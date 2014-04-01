@@ -1,4 +1,3 @@
-let debug = false
 (* Immutable array *)
 
 module IA = struct
@@ -71,10 +70,9 @@ module LP = struct
 type var = int
 type level = int
 type name = string
-type arity = int
 
 type data =
-  | Uv of var * level * arity
+  | Uv of var * level
   | Con of name * level
   | DB of int
   | Bin of int * data
@@ -84,6 +82,7 @@ type data =
 let pr_cst x = x
 let pr_var x = "X" ^ string_of_int x
 
+let mkBin n t = if n = 0 then t else Bin(n,t)
 
 let mkApp t v start stop =
   if start = stop then t else
@@ -97,7 +96,7 @@ let fixTup xs =
   | _ -> Tup xs
 
 let rec equal a b = match a,b with
- | Uv (x,_,_), Uv (y,_,_) -> x = y
+ | Uv (x,_), Uv (y,_) -> x = y
  | Con (x,_), Con (y,_) -> x = y
  | DB x, DB y -> x = y
  | Bin (n1,x), Bin (n2,y) -> n1 = n2 && equal x y
@@ -129,13 +128,13 @@ let printf ctx fmt t =
        if pars then P.pp_print_string fmt ")";
        P.pp_close_box fmt ()
     | DB x -> P.pp_print_string fmt 
-        (try (if debug then "'" else "") ^List.nth ctx (x-1)
+        (try (if !Trace.debug then "'" else "") ^List.nth ctx (x-1)
         with Failure _ | Invalid_argument _ ->
           "_" ^ string_of_int (x-List.length ctx))
     | Con (x,_) -> P.pp_print_string fmt (pr_cst x)
-    | Uv (x,lvl,a) ->
+    | Uv (x,lvl) ->
         P.pp_print_string fmt
-          (pr_var x ^ (if debug then Printf.sprintf "(%d)" lvl else ""))
+          (pr_var x ^ (if !Trace.debug then Printf.sprintf "(%d)" lvl else ""))
     | Tup xs ->
         P.pp_open_hovbox fmt 2;
         if pars then P.pp_print_string fmt "(";
@@ -161,7 +160,7 @@ let rec map f = function
   | Bin (ns,x) -> Bin(ns, map f x)
   | Tup xs -> Tup(IA.map (map f) xs)
 
-let max_uv x a = match x with Uv (i,_,_) -> max a i | _ -> a
+let max_uv x a = match x with Uv (i,_) -> max a i | _ -> a
 
 let rec fold_map f x a = match x with
   | (DB _ | Con _ | Uv _ | Ext _) as x -> f x a
@@ -210,7 +209,7 @@ let tok = lexer
   | [ "==>" ] -> "IMPL","==>"
 ]
 
-let spy f s = if debug then begin
+let spy f s = if !Trace.debug then begin
   Printf.eprintf "<- %s\n"
     (match Stream.peek s with None -> "EOF" | Some x -> String.make 1 x);
   let t, v as tok = f s in
@@ -236,10 +235,10 @@ let lex_fun s =
 
 let tok_match (s1,_) = (); function
   | (s2,v) when s1=s2 ->
-      if debug then Printf.eprintf "%s = %s = %s\n" s1 s2 v;
+      if !Trace.debug then Printf.eprintf "%s = %s = %s\n" s1 s2 v;
       v
   | (s2,v) ->
-      if debug then Printf.eprintf "%s <> %s = %s\n" s1 s2 v;
+      if !Trace.debug then Printf.eprintf "%s <> %s = %s\n" s1 s2 v;
       raise Stream.Failure
 
 let lex = {
@@ -296,7 +295,7 @@ EXTEND
           match b with
           | None -> Con(c,0)
           | Some b ->  Bin(1,binders c 1 b) ]
-      | [ u = UVAR -> Uv(get_uv u,0,0) ]
+      | [ u = UVAR -> Uv(get_uv u,0) ]
       | [ LPAREN; a = atom LEVEL "1"; RPAREN -> a ] ]
     ];
   premise :

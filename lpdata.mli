@@ -1,5 +1,3 @@
-val debug : bool
-
 (* External data: partial instantiate declare with a print and equality function
  * to get a factory for a type *)
 module C : sig
@@ -25,15 +23,15 @@ module LP :
     type var = int
     type level = int
     type name = string
-    type arity = int
     type data =
-        Uv of var * level * arity
+        Uv of var * level
       | Con of name * level
       | DB of int
       | Bin of int * data
       | Tup of data IA.t
       | Ext of C.data
     val mkApp : data -> data IA.t -> int -> int -> data
+    val mkBin : int -> data -> data
     val fixTup : data IA.t -> data
     val pr_var : int -> string
     val equal : data -> data -> bool

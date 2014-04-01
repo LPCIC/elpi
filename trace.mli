@@ -1,5 +1,6 @@
-val enter : string -> string lazy_t -> unit
-val exit : ?e:exn -> unit -> unit
+val enter : string ->  (Format.formatter -> unit) -> unit
+val print : string -> (Format.formatter -> 'a -> unit) -> 'a -> unit
+val exit : ?e:exn -> float -> unit
 
 exception Unknown
 val pr_exn : (exn -> string) -> unit

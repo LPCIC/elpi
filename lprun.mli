@@ -9,6 +9,7 @@ module Subst : sig
 end
 module Red : sig
   val whd : Subst.subst -> Lpdata.LP.data -> Lpdata.LP.data * Subst.subst
+  val nf : Subst.subst -> Lpdata.LP.data -> Lpdata.LP.data
 end
 exception UnifFail of string lazy_t
 val unify : Lpdata.LP.data -> Lpdata.LP.data -> Subst.subst -> Subst.subst

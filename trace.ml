@@ -13,9 +13,15 @@ let init ?(first=0) ?(last=max_int) b =
 let enter k msg =
   incr level;
   incr cur_step;
+  if condition () then begin
+    Format.pp_open_hvbox Format.err_formatter !level;
+    Format.eprintf "%s%s %d {{{@[<hv1> %a@]\n%!"
+      (String.make !level ' ') k !cur_step (fun fmt () -> msg fmt) ();
+  end
+
+let print name f x = 
   if condition () then
-    Printf.eprintf "%s%s %d {{{ %s\n"
-      (String.make !level ' ') k !cur_step (Lazy.force msg)
+    Format.eprintf "%s %s =@[<hv1> %a@]\n%!" (String.make !level ' ') name f x
 
 let printers = ref []
 
@@ -33,9 +39,9 @@ let pr_exc = function
      aux !printers
 let pr_exn f = printers := f :: !printers
 
-let exit ?(e=OK) () =
-  decr level; 
+let exit ?(e=OK) time =
   if condition () then
-    Printf.eprintf "%s}}} %s\n" (String.make !level ' ') (pr_exc e)
-
+    Format.eprintf "%s}}} %s  (%.3fs)\n%!"
+      (String.make !level ' ') (pr_exc e) time;
+  decr level
 

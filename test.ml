@@ -81,14 +81,6 @@ let clist : C.data list -> C.data =
     (List.for_all2 C.equal)
 let of_list l = LP.Ext (clist l)
 
-let rec nf s = function
-  | (LP.Ext _ | LP.Con _ | LP.DB _) as x -> x
-  | LP.Bin(n,t) -> LP.Bin(n,nf s t)
-  | (LP.Tup _ | LP.Uv _) as x ->
-      match fst(Red.whd s x) with
-      | LP.Tup xs -> LP.Tup(IA.map (nf s) xs)
-      | y -> if y == x then y else nf s y
-
 let test_IA () =
   let t = IA.of_array [| 1; 2; 3; 4; 5 |] in
   assert(t = IA.append (IA.sub 0 1 t) (IA.tl t));
@@ -100,7 +92,7 @@ let test_IA () =
 let test_LPdata () =
   let wc = Unix.gettimeofday () in
   for j = 1 to 400 do
-    let test1 = toa [|LP.Con("of",0); of_int 3; of_int 4; LP.Uv (0,0,0) |] in
+    let test1 = toa [|LP.Con("of",0); of_int 3; of_int 4; LP.Uv (0,0) |] in
     let test2 = toa [|LP.Con("of",0); of_list [cint 3; cint 5] |] in
     for i = 1 to 2000 do
             ignore(LP.equal test1 test2);
@@ -136,6 +128,47 @@ let test_whd () =
   assert(LP.equal t' LP.(Con("c",0)));
   ;;
 
+let test_unif () =
+  let test b x y = try
+    let s = unify x y (Subst.empty 100) in
+    Format.eprintf "@[<hv3>unify: %a@ @[<hv0>=== %a@ ---> %a@]@]@\n%!"
+      (LP.printf []) x (LP.printf []) y Subst.print_substf s;
+    let x, y = Red.nf s x, Red.nf s y in
+    assert(LP.equal x y)
+  with UnifFail s when not b -> 
+    Format.eprintf "@[<hv3>unify: %a@ @[<hv0>=/= %a@ ---> %s@]@]@\n%!"
+      (LP.printf []) x (LP.printf []) y (Lazy.force s) in
+  test true LP.(Tup(IA.of_array [|Uv(0,0);Con("a1",1)|])) LP.(Con("a1",1));
+  test false LP.(Tup(IA.of_array [|Uv(0,0);Con("a0",0)|])) LP.(Con("a0",0));
+  test false LP.(Tup(IA.of_array [|Uv(0,0);Con("a1",1);Con("a1",1);|]))
+             LP.(Con("a0",0));
+  test false LP.(Tup(IA.of_array [|Uv(1,1);DB 1;Con("a1",1);|]))
+             LP.(Con("a0",0));
+  test false LP.(Tup(IA.of_array [|Uv(1,1);DB 1;DB 1;|]))
+             LP.(Con("a0",0));
+  test false LP.(Tup(IA.of_array [|Uv(1,1);Uv(1,1);|])) LP.(Con("a0",0));
+  test false LP.(Tup(IA.of_array [|Uv(0,0);
+                      Tup(IA.of_array [|Con("a1",1);Con("a2",2)|])|]))
+             LP.(Con("a0",0));
+  test false LP.(Uv(0,0)) LP.(Con("a1",1));
+  test false LP.(Con("a",0)) LP.(Con("a",1));
+  test true LP.(Con("a1",1)) LP.(Con("a1",1));
+  test true LP.(Tup(IA.of_array([|Con("f",0);Con("a1",1);|])))
+            LP.(Tup(IA.of_array([|Con("f",0);Con("a1",1);|])));
+  test false LP.(Tup(IA.of_array([|Con("f",0);Con("a1",1);|])))
+             LP.(Tup(IA.of_array([|Con("f",0);Con("a0",0);|])));
+  test false LP.(Tup(IA.of_array([|Con("g",0);Con("a1",1);|])))
+             LP.(Tup(IA.of_array([|Con("f",0);Con("a1",1);|])));
+  test true LP.(Tup(IA.of_array [|Uv(0,0);Con("a1",1);Con("a2",2)|]))
+            LP.(Tup(IA.of_array [|Con("f",0);Con("a2",2);Con("a1",1);|]));
+  test false LP.(Tup(IA.of_array [|Uv(0,0);Con("a1",1)|]))
+            LP.(Tup(IA.of_array [|Con("a1",1);DB 1;|]));
+  test true LP.(Tup(IA.of_array [|Uv(0,0);Con("a1",1);DB 1|]))
+            LP.(Tup(IA.of_array [|Con("a1",1);Bin(2,DB 3);|]));
+  test true LP.(Bin(6,Tup(IA.of_array [|Uv(0,0);Con("a1",1);DB 1|])))
+            LP.(Bin(6,Tup(IA.of_array [|Con("a1",1);Bin(2,DB 3);|])));
+;;
+
 let test_coq () =
   Format.eprintf "@[<hv2>embed test:@ %a@]@\n%!"
     (LP.printf []) Coq.(embed 
@@ -146,13 +179,14 @@ let test_coq () =
 
 let _ = Printexc.record_backtrace true
 let _ =
-  if not debug then begin
+  if not !Trace.debug then begin
     test_IA ();
     test_LPdata ();
     test_whd ();
+    test_unif ();
     test_coq ();
   end;
-  Trace.init (*~first:98 ~last:102*) false;
+  Trace.init ~first:0 ~last:max_int false;
   let p = LP.parse_program "
     copy hole hole.
     copy (app A B) (app X Y) :- copy A X, copy B Y.
@@ -167,4 +201,4 @@ let _ =
   Format.eprintf "@[<hv2>output:@ %a@]@\n@[<hv2>subst:@ %a@]@\n%!"
     LP.print_goalf (Subst.apply_subst_goal s g) Subst.print_substf s;
   Format.eprintf "@[<hv2>output:@ %a@]@\n%!"
-    LP.print_goalf (LP.map_premise (nf s) g)
+    LP.print_goalf (LP.map_premise (Red.nf s) g)

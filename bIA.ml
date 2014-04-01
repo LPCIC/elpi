@@ -40,7 +40,7 @@ let len (start,stop,_) = stop - start
 let sub i len (start,stop,v) =
   if len > stop - start then raise (Invalid_argument "sub")
   else (start+i,start+i+len,v)
-let tl (start,stop,v) = assert(stop - start > 1); (start+1,stop,v)
+let tl (start,stop,v) = assert(stop - start > 0); (start+1,stop,v)
 let of_array v = 0,Array.length v,v
 
 let fold_mapi f (start,stop,ar as orig) acc =
