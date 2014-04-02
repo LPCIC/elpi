@@ -115,7 +115,7 @@ let rec iter_sep spc pp = function
 
 let isBin = function Bin _ -> true | _ -> false
 
-let printf ctx fmt t =
+let prf_data ctx fmt t =
   let module P = Format in
   let rec print ?(pars=false) ctx = function
     | Bin (n,x) ->
@@ -147,7 +147,7 @@ let printf ctx fmt t =
         P.pp_close_box fmt ()
   in
     print ctx t
-let print ?(ctx=[]) t = on_buffer (printf ctx) t
+let string_of_data ?(ctx=[]) t = on_buffer (prf_data ctx) t
 
 
 let rec fold f x a = match x with
@@ -315,32 +315,32 @@ let parse_goal s : goal =
   reset ();
   Grammar.Entry.parse goal (Stream.of_string s)
 
-let rec print_premisef ctx fmt = function
-  | Atom p -> printf ctx fmt p
+let rec prf_premise ctx fmt = function
+  | Atom p -> prf_data ctx fmt p
   | Pi (x,p) ->
        Format.pp_open_hvbox fmt 2;
        Format.pp_print_string fmt ("pi "^x^"\\");
        Format.pp_print_space fmt ();
-       print_premisef (x::ctx) fmt p;
+       prf_premise (x::ctx) fmt p;
        Format.pp_close_box fmt ()
   | Impl (x,p) ->
        Format.pp_open_hvbox fmt 2;
-       printf ctx fmt x;
+       prf_data ctx fmt x;
        Format.pp_print_space fmt ();
        Format.pp_open_hovbox fmt 0;
        Format.pp_print_string fmt "==> ";
-       print_premisef ctx fmt p;
+       prf_premise ctx fmt p;
        Format.pp_close_box fmt ();
        Format.pp_close_box fmt ()
-let print_premise p = on_buffer (print_premisef []) p
-let print_goal = print_premise
-let print_goalf = print_premisef []
+let string_of_premise p = on_buffer (prf_premise []) p
+let string_of_goal = string_of_premise
+let prf_goal = prf_premise []
 
-let print_head = print
+let string_of_head = string_of_data
 
-let print_clausef fmt (_, hd, hyps) =
+let prf_clause fmt (_, hd, hyps) =
   Format.pp_open_hvbox fmt 2;
-  printf [] fmt hd;
+  prf_data [] fmt hd;
   if hyps <> [] then begin
     Format.pp_print_space fmt ();
     Format.pp_print_string fmt ":- ";
@@ -348,18 +348,18 @@ let print_clausef fmt (_, hd, hyps) =
   Format.pp_open_hovbox fmt 0;
   iter_sep
     (fun () -> Format.pp_print_string fmt ",";Format.pp_print_space fmt ())
-    (print_premisef [] fmt) hyps;
+    (prf_premise [] fmt) hyps;
   Format.pp_print_string fmt ".";
   Format.pp_close_box fmt ();
   Format.pp_close_box fmt ()
 
-let print_clause c = on_buffer print_clausef c
+let string_of_clause c = on_buffer prf_clause c
 
-let print_programf fmt p =
+let prf_program fmt p =
   Format.pp_open_vbox fmt 0;
-  iter_sep (Format.pp_print_space fmt) (print_clausef fmt) p;
+  iter_sep (Format.pp_print_space fmt) (prf_clause fmt) p;
   Format.pp_close_box fmt ()
-let print_program p = on_buffer print_programf p
+let string_of_program p = on_buffer prf_program p
 
 end
 
@@ -382,7 +382,7 @@ let rec iter_sep spc pp = function
   | [x] -> pp x
   | x::tl -> pp x; spc (); iter_sep spc pp tl
 
-let print_substf fmt s =
+let prf_subst fmt s =
   Format.pp_open_hovbox fmt 2;
   Format.pp_print_string fmt "{ ";
   iter_sep
@@ -392,12 +392,12 @@ let print_substf fmt s =
        Format.pp_print_string fmt (pr_var i);
        Format.pp_print_space fmt ();
        Format.pp_print_string fmt ":= ";
-       printf [] fmt t;
+       prf_data [] fmt t;
        Format.pp_close_box fmt ())
     (Int.Map.bindings s.assign);
   Format.pp_print_string fmt " }";
   Format.pp_close_box fmt ()
-let print_subst s = on_buffer print_substf s
+let string_of_subst s = on_buffer prf_subst s
 
 let apply_subst s t =
   let rec subst = function

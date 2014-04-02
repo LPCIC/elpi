@@ -109,22 +109,22 @@ let test_whd () =
   let t = LP.(Tup(IA.of_array [| Bin(2, DB 2); Con("a",0); Con("b",0) |])) in
   let t', _ = Red.whd (Subst.empty 0) t in
   Format.eprintf "@[<hv2>whd: @ %a @ ---> %a@]@\n%!"
-    (LP.printf []) t (LP.printf []) t';
+    (LP.prf_data []) t (LP.prf_data []) t';
   assert(LP.equal t' (LP.Con("a",0)));
   let t = LP.(Tup(IA.of_array [| Bin(2, DB 2); Con("a",0) |])) in
   let t', _ = Red.whd (Subst.empty 0) t in
   Format.eprintf "@[<hv2>whd: @ %a @ ---> %a@]@\n%!"
-    (LP.printf []) t (LP.printf []) t';
+    (LP.prf_data []) t (LP.prf_data []) t';
   assert(LP.equal t' LP.(Bin(1, Con("a",0))));
   let t = LP.(Tup(IA.of_array [| Bin(2, DB 2); Con("a",0); Con("b",0); Con("c",0) |])) in
   let t', _ = Red.whd (Subst.empty 0) t in
   Format.eprintf "@[<hv2>whd: @ %a @ ---> %a@]@\n%!"
-    (LP.printf []) t (LP.printf []) t';
+    (LP.prf_data []) t (LP.prf_data []) t';
   assert(LP.equal t' LP.(Tup(IA.of_array [| Con("a",0); Con("c",0) |] )));
   let t = LP.(Tup(IA.of_array [| Bin(2, DB 2); (Bin(1,DB 1)); Con("b",0); Con("c",0) |])) in
   let t', _ = Red.whd (Subst.empty 0) t in
   Format.eprintf "@[<hv2>whd: @ %a @ ---> %a@]@\n%!"
-    (LP.printf []) t (LP.printf []) t';
+    (LP.prf_data []) t (LP.prf_data []) t';
   assert(LP.equal t' LP.(Con("c",0)));
   ;;
 
@@ -132,12 +132,12 @@ let test_unif () =
   let test b x y = try
     let s = unify x y (Subst.empty 100) in
     Format.eprintf "@[<hv3>unify: %a@ @[<hv0>=== %a@ ---> %a@]@]@\n%!"
-      (LP.printf []) x (LP.printf []) y Subst.print_substf s;
+      (LP.prf_data []) x (LP.prf_data []) y Subst.prf_subst s;
     let x, y = Red.nf s x, Red.nf s y in
     assert(LP.equal x y)
   with UnifFail s when not b -> 
     Format.eprintf "@[<hv3>unify: %a@ @[<hv0>=/= %a@ ---> %s@]@]@\n%!"
-      (LP.printf []) x (LP.printf []) y (Lazy.force s) in
+      (LP.prf_data []) x (LP.prf_data []) y (Lazy.force s) in
   test true LP.(Tup(IA.of_array [|Uv(0,0);Con("a1",1)|])) LP.(Con("a1",1));
   test false LP.(Tup(IA.of_array [|Uv(0,0);Con("a0",0)|])) LP.(Con("a0",0));
   test false LP.(Tup(IA.of_array [|Uv(0,0);Con("a1",1);Con("a1",1);|]))
@@ -171,7 +171,7 @@ let test_unif () =
 
 let test_coq () =
   Format.eprintf "@[<hv2>embed test:@ %a@]@\n%!"
-    (LP.printf []) Coq.(embed 
+    (LP.prf_data []) Coq.(embed 
        (Prod("T",Sort true,
          Prod("x",Rel 1,
            App(Const "eq", [|Rel 2; Rel 1; Evar(1,[|Rel 1;Rel 2|]) |])))));
@@ -195,10 +195,10 @@ let _ =
   let g = LP.parse_goal "
     copy (app (lam w/ lam x/ (app w x)) hole) X.
   " in
-  Format.eprintf "@[<hv2>program:@ %a@]@\n%!" LP.print_programf p;
-  Format.eprintf "@[<hv2>goal:@ %a@]@\n%!" LP.print_goalf g;
+  Format.eprintf "@[<hv2>program:@ %a@]@\n%!" LP.prf_program p;
+  Format.eprintf "@[<hv2>goal:@ %a@]@\n%!" LP.prf_goal g;
   let s = run p g in
   Format.eprintf "@[<hv2>output:@ %a@]@\n@[<hv2>subst:@ %a@]@\n%!"
-    LP.print_goalf (Subst.apply_subst_goal s g) Subst.print_substf s;
+    LP.prf_goal (Subst.apply_subst_goal s g) Subst.prf_subst s;
   Format.eprintf "@[<hv2>output:@ %a@]@\n%!"
-    LP.print_goalf (LP.map_premise (Red.nf s) g)
+    LP.prf_goal (LP.map_premise (Red.nf s) g)

@@ -13,7 +13,7 @@ let lfail l = raise (UnifFail l)
 
 let print_unif_prob s rel a b fmt =
   Format.fprintf fmt "@[%a@ %s %a@]%!"
-    (printf []) (apply_subst s a) rel (printf []) (apply_subst s b)
+    (prf_data []) (apply_subst s a) rel (prf_data []) (apply_subst s b)
 
 let rec rigid = function
   | Uv _ -> false
@@ -87,8 +87,9 @@ let rec bind x id depth lvl args t s =
           let us = zs ^- bs in
           let nws, nvs, ncs, nus = IA.len ws, IA.len vs, IA.len cs, IA.len us in
           let vj = mkBin nbs (mkApp h (IA.append cs us) 0 (ncs + nus)) in
-          let s = set_sub j vj s in SPY "vj" (printf []) vj;
-          let t = mkApp h (IA.append ws vs) 0 (nws+nvs) in SPY "t" (printf[]) t;
+          let s = set_sub j vj s in
+          let t = mkApp h (IA.append ws vs) 0 (nws+nvs) in
+          SPY "vj" (prf_data []) vj; SPY "t" (prf_data[]) t;
           t, s
       | Uv(j,l) when j <> id && isPU bs ->
           let bs = IA.tl bs in
@@ -102,8 +103,9 @@ let rec bind x id depth lvl args t s =
           let us = zs ^- al in
           let nws, nvs, ncs, nus = IA.len ws, IA.len vs, IA.len cs, IA.len us in
           let vj = mkBin nbs (mkApp h (IA.append ws vs) 0 (nws + nvs)) in
-          let s = set_sub j vj s in SPY "vj" (printf []) vj;
-          let t = mkApp h (IA.append cs us) 0 (ncs+nus) in SPY "t" (printf[]) t;
+          let s = set_sub j vj s in
+          let t = mkApp h (IA.append cs us) 0 (ncs+nus) in
+          SPY "vj" (prf_data []) vj; SPY "t" (prf_data[]) t;
           t, s
       | Uv _ -> fail "ho-ho"
 
@@ -169,7 +171,7 @@ let rec contextualize_premise depth s hv = function
 
 let rec select goal depth s = function
   | [] ->
-      Printf.eprintf "fail: %s\n%!" (print (apply_subst s goal));
+      Printf.eprintf "fail: %s\n%!" (string_of_data (apply_subst s goal));
       raise NoClause
   | (nuv,hd,hyps) as clause :: prog ->
       try
@@ -180,8 +182,8 @@ let rec select goal depth s = function
           hyps [] in
         let s = Subst.set_top (Subst.top s + nuv + 1) s in
         let s = unify goal hd s in
-        Format.eprintf "@[<hv2>  use:@ %a@]@\n%!" print_clausef clause;
-        Format.eprintf "@[<hv2>  sub:@ %a@]@\n%!" Subst.print_substf s;
+        Format.eprintf "@[<hv2>  use:@ %a@]@\n%!" prf_clause clause;
+        Format.eprintf "@[<hv2>  sub:@ %a@]@\n%!" Subst.prf_subst s;
         s, hyps, prog
       with UnifFail _ -> select goal depth s prog
 let rec run prog s (depth,goal) =
@@ -189,7 +191,7 @@ let rec run prog s (depth,goal) =
   | Atom goal ->
     let rec aux alternatives =
       Format.eprintf "@[<hv2>on:@ %a%s@]@\n%!"
-        (printf []) (apply_subst s goal)
+        (prf_data []) (apply_subst s goal)
         (if !Trace.debug then Printf.sprintf " (%d,%d)" depth (Subst.top s)
         else "");
       let s, goals, alternatives = select goal depth s alternatives in
