@@ -20,16 +20,27 @@ module LP : sig
   type var = int
   type level = int
   type name = string
-  type data =
-      Uv of var * level
+  type data
+
+  type kind_of_data = private
+    | Uv of var * level
     | Con of name * level
     | DB of int
     | Bin of int * data
     | Tup of data IA.t
     | Ext of C.data
 
-  val mkApp : data -> data IA.t -> int -> int -> data
+  val look : data -> kind_of_data
+  val kool : kind_of_data -> data
+  
+  val mkUv : var -> level -> data
+  val mkCon : name -> level -> data
+  val mkDB : int -> data
   val mkBin : int -> data -> data
+  val mkTup : data IA.t -> data
+  val mkExt : C.data -> data
+
+  val mkApp : data -> data IA.t -> int -> int -> data
   val fixTup : data IA.t -> data
 
   val equal : data -> data -> bool
@@ -56,6 +67,7 @@ module LP : sig
 
   val parse_program : string -> program
   val parse_goal : string -> goal
+  val parse_data : string -> data
 
   val prf_data : name list -> Format.formatter -> data -> unit
   val prf_premise : name list -> Format.formatter -> premise -> unit

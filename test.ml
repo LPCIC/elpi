@@ -1,7 +1,7 @@
 open Lprun
 open Lpdata
 
-let toa x = LP.Tup(IA.of_array x)
+let toa x = LP.mkTup(IA.of_array x)
 
 module Coq = struct
 
@@ -27,22 +27,22 @@ let quote x = "\""^x^"\""
 let sob = function true -> "Type" | _ -> "Prop"
 
 let cVar : string -> C.data = C.declare quote (=)
-let of_Var s = LP.Ext (cVar s)
+let of_Var s = LP.mkExt (cVar s)
 
 let cSort : bool -> C.data =
   C.declare (fun x -> quote (sob x)) (=)
-let of_Sort s = LP.Ext (cSort s)
+let of_Sort s = LP.mkExt (cSort s)
 
 let cName : string -> C.data = C.declare quote (=)
-let of_Name s = LP.Ext (cName s)
+let of_Name s = LP.mkExt (cName s)
 
 
 
-let app  = LP.Con ("app", 0)
-let cast = LP.Con ("cast",0)
-let prod = LP.Con ("prod",0)
-let lam  = LP.Con ("lam", 0)
-let hole = LP.Con ("hole",0)
+let app  = LP.mkCon "app"  0
+let cast = LP.mkCon "cast" 0
+let prod = LP.mkCon "prod" 0
+let lam  = LP.mkCon "lam"  0
+let hole = LP.mkCon "hole" 0
 
 (* module M = Map.Make(struct type t = int let compare = compare end) *)
 
@@ -50,20 +50,20 @@ let hole = LP.Con ("hole",0)
 let embed t (*sigma*) =
 (*   let s = ref M.empty in *)
   let rec aux = function
-  | Rel n -> LP.DB n
+  | Rel n -> LP.mkDB n
   | Var s -> of_Var s
   | Evar (i,ls) -> hole 
   (*aux_app (Tup [| ginst; M.find i s; aux (sigma i) |]) ls*)
   | Sort s -> of_Sort s
   | Cast(t,ty) -> toa [|cast; aux t; aux ty|]
-  | Prod(n,ty,t) ->  toa [|prod; of_Name n; aux ty; LP.Bin(1,aux t) |]
-  | Lambda(n,ty,t) ->  toa [|lam; of_Name n; aux ty; LP.Bin(1,aux t) |]
+  | Prod(n,ty,t) ->  toa [|prod; of_Name n; aux ty; LP.mkBin 1 (aux t) |]
+  | Lambda(n,ty,t) ->  toa [|lam; of_Name n; aux ty; LP.mkBin 1 (aux t) |]
   | App(hd,args) -> aux_app (aux hd) args
   | Const n -> of_Name n
   and aux_app hd args =
      let len_args = Array.length args in
      if len_args = 0 then hd else
-     let a = Array.create (len_args + 2) (LP.DB 0) in
+     let a = Array.create (len_args + 2) (LP.mkDB 0) in
      a.(0) <- app; a.(1) <- hd;
      for i = 0 to len_args - 1 do a.(i+2) <- aux args.(i); done;
      toa a
@@ -73,13 +73,13 @@ let embed t (*sigma*) =
 end
 
 let cint : int -> C.data = C.declare string_of_int (=)
-let of_int n = LP.Ext (cint n)
+let of_int n = LP.mkExt (cint n)
 
 let clist : C.data list -> C.data =
   C.declare
     (fun l -> "[" ^ String.concat "; " (List.map C.print l) ^ "]")
     (List.for_all2 C.equal)
-let of_list l = LP.Ext (clist l)
+let of_list l = LP.mkExt (clist l)
 
 let test_IA () =
   let t = IA.of_array [| 1; 2; 3; 4; 5 |] in
@@ -92,8 +92,8 @@ let test_IA () =
 let test_LPdata () =
   let wc = Unix.gettimeofday () in
   for j = 1 to 400 do
-    let test1 = toa [|LP.Con("of",0); of_int 3; of_int 4; LP.Uv (0,0) |] in
-    let test2 = toa [|LP.Con("of",0); of_list [cint 3; cint 5] |] in
+    let test1 = toa [|LP.mkCon "of" 0; of_int 3; of_int 4; LP.mkUv 0 0 |] in
+    let test2 = toa [|LP.mkCon "of" 0; of_list [cint 3; cint 5] |] in
     for i = 1 to 2000 do
             ignore(LP.equal test1 test2);
             ignore(LP.equal test1 test1);
@@ -106,67 +106,49 @@ let test_LPdata () =
 ;;
 
 let test_whd () =
-  let t = LP.(Tup(IA.of_array [| Bin(2, DB 2); Con("a",0); Con("b",0) |])) in
-  let t', _ = Red.whd (Subst.empty 0) t in
-  Format.eprintf "@[<hv2>whd: @ %a @ ---> %a@]@\n%!"
-    (LP.prf_data []) t (LP.prf_data []) t';
-  assert(LP.equal t' (LP.Con("a",0)));
-  let t = LP.(Tup(IA.of_array [| Bin(2, DB 2); Con("a",0) |])) in
-  let t', _ = Red.whd (Subst.empty 0) t in
-  Format.eprintf "@[<hv2>whd: @ %a @ ---> %a@]@\n%!"
-    (LP.prf_data []) t (LP.prf_data []) t';
-  assert(LP.equal t' LP.(Bin(1, Con("a",0))));
-  let t = LP.(Tup(IA.of_array [| Bin(2, DB 2); Con("a",0); Con("b",0); Con("c",0) |])) in
-  let t', _ = Red.whd (Subst.empty 0) t in
-  Format.eprintf "@[<hv2>whd: @ %a @ ---> %a@]@\n%!"
-    (LP.prf_data []) t (LP.prf_data []) t';
-  assert(LP.equal t' LP.(Tup(IA.of_array [| Con("a",0); Con("c",0) |] )));
-  let t = LP.(Tup(IA.of_array [| Bin(2, DB 2); (Bin(1,DB 1)); Con("b",0); Con("c",0) |])) in
-  let t', _ = Red.whd (Subst.empty 0) t in
-  Format.eprintf "@[<hv2>whd: @ %a @ ---> %a@]@\n%!"
-    (LP.prf_data []) t (LP.prf_data []) t';
-  assert(LP.equal t' LP.(Con("c",0)));
+  let test a b =
+    let t = LP.parse_data a in
+    let t', _ = Red.whd (Subst.empty 0) t in
+    Format.eprintf "@[<hv2>whd: @ %a @ ---> %a@]@\n%!"
+      (LP.prf_data []) t (LP.prf_data []) t';
+    assert(LP.equal t' LP.(parse_data b)) in
+  test "(x/ y/ x) a b" "a";
+  test "(x/ y/ x) a" "y/ a";
+  test "(x/ y/ x) a b c" "a c";
+  test "(x/ y/ x) (x/ x) b c" "c";
   ;;
 
 let test_unif () =
-  let test b x y = try
-    let s = unify x y (Subst.empty 100) in
-    Format.eprintf "@[<hv3>unify: %a@ @[<hv0>=== %a@ ---> %a@]@]@\n%!"
-      (LP.prf_data []) x (LP.prf_data []) y Subst.prf_subst s;
-    let x, y = Red.nf s x, Red.nf s y in
-    assert(LP.equal x y)
-  with UnifFail s when not b -> 
-    Format.eprintf "@[<hv3>unify: %a@ @[<hv0>=/= %a@ ---> %s@]@]@\n%!"
-      (LP.prf_data []) x (LP.prf_data []) y (Lazy.force s) in
-  test true LP.(Tup(IA.of_array [|Uv(0,0);Con("a1",1)|])) LP.(Con("a1",1));
-  test false LP.(Tup(IA.of_array [|Uv(0,0);Con("a0",0)|])) LP.(Con("a0",0));
-  test false LP.(Tup(IA.of_array [|Uv(0,0);Con("a1",1);Con("a1",1);|]))
-             LP.(Con("a0",0));
-  test false LP.(Tup(IA.of_array [|Uv(1,1);DB 1;Con("a1",1);|]))
-             LP.(Con("a0",0));
-  test false LP.(Tup(IA.of_array [|Uv(1,1);DB 1;DB 1;|]))
-             LP.(Con("a0",0));
-  test false LP.(Tup(IA.of_array [|Uv(1,1);Uv(1,1);|])) LP.(Con("a0",0));
-  test false LP.(Tup(IA.of_array [|Uv(0,0);
-                      Tup(IA.of_array [|Con("a1",1);Con("a2",2)|])|]))
-             LP.(Con("a0",0));
-  test false LP.(Uv(0,0)) LP.(Con("a1",1));
-  test false LP.(Con("a",0)) LP.(Con("a",1));
-  test true LP.(Con("a1",1)) LP.(Con("a1",1));
-  test true LP.(Tup(IA.of_array([|Con("f",0);Con("a1",1);|])))
-            LP.(Tup(IA.of_array([|Con("f",0);Con("a1",1);|])));
-  test false LP.(Tup(IA.of_array([|Con("f",0);Con("a1",1);|])))
-             LP.(Tup(IA.of_array([|Con("f",0);Con("a0",0);|])));
-  test false LP.(Tup(IA.of_array([|Con("g",0);Con("a1",1);|])))
-             LP.(Tup(IA.of_array([|Con("f",0);Con("a1",1);|])));
-  test true LP.(Tup(IA.of_array [|Uv(0,0);Con("a1",1);Con("a2",2)|]))
-            LP.(Tup(IA.of_array [|Con("f",0);Con("a2",2);Con("a1",1);|]));
-  test false LP.(Tup(IA.of_array [|Uv(0,0);Con("a1",1)|]))
-            LP.(Tup(IA.of_array [|Con("a1",1);DB 1;|]));
-  test true LP.(Tup(IA.of_array [|Uv(0,0);Con("a1",1);DB 1|]))
-            LP.(Tup(IA.of_array [|Con("a1",1);Bin(2,DB 3);|]));
-  test true LP.(Bin(6,Tup(IA.of_array [|Uv(0,0);Con("a1",1);DB 1|])))
-            LP.(Bin(6,Tup(IA.of_array [|Con("a1",1);Bin(2,DB 3);|])));
+  let test b x y =
+    let x, y = LP.parse_data x, LP.parse_data y in
+    try
+      let s = unify x y (Subst.empty 100) in
+      Format.eprintf "@[<hv3>unify: %a@ @[<hv0>=== %a@ ---> %a@]@]@\n%!"
+        (LP.prf_data []) x (LP.prf_data []) y Subst.prf_subst s;
+      let x, y = Red.nf s x, Red.nf s y in
+      assert(LP.equal x y)
+    with UnifFail s when not b -> 
+      Format.eprintf "@[<hv3>unify: %a@ @[<hv0>=/= %a@ ---> %s@]@]@\n%!"
+        (LP.prf_data []) x (LP.prf_data []) y (Lazy.force s) in
+  test true "X a1^1" "a1^1";
+  test false "X a" "a";
+  test false "X a1^1 a1^1" "b";
+  test false "X^1 _1 a1^1" "b";
+  test true  "X _1 a1^1" "b";
+  test false "X^1 _1 _1" "a";
+  test false "X^1 X^1" "a";
+  test false "X (f1^1 a2^2)" "b";
+  test false "X" "a1^1";
+  test false "a" "b1^1";
+  test false "a" "b";
+  test true  "a1^1" "a1^1";
+  test true  "f a1^1" "f a1^1";
+  test false "f a1^1" "f b";
+  test false "f a" "g a";
+  test true  "X a1^1 b2^2" "f b2^2 a1^1";
+  test false "X a1^1" "a1^1 _1";
+  test true  "X a1^1 _1" "a1^1 x/y/ _3";
+  test true  "a/b/c/d/e/f/ X a1^1 f" "a/b/c/d/e/f/ a1^1 x/y/f";
 ;;
 
 let test_coq () =

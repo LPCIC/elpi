@@ -71,16 +71,37 @@ type var = int
 type level = int
 type name = string
 
-type data =
+type kind_of_data =
   | Uv of var * level
   | Con of name * level
   | DB of int
   | Bin of int * data
   | Tup of data IA.t
   | Ext of C.data
+and data = kind_of_data
+let look x = x
+let mkUv v l = Uv(v,l)
+let mkCon n l = Con(n,l)
+let mkDB i = DB i
+let mkBin n t = Bin(n,t)
+let mkTup xs = Tup xs
+let mkExt x = Ext x
+let kool x = x
 
-let pr_cst x = x
-let pr_var x = "X" ^ string_of_int x
+let small_digit = function
+  | 0 -> "⁰" | 1 -> "¹" | 2 -> "²" | 3 -> "³" | 4 -> "⁴" | 5 -> "⁵"
+  | 6 -> "⁶" | 7 -> "⁷" | 8 -> "⁸" | 9 -> "⁹" | _ -> assert false
+
+let rec digits_of n =
+  let n, r = n / 10, n mod 10 in
+  r :: if n > 0 then digits_of n else []
+
+let string_of_level lvl = if !Trace.debug then "^" ^ string_of_int lvl
+  else if lvl = 0 then ""
+  else String.concat "" (List.map small_digit (digits_of lvl))
+
+let pr_cst x lvl = x ^ if !Trace.debug then string_of_level lvl else ""
+let pr_var x lvl = "X" ^ string_of_int x ^ string_of_level lvl
 
 let mkBin n t = if n = 0 then t else Bin(n,t)
 
@@ -131,10 +152,8 @@ let prf_data ctx fmt t =
         (try (if !Trace.debug then "'" else "") ^List.nth ctx (x-1)
         with Failure _ | Invalid_argument _ ->
           "_" ^ string_of_int (x-List.length ctx))
-    | Con (x,_) -> P.pp_print_string fmt (pr_cst x)
-    | Uv (x,lvl) ->
-        P.pp_print_string fmt
-          (pr_var x ^ (if !Trace.debug then Printf.sprintf "(%d)" lvl else ""))
+    | Con (x,lvl) -> P.pp_print_string fmt (pr_cst x lvl)
+    | Uv (x,lvl) -> P.pp_print_string fmt (pr_var x lvl)
     | Tup xs ->
         P.pp_open_hovbox fmt 2;
         if pars then P.pp_print_string fmt "(";
@@ -194,11 +213,20 @@ let rec fold_map_premise f p a = match p with
                  Impl(x,y), a
   | Pi(n,y) -> let y, a = fold_map_premise f y a in Pi(n, y), a
 
-let rec ident = lexer [ [ 'a'-'z' | '\'' | '_' ] ident | ]
+let rec number = lexer [ '0'-'9' number | ]
+let rec ident =
+  lexer [ [ 'a'-'z' | '\'' | '_' | '0'-'9' ] ident | '^' '0'-'9' number | ]
+
+let lvl_name_of s =
+  match Str.split (Str.regexp_string "^") s with
+  | [ x ] -> x, 0
+  | [ x;l ] -> x, int_of_string l
+  | _ -> raise (Token.Error ("<name> ^ <number> expected.  Got: " ^ s))
 
 let tok = lexer
   [ [ 'A'-'Z' ] ident -> "UVAR", $buf 
   | [ 'a'-'z' ] ident -> "CONSTANT", $buf
+  | [ '_' '0'-'9' ] number -> "REL", $buf
   | [ ":-" ] -> "ENTAILS",$buf
   | [ ',' ] -> "COMMA",","
   | [ '.' ] -> "FULLSTOP","."
@@ -253,9 +281,11 @@ let lex = {
 let g = Grammar.gcreate lex
 let lp = Grammar.Entry.create g "lp"
 let goal = Grammar.Entry.create g "goal"
+let atom = Grammar.Entry.create g "atom"
 
 let uvmap = ref []
-let reset () = uvmap := []
+let conmap = ref []
+let reset () = uvmap := []; conmap := []
 let top_uv () = List.length !uvmap
 
 let get_uv u =
@@ -264,6 +294,12 @@ let get_uv u =
     let n = List.length !uvmap in
     uvmap := (u,n) :: !uvmap;
     n
+let check_con n l =
+  try
+    let l' = List.assoc n !conmap in
+    if l <> l' then
+      raise (Token.Error ("Constant "^n^" used at different levels"))
+  with Not_found -> conmap := (n,l) :: !conmap
 
 let rec binders c n = function
     | Con(c',_) when c = c' -> DB n
@@ -276,7 +312,7 @@ and binders_premise c n = function
     | Impl(a,t) -> Impl(binders c n a, binders_premise c n t)
 
 EXTEND
-  GLOBAL: lp goal;
+  GLOBAL: lp goal atom;
   lp: [ [ cl = LIST1 clause -> cl ] ];
   goal : [ [ g = atom; FULLSTOP -> Atom g ] ];
   clause :
@@ -292,10 +328,12 @@ EXTEND
           if args = [] then hd else Tup (IA.of_list (hd :: args)) ]
     | "2" 
       [ [ c = CONSTANT; b = OPT [ BIND; a = atom LEVEL "1" -> a ] ->
+          let c, lvl = lvl_name_of c in
           match b with
-          | None -> Con(c,0)
+          | None -> check_con c lvl; Con(c,lvl)
           | Some b ->  Bin(1,binders c 1 b) ]
-      | [ u = UVAR -> Uv(get_uv u,0) ]
+      | [ u = UVAR -> let u, lvl = lvl_name_of u in Uv(get_uv u,lvl) ]
+      | [ i = REL -> DB(int_of_string (String.sub i 1 (String.length i - 1))) ]
       | [ LPAREN; a = atom LEVEL "1"; RPAREN -> a ] ]
     ];
   premise :
@@ -307,13 +345,22 @@ EXTEND
     ];
 END
 
-let parse_program s : program =  
+let parse e s =
   reset ();
-  Grammar.Entry.parse lp (Stream.of_string s)
+  try Grammar.Entry.parse e (Stream.of_string s)
+  with Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) ->
+    let last = Ploc.last_pos l in
+    let ctx_len = 10 in
+    let ctx =
+      let start = max 0 (last - ctx_len) in
+      let len = min (String.length s - start) ctx_len in
+      "..." ^ String.sub s start len in
+    raise (Stream.Error(Printf.sprintf "%s: %s" ctx msg))
+  | Ploc.Exc(_,e) -> raise e
 
-let parse_goal s : goal =  
-  reset ();
-  Grammar.Entry.parse goal (Stream.of_string s)
+let parse_program s : program = parse lp s 
+let parse_goal s : goal = parse goal s
+let parse_data s : data = parse atom s
 
 let rec prf_premise ctx fmt = function
   | Atom p -> prf_data ctx fmt p
@@ -389,7 +436,7 @@ let prf_subst fmt s =
     (fun () -> Format.pp_print_string fmt ";";Format.pp_print_space fmt ())
     (fun (i,t) ->
        Format.pp_open_hvbox fmt 0;
-       Format.pp_print_string fmt (pr_var i);
+       Format.pp_print_string fmt (pr_var i 0);
        Format.pp_print_space fmt ();
        Format.pp_print_string fmt ":= ";
        prf_data [] fmt t;

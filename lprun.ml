@@ -15,23 +15,24 @@ let print_unif_prob s rel a b fmt =
   Format.fprintf fmt "@[%a@ %s %a@]%!"
     (prf_data []) (apply_subst s a) rel (prf_data []) (apply_subst s b)
 
-let rec rigid = function
+let rec rigid x = match x with
   | Uv _ -> false
-  | Tup xs -> rigid (IA.get 0 xs)
+  | Tup xs -> rigid (look (IA.get 0 xs))
   | _ -> true
 
 let eta n t =
-  fixTup (IA.init (n+1) (fun i -> if i = 0 then (lift n t) else DB (n-i)))
+  fixTup (IA.init (n+1) (fun i -> if i = 0 then (lift n t) else mkDB (n-i)))
 
 let inter xs ys = IA.filter (fun x -> not(IA.for_all (equal x) ys)) xs
 
 (* construction of bindings: ↓ is ^- and ⇑ is ^= *)
-let cst_lower xs lvl = IA.filter (function Con(_,l) -> l <= lvl | _ -> false) xs
+let cst_lower xs lvl =
+  IA.filter (fun x -> match look x with Con(_,l) -> l <= lvl | _ -> false) xs
 let (^=) = cst_lower
 
 let rec position_of i stop v = (); fun x ->
   if i = stop then fail "cannot occur"
-  else if equal x (IA.get i v) then DB(stop - i)
+  else if equal x (IA.get i v) then mkDB (stop - i)
   else position_of (i+1) stop v x
 let (^-) what where = IA.map (position_of 0 (IA.len where) where) what
 let (^--) x v = position_of 0 (IA.len v) v x
@@ -42,15 +43,15 @@ let mk_al nbinders args =
   IA.init (nbinders + nargs)
     (fun i ->
       if i < nargs then Red.lift nbinders (IA.get i args)
-      else DB(nargs + nbinders - i))
+      else mkDB (nargs + nbinders - i))
 
 (* pattern unification fragment *)
-let higher lvl = function (DB l | Con(_,l)) -> l > lvl | _ -> false
+let higher lvl x = match look x with (DB l | Con(_,l)) -> l > lvl | _ -> false
 let rec not_in v len i x =
   if i+1 = len then true
   else not(equal x (IA.get (i+1) v)) && not_in v len (i+1) x
 let isPU xs =
-  match IA.get 0 xs with
+  match look (IA.get 0 xs) with
   | Uv (_,lvl) ->
       IA.for_alli (fun i x -> i = 0 || higher lvl x) xs &&
       IA.for_alli (fun i x -> i = 0 || not_in xs (IA.len xs) i x) xs
@@ -60,20 +61,20 @@ let isPU xs =
 let rec bind x id depth lvl args t s =
   let t, s = whd s t in
   TRACE "bind" (print_unif_prob s (":= "^string_of_int depth^"↓") x t)
-  match t with
-  | Bin(m,t) -> let t, s = bind x id (depth+m) lvl args t s in Bin(m,t), s
+  match look t with
+  | Bin(m,t) -> let t, s = bind x id (depth+m) lvl args t s in mkBin m t, s
   | Ext _ -> t, s
   | Con (_,l) when l <= lvl -> t, s
   | Con _ -> t ^-- mk_al depth args, s (* XXX optimize *)
   (* the following 2 cases are: t ^-- mk_al depth args, s *) (* XXX CHECK *)
   | DB m when m <= depth -> t, s
-  | DB m -> lift depth (DB(m-depth) ^-- args), s
-  | Uv(j,l) -> bind x id depth lvl args (Tup(IA.of_array[|t|])) s
-  | Tup bs when rigid t ->
+  | DB m -> lift depth (mkDB (m-depth) ^-- args), s
+  | Uv(j,l) -> bind x id depth lvl args (mkTup (IA.of_array[|t|])) s
+  | Tup bs as t when rigid t ->
       let ss, s = IA.fold_map (bind x id depth lvl args) bs s in
-      Tup ss, s
+      mkTup ss, s
   | Tup bs -> (* pruning *)
-      match IA.get 0 bs with
+      match look (IA.get 0 bs) with
       | (Bin _ | Con _ | DB _ | Ext _ | Tup _) -> assert false
       | Uv(j,l) when j <> id && l > lvl && isPU bs ->
           let bs = IA.tl bs in
@@ -111,24 +112,26 @@ let rec bind x id depth lvl args t s =
 
 let mksubst x id lvl t args s =
   let nargs = IA.len args in
-  match t with
+(*
+  match look t with
   | Bin(k,Uv(id1,_)) when id1 = id -> assert false (* TODO *)
   | Bin(k,Tup xs) when equal (IA.get 0 xs) (Uv (id,lvl)) && isPU xs ->
       assert false (* TODO *)
   | _ ->
+*)
      let t, s = bind x id 0 lvl args t s in
      set_sub id (mkBin nargs t) s
 
 let rec unify a b s = TRACE "unify" (print_unif_prob s "=" a b)
   let a, s =  whd s a in
   let b, s =  whd s b in
-  match a, b with
+  match look a, look b with
   | Con _, Con _ | Ext _, Ext _ | DB _, DB _ ->
       if equal a b then s else fail "rigid"
   | Bin(nx,x), Bin(ny,y) when nx = ny -> unify x y s
   | Bin(nx,x), Bin(ny,y) when nx < ny -> unify (eta (ny-nx) x) y s
   | Bin(nx,x), Bin(ny,y) when nx > ny -> unify x (eta (nx-ny) y) s
-  | ((Bin(nx,x), y) | (y, Bin(nx,x))) when rigid y -> unify x (eta nx y) s
+  | ((Bin(nx,x), y) | (y, Bin(nx,x))) when rigid y -> unify x (eta nx (kool y)) s
   | Uv(i,_), Uv(j,_) when i = j -> s
   | x, y -> if rigid x && rigid y then unify_fo x y s else unify_ho x y s
 and unify_fo x y s =
@@ -138,10 +141,10 @@ and unify_fo x y s =
 and unify_ho x y s =
   match x, y with
   | (((Uv (id,lvl) as x), y) | (y, (Uv (id,lvl) as x))) ->
-      mksubst x id lvl y (IA.init 0 (fun _ -> y)) s
+      mksubst (kool x) id lvl (kool y) (IA.init 0 (fun _ -> kool y)) s
   | (((Tup xs as x), y) | (y, (Tup xs as x))) when isPU xs -> begin
-      match IA.get 0 xs with
-      | Uv (id,lvl) -> mksubst x id lvl y (IA.tl xs) s
+      match look (IA.get 0 xs) with
+      | Uv (id,lvl) -> mksubst (kool x) id lvl (kool y) (IA.tl xs) s
       | _ -> assert false
     end
   | _ -> fail "not a pattern unif"
@@ -155,7 +158,15 @@ exception NoClause
  * when we move under other pi binders *)
 let mkhv =
   let i = ref 0 in
-  fun depth -> incr i; Con("h"^string_of_int !i,depth)
+  let small_digit = function
+    | 0 -> "₀" | 1 -> "₁" | 2 -> "₂" | 3 -> "₃" | 4 -> "₄" | 5 -> "₅"
+    | 6 -> "₆" | 7 -> "₇" | 8 -> "₈" | 9 -> "₉" | _ -> assert false in
+  let rec digits_of n =
+    let n, r = n / 10, n mod 10 in
+    r :: if n > 0 then digits_of n else [] in
+  fun depth ->
+    incr i;
+    mkCon ("ð±"^String.concat "" (List.map small_digit (digits_of !i))) depth
 
 let contextualize depth s t hv =
   let t = Subst.refresh_uv depth s t in
