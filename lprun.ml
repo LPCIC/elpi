@@ -1,125 +1,7 @@
 open Lpdata
-
-module Subst = struct (* {{{ *)
-
-type subst = { assign : LP.data Int.Map.t; top_uv : int }
-let empty n = { assign = Int.Map.empty; top_uv = n }
-
-let last_sub_lookup = ref (LP.DB 0)
-let in_sub i { assign = assign } =
-  try last_sub_lookup := Int.Map.find i assign; true
-  with Not_found -> false
-let set_sub i t s = { s with assign = Int.Map.add i t s.assign }
-
-let rec iter_sep spc pp = function
-  | [] -> ()
-  | [x] -> pp x
-  | x::tl -> pp x; spc (); iter_sep spc pp tl
-
-let print_substf fmt s =
-  Format.pp_open_hovbox fmt 2;
-  Format.pp_print_string fmt "{ ";
-  iter_sep
-    (fun () -> Format.pp_print_string fmt ";";Format.pp_print_space fmt ())
-    (fun (i,t) ->
-       Format.pp_open_hvbox fmt 0;
-       Format.pp_print_string fmt (LP.pr_var i);
-       Format.pp_print_space fmt ();
-       Format.pp_print_string fmt ":= ";
-       LP.printf [] fmt t;
-       Format.pp_close_box fmt ())
-    (Int.Map.bindings s.assign);
-  Format.pp_print_string fmt " }";
-  Format.pp_close_box fmt ()
-let print_subst s = on_buffer print_substf s
-
-let apply_subst s t =
-  let rec subst = function
-    | LP.Uv(i,_) when in_sub i s -> LP.map subst !last_sub_lookup
-    | x -> x in
-  LP.map subst t
-let apply_subst_goal s = function
-  | LP.Atom t -> LP.Atom(apply_subst s t)
-  | _ -> assert false
-
-let refresh_uv depth s x =
-  LP.map (function LP.Uv(i,_) -> LP.Uv(s.top_uv + i,depth) | x -> x) x
-
-let top s = s.top_uv
-let set_top i s = { s with top_uv = s.top_uv + i + 1 }
-
-let fresh_uv lvl s = LP.Uv(s.top_uv,lvl), { s with top_uv = s.top_uv + 1 }
-
-end (* }}} *)
-
+open LP
 open Subst
-
-module Red = struct (* {{{ *)
-
-open LP
-
-let rec lift n k = function
-  | Uv _ as x -> x
-  | Con _ as x -> x
-  | DB m when m > n -> DB (m+k)
-  | DB _ as x -> x
-  | Bin (ns,t) as x ->
-      let t' = lift (n+ns) k t in
-      if t == t' then x else Bin(ns,t')
-  | Tup xs as x ->
-      let xs' = IA.map (lift n k) xs in
-      if xs' == xs then x else Tup xs'
-  | Ext _ as x -> x
-let lift ?(from=0) k t = if k = 0 then t else lift from k t
-
-(* DB i := v.(start + len - i) *)
-let rec beta depth t start len v =
-  match t with
-  | (Con _ | Ext _ | Uv _) as x -> x
-  | DB m when m > depth && m - depth <= len ->
-      lift depth (IA.get (start + len - (m - depth)) v)
-  | DB m when m > depth -> DB (m - len)
-  | DB _ as x -> x
-  | Tup xs -> Tup(IA.map (fun t -> beta depth t start len v) xs)
-  | Bin(ns,b) -> Bin(ns,beta (depth+ns) b start len v)
-
-let rec whd s t =
-  match t with
-  | (Ext _ | Con _ | DB _ | Bin _) as x -> x, s
-  | Uv (i,_) when in_sub i s ->
-      let t = !last_sub_lookup in
-      let t', s = whd s t in
-      t', if t == t' then s else set_sub i t' s
-  | Uv _ as x -> x, s
-  | Tup v as x ->
-      let hd = IA.get 0 v in
-      let hd', s = whd s hd in
-      match hd' with
-      | Bin (n_lam,b) ->
-        let n_args = IA.len v - 1 in
-        if n_lam = n_args then
-          whd s (beta 0 b 1 n_args v)
-        else if n_lam < n_args then
-          whd s (mkApp (beta 0 b 1 n_lam v) v (n_lam+1) (n_args+1))
-        else
-          let diff = n_lam - n_args in
-          Bin(diff, beta diff b 1 n_args v), s
-      | _ ->
-          if hd == hd' then x, s
-          else mkApp hd' (IA.tl v) 0 (IA.len v-1), s
-          
-let rec nf s = function
-  | (Ext _ | Con _ | DB _) as x -> x
-  | Bin(n,t) -> Bin(n,nf s t)
-  | (Tup _ | Uv _) as x ->
-      match fst(whd s x) with
-      | Tup xs -> Tup(IA.map (nf s) xs)
-      | y -> if y == x then y else nf s y
-
-end (* }}} *)
-
 open Red
-open LP
 
 exception UnifFail of string lazy_t
 
@@ -131,21 +13,7 @@ let lfail l = raise (UnifFail l)
 
 let print_unif_prob s rel a b fmt =
   Format.fprintf fmt "@[%a@ %s %a@]%!"
-    (LP.printf []) (apply_subst s a) rel (LP.printf []) (apply_subst s b)
-
-let cst_lower xs lvl =
-  IA.filter (function Con(_,l) -> l <= lvl | _ -> false) xs
-let (^=) = cst_lower
-
-let rec position_of i stop v = (); fun x ->
-  if i = stop then fail "cannot occur"
-  else if LP.equal x (IA.get i v) then DB(stop - i)
-  else position_of (i+1) stop v x
-
-let select what where =
-  IA.map (position_of 0 (IA.len where) where) what
-let (^-) = select
-let (^--) x v = position_of 0 (IA.len v) v x
+    (printf []) (apply_subst s a) rel (printf []) (apply_subst s b)
 
 let rec rigid = function
   | Uv _ -> false
@@ -155,50 +23,41 @@ let rec rigid = function
 let eta n t =
   fixTup (IA.init (n+1) (fun i -> if i = 0 then (lift n t) else DB (n-i)))
 
+let inter xs ys = IA.filter (fun x -> not(IA.for_all (equal x) ys)) xs
+
+(* construction of bindings: ↓ is ^- and ⇑ is ^= *)
+let cst_lower xs lvl = IA.filter (function Con(_,l) -> l <= lvl | _ -> false) xs
+let (^=) = cst_lower
+
+let rec position_of i stop v = (); fun x ->
+  if i = stop then fail "cannot occur"
+  else if equal x (IA.get i v) then DB(stop - i)
+  else position_of (i+1) stop v x
+let (^-) what where = IA.map (position_of 0 (IA.len where) where) what
+let (^--) x v = position_of 0 (IA.len v) v x
+
 let mk_al nbinders args =
+  (* builds: map (lift nbinders) args @ [DB nbinders ... DB 1] *)
   let nargs = IA.len args in
   IA.init (nbinders + nargs)
     (fun i ->
       if i < nargs then Red.lift nbinders (IA.get i args)
       else DB(nargs + nbinders - i))
 
+(* pattern unification fragment *)
+let higher lvl = function (DB l | Con(_,l)) -> l > lvl | _ -> false
+let rec not_in v len i x =
+  if i+1 = len then true
+  else not(equal x (IA.get (i+1) v)) && not_in v len (i+1) x
+let isPU xs =
+  match IA.get 0 xs with
+  | Uv (_,lvl) ->
+      IA.for_alli (fun i x -> i = 0 || higher lvl x) xs &&
+      IA.for_alli (fun i x -> i = 0 || not_in xs (IA.len xs) i x) xs
+  | _ -> false
+
 (* Based on Xiaochu Qi PHD (pages 51..52) / or reference 41 *)
-let rec unify a b s = TRACE "unify" (print_unif_prob s "=" a b)
-  let a, s =  whd s a in
-  let b, s =  whd s b in
-  match a, b with
-  | Con _, Con _ | Ext _, Ext _ | DB _, DB _ ->
-      if equal a b then s else fail "rigid"
-  | Bin(nx,x), Bin(ny,y) when nx = ny -> unify x y s
-  | Bin(nx,x), Bin(ny,y) when nx < ny -> unify (eta (ny-nx) x) y s
-  | Bin(nx,x), Bin(ny,y) when nx > ny -> unify x (eta (nx-ny) y) s
-  | ((Bin(nx,x), y) | (y, Bin(nx,x))) when rigid y -> unify x (eta nx y) s
-  | Uv(i,_), Uv(j,_) when i = j -> s
-  | x, y -> if rigid x && rigid y then unify_fo x y s else unify_ho x y s
-and unify_fo x y s =
-  match x, y with
-  | Tup xs, Tup ys when IA.len xs = IA.len ys -> IA.fold2 unify xs ys s
-  | _ -> fail "founif"
-and unify_ho x y s =
-  match x, y with
-  | (((Uv (id,lvl) as x), y) | (y, (Uv (id,lvl) as x))) ->
-      mksubst x id lvl y (IA.init 0 (fun _ -> y)) s
-  | (((Tup xs as x), y) | (y, (Tup xs as x))) when isPU xs -> begin
-      match IA.get 0 xs with
-      | Uv (id,lvl) -> mksubst x id lvl y (IA.tl xs) s
-      | _ -> assert false
-    end
-  | _ -> fail "not a pattern unif"
-and mksubst x id lvl t args s =
-  let nargs = IA.len args in
-  match t with
-  | Bin(k,Uv(id1,_)) when id1 = id -> assert false (* TODO *)
-  | Bin(k,Tup xs) when equal (IA.get 0 xs) (Uv (id,lvl)) && isPU xs ->
-      assert false (* TODO *)
-  | _ ->
-     let t, s = bind x id 0 lvl args t s in
-     set_sub id (mkBin nargs t) s (* mkBin ??? *)
-and bind x id depth lvl args t s =
+let rec bind x id depth lvl args t s =
   let t, s = whd s t in
   TRACE "bind" (print_unif_prob s (":= "^string_of_int depth^"↓") x t)
   match t with
@@ -247,21 +106,51 @@ and bind x id depth lvl args t s =
           let t = mkApp h (IA.append cs us) 0 (ncs+nus) in SPY "t" (printf[]) t;
           t, s
       | Uv _ -> fail "ho-ho"
-and inter xs ys =
-  IA.filter (fun x -> not(IA.for_all (equal x) ys)) xs
-and higher lvl = function (DB l | Con(_,l)) -> l > lvl | _ -> false
-and not_in v len i x =
-  if i+1 = len then true
-  else not(equal x (IA.get (i+1) v)) && not_in v len (i+1) x
-and isPU xs =
-  match IA.get 0 xs with
-  | Uv (_,lvl) ->
-      IA.for_alli (fun i x -> i = 0 || higher lvl x) xs &&
-      IA.for_alli (not_in xs (IA.len xs)) xs
-  | _ -> false
+
+let mksubst x id lvl t args s =
+  let nargs = IA.len args in
+  match t with
+  | Bin(k,Uv(id1,_)) when id1 = id -> assert false (* TODO *)
+  | Bin(k,Tup xs) when equal (IA.get 0 xs) (Uv (id,lvl)) && isPU xs ->
+      assert false (* TODO *)
+  | _ ->
+     let t, s = bind x id 0 lvl args t s in
+     set_sub id (mkBin nargs t) s
+
+let rec unify a b s = TRACE "unify" (print_unif_prob s "=" a b)
+  let a, s =  whd s a in
+  let b, s =  whd s b in
+  match a, b with
+  | Con _, Con _ | Ext _, Ext _ | DB _, DB _ ->
+      if equal a b then s else fail "rigid"
+  | Bin(nx,x), Bin(ny,y) when nx = ny -> unify x y s
+  | Bin(nx,x), Bin(ny,y) when nx < ny -> unify (eta (ny-nx) x) y s
+  | Bin(nx,x), Bin(ny,y) when nx > ny -> unify x (eta (nx-ny) y) s
+  | ((Bin(nx,x), y) | (y, Bin(nx,x))) when rigid y -> unify x (eta nx y) s
+  | Uv(i,_), Uv(j,_) when i = j -> s
+  | x, y -> if rigid x && rigid y then unify_fo x y s else unify_ho x y s
+and unify_fo x y s =
+  match x, y with
+  | Tup xs, Tup ys when IA.len xs = IA.len ys -> IA.fold2 unify xs ys s
+  | _ -> fail "founif"
+and unify_ho x y s =
+  match x, y with
+  | (((Uv (id,lvl) as x), y) | (y, (Uv (id,lvl) as x))) ->
+      mksubst x id lvl y (IA.init 0 (fun _ -> y)) s
+  | (((Tup xs as x), y) | (y, (Tup xs as x))) when isPU xs -> begin
+      match IA.get 0 xs with
+      | Uv (id,lvl) -> mksubst x id lvl y (IA.tl xs) s
+      | _ -> assert false
+    end
+  | _ -> fail "not a pattern unif"
+
+(* ******************************** Main loop ******************************* *)
 
 exception NoClause
 
+(* Important: when we move under a pi we put a constant in place of the
+ * bound variable. This was hypothetical clauses do not need to be lifted
+ * when we move under other pi binders *)
 let mkhv =
   let i = ref 0 in
   fun depth -> incr i; Con("h"^string_of_int !i,depth)
@@ -280,7 +169,7 @@ let rec contextualize_premise depth s hv = function
 
 let rec select goal depth s = function
   | [] ->
-      Printf.eprintf "fail: %s\n%!" (LP.print (apply_subst s goal));
+      Printf.eprintf "fail: %s\n%!" (print (apply_subst s goal));
       raise NoClause
   | (nuv,hd,hyps) as clause :: prog ->
       try
@@ -300,7 +189,7 @@ let rec run prog s (depth,goal) =
   | Atom goal ->
     let rec aux alternatives =
       Format.eprintf "@[<hv2>on:@ %a%s@]@\n%!"
-        (LP.printf []) (apply_subst s goal)
+        (printf []) (apply_subst s goal)
         (if !Trace.debug then Printf.sprintf " (%d,%d)" depth (Subst.top s)
         else "");
       let s, goals, alternatives = select goal depth s alternatives in
@@ -308,9 +197,9 @@ let rec run prog s (depth,goal) =
       with NoClause -> aux alternatives in
     aux prog
   | Pi(_,goal) -> run prog s (depth+1,goal)
-  | Impl(hyp,goal) -> run ((LP.max_uv hyp 0,hyp,[]) :: prog) s (depth,goal)
+  | Impl(hyp,goal) -> run ((max_uv hyp 0,hyp,[]) :: prog) s (depth,goal)
 let run p g =
-  let n = fold_premise (LP.fold max_uv) g 0 in
+  let n = fold_premise (fold max_uv) g 0 in
   run p (empty (n + 1)) (0,g)
 
 (* vim:set foldmethod=marker: *)

@@ -363,4 +363,128 @@ let print_program p = on_buffer print_programf p
 
 end
 
+open LP
+
+(* LP.Uv |-> data mapping *)
+module Subst = struct (* {{{ *)
+
+type subst = { assign : data Int.Map.t; top_uv : int }
+let empty n = { assign = Int.Map.empty; top_uv = n }
+
+let last_sub_lookup = ref (DB 0)
+let in_sub i { assign = assign } =
+  try last_sub_lookup := Int.Map.find i assign; true
+  with Not_found -> false
+let set_sub i t s = { s with assign = Int.Map.add i t s.assign }
+
+let rec iter_sep spc pp = function
+  | [] -> ()
+  | [x] -> pp x
+  | x::tl -> pp x; spc (); iter_sep spc pp tl
+
+let print_substf fmt s =
+  Format.pp_open_hovbox fmt 2;
+  Format.pp_print_string fmt "{ ";
+  iter_sep
+    (fun () -> Format.pp_print_string fmt ";";Format.pp_print_space fmt ())
+    (fun (i,t) ->
+       Format.pp_open_hvbox fmt 0;
+       Format.pp_print_string fmt (pr_var i);
+       Format.pp_print_space fmt ();
+       Format.pp_print_string fmt ":= ";
+       printf [] fmt t;
+       Format.pp_close_box fmt ())
+    (Int.Map.bindings s.assign);
+  Format.pp_print_string fmt " }";
+  Format.pp_close_box fmt ()
+let print_subst s = on_buffer print_substf s
+
+let apply_subst s t =
+  let rec subst = function
+    | Uv(i,_) when in_sub i s -> map subst !last_sub_lookup
+    | x -> x in
+  map subst t
+let apply_subst_goal s = function
+  | Atom t -> Atom(apply_subst s t)
+  | _ -> assert false
+
+let refresh_uv depth s x =
+  map (function Uv(i,_) -> Uv(s.top_uv + i,depth) | x -> x) x
+
+let top s = s.top_uv
+let set_top i s = { s with top_uv = s.top_uv + i + 1 }
+
+let fresh_uv lvl s = Uv(s.top_uv,lvl), { s with top_uv = s.top_uv + 1 }
+
+end (* }}} *)
+
+open Subst
+
+(* beta reduction, whd, and nf (for tests) *) 
+module Red = struct (* {{{ *)
+
+open LP
+
+let rec lift n k = function
+  | Uv _ as x -> x
+  | Con _ as x -> x
+  | DB m when m > n -> DB (m+k)
+  | DB _ as x -> x
+  | Bin (ns,t) as x ->
+      let t' = lift (n+ns) k t in
+      if t == t' then x else Bin(ns,t')
+  | Tup xs as x ->
+      let xs' = IA.map (lift n k) xs in
+      if xs' == xs then x else Tup xs'
+  | Ext _ as x -> x
+let lift ?(from=0) k t = if k = 0 then t else lift from k t
+
+(* DB i := v.(start + len - i) *)
+let rec beta depth t start len v =
+  match t with
+  | (Con _ | Ext _ | Uv _) as x -> x
+  | DB m when m > depth && m - depth <= len ->
+      lift depth (IA.get (start + len - (m - depth)) v)
+  | DB m when m > depth -> DB (m - len)
+  | DB _ as x -> x
+  | Tup xs -> Tup(IA.map (fun t -> beta depth t start len v) xs)
+  | Bin(ns,b) -> Bin(ns,beta (depth+ns) b start len v)
+
+let rec whd s t =
+  match t with
+  | (Ext _ | Con _ | DB _ | Bin _) as x -> x, s
+  | Uv (i,_) when in_sub i s ->
+      let t = !last_sub_lookup in
+      let t', s = whd s t in
+      t', if t == t' then s else set_sub i t' s
+  | Uv _ as x -> x, s
+  | Tup v as x ->
+      let hd = IA.get 0 v in
+      let hd', s = whd s hd in
+      match hd' with
+      | Bin (n_lam,b) ->
+        let n_args = IA.len v - 1 in
+        if n_lam = n_args then
+          whd s (beta 0 b 1 n_args v)
+        else if n_lam < n_args then
+          whd s (mkApp (beta 0 b 1 n_lam v) v (n_lam+1) (n_args+1))
+        else
+          let diff = n_lam - n_args in
+          Bin(diff, beta diff b 1 n_args v), s
+      | _ ->
+          if hd == hd' then x, s
+          else mkApp hd' (IA.tl v) 0 (IA.len v-1), s
+          
+let rec nf s = function
+  | (Ext _ | Con _ | DB _) as x -> x
+  | Bin(n,t) -> Bin(n,nf s t)
+  | (Tup _ | Uv _) as x ->
+      match fst(whd s x) with
+      | Tup xs -> Tup(IA.map (nf s) xs)
+      | y -> if y == x then y else nf s y
+
+end (* }}} *)
+
+open Red
+
 (* vim:set foldmethod=marker: *)
