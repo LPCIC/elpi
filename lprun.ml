@@ -161,24 +161,34 @@ let mkhv =
   let small_digit = function
     | 0 -> "₀" | 1 -> "₁" | 2 -> "₂" | 3 -> "₃" | 4 -> "₄" | 5 -> "₅"
     | 6 -> "₆" | 7 -> "₇" | 8 -> "₈" | 9 -> "₉" | _ -> assert false in
-  let rec digits_of n =
-    let n, r = n / 10, n mod 10 in
-    r :: if n > 0 then digits_of n else [] in
+  let rec digits_of n = n mod 10 :: if n > 10 then digits_of (n / 10) else [] in
   fun depth ->
     incr i;
-    mkCon ("ð±"^String.concat "" (List.map small_digit (digits_of !i))) depth
+    mkCon ("𝓱"^
+      String.concat "" (List.map small_digit (List.rev (digits_of !i)))) depth
 
-let contextualize depth s t hv =
-  let t = Subst.refresh_uv depth s t in
+let apply_refresh refresh depth top x = match look x with
+  | Uv(i,_) when List.mem_assoc i refresh ->
+      mkUv (i+top) (List.assoc i refresh)
+  | Uv(i,_) -> mkUv (i+top) depth
+  | _ -> x
+
+let contextualize (_, refresh) depth s t hv =
+  let t = LP.map (apply_refresh refresh depth (Subst.top s)) t in
   if hv <> [] then
     beta 0 t 0 (List.length hv) (IA.of_list (List.rev hv))
   else t
-let rec contextualize_premise depth s hv = function
-  | Atom t -> Atom(contextualize depth s t hv)
+let rec contextualize_premise (cdepth, cl as refresh) depth s hv eh = function
+  | Atom t -> cdepth, contextualize refresh depth s t hv,
+      List.map (fun t -> fold max_uv t 0, t, []) eh
   | Impl(t,h) ->
-      Impl(contextualize depth s t hv,
-           contextualize_premise depth s hv h)
-  | Pi(n,h) -> Pi(n,contextualize_premise depth s (mkhv (depth+1)::hv) h)
+      contextualize_premise refresh depth s hv 
+        (contextualize refresh depth s t hv :: eh)
+        h
+  | Pi(n,h) ->
+      contextualize_premise (cdepth+1,cl) depth s (mkhv (depth+1)::hv) eh h
+  | Sigma(n,h) ->
+      contextualize_premise (cdepth,(n,cdepth)::cl) depth s hv eh h
 
 let rec select goal depth s = function
   | [] ->
@@ -186,10 +196,10 @@ let rec select goal depth s = function
       raise NoClause
   | (nuv,hd,hyps) as clause :: prog ->
       try
-        let hd = contextualize depth s hd [] in
+        let hd = contextualize (depth,[]) depth s hd [] in
         let hyps =
           List.fold_right (fun h hs ->
-                  (depth, contextualize_premise depth s [] h) :: hs)
+                  (contextualize_premise (depth,[]) depth s [] [] h) :: hs)
           hyps [] in
         let s = Subst.set_top (Subst.top s + nuv + 1) s in
         let s = unify goal hd s in
@@ -197,22 +207,24 @@ let rec select goal depth s = function
         Format.eprintf "@[<hv2>  sub:@ %a@]@\n%!" Subst.prf_subst s;
         s, hyps, prog
       with UnifFail _ -> select goal depth s prog
-let rec run prog s (depth,goal) =
-  match goal with
-  | Atom goal ->
-    let rec aux alternatives =
-      Format.eprintf "@[<hv2>on:@ %a%s@]@\n%!"
-        (prf_data []) (apply_subst s goal)
-        (if !Trace.debug then Printf.sprintf " (%d,%d)" depth (Subst.top s)
-        else "");
-      let s, goals, alternatives = select goal depth s alternatives in
-      try List.fold_left (run prog) s goals
-      with NoClause -> aux alternatives in
-    aux prog
-  | Pi(_,goal) -> run prog s (depth+1,goal)
-  | Impl(hyp,goal) -> run ((max_uv hyp 0,hyp,[]) :: prog) s (depth,goal)
+
+let rec run prog s (depth,goal,extra_hyps) =
+  let prog = extra_hyps @ prog in
+  let rec aux alternatives =
+    Format.eprintf "@[<hv2>on:@ %a%s@]@\n%!"
+      (prf_data []) (apply_subst s goal)
+      (if !Trace.debug then Printf.sprintf " (%d,%d)" depth (Subst.top s)
+      else "");
+    let s, goals, alternatives = select goal depth s alternatives in
+    try List.fold_left (run prog) s goals
+    with NoClause -> aux alternatives in
+  aux prog
+
 let run p g =
-  let n = fold_premise (fold max_uv) g 0 in
-  run p (empty (n + 1)) (0,g)
+  let s = empty 0 in
+  let depth = 0 in
+  let _, t, _ as g = contextualize_premise (depth,[]) depth s [] [] g in
+  let s = Subst.set_top (fold max_uv t 0) s in
+  run p s g
 
 (* vim:set foldmethod=marker: *)

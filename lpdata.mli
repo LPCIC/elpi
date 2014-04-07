@@ -58,6 +58,7 @@ module LP : sig
       Atom of data
     | Impl of data * premise
     | Pi of name * premise
+    | Sigma of var * premise
   and goal = premise
 
   val map_premise : (data -> data) -> premise -> premise
@@ -90,7 +91,6 @@ module Subst : sig
   val empty : int -> subst
   val apply_subst : subst -> LP.data -> LP.data
   val apply_subst_goal : subst -> LP.goal -> LP.goal
-  val refresh_uv : int -> subst -> LP.data -> LP.data
   val fresh_uv : LP.level -> subst -> LP.data * subst
   val set_sub : int -> LP.data -> subst -> subst
   val top : subst -> int

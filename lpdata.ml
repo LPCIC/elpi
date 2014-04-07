@@ -92,16 +92,15 @@ let small_digit = function
   | 0 -> "⁰" | 1 -> "¹" | 2 -> "²" | 3 -> "³" | 4 -> "⁴" | 5 -> "⁵"
   | 6 -> "⁶" | 7 -> "⁷" | 8 -> "⁸" | 9 -> "⁹" | _ -> assert false
 
-let rec digits_of n =
-  let n, r = n / 10, n mod 10 in
-  r :: if n > 0 then digits_of n else []
+let rec digits_of n = n mod 10 :: if n > 10 then digits_of (n / 10) else []
 
 let string_of_level lvl = if !Trace.debug then "^" ^ string_of_int lvl
   else if lvl = 0 then ""
-  else String.concat "" (List.map small_digit (digits_of lvl))
+  else String.concat "" (List.map small_digit (List.rev (digits_of lvl)))
 
 let pr_cst x lvl = x ^ if !Trace.debug then string_of_level lvl else ""
-let pr_var x lvl = "X" ^ string_of_int x ^ string_of_level lvl
+let pr_var x lvl =
+  "X" ^ string_of_int x ^ if !Trace.debug then string_of_level lvl else ""
 
 let mkBin n t = if n = 0 then t else Bin(n,t)
 
@@ -194,17 +193,20 @@ and premise =
   | Atom of data
   | Impl of data * premise
   | Pi of name * premise
+  | Sigma of var * premise
 and goal = premise
 
 let rec map_premise f = function
   | Atom x -> Atom(f x)
   | Impl(x,y) -> Impl(f x, map_premise f y)
   | Pi(n,x) -> Pi(n, map_premise f x)
+  | Sigma(n,x) -> Sigma(n, map_premise f x)
 
 let rec fold_premise f x a = match x with
   | Atom x -> f x a
   | Impl(x,y) -> fold_premise f y (f x a)
   | Pi(_,x) -> fold_premise f x a
+  | Sigma(_,x) -> fold_premise f x a
 
 let rec fold_map_premise f p a = match p with
   | Atom x -> let x, a = f x a in Atom x, a
@@ -212,6 +214,7 @@ let rec fold_map_premise f p a = match p with
                  let y, a = fold_map_premise f y a in
                  Impl(x,y), a
   | Pi(n,y) -> let y, a = fold_map_premise f y a in Pi(n, y), a
+  | Sigma(n,y) -> let y, a = fold_map_premise f y a in Sigma(n, y), a
 
 let rec number = lexer [ '0'-'9' number | ]
 let rec ident =
@@ -251,6 +254,7 @@ let rec foo c = parser
   | [< s >] ->
        match spy (tok c) s with
        | "CONSTANT","pi" -> "PI", "pi"
+       | "CONSTANT","sigma" -> "SIGMA", "sigma"
        | x -> x
 and comment c = parser
   | [< '( '\n' ); s >] -> foo c s
@@ -308,6 +312,7 @@ let rec binders c n = function
     | Tup xs -> Tup (IA.map (binders c n) xs)
 and binders_premise c n = function
     | Pi(c,t) -> Pi(c,binders_premise c (n+1) t)
+    | Sigma(m,t) -> Sigma(m,binders_premise c n t)
     | Atom t -> Atom(binders c n t)
     | Impl(a,t) -> Impl(binders c n a, binders_premise c n t)
 
@@ -342,6 +347,8 @@ EXTEND
          | None -> Atom a
          | Some p -> Impl (a,p) ]
     | [ PI; c = CONSTANT; BIND; p = premise -> Pi(c, binders_premise c 1 p) ]
+    | [ SIGMA; c = UVAR; BIND; p = premise ->
+          Sigma(get_uv (fst(lvl_name_of c)), p) ]
     ];
 END
 
@@ -354,7 +361,7 @@ let parse e s =
     let ctx =
       let start = max 0 (last - ctx_len) in
       let len = min (String.length s - start) ctx_len in
-      "..." ^ String.sub s start len in
+      "…" ^ String.sub s start len in
     raise (Stream.Error(Printf.sprintf "%s: %s" ctx msg))
   | Ploc.Exc(_,e) -> raise e
 
@@ -369,6 +376,12 @@ let rec prf_premise ctx fmt = function
        Format.pp_print_string fmt ("pi "^x^"\\");
        Format.pp_print_space fmt ();
        prf_premise (x::ctx) fmt p;
+       Format.pp_close_box fmt ()
+  | Sigma (x,p) ->
+       Format.pp_open_hvbox fmt 2;
+       Format.pp_print_string fmt ("sigma "^pr_var x 0^"\\");
+       Format.pp_print_space fmt ();
+       prf_premise ctx fmt p;
        Format.pp_close_box fmt ()
   | Impl (x,p) ->
        Format.pp_open_hvbox fmt 2;
@@ -454,9 +467,6 @@ let apply_subst s t =
 let apply_subst_goal s = function
   | Atom t -> Atom(apply_subst s t)
   | _ -> assert false
-
-let refresh_uv depth s x =
-  map (function Uv(i,_) -> Uv(s.top_uv + i,depth) | x -> x) x
 
 let top s = s.top_uv
 let set_top i s = { s with top_uv = s.top_uv + i + 1 }
