@@ -51,11 +51,14 @@ module LP : sig
   
   val max_uv : data -> var -> var
 
+  type builtin = BIUnif of data * data
   type program = clause list
-  and clause = int * head * premise list
+  and clause = int * int * head * premise
   and head = data
   and premise =
       Atom of data
+    | AtomBI of builtin
+    | Conj of premise list
     | Impl of data * premise
     | Pi of name * premise
     | Sigma of var * premise
@@ -94,7 +97,7 @@ module Subst : sig
   val fresh_uv : LP.level -> subst -> LP.data * subst
   val set_sub : int -> LP.data -> subst -> subst
   val top : subst -> int
-  val set_top : int -> subst -> subst
+  val raise_top : int -> subst -> subst
   
   val prf_subst : Format.formatter -> subst -> unit
   val string_of_subst : subst -> string

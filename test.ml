@@ -174,11 +174,10 @@ let _ =
     copy (app A B) (app X Y) :- copy A X, copy B Y.
     copy (lam F) (lam G) :- pi x/ copy x x ==> copy (F x) (G x).
 
-    t1 X :- copy (app (lam w/ lam x/ (app w x)) hole) X.
-    t2 :- pi x/ sigma Y/ copy x x ==> copy x Y.
-    run X :- t1 X, t2.
+    t1 X :- copy (app (lam w/ lam x/ (app w x)) a) X.
+    t2 :- pi x/ sigma Y/ copy x x ==> copy x Y, copy a a.
   " in
-  let g = LP.parse_goal "run X." in
+  let g = LP.parse_goal "copy a a ==> (t1 X, t2), W = a." in
   Format.eprintf "@[<hv2>program:@ %a@]@\n%!" LP.prf_program p;
   Format.eprintf "@[<hv2>goal:@ %a@]@\n%!" LP.prf_goal g;
   let s = run p g in

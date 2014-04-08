@@ -178,53 +178,69 @@ let contextualize (_, refresh) depth s t hv =
   if hv <> [] then
     beta 0 t 0 (List.length hv) (IA.of_list (List.rev hv))
   else t
-let rec contextualize_premise (cdepth, cl as refresh) depth s hv eh = function
-  | Atom t -> cdepth, contextualize refresh depth s t hv,
-      List.map (fun t -> fold max_uv t 0, t, []) eh
-  | Impl(t,h) ->
-      contextualize_premise refresh depth s hv 
-        (contextualize refresh depth s t hv :: eh)
-        h
-  | Pi(n,h) ->
-      contextualize_premise (cdepth+1,cl) depth s (mkhv (depth+1)::hv) eh h
-  | Sigma(n,h) ->
-      contextualize_premise (cdepth,(n,cdepth)::cl) depth s hv eh h
 
-let rec select goal depth s = function
+let contextualize_premise depth subst premise nuv =
+  let rec aux (cdepth, cl as refresh) depth s hv eh = function
+  | Atom t ->
+      [cdepth,nuv,`Atom(contextualize refresh depth s t hv),
+       List.map (fun t -> cdepth,nuv, t, Conj []) eh]
+  | AtomBI (BIUnif(x,y)) -> [cdepth,nuv,`Unify(x,y),[]]
+  | Impl(t,h) ->
+      aux refresh depth s hv (contextualize refresh depth s t hv :: eh) h
+  | Pi(n,h) -> aux (cdepth+1,cl) depth s (mkhv (depth+1)::hv) eh h
+  | Sigma(n,h) -> aux (cdepth,(n,cdepth)::cl) depth s hv eh h
+  | Conj l -> List.flatten (List.map (aux refresh depth s hv eh) l)
+  in
+    aux (depth,[]) depth subst [] [] premise
+
+let contextualize depth subst atom : data =
+  contextualize (depth,[]) depth subst atom []
+
+let rec select (goal : head) depth s (prog : program) =
+  match prog with
   | [] ->
       Printf.eprintf "fail: %s\n%!" (string_of_data (apply_subst s goal));
       raise NoClause
-  | (nuv,hd,hyps) as clause :: prog ->
+  | (_,nuv,hd,hyp) as clause :: prog ->
       try
-        let hd = contextualize (depth,[]) depth s hd [] in
-        let hyps =
-          List.fold_right (fun h hs ->
-                  (contextualize_premise (depth,[]) depth s [] [] h) :: hs)
-          hyps [] in
-        let s = Subst.set_top (Subst.top s + nuv + 1) s in
+        let hd = contextualize depth s hd in
+        let chyp h = contextualize_premise depth s h nuv in
+        let s = Subst.raise_top nuv s in
         let s = unify goal hd s in
         Format.eprintf "@[<hv2>  use:@ %a@]@\n%!" prf_clause clause;
         Format.eprintf "@[<hv2>  sub:@ %a@]@\n%!" Subst.prf_subst s;
-        s, hyps, prog
+        s, chyp hyp, prog
       with UnifFail _ -> select goal depth s prog
 
-let rec run prog s (depth,goal,extra_hyps) =
+let rec run (prog : program) s (depth,_,goal,extra_hyps) =
   let prog = extra_hyps @ prog in
-  let rec aux alternatives =
-    Format.eprintf "@[<hv2>on:@ %a%s@]@\n%!"
-      (prf_data []) (apply_subst s goal)
-      (if !Trace.debug then Printf.sprintf " (%d,%d)" depth (Subst.top s)
-      else "");
-    let s, goals, alternatives = select goal depth s alternatives in
-    try List.fold_left (run prog) s goals
-    with NoClause -> aux alternatives in
-  aux prog
+  match goal with
+  | `Atom goal ->
+      let rec aux alternatives =
+        Format.eprintf "@[<hv2>on:@ %a%s@]@\n%!"
+          (prf_data []) (apply_subst s goal)
+          (if !Trace.debug then Printf.sprintf " (%d,%d)" depth (Subst.top s)
+          else "");
+        let s, goals, alternatives = select goal depth s alternatives in
+        try List.fold_left (run prog) s goals
+        with NoClause -> aux alternatives in
+      aux prog
+  | `Unify(a,b) ->
+        Format.eprintf "@[<hv2>on:@ %a = %a%s@]@\n%!"
+          (prf_data []) (apply_subst s a) (prf_data []) (apply_subst s b)
+          (if !Trace.debug then Printf.sprintf " (%d,%d)" depth (Subst.top s)
+          else "");
+      try
+        let s = unify a b s in
+        Format.eprintf "@[<hv2>  sub:@ %a@]@\n%!" Subst.prf_subst s;
+        s
+      with UnifFail _ -> raise NoClause
 
-let run p g =
+let run (p : program) (g : goal) =
   let s = empty 0 in
-  let depth = 0 in
-  let _, t, _ as g = contextualize_premise (depth,[]) depth s [] [] g in
-  let s = Subst.set_top (fold max_uv t 0) s in
-  run p s g
+  let maxuv = fold_premise max_uv g 0 in
+  let gs = contextualize_premise 0 s g maxuv in
+  let s = Subst.raise_top (maxuv+1) s in
+  List.fold_left (run p) s gs
 
 (* vim:set foldmethod=marker: *)

@@ -186,11 +186,23 @@ let rec fold_map f x a = match x with
   | Tup xs -> let xs, a = IA.fold_map (fold_map f) xs a in Tup xs, a
  
 (* PROGRAM *)
+type builtin = BIUnif of data * data
+
+let map_builtin f = function BIUnif(a,b) -> BIUnif(f a, f b)
+let fold_builtin f x a = match x with BIUnif(x,y) -> f y (f x a)
+let fold_map_builtin f x a = match x with
+  | BIUnif(x,y) ->
+      let x, a = f x a in
+      let y, a = f y a in
+      BIUnif(x,y), a
+
 type program = clause list
-and clause = int * head * premise list (* level, maxuv, head, premises *)
+and clause = int * int * head * premise (* level, maxuv, head, premises *)
 and head = data
 and premise =
   | Atom of data
+  | AtomBI of builtin
+  | Conj of premise list
   | Impl of data * premise
   | Pi of name * premise
   | Sigma of var * premise
@@ -198,18 +210,30 @@ and goal = premise
 
 let rec map_premise f = function
   | Atom x -> Atom(f x)
+  | AtomBI bi -> AtomBI (map_builtin f bi)
+  | Conj xs -> Conj(List.map (map_premise f) xs)
   | Impl(x,y) -> Impl(f x, map_premise f y)
   | Pi(n,x) -> Pi(n, map_premise f x)
   | Sigma(n,x) -> Sigma(n, map_premise f x)
 
 let rec fold_premise f x a = match x with
   | Atom x -> f x a
+  | AtomBI bi -> fold_builtin f bi a
+  | Conj xs -> List.fold_left (fun a x -> fold_premise f x a) a xs
   | Impl(x,y) -> fold_premise f y (f x a)
   | Pi(_,x) -> fold_premise f x a
   | Sigma(_,x) -> fold_premise f x a
 
 let rec fold_map_premise f p a = match p with
   | Atom x -> let x, a = f x a in Atom x, a
+  | AtomBI bi -> let bi, a = fold_map_builtin f bi a in AtomBI bi, a
+  | Conj xs ->
+      let xs, a =
+        List.fold_left (fun (l,a) x ->
+          let x, a = fold_map_premise f x a in
+          x::l, a)
+        ([],a) xs in
+      Conj(List.rev xs), a
   | Impl(x,y) -> let x, a = f x a in
                  let y, a = fold_map_premise f y a in
                  Impl(x,y), a
@@ -226,6 +250,8 @@ let lvl_name_of s =
   | [ x;l ] -> x, int_of_string l
   | _ -> raise (Token.Error ("<name> ^ <number> expected.  Got: " ^ s))
 
+let arr = lexer [ "=>" ]
+
 let tok = lexer
   [ [ 'A'-'Z' ] ident -> "UVAR", $buf 
   | [ 'a'-'z' ] ident -> "CONSTANT", $buf
@@ -237,7 +263,8 @@ let tok = lexer
   | [ '/' ] -> "BIND","/"
   | [ '(' ] -> "LPAREN","("
   | [ ')' ] -> "RPAREN",")"
-  | [ "==>" ] -> "IMPL","==>"
+  | [ '=' ] arr -> "IMPL", $buf
+  | [ '=' ] -> "EQUAL","="
 ]
 
 let spy f s = if !Trace.debug then begin
@@ -284,7 +311,7 @@ let lex = {
 
 let g = Grammar.gcreate lex
 let lp = Grammar.Entry.create g "lp"
-let goal = Grammar.Entry.create g "goal"
+let premise = Grammar.Entry.create g "premise"
 let atom = Grammar.Entry.create g "atom"
 
 let uvmap = ref []
@@ -314,19 +341,22 @@ and binders_premise c n = function
     | Pi(c,t) -> Pi(c,binders_premise c (n+1) t)
     | Sigma(m,t) -> Sigma(m,binders_premise c n t)
     | Atom t -> Atom(binders c n t)
+    | AtomBI bi -> AtomBI (binders_builtin c n bi)
+    | Conj l -> Conj(List.map (binders_premise c n) l)
     | Impl(a,t) -> Impl(binders c n a, binders_premise c n t)
+and binders_builtin c n = function
+    | BIUnif (a,b) -> BIUnif(binders c n a, binders c n b)
 
 EXTEND
-  GLOBAL: lp goal atom;
+  GLOBAL: lp premise atom;
   lp: [ [ cl = LIST1 clause -> cl ] ];
-  goal : [ [ g = atom; FULLSTOP -> Atom g ] ];
   clause :
     [ [ hd = atom;
         hyps =
-          [ ENTAILS; hyps = LIST1 premise SEP COMMA; FULLSTOP -> hyps
-          | FULLSTOP -> [] ] ->
+          [ ENTAILS; hyp = premise; FULLSTOP -> hyp
+          | FULLSTOP -> Conj [] ] ->
               let top = top_uv () in reset ();
-              top, hd, hyps ] ];
+              0, top, hd, hyps ] ];
   atom :
     [ "1"
       [ hd = atom LEVEL "2"; args = LIST0 atom LEVEL "2" ->
@@ -342,13 +372,18 @@ EXTEND
       | [ LPAREN; a = atom LEVEL "1"; RPAREN -> a ] ]
     ];
   premise :
-    [ [ a = atom; next = OPT [ IMPL; p = premise -> p ] ->
-         match next with
-         | None -> Atom a
-         | Some p -> Impl (a,p) ]
-    | [ PI; c = CONSTANT; BIND; p = premise -> Pi(c, binders_premise c 1 p) ]
-    | [ SIGMA; c = UVAR; BIND; p = premise ->
-          Sigma(get_uv (fst(lvl_name_of c)), p) ]
+    [ "1"
+      [ [ conj = LIST1 premise LEVEL "2" SEP COMMA ->
+            if List.length conj = 1 then List.hd conj else Conj conj ] ]
+    | "2"
+      [ a = atom; IMPL; p = premise -> Impl(a,p)
+      | a = atom; EQUAL; b = atom -> AtomBI (BIUnif(a,b))
+      | a = atom -> Atom a
+      | PI; c = CONSTANT; BIND; p = premise -> Pi(c, binders_premise c 1 p)
+      | SIGMA; c = UVAR; BIND; p = premise ->
+         Sigma(get_uv (fst(lvl_name_of c)), p)
+      | LPAREN; a = premise LEVEL "1"; RPAREN -> a ]
+
     ];
 END
 
@@ -366,11 +401,29 @@ let parse e s =
   | Ploc.Exc(_,e) -> raise e
 
 let parse_program s : program = parse lp s 
-let parse_goal s : goal = parse goal s
+let parse_goal s : goal = parse premise s
 let parse_data s : data = parse atom s
 
-let rec prf_premise ctx fmt = function
+let prf_builtin ctx fmt = function
+  | BIUnif (a,b) -> 
+      Format.pp_open_hvbox fmt 2;
+      prf_data ctx fmt a;
+      Format.pp_print_space fmt ();
+      Format.pp_print_string fmt "= ";
+      prf_data ctx fmt b;
+      Format.pp_close_box fmt ()
+
+let rec prf_premise ?(pars=false) ctx fmt = function
   | Atom p -> prf_data ctx fmt p
+  | AtomBI bi -> prf_builtin ctx fmt bi
+  | Conj l ->
+       Format.pp_open_hvbox fmt 2;
+       if pars then Format.pp_print_string fmt "(";
+       iter_sep (fun () ->
+         Format.pp_print_string fmt ","; Format.pp_print_space fmt ())
+         (prf_premise ctx fmt) l;
+       if pars then Format.pp_print_string fmt ")";
+       Format.pp_close_box fmt ()
   | Pi (x,p) ->
        Format.pp_open_hvbox fmt 2;
        Format.pp_print_string fmt ("pi "^x^"\\");
@@ -389,28 +442,26 @@ let rec prf_premise ctx fmt = function
        Format.pp_print_space fmt ();
        Format.pp_open_hovbox fmt 0;
        Format.pp_print_string fmt "==> ";
-       prf_premise ctx fmt p;
+       prf_premise ~pars:true ctx fmt p;
        Format.pp_close_box fmt ();
        Format.pp_close_box fmt ()
+
+let prf_premise ctx fmt = prf_premise ctx fmt
 let string_of_premise p = on_buffer (prf_premise []) p
 let string_of_goal = string_of_premise
 let prf_goal = prf_premise []
 
 let string_of_head = string_of_data
 
-let prf_clause fmt (_, hd, hyps) =
+let prf_clause fmt (_, _, hd, hyps) =
   Format.pp_open_hvbox fmt 2;
   prf_data [] fmt hd;
-  if hyps <> [] then begin
+  if hyps <> Conj [] then begin
     Format.pp_print_space fmt ();
     Format.pp_print_string fmt ":- ";
   end;
-  Format.pp_open_hovbox fmt 0;
-  iter_sep
-    (fun () -> Format.pp_print_string fmt ",";Format.pp_print_space fmt ())
-    (prf_premise [] fmt) hyps;
+  prf_premise [] fmt hyps;
   Format.pp_print_string fmt ".";
-  Format.pp_close_box fmt ();
   Format.pp_close_box fmt ()
 
 let string_of_clause c = on_buffer prf_clause c
@@ -464,12 +515,10 @@ let apply_subst s t =
     | Uv(i,_) when in_sub i s -> map subst !last_sub_lookup
     | x -> x in
   map subst t
-let apply_subst_goal s = function
-  | Atom t -> Atom(apply_subst s t)
-  | _ -> assert false
+let apply_subst_goal s = map_premise (apply_subst s)
 
 let top s = s.top_uv
-let set_top i s = { s with top_uv = s.top_uv + i + 1 }
+let raise_top i s = { s with top_uv = s.top_uv + i + 1 }
 
 let fresh_uv lvl s = Uv(s.top_uv,lvl), { s with top_uv = s.top_uv + 1 }
 
