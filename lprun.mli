@@ -1,3 +1,8 @@
+(* elpi: embedded lambda prolog interpreter                                  *)
+(* copyright: 2014 - Enrico Tassi <enrico.tassi@inria.fr>                    *)
+(* license: GNU Lesser General Public License Version 2.1                    *)
+(* ------------------------------------------------------------------------- *)
+
 open Lpdata
 
 exception UnifFail of string lazy_t

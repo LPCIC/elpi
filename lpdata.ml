@@ -1,8 +1,9 @@
-(* Immutable array *)
+(* elpi: embedded lambda prolog interpreter                                  *)
+(* copyright: 2014 - Enrico Tassi <enrico.tassi@inria.fr>                    *)
+(* license: GNU Lesser General Public License Version 2.1                    *)
+(* ------------------------------------------------------------------------- *)
 
-module IA = struct
-
-  include BIA
+module IA = struct include BIA (* {{{ Immutable arrays *)
 
   let append v1 v2 =
     let len1 = BIA.len v1 in
@@ -12,10 +13,9 @@ module IA = struct
   let cons t v =
     BIA.init (BIA.len v+1) (fun i -> if i = 0 then t else BIA.get (i-1) v)
 
-end
+end (* }}} *)
 
-(* External, user defined, datatypes *)
-module C : sig
+module C : sig (* {{{ External, user defined, datatypes *)
 
   type t
   type ty
@@ -29,6 +29,7 @@ module C : sig
   val print : data -> string
   val equal : data -> data -> bool
 
+(* }}} *)
 end = struct (* {{{ *)
 
 type t = Obj.t
@@ -58,12 +59,21 @@ let declare print cmp =
 
 end (* }}} *)
 
+module PPLIB = struct (* {{{ auxiliary lib for PP *)
+
 let on_buffer f x =
   let b = Buffer.create 1024 in
   let fmt = Format.formatter_of_buffer b in
   f fmt x;
   Format.pp_print_flush fmt ();
   Buffer.contents b
+let rec iter_sep spc pp = function
+  | [] -> ()
+  | [x] -> pp x
+  | x::tl -> pp x; spc (); iter_sep spc pp tl
+
+end (* }}} *)
+open PPLIB
 
 module LP = struct
 
@@ -79,14 +89,8 @@ type kind_of_data =
   | Tup of data IA.t
   | Ext of C.data
 and data = kind_of_data
-let look x = x
-let mkUv v l = Uv(v,l)
-let mkCon n l = Con(n,l)
-let mkDB i = DB i
-let mkBin n t = Bin(n,t)
-let mkTup xs = Tup xs
-let mkExt x = Ext x
-let kool x = x
+
+module PP = struct (* {{{ pretty printer for data *)
 
 let small_digit = function
   | 0 -> "⁰" | 1 -> "¹" | 2 -> "²" | 3 -> "³" | 4 -> "⁴" | 5 -> "⁵"
@@ -102,38 +106,9 @@ let pr_cst x lvl = x ^ if !Trace.debug then string_of_level lvl else ""
 let pr_var x lvl =
   "X" ^ string_of_int x ^ if !Trace.debug then string_of_level lvl else ""
 
-let mkBin n t = if n = 0 then t else Bin(n,t)
-
-let mkApp t v start stop =
-  if start = stop then t else
-  match t with
-  | Tup xs -> Tup(IA.append xs (IA.sub start (stop-start) v))
-  | _ -> Tup(IA.cons t (IA.sub start (stop-start) v))
-
-let fixTup xs =
-  match IA.get 0 xs with
-  | Tup ys -> Tup (IA.append ys (IA.tl xs))
-  | _ -> Tup xs
-
-let rec equal a b = match a,b with
- | Uv (x,_), Uv (y,_) -> x = y
- | Con (x,_), Con (y,_) -> x = y
- | DB x, DB y -> x = y
- | Bin (n1,x), Bin (n2,y) -> n1 = n2 && equal x y
- | Tup xs, Tup ys -> IA.for_all2 equal xs ys
- | Ext x, Ext y -> C.equal x y
- | _ -> false
-
 let rec fresh_names k = function
   | 0 -> []
   | n -> ("w" ^ string_of_int k) :: fresh_names (k+1) (n-1)
-
-let rec iter_sep spc pp = function
-  | [] -> ()
-  | [x] -> pp x
-  | x::tl -> pp x; spc (); iter_sep spc pp tl
-
-let isBin = function Bin _ -> true | _ -> false
 
 let prf_data ctx fmt t =
   let module P = Format in
@@ -167,6 +142,41 @@ let prf_data ctx fmt t =
     print ctx t
 let string_of_data ?(ctx=[]) t = on_buffer (prf_data ctx) t
 
+end (* }}} *)
+include PP
+
+let look x = x
+let mkUv v l = Uv(v,l)
+let mkCon n l = Con(n,l)
+let mkDB i = DB i
+let mkBin n t = Bin(n,t)
+let mkTup xs = Tup xs
+let mkExt x = Ext x
+let kool x = x
+
+let mkBin n t = if n = 0 then t else Bin(n,t)
+
+let mkApp t v start stop =
+  if start = stop then t else
+  match t with
+  | Tup xs -> Tup(IA.append xs (IA.sub start (stop-start) v))
+  | _ -> Tup(IA.cons t (IA.sub start (stop-start) v))
+
+let fixTup xs =
+  match IA.get 0 xs with
+  | Tup ys -> Tup (IA.append ys (IA.tl xs))
+  | _ -> Tup xs
+
+let rec equal a b = match a,b with
+ | Uv (x,_), Uv (y,_) -> x = y
+ | Con (x,_), Con (y,_) -> x = y
+ | DB x, DB y -> x = y
+ | Bin (n1,x), Bin (n2,y) -> n1 = n2 && equal x y
+ | Tup xs, Tup ys -> IA.for_all2 equal xs ys
+ | Ext x, Ext y -> C.equal x y
+ | _ -> false
+
+let isBin = function Bin _ -> true | _ -> false
 
 let rec fold f x a = match x with
   | (DB _ | Con _ | Uv _ | Ext _) as x -> f x a
@@ -240,6 +250,88 @@ let rec fold_map_premise f p a = match p with
   | Pi(n,y) -> let y, a = fold_map_premise f y a in Pi(n, y), a
   | Sigma(n,y) -> let y, a = fold_map_premise f y a in Sigma(n, y), a
 
+module PPP = struct (* {{{ pretty printer for programs *)
+
+let prf_builtin ctx fmt = function
+  | BIUnif (a,b) -> 
+      Format.pp_open_hvbox fmt 2;
+      prf_data ctx fmt a;
+      Format.pp_print_space fmt ();
+      Format.pp_print_string fmt "= ";
+      prf_data ctx fmt b;
+      Format.pp_close_box fmt ()
+
+let rec prf_premise ?(pars=false) ctx fmt = function
+  | Atom p -> prf_data ctx fmt p
+  | AtomBI bi -> prf_builtin ctx fmt bi
+  | Conj l ->
+       Format.pp_open_hvbox fmt 2;
+       if pars then Format.pp_print_string fmt "(";
+       iter_sep (fun () ->
+         Format.pp_print_string fmt ","; Format.pp_print_space fmt ())
+         (prf_premise ctx fmt) l;
+       if pars then Format.pp_print_string fmt ")";
+       Format.pp_close_box fmt ()
+  | Pi (x,p) ->
+       Format.pp_open_hvbox fmt 2;
+       Format.pp_print_string fmt ("pi "^x^"\\");
+       Format.pp_print_space fmt ();
+       prf_premise (x::ctx) fmt p;
+       Format.pp_close_box fmt ()
+  | Sigma (x,p) ->
+       Format.pp_open_hvbox fmt 2;
+       Format.pp_print_string fmt ("sigma "^pr_var x 0^"\\");
+       Format.pp_print_space fmt ();
+       prf_premise ctx fmt p;
+       Format.pp_close_box fmt ()
+  | Impl (x,p) ->
+       Format.pp_open_hvbox fmt 2;
+       prf_data ctx fmt x;
+       Format.pp_print_space fmt ();
+       Format.pp_open_hovbox fmt 0;
+       Format.pp_print_string fmt "==> ";
+       prf_premise ~pars:true ctx fmt p;
+       Format.pp_close_box fmt ();
+       Format.pp_close_box fmt ()
+
+let prf_premise ctx fmt = prf_premise ctx fmt
+let string_of_premise p = on_buffer (prf_premise []) p
+let string_of_goal = string_of_premise
+let prf_goal = prf_premise []
+
+let string_of_head = string_of_data
+
+let prf_clause fmt (_, _, hd, hyps) =
+  Format.pp_open_hvbox fmt 2;
+  prf_data [] fmt hd;
+  if hyps <> Conj [] then begin
+    Format.pp_print_space fmt ();
+    Format.pp_print_string fmt ":- ";
+  end;
+  prf_premise [] fmt hyps;
+  Format.pp_print_string fmt ".";
+  Format.pp_close_box fmt ()
+
+let string_of_clause c = on_buffer prf_clause c
+
+let prf_program fmt p =
+  Format.pp_open_vbox fmt 0;
+  iter_sep (Format.pp_print_space fmt) (prf_clause fmt) p;
+  Format.pp_close_box fmt ()
+let string_of_program p = on_buffer prf_program p
+
+end (* }}} *)
+include PPP
+
+module Parser : sig (* {{{ parser for LP programs *)
+
+  val parse_program : string -> program
+  val parse_goal : string -> goal
+  val parse_data : string -> data
+
+(* }}} *)
+end = struct (* {{{ *)
+
 let rec number = lexer [ '0'-'9' number | ]
 let rec ident =
   lexer [ [ 'a'-'z' | '\'' | '_' | '0'-'9' ] ident | '^' '0'-'9' number | ]
@@ -275,8 +367,8 @@ let spy f s = if !Trace.debug then begin
   tok
   end else f s
 
-let rec foo c = parser
-  | [< ' ( ' ' | '\n' ); s >] -> foo c s
+let rec lex c = parser
+  | [< ' ( ' ' | '\n' ); s >] -> lex c s
   | [< '( '%' ); s >] -> comment c s
   | [< s >] ->
        match spy (tok c) s with
@@ -284,13 +376,13 @@ let rec foo c = parser
        | "CONSTANT","sigma" -> "SIGMA", "sigma"
        | x -> x
 and comment c = parser
-  | [< '( '\n' ); s >] -> foo c s
+  | [< '( '\n' ); s >] -> lex c s
   | [< '_ ; s >] -> comment c s
 
 open Plexing
 
 let lex_fun s =
-  (Stream.from (fun _ -> Some (foo Lexbuf.empty s))), (fun _ -> Ploc.dummy)
+  (Stream.from (fun _ -> Some (lex Lexbuf.empty s))), (fun _ -> Ploc.dummy)
 
 let tok_match (s1,_) = (); function
   | (s2,v) when s1=s2 ->
@@ -404,80 +496,13 @@ let parse_program s : program = parse lp s
 let parse_goal s : goal = parse premise s
 let parse_data s : data = parse atom s
 
-let prf_builtin ctx fmt = function
-  | BIUnif (a,b) -> 
-      Format.pp_open_hvbox fmt 2;
-      prf_data ctx fmt a;
-      Format.pp_print_space fmt ();
-      Format.pp_print_string fmt "= ";
-      prf_data ctx fmt b;
-      Format.pp_close_box fmt ()
-
-let rec prf_premise ?(pars=false) ctx fmt = function
-  | Atom p -> prf_data ctx fmt p
-  | AtomBI bi -> prf_builtin ctx fmt bi
-  | Conj l ->
-       Format.pp_open_hvbox fmt 2;
-       if pars then Format.pp_print_string fmt "(";
-       iter_sep (fun () ->
-         Format.pp_print_string fmt ","; Format.pp_print_space fmt ())
-         (prf_premise ctx fmt) l;
-       if pars then Format.pp_print_string fmt ")";
-       Format.pp_close_box fmt ()
-  | Pi (x,p) ->
-       Format.pp_open_hvbox fmt 2;
-       Format.pp_print_string fmt ("pi "^x^"\\");
-       Format.pp_print_space fmt ();
-       prf_premise (x::ctx) fmt p;
-       Format.pp_close_box fmt ()
-  | Sigma (x,p) ->
-       Format.pp_open_hvbox fmt 2;
-       Format.pp_print_string fmt ("sigma "^pr_var x 0^"\\");
-       Format.pp_print_space fmt ();
-       prf_premise ctx fmt p;
-       Format.pp_close_box fmt ()
-  | Impl (x,p) ->
-       Format.pp_open_hvbox fmt 2;
-       prf_data ctx fmt x;
-       Format.pp_print_space fmt ();
-       Format.pp_open_hovbox fmt 0;
-       Format.pp_print_string fmt "==> ";
-       prf_premise ~pars:true ctx fmt p;
-       Format.pp_close_box fmt ();
-       Format.pp_close_box fmt ()
-
-let prf_premise ctx fmt = prf_premise ctx fmt
-let string_of_premise p = on_buffer (prf_premise []) p
-let string_of_goal = string_of_premise
-let prf_goal = prf_premise []
-
-let string_of_head = string_of_data
-
-let prf_clause fmt (_, _, hd, hyps) =
-  Format.pp_open_hvbox fmt 2;
-  prf_data [] fmt hd;
-  if hyps <> Conj [] then begin
-    Format.pp_print_space fmt ();
-    Format.pp_print_string fmt ":- ";
-  end;
-  prf_premise [] fmt hyps;
-  Format.pp_print_string fmt ".";
-  Format.pp_close_box fmt ()
-
-let string_of_clause c = on_buffer prf_clause c
-
-let prf_program fmt p =
-  Format.pp_open_vbox fmt 0;
-  iter_sep (Format.pp_print_space fmt) (prf_clause fmt) p;
-  Format.pp_close_box fmt ()
-let string_of_program p = on_buffer prf_program p
+end (* }}} *)
+include Parser
 
 end
 
+module Subst = struct (* {{{ LP.Uv |-> data mapping *)
 open LP
-
-(* LP.Uv |-> data mapping *)
-module Subst = struct (* {{{ *)
 
 type subst = { assign : data Int.Map.t; top_uv : int }
 let empty n = { assign = Int.Map.empty; top_uv = n }
@@ -524,12 +549,10 @@ let fresh_uv lvl s = Uv(s.top_uv,lvl), { s with top_uv = s.top_uv + 1 }
 
 end (* }}} *)
 
-open Subst
-
-(* beta reduction, whd, and nf (for tests) *) 
-module Red = struct (* {{{ *)
+module Red = struct (* {{{ beta reduction, whd, and nf (for tests) *) 
 
 open LP
+open Subst
 
 let rec lift n k = function
   | Uv _ as x -> x
@@ -590,7 +613,5 @@ let rec nf s = function
       | y -> if y == x then y else nf s y
 
 end (* }}} *)
-
-open Red
 
 (* vim:set foldmethod=marker: *)

@@ -1,5 +1,9 @@
-(* Immutable array with basic slicing operations *)
+(* elpi: embedded lambda prolog interpreter                                  *)
+(* copyright: 2014 - Enrico Tassi <enrico.tassi@inria.fr>                    *)
+(* license: GNU Lesser General Public License Version 2.1                    *)
+(* ------------------------------------------------------------------------- *)
 
+(* Immutable array with basic slicing operations *)
 module type S = sig
 type 'a t
 

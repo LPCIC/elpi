@@ -1,3 +1,8 @@
+(* elpi: embedded lambda prolog interpreter                                  *)
+(* copyright: 2014 - Enrico Tassi <enrico.tassi@inria.fr>                    *)
+(* license: GNU Lesser General Public License Version 2.1                    *)
+(* ------------------------------------------------------------------------- *)
+
 (* External data: partial instantiate declare with a print and equality function
  * to get a factory for a type *)
 module C : sig
