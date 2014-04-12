@@ -152,6 +152,8 @@ and unify_ho x y s =
 (* ******************************** Main loop ******************************* *)
 
 exception NoClause
+type objective = [ `Atom of data | `Unify of data * data ]
+type goal = int * int * objective * clause list
 
 (* Important: when we move under a pi we put a constant in place of the
  * bound variable. This was hypothetical clauses do not need to be lifted
@@ -212,7 +214,7 @@ let rec select (goal : head) depth s (prog : program) =
         s, chyp hyp, prog
       with UnifFail _ -> select goal depth s prog
 
-let rec run (prog : program) s (depth,_,goal,extra_hyps) =
+let rec run (prog : program) s ((depth,_,goal,extra_hyps) : goal) =
   let prog = extra_hyps @ prog in
   match goal with
   | `Atom goal ->
@@ -236,7 +238,7 @@ let rec run (prog : program) s (depth,_,goal,extra_hyps) =
         s
       with UnifFail _ -> raise NoClause
 
-let run (p : program) (g : goal) =
+let run (p : program) (g : premise) =
   let s = empty 0 in
   let maxuv = fold_premise max_uv g 0 in
   let gs = contextualize_premise 0 s g maxuv in
