@@ -74,11 +74,12 @@ let rec bind x id depth lvl args t s =
   (* the following 2 cases are: t ^-- mk_al depth args, s *) (* XXX CHECK *)
   | DB m when m <= depth -> t, s
   | DB m -> lift depth (mkDB (m-depth) ^-- args), s
-  | Uv(j,l) -> bind x id depth lvl args (mkTup (IA.of_array[|t|])) s
   | Tup bs as t when rigid t ->
       let ss, s = IA.fold_map (bind x id depth lvl args) bs s in
       mkTup ss, s
-  | Tup bs -> (* pruning *)
+  | (Tup _ | Uv _) as tmp -> (* pruning *)
+      let bs = match tmp with
+        | Tup bs -> bs | Uv _ -> IA.of_array [|t|] | _ -> assert false in
       match look (IA.get 0 bs) with
       | (Bin _ | Con _ | DB _ | Ext _ | Tup _) -> assert false
       | Uv(j,l) when j <> id && l > lvl && isPU bs ->

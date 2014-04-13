@@ -109,8 +109,10 @@ let test_whd () =
   let test a b =
     let t = LP.parse_data a in
     let t', _ = Red.whd (Subst.empty 0) t in
-    Format.eprintf "@[<hv2>whd: @ %a @ ---> %a@]@\n%!"
-      (LP.prf_data []) t (LP.prf_data []) t';
+    Format.eprintf "@[<hv2>whd: @ %a @ ---> %a ---> %a@]@\n%!"
+      (LP.prf_data []) t
+      (LP.prf_data []) t'
+      (LP.prf_data []) (Red.nf (Subst.empty 0) t') ;
     assert(LP.equal t' LP.(parse_data b)) in
   test "(x/ y/ x) a b" "a";
   test "(x/ y/ x) a" "y/ a";
@@ -126,7 +128,11 @@ let test_unif () =
       Format.eprintf "@[<hv3>unify: %a@ @[<hv0>=== %a@ ---> %a@]@]@\n%!"
         (LP.prf_data []) x (LP.prf_data []) y Subst.prf_subst s;
       let x, y = Red.nf s x, Red.nf s y in
-      assert(LP.equal x y)
+      if not (LP.equal x y) then begin
+        Format.eprintf "@[<hv3>bad unified: %a@ =/= %a@]@\n%!"
+          (LP.prf_data []) x (LP.prf_data []) y;
+        exit 1;
+      end
     with UnifFail s when not b -> 
       Format.eprintf "@[<hv3>unify: %a@ @[<hv0>=/= %a@ ---> %s@]@]@\n%!"
         (LP.prf_data []) x (LP.prf_data []) y (Lazy.force s) in

@@ -88,7 +88,19 @@ type kind_of_data =
   | Bin of int * data
   | Tup of data IA.t
   | Ext of C.data
-and data = kind_of_data
+and data =
+  | XUv of var * level
+  | XCon of name * level
+  | XDB of int
+  | XBin of int * data
+  | XTup of data IA.t
+  | XExt of C.data
+  | XSusp of data * int * int * env
+and env =
+  | XNil
+  | XArgs of data IA.t * int * env
+  | XMerge of env * int * int * env
+  (*| XSkip of int *)
 
 module PP = struct (* {{{ pretty printer for data *)
 
@@ -113,7 +125,7 @@ let rec fresh_names k = function
 let prf_data ctx fmt t =
   let module P = Format in
   let rec print ?(pars=false) ctx = function
-    | Bin (n,x) ->
+    | XBin (n,x) ->
        P.pp_open_hovbox fmt 2;
        let names = fresh_names (List.length ctx) n in
        if pars then P.pp_print_string fmt "(";
@@ -122,22 +134,67 @@ let prf_data ctx fmt t =
        print (List.rev names @ ctx) x;
        if pars then P.pp_print_string fmt ")";
        P.pp_close_box fmt ()
-    | DB x -> P.pp_print_string fmt 
+    | XDB x -> P.pp_print_string fmt 
         (try (if !Trace.debug then "'" else "") ^List.nth ctx (x-1)
         with Failure _ | Invalid_argument _ ->
           "_" ^ string_of_int (x-List.length ctx))
-    | Con (x,lvl) -> P.pp_print_string fmt (pr_cst x lvl)
-    | Uv (x,lvl) -> P.pp_print_string fmt (pr_var x lvl)
-    | Tup xs ->
+    | XCon (x,lvl) -> P.pp_print_string fmt (pr_cst x lvl)
+    | XUv (x,lvl) -> P.pp_print_string fmt (pr_var x lvl)
+    | XTup xs ->
         P.pp_open_hovbox fmt 2;
         if pars then P.pp_print_string fmt "(";
         iter_sep (P.pp_print_space fmt) (print ~pars:true ctx) (IA.to_list xs);
         if pars then P.pp_print_string fmt ")";
         P.pp_close_box fmt ()
-    | Ext x ->
+    | XExt x ->
         P.pp_open_hbox fmt ();
         P.pp_print_string fmt (C.print x);
         P.pp_close_box fmt ()
+    | XSusp (t,ol,nl,e) ->
+        P.pp_open_hovbox fmt 2;
+        P.pp_print_string fmt "⟦";
+        print ctx t;
+        P.pp_print_string fmt ",";
+        P.pp_print_space fmt ();
+        P.pp_print_string fmt (string_of_int ol);
+        P.pp_print_string fmt ",";
+        P.pp_print_space fmt ();
+        P.pp_print_string fmt (string_of_int nl);
+        P.pp_print_string fmt ",";
+        P.pp_print_space fmt ();
+        P.pp_open_hovbox fmt 2;
+        print_env e;
+        P.pp_close_box fmt ();
+        P.pp_print_string fmt "⟧";
+        P.pp_close_box fmt ();
+  and print_env = function
+    | XNil -> P.pp_print_string fmt "nil"
+    | XArgs(a,n,e) ->
+        P.pp_print_string fmt "(";
+        P.pp_open_hovbox fmt 2;
+        iter_sep (fun () -> P.pp_print_string fmt ","; P.pp_print_space fmt ())
+          (print ctx) (IA.to_list a);
+        P.pp_close_box fmt ();
+        P.pp_print_string fmt ",";
+        P.pp_print_string fmt (string_of_int n);
+        P.pp_print_string fmt ")::";
+        P.pp_print_space fmt ();
+        print_env e
+    | XMerge(e1,nl1,ol2,e2) ->
+        P.pp_open_hovbox fmt 2;
+        P.pp_print_string fmt "⦃";
+        print_env e1;
+        P.pp_print_string fmt ",";
+        P.pp_print_space fmt ();
+        P.pp_print_string fmt (string_of_int nl1);
+        P.pp_print_string fmt ",";
+        P.pp_print_space fmt ();
+        P.pp_print_string fmt ",";
+        P.pp_print_string fmt (string_of_int ol2);
+        P.pp_print_space fmt ();
+        print_env e2;
+        P.pp_print_string fmt "⦄";
+        P.pp_close_box fmt ();
   in
     print ctx t
 let string_of_data ?(ctx=[]) t = on_buffer (prf_data ctx) t
@@ -145,55 +202,137 @@ let string_of_data ?(ctx=[]) t = on_buffer (prf_data ctx) t
 end (* }}} *)
 include PP
 
-let look x = x
-let mkUv v l = Uv(v,l)
-let mkCon n l = Con(n,l)
-let mkDB i = DB i
-let mkBin n t = Bin(n,t)
-let mkTup xs = Tup xs
-let mkExt x = Ext x
-let kool x = x
+(*
+let rec elen = function
+  | XNil -> 0
+  | XArgs(a,_,e) -> IA.len a + elen e
+  | XMerge(e1,nl1,ol2,e2) -> elen e1 + (elen e2 - nl1)
 
-let mkBin n t = if n = 0 then t else Bin(n,t)
+let rec elev = function
+  | XNil -> 0
+  | XArgs(_,l,_) -> l
+  | XMerge(_,nl1,ol2,e2) -> elev(e2) + (nl1 - ol2)
+
+*)
+let (--) x y = max 0 (x - y)
+let rec epush = function
+  | (XNil | XArgs _) as x -> x
+  | XMerge(e1,nl1,ol2,e2) -> let e1 = epush e1 in let e2 = epush e2 in
+  match e1, nl1, ol2, e2 with
+  | e1, _, 0, XNil -> (*m2*) e1
+  | XNil, 0, _, e2 -> (*m3*) e2
+  | XNil, nl1, ol2, XArgs(a,l,e2) -> (*m4*)
+      let nargs = IA.len a in
+      if nl1 = nargs then e2 (* repeat m4, end m3 *)
+      else if nl1 > nargs then epush (XMerge(XNil,nl1 - nargs, ol2 - nargs, e2))
+      else XArgs(IA.sub nl1 (nargs-nl1) a,l-nl1,e2) (* repeast m4 + m3 *)
+  | XArgs(a,n,e1) as orig_e1, nl1, ol2, XArgs(b,l,e2) when nl1 > n -> (*m5*)
+      let drop = min (IA.len b) (nl1 - n) in
+      if drop = IA.len b then
+        epush (XMerge(orig_e1,nl1 - drop, ol2 - drop, e2))
+      else   
+        epush (XMerge(orig_e1,nl1 - drop, ol2 - drop,
+          XArgs(IA.sub drop (IA.len b - drop) b,l-drop,e2)))
+  | XArgs(a,n,e1), _, ol2, (XArgs(b,l,e2) as orig_e2) -> (*m6*)
+      assert(nl1 = n);
+      let m = l + (n -- ol2) in
+      let t = IA.get 0 a in
+      let e1 = if IA.len a > 1 then XArgs(IA.tl a,n-1,e1) else e1 in
+      (* fishy *)
+      XArgs(IA.of_array [|XSusp(t,ol2,l,orig_e2)|], m, XMerge(e1,n,ol2,orig_e2))
+  | XArgs _, _, _, XNil -> assert false
+  | XNil, _, _, XNil -> assert false
+  | ((XMerge _, _, _, _) | (_, _, _, XMerge _)) -> assert false
+
+let rec push = function
+  | (XUv _ | XCon _ | XDB _ | XBin _ | XTup _ | XExt _) as x -> x
+  | XSusp(XSusp(t,ol1,nl1,e1),ol2,nl2,e2) -> (*m1*)
+      push (XSusp(t,ol1 +(ol2 -- nl1),nl2 +(nl1 -- ol2),XMerge(e1,nl1,ol2,e2)))
+  | XSusp((XCon _ | XUv _ | XExt _) as x,_,_,_) -> (*r1*) x
+  | XSusp(XBin(n,t),ol,nl,e) -> (*r6*)
+                  assert(n > 0);
+      XBin(n,XSusp(t,ol+n,nl+n,XArgs(IA.init n (fun i -> XDB(n-i)),nl+n,e)))
+  | XSusp(XTup a,nl,ol,e) -> (*r5*)
+      XTup(IA.map (fun t -> XSusp(t,nl,ol,e)) a)
+  | XSusp(XDB i,ol,nl,e) -> (* r2, r3, r4 *)
+      let e = epush e in
+      match e with
+      | XMerge _ -> assert false
+      | XNil -> assert(ol = 0); XDB(i+nl)
+      | XArgs(a,l,e) ->
+          let nargs = IA.len a in
+          if i <= nargs then
+            push (XSusp(IA.get (nargs - i) a, 0, nl - l,XNil))
+          else push (XSusp(XDB(i - nargs), ol - nargs, nl, e))
+
+let isSubsp = function XSusp _ -> true | _ -> false
+
+let look x =
+  match push x with
+  | XUv (v,l) -> Uv(v,l)
+  | XCon (n,l) -> Con(n,l)
+  | XDB i -> DB i
+  | XBin (n,t) -> Bin(n,t)
+  | XTup a -> Tup a
+  | XExt e -> Ext e
+  | XSusp _ -> assert false
+let mkUv v l = XUv(v,l)
+let mkCon n l = XCon(n,l)
+let mkDB i = XDB i
+let mkBin n t = XBin(n,t)
+let mkTup xs = XTup xs
+let mkExt x = XExt x
+let kool = function
+  | Uv (v,l) -> XUv(v,l)
+  | Con (n,l) -> XCon(n,l)
+  | DB i -> XDB i
+  | Bin (n,t) -> XBin(n,t)
+  | Tup a -> XTup a
+  | Ext e -> XExt e
+
+let mkBin n t = if n = 0 then t else XBin(n,t)
 
 let mkApp t v start stop =
   if start = stop then t else
   match t with
-  | Tup xs -> Tup(IA.append xs (IA.sub start (stop-start) v))
-  | _ -> Tup(IA.cons t (IA.sub start (stop-start) v))
+  | XTup xs -> XTup(IA.append xs (IA.sub start (stop-start) v))
+  | _ -> XTup(IA.cons t (IA.sub start (stop-start) v))
 
 let fixTup xs =
-  match IA.get 0 xs with
-  | Tup ys -> Tup (IA.append ys (IA.tl xs))
-  | _ -> Tup xs
+  match push (IA.get 0 xs) with
+  | XTup ys -> XTup (IA.append ys (IA.tl xs))
+  | _ -> XTup xs
 
-let rec equal a b = match a,b with
- | Uv (x,_), Uv (y,_) -> x = y
- | Con (x,_), Con (y,_) -> x = y
- | DB x, DB y -> x = y
- | Bin (n1,x), Bin (n2,y) -> n1 = n2 && equal x y
- | Tup xs, Tup ys -> IA.for_all2 equal xs ys
- | Ext x, Ext y -> C.equal x y
+let rec equal a b = match push a, push b with
+ | XUv (x,_), XUv (y,_) -> x = y
+ | XCon (x,_), XCon (y,_) -> x = y
+ | XDB x, XDB y -> x = y
+ | XBin (n1,x), XBin (n2,y) -> n1 = n2 && equal x y
+ | XTup xs, XTup ys -> IA.for_all2 equal xs ys
+ | XExt x, XExt y -> C.equal x y
  | _ -> false
 
-let isBin = function Bin _ -> true | _ -> false
+let isBin x = match push x with XBin _ -> true | _ -> false
 
-let rec fold f x a = match x with
-  | (DB _ | Con _ | Uv _ | Ext _) as x -> f x a
-  | Bin (_,x) -> fold f x a
-  | Tup xs -> IA.fold (fold f) xs a
+let rec fold f x a = match push x with
+  | (XDB _ | XCon _ | XUv _ | XExt _) as x -> f x a
+  | XBin (_,x) -> fold f x a
+  | XTup xs -> IA.fold (fold f) xs a
+  | XSusp _ -> assert false
 
-let rec map f = function
-  | (DB _ | Con _ | Uv _ | Ext _) as x -> f x
-  | Bin (ns,x) -> Bin(ns, map f x)
-  | Tup xs -> Tup(IA.map (map f) xs)
+let rec map f x = match push x with
+  | (XDB _ | XCon _ | XUv _ | XExt _) as x -> f x
+  | XBin (ns,x) -> XBin(ns, map f x)
+  | XTup xs -> XTup(IA.map (map f) xs)
+  | XSusp _ -> assert false
 
-let max_uv x a = match x with Uv (i,_) -> max a i | _ -> a
+let max_uv x a = match push x with XUv (i,_) -> max a i | _ -> a
 
-let rec fold_map f x a = match x with
-  | (DB _ | Con _ | Uv _ | Ext _) as x -> f x a
-  | Bin (n,x) -> let x, a = fold_map f x a in Bin(n,x), a
-  | Tup xs -> let xs, a = IA.fold_map (fold_map f) xs a in Tup xs, a
+let rec fold_map f x a = match push x with
+  | (XDB _ | XCon _ | XUv _ | XExt _) as x -> f x a
+  | XBin (n,x) -> let x, a = fold_map f x a in XBin(n,x), a
+  | XTup xs -> let xs, a = IA.fold_map (fold_map f) xs a in XTup xs, a
+  | XSusp _ -> assert false
  
 (* PROGRAM *)
 type builtin = BIUnif of data * data
@@ -425,10 +564,11 @@ let check_con n l =
   with Not_found -> conmap := (n,l) :: !conmap
 
 let rec binders c n = function
-    | Con(c',_) when c = c' -> DB n
-    | (Con _ | Uv _ | Ext _ | DB _) as x -> x
-    | Bin(w,t) -> Bin(w,binders c (n+w) t)
-    | Tup xs -> Tup (IA.map (binders c n) xs)
+    | XCon(c',_) when c = c' -> XDB n
+    | (XCon _ | XUv _ | XExt _ | XDB _) as x -> x
+    | XBin(w,t) -> XBin(w,binders c (n+w) t)
+    | XTup xs -> XTup (IA.map (binders c n) xs)
+    | XSusp _ -> assert false
 and binders_premise c n = function
     | Pi(c,t) -> Pi(c,binders_premise c (n+1) t)
     | Sigma(m,t) -> Sigma(m,binders_premise c n t)
@@ -452,15 +592,16 @@ EXTEND
   atom :
     [ "1"
       [ hd = atom LEVEL "2"; args = LIST0 atom LEVEL "2" ->
-          if args = [] then hd else Tup (IA.of_list (hd :: args)) ]
+          if args = [] then hd else mkTup (IA.of_list (hd :: args)) ]
     | "2" 
       [ [ c = CONSTANT; b = OPT [ BIND; a = atom LEVEL "1" -> a ] ->
           let c, lvl = lvl_name_of c in
           match b with
-          | None -> check_con c lvl; Con(c,lvl)
-          | Some b ->  Bin(1,binders c 1 b) ]
-      | [ u = UVAR -> let u, lvl = lvl_name_of u in Uv(get_uv u,lvl) ]
-      | [ i = REL -> DB(int_of_string (String.sub i 1 (String.length i - 1))) ]
+          | None -> check_con c lvl; XCon(c,lvl)
+          | Some b ->  mkBin 1 (binders c 1 b) ]
+      | [ u = UVAR -> let u, lvl = lvl_name_of u in mkUv (get_uv u) lvl ]
+      | [ i = REL ->
+            mkDB (int_of_string (String.sub i 1 (String.length i - 1))) ]
       | [ LPAREN; a = atom LEVEL "1"; RPAREN -> a ] ]
     ];
   premise :
@@ -507,7 +648,7 @@ open LP
 type subst = { assign : data Int.Map.t; top_uv : int }
 let empty n = { assign = Int.Map.empty; top_uv = n }
 
-let last_sub_lookup = ref (DB 0)
+let last_sub_lookup = ref (XDB 0)
 let in_sub i { assign = assign } =
   try last_sub_lookup := Int.Map.find i assign; true
   with Not_found -> false
@@ -528,7 +669,7 @@ let prf_subst fmt s =
        Format.pp_print_string fmt (pr_var i 0);
        Format.pp_print_space fmt ();
        Format.pp_print_string fmt ":= ";
-       prf_data [] fmt t;
+       prf_data [] fmt (map (fun x -> kool (look x)) t);
        Format.pp_close_box fmt ())
     (Int.Map.bindings s.assign);
   Format.pp_print_string fmt " }";
@@ -536,16 +677,16 @@ let prf_subst fmt s =
 let string_of_subst s = on_buffer prf_subst s
 
 let apply_subst s t =
-  let rec subst = function
+  let rec subst x = match look x with
     | Uv(i,_) when in_sub i s -> map subst !last_sub_lookup
-    | x -> x in
+    | _ -> x in
   map subst t
 let apply_subst_goal s = map_premise (apply_subst s)
 
 let top s = s.top_uv
 let raise_top i s = { s with top_uv = s.top_uv + i + 1 }
 
-let fresh_uv lvl s = Uv(s.top_uv,lvl), { s with top_uv = s.top_uv + 1 }
+let fresh_uv lvl s = XUv(s.top_uv,lvl), { s with top_uv = s.top_uv + 1 }
 
 end (* }}} *)
 
@@ -554,6 +695,7 @@ module Red = struct (* {{{ beta reduction, whd, and nf (for tests) *)
 open LP
 open Subst
 
+(*
 let rec lift n k = function
   | Uv _ as x -> x
   | Con _ as x -> x
@@ -578,19 +720,30 @@ let rec beta depth t start len v =
   | DB _ as x -> x
   | Tup xs -> Tup(IA.map (fun t -> beta depth t start len v) xs)
   | Bin(ns,b) -> Bin(ns,beta (depth+ns) b start len v)
+*)
 
+let lift ?(from=0) k t =
+  if k = 0 then t
+  else if from = 0 then XSusp(t,0,k,XNil)
+  else XSusp(t,from,from+k,XArgs(IA.init from (fun i -> XDB(from-i)),from,XNil))
+let beta depth t start len v =
+  XSusp(t,len,0,
+    XArgs(IA.init len
+        (fun i -> (IA.get (i+start) v)),
+      0,XNil))
+  
 let rec whd s t =
-  match t with
-  | (Ext _ | Con _ | DB _ | Bin _) as x -> x, s
+  match look t with
+  | (Ext _ | Con _ | DB _ | Bin _) (*as x*) -> (*kool x*) t, s
   | Uv (i,_) when in_sub i s ->
       let t = !last_sub_lookup in
       let t', s = whd s t in
-      t', if t == t' then s else set_sub i t' s
-  | Uv _ as x -> x, s
-  | Tup v as x ->
+      t', s (*if t == t' then s else set_sub i t' s*)
+  | Uv _ (*as x*) -> (*kool x*) t, s
+  | Tup v (*as x*) ->
       let hd = IA.get 0 v in
       let hd', s = whd s hd in
-      match hd' with
+      match look hd' with
       | Bin (n_lam,b) ->
         let n_args = IA.len v - 1 in
         if n_lam = n_args then
@@ -599,18 +752,20 @@ let rec whd s t =
           whd s (mkApp (beta 0 b 1 n_lam v) v (n_lam+1) (n_args+1))
         else
           let diff = n_lam - n_args in
-          Bin(diff, beta diff b 1 n_args v), s
+(*           mkBin diff (beta diff b 1 n_args v), s *)
+          (beta diff (mkBin diff b) 1 n_args v), s
       | _ ->
-          if hd == hd' then x, s
-          else mkApp hd' (IA.tl v) 0 (IA.len v-1), s
+          (*if hd == hd' then x, s else*) mkApp hd' (IA.tl v) 0 (IA.len v-1), s
           
-let rec nf s = function
-  | (Ext _ | Con _ | DB _) as x -> x
-  | Bin(n,t) -> Bin(n,nf s t)
+let rec nf s x = match look x with
+  | (Ext _ | Con _ | DB _) as x -> kool x
+  | Bin(n,t) -> mkBin n (nf s t)
   | (Tup _ | Uv _) as x ->
-      match fst(whd s x) with
-      | Tup xs -> Tup(IA.map (nf s) xs)
-      | y -> if y == x then y else nf s y
+      let x = kool x in
+      let x', _ = whd s x in 
+      match look x' with
+      | Tup xs -> mkTup (IA.map (nf s) xs)
+      | _ -> if x == x' then x' else nf s x'
 
 end (* }}} *)
 
