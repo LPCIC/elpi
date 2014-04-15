@@ -8,6 +8,11 @@ open LP
 open Subst
 open Red
 
+(* Based on " An Implementation of the Language Lambda Prolog Organized around
+   Higher-Order Pattern Unification", Xiaochu Qi (pages 51 and 52)
+   or "Practical Higher-Order Pattern Unification With On-the-Fly Raising",
+   Gopalan Nadathur and Natalie Linnell. LNCS 3668 *)
+
 exception UnifFail of string lazy_t
 
 let _ = Trace.pr_exn
@@ -65,7 +70,6 @@ let isPU xs =
       IA.for_alli (fun i x -> i = 0 || not_in xs (IA.len xs) i x) xs
   | _ -> false
 
-(* Based on Xiaochu Qi PHD (pages 51..52) / or reference 41 *)
 let rec bind x id depth lvl args t s =
   let t, s = whd s t in
   TRACE "bind" (print_unif_prob s (":= "^string_of_int depth^"↓") x t)
@@ -165,7 +169,7 @@ type objective = [ `Atom of data | `Unify of data * data ]
 type goal = int * int * objective * clause list
 
 (* Important: when we move under a pi we put a constant in place of the
- * bound variable. This was hypothetical clauses do not need to be lifted
+ * bound variable. This way hypothetical clauses do not need to be lifted
  * when we move under other pi binders *)
 let mkhv =
   let i = ref 0 in

@@ -77,6 +77,11 @@ open PPLIB
 
 module LP = struct
 
+(* Based on "A Simplified Suspension Calculus and its Relationship to Other
+   Explicit Substitution Calculi", Andrew Gacek and Gopalan Nadathur.
+   Research Report 2007/39, Digital Technology Center, University of Minnesota.
+*)
+
 type var = int
 type level = int
 type name = string
@@ -200,7 +205,7 @@ end (* }}} *)
 include PP
 
 let (--) x y = max 0 (x - y)
-let mkXSusp ?(uv_reloc=noreloc) t n o e = XSusp(ref(Todo(uv_reloc,t,n,o,e)))
+let mkXSusp ?(uvrl=noreloc) t n o e = XSusp(ref(Todo(uvrl,t,n,o,e)))
 
 let rec epush e = TRACE "epush" (fun fmt -> prf_env [] fmt e)
   match e with
@@ -265,9 +270,9 @@ let push t =
         | XBin(n,t) -> (*r6*)
             assert(n > 0);
             store ptr
-              (XBin(n,mkXSusp ~uv_reloc:u t (ol+n) (nl+n) (XSkip(n,nl+n,e))))
+              (XBin(n,mkXSusp ~uvrl:u t (ol+n) (nl+n) (XSkip(n,nl+n,e))))
         | XTup a -> (*r5*)
-            store ptr (XTup(IA.map (fun t -> mkXSusp ~uv_reloc:u t ol nl e) a))
+            store ptr (XTup(IA.map (fun t -> mkXSusp ~uvrl:u t ol nl e) a))
         | XDB i -> (* r2, r3, r4 *)
             let e = epush e in
             SPY "epushed" (prf_env []) e;
@@ -335,15 +340,14 @@ let rec equal a b = match push a, push b with
  | XBin (n1,x), XBin (n2,y) -> n1 = n2 && equal x y
  | XTup xs, XTup ys -> IA.for_all2 equal xs ys
  | XExt x, XExt y -> C.equal x y
- | ((XBin(n,x), y) | (y, XBin(n,x))) -> begin
+ | ((XBin(n,x), y) | (y, XBin(n,x))) -> begin (* eta *)
      match push x with
      | XTup xs ->
         let nxs = IA.len xs in
         let eargs = nxs - n in
            eargs > 0
-        && IA.for_alli (fun i t -> i < eargs || equal t (XDB (nxs-i))) xs
-        && let hd = mkTup (IA.sub 0 eargs xs) in
-           equal hd (mkXSusp y 0 n XNil)
+        && IA.for_alli (fun i t -> equal t (XDB (n-i))) (IA.sub eargs n xs)
+        && equal (mkTup (IA.sub 0 eargs xs)) (mkXSusp y 0 n XNil)
      | _ -> false
    end
  | _ -> false
@@ -751,18 +755,18 @@ let beta depth t start len v =
 
 let reloc_uv_subst ~uv_increment:u ~cur_level:lvl args t =
   let nargs = List.length args in
-  mkXSusp ~uv_reloc:(u,lvl) t nargs 0
+  mkXSusp ~uvrl:(u,lvl) t nargs 0
     (if nargs > 0 then XArgs (IA.of_list args, 0, XNil) else XNil)
   
 let rec whd s t =
   match look t with
-  | (Ext _ | Con _ | DB _ | Bin _) -> t, s
+  | (Ext _ | Con _ | DB _ | Bin _) as x -> kool x, s
   | Uv (i,_) when in_sub i s ->
       let t = !last_sub_lookup in
       let t', s = whd s t in
       t', if t == t' then s else set_sub i t' s
-  | Uv _ -> t, s
-  | Tup v ->
+  | Uv _ as x -> kool x, s
+  | Tup v as x ->
       let hd = IA.get 0 v in
       let hd', s = whd s hd in
       match look hd' with
@@ -776,7 +780,8 @@ let rec whd s t =
           let diff = n_lam - n_args in
           (beta diff (mkBin diff b) 1 n_args v), s
       | _ ->
-          if hd == hd' then t, s else mkApp hd' (IA.tl v) 0 (IA.len v-1), s
+          if hd == hd' then kool x, s
+          else mkApp hd' (IA.tl v) 0 (IA.len v-1), s
           
 let rec nf s x = match look x with
   | (Ext _ | Con _ | DB _) as x -> kool x
