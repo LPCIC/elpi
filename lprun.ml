@@ -25,8 +25,11 @@ let rec rigid x = match x with
   | Tup xs -> rigid (look (IA.get 0 xs))
   | _ -> true
 
-let eta n t =
-  fixTup (IA.init (n+1) (fun i -> if i = 0 then (lift n t) else mkDB (n-i)))
+let eta n t = TRACE "eta" (fun fmt -> prf_data [] fmt t)
+ let t =
+   fixTup (IA.init (n+1) (fun i -> if i = 0 then (lift n t) else mkDB (n+1-i))) in
+ SPY "etaed" (prf_data []) t;
+ t
 
 let inter xs ys = IA.filter (fun x -> not(IA.for_all (equal x) ys)) xs
 
@@ -175,34 +178,28 @@ let mkhv =
     mkCon ("𝓱"^
       String.concat "" (List.map small_digit (List.rev (digits_of !i)))) depth
 
-let apply_refresh refresh depth top x = match look x with
-  | Uv(i,_) when List.mem_assoc i refresh ->
-      mkUv (i+top) (List.assoc i refresh)
-  | Uv(i,_) -> mkUv (i+top) depth
-  | _ -> x
-
-let contextualize (_, refresh) depth s t hv =
-  let t = LP.map (apply_refresh refresh depth (Subst.top s)) t in
-  if hv <> [] then
-    beta 0 t 0 (List.length hv) (IA.of_list (List.rev hv))
-  else t
+let contextualize depth s t hv =
+  Red.reloc_uv_subst
+    ~uv_increment:(Subst.top s) ~cur_level:depth (List.rev hv) t
 
 let contextualize_premise depth subst premise nuv =
-  let rec aux (cdepth, cl as refresh) depth s hv eh = function
+  let rec aux cdepth depth s hv eh = function
   | Atom t ->
-      [cdepth,nuv,`Atom(contextualize refresh depth s t hv),
+      [cdepth,nuv,`Atom(contextualize depth s t hv),
        List.map (fun t -> cdepth,nuv, t, Conj []) eh]
   | AtomBI (BIUnif(x,y)) -> [cdepth,nuv,`Unify(x,y),[]]
   | Impl(t,h) ->
-      aux refresh depth s hv (contextualize refresh depth s t hv :: eh) h
-  | Pi(n,h) -> aux (cdepth+1,cl) depth s (mkhv (depth+1)::hv) eh h
-  | Sigma(n,h) -> aux (cdepth,(n,cdepth)::cl) depth s hv eh h
-  | Conj l -> List.flatten (List.map (aux refresh depth s hv eh) l)
+      aux cdepth depth s hv (contextualize depth s t hv :: eh) h
+  | Pi h -> aux (cdepth+1) depth s (mkhv (depth+1)::hv) eh h
+  | Sigma h ->
+      let m, s = Subst.fresh_uv cdepth s in
+      aux cdepth depth s (m :: hv) eh h
+  | Conj l -> List.flatten (List.map (aux cdepth depth s hv eh) l)
   in
-    aux (depth,[]) depth subst [] [] premise
+    aux depth depth subst [] [] premise
 
 let contextualize depth subst atom : data =
-  contextualize (depth,[]) depth subst atom []
+  contextualize depth subst atom []
 
 let rec select (goal : head) depth s (prog : program) =
   match prog with

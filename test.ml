@@ -91,10 +91,10 @@ let test_IA () =
 
 let test_LPdata () =
   let wc = Unix.gettimeofday () in
-  for j = 1 to 400 do
+  for j = 1 to 300 do
     let test1 = toa [|LP.mkCon "of" 0; of_int 3; of_int 4; LP.mkUv 0 0 |] in
     let test2 = toa [|LP.mkCon "of" 0; of_list [cint 3; cint 5] |] in
-    for i = 1 to 2000 do
+    for i = 1 to 1000 do
             ignore(LP.equal test1 test2);
             ignore(LP.equal test1 test1);
             let s = Subst.empty 1 in
@@ -117,7 +117,9 @@ let test_whd () =
   test "(x/ y/ x) a b" "a";
   test "(x/ y/ x) a" "y/ a";
   test "(x/ y/ x) a b c" "a c";
+  test "(x/ y/ x) (x/ x) b" "x/ x";
   test "(x/ y/ x) (x/ x) b c" "c";
+  test "(x/ y/ x) (x/y/ x) b c" "y/c";
   ;;
 
 let test_unif () =
@@ -133,7 +135,7 @@ let test_unif () =
           (LP.prf_data []) x (LP.prf_data []) y;
         exit 1;
       end
-    with UnifFail s when not b -> 
+    with Lprun.UnifFail s when not b -> 
       Format.eprintf "@[<hv3>unify: %a@ @[<hv0>=/= %a@ ---> %s@]@]@\n%!"
         (LP.prf_data []) x (LP.prf_data []) y (Lazy.force s) in
   test true "X a1^1" "a1^1";
@@ -155,6 +157,7 @@ let test_unif () =
   test false "X a1^1" "a1^1 _1";
   test true  "X a1^1 _1" "a1^1 x/y/ _3";
   test true  "a/b/c/d/e/f/ X a1^1 f" "a/b/c/d/e/f/ a1^1 x/y/f";
+  test true  "a/b/c/f a b c" "f";
 ;;
 
 let test_coq () =
@@ -174,7 +177,8 @@ let _ =
     test_unif ();
     test_coq ();
   end;
-  Trace.init ~first:0 ~last:max_int false;
+  Trace.init ~where:("unify",94,99) ~filter_out:["push.*";"epush.*"] false;
+
   let p = LP.parse_program "
     copy hole hole.
     copy (app A B) (app X Y) :- copy A X, copy B Y.
@@ -187,7 +191,7 @@ let _ =
   Format.eprintf "@[<hv2>program:@ %a@]@\n%!" LP.prf_program p;
   Format.eprintf "@[<hv2>goal:@ %a@]@\n%!" LP.prf_goal g;
   let s = run p g in
-  Format.eprintf "@[<hv2>output:@ %a@]@\n@[<hv2>subst:@ %a@]@\n%!"
+  Format.eprintf "@\n@[<hv2>output:@ %a@]@\n@[<hv2>subst:@ %a@]@\n%!"
     LP.prf_goal (Subst.apply_subst_goal s g) Subst.prf_subst s;
-  Format.eprintf "@[<hv2>output:@ %a@]@\n%!"
+  Format.eprintf "@[<hv2>nf output:@ %a@]@\n%!"
     LP.prf_goal (LP.map_premise (Red.nf s) g)

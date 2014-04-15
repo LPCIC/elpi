@@ -14,10 +14,10 @@ EXTEND
              Trace.enter $c$ $e$;
              try
                let rc = $b$ in do {
-               Trace.exit (Unix.gettimeofday () -. wall_clock);
+               Trace.exit $c$( Unix.gettimeofday () -. wall_clock);
                rc }
              with [ e -> do {
-               Trace.exit ~e (Unix.gettimeofday () -. wall_clock);
+               Trace.exit $c$ ~e (Unix.gettimeofday () -. wall_clock);
                raise e } ] } >> ]
      | [ "SPY"; n = expr LEVEL "simple"; c = expr LEVEL "simple";
                                          x = expr LEVEL "simple" ->

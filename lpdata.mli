@@ -65,8 +65,8 @@ module LP : sig
     | AtomBI of builtin
     | Conj of premise list
     | Impl of data * premise
-    | Pi of name * premise
-    | Sigma of var * premise
+    | Pi of premise
+    | Sigma of premise
   and goal = premise
 
   val map_premise : (data -> data) -> premise -> premise
@@ -110,7 +110,8 @@ end
 
 module Red : sig
   val lift : ?from:int -> int -> LP.data -> LP.data
-  val beta : int -> LP.data -> int -> int -> LP.data IA.t -> LP.data
+  val reloc_uv_subst :
+    uv_increment:int -> cur_level:int -> LP.data list -> LP.data -> LP.data
   val whd : Subst.subst -> LP.data -> LP.data * Subst.subst
   val nf : Subst.subst -> LP.data -> LP.data
 end

@@ -3,7 +3,7 @@ TRACE=-DTRACE
 PP=camlp5o -I . -I +camlp5
 LIBS=unix.cmxa str.cmxa camlp5.cmxa $(EXTRALIB)
 FLAGS=-g -I +camlp5
-PPPARSE=-pp '$(PP) pa_extend.cmo pa_lexer.cmo'
+PPPARSE=-pp '$(PP) pa_extend.cmo pa_lexer.cmo pa_trace.cmo'
 PPTRACE=-pp '$(PP) pa_trace.cmo'
 PPTRACESYNTAX=-pp '$(PP) pa_extend.cmo q_MLast.cmo pa_macro.cmo $(TRACE)'
 EXTRALIB=cMap.cmx int.cmx bIA.cmx trace.cmx
@@ -21,7 +21,7 @@ elpi elpi.byte: test.ml lprun.cmx lpdata.cmx
 	$(H) ocamlc   $(FLAGS) $(LIBSBYTE) lpdata.cmo lprun.cmo -o $@.byte $<
 	$(I) echo OCAMLC $<
 
-lpdata.cmx lpdata.cmo: lpdata.ml $(EXTRALIB)
+lpdata.cmx lpdata.cmo: lpdata.ml $(EXTRALIB) pa_trace.cmo
 	$(H) ocamlopt $(PPPARSE) $(FLAGS) -o $@ -c $<
 	$(H) ocamlc   $(PPPARSE) $(FLAGS) -o $@ -c $<
 	$(I) echo OCAMLC $<
