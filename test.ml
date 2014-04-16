@@ -1,7 +1,7 @@
 open Lprun
 open Lpdata
 
-let toa x = LP.mkTup(IA.of_array x)
+let toa x = LP.mkApp(IA.of_array x)
 
 module Coq = struct
 
@@ -53,7 +53,7 @@ let embed t (*sigma*) =
   | Rel n -> LP.mkDB n
   | Var s -> of_Var s
   | Evar (i,ls) -> hole 
-  (*aux_app (Tup [| ginst; M.find i s; aux (sigma i) |]) ls*)
+  (*aux_app (App [| ginst; M.find i s; aux (sigma i) |]) ls*)
   | Sort s -> of_Sort s
   | Cast(t,ty) -> toa [|cast; aux t; aux ty|]
   | Prod(n,ty,t) ->  toa [|prod; of_Name n; aux ty; LP.mkBin 1 (aux t) |]

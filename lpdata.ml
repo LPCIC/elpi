@@ -97,14 +97,14 @@ type kind_of_data =
   | Con of name * level
   | DB of int
   | Bin of int * data
-  | Tup of data IA.t
+  | App of data IA.t
   | Ext of C.data
 and data =
   | XUv of var * level
   | XCon of name * level
   | XDB of int
   | XBin of int * data
-  | XTup of data IA.t
+  | XApp of data IA.t
   | XExt of C.data
   | XSusp of suspended_job ref
 and suspended_job = Done of data | Todo of uvreloc * data * olam * nlam * env
@@ -153,7 +153,7 @@ let rec prf_data ctx fmt t =
           "_" ^ string_of_int (x-List.length ctx))
     | XCon (x,lvl) -> P.pp_print_string fmt (pr_cst x lvl)
     | XUv (x,lvl) -> P.pp_print_string fmt (pr_var x lvl)
-    | XTup xs ->
+    | XApp xs ->
         P.pp_open_hovbox fmt 2;
         if pars then P.pp_print_string fmt "(";
         iter_sep (P.pp_print_space fmt) (print ~pars:true ctx) (IA.to_list xs);
@@ -255,7 +255,7 @@ let rec epush e = TRACE "epush" (fun fmt -> prf_env [] fmt e)
 let store ptr v = ptr := Done v; v
 let push t =
   match t with
-  | (XUv _ | XCon _ | XDB _ | XBin _ | XTup _ | XExt _) as x -> x
+  | (XUv _ | XCon _ | XDB _ | XBin _ | XApp _ | XExt _) as x -> x
   | XSusp { contents = Done t } -> t
   | XSusp ({ contents = Todo (uvrl,t,ol,nl,e) } as ptr) ->
       let rec push u t ol nl e = TRACE "push" (fun fmt -> prf_data [] fmt t)
@@ -271,8 +271,8 @@ let push t =
             assert(n > 0);
             store ptr
               (XBin(n,mkXSusp ~uvrl:u t (ol+n) (nl+n) (XSkip(n,nl+n,e))))
-        | XTup a -> (*r5*)
-            store ptr (XTup(IA.map (fun t -> mkXSusp ~uvrl:u t ol nl e) a))
+        | XApp a -> (*r5*)
+            store ptr (XApp(IA.map (fun t -> mkXSusp ~uvrl:u t ol nl e) a))
         | XDB i -> (* r2, r3, r4 *)
             let e = epush e in
             SPY "epushed" (prf_env []) e;
@@ -300,20 +300,19 @@ let look x =
   | XCon (n,l) -> Con(n,l)
   | XDB i -> DB i
   | XBin (n,t) -> Bin(n,t)
-  | XTup a -> Tup a
+  | XApp a -> App a
   | XExt e -> Ext e
   | XSusp _ -> assert false
 let mkUv v l = XUv(v,l)
 let mkCon n l = XCon(n,l)
 let mkDB i = XDB i
-let mkTup xs = if IA.len xs = 1 then IA.get 0 xs else XTup xs
 let mkExt x = XExt x
 let kool = function
   | Uv (v,l) -> XUv(v,l)
   | Con (n,l) -> XCon(n,l)
   | DB i -> XDB i
   | Bin (n,t) -> XBin(n,t)
-  | Tup a -> XTup a
+  | App a -> XApp a
   | Ext e -> XExt e
 
 let mkBin n t =
@@ -322,32 +321,33 @@ let mkBin n t =
     | XBin(n',t) -> XBin(n+n',t)
     | _ -> XBin(n,t)
 
-let mkApp t v start stop =
+let mkApp xs = if IA.len xs = 1 then IA.get 0 xs else XApp xs
+let mkAppv t v start stop =
   if start = stop then t else
   match t with
-  | XTup xs -> XTup(IA.append xs (IA.sub start (stop-start) v))
-  | _ -> XTup(IA.cons t (IA.sub start (stop-start) v))
+  | XApp xs -> XApp(IA.append xs (IA.sub start (stop-start) v))
+  | _ -> XApp(IA.cons t (IA.sub start (stop-start) v))
 
-let fixTup xs =
+let fixApp xs =
   match push (IA.get 0 xs) with
-  | XTup ys -> XTup (IA.append ys (IA.tl xs))
-  | _ -> XTup xs
+  | XApp ys -> XApp (IA.append ys (IA.tl xs))
+  | _ -> XApp xs
 
 let rec equal a b = match push a, push b with
  | XUv (x,_), XUv (y,_) -> x = y
  | XCon (x,_), XCon (y,_) -> x = y
  | XDB x, XDB y -> x = y
  | XBin (n1,x), XBin (n2,y) -> n1 = n2 && equal x y
- | XTup xs, XTup ys -> IA.for_all2 equal xs ys
+ | XApp xs, XApp ys -> IA.for_all2 equal xs ys
  | XExt x, XExt y -> C.equal x y
  | ((XBin(n,x), y) | (y, XBin(n,x))) -> begin (* eta *)
      match push x with
-     | XTup xs ->
+     | XApp xs ->
         let nxs = IA.len xs in
         let eargs = nxs - n in
            eargs > 0
         && IA.for_alli (fun i t -> equal t (XDB (n-i))) (IA.sub eargs n xs)
-        && equal (mkTup (IA.sub 0 eargs xs)) (mkXSusp y 0 n XNil)
+        && equal (mkApp (IA.sub 0 eargs xs)) (mkXSusp y 0 n XNil)
      | _ -> false
    end
  | _ -> false
@@ -357,13 +357,13 @@ let isBin x = match push x with XBin _ -> true | _ -> false
 let rec fold f x a = match push x with
   | (XDB _ | XCon _ | XUv _ | XExt _) as x -> f x a
   | XBin (_,x) -> fold f x a
-  | XTup xs -> IA.fold (fold f) xs a
+  | XApp xs -> IA.fold (fold f) xs a
   | XSusp _ -> assert false
 
 let rec map f x = match push x with
   | (XDB _ | XCon _ | XUv _ | XExt _) as x -> f x
   | XBin (ns,x) -> XBin(ns, map f x)
-  | XTup xs -> XTup(IA.map (map f) xs)
+  | XApp xs -> XApp(IA.map (map f) xs)
   | XSusp _ -> assert false
 
 let max_uv x a = match push x with XUv (i,_) -> max a i | _ -> a
@@ -371,7 +371,7 @@ let max_uv x a = match push x with XUv (i,_) -> max a i | _ -> a
 let rec fold_map f x a = match push x with
   | (XDB _ | XCon _ | XUv _ | XExt _) as x -> f x a
   | XBin (n,x) -> let x, a = fold_map f x a in XBin(n,x), a
-  | XTup xs -> let xs, a = IA.fold_map (fold_map f) xs a in XTup xs, a
+  | XApp xs -> let xs, a = IA.fold_map (fold_map f) xs a in XApp xs, a
   | XSusp _ -> assert false
  
 (* PROGRAM *)
@@ -609,7 +609,7 @@ let rec binders c n = function
     | (XCon _ | XUv _) as x when equal x c -> XDB n
     | (XCon _ | XUv _ | XExt _ | XDB _) as x -> x
     | XBin(w,t) -> XBin(w,binders c (n+w) t)
-    | XTup xs -> XTup (IA.map (binders c n) xs)
+    | XApp xs -> XApp (IA.map (binders c n) xs)
     | XSusp _ -> assert false
 and binders_premise c n = function
     | Pi t -> Pi(binders_premise c (n+1) t)
@@ -634,7 +634,7 @@ EXTEND
   atom :
     [ "1"
       [ hd = atom LEVEL "2"; args = LIST0 atom LEVEL "2" ->
-          if args = [] then hd else mkTup (IA.of_list (hd :: args)) ]
+          if args = [] then hd else mkApp (IA.of_list (hd :: args)) ]
     | "2" 
       [ [ c = CONSTANT; b = OPT [ BIND; a = atom LEVEL "1" -> a ] ->
           let c, lvl = lvl_name_of c in 
@@ -766,7 +766,7 @@ let rec whd s t =
       let t', s = whd s t in
       t', if t == t' then s else set_sub i t' s
   | Uv _ as x -> kool x, s
-  | Tup v as x ->
+  | App v as x ->
       let hd = IA.get 0 v in
       let hd', s = whd s hd in
       match look hd' with
@@ -775,21 +775,21 @@ let rec whd s t =
         if n_lam = n_args then
           whd s (beta 0 b 1 n_args v)
         else if n_lam < n_args then
-          whd s (mkApp (beta 0 b 1 n_lam v) v (n_lam+1) (n_args+1))
+          whd s (mkAppv (beta 0 b 1 n_lam v) v (n_lam+1) (n_args+1))
         else
           let diff = n_lam - n_args in
           (beta diff (mkBin diff b) 1 n_args v), s
       | _ ->
           if hd == hd' then kool x, s
-          else mkApp hd' (IA.tl v) 0 (IA.len v-1), s
+          else mkAppv hd' (IA.tl v) 0 (IA.len v-1), s
           
 let rec nf s x = match look x with
   | (Ext _ | Con _ | DB _) as x -> kool x
   | Bin(n,t) -> mkBin n (nf s t)
-  | (Tup _ | Uv _) as xf ->
+  | (App _ | Uv _) as xf ->
       let x', _ = whd s x in 
       match look x' with
-      | Tup xs -> mkTup (IA.map (nf s) xs)
+      | App xs -> mkApp (IA.map (nf s) xs)
       | _ -> if x == x' then kool xf else nf s x'
 
 end (* }}} *)

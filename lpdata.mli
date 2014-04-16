@@ -32,7 +32,7 @@ module LP : sig
     | Con of name * level
     | DB of int
     | Bin of int * data
-    | Tup of data IA.t
+    | App of data IA.t
     | Ext of C.data
 
   val look : data -> kind_of_data
@@ -42,11 +42,11 @@ module LP : sig
   val mkCon : name -> level -> data
   val mkDB : int -> data
   val mkBin : int -> data -> data
-  val mkTup : data IA.t -> data
+  val mkApp : data IA.t -> data
   val mkExt : C.data -> data
 
-  val mkApp : data -> data IA.t -> int -> int -> data
-  val fixTup : data IA.t -> data
+  val mkAppv : data -> data IA.t -> int -> int -> data
+  val fixApp : data IA.t -> data
 
   val equal : data -> data -> bool
   

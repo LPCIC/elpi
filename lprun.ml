@@ -27,12 +27,12 @@ let print_unif_prob s rel a b fmt =
 
 let rec rigid x = match x with
   | Uv _ -> false
-  | Tup xs -> rigid (look (IA.get 0 xs))
+  | App xs -> rigid (look (IA.get 0 xs))
   | _ -> true
 
 let eta n t = TRACE "eta" (fun fmt -> prf_data [] fmt t)
  let t =
-   fixTup (IA.init (n+1) (fun i -> if i = 0 then (lift n t) else mkDB (n+1-i))) in
+   fixApp (IA.init (n+1) (fun i -> if i = 0 then (lift n t) else mkDB (n+1-i))) in
  SPY "etaed" (prf_data []) t;
  t
 
@@ -81,14 +81,14 @@ let rec bind x id depth lvl args t s =
   (* the following 2 cases are: t ^-- mk_al depth args, s *) (* XXX CHECK *)
   | DB m when m <= depth -> t, s
   | DB m -> lift depth (mkDB (m-depth) ^-- args), s
-  | Tup bs as t when rigid t ->
+  | App bs as t when rigid t ->
       let ss, s = IA.fold_map (bind x id depth lvl args) bs s in
-      mkTup ss, s
-  | (Tup _ | Uv _) as tmp -> (* pruning *)
+      mkApp ss, s
+  | (App _ | Uv _) as tmp -> (* pruning *)
       let bs = match tmp with
-        | Tup bs -> bs | Uv _ -> IA.of_array [|t|] | _ -> assert false in
+        | App bs -> bs | Uv _ -> IA.of_array [|t|] | _ -> assert false in
       match look (IA.get 0 bs) with
-      | (Bin _ | Con _ | DB _ | Ext _ | Tup _) -> assert false
+      | (Bin _ | Con _ | DB _ | Ext _ | App _) -> assert false
       | Uv(j,l) when j <> id && l > lvl && isPU bs ->
           let bs = IA.tl bs in
           let nbs = IA.len bs in
@@ -100,9 +100,9 @@ let rec bind x id depth lvl args t s =
           let vs = zs ^- al in
           let us = zs ^- bs in
           let nws, nvs, ncs, nus = IA.len ws, IA.len vs, IA.len cs, IA.len us in
-          let vj = mkBin nbs (mkApp h (IA.append cs us) 0 (ncs + nus)) in
+          let vj = mkBin nbs (mkAppv h (IA.append cs us) 0 (ncs + nus)) in
           let s = set_sub j vj s in
-          let t = mkApp h (IA.append ws vs) 0 (nws+nvs) in
+          let t = mkAppv h (IA.append ws vs) 0 (nws+nvs) in
           SPY "vj" (prf_data []) vj; SPY "t" (prf_data[]) t;
           t, s
       | Uv(j,l) when j <> id && isPU bs ->
@@ -116,9 +116,9 @@ let rec bind x id depth lvl args t s =
           let vs = zs ^- bs in
           let us = zs ^- al in
           let nws, nvs, ncs, nus = IA.len ws, IA.len vs, IA.len cs, IA.len us in
-          let vj = mkBin nbs (mkApp h (IA.append ws vs) 0 (nws + nvs)) in
+          let vj = mkBin nbs (mkAppv h (IA.append ws vs) 0 (nws + nvs)) in
           let s = set_sub j vj s in
-          let t = mkApp h (IA.append cs us) 0 (ncs+nus) in
+          let t = mkAppv h (IA.append cs us) 0 (ncs+nus) in
           SPY "vj" (prf_data []) vj; SPY "t" (prf_data[]) t;
           t, s
       | Uv _ -> fail "ho-ho"
@@ -128,7 +128,7 @@ let mksubst x id lvl t args s =
 (*
   match look t with
   | Bin(k,Uv(id1,_)) when id1 = id -> assert false (* TODO *)
-  | Bin(k,Tup xs) when equal (IA.get 0 xs) (Uv (id,lvl)) && isPU xs ->
+  | Bin(k,App xs) when equal (IA.get 0 xs) (Uv (id,lvl)) && isPU xs ->
       assert false (* TODO *)
   | _ ->
 *)
@@ -149,13 +149,13 @@ let rec unify a b s = TRACE "unify" (print_unif_prob s "=" a b)
   | x, y -> if rigid x && rigid y then unify_fo x y s else unify_ho x y s
 and unify_fo x y s =
   match x, y with
-  | Tup xs, Tup ys when IA.len xs = IA.len ys -> IA.fold2 unify xs ys s
+  | App xs, App ys when IA.len xs = IA.len ys -> IA.fold2 unify xs ys s
   | _ -> fail "founif"
 and unify_ho x y s =
   match x, y with
   | (((Uv (id,lvl) as x), y) | (y, (Uv (id,lvl) as x))) ->
       mksubst (kool x) id lvl (kool y) (IA.init 0 (fun _ -> kool y)) s
-  | (((Tup xs as x), y) | (y, (Tup xs as x))) when isPU xs -> begin
+  | (((App xs as x), y) | (y, (App xs as x))) when isPU xs -> begin
       match look (IA.get 0 xs) with
       | Uv (id,lvl) -> mksubst (kool x) id lvl (kool y) (IA.tl xs) s
       | _ -> assert false
