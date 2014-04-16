@@ -109,7 +109,7 @@ and data =
   | XSusp of suspended_job ref
 and suspended_job = Done of data | Todo of uvreloc * data * olam * nlam * env
 and env =
-  | XNil
+  | XEmpty
   | XArgs of data IA.t * int * env
   | XMerge of env * nlam * olam * env
   | XSkip of int * nlam * env
@@ -177,7 +177,7 @@ let rec prf_data ctx fmt t =
 
 and prf_env ctx fmt e =
   let rec print_env = function
-    | XNil -> P.pp_print_string fmt "nil"
+    | XEmpty -> P.pp_print_string fmt "nil"
     | XArgs(a,n,e) ->
         P.fprintf fmt "(@[<hov 2>";
         iter_sep (fun () -> P.fprintf fmt ",@ ")
@@ -209,19 +209,19 @@ let mkXSusp ?(uvrl=noreloc) t n o e = XSusp(ref(Todo(uvrl,t,n,o,e)))
 
 let rec epush e = TRACE "epush" (fun fmt -> prf_env [] fmt e)
   match e with
-  | (XNil | XArgs _ | XSkip _) as x -> x
+  | (XEmpty | XArgs _ | XSkip _) as x -> x
   | XMerge(e1,nl1,ol2,e2) -> let e1 = epush e1 in let e2 = epush e2 in
   match e1, e2 with
-  | e1, XNil when ol2 = 0 -> (*m2*) e1
-  | XNil, e2 when nl1 = 0 -> (*m3*) e2
-  | XNil, XArgs(a,l,e2) -> (*m4*)
+  | e1, XEmpty when ol2 = 0 -> (*m2*) e1
+  | XEmpty, e2 when nl1 = 0 -> (*m3*) e2
+  | XEmpty, XArgs(a,l,e2) -> (*m4*)
       let nargs = IA.len a in
       if nl1 = nargs then e2 (* repeat m4, end m3 *)
-      else if nl1 > nargs then epush (XMerge(XNil,nl1 - nargs, ol2 - nargs, e2))
+      else if nl1 > nargs then epush (XMerge(XEmpty,nl1 -nargs, ol2 -nargs, e2))
       else XArgs(IA.sub nl1 (nargs-nl1) a,l,e2) (* repeast m4 + m3 *)
-  | XNil, XSkip(a,l,e2) -> (*m4*)
+  | XEmpty, XSkip(a,l,e2) -> (*m4*)
       if nl1 = a then e2 (* repeat m4, end m3 *)
-      else if nl1 > a then epush (XMerge(XNil,nl1 - a, ol2 - a, e2))
+      else if nl1 > a then epush (XMerge(XEmpty,nl1 - a, ol2 - a, e2))
       else XSkip(a-nl1,l-nl1,e2) (* repeast m4 + m3 *)
   | (XArgs(_,n,_) | XSkip(_,n,_)) as e1, XArgs(b,l,e2) when nl1 > n -> (*m5*)
       let drop = min (IA.len b) (nl1 - n) in
@@ -247,15 +247,15 @@ let rec epush e = TRACE "epush" (fun fmt -> prf_env [] fmt e)
       let e1 = if a > 1 then XSkip(a-1,n-1,e1) else e1 in
       (* ugly *)
       XArgs(IA.of_array [|mkXSusp (XDB 1) 0 l e2|], m, XMerge(e1,n,ol2,e2))
-  | XArgs _, XNil -> assert false
-  | XNil, XNil -> assert false
-  | XSkip _, XNil -> assert false
+  | XArgs _, XEmpty -> assert false
+  | XEmpty, XEmpty -> assert false
+  | XSkip _, XEmpty -> assert false
   | ((XMerge _, _) | (_, XMerge _)) -> assert false
 
 let store ptr v = ptr := Done v; v
 let push t =
   match t with
-  | (XUv _ | XCon _ | XDB _ | XBin _ | XApp _ | XExt _) as x -> x
+  | (XUv _ | XCon _ | XDB _ | XBin _ | XApp _ | XExt _ | XSeq _) as x -> x
   | XSusp { contents = Done t } -> t
   | XSusp ({ contents = Todo (uvrl,t,ol,nl,e) } as ptr) ->
       let rec push u t ol nl e = TRACE "push" (fun fmt -> prf_data [] fmt t)
@@ -278,11 +278,11 @@ let push t =
             SPY "epushed" (prf_env []) e;
             match e with
             | XMerge _ -> assert false
-            | XNil -> assert(ol = 0); store ptr (XDB(i+nl))
+            | XEmpty -> assert(ol = 0); store ptr (XDB(i+nl))
             | XArgs(a,l,e) ->
                 let nargs = IA.len a in
                 if i <= nargs
-                then push noreloc (IA.get (nargs - i) a) 0 (nl - l) XNil
+                then push noreloc (IA.get (nargs - i) a) 0 (nl - l) XEmpty
                 else push u (XDB(i - nargs)) (ol - nargs) nl e
             | XSkip(n,l,e) -> 
                 if (i <= n) then store ptr (XDB (i + nl - l))
@@ -347,7 +347,7 @@ let rec equal a b = match push a, push b with
         let eargs = nxs - n in
            eargs > 0
         && IA.for_alli (fun i t -> equal t (XDB (n-i))) (IA.sub eargs n xs)
-        && equal (mkApp (IA.sub 0 eargs xs)) (mkXSusp y 0 n XNil)
+        && equal (mkApp (IA.sub 0 eargs xs)) (mkXSusp y 0 n XEmpty)
      | _ -> false
    end
  | _ -> false
@@ -746,17 +746,17 @@ open Subst
 
 let lift ?(from=0) k t =
   if k = 0 then t
-  else if from = 0 then mkXSusp t 0 k XNil
-  else mkXSusp t from (from+k) (XSkip(k,from,XNil))
+  else if from = 0 then mkXSusp t 0 k XEmpty
+  else mkXSusp t from (from+k) (XSkip(k,from,XEmpty))
 
 let beta depth t start len v =
   mkXSusp t len 0
-    (XArgs(IA.init len (fun i -> (IA.get (i+start) v)), 0, XNil))
+    (XArgs(IA.init len (fun i -> (IA.get (i+start) v)), 0, XEmpty))
 
 let reloc_uv_subst ~uv_increment:u ~cur_level:lvl args t =
   let nargs = List.length args in
   mkXSusp ~uvrl:(u,lvl) t nargs 0
-    (if nargs > 0 then XArgs (IA.of_list args, 0, XNil) else XNil)
+    (if nargs > 0 then XArgs (IA.of_list args, 0, XEmpty) else XEmpty)
   
 let rec whd s t =
   match look t with
