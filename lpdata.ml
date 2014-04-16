@@ -470,7 +470,7 @@ let rec prf_premise ?(pars=false) ctx fmt = function
        prf_data ctx fmt x;
        Format.pp_print_space fmt ();
        Format.pp_open_hovbox fmt 0;
-       Format.pp_print_string fmt "==> ";
+       Format.pp_print_string fmt "=> ";
        prf_premise ~pars:true ctx fmt p;
        Format.pp_close_box fmt ();
        Format.pp_close_box fmt ()
@@ -523,7 +523,7 @@ let lvl_name_of s =
   | [ x;l ] -> x, int_of_string l
   | _ -> raise (Token.Error ("<name> ^ <number> expected.  Got: " ^ s))
 
-let arr = lexer [ "=>" ]
+let arr = lexer [ ">" ]
 
 let tok = lexer
   [ [ 'A'-'Z' ] ident -> "UVAR", $buf 
