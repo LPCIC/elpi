@@ -158,6 +158,12 @@ let test_unif () =
   test true  "X a1^1 _1" "a1^1 x/y/ _3";
   test true  "a/b/c/d/e/f/ X a1^1 f" "a/b/c/d/e/f/ a1^1 x/y/f";
   test true  "a/b/c/f a b c" "f";
+  test true  "a/b/c/f a b c" "f";
+  test true  "[]" "nil";
+  test true  "[a]" "[a]";
+  test true  "[a]" "a :: nil";
+  test true  "[a,b,c]" "a :: b :: c :: nil";
+  test true  "[a,b,c|X]" "a :: b :: c :: X";
 ;;
 
 let test_coq () =
@@ -177,17 +183,19 @@ let _ =
     test_unif ();
     test_coq ();
   end;
-  Trace.init ~where:("unify",94,99) ~filter_out:["push.*";"epush.*"] false;
+  Trace.init ~where:("unify",1,99) ~filter_out:["push.*";"epush.*"] false;
 
   let p = LP.parse_program "
     copy hole hole.
     copy (app A B) (app X Y) :- copy A X, copy B Y.
     copy (lam F) (lam G) :- pi x/ copy x x => copy (F x) (G x).
+    
+    tlist :- [l1,l2,l3] = [A|TL], A = l1, TL = [l2,l3].
 
     t1 X :- copy (app (lam w/ lam x/ (app w x)) a) X.
     t2 :- pi x/ sigma Y/ copy x x => copy x Y, copy a a.
   " in
-  let g = LP.parse_goal "copy a a => (t1 X, t2), W = a." in
+  let g = LP.parse_goal "copy a a => (t1 X, t2), W = a, tlist." in
   Format.eprintf "@[<hv2>program:@ %a@]@\n%!" LP.prf_program p;
   Format.eprintf "@[<hv2>goal:@ %a@]@\n%!" LP.prf_goal g;
   let s = run p g in

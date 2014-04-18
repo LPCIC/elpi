@@ -33,6 +33,8 @@ module LP : sig
     | DB of int
     | Bin of int * data
     | App of data IA.t
+    | Seq of data IA.t * data
+    | Nil
     | Ext of C.data
 
   val look : data -> kind_of_data
@@ -44,6 +46,8 @@ module LP : sig
   val mkBin : int -> data -> data
   val mkApp : data IA.t -> data
   val mkExt : C.data -> data
+  val mkSeq : data IA.t -> data -> data
+  val mkNil : data
 
   val mkAppv : data -> data IA.t -> int -> int -> data
   val fixApp : data IA.t -> data
@@ -53,7 +57,7 @@ module LP : sig
   val fold : (data -> 'a -> 'a) -> data -> 'a -> 'a
   val map : (data -> data) -> data -> data
   val fold_map : (data -> 'a -> data * 'a) -> data -> 'a -> data * 'a
-  
+
   val max_uv : data -> var -> var
 
   type builtin = BIUnif of data * data

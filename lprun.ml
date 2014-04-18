@@ -81,6 +81,11 @@ let rec bind x id depth lvl args t s =
   (* the following 2 cases are: t ^-- mk_al depth args, s *) (* XXX CHECK *)
   | DB m when m <= depth -> t, s
   | DB m -> lift depth (mkDB (m-depth) ^-- args), s
+  | Seq(xs,tl) ->
+      let xs, s = IA.fold_map (bind x id depth lvl args) xs s in
+      let tl, s = bind x id depth lvl args tl s in
+      mkSeq xs tl, s
+  | Nil -> t, s
   | App bs as t when rigid t ->
       let ss, s = IA.fold_map (bind x id depth lvl args) bs s in
       mkApp ss, s
@@ -88,7 +93,7 @@ let rec bind x id depth lvl args t s =
       let bs = match tmp with
         | App bs -> bs | Uv _ -> IA.of_array [|t|] | _ -> assert false in
       match look (IA.get 0 bs) with
-      | (Bin _ | Con _ | DB _ | Ext _ | App _) -> assert false
+      | (Bin _ | Con _ | DB _ | Ext _ | App _ | Seq _ | Nil) -> assert false
       | Uv(j,l) when j <> id && l > lvl && isPU bs ->
           let bs = IA.tl bs in
           let nbs = IA.len bs in
@@ -135,11 +140,18 @@ let mksubst x id lvl t args s =
      let t, s = bind x id 0 lvl args t s in
      set_sub id (mkBin nargs t) s
 
+let rec splay xs tl s =
+  let tl, s = whd s tl in
+  match look tl with
+  | Uv _ | Nil -> xs, tl, s
+  | Seq(ys,t) -> splay (IA.append xs ys) t s
+  | _ -> assert false
+
 let rec unify a b s = TRACE "unify" (print_unif_prob s "=" a b)
   let a, s =  whd s a in
   let b, s =  whd s b in
   match look a, look b with
-  | Con _, Con _ | Ext _, Ext _ | DB _, DB _ ->
+  | Con _, Con _ | Ext _, Ext _ | DB _, DB _ | Nil, Nil ->
       if equal a b then s else fail "rigid"
   | Bin(nx,x), Bin(ny,y) when nx = ny -> unify x y s
   | Bin(nx,x), Bin(ny,y) when nx < ny -> unify (eta (ny-nx) x) y s
@@ -150,6 +162,18 @@ let rec unify a b s = TRACE "unify" (print_unif_prob s "=" a b)
 and unify_fo x y s =
   match x, y with
   | App xs, App ys when IA.len xs = IA.len ys -> IA.fold2 unify xs ys s
+  | Seq(xs,tl), Seq(ys,sl) ->
+      let xs, tl, s = splay xs tl s in
+      let ys, sl, s = splay ys sl s in
+      let nxs, nys = IA.len xs, IA.len ys in
+      if nxs = nys then unify tl sl (IA.fold2 unify xs ys s)
+      else if nxs < nys && not (rigid (look tl)) then
+        let yshd, ystl = IA.sub 0 nxs ys, IA.sub nxs (nys - nxs) ys in
+        unify tl (mkSeq ystl mkNil) (IA.fold2 unify xs yshd s)
+      else if nxs > nys && not (rigid (look sl)) then
+        let xshd, xstl = IA.sub 0 nys xs, IA.sub nys (nxs - nys) xs in
+        unify sl (mkSeq xstl mkNil) (IA.fold2 unify ys xshd s)
+      else fail "listalign"
   | _ -> fail "founif"
 and unify_ho x y s =
   match x, y with
@@ -191,7 +215,9 @@ let contextualize_premise depth subst premise nuv =
   | Atom t ->
       [cdepth,nuv,`Atom(contextualize depth s t hv),
        List.map (fun t -> cdepth,nuv, t, Conj []) eh]
-  | AtomBI (BIUnif(x,y)) -> [cdepth,nuv,`Unify(x,y),[]]
+  | AtomBI (BIUnif(x,y)) ->
+      [cdepth,nuv,
+        `Unify(contextualize depth s x hv,contextualize depth s y hv),[]]
   | Impl(t,h) ->
       aux cdepth depth s hv (contextualize depth s t hv :: eh) h
   | Pi h -> aux (cdepth+1) depth s (mkhv (depth+1)::hv) eh h

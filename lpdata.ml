@@ -98,6 +98,8 @@ type kind_of_data =
   | DB of int
   | Bin of int * data
   | App of data IA.t
+  | Seq of data IA.t * data
+  | Nil
   | Ext of C.data
 and data =
   | XUv of var * level
@@ -105,6 +107,8 @@ and data =
   | XDB of int
   | XBin of int * data
   | XApp of data IA.t
+  | XSeq of data IA.t * data
+  | XNil
   | XExt of C.data
   | XSusp of suspended_job ref
 and suspended_job = Done of data | Todo of uvreloc * data * olam * nlam * env
@@ -159,6 +163,17 @@ let rec prf_data ctx fmt t =
         iter_sep (P.pp_print_space fmt) (print ~pars:true ctx) (IA.to_list xs);
         if pars then P.pp_print_string fmt ")";
         P.pp_close_box fmt ()
+    | XSeq (xs, XNil) ->
+        P.fprintf fmt "@[<hov 2>[";
+        iter_sep (fun () -> P.fprintf fmt ",@ ") (print ctx) (IA.to_list xs);
+        P.fprintf fmt "]@]";
+    | XSeq (xs, t) ->
+        P.fprintf fmt "@[<hov 2>[";
+        iter_sep (fun () -> P.fprintf fmt ",@ ") (print ctx) (IA.to_list xs);
+        P.fprintf fmt "|";
+        print ctx t;
+        P.fprintf fmt "]@]";
+    | XNil -> P.fprintf fmt "[]";
     | XExt x ->
         P.pp_open_hbox fmt ();
         P.pp_print_string fmt (C.print x);
@@ -255,7 +270,7 @@ let rec epush e = TRACE "epush" (fun fmt -> prf_env [] fmt e)
 let store ptr v = ptr := Done v; v
 let push t =
   match t with
-  | (XUv _ | XCon _ | XDB _ | XBin _ | XApp _ | XExt _ | XSeq _) as x -> x
+  | (XUv _ | XCon _ | XDB _ | XBin _ | XApp _ | XExt _ | XSeq _ | XNil) -> t
   | XSusp { contents = Done t } -> t
   | XSusp ({ contents = Todo (uvrl,t,ol,nl,e) } as ptr) ->
       let rec push u t ol nl e = TRACE "push" (fun fmt -> prf_data [] fmt t)
@@ -264,7 +279,7 @@ let push t =
         | XSusp { contents = Todo (u1,t,ol1,nl1,e1) } -> (*m1*)
             push (fst u + fst u1,snd u) t (ol1 + (ol -- nl1)) (nl + (nl1 -- ol))
               (XMerge(e1,nl1,ol,e))
-        | (XCon _ | XExt _) as x -> (*r1*) x
+        | (XCon _ | XExt _ | XNil) as x -> (*r1*) x
         | XUv (i,l) when snd u = nolvl -> XUv (i+fst u,l)
         | XUv (i,_) -> XUv (i+fst u,snd u)
         | XBin(n,t) -> (*r6*)
@@ -273,6 +288,9 @@ let push t =
               (XBin(n,mkXSusp ~uvrl:u t (ol+n) (nl+n) (XSkip(n,nl+n,e))))
         | XApp a -> (*r5*)
             store ptr (XApp(IA.map (fun t -> mkXSusp ~uvrl:u t ol nl e) a))
+        | XSeq(a,tl) ->
+            store ptr (XSeq(IA.map (fun t -> mkXSusp ~uvrl:u t ol nl e) a,
+                            mkXSusp ~uvrl:u tl ol nl e))
         | XDB i -> (* r2, r3, r4 *)
             let e = epush e in
             SPY "epushed" (prf_env []) e;
@@ -301,18 +319,27 @@ let look x =
   | XDB i -> DB i
   | XBin (n,t) -> Bin(n,t)
   | XApp a -> App a
+  | XSeq (a,tl) -> Seq (a,tl)
+  | XNil -> Nil
   | XExt e -> Ext e
   | XSusp _ -> assert false
 let mkUv v l = XUv(v,l)
 let mkCon n l = XCon(n,l)
 let mkDB i = XDB i
 let mkExt x = XExt x
+let rec mkSeq xs tl =
+  match tl with
+  | XSeq (ys,tl) -> mkSeq (IA.append xs ys) tl
+  | _ -> XSeq(xs,tl)
+let mkNil = XNil
 let kool = function
   | Uv (v,l) -> XUv(v,l)
   | Con (n,l) -> XCon(n,l)
   | DB i -> XDB i
   | Bin (n,t) -> XBin(n,t)
   | App a -> XApp a
+  | Seq (a,tl) -> XSeq (a,tl)
+  | Nil -> XNil
   | Ext e -> XExt e
 
 let mkBin n t =
@@ -340,6 +367,8 @@ let rec equal a b = match push a, push b with
  | XBin (n1,x), XBin (n2,y) -> n1 = n2 && equal x y
  | XApp xs, XApp ys -> IA.for_all2 equal xs ys
  | XExt x, XExt y -> C.equal x y
+ | XSeq(xs,s), XSeq(ys,t) -> IA.for_all2 equal xs ys && equal s t
+ | XNil, XNil -> true
  | ((XBin(n,x), y) | (y, XBin(n,x))) -> begin (* eta *)
      match push x with
      | XApp xs ->
@@ -358,20 +387,27 @@ let rec fold f x a = match push x with
   | (XDB _ | XCon _ | XUv _ | XExt _) as x -> f x a
   | XBin (_,x) -> fold f x a
   | XApp xs -> IA.fold (fold f) xs a
+  | XSeq (xs, t) -> fold f t (IA.fold (fold f) xs a)
+  | XNil -> a
   | XSusp _ -> assert false
 
 let rec map f x = match push x with
-  | (XDB _ | XCon _ | XUv _ | XExt _) as x -> f x
+  | (XDB _ | XCon _ | XUv _ | XExt _ | XNil) as x -> f x
   | XBin (ns,x) -> XBin(ns, map f x)
   | XApp xs -> XApp(IA.map (map f) xs)
+  | XSeq (xs, tl) -> XSeq(IA.map (map f) xs, map f tl)
   | XSusp _ -> assert false
 
 let max_uv x a = match push x with XUv (i,_) -> max a i | _ -> a
 
 let rec fold_map f x a = match push x with
-  | (XDB _ | XCon _ | XUv _ | XExt _) as x -> f x a
+  | (XDB _ | XCon _ | XUv _ | XExt _ | XNil) as x -> f x a
   | XBin (n,x) -> let x, a = fold_map f x a in XBin(n,x), a
   | XApp xs -> let xs, a = IA.fold_map (fold_map f) xs a in XApp xs, a
+  | XSeq (xs, tl) ->
+      let xs, a = IA.fold_map (fold_map f) xs a in
+      let tl, a = fold_map f tl a in
+      XSeq(xs, tl), a
   | XSusp _ -> assert false
  
 (* PROGRAM *)
@@ -515,7 +551,8 @@ end = struct (* {{{ *)
 
 let rec number = lexer [ '0'-'9' number | ]
 let rec ident =
-  lexer [ [ 'a'-'z' | '\'' | '_' | '0'-'9' ] ident | '^' '0'-'9' number | ]
+  lexer [ [ 'a'-'z' | 'A'-'Z' | '\'' | '_' | '-' | '0'-'9' ] ident
+        | '^' '0'-'9' number | ]
 
 let lvl_name_of s =
   match Str.split (Str.regexp_string "^") s with
@@ -523,21 +560,23 @@ let lvl_name_of s =
   | [ x;l ] -> x, int_of_string l
   | _ -> raise (Token.Error ("<name> ^ <number> expected.  Got: " ^ s))
 
-let arr = lexer [ ">" ]
-
 let tok = lexer
-  [ [ 'A'-'Z' ] ident -> "UVAR", $buf 
-  | [ 'a'-'z' ] ident -> "CONSTANT", $buf
-  | [ '_' '0'-'9' ] number -> "REL", $buf
-  | [ ":-" ] -> "ENTAILS",$buf
-  | [ ',' ] -> "COMMA",","
-  | [ '.' ] -> "FULLSTOP","."
-  | [ '\\' ] -> "BIND","\\"
-  | [ '/' ] -> "BIND","/"
-  | [ '(' ] -> "LPAREN","("
-  | [ ')' ] -> "RPAREN",")"
-  | [ '=' ] arr -> "IMPL", $buf
-  | [ '=' ] -> "EQUAL","="
+  [ 'A'-'Z' ident -> "UVAR", $buf 
+  | 'a'-'z' ident -> "CONSTANT", $buf
+  | '_' '0'-'9' number -> "REL", $buf
+  |  ":-"  -> "ENTAILS",$buf
+  |  "::"  -> "CONS",$buf
+  | ',' -> "COMMA",","
+  | '.' -> "FULLSTOP","."
+  | '\\' -> "BIND","\\"
+  | '/' -> "BIND","/"
+  | '(' -> "LPAREN","("
+  | ')' -> "RPAREN",")"
+  | '[' -> "LBRACKET","["
+  | ']' -> "RBRACKET","]"
+  | '|' -> "PIPE","|"
+  | "=>" -> "IMPL", $buf
+  | '=' -> "EQUAL","="
 ]
 
 let spy f s = if !Trace.debug then begin
@@ -555,6 +594,7 @@ let rec lex c = parser
        match spy (tok c) s with
        | "CONSTANT","pi" -> "PI", "pi"
        | "CONSTANT","sigma" -> "SIGMA", "sigma"
+       | "CONSTANT","nil" -> "NIL", "nil"
        | x -> x
 and comment c = parser
   | [< '( '\n' ); s >] -> lex c s
@@ -607,9 +647,10 @@ let check_con n l =
 
 let rec binders c n = function
     | (XCon _ | XUv _) as x when equal x c -> XDB n
-    | (XCon _ | XUv _ | XExt _ | XDB _) as x -> x
+    | (XCon _ | XUv _ | XExt _ | XDB _ | XNil) as x -> x
     | XBin(w,t) -> XBin(w,binders c (n+w) t)
     | XApp xs -> XApp (IA.map (binders c n) xs)
+    | XSeq (xs,tl) -> XSeq(IA.map (binders c n) xs, binders c n tl)
     | XSusp _ -> assert false
 and binders_premise c n = function
     | Pi t -> Pi(binders_premise c (n+1) t)
@@ -632,21 +673,40 @@ EXTEND
               let top = top_uv () in reset ();
               0, top, hd, hyps ] ];
   atom :
-    [ "1"
+    [ "0"
+      [ l = LIST1 atom LEVEL "1" SEP CONS ->
+          if List.length l = 1 then List.hd l
+          else
+            let l = List.rev l in
+            let last = List.hd l in
+            let rest = List.rev (List.tl l) in
+            mkSeq (IA.of_list rest) last
+      | LBRACKET; xs = LIST0 atom LEVEL "1" SEP COMMA;
+          tl = OPT [ PIPE; u = UVAR -> u ]; RBRACKET ->
+            let tl = match tl with
+              | None -> XNil
+              | Some u ->
+                  let u, lvl = lvl_name_of u in mkUv (get_uv u) lvl in
+          if List.length xs = 0 && tl <> XNil then 
+            raise (Token.Error ("List with not elements cannot have a tail"));
+          if List.length xs = 0 then mkNil
+          else mkSeq (IA.of_list xs) tl ]
+    | "1"
       [ hd = atom LEVEL "2"; args = LIST0 atom LEVEL "2" ->
           if args = [] then hd else mkApp (IA.of_list (hd :: args)) ]
     | "2" 
-      [ [ c = CONSTANT; b = OPT [ BIND; a = atom LEVEL "1" -> a ] ->
+      [ c = CONSTANT; b = OPT [ BIND; a = atom LEVEL "1" -> a ] ->
           let c, lvl = lvl_name_of c in 
           let x = mkCon c lvl in
-          match b with
+          (match b with
           | None -> check_con c lvl; x
-          | Some b ->  mkBin 1 (binders x 1 b) ]
-      | [ u = UVAR -> let u, lvl = lvl_name_of u in mkUv (get_uv u) lvl ]
-      | [ i = REL ->
-            mkDB (int_of_string (String.sub i 1 (String.length i - 1))) ]
-      | [ LPAREN; a = atom LEVEL "1"; RPAREN -> a ] ]
+          | Some b ->  mkBin 1 (binders x 1 b))
+      | u = UVAR -> let u, lvl = lvl_name_of u in mkUv (get_uv u) lvl
+      | i = REL -> mkDB (int_of_string (String.sub i 1 (String.length i - 1)))
+      | NIL -> mkNil
+      | LPAREN; a = atom LEVEL "0"; RPAREN -> a ]
     ];
+
   premise :
     [ "1"
       [ [ conj = LIST1 premise LEVEL "2" SEP COMMA ->
@@ -760,12 +820,13 @@ let reloc_uv_subst ~uv_increment:u ~cur_level:lvl args t =
   
 let rec whd s t =
   match look t with
-  | (Ext _ | Con _ | DB _ | Bin _) as x -> kool x, s
+  | (Ext _ | Con _ | DB _ | Bin _ | Nil) as x -> kool x, s
   | Uv (i,_) when in_sub i s ->
       let t = !last_sub_lookup in
       let t', s = whd s t in
       t', if t == t' then s else set_sub i t' s
-  | Uv _ as x -> kool x, s
+  | Uv _ -> t, s
+  | Seq(xs,tl) as x -> kool x, s
   | App v as x ->
       let hd = IA.get 0 v in
       let hd', s = whd s hd in
@@ -784,8 +845,9 @@ let rec whd s t =
           else mkAppv hd' (IA.tl v) 0 (IA.len v-1), s
           
 let rec nf s x = match look x with
-  | (Ext _ | Con _ | DB _) as x -> kool x
+  | (Ext _ | Con _ | DB _ | Nil) as x -> kool x
   | Bin(n,t) -> mkBin n (nf s t)
+  | Seq(xs,t) -> mkSeq (IA.map (nf s) xs) (nf s t)
   | (App _ | Uv _) as xf ->
       let x', _ = whd s x in 
       match look x' with
