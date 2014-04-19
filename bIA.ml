@@ -67,7 +67,7 @@ let fold_mapi f (start,stop,ar as orig) acc =
   if !i < stop then begin (* The array is not the same as the original one *)
     let ans = Array.sub ar start len in
     let v = match !temp with None -> assert false | Some x -> x in
-    ans.(!i) <- v;
+    ans.(!i - start) <- v;
     incr i;
     while !i < stop do
       let v = ar.(!i) in
