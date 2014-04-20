@@ -411,15 +411,22 @@ let rec fold_map i f x a = match push x with
   | XSusp _ -> assert false
  
 (* PROGRAM *)
-type builtin = BIUnif of data * data
+type builtin = BIUnif of data * data | BICustom of string * data
 
-let map_builtin f = function BIUnif(a,b) -> BIUnif(f a, f b)
-let fold_builtin f x a = match x with BIUnif(x,y) -> f y (f x a)
+let map_builtin f = function
+  | BIUnif(a,b) -> BIUnif(f a, f b)
+  | BICustom(n,t) -> BICustom(n,f t)
+let fold_builtin f x a = match x with
+  | BIUnif(x,y) -> f y (f x a)
+  | BICustom(_,x) -> f x a
 let fold_map_builtin i f x a = match x with
   | BIUnif(x,y) ->
       let x, a = f i x a in
       let y, a = f i y a in
       BIUnif(x,y), a
+  | BICustom(n,x) ->
+      let x, a = f i x a in
+      BICustom(n,x), a
 
 type program = annot_clause list
 and annot_clause = int * clause (* level *)
@@ -473,12 +480,9 @@ module PPP = struct (* {{{ pretty printer for programs *)
 
 let prf_builtin ctx fmt = function
   | BIUnif (a,b) -> 
-      Format.pp_open_hvbox fmt 2;
-      prf_data ctx fmt a;
-      Format.pp_print_space fmt ();
-      Format.pp_print_string fmt "= ";
-      prf_data ctx fmt b;
-      Format.pp_close_box fmt ()
+      Format.fprintf fmt "@[<hv 2>%a@ = %a@]" (prf_data ctx) a (prf_data ctx) b;
+  | BICustom(name,t) ->
+      Format.fprintf fmt "@[<hov 2>%s %a@]" name (prf_data ctx) t
 
 let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
   match p with
@@ -592,6 +596,7 @@ let tok = lexer
   | '|' -> "PIPE","|"
   | "=>" -> "IMPL", $buf
   | '=' -> "EQUAL","="
+  | '$' 'a'-'z' ident -> "BUILTIN",$buf
 ]
 
 let spy f s = if !Trace.dverbose then begin
@@ -676,6 +681,7 @@ and binders_premise c n = function
     | Impl(p,t) -> Impl(binders_premise c n p, binders_premise c n t)
 and binders_builtin c n = function
     | BIUnif (a,b) -> BIUnif(binders c n a, binders c n b)
+    | BICustom(s,t) -> BICustom(s,binders c n t)
 
 let sigma_abstract t =
   let uvl = List.rev (uvlist ()) in
@@ -736,6 +742,7 @@ EXTEND
       | a = atom -> Atom a
       | a = atom; ENTAILS; hyp = LIST1 premise LEVEL "2" SEP COMMA ->
          Impl(Conj hyp,Atom a)
+      | bt = BUILTIN; a = atom -> AtomBI(BICustom(bt,a))
       | PI; c = CONSTANT; BIND; p = premise ->
          let c, lvl = lvl_name_of c in
          let x = mkCon c lvl in

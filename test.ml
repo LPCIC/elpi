@@ -236,6 +236,16 @@ let test_aug () =
   " (foo Z :- Z = c) => (foo Y :- Y = a, sigma X/ X = nota) => foo X."
 ;;
 
+let test_custom () =
+  register_custom "is_flex" (fun t s _ _ ->
+    let t, s = Red.whd s t in
+    match LP.look t with
+    | LP.Uv _ -> s
+    | _ -> raise NoClause);
+  test_prog "foo X Y :- $is_flex X, X = a, Y = X.  foo b c." "foo X Y";
+  test_prog "foo X Y :- $is_flex X, X = a, Y = X.  foo b c." "foo b Y";
+;;
+
 let _ = Printexc.record_backtrace true
 let _ =
   test_IA ();
@@ -248,4 +258,5 @@ let _ =
   Trace.init ~where:("run",1,99) ~filter_out:["push.*";"epush.*"] false;
   test_list ();
   test_aug ();
+  test_custom ();
 

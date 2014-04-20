@@ -189,7 +189,8 @@ and unify_ho x y s =
 (* ******************************** Main loop ******************************* *)
 
 exception NoClause
-type objective = [ `Atom of data | `Unify of data * data ]
+type objective =
+  [ `Atom of data | `Unify of data * data | `Custom of string * data ]
 type goal = int * objective * annot_clause list
 
 (* Important: when we move under a pi we put a constant in place of the
@@ -224,6 +225,9 @@ let contextualize_premise depth subst premise : goal list * subst =
       [cdepth,`Atom(contextualize 0 t hv), List.map (fun c -> cdepth, c) eh], s
   | AtomBI (BIUnif(x,y)) ->
       [cdepth, `Unify(contextualize 0 x hv,contextualize 0 y hv),
+       List.map (fun c -> cdepth, c) eh], s
+  | AtomBI (BICustom(n,x)) ->
+      [cdepth, `Custom(n,contextualize 0 x hv),
        List.map (fun c -> cdepth, c) eh], s
   | Impl(p,h) ->
       let p, _ = fold_map_premise 0 (fun i t _ -> contextualize i t hv,()) p () in
@@ -275,6 +279,15 @@ let pr_cur_goal g s fmt =
   | `Unify(a,b) ->
         Format.eprintf "@[<hv2>on:@ %a = %a@]"
           (prf_data []) (apply_subst s a) (prf_data []) (apply_subst s b)
+  | `Custom(name,a) ->
+        Format.eprintf "@[<hv2>on:@ %s %a@]"
+          name (prf_data []) (apply_subst s a)
+
+let custom_tab = ref []
+let register_custom n f = custom_tab := ("$"^n,f) :: !custom_tab
+let custom name t s d p =
+  try List.assoc name !custom_tab t s d p
+  with Not_found -> raise(Invalid_argument ("custom "^name))
 
 let rec run (prog : program) s ((depth,goal,extra) : goal) =
   let prog = extra @ prog in
@@ -288,8 +301,14 @@ let rec run (prog : program) s ((depth,goal,extra) : goal) =
         with NoClause -> aux alternatives in
       aux prog
   | `Unify(a,b) ->
-      try
+      (try
         let s = unify a b s in
+        SPY "sub" Subst.prf_subst s;
+        s
+      with UnifFail _ -> raise NoClause)
+  | `Custom(name,a) ->
+      try
+        let s = custom name a s depth prog in
         SPY "sub" Subst.prf_subst s;
         s
       with UnifFail _ -> raise NoClause

@@ -15,3 +15,5 @@ val run : LP.program -> LP.goal -> LP.goal * Subst.subst
 (* debug *)
 val prepare_initial_goal : LP.goal -> LP.goal * Subst.subst
 
+val register_custom :
+  string -> (LP.data -> Subst.subst -> int -> LP.program -> Subst.subst) -> unit

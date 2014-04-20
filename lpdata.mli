@@ -61,7 +61,7 @@ module LP : sig
 
   val max_uv : data -> var -> var
 
-  type builtin = BIUnif of data * data
+  type builtin = BIUnif of data * data | BICustom of string * data
   type program = annot_clause list
   and annot_clause = int * clause (* level *)
   and clause = premise
