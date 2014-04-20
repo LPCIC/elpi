@@ -11,5 +11,7 @@ exception Unknown
 val pr_exn : (exn -> string) -> unit
 
 val debug : bool ref
+val dverbose : bool ref
 val init :
-  ?where:(string * int * int) -> ?filter_out:string list -> bool -> unit
+  ?where:(string * int * int) -> ?filter_out:string list ->
+  ?verbose:bool -> bool -> unit

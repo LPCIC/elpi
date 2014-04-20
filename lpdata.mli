@@ -56,27 +56,28 @@ module LP : sig
   
   val fold : (data -> 'a -> 'a) -> data -> 'a -> 'a
   val map : (data -> data) -> data -> data
-  val fold_map : (data -> 'a -> data * 'a) -> data -> 'a -> data * 'a
+  val fold_map :
+    int -> (int -> data -> 'a -> data * 'a) -> data -> 'a -> data * 'a
 
   val max_uv : data -> var -> var
 
   type builtin = BIUnif of data * data
-  type program = clause list
-  and clause = int * int * head * premise
-  and head = data
+  type program = annot_clause list
+  and annot_clause = int * clause (* level *)
+  and clause = premise
   and premise =
       Atom of data
     | AtomBI of builtin
     | Conj of premise list
-    | Impl of data * premise
-    | Pi of premise
-    | Sigma of premise
+    | Impl of clause * premise
+    | Pi of int * premise
+    | Sigma of int * premise
   and goal = premise
 
   val map_premise : (data -> data) -> premise -> premise
   val fold_premise : (data -> 'a -> 'a) -> premise -> 'a -> 'a
   val fold_map_premise :
-    (data -> 'a -> data * 'a) -> premise -> 'a -> premise * 'a
+    int -> (int -> data -> 'a -> data * 'a) -> premise -> 'a -> premise * 'a
 
   val parse_program : string -> program
   val parse_goal : string -> goal
@@ -91,7 +92,6 @@ module LP : sig
   val string_of_data : ?ctx:string list -> data -> string
   val string_of_premise : premise -> string
   val string_of_goal : premise -> string
-  val string_of_head : ?ctx:string list -> data -> name
   val string_of_clause : clause -> string
   val string_of_program : program -> string
 end
@@ -114,8 +114,7 @@ end
 
 module Red : sig
   val lift : ?from:int -> int -> LP.data -> LP.data
-  val reloc_uv_subst :
-    uv_increment:int -> cur_level:int -> LP.data list -> LP.data -> LP.data
+  val beta_under : int -> LP.data -> LP.data list -> LP.data
   val whd : Subst.subst -> LP.data -> LP.data * Subst.subst
   val nf : Subst.subst -> LP.data -> LP.data
 end

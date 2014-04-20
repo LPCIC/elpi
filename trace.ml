@@ -4,6 +4,7 @@
 (* ------------------------------------------------------------------------- *)
 
 let debug = ref false
+let dverbose = ref false
 let where_loc = ref ("",0,max_int)
 module M = Map.Make(String)
 let cur_step = ref M.empty
@@ -23,9 +24,10 @@ let condition k =
        !hot))
     && not(List.exists (fun p -> Str.string_match p k 0) !filter)
 
-let init ?(where="",0,max_int) ?(filter_out=[]) b =
+let init ?(where="",0,max_int) ?(filter_out=[]) ?(verbose=false) b =
   cur_step := M.empty;
   debug := b;
+  dverbose := verbose;
   filter := List.map Str.regexp filter_out;
   where_loc := where
 

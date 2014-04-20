@@ -190,12 +190,12 @@ and unify_ho x y s =
 
 exception NoClause
 type objective = [ `Atom of data | `Unify of data * data ]
-type goal = int * int * objective * clause list
+type goal = int * objective * annot_clause list
 
 (* Important: when we move under a pi we put a constant in place of the
  * bound variable. This way hypothetical clauses do not need to be lifted
  * when we move under other pi binders *)
-let mkhv =
+let mkhv_aux =
   let i = ref 0 in
   let small_digit = function
     | 0 -> "₀" | 1 -> "₁" | 2 -> "₂" | 3 -> "₃" | 4 -> "₄" | 5 -> "₅"
@@ -205,77 +205,109 @@ let mkhv =
     incr i;
     mkCon ("𝓱"^
       String.concat "" (List.map small_digit (List.rev (digits_of !i)))) depth
+let rec mkhv n d =
+  if n = 0 then []
+  else mkhv_aux d :: mkhv (n-1) d
 
-let contextualize depth s t hv =
-  Red.reloc_uv_subst
-    ~uv_increment:(Subst.top s) ~cur_level:depth (List.rev hv) t
+let rec fresh_uv n d s =
+  if n = 0 then [], s
+  else 
+    let m, s = Subst.fresh_uv d s in
+    let tl, s = fresh_uv (n-1) d s in
+    m :: tl, s
 
-let contextualize_premise depth subst premise nuv =
+let contextualize depth t hv = Red.beta_under depth t (List.rev hv)
+
+let contextualize_premise depth subst premise : goal list * subst =
   let rec aux cdepth depth s hv eh = function
   | Atom t ->
-      [cdepth,nuv,`Atom(contextualize depth s t hv),
-       List.map (fun t -> cdepth,nuv, t, Conj []) eh]
+      [cdepth,`Atom(contextualize 0 t hv), List.map (fun c -> cdepth, c) eh], s
   | AtomBI (BIUnif(x,y)) ->
-      [cdepth,nuv,
-        `Unify(contextualize depth s x hv,contextualize depth s y hv),[]]
-  | Impl(t,h) ->
-      aux cdepth depth s hv (contextualize depth s t hv :: eh) h
-  | Pi h -> aux (cdepth+1) depth s (mkhv (depth+1)::hv) eh h
-  | Sigma h ->
-      let m, s = Subst.fresh_uv cdepth s in
-      aux cdepth depth s (m :: hv) eh h
-  | Conj l -> List.flatten (List.map (aux cdepth depth s hv eh) l)
+      [cdepth, `Unify(contextualize 0 x hv,contextualize 0 y hv),
+       List.map (fun c -> cdepth, c) eh], s
+  | Impl(p,h) ->
+      let p, _ = fold_map_premise 0 (fun i t _ -> contextualize i t hv,()) p () in
+      aux cdepth depth s hv (p :: eh) h
+  | Pi(n,h) -> aux (cdepth+n) depth s (mkhv n (depth+1) @ hv) eh h
+  | Sigma(n,h) ->
+      let ms, s = fresh_uv n cdepth s in
+      aux cdepth depth s (ms @ hv) eh h
+  | Conj l ->
+      let ll, s = List.fold_right (fun p (acc,s) ->
+        let l, s = aux cdepth depth s hv eh p in
+        l::acc, s) l ([],s) in
+      List.flatten ll, s
   in
     aux depth depth subst [] [] premise
 
-let contextualize depth subst atom : data =
-  contextualize depth subst atom []
+let contextualize_hyp depth subst premise =
+  match contextualize_premise depth subst premise with
+  | [_,`Atom hd,hyps], s -> hd, hyps, s
+  | _ -> assert false
 
-let rec select (goal : head) depth s (prog : program) =
+let contextualize_goal depth subst goal =
+  contextualize_premise depth subst goal
+
+let rec select (goal : data) depth s (prog : program) :
+  subst * goal list * program
+=
   match prog with
   | [] ->
       Printf.eprintf "fail: %s\n%!" (string_of_data (apply_subst s goal));
       raise NoClause
-  | (_,nuv,hd,hyp) as clause :: prog ->
+  | (_,clause) :: prog ->
+      TRACE "select" (fun fmt -> prf_clause fmt clause)
       try
-        let hd = contextualize depth s hd in
-        let chyp h = contextualize_premise depth s h nuv in
-        let s = Subst.raise_top nuv s in
+        let hd, subgoals, s = contextualize_hyp depth s clause in
         let s = unify goal hd s in
-        Format.eprintf "@[<hv2>  use:@ %a@]@\n%!" prf_clause clause;
-        Format.eprintf "@[<hv2>  sub:@ %a@]@\n%!" Subst.prf_subst s;
-        s, chyp hyp, prog
+        let subgoals, s =
+          List.fold_right (fun (d,p) (acc,s) ->
+            let gl, s = contextualize_goal d s p in
+            gl :: acc, s) subgoals ([],s) in
+        s, List.flatten subgoals, prog
       with UnifFail _ -> select goal depth s prog
 
-let rec run (prog : program) s ((depth,_,goal,extra_hyps) : goal) =
-  let prog = extra_hyps @ prog in
+let pr_cur_goal g s fmt =
+  match g with
+  | `Atom goal ->
+        Format.eprintf "@[<hv2>on:@ %a@]"
+          (prf_data []) (apply_subst s goal)
+  | `Unify(a,b) ->
+        Format.eprintf "@[<hv2>on:@ %a = %a@]"
+          (prf_data []) (apply_subst s a) (prf_data []) (apply_subst s b)
+
+let rec run (prog : program) s ((depth,goal,extra) : goal) =
+  let prog = extra @ prog in
+  TRACE "run" (pr_cur_goal goal s)
   match goal with
   | `Atom goal ->
       let rec aux alternatives =
-        Format.eprintf "@[<hv2>on:@ %a%s@]@\n%!"
-          (prf_data []) (apply_subst s goal)
-          (if !Trace.debug then Printf.sprintf " (%d,%d)" depth (Subst.top s)
-          else "");
         let s, goals, alternatives = select goal depth s alternatives in
+        SPY "sub" Subst.prf_subst s;
         try List.fold_left (run prog) s goals
         with NoClause -> aux alternatives in
       aux prog
   | `Unify(a,b) ->
-        Format.eprintf "@[<hv2>on:@ %a = %a%s@]@\n%!"
-          (prf_data []) (apply_subst s a) (prf_data []) (apply_subst s b)
-          (if !Trace.debug then Printf.sprintf " (%d,%d)" depth (Subst.top s)
-          else "");
       try
         let s = unify a b s in
-        Format.eprintf "@[<hv2>  sub:@ %a@]@\n%!" Subst.prf_subst s;
+        SPY "sub" Subst.prf_subst s;
         s
       with UnifFail _ -> raise NoClause
 
+let prepare_initial_goal g =
+  let s = empty 1 in
+  match g with
+  | Sigma(n,g) ->
+      let ms, s = fresh_uv n 0 s in
+      fst(fold_map_premise 0 (fun i t _ -> contextualize i t ms,()) g ()), s
+  | _ -> g, s
+
 let run (p : program) (g : premise) =
-  let s = empty 0 in
-  let maxuv = fold_premise max_uv g 0 in
-  let gs = contextualize_premise 0 s g maxuv in
-  let s = Subst.raise_top (maxuv+1) s in
-  List.fold_left (run p) s gs
+  let g, s = prepare_initial_goal g in
+  Format.eprintf "@[<hv2>goal:@ %a@]@\n%!"
+    prf_goal (LP.map_premise (Red.nf s) g);
+  let gls, s = contextualize_goal 0 s g in
+  let s = List.fold_left (run p) s gls in
+  g, s
 
 (* vim:set foldmethod=marker: *)

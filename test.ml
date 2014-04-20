@@ -174,32 +174,78 @@ let test_coq () =
            App(Const "eq", [|Rel 2; Rel 1; Evar(1,[|Rel 1;Rel 2|]) |])))));
 ;;
 
-let _ = Printexc.record_backtrace true
-let _ =
-  if not !Trace.debug then begin
-    test_IA ();
-    test_LPdata ();
-    test_whd ();
-    test_unif ();
-    test_coq ();
-  end;
-  Trace.init ~where:("unify",1,99) ~filter_out:["push.*";"epush.*"] false;
+let test_parse () =
+  let test_p s =
+    let p = LP.parse_program s in
+    Format.eprintf "@[<hv2>program:@ %a@]@\n%!" LP.prf_program p in
+  let test_g s =
+    let g, s = prepare_initial_goal (LP.parse_goal s) in
+    Format.eprintf "@[<hv2>goal:@ %a@]@\n%!"
+      LP.prf_goal (Subst.apply_subst_goal s g) in
+  test_p "copy (lam F) (lam G) :- pi x\\ copy x x => copy (F x) (G x).";
+  test_g " (foo Z :- Z = c) => (foo Y :- Y = a, sigma X/ X = nota) => foo X";
+;;
 
-  let p = LP.parse_program "
+let test_prog p g =
+  Format.eprintf "---------------------------------------";
+  Format.eprintf "---------------------------------------@\n%!";
+  let p = LP.parse_program p in
+  let g = LP.parse_goal g in
+  Format.eprintf "@[<hv2>program:@ %a@]@\n%!" LP.prf_program p;
+  let g, s = run p g in
+  Format.eprintf
+    "@\n@[<hv2>output:@ %a@]@\n@[<hv2>nf out:@ %a@]@\n@[<hv2>subst:@ %a@]@\n%!"
+    LP.prf_goal (Subst.apply_subst_goal s g) 
+    LP.prf_goal (LP.map_premise (Red.nf s) g)
+    Subst.prf_subst s;
+
+;;
+
+let test_copy () =
+  test_prog "
     copy hole hole.
     copy (app A B) (app X Y) :- copy A X, copy B Y.
     copy (lam F) (lam G) :- pi x/ copy x x => copy (F x) (G x).
     
-    tlist :- [l1,l2,l3] = [A|TL], A = l1, TL = [l2,l3].
-
     t1 X :- copy (app (lam w/ lam x/ (app w x)) a) X.
     t2 :- pi x/ sigma Y/ copy x x => copy x Y, copy a a.
-  " in
-  let g = LP.parse_goal "copy a a => (t1 X, t2), W = a, tlist." in
-  Format.eprintf "@[<hv2>program:@ %a@]@\n%!" LP.prf_program p;
-  Format.eprintf "@[<hv2>goal:@ %a@]@\n%!" LP.prf_goal g;
-  let s = run p g in
-  Format.eprintf "@\n@[<hv2>output:@ %a@]@\n@[<hv2>subst:@ %a@]@\n%!"
-    LP.prf_goal (Subst.apply_subst_goal s g) Subst.prf_subst s;
-  Format.eprintf "@[<hv2>nf output:@ %a@]@\n%!"
-    LP.prf_goal (LP.map_premise (Red.nf s) g)
+  " 
+  "copy a a => (t1 X, t2), W = a."
+;;
+
+let test_list () =
+  test_prog "
+    rev [] [].
+    rev [X|Y] T :- rev Y Z, rcons X Z T.
+    rcons X [] [X].
+    rcons X [Y|Z] [Y|T] :- rcons X Z T. 
+  "
+  "rev [a,b,c,d] X.";
+  test_prog "
+    rev A B :- rev-aux A B [].
+    rev-aux [] ACC ACC.
+    rev-aux [X|Y] T ACC :- rev-aux Y T [X|ACC].
+  "
+  "rev [a,b,c,d] X.";
+;;
+
+let test_aug () =
+  test_prog " foo b."
+  " (foo Z :- Z = c) => (foo Y :- Y = a, X = nota) => foo X.";
+  test_prog " foo b."
+  " (foo Z :- Z = c) => (foo Y :- Y = a, sigma X/ X = nota) => foo X."
+;;
+
+let _ = Printexc.record_backtrace true
+let _ =
+  test_IA ();
+  test_LPdata ();
+  test_parse ();
+  test_whd ();
+  test_unif ();
+  test_coq ();
+  test_copy ();
+  Trace.init ~where:("run",1,99) ~filter_out:["push.*";"epush.*"] false;
+  test_list ();
+  test_aug ();
+
