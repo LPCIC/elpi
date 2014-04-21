@@ -88,9 +88,6 @@ type name = string
 
 type olam = int
 type nlam = int
-type uvreloc = int * level
-let nolvl = -1
-let noreloc = 0,nolvl
 
 type kind_of_data =
   | Uv of var * level
@@ -111,11 +108,11 @@ and data =
   | XNil
   | XExt of C.data
   | XSusp of suspended_job ref
-and suspended_job = Done of data | Todo of uvreloc * data * olam * nlam * env
+and suspended_job = Done of data | Todo of data * olam * nlam * env
 and env =
   | XEmpty
   | XArgs of data IA.t * int * env
-  | XMerge of env * nlam * olam * env
+(*   | XMerge of env * nlam * olam * env *)
   | XSkip of int * nlam * env
 
 module PP = struct (* {{{ pretty printer for data *)
@@ -181,8 +178,8 @@ let rec prf_data ctx fmt t =
     | XSusp ptr ->
         match !ptr with
         | Done t -> P.fprintf fmt ".(@["; print ctx t; P.fprintf fmt ")@]"
-        | Todo(u,t,ol,nl,e) ->
-            P.fprintf fmt "@[<hov 2>⟦%d,%d, " (fst u) (snd u);
+        | Todo(t,ol,nl,e) ->
+            P.fprintf fmt "@[<hov 2>⟦";
             print ctx t;
             P.fprintf fmt ",@ %d, %d,@ " ol nl;
             prf_env ctx fmt e;
@@ -220,7 +217,7 @@ end (* }}} *)
 include PP
 
 let (--) x y = max 0 (x - y)
-let mkXSusp ?(uvrl=noreloc) t n o e = XSusp(ref(Todo(uvrl,t,n,o,e)))
+let mkXSusp t n o e = XSusp(ref(Todo(t,n,o,e)))
 
 let rec epush e = TRACE "epush" (fun fmt -> prf_env [] fmt e)
   match e with
@@ -607,15 +604,15 @@ let spy f s = if !Trace.dverbose then begin
   tok
   end else f s
 
-let rec lex c = parser
-  | [< ' ( ' ' | '\n' ); s >] -> lex c s
+let rec lex c = parser bp
+  | [< ' ( ' ' | '\n' | '\t' ); s >] -> lex c s
   | [< '( '%' ); s >] -> comment c s
-  | [< s >] ->
-       match spy (tok c) s with
+  | [< s >] ep ->
+       (match spy (tok c) s with
        | "CONSTANT","pi" -> "PI", "pi"
        | "CONSTANT","sigma" -> "SIGMA", "sigma"
        | "CONSTANT","nil" -> "NIL", "nil"
-       | x -> x
+       | x -> x), (bp, ep)
 and comment c = parser
   | [< '( '\n' ); s >] -> lex c s
   | [< '_ ; s >] -> comment c s
@@ -623,7 +620,14 @@ and comment c = parser
 open Plexing
 
 let lex_fun s =
-  (Stream.from (fun _ -> Some (lex Lexbuf.empty s))), (fun _ -> Ploc.dummy)
+  let tab = Hashtbl.create 207 in
+  let last = ref Ploc.dummy in
+  (Stream.from (fun id ->
+     let tok, loc = lex Lexbuf.empty s in
+     last := Ploc.make_unlined loc;
+     Hashtbl.add tab id !last;
+     Some tok)),
+  (fun id -> try Hashtbl.find tab id with Not_found -> !last)
 
 let tok_match (s1,_) = (); function
   | (s2,v) when s1=s2 ->
@@ -743,16 +747,14 @@ EXTEND
       | a = atom; ENTAILS; hyp = LIST1 premise LEVEL "2" SEP COMMA ->
          Impl(Conj hyp,Atom a)
       | bt = BUILTIN; a = atom -> AtomBI(BICustom(bt,a))
-      | PI; c = CONSTANT; BIND; p = premise ->
-         let c, lvl = lvl_name_of c in
-         let x = mkCon c lvl in
-         mkPi 1 (binders_premise x 1 p)
-      | SIGMA; u = UVAR; BIND; p = premise ->
-         let u, lvl = lvl_name_of u in
-         let x = mkUv (get_uv u) lvl in
-         mkSigma 1 (binders_premise x 1 p)
+      | bind = [ PI -> mkPi | SIGMA -> mkSigma]; x = bound; BIND; p = premise ->
+         bind 1 (binders_premise x 1 p)
       | LPAREN; p = premise; RPAREN -> p
       | LPAREN; p = premise; RPAREN; IMPL; q = premise -> Impl(p,q)]
+    ];
+  bound : 
+    [ [ c = CONSTANT -> let c, lvl = lvl_name_of c in mkCon c lvl
+      | u = UVAR -> let u, lvl = lvl_name_of u in mkUv (get_uv u) lvl ]
     ];
 END
 
@@ -761,12 +763,12 @@ let parse e s =
   try Grammar.Entry.parse e (Stream.of_string s)
   with Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) ->
     let last = Ploc.last_pos l in
-    let ctx_len = 10 in
+    let ctx_len = 70 in
     let ctx =
       let start = max 0 (last - ctx_len) in
       let len = min (String.length s - start) ctx_len in
       "…" ^ String.sub s start len in
-    raise (Stream.Error(Printf.sprintf "%s: %s" ctx msg))
+    raise (Stream.Error(Printf.sprintf "%s\nnear: %s" msg ctx))
   | Ploc.Exc(_,e) -> raise e
 
 let parse_program s : program = parse lp s 
@@ -848,6 +850,7 @@ let beta_under depth t l =
       (XSkip(depth,0,(XArgs(IA.of_list (List.map (lift depth) l), 0, XEmpty))))
 
 let rec whd s t =
+  TRACE "whd" (fun fmt -> prf_data [] fmt t)
   match look t with
   | (Ext _ | Con _ | DB _ | Bin _ | Nil) as x -> kool x, s
   | Uv (i,_) when in_sub i s ->

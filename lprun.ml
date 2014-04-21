@@ -260,10 +260,10 @@ let rec select (goal : data) depth s (prog : program) :
       Printf.eprintf "fail: %s\n%!" (string_of_data (apply_subst s goal));
       raise NoClause
   | (_,clause) :: prog ->
-      TRACE "select" (fun fmt -> prf_clause fmt clause)
       try
         let hd, subgoals, s = contextualize_hyp depth s clause in
         let s = unify goal hd s in
+        SPY "selected"  prf_clause clause;
         let subgoals, s =
           List.fold_right (fun (d,p) (acc,s) ->
             let gl, s = contextualize_goal d s p in
@@ -273,15 +273,12 @@ let rec select (goal : data) depth s (prog : program) :
 
 let pr_cur_goal g s fmt =
   match g with
-  | `Atom goal ->
-        Format.eprintf "@[<hv2>on:@ %a@]"
-          (prf_data []) (apply_subst s goal)
+  | `Atom goal -> prf_data [] fmt (apply_subst s goal)
   | `Unify(a,b) ->
-        Format.eprintf "@[<hv2>on:@ %a = %a@]"
+        Format.eprintf "%a = %a"
           (prf_data []) (apply_subst s a) (prf_data []) (apply_subst s b)
   | `Custom(name,a) ->
-        Format.eprintf "@[<hv2>on:@ %s %a@]"
-          name (prf_data []) (apply_subst s a)
+        Format.eprintf "%s %a" name (prf_data []) (apply_subst s a)
 
 let custom_tab = ref []
 let register_custom n f = custom_tab := ("$"^n,f) :: !custom_tab
