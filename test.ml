@@ -106,22 +106,26 @@ let test_LPdata () =
 ;;
 
 let test_whd () =
-  let test a b =
+  let test ?(nf=false) a b =
     let t = LP.parse_data a in
-    let t', _ = Red.whd (Subst.empty 0) t in
-    Format.eprintf "@[<hv2>whd: @ %a @ ---> %a ---> %a@]@\n%!"
-      (LP.prf_data []) t
-      (LP.prf_data []) t'
-      (LP.prf_data []) (Red.nf (Subst.empty 0) t') ;
-    assert(LP.equal t' LP.(parse_data b)) in
+    let s = Subst.empty 0 in
+    let t' = if nf then Red.nf s t else fst(Red.whd s t) in
+    let t'' =  LP.parse_data b in
+    Format.eprintf "@[<hv2>whd: @ %a@ ---> %a@]@\n%!"
+      (LP.prf_data []) t (LP.prf_data []) t';
+    if not (LP.equal t' t'') then begin
+      Format.eprintf "@[  =/=  %a@]@\n%!" (LP.prf_data []) t'';
+      exit 1;
+    end
+    in
   test "(x/ y/ x) a b" "a";
   test "(x/ y/ x) a" "y/ a";
   test "(x/ y/ x) a b c" "a c";
-  Trace.init ~where:("whd",1,99) true;
   test "(x/ y/ x) (x/ x) b" "x/ x";
   test "(x/ y/ x) (x/ x) b c" "c";
   test "(x/ y/ x) (x/y/ x x y) b c" "y/c c y";
-  test "(x/ y/ z/ t/ x r y) (x/y/ x x y) b c c" "x/y/r r b";
+  test ~nf:true "(x/ y/ z/ t/ x r y) (x/y/ x x y) b" "x/y/r r b";
+  test "(x/ y/ z/ t/ x r y) (x/y/ x x y) b c c" "r r b";
   ;;
 
 let test_unif () =
@@ -181,9 +185,9 @@ let test_parse () =
     let p = LP.parse_program s in
     Format.eprintf "@[<hv2>program:@ %a@]@\n%!" LP.prf_program p in
   let test_g s =
-    let g, s = prepare_initial_goal (LP.parse_goal s) in
+    let hv, g, s = prepare_initial_goal (LP.parse_goal s) in
     Format.eprintf "@[<hv2>goal:@ %a@]@\n%!"
-      LP.prf_goal (Subst.apply_subst_goal s g) in
+      (LP.prf_goal (ctx_of_hv hv)) (Subst.apply_subst_goal s g) in
   test_p "copy (lam F) (lam G) :- pi x\\ copy x x => copy (F x) (G x).";
   test_g " (foo Z :- Z = c) => (foo Y :- Y = a, sigma X/ X = nota) => foo X";
 ;;
@@ -199,8 +203,8 @@ let test_prog p g =
   let g, s = run p g in
   Format.eprintf
     "@\n@[<hv2>output:@ %a@]@\n@[<hv2>nf out:@ %a@]@\n@[<hv2>subst:@ %a@]@\n%!"
-    LP.prf_goal (Subst.apply_subst_goal s g) 
-    LP.prf_goal (LP.map_premise (Red.nf s) g)
+    (LP.prf_goal []) (Subst.apply_subst_goal s g) 
+    (LP.prf_goal []) (LP.map_premise (Red.nf s) g)
     Subst.prf_subst s;
  with Stream.Error msg ->
    Format.eprintf "@[Parse error: %s@]@\n%!" msg
@@ -214,8 +218,8 @@ let test_copy () =
     
     t1 X :- copy (app (lam w/ lam x/ (app w x)) a) X.
     t2 :- pi x/ sigma Y/ copy x x => copy x Y, copy a a.
-  " 
-  "copy a a => (t1 X, t2), W = a."
+    go X W :- (t1 X, t2), W = a."
+  "copy a a => go X W"
 ;;
 
 let test_list () =
@@ -241,6 +245,11 @@ let test_aug () =
   " (foo Z :- Z = c) => (foo Y :- Y = a, sigma X/ X = nota) => foo X."
 ;;
 
+let test_back () =
+  test_prog " foo X :- bar.  foo X :- X = a."
+  "foo a";
+;;
+
 let test_custom () =
   register_custom "is_flex" (fun t s _ _ ->
     let t, s = Red.whd s t in
@@ -252,6 +261,10 @@ let test_custom () =
 ;;
 
 let test_typeinf () =
+  register_custom "print" (fun t s _ _ ->
+    let t = Red.nf s t in
+    Format.eprintf "%a@\n%!" (LP.prf_data []) t;
+    s);
   test_prog "
 % ML Type inferencer, with abs, app and let.  Chuck liang, 7/95, revised
 % from old version of 4/94.  Adopted to Teyjus 7/2000.
@@ -311,13 +324,11 @@ append-sub emp L L.
 append-sub (sub X Y Ss) A (sub X Y B) :- append-sub Ss A B.
 
 resolve-for A Vl M N :- M = emp,
-  ((pi U/ (vrd A U :- member U Vl)) => rsub2 Vl A M N).
-resolve-for A Vl M N :- M = emp,
-  ((pi U/ (vrd A U :- rigid U)) => rsub2 Vl A M N).
+  ((pi U/ (vrd A U :- member U Vl)) =>
+   ((pi U/ (vrd A U :- rigid U)) => rsub2 Vl A M N)).
 resolve-for A Vl M N :- M = (sub X Y Z), 
-  ((pi U/ (vrd A U :- rigid U)) => rsub2 Vl A M N).
-resolve-for A Vl M N :- M = (sub X Y Z), 
-  ((pi U/ (vrd A U :- member U Vl)) => rsub2 Vl A M N).
+  ((pi U/ (vrd A U :- rigid U)) =>
+   ((pi U/ (vrd A U :- member U Vl)) => rsub2 Vl A M N)).
 rsub2 Vl A M (sub A T P) :- collect-for A M AL N, rsub3 (A::Vl) AL T N P.
 rsub3 (A::Vl) nil A N N.
 rsub3 (A::Vl) (X::nil) X N M :- 
@@ -467,7 +478,7 @@ update-sig NV G :-
 
 
 member X [X|T].
-member X [Y|T] :- %!, 
+member X [Y|T] :- !, 
 member X T.
 append [] L L.
 append [H|T] L [H|M] :- append T L M.
@@ -496,52 +507,44 @@ appear-in A (arr B C) :- appear-in A C.
 
 infer-type N T :- polytype nil M N S, remvac S T.
 
-tryonce X T :- %!, 
-polytype nil M X T.
-%, !, fail.
+tryonce X T :- polytype nil M X T, $print X, $print T, fail.
 
-"
-"tryonce (abs x/ (app op zero)) T"
-(*
 
 go :- example X T, tryonce X T.
 go :- stop.
+stop :- $print the-end.
       
-tryonce X T :- !, polytype nil M X T, !, fail.
-%	printterm std_out T, print "\n", !, fail.
-
-example (abs x\ (app op zero)) T.
-example (abs f\ (app f zero)) T.
-example (abs f\ (abs x\ (app f x))) T. 
-example (abs x\ (abs f\ (app f x))) T.
-example (abs f\ (abs g\ (abs x\ (app g (app f x))))) T.
-example (abs x\ (abs f\ (app (app f x) (app (app f x) x)))) T.
-example (abs f\ (abs x\ (abs y\ (app (app f (app op x)) (app op y))))) T.
-example (abs y\ (let (x\ (abs z\x)) (app succ y))) T.
-example (let (x\ (app x x)) (abs y\y)) T.
-example (let (x\ (let (z\ (app z (app (app x x) (app z z)))) (abs u\u))) (abs y\y)) T. 
-example (let (f\ (app (app (abs d1\ (abs (d2 \ zero))) (app f zero)) (app f (abs x \ x)))) (abs x \ x)) T.
-example (abs x\ (let (y\x) (app x zero))) T.
-example (abs x\ (app op (app op x))) T.
-example (abs x\ (let (y\ (app (abs c\c) y)) (app (abs c\c) x))) T.
-example (abs x\ (let (u\ (let (v\v) (app succ u))) (app op x))) T.
-example (let (u\ (let (v\v) (app op u))) (abs x\x)) T.
+example (abs x/ (app op zero)) T.
+example (abs f/ (abs x/ (app f x))) T. 
+example (abs x/ (abs f/ (app f x))) T.
+example (abs f/ (abs g/ (abs x/ (app g (app f x))))) T.
+example (abs x/ (abs f/ (app (app f x) (app (app f x) x)))) T.
+example (abs f/ (abs x/ (abs y/ (app (app f (app op x)) (app op y))))) T.
+example (abs y/ (let (x/ (abs z/x)) (app succ y))) T.
+example (let (x/ (app x x)) (abs y/y)) T.
+example (let (x/ (let (z/ (app z (app (app x x) (app z z)))) (abs u/u))) (abs y/y)) T. 
+example (let (f/ (app (app (abs d1/ (abs (d2 / zero))) (app f zero)) (app f (abs x / x)))) (abs x / x)) T.
+example (abs x/ (let (y/x) (app x zero))) T.
+example (abs x/ (app op (app op x))) T.
+example (abs x/ (let (y/ (app (abs c/c) y)) (app (abs c/c) x))) T.
+example (abs x/ (let (u/ (let (v/v) (app succ u))) (app op x))) T.
+example (let (u/ (let (v/v) (app op u))) (abs x/x)) T.
 
 % Untypable examples:
-example (app (abs x\ (app x x)) (abs x\ (app x x))) T.
-example (abs x\ (abs y\ (app (app y x) (app succ y)))) T.
-example (abs f\ (let (x\ (app f x)) (app op f))) T.
-example (abs x\ (let y\ (app y y)) (app op2 x)) T.
-example (abs x\ (let (y\ (app x y)) (app op3 x))) T.
-example (abs x\ (let (y\ (app y y)) (app op3 x))) T.
-example (abs x\ (let (v\ (app v v)) (abs z\ (app x z)))) T.
-example (let (u\ (let (v\v) (app succ u))) (abs x\x)) T.
+example (app (abs x/ (app x x)) (abs x/ (app x x))) T.
+example (abs x/ (abs y/ (app (app y x) (app succ y)))) T.
+example (abs f/ (let (x/ (app f x)) (app op f))) T.
+example (abs x/ (let y/ (app y y)) (app op2 x)) T.
+example (abs x/ (let (y/ (app x y)) (app op3 x))) T.
+example (abs x/ (let (y/ (app y y)) (app op3 x))) T.
+example (abs x/ (let (v/ (app v v)) (abs z/ (app x z)))) T.
+example (let (u/ (let (v/v) (app succ u))) (abs x/x)) T.
 
 % some ml equivalents
 % fn f => (fn g => (fn x => (g (f x))));
 % let val x = (fn y => y) in (let val z = (fn u => u) in (z (x x) (z z)) end) end;
-% let val f = (fn x => x) in (((fn d1 => (fn d2 => 0)) (f 0)) (f (fn h => h))) end;
-*)
+% let val f = (fn x => x) in (((fn d1 => (fn d2 => 0)) (f 0)) (f (fn h => h))) end;"
+"go"
 ;;
 
 let set_terminal_width () =
@@ -549,6 +552,8 @@ let set_terminal_width () =
   let w = int_of_string (input_line ic) in
   let _ = Unix.close_process p in
   Format.pp_set_margin Format.err_formatter w;
+  Format.pp_set_ellipsis_text Format.err_formatter "...";
+  Format.pp_set_max_boxes Format.err_formatter 30;
 ;;
 
 let _ = Printexc.record_backtrace true
@@ -560,11 +565,11 @@ let _ =
   test_whd ();
   test_unif ();
   test_coq ();
-  Trace.init ~where:("run",1,99)
-    ~filter_out:[(*"push.*";"epush.*";"unif";*)"bind";"t$";"vj$"] false;
   test_copy ();
   test_list ();
   test_aug ();
   test_custom ();
+  test_back ();
+(*    Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";"epush.*";"unif";"bind";"t$";"vj$";"rule";"whd";"hv";"premise";"sub"] true; *)
   test_typeinf ();
 
