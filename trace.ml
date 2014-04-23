@@ -39,14 +39,13 @@ let enter k msg =
   incr level;
   incr_cur_step k;
   if condition k then begin
-    Format.pp_open_hvbox Format.err_formatter !level;
-    Format.eprintf "%s%s %d {{{@[<hv1> %a@]\n%!"
+    Format.eprintf "%s%s %d {{{@[<hov1> %a@]\n%!"
       (String.make !level ' ') k (get_cur_step k) (fun fmt () -> msg fmt) ();
   end
 
 let print name f x = 
   if condition name then
-    Format.eprintf "%s %s =@[<hv1> %a@]\n%!" (String.make !level ' ') name f x
+    Format.eprintf "%s %s =@[<hov1> %a@]\n%!" (String.make !level ' ') name f x
 
 let printers = ref []
 
