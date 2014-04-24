@@ -113,7 +113,7 @@ let rec bind x id depth lvl args t s =
       | Uv(j,l) when j <> id && isPU bs ->
           let bs = IA.tl bs in
           let nbs = IA.len bs in
-          let h, s = fresh_uv lvl s in
+          let h, s = fresh_uv (*lv*)l s in
           let cs = bs ^= lvl in (* constants X = id,lvl can copy *)
           let ws = cs ^- bs in
           let al = mk_al depth args in
