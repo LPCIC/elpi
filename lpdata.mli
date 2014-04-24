@@ -61,9 +61,9 @@ module LP : sig
 
   val max_uv : data -> var -> var
 
-  type builtin = BIUnif of data * data | BICustom of string * data
+  type builtin = BIUnif of data * data | BICustom of string * data | BICut
   type program = annot_clause list
-  and annot_clause = int * clause (* level *)
+  and annot_clause = int * data list * clause (* level, subst, clause *)
   and clause = premise
   and premise =
       Atom of data
@@ -85,8 +85,8 @@ module LP : sig
 
   val prf_data : name list -> Format.formatter -> data -> unit
   val prf_premise : name list -> Format.formatter -> premise -> unit
-  val prf_goal : Format.formatter -> goal -> unit
-  val prf_clause : Format.formatter -> clause -> unit
+  val prf_goal : name list -> Format.formatter -> goal -> unit
+  val prf_clause : name list -> Format.formatter -> clause -> unit
   val prf_program : Format.formatter -> program -> unit
   
   val string_of_data : ?ctx:string list -> data -> string

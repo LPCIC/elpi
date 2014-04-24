@@ -13,7 +13,9 @@ exception NoClause
 val run : LP.program -> LP.goal -> LP.goal * Subst.subst
 
 (* debug *)
-val prepare_initial_goal : LP.goal -> LP.goal * Subst.subst
+val prepare_initial_goal : LP.goal -> LP.data list * LP.goal * Subst.subst
 
 val register_custom :
   string -> (LP.data -> Subst.subst -> int -> LP.program -> Subst.subst) -> unit
+
+val ctx_of_hv : LP.data list -> LP.name list

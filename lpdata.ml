@@ -67,10 +67,15 @@ let on_buffer f x =
   f fmt x;
   Format.pp_print_flush fmt ();
   Buffer.contents b
-let rec iter_sep spc pp = function
-  | [] -> ()
-  | [x] -> pp x
-  | x::tl -> pp x; spc (); iter_sep spc pp tl
+let iter_sep spc pp fmt l =
+  let rec aux n = function
+    | [] -> ()
+    | [x] -> pp fmt x
+    | _ when n = 0 ->
+         Format.fprintf fmt "%s" (Format.pp_get_ellipsis_text fmt ())
+    | x::tl -> pp fmt x; spc fmt (); aux (n-1) tl in
+  aux (Format.pp_get_max_boxes fmt ()) l
+
 
 end (* }}} *)
 open PPLIB
@@ -112,7 +117,7 @@ and suspended_job = Done of data | Todo of data * olam * nlam * env
 and env =
   | XEmpty
   | XArgs of data IA.t * int * env
-(*   | XMerge of env * nlam * olam * env *)
+  | XMerge of env * nlam * olam * env
   | XSkip of int * nlam * env
 
 module PP = struct (* {{{ pretty printer for data *)
@@ -157,16 +162,19 @@ let rec prf_data ctx fmt t =
     | XApp xs ->
         P.pp_open_hovbox fmt 2;
         if pars then P.pp_print_string fmt "(";
-        iter_sep (P.pp_print_space fmt) (print ~pars:true ctx) (IA.to_list xs);
+        iter_sep P.pp_print_space (fun _ -> print ~pars:true ctx)
+          fmt (IA.to_list xs);
         if pars then P.pp_print_string fmt ")";
         P.pp_close_box fmt ()
     | XSeq (xs, XNil) ->
         P.fprintf fmt "@[<hov 2>[";
-        iter_sep (fun () -> P.fprintf fmt ",@ ") (print ctx) (IA.to_list xs);
+        iter_sep (fun fmt () -> P.fprintf fmt ",@ ") (fun _ -> print ctx)
+          fmt (IA.to_list xs);
         P.fprintf fmt "]@]";
     | XSeq (xs, t) ->
         P.fprintf fmt "@[<hov 2>[";
-        iter_sep (fun () -> P.fprintf fmt ",@ ") (print ctx) (IA.to_list xs);
+        iter_sep (fun fmt () -> P.fprintf fmt ",@ ") (fun _ -> print ctx)
+          fmt (IA.to_list xs);
         P.fprintf fmt "|";
         print ctx t;
         P.fprintf fmt "]@]";
@@ -192,8 +200,8 @@ and prf_env ctx fmt e =
     | XEmpty -> P.pp_print_string fmt "nil"
     | XArgs(a,n,e) ->
         P.fprintf fmt "(@[<hov 2>";
-        iter_sep (fun () -> P.fprintf fmt ",@ ")
-          (prf_data ctx fmt) (IA.to_list a);
+        iter_sep (fun fmt () -> P.fprintf fmt ",@ ")
+          (prf_data ctx) fmt (IA.to_list a);
         P.fprintf fmt "@]|%d)@ :: " n;
         print_env e
     | XMerge(e1,nl1,ol2,e2) ->
@@ -219,6 +227,8 @@ include PP
 let (--) x y = max 0 (x - y)
 let mkXSusp t n o e = XSusp(ref(Todo(t,n,o,e)))
 
+let rule s = SPY "rule" Format.pp_print_string s
+
 let rec epush e = TRACE "epush" (fun fmt -> prf_env [] fmt e)
   match e with
   | (XEmpty | XArgs _ | XSkip _) as x -> x
@@ -226,34 +236,34 @@ let rec epush e = TRACE "epush" (fun fmt -> prf_env [] fmt e)
   match e1, e2 with
   | e1, XEmpty when ol2 = 0 -> (*m2*) e1
   | XEmpty, e2 when nl1 = 0 -> (*m3*) e2
-  | XEmpty, XArgs(a,l,e2) -> (*m4*)
+  | XEmpty, XArgs(a,l,e2) -> rule"m4";
       let nargs = IA.len a in
       if nl1 = nargs then e2 (* repeat m4, end m3 *)
       else if nl1 > nargs then epush (XMerge(XEmpty,nl1 -nargs, ol2 -nargs, e2))
       else XArgs(IA.sub nl1 (nargs-nl1) a,l,e2) (* repeast m4 + m3 *)
-  | XEmpty, XSkip(a,l,e2) -> (*m4*)
+  | XEmpty, XSkip(a,l,e2) -> rule"m4";
       if nl1 = a then e2 (* repeat m4, end m3 *)
       else if nl1 > a then epush (XMerge(XEmpty,nl1 - a, ol2 - a, e2))
       else XSkip(a-nl1,l-nl1,e2) (* repeast m4 + m3 *)
-  | (XArgs(_,n,_) | XSkip(_,n,_)) as e1, XArgs(b,l,e2) when nl1 > n -> (*m5*)
+  | (XArgs(_,n,_) | XSkip(_,n,_)) as e1, XArgs(b,l,e2) when nl1 > n -> rule"m5";
       let drop = min (IA.len b) (nl1 - n) in
       if drop = IA.len b then
         epush (XMerge(e1,nl1 - drop, ol2 - drop, e2))
       else   
         epush (XMerge(e1,nl1 - drop, ol2 - drop,
           XArgs(IA.sub drop (IA.len b - drop) b,l,e2)))
-  | (XArgs(_,n,_) | XSkip(_,n,_)) as e1, XSkip(b,l,e2) when nl1 > n -> (*m5*)
+  | (XArgs(_,n,_) | XSkip(_,n,_)) as e1, XSkip(b,l,e2) when nl1 > n -> rule"m5";
       let drop = min b (nl1 - n) in
       if drop = b then epush (XMerge(e1,nl1 - drop, ol2 - drop, e2))
       else epush (XMerge(e1,nl1 - drop, ol2 - drop, XSkip(b - drop,l-drop,e2)))
-  | XArgs(a,n,e1), ((XArgs(_,l,_) | XSkip(_,l,_)) as e2) -> (*m6*)
+  | XArgs(a,n,e1), ((XArgs(_,l,_) | XSkip(_,l,_)) as e2) -> rule"m6";
       assert(nl1 = n);
       let m = l + (n -- ol2) in
       let t = IA.get 0 a in
       let e1 = if IA.len a > 1 then XArgs(IA.tl a,n,e1) else e1 in
       (* ugly *)
       XArgs(IA.of_array [|mkXSusp t ol2 l e2|], m, XMerge(e1,n,ol2,e2))
-  | XSkip(a,n,e1), ((XArgs(_,l,_) | XSkip(_,l,_)) as e2) -> (*m6*)
+  | XSkip(a,n,e1), ((XArgs(_,l,_) | XSkip(_,l,_)) as e2) -> rule"m6";
       assert(nl1 = n);
       let m = l + (n -- ol2) in
       let e1 = if a > 1 then XSkip(a-1,n-1,e1) else e1 in
@@ -264,46 +274,58 @@ let rec epush e = TRACE "epush" (fun fmt -> prf_env [] fmt e)
   | XSkip _, XEmpty -> assert false
   | ((XMerge _, _) | (_, XMerge _)) -> assert false
 
+let mkBin n t =
+  if n = 0 then t
+  else match t with
+    | XBin(n',t) -> XBin(n+n',t)
+    | _ -> XBin(n,t)
+
 let store ptr v = ptr := Done v; v
 let push t =
   match t with
   | (XUv _ | XCon _ | XDB _ | XBin _ | XApp _ | XExt _ | XSeq _ | XNil) -> t
   | XSusp { contents = Done t } -> t
-  | XSusp ({ contents = Todo (uvrl,t,ol,nl,e) } as ptr) ->
-      let rec push u t ol nl e = TRACE "push" (fun fmt -> prf_data [] fmt t)
+  | XSusp ({ contents = Todo (t,ol,nl,e) } as ptr) ->
+      let rec push t ol nl e =
+        TRACE "push"
+          (fun fmt -> prf_data [] fmt (XSusp { contents = Todo(t,ol,nl,e) }))
         match t with
-        | XSusp { contents = Done t } -> push u t ol nl e
-        | XSusp { contents = Todo (u1,t,ol1,nl1,e1) } -> (*m1*)
-            push (fst u + fst u1,snd u) t (ol1 + (ol -- nl1)) (nl + (nl1 -- ol))
+        | XSusp { contents = Done t } -> push t ol nl e
+        | XSusp { contents = Todo (t,ol1,nl1,e1) } -> rule"m1";
+            push t (ol1 + (ol -- nl1)) (nl + (nl1 -- ol))
               (XMerge(e1,nl1,ol,e))
-        | (XCon _ | XExt _ | XNil) as x -> (*r1*) x
-        | XUv (i,l) when snd u = nolvl -> XUv (i+fst u,l)
-        | XUv (i,_) -> XUv (i+fst u,snd u)
-        | XBin(n,t) -> (*r6*)
+        | (XCon _ | XExt _ | XNil) as x -> rule"r1"; x
+        | XUv _ as x -> store ptr x
+        | XBin(n,t) -> rule"r6";
             assert(n > 0);
+(*
             store ptr
-              (XBin(n,mkXSusp ~uvrl:u t (ol+n) (nl+n) (XSkip(n,nl+n,e))))
-        | XApp a -> (*r5*)
-            store ptr (XApp(IA.map (fun t -> mkXSusp ~uvrl:u t ol nl e) a))
+              (XBin(n,mkXSusp t (ol+n) (nl+n) (XSkip(n,nl+n,e))))
+*)
+            store ptr (mkBin 1 (mkXSusp (mkBin (n-1) t) (ol+1) (nl+1)
+                                 (XArgs (IA.of_array[|XDB 1|],nl+1,e))))
+        | XApp a -> rule"r5";
+            store ptr (XApp(IA.map (fun t -> mkXSusp t ol nl e) a))
         | XSeq(a,tl) ->
-            store ptr (XSeq(IA.map (fun t -> mkXSusp ~uvrl:u t ol nl e) a,
-                            mkXSusp ~uvrl:u tl ol nl e))
+            store ptr (XSeq(IA.map (fun t -> mkXSusp t ol nl e) a,
+                            mkXSusp tl ol nl e))
         | XDB i -> (* r2, r3, r4 *)
             let e = epush e in
             SPY "epushed" (prf_env []) e;
             match e with
             | XMerge _ -> assert false
-            | XEmpty -> assert(ol = 0); store ptr (XDB(i+nl))
+            | XEmpty -> rule"r2"; assert(ol = 0); store ptr (XDB(i+nl))
             | XArgs(a,l,e) ->
                 let nargs = IA.len a in
                 if i <= nargs
-                then push noreloc (IA.get (nargs - i) a) 0 (nl - l) XEmpty
-                else push u (XDB(i - nargs)) (ol - nargs) nl e
+                then (rule"r3"; push (IA.get (nargs - i) a) 0 (nl - l) XEmpty)
+                else (rule"r4"; push (XDB(i - nargs)) (ol - nargs) nl e)
             | XSkip(n,l,e) -> 
-                if (i <= n) then store ptr (XDB (i + nl - l))
-                else push u (XDB(i - n)) (ol - n) nl e
+                if (i <= n)
+                then (rule"r3"; store ptr (XDB (i + nl - l)))
+                else (rule"r4"; push (XDB(i - n)) (ol - n) nl e)
       in
-        push uvrl t ol nl e
+        push t ol nl e
 
 let isSubsp = function XSusp _ -> true | _ -> false
 
@@ -408,14 +430,16 @@ let rec fold_map i f x a = match push x with
   | XSusp _ -> assert false
  
 (* PROGRAM *)
-type builtin = BIUnif of data * data | BICustom of string * data
+type builtin = BIUnif of data * data | BICustom of string * data | BICut
 
 let map_builtin f = function
   | BIUnif(a,b) -> BIUnif(f a, f b)
   | BICustom(n,t) -> BICustom(n,f t)
+  | BICut -> BICut
 let fold_builtin f x a = match x with
   | BIUnif(x,y) -> f y (f x a)
   | BICustom(_,x) -> f x a
+  | BICut -> a
 let fold_map_builtin i f x a = match x with
   | BIUnif(x,y) ->
       let x, a = f i x a in
@@ -424,9 +448,10 @@ let fold_map_builtin i f x a = match x with
   | BICustom(n,x) ->
       let x, a = f i x a in
       BICustom(n,x), a
+  | BICut -> BICut, a
 
 type program = annot_clause list
-and annot_clause = int * clause (* level *)
+and annot_clause = int * data list * clause (* level, subst, clause *)
 and clause = premise
 and premise =
   | Atom of data
@@ -480,6 +505,7 @@ let prf_builtin ctx fmt = function
       Format.fprintf fmt "@[<hv 2>%a@ = %a@]" (prf_data ctx) a (prf_data ctx) b;
   | BICustom(name,t) ->
       Format.fprintf fmt "@[<hov 2>%s %a@]" name (prf_data ctx) t
+  | BICut -> Format.fprintf fmt "!"
 
 let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
   match p with
@@ -490,9 +516,9 @@ let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
   | Conj l ->
        Format.pp_open_hvbox fmt 2;
        if pars then Format.pp_print_string fmt "(";
-       iter_sep (fun () ->
+       iter_sep (fun fmt () ->
          Format.pp_print_string fmt ","; Format.pp_print_space fmt ())
-         (prf_premise ~positive ctx fmt) l;
+         (prf_premise ~positive ctx) fmt l;
        if pars then Format.pp_print_string fmt ")";
        Format.pp_close_box fmt ()
   | Pi(n,p) ->
@@ -527,10 +553,10 @@ let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
        if pars then Format.pp_print_string fmt ")";
        Format.pp_close_box fmt ()
 
-let prf_clause ?(dot=true) ?positive fmt c =
+let prf_clause ?(dot=true) ?positive ctx fmt c =
   let c, ctx = match c with
-    | Sigma(n,c) -> c, fresh_names "X" 0 n
-    | c -> c, [] in
+    | Sigma(n,c) -> c, fresh_names "X" 0 n @ ctx
+    | c -> c, ctx in
   Format.pp_open_hbox fmt ();
   prf_premise ?positive ctx fmt c;
   if dot then Format.pp_print_string fmt ".";
@@ -539,17 +565,17 @@ let prf_clause ?(dot=true) ?positive fmt c =
 let prf_premise ctx fmt = prf_premise ctx fmt
 let string_of_premise p = on_buffer (prf_premise []) p
 let string_of_goal = string_of_premise
-let prf_goal = prf_clause ~dot:false ~positive:true
-let prf_clause fmt c = prf_clause fmt c
+let prf_goal ctx = prf_clause ~dot:false ~positive:true ctx
+let prf_clause ctx fmt c = prf_clause ctx fmt c
 
 let string_of_head = string_of_data
 
-let string_of_clause c = on_buffer prf_clause c
+let string_of_clause c = on_buffer (prf_clause []) c
 
 let prf_program fmt p =
-  let p = List.map snd p in
+  let p = List.map (fun _, _, p -> p) p in
   Format.pp_open_vbox fmt 0;
-  iter_sep (Format.pp_print_space fmt) (prf_clause fmt) p;
+  iter_sep (Format.pp_print_space) (prf_clause []) fmt p;
   Format.pp_close_box fmt ()
 let string_of_program p = on_buffer prf_program p
 
@@ -594,6 +620,7 @@ let tok = lexer
   | "=>" -> "IMPL", $buf
   | '=' -> "EQUAL","="
   | '$' 'a'-'z' ident -> "BUILTIN",$buf
+  | '!' -> "BANG", $buf
 ]
 
 let spy f s = if !Trace.dverbose then begin
@@ -686,6 +713,7 @@ and binders_premise c n = function
 and binders_builtin c n = function
     | BIUnif (a,b) -> BIUnif(binders c n a, binders c n b)
     | BICustom(s,t) -> BICustom(s,binders c n t)
+    | BICut -> BICut
 
 let sigma_abstract t =
   let uvl = List.rev (uvlist ()) in
@@ -699,7 +727,7 @@ EXTEND
          let hyp = match hyp with None -> Conj [] | Some h -> h in
          let clause = sigma_abstract (Impl(hyp,Atom hd)) in
          reset (); 
-         0, clause ]
+         0, [], clause ]
     ];
   atom :
     [ "0"
@@ -747,14 +775,17 @@ EXTEND
       | a = atom; ENTAILS; hyp = LIST1 premise LEVEL "2" SEP COMMA ->
          Impl(Conj hyp,Atom a)
       | bt = BUILTIN; a = atom -> AtomBI(BICustom(bt,a))
-      | bind = [ PI -> mkPi | SIGMA -> mkSigma]; x = bound; BIND; p = premise ->
+      | BANG -> AtomBI BICut
+      | binder = [PI -> fst | SIGMA -> snd]; x = bound; BIND; p = premise ->
+         let x, is_uv = x in
+         let bind = if is_uv then mkSigma else binder (mkPi,mkSigma) in
          bind 1 (binders_premise x 1 p)
       | LPAREN; p = premise; RPAREN -> p
       | LPAREN; p = premise; RPAREN; IMPL; q = premise -> Impl(p,q)]
     ];
   bound : 
-    [ [ c = CONSTANT -> let c, lvl = lvl_name_of c in mkCon c lvl
-      | u = UVAR -> let u, lvl = lvl_name_of u in mkUv (get_uv u) lvl ]
+    [ [ c = CONSTANT -> let c, lvl = lvl_name_of c in mkCon c lvl, false
+      | u = UVAR -> let u, lvl = lvl_name_of u in mkUv (get_uv u) lvl, true ]
     ];
 END
 
@@ -792,23 +823,18 @@ let in_sub i { assign = assign } =
   with Not_found -> false
 let set_sub i t s = { s with assign = Int.Map.add i t s.assign }
 
-let rec iter_sep spc pp = function
-  | [] -> ()
-  | [x] -> pp x
-  | x::tl -> pp x; spc (); iter_sep spc pp tl
-
 let prf_subst fmt s =
   Format.pp_open_hovbox fmt 2;
   Format.pp_print_string fmt "{ ";
-  iter_sep
-    (fun () -> Format.pp_print_string fmt ";";Format.pp_print_space fmt ())
-    (fun (i,t) ->
+  iter_sep 
+    (fun fmt () -> Format.pp_print_string fmt ";";Format.pp_print_space fmt ())
+    (fun fmt (i,t) ->
        Format.pp_open_hvbox fmt 0;
        Format.pp_print_string fmt (pr_var i 0);
        Format.pp_print_space fmt ();
        Format.pp_print_string fmt ":= ";
        prf_data [] fmt (map (fun x -> kool (look x)) t);
-       Format.pp_close_box fmt ())
+       Format.pp_close_box fmt ()) fmt
     (Int.Map.bindings s.assign);
   Format.pp_print_string fmt " }";
   Format.pp_close_box fmt ()
@@ -840,14 +866,21 @@ let lift ?(from=0) k t =
   else mkXSusp t from (from+k) (XSkip(k,from,XEmpty))
 
 let beta t start len v =
-  mkXSusp t len 0 (XArgs(IA.sub start len v, 0, XEmpty))
+  let rdx = mkXSusp t len 0 (XArgs(IA.sub start len v, 0, XEmpty)) in
+  SPY "rdx" (prf_data []) rdx;
+  rdx
+
+let rec mkskip n e = match n with
+  | 0 -> e
+  | n -> XArgs(IA.of_array[|XDB 1|],n,mkskip (n-1) e)
 
 let beta_under depth t l =
   if l = [] then t
   else
     let len = List.length l in
-    mkXSusp t len 0
-      (XSkip(depth,0,(XArgs(IA.of_list (List.map (lift depth) l), 0, XEmpty))))
+    mkXSusp t (len+depth) depth
+      (mkskip depth
+          (XArgs(IA.of_list l, 0, XEmpty)))
 
 let rec whd s t =
   TRACE "whd" (fun fmt -> prf_data [] fmt t)
