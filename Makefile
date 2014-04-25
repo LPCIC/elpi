@@ -1,8 +1,9 @@
-#TRACE=-DTRACE
-#PROFILE=-p
+# vars passed around by make
+TRACE=-DTRACE
 CC=ocamlc
-CCO=ocamlopt $(PROFILE)
+CCP=ocamlc
 
+CCO=ocamlopt $(PROFILE)
 PP=camlp5o -I . -I +camlp5
 LIBS=unix.cmxa str.cmxa camlp5.cmxa $(EXTRALIB)
 FLAGS=-g -I +camlp5
@@ -20,7 +21,24 @@ TMP=.tmp/
 
 all: elpi elpi.byte
 
-perf.byte: elpi.byte
+profile/%:
+	$(H) $(MAKE) $*  CCP="ocamlcp -P fmi" PROFILE=-p TRACE="$(TRACE)"
+notrace/%:
+	$(H) rm -f pa_trace.cmo
+	$(H) $(MAKE) $*  CCP="$(CCP)" PROFILE="$(PROFILE)" TRACE=""
+
+bench: notrace/elpi
+	$(H) time -f '\ntime: %U (user) + %S (sys) = %E (wall)\nmem: %Mk\npagefaults: %F (major) + %R (minor)' ./elpi
+
+valgrind: notrace/elpi
+	$(H) valgrind --tool=cachegrind ./elpi
+	
+gprof: profile/notrace/elpi
+	$(H) ./elpi
+	$(H) gprof elpi > elpi.annot
+	$(H) echo "profiling written to elpi.annot"
+
+ocamlprof: profile/notrace/elpi.byte
 	$(H) ./elpi.byte
 	$(I) echo OCAMLPROF lpdata.ml lprun.ml int.ml cMap.ml
 	$(H) ocamlprof $(TMP)/lpdata.ml > lpdata.annot.ml
@@ -28,57 +46,50 @@ perf.byte: elpi.byte
 	$(H) ocamlprof int.ml > int.annot.ml
 	$(H) ocamlprof cMap.ml > cMap.annot.ml
 
-perf:
-	$(H) make clean
-	$(H) make PROFILE=-p elpi -j
-	$(H) ./elpi
-	$(H) gprof elpi > elpi.annot
-	$(H) echo "profiling written to elpi.annot"
-
 elpi: test.ml lprun.cmx lpdata.cmx $(EXTRALIB)
-	$(H) $(CCO) $(FLAGS) $(LIBS) lpdata.cmx lprun.cmx -o $@ $<
 	$(I) echo OCAMLOPT $<
+	$(H) $(CCO) $(FLAGS) $(LIBS) lpdata.cmx lprun.cmx -o $@ $<
 
 elpi.byte: test.ml lprun.cmo lpdata.cmo $(EXTRALIB:%.cmx=%.cmo)
-	$(H) $(CC)p  $(FLAGS) $(LIBSBYTE) lpdata.cmo lprun.cmo -o $@ $<
 	$(I) echo OCAMLC $<
+	$(H) $(CCP)  $(FLAGS) $(LIBSBYTE) lpdata.cmo lprun.cmo -o $@ $<
 
 lpdata.cmx: lpdata.ml pa_trace.cmo
-	$(H) $(CCO) -pp '$(PPPARSE)' $(FLAGS) -o lpdata.cmx -c $<
 	$(I) echo OCAMLOPT $<
+	$(H) $(CCO) -pp '$(PPPARSE)' $(FLAGS) -o lpdata.cmx -c $<
 
 lpdata.cmo: lpdata.ml pa_trace.cmo
+	$(I) echo OCAMLCP $<
 	$(H) $(PPPARSE) pr_o.cmo $< -o $(TMP)/$<
 	$(H) cp lpdata.cmi lpdata.mli $(TMP)
-	$(H) $(CC)p $(FLAGS) -o lpdata.cmo -c $(TMP)/$<
-	$(I) echo OCAMLCP $<
+	$(H) $(CCP) $(FLAGS) -o lpdata.cmo -c $(TMP)/$<
 
 lprun.cmx: lprun.ml pa_trace.cmo
-	$(H) $(CCO) -pp '$(PPTRACE)' $(FLAGS) -o lprun.cmx -c $<
 	$(I) echo OCAMLOPT $<
+	$(H) $(CCO) -pp '$(PPTRACE)' $(FLAGS) -o lprun.cmx -c $<
 
 lprun.cmo: lprun.ml pa_trace.cmo
+	$(I) echo OCAMLCP $<
 	$(H) $(PPTRACE) pr_o.cmo $< -o $(TMP)/$<
 	$(H) cp lprun.cmi lprun.mli $(TMP)
-	$(H) $(CC)p  $(FLAGS) -o lprun.cmo -c $(TMP)/$<
-	$(I) echo OCAMLCP $<
+	$(H) $(CCP)  $(FLAGS) -o lprun.cmo -c $(TMP)/$<
 
 pa_trace.cmo: pa_trace.ml trace.cmi
-	$(H) $(CC)   -pp '$(PPTRACESYNTAX)' $(FLAGS) -o $@ -c $<
 	$(I) echo OCAMLC $<
+	$(H) $(CC)   -pp '$(PPTRACESYNTAX)' $(FLAGS) -o $@ -c $<
 
 %.cmx %.cmo: %.ml %.cmi
-	$(H) $(CCO) $(FLAGS) -c $<
 	$(I) echo OCAMLOPT $<
-	$(H) $(CC)p  $(FLAGS) -c $<
+	$(H) $(CCO) $(FLAGS) -c $<
 	$(I) echo OCAMLCP $<
+	$(H) $(CCP)  $(FLAGS) -c $<
 %.cmi: %.mli
-	$(H) $(CC)   $(FLAGS) -o $@ -c $<
 	$(I) echo OCAMLC $<
+	$(H) $(CC)   $(FLAGS) -o $@ -c $<
 
 clean:
 	$(H) rm -rf *.cmo *.cmi *.cmx *.cma *.o elpi elpi.byte \
-		*.annot.ml .depend $(TMP)
+		*.annot.ml .depend elpi.annot gmon.out ocamlprof.dump $(TMP)
 
 .depend: pa_trace.cmo
 	$(H) mkdir -p $(TMP)
