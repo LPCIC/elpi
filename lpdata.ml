@@ -332,6 +332,8 @@ let isSubsp = function XSusp _ -> true | _ -> false
 let look x =
   let x = push x in
   SPY "pushed" (prf_data []) x;
+  Obj.magic x
+(*
   match x with
   | XUv (v,l) -> Uv(v,l)
   | XCon (n,l) -> Con(n,l)
@@ -342,6 +344,7 @@ let look x =
   | XNil -> Nil
   | XExt e -> Ext e
   | XSusp _ -> assert false
+*)
 let mkUv v l = XUv(v,l)
 let mkCon n l = XCon(n,l)
 let mkDB i = XDB i
@@ -351,7 +354,7 @@ let rec mkSeq xs tl =
   | XSeq (ys,tl) -> mkSeq (IA.append xs ys) tl
   | _ -> XSeq(xs,tl)
 let mkNil = XNil
-let kool = function
+let kool = Obj.magic (*function
   | Uv (v,l) -> XUv(v,l)
   | Con (n,l) -> XCon(n,l)
   | DB i -> XDB i
@@ -359,7 +362,7 @@ let kool = function
   | App a -> XApp a
   | Seq (a,tl) -> XSeq (a,tl)
   | Nil -> XNil
-  | Ext e -> XExt e
+  | Ext e -> XExt e*)
 
 let mkBin n t =
   if n = 0 then t
