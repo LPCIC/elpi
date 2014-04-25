@@ -423,6 +423,8 @@ let fixApp xs =
   | XApp ys -> XApp (L.append ys (L.tl xs))
   | _ -> XApp xs
 
+let isDB i = function XDB j when j = i -> true | _ -> false
+
 let rec equal a b = match push a, push b with
  | XUv (x,_), XUv (y,_) -> x = y
  | XCon (x,_), XCon (y,_) -> x = y
@@ -438,7 +440,7 @@ let rec equal a b = match push a, push b with
         let nxs = L.len xs in
         let eargs = nxs - n in
            eargs > 0
-        && L.for_alli (fun i t -> equal t (XDB (n-i))) (L.sub eargs n xs)
+        && L.for_alli (fun i t -> isDB (n-i) t) (L.sub eargs n xs)
         && equal (mkApp (L.sub 0 eargs xs)) (mkXSusp y 0 n XEmpty)
      | _ -> false
    end

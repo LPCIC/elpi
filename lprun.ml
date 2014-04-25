@@ -46,9 +46,7 @@ let (^=) = cst_lower
 let position_of l = let stop = L.len l in fun x ->
   let rec aux i = function
     | [] -> fail "cannot occur"
-    | y::ys ->
-      if equal x y then mkDB (stop - i)
-      else aux (i+1) ys
+    | y::ys -> if equal x y then mkDB (stop - i) else aux (i+1) ys
   in aux 0 (L.to_list l)
 let (^-) what where = L.map (position_of where) what
 let (^--) x v = position_of v x
@@ -240,7 +238,7 @@ let pr_cur_goal g lvl s fmt =
 let pr_cur_goals gls s fmt =
   Format.fprintf fmt "@[<hov 0>"; 
   iter_sep (fun fmt () -> Format.fprintf fmt ",@ ")
-    (fun fmt (_,g,_,l) -> pr_cur_goal g l s fmt) fmt gls;
+    (fun fmt (_,g,_,_,l) -> pr_cur_goal g l s fmt) fmt gls;
   Format.fprintf fmt "@]" 
 
 let custom_tab = ref []

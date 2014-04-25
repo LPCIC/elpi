@@ -77,6 +77,7 @@ module LP : sig
     int -> (int -> data -> 'a -> data * 'a) -> data -> 'a -> data * 'a
 
   val max_uv : data -> var -> var
+  val isDB : int -> data -> bool
 
   type key = Key of data | Flex
   type builtin = BIUnif of data * data | BICustom of string * data | BICut
