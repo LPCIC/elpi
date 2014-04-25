@@ -190,6 +190,8 @@ type objective =
   | `Unify of data * data | `Custom of string * data | `Cut ]
 type goal = int * objective * program * program * int
 type alternatives = (subst * goal list) list
+type step_outcome = subst * goal list * alternatives
+
 
 (* Important: when we move under a pi we put a constant in place of the
  * bound variable. This way hypothetical clauses do not need to be lifted
@@ -300,7 +302,7 @@ let no_key_match k kc =
   | Key _, Flex -> true
   | Flex, _ -> false
 
-let select k goal depth (s as os) prog orig_prog lvl : subst * goal list * alternatives =
+let select k goal depth (s as os) prog orig_prog lvl : step_outcome =
   let rec first = function
   | [] ->
       SPY "fail" (prf_data []) (apply_subst s goal);
@@ -316,16 +318,18 @@ let select k goal depth (s as os) prog orig_prog lvl : subst * goal list * alter
           List.fold_right (fun (d,hv,_,p) (acc,s) ->
             let gl, s = contextualize_goal d s hv p in
             gl :: acc, s) subgoals ([],s) in
-        s, List.map (fun (d,g,e) -> d,g,e@orig_prog,e@orig_prog,lvl+1) (List.flatten subgoals),
-          [os,[depth,`Atom(goal,k),rest,orig_prog,lvl]]
+        let subgoals =
+          List.map (fun (d,g,e) -> d,g,e@orig_prog,e@orig_prog,lvl+1)
+            (List.flatten subgoals) in
+        s, subgoals, [os,[depth,`Atom(goal,k),rest,orig_prog,lvl]]
       with UnifFail _ ->
         SPY "skipped" (prf_clause (ctx_of_hv old_hv)) clause;
         first rest
   in
     first prog
 
-let rec run1 s ((depth,goal,prog,orig_prog,lvl) : goal) : subst * goal list * alternatives =
-  (match goal with
+let rec run1 s ((depth,goal,prog,orig_prog,lvl) : goal) : step_outcome =
+  match goal with
   | `Cut -> assert false
   | `Atom(t,k) ->
       let s, goals, alts = select k t depth s prog orig_prog lvl in
@@ -341,7 +345,7 @@ let rec run1 s ((depth,goal,prog,orig_prog,lvl) : goal) : subst * goal list * al
         let s = custom name a s depth prog in
         SPY "sub" Subst.prf_subst s;
         s,[], []
-      with UnifFail _ -> raise NoClause)
+      with UnifFail _ -> raise NoClause
 
 let rec cut lvl = function
   | [] -> []
