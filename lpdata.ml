@@ -3,7 +3,35 @@
 (* license: GNU Lesser General Public License Version 2.1                    *)
 (* ------------------------------------------------------------------------- *)
 
-module L = struct
+module L : sig (* {{{ Lists *)
+
+
+  type 'a t
+  val empty : 'a t
+  val singl : 'a -> 'a t
+  val init : int -> (int -> 'a) -> 'a t
+  val get : int -> 'a t -> 'a
+  val len : 'a t -> int
+  val sub : int -> int -> 'a t -> 'a t
+  val tl : 'a t -> 'a t
+  val hd : 'a t -> 'a
+  val map : ('a -> 'b) -> 'a t -> 'b t
+  val mapi : (int -> 'a -> 'b) -> 'a t -> 'b t
+  val fold_map : ('a -> 'b -> 'a * 'b) -> 'a t -> 'b -> 'a t * 'b
+  val fold : ('a -> 'b -> 'b) -> 'a t -> 'b -> 'b
+  val fold2 : ('a -> 'b -> 'c -> 'c) -> 'a t -> 'b t -> 'c -> 'c
+  val for_all : ('a -> bool) -> 'a t -> bool
+  val for_alli : (int -> 'a -> bool) -> 'a t -> bool
+  val for_all2 : ('a -> 'b -> bool) -> 'a t -> 'b t -> bool
+  val of_list : 'a list-> 'a t
+  val to_list : 'a t -> 'a list
+  val filter : ('a -> bool) -> 'a t -> 'a t
+  val append : 'a t -> 'a t -> 'a t
+  val cons : 'a -> 'a t -> 'a t
+  val uniq : ('a -> 'a -> bool) -> 'a t -> bool
+
+  (* }}} *)
+end  = struct (* {{{ *)
   
   type 'a t = 'a list
   let empty = []
@@ -879,14 +907,16 @@ end
 module Subst = struct (* {{{ LP.Uv |-> data mapping *)
 open LP
 
-type subst = { assign : data Int.Map.t; top_uv : int }
-let empty n = { assign = Int.Map.empty; top_uv = n }
+module M = Int.Map
+
+type subst = { assign : data M.t; top_uv : int }
+let empty n = { assign = M.empty; top_uv = n }
 
 let last_sub_lookup = ref (XDB 0)
 let in_sub i { assign = assign } =
-  try last_sub_lookup := Int.Map.find i assign; true
+  try last_sub_lookup := M.find i assign; true
   with Not_found -> false
-let set_sub i t s = { s with assign = Int.Map.add i t s.assign }
+let set_sub i t s = { s with assign = M.add i t s.assign }
 
 let prf_subst fmt s =
   Format.pp_open_hovbox fmt 2;
@@ -900,7 +930,7 @@ let prf_subst fmt s =
        Format.pp_print_string fmt ":= ";
        prf_data [] fmt (map (fun x -> kool (look x)) t);
        Format.pp_close_box fmt ()) fmt
-    (Int.Map.bindings s.assign);
+    (M.bindings s.assign);
   Format.pp_print_string fmt " }";
   Format.pp_close_box fmt ()
 let string_of_subst s = on_buffer prf_subst s
