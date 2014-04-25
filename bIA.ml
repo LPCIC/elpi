@@ -19,19 +19,15 @@ val map : ('a -> 'a) -> 'a t -> 'a t
 val mapi : (int -> 'a -> 'a) -> 'a t -> 'a t
 
 val fold_map : ('a -> 'b -> 'a * 'b) -> 'a t -> 'b -> 'a t * 'b
-val fold_mapi : (int -> 'a -> 'b -> 'a * 'b) -> 'a t -> 'b -> 'a t * 'b
 
 val fold : ('a -> 'b -> 'b) -> 'a t -> 'b -> 'b
-val foldi : (int -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
 
 val fold2 : ('a -> 'c -> 'b -> 'b) -> 'a t -> 'c t -> 'b -> 'b
-val fold2i : (int -> 'a -> 'c -> 'b -> 'b) -> 'a t -> 'c t -> 'b -> 'b
 
 val for_all : ('a -> bool) -> 'a t -> bool
 val for_alli : (int -> 'a -> bool) -> 'a t -> bool
 
 val for_all2 : ('a -> 'b -> bool) -> 'a t -> 'b t -> bool
-val for_all2i : (int -> 'a -> 'b -> bool) -> 'a t -> 'b t -> bool
 
 val filter : ('a -> bool) -> 'a t -> 'a t
 
