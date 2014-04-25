@@ -27,47 +27,45 @@ let print_unif_prob s rel a b fmt =
 
 let rec rigid x = match x with
   | Uv _ -> false
-  | App xs -> rigid (look (IA.get 0 xs))
+  | App xs -> rigid (look (L.hd xs))
   | _ -> true
 
 let eta n t = TRACE "eta" (fun fmt -> prf_data [] fmt t)
  let t =
-   fixApp (IA.init (n+1) (fun i -> if i = 0 then (lift n t) else mkDB (n+1-i))) in
+   fixApp (L.init (n+1) (fun i -> if i = 0 then (lift n t) else mkDB (n+1-i))) in
  SPY "etaed" (prf_data []) t;
  t
 
-let inter xs ys = IA.filter (fun x -> not(IA.for_all (equal x) ys)) xs
+let inter xs ys = L.filter (fun x -> not(L.for_all (equal x) ys)) xs
 
 (* construction of bindings: ↓ is ^- and ⇑ is ^= *)
 let cst_lower xs lvl =
-  IA.filter (fun x -> match look x with Con(_,l) -> l <= lvl | _ -> false) xs
+  L.filter (fun x -> match look x with Con(_,l) -> l <= lvl | _ -> false) xs
 let (^=) = cst_lower
 
-let rec position_of i stop v = (); fun x ->
-  if i = stop then fail "cannot occur"
-  else if equal x (IA.get i v) then mkDB (stop - i)
-  else position_of (i+1) stop v x
-let (^-) what where = IA.map (position_of 0 (IA.len where) where) what
-let (^--) x v = position_of 0 (IA.len v) v x
+let position_of l = let stop = L.len l in fun x ->
+  let rec aux i = function
+    | [] -> fail "cannot occur"
+    | y::ys ->
+      if equal x y then mkDB (stop - i)
+      else aux (i+1) ys
+  in aux 0 (L.to_list l)
+let (^-) what where = L.map (position_of where) what
+let (^--) x v = position_of v x
 
 let mk_al nbinders args =
   (* builds: map (lift nbinders) args @ [DB nbinders ... DB 1] *)
-  let nargs = IA.len args in
-  IA.init (nbinders + nargs)
+  let nargs = L.len args in
+  L.init (nbinders + nargs)
     (fun i ->
-      if i < nargs then Red.lift nbinders (IA.get i args)
+      if i < nargs then Red.lift nbinders (L.get i args)
       else mkDB (nargs + nbinders - i))
 
 (* pattern unification fragment *)
 let higher lvl x = match look x with (DB l | Con(_,l)) -> l > lvl | _ -> false
-let rec not_in v len i x =
-  if i+1 = len then true
-  else not(equal x (IA.get (i+1) v)) && not_in v len (i+1) x
 let isPU xs =
-  match look (IA.get 0 xs) with
-  | Uv (_,lvl) ->
-      IA.for_alli (fun i x -> i = 0 || higher lvl x) xs &&
-      IA.for_alli (fun i x -> i = 0 || not_in xs (IA.len xs) i x) xs
+  match look (L.get 0 xs) with
+  | Uv (_,lvl) -> L.for_all (higher lvl) (L.tl xs) && L.uniq LP.equal (L.tl xs)
   | _ -> false
 
 let rec bind x id depth lvl args t s =
@@ -82,21 +80,21 @@ let rec bind x id depth lvl args t s =
   | DB m when m <= depth -> t, s
   | DB m -> lift depth (mkDB (m-depth) ^-- args), s
   | Seq(xs,tl) ->
-      let xs, s = IA.fold_map (bind x id depth lvl args) xs s in
+      let xs, s = L.fold_map (bind x id depth lvl args) xs s in
       let tl, s = bind x id depth lvl args tl s in
       mkSeq xs tl, s
   | Nil -> t, s
   | App bs as t when rigid t ->
-      let ss, s = IA.fold_map (bind x id depth lvl args) bs s in
+      let ss, s = L.fold_map (bind x id depth lvl args) bs s in
       mkApp ss, s
   | (App _ | Uv _) as tmp -> (* pruning *)
       let bs = match tmp with
-        | App bs -> bs | Uv _ -> IA.of_array [|t|] | _ -> assert false in
-      match look (IA.get 0 bs) with
+        | App bs -> bs | Uv _ -> L.singl t | _ -> assert false in
+      match look (L.hd bs) with
       | (Bin _ | Con _ | DB _ | Ext _ | App _ | Seq _ | Nil) -> assert false
       | Uv(j,l) when j <> id && l > lvl && isPU bs ->
-          let bs = IA.tl bs in
-          let nbs = IA.len bs in
+          let bs = L.tl bs in
+          let nbs = L.len bs in
           let h, s = fresh_uv lvl s in
           let al = mk_al depth args in
           let cs = al ^= l in (* constants X = id,lvl can copy *)
@@ -104,15 +102,15 @@ let rec bind x id depth lvl args t s =
           let zs = inter al bs in (* XXX paper excludes #l-1, why? *)
           let vs = zs ^- al in
           let us = zs ^- bs in
-          let nws, nvs, ncs, nus = IA.len ws, IA.len vs, IA.len cs, IA.len us in
-          let vj = mkBin nbs (mkAppv h (IA.append cs us) 0 (ncs + nus)) in
+          let nws, nvs, ncs, nus = L.len ws, L.len vs, L.len cs, L.len us in
+          let vj = mkBin nbs (mkAppv h (L.append cs us) 0 (ncs + nus)) in
           let s = set_sub j vj s in
-          let t = mkAppv h (IA.append ws vs) 0 (nws+nvs) in
+          let t = mkAppv h (L.append ws vs) 0 (nws+nvs) in
           SPY "vj" (prf_data []) vj; SPY "t" (prf_data[]) t;
           t, s
       | Uv(j,l) when j <> id && isPU bs ->
-          let bs = IA.tl bs in
-          let nbs = IA.len bs in
+          let bs = L.tl bs in
+          let nbs = L.len bs in
           let h, s = fresh_uv (*lv*)l s in
           let cs = bs ^= lvl in (* constants X = id,lvl can copy *)
           let ws = cs ^- bs in
@@ -120,20 +118,20 @@ let rec bind x id depth lvl args t s =
           let zs = inter al bs in (* XXX paper excludes #l-1, why? *)
           let vs = zs ^- bs in
           let us = zs ^- al in
-          let nws, nvs, ncs, nus = IA.len ws, IA.len vs, IA.len cs, IA.len us in
-          let vj = mkBin nbs (mkAppv h (IA.append ws vs) 0 (nws + nvs)) in
+          let nws, nvs, ncs, nus = L.len ws, L.len vs, L.len cs, L.len us in
+          let vj = mkBin nbs (mkAppv h (L.append ws vs) 0 (nws + nvs)) in
           let s = set_sub j vj s in
-          let t = mkAppv h (IA.append cs us) 0 (ncs+nus) in
+          let t = mkAppv h (L.append cs us) 0 (ncs+nus) in
           SPY "vj" (prf_data []) vj; SPY "t" (prf_data[]) t;
           t, s
       | Uv _ -> fail "ho-ho"
 
 let mksubst x id lvl t args s =
-  let nargs = IA.len args in
+  let nargs = L.len args in
 (*
   match look t with
   | Bin(k,Uv(id1,_)) when id1 = id -> assert false (* TODO *)
-  | Bin(k,App xs) when equal (IA.get 0 xs) (Uv (id,lvl)) && isPU xs ->
+  | Bin(k,App xs) when equal (L.get 0 xs) (Uv (id,lvl)) && isPU xs ->
       assert false (* TODO *)
   | _ ->
 *)
@@ -144,7 +142,7 @@ let rec splay xs tl s =
   let tl, s = whd s tl in
   match look tl with
   | Uv _ | Nil -> xs, tl, s
-  | Seq(ys,t) -> splay (IA.append xs ys) t s
+  | Seq(ys,t) -> splay (L.append xs ys) t s
   | _ -> assert false
 
 let rec unify a b s = TRACE "unify" (print_unif_prob s "=" a b)
@@ -161,27 +159,27 @@ let rec unify a b s = TRACE "unify" (print_unif_prob s "=" a b)
   | x, y -> if rigid x && rigid y then unify_fo x y s else unify_ho x y s
 and unify_fo x y s =
   match x, y with
-  | App xs, App ys when IA.len xs = IA.len ys -> IA.fold2 unify xs ys s
+  | App xs, App ys when L.len xs = L.len ys -> L.fold2 unify xs ys s
   | Seq(xs,tl), Seq(ys,sl) ->
       let xs, tl, s = splay xs tl s in
       let ys, sl, s = splay ys sl s in
-      let nxs, nys = IA.len xs, IA.len ys in
-      if nxs = nys then unify tl sl (IA.fold2 unify xs ys s)
+      let nxs, nys = L.len xs, L.len ys in
+      if nxs = nys then unify tl sl (L.fold2 unify xs ys s)
       else if nxs < nys && not (rigid (look tl)) then
-        let yshd, ystl = IA.sub 0 nxs ys, IA.sub nxs (nys - nxs) ys in
-        unify tl (mkSeq ystl mkNil) (IA.fold2 unify xs yshd s)
+        let yshd, ystl = L.sub 0 nxs ys, L.sub nxs (nys - nxs) ys in
+        unify tl (mkSeq ystl mkNil) (L.fold2 unify xs yshd s)
       else if nxs > nys && not (rigid (look sl)) then
-        let xshd, xstl = IA.sub 0 nys xs, IA.sub nys (nxs - nys) xs in
-        unify sl (mkSeq xstl mkNil) (IA.fold2 unify ys xshd s)
+        let xshd, xstl = L.sub 0 nys xs, L.sub nys (nxs - nys) xs in
+        unify sl (mkSeq xstl mkNil) (L.fold2 unify ys xshd s)
       else fail "listalign"
   | _ -> fail "founif"
 and unify_ho x y s =
   match x, y with
   | (((Uv (id,lvl) as x), y) | (y, (Uv (id,lvl) as x))) ->
-      mksubst (kool x) id lvl (kool y) (IA.init 0 (fun _ -> kool y)) s
+      mksubst (kool x) id lvl (kool y) L.empty s
   | (((App xs as x), y) | (y, (App xs as x))) when isPU xs -> begin
-      match look (IA.get 0 xs) with
-      | Uv (id,lvl) -> mksubst (kool x) id lvl (kool y) (IA.tl xs) s
+      match look (L.hd xs) with
+      | Uv (id,lvl) -> mksubst (kool x) id lvl (kool y) (L.tl xs) s
       | _ -> assert false
     end
   | _ -> fail "not a pattern unif"
@@ -391,8 +389,8 @@ let run (p : program) (g : premise) =
   let s,_ = run s (List.map (fun (d,g,ep) -> (d,g,ep@p,ep@p,0)) gls) [] in
   fst(fold_map_premise 0 (fun i t () ->
     let n = List.length hv in
-    let vhv = if hv = [] then IA.of_array [||] else IA.of_list (List.rev hv) in
-    let v = IA.append vhv (IA.init i (fun j -> mkDB(i-j))) in
-    fst(Red.whd s (mkAppv (mkBin (i+n) t) v 0 (IA.len v))), ()) g ()), s
+    let vhv = if hv = [] then L.empty else L.of_list (List.rev hv) in
+    let v = L.append vhv (L.init i (fun j -> mkDB(i-j))) in
+    fst(Red.whd s (mkAppv (mkBin (i+n) t) v 0 (L.len v))), ()) g ()), s
 
 (* vim:set foldmethod=marker: *)

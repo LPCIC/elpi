@@ -9,7 +9,7 @@ FLAGS=-g -I +camlp5
 PPPARSE=$(PP) pa_extend.cmo pa_lexer.cmo pa_trace.cmo
 PPTRACE=$(PP) pa_trace.cmo
 PPTRACESYNTAX=$(PP) pa_extend.cmo q_MLast.cmo pa_macro.cmo $(TRACE)
-EXTRALIB=cMap.cmx int.cmx bIA.cmx trace.cmx
+EXTRALIB=cMap.cmx int.cmx trace.cmx
 LIBSBYTE=$(subst .cmx,.cmo,$(subst .cmxa,.cma,$(LIBS)))
 H=@
 I=@
@@ -22,12 +22,18 @@ all: elpi elpi.byte
 
 perf.byte: elpi.byte
 	$(H) ./elpi.byte
-	$(I) echo OCAMLPROF lpdata.ml lprun.ml bIA.ml int.ml cMap.ml
+	$(I) echo OCAMLPROF lpdata.ml lprun.ml int.ml cMap.ml
 	$(H) ocamlprof $(TMP)/lpdata.ml > lpdata.annot.ml
 	$(H) ocamlprof $(TMP)/lprun.ml > lprun.annot.ml
-	$(H) ocamlprof bIA.ml > bIA.annot.ml
 	$(H) ocamlprof int.ml > int.annot.ml
 	$(H) ocamlprof cMap.ml > cMap.annot.ml
+
+perf:
+	$(H) make clean
+	$(H) make PROFILE=-p elpi -j
+	$(H) ./elpi
+	$(H) gprof elpi > elpi.annot
+	$(H) echo "profiling written to elpi.annot"
 
 elpi: test.ml lprun.cmx lpdata.cmx $(EXTRALIB)
 	$(H) $(CCO) $(FLAGS) $(LIBS) lpdata.cmx lprun.cmx -o $@ $<

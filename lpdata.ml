@@ -3,15 +3,62 @@
 (* license: GNU Lesser General Public License Version 2.1                    *)
 (* ------------------------------------------------------------------------- *)
 
-module IA = struct include BIA (* {{{ Immutable arrays *)
-
-  let append v1 v2 =
-    let len1 = BIA.len v1 in
-    BIA.init (len1 + BIA.len v2)
-      (fun i -> if i < len1 then BIA.get i v1 else BIA.get (i-len1) v2)
-
-  let cons t v =
-    BIA.init (BIA.len v+1) (fun i -> if i = 0 then t else BIA.get (i-1) v)
+module L = struct
+  
+  type 'a t = 'a list
+  let empty = []
+  let singl a = [a]
+  let init i f =
+    let rec aux j = if i = j then [] else f j :: aux (j+1) in aux 0
+  let get i l = List.nth l i
+  let len l = List.length l
+  let sub i j l =
+    let rec aux n l = if n = j + i then [] else
+    match l with
+    | [] -> assert false
+    | x :: xs when n < i -> aux (n+1) xs
+    | x :: xs -> x :: aux (n+1) xs
+    in aux 0 l
+  let tl l = List.tl l
+  let hd l = List.hd l
+  let map f l = List.map f l
+  let mapi f l =
+    let rec aux n = function
+      | [] -> []
+      | x::xs -> f n x :: aux (n+1) xs
+    in aux 0 l
+  let rec fold_map f l a =
+    match l with
+    | [] -> l, a
+    | x::xs -> let x, a = f x a in let xs, a = fold_map f xs a in x::xs, a
+  let rec fold f l a =
+    match l with
+    | [] -> a
+    | x::xs -> fold f xs (f x a)
+  let rec fold2 f l1 l2 a =
+    match l1, l2 with
+    | [], [] -> a
+    | x::xs,y::ys -> fold2 f xs ys (f x y a)
+    | _ -> assert false
+  let for_all f l = List.for_all f l
+  let for_alli f l =
+    let rec aux n = function
+      | [] -> true
+      | x::xs -> f n x && aux (n+1) xs
+    in aux 0 l
+  let rec for_all2 f l1 l2 =
+    match l1, l2 with
+    | [], [] -> true
+    | x::xs, y::ys -> f x y && for_all2 f xs ys
+    | _ -> false
+  let of_list l = l
+  let to_list l = l
+  let filter f l = List.filter f l
+  let append l1 l2 = l1 @ l2
+  let cons x l = x :: l
+  let rec uniq equal = function
+    | [] -> true
+    | x::xs -> List.for_all (fun y -> not(equal x y)) xs && uniq equal xs
 
 end (* }}} *)
 
@@ -99,8 +146,8 @@ type kind_of_data =
   | Con of name * level
   | DB of int
   | Bin of int * data
-  | App of data IA.t
-  | Seq of data IA.t * data
+  | App of data L.t
+  | Seq of data L.t * data
   | Nil
   | Ext of C.data
 and data =
@@ -108,15 +155,15 @@ and data =
   | XCon of name * level
   | XDB of int
   | XBin of int * data
-  | XApp of data IA.t
-  | XSeq of data IA.t * data
+  | XApp of data L.t
+  | XSeq of data L.t * data
   | XNil
   | XExt of C.data
   | XSusp of suspended_job ref
 and suspended_job = Done of data | Todo of data * olam * nlam * env
 and env =
   | XEmpty
-  | XArgs of data IA.t * int * env
+  | XArgs of data L.t * int * env
   | XMerge of env * nlam * olam * env
   | XSkip of int * nlam * env
 
@@ -163,18 +210,18 @@ let rec prf_data ctx fmt t =
         P.pp_open_hovbox fmt 2;
         if pars then P.pp_print_string fmt "(";
         iter_sep P.pp_print_space (fun _ -> print ~pars:true ctx)
-          fmt (IA.to_list xs);
+          fmt (L.to_list xs);
         if pars then P.pp_print_string fmt ")";
         P.pp_close_box fmt ()
     | XSeq (xs, XNil) ->
         P.fprintf fmt "@[<hov 2>[";
         iter_sep (fun fmt () -> P.fprintf fmt ",@ ") (fun _ -> print ctx)
-          fmt (IA.to_list xs);
+          fmt (L.to_list xs);
         P.fprintf fmt "]@]";
     | XSeq (xs, t) ->
         P.fprintf fmt "@[<hov 2>[";
         iter_sep (fun fmt () -> P.fprintf fmt ",@ ") (fun _ -> print ctx)
-          fmt (IA.to_list xs);
+          fmt (L.to_list xs);
         P.fprintf fmt "|";
         print ctx t;
         P.fprintf fmt "]@]";
@@ -201,7 +248,7 @@ and prf_env ctx fmt e =
     | XArgs(a,n,e) ->
         P.fprintf fmt "(@[<hov 2>";
         iter_sep (fun fmt () -> P.fprintf fmt ",@ ")
-          (prf_data ctx) fmt (IA.to_list a);
+          (prf_data ctx) fmt (L.to_list a);
         P.fprintf fmt "@]|%d)@ :: " n;
         print_env e
     | XMerge(e1,nl1,ol2,e2) ->
@@ -237,21 +284,21 @@ let rec epush e = TRACE "epush" (fun fmt -> prf_env [] fmt e)
   | e1, XEmpty when ol2 = 0 -> (*m2*) e1
   | XEmpty, e2 when nl1 = 0 -> (*m3*) e2
   | XEmpty, XArgs(a,l,e2) -> rule"m4";
-      let nargs = IA.len a in
+      let nargs = L.len a in
       if nl1 = nargs then e2 (* repeat m4, end m3 *)
       else if nl1 > nargs then epush (XMerge(XEmpty,nl1 -nargs, ol2 -nargs, e2))
-      else XArgs(IA.sub nl1 (nargs-nl1) a,l,e2) (* repeast m4 + m3 *)
+      else XArgs(L.sub nl1 (nargs-nl1) a,l,e2) (* repeast m4 + m3 *)
   | XEmpty, XSkip(a,l,e2) -> rule"m4";
       if nl1 = a then e2 (* repeat m4, end m3 *)
       else if nl1 > a then epush (XMerge(XEmpty,nl1 - a, ol2 - a, e2))
       else XSkip(a-nl1,l-nl1,e2) (* repeast m4 + m3 *)
   | (XArgs(_,n,_) | XSkip(_,n,_)) as e1, XArgs(b,l,e2) when nl1 > n -> rule"m5";
-      let drop = min (IA.len b) (nl1 - n) in
-      if drop = IA.len b then
+      let drop = min (L.len b) (nl1 - n) in
+      if drop = L.len b then
         epush (XMerge(e1,nl1 - drop, ol2 - drop, e2))
       else   
         epush (XMerge(e1,nl1 - drop, ol2 - drop,
-          XArgs(IA.sub drop (IA.len b - drop) b,l,e2)))
+          XArgs(L.sub drop (L.len b - drop) b,l,e2)))
   | (XArgs(_,n,_) | XSkip(_,n,_)) as e1, XSkip(b,l,e2) when nl1 > n -> rule"m5";
       let drop = min b (nl1 - n) in
       if drop = b then epush (XMerge(e1,nl1 - drop, ol2 - drop, e2))
@@ -259,16 +306,16 @@ let rec epush e = TRACE "epush" (fun fmt -> prf_env [] fmt e)
   | XArgs(a,n,e1), ((XArgs(_,l,_) | XSkip(_,l,_)) as e2) -> rule"m6";
       assert(nl1 = n);
       let m = l + (n -- ol2) in
-      let t = IA.hd a in
-      let e1 = if IA.len a > 1 then XArgs(IA.tl a,n,e1) else e1 in
+      let t = L.hd a in
+      let e1 = if L.len a > 1 then XArgs(L.tl a,n,e1) else e1 in
       (* ugly *)
-      XArgs(IA.of_array [|mkXSusp t ol2 l e2|], m, XMerge(e1,n,ol2,e2))
+      XArgs(L.singl (mkXSusp t ol2 l e2), m, XMerge(e1,n,ol2,e2))
   | XSkip(a,n,e1), ((XArgs(_,l,_) | XSkip(_,l,_)) as e2) -> rule"m6";
       assert(nl1 = n);
       let m = l + (n -- ol2) in
       let e1 = if a > 1 then XSkip(a-1,n-1,e1) else e1 in
       (* ugly *)
-      XArgs(IA.of_array [|mkXSusp (XDB 1) 0 l e2|], m, XMerge(e1,n,ol2,e2))
+      XArgs(L.singl (mkXSusp (XDB 1) 0 l e2), m, XMerge(e1,n,ol2,e2))
   | XArgs _, XEmpty -> assert false
   | XEmpty, XEmpty -> assert false
   | XSkip _, XEmpty -> assert false
@@ -281,51 +328,45 @@ let mkBin n t =
     | _ -> XBin(n,t)
 
 let store ptr v = ptr := Done v; v
+let rec psusp ptr t ol nl e =
+  TRACE "psusp ptr"
+    (fun fmt -> prf_data [] fmt (XSusp { contents = Todo(t,ol,nl,e) }))
+  match t with
+  | XSusp { contents = Done t } -> psusp ptr t ol nl e
+  | XSusp { contents = Todo (t,ol1,nl1,e1) } -> rule"m1";
+      psusp ptr t (ol1 + (ol -- nl1)) (nl + (nl1 -- ol))
+        (XMerge(e1,nl1,ol,e))
+  | (XCon _ | XExt _ | XNil) as x -> rule"r1"; x
+  | XUv _ as x -> store ptr x
+  | XBin(n,t) -> rule"r6";
+      assert(n > 0);
+      store ptr (mkBin 1 (mkXSusp (mkBin (n-1) t) (ol+1) (nl+1)
+                           (XArgs (L.singl (XDB 1),nl+1,e))))
+  | XApp a -> rule"r5";
+      store ptr (XApp(L.map (fun t -> mkXSusp t ol nl e) a))
+  | XSeq(a,tl) ->
+      store ptr (XSeq(L.map (fun t -> mkXSusp t ol nl e) a,
+                      mkXSusp tl ol nl e))
+  | XDB i -> (* r2, r3, r4 *)
+      let e = epush e in
+      SPY "epushed" (prf_env []) e;
+      match e with
+      | XMerge _ -> assert false
+      | XEmpty -> rule"r2"; assert(ol = 0); store ptr (XDB(i+nl))
+      | XArgs(a,l,e) ->
+          let nargs = L.len a in
+          if i <= nargs
+          then (rule"r3"; psusp ptr (L.get (nargs - i) a) 0 (nl - l) XEmpty)
+          else (rule"r4"; psusp ptr (XDB(i - nargs)) (ol - nargs) nl e)
+      | XSkip(n,l,e) -> 
+          if (i <= n)
+          then (rule"r3"; store ptr (XDB (i + nl - l)))
+          else (rule"r4"; psusp ptr (XDB(i - n)) (ol - n) nl e)
 let push t =
   match t with
   | (XUv _ | XCon _ | XDB _ | XBin _ | XApp _ | XExt _ | XSeq _ | XNil) -> t
   | XSusp { contents = Done t } -> t
-  | XSusp ({ contents = Todo (t,ol,nl,e) } as ptr) ->
-      let rec push t ol nl e =
-        TRACE "push"
-          (fun fmt -> prf_data [] fmt (XSusp { contents = Todo(t,ol,nl,e) }))
-        match t with
-        | XSusp { contents = Done t } -> push t ol nl e
-        | XSusp { contents = Todo (t,ol1,nl1,e1) } -> rule"m1";
-            push t (ol1 + (ol -- nl1)) (nl + (nl1 -- ol))
-              (XMerge(e1,nl1,ol,e))
-        | (XCon _ | XExt _ | XNil) as x -> rule"r1"; x
-        | XUv _ as x -> store ptr x
-        | XBin(n,t) -> rule"r6";
-            assert(n > 0);
-(*
-            store ptr
-              (XBin(n,mkXSusp t (ol+n) (nl+n) (XSkip(n,nl+n,e))))
-*)
-            store ptr (mkBin 1 (mkXSusp (mkBin (n-1) t) (ol+1) (nl+1)
-                                 (XArgs (IA.of_array[|XDB 1|],nl+1,e))))
-        | XApp a -> rule"r5";
-            store ptr (XApp(IA.map (fun t -> mkXSusp t ol nl e) a))
-        | XSeq(a,tl) ->
-            store ptr (XSeq(IA.map (fun t -> mkXSusp t ol nl e) a,
-                            mkXSusp tl ol nl e))
-        | XDB i -> (* r2, r3, r4 *)
-            let e = epush e in
-            SPY "epushed" (prf_env []) e;
-            match e with
-            | XMerge _ -> assert false
-            | XEmpty -> rule"r2"; assert(ol = 0); store ptr (XDB(i+nl))
-            | XArgs(a,l,e) ->
-                let nargs = IA.len a in
-                if i <= nargs
-                then (rule"r3"; push (IA.get (nargs - i) a) 0 (nl - l) XEmpty)
-                else (rule"r4"; push (XDB(i - nargs)) (ol - nargs) nl e)
-            | XSkip(n,l,e) -> 
-                if (i <= n)
-                then (rule"r3"; store ptr (XDB (i + nl - l)))
-                else (rule"r4"; push (XDB(i - n)) (ol - n) nl e)
-      in
-        push t ol nl e
+  | XSusp ({ contents = Todo (t,ol,nl,e) } as ptr) -> psusp ptr t ol nl e
 
 let isSubsp = function XSusp _ -> true | _ -> false
 
@@ -351,7 +392,7 @@ let mkDB i = XDB i
 let mkExt x = XExt x
 let rec mkSeq xs tl =
   match tl with
-  | XSeq (ys,tl) -> mkSeq (IA.append xs ys) tl
+  | XSeq (ys,tl) -> mkSeq (L.append xs ys) tl
   | _ -> XSeq(xs,tl)
 let mkNil = XNil
 let kool = Obj.magic (*function
@@ -370,16 +411,16 @@ let mkBin n t =
     | XBin(n',t) -> XBin(n+n',t)
     | _ -> XBin(n,t)
 
-let mkApp xs = if IA.len xs = 1 then IA.hd xs else XApp xs
+let mkApp xs = if L.len xs = 1 then L.hd xs else XApp xs
 let mkAppv t v start stop =
   if start = stop then t else
   match t with
-  | XApp xs -> XApp(IA.append xs (IA.sub start (stop-start) v))
-  | _ -> XApp(IA.cons t (IA.sub start (stop-start) v))
+  | XApp xs -> XApp(L.append xs (L.sub start (stop-start) v))
+  | _ -> XApp(L.cons t (L.sub start (stop-start) v))
 
 let fixApp xs =
-  match push (IA.hd xs) with
-  | XApp ys -> XApp (IA.append ys (IA.tl xs))
+  match push (L.hd xs) with
+  | XApp ys -> XApp (L.append ys (L.tl xs))
   | _ -> XApp xs
 
 let rec equal a b = match push a, push b with
@@ -387,18 +428,18 @@ let rec equal a b = match push a, push b with
  | XCon (x,_), XCon (y,_) -> x = y
  | XDB x, XDB y -> x = y
  | XBin (n1,x), XBin (n2,y) -> n1 = n2 && equal x y
- | XApp xs, XApp ys -> IA.for_all2 equal xs ys
+ | XApp xs, XApp ys -> L.for_all2 equal xs ys
  | XExt x, XExt y -> C.equal x y
- | XSeq(xs,s), XSeq(ys,t) -> IA.for_all2 equal xs ys && equal s t
+ | XSeq(xs,s), XSeq(ys,t) -> L.for_all2 equal xs ys && equal s t
  | XNil, XNil -> true
  | ((XBin(n,x), y) | (y, XBin(n,x))) -> begin (* eta *)
      match push x with
      | XApp xs ->
-        let nxs = IA.len xs in
+        let nxs = L.len xs in
         let eargs = nxs - n in
            eargs > 0
-        && IA.for_alli (fun i t -> equal t (XDB (n-i))) (IA.sub eargs n xs)
-        && equal (mkApp (IA.sub 0 eargs xs)) (mkXSusp y 0 n XEmpty)
+        && L.for_alli (fun i t -> equal t (XDB (n-i))) (L.sub eargs n xs)
+        && equal (mkApp (L.sub 0 eargs xs)) (mkXSusp y 0 n XEmpty)
      | _ -> false
    end
  | _ -> false
@@ -408,16 +449,16 @@ let isBin x = match push x with XBin _ -> true | _ -> false
 let rec fold f x a = match push x with
   | (XDB _ | XCon _ | XUv _ | XExt _) as x -> f x a
   | XBin (_,x) -> fold f x a
-  | XApp xs -> IA.fold (fold f) xs a
-  | XSeq (xs, t) -> fold f t (IA.fold (fold f) xs a)
+  | XApp xs -> L.fold (fold f) xs a
+  | XSeq (xs, t) -> fold f t (L.fold (fold f) xs a)
   | XNil -> a
   | XSusp _ -> assert false
 
 let rec map f x = match push x with
   | (XDB _ | XCon _ | XUv _ | XExt _ | XNil) as x -> f x
   | XBin (ns,x) -> XBin(ns, map f x)
-  | XApp xs -> XApp(IA.map (map f) xs)
-  | XSeq (xs, tl) -> XSeq(IA.map (map f) xs, map f tl)
+  | XApp xs -> XApp(L.map (map f) xs)
+  | XSeq (xs, tl) -> XSeq(L.map (map f) xs, map f tl)
   | XSusp _ -> assert false
 
 let max_uv x a = match push x with XUv (i,_) -> max a i | _ -> a
@@ -425,9 +466,9 @@ let max_uv x a = match push x with XUv (i,_) -> max a i | _ -> a
 let rec fold_map i f x a = match push x with
   | (XDB _ | XCon _ | XUv _ | XExt _ | XNil) as x -> f i x a
   | XBin (n,x) -> let x, a = fold_map i f x a in XBin(n,x), a
-  | XApp xs -> let xs, a = IA.fold_map (fold_map i f) xs a in XApp xs, a
+  | XApp xs -> let xs, a = L.fold_map (fold_map i f) xs a in XApp xs, a
   | XSeq (xs, tl) ->
-      let xs, a = IA.fold_map (fold_map i f) xs a in
+      let xs, a = L.fold_map (fold_map i f) xs a in
       let tl, a = fold_map i f tl a in
       XSeq(xs, tl), a
   | XSusp _ -> assert false
@@ -598,7 +639,7 @@ let rec key_of = function
   | Atom t ->
       match look t with
       | Con _ -> Key t
-      | App xs -> Key(IA.hd xs)
+      | App xs -> Key(L.hd xs)
       | _ -> Flex
 
 end (* }}} *)
@@ -722,8 +763,8 @@ let rec binders c n = function
     | (XCon _ | XUv _) as x when equal x c -> XDB n
     | (XCon _ | XUv _ | XExt _ | XDB _ | XNil) as x -> x
     | XBin(w,t) -> XBin(w,binders c (n+w) t)
-    | XApp xs -> XApp (IA.map (binders c n) xs)
-    | XSeq (xs,tl) -> XSeq(IA.map (binders c n) xs, binders c n tl)
+    | XApp xs -> XApp (L.map (binders c n) xs)
+    | XSeq (xs,tl) -> XSeq(L.map (binders c n) xs, binders c n tl)
     | XSusp _ -> assert false
 and binders_premise c n = function
     | Pi(m,t) -> Pi(m,binders_premise c (n+m) t)
@@ -759,10 +800,10 @@ EXTEND
             let l = List.rev l in
             let last = List.hd l in
             let rest = List.rev (List.tl l) in
-            mkSeq (IA.of_list rest) last ]
+            mkSeq (L.of_list rest) last ]
     | "1"
       [ hd = atom LEVEL "2"; args = LIST0 atom LEVEL "2" ->
-          if args = [] then hd else mkApp (IA.of_list (hd :: args)) ]
+          if args = [] then hd else mkApp (L.of_list (hd :: args)) ]
     | "2" 
       [ c = CONSTANT; b = OPT [ BIND; a = atom LEVEL "1" -> a ] ->
           let c, lvl = lvl_name_of c in 
@@ -782,7 +823,7 @@ EXTEND
           if List.length xs = 0 && tl <> XNil then 
             raise (Token.Error ("List with not elements cannot have a tail"));
           if List.length xs = 0 then mkNil
-          else mkSeq (IA.of_list xs) tl
+          else mkSeq (L.of_list xs) tl
       | LPAREN; a = atom LEVEL "0"; RPAREN -> a ]
     ];
 
@@ -888,13 +929,13 @@ let lift ?(from=0) k t =
   else mkXSusp t from (from+k) (XSkip(k,from,XEmpty))
 
 let beta t start len v =
-  let rdx = mkXSusp t len 0 (XArgs(IA.sub start len v, 0, XEmpty)) in
+  let rdx = mkXSusp t len 0 (XArgs(L.sub start len v, 0, XEmpty)) in
   SPY "rdx" (prf_data []) rdx;
   rdx
 
 let rec mkskip n e = match n with
   | 0 -> e
-  | n -> XArgs(IA.of_array[|XDB 1|],n,mkskip (n-1) e)
+  | n -> XArgs(L.singl (XDB 1),n,mkskip (n-1) e)
 
 let beta_under depth t l =
   if l = [] then t
@@ -902,7 +943,7 @@ let beta_under depth t l =
     let len = List.length l in
     mkXSusp t (len+depth) depth
       (mkskip depth
-          (XArgs(IA.of_list l, 0, XEmpty)))
+          (XArgs(L.of_list l, 0, XEmpty)))
 
 let rec whd s t =
   TRACE "whd" (fun fmt -> prf_data [] fmt t)
@@ -915,11 +956,11 @@ let rec whd s t =
   | Uv _ -> t, s
   | Seq(xs,tl) as x -> kool x, s
   | App v as x ->
-      let hd = IA.hd v in
+      let hd = L.hd v in
       let hd', s = whd s hd in
       match look hd' with
       | Bin (n_lam,b) ->
-        let n_args = IA.len v - 1 in
+        let n_args = L.len v - 1 in
         if n_lam = n_args then
           whd s (beta b 1 n_args v)
         else if n_lam < n_args then
@@ -929,16 +970,16 @@ let rec whd s t =
           (beta (mkBin diff b) 1 n_args v), s
       | _ ->
           if hd == hd' then kool x, s
-          else mkAppv hd' (IA.tl v) 0 (IA.len v-1), s
+          else mkAppv hd' (L.tl v) 0 (L.len v-1), s
           
 let rec nf s x = match look x with
   | (Ext _ | Con _ | DB _ | Nil) as x -> kool x
   | Bin(n,t) -> mkBin n (nf s t)
-  | Seq(xs,t) -> mkSeq (IA.map (nf s) xs) (nf s t)
+  | Seq(xs,t) -> mkSeq (L.map (nf s) xs) (nf s t)
   | (App _ | Uv _) as xf ->
       let x', _ = whd s x in 
       match look x' with
-      | App xs -> mkApp (IA.map (nf s) xs)
+      | App xs -> mkApp (L.map (nf s) xs)
       | _ -> if x == x' then kool xf else nf s x'
 
 end (* }}} *)

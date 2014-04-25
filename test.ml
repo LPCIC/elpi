@@ -1,7 +1,7 @@
 open Lprun
 open Lpdata
 
-let toa x = LP.mkApp(IA.of_array x)
+let toa x = LP.mkApp(L.of_list x)
 
 module Coq = struct
 
@@ -55,9 +55,9 @@ let embed t (*sigma*) =
   | Evar (i,ls) -> hole 
   (*aux_app (App [| ginst; M.find i s; aux (sigma i) |]) ls*)
   | Sort s -> of_Sort s
-  | Cast(t,ty) -> toa [|cast; aux t; aux ty|]
-  | Prod(n,ty,t) ->  toa [|prod; of_Name n; aux ty; LP.mkBin 1 (aux t) |]
-  | Lambda(n,ty,t) ->  toa [|lam; of_Name n; aux ty; LP.mkBin 1 (aux t) |]
+  | Cast(t,ty) -> toa [cast; aux t; aux ty]
+  | Prod(n,ty,t) ->  toa [prod; of_Name n; aux ty; LP.mkBin 1 (aux t) ]
+  | Lambda(n,ty,t) ->  toa [lam; of_Name n; aux ty; LP.mkBin 1 (aux t) ]
   | App(hd,args) -> aux_app (aux hd) args
   | Const n -> of_Name n
   and aux_app hd args =
@@ -66,7 +66,7 @@ let embed t (*sigma*) =
      let a = Array.create (len_args + 2) (LP.mkDB 0) in
      a.(0) <- app; a.(1) <- hd;
      for i = 0 to len_args - 1 do a.(i+2) <- aux args.(i); done;
-     toa a
+     toa (Array.to_list a)
   in
     aux t
 
@@ -81,19 +81,19 @@ let clist : C.data list -> C.data =
     (List.for_all2 C.equal)
 let of_list l = LP.mkExt (clist l)
 
-let test_IA () =
-  let t = IA.of_array [| 1; 2; 3; 4; 5 |] in
-  assert(t = IA.append (IA.sub 0 1 t) (IA.tl t));
-  assert(t = IA.append t (IA.sub (IA.len t-1) 0 t));
-  assert(t = IA.append (IA.sub 0 0 t) t);
-  assert(t == IA.map (fun x -> x) t);
+let test_L () =
+  let t = L.of_list [ 1; 2; 3; 4; 5 ] in
+  assert(t = L.append (L.sub 0 1 t) (L.tl t));
+  assert(t = L.append t (L.sub (L.len t-1) 0 t));
+  assert(t = L.append (L.sub 0 0 t) t);
+(*   assert(t == L.map (fun x -> x) t); *)
 ;;
 
 let test_LPdata () =
   let wc = Unix.gettimeofday () in
   for j = 1 to 300 do
-    let test1 = toa [|LP.mkCon "of" 0; of_int 3; of_int 4; LP.mkUv 0 0 |] in
-    let test2 = toa [|LP.mkCon "of" 0; of_list [cint 3; cint 5] |] in
+    let test1 = toa [LP.mkCon "of" 0; of_int 3; of_int 4; LP.mkUv 0 0 ] in
+    let test2 = toa [LP.mkCon "of" 0; of_list [cint 3; cint 5] ] in
     for i = 1 to 1000 do
             ignore(LP.equal test1 test2);
             ignore(LP.equal test1 test1);
@@ -565,7 +565,7 @@ let _ =
   } in
   Gc.set tweaked_control;
   set_terminal_width ();
-  test_IA ();
+  test_L ();
   test_LPdata ();
   test_parse ();
   test_whd ();

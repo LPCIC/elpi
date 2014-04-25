@@ -12,13 +12,30 @@ module C : sig
   val equal : data -> data -> bool
 end
 
-(* Immutable arrays with fast sub and append TODO *)
-module IA : sig
-  include BIA.S
-
-  (* TODO: evaluate rope like structure with compression on get *)
+module L : sig
+  type 'a t
+  val empty : 'a t
+  val singl : 'a -> 'a t
+  val init : int -> (int -> 'a) -> 'a t
+  val get : int -> 'a t -> 'a
+  val len : 'a t -> int
+  val sub : int -> int -> 'a t -> 'a t
+  val tl : 'a t -> 'a t
+  val hd : 'a t -> 'a
+  val map : ('a -> 'a) -> 'a t -> 'a t
+  val mapi : (int -> 'a -> 'a) -> 'a t -> 'a t
+  val fold_map : ('a -> 'b -> 'a * 'b) -> 'a t -> 'b -> 'a t * 'b
+  val fold : ('a -> 'b -> 'b) -> 'a t -> 'b -> 'b
+  val fold2 : ('a -> 'c -> 'b -> 'b) -> 'a t -> 'c t -> 'b -> 'b
+  val for_all : ('a -> bool) -> 'a t -> bool
+  val for_alli : (int -> 'a -> bool) -> 'a t -> bool
+  val for_all2 : ('a -> 'b -> bool) -> 'a t -> 'b t -> bool
+  val filter : ('a -> bool) -> 'a t -> 'a t
+  val to_list : 'a t -> 'a list
+  val of_list : 'a list -> 'a t
   val append : 'a t -> 'a t -> 'a t
   val cons : 'a -> 'a t -> 'a t
+  val uniq : ('a -> 'a -> bool) -> 'a t -> bool
 end
 
 module LP : sig
@@ -32,8 +49,8 @@ module LP : sig
     | Con of name * level
     | DB of int
     | Bin of int * data
-    | App of data IA.t
-    | Seq of data IA.t * data
+    | App of data L.t
+    | Seq of data L.t * data
     | Nil
     | Ext of C.data
 
@@ -44,13 +61,13 @@ module LP : sig
   val mkCon : name -> level -> data
   val mkDB : int -> data
   val mkBin : int -> data -> data
-  val mkApp : data IA.t -> data
+  val mkApp : data L.t -> data
   val mkExt : C.data -> data
-  val mkSeq : data IA.t -> data -> data
+  val mkSeq : data L.t -> data -> data
   val mkNil : data
 
-  val mkAppv : data -> data IA.t -> int -> int -> data
-  val fixApp : data IA.t -> data
+  val mkAppv : data -> data L.t -> int -> int -> data
+  val fixApp : data L.t -> data
 
   val equal : data -> data -> bool
   
