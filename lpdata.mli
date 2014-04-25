@@ -61,9 +61,10 @@ module LP : sig
 
   val max_uv : data -> var -> var
 
+  type key = Key of data | Flex
   type builtin = BIUnif of data * data | BICustom of string * data | BICut
   type program = annot_clause list
-  and annot_clause = int * data list * clause (* level, subst, clause *)
+  and annot_clause = int * data list * key * clause
   and clause = premise
   and premise =
       Atom of data
@@ -73,6 +74,8 @@ module LP : sig
     | Pi of int * premise
     | Sigma of int * premise
   and goal = premise
+
+  val key_of : premise -> key
 
   val map_premise : (data -> data) -> premise -> premise
   val fold_premise : (data -> 'a -> 'a) -> premise -> 'a -> 'a

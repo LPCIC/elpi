@@ -13,6 +13,7 @@ val get : int -> 'a t -> 'a
 val len : 'a t -> int
 val sub : int -> int -> 'a t -> 'a t
 val tl : 'a t -> 'a t
+val hd : 'a t -> 'a
 
 val map : ('a -> 'a) -> 'a t -> 'a t
 val mapi : (int -> 'a -> 'a) -> 'a t -> 'a t
@@ -41,6 +42,7 @@ end
 type 'a t = int * int * 'a array
 let init len f = 0, len, Array.init len f
 let get i (start,stop,a) = assert(start + i < stop); a.(start + i)
+let hd a = get 0 a
 let len (start,stop,_) = stop - start
 let sub i len (start,stop,v) =
   if len > stop - start then raise (Invalid_argument "sub")

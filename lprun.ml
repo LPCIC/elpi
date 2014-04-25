@@ -190,7 +190,8 @@ and unify_ho x y s =
 
 exception NoClause
 type objective =
-  [ `Atom of data | `Unify of data * data | `Custom of string * data | `Cut ]
+  [ `Atom of data * key
+  | `Unify of data * data | `Custom of string * data | `Cut ]
 type goal = int * objective * program * program * int
 type alternatives = (subst * goal list) list
 
@@ -229,7 +230,7 @@ let rec iter_sep spc pp fmt = function
 
 let pr_cur_goal g lvl s fmt =
   match g with
-  | `Atom goal ->
+  | `Atom (goal,_) ->
       Format.fprintf fmt "%d |- %a"
         lvl (prf_data []) (apply_subst s goal)
   | `Unify(a,b) ->
@@ -256,19 +257,23 @@ let contextualize depth t hv =
   assert(depth = 0);
   Red.beta_under depth t (List.rev hv)
 
-let add_cdepth cdepth = List.map (fun (hv,p) -> cdepth, hv, p)
+let add_cdepth b cdepth =
+  List.map (fun (hv,p) -> cdepth, hv, (if b then key_of p else Flex), p)
 
-let contextualize_premise depth subst old_hv premise = (*: goal list * subst =*)
+let mkAtom t hv = `Atom(contextualize 0 t hv, key_of (Atom t))
+
+let contextualize_premise ?(compute_key=false) depth subst old_hv premise =
   let rec aux cdepth depth s hv eh = function
   | Atom t ->
-      [cdepth,`Atom(contextualize 0 t hv), add_cdepth cdepth eh], s
+      [cdepth, mkAtom t hv, add_cdepth compute_key cdepth eh], s
   | AtomBI (BIUnif(x,y)) ->
       [cdepth, `Unify(contextualize 0 x hv,contextualize 0 y hv),
-       add_cdepth cdepth eh], s
+       add_cdepth compute_key cdepth eh], s
   | AtomBI (BICustom(n,x)) ->
-      [cdepth, `Custom(n,contextualize 0 x hv), add_cdepth cdepth eh], s
+      [cdepth, `Custom(n,contextualize 0 x hv),
+       add_cdepth compute_key cdepth eh], s
   | AtomBI BICut ->
-      [cdepth, `Cut, add_cdepth cdepth eh], s
+      [cdepth, `Cut, add_cdepth compute_key cdepth eh], s
   | Impl(Conj ps,h) ->
       aux cdepth depth s hv (List.map (fun p -> hv,p) ps @ eh) h
   | Impl(p,h) -> aux cdepth depth s hv ((hv,p) :: eh) h
@@ -286,30 +291,37 @@ let contextualize_premise depth subst old_hv premise = (*: goal list * subst =*)
 
 let contextualize_hyp depth subst hv premise =
   match contextualize_premise depth subst hv premise with
-  | [_,`Atom hd,hyps], s -> hd, hyps, s
+  | [_,`Atom(hd,_),hyps], s -> hd, hyps, s
   | [], _ -> assert false
   | _ -> assert false
 
 let contextualize_goal depth subst hv goal =
-  contextualize_premise depth subst hv goal
+  contextualize_premise ~compute_key:true depth subst hv goal
 
-let select goal depth (s as os) prog orig_prog lvl : subst * goal list * alternatives =
+let no_key_match k kc =
+  match k, kc with
+  | Key t1, Key t2 -> not(LP.equal t1 t2)
+  | Key _, Flex -> true
+  | Flex, _ -> false
+
+let select k goal depth (s as os) prog orig_prog lvl : subst * goal list * alternatives =
   let rec first = function
   | [] ->
       SPY "fail" (prf_data []) (apply_subst s goal);
       raise NoClause
-  | (_,old_hv,clause) :: rest ->
+  | (_,old_hv,kc,clause) :: rest when no_key_match k kc -> first rest
+  | (_,old_hv,_,clause) :: rest ->
       try
         let hd, subgoals, s = contextualize_hyp depth s old_hv clause in
         let s = unify goal hd s in
         SPY "selected" (prf_clause (ctx_of_hv old_hv)) clause;
         SPY "sub" Subst.prf_subst s;
         let subgoals, s =
-          List.fold_right (fun (d,hv,p) (acc,s) ->
+          List.fold_right (fun (d,hv,_,p) (acc,s) ->
             let gl, s = contextualize_goal d s hv p in
             gl :: acc, s) subgoals ([],s) in
         s, List.map (fun (d,g,e) -> d,g,e@orig_prog,e@orig_prog,lvl+1) (List.flatten subgoals),
-          [os,[depth,`Atom goal,rest,orig_prog,lvl]]
+          [os,[depth,`Atom(goal,k),rest,orig_prog,lvl]]
       with UnifFail _ ->
         SPY "skipped" (prf_clause (ctx_of_hv old_hv)) clause;
         first rest
@@ -319,8 +331,8 @@ let select goal depth (s as os) prog orig_prog lvl : subst * goal list * alterna
 let rec run1 s ((depth,goal,prog,orig_prog,lvl) : goal) : subst * goal list * alternatives =
   (match goal with
   | `Cut -> assert false
-  | `Atom t ->
-      let s, goals, alts = select t depth s prog orig_prog lvl in
+  | `Atom(t,k) ->
+      let s, goals, alts = select k t depth s prog orig_prog lvl in
       s, goals, alts
   | `Unify(a,b) ->
       (try

@@ -259,7 +259,7 @@ let rec epush e = TRACE "epush" (fun fmt -> prf_env [] fmt e)
   | XArgs(a,n,e1), ((XArgs(_,l,_) | XSkip(_,l,_)) as e2) -> rule"m6";
       assert(nl1 = n);
       let m = l + (n -- ol2) in
-      let t = IA.get 0 a in
+      let t = IA.hd a in
       let e1 = if IA.len a > 1 then XArgs(IA.tl a,n,e1) else e1 in
       (* ugly *)
       XArgs(IA.of_array [|mkXSusp t ol2 l e2|], m, XMerge(e1,n,ol2,e2))
@@ -367,7 +367,7 @@ let mkBin n t =
     | XBin(n',t) -> XBin(n+n',t)
     | _ -> XBin(n,t)
 
-let mkApp xs = if IA.len xs = 1 then IA.get 0 xs else XApp xs
+let mkApp xs = if IA.len xs = 1 then IA.hd xs else XApp xs
 let mkAppv t v start stop =
   if start = stop then t else
   match t with
@@ -375,7 +375,7 @@ let mkAppv t v start stop =
   | _ -> XApp(IA.cons t (IA.sub start (stop-start) v))
 
 let fixApp xs =
-  match push (IA.get 0 xs) with
+  match push (IA.hd xs) with
   | XApp ys -> XApp (IA.append ys (IA.tl xs))
   | _ -> XApp xs
 
@@ -450,8 +450,10 @@ let fold_map_builtin i f x a = match x with
       BICustom(n,x), a
   | BICut -> BICut, a
 
+type key = Key of data | Flex
+
 type program = annot_clause list
-and annot_clause = int * data list * clause (* level, subst, clause *)
+and annot_clause = int * data list * key * clause (* level, subst, key, clause *)
 and clause = premise
 and premise =
   | Atom of data
@@ -464,6 +466,13 @@ and goal = premise
 
 let mkPi n = function Pi(m,t) -> Pi(m+n,t) | t -> Pi(n,t)
 let mkSigma n = function Sigma(m,t) -> Sigma(m+n,t) | t -> Sigma(n,t)
+let mkConj l =
+  let rec aux acc = function
+    | [] -> Conj(List.flatten (List.rev acc))
+    | Conj l::rest -> aux (l :: acc) rest
+    | p::rest -> aux ([p] :: acc) rest
+  in
+    aux [] l
 
 let rec map_premise f = function
   | Atom x -> Atom(f x)
@@ -573,11 +582,21 @@ let string_of_head = string_of_data
 let string_of_clause c = on_buffer (prf_clause []) c
 
 let prf_program fmt p =
-  let p = List.map (fun _, _, p -> p) p in
+  let p = List.map (fun _, _, _, p -> p) p in
   Format.pp_open_vbox fmt 0;
   iter_sep (Format.pp_print_space) (prf_clause []) fmt p;
   Format.pp_close_box fmt ()
 let string_of_program p = on_buffer prf_program p
+
+let rec key_of = function
+  | AtomBI _ -> assert false
+  | Conj _ -> assert false
+  | Impl(_,p) | Pi(_,p) | Sigma(_,p) -> key_of p
+  | Atom t ->
+      match look t with
+      | Con _ -> Key t
+      | App xs -> Key(IA.hd xs)
+      | _ -> Flex
 
 end (* }}} *)
 include PPP
@@ -727,7 +746,7 @@ EXTEND
          let hyp = match hyp with None -> Conj [] | Some h -> h in
          let clause = sigma_abstract (Impl(hyp,Atom hd)) in
          reset (); 
-         0, [], clause ]
+         0, [], key_of clause, clause ]
     ];
   atom :
     [ "0"
@@ -767,13 +786,13 @@ EXTEND
   premise :
     [ "1"
       [ conj = LIST1 premise LEVEL "2" SEP COMMA ->
-         if List.length conj = 1 then List.hd conj else Conj conj ]
+         if List.length conj = 1 then List.hd conj else mkConj conj ]
     | "2"
       [ a = atom; IMPL; p = premise -> Impl(Atom a,p)
       | a = atom; EQUAL; b = atom -> AtomBI (BIUnif(a,b))
       | a = atom -> Atom a
       | a = atom; ENTAILS; hyp = LIST1 premise LEVEL "2" SEP COMMA ->
-         Impl(Conj hyp,Atom a)
+         Impl(mkConj hyp,Atom a)
       | bt = BUILTIN; a = atom -> AtomBI(BICustom(bt,a))
       | BANG -> AtomBI BICut
       | binder = [PI -> fst | SIGMA -> snd]; x = bound; BIND; p = premise ->
@@ -893,7 +912,7 @@ let rec whd s t =
   | Uv _ -> t, s
   | Seq(xs,tl) as x -> kool x, s
   | App v as x ->
-      let hd = IA.get 0 v in
+      let hd = IA.hd v in
       let hd', s = whd s hd in
       match look hd' with
       | Bin (n_lam,b) ->

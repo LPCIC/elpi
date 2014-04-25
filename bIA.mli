@@ -14,6 +14,7 @@ val get : int -> 'a t -> 'a
 val len : 'a t -> int
 val sub : int -> int -> 'a t -> 'a t
 val tl : 'a t -> 'a t
+val hd : 'a t -> 'a
 
 val map : ('a -> 'a) -> 'a t -> 'a t
 val mapi : (int -> 'a -> 'a) -> 'a t -> 'a t

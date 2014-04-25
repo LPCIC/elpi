@@ -507,7 +507,7 @@ appear-in A (arr B C) :- appear-in A C.
 
 infer-type N T :- polytype nil M N S, remvac S T.
 
-tryonce X T :- polytype nil M X T, $print X, $print T, fail.
+tryonce X T :- polytype nil M X T, $print T, fail.
 
 
 go :- example X T, tryonce X T.
