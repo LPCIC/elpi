@@ -713,6 +713,7 @@ let tok = lexer
   [ 'A'-'Z' ident -> "UVAR", $buf 
   | 'a'-'z' ident -> "CONSTANT", $buf
   | '_' '0'-'9' number -> "REL", $buf
+  | '_' -> "FRESHUV", "_"
   |  ":-"  -> "ENTAILS",$buf
   |  "::"  -> "CONS",$buf
   | ',' -> "COMMA",","
@@ -807,6 +808,8 @@ let get_uv u =
     let n = List.length !uvmap in
     uvmap := (u,n) :: !uvmap;
     n
+let fresh_lvl_name () = lvl_name_of (Printf.sprintf "_%d" (List.length !uvmap))
+
 let check_con n l =
   try
     let l' = List.assoc n !conmap in
@@ -868,15 +871,13 @@ EXTEND
           | None -> check_con c lvl; x
           | Some b ->  mkBin 1 (binders x 1 b))
       | u = UVAR -> let u, lvl = lvl_name_of u in mkUv (get_uv u) lvl
+      | u = FRESHUV -> let u, lvl = fresh_lvl_name () in mkUv (get_uv u) lvl
       | i = REL -> mkDB (int_of_string (String.sub i 1 (String.length i - 1)))
       | NIL -> mkNil
       | s = LITERAL -> mkExt (mkString s)
       | LBRACKET; xs = LIST0 atom LEVEL "1" SEP COMMA;
-          tl = OPT [ PIPE; u = UVAR -> u ]; RBRACKET ->
-            let tl = match tl with
-              | None -> XNil
-              | Some u ->
-                  let u, lvl = lvl_name_of u in mkUv (get_uv u) lvl in
+          tl = OPT [ PIPE; x = atom LEVEL "0" -> x ]; RBRACKET ->
+          let tl = match tl with None -> XNil | Some x -> x in
           if List.length xs = 0 && tl <> XNil then 
             raise (Token.Error ("List with not elements cannot have a tail"));
           if List.length xs = 0 then mkNil
