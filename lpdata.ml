@@ -99,7 +99,7 @@ module C : sig (* {{{ External, user defined, datatypes *)
     ty : ty;
   }
 
-  val declare : ('a -> string) -> ('a -> 'a -> bool) -> 'a -> data
+  val declare : ('a -> string) -> ('a -> 'a -> bool) -> ('a -> data) * (data -> bool) * (data -> 'a)
   
   val print : data -> string
   val equal : data -> data -> bool
@@ -130,9 +130,13 @@ let declare print cmp =
   let tid = fresh_tid () in
   m := M.add tid ((fun x -> print (cget x)),
                   (fun x y -> cmp (cget x) (cget y))) !m;
-  fun v -> { t = Obj.repr v; ty = tid }
+  (fun v -> { t = Obj.repr v; ty = tid }),
+  (fun c -> c.ty = tid),
+  (fun c -> assert(c.ty = tid); cget c)
 
 end (* }}} *)
+
+let mkString, isString, getString = C.declare (fun x -> "\""^x^"\"") (=)
 
 module PPLIB = struct (* {{{ auxiliary lib for PP *)
 

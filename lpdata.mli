@@ -7,10 +7,14 @@
  * to get a factory for a type *)
 module C : sig
   type data
-  val declare : ('a -> string) -> ('a -> 'a -> bool) -> 'a -> data
+  val declare : ('a -> string) -> ('a -> 'a -> bool) -> ('a -> data) * (data -> bool) * (data -> 'a)
   val print : data -> string
   val equal : data -> data -> bool
 end
+
+val mkString : string -> C.data
+val isString : C.data -> bool
+val getString : C.data -> string
 
 module L : sig
   type 'a t
