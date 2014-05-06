@@ -26,14 +26,13 @@ type term =
 let quote x = "\""^x^"\""
 let sob = function true -> "Type" | _ -> "Prop"
 
-let cVar : string -> C.data = C.declare quote (=)
+let cVar,_,_ = C.declare quote (=)
 let of_Var s = LP.mkExt (cVar s)
 
-let cSort : bool -> C.data =
-  C.declare (fun x -> quote (sob x)) (=)
+let cSort,_,_ = C.declare (fun x -> quote (sob x)) (=)
 let of_Sort s = LP.mkExt (cSort s)
 
-let cName : string -> C.data = C.declare quote (=)
+let cName,_,_ = C.declare quote (=)
 let of_Name s = LP.mkExt (cName s)
 
 
@@ -72,10 +71,10 @@ let embed t (*sigma*) =
 
 end
 
-let cint : int -> C.data = C.declare string_of_int (=)
+let cint,_,_ = C.declare string_of_int (=)
 let of_int n = LP.mkExt (cint n)
 
-let clist : C.data list -> C.data =
+let clist,_,_ =
   C.declare
     (fun l -> "[" ^ String.concat "; " (List.map C.print l) ^ "]")
     (List.for_all2 C.equal)
@@ -170,6 +169,7 @@ let test_unif () =
   test true  "[a]" "a :: nil";
   test true  "[a,b,c]" "a :: b :: c :: nil";
   test true  "[a,b,c|X]" "a :: b :: c :: X";
+  test false "[]" "[x|B]";
 ;;
 
 let test_coq () =
@@ -189,7 +189,9 @@ let test_parse () =
     Format.eprintf "@[<hv2>goal:@ %a@]@\n%!"
       (LP.prf_goal (ctx_of_hv hv)) (Subst.apply_subst_goal s g) in
   test_p "copy (lam F) (lam G) :- pi x\\ copy x x => copy (F x) (G x).";
-  test_g " (foo Z :- Z = c) => (foo Y :- Y = a, sigma X/ X = nota) => foo X";
+  test_p "copy (lam F) (lam G)/* foo */:- pi x/ copy x x => copy (F x) (G x).";
+  test_g "(foo Z :- Z = c) => (foo Y :- Y = a, sigma X/ X = nota) => foo X";
+  test_p "foo Y :- $print \"literal\".";
 ;;
 
 let test_prog p g =
@@ -212,10 +214,12 @@ let test_prog p g =
 
 let test_copy () =
   test_prog "
+    /* clauses for copy */
     copy hole hole.
     copy (app A B) (app X Y) :- copy A X, copy B Y.
     copy (lam F) (lam G) :- pi x/ copy x x => copy (F x) (G x).
     
+    /* some test for sigma */
     t1 X :- copy (app (lam w/ lam x/ (app w x)) a) X.
     t2 :- pi x/ sigma Y/ copy x x => copy x Y, copy a a.
     go X W :- (t1 X, t2), W = a."
@@ -251,20 +255,12 @@ let test_back () =
 ;;
 
 let test_custom () =
-  register_custom "is_flex" (fun t s _ _ ->
-    let t, s = Red.whd s t in
-    match LP.look t with
-    | LP.Uv _ -> s
-    | _ -> raise NoClause);
   test_prog "foo X Y :- $is_flex X, X = a, Y = X.  foo b c." "foo X Y";
   test_prog "foo X Y :- $is_flex X, X = a, Y = X.  foo b c." "foo b Y";
+  test_prog "go :- $print \"test\"." "go";
 ;;
 
 let test_typeinf () =
-  register_custom "print" (fun t s _ _ ->
-    let t = Red.nf s t in
-    Format.eprintf "%a@\n%!" (LP.prf_data []) t;
-    s);
   test_prog "
 % ML Type inferencer, with abs, app and let.  Chuck liang, 7/95, revised
 % from old version of 4/94.  Adopted to Teyjus 7/2000.
@@ -547,6 +543,309 @@ example (let (u/ (let (v/v) (app succ u))) (abs x/x)) T.
 "go"
 ;;
 
+let test_refiner () =
+  test_prog "
+
+/************************* helpers ************************/
+
+is_flex T :- $is_flex T.
+
+is_same_flex M N :-
+  is_flex M, is_flex N, not(dummy1__ = M, dummy2__ = N).
+
+prt S T :- $print S, $print T, $print \"\n\".
+
+%type spy o -> o.
+%spy G :- prt \"< \" G, (G, prt \"> \" G ; prt \">fail \" G).
+
+/************************* refiner ************************/
+
+%of M D0_ D1_ D2_ :-  is_flex M, !, prt \"GAME OVER\" M, not true.
+
+of (ginst M T) T (ginst M T) nil :- is_flex M, !.
+of (ginst M T) T2 M1 Ex1 :- !, of M T2 M1 Ex1, unify T2 T.
+
+of hole (ginst T set) (ginst M (ginst T set)) [ goal M (ginst T set), goal T set ].
+
+sigma_appl [] [] D0_ D1_ :- !.
+sigma_appl [HD|Ss] [decl T S1|Ss1] X T :- HD = S1 X, sigma_appl Ss Ss1 X T.
+sigma_appl (append L R) (append L1 R1) X T :- sigma_appl L L1 X T, sigma_appl R R1 X T.
+
+of (lam S F) (prod S2 T) (lam S2 F2) (append Ex1 Ex3) :-
+  of S SO S2 Ex1,
+  unify SO set,
+  pi x/ sigma Ex2/ of x S2 x nil => (
+    of (F x) (T x) (F2 x) Ex2,
+    sigma_appl Ex2 /*=*/ Ex3 x S2).
+
+of (prod S F) set (prod S2 F2) (append Ex1 Ex3) :-
+  of S SO S2 Ex1,
+  unify SO set,
+  pi x/ sigma Ex2/ of x S2 x nil => (
+    of (F x) (T x) (F2 x) Ex2,
+    unify (T x) set,
+    sigma_appl Ex2 /*=*/ Ex3 x S2).
+
+of (app M1 N1) Z (app M2 N2) (append (append Ex1 Ex2) Ex4) :-
+    of M1 TM1 M2 Ex1,
+    of N1 TN1 N2 Ex2,
+    pi x/ sigma Ex3/
+      (of hole (D0_ x) (F x) Ex3,
+      unify TM1 (prod TN1 F),
+      sigma_appl Ex3 /*=*/ Ex4 x TN1,
+      subst F N2 Z).
+
+of (atom ID) T (atom ID) nil :- env ID T.
+
+env zero (atom nat).
+env succ (prod (atom nat) (x / (atom nat))).
+env plus (prod (atom nat) (x/ prod (atom nat) (y/ (atom nat)))).
+env nat set.
+env vect (prod (atom nat) (x/ set)).
+env vnil (app (atom vect) (atom zero)).
+env vcons (prod (atom nat) (n/ prod (app (atom vect) n) (w/ app (atom vect) (app (atom succ) n)))).
+
+of set set set nil.
+
+of (rec Rty N Base Step) Rty2 (rec Rty2 N2 Base2 Step2) (append (append Ex1 Ex2) (append Ex3 Ex4)) :-
+  of Rty TRty Rty2 Ex1,
+  unify TRty set,
+  of N TN N2 Ex2,
+  unify TN (atom nat),
+  of Base TBase Base2 Ex3,
+  unify TBase Rty2,
+  of Step TStep Step2 Ex4,
+  unify TStep (prod (atom nat) n/ prod Rty2 acc / Rty2).
+
+/* retype */
+rof T TY :- of T TY D0_ D1_.
+
+/************************* clean ************************/
+
+% clean L M :- prt \"\" (clean L M), not true.
+clean (ginst M T1) R :-
+ % prt \"?FLEXIBLE \" M,
+ is_flex M, !,
+ % prt \"!FLEXIBLE \" M,
+ clean T1 T2,
+ R = ginst M T2.
+clean (ginst M1 D0_) M2 :- !,
+ % prt \"!RIGID \" M1,
+ clean M1 M2.
+clean (app M1 N1) (app M2 N2) :- !, clean M1 M2, clean N1 N2.
+clean (lam T1 F1) (lam T2 F2) :- !, clean T1 T2, pi x/ clean (F1 x) (F2 x).
+clean (prod T1 F1) (prod T2 F2) :- !, clean T1 T2, pi x/ clean (F1 x) (F2 x).
+clean (rec A1 B1 C1 D1) (rec A2 B2 C2 D2) :-
+  !, clean A1 A2, clean B1 B2, clean C1 C2, clean D1 D2.
+clean T T :- !.
+
+% clean_seq L M :- prt \"\" (clean_seq L M), not true.
+clean_seq (decl S1 F1) (decl S2 F2) :- clean S1 S2, pi x/ clean_seq (F1 x) (F2 x).
+clean_seq (goal V T1) (goal V T2) :- is_flex V, !, clean T1 T2.
+
+% clean_sigma L D0_ :- prt \"\" (clean_sigma L nil), not true.
+clean_sigma [] [].
+clean_sigma [X|Xs] [Y|Ys] :- clean_seq X Y, !, clean_sigma Xs Ys.
+clean_sigma [D0_|Xs] Ys :- clean_sigma Xs Ys.
+clean_sigma (append [] L1) L2 :- clean_sigma L1 L2.
+clean_sigma (append [X|Xs] L1) L2 :- clean_sigma (X :: append Xs L1) L2.
+clean_sigma (append (append L1 L2) L3) L :- clean_sigma (append L1 (append L2 L3)) L.
+
+/************************* ho ************************/
+
+% ho (lam _ Res) What TYWhat Where
+
+% only mimic in (? ? = T) case
+ho (lam LTY (x/T)) (ginst N D0_) LTY T :- is_flex N, !.
+ho (lam LTY (x/T)) (app (ginst N D0_) D1_) LTY T :- is_flex N, !.
+
+% proj rigid
+ho (lam LTY (x/x)) T LTY T2 :- unify T T2.
+
+% mimic on compound terms
+ho (lam LTY (x/ app (L1 x) (R1 x))) T LTY (app L R) :- ho (lam D0_ L1) T LTY L, ho (lam D1_ R1) T LTY R.
+ho (lam LTY (x/ rec (A1 x) (B1 x) (C1 x) (D1 x))) T LTY (rec A B C D) :-
+ ho (lam D0_ A1) T LTY A, ho (lam D1_ B1) T LTY B, ho (lam D2_ C1) T LTY C, ho (lam D3_ D1) T LTY D.
+ho (lam LTY (x/ lam (L1 x) (R1 x))) T LTY (lam L R) :-
+ ho (lam D0_ L1) T LTY L, pi x/ ho (lam D1_ (R1 x)) T LTY (R x).
+ho (lam LTY (x/ prod (L1 x) (R1 x))) T LTY (prod L R) :-
+ ho (lam D0_ L1) T LTY L, pi x/ ho (lam D1_ (R1 x)) T LTY (R x).
+
+% mimic on atomic terms
+ho (lam LTY (x/set)) T LTY set.
+ho (lam LTY (x/A)) T LTY A :- A = atom D0_.
+
+/************************* copy ************************/
+
+copy (ginst G GT) (ginst G GT1) :- is_flex G, !, copy GT GT1.
+copy (ginst G GT) (ginst G1 GT1) :- copy G G1, copy GT GT1.
+copy set set.
+copy A A :- A = atom D0_.
+copy (app A B) (app A1 B1) :- copy A A1, copy B B1.
+copy (lam T F) (lam T1 F1) :- copy T T1, pi x/ copy (F x) (F1 x).
+copy (prod T F) (prod T1 F1) :- copy T T1, pi x/ copy (F x) (F1 x).
+
+subst Where What Out :- pi x/ copy x What => copy (Where x) Out.
+
+/************************* unify ************************/
+
+%unif A M N :- prt \"\" (unif A M N), not true.
+
+%unif D0_ M D1_ :-  is_flex M, !, prt \"GAME OVER\" M, not true.
+%unif D0_ D1_ M :-  is_flex M, !, prt \"GAME OVER\" M, not true.
+
+/* M=M */
+unif ff (ginst M TM) (ginst N TN) :- is_same_flex M N, !, unify TM TN.
+
+/* ginst with rigid body */
+unif ff (ginst M T) N :- not (is_flex M), !, unify N M.
+unif ff N (ginst M T) :- not (is_flex M), !, unify N M.
+
+/* flex=term */
+unif ff (ginst M T) N :-
+  is_flex M,
+  !,
+  rof N TN,
+  unify TN T,
+  M = N.
+unif ff N (ginst M T) :-
+  is_flex M,
+  !,
+  rof N TN,
+  unify TN T,
+  M = N.
+
+/* reflexive closure + heuristic for == */
+/*unif ff _ T T :- !.*/
+unif ff set set :- !.
+unif ff A A :- A = atom D0_, !.
+
+/* contextual closure + heuristic */
+unif ff (app H A) (app K B) :- unify H K, unify A B.
+
+/* contextual closure */
+unif ff (lam S F) (lam T G) :-
+  !,
+  unify S T,
+  pi x/ of x S x nil => unif ff x x =>
+    unify (F x) (G x).
+
+unif ff (prod S F) (prod T G) :-
+  !,
+  unify S T,
+  pi x/ of x S x nil => unif ff x x =>
+    unify (F x) (G x).
+
+/* contextual closure + heuristic */
+unif ff (rec A1 B1 C1 D1) (rec A2 B2 C2 D2) :-
+  unify A1 A2, unify B1 B2, unify C1 C2, unify D1 D2.
+
+/* ho unification */
+unif D0_ (app (ginst H TH) M) X :-
+  is_flex H, !, rof M TYM, ho H2 M TYM X, unify (ginst H TH) H2.
+
+/* beta */
+unif D0_ (app L M) X :-
+  L = lam D1_ F,
+  !,
+  subst F M Y,
+  unify Y X.
+
+/* delta */
+unif D0_ (atom ID) B :- body ID B.
+
+/* delta */
+body plus (lam (atom nat)
+             (n/ (rec (prod (atom nat) (x/ (atom nat))) n
+                    (lam (atom nat) (x/ x))
+                    (lam (atom nat) m/ lam (prod (atom nat) (x/ (atom nat))) acc/
+                       lam (atom nat) (n/ app (atom succ) (app acc n)))))) :- !.
+/* iota */
+unif D0_ (rec D1_ N D2_ D3_) D4_ :- is_flex N, !, fail.
+unif D0_ (rec D1_ N B R) X :- N = atom zero, !, unify B X.
+unif D0_ (rec T N B R) X :- N = app (atom succ) M, !, unify (app (app R M) (rec T M B R)) X.
+
+/* symmetric */
+unif ff A B :- unif tt B A.
+
+unify A B :- unif ff A B.
+
+/* Tactics */
+
+tacsem i     (lam hole (x/ hole)).
+tacsem (a M) (app M hole).
+tacsem (h N) (var N).
+tacsem (r M) M.
+
+/* GUI */
+
+test_unify A B TA2 A2 B2 Sig :-
+  prt \"---------> \" (of A TA A1 Ex1),!,
+  of A TA A1 Ex1,
+  prt \"---------> \" (of B TB B1 Ex2),!,
+  of B TB B1 Ex2,
+  prt \"========== \" (unify TA TB),!,
+  unify TA TB,
+  prt \"========== \" (unify A1 B1),!,
+  unify A1 B1,
+  $print \"cleaning1\n\",!,
+  clean TA TA2,
+  $print \"cleaning2\n\",
+  clean A1 A2,
+  $print \"cleaning3\n\",
+  clean B1 B2,
+  prt \"cleaning4\n\" (append Ex1 Ex2),
+  clean_sigma (append Ex1 Ex2) Sig.
+
+  of (var N) T M Sig :- hyp N X, of X T M Sig.
+"
+
+ "test_unify (app hole (atom zero)) (app hole (atom zero)) T X Y S"
+(*
+step_in N (decl TY F) Sig2 :-
+  pi x/ sigma Sig/ of x TY x nil => copy x x => unify x x => hyp N x => (
+  M is (N + 1),
+  prt "" (hyp N TY),
+  step_in M (F x) Sig,
+  sigma_appl Sig /*=*/ Sig2 x TY).
+
+lread T :- read T, !.
+lread T :- print "Not a tactic, retry./n", lread T.
+
+step_in N (goal M MTY) Sig :-
+  prt "=========/n" MTY,
+  print "/n> ",
+  lread T,
+  prt "letto " T,
+  ((T = undo, !, fail)
+  ;(prt "eseguo " T,
+    tacsem T P,
+    of P TP P1 Sig,
+    unify TP MTY,
+    print "/nOk/n/n",
+    P1 = M)
+  ; print "/nWrong! Please retry/n/n", step_in N (goal M MTY) Sig).
+
+step nil :- print "Proof completed./n".
+step [G|GS] :-
+  (step_in 0 G Sig1,
+   clean_sigma (append Sig1 GS) Sig2,
+   step Sig2).
+  
+claim Claim P1 :-
+  of Claim T Claim1 Sig1,
+  unify T set,
+  of hole THole P Sig2,
+  unify THole Claim1,
+  clean_sigma (append Sig1 Sig2) Sig,
+  print "/n",
+  step Sig,
+  clean P P1. 
+  
+  ""
+  *)
+;;
+
 let set_terminal_width () =
   let ic, _ as p = Unix.open_process "tput cols" in
   let w = int_of_string (input_line ic) in
@@ -565,6 +864,17 @@ let _ =
   } in
   Gc.set tweaked_control;
   set_terminal_width ();
+  register_custom "print" (fun t s _ _ ->
+    let t = Red.nf s t in
+    (match LP.look t with
+    | LP.Ext t when isString t -> Format.eprintf "%s%!" (getString t)
+    | _ -> Format.eprintf "%a%!" (LP.prf_data []) t);
+    s);
+  register_custom "is_flex" (fun t s _ _ ->
+    let t, s = Red.whd s t in
+    match LP.look t with
+    | LP.Uv _ -> s
+    | _ -> raise NoClause);
   test_L ();
   test_LPdata ();
   test_parse ();
@@ -576,6 +886,7 @@ let _ =
   test_aug ();
   test_custom ();
   test_back ();
-(*    Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";"epush.*";"unif";"bind";"t$";"vj$";"rule";"whd";"hv";"premise";"sub"] true; *)
-  test_typeinf ();
+(*    Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";"epush.*";(*"unif";"bind";"t$";"vj$";*)"rule";"whd";"hv";"premise";"psusp";"skipped"] ~verbose:true true; *)
+  test_refiner ();
+(*   test_typeinf (); *)
 
