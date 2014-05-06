@@ -14,7 +14,7 @@ of (ginst M T) T2 M1 Ex1 :- !, of M T2 M1 Ex1, unify T2 T.
 of hole (ginst T set) (ginst M (ginst T set)) [ goal M (ginst T set), goal T set ].
 
 sigma_appl [] [] _ _ :- !.
-sigma_appl [S1 X|Ss] [decl T S1|Ss1] X T :- sigma_appl Ss Ss1 X T.
+sigma_appl [HD|Ss] [decl T S1|Ss1] X T :- HD = S1 X, sigma_appl Ss Ss1 X T.
 sigma_appl (append L R) (append L1 R1) X T :- sigma_appl L L1 X T, sigma_appl R R1 X T.
 
 of (lam S F) (prod S2 T) (lam S2 F2) (append Ex1 Ex3) :-
@@ -250,9 +250,11 @@ step_in N (goal M MTY) Sig :-
   $parse [T,T1],
   prt "eseguo " T1,
   tacsem T1 P,
+  prt "produce " P,
   of P TP P1 Sig,
+  prt "che ha tipo " TP,
   unify TP MTY,
-  $print "\nOk\n\n",
+  $print "che unifica col goal\n\n",
   P1 = M.
 
 step nil :- $print "\nProof completed.\n".
