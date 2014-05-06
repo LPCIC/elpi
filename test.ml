@@ -503,12 +503,12 @@ appear-in A (arr B C) :- appear-in A C.
 
 infer-type N T :- polytype nil M N S, remvac S T.
 
-tryonce X T :- polytype nil M X T, $print T, fail.
+tryonce X T :- polytype nil M X T, $print T, $print \"\n\", fail.
 
 
 go :- example X T, tryonce X T.
 go :- stop.
-stop :- $print the-end.
+stop.
       
 example (abs x/ (app op zero)) T.
 example (abs f/ (abs x/ (app f x))) T. 
@@ -888,5 +888,5 @@ let _ =
   test_back ();
 (*    Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";"epush.*";(*"unif";"bind";"t$";"vj$";*)"rule";"whd";"hv";"premise";"psusp";"skipped"] ~verbose:true true; *)
   test_refiner ();
-(*   test_typeinf (); *)
+  test_typeinf ();
 

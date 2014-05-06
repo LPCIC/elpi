@@ -27,13 +27,13 @@ notrace/%:
 	$(H) rm -f pa_trace.cmo
 	$(H) $(MAKE) $*  CCP="$(CCP)" PROFILE="$(PROFILE)" TRACE=""
 
-bench/%: notrace/$*
+bench/%: notrace/all
 	$(H) time -f '\ntime: %U (user) + %S (sys) = %E (wall)\nmem: %Mk\npagefaults: %F (major) + %R (minor)' ./$*
 
-valgrind/%: notrace/$*
+valgrind/%: notrace/all
 	$(H) valgrind --tool=cachegrind ./$*
 	
-gprof/%: profile/notrace/$*
+gprof/%: profile/notrace/all
 	$(H) ./$*
 	$(H) gprof $* > $*.annot
 	$(H) echo "profiling written to $*.annot"
