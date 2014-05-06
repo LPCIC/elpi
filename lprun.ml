@@ -60,10 +60,13 @@ let mk_al nbinders args =
       else mkDB (nargs + nbinders - i))
 
 (* pattern unification fragment *)
-let higher lvl x = match look x with (DB l | Con(_,l)) -> l > lvl | _ -> false
-let isPU xs =
-  match look (L.get 0 xs) with
-  | Uv (_,lvl) -> L.for_all (higher lvl) (L.tl xs) && L.uniq LP.equal (L.tl xs)
+let higher nf lvl x = match look (nf x) with (DB l | Con(_,l)) -> l > lvl | _ -> false
+let isPU s xs =
+        TRACE "isPU" (fun fmt -> prf_data [] fmt (mkApp xs))
+  match look (L.hd xs) with
+  | Uv (_,lvl) ->
+      let nf t = fst (whd s t) in
+      L.for_all (higher nf lvl) (L.tl xs) && L.uniq LP.equal (L.map nf (L.tl xs))
   | _ -> false
 
 let rec bind x id depth lvl args t s =
@@ -90,7 +93,7 @@ let rec bind x id depth lvl args t s =
         | App bs -> bs | Uv _ -> L.singl t | _ -> assert false in
       match look (L.hd bs) with
       | (Bin _ | Con _ | DB _ | Ext _ | App _ | Seq _ | Nil) -> assert false
-      | Uv(j,l) when j <> id && l > lvl && isPU bs ->
+      | Uv(j,l) when j <> id && l > lvl && isPU s bs ->
           let bs = L.tl bs in
           let nbs = L.len bs in
           let h, s = fresh_uv lvl s in
@@ -106,7 +109,7 @@ let rec bind x id depth lvl args t s =
           let t = mkAppv h (L.append ws vs) 0 (nws+nvs) in
           SPY "vj" (prf_data []) vj; SPY "t" (prf_data[]) t;
           t, s
-      | Uv(j,l) when j <> id && isPU bs ->
+      | Uv(j,l) when j <> id && isPU s bs ->
           let bs = L.tl bs in
           let nbs = L.len bs in
           let h, s = fresh_uv (*lv*)l s in
@@ -175,7 +178,12 @@ and unify_ho x y s =
   match x, y with
   | (((Uv (id,lvl) as x), y) | (y, (Uv (id,lvl) as x))) ->
       mksubst (kool x) id lvl (kool y) L.empty s
-  | (((App xs as x), y) | (y, (App xs as x))) when isPU xs -> begin
+  | (y, (App xs as x)) when isPU s xs -> begin
+      match look (L.hd xs) with
+      | Uv (id,lvl) -> mksubst (kool x) id lvl (kool y) (L.tl xs) s
+      | _ -> assert false
+    end
+  | ((App xs as x), y) when isPU s xs -> begin
       match look (L.hd xs) with
       | Uv (id,lvl) -> mksubst (kool x) id lvl (kool y) (L.tl xs) s
       | _ -> assert false
