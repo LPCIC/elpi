@@ -141,7 +141,7 @@ let rec splay xs tl s =
   match look tl with
   | Uv _ | Nil -> xs, tl, s
   | Seq(ys,t) -> splay (L.append xs ys) t s
-  | _ -> assert false
+  | _ -> xs, tl, s
 
 let rec unify a b s = TRACE "unify" (print_unif_prob s "=" a b)
   let a, s =  whd s a in
