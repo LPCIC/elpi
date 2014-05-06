@@ -187,7 +187,8 @@ and unify_ho x y s =
 exception NoClause
 type objective =
   [ `Atom of data * key
-  | `Unify of data * data | `Custom of string * data | `Cut ]
+  | `Unify of data * data | `Custom of string * data | `Cut
+  | `Not of data list * premise]
 type goal = int * objective * program * program * int
 type alternatives = (subst * goal list) list
 type step_outcome = subst * goal list * alternatives
@@ -237,6 +238,7 @@ let pr_cur_goal g lvl s fmt =
   | `Custom(name,a) ->
       Format.fprintf fmt "%s %a" name (prf_data []) (apply_subst s a)
   | `Cut -> Format.fprintf fmt "!"
+  | `Not (hv,p) -> Format.fprintf fmt "%a" (prf_premise (ctx_of_hv hv)) p
 let pr_cur_goals gls s fmt =
   Format.fprintf fmt "@[<hov 0>"; 
   iter_sep (fun fmt () -> Format.fprintf fmt ",@ ")
@@ -284,6 +286,7 @@ let contextualize_premise ?(compute_key=false) depth subst old_hv premise =
         let l, s = aux cdepth depth s hv eh p in
         l::acc, s) l ([],s) in
       List.flatten ll, s
+  | Not p -> [cdepth, `Not (hv,p), add_cdepth compute_key cdepth eh], s
   in
     aux depth depth subst old_hv [] premise
 
@@ -331,6 +334,7 @@ let select k goal depth (s as os) prog orig_prog lvl : step_outcome =
 let rec run1 s ((depth,goal,prog,orig_prog,lvl) : goal) : step_outcome =
   match goal with
   | `Cut -> assert false
+  | `Not _ -> assert false
   | `Atom(t,k) ->
       let s, goals, alts = select k t depth s prog orig_prog lvl in
       s, goals, alts
@@ -341,11 +345,12 @@ let rec run1 s ((depth,goal,prog,orig_prog,lvl) : goal) : step_outcome =
         s,[], []
       with UnifFail _ -> raise NoClause)
   | `Custom(name,a) ->
-      try
+      (try
         let s = custom name a s depth prog in
         SPY "sub" Subst.prf_subst s;
         s,[], []
-      with UnifFail _ -> raise NoClause
+      with UnifFail _ -> raise NoClause)
+
 
 let rec cut lvl = function
   | [] -> []
@@ -359,6 +364,20 @@ let rec run s (gls : goal list) alts : subst * alternatives =
     | (_,`Cut,_,_,lvl)::rest ->
        let alts = cut lvl alts in
        s, rest, alts
+    | (depth,`Not(hv,p),_,orig_prog,lvl) :: rest ->
+       let gl, s' = contextualize_goal depth s hv p in
+       let gl =
+          List.map (fun (d,g,e) -> d,g,e@orig_prog,e@orig_prog,lvl+1) gl in
+       let ok =
+         try let _ = run s' gl [] in false
+         with NoClause -> true in
+       if ok then s, rest, alts
+       else 
+           (match alts with
+           | [] -> raise NoClause
+           | (s,g) :: rest ->
+               SPY "backtrack" (fun fmt s -> pr_cur_goals gls s fmt) s';
+               s, g, rest)
     | (_,go,_,_,lvl as g)::rest ->
        try
          TRACE "run" (pr_cur_goal go lvl s)
@@ -367,11 +386,11 @@ let rec run s (gls : goal list) alts : subst * alternatives =
            (List.map (fun (s,gl) -> s,gl @ rest) new_alts @ alts)
        with
        | NoClause as e ->
-           match alts with
+           (match alts with
            | [] -> raise e
            | (s,g) :: rest ->
                SPY "backtrack" (fun fmt s -> pr_cur_goals gls s fmt) s;
-               s, g, rest
+               s, g, rest)
   in
   if subg = [] then s, alts
   else run s subg alts

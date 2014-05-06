@@ -95,6 +95,7 @@ module LP : sig
     | Impl of clause * premise
     | Pi of int * premise
     | Sigma of int * premise
+    | Not of premise
   and goal = premise
 
   val key_of : premise -> key

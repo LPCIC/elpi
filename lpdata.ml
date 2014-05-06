@@ -254,7 +254,7 @@ let rec prf_data ctx fmt t =
         P.fprintf fmt "@[<hov 2>[";
         iter_sep (fun fmt () -> P.fprintf fmt ",@ ") (fun _ -> print ctx)
           fmt (L.to_list xs);
-        P.fprintf fmt "|";
+        P.fprintf fmt "|@ ";
         print ctx t;
         P.fprintf fmt "]@]";
     | XNil -> P.fprintf fmt "[]";
@@ -540,6 +540,7 @@ and premise =
   | Impl of clause * premise
   | Pi of int * premise
   | Sigma of int * premise
+  | Not of premise
 and goal = premise
 
 let mkPi n = function Pi(m,t) -> Pi(m+n,t) | t -> Pi(n,t)
@@ -559,6 +560,7 @@ let rec map_premise f = function
   | Impl(x,y) -> Impl(map_premise f x, map_premise f y)
   | Pi(n,x)  -> Pi(n,map_premise f x)
   | Sigma(n,x)  -> Sigma(n,map_premise f x)
+  | Not x -> Not(map_premise f x)
 
 let rec fold_premise f x a = match x with
   | Atom x -> f x a
@@ -567,6 +569,7 @@ let rec fold_premise f x a = match x with
   | Impl(x,y) -> fold_premise f y (fold_premise f x a)
   | Pi(_,x) -> fold_premise f x a
   | Sigma(_,x) -> fold_premise f x a
+  | Not x -> fold_premise f x a
 
 let rec fold_map_premise i f p a = match p with
   | Atom x -> let x, a = f i x a in Atom x, a
@@ -584,6 +587,7 @@ let rec fold_map_premise i f p a = match p with
       Impl(x,y), a
   | Pi(n,y) -> let y, a = fold_map_premise (i+n) f y a in Pi(n,y), a
   | Sigma(n,y) -> let y, a = fold_map_premise (i+n) f y a in Sigma(n,y), a
+  | Not x -> let x, a = fold_map_premise i f x a in Not x, a
 
 module PPP = struct (* {{{ pretty printer for programs *)
 
@@ -601,7 +605,7 @@ let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
   | Conj [] -> Format.fprintf fmt ""
   | Conj [p] -> prf_premise ~positive ~pars ctx fmt p
   | Conj l ->
-       Format.pp_open_hvbox fmt 2;
+       Format.pp_open_hvbox fmt 0;
        if pars then Format.pp_print_string fmt "(";
        iter_sep (fun fmt () ->
          Format.pp_print_string fmt ","; Format.pp_print_space fmt ())
@@ -639,6 +643,10 @@ let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
        end;
        if pars then Format.pp_print_string fmt ")";
        Format.pp_close_box fmt ()
+  | Not p ->
+       Format.fprintf fmt "not @[";
+       prf_premise ~pars ~positive ctx fmt p;
+       Format.pp_close_box fmt ()
 
 let prf_clause ?(dot=true) ?positive ctx fmt c =
   let c, ctx = match c with
@@ -669,7 +677,7 @@ let string_of_program p = on_buffer prf_program p
 let rec key_of = function
   | AtomBI _ -> assert false
   | Conj _ -> assert false
-  | Impl(_,p) | Pi(_,p) | Sigma(_,p) -> key_of p
+  | Impl(_,p) | Pi(_,p) | Sigma(_,p) | Not p -> key_of p
   | Atom t ->
       match look t with
       | Con _ -> Key t
@@ -692,6 +700,8 @@ let rec number = lexer [ '0'-'9' number | ]
 let rec ident =
   lexer [ [ 'a'-'z' | 'A'-'Z' | '\'' | '_' | '-' | '0'-'9' ] ident
         | '^' '0'-'9' number | ]
+
+let rec string = lexer [ '"' | _ string ]
 
 let lvl_name_of s =
   match Str.split (Str.regexp_string "^") s with
@@ -718,6 +728,7 @@ let tok = lexer
   | '=' -> "EQUAL","="
   | '$' 'a'-'z' ident -> "BUILTIN",$buf
   | '!' -> "BANG", $buf
+  | '"' string -> "LITERAL", let b = $buf in String.sub b 1 (String.length b-2)
 ]
 
 let spy f s = if !Trace.dverbose then begin
@@ -729,17 +740,27 @@ let spy f s = if !Trace.dverbose then begin
   end else f s
 
 let rec lex c = parser bp
-  | [< ' ( ' ' | '\n' | '\t' ); s >] -> lex c s
+  | [< '( ' ' | '\n' | '\t' ); s >] -> lex c s
   | [< '( '%' ); s >] -> comment c s
+  | [< '( '/' ); s >] ep ->
+       if Stream.peek s = Some '*' then comment2 c s
+       else ("BIND", "/"), (bp,ep)
   | [< s >] ep ->
        (match spy (tok c) s with
        | "CONSTANT","pi" -> "PI", "pi"
        | "CONSTANT","sigma" -> "SIGMA", "sigma"
        | "CONSTANT","nil" -> "NIL", "nil"
+       | "CONSTANT","not" -> "NOT","not"
        | x -> x), (bp, ep)
 and comment c = parser
   | [< '( '\n' ); s >] -> lex c s
   | [< '_ ; s >] -> comment c s
+and comment2 c = parser
+  | [< '( '*' ); s >] ->
+       if Stream.peek s = Some '/' then (Stream.junk s; lex c s)
+       else comment2 c s
+  | [< '_ ; s >] -> comment2 c s
+
 
 open Plexing
 
@@ -807,6 +828,7 @@ and binders_premise c n = function
     | AtomBI bi -> AtomBI (binders_builtin c n bi)
     | Conj l -> Conj(List.map (binders_premise c n) l)
     | Impl(p,t) -> Impl(binders_premise c n p, binders_premise c n t)
+    | Not p -> Not(binders_premise c n p)
 and binders_builtin c n = function
     | BIUnif (a,b) -> BIUnif(binders c n a, binders c n b)
     | BICustom(s,t) -> BICustom(s,binders c n t)
@@ -848,6 +870,7 @@ EXTEND
       | u = UVAR -> let u, lvl = lvl_name_of u in mkUv (get_uv u) lvl
       | i = REL -> mkDB (int_of_string (String.sub i 1 (String.length i - 1)))
       | NIL -> mkNil
+      | s = LITERAL -> mkExt (mkString s)
       | LBRACKET; xs = LIST0 atom LEVEL "1" SEP COMMA;
           tl = OPT [ PIPE; u = UVAR -> u ]; RBRACKET ->
             let tl = match tl with
@@ -873,7 +896,8 @@ EXTEND
          Impl(mkConj hyp,Atom a)
       | bt = BUILTIN; a = atom -> AtomBI(BICustom(bt,a))
       | BANG -> AtomBI BICut
-      | binder = [PI -> fst | SIGMA -> snd]; x = bound; BIND; p = premise ->
+      | NOT; p = premise LEVEL "2" -> Not p
+      | binder = [PI -> fst | SIGMA -> snd]; x = bound; BIND; p = premise LEVEL "1" ->
          let x, is_uv = x in
          let bind = if is_uv then mkSigma else binder (mkPi,mkSigma) in
          bind 1 (binders_premise x 1 p)
@@ -934,7 +958,7 @@ let prf_subst fmt s =
        Format.pp_print_string fmt ":= ";
        prf_data [] fmt (map (fun x -> kool (look x)) t);
        Format.pp_close_box fmt ()) fmt
-    (M.bindings s.assign);
+    (List.rev (M.bindings s.assign));
   Format.pp_print_string fmt " }";
   Format.pp_close_box fmt ()
 let string_of_subst s = on_buffer prf_subst s
