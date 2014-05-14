@@ -31,7 +31,16 @@ let _ =
     let t, s = Red.whd s t in
     match LP.look t with
     | LP.Uv _ -> s
+    | LP.App xs ->
+        (match LP.look (L.hd xs) with LP.Uv _ -> s | _ -> raise NoClause)
     | _ -> raise NoClause);
+  let aborts = ref 0 in
+  register_custom "abort" (fun t s _ _ ->
+    incr aborts;
+    (match LP.look t with
+    | LP.Ext t when isString t ->
+         if !aborts = int_of_string (getString t) then exit 1 else s
+    | _ -> assert false));
   register_custom "parse" (fun t s _ _ ->
     let t, s = Red.whd s t in
     match LP.look t with

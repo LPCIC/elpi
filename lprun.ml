@@ -36,20 +36,28 @@ let eta n t = TRACE "eta" (fun fmt -> prf_data [] fmt t)
  SPY "etaed" (prf_data []) t;
  t
 
-let inter xs ys = L.filter (fun x -> not(L.for_all (equal x) ys)) xs
+let inter xs ys s =
+  L.filter (fun x -> let x = Red.nf s x in
+                     not(L.for_all (fun y ->
+                                    let y = Red.nf s y in
+                                    not(equal x y)) ys)) xs
 
 (* construction of bindings: ↓ is ^- and ⇑ is ^= *)
 let cst_lower xs lvl =
   L.filter (fun x -> match look x with Con(_,l) -> l <= lvl | _ -> false) xs
 let (^=) = cst_lower
 
-let position_of l = let stop = L.len l in fun x ->
+let position_of s l = let stop = L.len l in fun x ->
+        let x = Red.nf s x in
   let rec aux i = function
     | [] -> fail "cannot occur"
-    | y::ys -> if equal x y then mkDB (stop - i) else aux (i+1) ys
+    | y::ys -> 
+        let y = Red.nf s y in
+                    if equal x y then mkDB (stop - i) else aux (i+1) ys
   in aux 0 (L.to_list l)
-let (^-) what where = L.map (position_of where) what
-let (^--) x v = position_of v x
+let ($) f x = f x
+let (^-) what where s = L.map (position_of s where) what
+let (^--) x v s = position_of s v x
 
 let mk_al nbinders args =
   (* builds: map (lift nbinders) args @ [DB nbinders ... DB 1] *)
@@ -60,13 +68,15 @@ let mk_al nbinders args =
       else mkDB (nargs + nbinders - i))
 
 (* pattern unification fragment *)
-let higher nf lvl x = match look (nf x) with (DB l | Con(_,l)) -> l > lvl | _ -> false
+let higher nf lvl x =
+  match look (nf x) with Con(_,l) -> l > lvl | DB _ -> true | _ -> false
 let isPU s xs =
         TRACE "isPU" (fun fmt -> prf_data [] fmt (mkApp xs))
   match look (L.hd xs) with
   | Uv (_,lvl) ->
       let nf t = fst (whd s t) in
-      L.for_all (higher nf lvl) (L.tl xs) && L.uniq LP.equal (L.map nf (L.tl xs))
+      L.for_all (higher nf lvl) (L.tl xs) &&
+      L.uniq LP.equal (L.map nf (L.tl xs))
   | _ -> false
 
 let rec bind x id depth lvl args t s =
@@ -76,10 +86,10 @@ let rec bind x id depth lvl args t s =
   | Bin(m,t) -> let t, s = bind x id (depth+m) lvl args t s in mkBin m t, s
   | Ext _ -> t, s
   | Con (_,l) when l <= lvl -> t, s
-  | Con _ -> t ^-- mk_al depth args, s (* XXX optimize *)
+  | Con _ -> t ^-- mk_al depth args $ s, s (* XXX optimize *)
   (* the following 2 cases are: t ^-- mk_al depth args, s *) (* XXX CHECK *)
   | DB m when m <= depth -> t, s
-  | DB m -> lift depth (mkDB (m-depth) ^-- args), s
+  | DB m -> lift depth (mkDB (m-depth) ^-- args $ s), s
   | Seq(xs,tl) ->
       let xs, s = L.fold_map (bind x id depth lvl args) xs s in
       let tl, s = bind x id depth lvl args tl s in
@@ -89,20 +99,22 @@ let rec bind x id depth lvl args t s =
       let ss, s = L.fold_map (bind x id depth lvl args) bs s in
       mkApp ss, s
   | (App _ | Uv _) as tmp -> (* pruning *)
+          SPY "Pruning" (prf_data []) (mkNil);
       let bs = match tmp with
         | App bs -> bs | Uv _ -> L.singl t | _ -> assert false in
       match look (L.hd bs) with
       | (Bin _ | Con _ | DB _ | Ext _ | App _ | Seq _ | Nil) -> assert false
       | Uv(j,l) when j <> id && l > lvl && isPU s bs ->
+          SPY "1hd" (prf_data []) (L.hd bs);
           let bs = L.tl bs in
           let nbs = L.len bs in
           let h, s = fresh_uv lvl s in
           let al = mk_al depth args in
           let cs = al ^= l in (* constants X = id,lvl can copy *)
-          let ws = cs ^- al in
-          let zs = inter al bs in (* XXX paper excludes #l-1, why? *)
-          let vs = zs ^- al in
-          let us = zs ^- bs in
+          let ws = cs ^- al $ s in
+          let zs = inter al bs s in (* XXX paper excludes #l-1, why? *)
+          let vs = zs ^- al $ s in
+          let us = zs ^- bs $ s in
           let nws, nvs, ncs, nus = L.len ws, L.len vs, L.len cs, L.len us in
           let vj = mkBin nbs (mkAppv h (L.append cs us) 0 (ncs + nus)) in
           let s = set_sub j vj s in
@@ -110,15 +122,22 @@ let rec bind x id depth lvl args t s =
           SPY "vj" (prf_data []) vj; SPY "t" (prf_data[]) t;
           t, s
       | Uv(j,l) when j <> id && isPU s bs ->
+          SPY "2hd" (prf_data []) (mkNil);
           let bs = L.tl bs in
           let nbs = L.len bs in
           let h, s = fresh_uv (*lv*)l s in
           let cs = bs ^= lvl in (* constants X = id,lvl can copy *)
-          let ws = cs ^- bs in
+          SPY "cs" (prf_data []) (mkApp cs);
+          let ws = cs ^- bs $ s in
+          SPY "ws" (prf_data []) (mkApp ws);
           let al = mk_al depth args in
-          let zs = inter al bs in (* XXX paper excludes #l-1, why? *)
-          let vs = zs ^- bs in
-          let us = zs ^- al in
+          SPY "al" (prf_data []) (mkApp al);
+          let zs = inter al bs s in (* XXX paper excludes #l-1, why? *)
+          SPY "zs" (prf_data []) (mkApp zs);
+          let vs = zs ^- bs $ s in
+          SPY "vs" (prf_data []) (mkApp vs);
+          let us = zs ^- al $ s in
+          SPY "5hd" (prf_data []) (mkNil);
           let nws, nvs, ncs, nus = L.len ws, L.len vs, L.len cs, L.len us in
           let vj = mkBin nbs (mkAppv h (L.append ws vs) 0 (nws + nvs)) in
           let s = set_sub j vj s in
