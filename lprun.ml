@@ -463,16 +463,22 @@ let prepare_initial_goal g =
       ms, g, s
   | _ -> [], g, s
 
-let run (p : program) (g : premise) =
+let apply_sub_hv_to_goal hv s g =
+  fst(fold_map_premise 0 (fun i t () ->
+    let n = List.length hv in
+    let vhv = if hv = [] then L.empty else L.of_list (List.rev hv) in
+    let v = L.append vhv (L.init i (fun j -> mkDB(i-j))) in
+    fst(Red.whd s (mkAppv (mkBin (i+n) t) v 0 (L.len v))), ()) g ())
+
+let run_dls (p : program) (g : premise) =
   let hv, g, s = prepare_initial_goal g in
   Format.eprintf "@[<hv2>goal:@ %a@]@\n%!" (prf_goal (ctx_of_hv hv)) g;
   let gls, s = contextualize_goal 0 s hv g in
   let s, dls, _alts =
     run s (List.map (fun (d,g,ep) -> (d,g,ep@p,ep@p,0)) gls, []) [] in
-  fst(fold_map_premise 0 (fun i t () ->
-    let n = List.length hv in
-    let vhv = if hv = [] then L.empty else L.of_list (List.rev hv) in
-    let v = L.append vhv (L.init i (fun j -> mkDB(i-j))) in
-    fst(Red.whd s (mkAppv (mkBin (i+n) t) v 0 (L.len v))), ()) g ()), s
+  apply_sub_hv_to_goal hv s g, s,
+  List.map (fun (_,hv,g,_,_) -> apply_sub_hv_to_goal hv s g) dls
+
+let run p g = let a,b, _ = run_dls p g in a, b
 
 (* vim:set foldmethod=marker: *)
