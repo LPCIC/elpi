@@ -148,13 +148,15 @@ let rec bind x id depth lvl args t s =
 
 let mksubst x id lvl t args s =
   let nargs = L.len args in
-(*
   match look t with
+(*
   | Bin(k,Uv(id1,_)) when id1 = id -> assert false (* TODO *)
   | Bin(k,App xs) when equal (L.get 0 xs) (Uv (id,lvl)) && isPU xs ->
       assert false (* TODO *)
-  | _ ->
 *)
+  | App xs when equal (L.get 0 xs) (mkUv id lvl) && isPU s xs ->
+      if L.for_all2 equal (L.tl xs) args then s else fail "wtf"
+  | _ ->
      let t, s = bind x id 0 lvl args t s in
      set_sub id (mkBin nargs t) s
 
