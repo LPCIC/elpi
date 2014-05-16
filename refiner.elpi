@@ -241,23 +241,27 @@ step_in N (decl TY F) Sig2 :-
   pi x\ sigma Sig\ of x TY x nil => copy x x => unify x x => hyp N x => (
   M = ss N,
   prt "" (hyp N TY),
-  step_in M (F x) Sig,
+  step_in M (F x) Sig, !,
   sigma_appl Sig /*=*/ Sig2 x TY).
+
+read_tac T :-
+  $print "\ntactic> ",
+  $read S,
+  $parse [S,T], !.
+read_tac T :- $print "\nparse error\n", read_tac T.
 
 step_in N (goal M MTY) Sig :-
   prt "=========\n" MTY,
-  $print "\n> ",
-  $read T,
-  prt "letto " T,
-  $parse [T,T1],
-  prt "eseguo " T1,
+  read_tac T1,
+  prt "running " T1,
   tacsem T1 P,
-  prt "produce " P,
+  prt "got term " P,
   of P TP P1 Sig,
-  prt "che ha tipo " TP,
+  prt "of type " TP,
   unify TP MTY,
-  $print "che unifica col goal\n\n",
-  P1 = M.
+  $print "unifies with goal!\n\n",
+  P1 = M, !.
+step_in N G S :- $print "\ntactic error\n", step_in N G S.
 
 step nil :- $print "\nProof completed.\n".
 step [G|GS] :-
@@ -273,3 +277,8 @@ claim Claim P1 :-
   clean_sigma (append Sig1 Sig2) Sig,
   step Sig,
   clean P P1. 
+
+test_delay X Y :-
+  delay X (test_delay1 Z Z => test_delay1 X Y), $print "delay", X = pippo.
+test_delay X pluto.
+
