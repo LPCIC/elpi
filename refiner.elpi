@@ -8,33 +8,37 @@ prt S T :-
 
 /************************* refiner ************************/
 
-of M _ _ _ :-  $is_flex M, !, prt "GAME OVER" M, not true.
+/* func P <=> pi i\ pi a\ pi b\ P i a => P i b => eq a b. */
+/* func of                                                */
+eq (of M TY1 T1) (of N TY2 T2) :- $is (pair M N).
 
-of (ginst M T) T (ginst M T) nil :- $is_flex M, !.
-of (ginst M T) T2 M1 Ex1 :- !, of M T2 M1 Ex1, unify T2 T.
+assign_if_flex M T TY S:- $is_flex M, !, M=T, S=[goal M (ginst TY set)].
+assign_if_flex M T TY [].
 
-of hole (ginst T set) (ginst M (ginst T set)) [ goal M (ginst T set), goal T set ].
+of M TY T (append S S1) :- assign_if_flex M T TY S, delay M (ofr M TY T S1).
+
+ofr hole TY T (append S S1) :- of T TY T S, of TY set TY S1.
 
 sigma_appl [] [] _ _ :- !.
 sigma_appl [HD|Ss] [decl T S1|Ss1] X T :- HD = S1 X, sigma_appl Ss Ss1 X T.
 sigma_appl (append L R) (append L1 R1) X T :- sigma_appl L L1 X T, sigma_appl R R1 X T.
 
-of (lam S F) (prod S2 T) (lam S2 F2) (append Ex1 Ex3) :-
+ofr (lam S F) (prod S2 T) (lam S2 F2) (append Ex1 Ex3) :-
   of S SO S2 Ex1,
   unify SO set,
-  pi x\ sigma Ex2\ of x S2 x nil => (
+  pi x\ sigma Ex2\ ofr x S2 x nil => (
     of (F x) (T x) (F2 x) Ex2,
     sigma_appl Ex2 /*=*/ Ex3 x S2).
 
-of (prod S F) set (prod S2 F2) (append Ex1 Ex3) :-
+ofr (prod S F) set (prod S2 F2) (append Ex1 Ex3) :-
   of S SO S2 Ex1,
   unify SO set,
-  pi x\ sigma Ex2\ of x S2 x nil => (
+  pi x\ sigma Ex2\ ofr x S2 x nil => (
     of (F x) (T x) (F2 x) Ex2,
     unify (T x) set,
     sigma_appl Ex2 /*=*/ Ex3 x S2).
 
-of (app M1 N1) Z (app M2 N2) (append (append Ex1 Ex2) Ex4) :-
+ofr (app M1 N1) Z (app M2 N2) (append (append Ex1 Ex2) Ex4) :-
     of M1 TM1 M2 Ex1,
     of N1 TN1 N2 Ex2,
     pi x\ sigma Ex3\
@@ -43,7 +47,7 @@ of (app M1 N1) Z (app M2 N2) (append (append Ex1 Ex2) Ex4) :-
       sigma_appl Ex3 /*=*/ Ex4 x TN1,
       subst F N2 Z.
 
-of (atom ID) T (atom ID) nil :- env ID T.
+ofr (atom ID) T (atom ID) nil :- env ID T.
 
 env zero (atom nat).
 env succ (prod (atom nat) (x \ (atom nat))).
@@ -53,9 +57,9 @@ env vect (prod (atom nat) (x\ set)).
 env vnil (app (atom vect) (atom zero)).
 env vcons (prod (atom nat) (n\ prod (app (atom vect) n) (w\ app (atom vect) (app (atom succ) n)))).
 
-of set set set nil.
+ofr set set set nil.
 
-of (rec Rty N Base Step) Rty2 (rec Rty2 N2 Base2 Step2) (append (append Ex1 Ex2) (append Ex3 Ex4)) :-
+ofr (rec Rty N Base Step) Rty2 (rec Rty2 N2 Base2 Step2) (append (append Ex1 Ex2) (append Ex3 Ex4)) :-
   of Rty TRty Rty2 Ex1,
   unify TRty set,
   of N TN N2 Ex2,
@@ -235,7 +239,7 @@ test_unify A B TA2 A2 B2 Sig :-
   $print "cleaning4\n",
   clean_sigma (append Ex1 Ex2) Sig.
 
-of (var N) T M Sig :- hyp N X, of X T M Sig.
+ofr (var N) T M Sig :- hyp N X, of X T M Sig.
 
 step_in N (decl TY F) Sig2 :-
   pi x\ sigma Sig\ of x TY x nil => copy x x => unify x x => hyp N x => (

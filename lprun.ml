@@ -423,7 +423,25 @@ let resume s lvl (dls : dgoal list) =
     else 
        let gl, s = goals_of_premise hv p depth orig_prog lvl s in
        Some(gl,s)) dls s
-          
+         
+let add_delay (t,hv,Atom a,depth,orig_prog as dl) s dls run = 
+  let rec aux = function
+  | [] -> dl :: dls, s
+  | (t',hv',Atom a',depth',orig_prog') :: rest
+    when LP.equal (Red.nf s t) (Red.nf s t') && false ->
+      let a = contextualize 0 a hv in
+      let a' = contextualize 0 a' hv' in
+      let g = mkApp (L.of_list [mkCon "eq" 0; a; a']) in
+      let is_funct =
+        try let _ = run s ([max depth depth',`Atom(g,key_of (Atom g)),orig_prog,orig_prog,0],[]) [] in true
+        with NoClause -> false in
+      if not is_funct then aux rest
+      else assert false
+  | _ :: rest -> aux rest 
+  in
+    aux dls
+
+
 let rec run s ((gls,dls) : goals) (alts : alternatives) : subst * dgoal list * alternatives =
   let s, gls, dls, alts =
     match gls with
@@ -438,8 +456,14 @@ let rec run s ((gls,dls) : goals) (alts : alternatives) : subst * dgoal list * a
          with NoClause -> true in
        if ok then s, rest, dls, alts
        else next_alt s alts (fun fmt _ -> pr_cur_goals gls fmt s')
-    | (depth,`Delay(hv,t,p), _, orig_prog,lvl) :: rest ->
-       if flexible s t then s, rest, (t,hv,p,depth,orig_prog)::dls, alts
+    | (depth,(`Delay(hv,t,p) as go), _, orig_prog,lvl) :: rest ->
+       if flexible s t then
+         try
+(*            let dls, s = add_delay (t,hv,p,depth,orig_prog) s dls run in *)
+                 TRACE "delay" (pr_cur_goal go lvl s)
+                 let dls = (t,hv,p,depth,orig_prog) :: dls in
+           s, rest, dls, alts
+         with NoClause -> next_alt s alts (pr_cur_goals gls)
        else
          let gl, s = goals_of_premise hv p depth orig_prog lvl s in
          s, gl@rest, dls, alts

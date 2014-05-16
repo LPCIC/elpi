@@ -23,10 +23,16 @@ let _ =
     let unescape s = Str.global_replace (Str.regexp_string "\\n") "\n" s in
     let t = Red.nf s t in
     (match LP.look t with
-    | LP.Ext t when isString t ->
+    | LP.Ext t  when isString t ->
         Format.eprintf "%s%!" (unescape (getString t))
     | _ -> Format.eprintf "%a%!" (LP.prf_data []) t);
     s);
+  register_custom "is" (fun t s _ _ ->
+    let t = Red.nf s t in
+    match LP.look t with
+    | LP.App l when L.len l = 3 ->
+        if LP.equal (L.get 1 l) (L.get 2 l) then s else raise NoClause
+    | _ -> assert false);
   register_custom "is_flex" (fun t s _ _ ->
     let t, s = Red.whd s t in
     match LP.look t with
