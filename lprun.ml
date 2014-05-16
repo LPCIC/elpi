@@ -215,11 +215,15 @@ exception NoClause
 type objective =
   [ `Atom of data * key
   | `Unify of data * data | `Custom of string * data | `Cut
-  | `Not of data list * premise]
+  | `Not of data list * premise
+  | `Delay of data list * data * premise]
 type goal = int * objective * program * program * int
-type alternatives = (subst * goal list) list
+type dgoal = data * data list * premise * int * program
+type goals = goal list * dgoal list
+type alternatives = (subst * goals) list
 type step_outcome = subst * goal list * alternatives
 
+let cat_goals (a,b) (c,d) = a@c, b@d
 
 (* Important: when we move under a pi we put a constant in place of the
  * bound variable. This way hypothetical clauses do not need to be lifted
@@ -265,8 +269,11 @@ let pr_cur_goal g lvl s fmt =
   | `Custom(name,a) ->
       Format.fprintf fmt "%s %a" name (prf_data []) (apply_subst s a)
   | `Cut -> Format.fprintf fmt "!"
-  | `Not (hv,p) -> Format.fprintf fmt "%a" (prf_premise (ctx_of_hv hv)) p
-let pr_cur_goals gls s fmt =
+  | `Not (hv,p) -> Format.fprintf fmt "not %a" (prf_premise (ctx_of_hv hv)) p
+  | `Delay (hv,t,p) ->
+       Format.fprintf fmt "delay %a %a"
+         (prf_data (ctx_of_hv hv)) t (prf_premise (ctx_of_hv hv)) p
+let pr_cur_goals gls fmt s =
   Format.fprintf fmt "@[<hov 0>"; 
   iter_sep (fun fmt () -> Format.fprintf fmt ",@ ")
     (fun fmt (_,g,_,_,l) -> pr_cur_goal g l s fmt) fmt gls;
@@ -314,6 +321,8 @@ let contextualize_premise ?(compute_key=false) depth subst old_hv premise =
         l::acc, s) l ([],s) in
       List.flatten ll, s
   | Not p -> [cdepth, `Not (hv,p), add_cdepth compute_key cdepth eh], s
+  | Delay(t, p) ->
+      [cdepth, `Delay (hv,contextualize 0 t hv,p), add_cdepth compute_key cdepth eh], s
   in
     aux depth depth subst old_hv [] premise
 
@@ -351,7 +360,7 @@ let select k goal depth (s as os) prog orig_prog lvl : step_outcome =
         let subgoals =
           List.map (fun (d,g,e) -> d,g,e@orig_prog,e@orig_prog,lvl+1)
             (List.flatten subgoals) in
-        s, subgoals, [os,[depth,`Atom(goal,k),rest,orig_prog,lvl]]
+        s, subgoals, [os,([depth,`Atom(goal,k),rest,orig_prog,lvl],[])]
       with UnifFail _ ->
         SPY "skipped" (prf_clause (ctx_of_hv old_hv)) clause;
         first rest
@@ -362,6 +371,7 @@ let rec run1 s ((depth,goal,prog,orig_prog,lvl) : goal) : step_outcome =
   match goal with
   | `Cut -> assert false
   | `Not _ -> assert false
+  | `Delay _ -> assert false
   | `Atom(t,k) ->
       let s, goals, alts = select k t depth s prog orig_prog lvl in
       s, goals, alts
@@ -381,46 +391,69 @@ let rec run1 s ((depth,goal,prog,orig_prog,lvl) : goal) : step_outcome =
 
 let rec cut lvl = function
   | [] -> []
-  | (_,(_,_,_,_,l)::_) :: xs when l + 1 = lvl -> xs
+  | (_,((_,_,_,_,l)::_,_)) :: xs when l + 1 = lvl -> xs
   | _ :: xs -> cut lvl xs
 
-let rec run s (gls : goal list) alts : subst * alternatives =
-  let s, subg, alts =
+let next_alt s (alts : alternatives) pp : subst * goal list * dgoal list * alternatives =
+  match alts with
+  | [] -> raise NoClause
+  | (s,(gs,dgs)) :: alts -> SPY "backtrack" pp s; s, gs, dgs, alts
+
+let list_partmapfold f l a = 
+  let rec aux xs ys a = function
+  | [] -> List.rev xs, List.rev ys, a
+  | z :: zs ->
+     match f z a with
+     | Some (z',a) -> aux (z'::xs) ys a zs
+     | None -> aux xs (z::ys) a zs
+  in
+    aux [] [] a l
+
+let flexible s t = let t, _s = Red.whd s t in not (rigid (look t))
+
+let goals_of_premise hv p depth orig_prog lvl s =
+  let gl, s = contextualize_goal depth s hv p in
+  List.map (fun (d,g,e) -> d,g,e@orig_prog,e@orig_prog,lvl+1) gl, s
+
+let resume s lvl (dls : dgoal list) =
+  list_partmapfold (fun (t,hv,p,depth,orig_prog) s ->
+    if flexible s t then None
+    else 
+       let gl, s = goals_of_premise hv p depth orig_prog lvl s in
+       Some(gl,s)) dls s
+          
+let rec run s ((gls,dls) : goals) (alts : alternatives) : subst * dgoal list * alternatives =
+  let s, gls, dls, alts =
     match gls with
-    | [] -> s, [], alts
+    | [] -> s, [], dls, alts
     | (_,`Cut,_,_,lvl)::rest ->
        let alts = cut lvl alts in
-       s, rest, alts
+       s, rest, dls, alts
     | (depth,`Not(hv,p),_,orig_prog,lvl) :: rest ->
-       let gl, s' = contextualize_goal depth s hv p in
-       let gl =
-          List.map (fun (d,g,e) -> d,g,e@orig_prog,e@orig_prog,lvl+1) gl in
+       let gl, s' = goals_of_premise hv p depth orig_prog lvl s in
        let ok =
-         try let _ = run s' gl [] in false
+         try let _ = run s' (gl,dls) [] in false
          with NoClause -> true in
-       if ok then s, rest, alts
-       else 
-           (match alts with
-           | [] -> raise NoClause
-           | (s,g) :: rest ->
-               SPY "backtrack" (fun fmt s -> pr_cur_goals gls s fmt) s';
-               s, g, rest)
+       if ok then s, rest, dls, alts
+       else next_alt s alts (fun fmt _ -> pr_cur_goals gls fmt s')
+    | (depth,`Delay(hv,t,p), _, orig_prog,lvl) :: rest ->
+       if flexible s t then s, rest, (t,hv,p,depth,orig_prog)::dls, alts
+       else
+         let gl, s = goals_of_premise hv p depth orig_prog lvl s in
+         s, gl@rest, dls, alts
     | (_,go,_,_,lvl as g)::rest ->
        try
          TRACE "run" (pr_cur_goal go lvl s)
          let s, subg, new_alts = run1 s g in
-         s, (subg@rest),
-           (List.map (fun (s,gl) -> s,gl @ rest) new_alts @ alts)
+         let resumed, dls, s = resume s lvl dls in
+         let resumed = List.flatten resumed in
+         s, (resumed@subg@rest), dls,
+           (List.map (fun (s,gs) -> s,cat_goals gs (rest,dls)) new_alts @ alts)
        with
-       | NoClause as e ->
-           (match alts with
-           | [] -> raise e
-           | (s,g) :: rest ->
-               SPY "backtrack" (fun fmt s -> pr_cur_goals gls s fmt) s;
-               s, g, rest)
+       | NoClause -> next_alt s alts (pr_cur_goals gls)
   in
-  if subg = [] then s, alts
-  else run s subg alts
+  if gls = [] then s, dls, alts
+  else run s (gls,dls) alts
 
 let prepare_initial_goal g =
   let s = empty 1 in
@@ -434,7 +467,8 @@ let run (p : program) (g : premise) =
   let hv, g, s = prepare_initial_goal g in
   Format.eprintf "@[<hv2>goal:@ %a@]@\n%!" (prf_goal (ctx_of_hv hv)) g;
   let gls, s = contextualize_goal 0 s hv g in
-  let s,_ = run s (List.map (fun (d,g,ep) -> (d,g,ep@p,ep@p,0)) gls) [] in
+  let s, dls, _alts =
+    run s (List.map (fun (d,g,ep) -> (d,g,ep@p,ep@p,0)) gls, []) [] in
   fst(fold_map_premise 0 (fun i t () ->
     let n = List.length hv in
     let vhv = if hv = [] then L.empty else L.of_list (List.rev hv) in

@@ -541,6 +541,7 @@ and premise =
   | Pi of int * premise
   | Sigma of int * premise
   | Not of premise
+  | Delay of data * premise
 and goal = premise
 
 let mkPi n = function Pi(m,t) -> Pi(m+n,t) | t -> Pi(n,t)
@@ -561,6 +562,7 @@ let rec map_premise f = function
   | Pi(n,x)  -> Pi(n,map_premise f x)
   | Sigma(n,x)  -> Sigma(n,map_premise f x)
   | Not x -> Not(map_premise f x)
+  | Delay (t,p) -> Delay(f t,map_premise f p)
 
 let rec fold_premise f x a = match x with
   | Atom x -> f x a
@@ -570,6 +572,7 @@ let rec fold_premise f x a = match x with
   | Pi(_,x) -> fold_premise f x a
   | Sigma(_,x) -> fold_premise f x a
   | Not x -> fold_premise f x a
+  | Delay (t,p) -> fold_premise f p (f t a)
 
 let rec fold_map_premise i f p a = match p with
   | Atom x -> let x, a = f i x a in Atom x, a
@@ -588,6 +591,8 @@ let rec fold_map_premise i f p a = match p with
   | Pi(n,y) -> let y, a = fold_map_premise (i+n) f y a in Pi(n,y), a
   | Sigma(n,y) -> let y, a = fold_map_premise (i+n) f y a in Sigma(n,y), a
   | Not x -> let x, a = fold_map_premise i f x a in Not x, a
+  | Delay (t,p) -> let t, a = f i t a in let p, a = fold_map_premise i f p a in
+                   Delay(t,p), a
 
 module PPP = struct (* {{{ pretty printer for programs *)
 
@@ -647,6 +652,12 @@ let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
        Format.fprintf fmt "not @[";
        prf_premise ~pars ~positive ctx fmt p;
        Format.pp_close_box fmt ()
+  | Delay(t,p) ->
+       Format.fprintf fmt "delay @[";
+       prf_data ctx fmt t;
+       Format.fprintf fmt "@ (";
+       prf_premise ~pars:false ~positive ctx fmt p;
+       Format.fprintf fmt ")@]"
 
 let prf_clause ?(dot=true) ?positive ctx fmt c =
   let c, ctx = match c with
@@ -678,6 +689,7 @@ let rec key_of = function
   | AtomBI _ -> assert false
   | Conj _ -> assert false
   | Impl(_,p) | Pi(_,p) | Sigma(_,p) | Not p -> key_of p
+  | Delay _ -> Flex
   | Atom t ->
       match look t with
       | Con _ -> Key t
@@ -752,6 +764,7 @@ let rec lex c = parser bp
        | "CONSTANT","sigma" -> "SIGMA", "sigma"
        | "CONSTANT","nil" -> "NIL", "nil"
        | "CONSTANT","not" -> "NOT","not"
+       | "CONSTANT","delay" -> "DELAY","delay"
        | x -> x), (bp, ep)
 and comment c = parser
   | [< '( '\n' ); s >] -> lex c s
@@ -832,6 +845,7 @@ and binders_premise c n = function
     | Conj l -> Conj(List.map (binders_premise c n) l)
     | Impl(p,t) -> Impl(binders_premise c n p, binders_premise c n t)
     | Not p -> Not(binders_premise c n p)
+    | Delay(t,p) -> Delay(binders c n t, binders_premise c n p)
 and binders_builtin c n = function
     | BIUnif (a,b) -> BIUnif(binders c n a, binders c n b)
     | BICustom(s,t) -> BICustom(s,binders c n t)
@@ -898,7 +912,9 @@ EXTEND
       | bt = BUILTIN; a = atom -> AtomBI(BICustom(bt,a))
       | BANG -> AtomBI BICut
       | NOT; p = premise LEVEL "2" -> Not p
-      | binder = [PI -> fst | SIGMA -> snd]; x = bound; BIND; p = premise LEVEL "1" ->
+      | DELAY; t = atom LEVEL "2"; p = premise LEVEL "2" -> Delay(t, p)
+      | binder = [PI -> fst | SIGMA -> snd];
+        x = bound; BIND; p = premise LEVEL "1" ->
          let x, is_uv = x in
          let bind = if is_uv then mkSigma else binder (mkPi,mkSigma) in
          bind 1 (binders_premise x 1 p)

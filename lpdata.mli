@@ -96,6 +96,7 @@ module LP : sig
     | Pi of int * premise
     | Sigma of int * premise
     | Not of premise
+    | Delay of data * premise
   and goal = premise
 
   val key_of : premise -> key
