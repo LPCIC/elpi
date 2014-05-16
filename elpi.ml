@@ -50,7 +50,10 @@ let _ =
         | LP.Ext x when isString x ->
             let input = getString x in
             (try unify (LP.parse_data input) (L.get 1 l) s
-            with UnifFail _ -> raise NoClause)
+            with
+            | UnifFail _ ->
+                prerr_endline "parsing in the wrong ctx?";raise NoClause
+            | Stream.Error msg -> prerr_endline msg; raise NoClause)
         | _ -> assert false)
     | _ -> assert false);
   register_custom "read" (fun t s _ _ ->
