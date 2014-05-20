@@ -170,6 +170,9 @@ let test_unif () =
   test true  "[a,b,c]" "a :: b :: c :: nil";
   test true  "[a,b,c|X]" "a :: b :: c :: X";
   test false "[]" "[x|B]";
+  test true "foo X (X c)" "foo X (@Y L)";
+  test true "foo X (X c1 c2) [c1,c2]" "foo X (@Y L) L";
+  test false "foo X (X c1 c2) [c1]" "foo X (@Y L) L";
 ;;
 
 let test_coq () =
@@ -887,6 +890,6 @@ let _ =
   test_custom ();
   test_back ();
 (*    Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";"epush.*";(*"unif";"bind";"t$";"vj$";*)"rule";"whd";"hv";"premise";"psusp";"skipped"] ~verbose:true true; *)
-  test_refiner ();
+(*   test_refiner (); *)
   test_typeinf ();
 
