@@ -122,6 +122,7 @@ let rec bind x id depth lvl args t s =
           let t = mkAppv h (L.append ws vs) 0 (nws+nvs) in
           SPY "vj" (prf_data []) vj; SPY "t" (prf_data[]) t;
           t, s
+      | Uv(j,l) when j <> id && L.len args = 0 -> t, s
       | Uv(j,l) when j <> id && isPU s bs ->
           SPY "2hd" (prf_data []) (mkNil);
           let bs = L.tl bs in
@@ -145,7 +146,8 @@ let rec bind x id depth lvl args t s =
           let t = mkAppv h (L.append cs us) 0 (ncs+nus) in
           SPY "vj" (prf_data []) vj; SPY "t" (prf_data[]) t;
           t, s
-      | Uv _ -> fail "ho-ho"
+      | Uv _ -> assert false (*fail "ho-ho"*)
+
 let keep xs ys s =
   let l1 = L.to_list xs in
   let l2 = L.to_list ys in
@@ -231,7 +233,7 @@ and unify_ho x y s =
       | Uv (id,lvl) -> mksubst (kool x) id lvl (kool y) (L.tl xs) s
       | _ -> assert false
     end
-  | _ -> fail "not a pattern unif"
+  | _ -> assert false (*fail "not a pattern unif"*)
 
 (* ******************************** Main loop ******************************* *)
 
