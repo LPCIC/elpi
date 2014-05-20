@@ -168,7 +168,15 @@ projection M [_|XS] Y :- pi c\ projection (M c) XS Y.
 
 % mimick
 mimick M L (atom A) :- add_dummy_lambdas M L (atom A).
+mimick M L set :- add_dummy_lambdas M L set.
+mimick M L (app N1 N2) :-
+ mimick_app M L FN1 FN2,
+ delift FN1 L N1,
+ delift FN2 L N2.
 
+% mimick_app
+mimick_app M [] FN1 FN2 :- M = app FN1 FN2.
+mimick_app M [_|XS] FN1 FN2 :- pi c\ mimick_app (M c) XS (FN1 c) (FN2 c).
 
 %unif A M N :- prt "" (unif A M N), not true.
 
