@@ -247,7 +247,9 @@ type goal = int * objective * program * program * int
 type dgoal = data * data list * premise * int * program
 type goals = goal list * dgoal list
 type alternatives = (subst * goals) list
+type continuation = subst * data list * premise * alternatives
 type step_outcome = subst * goal list * alternatives
+type result = LP.goal * subst * LP.goal list * continuation
 
 let cat_goals (a,b) (c,d) = a@c, b@d
 
@@ -420,7 +422,7 @@ let rec cut lvl = function
   | (_,((_,_,_,_,l)::_,_)) :: xs when l + 1 = lvl -> xs
   | _ :: xs -> cut lvl xs
 
-let next_alt s (alts : alternatives) pp : subst * goal list * dgoal list * alternatives =
+let next_alt (_s : Lpdata.Subst.subst) (alts : alternatives) pp : subst * goal list * dgoal list * alternatives =
   match alts with
   | [] -> raise NoClause
   | (s,(gs,dgs)) :: alts -> SPY "backtrack" pp s; s, gs, dgs, alts
@@ -524,11 +526,21 @@ let run_dls (p : program) (g : premise) =
   let hv, g, s = prepare_initial_goal g in
   Format.eprintf "@[<hv2>goal:@ %a@]@\n%!" (prf_goal (ctx_of_hv hv)) g;
   let gls, s = contextualize_goal 0 s hv g in
-  let s, dls, _alts =
+  let s, dls, alts =
     run s (List.map (fun (d,g,ep) -> (d,g,ep@p,ep@p,0)) gls, []) [] in
   apply_sub_hv_to_goal hv s g, s,
-  List.map (fun (_,hv,g,_,_) -> apply_sub_hv_to_goal hv s g) dls
+  List.map (fun (_,hv,g,_,_) -> apply_sub_hv_to_goal hv s g) dls,
+  (s,hv,g,alts)
 
-let run p g = let a,b, _ = run_dls p g in a, b
+let next (s,hv,g,alts) =
+ let s,gls,dls,alts =
+  next_alt s alts (fun fmt _ -> Format.fprintf fmt "next solution") in
+ (* from now on cut&paste from run_dls, the code need factorization *)
+ let s, dls, alts = run s (gls,dls) alts in
+ apply_sub_hv_to_goal hv s g, s,
+ List.map (fun (_,hv,g,_,_) -> apply_sub_hv_to_goal hv s g) dls,
+ (s,hv,g,alts)
+
+let run p g = let a,b,_,_ = run_dls p g in a, b
 
 (* vim:set foldmethod=marker: *)

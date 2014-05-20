@@ -75,17 +75,25 @@ let test_prog p g =
   let p = LP.parse_program p in
   let g = LP.parse_goal g in
   Format.eprintf "@[<hv2>program:@ %a@]@\n%!" LP.prf_program p;
-  let g, s, dgs = run_dls p g in
-  Format.eprintf
-    "@\n@[<hv2>output:@ %a@]@\n@[<hv2>nf out:@ %a@]@\n@[<hv2>subst:@ %a@]@\n%!"
-    (LP.prf_goal []) (Subst.apply_subst_goal s g) 
-    (LP.prf_goal []) (LP.map_premise (Red.nf s) g)
-    Subst.prf_subst s;
- List.iter (fun g ->
-  Format.eprintf
-    "@[<hv2>delay:@ %a@]@\n%!"
-    (LP.prf_goal []) (LP.map_premise (Red.nf s) g)) dgs
-
+  let rec aux (g,s,dgs,continuation) =
+   Format.eprintf
+     "@\n@[<hv2>output:@ %a@]@\n@[<hv2>nf out:@ %a@]@\n@[<hv2>subst:@ %a@]@\n%!"
+     (LP.prf_goal []) (Subst.apply_subst_goal s g) 
+     (LP.prf_goal []) (LP.map_premise (Red.nf s) g)
+     Subst.prf_subst s;
+   List.iter (fun g ->
+    Format.eprintf
+     "@[<hv2>delay:@ %a@]@\n%!"
+     (LP.prf_goal []) (LP.map_premise (Red.nf s) g)) dgs;
+   Printf.printf "next? (y/n)> %!";
+   if input_line stdin = "y" then
+    try aux (next continuation)
+    with Lprun.NoClause ->
+     Printf.printf "no more solutions\n";
+     exit 0
+   else exit 0
+  in
+   aux (run_dls p g)
  with Stream.Error msg ->
    Format.eprintf "@[Parse error: %s@]@\n%!" msg
 ;;

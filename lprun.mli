@@ -10,7 +10,14 @@ val unify : LP.data -> LP.data -> Subst.subst -> Subst.subst
 
 (* Runtime *)
 exception NoClause
-val run_dls : LP.program -> LP.goal -> LP.goal * Subst.subst * LP.goal list
+
+type continuation
+type result = LP.goal * Subst.subst * LP.goal list * continuation
+
+val run_dls : LP.program -> LP.goal -> result
+val next: continuation -> result
+
+(* as run_dls, with simplified output, used only for debugging *)
 val run : LP.program -> LP.goal -> LP.goal * Subst.subst
 
 (* debug *)
