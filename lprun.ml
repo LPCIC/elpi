@@ -98,12 +98,13 @@ let rec bind x id depth lvl args t s =
   | App bs as t when rigid t ->
       let ss, s = L.fold_map (bind x id depth lvl args) bs s in
       mkApp ss, s
+  | VApp _ -> assert false
   | (App _ | Uv _) as tmp -> (* pruning *)
           SPY "Pruning" (prf_data []) (mkNil);
       let bs = match tmp with
         | App bs -> bs | Uv _ -> L.singl t | _ -> assert false in
       match look (L.hd bs) with
-      | (Bin _ | Con _ | DB _ | Ext _ | App _ | Seq _ | Nil) -> assert false
+      | (Bin _ | Con _ | DB _ | Ext _ | App _ | Seq _ | Nil | VApp _) -> assert false
       | Uv(j,l) when j <> id && l > lvl && isPU s bs ->
           SPY "1hd" (prf_data []) (L.hd bs);
           let bs = L.tl bs in
@@ -145,17 +146,30 @@ let rec bind x id depth lvl args t s =
           SPY "vj" (prf_data []) vj; SPY "t" (prf_data[]) t;
           t, s
       | Uv _ -> fail "ho-ho"
+let keep xs ys s =
+  let l1 = L.to_list xs in
+  let l2 = L.to_list ys in
+  let rec aux l1 l2 i =
+    match l1, l2 with
+    | [], [] -> []
+    | x::xs, y::ys when equal (Red.nf s x) (Red.nf s y) ->
+       mkDB i :: aux xs ys (i-1)
+    | _::xs, _::ys -> aux xs ys (i-1)
+    | _ -> assert false
+  in
+    L.of_list (aux l1 l2 (L.len xs))
 
 let mksubst x id lvl t args s =
   let nargs = L.len args in
   match look t with
-(*
-  | Bin(k,Uv(id1,_)) when id1 = id -> assert false (* TODO *)
-  | Bin(k,App xs) when equal (L.get 0 xs) (Uv (id,lvl)) && isPU xs ->
-      assert false (* TODO *)
-*)
-  | App xs when equal (L.get 0 xs) (mkUv id lvl) && isPU s xs ->
-      if L.for_all2 equal (L.tl xs) args then s else fail "wtf"
+  | App xs when isPU s xs && equal (L.get 0 xs) (mkUv id lvl) ->
+      if L.for_all2 equal (L.tl xs) args then s
+      else
+        let h_args = keep (L.tl xs) args s in
+        if L.len h_args = nargs then s
+        else
+          let h, s = fresh_uv lvl s in
+          set_sub id (mkBin nargs (mkApp (L.cons h h_args))) s
   | _ ->
      let t, s = bind x id 0 lvl args t s in
      set_sub id (mkBin nargs t) s
@@ -173,10 +187,18 @@ let rec unify a b s = TRACE "unify" (print_unif_prob s "=" a b)
   match look a, look b with
   | Con _, Con _ | Ext _, Ext _ | DB _, DB _ | Nil, Nil ->
       if equal a b then s else fail "rigid"
+  | VApp _, _ -> assert false
+  | Bin _, VApp _ -> assert false
+  | t, VApp(t1,t2) when not(rigid t) ->
+     let hd, tl = match t with
+       | App xs -> L.hd xs, L.tl xs | Uv _ -> a, L.empty | _ -> assert false in
+     let s = unify hd t1 s in
+     unify (mkSeq tl mkNil) t2 s
+  | _, VApp _ -> fail "not flex"
   | Bin(nx,x), Bin(ny,y) when nx = ny -> unify x y s
   | Bin(nx,x), Bin(ny,y) when nx < ny -> unify (eta (ny-nx) x) y s
   | Bin(nx,x), Bin(ny,y) when nx > ny -> unify x (eta (nx-ny) y) s
-  | ((Bin(nx,x), y) | (y, Bin(nx,x))) when rigid y -> unify x (eta nx (kool y)) s
+  | ((Bin(nx,x), y) | (y, Bin(nx,x))) when rigid y ->unify x (eta nx (kool y)) s
   | Uv(i,_), Uv(j,_) when i = j -> s
   | x, y -> if rigid x && rigid y then unify_fo x y s else unify_ho x y s
 and unify_fo x y s =
@@ -369,7 +391,7 @@ let select k goal depth (s as os) prog orig_prog lvl : step_outcome =
   in
     first prog
 
-let rec run1 s ((depth,goal,prog,orig_prog,lvl) : goal) : step_outcome =
+let run1 s ((depth,goal,prog,orig_prog,lvl) : goal) : step_outcome =
   match goal with
   | `Cut -> assert false
   | `Not _ -> assert false

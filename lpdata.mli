@@ -57,6 +57,7 @@ module LP : sig
     | Seq of data L.t * data
     | Nil
     | Ext of C.data
+    | VApp of data * data (* VApp(hd,args) : args is a list *)
 
   val look : data -> kind_of_data
   val kool : kind_of_data -> data
@@ -75,12 +76,6 @@ module LP : sig
 
   val equal : data -> data -> bool
   
-  val fold : (data -> 'a -> 'a) -> data -> 'a -> 'a
-  val map : (data -> data) -> data -> data
-  val fold_map :
-    int -> (int -> data -> 'a -> data * 'a) -> data -> 'a -> data * 'a
-
-  val max_uv : data -> var -> var
   val isDB : int -> data -> bool
 
   type key = Key of data | Flex

@@ -182,6 +182,7 @@ type kind_of_data =
   | Seq of data L.t * data
   | Nil
   | Ext of C.data
+  | VApp of data * data
 and data =
   | XUv of var * level
   | XCon of name * level
@@ -191,6 +192,7 @@ and data =
   | XSeq of data L.t * data
   | XNil
   | XExt of C.data
+  | XVApp of data * data
   | XSusp of suspended_job ref
 and suspended_job = Done of data | Todo of data * olam * nlam * env
 and env =
@@ -262,6 +264,15 @@ let rec prf_data ctx fmt t =
         P.pp_open_hbox fmt ();
         P.pp_print_string fmt (C.print x);
         P.pp_close_box fmt ()
+    | XVApp(t1,t2) ->
+        P.fprintf fmt "@[<hov 2>";
+        if pars then P.pp_print_string fmt "(";
+        P.fprintf fmt "@@";
+        print ctx ~pars:true t1;
+        P.fprintf fmt "@ ";
+        print ctx ~pars:true t2;
+        if pars then P.pp_print_string fmt ")";
+        P.fprintf fmt "@]"
     | XSusp ptr ->
         match !ptr with
         | Done t -> P.fprintf fmt ".(@["; print ctx t; P.fprintf fmt ")@]"
@@ -376,6 +387,8 @@ let rec psusp ptr t ol nl e =
                            (XArgs (L.singl (XDB 1),nl+1,e))))
   | XApp a -> rule"r5";
       store ptr (XApp(L.map (fun t -> mkXSusp t ol nl e) a))
+  | XVApp(t1,t2) -> rule"r5bis";
+      store ptr (XVApp(mkXSusp t1 ol nl e,mkXSusp t2 ol nl e))
   | XSeq(a,tl) ->
       store ptr (XSeq(L.map (fun t -> mkXSusp t ol nl e) a,
                       mkXSusp tl ol nl e))
@@ -396,7 +409,8 @@ let rec psusp ptr t ol nl e =
           else (rule"r4"; psusp ptr (XDB(i - n)) (ol - n) nl e)
 let push t =
   match t with
-  | (XUv _ | XCon _ | XDB _ | XBin _ | XApp _ | XExt _ | XSeq _ | XNil) -> t
+  | (XUv _ | XCon _ | XDB _ | XBin _ | XApp _
+    | XExt _ | XSeq _ | XNil | XVApp _) -> t
   | XSusp { contents = Done t } -> t
   | XSusp ({ contents = Todo (t,ol,nl,e) } as ptr) -> psusp ptr t ol nl e
 
@@ -457,6 +471,8 @@ let fixApp xs =
 
 let isDB i = function XDB j when j = i -> true | _ -> false
 
+let mkVApp t1 t2 = XVApp(t1,t2)
+
 let rec equal a b = match push a, push b with
  | XUv (x,_), XUv (y,_) -> x = y
  | XCon (x,_), XCon (y,_) -> x = y
@@ -466,6 +482,19 @@ let rec equal a b = match push a, push b with
  | XExt x, XExt y -> C.equal x y
  | XSeq(xs,s), XSeq(ys,t) -> L.for_all2 equal xs ys && equal s t
  | XNil, XNil -> true
+ | XVApp (t1,t2), XVApp (s1,s2) -> equal t1 s2 && equal t2 s2
+ | XVApp (t1,t2), _ when equal t2 mkNil -> equal t1 b
+ | _, XVApp (t1,t2) when equal t2 mkNil -> equal a t1
+ | (XVApp (t1,t2), XApp _) ->
+     (match look t2 with
+     | XSeq (ys,tl) when equal tl mkNil -> equal (mkApp (L.cons t1 ys)) b
+     | XSeq (ys,tl) -> false
+     | _ -> false)
+ | (XApp _, XVApp (t1,t2)) ->
+     (match look t2 with
+     | XSeq (ys,tl) when equal tl mkNil -> equal a (mkApp (L.cons t1 ys))
+     | XSeq (ys,tl) -> false
+     | _ -> false)
  | ((XBin(n,x), y) | (y, XBin(n,x))) -> begin (* eta *)
      match push x with
      | XApp xs ->
@@ -480,31 +509,12 @@ let rec equal a b = match push a, push b with
 
 let isBin x = match push x with XBin _ -> true | _ -> false
 
-let rec fold f x a = match push x with
-  | (XDB _ | XCon _ | XUv _ | XExt _) as x -> f x a
-  | XBin (_,x) -> fold f x a
-  | XApp xs -> L.fold (fold f) xs a
-  | XSeq (xs, t) -> fold f t (L.fold (fold f) xs a)
-  | XNil -> a
-  | XSusp _ -> assert false
-
 let rec map f x = match push x with
   | (XDB _ | XCon _ | XUv _ | XExt _ | XNil) as x -> f x
   | XBin (ns,x) -> XBin(ns, map f x)
   | XApp xs -> XApp(L.map (map f) xs)
   | XSeq (xs, tl) -> XSeq(L.map (map f) xs, map f tl)
-  | XSusp _ -> assert false
-
-let max_uv x a = match push x with XUv (i,_) -> max a i | _ -> a
-
-let rec fold_map i f x a = match push x with
-  | (XDB _ | XCon _ | XUv _ | XExt _ | XNil) as x -> f i x a
-  | XBin (n,x) -> let x, a = fold_map i f x a in XBin(n,x), a
-  | XApp xs -> let xs, a = L.fold_map (fold_map i f) xs a in XApp xs, a
-  | XSeq (xs, tl) ->
-      let xs, a = L.fold_map (fold_map i f) xs a in
-      let tl, a = fold_map i f tl a in
-      XSeq(xs, tl), a
+  | XVApp(t1,t2) -> XVApp(map f t1,map f t2)
   | XSusp _ -> assert false
  
 (* PROGRAM *)
@@ -741,6 +751,7 @@ let tok = lexer
   | '=' -> "EQUAL","="
   | '$' 'a'-'z' ident -> "BUILTIN",$buf
   | '!' -> "BANG", $buf
+  | '@' -> "AT", $buf
   | '"' string -> "LITERAL", let b = $buf in String.sub b 1 (String.length b-2)
 ]
 
@@ -809,6 +820,7 @@ let g = Grammar.gcreate lex
 let lp = Grammar.Entry.create g "lp"
 let premise = Grammar.Entry.create g "premise"
 let atom = Grammar.Entry.create g "atom"
+let goal = Grammar.Entry.create g "goal"
 
 let uvmap = ref []
 let conmap = ref []
@@ -831,7 +843,8 @@ let check_con n l =
   with Not_found -> conmap := (n,l) :: !conmap
 
 let rec binders c n = function
-    | (XCon _ | XUv _) as x when equal x c -> XDB n
+    | (XCon _ | XUv _) as x when equal x c -> mkDB n
+    | XVApp(t1,t2) -> XVApp(binders c n t1, binders c n t2)
     | (XCon _ | XUv _ | XExt _ | XDB _ | XNil) as x -> x
     | XBin(w,t) -> XBin(w,binders c (n+w) t)
     | XApp xs -> XApp (L.map (binders c n) xs)
@@ -856,8 +869,8 @@ let sigma_abstract t =
   List.fold_left (fun p uv -> mkSigma 1 (binders_premise (mkUv uv 0) 1 p)) t uvl
 
 EXTEND
-  GLOBAL: lp premise atom;
-  lp: [ [ cl = LIST1 clause -> cl ] ];
+  GLOBAL: lp premise atom goal;
+  lp: [ [ cl = LIST0 clause -> cl ] ];
   clause :
     [ [ hd = atom; hyp = OPT [ ENTAILS; hyp = premise -> hyp ]; FULLSTOP ->
          let hyp = match hyp with None -> Conj [] | Some h -> h in
@@ -889,6 +902,9 @@ EXTEND
       | i = REL -> mkDB (int_of_string (String.sub i 1 (String.length i - 1)))
       | NIL -> mkNil
       | s = LITERAL -> mkExt (mkString s)
+      | AT; u = UVAR; args = atom LEVEL "2" ->
+          let u, lvl = lvl_name_of u in
+          mkVApp (mkUv (get_uv u) lvl) args
       | LBRACKET; xs = LIST0 atom LEVEL "1" SEP COMMA;
           tl = OPT [ PIPE; x = atom LEVEL "0" -> x ]; RBRACKET ->
           let tl = match tl with None -> XNil | Some x -> x in
@@ -921,6 +937,7 @@ EXTEND
       | LPAREN; p = premise; RPAREN -> p
       | LPAREN; p = premise; RPAREN; IMPL; q = premise -> Impl(p,q)]
     ];
+  goal: [ [ p = premise(*; FULLSTOP*) -> p ] ];
   bound : 
     [ [ c = CONSTANT -> let c, lvl = lvl_name_of c in mkCon c lvl, false
       | u = UVAR -> let u, lvl = lvl_name_of u in mkUv (get_uv u) lvl, true ]
@@ -941,7 +958,7 @@ let parse e s =
   | Ploc.Exc(_,e) -> raise e
 
 let parse_program s : program = parse lp s 
-let parse_goal s : goal = sigma_abstract (parse premise s)
+let parse_goal s : goal = sigma_abstract (parse goal s)
 let parse_data s : data = parse atom s
 
 end (* }}} *)
@@ -1031,6 +1048,7 @@ let rec whd s t =
       let t', s = whd s t in
       t', if t == t' then s else set_sub i t' s
   | Uv _ -> t, s
+  | VApp _ -> t, s 
   | Seq(xs,tl) as x -> kool x, s
   | App v as x ->
       let hd = L.hd v in
@@ -1053,6 +1071,7 @@ let rec nf s x = match look x with
   | (Ext _ | Con _ | DB _ | Nil) as x -> kool x
   | Bin(n,t) -> mkBin n (nf s t)
   | Seq(xs,t) -> mkSeq (L.map (nf s) xs) (nf s t)
+  | VApp(t1,t2) -> mkVApp (nf s t1) (nf s t2)
   | (App _ | Uv _) as xf ->
       let x', _ = whd s x in 
       match look x' with
