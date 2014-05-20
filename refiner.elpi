@@ -159,12 +159,15 @@ uall2 [X|XS] [Y|YS] H :- (pi c\ pi d\ H c = H d), pi x\ uall2 XS YS (H x).
 add_dummy_lambdas M [] R :- M = R.
 add_dummy_lambdas M [_|XS] R :- pi c\ add_dummy_lambdas (M c) XS R.
 
+delift M L Y :- projection M L Y.
+delift M L Y :- mimick M L Y.
+
 % projection
-delift M [X|XS] Y :- unify X Y, pi c\ add_dummy_lambdas (M c) XS c.
+projection M [X|XS] Y :- unify X Y, pi c\ add_dummy_lambdas (M c) XS c.
+projection M [_|XS] Y :- pi c\ projection (M c) XS Y.
 
 % mimick
-delift M L (atom A) :- add_dummy_lambdas M L (atom A).
-delift M [_|XS] Y :- pi c\ delift (M c) XS Y.
+mimick M L (atom A) :- add_dummy_lambdas M L (atom A).
 
 
 %unif A M N :- prt "" (unif A M N), not true.
