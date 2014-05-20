@@ -15,11 +15,11 @@ eq (of M TY1 T1) (of N TY2 T2) :- $is (pair M N).
 assign_if_flex M T TY S:- $is_flex M, !, M=T, S=[goal M (ginst TY set)].
 assign_if_flex M T TY [].
 
-of M TY T S :- prt "" (of M TY T S), not true.
+%of M TY T S :- prt "" (of M TY T S), not true.
 
 of M TY T (append S S1) :- assign_if_flex M T TY S, delay M (ofr M TY T S1).
 
-ofr M TY T S :- prt "" (ofr M TY T S), not true.
+%ofr M TY T S :- prt "" (ofr M TY T S), not true.
 
 ofr hole TY T (append S S1) :- of T TY T S, of TY set TY S1.
 
@@ -150,60 +150,36 @@ subst Where What Out :- Where What = Out.
 
 /************************* unify ************************/
 
-uall2 _ _ H :- prt "uall2 " H, not true.
+%uall2 _ _ H :- prt "uall2 " H, not true.
 
 uall2 [] [] H.
 uall2 [X|XS] [Y|YS] H :- unify X Y, !, pi x\ uall2 XS YS (H x).
 uall2 [X|XS] [Y|YS] H :- (pi c\ pi d\ H c = H d), pi x\ uall2 XS YS (H x).
 
+add_dummy_lambdas M [] R :- M = R.
+add_dummy_lambdas M [_|XS] R :- pi c\ add_dummy_lambdas (M c) XS R.
 
-%unif A (@M L) (@N S) :- prt "unif " M, $print L, not true.
-unif ff (@M L1) (@M L2) :- !, uall2 L1 L2 M.
+% projection
+delift M [X|XS] Y :- unify X Y, pi c\ add_dummy_lambdas (M c) XS c.
+
+% mimick
+delift M L (atom A) :- add_dummy_lambdas M L (atom A).
+delift M [_|XS] Y :- pi c\ delift (M c) XS Y.
 
 
-
-%prt "xxxxxxxxxxxxx" (unif A (@M L) N), not true.
-unif A M N :- prt "xxxxxxxxxxxxx" (unif A M N), not true.
-
-%assign_if_flex M T TY S:- $is_flex M, !, M=T, S=[goal M (ginst TY set)].
-%assign_if_flex M T TY [].
-
-%unif _ M _ :-  $is_flex M, !, prt "GAME OVER" M, $abort "1".
-%unif _ _ M :-  $is_flex M, !, prt "GAME OVER" M, $abort "1".
+%unif A M N :- prt "" (unif A M N), not true.
 
 /* M=M */
-%unif ff (ginst M TM) (ginst N TN) :- is_same_flex M N, !, unify TM TN.
-%unif ff M N :- is_same_flex M N, !, rof M TM, rof N TN, unify TM TN.
-
-/* ginst with rigid body */
-%unif ff (ginst M T) N :- not ($is_flex M), !, unify N M.
-%unif ff N (ginst M T) :- not ($is_flex M), !, unify N M.
+unif ff (@M L1) (@M L2) :- !, uall2 L1 L2 M.
 
 /* flex=term */
-%unif ff (ginst M T) N :- $is_flex M, !, rof N TN, unify TN T, M = N.
-%unif ff N (ginst M T) :- $is_flex M, !, rof N TN, unify TN T, M = N.
-unif ff M N :-
- $is_flex M, !,
- $print "FLEX-RIGID\n",
- $print "ROF FLEX\n",
- rof M TM,
- $print "ROF RIGID\n",
- rof N TN,
- $print "UNIFY TYPES\n",
+unif _ T N :-
+ T = @M L,
+ !,
+ %rof T TM,
+ %rof N TN,
  %unify TM TN,
- $print "END FLEX-RIGID\n",
- M = N.
-unif ff N M :-
- $is_flex M, !,
- $print "RIGID-FLEX\n",
- $print "ROF FLEX\n",
- rof M TM,
- $print "ROF RIGID\n",
- rof N TN,
- $print "UNIFY TYPES\n",
- %unify TN TM,
- $print "END RIGID-FLEX\n",
- M = N.
+ delift M L N.
 
 /* reflexive closure + heuristic for == */
 /*unif ff _ T T :- !.*/
@@ -222,10 +198,8 @@ unif ff (lam S F) (lam T G) :-
 
 unif ff (prod S F) (prod T G) :-
   !,
-  $print "UNIFICO I SRC\n",
   unify S T,
   pi x\ of x S x nil => unif ff x x =>
-    $print "UNIFICO I TGT\n",
     unify (F x) (G x).
 
 /* contextual closure + heuristic */
