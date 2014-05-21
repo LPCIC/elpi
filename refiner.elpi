@@ -133,19 +133,6 @@ ho (lam LTY (x\ prod (L1 x) (R1 x))) T LTY (prod L R) :-
 ho (lam LTY (x\set)) T LTY set.
 ho (lam LTY (x\A)) T LTY A :- A = atom _.
 
-/************************* copy ************************/
-
-%copy (ginst G GT) (ginst G GT1) :- $is_flex G, !, copy GT GT1.
-%copy (ginst G GT) (ginst G1 GT1) :- copy G G1, copy GT GT1.
-/*
-copy G G :- $is_flex G, !.
-copy set set.
-copy A A :- A = atom _.
-copy (app A B) (app A1 B1) :- copy A A1, copy B B1.
-copy (lam T F) (lam T1 F1) :- copy T T1, pi x\ copy (F x) (F1 x).
-copy (prod T F) (prod T1 F1) :- copy T T1, pi x\ copy (F x) (F1 x).
-*/
-%subst Where What Out :- pi x\ copy x What => copy (Where x) Out.
 subst Where What Out :- Where What = Out.
 
 /************************* unify ************************/
@@ -213,6 +200,14 @@ unif ff N T :-
 
 unif _ (@M _) _ :- !, not true.
 unif _ _ (@M _) :- !, not true.
+
+/* lambda-intro on the fly */
+unif _ T (app H A) :-
+ H = @M L1, !,
+  % rof A Ty,
+  unif ff H (lam Ty G),
+  unif ff T (app H A).
+
 
 /* reflexive closure + heuristic for == */
 /*unif ff _ T T :- !.*/
