@@ -233,7 +233,10 @@ and unify_ho x y s =
       | Uv (id,lvl) -> mksubst (kool x) id lvl (kool y) (L.tl xs) s
       | _ -> assert false
     end
-  | _ -> assert false (*fail "not a pattern unif"*)
+  | _ ->
+    Format.eprintf "NOT A PU: %a = %a\n%!"
+      (prf_data []) (Red.nf s (kool x)) (prf_data []) (Red.nf s (kool y));
+    assert false (*fail "not a pattern unif"*)
 
 (* ******************************** Main loop ******************************* *)
 
