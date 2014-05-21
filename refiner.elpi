@@ -183,19 +183,12 @@ delift_aux (rec A1 B1 C1 D1) (rec A2 B2 C2 D2) :-
   delift_aux A1 A2, delift_aux B1 B2, delift_aux C1 C2, delift_aux D1 D2.
 
 % delift_meta M N L holds when M L1 = @N L with L1 now implicit as binds hyps
-delift_meta M N L :- prt "" (delift_meta M N L), not true.
+%delift_meta M N L :- prt "" (delift_meta M N L), not true.
 delift_meta M M [].
-delift_meta M N [X|XS] :-
- $print "QUE\n",
- delift_aux A X,
- $print "OK QUE\n",
- delift_meta M (N A) XS,
- $print "SUPER OK QUE\n".
+delift_meta M N [X|XS] :- delift_aux A X, delift_meta M (N A) XS.
 delift_meta M N [_|XS] :-
- $print "QUI\n",
  pi c\ N c = N2, % N is restricted
- delift_meta M N2 XS,
- $print "OK QUI\n".
+ delift_meta M N2 XS.
 
 %unif A M N :- prt "" (unif A M N), not true.
 
