@@ -156,27 +156,16 @@ uall2 [] [] H.
 uall2 [X|XS] [Y|YS] H :- unify X Y, !, pi x\ uall2 XS YS (H x).
 uall2 [X|XS] [Y|YS] H :- (pi c\ pi d\ H c = H d), pi x\ uall2 XS YS (H x).
 
-add_dummy_lambdas M [] R :- M = R.
-add_dummy_lambdas M [_|XS] R :- pi c\ add_dummy_lambdas (M c) XS R.
-
-delift M L Y :- projection M L Y.
-delift M L Y :- mimick M L Y.
+delift M [] Y :- prt "DELIFT" (pair M Y), delift_aux M Y.
+delift M [X|XS] Y :- pi c\ is c X => delift (M c) XS Y.
 
 % projection
-projection M [X|XS] Y :- unify X Y, pi c\ add_dummy_lambdas (M c) XS c.
-projection M [_|XS] Y :- pi c\ projection (M c) XS Y.
+delift_aux M Y :- is V X, unify X Y, M=V.
 
-% mimick
-mimick M L (atom A) :- add_dummy_lambdas M L (atom A).
-mimick M L set :- add_dummy_lambdas M L set.
-mimick M L (app N1 N2) :-
- mimick_app M L FN1 FN2,
- delift FN1 L N1,
- delift FN2 L N2.
-
-% mimick_app
-mimick_app M [] FN1 FN2 :- M = app FN1 FN2.
-mimick_app M [_|XS] FN1 FN2 :- pi c\ mimick_app (M c) XS (FN1 c) (FN2 c).
+%mimic
+delift_aux (atom A) (atom A).
+delift_aux set set.
+delift_aux (app M1 M2) (app N1 N2) :- delift_aux M1 N1, delift_aux M2 N2.
 
 %unif A M N :- prt "" (unif A M N), not true.
 
