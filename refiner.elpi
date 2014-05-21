@@ -217,7 +217,7 @@ unif _ _ (@M _) :- !, not true.
 /* reflexive closure + heuristic for == */
 /*unif ff _ T T :- !.*/
 unif ff set set :- !.
-unif ff A A :- A = atom _, !.
+unif ff (atom A) (atom A) :- !.
 
 /* contextual closure + heuristic */
 unif ff (app H A) (app K B) :- unify H K, unify A B.
