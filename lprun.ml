@@ -524,7 +524,7 @@ let apply_sub_hv_to_goal hv s g =
 
 let run_dls (p : program) (g : premise) =
   let hv, g, s = prepare_initial_goal g in
-  Format.eprintf "@[<hv2>goal:@ %a@]@\n%!" (prf_goal (ctx_of_hv hv)) g;
+  (*Format.eprintf "@[<hv2>goal:@ %a@]@\n%!" (prf_goal (ctx_of_hv hv)) g;*)
   let gls, s = contextualize_goal 0 s hv g in
   let s, dls, alts =
     run s (List.map (fun (d,g,ep) -> (d,g,ep@p,ep@p,0)) gls, []) [] in
