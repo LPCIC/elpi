@@ -1,3 +1,5 @@
+/************************* utilities ************************/
+
 true.
 
 is_same_flex M N :-
@@ -107,31 +109,7 @@ clean_sigma (append [] L1) L2 :- clean_sigma L1 L2.
 clean_sigma (append [X|Xs] L1) L2 :- clean_sigma [X | append Xs L1] L2.
 clean_sigma (append (append L1 L2) L3) L :- clean_sigma (append L1 (append L2 L3)) L.
 
-/************************* ho ************************/
-
-% ho (lam _ Res) What TYWhat Where
-
-% only mimic in (? ? = T) case
-%ho (lam LTY (x\T)) (ginst N _) LTY T :- $is_flex N, !.
-%ho (lam LTY (x\T)) (app (ginst N _) _) LTY T :- $is_flex N, !.
-ho (lam LTY (x\T)) N LTY T :- $is_flex N, !.
-ho (lam LTY (x\T)) (app N _) LTY T :- $is_flex N, !.
-
-% proj rigid
-ho (lam LTY (x\x)) T LTY T2 :- unify T T2.
-
-% mimic on compound terms
-ho (lam LTY (x\ app (L1 x) (R1 x))) T LTY (app L R) :- ho (lam _ L1) T LTY L, ho (lam __ R1) T LTY R.
-ho (lam LTY (x\ rec (A1 x) (B1 x) (C1 x) (D1 x))) T LTY (rec A B C D) :-
- ho (lam _ A1) T LTY A, ho (lam _ B1) T LTY B, ho (lam _ C1) T LTY C, ho (lam _ D1) T LTY D.
-ho (lam LTY (x\ lam (L1 x) (R1 x))) T LTY (lam L R) :-
- ho (lam _ L1) T LTY L, pi x\ ho (lam __ (R1 x)) T LTY (R x).
-ho (lam LTY (x\ prod (L1 x) (R1 x))) T LTY (prod L R) :-
- ho (lam _ L1) T LTY L, pi x\ ho (lam __ (R1 x)) T LTY (R x).
-
-% mimic on atomic terms
-ho (lam LTY (x\set)) T LTY set.
-ho (lam LTY (x\A)) T LTY A :- A = atom _.
+/************************* subst ************************/
 
 subst Where What Out :- Where What = Out.
 
@@ -173,7 +151,7 @@ delift_aux (rec A1 B1 C1 D1) (rec A2 B2 C2 D2) :-
 % delift_meta M N L holds when M L1 = @N L with L1 now implicit as binds hyps
 %delift_meta M N L :- prt "" (delift_meta M N L), not true.
 delift_meta M M [].
-delift_meta M N [X|XS] :- delift_aux A X, delift_meta M (N A) XS.
+delift_meta M N [X|XS] :- delift_aux A X, !, delift_meta M (N A) XS.
 delift_meta M N [_|XS] :-
  pi c\ N c = N2, % N is restricted
  delift_meta M N2 XS.
@@ -234,17 +212,8 @@ unif ff (prod S F) (prod T G) :-
 unif ff (rec A1 B1 C1 D1) (rec A2 B2 C2 D2) :-
   unify A1 A2, unify B1 B2, unify C1 C2, unify D1 D2.
 
-/* ho unification */
-%unif _ (app (ginst H TH) M) X :-
-%  $is_flex H, !, rof M TYM, ho H2 M TYM X, unify (ginst H TH) H2.
-unif _ (app H M) X :- $is_flex H, !, rof M TYM, ho H2 M TYM X, unify H H2.
-
 /* beta */
-unif _ (app L M) X :-
-  L = lam _ F,
-  !,
-  subst F M Y,
-  unify Y X.
+unif _ (app L M) X :- L = lam _ F, !, subst F M Y, unify Y X.
 
 /* delta */
 unif _ (atom ID) B :- body ID B.
@@ -252,9 +221,9 @@ unif _ (atom ID) B :- body ID B.
 /* delta */
 body plus (lam (atom nat)
              (n\ (rec (prod (atom nat) (x\ (atom nat))) n
-                    (lam (atom nat) (x\ x))
-                    (lam (atom nat) m\ lam (prod (atom nat) (x\ (atom nat))) acc\
-                       lam (atom nat) (n\ app (atom succ) (app acc n)))))) :- !.
+                   (lam (atom nat) (x\ x))
+                   (lam (atom nat) m\ lam (prod (atom nat) (x\ (atom nat))) acc\
+                      lam (atom nat) (n\ app (atom succ) (app acc n)))))) :- !.
 /* iota */
 unif _ (rec _ N _ _) _ :- $is_flex N, !, fail.
 unif _ (rec _ N B R) X :- N = atom zero, !, unify B X.
@@ -265,14 +234,14 @@ unif ff A B :- unif tt B A.
 
 unify A B :- unif ff A B.
 
-/* Tactics */
+/******************** Tactics **********************/
 
 tacsem i     (lam hole (x\ hole)).
 tacsem (a M) (app M hole).
 tacsem (h N) (var N).
 tacsem (r M) M.
 
-/* GUI */
+/******************** GUI **************************/
 
 test_unify A B TA2 A2 B2 Sig :-
   prt "---------> " (of A TA A1 Ex1),
@@ -334,8 +303,3 @@ claim Claim P1 :-
   clean_sigma (append Sig1 Sig2) Sig,
   step Sig,
   clean P P1. 
-
-test_delay X Y :-
-  delay X (test_delay1 Z Z => test_delay1 X Y), $print "delay", X = pippo.
-test_delay X pluto.
-
