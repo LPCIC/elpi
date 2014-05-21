@@ -158,6 +158,7 @@ uall2 [X|XS] [Y|YS] H :- restrict H, pi x\ uall2 XS YS (H x).
 
 % delift M L Y instantiates the output M s.t. @M L = Y
 % CSC: BUG, we should check typability of the delifted thing
+%delift M L Y :- prt "" (delift M L Y), not true.
 delift M [] Y :- delift_aux M Y.
 delift M [X|XS] Y :- pi c\ binds c X => delift (M c) XS Y.
 
