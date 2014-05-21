@@ -247,7 +247,7 @@ type goal = int * objective * program * program * int
 type dgoal = data * data list * premise * int * program
 type goals = goal list * dgoal list
 type alternatives = (subst * goals) list
-type continuation = subst * data list * premise * alternatives
+type continuation = data list * premise * alternatives
 type step_outcome = subst * goal list * alternatives
 type result = LP.goal * subst * LP.goal list * continuation
 
@@ -422,7 +422,7 @@ let rec cut lvl = function
   | (_,((_,_,_,_,l)::_,_)) :: xs when l + 1 = lvl -> xs
   | _ :: xs -> cut lvl xs
 
-let next_alt (_s : Lpdata.Subst.subst) (alts : alternatives) pp : subst * goal list * dgoal list * alternatives =
+let next_alt (alts : alternatives) pp : subst * goal list * dgoal list * alternatives =
   match alts with
   | [] -> raise NoClause
   | (s,(gs,dgs)) :: alts -> SPY "backtrack" pp s; s, gs, dgs, alts
@@ -481,7 +481,7 @@ let rec run s ((gls,dls) : goals) (alts : alternatives) : subst * dgoal list * a
          try let _ = run s' (gl,dls) [] in false
          with NoClause -> true in
        if ok then s, rest, dls, alts
-       else next_alt s alts (fun fmt _ -> pr_cur_goals gls fmt s')
+       else next_alt alts (fun fmt _ -> pr_cur_goals gls fmt s')
     | (depth,(`Delay(hv,t,p) as go), _, orig_prog,lvl) :: rest ->
        if flexible s t then
          try
@@ -489,7 +489,7 @@ let rec run s ((gls,dls) : goals) (alts : alternatives) : subst * dgoal list * a
                  TRACE "delay" (pr_cur_goal go lvl s)
                  let dls = (t,hv,p,depth,orig_prog) :: dls in
            s, rest, dls, alts
-         with NoClause -> next_alt s alts (pr_cur_goals gls)
+         with NoClause -> next_alt alts (pr_cur_goals gls)
        else
          let gl, s = goals_of_premise hv p depth orig_prog lvl s in
          s, gl@rest, dls, alts
@@ -502,7 +502,7 @@ let rec run s ((gls,dls) : goals) (alts : alternatives) : subst * dgoal list * a
          s, (resumed@subg@rest), dls,
            (List.map (fun (s,gs) -> s,cat_goals gs (rest,dls)) new_alts @ alts)
        with
-       | NoClause -> next_alt s alts (pr_cur_goals gls)
+       | NoClause -> next_alt alts (pr_cur_goals gls)
   in
   if gls = [] then s, dls, alts
   else run s (gls,dls) alts
@@ -530,16 +530,16 @@ let run_dls (p : program) (g : premise) =
     run s (List.map (fun (d,g,ep) -> (d,g,ep@p,ep@p,0)) gls, []) [] in
   apply_sub_hv_to_goal hv s g, s,
   List.map (fun (_,hv,g,_,_) -> apply_sub_hv_to_goal hv s g) dls,
-  (s,hv,g,alts)
+  (hv,g,alts)
 
-let next (s,hv,g,alts) =
+let next (hv,g,alts) =
  let s,gls,dls,alts =
-  next_alt s alts (fun fmt _ -> Format.fprintf fmt "next solution") in
+  next_alt alts (fun fmt _ -> Format.fprintf fmt "next solution") in
  (* from now on cut&paste from run_dls, the code need factorization *)
  let s, dls, alts = run s (gls,dls) alts in
  apply_sub_hv_to_goal hv s g, s,
  List.map (fun (_,hv,g,_,_) -> apply_sub_hv_to_goal hv s g) dls,
- (s,hv,g,alts)
+ (hv,g,alts)
 
 let run p g = let a,b,_,_ = run_dls p g in a, b
 
