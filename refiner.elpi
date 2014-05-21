@@ -182,7 +182,7 @@ unif _ _ (@M _) :- !, not true.
 /* lambda-intro on the fly */
 unif _ T (app H A) :-
  H = @M L1, !,
-  % rof A Ty,
+  rof A Ty,
   unif ff H (lam Ty G),
   unif ff T (app H A).
 
