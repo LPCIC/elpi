@@ -149,7 +149,7 @@ delift_aux (rec A1 B1 C1 D1) (rec A2 B2 C2 D2) :-
 % delift_meta M N L holds when M L1 = @N L with L1 now implicit as binds hyps
 %delift_meta M N L :- prt "" (delift_meta M N L), not true.
 delift_meta M M [].
-delift_meta M N [X|XS] :- delift_aux A X, !, delift_meta M (N A) XS.
+delift_meta M N [X|XS] :- delift_aux A X, ! /*red*/, delift_meta M (N A) XS.
 delift_meta M N [_|XS] :- % N is restricted
  pi c\ N c = N2, delift_meta M N2 XS.
 
@@ -213,7 +213,7 @@ body plus (lam (atom nat)
                    (lam (atom nat) m\ lam (prod (atom nat) (x\ (atom nat))) acc\
                       lam (atom nat) (n\ app (atom succ) (app acc n)))))) :- !.
 /* iota */
-unif _ (rec _ N _ _) _ :- $is_flex N, !, fail.
+unif _ (rec _ N _ _) _ :- $is_flex N, !/*red*/, fail.
 unif _ (rec _ N B R) X :- N = atom zero, !, unify B X.
 unif _ (rec T N B R) X :-
   N = app (atom succ) M, !, unify (app (app R M) (rec T M B R)) X.
