@@ -78,9 +78,11 @@ module LP : sig
   
   val isDB : int -> data -> bool
 
+  val collect_Uv : data -> data list
+
   type key = Key of data | Flex
   type program = annot_clause list
-  and annot_clause = int * data list * key * clause
+  and annot_clause = int * key * clause
   and clause = premise
   and premise = data
   and goal = premise
@@ -93,7 +95,6 @@ module LP : sig
   val mkImpl : premise -> premise -> premise
   val mkPi : int -> premise -> premise
   val mkSigma : int -> premise -> premise
-  val mkNot : premise -> premise
   val mkDelay : data -> premise -> premise
 
   type builtin = BIUnif of data * data | BICustom of string * data | BICut
@@ -104,7 +105,6 @@ module LP : sig
     | Impl of clause * premise
     | Pi of int * premise
     | Sigma of int * premise
-    | Not of premise
     | Delay of data * premise
   val look_premise : data -> kind_of_premise
 
@@ -117,6 +117,8 @@ module LP : sig
 
   val map_premise : (data -> data) -> premise -> premise
   val mapi_premise : (int -> data -> data) -> int -> premise -> premise
+
+  val collect_Uv_premise : premise -> data list
 
   val parse_program : string -> program
   val parse_goal : string -> goal
@@ -153,7 +155,7 @@ end
 
 module Red : sig
   val lift : ?from:int -> int -> LP.data -> LP.data
-  val beta_under : int -> LP.data -> LP.data list -> LP.data
+(*   val beta_under : int -> LP.data -> LP.data list -> LP.data *)
   val whd : Subst.subst -> LP.data -> LP.data * Subst.subst
   val nf : Subst.subst -> LP.data -> LP.data
 end

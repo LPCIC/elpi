@@ -229,7 +229,7 @@ let rec prf_data ctx fmt t =
        P.pp_open_hovbox fmt 2;
        let names = fresh_names "w" (List.length ctx) n in
        if pars then P.pp_print_string fmt "(";
-       P.pp_print_string fmt (String.concat "\\ " names ^ "\\");
+       P.pp_print_string fmt (String.concat "\\ " names ^ "\\" ^ string_of_int n);
        P.pp_print_space fmt ();
        print (List.rev names @ ctx) x;
        if pars then P.pp_print_string fmt ")";
@@ -526,13 +526,24 @@ let rec mapi f i x = match push x with
   | XVApp(t1,t2) -> XVApp(mapi f i t1, mapi f i t2)
   | XSusp _ -> assert false
  
- 
+
+let collect_Uv t =
+  let uvs = ref [] in
+  let _ = map (function XUv(n,l) as x -> uvs := x :: !uvs; x | x -> x) t in
+  let rec uniq seen = function
+    | [] -> List.rev seen
+    | x :: tl ->
+       if List.exists ((=) x) seen then uniq seen tl
+       else uniq (x :: seen) tl
+  in
+  uniq [] !uvs
+
 (* PROGRAM *)
 
 type key = Key of data | Flex
 
 type program = annot_clause list
-and annot_clause = int * data list * key * clause (* level, subst, key, clause *)
+and annot_clause = int * key * clause (* level, key, clause *)
 and clause = premise
 and premise = data
 and goal = premise
@@ -553,8 +564,6 @@ let pi_name = "*pi*"
 let mkPi n p = mkCApp pi_name [mkBin n p]
 let sigma_name = "*sigma*"
 let mkSigma n p = mkCApp sigma_name [mkBin n p]
-let not_name = "*not*"
-let mkNot x = mkCApp not_name [x]
 let delay_name = "*delay*"
 let mkDelay k p = mkCApp delay_name [k; p]
 
@@ -566,10 +575,15 @@ type kind_of_premise =
   | Impl of clause * premise
   | Pi of int * premise
   | Sigma of int * premise
-  | Not of premise
   | Delay of data * premise
 
-let destBin x = match look x with Bin(n,t) -> n, t | _ -> assert false
+let collect_Uv_premise = collect_Uv
+
+let rec destBin x =
+  match look x with
+  | Bin(n,t) when isBin t -> let m, t = destBin t in n+m, t
+  | Bin(n,t) -> n, t
+  | _ -> assert false
 let destExt x = match look x with Ext t -> t | _ -> assert false
 let look_premise p =
   match look p with
@@ -579,8 +593,6 @@ let look_premise p =
           AtomBI(BIUnif(L.get 1 xs,L.get 2 xs))
       | Con(name,0) when name = custom_name ->
           AtomBI(BICustom(getString (destExt (L.get 1 xs)),L.get 2 xs))
-      | Con(name,0) when name = cut_name ->
-          AtomBI BICut
       | Con(name,0) when name = conj_name ->
           Conj(L.tl xs)
       | Con(name,0) when name = impl_name ->
@@ -589,11 +601,11 @@ let look_premise p =
           let n,t = destBin (L.get 1 xs) in Pi(n,t)
       | Con(name,0) when name = sigma_name ->
           let n,t = destBin (L.get 1 xs) in Sigma(n,t)
-      | Con(name,0) when name = not_name ->
-          Not(L.get 1 xs)
       | Con(name,0) when name = delay_name ->
           Delay(L.get 1 xs, L.get 2 xs)
       | _ -> Atom (kool a))
+  | Con(name,0) when name = cut_name -> AtomBI BICut
+  | Con(name,0) when name = conj_name -> Conj L.empty
   | a -> Atom (kool a)
 
 let mkPi n p =
@@ -647,7 +659,7 @@ let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
   | Pi(n,p) ->
        let names = fresh_names "y" (List.length ctx) n in
        Format.pp_open_hvbox fmt 2;
-       Format.pp_print_string fmt ("pi "^String.concat "\\ " names ^ "\\");
+       Format.pp_print_string fmt ("pi "^String.concat "\\ " names ^ "\\" ^ string_of_int n);
        Format.pp_print_space fmt ();
        prf_premise ~positive ~pars (List.rev names @ ctx) fmt p;
        Format.pp_close_box fmt ()
@@ -675,10 +687,6 @@ let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
        end;
        if pars then Format.pp_print_string fmt ")";
        Format.pp_close_box fmt ()
-  | Not p ->
-       Format.fprintf fmt "not @[";
-       prf_premise ~pars ~positive ctx fmt p;
-       Format.pp_close_box fmt ()
   | Delay(t,p) ->
        Format.fprintf fmt "delay @[";
        prf_data ctx fmt t;
@@ -688,7 +696,7 @@ let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
 
 let prf_clause ?(dot=true) ?positive ctx fmt c =
   let c, ctx = match look_premise c with
-    | Sigma(n,c) -> c, fresh_names "X" 0 n @ ctx
+(*     | Sigma(n,c) -> c, fresh_names "X" 0 n @ ctx *)
     | _ -> c, ctx in
   Format.pp_open_hbox fmt ();
   prf_premise ?positive ctx fmt c;
@@ -706,7 +714,7 @@ let string_of_head = string_of_data
 let string_of_clause c = on_buffer (prf_clause []) c
 
 let prf_program fmt p =
-  let p = List.map (fun _, _, _, p -> p) p in
+  let p = List.map (fun _, _, p -> p) p in
   Format.pp_open_vbox fmt 0;
   iter_sep (Format.pp_print_space) (prf_clause []) fmt p;
   Format.pp_close_box fmt ()
@@ -715,7 +723,7 @@ let string_of_program p = on_buffer prf_program p
 let rec key_of p = match look_premise p with
   | AtomBI _ -> assert false
   | Conj _ -> assert false
-  | Impl(_,p) | Pi(_,p) | Sigma(_,p) | Not p -> key_of p
+  | Impl(_,p) | Pi(_,p) | Sigma(_,p) -> key_of p
   | Delay _ -> Flex
   | Atom t ->
       match look t with
@@ -787,11 +795,12 @@ let rec lex c = parser bp
        if Stream.peek s = Some '*' then comment2 c s
        else ("BIND", "/"), (bp,ep)
   | [< s >] ep ->
+       if Stream.peek s = None then ("EOF",""), (bp, ep)
+       else
        (match spy (tok c) s with
        | "CONSTANT","pi" -> "PI", "pi"
        | "CONSTANT","sigma" -> "SIGMA", "sigma"
        | "CONSTANT","nil" -> "NIL", "nil"
-       | "CONSTANT","not" -> "NOT","not"
        | "CONSTANT","delay" -> "DELAY","delay"
        | x -> x), (bp, ep)
 and comment c = parser
@@ -869,96 +878,94 @@ let rec binders c n = function
     | XSusp _ -> assert false
 
 let sigma_abstract t =
-  let uvl = List.rev (uvlist ()) in
-  List.fold_left (fun p uv -> mkSigma 1 (binders (mkUv uv 0) 1 p)) t uvl
+  let uvl = collect_Uv t in
+  List.fold_left (fun p uv -> mkSigma 1 (binders uv 1 p)) t uvl
 
 (* TODO : test that it is of the form of a clause *)
 let check_clause x = ()
 let check_goal x = ()
 
+let atom_levels = 
+  ["pi";"conjunction";"implication";"equality";"equality";"term";"app";"simple"]
+
+let () =
+  Grammar.extend [ Grammar.Entry.obj atom, None,
+    List.map (fun x -> Some x, Some Gramext.NonA, []) atom_levels ]
+
 EXTEND
   GLOBAL: lp premise atom goal;
-  lp: [ [ cl = LIST0 clause -> cl ] ];
+  lp: [ [ cl = LIST0 clause; EOF -> cl ] ];
   clause :
-    [ [ hd = atom; hyp = OPT [ ENTAILS; hyp = premise -> hyp ]; FULLSTOP ->
+    [[ hd = concl; hyp = OPT [ ENTAILS; hyp = premise -> hyp ]; FULLSTOP ->
          let hyp = match hyp with None -> mkConj L.empty | Some h -> h in
          let clause = sigma_abstract (mkImpl hyp (mkAtom hd)) in
          check_clause clause;
          reset (); 
-         0, [], key_of clause, clause ]
-    ];
+         0, key_of clause, clause ]];
   goal:
-    [ [ p = premise ->
+    [[ p = premise ->
          let g = sigma_abstract p in
          check_goal g;
          reset ();
-         g ] ];
-  atom :
-    [ "0"
-      [ l = LIST1 atom LEVEL "0bis" SEP CONS ->
+         g ]];
+  premise : [[ a = atom -> a ]];
+  concl : [[ a = atom LEVEL "term" -> a ]];
+  atom : LEVEL "pi"
+     [[ binder = [PI -> fst | SIGMA -> snd];
+        x = bound; BIND; p = atom LEVEL "conjunction" ->
+         let x, is_uv = x in
+         let bind = if is_uv then mkSigma else binder (mkPi,mkSigma) in
+         bind 1 (binders x 1 p) ]];
+  atom : LEVEL "conjunction"
+     [[ l = LIST1 atom LEVEL "implication" SEP COMMA ->
+          if List.length l = 1 then List.hd l
+          else mkConj (L.of_list l) ]];
+  atom : LEVEL "implication"
+     [[ a = atom (*LEVEL "equality"*); IMPL; p = atom LEVEL "implication" ->
+          mkImpl (mkAtom a) (mkAtom p)
+      | a = (*concl*)atom; ENTAILS; p = premise ->
+          mkImpl (mkAtom p) (mkAtom a) ]];
+  atom : LEVEL "equality"
+     [[ a = atom (*LEVEL "term"*); EQUAL; b = atom LEVEL "term" ->
+          mkAtomBiUnif a b ]];
+  atom : LEVEL "term"
+     [[ l = LIST1 atom LEVEL "app" SEP CONS ->
           if List.length l = 1 then List.hd l
           else
             let l = List.rev l in
             let last = List.hd l in
             let rest = List.rev (List.tl l) in
-            mkSeq (L.of_list rest) last ]
-    | "0bis"
-      [ l = LIST1 atom LEVEL "1" SEP COMMA ->
-          if List.length l = 1 then List.hd l
-          else mkConj (L.of_list l) ]
-    | "1"
-      [ app = LIST1 atom LEVEL "2" ->
-          if List.length app = 1 then List.hd app
-          else mkApp (L.of_list app)
-(*
-      | conj = LIST1 atom LEVEL "1" SEP COMMA ->
-         if List.length conj = 1 then List.hd conj
-         else mkConj (L.of_list conj)
-*)
-      ]
-    | "2" 
-      [ c = CONSTANT; b = OPT [ BIND; a = atom LEVEL "1" -> a ] ->
+            mkSeq (L.of_list rest) last ]];
+  atom : LEVEL "app"
+     [[ hd = atom(*LEVEL "simple"*); args = LIST1 atom LEVEL "simple" ->
+          mkApp (L.of_list (hd :: args)) ]];
+  atom : LEVEL "simple" 
+     [[ c = CONSTANT; b = OPT [ BIND; a = atom LEVEL "term" -> a ] ->
           let c, lvl = lvl_name_of c in 
           let x = mkCon c lvl in
           (match b with
           | None -> check_con c lvl; x
           | Some b ->  mkBin 1 (binders x 1 b))
-(*
       | u = UVAR -> let u, lvl = lvl_name_of u in mkUv (get_uv u) lvl
       | u = FRESHUV -> let u, lvl = fresh_lvl_name () in mkUv (get_uv u) lvl
       | i = REL -> mkDB (int_of_string (String.sub i 1 (String.length i - 1)))
       | NIL -> mkNil
       | s = LITERAL -> mkExt (mkString s)
-      | AT; u = UVAR; args = atom LEVEL "2" ->
+      | AT; u = UVAR; args = atom LEVEL "simple" ->
           let u, lvl = lvl_name_of u in
           mkVApp (mkUv (get_uv u) lvl) args
-      | a = atom; IMPL; p = atom -> mkImpl (mkAtom a) (mkAtom p)
-      | a = atom; EQUAL; b = atom -> mkAtomBiUnif a b
-(*       | a = atom -> mkAtom a *)
-      | a = atom; ENTAILS; hyp = LIST1 atom LEVEL "2" SEP COMMA ->
-         mkImpl (mkConj (L.of_list hyp)) (mkAtom a)
-      | bt = BUILTIN; a = atom -> mkAtomBiCustom bt a
+      | bt = BUILTIN; a = atom LEVEL "simple" -> mkAtomBiCustom bt a
       | BANG -> mkAtomBiCut
-      | NOT; p = atom LEVEL "2" -> mkNot p
-      | DELAY; t = atom LEVEL "2"; p = atom LEVEL "2" -> mkDelay t p
-      | binder = [PI -> fst | SIGMA -> snd];
-        x = bound; BIND; p = atom LEVEL "1" ->
-         let x, is_uv = x in
-         let bind = if is_uv then mkSigma else binder (mkPi,mkSigma) in
-         bind 1 (binders x 1 p)
-      | LBRACKET; xs = LIST0 atom LEVEL "1" SEP COMMA;
-          tl = OPT [ PIPE; x = atom LEVEL "0" -> x ]; RBRACKET ->
+      | DELAY; t = atom LEVEL "simple"; p = atom LEVEL "simple" -> mkDelay t p
+      | LBRACKET; xs = LIST0 atom LEVEL "implication" SEP COMMA;
+          tl = OPT [ PIPE; x = atom LEVEL "term" -> x ]; RBRACKET ->
           let tl = match tl with None -> XNil | Some x -> x in
           if List.length xs = 0 && tl <> XNil then 
             raise (Token.Error ("List with not elements cannot have a tail"));
           if List.length xs = 0 then mkNil
           else mkSeq (L.of_list xs) tl
-*)
-      | LPAREN; a = atom LEVEL "0"; RPAREN -> a
-      ]
-    ];
-
-  premise : [ [ a = atom -> a ] ];
+      | LPAREN; a = atom; RPAREN -> a
+      ]];
   bound : 
     [ [ c = CONSTANT -> let c, lvl = lvl_name_of c in mkCon c lvl, false
       | u = UVAR -> let u, lvl = lvl_name_of u in mkUv (get_uv u) lvl, true ]
@@ -1048,6 +1055,7 @@ let beta t start len v =
   SPY "rdx" (prf_data []) rdx;
   rdx
 
+(*
 let rec mkskip n e = match n with
   | 0 -> e
   | n -> XArgs(L.singl (XDB 1),n,mkskip (n-1) e)
@@ -1060,6 +1068,7 @@ let beta_under depth t l =
       (mkskip depth
           (XArgs(L.of_list l, 0, XEmpty)))
 
+*)
 let rec whd s t =
   TRACE "whd" (fun fmt -> prf_data [] fmt t)
   match look t with

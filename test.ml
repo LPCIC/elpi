@@ -125,6 +125,10 @@ let test_whd () =
   test "(x/ y/ x) (x/y/ x x y) b c" "y/c c y";
   test ~nf:true "(x/ y/ z/ t/ x r y) (x/y/ x x y) b" "x/y/r r b";
   test "(x/ y/ z/ t/ x r y) (x/y/ x x y) b c c" "r r b";
+   (*Trace.init ~where:("whd",1,1000) ~filter_out:["rdx";(*"push.*";"epush.*";*)"unif";"bind";"t$";"vj$";(*"rule";"whd";*)(*"hv";*)"premise";(*"psusp";*)"skipped"] ~verbose:false true; *)
+  test " (x/(y/z/ y) t1 t2) t3" "t1";
+  assert false;
+  test " (x/(y/z/ [y,z]) c1 c2) X1" "[c1,c2]";
   ;;
 
 let test_unif () =
@@ -188,14 +192,16 @@ let test_parse () =
     let p = LP.parse_program s in
     Format.eprintf "@[<hv2>program:@ %a@]@\n%!" LP.prf_program p in
   let test_g s =
-    let hv, g, s = prepare_initial_goal (LP.parse_goal s) in
+    let g, s = prepare_initial_goal (LP.parse_goal s) in
     Format.eprintf "@[<hv2>goal:@ %a@]@\n%!"
-      (LP.prf_goal (ctx_of_hv hv)) (Subst.apply_subst_goal s g) in
-  Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";"epush.*";(*"unif";"bind";"t$";"vj$";*)"rule";"whd";"hv";"premise";"psusp";"skipped"] ~verbose:false true;
+      (LP.prf_goal []) (Subst.apply_subst_goal s g) in
   test_p "copy c d.";
   test_p "copy (foo c) d.";
+  test_p "copy (foo c) ((pi x\\ y) = x).";
   test_p "copy (foo c) d :- bar, x :: baz.";
-  assert false;
+  test_p "copy (foo c) d :- bar, baz.";
+  test_p "copy X.";
+  test_p "not A :- A, !, false.";
   test_p "copy (lam F) (lam G) :- pi x\\ copy x x => copy (F x) (G x).";
   test_p "copy (lam F) (lam G)/* foo */:- pi x/ copy x x => copy (F x) (G x).";
   test_g "(foo Z :- Z = c) => (foo Y :- Y = a, sigma X/ X = nota) => foo X";
@@ -235,6 +241,7 @@ let test_copy () =
 ;;
 
 let test_list () =
+(*     Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";"epush.*";(*"unif";"bind";"t$";"vj$";*)"rule";"whd";"hv";"premise";"psusp";"skipped"] ~verbose:false true; *)
   test_prog "
     rev [] [].
     rev [X|Y] T :- rev Y Z, rcons X Z T.
@@ -258,8 +265,9 @@ let test_aug () =
 ;;
 
 let test_back () =
-  test_prog " foo X :- bar.  foo X :- X = a."
-  "foo a";
+  test_prog " foo X :- bar.  foo X :- X = a." "foo a";
+(*   Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";"epush.*";"unif";"bind";"t$";"vj$";"rule";"whd";(*"hv";"premise";*)"psusp";"skipped"] ~verbose:false true;  *)
+  test_prog " go X :- pi w/ sigma A/ A = X w." "go X";
 ;;
 
 let test_custom () =
@@ -555,6 +563,9 @@ let test_refiner () =
   test_prog "
 
 /************************* helpers ************************/
+
+not A :- A, !, false.
+not A.
 
 is_flex T :- $is_flex T.
 
@@ -854,6 +865,11 @@ claim Claim P1 :-
   *)
 ;;
 
+let test_pi () =
+        test_prog "foo :- sigma X/ pi x/ pi y/ [x,y] = [x,y]." "foo";
+;;
+
+
 let set_terminal_width () =
   let ic, _ as p = Unix.open_process "tput cols" in
   let w = int_of_string (input_line ic) in
@@ -883,20 +899,19 @@ let _ =
     match LP.look t with
     | LP.Uv _ -> s
     | _ -> raise NoClause);
-(*
   test_L ();
   test_LPdata ();
-*)
   test_parse ();
   test_whd ();
-  test_unif ();
+(*   test_unif (); *)
   test_coq ();
   test_copy ();
   test_list ();
   test_aug ();
   test_custom ();
   test_back ();
-(*    Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";"epush.*";(*"unif";"bind";"t$";"vj$";*)"rule";"whd";"hv";"premise";"psusp";"skipped"] ~verbose:true true; *)
+    Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";(*"epush.*";*)"unif";"bind";"t$";"vj$";"rule";"whd";(*"hv";*)"premise";"psusp";"skipped"] ~verbose:false true; 
+  test_pi ();
 (*   test_refiner (); *)
-  test_typeinf ();
+(*   test_typeinf (); *)
 

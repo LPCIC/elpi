@@ -12,7 +12,7 @@ val unify : LP.data -> LP.data -> Subst.subst -> Subst.subst
 exception NoClause
 
 type continuation
-type result = LP.goal * Subst.subst * LP.goal list * continuation
+type result = LP.goal * (LP.data * LP.data) list * Subst.subst * LP.goal list * continuation
 
 val run_dls : LP.program -> LP.goal -> result
 val next: continuation -> result
@@ -21,9 +21,7 @@ val next: continuation -> result
 val run : LP.program -> LP.goal -> LP.goal * Subst.subst
 
 (* debug *)
-val prepare_initial_goal : LP.goal -> LP.data list * LP.goal * Subst.subst
+val prepare_initial_goal : LP.goal -> LP.goal * Subst.subst
 
 val register_custom :
   string -> (LP.data -> Subst.subst -> int -> LP.program -> Subst.subst) -> unit
-
-val ctx_of_hv : LP.data list -> LP.name list

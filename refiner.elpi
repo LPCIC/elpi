@@ -1,6 +1,8 @@
 /************************* utilities ************************/
 
 true.
+not A :- A, !, false.
+not A.
 
 is_same_flex M N :-
   $is_flex M, $is_flex N, not(dummy1__ = M, dummy2__ = N).
