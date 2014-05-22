@@ -74,13 +74,13 @@ let test_prog p g =
  try
   let p = LP.parse_program p in
   let g = LP.parse_goal g in
-  Format.eprintf "@[<hv2>program:@ %a@]@\n%!" LP.prf_program p;
+  (*Format.eprintf "@[<hv2>program:@ %a@]@\n%!" LP.prf_program p;*)
   let rec aux (g,s,dgs,continuation) =
-   Format.eprintf
+   (*Format.eprintf
      "@\n@[<hv2>output:@ %a@]@\n@[<hv2>nf out:@ %a@]@\n@[<hv2>subst:@ %a@]@\n%!"
      (LP.prf_goal []) (Subst.apply_subst_goal s g) 
      (LP.prf_goal []) (LP.map_premise (Red.nf s) g)
-     Subst.prf_subst s;
+     Subst.prf_subst s;*)
    List.iter (fun g ->
     Format.eprintf
      "@[<hv2>delay:@ %a@]@\n%!"
@@ -111,7 +111,7 @@ let _ =
     let g =
       Printf.printf "goal> %!";
       input_line stdin in
-(*    Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";"epush.*";(*"unif";"bind";"t$";"vj$";*)"rule";"whd";"hv";"premise";"psusp";"skipped"] true; *)
+    (*Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";"epush.*";"unif";"bind";"t$";"vj$";"rule";"whd";"hv";"premise";"psusp";"skipped"] true;*)
     test_prog p g
   done
 

@@ -437,6 +437,7 @@ let mkCon n l = XCon(n,l)
 let mkDB i = XDB i
 let mkExt x = XExt x
 let rec mkSeq xs tl =
+ if L.len xs = 0 then tl else
   match tl with
   | XSeq (ys,tl) -> mkSeq (L.append xs ys) tl
   | _ -> XSeq(xs,tl)

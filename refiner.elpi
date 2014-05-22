@@ -1,3 +1,5 @@
+/************************* utilities ************************/
+
 true.
 
 is_same_flex M N :-
@@ -107,127 +109,99 @@ clean_sigma (append [] L1) L2 :- clean_sigma L1 L2.
 clean_sigma (append [X|Xs] L1) L2 :- clean_sigma [X | append Xs L1] L2.
 clean_sigma (append (append L1 L2) L3) L :- clean_sigma (append L1 (append L2 L3)) L.
 
-/************************* ho ************************/
+/************************* subst ************************/
 
-% ho (lam _ Res) What TYWhat Where
-
-% only mimic in (? ? = T) case
-%ho (lam LTY (x\T)) (ginst N _) LTY T :- $is_flex N, !.
-%ho (lam LTY (x\T)) (app (ginst N _) _) LTY T :- $is_flex N, !.
-ho (lam LTY (x\T)) N LTY T :- $is_flex N, !.
-ho (lam LTY (x\T)) (app N _) LTY T :- $is_flex N, !.
-
-% proj rigid
-ho (lam LTY (x\x)) T LTY T2 :- unify T T2.
-
-% mimic on compound terms
-ho (lam LTY (x\ app (L1 x) (R1 x))) T LTY (app L R) :- ho (lam _ L1) T LTY L, ho (lam __ R1) T LTY R.
-ho (lam LTY (x\ rec (A1 x) (B1 x) (C1 x) (D1 x))) T LTY (rec A B C D) :-
- ho (lam _ A1) T LTY A, ho (lam _ B1) T LTY B, ho (lam _ C1) T LTY C, ho (lam _ D1) T LTY D.
-ho (lam LTY (x\ lam (L1 x) (R1 x))) T LTY (lam L R) :-
- ho (lam _ L1) T LTY L, pi x\ ho (lam __ (R1 x)) T LTY (R x).
-ho (lam LTY (x\ prod (L1 x) (R1 x))) T LTY (prod L R) :-
- ho (lam _ L1) T LTY L, pi x\ ho (lam __ (R1 x)) T LTY (R x).
-
-% mimic on atomic terms
-ho (lam LTY (x\set)) T LTY set.
-ho (lam LTY (x\A)) T LTY A :- A = atom _.
-
-/************************* copy ************************/
-
-%copy (ginst G GT) (ginst G GT1) :- $is_flex G, !, copy GT GT1.
-%copy (ginst G GT) (ginst G1 GT1) :- copy G G1, copy GT GT1.
-/*
-copy G G :- $is_flex G, !.
-copy set set.
-copy A A :- A = atom _.
-copy (app A B) (app A1 B1) :- copy A A1, copy B B1.
-copy (lam T F) (lam T1 F1) :- copy T T1, pi x\ copy (F x) (F1 x).
-copy (prod T F) (prod T1 F1) :- copy T T1, pi x\ copy (F x) (F1 x).
-*/
-%subst Where What Out :- pi x\ copy x What => copy (Where x) Out.
 subst Where What Out :- Where What = Out.
 
 /************************* unify ************************/
 
-%uall2 _ _ H :- prt "uall2 " H, not true.
+restrict X :- pi c\ pi d\ X c = X d.
 
 uall2 [] [] H.
 uall2 [X|XS] [Y|YS] H :- unify X Y, !, pi x\ uall2 XS YS (H x).
-uall2 [X|XS] [Y|YS] H :- (pi c\ pi d\ H c = H d), pi x\ uall2 XS YS (H x).
+uall2 [X|XS] [Y|YS] H :- restrict H, pi x\ uall2 XS YS (H x).
 
-add_dummy_lambdas M [] R :- M = R.
-add_dummy_lambdas M [_|XS] R :- pi c\ add_dummy_lambdas (M c) XS R.
+% delift M L Y instantiates the output M s.t. @M L = Y
+% CSC: BUG, we should check typability of the delifted thing
+%delift M L Y :- prt "" (delift M L Y), not true.
+delift M [] Y :- delift_aux M Y.
+delift M [X|XS] Y :- pi c\ binds c X => delift (M c) XS Y.
 
-delift M L Y :- projection M L Y.
-delift M L Y :- mimick M L Y.
+%delift_aux M Y :- prt "" (delift_aux M Y), not true.
 
 % projection
-projection M [X|XS] Y :- unify X Y, pi c\ add_dummy_lambdas (M c) XS c.
-projection M [_|XS] Y :- pi c\ projection (M c) XS Y.
+delift_aux M Y :- binds V X, unify X Y, M=V.
 
-% mimick
-mimick M L (atom A) :- add_dummy_lambdas M L (atom A).
-mimick M L set :- add_dummy_lambdas M L set.
-mimick M L (app N1 N2) :-
- mimick_app M L FN1 FN2,
- delift FN1 L N1,
- delift FN2 L N2.
+%mimic (i.e. copy-clauses)
+delift_aux M (@N L) :- !, delift_meta M N L.
+delift_aux (atom A) (atom A).
+delift_aux set set.
+delift_aux (app M1 M2) (app N1 N2) :- delift_aux M1 N1, delift_aux M2 N2.
+delift_aux M N :- delift_aux2 M N. % to avoid adding clauses before the
+                                   % one for the flexible cases
+delift_aux (lam S1 F1) (lam S2 F2) :-
+ delift_aux S1 S2, pi c\ delift_aux2 c c => delift_aux (F1 c) (F2 c).
+delift_aux (prod S1 F1) (prod S2 F2) :-
+ delift_aux S1 S2, pi c\ delift_aux2 c c => delift_aux (F1 c) (F2 c).
+delift_aux (rec A1 B1 C1 D1) (rec A2 B2 C2 D2) :-
+  delift_aux A1 A2, delift_aux B1 B2, delift_aux C1 C2, delift_aux D1 D2.
 
-% mimick_app
-mimick_app M [] FN1 FN2 :- M = app FN1 FN2.
-mimick_app M [_|XS] FN1 FN2 :- pi c\ mimick_app (M c) XS (FN1 c) (FN2 c).
+% delift_meta M N L holds when M L1 = @N L with L1 now implicit as binds hyps
+%delift_meta M N L :- prt "" (delift_meta M N L), not true.
+delift_meta M M [].
+delift_meta M N [X|XS] :- delift_aux A X, !, delift_meta M (N A) XS.
+delift_meta M N [_|XS] :- % N is restricted
+ pi c\ N c = N2, delift_meta M N2 XS.
 
 %unif A M N :- prt "" (unif A M N), not true.
 
 /* M=M */
-unif ff (@M L1) (@M L2) :- !, uall2 L1 L2 M.
+unif ff (@M L1) (@N L2) :- is_same_flex M N, !, uall2 L1 L2 M.
 
 /* flex=term */
-unif _ T N :-
+unif ff T N :-
  T = @M L,
- !,
  %rof T TM,
  %rof N TN,
  %unify TM TN,
  delift M L N.
+/* term=flex */
+unif ff N T :-
+ T = @M L,
+ %rof T TM,
+ %rof N TN,
+ %unify TN TM,
+ delift M L N.
+
+unif _ (@M _) _ :- !, not true.
+unif _ _ (@M _) :- !, not true.
+
+/* lambda-intro on the fly */
+unif _ T (app H A) :-
+ H = @M L1, !, rof A Ty, unif ff H (lam Ty G), unif ff T (app H A).
+
 
 /* reflexive closure + heuristic for == */
 /*unif ff _ T T :- !.*/
 unif ff set set :- !.
-unif ff A A :- A = atom _, !.
+unif ff (atom A) (atom A) :- !.
 
 /* contextual closure + heuristic */
 unif ff (app H A) (app K B) :- unify H K, unify A B.
 
 /* contextual closure */
 unif ff (lam S F) (lam T G) :-
-  !,
-  unify S T,
-  pi x\ of x S x nil => unif ff x x =>
-    unify (F x) (G x).
+  !, unify S T, pi x\ of x S x nil => unif ff x x => unify (F x) (G x).
 
 unif ff (prod S F) (prod T G) :-
-  !,
-  unify S T,
-  pi x\ of x S x nil => unif ff x x =>
-    unify (F x) (G x).
+  !, unify S T, pi x\ of x S x nil => unif ff x x => unify (F x) (G x).
 
 /* contextual closure + heuristic */
 unif ff (rec A1 B1 C1 D1) (rec A2 B2 C2 D2) :-
   unify A1 A2, unify B1 B2, unify C1 C2, unify D1 D2.
 
-/* ho unification */
-%unif _ (app (ginst H TH) M) X :-
-%  $is_flex H, !, rof M TYM, ho H2 M TYM X, unify (ginst H TH) H2.
-unif _ (app H M) X :- $is_flex H, !, rof M TYM, ho H2 M TYM X, unify H H2.
-
 /* beta */
-unif _ (app L M) X :-
-  L = lam _ F,
-  !,
-  subst F M Y,
-  unify Y X.
+unif _ (app L M) X :- L = lam _ F, !, subst F M Y, unify Y X.
 
 /* delta */
 unif _ (atom ID) B :- body ID B.
@@ -235,27 +209,28 @@ unif _ (atom ID) B :- body ID B.
 /* delta */
 body plus (lam (atom nat)
              (n\ (rec (prod (atom nat) (x\ (atom nat))) n
-                    (lam (atom nat) (x\ x))
-                    (lam (atom nat) m\ lam (prod (atom nat) (x\ (atom nat))) acc\
-                       lam (atom nat) (n\ app (atom succ) (app acc n)))))) :- !.
+                   (lam (atom nat) (x\ x))
+                   (lam (atom nat) m\ lam (prod (atom nat) (x\ (atom nat))) acc\
+                      lam (atom nat) (n\ app (atom succ) (app acc n)))))) :- !.
 /* iota */
 unif _ (rec _ N _ _) _ :- $is_flex N, !, fail.
 unif _ (rec _ N B R) X :- N = atom zero, !, unify B X.
-unif _ (rec T N B R) X :- N = app (atom succ) M, !, unify (app (app R M) (rec T M B R)) X.
+unif _ (rec T N B R) X :-
+  N = app (atom succ) M, !, unify (app (app R M) (rec T M B R)) X.
 
 /* symmetric */
 unif ff A B :- unif tt B A.
 
 unify A B :- unif ff A B.
 
-/* Tactics */
+/******************** Tactics **********************/
 
 tacsem i     (lam hole (x\ hole)).
 tacsem (a M) (app M hole).
 tacsem (h N) (var N).
 tacsem (r M) M.
 
-/* GUI */
+/******************** GUI **************************/
 
 test_unify A B TA2 A2 B2 Sig :-
   prt "---------> " (of A TA A1 Ex1),
@@ -317,8 +292,3 @@ claim Claim P1 :-
   clean_sigma (append Sig1 Sig2) Sig,
   step Sig,
   clean P P1. 
-
-test_delay X Y :-
-  delay X (test_delay1 Z Z => test_delay1 X Y), $print "delay", X = pippo.
-test_delay X pluto.
-

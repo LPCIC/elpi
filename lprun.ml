@@ -122,8 +122,25 @@ let rec bind x id depth lvl args t s =
           let t = mkAppv h (L.append ws vs) 0 (nws+nvs) in
           SPY "vj" (prf_data []) vj; SPY "t" (prf_data[]) t;
           t, s
-      | Uv(j,l) when j <> id && L.len args = 0 -> t, s
-      | Uv(j,l) when j <> id && isPU s bs ->
+      | Uv(j,l) when j <> id ->
+          let bs = L.tl bs in
+          let nbs = L.len bs in
+          let ssrels,ssargs,s,_ =
+           L.fold
+            (fun e (ssrels,ssargs,s,n) ->
+              try
+               let e,s = bind x id depth lvl args e s in
+               mkDB n::ssrels, e::ssargs, s, n-1
+              with UnifFail _ -> ssrels,ssargs,s,n-1)
+             bs ([],[],s,nbs) in
+          let ssrels = List.rev ssrels in
+          let ssargs = List.rev ssargs in
+          let h, s = fresh_uv l s in
+          let vj = mkBin nbs (mkApp (L.of_list (h::ssrels))) in
+          let s = set_sub j vj s in
+          let t = mkApp (L.of_list (h::ssargs)) in
+          t, s
+      (*| Uv(j,l) when j <> id && isPU s bs ->
           SPY "2hd" (prf_data []) (mkNil);
           let bs = L.tl bs in
           let nbs = L.len bs in
@@ -145,7 +162,7 @@ let rec bind x id depth lvl args t s =
           let s = set_sub j vj s in
           let t = mkAppv h (L.append cs us) 0 (ncs+nus) in
           SPY "vj" (prf_data []) vj; SPY "t" (prf_data[]) t;
-          t, s
+          t, s*)
       | Uv _ -> assert false (*fail "ho-ho"*)
 
 let keep xs ys s =
@@ -233,7 +250,10 @@ and unify_ho x y s =
       | Uv (id,lvl) -> mksubst (kool x) id lvl (kool y) (L.tl xs) s
       | _ -> assert false
     end
-  | _ -> assert false (*fail "not a pattern unif"*)
+  | _ ->
+    Format.eprintf "NOT A PU: %a = %a\n%!"
+      (prf_data []) (Red.nf s (kool x)) (prf_data []) (Red.nf s (kool y));
+    assert false (*fail "not a pattern unif"*)
 
 (* ******************************** Main loop ******************************* *)
 
@@ -524,7 +544,7 @@ let apply_sub_hv_to_goal hv s g =
 
 let run_dls (p : program) (g : premise) =
   let hv, g, s = prepare_initial_goal g in
-  Format.eprintf "@[<hv2>goal:@ %a@]@\n%!" (prf_goal (ctx_of_hv hv)) g;
+  (*Format.eprintf "@[<hv2>goal:@ %a@]@\n%!" (prf_goal (ctx_of_hv hv)) g;*)
   let gls, s = contextualize_goal 0 s hv g in
   let s, dls, alts =
     run s (List.map (fun (d,g,ep) -> (d,g,ep@p,ep@p,0)) gls, []) [] in
