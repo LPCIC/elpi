@@ -342,10 +342,10 @@ let contextualize depth t hv =
 let add_cdepth b cdepth =
   List.map (fun (hv,p) -> cdepth, hv, (if b then key_of p else Flex), p)
 
-let mkAtom t hv = `Atom(contextualize 0 t hv, key_of (Atom t))
+let mkAtom t hv = `Atom(contextualize 0 t hv, key_of t)
 
 let contextualize_premise ?(compute_key=false) depth subst old_hv premise =
-  let rec aux cdepth depth s hv eh = function
+  let rec aux cdepth depth s hv eh p = match look_premise p with
   | Atom t ->
       [cdepth, mkAtom t hv, add_cdepth compute_key cdepth eh], s
   | AtomBI (BIUnif(x,y)) ->
@@ -356,7 +356,8 @@ let contextualize_premise ?(compute_key=false) depth subst old_hv premise =
        add_cdepth compute_key cdepth eh], s
   | AtomBI BICut ->
       [cdepth, `Cut, add_cdepth compute_key cdepth eh], s
-  | Impl(Conj ps,h) ->
+  | Impl(ps,h) when isConj ps ->
+      let ps = destConj ps in
       aux cdepth depth s hv (List.map (fun p -> hv,p) ps @ eh) h
   | Impl(p,h) -> aux cdepth depth s hv ((hv,p) :: eh) h
   | Pi(n,h) -> aux (cdepth+n) depth s (mkhv n (depth+1) @ hv) eh h
@@ -366,7 +367,7 @@ let contextualize_premise ?(compute_key=false) depth subst old_hv premise =
   | Conj l ->
       let ll, s = List.fold_right (fun p (acc,s) ->
         let l, s = aux cdepth depth s hv eh p in
-        l::acc, s) l ([],s) in
+        l::acc, s) (L.to_list l) ([],s) in
       List.flatten ll, s
   | Not p -> [cdepth, `Not (hv,p), add_cdepth compute_key cdepth eh], s
   | Delay(t, p) ->
@@ -470,16 +471,18 @@ let resume s lvl (dls : dgoal list) =
        let gl, s = goals_of_premise hv p depth orig_prog lvl s in
        Some(gl,s)) dls s
          
-let add_delay (t,hv,Atom a,depth,orig_prog as dl) s dls run = 
+let add_delay (t,hv,a,depth,orig_prog as dl) s dls run = 
+  let a = destAtom a in
   let rec aux = function
   | [] -> dl :: dls, s
-  | (t',hv',Atom a',depth',orig_prog') :: rest
+  | (t',hv',a',depth',orig_prog') :: rest
     when LP.equal (Red.nf s t) (Red.nf s t') && false ->
+      let a' = destAtom a' in
       let a = contextualize 0 a hv in
       let a' = contextualize 0 a' hv' in
       let g = mkApp (L.of_list [mkCon "eq" 0; a; a']) in
       let is_funct =
-        try let _ = run s ([max depth depth',`Atom(g,key_of (Atom g)),orig_prog,orig_prog,0],[]) [] in true
+        try let _ = run s ([max depth depth',`Atom(g,key_of g),orig_prog,orig_prog,0],[]) [] in true
         with NoClause -> false in
       if not is_funct then aux rest
       else assert false
@@ -529,18 +532,18 @@ let rec run s ((gls,dls) : goals) (alts : alternatives) : subst * dgoal list * a
 
 let prepare_initial_goal g =
   let s = empty 1 in
-  match g with
+  match look_premise g with
   | Sigma(n,g) ->
       let ms, s = fresh_uv n 0 s in
       ms, g, s
   | _ -> [], g, s
 
 let apply_sub_hv_to_goal hv s g =
-  fst(fold_map_premise 0 (fun i t () ->
+  mapi_premise (fun i t ->
     let n = List.length hv in
     let vhv = if hv = [] then L.empty else L.of_list (List.rev hv) in
     let v = L.append vhv (L.init i (fun j -> mkDB(i-j))) in
-    fst(Red.whd s (mkAppv (mkBin (i+n) t) v 0 (L.len v))), ()) g ())
+    fst(Red.whd s (mkAppv (mkBin (i+n) t) v 0 (L.len v)))) 0 g
 
 let run_dls (p : program) (g : premise) =
   let hv, g, s = prepare_initial_goal g in

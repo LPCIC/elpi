@@ -191,6 +191,11 @@ let test_parse () =
     let hv, g, s = prepare_initial_goal (LP.parse_goal s) in
     Format.eprintf "@[<hv2>goal:@ %a@]@\n%!"
       (LP.prf_goal (ctx_of_hv hv)) (Subst.apply_subst_goal s g) in
+  Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";"epush.*";(*"unif";"bind";"t$";"vj$";*)"rule";"whd";"hv";"premise";"psusp";"skipped"] ~verbose:false true;
+  test_p "copy c d.";
+  test_p "copy (foo c) d.";
+  test_p "copy (foo c) d :- bar, x :: baz.";
+  assert false;
   test_p "copy (lam F) (lam G) :- pi x\\ copy x x => copy (F x) (G x).";
   test_p "copy (lam F) (lam G)/* foo */:- pi x/ copy x x => copy (F x) (G x).";
   test_g "(foo Z :- Z = c) => (foo Y :- Y = a, sigma X/ X = nota) => foo X";
@@ -878,8 +883,10 @@ let _ =
     match LP.look t with
     | LP.Uv _ -> s
     | _ -> raise NoClause);
+(*
   test_L ();
   test_LPdata ();
+*)
   test_parse ();
   test_whd ();
   test_unif ();

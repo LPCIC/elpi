@@ -79,27 +79,44 @@ module LP : sig
   val isDB : int -> data -> bool
 
   type key = Key of data | Flex
-  type builtin = BIUnif of data * data | BICustom of string * data | BICut
   type program = annot_clause list
   and annot_clause = int * data list * key * clause
   and clause = premise
-  and premise =
+  and premise = data
+  and goal = premise
+  
+  val mkAtom : data -> premise
+  val mkAtomBiUnif : data -> data -> premise
+  val mkAtomBiCustom : string -> data -> premise
+  val mkAtomBiCut : premise
+  val mkConj : premise L.t -> premise
+  val mkImpl : premise -> premise -> premise
+  val mkPi : int -> premise -> premise
+  val mkSigma : int -> premise -> premise
+  val mkNot : premise -> premise
+  val mkDelay : data -> premise -> premise
+
+  type builtin = BIUnif of data * data | BICustom of string * data | BICut
+  type kind_of_premise =
       Atom of data
     | AtomBI of builtin
-    | Conj of premise list
+    | Conj of premise L.t
     | Impl of clause * premise
     | Pi of int * premise
     | Sigma of int * premise
     | Not of premise
     | Delay of data * premise
-  and goal = premise
+  val look_premise : data -> kind_of_premise
+
+  val isConj : premise -> bool
+  val destConj : premise -> premise list
+  val isAtom : premise -> bool
+  val destAtom : premise -> data
 
   val key_of : premise -> key
 
   val map_premise : (data -> data) -> premise -> premise
-  val fold_premise : (data -> 'a -> 'a) -> premise -> 'a -> 'a
-  val fold_map_premise :
-    int -> (int -> data -> 'a -> data * 'a) -> premise -> 'a -> premise * 'a
+  val mapi_premise : (int -> data -> data) -> int -> premise -> premise
 
   val parse_program : string -> program
   val parse_goal : string -> goal

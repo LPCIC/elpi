@@ -517,93 +517,109 @@ let rec map f x = match push x with
   | XSeq (xs, tl) -> XSeq(L.map (map f) xs, map f tl)
   | XVApp(t1,t2) -> XVApp(map f t1,map f t2)
   | XSusp _ -> assert false
+
+let rec mapi f i x = match push x with
+  | (XDB _ | XCon _ | XUv _ | XExt _ | XNil) as x -> f i x
+  | XBin (ns,x) -> XBin(ns, mapi f (i+ns) x)
+  | XApp xs -> XApp(L.map (mapi f i) xs)
+  | XSeq (xs, tl) -> XSeq(L.map (mapi f i) xs, mapi f i tl)
+  | XVApp(t1,t2) -> XVApp(mapi f i t1, mapi f i t2)
+  | XSusp _ -> assert false
+ 
  
 (* PROGRAM *)
-type builtin = BIUnif of data * data | BICustom of string * data | BICut
-
-let map_builtin f = function
-  | BIUnif(a,b) -> BIUnif(f a, f b)
-  | BICustom(n,t) -> BICustom(n,f t)
-  | BICut -> BICut
-let fold_builtin f x a = match x with
-  | BIUnif(x,y) -> f y (f x a)
-  | BICustom(_,x) -> f x a
-  | BICut -> a
-let fold_map_builtin i f x a = match x with
-  | BIUnif(x,y) ->
-      let x, a = f i x a in
-      let y, a = f i y a in
-      BIUnif(x,y), a
-  | BICustom(n,x) ->
-      let x, a = f i x a in
-      BICustom(n,x), a
-  | BICut -> BICut, a
 
 type key = Key of data | Flex
 
 type program = annot_clause list
 and annot_clause = int * data list * key * clause (* level, subst, key, clause *)
 and clause = premise
-and premise =
+and premise = data
+and goal = premise
+
+let mkCApp name args = mkApp L.(of_list (mkCon name 0 :: args))
+let mkAtom x = x
+let unif_name = "*unif*"
+let mkAtomBiUnif x y = mkCApp unif_name [x; y]
+let custom_name = "*custom*"
+let mkAtomBiCustom name x = mkCApp custom_name [mkExt (mkString name); x]
+let cut_name = "*cut*"
+let mkAtomBiCut = mkCon cut_name 0
+let conj_name = "*conj*"
+let mkConj l = mkCApp conj_name (L.to_list l)
+let impl_name = "*impl*"
+let mkImpl x y = mkCApp impl_name [x; y]
+let pi_name = "*pi*"
+let mkPi n p = mkCApp pi_name [mkBin n p]
+let sigma_name = "*sigma*"
+let mkSigma n p = mkCApp sigma_name [mkBin n p]
+let not_name = "*not*"
+let mkNot x = mkCApp not_name [x]
+let delay_name = "*delay*"
+let mkDelay k p = mkCApp delay_name [k; p]
+
+type builtin = BIUnif of data * data | BICustom of string * data | BICut
+type kind_of_premise =
   | Atom of data
   | AtomBI of builtin
-  | Conj of premise list
+  | Conj of premise L.t
   | Impl of clause * premise
   | Pi of int * premise
   | Sigma of int * premise
   | Not of premise
   | Delay of data * premise
-and goal = premise
 
-let mkPi n = function Pi(m,t) -> Pi(m+n,t) | t -> Pi(n,t)
-let mkSigma n = function Sigma(m,t) -> Sigma(m+n,t) | t -> Sigma(n,t)
+let destBin x = match look x with Bin(n,t) -> n, t | _ -> assert false
+let destExt x = match look x with Ext t -> t | _ -> assert false
+let look_premise p =
+  match look p with
+  | App xs as a ->
+      (match look (L.hd xs) with
+      | Con(name,0) when name = unif_name ->
+          AtomBI(BIUnif(L.get 1 xs,L.get 2 xs))
+      | Con(name,0) when name = custom_name ->
+          AtomBI(BICustom(getString (destExt (L.get 1 xs)),L.get 2 xs))
+      | Con(name,0) when name = cut_name ->
+          AtomBI BICut
+      | Con(name,0) when name = conj_name ->
+          Conj(L.tl xs)
+      | Con(name,0) when name = impl_name ->
+          Impl(L.get 1 xs, L.get 2 xs)
+      | Con(name,0) when name = pi_name ->
+          let n,t = destBin (L.get 1 xs) in Pi(n,t)
+      | Con(name,0) when name = sigma_name ->
+          let n,t = destBin (L.get 1 xs) in Sigma(n,t)
+      | Con(name,0) when name = not_name ->
+          Not(L.get 1 xs)
+      | Con(name,0) when name = delay_name ->
+          Delay(L.get 1 xs, L.get 2 xs)
+      | _ -> Atom (kool a))
+  | a -> Atom (kool a)
+
+let mkPi n p =
+  match look_premise p with Pi(m,t) -> mkPi (m+n) t | _ -> mkPi n p
+let mkSigma n p =
+  match look_premise p with Sigma(m,t) -> mkSigma (m+n) t | _ -> mkSigma n p
+
+let isConj p =
+  match look_premise p with Conj _ -> true | _ -> false
+let destConj p =
+  match look_premise p with Conj l -> L.to_list l | _ -> assert false
+let isAtom p =
+  match look_premise p with Atom _ -> true | _ -> false
+let destAtom p =
+  match look_premise p with Atom t -> t | _ -> assert false
+
 let mkConj l =
   let rec aux acc = function
-    | [] -> Conj(List.flatten (List.rev acc))
-    | Conj l::rest -> aux (l :: acc) rest
+    | [] -> mkConj (L.of_list (List.flatten (List.rev acc)))
+    | p::rest when isConj p -> aux (destConj p :: acc) rest
     | p::rest -> aux ([p] :: acc) rest
   in
-    aux [] l
+    aux [] (L.to_list l)
 
-let rec map_premise f = function
-  | Atom x -> Atom(f x)
-  | AtomBI bi -> AtomBI (map_builtin f bi)
-  | Conj xs -> Conj(List.map (map_premise f) xs)
-  | Impl(x,y) -> Impl(map_premise f x, map_premise f y)
-  | Pi(n,x)  -> Pi(n,map_premise f x)
-  | Sigma(n,x)  -> Sigma(n,map_premise f x)
-  | Not x -> Not(map_premise f x)
-  | Delay (t,p) -> Delay(f t,map_premise f p)
-
-let rec fold_premise f x a = match x with
-  | Atom x -> f x a
-  | AtomBI bi -> fold_builtin f bi a
-  | Conj xs -> List.fold_left (fun a x -> fold_premise f x a) a xs
-  | Impl(x,y) -> fold_premise f y (fold_premise f x a)
-  | Pi(_,x) -> fold_premise f x a
-  | Sigma(_,x) -> fold_premise f x a
-  | Not x -> fold_premise f x a
-  | Delay (t,p) -> fold_premise f p (f t a)
-
-let rec fold_map_premise i f p a = match p with
-  | Atom x -> let x, a = f i x a in Atom x, a
-  | AtomBI bi -> let bi, a = fold_map_builtin i f bi a in AtomBI bi, a
-  | Conj xs ->
-      let xs, a =
-        List.fold_left (fun (l,a) x ->
-          let x, a = fold_map_premise i f x a in
-          x::l, a)
-        ([],a) xs in
-      Conj(List.rev xs), a
-  | Impl(x,y) ->
-      let x, a = fold_map_premise i f x a in
-      let y, a = fold_map_premise i f y a in
-      Impl(x,y), a
-  | Pi(n,y) -> let y, a = fold_map_premise (i+n) f y a in Pi(n,y), a
-  | Sigma(n,y) -> let y, a = fold_map_premise (i+n) f y a in Sigma(n,y), a
-  | Not x -> let x, a = fold_map_premise i f x a in Not x, a
-  | Delay (t,p) -> let t, a = f i t a in let p, a = fold_map_premise i f p a in
-                   Delay(t,p), a
+let map_premise = map
+let mapi_premise = mapi
 
 module PPP = struct (* {{{ pretty printer for programs *)
 
@@ -615,17 +631,17 @@ let prf_builtin ctx fmt = function
   | BICut -> Format.fprintf fmt "!"
 
 let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
-  match p with
+  match look_premise p with
   | Atom p -> prf_data ctx fmt p
   | AtomBI bi -> prf_builtin ctx fmt bi
-  | Conj [] -> Format.fprintf fmt ""
-  | Conj [p] -> prf_premise ~positive ~pars ctx fmt p
+  | Conj l when L.len l = 0 -> Format.fprintf fmt ""
+  | Conj l when L.len l = 1 -> prf_premise ~positive ~pars ctx fmt (L.hd l)
   | Conj l ->
        Format.pp_open_hvbox fmt 0;
        if pars then Format.pp_print_string fmt "(";
        iter_sep (fun fmt () ->
          Format.pp_print_string fmt ","; Format.pp_print_space fmt ())
-         (prf_premise ~positive ctx) fmt l;
+         (prf_premise ~positive ctx) fmt (L.to_list l);
        if pars then Format.pp_print_string fmt ")";
        Format.pp_close_box fmt ()
   | Pi(n,p) ->
@@ -648,14 +664,14 @@ let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
        Format.pp_open_hvbox fmt 2;
        if pars then Format.pp_print_string fmt "(";
        prf_premise ~pars:neg_pars ~positive:(not positive) ctx fmt l;
-       if r <> Conj [] then begin
-         if l <> Conj [] then begin
+       if not (equal r (mkConj L.empty)) then begin
+         if not (equal l (mkConj L.empty)) then begin
            Format.pp_print_space fmt ();
            Format.pp_open_hovbox fmt 0;
            Format.pp_print_string fmt sep;
          end;
          prf_premise ~pars:false ~positive:true ctx fmt r;
-         if l <> Conj [] then Format.pp_close_box fmt ();
+         if not (equal l (mkConj L.empty)) then Format.pp_close_box fmt ();
        end;
        if pars then Format.pp_print_string fmt ")";
        Format.pp_close_box fmt ()
@@ -671,9 +687,9 @@ let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
        Format.fprintf fmt ")@]"
 
 let prf_clause ?(dot=true) ?positive ctx fmt c =
-  let c, ctx = match c with
+  let c, ctx = match look_premise c with
     | Sigma(n,c) -> c, fresh_names "X" 0 n @ ctx
-    | c -> c, ctx in
+    | _ -> c, ctx in
   Format.pp_open_hbox fmt ();
   prf_premise ?positive ctx fmt c;
   if dot then Format.pp_print_string fmt ".";
@@ -696,7 +712,7 @@ let prf_program fmt p =
   Format.pp_close_box fmt ()
 let string_of_program p = on_buffer prf_program p
 
-let rec key_of = function
+let rec key_of p = match look_premise p with
   | AtomBI _ -> assert false
   | Conj _ -> assert false
   | Impl(_,p) | Pi(_,p) | Sigma(_,p) | Not p -> key_of p
@@ -851,46 +867,55 @@ let rec binders c n = function
     | XApp xs -> XApp (L.map (binders c n) xs)
     | XSeq (xs,tl) -> XSeq(L.map (binders c n) xs, binders c n tl)
     | XSusp _ -> assert false
-and binders_premise c n = function
-    | Pi(m,t) -> Pi(m,binders_premise c (n+m) t)
-    | Sigma(m,t) -> Sigma(m,binders_premise c (n+m) t)
-    | Atom t -> Atom(binders c n t)
-    | AtomBI bi -> AtomBI (binders_builtin c n bi)
-    | Conj l -> Conj(List.map (binders_premise c n) l)
-    | Impl(p,t) -> Impl(binders_premise c n p, binders_premise c n t)
-    | Not p -> Not(binders_premise c n p)
-    | Delay(t,p) -> Delay(binders c n t, binders_premise c n p)
-and binders_builtin c n = function
-    | BIUnif (a,b) -> BIUnif(binders c n a, binders c n b)
-    | BICustom(s,t) -> BICustom(s,binders c n t)
-    | BICut -> BICut
 
 let sigma_abstract t =
   let uvl = List.rev (uvlist ()) in
-  List.fold_left (fun p uv -> mkSigma 1 (binders_premise (mkUv uv 0) 1 p)) t uvl
+  List.fold_left (fun p uv -> mkSigma 1 (binders (mkUv uv 0) 1 p)) t uvl
+
+(* TODO : test that it is of the form of a clause *)
+let check_clause x = ()
+let check_goal x = ()
 
 EXTEND
   GLOBAL: lp premise atom goal;
   lp: [ [ cl = LIST0 clause -> cl ] ];
   clause :
     [ [ hd = atom; hyp = OPT [ ENTAILS; hyp = premise -> hyp ]; FULLSTOP ->
-         let hyp = match hyp with None -> Conj [] | Some h -> h in
-         let clause = sigma_abstract (Impl(hyp,Atom hd)) in
+         let hyp = match hyp with None -> mkConj L.empty | Some h -> h in
+         let clause = sigma_abstract (mkImpl hyp (mkAtom hd)) in
+         check_clause clause;
          reset (); 
          0, [], key_of clause, clause ]
     ];
+  goal:
+    [ [ p = premise ->
+         let g = sigma_abstract p in
+         check_goal g;
+         reset ();
+         g ] ];
   atom :
     [ "0"
-      [ l = LIST1 atom LEVEL "1" SEP CONS ->
+      [ l = LIST1 atom LEVEL "0bis" SEP CONS ->
           if List.length l = 1 then List.hd l
           else
             let l = List.rev l in
             let last = List.hd l in
             let rest = List.rev (List.tl l) in
             mkSeq (L.of_list rest) last ]
+    | "0bis"
+      [ l = LIST1 atom LEVEL "1" SEP COMMA ->
+          if List.length l = 1 then List.hd l
+          else mkConj (L.of_list l) ]
     | "1"
-      [ hd = atom LEVEL "2"; args = LIST0 atom LEVEL "2" ->
-          if args = [] then hd else mkApp (L.of_list (hd :: args)) ]
+      [ app = LIST1 atom LEVEL "2" ->
+          if List.length app = 1 then List.hd app
+          else mkApp (L.of_list app)
+(*
+      | conj = LIST1 atom LEVEL "1" SEP COMMA ->
+         if List.length conj = 1 then List.hd conj
+         else mkConj (L.of_list conj)
+*)
+      ]
     | "2" 
       [ c = CONSTANT; b = OPT [ BIND; a = atom LEVEL "1" -> a ] ->
           let c, lvl = lvl_name_of c in 
@@ -898,6 +923,7 @@ EXTEND
           (match b with
           | None -> check_con c lvl; x
           | Some b ->  mkBin 1 (binders x 1 b))
+(*
       | u = UVAR -> let u, lvl = lvl_name_of u in mkUv (get_uv u) lvl
       | u = FRESHUV -> let u, lvl = fresh_lvl_name () in mkUv (get_uv u) lvl
       | i = REL -> mkDB (int_of_string (String.sub i 1 (String.length i - 1)))
@@ -906,6 +932,20 @@ EXTEND
       | AT; u = UVAR; args = atom LEVEL "2" ->
           let u, lvl = lvl_name_of u in
           mkVApp (mkUv (get_uv u) lvl) args
+      | a = atom; IMPL; p = atom -> mkImpl (mkAtom a) (mkAtom p)
+      | a = atom; EQUAL; b = atom -> mkAtomBiUnif a b
+(*       | a = atom -> mkAtom a *)
+      | a = atom; ENTAILS; hyp = LIST1 atom LEVEL "2" SEP COMMA ->
+         mkImpl (mkConj (L.of_list hyp)) (mkAtom a)
+      | bt = BUILTIN; a = atom -> mkAtomBiCustom bt a
+      | BANG -> mkAtomBiCut
+      | NOT; p = atom LEVEL "2" -> mkNot p
+      | DELAY; t = atom LEVEL "2"; p = atom LEVEL "2" -> mkDelay t p
+      | binder = [PI -> fst | SIGMA -> snd];
+        x = bound; BIND; p = atom LEVEL "1" ->
+         let x, is_uv = x in
+         let bind = if is_uv then mkSigma else binder (mkPi,mkSigma) in
+         bind 1 (binders x 1 p)
       | LBRACKET; xs = LIST0 atom LEVEL "1" SEP COMMA;
           tl = OPT [ PIPE; x = atom LEVEL "0" -> x ]; RBRACKET ->
           let tl = match tl with None -> XNil | Some x -> x in
@@ -913,32 +953,12 @@ EXTEND
             raise (Token.Error ("List with not elements cannot have a tail"));
           if List.length xs = 0 then mkNil
           else mkSeq (L.of_list xs) tl
-      | LPAREN; a = atom LEVEL "0"; RPAREN -> a ]
+*)
+      | LPAREN; a = atom LEVEL "0"; RPAREN -> a
+      ]
     ];
 
-  premise :
-    [ "1"
-      [ conj = LIST1 premise LEVEL "2" SEP COMMA ->
-         if List.length conj = 1 then List.hd conj else mkConj conj ]
-    | "2"
-      [ a = atom; IMPL; p = premise -> Impl(Atom a,p)
-      | a = atom; EQUAL; b = atom -> AtomBI (BIUnif(a,b))
-      | a = atom -> Atom a
-      | a = atom; ENTAILS; hyp = LIST1 premise LEVEL "2" SEP COMMA ->
-         Impl(mkConj hyp,Atom a)
-      | bt = BUILTIN; a = atom -> AtomBI(BICustom(bt,a))
-      | BANG -> AtomBI BICut
-      | NOT; p = premise LEVEL "2" -> Not p
-      | DELAY; t = atom LEVEL "2"; p = premise LEVEL "2" -> Delay(t, p)
-      | binder = [PI -> fst | SIGMA -> snd];
-        x = bound; BIND; p = premise LEVEL "1" ->
-         let x, is_uv = x in
-         let bind = if is_uv then mkSigma else binder (mkPi,mkSigma) in
-         bind 1 (binders_premise x 1 p)
-      | LPAREN; p = premise; RPAREN -> p
-      | LPAREN; p = premise; RPAREN; IMPL; q = premise -> Impl(p,q)]
-    ];
-  goal: [ [ p = premise(*; FULLSTOP*) -> p ] ];
+  premise : [ [ a = atom -> a ] ];
   bound : 
     [ [ c = CONSTANT -> let c, lvl = lvl_name_of c in mkCon c lvl, false
       | u = UVAR -> let u, lvl = lvl_name_of u in mkUv (get_uv u) lvl, true ]
@@ -953,13 +973,13 @@ let parse e s =
     let ctx_len = 70 in
     let ctx =
       let start = max 0 (last - ctx_len) in
-      let len = min (String.length s - start) ctx_len in
+      let len = min (String.length s - start) last in
       "…" ^ String.sub s start len in
     raise (Stream.Error(Printf.sprintf "%s\nnear: %s" msg ctx))
   | Ploc.Exc(_,e) -> raise e
 
 let parse_program s : program = parse lp s 
-let parse_goal s : goal = sigma_abstract (parse goal s)
+let parse_goal s : goal = parse goal s
 let parse_data s : data = parse atom s
 
 end (* }}} *)
