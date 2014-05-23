@@ -83,7 +83,7 @@ let test_prog p g =
      Subst.prf_subst s;*)
    List.iter (fun (x,v) ->
     Format.eprintf
-     "@[<hv2>%a@ = %a@]@\n%!" (LP.prf_data []) x (LP.prf_data []) v)
+     "@[<hv2>%a@ = %a@]@\n%!" (LP.prf_data []) x (LP.prf_data []) (Red.nf s v))
      assignements;
    List.iter (fun g ->
     Format.eprintf
