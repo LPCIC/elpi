@@ -1050,7 +1050,7 @@ let lift ?(from=0) k t =
   else if from = 0 then mkXSusp t 0 k XEmpty
   else mkXSusp t from (from+k) (XSkip(k,from,XEmpty))
 
-let beta t start len v =
+let beta t start len v = rule"Bs";
   let rdx = mkXSusp t len 0 (XArgs(L.sub start len v, 0, XEmpty)) in
   SPY "rdx" (prf_data []) rdx;
   rdx
