@@ -268,7 +268,7 @@ type goals = goal list * dgoal list
 type alternatives = (subst * goals) list
 type continuation = (*data list **) premise * alternatives
 type step_outcome = subst * goal list * alternatives
-type result = LP.goal * (LP.data * LP.data) list * Subst.subst * LP.goal list * continuation
+type result = LP.goal * LP.data list * Subst.subst * LP.goal list * continuation
 
 let cat_goals (a,b) (c,d) = a@c, b@d
 
@@ -526,24 +526,25 @@ let apply_sub_hv_to_goal s g =
     let v = L.init i (fun j -> mkDB(i-j)) in
     fst(Red.whd s (mkAppv (mkBin i t) v 0 (L.len v)))) 0 g
 
+let return_current_result s g dls alts =
+  apply_sub_hv_to_goal s g, collect_Uv_premise g, s,
+  List.map (fun (_,g,_,_) -> apply_sub_hv_to_goal s g) dls,
+  (g,alts)
+
 let run_dls (p : program) (g : premise) =
   let g, s = prepare_initial_goal g in
   (*Format.eprintf "@[<hv2>goal:@ %a@]@\n%!" (prf_goal (ctx_of_hv hv)) g;*)
   let gls, s = contextualize_goal 0 s g in
   let s, dls, alts =
     run s (List.map (fun (d,g,ep) -> (d,g,ep@p,ep@p,0)) gls, []) [] in
-  apply_sub_hv_to_goal s g, List.map (fun x -> x, apply_subst s x) (collect_Uv_premise g), s,
-  List.map (fun (_,g,_,_) -> apply_sub_hv_to_goal s g) dls,
-  (g,alts)
+  return_current_result s g dls alts
 
 let next (g,alts) =
  let s,gls,dls,alts =
   next_alt alts (fun fmt _ -> Format.fprintf fmt "next solution") in
  (* from now on cut&paste from run_dls, the code need factorization *)
  let s, dls, alts = run s (gls,dls) alts in
- apply_sub_hv_to_goal s g, List.map (fun x -> x, apply_subst s x) (collect_Uv_premise g), s,
- List.map (fun (_,g,_,_) -> apply_sub_hv_to_goal s g) dls,
- (g,alts)
+ return_current_result s g dls alts
 
 let run p g = let a,_,b,_,_ = run_dls p g in a, b
 

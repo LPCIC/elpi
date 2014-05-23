@@ -127,7 +127,6 @@ let test_whd () =
   test "(x/ y/ z/ t/ x r y) (x/y/ x x y) b c c" "r r b";
    (*Trace.init ~where:("whd",1,1000) ~filter_out:["rdx";(*"push.*";"epush.*";*)"unif";"bind";"t$";"vj$";(*"rule";"whd";*)(*"hv";*)"premise";(*"psusp";*)"skipped"] ~verbose:false true; *)
   test " (x/(y/z/ y) t1 t2) t3" "t1";
-  assert false;
   test " (x/(y/z/ [y,z]) c1 c2) X1" "[c1,c2]";
   ;;
 
