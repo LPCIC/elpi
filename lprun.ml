@@ -261,12 +261,12 @@ exception NoClause
 type objective =
   [ `Atom of data * key
   | `Unify of data * data | `Custom of string * data | `Cut
-  | `Delay of (*data list **) data * premise]
+  | `Delay of data * premise]
 type goal = int * objective * program * program * int
-type dgoal = data * (*data list **) premise * int * program
+type dgoal = data * premise * int * program
 type goals = goal list * dgoal list
 type alternatives = (subst * goals) list
-type continuation = (*data list **) premise * alternatives
+type continuation = premise * program * alternatives
 type step_outcome = subst * goal list * alternatives
 type result = LP.goal * LP.data list * Subst.subst * LP.goal list * continuation
 
@@ -382,7 +382,7 @@ let no_key_match k kc =
   | Key _, Flex -> true
   | Flex, _ -> false
 
-let select k goal depth (s as os) prog orig_prog lvl : step_outcome =
+let select p k goal depth (s as os) prog orig_eh lvl : step_outcome =
   let rec first = function
   | [] ->
       SPY "fail" (prf_data []) (apply_subst s goal);
@@ -400,21 +400,21 @@ let select k goal depth (s as os) prog orig_prog lvl : step_outcome =
             let gl, s = contextualize_goal d s p in
             gl :: acc, s) subgoals ([],s) in
         let subgoals =
-          List.map (fun (d,g,e) -> d,g,e@orig_prog,e@orig_prog,lvl+1)
+          List.map (fun (d,g,e) -> d,g,e@orig_eh@p,e@orig_eh,lvl+1)
             (List.flatten subgoals) in
-        s, subgoals, [os,([depth,`Atom(goal,k),rest,orig_prog,lvl],[])]
+        s, subgoals, [os,([depth,`Atom(goal,k),rest,orig_eh,lvl],[])]
       with UnifFail _ ->
         SPY "skipped" (prf_clause []) clause;
         first rest
   in
     first prog
 
-let run1 s ((depth,goal,prog,orig_prog,lvl) : goal) : step_outcome =
+let run1 p s ((depth,goal,prog,orig_eh,lvl) : goal) : step_outcome =
   match goal with
   | `Cut -> assert false
   | `Delay _ -> assert false
   | `Atom(t,k) ->
-      let s, goals, alts = select k t depth s prog orig_prog lvl in
+      let s, goals, alts = select p k t depth s prog orig_eh lvl in
       s, goals, alts
   | `Unify(a,b) ->
       (try
@@ -481,7 +481,7 @@ let add_delay (t,a,depth,orig_prog as dl) s dls run =
     aux dls
 
 
-let rec run s ((gls,dls) : goals) (alts : alternatives) : subst * dgoal list * alternatives =
+let rec run p s ((gls,dls) : goals) (alts : alternatives) : subst * dgoal list * alternatives =
   let s, gls, dls, alts =
     match gls with
     | [] -> s, [], dls, alts
@@ -502,7 +502,7 @@ let rec run s ((gls,dls) : goals) (alts : alternatives) : subst * dgoal list * a
     | (_,go,_,_,lvl as g)::rest ->
        try
          TRACE "run" (pr_cur_goal go lvl s)
-         let s, subg, new_alts = run1 s g in
+         let s, subg, new_alts = run1 p s g in
          let resumed, dls, s = resume s lvl dls in
          let resumed = List.flatten resumed in
          s, (resumed@subg@rest), dls,
@@ -511,7 +511,7 @@ let rec run s ((gls,dls) : goals) (alts : alternatives) : subst * dgoal list * a
        | NoClause -> next_alt alts (pr_cur_goals gls)
   in
   if gls = [] then s, dls, alts
-  else run s (gls,dls) alts
+  else run p s (gls,dls) alts
 
 let prepare_initial_goal g =
   let s = empty 1 in
@@ -526,25 +526,25 @@ let apply_sub_hv_to_goal s g =
     let v = L.init i (fun j -> mkDB(i-j)) in
     fst(Red.whd s (mkAppv (mkBin i t) v 0 (L.len v)))) 0 g
 
-let return_current_result s g dls alts =
+let return_current_result p s g dls alts =
   apply_sub_hv_to_goal s g, collect_Uv_premise g, s,
   List.map (fun (_,g,_,_) -> apply_sub_hv_to_goal s g) dls,
-  (g,alts)
+  (g,p,alts)
 
 let run_dls (p : program) (g : premise) =
   let g, s = prepare_initial_goal g in
   (*Format.eprintf "@[<hv2>goal:@ %a@]@\n%!" (prf_goal (ctx_of_hv hv)) g;*)
   let gls, s = contextualize_goal 0 s g in
   let s, dls, alts =
-    run s (List.map (fun (d,g,ep) -> (d,g,ep@p,ep@p,0)) gls, []) [] in
-  return_current_result s g dls alts
+    run p s (List.map (fun (d,g,ep) -> (d,g,ep@p,ep,0)) gls, []) [] in
+  return_current_result p s g dls alts
 
-let next (g,alts) =
+let next (g,p,alts) =
  let s,gls,dls,alts =
   next_alt alts (fun fmt _ -> Format.fprintf fmt "next solution") in
  (* from now on cut&paste from run_dls, the code need factorization *)
- let s, dls, alts = run s (gls,dls) alts in
- return_current_result s g dls alts
+ let s, dls, alts = run p s (gls,dls) alts in
+ return_current_result p s g dls alts
 
 let run p g = let a,_,b,_,_ = run_dls p g in a, b
 

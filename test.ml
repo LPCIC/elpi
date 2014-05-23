@@ -191,9 +191,8 @@ let test_parse () =
     let p = LP.parse_program s in
     Format.eprintf "@[<hv2>program:@ %a@]@\n%!" LP.prf_program p in
   let test_g s =
-    let g, s = prepare_initial_goal (LP.parse_goal s) in
-    Format.eprintf "@[<hv2>goal:@ %a@]@\n%!"
-      (LP.prf_goal []) (Subst.apply_subst_goal s g) in
+    let g = LP.parse_goal s in
+    Format.eprintf "@[<hv2>goal:@ %a@]@\n%!" (LP.prf_goal []) g in
   test_p "copy c d.";
   test_p "copy (foo c) d.";
   test_p "copy (foo c) ((pi x\\ y) = x).";

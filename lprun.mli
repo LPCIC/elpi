@@ -20,8 +20,5 @@ val next: continuation -> result
 (* as run_dls, with simplified output, used only for debugging *)
 val run : LP.program -> LP.goal -> LP.goal * Subst.subst
 
-(* debug *)
-val prepare_initial_goal : LP.goal -> LP.goal * Subst.subst
-
 val register_custom :
   string -> (LP.data -> Subst.subst -> int -> LP.program -> Subst.subst) -> unit
