@@ -106,6 +106,8 @@ module LP : sig
     | Pi of int * premise
     | Sigma of int * premise
     | Delay of data * premise
+    | Resume of data * premise
+
   val look_premise : data -> kind_of_premise
 
   val isConj : premise -> bool

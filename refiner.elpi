@@ -12,24 +12,17 @@ prt S T :-
 
 /************************* refiner ************************/
 
-/* func P <=> pi i\ pi a\ pi b\ P i a => P i b => eq a b. */
-/* func of                                                */
-eq (of M TY1 T1) (of N TY2 T2) :- $is (pair M N).
+of M TY T S :- ofr M TY T S.
 
-assign_if_flex M T TY S:- $is_flex M, !, M=T, S=[goal M (ginst TY set)].
-assign_if_flex M T TY [].
+bof M TY :- prt "BOF " (pair M TY), rof M TY2, unify TY TY2.
 
-%of M TY T S :- prt "" (of M TY T S), not true.
-
-of M TY T (append S S1) :- assign_if_flex M T TY S, delay M (ofr M TY T S1).
-
-%ofr M TY T S :- prt "" (ofr M TY T S), not true.
-
-ofr hole TY T (append S S1) :- of T TY T S, of TY set TY S1.
+ofr T TY T [] :- T = $is_flex T, !, prt "ofr " T, bof T2 TY, prt "offfr " T2, is_same_flex T T2, prt "offr ok" (pair T T2).
 
 sigma_appl [] [] _ _ :- !.
 sigma_appl [HD|Ss] [decl T S1|Ss1] X T :- HD = S1 X, sigma_appl Ss Ss1 X T.
 sigma_appl (append L R) (append L1 R1) X T :- sigma_appl L L1 X T, sigma_appl R R1 X T.
+
+ofr hole TY T [] :- delay T (bof T TY), delay TY (bof TY set).
 
 ofr (lam S F) (prod S2 T) (lam S2 F2) (append Ex1 Ex3) :-
   of S SO S2 Ex1,
@@ -125,9 +118,11 @@ uall2 [X|XS] [Y|YS] H :- restrict H, pi x\ uall2 XS YS (H x).
 
 % delift M L Y instantiates the output M s.t. @M L = Y
 % CSC: BUG, we should check typability of the delifted thing
-%delift M L Y :- prt "" (delift M L Y), not true.
-delift M [] Y :- delift_aux M Y.
-delift M [X|XS] Y :- pi c\ binds c X => delift (M c) XS Y.
+%delift0 M L Y :- prt "" (delift M L Y), not true.
+delift0 M [] Y :- delift_aux M Y.
+delift0 M [X|XS] Y :- pi c\ binds c X => delift (M c) XS Y.
+
+delift M L Y :- resume M (delift0 M L Y).
 
 %delift_aux M Y :- prt "" (delift_aux M Y), not true.
 
@@ -294,3 +289,9 @@ claim Claim P1 :-
   clean_sigma (append Sig1 Sig2) Sig,
   step Sig,
   clean P P1. 
+
+
+%pippo2 A B :- prt "on> " (pippo2 A B), not true.
+%pippo A B :- prt "on> " (pippo A B), not true.
+%pippo A B :- pippo2 A B.
+%test Y :- pi x\ pippo x zero => (delay Y (pippo x one), pippo x one), Y=zero.

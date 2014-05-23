@@ -116,7 +116,7 @@ let _ =
     let g =
       Printf.printf "goal> %!";
       input_line stdin in
-    Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";"epush.*";"unif";"bind";"isPU";"mksubst";"t$";"vj$";"rule";"whd";"hv";"premise";"psusp";"skipped";"substitu.*";"Pruning";"delay";"sub"] false;
+    Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";"epush.*";"unif";"bind";"isPU";"mksubst";"t$";"vj$";"rule";"whd";"hv";"premise";"psusp";"skipped";"substitu.*";"Pruning";"delay";"sub"] true;
     test_prog p g
   done
 

@@ -577,6 +577,8 @@ let sigma_name = "*sigma*"
 let mkSigma n p = mkCApp sigma_name [mkBin n p]
 let delay_name = "*delay*"
 let mkDelay k p = mkCApp delay_name [k; p]
+let resume_name = "*resume*"
+let mkResume k p = mkCApp resume_name [k;p]
 
 type builtin = BIUnif of data * data | BICustom of string * data | BICut
 type kind_of_premise =
@@ -587,6 +589,7 @@ type kind_of_premise =
   | Pi of int * premise
   | Sigma of int * premise
   | Delay of data * premise
+  | Resume of data * premise
 
 let collect_Uv_premise = collect_Uv
 let collect_hv_premise = collect_hv
@@ -615,6 +618,8 @@ let look_premise p =
           let n,t = destBin (L.get 1 xs) in Sigma(n,t)
       | Con(name,0) when name = delay_name ->
           Delay(L.get 1 xs, L.get 2 xs)
+      | Con(name,0) when name = resume_name ->
+          Resume(L.get 1 xs, L.get 2 xs)
       | _ -> Atom (kool a))
   | Con(name,0) when name = cut_name -> AtomBI BICut
   | Con(name,0) when name = conj_name -> Conj L.empty
@@ -705,6 +710,12 @@ let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
        Format.fprintf fmt "@ (";
        prf_premise ~pars:false ~positive ctx fmt p;
        Format.fprintf fmt ")@]"
+  | Resume(t,p) ->
+       Format.fprintf fmt "resume @[";
+       prf_data ctx fmt t;
+       Format.fprintf fmt "@ (";
+       prf_premise ~pars:false ~positive ctx fmt p;
+       Format.fprintf fmt ")@]"
 
 let prf_clause ?(dot=true) ?positive ctx fmt c =
   let c, ctx = match look_premise c with
@@ -733,10 +744,11 @@ let prf_program fmt p =
 let string_of_program p = on_buffer prf_program p
 
 let rec key_of p = match look_premise p with
-  | AtomBI _ -> assert false
+  | AtomBI _ -> Flex
   | Conj _ -> assert false
   | Impl(_,p) | Pi(_,p) | Sigma(_,p) -> key_of p
   | Delay _ -> Flex
+  | Resume _ -> Flex
   | Atom t ->
       match look t with
       | Con _ -> Key t
@@ -814,6 +826,7 @@ let rec lex c = parser bp
        | "CONSTANT","sigma" -> "SIGMA", "sigma"
        | "CONSTANT","nil" -> "NIL", "nil"
        | "CONSTANT","delay" -> "DELAY","delay"
+       | "CONSTANT","resume" -> "RESUME","resume"
        | x -> x), (bp, ep)
 and comment c = parser
   | [< '( '\n' ); s >] -> lex c s
@@ -969,6 +982,7 @@ EXTEND
       | bt = BUILTIN; a = atom LEVEL "simple" -> mkAtomBiCustom bt a
       | BANG -> mkAtomBiCut
       | DELAY; t = atom LEVEL "simple"; p = atom LEVEL "simple" -> mkDelay t p
+      | RESUME; t = atom LEVEL "simple"; p = atom LEVEL "simple" -> mkResume t p
       | LBRACKET; xs = LIST0 atom LEVEL "implication" SEP COMMA;
           tl = OPT [ PIPE; x = atom LEVEL "term" -> x ]; RBRACKET ->
           let tl = match tl with None -> XNil | Some x -> x in
