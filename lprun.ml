@@ -583,7 +583,7 @@ let apply_sub_hv_to_goal s g =
     fst(Red.whd s (mkAppv (mkBin i t) v 0 (L.len v)))) 0 g
 
 let return_current_result op s g dls alts =
-  apply_sub_hv_to_goal s g, collect_Uv_premise g, s,
+  apply_sub_hv_to_goal (Subst.empty 0) g, collect_Uv_premise g, s,
   List.map (fun (_,g,_,_,_) -> apply_sub_hv_to_goal s g) dls,
   (g,op,alts)
 
