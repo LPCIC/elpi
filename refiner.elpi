@@ -12,43 +12,36 @@ prt S T :-
 
 /************************* refiner ************************/
 
-of M TY T S :- ofr M TY T S.
+of M TY T :- ofr M TY T.
 
 bof M TY :- prt "BOF " (pair M TY), rof M TY2, unify TY TY2.
 
-ofr T TY T [] :- T = $is_flex T, !, prt "ofr " T, bof T2 TY, prt "offfr " T2, is_same_flex T T2, prt "offr ok" (pair T T2).
+ofr T TY T :- T = $is_flex T, !, prt "ofr " T, bof T2 TY, prt "offfr " T2, is_same_flex T T2, prt "offr ok" (pair T T2).
 
-sigma_appl [] [] _ _ :- !.
-sigma_appl [HD|Ss] [decl T S1|Ss1] X T :- HD = S1 X, sigma_appl Ss Ss1 X T.
-sigma_appl (append L R) (append L1 R1) X T :- sigma_appl L L1 X T, sigma_appl R R1 X T.
+ofr hole TY T :- delay T (bof T TY), delay TY (bof TY set).
 
-ofr hole TY T [] :- delay T (bof T TY), delay TY (bof TY set).
-
-ofr (lam S F) (prod S2 T) (lam S2 F2) (append Ex1 Ex3) :-
-  of S SO S2 Ex1,
+ofr (lam S F) (prod S2 T) (lam S2 F2) :-
+  of S SO S2,
   unify SO set,
-  pi x\ sigma Ex2\ ofr x S2 x nil => (
-    of (F x) (T x) (F2 x) Ex2,
-    sigma_appl Ex2 /*=*/ Ex3 x S2).
+  pi x\ ofr x S2 x =>
+    of (F x) (T x) (F2 x).
 
-ofr (prod S F) set (prod S2 F2) (append Ex1 Ex3) :-
-  of S SO S2 Ex1,
+ofr (prod S F) set (prod S2 F2) :-
+  of S SO S2,
   unify SO set,
-  pi x\ sigma Ex2\ ofr x S2 x nil => (
-    of (F x) (T x) (F2 x) Ex2,
-    unify (T x) set,
-    sigma_appl Ex2 /*=*/ Ex3 x S2).
+  pi x\ ofr x S2 x => (
+    of (F x) (T x) (F2 x),
+    unify (T x) set).
 
-ofr (app M1 N1) Z (app M2 N2) (append (append Ex1 Ex2) Ex4) :-
-    of M1 TM1 M2 Ex1,
-    of N1 TN1 N2 Ex2,
-    pi x\ sigma Ex3\
-      of hole (_ x) (F x) Ex3,
+ofr (app M1 N1) Z (app M2 N2) :-
+    of M1 TM1 M2,
+    of N1 TN1 N2,
+    pi x\
+      of hole (_ x) (F x),
       unify TM1 (prod TN1 F),
-      sigma_appl Ex3 /*=*/ Ex4 x TN1,
       subst F N2 Z.
 
-ofr (atom ID) T (atom ID) nil :- env ID T.
+ofr (atom ID) T (atom ID) :- env ID T.
 
 env zero (atom nat).
 env succ (prod (atom nat) (x \ (atom nat))).
@@ -58,51 +51,20 @@ env vect (prod (atom nat) (x\ set)).
 env vnil (app (atom vect) (atom zero)).
 env vcons (prod (atom nat) (n\ prod (app (atom vect) n) (w\ app (atom vect) (app (atom succ) n)))).
 
-ofr set set set nil.
+ofr set set set.
 
-ofr (rec Rty N Base Step) Rty2 (rec Rty2 N2 Base2 Step2) (append (append Ex1 Ex2) (append Ex3 Ex4)) :-
-  of Rty TRty Rty2 Ex1,
+ofr (rec Rty N Base Step) Rty2 (rec Rty2 N2 Base2 Step2) :-
+  of Rty TRty Rty2,
   unify TRty set,
-  of N TN N2 Ex2,
+  of N TN N2,
   unify TN (atom nat),
-  of Base TBase Base2 Ex3,
+  of Base TBase Base2,
   unify TBase Rty2,
-  of Step TStep Step2 Ex4,
+  of Step TStep Step2,
   unify TStep (prod (atom nat) n\ prod Rty2 acc \ Rty2).
 
-/* retype */
-rof T TY :- of T TY _ _.
-
-/************************* clean ************************/
-
-% clean L M :- prt "" (clean L M), not true.
-clean (ginst M T1) R :-
- % prt "?FLEXIBLE " M,
- $is_flex M, !,
- % prt "!FLEXIBLE " M,
- clean T1 T2,
- R = ginst M T2.
-clean (ginst M1 _) M2 :- !,
- % prt "!RIGID " M1,
- clean M1 M2.
-clean (app M1 N1) (app M2 N2) :- !, clean M1 M2, clean N1 N2.
-clean (lam T1 F1) (lam T2 F2) :- !, clean T1 T2, pi x\ clean (F1 x) (F2 x).
-clean (prod T1 F1) (prod T2 F2) :- !, clean T1 T2, pi x\ clean (F1 x) (F2 x).
-clean (rec A1 B1 C1 D1) (rec A2 B2 C2 D2) :-
-  !, clean A1 A2, clean B1 B2, clean C1 C2, clean D1 D2.
-clean T T :- !.
-
-% clean_seq L M :- prt "" (clean_seq L M), not true.
-clean_seq (decl S1 F1) (decl S2 F2) :- clean S1 S2, pi x\ clean_seq (F1 x) (F2 x).
-clean_seq (goal V T1) (goal V T2) :- $is_flex V, !, clean T1 T2.
-
-% clean_sigma L _ :- prt "" (clean_sigma L nil), not true.
-clean_sigma [] [].
-clean_sigma [X|Xs] [Y|Ys] :- clean_seq X Y, !, clean_sigma Xs Ys.
-clean_sigma [_|Xs] Ys :- clean_sigma Xs Ys.
-clean_sigma (append [] L1) L2 :- clean_sigma L1 L2.
-clean_sigma (append [X|Xs] L1) L2 :- clean_sigma [X | append Xs L1] L2.
-clean_sigma (append (append L1 L2) L3) L :- clean_sigma (append L1 (append L2 L3)) L.
+/************************ retype *************************/
+rof T TY :- of T TY _.
 
 /************************* subst ************************/
 
@@ -188,10 +150,10 @@ unif ff (app H A) (app K B) :- unify H K, unify A B.
 
 /* contextual closure */
 unif ff (lam S F) (lam T G) :-
-  !, unify S T, pi x\ of x S x nil => unif ff x x => unify (F x) (G x).
+  !, unify S T, pi x\ of x S x => unif ff x x => unify (F x) (G x).
 
 unif ff (prod S F) (prod T G) :-
-  !, unify S T, pi x\ of x S x nil => unif ff x x => unify (F x) (G x).
+  !, unify S T, pi x\ of x S x => unif ff x x => unify (F x) (G x).
 
 /* contextual closure + heuristic */
 unif ff (rec A1 B1 C1 D1) (rec A2 B2 C2 D2) :-
@@ -229,32 +191,23 @@ tacsem (r M) M.
 
 /******************** GUI **************************/
 
-test_unify A B TA2 A2 B2 Sig :-
-  prt "---------> " (of A TA A1 Ex1),
-  of A TA A1 Ex1,
-  prt "---------> " (of B TB B1 Ex2),
-  of B TB B1 Ex2,
+test_unify A B TA2 :-
+  prt "---------> " (of A TA A1),
+  of A TA A1,
+  prt "---------> " (of B TB B1),
+  of B TB B1,
   prt "========== " (unify TA TB),
   unify TA TB,
   prt "========== " (unify A1 B1),
-  unify A1 B1,
-  $print "cleaning1\n",
-  clean TA TA2,
-  $print "cleaning2\n",
-  clean A1 A2,
-  $print "cleaning3\n",
-  clean B1 B2,
-  $print "cleaning4\n",
-  clean_sigma (append Ex1 Ex2) Sig.
+  unify A1 B1.
 
-ofr (var N) T M Sig :- hyp N X, of X T M Sig.
+ofr (var N) T M :- hyp N X, of X T M.
 
-step_in N (decl TY F) Sig2 :-
-  pi x\ sigma Sig\ of x TY x nil => copy x x => unify x x => hyp N x => (
+step_in N (decl TY F) :-
+  pi x\ of x TY x => copy x x => unify x x => hyp N x => (
   M = ss N,
   prt "" (hyp N TY),
-  step_in M (F x) Sig, !,
-  sigma_appl Sig /*=*/ Sig2 x TY).
+  step_in M (F x), !).
 
 read_tac T :-
   $print "\ntactic> ",
@@ -262,34 +215,31 @@ read_tac T :-
   $parse [S,T], !.
 read_tac T :- $print "\nparse error\n", read_tac T.
 
-step_in N (goal M MTY) Sig :-
+step_in N (goal M MTY) :-
   prt "=========\n" MTY,
   read_tac T1,
   prt "running " T1,
   tacsem T1 P,
   prt "got term " P,
-  of P TP P1 Sig,
+  of P TP P1,
   prt "of type " TP,
   unify TP MTY,
   $print "unifies with goal!\n\n",
   P1 = M, !.
-step_in N G S :- $print "\ntactic error\n", step_in N G S.
+
+step_in N G :- $print "\ntactic error\n", step_in N G.
 
 step nil :- $print "\nProof completed.\n".
 step [G|GS] :-
-  step_in zz G Sig1,
-  clean_sigma (append Sig1 GS) Sig2,
-  step Sig2.
+  step_in zz G,
+  step Sig.
   
 claim Claim P1 :-
-  of Claim T Claim1 Sig1,
+  of Claim T Claim1,
   unify T set,
-  of hole THole P Sig2,
+  of hole THole P,
   unify THole Claim1,
-  clean_sigma (append Sig1 Sig2) Sig,
-  step Sig,
-  clean P P1. 
-
+  step Sig.
 
 %pippo2 A B :- prt "on> " (pippo2 A B), not true.
 %pippo A B :- prt "on> " (pippo A B), not true.
