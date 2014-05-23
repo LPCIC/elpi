@@ -16,9 +16,9 @@ of M TY T :- ofr M TY T.
 
 bof M TY :- prt "BOF " (pair M TY), rof M TY2, unify TY TY2.
 
-ofr T TY T :- T = $is_flex T, !, prt "ofr " T, bof T2 TY, prt "offfr " T2, is_same_flex T T2, prt "offr ok" (pair T T2).
+ofr T TY R :- $is_flex T, !, prt "==== ofr " T, bof T2 TY, prt "offfr " T2, is_same_flex T T2, prt "offr ok" (pair T T2), R=T.
 
-ofr hole TY T :- delay T (bof T TY), delay TY (bof TY set).
+ofr hole TY T :- prt "DELAY " (delay T (bof T TY)), delay T (bof T TY), delay TY (bof TY set).
 
 ofr (lam S F) (prod S2 T) (lam S2 F2) :-
   of S SO S2,
