@@ -341,7 +341,7 @@ let rec epush e = TRACE "epush" (fun fmt -> prf_env [] fmt e)
         epush (XMerge(e1,nl1 - drop, ol2 - drop, e2))
       else   
         epush (XMerge(e1,nl1 - drop, ol2 - drop,
-          XArgs(L.sub drop (L.len b - drop) b,l,e2)))
+          XArgs(L.sub 0 (L.len b - drop) b,l,e2)))
   | (XArgs(_,n,_) | XSkip(_,n,_)) as e1, XSkip(b,l,e2) when nl1 > n -> rule"m5";
       let drop = min b (nl1 - n) in
       if drop = b then epush (XMerge(e1,nl1 - drop, ol2 - drop, e2))
