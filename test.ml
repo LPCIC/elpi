@@ -910,8 +910,8 @@ let _ =
   test_aug ();
   test_custom ();
   test_back ();
-    Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";(*"epush.*";*)"unif";"bind";"t$";"vj$";"rule";"whd";(*"hv";*)"premise";"psusp";"skipped"] ~verbose:false true; 
+(*     Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";(*"epush.*";*)"unif";"bind";"t$";"vj$";"rule";"whd";(*"hv";*)"premise";"psusp";"skipped"] ~verbose:false true;  *)
   test_pi ();
 (*   test_refiner (); *)
-(*   test_typeinf (); *)
+  test_typeinf ();
 

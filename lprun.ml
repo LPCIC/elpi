@@ -327,69 +327,45 @@ let custom name t s d p =
   try List.assoc name !custom_tab t s d p
   with Not_found -> raise(Invalid_argument ("custom "^name))
 
-let contextualize depth t hv =
-  SPY "hv" (iter_sep Format.pp_print_space (prf_data [])) hv;
-  SPY "premise" (prf_data []) t;
-  assert(depth = 0);
-(*   let t1 = Red.beta_under depth t (List.rev hv) in *)
-  let t1 = (*Red.whd*) (mkApp(L.of_list (mkBin (List.length hv) t::List.rev hv))) in
-  SPY "in-error" (prf_data []) t1;
-  let xxxx, _ = Red.whd (Subst.empty 0) t1 in
-  SPY "out-error" (prf_data []) xxxx;
-(*   SPY "premise" (prf_data []) (Red.nf (Subst.empty 0) t1); *)
+let subst t hv =
+  let t1 = mkApp(L.of_list (mkBin (List.length hv) t::List.rev hv)) in
+(*   let t1 = Red.nf (Subst.empty 0) t1 in *)
+  SPY "substituted premise/goal" (prf_data []) t1;
   t1
 
 let add_cdepth b cdepth =
   List.map (fun p -> cdepth, (if b then key_of p else Flex), p)
 
-let mkAtom t hv = `Atom((*contextualize 0 t hv*)t, key_of t)
+let mkAtom t = `Atom(t, key_of t)
 
 let whd_premise s p = Red.whd s p
 
-let contextualize_premise ?(compute_key=false) depth subst premise =
-(*   Format.eprintf "premise = %a\n%!" (prf_premise []) premise; *)
-  let rec aux cdepth s hv eh p =
-(*           Format.eprintf "premise-pre %a\n%!" (prf_data []) p; *)
-  let p, s = whd_premise s p in
-(*                   Format.eprintf "premise-post %a\n%!" (prf_data []) p; *)
-(*                   Format.eprintf "premise-nf %a\n%!" (prf_data []) (Red.nf s p); *)
-  match look_premise p with
-  | Atom t ->
-      [cdepth, mkAtom t hv, add_cdepth compute_key cdepth eh], s
-  | AtomBI (BIUnif(x,y)) ->
-  SPY "in-error2" (prf_data []) x;
-  let xxxx, _ = Red.whd (Subst.empty 0) x in
-  SPY "out-error2" (prf_data []) xxxx;
-      [cdepth, `Unify((*contextualize 0 *)x(* hv*),(*contextualize 0 *)y(* hv*)),
-       add_cdepth compute_key cdepth eh], s
-  | AtomBI (BICustom(n,x)) ->
-      [cdepth, `Custom(n,(*contextualize 0 *)x(* hv*)),
-       add_cdepth compute_key cdepth eh], s
-  | AtomBI BICut ->
-      [cdepth, `Cut, add_cdepth compute_key cdepth eh], s
-  | Impl(ps,h) when isConj ps ->
-      let ps = destConj ps in
-      aux cdepth s hv ((*List.map (fun p -> contextualize 0 p hv)*) ps @ eh) h
-  | Impl(p,h) -> aux cdepth s hv ((*contextualize 0 p hv*)p :: eh) h
-  | Pi(n,h) ->
-(*       Format.eprintf "PI: premise = %a\n%!" (prf_premise []) (apply_subst s p); *)
-                  Format.eprintf "PI: %d\n%!" n;
-      let hvs = mkhv n (cdepth+1) in
-      aux (cdepth+1) s ((*hvs @*) hv) eh (contextualize 0 h hvs)
-  | Sigma(n,h) ->
-(*       Format.eprintf "SIGMA: premise = %a\n%!" (prf_premise []) (apply_subst s p); *)
-                  Format.eprintf "SIGMA: %d\n%!" n;
-      let ms, s = fresh_uv n cdepth s in
-      aux cdepth s ((*ms @*) hv) eh (contextualize 0 h ms)
-  | Conj l ->
-      let ll, s = List.fold_right (fun p (acc,s) ->
-        let l, s = aux cdepth s hv eh p in
-        l::acc, s) (L.to_list l) ([],s) in
-      List.flatten ll, s
-  | Delay(t, p) ->
-      [cdepth, `Delay (contextualize 0 t hv,p), add_cdepth compute_key cdepth eh], s
+let contextualize_premise ?(compute_key=false) depth s premise =
+  let rec aux cdepth s eh p =
+    let p, s = whd_premise s p in
+    match look_premise p with
+    | Atom t ->
+        [cdepth, mkAtom t, add_cdepth compute_key cdepth eh], s
+    | AtomBI (BIUnif(x,y)) ->
+        [cdepth, `Unify(x,y), add_cdepth compute_key cdepth eh], s
+    | AtomBI (BICustom(n,x)) ->
+        [cdepth, `Custom(n,x), add_cdepth compute_key cdepth eh], s
+    | AtomBI BICut ->
+        [cdepth, `Cut, add_cdepth compute_key cdepth eh], s
+    | Impl(ps,h) when isConj ps -> aux cdepth s (destConj ps @ eh) h
+    | Impl(p,h) -> aux cdepth s (p :: eh) h
+    | Pi(n,h) -> aux (cdepth+1) s eh (subst h (mkhv n (cdepth+1)))
+    | Sigma(n,h) ->
+        let ms, s = fresh_uv n cdepth s in
+        aux cdepth s eh (subst h ms)
+    | Conj l ->
+        let ll, s = List.fold_right (fun p (acc,s) ->
+          let l, s = aux cdepth s eh p in
+          l::acc, s) (L.to_list l) ([],s) in
+        List.flatten ll, s
+    | Delay(t, p) -> [cdepth, `Delay (t,p), add_cdepth compute_key cdepth eh], s
   in
-    aux depth subst [] [] premise
+    aux depth s [] premise
 
 let contextualize_hyp depth subst premise =
   match contextualize_premise depth subst premise with
@@ -542,7 +518,7 @@ let prepare_initial_goal g =
   match look_premise g with
   | Sigma(n,g) ->
       let ms, s = fresh_uv n 0 s in
-      contextualize 0 g ms, s
+      subst g ms, s
   | _ -> g, s
 
 let apply_sub_hv_to_goal s g =

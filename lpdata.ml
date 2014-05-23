@@ -229,7 +229,7 @@ let rec prf_data ctx fmt t =
        P.pp_open_hovbox fmt 2;
        let names = fresh_names "w" (List.length ctx) n in
        if pars then P.pp_print_string fmt "(";
-       P.pp_print_string fmt (String.concat "\\ " names ^ "\\" ^ string_of_int n);
+       P.pp_print_string fmt (String.concat "\\ " names ^ "\\");
        P.pp_print_space fmt ();
        print (List.rev names @ ctx) x;
        if pars then P.pp_print_string fmt ")";
@@ -659,7 +659,7 @@ let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
   | Pi(n,p) ->
        let names = fresh_names "y" (List.length ctx) n in
        Format.pp_open_hvbox fmt 2;
-       Format.pp_print_string fmt ("pi "^String.concat "\\ " names ^ "\\" ^ string_of_int n);
+       Format.pp_print_string fmt ("pi "^String.concat "\\ " names);
        Format.pp_print_space fmt ();
        prf_premise ~positive ~pars (List.rev names @ ctx) fmt p;
        Format.pp_close_box fmt ()
