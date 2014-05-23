@@ -538,6 +538,17 @@ let collect_Uv t =
   in
   uniq [] !uvs
 
+let collect_hv t =
+  let hvs = ref [] in
+  let _ = map (function XCon(n,l) as x when l > 0 -> hvs := x :: !hvs; x | x -> x) t in
+  let rec uniq seen = function
+    | [] -> List.rev seen
+    | x :: tl ->
+       if List.exists ((=) x) seen then uniq seen tl
+       else uniq (x :: seen) tl
+  in
+  uniq [] !hvs
+
 (* PROGRAM *)
 
 type key = Key of data | Flex
@@ -578,12 +589,13 @@ type kind_of_premise =
   | Delay of data * premise
 
 let collect_Uv_premise = collect_Uv
+let collect_hv_premise = collect_hv
 
 let rec destBin x =
   match look x with
   | Bin(n,t) when isBin t -> let m, t = destBin t in n+m, t
   | Bin(n,t) -> n, t
-  | _ -> assert false
+  | _ -> Format.eprintf "%a\n%!" (prf_data []) x; assert false
 let destExt x = match look x with Ext t -> t | _ -> assert false
 let look_premise p =
   match look p with
@@ -659,7 +671,7 @@ let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
   | Pi(n,p) ->
        let names = fresh_names "y" (List.length ctx) n in
        Format.pp_open_hvbox fmt 2;
-       Format.pp_print_string fmt ("pi "^String.concat "\\ " names);
+       Format.pp_print_string fmt ("pi "^String.concat "\\ " names ^ "\\");
        Format.pp_print_space fmt ();
        prf_premise ~positive ~pars (List.rev names @ ctx) fmt p;
        Format.pp_close_box fmt ()
@@ -696,7 +708,7 @@ let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
 
 let prf_clause ?(dot=true) ?positive ctx fmt c =
   let c, ctx = match look_premise c with
-(*     | Sigma(n,c) -> c, fresh_names "X" 0 n @ ctx *)
+    | Sigma(n,c) -> c, fresh_names "X" 0 n @ ctx
     | _ -> c, ctx in
   Format.pp_open_hbox fmt ();
   prf_premise ?positive ctx fmt c;

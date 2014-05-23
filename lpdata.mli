@@ -119,6 +119,7 @@ module LP : sig
   val mapi_premise : (int -> data -> data) -> int -> premise -> premise
 
   val collect_Uv_premise : premise -> data list
+  val collect_hv_premise : premise -> data list
 
   val parse_program : string -> program
   val parse_goal : string -> goal
