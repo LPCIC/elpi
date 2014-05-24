@@ -14,11 +14,12 @@ prt S T :-
 
 of M TY T :- ofr M TY T.
 
-bof M TY :- prt "BOF " (pair M TY), rof M TY2, unify TY TY2.
+bof M TY :- rof M TY2, unify TY TY2.
 
-ofr T TY R :- $is_flex T, !, prt "==== ofr " T, bof T2 TY, prt "offfr " T2, is_same_flex T T2, prt "offr ok" (pair T T2), R=T.
+ofr T TY R :- $is_flex T, !, bof T2 TY,
+ T = @VT _, T2 = @VT2 _, is_same_flex VT VT2, !, R=T.
 
-ofr hole TY T :- prt "DELAY " (delay T (bof T TY)), delay T (bof T TY), delay TY (bof TY set).
+ofr hole TY T :- delay T (bof T TY), delay TY (bof TY set).
 
 ofr (lam S F) (prod S2 T) (lam S2 F2) :-
   of S SO S2,
@@ -84,7 +85,7 @@ uall2 [X|XS] [Y|YS] H :- restrict H, pi x\ uall2 XS YS (H x).
 delift0 M [] Y :- delift_aux M Y.
 delift0 M [X|XS] Y :- pi c\ binds c X => delift (M c) XS Y.
 
-delift M L Y :- resume M (delift0 M L Y).
+delift M L Y :- resume M (delift0 M L Y, of Y _ _).
 
 %delift_aux M Y :- prt "" (delift_aux M Y), not true.
 
@@ -120,16 +121,16 @@ unif ff (@M L1) (@N L2) :- is_same_flex M N, !, uall2 L1 L2 M.
 /* flex=term */
 unif ff T N :-
  T = @M L,
- %rof T TM,
- %rof N TN,
- %unify TM TN,
+ rof T TM,
+ rof N TN,
+ unify TM TN,
  delift M L N.
 /* term=flex */
 unif ff N T :-
  T = @M L,
- %rof T TM,
- %rof N TN,
- %unify TN TM,
+ rof T TM,
+ rof N TN,
+ unify TN TM,
  delift M L N.
 
 unif _ (@M _) _ :- !, not true.
