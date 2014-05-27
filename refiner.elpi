@@ -82,10 +82,11 @@ uall2 [X|XS] [Y|YS] H :- restrict H, pi x\ uall2 XS YS (H x).
 % CSC: BUG, we should check typability of the delifted thing
 %delift0 M L Y :- prt "" (delift M L Y), not true.
 delift0 M [] Y :- delift_aux M Y.
-delift0 M [X|XS] Y :- pi c\ binds c X => delift (M c) XS Y.
+delift0 M [X|XS] Y :- pi c\ binds c X => delift0 (M c) XS Y.
 
-delift M L Y :-
-  prt "sblocco la meta e assegno " (M L Y), resume M (delift0 M L Y).
+delift ML M L Y :-
+  prt "sblocco la meta e assegno " (M L Y), resume ML (delift0 M L Y),
+  $print "assegnato\n".
 
 %delift_aux M Y :- prt "" (delift_aux M Y), not true.
 
@@ -126,7 +127,7 @@ unif ff T N :-
  prt "tale valore ha tipo " TN,
  bof T TN,
  prt "la meta puo avere tale tipo: " (bof T TN),
- delift M L N.
+ delift T M L N.
 /* term=flex */
 unif ff N T :-
  T = #M L,
@@ -135,7 +136,7 @@ unif ff N T :-
  prt "tale valore ha tipo " TN,
  bof T TN,
  prt "la meta puo avere tale tipo: " (bof T TN),
- delift M L N.
+ delift T M L N.
 
 %unif _ (@M _) _ :- !, not true.
 %unif _ _ (@M _) :- !, not true.
