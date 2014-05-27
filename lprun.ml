@@ -209,12 +209,17 @@ let rec unify a b s = TRACE "unify" (print_unif_prob s "=" a b)
       if equal a b then s else fail "rigid"
   | VApp _, _ -> assert false
   | Bin _, VApp _ -> assert false
-  | t, VApp(t1,t2) when not(rigid t) ->
+  | t, VApp(true,t1,t2) when not(rigid t) ->
      let hd, tl = match t with
        | App xs -> L.hd xs, L.tl xs | Uv _ -> a, L.empty | _ -> assert false in
      let s = unify hd t1 s in
      unify (mkSeq tl mkNil) t2 s
-  | _, VApp _ -> fail "not flex"
+  | t, VApp(false,t1,t2) when Subst.is_tc a ->
+     let hd, tl = match t with
+       | App xs -> L.hd xs, L.tl xs | Con _ -> a, L.empty | _ -> assert false in
+     let s = unify hd t1 s in
+     unify (mkSeq tl mkNil) t2 s
+  | _, VApp (b,_,_) -> if b then fail "not flex" else fail "not rigid"
   | Bin(nx,x), Bin(ny,y) when nx = ny -> unify x y s
   | Bin(nx,x), Bin(ny,y) when nx < ny -> unify (eta (ny-nx) x) y s
   | Bin(nx,x), Bin(ny,y) when nx > ny -> unify x (eta (nx-ny) y) s
@@ -264,6 +269,7 @@ type objective =
   | `Unify of data * data | `Custom of string * data | `Cut
   | `Delay of data * premise
   | `Resume of data * premise
+  | `Unlock of data
   ]
 type goal = int * objective * program * program * int
 type dgoal = data * premise * int * program * annot_clause
@@ -320,6 +326,7 @@ let pr_cur_goal eh g lvl s fmt =
        Format.fprintf fmt "delay %a %a"
          (prf_data []) t (prf_premise []) (Red.nf s p)
   | `Resume (t,p) -> Format.fprintf fmt "resume %a %a" (prf_data []) t (prf_premise []) (Red.nf s p)
+  | `Unlock t -> Format.fprintf fmt "unlock %a" (prf_data []) t
 let pr_cur_goals gls fmt s =
   Format.fprintf fmt "@[<hov 0>"; 
   iter_sep (fun fmt () -> Format.fprintf fmt ",@ ")
@@ -428,6 +435,13 @@ let run1 p s ((depth,goal,prog,orig_eh,lvl) : goal) : step_outcome =
   | `Atom(t,k) ->
       let s, goals, alts = select p k t depth s prog orig_eh lvl in
       s, goals, alts
+  | `Unlock t ->
+      assert(Subst.is_tc t);
+      let h, s = Subst.fresh_uv 0 s in
+      let hd = let rec uff t = match look t with
+        | App xs -> uff (L.hd xs) | Con (n,_) -> n | _ -> assert false in
+      uff t in
+      Subst.set_body hd h s, [], []
   | `Unify(a,b) ->
       (try
         let s = unify a b s in
@@ -499,7 +513,13 @@ let add_delay (t,a,depth,orig_prog as dl) s dls run =
   in
     aux dls
 
-let bubble_up s p (eh : program) : annot_clause * subst =
+let rec destFlexHd t =
+  match look t with
+  | Uv(i,_) -> i
+  | App xs -> destFlexHd (L.hd xs)
+  | _ -> assert false
+
+let bubble_up s t p (eh : program) : annot_clause * subst =
   let k = key_of p in
   let p = mkImpl (mkConj (L.of_list (List.map (fun _,_,x -> x) eh))) p in
   let hvs = collect_hv_premise p in      
@@ -509,10 +529,12 @@ let bubble_up s p (eh : program) : annot_clause * subst =
   Format.eprintf "h hvs = %a\n%!" (prf_data []) h_hvs;
   Format.eprintf "p = %a\n%!" (prf_data []) (Red.nf s p);
 *)
+  let i = destFlexHd t in
+  let s = Subst.set_sub i (Subst.fresh_tc ()) s in
   let s = unify h_hvs p s in
   let abstracted =
     if List.length hvs = 0 then (Red.nf s h) else (mkSigma 0 (Red.nf s h)) in
-(*   Format.eprintf "astratto %a\n%!" (prf_premise []) abstracted; *)
+  Format.eprintf "astratto %a\n%!" (prf_premise []) abstracted;
   (0, k, abstracted), s
 
 let rec same_hd a b =
@@ -520,7 +542,7 @@ let rec same_hd a b =
        SPY "same-hd hd2" (prf_data []) ( b);
 
  match look a, look b with
- | Uv _, Uv _ -> LP.equal a b
+ | Con _, Con _ -> LP.equal a b
  | App xs, App ys -> same_hd (L.hd xs) (L.hd ys)
  | _ -> false
 
@@ -536,13 +558,15 @@ let rec run op s ((gls,dls,p) : goals) (alts : alternatives) : subst * dgoal lis
          let resumed, dls, s =
            resume p s (fun t1 -> not(same_hd (Red.nf s t) (Red.nf s t1))) lvl dls in
          let resumed = List.flatten resumed in
+         Format.eprintf "riesumati : %d\n%!" (List.length resumed);
          let gl, s = goals_of_premise p goal depth eh lvl s in
-         s, gl@resumed@rest, dls, p, alts
+         let unlock = depth,`Unlock t,[],eh,lvl in
+         s, unlock::gl@resumed@rest, dls, p, alts
     | (depth,(`Delay(t,goal) as go), _, eh,lvl) :: rest ->
        if true || flexible s t then
          try
            TRACE "delay" (pr_cur_goal eh go lvl s)
-           let new_hyp, s = bubble_up s goal eh in
+           let new_hyp, s = bubble_up s t goal eh in
            let dls = (t,goal,depth,eh,new_hyp) :: dls in
            s, List.map (fun (d,g,cp,eh,l) -> (* siblings are pristine *)
                 d,g,eh@(new_hyp::p),eh,l) rest, dls, new_hyp :: p,

@@ -57,7 +57,7 @@ module LP : sig
     | Seq of data L.t * data
     | Nil
     | Ext of C.data
-    | VApp of data * data (* VApp(hd,args) : args is a list *)
+    | VApp of bool * data * data (* VApp(hd,args) : args is a list *)
 
   val look : data -> kind_of_data
   val kool : kind_of_data -> data
@@ -148,7 +148,10 @@ module Subst : sig
   val apply_subst : subst -> LP.data -> LP.data
   val apply_subst_goal : subst -> LP.goal -> LP.goal
   val fresh_uv : LP.level -> subst -> LP.data * subst
+  val fresh_tc : unit -> LP.data
+  val is_tc : LP.data -> bool
   val set_sub : int -> LP.data -> subst -> subst
+  val set_body : LP.name -> LP.data -> subst -> subst
   val top : subst -> int
   val raise_top : int -> subst -> subst
   

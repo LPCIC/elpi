@@ -182,7 +182,7 @@ type kind_of_data =
   | Seq of data L.t * data
   | Nil
   | Ext of C.data
-  | VApp of data * data
+  | VApp of bool * data * data
 and data =
   | XUv of var * level
   | XCon of name * level
@@ -192,7 +192,7 @@ and data =
   | XSeq of data L.t * data
   | XNil
   | XExt of C.data
-  | XVApp of data * data
+  | XVApp of bool * data * data
   | XSusp of suspended_job ref
 and suspended_job = Done of data | Todo of data * olam * nlam * env
 and env =
@@ -264,10 +264,10 @@ let rec prf_data ctx fmt t =
         P.pp_open_hbox fmt ();
         P.pp_print_string fmt (C.print x);
         P.pp_close_box fmt ()
-    | XVApp(t1,t2) ->
+    | XVApp(b,t1,t2) ->
         P.fprintf fmt "@[<hov 2>";
         if pars then P.pp_print_string fmt "(";
-        P.fprintf fmt "@@";
+        if b then P.fprintf fmt "@@" else P.fprintf fmt "#";
         print ctx ~pars:true t1;
         P.fprintf fmt "@ ";
         print ctx ~pars:true t2;
@@ -387,8 +387,8 @@ let rec psusp ptr t ol nl e =
                            (XArgs (L.singl (XDB 1),nl+1,e))))
   | XApp a -> rule"r5";
       store ptr (XApp(L.map (fun t -> mkXSusp t ol nl e) a))
-  | XVApp(t1,t2) -> rule"r5bis";
-      store ptr (XVApp(mkXSusp t1 ol nl e,mkXSusp t2 ol nl e))
+  | XVApp(b,t1,t2) -> rule"r5bis";
+      store ptr (XVApp(b,mkXSusp t1 ol nl e,mkXSusp t2 ol nl e))
   | XSeq(a,tl) ->
       store ptr (XSeq(L.map (fun t -> mkXSusp t ol nl e) a,
                       mkXSusp tl ol nl e))
@@ -472,7 +472,7 @@ let fixApp xs =
 
 let isDB i = function XDB j when j = i -> true | _ -> false
 
-let mkVApp t1 t2 = XVApp(t1,t2)
+let mkVApp b t1 t2 = XVApp(b,t1,t2)
 
 let rec equal a b = match push a, push b with
  | XUv (x,_), XUv (y,_) -> x = y
@@ -483,15 +483,15 @@ let rec equal a b = match push a, push b with
  | XExt x, XExt y -> C.equal x y
  | XSeq(xs,s), XSeq(ys,t) -> L.for_all2 equal xs ys && equal s t
  | XNil, XNil -> true
- | XVApp (t1,t2), XVApp (s1,s2) -> equal t1 s2 && equal t2 s2
- | XVApp (t1,t2), _ when equal t2 mkNil -> equal t1 b
- | _, XVApp (t1,t2) when equal t2 mkNil -> equal a t1
- | (XVApp (t1,t2), XApp _) ->
+ | XVApp (b1,t1,t2), XVApp (b2,s1,s2) -> b1=b2 && equal t1 s2 && equal t2 s2
+ | XVApp (_,t1,t2), _ when equal t2 mkNil -> equal t1 b
+ | _, XVApp (_,t1,t2) when equal t2 mkNil -> equal a t1
+ | (XVApp (_,t1,t2), XApp _) ->
      (match look t2 with
      | XSeq (ys,tl) when equal tl mkNil -> equal (mkApp (L.cons t1 ys)) b
      | XSeq (ys,tl) -> false
      | _ -> false)
- | (XApp _, XVApp (t1,t2)) ->
+ | (XApp _, XVApp (_,t1,t2)) ->
      (match look t2 with
      | XSeq (ys,tl) when equal tl mkNil -> equal a (mkApp (L.cons t1 ys))
      | XSeq (ys,tl) -> false
@@ -515,7 +515,7 @@ let rec map f x = match push x with
   | XBin (ns,x) -> XBin(ns, map f x)
   | XApp xs -> XApp(L.map (map f) xs)
   | XSeq (xs, tl) -> XSeq(L.map (map f) xs, map f tl)
-  | XVApp(t1,t2) -> XVApp(map f t1,map f t2)
+  | XVApp(b,t1,t2) -> XVApp(b,map f t1,map f t2)
   | XSusp _ -> assert false
 
 let rec mapi f i x = match push x with
@@ -523,7 +523,7 @@ let rec mapi f i x = match push x with
   | XBin (ns,x) -> XBin(ns, mapi f (i+ns) x)
   | XApp xs -> XApp(L.map (mapi f i) xs)
   | XSeq (xs, tl) -> XSeq(L.map (mapi f i) xs, mapi f i tl)
-  | XVApp(t1,t2) -> XVApp(mapi f i t1, mapi f i t2)
+  | XVApp(b,t1,t2) -> XVApp(b,mapi f i t1, mapi f i t2)
   | XSusp _ -> assert false
  
 
@@ -801,6 +801,7 @@ let tok = lexer
   | '$' 'a'-'z' ident -> "BUILTIN",$buf
   | '!' -> "BANG", $buf
   | '@' -> "AT", $buf
+  | '#' -> "SHARP", $buf
   | '"' string -> "LITERAL", let b = $buf in String.sub b 1 (String.length b-2)
 ]
 
@@ -895,7 +896,7 @@ let check_con n l =
 
 let rec binders c n = function
     | (XCon _ | XUv _) as x when equal x c -> mkDB n
-    | XVApp(t1,t2) -> XVApp(binders c n t1, binders c n t2)
+    | XVApp(b,t1,t2) -> XVApp(b,binders c n t1, binders c n t2)
     | (XCon _ | XUv _ | XExt _ | XDB _ | XNil) as x -> x
     | XBin(w,t) -> XBin(w,binders c (n+w) t)
     | XApp xs -> XApp (L.map (binders c n) xs)
@@ -977,8 +978,9 @@ EXTEND
       | NIL -> mkNil
       | s = LITERAL -> mkExt (mkString s)
       | AT; u = UVAR; args = atom LEVEL "simple" ->
-          let u, lvl = lvl_name_of u in
-          mkVApp (mkUv (get_uv u) lvl) args
+          let u, lvl = lvl_name_of u in mkVApp true (mkUv (get_uv u) lvl) args
+      | SHARP; u = UVAR; args = atom LEVEL "simple" ->
+          let u, lvl = lvl_name_of u in mkVApp false (mkUv (get_uv u) lvl) args
       | bt = BUILTIN; a = atom LEVEL "simple" -> mkAtomBiCustom bt a
       | BANG -> mkAtomBiCut
       | DELAY; t = atom LEVEL "simple"; p = atom LEVEL "simple" -> mkDelay t p
@@ -1024,15 +1026,17 @@ module Subst = struct (* {{{ LP.Uv |-> data mapping *)
 open LP
 
 module M = Int.Map
+module S = Map.Make(struct type t = string let compare = compare end)
 
-type subst = { assign : data M.t; top_uv : int }
-let empty n = { assign = M.empty; top_uv = n }
+type subst = { assign : data M.t; body : data S.t; top_uv : int }
+let empty n = { assign = M.empty; body = S.empty; top_uv = n }
 
 let last_sub_lookup = ref (XDB 0)
 let in_sub i { assign = assign } =
   try last_sub_lookup := M.find i assign; true
   with Not_found -> false
 let set_sub i t s = { s with assign = M.add i t s.assign }
+let set_body c t s = { s with body = S.add c t s.body }
 
 let prf_subst fmt s =
   Format.pp_open_hovbox fmt 2;
@@ -1054,6 +1058,8 @@ let string_of_subst s = on_buffer prf_subst s
 let apply_subst s t =
   let rec subst x = match look x with
     | Uv(i,_) when in_sub i s -> map subst !last_sub_lookup
+    | Con(n,0) when n.[0] = 'd' ->
+        (try map subst (S.find n s.body) with Not_found -> x)
     | _ -> x in
   map subst t
 let apply_subst_goal s = map_premise (apply_subst s)
@@ -1062,6 +1068,12 @@ let top s = s.top_uv
 let raise_top i s = { s with top_uv = s.top_uv + i + 1 }
 
 let fresh_uv lvl s = XUv(s.top_uv,lvl), { s with top_uv = s.top_uv + 1 }
+let tc = ref 0
+let fresh_tc () = incr tc; mkCon ("d" ^ string_of_int !tc) 0
+let rec is_tc t = match look t with
+  | Con(n,0) when n.[0] = 'd' -> true
+  | App xs -> is_tc (L.hd xs)
+  | _ -> false
 
 end (* }}} *)
 
@@ -1098,7 +1110,10 @@ let beta_under depth t l =
 let rec whd s t =
   TRACE "whd" (fun fmt -> prf_data [] fmt t)
   match look t with
-  | (Ext _ | Con _ | DB _ | Bin _ | Nil) as x -> kool x, s
+  | (Ext _  | DB _ | Bin _ | Nil) as x -> kool x, s
+  | Con(n,0) as x when n.[0] = 'd' ->
+      (try whd s (S.find n s.body) with Not_found -> kool x,s)
+  | Con _ as x -> kool x, s
   | Uv (i,_) when in_sub i s ->
       let t = !last_sub_lookup in
       let t', s = whd s t in
@@ -1124,10 +1139,13 @@ let rec whd s t =
           else mkAppv hd' (L.tl v) 0 (L.len v-1), s
           
 let rec nf s x = match look x with
-  | (Ext _ | Con _ | DB _ | Nil) as x -> kool x
+  | (Ext _ | DB _ | Nil) as x -> kool x
+  | Con(n,0) as x when n.[0] = 'd' ->
+      (try nf s (S.find n s.body) with Not_found -> kool x)
+  | Con _ as x -> kool x
   | Bin(n,t) -> mkBin n (nf s t)
   | Seq(xs,t) -> mkSeq (L.map (nf s) xs) (nf s t)
-  | VApp(t1,t2) -> mkVApp (nf s t1) (nf s t2)
+  | VApp(b,t1,t2) -> mkVApp b (nf s t1) (nf s t2)
   | (App _ | Uv _) as xf ->
       let x', _ = whd s x in 
       match look x' with

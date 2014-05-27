@@ -12,29 +12,28 @@ prt S T :-
 
 /************************* refiner ************************/
 
-of M TY T :- ofr M TY T.
+% of M TY T :- prt " " (of M TY Y), not true.
 
-bof M TY :- rof M TY2, unify TY TY2.
+bof M TY :- prt "resumed " (rof M TY), rof M TY. %, unify TY TY2.
 
-ofr T TY R :- $is_flex T, !, bof T2 TY,
- T = @VT _, T2 = @VT2 _, is_same_flex VT VT2, !, R=T.
+of hole TY T :-
+  delay TY (bof TY set), 
+  pi x\ unify x TY => delay T (bof T x).
 
-ofr hole TY T :- delay T (bof T TY), delay TY (bof TY set).
-
-ofr (lam S F) (prod S2 T) (lam S2 F2) :-
+of (lam S F) (prod S2 T) (lam S2 F2) :-
   of S SO S2,
   unify SO set,
-  pi x\ ofr x S2 x =>
+  pi x\ of x S2 x =>
     of (F x) (T x) (F2 x).
 
-ofr (prod S F) set (prod S2 F2) :-
+of (prod S F) set (prod S2 F2) :-
   of S SO S2,
   unify SO set,
-  pi x\ ofr x S2 x => (
+  pi x\ of x S2 x => (
     of (F x) (T x) (F2 x),
     unify (T x) set).
 
-ofr (app M1 N1) Z (app M2 N2) :-
+of (app M1 N1) Z (app M2 N2) :-
     of M1 TM1 M2,
     of N1 TN1 N2,
     pi x\
@@ -42,7 +41,7 @@ ofr (app M1 N1) Z (app M2 N2) :-
       unify TM1 (prod TN1 F),
       subst F N2 Z.
 
-ofr (atom ID) T (atom ID) :- env ID T.
+of (atom ID) T (atom ID) :- env ID T1, unify T T1.
 
 env zero (atom nat).
 env succ (prod (atom nat) (x \ (atom nat))).
@@ -52,9 +51,9 @@ env vect (prod (atom nat) (x\ set)).
 env vnil (app (atom vect) (atom zero)).
 env vcons (prod (atom nat) (n\ prod (app (atom vect) n) (w\ app (atom vect) (app (atom succ) n)))).
 
-ofr set set set.
+of set set set.
 
-ofr (rec Rty N Base Step) Rty2 (rec Rty2 N2 Base2 Step2) :-
+of (rec Rty N Base Step) Rty2 (rec Rty2 N2 Base2 Step2) :-
   of Rty TRty Rty2,
   unify TRty set,
   of N TN N2,
@@ -85,7 +84,8 @@ uall2 [X|XS] [Y|YS] H :- restrict H, pi x\ uall2 XS YS (H x).
 delift0 M [] Y :- delift_aux M Y.
 delift0 M [X|XS] Y :- pi c\ binds c X => delift (M c) XS Y.
 
-delift M L Y :- resume M (delift0 M L Y, of Y _ _).
+delift M L Y :-
+  prt "sblocco la meta e assegno " (M L Y), resume M (delift0 M L Y).
 
 %delift_aux M Y :- prt "" (delift_aux M Y), not true.
 
@@ -116,25 +116,29 @@ delift_meta M N [_|XS] :- % N is restricted
 %unif A M N :- prt "" (unif A M N), not true.
 
 /* M=M */
-unif ff (@M L1) (@N L2) :- is_same_flex M N, !, uall2 L1 L2 M.
+unif ff (#M L1) (#M L2) :- !, uall2 L1 L2 M.
 
 /* flex=term */
 unif ff T N :-
- T = @M L,
- rof T TM,
+ T = #M L,
+ prt "tento di assegnare alla meta " (T il valore N),
  rof N TN,
- unify TM TN,
+ prt "tale valore ha tipo " TN,
+ bof T TN,
+ prt "la meta puo avere tale tipo: " (bof T TN),
  delift M L N.
 /* term=flex */
 unif ff N T :-
- T = @M L,
- rof T TM,
+ T = #M L,
+ prt "tento di assegnare alla meta " (T il valore N),
  rof N TN,
- unify TN TM,
+ prt "tale valore ha tipo " TN,
+ bof T TN,
+ prt "la meta puo avere tale tipo: " (bof T TN),
  delift M L N.
 
-unif _ (@M _) _ :- !, not true.
-unif _ _ (@M _) :- !, not true.
+%unif _ (@M _) _ :- !, not true.
+%unif _ _ (@M _) :- !, not true.
 
 /* lambda-intro on the fly */
 unif _ T (app H A) :-
@@ -202,7 +206,7 @@ test_unify A B TA2 :-
   prt "========== " (unify A1 B1),
   unify A1 B1.
 
-ofr (var N) T M :- hyp N X, of X T M.
+of (var N) T M :- hyp N X, of X T M.
 
 step_in N (decl TY F) :-
   pi x\ of x TY x => copy x x => unify x x => hyp N x => (
