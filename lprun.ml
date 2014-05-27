@@ -436,7 +436,8 @@ let run1 p s ((depth,goal,prog,orig_eh,lvl) : goal) : step_outcome =
       let s, goals, alts = select p k t depth s prog orig_eh lvl in
       s, goals, alts
   | `Unlock t ->
-      assert(Subst.is_tc t);
+      if not (Subst.is_tc t) then
+        (Format.eprintf "not a tc: %a\n%!" (prf_data []) t; assert false);
       let h, s = Subst.fresh_uv 0 s in
       let hd = let rec uff t = match look t with
         | App xs -> uff (L.hd xs) | Con (n,_) -> n | _ -> assert false in
