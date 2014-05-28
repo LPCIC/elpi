@@ -663,7 +663,8 @@ let prf_builtin ctx fmt = function
 let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
   match look_premise p with
   | Atom p ->
-      prf_data_low ~reccal:(fun ?pars ctx -> prf_premise ?pars ctx fmt) ctx fmt p
+      prf_data_low ~pars
+        ~reccal:(fun ?pars ctx -> prf_premise ?pars ctx fmt) ctx fmt p
   | AtomBI bi -> prf_builtin ctx fmt bi
   | Conj l when L.len l = 0 -> Format.fprintf fmt ""
   | Conj l when L.len l = 1 -> prf_premise ~positive ~pars ctx fmt (L.hd l)
