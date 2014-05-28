@@ -535,7 +535,7 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
   let s = unify h_hvs p s in
   let abstracted =
     if List.length hvs = 0 then (Red.nf s h) else (mkSigma 0 (Red.nf s h)) in
-  Format.eprintf "astratto %a\n%!" (prf_premise []) abstracted;
+(*   Format.eprintf "astratto %a\n%!" (prf_premise []) abstracted; *)
   (0, k, abstracted), s
 
 let rec same_hd a b =
@@ -559,7 +559,7 @@ let rec run op s ((gls,dls,p) : goals) (alts : alternatives) : subst * dgoal lis
          let resumed, dls, s =
            resume p s (fun t1 -> not(same_hd (Red.nf s t) (Red.nf s t1))) lvl dls in
          let resumed = List.flatten resumed in
-         Format.eprintf "riesumati : %d\n%!" (List.length resumed);
+(*          Format.eprintf "riesumati : %d\n%!" (List.length resumed); *)
          let gl, s = goals_of_premise p goal depth eh lvl s in
          let unlock = depth,`Unlock t,[],eh,lvl in
          s, unlock::gl@resumed@rest, dls, p, alts
