@@ -10,28 +10,29 @@ is_same_flex M N :-
 prt S T :- 
     $print S, $print T, $print "\n".
 
+spy C :- prt "<<-- " C, C, prt "-->> " C.
+
+debug :- not true.
+
 /************************* refiner ************************/
 
-% of M TY T :- prt " " (of M TY Y), not true.
+of M TY T :- debug, prt " " (of M TY Y), not true.
 
-bof M TY :- prt "resumed " (rof M TY), rof M TY. %, unify TY TY2.
+of T TY W :- not($is_flex TY), !, of T TY1 W, unify TY TY1.
 
-of hole TY T :-
-  delay TY (bof TY set), 
-  pi x\ unify x TY => delay T (bof T x).
+of hole TY T :- % this rule is bidirectional
+  (pi x\ unify x x => unify x set => delay TY (of TY x TY)), 
+  (pi x\ unify x x => unify x TY => delay T (of T x T)).
 
 of (lam S F) (prod S2 T) (lam S2 F2) :-
   of S SO S2,
   unify SO set,
-  pi x\ of x S2 x =>
-    of (F x) (T x) (F2 x).
+  (pi x\ of x S2 x => unify x x => of (F x) (T x) (F2 x)).
 
 of (prod S F) set (prod S2 F2) :-
   of S SO S2,
   unify SO set,
-  pi x\ of x S2 x => (
-    of (F x) (T x) (F2 x),
-    unify (T x) set).
+  (pi x\ of x S2 x => unify x x => (of (F x) (T x) (F2 x), unify (T x) set)).
 
 of (app M1 N1) Z (app M2 N2) :-
     of M1 TM1 M2,
@@ -41,7 +42,7 @@ of (app M1 N1) Z (app M2 N2) :-
       unify TM1 (prod TN1 F),
       subst F N2 Z.
 
-of (atom ID) T (atom ID) :- env ID T1, unify T T1.
+of (atom ID) T (atom ID) :- env ID T.
 
 env zero (atom nat).
 env succ (prod (atom nat) (x \ (atom nat))).
@@ -75,7 +76,7 @@ subst Where What Out :- Where What = Out.
 restrict X :- pi c\ pi d\ X c = X d.
 
 uall2 [] [] H.
-uall2 [X|XS] [Y|YS] H :- unify X Y, !, pi x\ uall2 XS YS (H x).
+uall2 [X|XS] [Y|YS] H :- unify X Y, !, pi x\ unify x x => uall2 XS YS (H x).
 uall2 [X|XS] [Y|YS] H :- restrict H, pi x\ uall2 XS YS (H x).
 
 % delift M L Y instantiates the output M s.t. @M L = Y
@@ -84,17 +85,15 @@ uall2 [X|XS] [Y|YS] H :- restrict H, pi x\ uall2 XS YS (H x).
 delift0 M [] Y :- delift_aux M Y.
 delift0 M [X|XS] Y :- pi c\ binds c X => delift0 (M c) XS Y.
 
-delift ML M L Y :-
-  prt "sblocco la meta e assegno " (M L Y), resume ML (delift0 M L Y),
-  $print "assegnato\n".
+delift ML M L Y :- resume ML (delift0 M L Y).
 
-%delift_aux M Y :- prt "" (delift_aux M Y), not true.
+delift_aux M Y :- debug, prt "" (delift_aux M Y), not true.
 
 % projection
 delift_aux M Y :- binds V X, unify X Y, M=V.
 
 %mimic (i.e. copy-clauses)
-delift_aux M (@N L) :- !, delift_meta M N L.
+delift_aux M (#N L) :- !, delift_meta M N L.
 delift_aux (atom A) (atom A).
 delift_aux set set.
 delift_aux (app M1 M2) (app N1 N2) :- delift_aux M1 N1, delift_aux M2 N2.
@@ -108,34 +107,30 @@ delift_aux (rec A1 B1 C1 D1) (rec A2 B2 C2 D2) :-
   delift_aux A1 A2, delift_aux B1 B2, delift_aux C1 C2, delift_aux D1 D2.
 
 % delift_meta M N L holds when M L1 = @N L with L1 now implicit as binds hyps
-%delift_meta M N L :- prt "" (delift_meta M N L), not true.
-delift_meta M M [].
+delift_meta M N L :- prt "" (delift_meta M N L), not true.
+delift_meta M N [] :- of hole TY N, M = N.
 delift_meta M N [X|XS] :- delift_aux A X, ! /*red*/, delift_meta M (N A) XS.
 delift_meta M N [_|XS] :- % N is restricted
  pi c\ N c = N2, delift_meta M N2 XS.
 
-%unif A M N :- prt "" (unif A M N), not true.
+unif A M N :- debug, prt "" (unif A M N), not true.
 
 /* M=M */
 unif ff (#M L1) (#M L2) :- !, uall2 L1 L2 M.
+unif ff (@M L) (#M L) :- !.
+unif ff (#M L) (@M L) :- !.
 
 /* flex=term */
 unif ff T N :-
  T = #M L,
- prt "tento di assegnare alla meta " (T il valore N),
  rof N TN,
- prt "tale valore ha tipo " TN,
- bof T TN,
- prt "la meta puo avere tale tipo: " (bof T TN),
+ of T TN _,
  delift T M L N.
 /* term=flex */
 unif ff N T :-
  T = #M L,
- prt "tento di assegnare alla meta " (T il valore N),
- rof N TN,
- prt "tale valore ha tipo " TN,
- bof T TN,
- prt "la meta puo avere tale tipo: " (bof T TN),
+ of N TN,
+ of T TN _,
  delift T M L N.
 
 %unif _ (@M _) _ :- !, not true.
@@ -247,7 +242,14 @@ claim Claim P1 :-
   unify THole Claim1,
   step Sig.
 
-%pippo2 A B :- prt "on> " (pippo2 A B), not true.
-%pippo A B :- prt "on> " (pippo A B), not true.
-%pippo A B :- pippo2 A B.
-%test Y :- pi x\ pippo x zero => (delay Y (pippo x one), pippo x one), Y=zero.
+/* ======================================================================== */
+
+suite TEST :- % runnin of twice in a row
+  TEST = (of (lam (atom nat) x\ hole) TY T, of T TY1 T1, TY1=TY, T1=T).
+suite TEST :- % typing a pi
+  TEST = (of (prod (atom nat) x\ hole) TY T).
+
+run T :- prt "INFO: running " T, T, !, prt "INFO: success " T.
+run T :- prt "ERROR: failure " T.
+test :- suite T, run T, not true.
+test :- $print "INFO: all tests run\n".
