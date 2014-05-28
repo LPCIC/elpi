@@ -223,15 +223,15 @@ let rec fresh_names w k = function
 
 module P = Format
 
-let rec prf_data ctx fmt t =
-  let rec print ?(pars=false) ctx = function
+let rec self fmt ?pars ctx t = prf_data_low ?pars ctx fmt t
+and prf_data_low ?(pars=false) ctx fmt ?(reccal=self fmt) = function
     | XBin (n,x) ->
        P.pp_open_hovbox fmt 2;
        let names = fresh_names "w" (List.length ctx) n in
        if pars then P.pp_print_string fmt "(";
        P.pp_print_string fmt (String.concat "\\ " names ^ "\\");
        P.pp_print_space fmt ();
-       print (List.rev names @ ctx) x;
+       reccal (List.rev names @ ctx) x;
        if pars then P.pp_print_string fmt ")";
        P.pp_close_box fmt ()
     | XDB x -> P.pp_print_string fmt 
@@ -243,21 +243,21 @@ let rec prf_data ctx fmt t =
     | XApp xs ->
         P.pp_open_hovbox fmt 2;
         if pars then P.pp_print_string fmt "(";
-        iter_sep P.pp_print_space (fun _ -> print ~pars:true ctx)
+        iter_sep P.pp_print_space (fun _ -> reccal ~pars:true ctx)
           fmt (L.to_list xs);
         if pars then P.pp_print_string fmt ")";
         P.pp_close_box fmt ()
     | XSeq (xs, XNil) ->
         P.fprintf fmt "@[<hov 2>[";
-        iter_sep (fun fmt () -> P.fprintf fmt ",@ ") (fun _ -> print ctx)
+        iter_sep (fun fmt () -> P.fprintf fmt ",@ ") (fun _ -> reccal ctx)
           fmt (L.to_list xs);
         P.fprintf fmt "]@]";
     | XSeq (xs, t) ->
         P.fprintf fmt "@[<hov 2>[";
-        iter_sep (fun fmt () -> P.fprintf fmt ",@ ") (fun _ -> print ctx)
+        iter_sep (fun fmt () -> P.fprintf fmt ",@ ") (fun _ -> reccal ctx)
           fmt (L.to_list xs);
         P.fprintf fmt "|@ ";
-        print ctx t;
+        reccal ctx t;
         P.fprintf fmt "]@]";
     | XNil -> P.fprintf fmt "[]";
     | XExt x ->
@@ -268,22 +268,20 @@ let rec prf_data ctx fmt t =
         P.fprintf fmt "@[<hov 2>";
         if pars then P.pp_print_string fmt "(";
         if b then P.fprintf fmt "@@" else P.fprintf fmt "#";
-        print ctx ~pars:true t1;
+        reccal ctx ~pars:true t1;
         P.fprintf fmt "@ ";
-        print ctx ~pars:true t2;
+        reccal ctx ~pars:true t2;
         if pars then P.pp_print_string fmt ")";
         P.fprintf fmt "@]"
     | XSusp ptr ->
         match !ptr with
-        | Done t -> P.fprintf fmt ".(@["; print ctx t; P.fprintf fmt ")@]"
+        | Done t -> P.fprintf fmt ".(@["; reccal ctx t; P.fprintf fmt ")@]"
         | Todo(t,ol,nl,e) ->
             P.fprintf fmt "@[<hov 2>⟦";
-            print ctx t;
+            reccal ctx t;
             P.fprintf fmt ",@ %d, %d,@ " ol nl;
             prf_env ctx fmt e;
             P.fprintf fmt "⟧@]";
-  in
-    print ctx t
 
 and prf_env ctx fmt e =
   let rec print_env = function
@@ -291,7 +289,7 @@ and prf_env ctx fmt e =
     | XArgs(a,n,e) ->
         P.fprintf fmt "(@[<hov 2>";
         iter_sep (fun fmt () -> P.fprintf fmt ",@ ")
-          (prf_data ctx) fmt (L.to_list a);
+          (fun fmt t -> prf_data_low ctx fmt t) fmt (L.to_list a);
         P.fprintf fmt "@]|%d)@ :: " n;
         print_env e
     | XMerge(e1,nl1,ol2,e2) ->
@@ -307,6 +305,9 @@ and prf_env ctx fmt e =
     P.pp_open_hovbox fmt 2;
     print_env e;
     P.pp_close_box fmt ()
+
+let prf_data ctx fmt p = prf_data_low ctx fmt p
+let prf_data_only = prf_data
 
 let string_of_data ?(ctx=[]) t = on_buffer (prf_data ctx) t
 let string_of_env ?(ctx=[]) e = on_buffer (prf_env ctx) e
@@ -661,7 +662,8 @@ let prf_builtin ctx fmt = function
 
 let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
   match look_premise p with
-  | Atom p -> prf_data ctx fmt p
+  | Atom p ->
+      prf_data_low ~reccal:(fun ?pars ctx -> prf_premise ?pars ctx fmt) ctx fmt p
   | AtomBI bi -> prf_builtin ctx fmt bi
   | Conj l when L.len l = 0 -> Format.fprintf fmt ""
   | Conj l when L.len l = 1 -> prf_premise ~positive ~pars ctx fmt (L.hd l)
@@ -726,6 +728,7 @@ let prf_clause ?(dot=true) ?positive ctx fmt c =
   if dot then Format.pp_print_string fmt ".";
   Format.pp_close_box fmt ()
 
+let prf_data ctx fmt p = prf_premise ctx fmt p
 let prf_premise ctx fmt = prf_premise ctx fmt
 let string_of_premise p = on_buffer (prf_premise []) p
 let string_of_goal = string_of_premise

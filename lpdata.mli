@@ -128,6 +128,7 @@ module LP : sig
   val parse_data : string -> data
 
   val prf_data : name list -> Format.formatter -> data -> unit
+  val prf_data_only : name list -> Format.formatter -> data -> unit
   val prf_premise : name list -> Format.formatter -> premise -> unit
   val prf_goal : name list -> Format.formatter -> goal -> unit
   val prf_clause : name list -> Format.formatter -> clause -> unit
