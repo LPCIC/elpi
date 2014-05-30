@@ -30,9 +30,7 @@ of M TY T :- dbgpp "" (of M TY Y), false.
 % ideally each rule should take care of dealing with bi-directionality
 of T TY W :- not($is_flex TY), !, of T TY1 W, unify TY TY1.
 
-of hole TY T :-
-  (pi x\ unify x x => unify x set => delay TY (of TY x TY)), 
-  (pi x\ of x set x => unify x x => unify x TY => delay T (of T x T)).
+of hole TY T :- delay TY (of TY set TY), delay T (of T TY T).
 
 of (lam S F) (prod S2 T) (lam S2 F2) :-
   of S SO S2,
