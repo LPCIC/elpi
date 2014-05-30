@@ -521,8 +521,14 @@ let rec destFlexHd t =
   | _ -> assert false
 
 let bubble_up s t p (eh : program) : annot_clause * subst =
+  Format.eprintf "DELAY: %a\n%!" (prf_premise []) p;
   let k = key_of p in
-  let p = mkImpl (mkConj (L.of_list (List.map (fun _,_,x -> x) eh))) p in
+  let hvs = collect_hv_premise p in      
+  let p = mkImpl (mkConj (L.of_list
+    (List.filter (fun x ->
+        let hvsx = collect_hv_premise x in
+        List.exists (fun h -> List.mem h hvsx) hvs)
+      (List.map (fun _,_,x -> x) eh)))) p in
   let hvs = collect_hv_premise p in      
   let h, s = Subst.fresh_uv 0 s in
   let h_hvs = mkApp (L.of_list (h :: hvs)) in
