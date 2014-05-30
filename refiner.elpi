@@ -72,7 +72,8 @@ of (rec Rty N Base Step) Rty2 (rec Rty2 N2 Base2 Step2) :-
   unify TStep (prod (atom nat) n\ prod Rty2 acc \ Rty2).
 
 /************************ retype *************************/
-rof T TY :- of T TY _.
+rof T TY :- dbgpp "ritipo " (il termine T ":" TY), of T TY _, !.
+rof T TY :- dbgpp "ritipaggio fallito! " (rof T TY), $abort "1".
 
 /************************* subst ************************/
 
