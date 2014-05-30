@@ -1,31 +1,36 @@
-/************************* utilities ************************/
+% vim: syntax=prolog:
+
+% enabling/disabling this will change the program hence the value of the
+% counters of the tracing mechanism of elpi
+debug :- true.
+
+/************************* logic ************************/
 
 true.
 not A :- A, !, false.
 not A.
 
-debug :- true.
+/************************* utilities ************************/
 
-is_same_flex M N :-
-  $is_flex M, $is_flex N, not(dummy1__ = M, dummy2__ = N).
-
-dbgpp S T :- 
-  debug, !,
-  $counter ["run",N],
-  $printl ["run:", N, ": ", S, T, "\n"].
+% print only when debug is true and annotate with the value of the "run" counter
+dbgpp S T :- debug, !, $counter ["run",N], $printl ["run:",N,": ",S,T,"\n"].
 dbgpp S T.
-pp S T :- $print S, $print T, $print "\n".
 
-spy C :- dbgpp "<<-- " C, C, dbgpp "-->> " C.
-
+% always print
+pp S T :- $printl [S,T,"\n"].
 
 /************************* refiner ************************/
 
-of M TY T :- dbgpp " " (of M TY Y), false.
+% this is not going to be run always, since hyp clases will have precedence
+% over this rule.  Still one gets a good value for further investigation
+% using: ./elpi -trace-on -trace-at run 1673 1700 -trace-only 'run' refiner.elpi
+% that will print all goals processed
+of M TY T :- dbgpp "" (of M TY Y), false.
 
+% ideally each rule should take care of dealing with bi-directionality
 of T TY W :- not($is_flex TY), !, of T TY1 W, unify TY TY1.
 
-of hole TY T :- % this rule is bidirectional
+of hole TY T :-
   (pi x\ unify x x => unify x set => delay TY (of TY x TY)), 
   (pi x\ of x set x => unify x x => unify x TY => delay T (of T x T)).
 
@@ -76,7 +81,6 @@ rof T TY :- dbgpp "ritipo " (il termine T ":" TY), of T TY _, !.
 rof T TY :- dbgpp "ritipaggio fallito! " (rof T TY), $abort "1".
 
 /************************* subst ************************/
-
 subst Where What Out :- Where What = Out.
 
 /************************* unify ************************/
@@ -94,10 +98,10 @@ delift0 M [] Y :- delift_aux M Y.
 delift0 M [X|XS] Y :- rof X T,
   pi c\ of c T c => binds c X => delift0 (M c) XS Y.
 
-binds A B :- dbgpp " " (binds A B), false.
+binds A B :- dbgpp "" (binds A B), false.
 
 delift ML M L Y :-
-  dbgpp "<<<< assegno: " (valore Y a M con subst L),
+  dbgpp "<<<< assegno: " (valore Y alla meta M con subst L),
   resume ML (delift0 M L Y),
   dbgpp "assegnato >>>> " M.
 
@@ -106,7 +110,8 @@ delift_aux M Y :- dbgpp "" (delift_aux M Y), false.
 %mimic (i.e. copy-clauses) with pruning
 delift_aux M (#N L) :- !,
   delift_subst L L1,
-  mkhole M1 L1, mkapp M1 L1 M, dbgpp "fresh " M.
+  mkhole M1 L1, mkapp M1 L1 M,
+  dbgpp "fresh meta with delifted/pruned subst: " M.
 mkhole M [] :- of hole _ M.
 mkhole M [X|XS] :-
   rof X TY,
