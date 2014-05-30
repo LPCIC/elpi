@@ -26,19 +26,19 @@ let _ =
     | LP.Ext t  when isString t ->
         Format.eprintf "%s%!" (unescape (getString t))
     | _ -> Format.eprintf "%a%!" (LP.prf_data []) t in
-  register_custom "print" (fun t s _ _ -> print_atom s t; s);
-  register_custom "printl" (fun t s _ _ ->
+  register_custom "print" (fun t s -> print_atom s t; s);
+  register_custom "printl" (fun t s ->
     let t = Red.nf s t in
     match LP.look t with
     | LP.Seq(l,_) -> List.iter (print_atom s) (L.to_list l); s
     | _ -> assert false);
-  register_custom "is" (fun t s _ _ ->
+  register_custom "is" (fun t s ->
     let t = Red.nf s t in
     match LP.look t with
     | LP.App l when L.len l = 3 ->
         if LP.equal (L.get 1 l) (L.get 2 l) then s else raise NoClause
     | _ -> assert false);
-  register_custom "is_flex" (fun t s _ _ ->
+  register_custom "is_flex" (fun t s ->
     let t, s = Red.whd s t in
     match LP.look t with
     | LP.Uv _ -> s
@@ -46,13 +46,13 @@ let _ =
         (match LP.look (L.hd xs) with LP.Uv _ -> s | _ -> raise NoClause)
     | _ -> raise NoClause);
   let aborts = ref 0 in
-  register_custom "abort" (fun t s _ _ ->
+  register_custom "abort" (fun t s ->
     incr aborts;
     (match LP.look t with
     | LP.Ext t when isString t ->
          if !aborts = int_of_string (getString t) then exit 1 else s
     | _ -> assert false));
-  register_custom "counter" (fun t s _ _ ->
+  register_custom "counter" (fun t s ->
     let t, s = Red.whd s t in
     match LP.look t with
     | LP.Seq (l,_) when L.len l = 2 ->
@@ -68,7 +68,7 @@ let _ =
             | Stream.Error msg -> prerr_endline msg; raise NoClause)
         | _ -> assert false)
     | _ -> assert false);
-  register_custom "parse" (fun t s _ _ ->
+  register_custom "parse" (fun t s ->
     let t, s = Red.whd s t in
     match LP.look t with
     | LP.Seq (l,_) when L.len l = 2 ->
@@ -83,7 +83,7 @@ let _ =
             | Stream.Error msg -> prerr_endline msg; raise NoClause)
         | _ -> assert false)
     | _ -> assert false);
-  register_custom "read" (fun t s _ _ ->
+  register_custom "read" (fun t s ->
     let input = input_line stdin in
     unify (LP.mkExt (mkString input)) t s);
 ;;

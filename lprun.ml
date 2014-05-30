@@ -310,7 +310,11 @@ let rec iter_sep spc pp fmt = function
   | [x] -> pp fmt x; Format.fprintf fmt "@ "
   | x::tl -> pp fmt x; spc fmt (); iter_sep spc pp fmt tl
 
-let pr_cur_goal eh g lvl s fmt =
+let pr_cur_goal op (_,g,hyps,_,lvl) s fmt =
+  let eh = (* XXX This is inprecise, hypotheticals should have a special id *)
+    let nhyps = List.length hyps in let nop = List.length op in
+    if nhyps <= nop then []
+    else L.to_list (L.sub 0 (nhyps - nop) (L.of_list hyps)) in
   match g with
   | `Atom (goal,_) ->
       Format.fprintf fmt "@[<hv 0>%a@ |- %a@]"
@@ -325,20 +329,23 @@ let pr_cur_goal eh g lvl s fmt =
   | `Delay (t,p) ->
        Format.fprintf fmt "delay %a %a"
          (prf_data []) t (prf_premise []) (Red.nf s p)
-  | `Resume (t,p) -> Format.fprintf fmt "resume %a %a" (prf_data []) t (prf_premise []) (Red.nf s p)
+  | `Resume (t,p) ->
+       Format.fprintf fmt "resume %a %a" (prf_data []) t
+         (prf_premise []) (Red.nf s p)
   | `Unlock (t,ps) ->
        Format.fprintf fmt "@[<hv 0>unlock %a@ purge %a@]"
          (prf_data []) t (prf_program ~compact:true) ps
-let pr_cur_goals gls fmt s =
+
+let pr_cur_goals op gls fmt s =
   Format.fprintf fmt "@[<hov 0>"; 
   iter_sep (fun fmt () -> Format.fprintf fmt ",@ ")
-    (fun fmt (_,g,_,eh,l) -> pr_cur_goal eh g l s fmt) fmt gls;
+    (fun fmt g -> pr_cur_goal op g s fmt) fmt gls;
   Format.fprintf fmt "@]" 
 
 let custom_tab = ref []
 let register_custom n f = custom_tab := ("$"^n,f) :: !custom_tab
-let custom name t s d p =
-  try List.assoc name !custom_tab t s d p
+let custom name t s =
+  try List.assoc name !custom_tab t s
   with Not_found -> raise(Invalid_argument ("custom "^name))
 
 let subst t hv =
@@ -429,28 +436,6 @@ let select p k goal depth (s as os) prog orig_eh lvl : step_outcome =
   in
     first prog
 
-let run1 p s ((depth,goal,prog,orig_eh,lvl) : goal) : step_outcome =
-  match goal with
-  | `Cut -> assert false
-  | `Delay _ -> assert false
-  | `Resume _ -> assert false
-  | `Unlock _ -> assert false
-  | `Atom(t,k) ->
-      let s, goals, alts = select p k t depth s prog orig_eh lvl in
-      s, goals, alts
-  | `Unify(a,b) ->
-      (try
-        let s = unify a b s in
-        SPY "sub" Subst.prf_subst s;
-        s,[], []
-      with UnifFail _ -> raise NoClause)
-  | `Custom(name,a) ->
-      (try
-        let s = custom name a s depth prog in
-        SPY "sub" Subst.prf_subst s;
-        s,[], []
-      with UnifFail _ -> raise NoClause)
-
 let rec cut lvl = function
   | [] -> []
   | (_,((_,_,_,_,l)::_,_,_)) :: xs when l + 1 = lvl -> xs
@@ -471,9 +456,7 @@ let list_partmapfold f l a =
   in
     aux [] [] a l
 
-let flexible s t = let t, _s = Red.whd s t in
-(*   Format.eprintf "flexible %a = not %b\n%!" (prf_data []) t (rigid (look t)); *)
-  not (rigid (look t))
+let flexible s t = let t, _s = Red.whd s t in not (rigid (look t))
 
 let goals_of_premise p clause depth eh lvl s =
   let gl, s = contextualize_goal depth s clause in
@@ -539,23 +522,27 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
   Format.eprintf "EXTRA: %a\n%!" (prf_premise []) abstracted;
   (0, k, abstracted), s
 
-let rec same_hd a b =
-       SPY "same-hd hd1" (prf_data []) ( a);
-       SPY "same-hd hd2" (prf_data []) ( b);
+let not_same_hd s a b =
+ let rec aux a b =
+   let a, _ = Red.whd s a in
+   let b, _ = Red.whd s b in
+   match look a, look b with
+   | Con _, Con _ -> not (LP.equal a b)
+   | App xs, App ys -> aux (L.hd xs) (L.hd ys)
+   | _ -> true
+ in aux a b
+        
+let mk_prtg str d l = d, `Custom("$print",mkExt(mkString str)), [], [], l
 
- match look a, look b with
- | Con _, Con _ -> LP.equal a b
- | App xs, App ys -> same_hd (L.hd xs) (L.hd ys)
- | _ -> false
-
-let rec run op s ((gls,dls,p) : goals) (alts : alternatives) : subst * dgoal list * alternatives =
-(*   SPY "status" (fun fmt -> Format.fprintf fmt "%d") (List.length dls); *)
+let rec run op s ((gls,dls,p) : goals) (alts : alternatives)
+: subst * dgoal list * alternatives
+=
   let s, gls, dls, p, alts =
     match gls with
     | [] -> s, [], dls, p, alts
     | (_,`Cut,_,_,lvl)::rest ->
-       let alts = cut lvl alts in
-       s, rest, dls, p, alts
+        let alts = cut lvl alts in
+        s, rest, dls, p, alts
     | (_,`Unlock (t,to_purge),_,_,_) :: rest ->
         if not (Subst.is_tc t) then
           (Format.eprintf "not a tc: %a\n%!" (prf_data []) t; assert false);
@@ -569,46 +556,49 @@ let rec run op s ((gls,dls,p) : goals) (alts : alternatives) : subst * dgoal lis
         let p = List.filter (fun x -> not(List.mem x to_purge)) p in
         Subst.set_body hd h s, rest, dls, p, alts
     | (depth,`Resume(t,goal), _, eh,lvl) :: rest ->
-         let resumed, dls, s =
-           resume p s (fun t1 -> not(same_hd (Red.nf s t) (Red.nf s t1))) lvl dls in
-         let resumed, to_purge = List.split resumed in
-         let resumed = List.flatten resumed in
-(*          Format.eprintf "riesumati : %d\n%!" (List.length resumed); *)
-         let gl, s = goals_of_premise p goal depth eh lvl s in
-         let unlock = depth,`Unlock (t,to_purge),[],eh,lvl in
-         let prt str =
-           depth,`Custom("$print",mkExt(mkString str)),[],eh,lvl in
-         s, unlock::gl@prt "inizio resume..\n"::resumed@[prt "...fine resume\n"]@rest, dls, p, alts
-    | (depth,(`Delay(t,goal) as go), _, eh,lvl) :: rest ->
-       if true || flexible s t then
-         try
-           TRACE "delay" (pr_cur_goal eh go lvl s)
-           let new_hyp, s = bubble_up s t goal eh in
-           let dls = (t,goal,depth,eh,new_hyp) :: dls in
-           s, List.map (fun (d,g,cp,eh,l) -> (* siblings are pristine *)
-                d,g,eh@(new_hyp::p),eh,l) rest, dls, new_hyp :: p,
-           alts
-         with NoClause -> next_alt alts (pr_cur_goals gls)
-       else
-         let gl, s = goals_of_premise p goal depth eh lvl s in
-         s, gl@rest, dls, p, alts
-    | (_,go,hyps,eh,lvl as g)::rest ->
-       try
-         let hyps_nop =
-           let nhyps = List.length hyps in let nop = List.length op in
-           if nhyps <= nop then []
-           else L.to_list (L.sub 0 (nhyps - nop) (L.of_list hyps)) in
-         TRACE "run" (pr_cur_goal hyps_nop go lvl s)
-         let s, subg, new_alts = run1 p s g in
-(*
-         let resumed, dls', s = resume p s (fun t -> true || flexible s t) lvl dls in
-         let resumed = List.flatten resumed in
-*)
-  let resumed, dls', s = [], dls, s in
-         s, (resumed@subg@rest), dls', p,
-           (List.map (fun (s,gs) -> s,cat_goals gs (rest,dls)) new_alts @ alts)
-       with
-       | NoClause -> next_alt alts (pr_cur_goals gls)
+        let resumed, dls, s = resume p s (not_same_hd s t) lvl dls in
+        let resumed, to_purge = List.split resumed in
+        let resumed =
+          let start = mk_prtg "<<resume\n" depth lvl in
+          let stop = mk_prtg "resume>>\n" depth lvl in
+          start :: List.flatten resumed @ [stop] in
+        let unlock = depth, `Unlock (t, to_purge), [], [], lvl in
+        let gl, s = goals_of_premise p goal depth eh lvl s in
+        s, unlock::gl@resumed@rest, dls, p, alts
+    | (depth,`Delay(t,goal), _, eh,lvl as g) :: rest ->
+        if true || flexible s t then
+          try
+            TRACE "delay" (pr_cur_goal op g s)
+            let new_hyp, s = bubble_up s t goal eh in
+            let dls = (t,goal,depth,eh,new_hyp) :: dls in
+            s, List.map (fun (d,g,cp,eh,l) -> (* siblings are pristine *)
+                 d,g,eh@(new_hyp::p),eh,l) rest, dls, new_hyp :: p,
+            alts
+          with NoClause -> next_alt alts (pr_cur_goals op gls)
+        else
+          let gl, s = goals_of_premise p goal depth eh lvl s in
+          s, gl@rest, dls, p, alts
+    | (depth,`Atom(t,k),hyps,eh,lvl as g)::rest ->
+        (try
+          TRACE "run" (pr_cur_goal op g s)
+          let s, subg, new_alts = select p k t depth s hyps eh lvl in
+          s, subg@rest, dls, p,
+            (List.map (fun (s,gs) -> s,cat_goals gs (rest,dls)) new_alts @ alts)
+        with NoClause -> next_alt alts (pr_cur_goals op gls))
+    | (depth,`Unify(a,b),hyps,eh,lvl as g)::rest ->
+        (try
+          TRACE "run" (pr_cur_goal op g s)
+          let s = unify a b s in
+          SPY "sub" Subst.prf_subst s;
+          s, rest, dls, p, alts
+        with UnifFail _ -> next_alt alts (pr_cur_goals op gls))
+    | (depth,`Custom(name,a),hyps,eh,lvl as g)::rest ->
+        (try
+          TRACE "run" (pr_cur_goal op g s)
+          let s = custom name a s in
+          SPY "sub" Subst.prf_subst s;
+          s, rest, dls, p, alts
+        with UnifFail _ | NoClause -> next_alt alts (pr_cur_goals op gls))
   in
   if gls = [] then s, dls, alts
   else run op s (gls,dls,p) alts
@@ -633,7 +623,6 @@ let return_current_result op s g dls alts =
 
 let run_dls (p : program) (g : premise) =
   let g, s = prepare_initial_goal g in
-  (*Format.eprintf "@[<hv2>goal:@ %a@]@\n%!" (prf_goal (ctx_of_hv hv)) g;*)
   let gls, s = contextualize_goal 0 s g in
   let s, dls, alts =
     run p s (List.map (fun (d,g,ep) -> (d,g,ep@p,ep,0)) gls, [], p) [] in
@@ -642,7 +631,6 @@ let run_dls (p : program) (g : premise) =
 let next (g,op,alts) =
  let s,gls,dls,p,alts =
   next_alt alts (fun fmt _ -> Format.fprintf fmt "next solution") in
- (* from now on cut&paste from run_dls, the code need factorization *)
  let s, dls, alts = run op s (gls,dls,p) alts in
  return_current_result op s g dls alts
 
