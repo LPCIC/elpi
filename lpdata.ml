@@ -669,7 +669,7 @@ let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
   | Conj l when L.len l = 0 -> Format.fprintf fmt ""
   | Conj l when L.len l = 1 -> prf_premise ~positive ~pars ctx fmt (L.hd l)
   | Conj l ->
-       Format.pp_open_hvbox fmt 0;
+       Format.pp_open_hovbox fmt 0; (* if compact *)
        if pars then Format.pp_print_string fmt "(";
        iter_sep (fun fmt () ->
          Format.pp_print_string fmt ","; Format.pp_print_space fmt ())
@@ -740,9 +740,10 @@ let string_of_head = string_of_data
 
 let string_of_clause c = on_buffer (prf_clause []) c
 
-let prf_program fmt p =
+let prf_program ?(compact=false) fmt p =
   let p = List.map (fun _, _, p -> p) p in
-  Format.pp_open_vbox fmt 0;
+  if compact then Format.pp_open_hovbox fmt 0
+  else Format.pp_open_vbox fmt 0;
   iter_sep (Format.pp_print_space) (prf_clause []) fmt p;
   Format.pp_close_box fmt ()
 let string_of_program p = on_buffer prf_program p

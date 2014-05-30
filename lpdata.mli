@@ -132,7 +132,7 @@ module LP : sig
   val prf_premise : name list -> Format.formatter -> premise -> unit
   val prf_goal : name list -> Format.formatter -> goal -> unit
   val prf_clause : name list -> Format.formatter -> clause -> unit
-  val prf_program : Format.formatter -> program -> unit
+  val prf_program : ?compact:bool -> Format.formatter -> program -> unit
   
   val string_of_data : ?ctx:string list -> data -> string
   val string_of_premise : premise -> string

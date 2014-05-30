@@ -188,7 +188,8 @@ let test_coq () =
 let test_parse () =
   let test_p s =
     let p = LP.parse_program s in
-    Format.eprintf "@[<hv2>program:@ %a@]@\n%!" LP.prf_program p in
+    Format.eprintf "@[<hv2>program:@ %a@]@\n%!"
+      (LP.prf_program ~compact:false) p in
   let test_g s =
     let g = LP.parse_goal s in
     Format.eprintf "@[<hv2>goal:@ %a@]@\n%!" (LP.prf_goal []) g in
@@ -212,7 +213,8 @@ let test_prog p g =
  try
   let p = LP.parse_program p in
   let g = LP.parse_goal g in
-  Format.eprintf "@[<hv2>program:@ %a@]@\n%!" LP.prf_program p;
+  Format.eprintf "@[<hv2>program:@ %a@]@\n%!"
+    (LP.prf_program ~compact:false) p;
   let g, s = run p g in
   Format.eprintf
     "@\n@[<hv2>output:@ %a@]@\n@[<hv2>nf out:@ %a@]@\n@[<hv2>subst:@ %a@]@\n%!"

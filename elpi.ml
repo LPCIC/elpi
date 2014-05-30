@@ -19,14 +19,19 @@ let _ =
   } in
   Gc.set tweaked_control;
   set_terminal_width ();
-  register_custom "print" (fun t s _ _ ->
+  let print_atom s t =
     let unescape s = Str.global_replace (Str.regexp_string "\\n") "\n" s in
     let t = Red.nf s t in
-    (match LP.look t with
+    match LP.look t with
     | LP.Ext t  when isString t ->
         Format.eprintf "%s%!" (unescape (getString t))
-    | _ -> Format.eprintf "%a%!" (LP.prf_data []) t);
-    s);
+    | _ -> Format.eprintf "%a%!" (LP.prf_data []) t in
+  register_custom "print" (fun t s _ _ -> print_atom s t; s);
+  register_custom "printl" (fun t s _ _ ->
+    let t = Red.nf s t in
+    match LP.look t with
+    | LP.Seq(l,_) -> List.iter (print_atom s) (L.to_list l); s
+    | _ -> assert false);
   register_custom "is" (fun t s _ _ ->
     let t = Red.nf s t in
     match LP.look t with
@@ -47,6 +52,22 @@ let _ =
     | LP.Ext t when isString t ->
          if !aborts = int_of_string (getString t) then exit 1 else s
     | _ -> assert false));
+  register_custom "counter" (fun t s _ _ ->
+    let t, s = Red.whd s t in
+    match LP.look t with
+    | LP.Seq (l,_) when L.len l = 2 ->
+        let hd, s = Red.whd s (L.hd l) in
+        (match LP.look hd with
+        | LP.Ext x when isString x ->
+            let input = getString x in
+            let n = Trace.get_cur_step input in
+            (try unify (LP.mkExt (mkString (string_of_int n))) (L.get 1 l) s
+            with
+            | UnifFail _ ->
+                prerr_endline "parsing in the wrong ctx?";raise NoClause
+            | Stream.Error msg -> prerr_endline msg; raise NoClause)
+        | _ -> assert false)
+    | _ -> assert false);
   register_custom "parse" (fun t s _ _ ->
     let t, s = Red.whd s t in
     match LP.look t with

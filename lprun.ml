@@ -313,8 +313,8 @@ let rec iter_sep spc pp fmt = function
 let pr_cur_goal eh g lvl s fmt =
   match g with
   | `Atom (goal,_) ->
-      Format.fprintf fmt "@[<hov 2>%a@ |- %a@]"
-        prf_program (List.map (fun a,b,p -> a,b,Red.nf s p) eh)
+      Format.fprintf fmt "@[<hv 0>%a@ |- %a@]"
+        (prf_program ~compact:true) (List.map (fun a,b,p -> a,b,Red.nf s p) eh)
         (prf_premise []) (apply_subst s goal)
   | `Unify(a,b) ->
       Format.fprintf fmt "%a = %a"
