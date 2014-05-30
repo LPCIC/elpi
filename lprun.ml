@@ -600,8 +600,11 @@ let rec run op s ((gls,dls,p) : goals) (alts : alternatives) : subst * dgoal lis
            else L.to_list (L.sub 0 (nhyps - nop) (L.of_list hyps)) in
          TRACE "run" (pr_cur_goal hyps_nop go lvl s)
          let s, subg, new_alts = run1 p s g in
+(*
          let resumed, dls', s = resume p s (fun t -> true || flexible s t) lvl dls in
          let resumed = List.flatten resumed in
+*)
+  let resumed, dls', s = [], dls, s in
          s, (resumed@subg@rest), dls', p,
            (List.map (fun (s,gs) -> s,cat_goals gs (rest,dls)) new_alts @ alts)
        with
