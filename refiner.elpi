@@ -103,7 +103,7 @@ delift ML M L Y :-
 
 delift_aux M Y :- dbgpp "" (delift_aux M Y), false.
 
-%mimic (i.e. copy-clauses)
+%mimic (i.e. copy-clauses) with pruning
 delift_aux M (#N L) :- !,
   delift_subst L L1,
   mkhole M1 L1, mkapp M1 L1 M, dbgpp "fresh " M.
@@ -276,11 +276,16 @@ claim Claim P1 :-
 
 /* ======================================================================== */
 
-suite TEST t1 :- % runnin of twice in a row
+% usage:
+% > test _          runs all tests, only first solution of each
+% > test t2         runs only test t2, only first solution of t2
+% > solutions t2    generates all solutions of t2
+
+suite TEST t1 :- % runnin of twice in a row should work
   TEST = (of (lam (atom nat) x\ hole) TY T, of T TY1 T1, TY1=TY, T1=T).
 suite TEST t2 :- % typing a pi
   TEST = (of (prod (atom nat) x\ hole) TY T).
-suite TEST t3 :- % pruning
+suite TEST t3 :- % meta/meta unif w pruning: ?X[] = ?Y[v]
   TEST = (of (lam (atom nat) x\ app (atom succ) hole) TY T,
           of (app (atom succ) hole) TY1 W,
           pp "non-ristretto " T, unify (app T (atom zero)) W,
