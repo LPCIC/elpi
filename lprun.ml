@@ -269,7 +269,7 @@ type objective =
   | `Unify of data * data | `Custom of string * data | `Cut
   | `Delay of data * premise
   | `Resume of data * premise
-  | `Unlock of data
+  | `Unlock of data * annot_clause list
   ]
 type goal = int * objective * program * program * int
 type dgoal = data * premise * int * program * annot_clause
@@ -326,7 +326,9 @@ let pr_cur_goal eh g lvl s fmt =
        Format.fprintf fmt "delay %a %a"
          (prf_data []) t (prf_premise []) (Red.nf s p)
   | `Resume (t,p) -> Format.fprintf fmt "resume %a %a" (prf_data []) t (prf_premise []) (Red.nf s p)
-  | `Unlock t -> Format.fprintf fmt "unlock %a" (prf_data []) t
+  | `Unlock (t,ps) ->
+       Format.fprintf fmt "@[<hv 0>unlock %a@ purge %a@]"
+         (prf_data []) t (prf_program ~compact:true) ps
 let pr_cur_goals gls fmt s =
   Format.fprintf fmt "@[<hov 0>"; 
   iter_sep (fun fmt () -> Format.fprintf fmt ",@ ")
@@ -432,17 +434,10 @@ let run1 p s ((depth,goal,prog,orig_eh,lvl) : goal) : step_outcome =
   | `Cut -> assert false
   | `Delay _ -> assert false
   | `Resume _ -> assert false
+  | `Unlock _ -> assert false
   | `Atom(t,k) ->
       let s, goals, alts = select p k t depth s prog orig_eh lvl in
       s, goals, alts
-  | `Unlock t ->
-      if not (Subst.is_tc t) then
-        (Format.eprintf "not a tc: %a\n%!" (prf_data []) t; assert false);
-      let h, s = Subst.fresh_uv 0 s in
-      let hd = let rec uff t = match look t with
-        | App xs -> uff (L.hd xs) | Con (n,_) -> n | _ -> assert false in
-      uff t in
-      Subst.set_body hd h s, [], []
   | `Unify(a,b) ->
       (try
         let s = unify a b s in
@@ -493,7 +488,7 @@ let resume p s test lvl (dls : dgoal list) =
        let gl, s = goals_of_premise p clause depth eh lvl s in
        SPY "will resume" (prf_premise []) (Red.nf s clause);
        SPY "hd" (prf_data []) (Red.nf s t);
-       Some(gl,s)) dls s
+       Some((gl,to_purge),s)) dls s
          
 let add_delay (t,a,depth,orig_prog as dl) s dls run = 
 (*   let a = destAtom a in *)
@@ -541,7 +536,7 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
   let s = unify h_hvs p s in
   let abstracted =
     if List.length hvs = 0 then (Red.nf s h) else (mkSigma 0 (Red.nf s h)) in
-(*   Format.eprintf "astratto %a\n%!" (prf_premise []) abstracted; *)
+  Format.eprintf "EXTRA: %a\n%!" (prf_premise []) abstracted;
   (0, k, abstracted), s
 
 let rec same_hd a b =
@@ -561,14 +556,29 @@ let rec run op s ((gls,dls,p) : goals) (alts : alternatives) : subst * dgoal lis
     | (_,`Cut,_,_,lvl)::rest ->
        let alts = cut lvl alts in
        s, rest, dls, p, alts
+    | (_,`Unlock (t,to_purge),_,_,_) :: rest ->
+        if not (Subst.is_tc t) then
+          (Format.eprintf "not a tc: %a\n%!" (prf_data []) t; assert false);
+        let h, s = Subst.fresh_uv 0 s in
+        let hd = let rec uff t = match look t with
+          | App xs -> uff (L.hd xs) | Con (n,_) -> n | _ -> assert false in
+        uff t in
+        let rest = List.map (fun (d,g,cp,eh,l) ->
+          let cp = List.filter (fun x -> not(List.mem x to_purge)) cp in
+          d,g,cp,eh,l) rest in
+        let p = List.filter (fun x -> not(List.mem x to_purge)) p in
+        Subst.set_body hd h s, rest, dls, p, alts
     | (depth,`Resume(t,goal), _, eh,lvl) :: rest ->
          let resumed, dls, s =
            resume p s (fun t1 -> not(same_hd (Red.nf s t) (Red.nf s t1))) lvl dls in
+         let resumed, to_purge = List.split resumed in
          let resumed = List.flatten resumed in
 (*          Format.eprintf "riesumati : %d\n%!" (List.length resumed); *)
          let gl, s = goals_of_premise p goal depth eh lvl s in
-         let unlock = depth,`Unlock t,[],eh,lvl in
-         s, unlock::gl@resumed@rest, dls, p, alts
+         let unlock = depth,`Unlock (t,to_purge),[],eh,lvl in
+         let prt str =
+           depth,`Custom("$print",mkExt(mkString str)),[],eh,lvl in
+         s, unlock::gl@prt "inizio resume..\n"::resumed@[prt "...fine resume\n"]@rest, dls, p, alts
     | (depth,(`Delay(t,goal) as go), _, eh,lvl) :: rest ->
        if true || flexible s t then
          try
