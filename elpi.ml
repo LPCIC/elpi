@@ -107,11 +107,12 @@ let test_prog p g =
 ;;
 
 let _ =
-  for i=1 to Array.length Sys.argv - 1 do
-    Printf.eprintf "running with %s\n" Sys.argv.(i);
+  let argv = Trace.parse_argv Sys.argv in
+  for i=1 to Array.length argv - 1 do
+    Printf.eprintf "running with %s\n" argv.(i);
     let p =
       let b = Buffer.create 1024 in
-      let ic = open_in Sys.argv.(i) in
+      let ic = open_in argv.(i) in
       try
         while true do Buffer.add_string b (input_line ic^"\n") done;
         assert false
@@ -119,7 +120,6 @@ let _ =
     let g =
       Printf.printf "goal> %!";
       input_line stdin in
-    (*Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";"epush.*";"unif";"bind";"isPU";"mksubst";"t$";"vj$";"rule";"whd";"hv";"premise";"psusp";"skipped";"substitu.*";"Pruning";"delay";"sub"] true;*)
     test_prog p g
   done
 

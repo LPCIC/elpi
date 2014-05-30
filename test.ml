@@ -125,7 +125,6 @@ let test_whd () =
   test "(x/ y/ x) (x/y/ x x y) b c" "y/c c y";
   test ~nf:true "(x/ y/ z/ t/ x r y) (x/y/ x x y) b" "x/y/r r b";
   test "(x/ y/ z/ t/ x r y) (x/y/ x x y) b c c" "r r b";
-   (*Trace.init ~where:("whd",1,1000) ~filter_out:["rdx";(*"push.*";"epush.*";*)"unif";"bind";"t$";"vj$";(*"rule";"whd";*)(*"hv";*)"premise";(*"psusp";*)"skipped"] ~verbose:false true; *)
   test " (x/(y/z/ y) t1 t2) t3" "t1";
   test " (x/(y/z/ [y,z]) c1 c2) X1" "[c1,c2]";
   ;;
@@ -239,7 +238,6 @@ let test_copy () =
 ;;
 
 let test_list () =
-(*     Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";"epush.*";(*"unif";"bind";"t$";"vj$";*)"rule";"whd";"hv";"premise";"psusp";"skipped"] ~verbose:false true; *)
   test_prog "
     rev [] [].
     rev [X|Y] T :- rev Y Z, rcons X Z T.
@@ -264,7 +262,6 @@ let test_aug () =
 
 let test_back () =
   test_prog " foo X :- bar.  foo X :- X = a." "foo a";
-(*   Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";"epush.*";"unif";"bind";"t$";"vj$";"rule";"whd";(*"hv";"premise";*)"psusp";"skipped"] ~verbose:false true;  *)
   test_prog " go X :- pi w/ sigma A/ A = X w." "go X";
 ;;
 
@@ -886,6 +883,7 @@ let _ =
   } in
   Gc.set tweaked_control;
   set_terminal_width ();
+  let _ = Trace.parse_argv Sys.argv in
   register_custom "print" (fun t s _ _ ->
     let t = Red.nf s t in
     (match LP.look t with
@@ -908,7 +906,6 @@ let _ =
   test_aug ();
   test_custom ();
   test_back ();
-(*     Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";(*"epush.*";*)"unif";"bind";"t$";"vj$";"rule";"whd";(*"hv";*)"premise";"psusp";"skipped"] ~verbose:false true;  *)
   test_pi ();
 (*   test_refiner (); *)
   test_typeinf ();

@@ -10,6 +10,7 @@ module M = Map.Make(String)
 let cur_step = ref M.empty
 let level = ref 0
 let filter = ref []
+let fonly = ref []
 let hot = ref false
 
 let get_cur_step k = try M.find k !cur_step with Not_found -> 0
@@ -22,13 +23,15 @@ let condition k =
        let cur_step = get_cur_step k in
        hot := cur_step >= first_step && cur_step <= last_step;
        !hot))
+    && (!fonly = [] || List.exists (fun p -> Str.string_match p k 0) !fonly)
     && not(List.exists (fun p -> Str.string_match p k 0) !filter)
 
-let init ?(where="",0,max_int) ?(filter_out=[]) ?(verbose=false) b =
+let init ?(where="",0,max_int) ?(skip=[]) ?(only=[]) ?(verbose=false) b =
   cur_step := M.empty;
   debug := b;
   dverbose := verbose;
-  filter := List.map Str.regexp filter_out;
+  filter := List.map Str.regexp skip;
+  fonly := List.map Str.regexp only;
   where_loc := where
 
 let incr_cur_step k =
@@ -68,4 +71,29 @@ let exit k ?(e=OK) time =
     Format.eprintf "%s}}} %s  (%.3fs)\n%!"
       (String.make !level ' ') (pr_exc e) time;
   decr level
+
+let parse_argv argv =
+  let on = ref false in
+  let where = ref ("run",0,0) in
+  let verbose = ref false in
+  let skip = ref [] in
+  let only = ref [] in
+  let rec aux = function
+    | [] -> []
+    | "-trace-v" :: rest -> verbose := true; aux rest
+    | "-trace-at" :: fname :: start :: stop :: rest ->
+         where := (fname, int_of_string start, int_of_string stop);
+         aux rest
+    | "-trace-on" :: rest -> on := true; aux rest
+    | "-trace-skip" :: expr :: rest ->
+         skip := expr :: !skip;
+         aux rest
+    | "-trace-only" :: expr :: rest ->
+         only := expr :: !only;
+         aux rest
+    | x :: rest -> x :: aux rest in
+  let rest = aux (Array.to_list argv) in
+  init ~where:!where ~verbose:!verbose ~only:!only ~skip:!skip !on;
+  Array.of_list rest
+
 
