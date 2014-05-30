@@ -2,7 +2,7 @@
 
 % enabling/disabling this will change the program hence the value of the
 % counters of the tracing mechanism of elpi
-debug :- true.
+debug :- false.
 
 /************************* logic ************************/
 
@@ -33,13 +33,11 @@ of T TY W :- not($is_flex TY), !, of T TY1 W, unify TY TY1.
 of hole TY T :- delay TY (of TY set TY), delay T (of T TY T).
 
 of (lam S F) (prod S2 T) (lam S2 F2) :-
-  of S SO S2,
-  unify SO set,
+  of S set S2,
   (pi x\ of x S2 x => unify x x => of (F x) (T x) (F2 x)).
 
 of (prod S F) set (prod S2 F2) :-
-  of S SO S2,
-  unify SO set,
+  of S set S2,
   (pi x\ of x S2 x => unify x x => (of (F x) (T x) (F2 x), unify (T x) set)).
 
 of (app M1 N1) Z (app M2 N2) :-
@@ -65,8 +63,7 @@ env vcons (prod (atom nat) (n\ prod (app (atom vect) n) (w\ app (atom vect) (app
 of set set set.
 
 of (rec Rty N Base Step) Rty2 (rec Rty2 N2 Base2 Step2) :-
-  of Rty TRty Rty2,
-  unify TRty set,
+  of Rty set Rty2,
   of N TN N2,
   unify TN (atom nat),
   of Base TBase Base2,
@@ -271,8 +268,7 @@ step [G|GS] :-
   step Sig.
   
 claim Claim P1 :-
-  of Claim T Claim1,
-  unify T set,
+  of Claim set Claim1,
   of hole THole P,
   unify THole Claim1,
   step Sig.
@@ -293,6 +289,8 @@ suite TEST t3 :- % meta/meta unif w pruning: ?X[] = ?Y[v]
           of (app (atom succ) hole) TY1 W,
           pp "non-ristretto " T, unify (app T (atom zero)) W,
           pp "ristretto " T).
+suite TEST t4 :-
+  TEST = (of hole TY1 T1, unify TY1 (atom nat), of hole TY2 T2, unify TY2 set).
 
 run1 T :- pp "INFO: running " T, T, !, pp "INFO: success " T.
 run1 T :- pp "ERROR: failure " T.
