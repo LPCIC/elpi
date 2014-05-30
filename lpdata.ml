@@ -554,11 +554,32 @@ let collect_hv t =
 
 type key = Key of data | Flex
 
+module CN : sig
+  type t
+  val equal : t -> t -> bool
+  val make : string -> t
+  val fresh : unit -> t
+  val pp : Format.formatter -> t -> unit
+end = struct
+  type t = string
+  let equal = (=)
+  module S = Set.Make(String)
+  let all = ref S.empty
+  let fresh = ref 0
+  let rec make s =
+    if S.mem s !all then make (incr fresh; s ^ string_of_int !fresh)
+    else (all := S.add s !all; s)
+  let fresh () = incr fresh; make ("hyp" ^ string_of_int !fresh)
+  let pp fmt t = Format.fprintf fmt "%s" t
+end
+
 type program = annot_clause list
-and annot_clause = int * key * clause (* level, key, clause *)
+and annot_clause = int * key * clause * CN.t (* level, key, clause, id *)
 and clause = premise
 and premise = data
 and goal = premise
+
+let eq_clause (_,_,_,n1) (_,_,_,n2) = CN.equal n1 n2
 
 let mkCApp name args = mkApp L.(of_list (mkCon name 0 :: args))
 let mkAtom x = x
@@ -741,7 +762,7 @@ let string_of_head = string_of_data
 let string_of_clause c = on_buffer (prf_clause []) c
 
 let prf_program ?(compact=false) fmt p =
-  let p = List.map (fun _, _, p -> p) p in
+  let p = List.map (fun _, _, p, _ -> p) p in
   if compact then Format.pp_open_hovbox fmt 0
   else Format.pp_open_vbox fmt 0;
   iter_sep (Format.pp_print_space) (prf_clause []) fmt p;
@@ -791,6 +812,7 @@ let tok = lexer
   | '_' '0'-'9' number -> "REL", $buf
   | '_' -> "FRESHUV", "_"
   |  ":-"  -> "ENTAILS",$buf
+  |  ":"  -> "COLON",$buf
   |  "::"  -> "CONS",$buf
   | ',' -> "COMMA",","
   | '.' -> "FULLSTOP","."
@@ -926,13 +948,17 @@ let () =
 EXTEND
   GLOBAL: lp premise atom goal;
   lp: [ [ cl = LIST0 clause; EOF -> cl ] ];
+  name : [ [ c = CONSTANT -> c | u = UVAR -> u ] ];
+  label : [ [ COLON; n = name; COLON -> n ] ];
   clause :
-    [[ hd = concl; hyp = OPT [ ENTAILS; hyp = premise -> hyp ]; FULLSTOP ->
+    [[ name = OPT label;
+       hd = concl; hyp = OPT [ ENTAILS; hyp = premise -> hyp ]; FULLSTOP ->
+         let name = match name with Some s -> CN.make s | _ -> CN.fresh () in
          let hyp = match hyp with None -> mkConj L.empty | Some h -> h in
          let clause = sigma_abstract (mkImpl hyp (mkAtom hd)) in
          check_clause clause;
          reset (); 
-         0, key_of clause, clause ]];
+         0, key_of clause, clause, name ]];
   goal:
     [[ p = premise ->
          let g = sigma_abstract p in

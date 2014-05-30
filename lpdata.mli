@@ -80,9 +80,17 @@ module LP : sig
 
   val collect_Uv : data -> data list
 
+  module CN : sig
+    type t
+    val equal : t -> t -> bool
+    val make : string -> t
+    val fresh : unit -> t
+    val pp : Format.formatter -> t -> unit
+  end
+
   type key = Key of data | Flex
   type program = annot_clause list
-  and annot_clause = int * key * clause
+  and annot_clause = int * key * clause * CN.t
   and clause = premise
   and premise = data
   and goal = premise
@@ -96,6 +104,8 @@ module LP : sig
   val mkPi : int -> premise -> premise
   val mkSigma : int -> premise -> premise
   val mkDelay : data -> premise -> premise
+
+  val eq_clause : annot_clause -> annot_clause -> bool
 
   type builtin = BIUnif of data * data | BICustom of string * data | BICut
   type kind_of_premise =

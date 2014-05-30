@@ -318,7 +318,8 @@ let pr_cur_goal op (_,g,hyps,_,lvl) s fmt =
   match g with
   | `Atom (goal,_) ->
       Format.fprintf fmt "@[<hv 0>%a@ |- %a@]"
-        (prf_program ~compact:true) (List.map (fun a,b,p -> a,b,Red.nf s p) eh)
+        (prf_program ~compact:true)
+          (List.map (fun a,b,p,n -> a,b,Red.nf s p,n) eh)
         (prf_premise []) (apply_subst s goal)
   | `Unify(a,b) ->
       Format.fprintf fmt "%a = %a"
@@ -355,7 +356,7 @@ let subst t hv =
   t1
 
 let add_cdepth b cdepth =
-  List.map (fun p -> cdepth, (if b then key_of p else Flex), p)
+  List.map (fun p -> cdepth, (if b then key_of p else Flex), p, CN.fresh ())
 
 let mkAtom t = `Atom(t, key_of t)
 
@@ -414,8 +415,8 @@ let select p k goal depth (s as os) prog orig_eh lvl : step_outcome =
   | [] ->
       SPY "fail" (prf_data []) (apply_subst s goal);
       raise NoClause
-  | (_,kc,clause) :: rest when no_key_match k kc -> first rest
-  | (_,_,clause) :: rest ->
+  | (_,kc,clause,_) :: rest when no_key_match k kc -> first rest
+  | (_,_,clause,_) :: rest ->
       try
         let hd, subgoals, (s as cs) = contextualize_hyp depth s clause in
         SPY "try" (prf_clause []) (Red.nf s clause);
@@ -423,7 +424,7 @@ let select p k goal depth (s as os) prog orig_eh lvl : step_outcome =
         SPY "selected" (prf_clause []) (Red.nf cs clause);
         SPY "sub" Subst.prf_subst s;
         let subgoals, s =
-          List.fold_right (fun (d,_,p) (acc,s) ->
+          List.fold_right (fun (d,_,p,_) (acc,s) ->
             let gl, s = contextualize_goal d s p in
             gl :: acc, s) subgoals ([],s) in
         let subgoals =
@@ -467,7 +468,7 @@ let resume p s test lvl (dls : dgoal list) =
     if test t then None
     else
             (* FIXME: to_purge should be an id (int) *)
-       let p = List.filter (fun x -> not(x = to_purge)) p in
+       let p = List.filter (fun x -> not(eq_clause x to_purge)) p in
        let gl, s = goals_of_premise p clause depth eh lvl s in
        SPY "will resume" (prf_premise []) (Red.nf s clause);
        SPY "hd" (prf_data []) (Red.nf s t);
@@ -506,7 +507,7 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
     (List.filter (fun x ->
         let hvsx = collect_hv_premise x in
         List.exists (fun h -> List.mem h hvsx) hvs)
-      (List.map (fun _,_,x -> x) eh)))) p in
+      (List.map (fun _,_,x,_ -> x) eh)))) p in
   let hvs = collect_hv_premise p in      
   let h, s = Subst.fresh_uv 0 s in
   let h_hvs = mkApp (L.of_list (h :: hvs)) in
@@ -520,7 +521,7 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
   let abstracted =
     if List.length hvs = 0 then (Red.nf s h) else (mkSigma 0 (Red.nf s h)) in
   Format.eprintf "EXTRA: %a\n%!" (prf_premise []) abstracted;
-  (0, k, abstracted), s
+  (0, k, abstracted,CN.fresh()), s
 
 let not_same_hd s a b =
  let rec aux a b =
@@ -533,6 +534,9 @@ let not_same_hd s a b =
  in aux a b
         
 let mk_prtg str d l = d, `Custom("$print",mkExt(mkString str)), [], [], l
+
+let not_in to_purge l =
+  List.filter (fun x -> not(List.exists (eq_clause x) to_purge)) l
 
 let rec run op s ((gls,dls,p) : goals) (alts : alternatives)
 : subst * dgoal list * alternatives
@@ -551,9 +555,9 @@ let rec run op s ((gls,dls,p) : goals) (alts : alternatives)
           | App xs -> uff (L.hd xs) | Con (n,_) -> n | _ -> assert false in
         uff t in
         let rest = List.map (fun (d,g,cp,eh,l) ->
-          let cp = List.filter (fun x -> not(List.mem x to_purge)) cp in
+          let cp = not_in to_purge cp in
           d,g,cp,eh,l) rest in
-        let p = List.filter (fun x -> not(List.mem x to_purge)) p in
+        let p = not_in to_purge p in
         Subst.set_body hd h s, rest, dls, p, alts
     | (depth,`Resume(t,goal), _, eh,lvl) :: rest ->
         let resumed, dls, s = resume p s (not_same_hd s t) lvl dls in
