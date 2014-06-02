@@ -98,7 +98,7 @@ restrict X :- pi c\ pi d\ X c = X d.
 uall2 L1 L2 H :- dbgpp "" (uall2 L1 L2 H), false.
 uall2 [] [] H.
 uall2 [X|XS] [Y|YS] H :- unify X Y, !, pi x\ unify x x => uall2 XS YS (H x).
-uall2 [X|XS] [Y|YS] H :- restrict H, pi x\ uall2 XS YS (H x).
+uall2 [X|XS] [Y|YS] H :- $abort "2", restrict H, pi x\ uall2 XS YS (H x).
 
 % delift M L Y instantiates the output M s.t. @M L = Y
 delift0 M L Y :- dbgpp "" (delift M L Y), false.
@@ -153,9 +153,6 @@ unif A M N :- dbgpp "" (unif A M N), false.
 
 /* M=M */
 unif ff (#M L1) (#M L2) :- !, uall2 L1 L2 M.
-unif ff (@M L) (#M L) :- !.
-unif ff (#M L) (@M L) :- !.
-unif ff (@M L) (@M L) :- !.
 
 /* flex=term */
 unif ff T N :-
