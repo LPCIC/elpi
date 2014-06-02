@@ -25,7 +25,7 @@ pp S T :- $printl [S,T,"\n"].
 % over this rule.  Still one gets a good value for further investigation
 % using: ./elpi -trace-on -trace-at run 1673 1700 -trace-only 'run' refiner.elpi
 % that will print all goals processed
-of M TY T :- dbgpp "" (of M TY Y), false.
+of M TY T :- dbgpp "" (of M TY T), false.
 
 % ideally each rule should take care of dealing with bi-directionality
 of T TY W :- not($is_flex TY), !, of T TY1 W, unify TY TY1.
@@ -42,13 +42,11 @@ of (prod S F) set (prod S2 F2) :-
 
 of (app M1 N1) Z (app M2 N2) :-
     of M1 TM1 M2,
-    of N1 TN1 N2,
-    pi x\
-      of x TN1 x =>
-      unify x x => (
-        of hole (_ x) (F x),
-        unify TM1 (prod TN1 F),
-        subst F N2 Z).
+    of (prod hole x\hole) _ TM2,
+    unify TM1 TM2,
+    TM2 = prod TY1 F,
+    of N1 TY1 N2,
+    subst F N2 Z.
 
 of (atom ID) T (atom ID) :- env ID T.
 
