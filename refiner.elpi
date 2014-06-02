@@ -110,24 +110,21 @@ binds A B :- dbgpp "" (binds A B), false.
 
 delift ML M L Y :-
   dbgpp "<<<< assegno: " (valore Y alla meta M con subst L),
-  % CSC: BUG, IL CODICE COMMENTATO QUA SOTTO E' MAL TIPATO PERCHE' M E' DI
-  % META-TIPO FUNZIONALE
-  resume ML (delift0 M L Y), %pp "VERIFICO " M, of M _ _, pp "VERIFICATO " M),
+  resume ML (delift0 M L Y, $print "RESUMO\n"),
   dbgpp "assegnato >>>> " M.
 
 delift_aux M Y :- dbgpp "" (delift_aux M Y), false.
 
 %mimic (i.e. copy-clauses) with pruning
-delift_aux M (#N L) :- !,
-  delift_subst L L1,
-  mkhole M1 L1, mkapp M1 L1 M,
-  dbgpp "fresh meta with delifted/pruned subst: " M.
-mkhole M [] :- of hole _ M.
-mkhole M [X|XS] :-
-  rof X TY,
-  pi x\ of x TY x => unify x x => mkhole (M x) XS.
-mkapp X [] X.
-mkapp X [Y|YS] W :-mkapp (X Y) YS W.
+delift_aux M (#N L) :- !, delift_meta M N L.
+
+% delift_meta M N L holds when M L1 = #N L with L1 now implicit as binds hyps
+delift_meta M N L :- dbgpp "" (delift_meta M N L), false.
+delift_meta M M [].
+delift_meta M N [X|XS] :- delift_aux A X, ! /*red*/, delift_meta M (N A) XS.
+delift_meta M N [_|XS] :- % N is restricted
+ $abort "1", %CSC: come fare la restrizione ora?
+ pi c\ N c = N2, delift_meta M N2 XS.
 
 % projection
 delift_aux M Y :- binds V X, dbgpp "trying " (grab X as V), unify X Y, M=V.
@@ -163,28 +160,31 @@ unif ff (@M L) (@M L) :- !.
 /* flex=term */
 unif ff T N :-
  T = #M L,
- dbgpp " ----> ritipo " N,
+ %dbgpp " ----> ritipo " N,
  rof N TN,
- dbgpp " ----> ritipo " T,
- rof T TN,
+ %dbgpp " ----> ritipo " T,
+ rof T TT,
+ unify TN TT,
  delift T M L N.
 /* term=flex */
 unif ff N T :-
  T = #M L,
- dbgpp " ----> ritipo " N,
+ %dbgpp " ----> ritipo " N,
  rof N TN,
- dbgpp " ----> ritipo " T,
- rof T TN,
+ %dbgpp " ----> ritipo " T,
+ rof T TT,
+ unify TN TT,
  delift T M L N.
 
 %unif _ (@M _) _ :- !, false.
 %unif _ _ (@M _) :- !, false.
 
-%CSC: BUG HERE, VECCHIO CODICE
 /* lambda-intro on the fly */
 unif _ T (app H A) :-
- H = @M L1, !, rof A Ty, unif ff H (lam Ty G), unif ff T (app H A).
-
+ H = #M L1, !, rof A Ty,
+ of (lam Ty x\hole) _ G,
+ unify H G,
+ unify T (app H A).
 
 /* reflexive closure + heuristic for == */
 /*unif ff _ T T :- !.*/
