@@ -40,7 +40,7 @@ of (lam S F) TY (lam S2 F2) :-
 of T TY W :- not($is_flex TY), !, of T TY1 W1, coerce W1 TY1 TY W.
 
 coerce T TyA TyE W :- dbgpp "" (coerce T TyA TyE W), false.
-coerce T TyA TyE W :- unify TyA TyE.
+coerce T TyA TyE T :- unify TyA TyE.
 coerce T (app (lam _ F) N) TyE W :- % CSC: whd required because we infer redexes
  subst F N TyA, coerce T TyA TyE W.
 coerce T (atom nat) (atom z) (app (atom nat_to_z) T).
@@ -48,8 +48,7 @@ coerce T (atom nat) (atom z) (app (atom nat_to_z) T).
 of hole TY T :- delay TY (of TY set TY), delay T (of T TY T).
 
 of (lam S F) (prod S2 T) (lam S2 F2) :-
-  of S set S2,
-  (pi x\ of x S2 x => unify x x => of (F x) (T x) (F2 x)).
+  of S set S2, (pi x\ of x S2 x => unify x x => of (F x) (T x) (F2 x)).
 
 of (prod S F) set (prod S2 F2) :-
   of S set S2,
