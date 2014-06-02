@@ -62,14 +62,12 @@ env vcons (prod (atom nat) (n\ prod (app (atom vect) n) (w\ app (atom vect) (app
 
 of set set set.
 
+% CSC: non dependent recursion
 of (rec Rty N Base Step) Rty2 (rec Rty2 N2 Base2 Step2) :-
   of Rty set Rty2,
-  of N TN N2,
-  unify TN (atom nat),
-  of Base TBase Base2,
-  unify TBase Rty2,
-  of Step TStep Step2,
-  unify TStep (prod (atom nat) n\ prod Rty2 acc \ Rty2).
+  of N (atom nat) N2,
+  of Base Rty2 Base2,
+  of Step (prod (atom nat) n\ prod Rty2 acc \ Rty2) Step2.
 
 /************************ retype *************************/
 rof T TY :- dbgpp "ritipo " (il termine T ":" TY), of T TY _, !.
