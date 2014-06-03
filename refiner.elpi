@@ -99,12 +99,6 @@ subst Where What Out :- Where What = Out.
 
 restrict X :- pi c\ pi d\ X c = X d.
 
-% CSC: QUESTO CODICE E' ROTTO PERCHE' LA RESTRICT NON SI PUO' PIU' FARE COSI'!
-uall2 L1 L2 H :- dbgpp "" (uall2 L1 L2 H), false.
-uall2 [] [] H.
-uall2 [X|XS] [Y|YS] H :- unify X Y, !, pi x\ unify x x => uall2 XS YS (H x).
-uall2 [X|XS] [Y|YS] H :- $abort "2", restrict H, pi x\ uall2 XS YS (H x).
-
 % delift M L Y instantiates the output M s.t. @M L = Y
 delift0 M L Y :- dbgpp "" (delift M L Y), false.
 delift0 M [] Y :- delift_aux M Y.
@@ -154,7 +148,30 @@ delift_subst [_|XS] XS1 :- delift_subst XS XS1.
 unif A M N :- dbgpp "" (unif A M N), false.
 
 /* M=M */
-unif ff (#M L1) (#M L2) :- !, uall2 L1 L2 M.
+unif ff ML1 ML2 :- ML1 = (#M1 L1), ML2 = (#M2 L2), !,
+  pp "caso META META=" (unif ML1 ML2),
+  mask_unif L1 L2 L1m L2m,
+  pp "Masks=" (unif L1m L2m),
+  mklams L1m _ NM1 F,
+  mklams L2m F NM2 _,
+  pp "Lams=" (unif NM1 NM2),
+  resume ML1 (M1 = NM1),
+  resume ML2 (M2 = NM2),
+  pp "Dopo assegnamento=" (unif ML1 ML2).
+mask_unif [] [] [] [].
+mask_unif [] [_|XS] L1 [false|L2] :- mask_unif [] XS L1 L2.
+mask_unif [_|XS] [] [false|L1] L2 :- mask_unif XS [] L1 L2.
+mask_unif [X|XS] [Y|YS] [true|L1] [true|L2] :-
+  unify X Y, !, mask_unif XS YS L1 L2.
+mask_unif [_|XS] [_|YS] [false|L1] [false|L2] :- mask_unif XS YS L1 L2.
+% mklams Bitmask Head Result Fresh
+% generates x\ delay (Fresh x) for x in Bitmask and when Fresh is flex
+% hence Fresh is the new constant for the meta.  If fresh is already a constant
+% then there is no delay, it just reuses such constant as the head.
+mklams [] M M _ :- M = (#HD _), !.
+mklams [] M M W :- delay M (of M _ M), M = #F L, W = F.
+mklams [true|L] M R F :- pi x\ mklams L (M x) (R x) F.
+mklams [false|L] M R F :- pi x\ mklams L M (R x) F.
 
 /* flex=term */
 unif ff T N :-
