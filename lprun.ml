@@ -563,9 +563,9 @@ let rec run op s ((gls,dls,p) : goals) (alts : alternatives)
         let resumed, dls, s = resume p s (not_same_hd s t) lvl dls in
         let resumed, to_purge = List.split resumed in
         let resumed =
-          let start = mk_prtg "<<resume\n" depth lvl in
-          let stop = mk_prtg "resume>>\n" depth lvl in
-          start :: List.flatten resumed @ [stop] in
+          (*let start = mk_prtg "<<resume\n" depth lvl in
+          let stop = mk_prtg "resume>>\n" depth lvl in*)
+          (*start ::*) List.flatten resumed (*@ [stop]*) in
         let unlock = depth, `Unlock (t, to_purge), [], [], lvl in
         let gl, s = goals_of_premise p goal depth eh lvl s in
         s, unlock::gl@resumed@rest, dls, p, alts
