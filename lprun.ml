@@ -331,7 +331,7 @@ let pr_cur_goal op (_,g,hyps,_,lvl) s fmt =
   | `Cut -> Format.fprintf fmt "!"
   | `Delay (t,p) ->
        Format.fprintf fmt "delay %a %a"
-         (prf_data []) t (prf_premise []) (Red.nf s p)
+         (prf_data []) (Red.nf s t) (prf_premise []) (Red.nf s p)
   | `Resume (t,p) ->
        Format.fprintf fmt "resume %a %a" (prf_data []) t
          (prf_premise []) (Red.nf s p)
@@ -511,7 +511,9 @@ let rec uniq = function
   | x :: l -> x :: uniq l
 
 let bubble_up s t p (eh : program) : annot_clause * subst =
-  Format.eprintf "DELAY: %a\n%!" (prf_premise []) p;
+  (*Format.eprintf "DELAY: %a\n%!" (prf_premise []) p;*)
+  let t = Red.nf s t in
+  let p = Red.nf s p in
   let k = key_of p in
   let i, lvl, ht = destFlexHd t [] in
   let hvs =
@@ -536,7 +538,7 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
   let s = unify h_hvs p s in
   let abstracted =
     if List.length hvs = 0 then (Red.nf s h) else (mkSigma 0 (Red.nf s h)) in
-  Format.eprintf "EXTRA: %a\n%!" (prf_premise []) abstracted;
+  (*Format.eprintf "EXTRA: %a\n%!" (prf_premise []) abstracted;*)
   (0, k, abstracted,CN.fresh()), s
 
 let not_same_hd s a b =
@@ -586,6 +588,7 @@ let rec run op s ((gls,dls,p) : goals) (alts : alternatives)
         let gl, s = goals_of_premise p goal depth eh lvl s in
         s, unlock::gl@resumed@rest, dls, p, alts
     | (depth,`Delay(t,goal), _, eh,lvl as g) :: rest ->
+        TRACE "run" (pr_cur_goal op g s)
         if true || flexible s t then
           try
             TRACE "delay" (pr_cur_goal op g s)
