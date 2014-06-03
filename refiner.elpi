@@ -41,7 +41,7 @@ fresh (@HD L) W :- !, $zero_level W1, mkapp W1 L W.
 fresh _ _.
 % ideally each rule should take care of dealing with bi-directionality
 of T TY W :- not($is_flex TY), !,
-  fresh W TY1, fresh W W1,
+%  fresh W TY1, fresh W W1,
   of T TY1 W1, coerce W1 TY1 TY W.
 
 coerce T TyA TyE W :- dbgpp "" (coerce T TyA TyE W), false.

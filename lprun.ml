@@ -495,16 +495,30 @@ let add_delay (t,a,depth,orig_prog as dl) s dls run =
   in
     aux dls
 
-let rec destFlexHd t =
+let rec destFlexHd t l =
   match look t with
-  | Uv(i,_) -> i
-  | App xs -> destFlexHd (L.hd xs)
+  | Uv(i,lvl) -> i, lvl, l
+  | App xs -> destFlexHd (L.hd xs) (L.to_list (L.tl xs))
   | _ -> assert false
+
+let hv_lvl_leq lvl t = match look t with
+  | Con(_,l) -> l <= lvl
+  | _ -> false
+
+let rec uniq = function
+  | ([] | [_]) as l -> l
+  | x :: y :: l when LP.equal x y -> uniq (y :: l)
+  | x :: l -> x :: uniq l
 
 let bubble_up s t p (eh : program) : annot_clause * subst =
   Format.eprintf "DELAY: %a\n%!" (prf_premise []) p;
   let k = key_of p in
-  let hvs = collect_hv_premise p in      
+  let i, lvl, ht = destFlexHd t [] in
+  let hvs =
+    uniq (List.sort compare (
+    collect_hv_premise p @
+    List.flatten (List.map (fun _,_,p,_ ->
+      List.filter (hv_lvl_leq lvl) (collect_hv_premise p)) eh))) in      
   let p = mkImpl (mkConj (L.of_list
     (List.filter (fun x ->
         let hvsx = collect_hv_premise x in
@@ -517,8 +531,8 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
   Format.eprintf "h hvs = %a\n%!" (prf_data []) h_hvs;
   Format.eprintf "p = %a\n%!" (prf_data []) (Red.nf s p);
 *)
-  let i = destFlexHd t in
-  let s = Subst.set_sub i (Subst.fresh_tc ()) s in
+  let s = Subst.set_sub i (mkApp (L.cons (Subst.fresh_tc ()) 
+    (L.of_list (List.filter (fun h -> not(List.mem h ht)) hvs)))) s in
   let s = unify h_hvs p s in
   let abstracted =
     if List.length hvs = 0 then (Red.nf s h) else (mkSigma 0 (Red.nf s h)) in
