@@ -119,7 +119,7 @@ delift_aux M NL :- NL = #N L, !,
   mkhole M1 L1, mkapp M1 L1 M,
   resume NL (N = M1).
  mkhole M [] :- of hole _ M.
- mkhole M [X|XS] :- rof X TY,!, pi x\ of x TY x => unify x x => mkhole (M x) XS.
+ mkhole M [X|XS] :- rof X TY,!, pi x\ (of x TY x :- !) => unify x x => mkhole (M x) XS.
  mkapp X [] X.
  mkapp X [Y|YS] W :-mkapp (X Y) YS W.
 
