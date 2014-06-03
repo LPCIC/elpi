@@ -507,7 +507,7 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
     (List.filter (fun x ->
         let hvsx = collect_hv_premise x in
         List.exists (fun h -> List.mem h hvsx) hvs)
-      (List.map (fun _,_,x,_ -> x) eh)))) p in
+      (List.map (fun _,_,x,_ -> x) eh) @ [mkAtomBiCut]))) p in
   let hvs = collect_hv_premise p in      
   let h, s = Subst.fresh_uv 0 s in
   let h_hvs = mkApp (L.of_list (h :: hvs)) in

@@ -305,10 +305,10 @@ suite TEST t4 :-
   TEST = (of hole TY1 T1, unify TY1 (atom nat), of hole TY2 T2, unify TY2 set).
 % alla seconda soluzione crasha
 suite TEST t5 :-
-  TEST = (of (lam hole (x\ x)) (prod (atom nat) x\ atom z) X).
+  TEST = (of (lam hole (x\ x)) (prod (atom nat) x\ atom z) X, pp "X=" X).
 % non fa piu' intro on the fly
 suite TEST t6 :-
-  TEST = (of hole _ X, unify (app X (atom zero)) (atom zero)).
+  TEST = (of hole _ X, unify (app X (atom zero)) (atom zero), pp "X=" X).
 
 run1 T :- pp "INFO: running " T, T, !, pp "INFO: success " T.
 run1 T :- pp "ERROR: failure " T.
