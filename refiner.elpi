@@ -161,8 +161,8 @@ unif ff ML1 ML2 :- ML1 = (#M1 L1), ML2 = (#M2 L2), !,
 mask_unif [] [] [] [].
 mask_unif [] [_|XS] L1 [false|L2] :- mask_unif [] XS L1 L2.
 mask_unif [_|XS] [] [false|L1] L2 :- mask_unif XS [] L1 L2.
-mask_unif [X|XS] [Y|YS] [true|L1] [true|L2] :-
-  unify X Y, !, mask_unif XS YS L1 L2.
+mask_unif [X|XS] [Y|YS] [pair true T|L1] [pair true T|L2] :-
+  unify X Y, !, rof X T, mask_unif XS YS L1 L2.
 mask_unif [_|XS] [_|YS] [false|L1] [false|L2] :- mask_unif XS YS L1 L2.
 % mklams Bitmask Head Result Fresh
 % generates x\ delay (Fresh x) for x in Bitmask and when Fresh is flex
@@ -170,7 +170,7 @@ mask_unif [_|XS] [_|YS] [false|L1] [false|L2] :- mask_unif XS YS L1 L2.
 % then there is no delay, it just reuses such constant as the head.
 mklams [] M M _ :- M = (#HD _), !.
 mklams [] M M W :- delay M (of M _ M), M = #F L, W = F.
-mklams [true|L] M R F :- pi x\ mklams L (M x) (R x) F.
+mklams [pair true T|L] M R F :- pi x\ of x T x => unify x x => mklams L (M x) (R x) F.
 mklams [false|L] M R F :- pi x\ mklams L M (R x) F.
 
 /* flex=term */
@@ -226,12 +226,9 @@ unif ff (rec A1 B1 C1 D1) (rec A2 B2 C2 D2) :-
   unify A1 A2, unify B1 B2, unify C1 C2, unify D1 D2.
 
 /* beta */
-unif _ (app L M) X :-
-  L = lam _ F, !,
-  dbgpp "beta redex " (head F arg M),
-  subst F M Y,
-  dbgpp "ridotto " Y,
-  unify Y X.
+% hem...
+unif _ (app (app L A) M) X :- L = lam _ x\ (lam _ y\ F x y), !, unify (F A M) X.
+unif _ (app L M) X :- L = lam _ F, !, subst F M Y, unify Y X.
 
 /* delta */
 unif _ (atom ID) B :- body ID B.
@@ -327,6 +324,13 @@ suite TEST t3 :- % meta/meta unif w pruning: ?X[] = ?Y[v]
           of (app (atom succ) hole) TY1 W,
           pp "non-ristretto " T, unify (app T (atom zero)) W,
           pp "ristretto " T).
+suite TEST t3bis :- % meta/meta unif w pruning: ?X[v,r] = ?Y[v,s]
+  TEST = (of (lam (atom nat) x\ lam (atom nat) y\ app (atom succ) hole) _ T1,
+          of (lam (atom nat) x\ lam (atom nat) y\ app (atom succ) hole) _ T2,
+          pp "non-ristretto " T1,
+          unify (app (app T1 (atom zero)) (atom zero))
+                (app (app T2 (atom zero)) (app (atom succ) (atom zero))),
+          pp "ristretto " T1).
 suite TEST t4 :-
   TEST = (of hole TY1 T1, unify TY1 (atom nat), of hole TY2 T2, unify TY2 set).
 % alla seconda soluzione crasha
