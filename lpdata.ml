@@ -849,7 +849,7 @@ let rec lex c = parser bp
   | [< s >] ep ->
        if Stream.peek s = None then ("EOF",""), (bp, ep)
        else
-       (match spy (tok c) s with
+       (match (*spy*) (tok c) s with
        | "CONSTANT","pi" -> "PI", "pi"
        | "CONSTANT","sigma" -> "SIGMA", "sigma"
        | "CONSTANT","nil" -> "NIL", "nil"
@@ -880,10 +880,10 @@ let lex_fun s =
 
 let tok_match (s1,_) = (); function
   | (s2,v) when s1=s2 ->
-      if !Trace.dverbose then Printf.eprintf "%s = %s = %s\n" s1 s2 v;
+      if false(*!Trace.dverbose*) then Printf.eprintf "%s = %s = %s\n" s1 s2 v;
       v
   | (s2,v) ->
-      if !Trace.dverbose then Printf.eprintf "%s <> %s = %s\n" s1 s2 v;
+      if false(*!Trace.dverbose*) then Printf.eprintf "%s <> %s = %s\n" s1 s2 v;
       raise Stream.Failure
 
 let lex = {
