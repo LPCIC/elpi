@@ -86,6 +86,9 @@ let _ =
   register_custom "read" (fun t s ->
     let input = input_line stdin in
     unify (LP.mkExt (mkString input)) t s);
+  register_custom "zero_level" (fun t s ->
+    let h, s = Subst.fresh_uv 0 s in
+    unify t h s);
 ;;
 
 let test_prog p g =
