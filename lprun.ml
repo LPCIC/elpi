@@ -277,7 +277,9 @@ type goals = goal list * dgoal list * program
 type alternatives = (subst * goals) list
 type continuation = premise * program *  alternatives
 type step_outcome = subst * goal list * alternatives
-type result = LP.goal * LP.data list * Subst.subst * LP.goal list * continuation
+type result =
+ LP.goal * LP.data list * Subst.subst *
+  (LP.goal * LP.program) list * continuation
 
 let cat_goals (a,b,p) (c,d) = a@c, b@d, p
 
@@ -622,7 +624,9 @@ let apply_sub_hv_to_goal s g =
 
 let return_current_result op s g dls alts =
   apply_sub_hv_to_goal (Subst.empty 0) g, collect_Uv_premise g, s,
-  List.map (fun (_,g,_,_,_) -> apply_sub_hv_to_goal s g) dls,
+  List.map (fun (_,g,_,eh,_) ->
+   apply_sub_hv_to_goal s g,
+   List.map (fun (i,k,c,u) -> i,k,apply_sub_hv_to_goal s c,u) eh) dls,
   (g,op,alts)
 
 let run_dls (p : program) (g : premise) =

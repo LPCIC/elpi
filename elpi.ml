@@ -109,9 +109,9 @@ let test_prog p g =
     Format.eprintf
      "@[<hv2>%a@ = %a@]@\n%!" (LP.prf_data []) x (LP.prf_data []) (Red.nf s x))
      assignments;
-   List.iter (fun g ->
-    Format.eprintf
-     "@[<hv2>delay:@ %a@]@\n%!"
+   List.iter (fun (g,eh) ->
+    Format.eprintf "delay: @[<hv 0>@[<hv2>@ %a@]@ |- %a@]\n%!"
+     (LP.prf_program ~compact:false) eh
      (LP.prf_goal []) (LP.map_premise (Red.nf s) g)) dgs;
    Printf.printf "next? (Y/n)> %!";
    let l = input_line stdin in

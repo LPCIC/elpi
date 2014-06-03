@@ -12,7 +12,9 @@ val unify : LP.data -> LP.data -> Subst.subst -> Subst.subst
 exception NoClause
 
 type continuation
-type result = LP.goal * LP.data list * Subst.subst * LP.goal list * continuation
+type result =
+ LP.goal * LP.data list * Subst.subst *
+  (LP.goal * LP.program) list * continuation
 
 val run_dls : LP.program -> LP.goal -> result
 val next: continuation -> result
