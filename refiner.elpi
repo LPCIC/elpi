@@ -169,7 +169,8 @@ mask_unif [_|XS] [_|YS] [false|L1] [false|L2] :- mask_unif XS YS L1 L2.
 % hence Fresh is the new constant for the meta.  If fresh is already a constant
 % then there is no delay, it just reuses such constant as the head.
 mklams [] M M _ :- M = (#HD _), !.
-mklams [] M M W :- delay M (of M _ M), M = #F L, W = F.
+mklams [] M M W :-
+  delay TY (of TY set TY), delay M (of M TY M), M = #F L, W = F.
 mklams [pair true T|L] M R F :- pi x\ of x T x => unify x x => mklams L (M x) (R x) F.
 mklams [false|L] M R F :- pi x\ mklams L M (R x) F.
 
