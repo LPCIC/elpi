@@ -165,6 +165,10 @@ unif ff T N :-
  rof T TT,
  unify TN TT,
  delift T M L N.
+/* flex=flex already tried */
+% CSC: ma da risultati diversi!
+% esempio: ?1[0] = ?2 vs ?2 = ?1[0]
+%unif ff (#N NL) (#T TL) :- !, false.
 /* term=flex */
 unif ff N T :-
  T = #M L,
