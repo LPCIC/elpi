@@ -148,6 +148,14 @@ delift_subst [_|XS] XS1 :- delift_subst XS XS1.
 unif A M N :- dbgpp "" (unif A M N), false.
 
 /* M=M */
+unif ff ML1 ML2 :- ML1 = (#M L1), ML2 = (#M L2), !,
+  pp "caso SAME META =" (unif ML1 ML2),
+  mask_unif L1 L2 L1m L2m, %CSC: basta L1m
+  pp "Mask=" L1m,
+  mklams L1m _ NM F,
+  pp "Dopo mklams=" (resume ML1 (M = NM)),
+  resume ML1 (M = NM),
+  pp "Dopo assegnamento=" (unif ML1 ML2).
 unif ff ML1 ML2 :- ML1 = (#M1 L1), ML2 = (#M2 L2), !,
   pp "caso META META=" (unif ML1 ML2),
   mask_unif L1 L2 L1m L2m,
