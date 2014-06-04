@@ -546,7 +546,7 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
   let s = unify h_hvs p s in
   let abstracted =
     if List.length hvs = 0 then (Red.nf s h) else (mkSigma 0 (Red.nf s h)) in
-  (*Format.eprintf "EXTRA: %a\n%!" (prf_premise []) abstracted;*)
+  Format.eprintf "NEW META: %a\n%!" (prf_clause []) abstracted;
   (0, k, abstracted,CN.fresh()), s
 
 let not_same_hd s a b =
@@ -576,6 +576,7 @@ let rec run op s ((gls,dls,p) : goals) (alts : alternatives)
     | (_,`Unlock (t,to_purge),_,_,_) :: rest ->
         if not (Subst.is_tc t) then
           (Format.eprintf "not a tc: %a\n%!" (prf_data []) t; assert false);
+        Format.eprintf "ASSIGN META: %a\n%!" (prf_data []) t;
         let h, s = Subst.fresh_uv 0 s in
         let hd = let rec uff t = match look t with
           | App xs -> uff (L.hd xs) | Con (n,_) -> n | _ -> assert false in
