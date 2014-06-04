@@ -150,13 +150,18 @@ rev-aux [X|Y] T ACC :- rev-aux Y T [X|ACC].
 
 unif A M N :- dbgpp "" (unif A M N), false.
 
+distr_lam A ACC B :- pp "distr " (distr A ACC B), false.
+distr_lam [X|x\[]] X [] :- !.
+distr_lam [X|XS] X [HD|L] :- pi x\ distr_lam (XS x) (HD x) L. 
+
 /* M=M */
 unif ff ML1 ML2 :- ML1 = (#M L1), ML2 = (#M L2), !,
   $zero_level Ma, $zero_level Tya,
-  get_canonical M L1 TS [] Ma Tya,
-  pp "canonical" (get_canonical M L1 TS []), $abort "3",
+  get_canonical M L1 TSl [] Ma Tya,
+  distr_lam TSl HD TStl, TS = [HD|TStl],
+  pp "canonical" (get_canonical M L1 TS []),
   pp "caso SAME META =" (unif ML1 ML2),
-  mask_unif L1 L2 L1m L2m, %CSC: basta L1m
+  mask_unif L1 L2 L1m L2m, %CSC: basta L1m   QUI BISOGNA USARE TS e non rof!
   pp "Mask=" L1m,
   $zero_level NM, $zero_level NMTY,
   mklams L1m _ NM NMTY F ,
