@@ -342,6 +342,11 @@ suite TEST t3bis :- % meta/meta unif w pruning: ?X[v,r] = ?Y[v,s]
           unify (app (app T1 (atom zero)) (atom zero))
                 (app (app T2 (atom zero)) (app (atom succ) (atom zero))),
           pp "ristretto " T1).
+suite TEST t3ter :- % meta/meta unif with dependent type
+  TEST = (pi c\ unify c c => of c (atom nat) c =>
+           pi d\ unify d d => of d (app (atom vect) c) =>
+            of hole (TY c d) (X c d)),
+         unify (X (atom zero) (atom vnil)) (X (atom zero) (atom vnil)).
 suite TEST t4 :-
   TEST = (of hole TY1 T1, unify TY1 (atom nat), of hole TY2 T2, unify TY2 set).
 % alla seconda soluzione crasha
