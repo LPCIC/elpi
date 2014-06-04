@@ -152,7 +152,8 @@ unif ff ML1 ML2 :- ML1 = (#M L1), ML2 = (#M L2), !,
   pp "caso SAME META =" (unif ML1 ML2),
   mask_unif L1 L2 L1m L2m, %CSC: basta L1m
   pp "Mask=" L1m,
-  mklams L1m _ NM F,
+  $zero_level NM, $zero_level NMTY,
+  mklams L1m _ NM NMTY F ,
   pp "Dopo mklams=" (resume ML1 (M = NM)),
   resume ML1 (M = NM),
   pp "Dopo assegnamento=" (unif ML1 ML2).
@@ -160,8 +161,9 @@ unif ff ML1 ML2 :- ML1 = (#M1 L1), ML2 = (#M2 L2), !,
   pp "caso META META=" (unif ML1 ML2),
   mask_unif L1 L2 L1m L2m,
   pp "Masks=" (unif L1m L2m),
-  mklams L1m _ NM1 F,
-  mklams L2m F NM2 _,
+  $zero_level NM1, $zero_level NM2, $zero_level NM1TY, $zero_level NM2TY,
+  mklams L1m _ NM1 NM1TY F,
+  mklams L2m F NM2 NM2TY _,
   pp "Lams=" (unif NM1 NM2),
   resume ML1 (M1 = NM1),
   resume ML2 (M2 = NM2),
@@ -176,11 +178,11 @@ mask_unif [_|XS] [_|YS] [false|L1] [false|L2] :- mask_unif XS YS L1 L2.
 % generates x\ delay (Fresh x) for x in Bitmask and when Fresh is flex
 % hence Fresh is the new constant for the meta.  If fresh is already a constant
 % then there is no delay, it just reuses such constant as the head.
-mklams [] M M _ :- M = (#HD _), !.
-mklams [] M M W :-
+mklams [] M M TY _ :- M = (#HD _), !.
+mklams [] M M TY W :-
   delay TY (of TY set TY), delay M (of M TY M), M = #F L, W = F.
-mklams [pair true T|L] M R F :- pi x\ of x T x => unify x x => mklams L (M x) (R x) F.
-mklams [false|L] M R F :- pi x\ mklams L M (R x) F.
+mklams [pair true T|L] M R TY F :- pi x\ of x T x => unify x x => mklams L (M x) (R x) (TY x) F.
+mklams [false|L] M R TY F :- pi x\ mklams L M (R x) TY F.
 
 /* flex=term */
 unif ff T N :-
