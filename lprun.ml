@@ -519,10 +519,11 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
   let p = Red.nf s p in
   let k = key_of p in
   let i, lvl, ht = destFlexHd t [] in
+  let eh = List.filter (fun _,k1,_,_ -> rigid_key_match k k1) eh in
   let hvs =
     uniq (List.sort compare (
     collect_hv_premise p @
-    List.flatten (List.map (fun _,kp,p,_ ->
+    List.flatten (List.map (fun _,_,p,_ ->
       List.filter (hv_lvl_leq lvl) (collect_hv_premise p)
       ) eh))) in      
   let p = mkImpl (mkConj (L.of_list
@@ -530,7 +531,7 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
        match look_premise x with
        | Impl(x,p) when look_premise x = AtomBI BICut -> p
        | _ -> x)
-      (List.filter (fun _,kx,x,_ -> rigid_key_match k kx &&
+      (List.filter (fun _,_,x,_ ->
         let hvsx = collect_hv_premise x in
         List.exists (fun h -> List.mem h hvsx) hvs) eh)
     @ [mkAtomBiCut]))) p in
