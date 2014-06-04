@@ -510,6 +510,9 @@ let rec uniq = function
   | x :: y :: l when LP.equal x y -> uniq (y :: l)
   | x :: l -> x :: uniq l
 
+let rigid_key_match k1 k2 =
+  match k1,k2 with Key a, Key b -> LP.equal a b | _ -> false
+
 let bubble_up s t p (eh : program) : annot_clause * subst =
   (*Format.eprintf "DELAY: %a\n%!" (prf_premise []) p;*)
   let t = Red.nf s t in
@@ -519,13 +522,18 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
   let hvs =
     uniq (List.sort compare (
     collect_hv_premise p @
-    List.flatten (List.map (fun _,_,p,_ ->
-      List.filter (hv_lvl_leq lvl) (collect_hv_premise p)) eh))) in      
+    List.flatten (List.map (fun _,kp,p,_ ->
+      List.filter (hv_lvl_leq lvl) (collect_hv_premise p)
+      ) eh))) in      
   let p = mkImpl (mkConj (L.of_list
-    (List.filter (fun x ->
+    (List.map (fun _,_,x,_ ->
+       match look_premise x with
+       | Impl(x,p) when look_premise x = AtomBI BICut -> p
+       | _ -> x)
+      (List.filter (fun _,kx,x,_ -> rigid_key_match k kx &&
         let hvsx = collect_hv_premise x in
-        List.exists (fun h -> List.mem h hvsx) hvs)
-      (List.map (fun _,_,x,_ -> x) eh) @ [mkAtomBiCut]))) p in
+        List.exists (fun h -> List.mem h hvsx) hvs) eh)
+    @ [mkAtomBiCut]))) p in
   let hvs = collect_hv_premise p in      
   let h, s = Subst.fresh_uv 0 s in
   let h_hvs = mkApp (L.of_list (h :: hvs)) in
