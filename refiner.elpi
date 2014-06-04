@@ -2,7 +2,7 @@
 
 % enabling/disabling this will change the program hence the value of the
 % counters of the tracing mechanism of elpi
-debug :- false.
+debug :- true.
 
 /************************* logic ************************/
 
@@ -149,6 +149,9 @@ unif A M N :- dbgpp "" (unif A M N), false.
 
 /* M=M */
 unif ff ML1 ML2 :- ML1 = (#M L1), ML2 = (#M L2), !,
+  $zero_level Ma, $zero_level Tya,
+  get_canonical M L1 TS [] Ma Tya,
+  pp "canonical" (get_canonical M L1 TS []), $abort "3",
   pp "caso SAME META =" (unif ML1 ML2),
   mask_unif L1 L2 L1m L2m, %CSC: basta L1m
   pp "Mask=" L1m,
@@ -168,6 +171,16 @@ unif ff ML1 ML2 :- ML1 = (#M1 L1), ML2 = (#M2 L2), !,
   resume ML1 (M1 = NM1),
   resume ML2 (M2 = NM2),
   pp "Dopo assegnamento=" (unif ML1 ML2).
+get_canonical M L TS ARGS Ma Tya :- pp "" (get_canonical M L TS ARGS Ma Tya), false.
+get_canonical M [] [] ARGS Ma Tya :-
+ pp "" (mkapp M ARGS Ma),
+ mkapp M ARGS Ma,
+ pp "" (mkapp TY ARGS Tya),
+ mkapp TY ARGS TYa,
+ pp "OF " (of Ma Tya _),
+ of Ma TYa _.
+get_canonical M [_|XS] [T|TS] ARGS Ma Tya :-
+ pi x\ of x T x => get_canonical M XS (TS x) [x|ARGS] (Ma x) (Tya x).
 mask_unif [] [] [] [].
 mask_unif [] [_|XS] L1 [false|L2] :- mask_unif [] XS L1 L2.
 mask_unif [_|XS] [] [false|L1] L2 :- mask_unif XS [] L1 L2.
