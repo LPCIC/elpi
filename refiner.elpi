@@ -144,6 +144,9 @@ delift_subst [] [].
 delift_subst [X|XS] [A|XS1] :- delift_aux A X, ! /*red*/, delift_subst XS XS1.
 delift_subst [_|XS] XS1 :- delift_subst XS XS1.
 
+rev A B :- rev-aux A B [].
+rev-aux [] ACC ACC.
+rev-aux [X|Y] T ACC :- rev-aux Y T [X|ACC].
 
 unif A M N :- dbgpp "" (unif A M N), false.
 
@@ -172,10 +175,13 @@ unif ff ML1 ML2 :- ML1 = (#M1 L1), ML2 = (#M2 L2), !,
   resume ML2 (M2 = NM2),
   pp "Dopo assegnamento=" (unif ML1 ML2).
 get_canonical M L TS ARGS Ma Tya :- pp "" (get_canonical M L TS ARGS Ma Tya), false.
-get_canonical M [] [] ARGS Ma Tya :-
+get_canonical M [] [] ARGSr Ma Tya :-
+ rev ARGSr ARGS,
  pp "" (mkapp M ARGS Ma),
+ $zero_level M,
  mkapp M ARGS Ma,
  pp "" (mkapp TY ARGS Tya),
+ $zero_level TY,
  mkapp TY ARGS TYa,
  pp "OF " (of Ma Tya _),
  of Ma TYa _.
@@ -357,7 +363,7 @@ suite TEST t3bis :- % meta/meta unif w pruning: ?X[v,r] = ?Y[v,s]
           pp "ristretto " T1).
 suite TEST t3ter :- % meta/meta unif with dependent type
   TEST = ((pi c\ unify c c => of c (atom nat) c =>
-           pi d\ unify d d => of d (app (atom vect) c) =>
+           pi d\ unify d d => of d (app (atom vect) c) d =>
             of hole (TY c d) (X c d)),
           unify (X (atom zero) (atom vnil)) (X (atom zero) (atom vnil))).
 suite TEST t4 :-
