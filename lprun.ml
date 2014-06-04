@@ -574,7 +574,8 @@ let rec run op s ((gls,dls,p) : goals) (alts : alternatives)
     | (_,`Cut,_,_,lvl)::rest ->
         let alts = cut lvl alts in
         s, rest, dls, p, alts
-    | (_,`Unlock (t,to_purge),_,_,_) :: rest ->
+    | (_,`Unlock (t,to_purge),_,_,_ as g) :: rest ->
+        TRACE "run" (pr_cur_goal op g s)
         if not (Subst.is_tc t) then
           (Format.eprintf "not a tc: %a\n%!" (prf_data []) t; assert false);
         Format.eprintf "ASSIGN META: %a\n%!" (prf_data []) t;
@@ -587,7 +588,8 @@ let rec run op s ((gls,dls,p) : goals) (alts : alternatives)
           d,g,cp,eh,l) rest in
         let p = not_in to_purge p in
         Subst.set_body hd h s, rest, dls, p, alts
-    | (depth,`Resume(t,goal), _, eh,lvl) :: rest ->
+    | (depth,`Resume(t,goal), _, eh,lvl as g) :: rest ->
+        TRACE "run" (pr_cur_goal op g s)
         let resumed, dls, s = resume p s (not_same_hd s t) lvl dls in
         let resumed, to_purge = List.split resumed in
         let resumed =
