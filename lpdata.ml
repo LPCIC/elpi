@@ -29,6 +29,7 @@ module L : sig (* {{{ Lists *)
   val append : 'a t -> 'a t -> 'a t
   val cons : 'a -> 'a t -> 'a t
   val uniq : ('a -> 'a -> bool) -> 'a t -> bool
+  val rev : 'a t -> 'a t
 
   (* }}} *)
 end  = struct (* {{{ *)
@@ -87,6 +88,7 @@ end  = struct (* {{{ *)
   let rec uniq equal = function
     | [] -> true
     | x::xs -> List.for_all (fun y -> not(equal x y)) xs && uniq equal xs
+  let rev = List.rev
 
 end (* }}} *)
 
@@ -173,6 +175,8 @@ type name = string
 type olam = int
 type nlam = int
 
+type appkind = [ `Regular | `Rev | `Flex | `Frozen ]
+
 type kind_of_data =
   | Uv of var * level
   | Con of name * level
@@ -182,7 +186,7 @@ type kind_of_data =
   | Seq of data L.t * data
   | Nil
   | Ext of C.data
-  | VApp of bool * data * data
+  | VApp of appkind * data * data
 and data =
   | XUv of var * level
   | XCon of name * level
@@ -192,7 +196,7 @@ and data =
   | XSeq of data L.t * data
   | XNil
   | XExt of C.data
-  | XVApp of bool * data * data
+  | XVApp of appkind * data * data
   | XSusp of suspended_job ref
 and suspended_job = Done of data | Todo of data * olam * nlam * env
 and env =
@@ -265,12 +269,14 @@ and prf_data_low ?(pars=false) ctx fmt ?(reccal=self fmt) = function
         P.pp_print_string fmt (C.print x);
         P.pp_close_box fmt ()
     | XVApp(b,t1,t2) ->
+        let t1, t2 = if b = `Rev then t2, t1 else t1, t2 in
         P.fprintf fmt "@[<hov 2>";
         if pars then P.pp_print_string fmt "(";
-        if b then P.fprintf fmt "@@" else P.fprintf fmt "#";
+        if b <> `Rev then P.fprintf fmt "@@";
         reccal ctx ~pars:true t1;
         P.fprintf fmt "@ ";
         reccal ctx ~pars:true t2;
+        if b = `Rev then P.fprintf fmt "@@";
         if pars then P.pp_print_string fmt ")";
         P.fprintf fmt "@]"
     | XSusp ptr ->
@@ -549,6 +555,8 @@ let collect_hv t =
        else uniq (x :: seen) tl
   in
   uniq [] !hvs
+
+let sentinel = mkExt (mkString "T8fNhK/8Wk6Ds")
 
 (* PROGRAM *)
 
@@ -829,6 +837,7 @@ let tok = lexer
   | '!' -> "BANG", $buf
   | '@' -> "AT", $buf
   | '#' -> "SHARP", $buf
+  | '?' -> "QMARK", $buf
   | '"' string -> "LITERAL", let b = $buf in String.sub b 1 (String.length b-2)
 ]
 
@@ -939,7 +948,7 @@ let check_clause x = ()
 let check_goal x = ()
 
 let atom_levels = 
-  ["pi";"conjunction";"implication";"equality";"equality";"term";"app";"simple"]
+        ["pi";"conjunction";"implication";"equality";"equality";"term";"app";"simple"]
 
 let () =
   Grammar.extend [ Grammar.Entry.obj atom, None,
@@ -978,12 +987,12 @@ EXTEND
           if List.length l = 1 then List.hd l
           else mkConj (L.of_list l) ]];
   atom : LEVEL "implication"
-     [[ a = atom (*LEVEL "equality"*); IMPL; p = atom LEVEL "implication" ->
+     [[ a = atom; IMPL; p = atom LEVEL "implication" ->
           mkImpl (mkAtom a) (mkAtom p)
       | a = (*concl*)atom; ENTAILS; p = premise ->
           mkImpl (mkAtom p) (mkAtom a) ]];
   atom : LEVEL "equality"
-     [[ a = atom (*LEVEL "term"*); EQUAL; b = atom LEVEL "term" ->
+     [[ a = atom; EQUAL; b = atom LEVEL "term" ->
           mkAtomBiUnif a b ]];
   atom : LEVEL "term"
      [[ l = LIST1 atom LEVEL "app" SEP CONS ->
@@ -994,8 +1003,10 @@ EXTEND
             let rest = List.rev (List.tl l) in
             mkSeq (L.of_list rest) last ]];
   atom : LEVEL "app"
-     [[ hd = atom(*LEVEL "simple"*); args = LIST1 atom LEVEL "simple" ->
-          mkApp (L.of_list (hd :: args)) ]];
+     [[ hd = atom; args = LIST1 atom LEVEL "simple" ->
+          match args with
+          | [tl;x] when equal x sentinel -> mkVApp `Rev tl hd
+          | _ -> mkApp (L.of_list (hd :: args)) ]];
   atom : LEVEL "simple" 
      [[ c = CONSTANT; b = OPT [ BIND; a = atom LEVEL "term" -> a ] ->
           let c, lvl = lvl_name_of c in 
@@ -1008,10 +1019,13 @@ EXTEND
       | i = REL -> mkDB (int_of_string (String.sub i 1 (String.length i - 1)))
       | NIL -> mkNil
       | s = LITERAL -> mkExt (mkString s)
-      | AT; u = UVAR; args = atom LEVEL "simple" ->
-          let u, lvl = lvl_name_of u in mkVApp true (mkUv (get_uv u) lvl) args
-      | SHARP; u = UVAR; args = atom LEVEL "simple" ->
-          let u, lvl = lvl_name_of u in mkVApp false (mkUv (get_uv u) lvl) args
+      | AT; hd = atom LEVEL "simple"; args = atom LEVEL "simple" ->
+          mkVApp `Regular hd args
+      | AT -> sentinel
+      | QMARK; hd = atom LEVEL "simple"; args = atom LEVEL "simple" ->
+          mkVApp `Flex hd args
+      | SHARP; hd = atom LEVEL "simple"; args = atom LEVEL "simple" ->
+          mkVApp `Frozen hd args
       | bt = BUILTIN; a = atom LEVEL "simple" -> mkAtomBiCustom bt a
       | BANG -> mkAtomBiCut
       | DELAY; t = atom LEVEL "simple"; p = atom LEVEL "simple" -> mkDelay t p
@@ -1138,7 +1152,14 @@ let beta_under depth t l =
           (XArgs(L.of_list l, 0, XEmpty)))
 
 *)
-let rec whd s t =
+let rec splay xs tl s =
+  let tl, s = whd s tl in
+  match look tl with
+  | Uv _ | Nil -> xs, tl, s
+  | Seq(ys,t) -> splay (L.append xs ys) t s
+  | _ -> xs, tl, s
+
+and whd s t =
   TRACE "whd" (fun fmt -> prf_data [] fmt t)
   match look t with
   | (Ext _  | DB _ | Bin _ | Nil) as x -> kool x, s
@@ -1150,7 +1171,12 @@ let rec whd s t =
       let t', s = whd s t in
       t', if t == t' then s else set_sub i t' s
   | Uv _ -> t, s
-  | VApp _ -> t, s 
+  | VApp (b,hd,tl) ->
+      let xs, tl, s = splay L.empty tl s in
+      if equal tl mkNil then
+        if b <> `Rev then whd s (mkApp (L.cons hd xs))
+        else whd s (mkApp (L.cons hd (L.rev xs)))
+      else (*mkVApp b hd (mkSeq xs tl), s*) t,s
   | Seq(xs,tl) as x -> kool x, s
   | App v as x ->
       let hd = L.hd v in
@@ -1176,7 +1202,11 @@ let rec nf s x = match look x with
   | Con _ as x -> kool x
   | Bin(n,t) -> mkBin n (nf s t)
   | Seq(xs,t) -> mkSeq (L.map (nf s) xs) (nf s t)
-  | VApp(b,t1,t2) -> mkVApp b (nf s t1) (nf s t2)
+  | VApp(b,t1,t2) as xf -> 
+      let x', _ = whd s x in 
+      (match look x' with
+      | App xs -> mkApp (L.map (nf s) xs)
+      | _ -> if x == x' then kool xf else nf s x')
   | (App _ | Uv _) as xf ->
       let x', _ = whd s x in 
       match look x' with

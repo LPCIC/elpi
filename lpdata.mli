@@ -40,6 +40,7 @@ module L : sig
   val append : 'a t -> 'a t -> 'a t
   val cons : 'a -> 'a t -> 'a t
   val uniq : ('a -> 'a -> bool) -> 'a t -> bool
+  val rev : 'a t -> 'a t
 end
 
 module LP : sig
@@ -47,6 +48,7 @@ module LP : sig
   type level = int
   type name = string
   type data
+  type appkind = [ `Regular | `Rev | `Flex | `Frozen ]
 
   type kind_of_data = private
     | Uv of var * level
@@ -57,7 +59,7 @@ module LP : sig
     | Seq of data L.t * data
     | Nil
     | Ext of C.data
-    | VApp of bool * data * data (* VApp(hd,args) : args is a list *)
+    | VApp of appkind * data * data (* VApp(hd,args) : args is a list *)
 
   val look : data -> kind_of_data
   val kool : kind_of_data -> data

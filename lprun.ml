@@ -201,25 +201,33 @@ let rec splay xs tl s =
   | Seq(ys,t) -> splay (L.append xs ys) t s
   | _ -> xs, tl, s
 
+let destApp b t ot = match t with
+  | App xs -> L.hd xs, if b = `Rev then L.rev (L.tl xs) else L.tl xs
+  | Seq _ -> assert false
+  | _ -> ot, L.empty
+
+exception NOT_A_PU
+
 let rec unify a b s = TRACE "unify" (print_unif_prob s "=" a b)
   let a, s =  whd s a in
   let b, s =  whd s b in
   match look a, look b with
   | Con _, Con _ | Ext _, Ext _ | DB _, DB _ | Nil, Nil ->
       if equal a b then s else fail "rigid"
-  | VApp _, _ -> assert false
-  | Bin _, VApp _ -> assert false
-  | t, VApp(true,t1,t2) when not(rigid t) ->
-     let hd, tl = match t with
-       | App xs -> L.hd xs, L.tl xs | Uv _ -> a, L.empty | _ -> assert false in
-     let s = unify hd t1 s in
-     unify (mkSeq tl mkNil) t2 s
-  | t, VApp(false,t1,t2) when Subst.is_tc a ->
-     let hd, tl = match t with
-       | App xs -> L.hd xs, L.tl xs | Con _ -> a, L.empty | _ -> assert false in
-     let s = unify hd t1 s in
-     unify (mkSeq tl mkNil) t2 s
-  | _, VApp (b,_,_) -> if b then fail "not flex" else fail "not rigid"
+  | VApp (b1,hd1,al1), VApp (b2,hd2,al2) ->
+      if (b1 = `Rev && b2 = `Rev) || (b1 <> `Rev && b2 <> `Rev) then
+        unify al1 al2 (unify hd1 hd2 s)
+      else assert false
+
+  | t, VApp(w,t1,t2) ->
+     if w = `Flex && rigid t then fail "no-flex";
+     if w = `Frozen && not(Subst.is_tc a) then fail "no-tc";
+     let hd, tl = destApp w t a in unify (mkSeq tl mkNil) t2 (unify hd t1 s)
+  | VApp(w,t1,t2), t ->
+     if w = `Flex && rigid t then fail "no-flex";
+     if w = `Frozen && not(Subst.is_tc b) then fail "no-tc";
+     let hd, tl = destApp w t a in unify (mkSeq tl mkNil) t2 (unify hd t1 s)
+
   | Bin(nx,x), Bin(ny,y) when nx = ny -> unify x y s
   | Bin(nx,x), Bin(ny,y) when nx < ny -> unify (eta (ny-nx) x) y s
   | Bin(nx,x), Bin(ny,y) when nx > ny -> unify x (eta (nx-ny) y) s
@@ -259,7 +267,7 @@ and unify_ho x y s =
   | _ ->
     Format.eprintf "NOT A PU: %a = %a\n%!"
       (prf_data []) (Red.nf s (kool x)) (prf_data []) (Red.nf s (kool y));
-    assert false (*fail "not a pattern unif"*)
+    raise NOT_A_PU (*fail "not a pattern unif"*)
 
 (* ******************************** Main loop ******************************* *)
 
@@ -519,6 +527,9 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
   let p = Red.nf s p in
   let k = key_of p in
   let i, lvl, ht = destFlexHd t [] in
+(*
+  Format.eprintf "DELAY: %d %d %d\n%!" i lvl (List.length ht);
+*)
   let eh = List.filter (fun _,k1,_,_ -> rigid_key_match k k1) eh in
   let hvs =
     uniq (List.sort compare (
@@ -526,6 +537,7 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
     List.flatten (List.map (fun _,_,p,_ ->
       List.filter (hv_lvl_leq lvl) (collect_hv_premise p)
       ) eh))) in      
+(*   Format.eprintf "hvs = %a\n%!" (prf_data []) (mkApp (L.of_list hvs)); *)
   let p = mkImpl (mkConj (L.of_list
     (List.map (fun _,_,x,_ ->
        match look_premise x with

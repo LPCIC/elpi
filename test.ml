@@ -138,13 +138,17 @@ let test_unif () =
         (LP.prf_data []) x (LP.prf_data []) y Subst.prf_subst s;
       let x, y = Red.nf s x, Red.nf s y in
       if not (LP.equal x y) then begin
-        Format.eprintf "@[<hv3>bad unified: %a@ =/= %a@]@\n%!"
+        Format.eprintf "@[<hv3>bad unifier: %a@ =/= %a@]@\n%!"
           (LP.prf_data []) x (LP.prf_data []) y;
         exit 1;
       end
-    with Lprun.UnifFail s when not b -> 
+    with
+    | Lprun.UnifFail s when not b -> 
       Format.eprintf "@[<hv3>unify: %a@ @[<hv0>=/= %a@ ---> %s@]@]@\n%!"
-        (LP.prf_data []) x (LP.prf_data []) y (Lazy.force s) in
+        (LP.prf_data []) x (LP.prf_data []) y (Lazy.force s)
+    | Lprun.NOT_A_PU when not b -> 
+      Format.eprintf "@[<hv3>unify: %a@ @[<hv0>=/= %a@ ---> %s@]@]@\n%!"
+        (LP.prf_data []) x (LP.prf_data []) y "not a PU" in
   test true "X a1^1" "a1^1";
   test false "X a" "a";
   test false "X a1^1 a1^1" "b";
@@ -173,7 +177,10 @@ let test_unif () =
   test true  "[a,b,c|X]" "a :: b :: c :: X";
   test false "[]" "[x|B]";
   test true "foo X (X c)" "foo X (@Y L)";
+  test true "foo X (X c)" "foo X (?Y L)";
+  test false "foo X (X c)" "foo X (#Y L)";
   test true "foo X (X c1 c2) [c1,c2]" "foo X (@Y L) L";
+  test true "foo X (X c1 c2) [c2,c1]" "foo X (L Y@) L";
   test false "foo X (X c1 c2) [c1]" "foo X (@Y L) L";
 ;;
 
@@ -193,6 +200,7 @@ let test_parse () =
   let test_g s =
     let g = LP.parse_goal s in
     Format.eprintf "@[<hv2>goal:@ %a@]@\n%!" (LP.prf_goal []) g in
+  test_p "copy.";
   test_p "copy c d.";
   test_p "copy (foo c) d.";
   test_p "copy (foo c) ((pi x\\ y) = x).";
@@ -901,7 +909,7 @@ let _ =
   test_LPdata ();
   test_parse ();
   test_whd ();
-(*   test_unif (); *)
+  test_unif ();
   test_coq ();
   test_copy ();
   test_list ();
