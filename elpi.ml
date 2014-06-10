@@ -115,8 +115,8 @@ let test_prog p g =
    List.iter (fun (g,eh) ->
     Format.eprintf "delay: @[<hv 0>@[<hv2>@ %a@]@ |- %a@]\n%!"
      (LP.prf_program ~compact:false)
-     (List.map (function i,k,p,u -> i,k,LP.map_premise (Red.nf s) p,u) eh)
-     (LP.prf_goal []) (LP.map_premise (Red.nf s) g)) dgs;
+     (List.map (function i,k,p,u -> i,k,Red.nf s p,u) eh)
+     (LP.prf_goal []) (Red.nf s g)) dgs;
    Printf.printf "next? (Y/n)> %!";
    let l = input_line stdin in
    if l = "y" || l = "" then
