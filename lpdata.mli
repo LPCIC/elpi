@@ -69,6 +69,7 @@ module LP : sig
   val mkDB : int -> data
   val mkBin : int -> data -> data
   val mkApp : data L.t -> data
+  val mkVApp : appkind -> data -> data -> data
   val mkExt : C.data -> data
   val mkSeq : data L.t -> data -> data
   val mkNil : data

@@ -98,7 +98,10 @@ let rec bind x id depth lvl args t s =
   | App bs as t when rigid t ->
       let ss, s = L.fold_map (bind x id depth lvl args) bs s in
       mkApp ss, s
-  | VApp _ -> assert false
+  | VApp (b,h,a) ->
+      let h, s = bind x id depth lvl args h s in
+      let a, s = bind x id depth lvl args a s in
+      mkVApp b h a, s
   | (App _ | Uv _) as tmp -> (* pruning *)
           SPY "Pruning" (prf_data []) (mkNil);
       let bs = match tmp with
