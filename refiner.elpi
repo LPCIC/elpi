@@ -31,7 +31,7 @@ if _ _ E :- E.
 % over this rule.  Still one gets a good value for further investigation
 % using: ./elpi -trace-on -trace-at run 1673 1700 -trace-only 'run' refiner.elpi
 % that will print all goals processed
-:ppof < _:
+:o-pp < _:
 of M TY T :- dbgpp "" (of M TY T), false.
 
 % bi-directional rule for lam
@@ -155,13 +155,14 @@ rev A B :- rev-aux A B [].
 rev-aux [] ACC ACC.
 rev-aux [X|Y] T ACC :- rev-aux Y T [X|ACC].
 
+:u-pp < _:
 unif A M N :- dbgpp "" (unif A M N), false.
 
-:unif-SAME-META: % we restrict it on the items that do unot unify
+:u-SAME-META: % we restrict it on the items of L1 and L2 that do not unify
 unif ff (#M L1) (#M L2) :- !,
-  sequent_of M L1 TS [],
-  mask_unif L1 TS L2 Mask,
-  new_restricted_meta Mask NewM,
+  sequent_of M L1 Seq [],
+  mask_sequent L1 Seq L2 MaskedSeq,
+  new_restricted_meta MaskedSeq NewM,
   resume M (M = NewM).
 
 % sequent_of M L1 Seq []. Fetches the metasenv entry for M, L1 is used just
@@ -172,14 +173,14 @@ unif ff (#M L1) (#M L2) :- !,
 sequent_of M [] [TY] A :- assert(M = #HD _), of (A M@) TY _.
 sequent_of M [_|XS] [T|TS] A :- pi x\ of x T x => sequent_of M XS (TS x) [x|A].
 
-% mask_unif XS TS YS Mask. Returns in Mask a copy of TS where each item T is
-% either prefixed by in as in "in T", or subtituted with "out".  Items filtered
-% out are in correspondence of and X and Y (in XS and YS) that do not unify.
-% XS and YS are expected to be of the same length, and TS having 1 extra item.
-mask_unif [] [E] [] [E].
-mask_unif [X|XS] [T|TS] [Y|YS] [E|L] :-
+% mask_sequent XS Seq YS Mask. Returns in Mask a copy of Seq where each item T
+% is either prefixed by in as in "in T", or subtituted with "out".  Items
+% filtered out are in correspondence of an X and Y (in XS and YS) that do not
+% unify.  XS and YS are expected to be of the same length, and TS has 1 more.
+mask_sequent [] [E] [] [E].
+mask_sequent [X|XS] [T|TS] [Y|YS] [E|L] :-
   if (unify X Y) (E = in T) (E = out),
-  pi x\ mask_unif XS (TS x) YS (L x).
+  pi x\ mask_sequent XS (TS x) YS (L x).
 
 % given the filter generates a new lambda spine that prunes "out" items
 % and returns a new meta.
