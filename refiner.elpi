@@ -157,18 +157,25 @@ rev-aux [X|Y] T ACC :- rev-aux Y T [X|ACC].
 
 unif A M N :- dbgpp "" (unif A M N), false.
 
-/* M=M */
-unif ff ML1 ML2 :- ML1 = (#M L1), ML2 = (#M L2), !,
+:unif-SAME-META: % we restrict it on the items that do unot unify
+unif ff (#M L1) (#M L2) :- !,
   sequent_of M L1 TS [],
   mask_unif L1 TS L2 Mask,
   new_restricted_meta Mask NewM,
-  resume ML1 (M = NewM).
+  resume M (M = NewM).
 
 % sequent_of M L1 Seq []. Fetches the metasenv entry for M, L1 is used just
-% to know the length of the context.
+% to know the length of the context. Seq is a telescope of the form
+%               [T1, x1\ [T2, .. xn\ [TN, T] .. ]]
+% meaning that
+%                 x1 : T1, .., xn : TN |- M : T
 sequent_of M [] [TY] A :- assert(M = #HD _), of (A M@) TY _.
 sequent_of M [_|XS] [T|TS] A :- pi x\ of x T x => sequent_of M XS (TS x) [x|A].
 
+% mask_unif XS TS YS Mask. Returns in Mask a copy of TS where each item T is
+% either prefixed by in as in "in T", or subtituted with "out".  Items filtered
+% out are in correspondence of and X and Y (in XS and YS) that do not unify.
+% XS and YS are expected to be of the same length, and TS having 1 extra item.
 mask_unif [] [E] [] [E].
 mask_unif [X|XS] [T|TS] [Y|YS] [E|L] :-
   if (unify X Y) (E = in T) (E = out),
