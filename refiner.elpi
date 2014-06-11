@@ -19,6 +19,12 @@ dbgpp S T.
 % always print
 pp S T :- $printl [S,T,"\n"].
 
+assert P :- P, !.
+assert P :- pp "assert failure " P, $abort "1".
+
+if B T _ :- B, !, T.
+if _ _ E :- E.
+
 /************************* refiner ************************/
 
 % this is not going to be run always, since hyp clases will have precedence
@@ -151,80 +157,31 @@ rev-aux [X|Y] T ACC :- rev-aux Y T [X|ACC].
 
 unif A M N :- dbgpp "" (unif A M N), false.
 
-distr_lam A ACC B :- pp "distr " (distr A ACC B), false.
-distr_lam [X|x\[]] X [] :- !.
-distr_lam [X|XS] X [HD|L] :- pi x\ distr_lam (XS x) (HD x) L. 
-
 /* M=M */
 unif ff ML1 ML2 :- ML1 = (#M L1), ML2 = (#M L2), !,
-  $zero_level Ma, $zero_level Tya,
-  get_canonical M L1 TSl [] Ma Tya,
-  distr_lam TSl HD TStl, TS = [HD|TStl],
-  pp "canonical" (get_canonical M L1 TS []),
-  pp "caso SAME META =" (unif ML1 ML2),
-  mask_unif1 L1 TS L2 L1m, %CSC: basta L1m   QUI BISOGNA USARE TS e non rof!
-  pp "Mask=" L1m,
-  $zero_level NM, $zero_level NMTY,
-  mklams1 L1m NM NMTY [],
-  pp "Dopo mklams1=" (resume ML1 (M = NM)),
-  resume ML1 (M = NM),
-  pp "Dopo assegnamento=" (unif ML1 ML2).
-unif ff ML1 ML2 :- ML1 = (#M1 L1), ML2 = (#M2 L2), !,
-  pp "caso META META=" (unif ML1 ML2),
-  $zero_level Ma, $zero_level Tya,
-  get_canonical M1 L1 TSl [] Ma Tya,
-  distr_lam TSl HD TStl, TS = [HD|TStl],
-  mask_unif L1 TS L2 L1m L2m,
-  pp "Masks=" (unif L1m L2m),
-  $zero_level NM1, $zero_level NM2, $zero_level NM1TY, $zero_level NM2TY,
-  mklams L1m _ NM1 NM1TY F [],
-  mklams L2m F NM2 NM2TY _ [],
-  pp "Lams=" (unif NM1 NM2),
-  resume ML1 (M1 = NM1),
-  resume ML2 (M2 = NM2),
-  pp "Dopo assegnamento=" (unif ML1 ML2).
-get_canonical M L TS ARGS Ma Tya :- pp "" (get_canonical M L TS ARGS Ma Tya), false.
-get_canonical M [] [] ARGSr Ma Tya :-
- rev ARGSr ARGS,
- pp "" (mkapp M ARGS Ma),
- $zero_level M,
- mkapp M ARGS Ma,
- pp "" (mkapp TY ARGS Tya),
- $zero_level TY,
- mkapp TY ARGS TYa,
- pp "OF " (of Ma Tya _),
- of Ma TYa _.
-get_canonical M [_|XS] [T|TS] ARGS Ma Tya :-
- pi x\ of x T x => get_canonical M XS (TS x) [x|ARGS] (Ma x) (Tya x).
+  sequent_of M L1 TS [],
+  mask_unif L1 TS L2 Mask,
+  new_restricted_meta Mask NewM,
+  resume ML1 (M = NewM).
 
-mask_unif1 [] [] [] [].
-mask_unif1 [X|XS] [T|TS] [Y|YS] [pair true T|L] :-
-  unify X Y, !, mask_unif1 XS TS YS L.
-mask_unif1 [_|XS] [_|TS] [_|YS] [false|L] :- mask_unif1 XS TS YS L.
+% sequent_of M L1 Seq []. Fetches the metasenv entry for M, L1 is used just
+% to know the length of the context.
+sequent_of M [] [TY] A :- assert(M = #HD _), of (A M@) TY _.
+sequent_of M [_|XS] [T|TS] A :- pi x\ of x T x => sequent_of M XS (TS x) [x|A].
 
-mask_unif [] _ [] [] [].
-mask_unif [] _ [_|XS] L1 [false|L2] :- mask_unif [] [] XS L1 L2.
-mask_unif [_|XS] _ [] [false|L1] L2 :- mask_unif XS [] [] L1 L2.
-mask_unif [X|XS] [T|TS] [Y|YS] [pair true T|L1] [pair true T|L2] :-
-  unify X Y, !, mask_unif XS TS YS L1 L2.
-mask_unif [_|XS] [_|TS] [_|YS] [false|L1] [false|L2] :-
-  mask_unif XS TS YS L1 L2.
-% mklams Bitmask Head Result Fresh
-% generates x\ delay (Fresh x) for x in Bitmask and when Fresh is flex
-% hence Fresh is the new constant for the meta.  If fresh is already a constant
-% then there is no delay, it just reuses such constant as the head.
-mklams [] M M TY _ ARGS :- M = (#HD _), !.
-mklams [] M M TY W ARGS :- pp "M,TY=" (all M TY),
-  delay TY (of TY set TY), delay M (of M TY M), pp "M,TY=" (all M TY), M = #F L, W = F.
-mklams [pair true T|L] M R TY F ARGS :-
-  pi x\ of x (ARGS T@) x => unify x x => mklams L (M x) (R x) (TY x) F [x|ARGS].
-mklams [false|L] M R TY F ARGS :- pi x\ mklams L M (R x) TY F [x|ARGS].
+mask_unif [] [E] [] [E].
+mask_unif [X|XS] [T|TS] [Y|YS] [E|L] :-
+  if (unify X Y) (E = in T) (E = out),
+  pi x\ mask_unif XS (TS x) YS (L x).
 
-
-mklams1 [] M TY _ :- delay TY (of TY set TY), delay M (of M TY M).
-mklams1 [pair true T|L] M TY ARGS :-
-  pi x\ of x (ARGS T@) x => unify x x => mklams1 L (M x) (TY x) [x|ARGS].
-mklams1 [false|L] M TY ARGS :- pi x\ mklams1 L M TY [x|ARGS].
+% given the filter generates a new lambda spine that prunes "out" items
+% and returns a new meta.
+% CHOICE: we L a = L b, but a/b may appear but not be really used (reduction)
+new_restricted_meta FILTER M :- pp "new meta that prunes " FILTER,
+  $zero_level M, mklams FILTER M.
+  mklams [TY] M :- delay M (of M TY M). % we reuse the type of the old meta
+  mklams [in T|L] M :- pi x\ of x T x => unify x x => mklams (L x) (M x).
+  mklams [out |L] M :- (pi a\ pi b\ L a = L b), (pi x\ mklams (L x) M).
 
 
 /* flex=term */
