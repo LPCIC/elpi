@@ -565,20 +565,28 @@ type key = Key of data | Flex
 module CN : sig
   type t
   val equal : t -> t -> bool
-  val make : string -> t
+  val compare : t -> t -> int
+  val make : ?float:[ `Here | `Begin | `End ] -> string -> t
   val fresh : unit -> t
   val pp : Format.formatter -> t -> unit
+  val to_string : t -> string
 end = struct
-  type t = string
-  let equal = (=)
+  type t = string * [ `Here | `Begin | `End ]
+  let equal (a,_) (b,_) = a = b
+  let compare (_,oa as a) (_,ob as b) =
+    if equal a b then 0
+    else if oa = ob then 0
+    else if oa = `Begin || ob = `End then ~-1
+    else 1
+  let to_string = fst
   module S = Set.Make(String)
   let all = ref S.empty
   let fresh = ref 0
-  let rec make s =
-    if S.mem s !all then make (incr fresh; s ^ string_of_int !fresh)
-    else (all := S.add s !all; s)
+  let rec make ?(float=`Here) s =
+    if S.mem s !all then make ~float (incr fresh; s ^ string_of_int !fresh)
+    else (all := S.add s !all; s, float)
   let fresh () = incr fresh; make ("hyp" ^ string_of_int !fresh)
-  let pp fmt t = Format.fprintf fmt "%s" t
+  let pp fmt (t,_) = Format.fprintf fmt "%s" t
 end
 
 type program = annot_clause list
@@ -588,6 +596,7 @@ and premise = data
 and goal = premise
 
 let eq_clause (_,_,_,n1) (_,_,_,n2) = CN.equal n1 n2
+let cmp_clause (_,_,_,n1) (_,_,_,n2) = CN.compare n1 n2
 
 let mkCApp name args = mkApp L.(of_list (mkCon name 0 :: args))
 let mkAtom x = x
@@ -794,7 +803,7 @@ include PPP
 
 module Parser : sig (* {{{ parser for LP programs *)
 
-  val parse_program : string -> program
+  val parse_program : ?ontop:program -> string -> program
   val parse_goal : string -> goal
   val parse_data : string -> data
 
@@ -833,6 +842,8 @@ let tok = lexer
   | '|' -> "PIPE","|"
   | "=>" -> "IMPL", $buf
   | '=' -> "EQUAL","="
+  | '<' -> "LT","<"
+  | '>' -> "GT",">"
   | '$' 'a'-'z' ident -> "BUILTIN",$buf
   | '!' -> "BANG", $buf
   | '@' -> "AT", $buf
@@ -957,17 +968,28 @@ let () =
 EXTEND
   GLOBAL: lp premise atom goal;
   lp: [ [ cl = LIST0 clause; EOF -> cl ] ];
-  name : [ [ c = CONSTANT -> c | u = UVAR -> u ] ];
-  label : [ [ COLON; n = name; COLON -> n ] ];
+  name : [ [ c = CONSTANT -> c | u = UVAR -> u | FRESHUV -> "_" ] ];
+  label : [ [ COLON;
+              n = name;
+              p = OPT [ LT; n = name -> `Before n | GT; n = name -> `After n ];
+              COLON -> n,p ] ];
   clause :
     [[ name = OPT label;
        hd = concl; hyp = OPT [ ENTAILS; hyp = premise -> hyp ]; FULLSTOP ->
-         let name = match name with Some s -> CN.make s | _ -> CN.fresh () in
+         let name, insertion = match name with
+           | None -> CN.fresh (), `Here
+           | Some (s,pos) ->
+               match pos with
+               | None -> CN.make s, `Here
+               | Some (`Before "_") -> CN.make ~float:`Begin s, `Begin
+               | Some (`After "_") -> CN.make ~float:`End s, `End
+               | Some (`Before n) -> CN.make s, `Before (CN.make n)
+               | Some (`After n) -> CN.make s, `After (CN.make n) in
          let hyp = match hyp with None -> mkConj L.empty | Some h -> h in
          let clause = sigma_abstract (mkImpl hyp (mkAtom hd)) in
          check_clause clause;
          reset (); 
-         0, key_of clause, clause, name ]];
+         (0, key_of clause, clause, name), insertion ]];
   goal:
     [[ p = premise ->
          let g = sigma_abstract p in
@@ -1058,7 +1080,27 @@ let parse e s =
     raise (Stream.Error(Printf.sprintf "%s\nnear: %s" msg ctx))
   | Ploc.Exc(_,e) -> raise e
 
-let parse_program s : program = parse lp s 
+let parse_program ?(ontop=[]) s : program =
+  let insertions = parse lp s in
+  let insert prog = function
+    | item, (`Here | `End) -> prog @ [item]
+    | item, `Begin -> item :: prog
+    | (_,_,_,name as item), `Before n ->
+        let newprog = List.fold_left (fun acc (_,_,_,cn as c) ->
+          if CN.equal n cn then acc @ [item;c]
+          else acc @ [c]) [] prog in
+        if List.length prog = List.length newprog then
+          raise (Stream.Error ("unable to insert clause "^CN.to_string name));
+        newprog
+    | (_,_,_,name as item), `After n ->
+        let newprog = List.fold_left (fun acc (_,_,_,cn as c) ->
+          if CN.equal n cn then acc @ [c;item]
+          else acc @ [c]) [] prog in
+        if List.length prog = List.length newprog then
+          raise (Stream.Error ("unable to insert clause "^CN.to_string name));
+        newprog in
+  List.fold_left insert ontop insertions
+
 let parse_goal s : goal = parse goal s
 let parse_data s : data = parse atom s
 

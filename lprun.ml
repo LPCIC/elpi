@@ -577,6 +577,8 @@ let mk_prtg str d l = d, `Custom("$print",mkExt(mkString str)), [], [], l
 let not_in to_purge l =
   List.filter (fun x -> not(List.exists (eq_clause x) to_purge)) l
 
+let sort_hyps (d,g,p,eh,lvl) = (d,g,List.sort cmp_clause p,eh,lvl)
+
 let rec run op s ((gls,dls,p) : goals) (alts : alternatives)
 : subst * dgoal list * alternatives
 =
@@ -629,6 +631,7 @@ let rec run op s ((gls,dls,p) : goals) (alts : alternatives)
         (try
           TRACE "run" (pr_cur_goal op g s)
           let s, subg, new_alts = select p k t depth s hyps eh lvl in
+          let subg = List.map sort_hyps subg in
           s, subg@rest, dls, p,
             (List.map (fun (s,gs) -> s,cat_goals gs (rest,dls)) new_alts @ alts)
         with NoClause -> next_alt alts (pr_cur_goals op gls))

@@ -85,9 +85,10 @@ module LP : sig
   module CN : sig
     type t
     val equal : t -> t -> bool
-    val make : string -> t
+    val make : ?float:[ `Here | `Begin | `End ] -> string -> t
     val fresh : unit -> t
     val pp : Format.formatter -> t -> unit
+    val to_string : t -> string
   end
 
   type key = Key of data | Flex
@@ -108,6 +109,7 @@ module LP : sig
   val mkDelay : data -> premise -> premise
 
   val eq_clause : annot_clause -> annot_clause -> bool
+  val cmp_clause : annot_clause -> annot_clause -> int
 
   type builtin = BIUnif of data * data | BICustom of string * data | BICut
   type kind_of_premise =
@@ -135,7 +137,7 @@ module LP : sig
   val collect_Uv_premise : premise -> data list
   val collect_hv_premise : premise -> data list
 
-  val parse_program : string -> program
+  val parse_program : ?ontop:program -> string -> program
   val parse_goal : string -> goal
   val parse_data : string -> data
 

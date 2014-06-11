@@ -25,6 +25,7 @@ pp S T :- $printl [S,T,"\n"].
 % over this rule.  Still one gets a good value for further investigation
 % using: ./elpi -trace-on -trace-at run 1673 1700 -trace-only 'run' refiner.elpi
 % that will print all goals processed
+:ppof < _:
 of M TY T :- dbgpp "" (of M TY T), false.
 
 % bi-directional rule for lam
