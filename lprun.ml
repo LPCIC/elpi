@@ -571,7 +571,8 @@ let not_same_hd s a b =
    let b, _ = Red.whd s b in
    match look a, look b with
    | Con _, Con _ -> not (LP.equal a b)
-   | App xs, App ys -> aux (L.hd xs) (L.hd ys)
+   | App xs, _ -> aux (L.hd xs) b
+   | _, App ys -> aux a (L.hd ys)
    | _ -> true
  in aux a b
         
