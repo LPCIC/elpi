@@ -161,9 +161,8 @@ unif A M N :- dbgpp "" (unif A M N), false.
 :u-SAME-META: % we restrict it on the items of L1 and L2 that do not unify
 unif ff (#M L1) (#M L2) :- !,
   sequent_of M L1 Seq [],
-  mask_sequent L1 Seq L2 MaskedSeq,
-  new_restricted_meta MaskedSeq NewM,
-  resume M (M = NewM).
+  mask_sequent L1 Seq L2 MaskedSeq AllIn,
+  if AllIn true (new_restricted_meta MaskedSeq NewM, resume M (M = NewM)).
 
 % sequent_of M L1 Seq []. Fetches the metasenv entry for M, L1 is used just
 % to know the length of the context. Seq is a telescope of the form
@@ -177,19 +176,19 @@ sequent_of M [_|XS] [T|TS] A :- pi x\ of x T x => sequent_of M XS (TS x) [x|A].
 % is either prefixed by in as in "in T", or subtituted with "out".  Items
 % filtered out are in correspondence of an X and Y (in XS and YS) that do not
 % unify.  XS and YS are expected to be of the same length, and TS has 1 more.
-mask_sequent [] [E] [] [E].
-mask_sequent [X|XS] [T|TS] [Y|YS] [E|L] :-
-  if (unify X Y) (E = in T) (E = out),
-  pi x\ mask_sequent XS (TS x) YS (L x).
+mask_sequent [] [E] [] [E] true.
+mask_sequent [X|XS] [T|TS] [Y|YS] [E|L] B:-
+  if (unify X Y) (E = in T, B = Br) (E = out, B = false),
+  pi x\ mask_sequent XS (TS x) YS (L x) Br.
 
 % given the filter generates a new lambda spine that prunes "out" items
 % and returns a new meta.
-% CHOICE: we L a = L b, but a/b may appear but not be really used (reduction)
-new_restricted_meta FILTER M :- pp "new meta that prunes " FILTER,
-  $zero_level M, mklams FILTER M.
-  mklams [TY] M :- delay M (of M TY M). % we reuse the type of the old meta
-  mklams [in T|L] M :- pi x\ of x T x => unify x x => mklams (L x) (M x).
-  mklams [out |L] M :- (pi a\ pi b\ L a = L b), (pi x\ mklams (L x) M).
+new_restricted_meta FILTER M :- pp "building new meta restricted on " FILTER,
+  $zero_level M, $zero_level MTY, mklams FILTER M MTY.
+  mklams [_] M MTY :- delay MTY (of MTY set MTY), delay M (of M MTY M).
+  mklams [out |L] M MTY :- pi x\ mklams (L x) M MTY.
+  mklams [in TY|L] M MTY :-
+    pi x\ of x TY x => unify x x => mklams (L x) (M x) (MTY x).
 
 
 /* flex=term */
@@ -355,6 +354,12 @@ suite TEST t3ter :- % meta/meta unif with dependent type
            pi d\ unify d d => of d (app (atom vect) c) d =>
             of hole (TY c d) (X c d)),
           unify (X (atom zero) (atom vnil)) (X (atom zero) (atom vnil))).
+suite TEST t3quater :- % meta/meta unif with dependent type + restriction
+  TEST = ((pi c\ unify c c => of c (atom nat) c =>
+           pi d\ unify d d => of d (app (atom vect) c) d =>
+            of hole (TY c d) (X c d)),
+          pi vn \ unify vn vn => of vn (app (atom vect) atom zero) vn =>
+            unify (X (atom zero) (atom vnil)) (X (atom zero) vn)).
 suite TEST t4 :-
   TEST = (of hole TY1 T1, unify TY1 (atom nat), of hole TY2 T2, unify TY2 set).
 % alla seconda soluzione crasha
