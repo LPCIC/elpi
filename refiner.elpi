@@ -10,7 +10,7 @@ not A.
 
 % enabling/disabling this will change the program hence the value of the
 % counters of the tracing mechanism of elpi
-debug :- true.
+debug :- false.
 
 % print only when debug is true and annotate with the value of the "run" counter
 dbgpp T :- debug, !, $counter ["run",N], $printl ["run:",N,": "|T].
@@ -169,8 +169,9 @@ mask_sequent2 F [X|XS] [Y|YS] [T|TS] [E|L] B:-
 
 % given the filter generates a new lambda spine that prunes "out" items
 % and returns a new meta.
-new_restricted_meta FILTER M :- pp ["building new meta restricted on ",FILTER],
-  $zero_level M, $zero_level MTY, mklams FILTER M MTY, pp ["obtain ", M].
+new_restricted_meta FILTER M :-
+  dbgpp ["building new meta restricted on ",FILTER],
+  $zero_level M, $zero_level MTY, mklams FILTER M MTY, dbgpp ["obtain ", M].
   mklams [_] M MTY :- delay MTY (of MTY set MTY), delay M (of M MTY M).
   mklams [out |L] M MTY :-
     (pi a\ pi b\ M a = M b, MTY a = MTY b), pi x\ mklams (L x) (M x) (MTY x).
@@ -179,7 +180,7 @@ new_restricted_meta FILTER M :- pp ["building new meta restricted on ",FILTER],
 
 % Assigns a meta M and resumes all goals suspended on M
 assign M NewM :- assert(M = #HD []),
-  pp ["<<<< assigning value ",NewM," to meta ",M],
+  dbgpp ["<<<< assigning value ",NewM," to meta ",M],
   resume M (M = NewM),
   dbgpp ["assigned >>>> ", M].
 
@@ -210,7 +211,7 @@ unif _ T (app (#M L1) A) :- !,
  rof A Ty,
  of (lam Ty x\ hole) _ G,
  unify (@M L1) G,
- unify T (app H A).
+ unify T (app G A).
 
 :u-ATOM:
 unif ff set set :- !.
@@ -269,15 +270,16 @@ suite TEST t2 :- % typing a pi
 suite TEST t3 :- % meta/meta unif w pruning: ?X[] = ?Y[v]
   TEST = (of (lam (atom nat) x\ app (atom succ) hole) TY T,
           of (app (atom succ) hole) TY1 W,
-          pp ["before restriction ",T], unify (app T (atom zero)) W,
-          pp ["after restriction ",T]).
+          pp ["before ",T], unify (app T (atom zero)) W,
+          pp ["after ",T]).
 suite TEST t3bis :- % meta/meta unif w pruning: ?X[v,r] = ?Y[v,s]
   TEST = (of (lam (atom nat) x\ lam (atom nat) y\ app (atom succ) hole) _ T1,
           of (lam (atom nat) x\ lam (atom nat) y\ app (atom succ) hole) _ T2,
-          pp ["before restriction ",T1],
-          unify (app (app T1 (atom zero)) (atom zero))
-                (app (app T2 (atom zero)) (app (atom succ) (atom zero))),
-          pp ["after restriction ",T1]).
+          pp ["before ",T1],
+          pi x\ pi y\ of x (atom nat) x => of y (atom nat) y =>
+          unify (app (app T1 (atom zero)) x)
+                (app (app T2 (atom zero)) y),
+          pp ["after ",T1]).
 suite TEST t3ter :- % meta/meta unif with dependent type
   TEST = ((pi c\ unify c c => of c (atom nat) c =>
            pi d\ unify d d => of d (app (atom vect) c) d =>
@@ -294,7 +296,6 @@ suite TEST t4 :-
 % alla seconda soluzione crasha
 suite TEST t5 :-
   TEST = (of (lam hole (x\ x)) (prod (atom nat) x\ atom z) X, pp ["X=",X]).
-% non fa piu' intro on the fly
 suite TEST t6 :-
   TEST = (of hole _ X, unify (app X (atom zero)) (atom zero), pp ["X=",X]).
 suite TEST t7 :- % delift
@@ -302,7 +303,7 @@ suite TEST t7 :- % delift
           unify (app (app X (atom zero)) (atom zero)) (atom zero), pp ["X=",X]).
 suite TEST t7-1 :- % delift occur check
   TEST = (of (lam (atom nat) x\ lam (atom nat) y\ hole) _ X,
-          unify (app (app X (atom zero)) (atom zero)) X, pp ["X=",X]).
+          not (unify (app (app X (atom zero)) (atom zero)) X)).
 suite TEST t7-2 :- % delift  + restriction
   TEST = (of (lam (atom nat) y\ hole) _ (lam _ X),
           of (lam (atom nat) y\ hole) _ (lam _ X1),
@@ -311,9 +312,9 @@ suite TEST t7-2 :- % delift  + restriction
             unify (app Y (atom zero)) (app (atom succ) (X (X1 c))),
           pp ["X=",X,"\nX1=",X1,"\nY=",Y]).
 
-run1 T :- pp ["INFO: running ",T], T, !, pp ["INFO: success ",T].
-run1 T :- pp ["ERROR: failure ",T].
-test N :- suite T N, run1 T, false.
+run1 N T :- pp ["INFO: running ",N], T, !, pp ["INFO: success"].
+run1 N T :- pp ["ERROR: failure ",N].
+test N :- suite T N, run1 N T, false.
 test _ :- pp ["INFO: all tests run"].
 run T :- pp ["INFO: running ",T], T.
 run T :- pp ["ERROR: failure ",T].
