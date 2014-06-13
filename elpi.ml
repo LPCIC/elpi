@@ -30,7 +30,10 @@ let _ =
   register_custom "printl" (fun t s ->
     let t = Red.nf s t in
     match LP.look t with
-    | LP.Seq(l,_) -> List.iter (print_atom s) (L.to_list l); s
+    | LP.Seq(l,_) ->
+        List.iter (print_atom s) (L.to_list l);
+        Format.eprintf "\n%!";
+        s
     | _ -> assert false);
   register_custom "is" (fun t s ->
     let t = Red.nf s t in

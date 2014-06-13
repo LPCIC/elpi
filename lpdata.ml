@@ -1075,8 +1075,8 @@ let parse e s =
     let ctx_len = 70 in
     let ctx =
       let start = max 0 (last - ctx_len) in
-      let len = min (String.length s - start) last in
-      "…" ^ String.sub s start len in
+      let len = min 100 (min (String.length s - start) last) in
+      "…" ^ String.sub s start len ^ "…" in
     raise (Stream.Error(Printf.sprintf "%s\nnear: %s" msg ctx))
   | Ploc.Exc(_,e) -> raise e
 

@@ -1,38 +1,45 @@
 % vim: syntax=prolog:
 
-% enabling/disabling this will change the program hence the value of the
-% counters of the tracing mechanism of elpi
-debug :- true.
-
-/************************* logic ************************/
+/* ============================== logic =================================== */
 
 true.
 not A :- A, !, false.
 not A.
 
-/************************* utilities ************************/
+/* ============================== utils =================================== */
+
+% enabling/disabling this will change the program hence the value of the
+% counters of the tracing mechanism of elpi
+debug :- true.
 
 % print only when debug is true and annotate with the value of the "run" counter
-dbgpp S T :- debug, !, $counter ["run",N], $printl ["run:",N,": ",S,T,"\n"].
-dbgpp S T.
+dbgpp T :- debug, !, $counter ["run",N], $printl ["run:",N,": "|T].
+dbgpp _.
 
-% always print
-pp S T :- $printl [S,T,"\n"].
+% print with a new line at the end
+pp T :- $printl T.
 
 assert P :- P, !.
-assert P :- pp "assert failure " P, $abort "1".
+assert P :- pp ["assert failure: ",P], $abort "1".
 
 if B T _ :- B, !, T.
 if _ _ E :- E.
+choice B T _ :- B, T.
+choice _ _ E :- E.
 
-/************************* refiner ************************/
+rev L Lr :- L dummy@ = @dummy Lr.
+
+spy P :- dbgpp ["enter ",P], P, !, dbgpp ["exit ",P].
+spy P :- dbgpp ["fail ",P].
+
+/* ========================== type inference ============================== */
 
 % this is not going to be run always, since hyp clases will have precedence
 % over this rule.  Still one gets a good value for further investigation
 % using: ./elpi -trace-on -trace-at run 1673 1700 -trace-only 'run' refiner.elpi
 % that will print all goals processed
-:o-pp < _:
-of M TY T :- dbgpp "" (of M TY T), false.
+:of-pp < _:
+of M TY T :- dbgpp [of M TY T], false.
 
 % bi-directional rule for lam
 of (lam S F) TY (lam S2 F2) :-
@@ -51,7 +58,7 @@ of T TY W :- not($is_flex TY), !,
 %  fresh W TY1, fresh W W1,
   of T TY1 W1, coerce W1 TY1 TY W.
 
-coerce T TyA TyE W :- dbgpp "" (coerce T TyA TyE W), false.
+coerce T TyA TyE W :- dbgpp [coerce T TyA TyE W], false.
 coerce T TyA TyE T :- unify TyA TyE.
 coerce T (app (lam _ F) N) TyE W :- % CSC: whd required because we infer redexes
  subst F N TyA, coerce T TyA TyE W.
@@ -76,16 +83,6 @@ of (app M1 N1) Z (app M2 N2) :-
 
 of (atom ID) T (atom ID) :- env ID T.
 
-env zero (atom nat).
-env succ (prod (atom nat) (x \ (atom nat))).
-env plus (prod (atom nat) (x\ prod (atom nat) (y\ (atom nat)))).
-env nat set.
-env z set.
-env nat_to_z (prod (atom nat) (x\ atom z)).
-env vect (prod (atom nat) (x\ set)).
-env vnil (app (atom vect) (atom zero)).
-env vcons (prod (atom nat) (n\ prod (app (atom vect) n) (w\ app (atom vect) (app (atom succ) n)))).
-
 of set set set.
 
 % CSC: non dependent recursion
@@ -96,73 +93,55 @@ of (rec Rty N Base Step) Rty2 (rec Rty2 N2 Base2 Step2) :-
   of Step (prod (atom nat) n\ prod Rty2 acc \ Rty2) Step2.
 
 /************************ retype *************************/
-rof T TY :- dbgpp "ritipo " (il termine T ":" TY), of T TY _, !.
-rof T TY :- dbgpp "ritipaggio fallito! " (rof T TY), $abort "1".
+rof T TY :- dbgpp ["retyping term ",T," : ",TY], of T TY _, !.
+rof T TY :- dbgpp ["retyping failed for ",T," : ",TY,"\naborting"], $abort "1".
 
-/************************* subst ************************/
+/* ===================== unification helpers ============================== */
+
 subst Where What Out :- Where What = Out.
 
-/************************* unify ************************/
+delift OC _ [] M NewM BLr :- rev BLr BL, gr-o-cp OC BL M NewM.
+delift OC [T|TS] [#HD _|LS] M NewM BL :- !, % skip flexible entries
+  pi a\ (of a T a :- !) => unif a a =>
+    delift OC (TS a) LS M (NewM a) [skip|BL].
+delift OC [T|TS] [L|LS] M NewM BL :-
+  pi a\ (of a T a :- !) => unif a a =>
+    delift OC (TS a) LS M (NewM a) [bind a L|BL].
 
-restrict X :- pi c\ pi d\ X c = X d.
+gr-o-cp OC BL M NewM :- grab OC BL M NewM.
+gr-o-cp OC BL M NewM :- copy OC BL M NewM.
 
-% delift M L Y instantiates the output M s.t. @M L = Y
-delift0 M L Y :- dbgpp "" (delift M L Y), false.
-delift0 M [] Y :- delift_aux M Y.
-delift0 M [X|XS] Y :- rof X T,
-  pi c\ (of c T c :- !) => binds c X => delift0 (M c) XS Y.
+:grab-pp < _: grab OC L M N :- dbgpp [grab OC L M N], false.
 
-binds A B :- dbgpp "" (binds A B), false.
+:grab-OCCUR-CHECK:
+grab M L (#M _) _ :- !, false.
 
-delift ML M L Y :-
-  dbgpp "<<<< assegno: " (valore Y alla meta M con subst L),
-  resume ML (delift0 M L Y),
-  dbgpp "assegnato >>>> " M.
-
-delift_aux M Y :- dbgpp "" (delift_aux M Y), false.
-delift_aux M NL :- NL = #N L, !,
-  delift_subst L L1,
-  mkhole M1 L1, mkapp M1 L1 M,
-  resume NL (N = M1).
- mkhole M [] :- of hole _ M.
- mkhole M [X|XS] :- rof X TY,!, pi x\ (of x TY x :- !) => unify x x => mkhole (M x) XS.
- mkapp X [] X.
- mkapp X [Y|YS] W :-mkapp (X Y) YS W.
-
-% projection
-delift_aux M Y :- binds V X, dbgpp "trying " (grab X as V), unify X Y, M=V.
-
-%mimic (i.e. copy-clauses)
-delift_aux (atom A) (atom A).
-delift_aux set set.
-delift_aux (app M1 M2) (app N1 N2) :- delift_aux M1 N1, delift_aux M2 N2.
-delift_aux (lam S1 F1) (lam S2 F2) :-
- delift_aux S1 S2, pi c\ unify c c => delift_aux c c =>
-  (of c S1 c :- !) => delift_aux (F1 c) (F2 c).
-delift_aux (prod S1 F1) (prod S2 F2) :-
- delift_aux S1 S2, pi c\ unify c c => delift_aux c c =>
-  (of c S1 c :- !) => delift_aux (F1 c) (F2 c).
-delift_aux (rec A1 B1 C1 D1) (rec A2 B2 C2 D2) :-
-  delift_aux A1 A2, delift_aux B1 B2, delift_aux C1 C2, delift_aux D1 D2.
-
-% delift_subst delifts or prunes items in L
-delift_subst L W :- dbgpp "" (delift_subst L W), false.
-delift_subst [] [].
-delift_subst [X|XS] [A|XS1] :- delift_aux A X, ! /*red*/, delift_subst XS XS1.
-delift_subst [_|XS] XS1 :- delift_subst XS XS1.
-
-rev A B :- rev-aux A B [].
-rev-aux [] ACC ACC.
-rev-aux [X|Y] T ACC :- rev-aux Y T [X|ACC].
-
-:u-pp < _:
-unif A M N :- dbgpp "" (unif A M N), false.
-
-:u-SAME-META: % we restrict it on the items of L1 and L2 that do not unify
-unif ff (#M L1) (#M L2) :- !,
+:grab-flex:
+grab OC L (#M L1) NewT :- !,
   sequent_of M L1 Seq [],
-  mask_sequent L1 Seq L2 MaskedSeq AllIn,
-  if AllIn true (new_restricted_meta MaskedSeq NewM, resume M (M = NewM)).
+  % hack: mask_sequent2 is here used to fill in L1Dl
+  mask_sequent2 (gr-o-cp OC L) L1 L1Dl Seq MaskedSeq AllIn,
+  if AllIn
+    (NewT = @M L1Dl)
+    (new_restricted_meta MaskedSeq NewM, assign M NewM, NewT = @M L1Dl).
+
+:grab-here:
+grab _ [bind Name A|Tl] T NewT :- unify A T, NewT = Name.
+grab OC [_|Tl] T NewT :- grab OC Tl T NewT.
+
+copy OC _ (atom A) (atom A).
+copy OC _ set set.
+copy OC L (app M1 M2) (app N1 N2) :-
+  gr-o-cp OC L M1 N1, gr-o-cp OC L M2 N2.
+copy OC L (lam S1 F1) (lam S2 F2) :- gr-o-cp OC L S1 S2,
+  pi c\ unify c c => (of c S1 c :- !) => grab OC [] c c =>
+    gr-o-cp OC L (F1 c) (F2 c).
+copy OC L (prod S1 F1) (prod S2 F2) :- gr-o-cp OC L S1 S2,
+  pi c\ unify c c => (of c S1 c :- !) => grab OC [] c c =>
+    gr-o-cp OC L (F1 c) (F2 c).
+copy OC L (rec A1 B1 C1 D1) (rec A2 B2 C2 D2) :-
+  gr-o-cp OC L A1 A2, gr-o-cp OC L B1 B2,
+  gr-o-cp OC L C1 C2, gr-o-cp OC L D1 D2.
 
 % sequent_of M L1 Seq []. Fetches the metasenv entry for M, L1 is used just
 % to know the length of the context. Seq is a telescope of the form
@@ -170,165 +149,118 @@ unif ff (#M L1) (#M L2) :- !,
 % meaning that
 %                 x1 : T1, .., xn : TN |- M : T
 sequent_of M [] [TY] A :- assert(M = #HD _), of (A M@) TY _.
-sequent_of M [_|XS] [T|TS] A :- pi x\ of x T x => sequent_of M XS (TS x) [x|A].
+sequent_of M [_|XS] [T|TS] A :-
+  pi x\ (of x T x :- !) => sequent_of M XS (TS x) [x|A].
 
-% mask_sequent XS Seq YS Mask. Returns in Mask a copy of Seq where each item T
-% is either prefixed by in as in "in T", or subtituted with "out".  Items
-% filtered out are in correspondence of an X and Y (in XS and YS) that do not
-% unify.  XS and YS are expected to be of the same length, and TS has 1 more.
-mask_sequent [] [E] [] [E] true.
-mask_sequent [X|XS] [T|TS] [Y|YS] [E|L] B:-
-  if (unify X Y) (E = in T, B = Br) (E = out, B = false),
-  pi x\ mask_sequent XS (TS x) YS (L x) Br.
+% mask_sequent F XS Seq Mask AllIn. Returns in Mask a copy of Seq where each
+% item T is either prefixed by in as in "in T", or subtituted with "out".
+% Items filtered out are in correspondence of an X (in XS) that do not pass F.
+% TS has 1 more element of XS.  AllIn is true is Mask is made of "in" only.
+mask_sequent F [] [E] [E] true.
+mask_sequent F [X|XS] [T|TS] [E|L] B:-
+  choice (F X) (E = in T, B = Br) (E = out, B = false),
+  pi x\ mask_sequent F XS (TS x) (L x) Br.
+% as above but F takes 2 arguments, the 2 lists must be of the same len
+mask_sequent2 F [] [] [E] [E] true.
+mask_sequent2 F [X|XS] [Y|YS] [T|TS] [E|L] B:-
+  choice (F X Y) (E = in T, B = Br) (E = out, B = false),
+  pi x\ mask_sequent2 F XS YS (TS x) (L x) Br.
 
 % given the filter generates a new lambda spine that prunes "out" items
 % and returns a new meta.
-new_restricted_meta FILTER M :- pp "building new meta restricted on " FILTER,
-  $zero_level M, $zero_level MTY, mklams FILTER M MTY, pp "obtain " M.
+new_restricted_meta FILTER M :- pp ["building new meta restricted on ",FILTER],
+  $zero_level M, $zero_level MTY, mklams FILTER M MTY, pp ["obtain ", M].
   mklams [_] M MTY :- delay MTY (of MTY set MTY), delay M (of M MTY M).
   mklams [out |L] M MTY :-
     (pi a\ pi b\ M a = M b, MTY a = MTY b), pi x\ mklams (L x) (M x) (MTY x).
   mklams [in TY|L] M MTY :-
-    pi x\ of x TY x => unify x x => mklams (L x) (M x) (MTY x).
+    pi x\ (of x TY x :- !) => unify x x => mklams (L x) (M x) (MTY x).
 
+% Assigns a meta M and resumes all goals suspended on M
+assign M NewM :- assert(M = #HD []),
+  pp ["<<<< assigning value ",NewM," to meta ",M],
+  resume M (M = NewM),
+  dbgpp ["assigned >>>> ", M].
 
-/* flex=term */
-unif ff T N :-
- T = #M L,
- %dbgpp " ----> ritipo " N,
- rof N TN,
- %dbgpp " ----> ritipo " T,
- rof T TT,
- unify TN TT,
- delift T M L N.
-/* flex=flex already tried */
-% CSC: ma da risultati diversi!
-% esempio: ?1[0] = ?2 vs ?2 = ?1[0]
-%unif ff (#N NL) (#T TL) :- !, false.
-/* term=flex */
-unif ff N T :-
- T = #M L,
- %dbgpp " ----> ritipo " N,
- rof N TN,
- %dbgpp " ----> ritipo " T,
- rof T TT,
- unify TN TT,
- delift T M L N.
+/* =========================== unification ================================ */
 
-%unif _ (?M _) _ :- !, false.
-%unif _ _ (?M _) :- !, false.
+unify A B :- unif ff A B.
 
-/* lambda-intro on the fly */
-unif _ T (app H A) :-
- H = #M L1, !, rof A Ty,
- of (lam Ty x\hole) _ G,
- unify H G,
+:u-pp < _: unif A M N :- dbgpp [unif A M N], false.
+
+:u-SAME-META: % we restrict it on the items of L1 and L2 that do not unify
+unif ff (#M L1) (#M L2) :- !,
+  sequent_of M L1 Seq [],
+  mask_sequent2 unify L1 L2 Seq MaskedSeq AllIn,
+  if AllIn true (new_restricted_meta MaskedSeq NewM, assign M NewM).
+
+:u-ASSIGN:
+unif ff (#M L) N :-
+  % rof N TN, rof T TT, unify TN TT,
+  sequent_of M L Seq [],
+  delift M Seq L N NewM [], assign M NewM.
+unif ff N (#M L) :-
+  % rof N TN, rof T TT, unify TN TT,
+  sequent_of M L Seq [],
+  delift M Seq L N NewM [], assign M NewM.
+% to brak symmetry, we try the former rules once
+% TASSI: I think that now we could just have 1 u-ASSIGN and let the tt/ff game
+% swap the arguments
+unif _ (#M _) _ :- !, false.
+unif _ _ (#M _) :- !, false.
+
+:u-LAM-INTRO: % on the fly lambda intro
+unif _ T (app (#M L1) A) :- !,
+ rof A Ty,
+ of (lam Ty x\ hole) _ G,
+ unify (@M L1) G,
  unify T (app H A).
 
-/* reflexive closure + heuristic for == */
-/*unif ff _ T T :- !.*/
+:u-ATOM:
 unif ff set set :- !.
 unif ff (atom A) (atom A) :- !.
 
-/* contextual closure + heuristic */
+:u-APP-APP-SAME-HD: % contextual closure + heuristic (no !, hence we may reduce)
 unif ff (app H A) (app K B) :- unify H K, unify A B.
-
-/* contextual closure */
-unif ff (lam S F) (lam T G) :-
-  !, unify S T, pi x\ (of x S x :- !) => unify x x => unify (F x) (G x).
-
-unif ff (prod S F) (prod T G) :-
-  !, unify S T, pi x\ (of x S x :- !) => unify x x => unify (F x) (G x).
-
-/* contextual closure + heuristic */
 unif ff (rec A1 B1 C1 D1) (rec A2 B2 C2 D2) :-
   unify A1 A2, unify B1 B2, unify C1 C2, unify D1 D2.
 
-/* beta */
-% hem...
+:u-SAME-RIGID: % contextual closure
+unif ff (lam S F) (lam T G) :- !,
+  unify S T, pi x\ (of x S x :- !) => unify x x => unify (F x) (G x).
+unif ff (prod S F) (prod T G) :- !,
+  unify S T, pi x\ (of x S x :- !) => unify x x => unify (F x) (G x).
+
+:u-WHD: % BUG: redex may be deep, to fix with n-ary app; BUG: = is weak, use whd
 unif _ (app (app L A) M) X :- L = lam _ x\ (lam _ y\ F x y), !, unify (F A M) X.
 unif _ (app L M) X :- L = lam _ F, !, subst F M Y, unify Y X.
+unif _ (atom ID) B :- body ID C, !, unify C B.
+unif _ (rec _ N B R) X :- N = atom zero, !, unify B X. % BUG = is weak
+unif _ (rec T N B R) X :-
+  N = app (atom succ) M, !, unify (app (app R M) (rec T M B R)) X.
 
-/* delta */
-unif _ (atom ID) B :- body ID B.
+:u-SWAP: % we swap lhs and rhs, but only once
+unif ff A B :- unif tt B A.
 
-/* delta */
+/* ====================== prover environment ============================== */
+
+env zero (atom nat).
+env succ (prod (atom nat) (x \ (atom nat))).
+env plus (prod (atom nat) (x\ prod (atom nat) (y\ (atom nat)))).
+env nat set.
+env z set.
+env nat_to_z (prod (atom nat) (x\ atom z)).
+env vect (prod (atom nat) (x\ set)).
+env vnil (app (atom vect) (atom zero)).
+env vcons (prod (atom nat) (n\ prod (app (atom vect) n) (w\ app (atom vect) (app (atom succ) n)))).
+
 body plus (lam (atom nat)
              (n\ (rec (prod (atom nat) (x\ (atom nat))) n
                    (lam (atom nat) (x\ x))
                    (lam (atom nat) m\ lam (prod (atom nat) (x\ (atom nat))) acc\
-                      lam (atom nat) (n\ app (atom succ) (app acc n)))))) :- !.
-/* iota */
-unif _ (rec _ N _ _) _ :- $is_flex N, !/*red*/, fail.
-unif _ (rec _ N B R) X :- N = atom zero, !, unify B X.
-unif _ (rec T N B R) X :-
-  N = app (atom succ) M, !, unify (app (app R M) (rec T M B R)) X.
+                      lam (atom nat) (n\ app (atom succ) (app acc n)))))).
 
-/* symmetric */
-unif ff A B :- unif tt B A.
-
-unify A B :- unif ff A B.
-
-/******************** Tactics **********************/
-
-tacsem i     (lam hole (x\ hole)).
-tacsem (a M) (app M hole).
-tacsem (h N) (var N).
-tacsem (r M) M.
-
-/******************** GUI **************************/
-
-test_unify A B TA2 :-
-  dbgpp "---------> " (of A TA A1),
-  of A TA A1,
-  dbgpp "---------> " (of B TB B1),
-  of B TB B1,
-  dbgpp "========== " (unify TA TB),
-  unify TA TB,
-  dbgpp "========== " (unify A1 B1),
-  unify A1 B1.
-
-of (var N) T M :- hyp N X, of X T M.
-
-step_in N (decl TY F) :-
-  pi x\ (of x TY x :- !) => copy x x => unify x x => hyp N x => (
-  M = ss N,
-  dbgpp "" (hyp N TY),
-  step_in M (F x), !).
-
-read_tac T :-
-  $print "\ntactic> ",
-  $read S,
-  $parse [S,T], !.
-read_tac T :- $print "\nparse error\n", read_tac T.
-
-step_in N (goal M MTY) :-
-  dbgpp "=========\n" MTY,
-  read_tac T1,
-  dbgpp "running " T1,
-  tacsem T1 P,
-  dbgpp "got term " P,
-  of P TP P1,
-  dbgpp "of type " TP,
-  unify TP MTY,
-  $print "unifies with goal!\n\n",
-  P1 = M, !.
-
-step_in N G :- $print "\ntactic error\n", step_in N G.
-
-step nil :- $print "\nProof completed.\n".
-step [G|GS] :-
-  step_in zz G,
-  step Sig.
-  
-claim Claim P1 :-
-  of Claim set Claim1,
-  of hole THole P,
-  unify THole Claim1,
-  step Sig.
-
-/* ======================================================================== */
-
+/* ============================ testsuite ================================= */
 % usage:
 % > test _          runs all tests, only first solution of each
 % > test t2         runs only test t2, only first solution of t2
@@ -341,15 +273,15 @@ suite TEST t2 :- % typing a pi
 suite TEST t3 :- % meta/meta unif w pruning: ?X[] = ?Y[v]
   TEST = (of (lam (atom nat) x\ app (atom succ) hole) TY T,
           of (app (atom succ) hole) TY1 W,
-          pp "non-ristretto " T, unify (app T (atom zero)) W,
-          pp "ristretto " T).
+          pp ["before restriction ",T], unify (app T (atom zero)) W,
+          pp ["after restriction ",T]).
 suite TEST t3bis :- % meta/meta unif w pruning: ?X[v,r] = ?Y[v,s]
   TEST = (of (lam (atom nat) x\ lam (atom nat) y\ app (atom succ) hole) _ T1,
           of (lam (atom nat) x\ lam (atom nat) y\ app (atom succ) hole) _ T2,
-          pp "non-ristretto " T1,
+          pp ["before restriction ",T1],
           unify (app (app T1 (atom zero)) (atom zero))
                 (app (app T2 (atom zero)) (app (atom succ) (atom zero))),
-          pp "ristretto " T1).
+          pp ["after restriction ",T1]).
 suite TEST t3ter :- % meta/meta unif with dependent type
   TEST = ((pi c\ unify c c => of c (atom nat) c =>
            pi d\ unify d d => of d (app (atom vect) c) d =>
@@ -365,15 +297,90 @@ suite TEST t4 :-
   TEST = (of hole TY1 T1, unify TY1 (atom nat), of hole TY2 T2, unify TY2 set).
 % alla seconda soluzione crasha
 suite TEST t5 :-
-  TEST = (of (lam hole (x\ x)) (prod (atom nat) x\ atom z) X, pp "X=" X).
+  TEST = (of (lam hole (x\ x)) (prod (atom nat) x\ atom z) X, pp ["X=",X]).
 % non fa piu' intro on the fly
 suite TEST t6 :-
-  TEST = (of hole _ X, unify (app X (atom zero)) (atom zero), pp "X=" X).
+  TEST = (of hole _ X, unify (app X (atom zero)) (atom zero), pp ["X=",X]).
+suite TEST t7 :- % delift
+  TEST = (of (lam (atom nat) x\ lam (atom nat) y\ hole) _ X,
+          unify (app (app X (atom zero)) (atom zero)) (atom zero), pp ["X=",X]).
+suite TEST t7-1 :- % delift occur check
+  TEST = (of (lam (atom nat) x\ lam (atom nat) y\ hole) _ X,
+          unify (app (app X (atom zero)) (atom zero)) X, pp ["X=",X]).
+suite TEST t7-2 :- % delift  + restriction
+  TEST = (of (lam (atom nat) y\ hole) _ (lam _ X),
+          of (lam (atom nat) y\ hole) _ (lam _ X1),
+          of (lam (atom nat) y\ hole) _ Y,
+          pi c\ unify c c => (of c (atom nat) c :- !) =>
+            unify (app Y (atom zero)) (app (atom succ) (X (X1 c))),
+          pp ["X=",X,"\nX1=",X1,"\nY=",Y]).
 
-run1 T :- pp "INFO: running " T, T, !, pp "INFO: success " T.
-run1 T :- pp "ERROR: failure " T.
+run1 T :- pp ["INFO: running ",T], T, !, pp ["INFO: success ",T].
+run1 T :- pp ["ERROR: failure ",T].
 test N :- suite T N, run1 T, false.
-test _ :- $print "INFO: all tests run\n".
-run T :- pp "INFO: running " T, T.
-run T :- pp "ERROR: failure " T.
+test _ :- pp ["INFO: all tests run"].
+run T :- pp ["INFO: running ",T], T.
+run T :- pp ["ERROR: failure ",T].
 solutions N :- suite T N, run T.
+
+
+/* ============================ old stuff ================================= */
+
+/******************** Tactics **********************/
+
+tacsem i     (lam hole (x\ hole)).
+tacsem (a M) (app M hole).
+tacsem (h N) (var N).
+tacsem (r M) M.
+
+/******************** GUI **************************/
+
+test_unify A B TA2 :-
+  dbgpp ["---------> ",of A TA A1],
+  of A TA A1,
+  dbgpp ["---------> ",of B TB B1],
+  of B TB B1,
+  dbgpp ["========== ",unify TA TB],
+  unify TA TB,
+  dbgpp ["========== ",unify A1 B1],
+  unify A1 B1.
+
+of (var N) T M :- hyp N X, of X T M.
+
+step_in N (decl TY F) :-
+  pi x\ (of x TY x :- !) => copy x x => unify x x => hyp N x => (
+  M = ss N,
+  dbgpp [hyp N TY],
+  step_in M (F x), !).
+
+read_tac T :-
+  $print "\ntactic> ",
+  $read S,
+  $parse [S,T], !.
+read_tac T :- $print "\nparse error\n", read_tac T.
+
+step_in N (goal M MTY) :-
+  dbgpp ["=========\n", MTY],
+  read_tac T1,
+  dbgpp ["running ", T1],
+  tacsem T1 P,
+  dbgpp ["got term ", P],
+  of P TP P1,
+  dbgpp ["of type ", TP],
+  unify TP MTY,
+  pp ["unifies with goal!\n"],
+  P1 = M, !.
+
+step_in N G :- pp ["\ntactic error\n"], step_in N G.
+
+step nil :- pp ["\nProof completed.\n"].
+step [G|GS] :-
+  step_in zz G,
+  step Sig.
+  
+claim Claim P1 :-
+  of Claim set Claim1,
+  of hole THole P,
+  unify THole Claim1,
+  step Sig.
+
