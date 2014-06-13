@@ -100,6 +100,8 @@ rof T TY :- dbgpp ["retyping failed for ",T," : ",TY,"\naborting"], $abort "1".
 
 subst Where What Out :- Where What = Out.
 
+% delift M Seq Args Term DeliftedTerm [].  delifts Term w.r.t. Args for M (that
+% must not occur in Term) whose canonical context is Seq
 delift OC _ [] M NewM BLr :- rev BLr BL, gr-o-cp OC BL M NewM.
 delift OC [T|TS] [#HD _|LS] M NewM BL :- !, % skip flexible entries
   pi a\ (of a T a :- !) => unif a a =>
@@ -108,6 +110,10 @@ delift OC [T|TS] [L|LS] M NewM BL :-
   pi a\ (of a T a :- !) => unif a a =>
     delift OC (TS a) LS M (NewM a) [bind a L|BL].
 
+% gr-o-cp M ThingsToBind Term DeliftedTerm. traverses Term and at each node
+% looks if it can be grabbed or copies it.  It can be grabbed only if there
+% exists an entry in ThingsToBind of the form (bind c T) where T unifies
+% with Term.  If M is found, then fails (occur check)
 gr-o-cp OC BL M NewM :- grab OC BL M NewM.
 gr-o-cp OC BL M NewM :- copy OC BL M NewM.
 
@@ -116,10 +122,13 @@ gr-o-cp OC BL M NewM :- copy OC BL M NewM.
 :grab-OCCUR-CHECK:
 grab M L (#M _) _ :- !, false.
 
-:grab-flex:
+:grab-flex: % eventual restriction
 grab OC L (#M L1) NewT :- !,
   sequent_of M L1 Seq [],
-  % hack: mask_sequent2 is here used to fill in L1Dl
+  % HACK: mask_sequent2 is here used to fill in L1Dl with the delifted
+  % It works because it just calls the F, here (gr-o-cp OC L), on the elements
+  % of the two lists.  Here L1Dl is flexible, hence it generates a list to hold
+  % the delifted of L1.
   mask_sequent2 (gr-o-cp OC L) L1 L1Dl Seq MaskedSeq AllIn,
   if AllIn
     (NewT = @M L1Dl)
@@ -198,13 +207,9 @@ unif ff (#M L1) (#M L2) :- !,
 
 :u-ASSIGN:
 unif ff (#M L) N :- !,
-  % rof N TN, rof T TT, unify TN TT,
-  sequent_of M L Seq [],
-  delift M Seq L N NewM [], assign M NewM.
+  sequent_of M L Seq [], delift M Seq L N NewM [], assign M NewM.
 unif ff N (#M L) :- !,
-  % rof N TN, rof T TT, unify TN TT,
-  sequent_of M L Seq [],
-  delift M Seq L N NewM [], assign M NewM.
+  sequent_of M L Seq [], delift M Seq L N NewM [], assign M NewM.
 
 :u-LAM-INTRO: % on the fly lambda intro
 unif _ T (app (#M L1) A) :- !,
