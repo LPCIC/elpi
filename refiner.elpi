@@ -24,8 +24,9 @@ assert P :- pp ["assert failure: ",P], $abort "1".
 
 if B T _ :- B, !, T.
 if _ _ E :- E.
-choice B T _ :- B, T.
-choice _ _ E :- E.
+
+or A _ :- A.
+or _ B :- B.
 
 rev L Lr :- L dummy@ = @dummy Lr.
 
@@ -168,12 +169,12 @@ sequent_of M [_|XS] [T|TS] A :-
 % TS has 1 more element of XS.  AllIn is true is Mask is made of "in" only.
 mask_sequent F [] [E] [E] true.
 mask_sequent F [X|XS] [T|TS] [E|L] B:-
-  choice (F X) (E = in T, B = Br) (E = out, B = false),
+  or (F X, E = in T, B = Br) (E = out, B = false),
   pi x\ mask_sequent F XS (TS x) (L x) Br.
 % as above but F takes 2 arguments, the 2 lists must be of the same len
 mask_sequent2 F [] [] [E] [E] true.
 mask_sequent2 F [X|XS] [Y|YS] [T|TS] [E|L] B:-
-  choice (F X Y) (E = in T, B = Br) (E = out, B = false),
+  or (F X Y, E = in T, B = Br) (E = out, B = false),
   pi x\ mask_sequent2 F XS YS (TS x) (L x) Br.
 
 % given the filter generates a new lambda spine that prunes "out" items
