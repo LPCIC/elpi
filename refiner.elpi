@@ -37,14 +37,11 @@ rigid T :- not($is_flex T).
 
 /* ========================== type inference ============================== */
 
-% this is not going to be run always, since hyp clases will have precedence
-% over this rule.  Still one gets a good value for further investigation
-% using: ./elpi -trace-on -trace-at run 1673 1700 -trace-only 'run' refiner.elpi
-% that will print all goals processed
-:of-pp < _:
-of M TY T :- dbgpp [of M TY T], false.
+% dbgpp prints the value of the "run" counter that can be used to trace elpi:
+%    ./elpi -trace-on -trace-at run 1673 1700 -trace-only 'run' refiner.elpi
+:of-pp < _: of M TY T :- dbgpp [of M TY T], false.
 
-% bi-directional rule for lam
+:of-LAM-BIDIR:
 of (lam S F) TY (lam S2 F2) :-
   rigid TY,
   TY = prod S2 T, % CSC: whd missing here!
@@ -58,7 +55,7 @@ of (lam S F) TY (lam S2 F2) :-
 :of-TRIVIAL-BIDIR:
 of T ExpTY NewT :- rigid ExpTY, !, of T InfTY RT, coerce RT InfTY ExpTY NewT.
 
-:coe-pp < _: coerce T TyA TyE W :- dbgpp [coerce T TyA TyE W], false.
+:coerce-pp < _: coerce T TyA TyE W :- dbgpp [coerce T TyA TyE W], false.
 
 coerce T TyA TyE T :- unify TyA TyE.
 coerce T (app (lam _ F) N) TyE W :- % CSC: whd required because we infer redexes
@@ -92,7 +89,6 @@ of set set set.
 of (atom ID) T (atom ID) :- env ID T.
 
 
-/************************ retype *************************/
 rof T TY :- dbgpp ["retyping term ",T," : ",TY], of T TY _, !.
 rof T TY :- dbgpp ["retyping failed for ",T," : ",TY,"\naborting"], $abort "1".
 
