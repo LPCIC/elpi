@@ -33,6 +33,8 @@ rev L Lr :- L dummy@ = @dummy Lr.
 spy P :- dbgpp ["enter ",P], P, !, dbgpp ["exit ",P].
 spy P :- dbgpp ["fail ",P].
 
+rigid T :- not($is_flex T).
+
 /* ========================== type inference ============================== */
 
 % this is not going to be run always, since hyp clases will have precedence
@@ -44,47 +46,40 @@ of M TY T :- dbgpp [of M TY T], false.
 
 % bi-directional rule for lam
 of (lam S F) TY (lam S2 F2) :-
-  not($is_flex TY),
+  rigid TY,
   TY = prod S2 T, % CSC: whd missing here!
   !,
   of S set S3,
   unify S2 S3,
   (pi x\ (of x S3 x :- !) => unify x x => of (F x) (T x) (F2 x)).
 
-% fresh A W creates a W of level zero applied to all the local subst of A
-fresh (?HD L) W :- !, $zero_level W1, mkapp W1 L W.
-fresh _ _.
 % ideally each rule should take care of dealing with bi-directionality
-of T TY W :- not($is_flex TY), !,
-%  fresh W TY1, fresh W W1,
-  of T TY1 W1, coerce W1 TY1 TY W.
+% after this rule bidirectionaly become the trivially implemented
+:of-TRIVIAL-BIDIR:
+of T ExpTY NewT :- rigid ExpTY, !, of T InfTY RT, coerce RT InfTY ExpTY NewT.
 
-coerce T TyA TyE W :- dbgpp [coerce T TyA TyE W], false.
+:coe-pp < _: coerce T TyA TyE W :- dbgpp [coerce T TyA TyE W], false.
+
 coerce T TyA TyE T :- unify TyA TyE.
 coerce T (app (lam _ F) N) TyE W :- % CSC: whd required because we infer redexes
- subst F N TyA, coerce T TyA TyE W.
+  subst F N TyA, coerce T TyA TyE W.
 coerce T (atom nat) (atom z) (app (atom nat_to_z) T).
 
 of hole TY T :- delay TY (of TY set TY), delay T (of T TY T).
 
 of (lam S F) (prod S2 T) (lam S2 F2) :-
-  of S set S2, (pi x\ (of x S2 x :- !) => unify x x => of (F x) (T x) (F2 x)).
+  of S set S2, pi x\ (of x S2 x :- !) => unify x x => of (F x) (T x) (F2 x).
 
 of (prod S F) set (prod S2 F2) :-
-  of S set S2,
-  (pi x\ (of x S2 x :- !) => unify x x => (of (F x) (T x) (F2 x), unify (T x) set)).
+  of S set S2, pi x\ (of x S2 x :- !) => unify x x => of (F x) set (F2 x).
 
 of (app M1 N1) Z (app M2 N2) :-
-    of M1 TM1 M2,
-    of (prod hole x\hole) _ TM2,
-    unify TM1 TM2,
-    TM2 = prod TY1 F,
-    of N1 TY1 N2,
-    subst F N2 Z.
-
-of (atom ID) T (atom ID) :- env ID T.
-
-of set set set.
+  of M1 TM1 M2,
+  of (prod hole x\hole) _ TM2,
+  unify TM1 TM2,
+  TM2 = prod TY1 F,
+  of N1 TY1 N2,
+  subst F N2 Z.
 
 % CSC: non dependent recursion
 of (rec Rty N Base Step) Rty2 (rec Rty2 N2 Base2 Step2) :-
@@ -92,6 +87,10 @@ of (rec Rty N Base Step) Rty2 (rec Rty2 N2 Base2 Step2) :-
   of N (atom nat) N2,
   of Base Rty2 Base2,
   of Step (prod (atom nat) n\ prod Rty2 acc \ Rty2) Step2.
+
+of set set set.
+of (atom ID) T (atom ID) :- env ID T.
+
 
 /************************ retype *************************/
 rof T TY :- dbgpp ["retyping term ",T," : ",TY], of T TY _, !.
@@ -115,8 +114,7 @@ delift OC [T|TS] [L|LS] M NewM BL :-
 % looks if it can be grabbed or copies it.  It can be grabbed only if there
 % exists an entry in ThingsToBind of the form (bind c T) where T unifies
 % with Term.  If M is found, then fails (occur check)
-gr-o-cp OC BL M NewM :- grab OC BL M NewM.
-gr-o-cp OC BL M NewM :- copy OC BL M NewM.
+gr-o-cp OC BL M NewM :- or (grab OC BL M NewM) (copy OC BL M NewM).
 
 :grab-pp < _: grab OC L M N :- dbgpp [grab OC L M N], false.
 
@@ -315,13 +313,12 @@ suite TEST t7-2 :- % delift  + restriction
           pp ["X=",X,"\nX1=",X1,"\nY=",Y]).
 
 run1 N T :- pp ["INFO: running ",N], T, !, pp ["INFO: success"].
-run1 N T :- pp ["ERROR: failure ",N].
+run1 N T :- pp ["\n\nERROR: failure ",N,"\n\n"].
 test N :- suite T N, run1 N T, false.
-test _ :- pp ["INFO: all tests run"].
+test _ :- pp ["\nINFO: all tests run"].
 run T :- pp ["INFO: running ",T], T.
 run T :- pp ["ERROR: failure ",T].
 solutions N :- suite T N, run T.
-
 
 /* ============================ old stuff ================================= */
 
