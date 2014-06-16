@@ -108,7 +108,7 @@ let test_whd () =
   let test ?(nf=false) a b =
     let t = LP.parse_data a in
     let s = Subst.empty 0 in
-    let t' = if nf then Red.nf s t else fst(Red.whd s t) in
+    let t', s = if nf then Red.nf t s else Red.whd t s in
     let t'' =  LP.parse_data b in
     Format.eprintf "@[<hv2>whd: @ %a@ ---> %a@]@\n%!"
       (LP.prf_data []) t (LP.prf_data []) t';
@@ -136,7 +136,7 @@ let test_unif () =
       let s = unify x y (Subst.empty 100) in
       Format.eprintf "@[<hv3>unify: %a@ @[<hv0>=== %a@ ---> %a@]@]@\n%!"
         (LP.prf_data []) x (LP.prf_data []) y Subst.prf_subst s;
-      let x, y = Red.nf s x, Red.nf s y in
+      let x, s = Red.nf x s in let y, s = Red.nf y s in
       if not (LP.equal x y) then begin
         Format.eprintf "@[<hv3>bad unifier: %a@ =/= %a@]@\n%!"
           (LP.prf_data []) x (LP.prf_data []) y;
@@ -227,7 +227,7 @@ let test_prog p g =
   Format.eprintf
     "@\n@[<hv2>output:@ %a@]@\n@[<hv2>nf out:@ %a@]@\n@[<hv2>subst:@ %a@]@\n%!"
     (LP.prf_goal []) (Subst.apply_subst_goal s g) 
-    (LP.prf_goal []) (LP.map_premise (Red.nf s) g)
+    (LP.prf_goal []) (fst(Red.nf g s))
     Subst.prf_subst s;
  with Stream.Error msg ->
    Format.eprintf "@[Parse error: %s@]@\n%!" msg
@@ -895,13 +895,13 @@ let _ =
   set_terminal_width ();
   let _ = Trace.parse_argv Sys.argv in
   register_custom "print" (fun t s ->
-    let t = Red.nf s t in
+    let t, s = Red.nf t s in
     (match LP.look t with
     | LP.Ext t when isString t -> Format.eprintf "%s%!" (getString t)
     | _ -> Format.eprintf "%a%!" (LP.prf_data []) t);
     s);
   register_custom "is_flex" (fun t s ->
-    let t, s = Red.whd s t in
+    let t, s = Red.whd t s in
     match LP.look t with
     | LP.Uv _ -> s
     | _ -> raise NoClause);

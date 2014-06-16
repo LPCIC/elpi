@@ -36,13 +36,13 @@ bench/%: notrace/all
 valgrind/%: notrace/all
 	$(H) valgrind --tool=cachegrind ./$*
 	
-gprof/%: profile/notrace/all
-	$(H) ./$*
-	$(H) gprof $* > $*.annot
-	$(H) echo "profiling written to $*.annot"
+gprof: profile/notrace/all
+	$(H) (echo 'test _'; yes) | ./elpi refiner.elpi
+	$(H) gprof ./elpi > elpi.annot
+	$(H) echo "profiling written to elpi.annot"
 
 ocamlprof: profile/notrace/elpi.byte
-	$(H) ./elpi.byte
+	$(H) (echo 'test _'; yes) | ./elpi.byte refiner.elpi
 	$(I) echo OCAMLPROF lpdata.ml lprun.ml int.ml cMap.ml
 	$(H) ocamlprof $(TMP)/lpdata.ml > lpdata.annot.ml
 	$(H) ocamlprof $(TMP)/lprun.ml > lprun.annot.ml

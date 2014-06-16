@@ -23,9 +23,11 @@ module L : sig (* {{{ Lists *)
   val for_all : ('a -> bool) -> 'a t -> bool
   val for_alli : (int -> 'a -> bool) -> 'a t -> bool
   val for_all2 : ('a -> 'b -> bool) -> 'a t -> 'b t -> bool
+  val exists : ('a -> bool) -> 'a t -> bool
   val of_list : 'a list-> 'a t
   val to_list : 'a t -> 'a list
   val filter : ('a -> bool) -> 'a t -> 'a t
+  val filter_acc : ('a -> 'b -> bool * 'b) -> 'a t -> 'b -> 'a t * 'b
   val append : 'a t -> 'a t -> 'a t
   val cons : 'a -> 'a t -> 'a t
   val uniq : ('a -> 'a -> bool) -> 'a t -> bool
@@ -70,6 +72,7 @@ end  = struct (* {{{ *)
     | x::xs,y::ys -> fold2 f xs ys (f x y a)
     | _ -> assert false
   let for_all f l = List.for_all f l
+  let exists f l = List.exists f l
   let for_alli f l =
     let rec aux n = function
       | [] -> true
@@ -83,6 +86,14 @@ end  = struct (* {{{ *)
   let of_list l = l
   let to_list l = l
   let filter f l = List.filter f l
+  let filter_acc f l acc =
+    let rec aux a = function
+      | [] -> [], a
+      | x::xs ->
+          let b, a = f x a in
+          if b then let xs, a = aux a xs in x :: xs, a
+          else aux a xs
+    in aux acc l
   let append l1 l2 = l1 @ l2
   let cons x l = x :: l
   let rec uniq equal = function
@@ -1192,43 +1203,43 @@ let beta t start len v = rule"Bs";
   rdx
 
 let rec splay xs tl s =
-  let tl, s = whd s tl in
+  let tl, s = whd tl s in
   match look tl with
   | Uv _ | Nil -> xs, tl, s
   | Seq(ys,t) -> splay (L.append xs ys) t s
   | _ -> xs, tl, s
 
-and whd s t =
+and whd t s =
   TRACE "whd" (fun fmt -> prf_data [] fmt t)
   match look t with
   | (Ext _  | DB _ | Bin _ | Nil) as x -> kool x, s
   | Con(_,lvl) when in_sub_con lvl s ->
       let t = !last_sub_lookup in
-      let t', s = whd s t in
+      let t', s = whd t s in
       t', if t == t' then s else set_sub_con lvl t' s
   | Uv (i,_) when in_sub i s ->
       let t = !last_sub_lookup in
-      let t', s = whd s t in
+      let t', s = whd t s in
       t', if t == t' then s else set_sub i t' s
   | Con _ as x -> kool x, s
   | Uv _ -> t, s
   | VApp (b,hd,tl) ->
       let xs, tl, s = splay L.empty tl s in
       if equal tl mkNil then
-        if b <> `Rev then whd s (mkApp (L.cons hd xs))
-        else whd s (mkApp (L.cons hd (L.rev xs)))
+        if b <> `Rev then whd (mkApp (L.cons hd xs)) s
+        else whd (mkApp (L.cons hd (L.rev xs))) s
       else (*mkVApp b hd (mkSeq xs tl), s*) t,s
   | Seq(xs,tl) as x -> kool x, s
   | App v as x ->
       let hd = L.hd v in
-      let hd', s = whd s hd in
+      let hd', s = whd hd s in
       match look hd' with
       | Bin (n_lam,b) ->
         let n_args = L.len v - 1 in
         if n_lam = n_args then
-          whd s (beta b 1 n_args v)
+          whd (beta b 1 n_args v) s
         else if n_lam < n_args then
-          whd s (mkAppv (beta b 1 n_lam v) v (n_lam+1) (n_args+1))
+          whd (mkAppv (beta b 1 n_lam v) v (n_lam+1) (n_args+1)) s
         else
           let diff = n_lam - n_args in
           (beta (mkBin diff b) 1 n_args v), s
@@ -1236,26 +1247,31 @@ and whd s t =
           if hd == hd' then kool x, s
           else mkAppv hd' (L.tl v) 0 (L.len v-1), s
           
-let rec nf s x = match look x with
-  | (Ext _ | DB _ | Nil) as x -> kool x
+let rec nf x s = match look x with
+  | (Ext _ | DB _ | Nil) as x -> kool x, s
   | Con(_,lvl) as xf when lvl < 0 ->
-      let x', _ = whd s x in 
+      let x', s = whd x s in 
       (match look x' with
-      | App xs -> mkApp (L.map (nf s) xs)
-      | _ -> if x == x' then kool xf else nf s x')
-  | Con _ as x -> kool x
-  | Bin(n,t) -> mkBin n (nf s t)
-  | Seq(xs,t) -> mkSeq (L.map (nf s) xs) (nf s t)
+      | App xs -> nf_app xs s
+      | _ -> if x == x' then kool xf, s else nf x' s)
+  | Con _ as x -> kool x, s
+  | Bin(n,t) -> let t, s = nf t s in mkBin n t, s
+  | Seq(xs,t) ->
+      let xs, s = L.fold_map nf xs s in
+      let t, s = nf t s in
+      mkSeq xs t, s
   | VApp(b,t1,t2) as xf -> 
-      let x', _ = whd s x in 
+      let x', s = whd x s in 
       (match look x' with
-      | App xs -> mkApp (L.map (nf s) xs)
-      | _ -> if x == x' then kool xf else nf s x')
+      | App xs -> nf_app xs s
+      | _ -> if x == x' then kool xf, s else nf x' s)
   | (App _ | Uv _) as xf ->
-      let x', _ = whd s x in 
+      let x', s = whd x s in 
       (match look x' with
-      | App xs -> mkApp (L.map (nf s) xs)
-      | _ -> if x == x' then kool xf else nf s x')
+      | App xs -> nf_app xs s
+      | _ -> if x == x' then kool xf, s else nf x' s)
+
+and nf_app xs s = let xs, s = L.fold_map nf xs s in mkApp xs, s
 
 end (* }}} *)
 

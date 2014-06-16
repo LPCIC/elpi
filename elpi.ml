@@ -21,14 +21,14 @@ let _ =
   set_terminal_width ();
   let print_atom s t =
     let unescape s = Str.global_replace (Str.regexp_string "\\n") "\n" s in
-    let t = Red.nf s t in
+    let t, s = Red.nf t s in
     match LP.look t with
     | LP.Ext t  when isString t ->
         Format.eprintf "%s%!" (unescape (getString t))
     | _ -> Format.eprintf "%a%!" (LP.prf_data []) t in
   register_custom "print" (fun t s -> print_atom s t; s);
   register_custom "printl" (fun t s ->
-    let t = Red.nf s t in
+    let t, s = Red.nf t s in
     match LP.look t with
     | LP.Seq(l,_) ->
         List.iter (print_atom s) (L.to_list l);
@@ -36,13 +36,13 @@ let _ =
         s
     | _ -> assert false);
   register_custom "is" (fun t s ->
-    let t = Red.nf s t in
+    let t, s = Red.nf t s in
     match LP.look t with
     | LP.App l when L.len l = 3 ->
         if LP.equal (L.get 1 l) (L.get 2 l) then s else raise NoClause
     | _ -> assert false);
   register_custom "is_flex" (fun t s ->
-    let t, s = Red.whd s t in
+    let t, s = Red.whd t s in
     match LP.look t with
     | LP.Uv _ -> s
     | LP.App xs ->
@@ -56,10 +56,10 @@ let _ =
          if !aborts = int_of_string (getString t) then exit 1 else s
     | _ -> assert false));
   register_custom "counter" (fun t s ->
-    let t, s = Red.whd s t in
+    let t, s = Red.whd t s in
     match LP.look t with
     | LP.Seq (l,_) when L.len l = 2 ->
-        let hd, s = Red.whd s (L.hd l) in
+        let hd, s = Red.whd (L.hd l) s in
         (match LP.look hd with
         | LP.Ext x when isString x ->
             let input = getString x in
@@ -72,10 +72,10 @@ let _ =
         | _ -> assert false)
     | _ -> assert false);
   register_custom "parse" (fun t s ->
-    let t, s = Red.whd s t in
+    let t, s = Red.whd t s in
     match LP.look t with
     | LP.Seq (l,_) when L.len l = 2 ->
-        let hd, s = Red.whd s (L.hd l) in
+        let hd, s = Red.whd (L.hd l) s in
         (match LP.look hd with
         | LP.Ext x when isString x ->
             let input = getString x in
@@ -110,16 +110,16 @@ let test_prog p g =
      Subst.prf_subst s;*)
    Format.eprintf
      "@\n@[<hv2>input:@ %a@]@\n%!"
-     (LP.prf_goal []) (Red.nf (Subst.empty 0) g);
+     (LP.prf_goal []) (fst(Red.nf g (Subst.empty 0)));
    List.iter (fun x ->
-    Format.eprintf
-     "@[<hv2>%a@ = %a@]@\n%!" (LP.prf_data []) x (LP.prf_data []) (Red.nf s x))
+    Format.eprintf "@[<hv2>%a@ = %a@]@\n%!"
+     (LP.prf_data []) x (LP.prf_data []) (fst(Red.nf x s)))
      assignments;
    List.iter (fun (g,eh) ->
     Format.eprintf "delay: @[<hv>%a@ |- %a@]\n%!"
      (LP.prf_program ~compact:false)
-     (List.map (function i,k,p,u -> i,k,Red.nf s p,u) eh)
-     (LP.prf_goal []) (Red.nf s g)) dgs;
+     (List.map (function i,k,p,u -> i,k,fst(Red.nf p s),u) eh)
+     (LP.prf_goal []) (fst(Red.nf g s))) dgs;
    Printf.printf "next? (Y/n)> %!";
    let l = input_line stdin in
    if l = "y" || l = "" then

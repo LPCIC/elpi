@@ -35,9 +35,11 @@ module L : sig
   val fold : ('a -> 'b -> 'b) -> 'a t -> 'b -> 'b
   val fold2 : ('a -> 'c -> 'b -> 'b) -> 'a t -> 'c t -> 'b -> 'b
   val for_all : ('a -> bool) -> 'a t -> bool
+  val exists : ('a -> bool) -> 'a t -> bool
   val for_alli : (int -> 'a -> bool) -> 'a t -> bool
   val for_all2 : ('a -> 'b -> bool) -> 'a t -> 'b t -> bool
   val filter : ('a -> bool) -> 'a t -> 'a t
+  val filter_acc : ('a -> 'b -> bool * 'b) -> 'a t -> 'b -> 'a t * 'b
   val to_list : 'a t -> 'a list
   val of_list : 'a list -> 'a t
   val append : 'a t -> 'a t -> 'a t
@@ -188,7 +190,7 @@ end
 
 module Red : sig
   val lift : ?from:int -> int -> LP.data -> LP.data
-  val whd : Subst.subst -> LP.data -> LP.data * Subst.subst
-  val nf : Subst.subst -> LP.data -> LP.data
+  val whd : LP.data -> Subst.subst -> LP.data * Subst.subst
+  val nf : LP.data -> Subst.subst -> LP.data * Subst.subst
 end
 
