@@ -189,7 +189,7 @@ let rec splay xs tl s =
   | _ -> xs, tl, s
 
 let destApp b t ot = match t with
-  | App xs -> L.hd xs, if b = `Rev then L.rev (L.tl xs) else L.tl xs
+  | App xs -> L.hd xs, if b == `Rev then L.rev (L.tl xs) else L.tl xs
   | Seq _ -> assert false
   | _ -> ot, L.empty
 
@@ -202,17 +202,17 @@ let rec unify a b s = TRACE "unify" (print_unif_prob s "=" a b)
   | Con _, Con _ | Ext _, Ext _ | DB _, DB _ | Nil, Nil ->
       if equal a b then s else fail "rigid"
   | VApp (b1,hd1,al1), VApp (b2,hd2,al2) ->
-      if (b1 = `Rev && b2 = `Rev) || (b1 <> `Rev && b2 <> `Rev) then
+      if (b1 == `Rev && b2 == `Rev) || (b1 <> `Rev && b2 <> `Rev) then
         unify al1 al2 (unify hd1 hd2 s)
       else assert false
 
   | t, VApp(w,t1,t2) ->
-     if w = `Flex && rigid t then fail "no-flex";
-     if w = `Frozen && not(Subst.is_frozen a) then fail "no-tc";
+     if w == `Flex && rigid t then fail "no-flex";
+     if w == `Frozen && not(Subst.is_frozen a) then fail "no-tc";
      let hd, tl = destApp w t a in unify (mkSeq tl mkNil) t2 (unify hd t1 s)
   | VApp(w,t1,t2), t ->
-     if w = `Flex && rigid t then fail "no-flex";
-     if w = `Frozen && not(Subst.is_frozen b) then fail "no-tc";
+     if w == `Flex && rigid t then fail "no-flex";
+     if w == `Frozen && not(Subst.is_frozen b) then fail "no-tc";
      let hd, tl = destApp w t a in unify (mkSeq tl mkNil) t2 (unify hd t1 s)
 
   | Bin(nx,x), Bin(ny,y) when nx = ny -> unify x y s
@@ -503,6 +503,8 @@ let rec uniq = function
 let rigid_key_match k1 k2 =
   match k1,k2 with Key a, Key b -> LP.equal a b | _ -> false
 
+let is_cut x = match look_premise x with AtomBI BICut -> true | _ -> false
+
 let bubble_up s t p (eh : program) : annot_clause * subst =
   (*Format.eprintf "DELAY: %a\n%!" (prf_premise []) p;*)
   let t, s = Red.nf t s in
@@ -523,7 +525,7 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
   let p = mkImpl (mkConj (L.of_list
     (List.map (fun _,_,x,_ ->
        match look_premise x with
-       | Impl(x,p) when look_premise x = AtomBI BICut -> p
+       | Impl(x,p) when is_cut x -> p
        | _ -> x)
       (List.filter (fun _,_,x,_ ->
         let hvsx = collect_hv_premise x in
@@ -643,7 +645,7 @@ let rec run op s ((gls,dls,p) : goals) (alts : alternatives)
           s, rest, dls, p, alts
         with UnifFail _ | NoClause -> next_alt alts (pr_cur_goals op gls))
   in
-  if gls = [] then s, dls, alts
+  if gls == [] then s, dls, alts
   else run op s (gls,dls,p) alts
 
 let prepare_initial_goal g =

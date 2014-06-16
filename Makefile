@@ -37,12 +37,12 @@ valgrind/%: notrace/all
 	$(H) valgrind --tool=cachegrind ./$*
 	
 gprof: profile/notrace/all
-	$(H) (echo 'test _'; yes) | ./elpi refiner.elpi
+	-$(H) echo 'test\ny\n' | ./elpi refiner.elpi
 	$(H) gprof ./elpi > elpi.annot
 	$(H) echo "profiling written to elpi.annot"
 
 ocamlprof: profile/notrace/elpi.byte
-	$(H) (echo 'test _'; yes) | ./elpi.byte refiner.elpi
+	$(H) echo 'test\ny\n' | ./elpi.byte refiner.elpi
 	$(I) echo OCAMLPROF lpdata.ml lprun.ml int.ml cMap.ml
 	$(H) ocamlprof $(TMP)/lpdata.ml > lpdata.annot.ml
 	$(H) ocamlprof $(TMP)/lprun.ml > lprun.annot.ml

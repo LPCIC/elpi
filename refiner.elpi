@@ -336,8 +336,8 @@ all-t [run1 _ _ N _ U|XS] :-
   $get["unexp",U], $reset "unexp",
   all-t XS.
 run1 N T _ _ _ :-
-  pp["INFO: running ",N], T, $get["sols",S], pp["INFO: success #",S].
-run1 N T _ _ _ :- $get["sols","0"], !, pp ["ERROR: failure ",N], fail.
+  pp["INFO: running ",N], T, $get["sols",S], pp["INFO:   success #",S].
+run1 N T _ _ _ :- $get["sols","0"], !, pp ["ERROR:   failure ",N], fail.
 report-t [] ["\n"].
 report-t [run1 N _ "0" _ _|XS] E :- !,
   E = ["\n ",N,"\tNo solution"|ACC], report-t XS ACC.

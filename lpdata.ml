@@ -307,14 +307,14 @@ and prf_data_low ?(pars=false) ctx fmt ?(reccal=self fmt) = function
         P.pp_print_string fmt (C.print x);
         P.pp_close_box fmt ()
     | XVApp(b,t1,t2) ->
-        let t1, t2 = if b = `Rev then t2, t1 else t1, t2 in
+        let t1, t2 = if b == `Rev then t2, t1 else t1, t2 in
         P.fprintf fmt "@[<hov 2>";
         if pars then P.pp_print_string fmt "(";
         if b <> `Rev then P.fprintf fmt "@@";
         reccal ctx ~pars:true t1;
         P.fprintf fmt "@ ";
         reccal ctx ~pars:true t2;
-        if b = `Rev then P.fprintf fmt "@@";
+        if b == `Rev then P.fprintf fmt "@@";
         if pars then P.pp_print_string fmt ")";
         P.fprintf fmt "@]"
     | XSusp ptr ->
@@ -521,7 +521,7 @@ let rec equal a b = match push a, push b with
  | XExt x, XExt y -> C.equal x y
  | XSeq(xs,s), XSeq(ys,t) -> L.for_all2 equal xs ys && equal s t
  | XNil, XNil -> true
- | XVApp (b1,t1,t2), XVApp (b2,s1,s2) -> b1=b2 && equal t1 s2 && equal t2 s2
+ | XVApp (b1,t1,t2), XVApp (b2,s1,s2) -> b1 == b2 && equal t1 s2 && equal t2 s2
  | XVApp (_,t1,t2), _ when equal t2 mkNil -> equal t1 b
  | _, XVApp (_,t1,t2) when equal t2 mkNil -> equal a t1
  | (XVApp (_,t1,t2), XApp _) ->
@@ -567,25 +567,27 @@ let rec mapi f i x = match push x with
 
 let collect_Uv t =
   let uvs = ref [] in
-  let _ = map (function XUv(n,l) as x -> uvs := x :: !uvs; x | x -> x) t in
+  let _ =
+    map (function XUv(n,_) as x -> uvs := (n,x) :: !uvs; x | x -> x) t in
   let rec uniq seen = function
     | [] -> List.rev seen
-    | x :: tl ->
-       if List.exists ((=) x) seen then uniq seen tl
-       else uniq (x :: seen) tl
+    | (x,_) as y :: tl ->
+       if List.exists (fun (w,_) -> w == x) seen then uniq seen tl
+       else uniq (y :: seen) tl
   in
-  uniq [] !uvs
+  List.map snd (uniq [] !uvs)
 
 let collect_hv t =
   let hvs = ref [] in
-  let _ = map (function XCon(n,l) as x when l > 0 -> hvs := x :: !hvs; x | x -> x) t in
+  let _ =
+    map (function XCon(n,l) as x when l > 0 -> hvs := (n,x) :: !hvs; x | x -> x) t in
   let rec uniq seen = function
     | [] -> List.rev seen
-    | x :: tl ->
-       if List.exists ((=) x) seen then uniq seen tl
-       else uniq (x :: seen) tl
+    | (x,_) as y :: tl ->
+       if List.exists (fun (w,_) -> Name.equal x w) seen then uniq seen tl
+       else uniq (y :: seen) tl
   in
-  uniq [] !hvs
+  List.map snd (uniq [] !hvs)
 
 let sentinel = mkExt (mkString "T8fNhK/8Wk6Ds")
 
@@ -602,22 +604,22 @@ module CN : sig
   val pp : Format.formatter -> t -> unit
   val to_string : t -> string
 end = struct
-  type t = string * [ `Here | `Begin | `End ]
-  let equal (a,_) (b,_) = a = b
+  type t = Name.t * [ `Here | `Begin | `End ]
+  let equal (a,_) (b,_) = Name.equal a b
   let compare (_,oa as a) (_,ob as b) =
     if equal a b then 0
-    else if oa = ob then 0
-    else if oa = `Begin || ob = `End then ~-1
+    else if oa == ob then 0
+    else if oa == `Begin || ob == `End then ~-1
     else 1
-  let to_string = fst
+  let to_string (x,_) = Name.to_string x
   module S = Set.Make(String)
   let all = ref S.empty
   let fresh = ref 0
   let rec make ?(float=`Here) s =
     if S.mem s !all then make ~float (incr fresh; s ^ string_of_int !fresh)
-    else (all := S.add s !all; s, float)
+    else (all := S.add s !all; Name.make s, float)
   let fresh () = incr fresh; make ("hyp" ^ string_of_int !fresh)
-  let pp fmt (t,_) = Format.fprintf fmt "%s" t
+  let pp fmt (t,_) = Format.fprintf fmt "%s" (Name.to_string t)
 end
 
 type program = annot_clause list
@@ -674,25 +676,25 @@ let look_premise p =
   match look p with
   | App xs as a ->
       (match look (L.hd xs) with
-      | Con(name,0) when name = unif_name ->
+      | Con(name,0) when Name.equal name unif_name ->
           AtomBI(BIUnif(L.get 1 xs,L.get 2 xs))
-      | Con(name,0) when name = custom_name ->
+      | Con(name,0) when Name.equal name custom_name ->
           AtomBI(BICustom(getString (destExt (L.get 1 xs)),L.get 2 xs))
-      | Con(name,0) when name = conj_name ->
+      | Con(name,0) when Name.equal name conj_name ->
           Conj(L.tl xs)
-      | Con(name,0) when name = impl_name ->
+      | Con(name,0) when Name.equal name impl_name ->
           Impl(L.get 1 xs, L.get 2 xs)
-      | Con(name,0) when name = pi_name ->
+      | Con(name,0) when Name.equal name pi_name ->
           let n,t = destBin (L.get 1 xs) in Pi(n,t)
-      | Con(name,0) when name = sigma_name ->
+      | Con(name,0) when Name.equal name sigma_name ->
           let n,t = destBin (L.get 1 xs) in Sigma(n,t)
-      | Con(name,0) when name = delay_name ->
+      | Con(name,0) when Name.equal name delay_name ->
           Delay(L.get 1 xs, L.get 2 xs)
-      | Con(name,0) when name = resume_name ->
+      | Con(name,0) when Name.equal name resume_name ->
           Resume(L.get 1 xs, L.get 2 xs)
       | _ -> Atom (kool a))
-  | Con(name,0) when name = cut_name -> AtomBI BICut
-  | Con(name,0) when name = conj_name -> Conj L.empty
+  | Con(name,0) when Name.equal name cut_name -> AtomBI BICut
+  | Con(name,0) when Name.equal name conj_name -> Conj L.empty
   | a -> Atom (kool a)
 
 let mkPi n p =
@@ -883,14 +885,16 @@ let tok = lexer
   | '"' string -> "LITERAL", let b = $buf in String.sub b 1 (String.length b-2)
 ]
 
+let option_eq x y = match x, y with Some x, Some y -> x == y | _ -> x == y
+
 let rec lex c = parser bp
   | [< '( ' ' | '\n' | '\t' ); s >] -> lex c s
   | [< '( '%' ); s >] -> comment c s
   | [< '( '/' ); s >] ep ->
-       if Stream.peek s = Some '*' then comment2 c s
+       if option_eq (Stream.peek s) (Some '*') then comment2 c s
        else ("BIND", "/"), (bp,ep)
   | [< s >] ep ->
-       if Stream.peek s = None then ("EOF",""), (bp, ep)
+       if option_eq (Stream.peek s) None then ("EOF",""), (bp, ep)
        else
        (match tok c s with
        | "CONSTANT","pi" -> "PI", "pi"
@@ -904,7 +908,7 @@ and comment c = parser
   | [< '_ ; s >] -> comment c s
 and comment2 c = parser
   | [< '( '*' ); s >] ->
-       if Stream.peek s = Some '/' then (Stream.junk s; lex c s)
+       if option_eq (Stream.peek s) (Some '/') then (Stream.junk s; lex c s)
        else comment2 c s
   | [< '_ ; s >] -> comment2 c s
 
@@ -922,7 +926,7 @@ let lex_fun s =
   (fun id -> try Hashtbl.find tab id with Not_found -> !last)
 
 let tok_match (s1,_) = (); function
-  | (s2,v) when s1 = s2 -> v
+  | (s2,v) when Pervasives.compare s1 s2 == 0 -> v
   | (s2,v) -> raise Stream.Failure
 
 let lex = {
