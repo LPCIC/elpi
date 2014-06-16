@@ -540,7 +540,13 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
   (* This has to be understood *)
   let s = Subst.set_sub i (mkApp (L.cons ice 
     (L.of_list (List.filter (fun h -> not(List.mem h ht)) hvs)))) s in
-  let s = unify h_hvs p s in
+  let s =
+    try unify h_hvs p s
+    with UnifFail err -> 
+       Format.eprintf "*** bubble up: delif fails: %s@\nproblem: @[%a@]\n%!"
+         (Lazy.force err) (fun fmt b -> print_unif_prob s "=" h_hvs b fmt) p;
+       raise NoClause
+  in
   let abstracted, s =
     if List.length hvs = 0 then Red.nf h s
     else let h, s = Red.nf h s in mkSigma 0 h, s in

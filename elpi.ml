@@ -20,7 +20,10 @@ let _ =
   Gc.set tweaked_control;
   set_terminal_width ();
   let print_atom s t =
-    let unescape s = Str.global_replace (Str.regexp_string "\\n") "\n" s in
+    let unescape s =
+      Str.global_replace (Str.regexp_string "\\n") "\n"
+      (Str.global_replace (Str.regexp_string "\\t") "\t"
+        s) in
     let t, s = Red.nf t s in
     match LP.look t with
     | LP.Ext t  when isString t ->
@@ -48,12 +51,47 @@ let _ =
     | LP.App xs ->
         (match LP.look (L.hd xs) with LP.Uv _ -> s | _ -> raise NoClause)
     | _ -> raise NoClause);
+  let module M = Map.Make(struct type t = string let compare = compare end) in
+  let counters = ref M.empty in
+  register_custom "incr" (fun t s ->
+    (match LP.look t with
+    | LP.Ext t when isString t ->
+         let name = getString t in
+         (try let v = M.find name !counters in
+              counters := M.add name (v+1) !counters; s
+         with Not_found -> counters := M.add name 1 !counters; s)
+    | _ -> assert false));
+  register_custom "reset" (fun t s ->
+    (match LP.look t with
+    | LP.Ext t when isString t ->
+         let name = getString t in
+         counters := M.add name 0 !counters; s
+    | _ -> assert false));
+  register_custom "get" (fun t s ->
+    let t, s = Red.whd t s in
+    match LP.look t with
+    | LP.Seq (l,_) when L.len l = 2 ->
+        let hd, s = Red.whd (L.hd l) s in
+        (match LP.look hd with
+        | LP.Ext x when isString x ->
+            let input = getString x in
+            let n = try M.find input !counters with Not_found -> 0 in
+            (try unify (LP.mkExt (mkString (string_of_int n))) (L.get 1 l) s
+            with
+            | UnifFail _ -> raise NoClause
+            | Stream.Error msg -> prerr_endline msg; raise NoClause)
+        | _ -> assert false)
+    | _ -> assert false);
   let aborts = ref 0 in
   register_custom "abort" (fun t s ->
     incr aborts;
     (match LP.look t with
     | LP.Ext t when isString t ->
          if !aborts = int_of_string (getString t) then exit 1 else s
+    | _ -> assert false));
+  register_custom "exit" (fun t s ->
+    (match LP.look t with
+    | LP.Ext t when isString t -> exit (int_of_string (getString t))
     | _ -> assert false));
   register_custom "counter" (fun t s ->
     let t, s = Red.whd t s in
@@ -66,8 +104,7 @@ let _ =
             let n = Trace.get_cur_step input in
             (try unify (LP.mkExt (mkString (string_of_int n))) (L.get 1 l) s
             with
-            | UnifFail _ ->
-                prerr_endline "parsing in the wrong ctx?";raise NoClause
+            | UnifFail _ -> raise NoClause
             | Stream.Error msg -> prerr_endline msg; raise NoClause)
         | _ -> assert false)
     | _ -> assert false);

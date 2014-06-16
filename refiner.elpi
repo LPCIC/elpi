@@ -35,6 +35,9 @@ spy P :- dbgpp ["fail ",P].
 
 rigid T :- not($is_flex T).
 
+mem X [X|_] :- !.
+mem X [_|XS] :- mem X XS.
+
 /* ========================== type inference ============================== */
 
 % dbgpp prints the value of the "run" counter that can be used to trace elpi:
@@ -255,66 +258,97 @@ body plus (lam (atom nat)
 
 /* ============================ testsuite ================================= */
 % usage:
-% > test _          runs all tests, only first solution of each
-% > test t2         runs only test t2, only first solution of t2
+% > test            runs all tests
 % > solutions t2    generates all solutions of t2
 
-suite TEST t1 :- % runnin of twice in a row should work
+suite TEST t1 "1" :- % runnin of twice in a row should work
   TEST = (of (lam (atom nat) x\ hole) TY T, of T TY1 T1, TY1=TY, T1=T).
-suite TEST t2 :- % typing a pi
+suite TEST t2 "1" :- % typing a pi
   TEST = (of (prod (atom nat) x\ hole) TY T).
-suite TEST t3 :- % meta/meta unif w pruning: ?X[] = ?Y[v]
+suite TEST t3 "1" :- % meta/meta unif w pruning: ?X[] = ?Y[v]
   TEST = (of (lam (atom nat) x\ app (atom succ) hole) TY T,
           of (app (atom succ) hole) TY1 W,
-          pp ["before ",T], unify (app T (atom zero)) W,
-          pp ["after ",T]).
-suite TEST t3bis :- % meta/meta unif w pruning: ?X[v,r] = ?Y[v,s]
+          dbgpp["before ",T],expect [(T=lam _ (x\app _ (#F1 (A1 x))),A1=x\[x])],
+          unify (app T (atom zero)) W,
+          dbgpp["after  ",T],expect [(T=lam _ (x\app _ (#F2 (A2 x))),A2=x\[])]).
+suite TEST t3-2 "2" :- % meta/meta unif w pruning: ?X[v,r] = ?Y[v,s]
   TEST = (of (lam (atom nat) x\ lam (atom nat) y\ app (atom succ) hole) _ T1,
           of (lam (atom nat) x\ lam (atom nat) y\ app (atom succ) hole) _ T2,
-          pp ["before ",T1],
+          dbgpp ["before ",T1],
+          expect [(T1=lam _ x\lam _ y\app _ (#F1 (A1 x y)),A1=x\y\[y,x])],
           pi x\ pi y\ of x (atom nat) x => of y (atom nat) y =>
           unify (app (app T1 (atom zero)) x)
                 (app (app T2 (atom zero)) y),
-          pp ["after ",T1]).
-suite TEST t3ter :- % meta/meta unif with dependent type
+          dbgpp ["after  ",T1],
+          expect [(T1=lam _ x\ lam _ y\ app _ (#F2 (A2 x y)),A2=x\y\[x])]).
+suite TEST t3-3 "1" :- % meta/meta unif with dependent type
   TEST = ((pi c\ unify c c => of c (atom nat) c =>
            pi d\ unify d d => of d (app (atom vect) c) d =>
             of hole (TY c d) (X c d)),
-          unify (X (atom zero) (atom vnil)) (X (atom zero) (atom vnil))).
-suite TEST t3quater :- % meta/meta unif with dependent type + restriction
+          unify (X (atom zero) (atom vnil)) (X (atom zero) (atom vnil)),
+          dbgpp ["X=",X]).
+suite TEST t3-4 "1" :- % meta/meta unif with dependent type + restriction
   TEST = ((pi c\ unify c c => of c (atom nat) c =>
            pi d\ unify d d => of d (app (atom vect) c) d =>
             of hole (TY c d) (X c d)),
           pi vn \ unify vn vn => of vn (app (atom vect) atom zero) vn =>
             unify (X (atom zero) (atom vnil)) (X (atom zero) vn)).
-suite TEST t4 :-
+suite TEST t4 "1" :-
   TEST = (of hole TY1 T1, unify TY1 (atom nat), of hole TY2 T2, unify TY2 set).
-% alla seconda soluzione crasha
-suite TEST t5 :-
-  TEST = (of (lam hole (x\ x)) (prod (atom nat) x\ atom z) X, pp ["X=",X]).
-suite TEST t6 :-
-  TEST = (of hole _ X, unify (app X (atom zero)) (atom zero), pp ["X=",X]).
-suite TEST t7 :- % delift
+suite TEST t5 "1" :-
+  TEST = (of (lam hole (x\ x)) (prod (atom nat) x\ atom z) X,
+          dbgpp ["X=",X], expect [X=lam _ x\ app (atom nat_to_z) x]).
+suite TEST t6 "2" :-
+  TEST = (of hole _ X, unify (app X (atom zero)) (atom zero),
+          dbgpp ["X=",X], expect [(X=lam _ x\ x), (X=lam _ x\ (atom zero))]).
+suite TEST t7 "3" :- % delift
   TEST = (of (lam (atom nat) x\ lam (atom nat) y\ hole) _ X,
-          unify (app (app X (atom zero)) (atom zero)) (atom zero), pp ["X=",X]).
-suite TEST t7-1 :- % delift occur check
+          unify (app (app X (atom zero)) (atom zero)) (atom zero),
+          dbgpp ["X=",X],expect [(X=lam _ x\lam _ y\ x), (X=lam _ x\lam _ y\ y),
+                               (X=lam _ x\lam _ y\ atom zero)]).
+suite TEST t7-2 "1" :- % delift occur check
   TEST = (of (lam (atom nat) x\ lam (atom nat) y\ hole) _ X,
           not (unify (app (app X (atom zero)) (atom zero)) X)).
-suite TEST t7-2 :- % delift  + restriction
+suite TEST t7-3 "2" :- % delift  + restriction
   TEST = (of (lam (atom nat) y\ hole) _ (lam _ X),
           of (lam (atom nat) y\ hole) _ (lam _ X1),
           of (lam (atom nat) y\ hole) _ Y,
           pi c\ unify c c => (of c (atom nat) c :- !) =>
             unify (app Y (atom zero)) (app (atom succ) (X (X1 c))),
-          pp ["X=",X,"\nX1=",X1,"\nY=",Y]).
+          dbgpp ["X=",X,"\nX1=",X1,"\nY=",Y],
+          expect [(X = w\ #F1 (A1 w), A1=w\[w], X1 = w\ #F2 (A2 w), A2=w\[]),
+                  (X = w\ #F1 (A1 w), A1=w\[],  X1 = w\ #F2 (A2 w), A2=w\[w])]).
 
-run1 N T :- pp ["INFO: running ",N], T, !, pp ["INFO: success"].
-run1 N T :- pp ["\n\nERROR: failure ",N,"\n\n"].
-test N :- suite T N, run1 N T, false.
-test _ :- pp ["\nINFO: all tests run"].
 run T :- pp ["INFO: running ",T], T.
 run T :- pp ["ERROR: failure ",T].
-solutions N :- suite T N, run T.
+solutions N :- suite T N _, run T.
+
+test :- all-suite [] L, !, all-t L, !, report-t L FAIL,
+        if (FAIL=[]) (pp["\nINFO: All tests passed\n"], $exit "0")
+                     (pp["\nERROR: Some tests failed: "|FAIL],$exit "1").
+all-suite L [run1 N T _ B _|L1] :-
+  suite T N B, not(mem N L), !, all-suite [N|L] L1.
+all-suite _ [].
+all-t [].
+all-t [X|XS] :- X, $incr "sols", fail.
+all-t [run1 _ _ N _ U|XS] :-
+  $get["sols",N], $reset "sols",
+  $get["unexp",U], $reset "unexp",
+  all-t XS.
+run1 N T _ _ _ :-
+  pp["INFO: running ",N], T, $get["sols",S], pp["INFO: success #",S].
+run1 N T _ _ _ :- $get["sols","0"], !, pp ["ERROR: failure ",N], fail.
+report-t [] ["\n"].
+report-t [run1 N _ "0" _ _|XS] E :- !,
+  E = ["\n ",N,"\tNo solution"|ACC], report-t XS ACC.
+report-t [run1 N _ X X "0"|XS] ACC :- !, report-t XS ACC.
+report-t [run1 N _ X Y "0"|XS] E :- !,
+  E = ["\n ",N,"\tWrong number of solutions (",X, " instead of ",Y,")"|ACC],
+  report-t XS ACC.
+report-t [run1 N _ _ _ _|XS] E :- !,
+  E = ["\n ",N,"\tUnexpected solution"|ACC], report-t XS ACC.
+expect [X|XS] :- if X true (expect XS).
+expect [] :- $get["sols",S],pp["ERROR: Unexpected sol #",S],$incr "unexp",false.
 
 /* ============================ old stuff ================================= */
 
