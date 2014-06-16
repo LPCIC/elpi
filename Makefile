@@ -12,6 +12,9 @@ PPTRACE=$(PP) pa_trace.cmo
 PPTRACESYNTAX=$(PP) pa_extend.cmo q_MLast.cmo pa_macro.cmo $(TRACE)
 EXTRALIB=cMap.cmx int.cmx trace.cmx
 LIBSBYTE=$(subst .cmx,.cmo,$(subst .cmxa,.cma,$(LIBS)))
+MODULES= hashset hashcons lpdata lprun
+CMXMODULES=$(addsuffix .cmx,$(MODULES))
+CMOMODULES=$(addsuffix .cmo,$(MODULES))
 H=@
 I=@
 ifneq "$(H)" "@"
@@ -46,21 +49,21 @@ ocamlprof: profile/notrace/elpi.byte
 	$(H) ocamlprof int.ml > int.annot.ml
 	$(H) ocamlprof cMap.ml > cMap.annot.ml
 
-elpi: elpi.ml lprun.cmx lpdata.cmx $(EXTRALIB)
+elpi: elpi.ml $(CMXMODULES) $(EXTRALIB)
 	$(I) echo OCAMLOPT $<
-	$(H) $(CCO) $(FLAGS) $(LIBS) lpdata.cmx lprun.cmx -o $@ $<
+	$(H) $(CCO) $(FLAGS) $(LIBS) $(CMXMODULES) -o $@ $<
 
-elpi.byte: elpi.ml lprun.cmo lpdata.cmo $(EXTRALIB:%.cmx=%.cmo)
+elpi.byte: elpi.ml $(CMOMODULES) $(EXTRALIB:%.cmx=%.cmo)
 	$(I) echo OCAMLC $<
-	$(H) $(CCP)  $(FLAGS) $(LIBSBYTE) lpdata.cmo lprun.cmo -o $@ $<
+	$(H) $(CCP)  $(FLAGS) $(LIBSBYTE) $(CMOMODULES) -o $@ $<
 
-test: test.ml lprun.cmx lpdata.cmx $(EXTRALIB)
+test: test.ml $(CMXMODULES) $(EXTRALIB)
 	$(I) echo OCAMLOPT $<
-	$(H) $(CCO) $(FLAGS) $(LIBS) lpdata.cmx lprun.cmx -o $@ $<
+	$(H) $(CCO) $(FLAGS) $(LIBS) $(CMXMODULES) -o $@ $<
 
-test.byte: test.ml lprun.cmo lpdata.cmo $(EXTRALIB:%.cmx=%.cmo)
+test.byte: test.ml $(CMOMODULES) $(EXTRALIB:%.cmx=%.cmo)
 	$(I) echo OCAMLC $<
-	$(H) $(CCP)  $(FLAGS) $(LIBSBYTE) lpdata.cmo lprun.cmo -o $@ $<
+	$(H) $(CCP)  $(FLAGS) $(LIBSBYTE) $(CMOMODULES) -o $@ $<
 
 lpdata.cmx: lpdata.ml pa_trace.cmo
 	$(I) echo OCAMLOPT $<

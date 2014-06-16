@@ -43,10 +43,18 @@ module L : sig
   val rev : 'a t -> 'a t
 end
 
+module Name : sig
+  type t
+  val compare : t -> t -> int
+  val equal : t -> t -> bool
+  val make : string -> t
+  val to_string : t -> string
+end
+
 module LP : sig
   type var = int
   type level = int
-  type name = string
+  type name = Name.t
   type data
   type appkind = [ `Regular | `Rev | `Flex | `Frozen ]
 
@@ -65,7 +73,7 @@ module LP : sig
   val kool : kind_of_data -> data
   
   val mkUv : var -> level -> data
-  val mkCon : name -> level -> data
+  val mkCon : string -> level -> data
   val mkDB : int -> data
   val mkBin : int -> data -> data
   val mkApp : data L.t -> data
@@ -142,11 +150,11 @@ module LP : sig
   val parse_goal : string -> goal
   val parse_data : string -> data
 
-  val prf_data : name list -> Format.formatter -> data -> unit
-  val prf_data_only : name list -> Format.formatter -> data -> unit
-  val prf_premise : name list -> Format.formatter -> premise -> unit
-  val prf_goal : name list -> Format.formatter -> goal -> unit
-  val prf_clause : name list -> Format.formatter -> clause -> unit
+  val prf_data : string list -> Format.formatter -> data -> unit
+  val prf_data_only : string list -> Format.formatter -> data -> unit
+  val prf_premise : string list -> Format.formatter -> premise -> unit
+  val prf_goal : string list -> Format.formatter -> goal -> unit
+  val prf_clause : string list -> Format.formatter -> clause -> unit
   val prf_program : ?compact:bool -> Format.formatter -> program -> unit
   
   val string_of_data : ?ctx:string list -> data -> string

@@ -161,6 +161,20 @@ let iter_sep spc pp fmt l =
 end (* }}} *)
 open PPLIB
 
+module Name : sig
+  type t
+  val compare : t -> t -> int
+  val equal : t -> t -> bool
+  val make : string -> t
+  val to_string : t -> string
+end = struct
+  type t = string
+  let make = Hashcons.simple_hcons Hashcons.Hstring.generate ()
+  let compare = compare
+  let equal = (==)
+  let to_string x = x
+end
+
 module LP = struct
 
 (* Based on "A Simplified Suspension Calculus and its Relationship to Other
@@ -170,7 +184,7 @@ module LP = struct
 
 type var = int
 type level = int
-type name = string
+type name = Name.t
 
 type olam = int
 type nlam = int
@@ -179,7 +193,7 @@ type appkind = [ `Regular | `Rev | `Flex | `Frozen ]
 
 type kind_of_data =
   | Uv of var * level
-  | Con of name * level
+  | Con of name * level (* lvl < 0 means frozen meta and -lvl=var *)
   | DB of int
   | Bin of int * data
   | App of data L.t
@@ -217,7 +231,8 @@ let string_of_level lvl = if !Trace.dverbose then "^" ^ string_of_int lvl
   else if lvl = 0 then ""
   else String.concat "" (List.map small_digit (List.rev (digits_of lvl)))
 
-let pr_cst x lvl = x ^ if !Trace.dverbose then string_of_level lvl else ""
+let pr_cst x lvl =
+  Name.to_string x ^ if !Trace.dverbose then string_of_level lvl else ""
 let pr_var x lvl =
   "X" ^ string_of_int x ^ if !Trace.dverbose then string_of_level lvl else ""
 
@@ -432,7 +447,8 @@ let look x =
   | XSusp _ -> assert false
 *)
 let mkUv v l = XUv(v,l)
-let mkCon n l = XCon(n,l)
+let mkCon n l = XCon(Name.make n,l)
+let mkConN n l = XCon(n,l)
 let mkDB i = XDB i
 let mkExt x = XExt x
 let rec mkSeq xs tl =
@@ -475,7 +491,7 @@ let mkVApp b t1 t2 = XVApp(b,t1,t2)
 
 let rec equal a b = match push a, push b with
  | XUv (x,_), XUv (y,_) -> x = y
- | XCon (x,_), XCon (y,_) -> x = y
+ | XCon (x,_), XCon (y,_) -> Name.equal x y
  | XDB x, XDB y -> x = y
  | XBin (n1,x), XBin (n2,y) -> n1 = n2 && equal x y
  | XApp xs, XApp ys -> L.for_all2 equal xs ys
@@ -590,25 +606,25 @@ and goal = premise
 let eq_clause (_,_,_,n1) (_,_,_,n2) = CN.equal n1 n2
 let cmp_clause (_,_,_,n1) (_,_,_,n2) = CN.compare n1 n2
 
-let mkCApp name args = mkApp L.(of_list (mkCon name 0 :: args))
+let mkCApp name args = mkApp L.(of_list (mkConN name 0 :: args))
 let mkAtom x = x
-let unif_name = "*unif*"
+let unif_name = Name.make "*unif*"
 let mkAtomBiUnif x y = mkCApp unif_name [x; y]
-let custom_name = "*custom*"
+let custom_name = Name.make "*custom*"
 let mkAtomBiCustom name x = mkCApp custom_name [mkExt (mkString name); x]
-let cut_name = "*cut*"
-let mkAtomBiCut = mkCon cut_name 0
-let conj_name = "*conj*"
+let cut_name = Name.make "*cut*"
+let mkAtomBiCut = mkConN cut_name 0
+let conj_name = Name.make "*conj*"
 let mkConj l = mkCApp conj_name (L.to_list l)
-let impl_name = "*impl*"
+let impl_name = Name.make "*impl*"
 let mkImpl x y = mkCApp impl_name [x; y]
-let pi_name = "*pi*"
+let pi_name = Name.make "*pi*"
 let mkPi n p = mkCApp pi_name [mkBin n p]
-let sigma_name = "*sigma*"
+let sigma_name = Name.make "*sigma*"
 let mkSigma n p = mkCApp sigma_name [mkBin n p]
-let delay_name = "*delay*"
+let delay_name = Name.make "*delay*"
 let mkDelay k p = mkCApp delay_name [k; p]
-let resume_name = "*resume*"
+let resume_name = Name.make "*resume*"
 let mkResume k p = mkCApp resume_name [k;p]
 
 type builtin = BIUnif of data * data | BICustom of string * data | BICut
@@ -811,8 +827,8 @@ let rec string = lexer [ '"' | _ string ]
 
 let lvl_name_of s =
   match Str.split (Str.regexp_string "^") s with
-  | [ x ] -> x, 0
-  | [ x;l ] -> x, int_of_string l
+  | [ x ] -> Name.make x, 0
+  | [ x;l ] -> Name.make x, int_of_string l
   | _ -> raise (Token.Error ("<name> ^ <number> expected.  Got: " ^ s))
 
 let tok = lexer
@@ -930,7 +946,8 @@ let check_con n l =
   try
     let l' = List.assoc n !conmap in
     if l <> l' then
-      raise (Token.Error ("Constant "^n^" used at different levels"))
+      raise
+        (Token.Error("Constant "^Name.to_string n^" used at different levels"))
   with Not_found -> conmap := (n,l) :: !conmap
 
 let rec binders c n = function
@@ -1024,7 +1041,7 @@ EXTEND
   atom : LEVEL "simple" 
      [[ c = CONSTANT; b = OPT [ BIND; a = atom LEVEL "term" -> a ] ->
           let c, lvl = lvl_name_of c in 
-          let x = mkCon c lvl in
+          let x = mkConN c lvl in
           (match b with
           | None -> check_con c lvl; x
           | Some b ->  mkBin 1 (binders x 1 b))
@@ -1054,7 +1071,7 @@ EXTEND
       | LPAREN; a = atom; RPAREN -> a
       ]];
   bound : 
-    [ [ c = CONSTANT -> let c, lvl = lvl_name_of c in mkCon c lvl, false
+    [ [ c = CONSTANT -> let c, lvl = lvl_name_of c in mkConN c lvl, false
       | u = UVAR -> let u, lvl = lvl_name_of u in mkUv (get_uv u) lvl, true ]
     ];
 END
@@ -1105,7 +1122,7 @@ module Subst = struct (* {{{ LP.Uv |-> data mapping *)
 open LP
 
 module M = Int.Map
-module S = Map.Make(struct type t = string let compare = compare end)
+module S = Map.Make(struct type t = Name.t let compare = Name.compare end)
 
 type subst = { assign : data M.t; body : data S.t; top_uv : int }
 let empty n = { assign = M.empty; body = S.empty; top_uv = n }
@@ -1137,7 +1154,7 @@ let string_of_subst s = on_buffer prf_subst s
 let apply_subst s t =
   let rec subst x = match look x with
     | Uv(i,_) when in_sub i s -> map subst !last_sub_lookup
-    | Con(n,0) when n.[0] = 'd' ->
+    | Con(n,0) when (Name.to_string n).[0] = 'd' ->
         (try map subst (S.find n s.body) with Not_found -> x)
     | _ -> x in
   map subst t
@@ -1150,7 +1167,7 @@ let fresh_uv lvl s = XUv(s.top_uv,lvl), { s with top_uv = s.top_uv + 1 }
 let tc = ref 0
 let fresh_tc () = incr tc; mkCon ("d" ^ string_of_int !tc) 0
 let rec is_tc t = match look t with
-  | Con(n,0) when n.[0] = 'd' -> true
+  | Con(n,0) when (Name.to_string n).[0] = 'd' -> true
   | App xs -> is_tc (L.hd xs)
   | _ -> false
 
@@ -1197,7 +1214,7 @@ and whd s t =
   TRACE "whd" (fun fmt -> prf_data [] fmt t)
   match look t with
   | (Ext _  | DB _ | Bin _ | Nil) as x -> kool x, s
-  | Con(n,0) as x when n.[0] = 'd' ->
+  | Con(n,0) as x when (Name.to_string n).[0] = 'd' ->
       (try whd s (S.find n s.body) with Not_found -> kool x,s)
   | Con _ as x -> kool x, s
   | Uv (i,_) when in_sub i s ->
@@ -1231,7 +1248,7 @@ and whd s t =
           
 let rec nf s x = match look x with
   | (Ext _ | DB _ | Nil) as x -> kool x
-  | Con(n,0) as x when n.[0] = 'd' ->
+  | Con(n,0) as x when (Name.to_string n).[0] = 'd' ->
       (try nf s (S.find n s.body) with Not_found -> kool x)
   | Con _ as x -> kool x
   | Bin(n,t) -> mkBin n (nf s t)
