@@ -324,6 +324,8 @@ include PP
 let (--) x y = max 0 (x - y)
 let mkXSusp t n o e = XSusp(ref(Todo(t,n,o,e)))
 
+let mkSkip n l e = if n <= 0 then e else XSkip(n,l,e)
+
 let rule s = SPY "rule" Format.pp_print_string s
 
 let rec epush e = TRACE "epush" (fun fmt -> prf_env [] fmt e)
@@ -337,7 +339,7 @@ let rec epush e = TRACE "epush" (fun fmt -> prf_env [] fmt e)
       let nargs = L.len a in
       if nl1 = nargs then e2 (* repeat m4, end m3 *)
       else if nl1 > nargs then epush (XMerge(XEmpty,nl1 -nargs, ol2 -nargs, e2))
-      else XArgs(L.sub nl1 (nargs-nl1) a,l,e2) (* repeast m4 + m3 *)
+      else XArgs(L.sub nl1 (nargs-nl1) a,l,e2) (* repeat m4 + m3 *)
   | XEmpty, XSkip(a,l,e2) -> rule"m4";
       if nl1 = a then e2 (* repeat m4, end m3 *)
       else if nl1 > a then epush (XMerge(XEmpty,nl1 - a, ol2 - a, e2))
@@ -351,20 +353,15 @@ let rec epush e = TRACE "epush" (fun fmt -> prf_env [] fmt e)
           XArgs(L.sub 0 (L.len b - drop) b,l,e2)))
   | (XArgs(_,n,_) | XSkip(_,n,_)) as e1, XSkip(b,l,e2) when nl1 > n -> rule"m5";
       let drop = min b (nl1 - n) in
-      if drop = b then epush (XMerge(e1,nl1 - drop, ol2 - drop, e2))
-      else epush (XMerge(e1,nl1 - drop, ol2 - drop, XSkip(b - drop,l-drop,e2)))
+      epush (XMerge(e1,nl1 - drop, ol2 - drop, mkSkip (b - drop) (l-drop) e2))
   | XArgs(a,n,e1), ((XArgs(_,l,_) | XSkip(_,l,_)) as e2) -> rule"m6";
       assert(nl1 = n);
       let m = l + (n -- ol2) in
-      let t = L.hd a in
-      let e1 = if L.len a > 1 then XArgs(L.tl a,n,e1) else e1 in
-      (* ugly *)
-      XArgs(L.singl (mkXSusp t ol2 l e2), m, XMerge(e1,n,ol2,e2))
+      XArgs(L.map (fun t -> mkXSusp t ol2 l e2) a, m, e2)
   | XSkip(a,n,e1), ((XArgs(_,l,_) | XSkip(_,l,_)) as e2) -> rule"m6";
       assert(nl1 = n);
       let m = l + (n -- ol2) in
-      let e1 = if a > 1 then XSkip(a-1,n-1,e1) else e1 in
-      (* ugly *)
+      let e1 = mkSkip (a-1) (n-1) e1 in
       XArgs(L.singl (mkXSusp (XDB 1) 0 l e2), m, XMerge(e1,n,ol2,e2))
   | XArgs _, XEmpty -> assert false
   | XEmpty, XEmpty -> assert false
@@ -384,21 +381,18 @@ let rec psusp ptr t ol nl e =
   match t with
   | XSusp { contents = Done t } -> psusp ptr t ol nl e
   | XSusp { contents = Todo (t,ol1,nl1,e1) } -> rule"m1";
-      psusp ptr t (ol1 + (ol -- nl1)) (nl + (nl1 -- ol))
-        (XMerge(e1,nl1,ol,e))
+      psusp ptr t (ol1 + (ol -- nl1)) (nl + (nl1 -- ol)) (XMerge(e1,nl1,ol,e))
   | (XCon _ | XExt _ | XNil) as x -> rule"r1"; x
   | XUv _ as x -> store ptr x
   | XBin(n,t) -> rule"r6";
       assert(n > 0);
-      store ptr (mkBin 1 (mkXSusp (mkBin (n-1) t) (ol+1) (nl+1)
-                           (XArgs (L.singl (XDB 1),nl+1,e))))
+      store ptr (mkBin n (mkXSusp t (ol+n) (nl+n) (XSkip(n,nl+n,e))))
   | XApp a -> rule"r5";
       store ptr (XApp(L.map (fun t -> mkXSusp t ol nl e) a))
   | XVApp(b,t1,t2) -> rule"r5bis";
       store ptr (XVApp(b,mkXSusp t1 ol nl e,mkXSusp t2 ol nl e))
   | XSeq(a,tl) ->
-      store ptr (XSeq(L.map (fun t -> mkXSusp t ol nl e) a,
-                      mkXSusp tl ol nl e))
+      store ptr (XSeq(L.map (fun t -> mkXSusp t ol nl e) a, mkXSusp tl ol nl e))
   | XDB i -> (* r2, r3, r4 *)
       let e = epush e in
       SPY "epushed" (prf_env []) e;
@@ -412,7 +406,7 @@ let rec psusp ptr t ol nl e =
           else (rule"r4"; psusp ptr (XDB(i - nargs)) (ol - nargs) nl e)
       | XSkip(n,l,e) -> 
           if (i <= n)
-          then (rule"r3"; store ptr (XDB (i + nl - l)))
+          then (rule"r3"; store ptr (XDB(i + nl - l)))
           else (rule"r4"; psusp ptr (XDB(i - n)) (ol - n) nl e)
 let push t =
   match t with
@@ -420,8 +414,6 @@ let push t =
     | XExt _ | XSeq _ | XNil | XVApp _) -> t
   | XSusp { contents = Done t } -> t
   | XSusp ({ contents = Todo (t,ol,nl,e) } as ptr) -> psusp ptr t ol nl e
-
-let isSubsp = function XSusp _ -> true | _ -> false
 
 let look x =
   let x = push x in
