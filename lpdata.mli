@@ -63,7 +63,7 @@ module LP : sig
 
   type kind_of_data = private
     | Uv of var * level
-    | Con of name * level
+    | Con of name * level (* level < 0 has to be considered as 0 *)
     | DB of int
     | Bin of int * data
     | App of data L.t

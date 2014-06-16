@@ -872,14 +872,6 @@ let tok = lexer
   | '"' string -> "LITERAL", let b = $buf in String.sub b 1 (String.length b-2)
 ]
 
-let spy f s = if !Trace.dverbose then begin
-  Printf.eprintf "<- %s\n"
-    (match Stream.peek s with None -> "EOF" | Some x -> String.make 1 x);
-  let t, v as tok = f s in
-  Printf.eprintf "-> %s = %s\n" t v;
-  tok
-  end else f s
-
 let rec lex c = parser bp
   | [< '( ' ' | '\n' | '\t' ); s >] -> lex c s
   | [< '( '%' ); s >] -> comment c s
@@ -889,7 +881,7 @@ let rec lex c = parser bp
   | [< s >] ep ->
        if Stream.peek s = None then ("EOF",""), (bp, ep)
        else
-       (match (*spy*) (tok c) s with
+       (match tok c s with
        | "CONSTANT","pi" -> "PI", "pi"
        | "CONSTANT","sigma" -> "SIGMA", "sigma"
        | "CONSTANT","nil" -> "NIL", "nil"
@@ -919,12 +911,8 @@ let lex_fun s =
   (fun id -> try Hashtbl.find tab id with Not_found -> !last)
 
 let tok_match (s1,_) = (); function
-  | (s2,v) when s1=s2 ->
-      if false(*!Trace.dverbose*) then Printf.eprintf "%s = %s = %s\n" s1 s2 v;
-      v
-  | (s2,v) ->
-      if false(*!Trace.dverbose*) then Printf.eprintf "%s <> %s = %s\n" s1 s2 v;
-      raise Stream.Failure
+  | (s2,v) when s1 = s2 -> v
+  | (s2,v) -> raise Stream.Failure
 
 let lex = {
   tok_func = lex_fun;
@@ -980,7 +968,7 @@ let check_clause x = ()
 let check_goal x = ()
 
 let atom_levels = 
-        ["pi";"conjunction";"implication";"equality";"equality";"term";"app";"simple"]
+  ["pi";"conjunction";"implication";"equality";"equality";"term";"app";"simple"]
 
 let () =
   Grammar.extend [ Grammar.Entry.obj atom, None,

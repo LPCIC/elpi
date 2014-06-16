@@ -116,7 +116,7 @@ let test_prog p g =
      "@[<hv2>%a@ = %a@]@\n%!" (LP.prf_data []) x (LP.prf_data []) (Red.nf s x))
      assignments;
    List.iter (fun (g,eh) ->
-    Format.eprintf "delay: @[<hv 0>@[<hv2>@ %a@]@ |- %a@]\n%!"
+    Format.eprintf "delay: @[<hv>%a@ |- %a@]\n%!"
      (LP.prf_program ~compact:false)
      (List.map (function i,k,p,u -> i,k,Red.nf s p,u) eh)
      (LP.prf_goal []) (Red.nf s g)) dgs;
