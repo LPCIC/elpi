@@ -169,11 +169,26 @@ module Name : sig
   val to_string : t -> string
 end = struct
   type t = string
-  let make = Hashcons.simple_hcons Hashcons.Hstring.generate ()
+  let tbl = Hashtbl.create 97
+  let make x =
+    try Hashtbl.find tbl x
+    with Not_found -> Hashtbl.add tbl x x; x
   let compare = compare
   let equal = (==)
   let to_string x = x
 end
+
+let digit_sup = function
+  | 0 -> "⁰" | 1 -> "¹" | 2 -> "²" | 3 -> "³" | 4 -> "⁴" | 5 -> "⁵"
+  | 6 -> "⁶" | 7 -> "⁷" | 8 -> "⁸" | 9 -> "⁹" | _ -> assert false
+let digit_sub = function
+  | 0 -> "₀" | 1 -> "₁" | 2 -> "₂" | 3 -> "₃" | 4 -> "₄" | 5 -> "₅"
+  | 6 -> "₆" | 7 -> "₇" | 8 -> "₈" | 9 -> "₉" | _ -> assert false
+let rec digits_of n = n mod 10 :: if n >= 10 then digits_of (n / 10) else []
+let subscript n =
+  String.concat "" (List.map digit_sub (List.rev (digits_of n)))
+let superscript n =
+  String.concat "" (List.map digit_sup (List.rev (digits_of n)))
 
 module LP = struct
 
@@ -221,15 +236,12 @@ and env =
 
 module PP = struct (* {{{ pretty printer for data *)
 
-let small_digit = function
-  | 0 -> "⁰" | 1 -> "¹" | 2 -> "²" | 3 -> "³" | 4 -> "⁴" | 5 -> "⁵"
-  | 6 -> "⁶" | 7 -> "⁷" | 8 -> "⁸" | 9 -> "⁹" | _ -> assert false
 
-let rec digits_of n = n mod 10 :: if n > 10 then digits_of (n / 10) else []
 
-let string_of_level lvl = if !Trace.dverbose then "^" ^ string_of_int lvl
+let string_of_level lvl =
+  if !Trace.dverbose then "^" ^ string_of_int lvl
   else if lvl = 0 then ""
-  else String.concat "" (List.map small_digit (List.rev (digits_of lvl)))
+  else superscript lvl
 
 let pr_cst x lvl =
   Name.to_string x ^ if !Trace.dverbose then string_of_level lvl else ""
@@ -1122,17 +1134,17 @@ module Subst = struct (* {{{ LP.Uv |-> data mapping *)
 open LP
 
 module M = Int.Map
-module S = Map.Make(struct type t = Name.t let compare = Name.compare end)
 
-type subst = { assign : data M.t; body : data S.t; top_uv : int }
-let empty n = { assign = M.empty; body = S.empty; top_uv = n }
+type subst = { assign : data M.t; top_uv : int }
+let empty n = { assign = M.empty; top_uv = max 1 n }
 
 let last_sub_lookup = ref (XDB 0)
 let in_sub i { assign = assign } =
   try last_sub_lookup := M.find i assign; true
   with Not_found -> false
+let in_sub_con lvl s = if lvl >= 0 then false else in_sub (-lvl) s
 let set_sub i t s = { s with assign = M.add i t s.assign }
-let set_body c t s = { s with body = S.add c t s.body }
+let set_sub_con i t s = { s with assign = M.add (-i) t s.assign }
 
 let prf_subst fmt s =
   Format.pp_open_hovbox fmt 2;
@@ -1154,8 +1166,7 @@ let string_of_subst s = on_buffer prf_subst s
 let apply_subst s t =
   let rec subst x = match look x with
     | Uv(i,_) when in_sub i s -> map subst !last_sub_lookup
-    | Con(n,0) when (Name.to_string n).[0] = 'd' ->
-        (try map subst (S.find n s.body) with Not_found -> x)
+    | Con(_,lvl) when in_sub_con lvl s -> map subst !last_sub_lookup
     | _ -> x in
   map subst t
 let apply_subst_goal s = map_premise (apply_subst s)
@@ -1164,11 +1175,14 @@ let top s = s.top_uv
 let raise_top i s = { s with top_uv = s.top_uv + i + 1 }
 
 let fresh_uv lvl s = XUv(s.top_uv,lvl), { s with top_uv = s.top_uv + 1 }
-let tc = ref 0
-let fresh_tc () = incr tc; mkCon ("d" ^ string_of_int !tc) 0
-let rec is_tc t = match look t with
-  | Con(n,0) when (Name.to_string n).[0] = 'd' -> true
-  | App xs -> is_tc (L.hd xs)
+let frozen = ref 0
+let freeze_uv i s =
+  incr frozen;
+  let ice = mkCon ("𝓕" ^ subscript !frozen) (-s.top_uv) in
+  ice, set_sub i ice { s with top_uv = s.top_uv + 1 }
+let rec is_frozen t = match look t with
+  | Con(_,lvl) when lvl < 0 -> true
+  | App xs -> is_frozen (L.hd xs)
   | _ -> false
 
 end (* }}} *)
@@ -1189,20 +1203,6 @@ let beta t start len v = rule"Bs";
   SPY "rdx" (prf_data []) rdx;
   rdx
 
-(*
-let rec mkskip n e = match n with
-  | 0 -> e
-  | n -> XArgs(L.singl (XDB 1),n,mkskip (n-1) e)
-
-let beta_under depth t l =
-  if l = [] then t
-  else
-    let len = List.length l in
-    mkXSusp t (len+depth) depth
-      (mkskip depth
-          (XArgs(L.of_list l, 0, XEmpty)))
-
-*)
 let rec splay xs tl s =
   let tl, s = whd s tl in
   match look tl with
@@ -1214,13 +1214,15 @@ and whd s t =
   TRACE "whd" (fun fmt -> prf_data [] fmt t)
   match look t with
   | (Ext _  | DB _ | Bin _ | Nil) as x -> kool x, s
-  | Con(n,0) as x when (Name.to_string n).[0] = 'd' ->
-      (try whd s (S.find n s.body) with Not_found -> kool x,s)
-  | Con _ as x -> kool x, s
+  | Con(_,lvl) when in_sub_con lvl s ->
+      let t = !last_sub_lookup in
+      let t', s = whd s t in
+      t', if t == t' then s else set_sub_con lvl t' s
   | Uv (i,_) when in_sub i s ->
       let t = !last_sub_lookup in
       let t', s = whd s t in
       t', if t == t' then s else set_sub i t' s
+  | Con _ as x -> kool x, s
   | Uv _ -> t, s
   | VApp (b,hd,tl) ->
       let xs, tl, s = splay L.empty tl s in
@@ -1248,8 +1250,11 @@ and whd s t =
           
 let rec nf s x = match look x with
   | (Ext _ | DB _ | Nil) as x -> kool x
-  | Con(n,0) as x when (Name.to_string n).[0] = 'd' ->
-      (try nf s (S.find n s.body) with Not_found -> kool x)
+  | Con(_,lvl) as xf when lvl < 0 ->
+      let x', _ = whd s x in 
+      (match look x' with
+      | App xs -> mkApp (L.map (nf s) xs)
+      | _ -> if x == x' then kool xf else nf s x')
   | Con _ as x -> kool x
   | Bin(n,t) -> mkBin n (nf s t)
   | Seq(xs,t) -> mkSeq (L.map (nf s) xs) (nf s t)
@@ -1260,9 +1265,9 @@ let rec nf s x = match look x with
       | _ -> if x == x' then kool xf else nf s x')
   | (App _ | Uv _) as xf ->
       let x', _ = whd s x in 
-      match look x' with
+      (match look x' with
       | App xs -> mkApp (L.map (nf s) xs)
-      | _ -> if x == x' then kool xf else nf s x'
+      | _ -> if x == x' then kool xf else nf s x')
 
 end (* }}} *)
 

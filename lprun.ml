@@ -224,11 +224,11 @@ let rec unify a b s = TRACE "unify" (print_unif_prob s "=" a b)
 
   | t, VApp(w,t1,t2) ->
      if w = `Flex && rigid t then fail "no-flex";
-     if w = `Frozen && not(Subst.is_tc a) then fail "no-tc";
+     if w = `Frozen && not(Subst.is_frozen a) then fail "no-tc";
      let hd, tl = destApp w t a in unify (mkSeq tl mkNil) t2 (unify hd t1 s)
   | VApp(w,t1,t2), t ->
      if w = `Flex && rigid t then fail "no-flex";
-     if w = `Frozen && not(Subst.is_tc b) then fail "no-tc";
+     if w = `Frozen && not(Subst.is_frozen b) then fail "no-tc";
      let hd, tl = destApp w t a in unify (mkSeq tl mkNil) t2 (unify hd t1 s)
 
   | Bin(nx,x), Bin(ny,y) when nx = ny -> unify x y s
@@ -299,14 +299,7 @@ let cat_goals (a,b,p) (c,d) = a@c, b@d, p
  * when we move under other pi binders *)
 let mkhv_aux =
   let i = ref 0 in
-  let small_digit = function
-    | 0 -> "₀" | 1 -> "₁" | 2 -> "₂" | 3 -> "₃" | 4 -> "₄" | 5 -> "₅"
-    | 6 -> "₆" | 7 -> "₇" | 8 -> "₈" | 9 -> "₉" | _ -> assert false in
-  let rec digits_of n = n mod 10 :: if n > 10 then digits_of (n / 10) else [] in
-  fun depth ->
-    incr i;
-    mkCon ("𝓱"^
-      String.concat "" (List.map small_digit (List.rev (digits_of !i)))) depth
+  fun depth -> incr i; mkCon ("𝓱"^subscript !i) depth
 let rec mkhv n d =
   if n = 0 then []
   else mkhv_aux d :: mkhv (n-1) d
@@ -557,8 +550,11 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
   Format.eprintf "h hvs = %a\n%!" (prf_data []) h_hvs;
   Format.eprintf "p = %a\n%!" (prf_data []) (Red.nf s p);
 *)
+  let ice, s = Subst.freeze_uv i s in
+(*
   let s = Subst.set_sub i (mkApp (L.cons (Subst.fresh_tc ()) 
     (L.of_list (List.filter (fun h -> not(List.mem h ht)) hvs)))) s in
+*)
   let s = unify h_hvs p s in
   let abstracted =
     if List.length hvs = 0 then (Red.nf s h) else (mkSigma 0 (Red.nf s h)) in
@@ -594,18 +590,18 @@ let rec run op s ((gls,dls,p) : goals) (alts : alternatives)
         s, rest, dls, p, alts
     | (_,`Unlock (t,to_purge),_,_,_ as g) :: rest ->
         TRACE "run" (pr_cur_goal op g s)
-        if not (Subst.is_tc t) then
-          (Format.eprintf "not a tc: %a\n%!" (prf_data []) t; assert false);
+        if not (Subst.is_frozen t) then
+          (Format.eprintf "not frozen: %a\n%!" (prf_data []) t; assert false);
 (*         Format.eprintf "ASSIGN META: %a\n%!" (prf_data []) t; *)
         let h, s = Subst.fresh_uv 0 s in
         let hd = let rec uff t = match look t with
-          | App xs -> uff (L.hd xs) | Con (n,_) -> n | _ -> assert false in
+          | App xs -> uff (L.hd xs) | Con (_,lvl) -> lvl | _ -> assert false in
         uff t in
         let rest = List.map (fun (d,g,cp,eh,l) ->
           let cp = not_in to_purge cp in
           d,g,cp,eh,l) rest in
         let p = not_in to_purge p in
-        Subst.set_body hd h s, rest, dls, p, alts
+        Subst.set_sub_con hd h s, rest, dls, p, alts
     | (depth,`Resume(t,goal), _, eh,lvl as g) :: rest ->
         TRACE "run" (pr_cur_goal op g s)
         let resumed, dls, s = resume p s (not_same_hd s t) lvl dls in

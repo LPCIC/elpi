@@ -16,6 +16,9 @@ val mkString : string -> C.data
 val isString : C.data -> bool
 val getString : C.data -> string
 
+val superscript : int -> string
+val subscript : int -> string
+
 module L : sig
   type 'a t
   val empty : 'a t
@@ -172,10 +175,10 @@ module Subst : sig
   val apply_subst : subst -> LP.data -> LP.data
   val apply_subst_goal : subst -> LP.goal -> LP.goal
   val fresh_uv : LP.level -> subst -> LP.data * subst
-  val fresh_tc : unit -> LP.data
-  val is_tc : LP.data -> bool
-  val set_sub : int -> LP.data -> subst -> subst
-  val set_body : LP.name -> LP.data -> subst -> subst
+  val freeze_uv : LP.var -> subst -> LP.data * subst
+  val is_frozen : LP.data -> bool
+  val set_sub : LP.var -> LP.data -> subst -> subst
+  val set_sub_con : LP.level -> LP.data -> subst -> subst
   val top : subst -> int
   val raise_top : int -> subst -> subst
   
@@ -185,7 +188,6 @@ end
 
 module Red : sig
   val lift : ?from:int -> int -> LP.data -> LP.data
-(*   val beta_under : int -> LP.data -> LP.data list -> LP.data *)
   val whd : Subst.subst -> LP.data -> LP.data * Subst.subst
   val nf : Subst.subst -> LP.data -> LP.data
 end
