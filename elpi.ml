@@ -10,15 +10,71 @@ let set_terminal_width () =
   Format.pp_set_max_boxes Format.err_formatter 30;
 ;;
 
-let _ = Printexc.record_backtrace true
-let _ =
-  let control = Gc.get () in
-  let tweaked_control = { control with
-    Gc.minor_heap_size = 33554432; (** 4M *)
-    Gc.space_overhead = 120;
-  } in
-  Gc.set tweaked_control;
-  set_terminal_width ();
+let type_err name exp got =
+  Format.eprintf "Wrong call to %s, %s expected, got %a\n%!"
+    name exp (LP.prf_data []) got; exit 1
+
+let protect f x = try f x with UnifFail _ -> raise NoClause
+
+let check_list2 name t =
+  match LP.look t with
+  | LP.Seq (l,tl) when L.len l = 2 && LP.equal tl LP.mkNil -> L.hd l, L.get 1 l
+  | _ -> type_err name "list of len 2" t
+
+let check_string name t =
+  match LP.look t with
+  | LP.Ext x when isString x -> getString x
+  | _ -> type_err name "string" t
+
+let extern_kv name f =
+  register_custom name (fun t s ->
+    let t, s = Red.nf t s in
+    let k, v = check_list2 name t in
+    let k = check_string name k in
+    protect (f k v) s)
+;;
+
+let extern_k name f =
+  register_custom name (fun t s ->
+    let t, s = Red.nf t s in
+    let k = check_string name t in
+    protect (f k) s)
+;;
+
+let register_trace () =
+  extern_kv "trace_counter" (fun name value s ->
+    let n = Trace.get_cur_step name in
+    protect (unify (LP.mkExt (mkString (string_of_int n))) value) s)
+;;
+
+let register_imperative_counters () =
+  let module M = Map.Make(struct type t = string let compare = compare end) in
+  let counters = ref M.empty in
+  extern_k "incr" (fun name s ->
+    try counters := M.add name (M.find name !counters + 1) !counters; s
+    with Not_found -> counters := M.add name 1 !counters; s);
+  extern_k "reset" (fun name s -> counters := M.add name 0 !counters; s);
+  extern_kv "get" (fun name value s ->
+    let n = try M.find name !counters with Not_found -> 0 in
+    protect (unify (LP.mkExt (mkString (string_of_int n))) value) s)
+;;
+
+let register_exit_abort () =
+  let aborts = ref 0 in
+  extern_k "abort" (fun text s ->
+    incr aborts; if !aborts = int_of_string text then exit 1 else s);
+  extern_k "exit" (fun text s -> exit (int_of_string text));
+;;
+
+let register_parser () =
+  extern_kv "parse" (fun text value s ->
+    protect (unify (LP.parse_data text) value) s);
+  register_custom "read" (fun t s ->
+    let input = input_line stdin in
+    protect (unify (LP.mkExt (mkString input)) t) s);
+;;
+
+let register_print () =
   let print_atom s t =
     let unescape s =
       Str.global_replace (Str.regexp_string "\\n") "\n"
@@ -34,16 +90,20 @@ let _ =
     let t, s = Red.nf t s in
     match LP.look t with
     | LP.Seq(l,_) ->
-        List.iter (print_atom s) (L.to_list l);
-        Format.eprintf "\n%!";
-        s
-    | _ -> assert false);
-  register_custom "is" (fun t s ->
-    let t, s = Red.nf t s in
-    match LP.look t with
-    | LP.App l when L.len l = 3 ->
-        if LP.equal (L.get 1 l) (L.get 2 l) then s else raise NoClause
-    | _ -> assert false);
+        List.iter (print_atom s) (L.to_list l); Format.eprintf "\n%!"; s
+    | _ -> type_err "printl" "list" t);
+;;
+
+let _ = Printexc.record_backtrace true
+let _ =
+  let control = Gc.get () in
+  let tweaked_control = { control with
+    Gc.minor_heap_size = 33554432; (** 4M *)
+    Gc.space_overhead = 120;
+  } in
+  Gc.set tweaked_control;
+  set_terminal_width ();
+  register_print ();
   register_custom "is_flex" (fun t s ->
     let t, s = Red.whd t s in
     match LP.look t with
@@ -51,84 +111,13 @@ let _ =
     | LP.App xs ->
         (match LP.look (L.hd xs) with LP.Uv _ -> s | _ -> raise NoClause)
     | _ -> raise NoClause);
-  let module M = Map.Make(struct type t = string let compare = compare end) in
-  let counters = ref M.empty in
-  register_custom "incr" (fun t s ->
-    (match LP.look t with
-    | LP.Ext t when isString t ->
-         let name = getString t in
-         (try let v = M.find name !counters in
-              counters := M.add name (v+1) !counters; s
-         with Not_found -> counters := M.add name 1 !counters; s)
-    | _ -> assert false));
-  register_custom "reset" (fun t s ->
-    (match LP.look t with
-    | LP.Ext t when isString t ->
-         let name = getString t in
-         counters := M.add name 0 !counters; s
-    | _ -> assert false));
-  register_custom "get" (fun t s ->
-    let t, s = Red.whd t s in
-    match LP.look t with
-    | LP.Seq (l,_) when L.len l = 2 ->
-        let hd, s = Red.whd (L.hd l) s in
-        (match LP.look hd with
-        | LP.Ext x when isString x ->
-            let input = getString x in
-            let n = try M.find input !counters with Not_found -> 0 in
-            (try unify (LP.mkExt (mkString (string_of_int n))) (L.get 1 l) s
-            with
-            | UnifFail _ -> raise NoClause
-            | Stream.Error msg -> prerr_endline msg; raise NoClause)
-        | _ -> assert false)
-    | _ -> assert false);
-  let aborts = ref 0 in
-  register_custom "abort" (fun t s ->
-    incr aborts;
-    (match LP.look t with
-    | LP.Ext t when isString t ->
-         if !aborts = int_of_string (getString t) then exit 1 else s
-    | _ -> assert false));
-  register_custom "exit" (fun t s ->
-    (match LP.look t with
-    | LP.Ext t when isString t -> exit (int_of_string (getString t))
-    | _ -> assert false));
-  register_custom "counter" (fun t s ->
-    let t, s = Red.whd t s in
-    match LP.look t with
-    | LP.Seq (l,_) when L.len l = 2 ->
-        let hd, s = Red.whd (L.hd l) s in
-        (match LP.look hd with
-        | LP.Ext x when isString x ->
-            let input = getString x in
-            let n = Trace.get_cur_step input in
-            (try unify (LP.mkExt (mkString (string_of_int n))) (L.get 1 l) s
-            with
-            | UnifFail _ -> raise NoClause
-            | Stream.Error msg -> prerr_endline msg; raise NoClause)
-        | _ -> assert false)
-    | _ -> assert false);
-  register_custom "parse" (fun t s ->
-    let t, s = Red.whd t s in
-    match LP.look t with
-    | LP.Seq (l,_) when L.len l = 2 ->
-        let hd, s = Red.whd (L.hd l) s in
-        (match LP.look hd with
-        | LP.Ext x when isString x ->
-            let input = getString x in
-            (try unify (LP.parse_data input) (L.get 1 l) s
-            with
-            | UnifFail _ ->
-                prerr_endline "parsing in the wrong ctx?";raise NoClause
-            | Stream.Error msg -> prerr_endline msg; raise NoClause)
-        | _ -> assert false)
-    | _ -> assert false);
-  register_custom "read" (fun t s ->
-    let input = input_line stdin in
-    unify (LP.mkExt (mkString input)) t s);
+  register_exit_abort ();
+  register_imperative_counters ();
+  register_trace ();
+  register_parser ();
   register_custom "zero_level" (fun t s ->
     let h, s = Subst.fresh_uv 0 s in
-    unify t h s);
+    protect (unify t h) s);
 ;;
 
 let test_prog p g =

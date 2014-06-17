@@ -13,7 +13,7 @@ not A.
 debug :- false.
 
 % print only when debug is true and annotate with the value of the "run" counter
-dbgpp T :- debug, !, $counter ["run",N], $printl ["run:",N,": "|T].
+dbgpp T :- debug, !, $trace_counter ["run",N], $printl ["run:",N,": "|T].
 dbgpp _.
 
 % print with a new line at the end
