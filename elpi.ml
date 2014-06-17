@@ -186,5 +186,6 @@ let _ =
       Printf.printf "goal> %!";
       input_line stdin in
     test_prog p g
-  done
+  done;
+  Trace.quit ()
 

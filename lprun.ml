@@ -308,16 +308,18 @@ let pr_cur_goal op (_,g,hyps,_,lvl) s fmt =
     if nhyps <= nop then []
     else L.to_list (L.sub 0 (nhyps - nop) (L.of_list hyps)) in
   match g with
-  | `Atom (goal,_) ->
+  | `Atom (g,_) when !Trace.dverbose ->
       Format.fprintf fmt "@[<hv 0>%a@ |- %a@]"
         (prf_program ~compact:true)
-          (List.map (fun a,b,p,n -> a,b,fst(Red.nf p s),n) eh)
-        (prf_premise []) (apply_subst s goal)
+            (List.map (fun a,b,p,n -> a,b,fst(Red.nf p s),n) eh)
+        (prf_premise []) (fst(Red.nf g s))
+  | `Atom (g,_) ->
+      Format.fprintf fmt "@[<hv 0>|- %a@]" (prf_premise []) (fst(Red.nf g s))
   | `Unify(a,b) ->
       Format.fprintf fmt "%a = %a"
-          (prf_data []) (apply_subst s a) (prf_data []) (apply_subst s b)
+          (prf_data []) (fst(Red.nf a s)) (prf_data []) (fst(Red.nf b s))
   | `Custom(name,a) ->
-      Format.fprintf fmt "%s %a" name (prf_data []) (apply_subst s a)
+      Format.fprintf fmt "%s %a" name (prf_data []) (fst(Red.nf a s))
   | `Cut -> Format.fprintf fmt "!"
   | `Delay (t,p) ->
        Format.fprintf fmt "delay %a %a"
@@ -327,7 +329,7 @@ let pr_cur_goal op (_,g,hyps,_,lvl) s fmt =
          (prf_premise []) (fst(Red.nf p s))
   | `Unlock (t,ps) ->
        Format.fprintf fmt "@[<hv 0>unlock %a@ purge %a@]"
-         (prf_data []) t (prf_program ~compact:true) ps
+         (prf_data []) (fst(Red.nf t s)) (prf_program ~compact:true) ps
 
 let pr_cur_goals op gls fmt s =
   Format.fprintf fmt "@[<hov 0>"; 
@@ -582,8 +584,8 @@ let rec run op s ((gls,dls,p) : goals) (alts : alternatives)
     | (_,`Cut,_,_,lvl)::rest ->
         let alts = cut lvl alts in
         s, rest, dls, p, alts
-    | (_,`Unlock (t,to_purge),_,_,_ as g) :: rest ->
-        TRACE "run" (pr_cur_goal op g s)
+    | (_,`Unlock (t,to_purge),_,_,lvl as g) :: rest ->
+        TRACE ~depth:lvl "run" (pr_cur_goal op g s)
         let t, s = Red.whd t s in
         if not (Subst.is_frozen t) then
           (Format.eprintf "not frozen: %a\n%!" (prf_data []) t; assert false);
@@ -598,7 +600,7 @@ let rec run op s ((gls,dls,p) : goals) (alts : alternatives)
         let p = not_in to_purge p in
         Subst.set_sub_con hd h s, rest, dls, p, alts
     | (depth,`Resume(t,goal), _, eh,lvl as g) :: rest ->
-        TRACE "run" (pr_cur_goal op g s)
+        TRACE ~depth:lvl "run" (pr_cur_goal op g s)
         let resumed, dls, s = resume p s (not_same_hd s t) lvl dls in
         let resumed, to_purge = List.split resumed in
         let resumed =
@@ -609,7 +611,7 @@ let rec run op s ((gls,dls,p) : goals) (alts : alternatives)
         let gl, s = goals_of_premise p goal depth eh lvl s in
         s, unlock::gl@resumed@rest, dls, p, alts
     | (depth,`Delay(t,goal), _, eh,lvl as g) :: rest ->
-        TRACE "run" (pr_cur_goal op g s)
+        TRACE ~depth:lvl "run" (pr_cur_goal op g s)
         if true || flexible s t then
           try
             TRACE "delay" (pr_cur_goal op g s)
@@ -624,7 +626,7 @@ let rec run op s ((gls,dls,p) : goals) (alts : alternatives)
           s, gl@rest, dls, p, alts
     | (depth,`Atom(t,k),hyps,eh,lvl as g)::rest ->
         (try
-          TRACE "run" (pr_cur_goal op g s)
+          TRACE ~depth:lvl "run" (pr_cur_goal op g s)
           let s, subg, new_alts = select p k t depth s hyps eh lvl in
           let subg = List.map sort_hyps subg in
           s, subg@rest, dls, p,
@@ -632,14 +634,14 @@ let rec run op s ((gls,dls,p) : goals) (alts : alternatives)
         with NoClause -> next_alt alts (pr_cur_goals op gls))
     | (depth,`Unify(a,b),hyps,eh,lvl as g)::rest ->
         (try
-          TRACE "run" (pr_cur_goal op g s)
+          TRACE ~depth:lvl "run" (pr_cur_goal op g s)
           let s = unify a b s in
           SPY "sub" Subst.prf_subst s;
           s, rest, dls, p, alts
         with UnifFail _ -> next_alt alts (pr_cur_goals op gls))
     | (depth,`Custom(name,a),hyps,eh,lvl as g)::rest ->
         (try
-          TRACE "run" (pr_cur_goal op g s)
+          TRACE ~depth:lvl "run" (pr_cur_goal op g s)
           let s = custom name a s in
           SPY "sub" Subst.prf_subst s;
           s, rest, dls, p, alts

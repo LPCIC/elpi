@@ -1268,6 +1268,8 @@ let rec nf x s = match look x with
       let x', s = whd x s in 
       (match look x' with
       | App xs -> nf_app xs s
+      | VApp(b,t1,t2) ->
+          let t1, s = nf t1 s in let t2, s = nf t2 s in mkVApp b t1 t2, s
       | _ -> if x == x' then kool xf, s else nf x' s)
   | (App _ | Uv _) as xf ->
       let x', s = whd x s in 
