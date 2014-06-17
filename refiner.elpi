@@ -280,19 +280,25 @@ suite TEST t3-2 "2" :- % meta/meta unif w pruning: ?X[v,r] = ?Y[v,s]
           unify (app (app T1 (atom zero)) x)
                 (app (app T2 (atom zero)) y),
           dbgpp ["after  ",T1],
-          expect [(T1=lam _ x\ lam _ y\ app _ (#F2 (A2 x y)),A2=x\y\[x])]).
-suite TEST t3-3 "1" :- % meta/meta unif with dependent type
+          expect [(T1=lam _ x\ lam _ y\ app _ (#F2 (A2 x y)),A2=x\y\[x]),
+                  (T1=lam _ x\ lam _ y\ app _ (#F2 (A2 x y)),A2=x\y\[])]).
+suite TEST t3-3 "4" :- % meta/meta unif with dependent type
   TEST = ((pi c\ unify c c => of c (atom nat) c =>
            pi d\ unify d d => of d (app (atom vect) c) d =>
             of hole (TY c d) (X c d)),
           unify (X (atom zero) (atom vnil)) (X (atom zero) (atom vnil)),
-          dbgpp ["X=",X]).
-suite TEST t3-4 "1" :- % meta/meta unif with dependent type + restriction
+          dbgpp ["X=",X],
+          expect [(X = x\y\#F (L x y),L=x\y\[]),
+                  (X = x\y\#F (L x y),L=x\y\[x,y]),
+                  (X = x\y\#F (L x y),L=x\y\[y]),
+                  (X = x\y\#F (L x y),L=x\y\[x])]).
+suite TEST t3-4 "2" :- % meta/meta unif with dependent type + restriction
   TEST = ((pi c\ unify c c => of c (atom nat) c =>
            pi d\ unify d d => of d (app (atom vect) c) d =>
             of hole (TY c d) (X c d)),
-          pi vn \ unify vn vn => of vn (app (atom vect) atom zero) vn =>
-            unify (X (atom zero) (atom vnil)) (X (atom zero) vn)).
+          (pi vn \ unify vn vn => of vn (app (atom vect) atom zero) vn =>
+            unify (X (atom zero) (atom vnil)) (X (atom zero) vn)),
+          expect [(X=x\y\#F (L x y),L=x\y\[]),(X=x\y\#F (L x y),L=x\y\[x])]).
 suite TEST t4 "1" :-
   TEST = (of hole TY1 T1, unify TY1 (atom nat), of hole TY2 T2, unify TY2 set).
 suite TEST t5 "1" :-
