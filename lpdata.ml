@@ -17,7 +17,7 @@ module L : sig (* {{{ Lists *)
   val hd : 'a t -> 'a
   val map : ('a -> 'b) -> 'a t -> 'b t
   val mapi : (int -> 'a -> 'b) -> 'a t -> 'b t
-  val fold_map : ('a -> 'b -> 'a * 'b) -> 'a t -> 'b -> 'a t * 'b
+  val fold_map : ('a -> 'b -> 'c * 'b) -> 'a t -> 'b -> 'c t * 'b
   val fold : ('a -> 'b -> 'b) -> 'a t -> 'b -> 'b
   val fold2 : ('a -> 'b -> 'c -> 'c) -> 'a t -> 'b t -> 'c -> 'c
   val for_all : ('a -> bool) -> 'a t -> bool
@@ -60,7 +60,7 @@ end  = struct (* {{{ *)
     in aux 0 l
   let rec fold_map f l a =
     match l with
-    | [] -> l, a
+    | [] -> [], a
     | x::xs -> let x, a = f x a in let xs, a = fold_map f xs a in x::xs, a
   let rec fold f l a =
     match l with
@@ -179,14 +179,15 @@ module Name : sig
   val make : string -> t
   val to_string : t -> string
 end = struct
-  type t = string
+  type t = int * string
+  let id = ref 0
   let tbl = Hashtbl.create 97
   let make x =
     try Hashtbl.find tbl x
-    with Not_found -> Hashtbl.add tbl x x; x
-  let compare = compare
+    with Not_found -> incr id; let v = !id,x in Hashtbl.add tbl x v; v
+  let compare (id1,_) (id2,_) = compare id1 id2
   let equal = (==)
-  let to_string x = x
+  let to_string (_,x) = x
 end
 
 let digit_sup = function
@@ -545,6 +546,13 @@ let rec equal a b = match push a, push b with
      | _ -> false
    end
  | _ -> false
+
+let compare t1 t2 =
+  if equal t1 t2 then 0
+  else match push t1, push t2 with
+  | XCon(x,_), XCon(y,_) -> Name.compare x y
+  (* TODO : complete *)
+  | a, b -> compare a b
 
 let isBin x = match push x with XBin _ -> true | _ -> false
 

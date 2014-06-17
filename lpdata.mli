@@ -29,9 +29,9 @@ module L : sig
   val sub : int -> int -> 'a t -> 'a t
   val tl : 'a t -> 'a t
   val hd : 'a t -> 'a
-  val map : ('a -> 'a) -> 'a t -> 'a t
+  val map : ('a -> 'b) -> 'a t -> 'b t
   val mapi : (int -> 'a -> 'a) -> 'a t -> 'a t
-  val fold_map : ('a -> 'b -> 'a * 'b) -> 'a t -> 'b -> 'a t * 'b
+  val fold_map : ('a -> 'b -> 'c * 'b) -> 'a t -> 'b -> 'c t * 'b
   val fold : ('a -> 'b -> 'b) -> 'a t -> 'b -> 'b
   val fold2 : ('a -> 'c -> 'b -> 'b) -> 'a t -> 'c t -> 'b -> 'b
   val for_all : ('a -> bool) -> 'a t -> bool
@@ -91,6 +91,7 @@ module LP : sig
   val fixApp : data L.t -> data
 
   val equal : data -> data -> bool
+  val compare : data -> data -> int
   
   val isDB : int -> data -> bool
 

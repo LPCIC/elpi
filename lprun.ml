@@ -508,51 +508,43 @@ let rigid_key_match k1 k2 =
 let is_cut x = match look_premise x with AtomBI BICut -> true | _ -> false
 
 let bubble_up s t p (eh : program) : annot_clause * subst =
-  (*Format.eprintf "DELAY: %a\n%!" (prf_premise []) p;*)
   let t, s = Red.nf t s in
   let p, s = Red.nf p s in
   let k = key_of p in
   let i, lvl, ht = destFlexHd t [] in
-(*
-  Format.eprintf "DELAY: %d %d %d\n%!" i lvl (List.length ht);
-*)
-  let eh = List.filter (fun _,k1,_,_ -> rigid_key_match k k1) eh in
-  let hvs =
-    uniq (List.sort compare (
-    collect_hv_premise p @
-    List.flatten (List.map (fun _,_,p,_ ->
-      List.filter (hv_lvl_leq lvl) (collect_hv_premise p)
-      ) eh))) in      
-(*   Format.eprintf "hvs = %a\n%!" (prf_data []) (mkApp (L.of_list hvs)); *)
-  let p = mkImpl (mkConj (L.of_list
-    (List.map (fun _,_,x,_ ->
-       match look_premise x with
-       | Impl(x,p) when is_cut x -> p
-       | _ -> x)
-      (List.filter (fun _,_,x,_ ->
+  let eh = L.of_list eh in
+  let eh = L.filter (fun _,k1,_,_ -> rigid_key_match k k1) eh in
+  let eh, s = L.fold_map (fun (_,_,p,_) s -> Red.nf p s) eh s in
+  let eh = List.map
+    (fun x -> match look_premise x with Impl(x,p) when is_cut x -> p | _ -> x)
+    (L.to_list eh) in
+  let hvs = collect_hv_premise p :: List.map collect_hv_premise eh in
+  let hvs = uniq (List.sort LP.compare (List.flatten hvs)) in
+  let hvs = List.filter (hv_lvl_leq lvl) hvs in
+  let hyp = mkImpl (mkConj (L.of_list
+    ((List.filter (fun x ->
         let hvsx = collect_hv_premise x in
-        List.exists (fun h -> List.mem h hvsx) hvs) eh)
+        List.for_all (fun h -> List.exists (LP.equal h) hvs) hvsx) eh)
     @ [mkAtomBiCut]))) p in
-  let hvs = collect_hv_premise p in      
+  let hvs = L.of_list (collect_hv_premise hyp) in
   let h, s = Subst.fresh_uv 0 s in
-  let h_hvs = mkApp (L.of_list (h :: hvs)) in
+  let h_hvs = mkApp (L.cons h hvs) in
 (*
   Format.eprintf "h hvs = %a\n%!" (prf_data []) h_hvs;
-  Format.eprintf "p = %a\n%!" (prf_data []) (Red.nf s p);
+  Format.eprintf "hyp = %a\n%!" (prf_data []) hyp;
 *)
   let ice, s = Subst.freeze_uv i s in
-  (* This has to be understood *)
-  let s = Subst.set_sub i (mkApp (L.cons ice 
-    (L.of_list (List.filter (fun h -> not(List.mem h ht)) hvs)))) s in
+  let ice_args = L.filter (fun h -> not(List.exists (LP.equal h) ht)) hvs in
+  let s = Subst.set_sub i (mkApp (L.cons ice ice_args)) s in
   let s =
-    try unify h_hvs p s
+    try unify h_hvs hyp s
     with UnifFail err -> 
        Format.eprintf "*** bubble up: delif fails: %s@\nproblem: @[%a@]\n%!"
-         (Lazy.force err) (fun fmt b -> print_unif_prob s "=" h_hvs b fmt) p;
+         (Lazy.force err) (fun fmt b -> print_unif_prob s "=" h_hvs b fmt) hyp;
        raise NoClause
   in
   let abstracted, s =
-    if List.length hvs = 0 then Red.nf h s
+    if L.len hvs = 0 then Red.nf h s
     else let h, s = Red.nf h s in mkSigma 0 h, s in
 (*   Format.eprintf "NEW META: %a\n%!" (prf_clause []) abstracted; *)
   (0, k, abstracted,CN.fresh()), s
