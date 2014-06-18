@@ -34,7 +34,13 @@ END
 ELSE
 EXTEND
   expr:
-     [ [ "TRACE"; c = expr LEVEL "simple"; e = expr LEVEL "simple"; b = SELF ->
+     [ [ "TRACE";
+         depth =
+           [ i = V TILDEIDENT -> <:expr< ~{$_:i$} >>
+           | i = V TILDEIDENTCOLON; e = expr LEVEL "simple" ->
+               <:expr< ~{$_:i$ = $e$} >>
+           | -> <:expr< ?depth:None >> ];
+          c = expr LEVEL "simple"; e = expr LEVEL "simple"; b = SELF ->
          <:expr< $b$ >> ]
      | [ "SPY"; n = expr LEVEL "simple"; c = expr LEVEL "simple";
                                          x = expr LEVEL "simple" ->
