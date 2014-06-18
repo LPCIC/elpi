@@ -5,6 +5,8 @@
 
 open Lpdata
 
+exception NOT_A_PU (* for debuggin only *)
+
 exception UnifFail of string lazy_t
 val unify : LP.data -> LP.data -> Subst.subst -> Subst.subst
 
@@ -12,7 +14,9 @@ val unify : LP.data -> LP.data -> Subst.subst -> Subst.subst
 exception NoClause
 
 type continuation
-type result = LP.goal * LP.data list * Subst.subst * LP.goal list * continuation
+type result =
+ LP.goal * LP.data list * Subst.subst *
+  (LP.goal * LP.program) list * continuation
 
 val run_dls : LP.program -> LP.goal -> result
 val next: continuation -> result
@@ -21,4 +25,4 @@ val next: continuation -> result
 val run : LP.program -> LP.goal -> LP.goal * Subst.subst
 
 val register_custom :
-  string -> (LP.data -> Subst.subst -> int -> LP.program -> Subst.subst) -> unit
+  string -> (LP.data -> Subst.subst -> Subst.subst) -> unit

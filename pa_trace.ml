@@ -7,17 +7,23 @@ open Pcaml
 IFDEF TRACE THEN
 EXTEND
   expr:
-     [ [ "TRACE"; c = expr LEVEL "simple"; e = expr LEVEL "simple"; b = SELF ->
+          [ [ "TRACE";
+              depth =
+                [ i = V TILDEIDENT -> <:expr< ~{$_:i$} >>
+                | i = V TILDEIDENTCOLON; e = expr LEVEL "simple" ->
+                    <:expr< ~{$_:i$ = $e$} >>
+                | -> <:expr< ?depth:None >> ];
+              c = expr LEVEL "simple"; e = expr LEVEL "simple"; b = SELF ->
          <:expr<
            let wall_clock = Unix.gettimeofday () in
            do { 
-             Trace.enter $c$ $e$;
+             Trace.enter $c$ $depth$ $e$;
              try
                let rc = $b$ in do {
-               Trace.exit $c$( Unix.gettimeofday () -. wall_clock);
+               Trace.exit $c$ $depth$ (Unix.gettimeofday () -. wall_clock);
                rc }
              with [ e -> do {
-               Trace.exit $c$ ~e (Unix.gettimeofday () -. wall_clock);
+               Trace.exit $c$ $depth$ ~e (Unix.gettimeofday () -. wall_clock);
                raise e } ] } >> ]
      | [ "SPY"; n = expr LEVEL "simple"; c = expr LEVEL "simple";
                                          x = expr LEVEL "simple" ->

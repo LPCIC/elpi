@@ -108,7 +108,7 @@ let test_whd () =
   let test ?(nf=false) a b =
     let t = LP.parse_data a in
     let s = Subst.empty 0 in
-    let t' = if nf then Red.nf s t else fst(Red.whd s t) in
+    let t', s = if nf then Red.nf t s else Red.whd t s in
     let t'' =  LP.parse_data b in
     Format.eprintf "@[<hv2>whd: @ %a@ ---> %a@]@\n%!"
       (LP.prf_data []) t (LP.prf_data []) t';
@@ -125,7 +125,6 @@ let test_whd () =
   test "(x/ y/ x) (x/y/ x x y) b c" "y/c c y";
   test ~nf:true "(x/ y/ z/ t/ x r y) (x/y/ x x y) b" "x/y/r r b";
   test "(x/ y/ z/ t/ x r y) (x/y/ x x y) b c c" "r r b";
-   (*Trace.init ~where:("whd",1,1000) ~filter_out:["rdx";(*"push.*";"epush.*";*)"unif";"bind";"t$";"vj$";(*"rule";"whd";*)(*"hv";*)"premise";(*"psusp";*)"skipped"] ~verbose:false true; *)
   test " (x/(y/z/ y) t1 t2) t3" "t1";
   test " (x/(y/z/ [y,z]) c1 c2) X1" "[c1,c2]";
   ;;
@@ -137,15 +136,19 @@ let test_unif () =
       let s = unify x y (Subst.empty 100) in
       Format.eprintf "@[<hv3>unify: %a@ @[<hv0>=== %a@ ---> %a@]@]@\n%!"
         (LP.prf_data []) x (LP.prf_data []) y Subst.prf_subst s;
-      let x, y = Red.nf s x, Red.nf s y in
+      let x, s = Red.nf x s in let y, s = Red.nf y s in
       if not (LP.equal x y) then begin
-        Format.eprintf "@[<hv3>bad unified: %a@ =/= %a@]@\n%!"
+        Format.eprintf "@[<hv3>bad unifier: %a@ =/= %a@]@\n%!"
           (LP.prf_data []) x (LP.prf_data []) y;
         exit 1;
       end
-    with Lprun.UnifFail s when not b -> 
+    with
+    | Lprun.UnifFail s when not b -> 
       Format.eprintf "@[<hv3>unify: %a@ @[<hv0>=/= %a@ ---> %s@]@]@\n%!"
-        (LP.prf_data []) x (LP.prf_data []) y (Lazy.force s) in
+        (LP.prf_data []) x (LP.prf_data []) y (Lazy.force s)
+    | Lprun.NOT_A_PU when not b -> 
+      Format.eprintf "@[<hv3>unify: %a@ @[<hv0>=/= %a@ ---> %s@]@]@\n%!"
+        (LP.prf_data []) x (LP.prf_data []) y "not a PU" in
   test true "X a1^1" "a1^1";
   test false "X a" "a";
   test false "X a1^1 a1^1" "b";
@@ -174,7 +177,10 @@ let test_unif () =
   test true  "[a,b,c|X]" "a :: b :: c :: X";
   test false "[]" "[x|B]";
   test true "foo X (X c)" "foo X (@Y L)";
+  test true "foo X (X c)" "foo X (?Y L)";
+  test false "foo X (X c)" "foo X (#Y L)";
   test true "foo X (X c1 c2) [c1,c2]" "foo X (@Y L) L";
+  test true "foo X (X c1 c2) [c2,c1]" "foo X (L Y@) L";
   test false "foo X (X c1 c2) [c1]" "foo X (@Y L) L";
 ;;
 
@@ -189,10 +195,12 @@ let test_coq () =
 let test_parse () =
   let test_p s =
     let p = LP.parse_program s in
-    Format.eprintf "@[<hv2>program:@ %a@]@\n%!" LP.prf_program p in
+    Format.eprintf "@[<hv2>program:@ %a@]@\n%!"
+      (LP.prf_program ~compact:false) p in
   let test_g s =
     let g = LP.parse_goal s in
     Format.eprintf "@[<hv2>goal:@ %a@]@\n%!" (LP.prf_goal []) g in
+  test_p "copy.";
   test_p "copy c d.";
   test_p "copy (foo c) d.";
   test_p "copy (foo c) ((pi x\\ y) = x).";
@@ -213,12 +221,13 @@ let test_prog p g =
  try
   let p = LP.parse_program p in
   let g = LP.parse_goal g in
-  Format.eprintf "@[<hv2>program:@ %a@]@\n%!" LP.prf_program p;
+  Format.eprintf "@[<hv2>program:@ %a@]@\n%!"
+    (LP.prf_program ~compact:false) p;
   let g, s = run p g in
   Format.eprintf
     "@\n@[<hv2>output:@ %a@]@\n@[<hv2>nf out:@ %a@]@\n@[<hv2>subst:@ %a@]@\n%!"
     (LP.prf_goal []) (Subst.apply_subst_goal s g) 
-    (LP.prf_goal []) (LP.map_premise (Red.nf s) g)
+    (LP.prf_goal []) (fst(Red.nf g s))
     Subst.prf_subst s;
  with Stream.Error msg ->
    Format.eprintf "@[Parse error: %s@]@\n%!" msg
@@ -239,7 +248,6 @@ let test_copy () =
 ;;
 
 let test_list () =
-(*     Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";"epush.*";(*"unif";"bind";"t$";"vj$";*)"rule";"whd";"hv";"premise";"psusp";"skipped"] ~verbose:false true; *)
   test_prog "
     rev [] [].
     rev [X|Y] T :- rev Y Z, rcons X Z T.
@@ -264,7 +272,6 @@ let test_aug () =
 
 let test_back () =
   test_prog " foo X :- bar.  foo X :- X = a." "foo a";
-(*   Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";"epush.*";"unif";"bind";"t$";"vj$";"rule";"whd";(*"hv";"premise";*)"psusp";"skipped"] ~verbose:false true;  *)
   test_prog " go X :- pi w/ sigma A/ A = X w." "go X";
 ;;
 
@@ -886,14 +893,15 @@ let _ =
   } in
   Gc.set tweaked_control;
   set_terminal_width ();
-  register_custom "print" (fun t s _ _ ->
-    let t = Red.nf s t in
+  let _ = Trace.parse_argv Sys.argv in
+  register_custom "print" (fun t s ->
+    let t, s = Red.nf t s in
     (match LP.look t with
     | LP.Ext t when isString t -> Format.eprintf "%s%!" (getString t)
     | _ -> Format.eprintf "%a%!" (LP.prf_data []) t);
     s);
-  register_custom "is_flex" (fun t s _ _ ->
-    let t, s = Red.whd s t in
+  register_custom "is_flex" (fun t s ->
+    let t, s = Red.whd t s in
     match LP.look t with
     | LP.Uv _ -> s
     | _ -> raise NoClause);
@@ -901,14 +909,13 @@ let _ =
   test_LPdata ();
   test_parse ();
   test_whd ();
-(*   test_unif (); *)
+  test_unif ();
   test_coq ();
   test_copy ();
   test_list ();
   test_aug ();
   test_custom ();
   test_back ();
-(*     Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";(*"epush.*";*)"unif";"bind";"t$";"vj$";"rule";"whd";(*"hv";*)"premise";"psusp";"skipped"] ~verbose:false true;  *)
   test_pi ();
 (*   test_refiner (); *)
   test_typeinf ();

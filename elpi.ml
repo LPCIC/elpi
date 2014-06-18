@@ -10,6 +10,90 @@ let set_terminal_width () =
   Format.pp_set_max_boxes Format.err_formatter 30;
 ;;
 
+let type_err name exp got =
+  Format.eprintf "Wrong call to %s, %s expected, got %a\n%!"
+    name exp (LP.prf_data []) got; exit 1
+
+let protect f x = try f x with UnifFail _ -> raise NoClause
+
+let check_list2 name t =
+  match LP.look t with
+  | LP.Seq (l,tl) when L.len l = 2 && LP.equal tl LP.mkNil -> L.hd l, L.get 1 l
+  | _ -> type_err name "list of len 2" t
+
+let check_string name t =
+  match LP.look t with
+  | LP.Ext x when isString x -> getString x
+  | _ -> type_err name "string" t
+
+let extern_kv name f =
+  register_custom name (fun t s ->
+    let t, s = Red.nf t s in
+    let k, v = check_list2 name t in
+    let k = check_string name k in
+    protect (f k v) s)
+;;
+
+let extern_k name f =
+  register_custom name (fun t s ->
+    let t, s = Red.nf t s in
+    let k = check_string name t in
+    protect (f k) s)
+;;
+
+let register_trace () =
+  extern_kv "trace_counter" (fun name value s ->
+    let n = Trace.get_cur_step name in
+    protect (unify (LP.mkExt (mkString (string_of_int n))) value) s)
+;;
+
+let register_imperative_counters () =
+  let module M = Map.Make(struct type t = string let compare = compare end) in
+  let counters = ref M.empty in
+  extern_k "incr" (fun name s ->
+    try counters := M.add name (M.find name !counters + 1) !counters; s
+    with Not_found -> counters := M.add name 1 !counters; s);
+  extern_k "reset" (fun name s -> counters := M.add name 0 !counters; s);
+  extern_kv "get" (fun name value s ->
+    let n = try M.find name !counters with Not_found -> 0 in
+    protect (unify (LP.mkExt (mkString (string_of_int n))) value) s)
+;;
+
+let register_exit_abort () =
+  let aborts = ref 0 in
+  extern_k "abort" (fun text s ->
+    incr aborts; if !aborts = int_of_string text then exit 1 else s);
+  extern_k "exit" (fun text s -> exit (int_of_string text));
+;;
+
+let register_parser () =
+  extern_kv "parse" (fun text value s ->
+    protect (unify (LP.parse_data text) value) s);
+  register_custom "read" (fun t s ->
+    let input = input_line stdin in
+    protect (unify (LP.mkExt (mkString input)) t) s);
+;;
+
+let register_print () =
+  let print_atom s t =
+    let unescape s =
+      Str.global_replace (Str.regexp_string "\\n") "\n"
+      (Str.global_replace (Str.regexp_string "\\t") "\t"
+        s) in
+    let t, s = Red.nf t s in
+    match LP.look t with
+    | LP.Ext t  when isString t ->
+        Format.eprintf "%s%!" (unescape (getString t))
+    | _ -> Format.eprintf "%a%!" (LP.prf_data []) t in
+  register_custom "print" (fun t s -> print_atom s t; s);
+  register_custom "printl" (fun t s ->
+    let t, s = Red.nf t s in
+    match LP.look t with
+    | LP.Seq(l,_) ->
+        List.iter (print_atom s) (L.to_list l); Format.eprintf "\n%!"; s
+    | _ -> type_err "printl" "list" t);
+;;
+
 let _ = Printexc.record_backtrace true
 let _ =
   let control = Gc.get () in
@@ -19,52 +103,21 @@ let _ =
   } in
   Gc.set tweaked_control;
   set_terminal_width ();
-  register_custom "print" (fun t s _ _ ->
-    let unescape s = Str.global_replace (Str.regexp_string "\\n") "\n" s in
-    let t = Red.nf s t in
-    (match LP.look t with
-    | LP.Ext t  when isString t ->
-        Format.eprintf "%s%!" (unescape (getString t))
-    | _ -> Format.eprintf "%a%!" (LP.prf_data []) t);
-    s);
-  register_custom "is" (fun t s _ _ ->
-    let t = Red.nf s t in
-    match LP.look t with
-    | LP.App l when L.len l = 3 ->
-        if LP.equal (L.get 1 l) (L.get 2 l) then s else raise NoClause
-    | _ -> assert false);
-  register_custom "is_flex" (fun t s _ _ ->
-    let t, s = Red.whd s t in
+  register_print ();
+  register_custom "is_flex" (fun t s ->
+    let t, s = Red.whd t s in
     match LP.look t with
     | LP.Uv _ -> s
     | LP.App xs ->
         (match LP.look (L.hd xs) with LP.Uv _ -> s | _ -> raise NoClause)
     | _ -> raise NoClause);
-  let aborts = ref 0 in
-  register_custom "abort" (fun t s _ _ ->
-    incr aborts;
-    (match LP.look t with
-    | LP.Ext t when isString t ->
-         if !aborts = int_of_string (getString t) then exit 1 else s
-    | _ -> assert false));
-  register_custom "parse" (fun t s _ _ ->
-    let t, s = Red.whd s t in
-    match LP.look t with
-    | LP.Seq (l,_) when L.len l = 2 ->
-        let hd, s = Red.whd s (L.hd l) in
-        (match LP.look hd with
-        | LP.Ext x when isString x ->
-            let input = getString x in
-            (try unify (LP.parse_data input) (L.get 1 l) s
-            with
-            | UnifFail _ ->
-                prerr_endline "parsing in the wrong ctx?";raise NoClause
-            | Stream.Error msg -> prerr_endline msg; raise NoClause)
-        | _ -> assert false)
-    | _ -> assert false);
-  register_custom "read" (fun t s _ _ ->
-    let input = input_line stdin in
-    unify (LP.mkExt (mkString input)) t s);
+  register_exit_abort ();
+  register_imperative_counters ();
+  register_trace ();
+  register_parser ();
+  register_custom "zero_level" (fun t s ->
+    let h, s = Subst.fresh_uv 0 s in
+    protect (unify t h) s);
 ;;
 
 let test_prog p g =
@@ -83,15 +136,16 @@ let test_prog p g =
      Subst.prf_subst s;*)
    Format.eprintf
      "@\n@[<hv2>input:@ %a@]@\n%!"
-     (LP.prf_goal []) (Red.nf (Subst.empty 0) g);
+     (LP.prf_goal []) (fst(Red.nf g (Subst.empty 0)));
    List.iter (fun x ->
-    Format.eprintf
-     "@[<hv2>%a@ = %a@]@\n%!" (LP.prf_data []) x (LP.prf_data []) (Red.nf s x))
+    Format.eprintf "@[<hv2>%a@ = %a@]@\n%!"
+     (LP.prf_data []) x (LP.prf_data []) (fst(Red.nf x s)))
      assignments;
-   List.iter (fun g ->
-    Format.eprintf
-     "@[<hv2>delay:@ %a@]@\n%!"
-     (LP.prf_goal []) (LP.map_premise (Red.nf s) g)) dgs;
+   List.iter (fun (g,eh) ->
+    Format.eprintf "delay: @[<hv>%a@ |- %a@]\n%!"
+     (LP.prf_program ~compact:false)
+     (List.map (function i,k,p,u -> i,k,fst(Red.nf p s),u) eh)
+     (LP.prf_goal []) (fst(Red.nf g s))) dgs;
    Printf.printf "next? (Y/n)> %!";
    let l = input_line stdin in
    if l = "y" || l = "" then
@@ -107,11 +161,12 @@ let test_prog p g =
 ;;
 
 let _ =
-  for i=1 to Array.length Sys.argv - 1 do
-    Printf.eprintf "running with %s\n" Sys.argv.(i);
+  let argv = Trace.parse_argv Sys.argv in
+  for i=1 to Array.length argv - 1 do
+    Printf.eprintf "running with %s\n" argv.(i);
     let p =
       let b = Buffer.create 1024 in
-      let ic = open_in Sys.argv.(i) in
+      let ic = open_in argv.(i) in
       try
         while true do Buffer.add_string b (input_line ic^"\n") done;
         assert false
@@ -119,7 +174,7 @@ let _ =
     let g =
       Printf.printf "goal> %!";
       input_line stdin in
-    (*Trace.init ~where:("run",1,1000) ~filter_out:["rdx";"push.*";"epush.*";"unif";"bind";"isPU";"mksubst";"t$";"vj$";"rule";"whd";"hv";"premise";"psusp";"skipped";"substitu.*";"Pruning";"delay";"sub";(*"try";"backtrack"*)] true;*)
     test_prog p g
-  done
+  done;
+  Trace.quit ()
 

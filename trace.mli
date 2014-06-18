@@ -3,15 +3,17 @@
 (* license: GNU Lesser General Public License Version 2.1                    *)
 (* ------------------------------------------------------------------------- *)
 
-val enter : string ->  (Format.formatter -> unit) -> unit
+val enter : string -> ?depth:int -> (Format.formatter -> unit) -> unit
 val print : string -> (Format.formatter -> 'a -> unit) -> 'a -> unit
-val exit : string -> ?e:exn -> float -> unit
+val exit : string -> ?depth:int -> ?e:exn -> float -> unit
 
 exception Unknown
 val pr_exn : (exn -> string) -> unit
 
 val debug : bool ref
 val dverbose : bool ref
-val init :
-  ?where:(string * int * int) -> ?filter_out:string list ->
-  ?verbose:bool -> bool -> unit
+
+val get_cur_step : string -> int
+
+val parse_argv : string array -> string array
+val quit : unit -> unit
