@@ -30,13 +30,37 @@ or _ B :- B.
 
 rev L Lr :- L dummy@ = @dummy Lr.
 
-spy P :- dbgpp ["enter ",P], P, !, dbgpp ["exit ",P].
-spy P :- dbgpp ["fail ",P].
+spy P :- dbgpp ["----<<---- enter: ",P], P, !, dbgpp ["---->>---- exit: ",P].
+spy P :- dbgpp ["---->>---- fail: ",P].
+
+hide P :- ((debug :- !, false) => P).
 
 rigid T :- not($is_flex T).
 
 mem X [X|_] :- !.
 mem X [_|XS] :- mem X XS.
+
+list2 F [] [].
+list2 F [X|XS] [Y|YS] :- F X Y, list2 F XS YS.
+
+/* ====================== type inference helpers ========================== */
+
+:pp-whd < _: whd I _ :- dbgpp[whd I], fail.
+
+whd (app [X]) Y :- !, whd X Y.
+whd (app [HD,A|Rest]) X :- !,
+  whd HD HDRed,
+  if (HDRed = lam _ F)
+     (subst F A Rest Reduct, whd Reduct X)
+     (X = app [HDRed,A|Rest]).
+whd (rec T N B R) X :- !,
+  whd N RedN,
+  if (RedN = app [atom succ,M]) (whd (app [R,M,rec T M B R]) X)
+     (if (RedN = atom zero) (X = B) (X = rec T RedN B R)).
+whd (atom ID) Body :- body ID Body.
+whd X X.
+
+whd-progress X Y :- whd X Y, not(X = Y).
 
 /* ========================== type inference ============================== */
 
@@ -44,10 +68,12 @@ mem X [_|XS] :- mem X XS.
 %    ./elpi -trace-on -trace-at run 1673 1700 -trace-only 'run' refiner.elpi
 :of-pp < _: of M TY T :- dbgpp [of M TY T], false.
 
+of (app [T]) TY T1 :- !, of T TY T1.
+
 :of-LAM-BIDIR:
 of (lam S F) TY (lam S2 F2) :-
   rigid TY,
-  TY = prod S2 T, % CSC: whd missing here!
+  whd TY (prod S2 T),
   !,
   of S set S3,
   unify S2 S3,
@@ -61,9 +87,10 @@ of T ExpTY NewT :- rigid ExpTY, !, of T InfTY RT, coerce RT InfTY ExpTY NewT.
 :coerce-pp < _: coerce T TyA TyE W :- dbgpp [coerce T TyA TyE W], false.
 
 coerce T TyA TyE T :- unify TyA TyE.
-coerce T (app (lam _ F) N) TyE W :- % CSC: whd required because we infer redexes
-  subst F N TyA, coerce T TyA TyE W.
-coerce T (atom nat) (atom z) (app (atom nat_to_z) T).
+coerce T (app [lam _ F,N|A]) TyE W :-
+  % CSC: whd required because we infer redexes
+  subst F N A TyA, coerce T TyA TyE W.
+coerce T (atom nat) (atom z) (app [atom nat_to_z, T]).
 
 of hole TY T :- delay TY (of TY set TY), delay T (of T TY T).
 
@@ -73,13 +100,21 @@ of (lam S F) (prod S2 T) (lam S2 F2) :-
 of (prod S F) set (prod S2 F2) :-
   of S set S2, pi x\ (of x S2 x :- !) => unify x x => of (F x) set (F2 x).
 
-of (app M1 N1) Z (app M2 N2) :-
-  of M1 TM1 M2,
-  of (prod hole x\hole) _ TM2,
-  unify TM1 TM2,
-  TM2 = prod TY1 F,
-  of N1 TY1 N2,
-  subst F N2 Z.
+of (app [T|U]) TyV V :- !, of T TyT T1, eat-prod T1 [] TyT U V TyV.
+
+:eat-prod-pp < _: eat-prod T XS TY A _ _ :- dbgpp [eat-prod T XS TY A], false.
+
+eat-prod T XS TY []     V TyV :- rev XS Args, V = app [T| Args], TyV = TY.
+eat-prod T XS TY [U|US] V TyV :-
+  whd TY WhdTY,
+  if (WhdTY = prod Src Tgt)
+    (of U Src U1,
+     eat-prod T [U1|XS] (Tgt U1) US V TyV)
+    (assert(WhdTY = #M _),
+     of U TyU U1,
+     of (prod TyU x\hole) _ Prod, Prod = prod _ Tgt,
+     eat-prod T [U1|XS] (Tgt U1) US V TyV,
+     unify WhdTY Prod).
 
 % CSC: non dependent recursion
 of (rec Rty N Base Step) Rty2 (rec Rty2 N2 Base2 Step2) :-
@@ -97,7 +132,8 @@ rof T TY :- dbgpp ["retyping failed for ",T," : ",TY,"\naborting"], $abort "1".
 
 /* ===================== unification helpers ============================== */
 
-subst Where What Out :- Where What = Out.
+subst Where What Rest Out :-
+  if (Rest = []) (Out = Where What) (Out = app [Where What|Rest]).
 
 % delift M Seq Args Term DeliftedTerm [].  delifts Term w.r.t. Args for M (that
 % must not occur in Term) whose canonical context is Seq
@@ -115,7 +151,7 @@ delift OC [T|TS] [L|LS] M NewM BL :-
 % with Term.  If M is found, then fails (occur check)
 gr-o-cp OC BL M NewM :- or (grab OC BL M NewM) (copy OC BL M NewM).
 
-:grab-pp < _: grab OC L M N :- dbgpp [grab OC L M N], false.
+:grab-pp < _: grab OC L M _ :- dbgpp [grab OC L M], false.
 
 :grab-OCCUR-CHECK:
 grab M L (#M _) _ :- !, false.
@@ -136,10 +172,11 @@ grab OC L (#M L1) NewT :- !,
 grab _ [bind Name A|Tl] T NewT :- unify A T, NewT = Name.
 grab OC [_|Tl] T NewT :- grab OC Tl T NewT.
 
+:copy-pp < _: copy OC L M _ :- dbgpp [copy OC L M], false.
+
 copy OC _ (atom A) (atom A).
 copy OC _ set set.
-copy OC L (app M1 M2) (app N1 N2) :-
-  gr-o-cp OC L M1 N1, gr-o-cp OC L M2 N2.
+copy OC L (app MS) (app NS) :- list2 (gr-o-cp OC L) MS NS.
 copy OC L (lam S1 F1) (lam S2 F2) :- gr-o-cp OC L S1 S2,
   pi c\ unify c c => (of c S2 c :- !) => grab OC [] c c =>
     % TASSI: should the hyp be (of c S1) or (of c S2) ?
@@ -206,18 +243,18 @@ unif ff N (#M L) :- !,
   sequent_of M L Seq [], delift M Seq L N NewM [], assign M NewM.
 
 :u-LAM-INTRO: % on the fly lambda intro
-unif _ T (app (#M L1) A) :- !,
+unif _ T (app [#M L1,A|Rest]) :- !,
  rof A Ty,
  of (lam Ty x\ hole) _ G,
  unify (@M L1) G,
- unify T (app G A).
+ unify T (app [G,A|Rest]).
 
 :u-ATOM:
 unif ff set set :- !.
 unif ff (atom A) (atom A) :- !.
 
 :u-APP-APP-SAME-HD: % contextual closure + heuristic (no !, hence we may reduce)
-unif ff (app H A) (app K B) :- unify H K, unify A B.
+unif ff (app AS) (app BS) :- list2 unify AS BS.
 unif ff (rec A1 B1 C1 D1) (rec A2 B2 C2 D2) :-
   unify A1 A2, unify B1 B2, unify C1 C2, unify D1 D2.
 
@@ -227,13 +264,8 @@ unif ff (lam S F) (lam T G) :- !,
 unif ff (prod S F) (prod T G) :- !,
   unify S T, pi x\ (of x S x :- !) => unify x x => unify (F x) (G x).
 
-:u-WHD: % BUG: redex may be deep, to fix with n-ary app; BUG: = is weak, use whd
-unif _ (app (app L A) M) X :- L = lam _ x\ (lam _ y\ F x y), !, unify (F A M) X.
-unif _ (app L M) X :- L = lam _ F, !, subst F M Y, unify Y X.
-unif _ (atom ID) B :- body ID C, !, unify C B.
-unif _ (rec _ N B R) X :- N = atom zero, !, unify B X. % BUG = is weak
-unif _ (rec T N B R) X :-
-  N = app (atom succ) M, !, unify (app (app R M) (rec T M B R)) X.
+:u-WHD:
+unif _ X Y :- whd-progress X Z, !, unify Z Y.
 
 :u-SWAP: % we swap lhs and rhs, but only once
 unif ff A B :- unif tt B A.
@@ -247,14 +279,14 @@ env nat set.
 env z set.
 env nat_to_z (prod (atom nat) (x\ atom z)).
 env vect (prod (atom nat) (x\ set)).
-env vnil (app (atom vect) (atom zero)).
-env vcons (prod (atom nat) (n\ prod (app (atom vect) n) (w\ app (atom vect) (app (atom succ) n)))).
+env vnil (app [atom vect,atom zero]).
+env vcons (prod (atom nat) (n\ prod (app [atom vect,n]) (w\ app [atom vect,app [atom succ,n]]))).
 
 body plus (lam (atom nat)
              (n\ (rec (prod (atom nat) (x\ (atom nat))) n
                    (lam (atom nat) (x\ x))
                    (lam (atom nat) m\ lam (prod (atom nat) (x\ (atom nat))) acc\
-                      lam (atom nat) (n\ app (atom succ) (app acc n)))))).
+                      lam (atom nat) (n\ app [atom succ, app [acc,n]]))))).
 
 /* ============================ testsuite ================================= */
 % usage:
@@ -266,25 +298,24 @@ suite TEST t1 "1" :- % runnin of twice in a row should work
 suite TEST t2 "1" :- % typing a pi
   TEST = (of (prod (atom nat) x\ hole) TY T).
 suite TEST t3 "1" :- % meta/meta unif w pruning: ?X[] = ?Y[v]
-  TEST = (of (lam (atom nat) x\ app (atom succ) hole) TY T,
-          of (app (atom succ) hole) TY1 W,
-          dbgpp["before ",T],expect [(T=lam _ (x\app _ (#F1 (A1 x))),A1=x\[x])],
-          unify (app T (atom zero)) W,
-          dbgpp["after  ",T],expect [(T=lam _ (x\app _ (#F2 (A2 x))),A2=x\[])]).
+  TEST = (of (lam (atom nat) x\ app [atom succ, hole]) TY T,
+          of (app [atom succ, hole]) TY1 W,
+          dbgpp["before ",T],expect [(T=lam _ (x\app [_,#F1 (A1 x)]),A1=x\[x])],
+          unify (app [T,atom zero]) W,
+          dbgpp["after  ",T],expect [(T=lam _ (x\app [_,#F2 (A2 x)]),A2=x\[])]).
 suite TEST t3-2 "2" :- % meta/meta unif w pruning: ?X[v,r] = ?Y[v,s]
-  TEST = (of (lam (atom nat) x\ lam (atom nat) y\ app (atom succ) hole) _ T1,
-          of (lam (atom nat) x\ lam (atom nat) y\ app (atom succ) hole) _ T2,
+  TEST = (of (lam (atom nat) x\ lam (atom nat) y\ app [atom succ, hole]) _ T1,
+          of (lam (atom nat) x\ lam (atom nat) y\ app [atom succ, hole]) _ T2,
           dbgpp ["before ",T1],
-          expect [(T1=lam _ x\lam _ y\app _ (#F1 (A1 x y)),A1=x\y\[y,x])],
+          expect [(T1=lam _ x\lam _ y\app [_,#F1 (A1 x y)],A1=x\y\[y,x])],
           pi x\ pi y\ of x (atom nat) x => of y (atom nat) y =>
-          unify (app (app T1 (atom zero)) x)
-                (app (app T2 (atom zero)) y),
+          unify (app [T1, atom zero, x]) (app [T2, atom zero, y]),
           dbgpp ["after  ",T1],
-          expect [(T1=lam _ x\ lam _ y\ app _ (#F2 (A2 x y)),A2=x\y\[x]),
-                  (T1=lam _ x\ lam _ y\ app _ (#F2 (A2 x y)),A2=x\y\[])]).
+          expect [(T1=lam _ x\ lam _ y\ app [_, #F2 (A2 x y)],A2=x\y\[x]),
+                  (T1=lam _ x\ lam _ y\ app [_, #F2 (A2 x y)],A2=x\y\[])]).
 suite TEST t3-3 "4" :- % meta/meta unif with dependent type
   TEST = ((pi c\ unify c c => of c (atom nat) c =>
-           pi d\ unify d d => of d (app (atom vect) c) d =>
+           pi d\ unify d d => of d (app [atom vect, c]) d =>
             of hole (TY c d) (X c d)),
           unify (X (atom zero) (atom vnil)) (X (atom zero) (atom vnil)),
           dbgpp ["X=",X],
@@ -294,36 +325,67 @@ suite TEST t3-3 "4" :- % meta/meta unif with dependent type
                   (X = x\y\#F (L x y),L=x\y\[x])]).
 suite TEST t3-4 "2" :- % meta/meta unif with dependent type + restriction
   TEST = ((pi c\ unify c c => of c (atom nat) c =>
-           pi d\ unify d d => of d (app (atom vect) c) d =>
+           pi d\ unify d d => of d (app [atom vect, c]) d =>
             of hole (TY c d) (X c d)),
-          (pi vn \ unify vn vn => of vn (app (atom vect) atom zero) vn =>
+          (pi vn \ unify vn vn => of vn (app [atom vect, atom zero]) vn =>
             unify (X (atom zero) (atom vnil)) (X (atom zero) vn)),
           expect [(X=x\y\#F (L x y),L=x\y\[]),(X=x\y\#F (L x y),L=x\y\[x])]).
 suite TEST t4 "1" :-
   TEST = (of hole TY1 T1, unify TY1 (atom nat), of hole TY2 T2, unify TY2 set).
 suite TEST t5 "1" :-
   TEST = (of (lam hole (x\ x)) (prod (atom nat) x\ atom z) X,
-          dbgpp ["X=",X], expect [X=lam _ x\ app (atom nat_to_z) x]).
+          dbgpp ["X=",X], expect [X=lam _ x\ app [atom nat_to_z, x]]).
 suite TEST t6 "2" :-
-  TEST = (of hole _ X, unify (app X (atom zero)) (atom zero),
+  TEST = (of hole _ X, unify (app [X, atom zero]) (atom zero),
           dbgpp ["X=",X], expect [(X=lam _ x\ x), (X=lam _ x\ (atom zero))]).
 suite TEST t7 "3" :- % delift
   TEST = (of (lam (atom nat) x\ lam (atom nat) y\ hole) _ X,
-          unify (app (app X (atom zero)) (atom zero)) (atom zero),
+          unify (app [X, atom zero,atom zero]) (atom zero),
           dbgpp ["X=",X],expect [(X=lam _ x\lam _ y\ x), (X=lam _ x\lam _ y\ y),
                                (X=lam _ x\lam _ y\ atom zero)]).
 suite TEST t7-2 "1" :- % delift occur check
   TEST = (of (lam (atom nat) x\ lam (atom nat) y\ hole) _ X,
-          not (unify (app (app X (atom zero)) (atom zero)) X)).
+          not (unify (app [X, atom zero, atom zero]) X)).
 suite TEST t7-3 "2" :- % delift  + restriction
   TEST = (of (lam (atom nat) y\ hole) _ (lam _ X),
           of (lam (atom nat) y\ hole) _ (lam _ X1),
           of (lam (atom nat) y\ hole) _ Y,
           pi c\ unify c c => (of c (atom nat) c :- !) =>
-            unify (app Y (atom zero)) (app (atom succ) (X (X1 c))),
+            unify (app [Y, atom zero]) (app [atom succ, X (X1 c)]),
           dbgpp ["X=",X,"\nX1=",X1,"\nY=",Y],
           expect [(X = w\ #F1 (A1 w), A1=w\[w], X1 = w\ #F2 (A2 w), A2=w\[]),
                   (X = w\ #F1 (A1 w), A1=w\[],  X1 = w\ #F2 (A2 w), A2=w\[w])]).
+suite TEST t8 "1" :- % whd
+  TEST = (SUCC = atom succ, ZERO = atom zero, NAT = atom nat,
+          N2 = app [SUCC,app[SUCC,ZERO]],
+          MkPi = lam NAT n\rec set n NAT (lam NAT m\lam set ty\ prod NAT w\ ty),
+          (pi f\ of f (app [MkPi,N2]) f => of (app [f,ZERO,ZERO]) NAT (Y f))).
+% suite TEST t8-1 "1" :- % flex head, BROKEN bubble-up, too many hvs
+%   TEST = (NAT = atom nat,
+%           (pi c1\ pi c2\ pi c3\ pi t1\ pi t2\
+%             of t1 (prod NAT x\set) t1 =>
+%             of t2 (prod NAT x\ prod (app [t1,x]) y\set) t2 =>
+%             of c1 NAT c1 =>
+%             of c2 (app [t1,c1]) c2 => of c3 (app [t2,c1,c2]) c3 =>
+%             unify c1 c1 => unif1 c2 c2 => unify c3 c3 =>
+%             unify t1 t1 => unify t2 t2 =>
+%             copy c1 c1 => unif1 c2 c2 => copy c3 c3 =>
+%             copy t1 t1 => copy t2 t2 =>
+%             sigma T\sigma TY\
+%               of (lam hole f\ app [f,c1,c2,c3]) TY T,
+%               pp["T=",T])).
+suite TEST t8-2 "4" :- % flex head
+  TEST = (NAT = atom nat, T1 = atom t1, T2 = atom t2, 
+          C1 = atom c1, C2 = atom c2, C3 = atom c3,
+          (%pi c1\ pi c2\ pi c3\ pi t1\ pi T2\
+            (of T1 (prod NAT x\set) T1 :- !) =>
+            (of T2 (prod NAT x\ prod (app [T1,x]) y\set) T2 :- !) =>
+            (of C1 NAT C1 :- !) =>
+            (of C2 (app [T1,C1]) C2 :- !) =>
+            (of C3 (app [T2,C1,C2]) C3 :- !) =>
+            %sigma T\sigma TY\
+              of (lam hole f\ app [atom succ,app [f,C1,C2,C3]]) TY T,
+              dbgpp["T=",T])).
 
 run T :- pp ["INFO: running ",T], T.
 run T :- pp ["ERROR: failure ",T].
@@ -361,7 +423,7 @@ expect [] :- $get["sols",S],pp["ERROR: Unexpected sol #",S],$incr "unexp",false.
 /******************** Tactics **********************/
 
 tacsem i     (lam hole (x\ hole)).
-tacsem (a M) (app M hole).
+tacsem (a M) (app [M, hole]).
 tacsem (h N) (var N).
 tacsem (r M) M.
 
