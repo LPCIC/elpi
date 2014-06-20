@@ -269,7 +269,7 @@ type objective =
   | `Unlock of data * annot_clause list
   ]
 type goal = int * objective * program * program * int
-type dgoal = data * premise * int * program * annot_clause
+type dgoal = data * premise * int * program * int * annot_clause
 type goals = goal list * dgoal list * program
 type alternatives = (subst * goals) list
 type continuation = premise * program *  alternatives
@@ -457,8 +457,8 @@ let goals_of_premise p clause depth eh lvl s =
   let gl, s = contextualize_goal depth s clause in
   List.map (fun (d,g,e) -> d,g,e@eh@p,e@eh,lvl+1) gl, s
 
-let resume p s test lvl (dls : dgoal list) =
-  list_partmapfold (fun (t,clause,depth,eh,to_purge) s ->
+let resume p s test (dls : dgoal list) =
+  list_partmapfold (fun (t,clause,depth,eh,lvl,to_purge) s ->
     if test t then None
     else
             (* FIXME: to_purge should be an id (int) *)
@@ -593,7 +593,7 @@ let rec run op s ((gls,dls,p) : goals) (alts : alternatives)
         Subst.set_sub_con hd h s, rest, dls, p, alts
     | (depth,`Resume(t,goal), _, eh,lvl as g) :: rest ->
         TRACE ~depth:lvl "run" (pr_cur_goal op g s)
-        let resumed, dls, s = resume p s (not_same_hd s t) lvl dls in
+        let resumed, dls, s = resume p s (not_same_hd s t) dls in
         let resumed, to_purge = List.split resumed in
         let resumed =
           (*let start = mk_prtg "<<resume\n" depth lvl in
@@ -608,7 +608,7 @@ let rec run op s ((gls,dls,p) : goals) (alts : alternatives)
           try
             TRACE "delay" (pr_cur_goal op g s)
             let new_hyp, s = bubble_up s t goal eh in
-            let dls = (t,goal,depth,eh,new_hyp) :: dls in
+            let dls = (t,goal,depth,eh,lvl,new_hyp) :: dls in
             s, List.map (fun (d,g,cp,eh,l) -> (* siblings are pristine *)
                  d,g,eh@(new_hyp::p),eh,l) rest, dls, new_hyp :: p,
             alts
@@ -657,7 +657,7 @@ let apply_sub_hv_to_goal s g =
 
 let return_current_result op s g dls alts =
   apply_sub_hv_to_goal (Subst.empty 0) g, collect_Uv_premise g, s,
-  List.map (fun (_,g,_,eh,_) ->
+  List.map (fun (_,g,_,eh,_,_) ->
    apply_sub_hv_to_goal s g,
    List.map (fun (i,k,c,u) -> i,k,apply_sub_hv_to_goal s c,u) eh) dls,
   (g,op,alts)
