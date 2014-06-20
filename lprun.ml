@@ -285,7 +285,7 @@ let cat_goals (a,b,p) (c,d) = a@c, b@d, p
  * when we move under other pi binders *)
 let mkhv_aux =
   let i = ref 0 in
-  fun depth -> incr i; mkCon ("𝓱"^subscript !i) depth
+  fun depth -> incr i; mkFreshCon ("𝓱"^subscript !i) depth
 let rec mkhv n d =
   if n = 0 then []
   else mkhv_aux d :: mkhv (n-1) d
@@ -337,11 +337,22 @@ let pr_cur_goals op gls fmt s =
     (fun fmt g -> pr_cur_goal op g s fmt) fmt gls;
   Format.fprintf fmt "@]" 
 
-let custom_tab = ref []
-let register_custom n f = custom_tab := ("$"^n,f) :: !custom_tab
-let custom name t s =
-  try List.assoc name !custom_tab t s
-  with Not_found -> raise(Invalid_argument ("custom "^name))
+let custom_predicate_tab = ref []
+let register_custom_predicate n f =
+  custom_predicate_tab := ("$"^n,f) :: !custom_predicate_tab
+let is_custom_predicate name =
+  List.mem_assoc name !custom_predicate_tab
+let custom_predicate name =
+  try List.assoc name !custom_predicate_tab
+  with Not_found -> raise(Invalid_argument ("custom_predicate "^name))
+let custom_control_operator_tab = ref []
+let register_custom_control_operator n f =
+  custom_control_operator_tab := ("$"^n,f) :: !custom_control_operator_tab
+let is_custom_control_operator name =
+  List.mem_assoc name !custom_control_operator_tab
+let custom_control_operator name =
+  try List.assoc name !custom_control_operator_tab
+  with Not_found -> raise(Invalid_argument ("custom_control_operator "^name))
 
 let subst t hv =
   let t1 = mkApp(L.of_list (mkBin (List.length hv) t::List.rev hv)) in
@@ -567,7 +578,7 @@ let not_in to_purge l =
 
 let sort_hyps (d,g,p,eh,lvl) = (d,g,List.sort cmp_clause p,eh,lvl)
 
-let rec run op s ((gls,dls,p) : goals) (alts : alternatives)
+let rec run op s ((gls,dls,p as goals) : goals) (alts : alternatives)
 : subst * dgoal list * alternatives
 =
   let s, gls, dls, p, alts =
@@ -632,12 +643,17 @@ let rec run op s ((gls,dls,p) : goals) (alts : alternatives)
           s, rest, dls, p, alts
         with UnifFail _ -> next_alt alts (pr_cur_goals op gls))
     | (depth,`Custom(name,a),hyps,eh,lvl as g)::rest ->
-        (try
-          TRACE ~depth:lvl "run" (pr_cur_goal op g s)
-          let s = custom name a s in
-          SPY "sub" Subst.prf_subst s;
-          s, rest, dls, p, alts
-        with UnifFail _ | NoClause -> next_alt alts (pr_cur_goals op gls))
+        if is_custom_predicate name then
+          try
+            TRACE ~depth:lvl "run" (pr_cur_goal op g s)
+            let s = custom_predicate name a s in
+            SPY "sub" Subst.prf_subst s;
+            s, rest, dls, p, alts
+          with UnifFail _ | NoClause -> next_alt alts (pr_cur_goals op gls)
+        else if is_custom_control_operator name then
+           let s,(gls,dls,p),alts = custom_control_operator name a s goals alts in
+           s, gls, dls, p, alts
+        else raise (Invalid_argument ("no custom named " ^ name))
   in
   if gls == [] then s, dls, alts
   else run op s (gls,dls,p) alts

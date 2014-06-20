@@ -27,7 +27,7 @@ let check_string name t =
   | _ -> type_err name "string" t
 
 let extern_kv name f =
-  register_custom name (fun t s ->
+  register_custom_predicate name (fun t s ->
     let t, s = Red.nf t s in
     let k, v = check_list2 name t in
     let k = check_string name k in
@@ -35,7 +35,7 @@ let extern_kv name f =
 ;;
 
 let extern_k name f =
-  register_custom name (fun t s ->
+  register_custom_predicate name (fun t s ->
     let t, s = Red.nf t s in
     let k = check_string name t in
     protect (f k) s)
@@ -69,7 +69,7 @@ let register_exit_abort () =
 let register_parser () =
   extern_kv "parse" (fun text value s ->
     protect (unify (LP.parse_data text) value) s);
-  register_custom "read" (fun t s ->
+  register_custom_predicate "read" (fun t s ->
     let input = input_line stdin in
     protect (unify (LP.mkExt (mkString input)) t) s);
 ;;
@@ -85,8 +85,8 @@ let register_print () =
     | LP.Ext t  when isString t ->
         Format.eprintf "%s%!" (unescape (getString t))
     | _ -> Format.eprintf "%a%!" (LP.prf_data []) t in
-  register_custom "print" (fun t s -> print_atom s t; s);
-  register_custom "printl" (fun t s ->
+  register_custom_predicate "print" (fun t s -> print_atom s t; s);
+  register_custom_predicate "printl" (fun t s ->
     let t, s = Red.nf t s in
     match LP.look t with
     | LP.Seq(l,_) ->
@@ -104,7 +104,7 @@ let _ =
   Gc.set tweaked_control;
   set_terminal_width ();
   register_print ();
-  register_custom "is_flex" (fun t s ->
+  register_custom_predicate "is_flex" (fun t s ->
     let t, s = Red.whd t s in
     match LP.look t with
     | LP.Uv _ -> s
@@ -115,9 +115,38 @@ let _ =
   register_imperative_counters ();
   register_trace ();
   register_parser ();
-  register_custom "zero_level" (fun t s ->
+  register_custom_predicate "zero_level" (fun t s ->
     let h, s = Subst.fresh_uv 0 s in
     protect (unify t h) s);
+  register_custom_control_operator "schedule" (fun t s (gls,dls,p) alts ->
+    let t, s = Red.nf t s in
+    let v1, v2 = check_list2 "schedule" t in
+    match dls with
+    | (key,a,depth,eh,lvl,_ as d) :: rest ->
+         Format.eprintf "------------- scheduled goal --------------@\n";
+         Format.eprintf "@[<hv 0>%a@ |- %a@]"
+           (LP.prf_program ~compact:false)
+             (List.map (fun (a,b,p,n) -> a,b,fst(Red.nf p s),n)
+               (List.filter (fun (_,k,_,_) ->
+                  match k with
+                  | LP.Flex -> false
+                  | LP.Key x -> LP.equal x (LP.mkCon "var" 0))
+                  eh))
+           (LP.prf_premise []) (fst(Red.nf a s));
+         let gl, s = goals_of_premise p v1 depth eh lvl s in
+         let g1, gl = List.hd gl, List.tl gl in
+         (match g1 with
+         | _,`Atom (k,_),_,_,_ ->
+            let s = unify key k s in
+            s,(gl @ List.tl gls, rest @ [d], p),alts
+         | _ -> raise (Invalid_argument "schedule"))
+    | [] ->
+         match gls with
+         | [] -> assert false
+         | (depth,_,_,eh,lvl) :: rest ->
+             let gl, s = goals_of_premise p v2 depth eh lvl s in
+             s,(gl @ rest,[],p),alts)
+    
 ;;
 
 let test_prog p g =

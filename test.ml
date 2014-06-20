@@ -894,13 +894,13 @@ let _ =
   Gc.set tweaked_control;
   set_terminal_width ();
   let _ = Trace.parse_argv Sys.argv in
-  register_custom "print" (fun t s ->
+  register_custom_predicate "print" (fun t s ->
     let t, s = Red.nf t s in
     (match LP.look t with
     | LP.Ext t when isString t -> Format.eprintf "%s%!" (getString t)
     | _ -> Format.eprintf "%a%!" (LP.prf_data []) t);
     s);
-  register_custom "is_flex" (fun t s ->
+  register_custom_predicate "is_flex" (fun t s ->
     let t, s = Red.whd t s in
     match LP.look t with
     | LP.Uv _ -> s

@@ -100,7 +100,7 @@ module LP : sig
   module CN : sig
     type t
     val equal : t -> t -> bool
-    val make : ?float:[ `Here | `Begin | `End ] -> string -> t
+    val make : ?float:[ `Here | `Begin | `End ] -> ?existing:bool -> string -> t
     val fresh : unit -> t
     val pp : Format.formatter -> t -> unit
     val to_string : t -> string
@@ -155,6 +155,8 @@ module LP : sig
   val parse_program : ?ontop:program -> string -> program
   val parse_goal : string -> goal
   val parse_data : string -> data
+
+  val mkFreshCon : string -> int -> data
 
   val prf_data : string list -> Format.formatter -> data -> unit
   val prf_data_only : string list -> Format.formatter -> data -> unit

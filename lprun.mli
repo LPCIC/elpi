@@ -30,6 +30,7 @@ type objective =
   | `Unify of LP.data * LP.data | `Custom of string * LP.data | `Cut
   | `Delay of LP.data * LP.premise
   | `Resume of LP.data * LP.premise
+  | `Unlock of LP.data * LP.annot_clause list
   ]
 type goal = int * objective * LP.program * LP.program * int
 type dgoal = LP.data * LP.premise * int * LP.program * int * LP.annot_clause

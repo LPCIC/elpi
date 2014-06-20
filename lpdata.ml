@@ -607,7 +607,7 @@ module CN : sig
   type t
   val equal : t -> t -> bool
   val compare : t -> t -> int
-  val make : ?float:[ `Here | `Begin | `End ] -> string -> t
+  val make : ?float:[ `Here | `Begin | `End ] -> ?existing:bool -> string -> t
   val fresh : unit -> t
   val pp : Format.formatter -> t -> unit
   val to_string : t -> string
@@ -623,7 +623,8 @@ end = struct
   module S = Set.Make(String)
   let all = ref S.empty
   let fresh = ref 0
-  let rec make ?(float=`Here) s =
+  let rec make ?(float=`Here) ?(existing=false) s =
+    if existing then (assert(S.mem s !all); Name.make s, float) else
     if S.mem s !all then make ~float (incr fresh; s ^ string_of_int !fresh)
     else (all := S.add s !all; Name.make s, float)
   let fresh () = incr fresh; make ("hyp" ^ string_of_int !fresh)
@@ -848,10 +849,12 @@ module Parser : sig (* {{{ parser for LP programs *)
   val parse_goal : string -> goal
   val parse_data : string -> data
 
+  val mkFreshCon : string -> int -> data
+
 (* }}} *)
 end = struct (* {{{ *)
 
-let rec number = lexer [ '0'-'9' number | ]
+let rec number = lexer [ '0'-'9' number ]
 let rec ident =
   lexer [ [ 'a'-'z' | 'A'-'Z' | '\'' | '_' | '-' | '0'-'9' ] ident
         | '^' '0'-'9' number | ]
@@ -972,7 +975,12 @@ let check_con n l =
       raise
         (Token.Error("Constant "^Name.to_string n^" used at different levels"))
   with Not_found -> conmap := (n,l) :: !conmap
-
+let mkFreshCon name lvl =
+  let name = Name.make name in
+  let t = mkConN name lvl in
+  assert(not(List.mem_assoc name !conmap));
+  conmap := (name,lvl) :: !conmap;
+  t
 let rec binders c n = function
     | (XCon _ | XUv _) as x when equal x c -> mkDB n
     | XVApp(b,t1,t2) -> XVApp(b,binders c n t1, binders c n t2)
@@ -1015,8 +1023,8 @@ EXTEND
                | None -> CN.make s, `Here
                | Some (`Before "_") -> CN.make ~float:`Begin s, `Begin
                | Some (`After "_") -> CN.make ~float:`End s, `End
-               | Some (`Before n) -> CN.make s, `Before (CN.make n)
-               | Some (`After n) -> CN.make s, `After (CN.make n) in
+               | Some (`Before n) -> CN.make s, `Before (CN.make ~existing:true n)
+               | Some (`After n) -> CN.make s, `After (CN.make ~existing:true n) in
          let hyp = match hyp with None -> mkConj L.empty | Some h -> h in
          let clause = sigma_abstract (mkImpl hyp (mkAtom hd)) in
          check_clause clause;
