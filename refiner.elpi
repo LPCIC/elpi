@@ -58,6 +58,7 @@ whd (rec T N B R) X :- !,
   if (RedN = app [atom succ,M]) (whd (app [R,M,rec T M B R]) X)
      (if (RedN = atom zero) (X = B) (X = rec T RedN B R)).
 whd (atom ID) Body :- body ID Body.
+:whd-NORED:
 whd X X.
 
 whd-progress X Y :- whd X Y, not(X = Y).
@@ -77,7 +78,7 @@ of (lam S F) TY (lam S2 F2) :-
   !,
   of S set S3,
   unify S2 S3,
-  (pi x\ (of x S3 x :- !) => unify x x => of (F x) (T x) (F2 x)).
+  (pi x\ (of x S3 x :- !) => unify x x => var _ S2 x => of (F x) (T x) (F2 x)).
 
 % ideally each rule should take care of dealing with bi-directionality
 % after this rule bidirectionaly become the trivially implemented
@@ -95,7 +96,8 @@ coerce T (atom nat) (atom z) (app [atom nat_to_z, T]).
 of hole TY T :- delay TY (of TY set TY), delay T (of T TY T).
 
 of (lam S F) (prod S2 T) (lam S2 F2) :-
-  of S set S2, pi x\ (of x S2 x :- !) => unify x x => of (F x) (T x) (F2 x).
+  of S set S2, pi x\ (of x S2 x :- !) => unify x x => var _ S2 x =>
+    of (F x) (T x) (F2 x).
 
 of (prod S F) set (prod S2 F2) :-
   of S set S2, pi x\ (of x S2 x :- !) => unify x x => of (F x) set (F2 x).
@@ -418,63 +420,30 @@ report-t [run1 N _ _ _ _|XS] E :- !,
 expect [X|XS] :- if X true (expect XS).
 expect [] :- $get["sols",S],pp["ERROR: Unexpected sol #",S],$incr "unexp",false.
 
-/* ============================ old stuff ================================= */
+/* ============================== UI ==================================== */
 
-/******************** Tactics **********************/
+tacsem i M :- of (lam hole (x\ hole)) _ T, unify M T.
+tacsem (n S) M :- var S _ _, of hole _ T, unify M T.
+tacsem (a T) M :- of (app [T, hole]) _ R, unify M R.
+tacsem (h N) M :- var N _ Id, unify M Id.
+tacsem (r T) M :- of T _ T1, unify M T1.
 
-tacsem i     (lam hole (x\ hole)).
-tacsem (a M) (app [M, hole]).
-tacsem (h N) (var N).
-tacsem (r M) M.
+of (hyp Name) T (hyp Name) :- var Name T _, !.
+:whd-VAR < whd-NORED: whd (hyp Name) Id :- var Name _ Id, !.
 
-/******************** GUI **************************/
-
-test_unify A B TA2 :-
-  dbgpp ["---------> ",of A TA A1],
-  of A TA A1,
-  dbgpp ["---------> ",of B TB B1],
-  of B TB B1,
-  dbgpp ["========== ",unify TA TB],
-  unify TA TB,
-  dbgpp ["========== ",unify A1 B1],
-  unify A1 B1.
-
-of (var N) T M :- hyp N X, of X T M.
-
-step_in N (decl TY F) :-
-  pi x\ (of x TY x :- !) => copy x x => unify x x => hyp N x => (
-  M = ss N,
-  dbgpp [hyp N TY],
-  step_in M (F x), !).
 
 read_tac T :-
   $print "\ntactic> ",
   $read S,
-  $parse [S,T], !.
+  $parse [S,T], pp[T], !.
 read_tac T :- $print "\nparse error\n", read_tac T.
 
-step_in N (goal M MTY) :-
-  dbgpp ["=========\n", MTY],
-  read_tac T1,
-  dbgpp ["running ", T1],
-  tacsem T1 P,
-  dbgpp ["got term ", P],
-  of P TP P1,
-  dbgpp ["of type ", TP],
-  unify TP MTY,
-  pp ["unifies with goal!\n"],
-  P1 = M, !.
+step M :- read_tac T1, tacsem T1 M, loop.
+loop :- $schedule [(sigma M\ M, or (step M) loop), pp["\nProof completed.\n"]].
 
-step_in N G :- pp ["\ntactic error\n"], step_in N G.
-
-step nil :- pp ["\nProof completed.\n"].
-step [G|GS] :-
-  step_in zz G,
-  step Sig.
-  
-claim Claim P1 :-
+claim Claim P :-
   of Claim set Claim1,
   of hole THole P,
   unify THole Claim1,
-  step Sig.
+  loop.
 
