@@ -256,10 +256,6 @@ unif _ T (app [#M L1,A|Rest]) :- !,
  unify (@M L1) G,
  unify T (app [G,A|Rest]).
 
-% :u-ATOM:
-% unif ff set set :- !.
-% unif ff (atom A) (atom A) :- !.
-
 :u-APP-APP-SAME-HD: % contextual closure + heuristic (no !, hence we may reduce)
 unif ff (app AS) (app BS) :- list2 unify AS BS.
 unif ff (rec A1 B1 C1 D1) (rec A2 B2 C2 D2) :-

@@ -8,7 +8,7 @@ open Lpdata
 exception NOT_A_PU (* for debuggin only *)
 
 exception UnifFail of string lazy_t
-val unify : LP.data -> LP.data -> Subst.subst -> Subst.subst
+val unify : ?depth:int -> LP.data -> LP.data -> Subst.subst -> Subst.subst
 
 (* Runtime *)
 exception NoClause

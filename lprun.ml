@@ -164,7 +164,21 @@ let keep xs ys s =
   let l, s = aux l1 l2 (L.len xs) s in
   L.of_list l, s
 
-let mksubst x id lvl t args s =
+let rec simple_oc id lvl t s =
+  match look t with
+  | Uv(i,lvl') ->
+      if i = id then fail "occur-check"
+      else if lvl' >= lvl then
+        let t', s = Red.whd t s in
+        if t' == t then s else simple_oc id lvl t' s
+      else s
+  | Con _ | DB _ | Nil | Ext _ -> s
+  | Bin(_,t) -> simple_oc id lvl t s
+  | App l -> L.fold (simple_oc id lvl) l s
+  | Seq(l,t) -> L.fold (simple_oc id lvl) l (simple_oc id lvl t s)
+  | VApp(_,t1,t2) -> simple_oc id lvl t1 (simple_oc id lvl t2 s)
+
+let mksubst ?depth x id lvl t args s =
   let nargs = L.len args in
   match look t with
   | App xs when equal (L.hd xs) (mkUv id lvl) && isPU xs s ->
@@ -178,9 +192,15 @@ let mksubst x id lvl t args s =
           let h, s = fresh_uv lvl s in
           set_sub id (mkBin nargs (mkApp (L.cons h h_args))) s
   | _ ->
-     let t, s = bind x id 0 lvl args t s in
-     SPY "mksubst" (prf_data []) (mkBin nargs t);
-     set_sub id (mkBin nargs t) s
+     (* If a variable is at the deepest level, then the term can be copied
+      * as it is *)
+     if Some lvl = depth && L.len args = 0 then
+       let s = simple_oc id lvl t s in
+       set_sub id t s
+     else
+       let t, s = bind x id 0 lvl args t s in
+       SPY "mksubst" (prf_data []) (mkBin nargs t);
+       set_sub id (mkBin nargs t) s
 
 let rec splay xs tl s =
   let tl, s = whd tl s in
@@ -196,7 +216,7 @@ let destApp b t ot = match t with
 
 exception NOT_A_PU
 
-let rec unify a b s = TRACE "unify" (print_unif_prob s "=" a b)
+let rec unify ?depth a b s = TRACE "unify" (print_unif_prob s "=" a b)
   let a, s =  whd a s in
   let b, s =  whd b s in
   match look a, look b with
@@ -221,10 +241,10 @@ let rec unify a b s = TRACE "unify" (print_unif_prob s "=" a b)
   | Bin(nx,x), Bin(ny,y) when nx > ny -> unify x (eta (nx-ny) y) s
   | ((Bin(nx,x), y) | (y, Bin(nx,x))) when rigid y ->unify x (eta nx (kool y)) s
   | Uv(i,_), Uv(j,_) when i = j -> s
-  | x, y -> if rigid x && rigid y then unify_fo x y s else unify_ho x y s
-and unify_fo x y s =
+  | x, y -> if rigid x && rigid y then unify_fo ?depth x y s else unify_ho ?depth x y s
+and unify_fo ?depth x y s =
   match x, y with
-  | App xs, App ys when L.len xs = L.len ys -> L.fold2 unify xs ys s
+  | App xs, App ys when L.len xs = L.len ys -> L.fold2 (unify ?depth) xs ys s
   | Seq(xs,tl), Seq(ys,sl) ->
       let xs, tl, s = splay xs tl s in
       let ys, sl, s = splay ys sl s in
@@ -238,10 +258,10 @@ and unify_fo x y s =
         unify sl (mkSeq xstl mkNil) (L.fold2 unify ys xshd s)
       else fail "listalign"
   | _ -> fail "founif"
-and unify_ho x y s =
+and unify_ho ?depth x y s =
   match x, y with
   | (((Uv (id,lvl) as x), y) | (y, (Uv (id,lvl) as x))) ->
-      mksubst (kool x) id lvl (kool y) L.empty s
+      mksubst ?depth (kool x) id lvl (kool y) L.empty s
   | (y, (App xs as x)) when isPU xs s -> begin
       let s = !last_isPU in
       match look (L.hd xs) with
@@ -426,7 +446,7 @@ let select p k goal depth (s as os) prog orig_eh lvl : step_outcome =
       try
         let hd, subgoals, (s as cs) = contextualize_hyp depth s clause in
         SPY "try" (prf_clause []) (fst(Red.nf clause s));
-        let s = unify goal hd s in
+        let s = unify ~depth goal hd s in
         SPY "selected" (prf_clause []) (fst(Red.nf clause cs));
         SPY "sub" Subst.prf_subst s;
         let subgoals, s =
