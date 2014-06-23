@@ -145,6 +145,7 @@ let rec bind x id depth lvl args t s =
           let t = mkApp (L.of_list (h::ssargs)) in
           SPY "prune-vj" (prf_data []) vj; SPY "prune-t" (prf_data[]) t;
           t, s
+      | Uv(j,_) when j = id -> fail "occur-check"
       | Uv _ -> assert false (*fail "ho-ho"*)
 
 let keep xs ys s =
