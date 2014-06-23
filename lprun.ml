@@ -529,9 +529,13 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
   let eh = List.map
     (fun x -> match look_premise x with Impl(x,p) when is_cut x -> p | _ -> x)
     (L.to_list eh) in
-  let hvs = collect_hv_premise p :: List.map collect_hv_premise eh in
+  let hvs_p = collect_hv_premise p in
+  let hvs = hvs_p :: List.map collect_hv_premise eh in
+(*   List.iter (fun e -> Format.eprintf "eh=%a\n%!" (prf_premise []) e) eh; *)
   let hvs = uniq (List.sort LP.compare (List.flatten hvs)) in
-  let hvs = List.filter (hv_lvl_leq lvl) hvs in
+  let hvs = List.filter
+    (fun h -> hv_lvl_leq lvl h || List.exists (LP.equal h) hvs_p) hvs in
+(*   Format.eprintf "hvs1=%a\n%!" (prf_data []) (mkSeq (L.of_list hvs) mkNil); *)
   let hyp = mkImpl (mkConj (L.of_list
     ((List.filter (fun x ->
         let hvsx = collect_hv_premise x in
