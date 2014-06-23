@@ -139,6 +139,7 @@ subst Where What Rest Out :-
 
 % delift M Seq Args Term DeliftedTerm [].  delifts Term w.r.t. Args for M (that
 % must not occur in Term) whose canonical context is Seq
+:delift < _: delift M S A T D L :- dbgpp[delift M S A T D L], false.
 delift OC _ [] M NewM BLr :- rev BLr BL, gr-o-cp OC BL M NewM.
 delift OC [T|TS] [#HD _|LS] M NewM BL :- !, % drop flexible entries
   pi a\ (of a T a :- !) => unif a a =>
@@ -215,10 +216,12 @@ new_restricted_meta FILTER M :-
   dbgpp ["building new meta restricted on ",FILTER],
   $zero_level M, $zero_level MTY, mklams FILTER M MTY, dbgpp ["obtain ", M].
   mklams [_] M MTY :- delay MTY (of MTY set MTY), delay M (of M MTY M).
-  mklams [drop |L] M MTY :-
+  mklams [drop|L] M MTY :-
     (pi a\ pi b\ M a = M b, MTY a = MTY b), pi x\ mklams (L x) (M x) (MTY x).
   mklams [keep TY|L] M MTY :-
-    pi x\ (of x TY x :- !) => unify x x => mklams (L x) (M x) (MTY x).
+    if (of TY _ _)
+      (pi x\ (of x TY x :- !) => unify x x => mklams (L x) (M x) (MTY x))
+      (mklams [drop|L] M MTY).
 
 % Assigns a meta M and resumes all goals suspended on M
 assign M NewM :- assert(M = #HD []),
