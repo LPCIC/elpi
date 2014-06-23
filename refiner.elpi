@@ -78,7 +78,7 @@ of (lam S F) TY (lam S2 F2) :-
   !,
   of S set S3,
   unify S2 S3,
-  (pi x\ (of x S3 x :- !) => unify x x => var _ S2 x => of (F x) (T x) (F2 x)).
+  (pi x\ (of x S3 x :- !) => var _ S2 x => of (F x) (T x) (F2 x)).
 
 % ideally each rule should take care of dealing with bi-directionality
 % after this rule bidirectionaly become the trivially implemented
@@ -96,11 +96,11 @@ coerce T (atom nat) (atom z) (app [atom nat_to_z, T]).
 of hole TY T :- delay TY (of TY set TY), delay T (of T TY T).
 
 of (lam S F) (prod S2 T) (lam S2 F2) :-
-  of S set S2, pi x\ (of x S2 x :- !) => unify x x => var _ S2 x =>
+  of S set S2, pi x\ (of x S2 x :- !) => var _ S2 x =>
     of (F x) (T x) (F2 x).
 
 of (prod S F) set (prod S2 F2) :-
-  of S set S2, pi x\ (of x S2 x :- !) => unify x x => of (F x) set (F2 x).
+  of S set S2, pi x\ (of x S2 x :- !) => of (F x) set (F2 x).
 
 of (app [T|U]) TyV V :- !, of T TyT T1, eat-prod T1 [] TyT U V TyV.
 
@@ -142,10 +142,10 @@ subst Where What Rest Out :-
 :delift < _: delift M S A T D L :- dbgpp[delift M S A T D L], false.
 delift OC _ [] M NewM BLr :- rev BLr BL, gr-o-cp OC BL M NewM.
 delift OC [T|TS] [#HD _|LS] M NewM BL :- !, % drop flexible entries
-  pi a\ (of a T a :- !) => unif a a =>
+  pi a\ (of a T a :- !) =>
     delift OC (TS a) LS M (NewM a) [drop|BL].
 delift OC [T|TS] [L|LS] M NewM BL :-
-  pi a\ (of a T a :- !) => unif a a =>
+  pi a\ (of a T a :- !) =>
     delift OC (TS a) LS M (NewM a) [bind a L|BL].
 
 % gr-o-cp M ThingsToBind Term DeliftedTerm. traverses Term and at each node
@@ -220,7 +220,7 @@ new_restricted_meta FILTER M :-
     (pi a\ pi b\ M a = M b, MTY a = MTY b), pi x\ mklams (L x) (M x) (MTY x).
   mklams [keep TY|L] M MTY :-
     if (of TY _ _)
-      (pi x\ (of x TY x :- !) => unify x x => mklams (L x) (M x) (MTY x))
+      (pi x\ (of x TY x :- !) => mklams (L x) (M x) (MTY x))
       (mklams [drop|L] M MTY).
 
 % Assigns a meta M and resumes all goals suspended on M
@@ -234,6 +234,8 @@ assign M NewM :- assert(M = #HD []),
 unify A B :- unif ff A B.
 
 :u-pp < _: unif A M N :- dbgpp [unif A M N], false.
+
+:u-EQ: unif ff X X :- !.
 
 :u-SAME-META: % we restrict it on the items of L1 and L2 that do not unify
 unif ff (#M L1) (#M L2) :- !,
@@ -254,9 +256,9 @@ unif _ T (app [#M L1,A|Rest]) :- !,
  unify (@M L1) G,
  unify T (app [G,A|Rest]).
 
-:u-ATOM:
-unif ff set set :- !.
-unif ff (atom A) (atom A) :- !.
+% :u-ATOM:
+% unif ff set set :- !.
+% unif ff (atom A) (atom A) :- !.
 
 :u-APP-APP-SAME-HD: % contextual closure + heuristic (no !, hence we may reduce)
 unif ff (app AS) (app BS) :- list2 unify AS BS.
@@ -265,9 +267,9 @@ unif ff (rec A1 B1 C1 D1) (rec A2 B2 C2 D2) :-
 
 :u-SAME-RIGID: % contextual closure
 unif ff (lam S F) (lam T G) :- !,
-  unify S T, pi x\ (of x S x :- !) => unify x x => unify (F x) (G x).
+  unify S T, pi x\ (of x S x :- !) => unify (F x) (G x).
 unif ff (prod S F) (prod T G) :- !,
-  unify S T, pi x\ (of x S x :- !) => unify x x => unify (F x) (G x).
+  unify S T, pi x\ (of x S x :- !) => unify (F x) (G x).
 
 :u-WHD:
 unif _ X Y :- whd-progress X Z, !, unify Z Y.
