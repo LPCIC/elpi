@@ -582,7 +582,7 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
   let abstracted, s =
     if L.len hvs = 0 then Red.nf h s
     else let h, s = Red.nf h s in mkSigma 0 h, s in
-  Format.eprintf "TABULATED: %a\n%!" (prf_clause []) abstracted;
+  SPY "tabulated" (prf_clause []) abstracted;
   (0, k, abstracted,CN.fresh()), s
 
 let not_same_hd s a b =
@@ -641,11 +641,14 @@ let rec run op s ((gls,dls,p as goals) : goals) (alts : alternatives)
           let stop = mk_prtg "resume>>\n" depth lvl in*)
           (*start ::*) List.flatten resumed (*@ [stop]*) in
         let unlock = depth, `Unlock (List.hd keys, to_purge), [], [], lvl in
-        let gl, s = goals_of_premise p goal depth eh lvl s in
+        let extra_hyps, s = contextualize_goal depth s goal in
+        let extra_hyps = List.map
+          (function (_,`Atom (g,k),[]) -> depth, k, g, CN.fresh ()
+                    | _ -> assert false)
+          extra_hyps in
         let resumed =
           List.map (fun (d,g,pr,eh,lvl) ->
-            let goal = depth, key_of goal, goal, CN.fresh () in
-            (d,g,goal::pr,goal::eh,lvl))
+            (d,g,extra_hyps@pr,extra_hyps@eh,lvl))
           resumed in
         s, unlock::(*gl@*)resumed@rest, dls, p, alts
     | (depth,`Delay(t,goal), _, eh,lvl as g) :: rest ->
@@ -654,9 +657,10 @@ let rec run op s ((gls,dls,p as goals) : goals) (alts : alternatives)
           try
             TRACE "delay" (pr_cur_goal op g s)
             let new_hyp, s = bubble_up s t goal eh in
+            SPY "key" (prf_data []) (fst(Red.nf t s));
             let dls = (t,goal,depth,eh,lvl,new_hyp) :: dls in
             s, List.map (fun (d,g,cp,eh,l) -> (* siblings are pristine *)
-                 d,g,eh@(new_hyp::p),eh,l) rest, dls, new_hyp :: p,
+                    d,g,eh@p@[new_hyp],eh(*@[new_hyp]*),l) rest, dls, p @ [new_hyp],
             alts
           with NoClause -> next_alt alts (pr_cur_goals op gls)
         else

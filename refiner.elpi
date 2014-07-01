@@ -28,6 +28,9 @@ if _ _ E :- E.
 or A _ :- A.
 or _ B :- B.
 
+choice A _ :- A.
+choice A B :- not A, B.
+
 rev L Lr :- L dummy@ = @dummy Lr.
 
 spy P :- dbgpp ["----<<---- enter: ",P], P, !, dbgpp ["---->>---- exit: ",P].
@@ -96,9 +99,9 @@ coerce T TyA TyE T2 :- delta-betas-step TyE RedTyE, !, coerce T TyA RedTyE T2.
 of hole TY T :- delay TY (waiting-for TY set), delay T (waiting-for T TY).
 
 :waiting-for-pp < _: waiting-for T TY :- dbgpp[waiting-for T TY], false.
-waiting-for (?T L) TY :- get-canonical T M, $is_flex T, !, of (@M L) TY (@T L).
-waiting-for (?T L) TY :- get-local (@T L) M, $is_flex T, !, of M TY (@T L).
-:waiting-for-fail-pp > _: waiting-for _ _ :- dbgpp ["instantiation failed"].
+waiting-for (?T L) TY :- get-canonical M, !, of (@M L) TY (@T L).
+waiting-for (?T L) TY :- get-local M, !, of M TY (@T L).
+%:waiting-for-fail-pp > _: waiting-for _ _ :- get-canonical M, pp ["instantiation failed: ",M], false.
 
 of (#F L) TY T :- T = @F L, waiting-for (@F L) TY.
 
@@ -108,23 +111,47 @@ of (lam S F) (prod S2 T) (lam S2 F2) :-
 of (prod S F) set (prod S2 F2) :-
   of S set S2, pi x\ (of x S2 x :- !) => of (F x) set (F2 x).
 
-of (app [T|U]) TyV V :- of T TyT T1, eat-prod T1 [] TyT U V TyV.
+of (app [T|U]) TyV V :- of T TyT T1, eat-prod T1 [] [] TyT U V TyV.
 
-:eat-prod-pp < _: eat-prod T XS TY A _ _ :- dbgpp [eat-prod T XS TY A], false.
+:eat-prod-pp < _: eat-prod T XS XSTY TY A _ _ :- dbgpp [eat-prod T XS XSTY TY A], false.
 
 % eat-prod HD Processed TyHD Args Res ResTy, eats one by one Args, moves them
 % to Processed..
-eat-prod T XS TY []     (app [T| Args]) TY :- rev XS Args.
-eat-prod T XS TY [U|US] V TyV :-
+mk-hole-ctx TYS T TY :- dbgpp[mk-hole-ctx TYS T TY], false.
+mk-hole-ctx [] T TY :- of hole TY T.
+mk-hole-ctx [UTY|USTY] T TY :-
+  pi x\ (of x UTY x :- !) => mk-hole-ctx USTY (T x) (TY x).
+
+fresh-prod US USTY OldM :-
+  $zero_level NewTgt, $zero_level NewTgtTy,
+  rev USTY RUSTY,
+  mk-hole-ctx RUSTY NewTgt NewTgtTy,
+  %pp[ mk-hole-ctx RUSTY NewTgt NewTgtTy ],
+  [_|TlUS] = US,
+  [UTY|_] = USTY,
+  pp[unify OldM (prod UTY x\ ([x|TlUS] NewTgt@))],
+  unify OldM (prod UTY x\ ([x|TlUS] NewTgt@)),
+  pp["---> ",OldM]
+.
+
+eat-prod T XS _ TY []     (app [T| Args]) TY :- rev XS Args.
+eat-prod T XS XSTY TY [U|US] V TyV :-
   whd-w-delta TY WhdTY,
   if (WhdTY = prod Src Tgt)
     (of U Src U1,
-     eat-prod T [U1|XS] (Tgt U1) US V TyV)
+     eat-prod T [U1|XS] [Src|XSTY] (Tgt U1) US V TyV)
     (WhdTY = #M _,
      of U TyU U1,
-     of (prod TyU x\hole) _ Prod, Prod = prod _ Tgt,
-     eat-prod T [U1|XS] (Tgt U1) US V TyV,
-     unify WhdTY Prod).
+     %of (prod TyU x\ mkapp hole XS) _ Prod, Prod = prod _ Tgt,
+     fresh-prod [U1|XS] [TyU|XSTY] WhdTY,
+     %pp[fresh-prod [U1|XS] [TyU|XSTY] WhdTY],
+     WhdTY = prod _ Tgt,
+     eat-prod T [U1|XS] [TyU|XSTY] (Tgt U1) US V TyV).
+% ,
+% pp["E-P ?= ", unify WhdTY Prod],
+%      debug => unify WhdTY Prod,
+% pp["E-P  = ", unify WhdTY Prod]
+% ).
 
 % CSC: non dependent recursion
 of (rec Rty N Base Step) Rty2 (rec Rty2 N2 Base2 Step2) :-
@@ -204,7 +231,8 @@ copy OC L (rec A1 B1 C1 D1) (rec A2 B2 C2 D2) :-
 %               [T1, x1\ [T2, .. xn\ [TN, T] .. ]]
 % meaning that
 %                 x1 : T1, .., xn : TN |- M : T
-sequent_of M [] [TY] A :- assert(M = #HD _), waiting-for (A M@) TY.
+sequent_of M [] [TY] A :- assert(M = #HD _), waiting-for (A M@) TY, !.
+sequent_of M [] [_] _ :- pp["ERROR: unable to get sequent of ",M], $abort "1".
 sequent_of M [_|XS] [T|TS] A :-
   pi x\ (of x T x :- !) => sequent_of M XS (TS x) [x|A].
 
@@ -214,8 +242,8 @@ sequent_of M [_|XS] [T|TS] A :-
 % that do not pass F.  TS has 1 more element than XS and YS (that have the same
 % len). AllIn is true is Mask is made of "keep" only.
 mask_sequent2 F [] [] [E] [E] true.
-mask_sequent2 F [X|XS] [Y|YS] [T|TS] [E|L] B:-
-  or (F X Y, E = keep T, B = Br) (E = drop, B = false),
+mask_sequent2 F [X|XS] [Y|YS] [T|TS] [E|L] B:- % we could use or here
+  choice (F X Y, E = keep T, B = Br) (E = drop, B = false),
   pi x\ mask_sequent2 F XS YS (TS x) (L x) Br.
 
 % given the filter generates a new lambda spine that prunes "drop" items
@@ -223,7 +251,7 @@ mask_sequent2 F [X|XS] [Y|YS] [T|TS] [E|L] B:-
 new_restricted_meta FILTER M :-
   dbgpp ["building new meta restricted on ",FILTER],
   $zero_level M, $zero_level MTY, mklams FILTER M MTY, dbgpp ["obtain ", M].
-  mklams [_] M MTY :- delay MTY (of MTY set MTY), delay M (of M MTY M).
+  mklams [_] M MTY :- delay MTY (waiting-for MTY set), delay M (waiting-for M MTY).
   mklams [drop|L] M MTY :-
     (pi a\ pi b\ M a = M b, MTY a = MTY b), pi x\ mklams (L x) (M x) (MTY x).
   mklams [keep TY|L] M MTY :-
@@ -233,12 +261,12 @@ new_restricted_meta FILTER M :-
 
 % Assigns a meta M and resumes all goals suspended on M
 assign M NewM :- assert(M = #HD []), % resume adds the explicit subst
-  dbgpp ["<<<< assigning value ",NewM," to meta ",M],
-  resume M (get-canonical M NewM),
-  dbgpp ["assigned >>>> ", M].
+  pp ["<<<< assigning value ",NewM," to meta ",M],
+  resume M (get-canonical NewM),
+  pp ["assigned >>>> ", M].
 assign-local M NewM :- assert(M = #HD []), % resume adds the explicit subst
   dbgpp ["<<<< assigning the delifted of value ",NewM," to meta ",M],
-  resume M (get-local M NewM),
+  resume M (get-local NewM),
   dbgpp ["assigned >>>> ", M].
 
 /* =========================== unification ================================ */
@@ -323,30 +351,33 @@ suite TEST t3 "1" :- % meta/meta unif w pruning: ?X[] = ?Y[v]
 suite TEST t3-2 "2" :- % meta/meta unif w pruning: ?X[v,r] = ?Y[v,s]
   TEST = (of (lam (atom nat) x\ lam (atom nat) y\ app [atom succ, hole]) _ T1,
           of (lam (atom nat) x\ lam (atom nat) y\ app [atom succ, hole]) _ T2,
-          dbgpp ["before ",T1],
+          %pp ["before ",T1], pp ["before ",T2],
           expect [(T1=lam _ x\lam _ y\app [_,#F1 (A1 x y)],A1=x\y\[y,x])],
           pi x\ pi y\ of x (atom nat) x => of y (atom nat) y =>
           unify (app [T1, atom zero, x]) (app [T2, atom zero, y]),
-          dbgpp ["after  ",T1],
-          expect [(T1=lam _ x\ lam _ y\ app [_, #F2 (A2 x y)],A2=x\y\[x]),
-                  (T1=lam _ x\ lam _ y\ app [_, #F2 (A2 x y)],A2=x\y\[])]).
-suite TEST t3-3 "4" :- % meta/meta unif with dependent type
+          %pp ["after  ",T1], pp ["after  ",T2],
+          expect [(T1=lam _ x\lam _ y\app [_, #F2 (A2 x y)],A2=x\y\[x]),
+                  (T1=lam _ x\lam _ y\app [_, #F2 (A2 x y)],A2=x\y\[atom zero])]).
+suite TEST t3-3 "1" :- % meta/meta unif with dependent type
   TEST = ((pi c\ unify c c => of c (atom nat) c =>
            pi d\ unify d d => of d (app [atom vect, c]) d =>
             of hole (TY c d) (X c d)),
           unify (X (atom zero) (atom vnil)) (X (atom zero) (atom vnil)),
           dbgpp ["X=",X],
-          expect [(X = x\y\#F (L x y),L=x\y\[]),
-                  (X = x\y\#F (L x y),L=x\y\[x,y]),
-                  (X = x\y\#F (L x y),L=x\y\[y]),
-                  (X = x\y\#F (L x y),L=x\y\[x])]).
-suite TEST t3-4 "2" :- % meta/meta unif with dependent type + restriction
-  TEST = ((pi c\ unify c c => of c (atom nat) c =>
-           pi d\ unify d d => of d (app [atom vect, c]) d =>
+          expect [%(X = x\y\#F (L x y),L=x\y\[]),
+                  (X = x\y\#F (L x y),L=x\y\[x,y])%,
+                  %(X = x\y\#F (L x y),L=x\y\[y]),
+                  %(X = x\y\#F (L x y),L=x\y\[x])]
+]).
+suite TEST t3-4 "1" :- % meta/meta unif with dependent type + restriction
+  TEST = ((pi c\ of c (atom nat) c =>
+           pi d\ of d (app [atom vect, c]) d =>
             of hole (TY c d) (X c d)),
-          (pi vn \ unify vn vn => of vn (app [atom vect, atom zero]) vn =>
+          (pi vn \ of vn (app [atom vect, atom zero]) vn =>
             unify (X (atom zero) (atom vnil)) (X (atom zero) vn)),
-          expect [(X=x\y\#F (L x y),L=x\y\[]),(X=x\y\#F (L x y),L=x\y\[x])]).
+          pp["after= ",X],
+          expect [%(X=x\y\#F (L x y),L=x\y\[]),
+                  (X=x\y\#F (L x y),L=x\y\[x])]).
 suite TEST t4 "1" :-
   TEST = (of hole TY1 T1, unify TY1 (atom nat), of hole TY2 T2, unify TY2 set).
 suite TEST t5 "1" :-
@@ -354,7 +385,7 @@ suite TEST t5 "1" :-
           dbgpp ["X=",X], expect [X=lam _ x\ app [atom nat_to_z, x]]).
 suite TEST t6 "2" :-
   TEST = (of hole _ X, unify (app [X, atom zero]) (atom zero),
-          dbgpp ["X=",X], expect [(X=lam _ x\ x), (X=lam _ x\ (atom zero))]).
+          pp ["X=",X], expect [(X=lam _ x\ x), (X=lam _ x\ (atom zero))]).
 suite TEST t7 "3" :- % delift
   TEST = (of (lam (atom nat) x\ lam (atom nat) y\ hole) _ X,
           unify (app [X, atom zero,atom zero]) (atom zero),
@@ -363,15 +394,16 @@ suite TEST t7 "3" :- % delift
 suite TEST t7-2 "1" :- % delift occur check
   TEST = (of (lam (atom nat) x\ lam (atom nat) y\ hole) _ X,
           not (unify (app [X, atom zero, atom zero]) X)).
-suite TEST t7-3 "2" :- % delift  + restriction
+suite TEST t7-3 "1" :- % delift  + restriction
   TEST = (of (lam (atom nat) y\ hole) _ (lam _ X),
           of (lam (atom nat) y\ hole) _ (lam _ X1),
           of (lam (atom nat) y\ hole) _ Y,
           pi c\ unify c c => (of c (atom nat) c :- !) =>
             unify (app [Y, atom zero]) (app [atom succ, X (X1 c)]),
           dbgpp ["X=",X,"\nX1=",X1,"\nY=",Y],
-          expect [(X = w\ #F1 (A1 w), A1=w\[w], X1 = w\ #F2 (A2 w), A2=w\[]),
-                  (X = w\ #F1 (A1 w), A1=w\[],  X1 = w\ #F2 (A2 w), A2=w\[w])]).
+          expect [(X = w\ #F1 (A1 w), A1=w\[w], X1 = w\ #F2 (A2 w), A2=w\[])%,
+                  %(X = w\ #F1 (A1 w), A1=w\[],  X1 = w\ #F2 (A2 w), A2=w\[w])
+]).
 suite TEST t8 "1" :- % whd
   TEST = (SUCC = atom succ, ZERO = atom zero, NAT = atom nat,
           N2 = app [SUCC,app[SUCC,ZERO]],
@@ -391,7 +423,7 @@ suite TEST t8 "1" :- % whd
 %             sigma T\sigma TY\
 %               of (lam hole f\ app [f,c1,c2,c3]) TY T,
 %               pp["T=",T])).
-suite TEST t8-2 "4" :- % flex head
+suite TEST t8-2 "4" :- % flex head (esempio e-prod paper CSC + TASSI + ...)
   TEST = (NAT = atom nat, T1 = atom t1, T2 = atom t2, 
           C1 = atom c1, C2 = atom c2, C3 = atom c3,
           (%pi c1\ pi c2\ pi c3\ pi t1\ pi T2\
@@ -402,7 +434,7 @@ suite TEST t8-2 "4" :- % flex head
             (of C3 (app [T2,C1,C2]) C3 :- !) =>
             %sigma T\sigma TY\
               of (lam hole f\ app [atom succ,app [f,C1,C2,C3]]) TY T,
-              dbgpp["T=",T])).
+              pp["T=",T])).
 
 run T :- pp ["INFO: running ",T], T.
 run T :- pp ["ERROR: failure ",T].
