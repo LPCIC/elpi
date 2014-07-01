@@ -47,21 +47,22 @@ list2 F [X|XS] [Y|YS] :- F X Y, list2 F XS YS.
 
 :pp-whd < _: whd I _ :- dbgpp[whd I], fail.
 
-whd (app [X]) Y :- !, whd X Y.
 whd (app [HD,A|Rest]) X :- !,
   whd HD HDRed,
   if (HDRed = lam _ F)
      (subst F A Rest Reduct, whd Reduct X)
-     (X = app [HDRed,A|Rest]).
+     (X = app [HDRed,A|Rest]). % fixme: app[app ]...
 whd (rec T N B R) X :- !,
   whd N RedN,
   if (RedN = app [atom succ,M]) (whd (app [R,M,rec T M B R]) X)
      (if (RedN = atom zero) (X = B) (X = rec T RedN B R)).
-whd (atom ID) Body :- body ID Body.
 :whd-NORED:
 whd X X.
 
 whd-progress X Y :- whd X Y, not(X = Y).
+whd-w-delta X Y :-
+  (whd (atom ID) RedBody :- body ID Body, whd Body RedBody) => whd X Y.
+delta-betas-step (atom ID) RedBody :- body ID Body, whd Body RedBody.
 
 /* ========================== type inference ============================== */
 
@@ -69,16 +70,14 @@ whd-progress X Y :- whd X Y, not(X = Y).
 %    ./elpi -trace-on -trace-at run 1673 1700 -trace-only 'run' refiner.elpi
 :of-pp < _: of M TY T :- dbgpp [of M TY T], false.
 
-of (app [T]) TY T1 :- !, of T TY T1.
-
 :of-LAM-BIDIR:
 of (lam S F) TY (lam S2 F2) :-
   rigid TY,
-  whd TY (prod S2 T),
+  whd-w-delta TY (prod S2 T),
   !,
   of S set S3,
   unify S2 S3,
-  (pi x\ (of x S3 x :- !) => var _ S2 x => of (F x) (T x) (F2 x)).
+  (pi x\ (of x S3 x :- !) => var _ S3 x => of (F x) (T x) (F2 x)).
 
 % ideally each rule should take care of dealing with bi-directionality
 % after this rule bidirectionaly become the trivially implemented
@@ -87,32 +86,41 @@ of T ExpTY NewT :- rigid ExpTY, !, of T InfTY RT, coerce RT InfTY ExpTY NewT.
 
 :coerce-pp < _: coerce T TyA TyE W :- dbgpp [coerce T TyA TyE W], false.
 
-coerce T TyA TyE T :- unify TyA TyE.
-coerce T (app [lam _ F,N|A]) TyE W :-
-  % CSC: whd required because we infer redexes
-  subst F N A TyA, coerce T TyA TyE W.
-coerce T (atom nat) (atom z) (app [atom nat_to_z, T]).
+coerce T TyA TyE T :- unify TyA TyE, !.
+coerce T TyA TyE T2 :- whd-progress TyA RedTyA, !, coerce T RedTyA TyE T2.
+coerce T TyA TyE T2 :- whd-progress TyE RedTyE, !, coerce T TyA RedTyE T2.
+:coerce-DELTA:
+coerce T TyA TyE T2 :- delta-betas-step TyA RedTyA, !, coerce T RedTyA TyE T2.
+coerce T TyA TyE T2 :- delta-betas-step TyE RedTyE, !, coerce T TyA RedTyE T2.
 
-of hole TY T :- delay TY (of TY set TY), delay T (of T TY T).
+of hole TY T :- delay TY (waiting-for TY set), delay T (waiting-for T TY).
+
+:waiting-for-pp < _: waiting-for T TY :- dbgpp[waiting-for T TY], false.
+waiting-for (?T L) TY :- get-canonical T M, $is_flex T, !, of (@M L) TY (@T L).
+waiting-for (?T L) TY :- get-local (@T L) M, $is_flex T, !, of M TY (@T L).
+:waiting-for-fail-pp > _: waiting-for _ _ :- dbgpp ["instantiation failed"].
+
+of (#F L) TY T :- T = @F L, waiting-for (@F L) TY.
 
 of (lam S F) (prod S2 T) (lam S2 F2) :-
-  of S set S2, pi x\ (of x S2 x :- !) => var _ S2 x =>
-    of (F x) (T x) (F2 x).
+  of S set S2, pi x\ (of x S2 x :- !) => var _ S2 x => of (F x) (T x) (F2 x).
 
 of (prod S F) set (prod S2 F2) :-
   of S set S2, pi x\ (of x S2 x :- !) => of (F x) set (F2 x).
 
-of (app [T|U]) TyV V :- !, of T TyT T1, eat-prod T1 [] TyT U V TyV.
+of (app [T|U]) TyV V :- of T TyT T1, eat-prod T1 [] TyT U V TyV.
 
 :eat-prod-pp < _: eat-prod T XS TY A _ _ :- dbgpp [eat-prod T XS TY A], false.
 
-eat-prod T XS TY []     V TyV :- rev XS Args, V = app [T| Args], TyV = TY.
+% eat-prod HD Processed TyHD Args Res ResTy, eats one by one Args, moves them
+% to Processed..
+eat-prod T XS TY []     (app [T| Args]) TY :- rev XS Args.
 eat-prod T XS TY [U|US] V TyV :-
-  whd TY WhdTY,
+  whd-w-delta TY WhdTY,
   if (WhdTY = prod Src Tgt)
     (of U Src U1,
      eat-prod T [U1|XS] (Tgt U1) US V TyV)
-    (assert(WhdTY = #M _),
+    (WhdTY = #M _,
      of U TyU U1,
      of (prod TyU x\hole) _ Prod, Prod = prod _ Tgt,
      eat-prod T [U1|XS] (Tgt U1) US V TyV,
@@ -134,7 +142,7 @@ rof T TY :- dbgpp ["retyping failed for ",T," : ",TY,"\naborting"], $abort "1".
 
 /* ===================== unification helpers ============================== */
 
-subst Where What Rest Out :-
+subst Where What Rest Out :- % fixme: app[app]...
   if (Rest = []) (Out = Where What) (Out = app [Where What|Rest]).
 
 % delift M Seq Args Term DeliftedTerm [].  delifts Term w.r.t. Args for M (that
@@ -196,7 +204,7 @@ copy OC L (rec A1 B1 C1 D1) (rec A2 B2 C2 D2) :-
 %               [T1, x1\ [T2, .. xn\ [TN, T] .. ]]
 % meaning that
 %                 x1 : T1, .., xn : TN |- M : T
-sequent_of M [] [TY] A :- assert(M = #HD _), of (A M@) TY _.
+sequent_of M [] [TY] A :- assert(M = #HD _), waiting-for (A M@) TY.
 sequent_of M [_|XS] [T|TS] A :-
   pi x\ (of x T x :- !) => sequent_of M XS (TS x) [x|A].
 
@@ -224,9 +232,13 @@ new_restricted_meta FILTER M :-
       (mklams [drop|L] M MTY).
 
 % Assigns a meta M and resumes all goals suspended on M
-assign M NewM :- assert(M = #HD []),
+assign M NewM :- assert(M = #HD []), % resume adds the explicit subst
   dbgpp ["<<<< assigning value ",NewM," to meta ",M],
-  resume M (M = NewM),
+  resume M (get-canonical M NewM),
+  dbgpp ["assigned >>>> ", M].
+assign-local M NewM :- assert(M = #HD []), % resume adds the explicit subst
+  dbgpp ["<<<< assigning the delifted of value ",NewM," to meta ",M],
+  resume M (get-local M NewM),
   dbgpp ["assigned >>>> ", M].
 
 /* =========================== unification ================================ */
@@ -250,11 +262,10 @@ unif ff N (#M L) :- !,
   sequent_of M L Seq [], delift M Seq L N NewM [], assign M NewM.
 
 :u-LAM-INTRO: % on the fly lambda intro
-unif _ T (app [#M L1,A|Rest]) :- !,
- rof A Ty,
- of (lam Ty x\ hole) _ G,
- unify (@M L1) G,
- unify T (app [G,A|Rest]).
+unif ff T (app [#M L1,A|Rest]) :- !,
+ rof A Ty, of (lam Ty x\ hole) _ G, unify (@M L1) G, unify T (app [G,A|Rest]).
+unif ff (app [#M L1,A|Rest]) T :- !,
+ rof A Ty, of (lam Ty x\ hole) _ G, unify (@M L1) G, unify (app [G,A|Rest]) T.
 
 :u-APP-APP-SAME-HD: % contextual closure + heuristic (no !, hence we may reduce)
 unif ff (app AS) (app BS) :- list2 unify AS BS.
@@ -290,6 +301,9 @@ body plus (lam (atom nat)
                    (lam (atom nat) (x\ x))
                    (lam (atom nat) m\ lam (prod (atom nat) (x\ (atom nat))) acc\
                       lam (atom nat) (n\ app [atom succ, app [acc,n]]))))).
+
+:coerce-NZ < coerce-DELTA:
+coerce T (atom nat) (atom z) (app [atom nat_to_z, T]).
 
 /* ============================ testsuite ================================= */
 % usage:
@@ -423,28 +437,23 @@ expect [] :- $get["sols",S],pp["ERROR: Unexpected sol #",S],$incr "unexp",false.
 
 /* ============================== UI ==================================== */
 
-tacsem i M :- of (lam hole (x\ hole)) _ T, unify M T.
+tacsem i M :- assign-local M (lam hole (x\ hole)).
 tacsem (n S) M :- var S _ _, of hole _ T, unify M T.
-tacsem (a T) M :- of (app [T, hole]) _ R, unify M R.
-tacsem (h N) M :- var N _ Id, unify M Id.
-tacsem (r T) M :- of T _ T1, unify M T1.
+tacsem (a T) M :- assign-local M (app [T, hole]).
+tacsem (h N) M :- var N _ Id, assign-local M Id.
+tacsem (r T) M :- assign-local M T.
 
 of (hyp Name) T (hyp Name) :- var Name T _, !.
 :whd-VAR < whd-NORED: whd (hyp Name) Id :- var Name _ Id, !.
 
-
-read_tac T :-
-  $print "\ntactic> ",
-  $read S,
-  $parse [S,T], pp[T], !.
+read_tac T :- $print "\ntactic> ", $read S, $parse [S,T], pp[T], !.
 read_tac T :- $print "\nparse error\n", read_tac T.
 
 step M :- read_tac T1, tacsem T1 M, loop.
 loop :- $schedule [(sigma M\ M, or (step M) loop), pp["\nProof completed.\n"]].
 
 claim Claim P :-
-  of Claim set Claim1,
-  of hole THole P,
-  unify THole Claim1,
+  of Claim set Claim1, !,
+  of hole Claim1 P,
   loop.
 

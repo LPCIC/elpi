@@ -498,7 +498,7 @@ let resume p s test (dls : dgoal list) =
        let gl, s = goals_of_premise p clause depth eh lvl s in
        SPY "will resume" (prf_premise []) (fst(Red.nf clause s));
        SPY "hd" (prf_data []) (fst(Red.nf t s));
-       Some((gl,to_purge),s)) dls s
+       Some((gl,to_purge,t),s)) dls s
          
 let add_delay (t,a,depth,orig_prog as dl) s dls run = 
 (*   let a = destAtom a in *)
@@ -545,14 +545,14 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
   let k = key_of p in
   let i, lvl, ht = destFlexHd t [] in
   let eh = L.of_list eh in
-  let eh = L.filter (fun _,k1,_,_ -> rigid_key_match k k1) eh in
+  let k_of = key_of (mkCon "of" 0) in
+  let eh = L.filter (fun _,k1,_,_ -> rigid_key_match k_of k1) eh in
   let eh, s = L.fold_map (fun (_,_,p,_) s -> Red.nf p s) eh s in
   let eh = List.map
     (fun x -> match look_premise x with Impl(x,p) when is_cut x -> p | _ -> x)
     (L.to_list eh) in
   let hvs_p = collect_hv_premise p in
   let hvs = hvs_p :: List.map collect_hv_premise eh in
-(*   List.iter (fun e -> Format.eprintf "eh=%a\n%!" (prf_premise []) e) eh; *)
   let hvs = uniq (List.sort LP.compare (List.flatten hvs)) in
   let hvs = List.filter
     (fun h -> hv_lvl_leq lvl h || List.exists (LP.equal h) hvs_p) hvs in
@@ -582,7 +582,7 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
   let abstracted, s =
     if L.len hvs = 0 then Red.nf h s
     else let h, s = Red.nf h s in mkSigma 0 h, s in
-(*   Format.eprintf "NEW META: %a\n%!" (prf_clause []) abstracted; *)
+  Format.eprintf "TABULATED: %a\n%!" (prf_clause []) abstracted;
   (0, k, abstracted,CN.fresh()), s
 
 let not_same_hd s a b =
@@ -602,6 +602,11 @@ let not_in to_purge l =
   List.filter (fun x -> not(List.exists (eq_clause x) to_purge)) l
 
 let sort_hyps (d,g,p,eh,lvl) = (d,g,List.sort cmp_clause p,eh,lvl)
+
+let rec list_split3 = function
+  | [] -> [], [], []
+  | (a,b,c) :: tl ->
+     let tl1, tl2, tl3 = list_split3 tl in a::tl1, b::tl2, c::tl3
 
 let rec run op s ((gls,dls,p as goals) : goals) (alts : alternatives)
 : subst * dgoal list * alternatives
@@ -630,14 +635,19 @@ let rec run op s ((gls,dls,p as goals) : goals) (alts : alternatives)
     | (depth,`Resume(t,goal), _, eh,lvl as g) :: rest ->
         TRACE ~depth:lvl "run" (pr_cur_goal op g s)
         let resumed, dls, s = resume p s (not_same_hd s t) dls in
-        let resumed, to_purge = List.split resumed in
+        let resumed, to_purge, keys = list_split3 resumed in
         let resumed =
           (*let start = mk_prtg "<<resume\n" depth lvl in
           let stop = mk_prtg "resume>>\n" depth lvl in*)
           (*start ::*) List.flatten resumed (*@ [stop]*) in
-        let unlock = depth, `Unlock (t, to_purge), [], [], lvl in
+        let unlock = depth, `Unlock (List.hd keys, to_purge), [], [], lvl in
         let gl, s = goals_of_premise p goal depth eh lvl s in
-        s, unlock::gl@resumed@rest, dls, p, alts
+        let resumed =
+          List.map (fun (d,g,pr,eh,lvl) ->
+            let goal = depth, key_of goal, goal, CN.fresh () in
+            (d,g,goal::pr,goal::eh,lvl))
+          resumed in
+        s, unlock::(*gl@*)resumed@rest, dls, p, alts
     | (depth,`Delay(t,goal), _, eh,lvl as g) :: rest ->
         TRACE ~depth:lvl "run" (pr_cur_goal op g s)
         if true || flexible s t then
