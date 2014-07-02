@@ -113,26 +113,24 @@ of (prod S F) set (prod S2 F2) :-
 
 of (app [T|U]) TyV V :- of T TyT T1, eat-prod T1 [] [] TyT U V TyV.
 
-:eat-prod-pp < _: eat-prod T XS XSTY TY A _ _ :- dbgpp [eat-prod T XS XSTY TY A], false.
+simple-delift Arg ArgTy Term DelTerm :-
+  delift dummy [ArgTy|x\set] [Arg] Term DelTerm [].
 
-% eat-prod HD Processed TyHD Args Res ResTy, eats one by one Args, moves them
-% to Processed..
-mk-hole-ctx TYS T TY :- dbgpp[mk-hole-ctx TYS T TY], false.
-mk-hole-ctx [] T TY :- of hole TY T.
-mk-hole-ctx [UTY|USTY] T TY :-
-  pi x\ (of x UTY x :- !) => mk-hole-ctx USTY (T x) (TY x).
+mk-prod-aux [] [] set.
+mk-prod-aux [X|XS] [X1|X1S] T :-
+  of X XTY X1,
+  mk-prod-aux XS X1S P,
+  simple-delift X1 XTY P DelP,
+  T = prod XTY DelP.
+fix-prod set hole.
+fix-prod (prod A F) (prod A F1) :- pi x\ fix-prod (F x) (F1 x).
+mk-prod XS NewXS P :-
+  mk-prod-aux XS NewXS PwitSet,
+  fix-prod PwitSet PwithHole,
+  of PwithHole _ P.
 
-fresh-prod US USTY OldM :-
-  $zero_level NewTgt, $zero_level NewTgtTy,
-  rev USTY RUSTY,
-  mk-hole-ctx RUSTY NewTgt NewTgtTy,
-  %pp[ mk-hole-ctx RUSTY NewTgt NewTgtTy ],
-  [_|TlUS] = US,
-  [UTY|_] = USTY,
-  pp[unify OldM (prod UTY x\ ([x|TlUS] NewTgt@))],
-  unify OldM (prod UTY x\ ([x|TlUS] NewTgt@)),
-  pp["---> ",OldM]
-.
+:eat-prod-pp < _:
+eat-prod T XS XSTY TY A _ _ :- dbgpp [eat-prod T XS XSTY TY A], false.
 
 eat-prod T XS _ TY []     (app [T| Args]) TY :- rev XS Args.
 eat-prod T XS XSTY TY [dots|US] V TyV :-
@@ -150,17 +148,9 @@ eat-prod T XS XSTY TY [U|US] V TyV :-
     (of U Src U1,
      eat-prod T [U1|XS] [Src|XSTY] (Tgt U1) US V TyV)
     (WhdTY = #M _,
-     of U TyU U1,
-     %of (prod TyU x\ mkapp hole XS) _ Prod, Prod = prod _ Tgt,
-     fresh-prod [U1|XS] [TyU|XSTY] WhdTY,
-     %pp[fresh-prod [U1|XS] [TyU|XSTY] WhdTY],
-     WhdTY = prod _ Tgt,
-     eat-prod T [U1|XS] [TyU|XSTY] (Tgt U1) US V TyV).
-% ,
-% pp["E-P ?= ", unify WhdTY Prod],
-%      debug => unify WhdTY Prod,
-% pp["E-P  = ", unify WhdTY Prod]
-% ).
+     mk-prod [U|US] [U1|U1S] Prod, unify WhdTY Prod,
+     % infefficient, U1S are already refined
+     WhdTY = prod TyU Tgt, eat-prod T [U1|XS] [TyU|XSTY] (Tgt U1) U1S V TyV).
 
 % CSC: non dependent recursion
 of (rec Rty N Base Step) Rty2 (rec Rty2 N2 Base2 Step2) :-
@@ -225,11 +215,11 @@ copy OC _ (atom A) (atom A).
 copy OC _ set set.
 copy OC L (app MS) (app NS) :- list2 (gr-o-cp OC L) MS NS.
 copy OC L (lam S1 F1) (lam S2 F2) :- gr-o-cp OC L S1 S2,
-  pi c\ unify c c => (of c S2 c :- !) => grab OC [] c c =>
+  pi c\ (of c S2 c :- !) => grab OC [] c c =>
     % TASSI: should the hyp be (of c S1) or (of c S2) ?
     gr-o-cp OC L (F1 c) (F2 c).
 copy OC L (prod S1 F1) (prod S2 F2) :- gr-o-cp OC L S1 S2,
-  pi c\ unify c c => (of c S2 c :- !) => grab OC [] c c =>
+  pi c\ (of c S2 c :- !) => grab OC [] c c =>
     gr-o-cp OC L (F1 c) (F2 c).
 copy OC L (rec A1 B1 C1 D1) (rec A2 B2 C2 D2) :-
   gr-o-cp OC L A1 A2, gr-o-cp OC L B1 B2,
@@ -270,9 +260,9 @@ new_restricted_meta FILTER M :-
 
 % Assigns a meta M and resumes all goals suspended on M
 assign M NewM :- assert(M = #HD []), % resume adds the explicit subst
-  pp ["<<<< assigning value ",NewM," to meta ",M],
+  dbgpp ["<<<< assigning value ",NewM," to meta ",M],
   resume M (get-canonical NewM),
-  pp ["assigned >>>> ", M].
+  dbgpp ["assigned >>>> ", M].
 assign-local M NewM :- assert(M = #HD []), % resume adds the explicit subst
   dbgpp ["<<<< assigning the delifted of value ",NewM," to meta ",M],
   resume M (get-local NewM),
@@ -368,8 +358,8 @@ suite TEST t3-2 "2" :- % meta/meta unif w pruning: ?X[v,r] = ?Y[v,s]
           expect [(T1=lam _ x\lam _ y\app [_, #F2 (A2 x y)],A2=x\y\[x]),
                   (T1=lam _ x\lam _ y\app [_, #F2 (A2 x y)],A2=x\y\[atom zero])]).
 suite TEST t3-3 "1" :- % meta/meta unif with dependent type
-  TEST = ((pi c\ unify c c => of c (atom nat) c =>
-           pi d\ unify d d => of d (app [atom vect, c]) d =>
+  TEST = ((pi c\ of c (atom nat) c =>
+           pi d\ of d (app [atom vect, c]) d =>
             of hole (TY c d) (X c d)),
           unify (X (atom zero) (atom vnil)) (X (atom zero) (atom vnil)),
           dbgpp ["X=",X],
@@ -384,7 +374,7 @@ suite TEST t3-4 "1" :- % meta/meta unif with dependent type + restriction
             of hole (TY c d) (X c d)),
           (pi vn \ of vn (app [atom vect, atom zero]) vn =>
             unify (X (atom zero) (atom vnil)) (X (atom zero) vn)),
-          pp["after= ",X],
+          dbgpp["after= ",X],
           expect [%(X=x\y\#F (L x y),L=x\y\[]),
                   (X=x\y\#F (L x y),L=x\y\[x])]).
 suite TEST t4 "1" :-
@@ -394,7 +384,7 @@ suite TEST t5 "1" :-
           dbgpp ["X=",X], expect [X=lam _ x\ app [atom nat_to_z, x]]).
 suite TEST t6 "2" :-
   TEST = (of hole _ X, unify (app [X, atom zero]) (atom zero),
-          pp ["X=",X], expect [(X=lam _ x\ x), (X=lam _ x\ (atom zero))]).
+          dbgpp ["X=",X], expect [(X=lam _ x\ x), (X=lam _ x\ (atom zero))]).
 suite TEST t7 "3" :- % delift
   TEST = (of (lam (atom nat) x\ lam (atom nat) y\ hole) _ X,
           unify (app [X, atom zero,atom zero]) (atom zero),
@@ -407,7 +397,7 @@ suite TEST t7-3 "1" :- % delift  + restriction
   TEST = (of (lam (atom nat) y\ hole) _ (lam _ X),
           of (lam (atom nat) y\ hole) _ (lam _ X1),
           of (lam (atom nat) y\ hole) _ Y,
-          pi c\ unify c c => (of c (atom nat) c :- !) =>
+          pi c\ (of c (atom nat) c :- !) =>
             unify (app [Y, atom zero]) (app [atom succ, X (X1 c)]),
           dbgpp ["X=",X,"\nX1=",X1,"\nY=",Y],
           expect [(X = w\ #F1 (A1 w), A1=w\[w], X1 = w\ #F2 (A2 w), A2=w\[])%,
@@ -443,7 +433,7 @@ suite TEST t8-2 "4" :- % flex head (esempio e-prod paper CSC + TASSI + ...)
             (of C3 (app [T2,C1,C2]) C3 :- !) =>
             %sigma T\sigma TY\
               of (lam hole f\ app [atom succ,app [f,C1,C2,C3]]) TY T,
-              pp["T=",T])).
+              dbgpp["T=",T])).
 
 run T :- pp ["INFO: running ",T], T.
 run T :- pp ["ERROR: failure ",T].
