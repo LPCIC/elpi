@@ -351,7 +351,7 @@ suite TEST t3-2 "2" :- % meta/meta unif w pruning: ?X[v,r] = ?Y[v,s]
   TEST = (of (lam (atom nat) x\ lam (atom nat) y\ app [atom succ, hole]) _ T1,
           of (lam (atom nat) x\ lam (atom nat) y\ app [atom succ, hole]) _ T2,
           %pp ["before ",T1], pp ["before ",T2],
-          expect [(T1=lam _ x\lam _ y\app [_,#F1 (A1 x y)],A1=x\y\[y,x])],
+          expect [(T1=lam _ x\lam _ y\app [_,#F1 (A1 x y)],A1=x\y\[x,y])],
           pi x\ pi y\ of x (atom nat) x => of y (atom nat) y =>
           unify (app [T1, atom zero, x]) (app [T2, atom zero, y]),
           %pp ["after  ",T1], pp ["after  ",T2],
@@ -440,8 +440,9 @@ run T :- pp ["ERROR: failure ",T].
 solutions N :- suite T N _, run T.
 
 test :- all-suite [] L, !, all-t L, !, report-t L FAIL,
-        if (FAIL=[]) (pp["\nINFO: All tests passed\n"], $exit "0")
-                     (pp["\nERROR: Some tests failed: "|FAIL],$exit "1").
+        if (FAIL=[])
+          (pp["\nINFO: All tests passed\n"], $exit "0")
+          (pp["\nERROR: Some tests failed: "|FAIL],pp["\n"],$exit"1").
 all-suite L [run1 N T _ B _|L1] :-
   suite T N B, not(mem N L), !, all-suite [N|L] L1.
 all-suite _ [].
@@ -454,7 +455,7 @@ all-t [run1 _ _ N _ U|XS] :-
 run1 N T _ _ _ :-
   pp["INFO: running ",N], T, $get["sols",S], pp["INFO:   success #",S].
 run1 N T _ _ _ :- $get["sols","0"], !, pp ["ERROR:   failure ",N], fail.
-report-t [] ["\n"].
+report-t [] [].
 report-t [run1 N _ "0" _ _|XS] E :- !,
   E = ["\n ",N,"\tNo solution"|ACC], report-t XS ACC.
 report-t [run1 N _ X X "0"|XS] ACC :- !, report-t XS ACC.
