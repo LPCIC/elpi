@@ -470,12 +470,12 @@ expect [] :- $get["sols",S],pp["ERROR: Unexpected sol #",S],$incr "unexp",false.
 /* ============================== UI ==================================== */
 
 tacsem i M :- assign-local M (lam hole (x\ hole)).
-tacsem (n S) M :- var S _ _, of hole _ T, unify M T.
+tacsem (n S) M :- var S _ _.
 tacsem (a T) M :- assign-local M (app [T, hole]).
 tacsem (h N) M :- var N _ Id, assign-local M Id.
 tacsem (r T) M :- assign-local M T.
 
-of (hyp Name) T (hyp Name) :- var Name T _, !.
+of (hyp Name) T X :- var Name T X, !.
 :whd-VAR < whd-NORED: whd (hyp Name) Id :- var Name _ Id, !.
 
 read_tac T :- $print "\ntactic> ", $read S, $parse [S,T], pp[T], !.
