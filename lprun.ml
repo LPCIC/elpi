@@ -234,7 +234,7 @@ let rec unify ?depth a b s = TRACE "unify" (print_unif_prob s "=" a b)
   | VApp(w,t1,t2), t ->
      if w == `Flex && rigid t then fail "no-flex";
      if w == `Frozen && not(Subst.is_frozen b) then fail "no-tc";
-     let hd, tl = destApp w t a in unify (mkSeq tl mkNil) t2 (unify hd t1 s)
+     let hd, tl = destApp w t b in unify (mkSeq tl mkNil) t2 (unify hd t1 s)
 
   | Bin(nx,x), Bin(ny,y) when nx = ny -> unify x y s
   | Bin(nx,x), Bin(ny,y) when nx < ny -> unify (eta (ny-nx) x) y s
