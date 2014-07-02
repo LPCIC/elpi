@@ -111,6 +111,7 @@ of (lam S F) (prod S2 T) (lam S2 F2) :-
 of (prod S F) set (prod S2 F2) :-
   of S set S2, pi x\ (of x S2 x :- !) => of (F x) set (F2 x).
 
+:of-APP:
 of (app [T|U]) TyV V :- of T TyT T1, eat-prod T1 [] [] TyT U V TyV.
 
 simple-delift Arg ArgTy Term DelTerm :-
@@ -133,7 +134,7 @@ mk-prod XS NewXS P :-
 eat-prod T XS XSTY TY A _ _ :- dbgpp [eat-prod T XS XSTY TY A], false.
 
 eat-prod T XS _ TY []     (app [T| Args]) TY :- rev XS Args.
-eat-prod T XS XSTY TY [dots|US] V TyV :-
+eat-prod T XS XSTY TY [dots|US] V TyV :- !,
   whd-w-delta TY WhdTY,
   if (WhdTY = prod Src Tgt)
    % it is not greedy, it tries them all
@@ -311,6 +312,20 @@ unif _ X Y :- whd-progress X Z, !, unify Z Y.
 :u-SWAP: % we swap lhs and rhs, but only once
 unif ff A B :- unif tt B A.
 
+/* ====================== disambiguation ============================== */
+
+mkhole _ hole.
+
+of (sym X) TY T1 :- resolve X T, of T TY T1.
+
+:of-APP-SYM < of-APP:
+of (app [sym X|AS]) TY T :-
+ list2 mkhole AS dotsAS,
+ resolve X T, of (app [T|dotsAS]) TY1 T1,
+ if (T1 = app [T|AS1])
+  (list2 unify AS AS1)
+  (of (app [T|AS]) TY T).
+
 /* ====================== prover environment ============================== */
 
 env zero (atom nat).
@@ -322,6 +337,12 @@ env nat_to_z (prod (atom nat) (x\ atom z)).
 env vect (prod (atom nat) (x\ set)).
 env vnil (app [atom vect,atom zero]).
 env vcons (prod (atom nat) (n\ prod (app [atom vect,n]) (w\ app [atom vect,app [atom succ,n]]))).
+env list (prod set x\ set).
+env lnil (prod set x\ app [atom list, x]).
+env lcons (prod set x\ prod x y\prod (app [atom list, x]) z\app [atom list, x]).
+env map TY :-
+  (pi x\ LIST x = app [ atom list, x]),
+  TY = (prod set a\ prod set b\ prod (prod a x\ b) f\ prod (LIST a) l\ LIST b).
 
 body plus (lam (atom nat)
              (n\ (rec (prod (atom nat) (x\ (atom nat))) n
@@ -331,6 +352,13 @@ body plus (lam (atom nat)
 
 :coerce-NZ < coerce-DELTA:
 coerce T (atom nat) (atom z) (app [atom nat_to_z, T]).
+coerce T (app [atom list, X]) (app [atom list, Y])
+       (appl [atom map, X, Y, (lam X x\ K x), T]) :-
+ (pi f\ of f X f => coerce f X Y (K f)).
+
+resolve magicnat (atom zero).
+resolve magicnat (atom succ).
+resolve magicnat (atom plus).
 
 /* ============================ testsuite ================================= */
 % usage:
