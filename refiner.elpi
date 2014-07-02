@@ -33,8 +33,8 @@ choice A B :- not A, B.
 
 rev L Lr :- L dummy@ = @dummy Lr.
 
-spy P :- dbgpp ["----<<---- enter: ",P], P, !, dbgpp ["---->>---- exit: ",P].
-spy P :- dbgpp ["---->>---- fail: ",P].
+spy P :- pp ["----<<---- enter: ",P], P, pp ["---->>---- exit: ",P].
+spy P :- pp ["---->>---- fail: ",P], false.
 
 hide P :- ((debug :- !, false) => P).
 
@@ -89,6 +89,7 @@ of T ExpTY NewT :- rigid ExpTY, !, of T InfTY RT, coerce RT InfTY ExpTY NewT.
 
 :coerce-pp < _: coerce T TyA TyE W :- dbgpp [coerce T TyA TyE W], false.
 
+coerce T (?M _) TyE T :- pp["ERROR: flexible inferred ty?\n"], $abort "1".
 coerce T TyA TyE T :- unify TyA TyE, !.
 coerce T TyA TyE T2 :- whd-progress TyA RedTyA, !, coerce T RedTyA TyE T2.
 coerce T TyA TyE T2 :- whd-progress TyE RedTyE, !, coerce T TyA RedTyE T2.
@@ -101,7 +102,6 @@ of hole TY T :- delay TY (waiting-for TY set), delay T (waiting-for T TY).
 :waiting-for-pp < _: waiting-for T TY :- dbgpp[waiting-for T TY], false.
 waiting-for (?T L) TY :- get-canonical M, !, of (@M L) TY (@T L).
 waiting-for (?T L) TY :- get-local M, !, of M TY (@T L).
-%:waiting-for-fail-pp > _: waiting-for _ _ :- get-canonical M, pp ["instantiation failed: ",M], false.
 
 of (#F L) TY T :- T = @F L, waiting-for (@F L) TY.
 

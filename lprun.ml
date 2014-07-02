@@ -556,13 +556,13 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
   let hvs = uniq (List.sort LP.compare (List.flatten hvs)) in
   let hvs = List.filter
     (fun h -> hv_lvl_leq lvl h || List.exists (LP.equal h) hvs_p) hvs in
-(*   Format.eprintf "hvs1=%a\n%!" (prf_data []) (mkSeq (L.of_list hvs) mkNil); *)
   let hyp = mkImpl (mkConj (L.of_list
     ((List.filter (fun x ->
         let hvsx = collect_hv_premise x in
         List.for_all (fun h -> List.exists (LP.equal h) hvs) hvsx) eh)
     @ [mkAtomBiCut]))) p in
-  let hvs = L.of_list (collect_hv_premise hyp) in
+  (* FIXME: toposort, not time-sort *)
+  let hvs = L.of_list (List.sort LP.compare (collect_hv_premise hyp)) in
   let h, s = Subst.fresh_uv 0 s in
   let h_hvs = mkApp (L.cons h hvs) in
 (*
