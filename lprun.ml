@@ -23,7 +23,7 @@ let lfail l = raise (UnifFail l)
 
 let print_unif_prob s rel a b fmt =
   Format.fprintf fmt "@[%a@ %s %a@]%!"
-    (prf_data []) (apply_subst s a) rel (prf_data []) (apply_subst s b)
+    (prf_data []) (fst(Red.nf a s)) rel (prf_data []) (fst(Red.nf b s))
 
 let rec rigid x = match x with
   | Uv _ -> false
@@ -159,7 +159,7 @@ let keep xs ys s =
        let y, s = Red.nf y s in
        if equal x y then let l, s = aux xs ys (i-1) s in mkDB i :: l, s
        else aux xs ys (i-1) s
-    | _ -> assert false
+    | _ -> Format.eprintf "ERROR: same meta, different #args\n%!"; assert false
   in
   let l, s = aux l1 l2 (L.len xs) s in
   L.of_list l, s
