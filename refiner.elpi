@@ -135,6 +135,15 @@ fresh-prod US USTY OldM :-
 .
 
 eat-prod T XS _ TY []     (app [T| Args]) TY :- rev XS Args.
+eat-prod T XS XSTY TY [dots|US] V TyV :-
+  whd-w-delta TY WhdTY,
+  if (WhdTY = prod Src Tgt)
+   % it is not greedy, it tries them all
+   (or
+     (eat-prod T XS XSTY TY US V TyV)
+     (eat-prod T XS XSTY TY [hole,dots|US] V TyV))
+   % at the moment it is like in Matita: no saturation if flexible arity
+   (eat-prod T XS XSTY TY US V TyV).
 eat-prod T XS XSTY TY [U|US] V TyV :-
   whd-w-delta TY WhdTY,
   if (WhdTY = prod Src Tgt)
@@ -469,11 +478,12 @@ expect [] :- $get["sols",S],pp["ERROR: Unexpected sol #",S],$incr "unexp",false.
 
 /* ============================== UI ==================================== */
 
-tacsem i M :- assign-local M (lam hole (x\ hole)).
-tacsem (n S) M :- var S _ _.
-tacsem (a T) M :- assign-local M (app [T, hole]).
-tacsem (h N) M :- var N _ Id, assign-local M Id.
-tacsem (r T) M :- assign-local M T.
+/* ========= Tactics ======== */
+tacsem i M :- assign-local M (lam hole (x\ hole)).  /* # */
+tacsem (n S) M :- var S _ _.                        /* assign name */
+tacsem (a T) M :- assign-local M (app [T, dots]).   /* @ */
+tacsem h M :- var _ _ Id, assign-local M Id.        /* assumption */
+%tacsem (r T) M :- assign-local M T.                 /* refine */
 
 of (hyp Name) T X :- var Name T X, !.
 :whd-VAR < whd-NORED: whd (hyp Name) Id :- var Name _ Id, !.
@@ -481,8 +491,12 @@ of (hyp Name) T X :- var Name T X, !.
 read_tac T :- $print "\ntactic> ", $read S, $parse [S,T], pp[T], !.
 read_tac T :- $print "\nparse error\n", read_tac T.
 
-step M :- read_tac T1, tacsem T1 M, loop.
-loop :- $schedule [(sigma M\ M, or (step M) loop), pp["\nProof completed.\n"]].
+exec_tac u _ :- !, false.                           /* undo */
+exec_tac T M :- tacsem T M, loop.
+exec_tac T M :- pp ["Tactic failed!"], loop.
+
+step M :- read_tac T, exec_tac T M. 
+loop :- $schedule [(sigma M\ M, step M), pp["\nProof completed.\n"]].
 
 claim Claim P :-
   of Claim set Claim1, !,
