@@ -124,7 +124,7 @@ let _ =
   register_custom_control_operator "delayed" (fun t s (g,dls,p)  alts ->
     let keys =
       List.map (fun (t,_,_,_,_,_) -> fst(destApp (fst(Red.nf t s)))) dls in
-    let kl = LP.(mkSeq (L.of_list keys) mkNil) in
+    let kl = LP.(mkSeq (L.of_list (Lprun.uniq keys)) mkNil) in
     let s = unify t kl s in
     s, (List.tl g,dls,p), alts);
   let ppgoal s a eh =
@@ -134,7 +134,13 @@ let _ =
           (List.filter (fun (_,k,_,_) ->
              match k with
              | LP.Flex -> false
-             | LP.Key x -> LP.equal x (LP.mkCon "var" 0))
+             | LP.Key x ->
+                  LP.equal x (LP.mkCon "var" 0) ||
+                  LP.equal x (LP.mkCon "safe" 0) ||
+                  LP.equal x (LP.mkCon "seed" 0) ||
+                  LP.equal x (LP.mkCon "danger" 0)
+                  
+                  )
              eh))
       (LP.prf_premise []) (fst(Red.nf a s)) in
   let skip (l,d,p) = List.tl l,d,p in
@@ -145,9 +151,8 @@ let _ =
         let k = fst(destApp (fst(Red.nf k s))) in
         LP.equal k t) d in
     match selected with
-    | [key,a,depth,eh,lvl,_] -> ppgoal s a eh; s, skip gls, alts
-    | [] -> raise NoClause
-    | _ -> assert false);
+    | (key,a,depth,eh,lvl,_) :: _ -> ppgoal s a eh; s, skip gls, alts
+    | [] -> raise NoClause);
   register_custom_control_operator "schedule" (fun t s (gls,dls,p) alts ->
     let t, s = Red.nf t s in
     let v1, v2 = check_list2 "schedule" t in
@@ -157,7 +162,7 @@ let _ =
         let k = fst(destApp (fst(Red.nf t s))) in
         LP.equal k v1) dls in
     match resumed with
-    | [key,a,depth,eh,lvl,_] ->
+    | (key,a,depth,eh,lvl,_) :: _ ->
          let gl, s = goals_of_premise p v2 depth eh lvl s in
          let g1, gl = List.hd gl, List.tl gl in
          (match g1 with
@@ -165,8 +170,7 @@ let _ =
             let s = unify key k s in
             s,(gl @ List.tl gls, dls, p),alts
          | _ -> raise (Invalid_argument "schedule"))
-    | [] -> raise NoClause;
-    | _ -> assert false);
+    | [] -> raise NoClause);
 ;;
 
 let test_prog p g =

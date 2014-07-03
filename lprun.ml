@@ -483,7 +483,7 @@ let list_partmapfold f l a =
   in
     aux [] [] a l
 
-let flexible s t = let t, _s = Red.whd t s in not (rigid (look t))
+let flexible t = not (rigid (look t))
 
 let goals_of_premise p clause depth eh lvl s =
   let gl, s = contextualize_goal depth s clause in
@@ -519,10 +519,11 @@ let add_delay (t,a,depth,orig_prog as dl) s dls run =
   in
     aux dls
 
-let rec destFlexHd t l =
+let rec destFlexFrozenHd t l =
   match look t with
-  | Uv(i,lvl) -> i, lvl, l
-  | App xs -> destFlexHd (L.hd xs) (L.to_list (L.tl xs))
+  | Uv(i,lvl) -> Some i, lvl, l
+  | Con(_,lvl) when lvl < 0 -> None, 0, l
+  | App xs -> destFlexFrozenHd (L.hd xs) (L.to_list (L.tl xs))
   | _ -> assert false
 
 let hv_lvl_leq lvl t = match look t with
@@ -543,7 +544,7 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
   let t, s = Red.nf t s in
   let p, s = Red.nf p s in
   let k = key_of p in
-  let i, lvl, ht = destFlexHd t [] in
+  let i, lvl, ht = destFlexFrozenHd t [] in
   let eh = L.of_list eh in
   let k_of = key_of (mkCon "of" 0) in
   let eh = L.filter (fun _,k1,_,_ -> rigid_key_match k_of k1) eh in
@@ -569,9 +570,11 @@ let bubble_up s t p (eh : program) : annot_clause * subst =
   Format.eprintf "h hvs = %a\n%!" (prf_data []) h_hvs;
   Format.eprintf "hyp = %a\n%!" (prf_data []) hyp;
 *)
-  let ice, s = Subst.freeze_uv i s in
-  let ice_args = L.filter (fun h -> not(List.exists (LP.equal h) ht)) hvs in
-  let s = Subst.set_sub i (mkApp (L.cons ice ice_args)) s in
+  let s = match i with None -> s | Some i ->
+    let ice, s = Subst.freeze_uv i s in
+    let ice_args = L.filter (fun h -> not(List.exists (LP.equal h) ht)) hvs in
+    let s = Subst.set_sub i (mkApp (L.cons ice ice_args)) s in
+    s in
   let s =
     try unify h_hvs hyp s
     with UnifFail err -> 
@@ -595,7 +598,7 @@ let not_same_hd s a b =
    | _, App ys -> aux a (L.hd ys)
    | _ -> true
  in aux a b
-        
+
 let mk_prtg str d l = d, `Custom("$print",mkExt(mkString str)), [], [], l
 
 let not_in to_purge l =
@@ -640,20 +643,32 @@ let rec run op s ((gls,dls,p as goals) : goals) (alts : alternatives)
           (*let start = mk_prtg "<<resume\n" depth lvl in
           let stop = mk_prtg "resume>>\n" depth lvl in*)
           (*start ::*) List.flatten resumed (*@ [stop]*) in
+        (* TASSI: all keays must have the same head *)
         let unlock = depth, `Unlock (List.hd keys, to_purge), [], [], lvl in
         let extra_hyps, s = contextualize_goal depth s goal in
         let extra_hyps = List.map
           (function (_,`Atom (g,k),[]) -> depth, k, g, CN.fresh ()
                     | _ -> assert false)
           extra_hyps in
-        let resumed =
-          List.map (fun (d,g,pr,eh,lvl) ->
-            (d,g,extra_hyps@pr,extra_hyps@eh,lvl))
-          resumed in
-        s, unlock::(*gl@*)resumed@rest, dls, p, alts
+        let first_resumed, rest_resumed = List.hd resumed, List.tl resumed in
+        let first_resumed =
+          match first_resumed with (d,g,pr,eh,lvl) ->
+            (d,g,extra_hyps@pr,extra_hyps@eh,lvl) in
+        s, unlock::(*gl@*)first_resumed :: rest_resumed@rest, dls, p, alts
     | (depth,`Delay(t,goal), _, eh,lvl as g) :: rest ->
         TRACE ~depth:lvl "run" (pr_cur_goal op g s)
-        if true || flexible s t then
+        let t, s = Red.whd t s in
+        if Subst.is_frozen t then
+          try
+            TRACE "delay more" (pr_cur_goal op g s)
+            let new_hyp, s = bubble_up s t goal eh in
+            SPY "key" (prf_data []) (fst(Red.nf t s));
+            let dls = dls @ [t,goal,depth,eh,lvl,new_hyp] in
+            s, List.map (fun (d,g,cp,eh,l) -> (* siblings are pristine *)
+                    d,g,eh@p@[new_hyp],eh(*@[new_hyp]*),l) rest, dls, p @ [new_hyp],
+            alts
+          with NoClause -> next_alt alts (pr_cur_goals op gls)
+        else if flexible t then
           try
             TRACE "delay" (pr_cur_goal op g s)
             let new_hyp, s = bubble_up s t goal eh in

@@ -5,6 +5,9 @@
 
 open Lpdata
 
+(* out of place *)
+val uniq : LP.data list -> LP.data list
+
 exception NOT_A_PU (* for debuggin only *)
 
 exception UnifFail of string lazy_t
