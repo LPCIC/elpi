@@ -46,6 +46,9 @@ mem X [_|XS] :- mem X XS.
 list2 F [] [].
 list2 F [X|XS] [Y|YS] :- F X Y, list2 F XS YS.
 
+and-all [] _.
+and-all [P|PS] F :- F P, and-all PS F.
+
 /* ====================== type inference helpers ========================== */
 
 :pp-whd < _: whd I _ :- dbgpp[whd I], fail.
@@ -504,23 +507,30 @@ tacsem i M :- assign-local M (lam hole (x\ hole)).  /* # */
 tacsem (n S) M :- var S _ _.                        /* assign name */
 tacsem (a T) M :- assign-local M (app [T, dots]).   /* @ */
 tacsem h M :- var _ _ Id, assign-local M Id.        /* assumption */
-%tacsem (r T) M :- assign-local M T.                 /* refine */
 
 of (hyp Name) T X :- var Name T X, !.
 :whd-VAR < whd-NORED: whd (hyp Name) Id :- var Name _ Id, !.
 
-read_tac T :- $print "\ntactic> ", $read S, $parse [S,T], pp[T], !.
+read_tac (low T) :- $print "\ntactic> ", $read S, $parse [S,T], pp[T], !.
 read_tac T :- $print "\nparse error\n", read_tac T.
 
-exec_tac u _ :- !, false.                           /* undo */
-exec_tac T M :- tacsem T M, loop.
-exec_tac T M :- pp ["Tactic failed!"], loop.
+update_open_goals O O2 :- $delayed L, L = O2.
+pick [G|GS] [G].
 
-step M :- read_tac T, exec_tac T M. 
-loop :- $schedule [(sigma M\ M, step M), pp["\nProof completed.\n"]].
+print_goals [G|_] :- $pr_delayed G.
+loop Open :- pick Open Goals, !,
+  pp["Open goals: ",Open], $print "Goal: ", print_goals Goals,
+  read_tac Tac, exec_tac_high Tac Goals Open.
+loop _ :- pp["\nProof completed.\n"].
 
-claim Claim P :-
+exec_tac_high (low u) Goals Open :- !, false.       /* Undo */
+exec_tac_high (low Tac) Goals Open :-
+  and-all Goals (g\ $schedule [g,(sigma M\ M, tacsem Tac M)]),
+  update_open_goals Open NewOpen, loop NewOpen.
+exec_tac_high T G O :- pp ["Tactic failed!"], loop O.
+
+claim Claim :-
   of Claim set Claim1, !,
   of hole Claim1 P,
-  loop.
+  $delayed L, loop L, pp["Proof term: ",P].
 

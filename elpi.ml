@@ -118,35 +118,55 @@ let _ =
   register_custom_predicate "zero_level" (fun t s ->
     let h, s = Subst.fresh_uv 0 s in
     protect (unify t h) s);
+  let destApp x = LP.(match look x with
+    | App xs -> L.hd xs, L.tl xs
+    | _ -> x, L.empty) in
+  register_custom_control_operator "delayed" (fun t s (g,dls,p)  alts ->
+    let keys =
+      List.map (fun (t,_,_,_,_,_) -> fst(destApp (fst(Red.nf t s)))) dls in
+    let kl = LP.(mkSeq (L.of_list keys) mkNil) in
+    let s = unify t kl s in
+    s, (List.tl g,dls,p), alts);
+  let ppgoal s a eh =
+    Format.eprintf "@[<hv 0>%a@ |- %a@]"
+      (LP.prf_program ~compact:false)
+        (List.map (fun (a,b,p,n) -> a,b,fst(Red.nf p s),n)
+          (List.filter (fun (_,k,_,_) ->
+             match k with
+             | LP.Flex -> false
+             | LP.Key x -> LP.equal x (LP.mkCon "var" 0))
+             eh))
+      (LP.prf_premise []) (fst(Red.nf a s)) in
+  let skip (l,d,p) = List.tl l,d,p in
+  register_custom_control_operator "pr_delayed" (fun t s (_,d,_ as gls) alts ->
+    let t, s = Red.nf t s in
+    let selected, _ =
+      List.partition (fun (k,_,_,_,_,_) ->
+        let k = fst(destApp (fst(Red.nf k s))) in
+        LP.equal k t) d in
+    match selected with
+    | [key,a,depth,eh,lvl,_] -> ppgoal s a eh; s, skip gls, alts
+    | [] -> raise NoClause
+    | _ -> assert false);
   register_custom_control_operator "schedule" (fun t s (gls,dls,p) alts ->
     let t, s = Red.nf t s in
     let v1, v2 = check_list2 "schedule" t in
-    match dls with
-    | (key,a,depth,eh,lvl,_ as d) :: rest ->
-         Format.eprintf "------------- scheduled goal --------------@\n";
-         Format.eprintf "@[<hv 0>%a@ |- %a@]"
-           (LP.prf_program ~compact:false)
-             (List.map (fun (a,b,p,n) -> a,b,fst(Red.nf p s),n)
-               (List.filter (fun (_,k,_,_) ->
-                  match k with
-                  | LP.Flex -> false
-                  | LP.Key x -> LP.equal x (LP.mkCon "var" 0))
-                  eh))
-           (LP.prf_premise []) (fst(Red.nf a s));
-         let gl, s = goals_of_premise p v1 depth eh lvl s in
+    let open LP in
+    let resumed, _ =
+      List.partition (fun (t,_,_,_,_,_) ->
+        let k = fst(destApp (fst(Red.nf t s))) in
+        LP.equal k v1) dls in
+    match resumed with
+    | [key,a,depth,eh,lvl,_] ->
+         let gl, s = goals_of_premise p v2 depth eh lvl s in
          let g1, gl = List.hd gl, List.tl gl in
          (match g1 with
          | _,`Atom (k,_),_,_,_ ->
             let s = unify key k s in
-            s,(gl @ List.tl gls, rest @ [d], p),alts
+            s,(gl @ List.tl gls, dls, p),alts
          | _ -> raise (Invalid_argument "schedule"))
-    | [] ->
-         match gls with
-         | [] -> assert false
-         | (depth,_,_,eh,lvl) :: rest ->
-             let gl, s = goals_of_premise p v2 depth eh lvl s in
-             s,(gl @ rest,[],p),alts)
-    
+    | [] -> raise NoClause;
+    | _ -> assert false);
 ;;
 
 let test_prog p g =
