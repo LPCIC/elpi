@@ -1,0 +1,40 @@
+BUGS:
+- app[t]
+- app[app[.]]
+- controllo tabulate
+- pi/Sigma (aka varianza/covarianza)
+- Hereditary Harrop Formulae
+- sintassi di lambda-prolog?
+
+TODO:
+- a match is safe if all branches...
+- fwd reasoning in match for safe variables
+- match dipendente
+- tattichini
+- lam "name" ty x\ body
+- induttivi generali (atom foo) + env
+- universi + pila di meta + unif <=
+- let-in
+- L-tac (esempi) debugging?
+- meta taggate
+- caching di rof?
+- generazione di eliminatori
+- syntax right2left, latex
+
+OPEN QUESTIONS:
+- semantics tabulate/delay/resume/freeze
+- copy vs frozen: is it a solution?
+- success/fail/uncertain (4 disambiguation)
+- error reporting (which error is meaningful, how to display it)
+- choice? (makes sense when we pause, reorder alternatives,depth first ->
+  another visit, produces solutions according to a ranking) more kind
+  cuts?
+
+STATIC ANALYSYS:
+- slicing (extract the kernel)
+- modalities (I/O)
+- types (like raw/refined, whd needs a refined, of takes any gives refine)
+- bibliography / survey
+
+SCIENCE FICTION:
+- compilation
