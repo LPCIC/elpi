@@ -93,7 +93,7 @@ coerce T (?M _) TyE T :- pp["ERROR: flexible inferred ty?\n"], $abort "1".
 coerce T TyA TyE T :- unify TyA TyE, !.
 coerce T TyA TyE T2 :- whd-progress TyA RedTyA, !, coerce T RedTyA TyE T2.
 coerce T TyA TyE T2 :- whd-progress TyE RedTyE, !, coerce T TyA RedTyE T2.
-:coerce-DELTA:
+coerce T TyA TyE T2 :- add-coercion T TyA TyE UnsafeT2, of UnsafeT2 TyE T2.
 coerce T TyA TyE T2 :- delta-betas-step TyA RedTyA, !, coerce T RedTyA TyE T2.
 coerce T TyA TyE T2 :- delta-betas-step TyE RedTyE, !, coerce T TyA RedTyE T2.
 
@@ -350,11 +350,10 @@ body plus (lam (atom nat)
                    (lam (atom nat) m\ lam (prod (atom nat) (x\ (atom nat))) acc\
                       lam (atom nat) (n\ app [atom succ, app [acc,n]]))))).
 
-:coerce-NZ < coerce-DELTA:
-coerce T (atom nat) (atom z) (app [atom nat_to_z, T]).
-coerce T (app [atom list, X]) (app [atom list, Y])
-       (appl [atom map, X, Y, (lam X x\ K x), T]) :-
- (pi f\ of f X f => coerce f X Y (K f)).
+add-coercion T (atom nat) (atom z) NewT :- NewT = app [atom nat_to_z, T].
+add-coercion T (app [atom list, X]) (app [atom list, Y]) NewT :-
+ (pi f\ of f X f => coerce f X Y (K f)),
+ NewT = appl [atom map, X, Y, (lam X x\ K x), T].
 
 resolve magicnat (atom zero).
 resolve magicnat (atom succ).
