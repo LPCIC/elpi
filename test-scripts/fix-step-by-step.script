@@ -1,0 +1,8 @@
+claim (prod (atom nat) x\ atom nat)
+a (fix (atom nat) (x\hole) (f\x\ match hole x (atom zero) (lam hole y\ hole)))
+n "y"
+n "x"
+n "f"
+a (hyp "f")
+a (hyp "y")
+qed
