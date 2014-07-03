@@ -318,12 +318,15 @@ mkhole _ hole.
 
 of (sym X) TY T1 :- resolve X T, of T TY T1.
 
-:of-APP-SYM < of-APP:
-of (app [sym X|AS]) TY T :-
+of_unify T U :- of T _ T1, unify T1 U.
+
+%:of-APP-SYM < of-APP-BIDIR:
+:of-APP-SYM < of-TRIVIAL-BIDIR:
+of (app [sym X|AS]) TY T :- !,
  list2 mkhole AS dotsAS,
- resolve X T, of (app [T|dotsAS]) TY1 T1,
+ resolve X T, of (app [T|dotsAS]) TY T1,
  if (T1 = app [T|AS1])
-  (list2 unify AS AS1)
+  (list2 of_unify AS AS1)
   (of (app [T|AS]) TY T).
 
 /* ====================== prover environment ============================== */
