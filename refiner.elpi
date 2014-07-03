@@ -136,6 +136,7 @@ mk-prod XS NewXS P :-
 :eat-prod-pp < _:
 eat-prod T XS XSTY TY A _ _ :- dbgpp [eat-prod T XS XSTY TY A], false.
 
+eat-prod T [] _ TY []     T TY :- !. % kill unary app
 eat-prod T XS _ TY []     (app [T| Args]) TY :- rev XS Args.
 eat-prod T XS XSTY TY [dots|US] V TyV :- !,
   whd-w-delta TY WhdTY,
