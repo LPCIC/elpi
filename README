@@ -14,12 +14,14 @@ TODO:
 - lam "name" ty x\ body
 - induttivi generali (atom foo) + env
 - universi + pila di meta + unif <=
-- let-in
 - L-tac (esempi) debugging?
 - meta taggate
-- caching di rof?
+- caching di rof? / nuova rof che non tipa veramente (no safe/seed)
 - generazione di eliminatori
 - syntax right2left, latex
+- let-rec: copy, unif, whd, e mutui (togliere fix e rec)
+- map-constr-with-binders (copy, unify context closure)
+  - with that one could separate of and guardednes easily.
 
 OPEN QUESTIONS:
 - semantics tabulate/delay/resume/freeze
