@@ -71,6 +71,8 @@ whd (app [fix Ty RTy B,N]) X :- !,
   if (or (RedN = app [atom succ,M]) (RedN = atom zero))
     (whd (B (fix Ty Rty B) RedN) X)
     (X = app[fix Ty Rty B,RedN]).
+whd (let-in _ V B) X :- !, whd (B V) X. % we may cache the whd of V...
+wdh X B :- def X _ V, !, whd V B.
 :whd-NORED:
 whd X X.
 
@@ -92,7 +94,7 @@ of (lam S F) TY (lam S2 F2) :-
   !,
   of S set S3,
   unify S2 S3,
-  (pi x\ (of x S3 x :- !) => var _ S3 x => of (F x) (T x) (F2 x)).
+  (pi x\ (of x S3 x :- !) => var _ S3 x x => of (F x) (T x) (F2 x)).
 
 % ideally each rule should take care of dealing with bi-directionality
 % after this rule bidirectionaly become the trivially implemented
@@ -120,7 +122,13 @@ inhabit (?T L) TY :- get-local M, !, of M TY (@T L).
 of (#F L) TY T :- T = @F L, inhabit (@F L) TY.
 
 of (lam S F) (prod S2 T) (lam S2 F2) :-
-  of S set S2, pi x\ (of x S2 x :- !) => var _ S2 x => of (F x) (T x) (F2 x).
+  of S set S2, pi x\ (of x S2 x :- !) => var _ S2 x x => of (F x) (T x) (F2 x).
+
+of (let-in T V B) (let-in T2 V2 BTY2) (let-in T2 V2 B2) :-
+  of T set T2, of V T2 V2,
+  (pi x\ (def x T2 V2 :- !) => var _ T2 x V2 => of (B x) (BTY2 x) (B2 x)).
+
+of V TY V1 :- def V TY _, !. 
 
 of (prod S F) set (prod S2 F2) :-
   of S set S2, pi x\ (of x S2 x :- !) => of (F x) set (F2 x).
@@ -190,7 +198,7 @@ of (match Rty N Base Step) Rty2 (match Rty2 N2 Base2 (lam Ty2 F2)) :-
   unify Ty2 (atom nat),
   pi x\
    (of x Ty2 x :- !) =>
-   var _ Ty2 x =>
+   var _ Ty2 x x =>
    (safe x G :- or (safe N2 G) (seed N2 G)) =>
      of (F x) Rty2 (F2 x).
 
@@ -198,8 +206,8 @@ of (fix TY TYF B) (prod TY2 TYF2) (fix TY2 TYF2 B2) :-
  of (prod TY TYF) set (prod TY2 TYF2),
  pi f\ (of f (prod TY2 TYF2) f :- !) =>
        (pi X\ danger (app [f, X]) X f) =>
-       var _ (prod TY2 TYF2) f =>
- pi x\ (of x TY2 x :- !) => seed x f => var _ TY2 x =>
+       var _ (prod TY2 TYF2) f f =>
+ pi x\ (of x TY2 x :- !) => seed x f => var _ TY2 x x =>
   of (B f x) (TYF2 x) (B2 f x).
 
 of set set set.
@@ -261,6 +269,9 @@ copy OC L (lam S1 F1) (lam S2 F2) :- gr-o-cp OC L S1 S2,
   pi c\ (of c S2 c :- !) => grab OC [] c c =>
     % TASSI: should the hyp be (of c S1) or (of c S2) ?
     gr-o-cp OC L (F1 c) (F2 c).
+copy OC L (let-in T1 V1 B1) (let-in T2 V2 B2) :-
+  gr-o-cp OC L T1 T2, gr-o-cp OC L V1 V2,
+  pi c\ (def c T2 V2 :- !) => grab OC [] c c => gr-o-cp OC L (B1 c) (B2 c).
 copy OC L (prod S1 F1) (prod S2 F2) :- gr-o-cp OC L S1 S2,
   pi c\ (of c S2 c :- !) => grab OC [] c c =>
     gr-o-cp OC L (F1 c) (F2 c).
@@ -283,8 +294,11 @@ copy OC L (fix Ty RTy B) (fix Ty2 RTy2 B2) :-
 %                 x1 : T1, .., xn : TN |- M : T
 sequent_of M [] [TY] A :- assert(M = #HD _), inhabit (A M@) TY, !.
 sequent_of M [] [_] _ :- pp["ERROR: unable to get sequent of ",M], $abort "1".
-sequent_of M [X|XS] [T|TS] A :-
-  pi x\ (of x T x :- !) => sequent_of M XS (TS x) [x|A].
+sequent_of M [X|XS] [Item|TS] A :-
+  pi x\
+    (of x T x :- !, Item = decl T) =>
+    (def x T B :- !, Item = def T B) =>
+    sequent_of M XS (TS x) [x|A].
 
 % mask_sequent2 F XS YS Seq MaskSeq AllIn. Returns in MaskSeq a copy of Seq
 % where each item T is either prefixed by in as in "keep T", or subtituted with
@@ -298,15 +312,22 @@ mask_sequent2 F [X|XS] [Y|YS] [T|TS] [E|L] B:- % we could use or here
 
 % given the filter generates a new lambda spine that prunes "drop" items
 % and returns a new meta.
+no-dropped-occurs T :- of T _ _.
 new_restricted_meta FILTER M :-
   dbgpp ["building new meta restricted on ",FILTER],
   $zero_level M, $zero_level MTY, mklams FILTER M MTY, dbgpp ["obtain ", M].
   mklams [_] M MTY :- new-meta MTY set, new-meta M MTY.
   mklams [drop|L] M MTY :-
     (pi a\ pi b\ M a = M b, MTY a = MTY b), pi x\ mklams (L x) (M x) (MTY x).
-  mklams [keep TY|L] M MTY :-
-    if (of TY _ _)
+  mklams [keep (decl TY)|L] M MTY :-
+    if (no-dropped-occurs TY)
       (pi x\ (of x TY x :- !) => mklams (L x) (M x) (MTY x))
+      (mklams [drop|L] M MTY).
+  mklams [keep (def TY BO)|L] M MTY :-
+    if (no-dropped-occurs TY)
+      (if (no-dropped-occurs BO)
+         (pi x\ (def x TY BO :- !) => mklams (L x) (M x) (MTY x))
+         (pi x\ (of x TY x :- !) => mklams (L x) (M x) (MTY x)))
       (mklams [drop|L] M MTY).
 
 % Assigns a meta M and resumes all goals suspended on M
@@ -359,6 +380,8 @@ unif ff (fix A1 B1 C1) (fix A2 B2 C2) :-
 :u-SAME-RIGID: % contextual closure
 unif ff (lam S F) (lam T G) :- !,
   unify S T, pi x\ (of x S x :- !) => unify (F x) (G x).
+unif ff (let-in S V F) (let-in T W G) :- !,
+  unify S T, unify V W, pi x\ (def x S V :- !) => unify (F x) (G x).
 unif ff (prod S F) (prod T G) :- !,
   unify S T, pi x\ (of x S x :- !) => unify (F x) (G x).
 
@@ -485,7 +508,7 @@ suite TEST t7-3 "1" :- % delift  + restriction
           of (lam (atom nat) y\ hole) _ Y,
           pi c\ (of c (atom nat) c :- !) =>
             unify (app [Y, atom zero]) (app [atom succ, X (X1 c)]),
-          dbgpp ["X=",X,"\nX1=",X1,"\nY=",Y],
+          pp ["X=",X,"\nX1=",X1,"\nY=",Y],
           expect [(X = w\ #F1 (A1 w), A1=w\[w], X1 = w\ #F2 (A2 w), A2=w\[])%,
                   %(X = w\ #F1 (A1 w), A1=w\[],  X1 = w\ #F2 (A2 w), A2=w\[w])
 ]).
@@ -557,12 +580,13 @@ expect [] :- $get["sols",S],pp["ERROR: Unexpected sol #",S],$incr "unexp",false.
 
 /* ========= Tactics ======== */
 tacsem i M :- assign-local M (lam hole (x\ hole)).  /* # */
-tacsem (n S) M :- var S _ _.                        /* assign name */
+tacsem l M :- assign-local M (let-in hole hole (x\ hole)).  /* # */
+tacsem (n S) M :- var S _ _ _.                        /* assign name */
 tacsem (a T) M :- assign-local M (app [T, dots]).   /* @ */
-tacsem h M :- var _ _ Id, assign-local M Id.        /* assumption */
+tacsem h M :- var _ _ Id _, assign-local M Id.        /* assumption */
 
-of (hyp Name) T X :- var Name T X, !.
-:whd-VAR < whd-NORED: whd (hyp Name) Id :- var Name _ Id, !.
+of (hyp Name) T X :- var Name T X _, !.
+:whd-VAR < whd-NORED: whd (hyp Name) Id :- var Name _ Id _, !.
 
 read_tac (low T) :- $print "\ntactic> ", $read S, $parse [S,T], pp[T], !.
 read_tac T :- $print "\nparse error\n", read_tac T.
@@ -570,9 +594,9 @@ read_tac T :- $print "\nparse error\n", read_tac T.
 update_open_goals O O2 :- $delayed L, L = O2.
 pick [G|GS] [G].
 
-print_goals [G|_] :- $pr_delayed G.
+print_goals [G|_] :- $pr_delayed [G,[var,danger,seed,safe]].
 loop Open :- pick Open Goals, !,
-  pp["Open goals: ",Open], $print "Goal: ", print_goals Goals,
+  pp["Open goals: ",Open], $print "Goal:\n", print_goals Goals,
   read_tac Tac, exec_tac_high Tac Goals Open.
 loop _ :- pp["\nProof completed.\n"].
 
