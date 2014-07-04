@@ -217,19 +217,19 @@ let test_prog p g =
 
 let _ =
   let argv = Trace.parse_argv Sys.argv in
+  let b = Buffer.create 1024 in
   for i=1 to Array.length argv - 1 do
-    Printf.eprintf "running with %s\n" argv.(i);
-    let p =
-      let b = Buffer.create 1024 in
+    Printf.eprintf "loading %s\n" argv.(i);
       let ic = open_in argv.(i) in
       try
         while true do Buffer.add_string b (input_line ic^"\n") done;
         assert false
-      with End_of_file -> Buffer.contents b in
-    let g =
-      Printf.printf "goal> %!";
-      input_line stdin in
-    test_prog p g
+      with End_of_file -> ()
   done;
+  let p = Buffer.contents b in
+  let g =
+    Printf.printf "goal> %!";
+    input_line stdin in
+  test_prog p g;
   Trace.quit ()
 
