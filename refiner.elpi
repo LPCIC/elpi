@@ -138,8 +138,7 @@ safe (#M L) F :- delay (@M L) (safe (@M L) F).
 
 :of-APP:
 of (app [T|U]) TyV V :-
-  of T TyT T1, eat-prod T1 [] [] TyT U V TyV,
-  if (danger V X F) (safe X F) true.
+  of T TyT T1, eat-prod T1 [] [] TyT U V TyV.
 
 simple-delift Arg ArgTy Term DelTerm :-
   delift dummy [ArgTy|x\set] [Arg] Term DelTerm [].
@@ -209,6 +208,48 @@ of (fix TY TYF B) (prod TY2 TYF2) (fix TY2 TYF2 B2) :-
        var _ (prod TY2 TYF2) f f =>
  pi x\ (of x TY2 x :- !) => seed x f => var _ TY2 x x =>
   of (B f x) (TYF2 x) (B2 f x).
+
+of (let-rec D) INTY2 (let-rec D2) :- 
+  pi f\
+    D f = [CTX f,IN f],
+    of-let-rec-ty MASK (CTX f) RECTY (CTX2 f),
+    danger f RECTY MASK => of-let-rec-bo f (CTX2 f) (CTX3 f),
+    of f RECTY f => of (IN f) (INTY f) (IN1 f),
+    (D2 f) = [CTX3 f, IN1 f],
+    choice (INTY f = INTY2) (INTY2 = let-rec (g\[CTX3 g, INTY g])).
+
+:of-APP-LET-REC < of-APP:
+of (app[T|ARGS]) TyV V :-
+  danger T TyT MASK, !,
+  eat-prod T1 [] [] TyT U V TyV,
+  V = app[_|ARGS1],
+  all-safe T ARGS1 MASK. 
+
+all-safe _ _ [].
+all-safe _ [] MASK :- and-all MASK (x\x=false).
+all-safe F [_|XS] [true|MASK] :- all-safe F XS MASK.
+all-safe F [X|XS] [false|MASK] :- safe X F, all-safe F XS MASK. 
+
+of-let-rec-bo F [tybo T B] [tybo T B2] :- of B T B2.
+of-let-rec-bo F [decl T, CTX] [decl T, CTX2] :-
+  pi x\(of x T x :- !) => var _ T x x => of-let-rec-bo F (CTX x) (CTX2 x).
+of-let-rec-bo F [recarg T, CTX] [recarg T, CTX2] :-
+  pi x\(of x T x :- !) => var _ T x x => seed x F =>
+    of-let-rec-bo F (CTX x) (CTX2 x).
+of-let-rec-bo F [def T B, CTX] [def T B, CTX2] :-
+  pi x\(def x T B :- !) => var _ T x B => of-let-rec-bo F (CTX x) (CTX2 x).
+
+of-let-rec-ty [] [tybo T B] T2 [tybo T2 B] :- of T set T2.
+of-let-rec-ty [true|F] [decl T, CTX] (prod T2 TyF) [decl T2, CTX2] :-
+  of T set T2, pi x\(of x T2 x :- !) => var _ T2 x x =>
+    of-let-rec-ty F (CTX x) (TyF x) (CTX2 x).
+of-let-rec-ty [false|F] [recarg T, CTX] (prod T2 TyF) [recarg T2, CTX2] :-
+  of T set T2, pi x\(of x T2 x :- !) => var _ T2 x x =>
+    of-let-rec-ty F (CTX x) (TyF x) (CTX2 x).
+of-let-rec-ty [true|F] [def T B, CTX] (let-in T2 B2 TyF) [def T2 B2, CTX2] :-
+  of T set T2, of B T2 B2,
+  pi x\(def x T2 B2 :- !) => var _ T2 x B2 =>
+    of-let-rec-ty F (CTX x) (TyF x) (CTX2 x).
 
 of set set set.
 of (atom ID) T (atom ID) :- env ID T.
