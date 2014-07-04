@@ -72,7 +72,7 @@ whd (app [fix Ty RTy B,N]) X :- !,
     (whd (B (fix Ty Rty B) RedN) X)
     (X = app[fix Ty Rty B,RedN]).
 whd (let-in _ V B) X :- !, whd (B V) X. % we may cache the whd of V...
-wdh X B :- def X _ V, !, whd V B.
+whd X B :- def X _ V, !, whd V B.
 :whd-NORED:
 whd X X.
 
