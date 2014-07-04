@@ -109,13 +109,15 @@ coerce T TyA TyE T2 :- add-coercion T TyA TyE UnsafeT2, of UnsafeT2 TyE T2.
 coerce T TyA TyE T2 :- delta-betas-step TyA RedTyA, !, coerce T RedTyA TyE T2.
 coerce T TyA TyE T2 :- delta-betas-step TyE RedTyE, !, coerce T TyA RedTyE T2.
 
-of hole TY T :- delay TY (waiting-for TY set), delay T (waiting-for T TY).
+new-meta T TY :- delay T (inhabit T TY) tabulate [of,def].
 
-:waiting-for-pp < _: waiting-for T TY :- dbgpp[waiting-for T TY], false.
-waiting-for (?T L) TY :- get-canonical M, !, of (@M L) TY (@T L).
-waiting-for (?T L) TY :- get-local M, !, of M TY (@T L).
+of hole TY T :- new-meta TY set, new-meta T TY.
 
-of (#F L) TY T :- T = @F L, waiting-for (@F L) TY.
+:inhabit-pp < _: inhabit T TY :- dbgpp[inhabit T TY], false.
+inhabit (?T L) TY :- get-canonical M, !, of (@M L) TY (@T L).
+inhabit (?T L) TY :- get-local M, !, of M TY (@T L).
+
+of (#F L) TY T :- T = @F L, inhabit (@F L) TY.
 
 of (lam S F) (prod S2 T) (lam S2 F2) :-
   of S set S2, pi x\ (of x S2 x :- !) => var _ S2 x => of (F x) (T x) (F2 x).
@@ -279,7 +281,7 @@ copy OC L (fix Ty RTy B) (fix Ty2 RTy2 B2) :-
 %               [T1, x1\ [T2, .. xn\ [TN, T] .. ]]
 % meaning that
 %                 x1 : T1, .., xn : TN |- M : T
-sequent_of M [] [TY] A :- assert(M = #HD _), waiting-for (A M@) TY, !.
+sequent_of M [] [TY] A :- assert(M = #HD _), inhabit (A M@) TY, !.
 sequent_of M [] [_] _ :- pp["ERROR: unable to get sequent of ",M], $abort "1".
 sequent_of M [X|XS] [T|TS] A :-
   pi x\ (of x T x :- !) => sequent_of M XS (TS x) [x|A].
@@ -299,7 +301,7 @@ mask_sequent2 F [X|XS] [Y|YS] [T|TS] [E|L] B:- % we could use or here
 new_restricted_meta FILTER M :-
   dbgpp ["building new meta restricted on ",FILTER],
   $zero_level M, $zero_level MTY, mklams FILTER M MTY, dbgpp ["obtain ", M].
-  mklams [_] M MTY :- delay MTY (waiting-for MTY set), delay M (waiting-for M MTY).
+  mklams [_] M MTY :- new-meta MTY set, new-meta M MTY.
   mklams [drop|L] M MTY :-
     (pi a\ pi b\ M a = M b, MTY a = MTY b), pi x\ mklams (L x) (M x) (MTY x).
   mklams [keep TY|L] M MTY :-

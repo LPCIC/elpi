@@ -21,6 +21,11 @@ let check_list2 name t =
   | LP.Seq (l,tl) when L.len l = 2 && LP.equal tl LP.mkNil -> L.hd l, L.get 1 l
   | _ -> type_err name "list of len 2" t
 
+let check_list name t =
+  match LP.look t with
+  | LP.Seq (l,tl) when LP.equal tl LP.mkNil -> L.to_list l
+  | _ -> type_err name "list" t
+
 let check_string name t =
   match LP.look t with
   | LP.Ext x when isString x -> getString x
@@ -127,7 +132,8 @@ let _ =
     let kl = LP.(mkSeq (L.of_list (Lprun.uniq keys)) mkNil) in
     let s = unify t kl s in
     s, (List.tl g,dls,p), alts);
-  let ppgoal s a eh =
+  let ppgoal s a eh filter =
+    let filter = check_list "ppgoal" filter in
     Format.eprintf "@[<hv 0>%a@ |- %a@]"
       (LP.prf_program ~compact:false)
         (List.map (fun (a,b,p,n) -> a,b,fst(Red.nf p s),n)
@@ -135,23 +141,19 @@ let _ =
              match k with
              | LP.Flex -> false
              | LP.Key x ->
-                  LP.equal x (LP.mkCon "var" 0) ||
-                  LP.equal x (LP.mkCon "safe" 0) ||
-                  LP.equal x (LP.mkCon "seed" 0) ||
-                  LP.equal x (LP.mkCon "danger" 0)
-                  
-                  )
+                 List.exists (LP.equal x) filter)
              eh))
       (LP.prf_premise []) (fst(Red.nf a s)) in
   let skip (l,d,p) = List.tl l,d,p in
   register_custom_control_operator "pr_delayed" (fun t s (_,d,_ as gls) alts ->
     let t, s = Red.nf t s in
+    let t, filter = check_list2 "pr_delayed" t in
     let selected, _ =
       List.partition (fun (k,_,_,_,_,_) ->
         let k = fst(destApp (fst(Red.nf k s))) in
         LP.equal k t) d in
     match selected with
-    | (key,a,depth,eh,lvl,_) :: _ -> ppgoal s a eh; s, skip gls, alts
+    | (key,a,depth,eh,lvl,_) :: _ -> ppgoal s a eh filter; s, skip gls, alts
     | [] -> raise NoClause);
   register_custom_control_operator "schedule" (fun t s (gls,dls,p) alts ->
     let t, s = Red.nf t s in

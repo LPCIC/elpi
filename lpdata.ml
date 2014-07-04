@@ -657,7 +657,9 @@ let mkPi n p = mkCApp pi_name [mkBin n p]
 let sigma_name = Name.make "*sigma*"
 let mkSigma n p = mkCApp sigma_name [mkBin n p]
 let delay_name = Name.make "*delay*"
-let mkDelay k p = mkCApp delay_name [k; p]
+let mkDelay k p = function
+  | None -> mkCApp delay_name [k; p]
+  | Some l -> mkCApp delay_name [k; p; l]
 let resume_name = Name.make "*resume*"
 let mkResume k p = mkCApp resume_name [k;p]
 
@@ -669,7 +671,7 @@ type kind_of_premise =
   | Impl of clause * premise
   | Pi of int * premise
   | Sigma of int * premise
-  | Delay of data * premise
+  | Delay of data * premise * data L.t option
   | Resume of data * premise
 
 let collect_Uv_premise = collect_Uv
@@ -698,7 +700,14 @@ let look_premise p =
       | Con(name,0) when Name.equal name sigma_name ->
           let n,t = destBin (L.get 1 xs) in Sigma(n,t)
       | Con(name,0) when Name.equal name delay_name ->
-          Delay(L.get 1 xs, L.get 2 xs)
+          Delay(L.get 1 xs, L.get 2 xs,
+            if L.len xs < 4 then None
+            else
+              let fl = L.get 3 xs in
+              match look fl with
+            | Seq(l,_) -> Some l
+            | Nil -> Some L.empty
+            | _ -> assert false)
       | Con(name,0) when Name.equal name resume_name ->
           Resume(L.get 1 xs, L.get 2 xs)
       | _ -> Atom (kool a))
@@ -787,12 +796,16 @@ let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
        end;
        if pars then Format.pp_print_string fmt ")";
        Format.pp_close_box fmt ()
-  | Delay(t,p) ->
+  | Delay(t,p,fl) ->
        Format.fprintf fmt "delay @[";
        prf_data ctx fmt t;
        Format.fprintf fmt "@ (";
        prf_premise ~pars:false ~positive ctx fmt p;
-       Format.fprintf fmt ")@]"
+       Format.fprintf fmt ")";
+       (match fl with None -> () | Some l ->
+         Format.fprintf fmt "@ tabulate@ ";
+         prf_data ctx fmt (mkSeq l mkNil));
+       Format.fprintf fmt "@]"
   | Resume(t,p) ->
        Format.fprintf fmt "resume @[";
        prf_data ctx fmt t;
@@ -912,6 +925,7 @@ let rec lex c = parser bp
        | "CONSTANT","sigma" -> "SIGMA", "sigma"
        | "CONSTANT","nil" -> "NIL", "nil"
        | "CONSTANT","delay" -> "DELAY","delay"
+       | "CONSTANT","tabulate" -> "TABULATE","tabulate"
        | "CONSTANT","resume" -> "RESUME","resume"
        | x -> x), (bp, ep)
 and comment c = parser
@@ -999,7 +1013,7 @@ let check_clause x = ()
 let check_goal x = ()
 
 let atom_levels = 
-  ["pi";"conjunction";"implication";"equality";"equality";"term";"app";"simple"]
+        ["pi";"conjunction";"implication";"equality";"equality";"term";"app";"simple";"list"]
 
 let () =
   Grammar.extend [ Grammar.Entry.obj atom, None,
@@ -1090,17 +1104,18 @@ EXTEND
           mkVApp `Frozen hd args
       | bt = BUILTIN; a = atom LEVEL "simple" -> mkAtomBiCustom bt a
       | BANG -> mkAtomBiCut
-      | DELAY; t = atom LEVEL "simple"; p = atom LEVEL "simple" -> mkDelay t p
+      | DELAY; t = atom LEVEL "simple"; p = atom LEVEL "simple";
+          fl = OPT [ TABULATE; l = atom LEVEL "list" -> l ] -> mkDelay t p fl
       | RESUME; t = atom LEVEL "simple"; p = atom LEVEL "simple" -> mkResume t p
-      | LBRACKET; xs = LIST0 atom LEVEL "implication" SEP COMMA;
+      | LPAREN; a = atom; RPAREN -> a ]];
+  atom : LEVEL "list" 
+     [[ LBRACKET; xs = LIST0 atom LEVEL "implication" SEP COMMA;
           tl = OPT [ PIPE; x = atom LEVEL "term" -> x ]; RBRACKET ->
           let tl = match tl with None -> XNil | Some x -> x in
           if List.length xs = 0 && tl <> XNil then 
             raise (Token.Error ("List with not elements cannot have a tail"));
           if List.length xs = 0 then mkNil
-          else mkSeq (L.of_list xs) tl
-      | LPAREN; a = atom; RPAREN -> a
-      ]];
+          else mkSeq (L.of_list xs) tl ]];
   bound : 
     [ [ c = CONSTANT -> let c, lvl = lvl_name_of c in mkConN c lvl, false
       | u = UVAR -> let u, lvl = lvl_name_of u in mkUv (get_uv u) lvl, true ]

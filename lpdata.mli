@@ -121,7 +121,7 @@ module LP : sig
   val mkImpl : premise -> premise -> premise
   val mkPi : int -> premise -> premise
   val mkSigma : int -> premise -> premise
-  val mkDelay : data -> premise -> premise
+  val mkDelay : data -> premise -> data option -> premise
 
   val eq_clause : annot_clause -> annot_clause -> bool
   val cmp_clause : annot_clause -> annot_clause -> int
@@ -134,7 +134,7 @@ module LP : sig
     | Impl of clause * premise
     | Pi of int * premise
     | Sigma of int * premise
-    | Delay of data * premise
+    | Delay of data * premise * data L.t option
     | Resume of data * premise
 
   val look_premise : data -> kind_of_premise
