@@ -101,9 +101,11 @@ Tracing mechanism
 The code is instrumented with tracing facilities.  The build system can
 construct various flavours of the software, the one built in trace/ has
 all tracing code active.  Via command line options one can select which
-functions have to be traced an in which interval.  For example:
+functions have to be traced an in which interval.  For example
+
   -trace-on -trace-at run 102 123 -trace-only 'run\|try\|select'
-enable tracing from the call number 102 to the one number 123 of the
+
+activates tracing from the call number 102 to the one number 123 of the
 run function and traces only the functions that match the 'run\|try\|select'
 regular expression.  In this specific case we trace the main loop that
 tries to apply a clause and eventually selects one.
@@ -111,10 +113,6 @@ Traces are nested using standard {{{ and }}} markers, your text editor
 should have support for code folding using these markers.
 
 See trace.mli for more details.
-
-FIXME: move the $counter code to trace.ml from elpi.ml
-FIXME: document the command line options in trace.mli
-
 
 MISC
 ====
@@ -171,6 +169,8 @@ TODO: elpi:
 - move/document the $schedule code
 - syntax right 2 left
 - LaTeX export
+- move the $counter code to trace.ml from elpi.ml
+- document the command line options in trace.mli
 
 --
 vim: set tw=75:
