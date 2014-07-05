@@ -702,12 +702,10 @@ let look_premise p =
       | Con(name,0) when Name.equal name delay_name ->
           Delay(L.get 1 xs, L.get 2 xs,
             if L.len xs < 4 then None
-            else
-              let fl = L.get 3 xs in
-              match look fl with
-            | Seq(l,_) -> Some l
-            | Nil -> Some L.empty
-            | _ -> assert false)
+            else match look (L.get 3 xs) with
+              | Seq(l,_) -> Some l
+              | Nil -> Some L.empty
+              | _ -> assert false)
       | Con(name,0) when Name.equal name resume_name ->
           Resume(L.get 1 xs, L.get 2 xs)
       | _ -> Atom (kool a))
@@ -1012,8 +1010,8 @@ let sigma_abstract t =
 let check_clause x = ()
 let check_goal x = ()
 
-let atom_levels = 
-        ["pi";"conjunction";"implication";"equality";"equality";"term";"app";"simple";"list"]
+let atom_levels =
+  ["pi";"conjunction";"implication";"equality";"term";"app";"simple";"list"]
 
 let () =
   Grammar.extend [ Grammar.Entry.obj atom, None,
@@ -1031,14 +1029,13 @@ EXTEND
     [[ name = OPT label;
        hd = concl; hyp = OPT [ ENTAILS; hyp = premise -> hyp ]; FULLSTOP ->
          let name, insertion = match name with
-           | None -> CN.fresh (), `Here
-           | Some (s,pos) ->
-               match pos with
-               | None -> CN.make s, `Here
-               | Some (`Before "_") -> CN.make ~float:`Begin s, `Begin
-               | Some (`After "_") -> CN.make ~float:`End s, `End
-               | Some (`Before n) -> CN.make s, `Before (CN.make ~existing:true n)
-               | Some (`After n) -> CN.make s, `After (CN.make ~existing:true n) in
+         | None -> CN.fresh (), `Here
+         | Some (s,pos) -> match pos with
+             | None -> CN.make s, `Here
+             | Some (`Before "_") -> CN.make ~float:`Begin s, `Begin
+             | Some (`After "_") -> CN.make ~float:`End s, `End
+             | Some (`Before n) -> CN.make s, `Before(CN.make ~existing:true n)
+             | Some (`After n) -> CN.make s, `After(CN.make ~existing:true n) in
          let hyp = match hyp with None -> mkConj L.empty | Some h -> h in
          let clause = sigma_abstract (mkImpl hyp (mkAtom hd)) in
          check_clause clause;
@@ -1065,7 +1062,7 @@ EXTEND
   atom : LEVEL "implication"
      [[ a = atom; IMPL; p = atom LEVEL "implication" ->
           mkImpl (mkAtom a) (mkAtom p)
-      | a = (*concl*)atom; ENTAILS; p = premise ->
+      | a = atom; ENTAILS; p = premise ->
           mkImpl (mkAtom p) (mkAtom a) ]];
   atom : LEVEL "equality"
      [[ a = atom; EQUAL; b = atom LEVEL "term" ->

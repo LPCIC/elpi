@@ -1,42 +1,176 @@
-BUGS:
-- app[t]
-- app[app[.]]
-- controllo tabulate
-- pi/Sigma (aka varianza/covarianza)
-- Hereditary Harrop Formulae
-- sintassi di lambda-prolog?
+ELPI
+====
 
-TODO:
-- a match is safe if all branches...
-- fwd reasoning in match for safe variables
-- match dipendente
-- tattichini
-- lam "name" ty x\ body
-- induttivi generali (atom foo) + env
-- universi + pila di meta + unif <=
-- L-tac (esempi) debugging?
-- meta taggate
-- caching di rof? / nuova rof che non tipa veramente (no safe/seed)
-- generazione di eliminatori
-- syntax right2left, latex
-- let-rec: copy, unif, whd, e mutui (togliere fix e rec)
-- map-constr-with-binders (copy, unify context closure)
-  - with that one could separate of and guardednes easily.
+ELPI is a lambda Prolog interpreter embeddable in OCaml programs.
+
+ELPI extends lambda Prolog with a few linguistic constructs that ease the
+implementation of an instantiation based proof engine (also called refiner)
+for an interactive prover like Coq.  Such constructs makes it possible to
+separate the HO unification of lambda Prolog from the one of the language
+that is described in HOAS style in it.  They also enable programs to
+piggy back on the lambda Prolog runtime for the instantiation of
+unification variables and the automatic type checking of their instances.
+
+ELPI makes it easy to call OCaml code.  An OCaml function can act as a
+regular predicate (i.e. instantiate some variables or fail) or as a control
+operator (i.e. reschedule goals or prune choice points).
+
+ELPI is released under the GNU Lesser General Public License Version 2.1
+or, at your option, any later version.  ELPI is free software, and its
+development is supported by Inria and the University of Bologna.
+The source code is available at: https://gforge.inria.fr/projects/lpcic/
+
+Lambda Prolog extensions: DELAY, RESUME and company
+===================================================
+
+The "delay X P" predicate checks if X is flexible.  If it is not, then
+it behaves like P.  If X is flexible the X is frozen (substituted for
+a fresh global constant) and P is inserted into a list of delayed goals
+keyed on the frozen constant.  If X is already a frozen constant, then P
+is enqueued in the list of goals delayed on X.
+
+The "delay X P tabulate L" predicate additionally generates a new global
+clause of the form "P :- H1, .., HN" where Hi is an hypothetical clause
+in the context of X.  Hypothetical variables h1 .. hm are bound.
+This is performing a logical cut of the formula
+  pi h1\ .. pi hm\ H1 => .. => HN => P
+that is going to be proved once the delayed goal is resumed.  The list of
+head constants L is used to filter the hypothetical context to select
+H1, .., HN.
+
+QUESTION: in our use case this makes sense but if one bubbles up this way
+arbitrary predicates things get nonsensical pretty quickly. 
+
+The "resume X H" predicate defrosts X and resumes all the goals delayed on
+X.  The first goal resumed (the first one that was delayed) gets and extra
+hypothetical clause H.
+
+QUESTION: is there another way to pass data? We always pass closed terms, but
+the mechanism implemented is way too general.
+
+Graftable rules
+---------------
+
+To improve modularity and ease user extensions, clauses can be named and
+grafted before or after other rules.  A clause can be prefixed by :<name>:
+or :<name> <rel> <name1>: where <name> is the name of the clause and where
+<name1> is the name of another clause.  <rel> can be "<" or ">" where "a <
+b" reads "a" has precedence over "b".  If <name1> is "_" the clause is
+made to *always* float before or after any other clause, even the dynamic
+ones (the ones introduced via an implication).  This is useful to have
+pretty printing clauses float before hypothetical clauses.
+
+Implementation details
+======================
+
+The source code is split into two files: lpdata.ml and lprun.ml
+
+The data type of lambda Prolog programs, lambda terms with graftable
+unification variables, is contained in lpdata.  This modules provides
+facilities for parsing, printing, reducing terms (and clauses).  It also
+provides the data type for unification variable assignment, so that weak
+head normalization can both fire beta redexes and graft terms assigned
+to variables.
+
+The runtime for lambda Prolog programs is contained in lprun.  This module
+implements higher order unification and backtracking search.
+
+Higher Order unification
+------------------------
+
+Higher order unification is restricted to the L-lambda (pattern) fragment.
+ELPI implements no procrastination of unification problems falling outside
+the fragment.  These problems result in immediate failures.  This choice
+makes the whole language more deterministic at the cost of making the
+unification of non linear clause heads less declarative: subterms are
+unified left-to-right, outside-in.  It may be required to put terms
+leading to simple unification problems in front, so that later problems
+benefit from early instantiations.
+
+Beta reduction
+--------------
+
+ELPI implements beta reduction using an explicit substitution calculus
+known as the suspension calculus.  The data type of terms is opaque and
+hides suspended substitutions.  This makes it possible to test other
+implementations of beta reduction with minimal effort.
+
+Tracing mechanism
+-----------------
+
+The code is instrumented with tracing facilities.  The build system can
+construct various flavours of the software, the one built in trace/ has
+all tracing code active.  Via command line options one can select which
+functions have to be traced an in which interval.  For example:
+  -trace-on -trace-at run 102 123 -trace-only 'run\|try\|select'
+enable tracing from the call number 102 to the one number 123 of the
+run function and traces only the functions that match the 'run\|try\|select'
+regular expression.  In this specific case we trace the main loop that
+tries to apply a clause and eventually selects one.
+Traces are nested using standard {{{ and }}} markers, your text editor
+should have support for code folding using these markers.
+
+See trace.mli for more details.
+
+FIXME: move the $counter code to trace.ml from elpi.ml
+FIXME: document the command line options in trace.mli
+
+
+MISC
+====
 
 OPEN QUESTIONS:
 - semantics tabulate/delay/resume/freeze
-- copy vs frozen: is it a solution?
-- success/fail/uncertain (4 disambiguation)
+- copy clause is problematic with flexible terms.
+  with the frozen approach one can fully quit the HO unification of LP
+  and produce his own unifier.  Is it a real/good solution to build
+  a HO unif algorithm on top of L-lambda fragment + Prolog?
 - error reporting (which error is meaningful, how to display it)
+- success/fail/uncertain (4 disambiguation)
 - choice? (makes sense when we pause, reorder alternatives,depth first ->
   another visit, produces solutions according to a ranking) more kind
   cuts?
 
-STATIC ANALYSYS:
+STATIC ANALYSIS OF (HO)PROLOG PROGRAM:
+- do bibliography / find survey
+- types to check invariants, like "raw" term versus "refined" one:
+  - whd takes a refined
+  - of takes any term but always gives back a refined
 - slicing (extract the kernel)
 - modalities (I/O)
-- types (like raw/refined, whd needs a refined, of takes any gives refine)
-- bibliography / survey
 
 SCIENCE FICTION:
-- compilation
+- incremental compilation
+
+BUGS: refiner.elpi:
+- whd/of: app[t] -> t, app[app[t]] -> t
+
+BUGS: elpi:
+- pi/Sigma (do use positive/negative positions for real)
+
+Claudio, what do these items mean?
+  - Hereditary Harrop Formulae
+  - sintassi di lambda-prolog?
+
+TODO: refiner.elpi:
+- safe/seed: a match is safe if all branches are safe
+- fwd reasoning in match for safe variables
+- match with dependent return type
+- in lam ass "name" and get rid of n tactic
+- general inductive types (atom foo) + env
+- universese + stack of 3 metas + unification with <=
+- tag metas (named hole)
+- let-rec: copy, unif, whd, + mutual block (remove fix e rec)
+- caching di rof? / nuova rof che non tipa veramente (no safe/seed)
+- map-constr-with-binders (copy, unify context closure)
+  - with that one could separate of and guardednes easily.
+- tinycals
+- automatic generation of elimination principles
+
+TODO: elpi:
+- move/document the $schedule code
+- syntax right 2 left
+- LaTeX export
+
+--
+vim: set tw=75:
