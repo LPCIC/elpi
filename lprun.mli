@@ -31,12 +31,12 @@ val run : LP.program -> LP.goal -> LP.goal * Subst.subst
 type objective =
   [ `Atom of LP.data * LP.key
   | `Unify of LP.data * LP.data | `Custom of string * LP.data | `Cut
-  | `Delay of LP.data * LP.premise * LP.data L.t option
+  | `Delay of LP.data * LP.premise * LP.data option
   | `Resume of LP.data * LP.premise
-  | `Unlock of LP.data * LP.annot_clause list
+  | `Unlock of LP.data
   ]
 type goal = int * objective * LP.program * LP.program * int
-type dgoal = LP.data * LP.premise * int * LP.program * int * LP.annot_clause list
+type dgoal = LP.data * LP.premise * int * LP.program * int
 type goals = goal list * dgoal list * LP.program
 type alternatives = (Subst.subst * goals) list
 

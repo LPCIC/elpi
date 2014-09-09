@@ -285,12 +285,12 @@ exception NoClause
 type objective =
   [ `Atom of data * key
   | `Unify of data * data | `Custom of string * data | `Cut
-  | `Delay of data * premise * data L.t option
+  | `Delay of data * premise * data option
   | `Resume of data * premise
-  | `Unlock of data * annot_clause list
+  | `Unlock of data
   ]
 type goal = int * objective * program * program * int
-type dgoal = data * premise * int * program * int * annot_clause list
+type dgoal = data * premise * int * program * int
 type goals = goal list * dgoal list * program
 type alternatives = (subst * goals) list
 type continuation = premise * program *  alternatives
@@ -348,13 +348,12 @@ let pr_cur_goal op (_,g,hyps,_,lvl) s fmt =
   | `Delay (t,p,Some fl) ->
        Format.fprintf fmt "delay %a %a tabulate %a"
          (prf_data []) (fst(Red.nf t s)) (prf_premise []) (fst(Red.nf p s))
-         (prf_data []) (mkSeq fl mkNil)
+         (prf_data []) fl
   | `Resume (t,p) ->
        Format.fprintf fmt "resume %a %a" (prf_data []) t
          (prf_premise []) (fst(Red.nf p s))
-  | `Unlock (t,ps) ->
-       Format.fprintf fmt "@[<hv 0>unlock %a@ purge %a@]"
-         (prf_data []) (fst(Red.nf t s)) (prf_program ~compact:true) ps
+  | `Unlock t ->
+       Format.fprintf fmt "@[<hv 0>unlock %a@]" (prf_data []) (fst(Red.nf t s))
 
 let pr_cur_goals op gls fmt s =
   Format.fprintf fmt "@[<hov 0>"; 
@@ -495,41 +494,26 @@ let goals_of_premise p clause depth eh lvl s =
   List.map (fun (d,g,e) -> d,g,e@eh@p,e@eh,lvl+1) gl, s
 
 let resume p s test lvl (dls : dgoal list) =
-  list_partmapfold (fun (t,clause,depth,eh,_,to_purge) s ->
+  list_partmapfold (fun (t,clause,depth,eh,_) s ->
     if test t then None
     else
-            (* FIXME: to_purge should be an id (int) *)
-       let p = List.filter (fun x ->
-         not(List.exists (eq_clause x) to_purge)) p in
        let gl, s = goals_of_premise p clause depth eh lvl s in
        SPY "will resume" (prf_premise []) (fst(Red.nf clause s));
        SPY "hd" (prf_data []) (fst(Red.nf t s));
-       Some((gl,to_purge,t),s)) dls s
+       Some((gl,t),s)) dls s
          
 let add_delay (t,a,depth,orig_prog as dl) s dls run = 
-(*   let a = destAtom a in *)
   let rec aux = function
   | [] -> dl :: dls, s
-(*
-  | (t',a',depth',orig_prog') :: rest
-    when LP.equal (Red.nf s t) (Red.nf s t') ->
-      let a' = destAtom a' in
-      let g = mkApp (L.of_list [mkCon "eq" 0; a; a']) in
-      let is_funct =
-        try let _ = run s ([max depth depth',`Atom(g,key_of g),orig_prog,orig_prog,0],[]) [] in true
-        with NoClause -> false in
-      if not is_funct then aux rest
-      else assert false
-*)
   | _ :: rest -> aux rest 
   in
     aux dls
 
 let rec destFlexFrozenHd t l =
   match look t with
-  | Uv(i,lvl) -> Some i, lvl, l
-  | Con(_,lvl) when lvl < 0 -> None, 0, l
-  | App xs -> destFlexFrozenHd (L.hd xs) (L.to_list (L.tl xs))
+  | Uv(i,lvl) -> `Flex(i, lvl, l)
+  | Con(_,lvl) when lvl < 0 -> `Frozen (lvl, l)
+  | App xs -> destFlexFrozenHd (L.hd xs) (L.tl xs)
   | _ -> assert false
 
 let hv_lvl_leq lvl t = match look t with
@@ -546,59 +530,25 @@ let rigid_key_match k1 k2 =
 
 let is_cut x = match look_premise x with AtomBI BICut -> true | _ -> false
 
-let bubble_up s t p (eh : program) filter : annot_clause list * subst =
-  match filter with
-  | None -> [], s
-  | Some filter ->
+let freeze s t p filter =
   let t, s = Red.nf t s in
   let p, s = Red.nf p s in
-  let k = key_of p in
-  let i, lvl, ht = destFlexFrozenHd t [] in
-  let eh = L.of_list eh in
-  let eh =
-    let filter, s = L.fold_map Red.nf filter s in
-    let filter = L.map key_of filter in
-    L.filter (fun _,k1,_,_ ->
-      L.exists (rigid_key_match k1) filter) eh in
-  let eh, s = L.fold_map (fun (_,_,p,_) s -> Red.nf p s) eh s in
-  let eh = List.map
-    (fun x -> match look_premise x with Impl(x,p) when is_cut x -> p | _ -> x)
-    (L.to_list eh) in
-  let hvs_p = collect_hv_premise p in
-  let hvs = hvs_p :: List.map collect_hv_premise eh in
-  let hvs = uniq (List.sort LP.compare (List.flatten hvs)) in
-  let hvs = List.filter
-    (fun h -> hv_lvl_leq lvl h || List.exists (LP.equal h) hvs_p) hvs in
-  let hyp = mkImpl (mkConj (L.of_list
-    ((List.filter (fun x ->
-        let hvsx = collect_hv_premise x in
-        List.for_all (fun h -> List.exists (LP.equal h) hvs) hvsx) eh)
-    @ [mkAtomBiCut]))) p in
-  (* FIXME: toposort, not time-sort *)
-  let hvs = L.of_list (List.sort LP.compare (collect_hv_premise hyp)) in
-  let h, s = Subst.fresh_uv 0 s in
-  let h_hvs = mkApp (L.cons h hvs) in
-(*
-  Format.eprintf "h hvs = %a\n%!" (prf_data []) h_hvs;
-  Format.eprintf "hyp = %a\n%!" (prf_data []) hyp;
-*)
-  let s = match i with None -> s | Some i ->
+  match destFlexFrozenHd t L.empty, filter with
+  | `Frozen _, _ -> s
+  | `Flex(i, lvl, args), None ->
     let ice, s = Subst.freeze_uv i s in
-    let ice_args = L.filter (fun h -> not(List.exists (LP.equal h) ht)) hvs in
-    let s = Subst.set_sub i (mkApp (L.cons ice ice_args)) s in
-    s in
-  let s =
-    try unify h_hvs hyp s
-    with UnifFail err -> 
-       Format.eprintf "*** bubble up: delif fails: %s@\nproblem: @[%a@]\n%!"
-         (Lazy.force err) (fun fmt b -> print_unif_prob s "=" h_hvs b fmt) hyp;
-       raise NoClause
-  in
-  let abstracted, s =
-    if L.len hvs = 0 then Red.nf h s
-    else let h, s = Red.nf h s in mkSigma 0 h, s in
-  SPY "tabulated" (prf_clause []) abstracted;
-  [0, k, abstracted,CN.fresh()], s
+    let hvs = L.of_list (collect_hv p) in
+    let ice_args = L.filter (fun h -> not(L.exists (LP.equal h) args)) hvs in
+    Subst.set_sub i (mkApp (L.cons ice ice_args)) s
+  | `Flex(i, lvl, args), Some l ->
+    let ice, s = Subst.freeze_uv i s in
+    let hvs = L.of_list (collect_hv l) in
+    assert(L.for_all (fun h ->
+      hv_lvl_leq lvl h || L.exists (LP.equal h) args) hvs);
+    let ice_args, s =
+      L.fold_map (fun h s ->
+        try h ^-- args $ s with UnifFail _ -> h,s) hvs s in
+    Subst.set_sub i (mkBin (L.len args) (mkApp (L.cons ice ice_args))) s
 
 let not_same_hd s a b =
  let rec aux a b =
@@ -618,11 +568,6 @@ let not_in to_purge l =
 
 let sort_hyps (d,g,p,eh,lvl) = (d,g,List.sort cmp_clause p,eh,lvl)
 
-let rec list_split3 = function
-  | [] -> [], [], []
-  | (a,b,c) :: tl ->
-     let tl1, tl2, tl3 = list_split3 tl in a::tl1, b::tl2, c::tl3
-
 let rec run op s ((gls,dls,p as goals) : goals) (alts : alternatives)
 : subst * dgoal list * alternatives
 =
@@ -632,7 +577,7 @@ let rec run op s ((gls,dls,p as goals) : goals) (alts : alternatives)
     | (_,`Cut,_,_,lvl)::rest ->
         let alts = cut lvl alts in
         s, rest, dls, p, alts
-    | (_,`Unlock (t,to_purge),_,_,lvl as g) :: rest ->
+    | (_,`Unlock t,_,_,lvl as g) :: rest ->
         TRACE ~depth:lvl "run" (pr_cur_goal op g s)
         let t, s = Red.whd t s in
         if not (Subst.is_frozen t) then
@@ -642,23 +587,15 @@ let rec run op s ((gls,dls,p as goals) : goals) (alts : alternatives)
         let hd = let rec uff t = match look t with
           | App xs -> uff (L.hd xs) | Con (_,lvl) -> lvl | _ -> assert false in
         uff t in
-        let rest = List.map (fun (d,g,cp,eh,l) ->
-          let cp = not_in to_purge cp in
-          d,g,cp,eh,l) rest in
-        let p = not_in to_purge p in
+        let rest = List.map (fun (d,g,cp,eh,l) -> d,g,cp,eh,l) rest in
         Subst.set_sub_con hd h s, rest, dls, p, alts
     | (depth,`Resume(t,goal), _, eh,lvl as g) :: rest ->
         TRACE ~depth:lvl "run" (pr_cur_goal op g s)
         let resumed, dls, s = resume p s (not_same_hd s t) lvl dls in
-        let resumed, to_purge, keys = list_split3 resumed in
-        let to_purge = List.flatten to_purge in
-        let resumed =
-          (*let start = mk_prtg "<<resume\n" depth lvl in
-          let stop = mk_prtg "resume>>\n" depth lvl in*)
-          (*start ::*) List.flatten resumed (*@ [stop]*) in
-        (* TASSI: all keays must have the same head *)
-        let unlock =
-          depth, `Unlock (List.hd keys, to_purge), [], [], lvl+1 in
+        let resumed, keys = List.split resumed in
+        let resumed = List.flatten resumed in
+        assert(List.for_all (equal (List.hd keys)) keys);
+        let unlock = depth, `Unlock (List.hd keys), [], [], lvl+1 in
         let extra_hyps, s = contextualize_goal depth s goal in
         let extra_hyps = List.map
           (function (_,`Atom (g,k),[]) -> depth, k, g, CN.fresh ()
@@ -675,22 +612,17 @@ let rec run op s ((gls,dls,p as goals) : goals) (alts : alternatives)
         if Subst.is_frozen t then
           try
             TRACE "delay more" (pr_cur_goal op g s)
-            let new_hyps, s = bubble_up s t goal eh fl in
             SPY "key" (prf_data []) (fst(Red.nf t s));
-            let dls = dls @ [t,goal,depth,eh,lvl,new_hyps] in
-            s, List.map (fun (d,g,cp,eh,l) -> (* siblings are pristine *)
-                    d,g,eh@p@new_hyps,eh,l) rest, dls, p @ new_hyps,
-            alts
+            let dls = dls @ [t,goal,depth,eh,lvl] in
+            s, rest, dls, p, alts
           with NoClause -> next_alt alts (pr_cur_goals op gls)
         else if flexible t then
           try
             TRACE "delay" (pr_cur_goal op g s)
-            let new_hyps, s = bubble_up s t goal eh fl in
+            let s = freeze s t goal fl in
             SPY "key" (prf_data []) (fst(Red.nf t s));
-            let dls = (t,goal,depth,eh,lvl,new_hyps) :: dls in
-            s, List.map (fun (d,g,cp,eh,l) -> (* siblings are pristine *)
-                    d,g,eh@p@new_hyps,eh,l) rest, dls, p @ new_hyps,
-            alts
+            let dls = (t,goal,depth,eh,lvl) :: dls in
+            s, rest, dls, p, alts
           with NoClause -> next_alt alts (pr_cur_goals op gls)
         else
           let gl, s = goals_of_premise p goal depth eh lvl s in
@@ -741,7 +673,7 @@ let apply_sub_hv_to_goal s g =
 
 let return_current_result op s g dls alts =
   apply_sub_hv_to_goal (Subst.empty 0) g, collect_Uv_premise g, s,
-  List.map (fun (_,g,_,eh,_,_) ->
+  List.map (fun (_,g,_,eh,_) ->
    apply_sub_hv_to_goal s g,
    List.map (fun (i,k,c,u) -> i,k,apply_sub_hv_to_goal s c,u) eh) dls,
   (g,op,alts)

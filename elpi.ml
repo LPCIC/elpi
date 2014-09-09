@@ -31,6 +31,13 @@ let check_string name t =
   | LP.Ext x when isString x -> getString x
   | _ -> type_err name "string" t
 
+let extern_vv name f =
+  register_custom_predicate name (fun t s ->
+    let t, s = Red.nf t s in
+    let v1, v2 = check_list2 name t in
+    protect (f v1 v2) s)
+;;
+
 let extern_kv name f =
   register_custom_predicate name (fun t s ->
     let t, s = Red.nf t s in
@@ -99,6 +106,25 @@ let register_print () =
     | _ -> type_err "printl" "list" t);
 ;;
 
+let register_frozen_tab () =
+  extern_vv "set-frozen-info" (fun frozen value s ->
+    assert(LP.collect_hv value = [] && LP.collect_Uv value = []);
+    let rec aux frozen =
+      match LP.look frozen with
+      | LP.Con(_,lvl) -> Subst.set_info_con lvl value s
+      | LP.App xs -> aux (L.hd xs)
+      | _ -> assert false in aux frozen);
+  extern_vv "get-frozen-info" (fun frozen out s ->
+    let rec aux frozen =
+      match LP.look frozen with
+      | LP.Con(_,lvl) ->
+          (match Subst.get_info_con lvl s with
+          | None -> raise NoClause
+          | Some t -> unify t out s)
+      | LP.App xs -> aux (L.hd xs)
+      | _ -> assert false in aux frozen)
+;;
+
 let _ = Printexc.record_backtrace true
 let _ =
   let control = Gc.get () in
@@ -128,7 +154,7 @@ let _ =
     | _ -> x, L.empty) in
   register_custom_control_operator "delayed" (fun t s (g,dls,p)  alts ->
     let keys =
-      List.map (fun (t,_,_,_,_,_) -> fst(destApp (fst(Red.nf t s)))) dls in
+      List.map (fun (t,_,_,_,_) -> fst(destApp (fst(Red.nf t s)))) dls in
     let kl = LP.(mkSeq (L.of_list (Lprun.uniq keys)) mkNil) in
     let s = unify t kl s in
     s, (List.tl g,dls,p), alts);
@@ -149,22 +175,22 @@ let _ =
     let t, s = Red.nf t s in
     let t, filter = check_list2 "pr_delayed" t in
     let selected, _ =
-      List.partition (fun (k,_,_,_,_,_) ->
+      List.partition (fun (k,_,_,_,_) ->
         let k = fst(destApp (fst(Red.nf k s))) in
         LP.equal k t) d in
     match selected with
-    | (key,a,depth,eh,lvl,_) :: _ -> ppgoal s a eh filter; s, skip gls, alts
+    | (key,a,depth,eh,lvl) :: _ -> ppgoal s a eh filter; s, skip gls, alts
     | [] -> raise NoClause);
   register_custom_control_operator "schedule" (fun t s (gls,dls,p) alts ->
     let t, s = Red.nf t s in
     let v1, v2 = check_list2 "schedule" t in
     let open LP in
     let resumed, _ =
-      List.partition (fun (t,_,_,_,_,_) ->
+      List.partition (fun (t,_,_,_,_) ->
         let k = fst(destApp (fst(Red.nf t s))) in
         LP.equal k v1) dls in
     match resumed with
-    | (key,a,depth,eh,lvl,_) :: _ ->
+    | (key,a,depth,eh,lvl) :: _ ->
          let gl, s = goals_of_premise p v2 depth eh lvl s in
          let g1, gl = List.hd gl, List.tl gl in
          (match g1 with
@@ -173,6 +199,7 @@ let _ =
             s,(gl @ List.tl gls, dls, p),alts
          | _ -> raise (Invalid_argument "schedule"))
     | [] -> raise NoClause);
+  register_frozen_tab ();
 ;;
 
 let test_prog p g =

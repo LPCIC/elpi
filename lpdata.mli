@@ -55,6 +55,8 @@ module Name : sig
   val make : string -> t
   val to_string : t -> string
 end
+  
+module NameMap : Map.S with type key = Name.t
 
 module LP : sig
   type var = int
@@ -96,6 +98,7 @@ module LP : sig
   val isDB : int -> data -> bool
 
   val collect_Uv : data -> data list
+  val collect_hv : data -> data list
 
   module CN : sig
     type t
@@ -134,7 +137,7 @@ module LP : sig
     | Impl of clause * premise
     | Pi of int * premise
     | Sigma of int * premise
-    | Delay of data * premise * data L.t option
+    | Delay of data * premise * data option
     | Resume of data * premise
 
   val look_premise : data -> kind_of_premise
@@ -184,6 +187,8 @@ module Subst : sig
   val is_frozen : LP.data -> bool
   val set_sub : LP.var -> LP.data -> subst -> subst
   val set_sub_con : LP.level -> LP.data -> subst -> subst
+  val set_info_con : LP.level -> LP.data -> subst -> subst
+  val get_info_con : LP.level -> subst -> LP.data option
   val top : subst -> int
   val raise_top : int -> subst -> subst
   

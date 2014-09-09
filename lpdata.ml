@@ -189,6 +189,8 @@ end = struct
   let equal = (==)
   let to_string (_,x) = x
 end
+  
+module NameMap = Map.Make(Name)
 
 let digit_sup = function
   | 0 -> "⁰" | 1 -> "¹" | 2 -> "²" | 3 -> "³" | 4 -> "⁴" | 5 -> "⁵"
@@ -560,16 +562,16 @@ let rec map f x = match push x with
   | (XDB _ | XCon _ | XUv _ | XExt _ | XNil) as x -> f x
   | XBin (ns,x) -> XBin(ns, map f x)
   | XApp xs -> XApp(L.map (map f) xs)
-  | XSeq (xs, tl) -> XSeq(L.map (map f) xs, map f tl)
-  | XVApp(b,t1,t2) -> XVApp(b,map f t1,map f t2)
+  | XSeq (xs, tl) -> let xs = L.map (map f) xs in XSeq(xs, map f tl)
+  | XVApp(b,t1,t2) -> let t1 = map f t1 in XVApp(b,t1,map f t2)
   | XSusp _ -> assert false
 
 let rec mapi f i x = match push x with
   | (XDB _ | XCon _ | XUv _ | XExt _ | XNil) as x -> f i x
   | XBin (ns,x) -> XBin(ns, mapi f (i+ns) x)
   | XApp xs -> XApp(L.map (mapi f i) xs)
-  | XSeq (xs, tl) -> XSeq(L.map (mapi f i) xs, mapi f i tl)
-  | XVApp(b,t1,t2) -> XVApp(b,mapi f i t1, mapi f i t2)
+  | XSeq (xs, tl) -> let xs = L.map (mapi f i) xs in XSeq(xs, mapi f i tl)
+  | XVApp(b,t1,t2) -> let t1 = mapi f i t1 in XVApp(b,t1, mapi f i t2)
   | XSusp _ -> assert false
  
 
@@ -578,7 +580,7 @@ let collect_Uv t =
   let _ =
     map (function XUv(n,_) as x -> uvs := (n,x) :: !uvs; x | x -> x) t in
   let rec uniq seen = function
-    | [] -> List.rev seen
+    | [] -> seen
     | (x,_) as y :: tl ->
        if List.exists (fun (w,_) -> w == x) seen then uniq seen tl
        else uniq (y :: seen) tl
@@ -590,7 +592,7 @@ let collect_hv t =
   let _ =
     map (function XCon(n,l) as x when l > 0 -> hvs := (n,x) :: !hvs; x | x -> x) t in
   let rec uniq seen = function
-    | [] -> List.rev seen
+    | [] -> seen
     | (x,_) as y :: tl ->
        if List.exists (fun (w,_) -> Name.equal x w) seen then uniq seen tl
        else uniq (y :: seen) tl
@@ -671,7 +673,7 @@ type kind_of_premise =
   | Impl of clause * premise
   | Pi of int * premise
   | Sigma of int * premise
-  | Delay of data * premise * data L.t option
+  | Delay of data * premise * data option
   | Resume of data * premise
 
 let collect_Uv_premise = collect_Uv
@@ -702,10 +704,7 @@ let look_premise p =
       | Con(name,0) when Name.equal name delay_name ->
           Delay(L.get 1 xs, L.get 2 xs,
             if L.len xs < 4 then None
-            else match look (L.get 3 xs) with
-              | Seq(l,_) -> Some l
-              | Nil -> Some L.empty
-              | _ -> assert false)
+            else Some (L.get 3 xs))
       | Con(name,0) when Name.equal name resume_name ->
           Resume(L.get 1 xs, L.get 2 xs)
       | _ -> Atom (kool a))
@@ -802,7 +801,7 @@ let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
        Format.fprintf fmt ")";
        (match fl with None -> () | Some l ->
          Format.fprintf fmt "@ tabulate@ ";
-         prf_data ctx fmt (mkSeq l mkNil));
+         prf_data ctx fmt l);
        Format.fprintf fmt "@]"
   | Resume(t,p) ->
        Format.fprintf fmt "resume @[";
@@ -1166,6 +1165,7 @@ open LP
 
 module M = Int.Map
 
+(* Positive indexes to assignements, negative to extra infos for frozen *)
 type subst = { assign : data M.t; top_uv : int }
 let empty n = { assign = M.empty; top_uv = max 1 n }
 
@@ -1174,8 +1174,16 @@ let in_sub i { assign = assign } =
   try last_sub_lookup := M.find i assign; true
   with Not_found -> false
 let in_sub_con lvl s = if lvl >= 0 then false else in_sub (-lvl) s
-let set_sub i t s = { s with assign = M.add i t s.assign }
-let set_sub_con i t s = { s with assign = M.add (-i) t s.assign }
+let set_sub i t s =
+  SPY "sub" (fun fmt t -> Format.fprintf fmt "%d <- %a" i (prf_data []) t) t;
+  { s with assign = M.add i t s.assign }
+let set_sub_con i t s = assert(i < 0);
+  let m = if M.mem i s.assign then M.remove i s.assign else s.assign in
+  { s with assign = M.add (-i) t m }
+let set_info_con i t s = assert(i < 0); { s with assign = M.add i t s.assign }
+let get_info_con i s = assert(i < 0);
+  try Some (M.find i s.assign)
+  with Not_found -> None
 
 let prf_subst fmt s =
   Format.pp_open_hovbox fmt 2;
@@ -1210,6 +1218,8 @@ let frozen = ref 0
 let freeze_uv i s =
   incr frozen;
   let ice = mkCon ("𝓕" ^ subscript !frozen) (-s.top_uv) in
+  SPY "freeze"
+    (fun fmt t -> Format.fprintf fmt "%d <- %a" i (prf_data []) t) ice;
   ice, set_sub i ice { s with top_uv = s.top_uv + 1 }
 let rec is_frozen t = match look t with
   | Con(_,lvl) when lvl < 0 -> true
