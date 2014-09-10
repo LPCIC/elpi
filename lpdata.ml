@@ -634,7 +634,7 @@ end = struct
 end
 
 type program = annot_clause list
-and annot_clause = int * key * clause * CN.t (* level, key, clause, id *)
+and annot_clause = data option list * key * clause * CN.t (* level, key, clause, id *)
 and clause = premise
 and premise = data
 and goal = premise
@@ -655,9 +655,11 @@ let mkConj l = mkCApp conj_name (L.to_list l)
 let impl_name = Name.make "*impl*"
 let mkImpl x y = mkCApp impl_name [x; y]
 let pi_name = Name.make "*pi*"
-let mkPi n p = mkCApp pi_name [mkBin n p]
+let mkPi1 annot p = match annot with
+  | None -> mkCApp pi_name [mkBin 1 p]
+  | Some t -> mkCApp pi_name [t;mkBin 1 p]
 let sigma_name = Name.make "*sigma*"
-let mkSigma n p = mkCApp sigma_name [mkBin n p]
+let mkSigma1 p = mkCApp sigma_name [mkBin 1 p]
 let delay_name = Name.make "*delay*"
 let mkDelay k p = function
   | None -> mkCApp delay_name [k; p]
@@ -671,8 +673,8 @@ type kind_of_premise =
   | AtomBI of builtin
   | Conj of premise L.t
   | Impl of clause * premise
-  | Pi of int * premise
-  | Sigma of int * premise
+  | Pi of data option * premise
+  | Sigma of premise
   | Delay of data * premise * data option
   | Resume of data * premise
 
@@ -684,6 +686,7 @@ let rec destBin x =
   | Bin(n,t) when isBin t -> let m, t = destBin t in n+m, t
   | Bin(n,t) -> n, t
   | _ -> Format.eprintf "%a\n%!" (prf_data []) x; assert false
+let destBin1 t = let n, t = destBin t in assert(n = 1); t
 let destExt x = match look x with Ext t -> t | _ -> assert false
 let look_premise p =
   match look p with
@@ -698,9 +701,10 @@ let look_premise p =
       | Con(name,0) when Name.equal name impl_name ->
           Impl(L.get 1 xs, L.get 2 xs)
       | Con(name,0) when Name.equal name pi_name ->
-          let n,t = destBin (L.get 1 xs) in Pi(n,t)
+          if L.len xs = 2 then Pi(None, destBin1 (L.get 1 xs))
+          else Pi(Some (L.get 1 xs), destBin1 (L.get 2 xs))
       | Con(name,0) when Name.equal name sigma_name ->
-          let n,t = destBin (L.get 1 xs) in Sigma(n,t)
+          Sigma (destBin1 (L.get 1 xs))
       | Con(name,0) when Name.equal name delay_name ->
           Delay(L.get 1 xs, L.get 2 xs,
             if L.len xs < 4 then None
@@ -711,11 +715,6 @@ let look_premise p =
   | Con(name,0) when Name.equal name cut_name -> AtomBI BICut
   | Con(name,0) when Name.equal name conj_name -> Conj L.empty
   | a -> Atom (kool a)
-
-let mkPi n p =
-  match look_premise p with Pi(m,t) -> mkPi (m+n) t | _ -> mkPi n p
-let mkSigma n p =
-  match look_premise p with Sigma(m,t) -> mkSigma (m+n) t | _ -> mkSigma n p
 
 let isConj p =
   match look_premise p with Conj _ -> true | _ -> false
@@ -739,12 +738,13 @@ let mapi_premise = mapi
 
 module PPP = struct (* {{{ pretty printer for programs *)
 
+open Format
+
 let prf_builtin ctx fmt = function
   | BIUnif (a,b) -> 
-      Format.fprintf fmt "@[<hv 2>%a@ = %a@]" (prf_data ctx) a (prf_data ctx) b;
-  | BICustom(name,t) ->
-      Format.fprintf fmt "@[<hov 2>%s %a@]" name (prf_data ctx) t
-  | BICut -> Format.fprintf fmt "!"
+      fprintf fmt "@[<hv 2>%a@ = %a@]" (prf_data ctx) a (prf_data ctx) b
+  | BICustom(name,t) -> fprintf fmt "@[<hov 2>%s %a@]" name (prf_data ctx) t
+  | BICut -> fprintf fmt "!"
 
 let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
   match look_premise p with
@@ -752,72 +752,78 @@ let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
       prf_data_low ~pars
         ~reccal:(fun ?pars ctx -> prf_premise ?pars ctx fmt) ctx fmt p
   | AtomBI bi -> prf_builtin ctx fmt bi
-  | Conj l when L.len l = 0 -> Format.fprintf fmt ""
+  | Conj l when L.len l = 0 -> fprintf fmt ""
   | Conj l when L.len l = 1 -> prf_premise ~positive ~pars ctx fmt (L.hd l)
   | Conj l ->
-       Format.pp_open_hovbox fmt 0; (* if compact *)
-       if pars then Format.pp_print_string fmt "(";
+       pp_open_hovbox fmt 0; (* if compact *)
+       if pars then pp_print_string fmt "(";
        iter_sep (fun fmt () ->
-         Format.pp_print_string fmt ","; Format.pp_print_space fmt ())
+         pp_print_string fmt ","; pp_print_space fmt ())
          (prf_premise ~positive ctx) fmt (L.to_list l);
-       if pars then Format.pp_print_string fmt ")";
-       Format.pp_close_box fmt ()
-  | Pi(n,p) ->
-       let names = fresh_names "y" (List.length ctx) n in
-       Format.pp_open_hvbox fmt 2;
-       Format.pp_print_string fmt ("pi "^String.concat "\\ " names ^ "\\");
-       Format.pp_print_space fmt ();
+       if pars then pp_print_string fmt ")";
+       pp_close_box fmt ()
+  | Pi (annot,p) ->
+       let names = fresh_names "y" (List.length ctx) 1 in
+       pp_open_hvbox fmt 2;
+       pp_print_string fmt "pi ";
+       begin match annot with
+       | Some t ->
+           prf_premise ~positive ~pars:true ctx fmt t;
+           pp_print_space fmt ();
+       | None -> () end;
+       pp_print_string fmt (String.concat "\\ " names ^ "\\");
+       pp_print_space fmt ();
        prf_premise ~positive ~pars (List.rev names @ ctx) fmt p;
-       Format.pp_close_box fmt ()
-  | Sigma(n,p) ->
-       let names = fresh_names "X" (List.length ctx) n in
-       Format.pp_open_hvbox fmt 2;
-       Format.pp_print_string fmt ("sigma "^String.concat "\\ " names ^ "\\");
-       Format.pp_print_space fmt ();
+       pp_close_box fmt ()
+  | Sigma p ->
+       let names = fresh_names "X" (List.length ctx) 1 in
+       pp_open_hvbox fmt 2;
+       pp_print_string fmt ("sigma "^String.concat "\\ " names ^ "\\");
+       pp_print_space fmt ();
        prf_premise ~positive ~pars (List.rev names @ ctx) fmt p;
-       Format.pp_close_box fmt ()
+       pp_close_box fmt ()
   | Impl (x,p) ->
        let l, r, sep, neg_pars =
          if positive then x, p, "=> ",true else p, x, ":- ", false in
-       Format.pp_open_hvbox fmt 2;
-       if pars then Format.pp_print_string fmt "(";
+       pp_open_hvbox fmt 2;
+       if pars then pp_print_string fmt "(";
        prf_premise ~pars:neg_pars ~positive:(not positive) ctx fmt l;
        if not (equal r (mkConj L.empty)) then begin
          if not (equal l (mkConj L.empty)) then begin
-           Format.pp_print_space fmt ();
-           Format.pp_open_hovbox fmt 0;
-           Format.pp_print_string fmt sep;
+           pp_print_space fmt ();
+           pp_open_hovbox fmt 0;
+           pp_print_string fmt sep;
          end;
          prf_premise ~pars:false ~positive:true ctx fmt r;
-         if not (equal l (mkConj L.empty)) then Format.pp_close_box fmt ();
+         if not (equal l (mkConj L.empty)) then pp_close_box fmt ();
        end;
-       if pars then Format.pp_print_string fmt ")";
-       Format.pp_close_box fmt ()
+       if pars then pp_print_string fmt ")";
+       pp_close_box fmt ()
   | Delay(t,p,fl) ->
-       Format.fprintf fmt "delay @[";
+       fprintf fmt "delay @[";
        prf_data ctx fmt t;
-       Format.fprintf fmt "@ (";
+       fprintf fmt "@ (";
        prf_premise ~pars:false ~positive ctx fmt p;
-       Format.fprintf fmt ")";
+       fprintf fmt ")";
        (match fl with None -> () | Some l ->
-         Format.fprintf fmt "@ tabulate@ ";
+         fprintf fmt "@ tabulate@ ";
          prf_data ctx fmt l);
-       Format.fprintf fmt "@]"
+       fprintf fmt "@]"
   | Resume(t,p) ->
-       Format.fprintf fmt "resume @[";
+       fprintf fmt "resume @[";
        prf_data ctx fmt t;
-       Format.fprintf fmt "@ (";
+       fprintf fmt "@ (";
        prf_premise ~pars:false ~positive ctx fmt p;
-       Format.fprintf fmt ")@]"
+       fprintf fmt ")@]"
 
 let prf_clause ?(dot=true) ?positive ctx fmt c =
   let c, ctx = match look_premise c with
-    | Sigma(n,c) -> c, fresh_names "X" 0 n @ ctx
+    | Sigma c -> c, fresh_names "X" 0 1 @ ctx
     | _ -> c, ctx in
-  Format.pp_open_hbox fmt ();
+  pp_open_hbox fmt ();
   prf_premise ?positive ctx fmt c;
-  if dot then Format.pp_print_string fmt ".";
-  Format.pp_close_box fmt ()
+  if dot then pp_print_string fmt ".";
+  pp_close_box fmt ()
 
 let prf_data ctx fmt p = prf_premise ctx fmt p
 let prf_premise ctx fmt = prf_premise ctx fmt
@@ -832,16 +838,16 @@ let string_of_clause c = on_buffer (prf_clause []) c
 
 let prf_program ?(compact=false) fmt p =
   let p = List.map (fun _, _, p, _ -> p) p in
-  if compact then Format.pp_open_hovbox fmt 0
-  else Format.pp_open_vbox fmt 0;
-  iter_sep (Format.pp_print_space) (prf_clause []) fmt p;
-  Format.pp_close_box fmt ()
+  if compact then pp_open_hovbox fmt 0
+  else pp_open_vbox fmt 0;
+  iter_sep (pp_print_space) (prf_clause []) fmt p;
+  pp_close_box fmt ()
 let string_of_program p = on_buffer prf_program p
 
 let rec key_of p = match look_premise p with
   | AtomBI _ -> Flex
   | Conj _ -> assert false
-  | Impl(_,p) | Pi(_,p) | Sigma(_,p) -> key_of p
+  | Impl(_,p) | Pi(_,p) | Sigma p -> key_of p
   | Delay _ -> Flex
   | Resume _ -> Flex
   | Atom t ->
@@ -1003,7 +1009,7 @@ let rec binders c n = function
 
 let sigma_abstract t =
   let uvl = collect_Uv t in
-  List.fold_left (fun p uv -> mkSigma 1 (binders uv 1 p)) t uvl
+  List.fold_left (fun p uv -> mkSigma1 (binders uv 1 p)) t uvl
 
 (* TODO : test that it is of the form of a clause *)
 let check_clause x = ()
@@ -1039,7 +1045,7 @@ EXTEND
          let clause = sigma_abstract (mkImpl hyp (mkAtom hd)) in
          check_clause clause;
          reset (); 
-         (0, key_of clause, clause, name), insertion ]];
+         ([], key_of clause, clause, name), insertion ]];
   goal:
     [[ p = premise ->
          let g = sigma_abstract p in
@@ -1049,11 +1055,26 @@ EXTEND
   premise : [[ a = atom -> a ]];
   concl : [[ a = atom LEVEL "term" -> a ]];
   atom : LEVEL "pi"
-     [[ binder = [PI -> fst | SIGMA -> snd];
+     [[ PI; x = bound; BIND; p = atom LEVEL "conjunction" ->
+         let (x, is_uv), annot = x, None in
+         let bind = if is_uv then mkSigma1 else mkPi1 annot in
+         bind (binders x 1 p)
+      | PI; annot = bound; x = bound; BIND; p = atom LEVEL "conjunction" ->
+         let (x, is_uv), annot = x, Some (fst annot) in
+         let bind = if is_uv then mkSigma1 else mkPi1 annot in
+         bind (binders x 1 p)
+      | PI; LPAREN; annot = atom LEVEL "conjunction"; RPAREN;
         x = bound; BIND; p = atom LEVEL "conjunction" ->
-         let x, is_uv = x in
-         let bind = if is_uv then mkSigma else binder (mkPi,mkSigma) in
-         bind 1 (binders x 1 p) ]];
+         let (x, is_uv), annot = x, Some annot in
+         let bind = if is_uv then mkSigma1 else mkPi1 annot in
+         bind (binders x 1 p)
+      | PI; annot = atom LEVEL "list";
+        x = bound; BIND; p = atom LEVEL "conjunction" ->
+         let (x, is_uv), annot = x, Some annot in
+         let bind = if is_uv then mkSigma1 else mkPi1 annot in
+         bind (binders x 1 p)
+      | SIGMA; x = bound; BIND; p = atom LEVEL "conjunction" ->
+         mkSigma1 (binders (fst x) 1 p) ]];
   atom : LEVEL "conjunction"
      [[ l = LIST1 atom LEVEL "implication" SEP COMMA ->
           if List.length l = 1 then List.hd l

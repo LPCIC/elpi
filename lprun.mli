@@ -35,12 +35,13 @@ type objective =
   | `Resume of LP.data * LP.premise
   | `Unlock of LP.data
   ]
-type goal = int * objective * LP.program * LP.program * int
-type dgoal = LP.data * LP.premise * int * LP.program * int
+type context = LP.data option list
+type goal = context * objective * LP.program * LP.program * int
+type dgoal = LP.data * LP.premise * context * LP.program * int
 type goals = goal list * dgoal list * LP.program
 type alternatives = (Subst.subst * goals) list
 
-val goals_of_premise : LP.program -> LP.clause -> int -> LP.program -> int -> Subst.subst -> goal list * Subst.subst
+val goals_of_premise : LP.program -> LP.clause -> context -> LP.program -> int -> Subst.subst -> goal list * Subst.subst
 
 val register_custom_predicate :
   string -> (LP.data -> Subst.subst -> Subst.subst) -> unit

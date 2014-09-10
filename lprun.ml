@@ -289,8 +289,9 @@ type objective =
   | `Resume of data * premise
   | `Unlock of data
   ]
-type goal = int * objective * program * program * int
-type dgoal = data * premise * int * program * int
+type context = data option list
+type goal = context * objective * program * program * int
+type dgoal = data * premise * context * program * int
 type goals = goal list * dgoal list * program
 type alternatives = (subst * goals) list
 type continuation = premise * program *  alternatives
@@ -369,14 +370,14 @@ let is_custom_predicate name =
 let custom_predicate name =
   try List.assoc name !custom_predicate_tab
   with Not_found -> raise(Invalid_argument ("custom_predicate "^name))
-let custom_control_operator_tab = ref []
+let custom_ctrl_op_tab = ref []
 let register_custom_control_operator n f =
-  custom_control_operator_tab := ("$"^n,f) :: !custom_control_operator_tab
-let is_custom_control_operator name =
-  List.mem_assoc name !custom_control_operator_tab
-let custom_control_operator name =
-  try List.assoc name !custom_control_operator_tab
-  with Not_found -> raise(Invalid_argument ("custom_control_operator "^name))
+  custom_ctrl_op_tab := ("$"^n,f) :: !custom_ctrl_op_tab
+let is_custom_ctrl_op name =
+  List.mem_assoc name !custom_ctrl_op_tab
+let custom_ctrl_op name =
+  try List.assoc name !custom_ctrl_op_tab
+  with Not_found -> raise(Invalid_argument ("custom_ctrl_op "^name))
 
 let subst t hv =
   let t1 = mkApp(L.of_list (mkBin (List.length hv) t::List.rev hv)) in
@@ -384,46 +385,51 @@ let subst t hv =
   SPY "substituted premise/goal" (prf_data []) t1;
   t1
 
-let add_cdepth b cdepth =
-  List.map (fun p -> cdepth, (if b then key_of p else Flex), p, CN.fresh ())
+let add_ctx_key_name b ctx l =
+  List.map (fun p -> ctx, (if b then key_of p else Flex), p, CN.fresh ()) l
 
 let mkAtom t = `Atom(t, key_of t)
 
 let whd_premise s p =
   let p, s = Red.whd p s in
   match look_premise p with
-  | Pi (n,p) -> let p, s = Red.whd p s in mkPi n p, s
-  | Sigma (n,p) -> let p, s = Red.whd p s in mkSigma n p, s 
+  | Pi (annot,p) -> let p, s = Red.whd p s in mkPi1 annot p, s
+  | Sigma p -> let p, s = Red.whd p s in mkSigma1 p, s 
   | _ -> p, s
 
-let contextualize_premise ?(compute_key=false) depth s premise =
-  let rec aux cdepth s eh p =
+let contextualize_premise ?(compute_key=false) ctx s premise =
+  let rec aux ctx s eh p =
     let p, s = whd_premise s p in
     match look_premise p with
     | Atom t ->
-        [cdepth, mkAtom t, add_cdepth compute_key cdepth eh], s
+        [ctx, mkAtom t, add_ctx_key_name compute_key ctx eh], s
     | AtomBI (BIUnif(x,y)) ->
-        [cdepth, `Unify(x,y), add_cdepth compute_key cdepth eh], s
+        [ctx, `Unify(x,y), add_ctx_key_name compute_key ctx eh], s
     | AtomBI (BICustom(n,x)) ->
-        [cdepth, `Custom(n,x), add_cdepth compute_key cdepth eh], s
+        [ctx, `Custom(n,x), add_ctx_key_name compute_key ctx eh], s
     | AtomBI BICut ->
-        [cdepth, `Cut, add_cdepth compute_key cdepth eh], s
-    | Impl(ps,h) when isConj ps -> aux cdepth s (destConj ps @ eh) h
-    | Impl(p,h) -> aux cdepth s (p :: eh) h
-    | Pi(n,h) -> aux (cdepth+1) s eh (subst h (mkhv n (cdepth+1)))
-    | Sigma(n,h) ->
-        let ms, s = fresh_uv n cdepth s in
-        aux cdepth s eh (subst h ms)
+        [ctx, `Cut, add_ctx_key_name compute_key ctx eh], s
+    | Impl(ps,h) when isConj ps -> aux ctx s (destConj ps @ eh) h
+    | Impl(p,h) -> aux ctx s (p :: eh) h
+    | Pi(annot,h) ->
+        let hv = mkhv 1 (List.length ctx+1) in
+        let ctx_item = match annot with
+          | Some t -> Some (mkSeq (L.of_list (hv@[t])) mkNil)
+          | None -> None in
+        aux (ctx_item :: ctx) s eh (subst h hv)
+    | Sigma h ->
+        let ms, s = fresh_uv 1 (List.length ctx) s in
+        aux ctx s eh (subst h ms)
     | Conj l ->
         let ll, s = List.fold_right (fun p (acc,s) ->
-          let l, s = aux cdepth s eh p in
+          let l, s = aux ctx s eh p in
           l::acc, s) (L.to_list l) ([],s) in
         List.flatten ll, s
     | Delay(t, p, fl) ->
-        [cdepth, `Delay (t,p,fl), add_cdepth compute_key cdepth eh], s
-    | Resume(t,p) -> [cdepth, `Resume(t,p), add_cdepth compute_key cdepth eh], s
+        [ctx, `Delay (t,p,fl), add_ctx_key_name compute_key ctx eh], s
+    | Resume(t,p) -> [ctx, `Resume(t,p), add_ctx_key_name compute_key ctx eh], s
   in
-    aux depth s [] premise
+    aux ctx s [] premise
 
 let contextualize_hyp depth subst premise =
   match contextualize_premise depth subst premise with
@@ -440,7 +446,7 @@ let no_key_match k kc =
   | Key _, Flex -> true
   | Flex, _ -> false
 
-let select p k goal depth (s as os) prog orig_eh lvl : step_outcome =
+let select p k goal ctx (s as os) prog orig_eh lvl : step_outcome =
   let rec first = function
   | [] ->
       SPY "fail" (prf_data []) (apply_subst s goal);
@@ -448,9 +454,9 @@ let select p k goal depth (s as os) prog orig_eh lvl : step_outcome =
   | (_,kc,clause,_) :: rest when no_key_match k kc -> first rest
   | (_,_,clause,_) :: rest ->
       try
-        let hd, subgoals, (s as cs) = contextualize_hyp depth s clause in
+        let hd, subgoals, (s as cs) = contextualize_hyp ctx s clause in
         SPY "try" (prf_clause []) (fst(Red.nf clause s));
-        let s = unify ~depth goal hd s in
+        let s = unify ~depth:(List.length ctx) goal hd s in
         SPY "selected" (prf_clause []) (fst(Red.nf clause cs));
         SPY "sub" Subst.prf_subst s;
         let subgoals, s =
@@ -460,7 +466,7 @@ let select p k goal depth (s as os) prog orig_eh lvl : step_outcome =
         let subgoals =
           List.map (fun (d,g,e) -> d,g,e@orig_eh@p,e@orig_eh,lvl+1)
             (List.flatten subgoals) in
-        s, subgoals, [os,([depth,`Atom(goal,k),rest,orig_eh,lvl],[],p)]
+        s, subgoals, [os,([ctx,`Atom(goal,k),rest,orig_eh,lvl],[],p)]
       with UnifFail _ ->
         SPY "skipped" (prf_clause []) clause;
         first rest
@@ -650,9 +656,11 @@ let rec run op s ((gls,dls,p as goals) : goals) (alts : alternatives)
             SPY "sub" Subst.prf_subst s;
             s, rest, dls, p, alts
           with UnifFail _ | NoClause -> next_alt alts (pr_cur_goals op gls)
-        else if is_custom_control_operator name then
-           let s,(gls,dls,p),alts = custom_control_operator name a s goals alts in
-           s, gls, dls, p, alts
+        else if is_custom_ctrl_op name then
+          try
+            let s, (gls, dls, p), alts = custom_ctrl_op name a s goals alts in
+            s, gls, dls, p, alts
+          with UnifFail _ -> next_alt alts (pr_cur_goals op gls)
         else raise (Invalid_argument ("no custom named " ^ name))
   in
   if gls == [] then s, dls, alts
@@ -661,8 +669,8 @@ let rec run op s ((gls,dls,p as goals) : goals) (alts : alternatives)
 let prepare_initial_goal g =
   let s = empty 1 in
   match look_premise g with
-  | Sigma(n,g) ->
-      let ms, s = fresh_uv n 0 s in
+  | Sigma g ->
+      let ms, s = fresh_uv 1 0 s in
       subst g ms, s
   | _ -> g, s
 
@@ -680,7 +688,7 @@ let return_current_result op s g dls alts =
 
 let run_dls (p : program) (g : premise) =
   let g, s = prepare_initial_goal g in
-  let gls, s = contextualize_goal 0 s g in
+  let gls, s = contextualize_goal [] s g in
   let s, dls, alts =
     run p s (List.map (fun (d,g,ep) -> (d,g,ep@p,ep,0)) gls, [], p) [] in
   return_current_result p s g dls alts

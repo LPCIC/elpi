@@ -111,7 +111,7 @@ module LP : sig
 
   type key = Key of data | Flex
   type program = annot_clause list
-  and annot_clause = int * key * clause * CN.t
+  and annot_clause = data option list * key * clause * CN.t
   and clause = premise
   and premise = data
   and goal = premise
@@ -122,12 +122,14 @@ module LP : sig
   val mkAtomBiCut : premise
   val mkConj : premise L.t -> premise
   val mkImpl : premise -> premise -> premise
-  val mkPi : int -> premise -> premise
-  val mkSigma : int -> premise -> premise
+  val mkPi1 : data option -> premise -> premise
+  val mkSigma1 : premise -> premise
   val mkDelay : data -> premise -> data option -> premise
 
   val eq_clause : annot_clause -> annot_clause -> bool
   val cmp_clause : annot_clause -> annot_clause -> int
+
+  val mapi : (int -> data -> data) -> int -> data -> data 
 
   type builtin = BIUnif of data * data | BICustom of string * data | BICut
   type kind_of_premise =
@@ -135,8 +137,8 @@ module LP : sig
     | AtomBI of builtin
     | Conj of premise L.t
     | Impl of clause * premise
-    | Pi of int * premise
-    | Sigma of int * premise
+    | Pi of data option * premise
+    | Sigma of premise
     | Delay of data * premise * data option
     | Resume of data * premise
 

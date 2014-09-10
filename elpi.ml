@@ -16,6 +16,11 @@ let type_err name exp got =
 
 let protect f x = try f x with UnifFail _ -> raise NoClause
 
+let check_list1 name t =
+  match LP.look t with
+  | LP.Seq (l,tl) when L.len l = 1 && LP.equal tl LP.mkNil -> L.hd l
+  | _ -> type_err name "list of len 1" t
+
 let check_list2 name t =
   match LP.look t with
   | LP.Seq (l,tl) when L.len l = 2 && LP.equal tl LP.mkNil -> L.hd l, L.get 1 l
@@ -125,6 +130,21 @@ let register_frozen_tab () =
       | _ -> assert false in aux frozen)
 ;;
 
+let register_telescope () =
+  let bind v t = LP.mapi LP.(fun i t ->
+    if equal t v then mkDB i else t) 1 t in
+  extern_vv "telescope" LP.(fun ctx value s ->
+    let ctx, s = Red.nf ctx s in
+    let ctx = check_list "telescope" ctx in
+    if ctx = [] then unify mkNil value s else
+    let t, binders = List.hd ctx, List.tl ctx in
+    let binders = List.map (check_list2 "telescope") binders in
+    let tele = List.fold_left (fun t (var,typ) ->
+      fixApp (L.of_list [typ;mkBin 1 (bind var t)]))
+      t binders in
+    unify tele value s)
+;;
+
 let _ = Printexc.record_backtrace true
 let _ =
   let control = Gc.get () in
@@ -200,6 +220,21 @@ let _ =
          | _ -> raise (Invalid_argument "schedule"))
     | [] -> raise NoClause);
   register_frozen_tab ();
+  register_telescope ();
+  register_custom_control_operator "context" (fun t s (gls,dls,p) alts ->
+    let t, s = Red.nf t s in
+    let t = check_list1 "context" t in
+    let s =
+      match gls with
+      | (ctx1,_,_,_,_) :: _ ->
+           let rec aux = function
+             | [] -> []
+             | None :: rest -> aux rest
+             | Some x :: rest -> x :: aux rest in
+           let ctx = LP.(mkSeq (L.of_list (aux ctx1)) mkNil) in
+           unify ctx t s
+      | _ -> s in
+    s, (List.tl gls,dls,p), alts)
 ;;
 
 let test_prog p g =
