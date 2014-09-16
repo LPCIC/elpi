@@ -539,6 +539,10 @@ let is_cut x = match look_premise x with AtomBI BICut -> true | _ -> false
 let freeze s t p filter =
   let t, s = Red.nf t s in
   let p, s = Red.nf p s in
+  let filter, s =
+    match filter with
+    | None -> None, s
+    | Some f -> let f, s = Red.nf f s in Some f, s in
   match destFlexFrozenHd t L.empty, filter with
   | `Frozen _, _ -> s
   | `Flex(i, lvl, args), None ->
@@ -554,7 +558,8 @@ let freeze s t p filter =
     let ice_args, s =
       L.fold_map (fun h s ->
         try h ^-- args $ s with UnifFail _ -> h,s) hvs s in
-    Subst.set_sub i (mkBin (L.len args) (mkApp (L.cons ice ice_args))) s
+    let res = mkBin (L.len args) (mkApp (L.cons ice ice_args)) in
+    Subst.set_sub i res s
 
 let not_same_hd s a b =
  let rec aux a b =

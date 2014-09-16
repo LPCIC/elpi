@@ -94,7 +94,7 @@ of (lam S F) TY (lam S2 F2) :-
   !,
   of S set S3,
   unify S2 S3,
-  (pi x\ (of x S3 x :- !) => var _ S3 x x => of (F x) (T x) (F2 x)).
+  (pi (decl S3) x\ (of x S3 x :- !) => var _ S3 x x => of (F x) (T x) (F2 x)).
 
 % ideally each rule should take care of dealing with bi-directionality
 % after this rule bidirectionaly become the trivially implemented
@@ -111,7 +111,22 @@ coerce T TyA TyE T2 :- add-coercion T TyA TyE UnsafeT2, of UnsafeT2 TyE T2.
 coerce T TyA TyE T2 :- delta-betas-step TyA RedTyA, !, coerce T RedTyA TyE T2.
 coerce T TyA TyE T2 :- delta-betas-step TyE RedTyE, !, coerce T TyA RedTyE T2.
 
-new-meta T TY :- delay T (inhabit T TY) tabulate [of,def].
+list-fst [X,_] X.
+
+% Implements the functionality of the old $zero_level
+cut-at-stop [] [].
+cut-at-stop [[_,stop]| _] [] :- !.
+cut-at-stop [X|XS] [X|YS] :- cut-at-stop XS YS.
+
+new-meta T TY :-
+  $context[CC],
+  cut-at-stop CC C,
+  $telescope[[vdash TY|C],Seq],
+  list2 list-fst C RVars, rev RVars Vars,
+  new-meta-aux T TY Vars Seq.
+new-meta-aux T TY Vars Seq :-
+  delay T (inhabit T TY) tabulate [Vars],
+  $set-frozen-info [T,Seq].
 
 of hole TY T :- new-meta TY set, new-meta T TY.
 
@@ -119,19 +134,24 @@ of hole TY T :- new-meta TY set, new-meta T TY.
 inhabit (?T L) TY :- get-canonical M, !, of (@M L) TY (@T L).
 inhabit (?T L) TY :- get-local M, !, of M TY (@T L).
 
-of (#F L) TY T :- T = @F L, inhabit (@F L) TY.
+of (#F L) TY T :- T = @F L, $get-frozen-info[F,Seq], of-seq Seq L TY.
+of-seq (vdash TY) [] TY.
+of-seq (decl T Seq) [V|VS] TY :- rof V T, of-seq (Seq V) VS TY.
+of-seq (def T BO Seq) VS TY :- rof V T, of-seq (Seq BO) VS TY. % ????
 
 of (lam S F) (prod S2 T) (lam S2 F2) :-
-  of S set S2, pi x\ (of x S2 x :- !) => var _ S2 x x => of (F x) (T x) (F2 x).
+  of S set S2,
+  pi (decl S2) x\ (of x S2 x :- !) => var _ S2 x x => of (F x) (T x) (F2 x).
 
 of (let-in T V B) (let-in T2 V2 BTY2) (let-in T2 V2 B2) :-
   of T set T2, of V T2 V2,
-  (pi x\ (def x T2 V2 :- !) => var _ T2 x V2 => of (B x) (BTY2 x) (B2 x)).
+  pi (def T2 V2) x\ (def x T2 V2 :- !) =>
+    var _ T2 x V2 => of (B x) (BTY2 x) (B2 x).
 
 of V TY V1 :- def V TY _, !. 
 
 of (prod S F) set (prod S2 F2) :-
-  of S set S2, pi x\ (of x S2 x :- !) => of (F x) set (F2 x).
+  of S set S2, pi (decl S2) x\ (of x S2 x :- !) => of (F x) set (F2 x).
 
 safe (#M L) F :- delay (@M L) (safe (@M L) F).
 % safe (match ... B) F :- .... 
@@ -140,17 +160,15 @@ safe (#M L) F :- delay (@M L) (safe (@M L) F).
 of (app [T|U]) TyV V :-
   of T TyT T1, eat-prod T1 [] [] TyT U V TyV.
 
-simple-delift Arg ArgTy Term DelTerm :-
-  delift dummy [ArgTy|x\set] [Arg] Term DelTerm [].
-
 mk-prod-aux [] [] set.
 mk-prod-aux [X|XS] [X1|X1S] T :-
   of X XTY X1,
   mk-prod-aux XS X1S P,
-  simple-delift X1 XTY P DelP,
+  delift dummy (decl XTY x\vdash set) [X1] P DelP [],
   T = prod XTY DelP.
 fix-prod set hole.
-fix-prod (prod A F) (prod A F1) :- pi x\ fix-prod (F x) (F1 x).
+fix-prod (prod A F) (prod A F1) :-
+  pi (decl A) x\ (of x A x :- !) => fix-prod (F x) (F1 x).
 mk-prod XS NewXS P :-
   mk-prod-aux XS NewXS PwitSet,
   fix-prod PwitSet PwithHole,
@@ -195,7 +213,7 @@ of (match Rty N Base Step) Rty2 (match Rty2 N2 Base2 (lam Ty2 F2)) :-
   Step = lam Ty F,
   of Ty set Ty2,
   unify Ty2 (atom nat),
-  pi x\
+  pi (decl Ty2) x\
    (of x Ty2 x :- !) =>
    var _ Ty2 x x =>
    (safe x G :- or (safe N2 G) (seed N2 G)) =>
@@ -203,14 +221,14 @@ of (match Rty N Base Step) Rty2 (match Rty2 N2 Base2 (lam Ty2 F2)) :-
 
 of (fix TY TYF B) (prod TY2 TYF2) (fix TY2 TYF2 B2) :-
  of (prod TY TYF) set (prod TY2 TYF2),
- pi f\ (of f (prod TY2 TYF2) f :- !) =>
+ pi (decl (prod TY2 TYF2)) f\ (of f (prod TY2 TYF2) f :- !) =>
        (pi X\ danger (app [f, X]) X f) =>
        var _ (prod TY2 TYF2) f f =>
- pi x\ (of x TY2 x :- !) => seed x f => var _ TY2 x x =>
+ pi (decl TY2) x\ (of x TY2 x :- !) => seed x f => var _ TY2 x x =>
   of (B f x) (TYF2 x) (B2 f x).
 
 of (let-rec D) INTY2 (let-rec D2) :- 
-  pi f\
+  pi f\ % NO CTX TODO
     D f = [CTX f,IN f],
     of-let-rec-ty MASK (CTX f) RECTY (CTX2 f),
     danger f RECTY MASK => of-let-rec-bo f (CTX2 f) (CTX3 f),
@@ -266,12 +284,18 @@ subst Where What Rest Out :- % fixme: app[app]...
 % delift M Seq Args Term DeliftedTerm [].  delifts Term w.r.t. Args for M (that
 % must not occur in Term) whose canonical context is Seq
 :delift < _: delift M S A T D L :- dbgpp[delift M S A T D L], false.
-delift OC _ [] M NewM BLr :- rev BLr BL, gr-o-cp OC BL M NewM.
-delift OC [T|TS] [#HD _|LS] M NewM BL :- !, % drop flexible entries
+delift OC (vdash _) [] M NewM BLr :- rev BLr BL, gr-o-cp OC BL M NewM.
+delift OC (decl T TS) [#HD _|LS] M NewM BL :- !, % drop flexible entries
   pi a\ (of a T a :- !) =>
     delift OC (TS a) LS M (NewM a) [drop|BL].
-delift OC [T|TS] [L|LS] M NewM BL :-
+delift OC (def T _ TS) [#HD _|LS] M NewM BL :- !, % ????????????????
   pi a\ (of a T a :- !) =>
+    delift OC (TS a) LS M (NewM a) [drop|BL].
+delift OC (decl T TS) [L|LS] M NewM BL :-
+  pi a\ (of a T a :- !) =>
+    delift OC (TS a) LS M (NewM a) [bind a L|BL].
+delift OC (def T V TS) [L|LS] M NewM BL :- % ??????????????????
+  pi a\ (def a T V :- !) =>
     delift OC (TS a) LS M (NewM a) [bind a L|BL].
 
 % gr-o-cp M ThingsToBind Term DeliftedTerm. traverses Term and at each node
@@ -288,11 +312,11 @@ grab M L (#M _) _ :- !, false.
 :grab-flex: % eventual restriction
 grab OC L (#M L1) NewT :- !,
   sequent_of M L1 Seq [],
-  % HACK: mask_sequent2 is here used to fill in L1Dl with the delifted
+  % HACK: mask_seq is here used to fill in L1Dl with the delifted
   % It works because it just calls the F, here (gr-o-cp OC L), on the elements
   % of the two lists.  Here L1Dl is flexible, hence it generates a list to hold
   % the delifted of L1.
-  mask_sequent2 (gr-o-cp OC L) L1 L1Dl Seq MaskedSeq AllIn,
+  mask_seq (gr-o-cp OC L) L1 L1Dl Seq MaskedSeq AllIn,
   if AllIn
     (NewT = @M L1Dl)
     (new_restricted_meta MaskedSeq NewM, assign M NewM, NewT = @M L1Dl).
@@ -333,43 +357,40 @@ copy OC L (fix Ty RTy B) (fix Ty2 RTy2 B2) :-
 %               [T1, x1\ [T2, .. xn\ [TN, T] .. ]]
 % meaning that
 %                 x1 : T1, .., xn : TN |- M : T
-sequent_of M [] [TY] A :- assert(M = #HD _), inhabit (A M@) TY, !.
-sequent_of M [] [_] _ :- pp["ERROR: unable to get sequent of ",M], $abort "1".
-sequent_of M [X|XS] [Item|TS] A :-
-  pi x\
-    (of x T x :- !, Item = decl T) =>
-    (def x T B :- !, Item = def T B) =>
-    sequent_of M XS (TS x) [x|A].
+sequent_of M _ Seq _ :- assert(M = #HD _), $get-frozen-info [HD,Seq].
 
-% mask_sequent2 F XS YS Seq MaskSeq AllIn. Returns in MaskSeq a copy of Seq
+% mask_seq F XS YS Seq MaskSeq AllIn. Returns in MaskSeq a copy of Seq
 % where each item T is either prefixed by in as in "keep T", or subtituted with
 % "drop".  Items filtered out are in correspondence of an X and Y (in XS and YS)
 % that do not pass F.  TS has 1 more element than XS and YS (that have the same
 % len). AllIn is true is Mask is made of "keep" only.
-mask_sequent2 F [] [] [E] [E] true.
-mask_sequent2 F [X|XS] [Y|YS] [T|TS] [E|L] B:- % we could use or here
-  choice (F X Y, E = keep T, B = Br) (E = drop, B = false),
-  pi x\ mask_sequent2 F XS YS (TS x) (L x) Br.
+mask_seq F [] [] (vdash E) (vdash E) true.
+mask_seq F [X|XS] [Y|YS] (decl T TS) E B :- choice % we could use or here
+  (F X Y, E = keep (decl T) L, B = Br, pi x\ mask_seq F XS YS (TS x) (L x) Br)
+        ( E = drop L,       B = false, pi x\ mask_seq F XS YS (TS x) (L x) _).
+mask_seq F [X|XS] [Y|YS] (def T V TS) E B :- choice % we could use or here
+  (F X Y, E = keep (def T V) L, B = Br, pi x\ mask_seq F XS YS (TS x) (L x) Br)
+        ( E = drop L,       B = false,  pi x\ mask_seq F XS YS (TS x) (L x) _).
 
 % given the filter generates a new lambda spine that prunes "drop" items
 % and returns a new meta.
-no-dropped-occurs T :- of T _ _.
+no-dropped-occurs T :- of T _ _, !.
 new_restricted_meta FILTER M :-
   dbgpp ["building new meta restricted on ",FILTER],
-  $zero_level M, $zero_level MTY, mklams FILTER M MTY, dbgpp ["obtain ", M].
-  mklams [_] M MTY :- new-meta MTY set, new-meta M MTY.
-  mklams [drop|L] M MTY :-
+  (pi stop dummy\ mklams FILTER M MTY), dbgpp ["obtain ", M].
+  mklams (vdash _) M MTY :- new-meta MTY set, new-meta M MTY. % use vdash E ?
+  mklams (drop L) M MTY :-
     (pi a\ pi b\ M a = M b, MTY a = MTY b), pi x\ mklams (L x) (M x) (MTY x).
-  mklams [keep (decl TY)|L] M MTY :-
+  mklams (keep (decl TY) L) M MTY :-
     if (no-dropped-occurs TY)
-      (pi x\ (of x TY x :- !) => mklams (L x) (M x) (MTY x))
-      (mklams [drop|L] M MTY).
-  mklams [keep (def TY BO)|L] M MTY :-
+      (pi (decl TY) x\ (of x TY x :- !) => mklams (L x) (M x) (MTY x))
+      (mklams (drop L) M MTY).
+  mklams (keep (def TY BO) L) M MTY :-
     if (no-dropped-occurs TY)
       (if (no-dropped-occurs BO)
-         (pi x\ (def x TY BO :- !) => mklams (L x) (M x) (MTY x))
-         (pi x\ (of x TY x :- !) => mklams (L x) (M x) (MTY x)))
-      (mklams [drop|L] M MTY).
+         (pi (def TY BO) x\ (def x TY BO :- !) => mklams (L x) (M x) (MTY x))
+         (pi (decl TY) x\ (of x TY x :- !) => mklams (L x) (M x) (MTY x)))
+      (mklams (drop L) M MTY).
 
 % Assigns a meta M and resumes all goals suspended on M
 assign M NewM :- assert(M = #HD []), % resume adds the explicit subst
@@ -392,7 +413,7 @@ unify A B :- unif ff A B.
 :u-SAME-META: % we restrict it on the items of L1 and L2 that do not unify
 unif ff (#M L1) (#M L2) :- !,
   sequent_of M L1 Seq [],
-  mask_sequent2 unify L1 L2 Seq MaskedSeq AllIn,
+  mask_seq unify L1 L2 Seq MaskedSeq AllIn,
   if AllIn true (new_restricted_meta MaskedSeq NewM, assign M NewM).
 
 :u-ASSIGN:

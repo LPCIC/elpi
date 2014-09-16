@@ -1,11 +1,11 @@
 open Lprun
 open Lpdata
 
-let set_terminal_width () =
-  let ic, _ as p = Unix.open_process "tput cols" in
-  let w = int_of_string (input_line ic) in
-  let _ = Unix.close_process p in
-  Format.pp_set_margin Format.err_formatter w;
+let set_terminal_width ?(max_w=
+    let ic, _ as p = Unix.open_process "tput cols" in
+    let w = int_of_string (input_line ic) in
+    let _ = Unix.close_process p in w) () =
+  Format.pp_set_margin Format.err_formatter max_w;
   Format.pp_set_ellipsis_text Format.err_formatter "...";
   Format.pp_set_max_boxes Format.err_formatter 30;
 ;;
@@ -153,7 +153,6 @@ let _ =
     Gc.space_overhead = 120;
   } in
   Gc.set tweaked_control;
-  set_terminal_width ();
   register_print ();
   register_custom_predicate "is_flex" (fun t s ->
     let t, s = Red.whd t s in
@@ -166,9 +165,11 @@ let _ =
   register_imperative_counters ();
   register_trace ();
   register_parser ();
+(*
   register_custom_predicate "zero_level" (fun t s ->
     let h, s = Subst.fresh_uv 0 s in
     protect (unify t h) s);
+*)
   let destApp x = LP.(match look x with
     | App xs -> L.hd xs, L.tl xs
     | _ -> x, L.empty) in
@@ -277,8 +278,20 @@ let test_prog p g =
    Format.eprintf "@[Parse error: %s@]@\n%!" msg
 ;;
 
+let parse_argv argv =
+  let max_w = ref None in
+  let rec aux = function
+    | [] -> []
+    | "-max-w" :: cols :: rest -> max_w := Some (int_of_string cols); aux rest
+    | x :: rest -> x :: aux rest in
+  let rest = aux (Array.to_list argv) in
+  set_terminal_width ?max_w:!max_w ();
+  Array.of_list rest
+;;
+
 let _ =
   let argv = Trace.parse_argv Sys.argv in
+  let argv = parse_argv argv in
   let b = Buffer.create 1024 in
   for i=1 to Array.length argv - 1 do
     Printf.eprintf "loading %s\n" argv.(i);

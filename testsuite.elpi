@@ -20,27 +20,30 @@ suite TEST t3-2 "2" :- % meta/meta unif w pruning: ?X[v,r] = ?Y[v,s]
           of (lam (atom nat) x\ lam (atom nat) y\ app [atom succ, hole]) _ T2,
           %pp ["before ",T1], pp ["before ",T2],
           expect [(T1=lam _ x\lam _ y\app [_,#F1 (A1 x y)],A1=x\y\[x,y])],
-          pi x\ pi y\ of x (atom nat) x => of y (atom nat) y =>
+          pi (decl (atom nat)) x\ pi (decl (atom nat)) y\
+          of x (atom nat) x => of y (atom nat) y =>
           unify (app [T1, atom zero, x]) (app [T2, atom zero, y]),
           %pp ["after  ",T1], pp ["after  ",T2],
           expect [(T1=lam _ x\lam _ y\app [_, #F2 (A2 x y)],A2=x\y\[x]),
                   (T1=lam _ x\lam _ y\app [_, #F2 (A2 x y)],A2=x\y\[atom zero])]).
 suite TEST t3-3 "1" :- % meta/meta unif with dependent type
-  TEST = ((pi c\ of c (atom nat) c =>
-           pi d\ of d (app [atom vect, c]) d =>
+  TEST = ((pi (decl (atom nat)) c\ of c (atom nat) c =>
+           pi (decl (app [atom vect, c])) d\ of d (app [atom vect, c]) d =>
             of hole (TY c d) (X c d)),
+          %pp ["X=",X],
           unify (X (atom zero) (atom vnil)) (X (atom zero) (atom vnil)),
-          dbgpp ["X=",X],
+          %pp ["X=",X],
           expect [%(X = x\y\#F (L x y),L=x\y\[]),
                   (X = x\y\#F (L x y),L=x\y\[x,y])%,
                   %(X = x\y\#F (L x y),L=x\y\[y]),
                   %(X = x\y\#F (L x y),L=x\y\[x])]
 ]).
 suite TEST t3-4 "1" :- % meta/meta unif with dependent type + restriction
-  TEST = ((pi c\ of c (atom nat) c =>
-           pi d\ of d (app [atom vect, c]) d =>
+  TEST = ((pi (decl (atom nat)) c\ of c (atom nat) c =>
+           pi (decl (app [atom vect, c])) d\ of d (app [atom vect, c]) d =>
             of hole (TY c d) (X c d)),
-          (pi vn \ of vn (app [atom vect, atom zero]) vn =>
+          (pi (decl (app [atom vect, atom zero])) vn\
+            of vn (app [atom vect, atom zero]) vn =>
             unify (X (atom zero) (atom vnil)) (X (atom zero) vn)),
           dbgpp["after= ",X],
           expect [%(X=x\y\#F (L x y),L=x\y\[]),
@@ -65,9 +68,9 @@ suite TEST t7-3 "1" :- % delift  + restriction
   TEST = (of (lam (atom nat) y\ hole) _ (lam _ X),
           of (lam (atom nat) y\ hole) _ (lam _ X1),
           of (lam (atom nat) y\ hole) _ Y,
-          pi c\ (of c (atom nat) c :- !) =>
+          pi (decl (atom nat)) c\ (of c (atom nat) c :- !) =>
             unify (app [Y, atom zero]) (app [atom succ, X (X1 c)]),
-          pp ["X=",X,"\nX1=",X1,"\nY=",Y],
+          %pp ["X=",X,"\nX1=",X1,"\nY=",Y],
           expect [(X = w\ #F1 (A1 w), A1=w\[w], X1 = w\ #F2 (A2 w), A2=w\[])%,
                   %(X = w\ #F1 (A1 w), A1=w\[],  X1 = w\ #F2 (A2 w), A2=w\[w])
 ]).
@@ -75,20 +78,23 @@ suite TEST t8 "1" :- % whd
   TEST = (SUCC = atom succ, ZERO = atom zero, NAT = atom nat,
           N2 = app [SUCC,app[SUCC,ZERO]],
           MkPi = lam NAT n\rec set n NAT (lam NAT m\lam set ty\ prod NAT w\ ty),
-          (pi f\ of f (app [MkPi,N2]) f => of (app [f,ZERO,ZERO]) NAT (Y f))).
-% suite TEST t8-1 "1" :- % flex head, BROKEN bubble-up, too many hvs
+          (pi (decl (app [MkPi,N2])) f\
+            of f (app [MkPi,N2]) f => of (app [f,ZERO,ZERO]) NAT (Y f))).
+%suite TEST t8-1 "1" :- % generates too many solutions
 %   TEST = (NAT = atom nat,
-%           (pi c1\ pi c2\ pi c3\ pi t1\ pi t2\
-%             of t1 (prod NAT x\set) t1 =>
-%             of t2 (prod NAT x\ prod (app [t1,x]) y\set) t2 =>
-%             of c1 NAT c1 =>
-%             of c2 (app [t1,c1]) c2 => of c3 (app [t2,c1,c2]) c3 =>
-%             unify c1 c1 => unif1 c2 c2 => unify c3 c3 =>
-%             unify t1 t1 => unify t2 t2 =>
-%             copy c1 c1 => unif1 c2 c2 => copy c3 c3 =>
-%             copy t1 t1 => copy t2 t2 =>
+%           (pi (decl (prod NAT x\set)) t1\ (of t1 (prod NAT x\set) t1 :- !) =>
+%            pi (decl (prod NAT x\ prod (app [t1,x]) y\set)) t2\
+%             (of t2 (prod NAT x\ prod (app [t1,x]) y\set) t2 :- !) =>
+%            pi (decl NAT) c1\ (of c1 NAT c1 :- !) =>
+%            pi (decl (app [t1,c1])) c2\ (of c2 (app [t1,c1]) c2 :- !) =>
+%            pi (decl (app [t2,c1,c2])) c3\ (of c3 (app [t2,c1,c2]) c3 :- !) =>
+%             (pi X\ pi Y\ copy X Y c1 c1 :- !) =>
+%             (pi X\ pi Y\ copy X Y c2 c2 :- !) =>
+%             (pi X\ pi Y\ copy X Y c3 c3 :- !) =>
+%             (pi X\ pi Y\ copy X Y t1 t1 :- !) =>
+%             (pi X\ pi Y\ copy X Y t2 t2 :- !) =>
 %             sigma T\sigma TY\
-%               of (lam hole f\ app [f,c1,c2,c3]) TY T,
+%               of (lam hole f\ app [atom succ, app [f,c1,c2,c3]]) TY T,
 %               pp["T=",T])).
 suite TEST t8-2 "4" :- % flex head (esempio e-prod paper CSC + TASSI + ...)
   TEST = (NAT = atom nat, T1 = atom t1, T2 = atom t2, 
