@@ -34,12 +34,34 @@ variables listed in L are the only ones visible by X (i.e. X may be pruned
 as a result of the delay operation).  As a result the frozen constant that
 is substituted for X is applied to exactly the eigen variables in L.
 
+The "delay X P in L with T" predicate additionally attaches to the frozen
+constant the additional info T (a closed term).  Also see the extended
+matching conttructs.
+
 The "resume X H" predicate defrosts X and resumes all the goals delayed on
 X.  The first goal resumed (the first one that was delayed) gets and extra
 hypothetical clause H.
 
 QUESTION: is there another way to pass data? We always pass closed terms, but
 the mechanism implemented is way too general.
+
+Extended matching constructs
+----------------------------
+
+Special syntax is provided in order to access the Lambda Prolog applicative
+structure.
+
+The term "(@HD ARGS)" unifies with "(hd t1 t2)" by assigning "hd" to HD and
+"[t1,t2]" to ARGS.
+The term "(ARGS HD@)" unifies with "(hd t1 t2)" by assigning "hd" to HD and
+"[t2,t1]" to ARGS.
+The term "(?HD ARGS)" unifies with "(hd t1 t2)" by assigning "hd" to HD and
+"[t1,t2]" to ARGS only if "hd" is flexible.
+The term "(#HD ARGS)" unifies with "(hd t1 t2)" by assigning "hd" to HD and
+"[t1,t2]" to ARGS only if "hd" is a frozen constant.
+The term "(#HD ARGS INFO)" unifies with "(hd t1 t2)" by assigning "hd" to
+HD and "[t1,t2]" to ARGS and "t" to INFO only if "hd" is a frozen constant
+that was delayed "with t".
 
 Graftable rules
 ---------------

@@ -36,7 +36,7 @@ devel: trace-all
 
 all-flavours: trace-all plain-all
 
-all: $(FLAVOUR)/elpi $(FLAVOUR)/elpi.byte
+all: $(FLAVOUR)/elpi $(addprefix $(FLAVOUR)/elpi,.byte .cmxa .cma)
 
 profile-% : CCP=ocamlcp -P fmi
 profile-% : FLAVOUR=profile
@@ -92,6 +92,14 @@ $(FLAVOUR)/elpi: $(FLAVOUR)/elpi.cmx $(CMXMODULES) $(EXTRALIB)
 $(FLAVOUR)/elpi.byte: $(FLAVOUR)/elpi.cmo $(CMOMODULES) $(EXTRALIB:%.cmx=%.cmo)
 	$(I) echo $(FLAVOUR)/OCAMLC $@
 	$(H) $(CCP)  $(FLAGS) $(LIBSBYTE) $(CMOMODULES) -o $@ $<
+
+$(FLAVOUR)/elpi.cmxa: $(FLAVOUR)/elpi.cmx $(CMXMODULES) $(EXTRALIB)
+	$(I) echo $(FLAVOUR)/OCAMLOPT -a $@
+	$(CCO) $(FLAGS) -a $(EXTRALIB) $(CMXMODULES) -o $@ $<
+
+$(FLAVOUR)/elpi.cma: $(FLAVOUR)/elpi.cmo $(CMOMODULES) $(EXTRALIB:%.cmx=%.cmo)
+	$(I) echo $(FLAVOUR)/OCAMLC -a $@
+	$(CCP)  $(FLAGS) -a $(EXTRALIB:%.cmx=%.cmo) $(CMOMODULES) -o $@ $<
 
 $(FLAVOUR)/test: $(FLAVOUR)/test.cmx $(CMXMODULES) $(EXTRALIB)
 	$(I) echo $(FLAVOUR)/OCAMLOPT $<

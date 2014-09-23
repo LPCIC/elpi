@@ -1,0 +1,5 @@
+version="0.0.1"
+archive(byte)="elpi.cma"
+archive(native)="elpi.cmxa"
+linkopts=""
+directory="/home/gares/DATA/PUBLIC/INRIA/LPCIC/lpcic/elpi/trace/"
