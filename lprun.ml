@@ -5,8 +5,9 @@
 
 open Lpdata
 open LP
-open Subst
-open Red
+module S = Subst
+module R = Red
+module F = Format
 
 (* Based on " An Implementation of the Language Lambda Prolog Organized around
    Higher-Order Pattern Unification", Xiaochu Qi (pages 51 and 52)
@@ -22,8 +23,8 @@ let fail s = raise (UnifFail (lazy s))
 let lfail l = raise (UnifFail l)
 
 let print_unif_prob s rel a b fmt =
-  Format.fprintf fmt "@[%a@ %s %a@]%!"
-    (prf_data []) (fst(Red.nf a s)) rel (prf_data []) (fst(Red.nf b s))
+  F.fprintf fmt "@[%a@ %s %a@]%!"
+    (prf_data []) (fst(R.nf a s)) rel (prf_data []) (fst(R.nf b s))
 
 let rec rigid x = match x with
   | Uv _ -> false
@@ -31,18 +32,18 @@ let rec rigid x = match x with
   | _ -> true
 
 let eta n t =
-  fixApp (L.init (n+1) (fun i -> if i = 0 then (lift n t) else mkDB (n+1-i)))
+  fixApp (L.init (n+1) (fun i -> if i = 0 then (R.lift n t) else mkDB (n+1-i)))
 
 (* construction of bindings: ↓ is ^- and ⇑ is ^= *)
 let cst_lower xs lvl =
   L.filter (fun x -> match look x with Con(_,l) -> l <= lvl | _ -> false) xs
 
 let position_of l = let stop = L.len l in fun x s ->
-  let x, s = Red.whd x s in
+  let x, s = R.whd x s in
   let rec aux i s = function
     | [] -> fail "cannot occur"
     | y::ys -> 
-        let y, s = Red.whd y s in
+        let y, s = R.whd y s in
         if equal x y then mkDB (stop - i), s else aux (i+1) s ys
   in aux 0 s (L.to_list l)
   
@@ -52,35 +53,35 @@ let (^-) what where s = L.fold_map (position_of where) what s
 let (^--) x v s = position_of v x s
 
 let inter xs ys s =
-  let ys, s = L.fold_map Red.whd ys s in
+  let ys, s = L.fold_map R.whd ys s in
   L.filter_acc (fun x s ->
-     let x, s = Red.whd x s in
-     L.exists (LP.equal x) ys, s) xs s
+     let x, s = R.whd x s in
+     L.exists (equal x) ys, s) xs s
 
 (* builds: map (lift nbinders) args @ [DB nbinders ... DB 1] *)
 let mk_al nbinders args =
   let nargs = L.len args in
   L.init (nbinders + nargs)
     (fun i ->
-      if i < nargs then Red.lift nbinders (L.get i args)
+      if i < nargs then R.lift nbinders (L.get i args)
       else mkDB (nargs + nbinders - i))
 
 (* pattern unification fragment *)
 let higher lvl = (); fun x ->
   match look x with Con(_,l) -> l > lvl | DB _ -> true | _ -> false
 
-let last_isPU = ref (Subst.empty 0)
+let last_isPU = ref (S.empty 0)
 
 let isPU xs s = TRACE "isPU" (fun fmt -> prf_data [] fmt (mkApp xs))
   match look (L.hd xs) with
   | Uv (_,lvl) ->
-      let args, s = L.fold_map Red.whd (L.tl xs) s in
+      let args, s = L.fold_map R.whd (L.tl xs) s in
       last_isPU := s;
-      L.for_all (higher lvl) args && L.uniq LP.equal args
+      L.for_all (higher lvl) args && L.uniq equal args
   | _ -> false
 
 let rec bind x id depth lvl args t s =
-  let t, s = whd t s in
+  let t, s = R.whd t s in
   TRACE "bind" (print_unif_prob s (":= "^string_of_int depth^"↓") x t)
   match look t with
   | Bin(m,t) -> let t, s = bind x id (depth+m) lvl args t s in mkBin m t, s
@@ -89,7 +90,7 @@ let rec bind x id depth lvl args t s =
   | Con _ -> t ^-- mk_al depth args $ s (* XXX optimize *)
   (* the following 2 cases are: t ^-- mk_al depth args, s *) (* XXX CHECK *)
   | DB m when m <= depth -> t, s
-  | DB m -> let t, s = mkDB (m-depth) ^-- args $ s in lift depth t, s
+  | DB m -> let t, s = mkDB (m-depth) ^-- args $ s in R.lift depth t, s
   | Seq(xs,tl) ->
       let xs, s = L.fold_map (bind x id depth lvl args) xs s in
       let tl, s = bind x id depth lvl args tl s in
@@ -113,7 +114,7 @@ let rec bind x id depth lvl args t s =
           SPY "prune-copied-meta" (prf_data []) (L.hd bs);
           let bs = L.tl bs in
           let nbs = L.len bs in
-          let h, s = fresh_uv lvl s in
+          let h, s = S.fresh_uv lvl s in
           let al = mk_al depth args in
           let cs = al ^= l in (* constants X = id,lvl can copy *)
           let ws, s = cs ^- al $ s in
@@ -122,7 +123,7 @@ let rec bind x id depth lvl args t s =
           let us, s = zs ^- bs $ s in
           let nws, nvs, ncs, nus = L.len ws, L.len vs, L.len cs, L.len us in
           let vj = mkBin nbs (mkAppv h (L.append cs us) 0 (ncs + nus)) in
-          let s = set_sub j vj s in
+          let s = S.set_sub j vj s in
           let t = mkAppv h (L.append ws vs) 0 (nws+nvs) in
           SPY "prune-vj" (prf_data []) vj; SPY "prune-t" (prf_data[]) t;
           t, s
@@ -140,9 +141,9 @@ let rec bind x id depth lvl args t s =
              bs ([],[],s,nbs) in
           let ssrels = List.rev ssrels in
           let ssargs = List.rev ssargs in
-          let h, s = fresh_uv l s in
+          let h, s = S.fresh_uv l s in
           let vj = mkBin nbs (mkApp (L.of_list (h::ssrels))) in
-          let s = set_sub j vj s in
+          let s = S.set_sub j vj s in
           let t = mkApp (L.of_list (h::ssargs)) in
           SPY "prune-vj" (prf_data []) vj; SPY "prune-t" (prf_data[]) t;
           t, s
@@ -156,11 +157,11 @@ let keep xs ys s =
     match l1, l2 with
     | [], [] -> [], s
     | x::xs, y::ys ->
-       let x, s = Red.nf x s in
-       let y, s = Red.nf y s in
+       let x, s = R.nf x s in
+       let y, s = R.nf y s in
        if equal x y then let l, s = aux xs ys (i-1) s in mkDB i :: l, s
        else aux xs ys (i-1) s
-    | _ -> Format.eprintf "ERROR: same meta, different #args\n%!"; assert false
+    | _ -> F.eprintf "ERROR: same meta, different #args\n%!"; assert false
   in
   let l, s = aux l1 l2 (L.len xs) s in
   L.of_list l, s
@@ -170,7 +171,7 @@ let rec simple_oc id lvl t s =
   | Uv(i,lvl') ->
       if i = id then fail "occur-check"
       else if lvl' >= lvl then
-        let t', s = Red.whd t s in
+        let t', s = R.whd t s in
         if t' == t then s else simple_oc id lvl t' s
       else s
   | Con _ | DB _ | Nil | Ext _ -> s
@@ -185,27 +186,27 @@ let mksubst ?depth x id lvl t args s =
   match look t with
   | App xs when equal (L.hd xs) (mkUv id lvl) && isPU xs s ->
       let s = !last_isPU in
-      let xs, s = L.fold_map Red.whd (L.tl xs) s in
+      let xs, s = L.fold_map R.whd (L.tl xs) s in
       if L.for_all2 equal xs args then s
       else
         let h_args, s = keep xs args s in
         if L.len h_args = nargs then s
         else
-          let h, s = fresh_uv lvl s in
-          set_sub id (mkBin nargs (mkApp (L.cons h h_args))) s
+          let h, s = S.fresh_uv lvl s in
+          S.set_sub id (mkBin nargs (mkApp (L.cons h h_args))) s
   | _ ->
      (* If a variable is at the deepest level, then the term can be copied
       * as it is *)
      if Some lvl = depth && L.len args = 0 then
        let s = simple_oc id lvl t s in
-       set_sub id t s
+       S.set_sub id t s
      else
        let t, s = bind x id 0 lvl args t s in
        SPY "mksubst" (prf_data []) (mkBin nargs t);
-       set_sub id (mkBin nargs t) s
+       S.set_sub id (mkBin nargs t) s
 
 let rec splay xs tl s =
-  let tl, s = whd tl s in
+  let tl, s = R.whd tl s in
   match look tl with
   | Uv _ | Nil -> xs, tl, s
   | Seq(ys,t) -> splay (L.append xs ys) t s
@@ -219,8 +220,8 @@ let destApp b t ot = match t with
 exception NOT_A_PU
 
 let rec unify ?depth a b s = TRACE "unify" (print_unif_prob s "=" a b)
-  let a, s =  whd a s in
-  let b, s =  whd b s in
+  let a, s = R.whd a s in
+  let b, s = R.whd b s in
   match look a, look b with
   | Con _, Con _ | Ext _, Ext _ | DB _, DB _ | Nil, Nil ->
       if equal a b then s else fail "rigid"
@@ -231,16 +232,16 @@ let rec unify ?depth a b s = TRACE "unify" (print_unif_prob s "=" a b)
 
   | t, VApp(w,t1,t2,o) ->
      if w == `Flex && rigid t then fail "no-flex";
-     if w == `Frozen && not(Subst.is_frozen a) then fail "no-tc";
+     if w == `Frozen && not(S.is_frozen a) then fail "no-tc";
      let hd, tl = destApp w t a in
      let s = unify (mkSeq tl mkNil) t2 (unify hd t1 s) in
-     if w == `Frozen then Opt.fold2 (unify ?depth) s o (Subst.get_info_con a s) else s
+     if w == `Frozen then Opt.fold2 (unify ?depth) s o (S.get_info_con a s) else s
   | VApp(w,t1,t2,o), t ->
      if w == `Flex && rigid t then fail "no-flex";
-     if w == `Frozen && not(Subst.is_frozen b) then fail "no-tc";
+     if w == `Frozen && not(S.is_frozen b) then fail "no-tc";
      let hd, tl = destApp w t b in
      let s = unify (mkSeq tl mkNil) t2 (unify hd t1 s) in
-     if w == `Frozen then Opt.fold2 (unify ?depth) s o (Subst.get_info_con b s) else s
+     if w == `Frozen then Opt.fold2 (unify ?depth) s o (S.get_info_con b s) else s
 
   | Bin(nx,x), Bin(ny,y) when nx = ny -> unify x y s
   | Bin(nx,x), Bin(ny,y) when nx < ny -> unify (eta (ny-nx) x) y s
@@ -281,7 +282,7 @@ and unify_ho ?depth x y s =
       | _ -> assert false
     end
   | _ ->
-    Format.eprintf
+    F.eprintf
       "NOT A PU: %a = %a\n%!" (prf_data []) (kool x) (prf_data []) (kool y);
     raise NOT_A_PU (*fail "not a pattern unif"*)
 
@@ -302,11 +303,11 @@ type context = data option list
 type goal = context * objective * program * program * int
 type dgoal = data * premise * context * program * int
 type goals = goal list * dgoal list * program
-type alternatives = (subst * goals) list
+type alternatives = (S.subst * goals) list
 type continuation = premise * program *  alternatives
-type step_outcome = subst * goal list * alternatives
+type step_outcome = S.subst * goal list * alternatives
 type result =
- LP.goal * LP.data list * Subst.subst *
+ LP.goal * LP.data list * S.subst *
   (LP.goal * LP.program) list * continuation
 
 let cat_goals (a,b,p) (c,d) = a@c, b@d, p
@@ -324,13 +325,13 @@ let rec mkhv n d =
 let rec fresh_uv n d s =
   if n = 0 then [], s
   else 
-    let m, s = Subst.fresh_uv d s in
+    let m, s = S.fresh_uv d s in
     let tl, s = fresh_uv (n-1) d s in
     m :: tl, s
 
 let rec iter_sep spc pp fmt = function
-  | [] -> Format.fprintf fmt ""
-  | [x] -> pp fmt x; Format.fprintf fmt "@ "
+  | [] -> F.fprintf fmt ""
+  | [x] -> pp fmt x; F.fprintf fmt "@ "
   | x::tl -> pp fmt x; spc fmt (); iter_sep spc pp fmt tl
 
 let pr_cur_goal op (_,g,hyps,_,lvl) s fmt =
@@ -340,38 +341,38 @@ let pr_cur_goal op (_,g,hyps,_,lvl) s fmt =
     else L.to_list (L.sub 0 (nhyps - nop) (L.of_list hyps)) in
   match g with
   | `Atom (g,_) when !Trace.dverbose ->
-      Format.fprintf fmt "@[<hv 0>%a@ |- %a@]"
+      F.fprintf fmt "@[<hv 0>%a@ |- %a@]"
         (prf_program ~compact:true)
-            (List.map (fun a,b,p,n -> a,b,fst(Red.nf p s),n) eh)
-        (prf_premise []) (fst(Red.nf g s))
+            (List.map (fun a,b,p,n -> a,b,fst(R.nf p s),n) eh)
+        (prf_premise []) (fst(R.nf g s))
   | `Atom (g,_) ->
-      Format.fprintf fmt "@[<hv 0>|- %a@]" (prf_premise []) (fst(Red.nf g s))
+      F.fprintf fmt "@[<hv 0>|- %a@]" (prf_premise []) (fst(R.nf g s))
   | `Unify(a,b) ->
-      Format.fprintf fmt "%a = %a"
-          (prf_data []) (fst(Red.nf a s)) (prf_data []) (fst(Red.nf b s))
+      F.fprintf fmt "%a = %a"
+          (prf_data []) (fst(R.nf a s)) (prf_data []) (fst(R.nf b s))
   | `Custom(name,a) ->
-      Format.fprintf fmt "%s %a" name (prf_data []) (fst(Red.nf a s))
-  | `Cut -> Format.fprintf fmt "!"
+      F.fprintf fmt "%s %a" name (prf_data []) (fst(R.nf a s))
+  | `Cut -> F.fprintf fmt "!"
   | `Context a ->
-      Format.fprintf fmt "context %a" (prf_data []) (fst(Red.nf a s))
+      F.fprintf fmt "context %a" (prf_data []) (fst(R.nf a s))
   | `Delay (t,p,c,o) ->
-       Format.fprintf fmt "delay %a %a"
-         (prf_data []) (fst(Red.nf t s)) (prf_premise []) (fst(Red.nf p s));
+       F.fprintf fmt "delay %a %a"
+         (prf_data []) (fst(R.nf t s)) (prf_premise []) (fst(R.nf p s));
        Opt.iter (fun x ->
-         Format.fprintf fmt "in %a" (prf_premise []) (fst(Red.nf x s))) c;
+         F.fprintf fmt "in %a" (prf_premise []) (fst(R.nf x s))) c;
        Opt.iter (fun x ->
-         Format.fprintf fmt "with %a" (prf_premise []) (fst(Red.nf x s))) o
+         F.fprintf fmt "with %a" (prf_premise []) (fst(R.nf x s))) o
   | `Resume (t,p) ->
-       Format.fprintf fmt "resume %a %a" (prf_data []) t
-         (prf_premise []) (fst(Red.nf p s))
+       F.fprintf fmt "resume %a %a" (prf_data []) t
+         (prf_premise []) (fst(R.nf p s))
   | `Unlock t ->
-       Format.fprintf fmt "@[<hv 0>unlock %a@]" (prf_data []) (fst(Red.nf t s))
+       F.fprintf fmt "@[<hv 0>unlock %a@]" (prf_data []) (fst(R.nf t s))
 
 let pr_cur_goals op gls fmt s =
-  Format.fprintf fmt "@[<hov 0>"; 
-  iter_sep (fun fmt () -> Format.fprintf fmt ",@ ")
+  F.fprintf fmt "@[<hov 0>"; 
+  iter_sep (fun fmt () -> F.fprintf fmt ",@ ")
     (fun fmt g -> pr_cur_goal op g s fmt) fmt gls;
-  Format.fprintf fmt "@]" 
+  F.fprintf fmt "@]" 
 
 let custom_predicate_tab = ref []
 let register_custom_predicate n f =
@@ -392,7 +393,7 @@ let custom_ctrl_op name =
 
 let subst t hv =
   let t1 = mkApp(L.of_list (mkBin (List.length hv) t::List.rev hv)) in
-(*   let t1 = Red.nf (Subst.empty 0) t1 in *)
+(*   let t1 = R.nf (S.empty 0) t1 in *)
   SPY "substituted premise/goal" (prf_data []) t1;
   t1
 
@@ -402,10 +403,10 @@ let add_ctx_key_name b ctx l =
 let mkAtom t = `Atom(t, key_of t)
 
 let whd_premise s p =
-  let p, s = Red.whd p s in
+  let p, s = R.whd p s in
   match look_premise p with
-  | Pi (annot,p) -> let p, s = Red.whd p s in mkPi1 annot p, s
-  | Sigma p -> let p, s = Red.whd p s in mkSigma1 p, s 
+  | Pi (annot,p) -> let p, s = R.whd p s in mkPi1 annot p, s
+  | Sigma p -> let p, s = R.whd p s in mkSigma1 p, s 
   | _ -> p, s
 
 let contextualize_premise ?(compute_key=false) ctx s premise =
@@ -462,16 +463,16 @@ let no_key_match k kc =
 let select p k goal ctx (s as os) prog orig_eh lvl : step_outcome =
   let rec first = function
   | [] ->
-      SPY "fail" (prf_data []) (apply_subst s goal);
+      SPY "fail" (prf_data []) (S.apply_subst s goal);
       raise NoClause
   | (_,kc,clause,_) :: rest when no_key_match k kc -> first rest
   | (_,_,clause,_) :: rest ->
       try
         let hd, subgoals, (s as cs) = contextualize_hyp ctx s clause in
-        SPY "try" (prf_clause []) (fst(Red.nf clause s));
+        SPY "try" (prf_clause []) (fst(R.nf clause s));
         let s = unify ~depth:(List.length ctx) goal hd s in
-        SPY "selected" (prf_clause []) (fst(Red.nf clause cs));
-        SPY "sub" Subst.prf_subst s;
+        SPY "selected" (prf_clause []) (fst(R.nf clause cs));
+        SPY "sub" S.prf_subst s;
         let subgoals, s =
           List.fold_right (fun (d,_,p,_) (acc,s) ->
             let gl, s = contextualize_goal d s p in
@@ -517,8 +518,8 @@ let resume p s test lvl (dls : dgoal list) =
     if test t then None
     else
        let gl, s = goals_of_premise p clause depth eh lvl s in
-       SPY "will resume" (prf_premise []) (fst(Red.nf clause s));
-       SPY "hd" (prf_data []) (fst(Red.nf t s));
+       SPY "will resume" (prf_premise []) (fst(R.nf clause s));
+       SPY "hd" (prf_data []) (fst(R.nf t s));
        Some((gl,t),s)) dls s
          
 let add_delay (t,a,depth,orig_prog as dl) s dls run = 
@@ -550,21 +551,21 @@ let rigid_key_match k1 k2 =
 let is_cut x = match look_premise x with AtomBI BICut -> true | _ -> false
 
 let freeze s t p filter =
-  let t, s = Red.nf t s in
-  let p, s = Red.nf p s in
+  let t, s = R.nf t s in
+  let p, s = R.nf p s in
   let filter, s =
     match filter with
     | None -> None, s
-    | Some f -> let f, s = Red.nf f s in Some f, s in
+    | Some f -> let f, s = R.nf f s in Some f, s in
   match destFlexFrozenHd t L.empty, filter with
   | `Frozen _, _ -> s
   | `Flex(i, lvl, args), None ->
-    let ice, s = Subst.freeze_uv i s in
+    let ice, s = S.freeze_uv i s in
     let hvs = L.of_list (collect_hv p) in
     let ice_args = L.filter (fun h -> not(L.exists (LP.equal h) args)) hvs in
-    Subst.set_sub i (mkApp (L.cons ice ice_args)) s
+    S.set_sub i (mkApp (L.cons ice ice_args)) s
   | `Flex(i, lvl, args), Some l ->
-    let ice, s = Subst.freeze_uv i s in
+    let ice, s = S.freeze_uv i s in
     let hvs = L.of_list (collect_hv l) in
     assert(L.for_all (fun h ->
       hv_lvl_leq lvl h || L.exists (LP.equal h) args) hvs);
@@ -572,12 +573,12 @@ let freeze s t p filter =
       L.fold_map (fun h s ->
         try h ^-- args $ s with UnifFail _ -> h,s) hvs s in
     let res = mkBin (L.len args) (mkApp (L.cons ice ice_args)) in
-    Subst.set_sub i res s
+    S.set_sub i res s
 
 let not_same_hd s a b =
  let rec aux a b =
-   let a, _ = Red.whd a s in
-   let b, _ = Red.whd b s in
+   let a, _ = R.whd a s in
+   let b, _ = R.whd b s in
    match look a, look b with
    | Con _, Con _ -> not (LP.equal a b)
    | App xs, _ -> aux (L.hd xs) b
@@ -590,7 +591,7 @@ let mk_prtg str d l = d, `Custom("$print",mkExt(mkString str)), [], [], l
 let sort_hyps (d,g,p,eh,lvl) = (d,g,List.sort cmp_clause p,eh,lvl)
 
 let rec run op s ((gls,dls,p as goals) : goals) (alts : alternatives)
-: subst * dgoal list * alternatives
+: S.subst * dgoal list * alternatives
 =
   let s, gls, dls, p, alts =
     match gls with
@@ -610,16 +611,16 @@ let rec run op s ((gls,dls,p as goals) : goals) (alts : alternatives)
         with UnifFail _ -> next_alt alts (pr_cur_goals op gls))
     | (_,`Unlock t,_,_,lvl as g) :: rest ->
         TRACE ~depth:lvl "run" (pr_cur_goal op g s)
-        let t, s = Red.whd t s in
-        if not (Subst.is_frozen t) then
-          (Format.eprintf "not frozen: %a\n%!" (prf_data []) t; assert false);
-(*         Format.eprintf "ASSIGN META: %a\n%!" (prf_data []) t; *)
-        let h, s = Subst.fresh_uv 0 s in
+        let t, s = R.whd t s in
+        if not (S.is_frozen t) then
+          (F.eprintf "not frozen: %a\n%!" (prf_data []) t; assert false);
+(*         F.eprintf "ASSIGN META: %a\n%!" (prf_data []) t; *)
+        let h, s = S.fresh_uv 0 s in
         let hd = let rec uff t = match look t with
           | App xs -> uff (L.hd xs) | Con (_,lvl) -> lvl | _ -> assert false in
         uff t in
         let rest = List.map (fun (d,g,cp,eh,l) -> d,g,cp,eh,l) rest in
-        Subst.set_sub_con hd h s, rest, dls, p, alts
+        S.set_sub_con hd h s, rest, dls, p, alts
     | (depth,`Resume(t,goal), _, eh,lvl as g) :: rest ->
         TRACE ~depth:lvl "run" (pr_cur_goal op g s)
         let resumed, dls, s = resume p s (not_same_hd s t) lvl dls in
@@ -639,11 +640,11 @@ let rec run op s ((gls,dls,p as goals) : goals) (alts : alternatives)
         s, unlock::(*gl@*)first_resumed :: rest_resumed@rest, dls, p, alts
     | (depth,`Delay(t,goal,fctx,info), _, eh,lvl as g) :: rest ->
         TRACE ~depth:lvl "run" (pr_cur_goal op g s)
-        let t, s = Red.whd t s in
-        if Subst.is_frozen t then
+        let t, s = R.whd t s in
+        if S.is_frozen t then
           try
             TRACE "delay more" (pr_cur_goal op g s)
-            SPY "key" (prf_data []) (fst(Red.nf t s));
+            SPY "key" (prf_data []) (fst(R.nf t s));
             assert(info = None);
             let dls = dls @ [t,goal,depth,eh,lvl] in
             s, rest, dls, p, alts
@@ -652,9 +653,9 @@ let rec run op s ((gls,dls,p as goals) : goals) (alts : alternatives)
           try
             TRACE "delay" (pr_cur_goal op g s)
             let s = freeze s t goal fctx in
-            let t, s = Red.nf t s in
-            let s = Opt.fold (Subst.set_info_con t) s info in
-            SPY "key" (prf_data []) (fst(Red.nf t s));
+            let t, s = R.nf t s in
+            let s = Opt.fold (S.set_info_con t) s info in
+            SPY "key" (prf_data []) (fst(R.nf t s));
             let dls = (t,goal,depth,eh,lvl) :: dls in
             s, rest, dls, p, alts
           with NoClause -> next_alt alts (pr_cur_goals op gls)
@@ -673,7 +674,7 @@ let rec run op s ((gls,dls,p as goals) : goals) (alts : alternatives)
         (try
           TRACE ~depth:lvl "run" (pr_cur_goal op g s)
           let s = unify a b s in
-          SPY "sub" Subst.prf_subst s;
+          SPY "sub" S.prf_subst s;
           s, rest, dls, p, alts
         with UnifFail _ -> next_alt alts (pr_cur_goals op gls))
     | (depth,`Custom(name,a),hyps,eh,lvl as g)::rest ->
@@ -681,7 +682,7 @@ let rec run op s ((gls,dls,p as goals) : goals) (alts : alternatives)
           try
             TRACE ~depth:lvl "run" (pr_cur_goal op g s)
             let s = custom_predicate name a s in
-            SPY "sub" Subst.prf_subst s;
+            SPY "sub" S.prf_subst s;
             s, rest, dls, p, alts
           with UnifFail _ | NoClause -> next_alt alts (pr_cur_goals op gls)
         else if is_custom_ctrl_op name then
@@ -695,7 +696,7 @@ let rec run op s ((gls,dls,p as goals) : goals) (alts : alternatives)
   else run op s (gls,dls,p) alts
 
 let prepare_initial_goal g =
-  let s = empty 1 in
+  let s = S.empty 1 in
   match look_premise g with
   | Sigma g ->
       let ms, s = fresh_uv 1 0 s in
@@ -705,10 +706,10 @@ let prepare_initial_goal g =
 let apply_sub_hv_to_goal s g =
   mapi_premise (fun i t ->
     let v = L.init i (fun j -> mkDB(i-j)) in
-    fst(Red.whd (mkAppv (mkBin i t) v 0 (L.len v)) s)) 0 g
+    fst(R.whd (mkAppv (mkBin i t) v 0 (L.len v)) s)) 0 g
 
 let return_current_result op s g dls alts =
-  apply_sub_hv_to_goal (Subst.empty 0) g, collect_Uv_premise g, s,
+  apply_sub_hv_to_goal (S.empty 0) g, collect_Uv_premise g, s,
   List.map (fun (_,g,_,eh,_) ->
    apply_sub_hv_to_goal s g,
    List.map (fun (i,k,c,u) -> i,k,apply_sub_hv_to_goal s c,u) eh) dls,
@@ -723,7 +724,7 @@ let run_dls (p : program) (g : premise) =
 
 let next (g,op,alts) =
  let s,gls,dls,p,alts =
-  next_alt alts (fun fmt _ -> Format.fprintf fmt "next solution") in
+  next_alt alts (fun fmt _ -> F.fprintf fmt "next solution") in
  let s, dls, alts = run op s (gls,dls,p) alts in
  return_current_result op s g dls alts
 

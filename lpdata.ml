@@ -3,6 +3,8 @@
 (* license: GNU Lesser General Public License Version 2.1                    *)
 (* ------------------------------------------------------------------------- *)
 
+module F = Format
+
 module L : sig (* {{{ Lists *)
 
 
@@ -181,18 +183,18 @@ module PPLIB = struct (* {{{ auxiliary lib for PP *)
 
 let on_buffer f x =
   let b = Buffer.create 1024 in
-  let fmt = Format.formatter_of_buffer b in
+  let fmt = F.formatter_of_buffer b in
   f fmt x;
-  Format.pp_print_flush fmt ();
+  F.pp_print_flush fmt ();
   Buffer.contents b
 let iter_sep spc pp fmt l =
   let rec aux n = function
     | [] -> ()
     | [x] -> pp fmt x
     | _ when n = 0 ->
-         Format.fprintf fmt "%s" (Format.pp_get_ellipsis_text fmt ())
+         F.fprintf fmt "%s" (F.pp_get_ellipsis_text fmt ())
     | x::tl -> pp fmt x; spc fmt (); aux (n-1) tl in
-  aux (Format.pp_get_max_boxes fmt ()) l
+  aux (F.pp_get_max_boxes fmt ()) l
 
 
 end (* }}} *)
@@ -292,94 +294,92 @@ let rec fresh_names w k = function
   | 0 -> []
   | n -> (w ^ string_of_int k) :: fresh_names w (k+1) (n-1)
 
-module P = Format
-
 let rec self fmt ?pars ctx t = prf_data_low ?pars ctx fmt t
 and prf_data_low ?(pars=false) ctx fmt ?(reccal=self fmt) = function
     | XBin (n,x) ->
-       P.pp_open_hovbox fmt 2;
+       F.pp_open_hovbox fmt 2;
        let names = fresh_names "w" (List.length ctx) n in
-       if pars then P.pp_print_string fmt "(";
-       P.pp_print_string fmt (String.concat "\\ " names ^ "\\");
-       P.pp_print_space fmt ();
+       if pars then F.pp_print_string fmt "(";
+       F.pp_print_string fmt (String.concat "\\ " names ^ "\\");
+       F.pp_print_space fmt ();
        reccal (List.rev names @ ctx) x;
-       if pars then P.pp_print_string fmt ")";
-       P.pp_close_box fmt ()
-    | XDB x -> P.pp_print_string fmt 
+       if pars then F.pp_print_string fmt ")";
+       F.pp_close_box fmt ()
+    | XDB x -> F.pp_print_string fmt 
         (try (if !Trace.dverbose then "'" else "") ^List.nth ctx (x-1)
         with Failure _ | Invalid_argument _ ->
           "_" ^ string_of_int (x-List.length ctx))
-    | XCon (x,lvl) -> P.pp_print_string fmt (pr_cst x lvl)
-    | XUv (x,lvl) -> P.pp_print_string fmt (pr_var x lvl)
+    | XCon (x,lvl) -> F.pp_print_string fmt (pr_cst x lvl)
+    | XUv (x,lvl) -> F.pp_print_string fmt (pr_var x lvl)
     | XApp xs ->
-        P.pp_open_hovbox fmt 2;
-        if pars then P.pp_print_string fmt "(";
-        iter_sep P.pp_print_space (fun _ -> reccal ~pars:true ctx)
+        F.pp_open_hovbox fmt 2;
+        if pars then F.pp_print_string fmt "(";
+        iter_sep F.pp_print_space (fun _ -> reccal ~pars:true ctx)
           fmt (L.to_list xs);
-        if pars then P.pp_print_string fmt ")";
-        P.pp_close_box fmt ()
+        if pars then F.pp_print_string fmt ")";
+        F.pp_close_box fmt ()
     | XSeq (xs, XNil) ->
-        P.fprintf fmt "@[<hov 2>[";
-        iter_sep (fun fmt () -> P.fprintf fmt ",@ ") (fun _ -> reccal ctx)
+        F.fprintf fmt "@[<hov 2>[";
+        iter_sep (fun fmt () -> F.fprintf fmt ",@ ") (fun _ -> reccal ctx)
           fmt (L.to_list xs);
-        P.fprintf fmt "]@]";
+        F.fprintf fmt "]@]";
     | XSeq (xs, t) ->
-        P.fprintf fmt "@[<hov 2>[";
-        iter_sep (fun fmt () -> P.fprintf fmt ",@ ") (fun _ -> reccal ctx)
+        F.fprintf fmt "@[<hov 2>[";
+        iter_sep (fun fmt () -> F.fprintf fmt ",@ ") (fun _ -> reccal ctx)
           fmt (L.to_list xs);
-        P.fprintf fmt "|@ ";
+        F.fprintf fmt "|@ ";
         reccal ctx t;
-        P.fprintf fmt "]@]";
-    | XNil -> P.fprintf fmt "[]";
+        F.fprintf fmt "]@]";
+    | XNil -> F.fprintf fmt "[]";
     | XExt x ->
-        P.pp_open_hbox fmt ();
-        P.pp_print_string fmt (C.print x);
-        P.pp_close_box fmt ()
+        F.pp_open_hbox fmt ();
+        F.pp_print_string fmt (C.print x);
+        F.pp_close_box fmt ()
     | XVApp(b,t1,t2,o) ->
         let t1, t2 = if b == `Rev then t2, t1 else t1, t2 in
-        P.fprintf fmt "@[<hov 2>";
-        if pars then P.pp_print_string fmt "(";
-        if b <> `Rev then P.fprintf fmt "@@";
+        F.fprintf fmt "@[<hov 2>";
+        if pars then F.pp_print_string fmt "(";
+        if b <> `Rev then F.fprintf fmt "@@";
         reccal ctx ~pars:true t1;
-        P.fprintf fmt "@ ";
+        F.fprintf fmt "@ ";
         reccal ctx ~pars:true t2;
         Opt.iter (fun t ->
-          P.fprintf fmt "@ "; reccal ctx ~pars:true t) o;
-        if b == `Rev then P.fprintf fmt "@@";
-        if pars then P.pp_print_string fmt ")";
-        P.fprintf fmt "@]"
+          F.fprintf fmt "@ "; reccal ctx ~pars:true t) o;
+        if b == `Rev then F.fprintf fmt "@@";
+        if pars then F.pp_print_string fmt ")";
+        F.fprintf fmt "@]"
     | XSusp ptr ->
         match !ptr with
-        | Done t -> P.fprintf fmt ".(@["; reccal ctx t; P.fprintf fmt ")@]"
+        | Done t -> F.fprintf fmt ".(@["; reccal ctx t; F.fprintf fmt ")@]"
         | Todo(t,ol,nl,e) ->
-            P.fprintf fmt "@[<hov 2>⟦";
+            F.fprintf fmt "@[<hov 2>⟦";
             reccal ctx t;
-            P.fprintf fmt ",@ %d, %d,@ " ol nl;
+            F.fprintf fmt ",@ %d, %d,@ " ol nl;
             prf_env ctx fmt e;
-            P.fprintf fmt "⟧@]";
+            F.fprintf fmt "⟧@]";
 
 and prf_env ctx fmt e =
   let rec print_env = function
-    | XEmpty -> P.pp_print_string fmt "nil"
+    | XEmpty -> F.pp_print_string fmt "nil"
     | XArgs(a,n,e) ->
-        P.fprintf fmt "(@[<hov 2>";
-        iter_sep (fun fmt () -> P.fprintf fmt ",@ ")
+        F.fprintf fmt "(@[<hov 2>";
+        iter_sep (fun fmt () -> F.fprintf fmt ",@ ")
           (fun fmt t -> prf_data_low ctx fmt t) fmt (L.to_list a);
-        P.fprintf fmt "@]|%d)@ :: " n;
+        F.fprintf fmt "@]|%d)@ :: " n;
         print_env e
     | XMerge(e1,nl1,ol2,e2) ->
-        P.fprintf fmt "@[<hov 2>⦃";
+        F.fprintf fmt "@[<hov 2>⦃";
         print_env e1;
-        P.fprintf fmt ",@ %d, %d,@ " nl1 ol2;
+        F.fprintf fmt ",@ %d, %d,@ " nl1 ol2;
         print_env e2;
-        P.fprintf fmt "⦄@]";
+        F.fprintf fmt "⦄@]";
     | XSkip(n,m,e) ->
-        P.fprintf fmt "@@(%d,%d)@ :: " n m;
+        F.fprintf fmt "@@(%d,%d)@ :: " n m;
         print_env e;
   in
-    P.pp_open_hovbox fmt 2;
+    F.pp_open_hovbox fmt 2;
     print_env e;
-    P.pp_close_box fmt ()
+    F.pp_close_box fmt ()
 
 let prf_data ctx fmt p = prf_data_low ctx fmt p
 let prf_data_only = prf_data
@@ -395,7 +395,7 @@ let mkXSusp t n o e = XSusp(ref(Todo(t,n,o,e)))
 
 let mkSkip n l e = if n <= 0 then e else XSkip(n,l,e)
 
-let rule s = SPY "rule" Format.pp_print_string s
+let rule s = SPY "rule" F.pp_print_string s
 
 let rec epush e = TRACE "epush" (fun fmt -> prf_env [] fmt e)
   match e with
@@ -649,7 +649,7 @@ module CN : sig
   val compare : t -> t -> int
   val make : ?float:[ `Here | `Begin | `End ] -> ?existing:bool -> string -> t
   val fresh : unit -> t
-  val pp : Format.formatter -> t -> unit
+  val pp : F.formatter -> t -> unit
   val to_string : t -> string
 end = struct
   type t = Name.t * [ `Here | `Begin | `End ]
@@ -668,7 +668,7 @@ end = struct
     if S.mem s !all then make ~float (incr fresh; s ^ string_of_int !fresh)
     else (all := S.add s !all; Name.make s, float)
   let fresh () = incr fresh; make ("hyp" ^ string_of_int !fresh)
-  let pp fmt (t,_) = Format.fprintf fmt "%s" (Name.to_string t)
+  let pp fmt (t,_) = F.fprintf fmt "%s" (Name.to_string t)
 end
 
 type program = annot_clause list
@@ -734,7 +734,7 @@ let rec destBin x =
   match look x with
   | Bin(n,t) when isBin t -> let m, t = destBin t in n+m, t
   | Bin(n,t) -> n, t
-  | _ -> Format.eprintf "%a\n%!" (prf_data []) x; assert false
+  | _ -> F.eprintf "%a\n%!" (prf_data []) x; assert false
 let destBin1 t = let n, t = destBin t in assert(n = 1); t
 let destExt x = match look x with Ext t -> t | _ -> assert false
 let look_premise p =
@@ -790,7 +790,7 @@ let mapi_premise = mapi
 
 module PPP = struct (* {{{ pretty printer for programs *)
 
-open Format
+open F
 
 let prf_builtin ctx fmt = function
   | BIUnif (a,b) -> 
@@ -1255,7 +1255,7 @@ let in_sub i { assign = assign } =
   with Not_found -> false
 let in_sub_con lvl s = if lvl >= 0 then false else in_sub (-lvl) s
 let set_sub i t s =
-  SPY "sub" (fun fmt t -> Format.fprintf fmt "%d <- %a" i (prf_data []) t) t;
+  SPY "sub" (fun fmt t -> F.fprintf fmt "%d <- %a" i (prf_data []) t) t;
   { s with assign = M.add i t s.assign }
 let set_sub_con i t s = assert(i < 0);
   let m = if M.mem i s.assign then M.remove i s.assign else s.assign in
@@ -1273,20 +1273,20 @@ let rec get_info_con c s = match look c with
   | _ -> assert false
 
 let prf_subst fmt s =
-  Format.pp_open_hovbox fmt 2;
-  Format.pp_print_string fmt "{ ";
+  F.pp_open_hovbox fmt 2;
+  F.pp_print_string fmt "{ ";
   iter_sep 
-    (fun fmt () -> Format.pp_print_string fmt ";";Format.pp_print_space fmt ())
+    (fun fmt () -> F.pp_print_string fmt ";";F.pp_print_space fmt ())
     (fun fmt (i,t) ->
-       Format.pp_open_hvbox fmt 0;
-       Format.pp_print_string fmt (pr_var i 0);
-       Format.pp_print_space fmt ();
-       Format.pp_print_string fmt ":= ";
+       F.pp_open_hvbox fmt 0;
+       F.pp_print_string fmt (pr_var i 0);
+       F.pp_print_space fmt ();
+       F.pp_print_string fmt ":= ";
        prf_data [] fmt (map (fun x -> kool (look x)) t);
-       Format.pp_close_box fmt ()) fmt
+       F.pp_close_box fmt ()) fmt
     (List.rev (M.bindings s.assign));
-  Format.pp_print_string fmt " }";
-  Format.pp_close_box fmt ()
+  F.pp_print_string fmt " }";
+  F.pp_close_box fmt ()
 let string_of_subst s = on_buffer prf_subst s
 
 let apply_subst s t =
@@ -1306,7 +1306,7 @@ let freeze_uv i s =
   incr frozen;
   let ice = mkCon ("𝓕" ^ subscript !frozen) (-s.top_uv) in
   SPY "freeze"
-    (fun fmt t -> Format.fprintf fmt "%d <- %a" i (prf_data []) t) ice;
+    (fun fmt t -> F.fprintf fmt "%d <- %a" i (prf_data []) t) ice;
   ice, set_sub i ice { s with top_uv = s.top_uv + 1 }
 let rec is_frozen t = match look t with
   | Con(_,lvl) when lvl < 0 -> true
