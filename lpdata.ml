@@ -103,6 +103,32 @@ end  = struct (* {{{ *)
 
 end (* }}} *)
 
+module Opt = struct
+ 
+  let pred2 f o1 o2 = match o1, o2 with
+    | Some x, Some y -> f x y
+    | None, None -> true
+    | _ -> false
+
+  let map f o =
+    match o with
+    | None -> None
+    | Some x -> let y = f x in if x == y then o else Some y
+
+  let iter f o = match o with None -> () | Some x -> f x
+  
+  let fold f a o = match o with None -> a | Some x -> f x a
+  let fold_map f a o = match o with
+    | None -> None, a
+    | Some x -> let x, a = f x a in Some x, a
+  
+  let fold2 f a o1 o2 =
+    match o1,o2 with
+    | None, _ | _, None -> a
+    | Some x, Some y -> f x y a
+
+end
+
 module C : sig (* {{{ External, user defined, datatypes *)
 
   type t
@@ -229,7 +255,7 @@ type kind_of_data =
   | Seq of data L.t * data
   | Nil
   | Ext of C.data
-  | VApp of appkind * data * data
+  | VApp of appkind * data * data * data option
 and data =
   | XUv of var * level
   | XCon of name * level
@@ -239,7 +265,7 @@ and data =
   | XSeq of data L.t * data
   | XNil
   | XExt of C.data
-  | XVApp of appkind * data * data
+  | XVApp of appkind * data * data * data option
   | XSusp of suspended_job ref
 and suspended_job = Done of data | Todo of data * olam * nlam * env
 and env =
@@ -309,7 +335,7 @@ and prf_data_low ?(pars=false) ctx fmt ?(reccal=self fmt) = function
         P.pp_open_hbox fmt ();
         P.pp_print_string fmt (C.print x);
         P.pp_close_box fmt ()
-    | XVApp(b,t1,t2) ->
+    | XVApp(b,t1,t2,o) ->
         let t1, t2 = if b == `Rev then t2, t1 else t1, t2 in
         P.fprintf fmt "@[<hov 2>";
         if pars then P.pp_print_string fmt "(";
@@ -317,6 +343,8 @@ and prf_data_low ?(pars=false) ctx fmt ?(reccal=self fmt) = function
         reccal ctx ~pars:true t1;
         P.fprintf fmt "@ ";
         reccal ctx ~pars:true t2;
+        Opt.iter (fun t ->
+          P.fprintf fmt "@ "; reccal ctx ~pars:true t) o;
         if b == `Rev then P.fprintf fmt "@@";
         if pars then P.pp_print_string fmt ")";
         P.fprintf fmt "@]"
@@ -430,8 +458,9 @@ let rec psusp ptr t ol nl e =
       store ptr (mkBin n (mkXSusp t (ol+n) (nl+n) (XSkip(n,nl+n,e))))
   | XApp a -> rule"r5";
       store ptr (XApp(L.map (fun t -> mkXSusp t ol nl e) a))
-  | XVApp(b,t1,t2) -> rule"r5bis";
-      store ptr (XVApp(b,mkXSusp t1 ol nl e,mkXSusp t2 ol nl e))
+  | XVApp(b,t1,t2,o) -> rule"r5bis";
+      store ptr (XVApp(b,mkXSusp t1 ol nl e,mkXSusp t2 ol nl e,
+                       Opt.map (fun t -> mkXSusp t ol nl e) o))
   | XSeq(a,tl) ->
       store ptr (XSeq(L.map (fun t -> mkXSusp t ol nl e) a, mkXSusp tl ol nl e))
   | XDB i -> (* r2, r3, r4 *)
@@ -513,7 +542,7 @@ let fixApp xs =
 
 let isDB i = function XDB j when j = i -> true | _ -> false
 
-let mkVApp b t1 t2 = XVApp(b,t1,t2)
+let mkVApp b t1 t2 o = XVApp(b,t1,t2,o)
 
 let rec equal a b = match push a, push b with
  | XUv (x,_), XUv (y,_) -> x = y
@@ -524,15 +553,16 @@ let rec equal a b = match push a, push b with
  | XExt x, XExt y -> C.equal x y
  | XSeq(xs,s), XSeq(ys,t) -> L.for_all2 equal xs ys && equal s t
  | XNil, XNil -> true
- | XVApp (b1,t1,t2), XVApp (b2,s1,s2) -> b1 == b2 && equal t1 s2 && equal t2 s2
- | XVApp (_,t1,t2), _ when equal t2 mkNil -> equal t1 b
- | _, XVApp (_,t1,t2) when equal t2 mkNil -> equal a t1
- | (XVApp (_,t1,t2), XApp _) ->
+ | XVApp (b1,t1,t2,o1), XVApp (b2,s1,s2,o2) ->
+      b1 == b2 && equal t1 s2 && equal t2 s2 && Opt.pred2 equal o1 o2
+ | XVApp (_,t1,t2,None), _ when equal t2 mkNil -> equal t1 b
+ | _, XVApp (_,t1,t2,None) when equal t2 mkNil -> equal a t1
+ | (XVApp (_,t1,t2,None), XApp _) ->
      (match look t2 with
      | XSeq (ys,tl) when equal tl mkNil -> equal (mkApp (L.cons t1 ys)) b
      | XSeq (ys,tl) -> false
      | _ -> false)
- | (XApp _, XVApp (_,t1,t2)) ->
+ | (XApp _, XVApp (_,t1,t2,None)) ->
      (match look t2 with
      | XSeq (ys,tl) when equal tl mkNil -> equal a (mkApp (L.cons t1 ys))
      | XSeq (ys,tl) -> false
@@ -563,7 +593,11 @@ let rec map f x = match push x with
   | XBin (ns,x) -> XBin(ns, map f x)
   | XApp xs -> XApp(L.map (map f) xs)
   | XSeq (xs, tl) -> let xs = L.map (map f) xs in XSeq(xs, map f tl)
-  | XVApp(b,t1,t2) -> let t1 = map f t1 in XVApp(b,t1,map f t2)
+  | XVApp(b,t1,t2,o) ->
+      let t1 = map f t1 in
+      let t2 = map f t2 in
+      let o = Opt.map (map f) o in
+      XVApp(b,t1,t2,o)
   | XSusp _ -> assert false
 
 let rec mapi f i x = match push x with
@@ -571,7 +605,11 @@ let rec mapi f i x = match push x with
   | XBin (ns,x) -> XBin(ns, mapi f (i+ns) x)
   | XApp xs -> XApp(L.map (mapi f i) xs)
   | XSeq (xs, tl) -> let xs = L.map (mapi f i) xs in XSeq(xs, mapi f i tl)
-  | XVApp(b,t1,t2) -> let t1 = mapi f i t1 in XVApp(b,t1, mapi f i t2)
+  | XVApp(b,t1,t2,o) ->
+      let t1 = mapi f i t1 in
+      let t2 = mapi f i t2 in
+      let o = Opt.map (mapi f i) o in
+      XVApp(b,t1,t2,o)
   | XSusp _ -> assert false
  
 
@@ -646,6 +684,8 @@ let mkCApp name args = mkApp L.(of_list (mkConN name 0 :: args))
 let mkAtom x = x
 let unif_name = Name.make "*unif*"
 let mkAtomBiUnif x y = mkCApp unif_name [x; y]
+let context_name = Name.make "*context*"
+let mkAtomBiContext x = mkCApp context_name [x]
 let custom_name = Name.make "*custom*"
 let mkAtomBiCustom name x = mkCApp custom_name [mkExt (mkString name); x]
 let cut_name = Name.make "*cut*"
@@ -661,13 +701,22 @@ let mkPi1 annot p = match annot with
 let sigma_name = Name.make "*sigma*"
 let mkSigma1 p = mkCApp sigma_name [mkBin 1 p]
 let delay_name = Name.make "*delay*"
-let mkDelay k p = function
-  | None -> mkCApp delay_name [k; p]
-  | Some l -> mkCApp delay_name [k; p; l]
+let no_name = Name.make "*nothing*"
+let nothing = mkConN no_name 0
+let mkDelay k p vars info =
+  match vars, info with
+  | None, None -> mkCApp delay_name [k; p; nothing; nothing]
+  | None, Some i -> mkCApp delay_name [k; p; nothing; i]
+  | Some v, None -> mkCApp delay_name [k; p; v; nothing]
+  | Some v, Some i -> mkCApp delay_name [k; p; v; i]
 let resume_name = Name.make "*resume*"
 let mkResume k p = mkCApp resume_name [k;p]
 
-type builtin = BIUnif of data * data | BICustom of string * data | BICut
+type builtin =
+  | BIUnif of data * data
+  | BICustom of string * data
+  | BICut
+  | BIContext of data
 type kind_of_premise =
   | Atom of data
   | AtomBI of builtin
@@ -675,7 +724,7 @@ type kind_of_premise =
   | Impl of clause * premise
   | Pi of data option * premise
   | Sigma of premise
-  | Delay of data * premise * data option
+  | Delay of data * premise * data option * data option
   | Resume of data * premise
 
 let collect_Uv_premise = collect_Uv
@@ -694,6 +743,8 @@ let look_premise p =
       (match look (L.hd xs) with
       | Con(name,0) when Name.equal name unif_name ->
           AtomBI(BIUnif(L.get 1 xs,L.get 2 xs))
+      | Con(name,0) when Name.equal name context_name ->
+          AtomBI(BIContext (L.get 1 xs))
       | Con(name,0) when Name.equal name custom_name ->
           AtomBI(BICustom(getString (destExt (L.get 1 xs)),L.get 2 xs))
       | Con(name,0) when Name.equal name conj_name ->
@@ -706,9 +757,10 @@ let look_premise p =
       | Con(name,0) when Name.equal name sigma_name ->
           Sigma (destBin1 (L.get 1 xs))
       | Con(name,0) when Name.equal name delay_name ->
-          Delay(L.get 1 xs, L.get 2 xs,
-            if L.len xs < 4 then None
-            else Some (L.get 3 xs))
+          let v, i = L.get 3 xs, L.get 4 xs in
+          let v = if equal v nothing then None else Some v in
+          let i = if equal i nothing then None else Some i in
+          Delay(L.get 1 xs, L.get 2 xs, v, i)
       | Con(name,0) when Name.equal name resume_name ->
           Resume(L.get 1 xs, L.get 2 xs)
       | _ -> Atom (kool a))
@@ -745,6 +797,7 @@ let prf_builtin ctx fmt = function
       fprintf fmt "@[<hv 2>%a@ = %a@]" (prf_data ctx) a (prf_data ctx) b
   | BICustom(name,t) -> fprintf fmt "@[<hov 2>%s %a@]" name (prf_data ctx) t
   | BICut -> fprintf fmt "!"
+  | BIContext t -> fprintf fmt "@[<hov 2>context@ %a@]" (prf_data ctx) t
 
 let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
   match look_premise p with
@@ -799,15 +852,14 @@ let rec prf_premise ?(pars=false) ?(positive=false) ctx fmt p =
        end;
        if pars then pp_print_string fmt ")";
        pp_close_box fmt ()
-  | Delay(t,p,fl) ->
+  | Delay(t,p,v,i) ->
        fprintf fmt "delay @[";
        prf_data ctx fmt t;
        fprintf fmt "@ (";
        prf_premise ~pars:false ~positive ctx fmt p;
        fprintf fmt ")";
-       (match fl with None -> () | Some l ->
-         fprintf fmt "@ tabulate@ ";
-         prf_data ctx fmt l);
+       Opt.iter (fun x -> fprintf fmt "@ in@ "; prf_data ctx fmt x) v;
+       Opt.iter (fun x -> fprintf fmt "@ with@ "; prf_data ctx fmt x) v;
        fprintf fmt "@]"
   | Resume(t,p) ->
        fprintf fmt "resume @[";
@@ -928,8 +980,10 @@ let rec lex c = parser bp
        | "CONSTANT","sigma" -> "SIGMA", "sigma"
        | "CONSTANT","nil" -> "NIL", "nil"
        | "CONSTANT","delay" -> "DELAY","delay"
-       | "CONSTANT","tabulate" -> "TABULATE","tabulate"
+       | "CONSTANT","in" -> "IN","in"
+       | "CONSTANT","with" -> "WITH","with"
        | "CONSTANT","resume" -> "RESUME","resume"
+       | "CONSTANT","context" -> "CONTEXT","context"
        | x -> x), (bp, ep)
 and comment c = parser
   | [< '( '\n' ); s >] -> lex c s
@@ -1000,7 +1054,8 @@ let mkFreshCon name lvl =
   t
 let rec binders c n = function
     | (XCon _ | XUv _) as x when equal x c -> mkDB n
-    | XVApp(b,t1,t2) -> XVApp(b,binders c n t1, binders c n t2)
+    | XVApp(b,t1,t2,o) ->
+        XVApp(b,binders c n t1, binders c n t2,Opt.map (binders c n) o)
     | (XCon _ | XUv _ | XExt _ | XDB _ | XNil) as x -> x
     | XBin(w,t) -> XBin(w,binders c (n+w) t)
     | XApp xs -> XApp (L.map (binders c n) xs)
@@ -1098,7 +1153,7 @@ EXTEND
   atom : LEVEL "app"
      [[ hd = atom; args = LIST1 atom LEVEL "simple" ->
           match args with
-          | [tl;x] when equal x sentinel -> mkVApp `Rev tl hd
+          | [tl;x] when equal x sentinel -> mkVApp `Rev tl hd None
           | _ -> mkApp (L.of_list (hd :: args)) ]];
   atom : LEVEL "simple" 
      [[ c = CONSTANT; b = OPT [ BIND; a = atom LEVEL "term" -> a ] ->
@@ -1113,16 +1168,20 @@ EXTEND
       | NIL -> mkNil
       | s = LITERAL -> mkExt (mkString s)
       | AT; hd = atom LEVEL "simple"; args = atom LEVEL "simple" ->
-          mkVApp `Regular hd args
+          mkVApp `Regular hd args None
       | AT -> sentinel
+      | CONTEXT; hd = atom LEVEL "simple" -> mkAtomBiContext hd
       | QMARK; hd = atom LEVEL "simple"; args = atom LEVEL "simple" ->
-          mkVApp `Flex hd args
-      | SHARP; hd = atom LEVEL "simple"; args = atom LEVEL "simple" ->
-          mkVApp `Frozen hd args
+          mkVApp `Flex hd args None
+      | SHARP; hd = atom LEVEL "simple"; args = atom LEVEL "simple";
+        info = OPT atom LEVEL "simple" ->
+          mkVApp `Frozen hd args info
       | bt = BUILTIN; a = atom LEVEL "simple" -> mkAtomBiCustom bt a
       | BANG -> mkAtomBiCut
       | DELAY; t = atom LEVEL "simple"; p = atom LEVEL "simple";
-          fl = OPT [ TABULATE; l = atom LEVEL "list" -> l ] -> mkDelay t p fl
+        vars = OPT [ IN; x = atom LEVEL "simple" -> x ];
+        info = OPT [ WITH; x = atom LEVEL "simple" -> x ] ->
+          mkDelay t p vars info
       | RESUME; t = atom LEVEL "simple"; p = atom LEVEL "simple" -> mkResume t p
       | LPAREN; a = atom; RPAREN -> a ]];
   atom : LEVEL "list" 
@@ -1201,10 +1260,17 @@ let set_sub i t s =
 let set_sub_con i t s = assert(i < 0);
   let m = if M.mem i s.assign then M.remove i s.assign else s.assign in
   { s with assign = M.add (-i) t m }
-let set_info_con i t s = assert(i < 0); { s with assign = M.add i t s.assign }
-let get_info_con i s = assert(i < 0);
-  try Some (M.find i s.assign)
-  with Not_found -> None
+let rec set_info_con c t s = match look c with
+  | Con(_,i) -> assert(i < 0); { s with assign = M.add i t s.assign }
+  | App xs -> set_info_con (L.hd xs) t s
+  | _ -> assert false
+let rec get_info_con c s = match look c with
+  | Con(_,i) ->
+      (assert(i < 0);
+      try Some (M.find i s.assign)
+      with Not_found -> None)
+  | App xs -> get_info_con (L.hd xs) s
+  | _ -> assert false
 
 let prf_subst fmt s =
   Format.pp_open_hovbox fmt 2;
@@ -1286,7 +1352,7 @@ and whd t s =
       t', if t == t' then s else set_sub i t' s
   | Con _ as x -> kool x, s
   | Uv _ -> t, s
-  | VApp (b,hd,tl) ->
+  | VApp (b,hd,tl,_) ->
       let xs, tl, s = splay L.empty tl s in
       if equal tl mkNil then
         if b <> `Rev then whd (mkApp (L.cons hd xs)) s
@@ -1323,12 +1389,12 @@ let rec nf x s = match look x with
       let xs, s = L.fold_map nf xs s in
       let t, s = nf t s in
       mkSeq xs t, s
-  | VApp(b,t1,t2) as xf -> 
+  | VApp(b,t1,t2,o) as xf -> 
       let x', s = whd x s in 
       (match look x' with
       | App xs -> nf_app xs s
-      | VApp(b,t1,t2) ->
-          let t1, s = nf t1 s in let t2, s = nf t2 s in mkVApp b t1 t2, s
+      | VApp(b,t1,t2,o) ->
+          let t1, s = nf t1 s in let t2, s = nf t2 s in mkVApp b t1 t2 o, s
       | _ -> if x == x' then kool xf, s else nf x' s)
   | (App _ | Uv _) as xf ->
       let x', s = whd x s in 

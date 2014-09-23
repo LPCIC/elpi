@@ -29,17 +29,10 @@ a fresh global constant) and P is inserted into a list of delayed goals
 keyed on the frozen constant.  If X is already a frozen constant, then P
 is enqueued in the list of goals delayed on X.
 
-The "delay X P tabulate L" predicate additionally generates a new global
-clause of the form "P :- H1, .., HN" where Hi is an hypothetical clause
-in the context of X.  Hypothetical variables h1 .. hm are bound.
-This is performing a logical cut of the formula
-  pi h1\ .. pi hm\ H1 => .. => HN => P
-that is going to be proved once the delayed goal is resumed.  The list of
-head constants L is used to filter the hypothetical context to select
-H1, .., HN.
-
-QUESTION: in our use case this makes sense but if one bubbles up this way
-arbitrary predicates things get nonsensical pretty quickly. 
+The "delay X P in L" predicate additionally enforces that the eigen
+variables listed in L are the only ones visible by X (i.e. X may be pruned
+as a result of the delay operation).  As a result the frozen constant that
+is substituted for X is applied to exactly the eigen variables in L.
 
 The "resume X H" predicate defrosts X and resumes all the goals delayed on
 X.  The first goal resumed (the first one that was delayed) gets and extra

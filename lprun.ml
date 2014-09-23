@@ -98,10 +98,11 @@ let rec bind x id depth lvl args t s =
   | App bs as t when rigid t ->
       let ss, s = L.fold_map (bind x id depth lvl args) bs s in
       mkApp ss, s
-  | VApp (b,h,a) ->
+  | VApp (b,h,a,o) ->
       let h, s = bind x id depth lvl args h s in
       let a, s = bind x id depth lvl args a s in
-      mkVApp b h a, s
+      let o, s = Opt.fold_map (bind x id depth lvl args) s o in
+      mkVApp b h a o, s
   | (App _ | Uv _) as tmp -> (* pruning *)
       let bs = match tmp with
         | App bs -> bs | Uv _ -> L.singl t | _ -> assert false in
@@ -176,7 +177,8 @@ let rec simple_oc id lvl t s =
   | Bin(_,t) -> simple_oc id lvl t s
   | App l -> L.fold (simple_oc id lvl) l s
   | Seq(l,t) -> L.fold (simple_oc id lvl) l (simple_oc id lvl t s)
-  | VApp(_,t1,t2) -> simple_oc id lvl t1 (simple_oc id lvl t2 s)
+  | VApp(_,t1,t2,o) ->
+     Opt.fold (simple_oc id lvl) (simple_oc id lvl t1 (simple_oc id lvl t2 s)) o
 
 let mksubst ?depth x id lvl t args s =
   let nargs = L.len args in
@@ -222,19 +224,23 @@ let rec unify ?depth a b s = TRACE "unify" (print_unif_prob s "=" a b)
   match look a, look b with
   | Con _, Con _ | Ext _, Ext _ | DB _, DB _ | Nil, Nil ->
       if equal a b then s else fail "rigid"
-  | VApp (b1,hd1,al1), VApp (b2,hd2,al2) ->
+  | VApp (b1,hd1,al1,o1), VApp (b2,hd2,al2,o2) ->
       if (b1 == `Rev && b2 == `Rev) || (b1 <> `Rev && b2 <> `Rev) then
-        unify al1 al2 (unify hd1 hd2 s)
+        Opt.fold2 (unify ?depth) (unify al1 al2 (unify hd1 hd2 s)) o1 o2
       else assert false
 
-  | t, VApp(w,t1,t2) ->
+  | t, VApp(w,t1,t2,o) ->
      if w == `Flex && rigid t then fail "no-flex";
      if w == `Frozen && not(Subst.is_frozen a) then fail "no-tc";
-     let hd, tl = destApp w t a in unify (mkSeq tl mkNil) t2 (unify hd t1 s)
-  | VApp(w,t1,t2), t ->
+     let hd, tl = destApp w t a in
+     let s = unify (mkSeq tl mkNil) t2 (unify hd t1 s) in
+     if w == `Frozen then Opt.fold2 (unify ?depth) s o (Subst.get_info_con a s) else s
+  | VApp(w,t1,t2,o), t ->
      if w == `Flex && rigid t then fail "no-flex";
      if w == `Frozen && not(Subst.is_frozen b) then fail "no-tc";
-     let hd, tl = destApp w t b in unify (mkSeq tl mkNil) t2 (unify hd t1 s)
+     let hd, tl = destApp w t b in
+     let s = unify (mkSeq tl mkNil) t2 (unify hd t1 s) in
+     if w == `Frozen then Opt.fold2 (unify ?depth) s o (Subst.get_info_con b s) else s
 
   | Bin(nx,x), Bin(ny,y) when nx = ny -> unify x y s
   | Bin(nx,x), Bin(ny,y) when nx < ny -> unify (eta (ny-nx) x) y s
@@ -284,8 +290,11 @@ and unify_ho ?depth x y s =
 exception NoClause
 type objective =
   [ `Atom of data * key
-  | `Unify of data * data | `Custom of string * data | `Cut
-  | `Delay of data * premise * data option
+  | `Unify of data * data
+  | `Custom of string * data
+  | `Cut
+  | `Context of data
+  | `Delay of data * premise * data option * data option
   | `Resume of data * premise
   | `Unlock of data
   ]
@@ -343,13 +352,15 @@ let pr_cur_goal op (_,g,hyps,_,lvl) s fmt =
   | `Custom(name,a) ->
       Format.fprintf fmt "%s %a" name (prf_data []) (fst(Red.nf a s))
   | `Cut -> Format.fprintf fmt "!"
-  | `Delay (t,p,None) ->
+  | `Context a ->
+      Format.fprintf fmt "context %a" (prf_data []) (fst(Red.nf a s))
+  | `Delay (t,p,c,o) ->
        Format.fprintf fmt "delay %a %a"
-         (prf_data []) (fst(Red.nf t s)) (prf_premise []) (fst(Red.nf p s))
-  | `Delay (t,p,Some fl) ->
-       Format.fprintf fmt "delay %a %a tabulate %a"
-         (prf_data []) (fst(Red.nf t s)) (prf_premise []) (fst(Red.nf p s))
-         (prf_data []) fl
+         (prf_data []) (fst(Red.nf t s)) (prf_premise []) (fst(Red.nf p s));
+       Opt.iter (fun x ->
+         Format.fprintf fmt "in %a" (prf_premise []) (fst(Red.nf x s))) c;
+       Opt.iter (fun x ->
+         Format.fprintf fmt "with %a" (prf_premise []) (fst(Red.nf x s))) o
   | `Resume (t,p) ->
        Format.fprintf fmt "resume %a %a" (prf_data []) t
          (prf_premise []) (fst(Red.nf p s))
@@ -409,6 +420,8 @@ let contextualize_premise ?(compute_key=false) ctx s premise =
         [ctx, `Custom(n,x), add_ctx_key_name compute_key ctx eh], s
     | AtomBI BICut ->
         [ctx, `Cut, add_ctx_key_name compute_key ctx eh], s
+    | AtomBI (BIContext t) ->
+        [ctx, `Context t, add_ctx_key_name compute_key ctx eh], s
     | Impl(ps,h) when isConj ps -> aux ctx s (destConj ps @ eh) h
     | Impl(p,h) -> aux ctx s (p :: eh) h
     | Pi(annot,h) ->
@@ -425,8 +438,8 @@ let contextualize_premise ?(compute_key=false) ctx s premise =
           let l, s = aux ctx s eh p in
           l::acc, s) (L.to_list l) ([],s) in
         List.flatten ll, s
-    | Delay(t, p, fl) ->
-        [ctx, `Delay (t,p,fl), add_ctx_key_name compute_key ctx eh], s
+    | Delay(t, p, v, i) ->
+        [ctx, `Delay (t,p,v,i), add_ctx_key_name compute_key ctx eh], s
     | Resume(t,p) -> [ctx, `Resume(t,p), add_ctx_key_name compute_key ctx eh], s
   in
     aux ctx s [] premise
@@ -574,9 +587,6 @@ let not_same_hd s a b =
 
 let mk_prtg str d l = d, `Custom("$print",mkExt(mkString str)), [], [], l
 
-let not_in to_purge l =
-  List.filter (fun x -> not(List.exists (eq_clause x) to_purge)) l
-
 let sort_hyps (d,g,p,eh,lvl) = (d,g,List.sort cmp_clause p,eh,lvl)
 
 let rec run op s ((gls,dls,p as goals) : goals) (alts : alternatives)
@@ -588,6 +598,16 @@ let rec run op s ((gls,dls,p as goals) : goals) (alts : alternatives)
     | (_,`Cut,_,_,lvl)::rest ->
         let alts = cut lvl alts in
         s, rest, dls, p, alts
+    | (ctx1,`Context t,_,_,_) :: rest ->
+        (try
+          let rec aux = function
+            | [] -> []
+            | None :: rest -> aux rest
+            | Some x :: rest -> x :: aux rest in
+          let ctx = mkSeq (L.of_list (aux ctx1)) mkNil in
+          let s = unify ctx t s in
+          s, rest, dls, p, alts
+        with UnifFail _ -> next_alt alts (pr_cur_goals op gls))
     | (_,`Unlock t,_,_,lvl as g) :: rest ->
         TRACE ~depth:lvl "run" (pr_cur_goal op g s)
         let t, s = Red.whd t s in
@@ -617,20 +637,23 @@ let rec run op s ((gls,dls,p as goals) : goals) (alts : alternatives)
           match first_resumed with (d,g,pr,eh,lvl) ->
             (d,g,extra_hyps@pr,extra_hyps@eh,lvl) in
         s, unlock::(*gl@*)first_resumed :: rest_resumed@rest, dls, p, alts
-    | (depth,`Delay(t,goal,fl), _, eh,lvl as g) :: rest ->
+    | (depth,`Delay(t,goal,fctx,info), _, eh,lvl as g) :: rest ->
         TRACE ~depth:lvl "run" (pr_cur_goal op g s)
         let t, s = Red.whd t s in
         if Subst.is_frozen t then
           try
             TRACE "delay more" (pr_cur_goal op g s)
             SPY "key" (prf_data []) (fst(Red.nf t s));
+            assert(info = None);
             let dls = dls @ [t,goal,depth,eh,lvl] in
             s, rest, dls, p, alts
           with NoClause -> next_alt alts (pr_cur_goals op gls)
         else if flexible t then
           try
             TRACE "delay" (pr_cur_goal op g s)
-            let s = freeze s t goal fl in
+            let s = freeze s t goal fctx in
+            let t, s = Red.nf t s in
+            let s = Opt.fold (Subst.set_info_con t) s info in
             SPY "key" (prf_data []) (fst(Red.nf t s));
             let dls = (t,goal,depth,eh,lvl) :: dls in
             s, rest, dls, p, alts

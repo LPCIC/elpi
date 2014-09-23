@@ -119,14 +119,13 @@ cut-at-stop [[_,stop]| _] [] :- !.
 cut-at-stop [X|XS] [X|YS] :- cut-at-stop XS YS.
 
 new-meta T TY :-
-  $context[CC],
+  context CC,
   cut-at-stop CC C,
   $telescope[[vdash TY|C],Seq],
   list2 list-fst C RVars, rev RVars Vars,
   new-meta-aux T TY Vars Seq.
 new-meta-aux T TY Vars Seq :-
-  delay T (inhabit T TY) tabulate [Vars],
-  $set-frozen-info [T,Seq].
+  delay T (inhabit T TY) in Vars with Seq.
 
 of hole TY T :- new-meta TY set, new-meta T TY.
 
@@ -134,7 +133,7 @@ of hole TY T :- new-meta TY set, new-meta T TY.
 inhabit (?T L) TY :- get-canonical M, !, of (@M L) TY (@T L).
 inhabit (?T L) TY :- get-local M, !, of M TY (@T L).
 
-of (#F L) TY T :- T = @F L, $get-frozen-info[F,Seq], of-seq Seq L TY.
+of (#F L Seq) TY T :- T = @F L, of-seq Seq L TY.
 of-seq (vdash TY) [] TY.
 of-seq (decl T Seq) [V|VS] TY :- rof V T, of-seq (Seq V) VS TY.
 of-seq (def T BO Seq) VS TY :- rof V T, of-seq (Seq BO) VS TY. % ????
@@ -357,7 +356,7 @@ copy OC L (fix Ty RTy B) (fix Ty2 RTy2 B2) :-
 %               [T1, x1\ [T2, .. xn\ [TN, T] .. ]]
 % meaning that
 %                 x1 : T1, .., xn : TN |- M : T
-sequent_of M _ Seq _ :- assert(M = #HD _), $get-frozen-info [HD,Seq].
+sequent_of M _ Seq _ :- assert(M = #HD _ Seq).
 
 % mask_seq F XS YS Seq MaskSeq AllIn. Returns in MaskSeq a copy of Seq
 % where each item T is either prefixed by in as in "keep T", or subtituted with

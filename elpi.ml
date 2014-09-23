@@ -111,25 +111,6 @@ let register_print () =
     | _ -> type_err "printl" "list" t);
 ;;
 
-let register_frozen_tab () =
-  extern_vv "set-frozen-info" (fun frozen value s ->
-    assert(LP.collect_hv value = [] && LP.collect_Uv value = []);
-    let rec aux frozen =
-      match LP.look frozen with
-      | LP.Con(_,lvl) -> Subst.set_info_con lvl value s
-      | LP.App xs -> aux (L.hd xs)
-      | _ -> assert false in aux frozen);
-  extern_vv "get-frozen-info" (fun frozen out s ->
-    let rec aux frozen =
-      match LP.look frozen with
-      | LP.Con(_,lvl) ->
-          (match Subst.get_info_con lvl s with
-          | None -> raise NoClause
-          | Some t -> unify t out s)
-      | LP.App xs -> aux (L.hd xs)
-      | _ -> assert false in aux frozen)
-;;
-
 let register_telescope () =
   let bind v t = LP.mapi LP.(fun i t ->
     if equal t v then mkDB i else t) 1 t in
@@ -220,22 +201,7 @@ let _ =
             s,(gl @ List.tl gls, dls, p),alts
          | _ -> raise (Invalid_argument "schedule"))
     | [] -> raise NoClause);
-  register_frozen_tab ();
   register_telescope ();
-  register_custom_control_operator "context" (fun t s (gls,dls,p) alts ->
-    let t, s = Red.nf t s in
-    let t = check_list1 "context" t in
-    let s =
-      match gls with
-      | (ctx1,_,_,_,_) :: _ ->
-           let rec aux = function
-             | [] -> []
-             | None :: rest -> aux rest
-             | Some x :: rest -> x :: aux rest in
-           let ctx = LP.(mkSeq (L.of_list (aux ctx1)) mkNil) in
-           unify ctx t s
-      | _ -> s in
-    s, (List.tl gls,dls,p), alts)
 ;;
 
 let test_prog p g =

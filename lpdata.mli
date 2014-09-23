@@ -48,6 +48,17 @@ module L : sig
   val rev : 'a t -> 'a t
 end
 
+module Opt : sig
+ 
+  val map : ('a -> 'a) -> 'a option -> 'a option
+  val iter : ('a -> unit) -> 'a option -> unit
+  val fold : ('a -> 'b -> 'b) -> 'b -> 'a option -> 'b
+  val fold_map : ('a -> 'b -> 'c * 'b) -> 'b -> 'a option -> 'c option * 'b
+  
+  val pred2 : ('a -> 'b -> bool) -> 'a option -> 'b option -> bool
+  val fold2 : ('a -> 'b -> 'c -> 'c) -> 'c -> 'a option -> 'b option -> 'c
+end
+
 module Name : sig
   type t
   val compare : t -> t -> int
@@ -74,7 +85,8 @@ module LP : sig
     | Seq of data L.t * data
     | Nil
     | Ext of C.data
-    | VApp of appkind * data * data (* VApp(hd,args) : args is a list *)
+    | VApp of appkind * data * data * data option
+              (* VApp(hd,args,info) : args is a list *)
 
   val look : data -> kind_of_data
   val kool : kind_of_data -> data
@@ -84,7 +96,7 @@ module LP : sig
   val mkDB : int -> data
   val mkBin : int -> data -> data
   val mkApp : data L.t -> data
-  val mkVApp : appkind -> data -> data -> data
+  val mkVApp : appkind -> data -> data -> data option -> data
   val mkExt : C.data -> data
   val mkSeq : data L.t -> data -> data
   val mkNil : data
@@ -120,18 +132,23 @@ module LP : sig
   val mkAtomBiUnif : data -> data -> premise
   val mkAtomBiCustom : string -> data -> premise
   val mkAtomBiCut : premise
+  val mkAtomBiContext : data -> premise
   val mkConj : premise L.t -> premise
   val mkImpl : premise -> premise -> premise
   val mkPi1 : data option -> premise -> premise
   val mkSigma1 : premise -> premise
-  val mkDelay : data -> premise -> data option -> premise
+  val mkDelay : data -> premise -> data option -> data option -> premise
 
   val eq_clause : annot_clause -> annot_clause -> bool
   val cmp_clause : annot_clause -> annot_clause -> int
 
   val mapi : (int -> data -> data) -> int -> data -> data 
 
-  type builtin = BIUnif of data * data | BICustom of string * data | BICut
+  type builtin =
+      BIUnif of data * data
+    | BICustom of string * data
+    | BICut
+    | BIContext of data
   type kind_of_premise =
       Atom of data
     | AtomBI of builtin
@@ -139,7 +156,7 @@ module LP : sig
     | Impl of clause * premise
     | Pi of data option * premise
     | Sigma of premise
-    | Delay of data * premise * data option
+    | Delay of data * premise * data option * data option
     | Resume of data * premise
 
   val look_premise : data -> kind_of_premise
@@ -189,8 +206,8 @@ module Subst : sig
   val is_frozen : LP.data -> bool
   val set_sub : LP.var -> LP.data -> subst -> subst
   val set_sub_con : LP.level -> LP.data -> subst -> subst
-  val set_info_con : LP.level -> LP.data -> subst -> subst
-  val get_info_con : LP.level -> subst -> LP.data option
+  val set_info_con : LP.data -> LP.data -> subst -> subst
+  val get_info_con : LP.data -> subst -> LP.data option
   val top : subst -> int
   val raise_top : int -> subst -> subst
   

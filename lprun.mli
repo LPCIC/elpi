@@ -30,8 +30,11 @@ val run : LP.program -> LP.goal -> LP.goal * Subst.subst
 
 type objective =
   [ `Atom of LP.data * LP.key
-  | `Unify of LP.data * LP.data | `Custom of string * LP.data | `Cut
-  | `Delay of LP.data * LP.premise * LP.data option
+  | `Unify of LP.data * LP.data
+  | `Custom of string * LP.data
+  | `Cut
+  | `Context of LP.data
+  | `Delay of LP.data * LP.premise * LP.data option * LP.data option
   | `Resume of LP.data * LP.premise
   | `Unlock of LP.data
   ]
