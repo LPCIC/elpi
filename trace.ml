@@ -3,6 +3,8 @@
 (* license: GNU Lesser General Public License Version 2.1                    *)
 (* ------------------------------------------------------------------------- *)
 
+module F = Format
+
 let debug = ref false
 let dverbose = ref false
 let where_loc = ref ("",0,max_int)
@@ -92,6 +94,16 @@ let exit k ?(depth=0) ?(e=OK) time =
   end;
   decr level
 
+let usage () =
+  F.eprintf "\ntracing facility options:\n";
+  F.eprintf "\t-trace-v  verbose\n";
+  F.eprintf "\t-trace-at FUNCNAME START STOP  print trace between call START\n";
+  F.eprintf "\t\tand STOP of function FNAME\n";
+  F.eprintf "\t-trace-on  enable trace printing\n";
+  F.eprintf "\t-trace-skip REX  ignore trace items matching REX\n";
+  F.eprintf "\t-trace-only REX  trace only items matching REX\n";
+;;
+
 let parse_argv argv =
   let on = ref false in
   let where = ref ("run",0,0) in
@@ -111,9 +123,10 @@ let parse_argv argv =
     | "-trace-only" :: expr :: rest ->
          only := expr :: !only;
          aux rest
+    | ("-h"|"--help") as x :: rest -> usage (); x :: aux rest
     | x :: rest -> x :: aux rest in
   let rest = aux (Array.to_list argv) in
   init ~where:!where ~verbose:!verbose ~only:!only ~skip:!skip !on;
   Array.of_list rest
-
+;;
 

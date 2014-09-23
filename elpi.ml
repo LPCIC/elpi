@@ -1,17 +1,19 @@
 open Lprun
 open Lpdata
 
+module F = Format
+
 let set_terminal_width ?(max_w=
     let ic, _ as p = Unix.open_process "tput cols" in
     let w = int_of_string (input_line ic) in
     let _ = Unix.close_process p in w) () =
-  Format.pp_set_margin Format.err_formatter max_w;
-  Format.pp_set_ellipsis_text Format.err_formatter "...";
-  Format.pp_set_max_boxes Format.err_formatter 30;
+  F.pp_set_margin F.err_formatter max_w;
+  F.pp_set_ellipsis_text F.err_formatter "...";
+  F.pp_set_max_boxes F.err_formatter 30;
 ;;
 
 let type_err name exp got =
-  Format.eprintf "Wrong call to %s, %s expected, got %a\n%!"
+  F.eprintf "Wrong call to %s, %s expected, got %a\n%!"
     name exp (LP.prf_data []) got; exit 1
 
 let protect f x = try f x with UnifFail _ -> raise NoClause
@@ -100,14 +102,14 @@ let register_print () =
     let t, s = Red.nf t s in
     match LP.look t with
     | LP.Ext t  when isString t ->
-        Format.eprintf "%s%!" (unescape (getString t))
-    | _ -> Format.eprintf "%a%!" (LP.prf_data []) t in
+        F.eprintf "%s%!" (unescape (getString t))
+    | _ -> F.eprintf "%a%!" (LP.prf_data []) t in
   register_custom_predicate "print" (fun t s -> print_atom s t; s);
   register_custom_predicate "printl" (fun t s ->
     let t, s = Red.nf t s in
     match LP.look t with
     | LP.Seq(l,_) ->
-        List.iter (print_atom s) (L.to_list l); Format.eprintf "\n%!"; s
+        List.iter (print_atom s) (L.to_list l); F.eprintf "\n%!"; s
     | _ -> type_err "printl" "list" t);
 ;;
 
@@ -162,7 +164,7 @@ let _ =
     s, (List.tl g,dls,p), alts);
   let ppgoal s a eh filter =
     let filter = check_list "ppgoal" filter in
-    Format.eprintf "@[<hv 0>%a@ |- %a@]"
+    F.eprintf "@[<hv 0>%a@ |- %a@]"
       (LP.prf_program ~compact:false)
         (List.map (fun (a,b,p,n) -> a,b,fst(Red.nf p s),n)
           (List.filter (fun (_,k,_,_) ->
@@ -205,28 +207,28 @@ let _ =
 ;;
 
 let test_prog p g =
- let width = Format.pp_get_margin Format.err_formatter () in
- for i = 0 to width - 1 do Format.eprintf "-"; done;
- Format.eprintf "@\n%!";
+ let width = F.pp_get_margin F.err_formatter () in
+ for i = 0 to width - 1 do F.eprintf "-"; done;
+ F.eprintf "@\n%!";
  try
   let p = LP.parse_program p in
   let g = LP.parse_goal g in
-  (*Format.eprintf "@[<hv2>program:@ %a@]@\n%!" LP.prf_program p;*)
+  (*F.eprintf "@[<hv2>program:@ %a@]@\n%!" LP.prf_program p;*)
   let rec aux (g,assignments,s,dgs,continuation) =
-   (*Format.eprintf
+   (*F.eprintf
      "@\n@[<hv2>output:@ %a@]@\n@[<hv2>nf out:@ %a@]@\n@[<hv2>subst:@ %a@]@\n%!"
      (LP.prf_goal []) (Subst.apply_subst_goal s g) 
      (LP.prf_goal []) (LP.map_premise (Red.nf s) g)
      Subst.prf_subst s;*)
-   Format.eprintf
+   F.eprintf
      "@\n@[<hv2>input:@ %a@]@\n%!"
      (LP.prf_goal []) (fst(Red.nf g (Subst.empty 0)));
    List.iter (fun x ->
-    Format.eprintf "@[<hv2>%a@ = %a@]@\n%!"
+    F.eprintf "@[<hv2>%a@ = %a@]@\n%!"
      (LP.prf_data []) x (LP.prf_data []) (fst(Red.nf x s)))
      assignments;
    List.iter (fun (g,eh) ->
-    Format.eprintf "delay: @[<hv>%a@ |- %a@]\n%!"
+    F.eprintf "delay: @[<hv>%a@ |- %a@]\n%!"
      (LP.prf_program ~compact:false)
      (List.map (function i,k,p,u -> i,k,fst(Red.nf p s),u) eh)
      (LP.prf_goal []) (fst(Red.nf g s))) dgs;
@@ -241,14 +243,19 @@ let test_prog p g =
   in
    aux (run_dls p g)
  with Stream.Error msg ->
-   Format.eprintf "@[Parse error: %s@]@\n%!" msg
+   F.eprintf "@[Parse error: %s@]@\n%!" msg
 ;;
+
+let usage () =
+  F.eprintf "\nelpi interpreter usage:\telpi OPTS FILES\n";
+  F.eprintf "\t-max-w COLS  overrides the number of columns of the terminal\n\n";;
 
 let parse_argv argv =
   let max_w = ref None in
   let rec aux = function
     | [] -> []
     | "-max-w" :: cols :: rest -> max_w := Some (int_of_string cols); aux rest
+    | ("-h" | "--help") :: _ -> usage(); exit 1
     | x :: rest -> x :: aux rest in
   let rest = aux (Array.to_list argv) in
   set_terminal_width ?max_w:!max_w ();
