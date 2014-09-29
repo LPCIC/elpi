@@ -15,7 +15,8 @@ PPTRACE=$(PP) $(FLAVOUR)/pa_trace.cmo
 PPTRACESYNTAX=$(PP) pa_extend.cmo q_MLast.cmo pa_macro.cmo $(TRACE)
 EXTRALIB=$(addprefix $(FLAVOUR)/,cMap.cmx int.cmx trace.cmx)
 LIBSBYTE=$(subst .cmx,.cmo,$(subst .cmxa,.cma,$(LIBS)))
-MODULES= $(FLAVOUR)/lpdata $(FLAVOUR)/lprun
+MODULES= $(FLAVOUR)/lpdata $(FLAVOUR)/lprun $(FLAVOUR)/elpi
+
 CMXMODULES=$(addsuffix .cmx,$(MODULES))
 CMOMODULES=$(addsuffix .cmo,$(MODULES))
 H=@
@@ -45,7 +46,7 @@ profile-% : PROFILE=-p
 profile-% : TRACE=
 profile-% :
 	$(I) echo MAKE profile
-	$(H) $(MAKE) $* $(RECARGS) --no-print-directory --quiet
+	$(H) $(MAKE) $* $(RECARGS) --no-print-directory
 
 trace-% : CCP=ocamlc
 trace-% : FLAVOUR=trace
@@ -54,7 +55,7 @@ trace-% : PROFILE=
 trace-% : TRACE=-DTRACE
 trace-% :
 	$(I) echo MAKE trace
-	$(H) $(MAKE) $* $(RECARGS) --no-print-directory --quiet
+	$(H) $(MAKE) $* $(RECARGS) --no-print-directory
 
 plain-% : CCP=ocamlc
 plain-% : FLAVOUR=plain
@@ -63,7 +64,7 @@ plain-% : PROFILE=
 plain-% : TRACE=
 plain-% :
 	$(I) echo MAKE plain
-	$(H) $(MAKE) $* $(RECARGS) --no-print-directory --quiet
+	$(H) $(MAKE) $* $(RECARGS) --no-print-directory
 
 
 bench/%: all
@@ -85,21 +86,21 @@ ocamlprof: profile-all
 	$(H) ocamlprof int.ml > int.annot.ml
 	$(H) ocamlprof cMap.ml > cMap.annot.ml
 
-$(FLAVOUR)/elpi: $(FLAVOUR)/elpi.cmx $(CMXMODULES) $(EXTRALIB)
+$(FLAVOUR)/elpi: $(FLAVOUR)/client.cmx $(CMXMODULES) $(EXTRALIB)
 	$(I) echo $(FLAVOUR)/OCAMLOPT $@
 	$(H) $(CCO) $(FLAGS) $(LIBS) $(CMXMODULES) -o $@ $<
 
-$(FLAVOUR)/elpi.byte: $(FLAVOUR)/elpi.cmo $(CMOMODULES) $(EXTRALIB:%.cmx=%.cmo)
+$(FLAVOUR)/elpi.byte: $(FLAVOUR)/client.cmo $(CMOMODULES) $(EXTRALIB:%.cmx=%.cmo)
 	$(I) echo $(FLAVOUR)/OCAMLC $@
 	$(H) $(CCP)  $(FLAGS) $(LIBSBYTE) $(CMOMODULES) -o $@ $<
 
-$(FLAVOUR)/elpi.cmxa: $(FLAVOUR)/elpi.cmx $(CMXMODULES) $(EXTRALIB)
+$(FLAVOUR)/elpi.cmxa: $(CMXMODULES) $(EXTRALIB)
 	$(I) echo $(FLAVOUR)/OCAMLOPT -a $@
-	$(CCO) $(FLAGS) -a $(EXTRALIB) $(CMXMODULES) -o $@ $<
+	$(H) $(CCO) $(FLAGS) -a $(EXTRALIB) $(CMXMODULES) -o $@
 
-$(FLAVOUR)/elpi.cma: $(FLAVOUR)/elpi.cmo $(CMOMODULES) $(EXTRALIB:%.cmx=%.cmo)
+$(FLAVOUR)/elpi.cma: $(CMOMODULES) $(EXTRALIB:%.cmx=%.cmo)
 	$(I) echo $(FLAVOUR)/OCAMLC -a $@
-	$(CCP)  $(FLAGS) -a $(EXTRALIB:%.cmx=%.cmo) $(CMOMODULES) -o $@ $<
+	$(H) $(CCP)  $(FLAGS) -a $(EXTRALIB:%.cmx=%.cmo) $(CMOMODULES) -o $@
 
 $(FLAVOUR)/test: $(FLAVOUR)/test.cmx $(CMXMODULES) $(EXTRALIB)
 	$(I) echo $(FLAVOUR)/OCAMLOPT $<

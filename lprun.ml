@@ -690,18 +690,25 @@ let rec run op s ((gls,dls,p as goals) : goals) (alts : alternatives)
             let s, (gls, dls, p), alts = custom_ctrl_op name a s goals alts in
             s, gls, dls, p, alts
           with UnifFail _ -> next_alt alts (pr_cur_goals op gls)
-        else raise (Invalid_argument ("no custom named " ^ name))
+        else begin
+          Format.eprintf "WARN: no custom named %s\n%!" name;
+          next_alt alts (pr_cur_goals op gls)
+        end
   in
   if gls == [] then s, dls, alts
   else run op s (gls,dls,p) alts
 
 let prepare_initial_goal g =
   let s = S.empty 1 in
-  match look_premise g with
-  | Sigma g ->
-      let ms, s = fresh_uv 1 0 s in
-      subst g ms, s
-  | _ -> g, s
+  let rec aux s g =
+    let g, s = Red.whd g s in
+    match look_premise g with
+    | Sigma g ->
+        let ms, s = fresh_uv 1 0 s in
+        aux s (subst g ms)
+    | _ -> g, s
+  in
+    aux s g
 
 let apply_sub_hv_to_goal s g =
   mapi_premise (fun i t ->

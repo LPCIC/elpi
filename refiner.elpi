@@ -38,7 +38,7 @@ spy P :- pp ["---->>---- fail: ",P], false.
 
 hide P :- ((debug :- !, false) => P).
 
-rigid T :- not($is_flex T).
+rigid T :- not(T = ?HD ARGS).
 
 mem X [X|_] :- !.
 mem X [_|XS] :- mem X XS.
@@ -269,7 +269,8 @@ of-let-rec-ty [true|F] [def T B, CTX] (let-in T2 B2 TyF) [def T2 B2, CTX2] :-
     of-let-rec-ty F (CTX x) (TyF x) (CTX2 x).
 
 of set set set.
-of (atom ID) T (atom ID) :- env ID T.
+of (atom ID) T (atom ID) :- env ID T, !.
+of (atom ID) T (atom ID) :- $environment[ID,T].
 
 
 rof T TY :- dbgpp ["retyping term ",T," : ",TY], of T TY _, !.
@@ -492,6 +493,7 @@ body plus (lam (atom nat)
                    (lam (atom nat) (x\ x))
                    (lam (atom nat) m\ lam (prod (atom nat) (x\ (atom nat))) acc\
                       lam (atom nat) (n\ app [atom succ, app [acc,n]]))))).
+body Ext Bo :- $environment-body [Ext,Bo].
 
 add-coercion T (atom nat) (atom z) NewT :- NewT = app [atom nat_to_z, T].
 add-coercion T (app [atom list, X]) (app [atom list, Y]) NewT :-

@@ -3,15 +3,6 @@ open Lpdata
 
 module F = Format
 
-let set_terminal_width ?(max_w=
-    let ic, _ as p = Unix.open_process "tput cols" in
-    let w = int_of_string (input_line ic) in
-    let _ = Unix.close_process p in w) () =
-  F.pp_set_margin F.err_formatter max_w;
-  F.pp_set_ellipsis_text F.err_formatter "...";
-  F.pp_set_max_boxes F.err_formatter 30;
-;;
-
 let type_err name exp got =
   F.eprintf "Wrong call to %s, %s expected, got %a\n%!"
     name exp (LP.prf_data []) got; exit 1
@@ -30,7 +21,7 @@ let check_list2 name t =
 
 let check_list name t =
   match LP.look t with
-  | LP.Seq (l,tl) when LP.equal tl LP.mkNil -> L.to_list l
+  | LP.Seq (l,tl) when LP.equal tl LP.mkNil -> l
   | _ -> type_err name "list" t
 
 let check_string name t =
@@ -38,14 +29,14 @@ let check_string name t =
   | LP.Ext x when isString x -> getString x
   | _ -> type_err name "string" t
 
-let extern_vv name f =
+let extern_dd name f =
   register_custom_predicate name (fun t s ->
     let t, s = Red.nf t s in
     let v1, v2 = check_list2 name t in
     protect (f v1 v2) s)
 ;;
 
-let extern_kv name f =
+let extern_sd name f =
   register_custom_predicate name (fun t s ->
     let t, s = Red.nf t s in
     let k, v = check_list2 name t in
@@ -53,72 +44,77 @@ let extern_kv name f =
     protect (f k v) s)
 ;;
 
-let extern_k name f =
+let extern_s name f =
   register_custom_predicate name (fun t s ->
     let t, s = Red.nf t s in
     let k = check_string name t in
     protect (f k) s)
 ;;
 
-let register_trace () =
-  extern_kv "trace_counter" (fun name value s ->
-    let n = Trace.get_cur_step name in
-    protect (unify (LP.mkExt (mkString (string_of_int n))) value) s)
+let extern_d name f =
+  register_custom_predicate name (fun t s ->
+    let t, s = Red.nf t s in
+    protect (f t) s)
 ;;
 
-let register_imperative_counters () =
+let extern_l name f =      
+  register_custom_predicate name (fun t s ->
+    let t, s = Red.nf t s in
+    match LP.look t with
+    | LP.Seq(l,_) -> protect (f l) s
+    | _ -> type_err name "list" t)
+;;
+
+module Extern = struct
+
+let print t s =
+  let unescape s =
+    Str.global_replace (Str.regexp_string "\\n") "\n"
+    (Str.global_replace (Str.regexp_string "\\t") "\t"
+      s) in
+  let t, s = Red.nf t s in
+  match LP.look t with
+  | LP.Ext t  when isString t -> F.eprintf "%s%!" (unescape (getString t)); s
+  | _ -> F.eprintf "%a%!" (LP.prf_data []) t; s
+;;
+        
+let printl l s = let s = L.fold print l s in F.eprintf "\n%!"; s
+
+let abort =
+  let aborts = ref 0 in
+  fun text s ->
+    incr aborts; if !aborts = int_of_string text then exit 1 else s
+;;
+
+let exit text s = exit (int_of_string text)
+
+let trace_counter name value s =
+  let n = Trace.get_cur_step name in
+  protect (unify (LP.mkExt (mkString (string_of_int n))) value) s
+;;
+
+let incr, get, reset =
   let module M = Map.Make(struct type t = string let compare = compare end) in
   let counters = ref M.empty in
-  extern_k "incr" (fun name s ->
+  let incr name s =
     try counters := M.add name (M.find name !counters + 1) !counters; s
-    with Not_found -> counters := M.add name 1 !counters; s);
-  extern_k "reset" (fun name s -> counters := M.add name 0 !counters; s);
-  extern_kv "get" (fun name value s ->
+    with Not_found -> counters := M.add name 1 !counters; s in
+  let reset name s = counters := M.add name 0 !counters; s in
+  let get name value s =
     let n = try M.find name !counters with Not_found -> 0 in
-    protect (unify (LP.mkExt (mkString (string_of_int n))) value) s)
+    protect (unify (LP.mkExt (mkString (string_of_int n))) value) s in
+  incr, get, reset
 ;;
 
-let register_exit_abort () =
-  let aborts = ref 0 in
-  extern_k "abort" (fun text s ->
-    incr aborts; if !aborts = int_of_string text then exit 1 else s);
-  extern_k "exit" (fun text s -> exit (int_of_string text));
-;;
+let parse text value s = protect (unify (LP.parse_data text) value) s
+let read t s = unify (LP.mkExt (mkString (input_line stdin))) t s
 
-let register_parser () =
-  extern_kv "parse" (fun text value s ->
-    protect (unify (LP.parse_data text) value) s);
-  register_custom_predicate "read" (fun t s ->
-    let input = input_line stdin in
-    protect (unify (LP.mkExt (mkString input)) t) s);
-;;
-
-let register_print () =
-  let print_atom s t =
-    let unescape s =
-      Str.global_replace (Str.regexp_string "\\n") "\n"
-      (Str.global_replace (Str.regexp_string "\\t") "\t"
-        s) in
-    let t, s = Red.nf t s in
-    match LP.look t with
-    | LP.Ext t  when isString t ->
-        F.eprintf "%s%!" (unescape (getString t))
-    | _ -> F.eprintf "%a%!" (LP.prf_data []) t in
-  register_custom_predicate "print" (fun t s -> print_atom s t; s);
-  register_custom_predicate "printl" (fun t s ->
-    let t, s = Red.nf t s in
-    match LP.look t with
-    | LP.Seq(l,_) ->
-        List.iter (print_atom s) (L.to_list l); F.eprintf "\n%!"; s
-    | _ -> type_err "printl" "list" t);
-;;
-
-let register_telescope () =
+let telescope ctx value s =
   let bind v t = LP.mapi LP.(fun i t ->
     if equal t v then mkDB i else t) 1 t in
-  extern_vv "telescope" LP.(fun ctx value s ->
+  LP.(
     let ctx, s = Red.nf ctx s in
-    let ctx = check_list "telescope" ctx in
+    let ctx = L.to_list (check_list "telescope" ctx) in
     if ctx = [] then unify mkNil value s else
     let t, binders = List.hd ctx, List.tl ctx in
     let binders = List.map (check_list2 "telescope") binders in
@@ -128,156 +124,22 @@ let register_telescope () =
     unify tele value s)
 ;;
 
-let _ = Printexc.record_backtrace true
-let _ =
-  let control = Gc.get () in
-  let tweaked_control = { control with
-    Gc.minor_heap_size = 33554432; (** 4M *)
-    Gc.space_overhead = 120;
-  } in
-  Gc.set tweaked_control;
-  register_print ();
-  register_custom_predicate "is_flex" (fun t s ->
-    let t, s = Red.whd t s in
-    match LP.look t with
-    | LP.Uv _ -> s
-    | LP.App xs ->
-        (match LP.look (L.hd xs) with LP.Uv _ -> s | _ -> raise NoClause)
-    | _ -> raise NoClause);
-  register_exit_abort ();
-  register_imperative_counters ();
-  register_trace ();
-  register_parser ();
-(*
-  register_custom_predicate "zero_level" (fun t s ->
-    let h, s = Subst.fresh_uv 0 s in
-    protect (unify t h) s);
-*)
-  let destApp x = LP.(match look x with
-    | App xs -> L.hd xs, L.tl xs
-    | _ -> x, L.empty) in
-  register_custom_control_operator "delayed" (fun t s (g,dls,p)  alts ->
-    let keys =
-      List.map (fun (t,_,_,_,_) -> fst(destApp (fst(Red.nf t s)))) dls in
-    let kl = LP.(mkSeq (L.of_list (Lprun.uniq keys)) mkNil) in
-    let s = unify t kl s in
-    s, (List.tl g,dls,p), alts);
-  let ppgoal s a eh filter =
-    let filter = check_list "ppgoal" filter in
-    F.eprintf "@[<hv 0>%a@ |- %a@]"
-      (LP.prf_program ~compact:false)
-        (List.map (fun (a,b,p,n) -> a,b,fst(Red.nf p s),n)
-          (List.filter (fun (_,k,_,_) ->
-             match k with
-             | LP.Flex -> false
-             | LP.Key x ->
-                 List.exists (LP.equal x) filter)
-             eh))
-      (LP.prf_premise []) (fst(Red.nf a s)) in
-  let skip (l,d,p) = List.tl l,d,p in
-  register_custom_control_operator "pr_delayed" (fun t s (_,d,_ as gls) alts ->
-    let t, s = Red.nf t s in
-    let t, filter = check_list2 "pr_delayed" t in
-    let selected, _ =
-      List.partition (fun (k,_,_,_,_) ->
-        let k = fst(destApp (fst(Red.nf k s))) in
-        LP.equal k t) d in
-    match selected with
-    | (key,a,depth,eh,lvl) :: _ -> ppgoal s a eh filter; s, skip gls, alts
-    | [] -> raise NoClause);
-  register_custom_control_operator "schedule" (fun t s (gls,dls,p) alts ->
-    let t, s = Red.nf t s in
-    let v1, v2 = check_list2 "schedule" t in
-    let open LP in
-    let resumed, _ =
-      List.partition (fun (t,_,_,_,_) ->
-        let k = fst(destApp (fst(Red.nf t s))) in
-        LP.equal k v1) dls in
-    match resumed with
-    | (key,a,depth,eh,lvl) :: _ ->
-         let gl, s = goals_of_premise p v2 depth eh lvl s in
-         let g1, gl = List.hd gl, List.tl gl in
-         (match g1 with
-         | _,`Atom (k,_),_,_,_ ->
-            let s = unify key k s in
-            s,(gl @ List.tl gls, dls, p),alts
-         | _ -> raise (Invalid_argument "schedule"))
-    | [] -> raise NoClause);
-  register_telescope ();
+
+end
+
+open Extern
+
+let register_std () =
+  extern_s "abort" abort;
+  extern_s "exit" exit;
+  extern_d "print" print;
+  extern_l "printl" printl;
+  extern_sd "trace_counter" trace_counter;
+  extern_s "incr" incr;
+  extern_s "reset" reset;
+  extern_sd "get" get;
+  extern_sd "parse" parse;
+  extern_d "read" read;
+  extern_dd "telescope" telescope;
 ;;
-
-let test_prog p g =
- let width = F.pp_get_margin F.err_formatter () in
- for i = 0 to width - 1 do F.eprintf "-"; done;
- F.eprintf "@\n%!";
- try
-  let p = LP.parse_program p in
-  let g = LP.parse_goal g in
-  (*F.eprintf "@[<hv2>program:@ %a@]@\n%!" LP.prf_program p;*)
-  let rec aux (g,assignments,s,dgs,continuation) =
-   (*F.eprintf
-     "@\n@[<hv2>output:@ %a@]@\n@[<hv2>nf out:@ %a@]@\n@[<hv2>subst:@ %a@]@\n%!"
-     (LP.prf_goal []) (Subst.apply_subst_goal s g) 
-     (LP.prf_goal []) (LP.map_premise (Red.nf s) g)
-     Subst.prf_subst s;*)
-   F.eprintf
-     "@\n@[<hv2>input:@ %a@]@\n%!"
-     (LP.prf_goal []) (fst(Red.nf g (Subst.empty 0)));
-   List.iter (fun x ->
-    F.eprintf "@[<hv2>%a@ = %a@]@\n%!"
-     (LP.prf_data []) x (LP.prf_data []) (fst(Red.nf x s)))
-     assignments;
-   List.iter (fun (g,eh) ->
-    F.eprintf "delay: @[<hv>%a@ |- %a@]\n%!"
-     (LP.prf_program ~compact:false)
-     (List.map (function i,k,p,u -> i,k,fst(Red.nf p s),u) eh)
-     (LP.prf_goal []) (fst(Red.nf g s))) dgs;
-   Printf.printf "next? (Y/n)> %!";
-   let l = input_line stdin in
-   if l = "y" || l = "" then
-    try aux (next continuation)
-    with Lprun.NoClause ->
-     Printf.printf "no more solutions\n";
-     exit 0
-   else exit 0
-  in
-   aux (run_dls p g)
- with Stream.Error msg ->
-   F.eprintf "@[Parse error: %s@]@\n%!" msg
-;;
-
-let usage () =
-  F.eprintf "\nelpi interpreter usage:\telpi OPTS FILES\n";
-  F.eprintf "\t-max-w COLS  overrides the number of columns of the terminal\n\n";;
-
-let parse_argv argv =
-  let max_w = ref None in
-  let rec aux = function
-    | [] -> []
-    | "-max-w" :: cols :: rest -> max_w := Some (int_of_string cols); aux rest
-    | ("-h" | "--help") :: _ -> usage(); exit 1
-    | x :: rest -> x :: aux rest in
-  let rest = aux (Array.to_list argv) in
-  set_terminal_width ?max_w:!max_w ();
-  Array.of_list rest
-;;
-
-let _ =
-  let argv = Trace.parse_argv Sys.argv in
-  let argv = parse_argv argv in
-  let b = Buffer.create 1024 in
-  for i=1 to Array.length argv - 1 do
-    Printf.eprintf "loading %s\n" argv.(i);
-      let ic = open_in argv.(i) in
-      try
-        while true do Buffer.add_string b (input_line ic^"\n") done;
-        assert false
-      with End_of_file -> ()
-  done;
-  let p = Buffer.contents b in
-  let g =
-    Printf.printf "goal> %!";
-    input_line stdin in
-  test_prog p g;
-  Trace.quit ()
 
