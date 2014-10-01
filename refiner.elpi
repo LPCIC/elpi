@@ -136,7 +136,7 @@ inhabit (?T L) TY :- get-local M, !, of M TY (@T L).
 of (#F L Seq) TY T :- T = @F L, of-seq Seq L TY.
 of-seq (vdash TY) [] TY.
 of-seq (decl T Seq) [V|VS] TY :- rof V T, of-seq (Seq V) VS TY.
-of-seq (def T BO Seq) VS TY :- rof V T, of-seq (Seq BO) VS TY. % ????
+of-seq (def T BO Seq) [V|VS] TY :- rof V T, unify V BO, of-seq (Seq BO) VS TY.
 
 of (lam S F) (prod S2 T) (lam S2 F2) :-
   of S set S2,
@@ -147,7 +147,7 @@ of (let-in T V B) (let-in T2 V2 BTY2) (let-in T2 V2 B2) :-
   pi (def T2 V2) x\ (def x T2 V2 :- !) =>
     var _ T2 x V2 => of (B x) (BTY2 x) (B2 x).
 
-of V TY V1 :- def V TY _, !. 
+of V TY V :- def V TY _, !. 
 
 of (prod S F) set (prod S2 F2) :-
   of S set S2, pi (decl S2) x\ (of x S2 x :- !) => of (F x) set (F2 x).
