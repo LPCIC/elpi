@@ -310,8 +310,8 @@ gr-o-cp OC BL M NewM :- or (grab OC BL M NewM) (copy OC BL M NewM).
 grab M L (#M _) _ :- !, false.
 
 :grab-flex: % eventual restriction
-grab OC L (#M L1) NewT :- !,
-  sequent_of M L1 Seq [],
+grab OC L (#M L1 Seq) NewT :- !,
+  %sequent_of M L1 Seq [],
   % HACK: mask_seq is here used to fill in L1Dl with the delifted
   % It works because it just calls the F, here (gr-o-cp OC L), on the elements
   % of the two lists.  Here L1Dl is flexible, hence it generates a list to hold
@@ -352,12 +352,9 @@ copy OC L (fix Ty RTy B) (fix Ty2 RTy2 B2) :-
   (pi f\ (of f (prod Ty2 RTy2) f :- !) => pi x\ (of x Ty2 x :- !) =>
     gr-o-cp OC L (B f x) (B2 f x)).
 
-% sequent_of M L1 Seq []. Fetches the metasenv entry for M, L1 is used just
-% to know the length of the context. Seq is a telescope of the form
-%               [T1, x1\ [T2, .. xn\ [TN, T] .. ]]
-% meaning that
-%                 x1 : T1, .., xn : TN |- M : T
-sequent_of M _ Seq _ :- assert(M = #HD _ Seq).
+% [of x .... ] =>
+% ([Gamma |- unif... ] <==>
+%  [Gamma' |- of M TY] /\ ...)
 
 % mask_seq F XS YS Seq MaskSeq AllIn. Returns in MaskSeq a copy of Seq
 % where each item T is either prefixed by in as in "keep T", or subtituted with
@@ -410,18 +407,34 @@ unify A B :- unif ff A B.
 
 :u-EQ: unif ff X X :- !.
 
+
+% [of x T => .. => of X TY] ==>
+%   ([unif (X L1)  (X L2)] <==>
+%   [unif_all L1 L2 P] /\ (P = [] \/ [restrict P X]))
 :u-SAME-META: % we restrict it on the items of L1 and L2 that do not unify
-unif ff (#M L1) (#M L2) :- !,
-  sequent_of M L1 Seq [],
+unif ff (#M L1 Seq) (#M L2 _) :- !,
+  % sequent_of M L1 Seq [],
   mask_seq unify L1 L2 Seq MaskedSeq AllIn,
   if AllIn true (new_restricted_meta MaskedSeq NewM, assign M NewM).
 
+% [of x T => .. => of X TY] ==>
+% ([unif (X L) N] <==> "exists DelN, unif (DelN L) N", X = DelN)
 :u-ASSIGN:
-unif ff (#M L) N :- !,
-  sequent_of M L Seq [], delift M Seq L N NewM [], assign M NewM.
-unif ff N (#M L) :- !,
-  sequent_of M L Seq [], delift M Seq L N NewM [], assign M NewM.
+unif ff (#M L Seq) N :- !,
+  % sequent_of M L Seq [],
+  delift M Seq L N NewM [], assign M NewM.
+unif ff N (#M L Seq) :- !,
+  % sequent_of M L Seq [],
+  delift M Seq L N NewM [], assign M NewM.
 
+% fundamental metametatheorem of metatheory
+% ([Gamma |- P] <= [Gamma |- Q]) ===
+% ([Gamma |- P :- Q])
+
+% [of x T => .. => of X TY] ==>
+% ([Gamma |- unif ff T (app [X L1,A|Rest]) <==
+%  [Gamma |- rof A ty /\ of (lam Ty x\ hole) _ G /\
+%  unify (X L1) G])  and reschedule at the end
 :u-LAM-INTRO: % on the fly lambda intro
 unif ff T (app [#M L1,A|Rest]) :- !,
  rof A Ty, of (lam Ty x\ hole) _ G, unify (@M L1) G, unify T (app [G,A|Rest]).
