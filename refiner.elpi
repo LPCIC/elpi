@@ -204,19 +204,19 @@ of (rec Rty N Base Step) Rty2 (rec Rty2 N2 Base2 Step2) :-
   of Base Rty2 Base2,
   of Step (prod (atom nat) n\ prod Rty2 acc \ Rty2) Step2.
 
-% CSC: non dependent match
-of (match Rty N Base Step) Rty2 (match Rty2 N2 Base2 (lam Ty2 F2)) :-
-  of Rty set Rty2,
-  of N (atom nat) N2,
-  of Base Rty2 Base2,
+of (match Rty N Base Step) (app [Rty2,N2]) (match Rty2 N2 Base2 (lam Ty2 F2)) :-
+  ind-info [NAT,[Zero,Succ]],
+  of N NAT N2,
+  of Rty (prod NAT x\set) Rty2,
+  of Base (app [Rty2,Zero]) Base2,
   Step = lam Ty F,
   of Ty set Ty2,
-  unify Ty2 (atom nat),
+  unify Ty2 NAT,
   pi (decl Ty2) x\
    (of x Ty2 x :- !) =>
    var _ Ty2 x x =>
    (safe x G :- or (safe N2 G) (seed N2 G)) =>
-     of (F x) Rty2 (F2 x).
+     of (F x) (app [Rty2,app [Succ,x]]) (F2 x).
 
 of (fix TY TYF B) (prod TY2 TYF2) (fix TY2 TYF2 B2) :-
  of (prod TY TYF) set (prod TY2 TYF2),
