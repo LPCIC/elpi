@@ -1313,6 +1313,8 @@ let rec is_frozen t = match look t with
   | App xs -> is_frozen (L.hd xs)
   | _ -> false
 
+let prune id s = {s with assign = M.remove id s.assign }
+
 end (* }}} *)
 
 module Red = struct (* {{{ beta reduction, whd, and nf (for tests) *) 

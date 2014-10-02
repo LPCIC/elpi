@@ -54,6 +54,29 @@ let _ =
              eh))
       (LP.prf_premise []) (fst(Red.nf a s)) in
   let skip (l,d,p) = List.tl l,d,p in
+  register_custom_predicate "gc" (fun _ s ->
+          prerr_endline "GC";Gc.compact(); prerr_endline "fine GC";s);
+  register_custom_predicate "erase" (fun t s ->
+    match LP.look t with
+    | LP.Uv(id,lvl) -> Subst.prune id s
+    | _ -> assert false
+  );
+  register_custom_control_operator "with-gc" (fun t s (gls,dls,p) alts ->
+    let goal, garbage = check_list2 "with-gc" t in
+    let goal, s = Red.nf goal s in
+    (* assert ground/input flex/output *)
+    let goal =
+      let ctx, _, cur, eh, n = List.hd gls in
+      ctx, `Atom(goal, LP.key_of goal), cur, eh, n in
+    let gls = goal :: List.tl gls, dls, p in
+    let s =
+      let garbage = L.to_list (check_list "with-gc" garbage) in
+      List.fold_left (fun s t ->
+        match LP.look t with
+        | LP.Uv(id,lvl) -> Printf.eprintf "erase %d\n%!" id; Subst.prune id s
+        | _ -> assert false) s garbage in
+    s, gls, alts
+  );
   register_custom_control_operator "pr_delayed" (fun t s (_,d,_ as gls) alts ->
     let t, s = Red.nf t s in
     let t, filter = check_list2 "pr_delayed" t in

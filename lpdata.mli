@@ -213,6 +213,8 @@ module Subst : sig
   
   val prf_subst : Format.formatter -> subst -> unit
   val string_of_subst : subst -> string
+
+  val prune : int -> subst -> subst
 end
 
 module Red : sig
