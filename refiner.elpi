@@ -127,6 +127,7 @@ new-meta T TY :-
 new-meta-aux T TY Vars Seq :-
   delay T (inhabit T TY) in Vars with Seq.
 
+CSC: AGGIUNGERE LA REGOLA BI-DIREZIONALE!
 of hole TY T :- new-meta TY set, new-meta T TY.
 
 :inhabit-pp < _: inhabit T TY :- dbgpp[inhabit T TY], false.
