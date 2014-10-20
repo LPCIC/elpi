@@ -456,7 +456,7 @@ let mkXSusp t n o e = XSusp(ref(Todo(t,n,o,e)))
 let mkSkip n l e = if n <= 0 then e else XSkip(n,l,e)
 
 let rule s = SPY "rule" F.pp_print_string s
-
+(*
 let rec epush e = TRACE "epush" (fun fmt -> prf_env [] fmt e)
   match e with
   | (XEmpty | XArgs _ | XSkip _) as x -> x
@@ -544,6 +544,8 @@ let push t =
     | XExt _ | XSeq _ | XNil | XVApp _) -> t
   | XSusp { contents = Done t } -> t
   | XSusp ({ contents = Todo (t,ol,nl,e) } as ptr) -> psusp ptr t ol nl e
+*)
+let push x = x
 
 let look x =
   let x = push x in
@@ -706,7 +708,7 @@ let rec grab c n = function
   | XApp xs -> XApp (L.map (grab c n) xs)
   | XSeq (xs,tl) -> XSeq(L.map (grab c n) xs, grab c n tl)
   | XSusp _ -> assert false
-
+(*
 let lift ?(from=0) k t =
   if k = 0 then t
   else if from = 0 then mkXSusp t 0 k XEmpty
@@ -716,6 +718,63 @@ let beta t start len v = rule"Bs";
   let rdx = mkXSusp t len 0 (XArgs(L.sub start len v, 0, XEmpty)) in
   SPY "rdx" (prf_data []) rdx;
   rdx
+*)
+
+let lift ?(from=0) k t =
+  let rec aux n x =
+    match x with
+    | XDB i when i > n && i-n > from -> XDB (i+k)
+    | XDB _ -> x
+    | (XCon _ | XUv _ | XExt _ | XNil) -> x
+    | XVApp(b,t1,t2,o) ->
+        let t1' = aux n t1 in
+        let t2' = aux n t2 in
+        let o' = Opt.map (aux n) o in
+        if t1 == t1' && t2 == t2' && o == o' then x
+        else XVApp(b,t1',t2',o')
+    | XBin(w,t) ->
+        let t' = aux (n+w) t in
+        if t == t' then x else XBin(w,t')
+    | XApp xs ->
+        let xs' = L.map (aux n) xs in
+        if xs == xs' then x
+        else XApp xs'
+    | XSeq (xs,tl) ->
+        let xs' = L.map (aux n) xs in
+        let tl' = aux n tl in
+        if xs == xs' && tl == tl' then x else XSeq(xs',tl')
+    | XSusp _ -> assert false
+  in
+    if k = 0 then t else aux 0 t
+
+let beta body start len v =
+  let v = L.sub start len v in
+  let rec aux n x =
+    match x with
+    | XDB i when i > n && i-n <= len -> lift n (L.get (i-n-1) v)
+    | XDB i when i > n -> XDB(i - len)
+    | (XDB _ | XCon _ | XUv _ | XExt _ | XNil) -> x
+    | XVApp(b,t1,t2,o) ->
+        let t1' = aux n t1 in
+        let t2' = aux n t2 in
+        let o' = Opt.map (aux n) o in
+        if t1 == t1' && t2 == t2' && o == o' then x
+        else XVApp(b,t1',t2',o')
+    | XBin(w,t) ->
+        let t' = aux (n+w) t in
+        if t == t' then x else XBin(w,t')
+    | XApp xs ->
+        let xs' = L.map (aux n) xs in
+        if xs == xs' then x
+        else XApp xs'
+    | XSeq (xs,tl) ->
+        let xs' = L.map (aux n) xs in
+        let tl' = aux n tl in
+        if xs == xs' && tl == tl' then x else XSeq(xs',tl')
+    | XSusp _ -> assert false
+  in
+    aux 0 body
+   
 
 end
 
