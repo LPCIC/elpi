@@ -248,6 +248,68 @@ type nlam = int
 
 type appkind = [ `Regular | `Rev | `Flex | `Frozen ]
 
+module DATA : sig
+
+  type data
+
+  type kind_of_data = private
+    | Uv of var * level
+    | Con of name * level (* level < 0 has to be considered as 0 *)
+    | DB of int
+    | Bin of int * data
+    | App of data L.t
+    | Seq of data L.t * data
+    | Nil
+    | Ext of C.data
+    | VApp of appkind * data * data * data option
+              (* VApp(hd,args,info) : args is a list *)
+
+  val look : data -> kind_of_data
+  val kool : kind_of_data -> data
+  
+  val mkUv : var -> level -> data
+  val mkCon : string -> level -> data
+  val mkConN : name -> level -> data
+  val mkDB : int -> data
+  val mkBin : int -> data -> data
+  val mkApp : data L.t -> data
+  val mkVApp : appkind -> data -> data -> data option -> data
+  val mkExt : C.data -> data
+  val mkSeq : data L.t -> data -> data
+  val mkNil : data
+
+  val mkAppv : data -> data L.t -> int -> int -> data
+  val fixApp : data L.t -> data
+
+  val equal : data -> data -> bool
+  val compare : data -> data -> int
+  
+  val isDB : int -> data -> bool
+  val isBin : data -> bool
+
+  val collect_Uv : data -> data list
+  val collect_hv : data -> data list
+
+  val prf_data : string list -> Format.formatter -> data -> unit
+  val prf_data_low : 
+    ?pars:bool -> string list -> F.formatter ->
+    ?reccal:(?pars:bool -> string list -> data -> unit) ->
+    data -> unit
+  val fresh_names : string -> int -> int -> string list
+  val string_of_data : ?ctx:string list -> data -> string
+  val pr_var : int -> int -> string
+  val prf_data_only : string list -> Format.formatter -> data -> unit
+
+  val map : (data -> data) -> data -> data
+  val mapi : (int -> data -> data) -> int -> data -> data
+
+  val grab : data -> int -> data -> data
+
+  val lift : ?from:int -> int -> data -> data
+  val beta : data -> int -> int -> data L.t -> data
+
+end = struct
+
 type kind_of_data =
   | Uv of var * level
   | Con of name * level (* lvl < 0 means frozen meta and -lvl=var *)
@@ -277,8 +339,6 @@ and env =
   | XSkip of int * nlam * env
 
 module PP = struct (* {{{ pretty printer for data *)
-
-
 
 let string_of_level lvl =
   if !Trace.dverbose then "^" ^ string_of_int lvl
@@ -636,6 +696,30 @@ let collect_hv t =
        else uniq (y :: seen) tl
   in
   List.map snd (uniq [] !hvs)
+
+let rec grab c n = function
+  | (XCon _ | XUv _) as x when equal x c -> mkDB n
+  | XVApp(b,t1,t2,o) ->
+      XVApp(b,grab c n t1, grab c n t2,Opt.map (grab c n) o)
+  | (XCon _ | XUv _ | XExt _ | XDB _ | XNil) as x -> x
+  | XBin(w,t) -> XBin(w,grab c (n+w) t)
+  | XApp xs -> XApp (L.map (grab c n) xs)
+  | XSeq (xs,tl) -> XSeq(L.map (grab c n) xs, grab c n tl)
+  | XSusp _ -> assert false
+
+let lift ?(from=0) k t =
+  if k = 0 then t
+  else if from = 0 then mkXSusp t 0 k XEmpty
+  else mkXSusp t from (from+k) (XSkip(k,from,XEmpty))
+
+let beta t start len v = rule"Bs";
+  let rdx = mkXSusp t len 0 (XArgs(L.sub start len v, 0, XEmpty)) in
+  SPY "rdx" (prf_data []) rdx;
+  rdx
+
+end
+
+include DATA
 
 let sentinel = mkExt (mkString "T8fNhK/8Wk6Ds")
 
@@ -1052,19 +1136,10 @@ let mkFreshCon name lvl =
   assert(not(List.mem_assoc name !conmap));
   conmap := (name,lvl) :: !conmap;
   t
-let rec binders c n = function
-    | (XCon _ | XUv _) as x when equal x c -> mkDB n
-    | XVApp(b,t1,t2,o) ->
-        XVApp(b,binders c n t1, binders c n t2,Opt.map (binders c n) o)
-    | (XCon _ | XUv _ | XExt _ | XDB _ | XNil) as x -> x
-    | XBin(w,t) -> XBin(w,binders c (n+w) t)
-    | XApp xs -> XApp (L.map (binders c n) xs)
-    | XSeq (xs,tl) -> XSeq(L.map (binders c n) xs, binders c n tl)
-    | XSusp _ -> assert false
 
 let sigma_abstract t =
   let uvl = collect_Uv t in
-  List.fold_left (fun p uv -> mkSigma1 (binders uv 1 p)) t uvl
+  List.fold_left (fun p uv -> mkSigma1 (grab uv 1 p)) t uvl
 
 (* TODO : test that it is of the form of a clause *)
 let check_clause x = ()
@@ -1113,23 +1188,23 @@ EXTEND
      [[ PI; x = bound; BIND; p = atom LEVEL "conjunction" ->
          let (x, is_uv), annot = x, None in
          let bind = if is_uv then mkSigma1 else mkPi1 annot in
-         bind (binders x 1 p)
+         bind (grab x 1 p)
       | PI; annot = bound; x = bound; BIND; p = atom LEVEL "conjunction" ->
          let (x, is_uv), annot = x, Some (fst annot) in
          let bind = if is_uv then mkSigma1 else mkPi1 annot in
-         bind (binders x 1 p)
+         bind (grab x 1 p)
       | PI; LPAREN; annot = atom LEVEL "conjunction"; RPAREN;
         x = bound; BIND; p = atom LEVEL "conjunction" ->
          let (x, is_uv), annot = x, Some annot in
          let bind = if is_uv then mkSigma1 else mkPi1 annot in
-         bind (binders x 1 p)
+         bind (grab x 1 p)
       | PI; annot = atom LEVEL "list";
         x = bound; BIND; p = atom LEVEL "conjunction" ->
          let (x, is_uv), annot = x, Some annot in
          let bind = if is_uv then mkSigma1 else mkPi1 annot in
-         bind (binders x 1 p)
+         bind (grab x 1 p)
       | SIGMA; x = bound; BIND; p = atom LEVEL "conjunction" ->
-         mkSigma1 (binders (fst x) 1 p) ]];
+         mkSigma1 (grab (fst x) 1 p) ]];
   atom : LEVEL "conjunction"
      [[ l = LIST1 atom LEVEL "implication" SEP COMMA ->
           if List.length l = 1 then List.hd l
@@ -1161,7 +1236,7 @@ EXTEND
           let x = mkConN c lvl in
           (match b with
           | None -> check_con c lvl; x
-          | Some b ->  mkBin 1 (binders x 1 b))
+          | Some b ->  mkBin 1 (grab x 1 b))
       | u = UVAR -> let u, lvl = lvl_name_of u in mkUv (get_uv u) lvl
       | u = FRESHUV -> let u, lvl = fresh_lvl_name () in mkUv (get_uv u) lvl
       | i = REL -> mkDB (int_of_string (String.sub i 1 (String.length i - 1)))
@@ -1187,8 +1262,8 @@ EXTEND
   atom : LEVEL "list" 
      [[ LBRACKET; xs = LIST0 atom LEVEL "implication" SEP COMMA;
           tl = OPT [ PIPE; x = atom LEVEL "term" -> x ]; RBRACKET ->
-          let tl = match tl with None -> XNil | Some x -> x in
-          if List.length xs = 0 && tl <> XNil then 
+          let tl = match tl with None -> mkNil | Some x -> x in
+          if List.length xs = 0 && tl <> mkNil then 
             raise (Token.Error ("List with not elements cannot have a tail"));
           if List.length xs = 0 then mkNil
           else mkSeq (L.of_list xs) tl ]];
@@ -1249,7 +1324,7 @@ module M = Int.Map
 type subst = { assign : data M.t; top_uv : int }
 let empty n = { assign = M.empty; top_uv = max 1 n }
 
-let last_sub_lookup = ref (XDB 0)
+let last_sub_lookup = ref (mkDB 0)
 let in_sub i { assign = assign } =
   try last_sub_lookup := M.find i assign; true
   with Not_found -> false
@@ -1300,7 +1375,7 @@ let apply_subst_goal s = map_premise (apply_subst s)
 let top s = s.top_uv
 let raise_top i s = { s with top_uv = s.top_uv + i + 1 }
 
-let fresh_uv lvl s = XUv(s.top_uv,lvl), { s with top_uv = s.top_uv + 1 }
+let fresh_uv lvl s = mkUv s.top_uv lvl, { s with top_uv = s.top_uv + 1 }
 let frozen = ref 0
 let freeze_uv i s =
   incr frozen;
@@ -1322,16 +1397,8 @@ module Red = struct (* {{{ beta reduction, whd, and nf (for tests) *)
 open LP
 open Subst
 
-
-let lift ?(from=0) k t =
-  if k = 0 then t
-  else if from = 0 then mkXSusp t 0 k XEmpty
-  else mkXSusp t from (from+k) (XSkip(k,from,XEmpty))
-
-let beta t start len v = rule"Bs";
-  let rdx = mkXSusp t len 0 (XArgs(L.sub start len v, 0, XEmpty)) in
-  SPY "rdx" (prf_data []) rdx;
-  rdx
+let lift = lift
+let beta = beta
 
 let rec splay xs tl s =
   let tl, s = whd tl s in
