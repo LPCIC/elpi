@@ -73,7 +73,7 @@ let _ =
       let garbage = L.to_list (check_list "with-gc" garbage) in
       List.fold_left (fun s t ->
         match LP.look t with
-        | LP.Uv(id,lvl) -> Printf.eprintf "erase %d\n%!" id; Subst.prune id s
+        | LP.Uv(id,lvl) -> (*Printf.eprintf "erase %d\n%!" id;*) Subst.prune id s
         | _ -> assert false) s garbage in
     s, gls, alts
   );
