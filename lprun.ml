@@ -289,10 +289,10 @@ and unify_fo ?depth x y s =
       if nxs = nys then unify tl sl (L.fold2 unify xs ys s)
       else if nxs < nys && not (rigid (look tl)) then
         let yshd, ystl = L.sub 0 nxs ys, L.sub nxs (nys - nxs) ys in
-        unify tl (mkSeq ystl mkNil) (L.fold2 unify xs yshd s)
+        unify tl (mkSeq ystl sl) (L.fold2 unify xs yshd s)
       else if nxs > nys && not (rigid (look sl)) then
         let xshd, xstl = L.sub 0 nys xs, L.sub nys (nxs - nys) xs in
-        unify sl (mkSeq xstl mkNil) (L.fold2 unify ys xshd s)
+        unify sl (mkSeq xstl tl) (L.fold2 unify ys xshd s)
       else fail "listalign"
   | _ -> fail "founif"
 and unify_ho ?depth x y s =
