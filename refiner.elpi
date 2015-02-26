@@ -464,6 +464,9 @@ unif ff (prod S F) (prod T G) :- !,
 :u-WHD:
 unif _ X Y :- whd-progress X Z, !, unify Z Y.
 
+%TUTTO STO CASINO DI SWAP, MA ALLA FINE SOLO LA REGOLA QUA SOPRA
+%SI APPLICA NEI DUE CASI. DUPLICARLA E AMEN?
+
 :u-SWAP: % we swap lhs and rhs, but only once
 unif ff A B :- unif tt B A.
 
