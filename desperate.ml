@@ -13,13 +13,13 @@ type term =
   (* Pure terms *)
   | Const of string
   (* Query terms *)
-  | Struct of term list
+  | Struct of term * term * term list
   | Arg of int
   (* Heap terms *)
-  | App of term list
+  | App of term * term * term list
   | UVar of term ref
 
-let dummy = App []
+let rec dummy = App (dummy,dummy,[])
 
 let ppterm f t =
   let rec ppapp a c1 c2 = 
@@ -27,8 +27,8 @@ let ppterm f t =
     List.iter (fun x -> aux x; Format.fprintf f "@ ") a;
     Format.fprintf f "@]%c" c2
   and aux = function
-    | App a -> ppapp a '(' ')'
-    | Struct a -> ppapp a '{' '}'
+    | App (hd,x,xs)-> ppapp (hd::x::xs) '(' ')'
+    | Struct (hd,x,xs) -> ppapp (hd::x::xs) '{' '}'
     | UVar { contents = t } -> aux t
     | Const s -> Format.fprintf f "%s" s
     | Arg i -> Format.fprintf f "A%d" i
@@ -43,17 +43,9 @@ type clause = { hd : term; hyps : term list; vars : int; key : key }
 let dummyk = "dummy"
 
 let key_of = function
-  | (App xs | Struct xs) -> begin
-      match xs with
-      | Const w :: (App ys | Struct ys) :: _ -> begin
-          match ys with
-          | Const z :: _ -> w,z
-          | _ -> w, dummyk
-          end
-      | Const w :: Const z :: _ -> w,z
-      | Const w :: _ -> w,dummyk
-      | _ -> dummyk, dummyk
-  end
+  | (App (Const w,Const z, _) | Struct (Const w,Const z, _)) -> w, z
+  | (App (Const w,App(Const z,_,_), _) | Struct (Const w,App(Const z,_,_), _)) -> w, z
+  | (App (Const w,_, _) | Struct (Const w,_, _)) -> w, dummyk
   | _ -> dummyk, dummyk
 
 let clause_match_key (j1,j2) { key = (k1,k2) } =
@@ -67,7 +59,7 @@ let mk_env size = Array.create size dummy
 let to_heap e t =
   let rec aux = function
     | (Const _ | UVar _ | App _) as x -> x (* heap term *)
-    | Struct b -> App (List.map aux b)
+    | Struct(hd,b,bs) -> App (aux hd, aux b, List.map aux bs)
     | Arg i ->
         let a = e.(i) in
         if a == dummy then
@@ -113,7 +105,8 @@ let unif trail e_a e_b a b =
    | UVar r, t -> trail_this trail (`Ref r); r := to_heap e_b t; true
    | t, UVar r -> trail_this trail (`Ref r); r := t; true
    | Const x, Const y -> x == y (* !!! hashcons the entire Const node *)
-   | App xs, (Struct ys | App ys) -> List.for_all2 unif xs ys
+   | App (x1,x2,xs), (Struct (y1,y2,ys) | App (y1,y2,ys)) ->
+       unif x1 y1 && unif x2 y2 && List.for_all2 unif xs ys
    | Const _, (App _ | Struct _) -> false
    | App _, Const _  -> false in
  unif a b
@@ -210,22 +203,22 @@ let cappk = Const appk
 let crevk = Const revk
 
 (* Program *)
-let app1 = { hd = Struct[ cappk; cnilk; Arg 0; Arg 0 ]; hyps = []; vars = 1; key = (appk,nilk) };;
-let app2 = { hd = Struct[ cappk; Struct[cconsk; Arg 0; Arg 1]; Arg 2; Struct [cconsk; Arg 0; Arg 3 ] ]; hyps = [ Struct [ cappk; Arg 1; Arg 2; Arg 3] ]; vars = 4; key = (appk,consk) };;
+let app1 = { hd = Struct (cappk, cnilk, [Arg 0; Arg 0 ]); hyps = []; vars = 1; key = (appk,nilk) };;
+let app2 = { hd = Struct (cappk, Struct(cconsk, Arg 0, [Arg 1]), [Arg 2; Struct (cconsk, Arg 0, [Arg 3 ]) ]); hyps = [ Struct (cappk, Arg 1, [Arg 2; Arg 3]) ]; vars = 4; key = (appk,consk) };;
 
-let rev1 = { hd = Struct[ crevk; cnilk; Arg 0; Arg 0 ]; hyps = []; vars = 1; key = (revk,nilk) };;
-let rev2 = { hd = Struct[ crevk; Struct[ cconsk; Arg 0; Arg 1]; Arg 2; Arg 3 ];
-             hyps = [Struct[crevk; Arg 1; Struct [ cconsk; Arg 0; Arg 2]; Arg 3]];
+let rev1 = { hd = Struct( crevk, cnilk, [Arg 0; Arg 0 ]); hyps = []; vars = 1; key = (revk,nilk) };;
+let rev2 = { hd = Struct( crevk, Struct(cconsk, Arg 0, [Arg 1]), [Arg 2; Arg 3 ]);
+             hyps = [Struct(crevk, Arg 1, [Struct ( cconsk, Arg 0, [Arg 2]); Arg 3])];
              vars = 4; key = (revk,consk) };;
-let refl = { hd = Struct[ Const eqk; Arg 0; Arg 0]; hyps = []; vars = 1; key = (eqk,dummyk) };;
+let refl = { hd = Struct(Const eqk, Arg 0, [Arg 0]); hyps = []; vars = 1; key = (eqk,dummyk) };;
 
 let l1 =
-   App [ cconsk; cak; App [ cconsk; cbk; 
-   App [ cconsk; cak; App [ cconsk; cbk; 
-   App [ cconsk; cak; App [ cconsk; cbk; 
-   App [ cconsk; cak; App [ cconsk; cbk; 
-   App [ cconsk; cak; App [ cconsk; cbk; 
-   cnilk ]]]]]]]]]];;
+   App (cconsk, cak, [App (cconsk, cbk, [ 
+   App (cconsk, cak, [App (cconsk, cbk, [ 
+   App (cconsk, cak, [App (cconsk, cbk, [ 
+   App (cconsk, cak, [App (cconsk, cbk, [ 
+   App (cconsk, cak, [App (cconsk, cbk, [ 
+   cnilk ])])])])])])])])])]);;
 let gs =
   let v1 = UVar (ref dummy) in
   let v2 = UVar (ref dummy) in
@@ -243,40 +236,40 @@ let gs =
   let v14 = UVar (ref dummy) in
   let r1 = UVar (ref dummy) in
   let r2 = UVar (ref dummy) in
-  let a1 = [cappk; l1; l1; v1] in
-  let a2 = [cappk; v1; v1; v2] in
-  let a3 = [cappk; v2; v2; v3] in
-  let a4 = [cappk; v3; v3; v4] in
-  let a5 = [cappk; v4; v4; v5] in
-  let a6 = [cappk; v5; v5; v6] in
-  let a7 = [cappk; v6; v6; v7] in
-  let a8 = [cappk; v7; v7; v8] in
-  let a9 = [cappk; v8; v8; v9] in
-  let a10 = [cappk; v9; v9; v10] in
-  let a11 = [cappk; v10; v10; v11] in
-  let a12 = [cappk; v11; v11; v12] in
-  let a13 = [cappk; v12; v12; v13] in
-  let a14 = [cappk; v13; v13; v14] in
-  let aR1 = [crevk; v14; cnilk; r1] in
-  let aR2 = [crevk; r1; cnilk; r2] in
+  let a1 = App (cappk, l1, [ l1; v1] ) in
+  let a2 = App (cappk, v1, [ v1; v2] ) in
+  let a3 = App (cappk, v2, [ v2; v3] ) in
+  let a4 = App (cappk, v3, [ v3; v4] ) in
+  let a5 = App (cappk, v4, [ v4; v5] ) in
+  let a6 = App (cappk, v5, [ v5; v6] ) in
+  let a7 = App (cappk, v6, [ v6; v7] ) in
+  let a8 = App (cappk, v7, [ v7; v8] ) in
+  let a9 = App (cappk, v8, [v8; v9] ) in
+  let a10 = App (cappk, v9, [v9; v10] ) in
+  let a11 = App (cappk, v10, [ v10; v11] ) in
+  let a12 = App (cappk, v11, [ v11; v12] ) in
+  let a13 = App (cappk, v12, [ v12; v13] ) in
+  let a14 = App (cappk, v13, [ v13; v14] ) in
+  let aR1 = App (crevk, v14, [ cnilk; r1] ) in
+  let aR2 = App (crevk, r1, [cnilk; r2] ) in
   [
-          App a1;
-          App a2;
-          App a3;
-          App a4;
-          App a5;
-          App a6;
-          App a7;
-          App a8;
-          App a9;
-          App a10;
-          App a11;
-          App a12;
-          App a13;
-          App a14;
-          App aR1;
-          App aR2;
-          App [Const eqk; v14;r2] 
+          a1;
+          a2;
+          a3;
+          a4;
+          a5;
+          a6;
+          a7;
+          a8;
+          a9;
+          a10;
+          a11;
+          a12;
+          a13;
+          a14;
+          aR1;
+          aR2;
+          App (Const eqk, v14, [r2]) 
   ];;
 
 let p = [app1;app2;rev1;rev2;refl];;
