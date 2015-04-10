@@ -202,23 +202,30 @@ let consk = "cons"
 let ak = "a"
 let bk = "b"
 
-(* Program *)
-let app1 = { hd = Struct[ Const appk; Const nilk; Arg 0; Arg 0 ]; hyps = []; vars = 1; key = (appk,nilk) };;
-let app2 = { hd = Struct[ Const appk; Struct[Const consk; Arg 0; Arg 1]; Arg 2; Struct [Const consk; Arg 0; Arg 3 ] ]; hyps = [ Struct [ Const appk; Arg 1; Arg 2; Arg 3] ]; vars = 4; key = (appk,consk) };;
+let cak = Const ak
+let cbk = Const bk
+let cconsk = Const consk
+let cnilk = Const nilk
+let cappk = Const appk
+let crevk = Const revk
 
-let rev1 = { hd = Struct[ Const revk; Const nilk; Arg 0; Arg 0 ]; hyps = []; vars = 1; key = (revk,nilk) };;
-let rev2 = { hd = Struct[ Const revk; Struct[ Const consk; Arg 0; Arg 1]; Arg 2; Arg 3 ];
-             hyps = [Struct[Const revk; Arg 1; Struct [ Const consk; Arg 0; Arg 2]; Arg 3]];
+(* Program *)
+let app1 = { hd = Struct[ cappk; cnilk; Arg 0; Arg 0 ]; hyps = []; vars = 1; key = (appk,nilk) };;
+let app2 = { hd = Struct[ cappk; Struct[cconsk; Arg 0; Arg 1]; Arg 2; Struct [cconsk; Arg 0; Arg 3 ] ]; hyps = [ Struct [ cappk; Arg 1; Arg 2; Arg 3] ]; vars = 4; key = (appk,consk) };;
+
+let rev1 = { hd = Struct[ crevk; cnilk; Arg 0; Arg 0 ]; hyps = []; vars = 1; key = (revk,nilk) };;
+let rev2 = { hd = Struct[ crevk; Struct[ cconsk; Arg 0; Arg 1]; Arg 2; Arg 3 ];
+             hyps = [Struct[crevk; Arg 1; Struct [ cconsk; Arg 0; Arg 2]; Arg 3]];
              vars = 4; key = (revk,consk) };;
 let refl = { hd = Struct[ Const eqk; Arg 0; Arg 0]; hyps = []; vars = 1; key = (eqk,dummyk) };;
 
 let l1 =
-   App [ Const consk; Const ak; App [ Const consk; Const bk; 
-   App [ Const consk; Const ak; App [ Const consk; Const bk; 
-   App [ Const consk; Const ak; App [ Const consk; Const bk; 
-   App [ Const consk; Const ak; App [ Const consk; Const bk; 
-   App [ Const consk; Const ak; App [ Const consk; Const bk; 
-   Const nilk ]]]]]]]]]];;
+   App [ cconsk; cak; App [ cconsk; cbk; 
+   App [ cconsk; cak; App [ cconsk; cbk; 
+   App [ cconsk; cak; App [ cconsk; cbk; 
+   App [ cconsk; cak; App [ cconsk; cbk; 
+   App [ cconsk; cak; App [ cconsk; cbk; 
+   cnilk ]]]]]]]]]];;
 let gs =
   let v1 = UVar (ref dummy) in
   let v2 = UVar (ref dummy) in
@@ -236,22 +243,22 @@ let gs =
   let v14 = UVar (ref dummy) in
   let r1 = UVar (ref dummy) in
   let r2 = UVar (ref dummy) in
-  let a1 = [Const appk; l1; l1; v1] in
-  let a2 = [Const appk; v1; v1; v2] in
-  let a3 = [Const appk; v2; v2; v3] in
-  let a4 = [Const appk; v3; v3; v4] in
-  let a5 = [Const appk; v4; v4; v5] in
-  let a6 = [Const appk; v5; v5; v6] in
-  let a7 = [Const appk; v6; v6; v7] in
-  let a8 = [Const appk; v7; v7; v8] in
-  let a9 = [Const appk; v8; v8; v9] in
-  let a10 = [Const appk; v9; v9; v10] in
-  let a11 = [Const appk; v10; v10; v11] in
-  let a12 = [Const appk; v11; v11; v12] in
-  let a13 = [Const appk; v12; v12; v13] in
-  let a14 = [Const appk; v13; v13; v14] in
-  let aR1 = [Const revk; v14; Const nilk; r1] in
-  let aR2 = [Const revk; r1; Const nilk; r2] in
+  let a1 = [cappk; l1; l1; v1] in
+  let a2 = [cappk; v1; v1; v2] in
+  let a3 = [cappk; v2; v2; v3] in
+  let a4 = [cappk; v3; v3; v4] in
+  let a5 = [cappk; v4; v4; v5] in
+  let a6 = [cappk; v5; v5; v6] in
+  let a7 = [cappk; v6; v6; v7] in
+  let a8 = [cappk; v7; v7; v8] in
+  let a9 = [cappk; v8; v8; v9] in
+  let a10 = [cappk; v9; v9; v10] in
+  let a11 = [cappk; v10; v10; v11] in
+  let a12 = [cappk; v11; v11; v12] in
+  let a13 = [cappk; v12; v12; v13] in
+  let a14 = [cappk; v13; v13; v14] in
+  let aR1 = [crevk; v14; cnilk; r1] in
+  let aR2 = [crevk; r1; cnilk; r2] in
   [
           App a1;
           App a2;
