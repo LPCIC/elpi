@@ -97,7 +97,6 @@ let unif trail e_b a b =
  let rec unif a b =
    (* Format.eprintf "unif: %a = %a\n%!" ppterm a ppterm b; *)
    a == b || match a,b with
-   | (Arg _ | Struct _), _ -> assert false
    | _, Arg i when e_b.(i) != dummy -> unif a e_b.(i)
    | UVar { contents = t }, _ when t != dummy -> unif t b
    | _, UVar { contents = t } when t != dummy -> unif a t
@@ -105,11 +104,9 @@ let unif trail e_b a b =
    | t, Arg i -> trail_this trail (`Arr (e_b,i)); e_b.(i) <- t; true
    | UVar r, t -> trail_this trail (`Ref r); r := to_heap trail e_b t; true
    | t, UVar r -> trail_this trail (`Ref r); r := t; true
-   | Const x, Const y -> x == y (* !!! hashcons the entire Const node *)
    | App (x1,x2,xs), (Struct (y1,y2,ys) | App (y1,y2,ys)) ->
-       unif x1 y1 && unif x2 y2 && List.for_all2 unif xs ys
-   | Const _, (App _ | Struct _) -> false
-   | App _, Const _  -> false in
+       (x1 == y1 || unif x1 y1) && (x2 == y2 || unif x2 y2) && List.for_all2 unif xs ys
+   | _ -> false in
  unif a b
 ;;
 
@@ -196,6 +193,7 @@ let cconsk = Const consk
 let cnilk = Const nilk
 let cappk = Const appk
 let crevk = Const revk
+let ceqk = Const eqk
 
 (* Program *)
 let app1 = { hd = Struct (cappk, cnilk, [Arg 0; Arg 0 ]); hyps = []; vars = 1; key = (appk,nilk) };;
@@ -205,7 +203,7 @@ let rev1 = { hd = Struct( crevk, cnilk, [Arg 0; Arg 0 ]); hyps = []; vars = 1; k
 let rev2 = { hd = Struct( crevk, Struct(cconsk, Arg 0, [Arg 1]), [Arg 2; Arg 3 ]);
              hyps = [Struct(crevk, Arg 1, [Struct ( cconsk, Arg 0, [Arg 2]); Arg 3])];
              vars = 4; key = (revk,consk) };;
-let refl = { hd = Struct(Const eqk, Arg 0, [Arg 0]); hyps = []; vars = 1; key = (eqk,dummyk) };;
+let refl = { hd = Struct(ceqk, Arg 0, [Arg 0]); hyps = []; vars = 1; key = (eqk,dummyk) };;
 
 let l1 =
    App (cconsk, cak, [App (cconsk, cbk, [ 
@@ -264,7 +262,7 @@ let gs =
           a14;
           aR1;
           aR2;
-          App (Const eqk, v14, [r2]) 
+          App (ceqk, v14, [r2]) 
   ];;
 
 let p = [app1;app2;rev1;rev2;refl];;
