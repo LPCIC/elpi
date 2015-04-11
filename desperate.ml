@@ -56,10 +56,7 @@ let clause_match_key (j1,j2) { key = (k1,k2) } =
 
 let mk_env size = Array.create size dummy
 
-let trail_this (trail,no_alternative) old =
-  match no_alternative with
-  | true -> ()
-  | false -> trail := old :: !trail
+let trail_this (trail,_) old = trail := old :: !trail
 
 let to_heap trail e t =
   let rec aux = function
@@ -69,7 +66,7 @@ let to_heap trail e t =
         let a = e.(i) in
         if a == dummy then
             let v = UVar(ref dummy) in
-            trail_this trail (`Arr(e,i));
+            if not (snd trail) then trail_this trail (`Arr(e,i));
             e.(i) <- v;
             v
         else aux a
@@ -101,9 +98,9 @@ let unif trail e_b a b =
    | UVar { contents = t }, _ when t != dummy -> unif t b
    | _, UVar { contents = t } when t != dummy -> unif a t
    | UVar _, Arg j -> e_b.(j) <- a; true
-   | t, Arg i -> trail_this trail (`Arr (e_b,i)); e_b.(i) <- t; true
-   | UVar r, t -> trail_this trail (`Ref r); r := to_heap trail e_b t; true
-   | t, UVar r -> trail_this trail (`Ref r); r := t; true
+   | t, Arg i -> if not (snd trail) then trail_this trail (`Arr (e_b,i)); e_b.(i) <- t; true
+   | UVar r, t -> if not (snd trail) then trail_this trail (`Ref r); r := to_heap trail e_b t; true
+   | t, UVar r -> if not (snd trail) then trail_this trail (`Ref r); r := t; true
    | App (x1,x2,xs), (Struct (y1,y2,ys) | App (y1,y2,ys)) ->
        (x1 == y1 || unif x1 y1) && (x2 == y2 || unif x2 y2) && List.for_all2 unif xs ys
    | _ -> false in
