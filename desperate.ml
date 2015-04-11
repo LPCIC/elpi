@@ -92,7 +92,7 @@ let trail_this (trail,no_alternative) old =
   | false -> trail := old :: !trail
 
 (* Invariant: LSH is a heap term *)
-let unif trail e_a e_b a b =
+let unif trail e_b a b =
  let rec unif a b =
    (* Format.eprintf "unif: %a = %a\n%!" ppterm a ppterm b; *)
    a == b || match a,b with
@@ -133,21 +133,21 @@ let undo_trail old_trail trail =
 
 (* Loop *)
 
-let run1 trail e_g g c stack last_call =
+let run1 trail g c stack last_call =
   let old_trail = !trail in
   let f = mk_frame stack c in
-  if unif (trail,last_call) e_g f.env g c.hd
+  if unif (trail,last_call) f.env g c.hd
   then Some f
   else (undo_trail old_trail trail; None)
 ;;
 
-let rec select trail e_g g stack p old_stack alts =
+let rec select trail g stack p old_stack alts =
   match p with
   | [] -> None
   | c :: cs ->
      let old_trail = !trail in
-     match run1 trail e_g g c stack (alts = []) with
-     | None -> select trail e_g g stack cs old_stack alts
+     match run1 trail g c stack (alts = []) with
+     | None -> select trail g stack cs old_stack alts
      | Some new_stack ->
          Some (new_stack, (* crucial *)
                if cs = [] then alts
@@ -166,7 +166,7 @@ let rec run p cp trail (stack : frame) alts =
   | g :: gs ->
       let g = to_heap stack.env g in (* put args *)
       let cp = filter cp (key_of g) in
-      match select trail stack.env g (set_goals stack gs) cp stack alts with
+      match select trail g (set_goals stack gs) cp stack alts with
       | Some (stack, alts) -> run p p trail stack alts
       | None ->
           match alts with
