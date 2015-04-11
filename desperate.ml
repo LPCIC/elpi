@@ -73,14 +73,14 @@ let to_heap e t =
 type frame = {
   env : term array;
   lvl : int;
-  goals : (key * term) list;
+  goals : term list;
   next : frame;
 }
 
 let mk_frame stack_top (c : clause) = {
   env = mk_env c.vars;
   lvl = 1 + stack_top.lvl;
-  goals = List.map (fun x -> (dummyk,dummyk), x) c.hyps;
+  goals = c.hyps;
   next = stack_top;
 }
 
@@ -133,18 +133,11 @@ let undo_trail old_trail trail =
 
 (* Loop *)
 
-let put_all_args f = { f with
-   goals = List.map (fun (_,x) ->
-     let x = to_heap f.env x in
-     key_of x, x)
-   f.goals
-}
-
 let run1 trail e_g g c stack last_call =
   let old_trail = !trail in
   let f = mk_frame stack c in
   if unif (trail,last_call) e_g f.env g c.hd
-  then Some (put_all_args f)
+  then Some f
   else (undo_trail old_trail trail; None)
 ;;
 
@@ -170,8 +163,9 @@ let rec run p cp trail (stack : frame) alts =
   match stack.goals with
   | [] ->
       if stack.lvl == 0 then () else run p p trail stack.next alts
-  | (key_g,g) :: gs ->
-      let cp = filter cp key_g in
+  | g :: gs ->
+      let g = to_heap stack.env g in (* put args *)
+      let cp = filter cp (key_of g) in
       match select trail stack.env g (set_goals stack gs) cp stack alts with
       | Some (stack, alts) -> run p p trail stack alts
       | None ->
@@ -273,5 +267,5 @@ let gs =
   ];;
 
 let p = [app1;app2;rev1;rev2;refl];;
-let rec top = { lvl = 0; env = mk_env 0; goals = List.map (fun x -> key_of x, x) gs; next = top; };;
+let rec top = { lvl = 0; env = mk_env 0; goals = gs; next = top; };;
 run p top;;
