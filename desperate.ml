@@ -56,7 +56,12 @@ let clause_match_key (j1,j2) { key = (k1,k2) } =
 
 let mk_env size = Array.create size dummy
 
-let to_heap e t =
+let trail_this (trail,no_alternative) old =
+  match no_alternative with
+  | true -> ()
+  | false -> trail := old :: !trail
+
+let to_heap trail e t =
   let rec aux = function
     | (Const _ | UVar _ | App _) as x -> x (* heap term *)
     | Struct(hd,b,bs) -> App (aux hd, aux b, List.map aux bs)
@@ -64,6 +69,7 @@ let to_heap e t =
         let a = e.(i) in
         if a == dummy then
             let v = UVar(ref dummy) in
+            trail_this trail (`Arr(e,i));
             e.(i) <- v;
             v
         else aux a
@@ -86,11 +92,6 @@ let mk_frame stack_top (c : clause) = {
 
 (* Unification *)
 
-let trail_this (trail,no_alternative) old =
-  match no_alternative with
-  | true -> ()
-  | false -> trail := old :: !trail
-
 (* Invariant: LSH is a heap term *)
 let unif trail e_b a b =
  let rec unif a b =
@@ -102,7 +103,7 @@ let unif trail e_b a b =
    | _, UVar { contents = t } when t != dummy -> unif a t
    | UVar _, Arg j -> e_b.(j) <- a; true
    | t, Arg i -> trail_this trail (`Arr (e_b,i)); e_b.(i) <- t; true
-   | UVar r, t -> trail_this trail (`Ref r); r := to_heap e_b t; true
+   | UVar r, t -> trail_this trail (`Ref r); r := to_heap trail e_b t; true
    | t, UVar r -> trail_this trail (`Ref r); r := t; true
    | Const x, Const y -> x == y (* !!! hashcons the entire Const node *)
    | App (x1,x2,xs), (Struct (y1,y2,ys) | App (y1,y2,ys)) ->
@@ -164,7 +165,7 @@ let rec run p cp trail (stack : frame) alts =
   | [] ->
       if stack.lvl == 0 then () else run p p trail stack.next alts
   | g :: gs ->
-      let g = to_heap stack.env g in (* put args *)
+      let g = to_heap (trail,alts=[]) stack.env g in (* put args *)
       let cp = filter cp (key_of g) in
       match select trail g (set_goals stack gs) cp stack alts with
       | Some (stack, alts) -> run p p trail stack alts
