@@ -44,7 +44,8 @@ let dummyk = "dummy"
 
 let key_of = function
   | (App (Const w,Const z, _) | Struct (Const w,Const z, _)) -> w, z
-  | (App (Const w,App(Const z,_,_), _) | Struct (Const w,App(Const z,_,_), _)) -> w, z
+  | (App (Const w,App(Const z,_,_), _)
+    |Struct (Const w,App(Const z,_,_), _)) -> w, z
   | (App (Const w,_, _) | Struct (Const w,_, _)) -> w, dummyk
   | _ -> dummyk, dummyk
 
@@ -54,11 +55,7 @@ let clause_match_key (j1,j2) { key = (k1,k2) } =
 
 (* The environment of a clause and stack frame *)
 
-let mk_env size = Array.create size dummy
-
-let trail_this (trail,_) old = trail := old :: !trail
-
-let to_heap trail e t =
+let to_heap e t =
   let rec aux = function
     | (Const _ | UVar _ | App _) as x -> x (* heap term *)
     | Struct(hd,b,bs) -> App (aux hd, aux b, List.map aux bs)
@@ -66,111 +63,97 @@ let to_heap trail e t =
         let a = e.(i) in
         if a == dummy then
             let v = UVar(ref dummy) in
-            if not (snd trail) then trail_this trail (`Arr(e,i));
             e.(i) <- v;
             v
         else aux a
   in aux t
 ;;
 
-type frame = {
-  env : term array;
-  lvl : int;
-  goals : term list;
-  next : frame;
-}
-
-let mk_frame stack_top (c : clause) = {
-  env = mk_env c.vars;
-  lvl = 1 + stack_top.lvl;
-  goals = c.hyps;
-  next = stack_top;
-}
-
 (* Unification *)
 
-(* Invariant: LSH is a heap term *)
-let unif trail e_b a b =
+(* Invariant: LSH is a heap term, the RHS is a query in env e *)
+let unif trail last_call a e b =
  let rec unif a b =
    (* Format.eprintf "unif: %a = %a\n%!" ppterm a ppterm b; *)
    a == b || match a,b with
-   | _, Arg i when e_b.(i) != dummy -> unif a e_b.(i)
+   | _, Arg i when e.(i) != dummy -> unif a e.(i)
    | UVar { contents = t }, _ when t != dummy -> unif t b
    | _, UVar { contents = t } when t != dummy -> unif a t
-   | UVar _, Arg j -> e_b.(j) <- a; true
-   | t, Arg i -> if not (snd trail) then trail_this trail (`Arr (e_b,i)); e_b.(i) <- t; true
-   | UVar r, t -> if not (snd trail) then trail_this trail (`Ref r); r := to_heap trail e_b t; true
-   | t, UVar r -> if not (snd trail) then trail_this trail (`Ref r); r := t; true
+   | UVar _, Arg j -> e.(j) <- a; true
+   | t, Arg i -> e.(i) <- t; true
+   | UVar r, t ->
+       if not last_call then trail := r :: !trail;
+       r := to_heap e t;
+       true
+   | t, UVar r ->
+       if not last_call then trail := r :: !trail;
+       r := t;
+       true
    | App (x1,x2,xs), (Struct (y1,y2,ys) | App (y1,y2,ys)) ->
-       (x1 == y1 || unif x1 y1) && (x2 == y2 || unif x2 y2) && List.for_all2 unif xs ys
+       (x1 == y1 || unif x1 y1) && (x2 == y2 || unif x2 y2) &&
+       List.for_all2 unif xs ys
    | _ -> false in
  unif a b
 ;;
 
 (* Backtracking *)
 
-type trail = [ `Arr of term array * int | `Ref of term ref ]
-
-type alternative = {
-  stack : frame;
-  trail : trail list;
-  clauses : clause list
-}
-
 let undo_trail old_trail trail =
   while !trail != old_trail do
     match !trail with
-    | `Ref r :: rest -> r := dummy; trail := rest
-    | `Arr(a,i) :: rest -> a.(i) <- dummy; trail := rest
+    | r :: rest -> r := dummy; trail := rest
     | _ -> assert false
   done
 ;;
 
 (* Loop *)
 
-let run1 trail g c stack last_call =
-  let old_trail = !trail in
-  let f = mk_frame stack c in
-  if unif (trail,last_call) f.env g c.hd
-  then Some f
-  else (undo_trail old_trail trail; None)
-;;
-
-let rec select trail g stack p old_stack alts =
-  match p with
-  | [] -> None
-  | c :: cs ->
-     let old_trail = !trail in
-     match run1 trail g c stack (alts = []) with
-     | None -> select trail g stack cs old_stack alts
-     | Some new_stack ->
-         Some (new_stack, (* crucial *)
-               if cs = [] then alts
-               else { stack = old_stack; trail = old_trail; clauses = cs }
-                    :: alts)
-;;
-
-let filter cl k = List.filter (clause_match_key k) cl
+type frame = { goals : term list; next : frame; }
+type alternative = { lvl : int;
+  stack : frame;
+  trail : term ref list;
+  clauses : clause list
+}
 
 let set_goals s gs = { s with goals = gs }
 
-let rec run p cp trail (stack : frame) alts =
-  match stack.goals with
-  | [] ->
-      if stack.lvl == 0 then () else run p p trail stack.next alts
-  | g :: gs ->
-      let g = to_heap (trail,alts=[]) stack.env g in (* put args *)
-      let cp = filter cp (key_of g) in
-      match select trail g (set_goals stack gs) cp stack alts with
-      | Some (stack, alts) -> run p p trail stack alts
-      | None ->
-          match alts with
-          | [] -> raise (Failure "no clause")
-          | { stack; trail = old_trail; clauses } :: alts ->
-              undo_trail old_trail trail;
-              run p clauses trail stack alts
+(* The block of recursive functions spares the allocation of a Some/None
+ * at each iteration in order to know if one needs to backtrack or continue *)
+let make_runtime (p : clause list) : (frame -> 'k) * ('k -> 'k) =
+  let trail = ref [] in
+
+  let rec run cp (stack : frame) alts lvl =
+    match stack.goals with
+    | [] -> if lvl == 0 then alts else run p stack.next alts (lvl - 1)
+    | g :: gs ->
+        let cp = List.filter (clause_match_key (key_of g)) cp in
+        backchain g (set_goals stack gs) cp stack alts lvl
+
+  and backchain g stack cp old_stack alts lvl =
+    let last_call = alts = [] in
+    let rec select = function
+    | [] -> next_alt alts
+    | c :: cs ->
+        let old_trail = !trail in
+        let env = Array.create c.vars dummy in
+        match unif trail last_call g env c.hd with
+        | false -> undo_trail old_trail trail; select cs
+        | true ->
+            let stack = { goals = List.map (to_heap env) c.hyps; next=stack } in
+            let alts = if cs = [] then alts else
+              { stack=old_stack; trail=old_trail; clauses=cs; lvl } :: alts in
+            run p stack alts (lvl + 1)
+    in
+      select cp
+
+  and next_alt = function
+    | [] -> raise (Failure "no clause")
+    | { stack; trail = old_trail; clauses; lvl } :: alts ->
+        undo_trail old_trail trail;
+        run clauses stack alts lvl
+  in
+   (fun s -> run p s [] 0), next_alt
 ;;
-let run p s = run p p (ref []) s []
   
 
 (* Test *)
@@ -263,5 +246,7 @@ let gs =
   ];;
 
 let p = [app1;app2;rev1;rev2;refl];;
-let rec top = { lvl = 0; env = mk_env 0; goals = gs; next = top; };;
-run p top;;
+let run, cont = make_runtime p;;
+let rec top = { goals = gs; next = top; };;
+let k = ref (run top);;
+while !k <> [] do k := cont !k; done
