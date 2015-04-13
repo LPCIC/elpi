@@ -127,9 +127,9 @@ let make_runtime (p : clause list) : (frame -> 'k) * ('k -> 'k) =
     | [] -> if lvl == 0 then alts else run p stack.next alts (lvl - 1)
     | g :: gs ->
         let cp = List.filter (clause_match_key (key_of g)) cp in
-        backchain g (set_goals stack gs) cp stack alts lvl
+        backchain g gs cp stack alts lvl
 
-  and backchain g stack cp old_stack alts lvl =
+  and backchain g gs cp old_stack alts lvl =
     let last_call = alts = [] in
     let rec select = function
     | [] -> next_alt alts
@@ -139,10 +139,13 @@ let make_runtime (p : clause list) : (frame -> 'k) * ('k -> 'k) =
         match unif trail last_call g env c.hd with
         | false -> undo_trail old_trail trail; select cs
         | true ->
-            let stack = { goals = List.map (to_heap env) c.hyps; next=stack } in
+            let next, next_lvl =
+              if gs = [] then old_stack.next, lvl
+              else { old_stack with goals = gs }, lvl + 1 in
+            let stack = { goals = List.map (to_heap env) c.hyps; next } in
             let alts = if cs = [] then alts else
               { stack=old_stack; trail=old_trail; clauses=cs; lvl } :: alts in
-            run p stack alts (lvl + 1)
+            run p stack alts next_lvl
     in
       select cp
 
