@@ -142,14 +142,25 @@ let test_prog p g =
      exit 0
    else exit 0
   in
-   aux (run_dls p g)
+(* )   aux (run_dls p g) *)
+ let time f p q =
+   let t0 = Unix.gettimeofday () in
+   let b = f p q in
+   let t1 = Unix.gettimeofday () in
+   Printf.printf "INTERNAL TIMING %5.3f\n%!" (t1 -. t0);
+   b in
+   ignore(time run_dls p g);
+   exit 0
  with Stream.Error msg ->
    F.eprintf "@[Parse error: %s@]@\n%!" msg
+    | Lprun.NoClause -> exit 1
 ;;
 
 let usage () =
   F.eprintf "\nelpi interpreter usage:\telpi OPTS FILES\n";
   F.eprintf "\t-max-w COLS  overrides the number of columns of the terminal\n\n";;
+
+let goal = ref None
 
 let parse_argv argv =
   let max_w = ref None in
@@ -157,6 +168,7 @@ let parse_argv argv =
     | [] -> []
     | "-max-w" :: cols :: rest -> max_w := Some (int_of_string cols); aux rest
     | ("-h" | "--help") :: _ -> usage(); exit 1
+    | "-goal" :: g :: rest -> goal := Some g; aux rest
     | x :: rest -> x :: aux rest in
   let rest = aux (Array.to_list argv) in
   set_terminal_width ?max_w:!max_w ();
@@ -177,8 +189,9 @@ let _ =
   done;
   let p = Buffer.contents b in
   let g =
-    Printf.printf "goal> %!";
-    input_line stdin in
+    match !goal with
+    | None -> Printf.printf "goal> %!"; input_line stdin
+    | Some g -> g in
   test_prog p g;
   Trace.quit ()
 
