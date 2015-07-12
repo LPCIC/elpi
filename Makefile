@@ -31,8 +31,11 @@ elpi: elpi.$(CMX) runtime.$(CMX) parser.$(CMX)
 elpi.$(CMX): elpi.ml ptmap.$(CMX) runtime.$(CMX) parser.$(CMX)
 	$(OC) $(OCAMLOPTIONS) -c elpi.ml
 
-runtime.$(CMX) runtime.cmi: runtime.ml parser.$(CMX) ptmap.$(CMX)
+runtime.$(CMX): runtime.ml runtime.cmi parser.$(CMX) ptmap.$(CMX)
 	$(OC) $(OCAMLOPTIONS) -c runtime.ml
+
+runtime.cmi: runtime.mli parser.cmi
+	$(OC) $(OCAMLOPTIONS) -c runtime.mli
 
 ptmap.cmi: ptmap.mli
 	$(OC) $(OCAMLOPTIONS) -c ptmap.mli

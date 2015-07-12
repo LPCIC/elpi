@@ -2,6 +2,7 @@
 (* license: GNU Lesser General Public License Version 2.1                    *)
 (* ------------------------------------------------------------------------- *)
 
+(* Prolog functors *)
 module ASTFuncS : sig
   type t
   val compare : t -> t -> int
