@@ -1,6 +1,6 @@
 # Commands:
 #  make       -- to compile elpi
-#  make git/V -- to compile elpi.git.V out of git's commit/branch V
+#  make git/V -- to compile elpi.git.V out of git's commit/branch/tag V
 
 
 V=$(shell git describe --tags)
