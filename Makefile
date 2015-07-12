@@ -1,6 +1,9 @@
 # Commands:
 #  make       -- to compile elpi
 #  make git/V -- to compile elpi.git.V out of git's commit/branch/tag V
+#                such binary is then picked up automatically by the bench
+#                system as an elpi like runner
+#  make runners -- foreach git tag runner-V, do something like make git/V 
 
 
 V=$(shell git describe --tags)
@@ -22,6 +25,19 @@ git/%:
 	cd "elpi-$*"; git checkout -b "build-this" "$*"; cd elpi; make
 	cp "elpi-$*/elpi/elpi" "elpi.git.$*"
 	rm -rf "$$PWD/elpi-$*"
+
+runners:
+	$(foreach t,$(shell git tag | grep ^runner),\
+		$(MAKE) git/$(t); mv elpi.git.$(t) elpi.git.$(t:runner-%=%))
+
+clean:
+	rm -f *.cmo *.cma *.cmx *.cmxa *.cmi *.o elpi elpi.git.*
+
+dist:
+	git archive --format=tar --prefix=elpi-$(V)/ HEAD . \
+		| gzip > ../elpi-$(V).tgz
+
+# compilation of elpi
 
 elpi: elpi.$(CMX) runtime.$(CMX) parser.$(CMX)
 	$(OC) $(OCAMLOPTIONS) $(FLAGS) -o elpi \
@@ -49,9 +65,3 @@ parser.cmi: parser.mli
 parser.$(CMX): parser.ml parser.cmi 
 	$(OCP) $(OCAMLOPTIONS) -pp '$(PP) $(PARSE)' $(FLAGS) -o $@ -c $<
 
-clean:
-	rm -f *.cmo *.cma *.cmx *.cmxa *.cmi *.o elpi elpi.git.*
-
-dist:
-	git archive --format=tar --prefix=elpi-$(V)/ HEAD . \
-		| gzip > ../elpi-$(V).tgz
