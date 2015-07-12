@@ -1,2 +1,2 @@
 #!/bin/sh
-echo ${TOP}/../elpi/plain/elpi -goal 'main.' $1
+echo ${TOP}/elpi${VARIANT} -test $1

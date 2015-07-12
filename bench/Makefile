@@ -58,7 +58,5 @@ only: prepare
 
 prepare:
 	@make -C ..
-	@make -C ../../elpi plain-all
-
 
 .PHONY: all prepare only
