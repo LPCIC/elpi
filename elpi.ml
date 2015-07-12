@@ -1,5 +1,3 @@
-let implementations = [ Runtime.impl ]
-
 (*
 let _ =
   let control = Gc.get () in
@@ -11,44 +9,29 @@ let _ =
 ;;
 *)
 
-let run_prog impl prog query =
- let (module Impl : Parser.Implementation) =
-  List.nth implementations (impl-1) in
- let query = Impl.query_of_ast query in
- let prog = Impl.program_of_ast prog in
- prerr_endline (Impl.msg query);
- Impl.execute_loop prog query
+let run_prog prog query =
+ let query = Runtime.query_of_ast query in
+ let prog = Runtime.program_of_ast prog in
+ Runtime.execute_loop prog query
 ;;
 
-let test_impl impl prog query =
- let (module Impl : Parser.Implementation) =
-  List.nth implementations (impl-1) in
- let query = Impl.query_of_ast query in
- let prog = Impl.program_of_ast prog in
+let test_impl prog query =
+ let query = Runtime.query_of_ast query in
+ let prog = Runtime.program_of_ast prog in
  let time f p q =
    let t0 = Unix.gettimeofday () in
    let b = f p q in
    let t1 = Unix.gettimeofday () in
    Printf.printf "TIME: %5.3f\n%!" (t1 -. t0);
    b in
- if time Impl.execute_once prog query then exit 1 else exit 0
+ if time Runtime.execute_once prog query then exit 1 else exit 0
 ;;
 
-
-let print_implementations () =
- List.iteri (
-  fun i (module Impl : Parser.Implementation) ->
-   prerr_string ("Implementation #" ^ string_of_int (i+1) ^ ": ");
-   prerr_endline (Impl.msg (Impl.query_of_ast (Parser.Const Parser.ASTFuncS.truef))) ;
- ) implementations
-;;
 
 (* rewrites a lambda-prolog program to first-order prolog *)
-let pp_lambda_to_prolog impl prog =
- let (module Impl : Parser.Implementation) =
-  List.nth implementations (impl - 1) in
+let pp_lambda_to_prolog prog =
  Printf.printf "\nRewriting λ-prolog to first-order prolog...\n\n%!";
- Impl.pp_prolog prog
+ Runtime.pp_prolog prog
 ;;
 
 let set_terminal_width ?(max_w=
@@ -65,27 +48,22 @@ let _ =
   let argn = Array.length argv in
   (* j=1 iff -test is not passed *)
   let j,test =
-   if argv.(1) = "-test" then
-     if argn = 4 then 3,`OneBatch (int_of_string (argv.(2)))
-     else 2,`OneBatch 1
-   else if argv.(1) = "-prolog" then 3,`PPprologBatch (int_of_string (argv.(2)))
-   else if argv.(1) = "-impl" then 2,`OneInteractive (1)
-   else if argv.(1) = "-list" then
-    (print_implementations (); exit 0)
-   else 1,`OneInteractive 1 in
+   if argv.(1) = "-test" then 2,`OneBatch
+   else if argv.(1) = "-prolog" then 2,`PPprologBatch
+   else 1,`OneInteractive in
   let filenames = ref [] in
   for i=j to argn - 1 do filenames := argv.(i)::!filenames done;
   let p = Parser.parse_program (List.rev !filenames) in
   let g =
     match test with
-    | `OneBatch _ | `PPprologBatch _ -> "main."
+    | `OneBatch | `PPprologBatch -> "main."
     | _ ->
     Printf.printf "goal> %!";
     input_line stdin in
   let g = Parser.parse_goal g in
   set_terminal_width ();
   match test with
-  | `OneBatch impl -> test_impl impl p g
-  | `OneInteractive impl -> run_prog impl p g
-  | `PPprologBatch impl -> pp_lambda_to_prolog impl p  
+  | `OneBatch -> test_impl p g
+  | `OneInteractive -> run_prog p g
+  | `PPprologBatch -> pp_lambda_to_prolog p  
 ;;

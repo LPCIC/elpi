@@ -54,19 +54,6 @@ type term =
  | String of ASTFuncS.t
  | Int of int
 
-(* TODO: to be moved elsewhere, obviously *)
-module type Implementation =
- sig
-  type query
-  type program
-  val query_of_ast : term -> query
-  val program_of_ast : (term * term) list -> program
-  val msg : query -> string
-  val execute_once : program -> query -> bool
-  val execute_loop : program -> query -> unit
-  val pp_prolog : (term * term) list -> unit
- end
-
 let mkConj = function [f] -> f | l -> App(Const ASTFuncS.andf,l)
 (* TODO: Bug here: mkConj2 should be right associative!
    But what is the difference??? *)

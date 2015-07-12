@@ -28,16 +28,3 @@ type term =
 
 val parse_program : filenames:string list -> (term * term) list
 val parse_goal : string -> term
-
-(* TODO: to be moved elsewhere, obviously *)
-module type Implementation =
- sig
-  type query
-  type program
-  val query_of_ast : term -> query
-  val program_of_ast : (term * term) list -> program
-  val msg : query -> string
-  val execute_once : program -> query -> bool  (* true means error *)
-  val execute_loop : program -> query -> unit
-  val pp_prolog : (term * term) list -> unit
- end

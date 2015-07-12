@@ -1,12 +1,4 @@
-(* GC off
-let _ =
-  let control = Gc.get () in
-  let tweaked_control = { control with
-    Gc.space_overhead = max_int;
-  } in
-  Gc.set tweaked_control
-;;
-*)
+let debug = false
 
 let pplist ?(boxed=false) ppelem sep f l =
  if l <> [] then begin
@@ -20,7 +12,6 @@ let pplist ?(boxed=false) ppelem sep f l =
  end
 ;;
 
-let debug = false
 
 let rec smart_map f =
  function
@@ -1058,7 +1049,7 @@ let stack_var_of_ast (f,l) n =
  with Not_found ->
   let n' = Arg (f,0) in
   (f+1,(n,n')::l),n'
-
+;;
 
 let stack_funct_of_ast l l' f =
  (try l,l',ConstMap.find f l'
@@ -1067,6 +1058,7 @@ let stack_funct_of_ast l l' f =
    if ('A' <= c && c <= 'Z') || c = '_' then
     let l,v = stack_var_of_ast l (Parser.ASTFuncS.pp f) in l,l',v
    else l,l',snd (funct_of_ast f))
+;;
 
 let rec stack_term_of_ast lvl l l' =
  function
@@ -1155,48 +1147,39 @@ let pp_FOprolog p =
   else
    Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!" (pp_FOprolog names env) a (pplist (pp_FOprolog names env) ",") (chop f)) p;;
 
-let impl =
- (module struct
-  (* RUN with non indexed engine *)
-  type query = string list * term array * term
-  type program_ = program
-  type program = program_
-  let query_of_ast = query_of_ast
-  let program_of_ast = program_of_ast
-  let pp_prolog = pp_FOprolog
+(* RUN with non indexed engine *)
+type query = string list * term array * term
+let pp_prolog = pp_FOprolog
 
-  let msg (q_names,q_env,q) =
-   Format.fprintf Format.str_formatter "Pattern unification only, lazy refresh, double hash indexing: %a" (uppterm 0 q_names 0 q_env) q ;
-   Format.flush_str_formatter ()
+let execute_once p q =
+ let run, cont = make_runtime in
+ try ignore (run p q) ; false
+ with Failure _ -> true
+;;
 
-  let execute_once p q =
-   let run, cont = make_runtime in
-   try ignore (run p q) ; false
-   with Failure _ -> true
-
-  let execute_loop p ((q_names,q_env,q) as qq) =
-   let run, cont = make_runtime in
-   let time0 = Unix.gettimeofday() in
-   let k = ref (run p qq) in
-   let time1 = Unix.gettimeofday() in
-   prerr_endline ("Execution time: "^string_of_float(time1 -. time0));
-   Format.eprintf "Raw Result: %a\n%!" (ppterm 0 q_names 0 q_env) q ;
-   Format.eprintf "Result: \n%!" ;
-   List.iteri (fun i name -> Format.eprintf "%s=%a\n%!" name
-    (uppterm 0 q_names 0 q_env) q_env.(i)) q_names;
-   while !k != emptyalts do
-     prerr_endline "More? (Y/n)";
-     if read_line() = "n" then k := emptyalts else
-      try
-       let time0 = Unix.gettimeofday() in
-       k := cont !k;
-       let time1 = Unix.gettimeofday() in
-       prerr_endline ("Execution time: "^string_of_float(time1 -. time0));
-       Format.eprintf "Raw Result: %a\n%!" (ppterm 0 q_names 0 q_env) q ;
-       Format.eprintf "Result: \n%!" ;
-       List.iteri (fun i name -> Format.eprintf "%s=%a\n%!" name
-        (uppterm 0 q_names 0 q_env) q_env.(i)) q_names;
-      with
-       Failure "no clause" -> prerr_endline "Fail"; k := emptyalts
-  done
- end : Parser.Implementation)
+let execute_loop p ((q_names,q_env,q) as qq) =
+ let run, cont = make_runtime in
+ let time0 = Unix.gettimeofday() in
+ let k = ref (run p qq) in
+ let time1 = Unix.gettimeofday() in
+ prerr_endline ("Execution time: "^string_of_float(time1 -. time0));
+ Format.eprintf "Raw Result: %a\n%!" (ppterm 0 q_names 0 q_env) q ;
+ Format.eprintf "Result: \n%!" ;
+ List.iteri (fun i name -> Format.eprintf "%s=%a\n%!" name
+  (uppterm 0 q_names 0 q_env) q_env.(i)) q_names;
+ while !k != emptyalts do
+   prerr_endline "More? (Y/n)";
+   if read_line() = "n" then k := emptyalts else
+    try
+     let time0 = Unix.gettimeofday() in
+     k := cont !k;
+     let time1 = Unix.gettimeofday() in
+     prerr_endline ("Execution time: "^string_of_float(time1 -. time0));
+     Format.eprintf "Raw Result: %a\n%!" (ppterm 0 q_names 0 q_env) q ;
+     Format.eprintf "Result: \n%!" ;
+     List.iteri (fun i name -> Format.eprintf "%s=%a\n%!" name
+      (uppterm 0 q_names 0 q_env) q_env.(i)) q_names;
+    with
+     Failure "no clause" -> prerr_endline "Fail"; k := emptyalts
+ done
+;;
