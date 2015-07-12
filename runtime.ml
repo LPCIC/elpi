@@ -1,3 +1,7 @@
+(* elpi: embedded lambda prolog interpreter                                  *)
+(* license: GNU Lesser General Public License Version 2.1                    *)
+(* ------------------------------------------------------------------------- *)
+
 let debug = false
 
 let pplist ?(boxed=false) ppelem sep f l =

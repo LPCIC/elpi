@@ -1,46 +1,32 @@
-module type ASTFuncT =
-  sig
-    type t
-    val compare : t -> t -> int
-    val pp : t -> string
-    val eq : t -> t -> bool
-    val truef : t
-    val andf : t
-    val orf : t
-    val implf : t
-    val cutf : t
-    val pif : t
-    val sigmaf : t
-    val eqf : t
-    val isf : t
-    val from_string : string -> t
-  end;;
+(* elpi: embedded lambda prolog interpreter                                  *)
+(* license: GNU Lesser General Public License Version 2.1                    *)
+(* ------------------------------------------------------------------------- *)
 
-module ASTFuncS : ASTFuncT = 
-  struct
-    type t = string
-    let compare = String.compare
+module ASTFuncS = struct
 
-    (* Hash consing *)
-    let from_string =
-     let h = Hashtbl.create 37 in
-     function x ->
-      try Hashtbl.find h x
-      with Not_found -> Hashtbl.add h x x ; x
+  type t = string
+  let compare = String.compare
 
-    let pp n = n
-    let eq = (==)
-    let truef = from_string "true"
-    let andf = from_string ","
-    let orf = from_string ";"
-    let implf = from_string "=>"
-    let cutf = from_string "!"
-    let pif = from_string "pi"
-    let sigmaf = from_string "sigma"
-    let eqf = from_string "="
-    let isf = from_string "is"
+  (* Hash consing *)
+  let from_string =
+   let h = Hashtbl.create 37 in
+   function x ->
+    try Hashtbl.find h x
+    with Not_found -> Hashtbl.add h x x ; x
 
-  end;;
+  let pp n = n
+  let eq = (==)
+  let truef = from_string "true"
+  let andf = from_string ","
+  let orf = from_string ";"
+  let implf = from_string "=>"
+  let cutf = from_string "!"
+  let pif = from_string "pi"
+  let sigmaf = from_string "sigma"
+  let eqf = from_string "="
+  let isf = from_string "is"
+
+end
 
 (* Note: Appl(",",[]) is allowed in r.h.s. of clauses to represent
    axioms. Const "true" would not work because the definition of true
