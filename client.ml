@@ -54,6 +54,29 @@ let _ =
              eh))
       (LP.prf_premise []) (fst(Red.nf a s)) in
   let skip (l,d,p) = List.tl l,d,p in
+  register_custom_predicate "gc" (fun _ s ->
+          prerr_endline "GC";Gc.compact(); prerr_endline "fine GC";s);
+  register_custom_predicate "erase" (fun t s ->
+    match LP.look t with
+    | LP.Uv(id,lvl) -> Subst.prune id s
+    | _ -> assert false
+  );
+  register_custom_control_operator "with-gc" (fun t s (gls,dls,p) alts ->
+    let goal, garbage = check_list2 "with-gc" t in
+    let goal, s = Red.nf goal s in
+    (* assert ground/input flex/output *)
+    let goal =
+      let ctx, _, cur, eh, n = List.hd gls in
+      ctx, `Atom(goal, LP.key_of goal), cur, eh, n in
+    let gls = goal :: List.tl gls, dls, p in
+    let s =
+      let garbage = L.to_list (check_list "with-gc" garbage) in
+      List.fold_left (fun s t ->
+        match LP.look t with
+        | LP.Uv(id,lvl) -> (*Printf.eprintf "erase %d\n%!" id;*) Subst.prune id s
+        | _ -> assert false) s garbage in
+    s, gls, alts
+  );
   register_custom_control_operator "pr_delayed" (fun t s (_,d,_ as gls) alts ->
     let t, s = Red.nf t s in
     let t, filter = check_list2 "pr_delayed" t in
@@ -119,14 +142,25 @@ let test_prog p g =
      exit 0
    else exit 0
   in
-   aux (run_dls p g)
+(* )   aux (run_dls p g) *)
+ let time f p q =
+   let t0 = Unix.gettimeofday () in
+   let b = f p q in
+   let t1 = Unix.gettimeofday () in
+   Printf.printf "INTERNAL TIMING %5.3f\n%!" (t1 -. t0);
+   b in
+   ignore(time run_dls p g);
+   exit 0
  with Stream.Error msg ->
    F.eprintf "@[Parse error: %s@]@\n%!" msg
+    | Lprun.NoClause -> exit 1
 ;;
 
 let usage () =
   F.eprintf "\nelpi interpreter usage:\telpi OPTS FILES\n";
   F.eprintf "\t-max-w COLS  overrides the number of columns of the terminal\n\n";;
+
+let goal = ref None
 
 let parse_argv argv =
   let max_w = ref None in
@@ -134,6 +168,7 @@ let parse_argv argv =
     | [] -> []
     | "-max-w" :: cols :: rest -> max_w := Some (int_of_string cols); aux rest
     | ("-h" | "--help") :: _ -> usage(); exit 1
+    | "-goal" :: g :: rest -> goal := Some g; aux rest
     | x :: rest -> x :: aux rest in
   let rest = aux (Array.to_list argv) in
   set_terminal_width ?max_w:!max_w ();
@@ -154,8 +189,9 @@ let _ =
   done;
   let p = Buffer.contents b in
   let g =
-    Printf.printf "goal> %!";
-    input_line stdin in
+    match !goal with
+    | None -> Printf.printf "goal> %!"; input_line stdin
+    | Some g -> g in
   test_prog p g;
   Trace.quit ()
 

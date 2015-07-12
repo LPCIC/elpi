@@ -108,6 +108,7 @@ module LP : sig
   val compare : data -> data -> int
   
   val isDB : int -> data -> bool
+  val isBin : data -> bool
 
   val collect_Uv : data -> data list
   val collect_hv : data -> data list
@@ -213,6 +214,8 @@ module Subst : sig
   
   val prf_subst : Format.formatter -> subst -> unit
   val string_of_subst : subst -> string
+
+  val prune : int -> subst -> subst
 end
 
 module Red : sig

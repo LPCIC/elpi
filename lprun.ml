@@ -181,6 +181,36 @@ let rec simple_oc id lvl t s =
   | VApp(_,t1,t2,o) ->
      Opt.fold (simple_oc id lvl) (simple_oc id lvl t1 (simple_oc id lvl t2 s)) o
 
+let simple_oc id lvl t s =
+  let rec aux orig s = match look orig with
+  | Uv(i,lvl') ->
+      if i = id then fail "occur-check"
+      else
+        let t', s = R.whd orig s in
+        if lvl' >= lvl then
+          if t' == orig then orig, s else aux t' s
+        else t', s
+  | Con _ | DB _ | Nil | Ext _ -> orig, s
+  | Bin(n,t) ->
+      let t', s = aux t s in
+      if t == t' then orig, s else mkBin n t', s
+  | App l ->
+      let l', s = L.fold_map aux l s in
+      if l == l' then orig, s else mkApp l', s
+  | Seq(l,t) ->
+      let l', s = L.fold_map aux l s in
+      let t', s = aux t s in
+      if l == l' && t == t' then orig, s else mkSeq l' t', s
+  | VApp(k,t1,t2,o) ->
+      let t1', s = aux t1 s in
+      let t2', s = aux t2 s in
+      let o', s = Opt.fold_map aux s o in
+      if o' == o && t1' == t1 && t2' == t2 then orig, s
+      else mkVApp k t1' t2' o', s
+  in
+    aux t s
+;;
+
 let mksubst ?depth x id lvl t args s =
   let nargs = L.len args in
   match look t with
@@ -198,7 +228,7 @@ let mksubst ?depth x id lvl t args s =
      (* If a variable is at the deepest level, then the term can be copied
       * as it is *)
      if Some lvl = depth && L.len args = 0 then
-       let s = simple_oc id lvl t s in
+(*        let t,s = simple_oc id lvl t s in *)
        S.set_sub id t s
      else
        let t, s = bind x id 0 lvl args t s in
@@ -267,7 +297,9 @@ and unify_fo ?depth x y s =
   | _ -> fail "founif"
 and unify_ho ?depth x y s =
   match x, y with
-  | (((Uv (id,lvl) as x), y) | (y, (Uv (id,lvl) as x))) ->
+  | (y, (Uv (id,lvl) as x)) ->
+      mksubst ?depth (kool x) id lvl (kool y) L.empty s
+  | ((Uv (id,lvl) as x), y) ->
       mksubst ?depth (kool x) id lvl (kool y) L.empty s
   | (y, (App xs as x)) when isPU xs s -> begin
       let s = !last_isPU in

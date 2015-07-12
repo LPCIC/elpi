@@ -1,0 +1,563 @@
+% vim: syntax=prolog:
+% 
+% /* ============================== logic =================================== */
+% 
+% true.
+% not A :- A, !, false.
+% not A.
+% 
+% /* ============================== utils =================================== */
+% 
+% % enabling/disabling this will change the program hence the value of the
+% % counters of the tracing mechanism of elpi
+% debug :- false.
+% 
+% % print only when debug is true and annotate with the value of the "run" counter
+% dbgpp T :- debug, !, $trace_counter ["run",N], $printl ["run:",N,": "|T].
+% dbgpp _.
+% 
+% % print with a new line at the end
+% pp T :- $printl T.
+% 
+% assert P :- P, !.
+% assert P :- pp ["assert failure: ",P], $abort "1".
+% 
+if B T _ :- B, !, T.
+if _ _ E :- E.
+% 
+% or A _ :- A.
+% or _ B :- B.
+% 
+% choice A _ :- A.
+% choice A B :- not A, B.
+% 
+% rev L Lr :- L dummy@ = @dummy Lr.
+% 
+
+rev L RL :- rev-aux L [] RL.
+rev-aux [] L L.
+rev-aux [X|XS] ACC R :- rev-aux XS [X|ACC] R. 
+
+% spy P :- pp ["----<<---- enter: ",P], P, pp ["---->>---- exit: ",P].
+% spy P :- pp ["---->>---- fail: ",P], false.
+% 
+% hide P :- ((debug :- !, false) => P).
+% 
+% rigid T :- not(T = ?HD ARGS).
+% 
+% mem X [X|_] :- !.
+% mem X [_|XS] :- mem X XS.
+% 
+% list2 F [] [].
+% list2 F [X|XS] [Y|YS] :- F X Y, list2 F XS YS.
+% 
+% and-all [] _.
+% and-all [P|PS] F :- F P, and-all PS F.
+% 
+% /* ====================== type inference helpers ========================== */
+% 
+% :pp-whd < _: whd I _ :- dbgpp[whd I], fail.
+% 
+% whd (app [HD,A|Rest]) X :- !,
+%   whd HD HDRed,
+%   if (HDRed = lam _ F)
+%      (subst F A Rest Reduct, whd Reduct X)
+%      (X = app [HDRed,A|Rest]). % fixme: app[app ]...
+% whd (rec T N B R) X :- !,
+%   whd N RedN,
+%   if (RedN = app [atom succ,M]) (whd (app [R,M,rec T M B R]) X)
+%      (if (RedN = atom zero) (X = B) (X = rec T RedN B R)).
+% whd (match T N B R) X :- !,
+%   whd N RedN,
+%   if (RedN = app [atom succ,M]) (whd (app [R,M]) X)
+%      (if (RedN = atom zero) (X = B) (X = match T RedN B R)).
+% whd (app [fix Ty RTy B,N]) X :- !,
+%   whd N RedN,
+%   if (or (RedN = app [atom succ,M]) (RedN = atom zero))
+%     (whd (B (fix Ty Rty B) RedN) X)
+%     (X = app[fix Ty Rty B,RedN]).
+% whd (let-in _ V B) X :- !, whd (B V) X. % we may cache the whd of V...
+% whd X B :- def X _ V, !, whd V B.
+% :whd-NORED:
+ whd X X.
+% 
+% whd-progress X Y :- whd X Y, not(X = Y).
+ whd-w-delta X Y :-
+   (whd (atom ID) RedBody :- body ID Body, whd Body RedBody) => whd X Y.
+% delta-betas-step (atom ID) RedBody :- body ID Body, whd Body RedBody.
+% 
+% /* ========================== type inference ============================== */
+% 
+% % dbgpp prints the value of the "run" counter that can be used to trace elpi:
+% %    ./elpi -trace-on -trace-at run 1673 1700 -trace-only 'run' refiner.elpi
+% :of-pp < _: of M TY T :- dbgpp [of M TY T], false.
+% 
+% :of-LAM-BIDIR:
+% of (lam S F) TY (lam S2 F2) :-
+%   rigid TY,
+%   whd-w-delta TY (prod S2 T),
+%   !,
+%   of S set S3,
+%   unify S2 S3,
+%   (pi (decl S3) x\ (of x S3 x :- !) => var _ S3 x x => of (F x) (T x) (F2 x)).
+% 
+% % ideally each rule should take care of dealing with bi-directionality
+% % after this rule bidirectionaly become the trivially implemented
+% :of-TRIVIAL-BIDIR:
+% of T ExpTY NewT :- rigid ExpTY, !, of T InfTY RT, coerce RT InfTY ExpTY NewT.
+% 
+% :coerce-pp < _: coerce T TyA TyE W :- dbgpp [coerce T TyA TyE W], false.
+% 
+% coerce T (?M _) TyE T :- pp["ERROR: flexible inferred ty?\n"], $abort "1".
+% coerce T TyA TyE T :- unify TyA TyE, !.
+% coerce T TyA TyE T2 :- whd-progress TyA RedTyA, !, coerce T RedTyA TyE T2.
+% coerce T TyA TyE T2 :- whd-progress TyE RedTyE, !, coerce T TyA RedTyE T2.
+% coerce T TyA TyE T2 :- add-coercion T TyA TyE UnsafeT2, of UnsafeT2 TyE T2.
+% coerce T TyA TyE T2 :- delta-betas-step TyA RedTyA, !, coerce T RedTyA TyE T2.
+% coerce T TyA TyE T2 :- delta-betas-step TyE RedTyE, !, coerce T TyA RedTyE T2.
+% 
+% list-fst [X,_] X.
+% 
+% % Implements the functionality of the old $zero_level
+% cut-at-stop [] [].
+% cut-at-stop [[_,stop]| _] [] :- !.
+% cut-at-stop [X|XS] [X|YS] :- cut-at-stop XS YS.
+% 
+% new-meta T TY :-
+%   context CC,
+%   cut-at-stop CC C,
+%   $telescope[[vdash TY|C],Seq],
+%   list2 list-fst C RVars, rev RVars Vars,
+%   new-meta-aux T TY Vars Seq.
+% new-meta-aux T TY Vars Seq :-
+%   delay T (inhabit T TY) in Vars with Seq.
+% 
+% of hole TY T :- new-meta TY set, new-meta T TY.
+% 
+% :inhabit-pp < _: inhabit T TY :- dbgpp[inhabit T TY], false.
+% inhabit (?T L) TY :- get-canonical M, !, of (@M L) TY (@T L).
+% inhabit (?T L) TY :- get-local M, !, of M TY (@T L).
+% 
+% of (#F L Seq) TY T :- T = @F L, of-seq Seq L TY.
+% of-seq (vdash TY) [] TY.
+% of-seq (decl T Seq) [V|VS] TY :- rof V T, of-seq (Seq V) VS TY.
+% of-seq (def T BO Seq) [V|VS] TY :- rof V T, unify V BO, of-seq (Seq BO) VS TY.
+% 
+% of (lam S F) (prod S2 T) (lam S2 F2) :-
+%   of S set S2,
+%   pi (decl S2) x\ (of x S2 x :- !) => var _ S2 x x => of (F x) (T x) (F2 x).
+% 
+of (let-in T V B) (let-in T2 V2 BTY2) (let-in T2 V2 B2) :-
+  of T set T2, of V T2 V2,
+  pi x\ def x T2 V2 => of (B x) (BTY2 x) (B2 x).
+% 
+of V TY V :- def V TY _, !. 
+% 
+% of (prod S F) set (prod S2 F2) :-
+%   of S set S2, pi (decl S2) x\ (of x S2 x :- !) => of (F x) set (F2 x).
+% 
+% safe (#M L) F :- delay (@M L) (safe (@M L) F).
+% % safe (match ... B) F :- .... 
+% 
+% :of-APP:
+of (app [T|U]) TyV V :- of T TyT T1, eat-prod T1 [] [] TyT U V TyV.
+% 
+% mk-prod-aux [] [] set.
+% mk-prod-aux [X|XS] [X1|X1S] T :-
+%   of X XTY X1,
+%   mk-prod-aux XS X1S P,
+%   delift dummy (decl XTY x\vdash set) [X1] P DelP [],
+%   T = prod XTY DelP.
+% fix-prod set hole.
+% fix-prod (prod A F) (prod A F1) :-
+%   pi (decl A) x\ (of x A x :- !) => fix-prod (F x) (F1 x).
+% mk-prod XS NewXS P :-
+%   mk-prod-aux XS NewXS PwitSet,
+%   fix-prod PwitSet PwithHole,
+%   of PwithHole _ P.
+% 
+% :eat-prod-pp < _:
+% eat-prod T XS XSTY TY A _ _ :- dbgpp [eat-prod T XS XSTY TY A], false.
+% 
+eat-prod T [] _ TY []     T TY :- !. % kill unary app
+eat-prod T XS _ TY []     (app [T| Args]) TY :- rev XS Args.
+% eat-prod T XS XSTY TY [dots|US] V TyV :- !,
+%   whd-w-delta TY WhdTY,
+%   if (WhdTY = prod Src Tgt)
+%    % it is not greedy, it tries them all
+%    (or
+%      (eat-prod T XS XSTY TY US V TyV)
+%      (eat-prod T XS XSTY TY [hole,dots|US] V TyV))
+%    % at the moment it is like in Matita: no saturation if flexible arity
+%    (eat-prod T XS XSTY TY US V TyV).
+eat-prod T XS XSTY TY [U|US] V TyV :-
+   whd-w-delta TY WhdTY,
+  if (WhdTY = prod Src Tgt)
+     (of U Src U1,
+      eat-prod T [U1|XS] [Src|XSTY] (Tgt U1) US V TyV)
+     false.
+% (WhdTY = #M _,
+%      mk-prod [U|US] [U1|U1S] Prod, unify WhdTY Prod,
+%      % infefficient, U1S are already refined
+%      WhdTY = prod TyU Tgt, eat-prod T [U1|XS] [TyU|XSTY] (Tgt U1) U1S V TyV).
+% 
+% % CSC: non dependent recursion
+% of (rec Rty N Base Step) Rty2 (rec Rty2 N2 Base2 Step2) :-
+%   of Rty set Rty2,
+%   of N (atom nat) N2,
+%   of Base Rty2 Base2,
+%   of Step (prod (atom nat) n\ prod Rty2 acc \ Rty2) Step2.
+% 
+% of (match Rty N Base Step) (app [Rty2,N2]) (match Rty2 N2 Base2 (lam Ty2 F2)) :-
+%   ind-info [NAT,[Zero,Succ]],
+%   of N NAT N2,
+%   of Rty (prod NAT x\set) Rty2,
+%   of Base (app [Rty2,Zero]) Base2,
+%   Step = lam Ty F,
+%   of Ty set Ty2,
+%   unify Ty2 NAT,
+%   pi (decl Ty2) x\
+%    (of x Ty2 x :- !) =>
+%    var _ Ty2 x x =>
+%    (safe x G :- or (safe N2 G) (seed N2 G)) =>
+%      of (F x) (app [Rty2,app [Succ,x]]) (F2 x).
+% 
+% of (fix TY TYF B) (prod TY2 TYF2) (fix TY2 TYF2 B2) :-
+%  of (prod TY TYF) set (prod TY2 TYF2),
+%  pi (decl (prod TY2 TYF2)) f\ (of f (prod TY2 TYF2) f :- !) =>
+%        (pi X\ danger (app [f, X]) X f) =>
+%        var _ (prod TY2 TYF2) f f =>
+%  pi (decl TY2) x\ (of x TY2 x :- !) => seed x f => var _ TY2 x x =>
+%   of (B f x) (TYF2 x) (B2 f x).
+% 
+% of (let-rec D) INTY2 (let-rec D2) :- 
+%   pi f\ % NO CTX TODO
+%     D f = [CTX f,IN f],
+%     of-let-rec-ty MASK (CTX f) RECTY (CTX2 f),
+%     danger f RECTY MASK => of-let-rec-bo f (CTX2 f) (CTX3 f),
+%     of f RECTY f => of (IN f) (INTY f) (IN1 f),
+%     (D2 f) = [CTX3 f, IN1 f],
+%     choice (INTY f = INTY2) (INTY2 = let-rec (g\[CTX3 g, INTY g])).
+% 
+% :of-APP-LET-REC < of-APP:
+% of (app[T|ARGS]) TyV V :-
+%   danger T TyT MASK, !,
+%   eat-prod T1 [] [] TyT U V TyV,
+%   V = app[_|ARGS1],
+%   all-safe T ARGS1 MASK. 
+% 
+% all-safe _ _ [].
+% all-safe _ [] MASK :- and-all MASK (x\x=false).
+% all-safe F [_|XS] [true|MASK] :- all-safe F XS MASK.
+% all-safe F [X|XS] [false|MASK] :- safe X F, all-safe F XS MASK. 
+% 
+% of-let-rec-bo F [tybo T B] [tybo T B2] :- of B T B2.
+% of-let-rec-bo F [decl T, CTX] [decl T, CTX2] :-
+%   pi x\(of x T x :- !) => var _ T x x => of-let-rec-bo F (CTX x) (CTX2 x).
+% of-let-rec-bo F [recarg T, CTX] [recarg T, CTX2] :-
+%   pi x\(of x T x :- !) => var _ T x x => seed x F =>
+%     of-let-rec-bo F (CTX x) (CTX2 x).
+% of-let-rec-bo F [def T B, CTX] [def T B, CTX2] :-
+%   pi x\(def x T B :- !) => var _ T x B => of-let-rec-bo F (CTX x) (CTX2 x).
+% 
+% of-let-rec-ty [] [tybo T B] T2 [tybo T2 B] :- of T set T2.
+% of-let-rec-ty [true|F] [decl T, CTX] (prod T2 TyF) [decl T2, CTX2] :-
+%   of T set T2, pi x\(of x T2 x :- !) => var _ T2 x x =>
+%     of-let-rec-ty F (CTX x) (TyF x) (CTX2 x).
+% of-let-rec-ty [false|F] [recarg T, CTX] (prod T2 TyF) [recarg T2, CTX2] :-
+%   of T set T2, pi x\(of x T2 x :- !) => var _ T2 x x =>
+%     of-let-rec-ty F (CTX x) (TyF x) (CTX2 x).
+% of-let-rec-ty [true|F] [def T B, CTX] (let-in T2 B2 TyF) [def T2 B2, CTX2] :-
+%   of T set T2, of B T2 B2,
+%   pi x\(def x T2 B2 :- !) => var _ T2 x B2 =>
+%     of-let-rec-ty F (CTX x) (TyF x) (CTX2 x).
+% 
+% of set set set.
+of (atom ID) T (atom ID) :- env ID T, !.
+% of (atom ID) T (atom ID) :- $environment[ID,T].
+% 
+% 
+% rof T TY :- dbgpp ["retyping term ",T," : ",TY], of T TY _, !.
+% rof T TY :- dbgpp ["retyping failed for ",T," : ",TY,"\naborting"], $abort "1".
+% 
+% /* ===================== unification helpers ============================== */
+% 
+% subst Where What Rest Out :- % fixme: app[app]...
+%   if (Rest = []) (Out = Where What) (Out = app [Where What|Rest]).
+% 
+% % delift M Seq Args Term DeliftedTerm [].  delifts Term w.r.t. Args for M (that
+% % must not occur in Term) whose canonical context is Seq
+% :delift < _: delift M S A T D L :- dbgpp[delift M S A T D L], false.
+% delift OC (vdash _) [] M NewM BLr :- rev BLr BL, gr-o-cp OC BL M NewM.
+% delift OC (decl T TS) [#HD _|LS] M NewM BL :- !, % drop flexible entries
+%   pi a\ (of a T a :- !) =>
+%     delift OC (TS a) LS M (NewM a) [drop|BL].
+% delift OC (def T _ TS) [#HD _|LS] M NewM BL :- !, % ????????????????
+%   pi a\ (of a T a :- !) =>
+%     delift OC (TS a) LS M (NewM a) [drop|BL].
+% delift OC (decl T TS) [L|LS] M NewM BL :-
+%   pi a\ (of a T a :- !) =>
+%     delift OC (TS a) LS M (NewM a) [bind a L|BL].
+% delift OC (def T V TS) [L|LS] M NewM BL :- % ??????????????????
+%   pi a\ (def a T V :- !) =>
+%     delift OC (TS a) LS M (NewM a) [bind a L|BL].
+% 
+% % gr-o-cp M ThingsToBind Term DeliftedTerm. traverses Term and at each node
+% % looks if it can be grabbed or copies it.  It can be grabbed only if there
+% % exists an entry in ThingsToBind of the form (bind c T) where T unifies
+% % with Term.  If M is found, then fails (occur check)
+% gr-o-cp OC BL M NewM :- or (grab OC BL M NewM) (copy OC BL M NewM).
+% 
+% :grab-pp < _: grab OC L M _ :- dbgpp [grab OC L M], false.
+% 
+% :grab-OCCUR-CHECK:
+% grab M L (#M _) _ :- !, false.
+% 
+% :grab-flex: % eventual restriction
+% grab OC L (#M L1 Seq) NewT :- !,
+%   %sequent_of M L1 Seq [],
+%   % HACK: mask_seq is here used to fill in L1Dl with the delifted
+%   % It works because it just calls the F, here (gr-o-cp OC L), on the elements
+%   % of the two lists.  Here L1Dl is flexible, hence it generates a list to hold
+%   % the delifted of L1.
+%   mask_seq (gr-o-cp OC L) L1 L1Dl Seq MaskedSeq AllIn,
+%   if AllIn
+%     (NewT = @M L1Dl)
+%     (new_restricted_meta MaskedSeq NewM, assign M NewM, NewT = @M L1Dl).
+% 
+% :grab-here:
+% grab _ [bind Name A|Tl] T NewT :- unify A T, NewT = Name.
+% grab OC [_|Tl] T NewT :- grab OC Tl T NewT.
+% 
+% :copy-pp < _: copy OC L M _ :- dbgpp [copy OC L M], false.
+% 
+% copy OC _ (atom A) (atom A).
+% copy OC _ set set.
+% copy OC L (app MS) (app NS) :- list2 (gr-o-cp OC L) MS NS.
+% copy OC L (lam S1 F1) (lam S2 F2) :- gr-o-cp OC L S1 S2,
+%   pi c\ (of c S2 c :- !) => grab OC [] c c =>
+%     % TASSI: should the hyp be (of c S1) or (of c S2) ?
+%     gr-o-cp OC L (F1 c) (F2 c).
+% copy OC L (let-in T1 V1 B1) (let-in T2 V2 B2) :-
+%   gr-o-cp OC L T1 T2, gr-o-cp OC L V1 V2,
+%   pi c\ (def c T2 V2 :- !) => grab OC [] c c => gr-o-cp OC L (B1 c) (B2 c).
+% copy OC L (prod S1 F1) (prod S2 F2) :- gr-o-cp OC L S1 S2,
+%   pi c\ (of c S2 c :- !) => grab OC [] c c =>
+%     gr-o-cp OC L (F1 c) (F2 c).
+% copy OC L (rec A1 B1 C1 D1) (rec A2 B2 C2 D2) :-
+%   gr-o-cp OC L A1 A2, gr-o-cp OC L B1 B2,
+%   gr-o-cp OC L C1 C2, gr-o-cp OC L D1 D2.
+% copy OC L (match A1 B1 C1 D1) (match A2 B2 C2 D2) :-
+%   gr-o-cp OC L A1 A2, gr-o-cp OC L B1 B2,
+%   gr-o-cp OC L C1 C2, gr-o-cp OC L D1 D2.
+% copy OC L (fix Ty RTy B) (fix Ty2 RTy2 B2) :-
+%   gr-o-cp OC L Ty Ty2,
+%   (pi x\ (of x Ty2 x :- !) => gr-o-cp OC L (RTy x) (RTy2 x)),
+%   (pi f\ (of f (prod Ty2 RTy2) f :- !) => pi x\ (of x Ty2 x :- !) =>
+%     gr-o-cp OC L (B f x) (B2 f x)).
+% 
+% % [of x .... ] =>
+% % ([Gamma |- unif... ] <==>
+% %  [Gamma' |- of M TY] /\ ...)
+% 
+% % mask_seq F XS YS Seq MaskSeq AllIn. Returns in MaskSeq a copy of Seq
+% % where each item T is either prefixed by in as in "keep T", or subtituted with
+% % "drop".  Items filtered out are in correspondence of an X and Y (in XS and YS)
+% % that do not pass F.  TS has 1 more element than XS and YS (that have the same
+% % len). AllIn is true is Mask is made of "keep" only.
+% mask_seq F [] [] (vdash E) (vdash E) true.
+% mask_seq F [X|XS] [Y|YS] (decl T TS) E B :- choice % we could use or here
+%   (F X Y, E = keep (decl T) L, B = Br, pi x\ mask_seq F XS YS (TS x) (L x) Br)
+%         ( E = drop L,       B = false, pi x\ mask_seq F XS YS (TS x) (L x) _).
+% mask_seq F [X|XS] [Y|YS] (def T V TS) E B :- choice % we could use or here
+%   (F X Y, E = keep (def T V) L, B = Br, pi x\ mask_seq F XS YS (TS x) (L x) Br)
+%         ( E = drop L,       B = false,  pi x\ mask_seq F XS YS (TS x) (L x) _).
+% 
+% % given the filter generates a new lambda spine that prunes "drop" items
+% % and returns a new meta.
+% no-dropped-occurs T :- of T _ _, !.
+% new_restricted_meta FILTER M :-
+%   dbgpp ["building new meta restricted on ",FILTER],
+%   (pi stop dummy\ mklams FILTER M MTY), dbgpp ["obtain ", M].
+%   mklams (vdash _) M MTY :- new-meta MTY set, new-meta M MTY. % use vdash E ?
+%   mklams (drop L) M MTY :-
+%     (pi a\ pi b\ M a = M b, MTY a = MTY b), pi x\ mklams (L x) (M x) (MTY x).
+%   mklams (keep (decl TY) L) M MTY :-
+%     if (no-dropped-occurs TY)
+%       (pi (decl TY) x\ (of x TY x :- !) => mklams (L x) (M x) (MTY x))
+%       (mklams (drop L) M MTY).
+%   mklams (keep (def TY BO) L) M MTY :-
+%     if (no-dropped-occurs TY)
+%       (if (no-dropped-occurs BO)
+%          (pi (def TY BO) x\ (def x TY BO :- !) => mklams (L x) (M x) (MTY x))
+%          (pi (decl TY) x\ (of x TY x :- !) => mklams (L x) (M x) (MTY x)))
+%       (mklams (drop L) M MTY).
+% 
+% % Assigns a meta M and resumes all goals suspended on M
+% assign M NewM :- assert(M = #HD []), % resume adds the explicit subst
+%   dbgpp ["<<<< assigning value ",NewM," to meta ",M],
+%   resume M (get-canonical NewM),
+%   dbgpp ["assigned >>>> ", M].
+% assign-local M NewM :- assert(M = #HD []), % resume adds the explicit subst
+%   dbgpp ["<<<< assigning the delifted of value ",NewM," to meta ",M],
+%   resume M (get-local NewM),
+%   dbgpp ["assigned >>>> ", M].
+% 
+% /* =========================== unification ================================ */
+% 
+% unify A B :- unif ff A B.
+% 
+% :u-pp < _: unif A M N :- dbgpp [unif A M N], false.
+% 
+% :u-EQ: unif ff X X :- !.
+% 
+% 
+% % [of x T => .. => of X TY] ==>
+% %   ([unif (X L1)  (X L2)] <==>
+% %   [unif_all L1 L2 P] /\ (P = [] \/ [restrict P X]))
+% :u-SAME-META: % we restrict it on the items of L1 and L2 that do not unify
+% unif ff (#M L1 Seq) (#M L2 _) :- !,
+%   % sequent_of M L1 Seq [],
+%   mask_seq unify L1 L2 Seq MaskedSeq AllIn,
+%   if AllIn true (new_restricted_meta MaskedSeq NewM, assign M NewM).
+% 
+% % [of x T => .. => of X TY] ==>
+% % ([unif (X L) N] <==> "exists DelN, unif (DelN L) N", X = DelN)
+% :u-ASSIGN:
+% unif ff (#M L Seq) N :- !,
+%   % sequent_of M L Seq [],
+%   delift M Seq L N NewM [], assign M NewM.
+% unif ff N (#M L Seq) :- !,
+%   % sequent_of M L Seq [],
+%   delift M Seq L N NewM [], assign M NewM.
+% 
+% % fundamental metametatheorem of metatheory
+% % ([Gamma |- P] <= [Gamma |- Q]) ===
+% % ([Gamma |- P :- Q])
+% 
+% % [of x T => .. => of X TY] ==>
+% % ([Gamma |- unif ff T (app [X L1,A|Rest]) <==
+% %  [Gamma |- rof A ty /\ of (lam Ty x\ hole) _ G /\
+% %  unify (X L1) G])  and reschedule at the end
+% :u-LAM-INTRO: % on the fly lambda intro
+% unif ff T (app [#M L1,A|Rest]) :- !,
+%  rof A Ty, of (lam Ty x\ hole) _ G, unify (@M L1) G, unify T (app [G,A|Rest]).
+% unif ff (app [#M L1,A|Rest]) T :- !,
+%  rof A Ty, of (lam Ty x\ hole) _ G, unify (@M L1) G, unify (app [G,A|Rest]) T.
+% 
+% :u-APP-APP-SAME-HD: % contextual closure + heuristic (no !, hence we may reduce)
+% unif ff (app AS) (app BS) :- list2 unify AS BS.
+% unif ff (rec A1 B1 C1 D1) (rec A2 B2 C2 D2) :-
+%   unify A1 A2, unify B1 B2, unify C1 C2, unify D1 D2.
+% unif ff (match A1 B1 C1 D1) (match A2 B2 C2 D2) :-
+%   unify A1 A2, unify B1 B2, unify C1 C2, unify D1 D2.
+% unif ff (fix A1 B1 C1) (fix A2 B2 C2) :-
+%   unify A1 A2, (pi x\ (of x A1 x :- !) => unify (B1 x) (B2 x)),
+%   (pi f\ (of f (prod A1 B1) f :- !) => pi x\ (of x A1 x:- !) =>
+%     unify (C1 f x) (C2 f x)).
+% 
+% :u-SAME-RIGID: % contextual closure
+% unif ff (lam S F) (lam T G) :- !,
+%   unify S T, pi x\ (of x S x :- !) => unify (F x) (G x).
+% unif ff (let-in S V F) (let-in T W G) :- !,
+%   unify S T, unify V W, pi x\ (def x S V :- !) => unify (F x) (G x).
+% unif ff (prod S F) (prod T G) :- !,
+%   unify S T, pi x\ (of x S x :- !) => unify (F x) (G x).
+% 
+% :u-WHD:
+% unif _ X Y :- whd-progress X Z, !, unify Z Y.
+% 
+% :u-SWAP: % we swap lhs and rhs, but only once
+% unif ff A B :- unif tt B A.
+% 
+% /* ====================== disambiguation ============================== */
+% 
+% mkhole _ hole.
+% 
+% of (sym X) TY T1 :- resolve X T, of T TY T1.
+% 
+% of_unify T U :- of T _ T1, unify T1 U.
+% 
+% %:of-APP-SYM < of-APP-BIDIR:
+% :of-APP-SYM < of-TRIVIAL-BIDIR:
+% of (app [sym X|AS]) TY T :- !,
+%  list2 mkhole AS dotsAS,
+%  resolve X T, of (app [T|dotsAS]) TY T1,
+%  if (T1 = app [T|AS1])
+%   (list2 of_unify AS AS1)
+%   (of (app [T|AS]) TY T).
+% 
+% /* ====================== prover environment ============================== */
+% 
+env zero (atom nat).
+env succ (prod (atom nat) (x \ (atom nat))).
+% env plus (prod (atom nat) (x\ prod (atom nat) (y\ (atom nat)))).
+env nat set.
+% env z set.
+% env nat_to_z (prod (atom nat) (x\ atom z)).
+% env vect (prod (atom nat) (x\ set)).
+% env vnil (app [atom vect,atom zero]).
+% env vcons (prod (atom nat) (n\ prod (app [atom vect,n]) (w\ app [atom vect,app [atom succ,n]]))).
+% env list (prod set x\ set).
+% env lnil (prod set x\ app [atom list, x]).
+% env lcons (prod set x\ prod x y\prod (app [atom list, x]) z\app [atom list, x]).
+% env map TY :-
+%   (pi x\ LIST x = app [ atom list, x]),
+%   TY = (prod set a\ prod set b\ prod (prod a x\ b) f\ prod (LIST a) l\ LIST b).
+% 
+% body plus (lam (atom nat)
+%              (n\ (rec (prod (atom nat) (x\ (atom nat))) n
+%                    (lam (atom nat) (x\ x))
+%                    (lam (atom nat) m\ lam (prod (atom nat) (x\ (atom nat))) acc\
+%                       lam (atom nat) (n\ app [atom succ, app [acc,n]]))))).
+% body Ext Bo :- $environment-body [Ext,Bo].
+% 
+% add-coercion T (atom nat) (atom z) NewT :- NewT = app [atom nat_to_z, T].
+% add-coercion T (app [atom list, X]) (app [atom list, Y]) NewT :-
+%  (pi f\ of f X f => coerce f X Y (K f)),
+%  NewT = appl [atom map, X, Y, (lam X x\ K x), T].
+% 
+% resolve magicnat (atom zero).
+% resolve magicnat (atom succ).
+% resolve magicnat (atom plus).
+% 
+% ind-info [atom nat,[atom zero,atom succ]].
+% ind-info X :- $ind-info X.
+% /* ============================== UI ==================================== */
+% 
+% /* ========= Tactics ======== */
+% tacsem i M :- assign-local M (lam hole (x\ hole)).  /* # */
+% tacsem l M :- assign-local M (let-in hole hole (x\ hole)).  /* # */
+% tacsem (n S) M :- var S _ _ _.                        /* assign name */
+% tacsem (a T) M :- assign-local M (app [T, dots]).   /* @ */
+% tacsem h M :- var _ _ Id _, assign-local M Id.        /* assumption */
+% 
+% of (hyp Name) T X :- var Name T X _, !.
+% :whd-VAR < whd-NORED: whd (hyp Name) Id :- var Name _ Id _, !.
+% 
+% read_tac (low T) :- $print "\ntactic> ", $read S, $parse [S,T], pp[T], !.
+% read_tac T :- $print "\nparse error\n", read_tac T.
+% 
+% update_open_goals O O2 :- $delayed L, L = O2.
+% pick [G|GS] [G].
+% 
+% print_goals [G|_] :- $pr_delayed [G,[var,danger,seed,safe]].
+% loop Open :- pick Open Goals, !,
+%   pp["Open goals: ",Open], $print "Goal:\n", print_goals Goals,
+%   read_tac Tac, exec_tac_high Tac Goals Open.
+% loop _ :- pp["\nProof completed.\n"].
+% 
+% exec_tac_high (low u) Goals Open :- !, false.       /* Undo */
+% exec_tac_high (low Tac) Goals Open :-
+%   and-all Goals (g\ $schedule [g,(sigma M\ M, tacsem Tac M)]),
+%   update_open_goals Open NewOpen, loop NewOpen.
+% exec_tac_high T G O :- pp ["Tactic failed!"], loop O.
+% 
+% claim Claim :-
+%   of Claim set Claim1, !,
+%   of hole Claim1 P,
+%   $delayed L, loop L, pp["Proof term: ",P].
+% 
+
+test X Y :- of 
+(app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ, app [atom succ,atom zero ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ] ]) X Y. 
