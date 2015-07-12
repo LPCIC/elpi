@@ -1,0 +1,2 @@
+#!/bin/sh
+echo ${TOP}/../elpi/plain/elpi -goal 'main.' $1

@@ -1,0 +1,65 @@
+% object-level head normalization
+%hnorm A B :- $print (hXXXX A), fail.
+hnorm (freevar V) (freevar V).
+hnorm X Y :- bvar X, X = Y.
+hnorm (abs A) (abs B) :- pi v\ (bvar v => hnorm (A v) (B v)).
+hnorm (app A B) C :- hnormw A D,  
+    ((D = (abs D2), hnorm (D2 B) C); 
+     (app D B) = C), !.
+
+%hnormw A B :- $print (wXXXX A), fail.
+hnormw (freevar V) (freevar V).
+hnormw X Y :- bvar X, X = Y.
+hnormw (abs A) (abs A).
+hnormw (app A B) C :- hnormw A D, 
+    ((D = (abs D2), hnormw (D2 B) C); 
+     (app D B) = C), !.
+
+htest :- combo Str T, hnorm T R, %$print hnorm Str R,
+         fail.
+htest.
+
+
+%  ---- full normalization outside in:
+
+
+fnorm (freevar V) (freevar V).
+fnorm X Y :- bvar X, X = Y.
+fnorm (abs A) (abs B) :- pi v\ (bvar v => fnorm (A v) (B v)).
+fnorm (app A B) C :- fnormw A D,  
+    ((D = (abs D2), fnorm (D2 B) C); 
+     (fnorm B B2, C = (app D B2))), !.
+
+
+fnormw (freevar V) (freevar V).
+fnormw X Y :- bvar X, X = Y.
+fnormw (abs A) (abs A).
+fnormw (app A B) C :- fnormw A D, 
+    ((D = (abs D2), fnormw (D2 B) C); 
+     (fnorm B B2, C = (app D B2))), !.
+
+ftest :- combo Str T, %$print xxx Str,
+         fnorm T R, %$print fnorm Str R,
+         fail.
+ftest.
+
+once :- htest, ftest.
+
+iter zero X.
+iter (s N) X :- X, iter N X.
+
+plus zero X X.
+plus (s X) Y (s S) :- plus X Y S.
+
+mult zero X zero.
+mult (s X) Y Z :- mult X Y K, plus Y K Z.
+
+exp zero X (s zero).
+exp (s X) Y Z :- exp X Y K, mult Y K Z.
+
+main :-
+ TEN = s (s (s (s (s (s (s (s (s (s zero))))))))),
+ mult (s (s (s (s zero)))) TEN FIFTY,
+ iter FIFTY once.
+
+%combo "((((S S) (I (I S))) (K ((S (I S)) S))) ((K S) (K I)))" (app (app (app (app (abs (x\ abs (y\ abs (z\ app (app x z) (app y z))))) (abs (x\ abs (y\ abs (z\ app (app x z) (app y z)))))) (app (abs (x\ x)) (app (abs (x\ x)) (abs (x\ abs (y\ abs (z\ app (app x z) (app y z)))))))) (app (abs (x\ abs (y\ x))) (app (app (abs (x\ abs (y\ abs (z\ app (app x z) (app y z))))) (app (abs (x\ x)) (abs (x\ abs (y\ abs (z\ app (app x z) (app y z))))))) (abs (x\ abs (y\ abs (z\ app (app x z) (app y z)))))))) (app (app (abs (x\ abs (y\ x))) (abs (x\ abs (y\ abs (z\ app (app x z) (app y z)))))) (app (abs (x\ abs (y\ x))) (abs (x\ x))))).

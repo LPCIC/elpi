@@ -1,0 +1,6 @@
+app F X :- F X. 
+c.
+ignore _.
+foo P :- pi d\ ignore P.
+main :- app (x\x) c, F = (y\y), F c, (pi d\ F c),
+        foo (G c).

@@ -1,0 +1,3 @@
+% main should fail.
+
+main :- (x\ x) = (x\ X).

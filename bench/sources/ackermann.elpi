@@ -1,0 +1,19 @@
+% ack (s zero) (s zero) V.              yields V = s(s(s(zero)))   = 3
+% ack (s (s zero)) (s (s zero)) V.      yields V = s(s...(s zero)) = 7
+% ack (s (s (s zero))) (s zero) V.      yields V = s(s...(s zero)) = 13
+% ack (s (s (s zero))) (s (s zero)) V.  yields V = ....            = 29
+% ack (s (s (s (s zero)))) (s zero) V.  yields  nothing
+
+% ack   +int    +int  -int
+% ack(0, N, V) :- !, V is N + 1.
+% ack(M, 0, V) :- !, M2 is M - 1, ack(M2, 1, V).
+% ack(M, N, V) :- M2 is M - 1, N2 is N - 1, ack(M, N2, V2), ack(M2, V2, V).
+
+
+ack zero N V :- !, V = (s N).
+
+ack M zero V :- !, (s M2) = M, ack M2 (s zero) V.
+
+ack M N V :- (s M2) = M, (s N2) = N, ack M N2 V2, ack M2 V2 V.
+
+main :- ack (s (s (s zero))) (s zero) V.

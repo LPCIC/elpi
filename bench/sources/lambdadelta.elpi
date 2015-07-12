@@ -1,0 +1,123 @@
+accumulate helena.
+
+% TESTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+test_sta :- k+succ k+1 k+2 => conv+ (sort k+1) satom m+1 m+0 satom (sort k+2).
+
+test_conv :- conv+ (appr w1 (abst l+y w2 x\ (abst l+y x y\ y))) satom m+0 m+0 satom (abst l+y w1 x\ x).
+
+test_tv_11 :- k+succ k+1 k+2 => k+succ k+2 k+3 => tv+ (appr (sort k+1) (abst l+y (sort k+2) x\ x)).
+
+test_tv_12 :- tv+ w => tv+ (abst l+y w x\ cast w x).
+
+test_tv_13 :- tv+ w => tv+ (cast (abst l+y w x\ w) (abst l+y w x\ x)).
+
+% does fail with resticted applicability
+test_tv_2 :- k+succ k+0 k+1 =>
+             tv+ (abst l+y (abst l+y (sort k+1) x\ (sort k+1)) x\ (abst l+y x y\ appx (sort k+0) y)).
+
+% first eight lines of the grundlagen: requires version 3
+
+g+line l_imp c+1
+       (abst l+y (sort k+prop) a\
+       (abst l+y (sort k+prop) b\
+          (cast (sort k+prop) (abst l+1 a x\ b))
+       )).
+
+g+line l_mp c+2
+       (abst l+y (sort k+prop) a\
+       (abst l+y (sort k+prop) b\
+       (abst l+y a a1\
+       (abst l+y (appx b (appx a l_imp)) i\
+          (cast b (appx a1 i))
+       )))).
+
+g+line l_refimp c+3
+       (abst l+2 (sort k+prop) a\
+          (cast (appx a (appx a l_imp)) (abst l+2 a x\ x))
+       ).
+
+g+line l_trimp c+4
+       (abst l+2 (sort k+prop) a\
+       (abst l+2 (sort k+prop) b\
+       (abst l+2 (sort k+prop) c\
+       (abst l+2 (appx b (appx a l_imp)) i\
+       (abst l+2 (appx c (appx b l_imp)) j\
+          (cast (appx c (appx a l_imp)) (abst l+2 a x\ (appx (appx x i) j)))
+       ))))).
+
+g+line l_con c+5 (sort k+prop).
+
+g+line l_not c+6
+       (abst l+2 (sort k+prop) a\
+          (cast (sort k+prop) (appx l_con (appx a l_imp)))
+       ).
+
+g+line l_wel c+7
+       (abst l+2 (sort k+prop) a\
+          (cast (sort k+prop) (appx (appx a l_not) l_not))
+       ).
+
+g+line l_weli c+8
+       (abst l+2 (sort k+prop) a\
+       (abst l+2 a a1\
+          (cast (appx a l_wel) (abst l+2 (appx a l_not) x\ (appx a1 x)))
+       )).
+
+g+line l_et c+9
+       (abst l+1 (sort k+prop) a\
+       (abst l+1 (appr a l_wel) w\
+          a
+       )).
+
+test_gv_32 :- gv+ (
+   (gdef+2 l_imp
+   (gdef+2 l_mp
+   (gdef+2 l_refimp
+   (gdef+2 l_trimp
+   (gdec+2 l_con
+   (gdef+2 l_not
+   (gdef+2 l_wel
+   (gdef+2 l_weli
+   (gdec+2 l_et
+   gtop)))))))))
+).
+
+test_gv_31 :- gv+ (
+   (gdef+1 c+1 (abst l+y (sort k+1) a\
+               (abst l+y (sort k+1) b\
+                 (cast (sort k+1) (abst l+1 a x\ b))
+               )) l_imp\
+   (gdef+1 c+2 (abst l+y (sort k+1) a\
+               (abst l+y (sort k+1) b\
+               (abst l+y a a1\
+               (abst l+y (appx b (appx a l_imp)) i\
+                  (cast b (appx a1 i))
+               )))) l_mp\
+   (gdef+1 c+3 (abst l+2 (sort k+1) a\
+                  (cast (appx a (appx a l_imp)) (abst l+2 a x\ x))
+               ) l_refimp\
+   (gdef+1 c+4 (abst l+2 (sort k+1) a\
+               (abst l+2 (sort k+1) b\
+               (abst l+2 (sort k+1) c\
+               (abst l+2 (appx b (appx a l_imp)) i\
+               (abst l+2 (appx c (appx b l_imp)) j\
+                  (cast (appx c (appx a l_imp)) (abst l+2 a x\ (appx (appx x i) j)))
+               ))))) l_trimp\
+   (gdec+1 c+5 (sort k+1) l_con\
+   (gdef+1 c+6 (abst l+2 (sort k+1) a\
+                  (cast (sort k+1) (appx l_con (appx a l_imp)))
+               ) l_not\
+   (gdef+1 c+7 (abst l+2 (sort k+1) a\
+                  (cast (sort k+1) (appx (appx a l_not) l_not))
+               ) l_wel\
+   (gdef+1 c+8 (abst l+2 (sort k+1) a\
+               (abst l+2 a a1\
+                  (cast (appx a l_wel) (abst l+2 (appx a l_not) x\ (appx a1 x)))
+               )) l_weli\
+   gtop))))))))
+).
+
+main :- test_sta, test_conv, test_tv_11, test_tv_12, test_tv_13, test_tv_2, test_gv_31, test_gv_32.
+
+% before.

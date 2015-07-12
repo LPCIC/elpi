@@ -1,0 +1,20 @@
+module test.
+
+infixl x+,y+ 20.
+infixr x++ 20.
+prefixr z+ 20.
+postfixl w+ 20.
+infixl x* 30.
+
+X x+ D.
+
+foo xx uu.
+
+z+ x w+.
+
+x x* y x+ z x* w.
+
+a x+ b x+ c x+ d x+ e.
+a x++ b x++ c x++ d x++ e.
+
+main :- $print (a a x+ [b] y+ d), cd x+ d.

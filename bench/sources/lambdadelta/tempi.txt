@@ -1,0 +1,21 @@
+compilazione (file singolo):
+ 250 righe: 0m07.237s
+ 500 righe: 1m12.379s
+ 750 righe: 3m21.432s
+1000 righe: 6m36.512s
+
+esecuzione (con 128M di heap):
+1000 righe: 0m47.743s
+
+compilazione (28 file di 250 righe)
+tutte le righe: 5m48.916s
+
+esecuzione (con 256M di heap):
+l_e_st_eq_landau_n_rt_rp_satz149:
+Simulator: Heap overflow.
+user    4m38.594s
+
+esecuzione (con 265M di heap):
+l_e_st_eq_landau_n_rt_rp_4152_t64
+Simulator: Heap overflow.
+user    5m4.282s

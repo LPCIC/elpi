@@ -1,0 +1,9 @@
+#!/bin/sh
+#set -x
+set -e
+NAME=`basename $1`
+BASE=${TOP}/../teyjus/source
+
+${BASE}/tjcc $1/$NAME -o $1/$NAME.lpo
+(cd $1; ${BASE}/tjlink $NAME)
+echo ${BASE}/tjsim -m 1 -b -s 'main.' -p $1/ $NAME

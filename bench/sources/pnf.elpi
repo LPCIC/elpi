@@ -1,0 +1,83 @@
+
+/*
+ * Predicates for transforming formulas into prenex normal form 
+ * assuming classical logic equivalences. This is an example of 
+ * analyzing formula structure, including recursion over bindings
+ * and generating modified structure based on this analysis
+ */
+
+%module  pnf.
+
+%type  merge  (form -> form -> o).
+
+quant_free perp.
+quant_free tru.
+quant_free A :- atom A.
+quant_free (and B C) :- quant_free B, quant_free C.
+quant_free (or B C) :- quant_free B, quant_free C.
+quant_free (imp B C) :- quant_free B, quant_free C.
+
+atom (path X Y) :- termp X, termp Y.
+atom (adj X Y) :- termp X, termp Y.
+
+termp a.
+termp b.
+termp c.
+termp (f X) :- termp X.
+
+(prenex B B) :- (quant_free B), !. 
+(prenex (and B C) D) :- (prenex B U), (prenex C V), (merge (and U V) D).
+(prenex (or B C) D) :- (prenex B U), (prenex C V), (merge (or U V) D).
+(prenex (imp B C) D) :- (prenex B U), (prenex C V), (merge (imp U V) D).
+(prenex (all B) (all D)) :- (pi x\ ((termp x) => (prenex (B x) (D x)))).
+(prenex (some B) (some D)) :- (pi x\ ((termp x) => (prenex (B x) (D x)))).
+
+
+/* This predicate is for moving out quantifiers appearing at the head of the 
+immediate subformulas of a formula with a propositional connective as its 
+top-level symbol */
+(merge (and (all B) (all C)) (all D)) :-
+       (pi x\ ((termp x) => (merge (and (B x) (C x)) (D x)))).
+(merge (and (all B) C) (all D)) :- 
+       (pi x\ ((termp x) => (merge (and (B x) C) (D x)))).
+(merge (and B (all C)) (all D)) :- 
+       (pi x\ ((termp x) => (merge (and B (C x)) (D x)))).
+
+(merge (and (some B) C) (some D)) :- 
+       (pi x\ ((termp x) => (merge (and (B x) C) (D x)))).
+(merge (and B (some C)) (some D)) :-
+       (pi x\ ((termp x) => (merge (and B (C x)) (D x)))).
+
+(merge (or (all B) C) (all D)) :-
+       (pi x\ ((termp x) => (merge (or (B x) C) (D x)))).
+(merge (or B (all C)) (all D)) :-
+       (pi x\ ((termp x) => (merge (or B (C x)) (D x)))).
+(merge (or (some B) (some C)) (some D)) :-
+       (pi x\ ((termp x) => (merge (or (B x) (C x)) (D x)))).
+(merge (or (some B) C) (some D)) :-
+       (pi x\ ((termp x) => (merge (or (B x) C) (D x)))).
+(merge (or B (some C)) (some D)) :-
+       (pi x\ ((termp x) => (merge (or B (C x)) (D x)))).
+
+(merge (imp (all B) (some C)) (some D)) :- 
+       (pi x\ ((termp x) => (merge (imp (B x) (C x)) (D x)))).
+(merge (imp (all B) C) (some D)) :- 
+       (pi x\ ((termp x) => (merge (imp (B x) C) (D x)))).
+(merge (imp (some B) C) (all D)) :-
+       (pi x\ ((termp x) => (merge (imp (B x) C) (D x)))).
+(merge (imp B (all C)) (all D)) :-
+       (pi x\ ((termp x) => (merge (imp B (C x)) (D x)))).
+(merge (imp B (some C)) (some D)) :-
+       (pi x\ ((termp x) => (merge (imp B (C x)) (D x)))).
+
+(merge B B) :- (quant_free B).
+
+formula one  (imp (all (x \ (path a x))) tru).
+formula two  (imp (some (x \ (path a x))) tru).
+formula three  (and (all (x \ (path a x))) (all (y \ (path y a)))).
+formula four  (imp (some (x \ (path a x))) ((all (y \ (path a y))))).
+
+(test N F) :- (formula N OF), (prenex OF F).
+
+main :- (test one F1), (test two F2), (test three F3), (test four F4),!.
+

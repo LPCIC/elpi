@@ -1,0 +1,3 @@
+% q Y yields Y=(z\z), i.e. Y=(\0)
+
+q Y :- pi c\ exists X\ pi d\ X=c (z\z), X => c Y.

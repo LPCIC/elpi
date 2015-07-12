@@ -1,0 +1,5 @@
+% q(x\x (y\y)): OK
+
+q(X) :- pi c\ c (y\y) => (X=Y, Y c).
+
+main :- q (x\x (y\y)).

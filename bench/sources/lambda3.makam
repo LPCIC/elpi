@@ -1,0 +1,84 @@
+term : type.
+typ : type.
+
+lam : (term -> term) -> term .
+appl : term -> term -> term .
+impl : typ -> typ -> typ .
+
+unit: typ.
+one : term.
+
+of : term -> typ -> prop .
+of one unit.
+of (appl T1 T2) B <- of T1 (impl A B), of T2 A.
+of (lam F) (impl A B) <- (x:term -> of x A -> of (F x) B).
+
+list: type.
+xnil: list.
+xcons: term -> list -> list.
+append: list -> list -> list -> prop.
+append (xcons X XS) L (xcons X L1)  <- append XS L L1 .
+append xnil L L .
+
+termify: list -> term -> prop.
+termify xnil one.
+termify (xcons X XS) (lam F) <- (c : term -> termify XS (F c)).
+
+x0 : term.
+x1 : term.
+x2 : term.
+x3 : term.
+x4 : term.
+x5 : term.
+x6 : term.
+x7 : term.
+x8 : term.
+x9 : term.
+x10 : term.
+
+eq : list -> list -> prop.
+eq X X.
+
+test: term -> typ -> prop .
+test L Z <- (eq X1 (xcons x0 (xcons x1 (xcons x2 (xcons x3 (xcons x4 (xcons x5 (xcons x6 (xcons x7 (xcons x8 (xcons x9 (xcons x10 xnil))))))))))), 
+  append X1 X1 X2 ,
+  append X2 X2 X3 ,
+  append X3 X3 X4 ,
+  append X4 X4 X5 ,
+  append X5 X5 X6 ,
+   eq X X6 ,
+   termify X L , 
+   of L Z) . 
+
+once: prop.
+once <- test L Z.
+
+nat: type.
+s: nat -> nat.
+zero: nat.
+iter: nat -> prop -> prop.
+iter zero X.
+iter (s N) X <- X, iter N X.
+
+plus: nat -> nat -> nat -> prop.
+plus zero X X.
+plus (s X) Y (s S) <- plus X Y S.
+
+mult: nat -> nat -> nat -> prop.
+mult zero X zero.
+mult (s X) Y Z <- mult X Y K, plus Y K Z.
+
+exp: nat -> nat -> nat -> prop.
+exp zero X (s zero).
+exp (s X) Y Z <- exp X Y K, mult Y K Z.
+
+eqn : nat -> nat -> prop.
+eqn X X.
+
+main: prop.
+main <-
+ eqn TEN (s (s (s (s (s (s (s (s (s (s zero)))))))))),
+ exp (s (s (s zero))) TEN THOUSAND,
+ iter THOUSAND once.
+
+main ?
