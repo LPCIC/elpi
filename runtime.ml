@@ -4,13 +4,15 @@
 
 let debug = false
 
-let pplist ?(boxed=false) ppelem sep f l =
+let pplist ?(max=max_int) ?(boxed=false) ppelem sep f l =
  if l <> [] then begin
   if boxed then Format.fprintf f "@[<hov 1>";
   let args,last = match List.rev l with
     [] -> assert false;
   | head::tail -> List.rev tail,head in
-  List.iter (fun x -> Format.fprintf f "%a%s@ " ppelem x sep) args;
+  List.iteri (fun i x -> if i = max + 1 then Format.fprintf f "..."
+                         else if i > max then ()
+                         else Format.fprintf f "%a%s@ " ppelem x sep) args;
   Format.fprintf f "%a" ppelem last;
   if boxed then Format.fprintf f "@]"
  end
@@ -232,6 +234,11 @@ type key = key1 * key2
 
 type clause =
  { depth : int; args : term list; hyps : term list; vars : int; key : key }
+
+let ppclause f { args = args; hyps = hyps; key = (hd,_) } =
+  Format.fprintf f "@[<hov 1>%s %a :- %a.@]" (string_of_constant hd)
+     (pplist (uppterm 0 [] 0 [||]) "") args
+     (pplist (uppterm 0 [] 0 [||]) ",") hyps
 
 exception NotInTheFragment
 (* in_fragment n [n;...;n+m-1] = m *)
@@ -972,10 +979,11 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
        else TCALL next_alt alts
 
   and backchain depth p g gs cp next alts lvl =
-    SPY "backchain-on" (uppterm 0 [] 0 [||]) g;
 (*List.iter (fun (_,g) -> Format.eprintf "GS %a\n%!" (uppterm 0 [] 0 [||]) g) gs;*)
     let last_call = alts == emptyalts in
-    let rec select = function
+    let rec select l =
+    TRACE "select" (fun fmt -> pplist ~max:1 ~boxed:true ppclause "|" fmt l)
+    match l with
     | [] -> next_alt alts
     | c :: cs ->
         let old_trail = !trail in
@@ -994,7 +1002,7 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
          for_all2 (fun x y -> unif trail last_call depth x env c.depth y)
           (args_of g) c.args
         with
-        | false -> undo_trail old_trail trail; select cs
+        | false -> undo_trail old_trail trail; TCALL select cs
         | true ->
             let oldalts = alts in
             let alts =
@@ -1006,9 +1014,9 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
             (match c.hyps with
                [] ->
                 (match gs with
-                    [] -> pop_andl alts next
+                    [] -> TCALL pop_andl alts next
                   | (depth,p,g)::gs ->
-                    run depth p g gs next alts lvl)
+                    TCALL run depth p g gs next alts lvl)
              | g'::gs' ->
                 let next =
                  if gs = [] then next
@@ -1024,7 +1032,7 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
                      to_heap depth last_call trail ~from:c.depth ~to_:depth
                       env x) gs'
                 in
-                 run depth p g' gs' next alts oldalts)
+                 TCALL run depth p g' gs' next alts oldalts)
     in
       select cp
 
