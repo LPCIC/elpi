@@ -853,7 +853,7 @@ let rec clausify vars depth hyps ts =
      clausify (vars+1) depth hyps (ts@[Arg(vars,0)]) b
   | Const _ as g ->
      let g = subst depth ts g in
-     [ { depth ; args = []; hyps = List.flatten (List.rev hyps) ; vars ;
+     [ { depth = depth; args = []; hyps = List.flatten (List.rev hyps) ; vars = vars ;
          key = key_of depth g } ]
   | App _ as g ->
      (* TODO: test this optimization on Prolog code: if ts==[] then
@@ -861,7 +861,7 @@ let rec clausify vars depth hyps ts =
      let g = subst depth ts g in
      (match g with
          App(_,x,xs) ->
-          [ { depth ; args=x::xs; hyps = List.flatten (List.rev hyps); vars ;
+          [ { depth = depth ; args=x::xs; hyps = List.flatten (List.rev hyps); vars = vars;
               key = key_of depth g}]
        | _ -> assert false)
   | UVar ({ contents=g },origdepth,args) when g != dummy ->
@@ -912,10 +912,12 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
      Depth >= 0 is the number of variables in the context.
   *)
   let rec run depth p g gs (next : frame) alts lvl =
-    if debug then Format.eprintf "goal^%d: %a\n%!" depth (ppterm depth [] 0 [||]) g;
+    TRACE "run" (fun fmt -> ppterm depth [] 0 [||] fmt g)
+(*     if debug then Format.eprintf "goal^%d: %a\n%!" depth (ppterm depth [] 0 [||]) g; *)
     (*Format.eprintf "<";
     List.iter (Format.eprintf "goal: %a\n%!" ppterm) stack.goals;
     Format.eprintf ">";*)
+    let run d p g gs n a l = TCALL run d p g gs n a l in
     match g with
     | c when c == cutc ->
          (* We filter out from the or list until we find the
@@ -928,7 +930,7 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
            prune alts in
          if alts==emptyalts then trail := [] ;
          (match gs with
-             [] -> pop_andl alts next
+             [] -> TCALL pop_andl alts next
            | (depth,p,g)::gs -> run depth p g gs next alts lvl)
     | App(c, g, gs') when c == andc ->
        run depth p g (List.map(fun x -> depth,p,x) gs'@gs) next alts lvl
@@ -958,7 +960,7 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
     | Lam _ | String _ | Int _ -> raise (Failure "Not a predicate")
     | Const _ | App _ -> (* Atom case *)
         let cp = get_clauses depth g p in
-        backchain depth p g gs cp next alts lvl
+        TCALL backchain depth p g gs cp next alts lvl
     | Arg _ | AppArg (_,_) -> assert false (* Not a heap term *)
     | Custom(c,gs') ->
        let f = try lookup_custom c with Not_found -> assert false in
@@ -967,10 +969,10 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
         (match gs with
            [] -> pop_andl alts next
          | (depth,p,g)::gs -> run depth p g gs next alts lvl)
-       else next_alt alts
+       else TCALL next_alt alts
 
   and backchain depth p g gs cp next alts lvl =
-    (*Format.eprintf "BACKCHAIN %a \n%!" (uppterm 0 [] 0 [||]) g ;*)
+    SPY "backchain-on" (uppterm 0 [] 0 [||]) g;
 (*List.iter (fun (_,g) -> Format.eprintf "GS %a\n%!" (uppterm 0 [] 0 [||]) g) gs;*)
     let last_call = alts == emptyalts in
     let rec select = function
@@ -998,8 +1000,8 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
             let alts =
              if cs = [] then alts
              else
-              { program=p; depth; goal=g; goals=gs; stack=next;
-                trail=old_trail; clauses=cs; lvl ;
+              { program=p; depth = depth; goal=g; goals=gs; stack=next;
+                trail=old_trail; clauses=cs; lvl = lvl ;
                 next=alts} in
             (match c.hyps with
                [] ->
@@ -1035,8 +1037,8 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
   and next_alt alts =
    if alts == emptyalts then raise (Failure "no clause")
    else begin
-    let { program = p; depth; goal = g; goals = gs; stack=next;
-          trail = old_trail; clauses; lvl ; next=alts} = alts in
+    let { program = p; depth = depth; goal = g; goals = gs; stack=next;
+          trail = old_trail; clauses = clauses; lvl = lvl ; next=alts} = alts in
     undo_trail old_trail trail;
     backchain depth p g gs clauses next alts lvl
    end
@@ -1132,7 +1134,7 @@ let program_of_ast p =
      | _ -> assert false
    in
    { depth = 0
-   ; args
+   ; args = args
    ; hyps = chop f
    ; vars = max
    ; key = key_of 0 a

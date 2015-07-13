@@ -48,7 +48,7 @@ let set_terminal_width ?(max_w=
 ;;
 
 let _ =
-  let argv = Sys.argv in
+  let argv = Trace.parse_argv Sys.argv in
   let argn = Array.length argv in
   (* j=1 iff -test is not passed *)
   let j,test =
