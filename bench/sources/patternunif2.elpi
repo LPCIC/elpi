@@ -2,4 +2,4 @@
 q (a\ X a) X.
 r A :- pi c\ q (a\a) A.
 
-main :- r Y, Y=x\x.
+main :- r Y, Y = x\x.

@@ -109,7 +109,7 @@ lefteven X :- digit X, is_lefteven X.
 
 once :-
 	crypt X,
-  X=(xcons
+  X = (xcons
     (s (s (s null)))
      (xcons
        (s (s (s (s null))))

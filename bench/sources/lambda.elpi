@@ -9,4 +9,4 @@ of (lam F) (impl A B) :- pi x\ of x A => of (F x) B.
 
 test Z :- of (lam f\ lam a\ appl f a) Z.
 
-main :- test Z, Z=impl (impl a b) (impl a b).
+main :- test Z, Z = impl (impl a b) (impl a b).

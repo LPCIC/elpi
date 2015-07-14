@@ -10,4 +10,4 @@ b four.
 
 c four.
 
-main :- q X, X=ok.
+main :- q X, X = ok.

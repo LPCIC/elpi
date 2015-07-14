@@ -8,4 +8,4 @@ f ok ok.
 p ko :- r a.
 p ok :- r a.
 
-main :- q X Y, X=ok, Y=ok.
+main :- q X Y, X = ok, Y = ok.

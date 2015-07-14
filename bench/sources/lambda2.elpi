@@ -5,4 +5,4 @@ q X :- r X (x\ p x).
 r ko (x\ g x).
 r ok (y\ p y).
 
-main :- q X, X=ok.
+main :- q X, X = ok.

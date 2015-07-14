@@ -13,4 +13,4 @@ c four.
 d three.
 d four.
 
-main :- q X, X=ok.
+main :- q X, X = ok.

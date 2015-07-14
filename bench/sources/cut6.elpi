@@ -10,4 +10,4 @@ c ko.
 
 b ko.
 
-main :- q X, X=ok.
+main :- q X, X = ok.
