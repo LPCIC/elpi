@@ -1,0 +1,89 @@
+Weird syntax of Teyjus:
+- add reals too
+- no syntax for negative numbers: ~ 2 is the unary minus applied to 2,
+  not the number -2.
+- what is the "closed" token for?
+- nested /* */ comments not implemented
+- strings should not contain newlines; instead
+  \n, \b, \t, \n, \r, \\, \", "" should be recognized (the last two synonyms)
+  \^['@'-'z'] ???
+  \OCTAL \OCTALOCTALOCTAL \xHEX \xHEXHEX
+  \\\n
+  \xxxxxxx\  where xxx are [ ' ' | '\t' | '\x0b' | '\x0d' ]
+  \\cxxxxxx  where xxx are [ ' ' | '\t' | '\x0b' | '\x0d' ]
+  eof should be an error
+  \x followed by other combinations should be an error
+  \ followed by other combinations should be an error
+- if the file ends (without eol) inside a comment, the parser ignores the
+  comment (in place of returning an error). How???
+
+Other:
+
+0. pretty-printing to LaTeX + transformation to standard presentation
+   (with fresh variables, etc.)
+1. implement delay and experiment with it for:
+   a) unif outside the fragment
+   b) avoid the creation of Explicit Substitutions ??
+   c) avoid failure of the "is" predicate?
+2. The brackets it Teyjus are needed for the right precedence,
+   for example look at reduce.mod.
+
+Benchmarks:
+
+0. modify lambda3 to use the bound variables (via a list, etc.)
+1. http://www.cs.hofstra.edu/~cscccl/lambda-examples/
+   vedi lpcic/elpi/doc/termrep.pdf
+2. port all examples we have to Teyjus as well
+3. port Teyjus pnf.* and its examples to newelpi
+4. port Teyjus hc_interp.* to newelpi
+   Note: it is outside the fragment and it needs to be brought
+   back in.
+
+Bugs:
+
+-2. revise all the assert false/raise Failure
+0. turn =, or, sigma, etc. into Custom predicates?
+   In particular, it should not be allowed to add more clauses to them
+   via implication.
+0.1. turn = into a builtin (more efficient?)
+1. a & b :- c  is parsed incorrectly (wrong precedence)
+   and not at all in the toplevel
+
+Possible optimizations:
+
+-3 parser: test if it gets quicker defining lp directly, without using
+   LIST1 clauses + List.concat
+-2 optimize the case of app_deref where we can stay in the fragment
+   after the beta (maybe already done?)
+-1. if full_deref only works on heap terms, why do we pass all that stuff?
+    why not calling deref instead?
+0. Try alternative implementation for ?n == ?n
+   (i.e. go back to the previous unif code, but change to_heap/restrict)
+   NOTE: in the WAM the check is for free. An uninstantiated variable
+   points to itsefl. So X=X is implemented making X points to X, i.e.
+   leaving X uninstantiated. We cannot do that easily for two reasons:
+   a) Fields of a constructor cannot be mutated in ocaml <=4.3.
+   b) Our variables can occur multiple times applied to different arguments.
+      To exploit the WAM's representation we should replace our
+      UVar of ... * term list with a UApp (UVar ..., term list) but then
+      we need a deep pattern matching everywhere and this could slow down
+      again.
+   TO BE TRIED (??)
+2. the to_heap could keep the highest non-bound variable to be cached in
+   the UVar to make restriction linear
+
+Missing:
+0. accumulate + fixity
+
+=============================================
+
+How to implement substitution:
+
+- in full lambda-prolog:
+  reduce (app (lam F) T) (F T).
+
+- in the fragment: using the copy clause.
+  reduce (app (lam F) T) R :- pi x\ copy x T => copy (F x) (R' x), R = R' x.
+
+  copy (app M N) (app M2 N2) :- copy M M2, copy N n2.
+  copy (lam F) (lam F2) :- pi x\ copy x x => copy (F x) (F2 x).
