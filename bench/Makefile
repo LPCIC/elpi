@@ -47,10 +47,13 @@ $(patsubst elpi%,elpi,$(1))
 endef
 
 only: prepare
-	@$(foreach r,$(RUNNERS),\
+	@($(foreach r,$(RUNNERS),\
 	  $(foreach k,ok ko,\
 	   $(foreach j,$(wildcard jobs/$(call name,$(r))/$(k)/*$(JOB)*),\
-	     $(call run,$(k),$(r),$(j)))))
+	     $(call run,$(k),$(r),$(j)))))) | tee data.csv
+	@./plot data.csv
+	@gnuplot data.csv.plot
+	@echo Results: `ls $$PWD/*png`
 
 prepare:
 	@make -C ..

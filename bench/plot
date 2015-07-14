@@ -1,0 +1,56 @@
+#!/usr/bin/lua5.1
+
+file = assert(io.open(arg[1]),"Argument missing: .csv file name")
+data = {}
+for l in file:lines() do
+	local _,runner,job,_,wc,_,mem =
+	  l:match('^([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),$')
+	job = job:match('([^/]+)$'):gsub("%.elpi$","")
+	local m,s,c = wc:match('^(%d+):(%d+)%.(%d+)$')
+	wc = c + s*100 + m*60*100
+	mem = mem:gsub('k$','')
+	local item = data[job] or {}
+	item[runner] = { time = wc; mem = mem }
+	data[job] = item
+end
+
+all_runners = {}
+all_jobs = {}
+for job, runners in pairs(data) do
+	for runner, _ in pairs(runners) do
+		all_runners[runner] = true
+	end
+	all_jobs[#all_jobs+1] = job
+end
+table.sort(all_jobs,function(j1,j2) return j1 < j2 end)
+
+out = assert(io.open(arg[1]..'.dat','w'), 'Unable to open output file')
+
+for i,job in ipairs(all_jobs) do
+	local runners = data[job]
+	out:write(i,' ',job,' ')
+	for runner, _ in pairs(all_runners) do
+		local runner_data = runners[runner] or { time = 0; mem = 0 }
+		out:write(runner,' ',runner_data.time,' ',runner_data.mem,' ')
+	end
+	out:write('\n')
+end
+out:close()
+
+plot = assert(io.open(arg[1]..'.plot','w'), 'Unable to open plot file')
+plot:write([[
+        set terminal png size 1024, 500
+	set xtics rotate by 90 right
+	set xlabel "test"
+	set boxwidth 0.3
+        set output "]]..arg[1]..[[.png"
+	plot \
+]])
+i=1
+for runner, _ in pairs(all_runners) do
+        plot:write('"'..arg[1]..'.dat" \\\n')
+	plot:write('using 1:'..(1+i*3)..':xtic(2) with boxes title "'..
+		runner..'", \\\n')
+	i=i+1
+end
+plot:close()
