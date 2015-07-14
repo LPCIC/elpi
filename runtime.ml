@@ -2,7 +2,15 @@
 (* license: GNU Lesser General Public License Version 2.1                    *)
 (* ------------------------------------------------------------------------- *)
 
-let debug = false
+module Utils : sig
+
+  val pplist : ?max:int -> ?boxed:bool ->
+    (Format.formatter -> 'a -> unit) -> string ->
+      Format.formatter -> 'a list -> unit
+
+  val smart_map : ('a -> 'a) -> 'a list -> 'a list
+
+end = struct (* {{{ *)
 
 let pplist ?(max=max_int) ?(boxed=false) ppelem sep f l =
  if l <> [] then begin
@@ -27,13 +35,19 @@ let rec smart_map f =
      let tl' = smart_map f tl in
      if hd==hd' && tl==tl' then l else hd'::tl'
 
+end (* }}} *)
+open Utils
+
+module F = Parser.ASTFuncS
+module AST = Parser
+module ConstMap = Map.Make(Parser.ASTFuncS);;
+
 (* TODOS:
    - There are a few TODOs with different implementative choices to
      be benchmarked *)
 
-type constant = int (* De Brujin levels *)
-
 (* Invariant: a Heap term never points to a Query term *)
+type constant = int (* De Brujin levels *)
 type term =
   (* Pure terms *)
   | Const of constant
@@ -42,18 +56,31 @@ type term =
   | AppArg of (*id*) int * term list
   (* Heap terms *)
   | App of constant * term * term list
-  | Custom of constant * term list
   | UVar of term ref * (*depth:*)int * (*argsno:*)int
   | AppUVar of term ref * (*depth:*)int * term list
   | Lam of term
-  | String of Parser.ASTFuncS.t
+  (* Misc *)
+  | Custom of constant * term list
+  | String of F.t
   | Int of int
 
-let rec dummy = App (-9999,dummy,[])
+module Constants : sig
 
-module F = Parser.ASTFuncS
-module AST = Parser
-module ConstMap = Map.Make(Parser.ASTFuncS);;
+  val funct_of_ast : F.t -> constant * term
+  val constant_of_dbl : constant -> term
+  val string_of_constant : constant -> string
+ 
+  val cutc : term
+  val truec : term
+  val andc : constant
+  val orc : constant
+  val implc : constant
+  val pic : constant
+  val sigmac : constant
+  val eqc : constant
+  val isc : constant
+
+end = struct (* {{{ *)
 
 (* Hash re-consing :-( *)
 let funct_of_ast, constant_of_dbl, string_of_constant =
@@ -90,6 +117,10 @@ let sigmac = fst (funct_of_ast F.sigmaf)
 let eqc = fst (funct_of_ast F.eqf)
 let isc = fst (funct_of_ast F.isf)
 
+end (* }}} *)
+open Constants
+
+let rec dummy = App (-9999,dummy,[])
 
 let m = ref [];;
 let n = ref 0;;
@@ -98,6 +129,26 @@ let n = ref 0;;
 let rec mkinterval depth argsno n =
  if n = argsno then [] else (n+depth)::mkinterval depth argsno (n+1)
 ;;
+
+module Pp : sig
+ 
+  val ppterm :
+    constant -> string list ->
+    constant -> term array ->
+      Format.formatter -> term -> unit
+
+  val uppterm :
+    constant -> string list ->
+    constant -> term array ->
+      Format.formatter -> term -> unit
+
+  val pp_FOprolog :
+    string list -> term array -> Format.formatter -> term -> unit
+
+  val do_deref : (from:int -> to_:int -> int -> term -> term) ref
+  val do_app_deref : (from:int -> to_:int -> term list -> term -> term) ref
+
+end = struct (* {{{ *)
 
 let do_deref = ref (fun ~from ~to_ _ _ -> assert false);;
 let do_app_deref = ref (fun ~from ~to_ _ _ -> assert false);;
@@ -227,6 +278,9 @@ let xppterm_prolog ~nice names env f t =
 let ppterm = xppterm ~nice:false
 let uppterm = xppterm ~nice:true
 let pp_FOprolog = xppterm_prolog ~nice:true 
+
+end (* }}} *)
+open Pp
 
 type key1 = int
 type key2 = int
@@ -920,7 +974,6 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
   *)
   let rec run depth p g gs (next : frame) alts lvl =
     TRACE "run" (fun fmt -> ppterm depth [] 0 [||] fmt g)
-(*     if debug then Format.eprintf "goal^%d: %a\n%!" depth (ppterm depth [] 0 [||]) g; *)
     (*Format.eprintf "<";
     List.iter (Format.eprintf "goal: %a\n%!" ppterm) stack.goals;
     Format.eprintf ">";*)
@@ -1197,3 +1250,5 @@ let execute_loop p ((q_names,q_env,q) as qq) =
      Failure "no clause" -> prerr_endline "Fail"; k := emptyalts
  done
 ;;
+
+(* vim: set foldmethod=marker: *)
