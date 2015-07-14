@@ -39,8 +39,6 @@ end (* }}} *)
 open Utils
 
 module F = Parser.ASTFuncS
-module AST = Parser
-module ConstMap = Map.Make(Parser.ASTFuncS);;
 
 (* TODOS:
    - There are a few TODOs with different implementative choices to
@@ -51,15 +49,15 @@ type constant = int (* De Brujin levels *)
 type term =
   (* Pure terms *)
   | Const of constant
-  (* Clause terms *)
-  | Arg of (*id:*)int * (*argsno:*)int
-  | AppArg of (*id*) int * term list
-  (* Heap terms *)
+  | Lam of term
   | App of constant * term * term list
+  (* Clause terms: unif variables used in clauses *)
+  | Arg of (*id:*)int * (*argsno:*)int
+  | AppArg of (*id*)int * term list
+  (* Heap terms: unif variables in the query *)
   | UVar of term ref * (*depth:*)int * (*argsno:*)int
   | AppUVar of term ref * (*depth:*)int * term list
-  | Lam of term
-  (* Misc *)
+  (* Misc: $custom predicates, ... *)
   | Custom of constant * term list
   | String of F.t
   | Int of int
@@ -70,15 +68,19 @@ module Constants : sig
   val constant_of_dbl : constant -> term
   val string_of_constant : constant -> string
  
-  val cutc : term
-  val truec : term
-  val andc : constant
-  val orc : constant
-  val implc : constant
-  val pic : constant
+  (* To keep the type of terms small, we use special constants for ! = pi.. *)
+  val cutc   : term
+  val truec  : term
+  val andc   : constant
+  val orc    : constant
+  val implc  : constant
+  val pic    : constant
   val sigmac : constant
-  val eqc : constant
-  val isc : constant
+  val eqc    : constant
+  val isc    : constant
+
+  (* Value for unassigned UVar/Arg *)
+  val dummy  : term
 
 end = struct (* {{{ *)
 
@@ -117,13 +119,11 @@ let sigmac = fst (funct_of_ast F.sigmaf)
 let eqc = fst (funct_of_ast F.eqf)
 let isc = fst (funct_of_ast F.isf)
 
+let rec dummy = App (-9999,dummy,[])
+
 end (* }}} *)
 open Constants
 
-let rec dummy = App (-9999,dummy,[])
-
-let m = ref [];;
-let n = ref 0;;
 
 (* mkinterval d n 0 = [d; ...; d+n-1] *)
 let rec mkinterval depth argsno n =
@@ -132,11 +132,13 @@ let rec mkinterval depth argsno n =
 
 module Pp : sig
  
+  (* Low level printing *)
   val ppterm :
     constant -> string list ->
     constant -> term array ->
       Format.formatter -> term -> unit
 
+  (* For user consumption *)
   val uppterm :
     constant -> string list ->
     constant -> term array ->
@@ -152,6 +154,8 @@ end = struct (* {{{ *)
 
 let do_deref = ref (fun ~from ~to_ _ _ -> assert false);;
 let do_app_deref = ref (fun ~from ~to_ _ _ -> assert false);;
+let m = ref [];;
+let n = ref 0;;
 
 let xppterm ~nice depth0 names argsdepth env f t =
   let pp_app f pphd pparg (hd,args) =
@@ -608,8 +612,8 @@ and beta depth sub t args =
 and app_deref ~from ~to_ args t = beta to_ [] (deref ~from ~to_ 0 t) args
 ;;
 
-do_deref := deref;;
-do_app_deref := app_deref;;
+let () = Pp.do_deref := deref;;
+let () = Pp.do_app_deref := app_deref;;
 
 
 (* Restrict is to be called only on heap terms *)
@@ -618,7 +622,21 @@ let restrict ?avoid argsdepth last_call trail ~from ~to_ e t =
  else to_heap ?avoid argsdepth last_call trail ~from ~to_ e t
 
 
-(****** Indexing ******)
+module Indexing : sig
+
+  type index
+  val key_of : constant -> term -> key
+  val add_clauses : clause list -> index -> index
+  val get_clauses : constant -> term -> index -> clause list
+  val make : clause list -> index
+
+end = struct (* {{{ *)
+
+(* all clauses: used when the query is flexible
+   all flexible clauses: used when the query is rigid and the map
+                        for that atom is empty
+   map: used when the query is rigid before trying the all flexible clauses *)
+type index = (clause list * clause list * clause list Ptmap.t) Ptmap.t
 
 let variablek =    -99999999
 let abstractionk = -99999998
@@ -699,7 +717,9 @@ let add_clauses clauses p =
 
 let make p = add_clauses (List.rev p) Ptmap.empty
 
-(****** End of Indexing ******)
+end (* }}} *)
+open Indexing
+
 
 (* Unification *)
 
@@ -863,12 +883,8 @@ let undo_trail old_trail trail =
 ;;
 
 (* Loop *)
-type program =
- (* all clauses: used when the query is flexible
-    all flexible clauses: used when the query is rigid and the map
-                          for that atom is empty
-    map: used when the query is rigid before trying the all flexible clauses *)
- (clause list * clause list * clause list Ptmap.t) Ptmap.t
+type program = Indexing.index
+
 (* The activation frames point to the choice point that
    cut should backtrack to, i.e. the first one not to be
    removed. For bad reasons, we call it lvl in the code. *)
@@ -1111,6 +1127,9 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
    next_alt
 ;;
  
+module AST = Parser
+module ConstMap = Map.Make(Parser.ASTFuncS);;
+
 let stack_var_of_ast (f,l) n =
  try (f,l),List.assoc n l
  with Not_found ->
