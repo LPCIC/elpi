@@ -1150,64 +1150,64 @@ let stack_var_of_ast ({ max_arg = f; name2arg = l } as amap) n =
 ;;
 
 let stack_funct_of_ast (amap : argmap) (cmap : term ConstMap.t) f =
-  try amap, cmap, ConstMap.find f cmap
+  try amap, ConstMap.find f cmap
   with Not_found ->
    let c = (F.pp f).[0] in
    if ('A' <= c && c <= 'Z') || c = '_' then
-     let amap,v = stack_var_of_ast amap (F.pp f) in amap,cmap,v
-   else amap,cmap,snd (funct_of_ast f)
+     let amap, v = stack_var_of_ast amap (F.pp f) in amap, v
+   else amap, snd (funct_of_ast f)
 ;;
 
 let rec stack_term_of_ast lvl (amap : argmap) (cmap : term ConstMap.t) =
   function
-  | AST.App(AST.Const f,[]) when F.eq f F.andf -> amap, cmap, truec
+  | AST.App(AST.Const f,[]) when F.eq f F.andf -> amap, truec
   | AST.Const f -> stack_funct_of_ast amap cmap f
-  | AST.Custom f -> amap, cmap, Custom (fst (funct_of_ast f), [])
+  | AST.Custom f -> amap, Custom (fst (funct_of_ast f), [])
   | AST.App(AST.Const f, tl) ->
-     let amap, cmap, rev_tl =
-       List.fold_left (fun (amap, cmap, tl) t ->
-         let amap, cmap, t = stack_term_of_ast lvl amap cmap t in
-         (amap, cmap, t::tl))
-        (amap, cmap, []) tl in
+     let amap, rev_tl =
+       List.fold_left (fun (amap, tl) t ->
+         let amap, t = stack_term_of_ast lvl amap cmap t in
+         (amap, t::tl))
+        (amap, []) tl in
      let tl = List.rev rev_tl in
-     let amap, cmap, c = stack_funct_of_ast amap cmap f in
+     let amap, c = stack_funct_of_ast amap cmap f in
      begin match c with
      | Arg (v,0) -> begin try
-         let tl = in_fragment 0 tl in amap, cmap, Arg(v,tl)
-         with NotInTheFragment -> amap, cmap, AppArg(v,tl) end
+        let tl = in_fragment 0 tl in amap, Arg(v,tl)
+        with NotInTheFragment -> amap, AppArg(v,tl) end
      | Const c -> begin match tl with
-         | hd2::tl -> amap,cmap,App(c,hd2,tl)
-         | _ -> anomaly "Application node with no arguments" end
+        | hd2::tl -> amap, App(c,hd2,tl)
+        | _ -> anomaly "Application node with no arguments" end
      | _ -> error "Clause shape unsupported" end
   | AST.App (AST.Custom f,tl) ->
-     let amap,cmap,rev_tl =
-       List.fold_left (fun (amap, cmap, tl) t ->
-          let amap, cmap, t = stack_term_of_ast lvl amap cmap t in
-          (amap,cmap,t::tl))
-        (amap, cmap, []) tl in
-     amap, cmap, Custom(fst (funct_of_ast f), List.rev rev_tl)
+     let amap, rev_tl =
+       List.fold_left (fun (amap, tl) t ->
+          let amap, t = stack_term_of_ast lvl amap cmap t in
+          (amap, t::tl))
+        (amap, []) tl in
+     amap, Custom(fst (funct_of_ast f), List.rev rev_tl)
   | AST.Lam (x,t) ->
      let cmap' = ConstMap.add x (constant_of_dbl lvl) cmap in
-     let amap, _, t' = stack_term_of_ast (lvl+1) amap cmap' t in
-     amap, cmap, Lam t'
+     let amap, t' = stack_term_of_ast (lvl+1) amap cmap' t in
+     amap, Lam t'
   | AST.App (AST.App (f,l1),l2) ->
      stack_term_of_ast lvl amap cmap (AST.App (f, l1@l2))
-  | AST.String str -> amap, cmap, String str
-  | AST.Int i -> amap, cmap, Int i 
+  | AST.String str -> amap, String str
+  | AST.Int i -> amap, Int i 
   | AST.App (AST.Lam _,_) -> error "Beta-redexes not in our language"
   | AST.App (AST.String _,_) -> error "Applied string value"
   | AST.App (AST.Int _,_) -> error "Applied integer value"
  
 let query_of_ast t =
-  let { max_arg = max; name2arg = l }, _, t =
+  let { max_arg = max; name2arg = l }, t =
     stack_term_of_ast 0 empty_amap ConstMap.empty t in
   List.rev_map fst l, Array.make max dummy, t
 
 let program_of_ast (p : Parser.clause list) : program =
  let clauses = List.map (fun { Parser.head = hd; hyps = hyp } ->
    let amap, cmap = empty_amap, ConstMap.empty in
-   let amap, cmap, hd  = stack_term_of_ast 0 amap cmap hd  in
-   let amap, cmap, hyp = stack_term_of_ast 0 amap cmap hyp in
+   let amap, hd  = stack_term_of_ast 0 amap cmap hd  in
+   let amap, hyp = stack_term_of_ast 0 amap cmap hyp in
    SPY "prog-clause" (fun fmt ({ max_arg = max; name2arg = l }, hd, hyp) ->
      let names = List.rev_map fst l in
      let env = Array.make max dummy in
@@ -1239,8 +1239,8 @@ let program_of_ast (p : Parser.clause list) : program =
 
 let pp_FOprolog p = List.iter (fun { Parser.head = a; hyps = f } ->
   let amap, cmap = empty_amap, ConstMap.empty in
-  let amap, cmap, a = stack_term_of_ast 0 amap cmap a in
-  let amap, cmap, f = stack_term_of_ast 0 amap cmap f in
+  let amap, a = stack_term_of_ast 0 amap cmap a in
+  let amap, f = stack_term_of_ast 0 amap cmap f in
   let { max_arg = max; name2arg = l } = amap in
   let names = List.rev_map fst l in
   let env = Array.make max dummy in
