@@ -92,9 +92,6 @@ let mkApp =
   | (Custom _ | Const _) as c::l2 -> App(c,l2)
   | _ -> raise NotInProlog
 
-(*let uvmap = ref [];;
-let reset () = uvmap := []*)
-
 let fresh_uv_names = ref (-1);;
 
 let mkFreshUVar () = incr fresh_uv_names; Const (ASTFuncS.from_string ("_" ^ string_of_int !fresh_uv_names))
@@ -135,16 +132,16 @@ let parse_one e filename =
   try let res = Grammar.Entry.parse e (Stream.of_channel ch) in close_in ch;res
   with Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) ->
     close_in ch;
-    let last = Ploc.last_pos l in
-    let ctx_len = 70 in
-    let ctx =
+    (*let last = Ploc.last_pos l in
+    let ctx_len = 70 in*)
+    let ctx = "…" (* CSC: TO BE FIXED AND RESTORED
       let start = max 0 (last - ctx_len) in
       let s = String.make 101 '\007' in
       let ch = open_in filename in
       (try really_input ch s 0 100 with End_of_file -> ());
       close_in ch;
       let last = String.index s '\007' in
-      "…" ^ String.sub s start last ^ "…" in
+      "…" ^ String.sub s start last ^ "…"*) in
     raise (Stream.Error(Printf.sprintf "%s\nnear: %s" msg ctx))
   | Ploc.Exc(_,e) -> close_in ch; raise e
  end
@@ -164,68 +161,86 @@ let parse_string e s =
     raise (Stream.Error(Printf.sprintf "%s\nnear: %s" msg ctx))
   | Ploc.Exc(_,e) -> raise e
 
-let rec number = lexer [ '0'-'9' number | '0'-'9' ]
-let rec ident =
-  lexer [ [ 'a'-'z' | 'A'-'Z' | '\'' | '_' | '-' | '+' | '0'-'9' ] ident | ]
+let digit = lexer [ '0'-'9' ]
+let octal = lexer [ '0'-'7' ]
+let hex = lexer [ '0'-'9' | 'A'-'F' | 'a'-'f' ]
+let schar =
+ lexer [ '+' | '-' | '*' | '/' | '^' | '<' | '>' | '=' | '`'
+       | '\'' | '?' | '@' | '#' | '$' | '&' | '!' | '_' | '~' ]
+let schar1 =
+ lexer [ '+' | '-' | '/' | '^' | '<' | '>' | '=' | '`'
+       | '\'' | '?' | '@' | '#' | '$' | '&' | '!' | '_' | '~' ]
+let schar2 =
+ lexer [ '+' | '-' | '*' | '^' | '<' | '>' | '=' | '`'
+       | '\'' | '?' | '@' | '#' | '$' | '&' | '!' | '~' ]
+let lcase = lexer [ 'a'-'z' ]
+let ucase = lexer [ 'A'-'Z' ]
+let idchar = lexer [ lcase | ucase | digit | schar ]
+let rec idcharstar = lexer [ idchar idcharstar | ]
+let idchar1 = lexer [ lcase | ucase | digit | schar1 ]
+let rec num = lexer [ digit | digit num ]
 
 let rec string = lexer [ '"' | _ string ]
 
-(*
-let lvl_name_of s =
-  match Str.split (Str.regexp_string "^") s with
-  | [ x ] -> Name.make x, 0
-  | [ x;l ] -> Name.make x, int_of_string l
-  | _ -> raise (Token.Error ("<name> ^ <number> expected.  Got: " ^ s))
-*)
-
 let tok = lexer
-  [ 'A'-'Z' ident -> "CONSTANT", $buf 
-  | 'a'-'z' ident -> "CONSTANT", $buf
-  | number -> "INTEGER", $buf
+  [ ucase idcharstar -> "CONSTANT", $buf 
+  | lcase idcharstar -> "CONSTANT", $buf
+  | '/' -> "CONSTANT",$buf
+  | '/' idchar1 idcharstar -> "CONSTANT", $buf
+(*| schar2 idcharstar -> "CONSTANT", $buf CSC: TO BE TESTED,
+    (would break the next line for sure)
+    commenting out the next lines if they are subsumed. *)
+  | '$' 'a'-'z' idcharstar -> "BUILTIN",$buf
+  | "*" -> "CONSTANT", $buf (*CSC: to be fixed *)
+  | "+" -> "CONSTANT", $buf (*CSC: to be fixed *)
+  | ">" -> "CONSTANT", $buf (*CSC: to be fixed *)
+  | ">=" -> "CONSTANT", $buf (*CSC: to be fixed *)
+  | '<' -> "CONSTANT",$buf (*CSC: to be fixed *)
+  | num -> "INTEGER", $buf
+  | num '.' num -> "REAL", $buf
   | "->" -> "ARROW", $buf
-  | '-' number -> "INTEGER", $buf
+  | "-" -> "CONSTANT", $buf (*CSC: to be fixed *)
+  | "~" -> "CONSTANT", $buf (*CSC: to be fixed *)
   | '_' -> "FRESHUV", "_"
+  | '_' idchar idcharstar -> "CONSTANT", $buf
   |  ":-"  -> "ENTAILS",$buf
   |  ":"  -> "COLON",$buf
   |  "::"  -> "CONS",$buf
-  | ',' -> "COMMA",","
+  | ',' -> "COMMA",$buf
   | '&' -> "AMPERSEND",","
-  | ';' -> "SEMICOLON",";"
-  | '.' -> "FULLSTOP","."
+  | ';' -> "SEMICOLON",$buf
+  | '.' -> "FULLSTOP",$buf
+  | '.' num -> "REAL",$buf
   | '\\' -> "BIND","\\"
-  | '/' -> "BIND","/"
-  | '(' -> "LPAREN","("
-  | ')' -> "RPAREN",")"
-  | '[' -> "LBRACKET","["
-  | ']' -> "RBRACKET","]"
-  | '|' -> "PIPE","|"
-  | "=>" -> "IMPL", $buf
-  | '=' -> "EQUAL","="
-  | '<' -> "LT","<"
-  | '>' -> "GT",">"
-  | '$' 'a'-'z' ident -> "BUILTIN",$buf
+  | '(' -> "LPAREN",$buf
+  | ')' -> "RPAREN",$buf
+  | '[' -> "LBRACKET",$buf
+  | ']' -> "RBRACKET",$buf
+  | '|' -> "PIPE",$buf
+  | "=>" -> "IMPL",$buf
+  | '=' -> "EQUAL",$buf
+  | "=<" -> "CONSTANT",$buf (*CSC: to be fixed *)
   | '!' -> "BANG", $buf
-  | "!-!" -> "AH5",$buf
-  | "!+!" -> "AH6",$buf
-  | '@' -> "AT", $buf
-  | '#' -> "SHARP", $buf
-  | '?' -> "QMARK", $buf
   | '"' string -> "LITERAL", let b = $buf in String.sub b 1 (String.length b-2)
 ]
 
 let option_eq x y = match x, y with Some x, Some y -> x == y | _ -> x == y
 
+module StringSet = Set.Make(String);;
+let symbols = ref StringSet.empty;;
+
 let rec lex c = parser bp
-  | [< '( ' ' | '\n' | '\t' ); s >] -> lex c s
+  | [< '( ' ' | '\n' | '\t' | '\r' ); s >] -> lex c s
   | [< '( '%' ); s >] -> comment c s
   | [< '( '/' ); s >] ep ->
        if option_eq (Stream.peek s) (Some '*') then comment2 c s
-       else ("BIND", "/"), (bp,ep)
+       else ("CONSTANT", "/"), (bp,ep)
   | [< s >] ep ->
        if option_eq (Stream.peek s) None then ("EOF",""), (bp, ep)
        else
        (match tok c s with
        | "CONSTANT","module" -> "MODULE", "module"
+       | "CONSTANT","sig" -> "SIG", "SIG"
        | "CONSTANT","import" -> "IMPORT", "accumulate"
        | "CONSTANT","accum_sig" -> "ACCUM_SIG", "accum_sig"
        | "CONSTANT","use_sig" -> "USE_SIG", "use_sig"
@@ -236,6 +251,7 @@ let rec lex c = parser bp
        | "CONSTANT","kind" -> "KIND", "kind"
        | "CONSTANT","typeabbrev" -> "TYPEABBREV", "typeabbrev"
        | "CONSTANT","type" -> "TYPE", "type"
+       | "CONSTANT","closed" -> "CLOSED", "closed" (* CSC: ??? *)
 
        | "CONSTANT","end" -> "EOF", "end"
        | "CONSTANT","accumulate" -> "ACCUMULATE", "accumulate"
@@ -250,12 +266,10 @@ let rec lex c = parser bp
        | "CONSTANT","pi" -> "PI", "pi"
        | "CONSTANT","sigma" -> "SIGMA", "sigma"
        | "CONSTANT","nil" -> "NIL", "nil"
-       | "CONSTANT","delay" -> "DELAY","delay"
-       | "CONSTANT","in" -> "IN","in"
        | "CONSTANT","is" -> "IS","is"
-       | "CONSTANT","with" -> "WITH","with"
-       | "CONSTANT","resume" -> "RESUME","resume"
-       | "CONSTANT","context" -> "CONTEXT","context"
+
+       | "CONSTANT", x when StringSet.mem x !symbols -> "SYMBOL",x
+
        | x -> x), (bp, ep)
 and skip_to_dot c = parser
   | [< '( '.' ); s >] -> lex c s
@@ -282,16 +296,27 @@ let lex_fun s =
      Some tok)),
   (fun id -> try Hashtbl.find tab id with Not_found -> !last)
 
-let tok_match ((s1:string),_) = (); function
-  | ((s2:string),v) when Pervasives.compare s1 s2 == 0 -> v
-  | (s2,v) -> raise Stream.Failure
+let tok_match =
+ function
+    ((s1:string),"") ->
+      fun ((s2:string),v) ->
+       if Pervasives.compare s1 s2 == 0 then v else raise Stream.Failure
+  | ((s1:string),v1) ->
+      fun ((s2:string),v2) ->
+       if Pervasives.compare s1 s2==0 && Pervasives.compare v1 v2==0 then v2
+       else raise Stream.Failure
 
 let lex = {
   tok_func = lex_fun;
-  tok_using = (fun _ -> ());
+  tok_using =
+   (fun x,y ->
+      if x = "SYMBOL" && y <> "" then begin
+       symbols := StringSet.add y !symbols
+      end
+   );
   tok_removing = (fun _ -> ());
   tok_match = tok_match;
-  tok_text = (function (s,_) -> s);
+  tok_text = (function (s,y) -> s ^ " " ^ y);
   tok_comm = None;
 }
 
@@ -301,55 +326,30 @@ let premise = Grammar.Entry.create g "premise"
 let atom = Grammar.Entry.create g "atom"
 let goal = Grammar.Entry.create g "goal"
 
-(*
-let uvmap = ref []
-let conmap = ref []
-let reset () = uvmap := []; conmap := []
-let uvlist () = List.map snd !uvmap
-*)
+let min_precedence = 0
+let max_precedence = 100
 
-(*
-let get_uv u =
-  if List.mem_assoc u !uvmap then List.assoc u !uvmap
-  else
-    let n = List.length !uvmap in
-    uvmap := (u,n) :: !uvmap;
-    n
-*)
-(*
-let fresh_lvl_name () = lvl_name_of (Printf.sprintf "_%d" (List.length !uvmap))
-
-let check_con n l =
-  try
-    let l' = List.assoc n !conmap in
-    if l <> l' then
-      raise
-        (Token.Error("Constant "^Name.to_string n^" used at different levels"))
-  with Not_found -> conmap := (n,l) :: !conmap
-let mkFreshCon name lvl =
-  let name = Name.make name in
-  let t = mkConN name lvl in
-  assert(not(List.mem_assoc name !conmap));
-  conmap := (name,lvl) :: !conmap;
-  t
-*)
-
-(*
-let sigma_abstract t =
-  let uvl = collect_Uv t in
-  List.fold_left (fun p uv -> mkSigma1 (grab uv 1 p)) t uvl
-*)
-
-(* TODO : test that it is of the form of a clause
-let check_clause x = ()
-let check_goal x = ()*)
+let rec mk_precedences acc n =
+ if n > max_precedence then List.rev acc
+ else string_of_int n :: mk_precedences acc (n+1)
+;;
 
 let atom_levels =
-  ["pi";"disjunction";"conjunction";"conjunction2";"implication";"equality";"term";"app";"simple";"list"]
+  ["pi";"disjunction";"conjunction";"conjunction2";"implication";"equality"]
+  @ mk_precedences [] min_precedence @ ["term";"app";"simple";"list"]
 
 let () =
+  let dummy_action =
+    Gramext.action (fun _ ->
+      failwith "internal error, lexer generated a dummy token") in
+  (* Needed since campl5 on "delete_rule" remove the precedence level if it
+     gets empty after the deletion. The lexer never generate the Stoken
+     below. *)
+  let dummy_prod = [ [ Gramext.Stoken ("DUMMY", "") ], dummy_action ] in
   Grammar.extend [ Grammar.Entry.obj atom, None,
-    List.map (fun x -> Some x, Some Gramext.NonA, []) atom_levels ]
+    List.map (fun x -> Some x, Some Gramext.NonA, dummy_prod) atom_levels ]
+
+let used_precedences = ref [];;
 
 EXTEND
   GLOBAL: lp premise atom goal;
@@ -374,14 +374,9 @@ EXTEND
              | Some (`After n) -> CN.make s, `After(CN.make ~existing:true n) in
 *)
          let hyp = match hyp with None -> mkConj [](*L.empty*) | Some h -> h in
-(*
-         let clause = sigma_abstract (mkImpl hyp (mkAtom hd)) in
-         check_clause clause;
-         reset (); 
-         ([], key_of clause, clause, name), insertion*)
-         (*reset ();*)
          [mkClause hd hyp]
      | MODULE; CONSTANT; FULLSTOP -> []
+     | SIG; CONSTANT; FULLSTOP -> []
      | ACCUMULATE; filenames=LIST1 CONSTANT SEP COMMA; FULLSTOP ->
         parse lp (List.map (fun fn -> fn ^ ".mod") filenames)
      | IMPORT; LIST1 CONSTANT SEP COMMA; FULLSTOP -> []
@@ -400,7 +395,55 @@ EXTEND
      | TYPE; LIST1 CONSTANT SEP COMMA; type_; FULLSTOP -> []
      | KIND; LIST1 CONSTANT SEP COMMA; kind; FULLSTOP -> []
      | TYPEABBREV; abbrform; TYPE; FULLSTOP -> []
-     | FIXITY; LIST1 CONSTANT SEP COMMA; INTEGER; FULLSTOP -> []
+     | fix = FIXITY; syms = LIST1 CONSTANT SEP COMMA; prec = INTEGER; FULLSTOP ->
+        let nprec = int_of_string prec in
+        if nprec < min_precedence || nprec > max_precedence then
+         assert false (* wrong precedence *)
+        else
+         let next_prec =
+          if nprec < max_precedence then string_of_int (nprec+1) else "term" in
+         let extend_one cst =
+          let rule =
+           (* NOTE: we do not distinguish between infix and infixl,
+              prefix and prefix, postfix and postfixl *)
+           match fix with
+             "infix"
+           | "infixl" ->
+              [ Gramext.Sself ; Gramext.Stoken ("SYMBOL",cst); Gramext.Sself ],
+              Gramext.action (fun t2 cst t1 _ ->mkApp [mkCon cst;t1;t2])
+           | "infixr" ->
+              (* needs extra hack below *)
+              [ Gramext.Snterml (Grammar.Entry.obj atom, next_prec) ;
+                Gramext.Stoken ("SYMBOL",cst);
+                Gramext.Snterml (Grammar.Entry.obj atom, string_of_int nprec)],
+              Gramext.action (fun t2 cst t1 _ ->mkApp [mkCon cst;t1;t2])
+           | "prefix"
+           | "prefixr" ->
+               [ Gramext.Stoken ("SYMBOL",cst); Gramext.Sself ],
+               Gramext.action (fun t cst _ ->mkApp [mkCon cst;t])
+           | "postfix"
+           | "postfixl" ->
+               [ Gramext.Sself ; Gramext.Stoken ("SYMBOL",cst) ],
+               Gramext.action (fun cst t _ ->mkApp [mkCon cst;t])
+           | _ -> assert false
+          in
+          let rules =
+           if not (List.mem nprec !used_precedences) && fix = "infixr" then
+            let skip_prod =
+             [ Gramext.Snterml (Grammar.Entry.obj atom, next_prec) ],
+             Gramext.action (fun r _ -> r) in
+            used_precedences := nprec::!used_precedences;
+            [rule ; skip_prod ]
+           else
+            [rule]
+          in
+           Grammar.extend
+            [ Grammar.Entry.obj atom,
+              Some (Gramext.Level prec),
+              [ None, Some Gramext.NonA, rules ]];
+         in
+          List.iter extend_one syms ; 
+          []
     ]];
   kind:
     [[ TYPE -> ()
@@ -421,15 +464,9 @@ EXTEND
      | LPAREN; abbrform; RPAREN -> ()
     ]];
   goal:
-    [[ p = premise -> (*
-         let g = sigma_abstract p in
-         check_goal g;
-         reset ();
-         g*)
-         (*reset (); *)
-         p ]];
+    [[ p = premise -> p ]];
   premise : [[ a = atom -> a ]];
-  concl : [[ a = atom LEVEL "term" -> a ]];
+  concl : [[ a = atom LEVEL "0" -> a ]];
   atom : LEVEL "pi"
      [[ PI; x = CONSTANT; BIND; p = atom LEVEL "disjunction" -> mkPi x p
       (*| PI; annot = bound; x = bound; BIND; p = atom LEVEL "disjuction" ->
@@ -459,65 +496,39 @@ EXTEND
       | a = atom; ENTAILS; p = premise ->
           mkImpl p a ]];
   atom : LEVEL "equality"
-     [[ a = atom; EQUAL; b = atom LEVEL "term" ->
+     [[ a = atom; EQUAL; b = atom LEVEL "0" ->
           mkEq a b
-      | a = atom; IS; b = atom LEVEL "term" ->
+      | a = atom; IS; b = atom LEVEL "0" ->
           mkIs a b
      ]];
   atom : LEVEL "term"
      [[ l = LIST1 atom LEVEL "app" SEP CONS ->
           if List.length l = 1 then List.hd l
-          else mkSeq l ]];
+          else mkSeq l
+     ]];
   atom : LEVEL "app"
-     [[ hd = atom; args = LIST1 atom LEVEL "simple" ->
-          (*match args with
-          | [tl;x] when equal x sentinel -> mkVApp `Rev tl hd None
-          | _ ->*) mkApp (hd::args) (*(L.of_list (hd :: args))*) ]];
+      [[ hd = atom; args = LIST1 atom LEVEL "simple" -> mkApp (hd::args)
+      ]];
   atom : LEVEL "simple" 
-     [[ c = CONSTANT; b = OPT [ BIND; a = atom LEVEL "term" -> a ] ->
-          (*let c, lvl = lvl_name_of c in 
-          let x = mkConN c lvl in
-          (match b with
-          | None -> check_con c lvl; x
-          | Some b ->  mkBin 1 (grab x 1 b))*)
+     [[ c = CONSTANT; b = OPT [ BIND; a = atom LEVEL "0" -> a ] ->
           (match b with
               None -> mkCon c
             | Some b -> mkLam c b)
       | u = FRESHUV -> mkFreshUVar ()
-      (*| i = REL -> mkDB (int_of_string (String.sub i 1 (String.length i - 1)))*)
       | NIL -> mkNil
       | s = LITERAL -> mkString s
       | s = INTEGER -> mkInt (int_of_string s) 
-      (*| AT; hd = atom LEVEL "simple"; args = atom LEVEL "simple" ->
-          mkVApp `Regular hd args None
-      | AT -> sentinel
-      | CONTEXT; hd = atom LEVEL "simple" -> mkAtomBiContext hd
-      | QMARK; hd = atom LEVEL "simple"; args = atom LEVEL "simple" ->
-          mkVApp `Flex hd args None
-      | SHARP; hd = atom LEVEL "simple"; args = atom LEVEL "simple";
-        info = OPT atom LEVEL "simple" ->
-          mkVApp `Frozen hd args info*)
       | bt = BUILTIN -> mkCustom bt
       | BANG -> mkCut
-      (*| DELAY; t = atom LEVEL "simple"; p = atom LEVEL "simple";
-        vars = OPT [ IN; x = atom LEVEL "simple" -> x ];
-        info = OPT [ WITH; x = atom LEVEL "simple" -> x ] ->
-          mkDelay t p vars info
-      | RESUME; t = atom LEVEL "simple"; p = atom LEVEL "simple" -> mkResume t p*)
       | LPAREN; a = atom; RPAREN -> a ]];
   atom : LEVEL "list" 
      [[ LBRACKET; xs = LIST0 atom LEVEL "implication" SEP COMMA;
-          tl = OPT [ PIPE; x = atom LEVEL "term" -> x ]; RBRACKET ->
+          tl = OPT [ PIPE; x = atom LEVEL "0" -> x ]; RBRACKET ->
           let tl = match tl with None -> mkNil | Some x -> x in
           if List.length xs = 0 && tl <> mkNil then 
             raise (Token.Error ("List with no elements cannot have a tail"));
           if List.length xs = 0 then mkNil
           else mkSeq (xs@[tl]) ]];
-  (*bound : 
-    NOTE: IT WAS RETURNING A BOOLEAN TOO TO DISCRIMINATE THE TWO CASES
-    [[ c = CONSTANT -> c
-     | u = UVAR -> u ]
-    ];*)
 END
 
 let parse_program (*?(ontop=[])*) ~filenames : program =
@@ -543,4 +554,3 @@ let parse_program (*?(ontop=[])*) ~filenames : program =
   true_clause::eq_clause::or_clauses@parse lp filenames
 
 let parse_goal s : goal = parse_string goal s
-(*let parse_data s : data = parse atom s*)
