@@ -11,6 +11,7 @@ module Utils : sig
   val smart_map : ('a -> 'a) -> 'a list -> 'a list
 
   val error : string -> 'a
+  val anomaly : string -> 'a
 
 end = struct (* {{{ *)
 
@@ -39,6 +40,9 @@ let rec smart_map f =
 let error s =
   Printf.eprintf "Fatal error: %s\n%!" s;
   exit 1
+let anomaly s =
+  Printf.eprintf "Anomaly: %s\n%!" s;
+  exit 2
 
 end (* }}} *)
 open Utils
@@ -1146,52 +1150,50 @@ let stack_var_of_ast ({ max_arg = f; name2arg = l } as amap) n =
 ;;
 
 let stack_funct_of_ast (amap : argmap) (cmap : term ConstMap.t) f =
- (try amap,cmap,ConstMap.find f cmap
+  try amap, cmap, ConstMap.find f cmap
   with Not_found ->
-   let c = (Parser.ASTFuncS.pp f).[0] in
+   let c = (F.pp f).[0] in
    if ('A' <= c && c <= 'Z') || c = '_' then
-    let amap,v = stack_var_of_ast amap (F.pp f) in amap,cmap,v
-   else amap,cmap,snd (funct_of_ast f))
+     let amap,v = stack_var_of_ast amap (F.pp f) in amap,cmap,v
+   else amap,cmap,snd (funct_of_ast f)
 ;;
 
 let rec stack_term_of_ast lvl (amap : argmap) (cmap : term ConstMap.t) =
- function
-    AST.App(AST.Const f,[]) when F.eq f F.andf ->
-     amap,cmap,truec
+  function
+  | AST.App(AST.Const f,[]) when F.eq f F.andf -> amap, cmap, truec
   | AST.Const f -> stack_funct_of_ast amap cmap f
-  | AST.Custom f -> amap,cmap,Custom (fst (funct_of_ast f),[])
-  | AST.App(AST.Const f,tl) ->
-     let amap,cmap,rev_tl =
-       List.fold_left
-        (fun (amap,cmap,tl) t ->
-          let amap,cmap,t = stack_term_of_ast lvl amap cmap t in (amap,cmap,t::tl))
-        (amap,cmap,[]) tl in
-     let amap,cmap,c = stack_funct_of_ast amap cmap f in
+  | AST.Custom f -> amap, cmap, Custom (fst (funct_of_ast f), [])
+  | AST.App(AST.Const f, tl) ->
+     let amap, cmap, rev_tl =
+       List.fold_left (fun (amap, cmap, tl) t ->
+         let amap, cmap, t = stack_term_of_ast lvl amap cmap t in
+         (amap, cmap, t::tl))
+        (amap, cmap, []) tl in
      let tl = List.rev rev_tl in
-     (match c with
-          Arg (v,0) ->
-           (try
-            let tl = in_fragment 0 tl in amap,cmap,Arg(v,tl)
-            with NotInTheFragment -> amap,cmap,AppArg(v,tl))
-        | Const c ->
-           (match tl with
-               hd2::tl -> amap,cmap,App(c,hd2,tl)
-             | _ -> assert false)
-        | _ -> assert false)
+     let amap, cmap, c = stack_funct_of_ast amap cmap f in
+     begin match c with
+     | Arg (v,0) -> begin try
+         let tl = in_fragment 0 tl in amap, cmap, Arg(v,tl)
+         with NotInTheFragment -> amap, cmap, AppArg(v,tl) end
+     | Const c -> begin match tl with
+         | hd2::tl -> amap,cmap,App(c,hd2,tl)
+         | _ -> anomaly "Application node with no arguments" end
+     | _ -> error "Clause shape unsupported" end
   | AST.App (AST.Custom f,tl) ->
      let amap,cmap,rev_tl =
-       List.fold_left
-        (fun (amap,cmap,tl) t ->
-          let amap,cmap,t = stack_term_of_ast lvl amap cmap t in (amap,cmap,t::tl))
-        (amap,cmap,[]) tl in
-     amap,cmap,Custom(fst (funct_of_ast f),List.rev rev_tl)
+       List.fold_left (fun (amap, cmap, tl) t ->
+          let amap, cmap, t = stack_term_of_ast lvl amap cmap t in
+          (amap,cmap,t::tl))
+        (amap, cmap, []) tl in
+     amap, cmap, Custom(fst (funct_of_ast f), List.rev rev_tl)
   | AST.Lam (x,t) ->
-     let c = constant_of_dbl lvl in
-     let amap,cmap,t' = stack_term_of_ast (lvl+1) amap (ConstMap.add x c cmap) t in
-     amap,cmap,Lam t'
-  | AST.App (AST.App (f,l1),l2) -> stack_term_of_ast lvl amap cmap (AST.App (f, l1@l2))
-  | AST.String str -> amap,cmap,String str
-  | AST.Int i -> amap,cmap,Int i 
+     let cmap' = ConstMap.add x (constant_of_dbl lvl) cmap in
+     let amap, _, t' = stack_term_of_ast (lvl+1) amap cmap' t in
+     amap, cmap, Lam t'
+  | AST.App (AST.App (f,l1),l2) ->
+     stack_term_of_ast lvl amap cmap (AST.App (f, l1@l2))
+  | AST.String str -> amap, cmap, String str
+  | AST.Int i -> amap, cmap, Int i 
   | AST.App (AST.Lam _,_) -> error "Beta-redexes not in our language"
   | AST.App (AST.String _,_) -> error "Applied string value"
   | AST.App (AST.Int _,_) -> error "Applied integer value"
