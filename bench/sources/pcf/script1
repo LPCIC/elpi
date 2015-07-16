@@ -1,0 +1,65 @@
+*****************************************************************************
+*  Execution trace of the call-by-value evaluator. Files are assumed to be  *
+*  precompiled. Look at the files eval_test.mod and examples.mod to figure  *
+*  out what functions are being evaluated in each case.                     *
+*****************************************************************************
+
+gopalan@sargam (~/projects/teyjus/examples/pcf) % alias tjsim ../../source/tjsim
+gopalan@sargam (~/projects/teyjus/examples/pcf) % make eval
+../../source/tjcc eval_test
+../../source/tjcc eval
+../../source/tjlink eval_test
+gopalan@sargam (~/projects/teyjus/examples/pcf) % tjsim eval_test
+Welcome to Teyjus
+Copyright (C) 2008 A. Gacek, S. Holte, G. Nadathur, X. Qi, Z. Snow
+Teyjus comes with ABSOLUTELY NO WARRANTY
+This is free software, and you are welcome to redistribute it
+under certain conditions. Please view the accompanying file
+COPYING for more information
+[eval_test] ?- eval_test 1 V.
+
+The answer substitution:
+V = in 144
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[eval_test] ?- eval_test 2 V.
+
+The answer substitution:
+V = cons @ in 2 @ (cons @ in 8 @ empty)
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[eval_test] ?- eval_test 3 V.
+
+The answer substitution:
+V = cons @ in 3 @ (cons @ in 5 @ empty)
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[eval_test] ?- eval_test 4 V.
+
+The answer substitution:
+V = truth
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[eval_test] ?- eval_test 5 V.
+
+The answer substitution:
+V = false
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[eval_test] ?- halt.
+gopalan@sargam (~/projects/teyjus/examples/pcf) % 

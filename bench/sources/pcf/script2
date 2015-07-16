@@ -1,0 +1,177 @@
+*****************************************************************************
+*  Execution trace of the type inference procedure, using the shallow       *
+*  embedding of types. Files are assumed to be precompiled. Look at the     *
+*  files mono_test.mod and examples.mod to figure out what code is being    *
+*  type-checked in each case.                                               *
+*****************************************************************************
+
+gopalan@sargam (~/projects/teyjus/examples/pcf) % alias tjsim ../../source/tjsim
+gopalan@sargam (~/projects/teyjus/examples/pcf) % make monotyping
+../../source/tjcc mono_test
+../../source/tjcc monoinfer
+../../source/tjlink mono_test
+gopalan@sargam (~/projects/teyjus/examples/pcf) % tjsim mono_test
+Welcome to Teyjus
+Copyright (C) 2008 A. Gacek, S. Holte, G. Nadathur, X. Qi, Z. Snow
+Teyjus comes with ABSOLUTELY NO WARRANTY
+This is free software, and you are welcome to redistribute it
+under certain conditions. Please view the accompanying file
+COPYING for more information
+[mono_test] ?- mono_test "successor" Ty.
+
+The answer substitution:
+Ty = num --> num
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[mono_test] ?- mono_test "onep" Ty.
+
+The answer substitution:
+Ty = num --> _T1 --> _T1 --> _T1
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[mono_test] ?- mono_test "is_sym" Ty.
+
+The answer substitution:
+Ty = (_T1 --> _T1 --> _T2) --> _T1 --> _T1 --> bool
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[mono_test] ?- mono_test "fib" Ty.
+
+The answer substitution:
+Ty = num --> num
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[mono_test] ?- mono_test "map" Ty.
+
+The answer substitution:
+Ty = (_T1 --> _T2) --> lst _T1 --> lst _T2
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[mono_test] ?- mono_test "mem" Ty.
+
+The answer substitution:
+Ty = _T1 --> lst _T1 --> bool
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[mono_test] ?- mono_test "fact" Ty.
+
+The answer substitution:
+Ty = num --> num --> num
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[mono_test] ?- mono_test "app" Ty.
+
+The answer substitution:
+Ty = lst _T1 --> lst _T1 --> lst _T1
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[mono_test] ?- mono_test "gcd" Ty.
+
+The answer substitution:
+Ty = num --> num --> num
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[mono_test] ?- mono_test "ex1" Ty.
+
+no (more) solutions
+
+[mono_test] ?- mono_test "ex2" Ty.
+
+no (more) solutions
+
+[mono_test] ?- mono_test "ex3" Ty.
+
+no (more) solutions
+
+[mono_test] ?- mono_test "ex4" Ty.
+
+The answer substitution:
+Ty = _T1 --> _T2 --> _T2
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[mono_test] ?- mono_test "ex5" Ty.
+
+The answer substitution:
+Ty = num
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[mono_test] ?- mono_test "ex6" Ty.
+
+The answer substitution:
+Ty = _T1 --> _T1
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[mono_test] ?- mono_test "i" Ty.
+
+The answer substitution:
+Ty = _T1 --> _T1
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[mono_test] ?- mono_test "k" Ty.
+
+The answer substitution:
+Ty = _T1 --> _T2 --> _T1
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[mono_test] ?- mono_test "s" Ty.
+
+The answer substitution:
+Ty = (_T1 --> _T2 --> _T3) --> (_T1 --> _T2) --> _T1 --> _T3
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[mono_test] ?- mono_test "comp" Ty.
+
+The answer substitution:
+Ty = (_T1 --> _T2) --> (_T3 --> _T1) --> _T3 --> _T2
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[mono_test] ?- halt.
+gopalan@sargam (~/projects/teyjus/examples/pcf) % 

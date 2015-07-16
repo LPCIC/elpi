@@ -1,0 +1,24 @@
+unifytypes.lpo: unifytypes.mod unifytypes.sig control.sig monotypes.sig
+tr_test.lpo: tr_test.mod tr_test.sig tailrec.sig examples.sig pcf.sig
+tailrec.lpo: tailrec.mod tailrec.sig refl_syntax.sig pcf.sig
+refl_syntax.lpo: refl_syntax.mod refl_syntax.sig pcf.sig
+polyinfer.lpo: polyinfer.mod polyinfer.sig unifytypes.sig polytypes.sig pcf.sig monotypes.sig
+poly_test.lpo: poly_test.mod poly_test.sig polyinfer.sig examples.sig pcf.sig polytypes.sig monotypes.sig
+monoinfer.lpo: monoinfer.mod monoinfer.sig pcf.sig monotypes.sig
+mono_test.lpo: mono_test.mod mono_test.sig monoinfer.sig examples.sig pcf.sig monotypes.sig
+examples.lpo: examples.mod examples.sig pcf.sig
+eval_test.lpo: eval_test.mod eval_test.sig eval.sig examples.sig pcf.sig
+eval.lpo: eval.mod eval.sig control.sig pcf.sig
+control.lpo: control.mod control.sig 
+unifytypes.lp: unifytypes.lpo control.lpo
+tr_test.lp: tr_test.lpo tailrec.lpo examples.lpo refl_syntax.lpo
+tailrec.lp: tailrec.lpo refl_syntax.lpo
+refl_syntax.lp: refl_syntax.lpo 
+polyinfer.lp: polyinfer.lpo unifytypes.lpo control.lpo
+poly_test.lp: poly_test.lpo polyinfer.lpo examples.lpo unifytypes.lpo control.lpo
+monoinfer.lp: monoinfer.lpo 
+mono_test.lp: mono_test.lpo monoinfer.lpo examples.lpo
+examples.lp: examples.lpo 
+eval_test.lp: eval_test.lpo eval.lpo examples.lpo control.lpo
+eval.lp: eval.lpo control.lpo
+control.lp: control.lpo 

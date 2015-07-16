@@ -1,0 +1,180 @@
+*****************************************************************************
+*  Execution trace of the type inference procedure, using the deep          *
+*  embedding of types. Files are assumed to be precompiled. Look at the     *
+*  files poly_test.mod and examples.mod to figure out what code is being    *
+*  type-checked in each case.                                               *
+*****************************************************************************
+
+gopalan@sargam (~/projects/teyjus/examples/pcf) % alias tjsim ../../source/tjsim
+gopalan@sargam (~/projects/teyjus/examples/pcf) % make polytyping
+../../source/tjcc poly_test
+../../source/tjcc polyinfer
+../../source/tjcc examples
+../../source/tjcc unifytypes
+../../source/tjcc control
+../../source/tjlink poly_test
+gopalan@sargam (~/projects/teyjus/examples/pcf) % tjsim poly_test
+Welcome to Teyjus
+Copyright (C) 2008 A. Gacek, S. Holte, G. Nadathur, X. Qi, Z. Snow
+Teyjus comes with ABSOLUTELY NO WARRANTY
+This is free software, and you are welcome to redistribute it
+under certain conditions. Please view the accompanying file
+COPYING for more information
+[poly_test] ?- poly_test "successor" Ty.
+
+The answer substitution:
+Ty = c (num --> num)
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[poly_test] ?- poly_test "onep" Ty.
+
+The answer substitution:
+Ty = all (W1\ c (num --> W1 --> W1 --> W1))
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[poly_test] ?- poly_test "is_sym" Ty.
+
+The answer substitution:
+Ty = all (W1\ all (W2\ c ((W2 --> W2 --> W1) --> W2 --> W2 --> bool)))
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[poly_test] ?- poly_test "fib" Ty.
+
+The answer substitution:
+Ty = c (num --> num)
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[poly_test] ?- poly_test "map" Ty.
+
+The answer substitution:
+Ty = all (W1\ all (W2\ c ((W2 --> W1) --> lst W2 --> lst W1)))
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[poly_test] ?- poly_test "mem" Ty.
+
+The answer substitution:
+Ty = all (W1\ c (W1 --> lst W1 --> bool))
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[poly_test] ?- poly_test "fact" Ty.
+
+The answer substitution:
+Ty = c (num --> num --> num)
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[poly_test] ?- poly_test "app" Ty.
+
+The answer substitution:
+Ty = all (W1\ c (lst W1 --> lst W1 --> lst W1))
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[poly_test] ?- poly_test "gcd" Ty.
+
+The answer substitution:
+Ty = c (num --> num --> num)
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[poly_test] ?- poly_test "ex1" Ty.
+
+no (more) solutions
+
+[poly_test] ?- poly_test "ex2" Ty.
+
+no (more) solutions
+
+[poly_test] ?- poly_test "ex3" Ty.
+
+no (more) solutions
+
+[poly_test] ?- poly_test "ex4" Ty.
+
+The answer substitution:
+Ty = all (W1\ all (W2\ c (W1 --> W2 --> W2)))
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[poly_test] ?- poly_test "ex5" Ty.
+
+The answer substitution:
+Ty = c num
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[poly_test] ?- poly_test "ex6" Ty.
+
+The answer substitution:
+Ty = all (W1\ c (W1 --> W1))
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[poly_test] ?- poly_test "i" Ty.
+
+The answer substitution:
+Ty = all (W1\ c (W1 --> W1))
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[poly_test] ?- poly_test "k" Ty.
+
+The answer substitution:
+Ty = all (W1\ all (W2\ c (W2 --> W1 --> W2)))
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[poly_test] ?- poly_test "s" Ty.
+
+The answer substitution:
+Ty = all (W1\ all (W2\ all (W3\ c ((W3 --> W2 --> W1) --> (W3 --> W2) --> W3 --> W1))))
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[poly_test] ?- poly_test "comp" Ty.
+
+The answer substitution:
+Ty = all (W1\ all (W2\ all (W3\ c ((W2 --> W1) --> (W3 --> W2) --> W3 --> W1))))
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[poly_test] ?- halt.
+gopalan@sargam (~/projects/teyjus/examples/pcf) % 
