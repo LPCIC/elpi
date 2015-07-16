@@ -10,8 +10,14 @@ module Utils : sig
 
   val smart_map : ('a -> 'a) -> 'a list -> 'a list
 
+  (* A regular error *)
   val error : string -> 'a
+
+  (* An invariant is broken, i.e. a bug *)
   val anomaly : string -> 'a
+  
+  (* If we type check the program, then these are anomalies *)
+  val type_error : string -> 'a
 
 end = struct (* {{{ *)
 
@@ -43,6 +49,7 @@ let error s =
 let anomaly s =
   Printf.eprintf "Anomaly: %s\n%!" s;
   exit 2
+let type_error = error
 
 end (* }}} *)
 open Utils
@@ -989,71 +996,52 @@ let _ =
      | _ -> assert false)
 ;;
 
+exception No_clause
+
 (* The block of recursive functions spares the allocation of a Some/None
  * at each iteration in order to know if one needs to backtrack or continue *)
 let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
   let trail = ref [] in
 
   (* Input to be read as the orl (((p,g)::gs)::next)::alts
-     Depth >= 0 is the number of variables in the context.
-  *)
+     depth >= 0 is the number of variables in the context. *)
   let rec run depth p g gs (next : frame) alts lvl =
     TRACE "run" (fun fmt -> ppterm depth [] 0 [||] fmt g)
-    (*Format.eprintf "<";
-    List.iter (Format.eprintf "goal: %a\n%!" ppterm) stack.goals;
-    Format.eprintf ">";*)
     let run d p g gs n a l = TCALL run d p g gs n a l in
     match g with
-    | c when c == cutc ->
-         (* We filter out from the or list until we find the
-            last frame not to be removed (called lvl). *)
-         let alts =
-          let rec prune alts =
-           if alts == lvl then alts
-           else prune alts.next
-          in
-           prune alts in
-         if alts==emptyalts then trail := [] ;
-         (match gs with
-             [] -> TCALL pop_andl alts next
-           | (depth,p,g)::gs -> run depth p g gs next alts lvl)
+    | c when c == cutc -> TCALL cut p gs next alts lvl
     | App(c, g, gs') when c == andc ->
        run depth p g (List.map(fun x -> depth,p,x) gs'@gs) next alts lvl
-    (* We do not check the case of implication applied to
-       multiple arguments *)
     | App(c, g1, [g2]) when c == implc ->
        let clauses = clausify 0 depth [] [] g1 in
        run depth (add_clauses clauses p) g2 gs next alts lvl
+(*  This stays commented out because it slows down rev18 in a visible way!   *)
+(*  | App(c, _, _) when c == implc -> anomaly "Implication must have 2 args" *)
     | App(c, g1, [g2]) when c == isc ->
        let eq = App(eqc, g1, [g2]) in
        run depth p eq gs next alts lvl 
     | App(c, Lam f, []) when c == pic ->
        run (depth+1) p f gs next alts lvl
     | App(c, Lam f, []) when c == sigmac ->
-       let r = ref dummy in
-       let v = UVar(r,depth,0) in
+       let v = UVar(ref dummy, depth, 0) in
        run depth p (subst depth [v] f) gs next alts lvl
-    | UVar ({ contents=g },_,_) when g == dummy ->
-       raise (Failure "Not a predicate")
-    | UVar ({ contents=g },origdepth,args) ->
-       run depth p (deref ~from:origdepth ~to_:depth args g)
-        gs next alts lvl
-    | AppUVar ({contents=t},origdepth,args) when t != dummy ->
-       run depth p (app_deref ~from:origdepth ~to_:depth args t)
-        gs next alts lvl 
-    | AppUVar _ -> raise (Failure "Not a predicate")
-    | Lam _ | String _ | Int _ -> raise (Failure "Not a predicate")
+    | UVar ({ contents = g }, from, args) when g != dummy ->
+       run depth p (deref ~from ~to_:depth args g) gs next alts lvl
+    | AppUVar ({contents = t}, from, args) when t != dummy ->
+       run depth p (app_deref ~from ~to_:depth args t) gs next alts lvl 
     | Const _ | App _ -> (* Atom case *)
-        let cp = get_clauses depth g p in
-        TCALL backchain depth p g gs cp next alts lvl
-    | Arg _ | AppArg (_,_) -> assert false (* Not a heap term *)
-    | Custom(c,gs') ->
-       let f = try lookup_custom c with Not_found -> assert false in
+       let cp = get_clauses depth g p in
+       TCALL backchain depth p g gs cp next alts lvl
+    | Arg _ | AppArg _ -> anomaly "Not a heap term"
+    | Lam _ | String _ | Int _ -> type_error "Not a predicate"
+    | UVar _ | AppUVar _ -> error "Flexible predicate"
+    | Custom(c, gs') ->
+       let f = try lookup_custom c with Not_found -> anomaly"no such custom" in
        let b = try f depth [||] gs'; true with Failure _ -> false in
        if b then
-        (match gs with
-           [] -> pop_andl alts next
-         | (depth,p,g)::gs -> run depth p g gs next alts lvl)
+         match gs with
+         | [] -> pop_andl alts next
+         | (depth,p,g) :: gs -> run depth p g gs next alts lvl
        else TCALL next_alt alts
 
   and backchain depth p g gs cp next alts lvl =
@@ -1114,14 +1102,22 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
     in
       select cp
 
-  and pop_andl alts =
-   function
-      FNil -> alts
+  and cut p gs next alts lvl =
+    (* cut the or list until the last frame not to be cut (called lvl) *)
+    let rec prune alts = if alts == lvl then alts else prune alts.next in
+    let alts = prune alts in
+    if alts == emptyalts then trail := [];
+    match gs with
+    | [] -> TCALL pop_andl alts next
+    | (depth, p, g) :: gs -> TCALL run depth p g gs next alts lvl
+
+  and pop_andl alts = function
+    | FNil -> alts
     | FCons (_,[],_) -> assert false
     | FCons(lvl,(depth,p,g)::gs,next) -> run depth p g gs next alts lvl
 
   and next_alt alts =
-   if alts == emptyalts then raise (Failure "no clause")
+   if alts == emptyalts then raise No_clause
    else begin
     let { program = p; depth = depth; goal = g; goals = gs; stack=next;
           trail = old_trail; clauses = clauses; lvl = lvl ; next=alts} = alts in
@@ -1129,17 +1125,22 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
     backchain depth p g gs clauses next alts lvl
    end
   in
+
+  (* Finally the runtime *)
    (fun p (_,q_env,q) ->
-     let q =
-      to_heap 0 true trail ~from:0 ~to_:0 q_env q in
+     let q = to_heap 0 true trail ~from:0 ~to_:0 q_env q in
      run 0 p q [] FNil emptyalts emptyalts),
    next_alt
 ;;
- 
-module AST = Parser
-module ConstMap = Map.Make(Parser.ASTFuncS);;
 
+(************************** "compilation" + API ****************************)
+
+module AST = Parser
+module ConstMap = Map.Make(Parser.ASTFuncS)
+
+(* To assign Arg (i.e. stack) slots to unif variables in clauses *)
 type argmap = { max_arg : int; name2arg : (string * term) list }
+
 let empty_amap = { max_arg = 0; name2arg = [] }
 
 let stack_var_of_ast ({ max_arg = f; name2arg = l } as amap) n =
@@ -1149,7 +1150,7 @@ let stack_var_of_ast ({ max_arg = f; name2arg = l } as amap) n =
   { max_arg = f+1 ; name2arg = (n,n')::l }, n'
 ;;
 
-let stack_funct_of_ast (amap : argmap) (cmap : term ConstMap.t) f =
+let stack_funct_of_ast amap cmap f =
   try amap, ConstMap.find f cmap
   with Not_found ->
    let c = (F.pp f).[0] in
@@ -1158,11 +1159,14 @@ let stack_funct_of_ast (amap : argmap) (cmap : term ConstMap.t) f =
    else amap, snd (funct_of_ast f)
 ;;
 
-let rec stack_term_of_ast lvl (amap : argmap) (cmap : term ConstMap.t) =
-  function
+let rec stack_term_of_ast lvl amap cmap = function
   | AST.App(AST.Const f,[]) when F.eq f F.andf -> amap, truec
   | AST.Const f -> stack_funct_of_ast amap cmap f
-  | AST.Custom f -> amap, Custom (fst (funct_of_ast f), [])
+  | AST.Custom f ->
+     let cname = fst (funct_of_ast f) in
+     begin try let _f = lookup_custom cname in ()
+     with Not_found -> error ("No custom named " ^ F.pp f) end;
+     amap, Custom (cname, [])
   | AST.App(AST.Const f, tl) ->
      let amap, rev_tl =
        List.fold_left (fun (amap, tl) t ->
@@ -1180,12 +1184,15 @@ let rec stack_term_of_ast lvl (amap : argmap) (cmap : term ConstMap.t) =
         | _ -> anomaly "Application node with no arguments" end
      | _ -> error "Clause shape unsupported" end
   | AST.App (AST.Custom f,tl) ->
+     let cname = fst (funct_of_ast f) in
+     begin try let _f = lookup_custom cname in ()
+     with Not_found -> error ("No custom named " ^ F.pp f) end;
      let amap, rev_tl =
        List.fold_left (fun (amap, tl) t ->
           let amap, t = stack_term_of_ast lvl amap cmap t in
           (amap, t::tl))
         (amap, []) tl in
-     amap, Custom(fst (funct_of_ast f), List.rev rev_tl)
+     amap, Custom(cname, List.rev rev_tl)
   | AST.Lam (x,t) ->
      let cmap' = ConstMap.add x (constant_of_dbl lvl) cmap in
      let amap, t' = stack_term_of_ast (lvl+1) amap cmap' t in
@@ -1197,11 +1204,13 @@ let rec stack_term_of_ast lvl (amap : argmap) (cmap : term ConstMap.t) =
   | AST.App (AST.Lam _,_) -> error "Beta-redexes not in our language"
   | AST.App (AST.String _,_) -> error "Applied string value"
   | AST.App (AST.Int _,_) -> error "Applied integer value"
+;;
  
 let query_of_ast t =
   let { max_arg = max; name2arg = l }, t =
     stack_term_of_ast 0 empty_amap ConstMap.empty t in
   List.rev_map fst l, Array.make max dummy, t
+;;
 
 let program_of_ast (p : Parser.clause list) : program =
  let clauses = List.map (fun { Parser.head = hd; hyps = hyp } ->
@@ -1261,7 +1270,7 @@ let pp_prolog = pp_FOprolog
 let execute_once p q =
  let run, cont = make_runtime in
  try ignore (run p q) ; false
- with Failure _ -> true
+ with No_clause -> true
 ;;
 
 let execute_loop p ((q_names,q_env,q) as qq) =
@@ -1287,7 +1296,7 @@ let execute_loop p ((q_names,q_env,q) as qq) =
      List.iteri (fun i name -> Format.eprintf "%s=%a\n%!" name
       (uppterm 0 q_names 0 q_env) q_env.(i)) q_names;
     with
-     Failure "no clause" -> prerr_endline "Fail"; k := emptyalts
+     No_clause -> prerr_endline "Fail"; k := emptyalts
  done
 ;;
 
