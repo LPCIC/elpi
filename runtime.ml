@@ -1195,7 +1195,7 @@ let query_of_ast t =
 
 let program_of_ast p =
  let clauses =
-  List.map (fun (a,f) ->
+   List.map (fun { Parser.head = a; hyps = f } ->
    let l,m1,a = stack_term_of_ast 0 (0,[]) ConstMap.empty a in
    let (max,l),m2,f = stack_term_of_ast 0 l m1 f in
 (* FG: print should be optional
@@ -1223,7 +1223,7 @@ let program_of_ast p =
   make clauses
 
 let pp_FOprolog p =
- List.iter (fun (a,f) ->
+  List.iter (fun { Parser.head = a; hyps = f } ->
   let l,_,a = stack_term_of_ast 0 (0,[]) ConstMap.empty a in
   let (max,l),_,f = stack_term_of_ast 0 l ConstMap.empty f in
   let names = List.rev_map fst l in

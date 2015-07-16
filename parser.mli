@@ -28,5 +28,7 @@ type term =
  | String of ASTFuncS.t
  | Int of int 
 
-val parse_program : filenames:string list -> (term * term) list
+type clause = { head : term; hyps : term }
+
+val parse_program : filenames:string list -> clause list
 val parse_goal : string -> term

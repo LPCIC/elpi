@@ -68,22 +68,23 @@ let mkIs x f = App(Const ASTFuncS.isf,[x;f])
 exception NotInProlog;;
 
 type formula = term
-type program = (term * term) list
+type clause = { head : term; hyps : term }
+type program = clause list
 type goal = term
 
-let mkClause lhs rhs = lhs,rhs
+let mkClause lhs rhs = { head = lhs; hyps = rhs }
 
-let true_clause = mkTrue, mkConj []
+let true_clause = mkClause mkTrue (mkConj [])
 
 let eq_clause =
  let v = Const (ASTFuncS.from_string "X") in
-  mkEq v v, mkConj []
+  mkClause (mkEq v v) (mkConj [])
 
 let or_clauses =
  let v1 = Const (ASTFuncS.from_string "A") in
  let v2 = Const (ASTFuncS.from_string "B") in
-  [ mkDisj [v1;v2], v1
-  ; mkDisj [v1;v2], v2 ]
+  [ mkClause (mkDisj [v1;v2]) v1
+  ; mkClause (mkDisj [v1;v2]) v2 ]
 
 let mkApp =
  function
