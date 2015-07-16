@@ -10,6 +10,8 @@ module Utils : sig
 
   val smart_map : ('a -> 'a) -> 'a list -> 'a list
 
+  val error : string -> 'a
+
 end = struct (* {{{ *)
 
 let pplist ?(max=max_int) ?(boxed=false) ppelem sep f l =
@@ -26,7 +28,6 @@ let pplist ?(max=max_int) ?(boxed=false) ppelem sep f l =
  end
 ;;
 
-
 let rec smart_map f =
  function
     [] -> []
@@ -34,6 +35,10 @@ let rec smart_map f =
      let hd' = f hd in
      let tl' = smart_map f tl in
      if hd==hd' && tl==tl' then l else hd'::tl'
+
+let error s =
+  Printf.eprintf "Fatal error: %s\n%!" s;
+  exit 1
 
 end (* }}} *)
 open Utils
@@ -1130,108 +1135,122 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
 module AST = Parser
 module ConstMap = Map.Make(Parser.ASTFuncS);;
 
-let stack_var_of_ast (f,l) n =
- try (f,l),List.assoc n l
+type argmap = { max_arg : int; name2arg : (string * term) list }
+let empty_amap = { max_arg = 0; name2arg = [] }
+
+let stack_var_of_ast ({ max_arg = f; name2arg = l } as amap) n =
+ try amap, List.assoc n l
  with Not_found ->
   let n' = Arg (f,0) in
-  (f+1,(n,n')::l),n'
+  { max_arg = f+1 ; name2arg = (n,n')::l }, n'
 ;;
 
-let stack_funct_of_ast l l' f =
- (try l,l',ConstMap.find f l'
+let stack_funct_of_ast (amap : argmap) (cmap : term ConstMap.t) f =
+ (try amap,cmap,ConstMap.find f cmap
   with Not_found ->
    let c = (Parser.ASTFuncS.pp f).[0] in
    if ('A' <= c && c <= 'Z') || c = '_' then
-    let l,v = stack_var_of_ast l (Parser.ASTFuncS.pp f) in l,l',v
-   else l,l',snd (funct_of_ast f))
+    let amap,v = stack_var_of_ast amap (F.pp f) in amap,cmap,v
+   else amap,cmap,snd (funct_of_ast f))
 ;;
 
-let rec stack_term_of_ast lvl l l' =
+let rec stack_term_of_ast lvl (amap : argmap) (cmap : term ConstMap.t) =
  function
     AST.App(AST.Const f,[]) when F.eq f F.andf ->
-     l,l',truec
-  | AST.Const f -> stack_funct_of_ast l l' f
-  | AST.Custom f -> l,l',Custom (fst (funct_of_ast f),[])
+     amap,cmap,truec
+  | AST.Const f -> stack_funct_of_ast amap cmap f
+  | AST.Custom f -> amap,cmap,Custom (fst (funct_of_ast f),[])
   | AST.App(AST.Const f,tl) ->
-     let l,l',rev_tl =
+     let amap,cmap,rev_tl =
        List.fold_left
-        (fun (l,l',tl) t ->
-          let l,l',t = stack_term_of_ast lvl l l' t in (l,l',t::tl))
-        (l,l',[]) tl in
-     let l,l',c = stack_funct_of_ast l l' f in
+        (fun (amap,cmap,tl) t ->
+          let amap,cmap,t = stack_term_of_ast lvl amap cmap t in (amap,cmap,t::tl))
+        (amap,cmap,[]) tl in
+     let amap,cmap,c = stack_funct_of_ast amap cmap f in
      let tl = List.rev rev_tl in
      (match c with
           Arg (v,0) ->
            (try
-            let tl = in_fragment 0 tl in l,l',Arg(v,tl)
-            with NotInTheFragment -> l,l',AppArg(v,tl))
+            let tl = in_fragment 0 tl in amap,cmap,Arg(v,tl)
+            with NotInTheFragment -> amap,cmap,AppArg(v,tl))
         | Const c ->
            (match tl with
-               hd2::tl -> l,l',App(c,hd2,tl)
+               hd2::tl -> amap,cmap,App(c,hd2,tl)
              | _ -> assert false)
         | _ -> assert false)
   | AST.App (AST.Custom f,tl) ->
-     let l,l',rev_tl =
+     let amap,cmap,rev_tl =
        List.fold_left
-        (fun (l,l',tl) t ->
-          let l,l',t = stack_term_of_ast lvl l l' t in (l,l',t::tl))
-        (l,l',[]) tl in
-     l,l',Custom(fst (funct_of_ast f),List.rev rev_tl)
+        (fun (amap,cmap,tl) t ->
+          let amap,cmap,t = stack_term_of_ast lvl amap cmap t in (amap,cmap,t::tl))
+        (amap,cmap,[]) tl in
+     amap,cmap,Custom(fst (funct_of_ast f),List.rev rev_tl)
   | AST.Lam (x,t) ->
      let c = constant_of_dbl lvl in
-     let l,l',t' = stack_term_of_ast (lvl+1) l (ConstMap.add x c l') t in
-     l,l',Lam t'
-  | AST.App (AST.App (f,l1),l2) -> stack_term_of_ast lvl l l' (AST.App (f, l1@l2))
-  | AST.App (AST.Lam _,_) ->
-     (* Beta-redexes not in our language *) assert false
-  | AST.App (AST.String _,_) -> assert false
-  | AST.App (AST.Int _,_) -> assert false
-  | AST.String str -> l,l',String str
-  | AST.Int i -> l,l',Int i 
+     let amap,cmap,t' = stack_term_of_ast (lvl+1) amap (ConstMap.add x c cmap) t in
+     amap,cmap,Lam t'
+  | AST.App (AST.App (f,l1),l2) -> stack_term_of_ast lvl amap cmap (AST.App (f, l1@l2))
+  | AST.String str -> amap,cmap,String str
+  | AST.Int i -> amap,cmap,Int i 
+  | AST.App (AST.Lam _,_) -> error "Beta-redexes not in our language"
+  | AST.App (AST.String _,_) -> error "Applied string value"
+  | AST.App (AST.Int _,_) -> error "Applied integer value"
  
 let query_of_ast t =
- let (max,l),_,t = stack_term_of_ast 0 (0,[]) ConstMap.empty t in
-  List.rev_map fst l,Array.make max dummy,t
+  let { max_arg = max; name2arg = l }, _, t =
+    stack_term_of_ast 0 empty_amap ConstMap.empty t in
+  List.rev_map fst l, Array.make max dummy, t
 
-let program_of_ast p =
- let clauses =
-   List.map (fun { Parser.head = a; hyps = f } ->
-   let l,m1,a = stack_term_of_ast 0 (0,[]) ConstMap.empty a in
-   let (max,l),m2,f = stack_term_of_ast 0 l m1 f in
-(* FG: print should be optional
-   let names = List.rev_map fst l in
-   let env = Array.make max dummy in
-   if f = truec then
-    Format.eprintf "@[<hov 1>%a%a.@]\n%!" (uppterm 0 names 0 env) a (pplist (uppterm 0 names 0 env) ",") (chop f)
-   else
-    Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!" (uppterm 0 names 0 env) a (pplist ~boxed:true (uppterm 0 names 0 env) ",") (chop f);*)
+let program_of_ast (p : Parser.clause list) : program =
+ let clauses = List.map (fun { Parser.head = hd; hyps = hyp } ->
+   let amap, cmap = empty_amap, ConstMap.empty in
+   let amap, cmap, hd  = stack_term_of_ast 0 amap cmap hd  in
+   let amap, cmap, hyp = stack_term_of_ast 0 amap cmap hyp in
+   SPY "prog-clause" (fun fmt ({ max_arg = max; name2arg = l }, hd, hyp) ->
+     let names = List.rev_map fst l in
+     let env = Array.make max dummy in
+     if hyp = truec then
+       Format.eprintf "@[<hov 1>%a%a.@]\n%!"
+         (uppterm 0 names 0 env) hd
+         (pplist (uppterm 0 names 0 env) ",") (chop hyp)
+     else
+       Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
+         (uppterm 0 names 0 env) hd
+         (pplist ~boxed:true (uppterm 0 names 0 env) ",") (chop hyp))
+     (amap,hd,hyp);
    let args =
-    match a with
-       Const _ -> []
+     match hd with
+     | Const _ -> []
      | App(_,x,xs) -> x::xs
-     | Arg _
-     | AppArg (_,_) -> assert false 
-     | _ -> assert false
+     | Arg _ | AppArg (_,_) -> error "flexible clause not supported"
+     | _ -> error "unsupported clause shape"
    in
    { depth = 0
    ; args = args
-   ; hyps = chop f
-   ; vars = max
-   ; key = key_of 0 a
+   ; hyps = chop hyp
+   ; vars = amap.max_arg
+   ; key = key_of 0 hd
    }) p
  in
-  make clauses
+  Indexing.make clauses
+;;
 
-let pp_FOprolog p =
-  List.iter (fun { Parser.head = a; hyps = f } ->
-  let l,_,a = stack_term_of_ast 0 (0,[]) ConstMap.empty a in
-  let (max,l),_,f = stack_term_of_ast 0 l ConstMap.empty f in
+let pp_FOprolog p = List.iter (fun { Parser.head = a; hyps = f } ->
+  let amap, cmap = empty_amap, ConstMap.empty in
+  let amap, cmap, a = stack_term_of_ast 0 amap cmap a in
+  let amap, cmap, f = stack_term_of_ast 0 amap cmap f in
+  let { max_arg = max; name2arg = l } = amap in
   let names = List.rev_map fst l in
   let env = Array.make max dummy in
   if f = truec then
-   Format.eprintf "@[<hov 1>%a%a.@]\n%!" (pp_FOprolog names env) a (pplist (pp_FOprolog names env) ",") (chop f)
+   Format.eprintf "@[<hov 1>%a%a.@]\n%!"
+     (pp_FOprolog names env) a
+     (pplist (pp_FOprolog names env) ",") (chop f)
   else
-   Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!" (pp_FOprolog names env) a (pplist (pp_FOprolog names env) ",") (chop f)) p;;
+   Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
+     (pp_FOprolog names env) a
+     (pplist (pp_FOprolog names env) ",") (chop f)) p
+;;
 
 (* RUN with non indexed engine *)
 type query = string list * term array * term
