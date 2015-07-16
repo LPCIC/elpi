@@ -39,7 +39,7 @@ out:close()
 
 plot = assert(io.open(arg[1]..'.plot','w'), 'Unable to open plot file')
 plot:write([[
-        set terminal png size 1024, 500
+        set terminal png size 1024, 1000
 	set xtics rotate by 90 right
 	set xlabel "test"
 	set boxwidth 0.3
@@ -48,8 +48,11 @@ plot:write([[
 ]])
 i=1
 for runner, _ in pairs(all_runners) do
+	local tics = ""
+	if i == 1 then tics = ':xtic(2)' end
+	local pos = '$1+' .. string.format("%3.1f",(i-1) * 0.1)
         plot:write('"'..arg[1]..'.dat" \\\n')
-	plot:write('using 1:'..(1+i*3)..':xtic(2) with boxes title "'..
+	plot:write('using ('..pos..'):'..(1+i*3)..tics..' with boxes title "'..
 		runner..'", \\\n')
 	i=i+1
 end
