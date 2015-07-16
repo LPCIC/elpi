@@ -102,8 +102,19 @@ let mkCon c = Const (ASTFuncS.from_string c)
 let mkCustom c = Custom (ASTFuncS.from_string c)
 
 let parsed = ref [];;
+let cur_dirname = ref ""
+
+let rec symlink_dirname f =
+  try
+    let link = Unix.readlink f in
+    if not(Filename.is_relative link) then symlink_dirname link
+    else symlink_dirname Filename.(concat (dirname f) link)
+  with Unix.Unix_error _ -> Filename.dirname f
 
 let parse_one e filename =
+ let filename =
+   if not (Filename.is_relative filename) then filename
+   else Filename.concat !cur_dirname filename in
  let filename =
   if Sys.file_exists filename then filename
   else if Filename.check_suffix filename ".elpi" then
@@ -120,6 +131,7 @@ let parse_one e filename =
   Printf.eprintf "loading %s\n%!" filename;
   parsed := filename::!parsed ;
   let ch = open_in filename in
+  cur_dirname := symlink_dirname filename;
   try let res = Grammar.Entry.parse e (Stream.of_channel ch) in close_in ch;res
   with Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) ->
     close_in ch;
@@ -137,7 +149,8 @@ let parse_one e filename =
   | Ploc.Exc(_,e) -> close_in ch; raise e
  end
 
-let parse e filenames = List.concat (List.map (parse_one e) filenames)
+let parse e filenames =
+  List.concat (List.map (parse_one e) filenames)
 
 let parse_string e s =
   try Grammar.Entry.parse e (Stream.of_string s)
