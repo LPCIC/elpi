@@ -170,13 +170,14 @@ let schar =
 let schar1 =
  lexer [ '+' | '-' | '/' | '^' | '<' | '>' | '=' | '`'
        | '\'' | '?' | '@' | '#' | '$' | '&' | '!' | '_' | '~' ]
-let schar2 =
- lexer [ '+' | '-' | '*' | '^' | '<' | '>' | '=' | '`'
-       | '\'' | '?' | '@' | '#' | '$' | '&' | '!' | '~' ]
+let schar2 = (* compared to Teyjus, we handle =, !, &, -, $ outside schar2
+                because otherwise the lexers are not factorized *)
+ lexer [ '+' | '*' | '^' | '<' | '>' | '`' | '\'' | '?' | '@' | '#' | '~' ]
 let lcase = lexer [ 'a'-'z' ]
 let ucase = lexer [ 'A'-'Z' ]
 let idchar = lexer [ lcase | ucase | digit | schar ]
 let rec idcharstar = lexer [ idchar idcharstar | ]
+let idcharplus = lexer [ idchar idcharstar ]
 let idchar1 = lexer [ lcase | ucase | digit | schar1 ]
 let rec num = lexer [ digit | digit num ]
 
@@ -185,29 +186,29 @@ let rec string = lexer [ '"' | _ string ]
 let tok = lexer
   [ ucase idcharstar -> "CONSTANT", $buf 
   | lcase idcharstar -> "CONSTANT", $buf
+  | schar2 idcharstar -> "CONSTANT", $buf
   | '/' -> "CONSTANT",$buf
   | '/' idchar1 idcharstar -> "CONSTANT", $buf
-(*| schar2 idcharstar -> "CONSTANT", $buf CSC: TO BE TESTED,
-    (would break the next line for sure)
-    commenting out the next lines if they are subsumed. *)
-  | '$' 'a'-'z' idcharstar -> "BUILTIN",$buf
-  | "*" -> "CONSTANT", $buf (*CSC: to be fixed *)
+  | '$' lcase idcharstar -> "BUILTIN",$buf
+  | '$' idcharstar -> "CONSTANT",$buf
+(*  | "*" -> "CONSTANT", $buf (*CSC: to be fixed *)
   | "+" -> "CONSTANT", $buf (*CSC: to be fixed *)
   | ">" -> "CONSTANT", $buf (*CSC: to be fixed *)
   | ">=" -> "CONSTANT", $buf (*CSC: to be fixed *)
-  | '<' -> "CONSTANT",$buf (*CSC: to be fixed *)
+  | '<' -> "CONSTANT",$buf (*CSC: to be fixed *)*)
   | num -> "INTEGER", $buf
-  | num '.' num -> "REAL", $buf
+  | num '.' num -> "REAL", $buf (* CSC *)
   | "->" -> "ARROW", $buf
-  | "-" -> "CONSTANT", $buf (*CSC: to be fixed *)
-  | "~" -> "CONSTANT", $buf (*CSC: to be fixed *)
+  | "->" idcharplus -> "CONSTANT", $buf
+(*  | "-" -> "CONSTANT", $buf (*CSC: to be fixed *) *)
+  | '-' idcharstar -> "CONSTANT", $buf
+(*  | "~" -> "CONSTANT", $buf (*CSC: to be fixed *) *)
   | '_' -> "FRESHUV", "_"
-  | '_' idchar idcharstar -> "CONSTANT", $buf
+  | '_' idcharplus -> "CONSTANT", $buf
   |  ":-"  -> "ENTAILS",$buf
   |  ":"  -> "COLON",$buf
   |  "::"  -> "CONS",$buf
   | ',' -> "COMMA",$buf
-  | '&' -> "AMPERSEND",","
   | ';' -> "SEMICOLON",$buf
   | '.' -> "FULLSTOP",$buf
   | '.' num -> "REAL",$buf
@@ -217,10 +218,15 @@ let tok = lexer
   | '[' -> "LBRACKET",$buf
   | ']' -> "RBRACKET",$buf
   | '|' -> "PIPE",$buf
-  | "=>" -> "IMPL",$buf
-  | '=' -> "EQUAL",$buf
-  | "=<" -> "CONSTANT",$buf (*CSC: to be fixed *)
+  | '&' -> "AMPERSEND",","
+  | '&' idcharplus -> "CONSTANT", $buf
   | '!' -> "BANG", $buf
+  | '!' idcharplus -> "CONSTANT", $buf
+  | "=>" -> "IMPL",$buf
+  | "=>" idcharplus -> "CONSTANT",$buf
+  | '=' -> "EQUAL",$buf
+  | '=' idcharplus -> "CONSTANT", $buf
+(*  | "=<" -> "CONSTANT",$buf (*CSC: to be fixed *) *)
   | '"' string -> "LITERAL", let b = $buf in String.sub b 1 (String.length b-2)
 ]
 

@@ -16,7 +16,7 @@ mu :- theorem (xcons m (xcons u (xcons i (xcons i (xcons u xnil))))) (s (s (s (s
 theorem (xcons m (xcons i xnil)) Dummy (xcons a (xcons m (xcons i xnil))).
 theorem R Depth (xcons (xcons N R) P) :-
     ge Depth zero,
-    (s D)=Depth,
+    (s D) = Depth,
     theorem S D P,
     rule N S R.
 

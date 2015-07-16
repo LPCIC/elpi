@@ -17,6 +17,9 @@ Weird syntax of Teyjus:
 - if the file ends (without eol) inside a comment, the parser ignores the
   comment (in place of returning an error). How???
 
+Documentation:
+- remark that we handle constants that start with $ in a special way
+
 Other:
 
 0. pretty-printing to LaTeX + transformation to standard presentation
