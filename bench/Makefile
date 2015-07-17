@@ -15,7 +15,7 @@ ulimit -s `cat runners/$(call name,$(1)).ulimit`
 endef
 
 define time-log
-((grep 'INTERNAL TIMING' $(1) || echo '? ? ?') | cut -d ' ' -f 3-;\
+((grep 'TIME' $(1) || echo '? ?') | cut -d ' ' -f 2-;\
  cat $(2)|cut -d ' ' -f 2-) | tr '\n' ' ' | sed 's/ /,/g'
 endef
 
