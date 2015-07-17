@@ -40,6 +40,7 @@ out:close()
 plot = assert(io.open(arg[1]..'.plot','w'), 'Unable to open plot file')
 plot:write([[
         set terminal png size 1024, 1000
+	set yrange [0:]
 	set xtics rotate by 90 right
 	set xlabel "test"
 	set boxwidth 0.3
