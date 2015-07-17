@@ -4,7 +4,7 @@ file = assert(io.open(arg[1]),"Argument missing: .csv file name")
 data = {}
 for l in file:lines() do
 	local _,runner,job,it,wc,_,mem =
-	  l:match('^([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),$')
+	 l:match('^([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),?$')
 	assert(runner and job and wc and mem and it, "format error: " .. l)
 	job = job:match('([^/]+)$'):gsub("%.elpi$","")
 	local m,s,c = wc:match('^(%d+):(%d+)%.(%d+)$')
