@@ -164,21 +164,15 @@ let parse_string e s =
 let digit = lexer [ '0'-'9' ]
 let octal = lexer [ '0'-'7' ]
 let hex = lexer [ '0'-'9' | 'A'-'F' | 'a'-'f' ]
-let schar =
- lexer [ '+' | '-' | '*' | '/' | '^' | '<' | '>' | '=' | '`'
-       | '\'' | '?' | '@' | '#' | '$' | '&' | '!' | '_' | '~' ]
-let schar1 =
- lexer [ '+' | '-' | '/' | '^' | '<' | '>' | '=' | '`'
-       | '\'' | '?' | '@' | '#' | '$' | '&' | '!' | '_' | '~' ]
-let schar2 = (* compared to Teyjus, we handle =, !, &, -, $ outside schar2
-                because otherwise the lexers are not factorized *)
- lexer [ '+' | '*' | '^' | '<' | '>' | '`' | '\'' | '?' | '@' | '#' | '~' ]
+let schar2 =
+ lexer [ '+'  | '*' | '/' | '^' | '<' | '>' | '`' | '\'' | '?' | '@' | '#'
+       | '~' ]
+let schar = lexer [ schar2 | '-' | '=' | '$' | '&' | '!' | '_' ]
 let lcase = lexer [ 'a'-'z' ]
 let ucase = lexer [ 'A'-'Z' ]
 let idchar = lexer [ lcase | ucase | digit | schar ]
 let rec idcharstar = lexer [ idchar idcharstar | ]
 let idcharplus = lexer [ idchar idcharstar ]
-let idchar1 = lexer [ lcase | ucase | digit | schar1 ]
 let rec num = lexer [ digit | digit num ]
 
 let rec string = lexer [ '"' | _ string ]
@@ -187,8 +181,6 @@ let tok = lexer
   [ ucase idcharstar -> "CONSTANT", $buf 
   | lcase idcharstar -> "CONSTANT", $buf
   | schar2 idcharstar -> "CONSTANT", $buf
-  | '/' -> "CONSTANT",$buf
-  | '/' idchar1 idcharstar -> "CONSTANT", $buf
   | '$' lcase idcharstar -> "BUILTIN",$buf
   | '$' idcharstar -> "CONSTANT",$buf
 (*  | "*" -> "CONSTANT", $buf (*CSC: to be fixed *)
@@ -238,9 +230,7 @@ let symbols = ref StringSet.empty;;
 let rec lex c = parser bp
   | [< '( ' ' | '\n' | '\t' | '\r' ); s >] -> lex c s
   | [< '( '%' ); s >] -> comment c s
-  | [< '( '/' ); s >] ep ->
-       if option_eq (Stream.peek s) (Some '*') then comment2 c s
-       else ("CONSTANT", "/"), (bp,ep)
+  | [< ?= [ '/'; '*' ]; '( '/' ); '( '*' ); s >] -> comment2 c s
   | [< s >] ep ->
        if option_eq (Stream.peek s) None then ("EOF",""), (bp, ep)
        else
