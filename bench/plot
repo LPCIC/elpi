@@ -52,6 +52,9 @@ plot:write([[
 	set xrange [0:]]..(#all_jobs+1)..[[]
 	set xtics rotate by 90 right
 	set xlabel "test"
+	set grid mytics 
+	set grid ytics
+	set mytics
 	set boxwidth 0.2 absolute
         set output "]]..arg[1]..[[.png"
 	plot \
