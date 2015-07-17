@@ -326,6 +326,8 @@ let ppclause f { args = args; hyps = hyps; key = (hd,_) } =
      (pplist (uppterm 0 [] 0 [||]) "") args
      (pplist (uppterm 0 [] 0 [||]) ",") hyps
 
+(* {{{ ************** to_heap/restrict/deref ******************** *)
+
 exception NotInTheFragment
 (* in_fragment n [n;...;n+m-1] = m *)
 let rec in_fragment expected =
@@ -334,14 +336,11 @@ let rec in_fragment expected =
  | Const c::tl when c = expected -> 1 + in_fragment (expected+1) tl
  | _ -> raise NotInTheFragment
 
-(************************* to_heap/restrict/deref **************************)
-
 exception RestrictionFailure
 
 (* To_heap performs at once:
    1) refreshing of the arguments into variables (heapifycation)
-      (and Structs/CLam into App/Lam)
-   2) restriction (see restrict function below)
+   2) restriction/occur-check (see restrict function below)
 
    when from = to, i.e. delta = 0:
      (-infty,+infty) -> (-infty,+infty)
@@ -351,166 +350,187 @@ exception RestrictionFailure
    when from > to, i.e. delta > 0:
      (-infty,to)   -> (-infty,to)     free variables
      [to,from)     -> error           free restricted variables
-     [from,+infty) -> [to,+infty)     bound variables *)
-(* when from=to, to_heap is to be called only for terms that are not in the heap*)
+     [from,+infty) -> [to,+infty)     bound variables
+   
+   Invariant:
+     when from=to, to_heap is to be called only for terms that are not in the
+     heap
+*)
+
 let def_avoid = ref dummy
 let occurr_check r1 r2 = if r1 == r2 then raise RestrictionFailure
+
+let dummy_trail = ref []
+let dummy_env = [||]
+
 let rec to_heap argsdepth last_call trail ~from ~to_ ?(avoid=def_avoid) e t =
-  (*Format.eprintf "to_heap: argsdepth=%d, from=%d, to=%d %a\n%!" argsdepth from to_ (ppterm from [] argsdepth e) t;*)
   let delta = from - to_ in
   let rec aux depth x =
-   (*Format.eprintf "to_heap(%d,%d): %a\n%!" depth delta (ppterm depth [] 0 e) x;*)
-   match x with
-      Const c ->
-        if delta=0 then x else (* optimization *)
-        if c >= from then constant_of_dbl (c - delta)
-        else if c < to_ then x
-        else raise RestrictionFailure
+    TRACE "to_heap" (fun fmt -> Format.fprintf fmt "to_heap(%d,%d->%d): %a"
+      depth from to_ (ppterm depth [] argsdepth e) x)
+    match x with
+    | Const c ->
+       if delta == 0 then x else                          (* optimization  *)
+       if c >= from then constant_of_dbl (c - delta) else (* locally bound *)
+       if c < to_ then x else                             (* constant      *)
+       raise RestrictionFailure
     | Lam f ->
        let f' = aux (depth+1) f in
-       if f==f' then x else Lam f'
-    | App (c,t,l) when delta=0 || c < from && c < to_ ->
+       if f == f' then x else Lam f'
+    | App (c,t,l) when delta == 0 || c < from && c < to_ ->
        let t' = aux depth t in
        let l' = smart_map (aux depth) l in
-       if t==t' && l==l' then x else App (c,t',l')
+       if t == t' && l == l' then x else App (c,t',l')
+    | App (c,t,l) when c >= from ->
+       App(c-delta, aux depth t, smart_map (aux depth) l)
+    | App _ -> raise RestrictionFailure
     | Custom (c,l) ->
        let l' = smart_map (aux depth) l in
-       if l==l' then x else Custom (c,l')
-    | App (c,t,l) when c >= from ->
-       App(c-delta,aux depth t,smart_map (aux depth) l)
-    | App _ -> raise RestrictionFailure
-    | UVar _ when delta=0 -> x
-    | UVar ({contents=t},vardepth,args) when t != dummy ->
-       if depth = 0 then
-        full_deref argsdepth last_call trail ~from:vardepth ~to_ args e t
+       if l == l' then x else Custom (c,l')
+    | String _ -> x 
+    | Int _ -> x
+
+    (* fast path with no deref... *)
+    | UVar (r,_,_) when delta == 0 -> occurr_check avoid r; x
+
+    (* deref and Arg->UVar *)
+    | UVar ({ contents = t },vardepth,args) when t != dummy ->
+       if depth == 0 then
+         full_deref argsdepth last_call trail ~from:vardepth ~to_ args e t
        else
-        (* First phase: from vardepth to from+depth *)
-        let t = full_deref argsdepth last_call trail ~from:vardepth
-         ~to_:(from+depth) args e t in
-        (* Second phase: from from to to *)
-        aux depth t
+         (* First phase: from vardepth to from+depth *)
+         let t =
+            full_deref argsdepth last_call trail
+              ~from:vardepth ~to_:(from+depth) args e t in
+         (* Second phase: from from to to *)
+         aux depth t
+    | AppUVar ({contents=t},vardepth,args) when t != dummy ->
+       if depth == 0 then
+         app_deref ~from:vardepth ~to_ args t
+       else
+         (* First phase: from vardepth to from+depth *)
+         let t = app_deref ~from:vardepth ~to_:(from+depth) args t in
+         (* Second phase: from from to to *)
+         aux depth t
+    | Arg (i,args) when argsdepth >= to_ ->
+       let a = e.(i) in
+       if a == dummy then
+         let r = ref dummy in
+         let v = UVar(r,to_,0) in
+         e.(i) <- v;
+         if args == 0 then v else UVar(r,to_,args)
+       else
+         full_deref argsdepth last_call trail
+           ~from:argsdepth ~to_:(to_+depth) args e a
+    | AppArg(i,args) when argsdepth >= to_ ->
+       let a = e.(i) in
+       if a == dummy then
+         let r = ref dummy in
+         let v = UVar(r,to_,0) in
+         e.(i) <- v;
+         AppUVar(r,to_,args) 
+       else
+         let args = List.map (aux depth) args in
+         app_deref ~from:argsdepth ~to_:(to_+depth) args a
+
+    (* pruning *)
     | UVar (r,vardepth,0) when delta > 0 ->
        occurr_check avoid r;
        if vardepth <= to_ then x
-       else begin
-        let fresh = UVar(ref dummy,to_,0) in
-        if not last_call then trail := r :: !trail;
-        r := fresh;
+       else
+         let fresh = UVar(ref dummy,to_,0) in
+         if not last_call then trail := r :: !trail;
+         r := fresh;
         (* TODO: test if it is more efficient here to return fresh or
            the original, imperatively changed, term. The current solution
            avoids dereference chains, but puts more pressure on the GC. *)
-        fresh
-       end
+         fresh
     | UVar (r,vardepth,argsno) when delta < 0 ->
        occurr_check avoid r;
        if vardepth+argsno <= from then x
        else
         let r,vardepth,argsno =
-         decrease_depth r ~from:vardepth ~to_:from argsno in
+          decrease_depth r ~from:vardepth ~to_:from argsno in
         let args = mkinterval vardepth argsno 0 in
         let args = List.map (fun c -> aux depth (constant_of_dbl c)) args in
         AppUVar (r,vardepth,args)
-    | UVar (_,_,_) -> assert false (* XXX Restriction TO BE IMPLEMENTED *)
-    | AppUVar ({contents=t},vardepth,args) when t != dummy ->
-       if depth = 0 then
-        app_deref ~from:vardepth ~to_ args t
-       else
-        (* First phase: from vardepth to from+depth *)
-        let t = app_deref ~from:vardepth ~to_:(from+depth) args t in
-        (* Second phase: from from to to *)
-        aux depth t
     | AppUVar (r,vardepth,args) when delta < 0 ->
        occurr_check avoid r;
        let r,vardepth,argsno =
-        decrease_depth r ~from:vardepth ~to_:from 0 in
+         decrease_depth r ~from:vardepth ~to_:from 0 in
        let args0= List.map constant_of_dbl (mkinterval vardepth argsno 0) in
        let args = List.map (aux depth) (args0@args) in
        AppUVar (r,vardepth,args)
-    | AppUVar _ -> assert false (* XXX Restriction TO BE IMPLEMENTED *)
-    | Arg (i,args) when argsdepth >= to_ ->
-        let a = e.(i) in
-        (*Format.eprintf "%a^%d = %a\n%!" ppterm (Arg(i,[])) argsdepth ppterm a;*)
-        if a == dummy then
-            let r = ref dummy in
-            let v = UVar(r,to_,0) in
-            e.(i) <- v;
-            if args=0 then v else UVar(r,to_,args)
-        else
-         full_deref argsdepth last_call trail ~from:argsdepth ~to_:(to_+depth)
-           args e a
-    | Arg _ -> assert false (* I believe this case to be impossible *)
-    | AppArg(i,args) when argsdepth >= to_ ->
-        let a = e.(i) in
-        if a == dummy then
-         let r = ref dummy in
-         let v = UVar(r,to_,0) in
-         e.(i) <- v;
-         AppUVar(r,to_,args) 
-        else
-         let args = List.map (aux depth) args in
-         app_deref ~from:argsdepth ~to_:(to_+depth) args a
-    | AppArg _ -> assert false (* I believe this case to be impossible *)
-    | String _ -> x 
-    | Int _ -> x
-  in aux 0 t
+
+    | UVar _ -> error "Non trivial pruning not implemented"
+    | AppUVar _ -> error "Non trivial pruning not implemented"
+    | Arg _ -> anomaly "to_heap: Arg: argsdepth < to_"
+    | AppArg _ -> anomaly "to_heap: AppArg: argsdepth < to_"
+  in
+    aux 0 t
 
 (* full_deref performs lifting only and with from <= to
    if called on non-heap terms, it does not turn them to heap terms
-   (if from=to_) *)
-(* Note: when full_deref is called inside restrict, it may be from > to_ *)
-(* t lives in from; args already live in to *)
+   (if from=to_)
+
+   Note:
+     when full_deref is called inside restrict, it may be from > to_
+     t lives in from; args already live in to_
+*)
 and full_deref argsdepth last_call trail ~from ~to_ args e t =
- (*Format.eprintf "full_deref from:%d to:%d %a @@ %d\n%!" from to_ (ppterm from [] 0 e) t args;*)
- if args = 0 then
-  if from=to_ then t
-  else to_heap argsdepth last_call trail ~from ~to_ e t
+  TRACE "full_deref" (fun fmt ->
+    Format.fprintf fmt "full_deref from:%d to:%d %a @@ %d\n%!"
+      from to_ (ppterm from [] 0 e) t args)
+ if args == 0 then
+   if from == to_ then t
+   else to_heap argsdepth last_call trail ~from ~to_ e t
  else (* O(1) reduction fragment tested here *)
-  let from,args',t = eat_args from args t in
-  let t = full_deref argsdepth last_call trail ~from ~to_ 0 e t in
-  if args'=0 then t
-  else
-   match t with
-      Lam _ -> assert false (* never happens *)
-    | Const c ->
-       let args = mkinterval (from+1) (args'-1) 0 in
-       (App (c,constant_of_dbl from,List.map constant_of_dbl args))
-    | App (c,arg,args2) ->
-       let args = mkinterval from args' 0 in
-       (App (c,arg,args2 @ List.map constant_of_dbl args))
-    | Custom (c,args2) ->
-       let args = mkinterval from args' 0 in
-       (Custom (c,args2@List.map constant_of_dbl args))
-    (* TODO: when the UVar/Arg is not dummy, we call full_deref that
-       will call to_heap that will call_full_deref again. Optimize the
-       path *)
-    | UVar(t,depth,args2) when from = depth+args2 ->
-       UVar(t,depth,args2+args')
-    | AppUVar (r,depth,args2) ->
-       let args = mkinterval from args' 0 in
-       AppUVar (r,depth,args2@List.map constant_of_dbl args)
-    | Arg(i,args2) when from = argsdepth+args2 -> Arg(i,args2+args')
-    | AppArg (i,args2) ->
-       let args = mkinterval from args' 0 in
-       AppArg (i,args2@List.map constant_of_dbl args)
-    | Arg(i,argsno) ->
-       let args1 = mkinterval argsdepth argsno 0 in
-       let args2 = mkinterval from args' 0 in
-       let args = List.map constant_of_dbl (args1@args2) in
-       AppArg (i,args)
-    | UVar (r,vardepth,argsno) ->
-       let args1 = mkinterval vardepth argsno 0 in
-       let args2 = mkinterval from args' 0 in
-       let args = List.map constant_of_dbl (args1@args2) in
-       AppUVar (r,vardepth,args)
-    | String _ -> t
-    | Int _ -> t
+   let from,args',t = eat_args from args t in
+   let t = full_deref argsdepth last_call trail ~from ~to_ 0 e t in
+   if args' == 0 then t
+   else
+     match t with
+     | Lam _ -> anomaly "eat_args went crazy"
+     | Const c ->
+        let args = mkinterval (from+1) (args'-1) 0 in
+        App (c,constant_of_dbl from,List.map constant_of_dbl args)
+     | App (c,arg,args2) ->
+        let args = mkinterval from args' 0 in
+        App (c,arg,args2 @ List.map constant_of_dbl args)
+     | Custom (c,args2) ->
+        let args = mkinterval from args' 0 in
+        Custom (c,args2@List.map constant_of_dbl args)
+     (* TODO: when the UVar/Arg is not dummy, we call full_deref that
+        will call to_heap that will call_full_deref again. Optimize the
+        path *)
+     | UVar(t,depth,args2) when from = depth+args2 ->
+        UVar(t,depth,args2+args')
+     | AppUVar (r,depth,args2) ->
+        let args = mkinterval from args' 0 in
+        AppUVar (r,depth,args2@List.map constant_of_dbl args)
+     | Arg(i,args2) when from = argsdepth+args2 -> Arg(i,args2+args')
+     | AppArg (i,args2) ->
+        let args = mkinterval from args' 0 in
+        AppArg (i,args2@List.map constant_of_dbl args)
+     | Arg(i,argsno) ->
+        let args1 = mkinterval argsdepth argsno 0 in
+        let args2 = mkinterval from args' 0 in
+        let args = List.map constant_of_dbl (args1@args2) in
+        AppArg (i,args)
+     | UVar (r,vardepth,argsno) ->
+        let args1 = mkinterval vardepth argsno 0 in
+        let args2 = mkinterval from args' 0 in
+        let args = List.map constant_of_dbl (args1@args2) in
+        AppUVar (r,vardepth,args)
+     | String _ -> t
+     | Int _ -> t
 
 (* eat_args n [n ; ... ; n+k] (Lam_0 ... (Lam_k t)...) = n+k+1,[],t
    eat_args n [n ; ... ; n+k]@l (Lam_0 ... (Lam_k t)...) =
      n+k+1,l,t if t != Lam or List.hd l != n+k+1 *)
 and eat_args depth l t =
- match t with
-    Lam t' when l > 0 -> eat_args (depth+1) (l-1) t'
+  match t with
+  | Lam t' when l > 0 -> eat_args (depth+1) (l-1) t'
   | UVar ({contents=t},origdepth,args) when t != dummy ->
      eat_args depth l (deref ~from:origdepth ~to_:depth args t)
   | AppUVar  ({contents=t},origdepth,args) when t != dummy ->
@@ -518,17 +538,18 @@ and eat_args depth l t =
   | _ -> depth,l,t
 
 (* Lift is to be called only on heap terms and with from <= to *)
-(* TODO: use lift in fullderef? efficient only iff it is inlined *)
+(* TODO: use lift in fullderef? efficient iff it is inlined *)
 and lift ~from ~to_ t =
  (* Dummy trail, argsdepth and e: they won't be used *)
- if from=to_ then t
- else to_heap 0 false (ref []) ~from ~to_ [||] t
+ if from == to_ then t
+ else to_heap 0 false dummy_trail ~from ~to_ dummy_env t
 
 (* Deref is to be called only on heap terms and with from <= to *)
 and deref ~from ~to_ args t =
  (* Dummy trail, argsdepth and e: they won't be used *)
- full_deref 0 false (ref []) ~from ~to_ args [||] t
+ full_deref 0 false dummy_trail ~from ~to_ args dummy_env t
 
+(* UVar(_,from,argsno) -> Uvar(_,to_,argsno+from-to_) *)
 and decrease_depth r ~from ~to_ argsno =
  if from <= to_ then r,from,argsno
  else
@@ -550,36 +571,36 @@ and decrease_depth r ~from ~to_ argsno =
    every t in ts must be either an heap term or an Arg(i,0)
    the ts are lifted as usual *)
 and subst fromdepth ts t =
- (*Format.eprintf "subst t: %a \n%!" (uppterm 0 [] 0 [||]) t;
- List.iter (fun t -> Format.eprintf "subst ts: %a \n%!" (uppterm 0 [] 0 [||]) t) ts;*)
- if ts == [] then t else
- let len = List.length ts in
- let fromdepthlen = fromdepth+len in
- let rec aux depth =
-  function
+ TRACE "subst" (fun fmt ->
+   Format.fprintf fmt "@[<hov 2>subst@ t: %a@ ts: %a@]"
+   (uppterm 0 [] 0 [||]) t (pplist (uppterm 0 [] 0 [||]) ",") ts)
+ if ts == [] then t
+ else
+   let len = List.length ts in
+   let fromdepthlen = fromdepth + len in
+   let rec aux depth = function
    | Const c as x ->
       if c >= fromdepth && c < fromdepthlen then
-       (match List.nth ts (c-fromdepth) with
-           Arg(i,0) as t -> t 
-         | t -> lift ~from:fromdepth ~to_:(depth-len) t)
+        match List.nth ts (c-fromdepth) with
+        | Arg(i,0) as t -> t 
+        | t -> lift ~from:fromdepth ~to_:(depth-len) t
       else if c < fromdepth then x
       else constant_of_dbl (c-len) (* NOT LIFTED *)
-   | Arg _
-   | AppArg _ -> assert false (* heap term *)
+   | Arg _ | AppArg _ -> anomaly "subst takes a heap term"
    | App(c,x,xs) as orig ->
       let x' = aux depth x in
       let xs' = List.map (aux depth) xs in
       let xxs' = x'::xs' in
       if c >= fromdepth && c < fromdepthlen then
-       (match List.nth ts (c-fromdepth) with
-           Arg(i,0) ->
-            (try Arg(i,in_fragment fromdepth xxs')
-             with NotInTheFragment -> AppArg (i,xxs'))
-         | t ->
-            let t = lift ~from:fromdepth ~to_:depth t in
-            beta depth [] t xxs')
+        match List.nth ts (c-fromdepth) with
+        | Arg(i,0) -> begin
+           try Arg(i,in_fragment fromdepth xxs')
+           with NotInTheFragment -> AppArg (i,xxs') end
+        | t ->
+           let t = lift ~from:fromdepth ~to_:depth t in
+           beta depth [] t xxs'
       else if c < fromdepth then
-       if x==x' && xs==xs' then orig else App(c,x',xs')
+        if x==x' && xs==xs' then orig else App(c,x',xs')
       else App(c-len,x',xs')
    | Custom(c,xs) as orig ->
       let xs' = List.map (aux depth) xs in
@@ -590,8 +611,7 @@ and subst fromdepth ts t =
       if vardepth+argsno <= fromdepth then orig
       else
        let r,vardepth,argsno =
-        decrease_depth r ~from:vardepth ~to_:fromdepth
-         argsno in
+         decrease_depth r ~from:vardepth ~to_:fromdepth argsno in
        let args = mkinterval vardepth argsno 0 in
        let args = List.map (fun c -> aux depth (constant_of_dbl c)) args in
        (* XXX TODO: check if we can stay in the fragment, here and in
@@ -601,40 +621,38 @@ and subst fromdepth ts t =
       aux depth (app_deref ~from:vardepth ~to_:depth args t)
    | AppUVar(r,vardepth,args) ->
       let r,vardepth,argsno =
-       decrease_depth r ~from:vardepth ~to_:fromdepth 0 in
+        decrease_depth r ~from:vardepth ~to_:fromdepth 0 in
       let args0 = List.map constant_of_dbl (mkinterval vardepth argsno 0) in
       let args = List.map (aux depth) (args0@args) in
       AppUVar(r,vardepth,args)
    | Lam t -> Lam (aux (depth+1) t)
    | String _ as str -> str 
    | Int _ as i -> i
- in
-  aux fromdepthlen t
+   in
+     aux fromdepthlen t
 
 and beta depth sub t args =
  match t,args with
-  | Lam t',hd::tl -> beta depth (hd::sub) t' tl
-  | _,_ ->
+ | Lam t',hd::tl -> beta depth (hd::sub) t' tl
+ | _ ->
     let t' = subst depth sub t in
     match args with
-        [] -> t'
-     | ahd::atl ->
-        match t' with
+    | [] -> t'
+    | ahd::atl ->
+         match t' with
          | Const c -> App (c,ahd,atl)
          | Arg _
-         | AppArg _ -> assert false (* ONLY ON HEAP TERMS *)
+         | AppArg _ -> anomaly "beta takes only heap terms"
          | App (c,arg,args1) -> App (c,arg,args1@args)
          | Custom (c,args1) -> Custom (c,args1@args)
-         | UVar (r,n,m) ->
-            (try
-              let args = in_fragment (n+m) args in
-              UVar(r,n,m+args)
-             with NotInTheFragment ->
+         | UVar (r,n,m) -> begin
+            try UVar(r,n,m + in_fragment (n+m) args)
+            with NotInTheFragment ->
               let args1 = List.map constant_of_dbl (mkinterval n m 0) in
-              AppUVar (r,n,args1@args))
+              AppUVar (r,n,args1@args) end
          | AppUVar (r,depth,args1) -> AppUVar (r,depth,args1@args)
-         | Lam _ -> assert false
-         | String _ | Int _ -> assert false (* Ill-typed *)
+         | Lam _ -> anomaly "beta: some args and some lambdas"
+         | String _ | Int _ -> type_error "beta"
 
 (* Deref is to be called only on heap terms and with from <= to *)
 and app_deref ~from ~to_ args t = beta to_ [] (deref ~from ~to_ 0 t) args
@@ -643,13 +661,13 @@ and app_deref ~from ~to_ args t = beta to_ [] (deref ~from ~to_ 0 t) args
 let () = Pp.do_deref := deref;;
 let () = Pp.do_app_deref := app_deref;;
 
-
 (* Restrict is to be called only on heap terms *)
 let restrict ?avoid argsdepth last_call trail ~from ~to_ e t =
- if from=to_ && avoid == None then t
+ if from = to_ && avoid == None then t
  else to_heap ?avoid argsdepth last_call trail ~from ~to_ e t
 
-(****************************** indexing **********************************)
+(* }}} *)
+(* {{{ ************** indexing ********************************** *)
 
 module Indexing : sig
 
@@ -750,7 +768,8 @@ end (* }}} *)
 open Indexing
 
 
-(**************************** unification **********************************)
+(* }}} *)
+(* {{{ ************** unification ******************************* *)
 
 let rec make_lambdas destdepth args =
  if args = 0 then UVar(ref dummy,destdepth,0)
@@ -909,7 +928,8 @@ let unif trail last_call adepth e bdepth a b =
 (* Look in Git for Enrico's partially tail recursive but slow unification.
    The tail recursive version is even slower. *)
 
-(***************************** backtracking *******************************)
+(* }}} *)
+(* {{{ ************** backtracking ****************************** *)
 
 type trail = term ref list ref
 
@@ -988,7 +1008,8 @@ let rec clausify vars depth hyps ts = function
   | UVar _ | AppUVar _ -> assert false
 ;;
 
-(*********************************** run ***********************************)
+(* }}} *)
+(* {{{ ************** run *************************************** *)
 
 exception No_clause
 
@@ -1148,7 +1169,8 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
    next_alt
 ;;
 
-(************************** "compilation" + API ****************************)
+(* }}} *)
+(* {{{ ************** "compilation" + API *********************** *)
 
 module AST = Parser
 module ConstMap = Map.Make(Parser.ASTFuncS)
@@ -1314,5 +1336,7 @@ let execute_loop p ((q_names,q_env,q) as qq) =
      No_clause -> prerr_endline "Fail"; k := emptyalts
  done
 ;;
+
+(* }}} *)
 
 (* vim: set foldmethod=marker: *)
