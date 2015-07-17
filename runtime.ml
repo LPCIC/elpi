@@ -760,7 +760,7 @@ let rec for_all2 p l1 l2 =
    (-infy,bdepth) = (-infty,bdepth)   common free variables
    [bdepth,adepth)                    free variable only visible by one:fail
    [adepth,+infty) = [bdepth,+infy)   bound variables *)
-let unif trail last_call adepth a e bdepth b =
+let unif trail last_call adepth e bdepth a b =
  let rec unif depth a bdepth b heap =
    (*Format.eprintf "unif: ^%d:%a =%d= ^%d:%a\n%!" adepth (ppterm depth [] adepth [||]) a depth bdepth (ppterm depth [] adepth e) b;*)
    let delta = adepth - bdepth in
@@ -966,37 +966,43 @@ let rec clausify vars depth hyps ts =
   | UVar _ | AppUVar _ -> assert false
 ;;
 
-let register_custom,lookup_custom =
- let (customs : ('a,(*depth:*)int -> (*env:*)term array -> term list -> unit) Hashtbl.t) = Hashtbl.create 17 in
- Hashtbl.add customs,Hashtbl.find customs
+(*********************************** run ***********************************)
+
+exception No_clause
+
+let register_custom, lookup_custom =
+ let (customs :
+     ('a, depth:int -> env:term array -> term list -> unit) Hashtbl.t)
+   =
+     Hashtbl.create 17 in
+ (fun s ->
+    if s = "" || s.[0] <> '$' then
+      error "Custom predicate name must begin with $";
+    Hashtbl.add customs (fst (funct_of_ast (F.from_string s)))),
+ Hashtbl.find customs
 ;;
 
 let _ =
- register_custom (fst (funct_of_ast (Parser.ASTFuncS.from_string "$print")))
-  (fun depth env args ->
-   Format.printf "@[<hov 1>" ;
-   List.iter (Format.printf "%a@ " (uppterm depth [] 0 env)) args;
-   Format.printf "@]\n%!") ;
- register_custom (fst (funct_of_ast (Parser.ASTFuncS.from_string "$lt")))
-  (fun depth _ args ->
-    let rec get_constant =
-     function
-        Const c -> c
+  register_custom "$print" (fun ~depth ~env args ->
+    Format.printf "@[<hov 1>" ;
+    List.iter (Format.printf "%a@ " (uppterm depth [] 0 env)) args;
+    Format.printf "@]\n%!") ;
+  register_custom "$lt" (fun ~depth ~env:_ args ->
+    let rec get_constant = function
+      | Const c -> c
       | UVar ({contents=t},vardepth,args) when t != dummy ->
          get_constant (deref ~from:vardepth ~to_:depth args t)
       | AppUVar ({contents=t},vardepth,args) when t != dummy ->
          get_constant (app_deref ~from:vardepth ~to_:depth args t)
-      | _ -> assert false in
+      | _ -> error "$lt takes constants as arguments" in
     match args with
-       [t1; t2] ->
-         let t1 = get_constant t1 in
-         let t2 = get_constant t2 in
-         let is_lt = if t1 < 0 && t2 < 0 then t2 < t1 else t1 < t2 in
-         if not is_lt then raise (Failure "not lt")
-     | _ -> assert false)
+    | [t1; t2] ->
+        let t1 = get_constant t1 in
+        let t2 = get_constant t2 in
+        let is_lt = if t1 < 0 && t2 < 0 then t2 < t1 else t1 < t2 in
+        if not is_lt then raise No_clause
+    | _ -> type_error "$lt takes 2 arguments")
 ;;
-
-exception No_clause
 
 (* The block of recursive functions spares the allocation of a Some/None
  * at each iteration in order to know if one needs to backtrack or continue *)
@@ -1037,68 +1043,56 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
     | UVar _ | AppUVar _ -> error "Flexible predicate"
     | Custom(c, gs') ->
        let f = try lookup_custom c with Not_found -> anomaly"no such custom" in
-       let b = try f depth [||] gs'; true with Failure _ -> false in
+       let b = try f depth [||] gs'; true with No_clause -> false in
        if b then
          match gs with
-         | [] -> pop_andl alts next
+         | [] -> TCALL pop_andl alts next
          | (depth,p,g) :: gs -> run depth p g gs next alts lvl
        else TCALL next_alt alts
 
   and backchain depth p g gs cp next alts lvl =
-(*List.iter (fun (_,g) -> Format.eprintf "GS %a\n%!" (uppterm 0 [] 0 [||]) g) gs;*)
     let last_call = alts == emptyalts in
+    let rec args_of = function
+      | Const _ -> []
+      | App(_,x,xs) -> x::xs
+      | UVar ({ contents = g },origdepth,args) when g != dummy ->
+         args_of (deref ~from:origdepth ~to_:depth args g) 
+      | AppUVar({ contents = g },origdepth,args) when g != dummy ->
+         args_of (app_deref ~from:origdepth ~to_:depth args g) 
+      | _ -> anomaly "ill-formed goal" in
+    let args_of_g = args_of g in
     let rec select l =
-    TRACE "select" (fun fmt -> pplist ~max:1 ~boxed:true ppclause "|" fmt l)
-    match l with
-    | [] -> next_alt alts
-    | c :: cs ->
+      TRACE "select" (fun fmt -> pplist ~max:1 ~boxed:true ppclause "|" fmt l)
+      match l with
+      | [] -> TCALL next_alt alts
+      | c :: cs ->
         let old_trail = !trail in
         let last_call = last_call && cs = [] in
         let env = Array.make c.vars dummy in
-        let rec args_of =
-         function
-            Const _ -> []
-          | App(_,x,xs) -> x::xs
-          | UVar ({ contents = g },origdepth,args) when g != dummy ->
-             args_of (deref ~from:origdepth ~to_:depth args g) 
-          | AppUVar({ contents = g },origdepth,args) when g != dummy ->
-             args_of (app_deref ~from:origdepth ~to_:depth args g) 
-          | _ -> assert false in
         match
-         for_all2 (fun x y -> unif trail last_call depth x env c.depth y)
-          (args_of g) c.args
+         for_all2 (unif trail last_call depth env c.depth) args_of_g c.args
         with
         | false -> undo_trail old_trail trail; TCALL select cs
         | true ->
-            let oldalts = alts in
-            let alts =
-             if cs = [] then alts
-             else
-              { program=p; depth = depth; goal=g; goals=gs; stack=next;
-                trail=old_trail; clauses=cs; lvl = lvl ;
-                next=alts} in
-            (match c.hyps with
-               [] ->
-                (match gs with
-                    [] -> TCALL pop_andl alts next
-                  | (depth,p,g)::gs ->
-                    TCALL run depth p g gs next alts lvl)
-             | g'::gs' ->
-                let next =
-                 if gs = [] then next
-                 else FCons (lvl,gs,next) in
-                let g' =
-                 (*Format.eprintf "to_heap ~from:%d ~to:%d %a\n%!" c.depth depth ppterm g';*)
-                 to_heap depth last_call trail ~from:c.depth ~to_:depth
-                  env g' in
-                let gs' =
-                 List.map
-                  (fun x->
-                    depth,p,
-                     to_heap depth last_call trail ~from:c.depth ~to_:depth
-                      env x) gs'
-                in
-                 TCALL run depth p g' gs' next alts oldalts)
+           let oldalts = alts in
+           let alts = if cs = [] then alts else
+             { program=p; depth = depth; goal=g; goals=gs; stack=next;
+               trail=old_trail; clauses=cs; lvl = lvl ; next=alts} in
+           begin match c.hyps with
+           | [] ->
+              begin match gs with
+              | [] -> TCALL pop_andl alts next
+              | (depth,p,g)::gs -> TCALL run depth p g gs next alts lvl end
+           | h::hs ->
+              let next = if gs = [] then next else FCons (lvl,gs,next) in
+              let h =
+                to_heap depth last_call trail ~from:c.depth ~to_:depth env h in
+              let hs =
+                List.map (fun x->
+                  depth,p,
+                  to_heap depth last_call trail ~from:c.depth ~to_:depth env x)
+                hs in
+              TCALL run depth p h hs next alts oldalts end
     in
       select cp
 
@@ -1113,17 +1107,16 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
 
   and pop_andl alts = function
     | FNil -> alts
-    | FCons (_,[],_) -> assert false
+    | FCons (_,[],_) -> anomaly "empty stack frame"
     | FCons(lvl,(depth,p,g)::gs,next) -> run depth p g gs next alts lvl
 
   and next_alt alts =
    if alts == emptyalts then raise No_clause
-   else begin
-    let { program = p; depth = depth; goal = g; goals = gs; stack=next;
-          trail = old_trail; clauses = clauses; lvl = lvl ; next=alts} = alts in
+   else
+    let { program = p; clauses = clauses; goal = g; goals = gs; stack = next;
+          trail = old_trail; depth = depth; lvl = lvl; next = alts} = alts in
     undo_trail old_trail trail;
     backchain depth p g gs clauses next alts lvl
-   end
   in
 
   (* Finally the runtime *)
