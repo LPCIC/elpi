@@ -128,8 +128,13 @@ let parse_one e filename =
   Printf.eprintf "loading %s\n%!" filename;
   parsed := filename::!parsed ;
   let ch = open_in filename in
+  let saved_cur_dirname = !cur_dirname in
   cur_dirname := symlink_dirname filename;
-  try let res = Grammar.Entry.parse e (Stream.of_channel ch) in close_in ch;res
+  try
+   let res = Grammar.Entry.parse e (Stream.of_channel ch) in
+   close_in ch;
+   cur_dirname := saved_cur_dirname;
+   res
   with Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) ->
     close_in ch;
     (*let last = Ploc.last_pos l in
