@@ -46,9 +46,7 @@ let mkConj = function [f] -> f | l -> App(Const ASTFuncS.andf,l)
 let mkConj2 = mkConj
 let mkDisj  = function [f] -> f | l -> App(Const ASTFuncS.orf, l)
 let mkImpl f1 f2 = App(Const ASTFuncS.implf,[f1;f2])
-let mkTrue = Const ASTFuncS.truef
 let mkCut = Const ASTFuncS.cutf
-let mkEq l r = App(Const ASTFuncS.eqf,[l;r]) 
 let mkLam x t = Lam (ASTFuncS.from_string x,t)
 let mkPi x t = App(Const ASTFuncS.pif,[mkLam x t])
 let mkSigma x t = App(Const ASTFuncS.sigmaf,[mkLam x t])
@@ -73,18 +71,6 @@ type program = clause list
 type goal = term
 
 let mkClause lhs rhs = { head = lhs; hyps = rhs }
-
-let true_clause = mkClause mkTrue (mkConj [])
-
-let eq_clause =
- let v = Const (ASTFuncS.from_string "X") in
-  mkClause (mkEq v v) (mkConj [])
-
-let or_clauses =
- let v1 = Const (ASTFuncS.from_string "A") in
- let v2 = Const (ASTFuncS.from_string "B") in
-  [ mkClause (mkDisj [v1;v2]) v1
-  ; mkClause (mkDisj [v1;v2]) v2 ]
 
 let mkApp =
  function
@@ -137,17 +123,18 @@ let parse_one e filename =
    res
   with Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) ->
     close_in ch;
-    (*let last = Ploc.last_pos l in
-    let ctx_len = 70 in*)
-    let ctx = "…" (* CSC: TO BE FIXED AND RESTORED
+    let last = Ploc.last_pos l in
+    (*let ctx_len = 70 in CSC: TO BE FIXED AND RESTORED
+    let ctx = "…"
       let start = max 0 (last - ctx_len) in
       let s = String.make 101 '\007' in
       let ch = open_in filename in
       (try really_input ch s 0 100 with End_of_file -> ());
       close_in ch;
       let last = String.index s '\007' in
-      "…" ^ String.sub s start last ^ "…"*) in
-    raise (Stream.Error(Printf.sprintf "%s\nnear: %s" msg ctx))
+      "…" ^ String.sub s start last ^ "…" in
+    raise (Stream.Error(Printf.sprintf "%s\nnear: %s" msg ctx))*)
+    raise (Stream.Error(Printf.sprintf "%s\nnear: %d" msg last))
   | Ploc.Exc(_,e) -> close_in ch; raise e
  end
 
@@ -188,18 +175,11 @@ let tok = lexer
   | schar2 idcharstar -> "CONSTANT", $buf
   | '$' lcase idcharstar -> "BUILTIN",$buf
   | '$' idcharstar -> "CONSTANT",$buf
-(*  | "*" -> "CONSTANT", $buf (*CSC: to be fixed *)
-  | "+" -> "CONSTANT", $buf (*CSC: to be fixed *)
-  | ">" -> "CONSTANT", $buf (*CSC: to be fixed *)
-  | ">=" -> "CONSTANT", $buf (*CSC: to be fixed *)
-  | '<' -> "CONSTANT",$buf (*CSC: to be fixed *)*)
   | num -> "INTEGER", $buf
-  | num '.' num -> "REAL", $buf (* CSC *)
+  | num ?= [ '.' '0'-'9' ] '.' num -> "REAL", $buf (* CSC *)
   | "->" -> "ARROW", $buf
   | "->" idcharplus -> "CONSTANT", $buf
-(*  | "-" -> "CONSTANT", $buf (*CSC: to be fixed *) *)
   | '-' idcharstar -> "CONSTANT", $buf
-(*  | "~" -> "CONSTANT", $buf (*CSC: to be fixed *) *)
   | '_' -> "FRESHUV", "_"
   | '_' idcharplus -> "CONSTANT", $buf
   |  ":-"  -> "ENTAILS",$buf
@@ -221,9 +201,7 @@ let tok = lexer
   | '!' idcharplus -> "CONSTANT", $buf
   | "=>" -> "IMPL",$buf
   | "=>" idcharplus -> "CONSTANT",$buf
-  | '=' -> "EQUAL",$buf
-  | '=' idcharplus -> "CONSTANT", $buf
-(*  | "=<" -> "CONSTANT",$buf (*CSC: to be fixed *) *)
+  | '=' idcharstar -> "CONSTANT",$buf
   | '"' string -> "LITERAL", let b = $buf in String.sub b 1 (String.length b-2)
 ]
 
@@ -267,7 +245,6 @@ let rec lex c = parser bp
        | "CONSTANT","pi" -> "PI", "pi"
        | "CONSTANT","sigma" -> "SIGMA", "sigma"
        | "CONSTANT","nil" -> "NIL", "nil"
-       | "CONSTANT","is" -> "IS","is"
 
        | "CONSTANT", x when StringSet.mem x !symbols -> "SYMBOL",x
 
@@ -328,7 +305,7 @@ let atom = Grammar.Entry.create g "atom"
 let goal = Grammar.Entry.create g "goal"
 
 let min_precedence = 0
-let max_precedence = 100
+let max_precedence = 256
 
 let rec mk_precedences acc n =
  if n > max_precedence then List.rev acc
@@ -336,7 +313,7 @@ let rec mk_precedences acc n =
 ;;
 
 let atom_levels =
-  ["pi";"disjunction";"conjunction";"conjunction2";"implication";"equality"]
+  ["pi";"disjunction";"conjunction";"conjunction2";"implication"]
   @ mk_precedences [] min_precedence @ ["term";"app";"simple";"list"]
 
 let () =
@@ -496,12 +473,6 @@ EXTEND
           mkImpl a p
       | a = atom; ENTAILS; p = premise ->
           mkImpl p a ]];
-  atom : LEVEL "equality"
-     [[ a = atom; EQUAL; b = atom LEVEL "0" ->
-          mkEq a b
-      | a = atom; IS; b = atom LEVEL "0" ->
-          mkIs a b
-     ]];
   atom : LEVEL "term"
      [[ l = LIST1 atom LEVEL "app" SEP CONS ->
           if List.length l = 1 then List.hd l
@@ -552,6 +523,8 @@ let parse_program (*?(ontop=[])*) ~filenames : program =
           raise (Stream.Error ("unable to insert clause "^CN.to_string name));
         newprog in
   List.fold_left insert ontop insertions*)
-  true_clause::eq_clause::or_clauses@parse lp filenames
+  let execname = Unix.readlink "/proc/self/exe" in
+  let pervasives = Filename.dirname execname ^ "/pervasives.elpi" in
+  parse lp (pervasives::filenames)
 
 let parse_goal s : goal = parse_string goal s
