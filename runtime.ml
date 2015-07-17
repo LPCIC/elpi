@@ -919,48 +919,48 @@ and alternative = {
   clauses : clause list;
   next : alternative
 }
+let emptyalts : alternative = Obj.magic 0
 
-let emptyalts = Obj.magic 0
-
-let rec chop =
- function
-    App(c,hd2,tl) when c == andc ->
-     chop hd2 @ List.flatten (List.map chop tl)
-  | f when f==truec -> []
+let rec split_conj = function
+  | App(c, hd, args) when c == andc ->
+      split_conj hd @ List.(flatten (map split_conj args))
+  | f when f == truec -> []
   | _ as f -> [ f ]
+;;
 
 (* BUG: the following clause is rejected because (Z c d) is not
    in the fragment. However, once X and Y becomes arguments, (Z c d)
    enters the fragment. 
 r :- (pi X\ pi Y\ q X Y :- pi c\ pi d\ q (Z c d) (X c d) (Y c)) => ... *)
 
-let rec clausify vars depth hyps ts =
- function
-    App(c, g, gs) when c == andc ->
-     clausify vars depth hyps ts g@ List.flatten (List.map (clausify vars depth hyps ts) gs)
+(* Takes the source of an implication an produces the clauses to be added to
+ * the program *)
+let rec clausify vars depth hyps ts = function
+  | App(c, g, gs) when c == andc ->
+     clausify vars depth hyps ts g @
+     List.(flatten (map (clausify vars depth hyps ts) gs))
   | App(c, g1, [g2]) when c == implc ->
      let g1 = subst depth ts g1 in
-     clausify vars depth (chop g1::hyps) ts g2
+     clausify vars depth (split_conj g1::hyps) ts g2
   | App(c, _, _) when c == implc -> assert false
   | App(c, Lam b, []) when c == pic ->
      clausify (vars+1) depth hyps (ts@[Arg(vars,0)]) b
   | Const _ as g ->
      let g = subst depth ts g in
-     [ { depth = depth; args = []; hyps = List.flatten (List.rev hyps) ; vars = vars ;
-         key = key_of depth g } ]
+     [ { depth = depth; args = []; hyps = List.(flatten (rev hyps));
+         vars = vars ; key = key_of depth g } ]
   | App _ as g ->
-     (* TODO: test this optimization on Prolog code: if ts==[] then
-        us the original x,xs,g avoiding the double pattern match *)
-     let g = subst depth ts g in
-     (match g with
-         App(_,x,xs) ->
-          [ { depth = depth ; args=x::xs; hyps = List.flatten (List.rev hyps); vars = vars;
-              key = key_of depth g}]
-       | _ -> assert false)
-  | UVar ({ contents=g },origdepth,args) when g != dummy ->
-     clausify vars depth hyps ts (deref ~from:origdepth ~to_:(depth+List.length ts) args g)
-  | AppUVar ({contents=g},origdepth,args) when g != dummy -> 
-     clausify vars depth hyps ts (app_deref ~from:origdepth ~to_:(depth+List.length ts) args g)
+     begin match subst depth ts g with
+     | App(_,x,xs) as g ->
+         [ { depth = depth ; args=x::xs; hyps = List.(flatten (rev hyps));
+             vars = vars; key = key_of depth g} ]
+     | _ -> anomaly "subst went crazy" end
+  | UVar ({ contents=g },from,args) when g != dummy ->
+     clausify vars depth hyps ts
+       (deref ~from ~to_:(depth+List.length ts) args g)
+  | AppUVar ({contents=g},from,args) when g != dummy -> 
+     clausify vars depth hyps ts
+       (app_deref ~from ~to_:(depth+List.length ts) args g)
   | Arg _ | AppArg _ -> assert false 
   | Lam _ | Custom _ | String _ | Int _ -> assert false
   | UVar _ | AppUVar _ -> assert false
@@ -1216,11 +1216,11 @@ let program_of_ast (p : Parser.clause list) : program =
      if hyp = truec then
        Format.eprintf "@[<hov 1>%a%a.@]\n%!"
          (uppterm 0 names 0 env) hd
-         (pplist (uppterm 0 names 0 env) ",") (chop hyp)
+         (pplist (uppterm 0 names 0 env) ",") (split_conj hyp)
      else
        Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
          (uppterm 0 names 0 env) hd
-         (pplist ~boxed:true (uppterm 0 names 0 env) ",") (chop hyp))
+         (pplist ~boxed:true (uppterm 0 names 0 env) ",") (split_conj hyp))
      (amap,hd,hyp);
    let args =
      match hd with
@@ -1231,7 +1231,7 @@ let program_of_ast (p : Parser.clause list) : program =
    in
    { depth = 0
    ; args = args
-   ; hyps = chop hyp
+   ; hyps = split_conj hyp
    ; vars = amap.max_arg
    ; key = key_of 0 hd
    }) p
@@ -1249,11 +1249,11 @@ let pp_FOprolog p = List.iter (fun { Parser.head = a; hyps = f } ->
   if f = truec then
    Format.eprintf "@[<hov 1>%a%a.@]\n%!"
      (pp_FOprolog names env) a
-     (pplist (pp_FOprolog names env) ",") (chop f)
+     (pplist (pp_FOprolog names env) ",") (split_conj f)
   else
    Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
      (pp_FOprolog names env) a
-     (pplist (pp_FOprolog names env) ",") (chop f)) p
+     (pplist (pp_FOprolog names env) ",") (split_conj f)) p
 ;;
 
 (* RUN with non indexed engine *)
