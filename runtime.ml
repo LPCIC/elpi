@@ -103,6 +103,7 @@ module Constants : sig
   val andc   : constant
   val orc    : constant
   val implc  : constant
+  val rimplc  : constant
   val pic    : constant
   val sigmac : constant
   val eqc    : constant
@@ -143,6 +144,7 @@ let truec = snd (funct_of_ast F.truef)
 let andc = fst (funct_of_ast F.andf)
 let orc = fst (funct_of_ast F.orf)
 let implc = fst (funct_of_ast F.implf)
+let rimplc = fst (funct_of_ast F.rimplf)
 let pic = fst (funct_of_ast F.pif)
 let sigmac = fst (funct_of_ast F.sigmaf)
 let eqc = fst (funct_of_ast F.eqf)
@@ -228,7 +230,10 @@ let xppterm ~nice depth0 names argsdepth env f t =
          Format.fprintf f "(%a)" (pplist (aux depth) ";") (x::xs)
         else if hd==andc then
          Format.fprintf f "(%a)" (pplist (aux depth) ",") (x::xs)
-        else if hd==implc then (
+        else if hd==rimplc then (
+          assert (List.length xs = 1);
+          Format.fprintf f "@[<hov 1>(%a@ :-@ %a)@]" (aux depth) x (aux depth) (List.hd xs)
+        ) else if hd==implc then (
           assert (List.length xs = 1);
           Format.fprintf f "@[<hov 1>(%a@ =>@ %a)@]" (aux depth) x (aux depth) (List.hd xs)
         ) else pp_app f ppconstant (aux depth) (hd,x::xs)
@@ -291,9 +296,9 @@ let xppterm_prolog ~nice names env f t =
          Format.fprintf f "%a" (pplist aux ";") (x::xs)  
         else if hd==andc then    
          Format.fprintf f "%a" (pplist aux ",") (x::xs)  
-        else if hd==implc then (
+        else if hd==rimplc then (
           assert (List.length xs = 1);
-          Format.fprintf f "@[<hov 1>(%a@ =>@ %a@])" aux x aux (List.hd xs)
+          Format.fprintf f "@[<hov 1>(%a@ :-@ %a@])" aux x aux (List.hd xs)
         ) else pp_app f ppconstant aux (hd,x::xs) 
     | Custom (hd,xs) ->  assert false;
     | UVar _
@@ -992,6 +997,10 @@ let rec clausify vars depth hyps ts = function
   | App(c, g, gs) when c == andc ->
      clausify vars depth hyps ts g @
      List.(flatten (map (clausify vars depth hyps ts) gs))
+  | App(c, g2, [g1]) when c == rimplc ->
+     let g1 = subst depth ts g1 in
+     clausify vars depth (split_conj g1::hyps) ts g2
+  | App(c, _, _) when c == rimplc -> assert false
   | App(c, g1, [g2]) when c == implc ->
      let g1 = subst depth ts g1 in
      clausify vars depth (split_conj g1::hyps) ts g2
@@ -1263,40 +1272,17 @@ let query_of_ast t =
 ;;
 
 let program_of_ast (p : Parser.clause list) : program =
- let clauses = List.map (fun { Parser.head = hd; hyps = hyp } ->
-   let amap, cmap = empty_amap, ConstMap.empty in
-   let amap, hd  = stack_term_of_ast 0 amap cmap hd  in
-   let amap, hyp = stack_term_of_ast 0 amap cmap hyp in
-   SPY "prog-clause" (fun fmt ({ max_arg = max; name2arg = l }, hd, hyp) ->
-     let names = List.rev_map fst l in
-     let env = Array.make max dummy in
-     if hyp = truec then
-       Format.eprintf "@[<hov 1>%a%a.@]\n%!"
-         (uppterm 0 names 0 env) hd
-         (pplist (uppterm 0 names 0 env) ",") (split_conj hyp)
-     else
-       Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
-         (uppterm 0 names 0 env) hd
-         (pplist ~boxed:true (uppterm 0 names 0 env) ",") (split_conj hyp))
-     (amap,hd,hyp);
-   let args =
-     match hd with
-     | Const _ -> []
-     | App(_,x,xs) -> x::xs
-     | Arg _ | AppArg (_,_) -> error "flexible clause not supported"
-     | _ -> error "unsupported clause shape"
-   in
-   { depth = 0
-   ; args = args
-   ; hyps = split_conj hyp
-   ; vars = amap.max_arg
-   ; key = key_of 0 hd
-   }) p
- in
-  Indexing.make clauses
+ let clauses =
+  List.concat
+   (List.map (fun t ->
+     let names,env,t = query_of_ast t in
+     (* Format.eprintf "%a\n%!" (uppterm 0 names 0 env) t ; *)
+     clausify (Array.length env) 0 [] [] t
+   ) p) in
+ Indexing.make clauses
 ;;
 
-let pp_FOprolog p = List.iter (fun { Parser.head = a; hyps = f } ->
+let pp_FOprolog p = assert false (*CSC: port the code, see function above List.iter (fun { Parser.head = a; hyps = f } ->
   let amap, cmap = empty_amap, ConstMap.empty in
   let amap, a = stack_term_of_ast 0 amap cmap a in
   let amap, f = stack_term_of_ast 0 amap cmap f in
@@ -1310,7 +1296,7 @@ let pp_FOprolog p = List.iter (fun { Parser.head = a; hyps = f } ->
   else
    Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
      (pp_FOprolog names env) a
-     (pplist (pp_FOprolog names env) ",") (split_conj f)) p
+     (pplist (pp_FOprolog names env) ",") (split_conj f)) p*)
 ;;
 
 (* RUN with non indexed engine *)

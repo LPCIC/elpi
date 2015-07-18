@@ -12,6 +12,7 @@ module ASTFuncS : sig
   val andf : t
   val orf : t
   val implf : t
+  val rimplf : t
   val cutf : t
   val pif : t
   val sigmaf : t
@@ -29,7 +30,7 @@ type term =
  | Int of int 
  | Float of float 
 
-type clause = { head : term; hyps : term }
+type clause = term
 
 val parse_program : filenames:string list -> clause list
 val parse_goal : string -> term

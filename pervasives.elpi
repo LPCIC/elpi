@@ -1,20 +1,8 @@
 %nil
 %::
 
-%true
-%!
 %fail
-%,
-%;
-%&
-%:-
-%=>
-%sigma
-%pi
 
-%=
-
-%is
 %std_in
 %std_out
 %std_err
@@ -86,6 +74,10 @@
 %s>=
 
 % nofixity abs
+% nofixity !
+% nofixity sigma
+% nofixity pi
+% nofixity true
 prefix ~  256.
 infixl mod 160.
 infixl div 160.
@@ -98,10 +90,13 @@ infix  >  130.
 infix  <  130.
 infix  >= 130.
 infix  =< 130.
-infix  = 130.
+infix  =  130.
 infix  is 130.
 infixr => 130.
-%infixl :- 0.
+infixr &  120.
+infixr ,  110.
+infixr ;  100.
+infixl :- 0.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% PREDEFINED PREDICATES %%%%%%%%%%%%%%%%%%%%%%%
 

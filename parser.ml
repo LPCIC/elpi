@@ -20,6 +20,7 @@ module ASTFuncS = struct
   let andf = from_string ","
   let orf = from_string ";"
   let implf = from_string "=>"
+  let rimplf = from_string ":-"
   let cutf = from_string "!"
   let pif = from_string "pi"
   let sigmaf = from_string "sigma"
@@ -28,6 +29,8 @@ module ASTFuncS = struct
 
 end
 
+(* CSC: I think that this is obsolete and that the corresponding code in
+   runtime.ml can be thrown away *)
 (* Note: Appl(",",[]) is allowed in r.h.s. of clauses to represent
    axioms. Const "true" would not work because the definition of true
    would become true :- true. *)
@@ -41,16 +44,7 @@ type term =
  | Int of int
  | Float of float
 
-let mkConj = function [f] -> f | l -> App(Const ASTFuncS.andf,l)
-(* TODO: Bug here: mkConj2 should be right associative!
-   But what is the difference??? *)
-let mkConj2 = mkConj
-let mkDisj  = function [f] -> f | l -> App(Const ASTFuncS.orf, l)
-let mkImpl f1 f2 = App(Const ASTFuncS.implf,[f1;f2])
-let mkCut = Const ASTFuncS.cutf
 let mkLam x t = Lam (ASTFuncS.from_string x,t)
-let mkPi x t = App(Const ASTFuncS.pif,[mkLam x t])
-let mkSigma x t = App(Const ASTFuncS.sigmaf,[mkLam x t])
 let mkNil = Const (ASTFuncS.from_string "nil")
 let mkString str = String (ASTFuncS.from_string str)
 let mkInt i = Int i
@@ -67,12 +61,9 @@ let mkIs x f = App(Const ASTFuncS.isf,[x;f])
 
 exception NotInProlog;;
 
-type formula = term
-type clause = { head : term; hyps : term }
+type clause = term
 type program = clause list
 type goal = term
-
-let mkClause lhs rhs = { head = lhs; hyps = rhs }
 
 let mkApp =
  function
@@ -160,8 +151,8 @@ let octal = lexer [ '0'-'7' ]
 let hex = lexer [ '0'-'9' | 'A'-'F' | 'a'-'f' ]
 let schar2 =
  lexer [ '+'  | '*' | '/' | '^' | '<' | '>' | '`' | '\'' | '?' | '@' | '#'
-       | '~' | '=' ]
-let schar = lexer [ schar2 | '-' | '$' | '&' | '!' | '_' ]
+       | '~' | '=' | '&' | '!' ]
+let schar = lexer [ schar2 | '-' | '$' | '_' ]
 let lcase = lexer [ 'a'-'z' ]
 let ucase = lexer [ 'A'-'Z' ]
 let idchar = lexer [ lcase | ucase | digit | schar ]
@@ -184,11 +175,11 @@ let tok = lexer
   | '-' idcharstar -> "CONSTANT", $buf
   | '_' -> "FRESHUV", "_"
   | '_' idcharplus -> "CONSTANT", $buf
-  |  ":-"  -> "ENTAILS",$buf
-  |  ":"  -> "COLON",$buf
-  |  "::"  -> "CONS",$buf
-  | ',' -> "COMMA",$buf
-  | ';' -> "SEMICOLON",$buf
+  | ":-"  -> "CONSTANT",$buf
+  | ":"  -> "COLON",$buf
+  | "::"  -> "CONS",$buf
+  | ',' -> "CONSTANT",$buf
+  | ';' -> "CONSTANT",$buf
   | '.' -> "FULLSTOP",$buf
   | '.' num -> "FLOAT",$buf
   | '\\' -> "BIND","\\"
@@ -197,10 +188,6 @@ let tok = lexer
   | '[' -> "LBRACKET",$buf
   | ']' -> "RBRACKET",$buf
   | '|' -> "PIPE",$buf
-  | '&' -> "AMPERSEND",","
-  | '&' idcharplus -> "CONSTANT", $buf
-  | '!' -> "BANG", $buf
-  | '!' idcharplus -> "CONSTANT", $buf
   | '"' string -> "LITERAL", let b = $buf in String.sub b 1 (String.length b-2)
 ]
 
@@ -241,8 +228,6 @@ let rec lex c = parser bp
        | "CONSTANT","postfix" -> "FIXITY", "postfix"
        | "CONSTANT","postfixl" -> "FIXITY", "postfixl"
 
-       | "CONSTANT","pi" -> "PI", "pi"
-       | "CONSTANT","sigma" -> "SIGMA", "sigma"
        | "CONSTANT","nil" -> "NIL", "nil"
 
        | "CONSTANT", x when StringSet.mem x !symbols -> "SYMBOL",x
@@ -312,8 +297,7 @@ let rec mk_precedences acc n =
 ;;
 
 let atom_levels =
-  ["pi";"disjunction";"conjunction";"conjunction2";"implication"]
-  @ mk_precedences [] min_precedence @ ["term";"app";"simple";"list"]
+  mk_precedences [] min_precedence @ ["term";"app";"simple";"list"]
 
 let () =
   let dummy_action =
@@ -331,16 +315,8 @@ let used_precedences = ref [];;
 EXTEND
   GLOBAL: lp premise atom goal;
   lp: [ [ cl = LIST0 clause; EOF -> List.concat cl ] ];
-(*  name : [ [ c = CONSTANT -> c | u = UVAR -> u | FRESHUV -> "_" ] ];
-  label : [ [ COLON;
-              n = name;
-              p = OPT [ LT; n = name -> `Before n | GT; n = name -> `After n ];
-              COLON -> n,p ] ];
-*)
   clause :
-    [[ hd = concl; hyp = OPT [ ENTAILS; hyp = premise -> hyp ]; FULLSTOP ->
-         let hyp = match hyp with None -> mkConj [](*L.empty*) | Some h -> h in
-         [mkClause hd hyp]
+    [[ f = atom; FULLSTOP -> [f]
      | MODULE; CONSTANT; FULLSTOP -> []
      | SIG; CONSTANT; FULLSTOP -> []
      | ACCUMULATE; filenames=LIST1 CONSTANT SEP COMMA; FULLSTOP ->
@@ -434,32 +410,6 @@ EXTEND
   goal:
     [[ p = premise -> p ]];
   premise : [[ a = atom -> a ]];
-  concl : [[ a = atom LEVEL "0" -> a ]];
-  atom : LEVEL "pi"
-     [[ PI; x = CONSTANT; BIND; p = atom LEVEL "disjunction" -> mkPi x p
-      (*| PI; annot = bound; x = bound; BIND; p = atom LEVEL "disjuction" ->
-         let (x, is_uv), annot = x, Some (fst annot) in
-         let bind = if is_uv then mkSigma1 else mkPi1 annot in
-         bind (grab x 1 p)
-      | PI; LPAREN; annot = atom LEVEL "disjuction"; RPAREN;
-        x = bound; BIND; p = atom LEVEL "disjuction" ->
-         let (x, is_uv), annot = x, Some annot in
-         let bind = if is_uv then mkSigma1 else mkPi1 annot in
-         bind (grab x 1 p)
-      | PI; annot = atom LEVEL "list";
-        x = bound; BIND; p = atom LEVEL "disjuction" ->
-         let (x, is_uv), annot = x, Some annot in
-         let bind = if is_uv then mkSigma1 else mkPi1 annot in
-         bind (grab x 1 p)*)
-      | SIGMA; x=CONSTANT; BIND; p=atom LEVEL "disjunction"-> mkSigma x p]];
-  atom : LEVEL "disjunction"
-     [[ l = LIST1 atom LEVEL "conjunction" SEP SEMICOLON -> mkDisj l ]];
-  atom : LEVEL "conjunction"
-     [[ l = LIST1 atom LEVEL "conjunction2" SEP COMMA -> mkConj l ]];
-  atom : LEVEL "conjunction2"
-     [[ l = LIST1 atom LEVEL "implication" SEP AMPERSEND -> mkConj2 l ]];
-  atom : LEVEL "implication"
-     [[ a = atom; ENTAILS; p = premise -> mkImpl p a ]];
   atom : LEVEL "term"
      [[ l = LIST1 atom LEVEL "app" SEP CONS ->
           if List.length l = 1 then List.hd l
@@ -479,10 +429,9 @@ EXTEND
       | s = INTEGER -> mkInt (int_of_string s) 
       | s = FLOAT -> mkFloat (float_of_string s) 
       | bt = BUILTIN -> mkCustom bt
-      | BANG -> mkCut
       | LPAREN; a = atom; RPAREN -> a ]];
   atom : LEVEL "list" 
-     [[ LBRACKET; xs = LIST0 atom LEVEL "implication" SEP COMMA;
+     [[ LBRACKET; xs = LIST0 atom LEVEL "0" SEP COMMA;
           tl = OPT [ PIPE; x = atom LEVEL "0" -> x ]; RBRACKET ->
           let tl = match tl with None -> mkNil | Some x -> x in
           if List.length xs = 0 && tl <> mkNil then 
