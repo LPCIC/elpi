@@ -160,8 +160,8 @@ let octal = lexer [ '0'-'7' ]
 let hex = lexer [ '0'-'9' | 'A'-'F' | 'a'-'f' ]
 let schar2 =
  lexer [ '+'  | '*' | '/' | '^' | '<' | '>' | '`' | '\'' | '?' | '@' | '#'
-       | '~' ]
-let schar = lexer [ schar2 | '-' | '=' | '$' | '&' | '!' | '_' ]
+       | '~' | '=' ]
+let schar = lexer [ schar2 | '-' | '$' | '&' | '!' | '_' ]
 let lcase = lexer [ 'a'-'z' ]
 let ucase = lexer [ 'A'-'Z' ]
 let idchar = lexer [ lcase | ucase | digit | schar ]
@@ -201,9 +201,6 @@ let tok = lexer
   | '&' idcharplus -> "CONSTANT", $buf
   | '!' -> "BANG", $buf
   | '!' idcharplus -> "CONSTANT", $buf
-  | "=>" -> "IMPL",$buf
-  | "=>" idcharplus -> "CONSTANT",$buf
-  | '=' idcharstar -> "CONSTANT",$buf
   | '"' string -> "LITERAL", let b = $buf in String.sub b 1 (String.length b-2)
 ]
 
@@ -341,18 +338,7 @@ EXTEND
               COLON -> n,p ] ];
 *)
   clause :
-    [[ (*name = OPT label;*)
-       hd = concl; hyp = OPT [ ENTAILS; hyp = premise -> hyp ]; FULLSTOP ->
-(*
-         let name, insertion = match name with
-         | None -> CN.fresh (), `Here
-         | Some (s,pos) -> match pos with
-             | None -> CN.make s, `Here
-             | Some (`Before "_") -> CN.make ~float:`Begin s, `Begin
-             | Some (`After "_") -> CN.make ~float:`End s, `End
-             | Some (`Before n) -> CN.make s, `Before(CN.make ~existing:true n)
-             | Some (`After n) -> CN.make s, `After(CN.make ~existing:true n) in
-*)
+    [[ hd = concl; hyp = OPT [ ENTAILS; hyp = premise -> hyp ]; FULLSTOP ->
          let hyp = match hyp with None -> mkConj [](*L.empty*) | Some h -> h in
          [mkClause hd hyp]
      | MODULE; CONSTANT; FULLSTOP -> []
@@ -473,10 +459,7 @@ EXTEND
   atom : LEVEL "conjunction2"
      [[ l = LIST1 atom LEVEL "implication" SEP AMPERSEND -> mkConj2 l ]];
   atom : LEVEL "implication"
-     [[ a = atom; IMPL; p = atom LEVEL "implication" ->
-          mkImpl a p
-      | a = atom; ENTAILS; p = premise ->
-          mkImpl p a ]];
+     [[ a = atom; ENTAILS; p = premise -> mkImpl p a ]];
   atom : LEVEL "term"
      [[ l = LIST1 atom LEVEL "app" SEP CONS ->
           if List.length l = 1 then List.hd l

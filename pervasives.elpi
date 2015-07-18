@@ -100,6 +100,8 @@ infix  >= 130.
 infix  =< 130.
 infix  = 130.
 infix  is 130.
+infixr => 130.
+%infixl :- 0.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% PREDEFINED PREDICATES %%%%%%%%%%%%%%%%%%%%%%%
 
