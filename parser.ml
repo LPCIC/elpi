@@ -178,7 +178,7 @@ let tok = lexer
   | '$' lcase idcharstar -> "BUILTIN",$buf
   | '$' idcharstar -> "CONSTANT",$buf
   | num -> "INTEGER", $buf
-  | num ?= [ '.' '0'-'9' ] '.' num -> "FLOAT", $buf (* CSC *)
+  | num ?= [ '.' '0'-'9' ] '.' num -> "FLOAT", $buf
   | "->" -> "ARROW", $buf
   | "->" idcharplus -> "CONSTANT", $buf
   | '-' idcharstar -> "CONSTANT", $buf
@@ -232,7 +232,7 @@ let rec lex c = parser bp
        | "CONSTANT","kind" -> "KIND", "kind"
        | "CONSTANT","typeabbrev" -> "TYPEABBREV", "typeabbrev"
        | "CONSTANT","type" -> "TYPE", "type"
-       | "CONSTANT","closed" -> "CLOSED", "closed" (* CSC: ??? *)
+       | "CONSTANT","closed" -> "CLOSED", "closed"
 
        | "CONSTANT","end" -> "EOF", "end"
        | "CONSTANT","accumulate" -> "ACCUMULATE", "accumulate"
@@ -368,6 +368,8 @@ EXTEND
      | LOCAL; LIST1 CONSTANT SEP COMMA; type_; FULLSTOP -> []
      | LOCALKIND; LIST1 CONSTANT SEP COMMA; FULLSTOP -> []
      | LOCALKIND; LIST1 CONSTANT SEP COMMA; kind; FULLSTOP -> []
+     | CLOSED; LIST1 CONSTANT SEP COMMA; FULLSTOP -> []
+     | CLOSED; LIST1 CONSTANT SEP COMMA; type_; FULLSTOP -> []
      | USEONLY; LIST1 CONSTANT SEP COMMA; FULLSTOP -> []
      | USEONLY; LIST1 CONSTANT SEP COMMA; type_; FULLSTOP -> []
      | EXPORTDEF; LIST1 CONSTANT SEP COMMA; FULLSTOP -> []
