@@ -215,7 +215,7 @@ let symbols = ref StringSet.empty;;
 let rec lex c = parser bp
   | [< '( ' ' | '\n' | '\t' | '\r' ); s >] -> lex c s
   | [< '( '%' ); s >] -> comment c s
-  | [< ?= [ '/'; '*' ]; '( '/' ); '( '*' ); s >] -> comment2 c s
+  | [< ?= [ '/'; '*' ]; '( '/' ); '( '*' ); s >] -> comment2 0 c s
   | [< s >] ep ->
        if option_eq (Stream.peek s) None then ("EOF",""), (bp, ep)
        else
@@ -257,11 +257,11 @@ and skip_to_dot c = parser
 and comment c = parser
   | [< '( '\n' ); s >] -> lex c s
   | [< '_ ; s >] -> comment c s
-and comment2 c = parser
-  | [< '( '*' ); s >] ->
-       if option_eq (Stream.peek s) (Some '/') then (Stream.junk s; lex c s)
-       else comment2 c s
-  | [< '_ ; s >] -> comment2 c s
+and comment2 lvl c = parser
+  | [< ?= [ '*'; '/' ]; '( '*' ); '( '/'); s >] ->
+      if lvl = 0 then lex c s else comment2 (lvl-1) c s
+  | [< ?= [ '/'; '*' ]; '( '/' ); '( '*' ); s >] -> comment2 (lvl+1) c s
+  | [< '_ ; s >] -> comment2 lvl c s
 
 
 open Plexing
