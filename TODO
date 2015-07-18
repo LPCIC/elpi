@@ -1,5 +1,4 @@
 Weird syntax of Teyjus:
-- add reals too
 - no syntax for negative numbers: ~ 2 is the unary minus applied to 2,
   not the number -2.
 - what is the "closed" token for?
@@ -74,19 +73,3 @@ Possible optimizations:
    TO BE TRIED (??)
 2. the to_heap could keep the highest non-bound variable to be cached in
    the UVar to make restriction linear
-
-Missing:
-0. accumulate + fixity
-
-=============================================
-
-How to implement substitution:
-
-- in full lambda-prolog:
-  reduce (app (lam F) T) (F T).
-
-- in the fragment: using the copy clause.
-  reduce (app (lam F) T) R :- pi x\ copy x T => copy (F x) (R' x), R = R' x.
-
-  copy (app M N) (app M2 N2) :- copy M M2, copy N n2.
-  copy (lam F) (lam F2) :- pi x\ copy x x => copy (F x) (F2 x).

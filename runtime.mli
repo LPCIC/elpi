@@ -31,6 +31,7 @@ type term =
   | Custom of constant * term list
   | String of ASTFuncS.t
   | Int of int
+  | Float of float
 
 exception No_clause
 

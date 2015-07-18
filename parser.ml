@@ -39,6 +39,7 @@ type term =
  | Lam of ASTFuncS.t * term
  | String of ASTFuncS.t
  | Int of int
+ | Float of float
 
 let mkConj = function [f] -> f | l -> App(Const ASTFuncS.andf,l)
 (* TODO: Bug here: mkConj2 should be right associative!
@@ -53,6 +54,7 @@ let mkSigma x t = App(Const ASTFuncS.sigmaf,[mkLam x t])
 let mkNil = Const (ASTFuncS.from_string "nil")
 let mkString str = String (ASTFuncS.from_string str)
 let mkInt i = Int i
+let mkFloat f = Float f
 let mkSeq l =
  let rec aux =
   function
@@ -176,7 +178,7 @@ let tok = lexer
   | '$' lcase idcharstar -> "BUILTIN",$buf
   | '$' idcharstar -> "CONSTANT",$buf
   | num -> "INTEGER", $buf
-  | num ?= [ '.' '0'-'9' ] '.' num -> "REAL", $buf (* CSC *)
+  | num ?= [ '.' '0'-'9' ] '.' num -> "FLOAT", $buf (* CSC *)
   | "->" -> "ARROW", $buf
   | "->" idcharplus -> "CONSTANT", $buf
   | '-' idcharstar -> "CONSTANT", $buf
@@ -188,7 +190,7 @@ let tok = lexer
   | ',' -> "COMMA",$buf
   | ';' -> "SEMICOLON",$buf
   | '.' -> "FULLSTOP",$buf
-  | '.' num -> "REAL",$buf
+  | '.' num -> "FLOAT",$buf
   | '\\' -> "BIND","\\"
   | '(' -> "LPAREN",$buf
   | ')' -> "RPAREN",$buf
@@ -490,6 +492,7 @@ EXTEND
       | NIL -> mkNil
       | s = LITERAL -> mkString s
       | s = INTEGER -> mkInt (int_of_string s) 
+      | s = FLOAT -> mkFloat (float_of_string s) 
       | bt = BUILTIN -> mkCustom bt
       | BANG -> mkCut
       | LPAREN; a = atom; RPAREN -> a ]];

@@ -89,6 +89,7 @@ type term =
   | Custom of constant * term list
   | String of F.t
   | Int of int
+  | Float of float
 
 module Constants : sig
 
@@ -259,6 +260,7 @@ let xppterm ~nice depth0 names argsdepth env f t =
        Format.fprintf f "%a\\%a%!" (aux depth) c (aux (depth+1)) t;
     | String str -> Format.fprintf f "\"%s\"" (Parser.ASTFuncS.pp str)
     | Int i -> Format.fprintf f "%d" i
+    | Float x -> Format.fprintf f "%f" x
   in
     aux depth0 f t
 ;;
@@ -303,6 +305,7 @@ let xppterm_prolog ~nice names env f t =
     | Lam t -> assert false;
     | String str -> Format.fprintf f "\"%s\"" (Parser.ASTFuncS.pp str)
     | Int i -> Format.fprintf f "%d" i
+    | Float x -> Format.fprintf f "%f" x
   in
     aux f t
 ;;
@@ -387,8 +390,9 @@ let rec to_heap argsdepth last_call trail ~from ~to_ ?(avoid=def_avoid) e t =
     | Custom (c,l) ->
        let l' = smart_map (aux depth) l in
        if l == l' then x else Custom (c,l')
-    | String _ -> x 
-    | Int _ -> x
+    | String _
+    | Int _
+    | Float _ -> x
 
     (* fast path with no deref... *)
     | UVar (r,_,_) when delta == 0 -> occurr_check avoid r; x
@@ -522,8 +526,9 @@ and full_deref argsdepth last_call trail ~from ~to_ args e t =
         let args2 = mkinterval from args' 0 in
         let args = List.map constant_of_dbl (args1@args2) in
         AppUVar (r,vardepth,args)
-     | String _ -> t
-     | Int _ -> t
+     | String _
+     | Int _
+     | Float _ -> t
 
 (* eat_args n [n ; ... ; n+k] (Lam_0 ... (Lam_k t)...) = n+k+1,[],t
    eat_args n [n ; ... ; n+k]@l (Lam_0 ... (Lam_k t)...) =
@@ -626,8 +631,9 @@ and subst fromdepth ts t =
       let args = List.map (aux depth) (args0@args) in
       AppUVar(r,vardepth,args)
    | Lam t -> Lam (aux (depth+1) t)
-   | String _ as str -> str 
-   | Int _ as i -> i
+   | String _
+   | Int _
+   | Float _ as x -> x
    in
      aux fromdepthlen t
 
@@ -652,7 +658,7 @@ and beta depth sub t args =
               AppUVar (r,n,args1@args) end
          | AppUVar (r,depth,args1) -> AppUVar (r,depth,args1@args)
          | Lam _ -> anomaly "beta: some args and some lambdas"
-         | String _ | Int _ -> type_error "beta"
+         | String _ | Int _ | Float _ -> type_error "beta"
 
 (* Deref is to be called only on heap terms and with from <= to *)
 and app_deref ~from ~to_ args t = beta to_ [] (deref ~from ~to_ 0 t) args
@@ -706,6 +712,10 @@ let key_of depth =
   | Int i -> 
      let hash = -(Hashtbl.hash i) in
      if hash > abstractionk then hash
+     else hash+1024
+  | Float f -> 
+     let hash = -(Hashtbl.hash f) in
+     if hash > abstractionk then hash
      else hash+1024 in           
  let rec key_of_depth = function
    Const k -> k, variablek
@@ -716,7 +726,7 @@ let key_of depth =
     key_of_depth (app_deref ~from:origdepth ~to_:depth args t)
  | App (k,arg2,_) -> k, skey_of arg2
  | Custom _ -> assert false
- | Arg _ | AppArg _ | Lam _ | UVar _ | AppUVar _ | String _ | Int _ ->
+ | Arg _ | AppArg _ | Lam _ | UVar _ | AppUVar _ | String _ | Int _ | Float _->
     raise (Failure "Not a predicate")
  in
   key_of_depth
@@ -920,6 +930,7 @@ let unif trail last_call adepth e bdepth a b =
      | Const c, Const _ when c >= bdepth && c < adepth -> false
      | Const c1, Const c2 when c1 = c2 + delta -> true*)
    | Int s1, Int s2 -> s1==s2
+   | Float s1, Float s2 -> s1==s2
    | String s1, String s2 -> s1==s2
    | _ -> false in
  unif 0 a bdepth b false
@@ -1004,7 +1015,7 @@ let rec clausify vars depth hyps ts = function
      clausify vars depth hyps ts
        (app_deref ~from ~to_:(depth+List.length ts) args g)
   | Arg _ | AppArg _ -> assert false 
-  | Lam _ | Custom _ | String _ | Int _ -> assert false
+  | Lam _ | Custom _ | String _ | Int _ | Float _ -> assert false
   | UVar _ | AppUVar _ -> assert false
 ;;
 
@@ -1082,7 +1093,7 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
        let cp = get_clauses depth g p in
        TCALL backchain depth p g gs cp next alts lvl
     | Arg _ | AppArg _ -> anomaly "Not a heap term"
-    | Lam _ | String _ | Int _ -> type_error "Not a predicate"
+    | Lam _ | String _ | Int _ | Float _ -> type_error "Not a predicate"
     | UVar _ | AppUVar _ -> error "Flexible predicate"
     | Custom(c, gs') ->
        let f = try lookup_custom c with Not_found -> anomaly"no such custom" in
@@ -1238,9 +1249,11 @@ let rec stack_term_of_ast lvl amap cmap = function
      stack_term_of_ast lvl amap cmap (AST.App (f, l1@l2))
   | AST.String str -> amap, String str
   | AST.Int i -> amap, Int i 
+  | AST.Float f -> amap, Float f 
   | AST.App (AST.Lam _,_) -> error "Beta-redexes not in our language"
   | AST.App (AST.String _,_) -> error "Applied string value"
   | AST.App (AST.Int _,_) -> error "Applied integer value"
+  | AST.App (AST.Float _,_) -> error "Applied float value"
 ;;
  
 let query_of_ast t =

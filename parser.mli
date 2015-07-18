@@ -27,6 +27,7 @@ type term =
  | Lam of ASTFuncS.t * term
  | String of ASTFuncS.t
  | Int of int 
+ | Float of float 
 
 type clause = { head : term; hyps : term }
 
