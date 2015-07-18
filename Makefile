@@ -35,8 +35,9 @@ git/%:
 	rm -rf "$$PWD/elpi-$*"
 
 runners:
-	$(foreach t,$(shell git tag | grep ^runner),\
-		$(MAKE) git/$(t); mv elpi.git.$(t) elpi.git.$(t:runner-%=%))
+	true $(foreach t,$(shell git tag | grep ^runner),\
+		&& $(MAKE) git/$(t) && \
+		mv elpi.git.$(t) elpi.git.$(t:runner-%=%))
 
 clean:
 	rm -f *.cmo *.cma *.cmx *.cmxa *.cmi *.o elpi elpi.trace elpi.git.*
