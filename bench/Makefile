@@ -8,7 +8,8 @@ export TOP=$(abspath ..)
 
 JOBS=$(sort $(notdir $(wildcard jobs/*)))
 RUNNERS=$(sort $(filter-out %ulimit,$(notdir $(wildcard runners/*) $(wildcard ../elpi.git.*))))
-TIME=timeout 30 /usr/bin/time --quiet --format='%x %E %U %Mk' -o
+MAX=59
+TIME=timeout $(MAX) /usr/bin/time --quiet --format='%x %E %U %Mk' -o
 
 define ulimit
 ulimit -s `cat runners/$(call name,$(1)).ulimit`
@@ -23,7 +24,7 @@ OK="\e[32mOK\e[0m"
 KO="\e[31mKO\e[0m"
 
 define check
-if [ -z "`cat $(3)`" ]; then printf $(KO),$(5),$(2),10.00,0:10.00,10.00,0k;\
+if [ -z "`cat $(3)`" ]; then printf $(KO),$(5),$(2),$(MAX).00,0:$(MAX).00,$(MAX).00,0k;\
 elif [ "`cat $(3)|cut -d ' ' -f 1`" = 0 -a $(1) = ok ];\
   then printf $(OK),$(5),$(2),`$(call time-log,$(4),$(3))`;\
 elif [ "`cat $(3)|cut -d ' ' -f 1`" = 1 -a $(1) = ko ];\
