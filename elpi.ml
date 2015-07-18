@@ -52,7 +52,8 @@ let _ =
   let argn = Array.length argv in
   (* j=1 iff -test is not passed *)
   let j,test =
-   if argv.(1) = "-test" then 2,`OneBatch
+   if Array.length argv = 1 then 1,`OneInteractive
+   else if argv.(1) = "-test" then 2,`OneBatch
    else if argv.(1) = "-prolog" then 2,`PPprologBatch
    else 1,`OneInteractive in
   let filenames = ref [] in
