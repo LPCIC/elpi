@@ -38,7 +38,7 @@ endef
 define run
 TMP=`mktemp`; LOG=`mktemp`;\
 (export VARIANT=$(subst elpi,,$(2));\
- export CRUFT="`head -c $$RANDOM /dev/urandom`";\
+ export CRUFT="`head -c $$RANDOM /dev/urandom|base64 -w0`";\
  $(call ulimit,$(2));\
  $(TIME) $$TMP `runners/$(call name,$(2)) $(3)` >$$LOG 2>&1;\
  $(call check,$(1),$(3),$$TMP,$$LOG,$(2)));\
