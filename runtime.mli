@@ -15,23 +15,25 @@ val pp_prolog : clause list -> unit
 
 (* Extensions *)
 
-type constant = int (* De Brujin levels *)
 type term =
   (* Pure terms *)
   | Const of constant
   | Lam of term
   | App of constant * term * term list
   (* Clause terms: unif variables used in clauses *)
-  | Arg of (*id:*)int * (*argsno:*)int
-  | AppArg of (*id*)int * term list
+  | Arg of (*id:*)int * arg
   (* Heap terms: unif variables in the query *)
-  | UVar of term ref * (*depth:*)int * (*argsno:*)int
-  | AppUVar of term ref * (*depth:*)int * term list
+  | UVar of term ref * (*depth:*)int * arg
   (* Misc: $custom predicates, ... *)
   | Custom of constant * term list
   | String of ASTFuncS.t
   | Int of int
   | Float of float
+and arg =
+  | Noa                (* special case (Irl 0), to save memory in 1st order *)
+  | Irl of int         (* the RFF, the int is the number of args            *)
+  | Exp of term list   (* general case                                      *)
+and constant = int     (* De Bruijn levels                                  *)
 
 exception No_clause
 
