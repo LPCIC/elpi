@@ -2,6 +2,7 @@
 #   make
 #   make RUNNERS=elpi
 #   make only JOB=rev14
+#   make ... N=3 # repeat tests 3 times and plot an average
 #
 SHELL=/bin/bash
 export TOP=$(abspath ..)
@@ -37,10 +38,15 @@ endef
 define run
 TMP=`mktemp`; LOG=`mktemp`;\
 (export VARIANT=$(subst elpi,,$(2));\
+ export CRUFT="`head -c $$RANDOM /dev/urandom|base64 -w0`";\
  $(call ulimit,$(2));\
  $(TIME) $$TMP `runners/$(call name,$(2)) $(3)` >$$LOG 2>&1;\
  $(call check,$(1),$(3),$$TMP,$$LOG,$(2)));\
 rm $$TMP $$LOG;
+endef
+
+define runk
+  $(foreach x,$(shell seq 1 $(1)), $(call run,$(2),$(3),$(4)))
 endef
 
 define name
@@ -51,7 +57,7 @@ only: prepare
 	@($(foreach r,$(RUNNERS),\
 	  $(foreach k,ok ko,\
 	   $(foreach j,$(wildcard jobs/$(call name,$(r))/$(k)/*$(JOB)*),\
-	     $(call run,$(k),$(r),$(j)))))) | tee data.csv
+	     $(call runk,$(N),$(k),$(r),$(j)))))) | tee data.csv
 	@./plot data.csv
 	@gnuplot data.csv.plot
 	@echo Results: `ls $$PWD/*png`
