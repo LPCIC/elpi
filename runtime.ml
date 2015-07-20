@@ -247,7 +247,9 @@ let xppterm ~nice depth0 names argsdepth env f t =
   and pp_arg depth f n args =
    let name= try List.nth names n with Failure _ -> "A" ^ string_of_int n in
    if try env.(n) == dummy with Invalid_argument _ -> true then
-    Format.fprintf f "%s" name
+     pp_app f 
+       (fun f name -> Format.fprintf f "%s" name)
+       (aux depth) (name, expand argsdepth args)
    (* TODO: (potential?) bug here, the argument is not lifted
       from g_depth (currently not even passed to the function)
       to depth (not passed as well) *)
@@ -477,7 +479,7 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
 *)
 and full_deref argsdepth ~from ~to_ args e t =
   TRACE "full_deref" (fun fmt ->
-    Format.fprintf fmt "full_deref from:%d to:%d %a @@ %d\n%!"
+    Format.fprintf fmt "full_deref from:%d to:%d %a @@ %d"
       from to_ (ppterm from [] 0 e) t args)
  if args == 0 then
    if from == to_ then t
@@ -1000,7 +1002,7 @@ let _ =
   register_custom "$print" (fun ~depth ~env args ->
     Format.printf "@[<hov 1>" ;
     List.iter (Format.printf "%a@ " (uppterm depth [] 0 env)) args;
-    Format.printf "@]\n%!") ;
+    Format.printf "@]") ;
   register_custom "$lt" (fun ~depth ~env:_ args ->
     let rec get_constant = function
       | Const c -> c
