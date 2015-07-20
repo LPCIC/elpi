@@ -334,6 +334,10 @@ let ppclause f { args = args; hyps = hyps; key = (hd,_) } =
      (pplist (uppterm 0 [] 0 [||]) "") args
      (pplist (uppterm 0 [] 0 [||]) ",") hyps
 
+type trail = term ref list ref
+let trail : trail = ref []
+let last_call = ref false
+
 (* {{{ ************** to_heap/restrict/deref ******************** *)
 
 exception NotInTheFragment
@@ -368,10 +372,9 @@ exception RestrictionFailure
 let def_avoid = ref dummy
 let occurr_check r1 r2 = if r1 == r2 then raise RestrictionFailure
 
-let dummy_trail = ref []
 let dummy_env = [||]
 
-let rec to_heap argsdepth last_call trail ~from ~to_ ?(avoid=def_avoid) e t =
+let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
   let delta = from - to_ in
   let rec aux depth x =
     TRACE "to_heap" (fun fmt -> Format.fprintf fmt "to_heap(%d,%d->%d): %a"
@@ -405,11 +408,11 @@ let rec to_heap argsdepth last_call trail ~from ~to_ ?(avoid=def_avoid) e t =
     (* deref and Arg->UVar *)
     | UVar ({ contents = t },vardepth,args) when t != dummy ->
        if depth == 0 then
-         full_deref argsdepth last_call trail ~from:vardepth ~to_ args e t
+         full_deref argsdepth ~from:vardepth ~to_ args e t
        else
          (* First phase: from vardepth to from+depth *)
          let t =
-            full_deref argsdepth last_call trail
+            full_deref argsdepth
               ~from:vardepth ~to_:(from+depth) args e t in
          (* Second phase: from from to to *)
          aux depth t
@@ -429,7 +432,7 @@ let rec to_heap argsdepth last_call trail ~from ~to_ ?(avoid=def_avoid) e t =
          e.(i) <- v;
          if args == 0 then v else UVar(r,to_,args)
        else
-         full_deref argsdepth last_call trail
+         full_deref argsdepth
            ~from:argsdepth ~to_:(to_+depth) args e a
     | AppArg(i,args) when argsdepth >= to_ ->
        let a = e.(i) in
@@ -448,7 +451,7 @@ let rec to_heap argsdepth last_call trail ~from ~to_ ?(avoid=def_avoid) e t =
        if vardepth <= to_ then x
        else
          let fresh = UVar(ref dummy,to_,0) in
-         if not last_call then trail := r :: !trail;
+         if not !last_call then trail := r :: !trail;
          r := fresh;
         (* TODO: test if it is more efficient here to return fresh or
            the original, imperatively changed, term. The current solution
@@ -486,16 +489,16 @@ let rec to_heap argsdepth last_call trail ~from ~to_ ?(avoid=def_avoid) e t =
      when full_deref is called inside restrict, it may be from > to_
      t lives in from; args already live in to_
 *)
-and full_deref argsdepth last_call trail ~from ~to_ args e t =
+and full_deref argsdepth ~from ~to_ args e t =
   TRACE "full_deref" (fun fmt ->
     Format.fprintf fmt "full_deref from:%d to:%d %a @@ %d\n%!"
       from to_ (ppterm from [] 0 e) t args)
  if args == 0 then
    if from == to_ then t
-   else to_heap argsdepth last_call trail ~from ~to_ e t
+   else to_heap argsdepth ~from ~to_ e t
  else (* O(1) reduction fragment tested here *)
    let from,args',t = eat_args from args t in
-   let t = full_deref argsdepth last_call trail ~from ~to_ 0 e t in
+   let t = full_deref argsdepth ~from ~to_ 0 e t in
    if args' == 0 then t
    else
      match t with
@@ -552,12 +555,12 @@ and eat_args depth l t =
 and lift ~from ~to_ t =
  (* Dummy trail, argsdepth and e: they won't be used *)
  if from == to_ then t
- else to_heap 0 false dummy_trail ~from ~to_ dummy_env t
+ else to_heap 0 ~from ~to_ dummy_env t
 
 (* Deref is to be called only on heap terms and with from <= to *)
 and deref ~from ~to_ args t =
  (* Dummy trail, argsdepth and e: they won't be used *)
- full_deref 0 false dummy_trail ~from ~to_ args dummy_env t
+ full_deref 0 ~from ~to_ args dummy_env t
 
 (* UVar(_,from,argsno) -> Uvar(_,to_,argsno+from-to_) *)
 and decrease_depth r ~from ~to_ argsno =
@@ -673,9 +676,9 @@ let () = Pp.do_deref := deref;;
 let () = Pp.do_app_deref := app_deref;;
 
 (* Restrict is to be called only on heap terms *)
-let restrict ?avoid argsdepth last_call trail ~from ~to_ e t =
+let restrict ?avoid argsdepth ~from ~to_ e t =
  if from = to_ && avoid == None then t
- else to_heap ?avoid argsdepth last_call trail ~from ~to_ e t
+ else to_heap ?avoid argsdepth ~from ~to_ e t
 
 (* }}} *)
 (* {{{ ************** indexing ********************************** *)
@@ -815,7 +818,7 @@ let rec make_lambdas destdepth args =
    - e.(i) lives in bdepth
    + we deref to move everything to adepth + depth
 *)
-let unif trail last_call adepth e bdepth a b =
+let unif adepth e bdepth a b =
 
  (* heap=true if b is known to be a heap term *)
  let rec unif depth a bdepth b heap =
@@ -852,42 +855,42 @@ let unif trail last_call adepth e bdepth a b =
    (* assign *)
    | _, Arg (i,0) ->
       e.(i) <-
-       restrict adepth last_call trail ~from:(adepth+depth) ~to_:adepth e a;
+       restrict adepth ~from:(adepth+depth) ~to_:adepth e a;
       SPY "assign" (ppterm depth [] adepth [||]) (e.(i)); true
    | _, UVar (r,origdepth,0) ->
-       if not last_call then trail := r :: !trail;
+       if not !last_call then trail := r :: !trail;
        begin try
          let t =
            if depth = 0 then
-             restrict ~avoid:r adepth last_call trail
+             restrict ~avoid:r adepth 
                ~from:adepth ~to_:origdepth e a
            else
              (* First step: we restrict the l.h.s. to the r.h.s. level *)
              let a =
-               to_heap ~avoid:r adepth last_call trail
+               to_heap ~avoid:r adepth 
                  ~from:adepth ~to_:bdepth e a in
              (* Second step: we restrict the l.h.s. *)
-             to_heap adepth last_call trail
+             to_heap adepth 
                ~from:(bdepth+depth) ~to_:origdepth e a in
          r := t;
          SPY "assign" (ppterm depth [] adepth [||]) t; true
        with RestrictionFailure -> false end
    | UVar (r,origdepth,0), _ ->
-       if not last_call then trail := r :: !trail;
+       if not !last_call then trail := r :: !trail;
        begin try
          let t =
            if depth=0 then
              if origdepth = bdepth && heap then b
              else
-               to_heap ~avoid:r adepth last_call trail
+               to_heap ~avoid:r adepth 
                  ~from:bdepth ~to_:origdepth e b
            else
              (* First step: we lift the r.h.s. to the l.h.s. level *)
              let b =
-               to_heap ~avoid:r adepth last_call trail
+               to_heap ~avoid:r adepth 
                  ~from:bdepth ~to_:adepth e b in
              (* Second step: we restrict the r.h.s. *)
-             to_heap adepth last_call trail
+             to_heap adepth 
                ~from:(adepth+depth) ~to_:origdepth e b in
          r := t;
          SPY "assign" (ppterm depth [] adepth [||]) t; true
@@ -900,12 +903,12 @@ let unif trail last_call adepth e bdepth a b =
       SPY "assign" (ppterm depth [] adepth [||]) (e.(i));
       unif depth a bdepth b heap
    | _, UVar (r,origdepth,args) ->
-      if not last_call then trail := r :: !trail;
+      if not !last_call then trail := r :: !trail;
       r := make_lambdas origdepth args;
       SPY "assign" (ppterm depth [] adepth [||]) (!r);
       unif depth a bdepth b heap
    | UVar (r,origdepth,args), _ ->
-      if not last_call then trail := r :: !trail;
+      if not !last_call then trail := r :: !trail;
       r := make_lambdas origdepth args;
       SPY "assign" (ppterm depth [] adepth [||]) (!r);
       unif depth a bdepth b heap
@@ -946,9 +949,8 @@ let unif trail last_call adepth e bdepth a b =
 (* }}} *)
 (* {{{ ************** backtracking ****************************** *)
 
-type trail = term ref list ref
 
-let undo_trail old_trail (trail :trail) =
+let undo_trail old_trail =
   while !trail != old_trail do
     match !trail with
     | r :: rest -> r := dummy; trail := rest
@@ -1068,8 +1070,7 @@ let _ =
 
 (* The block of recursive functions spares the allocation of a Some/None
  * at each iteration in order to know if one needs to backtrack or continue *)
-let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
-  let trail = ref [] in
+let make_runtime : unit -> ('a -> 'b -> 'k) * ('k -> 'k) =
 
   (* Input to be read as the orl (((p,g)::gs)::next)::alts
      depth >= 0 is the number of variables in the context. *)
@@ -1112,7 +1113,7 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
        else TCALL next_alt alts
 
   and backchain depth p g gs cp next alts lvl =
-    let last_call = alts == emptyalts in
+    let maybe_last_call = alts == emptyalts in
     let rec args_of = function
       | Const _ -> []
       | App(_,x,xs) -> x::xs
@@ -1128,12 +1129,12 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
       | [] -> TCALL next_alt alts
       | c :: cs ->
         let old_trail = !trail in
-        let last_call = last_call && cs = [] in
+        last_call := maybe_last_call && cs = [];
         let env = Array.make c.vars dummy in
         match
-         for_all2 (unif trail last_call depth env c.depth) args_of_g c.args
+         for_all2 (unif depth env c.depth) args_of_g c.args
         with
-        | false -> undo_trail old_trail trail; TCALL select cs
+        | false -> undo_trail old_trail; TCALL select cs
         | true ->
            let oldalts = alts in
            let alts = if cs = [] then alts else
@@ -1147,11 +1148,11 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
            | h::hs ->
               let next = if gs = [] then next else FCons (lvl,gs,next) in
               let h =
-                to_heap depth last_call trail ~from:c.depth ~to_:depth env h in
+                to_heap depth ~from:c.depth ~to_:depth env h in
               let hs =
                 List.map (fun x->
                   depth,p,
-                  to_heap depth last_call trail ~from:c.depth ~to_:depth env x)
+                  to_heap depth ~from:c.depth ~to_:depth env x)
                 hs in
               TCALL run depth p h hs next alts oldalts end
     in
@@ -1176,15 +1177,22 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
    else
     let { program = p; clauses = clauses; goal = g; goals = gs; stack = next;
           trail = old_trail; depth = depth; lvl = lvl; next = alts} = alts in
-    undo_trail old_trail trail;
+    undo_trail old_trail;
     backchain depth p g gs clauses next alts lvl
   in
 
-  (* Finally the runtime *)
-   (fun p (_,q_env,q) ->
-     let q = to_heap 0 true trail ~from:0 ~to_:0 q_env q in
-     run 0 p q [] FNil emptyalts emptyalts),
-   next_alt
+
+ (* Finally the runtime *)
+ fun () ->
+  let my_trail = ref [] in
+  let ensure_runtime f x =
+    trail := !my_trail; last_call := false;
+    try let rc = f x in my_trail := !trail; trail := []; rc
+    with e -> my_trail := !trail; trail := []; raise e in
+  (fun p -> ensure_runtime (fun (_,q_env,q) ->
+     let q = to_heap 0 ~from:0 ~to_:0 q_env q in
+     run 0 p q [] FNil emptyalts emptyalts)),
+  (fun alts -> ensure_runtime next_alt alts)
 ;;
 
 (* }}} *)
@@ -1302,13 +1310,13 @@ type query = string list * term array * term
 let pp_prolog = pp_FOprolog
 
 let execute_once p q =
- let run, cont = make_runtime in
+ let run, cont = make_runtime () in
  try ignore (run p q) ; false
  with No_clause -> true
 ;;
 
 let execute_loop p ((q_names,q_env,q) as qq) =
- let run, cont = make_runtime in
+ let run, cont = make_runtime () in
  let time0 = Unix.gettimeofday() in
  let k = ref (run p qq) in
  let time1 = Unix.gettimeofday() in
