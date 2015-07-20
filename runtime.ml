@@ -812,7 +812,7 @@ let rec make_lambdas destdepth args =
    
    Note about dereferencing Arg(i,args):
    - args live *here* (bdepth + depth)
-   - e.(i) lives in adepth
+   - e.(i) lives in bdepth
    + we deref to move everything to adepth + depth
 *)
 let unif trail last_call adepth e bdepth a b =
