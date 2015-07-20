@@ -83,13 +83,20 @@ type term =
   | Arg of (*id:*)int * (*argsno:*)int
   | AppArg of (*id*)int * term list
   (* Heap terms: unif variables in the query *)
-  | UVar of term ref * (*depth:*)int * (*argsno:*)int
-  | AppUVar of term ref * (*depth:*)int * term list
+  | UVar of term oref * (*depth:*)int * (*argsno:*)int
+  | AppUVar of term oref * (*depth:*)int * term list
   (* Misc: $custom predicates, ... *)
   | Custom of constant * term list
   | String of F.t
   | Int of int
   | Float of float
+and 'a oref = {
+  mutable contents : 'a;
+(*   mutable rest : constraints *)
+}
+and constraints = exn list (* well... open type in caml < 4.02 *)
+
+let (!!) { contents = x } = x
 
 module Constants : sig
 
@@ -195,7 +202,7 @@ let xppterm ~nice depth0 names argsdepth env f t =
     Format.fprintf f "(@[<hov 1>%a@ %a@])" pphd hd (pplist pparg "") args in
   let ppconstant f c = Format.fprintf f "%s" (string_of_constant c) in
   let rec pp_uvar depth vardepth args f r =
-   if !r == dummy then begin
+   if !!r == dummy then begin
     let s =
      try List.assq r !m
      with Not_found ->
@@ -211,8 +218,8 @@ let xppterm ~nice depth0 names argsdepth env f t =
       from origdepth (currently not even passed to the function)
       to depth (not passed as well) *)
    end else if nice then begin
-    aux depth f (!do_deref ~from:vardepth ~to_:depth args !r)
-   end else Format.fprintf f "<%a>_%d" (aux vardepth) !r vardepth
+    aux depth f (!do_deref ~from:vardepth ~to_:depth args !!r)
+   end else Format.fprintf f "<%a>_%d" (aux vardepth) !!r vardepth
   and pp_arg depth f n =
    let name= try List.nth names n with Failure _ -> "A" ^ string_of_int n in
    if try env.(n) == dummy with Invalid_argument _ -> true then
@@ -241,7 +248,7 @@ let xppterm ~nice depth0 names argsdepth env f t =
     | UVar (r,vardepth,argsno) when not nice ->
        let args = mkinterval vardepth argsno 0 in
        pp_app f (pp_uvar depth vardepth 0) ppconstant (r,args)
-    | UVar (r,vardepth,argsno) when !r == dummy ->
+    | UVar (r,vardepth,argsno) when !!r == dummy ->
        let diff = vardepth - depth0 in
        let diff = if diff >= 0 then diff else 0 in
        let vardepth = vardepth - diff in
@@ -250,8 +257,8 @@ let xppterm ~nice depth0 names argsdepth env f t =
        pp_app f (pp_uvar depth vardepth 0) ppconstant (r,args)
     | UVar (r,vardepth,argsno) ->
        pp_uvar depth vardepth argsno f r
-    | AppUVar (r,vardepth,terms) when !r != dummy && nice -> 
-       aux depth f (!do_app_deref ~from:vardepth ~to_:depth terms !r)
+    | AppUVar (r,vardepth,terms) when !!r != dummy && nice -> 
+       aux depth f (!do_app_deref ~from:vardepth ~to_:depth terms !!r)
     | AppUVar (r,vardepth,terms) -> 
        pp_app f (pp_uvar depth vardepth 0) (aux depth) (r,terms)
     | Arg (n,argsno) ->
@@ -334,9 +341,14 @@ let ppclause f { args = args; hyps = hyps; key = (hd,_) } =
      (pplist (uppterm 0 [] 0 [||]) "") args
      (pplist (uppterm 0 [] 0 [||]) ",") hyps
 
-type trail = term ref list ref
+type trail = term oref list ref
 let trail : trail = ref []
 let last_call = ref false
+let to_resume = ref []
+
+let (@:=) r v = r.contents <- v(*; if r.rest <> [] then begin to_resume := !to_resume @ r.rest; r.rest <- []; end*)
+let oref x = { contents = x (*; rest = []*) }
+
 
 (* {{{ ************** to_heap/restrict/deref ******************** *)
 
@@ -369,7 +381,7 @@ exception RestrictionFailure
      heap
 *)
 
-let def_avoid = ref dummy
+let def_avoid = oref dummy
 let occurr_check r1 r2 = if r1 == r2 then raise RestrictionFailure
 
 let dummy_env = [||]
@@ -427,7 +439,7 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
     | Arg (i,args) when argsdepth >= to_ ->
        let a = e.(i) in
        if a == dummy then
-         let r = ref dummy in
+         let r = oref dummy in
          let v = UVar(r,to_,0) in
          e.(i) <- v;
          if args == 0 then v else UVar(r,to_,args)
@@ -437,7 +449,7 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
     | AppArg(i,args) when argsdepth >= to_ ->
        let a = e.(i) in
        if a == dummy then
-         let r = ref dummy in
+         let r = oref dummy in
          let v = UVar(r,to_,0) in
          e.(i) <- v;
          AppUVar(r,to_,args) 
@@ -450,9 +462,9 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
        occurr_check avoid r;
        if vardepth <= to_ then x
        else
-         let fresh = UVar(ref dummy,to_,0) in
+         let fresh = UVar(oref dummy,to_,0) in
          if not !last_call then trail := r :: !trail;
-         r := fresh;
+         r @:= fresh;
         (* TODO: test if it is more efficient here to return fresh or
            the original, imperatively changed, term. The current solution
            avoids dereference chains, but puts more pressure on the GC. *)
@@ -566,7 +578,7 @@ and deref ~from ~to_ args t =
 and decrease_depth r ~from ~to_ argsno =
  if from <= to_ then r,from,argsno
  else
-  let newr = ref dummy in
+  let newr = oref dummy in
   let newargsno = argsno+from-to_ in
   let newvar = UVar(newr,to_,newargsno) in
   (* TODO: here we are not registering the operation in the
@@ -575,7 +587,7 @@ and decrease_depth r ~from ~to_ argsno =
      down? Would using a global last_call/trail speed up things? What
      about passing around last_call/trail? *)
   if not !last_call then trail := r :: !trail;
-  r := newvar;
+  r @:= newvar;
   newr,to_,newargsno
 
 (* simultaneous substitution of ts for [depth,depth+|ts|)
@@ -790,8 +802,10 @@ open Indexing
 (* {{{ ************** unification ******************************* *)
 
 let rec make_lambdas destdepth args =
- if args = 0 then UVar(ref dummy,destdepth,0)
+ if args = 0 then UVar(oref dummy,destdepth,0)
  else Lam (make_lambdas (destdepth+1) (args-1))
+
+exception Delayed_unif of int * term array * int * term * term
 
 (* Invariants:                                          |
    adepth: depth of a (query, heap term)                - bdepth       b
@@ -810,7 +824,7 @@ let rec make_lambdas destdepth args =
 
    Note about dereferencing UVar(r,origdepth,args):
    - args live *here* (a/bdepth + depth)
-   - !r lives in origdepth
+   - !!r lives in origdepth
    + we deref to move everything to a/bdepth + depth
    
    Note about dereferencing Arg(i,args):
@@ -872,7 +886,7 @@ let unif adepth e bdepth a b =
              (* Second step: we restrict the l.h.s. *)
              to_heap adepth 
                ~from:(bdepth+depth) ~to_:origdepth e a in
-         r := t;
+         r @:= t;
          SPY "assign" (ppterm depth [] adepth [||]) t; true
        with RestrictionFailure -> false end
    | UVar (r,origdepth,0), _ ->
@@ -892,7 +906,7 @@ let unif adepth e bdepth a b =
              (* Second step: we restrict the r.h.s. *)
              to_heap adepth 
                ~from:(adepth+depth) ~to_:origdepth e b in
-         r := t;
+         r @:= t;
          SPY "assign" (ppterm depth [] adepth [||]) t; true
        with RestrictionFailure -> false end
 
@@ -904,19 +918,28 @@ let unif adepth e bdepth a b =
       unif depth a bdepth b heap
    | _, UVar (r,origdepth,args) ->
       if not !last_call then trail := r :: !trail;
-      r := make_lambdas origdepth args;
-      SPY "assign" (ppterm depth [] adepth [||]) (!r);
+      r @:= make_lambdas origdepth args;
+      SPY "assign" (ppterm depth [] adepth [||]) (!!r);
       unif depth a bdepth b heap
    | UVar (r,origdepth,args), _ ->
       if not !last_call then trail := r :: !trail;
-      r := make_lambdas origdepth args;
-      SPY "assign" (ppterm depth [] adepth [||]) (!r);
+      r @:= make_lambdas origdepth args;
+      SPY "assign" (ppterm depth [] adepth [||]) (!!r);
       unif depth a bdepth b heap
 
    (* HO *)
-   | AppUVar _, _
-   | _, AppUVar _
-   | AppArg _, _ -> error "HO unification (maybe delay)"
+   | AppUVar (r, _,_), _
+   | _, AppUVar (r, _,_) -> error "HO unification (maybe delay)"
+(*
+       r.rest <- Delayed_unif (adepth+depth,e,bdepth,a,b) :: r.rest;
+       true
+*)
+   | _, AppArg _ -> error "HO unification (maybe delay)"
+(*
+       unif depth a bdepth
+         (to_heap bdepth ~from:bdepth ~to_:(adepth+depth) e b)
+         true
+*)
 
    (* recursion *)
    | App (c1,x2,xs), App (c2,y2,ys) ->
@@ -953,7 +976,7 @@ let unif adepth e bdepth a b =
 let undo_trail old_trail =
   while !trail != old_trail do
     match !trail with
-    | r :: rest -> r := dummy; trail := rest
+    | r :: rest -> r @:= dummy; trail := rest
     | _ -> assert false
   done
 ;;
@@ -974,11 +997,13 @@ and alternative = {
   goal : term;
   goals : ((*depth:*)int * program * term) list;
   stack : frame;
-  trail : term ref list;
+  trail : term oref list;
   clauses : clause list;
   next : alternative
 }
 let emptyalts : alternative = Obj.magic 0
+
+(* }}} *)
 
 let rec split_conj = function
   | App(c, hd, args) when c == andc ->
@@ -1029,7 +1054,6 @@ let rec clausify vars depth hyps ts = function
   | UVar _ | AppUVar _ -> assert false
 ;;
 
-(* }}} *)
 (* {{{ ************** run *************************************** *)
 
 exception No_clause
@@ -1091,7 +1115,7 @@ let make_runtime : unit -> ('a -> 'b -> 'k) * ('k -> 'k) =
     | App(c, Lam f, []) when c == pic ->
        run (depth+1) p f gs next alts lvl
     | App(c, Lam f, []) when c == sigmac ->
-       let v = UVar(ref dummy, depth, 0) in
+       let v = UVar(oref dummy, depth, 0) in
        run depth p (subst depth [v] f) gs next alts lvl
     | UVar ({ contents = g }, from, args) when g != dummy ->
        run depth p (deref ~from ~to_:depth args g) gs next alts lvl
@@ -1138,8 +1162,8 @@ let make_runtime : unit -> ('a -> 'b -> 'k) * ('k -> 'k) =
         | true ->
            let oldalts = alts in
            let alts = if cs = [] then alts else
-             { program=p; depth = depth; goal=g; goals=gs; stack=next;
-               trail=old_trail; clauses=cs; lvl = lvl ; next=alts} in
+             { program = p; depth = depth; goal = g; goals = gs; stack = next;
+               trail = old_trail; clauses = cs; lvl = lvl ; next = alts} in
            begin match c.hyps with
            | [] ->
               begin match gs with
@@ -1168,7 +1192,17 @@ let make_runtime : unit -> ('a -> 'b -> 'k) * ('k -> 'k) =
     | (depth, p, g) :: gs -> TCALL run depth p g gs next alts lvl
 
   and pop_andl alts = function
-    | FNil -> alts
+    | FNil ->
+(*
+       while !to_resume <> [] do
+         match !to_resume with
+         | Delayed_unif (ad,e,bd,a,b) :: rest ->
+             to_resume := rest;
+             assert(unif ad e bd a b)
+         | _ -> assert false
+       done;
+*)
+       alts
     | FCons (_,[],_) -> anomaly "empty stack frame"
     | FCons(lvl,(depth,p,g)::gs,next) -> run depth p g gs next alts lvl
 
@@ -1186,7 +1220,7 @@ let make_runtime : unit -> ('a -> 'b -> 'k) * ('k -> 'k) =
  fun () ->
   let my_trail = ref [] in
   let ensure_runtime f x =
-    trail := !my_trail; last_call := false;
+    trail := !my_trail; last_call := false; to_resume := [];
     try let rc = f x in my_trail := !trail; trail := []; rc
     with e -> my_trail := !trail; trail := []; raise e in
   (fun p -> ensure_runtime (fun (_,q_env,q) ->
