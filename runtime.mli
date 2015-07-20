@@ -23,7 +23,7 @@ type term =
   (* Clause terms: unif variables used in clauses *)
   | Arg of (*id:*)int * arg
   (* Heap terms: unif variables in the query *)
-  | UVar of term ref * (*depth:*)int * arg
+  | UVar of term oref * (*depth:*)int * arg
   (* Misc: $custom predicates, ... *)
   | Custom of constant * term list
   | String of ASTFuncS.t
@@ -34,6 +34,11 @@ and arg =
   | Irl of int         (* the RFF, the int is the number of args            *)
   | Exp of term list   (* general case                                      *)
 and constant = int     (* De Bruijn levels                                  *)
+and 'a oref = {
+  mutable contents : 'a;
+(*   mutable rest : constraints *)
+}
+and constraints = exn list
 
 exception No_clause
 
