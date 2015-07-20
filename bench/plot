@@ -15,7 +15,11 @@ for l in file:lines() do
 	it = c + s*100
 	mem = mem:gsub('k$','')
 	local item = data[job] or {}
-	item[runner] = { time = wc; mem = mem; itime = it }
+	local wcl = (item[runner] or {}).time or {}
+	wcl[#wcl+1] = wc
+	local itl = (item[runner] or {}).itime or {}
+	itl[#itl+1] = it
+	item[runner] = { time = wcl; mem = mem; itime = itl }
 	data[job] = item
 end
 
@@ -31,14 +35,20 @@ table.sort(all_jobs,function(j1,j2) return j1 < j2 end)
 
 out = assert(io.open(arg[1]..'.dat','w'), 'Unable to open output file')
 
+function average(l)
+	local t = 0
+	for _,v in ipairs(l) do t = t + v end
+	return t / #l
+end
+
 for i,job in ipairs(all_jobs) do
 	local runners = data[job]
 	out:write(i,' ',job,' ')
 	for runner, _ in pairs(all_runners) do
 		local runner_data =
 		  runners[runner] or { time = 0; mem = 0; itime = 0 }
-		out:write(runner,' ',runner_data.time,' ',
-		                     runner_data.itime,' ',
+		out:write(runner,' ',average(runner_data.time),' ',
+		                     average(runner_data.itime),' ',
 				     runner_data.mem,' ')
 	end
 	out:write('\n')
