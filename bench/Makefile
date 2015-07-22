@@ -56,13 +56,17 @@ endef
 only: prepare
 	@($(foreach r,$(RUNNERS),\
 	  $(foreach k,ok ko,\
-	   $(foreach j,$(wildcard jobs/$(call name,$(r))/$(k)/*$(JOB)*),\
-	     $(call runk,$(N),$(k),$(r),$(j)))))) | tee data.csv
+	   $(foreach j,\
+	      $(sort $(wildcard jobs/$(call name,$(r))/$(k)/*$(JOB)*)),\
+	    $(call runk,$(N),$(k),$(r),$(j)))))) | tee data.csv
+	$(MAKE) plot
+
+plot:
 	@./plot data.csv
 	@gnuplot data.csv.plot
-	@echo Results: `ls $$PWD/*png`
+	@echo Results: `ls $$PWD/*svg`
 
 prepare:
 	@make -C ..
 
-.PHONY: all prepare only
+.PHONY: all prepare only plot

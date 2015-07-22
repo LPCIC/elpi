@@ -3,7 +3,7 @@
 file = assert(io.open(arg[1]),"Argument missing: .csv file name")
 data = {}
 for l in file:lines() do
-	local _,runner,job,it,wc,_,mem =
+	local ok,runner,job,it,wc,_,mem =
 	 l:match('^([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),([^,]+),?$')
 	assert(runner and job and wc and mem and it, "format error: " .. l)
 	job = job:match('([^/]+)$'):gsub("%.elpi$","")
@@ -14,12 +14,13 @@ for l in file:lines() do
 	c = c1 or c
 	it = c + s*100
 	mem = mem:gsub('k$','')
+	if ok == "KO" then mem = 0 end -- kill failed tests
 	local item = data[job] or {}
 	local wcl = (item[runner] or {}).time or {}
 	wcl[#wcl+1] = wc
 	local itl = (item[runner] or {}).itime or {}
 	itl[#itl+1] = it
-	item[runner] = { time = wcl; mem = mem; itime = itl }
+	item[runner] = { time = wcl; mem = tonumber(mem); itime = itl }
 	data[job] = item
 end
 
@@ -44,11 +45,21 @@ end
 for i,job in ipairs(all_jobs) do
 	local runners = data[job]
 	out:write(i,' ',job,' ')
+	local fastest = 99999999999999
 	for runner, _ in pairs(all_runners) do
 		local runner_data =
-		  runners[runner] or { time = 0; mem = 0; itime = 0 }
+		  runners[runner] or { time = {0}; mem = 0; itime = {0} }
+                local t = average(runner_data.itime)
+		if t < fastest and runner_data.mem ~= 0 then fastest = t end
+	end
+	for runner, _ in pairs(all_runners) do
+		local runner_data =
+		  runners[runner] or { time = {0}; mem = 0; itime = {0} }
+	 	local delta = -(average(runner_data.itime) - fastest)
+		if runner_data.mem == 0 then delta = 0 end
 		out:write(runner,' ',average(runner_data.time),' ',
 		                     average(runner_data.itime),' ',
+		                     delta,' ',
 				     runner_data.mem,' ')
 	end
 	out:write('\n')
@@ -57,16 +68,15 @@ out:close()
 
 plot = assert(io.open(arg[1]..'.plot','w'), 'Unable to open plot file')
 plot:write([[
-        set terminal png size ]]..math.max(#all_jobs*20,200)..[[, 1000
-	set yrange [0:]
-	set xrange [0:]]..(#all_jobs+1)..[[]
+        set terminal svg background rgb 'white' size ]]..math.max(#all_jobs*30,200)..[[, 2000
+	set xrange [0:]]..(#all_jobs+2)..[[]
 	set xtics rotate by 90 right
 	set xlabel "test"
 	set grid mytics 
 	set grid ytics
 	set mytics
-	set boxwidth 0.2 absolute
-        set output "]]..arg[1]..[[.png"
+	set boxwidth 0.1 absolute
+        set output "]]..arg[1]..[[.svg"
 	plot \
 ]])
 i=1
@@ -75,8 +85,8 @@ for runner, _ in pairs(all_runners) do
 	if i == 1 then tics = ':xtic(2)' end
 	local pos = '$1+' .. string.format("%3.1f",(i-1) * 0.2)
         plot:write('"'..arg[1]..'.dat" \\\n')
-	local start = string.format("%d:%d",1+i*4,i*4)
-	local stop = "(0):(0)"
+	local start = string.format("%d:%d",2+(i-1)*5+3,2+(i-1)*5+2)
+	local stop = string.format("%d:(0)",2+(i-1)*5+4)
 	plot:write('using ('..pos..'):'..start..':'..stop..tics..' with candlesticks title "'..  runner..'", \\\n')
 	i=i+1
 end
