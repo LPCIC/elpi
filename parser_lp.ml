@@ -29,6 +29,8 @@ module ASTFuncS = struct
 
 end
 
+(* CSC: I think that this is obsolete and that the corresponding code in
+   runtime.ml can be thrown away *)
 (* Note: Appl(",",[]) is allowed in r.h.s. of clauses to represent
    axioms. Const "true" would not work because the definition of true
    would become true :- true. *)
@@ -42,21 +44,11 @@ type term =
  | Int of int
  | Float of float
 
-let mkConj = function [f] -> f | l -> App(Const ASTFuncS.andf,l)
-(* TODO: Bug here: mkConj2 should be right associative!
-   But what is the difference??? *)
-let mkConj2 = mkConj
-let mkDisj  = function [f] -> f | l -> App(Const ASTFuncS.orf, l)
-let mkImpl f1 f2 = App(Const ASTFuncS.implf,[f1;f2])
-let mkTrue = Const ASTFuncS.truef
-let mkCut = Const ASTFuncS.cutf
-let mkEq l r = App(Const ASTFuncS.eqf,[l;r]) 
 let mkLam x t = Lam (ASTFuncS.from_string x,t)
-let mkPi x t = App(Const ASTFuncS.pif,[mkLam x t])
-let mkSigma x t = App(Const ASTFuncS.sigmaf,[mkLam x t])
 let mkNil = Const (ASTFuncS.from_string "nil")
 let mkString str = String (ASTFuncS.from_string str)
 let mkInt i = Int i
+let mkFloat f = Float f
 let mkSeq l =
  let rec aux =
   function
@@ -69,24 +61,9 @@ let mkIs x f = App(Const ASTFuncS.isf,[x;f])
 
 exception NotInProlog;;
 
-type formula = term
 type clause = term
 type program = clause list
 type goal = term
-
-let mkClause lhs rhs = App(Const ASTFuncS.rimplf,[lhs;rhs])
-
-let true_clause = mkClause mkTrue (mkConj [])
-
-let eq_clause =
- let v = Const (ASTFuncS.from_string "X") in
-  mkClause (mkEq v v) (mkConj [])
-
-let or_clauses =
- let v1 = Const (ASTFuncS.from_string "A") in
- let v2 = Const (ASTFuncS.from_string "B") in
-  [ mkClause (mkDisj [v1;v2]) v1
-  ; mkClause (mkDisj [v1;v2]) v2 ]
 
 let mkApp =
  function
@@ -130,21 +107,27 @@ let parse_one e filename =
   Printf.eprintf "loading %s\n%!" filename;
   parsed := filename::!parsed ;
   let ch = open_in filename in
+  let saved_cur_dirname = !cur_dirname in
   cur_dirname := symlink_dirname filename;
-  try let res = Grammar.Entry.parse e (Stream.of_channel ch) in close_in ch;res
+  try
+   let res = Grammar.Entry.parse e (Stream.of_channel ch) in
+   close_in ch;
+   cur_dirname := saved_cur_dirname;
+   res
   with Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) ->
     close_in ch;
-    (*let last = Ploc.last_pos l in
-    let ctx_len = 70 in*)
-    let ctx = "…" (* CSC: TO BE FIXED AND RESTORED
+    let last = Ploc.last_pos l in
+    (*let ctx_len = 70 in CSC: TO BE FIXED AND RESTORED
+    let ctx = "…"
       let start = max 0 (last - ctx_len) in
       let s = String.make 101 '\007' in
       let ch = open_in filename in
       (try really_input ch s 0 100 with End_of_file -> ());
       close_in ch;
       let last = String.index s '\007' in
-      "…" ^ String.sub s start last ^ "…"*) in
-    raise (Stream.Error(Printf.sprintf "%s\nnear: %s" msg ctx))
+      "…" ^ String.sub s start last ^ "…" in
+    raise (Stream.Error(Printf.sprintf "%s\nnear: %s" msg ctx))*)
+    raise (Stream.Error(Printf.sprintf "%s\nnear: %d" msg last))
   | Ploc.Exc(_,e) -> close_in ch; raise e
  end
 
@@ -168,8 +151,8 @@ let octal = lexer [ '0'-'7' ]
 let hex = lexer [ '0'-'9' | 'A'-'F' | 'a'-'f' ]
 let schar2 =
  lexer [ '+'  | '*' | '/' | '^' | '<' | '>' | '`' | '\'' | '?' | '@' | '#'
-       | '~' ]
-let schar = lexer [ schar2 | '-' | '=' | '$' | '&' | '!' | '_' ]
+       | '~' | '=' | '&' | '!' ]
+let schar = lexer [ schar2 | '-' | '$' | '_' ]
 let lcase = lexer [ 'a'-'z' ]
 let ucase = lexer [ 'A'-'Z' ]
 let idchar = lexer [ lcase | ucase | digit | schar ]
@@ -185,42 +168,26 @@ let tok = lexer
   | schar2 idcharstar -> "CONSTANT", $buf
   | '$' lcase idcharstar -> "BUILTIN",$buf
   | '$' idcharstar -> "CONSTANT",$buf
-(*  | "*" -> "CONSTANT", $buf (*CSC: to be fixed *)
-  | "+" -> "CONSTANT", $buf (*CSC: to be fixed *)
-  | ">" -> "CONSTANT", $buf (*CSC: to be fixed *)
-  | ">=" -> "CONSTANT", $buf (*CSC: to be fixed *)
-  | '<' -> "CONSTANT",$buf (*CSC: to be fixed *)*)
   | num -> "INTEGER", $buf
-  | num '.' num -> "REAL", $buf (* CSC *)
+  | num ?= [ '.' '0'-'9' ] '.' num -> "FLOAT", $buf
   | "->" -> "ARROW", $buf
   | "->" idcharplus -> "CONSTANT", $buf
-(*  | "-" -> "CONSTANT", $buf (*CSC: to be fixed *) *)
   | '-' idcharstar -> "CONSTANT", $buf
-(*  | "~" -> "CONSTANT", $buf (*CSC: to be fixed *) *)
   | '_' -> "FRESHUV", "_"
   | '_' idcharplus -> "CONSTANT", $buf
-  |  ":-"  -> "ENTAILS",$buf
-  |  ":"  -> "COLON",$buf
-  |  "::"  -> "CONS",$buf
-  | ',' -> "COMMA",$buf
-  | ';' -> "SEMICOLON",$buf
+  | ":-"  -> "CONSTANT",$buf
+  | ":"  -> "COLON",$buf
+  | "::"  -> "CONS",$buf
+  | ',' -> "CONSTANT",$buf
+  | ';' -> "CONSTANT",$buf
   | '.' -> "FULLSTOP",$buf
-  | '.' num -> "REAL",$buf
+  | '.' num -> "FLOAT",$buf
   | '\\' -> "BIND","\\"
   | '(' -> "LPAREN",$buf
   | ')' -> "RPAREN",$buf
   | '[' -> "LBRACKET",$buf
   | ']' -> "RBRACKET",$buf
   | '|' -> "PIPE",$buf
-  | '&' -> "AMPERSEND",","
-  | '&' idcharplus -> "CONSTANT", $buf
-  | '!' -> "BANG", $buf
-  | '!' idcharplus -> "CONSTANT", $buf
-  | "=>" -> "IMPL",$buf
-  | "=>" idcharplus -> "CONSTANT",$buf
-  | '=' -> "EQUAL",$buf
-  | '=' idcharplus -> "CONSTANT", $buf
-(*  | "=<" -> "CONSTANT",$buf (*CSC: to be fixed *) *)
   | '"' string -> "LITERAL", let b = $buf in String.sub b 1 (String.length b-2)
 ]
 
@@ -232,7 +199,7 @@ let symbols = ref StringSet.empty;;
 let rec lex c = parser bp
   | [< '( ' ' | '\n' | '\t' | '\r' ); s >] -> lex c s
   | [< '( '%' ); s >] -> comment c s
-  | [< ?= [ '/'; '*' ]; '( '/' ); '( '*' ); s >] -> comment2 c s
+  | [< ?= [ '/'; '*' ]; '( '/' ); '( '*' ); s >] -> comment2 0 c s
   | [< s >] ep ->
        if option_eq (Stream.peek s) None then ("EOF",""), (bp, ep)
        else
@@ -249,7 +216,7 @@ let rec lex c = parser bp
        | "CONSTANT","kind" -> "KIND", "kind"
        | "CONSTANT","typeabbrev" -> "TYPEABBREV", "typeabbrev"
        | "CONSTANT","type" -> "TYPE", "type"
-       | "CONSTANT","closed" -> "CLOSED", "closed" (* CSC: ??? *)
+       | "CONSTANT","closed" -> "CLOSED", "closed"
 
        | "CONSTANT","end" -> "EOF", "end"
        | "CONSTANT","accumulate" -> "ACCUMULATE", "accumulate"
@@ -261,10 +228,7 @@ let rec lex c = parser bp
        | "CONSTANT","postfix" -> "FIXITY", "postfix"
        | "CONSTANT","postfixl" -> "FIXITY", "postfixl"
 
-       | "CONSTANT","pi" -> "PI", "pi"
-       | "CONSTANT","sigma" -> "SIGMA", "sigma"
        | "CONSTANT","nil" -> "NIL", "nil"
-       | "CONSTANT","is" -> "IS","is"
 
        | "CONSTANT", x when StringSet.mem x !symbols -> "SYMBOL",x
 
@@ -275,11 +239,11 @@ and skip_to_dot c = parser
 and comment c = parser
   | [< '( '\n' ); s >] -> lex c s
   | [< '_ ; s >] -> comment c s
-and comment2 c = parser
-  | [< '( '*' ); s >] ->
-       if option_eq (Stream.peek s) (Some '/') then (Stream.junk s; lex c s)
-       else comment2 c s
-  | [< '_ ; s >] -> comment2 c s
+and comment2 lvl c = parser
+  | [< ?= [ '*'; '/' ]; '( '*' ); '( '/'); s >] ->
+      if lvl = 0 then lex c s else comment2 (lvl-1) c s
+  | [< ?= [ '/'; '*' ]; '( '/' ); '( '*' ); s >] -> comment2 (lvl+1) c s
+  | [< '_ ; s >] -> comment2 lvl c s
 
 
 open Plexing
@@ -325,7 +289,7 @@ let atom = Grammar.Entry.create g "atom"
 let goal = Grammar.Entry.create g "goal"
 
 let min_precedence = 0
-let max_precedence = 100
+let max_precedence = 256
 
 let rec mk_precedences acc n =
  if n > max_precedence then List.rev acc
@@ -333,8 +297,7 @@ let rec mk_precedences acc n =
 ;;
 
 let atom_levels =
-  ["pi";"disjunction";"conjunction";"conjunction2";"implication";"equality"]
-  @ mk_precedences [] min_precedence @ ["term";"app";"simple";"list"]
+  mk_precedences [] min_precedence @ ["term";"app";"simple";"list"]
 
 let () =
   let dummy_action =
@@ -352,27 +315,8 @@ let used_precedences = ref [];;
 EXTEND
   GLOBAL: lp premise atom goal;
   lp: [ [ cl = LIST0 clause; EOF -> List.concat cl ] ];
-(*  name : [ [ c = CONSTANT -> c | u = UVAR -> u | FRESHUV -> "_" ] ];
-  label : [ [ COLON;
-              n = name;
-              p = OPT [ LT; n = name -> `Before n | GT; n = name -> `After n ];
-              COLON -> n,p ] ];
-*)
   clause :
-    [[ (*name = OPT label;*)
-       hd = concl; hyp = OPT [ ENTAILS; hyp = premise -> hyp ]; FULLSTOP ->
-(*
-         let name, insertion = match name with
-         | None -> CN.fresh (), `Here
-         | Some (s,pos) -> match pos with
-             | None -> CN.make s, `Here
-             | Some (`Before "_") -> CN.make ~float:`Begin s, `Begin
-             | Some (`After "_") -> CN.make ~float:`End s, `End
-             | Some (`Before n) -> CN.make s, `Before(CN.make ~existing:true n)
-             | Some (`After n) -> CN.make s, `After(CN.make ~existing:true n) in
-*)
-         let hyp = match hyp with None -> mkConj [](*L.empty*) | Some h -> h in
-         [mkClause hd hyp]
+    [[ f = atom; FULLSTOP -> [f]
      | MODULE; CONSTANT; FULLSTOP -> []
      | SIG; CONSTANT; FULLSTOP -> []
      | ACCUMULATE; filenames=LIST1 CONSTANT SEP COMMA; FULLSTOP ->
@@ -386,6 +330,8 @@ EXTEND
      | LOCAL; LIST1 CONSTANT SEP COMMA; type_; FULLSTOP -> []
      | LOCALKIND; LIST1 CONSTANT SEP COMMA; FULLSTOP -> []
      | LOCALKIND; LIST1 CONSTANT SEP COMMA; kind; FULLSTOP -> []
+     | CLOSED; LIST1 CONSTANT SEP COMMA; FULLSTOP -> []
+     | CLOSED; LIST1 CONSTANT SEP COMMA; type_; FULLSTOP -> []
      | USEONLY; LIST1 CONSTANT SEP COMMA; FULLSTOP -> []
      | USEONLY; LIST1 CONSTANT SEP COMMA; type_; FULLSTOP -> []
      | EXPORTDEF; LIST1 CONSTANT SEP COMMA; FULLSTOP -> []
@@ -464,41 +410,6 @@ EXTEND
   goal:
     [[ p = premise -> p ]];
   premise : [[ a = atom -> a ]];
-  concl : [[ a = atom LEVEL "0" -> a ]];
-  atom : LEVEL "pi"
-     [[ PI; x = CONSTANT; BIND; p = atom LEVEL "disjunction" -> mkPi x p
-      (*| PI; annot = bound; x = bound; BIND; p = atom LEVEL "disjuction" ->
-         let (x, is_uv), annot = x, Some (fst annot) in
-         let bind = if is_uv then mkSigma1 else mkPi1 annot in
-         bind (grab x 1 p)
-      | PI; LPAREN; annot = atom LEVEL "disjuction"; RPAREN;
-        x = bound; BIND; p = atom LEVEL "disjuction" ->
-         let (x, is_uv), annot = x, Some annot in
-         let bind = if is_uv then mkSigma1 else mkPi1 annot in
-         bind (grab x 1 p)
-      | PI; annot = atom LEVEL "list";
-        x = bound; BIND; p = atom LEVEL "disjuction" ->
-         let (x, is_uv), annot = x, Some annot in
-         let bind = if is_uv then mkSigma1 else mkPi1 annot in
-         bind (grab x 1 p)*)
-      | SIGMA; x=CONSTANT; BIND; p=atom LEVEL "disjunction"-> mkSigma x p]];
-  atom : LEVEL "disjunction"
-     [[ l = LIST1 atom LEVEL "conjunction" SEP SEMICOLON -> mkDisj l ]];
-  atom : LEVEL "conjunction"
-     [[ l = LIST1 atom LEVEL "conjunction2" SEP COMMA -> mkConj l ]];
-  atom : LEVEL "conjunction2"
-     [[ l = LIST1 atom LEVEL "implication" SEP AMPERSEND -> mkConj2 l ]];
-  atom : LEVEL "implication"
-     [[ a = atom; IMPL; p = atom LEVEL "implication" ->
-          mkImpl a p
-      | a = atom; ENTAILS; p = premise ->
-          mkImpl p a ]];
-  atom : LEVEL "equality"
-     [[ a = atom; EQUAL; b = atom LEVEL "0" ->
-          mkEq a b
-      | a = atom; IS; b = atom LEVEL "0" ->
-          mkIs a b
-     ]];
   atom : LEVEL "term"
      [[ l = LIST1 atom LEVEL "app" SEP CONS ->
           if List.length l = 1 then List.hd l
@@ -516,11 +427,11 @@ EXTEND
       | NIL -> mkNil
       | s = LITERAL -> mkString s
       | s = INTEGER -> mkInt (int_of_string s) 
+      | s = FLOAT -> mkFloat (float_of_string s) 
       | bt = BUILTIN -> mkCustom bt
-      | BANG -> mkCut
       | LPAREN; a = atom; RPAREN -> a ]];
   atom : LEVEL "list" 
-     [[ LBRACKET; xs = LIST0 atom LEVEL "implication" SEP COMMA;
+     [[ LBRACKET; xs = LIST0 atom LEVEL "0" SEP COMMA;
           tl = OPT [ PIPE; x = atom LEVEL "0" -> x ]; RBRACKET ->
           let tl = match tl with None -> mkNil | Some x -> x in
           if List.length xs = 0 && tl <> mkNil then 
@@ -549,6 +460,8 @@ let parse_program (*?(ontop=[])*) ~filenames : program =
           raise (Stream.Error ("unable to insert clause "^CN.to_string name));
         newprog in
   List.fold_left insert ontop insertions*)
-  true_clause::eq_clause::or_clauses@parse lp filenames
+  let execname = Unix.readlink "/proc/self/exe" in
+  let pervasives = Filename.dirname execname ^ "/pervasives.elpi" in
+  parse lp (pervasives::filenames)
 
 let parse_goal s : goal = parse_string goal s
