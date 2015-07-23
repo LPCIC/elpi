@@ -68,16 +68,24 @@ out:close()
 
 plot = assert(io.open(arg[1]..'.plot','w'), 'Unable to open plot file')
 plot:write([[
-        set terminal svg background rgb 'white' size ]]..math.max(#all_jobs*30,200)..[[, 2000
-	set xrange [0:]]..(#all_jobs+2)..[[]
-	set xtics rotate by 90 right
-	set xlabel "test"
-	set grid mytics 
-	set grid ytics
-	set mytics
-	set boxwidth 0.1 absolute
-        set output "]]..arg[1]..[[.svg"
-	plot \
+set terminal svg background rgb 'white' size ]]..math.max(#all_jobs*30,300)..[[, 2000
+set xrange [0:]]..(#all_jobs+2)..[[]
+set xtics rotate by 90 right
+set xlabel "test"
+set grid mytics 
+set grid ytics
+set mytics
+set linetype 1 lc rgb "#FF0000"
+set linetype 2 lc rgb "#006600"
+set linetype 3 lc rgb "#3300CC"
+set linetype 4 lc rgb "#DDDD66"
+set linetype 5 lc rgb "#66FFFF"
+set linetype 6 lc rgb "#6666FF"
+set style fill solid
+set key right bottom
+set boxwidth 0.1 absolute
+set output "]]..arg[1]..[[.svg"
+plot \
 ]])
 i=1
 for runner, _ in pairs(all_runners) do
