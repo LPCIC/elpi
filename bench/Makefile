@@ -3,7 +3,7 @@
 #   make RUNNERS=elpi
 #   make only JOB=rev14
 #   make ... N=3 # repeat tests 3 times and plot an average
-#
+#   make ... TEE=-a # append results, do not override
 SHELL=/bin/bash
 export TOP=$(abspath ..)
 
@@ -58,7 +58,7 @@ only: prepare
 	  $(foreach k,ok ko,\
 	   $(foreach j,\
 	      $(sort $(wildcard jobs/$(call name,$(r))/$(k)/*$(JOB)*)),\
-	    $(call runk,$(N),$(k),$(r),$(j)))))) | tee data.csv
+	    $(call runk,$(N),$(k),$(r),$(j)))))) | tee $(TEE) data.csv
 	$(MAKE) plot
 
 plot:
