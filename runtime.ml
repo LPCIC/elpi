@@ -573,8 +573,8 @@ and decrease_depth r ~from ~to_ argsno =
      trail to avoid passing last_call/trail around in every single
      function. Decrease_depth is reversible. However, does this slow
      down? Would using a global last_call/trail speed up things? What
-     about passing around last_call/trail?
-  if not last_call then trail := r :: !trail;*)
+     about passing around last_call/trail? *)
+  if not !last_call then trail := r :: !trail;
   r := newvar;
   newr,to_,newargsno
 
