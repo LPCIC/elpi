@@ -262,7 +262,7 @@ let xppterm ~nice depth0 names argsdepth env f t =
     | Const s -> ppconstant f s 
     | Lam t ->
        let c = constant_of_dbl depth in
-       Format.fprintf f "%a\\%a%!" (aux depth) c (aux (depth+1)) t;
+       Format.fprintf f "%a\\%a" (aux depth) c (aux (depth+1)) t;
     | String str -> Format.fprintf f "\"%s\"" (Parser.ASTFuncS.pp str)
     | Int i -> Format.fprintf f "%d" i
     | Float x -> Format.fprintf f "%f" x
@@ -491,7 +491,7 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
 *)
 and full_deref argsdepth ~from ~to_ args e t =
   TRACE "full_deref" (fun fmt ->
-    Format.fprintf fmt "full_deref from:%d to:%d %a @@ %d\n%!"
+    Format.fprintf fmt "full_deref from:%d to:%d %a @@ %d"
       from to_ (ppterm from [] 0 e) t args)
  if args == 0 then
    if from == to_ then t
