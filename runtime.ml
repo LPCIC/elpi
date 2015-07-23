@@ -823,7 +823,6 @@ let unif trail last_call adepth e bdepth a b =
      Format.fprintf fmt "unif: @[<hov 2>^%d:%a@ =%d= ^%d:%a@]"
        adepth (ppterm depth [] adepth [||]) a depth
        bdepth (ppterm depth [] adepth e) b)
-   let unif d a bd b h = TCALL unif d a bd b h in
    let delta = adepth - bdepth in
    (delta = 0 && a == b) || match a,b with
 (* TODO: test if it is better to deref first or not, i.e. the relative order
@@ -1076,7 +1075,6 @@ let make_runtime : ('a -> 'b -> 'k) * ('k -> 'k) =
      depth >= 0 is the number of variables in the context. *)
   let rec run depth p g gs (next : frame) alts lvl =
     TRACE "run" (fun fmt -> ppterm depth [] 0 [||] fmt g)
-    let run d p g gs n a l = TCALL run d p g gs n a l in
     match g with
     | c when c == cutc -> TCALL cut p gs next alts lvl
     | App(c, g, gs') when c == andc ->
