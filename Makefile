@@ -35,7 +35,7 @@ git/%:
 	rm -rf "$$PWD/elpi-$*"
 
 runners:
-	true $(foreach t,$(shell git branch | grep ' runner'),\
+	true $(foreach t,$(shell git branch --list 'runner*' | cut -c 3-),\
 		&& $(MAKE) git/$(t) && \
 		mv elpi.git.$(t) elpi.git.$(t:runner-%=%))
 
