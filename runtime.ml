@@ -491,7 +491,9 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
     | Arg _ -> anomaly "to_heap: Arg: argsdepth < to_"
     | AppArg _ -> anomaly "to_heap: AppArg: argsdepth < to_"
   in
-    aux 0 t
+    let rc = aux 0 t in
+    SPY "heap-term" (ppterm to_ [] argsdepth e) rc;
+    rc
 
 (* full_deref performs lifting only and with from <= to
    if called on non-heap terms, it does not turn them to heap terms
