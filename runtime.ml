@@ -1197,8 +1197,8 @@ let make_runtime : unit -> ('a -> 'b -> 'k) * ('k -> 'k) =
     let alts = prune alts in
     if alts == emptyalts then trail := [];
     match gs with
-    | [] -> TCALL pop_andl alts next
-    | (depth, p, g) :: gs -> TCALL run depth p g gs next alts lvl
+    | [] -> pop_andl alts next
+    | (depth, p, g) :: gs -> run depth p g gs next alts lvl
 
   and pop_andl alts = function
     | FNil ->
