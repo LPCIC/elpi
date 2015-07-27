@@ -565,6 +565,9 @@ and eat_args depth l t =
 (* Lift is to be called only on heap terms and with from <= to *)
 (* TODO: use lift in fullderef? efficient iff it is inlined *)
 and lift ~from ~to_ t =
+ TRACE "lift" (fun fmt ->
+   Format.fprintf fmt "@[<hov 1>from:%d@ to:%d@ %a@]"
+     from to_ (uppterm from [] 0 [||]) t)
  (* Dummy trail, argsdepth and e: they won't be used *)
  if from == to_ then t
  else to_heap 0 ~from ~to_ dummy_env t
@@ -597,13 +600,16 @@ and decrease_depth r ~from ~to_ argsno =
    the ts are lifted as usual *)
 and subst fromdepth ts t =
  TRACE "subst" (fun fmt ->
-   Format.fprintf fmt "@[<hov 2>subst@ t: %a@ ts: %a@]"
-   (uppterm 0 [] 0 [||]) t (pplist (uppterm 0 [] 0 [||]) ",") ts)
+   Format.fprintf fmt "@[<hov 2>t: %a@ ts: %a@]"
+   (uppterm (fromdepth+1) [] 0 [||]) t (pplist (uppterm 0 [] 0 [||]) ",") ts)
  if ts == [] then t
  else
    let len = List.length ts in
    let fromdepthlen = fromdepth + len in
-   let rec aux depth = function
+   let rec aux depth tt =
+   TRACE "subst-aux" (fun fmt ->
+     Format.fprintf fmt "@[<hov 2>t: %a@]" (uppterm (fromdepth+1) [] 0 [||]) tt)
+   match tt with
    | Const c as x ->
       if c >= fromdepth && c < fromdepthlen then
         match List.nth ts (c-fromdepth) with
@@ -631,7 +637,7 @@ and subst fromdepth ts t =
       let xs' = List.map (aux depth) xs in
       if xs==xs' then orig else Custom(c,xs')
    | UVar({contents=g},vardepth,argsno) when g != dummy ->
-      aux depth (deref ~from:vardepth ~to_:depth argsno g)
+      TCALL aux depth (deref ~from:vardepth ~to_:depth argsno g)
    | UVar(r,vardepth,argsno) as orig ->
       if vardepth+argsno <= fromdepth then orig
       else
@@ -643,7 +649,7 @@ and subst fromdepth ts t =
           many other places *)
        AppUVar (r,vardepth,args)
    | AppUVar({ contents = t },vardepth,args) when t != dummy ->
-      aux depth (app_deref ~from:vardepth ~to_:depth args t)
+      TCALL aux depth (app_deref ~from:vardepth ~to_:depth args t)
    | AppUVar(r,vardepth,args) ->
       let r,vardepth,argsno =
         decrease_depth r ~from:vardepth ~to_:fromdepth 0 in
@@ -658,8 +664,11 @@ and subst fromdepth ts t =
      aux fromdepthlen t
 
 and beta depth sub t args =
+ TRACE "beta" (fun fmt ->
+   Format.fprintf fmt "@[<hov 2>subst@ t: %a@ args: %a@]"
+     (uppterm depth [] 0 [||]) t (pplist (uppterm depth [] 0 [||]) ",") args)
  match t,args with
- | Lam t',hd::tl -> beta depth (hd::sub) t' tl
+ | Lam t',hd::tl -> TCALL beta depth (hd::sub) t' tl
  | _ ->
     let t' = subst depth sub t in
     match args with
