@@ -58,7 +58,7 @@ elpi: elpi.$(CMX) runtime.$(CMX) parser.$(CMX) parser_lp.$(CMX)
 elpi.trace: elpi.trace.$(CMX) runtime.trace.$(CMX) parser.$(CMX) parser_lp.$(CMX)
 	$(OC) $(OCAMLOPTIONS) $(FLAGS) -o $@ \
 		camlp5.$(CMXA) unix.$(CMXA) str.$(CMXA) \
-		parser.$(CMX) parser_lp.$(CMX)ptmap.$(CMX) \
+		parser.$(CMX) parser_lp.$(CMX) ptmap.$(CMX) \
 		trace.$(CMX) runtime.trace.$(CMX) \
 		elpi.trace.$(CMX)
 
