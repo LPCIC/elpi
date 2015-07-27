@@ -30,7 +30,7 @@ git/%:
 	rm -rf "$$PWD/elpi-$*"
 	mkdir "elpi-$*"
 	git clone -l .. "elpi-$*"
-	cd "elpi-$*"; git checkout -b "build-this" "$*"; cd elpi; make
+	cd "elpi-$*" && git checkout "$*" && cd elpi && make
 	cp "elpi-$*/elpi/elpi" "elpi.git.$*"
 	rm -rf "$$PWD/elpi-$*"
 
