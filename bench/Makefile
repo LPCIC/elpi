@@ -4,6 +4,8 @@
 #   make only JOB=rev14
 #   make ... N=3 # repeat tests 3 times and plot an average
 #   make ... TEE=-a # append results, do not override
+#   make plot # re-draw the results
+#   make plot ONLY=rev # re-draw the results selectively (default is ONLY=OK)
 SHELL=/bin/bash
 export TOP=$(abspath ..)
 
@@ -61,8 +63,9 @@ only: prepare
 	    $(call runk,$(N),$(k),$(r),$(j)))))) | tee $(TEE) data.csv
 	$(MAKE) plot
 
+ONLY=OK
 plot:
-	@./plot data.csv
+	@./plot <(cat data.csv | grep $(ONLY) ) data.csv
 	@gnuplot data.csv.plot
 	@echo Results: `ls $$PWD/*svg`
 
