@@ -329,18 +329,6 @@ let pp_FOprolog = xppterm_prolog ~nice:true
 end (* }}} *)
 open Pp
 
-type key1 = int
-type key2 = int
-type key = key1 * key2
-
-type clause =
- { depth : int; args : term list; hyps : term list; vars : int; key : key }
-
-let ppclause f { args = args; hyps = hyps; key = (hd,_) } =
-  Format.fprintf f "@[<hov 1>%s %a :- %a.@]" (string_of_constant hd)
-     (pplist (uppterm 0 [] 0 [||]) "") args
-     (pplist (uppterm 0 [] 0 [||]) ",") hyps
-
 type trail = term oref list ref
 let trail : trail = ref []
 let last_call = ref false
@@ -704,28 +692,43 @@ let restrict ?avoid argsdepth ~from ~to_ e t =
  else to_heap ?avoid argsdepth ~from ~to_ e t
 
 (* }}} *)
+
+type 'key clause =
+ { depth : int; args : term list; hyps : term list; vars : int; key : 'key }
+
+ 
 (* {{{ ************** indexing ********************************** *)
 
-module Indexing : sig
+module type Indexing = sig
 
+  type key
+  val pp_key : key -> string
   type index
-  val key_of : constant -> term -> key
-  val add_clauses : clause list -> index -> index
-  val get_clauses : constant -> term -> index -> clause list
-  val make : clause list -> index
+  val key_of : mode:[`Query | `Clause] -> depth:int -> term -> key
+  val add_clauses : key clause list -> index -> index
+  val get_clauses : depth:int -> term -> index -> key clause list
+  val make_index : key clause list -> index
 
-end = struct (* {{{ *)
+end
+
+module TwoMapIndexing : Indexing = struct (* {{{ *)
 
 (* all clauses: used when the query is flexible
    all flexible clauses: used when the query is rigid and the map
                         for that atom is empty
    map: used when the query is rigid before trying the all flexible clauses *)
-type index = (clause list * clause list * clause list Ptmap.t) Ptmap.t
+type key1 = int
+type key2 = int
+type key = key1 * key2
+
+let pp_key (hd,_) = string_of_constant hd
+
+type index = (key clause list * key clause list * key clause list Ptmap.t) Ptmap.t
 
 let variablek =    -99999999
 let abstractionk = -99999998
 
-let key_of depth =
+let key_of ~mode:_ ~depth =
  let rec skey_of = function
     Const k -> k
   | UVar ({contents=t},origdepth,args) when t != dummy ->
@@ -774,8 +777,8 @@ module IndexData =
   let compare (x:int) (y:int) = y - x
 end
 
-let get_clauses depth a m =
- let ind,app = key_of depth a in
+let get_clauses ~depth a m =
+ let ind,app = key_of ~mode:`Query ~depth a in
  try
   let l,flexs,h = Ptmap.find ind m in
   if app=variablek then l
@@ -803,13 +806,132 @@ let add_clauses clauses p =
        ([clause],[],Ptmap.add app [clause] Ptmap.empty) m
     ) p clauses
 
-let make p = add_clauses (List.rev p) Ptmap.empty
+let make_index p = add_clauses (List.rev p) Ptmap.empty
 
 end (* }}} *)
-open Indexing
 
+module UnifBits : Indexing = struct
+
+  type key = int
+
+  type index = (key clause * int) list Ptmap.t  (* timestamp *)
+
+  let key_bits =
+    let n = ref 0 in
+    let m = ref max_int in
+    while !m <> 0 do incr n; m := !m lsr 1; done;
+    !n
+
+  let hash x = Hashtbl.hash x * 1023
+  let fullones = 1 lsl key_bits -1
+  let fullzeros = 0
+  let abstractionk = 1022   (* TODO *)
+  let functor_bits = 6
+  let fst_arg_bits = key_bits / 5 * 4 + key_bits mod 5
+  let max_depth = 1
+  let sub_arg = 5
+
+  let pp_key hd = string_of_constant (hd land (1 lsr functor_bits - 1))
+
+  let dec_to_bin num =
+    let rec aux x = 
+     if x==1 then "1" else
+     if x==0 then "0" else 
+     if x mod 2 == 1 then (aux (x/2))^"1"
+     else (aux (x/2))^"0"
+    in
+    let addzero str =
+     let s = ref "" in
+     for i=1 to (key_bits - (String.length str)) do
+      s := "0"^(!s)
+     done; 
+     !s ^ str
+    in
+     addzero (aux num)
+
+  let key_of ~mode ~depth term =
+    let buf = ref 0 in 
+    let set_section k left right =
+      let new_bits = (k lsl right) land (fullones lsr (key_bits - left)) in
+      TRACE "set-section" (fun fmt -> Format.fprintf fmt "@[<hv 0>%s@ %s@]"
+        (dec_to_bin !buf) (dec_to_bin new_bits))
+      buf := new_bits lor !buf in
+    let rec index lvl tm depth left right =
+      match tm with
+      | Const k | Custom (k,_) ->
+          set_section (if lvl=0 then k else hash k) left right 
+      | UVar ({contents=t},origdepth,args) when t != dummy ->
+         index lvl (deref ~from:origdepth ~to_:depth args t) depth left right
+      | Lam _ -> set_section abstractionk left right
+      | String s -> set_section (hash s) left right
+      | Int n -> set_section (hash n) left right
+      | Float n -> set_section (hash n) left right
+      | Arg _ | UVar _ | AppArg _ | AppUVar _ ->
+         if mode = `Clause then set_section fullones left right
+         else set_section fullzeros left right
+      | App (k,arg,argl) -> 
+         let slot = left - right in
+         if lvl > max_depth || slot < 10 then set_section (hash k) left right
+         else
+           let nk, hd, fst_arg =
+             if lvl = 0 then k, functor_bits, fst_arg_bits
+             else hash k, sub_arg, sub_arg in
+           let right_hd = right + hd in
+           set_section nk right_hd right;
+           let j = right + hd + fst_arg in
+           index (lvl+1) arg depth j right_hd;
+           if sub_arg > 0 && j + sub_arg <= left
+           then subindex lvl depth j left sub_arg argl
+     and subindex lvl depth j left step = function
+       | [] -> ()
+       | x::xs ->
+          let j2 = j + step in
+          index (lvl+1) x depth j2 j;
+          if j2 + step <= left then subindex lvl depth j2 left step xs
+    in
+      index 0 term depth key_bits 0;
+      !buf
+
+  let get_clauses ~depth a m =
+    let ind = key_of ~mode:`Query ~depth a in
+    let cl_list = List.flatten (Ptmap.find_unifiables ~functor_bits ind m) in
+    List.map fst
+      (List.fast_sort (fun (_,cl1) (_,cl2) -> compare cl1 cl2) cl_list)
+      
+  let timestamp = ref 0    
+  let add_clauses ?(op=decr) clauses ptree =
+    List.fold_left (fun m clause -> 
+      let ind = clause.key in
+      let clause = clause, !timestamp in
+      op timestamp;
+      try 
+        let cl_list = Ptmap.find ind m in
+        Ptmap.add ind (clause::cl_list) m
+      with Not_found -> 
+        Ptmap.add ind [clause] m
+    ) ptree clauses
+ 
+  let make_index p =
+    timestamp := 1;
+    let m = add_clauses ~op:incr p Ptmap.empty in
+    timestamp := 0;
+    m
+
+  (* Get rid of optional arg *)
+  let add_clauses cl pt = add_clauses cl pt
+
+end
 
 (* }}} *)
+  
+(* open UnifBits *)
+open TwoMapIndexing
+
+let ppclause f { args = args; hyps = hyps; key = hd } =
+  Format.fprintf f "@[<hov 1>%s %a :- %a.@]" (pp_key hd)
+     (pplist (uppterm 0 [] 0 [||]) "") args
+     (pplist (uppterm 0 [] 0 [||]) ",") hyps
+
 (* {{{ ************** unification ******************************* *)
 
 let rec make_lambdas destdepth args =
@@ -992,7 +1114,7 @@ let undo_trail old_trail =
   done
 ;;
 
-type program = Indexing.index
+type program = index
 
 (* The activation frames points to the choice point that
    cut should backtrack to, i.e. the first one not to be
@@ -1009,7 +1131,7 @@ and alternative = {
   goals : ((*depth:*)int * program * term) list;
   stack : frame;
   trail : term oref list;
-  clauses : clause list;
+  clauses : key clause list;
   next : alternative
 }
 let emptyalts : alternative = Obj.magic 0
@@ -1047,12 +1169,12 @@ let rec clausify vars depth hyps ts = function
   | Const _ as g ->
      let g = subst depth ts g in
      [ { depth = depth; args = []; hyps = List.(flatten (rev hyps));
-         vars = vars ; key = key_of depth g } ]
+         vars = vars ; key = key_of ~mode:`Clause ~depth g } ]
   | App _ as g ->
      begin match subst depth ts g with
      | App(_,x,xs) as g ->
          [ { depth = depth ; args=x::xs; hyps = List.(flatten (rev hyps));
-             vars = vars; key = key_of depth g} ]
+             vars = vars; key = key_of ~mode:`Clause ~depth g} ]
      | _ -> anomaly "subst went crazy" end
   | UVar ({ contents=g },from,args) when g != dummy ->
      clausify vars depth hyps ts
@@ -1330,7 +1452,7 @@ let program_of_ast (p : Parser.clause list) : program =
      (* Format.eprintf "%a\n%!" (uppterm 0 names 0 env) t ; *)
      clausify (Array.length env) 0 [] [] t
    ) p) in
- Indexing.make clauses
+  make_index clauses
 ;;
 
 let pp_FOprolog p = assert false (*CSC: port the code, see function above List.iter (fun { Parser.head = a; hyps = f } ->
