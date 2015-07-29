@@ -822,16 +822,17 @@ module UnifBits : Indexing = struct
     while !m <> 0 do incr n; m := !m lsr 1; done;
     !n
 
-  let hash x = Hashtbl.hash x * 1023
+  let hash x = Hashtbl.hash x * 62653
   let fullones = 1 lsl key_bits -1
   let fullzeros = 0
   let abstractionk = 1022   (* TODO *)
   let functor_bits = 6
-  let fst_arg_bits = key_bits / 5 * 4 + key_bits mod 5
+  let fst_arg_bits = 15
   let max_depth = 1
-  let sub_arg = 5
+  let min_slot = 5
 
-  let pp_key hd = string_of_constant (hd land (1 lsr functor_bits - 1))
+
+  let pp_key hd = string_of_constant (- (hd land (1 lsl functor_bits - 1)))
 
   let dec_to_bin num =
     let rec aux x = 
@@ -852,11 +853,14 @@ module UnifBits : Indexing = struct
   let key_of ~mode ~depth term =
     let buf = ref 0 in 
     let set_section k left right =
+      let k = abs k in
       let new_bits = (k lsl right) land (fullones lsr (key_bits - left)) in
       TRACE "set-section" (fun fmt -> Format.fprintf fmt "@[<hv 0>%s@ %s@]"
         (dec_to_bin !buf) (dec_to_bin new_bits))
       buf := new_bits lor !buf in
     let rec index lvl tm depth left right =
+      TRACE "index" (fun fmt -> Format.fprintf fmt "@[<hv 0>%a@]"
+        (uppterm depth [] 0 [||]) tm)
       match tm with
       | Const k | Custom (k,_) ->
           set_section (if lvl=0 then k else hash k) left right 
@@ -871,11 +875,22 @@ module UnifBits : Indexing = struct
          else set_section fullzeros left right
       | App (k,arg,argl) -> 
          let slot = left - right in
-         if lvl > max_depth || slot < 10 then set_section (hash k) left right
+         if lvl >= max_depth || slot < min_slot
+         then set_section ( if lvl=0 then k else hash k) left right
          else
-           let nk, hd, fst_arg =
-             if lvl = 0 then k, functor_bits, fst_arg_bits
-             else hash k, sub_arg, sub_arg in
+           let nk, hd, fst_arg, sub_arg =
+             if lvl = 0 then
+               let sub_slots = List.length argl in
+               if sub_slots = 0 then
+                 k,functor_bits,slot-functor_bits,0
+               else
+                 let args_bits = slot - functor_bits - fst_arg_bits in
+                 let sub_arg = args_bits / sub_slots in
+                 k,functor_bits,fst_arg_bits + args_bits mod sub_slots, sub_arg
+             else
+               let sub_slots = List.length argl + 2 in
+               let sub_arg = slot / sub_slots in
+               hash k, sub_arg, sub_arg + slot mod sub_slots, sub_arg  in
            let right_hd = right + hd in
            set_section nk right_hd right;
            let j = right + hd + fst_arg in
@@ -890,6 +905,7 @@ module UnifBits : Indexing = struct
           if j2 + step <= left then subindex lvl depth j2 left step xs
     in
       index 0 term depth key_bits 0;
+      SPY "key-val" (fun f x -> Format.fprintf f "%s" (dec_to_bin x)) (!buf);
       !buf
 
   let get_clauses ~depth a m =
