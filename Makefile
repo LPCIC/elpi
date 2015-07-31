@@ -48,17 +48,17 @@ dist:
 
 # compilation of elpi
 
-elpi: elpi.$(CMX) runtime.$(CMX) parser.$(CMX) parser_lp.$(CMX)
+elpi: elpi.$(CMX) runtime.$(CMX) parser.$(CMX)
 	$(OC) $(OCAMLOPTIONS) $(FLAGS) -o $@ \
 		camlp5.$(CMXA) unix.$(CMXA) str.$(CMXA) \
-		parser.$(CMX) parser_lp.$(CMX) ptmap.$(CMX) \
+		parser.$(CMX) ptmap.$(CMX) \
 		trace.$(CMX) runtime.$(CMX) \
 		elpi.$(CMX)
 
-elpi.trace: elpi.trace.$(CMX) runtime.trace.$(CMX) parser.$(CMX) parser_lp.$(CMX)
+elpi.trace: elpi.trace.$(CMX) runtime.trace.$(CMX) parser.$(CMX)
 	$(OC) $(OCAMLOPTIONS) $(FLAGS) -o $@ \
 		camlp5.$(CMXA) unix.$(CMXA) str.$(CMXA) \
-		parser.$(CMX) parser_lp.$(CMX) ptmap.$(CMX) \
+		parser.$(CMX) ptmap.$(CMX) \
 		trace.$(CMX) runtime.trace.$(CMX) \
 		elpi.trace.$(CMX)
 
@@ -72,8 +72,6 @@ elpi.trace: elpi.trace.$(CMX) runtime.trace.$(CMX) parser.$(CMX) parser_lp.$(CMX
 	$(OC) $(OCAMLOPTIONS) -c $<
 
 parser.$(CMX): parser.ml parser.cmi 
-	$(OCP) $(OCAMLOPTIONS) -pp '$(PP) $(PARSE)' $(FLAGS) -o $@ -c $<
-parser_lp.$(CMX): parser_lp.ml parser_lp.cmi 
 	$(OCP) $(OCAMLOPTIONS) -pp '$(PP) $(PARSE)' $(FLAGS) -o $@ -c $<
 
 pa_trace.cmo: pa_trace.ml trace.cmi
@@ -91,7 +89,6 @@ runtime.cmi: runtime.mli parser.cmi
 ptmap.cmi: ptmap.mli
 ptmap.$(CMX): ptmap.ml ptmap.cmi
 parser.cmi: parser.mli
-parser_lp.cmi: parser_lp.mli
 trace.$(CMX): trace.ml trace.cmi
 trace.cmi: trace.mli
 
