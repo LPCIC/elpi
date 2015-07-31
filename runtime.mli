@@ -25,13 +25,18 @@ type term =
   | Arg of (*id:*)int * (*argsno:*)int
   | AppArg of (*id*)int * term list
   (* Heap terms: unif variables in the query *)
-  | UVar of term ref * (*depth:*)int * (*argsno:*)int
-  | AppUVar of term ref * (*depth:*)int * term list
+  | UVar of term oref * (*depth:*)int * (*argsno:*)int
+  | AppUVar of term oref * (*depth:*)int * term list
   (* Misc: $custom predicates, ... *)
   | Custom of constant * term list
   | String of ASTFuncS.t
   | Int of int
   | Float of float
+and 'a oref = {
+  mutable contents : 'a;
+(*   mutable rest : constraints *)
+}
+and constraints = exn list
 
 exception No_clause
 

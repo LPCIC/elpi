@@ -22,6 +22,7 @@ let run_prog prog query =
 let test_impl prog query =
  let query = Runtime.query_of_ast query in
  let prog = Runtime.program_of_ast prog in
+ Gc.compact ();
  let time f p q =
    let t0 = Unix.gettimeofday () in
    let b = f p q in

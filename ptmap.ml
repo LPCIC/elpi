@@ -146,3 +146,21 @@ let equal eq t1 t2 =
     | _ -> false
   in
   equal_aux t1 t2
+
+let find_unifiables ~functor_bits k t =
+  let sol = ref [] in
+  let functor_mask = 1 lsl functor_bits -1 in
+  let k_functor = k land functor_mask in
+  let rec aux = function 
+    | Empty -> ()
+    | Leaf (j,x) -> 
+       if k_functor == j land functor_mask && (k land j) == k
+       then sol := x :: !sol
+    | Branch (_, m, l, r) -> 
+        if zero_bit k m then
+          if m <= functor_mask then aux l
+          else (aux r; aux l)
+        else aux r
+  in
+    aux t; !sol
+
