@@ -291,26 +291,33 @@ let goal = Grammar.Entry.create g "goal"
 let min_precedence = 0
 let max_precedence = 256
 
-let rec mk_precedences acc n =
- if n > max_precedence then List.rev acc
- else string_of_int n :: mk_precedences acc (n+1)
-;;
+let atom_levels = ["term";"app";"simple";"list"]
 
-let atom_levels =
-  mk_precedences [] min_precedence @ ["term";"app";"simple";"list"]
+let dummy_prod =
+ let dummy_action =
+   Gramext.action (fun _ ->
+     failwith "internal error, lexer generated a dummy token") in
+ [ [ Gramext.Stoken ("DUMMY", "") ], dummy_action ]
 
 let () =
-  let dummy_action =
-    Gramext.action (fun _ ->
-      failwith "internal error, lexer generated a dummy token") in
-  (* Needed since campl5 on "delete_rule" remove the precedence level if it
-     gets empty after the deletion. The lexer never generate the Stoken
-     below. *)
-  let dummy_prod = [ [ Gramext.Stoken ("DUMMY", "") ], dummy_action ] in
   Grammar.extend [ Grammar.Entry.obj atom, None,
     List.map (fun x -> Some x, Some Gramext.NonA, dummy_prod) atom_levels ]
 
 let used_precedences = ref [];;
+let right_precedences = ref [];;
+let is_used n =
+ let rec aux visited acc =
+  function
+     hd::_  when hd = n ->
+     !used_precedences, (Gramext.Level (string_of_int n), None)
+   | hd::tl when hd < n ->
+     aux (hd::visited) (Gramext.After (string_of_int hd)) tl
+   | l -> List.rev (n::visited) @ l, (acc, Some (string_of_int n))
+ in
+  let used, res = aux [] Gramext.First !used_precedences in
+  used_precedences := used ;
+  res
+;;
 
 EXTEND
   GLOBAL: lp premise atom goal;
@@ -359,7 +366,7 @@ EXTEND
               (* needs extra hack below *)
               [ Gramext.Snterml (Grammar.Entry.obj atom, next_prec) ;
                 Gramext.Stoken ("SYMBOL",cst);
-                Gramext.Snterml (Grammar.Entry.obj atom, string_of_int nprec)],
+                Gramext.Snterml (Grammar.Entry.obj atom, prec)],
               Gramext.action (fun t2 cst t1 _ ->mkApp [mkCon cst;t1;t2])
            | "prefix"
            | "prefixr" ->
@@ -371,22 +378,35 @@ EXTEND
                Gramext.action (fun cst t _ ->mkApp [mkCon cst;t])
            | _ -> assert false
           in
-          let rules =
-           if not (List.mem nprec !used_precedences) && fix = "infixr" then
+          let rules,add_lvl =
+           if not (List.mem nprec !right_precedences) && fix = "infixr" then
             let skip_prod =
              [ Gramext.Snterml (Grammar.Entry.obj atom, next_prec) ],
              Gramext.action (fun r _ -> r) in
-            used_precedences := nprec::!used_precedences;
-            [rule ; skip_prod ]
+            right_precedences := nprec :: !right_precedences ;
+            [rule ; skip_prod ], snd (is_used (nprec + 1)) <> None
            else
-            [rule]
+            [rule], false
           in
+          let where,name = is_used nprec in
            Grammar.extend
             [ Grammar.Entry.obj atom,
-              Some (Gramext.Level prec),
-              [ None, Some Gramext.NonA, rules ]];
+              Some where (*(Gramext.Level prec)*),
+              [ name(*None*), Some Gramext.NonA, rules ]] ;
+           if add_lvl then
+            (* Camlp5 does not stand empty precedence levels :-( *)
+            Grammar.extend
+             [ Grammar.Entry.obj atom,
+               Some (Gramext.After prec),
+               [ Some next_prec, Some Gramext.NonA, dummy_prod ] ] ;
          in
           List.iter extend_one syms ; 
+          (* Debugging code
+          prerr_endline "###########################################";
+          Grammar.iter_entry (
+            Grammar.print_entry Format.err_formatter
+          ) (Grammar.Entry.obj atom);
+          prerr_endline "";*)
           []
     ]];
   kind:
