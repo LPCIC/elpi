@@ -291,17 +291,11 @@ let goal = Grammar.Entry.create g "goal"
 let min_precedence = 0
 let max_precedence = 256
 
-let atom_levels = ["term";"app";"simple";"list"]
-
 let dummy_prod =
  let dummy_action =
    Gramext.action (fun _ ->
      failwith "internal error, lexer generated a dummy token") in
  [ [ Gramext.Stoken ("DUMMY", "") ], dummy_action ]
-
-let () =
-  Grammar.extend [ Grammar.Entry.obj atom, None,
-    List.map (fun x -> Some x, Some Gramext.NonA, dummy_prod) atom_levels ]
 
 let used_precedences = ref [];;
 let right_precedences = ref [];;
@@ -391,8 +385,8 @@ EXTEND
           let where,name = is_used nprec in
            Grammar.extend
             [ Grammar.Entry.obj atom,
-              Some where (*(Gramext.Level prec)*),
-              [ name(*None*), Some Gramext.NonA, rules ]] ;
+              Some where,
+              [ name, Some Gramext.NonA, rules ]] ;
            if add_lvl then
             (* Camlp5 does not stand empty precedence levels :-( *)
             Grammar.extend
@@ -430,16 +424,15 @@ EXTEND
   goal:
     [[ p = premise -> p ]];
   premise : [[ a = atom -> a ]];
-  atom : LEVEL "term"
-     [[ l = LIST1 atom LEVEL "app" SEP CONS ->
+  atom :
+   [ "term"
+      [ l = LIST1 atom LEVEL "app" SEP CONS ->
           if List.length l = 1 then List.hd l
-          else mkSeq l
-     ]];
-  atom : LEVEL "app"
-      [[ hd = atom; args = LIST1 atom LEVEL "simple" -> mkApp (hd::args)
-      ]];
-  atom : LEVEL "simple" 
-     [[ c = CONSTANT; b = OPT [ BIND; a = atom LEVEL "0" -> a ] ->
+          else mkSeq l ]
+   | "app"
+      [ hd = atom; args = LIST1 atom LEVEL "simple" -> mkApp (hd::args) ]
+   | "simple"
+      [ c = CONSTANT; b = OPT [ BIND; a = atom LEVEL "0" -> a ] ->
           (match b with
               None -> mkCon c
             | Some b -> mkLam c b)
@@ -449,9 +442,9 @@ EXTEND
       | s = INTEGER -> mkInt (int_of_string s) 
       | s = FLOAT -> mkFloat (float_of_string s) 
       | bt = BUILTIN -> mkCustom bt
-      | LPAREN; a = atom; RPAREN -> a ]];
-  atom : LEVEL "list" 
-     [[ LBRACKET; xs = LIST0 atom LEVEL "0" SEP COMMA;
+      | LPAREN; a = atom; RPAREN -> a ]
+   | "list"
+      [ LBRACKET; xs = LIST0 atom LEVEL "0" SEP COMMA;
           tl = OPT [ PIPE; x = atom LEVEL "0" -> x ]; RBRACKET ->
           let tl = match tl with None -> mkNil | Some x -> x in
           if List.length xs = 0 && tl <> mkNil then 
