@@ -13,9 +13,18 @@ Weird syntax of Teyjus:
   \ followed by other combinations should be an error
 - if the file ends (without eol) inside a comment, the parser ignores the
   comment (in place of returning an error). How???
+- semantics of , in lists to be checked
+
+Departures from Teyjus due to camlp5 idiosynchrasies:
+- non-associative infix/prefix/postfix behave like their associative
+  counterparts. In particular, if @@ and @@@ are two prefix operators
+  with @@ > @@@ then (@@ @@@ @@ @@@ a) is parsed nevertheless
 
 Documentation:
 - remark that we handle constants that start with $ in a special way
+
+Bugs:
+- revise all remaining assert false, e.g. in parser
 
 Other:
 

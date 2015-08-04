@@ -1,10 +1,10 @@
 module test.
 
-infixl x+,y+ 20.
-infixr x++ 20.
-prefixr z+ 20.
-postfixl w+ 20.
-infixl x* 30.
+infixl x+,y+ 190.
+infixr x++ 191.
+prefixr z+ 191.
+postfixl w+ 190.
+infixl x* 200.
 
 X x+ D.
 

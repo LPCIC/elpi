@@ -284,8 +284,6 @@ let lex = {
 
 let g = Grammar.gcreate lex
 let lp = Grammar.Entry.create g "lp"
-let premise = Grammar.Entry.create g "premise"
-let atom = Grammar.Entry.create g "atom"
 let goal = Grammar.Entry.create g "goal"
 
 let min_precedence = 0
@@ -298,7 +296,6 @@ let dummy_prod =
  [ [ Gramext.Stoken ("DUMMY", "") ], dummy_action ]
 
 let used_precedences = ref [];;
-let right_precedences = ref [];;
 let is_used n =
  let rec aux visited acc =
   function
@@ -314,85 +311,62 @@ let is_used n =
 ;;
 
 EXTEND
-  GLOBAL: lp premise atom goal;
+  GLOBAL: lp goal;
   lp: [ [ cl = LIST0 clause; EOF -> List.concat cl ] ];
   clause :
     [[ f = atom; FULLSTOP -> [f]
      | MODULE; CONSTANT; FULLSTOP -> []
      | SIG; CONSTANT; FULLSTOP -> []
-     | ACCUMULATE; filenames=LIST1 CONSTANT SEP COMMA; FULLSTOP ->
+     | ACCUMULATE; filenames=LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP ->
         parse lp (List.map (fun fn -> fn ^ ".mod") filenames)
-     | IMPORT; LIST1 CONSTANT SEP COMMA; FULLSTOP -> []
-     | ACCUM_SIG; filenames=LIST1 CONSTANT SEP COMMA; FULLSTOP ->
+     | IMPORT; LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP -> []
+     | ACCUM_SIG; filenames=LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP ->
         parse lp (List.map (fun fn -> fn ^ ".sig") filenames)
-     | USE_SIG; filenames=LIST1 CONSTANT SEP COMMA; FULLSTOP ->
+     | USE_SIG; filenames=LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP ->
         parse lp (List.map (fun fn -> fn ^ ".sig") filenames)
-     | LOCAL; LIST1 CONSTANT SEP COMMA; FULLSTOP -> []
-     | LOCAL; LIST1 CONSTANT SEP COMMA; type_; FULLSTOP -> []
-     | LOCALKIND; LIST1 CONSTANT SEP COMMA; FULLSTOP -> []
-     | LOCALKIND; LIST1 CONSTANT SEP COMMA; kind; FULLSTOP -> []
-     | CLOSED; LIST1 CONSTANT SEP COMMA; FULLSTOP -> []
-     | CLOSED; LIST1 CONSTANT SEP COMMA; type_; FULLSTOP -> []
-     | USEONLY; LIST1 CONSTANT SEP COMMA; FULLSTOP -> []
-     | USEONLY; LIST1 CONSTANT SEP COMMA; type_; FULLSTOP -> []
-     | EXPORTDEF; LIST1 CONSTANT SEP COMMA; FULLSTOP -> []
-     | EXPORTDEF; LIST1 CONSTANT SEP COMMA; type_; FULLSTOP -> []
-     | TYPE; LIST1 CONSTANT SEP COMMA; type_; FULLSTOP -> []
-     | KIND; LIST1 CONSTANT SEP COMMA; kind; FULLSTOP -> []
+     | LOCAL; LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP -> []
+     | LOCAL; LIST1 CONSTANT SEP SYMBOL ","; type_; FULLSTOP -> []
+     | LOCALKIND; LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP -> []
+     | LOCALKIND; LIST1 CONSTANT SEP SYMBOL ","; kind; FULLSTOP -> []
+     | CLOSED; LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP -> []
+     | CLOSED; LIST1 CONSTANT SEP SYMBOL ","; type_; FULLSTOP -> []
+     | USEONLY; LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP -> []
+     | USEONLY; LIST1 CONSTANT SEP SYMBOL ","; type_; FULLSTOP -> []
+     | EXPORTDEF; LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP -> []
+     | EXPORTDEF; LIST1 CONSTANT SEP SYMBOL ","; type_; FULLSTOP -> []
+     | TYPE; LIST1 CONSTANT SEP SYMBOL ","; type_; FULLSTOP -> []
+     | KIND; LIST1 CONSTANT SEP SYMBOL ","; kind; FULLSTOP -> []
      | TYPEABBREV; abbrform; TYPE; FULLSTOP -> []
-     | fix = FIXITY; syms = LIST1 CONSTANT SEP COMMA; prec = INTEGER; FULLSTOP ->
+     | fix = FIXITY; syms = LIST1 [ CONSTANT | SYMBOL "," ] SEP SYMBOL ","; prec = INTEGER; FULLSTOP ->
         let nprec = int_of_string prec in
         if nprec < min_precedence || nprec > max_precedence then
          assert false (* wrong precedence *)
         else
-         let next_prec =
-          if nprec < max_precedence then string_of_int (nprec+1) else "term" in
          let extend_one cst =
-          let rule =
+          let binrule =
+           [ Gramext.Sself ; Gramext.Stoken ("SYMBOL",cst); Gramext.Sself ],
+           Gramext.action (fun t2 cst t1 _ ->mkApp [mkCon cst;t1;t2]) in
+          let prerule =
+           [ Gramext.Stoken ("SYMBOL",cst); Gramext.Sself ],
+           Gramext.action (fun t cst _ -> mkApp [mkCon cst;t]) in
+          let postrule =
+           [ Gramext.Sself ; Gramext.Stoken ("SYMBOL",cst) ],
+           Gramext.action (fun cst t _ -> mkApp [mkCon cst;t]) in
+          let fixity,rule =
            (* NOTE: we do not distinguish between infix and infixl,
               prefix and prefix, postfix and postfixl *)
            match fix with
-             "infix"
-           | "infixl" ->
-              [ Gramext.Sself ; Gramext.Stoken ("SYMBOL",cst); Gramext.Sself ],
-              Gramext.action (fun t2 cst t1 _ ->mkApp [mkCon cst;t1;t2])
-           | "infixr" ->
-              (* needs extra hack below *)
-              [ Gramext.Snterml (Grammar.Entry.obj atom, next_prec) ;
-                Gramext.Stoken ("SYMBOL",cst);
-                Gramext.Snterml (Grammar.Entry.obj atom, prec)],
-              Gramext.action (fun t2 cst t1 _ ->mkApp [mkCon cst;t1;t2])
-           | "prefix"
-           | "prefixr" ->
-               [ Gramext.Stoken ("SYMBOL",cst); Gramext.Sself ],
-               Gramext.action (fun t cst _ ->mkApp [mkCon cst;t])
-           | "postfix"
-           | "postfixl" ->
-               [ Gramext.Sself ; Gramext.Stoken ("SYMBOL",cst) ],
-               Gramext.action (fun cst t _ ->mkApp [mkCon cst;t])
-           | _ -> assert false
-          in
-          let rules,add_lvl =
-           if not (List.mem nprec !right_precedences) && fix = "infixr" then
-            let skip_prod =
-             [ Gramext.Snterml (Grammar.Entry.obj atom, next_prec) ],
-             Gramext.action (fun r _ -> r) in
-            right_precedences := nprec :: !right_precedences ;
-            [rule ; skip_prod ], snd (is_used (nprec + 1)) <> None
-           else
-            [rule], false
-          in
+             "infix"    -> Gramext.NonA,   binrule
+           | "infixl"   -> Gramext.LeftA,  binrule
+           | "infixr"   -> Gramext.RightA, binrule
+           | "prefix"   -> Gramext.NonA,   prerule
+           | "prefixr"  -> Gramext.RightA, prerule
+           | "postfix"  -> Gramext.NonA,   postrule
+           | "postfixl" -> Gramext.LeftA,  postrule
+           | _ -> assert false in
           let where,name = is_used nprec in
            Grammar.extend
-            [ Grammar.Entry.obj atom,
-              Some where,
-              [ name, Some Gramext.NonA, rules ]] ;
-           if add_lvl then
-            (* Camlp5 does not stand empty precedence levels :-( *)
-            Grammar.extend
-             [ Grammar.Entry.obj atom,
-               Some (Gramext.After prec),
-               [ Some next_prec, Some Gramext.NonA, dummy_prod ] ] ;
+            [Grammar.Entry.obj atom, Some where, [name, Some fixity, [rule]]];
          in
           List.iter extend_one syms ; 
           (* Debugging code
@@ -400,7 +374,7 @@ EXTEND
           Grammar.iter_entry (
             Grammar.print_entry Format.err_formatter
           ) (Grammar.Entry.obj atom);
-          prerr_endline "";*)
+          prerr_endline ""; *)
           []
     ]];
   kind:
@@ -444,7 +418,7 @@ EXTEND
       | bt = BUILTIN -> mkCustom bt
       | LPAREN; a = atom; RPAREN -> a ]
    | "list"
-      [ LBRACKET; xs = LIST0 atom LEVEL "0" SEP COMMA;
+      [ LBRACKET; xs = LIST0 atom LEVEL "0" SEP SYMBOL ",";
           tl = OPT [ PIPE; x = atom LEVEL "0" -> x ]; RBRACKET ->
           let tl = match tl with None -> mkNil | Some x -> x in
           if List.length xs = 0 && tl <> mkNil then 
