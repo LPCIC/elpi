@@ -81,28 +81,35 @@ let rec symlink_dirname f =
     else symlink_dirname Filename.(concat (dirname f) link)
   with Unix.Unix_error _ -> Filename.dirname f
 
-let parse_one e filename =
+let rec parse_one e filename =
  let filename =
    if not (Filename.is_relative filename) then filename
    else Filename.concat !cur_dirname filename in
+ let prefixname = Filename.chop_extension filename in
  let filename =
   if Sys.file_exists filename then filename
   else if Filename.check_suffix filename ".elpi" then
    (* Backward compatibility with Teyjus *) 
-   Filename.chop_extension filename ^ ".mod"
+   prefixname ^ ".mod"
   else if Filename.check_suffix filename ".mod" then
    (* Backward compatibility with Teyjus *) 
-   Filename.chop_extension filename ^ ".elpi"
+   prefixname ^ ".elpi"
   else raise (Failure ("file not found: " ^ filename)) in
  if List.mem filename !parsed then begin
   Printf.eprintf "already loaded %s\n%!" filename;
   []
  end else begin
+  let sigs =
+   if Filename.check_suffix filename ".sig" then []
+   else
+    let signame = prefixname ^ ".sig" in
+    if Sys.file_exists signame then parse_one e signame else [] in
   Printf.eprintf "loading %s\n%!" filename;
   parsed := filename::!parsed ;
   let ch = open_in filename in
   let saved_cur_dirname = !cur_dirname in
   cur_dirname := symlink_dirname filename;
+  sigs @
   try
    let res = Grammar.Entry.parse e (Stream.of_channel ch) in
    close_in ch;
