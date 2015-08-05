@@ -156,24 +156,26 @@ let rec num = lexer [ digit | digit num ]
 
 let rec string = lexer [ '"' | _ string ]
 
+let constant = "CONSTANT" (* to use physical equality *)
+
 let tok = lexer
-  [ ucase idcharstar -> "CONSTANT", $buf 
-  | lcase idcharstar -> "CONSTANT", $buf
-  | schar2 idcharstar -> "CONSTANT", $buf
+  [ ucase idcharstar -> constant,$buf 
+  | lcase idcharstar -> constant,$buf
+  | schar2 idcharstar -> constant,$buf
   | '$' lcase idcharstar -> "BUILTIN",$buf
-  | '$' idcharstar -> "CONSTANT",$buf
-  | num -> "INTEGER", $buf
-  | num ?= [ '.' '0'-'9' ] '.' num -> "FLOAT", $buf
-  | "->" -> "ARROW", $buf
-  | "->" idcharplus -> "CONSTANT", $buf
-  | '-' idcharstar -> "CONSTANT", $buf
+  | '$' idcharstar -> constant,$buf
+  | num -> "INTEGER",$buf
+  | num ?= [ '.' '0'-'9' ] '.' num -> "FLOAT",$buf
+  | "->" -> "ARROW",$buf
+  | "->" idcharplus -> constant,$buf
+  | '-' idcharstar -> constant,$buf
   | '_' -> "FRESHUV", "_"
-  | '_' idcharplus -> "CONSTANT", $buf
-  | ":-"  -> "CONSTANT",$buf
+  | '_' idcharplus -> constant,$buf
+  | ":-"  -> constant,$buf
   | ":"  -> "COLON",$buf
-  | "::"  -> "CONSTANT",$buf
-  | ',' -> "CONSTANT",$buf
-  | ';' -> "CONSTANT",$buf
+  | "::"  -> constant,$buf
+  | ',' -> constant,$buf
+  | ';' -> constant,$buf
   | '.' -> "FULLSTOP",$buf
   | '.' num -> "FLOAT",$buf
   | '\\' -> "BIND","\\"
@@ -197,34 +199,36 @@ let rec lex c = parser bp
   | [< s >] ep ->
        if option_eq (Stream.peek s) None then ("EOF",""), (bp, ep)
        else
-       (match tok c s with
-       | "CONSTANT","module" -> "MODULE", "module"
-       | "CONSTANT","sig" -> "SIG", "SIG"
-       | "CONSTANT","import" -> "IMPORT", "accumulate"
-       | "CONSTANT","accum_sig" -> "ACCUM_SIG", "accum_sig"
-       | "CONSTANT","use_sig" -> "USE_SIG", "use_sig"
-       | "CONSTANT","local" -> "LOCAL", "local"
-       | "CONSTANT","localkind" -> "LOCALKIND", "localkind"
-       | "CONSTANT","useonly" -> "USEONLY", "useonly"
-       | "CONSTANT","exportdef" -> "EXPORTDEF", "exportdef"
-       | "CONSTANT","kind" -> "KIND", "kind"
-       | "CONSTANT","typeabbrev" -> "TYPEABBREV", "typeabbrev"
-       | "CONSTANT","type" -> "TYPE", "type"
-       | "CONSTANT","closed" -> "CLOSED", "closed"
-
-       | "CONSTANT","end" -> "EOF", "end"
-       | "CONSTANT","accumulate" -> "ACCUMULATE", "accumulate"
-       | "CONSTANT","infixl" -> "FIXITY", "infixl"
-       | "CONSTANT","infixr" -> "FIXITY", "infixr"
-       | "CONSTANT","infix" -> "FIXITY", "infix"
-       | "CONSTANT","prefix" -> "FIXITY", "prefix"
-       | "CONSTANT","prefixr" -> "FIXITY", "prefixr"
-       | "CONSTANT","postfix" -> "FIXITY", "postfix"
-       | "CONSTANT","postfixl" -> "FIXITY", "postfixl"
-
-       | "CONSTANT", x when StringSet.mem x !symbols -> "SYMBOL",x
-
-       | x -> x), (bp, ep)
+        let (x,y) as res = tok c s in
+        (if x == constant then
+         (match y with
+         | "module" -> "MODULE", "module"
+         | "sig" -> "SIG", "SIG"
+         | "import" -> "IMPORT", "accumulate"
+         | "accum_sig" -> "ACCUM_SIG", "accum_sig"
+         | "use_sig" -> "USE_SIG", "use_sig"
+         | "local" -> "LOCAL", "local"
+         | "localkind" -> "LOCALKIND", "localkind"
+         | "useonly" -> "USEONLY", "useonly"
+         | "exportdef" -> "EXPORTDEF", "exportdef"
+         | "kind" -> "KIND", "kind"
+         | "typeabbrev" -> "TYPEABBREV", "typeabbrev"
+         | "type" -> "TYPE", "type"
+         | "closed" -> "CLOSED", "closed"
+        
+         | "end" -> "EOF", "end"
+         | "accumulate" -> "ACCUMULATE", "accumulate"
+         | "infixl" -> "FIXITY", "infixl"
+         | "infixr" -> "FIXITY", "infixr"
+         | "infix" -> "FIXITY", "infix"
+         | "prefix" -> "FIXITY", "prefix"
+         | "prefixr" -> "FIXITY", "prefixr"
+         | "postfix" -> "FIXITY", "postfix"
+         | "postfixl" -> "FIXITY", "postfixl"
+        
+         | x when StringSet.mem x !symbols -> "SYMBOL",x
+        
+         | _ -> res) else res), (bp, ep)
 and skip_to_dot c = parser
   | [< '( '.' ); s >] -> lex c s
   | [< '_ ; s >] -> skip_to_dot c s
