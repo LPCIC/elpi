@@ -29,12 +29,6 @@ module ASTFuncS = struct
 
 end
 
-(* CSC: I think that this is obsolete and that the corresponding code in
-   runtime.ml can be thrown away *)
-(* Note: Appl(",",[]) is allowed in r.h.s. of clauses to represent
-   axioms. Const "true" would not work because the definition of true
-   would become true :- true. *)
-
 type term =
    Const of ASTFuncS.t
  | Custom of ASTFuncS.t
@@ -177,7 +171,7 @@ let tok = lexer
   | '_' idcharplus -> "CONSTANT", $buf
   | ":-"  -> "CONSTANT",$buf
   | ":"  -> "COLON",$buf
-  | "::"  -> "CONS",$buf
+  | "::"  -> "CONSTANT",$buf
   | ',' -> "CONSTANT",$buf
   | ';' -> "CONSTANT",$buf
   | '.' -> "FULLSTOP",$buf
@@ -227,8 +221,6 @@ let rec lex c = parser bp
        | "CONSTANT","prefixr" -> "FIXITY", "prefixr"
        | "CONSTANT","postfix" -> "FIXITY", "postfix"
        | "CONSTANT","postfixl" -> "FIXITY", "postfixl"
-
-       | "CONSTANT","nil" -> "NIL", "nil"
 
        | "CONSTANT", x when StringSet.mem x !symbols -> "SYMBOL",x
 
@@ -400,25 +392,20 @@ EXTEND
   premise : [[ a = atom -> a ]];
   atom :
    [ "term"
-      [ l = LIST1 atom LEVEL "app" SEP CONS ->
-          if List.length l = 1 then List.hd l
-          else mkSeq l ]
-   | "app"
-      [ hd = atom; args = LIST1 atom LEVEL "simple" -> mkApp (hd::args) ]
-   | "simple"
+      [ hd = atom; args = LIST1 atom LEVEL "abstterm" -> mkApp (hd::args) ]
+   | "abstterm"
       [ c = CONSTANT; b = OPT [ BIND; a = atom LEVEL "0" -> a ] ->
           (match b with
               None -> mkCon c
             | Some b -> mkLam c b)
       | u = FRESHUV -> mkFreshUVar ()
-      | NIL -> mkNil
       | s = LITERAL -> mkString s
       | s = INTEGER -> mkInt (int_of_string s) 
       | s = FLOAT -> mkFloat (float_of_string s) 
       | bt = BUILTIN -> mkCustom bt
-      | LPAREN; a = atom; RPAREN -> a ]
-   | "list"
-      [ LBRACKET; xs = LIST0 atom LEVEL "0" SEP SYMBOL ",";
+      | LPAREN; a = atom; RPAREN -> a
+        (* 120 is the first level after 110, which is that of , *)
+      | LBRACKET; xs = LIST0 atom LEVEL "120" SEP SYMBOL ",";
           tl = OPT [ PIPE; x = atom LEVEL "0" -> x ]; RBRACKET ->
           let tl = match tl with None -> mkNil | Some x -> x in
           if List.length xs = 0 && tl <> mkNil then 

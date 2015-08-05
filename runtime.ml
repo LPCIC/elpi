@@ -1406,7 +1406,6 @@ let stack_funct_of_ast amap cmap f =
 ;;
 
 let rec stack_term_of_ast lvl amap cmap = function
-  | AST.App(AST.Const f,[]) when F.eq f F.andf -> amap, truec
   | AST.Const f -> stack_funct_of_ast amap cmap f
   | AST.Custom f ->
      let cname = fst (funct_of_ast f) in

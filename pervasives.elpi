@@ -1,8 +1,3 @@
-%nil
-%::
-
-%fail
-
 %std_in
 %std_out
 %std_err
@@ -78,6 +73,10 @@
 % nofixity sigma
 % nofixity pi
 % nofixity true
+% nofixity nil
+% nofixity fail
+
+
 prefix ~  256.
 infixl mod 160.
 infixl div 160.
@@ -86,6 +85,7 @@ infixl /  160.
 infixl ^  150.
 infixl +  150.
 infixl -  150.
+infixr :: 140.
 infix  >  130.
 infix  <  130.
 infix  >= 130.
