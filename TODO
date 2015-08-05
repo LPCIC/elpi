@@ -13,6 +13,7 @@ Weird syntax of Teyjus:
   \ followed by other combinations should be an error
 - if the file ends (without eol) inside a comment, the parser ignores the
   comment (in place of returning an error). How???
+- binders can be explicitly typed in Teyjus
 
 Departures from Teyjus due to camlp5 idiosynchrasies:
 - non-associative infix/prefix/postfix behave like their associative
@@ -26,6 +27,9 @@ Documentation:
 
 Bugs:
 - revise all remaining assert false, e.g. in parser
+- symbols can be declared twice (e.g. in .mod and in .sig): check and avoid
+  inserting a duplicated rule. Also issues a camlp5 warning when it happens
+  (e.g. in pcf test)
 
 Other:
 

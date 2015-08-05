@@ -317,6 +317,9 @@ let is_used n =
 EXTEND
   GLOBAL: lp goal;
   lp: [ [ cl = LIST0 clause; EOF -> List.concat cl ] ];
+  const_sym:
+    [[ c = CONSTANT -> c
+     | s = SYMBOL -> s ]];
   clause :
     [[ f = atom; FULLSTOP -> [f]
      | MODULE; CONSTANT; FULLSTOP -> []
@@ -328,20 +331,20 @@ EXTEND
         parse lp (List.map (fun fn -> fn ^ ".sig") filenames)
      | USE_SIG; filenames=LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP ->
         parse lp (List.map (fun fn -> fn ^ ".sig") filenames)
-     | LOCAL; LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP -> []
-     | LOCAL; LIST1 CONSTANT SEP SYMBOL ","; type_; FULLSTOP -> []
-     | LOCALKIND; LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP -> []
-     | LOCALKIND; LIST1 CONSTANT SEP SYMBOL ","; kind; FULLSTOP -> []
-     | CLOSED; LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP -> []
-     | CLOSED; LIST1 CONSTANT SEP SYMBOL ","; type_; FULLSTOP -> []
-     | USEONLY; LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP -> []
-     | USEONLY; LIST1 CONSTANT SEP SYMBOL ","; type_; FULLSTOP -> []
-     | EXPORTDEF; LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP -> []
-     | EXPORTDEF; LIST1 CONSTANT SEP SYMBOL ","; type_; FULLSTOP -> []
-     | TYPE; LIST1 CONSTANT SEP SYMBOL ","; type_; FULLSTOP -> []
-     | KIND; LIST1 CONSTANT SEP SYMBOL ","; kind; FULLSTOP -> []
+     | LOCAL; LIST1 const_sym SEP SYMBOL ","; FULLSTOP -> []
+     | LOCAL; LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP -> []
+     | LOCALKIND; LIST1 const_sym SEP SYMBOL ","; FULLSTOP -> []
+     | LOCALKIND; LIST1 const_sym SEP SYMBOL ","; kind; FULLSTOP -> []
+     | CLOSED; LIST1 const_sym SEP SYMBOL ","; FULLSTOP -> []
+     | CLOSED; LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP -> []
+     | USEONLY; LIST1 const_sym SEP SYMBOL ","; FULLSTOP -> []
+     | USEONLY; LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP -> []
+     | EXPORTDEF; LIST1 const_sym SEP SYMBOL ","; FULLSTOP -> []
+     | EXPORTDEF; LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP -> []
+     | TYPE; LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP -> []
+     | KIND; LIST1 const_sym SEP SYMBOL ","; kind; FULLSTOP -> []
      | TYPEABBREV; abbrform; TYPE; FULLSTOP -> []
-     | fix = FIXITY; syms = LIST1 [ CONSTANT | SYMBOL "," ] SEP SYMBOL ","; prec = INTEGER; FULLSTOP ->
+     | fix = FIXITY; syms = LIST1 const_sym SEP SYMBOL ","; prec = INTEGER; FULLSTOP ->
         let nprec = int_of_string prec in
         if nprec < min_precedence || nprec > max_precedence then
          assert false (* wrong precedence *)
