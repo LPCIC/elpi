@@ -36,6 +36,7 @@ Bugs:
 
 Other:
 
+-10. new pretty-printer for infix notation badly needed
 0. pretty-printing to LaTeX + transformation to standard presentation
    (with fresh variables, etc.)
 1. implement delay and experiment with it for:
