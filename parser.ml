@@ -95,7 +95,8 @@ let rec parse_one e filename =
    (* Backward compatibility with Teyjus *) 
    prefixname ^ ".elpi"
   else raise (Failure ("file not found: " ^ filename)) in
- if List.mem filename !parsed then begin
+ let inode = (Unix.stat filename).Unix.st_ino in
+ if List.mem inode !parsed then begin
   Printf.eprintf "already loaded %s\n%!" filename;
   []
  end else begin
@@ -105,7 +106,7 @@ let rec parse_one e filename =
     let signame = prefixname ^ ".sig" in
     if Sys.file_exists signame then parse_one e signame else [] in
   Printf.eprintf "loading %s\n%!" filename;
-  parsed := filename::!parsed ;
+  parsed := inode::!parsed ;
   let ch = open_in filename in
   let saved_cur_dirname = !cur_dirname in
   cur_dirname := symlink_dirname filename;
