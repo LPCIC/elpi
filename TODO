@@ -31,6 +31,9 @@ Bugs:
   inserting a duplicated rule. Also issues a camlp5 warning when it happens
   (e.g. in pcf test)
 
+Bugs:
+- we do not check the first argument of "is"
+
 Other:
 
 0. pretty-printing to LaTeX + transformation to standard presentation
