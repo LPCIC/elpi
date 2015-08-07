@@ -23,7 +23,9 @@ Departures from Teyjus due to camlp5 idiosynchrasies:
   in pervasives after 110, the level of ","
 
 Documentation:
+- see "Departures from Teyjus"
 - remark that we handle constants that start with $ in a special way
+- integers are 31 bits; floats are...
 
 Bugs:
 - revise all remaining assert false, e.g. in parser
