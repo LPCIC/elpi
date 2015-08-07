@@ -1237,7 +1237,82 @@ let _ =
    match args with
      [ Int x ; Int y ] -> Int (x + y)
    | [ Float x ; Float y ] -> Float (x +. y)
-   | _ -> error "Wrong arguments to +")
+   | _ -> error "Wrong arguments to +") ;
+  register_eval "*" (fun args ->
+   match args with
+     [ Int x ; Int y ] -> Int (x * y)
+   | [ Float x ; Float y ] -> Float (x *. y)
+   | _ -> error "Wrong arguments to *") ;
+  register_eval "/" (fun args ->
+   match args with
+     [ Float x ; Float y ] -> Float (x /. y)
+   | _ -> error "Wrong arguments to /") ;
+  register_eval "mod" (fun args ->
+   match args with
+     [ Int x ; Int y ] -> Int (x mod y)
+   | _ -> error "Wrong arguments to mod") ;
+  register_eval "div" (fun args ->
+   match args with
+     [ Int x ; Int y ] -> Int (x / y)
+   | _ -> error "Wrong arguments to div") ;
+  register_eval "^" (fun args ->
+   match args with
+     [ String x ; String y ] -> String (F.from_string (F.pp x ^ F.pp y))
+   | _ -> error "Wrong arguments to ^") ;
+  register_eval "~" (fun args ->
+   match args with
+     [ Int x ] -> Int (-x)
+   | [ Float x ] -> Float (-. x)
+   | _ -> error "Wrong arguments to ~") ;
+  register_eval "abs" (fun args ->
+   match args with
+     [ Int x ] -> Int (abs x)
+   | [ Float x ] -> Float (abs_float x)
+   | _ -> error "Wrong arguments to abs") ;
+  register_eval "int_to_real" (fun args ->
+   match args with
+     [ Int x ] -> Float (float_of_int x)
+   | _ -> error "Wrong arguments to int_to_real") ;
+  register_eval "sqrt" (fun args ->
+   match args with
+     [ Float x ] -> Float (sqrt x)
+   | _ -> error "Wrong arguments to sqrt") ;
+  register_eval "sin" (fun args ->
+   match args with
+     [ Float x ] -> Float (sin x)
+   | _ -> error "Wrong arguments to sin") ;
+  register_eval "cos" (fun args ->
+   match args with
+     [ Float x ] -> Float (cos x)
+   | _ -> error "Wrong arguments to cosin") ;
+  register_eval "arctan" (fun args ->
+   match args with
+     [ Float x ] -> Float (atan x)
+   | _ -> error "Wrong arguments to arctan") ;
+  register_eval "ln" (fun args ->
+   match args with
+     [ Float x ] -> Float (log x)
+   | _ -> error "Wrong arguments to ln") ;
+  register_eval "floor" (fun args ->
+   match args with
+     [ Float x ] -> Int (int_of_float (floor x))
+   | _ -> error "Wrong arguments to floor") ;
+  register_eval "ceil" (fun args ->
+   match args with
+     [ Float x ] -> Int (int_of_float (ceil x))
+   | _ -> error "Wrong arguments to ceil") ;
+  register_eval "truncate" (fun args ->
+   match args with
+     [ Float x ] -> Int (truncate x)
+   | _ -> error "Wrong arguments to truncate") ;
+  register_eval "size" (fun args ->
+   match args with
+     [ String x ] -> Int (String.length (F.pp x))
+   | _ -> error "Wrong arguments to size") ;
+  register_eval "chr" (fun args ->
+   match args with
+     [ Int x ] -> String (F.from_string (String.make 1 (char_of_int x)))
+   | _ -> error "Wrong arguments to chr")
 ;;
 
 let _ =

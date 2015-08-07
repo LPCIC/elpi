@@ -26,19 +26,8 @@
 %halt
 %stop
 %time
-%int_to_real
-%floor
-%ceil
-%truncate
-%sqrt
-%sin
-%cos
-%arctan
-%ln
 %real_to_string
-%size
 %string_to_int
-%chr
 %int_to_string
 %getenv
 %substring
@@ -68,13 +57,26 @@
 %s<=
 %s>=
 
-% nofixity abs
 % nofixity !
 % nofixity sigma
 % nofixity pi
 % nofixity true
-% nofixity nil
 % nofixity fail
+
+% nofixity nil
+
+% nofixity abs
+% nofixity int_to_real
+% nofixity sqrt
+% nofixity sin
+% nofixity cos
+% nofixity arctan
+% nofixity ln
+% nofixity floor
+% nofixity ceil
+% nofixity truncate
+% nofixity size
+% nofixity chr
 
 
 prefix ~  256.
