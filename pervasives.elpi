@@ -26,11 +26,7 @@
 %halt
 %stop
 %time
-%real_to_string
-%string_to_int
-%int_to_string
 %getenv
-%substring
 
 %i~
 %iabs
@@ -77,6 +73,10 @@
 % nofixity truncate
 % nofixity size
 % nofixity chr
+% nofixity string_to_int
+% nofixity substring
+% nofixity real_to_string
+% nofixity int_to_string
 
 
 prefix ~  256.

@@ -1312,7 +1312,26 @@ let _ =
   register_eval "chr" (fun args ->
    match args with
      [ Int x ] -> String (F.from_string (String.make 1 (char_of_int x)))
-   | _ -> error "Wrong arguments to chr")
+   | _ -> error "Wrong arguments to chr") ;
+  register_eval "string_to_int" (fun args ->
+   match args with
+     [ String x ] when String.length (F.pp x) = 1 ->
+       Int (int_of_char (F.pp x).[0])
+   | _ -> error "Wrong arguments to string_to_int") ;
+  register_eval "substring" (fun args ->
+   match args with
+     [ String x ; Int i ; Int j ] when
+       i >= 0 && j >= 0 && String.length (F.pp x) >= i+j ->
+       String (F.from_string (String.sub (F.pp x) i j))
+   | _ -> error "Wrong arguments to substring") ;
+  register_eval "int_to_string" (fun args ->
+   match args with
+     [ Int x ] -> String (F.from_string (string_of_int x))
+   | _ -> error "Wrong arguments to int_to_string") ;
+  register_eval "real_to_string" (fun args ->
+   match args with
+     [ Float x ] -> String (F.from_string (string_of_float x))
+   | _ -> error "Wrong arguments to real_to_string")
 ;;
 
 let _ =
