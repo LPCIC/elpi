@@ -26,6 +26,7 @@ Documentation:
 - see "Departures from Teyjus"
 - remark that we handle constants that start with $ in a special way
 - integers are 31 bits; floats are...
+- no beta-redexes in the source code
 
 Bugs:
 - revise all remaining assert false, e.g. in parser
