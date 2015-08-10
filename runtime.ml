@@ -1214,7 +1214,7 @@ let register_custom, lookup_custom =
      Hashtbl.create 17 in
  (fun s ->
     if s = "" || s.[0] <> '$' then
-      anomaly "Custom predicate name must begin with $";
+      anomaly ("Custom predicate name " ^ s ^ " must begin with $");
     Hashtbl.add customs (fst (funct_of_ast (F.from_string s)))),
  Hashtbl.find customs
 ;;
@@ -1334,28 +1334,6 @@ let _ =
    | _ -> type_error "Wrong arguments to real_to_string")
 ;;
 
-let _ =
-  register_custom "$print" (fun ~depth ~env args ->
-    Format.printf "@[<hov 1>" ;
-    List.iter (Format.printf "%a@ " (uppterm depth [] 0 env)) args;
-    Format.printf "@]\n%!") ;
-  register_custom "$lt" (fun ~depth ~env:_ args ->
-    let rec get_constant = function
-      | Const c -> c
-      | UVar ({contents=t},vardepth,args) when t != dummy ->
-         get_constant (deref ~from:vardepth ~to_:depth args t)
-      | AppUVar ({contents=t},vardepth,args) when t != dummy ->
-         get_constant (app_deref ~from:vardepth ~to_:depth args t)
-      | _ -> error "$lt takes constants as arguments" in
-    match args with
-    | [t1; t2] ->
-        let t1 = get_constant t1 in
-        let t2 = get_constant t2 in
-        let is_lt = if t1 < 0 && t2 < 0 then t2 < t1 else t1 < t2 in
-        if not is_lt then raise No_clause
-    | _ -> type_error "$lt takes 2 arguments")
-;;
-
 let rec eval depth =
  function
     Lam _
@@ -1378,6 +1356,43 @@ let rec eval depth =
   | String _
   | Int _
   | Float _ as x -> x
+;;
+
+
+let _ =
+  register_custom "$print" (fun ~depth ~env args ->
+    Format.printf "@[<hov 1>" ;
+    List.iter (Format.printf "%a@ " (uppterm depth [] 0 env)) args;
+    Format.printf "@]\n%!") ;
+  register_custom "$lt" (fun ~depth ~env:_ args ->
+    let rec get_constant = function
+      | Const c -> c
+      | UVar ({contents=t},vardepth,args) when t != dummy ->
+         get_constant (deref ~from:vardepth ~to_:depth args t)
+      | AppUVar ({contents=t},vardepth,args) when t != dummy ->
+         get_constant (app_deref ~from:vardepth ~to_:depth args t)
+      | _ -> error "$lt takes constants as arguments" in
+    match args with
+    | [t1; t2] ->
+        let t1 = get_constant t1 in
+        let t2 = get_constant t2 in
+        let is_lt = if t1 < 0 && t2 < 0 then t2 < t1 else t1 < t2 in
+        if not is_lt then raise No_clause
+    | _ -> type_error "$lt takes 2 arguments") ;
+  List.iter (fun p,psym,pname ->
+  register_custom pname (fun ~depth ~env:_ args ->
+    match args with
+    | [t1; t2] ->
+        let t1 = eval depth t1 in
+        let t2 = eval depth t2 in
+        (match t1,t2 with
+           Int _,    Int _
+         | Float _,  Float _
+         | String _, String _ -> if not (p t1 t2) then raise No_clause
+         | _ ->
+           type_error ("Wrong arguments to " ^ psym ^ " (or to " ^ pname^ ")"))
+    | _ -> type_error (psym ^ " (or " ^ pname ^ ") takes 2 arguments"))
+  ) [(<),"<","$lt_" ; (>),">","$gt_" ; (<=),"=<","$le_" ; (>=),">=","$ge_"]
 ;;
 
 (* The block of recursive functions spares the allocation of a Some/None

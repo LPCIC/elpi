@@ -100,6 +100,13 @@ infixr ,  110.
 infixr ;  100.
 infixl :- 0.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% CUSTOM PREDICATES %%%%%%%%%%%%%%%%%%%%%%%
+
+X < Y  :- $lt_ X Y.
+X > Y  :- $gt_ X Y.
+X =< Y :- $le_ X Y.
+X >= Y :- $ge_ X Y.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% PREDEFINED PREDICATES %%%%%%%%%%%%%%%%%%%%%%%
 
 true.
