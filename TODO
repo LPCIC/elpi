@@ -12,7 +12,8 @@ Weird syntax of Teyjus:
   \x followed by other combinations should be an error
   \ followed by other combinations should be an error
 - if the file ends (without eol) inside a comment, the parser ignores the
-  comment (in place of returning an error). How???
+  comment (in place of returning an error). How??? Same if the query is not
+  . terminated.
 - binders can be explicitly typed in Teyjus
 
 Departures from Teyjus due to camlp5 idiosynchrasies:
@@ -27,6 +28,7 @@ Documentation:
 - remark that we handle constants that start with $ in a special way
 - integers are 31 bits; floats are...
 - no beta-redexes in the source code
+- semantics of ; departed from Teyjus
 
 Bugs:
 - revise all remaining assert false, e.g. in parser
@@ -67,13 +69,9 @@ Bugs:
    In particular, it should not be allowed to add more clauses to them
    via implication.
 0.1. turn = into a builtin (more efficient?)
-1. a & b :- c  is parsed incorrectly (wrong precedence)
-   and not at all in the toplevel
 
 Possible optimizations:
 
--3 parser: test if it gets quicker defining lp directly, without using
-   LIST1 clauses + List.concat
 -2 optimize the case of app_deref where we can stay in the fragment
    after the beta (maybe already done?)
 -1. if full_deref only works on heap terms, why do we pass all that stuff?
