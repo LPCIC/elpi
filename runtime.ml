@@ -1214,7 +1214,7 @@ let register_custom, lookup_custom =
      Hashtbl.create 17 in
  (fun s ->
     if s = "" || s.[0] <> '$' then
-      error "Custom predicate name must begin with $";
+      anomaly "Custom predicate name must begin with $";
     Hashtbl.add customs (fst (funct_of_ast (F.from_string s)))),
  Hashtbl.find customs
 ;;
@@ -1232,106 +1232,106 @@ let _ =
    match args with
      [ Int x ; Int y ] -> Int (x - y)
    | [ Float x ; Float y ] -> Float (x -. y)
-   | _ -> error "Wrong arguments to -") ;
+   | _ -> type_error "Wrong arguments to -") ;
   register_eval "+" (fun args ->
    match args with
      [ Int x ; Int y ] -> Int (x + y)
    | [ Float x ; Float y ] -> Float (x +. y)
-   | _ -> error "Wrong arguments to +") ;
+   | _ -> type_error "Wrong arguments to +") ;
   register_eval "*" (fun args ->
    match args with
      [ Int x ; Int y ] -> Int (x * y)
    | [ Float x ; Float y ] -> Float (x *. y)
-   | _ -> error "Wrong arguments to *") ;
+   | _ -> type_error "Wrong arguments to *") ;
   register_eval "/" (fun args ->
    match args with
      [ Float x ; Float y ] -> Float (x /. y)
-   | _ -> error "Wrong arguments to /") ;
+   | _ -> type_error "Wrong arguments to /") ;
   register_eval "mod" (fun args ->
    match args with
      [ Int x ; Int y ] -> Int (x mod y)
-   | _ -> error "Wrong arguments to mod") ;
+   | _ -> type_error "Wrong arguments to mod") ;
   register_eval "div" (fun args ->
    match args with
      [ Int x ; Int y ] -> Int (x / y)
-   | _ -> error "Wrong arguments to div") ;
+   | _ -> type_error "Wrong arguments to div") ;
   register_eval "^" (fun args ->
    match args with
      [ String x ; String y ] -> String (F.from_string (F.pp x ^ F.pp y))
-   | _ -> error "Wrong arguments to ^") ;
+   | _ -> type_error "Wrong arguments to ^") ;
   register_eval "~" (fun args ->
    match args with
      [ Int x ] -> Int (-x)
    | [ Float x ] -> Float (-. x)
-   | _ -> error "Wrong arguments to ~") ;
+   | _ -> type_error "Wrong arguments to ~") ;
   register_eval "abs" (fun args ->
    match args with
      [ Int x ] -> Int (abs x)
    | [ Float x ] -> Float (abs_float x)
-   | _ -> error "Wrong arguments to abs") ;
+   | _ -> type_error "Wrong arguments to abs") ;
   register_eval "int_to_real" (fun args ->
    match args with
      [ Int x ] -> Float (float_of_int x)
-   | _ -> error "Wrong arguments to int_to_real") ;
+   | _ -> type_error "Wrong arguments to int_to_real") ;
   register_eval "sqrt" (fun args ->
    match args with
      [ Float x ] -> Float (sqrt x)
-   | _ -> error "Wrong arguments to sqrt") ;
+   | _ -> type_error "Wrong arguments to sqrt") ;
   register_eval "sin" (fun args ->
    match args with
      [ Float x ] -> Float (sin x)
-   | _ -> error "Wrong arguments to sin") ;
+   | _ -> type_error "Wrong arguments to sin") ;
   register_eval "cos" (fun args ->
    match args with
      [ Float x ] -> Float (cos x)
-   | _ -> error "Wrong arguments to cosin") ;
+   | _ -> type_error "Wrong arguments to cosin") ;
   register_eval "arctan" (fun args ->
    match args with
      [ Float x ] -> Float (atan x)
-   | _ -> error "Wrong arguments to arctan") ;
+   | _ -> type_error "Wrong arguments to arctan") ;
   register_eval "ln" (fun args ->
    match args with
      [ Float x ] -> Float (log x)
-   | _ -> error "Wrong arguments to ln") ;
+   | _ -> type_error "Wrong arguments to ln") ;
   register_eval "floor" (fun args ->
    match args with
      [ Float x ] -> Int (int_of_float (floor x))
-   | _ -> error "Wrong arguments to floor") ;
+   | _ -> type_error "Wrong arguments to floor") ;
   register_eval "ceil" (fun args ->
    match args with
      [ Float x ] -> Int (int_of_float (ceil x))
-   | _ -> error "Wrong arguments to ceil") ;
+   | _ -> type_error "Wrong arguments to ceil") ;
   register_eval "truncate" (fun args ->
    match args with
      [ Float x ] -> Int (truncate x)
-   | _ -> error "Wrong arguments to truncate") ;
+   | _ -> type_error "Wrong arguments to truncate") ;
   register_eval "size" (fun args ->
    match args with
      [ String x ] -> Int (String.length (F.pp x))
-   | _ -> error "Wrong arguments to size") ;
+   | _ -> type_error "Wrong arguments to size") ;
   register_eval "chr" (fun args ->
    match args with
      [ Int x ] -> String (F.from_string (String.make 1 (char_of_int x)))
-   | _ -> error "Wrong arguments to chr") ;
+   | _ -> type_error "Wrong arguments to chr") ;
   register_eval "string_to_int" (fun args ->
    match args with
      [ String x ] when String.length (F.pp x) = 1 ->
        Int (int_of_char (F.pp x).[0])
-   | _ -> error "Wrong arguments to string_to_int") ;
+   | _ -> type_error "Wrong arguments to string_to_int") ;
   register_eval "substring" (fun args ->
    match args with
      [ String x ; Int i ; Int j ] when
        i >= 0 && j >= 0 && String.length (F.pp x) >= i+j ->
        String (F.from_string (String.sub (F.pp x) i j))
-   | _ -> error "Wrong arguments to substring") ;
+   | _ -> type_error "Wrong arguments to substring") ;
   register_eval "int_to_string" (fun args ->
    match args with
      [ Int x ] -> String (F.from_string (string_of_int x))
-   | _ -> error "Wrong arguments to int_to_string") ;
+   | _ -> type_error "Wrong arguments to int_to_string") ;
   register_eval "real_to_string" (fun args ->
    match args with
      [ Float x ] -> String (F.from_string (string_of_float x))
-   | _ -> error "Wrong arguments to real_to_string")
+   | _ -> type_error "Wrong arguments to real_to_string")
 ;;
 
 let _ =
@@ -1588,9 +1588,9 @@ let rec stack_term_of_ast lvl amap cmap = function
   | AST.Int i -> amap, Int i 
   | AST.Float f -> amap, Float f 
   | AST.App (AST.Lam _,_) -> error "Beta-redexes not in our language"
-  | AST.App (AST.String _,_) -> error "Applied string value"
-  | AST.App (AST.Int _,_) -> error "Applied integer value"
-  | AST.App (AST.Float _,_) -> error "Applied float value"
+  | AST.App (AST.String _,_) -> type_error "Applied string value"
+  | AST.App (AST.Int _,_) -> type_error "Applied integer value"
+  | AST.App (AST.Float _,_) -> type_error "Applied float value"
 ;;
  
 let query_of_ast t =
