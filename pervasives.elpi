@@ -22,11 +22,9 @@
 %solve
 %not
 %open_socket
-%system
 %halt
 %stop
 %time
-%getenv
 
 %i~
 %iabs
@@ -106,6 +104,9 @@ X < Y  :- $lt_ X Y.
 X > Y  :- $gt_ X Y.
 X =< Y :- $le_ X Y.
 X >= Y :- $ge_ X Y.
+
+getenv X Y :- $getenv X Y.
+system X Y :- $system X Y.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% PREDEFINED PREDICATES %%%%%%%%%%%%%%%%%%%%%%%
 

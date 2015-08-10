@@ -1209,7 +1209,9 @@ exception No_clause
 
 let register_custom, lookup_custom =
  let (customs :
-     ('a, depth:int -> env:term array -> term list -> unit) Hashtbl.t)
+      (* Must either raise No_clause or succeed with the list of new goals *)
+      ('a, depth:int -> env:term array -> term list -> term list)
+      Hashtbl.t)
    =
      Hashtbl.create 17 in
  (fun s ->
@@ -1362,8 +1364,9 @@ let rec eval depth =
 let _ =
   register_custom "$print" (fun ~depth ~env args ->
     Format.printf "@[<hov 1>" ;
-    List.iter (Format.printf "%a@ " (uppterm depth [] 0 env)) args;
-    Format.printf "@]\n%!") ;
+    List.iter (Format.printf "%a@ " (uppterm depth [] 0 env)) args ;
+    Format.printf "@]\n%!" ;
+    []) ;
   register_custom "$lt" (fun ~depth ~env:_ args ->
     let rec get_constant = function
       | Const c -> c
@@ -1377,7 +1380,7 @@ let _ =
         let t1 = get_constant t1 in
         let t2 = get_constant t2 in
         let is_lt = if t1 < 0 && t2 < 0 then t2 < t1 else t1 < t2 in
-        if not is_lt then raise No_clause
+        if not is_lt then raise No_clause else []
     | _ -> type_error "$lt takes 2 arguments") ;
   List.iter (fun p,psym,pname ->
   register_custom pname (fun ~depth ~env:_ args ->
@@ -1388,11 +1391,30 @@ let _ =
         (match t1,t2 with
            Int _,    Int _
          | Float _,  Float _
-         | String _, String _ -> if not (p t1 t2) then raise No_clause
+         | String _, String _ ->
+            if not (p t1 t2) then raise No_clause else []
          | _ ->
            type_error ("Wrong arguments to " ^ psym ^ " (or to " ^ pname^ ")"))
     | _ -> type_error (psym ^ " (or " ^ pname ^ ") takes 2 arguments"))
-  ) [(<),"<","$lt_" ; (>),">","$gt_" ; (<=),"=<","$le_" ; (>=),">=","$ge_"]
+  ) [(<),"<","$lt_" ; (>),">","$gt_" ; (<=),"=<","$le_" ; (>=),">=","$ge_"] ;
+  register_custom "$getenv" (fun ~depth ~env:_ args ->
+    match args with
+    | [t1; t2] ->
+       (match eval depth t1 with
+           String s ->
+            (try
+              let v = Sys.getenv (F.pp s) in
+               [ App(eqc, t2, [String (F.from_string v)]) ]
+             with Not_found -> raise No_clause)
+         | _ -> type_error "bad argument to getenv (or $getenv)")
+    | _ -> type_error "getenv (or $getenv) takes 2 arguments") ;
+  register_custom "$system" (fun ~depth ~env:_ args ->
+    match args with
+    | [t1; t2] ->
+       (match eval depth t1 with
+           String s -> [ App(eqc, t2, [Int (Sys.command (F.pp s))]) ]
+         | _ -> type_error "bad argument to system (or $system)")
+    | _ -> type_error "system (or $system) takes 2 arguments")
 ;;
 
 (* The block of recursive functions spares the allocation of a Some/None
@@ -1431,14 +1453,15 @@ let make_runtime : unit -> ('a -> 'b -> 'k) * ('k -> 'k) =
     | Arg _ | AppArg _ -> anomaly "Not a heap term"
     | Lam _ | String _ | Int _ | Float _ -> type_error "Not a predicate"
     | UVar _ | AppUVar _ -> error "Flexible predicate"
-    | Custom(c, gs') ->
+    | Custom(c, args) ->
        let f = try lookup_custom c with Not_found -> anomaly"no such custom" in
-       let b = try f depth [||] gs'; true with No_clause -> false in
-       if b then
-         match gs with
-         | [] -> TCALL pop_andl alts next
-         | (depth,p,g) :: gs -> run depth p g gs next alts lvl
-       else TCALL next_alt alts
+       let b = try Some (f depth [||] args) with No_clause -> None in
+       (match b with
+          Some gs' ->
+           (match List.map (fun g -> depth,p,g) gs' @ gs with
+           | [] -> TCALL pop_andl alts next
+           | (depth,p,g) :: gs -> run depth p g gs next alts lvl)
+        | None -> TCALL next_alt alts)
 
   and backchain depth p g gs cp next alts lvl =
     let maybe_last_call = alts == emptyalts in

@@ -42,4 +42,8 @@ exception No_clause
 
 (* Custom predicates like $print, failure by raising No_clause *)
 val register_custom :
-  string -> (depth:int -> env:term array -> term list -> unit) -> unit
+  string -> (depth:int -> env:term array -> term list -> term list) -> unit
+
+(* Evaluable functions for the "is" and related predicates *)
+val register_eval :
+  string -> (term list -> term) -> unit
