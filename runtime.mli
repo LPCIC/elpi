@@ -71,7 +71,8 @@ module Constants :
   val dummy : term
  end
 
-(* Custom predicates like $print, failure by raising No_clause *)
+(* Custom predicates like $print. Must either raise No_clause or succeed
+   with the list of new goals *)
 val register_custom :
   string -> (depth:int -> env:term array -> term list -> term list) -> unit
 
