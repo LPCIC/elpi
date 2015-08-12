@@ -4,6 +4,18 @@
 
 open Parser
 
+module Utils :
+ sig
+  (* A regular error *)
+  val error : string -> 'a
+
+  (* An invariant is broken, i.e. a bug *)
+  val anomaly : string -> 'a
+  
+  (* If we type check the program, then these are anomalies *)
+  val type_error : string -> 'a
+ end
+
 type query
 type program
 
@@ -40,6 +52,22 @@ and constraints = exn list
 
 exception No_clause
 
+module Pp :
+ sig
+  val uppterm :
+    constant -> string list ->
+    constant -> term array ->
+      Format.formatter -> term -> unit
+ end
+
+module Constants :
+ sig
+  val eqc : constant
+
+  (* Value for unassigned UVar/Arg *)
+  val dummy : term
+ end
+
 (* Custom predicates like $print, failure by raising No_clause *)
 val register_custom :
   string -> (depth:int -> env:term array -> term list -> term list) -> unit
@@ -47,3 +75,11 @@ val register_custom :
 (* Evaluable functions for the "is" and related predicates *)
 val register_eval :
   string -> (term list -> term) -> unit
+
+(* Functions useful to implement custom predicates and evaluable functions *)
+
+val deref : from:constant -> to_:constant -> int -> term -> term
+val app_deref : from:constant -> to_:constant -> term list -> term -> term
+
+(* Traverses the expression evaluating all custom evaluable functions *)
+val eval : constant -> term -> term
