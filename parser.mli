@@ -32,5 +32,9 @@ type term =
 
 type clause = term
 
+type fixity = Infixl | Infixr | Infix | Prefix | Postfix
+
+(* raises Not_found is the constant has no declared fixity *)
+val precedence_of : ASTFuncS.t -> fixity * int
 val parse_program : filenames:string list -> clause list
 val parse_goal : string -> term

@@ -36,8 +36,11 @@ Bugs:
 - symbols can be declared twice (e.g. in .mod and in .sig): check and avoid
   inserting a duplicated rule. Also issues a camlp5 warning when it happens
   (e.g. in pcf test)
-
-Bugs:
+- handle the NotInProlog exception properly
+- a precedence level can change associativity if the user declares a symbol
+  with it with a new associativity. This is should be avoided, also because
+  the pretty-printer does not change the associativity of old symbols.
+  Maybe re-use the map used for set_precedence/precedence_of
 - we do not check the first argument of "is"
 
 Other:

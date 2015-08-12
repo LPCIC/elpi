@@ -53,6 +53,15 @@ let mkSeq l =
   aux l
 let mkIs x f = App(Const ASTFuncS.isf,[x;f])
 
+type fixity = Infixl | Infixr | Infix | Prefix | Postfix
+
+let set_precedence,precedence_of =
+ let module ConstMap = Map.Make(ASTFuncS) in 
+ let precs = ref ConstMap.empty in
+ (fun c p -> precs := ConstMap.add c p !precs),
+ (fun c -> ConstMap.find c !precs)
+;;
+
 exception NotInProlog;;
 
 type clause = term
@@ -359,18 +368,19 @@ EXTEND
           let postrule =
            [ Gramext.Sself ; Gramext.Stoken ("SYMBOL",cst) ],
            Gramext.action (fun cst t _ -> mkApp [mkCon cst;t]) in
-          let fixity,rule =
+          let fixity,rule,ppinfo =
            (* NOTE: we do not distinguish between infix and infixl,
               prefix and prefix, postfix and postfixl *)
            match fix with
-             "infix"    -> Gramext.NonA,   binrule
-           | "infixl"   -> Gramext.LeftA,  binrule
-           | "infixr"   -> Gramext.RightA, binrule
-           | "prefix"   -> Gramext.NonA,   prerule
-           | "prefixr"  -> Gramext.RightA, prerule
-           | "postfix"  -> Gramext.NonA,   postrule
-           | "postfixl" -> Gramext.LeftA,  postrule
+             "infix"    -> Gramext.NonA,   binrule,  (Infix,nprec)
+           | "infixl"   -> Gramext.LeftA,  binrule,  (Infixl,nprec)
+           | "infixr"   -> Gramext.RightA, binrule,  (Infixr,nprec)
+           | "prefix"   -> Gramext.NonA,   prerule,  (Prefix,nprec)
+           | "prefixr"  -> Gramext.RightA, prerule,  (Prefix,nprec)
+           | "postfix"  -> Gramext.NonA,   postrule, (Postfix,nprec)
+           | "postfixl" -> Gramext.LeftA,  postrule, (Postfix,nprec)
            | _ -> assert false in
+          set_precedence cst ppinfo ;
           let where,name = is_used nprec in
            Grammar.extend
             [Grammar.Entry.obj atom, Some where, [name, Some fixity, [rule]]];
