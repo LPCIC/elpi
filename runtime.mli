@@ -62,6 +62,9 @@ module Pp :
 
 module Constants :
  sig
+  val funct_of_ast : ASTFuncS.t -> constant * term
+  val string_of_constant : constant -> string
+
   val eqc : constant
 
   (* Value for unassigned UVar/Arg *)
@@ -72,14 +75,7 @@ module Constants :
 val register_custom :
   string -> (depth:int -> env:term array -> term list -> term list) -> unit
 
-(* Evaluable functions for the "is" and related predicates *)
-val register_eval :
-  string -> (term list -> term) -> unit
-
 (* Functions useful to implement custom predicates and evaluable functions *)
 
 val deref : from:constant -> to_:constant -> int -> term -> term
 val app_deref : from:constant -> to_:constant -> term list -> term -> term
-
-(* Traverses the expression evaluating all custom evaluable functions *)
-val eval : constant -> term -> term

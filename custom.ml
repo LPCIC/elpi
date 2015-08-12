@@ -8,6 +8,39 @@ open Runtime.Pp;;
 open Runtime.Constants;;
 module F = Parser.ASTFuncS;;
 
+let register_eval, lookup_eval =
+ let (evals : ('a, term list -> term) Hashtbl.t)
+   =
+     Hashtbl.create 17 in
+ (fun s -> Hashtbl.add evals (fst (funct_of_ast (F.from_string s)))),
+ Hashtbl.find evals
+;;
+
+(* Traverses the expression evaluating all custom evaluable functions *)
+let rec eval depth =
+ function
+    Lam _
+  | Custom _ -> error "Evaluation of a lambda abstraction or custom predicate"
+  | Arg _
+  | AppArg _ -> anomaly "Not a heap term"
+  | App (hd,arg,args) ->
+     let f =
+      try lookup_eval hd
+      with Not_found -> anomaly (string_of_constant hd ^ " not evaluable") in
+     let args = List.map (eval depth) (arg::args) in
+     f args
+  | UVar ({ contents = g }, from, args) when g != dummy ->
+     eval depth (deref ~from ~to_:depth args g)
+  | AppUVar ({contents = t}, from, args) when t != dummy ->
+     eval depth (app_deref ~from ~to_:depth args t)
+  | UVar _
+  | AppUVar _ -> error "Evaluation of a non closed term (maybe delay)"
+  | Const _
+  | String _
+  | Int _
+  | Float _ as x -> x
+;;
+
 let _ =
   register_eval "-" (fun args ->
    match args with
@@ -167,7 +200,11 @@ let _ =
     match args with
     | [t1; t2] ->
        (match eval depth t1 with
-           String s -> [ App(eqc, t2, [Int (Sys.command (F.pp s))]) ]
+           String s -> [ App (eqc, t2, [Int (Sys.command (F.pp s))]) ]
          | _ -> type_error "bad argument to system (or $system)")
-    | _ -> type_error "system (or $system) takes 2 arguments")
+    | _ -> type_error "system (or $system) takes 2 arguments") ;
+  register_custom "$is" (fun ~depth ~env:_ args ->
+    match args with
+    | [t1; t2] -> [ App (eqc, t1, [eval depth t2]) ]
+    | _ -> type_error "is (or $is) takes 2 arguments")
 ;;

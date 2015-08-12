@@ -114,7 +114,6 @@ module Constants : sig
   val pic    : constant
   val sigmac : constant
   val eqc    : constant
-  val isc    : constant
 
   (* Value for unassigned UVar/Arg *)
   val dummy  : term
@@ -155,7 +154,6 @@ let rimplc = fst (funct_of_ast F.rimplf)
 let pic = fst (funct_of_ast F.pif)
 let sigmac = fst (funct_of_ast F.sigmaf)
 let eqc = fst (funct_of_ast F.eqf)
-let isc = fst (funct_of_ast F.isf)
 
 let rec dummy = App (-9999,dummy,[])
 
@@ -1234,39 +1232,6 @@ let register_custom, lookup_custom =
  Hashtbl.find customs
 ;;
 
-let register_eval, lookup_eval =
- let (evals : ('a, term list -> term) Hashtbl.t)
-   =
-     Hashtbl.create 17 in
- (fun s -> Hashtbl.add evals (fst (funct_of_ast (F.from_string s)))),
- Hashtbl.find evals
-;;
-
-(* Traverses the expression evaluating all custom evaluable functions *)
-let rec eval depth =
- function
-    Lam _
-  | Custom _ -> error "Evaluation of a lambda abstraction or custom predicate"
-  | Arg _
-  | AppArg _ -> anomaly "Not a heap term"
-  | App (hd,arg,args) ->
-     let f =
-      try lookup_eval hd
-      with Not_found -> anomaly (string_of_constant hd ^ " not evaluable") in
-     let args = List.map (eval depth) (arg::args) in
-     f args
-  | UVar ({ contents = g }, from, args) when g != dummy ->
-     eval depth (deref ~from ~to_:depth args g)
-  | AppUVar ({contents = t}, from, args) when t != dummy ->
-     eval depth (app_deref ~from ~to_:depth args t)
-  | UVar _
-  | AppUVar _ -> error "Evaluation of a non closed term (maybe delay)"
-  | Const _
-  | String _
-  | Int _
-  | Float _ as x -> x
-;;
-
 (* The block of recursive functions spares the allocation of a Some/None
  * at each iteration in order to know if one needs to backtrack or continue *)
 let make_runtime : unit -> ('a -> 'b -> 'k) * ('k -> 'k) =
@@ -1284,10 +1249,6 @@ let make_runtime : unit -> ('a -> 'b -> 'k) * ('k -> 'k) =
        run depth (add_clauses clauses p) g2 gs next alts lvl
 (*  This stays commented out because it slows down rev18 in a visible way!   *)
 (*  | App(c, _, _) when c == implc -> anomaly "Implication must have 2 args" *)
-    | App(c, g1, [g2]) when c == isc ->
-       let g2 = eval depth g2 in
-       let eq = App(eqc, g1, [g2]) in
-       run depth p eq gs next alts lvl
     | App(c, Lam f, []) when c == pic ->
        run (depth+1) p f gs next alts lvl
     | App(c, Lam f, []) when c == sigmac ->

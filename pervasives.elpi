@@ -107,6 +107,7 @@ X >= Y :- $ge_ X Y.
 
 getenv X Y :- $getenv X Y.
 system X Y :- $system X Y.
+X is Y :- $is X Y.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% PREDEFINED PREDICATES %%%%%%%%%%%%%%%%%%%%%%%
 
