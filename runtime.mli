@@ -50,6 +50,8 @@ and 'a oref = {
 }
 and constraints = exn list
 
+val term_of_ast : depth:int -> Parser.term -> term
+
 exception No_clause
 
 module Pp :

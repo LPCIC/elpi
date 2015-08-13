@@ -1,8 +1,6 @@
 %open_string
 %eof
 %flush
-%term_to_string
-%string_to_term
 %input
 %input_line
 %lookahead
@@ -108,6 +106,8 @@ open_append X Y :- $open_append X Y.
 close_in X :- $close_in X.
 close_out X :- $close_out X.
 output X Y :- $output X Y.
+term_to_string X Y :- $term_to_string X Y.
+string_to_term X Y :- $string_to_term X Y.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% PREDEFINED PREDICATES %%%%%%%%%%%%%%%%%%%%%%%
 

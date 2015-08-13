@@ -1441,7 +1441,18 @@ let rec stack_term_of_ast lvl amap cmap = function
   | AST.App (AST.Int _,_) -> type_error "Applied integer value"
   | AST.App (AST.Float _,_) -> type_error "Applied float value"
 ;;
- 
+
+(* BUG: I pass the empty amap and cmap, that is plainly wrong.
+   Therefore the function only works on closed, meta-closed terms. *)
+let term_of_ast ~depth t =
+ let argsdepth = depth (*????*) in
+ let cmap = ConstMap.empty (*?????*) in
+ let { max_arg = max; name2arg = l }, t =
+  stack_term_of_ast depth empty_amap cmap t in
+ let env = Array.make max dummy in
+ to_heap argsdepth ~from:depth ~to_:depth ~avoid:def_avoid env t
+;;
+
 let query_of_ast t =
   let { max_arg = max; name2arg = l }, t =
     stack_term_of_ast 0 empty_amap ConstMap.empty t in

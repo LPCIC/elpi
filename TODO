@@ -42,6 +42,11 @@ Bugs:
   the pretty-printer does not change the associativity of old symbols.
   Maybe re-use the map used for set_precedence/precedence_of
 - we do not check the first argument of "is"
+- strings need to be quoted when pretty-printed
+- string_to_term is severely bugged:
+  * we pass the empty amap and cmap when parsing/heapifying the string,
+    because we do not have them available. Therefore the function works
+    as expected only on closed, meta-closed terms.
 
 Other:
 

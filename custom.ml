@@ -304,4 +304,21 @@ let _ =
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to output (or $output)")
     | _ -> type_error "output (or $output) takes 2 arguments") ;
+  register_custom "$term_to_string" (fun ~depth ~env args ->
+    match args with
+    | [t1; t2] ->
+       Format.fprintf Format.str_formatter "%a" (uppterm depth [] 0 env) t1 ;
+       let s = Format.flush_str_formatter () in
+       [App(eqc,t2,[String (F.from_string s)])]
+    | _ -> type_error "term_to_string (or $term_to_string) takes 2 arguments");
+  register_custom "$string_to_term" (fun ~depth ~env args ->
+    match args with
+    | [t1; t2] ->
+       (match eval depth t1 with
+           String s ->
+            let s = Parser.parse_goal (F.pp s) in
+            let t = term_of_ast ~depth s in
+            [App (eqc, t2, [t])]
+         | _ -> type_error "bad argument to string_to_term (or $string_to_term)")
+    | _ -> type_error "string_to_term (or $string_to_term) takes 2 arguments");
 ;;
