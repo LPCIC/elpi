@@ -91,4 +91,6 @@ ptmap.$(CMX): ptmap.ml ptmap.cmi
 parser.cmi: parser.mli
 trace.$(CMX): trace.ml trace.cmi
 trace.cmi: trace.mli
+custom.cmi: custom.mli
+custom.$(CMX): custom.ml custom.cmi runtime.cmi runtime.$(CMX)
 
