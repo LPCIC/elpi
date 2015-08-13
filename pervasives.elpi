@@ -1,17 +1,8 @@
-%std_in
-%std_out
-%std_err
-%open_in
 %open_string
-%open_out
-%open_append
-%close_in
 %eof
-%close_out
 %flush
 %term_to_string
 %string_to_term
-%output
 %input
 %input_line
 %lookahead
@@ -75,6 +66,9 @@
 % nofixity substring
 % nofixity real_to_string
 % nofixity int_to_string
+% nofixity std_in
+% nofixity std_out
+% nofixity std_err
 
 
 prefix ~  256.
@@ -108,6 +102,12 @@ X >= Y :- $ge_ X Y.
 getenv X Y :- $getenv X Y.
 system X Y :- $system X Y.
 X is Y :- $is X Y.
+open_in X Y :- $open_in X Y.
+open_out X Y :- $open_out X Y.
+open_append X Y :- $open_append X Y.
+close_in X :- $close_in X.
+close_out X :- $close_out X.
+output X Y :- $output X Y.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% PREDEFINED PREDICATES %%%%%%%%%%%%%%%%%%%%%%%
 

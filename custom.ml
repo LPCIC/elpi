@@ -16,6 +16,24 @@ let register_eval, lookup_eval =
  Hashtbl.find evals
 ;;
 
+(* To avoid adding another primitive constant to the type term, we
+   introduce bijective maps between {in,out}_streams and integers *)
+let add_in_stream,get_in_stream =
+ let fresh = ref (-1) in
+ let streams = ref Ptmap.empty in
+ (fun s -> incr fresh ; streams := Ptmap.add !fresh s !streams ; !fresh),
+ (fun i -> Ptmap.find i !streams)
+
+let add_out_stream,get_out_stream =
+ let fresh = ref (-1) in
+ let streams = ref Ptmap.empty in
+ (fun s -> incr fresh ; streams := Ptmap.add !fresh s !streams ; !fresh),
+ (fun i -> Ptmap.find i !streams)
+
+let cstdin = add_in_stream stdin;;
+let cstdout= add_out_stream stdout;;
+let cstderr = add_out_stream stderr;;
+
 (* Traverses the expression evaluating all custom evaluable functions *)
 let rec eval depth =
  function
@@ -35,13 +53,29 @@ let rec eval depth =
      eval depth (app_deref ~from ~to_:depth args t)
   | UVar _
   | AppUVar _ -> error "Evaluation of a non closed term (maybe delay)"
-  | Const _
+  | Const hd ->
+     let f =
+      try lookup_eval hd
+      with Not_found -> anomaly (string_of_constant hd ^ " not evaluable") in
+     f []
   | String _
   | Int _
   | Float _ as x -> x
 ;;
 
 let _ =
+  register_eval "stdin" (fun args ->
+   match args with
+     [] -> Int cstdin
+   | _ -> type_error "Wrong arguments to stin") ;
+  register_eval "stdout" (fun args ->
+   match args with
+     [] -> Int cstdout
+   | _ -> type_error "Wrong arguments to stout") ;
+  register_eval "stderr" (fun args ->
+   match args with
+     [] -> Int cstderr
+   | _ -> type_error "Wrong arguments to sterr") ;
   register_eval "-" (fun args ->
    match args with
      [ Int x ; Int y ] -> Int (x - y)
@@ -148,7 +182,6 @@ let _ =
    | _ -> type_error "Wrong arguments to real_to_string")
 ;;
 
-
 let _ =
   register_custom "$print" (fun ~depth ~env args ->
     Format.printf "@[<hov 1>" ;
@@ -206,5 +239,69 @@ let _ =
   register_custom "$is" (fun ~depth ~env:_ args ->
     match args with
     | [t1; t2] -> [ App (eqc, t1, [eval depth t2]) ]
-    | _ -> type_error "is (or $is) takes 2 arguments")
+    | _ -> type_error "is (or $is) takes 2 arguments") ;
+  register_custom "$open_in" (fun ~depth ~env:_ args ->
+    match args with
+    | [t1; t2] ->
+       (match eval depth t1 with
+           String s ->
+            (try
+              let v = open_in (F.pp s) in
+              let vv = add_in_stream v in
+               [ App(eqc, t2, [Int vv]) ]
+             with Sys_error msg -> error msg)
+         | _ -> type_error "bad argument to open_in (or $open_in)")
+    | _ -> type_error "open_in (or $open_in) takes 2 arguments") ;
+  register_custom "$open_out" (fun ~depth ~env:_ args ->
+    match args with
+    | [t1; t2] ->
+       (match eval depth t1 with
+           String s ->
+            (try
+              let v = open_out (F.pp s) in
+              let vv = add_out_stream v in
+               [ App(eqc, t2, [Int vv]) ]
+             with Sys_error msg -> error msg)
+         | _ -> type_error "bad argument to open_out (or $open_out)")
+    | _ -> type_error "open_out (or $open_out) takes 2 arguments") ;
+  register_custom "$open_append" (fun ~depth ~env:_ args ->
+    match args with
+    | [t1; t2] ->
+       (match eval depth t1 with
+           String s ->
+            (try
+              let v =
+               open_out_gen
+                [Open_wronly; Open_append; Open_creat; Open_text] 0x664
+                (F.pp s) in
+              let vv = add_out_stream v in
+               [ App(eqc, t2, [Int vv]) ]
+             with Sys_error msg -> error msg)
+         | _ -> type_error "bad argument to open_append (or $open_append)")
+    | _ -> type_error "open_append (or $open_append) takes 2 arguments") ;
+  register_custom "$close_in" (fun ~depth ~env:_ args ->
+    match args with
+    | [t1] ->
+       (match eval depth t1 with
+           Int s ->
+            (try close_in(get_in_stream s); [] with Sys_error msg -> error msg)
+         | _ -> type_error "bad argument to close_in (or $close_in)")
+    | _ -> type_error "close_in (or $close_in) takes 1 argument") ;
+  register_custom "$close_out" (fun ~depth ~env:_ args ->
+    match args with
+    | [t1] ->
+       (match eval depth t1 with
+           Int s ->
+            (try close_out(get_out_stream s); [] with Sys_error msg->error msg)
+         | _ -> type_error "bad argument to close_out (or $close_out)")
+    | _ -> type_error "close_out (or $close_out) takes 1 argument") ;
+  register_custom "$output" (fun ~depth ~env:_ args ->
+    match args with
+    | [t1; t2] ->
+       (match eval depth t1, eval depth t2 with
+           Int n, String s ->
+            (try output_string (get_out_stream n) (F.pp s) ; []
+             with Sys_error msg -> error msg)
+         | _ -> type_error "bad argument to output (or $output)")
+    | _ -> type_error "output (or $output) takes 2 arguments") ;
 ;;
