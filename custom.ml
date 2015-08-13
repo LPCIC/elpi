@@ -64,15 +64,15 @@ let rec eval depth =
 ;;
 
 let _ =
-  register_eval "stdin" (fun args ->
+  register_eval "std_in" (fun args ->
    match args with
      [] -> Int cstdin
    | _ -> type_error "Wrong arguments to stin") ;
-  register_eval "stdout" (fun args ->
+  register_eval "std_out" (fun args ->
    match args with
      [] -> Int cstdout
    | _ -> type_error "Wrong arguments to stout") ;
-  register_eval "stderr" (fun args ->
+  register_eval "std_err" (fun args ->
    match args with
      [] -> Int cstderr
    | _ -> type_error "Wrong arguments to sterr") ;
@@ -321,4 +321,13 @@ let _ =
             [App (eqc, t2, [t])]
          | _ -> type_error "bad argument to string_to_term (or $string_to_term)")
     | _ -> type_error "string_to_term (or $string_to_term) takes 2 arguments");
+  register_custom "$flush" (fun ~depth ~env:_ args ->
+    match args with
+    | [t1] ->
+       (match eval depth t1 with
+           Int n ->
+            (try flush (get_out_stream n) ; []
+             with Sys_error msg -> error msg)
+         | _ -> type_error "bad argument to flush (or $flush)")
+    | _ -> type_error "flush (or $flush) takes 2 arguments") ;
 ;;
