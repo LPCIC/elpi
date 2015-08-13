@@ -330,4 +330,8 @@ let _ =
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to flush (or $flush)")
     | _ -> type_error "flush (or $flush) takes 2 arguments") ;
+  register_custom "$halt" (fun ~depth ~env:_ args ->
+    match args with
+    | [] -> exit 0
+    | _ -> type_error "halt (or $halt) takes 0 arguments") ;
 ;;

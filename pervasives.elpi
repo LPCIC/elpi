@@ -6,10 +6,7 @@
 %read
 %readterm
 %solve
-%not
 %open_socket
-%halt
-%stop
 %time
 
 %i~
@@ -106,6 +103,7 @@ output X Y :- $output X Y.
 term_to_string X Y :- $term_to_string X Y.
 string_to_term X Y :- $string_to_term X Y.
 flush X :- $flush X.
+halt :- $halt.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% PREDEFINED PREDICATES %%%%%%%%%%%%%%%%%%%%%%%
 
@@ -116,5 +114,11 @@ X = X.
 (A ; B) :- A.
 (A ; B) :- B.
 
+not X :- X, !, fail.
+not X.
+
 printterm S T :- term_to_string T T', output S T'.
+
 print S :- output std_out S.
+
+stop :- halt.
