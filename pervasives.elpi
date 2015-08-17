@@ -1,11 +1,14 @@
-%eof
+%%%%%%%%%%%%%%%%%% PREDICATES NOT IMPLEMENTED IN TEYJUS %%%%%%%%%%%%%%%%%%%%%%%
+
+%open_socket
+%time
+
+%%%%%%%%%%%%%%%%%%%%% PREDICATES NOT IMPLEMENTED YET %%%%%%%%%%%%%%%%%%%%%%%%%%
+
 %input
-%lookahead
 %read
 %readterm
 %solve
-%open_socket
-%time
 
 %i~
 %iabs
@@ -31,6 +34,8 @@
 %s>
 %s<=
 %s>=
+
+%%%%%%%%%%%%%%%%%% DECLARATION OF CUSTOM PREDICATES %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % nofixity !
 % nofixity sigma
@@ -60,6 +65,9 @@
 % nofixity std_out
 % nofixity std_err
 
+% nofixity $print
+% nofixity $lt
+
 
 prefix ~  256.
 infixl mod 160.
@@ -82,7 +90,7 @@ infixr ,  110.
 infixr ;  100.
 infixl :- 0.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%% CUSTOM PREDICATES %%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% CUSTOM PREDICATES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 X < Y  :- $lt_ X Y.
 X > Y  :- $gt_ X Y.
@@ -104,6 +112,8 @@ string_to_term X Y :- $string_to_term X Y.
 flush X :- $flush X.
 halt :- $halt.
 input_line X Y :- $input_line X Y.
+lookahead X Y :- $lookahead X Y.
+eof X :- $eof X.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% PREDEFINED PREDICATES %%%%%%%%%%%%%%%%%%%%%%%
 

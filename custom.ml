@@ -18,11 +18,16 @@ let register_eval, lookup_eval =
 
 (* To avoid adding another primitive constant to the type term, we
    introduce bijective maps between {in,out}_streams and integers *)
-let add_in_stream,get_in_stream =
+
+(* The map stores pairs in_stream * char option, which is the lookahead *)
+let add_in_stream,get_in_stream,set_lookahead =
  let fresh = ref (-1) in
  let streams = ref Ptmap.empty in
- (fun s -> incr fresh ; streams := Ptmap.add !fresh s !streams ; !fresh),
- (fun i -> Ptmap.find i !streams)
+ (fun s -> incr fresh ; streams := Ptmap.add !fresh (s,None) !streams; !fresh),
+ (fun i -> Ptmap.find i !streams),
+ (fun i c ->
+   try streams := Ptmap.add i (fst (Ptmap.find i !streams),c) !streams
+   with Not_found -> anomaly "setting the lookahead for an unknown channel")
 
 let add_out_stream,get_out_stream =
  let fresh = ref (-1) in
@@ -300,7 +305,8 @@ let _ =
     | [t1] ->
        (match eval depth t1 with
            Int s ->
-            (try close_in(get_in_stream s); [] with Sys_error msg -> error msg)
+            (try close_in (fst (get_in_stream s)); []
+             with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to close_in (or $close_in)")
     | _ -> type_error "close_in (or $close_in) takes 1 argument") ;
   register_custom "$close_out" (fun ~depth ~env:_ args ->
@@ -356,11 +362,57 @@ let _ =
        (match eval depth t1 with
            Int s ->
             (try
-              let str = input_line (get_in_stream s) in
+              let ch,lookahead = get_in_stream s in
+              let str = try input_line ch with End_of_file -> "" in
+              set_lookahead s None ;
+              let str =
+               match lookahead with
+                  None -> str
+                | Some c -> String.make 1 c ^ str in
               [App (eqc, t2, [String (F.from_string str)])]
              with 
-                Sys_error msg -> error msg
-              | End_of_file -> [App (eqc, t2, [ String (F.from_string "")])])
+              Sys_error msg -> error msg)
          | _ -> type_error "bad argument to input_line (or $input_line)")
     | _ -> type_error "input_line (or $input_line) takes 2 arguments") ;
+  register_custom "$lookahead" (fun ~depth ~env:_ args ->
+    match args with
+    | [t1 ; t2] ->
+       (match eval depth t1 with
+           Int s ->
+            (try
+              let ch,lookahead = get_in_stream s in
+              let c =
+               match lookahead with
+                  Some c -> String.make 1 c
+                | None ->
+                   (try
+                     let c = input_char ch in
+                     set_lookahead s (Some c) ;
+                     String.make 1 c
+                    with End_of_file -> "")
+              in
+              [App (eqc, t2, [String (F.from_string c)])]
+             with 
+              Sys_error msg -> error msg)
+         | _ -> type_error "bad argument to lookahead (or $lookahead)")
+    | _ -> type_error "lookahead (or $lookahead) takes 2 arguments") ;
+  register_custom "$eof" (fun ~depth ~env:_ args ->
+    match args with
+    | [t1] ->
+       (match eval depth t1 with
+           Int s ->
+            (try
+              let ch,lookahead = get_in_stream s in
+              match lookahead with
+                 Some c -> raise No_clause
+               | None ->
+                  (try
+                    let c = input_char ch in
+                    set_lookahead s (Some c) ;
+                    raise No_clause
+                   with End_of_file -> [])
+             with 
+              Sys_error msg -> error msg)
+         | _ -> type_error "bad argument to eof (or $eof)")
+    | _ -> type_error "eof (or $eof) takes 1 argument") ;
 ;;
