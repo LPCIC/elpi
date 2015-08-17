@@ -382,7 +382,7 @@ let _ =
                   None -> 0,n
                 | Some c -> buf.[0] <- c ; 1,n-1 in
               let read = really_input ch buf start n in
-              let str = String.sub buf 0 read in
+              let str = String.sub buf 0 (read + start) in
               set_lookahead s None ;
               [App (eqc, t3, [String (F.from_string str)])]
              with 
