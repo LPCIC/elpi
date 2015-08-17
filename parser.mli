@@ -38,3 +38,4 @@ type fixity = Infixl | Infixr | Infix | Prefix | Postfix
 val precedence_of : ASTFuncS.t -> fixity * int
 val parse_program : filenames:string list -> clause list
 val parse_goal : string -> term
+val parse_goal_from_stream : char Stream.t -> term

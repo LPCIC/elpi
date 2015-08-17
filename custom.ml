@@ -429,6 +429,25 @@ let _ =
               Sys_error msg -> error msg)
          | _ -> type_error "bad argument to lookahead (or $lookahead)")
     | _ -> type_error "lookahead (or $lookahead) takes 2 arguments") ;
+  register_custom "$readterm" (fun ~depth ~env:_ args ->
+    match args with
+    | [t1 ; t2] ->
+       (match eval depth t1 with
+           Int s ->
+            (try
+              let ch,lookahead = get_in_stream s in
+              let strm = Stream.of_channel ch in
+              let strm =
+               match lookahead with
+                  Some c -> Stream.icons c strm
+                | None -> strm in
+              let t3 = Parser.parse_goal_from_stream strm in
+              let t3 = term_of_ast ~depth t3 in
+              [App (eqc, t2, [t3])]
+             with 
+              Sys_error msg -> error msg)
+         | _ -> type_error "bad argument to readterm (or $readterm)")
+    | _ -> type_error "readterm (or $readterm) takes 2 arguments") ;
   register_custom "$eof" (fun ~depth ~env:_ args ->
     match args with
     | [t1] ->

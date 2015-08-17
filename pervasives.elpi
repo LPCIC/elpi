@@ -1,13 +1,10 @@
-%%%%%%%%%%%%%%%%%% PREDICATES NOT IMPLEMENTED IN TEYJUS %%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%% PREDICATES NOT IMPLEMENTED/DOCUMENTED IN TEYJUS %%%%%%%%%%%%%%%%
 
 %open_socket
 %time
+%solve
 
 %%%%%%%%%%%%%%%%%%%%% PREDICATES NOT IMPLEMENTED YET %%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%read
-%readterm
-%solve
 
 %i~
 %iabs
@@ -112,6 +109,7 @@ flush X :- $flush X.
 halt :- $halt.
 input X Y Z :- $input X Y Z.
 input_line X Y :- $input_line X Y.
+readterm X Y :- $readterm X Y.
 lookahead X Y :- $lookahead X Y.
 eof X :- $eof X.
 
@@ -130,5 +128,7 @@ not X.
 printterm S T :- term_to_string T T', output S T'.
 
 print S :- output std_out S.
+
+read S :- input_line std_in X, string_to_term X S.
 
 stop :- halt.

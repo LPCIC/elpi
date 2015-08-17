@@ -464,3 +464,9 @@ let parse_program (*?(ontop=[])*) ~filenames : program =
   parse lp (pervasives::filenames)
 
 let parse_goal s : goal = parse_string goal s
+
+let parse_goal_from_stream strm =
+  try Grammar.Entry.parse goal strm
+  with
+    Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) -> raise(Stream.Error msg)
+  | Ploc.Exc(_,e) -> raise e

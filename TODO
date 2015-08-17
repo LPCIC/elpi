@@ -32,7 +32,13 @@ Documentation:
 - semantics of ; departed from Teyjus
 
 Bugs:
+- readterm flushes the rest of the line, even if it should not.
+  One of the misteries of camlp5, I suppose :-(
+  FIX: as the spec says, we should first read all characters up to dot,
+  then parse. Issue: real numbers are problematic :-(
 - capture all Invalid_arg exceptions in custom.ml
+- capture all exceptions raised from the parser in custom.ml
+  (functions string_to_term and readterm)
 - revise all remaining assert false, e.g. in parser
 - symbols can be declared twice (e.g. in .mod and in .sig): check and avoid
   inserting a duplicated rule. Also issues a camlp5 warning when it happens
