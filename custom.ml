@@ -187,6 +187,19 @@ let _ =
    | _ -> type_error "Wrong arguments to real_to_string")
 ;;
 
+let really_input ic s ofs len =
+  let rec unsafe_really_input read ic s ofs len =
+    if len <= 0 then read else begin
+      let r = input ic s ofs len in
+      if r = 0
+      then read
+      else unsafe_really_input (read+r) ic s (ofs + r) (len - r)
+    end
+  in
+  if ofs < 0 || len < 0 || ofs > String.length s - len
+  then invalid_arg "really_input"
+  else unsafe_really_input 0 ic s ofs len
+
 let _ =
   register_custom "$print" (fun ~depth ~env args ->
     Format.printf "@[<hov 1>" ;
@@ -356,6 +369,26 @@ let _ =
     match args with
     | [] -> exit 0
     | _ -> type_error "halt (or $halt) takes 0 arguments") ;
+  register_custom "$input" (fun ~depth ~env:_ args ->
+    match args with
+    | [t1 ; t2 ; t3] ->
+       (match eval depth t1, eval depth t2 with
+           Int s, Int n ->
+            (try
+              let ch,lookahead = get_in_stream s in
+              let buf = String.make n ' ' in
+              let start,n =
+               match lookahead with
+                  None -> 0,n
+                | Some c -> buf.[0] <- c ; 1,n-1 in
+              let read = really_input ch buf start n in
+              let str = String.sub buf 0 read in
+              set_lookahead s None ;
+              [App (eqc, t3, [String (F.from_string str)])]
+             with 
+              Sys_error msg -> error msg)
+         | _ -> type_error "bad argument to input (or $input)")
+    | _ -> type_error "input (or $input) takes 3 arguments") ;
   register_custom "$input_line" (fun ~depth ~env:_ args ->
     match args with
     | [t1 ; t2] ->

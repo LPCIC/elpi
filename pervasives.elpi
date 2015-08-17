@@ -5,7 +5,6 @@
 
 %%%%%%%%%%%%%%%%%%%%% PREDICATES NOT IMPLEMENTED YET %%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%input
 %read
 %readterm
 %solve
@@ -111,6 +110,7 @@ term_to_string X Y :- $term_to_string X Y.
 string_to_term X Y :- $string_to_term X Y.
 flush X :- $flush X.
 halt :- $halt.
+input X Y Z :- $input X Y Z.
 input_line X Y :- $input_line X Y.
 lookahead X Y :- $lookahead X Y.
 eof X :- $eof X.

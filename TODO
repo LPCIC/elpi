@@ -32,6 +32,7 @@ Documentation:
 - semantics of ; departed from Teyjus
 
 Bugs:
+- capture all Invalid_arg exceptions in custom.ml
 - revise all remaining assert false, e.g. in parser
 - symbols can be declared twice (e.g. in .mod and in .sig): check and avoid
   inserting a duplicated rule. Also issues a camlp5 warning when it happens
