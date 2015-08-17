@@ -1,7 +1,5 @@
-%open_string
 %eof
 %input
-%input_line
 %lookahead
 %read
 %readterm
@@ -97,6 +95,7 @@ X is Y :- $is X Y.
 open_in X Y :- $open_in X Y.
 open_out X Y :- $open_out X Y.
 open_append X Y :- $open_append X Y.
+open_string X Y :- $open_string X Y.
 close_in X :- $close_in X.
 close_out X :- $close_out X.
 output X Y :- $output X Y.
@@ -104,6 +103,7 @@ term_to_string X Y :- $term_to_string X Y.
 string_to_term X Y :- $string_to_term X Y.
 flush X :- $flush X.
 halt :- $halt.
+input_line X Y :- $input_line X Y.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% PREDEFINED PREDICATES %%%%%%%%%%%%%%%%%%%%%%%
 

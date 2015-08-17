@@ -279,6 +279,22 @@ let _ =
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to open_append (or $open_append)")
     | _ -> type_error "open_append (or $open_append) takes 2 arguments") ;
+  register_custom "$open_string" (fun ~depth ~env:_ args ->
+    match args with
+    | [t1; t2] ->
+       (match eval depth t1 with
+           String s ->
+            (try
+             let filename,outch = Filename.open_temp_file "elpi" "tmp" in
+             output_string outch (F.pp s) ;
+             close_out outch ;
+             let v = open_in filename in
+             Sys.remove filename ;
+             let vv = add_in_stream v in
+              [ App(eqc, t2, [Int vv]) ]
+             with Sys_error msg -> error msg)
+         | _ -> type_error "bad argument to open_in (or $open_in)")
+    | _ -> type_error "open_in (or $open_in) takes 2 arguments") ;
   register_custom "$close_in" (fun ~depth ~env:_ args ->
     match args with
     | [t1] ->
@@ -334,4 +350,17 @@ let _ =
     match args with
     | [] -> exit 0
     | _ -> type_error "halt (or $halt) takes 0 arguments") ;
+  register_custom "$input_line" (fun ~depth ~env:_ args ->
+    match args with
+    | [t1 ; t2] ->
+       (match eval depth t1 with
+           Int s ->
+            (try
+              let str = input_line (get_in_stream s) in
+              [App (eqc, t2, [String (F.from_string str)])]
+             with 
+                Sys_error msg -> error msg
+              | End_of_file -> [App (eqc, t2, [ String (F.from_string "")])])
+         | _ -> type_error "bad argument to input_line (or $input_line)")
+    | _ -> type_error "input_line (or $input_line) takes 2 arguments") ;
 ;;
