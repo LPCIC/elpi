@@ -1177,7 +1177,7 @@ let rec split_conj = function
    enters the fragment. 
 r :- (pi X\ pi Y\ q X Y :- pi c\ pi d\ q (Z c d) (X c d) (Y c)) => ... *)
 
-(* Takes the source of an implication an produces the clauses to be added to
+(* Takes the source of an implication and produces the clauses to be added to
  * the program *)
 let rec clausify vars depth hyps ts = function
   | App(c, g, gs) when c == andc ->
@@ -1470,7 +1470,7 @@ let program_of_ast (p : Parser.clause list) : program =
   make_index clauses
 ;;
 
-let pp_FOprolog p = assert false (*CSC: port the code, see function above List.iter (fun { Parser.head = a; hyps = f } ->
+(*let pp_FOprolog p = assert false (*CSC: port the code, see function above List.iter (fun { Parser.head = a; hyps = f } ->
   let amap, cmap = empty_amap, ConstMap.empty in
   let amap, a = stack_term_of_ast 0 amap cmap a in
   let amap, f = stack_term_of_ast 0 amap cmap f in
@@ -1485,8 +1485,30 @@ let pp_FOprolog p = assert false (*CSC: port the code, see function above List.i
    Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
      (pp_FOprolog names env) a
      (pplist (pp_FOprolog names env) ",") (split_conj f)) p*)
-;;
+;;*)
 
+
+let pp_FOprolog p = 
+ List.iter (fun t ->
+  let names,env,t = query_of_ast t in
+  Format.eprintf "\n%a\n%!" (uppterm 0 names 0 env) t ; 
+  let cl = clausify (Array.length env) 0 [] [] t in
+  Format.eprintf "cl.args.length = %d\n%!" (List.length (List.hd cl).args); 
+  Format.eprintf "cl.hyps.length = %d\n%!" (List.length (List.hd cl).hyps);
+  match t with
+   App(hd,a,[f]) when hd == rimplc -> 
+   Format.eprintf "x = %a\n%!" (uppterm 0 names 0 env) a ;
+   Format.eprintf "xs = %a\n%!" (uppterm 0 names 0 env) f ;
+   Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
+     (pp_FOprolog names env) a
+     (pplist (pp_FOprolog names env) ",") (split_conj f);
+  | _ -> 
+     Format.eprintf "@[<hov 1>%a.@]\n%!"
+     (pp_FOprolog names env) t 
+  ) p  
+ ;;
+
+ 
 (* RUN with non indexed engine *)
 type query = string list * term array * term
 let pp_prolog = pp_FOprolog
