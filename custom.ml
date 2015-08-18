@@ -68,6 +68,8 @@ let rec eval depth =
   | Float _ as x -> x
 ;;
 
+let register_evals l f = List.iter (fun i -> register_eval i f) l;;
+
 let _ =
   register_eval "std_in" (fun args ->
    match args with
@@ -81,16 +83,16 @@ let _ =
    match args with
      [] -> Int cstderr
    | _ -> type_error "Wrong arguments to sterr") ;
-  register_eval "-" (fun args ->
+  register_evals [ "-" ; "i-" ; "r-" ] (fun args ->
    match args with
      [ Int x ; Int y ] -> Int (x - y)
    | [ Float x ; Float y ] -> Float (x -. y)
-   | _ -> type_error "Wrong arguments to -") ;
-  register_eval "+" (fun args ->
+   | _ -> type_error "Wrong arguments to -/i-/r-") ;
+  register_evals [ "+" ; "i+" ; "r+" ] (fun args ->
    match args with
      [ Int x ; Int y ] -> Int (x + y)
    | [ Float x ; Float y ] -> Float (x +. y)
-   | _ -> type_error "Wrong arguments to +") ;
+   | _ -> type_error "Wrong arguments to +/i+/r+") ;
   register_eval "*" (fun args ->
    match args with
      [ Int x ; Int y ] -> Int (x * y)
@@ -112,16 +114,16 @@ let _ =
    match args with
      [ String x ; String y ] -> String (F.from_string (F.pp x ^ F.pp y))
    | _ -> type_error "Wrong arguments to ^") ;
-  register_eval "~" (fun args ->
+  register_evals [ "~" ; "i~" ; "r~" ] (fun args ->
    match args with
      [ Int x ] -> Int (-x)
    | [ Float x ] -> Float (-. x)
-   | _ -> type_error "Wrong arguments to ~") ;
-  register_eval "abs" (fun args ->
+   | _ -> type_error "Wrong arguments to ~/i~/r~") ;
+  register_evals [ "abs" ; "iabs" ; "rabs" ] (fun args ->
    match args with
      [ Int x ] -> Int (abs x)
    | [ Float x ] -> Float (abs_float x)
-   | _ -> type_error "Wrong arguments to abs") ;
+   | _ -> type_error "Wrong arguments to abs/iabs/rabs") ;
   register_eval "int_to_real" (fun args ->
    match args with
      [ Int x ] -> Float (float_of_int x)

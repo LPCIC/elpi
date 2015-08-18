@@ -23,6 +23,7 @@ Departures from Teyjus due to camlp5 idiosynchrasies:
 - we parse the elements of lists at level 120, that is the first level used
   in pervasives after 110, the level of ","
 - how does getenv fails in Teyjus when the var is not defined?
+- i<, r+, etc. are polymorphic in elpi
 
 Documentation:
 - see "Departures from Teyjus"

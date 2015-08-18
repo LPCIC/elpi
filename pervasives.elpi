@@ -4,33 +4,6 @@
 %time
 %solve
 
-%%%%%%%%%%%%%%%%%%%%% PREDICATES NOT IMPLEMENTED YET %%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%i~
-%iabs
-%i+
-%i-
-%i*
-%i<
-%i>
-%i<=
-%i>=
-
-%r~
-%rabs
-%r+
-%r-
-%r*
-%r<
-%r>
-%r<=
-%r>=
-
-%s<
-%s>
-%s<=
-%s>=
-
 %%%%%%%%%%%%%%%%%% DECLARATION OF CUSTOM PREDICATES %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % nofixity !
@@ -41,7 +14,7 @@
 
 % nofixity nil
 
-% nofixity abs
+% nofixity abs               nofixity iabs         nofixity rabs
 % nofixity int_to_real
 % nofixity sqrt
 % nofixity sin
@@ -65,19 +38,19 @@
 % nofixity $lt
 
 
-prefix ~  256.
+prefix ~  256.       prefix i~  256.     prefix r~  256.
 infixl mod 160.
 infixl div 160.
-infixl *  160.
+infixl *  160.       infixl i*  160.     infixl r*  160.
 infixl /  160.
 infixl ^  150.
-infixl +  150.
-infixl -  150.
+infixl +  150.       infixl i+  150.     infixl r+  150.
+infixl -  150.       infixl i-  150.     infixl r-  150.
 infixr :: 140.
-infix  >  130.
-infix  <  130.
-infix  >= 130.
-infix  =< 130.
+infix  >  130.       infix  i>  130.     infix  r>  130.     infix  s>  130.
+infix  <  130.       infix  i<  130.     infix  r<  130.     infix  s<  130.
+infix  >= 130.       infix  i>= 130.     infix  r>= 130.     infix  s>= 130.
+infix  =< 130.       infix  i=< 130.     infix  r=< 130.     infix  s=< 130.
 infix  =  130.
 infix  is 130.
 infixr => 129.
@@ -88,10 +61,25 @@ infixl :- 0.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% CUSTOM PREDICATES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-X < Y  :- $lt_ X Y.
-X > Y  :- $gt_ X Y.
-X =< Y :- $le_ X Y.
-X >= Y :- $ge_ X Y.
+X  < Y  :- $lt_ X Y.
+X i< Y  :- $lt_ X Y.
+X r< Y  :- $lt_ X Y.
+X s< Y  :- $lt_ X Y.
+
+X  > Y  :- $gt_ X Y.
+X i> Y  :- $gt_ X Y.
+X r> Y  :- $gt_ X Y.
+X s> Y  :- $gt_ X Y.
+
+X  =< Y :- $le_ X Y.
+X i=< Y :- $le_ X Y.
+X r=< Y :- $le_ X Y.
+X s=< Y :- $le_ X Y.
+
+X  >= Y :- $ge_ X Y.
+X i>= Y :- $ge_ X Y.
+X r>= Y :- $ge_ X Y.
+X s>= Y :- $ge_ X Y.
 
 getenv X Y :- $getenv X Y.
 system X Y :- $system X Y.
