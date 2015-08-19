@@ -1496,12 +1496,11 @@ let pp_FOprolog p =
   Format.eprintf "cl.args.length = %d\n%!" (List.length (List.hd cl).args); 
   Format.eprintf "cl.hyps.length = %d\n%!" (List.length (List.hd cl).hyps);
   match t with
-   App(hd,a,[f]) when hd == rimplc -> 
-   Format.eprintf "x = %a\n%!" (uppterm 0 names 0 env) a ;
-   Format.eprintf "xs = %a\n%!" (uppterm 0 names 0 env) f ;
-   Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
-     (pp_FOprolog names env) a
-     (pplist (pp_FOprolog names env) ",") (split_conj f);
+  | App(_, Custom _, _) | App(_,_,(Custom _)::_) -> ()  
+  | App(hd,a,[f]) when hd == rimplc -> 
+    Format.eprintf "x = %a\n%!" (uppterm 0 names 0 env) a ;
+    Format.eprintf "xs = %a\n%!" (uppterm 0 names 0 env) f ;
+    Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!" (pp_FOprolog names env) a (pplist (pp_FOprolog names env) ",") (split_conj f);
   | _ -> 
      Format.eprintf "@[<hov 1>%a.@]\n%!"
      (pp_FOprolog names env) t 
