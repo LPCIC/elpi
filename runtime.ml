@@ -1491,15 +1491,9 @@ let program_of_ast (p : Parser.clause list) : program =
 let pp_FOprolog p = 
  List.iter (fun t ->
   let names,env,t = query_of_ast t in
-  Format.eprintf "\n%a\n%!" (uppterm 0 names 0 env) t ; 
-  let cl = clausify (Array.length env) 0 [] [] t in
-  Format.eprintf "cl.args.length = %d\n%!" (List.length (List.hd cl).args); 
-  Format.eprintf "cl.hyps.length = %d\n%!" (List.length (List.hd cl).hyps);
   match t with
   | App(_, Custom _, _) | App(_,_,(Custom _)::_) -> ()  
   | App(hd,a,[f]) when hd == rimplc -> 
-    Format.eprintf "x = %a\n%!" (uppterm 0 names 0 env) a ;
-    Format.eprintf "xs = %a\n%!" (uppterm 0 names 0 env) f ;
     Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!" (pp_FOprolog names env) a (pplist (pp_FOprolog names env) ",") (split_conj f);
   | _ -> 
      Format.eprintf "@[<hov 1>%a.@]\n%!"
