@@ -58,15 +58,12 @@ Bugs:
 
 Other:
 
--10. new pretty-printer for infix notation badly needed
 0. pretty-printing to LaTeX + transformation to standard presentation
    (with fresh variables, etc.)
 1. implement delay and experiment with it for:
    a) unif outside the fragment
    b) avoid the creation of Explicit Substitutions ??
    c) avoid failure of the "is" predicate?
-2. The brackets it Teyjus are needed for the right precedence,
-   for example look at reduce.mod.
 
 Benchmarks:
 
