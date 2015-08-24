@@ -1,13 +1,14 @@
 # Modify the path to the Teyjus executables as needed
 TEYJUS= ../../../../teyjus/source
 
-.PHONY: all eval monotyping polytyping tailrecursion
-all: eval monotyping polytyping tailrecursion
+.PHONY: all eval monotyping polytyping tailrecursion pcf
+all: eval monotyping polytyping tailrecursion pcf
 
 eval: eval_test.lp
 monotyping: mono_test.lp
 polytyping: poly_test.lp
 tailrecursion: tr_test.lp
+pcf: pcf.lp
 
 # Everything after this point is generic and should be duplicated
 # in user's makefiles
