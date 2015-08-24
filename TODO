@@ -75,6 +75,8 @@ Benchmarks:
 4. port Teyjus hc_interp.* to newelpi
    Note: it is outside the fragment and it needs to be brought
    back in.
+5. pcf from teyjus does not work. It loops.
+6. the proofcert of Tomer was ported, parses successfully, but does gove a solution. To be investigated.
 
 Bugs:
 
