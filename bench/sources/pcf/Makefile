@@ -1,5 +1,5 @@
 # Modify the path to the Teyjus executables as needed
-TEYJUS= ../../source
+TEYJUS= ../../../../teyjus/source
 
 .PHONY: all eval monotyping polytyping tailrecursion
 all: eval monotyping polytyping tailrecursion
