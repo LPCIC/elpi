@@ -20,3 +20,5 @@ type and, or, false, truth,                      % boolean functions
      car, cdr, cons, nullp, consp, empty,        % lists functions
      equal, greater, zerop, minus, plus, times   % integer functions
      tm.
+
+type main o.

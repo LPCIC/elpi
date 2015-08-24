@@ -1,9 +1,12 @@
 /* combines script1 to script4.
  */
 
-module main.
+module pcf.
+
 
 accumulate eval_test, mono_test, poly_test, tr_test, examples.
+
+type main o.
 
 main :- eval_test 1 V1, 
         eval_test 2 V2,
