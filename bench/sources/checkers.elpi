@@ -512,4 +512,4 @@ inSig apply.
 inSig g.
 inSig f.
 
-
+main :- run.
