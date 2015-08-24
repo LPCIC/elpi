@@ -76,7 +76,7 @@ Benchmarks:
    Note: it is outside the fragment and it needs to be brought
    back in.
 5. pcf from teyjus does not work. It loops.
-6. the proofcert of Tomer was ported, parses successfully, but does gove a solution. To be investigated.
+6. the proofcert of Tomer was ported, parses successfully, but does gove a solution. To be investigated. It was added as bench/sources/checkers.elpi
 7. the Makefile of bench/sources/pcf does not work properly. It was modified, but still 
    the make RUNNERS=teyjus has problems with the pcf example. 
 
