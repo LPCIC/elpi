@@ -81,7 +81,7 @@ let mkCon c = Const (ASTFuncS.from_string c)
 let mkCustom c = Custom (ASTFuncS.from_string c)
 
 let parsed = ref [];;
-let cur_dirname = ref ""
+let cur_dirname = ref (Unix.getcwd ())
 
 let rec symlink_dirname f =
   try
@@ -90,10 +90,11 @@ let rec symlink_dirname f =
     else symlink_dirname Filename.(concat (dirname f) link)
   with Unix.Unix_error _ -> Filename.dirname f
 
-let rec parse_one e filename =
+let rec parse_one e (origfilename as filename) =
  let filename =
    if not (Filename.is_relative filename) then filename
    else Filename.concat !cur_dirname filename in
+ let origprefixname = Filename.chop_extension origfilename in
  let prefixname = Filename.chop_extension filename in
  let filename =
   if Sys.file_exists filename then filename
@@ -106,15 +107,18 @@ let rec parse_one e filename =
   else raise (Failure ("file not found: " ^ filename)) in
  let inode = (Unix.stat filename).Unix.st_ino in
  if List.mem inode !parsed then begin
-  Printf.eprintf "already loaded %s\n%!" filename;
+  Printf.eprintf "already loaded %s\n%!" origfilename;
   []
  end else begin
   let sigs =
    if Filename.check_suffix filename ".sig" then []
    else
     let signame = prefixname ^ ".sig" in
-    if Sys.file_exists signame then parse_one e signame else [] in
-  Printf.eprintf "loading %s\n%!" filename;
+    if Sys.file_exists signame then
+     let origsigname = origprefixname ^ ".sig" in
+     parse_one e origsigname
+    else [] in
+  Printf.eprintf "loading %s\n%!" origfilename;
   parsed := inode::!parsed ;
   let ch = open_in filename in
   let saved_cur_dirname = !cur_dirname in
