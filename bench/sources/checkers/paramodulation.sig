@@ -18,7 +18,7 @@ i.e. : the "from" is the first, "into" is the second.
 kind i, arity type.
 
 type ==, =*=		i -> i -> atm.
-infix ==, =*= 45.
+infix ==, =*= 130.
 
 type inSig	A -> o.
 
@@ -28,7 +28,7 @@ type resI, intoI, fromI index.
 type chainI int -> index.
 /* Certificate */
 type c>>, c<< cert -> cert -> cert.
-infix c<<, c>> 30.
+infix c<<, c>> 140.
 type witC cert -> cert.
 type doneWith, reflC, lastC, useC, decOn index -> cert.
 type rewC      	      index -> int -> cert.
