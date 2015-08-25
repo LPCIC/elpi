@@ -10,6 +10,7 @@ module ASTFuncS : sig
   val eq : t -> t -> bool
   val truef : t
   val andf : t
+  val andf2 : t
   val orf : t
   val implf : t
   val rimplf : t

@@ -32,6 +32,10 @@ Documentation:
 - no beta-redexes in the source code
 - semantics of ; departed from Teyjus
 
+TODO:
+- check if the ,/& and the =>/:- checks slow down a lot. In that case
+  we can parse both pairs as just one symbol :-(
+
 Bugs:
 - readterm flushes the rest of the line, even if it should not.
   One of the misteries of camlp5, I suppose :-(

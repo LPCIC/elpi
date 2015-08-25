@@ -108,6 +108,7 @@ module Constants : sig
   val cutc   : term
   val truec  : term
   val andc   : constant
+  val andc2  : constant
   val orc    : constant
   val implc  : constant
   val rimplc  : constant
@@ -148,6 +149,7 @@ let funct_of_ast, constant_of_dbl, string_of_constant =
 let cutc = snd (funct_of_ast F.cutf)
 let truec = snd (funct_of_ast F.truef)
 let andc = fst (funct_of_ast F.andf)
+let andc2 = fst (funct_of_ast F.andf2)
 let orc = fst (funct_of_ast F.orf)
 let implc = fst (funct_of_ast F.implf)
 let rimplc = fst (funct_of_ast F.rimplf)
@@ -312,7 +314,7 @@ let xppterm_prolog ~nice names env f t =
         else if hd==orc then        
                        (* (%a) ? *)
          Format.fprintf f "%a" (pplist aux ";") (x::xs)  
-        else if hd==andc then    
+        else if hd==andc || hd == andc2 then    
          Format.fprintf f "%a" (pplist aux ",") (x::xs)  
         else if hd==rimplc then (
           assert (List.length xs = 1);
@@ -1166,7 +1168,7 @@ let emptyalts : alternative = Obj.magic 0
 (* }}} *)
 
 let rec split_conj = function
-  | App(c, hd, args) when c == andc ->
+  | App(c, hd, args) when c == andc || c == andc2 ->
       split_conj hd @ List.(flatten (map split_conj args))
   | f when f == truec -> []
   | _ as f -> [ f ]
@@ -1180,7 +1182,7 @@ r :- (pi X\ pi Y\ q X Y :- pi c\ pi d\ q (Z c d) (X c d) (Y c)) => ... *)
 (* Takes the source of an implication and produces the clauses to be added to
  * the program *)
 let rec clausify vars depth hyps ts = function
-  | App(c, g, gs) when c == andc ->
+  | App(c, g, gs) when c == andc || c == andc2 ->
      clausify vars depth hyps ts g @
      List.(flatten (map (clausify vars depth hyps ts) gs))
   | App(c, g2, [g1]) when c == rimplc ->
@@ -1242,7 +1244,7 @@ let make_runtime : unit -> ('a -> 'b -> 'k) * ('k -> 'k) =
     TRACE "run" (fun fmt -> ppterm depth [] 0 [||] fmt g)
     match g with
     | c when c == cutc -> TCALL cut p gs next alts lvl
-    | App(c, g, gs') when c == andc ->
+    | App(c, g, gs') when c == andc || c == andc2 ->
        run depth p g (List.map(fun x -> depth,p,x) gs'@gs) next alts lvl
     | App(c, g1, [g2]) when c == implc ->
        let clauses = clausify 0 depth [] [] g1 in

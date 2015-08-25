@@ -18,6 +18,7 @@ module ASTFuncS = struct
   let eq = (==)
   let truef = from_string "true"
   let andf = from_string ","
+  let andf2 = from_string "&"
   let orf = from_string ";"
   let implf = from_string "=>"
   let rimplf = from_string ":-"
