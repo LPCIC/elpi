@@ -1,4 +1,4 @@
-sig ceco.
+sig checkers.
 
 %accum_sig col060.
 

@@ -1,4 +1,4 @@
-module ceco.
+module checkers.
 
 member X [X|_].
 member X [Y|R] :- member X R.
@@ -440,3 +440,5 @@ inSig f.
 
 if P Q R :- P, !, Q.
 if P Q R :- R.
+
+main :- run.
