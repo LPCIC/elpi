@@ -103,7 +103,7 @@ let rec parse_one e (origfilename as filename) =
    (* Backward compatibility with Teyjus *) 
    prefixname ^ ".mod"
   else if Filename.check_suffix filename ".mod" then
-   (* Backward compatibility with Teyjus *) 
+   (* Forward compatibility with Teyjus *) 
    prefixname ^ ".elpi"
   else raise (Failure ("file not found: " ^ filename)) in
  let inode = (Unix.stat filename).Unix.st_ino in
