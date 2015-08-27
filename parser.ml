@@ -424,15 +424,15 @@ EXTEND
    [ "term"
       [ hd = atom; args = LIST1 atom LEVEL "abstterm" -> mkApp (hd::args) ]
    | "abstterm"
-      [ c = CONSTANT; b = OPT [ BIND; a = atom LEVEL "0" -> a ] ->
+      [ c = CONSTANT; OPT [ COLON ; type_ ] ; b = OPT [ BIND; a = atom LEVEL "0" -> a ] ->
           (match b with
               None -> mkCon c
             | Some b -> mkLam c b)
-      | u = FRESHUV -> mkFreshUVar ()
+      | u = FRESHUV ; OPT [ COLON ; type_ ] -> mkFreshUVar ()
       | s = LITERAL -> mkString s
       | s = INTEGER -> mkInt (int_of_string s) 
       | s = FLOAT -> mkFloat (float_of_string s) 
-      | bt = BUILTIN -> mkCustom bt
+      | bt = BUILTIN ; OPT [ COLON ; type_ ] -> mkCustom bt
       | LPAREN; a = atom; RPAREN -> a
         (* 120 is the first level after 110, which is that of , *)
       | LBRACKET; xs = LIST0 atom LEVEL "120" SEP SYMBOL ",";

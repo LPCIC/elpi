@@ -14,7 +14,6 @@ Weird syntax of Teyjus:
 - if the file ends (without eol) inside a comment, the parser ignores the
   comment (in place of returning an error). How??? Same if the query is not
   . terminated.
-- binders can be explicitly typed in Teyjus
 
 Departures from Teyjus due to camlp5 idiosynchrasies:
 - non-associative infix/prefix/postfix behave like their associative
@@ -24,6 +23,7 @@ Departures from Teyjus due to camlp5 idiosynchrasies:
   in pervasives after 110, the level of ","
 - how does getenv fails in Teyjus when the var is not defined?
 - i<, r+, etc. are polymorphic in elpi
+- Teyjus admits  x :: : type l  and  x = : type y; we don't.
 
 Documentation:
 - see "Departures from Teyjus"
