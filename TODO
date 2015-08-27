@@ -1,9 +1,7 @@
 Weird syntax of Teyjus:
 - no syntax for negative numbers: ~ 2 is the unary minus applied to 2,
   not the number -2.
-- strings should not contain newlines; instead
-  \n, \b, \t, \n, \r, \\, \", "" should be recognized (the last two synonyms)
-  \^['@'-'z'] ???
+- \^['@'-'z'] ???
   \OCTAL \OCTALOCTALOCTAL \xHEX \xHEXHEX
   \\\n
   \xxxxxxx\  where xxx are [ ' ' | '\t' | '\x0b' | '\x0d' ]
@@ -31,6 +29,18 @@ Documentation:
 - integers are 31 bits; floats are...
 - no beta-redexes in the source code
 - semantics of ; departed from Teyjus
+- strings should not contain newlines; instead
+  \n, \b, \t, \n, \r, \\, \", "" should be recognized (the last two synonyms)
+  <NOT IMPLEMENTED YET>
+  \^['@'-'z'] ???
+  \OCTAL \OCTALOCTALOCTAL \xHEX \xHEXHEX
+  \\\n
+  \xxxxxxx\  where xxx are [ ' ' | '\t' | '\x0b' | '\x0d' ]
+  \\cxxxxxx  where xxx are [ ' ' | '\t' | '\x0b' | '\x0d' ]
+  eof should be an error
+  \x followed by other combinations should be an error
+  \ followed by other combinations should be an error
+  </NOT IMPLEMENTED YET>
 
 TODO:
 - check if the ,/& and the =>/:- checks slow down a lot. In that case

@@ -176,7 +176,19 @@ let rec idcharstar = lexer [ idchar idcharstar | ]
 let idcharplus = lexer [ idchar idcharstar ]
 let rec num = lexer [ digit | digit num ]
 
-let rec string = lexer [ '"' | _ string ]
+let rec stringchar = lexer
+ [ "\\\\" / -> $add "\\"
+ | "\\n" / -> $add "\n"
+ | "\\b" / -> $add "\b"
+ | "\\t" / -> $add "\t"
+ | "\\r" / -> $add "\r"
+ | "\\\"" / -> $add "\""
+ (* CSC: I have no idea how to implement the \octal syntax & friend :-(
+ | "\\" / [ -> buflen := String.length $buf ; $add "" ] octal / ->
+    $add (mkOctal "4")*)
+ | "\n" -> raise Stream.Failure
+ | _ ]
+let rec string = lexer [ '"' / '"' string | '"' / | stringchar string ]
 
 let constant = "CONSTANT" (* to use physical equality *)
 
@@ -206,7 +218,7 @@ let tok = lexer
   | '[' -> "LBRACKET",$buf
   | ']' -> "RBRACKET",$buf
   | '|' -> "PIPE",$buf
-  | '"' string -> "LITERAL", let b = $buf in String.sub b 1 (String.length b-2)
+  | '"' / string -> "LITERAL", $buf
 ]
 
 let option_eq x y = match x, y with Some x, Some y -> x == y | _ -> x == y
