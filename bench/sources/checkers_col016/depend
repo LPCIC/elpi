@@ -1,0 +1,20 @@
+runner.lpo: runner.mod runner.sig col016.sig lists.sig debug.sig lkf-kernel.sig eprover.sig resolution_steps.sig binary_res_fol_nosub.sig paramodulation.sig base.sig lkf-syntax.sig certificatesLKF.sig res_base.sig
+resolution_steps.lpo: resolution_steps.mod resolution_steps.sig certificatesLKF.sig lists.sig res_base.sig base.sig lkf-syntax.sig
+paramodulation.lpo: paramodulation.mod paramodulation.sig resolution_steps.sig base.sig lists.sig certificatesLKF.sig res_base.sig lkf-syntax.sig
+lkf-kernel.lpo: lkf-kernel.mod lkf-kernel.sig lists.sig certificatesLKF.sig base.sig lkf-syntax.sig
+lists.lpo: lists.mod lists.sig 
+eprover.lpo: eprover.mod eprover.sig paramodulation.sig resolution_steps.sig base.sig lists.sig certificatesLKF.sig res_base.sig lkf-syntax.sig binary_res_fol_nosub.sig
+debug.lpo: debug.mod debug.sig lists.sig
+col016.lpo: col016.mod col016.sig lkf-kernel.sig eprover.sig resolution_steps.sig certificatesLKF.sig lists.sig base.sig lkf-syntax.sig binary_res_fol_nosub.sig paramodulation.sig res_base.sig
+checkers_col016.lpo: checkers_col016.mod checkers_col016.sig runner.sig col016.sig lists.sig base.sig lkf-kernel.sig eprover.sig resolution_steps.sig binary_res_fol_nosub.sig paramodulation.sig lkf-syntax.sig certificatesLKF.sig res_base.sig
+binary_res_fol_nosub.lpo: binary_res_fol_nosub.mod binary_res_fol_nosub.sig resolution_steps.sig res_base.sig lists.sig certificatesLKF.sig base.sig lkf-syntax.sig
+runner.lp: runner.lpo col016.lpo lists.lpo debug.lpo lkf-kernel.lpo eprover.lpo resolution_steps.lpo paramodulation.lpo
+resolution_steps.lp: resolution_steps.lpo 
+paramodulation.lp: paramodulation.lpo 
+lkf-kernel.lp: lkf-kernel.lpo lists.lpo
+lists.lp: lists.lpo 
+eprover.lp: eprover.lpo paramodulation.lpo
+debug.lp: debug.lpo lists.lpo
+col016.lp: col016.lpo lkf-kernel.lpo eprover.lpo resolution_steps.lpo lists.lpo paramodulation.lpo
+checkers_col016.lp: checkers_col016.lpo runner.lpo col016.lpo lists.lpo debug.lpo lkf-kernel.lpo eprover.lpo resolution_steps.lpo paramodulation.lpo
+binary_res_fol_nosub.lp: binary_res_fol_nosub.lpo 

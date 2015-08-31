@@ -1,0 +1,5 @@
+%q(X,Y) :- p(X) = p(Y), X=a.
+                                                                                                    
+                                                                                
+q X Y :- p X = p Y, X = a.
+q Z Z.
