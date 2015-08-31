@@ -173,10 +173,7 @@ ok+l C1 M1 M M2 T2.
 
 % EXTENDED APPLICABILITY %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% upsilon, local l
-appl+ (prod L W T1) S M T2 :- l+zero L, !,
-                              pi x\ (pi m1\ pi m2\ r+exp x m1 0 e+dx m2 W :- m+pred m1 m2) =>
-                                    appl+ (T1 x) S M T2.
+% upsilon forbidden for applicability
 
 % local delta, updated for version 2
 appl+ (abbr V T1) S M T2 :- !,
