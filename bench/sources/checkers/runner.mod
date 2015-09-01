@@ -1,6 +1,14 @@
 module runner.
 
+accumulate col016.
+accumulate col037.
+accumulate col052.
 accumulate col060.
+accumulate col061.
+accumulate col062.
+accumulate col063.
+accumulate col064.
+accumulate col065.
 
 accumulate lists.
 accumulate debug.
@@ -28,6 +36,8 @@ run :-
   problem Name F Cert (map Map),
   print "Running on problem ", print Name, print ":\n",
   resolve Map F Cert.
+
+run.
 
 resolve [] F Cert :-
   if (entry_point Cert F)

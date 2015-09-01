@@ -1,6 +1,14 @@
 sig runner.
 
+accum_sig col016.
+accum_sig col037.
+accum_sig col052.
 accum_sig col060.
+accum_sig col061.
+accum_sig col062.
+accum_sig col063.
+accum_sig col064.
+accum_sig col065.
 
 accum_sig lists.
 accum_sig base.
