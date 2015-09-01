@@ -27,6 +27,9 @@ TODO:
 
 Documentation:
 - see "Departures from Teyjus"
+- accumulate and friends accept pathnames in quotes
+  (e.g. accumulate "../foo/x.mod"). Necessary to be able to write a path
+  that contains a dot.
 - remark that we handle constants that start with $ in a special way
 - integers are 31 bits; floats are...
 - no beta-redexes in the source code

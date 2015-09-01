@@ -346,16 +346,19 @@ EXTEND
   const_sym:
     [[ c = CONSTANT -> c
      | s = SYMBOL -> s ]];
+  filename:
+    [[ c = CONSTANT -> c
+     | c = LITERAL -> c ]];
   clause :
     [[ f = atom; FULLSTOP -> [f]
      | MODULE; CONSTANT; FULLSTOP -> []
      | SIG; CONSTANT; FULLSTOP -> []
-     | ACCUMULATE; filenames=LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP ->
+     | ACCUMULATE; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
         parse lp (List.map (fun fn -> fn ^ ".mod") filenames)
      | IMPORT; LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP -> []
-     | ACCUM_SIG; filenames=LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP ->
+     | ACCUM_SIG; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
         parse lp (List.map (fun fn -> fn ^ ".sig") filenames)
-     | USE_SIG; filenames=LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP ->
+     | USE_SIG; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
         parse lp (List.map (fun fn -> fn ^ ".sig") filenames)
      | LOCAL; LIST1 const_sym SEP SYMBOL ","; FULLSTOP -> []
      | LOCAL; LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP -> []
