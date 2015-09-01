@@ -54,6 +54,8 @@ Major Bugs:
   * we pass the empty amap and cmap when parsing/heapifying the string,
     because we do not have them available. Therefore the function works
     as expected only on closed, meta-closed terms.
+- halt should halt nicely, still printing the TIME spent, etc.
+  Otherwise the automatic benchmarks fail.
 
 Minor Bugs (mostly forward compatibility with Teyjus):
 - readterm flushes the rest of the line, even if it should not.
