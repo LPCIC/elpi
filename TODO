@@ -82,7 +82,8 @@ Minor Bugs (mostly forward compatibility with Teyjus):
    In particular, it should not be allowed to add more clauses to them
    via implication.
 - turn = into a builtin (more efficient?)
-
+- the bench/sources/checkers combines all of the col*.* and works for
+  elpi, but does not work for Teyjus. 
 
 Other:
 
