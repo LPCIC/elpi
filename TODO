@@ -9,9 +9,6 @@ Weird syntax of Teyjus:
   eof should be an error
   \x followed by other combinations should be an error
   \ followed by other combinations should be an error
-- if the file ends (without eol) inside a comment, the parser ignores the
-  comment (in place of returning an error). How??? Same if the query is not
-  . terminated.
 
 Departures from Teyjus due to camlp5 idiosynchrasies:
 - non-associative infix/prefix/postfix behave like their associative
@@ -19,9 +16,14 @@ Departures from Teyjus due to camlp5 idiosynchrasies:
   with @@ > @@@ then (@@ @@@ @@ @@@ a) is parsed nevertheless
 - we parse the elements of lists at level 120, that is the first level used
   in pervasives after 110, the level of ","
-- how does getenv fails in Teyjus when the var is not defined?
 - i<, r+, etc. are polymorphic in elpi
 - Teyjus admits  x :: : type l  and  x = : type y; we don't.
+- if the file ends (without eol) inside a comment, the parser ignores the
+  comment (in place of returning an error). How??? Same if the query is not
+  . terminated.
+
+TODO:
+- how does getenv fails in Teyjus when the var is not defined?
 
 Documentation:
 - see "Departures from Teyjus"
@@ -30,7 +32,7 @@ Documentation:
 - no beta-redexes in the source code
 - semantics of ; departed from Teyjus
 - strings should not contain newlines; instead
-  \n, \b, \t, \n, \r, \\, \", "" should be recognized (the last two synonyms)
+  \n, \b, \t, \r, \\, \", \', "" should be recognized (the last two synonyms)
   <NOT IMPLEMENTED YET>
   \^['@'-'z'] ???
   \OCTAL \OCTALOCTALOCTAL \xHEX \xHEXHEX
@@ -43,10 +45,17 @@ Documentation:
   </NOT IMPLEMENTED YET>
 
 TODO:
-- check if the ,/& and the =>/:- checks slow down a lot. In that case
-  we can parse both pairs as just one symbol :-(
+- update the TODO file
 
-Bugs:
+Major Bugs:
+- strings need to be quoted when pretty-printed
+- revise all the assert false/raise Failure
+- string_to_term is severely bugged:
+  * we pass the empty amap and cmap when parsing/heapifying the string,
+    because we do not have them available. Therefore the function works
+    as expected only on closed, meta-closed terms.
+
+Minor Bugs (mostly forward compatibility with Teyjus):
 - readterm flushes the rest of the line, even if it should not.
   One of the misteries of camlp5, I suppose :-(
   FIX: as the spec says, we should first read all characters up to dot,
@@ -63,12 +72,12 @@ Bugs:
   with it with a new associativity. This is should be avoided, also because
   the pretty-printer does not change the associativity of old symbols.
   Maybe re-use the map used for set_precedence/precedence_of
-- we do not check the first argument of "is"
-- strings need to be quoted when pretty-printed
-- string_to_term is severely bugged:
-  * we pass the empty amap and cmap when parsing/heapifying the string,
-    because we do not have them available. Therefore the function works
-    as expected only on closed, meta-closed terms.
+- we do not check the first argument of "is" and other predicates
+- turn =, or, sigma, etc. into Custom predicates?
+   In particular, it should not be allowed to add more clauses to them
+   via implication.
+- turn = into a builtin (more efficient?)
+
 
 Other:
 
@@ -84,28 +93,9 @@ Benchmarks:
 0. modify lambda3 to use the bound variables (via a list, etc.)
 1. http://www.cs.hofstra.edu/~cscccl/lambda-examples/
    vedi lpcic/elpi/doc/termrep.pdf
-2. port all examples we have to Teyjus as well
-3. port Teyjus pnf.* and its examples to newelpi
-4. port Teyjus hc_interp.* to newelpi
-   Note: it is outside the fragment and it needs to be brought
-   back in.
-5. pcf from teyjus does not work. It loops.
-6. the proofcert of Tomer was ported, parses successfully, but does gove a solution. To be investigated. It was added as bench/sources/checkers.elpi
-7. the Makefile of bench/sources/pcf does not work properly. It was modified, but still 
-   the make RUNNERS=teyjus has problems with the pcf example. 
-
-Bugs:
-
--2. revise all the assert false/raise Failure
-0. turn =, or, sigma, etc. into Custom predicates?
-   In particular, it should not be allowed to add more clauses to them
-   via implication.
-0.1. turn = into a builtin (more efficient?)
 
 Possible optimizations:
 
--2 optimize the case of app_deref where we can stay in the fragment
-   after the beta (maybe already done?)
 -1. if full_deref only works on heap terms, why do we pass all that stuff?
     why not calling deref instead?
 0. Try alternative implementation for ?n == ?n
@@ -122,3 +112,8 @@ Possible optimizations:
    TO BE TRIED (??)
 2. the to_heap could keep the highest non-bound variable to be cached in
    the UVar to make restriction linear
+
+CHECKED:
+- check if the ,/& and the =>/:- checks slow down a lot. In that case
+  we can parse both pairs as just one symbol :-(
+  Cvetan: no slow down
