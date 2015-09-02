@@ -143,7 +143,7 @@ let rec parse_one e (origfilename as filename) =
       let last = String.index s '\007' in
       "…" ^ String.sub s start last ^ "…" in
     raise (Stream.Error(Printf.sprintf "%s\nnear: %s" msg ctx))*)
-    raise (Stream.Error(Printf.sprintf "%s\nnear: %d" msg last))
+    raise (Stream.Error(Printf.sprintf "%s\nnear: %s@%d" msg origfilename last))
   | Ploc.Exc(_,e) -> close_in ch; raise e
  end
 
