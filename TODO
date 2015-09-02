@@ -29,6 +29,8 @@ Departures from Teyjus due to camlp5 idiosynchrasies:
   if it fails, according to the TJPATH
 
 TODO:
+- update our copy of Teyjus
+- check what else has been changed in the latest version of Teyjus :-(
 - how does getenv fails in Teyjus when the var is not defined?
 - when toes Teyjus parses the TJPATH? We do it statically, i.e. when
   elpi is run, not when accumulate is faced
