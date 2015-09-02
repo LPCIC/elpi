@@ -84,28 +84,55 @@ let mkCustom c = Custom (ASTFuncS.from_string c)
 let parsed = ref [];;
 let cur_dirname = ref (Unix.getcwd ())
 
-let rec symlink_dirname f =
+let rec readsymlinks f =
   try
     let link = Unix.readlink f in
-    if not(Filename.is_relative link) then symlink_dirname link
-    else symlink_dirname Filename.(concat (dirname f) link)
-  with Unix.Unix_error _ -> Filename.dirname f
+    if not(Filename.is_relative link) then readsymlinks link
+    else readsymlinks Filename.(concat (dirname f) link)
+  with Unix.Unix_error _ -> f
+
+let symlink_dirname f = Filename.dirname (readsymlinks f)
+
+let make_absolute filename =
+  if not (Filename.is_relative filename) then filename
+  else Filename.concat !cur_dirname filename
+
+let tjpath =
+ let tjpath = try Sys.getenv "TJPATH" with Not_found -> "" in
+ let tjpath = Str.split (Str.regexp ":") tjpath in
+ let tjpath = List.map (fun f -> make_absolute (readsymlinks f)) tjpath in
+ tjpath
 
 let rec parse_one e (origfilename as filename) =
- let filename =
-   if not (Filename.is_relative filename) then filename
-   else Filename.concat !cur_dirname filename in
  let origprefixname = Filename.chop_extension origfilename in
- let prefixname = Filename.chop_extension filename in
- let filename =
-  if Sys.file_exists filename then filename
-  else if Filename.check_suffix filename ".elpi" then
-   (* Backward compatibility with Teyjus *) 
-   prefixname ^ ".mod"
-  else if Filename.check_suffix filename ".mod" then
-   (* Forward compatibility with Teyjus *) 
-   prefixname ^ ".elpi"
-  else raise (Failure ("file not found: " ^ filename)) in
+ let prefixname,filename =
+  let rec iter_tjpath dirnames =
+   let filename,dirnames,relative =
+    if not (Filename.is_relative filename) then filename,[],false
+    else
+     match dirnames with
+        [] -> raise (Failure ("file not found in $TJPATH: " ^ filename))
+      | dirname::dirnames->Filename.concat dirname filename,dirnames,true in
+   let prefixname = Filename.chop_extension filename in
+   let prefixname,filename =
+    let change_suffix filename =
+     if Filename.check_suffix filename ".elpi" then
+      (* Backward compatibility with Teyjus *) 
+      prefixname ^ ".mod"
+     else if Filename.check_suffix filename ".mod" then
+      (* Forward compatibility with Teyjus *) 
+      prefixname ^ ".elpi"
+     else filename in
+    if Sys.file_exists filename then prefixname,filename
+    else
+     let changed_filename = change_suffix filename in
+     if Sys.file_exists changed_filename then prefixname,changed_filename
+     else if relative then iter_tjpath dirnames
+     else raise (Failure ("file not found in $TJPATH: " ^ origfilename)) in
+   prefixname,filename
+  in
+   iter_tjpath (!cur_dirname :: tjpath)
+ in
  let inode = (Unix.stat filename).Unix.st_ino in
  if List.mem inode !parsed then begin
   Printf.eprintf "already loaded %s\n%!" origfilename;

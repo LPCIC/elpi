@@ -21,9 +21,17 @@ Departures from Teyjus due to camlp5 idiosynchrasies:
 - if the file ends (without eol) inside a comment, the parser ignores the
   comment (in place of returning an error). How??? Same if the query is not
   . terminated.
+- elpi accumulates each file once; Teyjus does it multiple times, that is
+  always bad (all clauses are duplicated and tried multiple times, that is
+  rarely the expected behaviour)
+- Teyjus uses TJPATH; we use TJPATH + accumulate "../foo", resolving
+  relative paths according to the path of the accumulating file first or,
+  if it fails, according to the TJPATH
 
 TODO:
 - how does getenv fails in Teyjus when the var is not defined?
+- when toes Teyjus parses the TJPATH? We do it statically, i.e. when
+  elpi is run, not when accumulate is faced
 
 Documentation:
 - see "Departures from Teyjus"
@@ -82,8 +90,6 @@ Minor Bugs (mostly forward compatibility with Teyjus):
    In particular, it should not be allowed to add more clauses to them
    via implication.
 - turn = into a builtin (more efficient?)
-- the bench/sources/checkers combines all of the col*.* and works for
-  elpi, but does not work for Teyjus. 
 
 Other:
 
