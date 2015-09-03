@@ -117,6 +117,6 @@ printterm S T :- term_to_string T T', output S T'.
 
 print S :- output std_out S.
 
-read S :- input_line std_in X, string_to_term X S.
+read S :- flush std_out, input_line std_in X, string_to_term X S.
 
 stop :- halt.
