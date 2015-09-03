@@ -44,6 +44,10 @@ Documentation:
 - integers are 31 bits; floats are...
 - no beta-redexes in the source code
 - semantics of ; departed from Teyjus
+- we accepts generic terms as rules in a .mod/.elpi file.
+  All free uppercase variables are turned into existential variables.
+  All lowercase ones into universal variables.
+  NOTE: check what Teyjus really does now in the main branch.
 - strings should not contain newlines; instead
   \n, \b, \t, \r, \\, \", \', "" should be recognized (the last two synonyms)
   <NOT IMPLEMENTED YET>
