@@ -1,0 +1,38 @@
+Understand the implementation:
+
+- lpdata.ml:    0. data structures (terms, formulae, substitution, program, data
+                   structures, etc.)
+                1. parsing and pretty-printing
+                2. efficient implementation of beta reduction
+
+- lprun.ml:     prolog interpreter:
+                0. registration of custom predicates/control flow operators
+                1. run from program*query -> result*continuation
+                2. next from continuation -> result*continuation
+                -----------------------
+                1. code for unification
+                2. pretty-printing code
+                3. registration of custom predicates/control flow operators
+                4. (from line 394 on) main loop (but most code is about
+                   constraints)
+
+- elpi.ml:      registers primitive predicates that are mostly unrelated to
+                constraints (print/abort/exit/traces/...)
+
+- client.ml:    main
+                1. register more primitive predicates (constraints)
+                2. parses the command line
+                3. concats every program file
+                4. reads a query, calls the program and loops interactively over
+                   the solutions
+
+Understand the interface:
+- int.ml:       implementation of persistent arrays and maps
+- trace.ml:     (together with pa_trace.ml) implement traces for debugging
+- cMap.ml:      standard Maps on steroids
+
+
+Skip:
+
+- pa_trace.ml:  syntax extension for debugging
+- test.ml:      to test the Matita in elpi implementation
