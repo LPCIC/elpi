@@ -487,8 +487,8 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
        let args = List.map (aux depth) (args0@args) in
        AppUVar (r,vardepth,args)
 
-    | UVar _ -> error "Non trivial pruning not implemented"
-    | AppUVar _ -> error "Non trivial pruning not implemented"
+    | UVar _ -> error "Non trivial pruning not implemented (maybe delay)"
+    | AppUVar _ -> error "Non trivial pruning not implemented (maybe delay)"
     | Arg _ -> anomaly "to_heap: Arg: argsdepth < to_"
     | AppArg _ -> anomaly "to_heap: AppArg: argsdepth < to_"
   in
@@ -1091,12 +1091,16 @@ let unif adepth e bdepth a b =
 
    (* HO *)
    | AppUVar (r, _,_), _
-   | _, AppUVar (r, _,_) -> error "HO unification (maybe delay)"
+   | _, AppUVar (r, _,_) ->
+     Format.fprintf Format.std_formatter "HO unification (maybe delay): %a = %a\n" (ppterm depth [] adepth [||]) a (ppterm depth [] bdepth [||]) b ;
+     error (Format.flush_str_formatter ())
 (*
        r.rest <- Delayed_unif (adepth+depth,e,bdepth,a,b) :: r.rest;
        true
 *)
-   | _, AppArg _ -> error "HO unification (maybe delay)"
+   | _, AppArg _ ->
+     Format.fprintf Format.std_formatter "HO unification (maybe delay): %a = %a\n" (ppterm depth [] adepth [||]) a (ppterm depth [] bdepth [||]) b ;
+     error (Format.flush_str_formatter ())
 (*
        unif depth a bdepth
          (to_heap bdepth ~from:bdepth ~to_:(adepth+depth) e b)
