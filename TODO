@@ -32,6 +32,9 @@ TODO:
 - how does getenv fails in Teyjus when the var is not defined?
 - when toes Teyjus parses the TJPATH? We do it statically, i.e. when
   elpi is run, not when accumulate is faced
+- update (& commit again?) the DOC file
+- the pcf example whants to delay a goal that is in the pattern fragment
+  but not in our fragment. Let's implement the pattern fragment? :-(
 
 Documentation:
 - see "Departures from Teyjus"
@@ -58,9 +61,6 @@ Documentation:
   \x followed by other combinations should be an error
   \ followed by other combinations should be an error
   </NOT IMPLEMENTED YET>
-
-TODO:
-- update (& commit again?) the DOC file
 
 Major Bugs:
 - strings need to be quoted when pretty-printed
