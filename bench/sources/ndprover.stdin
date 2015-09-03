@@ -1,4 +1,3 @@
-inter_top cases1 Proof Outgoal.
 imp_i_tac.
 exists_i_tac.
 or_e_tac 1.

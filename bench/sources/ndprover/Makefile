@@ -4,7 +4,9 @@ TEYJUS= ../../../../teyjus
 .PHONY: inter
 inter: inter.lp
 run:
-	cat ../ndprover.stdin | $(TEYJUS)/tjsim -m 1 -b inter
+	cat ../ndprover.stdin | \
+		$(TEYJUS)/tjsim -m 1 \
+		-s 'inter_top cases1 Proof Outgoal.' inter
 
 # Everything after this point is generic and should be duplicated
 # in user's makefiles
