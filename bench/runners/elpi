@@ -1,6 +1,14 @@
-#!/bin/sh
+#!/bin/bash
 set -x
 set -e
 ulimit -s 16384
-timeout $MAX_TIME /usr/bin/time --quiet --format='%x %E %U %Mk' -o $2 \
-	${TOP}/elpi${VARIANT} -test $1
+
+FILE=`readlink -f $1`
+if [ -e ${FILE%%.elpi}.stdin ]; then
+	cat ${FILE%%.elpi}.stdin | \
+	timeout $MAX_TIME /usr/bin/time --quiet --format='%x %E %U %Mk' -o $2 \
+		${TOP}/elpi${VARIANT} $1
+else
+	timeout $MAX_TIME /usr/bin/time --quiet --format='%x %E %U %Mk' -o $2 \
+		${TOP}/elpi${VARIANT} -test $1
+fi

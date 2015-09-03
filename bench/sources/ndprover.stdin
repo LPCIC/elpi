@@ -1,0 +1,15 @@
+inter_top cases1 Proof Outgoal.
+imp_i_tac.
+exists_i_tac.
+or_e_tac 1.
+close_tac.
+backup.
+backup.
+backup.
+or_e_tac 1.
+exists_i_tac.
+close_tac.
+exists_i_tac.
+close_tac.
+n
+
