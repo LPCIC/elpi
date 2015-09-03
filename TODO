@@ -29,8 +29,6 @@ Departures from Teyjus due to camlp5 idiosynchrasies:
   if it fails, according to the TJPATH
 
 TODO:
-- update our copy of Teyjus
-- check what else has been changed in the latest version of Teyjus :-(
 - how does getenv fails in Teyjus when the var is not defined?
 - when toes Teyjus parses the TJPATH? We do it statically, i.e. when
   elpi is run, not when accumulate is faced
@@ -62,7 +60,7 @@ Documentation:
   </NOT IMPLEMENTED YET>
 
 TODO:
-- update the TODO file
+- update (& commit again?) the DOC file
 
 Major Bugs:
 - strings need to be quoted when pretty-printed
@@ -103,8 +101,9 @@ Other:
    (with fresh variables, etc.)
 1. implement delay and experiment with it for:
    a) unif outside the fragment
-   b) avoid the creation of Explicit Substitutions ??
+   b) non trivial restrictions
    c) avoid failure of the "is" predicate?
+   d) avoid the creation of Explicit Substitutions ??
 
 Benchmarks:
 
