@@ -1,0 +1,121 @@
+ *****************************************************************************
+ *                                                                           *
+ *    ILLUSTRATION OF AN INTERACTIVE THEOREM PROVER IMPLEMENTED IN TEYJUS    *
+ *                                                                           *
+ *  The script that follows shows the compilation and execution of the code  *
+ *  that implements an interactive theorem prover for a fragment of          *
+ *  first-order logic.                                                       *
+ *                                                                           *
+ *****************************************************************************
+
+% make inter
+../../source/tjdepend *.mod > depend
+../../source/tjcc inter
+../../source/tjcc ndtac
+../../source/tjcc tacticals
+../../source/tjcc formulas
+../../source/tjcc listmanip
+../../source/tjcc goalred
+../../source/tjlink inter
+% alias tjsim ../../source/tjsim
+% tjsim inter
+Welcome to Teyjus
+Copyright (C) 2008 A. Gacek, S. Holte, G. Nadathur, X. Qi, Z. Snow
+Teyjus comes with ABSOLUTELY NO WARRANTY
+This is free software, and you are welcome to redistribute it
+under certain conditions. Please view the accompanying file
+COPYING for more information
+[inter] ?- inter_top cases1 Proof Outgoal.
+
+Assumptions: 
+
+Conclusion: 
+q a or q b imp some (W1\ q W1)
+Enter tactic: imp_i_tac.
+
+Assumptions: 
+1 q a or q b
+
+Conclusion: 
+some (W1\ q W1)
+Enter tactic: exists_i_tac.
+
+Assumptions: 
+1 q a or q b
+
+Conclusion: 
+q (_2148 <lc-0-2>)
+Enter tactic: or_e_tac 1.
+
+Assumptions: 
+1 q a
+
+Conclusion: 
+q (_2148 <lc-0-2>)
+Enter tactic: close_tac.
+
+Assumptions: 
+1 q b
+
+Conclusion: 
+q a
+Enter tactic: backup.
+
+Assumptions: 
+1 q a
+
+Conclusion: 
+q (_2148 <lc-0-2>)
+Enter tactic: backup.
+
+Assumptions: 
+1 q a or q b
+
+Conclusion: 
+q (_2148 <lc-0-2>)
+Enter tactic: backup.
+
+Assumptions: 
+1 q a or q b
+
+Conclusion: 
+some (W1\ q W1)
+Enter tactic: or_e_tac 1.
+
+Assumptions: 
+1 q a
+
+Conclusion: 
+some (W1\ q W1)
+Enter tactic: exists_i_tac.
+
+Assumptions: 
+1 q a
+
+Conclusion: 
+q (_3916 <lc-0-2> <lc-0-3>)
+Enter tactic: close_tac.
+
+Assumptions: 
+1 q b
+
+Conclusion: 
+some (W1\ q W1)
+Enter tactic: exists_i_tac.
+
+Assumptions: 
+1 q b
+
+Conclusion: 
+q (_5396 <lc-0-2> <lc-0-3>)
+Enter tactic: close_tac.
+
+The answer substitution:
+Outgoal = truegoal
+Proof = imp_i (W1\ or_e W1 (W2\ exists_i a W2) (W2\ exists_i b W2))
+
+More solutions (y/n)? n
+
+yes
+
+[inter] ?- 
