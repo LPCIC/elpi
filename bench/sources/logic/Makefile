@@ -1,5 +1,5 @@
 # Modify the path to the Teyjus executables as needed
-TEYJUS= ../../../source
+TEYJUS= ../../../../teyjus
 
 .PHONY: all hcinterp hcsyntax pnf
 all: hcinterp hcsyntax pnf
