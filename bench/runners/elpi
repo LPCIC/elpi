@@ -1,2 +1,6 @@
 #!/bin/sh
-echo ${TOP}/elpi${VARIANT} -test $1
+set -x
+set -e
+ulimit -s 16384
+timeout $MAX_TIME /usr/bin/time --quiet --format='%x %E %U %Mk' -o $2 \
+	${TOP}/elpi${VARIANT} -test $1

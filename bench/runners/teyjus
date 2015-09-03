@@ -1,9 +1,20 @@
 #!/bin/sh
-#set -x
+set -x
 set -e
 NAME=`basename $1`
 BASE=${TOP}/../teyjus/source
 
-${BASE}/tjcc $1/$NAME -o $1/$NAME.lpo
-(cd $1; ${BASE}/tjlink $NAME)
-echo ${BASE}/tjsim -m 1 -b -s 'main.' -p $1/ $NAME
+ulimit -s 32768
+
+cd $1
+if [ -e "Makefile" ]; then
+	make
+	timeout $MAX_TIME /usr/bin/time --quiet --format='%x %E %U %Mk' -o $2 \
+		make run
+else
+	${BASE}/tjcc $NAME -o $NAME.lpo
+	${BASE}/tjlink $NAME
+	timeout $MAX_TIME /usr/bin/time --quiet --format='%x %E %U %Mk' -o $2 \
+		${BASE}/tjsim -m 1 -b -s 'main.' $NAME
+fi
+

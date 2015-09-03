@@ -11,7 +11,8 @@ ADD      = ./add.opt -a 3
 MODULES = $(shell cat Make)
 
 all: grundlagen.lp
-
+run: 
+	$(TJSIM) -s main. grundlagen
 depend: .depend
 
 test: grundlagen.lp Makefile

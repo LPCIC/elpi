@@ -3,6 +3,8 @@ TEYJUS= ../../../../teyjus
 
 .PHONY: inter
 inter: inter.lp
+run:
+	$(TEYJUS)/tjsim -m 1 -b -s 'main.' inter
 
 # Everything after this point is generic and should be duplicated
 # in user's makefiles

@@ -9,14 +9,10 @@
 SHELL=/bin/bash
 export TOP=$(abspath ..)
 
+H=@
 JOBS=$(sort $(notdir $(wildcard jobs/*)))
 RUNNERS=$(sort $(filter-out %ulimit,$(notdir $(wildcard runners/*) $(wildcard ../elpi.git.*))))
-MAX=59
-TIME=timeout $(MAX) /usr/bin/time --quiet --format='%x %E %U %Mk' -o
-
-define ulimit
-ulimit -s `cat runners/$(call name,$(1)).ulimit`
-endef
+export MAX_TIME=59
 
 define time-log
 ((grep 'TIME' $(1) || echo '? ?') | cut -d ' ' -f 2-;\
@@ -41,9 +37,9 @@ define run
 TMP=`mktemp`; LOG=`mktemp`;\
 (export VARIANT=$(subst elpi,,$(2));\
  export CRUFT="`head -c $$RANDOM /dev/urandom|base64 -w0`";\
- $(call ulimit,$(2));\
- $(TIME) $$TMP `runners/$(call name,$(2)) $(3)` >$$LOG 2>&1;\
+ runners/$(call name,$(2)) $(3) $$TMP >$$LOG 2>&1;\
  $(call check,$(1),$(3),$$TMP,$$LOG,$(2)));\
+if [ "$(H)" = "" ]; then cat $$TMP $$LOG; fi; \
 rm $$TMP $$LOG;
 endef
 
@@ -56,20 +52,20 @@ $(patsubst elpi%,elpi,$(1))
 endef
 
 only: prepare
-	@($(foreach r,$(RUNNERS),\
+	$(H)($(foreach r,$(RUNNERS),\
 	  $(foreach k,ok ko,\
 	   $(foreach j,\
 	      $(sort $(wildcard jobs/$(call name,$(r))/$(k)/*$(JOB)*)),\
 	    $(call runk,$(N),$(k),$(r),$(j)))))) | tee $(TEE) data.csv
-	$(MAKE) plot
+	$(H)$(MAKE) --no-print-directory plot
 
 ONLY=OK
 plot:
-	@./plot <(cat data.csv | grep $(ONLY) ) data.csv
-	@gnuplot data.csv.plot
-	@echo Results: `ls $$PWD/*svg`
+	$(H)./plot <(cat data.csv | grep $(ONLY) ) data.csv
+	$(H)gnuplot data.csv.plot
+	$(H)echo Results: `ls $$PWD/*svg`
 
 prepare:
-	@make -C ..
+	$(H)make -C ..
 
 .PHONY: all prepare only plot

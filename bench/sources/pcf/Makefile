@@ -3,6 +3,8 @@ TEYJUS= ../../../../teyjus/source
 
 .PHONY: all eval monotyping polytyping tailrecursion pcf
 all: eval monotyping polytyping tailrecursion pcf
+run:
+	$(TEYJUS)/tjsim -m 1 -b -s 'main.' pcf
 
 eval: eval_test.lp
 monotyping: mono_test.lp
