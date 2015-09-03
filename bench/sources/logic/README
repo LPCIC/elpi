@@ -1,0 +1,60 @@
+ *****************************************************************************
+ *                                                                           *
+ * The code in this directory is based on material in the paper              *
+ *                                                                           *
+ *     G. Nadathur and D. Miller, Higher-Order Logic Programming, in         *
+ *     Handbook of Logic in Artificial Intelligence and Logic                *
+ *     Programming, D. M. Gabbay, C. J. Hogger and J. A. Robinson (eds.),    *
+ *     Oxford University Press, January 1998, pages 499--590.                *
+ *                                                                           *
+ * The adaptation to Teyjus code is due to Gopalan Nadathur.                 *
+ *                                                                           *
+ *****************************************************************************
+	
+The important conceptual content of the code is the use of
+higher-order abstract syntax in representing quantification structure
+in formulas and of beta reduction, higher-order unification and the
+scoping primitives in probing this structure.
+
+The contents of particular files are as follows:
+
+lists.sig,               Interface and defining code for a collection
+lists.mod                of list manipulation predicates
+
+logic_types.sig          A file defining the kinds used in the 
+                         encoding of a first-order logic
+
+logic_basic.sig          A file defining the constructors used in 
+                         encoding the logical symbols
+
+logic_vocab.sig          A file encoding the nonlogical vocabulary 
+                         for a first-order logic
+
+hc_interp.sig            A interpreter for Horn clauses logic
+hc_interp.mod 
+
+hcinterp_examples.sig    Code for testing out the Horn clause logic
+hcinterp_examples.mod    interpreter
+
+refl_syntax.sig          Files defining the signature and clauses
+refl_syntax.mod          for recognizing quantifier free expressions
+                         in the logic
+
+hc_syntax.sig            Files defining the signature and clauses
+hc_syntax.mod            for recognizing goals and definite clauses
+                         in the Horn clause fragment of logic
+
+hcsyntax_examples.sig    Code for testing out the Horn clause logic
+hcsyntax_examples.mod    recognizers
+
+pnf.sig                  A prenex normal form transformer for 
+pnf.mod                  formulas
+
+pnf_examples.sig         Code for testing out the prenex-normal form 
+pnf_examples.mod         transformer
+
+script1,                 Scripts exhibiting the compilation and execution
+script2,                 of the code for the Horn clause interpreter, 
+script3                  formula recognizer and prenex normal form 
+                         transformer
+

@@ -1,0 +1,49 @@
+ *****************************************************************************
+ *                                                                           *
+ *           ILLUSTRATION OF FORMULA MANIPULATION USING TEYJUS               *
+ *                                                                           *
+ *  The script that follows shows the compilation and execution of the code  *
+ *  that implements an interpreter for Horn clause logic.                    *
+ *                                                                           *
+ *****************************************************************************
+
+/* Setting up */
+
+% make hcinterp
+../../../source/tjdepend *.mod > depend
+../../../source/tjcc hcinterp_examples
+../../../source/tjcc hc_interp
+../../../source/tjcc lists
+../../../source/tjlink hcinterp_examples
+% alias tjsim ../../../source/tjsim
+
+/* trying out the Horn clause interpreter */
+
+% tjsim hcinterp_examples
+Welcome to Teyjus
+Copyright (C) 2008 A. Gacek, S. Holte, G. Nadathur, X. Qi, Z. Snow
+Teyjus comes with ABSOLUTELY NO WARRANTY
+This is free software, and you are welcome to redistribute it
+under certain conditions. Please view the accompanying file
+COPYING for more information
+[hcinterp_examples] ?- pathfroma X.
+
+The answer substitution:
+X = b
+
+More solutions (y/n)? y
+
+The answer substitution:
+X = c
+
+More solutions (y/n)? y
+
+The answer substitution:
+X = f c
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[hcinterp_examples] ?- halt.
+% 

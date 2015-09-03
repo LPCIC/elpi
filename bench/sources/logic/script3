@@ -1,0 +1,83 @@
+ *****************************************************************************
+ *                                                                           *
+ *           ILLUSTRATION OF FORMULA MANIPULATION USING TEYJUS               *
+ *                                                                           *
+ *  The script that follows shows the compilation and execution of the code  *
+ *  for transforming first-order formulas into their prenex normal form      *
+ *  using equivalences in classical logic.                                   *
+ *                                                                           *
+ *****************************************************************************
+
+/* Setting up. */
+
+% make pnf
+../../../source/tjdepend *.mod > depend
+../../../source/tjcc pnf_examples
+../../../source/tjcc refl_syntax
+../../../source/tjcc pnf
+../../../source/tjlink pnf_examples
+% alias tjsim ../../../source/tjsim
+
+/* Trying out some pnf coversions */
+
+
+% tjsim pnf_examples
+Welcome to Teyjus
+Copyright (C) 2008 A. Gacek, S. Holte, G. Nadathur, X. Qi, Z. Snow
+Teyjus comes with ABSOLUTELY NO WARRANTY
+This is free software, and you are welcome to redistribute it
+under certain conditions. Please view the accompanying file
+COPYING for more information
+[pnf_examples] ?- test 1 F.
+
+The answer substitution:
+F = some (W1\ path a W1 imp tru)
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[pnf_examples] ?- test 2 F.
+
+The answer substitution:
+F = all (W1\ path a W1 imp tru)
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[pnf_examples] ?- test 3 F.
+
+The answer substitution:
+F = all (W1\ path a W1 and path W1 a)
+
+More solutions (y/n)? y
+
+The answer substitution:
+F = all (W1\ all (W2\ path a W1 and path W2 a))
+
+More solutions (y/n)? y
+
+The answer substitution:
+F = all (W1\ all (W2\ path a W2 and path W1 a))
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[pnf_examples] ?- test 4 F.
+
+The answer substitution:
+F = all (W1\ all (W2\ path a W1 imp path a W2))
+
+More solutions (y/n)? y
+
+The answer substitution:
+F = all (W1\ all (W2\ path a W2 imp path a W1))
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[pnf_examples] ?- halt.
+%

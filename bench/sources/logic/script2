@@ -1,0 +1,62 @@
+ *****************************************************************************
+ *                                                                           *
+ *           ILLUSTRATION OF FORMULA MANIPULATION USING TEYJUS               *
+ *                                                                           *
+ *  The script that follows shows the compilation and execution of the code  *
+ *  for checking if a given formula satisfies the required constraints of    *
+ *  a goal formula or a definite clause in Horn clause logic.                *
+ *                                                                           *
+ *****************************************************************************
+
+/* Setting up */
+
+% make hcsyntax
+../../../source/tjdepend *.mod > depend
+../../../source/tjcc hcsyntax_examples
+../../../source/tjcc hc_syntax
+../../../source/tjcc refl_syntax
+../../../source/tjlink hcsyntax_examples
+% alias tjsim ../../../source/tjsim
+
+/* Checking goals and definite clauses */
+% tjsim hcsyntax_examples
+Welcome to Teyjus
+Copyright (C) 2008 A. Gacek, S. Holte, G. Nadathur, X. Qi, Z. Snow
+Teyjus comes with ABSOLUTELY NO WARRANTY
+This is free software, and you are welcome to redistribute it
+under certain conditions. Please view the accompanying file
+COPYING for more information
+[hcsyntax_examples] ?- test_goal 1.
+
+yes
+
+[hcsyntax_examples] ?- test_goal 2.
+
+no (more) solutions
+
+[hcsyntax_examples] ?- test_goal 3.
+
+yes
+
+[hcsyntax_examples] ?- test_goal 4.
+
+no (more) solutions
+
+[hcsyntax_examples] ?- test_defcl 4.
+
+yes
+
+[hcsyntax_examples] ?- test_defcl 5.
+
+yes
+
+[hcsyntax_examples] ?- test_defcl 6.
+
+yes
+
+[hcsyntax_examples] ?- test_defcl 7.
+
+no (more) solutions
+
+[hcsyntax_examples] ?- halt.
+% 
