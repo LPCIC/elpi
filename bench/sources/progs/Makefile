@@ -1,14 +1,18 @@
 # Modify the path to the Teyjus executables as needed
 TEYJUS= ../../../../teyjus
 
-.PHONY: all eval curry tr1 tr2 progs
-all: eval curry tr1 tr2 progs
+.PHONY: all eval curry tr1 tr2 progs progs1 progs2 progs3 progs4
+all: eval curry tr1 tr2 progs progs1 progs2 progs3 progs4
 
 eval: eval_examples.lp
 curry: curry_test.lp
 tr1: tr1_test.lp
 tr2: tr2_test.lp
 progs: progs.lp
+progs1: progs1.lp
+progs2: progs2.lp
+progs3: progs3.lp
+progs4: progs4.lp
 
 # Everything after this point is generic and should be duplicated
 # in user's makefiles
