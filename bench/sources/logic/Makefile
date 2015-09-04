@@ -1,11 +1,12 @@
 # Modify the path to the Teyjus executables as needed
 TEYJUS= ../../../../teyjus
 
-.PHONY: all hcinterp hcsyntax pnf
-all: hcinterp hcsyntax pnf
+.PHONY: all hcinterp hcsyntax pnf logic
+all: hcinterp hcsyntax pnf logic
 hcinterp: hcinterp_examples.lp
 hcsyntax: hcsyntax_examples.lp
 pnf: pnf_examples.lp
+logic: logic.lp
 
 # Everything after this point is generic and should be duplicated
 # in user's makefiles
