@@ -1,0 +1,56 @@
+ *****************************************************************************
+ *                                                                           *
+ *           ILLUSTRATION OF PROGRAM MANIPULATION USING TEYJUS               *
+ *                                                                           *
+ *  The script that follows shows the execution of the code that implements  *
+ *  tail recursion recognition for arbitrary arity functional programs. The  *
+ *  script is a little cryptic. Looking at the relevant module will reveal   *
+ *  that the (tail recursive) factorial program of one and two arguments and *
+ *  the gcd program are deemed to be tail recursive as expected but the      *
+ *  append program is not so recognized. This code demonstrates the          *
+ *  power/usefulness of higher-order unification.                            *
+ *                                                                           *
+ *  The module tr2_test is assumed to be precompiled in this script.         *
+ *                                                                           *
+ *****************************************************************************
+
+/* Setting up */
+
+
+% make tr2
+../../../source/tjdepend *.mod > depend
+../../../source/tjcc tr2_test
+../../../source/tjcc terms
+../../../source/tjcc general_tr
+../../../source/tjcc refl_syntax
+../../../source/tjlink tr2_test
+% alias tjsim ../../../source/tjsim
+% 
+
+/* Checking tail recursiveness */
+
+% tjsim tr2_test
+Welcome to Teyjus
+Copyright (C) 2008 A. Gacek, S. Holte, G. Nadathur, X. Qi, Z. Snow
+Teyjus comes with ABSOLUTELY NO WARRANTY
+This is free software, and you are welcome to redistribute it
+under certain conditions. Please view the accompanying file
+COPYING for more information
+[tr2_test] ?- test 1.
+
+yes
+
+[tr2_test] ?- test 2.
+
+yes
+
+[tr2_test] ?- test 3.
+
+no (more) solutions
+
+[tr2_test] ?- test 4.
+
+yes
+
+[tr2_test] ?- halt.
+% 
