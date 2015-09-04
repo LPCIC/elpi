@@ -3,7 +3,9 @@ TEYJUS= ../../../../teyjus
 
 .PHONY: all eval curry tr1 tr2 progs progs1 progs2 progs3 progs4
 all: eval curry tr1 tr2 progs progs1 progs2 progs3 progs4
-
+run:
+	$(TEYJUS)/tjsim -m 1 -b -s 'main.' progs
+ 
 eval: eval_examples.lp
 curry: curry_test.lp
 tr1: tr1_test.lp

@@ -3,6 +3,8 @@ TEYJUS= ../../../../teyjus
 
 .PHONY: all hcinterp hcsyntax pnf logic
 all: hcinterp hcsyntax pnf logic
+run:
+	$(TEYJUS)/tjsim -m 1 -b -s 'main.' logic
 hcinterp: hcinterp_examples.lp
 hcsyntax: hcsyntax_examples.lp
 pnf: pnf_examples.lp
