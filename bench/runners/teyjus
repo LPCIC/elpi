@@ -5,6 +5,8 @@ NAME=`basename $1`
 BASE=${TOP}/../teyjus/source
 
 ulimit -s 32768
+export RUNNER=teyjus
+export PATH=${BASE}:$PATH
 
 cd $1
 if [ -e "Makefile" ]; then

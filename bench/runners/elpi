@@ -2,13 +2,22 @@
 set -x
 set -e
 ulimit -s 16384
-
+export RUNNER=elpi
+export PATH=${TOP}:$PATH
+export VARIANT=${VARIANT}
 FILE=`readlink -f $1`
 if [ -e ${FILE%%.elpi}.stdin ]; then
 	cat ${FILE%%.elpi}.stdin | \
 	timeout $MAX_TIME /usr/bin/time --quiet --format='%x %E %U %Mk' -o $2 \
 		${TOP}/elpi${VARIANT} $1
 else
+    if [ -e "$FILE/Makefile" ]; then
+	cd $FILE
+	make
+	timeout $MAX_TIME /usr/bin/time --quiet --format='%x %E %U %Mk' -o $2 \
+		make run
+    else
 	timeout $MAX_TIME /usr/bin/time --quiet --format='%x %E %U %Mk' -o $2 \
 		${TOP}/elpi${VARIANT} -test $1
+    fi
 fi

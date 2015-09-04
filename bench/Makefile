@@ -15,7 +15,7 @@ RUNNERS=$(sort $(filter-out %ulimit,$(notdir $(wildcard runners/*) $(wildcard ..
 export MAX_TIME=59
 
 define time-log
-((grep 'TIME' $(1) || echo '? ?') | cut -d ' ' -f 2-;\
+(if grep -q 'TIME' $(1); then grep 'TIME' $(1) | cut -d ' ' -f 2- | paste -sd+ | bc; else echo ?; fi;\
  cat $(2)|cut -d ' ' -f 2-) | tr '\n' ' ' | sed 's/ /,/g'
 endef
 
@@ -40,7 +40,7 @@ TMP=`mktemp`; LOG=`mktemp`;\
  runners/$(call name,$(2)) $(3) $$TMP >$$LOG 2>&1;\
  $(call check,$(1),$(3),$$TMP,$$LOG,$(2)));\
 if [ "$(H)" = "" ]; then cat $$TMP $$LOG; fi; \
-rm $$TMP $$LOG;
+rm $$TMP $$LxOG;
 endef
 
 define runk
