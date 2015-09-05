@@ -1,0 +1,4 @@
+lam (x\
+  pair
+    (fst x)
+    (lam (y\ fst x))).

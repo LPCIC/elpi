@@ -1,0 +1,7 @@
+utils.lpo: utils.mod utils.sig 
+typing.lpo: typing.mod typing.sig terms.sig types.sig
+types.lpo: types.mod types.sig 
+trafo.lpo: trafo.mod trafo.sig terms.sig
+tp_terms.lpo: tp_terms.mod tp_terms.sig poly_typing.sig typing.sig poly_terms.sig terms.sig types.sig poly_types.sig
+tp_part_eval.lpo: tp_part_eval.mod tp_part_eval.sig utils.sig tp_let_ext.sig effect_monad.sig tp_terms.sig poly_typing.sig typing.sig poly_terms.sig terms.sig types.sig poly_types.sig
+tp_let_ext.lpo: tp_let_ext.mod tp_let_ext.sig tp_terms.sig poly_typing.sig typing.sig poly_terms.sig terms.sig types.sig poly_types.sig

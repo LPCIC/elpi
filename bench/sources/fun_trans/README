@@ -1,0 +1,20 @@
+
+Example fun_trans-1.0-0  is from 
+www.ai.univie.ac.at/~markus/home/publications.html#mscthesis
+
+  It contains code used in the MSc thesis of Markus Mottl.  Haven't
+had time to study it very carefully.  It does program transformations.
+It uses both second and third order constructs (see modules
+let_ext.mod and tp_let_ext.mod).  It is non-Llambda and uses both
+first order unification (for type inference) and higher order
+unification (see below).
+
+To run tests, do as in:
+
+./main tests/poly.dat
+
+poly.dat can be replaced by any other file name in the tests subdirectory.
+
+Run all tests with
+
+./testscript

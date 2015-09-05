@@ -1,0 +1,4 @@
+lam (x\
+  case x
+    (l\ fst (pair x u))
+    (r\ snd (pair u x))).
