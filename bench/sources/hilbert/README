@@ -1,0 +1,26 @@
+
+Example hilbert:
+
+  This program was written by Dale Miller (modified for testing
+purposes).  It uses full, third order unification and produces lots of
+flex-flex pairs.  It is purely of theoretical interest. 
+
+  The goal "go." can be called for testing.
+
+There are two versions: hilbert.sig and hilbert.mod, which are the
+original, and hilbert2.sig and hilbert2.mod.
+
+hilbert2 changes the type for church numerals from
+
+(i -> i) -> i -> i  
+
+to
+
+A -> i -> i
+
+
+This has the effect of preventing eta-expansion of terms at certain
+key points.  Eta-expansion at higher types can lead to the need
+to renumber DeBruin indices during reduction.  The original version
+exhibited a large number of renumbering cases, while the polymorphic
+version showed none.
