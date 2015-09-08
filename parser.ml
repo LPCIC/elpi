@@ -382,7 +382,8 @@ EXTEND
      | SIG; CONSTANT; FULLSTOP -> []
      | ACCUMULATE; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
         parse lp (List.map (fun fn -> fn ^ ".mod") filenames)
-     | IMPORT; LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP -> []
+     | IMPORT; filenames=LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP ->
+        parse lp (List.map (fun fn -> fn ^ ".mod") filenames)
      | ACCUM_SIG; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
         parse lp (List.map (fun fn -> fn ^ ".sig") filenames)
      | USE_SIG; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->

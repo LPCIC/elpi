@@ -42,9 +42,11 @@ Documentation:
   (e.g. accumulate "../foo/x.mod"). Necessary to be able to write a path
   that contains a dot.
 - remark that we handle constants that start with $ in a special way
-- integers are 31 bits; floats are...
+- integers are 31 bits (25 bits in Teyjus); floats are...
 - no beta-redexes in the source code
 - semantics of ; departed from Teyjus
+- semantics of import/accumulate simpler than in Teyjus (no renaming, no
+  scoping)
 - we accepts generic terms as rules in a .mod/.elpi file.
   All free uppercase variables are turned into existential variables.
   All lowercase ones into universal variables.
