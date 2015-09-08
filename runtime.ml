@@ -449,13 +449,13 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
            ~from:argsdepth ~to_:(to_+depth) args e a
     | AppArg(i,args) when argsdepth >= to_ ->
        let a = e.(i) in
+       let args = List.map (aux depth) args in
        if a == dummy then
          let r = oref dummy in
          let v = UVar(r,to_,0) in
          e.(i) <- v;
          AppUVar(r,to_,args) 
        else
-         let args = List.map (aux depth) args in
          app_deref ~from:argsdepth ~to_:(to_+depth) args a
 
     (* pruning *)
