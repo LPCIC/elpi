@@ -6,7 +6,7 @@ TEYJUS= ../../../../teyjus/source
 all: utils types terms typing oper_sem poly_types poly_terms poly_typing poly_oper_sem effect_monad let_ext part_eval tp_terms tp_let_ext tp_part_eval termination trafo cse terzo_stuff main fun_trans
 
 run:
-	$(TEYJUS)/tjsim -m 1 -b -s 'main.' main
+	$(TEYJUS)/tjsim -m 1 -b -s 'main.' fun_trans 
 
 utils: utils.lp
 types: types.lp
