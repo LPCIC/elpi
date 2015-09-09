@@ -27,8 +27,7 @@ termination: termination.lp
 trafo: trafo.lp
 cse: cse.lp
 main: main.lp
-%fun_trans: fun_trans.lp
-
+fun_trans: fun_trans.lp
 terzo_stuff: terzo_stuff.lp
 
 

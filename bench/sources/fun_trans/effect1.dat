@@ -1,8 +1,1 @@
-lam (g\
-  app
-    (lam (f\
-      app
-        (snd (pair (app f u) (lam (x\ x))))
-        u))
-    g
-).
+lam (g\ app (lam (f\ app (snd (pair (app f u) (lam (x\ x)))) u)) g).

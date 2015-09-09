@@ -1,10 +1,1 @@
-lam (x\
-  app
-    (rec (f\y\
-      app
-        y
-        (case x
-          (l\ inl l)
-          (r\ inr (snd (pair f r))))))
-    (case (inl (lam (x\ x))) (l\ l) (r\ fst r))
-).
+lam (x\ app (rec (f\y\ app y (case x (l\ inl l) (r\ inr (snd (pair f r)))))) (case (inl (lam (x\ x))) (l\ l) (r\ fst r))).
