@@ -1,6 +1,6 @@
 main :-
- $print a X,
  X 1 = 1 + 1,
- $print b X,
+ Y 2 = W + 2,
+ Y 1 = Z 1 + 1,
  X = (x\ 1 + x),
- $print c X.
+ Y = (x\ 1 + x).

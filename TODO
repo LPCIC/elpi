@@ -47,6 +47,11 @@ TODO:
 - the pcf example whants to delay a goal that is in the pattern fragment
   but not in our fragment. Let's implement the pattern fragment? :-(
 
+DELAYS:
+- implement backtracking
+- X t1 = Y t2 is now associated only to X and resumed when X is instantiated;
+  it should be resumed when Y is instantiated as well
+
 Documentation:
 - see "Departures from Teyjus"
 - accumulate and friends accept pathnames in quotes
