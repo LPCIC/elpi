@@ -1249,9 +1249,6 @@ let unif adepth e bdepth a b =
 
    (* assign *)
    | _, Arg (i,0) ->
-     Format.fprintf Format.std_formatter "UFFA: @[<hov 2>^%d:%a@ =%d= ^%d:%a@]\n"
-       adepth (ppterm depth [] adepth [||]) a depth
-       bdepth (ppterm depth [] adepth e) b;
       e.(i) <-
        restrict adepth ~from:(adepth+depth) ~to_:adepth e a;
       SPY "assign" (ppterm depth [] adepth [||]) (e.(i)); true
@@ -1527,7 +1524,6 @@ let make_runtime : unit -> ('a -> 'b -> int -> 'k) * ('k -> 'k) =
      depth >= 0 is the number of variables in the context. *)
   let rec run depth p g gs (next : frame) alts lvl =
     TRACE "run" (fun fmt -> ppterm depth [] 0 [||] fmt g)
-    Format.fprintf Format.std_formatter "RUN: %a\n" (ppterm depth [] 0 [||]) g;
     match g with
     | c when c == cutc -> TCALL cut p gs next alts lvl
     | App(c, g, gs') when c == andc || c == andc2 ->
@@ -1628,7 +1624,7 @@ let make_runtime : unit -> ('a -> 'b -> int -> 'k) * ('k -> 'k) =
 
   and pop_andl alts = function
     | FNil ->
-       IFDEF DELAYED THEN
+       IFDEF DELAY THEN
         while !to_resume <> [] do
           match !to_resume with
           | Delayed_unif (ad,e,bd,a,b) :: rest ->
