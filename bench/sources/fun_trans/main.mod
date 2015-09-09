@@ -12,7 +12,7 @@ import cse.
 
 type main_aux in_stream -> o.
 
-main Name :-
+main1 Name :-
   open_in Name File,
   (
     main_aux File

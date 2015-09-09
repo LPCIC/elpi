@@ -5,4 +5,4 @@ accum_sig part_eval.
 accum_sig tp_part_eval.
 
 % [main +Arg] starts program with argument [Arg].
-type main string -> o.
+type main1 string -> o.

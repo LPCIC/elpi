@@ -112,6 +112,13 @@ Benchmarks:
 0. modify lambda3 to use the bound variables (via a list, etc.)
 1. http://www.cs.hofstra.edu/~cscccl/lambda-examples/
    vedi lpcic/elpi/doc/termrep.pdf
+2. the following benchmarks in bench/sources/ go outside the fragment:
+   - progs
+   - pcf
+   - hilbert
+   - hilbert2
+   - fun_trans
+
 
 Possible optimizations:
 
