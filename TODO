@@ -96,6 +96,12 @@ Minor Bugs (mostly forward compatibility with Teyjus):
    In particular, it should not be allowed to add more clauses to them
    via implication.
 - turn = into a builtin (more efficient?)
+- thi call:
+dell@dell:~/lpcic/elpi/bench/sources/fun_trans$ ../../../elpi fun_trans.mod
+  works fine, but the same call outside of the fun_trans/ directory does not, i.e.:
+dell@dell:~/lpcic/elpi$ ./elpi bench/sources/fun_trans.elpi 
+  fails. The problem is in loading the input file.
+
 
 Other:
 
