@@ -7,9 +7,9 @@
 
 
 V=$(shell git describe --tags)
-PP=camlp5o -I . -I +camlp5
+PP=camlp5o -I . -I +camlp5 pa_macro.cmo
 PARSE=pa_extend.cmo pa_lexer.cmo
-TRACESYNTAX=pa_extend.cmo q_MLast.cmo pa_macro.cmo
+TRACESYNTAX=pa_extend.cmo q_MLast.cmo
 FLAGS=-I $(shell camlp5 -where)
 OCAMLOPTIONS= -g
 CMX=cmx
@@ -70,7 +70,7 @@ elpi.trace: elpi.trace.$(CMX) latex_exporter.$(CMX) runtime.trace.$(CMX) parser.
 	mv $*.$(CMX) $*.trace.$(CMX)
 	mv $*.o $*.trace.o
 %.cmi: %.mli
-	$(OC) $(OCAMLOPTIONS) -c $<
+	$(OC) $(OCAMLOPTIONS) -pp '$(PP)' -c $<
 
 parser.$(CMX): parser.ml parser.cmi 
 	$(OCP) $(OCAMLOPTIONS) -pp '$(PP) $(PARSE)' $(FLAGS) -o $@ -c $<

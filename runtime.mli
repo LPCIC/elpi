@@ -46,7 +46,7 @@ type term =
   | Float of float
 and 'a oref = {
   mutable contents : 'a;
-(*   mutable rest : constraints *)
+  IFDEF DELAY THEN mutable rest : constraints END
 }
 and constraints = exn list
 

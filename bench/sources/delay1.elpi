@@ -1,0 +1,6 @@
+main :-
+ $print a X,
+ X 1 = 1 + 1,
+ $print b X,
+ X = (x\ 1 + x),
+ $print c X.

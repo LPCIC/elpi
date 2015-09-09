@@ -2,6 +2,8 @@
 (* license: GNU Lesser General Public License Version 2.1                    *)
 (* ------------------------------------------------------------------------- *)
 
+DEFINE DELAY
+
 module Utils : sig
 
   val pplist : ?max:int -> ?boxed:bool ->
@@ -97,7 +99,7 @@ type term =
   | Float of float
 and 'a oref = {
   mutable contents : 'a;
-(*   mutable rest : constraints *)
+  IFDEF DELAY THEN mutable rest : constraints END
 }
 and constraints = exn list (* well... open type in caml < 4.02 *)
 
@@ -367,11 +369,21 @@ open Pp
 
 type trail = term oref list ref
 let trail : trail = ref []
-let last_call = ref false
-let to_resume = ref []
+let last_call = ref false;;
+IFDEF DELAY THEN let to_resume = ref [] END
 
-let (@:=) r v = r.contents <- v(*; if r.rest <> [] then begin to_resume := !to_resume @ r.rest; r.rest <- []; end*)
-let oref x = { contents = x (*; rest = []*) }
+let (@:=) r v =
+ r.contents <- v;
+ IFDEF DELAY THEN
+   if r.rest <> [] then
+    begin
+     Format.fprintf Format.std_formatter "One to resume\n";
+     to_resume := !to_resume @ r.rest; r.rest <- []; end
+ ELSE () END
+let oref x =
+ IFDEF DELAY THEN { contents = x; rest = [] }
+ ELSE { contents = x }
+ END
 
 
 (* {{{ ************** to_heap/restrict/deref ******************** *)
@@ -991,7 +1003,9 @@ let rec make_lambdas destdepth args =
  if args = 0 then UVar(oref dummy,destdepth,0)
  else Lam (make_lambdas (destdepth+1) (args-1))
 
-exception Delayed_unif of int * term array * int * term * term
+IFDEF DELAY THEN
+ exception Delayed_unif of int * term array * int * term * term
+END
 
 (* Invariants:                                          |
    adepth: depth of a (query, heap term)                - bdepth       b
@@ -1235,6 +1249,9 @@ let unif adepth e bdepth a b =
 
    (* assign *)
    | _, Arg (i,0) ->
+     Format.fprintf Format.std_formatter "UFFA: @[<hov 2>^%d:%a@ =%d= ^%d:%a@]\n"
+       adepth (ppterm depth [] adepth [||]) a depth
+       bdepth (ppterm depth [] adepth e) b;
       e.(i) <-
        restrict adepth ~from:(adepth+depth) ~to_:adepth e a;
       SPY "assign" (ppterm depth [] adepth [||]) (e.(i)); true
@@ -1300,22 +1317,29 @@ let unif adepth e bdepth a b =
        if is_llam then
          bind r lvl args adepth depth delta bdepth true other e
        else begin
-     Format.fprintf Format.std_formatter "HO unification (maybe delay): %a = %a\n" (ppterm depth [] adepth [||]) a (ppterm depth [] bdepth [||]) b ;
-     error (Format.flush_str_formatter ())
+     IFDEF DELAY THEN
+       Format.fprintf Format.std_formatter "HO unification delayed: %a = %a\n" (ppterm depth [] adepth [||]) a (ppterm depth [] bdepth [||]) b ;
+       r.rest <- Delayed_unif (adepth+depth,e,bdepth,a,b) :: r.rest;
+       true
+     ELSE
+       Format.fprintf Format.std_formatter "HO unification (maybe delay): %a = %a\n" (ppterm depth [] adepth [||]) a (ppterm depth [] bdepth [||]) b ;
+       error (Format.flush_str_formatter ())
+     END
        end
    | other, AppUVar (r, lvl,args) ->
        let is_llam, args = is_llam lvl args adepth bdepth depth false e in
        if is_llam then
          bind r lvl args adepth depth delta bdepth false other e
        else begin
-     Format.fprintf Format.std_formatter "HO unification (maybe delay): %a = %a\n" (ppterm depth [] adepth [||]) a (ppterm depth [] bdepth [||]) b ;
-     error (Format.flush_str_formatter ())
-       end
-
-(*
+     IFDEF DELAY THEN
+       Format.fprintf Format.std_formatter "HO unification delayed: %a = %a\n" (ppterm depth [] adepth [||]) a (ppterm depth [] bdepth [||]) b ;
        r.rest <- Delayed_unif (adepth+depth,e,bdepth,a,b) :: r.rest;
        true
-*)
+     ELSE
+       Format.fprintf Format.std_formatter "HO unification (maybe delay): %a = %a\n" (ppterm depth [] adepth [||]) a (ppterm depth [] bdepth [||]) b ;
+       error (Format.flush_str_formatter ())
+     END
+       end
    | other, AppArg(i,args) ->
        let is_llam, args = is_llam adepth args adepth bdepth depth false e in
        if is_llam then
@@ -1323,8 +1347,15 @@ let unif adepth e bdepth a b =
          e.(i) <- UVar(r,adepth,0);
          bind r adepth args adepth depth delta bdepth false other e
        else begin
-     Format.fprintf Format.std_formatter "HO unification (maybe delay): %a = %a\n" (ppterm depth [] adepth [||]) a (ppterm depth [] bdepth [||]) b ;
-     error (Format.flush_str_formatter ())
+     IFDEF DELAY THEN
+       Format.fprintf Format.std_formatter "HO unification to_heap before delay: %a = %a\n" (ppterm depth [] adepth [||]) a (ppterm depth [] bdepth [||]) b ;
+       unif depth a bdepth
+         (to_heap bdepth ~from:bdepth ~to_:(adepth+depth) e b)
+         true
+     ELSE
+       Format.fprintf Format.std_formatter "HO unification (maybe delay): %a = %a\n" (ppterm depth [] adepth [||]) a (ppterm depth [] bdepth [||]) b ;
+       error (Format.flush_str_formatter ())
+     END
        end
 
    (* recursion *)
@@ -1496,6 +1527,7 @@ let make_runtime : unit -> ('a -> 'b -> int -> 'k) * ('k -> 'k) =
      depth >= 0 is the number of variables in the context. *)
   let rec run depth p g gs (next : frame) alts lvl =
     TRACE "run" (fun fmt -> ppterm depth [] 0 [||] fmt g)
+    Format.fprintf Format.std_formatter "RUN: %a\n" (ppterm depth [] 0 [||]) g;
     match g with
     | c when c == cutc -> TCALL cut p gs next alts lvl
     | App(c, g, gs') when c == andc || c == andc2 ->
@@ -1596,15 +1628,16 @@ let make_runtime : unit -> ('a -> 'b -> int -> 'k) * ('k -> 'k) =
 
   and pop_andl alts = function
     | FNil ->
-(*
-       while !to_resume <> [] do
-         match !to_resume with
-         | Delayed_unif (ad,e,bd,a,b) :: rest ->
-             to_resume := rest;
-             assert(unif ad e bd a b)
-         | _ -> assert false
-       done;
-*)
+       IFDEF DELAYED THEN
+        while !to_resume <> [] do
+          match !to_resume with
+          | Delayed_unif (ad,e,bd,a,b) :: rest ->
+              to_resume := rest;
+              Format.fprintf Format.std_formatter "One resumed\n";
+              assert(unif ad e bd a b)
+          | _ -> assert false
+        done;
+       ELSE () END;
        alts
     | FCons (_,[],_) -> anomaly "empty stack frame"
     | FCons(lvl,(depth,p,g)::gs,next) -> run depth p g gs next alts lvl
@@ -1622,10 +1655,20 @@ let make_runtime : unit -> ('a -> 'b -> int -> 'k) * ('k -> 'k) =
  (* Finally the runtime *)
  fun () ->
   let my_trail = ref [] in
+  let my_to_resume = ref [] in
   let ensure_runtime f x =
-    trail := !my_trail; last_call := false; to_resume := [];
-    try let rc = f x in my_trail := !trail; trail := []; rc
-    with e -> my_trail := !trail; trail := []; raise e in
+    trail := !my_trail; last_call := false;
+    IFDEF DELAY THEN to_resume := !my_to_resume ELSE () END;
+    try
+     let rc = f x in
+     my_trail := !trail; trail := [];
+     IFDEF DELAY THEN my_to_resume := !to_resume; to_resume := [] ELSE () END;
+     rc
+    with e ->
+     my_trail := !trail;
+     trail := [];
+     IFDEF DELAY THEN my_to_resume := !to_resume; to_resume := [] ELSE () END;
+     raise e in
   (fun p (_,q_env,q) -> ensure_runtime (fun lcs ->
      let q = to_heap 0 ~from:0 ~to_:0 q_env q in
      run lcs p q [] FNil emptyalts emptyalts)),
