@@ -93,4 +93,5 @@ trace.$(CMX): trace.ml trace.cmi
 trace.cmi: trace.mli
 custom.cmi: custom.mli
 custom.$(CMX): custom.ml custom.cmi runtime.cmi runtime.$(CMX)
+custom.trace.$(CMX): custom.ml custom.cmi runtime.cmi runtime.trace.$(CMX)
 
