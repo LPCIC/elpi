@@ -48,7 +48,8 @@ TODO:
   but not in our fragment. Let's implement the pattern fragment? :-(
 
 DELAYS:
-- implement backtracking
+- debug the progs case that raises an anomaly in to_heap
+- delay pruning as well
 
 Documentation:
 - see "Departures from Teyjus"

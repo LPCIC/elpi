@@ -1,0 +1,9 @@
+main :-
+ a X Y,
+ X 1 = Y 1,
+ c Y.
+
+a (x\ x) Z :- $print "a1".
+a X X :- $print "a2". 
+c (x\ x) :- $print "fail", fail.
+c Y.

@@ -1,0 +1,10 @@
+main :-
+ X 1 = 1,
+ c X Y,
+ Y = (x\2),
+ fail.
+
+main.
+
+c X Y :- X 2 = Y 2.
+c X Y :- X = (x \ 2).
