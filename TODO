@@ -29,6 +29,8 @@ Departures from Teyjus due to camlp5 idiosynchrasies:
   if it fails, according to the TJPATH
 
 TODO:
+- restriction is not implemented even in some of the simple cases.
+  E.g. "pi x \ X = Y x" is not solved!
 - how does getenv fails in Teyjus when the var is not defined?
 - when toes Teyjus parses the TJPATH? We do it statically, i.e. when
   elpi is run, not when accumulate is faced
