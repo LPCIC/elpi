@@ -114,7 +114,11 @@ and 'a oref = {
   mutable contents : 'a;
   IFDEF DELAY THEN mutable rest : constraints END
 }
-and constraints = exn list (* well... open type in caml < 4.02 *)
+and constraints =
+ (* exn is the constraint;
+    the associated list is the list of variables the constraint is
+    associated to *)
+ (exn * term oref list) list (* well... open type in caml < 4.02 *)
 
 let (!!) { contents = x } = x
 
@@ -394,7 +398,7 @@ let (@:=) r v =
    if r.rest <> [] then
     begin
      Format.fprintf Format.std_formatter "%d delayed goal(s) to be resumed\n%!" (List.length r.rest);
-     to_resume := !to_resume @ r.rest; r.rest <- [];
+     to_resume := r.rest @ !to_resume
     end
  ELSE () END
 let oref x =
@@ -1024,6 +1028,17 @@ IFDEF DELAY THEN
  exception Delayed_unif of int * term array * int * term * term
 END
 
+IFDEF DELAY THEN
+(* is_flex is to be called only on heap terms *)
+let rec is_flex =
+ function
+  | Arg _ | AppArg _ -> anomaly "is_flex called on Args"
+  | UVar ({ contents = t }, _, _)
+  | AppUVar ({ contents = t }, _, _) when t != dummy -> is_flex t
+  | UVar (r, _, _) | AppUVar (r, _, _) -> Some r
+  | Const _ | Lam _ | App _ | Custom _ | String _ | Int _ | Float _ -> None
+END
+
 (* Invariants:                                          |
    adepth: depth of a (query, heap term)                - bdepth       b
    bdepth: depth of b (clause hd, stack term in env e)  | b-only       .
@@ -1326,6 +1341,23 @@ let unif adepth e bdepth a b =
       unif depth a bdepth b heap
 
    (* HO *)
+   | other, AppArg(i,args) ->
+       let is_llam, args = is_llam adepth args adepth bdepth depth false e in
+       if is_llam then
+         let r = oref dummy in
+         e.(i) <- UVar(r,adepth,0);
+         bind r adepth args adepth depth delta bdepth false other e
+       else begin
+     IFDEF DELAY THEN
+       Format.fprintf Format.std_formatter "HO unification to_heap before delay: %a = %a\n" (ppterm depth [] adepth [||]) a (ppterm depth [] bdepth [||]) b ;
+       unif depth a bdepth
+         (to_heap adepth ~from:(bdepth+depth) ~to_:(bdepth+depth) e b)
+         true
+     ELSE
+       Format.fprintf Format.std_formatter "HO unification (maybe delay): %a = %a\n" (ppterm depth [] adepth [||]) a (ppterm depth [] bdepth [||]) b ;
+       error (Format.flush_str_formatter ())
+     END
+       end
    | AppUVar (r, lvl,args), other ->
        let is_llam, args = is_llam lvl args adepth bdepth depth true e in
        if is_llam then
@@ -1334,7 +1366,11 @@ let unif adepth e bdepth a b =
      IFDEF DELAY THEN
        Format.fprintf Format.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth [||]) a (uppterm depth [] bdepth [||]) b ;
        let delayed_goal = Delayed_unif (adepth+depth,e,bdepth+depth,a,b) in
-       r.rest <- delayed_goal :: r.rest;
+       let (_,vars) as delayed_goal =
+        match is_flex other with
+           None -> delayed_goal, [r]
+         | Some r' -> delayed_goal, [r;r'] in
+       List.iter (fun r -> r.rest <- delayed_goal :: r.rest) vars ;
        delayed := delayed_goal :: !delayed;
        true
      ELSE
@@ -1348,26 +1384,15 @@ let unif adepth e bdepth a b =
          bind r lvl args adepth depth delta bdepth false other e
        else begin
      IFDEF DELAY THEN
-       Format.fprintf Format.std_formatter "HO unification delayed: %a = %a\n" (ppterm depth [] adepth [||]) a (ppterm depth [] bdepth [||]) b ;
-       r.rest <- Delayed_unif (adepth+depth,e,bdepth,a,b) :: r.rest;
+       Format.fprintf Format.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth [||]) a (uppterm depth [] bdepth [||]) b ;
+       let delayed_goal = Delayed_unif (adepth+depth,e,bdepth+depth,a,b) in
+       let (_,vars) as delayed_goal =
+        match is_flex other with
+           None -> delayed_goal, [r]
+         | Some r' -> delayed_goal, [r;r'] in
+       List.iter (fun r -> r.rest <- delayed_goal :: r.rest) vars ;
+       delayed := delayed_goal :: !delayed;
        true
-     ELSE
-       Format.fprintf Format.std_formatter "HO unification (maybe delay): %a = %a\n" (ppterm depth [] adepth [||]) a (ppterm depth [] bdepth [||]) b ;
-       error (Format.flush_str_formatter ())
-     END
-       end
-   | other, AppArg(i,args) ->
-       let is_llam, args = is_llam adepth args adepth bdepth depth false e in
-       if is_llam then
-         let r = oref dummy in
-         e.(i) <- UVar(r,adepth,0);
-         bind r adepth args adepth depth delta bdepth false other e
-       else begin
-     IFDEF DELAY THEN
-       Format.fprintf Format.std_formatter "HO unification to_heap before delay: %a = %a\n" (ppterm depth [] adepth [||]) a (ppterm depth [] bdepth [||]) b ;
-       unif depth a bdepth
-         (to_heap adepth ~from:(bdepth+depth) ~to_:(bdepth+depth) e b)
-         true
      ELSE
        Format.fprintf Format.std_formatter "HO unification (maybe delay): %a = %a\n" (ppterm depth [] adepth [||]) a (ppterm depth [] bdepth [||]) b ;
        error (Format.flush_str_formatter ())
@@ -1658,7 +1683,7 @@ end
         else begin
          List.iter
           (function
-           | Delayed_unif (ad,e,bd,a,b) ->
+           | Delayed_unif (ad,e,bd,a,b),_ ->
               Format.fprintf Format.std_formatter
                "delayed goal: @[<hov 2>^%d:%a@ == ^%d:%a@]\n"
                 ad (uppterm ad [] 0 [||]) a
@@ -1675,8 +1700,9 @@ IFDEF DELAY THEN
    let ok = ref true in
    while !ok && !to_resume <> [] do
      match !to_resume with
-     | Delayed_unif (ad,e,bd,a,b) as exn :: rest ->
+     | (Delayed_unif (ad,e,bd,a,b), vars) as exn :: rest ->
          delayed := remove_from_list exn !delayed;
+         List.iter (fun r -> r.rest <- remove_from_list exn r.rest) vars;
          to_resume := rest;
          Format.fprintf Format.std_formatter
           "Resuming @[<hov 2>^%d:%a@ == ^%d:%a@]\n%!"

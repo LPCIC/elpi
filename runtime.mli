@@ -48,7 +48,11 @@ and 'a oref = {
   mutable contents : 'a;
   IFDEF DELAY THEN mutable rest : constraints END
 }
-and constraints = exn list
+and constraints =
+ (* exn is the constraint;
+    the associated list is the list of variables the constraint is
+    associated to *)
+ (exn * term oref list) list (* well... open type in caml < 4.02 *)
 
 val term_of_ast : depth:int -> Parser.term -> term
 

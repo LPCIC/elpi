@@ -49,8 +49,6 @@ TODO:
 
 DELAYS:
 - implement backtracking
-- X t1 = Y t2 is now associated only to X and resumed when X is instantiated;
-  it should be resumed when Y is instantiated as well
 
 Documentation:
 - see "Departures from Teyjus"
