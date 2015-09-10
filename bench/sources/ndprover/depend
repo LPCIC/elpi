@@ -1,0 +1,12 @@
+tacticals.lpo: tacticals.mod tacticals.sig goalred.sig goaltypes.sig
+ndtac.lpo: ndtac.mod ndtac.sig listmanip.sig goaltypes.sig ndproofs.sig logic.sig
+listmanip.lpo: listmanip.mod listmanip.sig 
+inter.lpo: inter.mod inter.sig ndtac.sig tacticals.sig formulas.sig logic.sig nonlogical.sig ndproofs.sig goaltypes.sig
+goalred.lpo: goalred.mod goalred.sig goaltypes.sig
+formulas.lpo: formulas.mod formulas.sig logic.sig nonlogical.sig
+tacticals.lp: tacticals.lpo goalred.lpo
+ndtac.lp: ndtac.lpo listmanip.lpo
+listmanip.lp: listmanip.lpo 
+inter.lp: inter.lpo ndtac.lpo tacticals.lpo formulas.lpo listmanip.lpo goalred.lpo
+goalred.lp: goalred.lpo 
+formulas.lp: formulas.lpo 

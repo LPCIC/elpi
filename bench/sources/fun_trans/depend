@@ -1,0 +1,42 @@
+utils.lpo: utils.mod utils.sig 
+typing.lpo: typing.mod typing.sig terms.sig types.sig
+types.lpo: types.mod types.sig 
+trafo.lpo: trafo.mod trafo.sig terms.sig
+tp_terms.lpo: tp_terms.mod tp_terms.sig poly_typing.sig typing.sig poly_terms.sig terms.sig types.sig poly_types.sig
+tp_part_eval.lpo: tp_part_eval.mod tp_part_eval.sig utils.sig tp_let_ext.sig effect_monad.sig tp_terms.sig poly_typing.sig typing.sig poly_terms.sig terms.sig types.sig poly_types.sig
+tp_let_ext.lpo: tp_let_ext.mod tp_let_ext.sig tp_terms.sig poly_typing.sig typing.sig poly_terms.sig terms.sig types.sig poly_types.sig
+terzo_stuff.lpo: terzo_stuff.mod terzo_stuff.sig 
+terms.lpo: terms.mod terms.sig 
+termination.lpo: termination.mod termination.sig part_eval.sig let_ext.sig effect_monad.sig oper_sem.sig terms.sig
+poly_typing.lpo: poly_typing.mod poly_typing.sig typing.sig poly_terms.sig poly_types.sig terms.sig types.sig
+poly_types.lpo: poly_types.mod poly_types.sig types.sig
+poly_terms.lpo: poly_terms.mod poly_terms.sig terms.sig poly_types.sig types.sig
+poly_oper_sem.lpo: poly_oper_sem.mod poly_oper_sem.sig oper_sem.sig poly_terms.sig terms.sig poly_types.sig types.sig
+part_eval.lpo: part_eval.mod part_eval.sig utils.sig let_ext.sig effect_monad.sig oper_sem.sig terms.sig
+oper_sem.lpo: oper_sem.mod oper_sem.sig terms.sig
+main.lpo: main.mod main.sig utils.sig poly_typing.sig poly_oper_sem.sig part_eval.sig tp_part_eval.sig termination.sig trafo.sig cse.sig typing.sig poly_terms.sig terms.sig types.sig poly_types.sig oper_sem.sig let_ext.sig effect_monad.sig tp_let_ext.sig tp_terms.sig
+let_ext.lpo: let_ext.mod let_ext.sig oper_sem.sig terms.sig
+fun_trans.lpo: fun_trans.mod fun_trans.sig utils.sig poly_typing.sig poly_oper_sem.sig part_eval.sig tp_part_eval.sig termination.sig trafo.sig cse.sig main.sig typing.sig poly_terms.sig terms.sig types.sig poly_types.sig oper_sem.sig let_ext.sig effect_monad.sig tp_let_ext.sig tp_terms.sig
+effect_monad.lpo: effect_monad.mod effect_monad.sig 
+cse.lpo: cse.mod cse.sig terms.sig let_ext.sig oper_sem.sig
+utils.lp: utils.lpo 
+typing.lp: typing.lpo terms.lpo types.lpo
+types.lp: types.lpo 
+trafo.lp: trafo.lpo terms.lpo
+tp_terms.lp: tp_terms.lpo poly_typing.lpo typing.lpo poly_terms.lpo poly_types.lpo terms.lpo types.lpo
+tp_part_eval.lp: tp_part_eval.lpo utils.lpo tp_let_ext.lpo effect_monad.lpo tp_terms.lpo poly_typing.lpo typing.lpo poly_terms.lpo poly_types.lpo terms.lpo types.lpo
+tp_let_ext.lp: tp_let_ext.lpo tp_terms.lpo poly_typing.lpo typing.lpo poly_terms.lpo poly_types.lpo terms.lpo types.lpo
+terzo_stuff.lp: terzo_stuff.lpo 
+terms.lp: terms.lpo 
+termination.lp: termination.lpo part_eval.lpo utils.lpo let_ext.lpo effect_monad.lpo oper_sem.lpo terms.lpo
+poly_typing.lp: poly_typing.lpo typing.lpo poly_terms.lpo poly_types.lpo terms.lpo types.lpo
+poly_types.lp: poly_types.lpo types.lpo
+poly_terms.lp: poly_terms.lpo terms.lpo poly_types.lpo types.lpo
+poly_oper_sem.lp: poly_oper_sem.lpo oper_sem.lpo poly_terms.lpo terms.lpo poly_types.lpo types.lpo
+part_eval.lp: part_eval.lpo utils.lpo let_ext.lpo effect_monad.lpo oper_sem.lpo terms.lpo
+oper_sem.lp: oper_sem.lpo terms.lpo
+main.lp: main.lpo utils.lpo poly_typing.lpo poly_oper_sem.lpo part_eval.lpo tp_part_eval.lpo termination.lpo trafo.lpo cse.lpo typing.lpo poly_terms.lpo poly_types.lpo terms.lpo types.lpo oper_sem.lpo let_ext.lpo effect_monad.lpo tp_let_ext.lpo tp_terms.lpo
+let_ext.lp: let_ext.lpo oper_sem.lpo terms.lpo
+fun_trans.lp: fun_trans.lpo utils.lpo poly_typing.lpo poly_oper_sem.lpo part_eval.lpo tp_part_eval.lpo termination.lpo trafo.lpo cse.lpo main.lpo typing.lpo poly_terms.lpo poly_types.lpo terms.lpo types.lpo oper_sem.lpo let_ext.lpo effect_monad.lpo tp_let_ext.lpo tp_terms.lpo
+effect_monad.lp: effect_monad.lpo 
+cse.lp: cse.lpo 

@@ -1,0 +1,28 @@
+This directory contains modules of lambda Prolog code that deal with lists or
+use lists. Some of these also implement higher-order functions.
+
+The files:
+
+assoc.{sig,mod}, assoclists.{sig,mod}:
+   The main signature is assoc.sig. These files implement an association
+   list type.
+
+lists.{sig,mod}:
+   Standard list manipulating predicates
+
+lists2.{sig,mod}:
+   List functions but with lists implemented with new functors, i.e. not 
+   using the builtin structures. This can be used to test the benefit of 
+   special list representations
+
+reverse.{sig,mod}:
+   This implements clever reverse using nested predicate definitions and
+   also non-local variables
+
+funs.{sig,mod}:
+   This implements some higher-order predicates including the intensional 
+   mapping predicate mapfun
+
+maps.{sig,mod}
+   This implements more higher-order predicates and has some overlap with 
+   funs

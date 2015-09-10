@@ -1,0 +1,32 @@
+tr_recognizer.lpo: tr_recognizer.mod tr_recognizer.sig fp_types.sig fp_vocab.sig
+tr2_test.lpo: tr2_test.mod tr2_test.sig terms.sig general_tr.sig fp_types.sig fp_vocab.sig
+tr1_test.lpo: tr1_test.mod tr1_test.sig terms.sig tr_recognizer.sig fp_types.sig fp_vocab.sig
+terms.lpo: terms.mod terms.sig fp_types.sig fp_vocab.sig
+refl_syntax.lpo: refl_syntax.mod refl_syntax.sig fp_types.sig fp_vocab.sig
+progs4.lpo: progs4.mod progs4.sig tr2_test.sig fp_types.sig fp_vocab.sig terms.sig
+progs3.lpo: progs3.mod progs3.sig tr1_test.sig fp_types.sig fp_vocab.sig
+progs2.lpo: progs2.mod progs2.sig curry_test.sig fp_types.sig fp_vocab.sig
+progs1.lpo: progs1.mod progs1.sig eval_examples.sig fp_types.sig fp_vocab.sig
+progs.lpo: progs.mod progs.sig progs1.sig progs2.sig progs3.sig progs4.sig
+general_tr.lpo: general_tr.mod general_tr.sig refl_syntax.sig fp_types.sig fp_vocab.sig
+eval_examples.lpo: eval_examples.mod eval_examples.sig eval.sig terms.sig fp_types.sig fp_vocab.sig
+eval_basic.lpo: eval_basic.mod eval_basic.sig fp_types.sig
+eval.lpo: eval.mod eval.sig eval_basic.sig fp_types.sig fp_vocab.sig
+curry_transform.lpo: curry_transform.mod curry_transform.sig fp_vocab.sig fp_types.sig
+curry_test.lpo: curry_test.mod curry_test.sig terms.sig curry_transform.sig fp_types.sig fp_vocab.sig
+tr_recognizer.lp: tr_recognizer.lpo 
+tr2_test.lp: tr2_test.lpo terms.lpo general_tr.lpo refl_syntax.lpo
+tr1_test.lp: tr1_test.lpo terms.lpo tr_recognizer.lpo
+terms.lp: terms.lpo 
+refl_syntax.lp: refl_syntax.lpo 
+progs4.lp: progs4.lpo tr2_test.lpo terms.lpo general_tr.lpo refl_syntax.lpo
+progs3.lp: progs3.lpo tr1_test.lpo terms.lpo tr_recognizer.lpo
+progs2.lp: progs2.lpo curry_test.lpo terms.lpo curry_transform.lpo
+progs1.lp: progs1.lpo eval_examples.lpo eval.lpo terms.lpo eval_basic.lpo
+progs.lp: progs.lpo progs1.lpo progs2.lpo progs3.lpo progs4.lpo eval_examples.lpo eval.lpo terms.lpo eval_basic.lpo curry_test.lpo curry_transform.lpo tr1_test.lpo tr_recognizer.lpo tr2_test.lpo general_tr.lpo refl_syntax.lpo
+general_tr.lp: general_tr.lpo refl_syntax.lpo
+eval_examples.lp: eval_examples.lpo eval.lpo terms.lpo eval_basic.lpo
+eval_basic.lp: eval_basic.lpo 
+eval.lp: eval.lpo eval_basic.lpo
+curry_transform.lp: curry_transform.lpo 
+curry_test.lp: curry_test.lpo terms.lpo curry_transform.lpo

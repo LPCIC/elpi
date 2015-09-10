@@ -1,0 +1,18 @@
+refl_syntax.lpo: refl_syntax.mod refl_syntax.sig logic_types.sig logic_basic.sig logic_vocab.sig
+pnf_examples.lpo: pnf_examples.mod pnf_examples.sig refl_syntax.sig pnf.sig logic_types.sig logic_basic.sig logic_vocab.sig
+pnf.lpo: pnf.mod pnf.sig logic_types.sig logic_basic.sig
+logic.lpo: logic.mod logic.sig hcinterp_examples.sig hcsyntax_examples.sig pnf_examples.sig logic_types.sig logic_vocab.sig logic_basic.sig
+lists.lpo: lists.mod lists.sig 
+hcsyntax_examples.lpo: hcsyntax_examples.mod hcsyntax_examples.sig hc_syntax.sig refl_syntax.sig logic_types.sig logic_basic.sig logic_vocab.sig
+hcinterp_examples.lpo: hcinterp_examples.mod hcinterp_examples.sig hc_interp.sig logic_basic.sig logic_types.sig logic_vocab.sig
+hc_syntax.lpo: hc_syntax.mod hc_syntax.sig logic_types.sig logic_basic.sig
+hc_interp.lpo: hc_interp.mod hc_interp.sig lists.sig logic_types.sig logic_basic.sig logic_vocab.sig
+refl_syntax.lp: refl_syntax.lpo 
+pnf_examples.lp: pnf_examples.lpo refl_syntax.lpo pnf.lpo
+pnf.lp: pnf.lpo 
+logic.lp: logic.lpo hcinterp_examples.lpo hcsyntax_examples.lpo pnf_examples.lpo hc_interp.lpo lists.lpo hc_syntax.lpo refl_syntax.lpo pnf.lpo
+lists.lp: lists.lpo 
+hcsyntax_examples.lp: hcsyntax_examples.lpo hc_syntax.lpo refl_syntax.lpo
+hcinterp_examples.lp: hcinterp_examples.lpo hc_interp.lpo lists.lpo
+hc_syntax.lp: hc_syntax.lpo 
+hc_interp.lp: hc_interp.lpo lists.lpo
