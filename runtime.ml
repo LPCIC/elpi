@@ -615,7 +615,7 @@ and subst fromdepth ts t =
    match tt with
    | Const c as x ->
       if c >= fromdepth && c < fromdepthlen then
-        match List.nth ts (c-fromdepth) with
+        match List.nth ts (len-1 - (c-fromdepth)) with
         | Arg(i,0) as t -> t 
         | t -> lift ~from:fromdepth ~to_:(depth-len) t
       else if c < fromdepth then x
@@ -626,7 +626,7 @@ and subst fromdepth ts t =
       let xs' = List.map (aux depth) xs in
       let xxs' = x'::xs' in
       if c >= fromdepth && c < fromdepthlen then
-        match List.nth ts (c-fromdepth) with
+        match List.nth ts (len-1 - (c-fromdepth)) with
         | Arg(i,0) -> begin
            try Arg(i,in_fragment fromdepth xxs')
            with NotInTheFragment -> AppArg (i,xxs') end
