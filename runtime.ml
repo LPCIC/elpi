@@ -402,14 +402,18 @@ let to_resume = ref []
 END
 
 let (@:=) r v =
- r.contents <- v;
  IFDEF DELAY THEN
    if r.rest <> [] then
     begin
-     Format.fprintf Format.std_formatter "%d delayed goal(s) to be resumed\n%!" (List.length r.rest);
+     Format.fprintf Format.std_formatter
+       "@[<hov 2>%d delayed goal(s) to resume since@ %a <-@ %a@]\n%!"
+          (List.length r.rest)
+          (ppterm 0 [] 0 [||]) (UVar(r,0,0))
+          (ppterm 0 [] 0 [||]) v;
      to_resume := r.rest @ !to_resume
     end
- ELSE () END
+ ELSE () END;
+ r.contents <- v
 let oref x =
  IFDEF DELAY THEN { contents = x; rest = [] }
  ELSE { contents = x }
