@@ -1182,7 +1182,7 @@ let bind r gamma l a d delta b left t e =
               let r' = oref dummy in
               let v = UVar(r',lvl+args,0) in
               r @:= mknLam args v;
-              if not !last_call then trail := r :: !trail;
+              if not !last_call then trail := (IFDEF DELAY THEN Assign r ELSE r END) :: !trail;
               r', (lvl+args),  (true,[]), []
           | AppUVar (r,lvl, orig_args) ->
               r, lvl, is_llam lvl orig_args a b (d+w) left e, orig_args
@@ -1222,7 +1222,7 @@ let bind r gamma l a d delta b left t e =
               List.split (keep_cst_for_lvl (List.sort compare l)) in
             let r' = oref dummy in
             r @:= mknLam n_args (mkAppUVar r' gamma args_gamma_lvl_abs);
-            if not !last_call then trail := r :: !trail;
+            if not !last_call then trail := (IFDEF DELAY THEN Assign r ELSE r END) :: !trail;
             mkAppUVar r' gamma args_gamma_lvl_here
           else
             (* given that we need to make lambdas to prune some args,
@@ -1247,7 +1247,7 @@ let bind r gamma l a d delta b left t e =
               let r' = oref dummy in
               let v = mkAppUVar r' lvl args_lvl in
               r @:= mknLam n_args v;
-              if not !last_call then trail := r :: !trail;
+              if not !last_call then trail := (IFDEF DELAY THEN Assign r ELSE r END) :: !trail;
               (* This should be the beta reduct. One could also
                * return the non reduced but bound as in the other if branch *)
               mkAppUVar r' lvl args_here
@@ -1256,7 +1256,7 @@ let bind r gamma l a d delta b left t e =
   in
   try
     r @:= mknLam new_lams (bind 0 t);
-    if not !last_call then trail := r :: !trail;
+    if not !last_call then trail := (IFDEF DELAY THEN Assign r ELSE r END) :: !trail;
     SPY "assign(HO)" (ppterm gamma [] a [||]) (!!r);
     true
   with RestrictionFailure -> false
@@ -1370,10 +1370,18 @@ let unif adepth e bdepth a b =
          bind r adepth args adepth depth delta bdepth false other e
        else begin
      IFDEF DELAY THEN
-       Format.fprintf Format.std_formatter "HO unification to_heap before delay: %a = %a\n%!" (ppterm depth [] adepth [||]) a (ppterm depth [] bdepth e) b ;
-       unif depth a bdepth
-         (to_heap adepth ~from:(bdepth+depth) ~to_:(bdepth+depth) e b)
-         true
+       Format.fprintf Format.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth [||]) a (uppterm depth [] bdepth e) b ;
+       let r = oref dummy in
+       e.(i) <- UVar(r,adepth,0);
+       let delayed_goal = Delayed_unif (adepth+depth,e,bdepth+depth,a,b) in
+       let (_,vars) as delayed_goal =
+        match is_flex other with
+           None -> delayed_goal, [r]
+         | Some r' -> delayed_goal, if r==r' then [r] else [r;r'] in
+       delayed := delayed_goal :: !delayed;
+       List.iter (fun r -> r.rest <- delayed_goal :: r.rest) vars ;
+       if not !last_call then trail := AddConstr delayed_goal :: !trail;
+       true
      ELSE
        Format.fprintf Format.std_formatter "HO unification (maybe delay): %a = %a\n%!" (ppterm depth [] adepth [||]) a (ppterm depth [] bdepth e) b ;
        error (Format.flush_str_formatter ())
