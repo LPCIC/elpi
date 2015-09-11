@@ -2,6 +2,8 @@
 (* license: GNU Lesser General Public License Version 2.1                    *)
 (* ------------------------------------------------------------------------- *)
 
+DEFINE DELAY
+
 open Parser
 
 module Utils :
@@ -18,6 +20,7 @@ module Utils :
 
 type query
 type program
+type index
 
 val query_of_ast : program -> term -> query
 val program_of_ast : decl list -> program
@@ -80,9 +83,17 @@ module Constants :
 (* Custom predicates like $print. Must either raise No_clause or succeed
    with the list of new goals *)
 val register_custom :
-  string -> (depth:int -> env:term array -> term list -> term list) -> unit
+  string ->
+  (depth:int -> env:term array -> index -> term list -> term list) ->
+  unit
 
 (* Functions useful to implement custom predicates and evaluable functions *)
 
 val deref : from:constant -> to_:constant -> int -> term -> term
 val app_deref : from:constant -> to_:constant -> term list -> term -> term
+IFDEF DELAY THEN
+type goal = (*depth:*)int * index * term
+exception Delayed_goal of goal
+val is_flex : term -> term oref option
+val add_constraint : constraint_ -> unit
+END

@@ -399,6 +399,22 @@ let last_call = ref false;;
 IFDEF DELAY THEN
 let delayed = ref []
 let to_resume = ref []
+
+let add_constraint0 (_,vars) as cstr =
+ delayed := cstr :: !delayed;
+ List.iter (fun r -> r.rest <- cstr :: r.rest) vars
+
+let add_constraint cstr =
+ add_constraint0 cstr ;
+ if not !last_call then trail := AddConstr cstr :: !trail
+
+let remove_constraint0 (_,vars) as cstr =
+ delayed := remove_from_list cstr !delayed;
+ List.iter (fun r -> r.rest <- remove_from_list cstr r.rest) vars
+
+let remove_constraint cstr =
+ remove_constraint0 cstr ;
+ if not !last_call then trail := DelConstr cstr :: !trail;
 END
 
 let (@:=) r v =
@@ -461,8 +477,6 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
   let rec aux depth x =
     TRACE "to_heap" (fun fmt -> Format.fprintf fmt "to_heap(%d,%d->%d): %a"
       depth from to_ (ppterm depth [] argsdepth e) x)
-    Format.fprintf Format.std_formatter "to_heap(%d,%d->%d): %a\n%!"
-      depth from to_ (ppterm depth [] argsdepth e) x;
     match x with
     | Const c ->
        if delta == 0 then x else                          (* optimization  *)
@@ -1041,8 +1055,19 @@ let rec make_lambdas destdepth args =
  if args = 0 then UVar(oref dummy,destdepth,0)
  else Lam (make_lambdas (destdepth+1) (args-1))
 
+type index = TwoMapIndexing.index
+type program = int * index (* int is the depth, i.e. number of
+                              sigma/local-introduced variables *)
+type goal = (*depth:*)int * index * term
+
+IFDEF DELAY THEN
+let original_program = ref (Obj.magic 0 : index) (* dummy value *)
+END
+
 IFDEF DELAY THEN
  exception Delayed_unif of int * term array * int * term * term
+ exception Delayed_goal of goal (* CSC: we could save a few cells by
+                                   expanding goal to its def *)
 END
 
 IFDEF DELAY THEN
@@ -1415,13 +1440,11 @@ let unif adepth e bdepth a b =
      IFDEF DELAY THEN
        Format.fprintf Format.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth [||]) a (uppterm depth [] bdepth e) b ;
        let delayed_goal = Delayed_unif (adepth+depth,e,bdepth+depth,a,b) in
-       let (_,vars) as delayed_goal =
+       let delayed_goal =
         match is_flex other with
            None -> delayed_goal, [r]
          | Some r' -> delayed_goal, if r==r' then [r] else [r;r'] in
-       delayed := delayed_goal :: !delayed;
-       List.iter (fun r -> r.rest <- delayed_goal :: r.rest) vars ;
-       if not !last_call then trail := AddConstr delayed_goal :: !trail;
+       add_constraint delayed_goal ;
        true
      ELSE
        Format.fprintf Format.std_formatter "HO unification (maybe delay): %a = %a\n%!" (ppterm depth [] adepth [||]) a (ppterm depth [] bdepth e) b ;
@@ -1474,16 +1497,10 @@ IFDEF DELAY THEN
       Assign r :: rest -> r.contents <- dummy; trail := rest
 END |
 IFDEF DELAY THEN
-      AddConstr ((_,vars) as exn) :: rest ->
-       delayed := remove_from_list exn !delayed;
-       List.iter (fun r -> r.rest <- remove_from_list exn r.rest) vars;
-       trail := rest
+      AddConstr exn :: rest -> remove_constraint0 exn ; trail := rest
 END |
 IFDEF DELAY THEN
-      DelConstr ((_,vars) as exn) :: rest ->
-       delayed := exn::!delayed;
-       List.iter (fun r -> r.rest <- exn::r.rest) vars;
-       trail := rest
+      DelConstr exn :: rest -> add_constraint0 exn ; trail := rest
 ELSE
       r :: rest -> r @:= dummy; trail := rest
 END
@@ -1491,22 +1508,19 @@ END
   done
 ;;
 
-type program = int * index (* int is the depth, i.e. number of
-                              sigma/local-introduced variables *)
-
 (* The activation frames points to the choice point that
    cut should backtrack to, i.e. the first one not to be
    removed. For bad reasons, we call it lvl in the code. *)
 type frame =
  | FNil
 (* TODO: to save memory, introduce a list of triples *)
- | FCons of (*lvl:*)alternative * ((*depth:*)int * index * term) list * frame
+ | FCons of (*lvl:*)alternative * goal list * frame
 and alternative = {
   lvl : alternative;
   program : index;
   depth : int;
   goal : term;
-  goals : ((*depth:*)int * index * term) list;
+  goals : goal list;
   stack : frame;
   trail : trail_item list;
   clauses : key clause list;
@@ -1599,7 +1613,7 @@ exception No_clause
 let register_custom, lookup_custom =
  let (customs :
       (* Must either raise No_clause or succeed with the list of new goals *)
-      ('a, depth:int -> env:term array -> term list -> term list)
+      ('a, depth:int -> env:term array -> index -> term list -> term list)
       Hashtbl.t)
    =
      Hashtbl.create 17 in
@@ -1618,13 +1632,16 @@ let make_runtime : unit -> ('a -> 'b -> int -> 'k) * ('k -> 'k) =
      depth >= 0 is the number of variables in the context. *)
   let rec run depth p g gs (next : frame) alts lvl =
     TRACE "run" (fun fmt -> ppterm depth [] 0 [||] fmt g)
- if IFDEF DELAY THEN not (resume_all ()) ELSE false END then
+ match IFDEF DELAY THEN resume_all () ELSE Some [] END with
+  None ->
 IFDEF DELAY THEN
 begin Format.fprintf Format.std_formatter "Undo triggered by goal resumption\n%!";
   TCALL next_alt alts
 end
 ELSE () END;
- else
+ | Some ((ndepth,p,ng)::goals) ->
+    run ndepth p ng (goals@(depth,p,g)::gs) next alts lvl
+ | Some [] ->
     match g with
     | c when c == cutc -> TCALL cut p gs next alts lvl
     | App(c, g, gs') when c == andc || c == andc2 ->
@@ -1660,11 +1677,11 @@ ELSE () END;
     | UVar _ | AppUVar _ -> error "Flexible predicate"
     | Custom(c, args) ->
        let f = try lookup_custom c with Not_found -> anomaly"no such custom" in
-       let b = try Some (f depth [||] args) with No_clause -> None in
+       let b = try Some (f depth [||] p args) with No_clause -> None in
        (match b with
           Some gs' ->
            (match List.map (fun g -> depth,p,g) gs' @ gs with
-           | [] -> TCALL pop_andl alts next
+           | [] -> TCALL pop_andl alts next lvl
            | (depth,p,g) :: gs -> run depth p g gs next alts lvl)
         | None -> TCALL next_alt alts)
 
@@ -1699,7 +1716,7 @@ ELSE () END;
            begin match c.hyps with
            | [] ->
               begin match gs with
-              | [] -> TCALL pop_andl alts next
+              | [] -> TCALL pop_andl alts next lvl
               | (depth,p,g)::gs -> TCALL run depth p g gs next alts lvl end
            | h::hs ->
               let next = if gs = [] then next else FCons (lvl,gs,next) in
@@ -1720,50 +1737,67 @@ ELSE () END;
     let alts = prune alts in
     if alts == emptyalts then trail := [];
     match gs with
-    | [] -> pop_andl alts next
+    | [] -> pop_andl alts next lvl
     | (depth, p, g) :: gs -> run depth p g gs next alts lvl
 
-  and pop_andl alts = function
+  and pop_andl alts next lvl =
+   match next with
     | FNil ->
        IFDEF DELAY THEN
-        if not (resume_all ()) then
-begin Format.fprintf Format.std_formatter "Undo triggered by goal resumption\n%!";
-         TCALL next_alt alts
-end 
-        else begin
-         List.iter
-          (function
-           | Delayed_unif (ad,e,bd,a,b),_ ->
-              Format.fprintf Format.std_formatter
-               "delayed goal: @[<hov 2>^%d:%a@ == ^%d:%a@]\n%!"
-                ad (uppterm ad [] 0 [||]) a
-                bd (uppterm ad [] ad e) b
-           | _ -> assert false) !delayed;
-         alts
-        end
-        ELSE alts END
+        match resume_all () with
+           None ->
+            Format.fprintf Format.std_formatter
+             "Undo triggered by goal resumption\n%!";
+            TCALL next_alt alts
+         | Some ((ndepth,p,ng)::goals) ->
+            run ndepth p ng goals FNil alts lvl
+         | Some [] ->
+            List.iter
+             (function
+              | Delayed_unif (ad,e,bd,a,b),_ ->
+                 Format.fprintf Format.std_formatter
+                  "delayed goal: @[<hov 2>^%d:%a@ == ^%d:%a@]\n%!"
+                   ad (uppterm ad [] 0 [||]) a
+                   bd (uppterm ad [] ad e) b
+              | Delayed_goal (depth,p,g),_ ->
+(* CSC: TO BE IMPLEMENTED *)
+let diff _ _ = [] in
+                 let pdiff = diff !original_program p in
+                 Format.fprintf Format.std_formatter
+                  "delayed goal: ... %a ⊢ %a\n%!"
+                  (* CSC: Bug here: print at the right precedence *)
+                  (pplist (uppterm depth [] 0 [||]) ", ") pdiff
+                  (uppterm depth [] 0 [||]) g
+              | _ -> assert false) !delayed;
+            alts
+       ELSE alts END
     | FCons (_,[],_) -> anomaly "empty stack frame"
     | FCons(lvl,(depth,p,g)::gs,next) -> run depth p g gs next alts lvl
 
   and resume_all () =
 IFDEF DELAY THEN
    let ok = ref true in
+   let to_be_resumed = ref [] in
    while !ok && !to_resume <> [] do
      match !to_resume with
      | (Delayed_unif (ad,e,bd,a,b), vars) as exn :: rest ->
-         delayed := remove_from_list exn !delayed;
-         List.iter (fun r -> r.rest <- remove_from_list exn r.rest) vars;
-         if not !last_call then trail := DelConstr exn :: !trail;
+         remove_constraint exn;
          to_resume := rest;
          Format.fprintf Format.std_formatter
           "Resuming @[<hov 2>^%d:%a@ == ^%d:%a@]\n%!"
            ad (uppterm ad [] 0 [||]) a
            bd (uppterm ad [] ad e) b;
          ok := unif ad e bd a b
+     | (Delayed_goal ((depth,_,g) as dpg), vars) as exn :: rest ->
+         remove_constraint exn;
+         to_resume := rest;
+         Format.fprintf Format.std_formatter
+          "Resuming goal: ... ⊢ %a\n%!" (uppterm depth [] 0 [||]) g ;
+         to_be_resumed := dpg :: !to_be_resumed
      | _ -> assert false
    done ;
-   !ok
-ELSE true END
+   if !ok then Some (List.rev !to_be_resumed) else None
+ELSE Some [] END
 
   and next_alt alts =
    if alts == emptyalts then raise No_clause
@@ -1780,29 +1814,35 @@ ELSE true END
   let my_trail = ref [] in
   let my_to_resume = ref [] in
   let my_delayed = ref [] in
+  let my_original_program = ref !original_program in
   let ensure_runtime f x =
     trail := !my_trail; last_call := false;
     IFDEF DELAY THEN
       to_resume := !my_to_resume;
-      delayed := !my_delayed
+      delayed := !my_delayed;
+      original_program := !my_original_program
     ELSE () END;
     try
      let rc = f x in
-     my_trail := !trail; trail := [];
+     my_trail := !trail ;
      IFDEF DELAY THEN
-       my_delayed := !delayed; delayed := [];
-       my_to_resume := !to_resume; to_resume := []
+       my_delayed := !delayed ;
+       my_to_resume := !to_resume ;
+       my_original_program := !original_program
      ELSE () END;
      rc
     with e ->
      my_trail := !trail;
      trail := [];
      IFDEF DELAY THEN
-       my_delayed := !delayed; delayed := [];
-       my_to_resume := !to_resume; to_resume := []
+       my_delayed := !delayed ;
+       my_to_resume := !to_resume ;
+       my_original_program := !original_program
      ELSE () END;
      raise e in
-  (fun p (_,q_env,q) -> ensure_runtime (fun lcs ->
+  (fun p (_,q_env,q) ->
+     original_program := p ;
+     ensure_runtime (fun lcs ->
      let q = to_heap 0 ~from:0 ~to_:0 q_env q in
      run lcs p q [] FNil emptyalts emptyalts)),
   (fun alts -> ensure_runtime next_alt alts)

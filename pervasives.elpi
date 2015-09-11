@@ -120,3 +120,5 @@ print S :- output std_out S.
 read S :- flush std_out, input_line std_in X, string_to_term X S.
 
 stop :- halt.
+
+is_flex X :- not (not (X = x_unused_x)).

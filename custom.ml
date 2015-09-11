@@ -2,6 +2,8 @@
 (* license: GNU Lesser General Public License Version 2.1                    *)
 (* ------------------------------------------------------------------------- *)
 
+DEFINE DELAY
+
 open Runtime;;
 open Runtime.Utils;;
 open Runtime.Pp;;
@@ -203,12 +205,27 @@ let really_input ic s ofs len =
   else unsafe_really_input 0 ic s ofs len
 
 let _ =
-  register_custom "$print" (fun ~depth ~env args ->
+IFDEF DELAY THEN
+  register_custom "$delay" (fun ~depth ~env p args ->
+    match args with
+    | [t1; t2] ->
+      (match is_flex t2 with
+          Some v2 ->
+           let delayed_goal = (Delayed_goal (depth,p,t1), [v2]) in
+           add_constraint delayed_goal ;
+           []
+(*CSC: BUG: WE SHOULD CHECK IT IS A VAR, NOT FLEXIBLE *)
+        | None -> type_error "the second arg of $delay must be flexible")
+    | _ -> type_error "$delay takes 2 arguments"
+    )
+ELSE ()
+END ;
+  register_custom "$print" (fun ~depth ~env _ args ->
     Format.printf "@[<hov 1>" ;
     List.iter (Format.printf "%a@ " (uppterm depth [] 0 env)) args ;
     Format.printf "@]\n%!" ;
     []) ;
-  register_custom "$counter" (fun ~depth ~env:_ args ->
+  register_custom "$counter" (fun ~depth ~env:_ _ args ->
     match args with
     | [t1; t2] ->
        (match eval depth t1 with
@@ -219,7 +236,7 @@ let _ =
              with Not_found -> raise No_clause)
          | _ -> type_error "bad argument to $counter")
     | _ -> type_error "$counter takes 2 arguments") ;
-  register_custom "$lt" (fun ~depth ~env:_ args ->
+  register_custom "$lt" (fun ~depth ~env:_ _ args ->
     let rec get_constant = function
       | Const c -> c
       | UVar ({contents=t},vardepth,args) when t != dummy ->
@@ -235,7 +252,7 @@ let _ =
         if not is_lt then raise No_clause else []
     | _ -> type_error "$lt takes 2 arguments") ;
   List.iter (fun p,psym,pname ->
-  register_custom pname (fun ~depth ~env:_ args ->
+  register_custom pname (fun ~depth ~env:_ _ args ->
     match args with
     | [t1; t2] ->
         let t1 = eval depth t1 in
@@ -249,7 +266,7 @@ let _ =
            type_error ("Wrong arguments to " ^ psym ^ " (or to " ^ pname^ ")"))
     | _ -> type_error (psym ^ " (or " ^ pname ^ ") takes 2 arguments"))
   ) [(<),"<","$lt_" ; (>),">","$gt_" ; (<=),"=<","$le_" ; (>=),">=","$ge_"] ;
-  register_custom "$getenv" (fun ~depth ~env:_ args ->
+  register_custom "$getenv" (fun ~depth ~env:_ _ args ->
     match args with
     | [t1; t2] ->
        (match eval depth t1 with
@@ -260,18 +277,18 @@ let _ =
              with Not_found -> raise No_clause)
          | _ -> type_error "bad argument to getenv (or $getenv)")
     | _ -> type_error "getenv (or $getenv) takes 2 arguments") ;
-  register_custom "$system" (fun ~depth ~env:_ args ->
+  register_custom "$system" (fun ~depth ~env:_ _ args ->
     match args with
     | [t1; t2] ->
        (match eval depth t1 with
            String s -> [ App (eqc, t2, [Int (Sys.command (F.pp s))]) ]
          | _ -> type_error "bad argument to system (or $system)")
     | _ -> type_error "system (or $system) takes 2 arguments") ;
-  register_custom "$is" (fun ~depth ~env:_ args ->
+  register_custom "$is" (fun ~depth ~env:_ _ args ->
     match args with
     | [t1; t2] -> [ App (eqc, t1, [eval depth t2]) ]
     | _ -> type_error "is (or $is) takes 2 arguments") ;
-  register_custom "$open_in" (fun ~depth ~env:_ args ->
+  register_custom "$open_in" (fun ~depth ~env:_ _ args ->
     match args with
     | [t1; t2] ->
        (match eval depth t1 with
@@ -283,7 +300,7 @@ let _ =
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to open_in (or $open_in)")
     | _ -> type_error "open_in (or $open_in) takes 2 arguments") ;
-  register_custom "$open_out" (fun ~depth ~env:_ args ->
+  register_custom "$open_out" (fun ~depth ~env:_ _ args ->
     match args with
     | [t1; t2] ->
        (match eval depth t1 with
@@ -295,7 +312,7 @@ let _ =
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to open_out (or $open_out)")
     | _ -> type_error "open_out (or $open_out) takes 2 arguments") ;
-  register_custom "$open_append" (fun ~depth ~env:_ args ->
+  register_custom "$open_append" (fun ~depth ~env:_ _ args ->
     match args with
     | [t1; t2] ->
        (match eval depth t1 with
@@ -310,7 +327,7 @@ let _ =
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to open_append (or $open_append)")
     | _ -> type_error "open_append (or $open_append) takes 2 arguments") ;
-  register_custom "$open_string" (fun ~depth ~env:_ args ->
+  register_custom "$open_string" (fun ~depth ~env:_ _ args ->
     match args with
     | [t1; t2] ->
        (match eval depth t1 with
@@ -326,7 +343,7 @@ let _ =
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to open_in (or $open_in)")
     | _ -> type_error "open_in (or $open_in) takes 2 arguments") ;
-  register_custom "$close_in" (fun ~depth ~env:_ args ->
+  register_custom "$close_in" (fun ~depth ~env:_ _ args ->
     match args with
     | [t1] ->
        (match eval depth t1 with
@@ -335,7 +352,7 @@ let _ =
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to close_in (or $close_in)")
     | _ -> type_error "close_in (or $close_in) takes 1 argument") ;
-  register_custom "$close_out" (fun ~depth ~env:_ args ->
+  register_custom "$close_out" (fun ~depth ~env:_ _ args ->
     match args with
     | [t1] ->
        (match eval depth t1 with
@@ -343,7 +360,7 @@ let _ =
             (try close_out(get_out_stream s); [] with Sys_error msg->error msg)
          | _ -> type_error "bad argument to close_out (or $close_out)")
     | _ -> type_error "close_out (or $close_out) takes 1 argument") ;
-  register_custom "$output" (fun ~depth ~env:_ args ->
+  register_custom "$output" (fun ~depth ~env:_ _ args ->
     match args with
     | [t1; t2] ->
        (match eval depth t1, eval depth t2 with
@@ -352,14 +369,14 @@ let _ =
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to output (or $output)")
     | _ -> type_error "output (or $output) takes 2 arguments") ;
-  register_custom "$term_to_string" (fun ~depth ~env args ->
+  register_custom "$term_to_string" (fun ~depth ~env _ args ->
     match args with
     | [t1; t2] ->
        Format.fprintf Format.str_formatter "%a" (uppterm depth [] 0 env) t1 ;
        let s = Format.flush_str_formatter () in
        [App(eqc,t2,[String (F.from_string s)])]
     | _ -> type_error "term_to_string (or $term_to_string) takes 2 arguments");
-  register_custom "$string_to_term" (fun ~depth ~env args ->
+  register_custom "$string_to_term" (fun ~depth ~env _ args ->
     match args with
     | [t1; t2] ->
        (match eval depth t1 with
@@ -369,7 +386,7 @@ let _ =
             [App (eqc, t2, [t])]
          | _ -> type_error "bad argument to string_to_term (or $string_to_term)")
     | _ -> type_error "string_to_term (or $string_to_term) takes 2 arguments");
-  register_custom "$flush" (fun ~depth ~env:_ args ->
+  register_custom "$flush" (fun ~depth ~env:_ _ args ->
     match args with
     | [t1] ->
        (match eval depth t1 with
@@ -378,11 +395,11 @@ let _ =
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to flush (or $flush)")
     | _ -> type_error "flush (or $flush) takes 2 arguments") ;
-  register_custom "$halt" (fun ~depth ~env:_ args ->
+  register_custom "$halt" (fun ~depth ~env:_ _ args ->
     match args with
     | [] -> exit 0
     | _ -> type_error "halt (or $halt) takes 0 arguments") ;
-  register_custom "$input" (fun ~depth ~env:_ args ->
+  register_custom "$input" (fun ~depth ~env:_ _ args ->
     match args with
     | [t1 ; t2 ; t3] ->
        (match eval depth t1, eval depth t2 with
@@ -402,7 +419,7 @@ let _ =
               Sys_error msg -> error msg)
          | _ -> type_error "bad argument to input (or $input)")
     | _ -> type_error "input (or $input) takes 3 arguments") ;
-  register_custom "$input_line" (fun ~depth ~env:_ args ->
+  register_custom "$input_line" (fun ~depth ~env:_ _ args ->
     match args with
     | [t1 ; t2] ->
        (match eval depth t1 with
@@ -420,7 +437,7 @@ let _ =
               Sys_error msg -> error msg)
          | _ -> type_error "bad argument to input_line (or $input_line)")
     | _ -> type_error "input_line (or $input_line) takes 2 arguments") ;
-  register_custom "$lookahead" (fun ~depth ~env:_ args ->
+  register_custom "$lookahead" (fun ~depth ~env:_ _ args ->
     match args with
     | [t1 ; t2] ->
        (match eval depth t1 with
@@ -442,7 +459,7 @@ let _ =
               Sys_error msg -> error msg)
          | _ -> type_error "bad argument to lookahead (or $lookahead)")
     | _ -> type_error "lookahead (or $lookahead) takes 2 arguments") ;
-  register_custom "$readterm" (fun ~depth ~env:_ args ->
+  register_custom "$readterm" (fun ~depth ~env:_ _ args ->
     match args with
     | [t1 ; t2] ->
        (match eval depth t1 with
@@ -461,7 +478,7 @@ let _ =
               Sys_error msg -> error msg)
          | _ -> type_error "bad argument to readterm (or $readterm)")
     | _ -> type_error "readterm (or $readterm) takes 2 arguments") ;
-  register_custom "$eof" (fun ~depth ~env:_ args ->
+  register_custom "$eof" (fun ~depth ~env:_ _ args ->
     match args with
     | [t1] ->
        (match eval depth t1 with

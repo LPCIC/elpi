@@ -1,0 +1,6 @@
+of X Y :- is_flex X, $delay (of_ X Y) X, !.
+of X Y :- of_ X Y.
+of_ (app M N) B :- of M (impl A B), of N A.
+of_ (lam F) (impl A B) :- pi x\ of_ x A => of (F x) B.
+
+main Y :- of (app X Y) Z, Y = (app A B).
