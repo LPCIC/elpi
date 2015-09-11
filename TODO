@@ -48,7 +48,12 @@ TODO:
   but not in our fragment. Let's implement the pattern fragment? :-(
 
 DELAYS:
-- debug the progs case that raises an anomaly in to_heap
+- BUG INTRODUCED BY ENRICO TO BE FIXED:
+  now that you no longer heapify when Delaying, you are no longer allowed
+  to call is_flex other in the case UVar on the left, because is_flex
+  now _can_ find an Arg. The only solution is to
+  1) pass e to is_flex so that it can dereference the Args
+  2) heapify e.(i) when e.(i) == dummy
 - delay pruning as well
 
 Documentation:
