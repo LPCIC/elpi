@@ -43,9 +43,11 @@ let set_terminal_width ?(max_w=
     let ic, _ as p = Unix.open_process "tput cols" in
     let w = int_of_string (input_line ic) in
     let _ = Unix.close_process p in w) () =
-  Format.pp_set_margin Format.err_formatter max_w;
-  Format.pp_set_ellipsis_text Format.err_formatter "...";
-  Format.pp_set_max_boxes Format.err_formatter 30;
+  List.iter (fun fmt ->
+    Format.pp_set_margin fmt max_w;
+    Format.pp_set_ellipsis_text fmt "...";
+    Format.pp_set_max_boxes fmt 30)
+  [ Format.err_formatter; Format.std_formatter ]
 ;;
 
 let _ =
