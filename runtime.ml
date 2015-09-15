@@ -809,7 +809,7 @@ module type Indexing = sig
   val add_clauses : key clause list -> index -> index
   val get_clauses : depth:int -> term -> index -> key clause list
   val make_index : key clause list -> index
-
+  val diff_progs : to_:int -> index -> index -> term list
 end
 
 module TwoMapIndexing : Indexing = struct (* {{{ *)
@@ -866,18 +866,6 @@ let key_of ~mode:_ ~depth =
  in
   key_of_depth
 
-module IndexData =
- struct
-  (* Note: we tried (c79d0e3007f66eb553b6d50338faca1e09d8d064) replacing
-     string with string*int in Const to index only the (unique) integer and
-     speed up comparison w.r.t. String.compare. But it seems that always
-     projecting out the integer from the pair during indexing for clause
-     retrieval makes the example program slower. *)
-  type t = key1
-  let equal = (==)
-  let compare (x:int) (y:int) = y - x
-end
-
 let get_clauses ~depth a m =
  let ind,app = key_of ~mode:`Query ~depth a in
  try
@@ -908,6 +896,29 @@ let add_clauses clauses p =
     ) p clauses
 
 let make_index p = add_clauses (List.rev p) Ptmap.empty
+ 
+(* flatten_snd = List.flatten o (List.map ~~snd~~) *)
+(* TODO: is this optimization necessary or useless? *)
+let rec flatten_snd =
+ function
+    [] -> []
+  | (_,(hd,_,_))::tl -> hd @ flatten_snd tl 
+
+let diff_progs ~to_ (prog1 : index) prog2 =  
+ let res =
+  flatten_snd
+   (Ptmap.to_list
+    (Ptmap.diff
+      (fun (cllist1,dummy1,dummy2) (cllist2,_,_) ->
+        match List.filter (fun x -> not (List.mem x cllist1)) cllist2 with
+           [] -> None
+         | l -> Some (l,dummy1,dummy2))
+      prog1 prog2)) in
+ List.rev_map
+  (fun { depth; args; hyps; key=(key,_) } ->
+    let app = match args with [] -> Const key | hd::tl -> App (key,hd,tl) in
+    lift ~from:depth ~to_ app
+  ) res
 
 end (* }}} *)
 
@@ -1036,6 +1047,22 @@ module UnifBits : Indexing = struct
 
   (* Get rid of optional arg *)
   let add_clauses cl pt = add_clauses cl pt
+
+  let compare key1 key2 = key1 - key2
+
+  let diff_progs ~to_ prog2 prog1 = assert false (* CSC: TO BE IMPLEMENTED
+   let rec get_key_cl = function
+     | [] -> []
+     | (k,l1)::l2 -> (k,List.map (fun (cl,_) -> cl) l1)::(get_key_cl l2) in
+   let rec aux pr1 pr2 = match pr1,pr2 with
+     | [],[] -> []
+     | x::l1,y::l2 when x=y -> aux l1 l2
+     | (k1,cllist1)::l1,(k2,cllist2)::l2 when k1=k2 ->
+      (List.filter (fun x -> List.mem x cllist1) cllist2) @ (aux l1 l2)
+     | (k1,cllist1)::l1 as l,(k2,cllist2)::l2 when
+      compare k1 k2 > 0 -> cllist2 @ (aux l l2)
+     | _,_ -> assert false (* l2 must contain l1 *) in
+   aux (get_key_cl (Ptmap.tree_to_list prog1)) (get_key_cl (Ptmap.tree_to_list prog2)) *)
 
 end
 
@@ -1760,11 +1787,9 @@ ELSE () END;
                    ad (uppterm ad [] 0 [||]) a
                    bd (uppterm ad [] ad e) b
               | Delayed_goal (depth,p,g),_ ->
-(* CSC: TO BE IMPLEMENTED *)
-let diff _ _ = [] in
-                 let pdiff = diff !original_program p in
+                 let pdiff = diff_progs ~to_:depth p !original_program in
                  Format.fprintf Format.std_formatter
-                  "delayed goal: ... %a ⊢ %a\n%!"
+                  "delayed goal: @[<hov 1>%a ⊢ %a@]\n%!"
                   (* CSC: Bug here: print at the right precedence *)
                   (pplist (uppterm depth [] 0 [||]) ", ") pdiff
                   (uppterm depth [] 0 [||]) g
@@ -1841,7 +1866,7 @@ ELSE Some [] END
      ELSE () END;
      raise e in
   (fun p (_,q_env,q) ->
-     original_program := p ;
+     my_original_program := p ;
      ensure_runtime (fun lcs ->
      let q = to_heap 0 ~from:0 ~to_:0 q_env q in
      run lcs p q [] FNil emptyalts emptyalts)),

@@ -65,3 +65,10 @@ val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
    The result is in no precise order. *)
 val find_unifiables : functor_bits:int -> int -> 'a t -> 'a list
 
+(* diff f m1 m2 is the map whose domain is (Dom(m1) \ Dom(m2)) \cup m3
+   where m3 = { x | x \in m1 \cap m2 && f (m1 x) (m2 x) != None } and
+   (diff f m1 m2)(x) = y when x \in m3 and f (m1 x) (m2 x) = Some y
+   (diff f m1 m2)(x) = m1(x) when x \in Dom(m1) \ Dom(m2) *)
+val diff : ('a -> 'b -> 'a option) -> 'a t -> 'b t -> 'a t
+
+val to_list : 'a t -> (int * 'a) list

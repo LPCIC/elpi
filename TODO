@@ -38,6 +38,7 @@ MODULES:
   declarations? E.g. X = accumulate M, X ==> x+y
 
 TODO:
+- fix the copyright for ptmap.ml*
 - restriction is not implemented even in some of the simple cases.
   E.g. "pi x \ X = Y x" is not solved!
 - how does getenv fails in Teyjus when the var is not defined?
@@ -161,6 +162,10 @@ Benchmarks:
 
 Possible optimizations:
 
+-4. TODO for flatten_snd: benchmark
+-3. compare Big Endian vs Little Endian Patricia Trees
+-2. diff + to_list can be implemented more efficiently saving all the
+    n log n merges and replacing them with an accumulator
 -1. if full_deref only works on heap terms, why do we pass all that stuff?
     why not calling deref instead?
 0. Try alternative implementation for ?n == ?n

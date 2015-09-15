@@ -164,3 +164,66 @@ let find_unifiables ~functor_bits k t =
   in
     aux t; !sol
 
+let rec merge = function
+  | Empty, t  -> t
+  | t, Empty  -> t
+  | Leaf (k,x), t -> add k x t
+  | t, Leaf (k,x) -> add k x t
+  | (Branch (p,m,s0,s1) as s), (Branch (q,n,t0,t1) as t) ->
+      if m == n && match_prefix q p m then
+        (* The trees have the same prefix. Merge the subtrees. *)
+        Branch (p, m, merge (s0,t0), merge (s1,t1))
+      else if m < n && match_prefix q p m then
+        (* [q] contains [p]. Merge [t] with a subtree of [s]. *)
+        if zero_bit q m then
+          Branch (p, m, merge (s0,t), s1)
+        else
+          Branch (p, m, s0, merge (s1,t))
+      else if m > n && match_prefix p q n then
+        (* [p] contains [q]. Merge [s] with a subtree of [t]. *)
+        if zero_bit p n then
+          Branch (q, n, merge (s,t0), t1)
+        else
+          Branch (q, n, t0, merge (s,t1))
+      else
+        (* The prefixes disagree. *)
+        join (p, s, q, t)
+
+let rec diff f s1 s2 = match (s1,s2) with
+  | Empty, _ -> Empty
+  | _, Empty -> s1
+  | Leaf (k1,x1), _ ->
+     (try
+       let x2 = find k1 s2 in
+       match f x1 x2 with
+          None -> Empty
+        | Some x -> Leaf (k1,x)
+      with Not_found -> s1)
+  | _, Leaf (k2,x2) ->
+     (try
+       let x1 = find k2 s1 in
+       match f x1 x2 with
+          None -> remove k2 s1
+        | Some x -> add k2 x s1
+      with Not_found -> s1)
+  | Branch (p1,m1,l1,r1), Branch (p2,m2,l2,r2) ->
+      if m1 == m2 && p1 == p2 then
+        merge (diff f l1 l2, diff f r1 r2)
+      else if m1 < m2 && match_prefix p2 p1 m1 then
+        if zero_bit p2 m1 then
+          merge (diff f l1 s2, r1)
+        else
+          merge (l1, diff f r1 s2)
+      else if m1 > m2 && match_prefix p1 p2 m2 then
+        if zero_bit p1 m2 then diff f s1 l2 else diff f s1 r2
+      else
+        s1
+
+let to_list s =
+  let rec elements_aux acc = function
+    | Empty -> acc
+    | Leaf (k,x) -> (k,x) :: acc
+    | Branch (_,_,l,r) -> elements_aux (elements_aux acc l) r
+  in
+  List.sort (fun (k1,_) (k2,_) -> Pervasives.compare k1 k2)
+   (elements_aux [] s)
