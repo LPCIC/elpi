@@ -912,10 +912,10 @@ let diff_progs ~to_ (prog1 : index) prog2 =
       (fun (cllist1,dummy1,dummy2) (cllist2,_,_) ->        
         let rec get_prefix acc =
          function
-            l when l == cllist1 -> List.rev acc
+            l when l == cllist2 -> List.rev acc
           | hd::tl -> get_prefix (hd::acc) tl
           | [] -> anomaly "Some clauses were deleted from the program" in
-        match get_prefix [] cllist2 with
+        match get_prefix [] cllist1 with
            [] -> None
          | l -> Some (l,dummy1,dummy2))
       prog1 prog2)) in

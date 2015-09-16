@@ -3,4 +3,7 @@ of X Y :- of_ X Y.
 of_ (app M N) B :- of M (impl A B), of N A.
 of_ (lam F) (impl A B) :- pi x\ of_ x A => of (F x) B.
 
-main Y :- of (app X Y) Z, Y = (app A B).
+test1 :- of (app X Y) Z, Y = (app A B), $print (of (app X Y) Z).
+test2 :- of X Z, X = Y, $print (of X Z).
+
+main :- test1, test2.
