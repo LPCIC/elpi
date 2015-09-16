@@ -909,8 +909,13 @@ let diff_progs ~to_ (prog1 : index) prog2 =
   flatten_snd
    (Ptmap.to_list
     (Ptmap.diff
-      (fun (cllist1,dummy1,dummy2) (cllist2,_,_) ->
-        match List.filter (fun x -> not (List.mem x cllist1)) cllist2 with
+      (fun (cllist1,dummy1,dummy2) (cllist2,_,_) ->        
+        let rec get_prefix acc =
+         function
+            l when l == cllist1 -> List.rev acc
+          | hd::tl -> get_prefix (hd::acc) tl
+          | [] -> anomaly "Some clauses were deleted from the program" in
+        match get_prefix [] cllist2 with
            [] -> None
          | l -> Some (l,dummy1,dummy2))
       prog1 prog2)) in
@@ -1048,21 +1053,15 @@ module UnifBits : Indexing = struct
   (* Get rid of optional arg *)
   let add_clauses cl pt = add_clauses cl pt
 
-  let compare key1 key2 = key1 - key2
+  (* from (key, (key clause * int) list) list  
+    creates  key clause list *)
+  let rec flatten_ = function
+     [] -> []
+   | (_,l)::tl -> (List.map (fun (cl,_) -> cl) l) @ flatten_ tl
 
-  let diff_progs ~to_ prog2 prog1 = assert false (* CSC: TO BE IMPLEMENTED
-   let rec get_key_cl = function
-     | [] -> []
-     | (k,l1)::l2 -> (k,List.map (fun (cl,_) -> cl) l1)::(get_key_cl l2) in
-   let rec aux pr1 pr2 = match pr1,pr2 with
-     | [],[] -> []
-     | x::l1,y::l2 when x=y -> aux l1 l2
-     | (k1,cllist1)::l1,(k2,cllist2)::l2 when k1=k2 ->
-      (List.filter (fun x -> List.mem x cllist1) cllist2) @ (aux l1 l2)
-     | (k1,cllist1)::l1 as l,(k2,cllist2)::l2 when
-      compare k1 k2 > 0 -> cllist2 @ (aux l l2)
-     | _,_ -> assert false (* l2 must contain l1 *) in
-   aux (get_key_cl (Ptmap.tree_to_list prog1)) (get_key_cl (Ptmap.tree_to_list prog2)) *)
+  let diff_progs ~to_ (prog1 : index) prog2 =
+   assert false (* TO BE IMPLEMENTED BUT IT CAN ONLY BE IMPLEMENTED
+                   AUGMENTING THE DATA STRUCTURES *)
 
 end
 
