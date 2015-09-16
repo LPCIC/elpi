@@ -19,6 +19,9 @@ module Utils : sig
   (*uses physical equality and calls anomaly if the element is not in the list*)
   val remove_from_list : 'a -> 'a list -> 'a list
 
+  (*uses physical equality; does nothing if the element is not in the list*)
+  val remove_from_list' : 'a -> 'a list -> 'a list
+
   (* A regular error *)
   val error : string -> 'a
 
@@ -82,6 +85,15 @@ let remove_from_list x =
    | y::tl -> aux (y::acc) tl
  in
   aux []
+
+let remove_from_list' x l =
+ let rec aux acc =
+  function
+     [] -> l
+   | y::tl when x==y -> List.rev acc @ tl
+   | y::tl -> aux (y::acc) tl
+ in
+  aux [] l
 
 end (* }}} *)
 open Utils
@@ -398,7 +410,12 @@ let trail : trail = ref []
 let last_call = ref false;;
 IFDEF DELAY THEN
 let delayed = ref []
+let new_delayed = ref []
 let to_resume = ref []
+
+IFDEF DELAY THEN
+ exception Delayed_unif of int * term array * int * term * term
+END
 
 let add_constraint0 (_,vars) as cstr =
  delayed := cstr :: !delayed;
@@ -406,6 +423,10 @@ let add_constraint0 (_,vars) as cstr =
 
 let add_constraint cstr =
  add_constraint0 cstr ;
+ (match cstr with
+     Delayed_unif _,_ -> ()
+   | _ (* Delayed_goal _ *) ->
+      new_delayed := cstr :: !new_delayed);
  if not !last_call then trail := AddConstr cstr :: !trail
 
 let remove_constraint0 (_,vars) as cstr =
@@ -414,6 +435,10 @@ let remove_constraint0 (_,vars) as cstr =
 
 let remove_constraint cstr =
  remove_constraint0 cstr ;
+ (match cstr with
+     Delayed_unif _,_ -> ()
+   | _ (* Delayed_goal _ *) ->
+      new_delayed := remove_from_list' cstr !new_delayed);
  if not !last_call then trail := DelConstr cstr :: !trail;
 END
 
@@ -920,7 +945,7 @@ let diff_progs ~to_ (prog1 : index) prog2 =
          | l -> Some (l,dummy1,dummy2))
       prog1 prog2)) in
  List.rev_map
-  (fun { depth; args; hyps; key=(key,_) } ->
+  (fun { depth = depth; args = args; hyps = hyps; key=(key,_) } ->
     let app = match args with [] -> Const key | hd::tl -> App (key,hd,tl) in
     lift ~from:depth ~to_ app
   ) res
@@ -1091,7 +1116,6 @@ let original_program = ref (Obj.magic 0 : index) (* dummy value *)
 END
 
 IFDEF DELAY THEN
- exception Delayed_unif of int * term array * int * term * term
  exception Delayed_goal of goal (* CSC: we could save a few cells by
                                    expanding goal to its def *)
 END
@@ -1513,10 +1537,11 @@ let unif adepth e bdepth a b =
 
 
 let undo_trail old_trail =
-(* Invariant: to_resume is always empty when a choice point is created.
-   This invariant is likely to break in the future, when we allow more
-   interesting constraints and constraint propagation rules. *)
-IFDEF DELAY THEN to_resume := [] ELSE () END;
+(* Invariant: to_resume and new_delayed are always empty when a choice
+   point is created. This invariant is likely to break in the future,
+   when we allow more interesting constraints and constraint propagation
+   rules. *)
+IFDEF DELAY THEN to_resume := []; new_delayed := [] ELSE () END;
   while !trail != old_trail do
     match !trail with
 IFDEF DELAY THEN
@@ -1648,6 +1673,20 @@ let register_custom, lookup_custom =
       anomaly ("Custom predicate name " ^ s ^ " must begin with $");
     Hashtbl.add customs (fst (funct_of_ast (F.from_string s)))),
  Hashtbl.find customs
+;;
+
+(* constr is a new_delayed constraint;
+   the two lists in output are the constraints to be removed and added *)
+let propagate constr =
+ let foo = fst (Constants.funct_of_ast (F.from_string "foo")) in
+ match constr with
+    Delayed_unif _,_ ->
+     anomaly "Delayed unifications should not become new_delayed"
+  | Delayed_goal (depth,p,App(xxx, Int n, [])),_ when xxx = foo ->
+     [constr],
+      if n = 0 then []
+      else [Delayed_goal (depth,p,App(foo, Int (n-1),[])),[]]
+  | _ -> [],[]
 ;;
 
 (* The block of recursive functions spares the allocation of a Some/None
@@ -1802,6 +1841,7 @@ ELSE () END;
 IFDEF DELAY THEN
    let ok = ref true in
    let to_be_resumed = ref [] in
+   (* Phase 1: we analyze the goals to be resumed *)
    while !ok && !to_resume <> [] do
      match !to_resume with
      | (Delayed_unif (ad,e,bd,a,b), vars) as exn :: rest ->
@@ -1812,13 +1852,33 @@ IFDEF DELAY THEN
            ad (uppterm ad [] 0 [||]) a
            bd (uppterm ad [] ad e) b;
          ok := unif ad e bd a b
-     | (Delayed_goal ((depth,_,g) as dpg), vars) as exn :: rest ->
+     | (Delayed_goal ((depth,_,g) as dpg), _) as exn :: rest ->
          remove_constraint exn;
          to_resume := rest;
          Format.fprintf Format.std_formatter
           "Resuming goal: ... ⊢ %a\n%!" (uppterm depth [] 0 [||]) g ;
          to_be_resumed := dpg :: !to_be_resumed
-     | _ -> assert false
+     | _ -> anomaly "Unknown constraint type"
+   done ;
+   (* Phase 2: we propagate the constraints *)
+   while !ok && !new_delayed <> [] do
+    match !new_delayed with
+     | dpg :: rest ->
+        new_delayed := rest ;
+        let to_be_removed,to_be_added = propagate dpg in
+        List.iter (function
+           (Delayed_goal ((depth,_,g)),_) ->
+             Format.fprintf Format.std_formatter
+              "Killing goal: ... ⊢ %a\n%!" (uppterm depth [] 0 [||]) g
+         | _ -> ()) to_be_removed ;
+        List.iter remove_constraint to_be_removed ;
+        List.iter (function
+           (Delayed_goal ((depth,_,g)),_) ->
+             Format.fprintf Format.std_formatter
+              "Add goal: ... ⊢ %a\n%!" (uppterm depth [] 0 [||]) g
+         | _ -> ()) to_be_added ;
+        List.iter add_constraint to_be_added
+     | _ -> anomaly "Empty list"
    done ;
    if !ok then Some (List.rev !to_be_resumed) else None
 ELSE Some [] END
