@@ -402,7 +402,7 @@ type trail_item =
  | AddConstr of constraint_
  | DelConstr of constraint_
 ELSE
-type trail_time = term oref
+type trail_item = term oref
 END
 
 type trail = trail_item list ref
