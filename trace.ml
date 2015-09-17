@@ -14,6 +14,7 @@ let level = ref 0
 let filter = ref []
 let fonly = ref []
 let hot = ref false
+let hot_level = ref 0
 
 let get_cur_step k = try M.find k !cur_step with Not_found -> 0
 
@@ -24,6 +25,7 @@ let condition k =
        (k = loc &&
        let cur_step = get_cur_step k in
        hot := cur_step >= first_step && cur_step <= last_step;
+       if !hot && !hot_level = 0 then hot_level := !level;
        !hot))
     && (!fonly = [] || List.exists (fun p -> Str.string_match p k 0) !fonly)
     && not(List.exists (fun p -> Str.string_match p k 0) !filter)
@@ -40,17 +42,20 @@ let incr_cur_step k =
   let n = get_cur_step k in
   cur_step := M.add k (n+1) !cur_step
 
+let make_indent () =
+  String.make (max 0 (!level - !hot_level)) ' '
+
 let enter k msg =
   incr level;
   incr_cur_step k;
   if condition k then begin
     Format.eprintf "%s%s %d {{{@[<hov1> %a@]\n%!"
-      (String.make !level ' ') k (get_cur_step k) (fun fmt () -> msg fmt) ();
+      (make_indent ()) k (get_cur_step k) (fun fmt () -> msg fmt) ();
   end
 
 let print name f x = 
   if condition name then
-    Format.eprintf "%s %s =@[<hov1> %a@]\n%!" (String.make !level ' ') name f x
+    Format.eprintf "%s %s =@[<hov1> %a@]\n%!" (make_indent ()) name f x
 
 let printers = ref []
 
@@ -73,7 +78,7 @@ exception TREC_CALL of Obj.t * Obj.t (* ('a -> 'b) * 'a *)
 let exit k tailcall ?(e=OK) time =
   if condition k then
     Format.eprintf "%s}}} %s  (%.3fs)\n%!"
-      (String.make !level ' ') (if tailcall then "->" else pr_exc e) time;
+      (make_indent ()) (if tailcall then "->" else pr_exc e) time;
   decr level
 
 let usage () =
