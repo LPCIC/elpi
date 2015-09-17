@@ -236,6 +236,17 @@ END ;
              with Not_found -> raise No_clause)
          | _ -> type_error "bad argument to $counter")
     | _ -> type_error "$counter takes 2 arguments") ;
+  register_custom "$is_flex" (fun ~depth ~env:_ _ args ->
+    let rec is_flex = function
+      | UVar ({contents=t},vardepth,args) when t != dummy ->
+         is_flex (deref ~from:vardepth ~to_:depth args t)
+      | AppUVar ({contents=t},vardepth,args) when t != dummy ->
+         is_flex (app_deref ~from:vardepth ~to_:depth args t)
+      | UVar _ | AppUVar _ -> true
+      | _ -> false in
+    match args with
+    | [t1] -> if is_flex t1 then [] else raise No_clause
+    | _ -> type_error "$is_flex takes 1 argument") ;
   register_custom "$lt" (fun ~depth ~env:_ _ args ->
     let rec get_constant = function
       | Const c -> c

@@ -100,6 +100,12 @@ input_line X Y :- $input_line X Y.
 readterm X Y :- $readterm X Y.
 lookahead X Y :- $lookahead X Y.
 eof X :- $eof X.
+is_flex X :- $is_flex X. % is_flex X :- not (not (X = x_unused_x))
+                         % does not work with delay/propagate
+                         % because the predicate is not "reentrant"
+                         % (i.e. when X <- x_unused_x occurs, it may
+                         % resume a goal that checks again is_flex X
+                         % returning true in place of false!
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% PREDEFINED PREDICATES %%%%%%%%%%%%%%%%%%%%%%%
 
@@ -120,5 +126,3 @@ print S :- output std_out S.
 read S :- flush std_out, input_line std_in X, string_to_term X S.
 
 stop :- halt.
-
-is_flex X :- not (not (X = x_unused_x)).
