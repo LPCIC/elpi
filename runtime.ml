@@ -1314,7 +1314,9 @@ let unif adepth e bdepth a b =
    | Float s1, Float s2 -> s1==s2
    | String s1, String s2 -> s1==s2
    | _ -> false in
- unif 0 a bdepth b false
+ let res = unif 0 a bdepth b false in
+ SPY "unif result" (fun fmt x -> Format.fprintf fmt "%b" x) res;
+ res
 ;;
 
 (* Look in Git for Enrico's partially tail recursive but slow unification.
