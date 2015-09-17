@@ -1103,6 +1103,8 @@ let bind r gamma l a d delta b left t e =
         let is_llam, args = is_llam lvl orig_args a b (d+w) left e in
         if is_llam then begin
           if lvl > gamma then
+            (* All orig args go away, but some between gamma and lvl can stay
+             * if they are in l *)
             let args_gamma_lvl =
               let rec keep_cst_for_lvl = function
                 | [] -> []
@@ -1132,12 +1134,16 @@ let bind r gamma l a d delta b left t e =
                   constant_of_dbl i :: a_here
                 with RestrictionFailure -> acc) args ([],[]) in
             if n_args = List.length args_here then
+              (* no pruning, just binding the args as a normal App *)
               mkAppUVar r lvl (List.map (bind w) orig_args)
             else
+              (* we need to project away some of the args *)
               let r' = oref dummy in
               let v = mkAppUVar r' lvl args_lvl in
               if not !last_call then trail := r :: !trail;
               r @:= List.fold_left (fun t _ -> Lam t) v args;
+              (* This should be the beta reduct. One could also
+               * return the non reduced but bound as in the other if branch *)
               mkAppUVar r' lvl args_here
         end
           else raise RestrictionFailure
