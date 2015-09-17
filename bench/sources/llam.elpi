@@ -1,0 +1,24 @@
+spy X :- % $print "test " X, 
+  not(not(X)).
+
+test P T :-
+  spy(P (x\y\x = y) F, F = T),
+  spy(P (x\y\y = x) F, F = T),
+  spy(pi dummy\ sigma F\ P (x\y\x = y) F, F = T),
+  spy(pi dummy\ sigma F\ P (x\y\y = x) F, F = T).
+
+clause (x\y\F y x) :- F = a\b\b.
+clause1 (x\y\x).
+clause2 (x\y\X x, F y (X x)) :- F = a\b\b.
+
+main :-
+  test (eq\F\        pi x\ pi y\ eq (F y x) x)             (a\b\b),
+  test (eq\F\   not (pi x\ pi y\ eq (F x) y))              whatever,
+  test (eq\F\        pi x\ pi y\ eq (F y x) (r (w\h w x))) (a\b\r (x\h x b)),
+  test (eq\F\        pi x\ pi y\ sigma R\ R = x, eq (F y x) R)             (a\b\b),
+  test (eq\F\   not (pi x\ pi y\ sigma R\ R = x, eq (F R) y))              whatever,
+  test (eq\F\        pi x\ pi y\ sigma R\ R = x, eq (F y x) (r (w\h w R))) (a\b\r (x\h x b)),
+  (pi dummy\ clause (x\y\x)),
+  (pi dummy\ clause1 (x\y\F y x), F = a\b\b),
+  (pi dummy\ clause2 (x\y\x,x)),
+  true.
