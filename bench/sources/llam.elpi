@@ -21,4 +21,5 @@ main :-
   (pi dummy\ clause (x\y\x)),
   (pi dummy\ clause1 (x\y\F y x), F = a\b\b),
   (pi dummy\ clause2 (x\y\x,x)),
+  (clause3 (x\y\G y x) => pi dummy\ clause3 (x\y\x)), (G = a\b\b),
   true.

@@ -1005,7 +1005,7 @@ exception Delayed_unif of int * term array * int * term * term
  *  constants to int.  The idea being that an UVar of level lvl also sees
  *  all the constants in the map, and the associated int is their position
  *  in the list of arguments starting from 0 *)
-let is_llam lvl args adepth bdepth depth left app_arg e =
+let is_llam lvl args adepth bdepth depth left e =
   let to_ = if left then adepth+depth else bdepth+depth in
   let get_con = function Const x -> x | _ -> raise RestrictionFailure in
   let deref_to_const = function
@@ -1014,14 +1014,10 @@ let is_llam lvl args adepth bdepth depth left app_arg e =
     | AppUVar ({ contents = t }, from, args) when t != dummy -> 
         get_con (app_deref ~from ~to_ args t)
     | Arg (i,args) when e.(i) != dummy ->
-        (* XXX BROKEN deref invariant XXX
-         *   args not living in to_ but in bdepth+depth *)
         get_con (deref ~from:adepth ~to_ args e.(i))
     | AppArg (i,args) when e.(i) != dummy -> 
-        (* XXX BROKEN deref invariant XXX
-         *   args not living in to_ but in bdepth+depth *)
         get_con (app_deref ~from:adepth ~to_ args e.(i))
-    | Const x -> if app_arg && x >= bdepth then x + (adepth-bdepth) else x
+    | Const x -> if not left && x >= bdepth then x + (adepth-bdepth) else x
     | _ -> raise RestrictionFailure
   in
   let rec aux n = function
@@ -1052,7 +1048,8 @@ let contained lvl lvl1 extra =
 
 let bind r gamma l a d delta b left t e =
   TRACE "bind" (fun fmt -> Format.fprintf fmt "%b %d + %a = %a %d" left
-    gamma (pplist (ppterm a [] b [||]) "") l (ppterm a [] b [||]) t a)
+    gamma (pplist (fun fmt (x,_) -> ppterm a [] b [||] fmt (constant_of_dbl x)) "") l
+          (ppterm a [] b [||]) t a)
   let new_lams = List.length l in
   let pos x = try List.assoc x l with Not_found -> raise RestrictionFailure in
   let cst c =
@@ -1226,7 +1223,7 @@ let unif adepth e bdepth a b =
 
    (* HO *)
    | AppUVar (r, lvl,args), other ->
-       let is_llam, args = is_llam lvl args adepth bdepth depth true false e in
+       let is_llam, args = is_llam lvl args adepth bdepth depth true e in
        if is_llam then
          bind r lvl args adepth depth delta bdepth true other e
        else begin
@@ -1234,7 +1231,7 @@ let unif adepth e bdepth a b =
      error (Format.flush_str_formatter ())
        end
    | other, AppUVar (r, lvl,args) ->
-       let is_llam, args = is_llam lvl args adepth bdepth depth false false e in
+       let is_llam, args = is_llam lvl args adepth bdepth depth false e in
        if is_llam then
          bind r lvl args adepth depth delta bdepth false other e
        else begin
@@ -1247,7 +1244,7 @@ let unif adepth e bdepth a b =
        true
 *)
    | other, AppArg(i,args) ->
-       let is_llam, args = is_llam adepth args adepth bdepth depth false true e in
+       let is_llam, args = is_llam adepth args adepth bdepth depth false e in
        if is_llam then
          let r = oref dummy in
          e.(i) <- UVar(r,adepth,0);
