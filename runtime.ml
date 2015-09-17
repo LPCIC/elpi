@@ -22,6 +22,10 @@ module Utils : sig
   (*uses physical equality; does nothing if the element is not in the list*)
   val remove_from_list' : 'a -> 'a list -> 'a list
 
+  (* returns Some t where f x = Some t for the first x in the list s.t.
+     f x <> None; returns None if for every x in the list, f x = None *)
+  val map_exists : ('a -> 'b option) -> 'a list -> 'b option
+
   (* A regular error *)
   val error : string -> 'a
 
@@ -95,6 +99,11 @@ let remove_from_list' x l =
  in
   aux [] l
 
+let rec map_exists f =
+ function
+    [] -> None
+  | hd::tl -> match f hd with None -> map_exists f tl | res -> res
+
 end (* }}} *)
 open Utils
 
@@ -151,6 +160,7 @@ module Constants : sig
   val pic    : constant
   val sigmac : constant
   val eqc    : constant
+  IFDEF DELAY THEN val propagatec : constant END
 
   (* Value for unassigned UVar/Arg *)
   val dummy  : term
@@ -192,6 +202,7 @@ let rimplc = fst (funct_of_ast F.rimplf)
 let pic = fst (funct_of_ast F.pif)
 let sigmac = fst (funct_of_ast F.sigmaf)
 let eqc = fst (funct_of_ast F.eqf)
+IFDEF DELAY THEN let propagatec = fst (funct_of_ast (F.from_string "propagate")) END
 
 let rec dummy = App (-9999,dummy,[])
 
@@ -1675,18 +1686,50 @@ let register_custom, lookup_custom =
  Hashtbl.find customs
 ;;
 
+let do_make_runtime =
+ ref (function () -> anomaly "do_make_runtime not initialized")
+
 (* constr is a new_delayed constraint;
    the two lists in output are the constraints to be removed and added *)
 let propagate constr =
- let foo = fst (Constants.funct_of_ast (F.from_string "foo")) in
- match constr with
-    Delayed_unif _,_ ->
-     anomaly "Delayed unifications should not become new_delayed"
-  | Delayed_goal (depth,p,App(xxx, Int n, [])),_ when xxx = foo ->
-     [constr],
-      if n = 0 then []
-      else [Delayed_goal (depth,p,App(foo, Int (n-1),[])),[]]
-  | _ -> [],[]
+ Format.fprintf Format.std_formatter "PROPAGATION\n%!";
+(*
+ let query =
+  let dummyv = UVar (oref dummy, 0, 0) in
+   App(propagatec,dummyv,[dummyv ; dummyv]) in
+ (* CSC: INVARIANT: propagate clauses can never be assumed using
+    implication. Otherwise ~depth:0 is wrong and I do not see any
+    reasonable semantics (i.e. a semantics where the scoping is not
+    violated). For the same reason I took the propagate clauses from
+    the !original_program. *)
+ let rules = get_clauses ~depth:0 query !original_program in*)
+ let pairs =
+  let not_constr = List.filter ((!=) constr) !delayed in
+  List.map (fun x -> constr,x) not_constr @
+  List.map (fun x -> x,constr) not_constr in
+ let run,_ = !do_make_runtime () in
+ map_exists
+  (fun (c,d) ->
+    let term_of_constr constr =
+     match constr with
+        Delayed_unif _,_ ->
+         anomaly "Delayed unifications should not become new_delayed"
+      | Delayed_goal (_depth,_p,t),_ -> t
+      | _ -> anomaly "Unknown constraint type" in
+    let cc = term_of_constr c in
+    let dd = term_of_constr d in
+    let uvar = oref dummy in
+    let query = [],[||],App(propagatec,cc,[dd ; UVar (uvar, 0, 0)]) in
+    Format.fprintf Format.std_formatter "Starting runtime\n%!";
+    try
+     let _ = run !original_program query in
+     Format.fprintf Format.std_formatter "Ending runtime\n%!";
+     let constr = Delayed_goal (0,!original_program,!!uvar),[] in
+     Some ([d],[constr])
+    with No_clause ->
+     Format.fprintf Format.std_formatter "Ending runtime\n%!";
+     None
+  ) pairs
 ;;
 
 (* The block of recursive functions spares the allocation of a Some/None
@@ -1864,20 +1907,21 @@ IFDEF DELAY THEN
    while !ok && !new_delayed <> [] do
     match !new_delayed with
      | dpg :: rest ->
-        new_delayed := rest ;
-        let to_be_removed,to_be_added = propagate dpg in
-        List.iter (function
-           (Delayed_goal ((depth,_,g)),_) ->
-             Format.fprintf Format.std_formatter
-              "Killing goal: ... ⊢ %a\n%!" (uppterm depth [] 0 [||]) g
-         | _ -> ()) to_be_removed ;
-        List.iter remove_constraint to_be_removed ;
-        List.iter (function
-           (Delayed_goal ((depth,_,g)),_) ->
-             Format.fprintf Format.std_formatter
-              "Add goal: ... ⊢ %a\n%!" (uppterm depth [] 0 [||]) g
-         | _ -> ()) to_be_added ;
-        List.iter add_constraint to_be_added
+        (match propagate dpg with
+            None -> new_delayed := rest
+          | Some (to_be_removed,to_be_added) ->
+             List.iter (function
+                (Delayed_goal ((depth,_,g)),_) ->
+                  Format.fprintf Format.std_formatter
+                   "Killing goal: ... ⊢ %a\n%!" (uppterm depth [] 0 [||]) g
+              | _ -> ()) to_be_removed ;
+             List.iter remove_constraint to_be_removed ;
+             List.iter (function
+                (Delayed_goal ((depth,_,g)),_) ->
+                  Format.fprintf Format.std_formatter
+                   "Add goal: ... ⊢ %a\n%!" (uppterm depth [] 0 [||]) g
+              | _ -> ()) to_be_added ;
+             List.iter add_constraint to_be_added)
      | _ -> anomaly "Empty list"
    done ;
    if !ok then Some (List.rev !to_be_resumed) else None
@@ -1895,14 +1939,21 @@ ELSE Some [] END
 
  (* Finally the runtime *)
  fun () ->
+  let saved_trail = ref !trail in
+  let saved_to_resume = ref !to_resume in
+  let saved_new_delayed = ref !new_delayed in
+  let saved_delayed = ref !delayed in
+  let saved_original_program = ref !original_program in
   let my_trail = ref [] in
   let my_to_resume = ref [] in
+  let my_new_delayed = ref [] in
   let my_delayed = ref [] in
   let my_original_program = ref !original_program in
   let ensure_runtime f x =
     trail := !my_trail; last_call := false;
     IFDEF DELAY THEN
       to_resume := !my_to_resume;
+      new_delayed := !my_new_delayed;
       delayed := !my_delayed;
       original_program := !my_original_program
     ELSE () END;
@@ -1912,7 +1963,12 @@ ELSE Some [] END
      IFDEF DELAY THEN
        my_delayed := !delayed ;
        my_to_resume := !to_resume ;
-       my_original_program := !original_program
+       my_new_delayed := !new_delayed ;
+       my_original_program := !original_program ;
+       delayed := !saved_delayed ;
+       to_resume := !saved_to_resume ;
+       new_delayed := !saved_new_delayed ;
+       original_program := !saved_original_program
      ELSE () END;
      rc
     with e ->
@@ -1921,7 +1977,12 @@ ELSE Some [] END
      IFDEF DELAY THEN
        my_delayed := !delayed ;
        my_to_resume := !to_resume ;
-       my_original_program := !original_program
+       my_new_delayed := !new_delayed ;
+       my_original_program := !original_program ;
+       delayed := !saved_delayed ;
+       to_resume := !saved_to_resume ;
+       new_delayed := !saved_new_delayed ;
+       original_program := !saved_original_program
      ELSE () END;
      raise e in
   (fun p (_,q_env,q) ->
@@ -1931,6 +1992,8 @@ ELSE Some [] END
      run lcs p q [] FNil emptyalts emptyalts)),
   (fun alts -> ensure_runtime next_alt alts)
 ;;
+
+do_make_runtime := make_runtime;;
 
 (* }}} *)
 (* {{{ ************** "compilation" + API *********************** *)

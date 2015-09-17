@@ -211,6 +211,8 @@ IFDEF DELAY THEN
     | [t1; t2] ->
       (match is_flex t2 with
           Some v2 ->
+           Format.fprintf Format.std_formatter
+            "Delaying goal: ... ⊢ %a\n%!" (uppterm depth [] 0 [||]) t1 ;
            let delayed_goal = (Delayed_goal (depth,p,t1), [v2]) in
            add_constraint delayed_goal ;
            []
