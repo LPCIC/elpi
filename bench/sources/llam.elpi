@@ -18,8 +18,15 @@ main :-
   test (eq\F\        pi x\ pi y\ sigma R\ R = x, eq (F y x) R)             (a\b\b),
   test (eq\F\   not (pi x\ pi y\ sigma R\ R = x, eq (F R) y))              whatever,
   test (eq\F\        pi x\ pi y\ sigma R\ R = x, eq (F y x) (r (w\h w R))) (a\b\r (x\h x b)),
-  (pi dummy\ clause (x\y\x)),
+  spy (pi dummy\ clause (x\y\x)),
   (pi dummy\ clause1 (x\y\F y x), F = a\b\b),
   (pi dummy\ clause2 (x\y\x,x)),
   (clause3 (x\y\G y x) => pi dummy\ clause3 (x\y\x)), (G = a\b\b),
+  test (eq\F\        sigma H\pi x\ pi y\ eq (F y) (r (H y x)), H x x = x, H x y = x)   (a\r a),
+
+  % this is hard because F<H but is applied to y that H can see, so H is restricted to the
+  % level of F (that alone would prune y) but applied to y, so H 1 = y works
+  test (eq\F\        pi x\ pi y\ sigma H\ pi z\pi w\eq (F y) (r (H w)), spy(H 1 = y), not(H 2 = x))
+     (a\r whatever),
+  
   true.
