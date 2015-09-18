@@ -1049,6 +1049,8 @@ let mkAppUVar r lvl l =
   try UVar(r,lvl,in_fragment lvl l)
   with NotInTheFragment -> AppUVar(r,lvl,l)
 
+let rec mknLam n t = if n = 0 then t else mknLam (n-1) (Lam t)
+
 (* [bind r args ... t] generates a term \args.t' to be assigned to r.
  * r is the variable being assigned
  * gamma is the level of the variable we assigning
@@ -1098,9 +1100,38 @@ let bind r gamma l a d delta b left t e =
     | AppUVar ({ contents = t }, from, args) when t != dummy ->
         if left then bind w (app_deref ~from ~to_:(b+d+w) args t)
         else         bind w (app_deref ~from ~to_:(a+d+w) args t)
-    (* prune? *)
-    | AppUVar (r,lvl, orig_args) ->
-        let is_llam, args = is_llam lvl orig_args a b (d+w) left e in
+    (* pruning (on the fly heapify of Args) *)
+    | (UVar _ | AppUVar _ | Arg _ | AppArg _) as _orig_ ->
+        let r, lvl, (is_llam, args), orig_args = match _orig_ with
+          | UVar(r,lvl,0) -> r, lvl, (true, []), []
+          | UVar(r,lvl,args) ->
+              let r' = oref dummy in
+              let v = UVar(r',lvl+args,0) in
+              r @:= mknLam args v;
+              if not !last_call then trail := r :: !trail;
+              r', (lvl+args),  (true,[]), []
+          | AppUVar (r,lvl, orig_args) ->
+              r, lvl, is_llam lvl orig_args a b (d+w) left e, orig_args
+          | Arg (i,0) ->
+              let r = oref dummy in
+              let v = UVar(r,a,0) in
+              e.(i) <- v;
+              r, a, (true,[]), []
+          | Arg (i,args) ->
+              let r = oref dummy in
+              let v = UVar(r,a,0) in
+              e.(i) <- v;
+              let r' = oref dummy in
+              let v = UVar(r',a+args,0) in
+              r @:= mknLam args v;
+              r', a+args, (true, []), []
+          | AppArg (i,orig_args) ->
+              let is_llam, args = is_llam a orig_args a b (d+w) false e in
+              let r = oref dummy in
+              let v = UVar(r,a,0) in
+              e.(i) <- v;
+              r, a, (is_llam, args), orig_args
+          | _ -> assert false in
         if is_llam then begin
           if lvl > gamma then
             (* All orig args go away, but some between gamma and lvl can stay
@@ -1114,8 +1145,8 @@ let bind r gamma l a d delta b left t e =
               keep_cst_for_lvl l in
             let r' = oref dummy in
             let v = mkAppUVar r' gamma args_gamma_lvl in
-            if not !last_call then trail := r :: !trail;
             r @:= List.fold_left (fun t _ -> Lam t) v args;
+            if not !last_call then trail := r :: !trail;
             v
           else
             (* given that we need to make lambdas to prune some args,
@@ -1140,28 +1171,13 @@ let bind r gamma l a d delta b left t e =
               (* we need to project away some of the args *)
               let r' = oref dummy in
               let v = mkAppUVar r' lvl args_lvl in
-              if not !last_call then trail := r :: !trail;
               r @:= List.fold_left (fun t _ -> Lam t) v args;
+              if not !last_call then trail := r :: !trail;
               (* This should be the beta reduct. One could also
                * return the non reduced but bound as in the other if branch *)
               mkAppUVar r' lvl args_here
         end
           else raise RestrictionFailure
-    | AppArg (i,args) -> assert false
-(*
-       let args = List.map (to_heap a ~from:b ~to_:(b+d+w) e) args in
-       if is_llam a args then
-         assert false
-       else
-         raise RestrictionFailure
-*)
-    | UVar(_,lvl,args) ->
-                    assert false
-(*
-        if contained (lvl + args) gamma l then ...
-        else prune            
-*)
-    | Arg _ -> assert false
   in
   try
     r @:= List.fold_left (fun t _ -> Lam t) (bind 0 t) l;

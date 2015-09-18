@@ -11,6 +11,10 @@ clause (x\y\F y x) :- F = a\b\b.
 clause1 (x\y\x).
 clause2 (x\y\X x, F y (X x)) :- F = a\b\b.
 
+prune_arg (r F).
+prune_arg2 (r (x\F x)).
+prune_arg3 (r (x\y\F y x)).
+
 main :-
   test (eq\F\        pi x\ pi y\ eq (F y x) x)             (a\b\b),
   test (eq\F\   not (pi x\ pi y\ eq (F x) y))              whatever,
@@ -26,7 +30,15 @@ main :-
 
   % this is hard because F<H but is applied to y that H can see, so H is restricted to the
   % level of F (that alone would prune y) but applied to y, so H 1 = y works
-  test (eq\F\        pi x\ pi y\ sigma H\ pi z\pi w\eq (F y) (r (H w)), spy(H 1 = y), not(H 2 = x))
-     (a\r whatever),
-  
+  test (eq\F\        pi x\ pi y\ sigma H\ pi z\pi w\eq (F y) (r (H w)),
+                                                    spy(H 1 = y), not(H 2 = x))
+       (a\r whatever),
+  test (eq\F\        pi x\ pi y\ sigma H\ pi w\eq (F y x) (r (H w)),
+                                               H 1 = f x y)
+       (a\b\r (f a b)),
+ 
+  test (eq\F\        pi x\pi y\prune_arg (F y x))  (a\b\r (v a b)),
+  test (eq\F\        pi x\pi y\prune_arg2 (F y x)) (a\b\r (x\v a b)),
+  test (eq\F\        pi x\pi y\prune_arg3 (F y x)) (a\b\r (x\y\v a b)),
+ 
   true.
