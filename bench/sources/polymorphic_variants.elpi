@@ -1,0 +1,65 @@
+% Type inference for a super-constrainted functional langage with
+% polymorphic variants
+%
+% Syntax:    f ::= (<case> constant term)^*    unary functions
+%         term ::= constant | <@> funname term
+%      program ::= (<fun> funname f)^*
+%        types ::= (<fun> funname type type)^*
+%         type ::= constant^*
+%
+%      constant and funnames are distinct lambda-prolog names
+
+% check types program types
+% the functions must be listed in the same order in both
+%check A B C :- $print (check A B C), fail.
+check [] [] _.
+check [fun F B | BTL] [fun F D C | TTL] ORIGTYS :-
+ check_domain B D,
+ check_codomain B C ORIGTYS,
+ check BTL TTL ORIGTYS.
+
+% check_domain body type
+%check_domain A B :- $print (check_domain A B), fail.
+check_domain B T :- inputs B I, is_subset T I.
+
+%is_subset A B :- $print (is_subset A B), fail.
+is_subset [] _.
+is_subset [X|TL] TL1 :- mem TL1 X, is_subset TL TL1.
+
+mem [X|_] X :- !.
+mem [Y|TL] X :- mem TL X.
+
+%check_codomain body type types
+%check_codomain A B C :- $print (check_codomain A B C), fail.
+check_codomain [] _ _.
+check_codomain [case _ T | TL] TYS ORIGTYS :-
+  check_term T TYS ORIGTYS,
+  check_codomain TL TYS ORIGTYS.
+
+%check_term term type
+%check_term A B C :- $print (check_term A B C), fail.
+check_term (@ F T) TY ORIGTYS :-
+ !,
+ find ORIGTYS F D C,
+ check_term T D ORIGTYS,
+ is_subset C TY.
+check_term X TY _ :-
+ mem TY X.
+
+find [fun F D C | _] F D C :- !.
+find [ _ | TL ] F D C :- find TL F D C.
+
+%inputs A B :- $print (inputs A B), fail.
+inputs [] [].
+inputs [case A _ | TL] [A | TL'] :- inputs TL TL'.
+
+main :-
+ P = [ fun f [ case a a
+             , case b (@ g a) ]
+     , fun g [ case a c
+             , case b d ]
+     ],
+ T = [ fun f [b] [a, c, d, e ]
+     , fun g [a, b] [c, d, e]
+     ],
+ check P T T.
