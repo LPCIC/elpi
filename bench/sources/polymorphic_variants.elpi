@@ -23,8 +23,10 @@ check [fun F B | BTL] [fun F D C | TTL] ORIGTYS :-
 check_domain B T :- inputs B I, is_subset T I.
 
 %is_subset A B :- $print (is_subset A B), fail.
-is_subset [] _.
-is_subset [X|TL] TL1 :- mem TL1 X, is_subset TL TL1.
+is_subset A B :- is_flex A, !, $delay (is_subset A B) A.
+is_subset A B :- is_subset_ A B.
+is_subset_ [] _.
+is_subset_ [X|TL] TL1 :- mem TL1 X, is_subset TL TL1.
 
 mem [X|_] X :- !.
 mem [Y|TL] X :- mem TL X.
@@ -53,6 +55,14 @@ find [ _ | TL ] F D C :- find TL F D C.
 inputs [] [].
 inputs [case A _ | TL] [A | TL'] :- inputs TL TL'.
 
+/* Expected output, according to OCaml
+Note: I use ref to kill Hindley-Milner polymorphism
+# let g = ref (function `A -> `C | `B -> `D);;
+# let f = function `A -> `A | `B -> !g `A;;
+# f,!g;;
+- : (_[< `A | `B ] -> (_[> `A | `C | `D ] as 'a)) *
+    (_[< `A | `B > `A ] -> 'a) */
+
 main :-
  P = [ fun f [ case a a
              , case b (@ g a) ]
@@ -62,4 +72,11 @@ main :-
  T = [ fun f [b] [a, c, d, e ]
      , fun g [a, b] [c, d, e]
      ],
- check P T T.
+ check P T T,
+ $print "Type-checking ok",
+ I = [ fun f If Of
+     , fun g Ig Og
+     ],
+ check P I I,
+ $print ":::" f ":" If "->" Of,
+ $print ":::" g ":" Ig "->" Og.
