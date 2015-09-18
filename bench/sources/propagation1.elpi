@@ -6,3 +6,7 @@ of_ (lam F) (impl A B) :- pi x\ of_ x A => of (F x) B.
 propagate (of X T1) (of X T2) true :- T1 = T2.
 
 main :- of X T1, of X nat, $print "The type is " T1.
+
+% NOTE: the following should fail because of occur-check, but it
+% does not. It creates a cyclic term. There is a bug with occur check!
+% of (app X X) T.
