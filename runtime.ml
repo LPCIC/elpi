@@ -1028,23 +1028,6 @@ let is_llam lvl args adepth bdepth depth left e =
   try true, aux 0 (List.map deref_to_const args)
   with RestrictionFailure -> false, []
 
-(*
-let contained lvl lvl1 extra =
-  if lvl <= lvl1 then lvl
-  else
-    let rec aux n max =
-      if n > max then max
-      else
-        try ignore(List.mem_assoc n extra)
-        with Not_found -> n-1
-    let max = ref lvl1 in
-    for i=lvl1 to lvl do
-      if i not in l then break;
-      
-    done
-    !max
-*)
-
 let mkAppUVar r lvl l =
   try UVar(r,lvl,in_fragment lvl l)
   with NotInTheFragment -> AppUVar(r,lvl,l)
@@ -1069,7 +1052,7 @@ let bind r gamma l a d delta b left t e =
     (ppterm a [] b [||]) t a)
   let new_lams = List.length l in
   let pos x = try List.assoc x l with Not_found -> raise RestrictionFailure in
-  let cst c =
+  let cst c = (* The complex thing (DBL) *)
     if left then begin
       if c < gamma && c < b then c
       else
@@ -1095,13 +1078,12 @@ let bind r gamma l a d delta b left t e =
     | AppArg (i,args) when e.(i) != dummy ->
         bind w (app_deref ~from:a ~to_:(a+d+w) args e.(i))
     | UVar ({ contents = t }, from, args) when t != dummy ->
-        if left then bind w (deref ~from ~to_:(b+d+w) args t)
-        else         bind w (deref ~from ~to_:(a+d+w) args t)
+        bind w (deref ~from ~to_:((if left then b else a)+d+w) args t)
     | AppUVar ({ contents = t }, from, args) when t != dummy ->
-        if left then bind w (app_deref ~from ~to_:(b+d+w) args t)
-        else         bind w (app_deref ~from ~to_:(a+d+w) args t)
-    (* pruning (on the fly heapify of Args) *)
+        bind w (app_deref ~from ~to_:((if left then b else a)+d+w) args t)
+    (* pruning *)
     | (UVar _ | AppUVar _ | Arg _ | AppArg _) as _orig_ ->
+        (* We deal with all flexible terms in a uniform way *)
         let r, lvl, (is_llam, args), orig_args = match _orig_ with
           | UVar(r,lvl,0) -> r, lvl, (true, []), []
           | UVar(r,lvl,args) ->
@@ -1122,8 +1104,8 @@ let bind r gamma l a d delta b left t e =
               let v = UVar(r,a,0) in
               e.(i) <- v;
               let r' = oref dummy in
-              let v = UVar(r',a+args,0) in
-              r @:= mknLam args v;
+              let v' = UVar(r',a+args,0) in
+              r @:= mknLam args v';
               r', a+args, (true, []), []
           | AppArg (i,orig_args) ->
               let is_llam, args = is_llam a orig_args a b (d+w) false e in
@@ -1133,6 +1115,7 @@ let bind r gamma l a d delta b left t e =
               r, a, (is_llam, args), orig_args
           | _ -> assert false in
         if is_llam then begin
+          let n_args = List.length args in
           if lvl > gamma then
             (* All orig args go away, but some between gamma and lvl can stay
              * if they are in l *)
@@ -1145,7 +1128,7 @@ let bind r gamma l a d delta b left t e =
               keep_cst_for_lvl l in
             let r' = oref dummy in
             let v = mkAppUVar r' gamma args_gamma_lvl in
-            r @:= List.fold_left (fun t _ -> Lam t) v args;
+            r @:= mknLam n_args v;
             if not !last_call then trail := r :: !trail;
             v
           else
@@ -1153,9 +1136,8 @@ let bind r gamma l a d delta b left t e =
              * we also permute to make the restricted meta eventually
              * fall inside the small fragment (sort the args) *)
             let args = List.sort compare args in
-            let n_args = List.length args in
             let args_lvl, args_here =
-              List.fold_right (fun (c,c_p) (a_lvl,a_here as acc) ->
+              List.fold_right (fun (c, c_p) (a_lvl, a_here as acc) ->
                 try
                   let i =
                     if c < gamma then c
@@ -1171,7 +1153,7 @@ let bind r gamma l a d delta b left t e =
               (* we need to project away some of the args *)
               let r' = oref dummy in
               let v = mkAppUVar r' lvl args_lvl in
-              r @:= List.fold_left (fun t _ -> Lam t) v args;
+              r @:= mknLam n_args v;
               if not !last_call then trail := r :: !trail;
               (* This should be the beta reduct. One could also
                * return the non reduced but bound as in the other if branch *)
@@ -1180,11 +1162,12 @@ let bind r gamma l a d delta b left t e =
           else raise RestrictionFailure
   in
   try
-    r @:= List.fold_left (fun t _ -> Lam t) (bind 0 t) l;
+    r @:= mknLam new_lams (bind 0 t);
     if not !last_call then trail := r :: !trail;
     SPY "assign(HO)" (ppterm gamma [] a [||]) (!!r);
     true
   with RestrictionFailure -> false
+;;
 
 let unif adepth e bdepth a b =
 
