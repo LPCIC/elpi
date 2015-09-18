@@ -1960,6 +1960,7 @@ ELSE Some [] END
     try
      let rc = f x in
      my_trail := !trail ;
+     trail := !saved_trail ;
      IFDEF DELAY THEN
        my_delayed := !delayed ;
        my_to_resume := !to_resume ;
@@ -1973,7 +1974,7 @@ ELSE Some [] END
      rc
     with e ->
      my_trail := !trail;
-     trail := [];
+     trail := !saved_trail;
      IFDEF DELAY THEN
        my_delayed := !delayed ;
        my_to_resume := !to_resume ;
