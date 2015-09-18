@@ -63,6 +63,16 @@ Note: I use ref to kill Hindley-Milner polymorphism
 - : (_[< `A | `B ] -> (_[> `A | `C | `D ] as 'a)) *
     (_[< `A | `B > `A ] -> 'a) */
 
+% This is an interesting propagation rule we would like to add:
+% a (non empty) subset of a singleton is a singleton.
+% We cannot add the propagation rule now because:
+%  1. we match up to unification
+%     => the rule turns constraints of the form (is_subset X a::Y) into
+%        (is_subset X [a])
+%  2. already unifying the first argument of the rule triggers resumption
+%     but there is confusion between the two runtimes and a mess happens
+%propagate true (is_subset X [Y]) [X = [Y]].
+
 main :-
  P = [ fun f [ case a a
              , case b (@ g a) ]
@@ -87,4 +97,29 @@ main :-
  Ig = [a],
  $print "Type specialization ok",
  $print ":::" f ":" If "->" Of,
- $print ":::" g ":" Ig "->" Og.
+ $print ":::" g ":" Ig "->" Og,
+ $print_delayed,
+
+ P' = [ fun f [ case a a
+              , case b (@ h1 (@ g a))
+              , case c (@ h2 (@ g a)) ]
+      , fun g  [ case a a ]
+      , fun h1 [ case a a
+               , case b b
+               , case d d ]
+      , fun h2 [ case a a
+               , case b b
+               , case c c ]
+      ],
+ I' = [ fun f If' Of'
+      , fun g Ig' Og'
+      , fun h1 Ih1' Oh1'
+      , fun h2 Ih2' Oh2'
+      ],
+ check P' I' I',
+ $delay true XX,
+ $print "Type-inference ok",
+ $print ":::" f ":" If' "->" Of',
+ $print ":::" g ":" Ig' "->" Og',
+ $print ":::" h1 ":" Ih1' "->" Oh1',
+ $print ":::" h2 ":" Ih2' "->" Oh2'.
