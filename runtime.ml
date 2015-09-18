@@ -1732,6 +1732,23 @@ let propagate constr =
   ) pairs
 ;;
 
+let print_delayed () =
+ List.iter
+  (function
+   | Delayed_unif (ad,e,bd,a,b),_ ->
+      Format.fprintf Format.std_formatter
+       "delayed goal: @[<hov 2>^%d:%a@ == ^%d:%a@]\n%!"
+        ad (uppterm ad [] 0 [||]) a
+        bd (uppterm ad [] ad e) b
+   | Delayed_goal (depth,p,g),_ ->
+      let pdiff = diff_progs ~to_:depth p !original_program in
+      Format.fprintf Format.std_formatter
+       "delayed goal: @[<hov 1>%a ⊢ %a@]\n%!"
+       (* CSC: Bug here: print at the right precedence *)
+       (pplist (uppterm depth [] 0 [||]) ", ") pdiff
+       (uppterm depth [] 0 [||]) g
+   | _ -> assert false) !delayed
+
 (* The block of recursive functions spares the allocation of a Some/None
  * at each iteration in order to know if one needs to backtrack or continue *)
 let make_runtime : unit -> ('a -> 'b -> int -> 'k) * ('k -> 'k) =
@@ -1860,21 +1877,7 @@ ELSE () END;
          | Some ((ndepth,p,ng)::goals) ->
             run ndepth p ng goals FNil alts lvl
          | Some [] ->
-            List.iter
-             (function
-              | Delayed_unif (ad,e,bd,a,b),_ ->
-                 Format.fprintf Format.std_formatter
-                  "delayed goal: @[<hov 2>^%d:%a@ == ^%d:%a@]\n%!"
-                   ad (uppterm ad [] 0 [||]) a
-                   bd (uppterm ad [] ad e) b
-              | Delayed_goal (depth,p,g),_ ->
-                 let pdiff = diff_progs ~to_:depth p !original_program in
-                 Format.fprintf Format.std_formatter
-                  "delayed goal: @[<hov 1>%a ⊢ %a@]\n%!"
-                  (* CSC: Bug here: print at the right precedence *)
-                  (pplist (uppterm depth [] 0 [||]) ", ") pdiff
-                  (uppterm depth [] 0 [||]) g
-              | _ -> assert false) !delayed;
+            print_delayed ();
             alts
        ELSE alts END
     | FCons (_,[],_) -> anomaly "empty stack frame"

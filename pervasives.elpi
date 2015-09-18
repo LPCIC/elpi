@@ -34,8 +34,11 @@
 % nofixity std_out
 % nofixity std_err
 
+% NOT IN TEYJUS
 % nofixity $print
 % nofixity $lt
+% nofixity is_flex
+% nofixity $print_delayed
 
 
 prefix ~  256.       prefix i~  256.     prefix r~  256.

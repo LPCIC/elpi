@@ -238,6 +238,9 @@ END ;
              with Not_found -> raise No_clause)
          | _ -> type_error "bad argument to $counter")
     | _ -> type_error "$counter takes 2 arguments") ;
+  register_custom "$print_delayed" (fun ~depth ~env _ args ->
+    print_delayed () ;
+    []) ;
   register_custom "$is_flex" (fun ~depth ~env:_ _ args ->
     let rec is_flex = function
       | UVar ({contents=t},vardepth,args) when t != dummy ->

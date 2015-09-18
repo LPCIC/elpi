@@ -74,9 +74,17 @@ main :-
      ],
  check P T T,
  $print "Type-checking ok",
+
  I = [ fun f If Of
      , fun g Ig Og
      ],
  check P I I,
+ $print "Type-inference ok",
+ $print ":::" f ":" If "->" Of,
+ $print ":::" g ":" Ig "->" Og,
+ $print_delayed,
+ 
+ Ig = [a],
+ $print "Type specialization ok",
  $print ":::" f ":" If "->" Of,
  $print ":::" g ":" Ig "->" Og.

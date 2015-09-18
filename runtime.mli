@@ -96,4 +96,5 @@ type goal = (*depth:*)int * index * term
 exception Delayed_goal of goal
 val is_flex : term -> term oref option
 val add_constraint : constraint_ -> unit
+val print_delayed : unit -> unit
 END
