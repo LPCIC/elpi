@@ -58,13 +58,14 @@ let _ =
    if Array.length argv = 1 then 1,`OneInteractive
    else if argv.(1) = "-test" then 2,`OneBatch
    else if argv.(1) = "-prolog" then 2,`PPprologBatch
+   else if argv.(1) = "-export" then 2,`LatexExport
    else 1,`OneInteractive in
   let filenames = ref [] in
   for i=j to argn - 1 do filenames := argv.(i)::!filenames done;
   let p = Parser.parse_program (List.rev !filenames) in
   let g =
     match test with
-    | `OneBatch | `PPprologBatch -> "main."
+    | `OneBatch | `LatexExport | `PPprologBatch -> "main."
     | _ ->
     Printf.printf "goal> %!";
     input_line stdin in
@@ -74,4 +75,5 @@ let _ =
   | `OneBatch -> test_impl p g
   | `OneInteractive -> run_prog p g
   | `PPprologBatch -> pp_lambda_to_prolog p  
+  | `LatexExport -> Parser.Export.export_clauses [List.nth (List.rev p) 0];
 ;;

@@ -518,3 +518,103 @@ let parse_goal_from_stream strm =
   with
     Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) -> raise(Stream.Error msg)
   | Ploc.Exc(_,e) -> raise e
+
+
+module Export = struct
+(* ------ LaTeX exporter ------- *)
+
+(* if  q :- a,b,c  returns a pair (q,[a;b;c]) *)
+let clausify t = match t with
+  | App(Const f,tl) ->
+     (match tl with
+        | [left;right] when ASTFuncS.pp f = (ASTFuncS.pp ASTFuncS.rimplf) ->
+            let rec hyps andl = (match andl with
+              | App(Const f,conjl) when ASTFuncS.pp f = (ASTFuncS.pp ASTFuncS.andf) -> (match conjl with
+                  | x::y::nil -> x :: (hyps y) 
+                  | _ -> assert false) 
+              | _ -> [andl] ) in             
+            let right = hyps right in
+            (left,right)
+        | _ -> (t,[])) 
+  | _ -> (t,[])          
+   
+
+(* (q,[a;b=>c;d] returns [(None,a);(b,c);(None,d)]*)
+let create_context pairsl = 
+  let rec aux clt = match clt with
+  | [] -> []
+  | (App(Const f,tl) as fla)::rest -> (match tl with
+      | [left;right] when ASTFuncS.pp f = (ASTFuncS.pp ASTFuncS.implf) -> (Some left,right) :: (aux rest)
+      | _ -> (None,fla) :: (aux rest) ) 
+  | hd::rest -> (None,hd) :: (aux rest) in
+  aux (snd pairsl)
+
+
+
+(* exports a f-la occurrence, i.e. q,a,b,c f-las from above *)
+let rec export_term t = match t with
+   Const f 
+ | Custom f -> ASTFuncS.pp f
+ | App(f,tl) -> 
+    (match tl with
+      [] -> export_term f
+    | [x] -> 
+       if (export_term f) == (ASTFuncS.pp ASTFuncS.pif) then
+        match x with
+          Lam(_,_) ->  "(" ^ " \\forall " ^ (export_term x) ^ ")"
+        | _ -> assert false 
+       else
+        (export_term f) ^ "(" ^ (export_term x) ^ ")"
+    | [x;y] -> 
+       if (export_term f) == (ASTFuncS.pp ASTFuncS.eqf) then
+        "(" ^ (export_term x) ^ " = " ^ (export_term y) ^ ")"
+       else if (export_term f) == (ASTFuncS.pp ASTFuncS.implf) then
+        "(" ^  (export_term x) ^ " \\rightarrow " ^ (export_term y) ^ ")" 
+       else if (export_term f) == (ASTFuncS.pp ASTFuncS.andf) then
+         "(" ^ (export_term x) ^ " \\wedge " ^ (export_term y) ^ ")"
+       else if (export_term f) == (ASTFuncS.pp ASTFuncS.orf) then
+         "(" ^ (export_term x) ^ " \\vee " ^ (export_term y) ^ ")"
+       else (export_term f) ^ "(" ^ (export_term x) ^ "," ^ (export_term y) ^ ")"
+    | _ -> let last,tail = (List.hd (List.rev tl)), (List.rev (List.tl (List.rev tl))) in
+      (export_term f) ^ "(" ^ (List.fold_left (fun l x -> l^(export_term x)^",") "" tail) ^ (export_term last) ^ ")" ) 
+ | Lam (x,t1) ->
+    " \\lambda "^ ASTFuncS.pp x^"." ^ (export_term t1)
+ | String str -> ASTFuncS.pp str
+ | Int i -> string_of_int i 
+
+
+(* exports b => c, i.e. (b,c) to b |- c*)
+let export_pair = function
+  | (None,b) -> " \\Gamma\\vdash " ^ export_term b
+  | (Some a,b) -> " \\Gamma," ^ export_term a ^" \\vdash "^  export_term b
+  | _ -> assert false
+
+
+let export_clauses cl_list = 
+ Format.printf "\nExport in LaTeX \n\n%!";
+ let headers = 
+  "\\documentclass[10pt]{article} 
+
+\\usepackage[utf8]{inputenc}
+\\usepackage{amssymb}
+\\usepackage{color}
+\\usepackage{bussproofs}
+
+\\begin{document} \n" in
+ let rules = List.fold_left (fun l cl ->
+   let clpair = clausify cl in
+   let arity = List.length (snd clpair) in
+   let rule = match arity with
+     | 1 -> "\\UnaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n"
+     | 2 -> "\\BinaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n"
+     | 3 -> "\\TrinaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n"
+     | 4 -> "\\QuaternaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n"
+     | 5 -> "\\QuinaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n" in
+
+   let axioms = List.fold_right (fun cl1 l1 -> "\\AxiomC{$" ^ (export_pair cl1) ^ "$}\n" ^ l1 ) (create_context clpair) "" in
+   axioms ^ rule) "" cl_list in
+ let str = headers ^ rules ^ "\\end{document}" in
+ Format.printf "%s%!" str;
+ exit 1;
+
+end

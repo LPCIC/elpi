@@ -40,3 +40,7 @@ val precedence_of : ASTFuncS.t -> fixity * int
 val parse_program : filenames:string list -> clause list
 val parse_goal : string -> term
 val parse_goal_from_stream : char Stream.t -> term
+
+module Export : sig
+  val export_clauses : term list -> unit 
+end
