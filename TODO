@@ -153,11 +153,11 @@ Benchmarks:
 1. http://www.cs.hofstra.edu/~cscccl/lambda-examples/
    vedi lpcic/elpi/doc/termrep.pdf
 2. the following benchmarks in bench/sources/ go outside the fragment:
-   - progs
-   - pcf
-   - hilbert
-   - hilbert2
-   - fun_trans
+   - progs: in progs2 we have 2 delays, teyjus only shows 1 (who knows it it hides the second one)
+   - pcf: bug?
+   - hilbert OK
+   - hilbert2 OK
+   - fun_trans: no-clause in elpi (bug?)
 
 
 Possible optimizations:
