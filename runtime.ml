@@ -148,6 +148,7 @@ module Constants : sig
   val funct_of_ast : F.t -> constant * term
   val constant_of_dbl : constant -> term
   val string_of_constant : constant -> string
+  val new_fresh_constant : unit -> term
  
   (* To keep the type of terms small, we use special constants for ! = pi.. *)
   val cutc   : term
@@ -168,7 +169,7 @@ module Constants : sig
 end = struct (* {{{ *)
 
 (* Hash re-consing :-( *)
-let funct_of_ast, constant_of_dbl, string_of_constant =
+let funct_of_ast, constant_of_dbl, string_of_constant, new_fresh_constant =
  let h = Hashtbl.create 37 in
  let h' = Hashtbl.create 37 in
  let h'' = Hashtbl.create 17 in
@@ -190,7 +191,13 @@ let funct_of_ast, constant_of_dbl, string_of_constant =
    Hashtbl.add h'' x xx; xx),
  (function n ->
    try Hashtbl.find h' n
-   with Not_found -> string_of_int n)
+   with Not_found -> string_of_int n),
+ (fun () ->
+   decr fresh;
+   let n = !fresh in
+   Hashtbl.add h' n ("frozen-"^string_of_int n);
+   Const n)
+;;
 
 let cutc = snd (funct_of_ast F.cutf)
 let truec = snd (funct_of_ast F.truef)
@@ -1689,8 +1696,140 @@ let register_custom, lookup_custom =
 let do_make_runtime =
  ref (function () -> anomaly "do_make_runtime not initialized")
 
+exception NoMatch
+
+let rec freeze m = function
+  | UVar( { contents = t} , 0,0) when t != dummy -> freeze m t
+  | UVar( r, 0,0) ->
+      (try m, List.assq r m
+       with Not_found ->
+         let x = new_fresh_constant () in
+         (r,x) :: m, x)
+  | App(c,x,xs) ->
+      let m, x = freeze m x in
+      let m, xs = List.fold_right (fun x (m,l) ->
+        let m, x = freeze m x in
+        (m, x ::l)) xs (m,[]) in
+      m, App(c,x,xs)
+  | Const _ as x -> m, x
+  | Arg _ | AppArg _ -> anomaly "freeze: not an heap term"
+  | _ -> assert false
+;;
+
+let rec list_assq2 p = function
+  | [] -> raise Not_found
+  | (data, k) :: _ when k == p -> data
+  | _ :: rest -> list_assq2 p rest
+;;
+
+let rec matching e m a b =
+  TRACE "matching" (fun fmt ->
+   Format.fprintf fmt "%a = %a" (ppterm 0 [] 0 e) a (ppterm 0 [] 0 e) b)
+  match a,b with
+  | UVar( { contents = t}, 0, 0), _ when t != dummy -> matching e m t b
+  | _, Arg(i,0) when e.(i) != dummy -> matching e m a e.(i)
+  | t, Arg(i,0) -> let m, t = freeze m t in e.(i) <- t; m 
+  | UVar( r,0,0), (Const _ as d) ->
+      (try
+        let c = List.assq r m in
+        if c == d then m else raise NoMatch
+      with Not_found -> raise NoMatch)
+  | App(c1,x,xs), App(c2,y,ys) when c1 == c2 ->
+      let m = matching e m x y in
+      let m = List.fold_left2 (matching e) m xs ys in
+      m
+  | Const _, Const _ when a == b -> m (* FIXME in the HO case *)
+  | _, AppArg _ -> assert false
+  | _ -> raise NoMatch
+;;
+
+let rec thaw e m = function
+  | UVar( { contents = t} , 0,0) when t != dummy -> thaw e m t
+  | Arg(i,0) when e.(i) != dummy -> thaw e m e.(i)
+  | UVar _ as x -> x
+  | Arg(i,0) -> e.(i) <- UVar(oref dummy,0,0); e.(i)
+  | App(c,x,xs) ->
+(*
+      (try ignore(list_assq2 c m); assert false
+      with Not_found -> 
+*)
+              App(c,thaw e m x, List.map (thaw e m) xs)
+  | Const _ as x ->
+     (try UVar(list_assq2 x m,0,0)
+      with Not_found -> x)
+  | Arg _ | AppArg _ -> anomaly "freeze: not an heap term"
+  | (Int _ | Float _ | String _) as x -> x
+  | Custom(c,ts) -> Custom(c,List.map (thaw e m) ts)
+  | _ -> assert false
+;;
+let thaw e m t =
+  SPY "thaw-in"  (ppterm 0 [] 0 e) t;
+  let t' = thaw e m t in
+  SPY "thaw-out"  (ppterm 0 [] 0 e) t';
+  t'
+
 (* constr is a new_delayed constraint;
    the two lists in output are the constraints to be removed and added *)
+let propagate constr =
+ let term_of_constr constr =
+  match constr with
+     Delayed_unif _,_ ->
+      anomaly "Delayed unifications should not become new_delayed"
+   | Delayed_goal (_depth,_p,t),_ -> t
+   | _ -> anomaly "Unknown constraint type"
+ in
+ Format.fprintf Format.std_formatter "PROPAGATION\n%!";
+ let query =
+  let dummyv = UVar (oref dummy, 0, 0) in
+   App(propagatec,dummyv,[dummyv ; dummyv]) in
+ (* CSC: INVARIANT: propagate clauses can never be assumed using
+    implication. Otherwise ~depth:0 is wrong and I do not see any
+    reasonable semantics (i.e. a semantics where the scoping is not
+    violated). For the same reason I took the propagate clauses from
+    the !original_program. *)
+ let p = !original_program in
+ let rules = get_clauses ~depth:0 query p in
+
+ let pairs =
+   let not_constr = List.filter ((!=) constr) !delayed in
+   List.map (fun x -> constr,x) not_constr @
+   List.map (fun x -> x,constr) not_constr in
+ 
+ let run,_,no_delayed = !do_make_runtime () in
+
+    map_exists (function { (*depth : int; *) args = [ g1; g2; g3];
+                     hyps = hyps; vars = nargs; key = k } ->
+     map_exists (fun (c,d) ->
+       let cc = term_of_constr c in
+       let dd = term_of_constr d in
+       
+       try
+         let m = [] in
+         let e = Array.make nargs dummy in
+         let m = matching e m cc g1 in
+         let m = matching e m dd g2 in
+         match hyps with
+         | [] -> Format.fprintf Format.std_formatter "Empty guard\n%!";
+                 Some([d],[(0,p,thaw e m g3)])
+         | h1 :: hs ->
+            let query = [],e,App(andc,h1,hs) in
+            Format.fprintf Format.std_formatter "Starting runtime\n%!";
+            (try
+              let _ = run p query in
+              if not (no_delayed ()) then begin
+                anomaly "propagation rules must not $delay"
+              end;
+              Format.fprintf Format.std_formatter "Ending runtime\n%!";
+              Some([d],[(0,p,thaw e m g3)])
+            with No_clause ->
+              Format.fprintf Format.std_formatter "Ending runtime\n%!";
+              None)
+       with NoMatch -> None) pairs
+     | _ -> anomaly "propagate expects 3 args") rules
+;;
+
+(* constr is a new_delayed constraint;
+   the two lists in output are the constraints to be removed and added 
 let propagate constr =
  Format.fprintf Format.std_formatter "PROPAGATION\n%!";
 (*
@@ -1731,6 +1870,7 @@ let propagate constr =
      None
   ) pairs
 ;;
+*)
 
 let print_delayed () =
  List.iter
@@ -1751,7 +1891,7 @@ let print_delayed () =
 
 (* The block of recursive functions spares the allocation of a Some/None
  * at each iteration in order to know if one needs to backtrack or continue *)
-let make_runtime : unit -> ('a -> 'b -> int -> 'k) * ('k -> 'k) =
+let make_runtime : unit -> ('a -> 'b -> int -> 'k) * ('k -> 'k) * (unit -> bool) =
 
   (* Input to be read as the orl (((p,g)::gs)::next)::alts
      depth >= 0 is the number of variables in the context. *)
@@ -1907,7 +2047,8 @@ IFDEF DELAY THEN
      | _ -> anomaly "Unknown constraint type"
    done ;
    (* Phase 2: we propagate the constraints *)
-   while !ok && !new_delayed <> [] do
+   if !ok then begin
+    while !new_delayed <> [] do
     match !new_delayed with
      | dpg :: rest ->
         (match propagate dpg with
@@ -1919,15 +2060,17 @@ IFDEF DELAY THEN
                    "Killing goal: ... ⊢ %a\n%!" (uppterm depth [] 0 [||]) g
               | _ -> ()) to_be_removed ;
              List.iter remove_constraint to_be_removed ;
-             List.iter (function
-                (Delayed_goal ((depth,_,g)),_) ->
+             List.iter (fun (depth,_,g) ->
                   Format.fprintf Format.std_formatter
-                   "Add goal: ... ⊢ %a\n%!" (uppterm depth [] 0 [||]) g
-              | _ -> ()) to_be_added ;
-             List.iter add_constraint to_be_added)
+                   "Additional goal: ... ⊢ %a\n%!" (uppterm depth [] 0 [||]) g)
+               to_be_added ;
+             (*List.iter add_constraint to_be_added*)
+             to_be_resumed := to_be_added @ !to_be_resumed )
      | _ -> anomaly "Empty list"
-   done ;
-   if !ok then Some (List.rev !to_be_resumed) else None
+    done;
+    Some (List.rev !to_be_resumed)
+   end
+   else None
 ELSE Some [] END
 
   and next_alt alts =
@@ -1994,7 +2137,8 @@ ELSE Some [] END
      ensure_runtime (fun lcs ->
      let q = to_heap 0 ~from:0 ~to_:0 q_env q in
      run lcs p q [] FNil emptyalts emptyalts)),
-  (fun alts -> ensure_runtime next_alt alts)
+  (fun alts -> ensure_runtime next_alt alts),
+  (fun () -> !my_delayed = [])
 ;;
 
 do_make_runtime := make_runtime;;
@@ -2167,13 +2311,13 @@ type query = string list * term array * term
 let pp_prolog = pp_FOprolog
 
 let execute_once (depth,p) q =
- let run, cont = make_runtime () in
+ let run, cont, _ = make_runtime () in
  try ignore (run p q depth) ; false
  with No_clause -> true
 ;;
 
 let execute_loop (depth,p) ((q_names,q_env,q) as qq) =
- let run, cont = make_runtime () in
+ let run, cont, _ = make_runtime () in
  let time0 = Unix.gettimeofday() in
  let k = ref (run p qq depth) in
  let time1 = Unix.gettimeofday() in

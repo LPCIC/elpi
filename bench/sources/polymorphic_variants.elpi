@@ -71,7 +71,20 @@ Note: I use ref to kill Hindley-Milner polymorphism
 %        (is_subset X [a])
 %  2. already unifying the first argument of the rule triggers resumption
 %     but there is confusion between the two runtimes and a mess happens
-%propagate true (is_subset X [Y]) [X = [Y]].
+propagate (is_subset X [Y]) true (X = [Y], $delay true Z).
+propagate (is_subset X (A::Y)) (is_subset Y Z) ($delay (is_subset (foo::Y) (foo::Z)) Y, is_subset X (A::Z)) :-
+  not (A = foo).
+
+inter (X :: A) L (X :: B) :- mem L X, !, inter A L B.
+inter (X :: A) L B :- inter A L B.
+inter [] _ [].
+
+is_ground [].
+is_ground (_ :: L) :- is_ground L.
+
+propagate (is_subset X (A::L)) (is_subset X (B::T)) ($delay (is_subset X (foo::INTER)) X) :-
+  not(A = foo), not (B = foo), is_ground (A::L), is_ground (B::T),
+  inter (A::L) (B::T) INTER.
 
 main :-
  P = [ fun f [ case a a
