@@ -1353,7 +1353,7 @@ let unif adepth e bdepth a b =
  (* heap=true if b is known to be a heap term *)
  let rec unif depth a bdepth b heap =
    TRACE "unif" (fun fmt ->
-     Format.fprintf fmt "@[<hov 2>^%d:%a@ =%d= ^%d:%a@]"
+     Format.fprintf fmt "@[<hov 2>^%d:%a@ =%d= ^%d:%a@]%!"
        adepth (ppterm (adepth+depth) [] adepth [||]) a depth
        bdepth (ppterm (bdepth+depth) [] adepth e) b)
    let delta = adepth - bdepth in
