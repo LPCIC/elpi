@@ -538,21 +538,50 @@ let clausify t = match t with
         | _ -> (t,[])) 
   | _ -> (t,[])          
    
+let cnt = ref 0 
 
-(* (q,[a;b=>c;d] returns [(None,a);(b,c);(None,d)]*)
-let create_context pairsl = 
-  let rec aux clt = match clt with
+(*x\ f x is transformed to v1\ f v1, where v1 is fresh*)
+let rename_bound_var lambda =
+  let rec subst t v newv = match t with
+    | Const(v1) when v = v1 -> Const newv
+    | Custom(v1) when v = v1 -> Custom newv
+    | App(t1,tl) ->
+       let newtl = List.map (fun x -> subst x v newv) tl in
+       App(t1,newtl)
+    | Lam(v1,tm) when v = v1 -> Lam(newv,subst tm v newv)
+    | Lam(v1,tm) -> Lam(v1,subst tm v newv)
+    | _ -> t in
+  match lambda with
+    | Lam(v,_) -> incr cnt; subst lambda v ("v" ^ (string_of_int !cnt))
+    | _ -> lambda
+
+let fresh_vars = ref [] 
+
+(* (q,[a; b=>c; d; pi x\ (f x)] returns 
+     ([(None,a);(b,c);(None,d);(None,f x)], [x])*)
+let create_context pairsl =
+  fresh_vars := []; 
+  let rec aux = function
   | [] -> []
   | (App(Const f,tl) as fla)::rest -> (match tl with
       | [left;right] when ASTFuncS.pp f = (ASTFuncS.pp ASTFuncS.implf) -> (Some left,right) :: (aux rest)
+      | [Lam(_,_) as lam] when ASTFuncS.pp f = (ASTFuncS.pp ASTFuncS.pif) ->
+          let newlam = rename_bound_var lam in
+          (match newlam with
+            | Lam(v,t) -> 
+                fresh_vars := (Const v) :: !fresh_vars; 
+                let pair_t = List.hd (aux [t]) in
+                pair_t :: (aux rest)
+            | _ -> assert false )
       | _ -> (None,fla) :: (aux rest) ) 
   | hd::rest -> (None,hd) :: (aux rest) in
-  aux (snd pairsl)
-
+  let res = (aux (snd pairsl),!fresh_vars) in
+  res
+  
 
 
 (* exports a f-la occurrence, i.e. q,a,b,c f-las from above *)
-let rec export_term t = match t with
+let rec export_term = function
    Const f 
  | Custom f -> ASTFuncS.pp f
  | App(f,tl) -> 
@@ -603,15 +632,22 @@ let export_clauses cl_list =
 \\begin{document} \n" in
  let rules = List.fold_left (fun l cl ->
    let clpair = clausify cl in
+   let create_pairs = create_context clpair in
+   let fst_ = fst create_pairs in
+   let snd_ = snd create_pairs in
+   let label = "\\RightLabel{fresh: $" ^ 
+                 (List.fold_right (fun freshvar l1 -> 
+                  (export_term freshvar) ^ "," ^ l1) snd_ "" ) ^ 
+                 "$}\n" in
    let arity = List.length (snd clpair) in
    let rule = match arity with
-     | 1 -> "\\UnaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n"
-     | 2 -> "\\BinaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n"
-     | 3 -> "\\TrinaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n"
-     | 4 -> "\\QuaternaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n"
-     | 5 -> "\\QuinaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n" in
+     | 1 -> label ^  "\\UnaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n"
+     | 2 -> label ^ "\\BinaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n"
+     | 3 -> label ^ "\\TrinaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n"
+     | 4 -> label ^ "\\QuaternaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n"
+     | 5 -> label ^ "\\QuinaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n" in
 
-   let axioms = List.fold_right (fun cl1 l1 -> "\\AxiomC{$" ^ (export_pair cl1) ^ "$}\n" ^ l1 ) (create_context clpair) "" in
+   let axioms = List.fold_right (fun cl1 l1 -> "\\AxiomC{$" ^ (export_pair cl1) ^ "$}\n" ^ l1 ) fst_ "" in
    axioms ^ rule) "" cl_list in
  let str = headers ^ rules ^ "\\end{document}" in
  Format.printf "%s%!" str;
