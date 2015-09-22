@@ -37,7 +37,104 @@ module Utils : sig
 
   val option_get : 'a option -> 'a
 
+  (* of course we don't fork, we just swap sets of local refs *)
+  module Fork : sig
+
+    type 'a local_ref = 'a ref
+
+    val new_local : 'a -> 'a local_ref
+
+    type process = {
+      (* To run a function in the child process *)
+      exec : 'a 'b. ('a -> 'b) -> 'a -> 'b;
+
+      (* To get/set values from the memory of the child *)
+      get : 'a. 'a local_ref -> 'a;
+      set : 'a. 'a local_ref -> 'a -> unit
+    }
+    
+    val fork : unit -> process
+
+  end
+
 end = struct (* {{{ *)
+
+module Global: sig
+ 
+   type backup
+
+   (* Takes the initial value *)
+   val new_local : 'a -> 'a ref
+   val backup : unit -> backup
+   val restore : backup -> unit
+
+   (* Like doing a backup just after having created all globals *)
+   val initial_backup : unit -> backup
+  
+   (* Hack, in case the initial value cannot be provided when the
+    * global is created *) 
+   val set_value : 'a ref -> 'a -> backup -> backup
+   val get_value : 'a ref -> backup -> 'a
+
+end = struct
+
+type backup = (Obj.t ref * Obj.t) list
+
+let all_globals : backup ref = ref []
+
+let new_local (t : 'a) : 'a ref =
+  let res = ref t in
+  all_globals := Obj.magic (res,t) :: !all_globals;
+  res
+
+let set_value (g : 'a ref) (v : 'a) (l : (Obj.t ref * Obj.t) list) =
+  let v = Obj.repr v in
+  let g :Obj.t ref = Obj.magic g in
+    List.map
+      (fun (g',_ as orig) -> if g == g' then (g,v) else orig)
+      l
+
+let get_value (p : 'a ref) (l : (Obj.t ref * Obj.t) list) : 'a =
+  Obj.magic (List.assq (Obj.magic p) l)
+
+let backup () : (Obj.t ref * Obj.t) list =
+  List.map (fun (o,_) -> o,!o) !all_globals
+
+let restore l = List.iter (fun (r,v) -> r := v) l
+
+let initial_backup () = !all_globals
+
+end
+
+module Fork = struct
+  type 'a local_ref = 'a ref
+
+  type process = {
+    exec : 'a 'b. ('a -> 'b) -> 'a -> 'b;
+    get : 'a. 'a local_ref -> 'a;
+    set : 'a. 'a local_ref -> 'a -> unit
+  }
+    
+  let new_local = Global.new_local
+  let fork () =
+    let saved_globals = Global.backup () in 
+    let my_globals = ref (Global.initial_backup ()) in
+    let ensure_runtime f x =
+      Global.restore !my_globals;
+      try
+       let rc = f x in
+       my_globals := Global.backup ();
+       Global.restore saved_globals;
+       rc
+      with e ->
+       my_globals := Global.backup ();
+       Global.restore saved_globals;
+       raise e in
+    { exec = ensure_runtime;
+      get = (fun p -> Global.get_value p !my_globals);
+      set = (fun p v -> my_globals := Global.set_value p v !my_globals) }
+          
+end
 
 let pplist ?(max=max_int) ?(boxed=false) ppelem ?(pplastelem=ppelem) sep f l =
  if l <> [] then begin
@@ -434,11 +531,11 @@ type trail_item =
  | DelConstr of constraint_
 
 type trail = trail_item list ref
-let trail : trail = ref []
-let last_call = ref false;;
-let delayed = ref []
-let new_delayed = ref []
-let to_resume = ref []
+let trail : trail = Fork.new_local []
+let last_call = Fork.new_local false;;
+let delayed = Fork.new_local []
+let new_delayed = Fork.new_local []
+let to_resume = Fork.new_local []
 
 exception Delayed_unif of int * term array * int * term * term
 
@@ -1133,7 +1230,7 @@ type program = int * index (* int is the depth, i.e. number of
                               sigma/local-introduced variables *)
 type goal = (*depth:*)int * index * term
 
-let original_program = ref (Obj.magic 0 : index) (* dummy value *)
+let original_program = Fork.new_local (Obj.magic 0 : index) (* dummy value *)
 
 exception Delayed_goal of goal (* CSC: we could save a few cells by
                                    expanding goal to its def *)
@@ -2119,61 +2216,14 @@ end
 
  (* Finally the runtime *)
  fun () ->
-  let saved_trail = ref !trail in
-  let saved_last_call = ref !last_call in
-  let saved_to_resume = ref !to_resume in
-  let saved_new_delayed = ref !new_delayed in
-  let saved_delayed = ref !delayed in
-  let saved_original_program = ref !original_program in
-  let my_trail = ref [] in
-  let my_last_call = ref false in
-  let my_to_resume = ref [] in
-  let my_new_delayed = ref [] in
-  let my_delayed = ref [] in
-  let my_original_program = ref !original_program in
-  let ensure_runtime f x =
-    trail := !my_trail;
-    last_call := !my_last_call;
-    to_resume := !my_to_resume;
-    new_delayed := !my_new_delayed;
-    delayed := !my_delayed;
-    original_program := !my_original_program;
-    try
-     let rc = f x in
-     my_trail := !trail ;
-     my_last_call := !last_call ;
-     my_delayed := !delayed ;
-     my_to_resume := !to_resume ;
-     my_new_delayed := !new_delayed ;
-     my_original_program := !original_program ;
-     trail := !saved_trail ;
-     last_call := !saved_last_call ;
-     delayed := !saved_delayed ;
-     to_resume := !saved_to_resume ;
-     new_delayed := !saved_new_delayed ;
-     original_program := !saved_original_program;
-     rc
-    with e ->
-     my_trail := !trail;
-     my_last_call := !last_call;
-     my_delayed := !delayed ;
-     my_to_resume := !to_resume ;
-     my_new_delayed := !new_delayed ;
-     my_original_program := !original_program ;
-     trail := !saved_trail;
-     last_call := !saved_last_call;
-     delayed := !saved_delayed ;
-     to_resume := !saved_to_resume ;
-     new_delayed := !saved_new_delayed ;
-     original_program := !saved_original_program;
-     raise e in
+  let { Fork.exec = exec ; get = get ; set = set } = Fork.fork () in
   (fun p (_,q_env,q) ->
-     my_original_program := p ;
-     ensure_runtime (fun lcs ->
+     set original_program p;
+     exec (fun lcs ->
      let q = to_heap 0 ~from:0 ~to_:0 q_env q in
      run lcs p q [] FNil emptyalts emptyalts)),
-  (fun alts -> ensure_runtime next_alt alts),
-  (fun () -> !my_delayed = [])
+  (fun alts -> exec next_alt alts),
+  (fun () -> get delayed = [])
 ;;
 
 do_make_runtime := make_runtime;;
