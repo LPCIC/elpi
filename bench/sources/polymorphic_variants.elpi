@@ -24,12 +24,15 @@ check_domain B T :- inputs B I, is_subset T I.
 
 %is_subset A B :- $print (is_subset A B), fail.
 is_subset A B :- is_flex A, !, $delay (is_subset A B) A.
+is_subset A B :- is_flex B, !, $delay (is_subset A B) B.
 is_subset A B :- is_subset_ A B.
 is_subset_ [] _.
 is_subset_ [X|TL] TL1 :- mem TL1 X, is_subset TL TL1.
 
-mem [X|_] X :- !.
-mem [Y|TL] X :- mem TL X.
+mem A B :- is_flex A, !, $delay (mem A B) A.
+mem A B :- mem_ A B.
+mem_ [X|_] X :- !.
+mem_ [Y|TL] X :- mem TL X.
 
 %check_codomain body type types
 %check_codomain A B C :- $print (check_codomain A B C), fail.
@@ -39,7 +42,7 @@ check_codomain [case _ T | TL] TYS ORIGTYS :-
   check_codomain TL TYS ORIGTYS.
 
 %check_term term type
-%check_term A B C :- $print (check_term A B C), fail.
+%check_term A B C :- $print "CHECK" (check_term A B C), fail.
 check_term (@ F T) TY ORIGTYS :-
  !,
  find ORIGTYS F D C,
@@ -51,7 +54,7 @@ check_term X TY _ :-
 find [fun F D C | _] F D C :- !.
 find [ _ | TL ] F D C :- find TL F D C.
 
-%inputs A B :- $print (inputs A B), fail.
+%inputs A B :- $print "INPUT" (inputs A B), fail.
 inputs [] [].
 inputs [case A _ | TL] [A | TL'] :- inputs TL TL'.
 
@@ -72,12 +75,16 @@ Note: I use ref to kill Hindley-Milner polymorphism
 %  2. already unifying the first argument of the rule triggers resumption
 %     but there is confusion between the two runtimes and a mess happens
 propagate [] [is_subset X [Y]] (X = [Y]).
-propagate [is_subset X (A::Y),is_subset Y Z] [] (is_subset X (A::Z)).
+propagate [is_subset X Y,is_subset Y Z] [] (is_subset X Z).
 
-inter (X :: A) L (X :: B) :- mem L X, !, inter A L B.
-inter (X :: A) L B :- inter A L B.
+inter [X | A] L [X | B] :- mem L X, !, inter A L B.
+inter [X | A] L B :- inter A L B.
 inter [] _ [].
  
+union [X | XS] L L1  :- mem L X, !, union XS L L1.
+union [X | XS] L [X | L1]  :- union XS L L1.
+union [] L L .
+
 is_ground [].
 is_ground (_ :: L) :- is_ground L.
  
@@ -86,7 +93,13 @@ propagate [] [is_subset X YS, is_subset X XS] (is_subset X INTER) :-
 
 propagate [X] [X] true.
 
-main :-
+propagate [mem X A,is_subset X Y] [] (mem Y A).
+
+propagate [] [mem X A] (is_subset [A] X).
+propagate [] [is_subset A X, is_subset B X] (is_subset C X) :-
+  is_ground A, is_ground B, union A B C.
+
+main1 :-
  P = [ fun f [ case a a
              , case b (@ g a) ]
      , fun g [ case a c
@@ -111,8 +124,9 @@ main :-
  $print "Type specialization ok",
  $print ":::" f ":" If "->" Of,
  $print ":::" g ":" Ig "->" Og,
- $print_delayed,
+ $print_delayed.
 
+main2 :-
  P' = [ fun f [ case a a
               , case b (@ h1 (@ g a))
               , case c (@ h2 (@ g a)) ]
@@ -135,3 +149,7 @@ main :-
  $print ":::" g ":" Ig' "->" Og',
  $print ":::" h1 ":" Ih1' "->" Oh1',
  $print ":::" h2 ":" Ih2' "->" Oh2'.
+
+main :- (main1, $print "xxx failing", fail) ; $print "xxx failed", main2.
+
+% vim: set ft=lprolog:
