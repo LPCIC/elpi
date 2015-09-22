@@ -2120,17 +2120,20 @@ end
  (* Finally the runtime *)
  fun () ->
   let saved_trail = ref !trail in
+  let saved_last_call = ref !last_call in
   let saved_to_resume = ref !to_resume in
   let saved_new_delayed = ref !new_delayed in
   let saved_delayed = ref !delayed in
   let saved_original_program = ref !original_program in
   let my_trail = ref [] in
+  let my_last_call = ref false in
   let my_to_resume = ref [] in
   let my_new_delayed = ref [] in
   let my_delayed = ref [] in
   let my_original_program = ref !original_program in
   let ensure_runtime f x =
-    trail := !my_trail; last_call := false;
+    trail := !my_trail;
+    last_call := !my_last_call;
     to_resume := !my_to_resume;
     new_delayed := !my_new_delayed;
     delayed := !my_delayed;
@@ -2138,11 +2141,13 @@ end
     try
      let rc = f x in
      my_trail := !trail ;
-     trail := !saved_trail ;
+     my_last_call := !last_call ;
      my_delayed := !delayed ;
      my_to_resume := !to_resume ;
      my_new_delayed := !new_delayed ;
      my_original_program := !original_program ;
+     trail := !saved_trail ;
+     last_call := !saved_last_call ;
      delayed := !saved_delayed ;
      to_resume := !saved_to_resume ;
      new_delayed := !saved_new_delayed ;
@@ -2150,11 +2155,13 @@ end
      rc
     with e ->
      my_trail := !trail;
-     trail := !saved_trail;
+     my_last_call := !last_call;
      my_delayed := !delayed ;
      my_to_resume := !to_resume ;
      my_new_delayed := !new_delayed ;
      my_original_program := !original_program ;
+     trail := !saved_trail;
+     last_call := !saved_last_call;
      delayed := !saved_delayed ;
      to_resume := !saved_to_resume ;
      new_delayed := !saved_new_delayed ;
