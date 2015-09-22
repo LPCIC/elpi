@@ -3,7 +3,7 @@ of X Y :- of_ X Y.
 of_ (app M N) B :- of M (impl A B), of N A.
 of_ (lam F) (impl A B) :- pi x\ of_ x A => of (F x) B.
 
-propagate (of X T1) (of X T2) (T1 = T2).
+propagate [of X T1] [of X T2] (T1 = T2).
 
 main :- of X T1, of X nat, $print "The type is " T1.
 

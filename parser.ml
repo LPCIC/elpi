@@ -27,6 +27,8 @@ module ASTFuncS = struct
   let sigmaf = from_string "sigma"
   let eqf = from_string "="
   let isf = from_string "is"
+  let consf = from_string "::"
+  let nilf = from_string "nil"
 
 end
 
@@ -40,7 +42,7 @@ type term =
  | Float of float
 
 let mkLam x t = Lam (ASTFuncS.from_string x,t)
-let mkNil = Const (ASTFuncS.from_string "nil")
+let mkNil = Const ASTFuncS.nilf
 let mkString str = String (ASTFuncS.from_string str)
 let mkInt i = Int i
 let mkFloat f = Float f
@@ -49,7 +51,7 @@ let mkSeq l =
   function
     [] -> assert false
   | [e] -> e
-  | hd::tl -> App(Const (ASTFuncS.from_string "::"),[hd;aux tl])
+  | hd::tl -> App(Const ASTFuncS.consf,[hd;aux tl])
  in
   aux l
 let mkIs x f = App(Const ASTFuncS.isf,[x;f])

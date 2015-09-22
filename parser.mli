@@ -19,6 +19,8 @@ module ASTFuncS : sig
   val sigmaf : t
   val eqf : t
   val isf : t
+  val nilf : t
+  val consf : t
   val from_string : string -> t
 end
 

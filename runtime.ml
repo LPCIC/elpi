@@ -24,6 +24,8 @@ module Utils : sig
      f x <> None; returns None if for every x in the list, f x = None *)
   val map_exists : ('a -> 'b option) -> 'a list -> 'b option
 
+  val partition_i : (int -> 'a -> bool) -> 'a list -> 'a list * 'a list
+
   (* A regular error *)
   val error : string -> 'a
 
@@ -102,6 +104,16 @@ let rec map_exists f =
     [] -> None
   | hd::tl -> match f hd with None -> map_exists f tl | res -> res
 
+
+let partition_i f l =
+  let rec aux n a1 a2 = function
+    | [] -> List.rev a1, List.rev a2
+    | x :: xs ->
+       if (f n x) then aux (n+1) (x::a1) a2 xs else aux (n+1) a1 (x::a2) xs
+  in
+    aux 0 [] [] l
+;;
+
 end (* }}} *)
 open Utils
 
@@ -160,6 +172,8 @@ module Constants : sig
   val sigmac : constant
   val eqc    : constant
   val propagatec : constant
+  val consc  : constant
+  val nilc   : term
 
   (* Value for unassigned UVar/Arg *)
   val dummy  : term
@@ -208,6 +222,8 @@ let pic = fst (funct_of_ast F.pif)
 let sigmac = fst (funct_of_ast F.sigmaf)
 let eqc = fst (funct_of_ast F.eqf)
 let propagatec = fst (funct_of_ast (F.from_string "propagate"))
+let nilc = snd (funct_of_ast F.nilf)
+let consc = fst (funct_of_ast F.consf)
 
 let rec dummy = App (-9999,dummy,[])
 
@@ -1565,6 +1581,16 @@ let rec split_conj = function
   | _ as f -> [ f ]
 ;;
 
+let rec lp_list_to_list = function
+  | App(c, hd, [tl]) when c == consc -> hd :: lp_list_to_list tl
+  | f when f == nilc -> []
+  | _ -> error "not a list"
+;;
+let rec list_to_lp_list = function
+  | [] -> nilc
+  | x::xs -> App(consc,x,[list_to_lp_list xs])
+;;
+
 (* BUG: the following clause is rejected because (Z c d) is not
    in the fragment. However, once X and Y becomes arguments, (Z c d)
    enters the fragment. 
@@ -1743,7 +1769,7 @@ let propagate constr j history =
    | Delayed_goal (_depth,_p,t),_ -> t
    | _ -> anomaly "Unknown constraint type"
  in
- Format.fprintf Format.std_formatter "PROPAGATION\n%!";
+ Format.fprintf Format.std_formatter "PROPAGATION %d\n%!" j;
  let query =
   let dummyv = UVar (oref dummy, 0, 0) in
    App(propagatec,dummyv,[dummyv ; dummyv]) in
@@ -1761,24 +1787,48 @@ let propagate constr j history =
  let result =
     map_exists (function ({ (*depth : int; *) args = [ g1; g2; g3];
                      hyps = hyps; vars = nargs; key = k } as clause) ->
-    let _heads = 2 in (* len g1 + len g2 *)
-    let pairs =
-      let not_constr = List.filter ((!=) constr) !delayed in
-      if j = 0 then
-       List.map (fun x -> constr,x) not_constr
-      else if j = 1 then
-       List.map (fun x -> x,constr) not_constr
-      else [] in
 
-     map_exists (fun (c,d) ->
+    let gg1 = lp_list_to_list g1 in
+    let gg2 = lp_list_to_list g2 in
+    let leng1 = List.length gg1 in
+
+    let headsno = leng1 + List.length gg2 in
+    if headsno < 1 then error "no heads in propagate" ;
+    if j >= headsno then None
+    else
+    let combinations =
+     let rec insert x =
+      function
+         [] -> [[x]]
+       | (hd::tl) as l -> (x::l) :: (List.map (fun y -> hd::y) (insert x tl)) in
+     let rec aux n l : 'a list list =
+       if n = 0 then [[]] else
+       match l with 
+          [] -> []
+        | hd::tl when hd == constr-> aux n tl
+        | hd::tl-> List.flatten (List.map (insert hd) (aux (n-1) tl)) @ aux n tl
+     in
+      aux (headsno - 1) !delayed in
+
+ Format.fprintf Format.std_formatter "COMBINATIONS %d\n%!" (List.length combinations);
+     
+    let combinations =
+      combinations |> List.map (fun l ->
+        let before, after = partition_i (fun i _ -> i < j) l in
+        before @ constr :: after
+        ) in
+
+
+     combinations |> map_exists (fun heads ->
+       let to_match, to_remove = partition_i (fun i _ -> i < leng1) heads in
        no_such_j := false;
-       let hitem = clause,[c;d] in
+       let cc = list_to_lp_list (List.map term_of_constr to_match) in
+       let dd = list_to_lp_list (List.map term_of_constr to_remove) in
+       let hitem = clause,heads in
        if HISTORY.mem history hitem then begin
         Format.fprintf Format.std_formatter "pruned\n%!" ;
         None
        end else
-       let cc = term_of_constr c in
-       let dd = term_of_constr d in
        try
          let m = [] in
          let e = Array.make nargs dummy in
@@ -1792,7 +1842,7 @@ let propagate constr j history =
          let m = matching e m dd g2 in
          match hyps with
          | [] -> Format.fprintf Format.std_formatter "Empty guard\n%!";
-                 Some([d],[(0,p,thaw e m g3)])
+                 Some(to_remove,[(0,p,thaw e m g3)])
          | h1 :: hs ->
             let query = [],e,App(andc,h1,hs) in
             Format.fprintf Format.std_formatter "Starting runtime\n%!";
@@ -1801,12 +1851,12 @@ let propagate constr j history =
               if not (no_delayed ()) then begin
                 anomaly "propagation rules must not $delay"
               end;
-              Format.fprintf Format.std_formatter "Ending runtime\n%!";
-              Some([d],[(0,p,thaw e m g3)])
+              Format.fprintf Format.std_formatter "Ending runtime (ok)\n%!";
+              Some(to_remove,[(0,p,thaw e m g3)])
             with No_clause ->
-              Format.fprintf Format.std_formatter "Ending runtime\n%!";
+              Format.fprintf Format.std_formatter "Ending runtime (fail)\n%!";
               None)
-       with NoMatch -> Format.fprintf Format.std_formatter "NoMatch\n%!";None) pairs
+       with NoMatch -> Format.fprintf Format.std_formatter "NoMatch\n%!";None)
      | _ -> anomaly "propagate expects 3 args") rules
  in
  match result with
@@ -2029,6 +2079,7 @@ end
      | _ -> anomaly "Unknown constraint type"
    done ;
    (* Phase 2: we propagate the constraints *)
+   if !new_delayed <> [] then Format.fprintf Format.std_formatter "RESUME ALL\n%!";
    let history = HISTORY.create 17 in
    if !ok then begin
     while !new_delayed <> [] do
