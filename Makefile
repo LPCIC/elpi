@@ -7,9 +7,9 @@
 
 
 V=$(shell git describe --tags)
-PP=camlp5o -I . -I +camlp5 pa_macro.cmo
+PP=camlp5o -I . -I +camlp5
 PARSE=pa_extend.cmo pa_lexer.cmo
-TRACESYNTAX=pa_extend.cmo q_MLast.cmo
+TRACESYNTAX=pa_extend.cmo q_MLast.cmo pa_macro.cmo
 FLAGS=-I $(shell camlp5 -where)
 OCAMLOPTIONS= -g
 CMX=cmx

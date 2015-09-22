@@ -2,7 +2,6 @@
 (* license: GNU Lesser General Public License Version 2.1                    *)
 (* ------------------------------------------------------------------------- *)
 
-DEFINE DELAY
 
 open Parser
 
@@ -49,7 +48,7 @@ type term =
   | Float of float
 and 'a oref = {
   mutable contents : 'a;
-  IFDEF DELAY THEN mutable rest : constraint_ list END
+  mutable rest : constraint_ list
 }
 and constraint_ =
  (* exn is the constraint;
@@ -91,10 +90,8 @@ val register_custom :
 
 val deref : from:constant -> to_:constant -> int -> term -> term
 val app_deref : from:constant -> to_:constant -> term list -> term -> term
-IFDEF DELAY THEN
 type goal = (*depth:*)int * index * term
 exception Delayed_goal of goal
 val is_flex : term -> term oref option
 val add_constraint : constraint_ -> unit
 val print_delayed : unit -> unit
-END

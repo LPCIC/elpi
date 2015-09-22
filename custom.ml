@@ -2,7 +2,6 @@
 (* license: GNU Lesser General Public License Version 2.1                    *)
 (* ------------------------------------------------------------------------- *)
 
-DEFINE DELAY
 
 open Runtime;;
 open Runtime.Utils;;
@@ -205,7 +204,6 @@ let really_input ic s ofs len =
   else unsafe_really_input 0 ic s ofs len
 
 let _ =
-IFDEF DELAY THEN
   register_custom "$delay" (fun ~depth ~env p args ->
     match args with
     | [t1; t2] ->
@@ -219,9 +217,7 @@ IFDEF DELAY THEN
 (*CSC: BUG: WE SHOULD CHECK IT IS A VAR, NOT FLEXIBLE *)
         | None -> type_error "the second arg of $delay must be flexible")
     | _ -> type_error "$delay takes 2 arguments"
-    )
-ELSE ()
-END ;
+    );
   register_custom "$print" (fun ~depth ~env _ args ->
     Format.printf "@[<hov 1>" ;
     List.iter (Format.printf "%a@ " (uppterm depth [] 0 env)) args ;
