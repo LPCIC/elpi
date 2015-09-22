@@ -20,7 +20,7 @@ module Utils : sig
   val remove_from_list : 'a -> 'a list -> 'a list
 
   (*uses physical equality; does nothing if the element is not in the list*)
-  val remove_from_list' : 'a -> 'a list -> 'a list
+  val remove_from_list' : 'a -> ('a * 'b) list -> ('a * 'b) list
 
   (* returns Some t where f x = Some t for the first x in the list s.t.
      f x <> None; returns None if for every x in the list, f x = None *)
@@ -94,7 +94,7 @@ let remove_from_list' x l =
  let rec aux acc =
   function
      [] -> l
-   | y::tl when x==y -> List.rev acc @ tl
+   | (y,_)::tl when x==y -> List.rev acc @ tl
    | y::tl -> aux (y::acc) tl
  in
   aux [] l
@@ -444,7 +444,7 @@ let add_constraint cstr =
  (match cstr with
      Delayed_unif _,_ -> ()
    | _ (* Delayed_goal _ *) ->
-      new_delayed := cstr :: !new_delayed);
+      new_delayed := (cstr, 0) :: !new_delayed);
  if not !last_call then trail := AddConstr cstr :: !trail
 
 let remove_constraint0 (_,vars) as cstr =
@@ -1768,9 +1768,15 @@ let thaw e m t =
   SPY "thaw-out"  (ppterm 0 [] 0 e) t';
   t'
 
+module HISTORY = Hashtbl.Make(struct
+  type t = key clause * constraint_ list
+  let hash = Hashtbl.hash
+  let equal (p,lp) (p',lp') = p == p' && for_all2 (==) lp lp'
+end)
+
 (* constr is a new_delayed constraint;
    the two lists in output are the constraints to be removed and added *)
-let propagate constr =
+let propagate constr j history =
  let term_of_constr constr =
   match constr with
      Delayed_unif _,_ ->
@@ -1790,22 +1796,39 @@ let propagate constr =
  let p = !original_program in
  let rules = get_clauses ~depth:0 query p in
 
- let pairs =
-   let not_constr = List.filter ((!=) constr) !delayed in
-   List.map (fun x -> constr,x) not_constr @
-   List.map (fun x -> x,constr) not_constr in
- 
- let run,_,no_delayed = !do_make_runtime () in
 
-    map_exists (function { (*depth : int; *) args = [ g1; g2; g3];
-                     hyps = hyps; vars = nargs; key = k } ->
+ let run,_,no_delayed = !do_make_runtime () in
+ let no_such_j = ref true in
+ let result =
+    map_exists (function ({ (*depth : int; *) args = [ g1; g2; g3];
+                     hyps = hyps; vars = nargs; key = k } as clause) ->
+    let _heads = 2 in (* len g1 + len g2 *)
+    let pairs =
+      let not_constr = List.filter ((!=) constr) !delayed in
+      if j = 0 then
+       List.map (fun x -> constr,x) not_constr
+      else if j = 1 then
+       List.map (fun x -> x,constr) not_constr
+      else [] in
+
      map_exists (fun (c,d) ->
+       no_such_j := false;
+       let hitem = clause,[c;d] in
+       if HISTORY.mem history hitem then begin
+        Format.fprintf Format.std_formatter "pruned\n%!" ;
+        None
+       end else
        let cc = term_of_constr c in
        let dd = term_of_constr d in
-       
        try
          let m = [] in
          let e = Array.make nargs dummy in
+         Format.fprintf Format.std_formatter "attempt: %a , %a = %a , %a\n%!"
+           (ppterm 0 [] 0 [||]) cc
+           (ppterm 0 [] 0 [||]) dd
+           (ppterm 0 [] 0 e) g1
+           (ppterm 0 [] 0 e) g2;
+         HISTORY.add history hitem (); 
          let m = matching e m cc g1 in
          let m = matching e m dd g2 in
          match hyps with
@@ -1824,8 +1847,13 @@ let propagate constr =
             with No_clause ->
               Format.fprintf Format.std_formatter "Ending runtime\n%!";
               None)
-       with NoMatch -> None) pairs
+       with NoMatch -> Format.fprintf Format.std_formatter "NoMatch\n%!";None) pairs
      | _ -> anomaly "propagate expects 3 args") rules
+ in
+ match result with
+ | Some x -> `Matched x
+ | None when !no_such_j -> `NoSuchJ
+ | _ -> `NoMatch
 ;;
 
 (* constr is a new_delayed constraint;
@@ -2047,13 +2075,15 @@ IFDEF DELAY THEN
      | _ -> anomaly "Unknown constraint type"
    done ;
    (* Phase 2: we propagate the constraints *)
+   let history = HISTORY.create 17 in
    if !ok then begin
     while !new_delayed <> [] do
     match !new_delayed with
-     | dpg :: rest ->
-        (match propagate dpg with
-            None -> new_delayed := rest
-          | Some (to_be_removed,to_be_added) ->
+     | (dpg, j) :: rest ->
+        (match propagate dpg j history with
+          | `NoSuchJ -> new_delayed := rest
+          | `NoMatch -> new_delayed := (dpg, j+1) :: rest
+          | `Matched (to_be_removed,to_be_added) ->
              List.iter (function
                 (Delayed_goal ((depth,_,g)),_) ->
                   Format.fprintf Format.std_formatter
