@@ -1696,10 +1696,6 @@ let rec lp_list_to_list = function
   | f when f == nilc -> []
   | _ -> error "not a list"
 ;;
-let rec list_to_lp_list = function
-  | [] -> nilc
-  | x::xs -> App(consc,x,[list_to_lp_list xs])
-;;
 
 (* BUG: the following clause is rejected because (Z c d) is not
    in the fragment. However, once X and Y becomes arguments, (Z c d)
@@ -1795,7 +1791,7 @@ exception NoMatch
 
 let rec freeze m = function
   | UVar( { contents = t} , 0,0) when t != dummy -> freeze m t
-  | UVar( r, 0,0) ->
+  | UVar( r, 0, 0) ->
       (try m, List.assq r m
        with Not_found ->
          let x = new_fresh_constant () in
@@ -1808,7 +1804,15 @@ let rec freeze m = function
       m, App(c,x,xs)
   | Const _ as x -> m, x
   | Arg _ | AppArg _ -> anomaly "freeze: not an heap term"
-  | _ -> assert false
+  | Lam t -> let m, t = freeze m t in m, Lam t
+  | (Int _ | Float _ | String _) as x -> m, x
+  | Custom(c,xs) ->
+      let m, xs = List.fold_right (fun x (m,l) ->
+        let m, x = freeze m x in
+        (m, x ::l)) xs (m,[]) in
+      m, Custom(c,xs)
+  | AppUVar _ -> assert false
+  | UVar _ -> assert false
 ;;
 
 let rec list_assq2 p = function
@@ -1817,12 +1821,13 @@ let rec list_assq2 p = function
   | _ :: rest -> list_assq2 p rest
 ;;
 
-let rec matching e m a b =
+let matching e adepth m a b =
+  let rec aux m a b =
   TRACE "matching" (fun fmt ->
    Format.fprintf fmt "%a = %a" (ppterm 0 [] 0 e) a (ppterm 0 [] 0 e) b)
   match a,b with
-  | UVar( { contents = t}, 0, 0), _ when t != dummy -> matching e m t b
-  | _, Arg(i,0) when e.(i) != dummy -> matching e m a e.(i)
+  | UVar( { contents = t}, 0, 0), _ when t != dummy -> aux m t b
+  | _, Arg(i,0) when e.(i) != dummy -> aux m a e.(i)
   | t, Arg(i,0) -> let m, t = freeze m t in e.(i) <- t; m 
   | UVar( r,0,0), (Const _ as d) ->
       (try
@@ -1830,12 +1835,20 @@ let rec matching e m a b =
         if c == d then m else raise NoMatch
       with Not_found -> raise NoMatch)
   | App(c1,x,xs), App(c2,y,ys) when c1 == c2 ->
-      let m = matching e m x y in
-      let m = List.fold_left2 (matching e) m xs ys in
+      let m = aux m x y in
+      let m = List.fold_left2 aux m xs ys in
       m
-  | Const _, Const _ when a == b -> m (* FIXME in the HO case *)
+  | Const c1, Const c2 ->
+      if c1 >= adepth && c2 >= adepth then if a == b then m else raise NoMatch
+      else
+        if a == b then m (* FIXME in the HO case *)
+        else
+          assert false (* FIXME in the HO case *)
   | _, AppArg _ -> assert false
+  | Lam a, Lam b -> aux m a b
   | _ -> raise NoMatch
+  in
+    aux m a b
 ;;
 
 let rec thaw e m = function
@@ -1855,7 +1868,9 @@ let rec thaw e m = function
   | Arg _ | AppArg _ -> anomaly "freeze: not an heap term"
   | (Int _ | Float _ | String _) as x -> x
   | Custom(c,ts) -> Custom(c,List.map (thaw e m) ts)
-  | _ -> assert false
+  | Lam t -> Lam (thaw e m t)
+  | AppUVar _ -> assert false
+  | UVar _ -> assert false
 ;;
 let thaw e m t =
   SPY "thaw-in"  (ppterm 0 [] 0 e) t;
@@ -1869,14 +1884,33 @@ module HISTORY = Hashtbl.Make(struct
   let equal (p,lp) (p',lp') = p == p' && for_all2 (==) lp lp'
 end)
 
+(* lift a term possibly containing Args *)
+let lift_pat ~from ~to_ t =
+  let delta = to_ - from in
+  let rec aux = function
+  | Const n as x ->
+     if n < from then x else constant_of_dbl (n + delta)
+  | Lam r -> Lam (aux r)
+  | App (n,x,xs) ->
+      App((if n < from then n else n + delta), aux x, List.map aux xs)
+  | Arg _ as x -> x
+  | AppArg(i,xs) -> AppArg(i,List.map aux xs)
+  | UVar _ -> assert false
+  | AppUVar _ -> assert false
+  | Custom(c,xs) -> Custom(c,List.map aux xs)
+  | (String _ | Int _ | Float _) as x -> x
+  in
+    aux t
+;;
+
 (* constr is a new_delayed constraint;
    the two lists in output are the constraints to be removed and added *)
 let propagate constr j history =
- let term_of_constr constr =
+ let sequent_of_constr constr =
   match constr with
      Delayed_unif _,_ ->
       anomaly "Delayed unifications should not become new_delayed"
-   | Delayed_goal (_depth,_orig_p,_p,t),_ -> t
+   | Delayed_goal (depth,_,p,t),_ -> depth,p,t
    | _ -> anomaly "Unknown constraint type"
  in
  Format.fprintf Format.std_formatter "PROPAGATION %d\n%!" j;
@@ -1929,33 +1963,46 @@ let propagate constr j history =
         before @ constr :: after
         ) in
 
-
      combinations |> map_exists (fun heads ->
-       let to_match, to_remove = partition_i (fun i _ -> i < leng1) heads in
-       no_such_j := false;
-       let cc = list_to_lp_list (List.map term_of_constr to_match) in
-       let dd = list_to_lp_list (List.map term_of_constr to_remove) in
-       let hitem = clause,heads in
-       if HISTORY.mem history hitem then begin
+      let hitem = clause,heads in
+      no_such_j := false;
+      if HISTORY.mem history hitem then begin
         Format.fprintf Format.std_formatter "pruned\n%!" ;
         None
-       end else
+        end
+      else
+       let () = HISTORY.add history hitem () in
+       let heads_sequent = List.map sequent_of_constr heads in
+       let max_depth =
+         List.fold_left (fun acc (d,_,_) -> max d acc) 0 heads_sequent in
+       let contexts, goals_at_max_depth =
+         List.fold_right (fun (d,p,g) (ctxs, gs) ->
+           (d,p) :: ctxs, lift ~from:d ~to_:max_depth g :: gs)
+           heads_sequent ([],[]) in
+       let to_match, to_remove =
+         partition_i (fun i _ -> i < leng1) goals_at_max_depth in
+       let _, heads_to_remove =
+         partition_i (fun i _ -> i < leng1) heads in
+
+       let gg1 = gg1 |> List.map (lift_pat ~from:0 ~to_:max_depth) in
+       let gg2 = gg2 |> List.map (lift_pat ~from:0 ~to_:max_depth) in
        try
-         let m = [] in
          let e = Array.make nargs dummy in
-         Format.fprintf Format.std_formatter "attempt: %a , %a = %a , %a\n%!"
-           (ppterm 0 [] 0 [||]) cc
-           (ppterm 0 [] 0 [||]) dd
-           (ppterm 0 [] 0 e) g1
-           (ppterm 0 [] 0 e) g2;
-         HISTORY.add history hitem (); 
-         let m = matching e m cc g1 in
-         let m = matching e m dd g2 in
+         Format.fprintf Format.std_formatter "attempt: %a = %a\n%!"
+           (pplist (uppterm max_depth [] 0 [||]) ",") (to_match @ to_remove)
+           (pplist (uppterm max_depth [] max_depth e) ",") (gg1 @ gg2);
+         let m = List.fold_left2 (matching e max_depth) [] to_match  gg1 in
+         let m = List.fold_left2 (matching e max_depth) m  to_remove gg2 in
+         (* check all aligned max_depth *)
+         let contexts_at_max_depth = contexts |>
+           List.map (fun (d,p) -> List.map (lift ~from:d ~to_:max_depth) p) in
+         
+         let gg3 = lift_pat ~from:0 ~to_:max_depth g3 in
          match hyps with
          | [] -> Format.fprintf Format.std_formatter "Empty guard\n%!";
-                 Some(to_remove,[(0,p,[],thaw e m g3)])
+                 Some(heads_to_remove,[(max_depth,p,[],thaw e m gg3)])
          | h1 :: hs ->
-            let query = [],e,App(andc,h1,hs) in
+            let query = [],e,App(andc,h1,hs) in (* RUN in max_depth XXX *)
             Format.fprintf Format.std_formatter "Starting runtime\n%!";
             (try
               let _ = run p query in
@@ -1963,7 +2010,7 @@ let propagate constr j history =
                 anomaly "propagation rules must not $delay"
               end;
               Format.fprintf Format.std_formatter "Ending runtime (ok)\n%!";
-              Some(to_remove,[(0,p,[],thaw e m g3)])
+              Some(heads_to_remove,[(max_depth,p,[],thaw e m gg3)])
             with No_clause ->
               Format.fprintf Format.std_formatter "Ending runtime (fail)\n%!";
               None)
@@ -1975,50 +2022,6 @@ let propagate constr j history =
  | None when !no_such_j -> `NoSuchJ
  | _ -> `NoMatch
 ;;
-
-(* constr is a new_delayed constraint;
-   the two lists in output are the constraints to be removed and added 
-let propagate constr =
- Format.fprintf Format.std_formatter "PROPAGATION\n%!";
-(*
- let query =
-  let dummyv = UVar (oref dummy, 0, 0) in
-   App(propagatec,dummyv,[dummyv ; dummyv]) in
- (* CSC: INVARIANT: propagate clauses can never be assumed using
-    implication. Otherwise ~depth:0 is wrong and I do not see any
-    reasonable semantics (i.e. a semantics where the scoping is not
-    violated). For the same reason I took the propagate clauses from
-    the !original_program. *)
- let rules = get_clauses ~depth:0 query !original_program in*)
- let pairs =
-  let not_constr = List.filter ((!=) constr) !delayed in
-  List.map (fun x -> constr,x) not_constr @
-  List.map (fun x -> x,constr) not_constr in
- let run,_ = !do_make_runtime () in
- map_exists
-  (fun (c,d) ->
-    let term_of_constr constr =
-     match constr with
-        Delayed_unif _,_ ->
-         anomaly "Delayed unifications should not become new_delayed"
-      | Delayed_goal (_depth,_p,t),_ -> t
-      | _ -> anomaly "Unknown constraint type" in
-    let cc = term_of_constr c in
-    let dd = term_of_constr d in
-    let uvar = oref dummy in
-    let query = [],[||],App(propagatec,cc,[dd ; UVar (uvar, 0, 0)]) in
-    Format.fprintf Format.std_formatter "Starting runtime\n%!";
-    try
-     let _ = run !original_program query in
-     Format.fprintf Format.std_formatter "Ending runtime\n%!";
-     let constr = Delayed_goal (0,!original_program,!!uvar),[] in
-     Some ([d],[constr])
-    with No_clause ->
-     Format.fprintf Format.std_formatter "Ending runtime\n%!";
-     None
-  ) pairs
-;;
-*)
 
 let print_delayed () =
  List.iter

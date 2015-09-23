@@ -1,0 +1,8 @@
+
+propagate [of X T] [of X S] (T = S, T = a\a).
+
+
+main :- $delay (of X (z\z)) X,
+        pi x\ of x bool => $delay (of X (w\w)) X. 
+
+% vim: set ft=lprolog:
