@@ -542,6 +542,12 @@ let cnt = ref 0
 
 (*x\ f x is transformed to v1\ f v1, where v1 is fresh*)
 let rename_bound_var lambda =
+ (* strings such as "open\_in", "\$print" are illegal in ocaml.
+    How to export them in LaTeX ? *)
+ (* let rename (str:string) = 
+    let l = Str.split (Str.regexp "[_]") str in
+    let s = List.fold_left (fun res x->res ^ "\\_" ^ x) "" (List.tl l) in 
+    (List.hd l) ^ s in *)
   let rec subst t v newv = match t with
     | Const(v1) when v = v1 -> Const newv
     | Custom(v1) when v = v1 -> Custom newv
@@ -620,7 +626,6 @@ let export_pair = function
 
 
 let export_clauses cl_list = 
- Format.printf "\nExport in LaTeX \n\n%!";
  let headers = 
   "\\documentclass[10pt]{article} 
 
