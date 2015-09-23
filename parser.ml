@@ -555,12 +555,11 @@ let rename_bound_var lambda =
     | Lam(v,_) -> incr cnt; subst lambda v ("v" ^ (string_of_int !cnt))
     | _ -> lambda
 
-let fresh_vars = ref [] 
 
 (* (q,[a; b=>c; d; pi x\ (f x)] returns 
      ([(None,a);(b,c);(None,d);(None,f x)], [x])*)
 let create_context pairsl =
-  fresh_vars := []; 
+  let fresh_vars = ref [] in 
   let rec aux = function
   | [] -> []
   | (App(Const f,tl) as fla)::rest -> (match tl with
@@ -575,8 +574,8 @@ let create_context pairsl =
             | _ -> assert false )
       | _ -> (None,fla) :: (aux rest) ) 
   | hd::rest -> (None,hd) :: (aux rest) in
-  let res = (aux (snd pairsl),!fresh_vars) in
-  res
+  (aux (snd pairsl),!fresh_vars) 
+  
   
 
 
@@ -641,11 +640,14 @@ let export_clauses cl_list =
                  "$}\n" in
    let arity = List.length (snd clpair) in
    let rule = match arity with
+     | 0 -> "\\AxiomC{$" ^ (export_term (fst clpair)) ^ "$}\n" 
      | 1 -> label ^  "\\UnaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n"
      | 2 -> label ^ "\\BinaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n"
      | 3 -> label ^ "\\TrinaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n"
      | 4 -> label ^ "\\QuaternaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n"
-     | 5 -> label ^ "\\QuinaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n" in
+     | 5 -> label ^ "\\QuinaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n" 
+     | _ -> Format.printf "\nThe branching factor is > 5!\n%!"; 
+            assert false in
 
    let axioms = List.fold_right (fun cl1 l1 -> "\\AxiomC{$" ^ (export_pair cl1) ^ "$}\n" ^ l1 ) fst_ "" in
    axioms ^ rule) "" cl_list in
