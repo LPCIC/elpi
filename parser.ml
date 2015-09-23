@@ -628,29 +628,31 @@ let export_clauses cl_list =
 \\usepackage{color}
 \\usepackage{bussproofs}
 
-\\begin{document} \n" in
+\\begin{document} \n\n" in
  let rules = List.fold_left (fun l cl ->
    let clpair = clausify cl in
    let create_pairs = create_context clpair in
    let fst_ = fst create_pairs in
    let snd_ = snd create_pairs in
-   let label = "\\RightLabel{fresh: $" ^ 
+   let fresh_str = match snd_ with
+     | [] -> ""
+     | _ -> "fresh: " in
+   let label = "\\RightLabel{" ^ fresh_str ^ "$" ^ 
                  (List.fold_right (fun freshvar l1 -> 
                   (export_term freshvar) ^ "," ^ l1) snd_ "" ) ^ 
                  "$}\n" in
    let arity = List.length (snd clpair) in
    let rule = match arity with
-     | 0 -> "\\AxiomC{$" ^ (export_term (fst clpair)) ^ "$}\n" 
-     | 1 -> label ^  "\\UnaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n"
-     | 2 -> label ^ "\\BinaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n"
-     | 3 -> label ^ "\\TrinaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n"
-     | 4 -> label ^ "\\QuaternaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n"
-     | 5 -> label ^ "\\QuinaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\n\n" 
+     | 0 -> "\\AxiomC{$$}\n" ^ "\\UnaryInfC{$" ^ (export_term (fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\\newline\n\n"
+     | 1 -> label ^  "\\UnaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\\newline\n\n"
+     | 2 -> label ^ "\\BinaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\\newline\n\n"
+     | 3 -> label ^ "\\TrinaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\\newline\n\n"
+     | 4 -> label ^ "\\QuaternaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\\newline\n\n"
+     | 5 -> label ^ "\\QuinaryInfC{$" ^ (export_pair (None,fst clpair))  ^ "$}\n" ^ "\\DisplayProof\\newline\\newline\n\n" 
      | _ -> Format.printf "\nThe branching factor is > 5!\n%!"; 
             assert false in
-
    let axioms = List.fold_right (fun cl1 l1 -> "\\AxiomC{$" ^ (export_pair cl1) ^ "$}\n" ^ l1 ) fst_ "" in
-   axioms ^ rule) "" cl_list in
+   axioms ^ rule ^ l ) "" cl_list in
  let str = headers ^ rules ^ "\\end{document}" in
  Format.printf "%s%!" str;
  exit 1;
