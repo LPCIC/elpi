@@ -552,7 +552,8 @@ let rename_bound_var lambda =
     | Lam(v1,tm) -> Lam(v1,subst tm v newv)
     | _ -> t in
   match lambda with
-    | Lam(v,_) -> incr cnt; subst lambda v ("v" ^ (string_of_int !cnt))
+    | Lam(v,_) -> 
+        incr cnt; subst lambda v ("v_{" ^ (string_of_int !cnt) ^ "}")
     | _ -> lambda
 
 
@@ -568,7 +569,7 @@ let create_context pairsl =
           let newlam = rename_bound_var lam in
           (match newlam with
             | Lam(v,t) -> 
-                fresh_vars := (Const v) :: !fresh_vars; 
+                fresh_vars := !fresh_vars @ [Const v]; 
                 let pair_t = List.hd (aux [t]) in
                 pair_t :: (aux rest)
             | _ -> assert false )
