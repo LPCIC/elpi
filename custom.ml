@@ -208,12 +208,7 @@ let _ =
     match args with
     | [t1; t2] ->
       (match is_flex t2 with
-          Some v2 ->
-           Format.fprintf Format.std_formatter
-            "Delaying goal: ... ⊢ %a\n%!" (uppterm depth [] 0 [||]) t1 ;
-           let delayed_goal = (Delayed_goal (depth,p,t1), [v2]) in
-           add_constraint delayed_goal ;
-           []
+          Some v2 -> delay_goal ~depth p ~goal:t1 ~on:[v2]; []
 (*CSC: BUG: WE SHOULD CHECK IT IS A VAR, NOT FLEXIBLE *)
         | None -> type_error "the second arg of $delay must be flexible")
     | _ -> type_error "$delay takes 2 arguments"

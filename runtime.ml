@@ -1232,8 +1232,21 @@ type goal = (*depth:*)int * index * term
 
 let original_program = Fork.new_local (Obj.magic 0 : index) (* dummy value *)
 
-exception Delayed_goal of goal (* CSC: we could save a few cells by
-                                   expanding goal to its def *)
+(* Delayed_goal of (depth, orig_prog, diffed_prog, goal), everything lives in
+ * depth (but for orig_prog) *)
+(* CAVEAT: we are going to use pointer equality on the contents, so it must
+ * be a tuple *)
+exception Delayed_goal of (int * index * term list * term)
+
+let delay_goal ~depth prog ~goal:g ~on:keys =
+  let pdiff = diff_progs ~to_:depth prog !original_program in
+  Format.fprintf Format.std_formatter
+    "Delaying goal: @[<hov 2> %a@ ⊢ %a@]\n%!"
+      (pplist (uppterm depth [] 0 [||]) ",") pdiff
+      (uppterm depth [] 0 [||]) g ;
+  let delayed_goal = (Delayed_goal (depth,prog,pdiff,g), keys) in
+  add_constraint delayed_goal
+;;
 
 (* is_flex is to be called only on heap terms *)
 let rec is_flex =
@@ -1863,7 +1876,7 @@ let propagate constr j history =
   match constr with
      Delayed_unif _,_ ->
       anomaly "Delayed unifications should not become new_delayed"
-   | Delayed_goal (_depth,_p,t),_ -> t
+   | Delayed_goal (_depth,_orig_p,_p,t),_ -> t
    | _ -> anomaly "Unknown constraint type"
  in
  Format.fprintf Format.std_formatter "PROPAGATION %d\n%!" j;
@@ -1907,7 +1920,8 @@ let propagate constr j history =
      in
       aux (headsno - 1) !delayed in
 
- Format.fprintf Format.std_formatter "COMBINATIONS %d\n%!" (List.length combinations);
+     Format.fprintf Format.std_formatter "COMBINATIONS %d\n%!"
+       (List.length combinations);
      
     let combinations =
       combinations |> List.map (fun l ->
@@ -1939,7 +1953,7 @@ let propagate constr j history =
          let m = matching e m dd g2 in
          match hyps with
          | [] -> Format.fprintf Format.std_formatter "Empty guard\n%!";
-                 Some(to_remove,[(0,p,thaw e m g3)])
+                 Some(to_remove,[(0,p,[],thaw e m g3)])
          | h1 :: hs ->
             let query = [],e,App(andc,h1,hs) in
             Format.fprintf Format.std_formatter "Starting runtime\n%!";
@@ -1949,7 +1963,7 @@ let propagate constr j history =
                 anomaly "propagation rules must not $delay"
               end;
               Format.fprintf Format.std_formatter "Ending runtime (ok)\n%!";
-              Some(to_remove,[(0,p,thaw e m g3)])
+              Some(to_remove,[(0,p,[],thaw e m g3)])
             with No_clause ->
               Format.fprintf Format.std_formatter "Ending runtime (fail)\n%!";
               None)
@@ -2014,13 +2028,12 @@ let print_delayed () =
        "delayed goal: @[<hov 2>^%d:%a@ == ^%d:%a@]\n%!"
         ad (uppterm ad [] 0 [||]) a
         bd (uppterm ad [] ad e) b
-   | Delayed_goal (depth,p,g),_ ->
-      let pdiff = diff_progs ~to_:depth p !original_program in
+   | Delayed_goal (depth,_,pdiff,g),_ ->
       Format.fprintf Format.std_formatter
-       "delayed goal: @[<hov 1>%a ⊢ %a@]\n%!"
+        "delayed goal: @[<hov 2> %a@ ⊢ %a@]\n%!"
+          (pplist (uppterm depth [] 0 [||]) ",") pdiff
+          (uppterm depth [] 0 [||]) g ;
        (* CSC: Bug here: print at the right precedence *)
-       (pplist (uppterm depth [] 0 [||]) ", ") pdiff
-       (uppterm depth [] 0 [||]) g
    | _ -> assert false) !delayed
 
 (* The block of recursive functions spares the allocation of a Some/None
@@ -2167,7 +2180,7 @@ end
            ad (uppterm ad [] 0 [||]) a
            bd (uppterm ad [] ad e) b;
          ok := unif ad e bd a b
-     | (Delayed_goal ((depth,_,g) as dpg), _) as exn :: rest ->
+     | (Delayed_goal((depth,_,_,g) as dpg), _) as exn :: rest ->
          remove_constraint exn;
          to_resume := rest;
          Format.fprintf Format.std_formatter
@@ -2187,12 +2200,12 @@ end
           | `NoMatch -> new_delayed := (dpg, j+1) :: rest
           | `Matched (to_be_removed,to_be_added) ->
              List.iter (function
-                (Delayed_goal ((depth,_,g)),_) ->
+                (Delayed_goal ((depth,_,_,g)),_) ->
                   Format.fprintf Format.std_formatter
                    "Killing goal: ... ⊢ %a\n%!" (uppterm depth [] 0 [||]) g
               | _ -> ()) to_be_removed ;
              List.iter remove_constraint to_be_removed ;
-             List.iter (fun (depth,_,g) ->
+             List.iter (fun (depth,_,_,g) ->
                   Format.fprintf Format.std_formatter
                    "Additional goal: ... ⊢ %a\n%!" (uppterm depth [] 0 [||]) g)
                to_be_added ;
@@ -2200,7 +2213,7 @@ end
              to_be_resumed := to_be_added @ !to_be_resumed )
      | _ -> anomaly "Empty list"
     done;
-    Some (List.rev !to_be_resumed)
+    Some (List.map (fun (d,p,_,g) -> d,p,g) (List.rev !to_be_resumed))
    end
    else None
 

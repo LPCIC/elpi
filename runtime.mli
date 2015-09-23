@@ -87,11 +87,9 @@ val register_custom :
   unit
 
 (* Functions useful to implement custom predicates and evaluable functions *)
-
 val deref : from:constant -> to_:constant -> int -> term -> term
 val app_deref : from:constant -> to_:constant -> term list -> term -> term
-type goal = (*depth:*)int * index * term
-exception Delayed_goal of goal
 val is_flex : term -> term oref option
-val add_constraint : constraint_ -> unit
 val print_delayed : unit -> unit
+val delay_goal : depth:int -> index -> goal:term -> on:term oref list -> unit
+
