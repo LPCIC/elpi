@@ -103,7 +103,13 @@ dell@dell:~/lpcic/elpi/bench/sources/fun_trans$ ../../../elpi fun_trans.mod
   works fine, but the same call outside of the fun_trans/ directory does not, i.e.:
 dell@dell:~/lpcic/elpi$ ./elpi bench/sources/fun_trans.elpi 
   fails. The problem is in loading the input file.
-
+- LaTeX exporter:
+  1) a Parser.term which contains LaTeX reserved symbols such 
+     as "_", "$", etc. should be exported accordingly
+  2) it should be implemented a better clausify function and 
+     some cases such as nested lambda, pi or impl should be considered.
+  3) There should be a uniqe naming of the fresh vars which come from pi.
+     For the time being they are named as: v_1, v_2, etc.
 
 Other:
 
