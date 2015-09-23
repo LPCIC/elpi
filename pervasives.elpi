@@ -40,6 +40,9 @@
 % nofixity is_flex
 % nofixity $print_delayed
 
+% nofixity propagate
+% nofixity $delay
+% nofixity nabla
 
 prefix ~  256.       prefix i~  256.     prefix r~  256.
 infixl mod 160.
@@ -58,6 +61,7 @@ infix  =  130.
 infix  is 130.
 infixr => 129.
 infixr &  120.
+infix  ?- 115.
 infixr ,  110.
 infixr ;  100.
 infixl :- 0.

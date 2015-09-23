@@ -271,6 +271,8 @@ module Constants : sig
   val propagatec : constant
   val consc  : constant
   val nilc   : term
+  val entailsc : constant
+  val nablac : constant
 
   (* Value for unassigned UVar/Arg *)
   val dummy  : term
@@ -321,6 +323,8 @@ let eqc = fst (funct_of_ast F.eqf)
 let propagatec = fst (funct_of_ast (F.from_string "propagate"))
 let nilc = snd (funct_of_ast F.nilf)
 let consc = fst (funct_of_ast F.consf)
+let nablac = fst (funct_of_ast (F.from_string "nabla"))
+let entailsc = fst (funct_of_ast (F.from_string "?-"))
 
 let rec dummy = App (-9999,dummy,[])
 
@@ -1821,7 +1825,7 @@ let rec list_assq2 p = function
   | _ :: rest -> list_assq2 p rest
 ;;
 
-let matching e adepth m a b =
+let matching e depth argsdepth m a b =
   let rec aux m a b =
   TRACE "matching" (fun fmt ->
    Format.fprintf fmt "%a = %a" (ppterm 0 [] 0 e) a (ppterm 0 [] 0 e) b)
@@ -1839,11 +1843,11 @@ let matching e adepth m a b =
       let m = List.fold_left2 aux m xs ys in
       m
   | Const c1, Const c2 ->
-      if c1 >= adepth && c2 >= adepth then if a == b then m else raise NoMatch
+      if c1 >= depth && c2 >= depth then if a == b then m else raise NoMatch
       else
         if a == b then m (* FIXME in the HO case *)
         else
-          assert false (* FIXME in the HO case *)
+          raise NoMatch
   | _, AppArg _ -> assert false
   | Lam a, Lam b -> aux m a b
   | _ -> raise NoMatch
@@ -1854,7 +1858,7 @@ let matching e adepth m a b =
 let rec thaw e m = function
   | UVar( { contents = t} , 0,0) when t != dummy -> thaw e m t
   | Arg(i,0) when e.(i) != dummy -> thaw e m e.(i)
-  | UVar _ as x -> x
+  | UVar(_,0,0) as x -> x
   | Arg(i,0) -> e.(i) <- UVar(oref dummy,0,0); e.(i)
   | App(c,x,xs) ->
 (*
@@ -1911,8 +1915,19 @@ let propagate constr j history =
      Delayed_unif _,_ ->
       anomaly "Delayed unifications should not become new_delayed"
    | Delayed_goal (depth,_,p,t),_ -> depth,p,t
-   | _ -> anomaly "Unknown constraint type"
- in
+   | _ -> anomaly "Unknown constraint type" in
+ let rec find_entails n = function
+   | Lam t -> find_entails (n+1) t
+   | App(c,x,[g]) when c == entailsc -> n, lp_list_to_list x, g
+   | t -> n,[],t in
+ let sequent_of_pattern = function
+   | App(c,x,[]) when c == nablac ->
+       let min_depth, ctx, g = find_entails 0 x in
+       (min_depth, ctx, g)
+   | Lam _ -> error "syntax error in propagate"
+   | x -> 
+       let min_depth, ctx, g = find_entails 0 x in
+       (min_depth, ctx, g) in
  Format.fprintf Format.std_formatter "PROPAGATION %d\n%!" j;
  let query =
   let dummyv = UVar (oref dummy, 0, 0) in
@@ -1979,20 +1994,31 @@ let propagate constr j history =
          List.fold_right (fun (d,p,g) (ctxs, gs) ->
            (d,p) :: ctxs, lift ~from:d ~to_:max_depth g :: gs)
            heads_sequent ([],[]) in
+
        let to_match, to_remove =
          partition_i (fun i _ -> i < leng1) goals_at_max_depth in
        let _, heads_to_remove =
          partition_i (fun i _ -> i < leng1) heads in
 
-       let gg1 = gg1 |> List.map (lift_pat ~from:0 ~to_:max_depth) in
-       let gg2 = gg2 |> List.map (lift_pat ~from:0 ~to_:max_depth) in
+       let lift_pattern_sequent (d,ctx,g) =
+         if d > max_depth then raise NoMatch;
+         d, ctx, lift_pat ~from:d ~to_:max_depth g in
+
        try
+         let patterns_sequent1 =
+           List.(gg1 |> map sequent_of_pattern |> map lift_pattern_sequent) in
+         let patterns_sequent2 =
+           List.(gg2 |> map sequent_of_pattern |> map lift_pattern_sequent) in
+
          let e = Array.make nargs dummy in
          Format.fprintf Format.std_formatter "attempt: %a = %a\n%!"
            (pplist (uppterm max_depth [] 0 [||]) ",") (to_match @ to_remove)
-           (pplist (uppterm max_depth [] max_depth e) ",") (gg1 @ gg2);
-         let m = List.fold_left2 (matching e max_depth) [] to_match  gg1 in
-         let m = List.fold_left2 (matching e max_depth) m  to_remove gg2 in
+           (pplist (fun fmt (_,_,g) ->
+              uppterm max_depth [] 0 e fmt g) ",")
+           (patterns_sequent1 @ patterns_sequent2);
+         let match_p m t (d,_,g) = matching e max_depth (max_depth-d) m t g in
+         let m = List.fold_left2 match_p [] to_match  patterns_sequent1 in
+         let m = List.fold_left2 match_p m  to_remove patterns_sequent2 in
          (* check all aligned max_depth *)
          let contexts_at_max_depth = contexts |>
            List.map (fun (d,p) -> List.map (lift ~from:d ~to_:max_depth) p) in

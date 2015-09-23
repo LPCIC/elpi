@@ -1,0 +1,7 @@
+propagate [nabla w\ of w (X w) (T w)] [nabla w\ r\ of w (X w) (S w)] (pi w\ T = S).
+
+
+main :- (pi x\ $delay (of x (X x) nat) X),
+        pi x \ pi y\ of x bool => $delay (of y (X y) nat) X. 
+
+% vim: set ft=lprolog:
