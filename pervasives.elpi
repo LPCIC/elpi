@@ -53,6 +53,7 @@ infixl ^  150.
 infixl +  150.       infixl i+  150.     infixl r+  150.
 infixl -  150.       infixl i-  150.     infixl r-  150.
 infixr :: 140.
+infix  @  135.
 infix  >  130.       infix  i>  130.     infix  r>  130.     infix  s>  130.
 infix  <  130.       infix  i<  130.     infix  r<  130.     infix  s<  130.
 infix  >= 130.       infix  i>= 130.     infix  r>= 130.     infix  s>= 130.

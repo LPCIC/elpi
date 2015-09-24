@@ -84,6 +84,12 @@ Documentation:
   \x followed by other combinations should be an error
   \ followed by other combinations should be an error
   </NOT IMPLEMENTED YET>
+- X @ L is a definable operator:
+  app H G (c d e).  returns  H = c, G = [d,e]
+  where
+  app F [] F :- $is_frozen F, !.
+  app F [X|XS] (G X) :- app F XS G.
+
 
 Major Bugs:
 - pi X\ (main A :- X = A, $print X).  Anomaly
