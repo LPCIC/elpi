@@ -57,6 +57,7 @@ and constraint_ =
  exn * term oref list (* well... open type in caml < 4.02 *)
 
 val term_of_ast : depth:int -> Parser.term -> term
+val oref : 'a -> 'a oref
 
 exception No_clause
 

@@ -43,6 +43,7 @@
 % nofixity propagate
 % nofixity $delay
 % nofixity nabla
+% nofixity $closed
 
 prefix ~  256.       prefix i~  256.     prefix r~  256.
 infixl mod 160.

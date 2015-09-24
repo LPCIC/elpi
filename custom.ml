@@ -243,6 +243,10 @@ let _ =
     match args with
     | [t1] -> if is_flex t1 then [] else raise No_clause
     | _ -> type_error "$is_flex takes 1 argument") ;
+  register_custom "$closed" (fun ~depth ~env:_ _ args ->
+    match args with
+    | [t1] -> [ App (eqc, t1, [UVar(oref dummy,0,0)]) ]
+    | _ -> type_error "$closed takes 1 argument") ;
   register_custom "$lt" (fun ~depth ~env:_ _ args ->
     let rec get_constant = function
       | Const c -> c
