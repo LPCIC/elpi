@@ -255,7 +255,7 @@ module Constants : sig
   val funct_of_ast : F.t -> constant * term
   val constant_of_dbl : constant -> term
   val string_of_constant : constant -> string
-  val new_fresh_constant : unit -> term
+  val new_fresh_constant : unit -> constant * term
  
   (* To keep the type of terms small, we use special constants for ! = pi.. *)
   val cutc   : term
@@ -273,6 +273,7 @@ module Constants : sig
   val nilc   : term
   val entailsc : constant
   val nablac : constant
+  val destappc : constant
 
   (* Value for unassigned UVar/Arg *)
   val dummy  : term
@@ -307,7 +308,7 @@ let funct_of_ast, constant_of_dbl, string_of_constant, new_fresh_constant =
    decr fresh;
    let n = !fresh in
    Hashtbl.add h' n ("frozen-"^string_of_int n);
-   Const n)
+   n,Const n)
 ;;
 
 let cutc = snd (funct_of_ast F.cutf)
@@ -325,6 +326,7 @@ let nilc = snd (funct_of_ast F.nilf)
 let consc = fst (funct_of_ast F.consf)
 let nablac = fst (funct_of_ast (F.from_string "nabla"))
 let entailsc = fst (funct_of_ast (F.from_string "?-"))
+let destappc = fst (funct_of_ast (F.from_string "@"))
 
 let rec dummy = App (-9999,dummy,[])
 
@@ -1636,7 +1638,7 @@ let unif adepth e bdepth a b =
      | Const c, Const _ when c >= bdepth && c < adepth -> false
      | Const c1, Const c2 when c1 = c2 + delta -> true*)
    | Int s1, Int s2 -> s1==s2
-   | Float s1, Float s2 -> s1==s2
+   | Float s1, Float s2 -> s1 = s2
    | String s1, String s2 -> s1==s2
    | _ -> false in
  let res = unif 0 a bdepth b false in
@@ -1699,6 +1701,11 @@ let rec lp_list_to_list = function
   | App(c, hd, [tl]) when c == consc -> hd :: lp_list_to_list tl
   | f when f == nilc -> []
   | _ -> error "not a list"
+;;
+
+let rec list_to_lp_list = function
+  | [] -> nilc
+  | x::xs -> App(consc,x,[list_to_lp_list xs])
 ;;
 
 (* BUG: the following clause is rejected because (Z c d) is not
@@ -1793,13 +1800,38 @@ let do_make_runtime =
 
 exception NoMatch
 
+let rec list_assq1 p = function
+  | [] -> raise Not_found
+  | ((r,_), data) :: _ when r == p -> data
+  | _ :: rest -> list_assq1 p rest
+;;
+
 let rec freeze m = function
   | UVar( { contents = t} , 0,0) when t != dummy -> freeze m t
-  | UVar( r, 0, 0) ->
-      (try m, List.assq r m
+  | AppUVar ( { contents = t }, _, _) when t != dummy -> assert false
+  | UVar( r, lvl, ano) ->
+     let m, (c, n) =
+      (try m, list_assq1 r m
        with Not_found ->
-         let x = new_fresh_constant () in
-         (r,x) :: m, x)
+         let n, x = new_fresh_constant () in
+         ((r,lvl),(x,n)) :: m, (x,n)) in
+     m, (match List.map constant_of_dbl (mkinterval 0 (lvl+ano) 0) with
+        | [] -> c
+        | [x] -> App(n,x,[])
+        | x::xs -> App(n,x,xs))
+  | AppUVar( r, lvl, args ) ->
+     let m, (c, n) =
+      (try m, list_assq1 r m
+       with Not_found ->
+         let n, x = new_fresh_constant () in
+         ((r,lvl),(x,n)) :: m, (x,n)) in
+     let m, args = List.fold_right (fun x (m,l) ->
+        let m, x = freeze m x in
+        (m, x ::l)) args (m,[]) in
+     m, (match List.map constant_of_dbl (mkinterval 0 lvl 0) @ args with
+        | [] -> c
+        | [x] -> App(n,x,[])
+        | x::xs -> App(n,x,xs))
   | App(c,x,xs) ->
       let m, x = freeze m x in
       let m, xs = List.fold_right (fun x (m,l) ->
@@ -1815,14 +1847,24 @@ let rec freeze m = function
         let m, x = freeze m x in
         (m, x ::l)) xs (m,[]) in
       m, Custom(c,xs)
-  | AppUVar _ -> assert false
   | UVar _ -> assert false
 ;;
 
 let rec list_assq2 p = function
   | [] -> raise Not_found
-  | (data, k) :: _ when k == p -> data
+  | (data, (_,k)) :: _ when k == p -> data
   | _ :: rest -> list_assq2 p rest
+;;
+let rec list_assq21 p = function
+  | [] -> raise Not_found
+  | (_, (data,k)) :: _ when k == p -> data
+  | _ :: rest -> list_assq21 p rest
+;;
+
+let is_frozen c m =
+   try
+     let _r = list_assq2 c m in true
+   with Not_found -> false
 ;;
 
 let matching e depth argsdepth m a b =
@@ -1833,9 +1875,16 @@ let matching e depth argsdepth m a b =
   | UVar( { contents = t}, 0, 0), _ when t != dummy -> aux m t b
   | _, Arg(i,0) when e.(i) != dummy -> aux m a e.(i)
   | t, Arg(i,0) -> let m, t = freeze m t in e.(i) <- t; m 
+  | t, App(c,Arg(i,0),[Arg(j,0)]) when c == destappc ->
+      let m, t = freeze m t in
+      (match t with
+      | Const f when is_frozen f m -> e.(i) <- a; e.(j) <- nilc; m
+      | App(f,x,xs) when is_frozen f m->
+         e.(i) <- list_assq21 f m; e.(j) <- list_to_lp_list (x::xs); m
+      | _ -> raise NoMatch)
   | UVar( r,0,0), (Const _ as d) ->
       (try
-        let c = List.assq r m in
+        let c = fst (list_assq1 r m) in
         if c == d then m else raise NoMatch
       with Not_found -> raise NoMatch)
   | App(c1,x,xs), App(c2,y,ys) when c1 == c2 ->
@@ -1850,6 +1899,9 @@ let matching e depth argsdepth m a b =
           raise NoMatch
   | _, AppArg _ -> assert false
   | Lam a, Lam b -> aux m a b
+  | Int x, Int y when x == y -> m
+  | Float x, Float y when x = y -> m
+  | String x, String y when x == y -> m
   | _ -> raise NoMatch
   in
     aux m a b
@@ -1857,25 +1909,35 @@ let matching e depth argsdepth m a b =
 
 let rec thaw e m = function
   | UVar( { contents = t} , 0,0) when t != dummy -> thaw e m t
+  | UVar( { contents = t} , _,_) when t != dummy -> assert false
+  | AppUVar( { contents = t} , _,_) when t != dummy -> assert false
   | Arg(i,0) when e.(i) != dummy -> thaw e m e.(i)
-  | UVar(_,0,0) as x -> x
   | Arg(i,0) -> e.(i) <- UVar(oref dummy,0,0); e.(i)
   | App(c,x,xs) ->
-(*
-      (try ignore(list_assq2 c m); assert false
+      (try
+        let r, lvl = list_assq2 c m in
+        let _, xs = partition_i (fun i t ->
+           if i < lvl then begin
+             if t <> Const i then assert false;
+             true
+           end
+             else false) (x::xs) in
+        AppUVar(r, lvl, List.map (thaw e m) xs)
       with Not_found -> 
-*)
-              App(c,thaw e m x, List.map (thaw e m) xs)
-  | Const _ as x ->
-     (try UVar(list_assq2 x m,0,0)
-      with Not_found -> x)
+        App(c,thaw e m x, List.map (thaw e m) xs))
+  | Const x as orig ->
+     (try
+        let r, lvl = list_assq2 x m in
+        UVar(r,lvl,0)
+      with Not_found -> orig)
   | Arg _ | AppArg _ -> anomaly "freeze: not an heap term"
   | (Int _ | Float _ | String _) as x -> x
   | Custom(c,ts) -> Custom(c,List.map (thaw e m) ts)
   | Lam t -> Lam (thaw e m t)
-  | AppUVar _ -> assert false
-  | UVar _ -> assert false
+  | AppUVar(r,lvl,args) -> AppUVar(r,lvl,List.map (thaw e m) args)
+  | UVar _ as x -> x
 ;;
+
 let thaw e m t =
   SPY "thaw-in"  (ppterm 0 [] 0 e) t;
   let t' = thaw e m t in

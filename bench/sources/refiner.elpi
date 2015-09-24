@@ -1,0 +1,65 @@
+
+of X Y :- is_flex X, !, $delay (of X Y) X.
+of X Y :- of_ X Y.
+
+of_ (app F A) (T A) :- of A TA, of F TF, TF = prod TA T.
+of_ (lam F) (prod A T) :- pi x\ of_ x A => of (F x) (T x).
+
+of_ vnil (vect 0).
+of_ (vcons N V) (vect (N + 1)) :- of V TV, TV = vect N.
+
+of_ 0 nat.
+of_ 1 nat.
+of_ (A + B) nat :- of A nat, of B nat.
+
+% Type checking
+%main :-
+% of (app (app (lam n\lam v\ vcons n v) (0 + 1)) (vcons 0 vnil)) T,
+% $print T.
+
+% Refinement
+% main :-
+%  of (app (app X (0 + 1)) (vcons 0 vnil)) T,
+%  $print X T,
+%  $print_delayed,
+%  $print "--------------",
+%  X = (lam n\lam v\ vcons n v),
+%  $print T.
+
+main :-
+   of (lam a\lam b\ X a b) (prod nat x\ prod (vect x) v\ nat),
+   of (X (0 + 1) (vcons 0 vnil)) Ti,
+   $print X Ti.
+
+propagate [ ([G] ?- of (X @ Cl) TY) ]
+          [      of (X @ Ll) Y ]
+          (COMPAT, T_ARGS = Y, TY = TY') :-
+  $closed T, app T Cl TY', app T Ll T_ARGS, compat Cl G Ll COMPAT [], $print COMPAT.
+
+compat [] _ [] true _.
+compat [A|AS] Ctx [V|VS] (of V Ta_ARGS, COMPAT) ARGS :-
+ mem Ctx (of A Ta),
+ app Ta ARGS Ta_ARGS,
+ compat AS Ctx VS COMPAT [V|ARGS].
+
+app F [] F :- !.
+app F [X|XS] (G X) :- app F XS G.
+
+mem [X|XS] X :- !.
+mem [_|XS] X :- mem XS X.
+
+/*
+propapage [ nabla a\ b\ [ of a Ta, of b (Tb a) ] ?- of (X a  b)  (Tc a b) ]
+          [                                         of (X V1 V2) Tl       ]
+  (COMPAT, (Tc V1 V2) = Tl) :- COMPAT = (of V1 Ta, of V2 (Tb V1)).
+
+propagate [ G ?- of (X # A :: B) T ]
+          [   ?- of X # L2 Y ]
+
+ f X + 1
+compat [] [] _.
+compat [T1|R1] [A|R2] Ctx :-
+ mem Ctx (of A Ta), of T1 Ta, ...
+               Tb @ Va
+*/
+% vim: set ft=lprolog:
