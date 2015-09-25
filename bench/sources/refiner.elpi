@@ -1,11 +1,11 @@
-canon_of X T Z :- is_flex X, is_flex Z, !, $delay (canon_of X T Z) X. % Z
-canon_of X T Z :- is_flex Z, !, of X T X.
-canon_of X T Z :- of Z T X.
+canon_of X T Z :- not (is_flex Z), !, of Z T X.
+canon_of X T Z :- is_flex X, !, $delay (canon_of X T Z) [X,Z].
+canon_of X T Z :- of X T X.
 
 of X Y X :- is_flex X, !, $delay (of X Y X) X.
 of X Y X' :- of_ X Y X'.
 
-of_ implicit T X :- $delay (canon_of X T Z) X.
+of_ implicit T X :- $delay (canon_of X T Z) [X,Z].
 
 of_ (app F A) (T A) (app F' A') :- of A TA A', of F TF F', TF = prod TA T.
 of_ (lam F) (prod A T) (lam F') :- pi x\ of_ x A x => of (F x) (T x) (F' x).
@@ -35,7 +35,11 @@ main :-
    of (lam a\lam b\ implicit) (prod nat x\ prod (vect x) v\ nat) (lam a\lam b\ X a b),
    of (X (0 + 1) (vcons 0 vnil)) Ti R,
    of (X 0 vnil) Ti R',
-   $print X Ti "->" R R'.
+   % $print X Ti "->" R R',
+   % X = a\b\a.
+   $delay (assign X (a\b\ a + implicit)) A,
+   $print "AAA" (of (X (0 + 1) (vcons 0 vnil)) Ti R),
+   $print "BBB" (of (X 0 vnil) Ti R').
 
 propagate [ (G1 ?- canon_of (X @ Cl) TY _) ]
           [ (G2 ?-       of (X @ Ll) Y  R) ]
@@ -43,10 +47,13 @@ propagate [ (G1 ?- canon_of (X @ Cl) TY _) ]
   $closed T, app T Cl TY, app T Ll T_ARGS, compat Cl [] G1 Ll COMPAT [],
   imply G2 COMPAT GOAL.
 
+propagate [ (_ ?- canon_of (X @ _) _ (Z @ _)) ] [ (G ?- assign X W) ] TODO :-
+ imply G (Z = W) TODO .
+
 compat [] _ _ [] true _.
 compat [A|AS] L Ctx [V|VS] (of V Ta_ARGS V, COMPAT) ARGS :-
  mem Ctx (of_ A Ta _),
- $closed X, app X L Ta', $print "HO" Ta' Ta, Ta' = Ta, $print "applico a" X ARGS, app X ARGS Ta_ARGS,
+ $closed X, app X L Ta', Ta' = Ta, app X ARGS Ta_ARGS,
  compat AS [A|L] Ctx VS COMPAT [V|ARGS].
 
 app F [] F :- !.
