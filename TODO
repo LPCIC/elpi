@@ -28,6 +28,20 @@ Departures from Teyjus due to camlp5 idiosynchrasies:
   relative paths according to the path of the accumulating file first or,
   if it fails, according to the TJPATH
 
+CHR:
+- look for the assert false: they are unimplemented stuff
+- the alignment of rels at the moment makes sense only (???) for our
+  use case. Introduce a permutation map for the rel? Lift everything
+  in the sum (not the max like now) of the length of the contexts?
+- nabla are now parsed, but the code for them is only partial.
+  The same for contexts (matched up to no permutation)
+- we wrote code to implement the CHR "function call" semantics; but
+  it does not work that way because to add a new delayed goal we resume
+  it at the end and it suspends again
+- rethink all the hacks/primitives (e.g. app, @, imply, ...) that are
+  at the same time definable, but implementable more efficiently as
+  a pattern (and improving legibility, maybe?)
+
 MODULES:
 - backward compatibility with Teyjus with modules
 - document local/sigma in the manual
