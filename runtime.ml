@@ -294,6 +294,7 @@ let funct_of_ast, constant_of_dbl, string_of_constant, new_fresh_constant =
    let xx = Const n in
    let p = n,xx in
    Hashtbl.add h' n (F.pp x);
+   Hashtbl.add h'' n xx;
    Hashtbl.add h x p; p),
  (function x ->
   try Hashtbl.find h'' x
