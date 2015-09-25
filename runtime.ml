@@ -2047,8 +2047,8 @@ let propagate constr j history =
      in
       aux (headsno - 1) !delayed in
 
-     Format.fprintf Format.std_formatter "COMBINATIONS %d\n%!"
-       (List.length combinations);
+     (*Format.fprintf Format.std_formatter "COMBINATIONS %d\n%!"
+       (List.length combinations);*)
      
     let combinations =
       combinations |> List.map (fun l ->
@@ -2141,16 +2141,20 @@ let propagate constr j history =
 let print_delayed () =
  List.iter
   (function
-   | Delayed_unif (ad,e,bd,a,b),_ ->
+   | Delayed_unif (ad,e,bd,a,b),l ->
       Format.fprintf Format.std_formatter
-       "delayed goal: @[<hov 2>^%d:%a@ == ^%d:%a@]\n%!"
+       "delayed goal: @[<hov 2>^%d:%a@ == ^%d:%a on %a@]\n%!"
         ad (uppterm ad [] 0 [||]) a
         bd (uppterm ad [] ad e) b
-   | Delayed_goal (depth,_,pdiff,g),_ ->
+        (pplist (uppterm ad [] 0 [||]) ",")
+        (List.map (fun r -> UVar(r,0,0)) l)
+   | Delayed_goal (depth,_,pdiff,g),l ->
       Format.fprintf Format.std_formatter
-        "delayed goal: @[<hov 2> %a@ ⊢ %a@]\n%!"
+        "delayed goal: @[<hov 2> %a@ ⊢ %a on %a@]\n%!"
           (pplist (uppterm depth [] 0 [||]) ",") pdiff
-          (uppterm depth [] 0 [||]) g ;
+          (uppterm depth [] 0 [||]) g
+          (pplist (uppterm depth [] 0 [||]) ",")
+          (List.map (fun r -> UVar(r,0,0)) l)
        (* CSC: Bug here: print at the right precedence *)
    | _ -> assert false) !delayed
 
@@ -2307,7 +2311,7 @@ end
      | _ -> anomaly "Unknown constraint type"
    done ;
    (* Phase 2: we propagate the constraints *)
-   if !new_delayed <> [] then Format.fprintf Format.std_formatter "RESUME ALL\n%!";
+   (*if !new_delayed <> [] then Format.fprintf Format.std_formatter "RESUME ALL\n%!";*)
    let history = HISTORY.create 17 in
    if !ok then begin
     while !new_delayed <> [] do
