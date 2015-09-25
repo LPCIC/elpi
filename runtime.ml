@@ -573,11 +573,11 @@ let remove_constraint cstr =
 let (@:=) r v =
   if r.rest <> [] then
     begin
-     Format.fprintf Format.std_formatter
-       "@[<hov 2>%d delayed goal(s) to resume since@ %a <-@ %a@]\n%!"
+     (*Format.fprintf Format.std_formatter
+       "@[<hov 2>%d delayed goal(s) to resume since@ %a <-@ %a@]@\n%!"
           (List.length r.rest)
           (ppterm 0 [] 0 [||]) (UVar(r,0,0))
-          (ppterm 0 [] 0 [||]) v;
+          (ppterm 0 [] 0 [||]) v;*)
      to_resume := r.rest @ !to_resume
     end;
  r.contents <- v
@@ -2090,11 +2090,11 @@ let propagate constr j history =
            List.(gg2 |> map sequent_of_pattern |> map lift_pattern_sequent) in
 
          let e = Array.make nargs dummy in
-         Format.fprintf Format.std_formatter "attempt: %a = %a\n%!"
+         (*Format.fprintf Format.std_formatter "attempt: %a = %a\n%!"
            (pplist (uppterm max_depth [] 0 [||]) ",") (to_match @ to_remove)
            (pplist (fun fmt (_,_,g) ->
               uppterm max_depth [] 0 e fmt g) ",")
-           (patterns_sequent1 @ patterns_sequent2);
+           (patterns_sequent1 @ patterns_sequent2);*)
          let match_p m t (d,_,g) = matching e max_depth (max_depth-d) m t g in
          let m = List.fold_left2 match_p [] to_match  patterns_sequent1 in
          let m = List.fold_left2 match_p m  to_remove patterns_sequent2 in
@@ -2116,7 +2116,7 @@ let propagate constr j history =
                  Some(heads_to_remove,[(max_depth,p,[],thaw max_depth e m gg3)])
          | h1 :: hs ->
             let query = [],max_depth,e,App(andc,h1,hs) in
-            Format.fprintf Format.std_formatter "Starting runtime\n%!";
+            (*Format.fprintf Format.std_formatter "Starting runtime\n%!";*)
             (try
               (* CSC: I am not at all sure about the second occurrence of
                  max_depth below *)
@@ -2124,12 +2124,12 @@ let propagate constr j history =
               if not (no_delayed ()) then begin
                 anomaly "propagation rules must not $delay"
               end;
-              Format.fprintf Format.std_formatter "Ending runtime (ok)\n%!";
+              (*Format.fprintf Format.std_formatter "Ending runtime (ok)\n%!";*)
               Some(heads_to_remove,[(max_depth,p,[],thaw max_depth e m gg3)])
             with No_clause ->
               Format.fprintf Format.std_formatter "Ending runtime (fail)\n%!";
               None)
-       with NoMatch -> Format.fprintf Format.std_formatter "NoMatch\n%!";None)
+       with NoMatch -> (*Format.fprintf Format.std_formatter "NoMatch\n%!";*)None)
      | _ -> anomaly "propagate expects 3 args") rules
  in
  match result with
@@ -2321,16 +2321,16 @@ end
           | `NoSuchJ -> new_delayed := rest
           | `NoMatch -> new_delayed := (dpg, j+1) :: rest
           | `Matched (to_be_removed,to_be_added) ->
-             List.iter (function
+             (*List.iter (function
                 (Delayed_goal ((depth,_,_,g)),_) ->
                   Format.fprintf Format.std_formatter
                    "Killing goal: ... ⊢ %a\n%!" (uppterm depth [] 0 [||]) g
-              | _ -> ()) to_be_removed ;
+              | _ -> ()) to_be_removed ;*)
              List.iter remove_constraint to_be_removed ;
-             List.iter (fun (depth,_,_,g) ->
+             (*List.iter (fun (depth,_,_,g) ->
                   Format.fprintf Format.std_formatter
                    "Additional goal: ... ⊢ %a\n%!" (uppterm depth [] 0 [||]) g)
-               to_be_added ;
+               to_be_added ;*)
              (*List.iter add_constraint to_be_added*)
              to_be_resumed := to_be_added @ !to_be_resumed )
      | _ -> anomaly "Empty list"
