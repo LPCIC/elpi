@@ -37,23 +37,29 @@ main :-
    of (X 0 vnil) Ti R',
    % $print X Ti "->" R R',
    % X = a\b\a.
-   $delay (assign X (a\b\ a + implicit)) A,
+   $delay (refine X (a\b\ a + implicit)) A,
    $print "AAA" (of (X (0 + 1) (vcons 0 vnil)) Ti R),
    $print "BBB" (of (X 0 vnil) Ti R').
 
+%%%%%%%%%%%%%%% Constraint Handling Rules and auxiliary functions %%%%%%%%%%%%%%
+
+% Type-checking rule for occurrences of variables
+% Invariant: every variable must have been declared with a canonical sequent
 propagate [ (G1 ?- canon_of (X @ Cl) TY _) ]
           [ (G2 ?-       of (X @ Ll) Y  R) ]
           (GOAL, T_ARGS = Y) :-
-  $closed T, app T Cl TY, app T Ll T_ARGS, compat Cl [] G1 Ll COMPAT [],
+  $closed T, app T Cl TY, app T Ll T_ARGS,
+  compat Cl [] G1 Ll COMPAT [],
   imply G2 COMPAT GOAL.
 
-propagate [ (_ ?- canon_of (X @ _) _ (Z @ _)) ] [ (G ?- assign X W) ] TODO :-
+% Instantiation rule (e.g. to implement tactics)
+propagate [ (_ ?- canon_of (X @ _) _ (Z @ _)) ] [ (G ?- refine X W) ] TODO :-
  imply G (Z = W) TODO .
 
 compat [] _ _ [] true _.
 compat [A|AS] L Ctx [V|VS] (of V Ta_ARGS V, COMPAT) ARGS :-
  mem Ctx (of_ A Ta _),
- $closed X, app X L Ta', Ta' = Ta, app X ARGS Ta_ARGS,
+ $closed X, app X L Ta, app X ARGS Ta_ARGS,
  compat AS [A|L] Ctx VS COMPAT [V|ARGS].
 
 app F [] F :- !.
@@ -65,18 +71,4 @@ mem [_|XS] X :- mem XS X.
 imply []     G G.
 imply [X|XS] G (X => G') :- imply XS G G'.
 
-/*
-propapage [ nabla a\ b\ [ of a Ta, of b (Tb a) ] ?- of (X a  b)  (Tc a b) ]
-          [                                         of (X V1 V2) Tl       ]
-  (COMPAT, (Tc V1 V2) = Tl) :- COMPAT = (of V1 Ta, of V2 (Tb V1)).
-
-propagate [ G ?- of (X # A :: B) T ]
-          [   ?- of X # L2 Y ]
-
- f X + 1
-compat [] [] _.
-compat [T1|R1] [A|R2] Ctx :-
- mem Ctx (of A Ta), of T1 Ta, ...
-               Tb @ Va
-*/
 % vim: set ft=lprolog:
