@@ -1921,19 +1921,29 @@ let thaw max_depth e m t =
   | App(c,x,xs) ->
       (try
         let r, lvl = list_assq2 c m in
-        let _, xs = partition_i (fun i t ->
+        if List.length xs + 1 >= lvl then
+         let _, xs = partition_i (fun i t ->
            if i < lvl then begin
              if t <> Const i then assert false;
              true
            end
              else false) (x::xs) in
-        AppUVar(r, lvl, List.map (aux) xs)
+         AppUVar(r, lvl, List.map (aux) xs)
+        else
+         assert false (* TODO *)
       with Not_found -> 
         App(c,aux x, List.map (aux) xs))
   | Const x as orig ->
      (try
         let r, lvl = list_assq2 x m in
-        UVar(r,lvl,0)
+        if lvl = 0 then
+         UVar(r,lvl,0)
+        else
+         let r' = oref dummy in
+         (*if not !last_call then
+          trail := (Assign r) :: !trail; ????? *)
+         r @:= UVar(r',0,lvl);
+         UVar (r', 0, 0)
       with Not_found -> orig)
   | (Int _ | Float _ | String _) as x -> x
   | Custom(c,ts) -> Custom(c,List.map (aux) ts)
@@ -1987,7 +1997,7 @@ let propagate constr j history =
  let rec find_entails max_depth n = function
    | Lam t -> find_entails max_depth (n+1) t
    | App(c,x,[g]) when c == entailsc -> n, x, g
-   | t -> n, UVar(oref dummy,max_depth,0), t in
+   | t -> assert false (*n, SHOULD BE AN Arg UVar(oref dummy,max_depth,0), t*) in
  let sequent_of_pattern max_depth = function
    | App(c,x,[]) when c == nablac ->
        let min_depth, ctx, g = find_entails max_depth 0 x in
@@ -1996,7 +2006,7 @@ let propagate constr j history =
    | x -> 
        let min_depth, ctx, g = find_entails max_depth 0 x in
        (min_depth, ctx, g) in
- Format.fprintf Format.std_formatter "PROPAGATION %d\n%!" j;
+ (*Format.fprintf Format.std_formatter "PROPAGATION %d\n%!" j;*)
  let query =
   let dummyv = UVar (oref dummy, 0, 0) in
    App(propagatec,dummyv,[dummyv ; dummyv]) in
