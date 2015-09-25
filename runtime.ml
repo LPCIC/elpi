@@ -379,14 +379,13 @@ let xppterm ~nice depth0 names argsdepth env f t =
     let s =
      try List.assq r !m
      with Not_found ->
-      let s =
-       "X" ^ string_of_int !n ^ if vardepth=0 then "" else "^" ^ string_of_int vardepth
-      in
+      let s = "X" ^ string_of_int !n in
       incr n;
       m := (r,s)::!m;
       s
     in
-     Format.fprintf f "%s" s 
+     Format.fprintf f "%s%s" s
+      (if vardepth=0 then "" else "^" ^ string_of_int vardepth)
    (* TODO: (potential?) bug here, the variable is not lifted
       from origdepth (currently not even passed to the function)
       to depth (not passed as well) *)
