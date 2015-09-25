@@ -98,3 +98,4 @@ val is_flex : term -> term oref option
 val print_delayed : unit -> unit
 val delay_goal : depth:int -> index -> goal:term -> on:term oref list -> unit
 
+val lp_list_to_list : term -> term list

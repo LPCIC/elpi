@@ -208,9 +208,15 @@ let _ =
     match args with
     | [t1; t2] ->
       (match is_flex t2 with
-          Some v2 -> delay_goal ~depth p ~goal:t1 ~on:[v2]; []
-(*CSC: BUG: WE SHOULD CHECK IT IS A VAR, NOT FLEXIBLE *)
-        | None -> type_error "the second arg of $delay must be flexible")
+        | Some v2 -> delay_goal ~depth p ~goal:t1 ~on:[v2]; []
+        | None ->
+            let v2 =
+              List.map (function
+               | Some x -> x
+               | None -> type_error
+            "the second arg of $delay must be flexible or a list of flexibles")
+              (List.map is_flex (lp_list_to_list t2)) in
+            delay_goal ~depth p ~goal:t1 ~on:v2; [])
     | _ -> type_error "$delay takes 2 arguments"
     );
   register_custom "$print" (fun ~depth ~env _ args ->
