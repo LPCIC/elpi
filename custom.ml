@@ -214,9 +214,8 @@ let _ =
     | _ -> type_error "$delay takes 2 arguments"
     );
   register_custom "$print" (fun ~depth ~env _ args ->
-    Format.printf "@[<hov 1>" ;
-    List.iter (Format.printf "%a@ " (uppterm depth [] 0 env)) args ;
-    Format.printf "@]\n%!" ;
+    Format.fprintf Format.std_formatter "%!@[<hov 1>%a@]\n%!"
+     (pplist (uppterm depth [] 0 env) " ") args ;
     []) ;
   register_custom "$counter" (fun ~depth ~env:_ _ args ->
     match args with
