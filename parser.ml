@@ -617,13 +617,13 @@ let rec export_term = function
     " \\lambda "^ ASTFuncS.pp x^"." ^ (export_term t1)
  | String str -> ASTFuncS.pp str
  | Int i -> string_of_int i 
+ | Float i -> string_of_float i 
 
 
 (* exports b => c, i.e. (b,c) to b |- c*)
 let export_pair = function
   | (None,b) -> " \\Gamma\\vdash " ^ export_term b
   | (Some a,b) -> " \\Gamma," ^ export_term a ^" \\vdash "^  export_term b
-  | _ -> assert false
 
 
 let export_clauses cl_list = 
