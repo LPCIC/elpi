@@ -1,0 +1,3 @@
+accumulate lambda-clam/ex1/ex1.
+
+main :- top_goal ex1 orevqrev [] (app forall (tuple [(olist nat), (abs x\    (app forall (tuple [(olist nat), (abs y\ (app eq (tuple [ (app oapp (tuple [(app orev x), y])), (app qrev (tuple [x, y]))])))])))])).
