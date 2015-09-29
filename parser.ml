@@ -209,6 +209,7 @@ let rec stringchar = lexer
  | "\\b" / -> $add "\b"
  | "\\t" / -> $add "\t"
  | "\\r" / -> $add "\r"
+ | "\\x" / -> $add "\x"
  | "\\\"" / -> $add "\""
  (* CSC: I have no idea how to implement the \octal syntax & friend :-(
  | "\\" / [ -> buflen := String.length $buf ; $add "" ] octal / ->
