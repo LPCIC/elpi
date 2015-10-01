@@ -1,3 +1,26 @@
 accumulate lambda-clam/ex1/ex1.
+accumulate lambda-clam/ex2/ex2.
+accumulate lambda-clam/ex3/ex3.
 
-main :- top_goal ex1 orevqrev [] (app forall (tuple [(olist nat), (abs x\    (app forall (tuple [(olist nat), (abs y\ (app eq (tuple [ (app oapp (tuple [(app orev x), y])), (app qrev (tuple [x, y]))])))])))])).
+main1 :- top_goal ex1 orevqrev [] (app forall (tuple [(olist nat), (abs x\    (app forall (tuple [(olist nat), (abs y\ (app eq (tuple [ (app oapp (tuple [(app orev x), y])), (app qrev (tuple [x, y]))])))])))])).
+
+
+main2 :- top_goal ex2 orevqrev []
+  (app forall (tuple [(olist nat), (abs x\
+    (app forall (tuple [(olist nat), (abs y\
+      (app eq (tuple [
+  (app oapp (tuple [(app orev x), y])),
+  (app qrev (tuple [x, y]))])))])))])).
+
+main3 :- top_goal ex2 revqrevlemma []
+  (app forall (tuple [(olist nat), (abs x\
+    (app forall (tuple [(olist nat), (abs y\
+      (app forall (tuple [(olist nat), (abs z\
+  (app eq (tuple [
+  (app oapp (tuple [(app qrev (tuple [x, y])), z])),
+  (app qrev (tuple [x, (app oapp (tuple [y, z]))]))])))])))])))])).
+
+main4 :- top_goal ex3 divides_zero [] (app forall (tuple [nat, (abs x\ (app iff (tuple [ (app divides (tuple [zero, x])), (app eq (tuple [x, zero]))])))])).
+
+
+main :- main1, main2, main3, main4.
