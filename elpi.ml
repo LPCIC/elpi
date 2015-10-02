@@ -75,5 +75,5 @@ let _ =
   | `OneBatch -> test_impl p g
   | `OneInteractive -> run_prog p g
   | `PPprologBatch -> pp_lambda_to_prolog p  
-  | `LatexExport -> Parser.Export.export_clauses p
+  | `LatexExport -> Exporter.Export.export_clauses p 
 ;;
