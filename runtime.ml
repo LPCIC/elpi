@@ -203,7 +203,7 @@ let xppterm ~nice depth0 names argsdepth env f t =
   let pp_app f pphd pparg (hd,args) =
    if args = [] then pphd f hd
    else
-    Format.fprintf f "(@[<hov 1>%a@ %a@])" pphd hd (pplist pparg "") args in
+    Format.fprintf f "@[<hov 1>%a@ %a@]" pphd hd (pplist pparg "") args in
   let ppconstant f c = Format.fprintf f "%s" (string_of_constant c) in
   let rec pp_uvar prec depth vardepth args f r =
    if !!r == dummy then begin
@@ -260,7 +260,11 @@ let xppterm ~nice depth0 names argsdepth env f t =
               ppconstant hd 
           | _ -> pp_app f ppconstant (aux max_int depth) (hd,x::xs)) ;
          if hdlvl < prec then Format.fprintf f ")" ;
-        with Not_found -> pp_app f ppconstant (aux max_int depth) (hd,x::xs))
+        with Not_found -> 
+         let hdlvl = max_int - 1 in
+         if hdlvl < prec then Format.fprintf f "(";
+         pp_app f ppconstant (aux max_int depth) (hd,x::xs);
+         if hdlvl < prec then Format.fprintf f ")" )
     | Custom (hd,xs) -> pp_app f ppconstant (aux max_int depth) (hd,xs)
     | UVar (r,vardepth,argsno) when not nice ->
        let args = mkinterval vardepth argsno 0 in
@@ -291,7 +295,7 @@ let xppterm ~nice depth0 names argsdepth env f t =
     | Int i -> Format.fprintf f "%d" i
     | Float x -> Format.fprintf f "%f" x
   in
-    aux 0 depth0 f t
+    aux 1 depth0 f t
 ;;
 
 (* pp for first-order prolog *) 
