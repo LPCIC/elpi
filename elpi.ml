@@ -63,6 +63,9 @@ let _ =
   let filenames = ref [] in
   for i=j to argn - 1 do filenames := argv.(i)::!filenames done;
   let p = Parser.parse_program (List.rev !filenames) in
+(* the program in the .elpi file(s) of the user only, 
+   without pervasives.elpi; mostly for LaTeX exporting purposes*)
+  let my_p = Parser.my_program_only in 
   let g =
     match test with
     | `OneBatch | `LatexExport | `PPprologBatch -> "main."
@@ -75,5 +78,5 @@ let _ =
   | `OneBatch -> test_impl p g
   | `OneInteractive -> run_prog p g
   | `PPprologBatch -> pp_lambda_to_prolog p  
-  | `LatexExport -> Exporter.Export.export_clauses p 
+  | `LatexExport -> Latex_exporter.Export.export_clauses !my_p
 ;;

@@ -48,12 +48,12 @@ dist:
 
 # compilation of elpi
 
-elpi: elpi.$(CMX) exporter.$(CMX) runtime.$(CMX) parser.$(CMX)
+elpi: elpi.$(CMX) latex_exporter.$(CMX) runtime.$(CMX) parser.$(CMX)
 	$(OC) $(OCAMLOPTIONS) $(FLAGS) -o $@ \
 		camlp5.$(CMXA) unix.$(CMXA) str.$(CMXA) \
 		parser.$(CMX) ptmap.$(CMX) \
 		trace.$(CMX) runtime.$(CMX) \
-    exporter.$(CMX) \
+    latex_exporter.$(CMX) \
 		custom.$(CMX) elpi.$(CMX)
 
 elpi.trace: elpi.trace.$(CMX) runtime.trace.$(CMX) parser.$(CMX)
@@ -82,7 +82,7 @@ pa_notrace.cmo: pa_trace.ml trace.cmi
 	$(OCB)  -pp '$(PP) $(TRACESYNTAX)' $(FLAGS) -o $@ -c $<
 
 # dependencies
-elpi.$(CMX): elpi.ml ptmap.$(CMX) trace.$(CMX) runtime.$(CMX) exporter.$(CMX) custom.$(CMX) parser.$(CMX)
+elpi.$(CMX): elpi.ml ptmap.$(CMX) trace.$(CMX) runtime.$(CMX) latex_exporter.$(CMX) custom.$(CMX) parser.$(CMX)
 elpi.trace.$(CMX): elpi.ml ptmap.$(CMX) trace.$(CMX) runtime.trace.$(CMX) custom.trace.$(CMX) parser.$(CMX)
 runtime.$(CMX): runtime.ml runtime.cmi trace.$(CMX) parser.$(CMX) ptmap.$(CMX)
 runtime.trace.$(CMX): runtime.ml runtime.cmi trace.$(CMX) parser.$(CMX) ptmap.$(CMX)
@@ -95,6 +95,6 @@ trace.cmi: trace.mli
 custom.cmi: custom.mli
 custom.$(CMX): custom.ml custom.cmi runtime.cmi runtime.$(CMX)
 custom.trace.$(CMX): custom.ml custom.cmi runtime.cmi runtime.trace.$(CMX)
-exporter.cmi: exporter.mli parser.cmi
-exporter.$(CMX): exporter.ml exporter.cmi parser.$(CMX) 
+latex_exporter.cmi: latex_exporter.mli parser.cmi
+latex_exporter.$(CMX): latex_exporter.ml latex_exporter.cmi parser.$(CMX) 
 

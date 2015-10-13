@@ -254,8 +254,20 @@ let option_eq x y = match x, y with Some x, Some y -> x == y | _ -> x == y
 module StringSet = Set.Make(String);;
 let symbols = ref StringSet.empty;;
 
+let literatebuf = Buffer.create 17;;
+
+(* %! <= \leq creates a map from "<=" to "\leq" *)
+let set_liter_map,get_literal,print_lit_map =
+ let module LitMap = Map.Make(String) in
+ let lit_map = ref LitMap.empty in
+ (fun s1 s2 -> lit_map := LitMap.add s1 s2 !lit_map),
+ (fun s -> LitMap.find s !lit_map),
+ (fun () -> LitMap.iter (fun s1 s2 -> Format.printf "\n%s -> %s\n%!" s1 s2) !lit_map);;
+
+
 let rec lex c = parser bp
   | [< '( ' ' | '\n' | '\t' | '\r' ); s >] -> lex c s
+  | [< '( '%' ); '( '!'); s >] -> literatecomment c s
   | [< '( '%' ); s >] -> comment c s
   | [< ?= [ '/'; '*' ]; '( '/' ); '( '*' ); s >] -> comment2 0 c s
   | [< s >] ep ->
@@ -294,6 +306,19 @@ let rec lex c = parser bp
 and skip_to_dot c = parser
   | [< '( '.' ); s >] -> lex c s
   | [< '_ ; s >] -> skip_to_dot c s
+and literatecomment c = parser
+  | [< '( '\n' ); s >] ->
+      let buf = Buffer.contents literatebuf in
+      Buffer.reset literatebuf;
+      let list_str = Str.split (Str.regexp " +") buf in
+      (match list_str with
+       | [s1;s2] -> set_liter_map s1 s2; 
+          Format.printf "%s\n%!" (get_literal s1);
+       | _ -> prerr_endline ("Wrong syntax: " ^ buf); exit 1);
+  (*   print_lit_map (); *)
+  (*   prerr_endline buf; (*register imperatively*) *)
+      lex c s
+  | [< '_ as x ; s >] -> Buffer.add_char literatebuf x; literatecomment c s
 and comment c = parser
   | [< '( '\n' ); s >] -> lex c s
   | [< '_ ; s >] -> comment c s
@@ -367,6 +392,7 @@ let is_used n =
   used_precedences := used ;
   res
 ;;
+
 
 EXTEND
   GLOBAL: lp goal;
@@ -488,6 +514,8 @@ EXTEND
           else mkSeq (xs@[tl]) ]];
 END
 
+let my_program_only = ref [];;
+
 let parse_program (*?(ontop=[])*) ~filenames : program =
   (* let insertions = parse plp s in
   let insert prog = function
@@ -510,7 +538,13 @@ let parse_program (*?(ontop=[])*) ~filenames : program =
   List.fold_left insert ontop insertions*)
   let execname = Unix.readlink "/proc/self/exe" in
   let pervasives = Filename.dirname execname ^ "/pervasives.elpi" in
-  parse lp (pervasives::filenames)
+  let p = parse lp (pervasives::filenames) in
+(*for restoring the parsed for safety reasons*)
+  let parsed_swp = !parsed in
+  parsed := [];
+  my_program_only := parse lp filenames;
+  parsed := parsed_swp;
+  p;;
 
 let parse_goal s : goal = parse_string goal s
 
