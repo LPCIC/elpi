@@ -250,8 +250,8 @@ let xppterm ~nice depth0 names argsdepth env f t =
               (aux (hdlvl+1) depth) (List.hd xs)
           | Parser.Infixr when List.length xs = 1 ->
              Format.fprintf f "@[<hov 1>%a@ %a@ %a@]"
-              (aux hdlvl depth) x ppconstant hd
-              (aux (hdlvl+1) depth) (List.hd xs)
+              (aux (hdlvl+1) depth) x ppconstant hd
+              (aux hdlvl depth) (List.hd xs)
           | Parser.Prefix when xs = [] ->
              Format.fprintf f "@[<hov 1>%a@ %a@]" ppconstant hd
               (aux hdlvl depth) x
