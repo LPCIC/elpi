@@ -321,11 +321,8 @@ let export_clauses cl_list =
    let snd_ = snd create_pairs in (*list of fresh vars*)
    let pair_var_metalist = not_in snd_ fst_ in
    let fresh_vars = print_not_in pair_var_metalist in 
- (*  let label = "\\RightLabel{\\tiny " ^ fresh_vars ^ "}\n" in *)
-   let label = "\\RightLabel{\\tiny \\begin{tabular}{l}" ^ fresh_vars ^ "\end{tabular}{l} }\n" in 
-
-
-
+   let label = if fresh_vars = "" then "" else
+     "\\RightLabel{\\tiny \\begin{tabular}{l}" ^ fresh_vars ^ "\end{tabular} }\n" in 
    let arity = List.length (snd clpair) in
    let rule = match arity with
      | 0 -> "\\AxiomC{$$}\n" ^ "\\UnaryInfC{" ^ (export_term (fst clpair))  ^ "}\n" ^ "\\DisplayProof\\newline\\newline\n\n"
