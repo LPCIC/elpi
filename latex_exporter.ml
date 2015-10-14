@@ -42,8 +42,11 @@ let rename_bound_var lambda =
     | _ -> t in
   match lambda with
     | Parser.Lam(v,_) -> 
-        incr cnt; subst lambda v (Parser.ASTFuncS.from_string ("x{" ^ (string_of_int !cnt) ^ "}"))
+        incr cnt; subst lambda v (Parser.ASTFuncS.from_string ("x$_{" ^ (string_of_int !cnt) ^ "}$"))
     | _ -> lambda
+
+
+
 
 
 (* (q,[a; b=>c; d; pi x\ (f x)] returns 
@@ -89,7 +92,8 @@ let export_term tm =
      let name = Parser.ASTFuncS.pp f in 
      (try "<<>>" ^ (Parser.get_literal name) ^ "<<>>" with Not_found ->name)
         (* pp_app f ppconstant (aux max_int depth) (hd,xs) *)
-  | Parser.App (Const hd,x::xs) ->
+  | Parser.App (Parser.Const hd,x::xs)
+  | Parser.App (Parser.Custom hd,x::xs) ->
     (try
      let assoc,hdlvl = Parser.precedence_of hd in
      let lbracket,rbracket= if hdlvl < prec then ("(",")") else ("","") in
@@ -97,61 +101,30 @@ let export_term tm =
        (match assoc with
         | Parser.Infix when List.length xs = 1 ->
           (aux (hdlvl+1) x) ^ " " ^
-          (aux 1000 (Const hd)) ^ " " ^
+          (aux 1000 (Parser.Const hd)) ^ " " ^
           (aux (hdlvl+1) (List.hd xs))
         | Parser.Infixl when List.length xs = 1 ->
           (aux hdlvl x) ^ " " ^
-          (aux 1000 (Const hd)) ^ " " ^
+          (aux 1000 (Parser.Const hd)) ^ " " ^
           (aux (hdlvl+1)) (List.hd xs)
         | Parser.Infixr when List.length xs = 1 ->
           (aux (hdlvl+1) x) ^ " " ^
-          (aux 1000 (Const hd)) ^ " " ^ 
+          (aux 1000 (Parser.Const hd)) ^ " " ^ 
           (aux hdlvl) (List.hd xs)
         | Parser.Prefix when xs = [] ->
-          (aux 1000 (Const hd)) ^ " " ^
+          (aux 1000 (Parser.Const hd)) ^ " " ^
           (aux hdlvl x)
         | Parser.Postfix when xs = [] ->
           (aux hdlvl x) ^ " " ^
-          (aux 1000 (Const hd)) 
-        | _ -> (*"(" ^*) (aux 1001 (Const hd)) ^ " " ^
-               (List.fold_left (fun l x -> l^(aux 1000 x)^(if (!cnt = 1) then "" else (decr cnt;" "))) "" (x::xs)) (*^ ")"*)) ^ rbracket
+          (aux 1000 (Parser.Const hd)) 
+        | _ -> (aux 1001 (Parser.Const hd)) ^ " " ^
+               (List.fold_left (fun l x -> l^(aux 1000 x)^(if (!cnt = 1) then "" else (decr cnt;" "))) "" (x::xs)) ) ^ rbracket
      with Not_found -> 
-      let cnt = ref (List.length (x::xs)) in
-      "(" ^ (aux 1001 (Const hd)) ^ " " ^
-      (List.fold_left (fun l x -> l^(aux 1000 x)^(if (!cnt = 1) then "" else (decr cnt;" "))) "" (x::xs)) ^ ")") 
-
-  | Parser.App (Custom hd,x::xs) ->
-    (try
-     let assoc,hdlvl = Parser.precedence_of hd in
+      let hdlvl = max_int - 1 in
       let lbracket,rbracket= if hdlvl < prec then ("(",")") else ("","") in
-       (match assoc with
-       | Parser.Infix when List.length xs = 1 ->
-          (aux (hdlvl+1) x) ^ 
-          (aux 1000 (Custom hd)) ^
-          (aux (hdlvl+1) (List.hd xs))
-       | Parser.Infixl when List.length xs = 1 ->
-          (aux hdlvl x) ^
-          (aux 1000 (Custom hd)) ^
-          (aux (hdlvl+1)) (List.hd xs)
-       | Parser.Infixr when List.length xs = 1 ->
-          (aux (hdlvl+1) x) ^
-          (aux 1000 (Custom hd)) ^
-          (aux hdlvl) (List.hd xs)
-       | Parser.Infixr when List.length xs = 1 ->
-          (aux hdlvl x) ^
-          (aux 1000 (Custom hd)) ^
-          (aux (hdlvl+1)) (List.hd xs)
-       | Parser.Prefix when xs = [] ->
-          (aux 1000 (Custom hd)) ^
-          (aux hdlvl x)
-       | Parser.Postfix when xs = [] ->
-          (aux hdlvl x) ^
-          (aux 1000 (Custom hd))
-       | _ -> "(" ^ (aux 1001 (Custom hd)) ^
-          (List.fold_left (fun l x -> l^(aux 1000 x)^" ") "" (x::xs)) ^
-           ")");
-     with Not_found -> "(" ^ (aux 1001 (Const hd)) ^ " " ^
-          (List.fold_left (fun l x -> l^(aux 1000 x)^" ") "" (x::xs)) ^")" )
+      let cnt = ref (List.length (x::xs)) in
+      lbracket ^ (aux max_int (Parser.Const hd)) ^ " " ^
+      (List.fold_left (fun l x -> l^(aux max_int x)^(if (!cnt = 1) then "" else (decr cnt;" "))) "" (x::xs)) ^ rbracket) 
 
 (*
  | Parser.App(f,tl) -> 
@@ -180,14 +153,16 @@ let export_term tm =
      " lambda"^ Parser.ASTFuncS.pp x^"." ^ (aux prec t1)
   | Parser.String str -> Parser.ASTFuncS.pp str
   | Parser.Int i -> string_of_int i 
-  | Parser.Float i -> string_of_float i in
- let pats =
+  | Parser.Float i -> string_of_float i 
+  | _ -> assert false in
+(* let pats =
   [ Str.regexp "\$", "\\$" (* for the custom predicates which start with $*)
   ; Str.regexp "<<>>",  "$" (* for mathematical mode in LaTeX, it is hidden from the user *)
   ; Str.regexp "_",  "\\_" (*for the _,otherwise exports it as a subscript*)
   ; Str.regexp "lambda", "$\\lambda$" ] in
  let new_tm = aux 0 tm in
  List.fold_left (fun s (a,b) -> Str.global_replace a b s) new_tm pats;;
+*) aux 1 tm;;
 
 
 (* exports b => c, i.e. (b,c) to b |- c*)
@@ -202,7 +177,7 @@ let print_clause cl_pair =
   | Parser.Const c
   | Parser.Custom c -> Format.printf "%s%!" (Parser.ASTFuncS.pp c)
   | Parser.App(Parser.Const hd,tl)
-  | Parser.App(Custom hd,tl) ->
+  | Parser.App(Parser.Custom hd,tl) ->
      Format.printf "(%s %!" (Parser.ASTFuncS.pp hd);
      List.iter (fun x -> print_fla x; Format.printf " %!") tl;
      Format.printf ")%!";
@@ -215,6 +190,33 @@ let print_clause cl_pair =
  print_fla (fst cl_pair);
  Format.printf " :- %!";
  List.iter (fun x -> (print_fla x); Format.printf ", %!";) (snd cl_pair);;
+
+
+(* a pair (main_pred,[a;b;$name_one]) is rewritten to the pair
+   (main\_pred,[a;b;\$name\_one]) *)
+let export_identifiers pair =
+ let replace name =
+  let paths =
+   [ Str.regexp "\$", "\\$" (* for the custom predicates which start with $*)
+   ; Str.regexp "<<>>",  "$" (* for mathematical mode in LaTeX, it is hidden from the user *)
+   ; Str.regexp "_",  "\\_" (*for the _,otherwise exports it as a subscript*)
+   ; Str.regexp "lambda", "$\\lambda$" ] in
+  List.fold_left (fun s (a,b) -> Str.global_replace a b s) name paths in
+ let rec aux t = match t with
+  | Parser.Const c ->
+     let name = Parser.ASTFuncS.pp c in
+     Parser.Const(Parser.ASTFuncS.from_string (replace name))
+  | Parser.Custom c ->
+     let name = Parser.ASTFuncS.pp c in
+     Parser.Custom(Parser.ASTFuncS.from_string (replace name))
+  | Parser.App(f,args) ->
+     Parser.App(aux f, List.map (fun x -> aux x) args)
+  | Parser.Lam(x,arg) -> Parser.Lam(x, aux arg)
+  | _ -> t in
+ let hd = aux (fst pair) in
+ let tl = List.map (fun x -> aux x) (snd pair) in
+ (hd,tl);;
+ 
 
 
 (* g F :- F a b  gives a eta-expanded clause, 
@@ -251,6 +253,7 @@ let eta_expand_clause cl =
      newf
   | _ -> f in
  let cl = clausify cl in
+ let cl = export_identifiers cl in
  List.iter (fun x -> get_arity x) ((fst cl)::(snd cl));
  let head = add_lambdas (fst cl) in
  let tail = List.map (fun f -> add_lambdas f) (snd cl) in
@@ -271,6 +274,7 @@ let not_in vars pairs =
  List.fold_left (fun rez v -> (v,(List.filter (fun x ->
    contains_var x v = false) l))::rez ) [] vars  
 
+
 (*l: (variable * (term list)) list*)
 let print_not_in l =
  let upper_case c = c >= 'A' && c <= 'Z' in
@@ -290,11 +294,11 @@ let print_not_in l =
    | Parser.Const c ->
       let meta_vars = List.fold_left (fun rez f -> 
        rez @ (get_meta_vars f)) [] pairsl in 
-      Format.printf "\n%s -> %!" (Parser.ASTFuncS.pp c);
-      List.iter (fun var_name -> Format.printf "%s, %!" var_name) meta_vars;
-      (Parser.ASTFuncS.pp c) ^ "$\\not\\in\\cup\\{$" ^ 
-       (List.fold_left (fun rez var_name -> 
-        "FV(" ^ var_name ^ ")," ^ rez) "\\} ; " meta_vars)
+      let len = ref (List.length meta_vars) in
+      (Parser.ASTFuncS.pp c) ^ "$ \\not\\in\\bigcup$ \\{" ^ 
+       (List.fold_right (fun var_name rez ->
+        decr len; 
+        (if (!len)>0 then "," else "") ^ "FV(" ^ var_name ^ ")" ^ rez) meta_vars "\\} \\\\ ")
    | _ -> "") l in
  List.fold_left (fun rez str -> str ^ rez) "" str_list
 
@@ -317,14 +321,11 @@ let export_clauses cl_list =
    let snd_ = snd create_pairs in (*list of fresh vars*)
    let pair_var_metalist = not_in snd_ fst_ in
    let fresh_vars = print_not_in pair_var_metalist in 
-   let fresh_str = match snd_ with
-     | [] -> ""
-     | _ -> "fresh: " in
- (* let label = "\\RightLabel{" ^ fresh_str ^
-                 (List.fold_right (fun freshvar l1 ->
-                  (export_term freshvar) ^ "," ^ l1) snd_ "" ) ^
-                 "}\n" in *)
-   let label = "\\RightLabel{" ^ fresh_vars ^ "}\n" in
+ (*  let label = "\\RightLabel{\\tiny " ^ fresh_vars ^ "}\n" in *)
+   let label = "\\RightLabel{\\tiny \\begin{tabular}{l}" ^ fresh_vars ^ "\end{tabular}{l} }\n" in 
+
+
+
    let arity = List.length (snd clpair) in
    let rule = match arity with
      | 0 -> "\\AxiomC{$$}\n" ^ "\\UnaryInfC{" ^ (export_term (fst clpair))  ^ "}\n" ^ "\\DisplayProof\\newline\\newline\n\n"

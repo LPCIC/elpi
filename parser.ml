@@ -103,6 +103,8 @@ let tjpath =
  let tjpath = List.map (fun f -> make_absolute (readsymlinks f)) tjpath in
  tjpath
 
+(*CSC: when parse_one opens a file for reading, open the .tex file
+  for writing (and put the header) *)
 let rec parse_one e (origfilename as filename) =
  let origprefixname = Filename.chop_extension origfilename in
  let prefixname,filename =
@@ -404,7 +406,7 @@ EXTEND
     [[ c = CONSTANT -> c
      | c = LITERAL -> c ]];
   clause :
-    [[ f = atom; FULLSTOP -> [f]
+    [[ f = atom; FULLSTOP -> [f] (*CSC: put the LaTeX export callback call here *)
      | MODULE; CONSTANT; FULLSTOP -> []
      | SIG; CONSTANT; FULLSTOP -> []
      | ACCUMULATE; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
@@ -538,11 +540,16 @@ let parse_program (*?(ontop=[])*) ~filenames : program =
   List.fold_left insert ontop insertions*)
   let execname = Unix.readlink "/proc/self/exe" in
   let pervasives = Filename.dirname execname ^ "/pervasives.elpi" in
-  let p = parse lp (pervasives::filenames) in
+  parse lp (pervasives::filenames)
+;;
+
+(* Warning: cut&paste from code above; duplicated in case
+   we go back implementing ~ontop *)
+let reparse_program ~filenames : program =
 (*for restoring the parsed for safety reasons*)
   let parsed_swp = !parsed in
   parsed := [];
-  my_program_only := parse lp filenames;
+  let p = parse lp filenames in
   parsed := parsed_swp;
   p;;
 

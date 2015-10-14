@@ -58,14 +58,11 @@ let _ =
    if Array.length argv = 1 then 1,`OneInteractive
    else if argv.(1) = "-test" then 2,`OneBatch
    else if argv.(1) = "-prolog" then 2,`PPprologBatch
-   else if argv.(1) = "-export" then 2,`LatexExport
+   else if argv.(1) = "-latex_export" then 2,`LatexExport
    else 1,`OneInteractive in
   let filenames = ref [] in
   for i=j to argn - 1 do filenames := argv.(i)::!filenames done;
   let p = Parser.parse_program (List.rev !filenames) in
-(* the program in the .elpi file(s) of the user only, 
-   without pervasives.elpi; mostly for LaTeX exporting purposes*)
-  let my_p = Parser.my_program_only in 
   let g =
     match test with
     | `OneBatch | `LatexExport | `PPprologBatch -> "main."
@@ -78,5 +75,9 @@ let _ =
   | `OneBatch -> test_impl p g
   | `OneInteractive -> run_prog p g
   | `PPprologBatch -> pp_lambda_to_prolog p  
-  | `LatexExport -> Latex_exporter.Export.export_clauses !my_p
+  | `LatexExport ->
+      (* the program in the .elpi file(s) of the user only, 
+         without pervasives.elpi; mostly for LaTeX exporting purposes*)
+      let my_p = Parser.reparse_program (List.rev !filenames) in 
+       Latex_exporter.Export.export_clauses my_p
 ;;
