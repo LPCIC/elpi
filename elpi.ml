@@ -76,8 +76,10 @@ let _ =
   | `OneInteractive -> run_prog p g
   | `PPprologBatch -> pp_lambda_to_prolog p  
   | `LatexExport ->
+      Latex_exporter.Export.set_pointer ();
       (* the program in the .elpi file(s) of the user only, 
          without pervasives.elpi; mostly for LaTeX exporting purposes*)
       let my_p = Parser.reparse_program (List.rev !filenames) in 
-       Latex_exporter.Export.export_clauses my_p
+      Latex_exporter.Export.export_clauses my_p;
+      ()
 ;;

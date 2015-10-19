@@ -3,5 +3,6 @@
 (* ------------------------------------------------------------------------- *)
 
 module Export : sig
-  val export_clauses : Parser.term list -> unit 
+  val export_clauses : Parser.term list -> string 
+  val set_pointer : unit -> unit
 end

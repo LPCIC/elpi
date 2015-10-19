@@ -45,3 +45,10 @@ val get_literal : string -> string
 (* BUG: to be changed.
    Parses the input without including pervasives *)
 val reparse_program : filenames:string list -> clause list
+
+module PointerFunc : sig
+(* to avoid a cycle in the Makefile, we introduce a pointer 
+   function which points to a function in the latex_exporter.ml *)
+ val set_export_clauses : (clause list -> string) -> unit
+ val flag : bool ref
+end

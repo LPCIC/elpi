@@ -40,7 +40,7 @@ runners:
 		mv elpi.git.$(t) elpi.git.$(t:runner-%=%))
 
 clean:
-	rm -f *.cmo *.cma *.cmx *.cmxa *.cmi *.o elpi elpi.trace elpi.git.*
+	rm -f *.cmo *.cma *.cmx *.cmxa *.cmi *.o *.tex *.aux *.log *.pdf elpi elpi.trace elpi.git.*
 
 dist:
 	git archive --format=tar --prefix=elpi-$(V)/ HEAD . \

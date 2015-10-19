@@ -336,10 +336,17 @@ let export_clauses cl_list =
    let axioms = List.fold_right (fun cl1 l1 -> "\\AxiomC{" ^ (export_pair cl1) ^ "}\n" ^ l1 ) fst_ "" in
    axioms ^ rule ^ l ) "" cl_list in
  let str = headers ^ rules ^ "\\end{document}" in
- Format.printf "%s%!" str; 
+ (*Format.printf "%s%!" str;*) 
  (*Format.printf "\n\neta: %!";
  let eta = eta_expand_clause (List.nth (List.rev cl_list) 0) in
  print_clause eta; *)
- exit 3;
+ str;;
+
+
+let set_pointer = fun _ ->   
+ Parser.PointerFunc.flag := true;
+ Parser.PointerFunc.set_export_clauses export_clauses;
+ ();;
+
 
 end
