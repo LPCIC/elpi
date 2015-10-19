@@ -103,22 +103,6 @@ let tjpath =
  let tjpath = List.map (fun f -> make_absolute (readsymlinks f)) tjpath in
  tjpath
 
-let rec print_fla f = match f with
- | Const c
- | Custom c -> Format.printf "%s%!" (ASTFuncS.pp c)
- | App(Const hd,tl)
- | App(Custom hd,tl) ->
-    Format.printf "(%s %!" (ASTFuncS.pp hd);
-    List.iter (fun x -> print_fla x; Format.printf " %!") tl;
-    Format.printf ")%!";
- | Lam(x,t) ->
-    Format.printf "λ%!";
-    print_fla (Const x);
-    Format.printf ".%!";
-    print_fla t
- | _ -> Format.printf "not_important%!"
-
-
 module PointerFunc = struct
  let flag = ref false
  let export_clauses_pointer = ref (fun _ -> assert false)
