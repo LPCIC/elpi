@@ -67,6 +67,7 @@ Documentation:
   </NOT IMPLEMENTED YET>
 
 Major Bugs:
+- accumulate does not fail if the file to be accumulated is not present
 - strings need to be quoted when pretty-printed
 - revise all the assert false/raise Failure
 - string_to_term is severely bugged:
