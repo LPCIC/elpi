@@ -446,7 +446,8 @@ EXTEND
         if !PointerFunc.flag then [] 
         else parse lp (List.map (fun fn -> fn ^ ".mod") filenames)
      | IMPORT; filenames=LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP ->
-        parse lp (List.map (fun fn -> fn ^ ".mod") filenames)
+        if !PointerFunc.flag then [] 
+        else parse lp (List.map (fun fn -> fn ^ ".mod") filenames)
      | ACCUM_SIG; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
         parse lp (List.map (fun fn -> fn ^ ".sig") filenames)
      | USE_SIG; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
