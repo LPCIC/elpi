@@ -428,10 +428,27 @@ EXTEND
      | ACCUMULATE; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
         (* LaTeX export callback to avoid accumulating *)
         if !PointerFunc.flag then [] 
-        else parse lp (List.map (fun fn -> fn ^ ".mod") filenames)
+        else begin
+         let exist_filenames,not_exist_filenames = 
+          List.fold_left (fun (l1,l2) file ->
+           let name = file^".mod" in 
+           if Sys.file_exists name then (name::l1,l2)
+           else (l1,name::l2)) ([],[]) filenames in
+         List.iter (fun file -> Format.printf "WARNING: %s does not exists.\n%!" file) not_exist_filenames;
+         parse lp exist_filenames 
+        end
+   (*     else parse lp (List.map (fun fn -> fn ^ ".mod") filenames) *)
      | IMPORT; filenames=LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP ->
         if !PointerFunc.flag then [] 
-        else parse lp (List.map (fun fn -> fn ^ ".mod") filenames)
+        else begin
+         let exist_filenames,not_exist_filenames =
+          List.fold_left (fun (l1,l2) file ->
+           let name = file^".mod" in    
+           if Sys.file_exists name then (name::l1,l2)
+           else (l1,name::l2)) ([],[]) filenames in
+         List.iter (fun file -> Format.printf "WARNING: %s does not exists.\n%!" file) not_exist_filenames;
+         parse lp exist_filenames    
+        end
      | ACCUM_SIG; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
         parse lp (List.map (fun fn -> fn ^ ".sig") filenames)
      | USE_SIG; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
