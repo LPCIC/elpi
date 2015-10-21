@@ -62,24 +62,22 @@ let _ =
    else 1,`OneInteractive in
   let filenames = ref [] in
   for i=j to argn - 1 do filenames := argv.(i)::!filenames done;
-  let p = Parser.parse_program (List.rev !filenames) in
-  let g =
-    match test with
-    | `OneBatch | `LatexExport | `PPprologBatch -> "main."
-    | _ ->
-    Printf.printf "goal> %!";
-    input_line stdin in
-  let g = Parser.parse_goal g in
   set_terminal_width ();
-  match test with
-  | `OneBatch -> test_impl p g
-  | `OneInteractive -> run_prog p g
-  | `PPprologBatch -> pp_lambda_to_prolog p  
-  | `LatexExport ->
-      Latex_exporter.Export.set_pointer ();
-      (* the program in the .elpi file(s) of the user only, 
-         without pervasives.elpi; mostly for LaTeX exporting purposes*)
-      let my_p = Parser.reparse_program (List.rev !filenames) in 
-      Latex_exporter.Export.export_clauses my_p;
-      ()
+  if test = `LatexExport then begin
+   Latex_exporter.activate () ;
+   ignore (Parser.parse_program (List.rev !filenames))
+  end else
+   let p = Parser.parse_program (List.rev !filenames) in
+   let g =
+     match test with
+     | `OneBatch | `LatexExport | `PPprologBatch -> "main."
+     | _ ->
+     Printf.printf "goal> %!";
+     input_line stdin in
+   let g = Parser.parse_goal g in
+   match test with
+   | `OneBatch -> test_impl p g
+   | `OneInteractive -> run_prog p g
+   | `PPprologBatch -> pp_lambda_to_prolog p  
+   | `LatexExport -> ()
 ;;

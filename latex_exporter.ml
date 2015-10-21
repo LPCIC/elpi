@@ -3,7 +3,6 @@
 (* ------------------------------------------------------------------------- *)
 
 
-module Export = struct
 (* ------ LaTeX exporter ------- *)
 
 (* if  q :- a,b,c  returns a pair (q,[a;b;c]) *)
@@ -342,11 +341,6 @@ let export_clauses cl_list =
  print_clause eta; *)
  str;;
 
+Parser.PointerFunc.set_export_clauses export_clauses;;
 
-let set_pointer = fun _ ->   
- Parser.PointerFunc.flag := true;
- Parser.PointerFunc.set_export_clauses export_clauses;
- ();;
-
-
-end
+let activate () = Parser.PointerFunc.flag := true;;
