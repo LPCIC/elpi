@@ -67,6 +67,10 @@ Documentation:
   </NOT IMPLEMENTED YET>
 
 Major Bugs:
+- pi X\ (main A :- X = A, $print X).  Anomaly
+- occur check fails: see the note in propagation1 where a cyclic term
+  is formed. More info: A = impl A B fails, but impl A B = A creates a
+  cyclic term.
 - strings need to be quoted when pretty-printed
 - revise all the assert false/raise Failure
 - string_to_term is severely bugged:

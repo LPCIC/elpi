@@ -373,8 +373,6 @@ let export_clauses cl_list =
  str;;
 
 
-
-
 Parser.PointerFunc.set_export_clauses export_clauses;;
 
 let activate () = Parser.PointerFunc.flag := true;;
