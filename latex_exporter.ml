@@ -41,7 +41,7 @@ let rename_bound_var lambda =
     | _ -> t in
   match lambda with
     | Parser.Lam(v,_) -> 
-        incr cnt; subst lambda v (Parser.ASTFuncS.from_string ("x$_{" ^ (string_of_int !cnt) ^ "}$"))
+        incr cnt; subst lambda v (Parser.ASTFuncS.from_string ("x_{" ^ (string_of_int !cnt) ^ "}"))
     | _ -> lambda
 
 
@@ -89,7 +89,8 @@ let export_term tm =
     Parser.Const f 
   | Parser.Custom f -> 
      let name = Parser.ASTFuncS.pp f in 
-     (try "<<>>" ^ (Parser.get_literal name) ^ "<<>>" with Not_found ->name)
+     (try "<<>>" ^ (Parser.get_literal name) ^ "<<>>" with Not_found ->
+      name^"\\:")
         (* pp_app f ppconstant (aux max_int depth) (hd,xs) *)
   | Parser.App (Parser.Const hd,x::xs)
   | Parser.App (Parser.Custom hd,x::xs) ->
@@ -166,8 +167,8 @@ let export_term tm =
 
 (* exports b => c, i.e. (b,c) to b |- c*)
 let export_pair = function
-  | (None,b) -> "$ \\Gamma\\vdash $" ^ export_term b
-  | (Some a,b) -> "$ \\Gamma,$" ^ export_term a ^" $\\vdash$ "^  export_term b
+  | (None,b) -> "\\Gamma\\vdash " ^ export_term b
+  | (Some a,b) -> " \\Gamma," ^ export_term a ^" \\vdash "^  export_term b
 
 
 (*hd :- a,b,c  is the cl_pair (hd,[a,b,c])*)
@@ -275,7 +276,7 @@ let not_in vars pairs =
 
 
 (*l: (variable * (term list)) list*)
-let print_not_in l =
+let print_label l =
  let upper_case c = c >= 'A' && c <= 'Z' in
 (* returns the meta-variables in term t *)
  let rec get_meta_vars t = match t with
@@ -294,15 +295,15 @@ let print_not_in l =
       let meta_vars = List.fold_left (fun rez f -> 
        rez @ (get_meta_vars f)) [] pairsl in 
       let len = ref (List.length meta_vars) in
-      (Parser.ASTFuncS.pp c) ^ "$ \\not\\in\\bigcup$ \\{" ^ 
+      "$" ^ (Parser.ASTFuncS.pp c) ^ " \\not\\in\\bigcup \\{" ^ 
        (List.fold_right (fun var_name rez ->
         decr len; 
-        (if (!len)>0 then "," else "") ^ "FV(" ^ var_name ^ ")" ^ rez) meta_vars "\\} \\\\ ")
+        (if (!len)>0 then "{,}" else "") ^ "FV(" ^ var_name ^ ")" ^ rez) meta_vars "\\} $ \\\\ ")
    | _ -> "") l in
  List.fold_left (fun rez str -> str ^ rez) "" str_list
 
-
-let export_clauses cl_list = 
+(*
+let export_clauses_bussproofs cl_list = 
  let headers = 
 "\\documentclass[10pt]{article} 
 
@@ -340,6 +341,39 @@ let export_clauses cl_list =
  let eta = eta_expand_clause (List.nth (List.rev cl_list) 0) in
  print_clause eta; *)
  str;;
+*)
+
+let export_clauses cl_list =
+ let headers =
+"\\documentclass[10pt]{article} 
+
+\\usepackage[utf8]{inputenc}
+\\usepackage{amssymb}
+\\usepackage{color}
+\\usepackage{mathpartir}
+
+\\begin{document} \n\n" in
+ let rules = List.fold_left (fun l cl ->
+(*   let clpair = clausify cl in *)
+   let clpair = eta_expand_clause cl in
+   let create_pairs = create_context (fst clpair,snd clpair) in
+   let fst_ = fst create_pairs in
+   let snd_ = snd create_pairs in (*list of fresh vars*)
+   let pair_var_metalist = not_in snd_ fst_ in
+   let fresh_vars = print_label pair_var_metalist in
+   let label = if fresh_vars = "" then "" else
+    "\\tiny\n\\begin{tabular}{l}\n" ^ fresh_vars ^ "\n\\end{tabular} \n" in
+   let arity = List.length (snd clpair) in
+   let consequence = match arity with
+     | 0 -> export_term (fst clpair) 
+     | _ -> export_pair (None,fst clpair) in
+ let axioms = List.fold_right (fun cl1 l1 -> (export_pair cl1) ^ " \\\\ " ^ l1 ) fst_ "" in
+   "${\\inferrule* [right =$\n"^ label ^ "$]\n" ^ "{" ^ axioms ^ "}\n" ^ "{" ^ consequence ^ "}" ^ l ^ "\n}$") "" cl_list in
+ let str = headers ^ rules ^ "\n\n\\end{document}" in
+ str;;
+
+
+
 
 Parser.PointerFunc.set_export_clauses export_clauses;;
 
