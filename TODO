@@ -106,13 +106,10 @@ Documentation:
 
 
 Major Bugs:
-<<<<<<< HEAD
 - pi X\ (main A :- X = A, $print X).  Anomaly
 - occur check fails: see the note in propagation1 where a cyclic term
   is formed. More info: A = impl A B fails, but impl A B = A creates a
   cyclic term.
-=======
->>>>>>> Bug fixed: LaTeX extraction failed in case of infix notations.
 - strings need to be quoted when pretty-printed
 - revise all the assert false/raise Failure
 - string_to_term is severely bugged:
