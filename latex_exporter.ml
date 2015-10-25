@@ -343,7 +343,18 @@ let export_clauses_bussproofs cl_list =
  str;;
 *)
 
-let export_clauses cl_list =
+
+let header = "\\documentclass[10pt]{article} 
+
+\\usepackage[utf8]{inputenc}
+\\usepackage{amssymb}
+\\usepackage{color}
+\\usepackage{mathpartir}
+
+\\begin{document} \n\n"
+
+
+let export_clause cl =
  let headers =
 "\\documentclass[10pt]{article} 
 
@@ -353,26 +364,28 @@ let export_clauses cl_list =
 \\usepackage{mathpartir}
 
 \\begin{document} \n\n" in
- let rules = List.fold_left (fun l cl ->
-(*   let clpair = clausify cl in *)
-   let clpair = eta_expand_clause cl in
-   let create_pairs = create_context (fst clpair,snd clpair) in
-   let fst_ = fst create_pairs in
-   let snd_ = snd create_pairs in (*list of fresh vars*)
-   let pair_var_metalist = not_in snd_ fst_ in
-   let fresh_vars = print_label pair_var_metalist in
-   let label = if fresh_vars = "" then "" else
-    "\\tiny\n\\begin{tabular}{l}\n" ^ fresh_vars ^ "\n\\end{tabular} \n" in
-   let arity = List.length (snd clpair) in
-   let consequence = match arity with
-     | 0 -> export_term (fst clpair) 
-     | _ -> export_pair (None,fst clpair) in
+ let clpair = eta_expand_clause cl in
+ let create_pairs = create_context (fst clpair,snd clpair) in
+ let fst_ = fst create_pairs in
+ let snd_ = snd create_pairs in (*list of fresh vars*)
+ let pair_var_metalist = not_in snd_ fst_ in
+ let fresh_vars = print_label pair_var_metalist in
+ let label = if fresh_vars = "" then "" else
+  "\\tiny\n\\begin{tabular}{l}\n" ^ fresh_vars ^ "\n\\end{tabular} \n" in
+ let arity = List.length (snd clpair) in
+ let consequence = match arity with
+   | 0 -> export_term (fst clpair) 
+   | _ -> export_pair (None,fst clpair) in
  let axioms = List.fold_right (fun cl1 l1 -> (export_pair cl1) ^ " \\\\ " ^ l1 ) fst_ "" in
-   "${\\inferrule* [right =$\n"^ label ^ "$]\n" ^ "{" ^ axioms ^ "}\n" ^ "{" ^ consequence ^ "}" ^ l ^ "\n}$") "" cl_list in
- let str = headers ^ rules ^ "\n\n\\end{document}" in
+ let rules = "${\\inferrule* [right =$\n" ^ label ^ "$]\n" ^ "{" ^ axioms ^ "}\n" ^ "{" ^ consequence ^ "}" ^ "\n}$" in
+ (*let str = headers ^ rules ^ "\n\n\\end{document}" in*)
+ let str = rules in
  str;;
 
 
-Parser.PointerFunc.set_export_clauses export_clauses;;
+Parser.PointerFunc.set_export_clause export_clause;;
+Parser.PointerFunc.set_export_header header;;
+Parser.PointerFunc.set_export_footer "\n\n\\end{document}";;
+
 
 let activate () = Parser.PointerFunc.flag := true;;

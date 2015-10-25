@@ -45,6 +45,8 @@ val get_literal : string -> string
 module PointerFunc : sig
 (* to avoid a cycle in the Makefile, we introduce a pointer 
    function which points to a function in the latex_exporter.ml *)
- val set_export_clauses : (clause list -> string) -> unit
+ val set_export_clause : (clause -> string) -> unit
+ val set_export_header : string -> unit 
+ val set_export_footer : string -> unit 
  val flag : bool ref
 end
