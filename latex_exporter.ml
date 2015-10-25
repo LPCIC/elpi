@@ -377,7 +377,7 @@ let export_clause cl =
    | 0 -> export_term (fst clpair) 
    | _ -> export_pair (None,fst clpair) in
  let axioms = List.fold_right (fun cl1 l1 -> (export_pair cl1) ^ " \\\\ " ^ l1 ) fst_ "" in
- let rules = "${\\inferrule* [right =$\n" ^ label ^ "$]\n" ^ "{" ^ axioms ^ "}\n" ^ "{" ^ consequence ^ "}" ^ "\n}$" in
+ let rules = "${\\inferrule* [right =$\n" ^ label ^ "$]\n" ^ "{" ^ axioms ^ "}\n" ^ "{" ^ consequence ^ "}" ^ "\n}$\\\\\\\\\\\\" in
  (*let str = headers ^ rules ^ "\n\n\\end{document}" in*)
  let str = rules in
  str;;
