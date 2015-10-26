@@ -433,8 +433,9 @@ EXTEND
      | c = LITERAL -> c ]];
   clause :
     [[ f = atom; FULLSTOP ->
-       Printf.fprintf !PointerFunc.open_tex_file "%s\n%!"
-        (!PointerFunc.export_clause_pointer f);
+       if !PointerFunc.flag then
+        Printf.fprintf !PointerFunc.open_tex_file "%s\n%!"
+         (!PointerFunc.export_clause_pointer f);
        [f]
      | MODULE; CONSTANT; FULLSTOP -> []
      | SIG; CONSTANT; FULLSTOP -> []
