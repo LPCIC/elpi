@@ -90,13 +90,13 @@ let export_term tm =
   | Parser.Custom f -> 
      let name = Parser.ASTFuncS.pp f in 
      (try "<<>>" ^ (Parser.get_literal name) ^ "<<>>" with Not_found ->
-      name^"\\:")
+      "\\:" ^ name ^ "\\:")
         (* pp_app f ppconstant (aux max_int depth) (hd,xs) *)
   | Parser.App (Parser.Const hd,x::xs)
   | Parser.App (Parser.Custom hd,x::xs) ->
     (try
      let assoc,hdlvl = Parser.precedence_of hd in
-     let lbracket,rbracket= if hdlvl < prec then ("(",")") else ("","") in
+     let lbracket,rbracket= if hdlvl < prec then ("\\:(",")\\:") else ("","") in
       lbracket ^
        (match assoc with
         | Parser.Infix when List.length xs = 1 ->
@@ -121,7 +121,7 @@ let export_term tm =
                (List.fold_left (fun l x -> l^(aux 1000 x)^(if (!cnt = 1) then "" else (decr cnt;" "))) "" (x::xs)) ) ^ rbracket
      with Not_found -> 
       let hdlvl = max_int - 1 in
-      let lbracket,rbracket= if hdlvl < prec then ("(",")") else ("","") in
+      let lbracket,rbracket= if hdlvl < prec then ("\\:(",")\\:") else ("","") in
       let cnt = ref (List.length (x::xs)) in
       lbracket ^ (aux max_int (Parser.Const hd)) ^ " " ^
       (List.fold_left (fun l x -> l^(aux max_int x)^(if (!cnt = 1) then "" else (decr cnt;" "))) "" (x::xs)) ^ rbracket) 
@@ -151,9 +151,9 @@ let export_term tm =
       (export_term f) ^ "(" ^ (List.fold_left (fun l x -> l^(export_term x)^",") "" tail) ^ (export_term last) ^ ")" )  *)
   | Parser.Lam (x,t1) ->
      " lambda"^ Parser.ASTFuncS.pp x^"." ^ (aux prec t1)
-  | Parser.String str -> Parser.ASTFuncS.pp str
-  | Parser.Int i -> string_of_int i 
-  | Parser.Float i -> string_of_float i 
+  | Parser.String str -> "\\:" ^ Parser.ASTFuncS.pp str ^ "\\:"
+  | Parser.Int i -> "\\:" ^ (string_of_int i) ^ "\\:" 
+  | Parser.Float i -> "\\:" ^ (string_of_float i) ^ "\\:" 
   | _ -> assert false in
 (* let pats =
   [ Str.regexp "\$", "\\$" (* for the custom predicates which start with $*)
