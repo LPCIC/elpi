@@ -43,10 +43,11 @@ val parse_goal_from_stream : char Stream.t -> term
 val get_literal : string -> string
 
 module PointerFunc : sig
+ type latex_export =
+  {process:
+    'a 'b. path:string -> shortpath:string -> ('a -> 'b) -> 'a -> 'b
+   ; export: clause -> unit}
 (* to avoid a cycle in the Makefile, we introduce a pointer 
    function which points to a function in the latex_exporter.ml *)
- val set_export_clause : (clause -> string) -> unit
- val set_export_header : string -> unit 
- val set_export_footer : string -> unit 
- val flag : bool ref
+ val set_latex_export : latex_export -> unit
 end
