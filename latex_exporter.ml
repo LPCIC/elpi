@@ -151,9 +151,9 @@ let export_term tm =
       (export_term f) ^ "(" ^ (List.fold_left (fun l x -> l^(export_term x)^",") "" tail) ^ (export_term last) ^ ")" )  *)
   | Parser.Lam (x,t1) ->
      " lambda"^ Parser.ASTFuncS.pp x^"." ^ (aux prec t1)
-  | Parser.String str -> Parser.ASTFuncS.pp str
-  | Parser.Int i -> string_of_int i 
-  | Parser.Float i -> string_of_float i 
+  | Parser.String str -> Parser.ASTFuncS.pp str ^ "\\:"
+  | Parser.Int i -> string_of_int i ^ "\\:" 
+  | Parser.Float i -> string_of_float i ^ "\\:" 
   | _ -> assert false in
 (* let pats =
   [ Str.regexp "\$", "\\$" (* for the custom predicates which start with $*)
