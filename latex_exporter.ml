@@ -355,15 +355,6 @@ let header = "\\documentclass[10pt]{article}
 
 
 let export_clause cl =
- let headers =
-"\\documentclass[10pt]{article} 
-
-\\usepackage[utf8]{inputenc}
-\\usepackage{amssymb}
-\\usepackage{color}
-\\usepackage{mathpartir}
-
-\\begin{document} \n\n" in
  let clpair = eta_expand_clause cl in
  let create_pairs = create_context (fst clpair,snd clpair) in
  let fst_ = fst create_pairs in
