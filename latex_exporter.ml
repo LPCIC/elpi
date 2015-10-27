@@ -369,14 +369,10 @@ let export_clause cl =
   let fresh_vars = print_label pair_var_metalist in
   let label = if fresh_vars = "" then "" else
    "\\tiny\n\\begin{tabular}{l}\n" ^ fresh_vars ^ "\n\\end{tabular} \n" in
-  let arity = List.length (snd clpair) in
-  let consequence = match arity with
-    | 0 -> export_term (fst clpair) 
-    | _ -> export_pair (None,fst clpair) in
+  let consequence = export_pair (None,fst clpair) in
   let axioms = List.fold_right (fun cl1 l1 -> (export_pair cl1) ^ " \\\\ " ^ l1 ) fst_ "" in
   let axioms = if axioms = "" then "~" else axioms in
   let rule = "${\\inferrule* [right =$\n" ^ label ^ "$]\n" ^ "{" ^ axioms ^ "}\n" ^ "{" ^ consequence ^ "}" ^ "\n}$\\\\\\\\\\\\ \n" in
-  (*let str = headers ^ rules ^ "\n\n\\end{document}" in*)
   Printf.fprintf !open_tex_file "%s\n%!" rule
  end
 ;;
