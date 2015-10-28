@@ -1057,16 +1057,15 @@ let rec mknLam n t = if n = 0 then t else mknLam (n-1) (Lam t)
  * t is the term we are assigning to r
  * e is the env for args *)
 let bind r gamma l a d delta b left t e =
-  TRACE "bind" (fun fmt -> Format.fprintf fmt "%b %d + %a = %a %d" left gamma
-    (pplist (fun fmt (x,_) -> ppterm a [] b e fmt (constant_of_dbl x)) "") l
-    (ppterm a [] b [||]) t a)
   let new_lams = List.length l in
   let pos x = try List.assoc x l with Not_found -> raise RestrictionFailure in
-  let cst c = (* The complex thing (DBL) *)
+  (* lift = false makes the code insensitive to left/right, i.e. no lift from b
+   * to a is performed *)
+  let cst ?(lift=true) c = (* The complex thing (DBL) *)
     if left then begin
       if c < gamma && c < b then c
       else
-        let c = c + delta in
+        let c = if lift then c + delta else c in
         if c < gamma then c
         else if c >= a + d then c + new_lams - (a+d - gamma)
         else pos c + gamma
@@ -1075,7 +1074,12 @@ let bind r gamma l a d delta b left t e =
       else if c >= a + d then c + new_lams - (a+d - gamma)
       else pos c + gamma
     end in
-  let rec bind w = function
+  let rec bind w t = TRACE "bind" (fun fmt -> Format.fprintf fmt
+      "%b %d + %a = t:%a a:%d delta:%d d:%d w:%d b:%d" left gamma
+      (pplist (fun fmt (x,n) -> Format.fprintf fmt "%a |-> %d"
+        (ppterm a [] b e) (constant_of_dbl x) n) "") l
+      (ppterm a [] b [||]) t a delta d w b)
+    match t with
     | UVar (r1,_,_) | AppUVar (r1,_,_) when r == r1 -> raise RestrictionFailure
     | Const c -> constant_of_dbl (cst c)
     | Lam t -> Lam (bind (w+1) t)
@@ -1129,21 +1133,19 @@ let bind r gamma l a d delta b left t e =
           if lvl > gamma then
             (* All orig args go away, but some between gamma and lvl can stay
              * if they are in l *)
-            let args_gamma_lvl =
+            let args_gamma_lvl_abs, args_gamma_lvl_here =
               let rec keep_cst_for_lvl = function
                 | [] -> []
-                | (i,_) :: rest ->
-                    if i < lvl then constant_of_dbl i :: keep_cst_for_lvl rest
-                    else keep_cst_for_lvl rest in
-              keep_cst_for_lvl l in
-            SPY "bind:lvl>gamma:keep:"
-              (fun fmt -> Format.fprintf fmt "%a" (pplist (ppterm a [] b e) ""))
-               args_gamma_lvl;
+                | (i,i_p) :: rest ->
+                    if i > lvl then keep_cst_for_lvl rest
+                    else
+                      (constant_of_dbl i, constant_of_dbl (cst ~lift:false i))
+                        :: keep_cst_for_lvl rest in
+              List.split (keep_cst_for_lvl (List.sort compare l)) in
             let r' = oref dummy in
-            let v = mkAppUVar r' gamma args_gamma_lvl in
-            r @:= mknLam n_args v;
-            if not !last_call then trail := r :: !trail;
-            v
+            r @:= mknLam n_args (mkAppUVar r' gamma args_gamma_lvl_abs);
+            if not !last_call then trail := (Assign r) :: !trail;
+            mkAppUVar r' gamma args_gamma_lvl_here
           else
             (* given that we need to make lambdas to prune some args,
              * we also permute to make the restricted meta eventually
