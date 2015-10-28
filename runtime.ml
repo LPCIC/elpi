@@ -1031,6 +1031,12 @@ let is_llam lvl args adepth bdepth depth left e =
        else raise RestrictionFailure in
   try true, aux 0 (List.map deref_to_const args)
   with RestrictionFailure -> false, []
+let is_llam lvl args adepth bdepth depth left e =
+  let res = is_llam lvl args adepth bdepth depth left e in
+  SPY "is_llam" (fun fmt (b,map) -> Format.fprintf fmt "%d + %a = %b, %a"
+    lvl (pplist (ppterm adepth [] bdepth e) "") args b
+    (pplist (fun fmt (x,n) -> Format.fprintf fmt "%d |-> %d" x n) "") map) res;
+  res
 
 let mkAppUVar r lvl l =
   try UVar(r,lvl,in_fragment lvl l)
@@ -1130,6 +1136,9 @@ let bind r gamma l a d delta b left t e =
                     if i < lvl then constant_of_dbl i :: keep_cst_for_lvl rest
                     else keep_cst_for_lvl rest in
               keep_cst_for_lvl l in
+            SPY "bind:lvl>gamma:keep:"
+              (fun fmt -> Format.fprintf fmt "%a" (pplist (ppterm a [] b e) ""))
+               args_gamma_lvl;
             let r' = oref dummy in
             let v = mkAppUVar r' gamma args_gamma_lvl in
             r @:= mknLam n_args v;
