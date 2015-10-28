@@ -1342,9 +1342,6 @@ let rec mknLam n t = if n = 0 then t else mknLam (n-1) (Lam t)
  * t is the term we are assigning to r
  * e is the env for args *)
 let bind r gamma l a d delta b left t e =
-  TRACE "bind" (fun fmt -> Format.fprintf fmt "%b %d + %a = t:%a a:%d delta:%d d:%d" left gamma
-    (pplist (fun fmt (x,n) -> Format.fprintf fmt "%a |-> %d" (ppterm a [] b e) (constant_of_dbl x) n) "") l
-    (ppterm a [] b [||]) t a delta d)
   let new_lams = List.length l in
   let pos x = try List.assoc x l with Not_found -> raise RestrictionFailure in
   (* lift = false makes the code insensitive to left/right, i.e. no lift from b
@@ -1362,7 +1359,18 @@ let bind r gamma l a d delta b left t e =
       else if c >= a + d then c + new_lams - (a+d - gamma)
       else pos c + gamma
     end in
-  let rec bind w = function
+  let cst ?lift c =
+    let n = cst ?lift c in
+    SPY "cst" (fun fmt (n,m) -> Format.fprintf fmt
+      "%d -> %d (c:%d b:%d gamma:%d delta:%d d:%d)" n m c b gamma delta d)
+      (c,n);
+    n in
+  let rec bind w t = TRACE "bind" (fun fmt -> Format.fprintf fmt
+      "%b %d + %a = t:%a a:%d delta:%d d:%d w:%d b:%d" left gamma
+      (pplist (fun fmt (x,n) -> Format.fprintf fmt "%a |-> %d"
+        (ppterm a [] b e) (constant_of_dbl x) n) "") l
+      (ppterm a [] b [||]) t a delta d w b)
+    match t with
     | UVar (r1,_,_) | AppUVar (r1,_,_) when r == r1 -> raise RestrictionFailure
     | Const c -> let n = cst c in if n < 0 then constant_of_dbl n else Const n
     | Lam t -> Lam (bind (w+1) t)

@@ -17,8 +17,9 @@ module Utils :
   val type_error : string -> 'a
 
   val pplist : ?max:int -> ?boxed:bool ->
-    (Format.formatter -> 'a -> unit) -> string ->
-      Format.formatter -> 'a list -> unit
+    (Format.formatter -> 'a -> unit) ->
+    ?pplastelem:(Format.formatter -> 'a -> unit) ->
+      string -> Format.formatter -> 'a list -> unit
  end
 
 type query
