@@ -37,7 +37,7 @@ main :-
        (a\r whatever),
   test (eq\F\        pi x\ pi y\ sigma H\ pi w\eq (F y x) (r (H w)),
                                                H 1 = f x y)
-       (a\b\r (f a b)),
+       (a\b\r (f b a)),
  
   test (eq\F\        pi x\pi y\prune_arg (F y x))  (a\b\r (v a b)),
   test (eq\F\        pi x\pi y\prune_arg2 (F y x)) (a\b\r (x\v a b)),
