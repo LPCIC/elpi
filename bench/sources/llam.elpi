@@ -1,11 +1,13 @@
-spy X :- % $print "test " X, 
+spy X :-  $counter "run" N, $print N "test " X, 
   not(not(X)).
 
 test P T :-
   spy(P (x\y\x = y) F, F = T),
   spy(P (x\y\y = x) F, F = T),
   spy(pi dummy\ sigma F\ P (x\y\x = y) F, F = T),
-  spy(pi dummy\ sigma F\ P (x\y\y = x) F, F = T).
+  spy(pi dummy\ sigma F\ P (x\y\y = x) F, F = T)
+  , $print "----------------------------------------"
+  .
 
 clause (x\y\F y x) :- F = a\b\b.
 clause1 (x\y\x).
