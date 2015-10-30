@@ -47,11 +47,11 @@ of _ Gamma E R 0 Gamma :- of2 Gamma E R.
 % T-Get
 of O Gamma (get E) X (dget O O') [ofi F (sync R) | Gamma'] :-
  unbind F Gamma Gamma', % remove the binding of F from Gamma
- of2 Gamma E F, of2 Gamma F (async R), $delay (R = requires O' X) Z/*???*/.
+ of2 Gamma E F, of2 Gamma F (async R), $delay (R = requires O' X) Z /*???*/.
 
 % T-Get-Tick
 of O Gamma (get E) X 0 Gamma :-
- of2 Gamma E F, of2 Gamma F (sync R), $delay (R = requires O' X) Z/*???*/.
+ of2 Gamma E F, of2 Gamma F (sync R), $delay (R = requires O' X) Z /*???*/.
 
 % T-New
 of O Gamma new O 0 Gamma.
