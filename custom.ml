@@ -208,6 +208,17 @@ let _ =
     List.iter (Format.printf "%a@ " (uppterm depth [] 0 env)) args ;
     Format.printf "@]\n%!" ;
     []) ;
+  register_custom "$counter" (fun ~depth ~env:_ _ args ->
+    match args with
+    | [t1; t2] ->
+       (match eval depth t1 with
+           String s ->
+            (try
+              let v = Trace.get_cur_step (F.pp s) in
+               [ App(eqc, t2, [Int v]) ]
+             with Not_found -> raise No_clause)
+         | _ -> type_error "bad argument to $counter")
+    | _ -> type_error "$counter takes 2 arguments") ;
   register_custom "$lt" (fun ~depth ~env:_ args ->
     let rec get_constant = function
       | Const c -> c
