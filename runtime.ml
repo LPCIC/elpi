@@ -1144,7 +1144,7 @@ let bind r gamma l a d delta b left t e =
               List.split (keep_cst_for_lvl (List.sort compare l)) in
             let r' = oref dummy in
             r @:= mknLam n_args (mkAppUVar r' gamma args_gamma_lvl_abs);
-            if not !last_call then trail := (Assign r) :: !trail;
+            if not !last_call then trail := r :: !trail;
             mkAppUVar r' gamma args_gamma_lvl_here
           else
             (* given that we need to make lambdas to prune some args,

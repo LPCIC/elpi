@@ -208,7 +208,7 @@ let _ =
     List.iter (Format.printf "%a@ " (uppterm depth [] 0 env)) args ;
     Format.printf "@]\n%!" ;
     []) ;
-  register_custom "$counter" (fun ~depth ~env:_ _ args ->
+  register_custom "$counter" (fun ~depth ~env:_ args ->
     match args with
     | [t1; t2] ->
        (match eval depth t1 with
