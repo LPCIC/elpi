@@ -1246,10 +1246,10 @@ exception Delayed_goal of (int * index * term list * term)
 
 let delay_goal ~depth prog ~goal:g ~on:keys =
   let pdiff = diff_progs ~to_:depth prog !original_program in
-  Format.fprintf Format.std_formatter
+  (*Format.fprintf Format.std_formatter
     "Delaying goal: @[<hov 2> %a@ ⊢ %a@]\n%!"
       (pplist (uppterm depth [] 0 [||]) ",") pdiff
-      (uppterm depth [] 0 [||]) g ;
+      (uppterm depth [] 0 [||]) g ;*)
   let delayed_goal = (Delayed_goal (depth,prog,pdiff,g), keys) in
   add_constraint delayed_goal
 ;;
@@ -2291,7 +2291,9 @@ end
          | Some ((ndepth,p,ng)::goals) ->
             run ndepth p ng goals FNil alts lvl
          | Some [] ->
+            Format.fprintf Format.std_formatter "===================\n%!";
             print_delayed ();
+            Format.fprintf Format.std_formatter "===================\n%!";
             alts)
     | FCons (_,[],_) -> anomaly "empty stack frame"
     | FCons(lvl,(depth,p,g)::gs,next) -> run depth p g gs next alts lvl
@@ -2550,7 +2552,7 @@ let execute_loop (depth,p) ((q_names,q_argsdepth,q_env,q) as qq) =
  let k = ref (run p qq depth) in
  let time1 = Unix.gettimeofday() in
  prerr_endline ("Execution time: "^string_of_float(time1 -. time0));
- Format.eprintf "Raw Result: %a\n%!" (ppterm depth q_names q_argsdepth q_env) q ;
+(* Format.eprintf "Raw Result: %a\n%!" (ppterm depth q_names q_argsdepth q_env) q ;*)
  Format.eprintf "Result: \n%!" ;
  List.iteri (fun i name -> Format.eprintf "%s=%a\n%!" name
   (uppterm depth q_names 0 q_env) q_env.(i)) q_names;
@@ -2562,7 +2564,7 @@ let execute_loop (depth,p) ((q_names,q_argsdepth,q_env,q) as qq) =
      k := cont !k;
      let time1 = Unix.gettimeofday() in
      prerr_endline ("Execution time: "^string_of_float(time1 -. time0));
-     Format.eprintf "Raw Result: %a\n%!" (ppterm depth q_names 0 q_env) q ;
+     (*Format.eprintf "Raw Result: %a\n%!" (ppterm depth q_names 0 q_env) q ;*)
      Format.eprintf "Result: \n%!" ;
      List.iteri (fun i name -> Format.eprintf "%s=%a\n%!" name
       (uppterm depth q_names 0 q_env) q_env.(i)) q_names;
