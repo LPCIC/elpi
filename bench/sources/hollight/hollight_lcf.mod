@@ -1,5 +1,7 @@
 infixl ' 139.
 
+/************ primitive rules ********/
+
 /* seq _hypothesis_ _conclusion_ */
 
 term (lam F) (impl A B) :- pi x\ term x A => term (F x) B.
@@ -27,15 +29,16 @@ thm (seq Gamma (eq ' (lam S) ' (lam T))) k
 thm (seq Gamma (eq ' P ' Q)) s
  [ seq ((hyp P) :: Gamma) Q, seq ((hyp Q) :: Gamma) P ]
 :-
- term P bool, term Q bool, /* CSC: check if required */
+ term P bool, term Q bool. /* CSC: check if required */
 thm (seq Gamma P) h [] :- mem Gamma P.
 
 thm (seq Gamma (eq ' C ' A)) d [] :-
- def1 C A./*,
+ def0 C A./*,
  pi T\ ttype T => (ttype (B T), term A (B T)). */
 
-def1 tt (eq ' (lam x\ x) ' (lam x\ x)).
-term tt bool.
+thm (seq _ G) (th NAME) [] :- provable NAME G.
+
+/************ interactive and non interactive loops ********/
 
 print_seq (seq Gamma G) :- $print Gamma "|-" G.
 
@@ -46,14 +49,14 @@ print_all_seqs [ SEQ | SEQS ] :-
 print_all_seqs (bind A F) :-
  pi x \ ($print x ":" A, print_all_seqs (F x)).
 
-loop true [] [] :- $print "proof completed".
-loop false [] [].
+/*loop INTERACTIVE SEQS TACS :- $print (loop INTERACTIVE SEQS TACS), fail.*/
+loop _ [] [].
 loop INTERACTIVE [ SEQ | OLD ] [ TAC | TACS ] :-
  (INTERACTIVE = true, !,
    print_all_seqs [ SEQ | OLD ],
    read ITAC
  ; ITAC = TAC),
- ( thm SEQ ITAC NEW,
+ ( tactic SEQ ITAC NEW,
    append NEW OLD SEQS,
    TAC = ITAC,
    loop INTERACTIVE SEQS TACS
@@ -62,23 +65,33 @@ loop INTERACTIVE [ SEQ | OLD ] [ TAC | TACS ] :-
  ; (INTERACTIVE = true, !, $print "error" ;
     $print "aborted", halt),
    loop INTERACTIVE [ SEQ | OLD ] [ TAC | TACS ] ).
-loop (bind A F) TACS :-
- pi x \ term x A => loop (F x) TACS.
+loop INTERACTIVE (bind A F) TACS :-
+ pi x \ term x A => loop INTERACTIVE (F x) TACS.
 
-prove G :-
+prove G TACS :-
  loop true [ seq [] G ] TACS,
- $print TACS.
+ $print "proof completed".
 
 saved G TACS :-
  loop false [ seq [] G ] TACS.
 
-check :-
- saved (eq ' (eq ' (lam x\ x) ' (lam x\ x)) ' tt)
-  (m (eq ' tt ' tt) :: c :: c :: r :: d :: r :: r :: nil).
+check [] :- toplevel.
+check [ theorem NAME GOAL TACTICS | NEXT ] :-
+  saved GOAL TACTICS,
+  $print NAME ":" GOAL,
+  provable NAME GOAL => check NEXT.
 
-/*tactic (bINARY_CONGR X Y) (c X (c Y r)).
-thm G X :- tactic X Y, thm G Y.*/
+toplevel :-
+ $print "Welcome to HOL extra-light",
+ $print "Enter a new theorem name",
+ read NAME,
+ $print "Enter its statement",
+ read G,
+ prove G TACS,
+ $print (theorem NAME G TACS),
+ provable NAME G => toplevel.
 
+/************ library of basic data types ********/
 /* blist ::= [] | X :: blist | bind A F
    where  F is x\ blist and A is the type of x */
 
@@ -87,5 +100,92 @@ append [ X | XS ] L [ X | RES ] :- append XS L RES.
 append (bind A F) L (bind A FL) :-
  pi x \ append (F x) L (FL x).
 
+fold_append [] _ [].
+fold_append [ X | XS ] F OUTS :-
+ F X OUT, fold_append XS F OUTS2, append OUT OUTS2 OUTS.
+fold_append (bind A G) F (bind A OUT) :-
+ pi x \ fold_append (G x) F (OUT x).
+
+fold2_append [] [] _ [].
+fold2_append [ X | XS ] [ Y | YS ] F OUTS :-
+ F X Y OUT, fold2_append XS YS F OUTS2, append OUT OUTS2 OUTS.
+fold2_append (bind A G) YS F (bind A OUT) :-
+ pi x \ fold2_append (G x) YS F (OUT x).
+
 mem [ X | _ ] X, !.
 mem [ _ | XS ] X :- mem XS X.
+
+/********** tactics and tacticals ********/
+
+tactic (seq Gamma G) C _ :- $print Gamma "|- " G " := " C, fail.
+
+tactic SEQ T SEQS :-
+ thm SEQ T SEQS.
+
+tactic (seq Gamma (eq ' L ' R)) sym SEQS :-
+ TAC = thenl (m (eq ' R ' R)) [ thenl c [ thenl c [ r , id ] , r ] , r ],
+ tactic (seq Gamma (eq ' L ' R)) TAC SEQS.
+
+tactic (seq Gamma (eq ' P ' tt)) eq_true_intro SEQS :-
+ TAC = thenl s [ th tt_intro, id ],
+ tactic (seq Gamma (eq ' P ' tt)) TAC SEQS.
+
+tactic (seq Gamma (and ' P ' Q)) conj SEQS :-
+ TAC =
+  thenl (m (eq ' (lam f \ f ' P ' Q) ' (lam f \ f ' tt ' tt)))
+   [ then sym d
+   , then k (thenl c [ thenl c [ r, eq_true_intro ] , eq_true_intro ])
+   ],
+ tactic (seq Gamma (and ' P ' Q)) TAC SEQS.
+
+/********** tacticals ********/
+
+tactic SEQ id [ SEQ ].
+
+tactic SEQ (then TAC1 TAC2) SEQS :-
+ tactic SEQ TAC1 NEW,
+ fold_append NEW (seq \ out \ tactic seq TAC2 out) SEQS.
+
+tactic SEQ (thenl TAC1 TACL) SEQS :-
+ tactic SEQ TAC1 NEW,
+ fold2_append NEW TACL (seq \ tac \ out \ tactic seq tac out) SEQS.
+
+tactic SEQ (orelse TAC1 TAC2) SEQS :-
+   tactic SEQ TAC1 SEQS
+ ; tactic SEQ TAC2 SEQS.
+
+tactic SEQ (repeat TAC) SEQS :-
+ (tactic SEQ TAC NEW,
+  fold_append NEW (seq \ out \ tactic seq (repeat TAC) out) SEQS
+ ; SEQS = SEQ).
+
+/********** the library ********/
+
+def0 tt (eq ' (lam x\ x) ' (lam x\ x)).
+term tt bool.
+
+/*def0 (forall ' F) (eq ' F ' (lam f \ tt)).
+term forall (impl (A impl bool) bool).*/
+
+def0 (and ' X ' Y) (eq ' (lam f \ f ' X ' Y) ' (lam f \ f ' tt ' tt)).
+term and (impl bool (impl bool bool)).
+
+term p bool.
+term q bool.
+
+main :-
+ check
+  [ theorem th0
+     (eq ' (eq ' (lam x\ x) ' (lam x\ x)) ' tt)
+     (m (eq ' tt ' tt) :: c :: c :: r :: d :: r :: r :: nil)
+  , theorem th0_alternative_proof0
+     (eq ' (eq ' (lam x\ x) ' (lam x\ x)) ' tt)
+     (thenl (m (eq ' tt ' tt)) (c :: r :: nil) ::
+       thenl c (r :: d :: nil) :: r :: nil)
+  , theorem th0_alternative_proof1
+     (eq ' (eq ' (lam x\ x) ' (lam x\ x)) ' tt)
+     (then (m (eq ' tt ' tt)) (repeat (orelse r (orelse d c))) :: nil)
+  , theorem tt_intro
+     tt
+     (m (eq ' (lam x0\x0) ' (lam x0\x0)) :: th th0 :: r :: nil)
+  ].
