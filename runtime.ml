@@ -265,7 +265,11 @@ let xppterm ~nice depth0 names argsdepth env f t =
               ~pplastarg:(aux (max_int - 1) depth) (hd,x::xs)) ;
          if hdlvl < prec then Format.fprintf f ")" ;
         with Not_found -> 
-         let hdlvl = max_int - 1 in
+         let hdlvl =
+          if match List.nth (x::xs) (List.length xs) with Lam _ -> true | _ -> false then
+           1 (* CSC: replace the hard-coded constants 1, max_int, max_int - 1, max_int - 2 with symbolic names *)
+          else
+           max_int - 2 in
          if hdlvl < prec then Format.fprintf f "(";
          pp_app f ppconstant (aux max_int depth)
           ~pplastarg:(aux (max_int - 1) depth) (hd,x::xs);
