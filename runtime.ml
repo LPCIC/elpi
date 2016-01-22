@@ -5,8 +5,9 @@
 module Utils : sig
 
   val pplist : ?max:int -> ?boxed:bool ->
-    (Format.formatter -> 'a -> unit) -> string ->
-      Format.formatter -> 'a list -> unit
+    (Format.formatter -> 'a -> unit) ->
+    ?pplastelem:(Format.formatter -> 'a -> unit) ->
+      string -> Format.formatter -> 'a list -> unit
 
   val smart_map : ('a -> 'a) -> 'a list -> 'a list
 
@@ -26,7 +27,7 @@ module Utils : sig
 
 end = struct (* {{{ *)
 
-let pplist ?(max=max_int) ?(boxed=false) ppelem sep f l =
+let pplist ?(max=max_int) ?(boxed=false) ppelem ?(pplastelem=ppelem) sep f l =
  if l <> [] then begin
   if boxed then Format.fprintf f "@[<hov 1>";
   let args,last = match List.rev l with
@@ -35,7 +36,7 @@ let pplist ?(max=max_int) ?(boxed=false) ppelem sep f l =
   List.iteri (fun i x -> if i = max + 1 then Format.fprintf f "..."
                          else if i > max then ()
                          else Format.fprintf f "%a%s@ " ppelem x sep) args;
-  Format.fprintf f "%a" ppelem last;
+  Format.fprintf f "%a" pplastelem last;
   if boxed then Format.fprintf f "@]"
  end
 ;;
@@ -200,10 +201,11 @@ let m = ref [];;
 let n = ref 0;;
 
 let xppterm ~nice depth0 names argsdepth env f t =
-  let pp_app f pphd pparg (hd,args) =
+  let pp_app f pphd pparg ?pplastarg (hd,args) =
    if args = [] then pphd f hd
    else
-    Format.fprintf f "@[<hov 1>%a@ %a@]" pphd hd (pplist pparg "") args in
+    Format.fprintf f "@[<hov 1>%a@ %a@]" pphd hd
+     (pplist pparg ?pplastelem:pplastarg "") args in
   let ppconstant f c = Format.fprintf f "%s" (string_of_constant c) in
   let rec pp_uvar prec depth vardepth args f r =
    if !!r == dummy then begin
@@ -258,14 +260,19 @@ let xppterm ~nice depth0 names argsdepth env f t =
           | Parser.Postfix when xs = [] ->
              Format.fprintf f "@[<hov 1>%a@ %a@]" (aux hdlvl depth) x
               ppconstant hd 
-          | _ -> pp_app f ppconstant (aux max_int depth) (hd,x::xs)) ;
+          | _ ->
+             pp_app f ppconstant (aux max_int depth)
+              ~pplastarg:(aux (max_int - 1) depth) (hd,x::xs)) ;
          if hdlvl < prec then Format.fprintf f ")" ;
         with Not_found -> 
          let hdlvl = max_int - 1 in
          if hdlvl < prec then Format.fprintf f "(";
-         pp_app f ppconstant (aux max_int depth) (hd,x::xs);
+         pp_app f ppconstant (aux max_int depth)
+          ~pplastarg:(aux (max_int - 1) depth) (hd,x::xs);
          if hdlvl < prec then Format.fprintf f ")" )
-    | Custom (hd,xs) -> pp_app f ppconstant (aux max_int depth) (hd,xs)
+    | Custom (hd,xs) ->
+       pp_app f ppconstant (aux max_int depth)
+        ~pplastarg:(aux (max_int - 1) depth) (hd,xs)
     | UVar (r,vardepth,argsno) when not nice ->
        let args = mkinterval vardepth argsno 0 in
        pp_app f (pp_uvar max_int depth vardepth 0) ppconstant (r,args)
@@ -281,16 +288,20 @@ let xppterm ~nice depth0 names argsdepth env f t =
     | AppUVar (r,vardepth,terms) when !!r != dummy && nice -> 
        aux prec depth f (!do_app_deref ~from:vardepth ~to_:depth terms !!r)
     | AppUVar (r,vardepth,terms) -> 
-       pp_app f (pp_uvar max_int depth vardepth 0)(aux max_int depth) (r,terms)
+       pp_app f (pp_uvar max_int depth vardepth 0) (aux max_int depth)
+        ~pplastarg:(aux max_int depth) (r,terms)
     | Arg (n,argsno) ->
        let args = mkinterval argsdepth argsno 0 in
        pp_app f (pp_arg prec depth) ppconstant (n,args)
     | AppArg (v,terms) ->
-       pp_app f (pp_arg max_int depth) (aux max_int depth) (v,terms) 
+       pp_app f (pp_arg max_int depth) (aux max_int depth)
+        ~pplastarg:(aux max_int depth) (v,terms) 
     | Const s -> ppconstant f s 
     | Lam t ->
+       if max_int - 1 < prec then Format.fprintf f "(" ;
        let c = constant_of_dbl depth in
        Format.fprintf f "%a\\%a" (aux max_int depth) c (aux 0 (depth+1)) t;
+       if max_int - 1 < prec then Format.fprintf f ")"
     | String str -> Format.fprintf f "\"%s\"" (Parser.ASTFuncS.pp str)
     | Int i -> Format.fprintf f "%d" i
     | Float x -> Format.fprintf f "%f" x
