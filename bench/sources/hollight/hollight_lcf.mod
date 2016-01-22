@@ -104,7 +104,7 @@ fold_append [] _ [].
 fold_append [ X | XS ] F OUTS :-
  F X OUT, fold_append XS F OUTS2, append OUT OUTS2 OUTS.
 fold_append (bind A G) F (bind A OUT) :-
- pi x \ fold_append (G x) F (OUT x).
+ pi x \ term x A => fold_append (G x) F (OUT x).
 
 fold2_append [] [] _ [].
 fold2_append [ X | XS ] [ Y | YS ] F OUTS :-
@@ -117,7 +117,7 @@ mem [ _ | XS ] X :- mem XS X.
 
 /********** tactics and tacticals ********/
 
-tactic (seq Gamma G) C _ :- $print Gamma "|- " G " := " C, fail.
+/*tactic (seq Gamma G) C _ :- $print Gamma "|- " G " := " C, fail.*/
 
 tactic SEQ T SEQS :-
  thm SEQ T SEQS.
