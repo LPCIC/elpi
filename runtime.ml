@@ -300,7 +300,7 @@ let xppterm ~nice depth0 names argsdepth env f t =
     | Lam t ->
        if max_int - 1 < prec then Format.fprintf f "(" ;
        let c = constant_of_dbl depth in
-       Format.fprintf f "%a\\%a" (aux max_int depth) c (aux 0 (depth+1)) t;
+       Format.fprintf f "%a \\ %a" (aux max_int depth) c (aux 0 (depth+1)) t;
        if max_int - 1 < prec then Format.fprintf f ")"
     | String str -> Format.fprintf f "\"%s\"" (Parser.ASTFuncS.pp str)
     | Int i -> Format.fprintf f "%d" i
