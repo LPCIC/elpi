@@ -4,6 +4,7 @@ infixl ' 139.
 
 /* seq _hypothesis_ _conclusion_ */
 
+/*term T TY :- $print (term T TY), fail.*/
 term (lam F) (impl A B) :- pi x\ term x A => term (F x) B.
 term (F ' T) B :- term T A, term F (impl A B).
 term eq (impl A (impl A bool)).
