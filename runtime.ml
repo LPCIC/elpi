@@ -1422,11 +1422,11 @@ let rec clausify vars depth hyps ts lcs = function
          clauses@moreclauses,lcs
       ) gs res
   | App(c, g2, [g1]) when c == rimplc ->
-     let g1 = subst depth ts g1 in
+     let g1 = subst (depth+lcs) ts g1 in
      clausify vars depth (split_conj g1::hyps) ts lcs g2
   | App(c, _, _) when c == rimplc -> assert false
   | App(c, g1, [g2]) when c == implc ->
-     let g1 = subst depth ts g1 in
+     let g1 = subst (depth+lcs) ts g1 in
      clausify vars depth (split_conj g1::hyps) ts lcs g2
   | App(c, _, _) when c == implc -> assert false
   | App(c, Lam b, []) when c == sigmac ->
@@ -1434,19 +1434,21 @@ let rec clausify vars depth hyps ts lcs = function
   | App(c, Lam b, []) when c == pic ->
      clausify (vars+1) depth hyps (ts@[Arg(vars,0)]) lcs b
   | Const _ as g ->
-     let g = subst depth ts g in
+     let g = subst (depth+lcs) ts g in
      [ { depth = depth; args = []; hyps = List.(flatten (rev hyps));
          vars = vars ; key = key_of ~mode:`Clause ~depth g } ], lcs
   | App _ as g ->
-     begin match subst depth ts g with
+     begin match subst (depth+lcs) ts g with
      | App(_,x,xs) as g ->
          [ { depth = depth+lcs ; args=x::xs; hyps = List.(flatten (rev hyps));
              vars = vars; key = key_of ~mode:`Clause ~depth g} ], lcs
      | _ -> anomaly "subst went crazy" end
   | UVar ({ contents=g },from,args) when g != dummy ->
+(*BUG here? depth+lcs?*)
      clausify vars depth hyps ts lcs
        (deref ~from ~to_:(depth+List.length ts) args g)
   | AppUVar ({contents=g},from,args) when g != dummy -> 
+(*BUG here? depth+lcs?*)
      clausify vars depth hyps ts lcs
        (app_deref ~from ~to_:(depth+List.length ts) args g)
   | Arg _ | AppArg _ -> assert false 
