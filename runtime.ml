@@ -1599,7 +1599,7 @@ let make_runtime : unit -> ('a -> 'b -> int -> 'k) * ('k -> 'k) =
     trail := !my_trail; last_call := false; to_resume := [];
     try let rc = f x in my_trail := !trail; trail := []; rc
     with e -> my_trail := !trail; trail := []; raise e in
-  (fun p -> ensure_runtime (fun (_,q_env,q) lcs ->
+  (fun p (_,q_env,q) -> ensure_runtime (fun lcs ->
      let q = to_heap 0 ~from:0 ~to_:0 q_env q in
      run lcs p q [] FNil emptyalts emptyalts)),
   (fun alts -> ensure_runtime next_alt alts)
