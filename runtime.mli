@@ -19,10 +19,10 @@ module Utils :
 type query
 type program
 
-val query_of_ast : term -> query
-val program_of_ast : clause list -> program
-val execute_once : program -> query -> bool  (* true means error *)
-val execute_loop : program -> query -> unit
+val query_of_ast : int(* number of hidden constants *) -> term -> query
+val program_of_ast : clause list -> int(* number of hidden constants*) * program
+val execute_once : int(* number of hidden constants *) -> program -> query -> bool (* true means error *)
+val execute_loop : int(* number of hidden constants *) -> program -> query -> unit
 val pp_prolog : clause list -> unit
 
 (* Extensions *)

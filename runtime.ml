@@ -1203,6 +1203,9 @@ let unif adepth e bdepth a b =
 
  (* heap=true if b is known to be a heap term *)
  let rec unif depth a bdepth b heap =
+     Format.fprintf Format.std_formatter "@[<hov 2>^%d:%a@ =%d= ^%d:%a@]"
+       adepth (ppterm (adepth+depth) [] adepth [||]) a depth
+       bdepth (ppterm (bdepth+depth) [] adepth e) b ;
    TRACE "unif" (fun fmt ->
      Format.fprintf fmt "@[<hov 2>^%d:%a@ =%d= ^%d:%a@]"
        adepth (ppterm (adepth+depth) [] adepth [||]) a depth
@@ -1257,6 +1260,7 @@ let unif adepth e bdepth a b =
          SPY "assign" (ppterm depth [] adepth [||]) t; true
        with RestrictionFailure -> false end
    | UVar (r,origdepth,0), _ ->
+prerr_endline ("origdepth=" ^ string_of_int origdepth ^ " depth=" ^ string_of_int depth);
        if not !last_call then trail := r :: !trail;
        begin try
          let t =
@@ -1274,6 +1278,7 @@ let unif adepth e bdepth a b =
              to_heap adepth 
                ~from:(adepth+depth) ~to_:origdepth e b in
          r @:= t;
+Format.fprintf Format.std_formatter "::::= %a" (ppterm depth [] adepth [||]) t;
          SPY "assign" (ppterm depth [] adepth [||]) t; true
        with RestrictionFailure -> false end
 
@@ -1406,36 +1411,44 @@ let rec split_conj = function
 r :- (pi X\ pi Y\ q X Y :- pi c\ pi d\ q (Z c d) (X c d) (Y c)) => ... *)
 
 (* Takes the source of an implication and produces the clauses to be added to
- * the program *)
-let rec clausify vars depth hyps ts = function
+ * the program and the number of existentially quantified constants turned
+ * into globals. *)
+let rec clausify vars depth hyps ts lcs = function
   | App(c, g, gs) when c == andc || c == andc2 ->
-     clausify vars depth hyps ts g @
-     List.(flatten (map (clausify vars depth hyps ts) gs))
+     let res = clausify vars depth hyps ts lcs g in
+     List.fold_right
+      (fun g (clauses,lcs) ->
+        (* BUG: g must be lifted by lcs *)
+        let moreclauses,lcs = clausify vars depth hyps ts lcs g in
+         clauses@moreclauses,lcs
+      ) gs res
   | App(c, g2, [g1]) when c == rimplc ->
      let g1 = subst depth ts g1 in
-     clausify vars depth (split_conj g1::hyps) ts g2
+     clausify vars depth (split_conj g1::hyps) ts lcs g2
   | App(c, _, _) when c == rimplc -> assert false
   | App(c, g1, [g2]) when c == implc ->
      let g1 = subst depth ts g1 in
-     clausify vars depth (split_conj g1::hyps) ts g2
+     clausify vars depth (split_conj g1::hyps) ts lcs g2
   | App(c, _, _) when c == implc -> assert false
+  | App(c, Lam b, []) when c == sigmac ->
+     clausify vars depth hyps ts (lcs+1) b
   | App(c, Lam b, []) when c == pic ->
-     clausify (vars+1) depth hyps (ts@[Arg(vars,0)]) b
+     clausify (vars+1) depth hyps (ts@[Arg(vars,0)]) lcs b
   | Const _ as g ->
      let g = subst depth ts g in
      [ { depth = depth; args = []; hyps = List.(flatten (rev hyps));
-         vars = vars ; key = key_of ~mode:`Clause ~depth g } ]
+         vars = vars ; key = key_of ~mode:`Clause ~depth g } ], lcs
   | App _ as g ->
      begin match subst depth ts g with
      | App(_,x,xs) as g ->
          [ { depth = depth ; args=x::xs; hyps = List.(flatten (rev hyps));
-             vars = vars; key = key_of ~mode:`Clause ~depth g} ]
+             vars = vars; key = key_of ~mode:`Clause ~depth g} ], lcs
      | _ -> anomaly "subst went crazy" end
   | UVar ({ contents=g },from,args) when g != dummy ->
-     clausify vars depth hyps ts
+     clausify vars depth hyps ts lcs
        (deref ~from ~to_:(depth+List.length ts) args g)
   | AppUVar ({contents=g},from,args) when g != dummy -> 
-     clausify vars depth hyps ts
+     clausify vars depth hyps ts lcs
        (app_deref ~from ~to_:(depth+List.length ts) args g)
   | Arg _ | AppArg _ -> assert false 
   | Lam _ | Custom _ | String _ | Int _ | Float _ -> assert false
@@ -1462,7 +1475,7 @@ let register_custom, lookup_custom =
 
 (* The block of recursive functions spares the allocation of a Some/None
  * at each iteration in order to know if one needs to backtrack or continue *)
-let make_runtime : unit -> ('a -> 'b -> 'k) * ('k -> 'k) =
+let make_runtime : unit -> ('a -> 'b -> int -> 'k) * ('k -> 'k) =
 
   (* Input to be read as the orl (((p,g)::gs)::next)::alts
      depth >= 0 is the number of variables in the context. *)
@@ -1473,7 +1486,8 @@ let make_runtime : unit -> ('a -> 'b -> 'k) * ('k -> 'k) =
     | App(c, g, gs') when c == andc || c == andc2 ->
        run depth p g (List.map(fun x -> depth,p,x) gs'@gs) next alts lvl
     | App(c, g1, [g2]) when c == implc ->
-       let clauses = clausify 0 depth [] [] g1 in
+       let clauses, lcs = clausify 0 depth [] [] 0 g1 in
+       (*BUG g2 must be lifted by lcs *) assert (lcs=0);
        run depth (add_clauses clauses p) g2 gs next alts lvl
 (*  This stays commented out because it slows down rev18 in a visible way!   *)
 (*  | App(c, _, _) when c == implc -> anomaly "Implication must have 2 args" *)
@@ -1503,6 +1517,7 @@ let make_runtime : unit -> ('a -> 'b -> 'k) * ('k -> 'k) =
         | None -> TCALL next_alt alts)
 
   and backchain depth p g gs cp next alts lvl =
+prerr_endline ("backchaiN " ^ string_of_int depth);
     let maybe_last_call = alts == emptyalts in
     let rec args_of = function
       | Const _ -> []
@@ -1521,6 +1536,7 @@ let make_runtime : unit -> ('a -> 'b -> 'k) * ('k -> 'k) =
         let old_trail = !trail in
         last_call := maybe_last_call && cs = [];
         let env = Array.make c.vars dummy in
+prerr_endline ("unif " ^ string_of_int depth);
         match
          for_all2 (unif depth env c.depth) args_of_g c.args
         with
@@ -1589,9 +1605,10 @@ let make_runtime : unit -> ('a -> 'b -> 'k) * ('k -> 'k) =
     trail := !my_trail; last_call := false; to_resume := [];
     try let rc = f x in my_trail := !trail; trail := []; rc
     with e -> my_trail := !trail; trail := []; raise e in
-  (fun p -> ensure_runtime (fun (_,q_env,q) ->
+  (fun p -> ensure_runtime (fun (_,q_env,q) lcs ->
      let q = to_heap 0 ~from:0 ~to_:0 q_env q in
-     run 0 p q [] FNil emptyalts emptyalts)),
+prerr_endline ("RUNNING DEPHT=" ^ string_of_int lcs);
+     run lcs p q [] FNil emptyalts emptyalts)),
   (fun alts -> ensure_runtime next_alt alts)
 ;;
 
@@ -1681,21 +1698,22 @@ let term_of_ast ~depth t =
  to_heap argsdepth ~from:depth ~to_:depth ~avoid:def_avoid env t
 ;;
 
-let query_of_ast t =
+let query_of_ast lcs t =
   let { max_arg = max; name2arg = l }, t =
-    stack_term_of_ast 0 empty_amap ConstMap.empty t in
+    stack_term_of_ast lcs empty_amap ConstMap.empty t in
   List.rev_map fst l, Array.make max dummy, t
 ;;
 
-let program_of_ast (p : Parser.clause list) : program =
- let clauses =
-  List.concat
-   (List.map (fun t ->
-     let names,env,t = query_of_ast t in
+let program_of_ast (p : Parser.clause list) : int * program =
+ let clauses,lcs =
+  List.fold_right
+   (fun t (clauses,lcs) ->
+     let names,env,t = query_of_ast lcs t in
      (* Format.eprintf "%a\n%!" (uppterm 0 names 0 env) t ; *)
-     clausify (Array.length env) 0 [] [] t
-   ) p) in
-  make_index clauses
+     let moreclauses, morelcs = clausify (Array.length env) 0 [] [] 0 t in
+     clauses@moreclauses, lcs+morelcs
+   ) p ([],0) in
+  lcs,make_index clauses
 ;;
 
 (*let pp_FOprolog p = assert false (*CSC: port the code, see function above List.iter (fun { Parser.head = a; hyps = f } ->
@@ -1718,7 +1736,7 @@ let program_of_ast (p : Parser.clause list) : program =
 
 let pp_FOprolog p = 
  List.iter (fun t ->
-  let names,env,t = query_of_ast t in
+  let names,env,t = query_of_ast 0 t in
   match t with
   | App(_, Custom _, _) | App(_,_,(Custom _)::_) -> ()  
   | App(hd,a,[f]) when hd == rimplc -> 
@@ -1734,22 +1752,22 @@ let pp_FOprolog p =
 type query = string list * term array * term
 let pp_prolog = pp_FOprolog
 
-let execute_once p q =
+let execute_once depth p q =
  let run, cont = make_runtime () in
- try ignore (run p q) ; false
+ try ignore (run p q depth) ; false
  with No_clause -> true
 ;;
 
-let execute_loop p ((q_names,q_env,q) as qq) =
+let execute_loop depth p ((q_names,q_env,q) as qq) =
  let run, cont = make_runtime () in
  let time0 = Unix.gettimeofday() in
- let k = ref (run p qq) in
+ let k = ref (run p qq depth) in
  let time1 = Unix.gettimeofday() in
  prerr_endline ("Execution time: "^string_of_float(time1 -. time0));
- Format.eprintf "Raw Result: %a\n%!" (ppterm 0 q_names 0 q_env) q ;
+ Format.eprintf "Raw Result: %a\n%!" (ppterm depth q_names 0 q_env) q ;
  Format.eprintf "Result: \n%!" ;
  List.iteri (fun i name -> Format.eprintf "%s=%a\n%!" name
-  (uppterm 0 q_names 0 q_env) q_env.(i)) q_names;
+  (uppterm depth q_names 0 q_env) q_env.(i)) q_names;
  while !k != emptyalts do
    prerr_endline "More? (Y/n)";
    if read_line() = "n" then k := emptyalts else
@@ -1758,10 +1776,10 @@ let execute_loop p ((q_names,q_env,q) as qq) =
      k := cont !k;
      let time1 = Unix.gettimeofday() in
      prerr_endline ("Execution time: "^string_of_float(time1 -. time0));
-     Format.eprintf "Raw Result: %a\n%!" (ppterm 0 q_names 0 q_env) q ;
+     Format.eprintf "Raw Result: %a\n%!" (ppterm depth q_names 0 q_env) q ;
      Format.eprintf "Result: \n%!" ;
      List.iteri (fun i name -> Format.eprintf "%s=%a\n%!" name
-      (uppterm 0 q_names 0 q_env) q_env.(i)) q_names;
+      (uppterm depth q_names 0 q_env) q_env.(i)) q_names;
     with
      No_clause -> prerr_endline "Fail"; k := emptyalts
  done
