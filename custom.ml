@@ -393,7 +393,7 @@ let _ =
               let start,n =
                match lookahead with
                   None -> 0,n
-                | Some c -> buf.[0] <- c ; 1,n-1 in
+                | Some c -> Bytes.set buf 0 c ; 1,n-1 in
               let read = really_input ch buf start n in
               let str = String.sub buf 0 (read + start) in
               set_lookahead s None ;
