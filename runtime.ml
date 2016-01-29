@@ -1203,9 +1203,6 @@ let unif adepth e bdepth a b =
 
  (* heap=true if b is known to be a heap term *)
  let rec unif depth a bdepth b heap =
-     Format.fprintf Format.std_formatter "@[<hov 2>^%d:%a@ =%d= ^%d:%a@]"
-       adepth (ppterm (adepth+depth) [] adepth [||]) a depth
-       bdepth (ppterm (bdepth+depth) [] adepth e) b ;
    TRACE "unif" (fun fmt ->
      Format.fprintf fmt "@[<hov 2>^%d:%a@ =%d= ^%d:%a@]"
        adepth (ppterm (adepth+depth) [] adepth [||]) a depth
@@ -1260,7 +1257,6 @@ let unif adepth e bdepth a b =
          SPY "assign" (ppterm depth [] adepth [||]) t; true
        with RestrictionFailure -> false end
    | UVar (r,origdepth,0), _ ->
-prerr_endline ("origdepth=" ^ string_of_int origdepth ^ " depth=" ^ string_of_int depth);
        if not !last_call then trail := r :: !trail;
        begin try
          let t =
@@ -1278,7 +1274,6 @@ prerr_endline ("origdepth=" ^ string_of_int origdepth ^ " depth=" ^ string_of_in
              to_heap adepth 
                ~from:(adepth+depth) ~to_:origdepth e b in
          r @:= t;
-Format.fprintf Format.std_formatter "::::= %a" (ppterm depth [] adepth [||]) t;
          SPY "assign" (ppterm depth [] adepth [||]) t; true
        with RestrictionFailure -> false end
 
@@ -1413,6 +1408,7 @@ r :- (pi X\ pi Y\ q X Y :- pi c\ pi d\ q (Z c d) (X c d) (Y c)) => ... *)
 (* Takes the source of an implication and produces the clauses to be added to
  * the program and the number of existentially quantified constants turned
  * into globals. *)
+(* BUG? should depth and lcs be collapsed to just depth? *)
 let rec clausify vars depth hyps ts lcs = function
   | App(c, g, gs) when c == andc || c == andc2 ->
      let res = clausify vars depth hyps ts lcs g in
@@ -1441,7 +1437,7 @@ let rec clausify vars depth hyps ts lcs = function
   | App _ as g ->
      begin match subst depth ts g with
      | App(_,x,xs) as g ->
-         [ { depth = depth ; args=x::xs; hyps = List.(flatten (rev hyps));
+         [ { depth = depth+lcs ; args=x::xs; hyps = List.(flatten (rev hyps));
              vars = vars; key = key_of ~mode:`Clause ~depth g} ], lcs
      | _ -> anomaly "subst went crazy" end
   | UVar ({ contents=g },from,args) when g != dummy ->
@@ -1517,7 +1513,6 @@ let make_runtime : unit -> ('a -> 'b -> int -> 'k) * ('k -> 'k) =
         | None -> TCALL next_alt alts)
 
   and backchain depth p g gs cp next alts lvl =
-prerr_endline ("backchaiN " ^ string_of_int depth);
     let maybe_last_call = alts == emptyalts in
     let rec args_of = function
       | Const _ -> []
@@ -1536,7 +1531,6 @@ prerr_endline ("backchaiN " ^ string_of_int depth);
         let old_trail = !trail in
         last_call := maybe_last_call && cs = [];
         let env = Array.make c.vars dummy in
-prerr_endline ("unif " ^ string_of_int depth);
         match
          for_all2 (unif depth env c.depth) args_of_g c.args
         with
@@ -1607,7 +1601,6 @@ prerr_endline ("unif " ^ string_of_int depth);
     with e -> my_trail := !trail; trail := []; raise e in
   (fun p -> ensure_runtime (fun (_,q_env,q) lcs ->
      let q = to_heap 0 ~from:0 ~to_:0 q_env q in
-prerr_endline ("RUNNING DEPHT=" ^ string_of_int lcs);
      run lcs p q [] FNil emptyalts emptyalts)),
   (fun alts -> ensure_runtime next_alt alts)
 ;;
@@ -1710,7 +1703,7 @@ let program_of_ast (p : Parser.clause list) : int * program =
    (fun t (clauses,lcs) ->
      let names,env,t = query_of_ast lcs t in
      (* Format.eprintf "%a\n%!" (uppterm 0 names 0 env) t ; *)
-     let moreclauses, morelcs = clausify (Array.length env) 0 [] [] 0 t in
+     let moreclauses, morelcs = clausify (Array.length env) lcs [] [] 0 t in
      clauses@moreclauses, lcs+morelcs
    ) p ([],0) in
   lcs,make_index clauses
