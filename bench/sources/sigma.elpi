@@ -1,6 +1,8 @@
-sigma c\ sigma d\ (
+sigma c\ sigma d\ sigma p\ (
  p c,
  p d,
- (pi X\ pi Y\ (q :- p X, p Y, not (X = Y))),
+ (pi X\ pi Y\ pi A\ (q :- k A, p X, p Y, not (X = Y))),
  (pi X\ (r X :- p X))
 ).
+
+sigma e\ k e.
