@@ -1435,7 +1435,7 @@ let rec clausify vars depth hyps ts lcs = function
      clausify (vars+1) depth hyps (ts@[Arg(vars,0)]) lcs b
   | Const _ as g ->
      let g = subst (depth+lcs) ts g in
-     [ { depth = depth; args = []; hyps = List.(flatten (rev hyps));
+     [ { depth = depth+lcs; args = []; hyps = List.(flatten (rev hyps));
          vars = vars ; key = key_of ~mode:`Clause ~depth g } ], lcs
   | App _ as g ->
      begin match subst (depth+lcs) ts g with
