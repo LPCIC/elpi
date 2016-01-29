@@ -1704,7 +1704,7 @@ let program_of_ast (p : Parser.clause list) : int * program =
      let names,env,t = query_of_ast lcs t in
      (* Format.eprintf "%a\n%!" (uppterm 0 names 0 env) t ; *)
      let moreclauses, morelcs = clausify (Array.length env) lcs [] [] 0 t in
-     clauses@moreclauses, lcs+morelcs
+     moreclauses@clauses, lcs+morelcs
    ) p ([],0) in
   lcs,make_index clauses
 ;;
