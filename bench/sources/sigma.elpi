@@ -9,6 +9,12 @@ sigma e\ k e.
 
 pi X\ sigma f\ pred X f.
 
+sigma a \ pi Y \ (
+ (sigma c \ pi X \ sigma e \ quot c e X),
+ quot2 uuu a (f Y)
+).
+
+
 /* Just for debugging
    sigma aa \ pi X\ sigma bb\ pi Y \sigma cc\ pred kkk aa X bb Y cc uuu.
    % 5                6               7         5 A0 (6 A0) A1 (7 A0 A1) */

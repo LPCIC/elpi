@@ -1411,16 +1411,17 @@ r :- (pi X\ pi Y\ q X Y :- pi c\ pi d\ q (Z c d) (X c d) (Y c)) => ... *)
  *)
 let rec clausify vars depth hyps ts lcs = function
   | App(c, g, gs) when c == andc || c == andc2 ->
-     let res = clausify vars depth hyps ts lcs g in
-     assert (snd res = lcs); (* TODO the lifting *)
+     let clauses,newlcs = clausify vars depth hyps ts lcs g in
+     let clauses,_,lcs =
      List.fold_right
-      (fun g (clauses,lcs) ->
-        let oldlcs = lcs in
-        (* BUG, TODO: g must be lifted by lcs *)
-        let moreclauses,lcs = clausify vars depth hyps ts lcs g in
-        assert (lcs = oldlcs);
-         clauses@moreclauses,lcs
-      ) gs res
+      (fun g (clauses,oldlcs,lcs) ->
+        let g =
+         lift ~from:(depth+List.length ts)
+          ~to_:(depth+List.length ts+lcs-oldlcs) g in
+        let moreclauses,newlcs = clausify vars depth hyps ts lcs g in
+         clauses@moreclauses,lcs,newlcs
+      ) gs (clauses,lcs,newlcs) in
+      clauses,lcs
   | App(c, g2, [g1]) when c == rimplc ->
      let g1 = lift ~from:depth ~to_:(depth+lcs) g1 in
      let g1 = subst (depth+lcs) ts g1 in
