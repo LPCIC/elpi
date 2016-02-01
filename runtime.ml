@@ -1407,8 +1407,8 @@ r :- (pi X\ pi Y\ q X Y :- pi c\ pi d\ q (Z c d) (X c d) (Y c)) => ... *)
 
 (* Takes the source of an implication and produces the clauses to be added to
  * the program and the number of existentially quantified constants turned
- * into globals. *)
-(* BUG? should depth and lcs be collapsed to just depth? *)
+ * into globals.
+ *)
 let rec clausify vars depth hyps ts lcs = function
   | App(c, g, gs) when c == andc || c == andc2 ->
      let res = clausify vars depth hyps ts lcs g in
@@ -1422,32 +1422,45 @@ let rec clausify vars depth hyps ts lcs = function
          clauses@moreclauses,lcs
       ) gs res
   | App(c, g2, [g1]) when c == rimplc ->
+     let g1 = lift ~from:depth ~to_:(depth+lcs) g1 in
      let g1 = subst (depth+lcs) ts g1 in
      clausify vars depth (split_conj g1::hyps) ts lcs g2
   | App(c, _, _) when c == rimplc -> assert false
   | App(c, g1, [g2]) when c == implc ->
+     let g1 = lift ~from:depth ~to_:(depth+lcs) g1 in
      let g1 = subst (depth+lcs) ts g1 in
      clausify vars depth (split_conj g1::hyps) ts lcs g2
   | App(c, _, _) when c == implc -> assert false
   | App(c, Lam b, []) when c == sigmac ->
-     clausify vars depth hyps ts (lcs+1) b
+     let args =
+      List.rev (List.filter (function (Arg _) -> true | _ -> false) ts) in
+     let cst =
+      match args with
+         [] -> Const (depth+lcs)
+       | hd::rest -> App (depth+lcs,hd,rest) in
+     clausify vars depth hyps (cst::ts) (lcs+1) b
   | App(c, Lam b, []) when c == pic ->
      clausify (vars+1) depth hyps (Arg(vars,0)::ts) lcs b
   | Const _ as g ->
+     let g = lift ~from:depth ~to_:(depth+lcs) g in
      let g = subst (depth+lcs) ts g in
      [ { depth = depth+lcs; args = []; hyps = List.(flatten (rev hyps));
          vars = vars ; key = key_of ~mode:`Clause ~depth:(depth+lcs) g } ], lcs
   | App _ as g ->
-     begin match subst (depth+lcs) ts g with
-     | App(_,x,xs) as g ->
+     let g = lift ~from:depth ~to_:(depth+lcs) g in
+     let g = subst (depth+lcs) ts g in
+     begin match g with
+     | App(_,x,xs) ->
          [ { depth = depth+lcs ; args=x::xs; hyps = List.(flatten (rev hyps));
              vars = vars; key = key_of ~mode:`Clause ~depth:(depth+lcs) g} ], lcs
      | _ -> anomaly "subst went crazy" end
   | UVar ({ contents=g },from,args) when g != dummy ->
 (*BUG here? depth+lcs?*)
+assert false;
      clausify vars depth hyps ts lcs
        (deref ~from ~to_:(depth+List.length ts) args g)
   | AppUVar ({contents=g},from,args) when g != dummy -> 
+assert false;
 (*BUG here? depth+lcs?*)
      clausify vars depth hyps ts lcs
        (app_deref ~from ~to_:(depth+List.length ts) args g)

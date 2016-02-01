@@ -6,3 +6,18 @@ sigma c\ sigma d\ sigma p\ (
 ).
 
 sigma e\ k e.
+
+pi X\ sigma f\ pred X f.
+
+/* Just for debugging
+   sigma aa \ pi X\ sigma bb\ pi Y \sigma cc\ pred kkk aa X bb Y cc uuu.
+   % 5                6               7         5 A0 (6 A0) A1 (7 A0 A1) */
+
+/*
+   query: q.            ok
+   query: r X.          fail X = c
+   query: sigma X\ r X. ok
+
+   query: sigma A\ pi c\ pred c A.     fail A = f c
+   query: sigma A\ pi c\ pred c (A c). ok A = f
+*/
