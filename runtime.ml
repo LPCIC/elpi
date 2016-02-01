@@ -1436,12 +1436,12 @@ let rec clausify vars depth hyps ts lcs = function
   | Const _ as g ->
      let g = subst (depth+lcs) ts g in
      [ { depth = depth+lcs; args = []; hyps = List.(flatten (rev hyps));
-         vars = vars ; key = key_of ~mode:`Clause ~depth g } ], lcs
+         vars = vars ; key = key_of ~mode:`Clause ~depth:(depth+lcs) g } ], lcs
   | App _ as g ->
      begin match subst (depth+lcs) ts g with
      | App(_,x,xs) as g ->
          [ { depth = depth+lcs ; args=x::xs; hyps = List.(flatten (rev hyps));
-             vars = vars; key = key_of ~mode:`Clause ~depth g} ], lcs
+             vars = vars; key = key_of ~mode:`Clause ~depth:(depth+lcs) g} ], lcs
      | _ -> anomaly "subst went crazy" end
   | UVar ({ contents=g },from,args) when g != dummy ->
 (*BUG here? depth+lcs?*)
