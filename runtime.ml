@@ -1703,15 +1703,15 @@ let query_of_ast lcs t =
 ;;
 
 let program_of_ast (p : Parser.clause list) : int * program =
- let clauses,lcs =
-  List.fold_right
-   (fun t (clauses,lcs) ->
+ let clausesrev,lcs =
+  List.fold_left
+   (fun (clauses,lcs) t ->
      let names,env,t = query_of_ast lcs t in
      (* Format.eprintf "%a\n%!" (uppterm 0 names 0 env) t ; *)
      let moreclauses, morelcs = clausify (Array.length env) lcs [] [] 0 t in
-     moreclauses@clauses, lcs+morelcs
-   ) p ([],0) in
-  lcs,make_index clauses
+     List.rev_append moreclauses clauses, lcs+morelcs
+   ) ([],0) p in
+  lcs,make_index (List.rev clausesrev)
 ;;
 
 (*let pp_FOprolog p = assert false (*CSC: port the code, see function above List.iter (fun { Parser.head = a; hyps = f } ->
