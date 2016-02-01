@@ -1432,7 +1432,7 @@ let rec clausify vars depth hyps ts lcs = function
   | App(c, Lam b, []) when c == sigmac ->
      clausify vars depth hyps ts (lcs+1) b
   | App(c, Lam b, []) when c == pic ->
-     clausify (vars+1) depth hyps (ts@[Arg(vars,0)]) lcs b
+     clausify (vars+1) depth hyps (Arg(vars,0)::ts) lcs b
   | Const _ as g ->
      let g = subst (depth+lcs) ts g in
      [ { depth = depth+lcs; args = []; hyps = List.(flatten (rev hyps));
