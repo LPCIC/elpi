@@ -1419,14 +1419,10 @@ let rec clausify vars depth hyps ts lcs = function
          clauses@moreclauses,lcs
       ) gs res
   | App(c, g2, [g1]) when c == rimplc ->
-     let g1 = lift ~from:depth ~to_:(depth+lcs) g1 in
-     let g1 = subst (depth+lcs) ts g1 in
-     clausify vars depth (split_conj g1::hyps) ts lcs g2
+     clausify vars depth ((ts,g1)::hyps) ts lcs g2
   | App(c, _, _) when c == rimplc -> assert false
   | App(c, g1, [g2]) when c == implc ->
-     let g1 = lift ~from:depth ~to_:(depth+lcs) g1 in
-     let g1 = subst (depth+lcs) ts g1 in
-     clausify vars depth (split_conj g1::hyps) ts lcs g2
+     clausify vars depth ((ts,g1)::hyps) ts lcs g2
   | App(c, _, _) when c == implc -> assert false
   | App(c, Lam b, []) when c == sigmac ->
      let args =
@@ -1439,24 +1435,36 @@ let rec clausify vars depth hyps ts lcs = function
   | App(c, Lam b, []) when c == pic ->
      clausify (vars+1) depth hyps (Arg(vars,0)::ts) lcs b
   | Const _ as g ->
+     let hyps =
+      List.(flatten (rev_map (fun (ts,g) ->
+         let g = lift ~from:depth ~to_:(depth+lcs) g in
+         let g = subst (depth+lcs) ts g in
+          split_conj g
+        ) hyps)) in
      let g = lift ~from:depth ~to_:(depth+lcs) g in
      let g = subst (depth+lcs) ts g in
      (*Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
       (ppterm (depth+lcs) [] 0 [||]) g
       (pplist (ppterm (depth+lcs) [] 0 [||]) " , ")
-      List.(flatten (rev hyps)) ;*)
-     [ { depth = depth+lcs; args = []; hyps = List.(flatten (rev hyps));
+      hyps ;*)
+     [ { depth = depth+lcs; args = []; hyps = hyps;
          vars = vars ; key = key_of ~mode:`Clause ~depth:(depth+lcs) g } ], lcs
   | App _ as g ->
+     let hyps =
+      List.(flatten (rev_map (fun (ts,g) ->
+         let g = lift ~from:depth ~to_:(depth+lcs) g in
+         let g = subst (depth+lcs) ts g in
+          split_conj g
+        ) hyps)) in
      let g = lift ~from:depth ~to_:(depth+lcs) g in
      let g = subst (depth+lcs) ts g in
      (*Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
       (ppterm (depth+lcs) [] 0 [||]) g
       (pplist (ppterm (depth+lcs) [] 0 [||]) " , ")
-      List.(flatten (rev hyps)) ;*)
+      hyps ;*)
      begin match g with
      | App(_,x,xs) ->
-         [ { depth = depth+lcs ; args=x::xs; hyps = List.(flatten (rev hyps));
+         [ { depth = depth+lcs ; args=x::xs; hyps = hyps;
              vars = vars; key = key_of ~mode:`Clause ~depth:(depth+lcs) g} ], lcs
      | _ -> anomaly "subst went crazy" end
   | UVar ({ contents=g },from,args) when g != dummy ->
