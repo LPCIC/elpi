@@ -11,9 +11,9 @@ pi X\ sigma f\ pred X f.
 
 sigma a \ pi Y \ (
  (sigma c \ pi X \ sigma e \ quot c e X),
- quot2 uuu a (f Y)
+ (sigma u \ ttt u :- $print a u),
+ (quot2 uuu a (f Y) :- $print (quot2 uuu a (f Y)))
 ).
-
 
 /* Just for debugging
    sigma aa \ pi X\ sigma bb\ pi Y \sigma cc\ pred kkk aa X bb Y cc uuu.
@@ -26,4 +26,6 @@ sigma a \ pi Y \ (
 
    query: sigma A\ pi c\ pred c A.     fail A = f c
    query: sigma A\ pi c\ pred c (A c). ok A = f
+
+   query: sigma X \ quot2 A X Y.       ok A = uuu, Y = (f X0).
 */

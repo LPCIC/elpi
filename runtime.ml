@@ -1410,18 +1410,14 @@ r :- (pi X\ pi Y\ q X Y :- pi c\ pi d\ q (Z c d) (X c d) (Y c)) => ... *)
  * into globals.
  *)
 let rec clausify vars depth hyps ts lcs = function
+(*g -> Format.eprintf "CLAUSIFY %a %d %d\n%!" (ppterm (depth+List.length ts) [] 0 [||]) g depth (List.length ts); match g with*)
   | App(c, g, gs) when c == andc || c == andc2 ->
-     let clauses,newlcs = clausify vars depth hyps ts lcs g in
-     let clauses,_,lcs =
+     let res = clausify vars depth hyps ts lcs g in
      List.fold_right
-      (fun g (clauses,oldlcs,lcs) ->
-        let g =
-         lift ~from:(depth+List.length ts)
-          ~to_:(depth+List.length ts+lcs-oldlcs) g in
-        let moreclauses,newlcs = clausify vars depth hyps ts lcs g in
-         clauses@moreclauses,lcs,newlcs
-      ) gs (clauses,lcs,newlcs) in
-      clauses,lcs
+      (fun g (clauses,lcs) ->
+        let moreclauses,lcs = clausify vars depth hyps ts lcs g in
+         clauses@moreclauses,lcs
+      ) gs res
   | App(c, g2, [g1]) when c == rimplc ->
      let g1 = lift ~from:depth ~to_:(depth+lcs) g1 in
      let g1 = subst (depth+lcs) ts g1 in
@@ -1445,11 +1441,19 @@ let rec clausify vars depth hyps ts lcs = function
   | Const _ as g ->
      let g = lift ~from:depth ~to_:(depth+lcs) g in
      let g = subst (depth+lcs) ts g in
+     (*Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
+      (ppterm (depth+lcs) [] 0 [||]) g
+      (pplist (ppterm (depth+lcs) [] 0 [||]) " , ")
+      List.(flatten (rev hyps)) ;*)
      [ { depth = depth+lcs; args = []; hyps = List.(flatten (rev hyps));
          vars = vars ; key = key_of ~mode:`Clause ~depth:(depth+lcs) g } ], lcs
   | App _ as g ->
      let g = lift ~from:depth ~to_:(depth+lcs) g in
      let g = subst (depth+lcs) ts g in
+     (*Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
+      (ppterm (depth+lcs) [] 0 [||]) g
+      (pplist (ppterm (depth+lcs) [] 0 [||]) " , ")
+      List.(flatten (rev hyps)) ;*)
      begin match g with
      | App(_,x,xs) ->
          [ { depth = depth+lcs ; args=x::xs; hyps = List.(flatten (rev hyps));
