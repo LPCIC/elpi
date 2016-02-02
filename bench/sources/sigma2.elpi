@@ -7,3 +7,6 @@ test_ok2 :-
  (sigma A \ pp A A).
 
 sigma e \ ((sigma c\ foo e c) :- d e (x \ x)).
+
+test_ok3 Y :-
+ X = (x \ p x (y \ y)), pi q \ ((sigma a \ X a) => sigma U \ p U Y).

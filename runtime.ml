@@ -1468,13 +1468,9 @@ let rec clausify vars depth hyps ts lcs = function
              vars = vars; key = key_of ~mode:`Clause ~depth:(depth+lcs) g} ], lcs
      | _ -> anomaly "subst went crazy" end
   | UVar ({ contents=g },from,args) when g != dummy ->
-(*BUG here? depth+lcs?*)
-assert false;
      clausify vars depth hyps ts lcs
        (deref ~from ~to_:(depth+List.length ts) args g)
   | AppUVar ({contents=g},from,args) when g != dummy -> 
-assert false;
-(*BUG here? depth+lcs?*)
      clausify vars depth hyps ts lcs
        (app_deref ~from ~to_:(depth+List.length ts) args g)
   | Arg _ | AppArg _ -> assert false 
