@@ -1726,21 +1726,27 @@ let term_of_ast ~depth t =
  to_heap argsdepth ~from:depth ~to_:depth ~avoid:def_avoid env t
 ;;
 
-let query_of_ast lcs t =
+let query_of_ast_cmap lcs cmap t =
   let { max_arg = max; name2arg = l }, t =
-    stack_term_of_ast lcs empty_amap ConstMap.empty t in
+    stack_term_of_ast lcs empty_amap cmap t in
   List.rev_map fst l, Array.make max dummy, t
 ;;
 
-let program_of_ast (p : Parser.clause list) : int * program =
- let clausesrev,lcs =
+let query_of_ast lcs t = query_of_ast_cmap lcs ConstMap.empty t;;
+
+let program_of_ast (p : Parser.decl list) : int * program =
+ let clausesrev,lcs,_ =
   List.fold_left
-   (fun (clauses,lcs) t ->
-     let names,env,t = query_of_ast lcs t in
-     (* Format.eprintf "%a\n%!" (uppterm 0 names 0 env) t ; *)
-     let moreclauses, morelcs = clausify (Array.length env) lcs [] [] 0 t in
-     List.rev_append moreclauses clauses, lcs+morelcs
-   ) ([],0) p in
+   (fun (clauses,lcs,cmap) d ->
+     match d with
+        Parser.Clause t ->
+         let names,env,t = query_of_ast_cmap lcs cmap t in
+         (* Format.eprintf "%a\n%!" (uppterm 0 names 0 env) t ; *)
+         let moreclauses, morelcs = clausify (Array.length env) lcs [] [] 0 t in
+         List.rev_append moreclauses clauses, lcs+morelcs, cmap
+      | Parser.Local v ->
+         clauses, lcs+1, ConstMap.add v (constant_of_dbl lcs) cmap
+   ) ([],0,ConstMap.empty) p in
   lcs,make_index (List.rev clausesrev)
 ;;
 
@@ -1763,15 +1769,19 @@ let program_of_ast (p : Parser.clause list) : int * program =
 
 
 let pp_FOprolog p = 
- List.iter (fun t ->
-  let names,env,t = query_of_ast 0 t in
-  match t with
-  | App(_, Custom _, _) | App(_,_,(Custom _)::_) -> ()  
-  | App(hd,a,[f]) when hd == rimplc -> 
-    Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!" (pp_FOprolog names env) a (pplist (pp_FOprolog names env) ",") (split_conj f);
-  | _ -> 
-     Format.eprintf "@[<hov 1>%a.@]\n%!"
-     (pp_FOprolog names env) t 
+ List.iter
+  (function
+      Parser.Local _ -> assert false (* TODO *)
+    | Parser.Clause t ->
+       (* BUG: ConstMap.empty because "local" declarations are ignored ATM *)
+       let names,env,t = query_of_ast_cmap 0 ConstMap.empty t in
+       match t with
+       | App(_, Custom _, _) | App(_,_,(Custom _)::_) -> ()  
+       | App(hd,a,[f]) when hd == rimplc -> 
+         Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!" (pp_FOprolog names env) a (pplist (pp_FOprolog names env) ",") (split_conj f);
+       | _ -> 
+          Format.eprintf "@[<hov 1>%a.@]\n%!"
+          (pp_FOprolog names env) t 
   ) p  
  ;;
 

@@ -108,6 +108,7 @@ dell@dell:~/lpcic/elpi/bench/sources/fun_trans$ ../../../elpi fun_trans.mod
 dell@dell:~/lpcic/elpi$ ./elpi bench/sources/fun_trans.elpi 
   fails. The problem is in loading the input file.
 - LaTeX exporter:
+  0) local ignored
   1) a Parser.term which contains LaTeX reserved symbols such 
      as "_", "$", etc. should be exported accordingly
   2) it should be implemented a better clausify function and 

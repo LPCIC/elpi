@@ -1,0 +1,7 @@
+local c.
+
+p c.
+
+local d.
+
+p c d e.

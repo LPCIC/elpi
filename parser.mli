@@ -32,12 +32,13 @@ type term =
  | Float of float 
 
 type clause = term
+type decl = Clause of clause | Local of ASTFuncS.t
 
 type fixity = Infixl | Infixr | Infix | Prefix | Postfix
 
 (* raises Not_found is the constant has no declared fixity *)
 val precedence_of : ASTFuncS.t -> fixity * int
-val parse_program : filenames:string list -> clause list
+val parse_program : filenames:string list -> decl list
 val parse_goal : string -> term
 val parse_goal_from_stream : char Stream.t -> term
 val get_literal : string -> string

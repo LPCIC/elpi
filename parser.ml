@@ -66,7 +66,8 @@ let set_precedence,precedence_of =
 exception NotInProlog;;
 
 type clause = term
-type program = clause list
+type decl = Clause of clause | Local of ASTFuncS.t
+type program = decl list
 type goal = term
 
 let mkApp =
@@ -418,7 +419,7 @@ EXTEND
   clause :
     [[ f = atom; FULLSTOP ->
        (!PointerFunc.latex_export).PointerFunc.export f ;
-       [f]
+       [Clause f]
      | MODULE; CONSTANT; FULLSTOP -> []
      | SIG; CONSTANT; FULLSTOP -> []
      | ACCUMULATE; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
@@ -429,8 +430,10 @@ EXTEND
         parse lp (List.map (fun fn -> fn ^ ".sig") filenames)
      | USE_SIG; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
         parse lp (List.map (fun fn -> fn ^ ".sig") filenames)
-     | LOCAL; LIST1 const_sym SEP SYMBOL ","; FULLSTOP -> []
-     | LOCAL; LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP -> []
+     | LOCAL; vars = LIST1 const_sym SEP SYMBOL ","; FULLSTOP ->
+        List.map (fun x -> Local x) vars
+     | LOCAL; vars = LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP ->
+        List.map (fun x -> Local x) vars
      | LOCALKIND; LIST1 const_sym SEP SYMBOL ","; FULLSTOP -> []
      | LOCALKIND; LIST1 const_sym SEP SYMBOL ","; kind; FULLSTOP -> []
      | CLOSED; LIST1 const_sym SEP SYMBOL ","; FULLSTOP -> []

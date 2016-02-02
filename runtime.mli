@@ -20,10 +20,10 @@ type query
 type program
 
 val query_of_ast : int(* number of hidden constants *) -> term -> query
-val program_of_ast : clause list -> int(* number of hidden constants*) * program
+val program_of_ast : decl list -> int(* number of hidden constants*) * program
 val execute_once : int(* number of hidden constants *) -> program -> query -> bool (* true means error *)
 val execute_loop : int(* number of hidden constants *) -> program -> query -> unit
-val pp_prolog : clause list -> unit
+val pp_prolog : decl list -> unit
 
 (* Extensions *)
 
