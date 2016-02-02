@@ -1505,9 +1505,11 @@ let make_runtime : unit -> ('a -> 'b -> int -> 'k) * ('k -> 'k) =
     | App(c, g, gs') when c == andc || c == andc2 ->
        run depth p g (List.map(fun x -> depth,p,x) gs'@gs) next alts lvl
     | App(c, g1, [g2]) when c == implc ->
+       (*Format.eprintf "RUN: %a\n%!" (uppterm depth [] 0 [||]) g ;*)
        let clauses, lcs = clausify 0 depth [] [] 0 g1 in
-       (*BUG g2 must be lifted by lcs *) assert (lcs=0);
-       run depth (add_clauses clauses p) g2 gs next alts lvl
+       let g2 = lift ~from:depth ~to_:(depth+lcs) g2 in
+       (*Format.eprintf "TO: %a \n%!" (uppterm (depth+lcs) [] 0 [||]) g2;*)
+       run (depth+lcs) (add_clauses clauses p) g2 gs next alts lvl
 (*  This stays commented out because it slows down rev18 in a visible way!   *)
 (*  | App(c, _, _) when c == implc -> anomaly "Implication must have 2 args" *)
     | App(c, Lam f, []) when c == pic ->

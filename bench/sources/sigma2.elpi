@@ -1,0 +1,7 @@
+test_ok :- (sigma a \ pp a) => (sigma A \ pp A).
+test_fail :- (sigma a \ pp a) => pp A.
+
+test_ok2 :-
+ (sigma a \ pp a a) =>
+ (pi X \ sigma c \ pp X c) =>
+ (sigma A \ pp A A).
