@@ -1504,6 +1504,12 @@ let make_runtime : unit -> ('a -> 'b -> int -> 'k) * ('k -> 'k) =
     | c when c == cutc -> TCALL cut p gs next alts lvl
     | App(c, g, gs') when c == andc || c == andc2 ->
        run depth p g (List.map(fun x -> depth,p,x) gs'@gs) next alts lvl
+    | App(c, g2, [g1]) when c == rimplc ->
+       (*Format.eprintf "RUN: %a\n%!" (uppterm depth [] 0 [||]) g ;*)
+       let clauses, lcs = clausify 0 depth [] [] 0 g1 in
+       let g2 = lift ~from:depth ~to_:(depth+lcs) g2 in
+       (*Format.eprintf "TO: %a \n%!" (uppterm (depth+lcs) [] 0 [||]) g2;*)
+       run (depth+lcs) (add_clauses clauses p) g2 gs next alts lvl
     | App(c, g1, [g2]) when c == implc ->
        (*Format.eprintf "RUN: %a\n%!" (uppterm depth [] 0 [||]) g ;*)
        let clauses, lcs = clausify 0 depth [] [] 0 g1 in
