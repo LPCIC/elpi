@@ -20,7 +20,7 @@ EXTEND
          Trace.exit $c$ True (Unix.gettimeofday () -. wall_clock);
          Obj.obj f (Obj.obj x) }
        | e -> do {
-         Trace.exit $c$ False ~e (Unix.gettimeofday () -. wall_clock);
+         Trace.exit $c$ False ~{e} (Unix.gettimeofday () -. wall_clock);
          raise e } ] } >> ]
     |[ "TCALL"; l = LIST1 expr LEVEL "simple" ->
        let l_rev = List.rev l in
