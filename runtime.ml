@@ -187,7 +187,7 @@ module Pp : sig
     constant -> term array ->
       Format.formatter -> term -> unit
 
-  val pp_FOprolog :
+  val prologppterm :
     string list -> term array -> Format.formatter -> term -> unit
 
   val do_deref : (from:int -> to_:int -> int -> term -> term) ref
@@ -360,7 +360,7 @@ let xppterm_prolog ~nice names env f t =
 
 let ppterm = xppterm ~nice:false
 let uppterm = xppterm ~nice:true
-let pp_FOprolog = xppterm_prolog ~nice:true 
+let prologppterm = xppterm_prolog ~nice:true 
 
 end (* }}} *)
 open Pp
@@ -1726,25 +1726,31 @@ let query_of_ast_cmap lcs cmap t =
 let query_of_ast lcs t = query_of_ast_cmap lcs ConstMap.empty t;;
 
 let program_of_ast (p : Parser.decl list) : int * program =
- let clausesrev,lcs,_,_ =
-  List.fold_left
-   (fun (clauses,lcs,cmap,cmapstack) d ->
-     match d with
-        Parser.Clause t ->
-         let names,env,t = query_of_ast_cmap lcs cmap t in
-         (* Format.eprintf "%a\n%!" (uppterm 0 names 0 env) t ; *)
-         let moreclauses, morelcs = clausify (Array.length env) lcs [] [] 0 t in
-         List.rev_append moreclauses clauses, lcs+morelcs, cmap, cmapstack
-      | Parser.Begin -> clauses, lcs, cmap, cmap::cmapstack
-      | Parser.End ->
-         (match cmapstack with
-             [] ->
-              (* TODO: raise it in the parser *)
-              error "End without a Begin"
-           | cmap::cmapstack -> clauses, lcs, cmap, cmapstack)
-      | Parser.Local v ->
-         clauses,lcs+1, ConstMap.add v (constant_of_dbl lcs) cmap, cmapstack
-   ) ([],0,ConstMap.empty,[]) p in
+ let rec aux lcs clauses =
+  let clauses,lcs,_,cmapstack as res =
+   List.fold_left
+    (fun (clauses,lcs,cmap,cmapstack) d ->
+      match d with
+         Parser.Clause t ->
+          let names,env,t = query_of_ast_cmap lcs cmap t in
+          (* Format.eprintf "%a\n%!" (uppterm 0 names 0 env) t ; *)
+          let moreclauses, morelcs = clausify (Array.length env) lcs [] [] 0 t in
+          List.rev_append moreclauses clauses, lcs+morelcs, cmap, cmapstack
+       | Parser.Begin -> clauses, lcs, cmap, cmap::cmapstack
+       | Parser.Accumulated p ->
+          let moreclausesrev,lcs = aux lcs p in
+           moreclausesrev@clauses, lcs, cmap, cmapstack
+       | Parser.End ->
+          (match cmapstack with
+              [] ->
+               (* TODO: raise it in the parser *)
+               error "End without a Begin"
+            | cmap::cmapstack -> clauses, lcs, cmap, cmapstack)
+       | Parser.Local v ->
+          clauses,lcs+1, ConstMap.add v (constant_of_dbl lcs) cmap, cmapstack
+    ) ([],lcs,ConstMap.empty,[]) clauses in
+  if cmapstack <> [] then error "Begin without an End" else clauses,lcs in
+ let clausesrev,lcs = aux 0 p in
   lcs,make_index (List.rev clausesrev)
 ;;
 
@@ -1766,22 +1772,24 @@ let program_of_ast (p : Parser.decl list) : int * program =
 ;;*)
 
 
-let pp_FOprolog p = 
+let rec pp_FOprolog p = 
  List.iter
   (function
       Parser.Local _
     | Parser.Begin
     | Parser.End -> assert false (* TODO *)
+    | Parser.Accumulated l -> pp_FOprolog l
     | Parser.Clause t ->
        (* BUG: ConstMap.empty because "local" declarations are ignored ATM *)
        let names,env,t = query_of_ast_cmap 0 ConstMap.empty t in
        match t with
        | App(_, Custom _, _) | App(_,_,(Custom _)::_) -> ()  
        | App(hd,a,[f]) when hd == rimplc -> 
-         Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!" (pp_FOprolog names env) a (pplist (pp_FOprolog names env) ",") (split_conj f);
+         Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
+          (prologppterm names env) a
+          (pplist (prologppterm names env) ",") (split_conj f);
        | _ -> 
-          Format.eprintf "@[<hov 1>%a.@]\n%!"
-          (pp_FOprolog names env) t 
+         Format.eprintf "@[<hov 1>%a.@]\n%!" (prologppterm names env) t 
   ) p  
  ;;
 

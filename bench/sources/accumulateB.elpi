@@ -1,0 +1,7 @@
+local c.
+
+accumulate accumulateA.
+
+q X Y Z :- p X Y, Z = d.
+
+/* query: sigma Y \ q X Y Z. % ok X = c, Z = d */

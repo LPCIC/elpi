@@ -66,7 +66,13 @@ let set_precedence,precedence_of =
 exception NotInProlog;;
 
 type clause = term
-type decl = Clause of clause | Local of ASTFuncS.t | Begin | End
+type decl =
+   Clause of clause
+ | Local of ASTFuncS.t
+ | Begin
+ | End
+ | Accumulated of decl list
+
 type program = decl list
 type goal = term
 
@@ -426,13 +432,13 @@ EXTEND
      | MODULE; CONSTANT; FULLSTOP -> []
      | SIG; CONSTANT; FULLSTOP -> []
      | ACCUMULATE; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
-        parse lp (List.map (fun fn -> fn ^ ".mod") filenames)
+        [Accumulated(parse lp (List.map (fun fn -> fn ^ ".mod") filenames))]
      | IMPORT; filenames=LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP ->
-        parse lp (List.map (fun fn -> fn ^ ".mod") filenames)
+        [Accumulated(parse lp (List.map (fun fn -> fn ^ ".mod") filenames))]
      | ACCUM_SIG; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
-        parse lp (List.map (fun fn -> fn ^ ".sig") filenames)
+        [Accumulated(parse lp (List.map (fun fn -> fn ^ ".sig") filenames))]
      | USE_SIG; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
-        parse lp (List.map (fun fn -> fn ^ ".sig") filenames)
+        [Accumulated(parse lp (List.map (fun fn -> fn ^ ".sig") filenames))]
      | LOCAL; vars = LIST1 const_sym SEP SYMBOL ","; FULLSTOP ->
         List.map (fun x -> Local x) vars
      | LOCAL; vars = LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP ->
