@@ -110,7 +110,6 @@ let parse_argv argv =
     | "-trace-only" :: expr :: rest ->
          only := expr :: !only;
          aux rest
-    | ("-h"|"--help") as x :: rest -> usage (); x :: aux rest
     | x :: rest -> x :: aux rest in
   let rest = aux (Array.to_list argv) in
   init ~where:!where ~verbose:!verbose ~only:!only ~skip:!skip !on;

@@ -50,12 +50,26 @@ let set_terminal_width ?(max_w=
   [ Format.err_formatter; Format.std_formatter ]
 ;;
 
+
+let usage () =
+  Format.eprintf "\nusage: elpi [OPTIONS]... [FILENAME]...\n";
+
+  Format.eprintf "\nmain options:\n";
+  Format.eprintf "\t-test runs the query \"main\"\n";
+  Format.eprintf "\t-prolog prints files to Prolog syntax if possible\n";
+  Format.eprintf "\t-latex_export prints files to LaTeX syntax\n";
+
+  Trace.usage ()
+;;
+
 let _ =
   let argv = Trace.parse_argv Sys.argv in
   let argn = Array.length argv in
+  if argn = 2 && (argv.(1) = "-h" || argv.(1) = "--help") then
+   begin usage () ; exit 0 end;
   (* j=1 iff -test is not passed *)
   let j,test =
-   if Array.length argv = 1 then 1,`OneInteractive
+   if argn = 1 then 1,`OneInteractive
    else if argv.(1) = "-test" then 2,`OneBatch
    else if argv.(1) = "-prolog" then 2,`PPprologBatch
    else if argv.(1) = "-latex_export" then 2,`LatexExport
