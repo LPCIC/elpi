@@ -1434,21 +1434,7 @@ let rec clausify vars depth hyps ts lcs = function
      clausify vars depth hyps (cst::ts) (lcs+1) b
   | App(c, Lam b, []) when c == pic ->
      clausify (vars+1) depth hyps (Arg(vars,0)::ts) lcs b
-  | Const _ as g ->
-     let hyps =
-      List.(flatten (rev_map (fun (ts,g) ->
-         let g = lift ~from:depth ~to_:(depth+lcs) g in
-         let g = subst (depth+lcs) ts g in
-          split_conj g
-        ) hyps)) in
-     let g = lift ~from:depth ~to_:(depth+lcs) g in
-     let g = subst (depth+lcs) ts g in
-     (*Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
-      (ppterm (depth+lcs) [] 0 [||]) g
-      (pplist (ppterm (depth+lcs) [] 0 [||]) " , ")
-      hyps ;*)
-     [ { depth = depth+lcs; args = []; hyps = hyps;
-         vars = vars ; key = key_of ~mode:`Clause ~depth:(depth+lcs) g } ], lcs
+  | Const _
   | App _ as g ->
      let hyps =
       List.(flatten (rev_map (fun (ts,g) ->
@@ -1462,11 +1448,16 @@ let rec clausify vars depth hyps ts lcs = function
       (ppterm (depth+lcs) [] 0 [||]) g
       (pplist (ppterm (depth+lcs) [] 0 [||]) " , ")
       hyps ;*)
-     begin match g with
-     | App(_,x,xs) ->
-         [ { depth = depth+lcs ; args=x::xs; hyps = hyps;
-             vars = vars; key = key_of ~mode:`Clause ~depth:(depth+lcs) g} ], lcs
-     | _ -> anomaly "subst went crazy" end
+     let args =
+      match g with
+         Const _ -> []
+       | App(_,x,xs) -> x::xs
+       | Arg _ | AppArg _ -> assert false 
+       | Lam _ | Custom _ | String _ | Int _ | Float _ -> assert false
+       | UVar _ | AppUVar _ -> assert false
+     in
+      [ { depth = depth+lcs ; args= args; hyps = hyps;
+          vars = vars; key=key_of ~mode:`Clause ~depth:(depth+lcs) g} ], lcs
   | UVar ({ contents=g },from,args) when g != dummy ->
      clausify vars depth hyps ts lcs
        (deref ~from ~to_:(depth+List.length ts) args g)
