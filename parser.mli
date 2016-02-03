@@ -32,7 +32,7 @@ type term =
  | Float of float 
 
 type clause = term
-type decl = Clause of clause | Local of ASTFuncS.t
+type decl = Clause of clause | Local of ASTFuncS.t | Begin | End
 
 type fixity = Infixl | Infixr | Infix | Prefix | Postfix
 

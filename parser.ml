@@ -66,7 +66,7 @@ let set_precedence,precedence_of =
 exception NotInProlog;;
 
 type clause = term
-type decl = Clause of clause | Local of ASTFuncS.t
+type decl = Clause of clause | Local of ASTFuncS.t | Begin | End
 type program = decl list
 type goal = term
 
@@ -259,6 +259,8 @@ let tok = lexer
   | ')' -> "RPAREN",$buf
   | '[' -> "LBRACKET",$buf
   | ']' -> "RBRACKET",$buf
+  | '{' -> "LCURLY",$buf
+  | '}' -> "RCURLY",$buf
   | '|' -> "PIPE",$buf
   | '"' / string -> "LITERAL", $buf
 ]
@@ -303,7 +305,6 @@ let rec lex c = parser bp
          | "typeabbrev" -> "TYPEABBREV", "typeabbrev"
          | "type" -> "TYPE", "type"
          | "closed" -> "CLOSED", "closed"
-        
          | "end" -> "EOF", "end"
          | "accumulate" -> "ACCUMULATE", "accumulate"
          | "infixl" -> "FIXITY", "infixl"
@@ -420,6 +421,8 @@ EXTEND
     [[ f = atom; FULLSTOP ->
        (!PointerFunc.latex_export).PointerFunc.export f ;
        [Clause f]
+     | LCURLY -> [Begin]
+     | RCURLY -> [End]
      | MODULE; CONSTANT; FULLSTOP -> []
      | SIG; CONSTANT; FULLSTOP -> []
      | ACCUMULATE; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->

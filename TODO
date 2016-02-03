@@ -81,6 +81,8 @@ Major Bugs:
   Otherwise the automatic benchmarks fail.
 
 Minor Bugs (mostly forward compatibility with Teyjus):
+- the parser should verify the well-balancing of { }
+  There is also a TODO about it in runtime.ml
 - readterm flushes the rest of the line, even if it should not.
   One of the misteries of camlp5, I suppose :-(
   FIX: as the spec says, we should first read all characters up to dot,

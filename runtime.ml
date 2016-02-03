@@ -1726,18 +1726,25 @@ let query_of_ast_cmap lcs cmap t =
 let query_of_ast lcs t = query_of_ast_cmap lcs ConstMap.empty t;;
 
 let program_of_ast (p : Parser.decl list) : int * program =
- let clausesrev,lcs,_ =
+ let clausesrev,lcs,_,_ =
   List.fold_left
-   (fun (clauses,lcs,cmap) d ->
+   (fun (clauses,lcs,cmap,cmapstack) d ->
      match d with
         Parser.Clause t ->
          let names,env,t = query_of_ast_cmap lcs cmap t in
          (* Format.eprintf "%a\n%!" (uppterm 0 names 0 env) t ; *)
          let moreclauses, morelcs = clausify (Array.length env) lcs [] [] 0 t in
-         List.rev_append moreclauses clauses, lcs+morelcs, cmap
+         List.rev_append moreclauses clauses, lcs+morelcs, cmap, cmapstack
+      | Parser.Begin -> clauses, lcs, cmap, cmap::cmapstack
+      | Parser.End ->
+         (match cmapstack with
+             [] ->
+              (* TODO: raise it in the parser *)
+              error "End without a Begin"
+           | cmap::cmapstack -> clauses, lcs, cmap, cmapstack)
       | Parser.Local v ->
-         clauses, lcs+1, ConstMap.add v (constant_of_dbl lcs) cmap
-   ) ([],0,ConstMap.empty) p in
+         clauses,lcs+1, ConstMap.add v (constant_of_dbl lcs) cmap, cmapstack
+   ) ([],0,ConstMap.empty,[]) p in
   lcs,make_index (List.rev clausesrev)
 ;;
 
@@ -1762,7 +1769,9 @@ let program_of_ast (p : Parser.decl list) : int * program =
 let pp_FOprolog p = 
  List.iter
   (function
-      Parser.Local _ -> assert false (* TODO *)
+      Parser.Local _
+    | Parser.Begin
+    | Parser.End -> assert false (* TODO *)
     | Parser.Clause t ->
        (* BUG: ConstMap.empty because "local" declarations are ignored ATM *)
        let names,env,t = query_of_ast_cmap 0 ConstMap.empty t in
