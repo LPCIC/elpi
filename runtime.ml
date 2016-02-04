@@ -1778,9 +1778,10 @@ let rec clausify vars depth hyps ts lcs = function
   | AppUVar ({contents=g},from,args) when g != dummy -> 
      clausify vars depth hyps ts lcs
        (app_deref ~from ~to_:(depth+List.length ts) args g)
-  | Arg _ | AppArg _ -> assert false 
-  | Lam _ | Custom _ | String _ | Int _ | Float _ -> assert false
-  | UVar _ | AppUVar _ -> assert false
+  | Arg _ | AppArg _ -> anomaly "clausify called on non-heap term"
+  | Lam _ | Custom _ | String _ | Int _ | Float _ ->
+     error "Assuming a custom or string or int or float or function"
+  | UVar _ | AppUVar _ -> error "Flexible assumption"
 ;;
 
 (* {{{ ************** run *************************************** *)
