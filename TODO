@@ -28,6 +28,15 @@ Departures from Teyjus due to camlp5 idiosynchrasies:
   relative paths according to the path of the accumulating file first or,
   if it fails, according to the TJPATH
 
+MODULES:
+- backward compatibility with Teyjus with modules
+- document local/sigma in the manual
+- name capturing semantics also useful?
+- implement import? requires to easily compute the list of free
+  names used in a file
+- implement ==>? what should be the semantics and scope of fixity
+  declarations? E.g. X = accumulate M, X ==> x+y
+
 TODO:
 - restriction is not implemented even in some of the simple cases.
   E.g. "pi x \ X = Y x" is not solved!
