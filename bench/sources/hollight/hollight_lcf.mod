@@ -139,6 +139,24 @@ tactic (seq Gamma (and ' P ' Q)) conj SEQS :-
    ],
  tactic (seq Gamma (and ' P ' Q)) TAC SEQS.
 
+tactic (seq Gamma P) andl SEQS :-
+ mem Gamma (and ' P ' Q),
+ TAC = (thenl (m ((lam x \ (x ' P ' Q)) ' (lam x \ (lam y \ x))))  [ thenl (m (eq ' ( (lam x \ (lam y \ x)) ' P ' Q) ' P)) 
+      [ thenl c [ thenl c [ then r id, then sym (then b id)           ], (then r id) ], thenl 
+        (m (eq ' (((lam x \ (lam y \ x)) ' P) ' Q) ' ((lam y \ P) ' Q)))  [ thenl c  [ thenl c [then r id, then r id], 
+            then b id ], thenl c [then b id, then r id] ] ],
+     thenl (m ((lam f \ (f ' tt ' tt)) ' (lam x \ lam y \ x) ))    [ thenl c [ then sym (thenl (m (and ' P ' Q)) [ then d id,     then h id ]), then r id ], thenl (m ( (lam x \ (lam y \ x)) ' tt ' tt )) [ then sym (then b id), thenl (m ((lam y \ tt) ' tt)) [ then sym (thenl c [then b id, then r id]), thenl (m tt)   [ then sym (then b id), thenl (m (eq ' (lam x \ x) ' (lam x \ x)))  [then sym (then d id), then r id] ] ] ] ] ] ),
+ tactic (seq Gamma P) TAC SEQS.
+
+
+tactic (seq Gamma Q) andr SEQS :-
+ mem Gamma (and ' P ' Q),
+ TAC = (thenl (m ((lam x \ (x ' P ' Q)) ' (lam x \ (lam y \ y)))) [ thenl (m (eq ' ( (lam x \ (lam y \ y)) ' P ' Q) ' Q)) [
+       thenl c [ thenl c [ then r id, then sym (then b id) ],  
+          (then r id) ], thenl (m (eq ' (((lam x \ (lam y \ y)) ' P) ' Q) ' ((lam y \ y) ' Q))) [ thenl c [ thenl c [then r id, then r id], then b id ], thenl c [then b id, then r id] ] ],
+     thenl (m ((lam f \ (f ' tt ' tt)) ' (lam x \ lam y \ y) ))     [ thenl c [ then sym (thenl (m (and ' P ' Q)) [ then d id,   then h id ]), then r id ], thenl (m ( (lam x \ (lam y \ y)) ' tt ' tt )) [ then sym (then b id), thenl (m ((lam y \ y) ' tt)) [ then sym (thenl c [then b id, then r id]), thenl (m tt) [     then sym (then b id), thenl (m (eq ' (lam x \ x) ' (lam x \ x))) [then sym (then d id), then r id] ] ] ] ] ] ),
+ tactic (seq Gamma Q) TAC SEQS.
+
 /********** tacticals ********/
 
 tactic SEQ id [ SEQ ].
