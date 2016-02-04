@@ -1369,7 +1369,8 @@ let undo_trail old_trail =
   done
 ;;
 
-type program = index
+type program = int * index (* int is the depth, i.e. number of
+                              sigma/local-introduced variables *)
 
 (* The activation frames points to the choice point that
    cut should backtrack to, i.e. the first one not to be
@@ -1377,13 +1378,13 @@ type program = index
 type frame =
  | FNil
 (* TODO: to save memory, introduce a list of triples *)
- | FCons of (*lvl:*)alternative * ((*depth:*)int * program * term) list * frame
+ | FCons of (*lvl:*)alternative * ((*depth:*)int * index * term) list * frame
 and alternative = {
   lvl : alternative;
-  program : program;
+  program : index;
   depth : int;
   goal : term;
-  goals : ((*depth:*)int * program * term) list;
+  goals : ((*depth:*)int * index * term) list;
   stack : frame;
   trail : term oref list;
   clauses : key clause list;
@@ -1723,9 +1724,9 @@ let query_of_ast_cmap lcs cmap t =
   List.rev_map fst l, Array.make max dummy, t
 ;;
 
-let query_of_ast lcs t = query_of_ast_cmap lcs ConstMap.empty t;;
+let query_of_ast (lcs,_) t = query_of_ast_cmap lcs ConstMap.empty t;;
 
-let program_of_ast (p : Parser.decl list) : int * program =
+let program_of_ast (p : Parser.decl list) : program =
  let rec aux lcs clauses =
   let clauses,lcs,_,cmapstack as res =
    List.fold_left
@@ -1798,13 +1799,13 @@ let rec pp_FOprolog p =
 type query = string list * term array * term
 let pp_prolog = pp_FOprolog
 
-let execute_once depth p q =
+let execute_once (depth,p) q =
  let run, cont = make_runtime () in
  try ignore (run p q depth) ; false
  with No_clause -> true
 ;;
 
-let execute_loop depth p ((q_names,q_env,q) as qq) =
+let execute_loop (depth,p) ((q_names,q_env,q) as qq) =
  let run, cont = make_runtime () in
  let time0 = Unix.gettimeofday() in
  let k = ref (run p qq depth) in
