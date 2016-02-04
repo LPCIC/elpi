@@ -43,9 +43,9 @@ thm (seq Gamma (eq ' C ' A)) d [] :-
 
 thm (seq _ G) (th NAME) [] :- provable NAME G.
 
-thm SEQ (thenll TAC1 MAKE_TACL) SEQS :-
+thm SEQ (thenll TAC1 TACN) SEQS :-
  thm SEQ TAC1 NEW,
- MAKE_TACL NEW TACL,
+ deftacl NEW TACN TACL,
  fold2_append NEW TACL (seq \ tac \ out \ thm seq tac out) SEQS.
 
 thm SEQ TAC SEQS :-
@@ -142,11 +142,16 @@ mk_constant_list (bind A G) X R :-
 
 /*sigma ff \*/ deftac SEQ fail ff.
 
+deftacl SEQS (constant_tacl TACL) TACL.
+
 deftac SEQ (thenl TAC TACL) XTAC :-
- XTAC = thenll TAC (new \ tacl \ tacl = TACL).
+ XTAC = thenll TAC (constant_tacl TACL).
+
+deftacl SEQS (all_equals_list TAC2) TACL :-
+ mk_constant_list SEQS TAC2 TACL.
 
 deftac SEQ (then TAC1 TAC2) XTAC :-
- XTAC = thenll TAC1 (L \ mk_constant_list L TAC2).
+ XTAC = thenll TAC1 (all_equals_list TAC2).
 
 deftac SEQ (orelse TAC1 TAC2) XTAC :- XTAC = TAC1 ; XTAC = TAC2.
 
