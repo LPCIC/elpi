@@ -45,14 +45,17 @@ thm (seq _ G) (th NAME) [] :- provable NAME G.
 
 thm SEQ (thenll TAC1 TACN) SEQS :-
  thm SEQ TAC1 NEW,
- deftacl NEW TACN TACL,
+ deftacl TACN NEW TACL,
  fold2_append NEW TACL (seq \ tac \ out \ thm seq tac out) SEQS.
 
 thm SEQ TAC SEQS :-
- deftac SEQ TAC XTAC,
+ deftac TAC SEQ XTAC,
  thm SEQ XTAC SEQS.
 
 thm SEQ id [ SEQ ].
+
+/* remove it */
+thm (seq Gamma F) x [(seq ((forall ' (lam g)) :: Gamma) F)].
 
 /*loop INTERACTIVE SEQS TACS :- $print (loop INTERACTIVE SEQS TACS), fail.*/
 loop _ [] [].
@@ -101,13 +104,14 @@ print_all_seqs (bind A F) :-
 
 toplevel :-
  $print "Welcome to HOL extra-light",
- $print "Enter a new theorem name",
+ $print "Enter a new theorem name or stop",
  read NAME,
- $print "Enter its statement",
- read G,
- prove G TACS,
- $print (theorem NAME G TACS),
- provable NAME G => toplevel.
+ ( NAME = stop, !
+ ; $print "Enter its statement",
+   read G,
+   prove G TACS,
+   $print (theorem NAME G TACS),
+   provable NAME G => toplevel).
 
 /************ library of basic data types ********/
 /* blist ::= [] | X :: blist | bind A F
@@ -140,41 +144,41 @@ mk_constant_list (bind A G) X R :-
 
 /********** tacticals ********/
 
-/*sigma ff \*/ deftac SEQ fail ff.
+/*sigma ff \*/ deftac fail SEQ ff.
 
-deftacl SEQS (constant_tacl TACL) TACL.
+deftacl (constant_tacl TACL) SEQS TACL.
 
-deftac SEQ (thenl TAC TACL) XTAC :-
+deftac (thenl TAC TACL) SEQ XTAC :-
  XTAC = thenll TAC (constant_tacl TACL).
 
-deftacl SEQS (all_equals_list TAC2) TACL :-
+deftacl (all_equals_list TAC2) SEQS TACL :-
  mk_constant_list SEQS TAC2 TACL.
 
-deftac SEQ (then TAC1 TAC2) XTAC :-
+deftac (then TAC1 TAC2) SEQ XTAC :-
  XTAC = thenll TAC1 (all_equals_list TAC2).
 
-deftac SEQ (orelse TAC1 TAC2) XTAC :- XTAC = TAC1 ; XTAC = TAC2.
+deftac (orelse TAC1 TAC2) SEQ XTAC :- XTAC = TAC1 ; XTAC = TAC2.
 
-deftac SEQ (repeat TAC) XTAC :-
+deftac (repeat TAC) SEQ XTAC :-
  ( XTAC = then TAC (repeat TAC)
  ; XTAC = id).
 
 /********** tactics ********/
 
-deftac (seq Gamma (eq ' L ' R)) sym TAC :-
+deftac sym (seq Gamma (eq ' L ' R)) TAC :-
  TAC = thenl (m (eq ' R ' R)) [ thenl c [ thenl c [ r , id ] , r ] , r ].
 
-deftac (seq Gamma (eq ' P ' tt)) eq_true_intro TAC :-
+deftac eq_true_intro (seq Gamma (eq ' P ' tt)) TAC :-
  TAC = thenl s [ th tt_intro, id ].
 
-deftac (seq Gamma (and ' P ' Q)) conj TAC :-
+deftac conj (seq Gamma (and ' P ' Q)) TAC :-
  TAC =
   thenl (m (eq ' (lam f \ f ' P ' Q) ' (lam f \ f ' tt ' tt)))
    [ then sym d
    , then k (thenl c [ thenl c [ r, eq_true_intro ] , eq_true_intro ])
    ].
 
-deftac (seq Gamma P) andl TAC :-
+deftac andl (seq Gamma P) TAC :-
  mem Gamma (and ' P ' Q),
  TAC = (thenl (m ((lam x \ (x ' P ' Q)) ' (lam x \ (lam y \ x))))  [ thenl (m (eq ' ( (lam x \ (lam y \ x)) ' P ' Q) ' P)) 
       [ thenl c [ thenl c [ then r id, then sym (then b id)           ], (then r id) ], thenl 
@@ -183,20 +187,27 @@ deftac (seq Gamma P) andl TAC :-
      thenl (m ((lam f \ (f ' tt ' tt)) ' (lam x \ lam y \ x) ))    [ thenl c [ then sym (thenl (m (and ' P ' Q)) [ then d id,     then h id ]), then r id ], thenl (m ( (lam x \ (lam y \ x)) ' tt ' tt )) [ then sym (then b id), thenl (m ((lam y \ tt) ' tt)) [ then sym (thenl c [then b id, then r id]), thenl (m tt)   [ then sym (then b id), thenl (m (eq ' (lam x \ x) ' (lam x \ x)))  [then sym (then d id), then r id] ] ] ] ] ] ).
 
 
-deftac (seq Gamma Q) andr TAC :-
+deftac andr (seq Gamma Q) TAC :-
  mem Gamma (and ' P ' Q),
  TAC = (thenl (m ((lam x \ (x ' P ' Q)) ' (lam x \ (lam y \ y)))) [ thenl (m (eq ' ( (lam x \ (lam y \ y)) ' P ' Q) ' Q)) [
        thenl c [ thenl c [ then r id, then sym (then b id) ],  
           (then r id) ], thenl (m (eq ' (((lam x \ (lam y \ y)) ' P) ' Q) ' ((lam y \ y) ' Q))) [ thenl c [ thenl c [then r id, then r id], then b id ], thenl c [then b id, then r id] ] ],
      thenl (m ((lam f \ (f ' tt ' tt)) ' (lam x \ lam y \ y) ))     [ thenl c [ then sym (thenl (m (and ' P ' Q)) [ then d id,   then h id ]), then r id ], thenl (m ( (lam x \ (lam y \ y)) ' tt ' tt )) [ then sym (then b id), thenl (m ((lam y \ y) ' tt)) [ then sym (thenl c [then b id, then r id]), thenl (m tt) [     then sym (then b id), thenl (m (eq ' (lam x \ x) ' (lam x \ x))) [then sym (then d id), then r id] ] ] ] ] ] ).
 
+
+deftac forall_e (seq Gamma (G X)) TAC :-
+ mem Gamma (forall ' (lam G)),
+ TAC = thenl (m ((lam G) ' X)) [ b, thenl (m ((lam z \ tt) ' X))
+  [ thenl c [then sym (thenl (m (forall ' lam G)) [d,h ]), r ],
+  thenl (m tt) [then sym b, thenl (m (eq ' (lam x \ x) ' (lam x \ x))) [ then sym d, r ] ] ] ].
+              
 /********** the library ********/
 
 def0 tt (eq ' (lam x\ x) ' (lam x\ x)).
 term tt bool.
 
-/*def0 (forall ' F) (eq ' F ' (lam f \ tt)).
-term forall (impl (A impl bool) bool).*/
+def0 (forall ' F) (eq ' F ' (lam f \ tt)).
+term forall (impl (A impl bool) bool).
 
 def0 (and ' X ' Y) (eq ' (lam f \ f ' X ' Y) ' (lam f \ f ' tt ' tt)).
 term and (impl bool (impl bool bool)).
@@ -204,6 +215,7 @@ term and (impl bool (impl bool bool)).
 term p bool.
 term q bool.
 term f (impl bool bool).
+term (g X) bool.
 
 main :-
  check
@@ -221,3 +233,5 @@ main :-
      tt
      (m (eq ' (lam x0\x0) ' (lam x0\x0)) :: th th0 :: r :: nil)
   ].
+
+t :- toplevel.
