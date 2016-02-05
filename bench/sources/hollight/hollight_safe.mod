@@ -5,54 +5,54 @@ infixl ' 139.
 /* seq _hypothesis_ _conclusion_ */
 
 /*term T TY :- $print (term T TY), fail.*/
-term (lam F) (impl A B) :- pi x\ term x A => term (F x) B.
-term (F ' T) B :- term T A, term F (impl A B).
-term eq (impl A (impl A bool)).
+term (lam F) (arr A B) :- pi x\ term x A => term (F x) B.
+term (F ' T) B :- term T A, term F (arr A B).
+term eq (arr A (arr A bool)).
 
 { /***** Trusted code base *******/
 
 local thm, provable.
 
-thm (seq Gamma G) C _ :- debug, $print Gamma "|- " G " := " C, fail.
-thm (seq Gamma (eq ' X ' X)) r [] :- term X A.
-thm (seq Gamma (eq ' X ' Z)) (t Y)
+thm C (seq Gamma G) _ :- debug, $print Gamma "|- " G " := " C, fail.
+thm r (seq Gamma (eq ' X ' X)) [] :- term X A.
+thm (t Y) (seq Gamma (eq ' X ' Z))
      [ seq Gamma (eq ' X ' Y), seq Gamma (eq ' Y ' Z) ] :-
  term X A, term Y A, term Z A.
-thm (seq Gamma Q) (m P) [ seq Gamma (eq ' P ' Q), seq Gamma P ].
-thm (seq Gamma (eq ' ((lam F) ' X) ' (F X))) b [] :-
+thm (m P) (seq Gamma Q) [ seq Gamma (eq ' P ' Q), seq Gamma P ].
+thm b (seq Gamma (eq ' ((lam F) ' X) ' (F X))) [] :-
  term X A,
  (pi y\ term y A => term (F y) B).
-thm (seq Gamma (eq ' (F ' X) ' (G ' Y))) c
+thm c (seq Gamma (eq ' (F ' X) ' (G ' Y)))
  [ seq Gamma (eq ' F ' G) , seq Gamma (eq ' X ' Y) ] :-
  term X A, term Y A,
  (pi y\ term y A => term (F ' y) B),
  (pi y\ term y A => term (G ' y) B).
-thm (seq Gamma (eq ' (lam S) ' (lam T))) k
+thm k (seq Gamma (eq ' (lam S) ' (lam T)))
  (bind A x \ [ seq Gamma (eq ' (S x) ' (T x)) ]) :-
  (pi y\ term y A => term (S y) B),
  (pi y\ term y A => term (T y) B).
-thm (seq Gamma (eq ' P ' Q)) s
- [ seq ((hyp P) :: Gamma) Q, seq ((hyp Q) :: Gamma) P ]
+thm s (seq Gamma (eq ' P ' Q))
+ [ seq (P :: Gamma) Q, seq (Q :: Gamma) P ]
 :-
  term P bool, term Q bool. /* CSC: check if required */
-thm (seq Gamma P) h [] :- mem Gamma P.
+thm h (seq Gamma P) [] :- mem Gamma P.
 
-thm (seq Gamma (eq ' C ' A)) d [] :-
+thm d (seq Gamma (eq ' C ' A)) [] :-
  def0 C A./*,
  pi T\ ttype T => (ttype (B T), term A (B T)). */
 
-thm (seq _ G) (th NAME) [] :- provable NAME G.
+thm (th NAME) (seq _ G) [] :- provable NAME G.
 
-thm SEQ (thenll TAC1 TACN) SEQS :-
- thm SEQ TAC1 NEW,
+thm (thenll TAC1 TACN) SEQ SEQS :-
+ thm TAC1 SEQ NEW,
  deftacl TACN NEW TACL,
- fold2_append NEW TACL (seq \ tac \ out \ thm seq tac out) SEQS.
+ fold2_append NEW TACL (seq \ tac \ out \ thm tac seq out) SEQS.
 
-thm SEQ TAC SEQS :-
+thm TAC SEQ SEQS :-
  deftac TAC SEQ XTAC,
- thm SEQ XTAC SEQS.
+ thm XTAC SEQ SEQS.
 
-thm SEQ id [ SEQ ].
+thm id SEQ [ SEQ ].
 
 /* remove it */
 thm (seq Gamma F) x [(seq ((forall ' (lam g)) :: Gamma) F)].
@@ -64,7 +64,7 @@ loop INTERACTIVE [ SEQ | OLD ] [ TAC | TACS ] :-
    print_all_seqs [ SEQ | OLD ],
    read ITAC
  ; ITAC = TAC),
- ( thm SEQ ITAC NEW,
+ ( thm ITAC SEQ NEW,
    append NEW OLD SEQS,
    TAC = ITAC,
    loop INTERACTIVE SEQS TACS
@@ -207,14 +207,14 @@ def0 tt (eq ' (lam x\ x) ' (lam x\ x)).
 term tt bool.
 
 def0 (forall ' F) (eq ' F ' (lam f \ tt)).
-term forall (impl (A impl bool) bool).
+term forall (arr (A arr bool) bool).
 
 def0 (and ' X ' Y) (eq ' (lam f \ f ' X ' Y) ' (lam f \ f ' tt ' tt)).
-term and (impl bool (impl bool bool)).
+term and (arr bool (arr bool bool)).
 
 term p bool.
 term q bool.
-term f (impl bool bool).
+term f (arr bool bool).
 term (g X) bool.
 
 main :-
