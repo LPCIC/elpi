@@ -55,7 +55,13 @@ thm TAC SEQ SEQS :-
 thm id SEQ [ SEQ ].
 
 /* remove it */
-thm (seq Gamma F) x [(seq ((forall ' (lam g)) :: Gamma) F)].
+thm x (seq Gamma F) [(seq ((impl ' p ' q) :: p :: Gamma) F)].
+/*thm x (seq Gamma F) [(seq ((and ' p ' q) :: Gamma) F)].*/
+/*thm x (seq Gamma F) [(seq (p :: Gamma) F)].*/
+/*thm x (seq Gamma F) [(seq (ff :: Gamma) F)].*/
+
+/* debuggin only, remove it */
+thm A B C :- $print "FAILED " (thm A B C), fail.
 
 /*loop INTERACTIVE SEQS TACS :- $print (loop INTERACTIVE SEQS TACS), fail.*/
 loop _ [] [].
@@ -65,6 +71,8 @@ loop INTERACTIVE [ SEQ | OLD ] [ TAC | TACS ] :-
    read ITAC
  ; ITAC = TAC),
  ( thm ITAC SEQ NEW,
+
+/*$print "#### " (thm ITAC SEQ NEW),*/
    append NEW OLD SEQS,
    TAC = ITAC,
    loop INTERACTIVE SEQS TACS
@@ -73,8 +81,8 @@ loop INTERACTIVE [ SEQ | OLD ] [ TAC | TACS ] :-
  ; (INTERACTIVE = true, !, $print "error" ;
     $print "aborted", halt),
    loop INTERACTIVE [ SEQ | OLD ] [ TAC | TACS ] ).
-loop INTERACTIVE (bind A F) TACS :-
- pi x \ term x A => loop INTERACTIVE (F x) TACS.
+loop INTERACTIVE (bind A F) (bind A TACS) :-
+ pi x \ term x A => loop INTERACTIVE (F x) (TACS x).
 
 prove G TACS :-
  loop true [ seq [] G ] TACS,
@@ -122,25 +130,27 @@ append [ X | XS ] L [ X | RES ] :- append XS L RES.
 append (bind A F) L (bind A FL) :-
  pi x \ append (F x) L (FL x).
 
-fold_append [] _ [].
+/*fold_append [] _ [].
 fold_append [ X | XS ] F OUTS :-
  F X OUT, fold_append XS F OUTS2, append OUT OUTS2 OUTS.
 fold_append (bind A G) F (bind A OUT) :-
- pi x \ term x A => fold_append (G x) F (OUT x).
+ pi x \ term x A => fold_append (G x) F (OUT x).*/
 
+fold2_append A B C D :- debug, $print (fold2_append A B C D), fail.
 fold2_append [] [] _ [].
 fold2_append [ X | XS ] [ Y | YS ] F OUTS :-
  F X Y OUT, fold2_append XS YS F OUTS2, append OUT OUTS2 OUTS.
-fold2_append (bind A G) YS F (bind A OUT) :-
- pi x \ term x A => fold2_append (G x) YS F (OUT x).
+fold2_append (bind A G) (bind A YS) F (bind A OUT) :-
+ pi x \ term x A => fold2_append (G x) (YS x) F (OUT x).
 
 mem [ X | _ ] X, !.
 mem [ _ | XS ] X :- mem XS X.
 
+/*mk_constant_list A B C :- debug, $print (mk_constant_list A B C), fail.*/
 mk_constant_list [] _ [].
 mk_constant_list [_|L] X [X|R] :- mk_constant_list L X R.
-mk_constant_list (bind A G) X R :-
- pi x \ term x A => mk_constant_list (G x) X R.
+mk_constant_list (bind A G) (bind A X) (bind A R) :-
+ pi x \ term x A => mk_constant_list (G x) (X x) (R x).
 
 /********** tacticals ********/
 
@@ -182,9 +192,10 @@ deftac conj (seq Gamma (and ' P ' Q)) TAC :-
  TAC =
   thenl (m (eq ' (lam f \ f ' P ' Q) ' (lam f \ f ' tt ' tt)))
    [ then sym d
-   , then k (thenl c [ thenl c [ r, eq_true_intro ] , eq_true_intro ])
+   , then k (bind _ x \ thenl c [ thenl c [ r, eq_true_intro ] , eq_true_intro ])
    ].
 
+/* (and ' p ' q) :: nil  "|-"  p */
 deftac andl (seq Gamma P) TAC :-
  mem Gamma (and ' P ' Q),
  TAC = (thenl (m ((lam x \ (x ' P ' Q)) ' (lam x \ (lam y \ x))))  [ thenl (m (eq ' ( (lam x \ (lam y \ x)) ' P ' Q) ' P)) 
@@ -194,6 +205,7 @@ deftac andl (seq Gamma P) TAC :-
      thenl (m ((lam f \ (f ' tt ' tt)) ' (lam x \ lam y \ x) ))    [ thenl c [ then sym (thenl (m (and ' P ' Q)) [ then d id,     then h id ]), then r id ], thenl (m ( (lam x \ (lam y \ x)) ' tt ' tt )) [ then sym (then b id), thenl (m ((lam y \ tt) ' tt)) [ then sym (thenl c [then b id, then r id]), thenl (m tt)   [ then sym (then b id), thenl (m (eq ' (lam x \ x) ' (lam x \ x)))  [then sym (then d id), then r id] ] ] ] ] ] ).
 
 
+/* (and ' p ' q) :: nil  "|-"  q */
 deftac andr (seq Gamma Q) TAC :-
  mem Gamma (and ' P ' Q),
  TAC = (thenl (m ((lam x \ (x ' P ' Q)) ' (lam x \ (lam y \ y)))) [ thenl (m (eq ' ( (lam x \ (lam y \ y)) ' P ' Q) ' Q)) [
@@ -211,18 +223,19 @@ deftac forall_e (seq Gamma (G X)) TAC :-
 
 deftac forall_i (seq Gamma (forall ' lam G)) TAC :-
  TAC = thenl (m (eq ' (lam G) ' (lam x \ tt)))
-  [ then sym d , then k eq_true_intro ].
+  [ then sym d , then k (bind _ x \ eq_true_intro) ].
               
 /*** impl ***/
 
 deftac mp (seq Gamma Q) TAC :-
  mem Gamma (impl ' P ' Q),
- TAC = thenl (m (and ' p ' q)) [ thenl s [ andr , thenl conj [ id , h ] ] ,
-  thenl (m p) [ then sym (thenl (m (impl ' p ' q)) [ d , h ]) , h ] ].
+ TAC = thenl (m (and ' P ' Q)) [ thenl s [ andr , thenl conj (bind _ x \ [ id , h ]) ] ,
+  thenl (m P) [ then sym (thenl (m (impl ' P ' Q)) [ d , h ]) , h ] ].
 
 deftac i (seq Gamma (impl ' P ' Q)) TAC :-
  TAC = thenl (m (eq ' (and ' P ' Q) ' P))
-  [ then sym d , thenl s [ andl, thenl conj [ h, id ]]].
+  [ then sym d , thenl s [ andl, thenl conj (bind _ x \ [ h, id ])]].
+
 /********** the library ********/
 
 def0 tt (eq ' (lam x\ x) ' (lam x\ x)).
@@ -243,28 +256,36 @@ term and (arr bool (arr bool bool)).
 term p bool.
 term q bool.
 term f (arr bool bool).
-term (g X) bool.
+term (g X) bool :- term X bool.
 
 main :-
  check
   [ theorem th0
      (eq ' (eq ' (lam x\ x) ' (lam x\ x)) ' tt)
      (m (eq ' tt ' tt) :: c :: c :: r :: d :: r :: r :: nil)
-  , theorem th0_alternative_proof0
+  /*, theorem th0_alternative_proof0
      (eq ' (eq ' (lam x\ x) ' (lam x\ x)) ' tt)
      (thenl (m (eq ' tt ' tt)) (c :: r :: nil) ::
        thenl c (r :: d :: nil) :: r :: nil)
   , theorem th0_alternative_proof1
      (eq ' (eq ' (lam x\ x) ' (lam x\ x)) ' tt)
-     (then (m (eq ' tt ' tt)) (repeat (orelse r (orelse d c))) :: nil)
+     (then (m (eq ' tt ' tt)) (repeat (orelse r (orelse d c))) :: nil)*/
   , theorem tt_intro
      tt
      (m (eq ' (lam x0\x0) ' (lam x0\x0)) :: th th0 :: r :: nil)
-/*  , theorem ff_elim
+  , theorem test_mp_expanded q
+     (x ::
+       m (and ' p ' q) ::
+        s ::
+         andr ::
+          conj ::
+           bind (arr bool (arr bool bool))
+            x2 \ h :: h :: m p :: sym :: m (impl ' p ' q) :: d :: h :: h :: nil)
+ , theorem ff_elim
      (forall ' lam p \ impl ' ff ' p)
-     (forall_i ::
-       (m (impl ' (forall ' (lam x2 \ x2)) ' P) :: c :: sym ::
-       c :: r :: d :: r :: i :: forall_e :: nil))*/
-  ].
+     (forall_i :: bind _ p \
+       (m (impl ' (forall ' (lam x2 \ x2)) ' p) :: c :: sym ::
+       c :: r :: d :: r :: i :: bind _ x \ forall_e :: nil))
+ ].
 
 t :- toplevel.
