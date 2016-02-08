@@ -229,7 +229,7 @@ def0 tt (eq ' (lam x\ x) ' (lam x\ x)).
 term tt bool.
 
 def0 (forall ' F) (eq ' F ' (lam f \ tt)).
-term forall (arr (A arr bool) bool).
+term forall (arr (arr A bool) bool).
 
 def0 (impl ' A ' B) (eq ' (and ' A ' B) ' A).
 term impl (arr bool (arr bool bool)).
