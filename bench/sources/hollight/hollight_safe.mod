@@ -206,6 +206,8 @@ deftac sym (seq Gamma (eq ' L ' R)) TAC :-
 deftac eq_true_intro (seq Gamma (eq ' P ' tt)) TAC :-
  TAC = thenl s [ th tt_intro, id ].
 
+/*** true ***/
+
 /*** and ***/
 
 deftac conj (seq Gamma (and ' P ' Q)) TAC :-
@@ -244,6 +246,8 @@ deftac forall_e (seq Gamma GX) TAC :-
 deftac forall_i (seq Gamma (forall ' lam G)) TAC :-
  TAC = thenl (m (eq ' (lam G) ' (lam x \ tt)))
   [ then sym d , then k (bind _ x \ eq_true_intro) ].
+
+/*** false ***/
               
 /*** impl ***/
 
@@ -255,6 +259,8 @@ deftac mp (seq Gamma Q) TAC :-
 deftac i (seq Gamma (impl ' P ' Q)) TAC :-
  TAC = thenl (m (eq ' (and ' P ' Q) ' P))
   [ then sym d , thenl s [ andl, thenl conj [ h, id ]]].
+
+/*** not ***/
 
 /********** the library ********/
 
@@ -272,6 +278,12 @@ term ff bool.
 
 def0 (and ' X ' Y) (eq ' (lam f \ f ' X ' Y) ' (lam f \ f ' tt ' tt)).
 term and (arr bool (arr bool bool)).
+
+def0 (not ' X) (impl ' X ' ff).
+term not (arr bool bool).
+
+%def0 (or ' X ' Y) (eq ' (lam f \ f ' X ' Y) ' (lam f \ f ' tt ' tt)).
+%term or (arr bool (arr bool bool)).
 
 term p bool.
 term q bool.
@@ -316,6 +328,20 @@ main :-
          thenl (m (impl ' (forall ' (lam x2 \ x2)) ' p))
          [ thenl c [ then sym (thenl c [ r , d ]) , r ],
            then i forall_e ] )]
+  , theorem not_e (forall ' (lam x2 \ impl ' (not ' x2) ' (impl ' x2 ' ff)))
+     (forall_i ::
+       (bind bool x2 \ m (impl ' (impl ' x2 ' ff) ' (impl ' x2 ' ff))) ::
+        (bind bool x2 \ c) ::
+         (bind bool x2 \ c) ::
+          r ::
+           (bind bool x2 \ sym) ::
+            (bind bool x2 \ d) ::
+             (bind bool x2 \ r) :: (bind bool x2 \ i) :: (bind bool x2 \ h) :: nil)
+  , theorem not_i (forall ' (lam x2 \ impl ' (impl ' x2 ' ff) ' (not ' x2)))
+     (forall_i ::
+       (bind bool x2 \ i) ::
+        (bind bool x2 \ m (impl ' x2 ' ff)) ::
+         (bind bool x2 \ sym) :: (bind bool x2 \ d) :: (bind bool x2 \ h) :: nil)
  ].
 
 t :- toplevel.
