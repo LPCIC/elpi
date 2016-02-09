@@ -1348,7 +1348,7 @@ let bind r gamma l a d delta b left t e =
   let pos x = try List.assoc x l with Not_found -> raise RestrictionFailure in
   (* lift = false makes the code insensitive to left/right, i.e. no lift from b
    * to a is performed *)
-  let cst ?(lift=true) c = (* The complex thing (DBL) *)
+  let cst ?(lift=true) c b delta = (* The complex thing (DBL) *)
     if left then begin
       if c < gamma && c < b then c
       else
@@ -1361,33 +1361,33 @@ let bind r gamma l a d delta b left t e =
       else if c >= a + d then c + new_lams - (a+d - gamma)
       else pos c + gamma
     end in
-  let cst ?lift c =
-    let n = cst ?lift c in
+  let cst ?lift c b delta =
+    let n = cst ?lift c b delta in
     SPY "cst" (fun fmt (n,m) -> Format.fprintf fmt
       "%d -> %d (c:%d b:%d gamma:%d delta:%d d:%d)" n m c b gamma delta d)
       (c,n);
     n in
-  let rec bind w t = TRACE "bind" (fun fmt -> Format.fprintf fmt
+  let rec bind b delta w t = TRACE "bind" (fun fmt -> Format.fprintf fmt
       "%b %d + %a = t:%a a:%d delta:%d d:%d w:%d b:%d" left gamma
       (pplist (fun fmt (x,n) -> Format.fprintf fmt "%a |-> %d"
         (ppterm a [] b e) (constant_of_dbl x) n) "") l
       (ppterm a [] b [||]) t a delta d w b)
     match t with
     | UVar (r1,_,_) | AppUVar (r1,_,_) when r == r1 -> raise RestrictionFailure
-    | Const c -> let n = cst c in if n < 0 then constant_of_dbl n else Const n
-    | Lam t -> Lam (bind (w+1) t)
-    | App (c,t,ts) -> App (cst c, bind w t, List.map (bind w) ts)
-    | Custom (c, tl) -> Custom(c, List.map (bind w) tl)
+    | Const c -> let n = cst c b delta in if n < 0 then constant_of_dbl n else Const n
+    | Lam t -> Lam (bind b delta (w+1) t)
+    | App (c,t,ts) -> App (cst c b delta, bind b delta w t, List.map (bind b delta w) ts)
+    | Custom (c, tl) -> Custom(c, List.map (bind b delta w) tl)
     | String _ | Int _ | Float _ -> t
     (* deref *)
     | Arg (i,args) when e.(i) != dummy ->
-        bind w (deref ~from:a ~to_:(a+d+w) args e.(i))
+        bind a 0 w (deref ~from:a ~to_:(a+d+w) args e.(i))
     | AppArg (i,args) when e.(i) != dummy ->
-        bind w (app_deref ~from:a ~to_:(a+d+w) args e.(i))
+        bind a 0 w (app_deref ~from:a ~to_:(a+d+w) args e.(i))
     | UVar ({ contents = t }, from, args) when t != dummy ->
-        bind w (deref ~from ~to_:((if left then b else a)+d+w) args t)
+        bind b delta w (deref ~from ~to_:((if left then b else a)+d+w) args t)
     | AppUVar ({ contents = t }, from, args) when t != dummy ->
-        bind w (app_deref ~from ~to_:((if left then b else a)+d+w) args t)
+        bind b delta w (app_deref ~from ~to_:((if left then b else a)+d+w) args t)
     (* pruning *)
     | (UVar _ | AppUVar _ | Arg _ | AppArg _) as _orig_ ->
         (* We deal with all flexible terms in a uniform way *)
@@ -1432,7 +1432,7 @@ let bind r gamma l a d delta b left t e =
                 | (i,i_p) :: rest ->
                     if i > lvl then keep_cst_for_lvl rest
                     else
-                      (constant_of_dbl i, constant_of_dbl (cst ~lift:false i))
+                      (constant_of_dbl i, constant_of_dbl (cst ~lift:false i b delta))
                         :: keep_cst_for_lvl rest in
               List.split (keep_cst_for_lvl (List.sort compare l)) in
             let r' = oref dummy in
@@ -1456,7 +1456,7 @@ let bind r gamma l a d delta b left t e =
                 with RestrictionFailure -> acc) args ([],[]) in
             if n_args = List.length args_here then
               (* no pruning, just binding the args as a normal App *)
-              mkAppUVar r lvl (List.map (bind w) orig_args)
+              mkAppUVar r lvl (List.map (bind b delta w) orig_args)
             else
               (* we need to project away some of the args *)
               let r' = oref dummy in
@@ -1470,7 +1470,7 @@ let bind r gamma l a d delta b left t e =
           else raise RestrictionFailure
   in
   try
-    r @:= mknLam new_lams (bind 0 t);
+    r @:= mknLam new_lams (bind b delta 0 t);
     if not !last_call then trail := (Assign r) :: !trail;
     SPY "assign(HO)" (ppterm gamma [] a [||]) (!!r);
     true
