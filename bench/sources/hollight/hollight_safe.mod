@@ -46,6 +46,7 @@ thm d (seq Gamma (eq ' C ' A)) [] :-
 thm (th NAME) (seq _ G) [] :- provable NAME G.
 
 thm (thenll TAC1 TACN) SEQ SEQS :-
+ %$print "THM ??" (thm TAC1 SEQ NEW0),
  thm TAC1 SEQ NEW0,
  %$print "THM OK" (thm TAC1 SEQ NEW0),
  push_binds NEW0 NEW,
@@ -54,7 +55,7 @@ thm (thenll TAC1 TACN) SEQ SEQS :-
  %$print "DEFTACL OK" (deftacl TACN NEW TACL),
  %$print "FOLD2_APPEND" (fold2_append NEW TACL (seq \ tac \ out \ thm tac seq out) SEQS),
  fold2_append NEW TACL (seq \ tac \ out \ thm tac seq out) SEQS.
- %$print "FOLD2_APPEND_OK" (fold2_append NEW TACL (seq \ tac \ out \ thm tac seq out) SEQS)
+ %$print "FOLD2_APPEND_OK" (fold2_append NEW TACL (seq \ tac \ out \ thm tac seq out) SEQS).
 
 thm TAC SEQ SEQS :-
  deftac TAC SEQ XTAC,
@@ -79,7 +80,7 @@ read_in_context (bind A K) (bind A TAC) :-
  pi x \ term x A => read_in_context (K x) (TAC x).
 read_in_context (seq A B) TAC :- read TAC.
 
-%loop INTERACTIVE SEQS TACS :- $print (loop INTERACTIVE SEQS TACS), fail.
+%loop INTERACTIVE SEQS TACS :- $print "LOOP" (loop INTERACTIVE SEQS TACS), fail.
 loop _ [] [].
 loop INTERACTIVE [ SEQ | OLD ] [ TAC | TACS ] :-
  (INTERACTIVE = true, !,
@@ -234,8 +235,8 @@ deftac andr (seq Gamma Q) TAC :-
 
 /*** forall ***/
 
-deftac forall_e (seq Gamma (G X)) TAC :-
- mem Gamma (forall ' (lam G)),
+deftac forall_e (seq Gamma GX) TAC :-
+ mem Gamma (forall ' (lam G)), GX = G X,
  TAC = thenl (m ((lam G) ' X)) [ b, thenl (m ((lam z \ tt) ' X))
   [ thenl c [then sym (thenl (m (forall ' lam G)) [d,h ]), r ],
   thenl (m tt) [then sym b, thenl (m (eq ' (lam x \ x) ' (lam x \ x))) [ then sym d, r ] ] ] ].
@@ -308,6 +309,13 @@ main :-
        (bind _ p \ r) ::
        (bind _ p \ i) ::
        (bind _ p \ forall_e) :: nil)
+  , theorem ff_elim_alt
+     (forall ' lam p \ impl ' ff ' p)
+     [then forall_i
+       (bind A p \
+         thenl (m (impl ' (forall ' (lam x2 \ x2)) ' p))
+         [ thenl c [ then sym (thenl c [ r , d ]) , r ],
+           then i forall_e ] )]
  ].
 
 t :- toplevel.
