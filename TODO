@@ -132,9 +132,9 @@ Major Bugs:
 - strings need to be quoted when pretty-printed
 - revise all the assert false/raise Failure
 - string_to_term is severely bugged:
-  * we pass the empty amap and cmap when parsing/heapifying the string,
+  * we pass the empty amap when parsing/heapifying the string,
     because we do not have them available. Therefore the function works
-    as expected only on closed, meta-closed terms.
+    as expected only on meta-closed terms.
 - halt should halt nicely, still printing the TIME spent, etc.
   Otherwise the automatic benchmarks fail.
 

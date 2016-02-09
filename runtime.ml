@@ -2451,11 +2451,16 @@ let rec stack_term_of_ast lvl amap cmap = function
   | AST.App (AST.Float _,_) -> type_error "Applied float value"
 ;;
 
-(* BUG: I pass the empty amap and cmap, that is plainly wrong.
-   Therefore the function only works on closed, meta-closed terms. *)
+(* BUG: I pass the empty amap, that is plainly wrong.
+   Therefore the function only works on meta-closed terms. *)
 let term_of_ast ~depth t =
- let argsdepth = depth (*????*) in
- let cmap = ConstMap.empty (*?????*) in
+ let argsdepth = depth in
+ let freevars = mkinterval 0 depth 0 in
+ let cmap =
+  List.fold_left (fun cmap i ->
+   ConstMap.add (Parser.ASTFuncS.from_string (string_of_constant i))
+    (constant_of_dbl i) cmap
+   ) ConstMap.empty freevars in
  let { max_arg = max; name2arg = l }, t =
   stack_term_of_ast depth empty_amap cmap t in
  let env = Array.make max dummy in
