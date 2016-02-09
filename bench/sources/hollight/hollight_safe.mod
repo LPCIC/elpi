@@ -66,6 +66,10 @@ thm TAC SEQ SEQS :-
 
 thm id SEQ [ SEQ ].
 
+thm (w G) (seq Gamma F) [ seq WGamma F ] :-
+ append Gamma1 [ G | Gamma2 ] Gamma,
+ append Gamma1 Gamma2 WGamma.
+
 /* remove it */
 thm x (seq Gamma F) [(seq ((impl ' p ' q) :: p :: Gamma) F)].
 /*thm x (seq Gamma F) [(seq ((and ' p ' q) :: Gamma) F)].*/
@@ -201,6 +205,9 @@ deftac (repeat TAC) SEQ XTAC :-
  ( XTAC = then TAC (repeat TAC)
  ; XTAC = id).
 
+deftac (printtac TAC) SEQ TAC :-
+ $print "SEQ" SEQ ":=" TAC.
+
 /********** tactics ********/
 
 /*** eq ***/
@@ -209,7 +216,7 @@ deftac sym (seq Gamma (eq ' L ' R)) TAC :-
  TAC = thenl (m (eq ' R ' R)) [ thenl c [ thenl c [ r , id ] , r ] , r ].
 
 deftac eq_true_intro (seq Gamma (eq ' P ' tt)) TAC :-
- TAC = thenl s [ th tt_intro, id ].
+ TAC = thenl s [ th tt_intro, w tt ].
 
 /*** true ***/
 
@@ -258,9 +265,11 @@ deftac forall_i (seq Gamma (forall ' lam G)) TAC :-
               
 /*** impl ***/
 
-deftac mp (seq Gamma Q) TAC :-
- mem Gamma (impl ' P ' Q),
+deftac (mp P) (seq Gamma Q) TAC :-
  TAC = then (cutandr P) (thenl (m P) [ then sym (thenl (m (impl ' P ' Q)) [ d , h ]) , id ]).
+
+deftac mp (seq Gamma Q) (mp P) :-
+ mem Gamma (impl ' P ' Q).
 
 deftac i (seq Gamma (impl ' P ' Q)) TAC :-
  TAC = thenl (m (eq ' (and ' P ' Q) ' P))
@@ -271,15 +280,24 @@ deftac i (seq Gamma (impl ' P ' Q)) TAC :-
 /*** lapply ***/
 
 /* impl p q |- f   --->   impl q f |- p  ,  q |- f */
-deftac lapply (seq Gamma F) TAC :-
- mem Gamma (impl ' P ' Q),
+deftac (lapply P Q) (seq Gamma F) TAC :-
  TAC =
-  thenl (m (impl ' Q ' F)) [ thenl s [ then mp mp , then i h ] , then i id ].
+  thenl (m (impl ' Q ' F)) [ thenl s [ then (mp Q) (mp P) , then i h ] , then i id ].
 
-/* BUG: the tactic is unfocused, it may diverge for stupid reasons */
-deftac apply SEQ TAC :-
- mem Gamma (impl ' P ' Q),
- TAC = thenl lapply [ id, orelse h apply ].
+/* impl p q |- f   --->   impl q f |- p  ,  q |- f */
+deftac lapply (seq Gamma F) (lapply P Q) :-
+ mem Gamma (impl ' P ' Q).
+
+/* impl p q |- f   --->   impl q f |- p  ,  q |- f */
+deftac lapply_last (seq ((impl ' P ' Q)::Gamma) F) (lapply P Q).
+
+deftac (apply P Q) SEQ TAC :-
+ TAC = thenl (lapply P Q) [ id, orelse h apply_last ].
+
+deftac apply_last (seq ((impl ' P ' Q)::Gamma) F) (apply P Q).
+
+deftac apply (seq Gamma F) (apply P Q) :-
+ mem Gamma (impl ' P ' Q).
 
 /********** the library ********/
 
@@ -431,4 +449,7 @@ main :-
                (bind bool x2 \ bind bool x3 \ bind bool x4 \ r) ::
                 (bind bool x2 \ bind bool x3 \ bind bool x4 \ i) ::
                  (bind bool x2 \ bind bool x3 \ bind bool x4 \ forall_e) :: nil)
+  , theorem test_apply
+    (impl ' p ' (impl ' (impl ' p ' (impl ' p ' q)) ' q))
+    [then i (then i (then apply h))]
  ].
