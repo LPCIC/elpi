@@ -74,7 +74,7 @@ thm (bind A TAC) (bind A SEQ) (bind A NEW) :-
  pi x \ term x A => thm (TAC x) (SEQ x) (NEW x).
 
 /* debuggin only, remove it */
-thm A B C :- $print "FAILED " (thm A B C), fail.
+%thm A B C :- $print "FAILED " (thm A B C), fail.
 
 read_in_context (bind A K) (bind A TAC) :-
  pi x \ term x A => read_in_context (K x) (TAC x).
@@ -283,13 +283,13 @@ main :-
   [ theorem th0
      (eq ' (eq ' (lam x\ x) ' (lam x\ x)) ' tt)
      (m (eq ' tt ' tt) :: c :: c :: r :: d :: r :: r :: nil)
-  /*, theorem th0_alternative_proof0
+  , theorem th0_alternative_proof0
      (eq ' (eq ' (lam x\ x) ' (lam x\ x)) ' tt)
      (thenl (m (eq ' tt ' tt)) (c :: r :: nil) ::
        thenl c (r :: d :: nil) :: r :: nil)
   , theorem th0_alternative_proof1
      (eq ' (eq ' (lam x\ x) ' (lam x\ x)) ' tt)
-     (then (m (eq ' tt ' tt)) (repeat (orelse r (orelse d c))) :: nil)*/
+     [then (m (eq ' tt ' tt)) (repeat (orelse r (orelse d c)))]
   , theorem tt_intro
      tt
      (m (eq ' (lam x0\x0) ' (lam x0\x0)) :: th th0 :: r :: nil)
