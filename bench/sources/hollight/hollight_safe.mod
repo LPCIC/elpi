@@ -86,7 +86,9 @@ loop INTERACTIVE [ SEQ | OLD ] [ TAC | TACS ] :-
  (INTERACTIVE = true, !,
    $print,
    print_all_seqs [ SEQ | OLD ],
+   %$print "READ_IN_CONTEXT" SEQ,
    read_in_context SEQ ITAC
+   %, $print "READ" ITAC
  ; ITAC = TAC),
  ( thm ITAC SEQ NEW0,
    %$print "OK" (thm ITAC SEQ NEW0),
@@ -144,8 +146,10 @@ toplevel :-
 /* blist ::= [] | X :: blist | bind A F
    where  F is x\ blist and A is the type of x */
 
+%put_binds A B C D :- $print "PUT BINDS" (put_binds A B C D), fail.
 put_binds A [] C [].
 put_binds X [ YX | YSX ] A [ YX | YYS ] :-
+ %$print "PRUNING BINDER",
  !, put_binds X YSX A YYS.
 put_binds X [ YX | YSX ] A [ bind A Y | YYS ] :-
  YX = Y X, put_binds X YSX A YYS.
@@ -282,8 +286,8 @@ term and (arr bool (arr bool bool)).
 def0 (not ' X) (impl ' X ' ff).
 term not (arr bool bool).
 
-%def0 (or ' X ' Y) (eq ' (lam f \ f ' X ' Y) ' (lam f \ f ' tt ' tt)).
-%term or (arr bool (arr bool bool)).
+def0 (or ' X ' Y) (forall ' lam c \ impl ' (impl ' X ' c) ' (impl ' (impl ' Y ' c) ' c)).
+term or (arr bool (arr bool bool)).
 
 term p bool.
 term q bool.
@@ -342,6 +346,76 @@ main :-
        (bind bool x2 \ i) ::
         (bind bool x2 \ m (impl ' x2 ' ff)) ::
          (bind bool x2 \ sym) :: (bind bool x2 \ d) :: (bind bool x2 \ h) :: nil)
+  , theorem orl
+     (forall ' (lam x2 \ forall ' (lam x3 \ impl ' x2 ' (or ' x2 ' x3))))
+      (forall_i ::
+       (bind bool x2 \ forall_i) ::
+        (bind bool x2 \ bind bool x3 \ i) ::
+         (bind bool
+          x2 \ bind bool
+            x3 \ m
+                  (forall '
+                    (lam
+                      x4 \ impl ' (impl ' x2 ' x4) '
+                            (impl ' (impl ' x3 ' x4) ' x4)))) ::
+      (bind bool x2 \ bind bool x3 \ sym) ::
+       (bind bool x2 \ bind bool x3 \ d) ::
+        (bind bool x2 \ bind bool x3 \ forall_i) ::
+         (bind bool x2 \ bind bool x3 \ bind bool x4 \ i) ::
+          (bind bool x2 \ bind bool x3 \ bind bool x4 \ i) ::
+           (bind bool x2 \ bind bool x3 \ bind bool x4 \ mp) ::
+            (bind bool x2 \ bind bool x3 \ bind bool x4 \ h) :: nil)
+  , theorem orr
+     (forall ' (lam x2 \ forall ' (lam x3 \ impl ' x2 ' (or ' x3 ' x2))))
+      (forall_i ::
+       (bind bool x2 \ forall_i) ::
+        (bind bool x2 \ bind bool x3 \ i) ::
+         (bind bool
+          x2 \ bind bool
+            x3 \ m
+                  (forall '
+                    (lam
+                      x4 \ impl ' (impl ' x3 ' x4) '
+                            (impl ' (impl ' x2 ' x4) ' x4)))) ::
+      (bind bool x2 \ bind bool x3 \ sym) ::
+       (bind bool x2 \ bind bool x3 \ d) ::
+        (bind bool x2 \ bind bool x3 \ forall_i) ::
+         (bind bool x2 \ bind bool x3 \ bind bool x4 \ i) ::
+          (bind bool x2 \ bind bool x3 \ bind bool x4 \ i) ::
+           (bind bool x2 \ bind bool x3 \ bind bool x4 \ mp) ::
+            (bind bool x2 \ bind bool x3 \ bind bool x4 \ h) :: nil)
+  , theorem or_e
+     (forall '
+       (lam
+         x2 \ forall '
+               (lam
+                 x3 \ forall '
+                       (lam
+                         x4 \ impl ' (or ' x2 ' x3) '
+                               (impl ' (impl ' x2 ' x4) '
+                                 (impl ' (impl ' x3 ' x4) ' x4))))))
+     (forall_i ::
+       (bind bool x2 \ forall_i) ::
+        (bind bool x2 \ bind bool x3 \ forall_i) ::
+         (bind bool
+          x2 \ bind bool
+                x3 \ bind bool
+                      x4 \ m
+                            (impl '
+                              (forall '
+                                (lam
+                                  x5 \ impl ' (impl ' x2 ' x5) '
+                                        (impl ' (impl ' x3 ' x5) ' x5))) '
+                              (impl ' (impl ' x2 ' x4) '
+                                (impl ' (impl ' x3 ' x4) ' x4)))) ::
+          (bind bool x2 \ bind bool x3 \ bind bool x4 \ c) ::
+           (bind bool x2 \ bind bool x3 \ c) ::
+            r ::
+             (bind bool x2 \ bind bool x3 \ sym) ::
+              (bind bool x2 \ bind bool x3 \ d) ::
+               (bind bool x2 \ bind bool x3 \ bind bool x4 \ r) ::
+                (bind bool x2 \ bind bool x3 \ bind bool x4 \ i) ::
+                 (bind bool x2 \ bind bool x3 \ bind bool x4 \ forall_e) :: nil)
  ].
 
 t :- toplevel.
