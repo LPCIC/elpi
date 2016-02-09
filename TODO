@@ -106,6 +106,25 @@ Documentation:
 
 
 Major Bugs:
+- pretty-printing bug: no parenthes around (X a)
+  f Y :- g (X a) c, $print (g (X a) c).
+  g a c.
+- pretty-printing bug: X = [ (x \ x), (y \ y) ]
+  the parentheses are lost
+- put_binds A [] C [].
+  put_binds X [ YX | YSX ] A [ bind A Y | YYS ] :-
+   YX = Y X, put_binds X YSX A YYS.
+
+  push_binds (bind A L) RES :-
+   pi x \ (push_binds (L x) (L2 x), put_binds x (L2 x) A RES).
+  push_binds [] [].
+  push_binds [ X | XS ] [ X | XS ].
+
+  :- push_binds (bind a x \ bind b y \ [ f x y, g y, h x, d ]) RES.
+  Unification bug: (X2^3 x3)^4 =0= (<<f x2 x3>>^4 :: ...)^2
+  x2 and x3 becomes x4 and x5 (??)
+- more often then not using _ is wrong even if _ is not under explicit
+  pis. I suppose it is due to sigma/locals.
 - pi X\ (main A :- X = A, $print X).  Anomaly
 - occur check fails: see the note in propagation1 where a cyclic term
   is formed. More info: A = impl A B fails, but impl A B = A creates a
