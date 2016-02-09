@@ -445,7 +445,9 @@ let xppterm ~nice depth0 names argsdepth env f t =
         ~pplastarg:(aux (max_int - 1) depth) (hd,xs)
     | UVar (r,vardepth,argsno) when not nice ->
        let args = mkinterval vardepth argsno 0 in
-       pp_app f (pp_uvar max_int depth vardepth 0) ppconstant (r,args)
+       if args <> [] then Format.fprintf f "(" ;
+       pp_app f (pp_uvar max_int depth vardepth 0) ppconstant (r,args);
+       if args <> [] then Format.fprintf f ")"
     | UVar (r,vardepth,argsno) when !!r == dummy ->
        let diff = vardepth - depth0 in
        let diff = if diff >= 0 then diff else 0 in
