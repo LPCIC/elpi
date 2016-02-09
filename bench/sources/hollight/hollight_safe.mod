@@ -15,6 +15,9 @@ local thm, provable.
 
 thm C (seq Gamma G) _ :- debug, $print Gamma "|- " G " := " C, fail.
 
+/* Remove, only for debugging */
+thm daemon (seq Gamma F) [] :- term F bool.
+
 thm r (seq Gamma (eq ' X ' X)) [] :- term X A.
 
 thm (t Y) (seq Gamma (eq ' X ' Z))
@@ -219,23 +222,25 @@ deftac conj (seq Gamma (and ' P ' Q)) TAC :-
    , then k (bind _ x \ thenl c [ thenl c [ r, eq_true_intro ] , eq_true_intro ])
    ].
 
-/* (and ' p ' q) :: nil  "|-"  p */
-deftac andl (seq Gamma P) TAC :-
- mem Gamma (and ' P ' Q),
- TAC = (thenl (m ((lam x \ (x ' P ' Q)) ' (lam x \ (lam y \ x))))  [ thenl (m (eq ' ( (lam x \ (lam y \ x)) ' P ' Q) ' P)) 
-      [ thenl c [ thenl c [ then r id, then sym (then b id)           ], (then r id) ], thenl 
-        (m (eq ' (((lam x \ (lam y \ x)) ' P) ' Q) ' ((lam y \ P) ' Q)))  [ thenl c  [ thenl c [then r id, then r id], 
-            then b id ], thenl c [then b id, then r id] ] ],
-     thenl (m ((lam f \ (f ' tt ' tt)) ' (lam x \ lam y \ x) ))    [ thenl c [ then sym (thenl (m (and ' P ' Q)) [ then d id,     then h id ]), then r id ], thenl (m ( (lam x \ (lam y \ x)) ' tt ' tt )) [ then sym (then b id), thenl (m ((lam y \ tt) ' tt)) [ then sym (thenl c [then b id, then r id]), thenl (m tt)   [ then sym (then b id), thenl (m (eq ' (lam x \ x) ' (lam x \ x)))  [then sym (then d id), then r id] ] ] ] ] ] ).
-
+/* Gamma  "|-"  q    --->   Gamma "|-" and ' p ' q*/
+deftac (cutandr P) (seq Gamma Q) TAC :-
+ TAC = (thenl (m ((lam x \ (x ' P ' Q)) ' (lam x \ (lam y \ y)))) [ thenl (m (eq ' ( (lam x \ (lam y \ y)) ' P ' Q) ' Q)) [
+       thenl c [ thenl c [ r , then sym b ],  
+          r ], thenl (m (eq ' (((lam x \ (lam y \ y)) ' P) ' Q) ' ((lam y \ y) ' Q))) [ thenl c [ thenl c [r , r ], b ], thenl c [b , r ] ] ],
+     thenl (m ((lam f \ (f ' tt ' tt)) ' (lam x \ lam y \ y) ))     [ thenl c [ then sym (thenl (m (and ' P ' Q)) [ d , id ]), r ], thenl (m ( (lam x \ (lam y \ y)) ' tt ' tt )) [ then sym b, thenl (m ((lam y \ y) ' tt)) [ then sym (thenl c [b , r ]), thenl (m tt) [ then sym b , thenl (m (eq ' (lam x \ x) ' (lam x \ x))) [then sym d , r ] ] ] ] ] ] ).
 
 /* (and ' p ' q) :: nil  "|-"  q */
 deftac andr (seq Gamma Q) TAC :-
  mem Gamma (and ' P ' Q),
- TAC = (thenl (m ((lam x \ (x ' P ' Q)) ' (lam x \ (lam y \ y)))) [ thenl (m (eq ' ( (lam x \ (lam y \ y)) ' P ' Q) ' Q)) [
-       thenl c [ thenl c [ then r id, then sym (then b id) ],  
-          (then r id) ], thenl (m (eq ' (((lam x \ (lam y \ y)) ' P) ' Q) ' ((lam y \ y) ' Q))) [ thenl c [ thenl c [then r id, then r id], then b id ], thenl c [then b id, then r id] ] ],
-     thenl (m ((lam f \ (f ' tt ' tt)) ' (lam x \ lam y \ y) ))     [ thenl c [ then sym (thenl (m (and ' P ' Q)) [ then d id,   then h id ]), then r id ], thenl (m ( (lam x \ (lam y \ y)) ' tt ' tt )) [ then sym (then b id), thenl (m ((lam y \ y) ' tt)) [ then sym (thenl c [then b id, then r id]), thenl (m tt) [     then sym (then b id), thenl (m (eq ' (lam x \ x) ' (lam x \ x))) [then sym (then d id), then r id] ] ] ] ] ] ).
+ TAC = then (cutandr P) h.
+
+/* (and ' p ' q) :: nil  "|-"  p */
+deftac andl (seq Gamma P) TAC :-
+ mem Gamma (and ' P ' Q),
+ TAC = (thenl (m ((lam x \ (x ' P ' Q)) ' (lam x \ (lam y \ x))))  [ thenl (m (eq ' ( (lam x \ (lam y \ x)) ' P ' Q) ' P)) 
+      [ thenl c [ thenl c [ r , then sym b ], r ], thenl 
+        (m (eq ' (((lam x \ (lam y \ x)) ' P) ' Q) ' ((lam y \ P) ' Q)))  [ thenl c  [ then c r, b ], thenl c [ b , r ] ] ],
+     thenl (m ((lam f \ (f ' tt ' tt)) ' (lam x \ lam y \ x) ))    [ thenl c [ then sym (thenl (m (and ' P ' Q)) [ d , h ]), r ], thenl (m ( (lam x \ (lam y \ x)) ' tt ' tt )) [ then sym b , thenl (m ((lam y \ tt) ' tt)) [ then sym (thenl c [ b , r ]), thenl (m tt)   [ then sym b, thenl (m (eq ' (lam x \ x) ' (lam x \ x)))  [then sym d, r ] ] ] ] ] ] ).
 
 /*** forall ***/
 
@@ -255,14 +260,26 @@ deftac forall_i (seq Gamma (forall ' lam G)) TAC :-
 
 deftac mp (seq Gamma Q) TAC :-
  mem Gamma (impl ' P ' Q),
- TAC = thenl (m (and ' P ' Q)) [ thenl s [ andr , thenl conj [ id , h ] ] ,
-  thenl (m P) [ then sym (thenl (m (impl ' P ' Q)) [ d , h ]) , h ] ].
+ TAC = then (cutandr P) (thenl (m P) [ then sym (thenl (m (impl ' P ' Q)) [ d , h ]) , id ]).
 
 deftac i (seq Gamma (impl ' P ' Q)) TAC :-
  TAC = thenl (m (eq ' (and ' P ' Q) ' P))
   [ then sym d , thenl s [ andl, thenl conj [ h, id ]]].
 
 /*** not ***/
+
+/*** lapply ***/
+
+/* impl p q |- f   --->   impl q f |- p  ,  q |- f */
+deftac lapply (seq Gamma F) TAC :-
+ mem Gamma (impl ' P ' Q),
+ TAC =
+  thenl (m (impl ' Q ' F)) [ thenl s [ then mp mp , then i h ] , then i id ].
+
+/* BUG: the tactic is unfocused, it may diverge for stupid reasons */
+deftac apply SEQ TAC :-
+ mem Gamma (impl ' P ' Q),
+ TAC = thenl lapply [ id, orelse h apply ].
 
 /********** the library ********/
 
@@ -361,8 +378,8 @@ main :-
         (bind bool x2 \ bind bool x3 \ forall_i) ::
          (bind bool x2 \ bind bool x3 \ bind bool x4 \ i) ::
           (bind bool x2 \ bind bool x3 \ bind bool x4 \ i) ::
-           (bind bool x2 \ bind bool x3 \ bind bool x4 \ mp) ::
-            (bind bool x2 \ bind bool x3 \ bind bool x4 \ h) :: nil)
+           (bind bool x2 \ bind bool x3 \ bind bool x4 \ then mp h) ::
+             nil)
   , theorem orr
      (forall ' (lam x2 \ forall ' (lam x3 \ impl ' x2 ' (or ' x3 ' x2))))
       (forall_i ::
@@ -415,5 +432,3 @@ main :-
                 (bind bool x2 \ bind bool x3 \ bind bool x4 \ i) ::
                  (bind bool x2 \ bind bool x3 \ bind bool x4 \ forall_e) :: nil)
  ].
-
-t :- toplevel.
