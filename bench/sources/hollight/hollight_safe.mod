@@ -78,7 +78,7 @@ thm (bind A TAC) (bind A SEQ) (bind A NEW) :-
 
 read_in_context (bind A K) (bind A TAC) :-
  pi x \ term x A => read_in_context (K x) (TAC x).
-read_in_context (seq A B) TAC :- read TAC.
+read_in_context (seq A B) TAC :- read TAC, (TAC = backtrack, !, fail ; true).
 
 %loop INTERACTIVE SEQS TACS :- $print "LOOP" (loop INTERACTIVE SEQS TACS), fail.
 loop _ [] [].
@@ -99,8 +99,6 @@ loop INTERACTIVE [ SEQ | OLD ] [ TAC | TACS ] :-
    TAC = ITAC,
    %$print "OK" (loop INTERACTIVE SEQS TACS),
    loop INTERACTIVE SEQS TACS
- ; ITAC = backtrack, !,
-   fail
  ; (INTERACTIVE = true, !, $print "error" ;
     $print "aborted", halt),
    loop INTERACTIVE [ SEQ | OLD ] [ TAC | TACS ] ).
