@@ -478,7 +478,7 @@ let xppterm ~nice depth0 names argsdepth env f t =
     | Int i -> Format.fprintf f "%d" i
     | Float x -> Format.fprintf f "%f" x
   in
-    aux 1 depth0 f t
+    try aux 1 depth0 f t with e -> Format.fprintf f "EXN PRINTING: %s" (Printexc.to_string e)
 ;;
 
 (* pp for first-order prolog *) 
