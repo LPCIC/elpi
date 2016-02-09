@@ -14,7 +14,9 @@ term eq (arr A (arr A bool)).
 local thm, provable.
 
 thm C (seq Gamma G) _ :- debug, $print Gamma "|- " G " := " C, fail.
+
 thm r (seq Gamma (eq ' X ' X)) [] :- term X A.
+
 thm (t Y) (seq Gamma (eq ' X ' Z))
      [ seq Gamma (eq ' X ' Y), seq Gamma (eq ' Y ' Z) ] :-
  term X A, term Y A, term Z A.
@@ -44,9 +46,15 @@ thm d (seq Gamma (eq ' C ' A)) [] :-
 thm (th NAME) (seq _ G) [] :- provable NAME G.
 
 thm (thenll TAC1 TACN) SEQ SEQS :-
- thm TAC1 SEQ NEW,
+ thm TAC1 SEQ NEW0,
+ %$print "THM OK" (thm TAC1 SEQ NEW0),
+ push_binds NEW0 NEW,
+ %$print "PUSH BINDS" (push_binds NEW0 NEW),
  deftacl TACN NEW TACL,
+ %$print "DEFTACL OK" (deftacl TACN NEW TACL),
+ %$print "FOLD2_APPEND" (fold2_append NEW TACL (seq \ tac \ out \ thm tac seq out) SEQS),
  fold2_append NEW TACL (seq \ tac \ out \ thm tac seq out) SEQS.
+ %$print "FOLD2_APPEND_OK" (fold2_append NEW TACL (seq \ tac \ out \ thm tac seq out) SEQS)
 
 thm TAC SEQ SEQS :-
  deftac TAC SEQ XTAC,
@@ -59,30 +67,41 @@ thm x (seq Gamma F) [(seq ((impl ' p ' q) :: p :: Gamma) F)].
 /*thm x (seq Gamma F) [(seq ((and ' p ' q) :: Gamma) F)].*/
 /*thm x (seq Gamma F) [(seq (p :: Gamma) F)].*/
 /*thm x (seq Gamma F) [(seq (ff :: Gamma) F)].*/
+/*thm x (seq Gamma F) [(seq (p :: q :: Gamma) F)].*/
+
+thm (bind A TAC) (bind A SEQ) (bind A NEW) :-
+ pi x \ term x A => thm (TAC x) (SEQ x) (NEW x).
 
 /* debuggin only, remove it */
 thm A B C :- $print "FAILED " (thm A B C), fail.
 
-/*loop INTERACTIVE SEQS TACS :- $print (loop INTERACTIVE SEQS TACS), fail.*/
+read_in_context (bind A K) (bind A TAC) :-
+ pi x \ term x A => read_in_context (K x) (TAC x).
+read_in_context (seq A B) TAC :- read TAC.
+
+%loop INTERACTIVE SEQS TACS :- $print (loop INTERACTIVE SEQS TACS), fail.
 loop _ [] [].
 loop INTERACTIVE [ SEQ | OLD ] [ TAC | TACS ] :-
  (INTERACTIVE = true, !,
+   $print,
    print_all_seqs [ SEQ | OLD ],
-   read ITAC
+   read_in_context SEQ ITAC
  ; ITAC = TAC),
- ( thm ITAC SEQ NEW,
-
-/*$print "#### " (thm ITAC SEQ NEW),*/
+ ( thm ITAC SEQ NEW0,
+   %$print "OK" (thm ITAC SEQ NEW0),
+   push_binds NEW0 NEW,
+   %$print "OK" (push_binds NEW0 NEW),
    append NEW OLD SEQS,
+   %$print "OK" (append NEW OLD SEQS),
    TAC = ITAC,
+   %$print "OK" (loop INTERACTIVE SEQS TACS),
    loop INTERACTIVE SEQS TACS
  ; ITAC = backtrack, !,
    fail
  ; (INTERACTIVE = true, !, $print "error" ;
     $print "aborted", halt),
    loop INTERACTIVE [ SEQ | OLD ] [ TAC | TACS ] ).
-loop INTERACTIVE (bind A F) (bind A TACS) :-
- pi x \ term x A => loop INTERACTIVE (F x) (TACS x).
+%loop INTERACTIVE SEQS TACS :- $print "FAIL" (loop INTERACTIVE SEQS TACS), fail.
 
 prove G TACS :-
  loop true [ seq [] G ] TACS,
@@ -102,13 +121,12 @@ check [ theorem NAME GOAL TACTICS | NEXT ] :-
 /************ interactive and non interactive loops ********/
 
 print_seq (seq Gamma G) :- $print Gamma "|-" G.
+print_seq (bind A F) :- pi x \ print_seq (F x).
 
 print_all_seqs []. 
 print_all_seqs [ SEQ | SEQS ] :-
  print_all_seqs SEQS,
  print_seq SEQ.
-print_all_seqs (bind A F) :-
- pi x \ ($print x ":" A, print_all_seqs (F x)).
 
 toplevel :-
  $print "Welcome to HOL extra-light",
@@ -125,23 +143,29 @@ toplevel :-
 /* blist ::= [] | X :: blist | bind A F
    where  F is x\ blist and A is the type of x */
 
+put_binds A [] C [].
+put_binds X [ YX | YSX ] A [ YX | YYS ] :-
+ !, put_binds X YSX A YYS.
+put_binds X [ YX | YSX ] A [ bind A Y | YYS ] :-
+ YX = Y X, put_binds X YSX A YYS.
+
+%push_binds A B :- $print (push_binds A B), fail.
+push_binds (bind A L) RES :-
+ pi x \ (push_binds (L x) (L2 x), put_binds x (L2 x) A RES).
+push_binds [] [].
+push_binds XXS YYS :- XXS = [ X | XS ], YYS = XXS.
+%push_binds A B :- $print "FAIL" (push_binds A B), fail.
+
+%append A B C :- $print (append_aux A B C), fail.
 append [] L L.
 append [ X | XS ] L [ X | RES ] :- append XS L RES.
-append (bind A F) L (bind A FL) :-
- pi x \ append (F x) L (FL x).
+%append A B C :- $print "FAIL" (append_aux A B C), fail.
 
-/*fold_append [] _ [].
-fold_append [ X | XS ] F OUTS :-
- F X OUT, fold_append XS F OUTS2, append OUT OUTS2 OUTS.
-fold_append (bind A G) F (bind A OUT) :-
- pi x \ term x A => fold_append (G x) F (OUT x).*/
-
-fold2_append A B C D :- debug, $print (fold2_append A B C D), fail.
+%fold2_append A B C D :- $print "ENTERING" (fold2_append A B C D), fail.
 fold2_append [] [] _ [].
 fold2_append [ X | XS ] [ Y | YS ] F OUTS :-
- F X Y OUT, fold2_append XS YS F OUTS2, append OUT OUTS2 OUTS.
-fold2_append (bind A G) (bind A YS) F (bind A OUT) :-
- pi x \ term x A => fold2_append (G x) (YS x) F (OUT x).
+ F X Y OUT0, fold2_append XS YS F OUTS2, push_binds OUT0 OUT, append OUT OUTS2 OUTS.
+%fold2_append A B C D :- $print "FAIL" (fold2_append A B C D), fail.
 
 mem [ X | _ ] X, !.
 mem [ _ | XS ] X :- mem XS X.
@@ -149,13 +173,8 @@ mem [ _ | XS ] X :- mem XS X.
 /*mk_constant_list A B C :- debug, $print (mk_constant_list A B C), fail.*/
 mk_constant_list [] _ [].
 mk_constant_list [_|L] X [X|R] :- mk_constant_list L X R.
-mk_constant_list (bind A G) (bind A X) (bind A R) :-
- pi x \ term x A => mk_constant_list (G x) (X x) (R x).
 
 /********** tacticals ********/
-
-deftac (inspect Gamma G) (seq Gamma G) id :-
- $print (inspect Gamma G).
 
 /*sigma ff \*/ deftac fail SEQ ff.
 
@@ -229,12 +248,12 @@ deftac forall_i (seq Gamma (forall ' lam G)) TAC :-
 
 deftac mp (seq Gamma Q) TAC :-
  mem Gamma (impl ' P ' Q),
- TAC = thenl (m (and ' P ' Q)) [ thenl s [ andr , thenl conj (bind _ x \ [ id , h ]) ] ,
+ TAC = thenl (m (and ' P ' Q)) [ thenl s [ andr , thenl conj [ id , h ] ] ,
   thenl (m P) [ then sym (thenl (m (impl ' P ' Q)) [ d , h ]) , h ] ].
 
 deftac i (seq Gamma (impl ' P ' Q)) TAC :-
  TAC = thenl (m (eq ' (and ' P ' Q) ' P))
-  [ then sym d , thenl s [ andl, thenl conj (bind _ x \ [ h, id ])]].
+  [ then sym d , thenl s [ andl, thenl conj [ h, id ]]].
 
 /********** the library ********/
 
@@ -279,13 +298,16 @@ main :-
         s ::
          andr ::
           conj ::
-           bind (arr bool (arr bool bool))
-            x2 \ h :: h :: m p :: sym :: m (impl ' p ' q) :: d :: h :: h :: nil)
- , theorem ff_elim
+           h :: h :: m p :: sym :: m (impl ' p ' q) :: d :: h :: h :: nil)
+  , theorem ff_elim
      (forall ' lam p \ impl ' ff ' p)
-     (forall_i :: bind _ p \
-       (m (impl ' (forall ' (lam x2 \ x2)) ' p) :: c :: sym ::
-       c :: r :: d :: r :: i :: bind _ x \ forall_e :: nil))
+     (forall_i ::
+       (bind _ p \ m (impl ' (forall ' (lam x2 \ x2)) ' p)) ::
+       (bind _ p \ c) ::
+       sym :: c :: r :: d ::
+       (bind _ p \ r) ::
+       (bind _ p \ i) ::
+       (bind _ p \ forall_e) :: nil)
  ].
 
 t :- toplevel.
