@@ -89,7 +89,7 @@ read_in_context (seq A B) TAC :- read TAC, (TAC = backtrack, !, fail ; true).
 
 %loop INTERACTIVE SEQS TACS :- $print "LOOP" (loop INTERACTIVE SEQS TACS), fail.
 loop _ [] [].
-loop INTERACTIVE [ SEQ | OLD ] [ TAC | TACS ] :-
+loop INTERACTIVE [ SEQ | OLD ] [ TAC | OTHER_TACS ] :-
  (INTERACTIVE = true, !,
    $print,
    print_all_seqs [ SEQ | OLD ],
@@ -103,12 +103,18 @@ loop INTERACTIVE [ SEQ | OLD ] [ TAC | TACS ] :-
    %$print "OK" (push_binds NEW0 NEW),
    append NEW OLD SEQS,
    %$print "OK" (append NEW OLD SEQS),
-   TAC = ITAC,
+   (INTERACTIVE = true, !,
+      %$print "OK" (mk_fresh_list NEW NEW_TACS),
+      mk_fresh_list NEW NEW_TACS,
+      %$print "OK" (TAC = thenl ITAC NEW_TACS),
+      TAC = thenl ITAC NEW_TACS,
+      append NEW_TACS OTHER_TACS TACS
+   ; TACS = OTHER_TACS ),
    %$print "OK" (loop INTERACTIVE SEQS TACS),
    loop INTERACTIVE SEQS TACS
  ; (INTERACTIVE = true, !, $print "error" ;
     $print "aborted", halt),
-   loop INTERACTIVE [ SEQ | OLD ] [ TAC | TACS ] ).
+   loop INTERACTIVE [ SEQ | OLD ] [ TAC | OTHER_TACS ] ).
 %loop INTERACTIVE SEQS TACS :- $print "FAIL" (loop INTERACTIVE SEQS TACS), fail.
 
 prove G TACS :-
@@ -143,8 +149,8 @@ toplevel :-
  ( NAME = stop, !
  ; $print "Enter its statement",
    read G,
-   prove G TACS,
-   $print (theorem NAME G TACS),
+   prove G [ TAC ],
+   $print (theorem NAME G TAC),
    provable NAME G => toplevel).
 
 /************ library of basic data types ********/
@@ -183,6 +189,9 @@ mem [ _ | XS ] X :- mem XS X.
 /*mk_constant_list A B C :- debug, $print (mk_constant_list A B C), fail.*/
 mk_constant_list [] _ [].
 mk_constant_list [_|L] X [X|R] :- mk_constant_list L X R.
+
+mk_fresh_list [] [].
+mk_fresh_list [_|L] [X|R] :- mk_fresh_list L R.
 
 /********** tacticals ********/
 
