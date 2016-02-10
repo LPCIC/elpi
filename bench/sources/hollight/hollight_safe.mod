@@ -5,9 +5,11 @@ infixl ' 139.
 /* seq _hypothesis_ _conclusion_ */
 
 /*term T TY :- $print (term T TY), fail.*/
-term (lam F) (arr A B) :- pi x\ term x A => term (F x) B.
-term (F ' T) B :- term T A, term F (arr A B).
-term eq (arr A (arr A bool)).
+term T TY :- $is_flex T, !, $delay (term T TY) [ T ].
+term T TY :- term' T TY.
+term' (lam F) (arr A B) :- pi x\ term' x A => term (F x) B.
+term' (F ' T) B :- term T A, term F (arr A B).
+term' eq (arr A (arr A bool)).
 
 { /***** Trusted code base *******/
 
@@ -128,6 +130,7 @@ check [] :- toplevel.
 check [ theorem NAME GOAL TACTICS | NEXT ] :-
   saved GOAL TACTICS,
   $print NAME ":" GOAL,
+  !,
   provable NAME GOAL => check NEXT.
 
 }
@@ -150,7 +153,7 @@ toplevel :-
  ; $print "Enter its statement",
    read G,
    prove G [ TAC ],
-   $print (theorem NAME G TAC),
+   $print (theorem NAME G [ TAC ]),
    provable NAME G => toplevel).
 
 /************ library of basic data types ********/
@@ -311,30 +314,34 @@ deftac apply (seq Gamma F) (apply P Q) :-
 /********** the library ********/
 
 def0 tt (eq ' (lam x\ x) ' (lam x\ x)).
-term tt bool.
+term' tt bool.
 
 def0 (forall ' F) (eq ' F ' (lam f \ tt)).
-term forall (arr (arr A bool) bool).
+term' forall (arr (arr A bool) bool).
+
+def0 (exists ' F) (forall ' (lam c \ (impl ' (forall ' (lam a \ (impl ' (F ' a) ' c))) ' c))).
+term' exists (arr (arr A bool) bool).
 
 def0 (impl ' A ' B) (eq ' (and ' A ' B) ' A).
-term impl (arr bool (arr bool bool)).
+term' impl (arr bool (arr bool bool)).
 
 def0 ff (forall ' lam x \ x).
-term ff bool.
+term' ff bool.
 
 def0 (and ' X ' Y) (eq ' (lam f \ f ' X ' Y) ' (lam f \ f ' tt ' tt)).
-term and (arr bool (arr bool bool)).
+term' and (arr bool (arr bool bool)).
 
 def0 (not ' X) (impl ' X ' ff).
-term not (arr bool bool).
+term' not (arr bool bool).
 
 def0 (or ' X ' Y) (forall ' lam c \ impl ' (impl ' X ' c) ' (impl ' (impl ' Y ' c) ' c)).
-term or (arr bool (arr bool bool)).
+term' or (arr bool (arr bool bool)).
 
-term p bool.
-term q bool.
-term f (arr bool bool).
-term (g X) bool :- term X bool.
+term' p bool.
+term' q bool.
+term' f (arr bool bool).
+term' (g X) bool :- term X bool.
+term' c bool.
 
 main :-
  check
@@ -461,4 +468,10 @@ main :-
   , theorem test_apply
     (impl ' p ' (impl ' (impl ' p ' (impl ' p ' q)) ' q))
     [then i (then i (then apply h))]
+  , theorem exists_e
+    (forall ' lam f \
+     (impl ' (exists ' f) '
+      (forall '
+       (lam x2 \ impl ' (forall ' (lam x3 \ impl ' (f ' x3) ' x2)) ' x2))))
+    [then forall_i (bind AA f \ then i (thenl (m (exists ' f)) [d , h ]))]
  ].
