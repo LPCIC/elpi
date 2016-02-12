@@ -501,4 +501,18 @@ main :-
       (forall '
        (lam x2 \ impl ' (forall ' (lam x3 \ impl ' (f ' x3) ' x2)) ' x2))))
     [then forall_i (bind AA f \ then i (thenl (m (exists ' f)) [d , h ]))]
+ , theorem exists_i
+   (forall ' (lam x2 \ forall ' (lam x3 \ impl ' (x2 ' x3) ' (exists ' x2))))
+    [then forall_i (then (bind (arr X0^2 bool) x2 \ forall_i) 
+     (then (bind (arr X0^2 bool) x2 \ bind X0^2 x3 \ i) 
+      (thenl (bind (arr X0^2 bool) x2 \ bind X0^2 x3 \ m 
+       (forall ' (lam x4 \ impl ' (forall ' (lam x5 \ impl ' (x2 ' x5) ' x4)) ' x4))) 
+        [then (bind (arr X0^2 bool) x2 \ bind X0^2 x3 \ sym) 
+         (then (bind (arr X0^2 bool) x2 \ bind X0^2 x3 \ d) id  ), 
+          then (bind (arr X0^2 bool) x2 \ bind X0^2 x3 \ forall_i) 
+           (then  (bind (arr X0^2 bool) x2 \ bind X0^2 x3 \ bind bool x4 \ i) 
+            (then (bind (arr X0^2 bool) x2 \ bind X0^2 x3 \ bind bool x4 \ lforall x3) 
+             (then (bind (arr X0^2 bool) x2 \ bind X0^2 x3 \ bind bool x4 \ mp) 
+              (bind (arr X0^2 bool) x2 \ bind X0^2 x3 \ bind bool x4 \ h))))])))]
+
  ].
