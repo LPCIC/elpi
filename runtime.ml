@@ -401,8 +401,25 @@ let xppterm ~nice depth0 names argsdepth env f t =
       to depth (not passed as well) *)
    else if nice then aux prec depth f (!do_deref ~from:argsdepth ~to_:depth 0 env.(n))
    else Format.fprintf f "≪%a≫ " (aux 0 argsdepth) env.(n)
+
+  (* ::(a, ::(b, nil))  -->  [a,b] *)
+  and flat_cons_to_list t = match t with
+      | App (hd,x,xs) when (string_of_constant hd) = "::" ->
+         x::(flat_cons_to_list (List.hd xs))
+      | Const c when (string_of_constant c) = "nil" -> []
+      | _ -> 
+Format.fprintf Format.std_formatter "\nANOMALY:\n %a\n%!" (aux 1 100 ) t ;
+anomaly "A list must be built from :: and nil only!" 
+
   and aux prec depth f = function
-      App (hd,x,xs) ->
+      App (hd,x,xs) as t ->
+       if (string_of_constant hd) = "::" then begin
+         let l = flat_cons_to_list t in
+         Format.fprintf f "[";
+         (pplist (aux prec depth) "," f l);
+         Format.fprintf f "]";
+        end
+       else      
        (try
          let assoc,hdlvl =
           Parser.precedence_of (F.from_string (string_of_constant hd)) in
@@ -468,7 +485,11 @@ let xppterm ~nice depth0 names argsdepth env f t =
     | AppArg (v,terms) ->
        pp_app f (pp_arg max_int depth) (aux max_int depth)
         ~pplastarg:(aux max_int depth) (v,terms) 
-    | Const s -> ppconstant f s 
+    | Const s -> 
+       if (string_of_constant s) = "nil" then 
+        Format.fprintf f "[]"
+       else
+        ppconstant f s 
     | Lam t ->
        if max_int - 1 < prec then Format.fprintf f "(" ;
        let c = constant_of_dbl depth in
