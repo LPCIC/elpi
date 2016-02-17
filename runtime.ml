@@ -367,6 +367,11 @@ let do_app_deref = ref (fun ~from ~to_ _ _ -> assert false);;
 let m = ref [];;
 let n = ref 0;;
 
+let min_prec = Parser.min_precedence
+let appl_prec = Parser.appl_precedence
+let lam_prec = Parser.lam_precedence
+let inf_prec = Parser.inf_precedence
+
 let xppterm ~nice depth0 names argsdepth env f t =
   let pp_app f pphd pparg ?pplastarg (hd,args) =
    if args = [] then pphd f hd
@@ -412,6 +417,14 @@ let xppterm ~nice depth0 names argsdepth env f t =
         (!do_app_deref ~from:vardepth ~to_:depth terms !!r)
     | App (hd,x,[y]) when hd==consc -> flat_cons_to_list depth (x::acc) y
     | _ -> List.rev acc, t
+  and aux_last prec depth f t = match t with
+     Lam _ -> aux min_prec depth f t
+   | UVar (r,vardepth,terms) when !!r != dummy -> 
+      aux_last prec depth f (!do_deref ~from:vardepth ~to_:depth terms !!r)
+   | AppUVar (r,vardepth,terms) when !!r != dummy -> 
+      aux_last prec depth f
+       (!do_app_deref ~from:vardepth ~to_:depth terms !!r)
+   | _ -> aux prec depth f t
   and aux prec depth f = function
    | t when
       match t with App (hd,_,_) when hd==consc -> true | _ -> t==nilc
@@ -450,67 +463,67 @@ let xppterm ~nice depth0 names argsdepth env f t =
              Format.fprintf f "@[<hov 1>%a@ %a@]" (aux hdlvl depth) x
               ppconstant hd 
           | _ ->
-             pp_app f ppconstant (aux max_int depth)
-              ~pplastarg:(aux (max_int - 1) depth) (hd,x::xs)) ;
+             pp_app f ppconstant (aux inf_prec depth)
+              ~pplastarg:(aux_last inf_prec depth) (hd,x::xs)) ;
          if hdlvl < prec then Format.fprintf f ")" ;
         with Not_found -> 
          let hdlvl =
           if match List.nth (x::xs) (List.length xs) with Lam _ -> true | _ -> false then
-           1 (* CSC: replace the hard-coded constants 1, max_int, max_int - 1, max_int - 2 with symbolic names *)
+           1 (* CSC: replace the hard-coded constants 1, max_int, max_int, max_int with symbolic names *)
           else
-           max_int - 2 in
+           appl_prec in
          if hdlvl < prec then Format.fprintf f "(";
-         pp_app f ppconstant (aux max_int depth)
-          ~pplastarg:(aux (max_int - 1) depth) (hd,x::xs);
+         pp_app f ppconstant (aux inf_prec depth)
+          ~pplastarg:(aux_last inf_prec depth) (hd,x::xs);
          if hdlvl < prec then Format.fprintf f ")" )
     | Custom (hd,xs) ->
-       if max_int - 2 < prec then Format.fprintf f "(";
-       pp_app f ppconstant (aux max_int depth)
-        ~pplastarg:(aux (max_int - 1) depth) (hd,xs) ;
-       if max_int - 2 < prec then Format.fprintf f ")"
+       if appl_prec < prec then Format.fprintf f "(";
+       pp_app f ppconstant (aux inf_prec depth)
+        ~pplastarg:(aux_last inf_prec depth) (hd,xs) ;
+       if appl_prec < prec then Format.fprintf f ")"
     | UVar (r,vardepth,argsno) when not nice ->
        let args = mkinterval vardepth argsno 0 in
-       if args <> [] && max_int - 2 < prec then Format.fprintf f "(";
-       pp_app f (pp_uvar max_int depth vardepth 0) ppconstant (r,args);
-       if args <> [] && max_int - 2 < prec then Format.fprintf f ")"
+       if args <> [] && appl_prec < prec then Format.fprintf f "(";
+       pp_app f (pp_uvar inf_prec depth vardepth 0) ppconstant (r,args);
+       if args <> [] && appl_prec < prec then Format.fprintf f ")"
     | UVar (r,vardepth,argsno) when !!r == dummy ->
        let diff = vardepth - depth0 in
        let diff = if diff >= 0 then diff else 0 in
        let vardepth = vardepth - diff in
        let argsno = argsno + diff in
        let args = mkinterval vardepth argsno 0 in
-       if args <> [] && max_int - 2 < prec then Format.fprintf f "(";
-       pp_app f (pp_uvar max_int depth vardepth 0) ppconstant (r,args) ;
-       if args <> [] && max_int - 2 < prec then Format.fprintf f ")"
+       if args <> [] && appl_prec < prec then Format.fprintf f "(";
+       pp_app f (pp_uvar inf_prec depth vardepth 0) ppconstant (r,args) ;
+       if args <> [] && appl_prec < prec then Format.fprintf f ")"
     | UVar (r,vardepth,argsno) ->
        pp_uvar prec depth vardepth argsno f r
     | AppUVar (r,vardepth,terms) when !!r != dummy && nice -> 
        aux prec depth f (!do_app_deref ~from:vardepth ~to_:depth terms !!r)
     | AppUVar (r,vardepth,terms) -> 
-       if max_int - 2 < prec then Format.fprintf f "(";
-       pp_app f (pp_uvar max_int depth vardepth 0) (aux max_int depth)
-        ~pplastarg:(aux max_int depth) (r,terms) ;
-       if max_int - 2 < prec then Format.fprintf f ")"
+       if appl_prec < prec then Format.fprintf f "(";
+       pp_app f (pp_uvar inf_prec depth vardepth 0) (aux inf_prec depth)
+        ~pplastarg:(aux_last inf_prec depth) (r,terms) ;
+       if appl_prec < prec then Format.fprintf f ")"
     | Arg (n,argsno) ->
        let args = mkinterval argsdepth argsno 0 in
-       if args <> [] && max_int - 2 < prec then Format.fprintf f "(";
+       if args <> [] && appl_prec < prec then Format.fprintf f "(";
        pp_app f (pp_arg prec depth) ppconstant (n,args) ;
-       if args <> [] && max_int - 2 < prec then Format.fprintf f ")"
+       if args <> [] && appl_prec < prec then Format.fprintf f ")"
     | AppArg (v,terms) ->
-       if max_int - 2 < prec then Format.fprintf f "(";
-       pp_app f (pp_arg max_int depth) (aux max_int depth)
-        ~pplastarg:(aux max_int depth) (v,terms) ;
-       if max_int - 2 < prec then Format.fprintf f ")"
+       if appl_prec < prec then Format.fprintf f "(";
+       pp_app f (pp_arg inf_prec depth) (aux inf_prec depth)
+        ~pplastarg:(aux_last inf_prec depth) (v,terms) ;
+       if appl_prec < prec then Format.fprintf f ")"
     | Lam t ->
-       if max_int - 1 < prec then Format.fprintf f "(" ;
+       if lam_prec < prec then Format.fprintf f "(" ;
        let c = constant_of_dbl depth in
-       Format.fprintf f "%a \\ %a" (aux max_int depth) c (aux 0 (depth+1)) t;
-       if max_int - 1 < prec then Format.fprintf f ")"
+       Format.fprintf f "%a \\ %a" (aux inf_prec depth) c (aux 0 (depth+1)) t;
+       if lam_prec < prec then Format.fprintf f ")"
     | String str -> Format.fprintf f "\"%s\"" (Parser.ASTFuncS.pp str)
     | Int i -> Format.fprintf f "%d" i
     | Float x -> Format.fprintf f "%f" x
   in
-    try aux 1 depth0 f t with e -> Format.fprintf f "EXN PRINTING: %s" (Printexc.to_string e)
+    try aux min_prec depth0 f t with e -> Format.fprintf f "EXN PRINTING: %s" (Printexc.to_string e)
 ;;
 
 (* pp for first-order prolog *) 

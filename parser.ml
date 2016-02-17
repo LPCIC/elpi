@@ -391,8 +391,12 @@ let g = Grammar.gcreate lex
 let lp = Grammar.Entry.create g "lp"
 let goal = Grammar.Entry.create g "goal"
 
-let min_precedence = 0
-let max_precedence = 256
+let min_precedence = -1  (* minimal precedence in use *)
+let lam_precedence = -1  (* precedence of lambda abstraction *)
+let umin_precedence = 0   (* minimal user defined precedence *)
+let umax_precedence = 256 (* maximal user defined precedence *)
+let appl_precedence = umax_precedence + 1 (* precedence of application *)
+let inf_precedence = appl_precedence+1 (* greater than any used precedence*)
 
 let dummy_prod =
  let dummy_action =
@@ -458,7 +462,7 @@ EXTEND
      | TYPEABBREV; abbrform; TYPE; FULLSTOP -> []
      | fix = FIXITY; syms = LIST1 const_sym SEP SYMBOL ","; prec = INTEGER; FULLSTOP ->
         let nprec = int_of_string prec in
-        if nprec < min_precedence || nprec > max_precedence then
+        if nprec < umin_precedence || nprec > umax_precedence then
          assert false (* wrong precedence *)
         else
          let extend_one cst =

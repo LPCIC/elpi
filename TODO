@@ -106,8 +106,6 @@ Documentation:
 
 
 Major Bugs:
-- pretty-printing bug: X = [ (x \ x), (y \ y) ]
-  the parentheses are lost
 - put_binds A [] C [].
   put_binds X [ YX | YSX ] A [ bind A Y | YYS ] :-
    YX = Y X, put_binds X YSX A YYS.
