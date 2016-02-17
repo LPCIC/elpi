@@ -2580,28 +2580,22 @@ let execute_once (depth,p) q =
 
 let execute_loop (depth,p) ((q_names,q_argsdepth,q_env,q) as qq) =
  let run, cont, _ = make_runtime () in
- let time0 = Unix.gettimeofday() in
- let k = ref (run p qq depth) in
- let time1 = Unix.gettimeofday() in
- prerr_endline ("Execution time: "^string_of_float(time1 -. time0));
-(* Format.eprintf "Raw Result: %a\n%!" (ppterm depth q_names q_argsdepth q_env) q ;*)
- Format.eprintf "Result: \n%!" ;
- List.iteri (fun i name -> Format.eprintf "%s=%a\n%!" name
-  (uppterm depth q_names 0 q_env) q_env.(i)) q_names;
+ let k = ref emptyalts in
+ let do_with_infos f x =
+  let time0 = Unix.gettimeofday() in
+  f x ;
+  let time1 = Unix.gettimeofday() in
+  prerr_endline ("Execution time: "^string_of_float(time1 -. time0));
+ (* Format.eprintf "Raw Result: %a\n%!" (ppterm depth q_names q_argsdepth q_env) q ;*)
+  Format.eprintf "Result: \n%!" ;
+  List.iteri (fun i name -> Format.eprintf "@[<hov 1>%s=%a@]\n%!" name
+   (uppterm depth q_names 0 q_env) q_env.(i)) q_names in
+ do_with_infos (fun _ -> k := (run p qq depth)) ();
  while !k != emptyalts do
    prerr_endline "More? (Y/n)";
    if read_line() = "n" then k := emptyalts else
-    try
-     let time0 = Unix.gettimeofday() in
-     k := cont !k;
-     let time1 = Unix.gettimeofday() in
-     prerr_endline ("Execution time: "^string_of_float(time1 -. time0));
-     (*Format.eprintf "Raw Result: %a\n%!" (ppterm depth q_names 0 q_env) q ;*)
-     Format.eprintf "Result: \n%!" ;
-     List.iteri (fun i name -> Format.eprintf "%s=%a\n%!" name
-      (uppterm depth q_names 0 q_env) q_env.(i)) q_names;
-    with
-     No_clause -> prerr_endline "Fail"; k := emptyalts
+    try do_with_infos (fun _ -> k := cont !k) ()
+    with No_clause -> prerr_endline "Fail"; k := emptyalts
  done
 ;;
 
