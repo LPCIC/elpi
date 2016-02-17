@@ -106,9 +106,6 @@ Documentation:
 
 
 Major Bugs:
-- pretty-printing bug: no parenthes around (X a)
-  f Y :- g (X a) c, $print (g (X a) c).
-  g a c.
 - pretty-printing bug: X = [ (x \ x), (y \ y) ]
   the parentheses are lost
 - put_binds A [] C [].

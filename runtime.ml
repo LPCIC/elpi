@@ -413,15 +413,18 @@ let xppterm ~nice depth0 names argsdepth env f t =
     | App (hd,x,[y]) when hd==consc -> flat_cons_to_list depth (x::acc) y
     | _ -> List.rev acc, t
   and aux prec depth f = function
-      App (hd,x,xs) as t when hd==consc ->
-         let prefix,last = flat_cons_to_list depth [] t in
-         Format.fprintf f "[" ;
-         pplist (aux Parser.list_element_prec depth) "," f prefix ;
-         if last!=nilc then begin
-          Format.fprintf f " | " ;
-          aux prec 1 f last
-         end;   
-         Format.fprintf f "]"
+   | t when
+      match t with App (hd,_,_) when hd==consc -> true | _ -> t==nilc
+     ->
+      let prefix,last = flat_cons_to_list depth [] t in
+      Format.fprintf f "[" ;
+      pplist (aux Parser.list_element_prec depth) "," f prefix ;
+      if last!=nilc then begin
+       Format.fprintf f " | " ;
+       aux prec 1 f last
+      end;   
+      Format.fprintf f "]"
+    | Const s -> ppconstant f s 
     | App (hd,x,xs) ->
        (try
          let assoc,hdlvl =
@@ -461,38 +464,43 @@ let xppterm ~nice depth0 names argsdepth env f t =
           ~pplastarg:(aux (max_int - 1) depth) (hd,x::xs);
          if hdlvl < prec then Format.fprintf f ")" )
     | Custom (hd,xs) ->
+       if max_int - 2 < prec then Format.fprintf f "(";
        pp_app f ppconstant (aux max_int depth)
-        ~pplastarg:(aux (max_int - 1) depth) (hd,xs)
+        ~pplastarg:(aux (max_int - 1) depth) (hd,xs) ;
+       if max_int - 2 < prec then Format.fprintf f ")"
     | UVar (r,vardepth,argsno) when not nice ->
        let args = mkinterval vardepth argsno 0 in
-       if args <> [] then Format.fprintf f "(" ;
+       if args <> [] && max_int - 2 < prec then Format.fprintf f "(";
        pp_app f (pp_uvar max_int depth vardepth 0) ppconstant (r,args);
-       if args <> [] then Format.fprintf f ")"
+       if args <> [] && max_int - 2 < prec then Format.fprintf f ")"
     | UVar (r,vardepth,argsno) when !!r == dummy ->
        let diff = vardepth - depth0 in
        let diff = if diff >= 0 then diff else 0 in
        let vardepth = vardepth - diff in
        let argsno = argsno + diff in
        let args = mkinterval vardepth argsno 0 in
-       pp_app f (pp_uvar max_int depth vardepth 0) ppconstant (r,args)
+       if args <> [] && max_int - 2 < prec then Format.fprintf f "(";
+       pp_app f (pp_uvar max_int depth vardepth 0) ppconstant (r,args) ;
+       if args <> [] && max_int - 2 < prec then Format.fprintf f ")"
     | UVar (r,vardepth,argsno) ->
        pp_uvar prec depth vardepth argsno f r
     | AppUVar (r,vardepth,terms) when !!r != dummy && nice -> 
        aux prec depth f (!do_app_deref ~from:vardepth ~to_:depth terms !!r)
     | AppUVar (r,vardepth,terms) -> 
+       if max_int - 2 < prec then Format.fprintf f "(";
        pp_app f (pp_uvar max_int depth vardepth 0) (aux max_int depth)
-        ~pplastarg:(aux max_int depth) (r,terms)
+        ~pplastarg:(aux max_int depth) (r,terms) ;
+       if max_int - 2 < prec then Format.fprintf f ")"
     | Arg (n,argsno) ->
        let args = mkinterval argsdepth argsno 0 in
-       pp_app f (pp_arg prec depth) ppconstant (n,args)
+       if args <> [] && max_int - 2 < prec then Format.fprintf f "(";
+       pp_app f (pp_arg prec depth) ppconstant (n,args) ;
+       if args <> [] && max_int - 2 < prec then Format.fprintf f ")"
     | AppArg (v,terms) ->
+       if max_int - 2 < prec then Format.fprintf f "(";
        pp_app f (pp_arg max_int depth) (aux max_int depth)
-        ~pplastarg:(aux max_int depth) (v,terms) 
-    | Const s -> 
-       if (string_of_constant s) = "nil" then 
-        Format.fprintf f "[]"
-       else
-        ppconstant f s 
+        ~pplastarg:(aux max_int depth) (v,terms) ;
+       if max_int - 2 < prec then Format.fprintf f ")"
     | Lam t ->
        if max_int - 1 < prec then Format.fprintf f "(" ;
        let c = constant_of_dbl depth in
