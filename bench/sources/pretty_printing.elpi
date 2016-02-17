@@ -1,0 +1,3 @@
+% U = (x \ x) + q 2, X = [ (x \ x), (y \ y) ], W = [ f a, b c], Y = f (g a) c (d e), Z = (a a + b b) * c c, AA = f (x \ x) (z \ z), ZZZ = (f x \ x) + c
+
+% run the query above to see a zoo of hard pretty-printing problems

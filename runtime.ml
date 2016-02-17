@@ -425,7 +425,12 @@ let xppterm ~nice depth0 names argsdepth env f t =
       aux_last prec depth f
        (!do_app_deref ~from:vardepth ~to_:depth terms !!r)
    | _ -> aux prec depth f t
-  and aux prec depth f = function
+  and aux prec depth f t =
+   let with_parens ?(test=true) myprec h =
+    if test && myprec < prec then
+     (Format.fprintf f "(" ; h () ; Format.fprintf f ")")
+    else h () in
+   match t with
    | t when
       match t with App (hd,_,_) when hd==consc -> true | _ -> t==nilc
      ->
@@ -442,8 +447,8 @@ let xppterm ~nice depth0 names argsdepth env f t =
        (try
          let assoc,hdlvl =
           Parser.precedence_of (F.from_string (string_of_constant hd)) in
-         if hdlvl < prec then Format.fprintf f "(" ;
-         (match assoc with
+         with_parens hdlvl
+         (fun _ -> match assoc with
             Parser.Infix when List.length xs = 1 ->
              Format.fprintf f "@[<hov 1>%a@ %a@ %a@]"
               (aux (hdlvl+1) depth) x ppconstant hd
@@ -464,61 +469,52 @@ let xppterm ~nice depth0 names argsdepth env f t =
               ppconstant hd 
           | _ ->
              pp_app f ppconstant (aux inf_prec depth)
-              ~pplastarg:(aux_last inf_prec depth) (hd,x::xs)) ;
-         if hdlvl < prec then Format.fprintf f ")" ;
+              ~pplastarg:(aux_last inf_prec depth) (hd,x::xs))
         with Not_found -> 
+         let lastarg = List.nth (x::xs) (List.length xs) in
          let hdlvl =
-          if match List.nth (x::xs) (List.length xs) with Lam _ -> true | _ -> false then
-           1 (* CSC: replace the hard-coded constants 1, max_int, max_int, max_int with symbolic names *)
-          else
-           appl_prec in
-         if hdlvl < prec then Format.fprintf f "(";
-         pp_app f ppconstant (aux inf_prec depth)
-          ~pplastarg:(aux_last inf_prec depth) (hd,x::xs);
-         if hdlvl < prec then Format.fprintf f ")" )
+          if match lastarg with Lam _ -> true | _ -> false then lam_prec
+          else appl_prec in
+         with_parens hdlvl (fun _ ->
+          pp_app f ppconstant (aux inf_prec depth)
+           ~pplastarg:(aux_last inf_prec depth) (hd,x::xs)))
     | Custom (hd,xs) ->
-       if appl_prec < prec then Format.fprintf f "(";
-       pp_app f ppconstant (aux inf_prec depth)
-        ~pplastarg:(aux_last inf_prec depth) (hd,xs) ;
-       if appl_prec < prec then Format.fprintf f ")"
+       with_parens appl_prec (fun _ ->
+        pp_app f ppconstant (aux inf_prec depth)
+         ~pplastarg:(aux_last inf_prec depth) (hd,xs))
     | UVar (r,vardepth,argsno) when not nice ->
        let args = mkinterval vardepth argsno 0 in
-       if args <> [] && appl_prec < prec then Format.fprintf f "(";
-       pp_app f (pp_uvar inf_prec depth vardepth 0) ppconstant (r,args);
-       if args <> [] && appl_prec < prec then Format.fprintf f ")"
+       with_parens ~test:(args <> []) appl_prec (fun _ ->
+        pp_app f (pp_uvar inf_prec depth vardepth 0) ppconstant (r,args))
     | UVar (r,vardepth,argsno) when !!r == dummy ->
        let diff = vardepth - depth0 in
        let diff = if diff >= 0 then diff else 0 in
        let vardepth = vardepth - diff in
        let argsno = argsno + diff in
        let args = mkinterval vardepth argsno 0 in
-       if args <> [] && appl_prec < prec then Format.fprintf f "(";
-       pp_app f (pp_uvar inf_prec depth vardepth 0) ppconstant (r,args) ;
-       if args <> [] && appl_prec < prec then Format.fprintf f ")"
+       with_parens ~test:(args <> []) appl_prec (fun _ ->
+        pp_app f (pp_uvar inf_prec depth vardepth 0) ppconstant (r,args))
     | UVar (r,vardepth,argsno) ->
        pp_uvar prec depth vardepth argsno f r
     | AppUVar (r,vardepth,terms) when !!r != dummy && nice -> 
        aux prec depth f (!do_app_deref ~from:vardepth ~to_:depth terms !!r)
     | AppUVar (r,vardepth,terms) -> 
-       if appl_prec < prec then Format.fprintf f "(";
-       pp_app f (pp_uvar inf_prec depth vardepth 0) (aux inf_prec depth)
-        ~pplastarg:(aux_last inf_prec depth) (r,terms) ;
-       if appl_prec < prec then Format.fprintf f ")"
+       with_parens appl_prec (fun _ ->
+        pp_app f (pp_uvar inf_prec depth vardepth 0) (aux inf_prec depth)
+         ~pplastarg:(aux_last inf_prec depth) (r,terms))
     | Arg (n,argsno) ->
        let args = mkinterval argsdepth argsno 0 in
-       if args <> [] && appl_prec < prec then Format.fprintf f "(";
-       pp_app f (pp_arg prec depth) ppconstant (n,args) ;
-       if args <> [] && appl_prec < prec then Format.fprintf f ")"
+       with_parens ~test:(args <> []) appl_prec (fun _ ->
+        pp_app f (pp_arg prec depth) ppconstant (n,args))
     | AppArg (v,terms) ->
-       if appl_prec < prec then Format.fprintf f "(";
-       pp_app f (pp_arg inf_prec depth) (aux inf_prec depth)
-        ~pplastarg:(aux_last inf_prec depth) (v,terms) ;
-       if appl_prec < prec then Format.fprintf f ")"
+       with_parens appl_prec (fun _ ->
+        pp_app f (pp_arg inf_prec depth) (aux inf_prec depth)
+         ~pplastarg:(aux_last inf_prec depth) (v,terms))
     | Lam t ->
-       if lam_prec < prec then Format.fprintf f "(" ;
-       let c = constant_of_dbl depth in
-       Format.fprintf f "%a \\ %a" (aux inf_prec depth) c (aux 0 (depth+1)) t;
-       if lam_prec < prec then Format.fprintf f ")"
+       with_parens lam_prec (fun _ ->
+        let c = constant_of_dbl depth in
+        Format.fprintf f "%a \\ %a" (aux inf_prec depth) c
+         (aux 0 (depth+1)) t)
     | String str -> Format.fprintf f "\"%s\"" (Parser.ASTFuncS.pp str)
     | Int i -> Format.fprintf f "%d" i
     | Float x -> Format.fprintf f "%f" x
