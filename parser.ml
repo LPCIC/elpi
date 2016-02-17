@@ -216,7 +216,7 @@ let octal = lexer [ '0'-'7' ]
 let hex = lexer [ '0'-'9' | 'A'-'F' | 'a'-'f' ]
 let schar2 =
  lexer [ '+'  | '*' | '/' | '^' | '<' | '>' | '`' | '\'' | '?' | '@' | '#'
-       | '~' | '=' | '&' | '!' | '_']
+       | '~' | '=' | '&' | '!' ]
 let schar = lexer [ schar2 | '-' | '$' | '_' ]
 let lcase = lexer [ 'a'-'z' ]
 let ucase = lexer [ 'A'-'Z' ]
