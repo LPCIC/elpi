@@ -403,23 +403,26 @@ let xppterm ~nice depth0 names argsdepth env f t =
    else Format.fprintf f "≪%a≫ " (aux 0 argsdepth) env.(n)
 
   (* ::(a, ::(b, nil))  -->  [a,b] *)
-  and flat_cons_to_list t = match t with
-      | App (hd,x,xs) when (string_of_constant hd) = "::" ->
-         x::(flat_cons_to_list (List.hd xs))
-      | Const c when (string_of_constant c) = "nil" -> []
-      | _ -> 
-Format.fprintf Format.std_formatter "\nANOMALY:\n %a\n%!" (aux 1 100 ) t ;
-anomaly "A list must be built from :: and nil only!" 
-
+  and flat_cons_to_list depth acc t = match t with
+      UVar (r,vardepth,terms) when !!r != dummy -> 
+       flat_cons_to_list depth acc
+        (!do_deref ~from:vardepth ~to_:depth terms !!r)
+    | AppUVar (r,vardepth,terms) when !!r != dummy -> 
+       flat_cons_to_list depth acc
+        (!do_app_deref ~from:vardepth ~to_:depth terms !!r)
+    | App (hd,x,[y]) when hd==consc -> flat_cons_to_list depth (x::acc) y
+    | _ -> List.rev acc, t
   and aux prec depth f = function
-      App (hd,x,xs) as t ->
-       if (string_of_constant hd) = "::" then begin
-         let l = flat_cons_to_list t in
-         Format.fprintf f "[";
-         (pplist (aux prec depth) "," f l);
-         Format.fprintf f "]";
-        end
-       else      
+      App (hd,x,xs) as t when hd==consc ->
+         let prefix,last = flat_cons_to_list depth [] t in
+         Format.fprintf f "[" ;
+         pplist (aux Parser.list_element_prec depth) "," f prefix ;
+         if last!=nilc then begin
+          Format.fprintf f " | " ;
+          aux prec 1 f last
+         end;   
+         Format.fprintf f "]"
+    | App (hd,x,xs) ->
        (try
          let assoc,hdlvl =
           Parser.precedence_of (F.from_string (string_of_constant hd)) in

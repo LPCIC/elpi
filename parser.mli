@@ -44,6 +44,7 @@ type decl =
 type fixity = Infixl | Infixr | Infix | Prefix | Postfix
 
 (* raises Not_found is the constant has no declared fixity *)
+val list_element_prec : int
 val precedence_of : ASTFuncS.t -> fixity * int
 val parse_program : filenames:string list -> decl list
 val parse_goal : string -> term

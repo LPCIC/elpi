@@ -532,7 +532,10 @@ EXTEND
       | s = FLOAT -> mkFloat (float_of_string s) 
       | bt = BUILTIN ; OPT [ COLON ; type_ ] -> mkCustom bt
       | LPAREN; a = atom; RPAREN -> a
-        (* 120 is the first level after 110, which is that of , *)
+        (* 120 is the first level after 110, which is that of ,
+           Warning: keep the hard-coded constant in sync with
+           the list_element_prec below :-(
+        *)
       | LBRACKET; xs = LIST0 atom LEVEL "120" SEP SYMBOL ",";
           tl = OPT [ PIPE; x = atom LEVEL "0" -> x ]; RBRACKET ->
           let tl = match tl with None -> mkNil | Some x -> x in
@@ -541,6 +544,9 @@ EXTEND
           if List.length xs = 0 then mkNil
           else mkSeq (xs@[tl]) ]];
 END
+
+(* 120 is the first level after 110, which is that of , *)
+let list_element_prec = 120
 
 let my_program_only = ref [];;
 
