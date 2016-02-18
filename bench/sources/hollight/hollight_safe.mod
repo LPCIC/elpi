@@ -153,8 +153,43 @@ toplevel :-
  ; $print "Enter its statement",
    read G,
    prove G [ TAC ],
-   $print (theorem NAME G [ TAC ]),
+   canonical TAC CANONICALTAC,
+   $print (theorem NAME G [ CANONICALTAC ]),
    provable NAME G => toplevel).
+
+/********* creating a nice script for the user ********/
+pull_binds [] (bind _ x \ []).
+pull_binds [bind A T | XS] (bind A x \ [ T x | YS x ]) :-
+ pull_binds XS (bind A YS).
+
+pull_binds_from_thenl (thenl (bind A F) (bind A G)) (bind A T) :- !,
+ pi x \ pull_binds_from_thenl (thenl (F x) (G x)) (T x).
+pull_binds_from_thenl T T.
+
+/* turns thenl o bind into bind o thenl */
+canonical1 (thenl T []) T :- !.
+canonical1 (thenl T L1) OTAC :- !,
+ blist_map L1 canonical1 L2,
+ (pull_binds L2 L3, ! ; L3 = L2),
+ pull_binds_from_thenl (thenl T L3) OTAC.
+canonical1 (bind A T1) (bind A T2) :- !,
+ pi x \ canonical1 (T1 x) (T2 x).
+canonical1 T T.
+
+/* turns thenl into then */
+canonical2 (thenl T L) OTAC :- !,
+ blist_map L canonical2 L2,
+ (mk_constant_list L2 S L2, !,
+  (S = [], !, OTAC = T ; OTAC = then T S)
+ ; OTAC = thenl T L2).
+canonical2 (bind A T1) (bind A T2) :- !,
+ pi x \ canonical2 (T1 x) (T2 x).
+canonical2 T T.
+
+/* turns thenl into then and thenl o bind into bind o thenl */
+canonical T1 T3 :-
+ canonical1 T1 T2, /* first pass: take out binds */
+ canonical2 T2 T3. /* second pass: introduce then */
 
 /************ library of basic data types ********/
 /* blist ::= [] | X :: blist | bind A F
@@ -186,12 +221,21 @@ fold2_append [ X | XS ] [ Y | YS ] F OUTS :-
  F X Y OUT0, fold2_append XS YS F OUTS2, push_binds OUT0 OUT, append OUT OUTS2 OUTS.
 %fold2_append A B C D :- $print "FAIL" (fold2_append A B C D), fail.
 
+blist_map [] _ [].
+blist_map [X|XS] F [Y|YS] :- 
+ F X Y, 
+ blist_map XS F YS.
+blist_map (bind A L) F (bind A M) :-
+ pi x \ term X A => blist_map (L x) F (M x).
+
 mem [ X | _ ] X, !.
 mem [ _ | XS ] X :- mem XS X.
 
 /*mk_constant_list A B C :- debug, $print (mk_constant_list A B C), fail.*/
 mk_constant_list [] _ [].
 mk_constant_list [_|L] X [X|R] :- mk_constant_list L X R.
+mk_constant_list (bind A L1) (bind A X) (bind A L2) :- 
+ pi x \ mk_constant_list (L1 x) (X x) (L2 x).
 
 mk_fresh_list [] [].
 mk_fresh_list [_|L] [X|R] :- mk_fresh_list L R.
@@ -502,17 +546,19 @@ main :-
        (lam x2 \ impl ' (forall ' (lam x3 \ impl ' (f ' x3) ' x2)) ' x2))))
     [then forall_i (bind AA f \ then i (thenl (m (exists ' f)) [d , h ]))]
  , theorem exists_i
-   (forall ' (lam x2 \ forall ' (lam x3 \ impl ' (x2 ' x3) ' (exists ' x2))))
-    [then forall_i (then (bind (arr X0^2 bool) x2 \ forall_i) 
-     (then (bind (arr X0^2 bool) x2 \ bind X0^2 x3 \ i) 
-      (thenl (bind (arr X0^2 bool) x2 \ bind X0^2 x3 \ m 
-       (forall ' (lam x4 \ impl ' (forall ' (lam x5 \ impl ' (x2 ' x5) ' x4)) ' x4))) 
-        [then (bind (arr X0^2 bool) x2 \ bind X0^2 x3 \ sym) 
-         (then (bind (arr X0^2 bool) x2 \ bind X0^2 x3 \ d) id  ), 
-          then (bind (arr X0^2 bool) x2 \ bind X0^2 x3 \ forall_i) 
-           (then  (bind (arr X0^2 bool) x2 \ bind X0^2 x3 \ bind bool x4 \ i) 
-            (then (bind (arr X0^2 bool) x2 \ bind X0^2 x3 \ bind bool x4 \ lforall x3) 
-             (then (bind (arr X0^2 bool) x2 \ bind X0^2 x3 \ bind bool x4 \ mp) 
-              (bind (arr X0^2 bool) x2 \ bind X0^2 x3 \ bind bool x4 \ h))))])))]
+ (forall ' (lam x2 \ forall ' (lam x3 \ impl ' (x2 ' x3) ' (exists ' x2))))
+ [then forall_i
+   (bind (arr X0^2 bool)
+     x2 \ then forall_i
+           (then (bind X0^2 x3 \ i)
+             (thenl
+               (bind X0^2
+                 x3 \ m (forall ' (lam x4 \ impl ' (forall ' (lam x5 \ impl ' (x2 ' x5) ' x4)) ' x4)))
+               [then (bind X0^2 x3 \ sym) (bind X0^2 x3 \ d),
+               then (bind X0^2 x3 \ forall_i)
+                (then (bind X0^2 x3 \ (bind bool x4 \ i))
+                  (then (bind X0^2 x3 \ (bind bool x4 \ lforall x3))
+                    (then (bind X0^2 x3 \ (bind bool x4 \ mp))
+                      (bind X0^2 x3 \ (bind bool x4 \ h)))))])))]
 
  ].
