@@ -562,3 +562,16 @@ main :-
                       (bind X0^2 x3 \ (bind bool x4 \ h)))))])))]
 
  ].
+
+/*
+BUGS:
+- major bug: theorems are forced to be monomorphic. E.g.
+  exists_i only inhabits (exists ' lam x \ F ' x) where F
+  has type (X -> bool) for a fixed existentially quantified
+  but uninstantiated variable X.
+
+  This is yet another case of lack of Hindley-Milner
+  polymorphism.
+
+TODO:
+*/
