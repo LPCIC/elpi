@@ -158,9 +158,17 @@ toplevel :-
    provable NAME G => toplevel).
 
 /********* creating a nice script for the user ********/
-pull_binds [] (bind _ x \ []).
-pull_binds [bind A T | XS] (bind A x \ [ T x | YS x ]) :-
- pull_binds XS (bind A YS).
+pull_bind [] (bind _ x \ []).
+pull_bind [bind A T | XS] (bind A x \ [ T x | YS x ]) :-
+ pull_bind XS (bind A YS).
+
+pull_binds L1 L3 :-
+ pull_bind L1 L2, !,
+ (L2 = bind A F, !,
+  (pi x \ pull_binds (F x) (G x)),
+  L3 = bind A G
+ ; L3 = L2).
+pull_binds L L.
 
 pull_binds_from_thenl (thenl (bind A F) (bind A G)) (bind A T) :- !,
  pi x \ pull_binds_from_thenl (thenl (F x) (G x)) (T x).
@@ -170,7 +178,7 @@ pull_binds_from_thenl T T.
 canonical1 (thenl T []) T :- !.
 canonical1 (thenl T L1) OTAC :- !,
  blist_map L1 canonical1 L2,
- (pull_binds L2 L3, ! ; L3 = L2),
+ pull_binds L2 L3,
  pull_binds_from_thenl (thenl T L3) OTAC.
 canonical1 (bind A T1) (bind A T2) :- !,
  pi x \ canonical1 (T1 x) (T2 x).
@@ -433,31 +441,21 @@ main :-
          andr ::
           conj ::
            h :: h :: m p :: sym :: m (impl ' p ' q) :: d :: h :: h :: nil)
-  , theorem ff_elim
-     (forall ' lam p \ impl ' ff ' p)
-     (forall_i ::
-       (bind _ p \ m (impl ' (forall ' (lam x2 \ x2)) ' p)) ::
-       (bind _ p \ c) ::
-       sym :: c :: r :: d ::
-       (bind _ p \ r) ::
-       (bind _ p \ i) ::
-       (bind _ p \ forall_e) :: nil)
-  , theorem ff_elim_alt
-     (forall ' lam p \ impl ' ff ' p)
-     [then forall_i
-       (bind A p \
-         thenl (m (impl ' (forall ' (lam x2 \ x2)) ' p))
-         [ thenl c [ then sym (thenl c [ r , d ]) , r ],
-           then i forall_e ] )]
+  , theorem ff_elim (forall ' (lam x2 \ impl ' ff ' x2))
+    [then forall_i
+     (thenl (bind bool x2 \ m (impl ' (forall ' (lam x3 \ x3)) ' x2))
+     [thenl (bind bool x2 \ c)
+       [then sym (thenl c [r, d])
+       ,bind bool x2 \ r]
+     ,bind bool x2 \ then i forall_e])]
   , theorem not_e (forall ' (lam x2 \ impl ' (not ' x2) ' (impl ' x2 ' ff)))
-     (forall_i ::
-       (bind bool x2 \ m (impl ' (impl ' x2 ' ff) ' (impl ' x2 ' ff))) ::
-        (bind bool x2 \ c) ::
-         (bind bool x2 \ c) ::
-          r ::
-           (bind bool x2 \ sym) ::
-            (bind bool x2 \ d) ::
-             (bind bool x2 \ r) :: (bind bool x2 \ i) :: (bind bool x2 \ h) :: nil)
+    [then forall_i
+     (thenl (bind bool x2 \ m (impl ' (impl ' x2 ' ff) ' (impl ' x2 ' ff)))
+      [thenl (bind bool x2 \ c)
+        [thenl (bind bool x2 \ c)
+          [r, bind bool x2 \ then sym d]
+        , bind bool x2 \ r]
+      , bind bool x2 \ then i h])]
   , theorem not_i (forall ' (lam x2 \ impl ' (impl ' x2 ' ff) ' (not ' x2)))
      (forall_i ::
        (bind bool x2 \ i) ::
@@ -540,26 +538,17 @@ main :-
     (impl ' p ' (impl ' (forall ' lam x \ forall ' lam y \ impl ' x ' (impl ' x ' y)) ' q))
     [then i (then i (then apply h))]*/
   , theorem exists_e
-    (forall ' lam f \
-     (impl ' (exists ' f) '
-      (forall '
-       (lam x2 \ impl ' (forall ' (lam x3 \ impl ' (f ' x3) ' x2)) ' x2))))
-    [then forall_i (bind AA f \ then i (thenl (m (exists ' f)) [d , h ]))]
+    (forall ' lam f \ (impl ' (exists ' f) ' (forall ' (lam x2 \ impl ' (forall ' (lam x3 \ impl ' (f ' x3) ' x2)) ' x2))))
+    [then forall_i (bind AAAAAA f \ then i (thenl (m (exists ' f)) [d , h ]))]
  , theorem exists_i
- (forall ' (lam x2 \ forall ' (lam x3 \ impl ' (x2 ' x3) ' (exists ' x2))))
- [then forall_i
-   (bind (arr X0^2 bool)
-     x2 \ then forall_i
-           (then (bind X0^2 x3 \ i)
-             (thenl
-               (bind X0^2
-                 x3 \ m (forall ' (lam x4 \ impl ' (forall ' (lam x5 \ impl ' (x2 ' x5) ' x4)) ' x4)))
-               [then (bind X0^2 x3 \ sym) (bind X0^2 x3 \ d),
-               then (bind X0^2 x3 \ forall_i)
-                (then (bind X0^2 x3 \ (bind bool x4 \ i))
-                  (then (bind X0^2 x3 \ (bind bool x4 \ lforall x3))
-                    (then (bind X0^2 x3 \ (bind bool x4 \ mp))
-                      (bind X0^2 x3 \ (bind bool x4 \ h)))))])))]
+   (forall ' (lam x2 \ forall ' (lam x3 \ impl ' (x2 ' x3) ' (exists ' x2))))
+   [then forall_i (bind (arr BBBBBB bool) x2 \
+    then forall_i (bind BBBBBB x3 \
+    then i
+    (thenl (m (forall ' (lam x4 \ impl ' (forall ' (lam x5 \ impl ' (x2 ' x5) ' x4)) ' x4)))
+    [then sym d,
+     then forall_i (bind bool x4 \
+     then i (then (lforall x3) (then mp h)))])))]
 
  ].
 
@@ -574,4 +563,6 @@ BUGS:
   polymorphism.
 
 TODO:
+- back to the blackboard for bind-pushing and erasing and
+  script pretty-printing. exists_e shows the problem
 */
