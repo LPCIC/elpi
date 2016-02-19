@@ -15,6 +15,7 @@ term' eq (arr A (arr A bool)).
 
 local thm, provable.
 
+% thm : bounded tactic -> bounded sequent -> list (bounded sequent) -> o
 thm C (seq Gamma G) _ :- debug, $print Gamma "|- " G " := " C, fail.
 
 /* Remove, only for debugging */
@@ -35,7 +36,7 @@ thm c (seq Gamma (eq ' (F ' X) ' (G ' Y)))
  (pi y\ term y A => term (F ' y) B),
  (pi y\ term y A => term (G ' y) B).
 thm k (seq Gamma (eq ' (lam S) ' (lam T)))
- (bind A x \ [ seq Gamma (eq ' (S x) ' (T x)) ]) :-
+ [ bind A x \  seq Gamma (eq ' (S x) ' (T x)) ] :-
  (pi y\ term y A => term (S y) B),
  (pi y\ term y A => term (T y) B).
 thm s (seq Gamma (eq ' P ' Q))
@@ -51,16 +52,9 @@ thm d (seq Gamma (eq ' C ' A)) [] :-
 thm (th NAME) (seq _ G) [] :- provable NAME G.
 
 thm (thenll TAC1 TACN) SEQ SEQS :-
- %$print "THM ??" (thm TAC1 SEQ NEW0),
- thm TAC1 SEQ NEW0,
- %$print "THM OK" (thm TAC1 SEQ NEW0),
- push_binds NEW0 NEW,
- %$print "PUSH BINDS" (push_binds NEW0 NEW),
+ thm TAC1 SEQ NEW,
  deftacl TACN NEW TACL,
- %$print "DEFTACL OK" (deftacl TACN NEW TACL),
- %$print "FOLD2_APPEND" (fold2_append NEW TACL (seq \ tac \ out \ thm tac seq out) SEQS),
- fold2_append NEW TACL (seq \ tac \ out \ thm tac seq out) SEQS.
- %$print "FOLD2_APPEND_OK" (fold2_append NEW TACL (seq \ tac \ out \ thm tac seq out) SEQS).
+ fold2_append TACL NEW thm SEQS.
 
 thm TAC SEQ SEQS :-
  deftac TAC SEQ XTAC,
@@ -79,8 +73,10 @@ thm x (seq Gamma F) [(seq ((impl ' p ' q) :: p :: Gamma) F)].
 /*thm x (seq Gamma F) [(seq (ff :: Gamma) F)].*/
 /*thm x (seq Gamma F) [(seq (p :: q :: Gamma) F)].*/
 
-thm (bind A TAC) (bind A SEQ) (bind A NEW) :-
- pi x \ term x A => thm (TAC x) (SEQ x) (NEW x).
+thm (bind A TAC) (bind A SEQ) NEWL :-
+ pi x \ term x A => (
+  thm (TAC x) (SEQ x) (NEW x),
+  put_binds x (NEW x) A NEWL).
 
 /* debuggin only, remove it */
 %thm A B C :- $print "FAILED " (thm A B C), fail.
@@ -89,30 +85,22 @@ read_in_context (bind A K) (bind A TAC) :-
  pi x \ term x A => read_in_context (K x) (TAC x).
 read_in_context (seq A B) TAC :- read TAC, (TAC = backtrack, !, fail ; true).
 
-%loop INTERACTIVE SEQS TACS :- $print "LOOP" (loop INTERACTIVE SEQS TACS), fail.
+% loop : bool -> list (bounded sequent) -> list (bounded tactics) -> o
+loop INTERACTIVE SEQS TACS :- $print "LOOP" (loop INTERACTIVE SEQS TACS), fail.
 loop _ [] [].
 loop INTERACTIVE [ SEQ | OLD ] [ TAC | OTHER_TACS ] :-
  (INTERACTIVE = true, !,
    $print,
-   print_all_seqs [ SEQ | OLD ],
-   %$print "READ_IN_CONTEXT" SEQ,
+   list_iter [ SEQ | OLD ] print_sequent,
    read_in_context SEQ ITAC
-   %, $print "READ" ITAC
  ; ITAC = TAC),
- ( thm ITAC SEQ NEW0,
-   %$print "OK" (thm ITAC SEQ NEW0),
-   push_binds NEW0 NEW,
-   %$print "OK" (push_binds NEW0 NEW),
+ ( thm ITAC SEQ NEW,
    append NEW OLD SEQS,
-   %$print "OK" (append NEW OLD SEQS),
    (INTERACTIVE = true, !,
-      %$print "OK" (mk_fresh_list NEW NEW_TACS),
-      mk_fresh_list NEW NEW_TACS,
-      %$print "OK" (TAC = thenl ITAC NEW_TACS),
+      mk_list_of_bounded_fresh NEW NEW_TACS,
       TAC = thenl ITAC NEW_TACS,
       append NEW_TACS OTHER_TACS TACS
    ; TACS = OTHER_TACS ),
-   %$print "OK" (loop INTERACTIVE SEQS TACS),
    loop INTERACTIVE SEQS TACS
  ; (INTERACTIVE = true, !, $print "error" ;
     $print "aborted", halt),
@@ -137,13 +125,8 @@ check [ theorem NAME GOAL TACTICS | NEXT ] :-
 
 /************ interactive and non interactive loops ********/
 
-print_seq (seq Gamma G) :- $print Gamma "|-" G.
-print_seq (bind A F) :- pi x \ print_seq (F x).
-
-print_all_seqs []. 
-print_all_seqs [ SEQ | SEQS ] :-
- print_all_seqs SEQS,
- print_seq SEQ.
+print_sequent (seq Gamma G) :- $print Gamma "|-" G.
+print_sequent (bind A F) :- pi x \ print_sequent (F x).
 
 toplevel :-
  $print "Welcome to HOL extra-light",
@@ -157,52 +140,22 @@ toplevel :-
    $print (theorem NAME G [ CANONICALTAC ]),
    provable NAME G => toplevel).
 
-/********* creating a nice script for the user ********/
-pull_bind [] (bind _ x \ []).
-pull_bind [bind A T | XS] (bind A x \ [ T x | YS x ]) :-
- pull_bind XS (bind A YS).
-
-pull_binds L1 L3 :-
- pull_bind L1 L2, !,
- (L2 = bind A F, !,
-  (pi x \ pull_binds (F x) (G x)),
-  L3 = bind A G
- ; L3 = L2).
-pull_binds L L.
-
-pull_binds_from_thenl (thenl (bind A F) (bind A G)) (bind A T) :- !,
- pi x \ pull_binds_from_thenl (thenl (F x) (G x)) (T x).
-pull_binds_from_thenl T T.
-
-/* turns thenl o bind into bind o thenl */
-canonical1 (thenl T []) T :- !.
-canonical1 (thenl T L1) OTAC :- !,
- blist_map L1 canonical1 L2,
- pull_binds L2 L3,
- pull_binds_from_thenl (thenl T L3) OTAC.
-canonical1 (bind A T1) (bind A T2) :- !,
- pi x \ canonical1 (T1 x) (T2 x).
-canonical1 T T.
-
 /* turns thenl into then */
-canonical2 (thenl T L) OTAC :- !,
- blist_map L canonical2 L2,
+canonical (bind A T1) (bind A T2) :- !,
+ pi x \ canonical (T1 x) (T2 x).
+canonical (thenl T L) OTAC :- !,
+ list_map L canonical L2,
  (mk_constant_list L2 S L2, !,
   (S = [], !, OTAC = T ; OTAC = then T S)
  ; OTAC = thenl T L2).
-canonical2 (bind A T1) (bind A T2) :- !,
- pi x \ canonical2 (T1 x) (T2 x).
-canonical2 T T.
-
-/* turns thenl into then and thenl o bind into bind o thenl */
-canonical T1 T3 :-
- canonical1 T1 T2, /* first pass: take out binds */
- canonical2 T2 T3. /* second pass: introduce then */
+canonical T T.
 
 /************ library of basic data types ********/
-/* blist ::= [] | X :: blist | bind A F
-   where  F is x\ blist and A is the type of x */
+/* bounded 'a ::= 'a | bind A (F : _ -> bounded 'a) */
 
+% put_binds : 'a -> list 'b -> 'c -> list (bounded 'b) -> o
+% put_binds x [ f1,...,fn ] t [ bind t x \ f1,...,bind t x fn ]
+% binding all the xs that occur in f1,...,fn
 %put_binds A B C D :- $print "PUT BINDS" (put_binds A B C D), fail.
 put_binds A [] C [].
 put_binds X [ YX | YSX ] A [ YX | YYS ] :-
@@ -210,43 +163,36 @@ put_binds X [ YX | YSX ] A [ YX | YYS ] :-
  !, put_binds X YSX A YYS.
 put_binds X [ YX | YSX ] A [ bind A Y | YYS ] :-
  YX = Y X, put_binds X YSX A YYS.
+%put_binds A B C D :- $print "KO PUT BINDS" (put_binds A B C D), fail.
 
-%push_binds A B :- $print (push_binds A B), fail.
-push_binds (bind A L) RES :-
- pi x \ (push_binds (L x) (L2 x), put_binds x (L2 x) A RES).
-push_binds [] [].
-push_binds XXS YYS :- XXS = [ X | XS ], YYS = XXS.
-%push_binds A B :- $print "FAIL" (push_binds A B), fail.
+mk_bounded_fresh (bind _ F) (bind _ G) :- !,
+ pi x \ mk_binders (F x) (G x).
+mk_bounded_fresh _ X.
 
-%append A B C :- $print (append_aux A B C), fail.
+mk_list_of_bounded_fresh [] [].
+mk_list_of_bounded_fresh [S|L] [X|R] :-
+ mk_bounded_fresh S X, mk_list_of_bounded_fresh L R.
+
+/* list functions */
+
 append [] L L.
 append [ X | XS ] L [ X | RES ] :- append XS L RES.
-%append A B C :- $print "FAIL" (append_aux A B C), fail.
 
-%fold2_append A B C D :- $print "ENTERING" (fold2_append A B C D), fail.
 fold2_append [] [] _ [].
 fold2_append [ X | XS ] [ Y | YS ] F OUTS :-
- F X Y OUT0, fold2_append XS YS F OUTS2, push_binds OUT0 OUT, append OUT OUTS2 OUTS.
-%fold2_append A B C D :- $print "FAIL" (fold2_append A B C D), fail.
+ F X Y OUT, fold2_append XS YS F OUTS2, append OUT OUTS2 OUTS.
 
-blist_map [] _ [].
-blist_map [X|XS] F [Y|YS] :- 
- F X Y, 
- blist_map XS F YS.
-blist_map (bind A L) F (bind A M) :-
- pi x \ term X A => blist_map (L x) F (M x).
+list_map [] _ [].
+list_map [X|XS] F [Y|YS] :- F X Y, list_map XS F YS.
+
+list_iter [] _.
+list_iter [X|XS] F :- F X, list_iter XS F.
 
 mem [ X | _ ] X, !.
 mem [ _ | XS ] X :- mem XS X.
 
-/*mk_constant_list A B C :- debug, $print (mk_constant_list A B C), fail.*/
 mk_constant_list [] _ [].
 mk_constant_list [_|L] X [X|R] :- mk_constant_list L X R.
-mk_constant_list (bind A L1) (bind A X) (bind A L2) :- 
- pi x \ mk_constant_list (L1 x) (X x) (L2 x).
-
-mk_fresh_list [] [].
-mk_fresh_list [_|L] [X|R] :- mk_fresh_list L R.
 
 /********** tacticals ********/
 
@@ -554,6 +500,8 @@ main :-
 
 /*
 BUGS:
+- forall ' lam x \ tt
+  forall_i fails
 - major bug: theorems are forced to be monomorphic. E.g.
   exists_i only inhabits (exists ' lam x \ F ' x) where F
   has type (X -> bool) for a fixed existentially quantified
