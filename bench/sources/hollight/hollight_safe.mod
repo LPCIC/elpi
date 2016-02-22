@@ -106,9 +106,9 @@ loop INTERACTIVE [ SEQ | OLD ] [ TAC | OTHER_TACS ] :-
 
 mk_script (bind A T) NEW NEW_TACS (bind A T2) :- !,
  pi x \
-  apply_list NEW x (NEW2 x),
+  apply_list NEW x A (NEW2 x),
   mk_script (T x) (NEW2 x) (NEWT x) (T2 x),
-  put_binds (NEWT x) x A NEW_TACS.
+  apply_list  NEW_TACS x A (NEWT x).
 mk_script ITAC NEW NEW_TACS (thenl ITAC NEW_TACS) :-
  mk_list_of_bounded_fresh NEW NEW_TACS.
 
@@ -176,10 +176,10 @@ mk_list_of_bounded_fresh [S|L] [X|R] :-
  mk_bounded_fresh S X, mk_list_of_bounded_fresh L R.
 
 % apply_list [ bind A F1, ..., bind A Fn ] x [ F1 x, ..., Fn x ]
-apply_list A B C :- $print (apply_list A B C), fail.
-apply_list [] _ [].
-apply_list [bind _ F | XS] X [ F X | YS ] :- apply_list XS X YS.
-apply_list A B C :- $print "KO" (apply_list A B C), fail.
+%apply_list A B C D :- $print (apply_list A B C D), fail.
+apply_list [] _ _ [].
+apply_list [bind A F | XS] X A [ F X | YS ] :- apply_list XS X A YS.
+%apply_list A B C D :- $print "KO" (apply_list A B C D), fail.
 
 /* list functions */
 
@@ -519,6 +519,9 @@ BUGS:
   polymorphism.
 
 TODO:
+- apply_list and put_binds are inverse predicates... up to
+  erasing of non-necessary binds. Can we reuse put_binds?
+  Must we reuse put_binds?
 - back to the blackboard for bind-pushing and erasing and
   script pretty-printing. exists_e shows the problem
 */
