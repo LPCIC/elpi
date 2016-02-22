@@ -720,24 +720,41 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
          let t = app_deref ~from:vardepth ~to_:(from+depth) args t in
          (* Second phase: from from to to *)
          aux depth t
-    | Arg (i,args) when argsdepth >= to_ ->
+    | Arg (i,args) ->
        let a = e.(i) in
        if a == dummy then
          let r = oref dummy in
-         let v = UVar(r,to_,0) in
+         let m = min argsdepth to_ in
+         let v = UVar(r,m,0) in
          e.(i) <- v;
-         if args == 0 then v else UVar(r,to_,args)
+         if args == 0 then v
+         else if argsdepth+args <= to_ then UVar(r,m,args)
+         else begin
+          Format.fprintf Format.str_formatter
+           "Non trivial pruning not implemented (maybe delay): t=%a, delta=%d%!"
+            (ppterm depth [] argsdepth e) x delta;
+          anomaly (Format.flush_str_formatter ())
+         end
        else
          full_deref argsdepth
            ~from:argsdepth ~to_:(to_+depth) args e a
-    | AppArg(i,args) when argsdepth >= to_ ->
+    | AppArg(i,args) ->
        let a = e.(i) in
-       let args = List.map (aux depth) args in
+       let args =
+        try List.map (aux depth) args
+        with RestrictionFailure ->
+         Format.fprintf Format.str_formatter
+          "Non trivial pruning not implemented (maybe delay): t=%a, delta=%d%!"
+           (ppterm depth [] argsdepth e) x delta;
+         anomaly (Format.flush_str_formatter ())
+       in
        if a == dummy then
          let r = oref dummy in
-         let v = UVar(r,to_,0) in
+         let m = min argsdepth to_ in
+         let v = UVar(r,m,0) in
          e.(i) <- v;
-         AppUVar(r,to_,args) 
+         (*BUG/TODO: check if we can stay in the fragment *)
+         AppUVar(r,m,args) 
        else
          app_deref ~from:argsdepth ~to_:(to_+depth) args a
 
@@ -768,16 +785,21 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
        let r,vardepth,argsno =
          decrease_depth r ~from:vardepth ~to_:from 0 in
        let args0= List.map constant_of_dbl (mkinterval vardepth argsno 0) in
-       let args = List.map (aux depth) (args0@args) in
+       let args =
+        try List.map (aux depth) (args0@args)
+        with RestrictionFailure ->
+         Format.fprintf Format.str_formatter
+          "Non trivial pruning not implemented (maybe delay): t=%a, delta=%d%!"
+           (ppterm depth [] argsdepth e) x delta;
+         anomaly (Format.flush_str_formatter ())
+       in
        AppUVar (r,vardepth,args)
 
     | AppUVar _ ->
        Format.fprintf Format.str_formatter
         "Non trivial pruning not implemented (maybe delay): t=%a, delta=%d%!"
          (ppterm depth [] argsdepth e) x delta;
-       error (Format.flush_str_formatter ())
-    | Arg _ -> anomaly "to_heap: Arg: argsdepth < to_"
-    | AppArg _ -> anomaly "to_heap: AppArg: argsdepth < to_"
+       anomaly (Format.flush_str_formatter ())
   in
     let rc = aux 0 t in
     SPY "heap-term" (ppterm to_ [] argsdepth e) rc;
