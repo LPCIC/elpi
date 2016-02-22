@@ -666,6 +666,10 @@ let occurr_check r1 r2 = if r1 == r2 then raise RestrictionFailure
 
 let dummy_env = [||]
 
+let rec make_lambdas destdepth args =
+ if args = 0 then let x = UVar(oref dummy,destdepth,0) in x,x
+ else let x,y = make_lambdas (destdepth+1) (args-1) in Lam x, y
+
 let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
   let delta = from - to_ in
   let rec aux depth x =
@@ -738,19 +742,19 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
          app_deref ~from:argsdepth ~to_:(to_+depth) args a
 
     (* pruning *)
-    | UVar (r,vardepth,0) when delta > 0 ->
+    | UVar (r,vardepth,argsno) when delta > 0 ->
        occurr_check avoid r;
-       if vardepth <= to_ then x
+       if vardepth+argsno <= to_ then x
        else
-         let fresh = UVar(oref dummy,to_,0) in
+         let assignment,fresh = make_lambdas (to_-argsno) argsno in
          if not !last_call then
           trail := (Assign r) :: !trail;
-         r @:= fresh;
+         r @:= assignment;
         (* TODO: test if it is more efficient here to return fresh or
            the original, imperatively changed, term. The current solution
            avoids dereference chains, but puts more pressure on the GC. *)
          fresh
-    | UVar (r,vardepth,argsno) when delta < 0 ->
+    | UVar (r,vardepth,argsno) ->
        occurr_check avoid r;
        if vardepth+argsno <= from then x
        else
@@ -767,15 +771,10 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
        let args = List.map (aux depth) (args0@args) in
        AppUVar (r,vardepth,args)
 
-    | UVar _ ->
-       Format.fprintf Format.str_formatter
-        "Non trivial pruning not implemented (maybe delay) %a%!"
-         (ppterm depth [] argsdepth e) x;
-       error (Format.flush_str_formatter ())
     | AppUVar _ ->
        Format.fprintf Format.str_formatter
-        "Non trivial pruning not implemented (maybe delay) %a%!"
-        (ppterm depth [] argsdepth e) x;
+        "Non trivial pruning not implemented (maybe delay): t=%a, delta=%d%!"
+         (ppterm depth [] argsdepth e) x delta;
        error (Format.flush_str_formatter ())
     | Arg _ -> anomaly "to_heap: Arg: argsdepth < to_"
     | AppArg _ -> anomaly "to_heap: AppArg: argsdepth < to_"
@@ -1279,10 +1278,6 @@ let ppclause f { args = args; hyps = hyps; key = hd } =
 
 (* {{{ ************** unification ******************************* *)
 
-let rec make_lambdas destdepth args =
- if args = 0 then UVar(oref dummy,destdepth,0)
- else Lam (make_lambdas (destdepth+1) (args-1))
-
 type index = TwoMapIndexing.index
 type program = int * index (* int is the depth, i.e. number of
                               sigma/local-introduced variables *)
@@ -1610,19 +1605,19 @@ let unif adepth e bdepth a b =
    (* simplify *)
    (* TODO: unif->deref case. Rewrite the code to do the job directly? *)
    | _, Arg (i,args) ->
-      e.(i) <- make_lambdas adepth args;
+      e.(i) <- fst (make_lambdas adepth args);
       SPY "assign" (ppterm depth [] adepth [||]) (e.(i));
       unif depth a bdepth b heap
    | _, UVar (r,origdepth,args) ->
       if not !last_call then
        trail := (Assign r) :: !trail;
-      r @:= make_lambdas origdepth args;
+      r @:= fst (make_lambdas origdepth args);
       SPY "assign" (ppterm depth [] adepth [||]) (!!r);
       unif depth a bdepth b heap
    | UVar (r,origdepth,args), _ ->
       if not !last_call then
        trail := (Assign r) :: !trail;
-      r @:= make_lambdas origdepth args;
+      r @:= fst (make_lambdas origdepth args);
       SPY "assign" (ppterm depth [] adepth [||]) (!!r);
       unif depth a bdepth b heap
 
