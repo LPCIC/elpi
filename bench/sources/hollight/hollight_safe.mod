@@ -74,9 +74,7 @@ thm x (seq Gamma F) [(seq ((impl ' p ' q) :: p :: Gamma) F)].
 /*thm x (seq Gamma F) [(seq (p :: q :: Gamma) F)].*/
 
 thm (bind A TAC) (bind A SEQ) NEWL :-
- pi x \ term x A => (
-  thm (TAC x) (SEQ x) (NEW x),
-  put_binds x (NEW x) A NEWL).
+ pi x \ term x A => thm (TAC x) (SEQ x) (NEW x), put_binds (NEW x) x A NEWL.
 
 /* debuggin only, remove it */
 %thm A B C :- $print "FAILED " (thm A B C), fail.
@@ -86,7 +84,7 @@ read_in_context (bind A K) (bind A TAC) :-
 read_in_context (seq A B) TAC :- read TAC, (TAC = backtrack, !, fail ; true).
 
 % loop : bool -> list (bounded sequent) -> list (bounded tactics) -> o
-loop INTERACTIVE SEQS TACS :- $print "LOOP" (loop INTERACTIVE SEQS TACS), fail.
+%loop INTERACTIVE SEQS TACS :- $print "LOOP" (loop INTERACTIVE SEQS TACS), fail.
 loop _ [] [].
 loop INTERACTIVE [ SEQ | OLD ] [ TAC | OTHER_TACS ] :-
  (INTERACTIVE = true, !,
@@ -97,15 +95,22 @@ loop INTERACTIVE [ SEQ | OLD ] [ TAC | OTHER_TACS ] :-
  ( thm ITAC SEQ NEW,
    append NEW OLD SEQS,
    (INTERACTIVE = true, !,
-      mk_list_of_bounded_fresh NEW NEW_TACS,
-      TAC = thenl ITAC NEW_TACS,
-      append NEW_TACS OTHER_TACS TACS
+    mk_script ITAC NEW NEW_TACS TAC,
+    append NEW_TACS OTHER_TACS TACS
    ; TACS = OTHER_TACS ),
    loop INTERACTIVE SEQS TACS
  ; (INTERACTIVE = true, !, $print "error" ;
     $print "aborted", halt),
    loop INTERACTIVE [ SEQ | OLD ] [ TAC | OTHER_TACS ] ).
 %loop INTERACTIVE SEQS TACS :- $print "FAIL" (loop INTERACTIVE SEQS TACS), fail.
+
+mk_script (bind A T) NEW NEW_TACS (bind A T2) :- !,
+ pi x \
+  apply_list NEW x (NEW2 x),
+  mk_script (T x) (NEW2 x) (NEWT x) (T2 x),
+  put_binds (NEWT x) x A NEW_TACS.
+mk_script ITAC NEW NEW_TACS (thenl ITAC NEW_TACS) :-
+ mk_list_of_bounded_fresh NEW NEW_TACS.
 
 prove G TACS :-
  loop true [ seq [] G ] TACS,
@@ -153,25 +158,28 @@ canonical T T.
 /************ library of basic data types ********/
 /* bounded 'a ::= 'a | bind A (F : _ -> bounded 'a) */
 
-% put_binds : 'a -> list 'b -> 'c -> list (bounded 'b) -> o
-% put_binds x [ f1,...,fn ] t [ bind t x \ f1,...,bind t x fn ]
+% put_binds : list 'b -> 'a -> 'c -> list (bounded 'b) -> o
+% put_binds [ f1,...,fn ] x t [ bind t x \ f1,...,bind t x fn ]
 % binding all the xs that occur in f1,...,fn
 %put_binds A B C D :- $print "PUT BINDS" (put_binds A B C D), fail.
-put_binds A [] C [].
-put_binds X [ YX | YSX ] A [ YX | YYS ] :-
- %$print "PRUNING BINDER",
- !, put_binds X YSX A YYS.
-put_binds X [ YX | YSX ] A [ bind A Y | YYS ] :-
- YX = Y X, put_binds X YSX A YYS.
+put_binds [] _ _ [].
+put_binds [ YX | YSX ] X A [ YX | YYS ] :- !, put_binds YSX X A YYS.
+put_binds [ YX | YSX ] X A [ bind A Y | YYS ] :-
+ YX = Y X, put_binds YSX X A YYS.
 %put_binds A B C D :- $print "KO PUT BINDS" (put_binds A B C D), fail.
 
-mk_bounded_fresh (bind _ F) (bind _ G) :- !,
- pi x \ mk_binders (F x) (G x).
+mk_bounded_fresh (bind _ F) (bind _ G) :- !, pi x\ mk_bounded_fresh (F x) (G x).
 mk_bounded_fresh _ X.
 
 mk_list_of_bounded_fresh [] [].
 mk_list_of_bounded_fresh [S|L] [X|R] :-
  mk_bounded_fresh S X, mk_list_of_bounded_fresh L R.
+
+% apply_list [ bind A F1, ..., bind A Fn ] x [ F1 x, ..., Fn x ]
+apply_list A B C :- $print (apply_list A B C), fail.
+apply_list [] _ [].
+apply_list [bind _ F | XS] X [ F X | YS ] :- apply_list XS X YS.
+apply_list A B C :- $print "KO" (apply_list A B C), fail.
 
 /* list functions */
 
