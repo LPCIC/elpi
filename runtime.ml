@@ -767,8 +767,16 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
        let args = List.map (aux depth) (args0@args) in
        AppUVar (r,vardepth,args)
 
-    | UVar _ -> error "Non trivial pruning not implemented (maybe delay)"
-    | AppUVar _ -> error "Non trivial pruning not implemented (maybe delay)"
+    | UVar _ ->
+       Format.fprintf Format.str_formatter
+        "Non trivial pruning not implemented (maybe delay) %a%!"
+         (ppterm depth [] argsdepth e) x;
+       error (Format.flush_str_formatter ())
+    | AppUVar _ ->
+       Format.fprintf Format.str_formatter
+        "Non trivial pruning not implemented (maybe delay) %a%!"
+        (ppterm depth [] argsdepth e) x;
+       error (Format.flush_str_formatter ())
     | Arg _ -> anomaly "to_heap: Arg: argsdepth < to_"
     | AppArg _ -> anomaly "to_heap: AppArg: argsdepth < to_"
   in
