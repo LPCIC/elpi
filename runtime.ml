@@ -485,6 +485,7 @@ let xppterm ~nice depth0 names argsdepth env f t =
     | UVar (r,vardepth,argsno) when not nice ->
        let args = mkinterval vardepth argsno 0 in
        with_parens ~test:(args <> []) appl_prec (fun _ ->
+        Format.fprintf f "." ;
         pp_app f (pp_uvar inf_prec depth vardepth 0) ppconstant (r,args))
     | UVar (r,vardepth,argsno) when !!r == dummy ->
        let diff = vardepth - depth0 in
