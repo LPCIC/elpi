@@ -45,6 +45,8 @@ thm s (seq Gamma (eq ' P ' Q))
  term P bool, term Q bool. /* CSC: check if required */
 thm (h IGN) (seq Gamma P) [] :- append IGN [ P | Gamma2 ] Gamma.
 
+/* TODO: unify the d and thm mechanisms? */
+
 thm d (seq Gamma (eq ' C ' A)) [] :-
  def0 C A./*,
  pi T\ ttype T => (ttype (B T), term A (B T)). */
@@ -340,6 +342,78 @@ deftac apply_last (seq (H::Gamma) F) (apply H).
 
 deftac apply (seq Gamma F) (apply H) :-
  mem Gamma H.
+
+/********** conversion(als) ***********/
+
+deftac (rand_tac C) SEQ TAC :-
+  TAC = thenl c [ r , C ].
+
+deftac (rator_tac C) SEQ TAC :-
+  TAC = thenl c [ C , r ].
+
+deftac (abs_tac C) SEQ TAC :-
+  TAC = then k (bind A x \ C).
+
+deftac (land_tac C) SEQ TAC :-
+  TAC = thenl c [ then c [ r, C ] , r ].
+
+deftac (sub_tac C) SEQ TAC :-
+  TAC = orelse (rand_conv C) (orelse (rator_conv C) (abs_conv C)).
+
+deftac (try TAC) SEQ (orelse TAC id).
+
+deftac (depth_tac C) SEQ TAC :-
+  TAC = then (try C) (sub_conv (depth_conv C)).
+
+defconv r_conv T T r.
+defconv b_conv ((lam F) ' T) (F T) b.
+defconv (rand_conv C) (F ' A) (F ' B) (rand_tac T) :- defconv C A B T.
+
+deftac (conv C) (seq Gamma F) TAC :-
+ defconv C F G CONVTAC,
+ TAC = thenl (m G) [ then sym CONVTAC , id ].
+
+/********** inductive things
+
+defined in terms of new_type_definition
+let nat_induct, nat_recurs = define_type "nat = O | S nat"
+
+val nat_induct : !P. P O /\ ....
+val nat_recurs : !f0 f1. ?f. f O = f0 /\ ...
+
+term O nat
+term S (arr nat nat)
+
+injectivity nat
+distinctiness nat
+cases nat
+
+smart way to instantiate nat_recurs
+let plus = new_recursive_definition nat_RECUR
+ "!n. plus O n = n /\ (!m n. plus (S m) n = S (plus m n)"
+val plus : (!n. plus 0 n = n) /\ ....
+
+every time you introduce a type you need to prove a theorem:
+ example, to define even numbers out of natural numbers you prove
+ ?n. EVEN n
+
+you obtain natural numbers from the axiom
+INFINITY_AX: ?f : ind -> ind. ONE_ONE f /\ -ONTO f
+
+e.g. IND_SUC_0_EXISTS
+?(f: ind -> ind) z. (!x1 x2. (f x1 = f x2) = (x1 = x2)) /\ (!x. ~(f x = z))
+
+then use new_definition with
+IND_SUC = @(f: ind -> ind). ?z. (!x1 x2. (f x1 = f x2) = (x1 = x2)) /\ (!x. ~(f x = z))
+IND_0 = @z:ind. (!x1 x2. (IND_SUC x1 = IND_SUC x2) = (x1 = x2)) /\ (!x. ~(IND_SUC x = z))
+
+and then your define the natural numbers
+
+in the kernel two types: bool and ind (the type of individuals)
+
+INFINITY_AX, SELECT_AX (* axiom of choice *), ETA_AX
+
+*******/
 
 /********** the library ********/
 
