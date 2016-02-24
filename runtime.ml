@@ -652,6 +652,19 @@ let rec in_fragment expected =
 
 exception RestrictionFailure
 
+let def_avoid = oref dummy
+let occurr_check r1 r2 = if r1 == r2 then raise RestrictionFailure
+
+let dummy_env = [||]
+
+let rec make_lambdas destdepth args =
+ if args = 0 then let x = UVar(oref dummy,destdepth,0) in x,x
+ else let x,y = make_lambdas (destdepth+1) (args-1) in Lam x, y
+
+let mkAppUVar r lvl l =
+  try UVar(r,lvl,in_fragment lvl l)
+  with NotInTheFragment -> AppUVar(r,lvl,l)
+
 (* To_heap performs at once:
    1) refreshing of the arguments into variables (heapifycation)
    2) restriction/occur-check (see restrict function below)
@@ -670,16 +683,6 @@ exception RestrictionFailure
      when from=to, to_heap is to be called only for terms that are not in the
      heap
 *)
-
-let def_avoid = oref dummy
-let occurr_check r1 r2 = if r1 == r2 then raise RestrictionFailure
-
-let dummy_env = [||]
-
-let rec make_lambdas destdepth args =
- if args = 0 then let x = UVar(oref dummy,destdepth,0) in x,x
- else let x,y = make_lambdas (destdepth+1) (args-1) in Lam x, y
-
 let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
   let delta = from - to_ in
   let rec aux depth x =
@@ -1401,10 +1404,6 @@ let is_llam lvl args adepth bdepth depth left e =
     lvl (pplist (ppterm adepth [] bdepth e) "") args b
     (pplist (fun fmt (x,n) -> Format.fprintf fmt "%d |-> %d" x n) "") map) res;
   res
-
-let mkAppUVar r lvl l =
-  try UVar(r,lvl,in_fragment lvl l)
-  with NotInTheFragment -> AppUVar(r,lvl,l)
 
 let rec mknLam n t = if n = 0 then t else mknLam (n-1) (Lam t)
 
