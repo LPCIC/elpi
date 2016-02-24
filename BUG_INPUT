@@ -1,0 +1,14 @@
+main.
+aaa
+(forall ' (lam x2 \ forall ' (lam x3 \ impl ' x2 ' (or ' x2 ' x3))))
+forall_i
+forall_i
+i
+m (forall ' (lam x4 \ impl ' (impl ' x2 ' x4) ' (impl ' (impl ' x3 ' x4) ' x4)))
+sym
+d
+forall_i
+i
+i
+mp x2
+h

@@ -1,0 +1,11 @@
+1) Start the command
+
+rlwrap ./elpi bench/sources/hollight/hollight_safe.mod  < BUG_INPUT
+
+And see the output. It works as it should
+
+2) comment out the $print line 102 of hollight_safe.mod and run again
+
+It will fail with a restriction exception. Moreover, when printing here and
+there, you can notice that terms are reduced/instantiated incorrectly. For
+example, you get the subterm  (thenl h [] x2) in place of (thenl h [])

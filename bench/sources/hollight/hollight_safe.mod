@@ -91,7 +91,7 @@ loop _ [] [].
 loop INTERACTIVE [ SEQ | OLD ] [ TAC | OTHER_TACS ] :-
  (INTERACTIVE = true, !,
    $print,
-   list_iter [ SEQ | OLD ] print_sequent,
+   list_iter_rev [ SEQ | OLD ] print_sequent,
    read_in_context SEQ ITAC
  ; ITAC = TAC),
  ( thm ITAC SEQ NEW,
@@ -195,8 +195,8 @@ fold2_append [ X | XS ] [ Y | YS ] F OUTS :-
 list_map [] _ [].
 list_map [X|XS] F [Y|YS] :- F X Y, list_map XS F YS.
 
-list_iter [] _.
-list_iter [X|XS] F :- F X, list_iter XS F.
+list_iter_rev [] _.
+list_iter_rev [X|XS] F :- list_iter_rev XS F, F X.
 
 mem [ X | _ ] X, !.
 mem [ _ | XS ] X :- mem XS X.
