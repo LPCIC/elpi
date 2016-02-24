@@ -941,12 +941,7 @@ and decrease_depth r ~from ~to_ argsno =
  else
   let newr = oref dummy in
   let newargsno = argsno+from-to_ in
-  let newvar = UVar(newr,to_,newargsno) in
-  (* TODO: here we are not registering the operation in the
-     trail to avoid passing last_call/trail around in every single
-     function. Decrease_depth is reversible. However, does this slow
-     down? Would using a global last_call/trail speed up things? What
-     about passing around last_call/trail? *)
+  let newvar = UVar(newr,to_,from-to_) in
   if not !last_call then
    trail := (Assign r) :: !trail;
   r @:= newvar;
