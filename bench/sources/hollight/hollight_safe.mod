@@ -485,10 +485,8 @@ main :-
         , bind bool x2 \ r]
       , bind bool x2 \ then i h])]
   , theorem not_i (forall ' (lam x2 \ impl ' (impl ' x2 ' ff) ' (not ' x2)))
-     (forall_i ::
-       (bind bool x2 \ i) ::
-        (bind bool x2 \ m (impl ' x2 ' ff)) ::
-         (bind bool x2 \ sym) :: (bind bool x2 \ d) :: (bind bool x2 \ h) :: nil)
+    [then forall_i (bind bool x2 \ then i (thenl (m (impl ' x2 ' ff))
+      [then sym d, h]))]
   , theorem orl
      (forall ' (lam x2 \ forall ' (lam x3 \ impl ' x2 ' (or ' x2 ' x3))))
       (forall_i ::
