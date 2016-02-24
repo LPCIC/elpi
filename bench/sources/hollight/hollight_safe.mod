@@ -507,24 +507,19 @@ main :-
            (bind bool x2 \ bind bool x3 \ bind bool x4 \ then mp h) ::
              nil)
   , theorem orr
-     (forall ' (lam x2 \ forall ' (lam x3 \ impl ' x2 ' (or ' x3 ' x2))))
-      (forall_i ::
-       (bind bool x2 \ forall_i) ::
-        (bind bool x2 \ bind bool x3 \ i) ::
-         (bind bool
-          x2 \ bind bool
-            x3 \ m
-                  (forall '
-                    (lam
-                      x4 \ impl ' (impl ' x3 ' x4) '
-                            (impl ' (impl ' x2 ' x4) ' x4)))) ::
-      (bind bool x2 \ bind bool x3 \ sym) ::
-       (bind bool x2 \ bind bool x3 \ d) ::
-        (bind bool x2 \ bind bool x3 \ forall_i) ::
-         (bind bool x2 \ bind bool x3 \ bind bool x4 \ i) ::
-          (bind bool x2 \ bind bool x3 \ bind bool x4 \ i) ::
-           (bind bool x2 \ bind bool x3 \ bind bool x4 \ mp) ::
-            (bind bool x2 \ bind bool x3 \ bind bool x4 \ h) :: nil)
+     (forall ' (lam x2 \ forall ' (lam x3 \ impl ' x2 ' (or ' x2 ' x3))))
+     [then forall_i
+       (bind bool x2 \
+         then forall_i
+          (bind bool x3 \
+            then i
+             (thenl
+               (m
+                 (forall '
+                   (lam x4 \
+                     impl ' (impl ' x2 ' x4) ' (impl ' (impl ' x3 ' x4) ' x4))))
+               [then sym d,
+               then forall_i (bind bool x4 \ then i (then i (then (mp x2) h)))])))]
   , theorem or_e
      (forall '
        (lam
