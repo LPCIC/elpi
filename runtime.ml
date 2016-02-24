@@ -649,6 +649,28 @@ let rec in_fragment expected =
     anomaly "non dereferenced terms in in_fragment"
  | _ -> raise NotInTheFragment
 
+exception NonMetaClosed
+
+let is_meta_closed t =
+ let rec aux =
+  function
+    Lam f -> aux f
+  | App (_,t,l) -> aux t; List.iter aux l
+  | Custom (_,l) -> List.iter aux l
+  | UVar (r,_,_) 
+  | AppUVar (r,_,_) when !!r != dummy -> raise NonMetaClosed
+  | UVar (r,_,_) -> aux !!r
+  | AppUVar (r,_,l) -> aux !!r ; List.iter aux l
+  | Arg _
+  | AppArg _ -> anomaly "non heap term in is_constant"
+  | Const _
+  | String _
+  | Int _
+  | Float _ -> ()
+ in
+  try aux t ; true
+  with NonMetaClosed -> false
+
 exception RestrictionFailure
 
 let def_avoid = oref dummy
@@ -804,6 +826,19 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
            (ppterm depth [] argsdepth e) x delta;
          anomaly (Format.flush_str_formatter ())
        in
+       mkAppUVar r vardepth args
+
+    | AppUVar (r,vardepth,args) when List.for_all is_meta_closed args ->
+       (* TODO: code to be reviewed/testd throughly *)
+       occurr_check avoid r;
+       let args =
+        try List.map (aux depth) args
+        with RestrictionFailure ->
+         anomaly "TODO: implement deterministic restriction" in
+       let newvar = UVar(oref dummy,to_,0) in
+       if not !last_call then
+        trail := (Assign r) :: !trail;
+       r @:= newvar;
        mkAppUVar r vardepth args
 
     | AppUVar _ ->
