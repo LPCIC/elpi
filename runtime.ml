@@ -400,7 +400,6 @@ let xppterm ~nice depth0 names argsdepth env f t =
     Format.fprintf f "%s" name
    else if nice then begin
     if argsdepth <= depth then
-     (*Format.eprintf "DO_DEREF_IN_PP from:%d to:%d\n%!" argsdepth depth;*)
      let dereffed = !do_deref ~from:argsdepth ~to_:depth 0 env.(n) in
      aux prec depth f dereffed
     else
@@ -1591,7 +1590,7 @@ let unif adepth e bdepth a b =
    | _, Arg (i,0) ->
       e.(i) <-
        restrict adepth ~from:(adepth+depth) ~to_:adepth e a;
-      SPY "assign" (ppterm depth [] adepth [||]) (e.(i)); true
+      SPY "assign" (ppterm adepth [] adepth [||]) (e.(i)); true
    | _, UVar (r,origdepth,0) ->
        if not !last_call then
         trail := (Assign r) :: !trail;
