@@ -638,11 +638,16 @@ let oref x = { contents = x; rest = [] }
 (* {{{ ************** to_heap/restrict/deref ******************** *)
 
 exception NotInTheFragment
-(* in_fragment n [n;...;n+m-1] = m *)
+(* in_fragment n [n;...;n+m-1] = m
+   it must be called either on heap terms or on stack terms whose Args are
+   non instantiated *)
 let rec in_fragment expected =
  function
    [] -> 0
  | Const c::tl when c = expected -> 1 + in_fragment (expected+1) tl
+ | UVar (r,_,_)::_
+ | AppUVar (r,_,_)::_ when !!r != dummy ->
+    anomaly "non dereferenced terms in in_fragment"
  | _ -> raise NotInTheFragment
 
 exception RestrictionFailure
