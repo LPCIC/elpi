@@ -765,8 +765,7 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
          let m = min argsdepth to_ in
          let v = UVar(r,m,0) in
          e.(i) <- v;
-         (*BUG/TODO: check if we can stay in the fragment *)
-         AppUVar(r,m,args) 
+         mkAppUVar r m args
        else
          app_deref ~from:argsdepth ~to_:(to_+depth) args a
 
@@ -791,7 +790,7 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
           decrease_depth r ~from:vardepth ~to_:from argsno in
         let args = mkinterval vardepth argsno 0 in
         let args = List.map (fun c -> aux depth (constant_of_dbl c)) args in
-        AppUVar (r,vardepth,args)
+        mkAppUVar r vardepth args
     | AppUVar (r,vardepth,args) when delta < 0 ->
        occurr_check avoid r;
        let r,vardepth,argsno =
@@ -805,7 +804,7 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
            (ppterm depth [] argsdepth e) x delta;
          anomaly (Format.flush_str_formatter ())
        in
-       AppUVar (r,vardepth,args)
+       mkAppUVar r vardepth args
 
     | AppUVar _ ->
        Format.fprintf Format.str_formatter
@@ -970,9 +969,7 @@ and subst fromdepth ts t =
          decrease_depth r ~from:vardepth ~to_:fromdepth argsno in
        let args = mkinterval vardepth argsno 0 in
        let args = List.map (fun c -> aux depth (constant_of_dbl c)) args in
-       (* XXX TODO: check if we can stay in the fragment, here and in
-          many other places *)
-       AppUVar (r,vardepth,args)
+       mkAppUVar r vardepth args
    | AppUVar({ contents = t },vardepth,args) when t != dummy ->
       TCALL aux depth (app_deref ~from:vardepth ~to_:depth args t)
    | AppUVar(r,vardepth,args) ->
@@ -980,7 +977,7 @@ and subst fromdepth ts t =
         decrease_depth r ~from:vardepth ~to_:fromdepth 0 in
       let args0 = List.map constant_of_dbl (mkinterval vardepth argsno 0) in
       let args = List.map (aux depth) (args0@args) in
-      AppUVar(r,vardepth,args)
+      mkAppUVar r vardepth args
    | Lam t -> Lam (aux (depth+1) t)
    | String _
    | Int _
@@ -2003,7 +2000,7 @@ let thaw max_depth e m t =
       aux (app_deref ~from:max_depth ~to_:max_depth args e.(i))
   | Arg(i,ano) -> e.(i) <- UVar(oref dummy,max_depth,ano); e.(i)
   | AppArg(i,args) ->
-      e.(i) <- AppUVar(oref dummy,max_depth,List.map aux args); e.(i)
+      e.(i) <- mkAppUVar (oref dummy) max_depth (List.map aux args); e.(i)
   | App(c,x,xs) ->
       (try
         let r, lvl = list_assq2 c m in
@@ -2014,7 +2011,7 @@ let thaw max_depth e m t =
              true
            end
              else false) (x::xs) in
-         AppUVar(r, lvl, List.map (aux) xs)
+         mkAppUVar r lvl  (List.map (aux) xs)
         else
          assert false (* TODO *)
       with Not_found -> 
@@ -2034,7 +2031,7 @@ let thaw max_depth e m t =
   | (Int _ | Float _ | String _) as x -> x
   | Custom(c,ts) -> Custom(c,List.map (aux) ts)
   | Lam t -> Lam (aux t)
-  | AppUVar(r,lvl,args) -> AppUVar(r,lvl,List.map (aux) args)
+  | AppUVar(r,lvl,args) -> mkAppUVar r lvl (List.map (aux) args)
   | UVar _ as x -> x
   in
     aux t
