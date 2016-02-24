@@ -177,7 +177,7 @@ mk_list_of_bounded_fresh [] [].
 mk_list_of_bounded_fresh [S|L] [X|R] :-
  mk_bounded_fresh S X, mk_list_of_bounded_fresh L R.
 
-% apply_list [ bind A F1, ..., bind A Fn ] x [ F1 x, ..., Fn x ]
+% apply_list [ bind A F1, ..., bind A Fn ] x A [ F1 x, ..., Fn x ]
 %apply_list A B C D :- $print (apply_list A B C D), fail.
 apply_list [] _ _ [].
 apply_list [bind A F | XS] X A [ FX | YS ] :- FX = F X, apply_list XS X A YS.
