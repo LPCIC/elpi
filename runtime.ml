@@ -674,7 +674,7 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
   let delta = from - to_ in
   let rec aux depth x =
     TRACE "to_heap" (fun fmt -> Format.fprintf fmt "to_heap(%d,%d->%d): %a"
-      depth from to_ (ppterm depth [] argsdepth e) x)
+      depth from to_ (ppterm (from+depth) [] argsdepth e) x)
     match x with
     | Const c ->
        if delta == 0 then x else                          (* optimization  *)
