@@ -514,7 +514,7 @@ let xppterm ~nice depth0 names argsdepth env f t =
     | Lam t ->
        with_parens lam_prec (fun _ ->
         let c = constant_of_dbl depth in
-        Format.fprintf f "%a \\ %a" (aux inf_prec depth) c
+        Format.fprintf f "%a \\@ %a" (aux inf_prec depth) c
          (aux 0 (depth+1)) t)
     | String str -> Format.fprintf f "\"%s\"" (Parser.ASTFuncS.pp str)
     | Int i -> Format.fprintf f "%d" i
