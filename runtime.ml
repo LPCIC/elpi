@@ -391,9 +391,6 @@ let xppterm ~nice depth0 names argsdepth env f t =
     in
      Format.fprintf f "%s%s" s
       (if vardepth=0 then "" else "^" ^ string_of_int vardepth)
-   (* TODO: (potential?) bug here, the variable is not lifted
-      from origdepth (currently not even passed to the function)
-      to depth (not passed as well) *)
    end else if nice then begin
     aux prec depth f (!do_deref ~from:vardepth ~to_:depth args !!r)
    end else Format.fprintf f "<%a>_%d" (aux 0 vardepth) !!r vardepth
