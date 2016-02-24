@@ -398,11 +398,16 @@ let xppterm ~nice depth0 names argsdepth env f t =
    let name= try List.nth names n with Failure _ -> "A" ^ string_of_int n in
    if try env.(n) == dummy with Invalid_argument _ -> true then
     Format.fprintf f "%s" name
-   (* TODO: (potential?) bug here, the argument is not lifted
-      from g_depth (currently not even passed to the function)
-      to depth (not passed as well) *)
-   else if nice then aux prec depth f (!do_deref ~from:argsdepth ~to_:depth 0 env.(n))
-   else Format.fprintf f "≪%a≫ " (aux 0 argsdepth) env.(n)
+   else if nice then begin
+    if argsdepth <= depth then
+     (*Format.eprintf "DO_DEREF_IN_PP from:%d to:%d\n%!" argsdepth depth;*)
+     let dereffed = !do_deref ~from:argsdepth ~to_:depth 0 env.(n) in
+     aux prec depth f dereffed
+    else
+     (* The instantiated Args live at an higher depth, and that's ok.
+        But if we try to deref we make an imperative mess *)
+     Format.fprintf f "≪%a≫_%d" (aux 0 argsdepth) env.(n) argsdepth
+   end else Format.fprintf f "≪%a≫_%d" (aux 0 argsdepth) env.(n) argsdepth
 
   (* ::(a, ::(b, nil))  -->  [a,b] *)
   and flat_cons_to_list depth acc t = match t with
