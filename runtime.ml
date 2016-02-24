@@ -414,7 +414,9 @@ let xppterm ~nice depth0 names argsdepth env f t =
         (!do_app_deref ~from:vardepth ~to_:depth terms !!r)
     | App (hd,x,[y]) when hd==consc -> flat_cons_to_list depth (x::acc) y
     | _ -> List.rev acc, t
-  and aux_last prec depth f t = match t with
+  and aux_last prec depth f t =
+   if nice then begin
+   match t with
      Lam _ -> aux min_prec depth f t
    | UVar (r,vardepth,terms) when !!r != dummy -> 
       aux_last prec depth f (!do_deref ~from:vardepth ~to_:depth terms !!r)
@@ -422,13 +424,14 @@ let xppterm ~nice depth0 names argsdepth env f t =
       aux_last prec depth f
        (!do_app_deref ~from:vardepth ~to_:depth terms !!r)
    | _ -> aux prec depth f t
+   end else aux inf_prec depth f t
   and aux prec depth f t =
    let with_parens ?(test=true) myprec h =
     if test && myprec < prec then
      (Format.fprintf f "(" ; h () ; Format.fprintf f ")")
     else h () in
    match t with
-   | t when
+   | t when nice &&
       match t with App (hd,_,_) when hd==consc -> true | _ -> t==nilc
      ->
       let prefix,last = flat_cons_to_list depth [] t in
