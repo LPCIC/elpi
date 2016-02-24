@@ -755,32 +755,43 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
          (* Second phase: from from to to *)
          aux depth t
     | Arg (i,args) ->
+       (* TODO: CODICE DA RIVEDERE *)
+(* I thought that this code was correct, but it is definitely not.
+   I restored the old code, but I am not sure that it is always correct.
        let a = e.(i) in
-       if a == dummy then
+       if a == dummy then begin
+         assert (delta <= 0);
+         let r,vardepth,argsno =
+           decrease_depth_arg e i ~from:argsdepth ~to_:from args in
+         let args = mkinterval vardepth argsno 0 in
+         let args = List.map (fun c -> aux depth (constant_of_dbl c)) args in
+         mkAppUVar r vardepth args
+*)
+       let a = e.(i) in
+       if a == dummy then begin
+         assert (delta <= 0);
+         assert (argsdepth >= to_); (* was an anomaly, same for AppArg *)
          let r = oref dummy in
-         let m = min argsdepth to_ in
-         let v = UVar(r,m,0) in
+         let v = UVar(r,to_,0) in
          e.(i) <- v;
-         if args == 0 then v
-         else if argsdepth+args <= to_ then UVar(r,m,args)
-         else begin
-          Format.fprintf Format.str_formatter
-           "Non trivial pruning not implemented (maybe delay): t=%a, delta=%d%!"
-            (ppterm depth [] argsdepth e) x delta;
-          anomaly (Format.flush_str_formatter ())
-         end
-       else
+         if args == 0 then v else UVar(r,to_,args)
+       end else
          full_deref argsdepth
            ~from:argsdepth ~to_:(to_+depth) args e a
     | AppArg(i,args) ->
+       (* TODO: CODICE DA RIVEDERE *)
+       assert (argsdepth >= to_); (* was an anomaly, same for AppArg *)
+       assert (delta <= 0);
+       if delta > 0 then anomaly "to_heap: restriction of a non heap term (3)" ;
        let a = e.(i) in
        let args =
         try List.map (aux depth) args
         with RestrictionFailure ->
-         Format.fprintf Format.str_formatter
+         anomaly "to_heap: restriction failure raised when delta <= 0!"
+         (*Format.fprintf Format.str_formatter
           "Non trivial pruning not implemented (maybe delay): t=%a, delta=%d%!"
            (ppterm depth [] argsdepth e) x delta;
-         anomaly (Format.flush_str_formatter ())
+         anomaly (Format.flush_str_formatter ())*)
        in
        if a == dummy then
          let r = oref dummy in
@@ -820,11 +831,11 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
        let args0= List.map constant_of_dbl (mkinterval vardepth argsno 0) in
        let args =
         try List.map (aux depth) (args0@args)
-        with RestrictionFailure ->
+        with RestrictionFailure -> anomaly "impossible, delta < 0"(*
          Format.fprintf Format.str_formatter
           "Non trivial pruning not implemented (maybe delay): t=%a, delta=%d%!"
            (ppterm depth [] argsdepth e) x delta;
-         anomaly (Format.flush_str_formatter ())
+         anomaly (Format.flush_str_formatter ())*)
        in
        mkAppUVar r vardepth args
 
