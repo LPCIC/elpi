@@ -780,18 +780,6 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
          (* Second phase: from from to to *)
          aux depth t
     | Arg (i,args) ->
-       (* TODO: CODICE DA RIVEDERE *)
-(* I thought that this code was correct, but it is definitely not.
-   I restored the old code, but I am not sure that it is always correct.
-       let a = e.(i) in
-       if a == dummy then begin
-         assert (delta <= 0);
-         let r,vardepth,argsno =
-           decrease_depth_arg e i ~from:argsdepth ~to_:from args in
-         let args = mkinterval vardepth argsno 0 in
-         let args = List.map (fun c -> aux depth (constant_of_dbl c)) args in
-         mkAppUVar r vardepth args
-*)
        let a = e.(i) in
        if a == dummy then begin
         if argsdepth < to_ then
