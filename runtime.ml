@@ -703,6 +703,21 @@ let mkAppUVar r lvl l =
    Invariant:
      when from=to, to_heap is to be called only for terms that are not in the
      heap
+
+   Notes:
+    - remember that the depth of a stack term is the depth when the clause
+      entered the program, whereas the argsdepth of the variables is the depth
+      when the clause is used. Therefore it is normal to have arguments,
+      possibly instantiated, whose depth is greater than the surrounding term.
+      Calling to_heap on them with the wrong depth (e.g. the depth of the
+      surrounding term) can therefore trigger restrictions that are meaningless.
+    - it is possible for delta to be >0 (restriction) and the second term
+      be a stack term. Therefore sometimes restrictions of heap terms are
+      meaningful. Example:
+      p A.
+      |- pi x \ p X
+      The unification problem becomes X^0 1^=^0 A^1 that triggers the
+      assigment X^0 := to_heap ~from:1 ~to_:0 A^1
 *)
 let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
   let delta = from - to_ in
