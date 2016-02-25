@@ -868,11 +868,15 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
         try List.map (aux depth) args
         with RestrictionFailure ->
          anomaly "TODO: implement deterministic restriction" in
-       let newvar = UVar(oref dummy,to_,0) in
-       if not !last_call then
-        trail := (Assign r) :: !trail;
-       r @:= newvar;
-       mkAppUVar r vardepth args
+       if vardepth <= to_ then
+        mkAppUVar r vardepth args
+       else begin
+        let newvar = UVar(oref dummy,to_,0) in
+        if not !last_call then
+         trail := (Assign r) :: !trail;
+        r @:= newvar;
+        mkAppUVar r vardepth args
+       end
 
     | AppUVar _ ->
        Format.fprintf Format.str_formatter
