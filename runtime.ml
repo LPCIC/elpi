@@ -796,6 +796,17 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
          anomaly "TODO: verify somehow that the beta-redexes corresponding to terms to be restricted are affine" in
        app_deref ~from:argsdepth ~to_:(to_+depth) args e.(i)
 
+    (* uvar, lifting *)
+    | UVar (r,vardepth,argsno) when delta <= 0 ->
+       occurr_check avoid r;
+       if vardepth+argsno <= from then x
+       else
+        let r,vardepth,argsno =
+          decrease_depth r ~from:vardepth ~to_:from argsno in
+        let args = mkinterval vardepth argsno 0 in
+        let args = List.map (fun c -> aux depth (constant_of_dbl c)) args in
+        mkAppUVar r vardepth args
+
     (* pruning and Arg -> UVar *)
     | Arg (i,args) ->
        if argsdepth < to_ then
@@ -824,10 +835,11 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
          (ppterm depth [] argsdepth e) x delta;
        anomaly (Format.flush_str_formatter ())
 
-    | UVar (r,vardepth,argsno) when delta > 0 ->
+    | UVar (r,vardepth,argsno) ->
        occurr_check avoid r;
        if vardepth+argsno <= to_ then x
-       else
+       else begin
+         assert (vardepth+argsno <= from);
          let assignment,fresh = make_lambdas (to_-argsno) argsno in
          if not !last_call then
           trail := (Assign r) :: !trail;
@@ -836,15 +848,8 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
            the original, imperatively changed, term. The current solution
            avoids dereference chains, but puts more pressure on the GC. *)
          fresh
-    | UVar (r,vardepth,argsno) ->
-       occurr_check avoid r;
-       if vardepth+argsno <= from then x
-       else
-        let r,vardepth,argsno =
-          decrease_depth r ~from:vardepth ~to_:from argsno in
-        let args = mkinterval vardepth argsno 0 in
-        let args = List.map (fun c -> aux depth (constant_of_dbl c)) args in
-        mkAppUVar r vardepth args
+       end
+
     | AppUVar (r,vardepth,args) when delta < 0 ->
        occurr_check avoid r;
        let r,vardepth,argsno =
