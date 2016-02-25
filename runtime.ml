@@ -718,6 +718,16 @@ let mkAppUVar r lvl l =
       |- pi x \ p X
       The unification problem becomes X^0 1^=^0 A^1 that triggers the
       assigment X^0 := to_heap ~from:1 ~to_:0 A^1
+    - On the other hand *I think* that it is not possible to have
+      argsdepth < to_ in to_heap.
+      It would mean that I am doing an assignment
+      X^to_ := ... A^argsdepth....
+      that is triggered by an unification problem
+      .... X^to_ .... == .... A^argsdepth ....
+      that is triggered by calling a clause at depth argsdepth with a formal
+      parameter containing an UVar whose depth is higher than the current depth
+      of the program. How could such a variable enters the formal parameters
+      without being restricted earlier?
 *)
 let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
   let delta = from - to_ in
@@ -784,12 +794,12 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
 *)
        let a = e.(i) in
        if a == dummy then begin
-         assert (delta <= 0);
-         assert (argsdepth >= to_); (* was an anomaly, same for AppArg *)
-         let r = oref dummy in
-         let v = UVar(r,to_,0) in
-         e.(i) <- v;
-         if args == 0 then v else UVar(r,to_,args)
+        if argsdepth < to_ then
+         anomaly "to_heap: assigning to an UVar whose depth is greater than the current goal depth" ;
+        let r = oref dummy in
+        let v = UVar(r,to_,0) in
+        e.(i) <- v;
+        if args == 0 then v else UVar(r,to_,args)
        end else
          full_deref argsdepth
            ~from:argsdepth ~to_:(to_+depth) args e a
