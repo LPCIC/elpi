@@ -68,6 +68,10 @@ exception No_clause
 
 module Pp :
  sig
+  val ppterm :
+    constant -> string list ->
+    constant -> term array ->
+      Format.formatter -> term -> unit
   val uppterm :
     constant -> string list ->
     constant -> term array ->
