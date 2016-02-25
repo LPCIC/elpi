@@ -651,7 +651,7 @@ let rec in_fragment expected =
 
 exception NonMetaClosed
 
-let is_meta_closed t =
+let cannot_be_restricted e ~args_safe t =
  let rec aux =
   function
     Lam f -> aux f
@@ -661,8 +661,10 @@ let is_meta_closed t =
   | AppUVar (r,_,_) when !!r != dummy -> raise NonMetaClosed
   | UVar (r,_,_) -> aux !!r
   | AppUVar (r,_,l) -> aux !!r ; List.iter aux l
-  | Arg _
-  | AppArg _ -> anomaly "non heap term in is_constant"
+  | Arg (i,_) when e.(i) == dummy && not args_safe -> raise NonMetaClosed
+  | AppArg (i,_) when e.(i) == dummy -> raise NonMetaClosed
+  | Arg (i,_) -> if e.(i) != dummy then aux e.(i)
+  | AppArg (i,l) -> aux e.(i) ; List.iter aux l
   | Const _
   | String _
   | Int _
@@ -728,6 +730,11 @@ let mkAppUVar r lvl l =
       parameter containing an UVar whose depth is higher than the current depth
       of the program. How could such a variable enters the formal parameters
       without being restricted earlier?
+
+      Therefore, in the case of heap terms, the invariant is
+              from <= depthargs <= to_
+      the first inequality because a clause always enter a program at a depth
+      (from) smaller than when it is used (depthargs).
 *)
 let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
   let delta = from - to_ in
@@ -760,7 +767,7 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
     (* fast path with no deref... *)
     | UVar (r,_,_) when delta == 0 -> occurr_check avoid r; x
 
-    (* deref and Arg->UVar *)
+    (* deref *)
     | UVar ({ contents = t },vardepth,args) when t != dummy ->
        if depth == 0 then
          full_deref argsdepth ~from:vardepth ~to_ args e t
@@ -779,43 +786,44 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
          let t = app_deref ~from:vardepth ~to_:(from+depth) args t in
          (* Second phase: from from to to *)
          aux depth t
-    | Arg (i,args) ->
-       let a = e.(i) in
-       if a == dummy then begin
-        if argsdepth < to_ then
-         anomaly "to_heap: assigning to an UVar whose depth is greater than the current goal depth" ;
-        let r = oref dummy in
-        let v = UVar(r,to_,0) in
-        e.(i) <- v;
-        if args == 0 then v else UVar(r,to_,args)
-       end else
-         full_deref argsdepth
-           ~from:argsdepth ~to_:(to_+depth) args e a
-    | AppArg(i,args) ->
-       (* TODO: CODICE DA RIVEDERE *)
-       assert (argsdepth >= to_); (* was an anomaly, same for AppArg *)
-       assert (delta <= 0);
-       if delta > 0 then anomaly "to_heap: restriction of a non heap term (3)" ;
-       let a = e.(i) in
+    | Arg (i,args) when e.(i) != dummy ->
+       full_deref argsdepth ~from:argsdepth ~to_:(to_+depth) args e e.(i)
+
+    | AppArg(i,args) when e.(i) != dummy ->
        let args =
         try List.map (aux depth) args
         with RestrictionFailure ->
-         anomaly "to_heap: restriction failure raised when delta <= 0!"
-         (*Format.fprintf Format.str_formatter
-          "Non trivial pruning not implemented (maybe delay): t=%a, delta=%d%!"
-           (ppterm depth [] argsdepth e) x delta;
-         anomaly (Format.flush_str_formatter ())*)
-       in
-       if a == dummy then
-         let r = oref dummy in
-         let m = min argsdepth to_ in
-         let v = UVar(r,m,0) in
-         e.(i) <- v;
-         mkAppUVar r m args
-       else
-         app_deref ~from:argsdepth ~to_:(to_+depth) args a
+         anomaly "TODO: verify somehow that the beta-redexes corresponding to terms to be restricted are affine" in
+       app_deref ~from:argsdepth ~to_:(to_+depth) args e.(i)
 
-    (* pruning *)
+    (* pruning and Arg -> UVar *)
+    | Arg (i,args) ->
+       if argsdepth < to_ then
+        anomaly "to_heap: assigning to an UVar whose depth is greater than the current goal depth" ;
+       let r = oref dummy in
+       let v = UVar(r,to_,0) in
+       e.(i) <- v;
+       if args == 0 then v else UVar(r,to_,args)
+
+    | AppArg(i,args) when
+      List.for_all (cannot_be_restricted e ~args_safe:(argsdepth=to_)) args ->
+       if argsdepth < to_ then
+        anomaly "to_heap: assigning to an UVar whose depth is greater than the current goal depth" ;
+       let args =
+        try List.map (aux depth) args
+        with RestrictionFailure ->
+         anomaly "TODO: implement deterministic restriction" in
+       let r = oref dummy in
+       let v = UVar(r,to_,0) in
+       e.(i) <- v;
+       mkAppUVar r to_ args
+
+    | AppArg _ ->
+       Format.fprintf Format.str_formatter
+        "Non deterministic pruning, implemented delay: t=%a, delta=%d%!"
+         (ppterm depth [] argsdepth e) x delta;
+       anomaly (Format.flush_str_formatter ())
+
     | UVar (r,vardepth,argsno) when delta > 0 ->
        occurr_check avoid r;
        if vardepth+argsno <= to_ then x
@@ -852,8 +860,9 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
        in
        mkAppUVar r vardepth args
 
-    | AppUVar (r,vardepth,args) when List.for_all is_meta_closed args ->
-       (* TODO: code to be reviewed/testd throughly *)
+    | AppUVar (r,vardepth,args) when
+      List.for_all (cannot_be_restricted e ~args_safe:(argsdepth=to_)) args ->
+       (* TODO: code to be reviewed/tested throughly *)
        occurr_check avoid r;
        let args =
         try List.map (aux depth) args
@@ -867,7 +876,7 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
 
     | AppUVar _ ->
        Format.fprintf Format.str_formatter
-        "Non trivial pruning not implemented (maybe delay): t=%a, delta=%d%!"
+        "Non deterministic pruning, implemented delay: t=%a, delta=%d%!"
          (ppterm depth [] argsdepth e) x delta;
        anomaly (Format.flush_str_formatter ())
   in
@@ -1066,7 +1075,9 @@ and beta depth sub t args =
          | Lam _ -> anomaly "beta: some args and some lambdas"
          | String _ | Int _ | Float _ -> type_error "beta"
 
-(* Deref is to be called only on heap terms and with from <= to *)
+(* Deref is to be called only on heap terms and with from <= to
+*  The args must live in to_.
+*)
 and app_deref ~from ~to_ args t = beta to_ [] (deref ~from ~to_ 0 t) args
 ;;
 
