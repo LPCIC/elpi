@@ -592,3 +592,49 @@ TODO:
 - back to the blackboard for bind-pushing and erasing and
   script pretty-printing. exists_e shows the problem
 */
+
+/*
+1. the need to use delay is a very good news. It justifies our
+implementation and it easily allow to publish. We also need to add
+the corresponding constraint propagation rules that implement the
+unicity of typing meta-theorem. I.e.
+  |- term X A,  |- term X B ==> |- A = B
+
+The propagation rule is however harder. Consider:
+
+  term x A |- term (X x) B,   |- term (X 0) C
+  ===> A = nat, B = C
+
+
+ We will discuss about it and we basically already have
+ the code in the refiner.elpi file.
+
+2) we need to fix the ELPI problems about handling of metavariables.
+ I have already discussed with Enrico about them and he could have a
+ shot at them. Namely:
+ a) occur check + optimization to avoid it when possible
+ b) unimplemented cases of restriction (IN PROGRESS)
+
+3) once we let metavariables reach the goals, the current HOL-light 
+ tactic implementation becomes too fragile. We should let the user 
+ refer to hypotheses at least by number if not by name. But we better
+ have a bidirectional successor/predecessor via $delay
+
+4) we should improve the pretty-printing of proofs to avoid propagating bindings to the leaves (IN PROGRESS)
+
+5) we must implement type declarations and in particular inductive 
+ types for HOL-light. It should also be a nice exercise in lambda-
+ Prolog and the resulting code is likely to be easier than the 
+ corresponding ML one. However, I never really had a look at the 
+ mechanism used by HOL and we need to study it first
+
+6) we could implement an automated theorem prover in lambdaProlog
+ that works or is interfaced with the HOL-light code. There are
+ complete provers like leanCOP 2.0 that are only 10 lines of code,
+ but use some Prolog tricks.
+
+7) we should do a small formalization, possibly developing a tactic,
+ to prove that everything is working. For example, a decision procedure
+ for rings or for linear inequations.
+
+*/
