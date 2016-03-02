@@ -418,6 +418,14 @@ let xppterm ~nice depth0 names argsdepth env f t =
         (!do_app_deref ~from:vardepth ~to_:depth terms !!r)
     | App (hd,x,[y]) when hd==consc -> flat_cons_to_list depth (x::acc) y
     | _ -> List.rev acc, t
+  and is_lambda depth =
+   function
+      Lam _ -> true
+    | UVar (r,vardepth,terms) when !!r != dummy ->
+       is_lambda depth (!do_deref ~from:vardepth ~to_:depth terms !!r)
+    | AppUVar (r,vardepth,terms) when !!r != dummy -> 
+       is_lambda depth (!do_app_deref ~from:vardepth ~to_:depth terms !!r)
+    | _ -> false
   and aux_last prec depth f t =
    if nice then begin
    match t with
@@ -477,7 +485,7 @@ let xppterm ~nice depth0 names argsdepth env f t =
         with Not_found -> 
          let lastarg = List.nth (x::xs) (List.length xs) in
          let hdlvl =
-          if match lastarg with Lam _ -> true | _ -> false then lam_prec
+          if is_lambda depth lastarg then lam_prec
           else appl_prec in
          with_parens hdlvl (fun _ ->
           pp_app f ppconstant (aux inf_prec depth)
