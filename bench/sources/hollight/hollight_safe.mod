@@ -147,8 +147,8 @@ check [ new_basic_type TYPE REP ABS REPABS ABSREP P TACTICS | NEXT ] :-
   $print new theorems ABSREP REPABS,
   !,
   typ TYPE =>
-  term REP (arr TYPE X) =>
-  term ABS (arr X TYPE) =>
+  term' REP (arr TYPE X) =>
+  term' ABS (arr X TYPE) =>
   provable ABSREP
    (forall ' lam x \ eq ' (abs ' (rep ' x)) ' x) =>
   provable REPABS
