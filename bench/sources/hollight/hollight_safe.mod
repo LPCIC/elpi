@@ -4,6 +4,9 @@ infixl ' 139.
 
 /* seq _hypothesis_ _conclusion_ */
 
+typ bool.
+typ ind.
+
 /*term T TY :- $print (term T TY), fail.*/
 term T TY :- $is_flex T, !, $delay (term T TY) [ T ].
 term T TY :- term' T TY.
@@ -125,11 +128,32 @@ saved G TACS :-
 
 check [] :- toplevel.
 check [ theorem NAME GOAL TACTICS | NEXT ] :-
+  not (provable NAME _),
   saved GOAL TACTICS,
   $print NAME ":" GOAL,
   !,
   provable NAME GOAL => check NEXT.
-
+check [ new_basic_type TYPE REP ABS REPABS ABSREP P TACTICS | NEXT ] :-
+  not (typ TYPE),
+  not (term REP _),
+  not (term ABS _),
+  not (term ABSREP _),
+  not (term REPABS _),
+  term P (arr X bool),
+  saved (exists ' P ) TACTICS,
+  $print new typ TYPE,
+  $print new term REP ":" (arr TYPE X),
+  $print new term ABS ":" (arr X TYPE),
+  $print new theorems ABSREP REPABS,
+  !,
+  typ TYPE =>
+  term REP (arr TYPE X) =>
+  term ABS (arr X TYPE) =>
+  provable ABSREP
+   (forall ' lam x \ eq ' (abs ' (rep ' x)) ' x) =>
+  provable REPABS
+   (forall ' lam x \ eq ' (P ' x) ' (eq ' (rep ' (abs ' x)) x)) =>
+  check NEXT.
 }
 
 /************ interactive and non interactive loops ********/
@@ -554,7 +578,9 @@ main :-
     [then sym d,
      then forall_i (bind bool x4 \
      then i (then (lforall x3) (then mp h)))])))]
-
+ , new_basic_type mybool myrep myabs myrepabs myabsrep
+    (lam x \ exists ' lam p \ eq ' x ' (and ' p ' p))
+    [ daemon ]
  ].
 
 /*
@@ -597,20 +623,18 @@ The propagation rule is however harder. Consider:
  refer to hypotheses at least by number if not by name. But we better
  have a bidirectional successor/predecessor via $delay
 
-4) we should improve the pretty-printing of proofs to avoid propagating bindings to the leaves (IN PROGRESS)
-
-5) we must implement type declarations and in particular inductive 
+4) we must implement type declarations and in particular inductive 
  types for HOL-light. It should also be a nice exercise in lambda-
  Prolog and the resulting code is likely to be easier than the 
  corresponding ML one. However, I never really had a look at the 
  mechanism used by HOL and we need to study it first
 
-6) we could implement an automated theorem prover in lambdaProlog
+5) we could implement an automated theorem prover in lambdaProlog
  that works or is interfaced with the HOL-light code. There are
  complete provers like leanCOP 2.0 that are only 10 lines of code,
  but use some Prolog tricks.
 
-7) we should do a small formalization, possibly developing a tactic,
+6) we should do a small formalization, possibly developing a tactic,
  to prove that everything is working. For example, a decision procedure
  for rings or for linear inequations.
 
