@@ -61,9 +61,15 @@ thm (thenll TAC1 TACN) SEQ SEQS :-
  deftacl TACN NEW TACL,
  fold2_append TACL NEW thm SEQS.
 
+/*debprint _ (then _ _) :- !.
+debprint _ (thenl _ _) :- !.
+debprint O T :- $print O T.*/
+
 thm TAC SEQ SEQS :-
  deftac TAC SEQ XTAC,
- thm XTAC SEQ SEQS.
+ /*debprint "<<" TAC,
+ (*/ thm XTAC SEQ SEQS /*, debprint ">>" TAC
+ ; debprint "XX" TAC, fail)*/.
 
 thm id SEQ [ SEQ ].
 
