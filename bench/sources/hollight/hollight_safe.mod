@@ -54,7 +54,8 @@ thm d (seq Gamma (eq ' C ' A)) [] :-
 thm (th NAME) (seq _ G) [] :- provable NAME G.
 
 thm (thenll TAC1 TACN) SEQ SEQS :-
- thm TAC1 SEQ NEW,
+ thm TAC1 SEQ NEW0,
+ list_map NEW0 (dweaken []) NEW,
  deftacl TACN NEW TACL,
  fold2_append TACL NEW thm SEQS.
 
@@ -94,7 +95,8 @@ loop INTERACTIVE [ SEQ | OLD ] [ TAC | OTHER_TACS ] :-
    list_iter_rev [ SEQ | OLD ] print_sequent,
    read_in_context SEQ ITAC
  ; ITAC = TAC),
- ( thm ITAC SEQ NEW,
+ ( thm ITAC SEQ NEW0,
+   list_map NEW0 (dweaken ITAC) NEW,
    append NEW OLD SEQS,
    (INTERACTIVE = true, !,
     mk_script ITAC NEW NEW_TACS TAC,
@@ -165,10 +167,19 @@ canonical T T.
 % binding all the xs that occur in f1,...,fn
 %put_binds A B C D :- $print "PUT BINDS" (put_binds A B C D), fail.
 put_binds [] _ _ [].
-put_binds [ YX | YSX ] X A [ YX | YYS ] :- !, put_binds YSX X A YYS.
+%put_binds [ YX | YSX ] X A [ YX | YYS ] :- !, put_binds YSX X A YYS.
 put_binds [ YX | YSX ] X A [ bind A Y | YYS ] :-
  YX = Y X, put_binds YSX X A YYS.
 %put_binds A B C D :- $print "KO PUT BINDS" (put_binds A B C D), fail.
+
+weaken (bind A F) H :- !,
+ pi x \ weaken (F x) (G x),
+ (pi y \ G x = G y, !, H = G x
+ ; H = bind A G).
+weaken F F :- !.
+
+dweaken (bind A F) (bind A G) (bind A H) :- !, pi x \ dweaken (F x) (G x) (H x).
+dweaken _ F G :- weaken F G.
 
 mk_bounded_fresh (bind _ F) (bind _ G) :- !, pi x\ mk_bounded_fresh (F x) (G x).
 mk_bounded_fresh _ X.
@@ -522,36 +533,28 @@ main :-
                then forall_i (bind bool x4 \ then i (then i (then (mp x2) h)))])))]
   , theorem or_e
      (forall '
-       (lam
-         x2 \ forall '
-               (lam
-                 x3 \ forall '
-                       (lam
-                         x4 \ impl ' (or ' x2 ' x3) '
-                               (impl ' (impl ' x2 ' x4) '
-                                 (impl ' (impl ' x3 ' x4) ' x4))))))
-     (forall_i ::
-       (bind bool x2 \ forall_i) ::
-        (bind bool x2 \ bind bool x3 \ forall_i) ::
-         (bind bool
-          x2 \ bind bool
-                x3 \ bind bool
-                      x4 \ m
-                            (impl '
-                              (forall '
-                                (lam
-                                  x5 \ impl ' (impl ' x2 ' x5) '
-                                        (impl ' (impl ' x3 ' x5) ' x5))) '
-                              (impl ' (impl ' x2 ' x4) '
-                                (impl ' (impl ' x3 ' x4) ' x4)))) ::
-          (bind bool x2 \ bind bool x3 \ bind bool x4 \ c) ::
-           (bind bool x2 \ bind bool x3 \ c) ::
-            r ::
-             (bind bool x2 \ bind bool x3 \ sym) ::
-              (bind bool x2 \ bind bool x3 \ d) ::
-               (bind bool x2 \ bind bool x3 \ bind bool x4 \ r) ::
-                (bind bool x2 \ bind bool x3 \ bind bool x4 \ i) ::
-                 (bind bool x2 \ bind bool x3 \ bind bool x4 \ forall_e) :: nil)
+       (lam x2 \
+         forall '
+          (lam x3 \
+            forall '
+             (lam x4 \
+               impl ' (or ' x2 ' x3) '
+                (impl ' (impl ' x2 ' x4) ' (impl ' (impl ' x3 ' x4) ' x4))))))
+     [then forall_i
+      (bind bool x2 \
+        then forall_i
+         (bind bool x3 \
+           then forall_i
+            (bind bool x4 \
+              thenl
+               (m
+                 (impl '
+                   (forall '
+                     (lam x5 \
+                       impl ' (impl ' x2 ' x5) '
+                        (impl ' (impl ' x3 ' x5) ' x5))) '
+                   (impl ' (impl ' x2 ' x4) ' (impl ' (impl ' x3 ' x4) ' x4))))
+               [thenl c [thenl c [r, then sym d], r], then i forall_e])))]
   , theorem test_apply
     (impl ' p ' (impl ' (impl ' p ' (impl ' p ' q)) ' q))
     [then i (then i (then apply h))]
