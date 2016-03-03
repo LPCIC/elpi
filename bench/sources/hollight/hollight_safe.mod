@@ -315,7 +315,7 @@ deftac forall_e (seq Gamma GX) TAC :-
 /* forall ' F |- f  -->  F ' a, forall ' F |- f */
 deftac (lforall F A) (seq Gamma G) TAC :-
  TAC = thenl (m (impl ' (F A) ' G))
-  [ thenl s [ then mp forall_e, then i h ] , i ].
+  [ thenl s [ then mp forall_e, then i h ] , then (w (forall ' lam F)) i ].
 
 /* forall ' F |- f  -->  F ' a, forall ' F |- f */
 deftac (lforall A) (seq Gamma G) (lforall F A) :-
