@@ -54,8 +54,7 @@ thm d (seq Gamma (eq ' C ' A)) [] :-
 thm (th NAME) (seq _ G) [] :- provable NAME G.
 
 thm (thenll TAC1 TACN) SEQ SEQS :-
- thm TAC1 SEQ NEW0,
- list_map NEW0 (dweaken []) NEW,
+ thm TAC1 SEQ NEW,
  deftacl TACN NEW TACL,
  fold2_append TACL NEW thm SEQS.
 
@@ -79,6 +78,8 @@ thm x (seq Gamma F) [(seq ((impl ' p ' q) :: p :: Gamma) F)].
 thm (bind A TAC) (bind A SEQ) NEWL :-
  pi x \ term x A => thm (TAC x) (SEQ x) (NEW x), put_binds (NEW x) x A NEWL.
 
+thm ww (bind A x \ SEQ) [ SEQ ].
+
 /* debuggin only, remove it */
 %thm A B C :- $print "FAILED " (thm A B C), fail.
 
@@ -95,8 +96,7 @@ loop INTERACTIVE [ SEQ | OLD ] [ TAC | OTHER_TACS ] :-
    list_iter_rev [ SEQ | OLD ] print_sequent,
    read_in_context SEQ ITAC
  ; ITAC = TAC),
- ( thm ITAC SEQ NEW0,
-   list_map NEW0 (dweaken ITAC) NEW,
+ ( thm ITAC SEQ NEW,
    append NEW OLD SEQS,
    (INTERACTIVE = true, !,
     mk_script ITAC NEW NEW_TACS TAC,
@@ -110,9 +110,9 @@ loop INTERACTIVE [ SEQ | OLD ] [ TAC | OTHER_TACS ] :-
 
 mk_script (bind A T) NEW NEW_TACS (bind A T2) :- !,
  pi x \
-  apply_list NEW x A (NEW2 x),
+  put_binds (NEW2 x) x A NEW,
   mk_script (T x) (NEW2 x) (NEWT x) (T2 x),
-  apply_list  NEW_TACS x A (NEWT x).
+  put_binds (NEWT x) x A NEW_TACS.
 mk_script ITAC NEW NEW_TACS (thenl ITAC NEW_TACS) :-
  mk_list_of_bounded_fresh NEW NEW_TACS.
 
@@ -167,19 +167,9 @@ canonical T T.
 % binding all the xs that occur in f1,...,fn
 %put_binds A B C D :- $print "PUT BINDS" (put_binds A B C D), fail.
 put_binds [] _ _ [].
-%put_binds [ YX | YSX ] X A [ YX | YYS ] :- !, put_binds YSX X A YYS.
 put_binds [ YX | YSX ] X A [ bind A Y | YYS ] :-
  YX = Y X, put_binds YSX X A YYS.
 %put_binds A B C D :- $print "KO PUT BINDS" (put_binds A B C D), fail.
-
-weaken (bind A F) H :- !,
- pi x \ weaken (F x) (G x),
- (pi y \ G x = G y, !, H = G x
- ; H = bind A G).
-weaken F F :- !.
-
-dweaken (bind A F) (bind A G) (bind A H) :- !, pi x \ dweaken (F x) (G x) (H x).
-dweaken _ F G :- weaken F G.
 
 mk_bounded_fresh (bind _ F) (bind _ G) :- !, pi x\ mk_bounded_fresh (F x) (G x).
 mk_bounded_fresh _ X.
@@ -187,12 +177,6 @@ mk_bounded_fresh _ X.
 mk_list_of_bounded_fresh [] [].
 mk_list_of_bounded_fresh [S|L] [X|R] :-
  mk_bounded_fresh S X, mk_list_of_bounded_fresh L R.
-
-% apply_list [ bind A F1, ..., bind A Fn ] x A [ F1 x, ..., Fn x ]
-%apply_list A B C D :- $print (apply_list A B C D), fail.
-apply_list [] _ _ [].
-apply_list [bind A F | XS] X A [ FX | YS ] :- FX = F X, apply_list XS X A YS.
-%apply_list A B C D :- $print "KO" (apply_list A B C D), fail.
 
 /* list functions */
 
@@ -257,10 +241,12 @@ deftac eq_true_intro (seq Gamma (eq ' P ' tt)) TAC :-
 
 deftac conj (seq Gamma (and ' P ' Q)) TAC :-
  TAC =
-  thenl (m (eq ' (lam f \ f ' P ' Q) ' (lam f \ f ' tt ' tt)))
-   [ then sym d
-   , then k (bind _ x \ thenl c [ thenl c [ r, eq_true_intro ] , eq_true_intro ])
-   ].
+  then
+   (thenl (m (eq ' (lam f \ f ' P ' Q) ' (lam f \ f ' tt ' tt)))
+    [ then sym d
+    , then k (bind _ x \ thenl c [ thenl c [ r, eq_true_intro ] , eq_true_intro ])
+    ])
+   ww.
 
 /* Gamma  "|-"  q    --->   Gamma "|-" and ' p ' q*/
 deftac (andr P) (seq Gamma Q) TAC :-
@@ -481,20 +467,15 @@ main :-
           conj ::
            h :: h :: m p :: sym :: m (impl ' p ' q) :: d :: h :: h :: nil)
   , theorem ff_elim (forall ' (lam x2 \ impl ' ff ' x2))
-    [then forall_i
-     (thenl (bind bool x2 \ m (impl ' (forall ' (lam x3 \ x3)) ' x2))
-     [thenl (bind bool x2 \ c)
-       [then sym (thenl c [r, d])
-       ,bind bool x2 \ r]
-     ,bind bool x2 \ then i forall_e])]
+     [then forall_i
+        (bind bool x2 \
+          thenl (m (impl ' (forall ' (lam x3 \ x3)) ' x2))
+           [thenl c [then sym (thenl c [r, d]), r], then i forall_e])]
   , theorem not_e (forall ' (lam x2 \ impl ' (not ' x2) ' (impl ' x2 ' ff)))
     [then forall_i
-     (thenl (bind bool x2 \ m (impl ' (impl ' x2 ' ff) ' (impl ' x2 ' ff)))
-      [thenl (bind bool x2 \ c)
-        [thenl (bind bool x2 \ c)
-          [r, bind bool x2 \ then sym d]
-        , bind bool x2 \ r]
-      , bind bool x2 \ then i h])]
+      (bind bool x2 \
+        thenl (m (impl ' (impl ' x2 ' ff) ' (impl ' x2 ' ff)))
+         [thenl c [thenl c [r, then sym d], r], then i h])]
   , theorem not_i (forall ' (lam x2 \ impl ' (impl ' x2 ' ff) ' (not ' x2)))
     [then forall_i (bind bool x2 \ then i (thenl (m (impl ' x2 ' ff))
       [then sym d, h]))]
@@ -587,13 +568,6 @@ BUGS:
 
   This is yet another case of lack of Hindley-Milner
   polymorphism.
-
-TODO:
-- apply_list and put_binds are inverse predicates... up to
-  erasing of non-necessary binds. Can we reuse put_binds?
-  Must we reuse put_binds?
-- back to the blackboard for bind-pushing and erasing and
-  script pretty-printing. exists_e shows the problem
 */
 
 /*
