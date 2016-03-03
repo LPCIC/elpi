@@ -363,7 +363,7 @@ deftac (apply (impl ' P ' Q)) SEQ TAC :-
  TAC = thenl (lapply P Q) [ id, orelse h apply_last ].
 
 deftac (apply (forall ' lam G)) SEQ TAC :-
- TAC = thenl (lforall G X) [ id, orelse h apply_last ].
+ TAC = then (lforall G X) (orelse h apply_last).
 
 deftac apply_last (seq (H::Gamma) F) (apply H).
 
