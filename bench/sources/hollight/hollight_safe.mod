@@ -345,6 +345,12 @@ deftac mp (seq Gamma Q) (mp P) :-
 deftac (cut P) (seq Gamma Q) TAC :-
  TAC = then (andr P) (thenl (m P) [then sym (thenl (m (impl ' P ' Q)) [d, i] ) , id]). 
 
+/* |-q  --> p |- q   where the theorem T proves p */
+deftac (cutth T) SEQ (thenl (cut X) [ id, th T ]).
+
+/* applies the theorem T */
+deftac (applyth T) SEQ (then (cutth T) apply_last).
+
 /* impl p q, Gamma |- f   --->   /*impl q f*/ Gamma |- p  ,  q, Gamma |- f */
 deftac (lapply P Q) (seq Gamma F) TAC :-
  TAC =
