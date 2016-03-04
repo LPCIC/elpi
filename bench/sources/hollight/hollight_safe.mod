@@ -341,6 +341,10 @@ deftac (mp P) (seq Gamma Q) TAC :-
 deftac mp (seq Gamma Q) (mp P) :-
  mem Gamma (impl ' P ' Q).
 
+/* |- q   -->   p |- q  and  |- p */
+deftac (cut P) (seq Gamma Q) TAC :-
+ TAC = then (andr P) (thenl (m P) [then sym (thenl (m (impl ' P ' Q)) [d, i] ) , id]). 
+
 /* impl p q, Gamma |- f   --->   /*impl q f*/ Gamma |- p  ,  q, Gamma |- f */
 deftac (lapply P Q) (seq Gamma F) TAC :-
  TAC =
