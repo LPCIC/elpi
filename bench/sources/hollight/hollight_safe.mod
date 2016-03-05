@@ -290,13 +290,15 @@ deftac andr (seq Gamma Q) TAC :-
  mem Gamma (and ' P ' Q),
  TAC = then (andr P) h.
 
+/* Gamma  "|-"  p    --->   Gamma "|-" and ' p ' q*/
+deftac (andl Q) (seq Gamma P) TAC :-
+ TAC = (thenl (m ((lam x \ (x ' P ' Q)) ' (lam x \ (lam y \ x))))  [ thenl (m (eq ' ( (lam x \ (lam y \ x)) ' P ' Q) ' P)) [ thenl c [ thenl c [ r , then sym b ], r ], thenl (m (eq ' (((lam x \ (lam y \ x)) ' P) ' Q) ' ((lam y \ P) ' Q)))  [ thenl c  [ then c r, b ], thenl c [ b , r ] ] ], thenl (m ((lam f \ (f ' tt ' tt)) ' (lam x \ lam y \ x) )) [ thenl c [ then sym (thenl (m (and ' P ' Q)) [ d , id ]), r ], thenl (m ( (lam x \ (lam y \ x)) ' tt ' tt )) [ then sym b , thenl (m ((lam y \ tt) ' tt)) [ then sym (thenl c [ b , r ]), thenl (m tt)   [ then sym b, thenl (m (eq ' (lam x \ x) ' (lam x \ x)))  [then sym d, r ] ] ] ] ] ] ).
+
 /* (and ' p ' q) :: nil  "|-"  p */
 deftac andl (seq Gamma P) TAC :-
  mem Gamma (and ' P ' Q),
- TAC = (thenl (m ((lam x \ (x ' P ' Q)) ' (lam x \ (lam y \ x))))  [ thenl (m (eq ' ( (lam x \ (lam y \ x)) ' P ' Q) ' P)) 
-      [ thenl c [ thenl c [ r , then sym b ], r ], thenl 
-        (m (eq ' (((lam x \ (lam y \ x)) ' P) ' Q) ' ((lam y \ P) ' Q)))  [ thenl c  [ then c r, b ], thenl c [ b , r ] ] ],
-     thenl (m ((lam f \ (f ' tt ' tt)) ' (lam x \ lam y \ x) ))    [ thenl c [ then sym (thenl (m (and ' P ' Q)) [ d , h ]), r ], thenl (m ( (lam x \ (lam y \ x)) ' tt ' tt )) [ then sym b , thenl (m ((lam y \ tt) ' tt)) [ then sym (thenl c [ b , r ]), thenl (m tt)   [ then sym b, thenl (m (eq ' (lam x \ x) ' (lam x \ x)))  [then sym d, r ] ] ] ] ] ] ).
+ TAC = then (andl q) h.
+
 
 /*** forall ***/
 
