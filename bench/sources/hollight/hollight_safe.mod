@@ -132,14 +132,19 @@ prove G TACS :-
 saved G TACS :-
  loop false [ seq [] G ] TACS.
 
-check [] :- toplevel.
-check [ theorem NAME GOAL TACTICS | NEXT ] :-
+/* check1 I O
+   checks the declaration I
+   returns the new assumption O */
+check1 (pi C) (pi O) :-
+  (
+  pi x \ check1 (C x) (O x)
+  ), $print "### ASSUME: " (pi O).
+check1 (theorem NAME GOAL TACTICS) (provable NAME GOAL) :-
   not (provable NAME _),
   saved GOAL TACTICS,
   $print NAME ":" GOAL,
-  !,
-  provable NAME GOAL => check NEXT.
-check [ new_basic_type TYPE REP ABS REPABS ABSREP P TACTICS | NEXT ] :-
+  !.
+check1 (new_basic_type TYPE REP ABS REPABS ABSREP P TACTICS) HYPS :-
   not (typ TYPE),
   not (term REP _),
   not (term ABS _),
@@ -152,14 +157,17 @@ check [ new_basic_type TYPE REP ABS REPABS ABSREP P TACTICS | NEXT ] :-
   $print new term ABS ":" (arr X TYPE),
   $print new theorems ABSREP REPABS,
   !,
-  typ TYPE =>
-  term' REP (arr TYPE X) =>
-  term' ABS (arr X TYPE) =>
-  provable ABSREP
-   (forall ' lam x \ eq ' (abs ' (rep ' x)) ' x) =>
-  provable REPABS
-   (forall ' lam x \ eq ' (P ' x) ' (eq ' (rep ' (abs ' x)) x)) =>
-  check NEXT.
+  HYPS =
+   ( typ TYPE
+   , term' REP (arr TYPE X)
+   , term' ABS (arr X TYPE)
+   , provable ABSREP
+    (forall ' lam x \ eq ' (abs ' (rep ' x)) ' x)
+   , provable REPABS
+    (forall ' lam x \ eq ' (P ' x) ' (eq ' (rep ' (abs ' x)) x))).
+
+check [] :- toplevel.
+check [ C | NEXT ] :- check1 C H, H => check NEXT.
 }
 
 /************ interactive and non interactive loops ********/
@@ -584,18 +592,18 @@ main :-
   /*, theorem test_apply2
     (impl ' p ' (impl ' (forall ' lam x \ forall ' lam y \ impl ' x ' (impl ' x ' y)) ' q))
     [then i (then i (then apply h))]*/
-  , theorem exists_e
+  , (pi T \ theorem exists_e
     (forall ' lam f \ (impl ' (exists ' f) ' (forall ' (lam x2 \ impl ' (forall ' (lam x3 \ impl ' (f ' x3) ' x2)) ' x2))))
-    [then forall_i (bind AAAAAA f \ then i (thenl (m (exists ' f)) [d , h ]))]
- , theorem exists_i
+    [then forall_i (bind (arr T bool) f \ then i (thenl (m (exists ' f)) [d , h ]))])
+ , (pi T \ theorem exists_i
    (forall ' (lam x2 \ forall ' (lam x3 \ impl ' (x2 ' x3) ' (exists ' x2))))
-   [then forall_i (bind (arr BBBBBB bool) x2 \
-    then forall_i (bind BBBBBB x3 \
+   [then forall_i (bind (arr T bool) x2 \
+    then forall_i (bind T x3 \
     then i
     (thenl (m (forall ' (lam x4 \ impl ' (forall ' (lam x5 \ impl ' (x2 ' x5) ' x4)) ' x4)))
     [then sym d,
      then forall_i (bind bool x4 \
-     then i (then (lforall x3) (then mp h)))])))]
+     then i (then (lforall x3) (then mp h)))])))])
  , new_basic_type mybool myrep myabs myrepabs myabsrep
     (lam x \ exists ' lam p \ eq ' x ' (and ' p ' p))
     [ daemon ]
