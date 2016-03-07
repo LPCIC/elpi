@@ -16,7 +16,7 @@ term' eq (arr A (arr A bool)).
 
 { /***** Trusted code base *******/
 
-local thm, provable.
+local thm, provable, def0.
 
 % thm : bounded tactic -> bounded sequent -> list (bounded sequent) -> o
 thm C (seq Gamma G) _ :- debug, $print Gamma "|- " G " := " C, fail.
@@ -48,11 +48,7 @@ thm s (seq Gamma (eq ' P ' Q))
  term P bool, term Q bool. /* CSC: check if required */
 thm (h IGN) (seq Gamma P) [] :- append IGN [ P | Gamma2 ] Gamma.
 
-/* TODO: unify the d and thm mechanisms? */
-
-thm d (seq Gamma (eq ' C ' A)) [] :-
- def0 C A./*,
- pi T\ ttype T => (ttype (B T), term A (B T)). */
+thm d (seq Gamma (eq ' C ' A)) [] :- def0 C A.
 
 thm (th NAME) (seq _ G) [] :- provable NAME G.
 
@@ -135,10 +131,7 @@ saved G TACS :-
 /* check1 I O
    checks the declaration I
    returns the new assumption O */
-check1 (pi C) (pi O) :-
-  (
-  pi x \ check1 (C x) (O x)
-  ), $print "### ASSUME: " (pi O).
+check1 (pi C) (pi O) :- pi x \ check1 (C x) (O x).
 check1 (theorem NAME GOAL TACTICS) (provable NAME GOAL) :-
   not (provable NAME _),
   saved GOAL TACTICS,
@@ -152,19 +145,29 @@ check1 (new_basic_type TYPE REP ABS REPABS ABSREP P TACTICS) HYPS :-
   not (term REPABS _),
   term P (arr X bool),
   saved (exists ' P ) TACTICS,
+  REPTYP = (arr TYPE X),
+  ABSTYP = (arr X TYPE),
+  ABSREPTYP = (forall ' lam x \ eq ' (abs ' (rep ' x)) ' x),
+  REPABSTYP = (forall ' lam x \ eq ' (P ' x) ' (eq ' (rep ' (abs ' x)) x)),
   $print new typ TYPE,
-  $print new term REP ":" (arr TYPE X),
-  $print new term ABS ":" (arr X TYPE),
-  $print new theorems ABSREP REPABS,
+  $print REP ":" REPTYP,
+  $print ABS ":" ABSTYP,
+  $print ABSREP ":" ABSREPTYP,
+  $print REPABS ":" REPABSTYP,
   !,
   HYPS =
    ( typ TYPE
-   , term' REP (arr TYPE X)
-   , term' ABS (arr X TYPE)
-   , provable ABSREP
-    (forall ' lam x \ eq ' (abs ' (rep ' x)) ' x)
-   , provable REPABS
-    (forall ' lam x \ eq ' (P ' x) ' (eq ' (rep ' (abs ' x)) x))).
+   , term' REP REPTYP
+   , term' ABS ABSTYP
+   , provable ABSREP ABSREPTYP
+   , provable REPABS REPABSTYP
+   ).
+check1 (def NAME TYP DEF) HYPS :-
+  not (def0 NAME _),
+  term DEF TYP, /* TODO: INFER TYP AUTOMATICALLY */
+  $print NAME ":" TYP,
+  $print NAME "=" DEF,
+  HYPS = (def0 NAME DEF, term' NAME TYP).
 
 check [] :- toplevel.
 check [ C | NEXT ] :- check1 C H, H => check NEXT.
@@ -464,30 +467,7 @@ INFINITY_AX, SELECT_AX (* axiom of choice *), ETA_AX
 
 /********** the library ********/
 
-def0 tt (eq ' (lam x\ x) ' (lam x\ x)).
-term' tt bool.
-
-def0 (forall ' F) (eq ' F ' (lam f \ tt)).
-term' forall (arr (arr A bool) bool).
-
-def0 (exists ' F) (forall ' (lam c \ (impl ' (forall ' (lam a \ (impl ' (F ' a) ' c))) ' c))).
-term' exists (arr (arr A bool) bool).
-
-def0 (impl ' A ' B) (eq ' (and ' A ' B) ' A).
-term' impl (arr bool (arr bool bool)).
-
-def0 ff (forall ' lam x \ x).
-term' ff bool.
-
-def0 (and ' X ' Y) (eq ' (lam f \ f ' X ' Y) ' (lam f \ f ' tt ' tt)).
-term' and (arr bool (arr bool bool)).
-
-def0 (not ' X) (impl ' X ' ff).
-term' not (arr bool bool).
-
-def0 (or ' X ' Y) (forall ' lam c \ impl ' (impl ' X ' c) ' (impl ' (impl ' Y ' c) ' c)).
-term' or (arr bool (arr bool bool)).
-
+/* TODO: GET RID OF THE HACKS */
 term' p bool.
 term' q bool.
 term' f (arr bool bool).
@@ -496,7 +476,24 @@ term' c bool.
 
 main :-
  check
-  [ theorem th0
+  [ def tt bool
+     (eq ' (lam x\ x) ' (lam x\ x))
+  , (pi A \ def forall (arr (arr A bool) bool)
+     (lam f \ eq ' f ' (lam g \ tt)))
+  , def ff bool
+     (forall ' lam x \ x)
+  , def and
+     (arr bool (arr bool bool))
+     (lam x \ lam y \ eq ' (lam f \ f ' x ' y) ' (lam f \ f ' tt ' tt))
+  , def impl (arr bool (arr bool bool))
+     (lam a \ lam b \ eq ' (and ' a ' b) ' a)
+  , (pi A \ def exists (arr (arr A bool) bool)
+     (lam f \ forall ' (lam c \ (impl ' (forall ' (lam a \ (impl ' (f ' a) ' c))) ' c))))
+  , def not (arr bool bool)
+     (lam x \ impl ' x ' ff)
+  , def or (arr bool (arr bool bool))
+     (lam x \ lam y \ forall ' lam c \ impl ' (impl ' x ' c) ' (impl ' (impl ' y ' c) ' c))
+  , theorem th0
      (eq ' (eq ' (lam x\ x) ' (lam x\ x)) ' tt)
      (m (eq ' tt ' tt) :: c :: c :: r :: d :: r :: r :: nil)
   , theorem th0_alternative_proof0
@@ -509,7 +506,7 @@ main :-
   , theorem tt_intro
      tt
      (m (eq ' (lam x0\x0) ' (lam x0\x0)) :: th th0 :: r :: nil)
-  , theorem test_mp_expanded q
+/*  , theorem test_mp_expanded q
      (x ::
        m (and ' p ' q) ::
         s ::
@@ -606,7 +603,7 @@ main :-
      then i (then (lforall x3) (then mp h)))])))])
  , new_basic_type mybool myrep myabs myrepabs myabsrep
     (lam x \ exists ' lam p \ eq ' x ' (and ' p ' p))
-    [ daemon ]
+    [ daemon ]*/
  ].
 
 /*
