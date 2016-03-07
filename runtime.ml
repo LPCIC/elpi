@@ -1870,6 +1870,15 @@ let rec list_to_lp_list = function
   | x::xs -> App(consc,x,[list_to_lp_list xs])
 ;;
 
+let rec get_lambda_body depth = function
+ | UVar ({ contents=g },from,args) when g != dummy ->
+    get_lambda_body depth (deref ~from ~to_:depth args g)
+ | AppUVar ({contents=g},from,args) when g != dummy -> 
+    get_lambda_body depth (app_deref ~from ~to_:depth args g)
+ | Lam b -> b
+ | _ -> error "pi/sigma applied to something that is not a Lam"
+;;
+
 (* BUG: the following clause is rejected because (Z c d) is not
    in the fragment. However, once X and Y becomes arguments, (Z c d)
    enters the fragment. 
@@ -1894,7 +1903,8 @@ let rec clausify vars depth hyps ts lcs = function
   | App(c, g1, [g2]) when c == implc ->
      clausify vars depth ((ts,g1)::hyps) ts lcs g2
   | App(c, _, _) when c == implc -> assert false
-  | App(c, Lam b, []) when c == sigmac ->
+  | App(c, arg, []) when c == sigmac ->
+     let b = get_lambda_body (depth+lcs) arg in
      let args =
       List.rev (List.filter (function (Arg _) -> true | _ -> false) ts) in
      let cst =
@@ -1902,7 +1912,8 @@ let rec clausify vars depth hyps ts lcs = function
          [] -> Const (depth+lcs)
        | hd::rest -> App (depth+lcs,hd,rest) in
      clausify vars depth hyps (cst::ts) (lcs+1) b
-  | App(c, Lam b, []) when c == pic ->
+  | App(c, arg, []) when c == pic ->
+     let b = get_lambda_body (depth+lcs) arg in
      clausify (vars+1) depth hyps (Arg(vars,0)::ts) lcs b
   | Const _
   | App _ as g ->
@@ -2357,9 +2368,11 @@ end
        run (depth+lcs) (add_clauses clauses p) g2 gs next alts lvl
 (*  This stays commented out because it slows down rev18 in a visible way!   *)
 (*  | App(c, _, _) when c == implc -> anomaly "Implication must have 2 args" *)
-    | App(c, Lam f, []) when c == pic ->
+    | App(c, arg, []) when c == pic ->
+       let f = get_lambda_body depth arg in
        run (depth+1) p f gs next alts lvl
-    | App(c, Lam f, []) when c == sigmac ->
+    | App(c, arg, []) when c == sigmac ->
+       let f = get_lambda_body depth arg in
        let v = UVar(oref dummy, depth, 0) in
        run depth p (subst depth [v] f) gs next alts lvl
     | UVar ({ contents = g }, from, args) when g != dummy ->
