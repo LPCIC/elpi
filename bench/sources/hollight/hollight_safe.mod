@@ -297,7 +297,7 @@ deftac (andl Q) (seq Gamma P) TAC :-
 /* (and ' p ' q) :: nil  "|-"  p */
 deftac andl (seq Gamma P) TAC :-
  mem Gamma (and ' P ' Q),
- TAC = then (andl q) h.
+ TAC = then (andl Q) h.
 
 
 /*** forall ***/
