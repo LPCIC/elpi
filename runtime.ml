@@ -1697,7 +1697,11 @@ let unif adepth e bdepth a b =
         (deref ~from:adepth ~to_:(adepth+depth) args e.(i)) true
    | _, AppArg (i,args) when e.(i) != dummy -> 
       (* XXX BROKEN deref invariant XXX
-       *   args not living in to_ but in bdepth+depth *)
+       *   args not living in to_ but in bdepth+depth
+       *   NOTE: the map below has been added after the XXX, but
+           I believe it is wrong as well *)
+      let args =
+       List.map (to_heap adepth ~from:bdepth ~to_:adepth e) args in
       unif depth a adepth
         (app_deref ~from:adepth ~to_:(adepth+depth) args e.(i)) true
 
