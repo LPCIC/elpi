@@ -297,6 +297,19 @@ deftac (andr P) (seq Gamma Q) TAC :-
           r ], thenl (m (eq ' (((lam x \ (lam y \ y)) ' P) ' Q) ' ((lam y \ y) ' Q))) [ thenl c [ thenl c [r , r ], b ], thenl c [b , r ] ] ],
      thenl (m ((lam f \ (f ' tt ' tt)) ' (lam x \ lam y \ y) ))     [ thenl c [ then sym (thenl (m (and ' P ' Q)) [ d , id ]), r ], thenl (m ( (lam x \ (lam y \ y)) ' tt ' tt )) [ then sym b, thenl (m ((lam y \ y) ' tt)) [ then sym (thenl c [b , r ]), thenl (m tt) [ then sym b , thenl (m (eq ' (lam x \ x) ' (lam x \ x))) [then sym d , r ] ] ] ] ] ] ).
 
+/* We need daemon that turns the definiens of and ' p ' q
+   into and ' p ' q
+ TAC = (thenl (m ((lam x3 \ (lam x4 \ x4)) ' p ' q))
+   [then (conv (depth_tac b)) (then (conv (depth_tac b)) r),
+   thenl (m ((lam x3 \ (lam x4 \ x4)) ' tt ' tt))
+    [then sym
+      (thenl (t ((lam x3 \ x3 ' p ' q) ' (lam x3 \ (lam x4 \ x4))))
+        [then (conv (depth_tac b)) r,
+        thenl (t ((lam x3 \ x3 ' tt ' tt) ' (lam x3 \ (lam x4 \ x4))))
+         [thenl c [daemon, r], then (conv (depth_tac b)) r]]),
+    then (conv (depth_tac b)) (then (conv (depth_tac b)) (th tt_intro))]]).
+*/
+
 /* (and ' p ' q) :: nil  "|-"  q */
 deftac andr (seq Gamma Q) TAC :-
  mem Gamma (and ' P ' Q),
