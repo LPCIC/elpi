@@ -1236,6 +1236,7 @@ let diff_progs ~to_ (prog1 : index) prog2 =
  List.rev_map
   (fun { depth = depth; args = args; hyps = hyps; key=(key,_) } ->
     let app = match args with [] -> Const key | hd::tl -> App (key,hd,tl) in
+    let app = List.fold_right (fun h t -> App (implc,h,[t])) hyps app in
     lift ~from:depth ~to_ app
   ) res
 
@@ -2482,11 +2483,11 @@ end
            ad (uppterm ad [] 0 [||]) a
            bd (uppterm ad [] ad e) b;
          ok := unif ad e bd a b
-     | (Delayed_goal((depth,_,_,g) as dpg), _) as exn :: rest ->
+     | (Delayed_goal((depth,_,pdiff,g) as dpg), _) as exn :: rest ->
          remove_constraint exn;
          to_resume := rest;
          Format.fprintf Format.std_formatter
-          "Resuming goal: ... ⊢ %a\n%!" (uppterm depth [] 0 [||]) g ;
+          "Resuming goal: %a ⊢ %a\n%!" (pplist (uppterm depth [] 0 [||]) ",") pdiff (uppterm depth [] 0 [||]) g ;
          to_be_resumed := dpg :: !to_be_resumed
      | _ -> anomaly "Unknown constraint type"
    done ;
