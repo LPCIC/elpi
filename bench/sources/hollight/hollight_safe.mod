@@ -397,7 +397,7 @@ deftac apply (seq Gamma F) (apply H) :-
 
 deftac dd (seq [] (eq ' T ' X)) d.
 deftac dd (seq [] (eq ' (D ' T) ' X))
- (thenl  (t A) [thenl c [d , r], thenl (t B) [b, id]]).
+ (thenl  (t A) [thenl c [dd , r], b]).
 
 deftac (rand_tac C) SEQ TAC :-
   TAC = thenl c [ r , C ].
@@ -412,20 +412,15 @@ deftac (land_tac C) SEQ TAC :-
   TAC = thenl c [ then c [ r, C ] , r ].
 
 deftac (sub_tac C) SEQ TAC :-
-  TAC = orelse (rand_conv C) (orelse (rator_conv C) (abs_conv C)).
+  TAC = orelse (rand_tac C) (orelse (rator_tac C) (abs_tac C)).
 
 deftac (try TAC) SEQ (orelse TAC id).
 
 deftac (depth_tac C) SEQ TAC :-
-  TAC = then (try C) (sub_conv (depth_conv C)).
-
-defconv r_conv T T r.
-defconv b_conv ((lam F) ' T) (F T) b.
-defconv (rand_conv C) (F ' A) (F ' B) (rand_tac T) :- defconv C A B T.
+  TAC = then (try C) (sub_tac (depth_tac C)).
 
 deftac (conv C) (seq Gamma F) TAC :-
- defconv C F G CONVTAC,
- TAC = thenl (m G) [ then sym CONVTAC , id ].
+ TAC = thenl (m G) [ then sym C , id ].
 
 /********** inductive things
 
