@@ -639,6 +639,14 @@ The propagation rule is however harder. Consider:
  We will discuss about it and we basically already have
  the code in the refiner.elpi file.
 
+1.5) revise all term checks in thm. In particular:
+  a) if we only do top-down proofs some checks can be
+     relaxed if an initial type-checking of the goal is
+     performed
+  b) in place of the (pi x \ term x A => term (F ' x) B)
+     is it possible to use (term F (arr A B))? Beware of
+     $delays...
+
 2) we need to fix the ELPI problems about handling of metavariables.
  I have already discussed with Enrico about them and he could have a
  shot at them. Namely:
