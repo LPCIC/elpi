@@ -32,16 +32,16 @@ thm (t Y) (seq Gamma (eq ' X ' Z))
 thm (m P) (seq Gamma Q) [ seq Gamma (eq ' P ' Q), seq Gamma P ].
 thm b (seq Gamma (eq ' ((lam F) ' X) ' (F X))) [] :-
  term X A,
- (pi y\ term y A => term (F y) B).
+ (pi y\ term' y A => term (F y) B).
 thm c (seq Gamma (eq ' (F ' X) ' (G ' Y)))
  [ seq Gamma (eq ' F ' G) , seq Gamma (eq ' X ' Y) ] :-
  term X A, term Y A,
- (pi y\ term y A => term (F ' y) B),
- (pi y\ term y A => term (G ' y) B).
+ (pi y\ term' y A => term (F ' y) B),
+ (pi y\ term' y A => term (G ' y) B).
 thm k (seq Gamma (eq ' (lam S) ' (lam T)))
  [ bind A x \  seq Gamma (eq ' (S x) ' (T x)) ] :-
- (pi y\ term y A => term (S y) B),
- (pi y\ term y A => term (T y) B).
+ (pi y\ term' y A => term (S y) B),
+ (pi y\ term' y A => term (T y) B).
 thm s (seq Gamma (eq ' P ' Q))
  [ seq (P :: Gamma) Q, seq (Q :: Gamma) P ]
 :-
