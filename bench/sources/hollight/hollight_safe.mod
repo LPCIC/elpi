@@ -283,10 +283,11 @@ deftac eq_true_intro (seq Gamma (eq ' P ' tt)) TAC :-
 deftac conj (seq Gamma (and ' P ' Q)) TAC :-
  TAC =
   then
-   (thenl (m (eq ' (lam f \ f ' P ' Q) ' (lam f \ f ' tt ' tt)))
-    [ then sym d
-    , then k (bind _ x \ thenl c [ thenl c [ r, eq_true_intro ] , eq_true_intro ])
-    ])
+   (then (conv dd)
+     (then k (bind _ x \
+       thenl c
+        [ thenl c [ r, eq_true_intro ] ,
+          eq_true_intro ])))
    ww.
 
 /* Gamma  "|-"  q    --->   Gamma "|-" and ' p ' q*/
