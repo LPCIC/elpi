@@ -395,6 +395,10 @@ deftac apply (seq Gamma F) (apply H) :-
 
 /********** conversion(als) ***********/
 
+deftac dd (seq [] (eq ' T ' X)) d.
+deftac dd (seq [] (eq ' (D ' T) ' X))
+ (thenl  (t A) [thenl c [d , r], thenl (t B) [b, id]]).
+
 deftac (rand_tac C) SEQ TAC :-
   TAC = thenl c [ r , C ].
 
