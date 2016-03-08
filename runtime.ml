@@ -1218,6 +1218,40 @@ let rec flatten_snd =
     [] -> []
   | (_,(hd,_,_))::tl -> hd @ flatten_snd tl 
 
+let close_with_pis depth vars t =
+ if vars = 0 then t
+ else
+  (* lifts the term by vars + replaces Arg(i,..) with x_{depth+i} *)
+  let fix_const c = if c < depth then c else c + vars in
+  (* TODO: the next function is identical to lift_pat, up to the
+     instantiation of Args. The two codes should be unified *)
+  let rec aux =
+   function
+    | Const c -> constant_of_dbl (fix_const c)
+    | Arg (i,argsno) ->
+       (match List.map constant_of_dbl (mkinterval (depth+vars) argsno 0) with
+        | [] -> Const(i+depth)
+        | [x] -> App(i+depth,x,[])
+        | x::xs -> App(i+depth,x,xs))
+    | AppArg (i,args) ->
+       (match List.map aux args with
+        | [] -> anomaly "AppArg to 0 args"
+        | [x] -> App(i+depth,x,[])
+        | x::xs -> App(i+depth,x,xs))
+    | App(c,x,xs) -> App(fix_const c,aux x,List.map aux xs)
+    | Custom(c,xs) -> Custom(c,List.map aux xs)
+    | UVar(_,_,_) as orig ->
+       (* TODO: quick hack here, but it does not work for AppUVar *)
+       lift ~from:depth ~to_:(depth+vars) orig
+    | AppUVar(r,vardepth,args) ->
+       assert false (* TODO, essentialy almost copy the code from to_heap delta < 0 *)
+    | Lam t -> Lam (aux t)
+    | (String _ | Int _ | Float _) as x -> x
+  in
+  let rec add_pis n t =
+   if n = 0 then t else App(pic,Lam (add_pis (n-1) t),[]) in
+  add_pis vars (aux t)
+
 let diff_progs ~to_ (prog1 : index) prog2 =  
  let res =
   flatten_snd
@@ -1234,9 +1268,10 @@ let diff_progs ~to_ (prog1 : index) prog2 =
          | l -> Some (l,dummy1,dummy2))
       prog1 prog2)) in
  List.rev_map
-  (fun { depth = depth; args = args; hyps = hyps; key=(key,_) } ->
+  (fun { depth = depth; args = args; hyps = hyps; key=(key,_); vars = vars } ->
     let app = match args with [] -> Const key | hd::tl -> App (key,hd,tl) in
     let app = List.fold_right (fun h t -> App (implc,h,[t])) hyps app in
+    let app = close_with_pis depth vars app in
     lift ~from:depth ~to_ app
   ) res
 
@@ -2144,6 +2179,8 @@ module HISTORY = Hashtbl.Make(struct
 end)
 
 (* lift a term possibly containing Args *)
+(* TODO: the function is almost identical to the aux of close_with_pis
+   but here we do not instantiate Args. The two codes must be unified *)
 let lift_pat ~from ~to_ t =
   let delta = to_ - from in
   let rec aux = function
@@ -2154,7 +2191,9 @@ let lift_pat ~from ~to_ t =
       App((if n < from then n else n + delta), aux x, List.map aux xs)
   | Arg _ as x -> x
   | AppArg(i,xs) -> AppArg(i,List.map aux xs)
-  | UVar _ -> assert false
+  | UVar _ as x ->
+     (* TODO: quick hack here, but it does not work for AppUVar *)
+     lift ~from ~to_ x
   | AppUVar _ -> assert false
   | Custom(c,xs) -> Custom(c,List.map aux xs)
   | (String _ | Int _ | Float _) as x -> x
