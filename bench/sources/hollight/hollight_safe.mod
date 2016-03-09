@@ -1,8 +1,15 @@
 infixl ' 139.
 
-/************ primitive rules ********/
+{ /***** Trusted code base *******/
 
-/* seq _hypothesis_ _conclusion_ */
+/* Trusted library functions:
+ * append
+ * fold2_append
+ * put_binds
+*/
+
+local thm, provable, def0, term, term', typ, loop, prove, saved, check1,
+ toplevel_loop, toplevel.
 
 typ bool.
 typ ind.
@@ -14,42 +21,33 @@ term' (lam F) (arr A B) :- pi x\ term' x A => term (F x) B.
 term' (F ' T) B :- term T A, term F (arr A B).
 term' eq (arr A (arr A bool)).
 
-{ /***** Trusted code base *******/
-
-local thm, provable, def0.
-
 % thm : bounded tactic -> bounded sequent -> list (bounded sequent) -> o
 thm C (seq Gamma G) _ :- debug, $print Gamma "|- " G " := " C, fail.
 
-/* Remove, only for debugging */
+/* << HACKS FOR DEBUGGING */
+term' p bool.
+term' q bool.
+term' f (arr bool bool).
+term' (g X) bool :- term X bool.
+term' c bool.
+
 thm daemon (seq Gamma F) [] :- term F bool.
+/* >> HACKS FOR DEBUGGING */
 
-thm r (seq Gamma (eq ' X ' X)) [] :- term X A.
-
+thm r (seq Gamma (eq ' X ' X)) [].
 thm (t Y) (seq Gamma (eq ' X ' Z))
-     [ seq Gamma (eq ' X ' Y), seq Gamma (eq ' Y ' Z) ] :-
- term X A, term Y A, term Z A.
-thm (m P) (seq Gamma Q) [ seq Gamma (eq ' P ' Q), seq Gamma P ].
-thm b (seq Gamma (eq ' ((lam F) ' X) ' (F X))) [] :-
- term X A,
- (pi y\ term' y A => term (F y) B).
+ [ seq Gamma (eq ' X ' Y), seq Gamma (eq ' Y ' Z) ] :- term X A, term Y A.
+thm (m P) (seq Gamma Q) [ seq Gamma (eq ' P ' Q), seq Gamma P ] :- term P bool.
+thm b (seq Gamma (eq ' ((lam F) ' X) ' (F X))) [].
 thm c (seq Gamma (eq ' (F ' X) ' (G ' Y)))
- [ seq Gamma (eq ' F ' G) , seq Gamma (eq ' X ' Y) ] :-
- term X A, term Y A,
- (pi y\ term' y A => term (F ' y) B),
- (pi y\ term' y A => term (G ' y) B).
+ [ seq Gamma (eq ' F ' G) , seq Gamma (eq ' X ' Y) ] :- term X A, term Y A.
 thm k (seq Gamma (eq ' (lam S) ' (lam T)))
- [ bind A x \  seq Gamma (eq ' (S x) ' (T x)) ] :-
- (pi y\ term' y A => term (S y) B),
- (pi y\ term' y A => term (T y) B).
-thm s (seq Gamma (eq ' P ' Q))
- [ seq (P :: Gamma) Q, seq (Q :: Gamma) P ]
-:-
- term P bool, term Q bool. /* CSC: check if required */
+ [ bind A x \  seq Gamma (eq ' (S x) ' (T x)) ] :- term (lam S) (arr A _).
+thm s (seq Gamma (eq ' P ' Q)) [ seq (P :: Gamma) Q, seq (Q :: Gamma) P ] :-
+ term P bool.
 thm (h IGN) (seq Gamma P) [] :- append IGN [ P | Gamma2 ] Gamma.
 
 thm d (seq Gamma (eq ' C ' A)) [] :- def0 C A.
-
 thm (th NAME) (seq _ G) [] :- provable NAME G.
 
 thm (thenll TAC1 TACN) SEQ SEQS :-
@@ -73,13 +71,6 @@ thm (w G) (seq Gamma F) [ seq WGamma F ] :-
  append Gamma1 [ G | Gamma2 ] Gamma,
  append Gamma1 Gamma2 WGamma.
 
-/* remove it */
-thm x (seq Gamma F) [(seq ((impl ' p ' q) :: p :: Gamma) F)].
-/*thm x (seq Gamma F) [(seq ((and ' p ' q) :: Gamma) F)].*/
-/*thm x (seq Gamma F) [(seq (p :: Gamma) F)].*/
-/*thm x (seq Gamma F) [(seq (ff :: Gamma) F)].*/
-/*thm x (seq Gamma F) [(seq (p :: q :: Gamma) F)].*/
-
 thm (bind A TAC) (bind A SEQ) NEWL :-
  pi x \ term x A => thm (TAC x) (SEQ x) (NEW x), put_binds (NEW x) x A NEWL.
 
@@ -87,10 +78,6 @@ thm ww (bind A x \ SEQ) [ SEQ ].
 
 /* debuggin only, remove it */
 %thm A B C :- $print "FAILED " (thm A B C), fail.
-
-read_in_context (bind A K) (bind A TAC) :-
- pi x \ term x A => read_in_context (K x) (TAC x).
-read_in_context (seq A B) TAC :- read TAC, (TAC = backtrack, !, fail ; true).
 
 % loop : bool -> list (bounded sequent) -> list (bounded tactics) -> o
 %loop INTERACTIVE SEQS TACS :- $print "LOOP" (loop INTERACTIVE SEQS TACS), fail.
@@ -113,19 +100,13 @@ loop INTERACTIVE [ SEQ | OLD ] [ TAC | OTHER_TACS ] :-
    loop INTERACTIVE [ SEQ | OLD ] [ TAC | OTHER_TACS ] ).
 %loop INTERACTIVE SEQS TACS :- $print "FAIL" (loop INTERACTIVE SEQS TACS), fail.
 
-mk_script (bind A T) NEW NEW_TACS (bind A T2) :- !,
- pi x \
-  put_binds (NEW2 x) x A NEW,
-  mk_script (T x) (NEW2 x) (NEWT x) (T2 x),
-  put_binds (NEWT x) x A NEW_TACS.
-mk_script ITAC NEW NEW_TACS (thenl ITAC NEW_TACS) :-
- mk_list_of_bounded_fresh NEW NEW_TACS.
-
 prove G TACS :-
+ term G bool,
  loop true [ seq [] G ] TACS,
  $print "proof completed".
 
 saved G TACS :-
+ term G bool,
  loop false [ seq [] G ] TACS.
 
 /* check1 I O
@@ -171,24 +152,43 @@ check1 (def NAME TYP DEF) HYPS :-
 
 check [] :- toplevel.
 check [ C | NEXT ] :- check1 C H, H => check NEXT.
+
+toplevel_loop :-
+ $print "Enter a statement to prove or stop to stop",
+ read G,
+ ( G = stop, !
+ ; prove G [ TAC ],
+   !,
+   canonical TAC CANONICALTAC,
+   $print "Enter the theorem name",
+   read NAME,
+   $print (theorem NAME G [ CANONICALTAC ]),
+   provable NAME G => toplevel_loop
+ ; $print "Bad statement " G,
+   toplevel_loop).
+
+toplevel :-
+ $print "Welcome to HOL extra-light",
+ toplevel_loop.
+
 }
 
 /************ interactive and non interactive loops ********/
 
+mk_script (bind A T) NEW NEW_TACS (bind A T2) :- !,
+ pi x \
+  put_binds (NEW2 x) x A NEW,
+  mk_script (T x) (NEW2 x) (NEWT x) (T2 x),
+  put_binds (NEWT x) x A NEW_TACS.
+mk_script ITAC NEW NEW_TACS (thenl ITAC NEW_TACS) :-
+ mk_list_of_bounded_fresh NEW NEW_TACS.
+
+read_in_context (bind A K) (bind A TAC) :-
+ pi x \ term x A => read_in_context (K x) (TAC x).
+read_in_context (seq A B) TAC :- read TAC, (TAC = backtrack, !, fail ; true).
+
 print_sequent (seq Gamma G) :- $print Gamma "|-" G.
 print_sequent (bind A F) :- pi x \ print_sequent (F x).
-
-toplevel :-
- $print "Welcome to HOL extra-light",
- $print "Enter a new theorem name or stop",
- read NAME,
- ( NAME = stop, !
- ; $print "Enter its statement",
-   read G,
-   prove G [ TAC ],
-   canonical TAC CANONICALTAC,
-   $print (theorem NAME G [ CANONICALTAC ]),
-   provable NAME G => toplevel).
 
 /* turns thenl into then */
 canonical (bind A T1) (bind A T2) :- !,
@@ -479,13 +479,6 @@ INFINITY_AX, SELECT_AX (* axiom of choice *), ETA_AX
 
 /********** the library ********/
 
-/* TODO: GET RID OF THE HACKS */
-term' p bool.
-term' q bool.
-term' f (arr bool bool).
-term' (g X) bool :- term X bool.
-term' c bool.
-
 main :-
  check
   [ def tt bool
@@ -653,6 +646,11 @@ main :-
 0. definitions must not be recursive (check needed)
    axioms are missing
 
+0.5 reduce and keep documented the trusted code base
+
+0.75 Observation: so far our HOL-Light is intuitionistic.
+ Keep it like that?
+
 1. the need to use delay is a very good news. It justifies our
 implementation and it easily allow to publish. We also need to add
 the corresponding constraint propagation rules that implement the
@@ -670,14 +668,6 @@ The propagation rule is however harder. Consider:
 
 1.25) major bug: I think that the proof of a theorem may now force it to
   be monomorphic, but we forget this when we assume it in check
-
-1.5) revise all term checks in thm. In particular:
-  a) if we only do top-down proofs some checks can be
-     relaxed if an initial type-checking of the goal is
-     performed
-  b) in place of the (pi x \ term x A => term (F ' x) B)
-     is it possible to use (term F (arr A B))? Beware of
-     $delays...
 
 2) we need to fix the ELPI problems about handling of metavariables.
  I have already discussed with Enrico about them and he could have a
