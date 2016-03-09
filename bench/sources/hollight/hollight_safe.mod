@@ -660,6 +660,9 @@ main :-
 */
 
 /*
+0. definitions must not be recursive (check needed)
+   axioms are missing
+
 1. the need to use delay is a very good news. It justifies our
 implementation and it easily allow to publish. We also need to add
 the corresponding constraint propagation rules that implement the
