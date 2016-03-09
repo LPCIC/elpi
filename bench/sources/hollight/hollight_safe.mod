@@ -511,22 +511,13 @@ main :-
   , theorem tt_intro
      tt
      (m (eq ' (lam x0\x0) ' (lam x0\x0)) :: th th0 :: r :: nil)
-, theorem ff_elim (forall ' (lam x2 \ impl ' ff ' x2))
-   [then forall_i (bind bool x3 \ then (conv (land_tac dd)) (then i forall_e))]
-/*     [then forall_i
-        (bind bool x2 \
-          thenl (m (impl ' (forall ' (lam x3 \ x3)) ' x2))
-           [thenl c [then sym (thenl c [r, d]), r], then i forall_e])]
+  , theorem ff_elim (forall ' (lam x2 \ impl ' ff ' x2))
+     [then forall_i (bind bool x3\ then (conv (land_tac dd)) (then i forall_e))]
   , theorem not_e (forall ' (lam x2 \ impl ' (not ' x2) ' (impl ' x2 ' ff)))
-    [then forall_i (bind bool x3 \ then (conv (land_tac dd)) (then i h))]
-    [then forall_i
-      (bind bool x2 \
-        thenl (m (impl ' (impl ' x2 ' ff) ' (impl ' x2 ' ff)))
-         [thenl c [thenl c [r, then sym d], r], then i h])]
+     [then forall_i (bind bool x3 \ then (conv (land_tac dd)) (then i h))]
   , theorem not_i (forall ' (lam x2 \ impl ' (impl ' x2 ' ff) ' (not ' x2)))
-    [then forall_i (bind bool x2 \ then i (thenl (m (impl ' x2 ' ff))
-      [then sym d, h]))]
-  , theorem orl
+     [then forall_i (bind bool x2 \ then i (then (conv dd) h))]
+/*  , theorem orl
      (forall ' (lam x2 \ forall ' (lam x3 \ impl ' x2 ' (or ' x2 ' x3))))
       (forall_i ::
        (bind bool x2 \ forall_i) ::
@@ -617,6 +608,9 @@ main :-
 +forall_e: sym dd
 +mp: andr sym dd
 -i: dd andl conj
+ BUG: i seems to easily take an extremely long time, resuming tons of goals.
+  Is the tactic backtracking a lot? Note: it uses depth_tac because it needs
+  to reduce redexes from inside-out.
  BUG: impl ' P ' q  diverge
 -cut: andr sym dd i
  BUG: cut X diverges because of i's BUG
