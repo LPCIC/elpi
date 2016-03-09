@@ -31,7 +31,7 @@ term' f (arr bool bool).
 term' (g X) bool :- term X bool.
 term' c bool.
 
-thm daemon (seq Gamma F) [] :- term F bool.
+thm daemon (seq Gamma F) [].
 /* >> HACKS FOR DEBUGGING */
 
 thm r (seq Gamma (eq ' X ' X)) [].
@@ -72,7 +72,7 @@ thm (w G) (seq Gamma F) [ seq WGamma F ] :-
  append Gamma1 Gamma2 WGamma.
 
 thm (bind A TAC) (bind A SEQ) NEWL :-
- pi x \ term x A => thm (TAC x) (SEQ x) (NEW x), put_binds (NEW x) x A NEWL.
+ pi x \ term' x A => thm (TAC x) (SEQ x) (NEW x), put_binds (NEW x) x A NEWL.
 
 thm ww (bind A x \ SEQ) [ SEQ ].
 
@@ -184,7 +184,7 @@ mk_script ITAC NEW NEW_TACS (thenl ITAC NEW_TACS) :-
  mk_list_of_bounded_fresh NEW NEW_TACS.
 
 read_in_context (bind A K) (bind A TAC) :-
- pi x \ term x A => read_in_context (K x) (TAC x).
+ pi x \ term' x A => read_in_context (K x) (TAC x).
 read_in_context (seq A B) TAC :- read TAC, (TAC = backtrack, !, fail ; true).
 
 print_sequent (seq Gamma G) :- $print Gamma "|-" G.
@@ -505,86 +505,54 @@ main :-
      [then forall_i (bind bool x3 \ then (conv (land_tac dd)) (then i h))]
   , theorem not_i (forall ' (lam x2 \ impl ' (impl ' x2 ' ff) ' (not ' x2)))
      [then forall_i (bind bool x2 \ then i (then (conv dd) h))]
-/*  , theorem orl
+  , theorem orl
      (forall ' (lam x2 \ forall ' (lam x3 \ impl ' x2 ' (or ' x2 ' x3))))
-      (forall_i ::
-       (bind bool x2 \ forall_i) ::
-        (bind bool x2 \ bind bool x3 \ i) ::
-         (bind bool
-          x2 \ bind bool
-            x3 \ m
-                  (forall '
-                    (lam
-                      x4 \ impl ' (impl ' x2 ' x4) '
-                            (impl ' (impl ' x3 ' x4) ' x4)))) ::
-      (bind bool x2 \ bind bool x3 \ sym) ::
-       (bind bool x2 \ bind bool x3 \ d) ::
-        (bind bool x2 \ bind bool x3 \ forall_i) ::
-         (bind bool x2 \ bind bool x3 \ bind bool x4 \ i) ::
-          (bind bool x2 \ bind bool x3 \ bind bool x4 \ i) ::
-           (bind bool x2 \ bind bool x3 \ bind bool x4 \ then mp h) ::
-             nil)
+      [then forall_i
+        (bind bool x12 \
+          then forall_i
+           (bind bool x13 \
+             then i
+              (then (conv dd)
+                (then forall_i (bind bool x14 \ then i (then i (then apply h)))))))]
   , theorem orr
      (forall ' (lam x2 \ forall ' (lam x3 \ impl ' x3 ' (or ' x2 ' x3))))
-     [then forall_i
-       (bind bool x2 \
-         then forall_i
-          (bind bool x3 \
-            then i
-             (thenl
-               (m
-                 (forall '
-                   (lam x4 \
-                     impl ' (impl ' x2 ' x4) ' (impl ' (impl ' x3 ' x4) ' x4))))
-               [then sym d,
-               then forall_i (bind bool x4 \ then i (then i (then (mp x3) h)))])))]
+      [then forall_i
+        (bind bool x12 \
+          then forall_i
+           (bind bool x13 \
+             then i
+              (then (conv dd)
+                (then forall_i (bind bool x14 \ then i (then i (then apply h)))))))]
   , theorem or_e
-     (forall '
-       (lam x2 \
-         forall '
-          (lam x3 \
-            forall '
-             (lam x4 \
-               impl ' (or ' x2 ' x3) '
-                (impl ' (impl ' x2 ' x4) ' (impl ' (impl ' x3 ' x4) ' x4))))))
+     (forall ' (lam x2 \ forall ' (lam x3 \ forall ' (lam x4 \ impl ' (or ' x2 ' x3) ' (impl ' (impl ' x2 ' x4) ' (impl ' (impl ' x3 ' x4) ' x4))))))
      [then forall_i
-      (bind bool x2 \
-        then forall_i
-         (bind bool x3 \
-           then forall_i
-            (bind bool x4 \
-              thenl
-               (m
-                 (impl '
-                   (forall '
-                     (lam x5 \
-                       impl ' (impl ' x2 ' x5) '
-                        (impl ' (impl ' x3 ' x5) ' x5))) '
-                   (impl ' (impl ' x2 ' x4) ' (impl ' (impl ' x3 ' x4) ' x4))))
-               [thenl c [thenl c [r, then sym d], r], then i forall_e])))]
-*/
+       (bind bool x12 \
+         then forall_i
+          (bind bool x13 \
+            then forall_i
+             (bind bool x14 \ then (conv (land_tac dd)) (then i forall_e))))]
   , theorem test_apply
     (impl ' p ' (impl ' (impl ' p ' (impl ' p ' q)) ' q))
     [then i (then i (then apply h))]
-/*
   /*, theorem test_apply2
     (impl ' p ' (impl ' (forall ' lam x \ forall ' lam y \ impl ' x ' (impl ' x ' y)) ' q))
     [then i (then i (then apply h))]*/
   , (pi T \ theorem exists_e
     (forall ' lam f \ (impl ' (exists ' f) ' (forall ' (lam x2 \ impl ' (forall ' (lam x3 \ impl ' (f ' x3) ' x2)) ' x2))))
-    [then forall_i (bind (arr T bool) f \ then i (thenl (m (exists ' f)) [d , h ]))])
+    [then forall_i (bind (arr T bool) x12 \ then (conv (land_tac dd)) (then i h))])
  , (pi T \ theorem exists_i
    (forall ' (lam x2 \ forall ' (lam x3 \ impl ' (x2 ' x3) ' (exists ' x2))))
-   [then forall_i (bind (arr T bool) x2 \
-    then forall_i (bind T x3 \
-    then i
-    (thenl (m (forall ' (lam x4 \ impl ' (forall ' (lam x5 \ impl ' (x2 ' x5) ' x4)) ' x4)))
-    [then sym d,
-     then forall_i (bind bool x4 \
-     then i (then (lforall x3) (then mp h)))])))])
+   [then forall_i
+     (bind (arr T bool) x12 \
+       then forall_i
+        (bind T x13 \
+          then i
+           (then (conv dd)
+             (then forall_i
+               (bind bool x14 \ then i (then (lforall x13) (then apply h)))))))])
  , new_basic_type mybool myrep myabs myrepabs myabsrep
     (lam x \ exists ' lam p \ eq ' x ' (and ' p ' p))
-    [ daemon ]*/
+    [ daemon ]
  ].
 
 /* Status and dependencies of the tactics:
@@ -625,8 +593,9 @@ main :-
 */
 
 /*
--1. proofs of exists_e/exists_i: stack overflow very quickly
-    Hmmmm. Maybe it created a cyclic term?
+-1. test_apply2 raises an anomaly in the interpreter;
+    inhabiting the last daemon in the library via applyth exists_i
+    diverges
 
 0. definitions must not be recursive (check needed)
    axioms are missing
