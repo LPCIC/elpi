@@ -518,19 +518,14 @@ main :-
   , theorem tt_intro
      tt
      (m (eq ' (lam x0\x0) ' (lam x0\x0)) :: th th0 :: r :: nil)
-/*  , theorem test_mp_expanded q
-     (x ::
-       m (and ' p ' q) ::
-        s ::
-         andr ::
-          conj ::
-           h :: h :: m p :: sym :: m (impl ' p ' q) :: d :: h :: h :: nil)
-  , theorem ff_elim (forall ' (lam x2 \ impl ' ff ' x2))
-     [then forall_i
+, theorem ff_elim (forall ' (lam x2 \ impl ' ff ' x2))
+   [then forall_i (bind bool x3 \ then (conv (land_tac dd)) (then i forall_e))]
+/*     [then forall_i
         (bind bool x2 \
           thenl (m (impl ' (forall ' (lam x3 \ x3)) ' x2))
            [thenl c [then sym (thenl c [r, d]), r], then i forall_e])]
   , theorem not_e (forall ' (lam x2 \ impl ' (not ' x2) ' (impl ' x2 ' ff)))
+    [then forall_i (bind bool x3 \ then (conv (land_tac dd)) (then i h))]
     [then forall_i
       (bind bool x2 \
         thenl (m (impl ' (impl ' x2 ' ff) ' (impl ' x2 ' ff)))
@@ -650,7 +645,7 @@ main :-
 
 /* Library clean-up:
 - th0 is used in tt_intro. Inline? Give it a better status?
-- variants of th0, test_apply, test_apply2, test_mp_expanded
+- variants of th0, test_apply, test_apply2
   are tests and not real theorems. Separate them somehow
 */
 
