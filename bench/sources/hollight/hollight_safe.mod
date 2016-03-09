@@ -331,8 +331,8 @@ deftac forall_i (seq Gamma (forall ' lam G)) TAC :-
 deftac forall_e (seq Gamma GX) TAC :-
  mem Gamma (forall ' (lam G)), GX = G X,
  TAC = thenl (m ((lam G) ' X)) [ b, thenl (m ((lam z \ tt) ' X))
-  [ thenl c [then sym (thenl (m (forall ' lam G)) [d,h ]), r ],
-  thenl (m tt) [then sym b, thenl (m (eq ' (lam x \ x) ' (lam x \ x))) [ then sym d, r ] ] ] ].
+  [ thenl c [ then sym (thenl (m (forall ' lam G)) [dd,h ]), r ]
+  , then (conv b) (th tt_intro) ] ].
 
 /* forall ' F |- f  -->  F ' a, forall ' F |- f */
 deftac (lforall F A) (seq Gamma G) TAC :-
@@ -356,7 +356,7 @@ deftac i (seq Gamma (impl ' P ' Q)) TAC :-
 
 /* p=>q |- q  -->  |- p */
 deftac (mp P) (seq Gamma Q) TAC :-
- TAC = then (andr P) (thenl (m P) [ then sym (thenl (m (impl ' P ' Q)) [ d , h ]) , id ]).
+ TAC = then (andr P) (thenl (m P) [ then sym (thenl (m (impl ' P ' Q)) [ dd , h ]) , id ]).
 
 /* p=>q |- q  -->  |- p */
 deftac mp (seq Gamma Q) (mp P) :-
@@ -364,7 +364,7 @@ deftac mp (seq Gamma Q) (mp P) :-
 
 /* |- q   -->   p |- q  and  |- p */
 deftac (cut P) (seq Gamma Q) TAC :-
- TAC = then (andr P) (thenl (m P) [then sym (thenl (m (impl ' P ' Q)) [d, i] ) , id]). 
+ TAC = then (andr P) (thenl (m P) [then sym (thenl (m (impl ' P ' Q)) [then (conv (land_tac dd)) r, i] ) , id]). 
 
 /* |-q  --> p |- q   where the theorem T proves p */
 deftac (cutth T) SEQ (thenl (cut X) [ id, th T ]).
@@ -626,24 +626,25 @@ main :-
 +conj: dd eq_true_intro
 +andr: dd tt_intro
 +andl: dd tt_intro
-+i: dd andl conj
-
--forall_e: sym d
- TO BE PORTED TO DD
--mp: andr sym d
- TO BE PORTED TO DD
-
-?lapply*: mp
-?lforall*: mp forall_e
-?apply*: lapply lforall
-
--cut: andr sym d
- TO BE PORTED TO DD
-?cutth: ...
-?applyth: ...
++forall_e: sym dd
++mp: andr sym dd
+-i: dd andl conj
+ BUG: impl ' P ' q  diverge
+-cut: andr sym dd i
+ BUG: cut X diverges because of i's BUG
+-cutth: cut
+ BUG always diverges because of cut(i) bug
++lapply*: mp
++lforall*: mp forall_e
+-apply*: lapply lforall
+ BUG diverges on impl ' (forall ' lam x \ impl ' p ' x) ' (impl ' p ' ff)
+-applyth: cutth apply*
+ BUG always diverges because of cutth(i) bug
 
 - f converional sometimes fails
 - conv (depth_tac) sometimes diverges
+- many tactics fails/diverge when applied to metavariables
+  e.g. lforall X, cut X, etc.
 - repeat is not implemented using progress, that is not even there
 */
 
