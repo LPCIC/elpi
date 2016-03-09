@@ -1443,8 +1443,8 @@ exception Delayed_goal of (int * index * term list * term)
 let delay_goal ~depth prog ~goal:g ~on:keys =
   let pdiff = diff_progs ~to_:depth prog !original_program in
   (*Format.fprintf Format.std_formatter
-    "Delaying goal: @[<hov 2> %a@ ⊢ %a@]\n%!"
-      (pplist (uppterm depth [] 0 [||]) ",") pdiff
+    "Delaying goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"
+      (pplist (uppterm depth [] 0 [||]) ",") pdiff depth
       (uppterm depth [] 0 [||]) g ;*)
   let delayed_goal = (Delayed_goal (depth,prog,pdiff,g), keys) in
   add_constraint delayed_goal
@@ -2391,8 +2391,8 @@ let make_runtime : unit -> (?depth:int -> 'a -> 'b -> int -> 'k) * ('k -> 'k) * 
 begin Format.fprintf Format.std_formatter "Undo triggered by goal resumption\n%!";
   TCALL next_alt alts
 end
- | Some ((ndepth,p,ng)::goals) ->
-    run ndepth p ng (goals@(depth,p,g)::gs) next alts lvl
+ | Some ((ndepth,np,ng)::goals) ->
+    run ndepth np ng (goals@(depth,p,g)::gs) next alts lvl
  | Some [] ->
     match g with
     | c when c == cutc -> TCALL cut p gs next alts lvl
@@ -2530,7 +2530,9 @@ end
          remove_constraint exn;
          to_resume := rest;
          Format.fprintf Format.std_formatter
-          "Resuming goal: %a ⊢ %a\n%!" (pplist (uppterm depth [] 0 [||]) ",") pdiff (uppterm depth [] 0 [||]) g ;
+          "Resuming goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"
+          (pplist (uppterm depth [] 0 [||]) ",") pdiff
+          depth (uppterm depth [] 0 [||]) g ;
          to_be_resumed := dpg :: !to_be_resumed
      | _ -> anomaly "Unknown constraint type"
    done ;
