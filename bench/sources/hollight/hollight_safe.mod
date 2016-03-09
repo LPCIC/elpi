@@ -291,24 +291,15 @@ deftac conj (seq Gamma (and ' P ' Q)) TAC :-
    ww.
 
 /* Gamma  "|-"  q    --->   Gamma "|-" and ' p ' q*/
+/* BUG: (andr P) fails proving q with RestrictionFailure */
 deftac (andr P) (seq Gamma Q) TAC :-
- TAC = (thenl (m ((lam x \ (x ' P ' Q)) ' (lam x \ (lam y \ y)))) [ thenl (m (eq ' ( (lam x \ (lam y \ y)) ' P ' Q) ' Q)) [
-       thenl c [ thenl c [ r , then sym b ],  
-          r ], thenl (m (eq ' (((lam x \ (lam y \ y)) ' P) ' Q) ' ((lam y \ y) ' Q))) [ thenl c [ thenl c [r , r ], b ], thenl c [b , r ] ] ],
-     thenl (m ((lam f \ (f ' tt ' tt)) ' (lam x \ lam y \ y) ))     [ thenl c [ then sym (thenl (m (and ' P ' Q)) [ d , id ]), r ], thenl (m ( (lam x \ (lam y \ y)) ' tt ' tt )) [ then sym b, thenl (m ((lam y \ y) ' tt)) [ then sym (thenl c [b , r ]), thenl (m tt) [ then sym b , thenl (m (eq ' (lam x \ x) ' (lam x \ x))) [then sym d , r ] ] ] ] ] ] ).
-
-/* We need daemon that turns the definiens of and ' p ' q
-   into and ' p ' q
- TAC = (thenl (m ((lam x3 \ (lam x4 \ x4)) ' p ' q))
-   [then (conv (depth_tac b)) (then (conv (depth_tac b)) r),
-   thenl (m ((lam x3 \ (lam x4 \ x4)) ' tt ' tt))
-    [then sym
-      (thenl (t ((lam x3 \ x3 ' p ' q) ' (lam x3 \ (lam x4 \ x4))))
-        [then (conv (depth_tac b)) r,
-        thenl (t ((lam x3 \ x3 ' tt ' tt) ' (lam x3 \ (lam x4 \ x4))))
-         [thenl c [daemon, r], then (conv (depth_tac b)) r]]),
-    then (conv (depth_tac b)) (then (conv (depth_tac b)) (th tt_intro))]]).
-*/
+ TAC =
+  (thenl (m ((lam f \ f ' P ' Q) ' (lam x \ lam y \ y)))
+    [ then (repeat (conv (depth_tac b))) r
+    , thenl (conv (rator_tac id))
+       [ then (thenl (t (lam f \ f ' tt ' tt)) [ id, r ])
+          (thenl (m (and ' P ' Q)) [ dd , id ])
+       , then (repeat (conv (depth_tac b))) (th tt_intro) ]]).
 
 /* (and ' p ' q) :: nil  "|-"  q */
 deftac andr (seq Gamma Q) TAC :-
@@ -316,8 +307,16 @@ deftac andr (seq Gamma Q) TAC :-
  TAC = then (andr P) h.
 
 /* Gamma  "|-"  p    --->   Gamma "|-" and ' p ' q*/
+/* BUG: (andl x3) fails with RestrictionFailure when applied to goal x3.
+   It works substituting p for x3. */
 deftac (andl Q) (seq Gamma P) TAC :-
- TAC = (thenl (m ((lam x \ (x ' P ' Q)) ' (lam x \ (lam y \ x))))  [ thenl (m (eq ' ( (lam x \ (lam y \ x)) ' P ' Q) ' P)) [ thenl c [ thenl c [ r , then sym b ], r ], thenl (m (eq ' (((lam x \ (lam y \ x)) ' P) ' Q) ' ((lam y \ P) ' Q)))  [ thenl c  [ then c r, b ], thenl c [ b , r ] ] ], thenl (m ((lam f \ (f ' tt ' tt)) ' (lam x \ lam y \ x) )) [ thenl c [ then sym (thenl (m (and ' P ' Q)) [ d , id ]), r ], thenl (m ( (lam x \ (lam y \ x)) ' tt ' tt )) [ then sym b , thenl (m ((lam y \ tt) ' tt)) [ then sym (thenl c [ b , r ]), thenl (m tt)   [ then sym b, thenl (m (eq ' (lam x \ x) ' (lam x \ x)))  [then sym d, r ] ] ] ] ] ] ).
+ TAC =
+  (thenl (m ((lam f \ f ' P ' Q) ' (lam x \ lam y \ x)))
+    [ then (repeat (conv (depth_tac b))) r
+    , thenl (conv (rator_tac id))
+       [ then (thenl (t (lam f \ f ' tt ' tt)) [ id, r ])
+          (thenl (m (and ' P ' Q)) [ dd , id ])
+       , then (repeat (conv (depth_tac b))) (th tt_intro) ]]).
 
 /* (and ' p ' q) :: nil  "|-"  p */
 deftac andl (seq Gamma P) TAC :-
@@ -329,8 +328,7 @@ deftac andl (seq Gamma P) TAC :-
 
 /* |- forall ' F  -->   |- F ' x */
 deftac forall_i (seq Gamma (forall ' lam G)) TAC :-
- TAC = thenl (m (eq ' (lam G) ' (lam x \ tt)))
-  [ then sym d , then k (bind _ x \ eq_true_intro) ].
+ TAC = then (conv dd) (then k (bind _ x \ eq_true_intro)).
 
 /* forall ' F |- F ' T */
 deftac forall_e (seq Gamma GX) TAC :-
@@ -357,8 +355,7 @@ deftac (lforall_last A) (seq ((forall ' lam F)::Gamma) G) (lforall F A).
 
 /* |- p=>q  -->  p |- q */
 deftac i (seq Gamma (impl ' P ' Q)) TAC :-
- TAC = thenl (m (eq ' (and ' P ' Q) ' P))
-  [ then sym d , thenl s [ andl, thenl conj [ h, id ]]].
+ TAC = then (conv dd) (thenl s [ andl, thenl conj [ h, id ]]).
 
 /* p=>q |- q  -->  |- p */
 deftac (mp P) (seq Gamma Q) TAC :-
@@ -409,9 +406,14 @@ deftac apply (seq Gamma F) (apply H) :-
 
 /********** conversion(als) ***********/
 
-deftac dd (seq [] (eq ' T ' X)) d.
-deftac dd (seq [] (eq ' (D ' T) ' X))
+/* expands definitions, even if applied to arguments */
+deftac dd (seq _ (eq ' T ' X)) d.
+deftac dd (seq _ (eq ' (D ' T) ' X))
  (thenl  (t A) [thenl c [dd , r], b]).
+
+/* folds a definition, even if applied to arguments */
+/* BUG: it seems to fail with restriction errors in some cases */
+deftac f SEQ (then sym dd).
 
 deftac (rand_tac C) SEQ TAC :-
   TAC = thenl c [ r , C ].
@@ -423,7 +425,7 @@ deftac (abs_tac C) SEQ TAC :-
   TAC = then k (bind A x \ C).
 
 deftac (land_tac C) SEQ TAC :-
-  TAC = thenl c [ then c [ r, C ] , r ].
+  TAC = thenl c [ thenl c [ r, C ] , r ].
 
 deftac (sub_tac C) SEQ TAC :-
   TAC = orelse (rand_tac C) (orelse (rator_tac C) (abs_tac C)).
@@ -619,17 +621,42 @@ main :-
     [ daemon ]*/
  ].
 
-/*
-BUGS:
-- forall ' lam x \ tt
-  forall_i fails
-- major bug: theorems are forced to be monomorphic. E.g.
-  exists_i only inhabits (exists ' lam x \ F ' x) where F
-  has type (X -> bool) for a fixed existentially quantified
-  but uninstantiated variable X.
+/* Status and dependencies of the tactics:
++dd:
++sym:
++eq_true_intro: (th tt_intro)
++forall_i: dd eq_true_intro
++conj: dd eq_true_intro
+-andr: dd tt_intro
+ SEE andl BELOW
+-andl: dd tt_intro
+ BUG fails on goal (and ' x3 ' x3 |- x3) with RestrictionFailure
+-i: dd andl conj
+ BUG fails on goal |- impl ' x3 ' x3 because andl is bugged
 
-  This is yet another case of lack of Hindley-Milner
-  polymorphism.
+-forall_e: sym d
+ TO BE PORTED TO DD
+-mp: andr sym d
+ TO BE PORTED TO DD
+
+?lapply*: mp
+?lforall*: mp forall_e
+?apply*: lapply lforall
+
+-cut: andr sym d
+ TO BE PORTED TO DD
+?cutth: ...
+?applyth: ...
+
+- f converional sometimes fails
+- conv (depth_tac) sometimes diverges
+- repeat is not implemented using progress, that is not even there
+*/
+
+/* Library clean-up:
+- th0 is used in tt_intro. Inline? Give it a better status?
+- variants of th0, test_apply, test_apply2, test_mp_expanded
+  are tests and not real theorems. Separate them somehow
 */
 
 /*
@@ -647,6 +674,9 @@ The propagation rule is however harder. Consider:
 
  We will discuss about it and we basically already have
  the code in the refiner.elpi file.
+
+1.25) major bug: I think that the proof of a theorem may now force it to
+  be monomorphic, but we forget this when we assume it in check
 
 1.5) revise all term checks in thm. In particular:
   a) if we only do top-down proofs some checks can be
