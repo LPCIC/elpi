@@ -291,7 +291,6 @@ deftac conj (seq Gamma (and ' P ' Q)) TAC :-
    ww.
 
 /* Gamma  "|-"  q    --->   Gamma "|-" and ' p ' q*/
-/* BUG: (andr P) fails proving q with RestrictionFailure */
 deftac (andr P) (seq Gamma Q) TAC :-
  TAC =
   (thenl (m ((lam f \ f ' P ' Q) ' (lam x \ lam y \ y)))
@@ -307,8 +306,6 @@ deftac andr (seq Gamma Q) TAC :-
  TAC = then (andr P) h.
 
 /* Gamma  "|-"  p    --->   Gamma "|-" and ' p ' q*/
-/* BUG: (andl x3) fails with RestrictionFailure when applied to goal x3.
-   It works substituting p for x3. */
 deftac (andl Q) (seq Gamma P) TAC :-
  TAC =
   (thenl (m ((lam f \ f ' P ' Q) ' (lam x \ lam y \ x)))
@@ -627,12 +624,9 @@ main :-
 +eq_true_intro: (th tt_intro)
 +forall_i: dd eq_true_intro
 +conj: dd eq_true_intro
--andr: dd tt_intro
- SEE andl BELOW
--andl: dd tt_intro
- BUG fails on goal (and ' x3 ' x3 |- x3) with RestrictionFailure
--i: dd andl conj
- BUG fails on goal |- impl ' x3 ' x3 because andl is bugged
++andr: dd tt_intro
++andl: dd tt_intro
++i: dd andl conj
 
 -forall_e: sym d
  TO BE PORTED TO DD
