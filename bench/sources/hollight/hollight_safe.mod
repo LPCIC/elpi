@@ -498,19 +498,7 @@ main :-
      (lam x \ impl ' x ' ff)
   , def or (arr bool (arr bool bool))
      (lam x \ lam y \ forall ' lam c \ impl ' (impl ' x ' c) ' (impl ' (impl ' y ' c) ' c))
-  , theorem th0
-     (eq ' (eq ' (lam x\ x) ' (lam x\ x)) ' tt)
-     (m (eq ' tt ' tt) :: c :: c :: r :: d :: r :: r :: nil)
-  , theorem th0_alternative_proof0
-     (eq ' (eq ' (lam x\ x) ' (lam x\ x)) ' tt)
-     (thenl (m (eq ' tt ' tt)) (c :: r :: nil) ::
-       thenl c (r :: d :: nil) :: r :: nil)
-  , theorem th0_alternative_proof1
-     (eq ' (eq ' (lam x\ x) ' (lam x\ x)) ' tt)
-     [then (m (eq ' tt ' tt)) (repeat (orelse r (orelse d c)))]
-  , theorem tt_intro
-     tt
-     (m (eq ' (lam x0\x0) ' (lam x0\x0)) :: th th0 :: r :: nil)
+  , theorem tt_intro tt [then (conv dd) (then k (bind _ x12 \ r))]
   , theorem ff_elim (forall ' (lam x2 \ impl ' ff ' x2))
      [then forall_i (bind bool x3\ then (conv (land_tac dd)) (then i forall_e))]
   , theorem not_e (forall ' (lam x2 \ impl ' (not ' x2) ' (impl ' x2 ' ff)))
@@ -574,9 +562,11 @@ main :-
                         (impl ' (impl ' x3 ' x5) ' x5))) '
                    (impl ' (impl ' x2 ' x4) ' (impl ' (impl ' x3 ' x4) ' x4))))
                [thenl c [thenl c [r, then sym d], r], then i forall_e])))]
+*/
   , theorem test_apply
     (impl ' p ' (impl ' (impl ' p ' (impl ' p ' q)) ' q))
     [then i (then i (then apply h))]
+/*
   /*, theorem test_apply2
     (impl ' p ' (impl ' (forall ' lam x \ forall ' lam y \ impl ' x ' (impl ' x ' y)) ' q))
     [then i (then i (then apply h))]*/
@@ -631,12 +621,13 @@ main :-
 */
 
 /* Library clean-up:
-- th0 is used in tt_intro. Inline? Give it a better status?
-- variants of th0, test_apply, test_apply2
-  are tests and not real theorems. Separate them somehow
+- test_apply, test_apply2 are tests and not real theorems. Separate them somehow
 */
 
 /*
+-1. proofs of exists_e/exists_i: stack overflow very quickly
+    Hmmmm. Maybe it created a cyclic term?
+
 0. definitions must not be recursive (check needed)
    axioms are missing
 
@@ -661,7 +652,9 @@ The propagation rule is however harder. Consider:
  the code in the refiner.elpi file.
 
 1.25) major bug: I think that the proof of a theorem may now force it to
-  be monomorphic, but we forget this when we assume it in check
+  be monomorphic, but we forget this when we assume it in check.
+  Similarly: tt is defined as (x\x)=(x\x) but what is the type of those
+  abstractions? It remains uninstantiated in the proof.
 
 2) we need to fix the ELPI problems about handling of metavariables.
  I have already discussed with Enrico about them and he could have a
