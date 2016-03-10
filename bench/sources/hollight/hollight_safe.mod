@@ -544,9 +544,6 @@ main :-
           (bind bool x13 \
             then forall_i
              (bind bool x14 \ then (conv (land_tac dd)) (then i forall_e))))]
-  , theorem test_apply
-    (impl ' p ' (impl ' (impl ' p ' (impl ' p ' q)) ' q))
-    [then i (then i (then apply h))]
   , (pi T \ theorem exists_e
     (forall ' lam f \ (impl ' (exists ' f) ' (forall ' (lam x2 \ impl ' (forall ' (lam x3 \ impl ' (f ' x3) ' x2)) ' x2))))
     [then forall_i (bind (arr T bool) x12 \ then (conv (land_tac dd)) (then i h))])
@@ -561,6 +558,9 @@ main :-
              (then forall_i
                (bind bool x14 \ then i (then (lforall x13) (then apply h)))))))])
  /******************* TESTS *****************/
+ , theorem test_apply
+    (impl ' p ' (impl ' (impl ' p ' (impl ' p ' q)) ' q))
+    [then i (then i (then apply h))]
  , theorem test_apply2
     (impl ' p ' (impl ' (forall ' lam x \ forall ' lam y \ impl ' x ' (impl ' x ' y)) ' q))
     [then i (then i (then apply h))]
@@ -594,6 +594,7 @@ main :-
 */
 
 /*
+-1. the test apply_2 is very slow: why?
 0. definitions must not be recursive (check needed)
    axioms are missing
 
