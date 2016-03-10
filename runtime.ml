@@ -1443,8 +1443,9 @@ exception Delayed_goal of (int * index * term list * term)
 let delay_goal ~depth prog ~goal:g ~on:keys =
   let pdiff = diff_progs ~to_:depth prog !original_program in
   (*Format.fprintf Format.std_formatter
-    "Delaying goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"
-      (pplist (uppterm depth [] 0 [||]) ",") pdiff depth
+    (*"Delaying goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
+    "Delaying goal: @[<hov 2> ...@ ⊢^%d %a@]\n%!"
+      (*(pplist (uppterm depth [] 0 [||]) ",") pdiff*) depth
       (uppterm depth [] 0 [||]) g ;*)
   let delayed_goal = (Delayed_goal (depth,prog,pdiff,g), keys) in
   add_constraint delayed_goal
@@ -2218,13 +2219,13 @@ let propagate constr j history =
    | Lam t -> find_entails max_depth (n+1) t
    | App(c,x,[g]) when c == entailsc -> n, x, g
    | t -> assert false (*n, SHOULD BE AN Arg UVar(oref dummy,max_depth,0), t*) in
- let sequent_of_pattern max_depth = function
+ let sequent_of_pattern max_depth ruledepth = function
    | App(c,x,[]) when c == nablac ->
-       let min_depth, ctx, g = find_entails max_depth 0 x in
+       let min_depth, ctx, g = find_entails max_depth ruledepth x in
        (min_depth, ctx, g)
    | Lam _ -> error "syntax error in propagate"
    | x -> 
-       let min_depth, ctx, g = find_entails max_depth 0 x in
+       let min_depth, ctx, g = find_entails max_depth ruledepth x in
        (min_depth, ctx, g) in
  (*Format.fprintf Format.std_formatter "PROPAGATION %d\n%!" j;*)
  let query =
@@ -2242,7 +2243,7 @@ let propagate constr j history =
  let run,_,no_delayed = !do_make_runtime () in
  let no_such_j = ref true in
  let result =
-    map_exists (function ({ (*depth : int; *) args = [ g1; g2; g3];
+    map_exists (function ({ depth = ruledepth; args = [ g1; g2; g3];
                      hyps = hyps; vars = nargs; key = k } as clause) ->
 
     let gg1 = lp_list_to_list g1 in
@@ -2287,7 +2288,7 @@ let propagate constr j history =
        let () = HISTORY.add history hitem () in
        let heads_sequent = List.map sequent_of_constr heads in
        let max_depth =
-         List.fold_left (fun acc (d,_,_) -> max d acc) 0 heads_sequent in
+         List.fold_left (fun acc (d,_,_) -> max d acc) ruledepth heads_sequent in
        let contexts, goals_at_max_depth =
          List.fold_right (fun (d,p,g) (ctxs, gs) ->
            (d,p) :: ctxs, lift ~from:d ~to_:max_depth g :: gs)
@@ -2303,7 +2304,7 @@ let propagate constr j history =
          d, ctx, lift_pat ~from:d ~to_:max_depth g in
 
        try
-         let sequent_of_pattern = sequent_of_pattern max_depth in
+         let sequent_of_pattern = sequent_of_pattern max_depth ruledepth in
          let patterns_sequent1 =
            List.(gg1 |> map sequent_of_pattern |> map lift_pattern_sequent) in
          let patterns_sequent2 =
@@ -2551,12 +2552,12 @@ end
              (*List.iter (function
                 (Delayed_goal ((depth,_,_,g)),_) ->
                   Format.fprintf Format.std_formatter
-                   "Killing goal: ... ⊢ %a\n%!" (uppterm depth [] 0 [||]) g
+                   "Killing goal: @[<hov 2> ... ⊢^%d %a@]\n%!" depth (uppterm depth [] 0 [||]) g
               | _ -> ()) to_be_removed ;*)
              List.iter remove_constraint to_be_removed ;
              (*List.iter (fun (depth,_,_,g) ->
                   Format.fprintf Format.std_formatter
-                   "Additional goal: ... ⊢ %a\n%!" (uppterm depth [] 0 [||]) g)
+                   "Additional goal: @[<hov 2> ... ⊢^%d %a@]\n%!" depth (uppterm depth [] 0 [||]) g)
                to_be_added ;*)
              (*List.iter add_constraint to_be_added*)
              to_be_resumed := to_be_added @ !to_be_resumed )
