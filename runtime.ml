@@ -2530,11 +2530,11 @@ end
      | (Delayed_goal((depth,_,pdiff,g) as dpg), _) as exn :: rest ->
          remove_constraint exn;
          to_resume := rest;
-         Format.fprintf Format.std_formatter
+         (*Format.fprintf Format.std_formatter
           "Resuming goal: @[<hov 2> ...@ ⊢^%d %a@]\n%!"
           (*"Resuming goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
           (*(pplist (uppterm depth [] 0 [||]) ",") pdiff*)
-          depth (uppterm depth [] 0 [||]) g ;
+          depth (uppterm depth [] 0 [||]) g ;*)
          to_be_resumed := dpg :: !to_be_resumed
      | _ -> anomaly "Unknown constraint type"
    done ;
