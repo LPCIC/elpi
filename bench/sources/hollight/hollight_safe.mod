@@ -566,7 +566,8 @@ main :-
     [then i (then i (then apply h))]
  , new_basic_type mybool myrep myabs myrepabs myabsrep
     (lam x \ exists ' lam p \ eq ' x ' (and ' p ' p))
-    [ daemon ]
+    [then (applyth exists_i)
+      (then (conv b) (then (applyth exists_i) (then (conv b) r)))]
  ].
 
 /* Status and dependencies of the tactics:
@@ -594,16 +595,29 @@ main :-
 */
 
 /*
--1. the test apply_2 is very slow: why?
-0. definitions must not be recursive (check needed)
+-3) after main, if I do stop I see thousands of delayed goal that have
+    never been resumed!
+
+-2.5) in the proof for mybool, at the end I provide the
+  witness (and X X) where X remains free (and it is not even pi-quantified).
+  If bool was empty, then X could not exist. On the other hand, if X was
+  empty, then there would be no need to provide the proof at all.
+  In any case, the symptom for X remaining free at the end of a proof is
+  one or more goals delayed on it. We never check for them and we have
+  no way atm to do that. See bug -3)
+
+-2) the test apply_2 is very slow: why?
+    same for the witness for mybool
+
+0) definitions must not be recursive (check needed)
    axioms are missing
 
-0.5 reduce and keep documented the trusted code base
+0.5) reduce and keep documented the trusted code base
 
-0.75 Observation: so far our HOL-Light is intuitionistic.
+0.75) Observation: so far our HOL-Light is intuitionistic.
  Keep it like that?
 
-1. the need to use delay is a very good news. It justifies our
+1) the need to use delay is a very good news. It justifies our
 implementation and it easily allow to publish. We also need to add
 the corresponding constraint propagation rules that implement the
 unicity of typing meta-theorem. I.e.
