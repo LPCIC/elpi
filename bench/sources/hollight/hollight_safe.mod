@@ -301,7 +301,10 @@ deftac conj (seq Gamma (and ' P ' Q)) TAC :-
 deftac (andr P) (seq Gamma Q) TAC :-
  TAC =
   (thenl (m ((lam f \ f ' P ' Q) ' (lam x \ lam y \ y)))
-    [ then (repeat (conv (depth_tac b))) r
+    [ then
+       %(repeat (conv (depth_tac b))) ROBUS VERSION LINE BELOW
+       (then (conv (land_tac b)) (then (conv (land_tac (rator_tac b))) (conv (land_tac b))))
+      r
     , thenl (conv (rator_tac id))
        [ then (thenl (t (lam f \ f ' tt ' tt)) [ id, r ])
           (thenl (m (and ' P ' Q)) [ dd , id ])
@@ -316,7 +319,10 @@ deftac andr (seq Gamma Q) TAC :-
 deftac (andl Q) (seq Gamma P) TAC :-
  TAC =
   (thenl (m ((lam f \ f ' P ' Q) ' (lam x \ lam y \ x)))
-    [ then (repeat (conv (depth_tac b))) r
+    [ then
+       %(repeat (conv (depth_tac b))) ROBUS VERSION LINE BELOW
+       (then (conv (land_tac b)) (then (conv (land_tac (rator_tac b))) (conv (land_tac b))))
+      r
     , thenl (conv (rator_tac id))
        [ then (thenl (t (lam f \ f ' tt ' tt)) [ id, r ])
           (thenl (m (and ' P ' Q)) [ dd , id ])
@@ -541,9 +547,6 @@ main :-
   , theorem test_apply
     (impl ' p ' (impl ' (impl ' p ' (impl ' p ' q)) ' q))
     [then i (then i (then apply h))]
-  /*, theorem test_apply2
-    (impl ' p ' (impl ' (forall ' lam x \ forall ' lam y \ impl ' x ' (impl ' x ' y)) ' q))
-    [then i (then i (then apply h))]*/
   , (pi T \ theorem exists_e
     (forall ' lam f \ (impl ' (exists ' f) ' (forall ' (lam x2 \ impl ' (forall ' (lam x3 \ impl ' (f ' x3) ' x2)) ' x2))))
     [then forall_i (bind (arr T bool) x12 \ then (conv (land_tac dd)) (then i h))])
@@ -557,6 +560,10 @@ main :-
            (then (conv dd)
              (then forall_i
                (bind bool x14 \ then i (then (lforall x13) (then apply h)))))))])
+ /******************* TESTS *****************/
+ , theorem test_apply2
+    (impl ' p ' (impl ' (forall ' lam x \ forall ' lam y \ impl ' x ' (impl ' x ' y)) ' q))
+    [then i (then i (then apply h))]
  , new_basic_type mybool myrep myabs myrepabs myabsrep
     (lam x \ exists ' lam p \ eq ' x ' (and ' p ' p))
     [ daemon ]
@@ -572,38 +579,21 @@ main :-
 +andl: dd tt_intro
 +forall_e: sym dd
 +mp: andr sym dd
--i: dd andl conj
- BUG: i seems to easily take an extremely long time, resuming tons of goals.
-  Is the tactic backtracking a lot? Note: it uses depth_tac because it needs
-  to reduce redexes from inside-out.
- BUG: impl ' P ' q  diverge
--cut: andr sym dd i
- BUG: cut X diverges because of i's BUG
--cutth: cut
- BUG always diverges because of cut(i) bug
++i: dd andl conj
++cut: andr sym dd i
++cutth: cut
 +lapply*: mp
 +lforall*: mp forall_e
--apply*: lapply lforall
- BUG diverges on impl ' (forall ' lam x \ impl ' p ' x) ' (impl ' p ' ff)
--applyth: cutth apply*
- BUG always diverges because of cutth(i) bug
++apply*: lapply lforall
++applyth: cutth apply*
 
 - f converional sometimes fails
-- conv (depth_tac) sometimes diverges
-- many tactics fails/diverge when applied to metavariables
-  e.g. lforall X, cut X, etc.
+- conv (depth_tac) diverges when applied to terms that contain
+  metavariables
 - repeat is not implemented using progress, that is not even there
 */
 
-/* Library clean-up:
-- test_apply, test_apply2 are tests and not real theorems. Separate them somehow
-*/
-
 /*
--1. test_apply2 raises an anomaly in the interpreter;
-    inhabiting the last daemon in the library via applyth exists_i
-    diverges
-
 0. definitions must not be recursive (check needed)
    axioms are missing
 
