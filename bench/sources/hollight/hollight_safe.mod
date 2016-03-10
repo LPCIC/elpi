@@ -21,6 +21,13 @@ term' (lam F) (arr A B) :- pi x\ term' x A => term (F x) B.
 term' (F ' T) B :- term T A, term F (arr A B).
 term' eq (arr A (arr A bool)).
 
+/*propagate [ (G1 ?- term (X @ L1) TY1) ] [ (G2 ?- term (X @ L2) TY2) ] NEW :-
+ list_map L1 (x\ y\ (term x y ; y = xxx)) LTY1,
+ list_map L2 (x\ y\ (term x y ; y = xxx)) LTY2,
+ NEW = (TY1 = TY2, LTY1 = LTY2).*/
+
+/*propagate [ (G ?- term (X @ L) TY) ] [ (G ?- term (X @ L) TY) ] true .*/
+
 % thm : bounded tactic -> bounded sequent -> list (bounded sequent) -> o
 thm C (seq Gamma G) _ :- debug, $print Gamma "|- " G " := " C, fail.
 
