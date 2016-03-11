@@ -605,13 +605,26 @@ let add_constraint0 (_,vars) as cstr =
  delayed := cstr :: !delayed;
  List.iter (fun r -> r.rest <- cstr :: r.rest) vars
 
+let safe_eq = ref (fun _ -> assert false);; 
+let print_cstr = ref (fun _ -> assert false);; 
+
+let rec safe_list_mem x = function
+    [] -> false
+  | a::l -> !safe_eq a x || safe_list_mem x l
+
 let add_constraint cstr =
- add_constraint0 cstr ;
- (match cstr with
-     Delayed_unif _,_ -> ()
-   | _ (* Delayed_goal _ *) ->
-      new_delayed := (cstr, 0) :: !new_delayed);
- if not !last_call then trail := AddConstr cstr :: !trail
+ if safe_list_mem cstr !delayed then begin
+  (*Format.fprintf Format.std_formatter "Duplicate delayed goal skipped\n%!" ;*)
+  (*assert false*) ()
+ end else begin
+  (*!print_cstr cstr ;*)
+  add_constraint0 cstr ;
+  (match cstr with
+      Delayed_unif _,_ -> ()
+    | _ (* Delayed_goal _ *) ->
+       new_delayed := (cstr, 0) :: !new_delayed);
+  if not !last_call then trail := AddConstr cstr :: !trail
+ end
 
 let remove_constraint0 (_,vars) as cstr =
  delayed := remove_from_list cstr !delayed;
@@ -1440,6 +1453,31 @@ let original_program = Fork.new_local (Obj.magic 0 : index) (* dummy value *)
  * be a tuple *)
 exception Delayed_goal of (int * index * term list * term)
 
+let safe_equal a x =
+ match a,x with
+   (Delayed_goal (depth,prog,pdiff,g),xs), (Delayed_goal (depth',prog',pdiff',g'),xs') ->
+  Format.fprintf Format.str_formatter
+    (*"Delaying goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
+    "@[<hov 2> ...@ ⊢ %a@]\n%!"
+      (*(pplist (uppterm depth [] 0 [||]) ",") pdiff*)
+      (uppterm depth [] 0 [||]) g ;
+  let s1 = Format.flush_str_formatter () in
+  Format.fprintf Format.str_formatter
+    (*"Delaying goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
+    "@[<hov 2> ...@ ⊢ %a@]\n%!"
+      (*(pplist (uppterm depth [] 0 [||]) ",") pdiff*)
+      (uppterm depth' [] 0 [||]) g' ;
+  let s2 = Format.flush_str_formatter () in
+  (*prerr_endline ("Compare1: " ^ s1);
+  prerr_endline ("Compare2: " ^ s2);*)
+  s1 = s2 (*
+    depth = depth' && g == g' &&
+     List.for_all2 (==) xs xs' *)
+ | _, _ -> false
+;;
+
+safe_eq := safe_equal
+
 let delay_goal ~depth prog ~goal:g ~on:keys =
   let pdiff = diff_progs ~to_:depth prog !original_program in
   (*Format.fprintf Format.std_formatter
@@ -1450,6 +1488,18 @@ let delay_goal ~depth prog ~goal:g ~on:keys =
   let delayed_goal = (Delayed_goal (depth,prog,pdiff,g), keys) in
   add_constraint delayed_goal
 ;;
+
+print_cstr :=
+ (function
+   | (Delayed_goal (depth,prog,pdiff,g), keys) ->
+     Format.fprintf Format.std_formatter
+       (*"Delaying goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
+       "Delaying goal: @[<hov 2> ...@ ⊢^%d %a@]\n%!"
+         (*(pplist (uppterm depth [] 0 [||]) ",") pdiff*) depth
+         (uppterm depth [] 0 [||]) g
+   | _ -> ())
+;;
+   
 
 (* is_flex is to be called only on heap terms *)
 let rec is_flex =
@@ -2514,6 +2564,10 @@ end
     | FCons(lvl,(depth,p,g)::gs,next) -> run depth p g gs next alts lvl
 
   and resume_all () =
+(*if (!to_resume <> []) then begin
+prerr_endline ("## RESUME ALL R " ^ string_of_int (List.length !to_resume));
+prerr_endline ("## RESUME ALL D " ^ string_of_int (List.length !delayed));
+end;*)
    let ok = ref true in
    let to_be_resumed = ref [] in
    (* Phase 1: we analyze the goals to be resumed *)
@@ -2522,10 +2576,10 @@ end
      | (Delayed_unif (ad,e,bd,a,b), vars) as exn :: rest ->
          remove_constraint exn;
          to_resume := rest;
-         Format.fprintf Format.std_formatter
+         (*Format.fprintf Format.std_formatter
           "Resuming @[<hov 2>^%d:%a@ == ^%d:%a@]\n%!"
            ad (uppterm ad [] 0 [||]) a
-           bd (uppterm ad [] ad e) b;
+           bd (uppterm ad [] ad e) b;*)
          ok := unif ad e bd a b
      | (Delayed_goal((depth,_,pdiff,g) as dpg), _) as exn :: rest ->
          remove_constraint exn;
