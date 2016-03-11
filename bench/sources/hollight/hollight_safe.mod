@@ -198,7 +198,7 @@ mk_script ITAC NEW NEW_TACS (thenl ITAC NEW_TACS) :-
 
 read_in_context (bind A K) (bind A TAC) :-
  pi x \ term' x A => read_in_context (K x) (TAC x).
-read_in_context (seq A B) TAC :- read TAC, (TAC = backtrack, !, fail ; true).
+read_in_context (seq A B) TAC :- read TAC, (TAC = backtrack, !, fail ; TAC = toplevel, toplevel ; true).
 
 print_sequent (seq Gamma G) :- $print Gamma "|-" G.
 print_sequent (bind A F) :- pi x \ print_sequent (F x).
