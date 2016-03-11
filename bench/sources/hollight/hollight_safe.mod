@@ -62,6 +62,12 @@ thm (thenll TAC1 TACN) SEQ SEQS :-
  deftacl TACN NEW TACL,
  fold2_append TACL NEW thm SEQS.
 
+thm (thenll! TAC1 TACN) SEQ SEQS :-
+ thm TAC1 SEQ NEW,
+ !,
+ deftacl TACN NEW TACL,
+ fold2_append TACL NEW thm SEQS.
+
 /*debprint _ (then _ _) :- !.
 debprint _ (thenl _ _) :- !.
 debprint O T :- $print O T.*/
@@ -262,10 +268,18 @@ deftacl (all_equals_list TAC2) SEQS TACL :-
 deftac (then TAC1 TAC2) SEQ XTAC :-
  XTAC = thenll TAC1 (all_equals_list TAC2).
 
-deftac (orelse TAC1 TAC2) SEQ XTAC :- XTAC = TAC1 ; XTAC = TAC2.
+deftac (then! TAC1 TAC2) SEQ XTAC :-
+ XTAC = thenll! TAC1 (all_equals_list TAC2).
+
+deftac (orelse TAC1 TAC2) SEQ XTAC :-
+ XTAC = TAC1 ; XTAC = TAC2.
+
+deftac (bind* TAC) SEQ XTAC :-
+   XTAC = (bind _ x \ bind* TAC)
+ ; XTAC = TAC.
 
 deftac (repeat TAC) SEQ XTAC :-
- ( XTAC = then TAC (repeat TAC)
+ ( XTAC = then TAC (repeat (bind* TAC))
  ; XTAC = id).
 
 deftac (printtac TAC) SEQ TAC :-
@@ -355,6 +369,9 @@ deftac (lforall F A) (seq Gamma G) TAC :-
 /* forall ' F |- f  -->  F ' a, forall ' F |- f */
 deftac (lforall A) (seq Gamma G) (lforall F A) :-
  mem Gamma (forall ' lam F).
+
+/* forall ' F |- f  -->  F ' a, forall ' F |- f */
+deftac lforall (seq Gamma G) (lforall A).
 
 /* forall ' F |- f  -->  F ' a, forall ' F |- f */
 deftac (lforall_last A) (seq ((forall ' lam F)::Gamma) G) (lforall F A).
@@ -448,6 +465,60 @@ deftac (depth_tac C) SEQ TAC :-
 deftac (conv C) (seq Gamma F) TAC :-
  TAC = thenl (m G) [ then sym C , id ].
 
+/********** Automation ***********/
+/* TODO: left rule for = (in the sense of coimplication) missing */
+/* left tries to reduce the search space via focusing */
+deftac left (seq Gamma _) TAC :-
+ mem Gamma (not ' F),
+ TAC =
+  (then (cutth not_e)
+   (then (lforall_last F)
+    (thenl lapply [ h, (w (not ' F)) ]))).
+deftac left (seq Gamma _) TAC :-
+ /* A bit long because we want to beta-reduce the produced hypothesis.
+    Maybe this should be automatized somewhere else. */
+ mem Gamma (exists ' F),
+ TAC =
+  (then (cutth exists_e)
+   (then (lforall_last F)
+    (thenl lapply [ h, then (w (exists ' F)) (then apply_last (then forall_i (bind _ x \ then (try (conv (land_tac b))) i))) ]))).
+deftac left (seq Gamma H) TAC :-
+ mem Gamma (or ' F ' G),
+ TAC =
+  (then (cutth or_e)
+   (then (lforall_last F)
+    (then (lforall_last G)
+     (then (lforall_last H)
+      (thenl lapply [ h, then (w (or ' F ' G)) (then apply_last i)]))))).
+deftac left (seq Gamma H) TAC :-
+ mem Gamma (and ' F ' G),
+ TAC =
+  (then (cutth and_e)
+   (then (lforall_last F)
+    (then (lforall_last G)
+     (then (lforall_last H)
+      (thenl lapply [ h, then (w (and ' F ' G)) (then apply_last (then i i))]))))).
+
+deftac (itaut N) SEQ fail :- N =< 0, !.
+deftac (itaut N) SEQ TAC :-
+ %$print (itaut N) SEQ,
+ N1 is N - 1,
+ N2 is N - 2,
+ TAC =
+ (then!
+  (repeat
+   (orelse conj (orelse forall_i (orelse i (orelse
+    (applyth not_i) (orelse s left))))))
+  (bind*
+   (orelse h
+   (orelse (th tt_intro)
+   (orelse (then (th ff_elim) h)
+   (orelse /* Hypothesis not moved to front */ (then lforall (itaut N2))
+   (orelse (then (applyth orr) (itaut N))
+   (orelse (then (applyth orl) (itaut N))
+   (orelse (then (applyth exists_i) (itaut N2))
+   (then lapply (itaut N1))))))))))).
+
 /********** inductive things
 
 defined in terms of new_type_definition
@@ -512,6 +583,21 @@ main :-
   , def or (arr bool (arr bool bool))
      (lam x \ lam y \ forall ' lam c \ impl ' (impl ' x ' c) ' (impl ' (impl ' y ' c) ' c))
   , theorem tt_intro tt [then (conv dd) (then k (bind _ x12 \ r))]
+  , theorem and_e
+     (forall '
+       (lam x12 \
+         forall '
+          (lam x13 \
+            forall '
+             (lam x14 \
+               impl ' (and ' x12 ' x13) '
+                (impl ' (impl ' x12 ' (impl ' x13 ' x14)) ' x14)))))
+     [then forall_i
+       (bind bool x12 \
+         then forall_i
+          (bind bool x13 \
+            then forall_i
+             (bind bool x14 \ then i (then i (thenl apply [andl, andr])))))]
   , theorem ff_elim (forall ' (lam x2 \ impl ' ff ' x2))
      [then forall_i (bind bool x3\ then (conv (land_tac dd)) (then i forall_e))]
   , theorem not_e (forall ' (lam x2 \ impl ' (not ' x2) ' (impl ' x2 ' ff)))
@@ -568,6 +654,16 @@ main :-
     (lam x \ exists ' lam p \ eq ' x ' (and ' p ' p))
     [then (applyth exists_i)
       (then (conv b) (then (applyth exists_i) (then (conv b) r)))]
+ , theorem test_itaut_1
+   (impl ' (exists ' lam g) '
+     (forall ' (lam x12\ impl ' (forall ' (lam x13\ impl ' g x13 ' x12)) ' x12)))
+   [itaut 4]
+ , theorem test_itaut_2
+   (forall ' lam a \ forall ' lam b \ impl ' (or ' a ' b) ' (or ' b ' a))
+   [itaut 1]
+ , theorem test_itaut_3
+   (forall ' lam a \ forall ' lam b \ impl ' (and ' a ' b) ' (and ' b ' a))
+   [itaut 1]
  ].
 
 /* Status and dependencies of the tactics:
