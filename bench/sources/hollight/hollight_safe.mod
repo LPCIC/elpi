@@ -17,7 +17,7 @@ typ bool.
 typ ind.
 
 /*term T TY :- $print (term T TY), fail.*/
-term T TY :- $is_flex T, !, $delay (term T TY) [ T ].
+term T TY :- $is_flex T, !.%, $delay (term T TY) [ T ].
 term T TY :- term' T TY.
 term' (lam F) (arr A B) :- pi x\ term' x A => term (F x) B.
 term' (F ' T) B :- term F (arr A B), term T A.
@@ -350,7 +350,7 @@ deftac (andl Q) (seq Gamma P) TAC :-
   (thenl (m ((lam f \ f ' P ' Q) ' (lam x \ lam y \ x)))
     [ then
        %(repeat (conv (depth_tac b))) ROBUS VERSION LINE BELOW
-       (time (then (time (conv (land_tac b))) (then (conv (land_tac (rator_tac b))) (conv (land_tac b)))))
+       (then (conv (land_tac b)) (then (conv (land_tac (rator_tac b))) (conv (land_tac b))))
       r
     , thenl (conv (rator_tac id))
        [ then (thenl (t (lam f \ f ' tt ' tt)) [ id, r ])
@@ -397,7 +397,7 @@ deftac (lforall_last A) (seq ((forall ' lam F)::Gamma) G) (lforall F A).
 
 /* |- p=>q  -->  p |- q */
 deftac i (seq Gamma (impl ' P ' Q)) TAC :-
- TAC = then (conv dd) (thenl s [ time andl, thenl conj [ h [], id ]]).
+ TAC = then (conv dd) (thenl s [ andl, thenl conj [ h [], id ]]).
 
 /* p=>q |- q  -->  |- p */
 deftac (mp P) (seq Gamma Q) TAC :-
