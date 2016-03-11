@@ -440,11 +440,15 @@ deftac lapply_last (seq ((impl ' P ' Q)::Gamma) F) (lapply P Q).
 
 /**** apply, i.e. forall + impl ****/
 
+deftac (apply X) SEQ h :- $is_flex X, !.
+
+deftac (apply X) SEQ h.
+
 deftac (apply (impl ' P ' Q)) SEQ TAC :-
- TAC = thenl (lapply P Q) [ id, orelse h apply_last ].
+ TAC = thenl (lapply P Q) [ id, apply_last ].
 
 deftac (apply (forall ' lam G)) SEQ TAC :-
- TAC = then (lforall G X) (orelse h apply_last).
+ TAC = then (lforall G X) apply_last.
 
 deftac apply_last (seq (H::Gamma) F) (apply H).
 
