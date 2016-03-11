@@ -287,6 +287,16 @@ deftac (repeat TAC) SEQ XTAC :-
 deftac (printtac TAC) SEQ TAC :-
  $print "SEQ" SEQ ":=" TAC.
 
+deftac (time TAC) SEQ XTAC :-
+ $gettimeofday B,
+ XTAC = thenll TAC (time_after TAC B).
+
+deftacl (time_after TAC B) SEQS TACL :-
+ $gettimeofday A,
+ D is A - B,
+ mk_constant_list SEQS id TACL,
+ $print "TIME SPENT " D "FOR" TAC.
+
 /********** tactics ********/
 
 deftac (w G) (seq Gamma _) (w Gamma1) :-
@@ -340,7 +350,7 @@ deftac (andl Q) (seq Gamma P) TAC :-
   (thenl (m ((lam f \ f ' P ' Q) ' (lam x \ lam y \ x)))
     [ then
        %(repeat (conv (depth_tac b))) ROBUS VERSION LINE BELOW
-       (then (conv (land_tac b)) (then (conv (land_tac (rator_tac b))) (conv (land_tac b))))
+       (time (then (time (conv (land_tac b))) (then (conv (land_tac (rator_tac b))) (conv (land_tac b)))))
       r
     , thenl (conv (rator_tac id))
        [ then (thenl (t (lam f \ f ' tt ' tt)) [ id, r ])
@@ -387,7 +397,7 @@ deftac (lforall_last A) (seq ((forall ' lam F)::Gamma) G) (lforall F A).
 
 /* |- p=>q  -->  p |- q */
 deftac i (seq Gamma (impl ' P ' Q)) TAC :-
- TAC = then (conv dd) (thenl s [ andl, thenl conj [ h [], id ]]).
+ TAC = then (conv dd) (thenl s [ time andl, thenl conj [ h [], id ]]).
 
 /* p=>q |- q  -->  |- p */
 deftac (mp P) (seq Gamma Q) TAC :-
