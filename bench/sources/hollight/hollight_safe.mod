@@ -11,6 +11,8 @@ infixl ' 139.
 local thm, provable, def0, term, term', typ, loop, prove, saved, check1,
  toplevel_loop, toplevel.
 
+proves T TY :- provable T TY.
+
 typ bool.
 typ ind.
 
@@ -80,8 +82,8 @@ thm TAC SEQ SEQS :-
 
 thm id SEQ [ SEQ ].
 
-thm (w G) (seq Gamma F) [ seq WGamma F ] :-
- append Gamma1 [ G | Gamma2 ] Gamma,
+thm (w Gamma1) (seq Gamma F) [ seq WGamma F ] :-
+ append Gamma1 [ P | Gamma2 ] Gamma,
  append Gamma1 Gamma2 WGamma.
 
 thm (bind A TAC) (bind A SEQ) NEWL :-
@@ -198,7 +200,7 @@ mk_script ITAC NEW NEW_TACS (thenl ITAC NEW_TACS) :-
 
 read_in_context (bind A K) (bind A TAC) :-
  pi x \ term' x A => read_in_context (K x) (TAC x).
-read_in_context (seq A B) TAC :- read TAC, (TAC = backtrack, !, fail ; TAC = toplevel, toplevel ; true).
+read_in_context (seq A B) TAC :- read TAC, (TAC = backtrack, !, fail ; TAC = toplevel, !, toplevel ; true).
 
 print_sequent (seq Gamma G) :- $print Gamma "|-" G.
 print_sequent (bind A F) :- pi x \ print_sequent (F x).
@@ -287,6 +289,9 @@ deftac (printtac TAC) SEQ TAC :-
 
 /********** tactics ********/
 
+deftac (w G) (seq Gamma _) (w Gamma1) :-
+ append Gamma1 [ G | _ ] Gamma.
+
 deftac h SEQ (h L).
 
 /*** eq ***/
@@ -295,7 +300,7 @@ deftac sym (seq Gamma (eq ' L ' R)) TAC :-
  TAC = thenl (m (eq ' R ' R)) [ thenl c [ thenl c [ r , id ] , r ] , r ].
 
 deftac eq_true_intro (seq Gamma (eq ' P ' tt)) TAC :-
- TAC = thenl s [ th tt_intro, w tt ].
+ TAC = thenl s [ th tt_intro, w [] ].
 
 /*** true ***/
 
@@ -382,7 +387,7 @@ deftac (lforall_last A) (seq ((forall ' lam F)::Gamma) G) (lforall F A).
 
 /* |- p=>q  -->  p |- q */
 deftac i (seq Gamma (impl ' P ' Q)) TAC :-
- TAC = then (conv dd) (thenl s [ andl, thenl conj [ h, id ]]).
+ TAC = then (conv dd) (thenl s [ andl, thenl conj [ h [], id ]]).
 
 /* p=>q |- q  -->  |- p */
 deftac (mp P) (seq Gamma Q) TAC :-
@@ -397,7 +402,9 @@ deftac (cut P) (seq Gamma Q) TAC :-
  TAC = then (andr P) (thenl (m P) [then sym (thenl (m (impl ' P ' Q)) [then (conv (land_tac dd)) r, i] ) , id]). 
 
 /* |-q  --> p |- q   where the theorem T proves p */
-deftac (cutth T) SEQ (thenl (cut X) [ id, th T ]).
+deftac (cutth T) SEQ TAC :-
+ proves T X,
+ TAC = (thenl (cut X) [ id, th T ]).
 
 /* applies the theorem T */
 deftac (applyth T) SEQ (then (cutth T) apply_last).
@@ -406,6 +413,9 @@ deftac (applyth T) SEQ (then (cutth T) apply_last).
 deftac (lapply P Q) (seq Gamma F) TAC :-
  TAC =
   thenl (m (impl ' Q ' F)) [ thenl s [ then (mp Q) (then (w (impl ' Q ' F)) (then (mp P) (w (impl ' P ' Q)))) , then i (h [A]) ] , then (w (impl ' P ' Q)) (then i id) ].
+
+/* For debugging only (?) For capturing metavariables */
+deftac (inspect SEQ TAC) SEQ TAC.
 
 /* impl p q, Gamma |- f   --->   /*impl q f*/ Gamma |- p  ,  q, Gamma |- f */
 deftac lapply (seq Gamma F) (lapply P Q) :-
@@ -466,7 +476,9 @@ deftac (conv C) (seq Gamma F) TAC :-
  TAC = thenl (m G) [ then sym C , id ].
 
 /********** Automation ***********/
-/* TODO: left rule for = (in the sense of coimplication) missing */
+/* TODO:
+ 1) left rule for = (in the sense of coimplication) missing
+ 2) our lforall gets rid of the hypothesis (bad) */
 /* left tries to reduce the search space via focusing */
 deftac left (seq Gamma _) TAC :-
  mem Gamma (not ' F),
@@ -512,7 +524,7 @@ deftac (itaut N) SEQ TAC :-
   (bind*
    (orelse h
    (orelse (th tt_intro)
-   (orelse (then (th ff_elim) h)
+   (orelse (then (th /*applyth*/ ff_elim) h)
    (orelse /* Hypothesis not moved to front */ (then lforall (itaut N2))
    (orelse (then (applyth orr) (itaut N))
    (orelse (then (applyth orl) (itaut N))
