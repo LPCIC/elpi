@@ -583,6 +583,36 @@ main :-
   , def or (arr bool (arr bool bool))
      (lam x \ lam y \ forall ' lam c \ impl ' (impl ' x ' c) ' (impl ' (impl ' y ' c) ' c))
   , theorem tt_intro tt [then (conv dd) (then k (bind _ x12 \ r))]
+  , theorem ff_elim (forall ' (lam x2 \ impl ' ff ' x2))
+     [then forall_i (bind bool x3\ then (conv (land_tac dd)) (then i forall_e))]
+  , theorem sym
+     (forall '
+      (lam x12 \
+        forall ' (lam x13 \ impl ' (eq ' x12 ' x13) ' (eq ' x13 ' x12))))
+    [then forall_i
+     (bind bool x12 \
+       then forall_i
+        (bind bool x13 \
+          then i (then sym h)))]
+  , theorem not_e (forall ' (lam x2 \ impl ' (not ' x2) ' (impl ' x2 ' ff)))
+     [then forall_i (bind bool x3 \ then (conv (land_tac dd)) (then i h))]
+  , theorem conj
+     (forall '
+      (lam x12 \
+       forall ' (lam x13 \ impl ' x12 ' (impl ' x13 ' (and ' x12 ' x13)))))
+    [then forall_i
+     (bind bool x12 \
+      then forall_i (bind bool x13 \ then i (then i (then conj h))))]
+  , theorem andl
+     (forall ' (lam x12 \ forall ' (lam x13 \ impl ' (and ' x12 ' x13) ' x12)))
+    [then forall_i
+     (bind bool x12 \
+      then forall_i (bind bool x13 \ then i (then (andl x13) h)))]
+  , theorem andr
+     (forall ' (lam x12 \ forall ' (lam x13 \ impl ' (and ' x12 ' x13) ' x13)))
+    [then forall_i
+     (bind bool x12 \
+      then forall_i (bind bool x13 \ then i (then (andr x12) h)))]
   , theorem and_e
      (forall '
        (lam x12 \
@@ -598,10 +628,6 @@ main :-
           (bind bool x13 \
             then forall_i
              (bind bool x14 \ then i (then i (thenl apply [andl, andr])))))]
-  , theorem ff_elim (forall ' (lam x2 \ impl ' ff ' x2))
-     [then forall_i (bind bool x3\ then (conv (land_tac dd)) (then i forall_e))]
-  , theorem not_e (forall ' (lam x2 \ impl ' (not ' x2) ' (impl ' x2 ' ff)))
-     [then forall_i (bind bool x3 \ then (conv (land_tac dd)) (then i h))]
   , theorem not_i (forall ' (lam x2 \ impl ' (impl ' x2 ' ff) ' (not ' x2)))
      [then forall_i (bind bool x2 \ then i (then (conv dd) h))]
   , theorem orl
