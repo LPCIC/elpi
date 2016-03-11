@@ -577,7 +577,8 @@ INFINITY_AX, SELECT_AX (* axiom of choice *), ETA_AX
 
 main :-
  check
-  [ def tt bool
+  [ /*********** Connectives and quantifiers ********/
+    def tt bool
      (eq ' (lam x\ x) ' (lam x\ x))
   , (pi A \ def forall (arr (arr A bool) bool)
      (lam f \ eq ' f ' (lam g \ tt)))
@@ -681,6 +682,13 @@ main :-
            (then (conv dd)
              (then forall_i
                (bind bool x14 \ then i (then (lforall x13) (then apply h)))))))])
+ /******************* Logic *****************/
+ , theorem or_commutative
+   (forall ' lam a \ forall ' lam b \ impl ' (or ' a ' b) ' (or ' b ' a))
+   [itaut 1]
+ , theorem and_commutative
+   (forall ' lam a \ forall ' lam b \ impl ' (and ' a ' b) ' (and ' b ' a))
+   [itaut 1]
  /******************* TESTS *****************/
  , theorem test_apply
     (impl ' p ' (impl ' (impl ' p ' (impl ' p ' q)) ' q))
@@ -696,12 +704,6 @@ main :-
    (impl ' (exists ' lam g) '
      (forall ' (lam x12\ impl ' (forall ' (lam x13\ impl ' g x13 ' x12)) ' x12)))
    [itaut 4]
- , theorem test_itaut_2
-   (forall ' lam a \ forall ' lam b \ impl ' (or ' a ' b) ' (or ' b ' a))
-   [itaut 1]
- , theorem test_itaut_3
-   (forall ' lam a \ forall ' lam b \ impl ' (and ' a ' b) ' (and ' b ' a))
-   [itaut 1]
  ].
 
 /* Status and dependencies of the tactics:
