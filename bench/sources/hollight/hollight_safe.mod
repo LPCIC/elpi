@@ -20,7 +20,7 @@ typ ind.
 term T TY :- $is_flex T, !, $delay (term T TY) [ T ].
 term T TY :- term' T TY.
 term' (lam F) (arr A B) :- pi x\ term' x A => term (F x) B.
-term' (F ' T) B :- term T A, term F (arr A B).
+term' (F ' T) B :- term F (arr A B), term T A.
 term' eq (arr A (arr A bool)).
 
 /*propagate [ (G1 ?- term (X @ L1) TY1) ] [ (G2 ?- term (X @ L2) TY2) ] NEW :-
