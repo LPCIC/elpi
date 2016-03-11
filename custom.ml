@@ -252,6 +252,10 @@ let _ =
     match args with
     | [t1] -> if is_flex t1 then [] else raise No_clause
     | _ -> type_error "$is_flex takes 1 argument") ;
+  register_custom "$gettimeofday" (fun ~depth ~env:_ _ args ->
+    match args with
+    | [t1] -> [ App (eqc, t1, [Float Unix.gettimeofday ()]) ]
+    | _ -> type_error "$gettimeofday takes 1 argument") ;
   register_custom "$closed" (fun ~depth ~env:_ _ args ->
     match args with
     | [t1] -> [ App (eqc, t1, [UVar(oref dummy,0,0)]) ]

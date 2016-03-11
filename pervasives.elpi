@@ -45,6 +45,10 @@
 % nofixity nabla
 % nofixity $closed
 
+% nofixity $dprint
+
+% nofixity $gettimeofday
+
 prefix ~  256.       prefix i~  256.     prefix r~  256.
 infixl mod 160.
 infixl div 160.
@@ -135,3 +139,5 @@ print S :- output std_out S.
 read S :- flush std_out, input_line std_in X, string_to_term X S.
 
 stop :- halt.
+
+time T :- $gettimeofday B, T, $gettimeofday A, D is A - B, $print "TIME" D T.
