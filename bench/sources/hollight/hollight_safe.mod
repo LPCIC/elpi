@@ -538,7 +538,7 @@ deftac (itaut N) SEQ TAC :-
   (bind*
    (orelse h
    (orelse (th tt_intro)
-   (orelse (then (th /*applyth*/ ff_elim) h)
+   (orelse (then (applyth ff_elim) h)
    (orelse /* Hypothesis not moved to front */ (then lforall (itaut N2))
    (orelse (then (applyth orr) (itaut N))
    (orelse (then (applyth orl) (itaut N))
@@ -698,11 +698,59 @@ main :-
                (bind bool x14 \ then i (then (lforall x13) (then apply h)))))))])
  /******************* Logic *****************/
  , theorem or_commutative
-   (forall ' lam a \ forall ' lam b \ impl ' (or ' a ' b) ' (or ' b ' a))
+   (forall ' lam a \ forall ' lam b \ eq ' (or ' a ' b) ' (or ' b ' a))
+   [itaut 1]
+ , theorem or_ff
+   (forall ' lam a \ eq ' (or ' a ' ff) ' a)
+   [itaut 1]
+ , theorem or_tt
+   (forall ' lam a \ eq ' (or ' a ' tt) ' tt)
+   [itaut 1]
+ , theorem or_idempotent
+   (forall ' lam a \ eq ' (or ' a ' a) ' a)
+   [itaut 1]
+ , theorem or_associative
+   (forall ' lam a \ forall ' lam b \ forall ' lam c \ eq ' (or ' a ' (or ' b ' c)) ' (or ' (or ' a ' b) ' c))
    [itaut 1]
  , theorem and_commutative
-   (forall ' lam a \ forall ' lam b \ impl ' (and ' a ' b) ' (and ' b ' a))
+   (forall ' lam a \ forall ' lam b \ eq ' (and ' a ' b) ' (and ' b ' a))
    [itaut 1]
+ , theorem and_tt
+   (forall ' lam a \ eq ' (and ' a ' tt) ' a)
+   [itaut 1]
+ , theorem and_ff
+   (forall ' lam a \ eq ' (and ' a ' ff) ' ff)
+   [itaut 1]
+ , theorem and_idempotent
+   (forall ' lam a \ eq ' (and ' a ' a) ' a)
+   [itaut 1]
+ , theorem and_associative
+   (forall ' lam a \ forall ' lam b \ forall ' lam c \ eq ' (and ' a ' (and ' b ' c)) ' (and ' (and ' a ' b) ' c))
+   [itaut 1]
+ , theorem and_or
+   (forall ' lam a \ forall ' lam b \ forall ' lam c \ eq ' (and ' a ' (or ' b ' c)) ' (or ' (and ' a ' b) ' (and ' a ' c)))
+   [itaut 1]
+ , theorem or_and
+   (forall ' lam a \ forall ' lam b \ forall ' lam c \ eq ' (or ' a ' (and ' b ' c)) ' (and ' (or ' a ' b) ' (or ' a ' c)))
+   [itaut 1]
+ , theorem ads_or_and
+   (forall ' lam a \ forall ' lam b \ eq ' (or ' (and ' a ' b) ' b) ' b)
+   [itaut 1]
+ , theorem ads_and_or
+   (forall ' lam a \ forall ' lam b \ eq ' (and ' (or ' a ' b) ' b) ' b)
+   [itaut 1]
+ , theorem not_or
+   (forall ' lam a \ forall ' lam b \ eq ' (and ' (not ' a) ' (not ' b)) ' (not ' (or ' a ' b)))
+   [itaut 2]
+ , theorem not_and
+   (forall ' lam a \ forall ' lam b \ impl ' (or ' (not ' a) ' (not ' b)) ' (not ' (and ' a ' b)))
+   [itaut 2]
+ , theorem not_not_not
+   (forall ' lam p \ eq ' (not ' (not ' (not ' p))) ' (not ' p))
+   [itaut 3]
+ , theorem impl_not_not
+   (forall ' lam a \ forall ' lam b \ impl ' (impl ' a ' b) ' (impl ' (not ' b) ' (not ' a)))
+   [itaut 3]
  /******************* TESTS *****************/
  , theorem test_apply
     (impl ' p ' (impl ' (impl ' p ' (impl ' p ' q)) ' q))
