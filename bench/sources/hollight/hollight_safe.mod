@@ -536,6 +536,13 @@ deftac inv _ TAC :-
    (orelse conj (orelse forall_i (orelse i (orelse (applyth not_i) s)))))
   (bind* (repeat! left))).
 
+deftac (sync N) (seq _ tt) (th tt_intro).
+deftac (sync N) (seq Gamma _) (then (applyth ff_elim) h) :-
+ mem Gamma ff.
+deftac (sync N) (seq _ (or ' _ ' _))
+ (orelse (then (applyth orr) (itaut N)) (then (applyth orl) (itaut N))).
+deftac (sync N) (seq _ (exists ' _)) (then (applyth exists_i) (itaut N2)) :-
+ N2 is N - 2.
 deftac (itaut N) SEQ fail :- N =< 0, !.
 deftac (itaut N) SEQ TAC :-
  %$print (itaut N) SEQ,
@@ -545,13 +552,9 @@ deftac (itaut N) SEQ TAC :-
  (then! inv
   (bind*
    (orelse h
-   (orelse (th tt_intro)
-   (orelse (then (applyth ff_elim) h)
+   (orelse (sync N)
    (orelse /* Hypothesis not moved to front */ (then lforall (itaut N2))
-   (orelse (then (applyth orr) (itaut N))
-   (orelse (then (applyth orl) (itaut N))
-   (orelse (then (applyth exists_i) (itaut N2))
-   (then lapply (itaut N1))))))))))).
+   (then lapply (itaut N1))))))).
 
 /********** inductive things
 
