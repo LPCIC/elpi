@@ -284,6 +284,10 @@ deftac (repeat TAC) SEQ XTAC :-
  ( XTAC = then TAC (repeat (bind* TAC))
  ; XTAC = id).
 
+deftac (repeat! TAC) SEQ XTAC :-
+ ( XTAC = then! TAC (repeat! (bind* TAC))
+ ; XTAC = id).
+
 deftac (printtac TAC) SEQ TAC :-
  $print "SEQ" SEQ ":=" TAC.
 
@@ -525,16 +529,20 @@ deftac left (seq Gamma H) TAC :-
      (then (lforall_last H)
       (thenl lapply [ h, then (w (and ' F ' G)) (then apply_last (then i i))]))))).
 
+deftac inv _ TAC :-
+ TAC =
+ (then!
+  (repeat!
+   (orelse conj (orelse forall_i (orelse i (orelse (applyth not_i) s)))))
+  (bind* (repeat! left))).
+
 deftac (itaut N) SEQ fail :- N =< 0, !.
 deftac (itaut N) SEQ TAC :-
  %$print (itaut N) SEQ,
  N1 is N - 1,
  N2 is N - 2,
  TAC =
- (then!
-  (repeat
-   (orelse conj (orelse forall_i (orelse i (orelse
-    (applyth not_i) (orelse s left))))))
+ (then! inv
   (bind*
    (orelse h
    (orelse (th tt_intro)
