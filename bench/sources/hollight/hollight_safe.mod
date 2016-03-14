@@ -8,7 +8,7 @@ infixl ' 139.
  * put_binds
 */
 
-local thm, provable, def0, term, term', typ, loop, prove, saved, check1,
+local thm, provable, def0, term, term', typ, loop, prove, check1,
  toplevel_loop, toplevel.
 
 proves T TY :- provable T TY.
@@ -92,35 +92,19 @@ thm ww (bind A x \ SEQ) [ SEQ ].
 /* debuggin only, remove it */
 %thm A B C :- $print "FAILED " (thm A B C), fail.
 
-% loop : bool -> list (bounded sequent) -> list (bounded tactics) -> o
-%loop INTERACTIVE SEQS TACS :- $print "LOOP" (loop INTERACTIVE SEQS TACS), fail.
-loop _ [] [].
-loop INTERACTIVE [ SEQ | OLD ] [ TAC | OTHER_TACS ] :-
- (INTERACTIVE = true, !,
-   $print,
-   list_iter_rev [ SEQ | OLD ] print_sequent,
-   read_in_context SEQ ITAC
- ; ITAC = TAC),
- ( thm ITAC SEQ NEW,
-   append NEW OLD SEQS,
-   (INTERACTIVE = true, !,
-    mk_script ITAC NEW NEW_TACS TAC,
-    append NEW_TACS OTHER_TACS TACS
-   ; TACS = OTHER_TACS ),
-   loop INTERACTIVE SEQS TACS
- ; (INTERACTIVE = true, !, $print "error" ;
-    $print "aborted", halt),
-   loop INTERACTIVE [ SEQ | OLD ] [ TAC | OTHER_TACS ] ).
-%loop INTERACTIVE SEQS TACS :- $print "FAIL" (loop INTERACTIVE SEQS TACS), fail.
+% loop : list (bounded sequent) -> certificate -> o
+%loop SEQS TACS :- $print "LOOP" (loop SEQS TACS), fail.
+loop [] CERTIFICATE :- end_of_proof CERTIFICATE.
+loop [ SEQ | OLD ] CERTIFICATE :-
+ next_tactic [ SEQ | OLD ] CERTIFICATE ITAC,
+ thm ITAC SEQ NEW,
+ append NEW OLD SEQS,
+ update_certificate CERTIFICATE ITAC NEW NEW_CERTIFICATE,
+ loop SEQS NEW_CERTIFICATE.
 
 prove G TACS :-
  term G bool,
- loop true [ seq [] G ] TACS,
- $print "proof completed".
-
-saved G TACS :-
- term G bool,
- loop false [ seq [] G ] TACS.
+ loop [ seq [] G ] TACS.
 
 /* check1 I O
    checks the declaration I
@@ -128,7 +112,7 @@ saved G TACS :-
 check1 (pi C) (pi O) :- pi x \ check1 (C x) (O x).
 check1 (theorem NAME GOAL TACTICS) (provable NAME GOAL) :-
   not (provable NAME _),
-  saved GOAL TACTICS,
+  prove GOAL (false,TACTICS),
   $print NAME ":" GOAL,
   !.
 check1 (new_basic_type TYPE REP ABS REPABS ABSREP P TACTICS) HYPS :-
@@ -138,7 +122,7 @@ check1 (new_basic_type TYPE REP ABS REPABS ABSREP P TACTICS) HYPS :-
   not (term ABSREP _),
   not (term REPABS _),
   term P (arr X bool),
-  saved (exists ' P ) TACTICS,
+  prove (exists ' P ) (false,TACTICS),
   REPTYP = (arr TYPE X),
   ABSTYP = (arr X TYPE),
   ABSREPTYP = (forall ' lam x \ eq ' (abs ' (rep ' x)) ' x),
@@ -170,7 +154,7 @@ toplevel_loop :-
  $print "Enter a statement to prove or stop to stop",
  read G,
  ( G = stop, !
- ; prove G [ TAC ],
+ ; prove G (true, [ TAC ]),
    !,
    canonical TAC CANONICALTAC,
    $print "Enter the theorem name",
@@ -188,6 +172,27 @@ toplevel :-
 
 /************ interactive and non interactive loops ********/
 
+end_of_proof (true, []) :- $print "proof completed".
+end_of_proof (false, []).
+
+next_tactic [ SEQ | OLD ] (true, [ _ | _ ]) ITAC :-
+ $print,
+ list_iter_rev [ SEQ | OLD ] print_sequent,
+ read_in_context SEQ ITAC BACKTRACK,
+ BACKTRACK.
+next_tactic SEQS (true, CERT) ITAC :-
+ $print "error",
+ next_tactic SEQS (true, CERT) ITAC.
+next_tactic [ SEQ | OLD ] (false, [ TAC | _ ]) TAC.
+next_tactic _ (false, _) ITAC :-
+ $print "aborted",
+ halt.
+
+update_certificate (true, [ TAC | OTHER_TACS ]) ITAC NEW (true, TACS) :-
+ mk_script ITAC NEW NEW_TACS TAC,
+ append NEW_TACS OTHER_TACS TACS.
+update_certificate (false, [ _ | OTHER_TACS ]) _ _ (false, OTHER_TACS).
+
 mk_script (bind A T) NEW NEW_TACS (bind A T2) :- !,
  pi x \
   put_binds (NEW2 x) x A NEW,
@@ -196,9 +201,10 @@ mk_script (bind A T) NEW NEW_TACS (bind A T2) :- !,
 mk_script ITAC NEW NEW_TACS (thenl ITAC NEW_TACS) :-
  mk_list_of_bounded_fresh NEW NEW_TACS.
 
-read_in_context (bind A K) (bind A TAC) :-
- pi x \ term' x A => read_in_context (K x) (TAC x).
-read_in_context (seq A B) TAC :- read TAC, (TAC = backtrack, !, fail ; TAC = toplevel, !, toplevel ; true).
+read_in_context (bind A K) (bind A TAC) BACKTRACK :-
+ pi x \ term' x A => read_in_context (K x) (TAC x) BACKTRACK.
+read_in_context (seq A B) TAC BACKTRACK :-
+ read TAC, (TAC = backtrack, !, BACKTRACK = (!, fail) ; BACKTRACK = true).
 
 print_sequent (seq Gamma G) :- $print Gamma "|-" G.
 print_sequent (bind A F) :- pi x \ print_sequent (F x).
