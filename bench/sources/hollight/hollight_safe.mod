@@ -1,9 +1,11 @@
 infixl ' 139.
 
 /* Untrusted predicates called from the kernel:
- * next_tactic
- * update_certificate
- * end_of_proof
+ * next_object            next object to check
+ * callback_proved        proof completed
+ * next_tactic            next tactic to use
+ * update_certificate     get new certificate after tactic application
+ * end_of_proof           is the certificate/proof empty?
  */
 
 /* Predicates exported from the kernel:
@@ -19,8 +21,7 @@ infixl ' 139.
  * put_binds
  */
 
-local thm, provable, def0, term, term', typ, loop, prove, check1,
- toplevel_loop, toplevel.
+local thm, provable, def0, term, term', typ, loop, prove, check1.
 
 proves T TY :- provable T TY.
 
@@ -114,7 +115,7 @@ loop [ SEQ | OLD ] CERTIFICATE :-
  loop SEQS NEW_CERTIFICATE.
 
 prove G TACS :-
- term G bool,
+ (term G bool, ! ; $print "Bad statement:" G, fail),
  loop [ seq [] G ] TACS.
 
 /* check1 I O
@@ -123,7 +124,10 @@ prove G TACS :-
 check1 (pi C) (pi O) :- pi x \ check1 (C x) (O x).
 check1 (theorem NAME GOAL TACTICS) (provable NAME GOAL) :-
   not (provable NAME _),
-  prove GOAL (false,TACTICS),
+  % Next line could be taken out of kernel
+  (TACTICS = interactive, !, TACS = (true, [ X ]) ; TACS = (false,TACTICS)),
+  prove GOAL TACS,
+  callback_proved NAME GOAL TACS,
   $print NAME ":" GOAL,
   !.
 check1 (new_basic_type TYPE REP ABS REPABS ABSREP P TACTICS) HYPS :-
@@ -158,30 +162,32 @@ check1 (def NAME TYP DEF) HYPS :-
   $print NAME "=" DEF,
   HYPS = (def0 NAME DEF, term' NAME TYP).
 
-check [] :- toplevel.
-check [ C | NEXT ] :- check1 C H, H => check NEXT.
-
-toplevel_loop :-
- $print "Enter a statement to prove or stop to stop",
- read G,
- ( G = stop, !
- ; prove G (true, [ TAC ]),
-   !,
-   canonical TAC CANONICALTAC,
-   $print "Enter the theorem name",
-   read NAME,
-   $print (theorem NAME G [ CANONICALTAC ]),
-   provable NAME G => toplevel_loop
- ; $print "Bad statement " G,
-   toplevel_loop).
-
-toplevel :-
- $print "Welcome to HOL extra-light",
- toplevel_loop.
+check WHAT :-
+ next_object WHAT C CONT,
+ (C = stop, !, K = true ; check1 C H , K = (H => check CONT)),
+ !, K.
 
 }
 
 /************ interactive and non interactive loops ********/
+
+next_object [ C | NEXT ] C NEXT.
+next_object [] C toplevel :- 
+ $print "Welcome to HOL extra-light",
+ toplevel_loop C.
+next_object toplevel C toplevel :- toplevel_loop C.
+
+toplevel_loop G :-
+ $print "Enter \"theorem NAME STATEMENT\" or \"stop\"",
+ read H,
+ ( H = stop, !
+ ; H = theorem NAME ST, !, (G = theorem NAME ST interactive ; toplevel_loop G)
+ ; $print "bad command", toplevel_loop G ).
+
+callback_proved _ _ (false,_).
+callback_proved NAME G (true, [ TAC ]) :-
+ canonical TAC CANONICALTAC,
+ $print (theorem NAME G [ CANONICALTAC ]).
 
 end_of_proof (true, []) :- $print "proof completed".
 end_of_proof (false, []).
