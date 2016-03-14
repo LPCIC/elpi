@@ -529,11 +529,13 @@ deftac left (seq Gamma H) TAC :-
      (then (lforall_last H)
       (thenl lapply [ h, then (w (and ' F ' G)) (then apply_last (then i i))]))))).
 
+deftac not_i (seq _ (not ' _)) (applyth not_i).
+
 deftac inv _ TAC :-
  TAC =
  (then!
   (repeat!
-   (orelse conj (orelse forall_i (orelse i (orelse (applyth not_i) s)))))
+   (orelse conj (orelse forall_i (orelse i (orelse not_i s)))))
   (bind* (repeat! left))).
 
 deftac (sync N) (seq _ tt) (th tt_intro).
