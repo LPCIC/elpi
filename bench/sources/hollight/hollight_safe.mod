@@ -1,12 +1,23 @@
 infixl ' 139.
 
+/* Untrusted predicates called from the kernel:
+ * next_tactic
+ * update_certificate
+ * end_of_proof
+ */
+
+/* Predicates exported from the kernel:
+ * proves
+ * check
+ */
+
 { /***** Trusted code base *******/
 
-/* Trusted library functions:
+/* Trusted library predicates:
  * append
  * fold2_append
  * put_binds
-*/
+ */
 
 local thm, provable, def0, term, term', typ, loop, prove, check1,
  toplevel_loop, toplevel.
