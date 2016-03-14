@@ -64,12 +64,6 @@ thm (thenll TAC1 TACN) SEQ SEQS :-
  deftacl TACN NEW TACL,
  fold2_append TACL NEW thm SEQS.
 
-thm (thenll! TAC1 TACN) SEQ SEQS :-
- thm TAC1 SEQ NEW,
- !,
- deftacl TACN NEW TACL,
- fold2_append TACL NEW thm SEQS.
-
 /*debprint _ (then _ _) :- !.
 debprint _ (thenl _ _) :- !.
 debprint O T :- $print O T.*/
@@ -79,6 +73,10 @@ thm TAC SEQ SEQS :-
  /*debprint "<<" TAC,
  (*/ thm XTAC SEQ SEQS /*, debprint ">>" TAC
  ; debprint "XX" TAC, fail)*/.
+
+thm (! TAC) SEQ SEQS :-
+ thm TAC SEQ SEQS,
+ !.
 
 thm id SEQ [ SEQ ].
 
@@ -270,23 +268,20 @@ deftacl (all_equals_list TAC2) SEQS TACL :-
 deftac (then TAC1 TAC2) SEQ XTAC :-
  XTAC = thenll TAC1 (all_equals_list TAC2).
 
-deftac (then! TAC1 TAC2) SEQ XTAC :-
- XTAC = thenll! TAC1 (all_equals_list TAC2).
+deftac (then! TAC1 TAC2) _ (then (! TAC1) TAC2).
 
 deftac (orelse TAC1 TAC2) SEQ XTAC :-
  XTAC = TAC1 ; XTAC = TAC2.
 
-deftac (bind* TAC) SEQ XTAC :-
-   XTAC = (bind _ x \ bind* TAC)
- ; XTAC = TAC.
+deftac (orelse! TAC1 TAC2) _ (orelse (! TAC1) TAC2).
+
+deftac (bind* TAC) SEQ (orelse! (bind _ x \ bind* TAC) TAC).
 
 deftac (repeat TAC) SEQ XTAC :-
  ( XTAC = then TAC (repeat (bind* TAC))
  ; XTAC = id).
 
-deftac (repeat! TAC) SEQ XTAC :-
- ( XTAC = then! TAC (repeat! (bind* TAC))
- ; XTAC = id).
+deftac (repeat! TAC) SEQ (orelse! (then! TAC (repeat! (bind* TAC))) id).
 
 deftac (printtac TAC) SEQ TAC :-
  $print "SEQ" SEQ ":=" TAC.
@@ -501,33 +496,37 @@ deftac (conv C) (seq Gamma F) TAC :-
 deftac left (seq Gamma _) TAC :-
  mem Gamma (not ' F),
  TAC =
-  (then (cutth not_e)
-   (then (lforall_last F)
-    (thenl lapply [ h, (w (not ' F)) ]))).
+  (!
+   (then (cutth not_e)
+    (then (lforall_last F)
+     (thenl lapply [ h, (w (not ' F)) ])))).
 deftac left (seq Gamma _) TAC :-
  /* A bit long because we want to beta-reduce the produced hypothesis.
     Maybe this should be automatized somewhere else. */
  mem Gamma (exists ' F),
  TAC =
-  (then (cutth exists_e)
-   (then (lforall_last F)
-    (thenl lapply [ h, then (w (exists ' F)) (then apply_last (then forall_i (bind _ x \ then (try (conv (land_tac b))) i))) ]))).
+  (!
+   (then (cutth exists_e)
+    (then (lforall_last F)
+     (thenl lapply [ h, then (w (exists ' F)) (then apply_last (then forall_i (bind _ x \ then (try (conv (land_tac b))) i))) ])))).
 deftac left (seq Gamma H) TAC :-
  mem Gamma (or ' F ' G),
  TAC =
-  (then (cutth or_e)
-   (then (lforall_last F)
-    (then (lforall_last G)
-     (then (lforall_last H)
-      (thenl lapply [ h, then (w (or ' F ' G)) (then apply_last i)]))))).
+  (!
+   (then (cutth or_e)
+    (then (lforall_last F)
+     (then (lforall_last G)
+      (then (lforall_last H)
+       (thenl lapply [ h, then (w (or ' F ' G)) (then apply_last i)])))))).
 deftac left (seq Gamma H) TAC :-
  mem Gamma (and ' F ' G),
  TAC =
-  (then (cutth and_e)
-   (then (lforall_last F)
-    (then (lforall_last G)
-     (then (lforall_last H)
-      (thenl lapply [ h, then (w (and ' F ' G)) (then apply_last (then i i))]))))).
+  (!
+   (then (cutth and_e)
+    (then (lforall_last F)
+     (then (lforall_last G)
+      (then (lforall_last H)
+       (thenl lapply [ h, then (w (and ' F ' G)) (then apply_last (then i i))])))))).
 
 deftac not_i (seq _ (not ' _)) (applyth not_i).
 
@@ -535,7 +534,7 @@ deftac inv _ TAC :-
  TAC =
  (then!
   (repeat!
-   (orelse conj (orelse forall_i (orelse i (orelse not_i s)))))
+   (orelse! conj (orelse! forall_i (orelse! i (orelse! not_i s)))))
   (bind* (repeat! left))).
 
 deftac (sync N) (seq _ tt) (th tt_intro).
