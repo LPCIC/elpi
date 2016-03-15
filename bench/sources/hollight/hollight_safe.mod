@@ -1,8 +1,10 @@
-infixl ' 255.
-infixl && 128.
-infixl $$ 127.
-infixr ==> 126.
-infixr <=> 125.
+infixl '   255. % infix application
+infixl &&  128. % and
+infixl $$  127. % or
+infixr ==> 126. % implication
+infixr <=> 125. % iff
+infix  #in 135. % membership
+infix  <<= 130. % subseteq
 
 /* Untrusted predicates called from the kernel:
  * next_object            next object to check
@@ -178,6 +180,8 @@ pp (eq ' F1 ' G1) (F2 <=> G2) :- !, pp F1 F2, pp G1 G2.
 pp (and ' F1 ' G1) (F2 && G2) :- !, pp F1 F2, pp G1 G2.
 pp (or ' F1 ' G1) (F2 $$ G2) :- !, pp F1 F2, pp G1 G2.
 pp (impl ' F1 ' G1) (F2 ==> G2) :- !, pp F1 F2, pp G1 G2.
+pp (in ' X1 ' S1) (X2 #in S2) :- !, pp X1 X2, pp S1 S2.
+pp (subseteq ' U1 ' V1) (U2 <<= V2) :- !, pp U1 U2, pp V1 V2.
 pp (F1 ' G1) (F2 ' G2) :- !, pp F1 F2, pp G1 G2.
 pp (lam ' F1) (lam ' F2) :- !, pi x \ pp (F1 x) (F2 x).
 pp A A.
@@ -297,6 +301,8 @@ mem [ _ | XS ] X :- mem XS X.
 
 mk_constant_list [] _ [].
 mk_constant_list [_|L] X [X|R] :- mk_constant_list L X R.
+
+bang P :- P, !.
 
 /********** tacticals ********/
 
@@ -478,6 +484,11 @@ deftac lapply (seq Gamma F) (lapply P Q) :-
 /* impl p q, Gamma |- f   --->   /*impl q f*/ Gamma |- p  ,  q, Gamma |- f */
 deftac lapply_last (seq ((impl ' P ' Q)::Gamma) F) (lapply P Q).
 
+/* p |- f ---> p |- p ==> f */
+deftac (g P) (seq _ F) TAC :-
+ TAC =
+  (thenl (m (impl ' P ' F)) [thenl s [then mp h , then i h] , id ]).
+
 /*** not ***/
 
 /*** exists ***/
@@ -502,9 +513,11 @@ deftac apply (seq Gamma F) (apply H) :-
 /********** conversion(als) ***********/
 
 /* expands definitions, even if applied to arguments */
-deftac dd (seq _ (eq ' T ' X)) d.
-deftac dd (seq _ (eq ' (D ' T) ' X))
- (thenl  (t A) [thenl c [dd , r], b]).
+deftac (dd L) (seq _ (eq ' T ' X)) d :- bang (mem L T).
+deftac (dd L) (seq _ (eq ' (D ' T) ' X))
+ (thenl (t A) [thenl c [dd L , r], b]).
+
+deftac dd _ (dd L).
 
 /* folds a definition, even if applied to arguments */
 /* BUG: it seems to fail with restriction errors in some cases */
@@ -781,6 +794,96 @@ main :-
       (then (conv b) (then (applyth exists_i) (then (conv b) r)))]
  , theorem test_itaut_1 ((? x \ g x) ==> ! x \ (! y \ g y ==> x) ==> x)
    [itaut 4]
+ /********** Monotonicity of logical connectives *********/
+ , theorem and_monotone (! a1 \ ! b1 \ ! a2 \ ! b2 \
+    (a1 ==> b1) ==> (a2 ==> b2) ==> a1 && a2 ==> b1 && b2)
+   [itaut 2]
+  , theorem forall_monotone (! p \ ! q \
+     (! x \ p ' x ==> q ' x) ==> (! x \ p ' x) ==> (! x \ q ' x))
+    [itaut 6]
+ /********** Knaster-Tarski theorem *********/
+  , (pi A \ def in (arr A (arr (arr A bool) bool))
+     (lam x \ lam j \ (j ' x)))
+  , (pi A \ def subseteq (arr (arr A bool) (arr (arr A bool) bool))
+     (lam x \ lam y \ forall ' (lam z \ impl ' (in ' z ' x) ' (in ' z ' y))))
+  , (pi A \ theorem in_subseteq
+     (! s \ ! t \ ! x \ s <<= t ==> x #in s ==> x #in t)
+     [then forall_i
+       (bind (arr A bool) x9 \
+         then forall_i
+          (bind (arr A bool) x10 \
+            then forall_i (bind A x11 \ then (conv (land_tac dd)) (itaut 4))))])
+  , (pi A \ def monotone (arr (arr (arr A bool) (arr A bool)) bool)
+      (lam f \ forall ' lam x \ forall ' lam y \
+        impl ' (subseteq ' x ' y) ' (subseteq ' (f ' x) ' (f ' y))))
+  , (pi A \ def is_fixpoint (arr (arr (arr A bool) (arr A bool)) (arr (arr A bool) bool))
+     (lam f \ lam x \ and ' (subseteq ' (f ' x) ' x) ' (subseteq ' x ' (f ' x))))
+  , (pi A \ def fixpoint (arr (arr (arr A bool) (arr A bool)) (arr A bool))
+     (lam f \ lam a \ forall ' lam e \
+       (impl ' (subseteq ' (f ' e) ' e) ' (in ' a ' e))))
+  , (pi A \ theorem fixpoint_subseteq_any_prefixpoint
+     (! f \ ! x\ f ' x <<= x ==> fixpoint ' f <<= x)
+     [then inv
+       (bind (arr (arr A bool) (arr A bool)) x9 \
+         (bind (arr A bool) x10 \
+           then (conv (land_tac dd))
+            (then (conv dd)
+              (then forall_i
+                (bind A x11 \
+                  then (conv (land_tac dd))
+                   (then (conv (land_tac b)) (itaut 4)))))))])
+  , (pi A \ theorem fixpoint_subseteq_any_fixpoint
+     (! f \ ! x\ is_fixpoint ' f ' x ==> fixpoint ' f <<= x)
+     [then forall_i
+       (bind (arr (arr A bool) (arr A bool)) x9 \
+         then forall_i
+          (bind (arr A bool) x10 \
+            then (conv (land_tac dd))
+             (then (cutth fixpoint_subseteq_any_prefixpoint) (itaut 8))))])
+  , (pi A \ theorem prefixpoint_to_prefixpoint
+    (! f \ ! x \ monotone ' f ==>
+      f ' x <<= x ==> f ' (f ' x) <<= f ' x)
+    [then forall_i
+      (bind (arr (arr A bool) (arr A bool)) x9 \
+        then forall_i
+         (bind (arr A bool) x10 \ then (conv (land_tac dd)) (itaut 6)))])
+  , (pi A \ theorem fixpoint_is_prefixpoint
+    (! f \ monotone ' f ==> f ' (fixpoint ' f) <<= fixpoint ' f)
+     [then inv
+       (bind (arr (arr A bool) (arr A bool)) x9 \
+         then (conv dd)
+          (then inv
+            (bind A x10 \
+              then (conv (depth_tac (dd [fixpoint])))
+               (then (conv dd)
+                 (then (conv b)
+                   (then inv
+                     (bind (arr A bool) x11 \
+                       thenl (cut (subseteq ' (fixpoint ' x9) ' x11))
+                        [thenl
+                          (cut (subseteq ' (x9 ' (fixpoint ' x9)) ' (x9 ' x11)))
+                          [then (cutth in_subseteq)
+                            (then (lforall_last (x9 ' x11))
+                              (then (lforall_last x11)
+                                (thenl apply_last [h,
+                                  then (cutth in_subseteq) (itaut 10)]))),
+                          thenl
+                           (m
+                             (impl ' (monotone ' x9) '
+                               (subseteq ' (x9 ' (fixpoint ' x9)) ' (x9 ' x11))))
+                           [itaut 10, then (conv (land_tac dd)) (itaut 10)]],
+                        then (applyth fixpoint_subseteq_any_prefixpoint) h])))))))])
+  , (pi A \ theorem fixpoint_is_fixpoint
+   (! f \ monotone ' f ==> is_fixpoint ' f ' (fixpoint ' f))
+    [then inv
+      (bind (arr (arr A bool) (arr A bool)) x9 \
+        then (conv (depth_tac (dd [is_fixpoint])))
+         (thenl inv [then (applyth fixpoint_is_prefixpoint) h,
+           then (applyth fixpoint_subseteq_any_prefixpoint)
+            (then (g (monotone ' x9))
+              (then (conv (land_tac dd))
+                (then inv
+                  (then apply (then (applyth fixpoint_is_prefixpoint) h)))))]))])
  ].
 
 /* Status and dependencies of the tactics:
