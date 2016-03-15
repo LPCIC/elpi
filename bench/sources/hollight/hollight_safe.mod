@@ -243,8 +243,9 @@ read_in_context (seq A B) TAC BACKTRACK :-
 
 print_sequent (seq Gamma G) :-
  pp G PPG,
- list_map Gamma pp PPGamma,
- $print PPGamma "|-" PPG.
+ list_iter_rev Gamma (x \ sigma PX \ pp x PX, $print PX),
+ $print "|------------------",
+ $print PPG.
 print_sequent (bind A F) :- pi x \ print_sequent (F x).
 
 /* turns thenl into then */
