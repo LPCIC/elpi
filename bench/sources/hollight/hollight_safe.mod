@@ -1,8 +1,8 @@
-infixl ' 128.
-infixl && 127.
-infixl $$ 126.
-infixr ==> 125.
-infixr <=> 124.
+infixl ' 255.
+infixl && 128.
+infixl $$ 127.
+infixr ==> 126.
+infixr <=> 125.
 
 /* Untrusted predicates called from the kernel:
  * next_object            next object to check
