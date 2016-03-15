@@ -198,13 +198,14 @@ toplevel_loop G :-
  $print "Enter \"theorem NAME STATEMENT\" or \"stop\"",
  read H,
  ( H = stop, !
- ; H = theorem NAME ST, !, (G = theorem NAME ST (true, [ X ]) ; toplevel_loop G)
+ ; H = theorem NAME PST, !, pp ST PST, (G = theorem NAME ST (true, [ X ]) ; toplevel_loop G)
  ; $print "bad command", toplevel_loop G ).
 
 callback_proved NAME GOAL (false,_) :- pp GOAL PGOAL, $print NAME ":" PGOAL.
 callback_proved NAME G (true, [ TAC ]) :-
  canonical TAC CANONICALTAC,
- $print (theorem NAME G [ CANONICALTAC ]).
+ pp G PG,
+ $print (theorem NAME PG [ CANONICALTAC ]).
 
 end_of_proof (true, []) :- $print "proof completed".
 end_of_proof (false, []).
