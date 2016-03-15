@@ -1,4 +1,8 @@
-infixl ' 139.
+infixl ' 128.
+infixl && 127.
+infixl $$ 126.
+infixr ==> 125.
+infixr <=> 124.
 
 /* Untrusted predicates called from the kernel:
  * next_object            next object to check
@@ -124,11 +128,8 @@ prove G TACS :-
 check1 (pi C) (pi O) :- pi x \ check1 (C x) (O x).
 check1 (theorem NAME GOAL TACTICS) (provable NAME GOAL) :-
   not (provable NAME _),
-  % Next line could be taken out of kernel
-  (TACTICS = interactive, !, TACS = (true, [ X ]) ; TACS = (false,TACTICS)),
-  prove GOAL TACS,
-  callback_proved NAME GOAL TACS,
-  $print NAME ":" GOAL,
+  prove GOAL TACTICS,
+  callback_proved NAME GOAL TACTICS,
   !.
 check1 (new_basic_type TYPE REP ABS REPABS ABSREP P TACTICS) HYPS :-
   not (typ TYPE),
@@ -169,9 +170,25 @@ check WHAT :-
 
 }
 
+/************ parsing and pretty-printing ********/
+pp (forall ' lam F1) (! F2) :- !, pi x \ pp (F1 x) (F2 x).
+pp (exists ' lam F1) (? F2) :- !, pi x \ pp (F1 x) (F2 x).
+pp (eq ' F1 ' G1) (F2 = G2) :- !, pp F1 F2, pp G1 G2.
+pp (eq ' F1 ' G1) (F2 <=> G2) :- !, pp F1 F2, pp G1 G2.
+pp (and ' F1 ' G1) (F2 && G2) :- !, pp F1 F2, pp G1 G2.
+pp (or ' F1 ' G1) (F2 $$ G2) :- !, pp F1 F2, pp G1 G2.
+pp (impl ' F1 ' G1) (F2 ==> G2) :- !, pp F1 F2, pp G1 G2.
+pp (F1 ' G1) (F2 ' G2) :- !, pp F1 F2, pp G1 G2.
+pp (lam ' F1) (lam ' F2) :- !, pi x \ pp (F1 x) (F2 x).
+pp A A.
+
 /************ interactive and non interactive loops ********/
 
-next_object [ C | NEXT ] C NEXT.
+parse (pi C) (pi O) :- !, pi x \ parse (C x) (O x).
+parse (theorem NAME PST TAC) (theorem NAME ST (false,TAC)) :- !, pp ST PST.
+parse C C.
+
+next_object [ C | NEXT ] CT NEXT :- parse C CT.
 next_object [] C toplevel :- 
  $print "Welcome to HOL extra-light",
  toplevel_loop C.
@@ -181,10 +198,10 @@ toplevel_loop G :-
  $print "Enter \"theorem NAME STATEMENT\" or \"stop\"",
  read H,
  ( H = stop, !
- ; H = theorem NAME ST, !, (G = theorem NAME ST interactive ; toplevel_loop G)
+ ; H = theorem NAME ST, !, (G = theorem NAME ST (true, [ X ]) ; toplevel_loop G)
  ; $print "bad command", toplevel_loop G ).
 
-callback_proved _ _ (false,_).
+callback_proved NAME GOAL (false,_) :- pp GOAL PGOAL, $print NAME ":" PGOAL.
 callback_proved NAME G (true, [ TAC ]) :-
  canonical TAC CANONICALTAC,
  $print (theorem NAME G [ CANONICALTAC ]).
@@ -223,7 +240,10 @@ read_in_context (bind A K) (bind A TAC) BACKTRACK :-
 read_in_context (seq A B) TAC BACKTRACK :-
  read TAC, (TAC = backtrack, !, BACKTRACK = (!, fail) ; BACKTRACK = true).
 
-print_sequent (seq Gamma G) :- $print Gamma "|-" G.
+print_sequent (seq Gamma G) :-
+ pp G PPG,
+ list_map Gamma pp PPGamma,
+ $print PPGamma "|-" PPG.
 print_sequent (bind A F) :- pi x \ print_sequent (F x).
 
 /* turns thenl into then */
@@ -645,55 +665,38 @@ main :-
   , def or (arr bool (arr bool bool))
      (lam x \ lam y \ forall ' lam c \ impl ' (impl ' x ' c) ' (impl ' (impl ' y ' c) ' c))
   , theorem tt_intro tt [then (conv dd) (then k (bind _ x12 \ r))]
-  , theorem ff_elim (forall ' (lam x2 \ impl ' ff ' x2))
+  , theorem ff_elim (! p \ ff ==> p)
      [then forall_i (bind bool x3\ then (conv (land_tac dd)) (then i forall_e))]
-  , theorem sym
-     (forall '
-      (lam x12 \
-        forall ' (lam x13 \ impl ' (eq ' x12 ' x13) ' (eq ' x13 ' x12))))
+  , theorem sym (! p \ ! q \ p = q ==> q = p)
     [then forall_i
      (bind bool x12 \
        then forall_i
         (bind bool x13 \
           then i (then sym h)))]
-  , theorem not_e (forall ' (lam x2 \ impl ' (not ' x2) ' (impl ' x2 ' ff)))
+  , theorem not_e (! p \ not ' p ==> p ==> ff)
      [then forall_i (bind bool x3 \ then (conv (land_tac dd)) (then i h))]
-  , theorem conj
-     (forall '
-      (lam x12 \
-       forall ' (lam x13 \ impl ' x12 ' (impl ' x13 ' (and ' x12 ' x13)))))
+  , theorem conj (! p \ ! q \ p ==> q ==> p && q)
     [then forall_i
      (bind bool x12 \
       then forall_i (bind bool x13 \ then i (then i (then conj h))))]
-  , theorem andl
-     (forall ' (lam x12 \ forall ' (lam x13 \ impl ' (and ' x12 ' x13) ' x12)))
+  , theorem andl (! p \ ! q \ p && q ==> p)
     [then forall_i
      (bind bool x12 \
       then forall_i (bind bool x13 \ then i (then (andl x13) h)))]
-  , theorem andr
-     (forall ' (lam x12 \ forall ' (lam x13 \ impl ' (and ' x12 ' x13) ' x13)))
+  , theorem andr (! p \ ! q \ p && q ==> q)
     [then forall_i
      (bind bool x12 \
       then forall_i (bind bool x13 \ then i (then (andr x12) h)))]
-  , theorem and_e
-     (forall '
-       (lam x12 \
-         forall '
-          (lam x13 \
-            forall '
-             (lam x14 \
-               impl ' (and ' x12 ' x13) '
-                (impl ' (impl ' x12 ' (impl ' x13 ' x14)) ' x14)))))
+  , theorem and_e (! p \ ! q \ ! c \ p && q ==> (p ==> q ==> c) ==> c)
      [then forall_i
        (bind bool x12 \
          then forall_i
           (bind bool x13 \
             then forall_i
              (bind bool x14 \ then i (then i (thenl apply [andl, andr])))))]
-  , theorem not_i (forall ' (lam x2 \ impl ' (impl ' x2 ' ff) ' (not ' x2)))
+  , theorem not_i (! p \ (p ==> ff) ==> not ' p)
      [then forall_i (bind bool x2 \ then i (then (conv dd) h))]
-  , theorem orl
-     (forall ' (lam x2 \ forall ' (lam x3 \ impl ' x2 ' (or ' x2 ' x3))))
+  , theorem orl (! p \ ! q \ p ==> p $$ q)
       [then forall_i
         (bind bool x12 \
           then forall_i
@@ -701,8 +704,7 @@ main :-
              then i
               (then (conv dd)
                 (then forall_i (bind bool x14 \ then i (then i (then apply h)))))))]
-  , theorem orr
-     (forall ' (lam x2 \ forall ' (lam x3 \ impl ' x3 ' (or ' x2 ' x3))))
+  , theorem orr (! p \ ! q \ q ==> p $$ q)
       [then forall_i
         (bind bool x12 \
           then forall_i
@@ -710,20 +712,18 @@ main :-
              then i
               (then (conv dd)
                 (then forall_i (bind bool x14 \ then i (then i (then apply h)))))))]
-  , theorem or_e
-     (forall ' (lam x2 \ forall ' (lam x3 \ forall ' (lam x4 \ impl ' (or ' x2 ' x3) ' (impl ' (impl ' x2 ' x4) ' (impl ' (impl ' x3 ' x4) ' x4))))))
+  , theorem or_e (! p \ ! q \ ! c \ p $$ q ==> (p ==> c) ==> (q ==> c) ==> c)
      [then forall_i
        (bind bool x12 \
          then forall_i
           (bind bool x13 \
             then forall_i
              (bind bool x14 \ then (conv (land_tac dd)) (then i forall_e))))]
-  , (pi T \ theorem exists_e
-    (forall ' lam f \ (impl ' (exists ' f) ' (forall ' (lam x2 \ impl ' (forall ' (lam x3 \ impl ' (f ' x3) ' x2)) ' x2))))
-    [then forall_i (bind (arr T bool) x12 \ then (conv (land_tac dd)) (then i h))])
- , (pi T \ theorem exists_i
-   (forall ' (lam x2 \ forall ' (lam x3 \ impl ' (x2 ' x3) ' (exists ' x2))))
-   [then forall_i
+  , (pi T \
+     theorem exists_e (! f \ (exists ' f) ==> (! c \ (! x \ f ' x ==> c) ==> c))
+     [then forall_i (bind (arr T bool) x12 \ then (conv (land_tac dd)) (then i h))])
+ , (pi T \ theorem exists_i (! f \ ! w \ f ' w ==> (exists ' f))
+    [then forall_i
      (bind (arr T bool) x12 \
        then forall_i
         (bind T x13 \
@@ -732,74 +732,52 @@ main :-
              (then forall_i
                (bind bool x14 \ then i (then (lforall x13) (then apply h)))))))])
  /******************* Logic *****************/
- , theorem or_commutative
-   (forall ' lam a \ forall ' lam b \ eq ' (or ' a ' b) ' (or ' b ' a))
+ , theorem or_commutative (! a \ ! b \ a $$ b <=> b $$ a)
    [itaut 1]
- , theorem or_ff
-   (forall ' lam a \ eq ' (or ' a ' ff) ' a)
+ , theorem or_ff (! a \ a $$ ff <=> a)
    [itaut 1]
- , theorem or_tt
-   (forall ' lam a \ eq ' (or ' a ' tt) ' tt)
+ , theorem or_tt (! a \ a $$ tt <=> tt)
    [itaut 1]
- , theorem or_idempotent
-   (forall ' lam a \ eq ' (or ' a ' a) ' a)
+ , theorem or_idempotent (! a \ a $$ a <=> a)
    [itaut 1]
- , theorem or_associative
-   (forall ' lam a \ forall ' lam b \ forall ' lam c \ eq ' (or ' a ' (or ' b ' c)) ' (or ' (or ' a ' b) ' c))
+ , theorem or_associative (! a \ ! b \ ! c \ a $$ (b $$ c) <=> (a $$ b) $$ c)
    [itaut 1]
- , theorem and_commutative
-   (forall ' lam a \ forall ' lam b \ eq ' (and ' a ' b) ' (and ' b ' a))
+ , theorem and_commutative (! a \ ! b \ a && b <=> b && a)
    [itaut 1]
- , theorem and_tt
-   (forall ' lam a \ eq ' (and ' a ' tt) ' a)
+ , theorem and_tt (! a \ a && tt <=> a)
    [itaut 1]
- , theorem and_ff
-   (forall ' lam a \ eq ' (and ' a ' ff) ' ff)
+ , theorem and_ff (! a \ a && ff <=> ff)
    [itaut 1]
- , theorem and_idempotent
-   (forall ' lam a \ eq ' (and ' a ' a) ' a)
+ , theorem and_idempotent (! a \ a && a <=> a)
    [itaut 1]
- , theorem and_associative
-   (forall ' lam a \ forall ' lam b \ forall ' lam c \ eq ' (and ' a ' (and ' b ' c)) ' (and ' (and ' a ' b) ' c))
+ , theorem and_associative (! a \ ! b \ ! c \ a && (b && c) <=> (a && b) && c)
    [itaut 1]
- , theorem and_or
-   (forall ' lam a \ forall ' lam b \ forall ' lam c \ eq ' (and ' a ' (or ' b ' c)) ' (or ' (and ' a ' b) ' (and ' a ' c)))
+ , theorem and_or (! a \ ! b \ ! c \ a && (b $$ c) <=> (a && b) $$ (a && c))
    [itaut 1]
- , theorem or_and
-   (forall ' lam a \ forall ' lam b \ forall ' lam c \ eq ' (or ' a ' (and ' b ' c)) ' (and ' (or ' a ' b) ' (or ' a ' c)))
+ , theorem or_and (! a \ ! b \ ! c \ a $$ (b && c) <=> (a $$ b) && (a $$ c))
    [itaut 1]
- , theorem ads_or_and
-   (forall ' lam a \ forall ' lam b \ eq ' (or ' (and ' a ' b) ' b) ' b)
+ , theorem ads_or_and (! a \ ! b \ (a && b) $$ b <=> b)
    [itaut 1]
- , theorem ads_and_or
-   (forall ' lam a \ forall ' lam b \ eq ' (and ' (or ' a ' b) ' b) ' b)
+ , theorem ads_and_or (! a \ ! b \ (a $$ b) && b <=> b)
    [itaut 1]
- , theorem not_or
-   (forall ' lam a \ forall ' lam b \ eq ' (and ' (not ' a) ' (not ' b)) ' (not ' (or ' a ' b)))
+ , theorem not_or (! a \ ! b \ not ' a && not ' b <=> not ' (a $$ b))
    [itaut 2]
- , theorem not_and
-   (forall ' lam a \ forall ' lam b \ impl ' (or ' (not ' a) ' (not ' b)) ' (not ' (and ' a ' b)))
+ , theorem not_and (! a \ ! b \ not ' a $$ not ' b ==> not ' (a && b))
    [itaut 2]
- , theorem not_not_not
-   (forall ' lam p \ eq ' (not ' (not ' (not ' p))) ' (not ' p))
+ , theorem not_not_not (! p \ not ' (not ' (not ' p)) <=> not ' p)
    [itaut 3]
- , theorem impl_not_not
-   (forall ' lam a \ forall ' lam b \ impl ' (impl ' a ' b) ' (impl ' (not ' b) ' (not ' a)))
+ , theorem impl_not_not (! a \ ! b \ (a ==> b) ==> (not ' b ==> not ' a))
    [itaut 3]
  /******************* TESTS *****************/
- , theorem test_apply
-    (impl ' p ' (impl ' (impl ' p ' (impl ' p ' q)) ' q))
+ , theorem test_apply (p ==> (p ==> p ==> q) ==> q)
     [then i (then i (then apply h))]
- , theorem test_apply2
-    (impl ' p ' (impl ' (forall ' lam x \ forall ' lam y \ impl ' x ' (impl ' x ' y)) ' q))
+ , theorem test_apply2 (p ==> (! x \ ! y \ x ==> x ==> y) ==> q)
     [then i (then i (then apply h))]
  , new_basic_type mybool myrep myabs myrepabs myabsrep
     (lam x \ exists ' lam p \ eq ' x ' (and ' p ' p))
     [then (applyth exists_i)
       (then (conv b) (then (applyth exists_i) (then (conv b) r)))]
- , theorem test_itaut_1
-   (impl ' (exists ' lam g) '
-     (forall ' (lam x12\ impl ' (forall ' (lam x13\ impl ' g x13 ' x12)) ' x12)))
+ , theorem test_itaut_1 ((? x \ g x) ==> ! x \ (! y \ g y ==> x) ==> x)
    [itaut 4]
  ].
 
