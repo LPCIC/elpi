@@ -1009,7 +1009,7 @@ main :-
  , theorem test_itaut_1 ((? x \ g x) ==> ! x \ (! y \ g y ==> x) ==> x)
    [itaut 4]
  , theorem test_monotone1 (! p \ ! q \ (p ==> q) ==> (not ' p ==> tt && p $$ p) ==> (not ' q ==> tt && q $$ q))
-   [ then forall_i (bind p \ then forall_i (bind q \ then i monotone)) ]
+   [ then forall_i (bind bool p \ then forall_i (bind bool q \ then i monotone)) ]
 /* , theorem test_monotone2 (! p \ ! q \ (p ==> q) ==> (! x \ ? y \ (not ' p ==> tt && p $$ p)) ==> (! x \ ? y \ (not ' q ==> tt && q $$ q)))
    [ then forall_i (bind p \ then forall_i (bind q \ then i monotone)) ]
 */
