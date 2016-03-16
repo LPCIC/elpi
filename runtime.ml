@@ -393,7 +393,7 @@ let xppterm ~nice depth0 names argsdepth env f t =
       (if vardepth=0 then "" else "^" ^ string_of_int vardepth)
    end else if nice then begin
     aux prec depth f (!do_deref ~from:vardepth ~to_:depth args !!r)
-   end else Format.fprintf f "<%a>_%d" (aux 0 vardepth) !!r vardepth
+   end else Format.fprintf f "<%a>_%d" (aux min_prec vardepth) !!r vardepth
   and pp_arg prec depth f n =
    let name= try List.nth names n with Failure _ -> "A" ^ string_of_int n in
    if try env.(n) == dummy with Invalid_argument _ -> true then
@@ -405,8 +405,8 @@ let xppterm ~nice depth0 names argsdepth env f t =
     else
      (* The instantiated Args live at an higher depth, and that's ok.
         But if we try to deref we make an imperative mess *)
-     Format.fprintf f "≪%a≫_%d" (aux 0 argsdepth) env.(n) argsdepth
-   end else Format.fprintf f "≪%a≫_%d" (aux 0 argsdepth) env.(n) argsdepth
+     Format.fprintf f "≪%a≫_%d" (aux min_prec argsdepth) env.(n) argsdepth
+   end else Format.fprintf f "≪%a≫_%d" (aux min_prec argsdepth) env.(n) argsdepth
 
   (* ::(a, ::(b, nil))  -->  [a,b] *)
   and flat_cons_to_list depth acc t = match t with
@@ -527,7 +527,7 @@ let xppterm ~nice depth0 names argsdepth env f t =
        with_parens lam_prec (fun _ ->
         let c = constant_of_dbl depth in
         Format.fprintf f "%a \\@ %a" (aux inf_prec depth) c
-         (aux 0 (depth+1)) t)
+         (aux min_prec (depth+1)) t)
     | String str -> Format.fprintf f "\"%s\"" (Parser.ASTFuncS.pp str)
     | Int i -> Format.fprintf f "%d" i
     | Float x -> Format.fprintf f "%f" x
