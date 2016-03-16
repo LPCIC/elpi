@@ -146,10 +146,10 @@ check1 (new_basic_type TYPE REP ABS REPABS ABSREP P TACTICS) HYPS :-
   ABSREPTYP = (forall ' lam x \ eq ' (abs ' (rep ' x)) ' x),
   REPABSTYP = (forall ' lam x \ eq ' (P ' x) ' (eq ' (rep ' (abs ' x)) x)),
   $print new typ TYPE,
-  $print REP ":" REPTYP,
-  $print ABS ":" ABSTYP,
-  $print ABSREP ":" ABSREPTYP,
-  $print REPABS ":" REPABSTYP,
+  pp REPTYP PREPTYP, $print REP ":" PREPTYP,
+  pp ABSTYP PABSTYP, $print ABS ":" PABSTYP,
+  pp ABSREPTYP PABSREPTYP, $print ABSREP ":" PABSREPTYP,
+  pp REPABSTYP PREPABSTYP, $print REPABS ":" PREPABSTYP,
   !,
   HYPS =
    ( typ TYPE
@@ -161,8 +161,8 @@ check1 (new_basic_type TYPE REP ABS REPABS ABSREP P TACTICS) HYPS :-
 check1 (def NAME TYP DEF) HYPS :-
   not (def0 NAME _),
   term DEF TYP, /* TODO: INFER TYP AUTOMATICALLY */
-  $print NAME ":" TYP,
-  $print NAME "=" DEF,
+  pp TYP PTYP, $print NAME ":" PTYP,
+  pp DEF PDEF, $print NAME "=" PDEF,
   HYPS = (def0 NAME DEF, term' NAME TYP).
 
 check WHAT :-
@@ -183,14 +183,16 @@ pp (impl ' F1 ' G1) (F2 ==> G2) :- !, pp F1 F2, pp G1 G2.
 pp (in ' X1 ' S1) (X2 #in S2) :- !, pp X1 X2, pp S1 S2.
 pp (subseteq ' U1 ' V1) (U2 <<= V2) :- !, pp U1 U2, pp V1 V2.
 pp (F1 ' G1) (F2 ' G2) :- !, pp F1 F2, pp G1 G2.
-pp (lam ' F1) (lam ' F2) :- !, pi x \ pp (F1 x) (F2 x).
+pp (lam F1) (lam F2) :- !, pi x \ pp (F1 x) (F2 x).
 pp A A.
 
 /************ interactive and non interactive loops ********/
 
-parse (pi C) (pi O) :- !, pi x \ parse (C x) (O x).
-parse (theorem NAME PST TAC) (theorem NAME ST (false,TAC)) :- !, pp ST PST.
-parse C C.
+parse (pi C) (pi O) :- pi x \ parse (C x) (O x).
+parse (theorem NAME PST TAC) (theorem NAME ST (false,TAC)) :- pp ST PST.
+parse (new_basic_type TYPE REP ABS REPABS ABSREP PP TACTICS)
+ (new_basic_type TYPE REP ABS REPABS ABSREP P TACTICS) :- pp P PP.
+parse (def NAME PTYP PDEF) (def NAME TYP DEF) :- pp TYP PTYP, pp DEF PDEF.
 
 next_object [ C | NEXT ] CT NEXT :- parse C CT.
 next_object [] C toplevel :- 
@@ -662,23 +664,17 @@ INFINITY_AX, SELECT_AX (* axiom of choice *), ETA_AX
 main :-
  check
   [ /*********** Connectives and quantifiers ********/
-    def tt bool
-     (eq ' (lam x\ x) ' (lam x\ x))
-  , (pi A \ def forall (arr (arr A bool) bool)
-     (lam f \ eq ' f ' (lam g \ tt)))
-  , def ff bool
-     (forall ' lam x \ x)
-  , def and
-     (arr bool (arr bool bool))
-     (lam x \ lam y \ eq ' (lam f \ f ' x ' y) ' (lam f \ f ' tt ' tt))
-  , def impl (arr bool (arr bool bool))
-     (lam a \ lam b \ eq ' (and ' a ' b) ' a)
+    def tt bool ((lam x \ x) = (lam x \ x))
+  , (pi A \ def forall (arr (arr A bool) bool) (lam f \ f = (lam g \ tt)))
+  , def ff bool (! x \ x)
+  , def and (arr bool (arr bool bool))
+     (lam x \ lam y \ (lam f \ f ' x ' y) = (lam f \ f ' tt ' tt))
+  , def impl (arr bool (arr bool bool)) (lam a \ lam b \ a && b <=> a)
   , (pi A \ def exists (arr (arr A bool) bool)
-     (lam f \ forall ' (lam c \ (impl ' (forall ' (lam a \ (impl ' (f ' a) ' c))) ' c))))
-  , def not (arr bool bool)
-     (lam x \ impl ' x ' ff)
+     (lam f \ ! c \ (! a \ f ' a ==> c) ==> c))
+  , def not (arr bool bool) (lam x \ x ==> ff)
   , def or (arr bool (arr bool bool))
-     (lam x \ lam y \ forall ' lam c \ impl ' (impl ' x ' c) ' (impl ' (impl ' y ' c) ' c))
+     (lam x \ lam y \ ! c \ (x ==> c) ==> (y ==> c) ==> c)
   , theorem tt_intro tt [then (conv dd) (then k (bind _ x12 \ r))]
   , theorem ff_elim (! p \ ff ==> p)
      [then forall_i (bind bool x3\ then (conv (land_tac dd)) (then i forall_e))]
@@ -789,7 +785,7 @@ main :-
  , theorem test_apply2 (p ==> (! x \ ! y \ x ==> x ==> y) ==> q)
     [then i (then i (then apply h))]
  , new_basic_type mybool myrep myabs myrepabs myabsrep
-    (lam x \ exists ' lam p \ eq ' x ' (and ' p ' p))
+    (lam x \ ? p \ x = (p && p))
     [then (applyth exists_i)
       (then (conv b) (then (applyth exists_i) (then (conv b) r)))]
  , theorem test_itaut_1 ((? x \ g x) ==> ! x \ (! y \ g y ==> x) ==> x)
@@ -803,9 +799,9 @@ main :-
     [itaut 6]
  /********** Knaster-Tarski theorem *********/
   , (pi A \ def in (arr A (arr (arr A bool) bool))
-     (lam x \ lam j \ (j ' x)))
+     (lam x \ lam j \ j ' x))
   , (pi A \ def subseteq (arr (arr A bool) (arr (arr A bool) bool))
-     (lam x \ lam y \ forall ' (lam z \ impl ' (in ' z ' x) ' (in ' z ' y))))
+     (lam x \ lam y \ ! z \ z #in x ==> z #in y))
   , (pi A \ theorem in_subseteq
      (! s \ ! t \ ! x \ s <<= t ==> x #in s ==> x #in t)
      [then forall_i
@@ -814,13 +810,11 @@ main :-
           (bind (arr A bool) x10 \
             then forall_i (bind A x11 \ then (conv (land_tac dd)) (itaut 4))))])
   , (pi A \ def monotone (arr (arr (arr A bool) (arr A bool)) bool)
-      (lam f \ forall ' lam x \ forall ' lam y \
-        impl ' (subseteq ' x ' y) ' (subseteq ' (f ' x) ' (f ' y))))
+      (lam f \ ! x \ ! y \ x <<= y ==> f ' x <<= f ' y))
   , (pi A \ def is_fixpoint (arr (arr (arr A bool) (arr A bool)) (arr (arr A bool) bool))
-     (lam f \ lam x \ and ' (subseteq ' (f ' x) ' x) ' (subseteq ' x ' (f ' x))))
+     (lam f \ lam x \ (f ' x) <<= x && x <<= (f ' x)))
   , (pi A \ def fixpoint (arr (arr (arr A bool) (arr A bool)) (arr A bool))
-     (lam f \ lam a \ forall ' lam e \
-       (impl ' (subseteq ' (f ' e) ' e) ' (in ' a ' e))))
+     (lam f \ lam a \ ! e \ f ' e <<= e ==> a #in e))
   , (pi A \ theorem fixpoint_subseteq_any_prefixpoint
      (! f \ ! x\ f ' x <<= x ==> fixpoint ' f <<= x)
      [then inv
