@@ -1,3 +1,5 @@
+infixr --> 126. % type arrow
+
 infixl '   255. % infix application
 infixl &&  128. % and
 infixl $$  127. % or
@@ -38,9 +40,9 @@ typ ind.
 /*term T TY :- $print (term T TY), fail.*/
 term T TY :- $is_flex T, !.%, $delay (term T TY) [ T ].
 term T TY :- term' T TY.
-term' (lam F) (arr A B) :- pi x\ term' x A => term (F x) B.
-term' (F ' T) B :- term F (arr A B), term T A.
-term' eq (arr A (arr A bool)).
+term' (lam F) (A --> B) :- pi x\ term' x A => term (F x) B.
+term' (F ' T) B :- term F (A --> B), term T A.
+term' eq (A --> A --> bool).
 
 /*propagate [ (G1 ?- term (X @ L1) TY1) ] [ (G2 ?- term (X @ L2) TY2) ] NEW :-
  list_map L1 (x\ y\ (term x y ; y = xxx)) LTY1,
@@ -55,7 +57,7 @@ thm C (seq Gamma G) _ :- debug, $print Gamma "|- " G " := " C, fail.
 /* << HACKS FOR DEBUGGING */
 term' p bool.
 term' q bool.
-term' f (arr bool bool).
+term' f (bool --> bool).
 term' (g X) bool :- term X bool.
 term' c bool.
 
@@ -70,7 +72,7 @@ thm b (seq Gamma (eq ' ((lam F) ' X) ' (F X))) [].
 thm c (seq Gamma (eq ' (F ' X) ' (G ' Y)))
  [ seq Gamma (eq ' F ' G) , seq Gamma (eq ' X ' Y) ] :- term X A, term Y A.
 thm k (seq Gamma (eq ' (lam S) ' (lam T)))
- [ bind A x \  seq Gamma (eq ' (S x) ' (T x)) ] :- term (lam S) (arr A _).
+ [ bind A x \  seq Gamma (eq ' (S x) ' (T x)) ] :- term (lam S) (A --> _).
 thm s (seq Gamma (eq ' P ' Q)) [ seq (P :: Gamma) Q, seq (Q :: Gamma) P ] :-
  term P bool.
 thm (h IGN) (seq Gamma P) [] :- append IGN [ P | Gamma2 ] Gamma.
@@ -140,10 +142,10 @@ check1 (new_basic_type TYPE REP ABS REPABS ABSREP P TACTICS) HYPS :-
   not (term ABS _),
   not (term ABSREP _),
   not (term REPABS _),
-  term P (arr X bool),
+  term P (X --> bool),
   prove (exists ' P ) (false,TACTICS),
-  REPTYP = (arr TYPE X),
-  ABSTYP = (arr X TYPE),
+  REPTYP = (TYPE --> X),
+  ABSTYP = (X --> TYPE),
   ABSREPTYP = (forall ' lam x \ eq ' (abs ' (rep ' x)) ' x),
   REPABSTYP = (forall ' lam x \ eq ' (P ' x) ' (eq ' (rep ' (abs ' x)) x)),
   $print new typ TYPE,
@@ -718,7 +720,7 @@ val nat_induct : !P. P O /\ ....
 val nat_recurs : !f0 f1. ?f. f O = f0 /\ ...
 
 term O nat
-term S (arr nat nat)
+term S (nat --> nat)
 
 injectivity nat
 distinctiness nat
@@ -757,15 +759,15 @@ main :-
  check
   [ /*********** Connectives and quantifiers ********/
     def tt bool ((lam x \ x) = (lam x \ x))
-  , (pi A \ def forall (arr (arr A bool) bool) (lam f \ f = (lam g \ tt)))
+  , (pi A \ def forall ((A --> bool) --> bool) (lam f \ f = (lam g \ tt)))
   , def ff bool (! x \ x)
-  , def and (arr bool (arr bool bool))
+  , def and (bool --> bool --> bool)
      (lam x \ lam y \ (lam f \ f ' x ' y) = (lam f \ f ' tt ' tt))
-  , def impl (arr bool (arr bool bool)) (lam a \ lam b \ a && b <=> a)
-  , (pi A \ def exists (arr (arr A bool) bool)
+  , def impl (bool --> bool --> bool) (lam a \ lam b \ a && b <=> a)
+  , (pi A \ def exists ((A --> bool) --> bool)
      (lam f \ ! c \ (! a \ f ' a ==> c) ==> c))
-  , def not (arr bool bool) (lam x \ x ==> ff)
-  , def or (arr bool (arr bool bool))
+  , def not (bool --> bool) (lam x \ x ==> ff)
+  , def or (bool --> bool --> bool)
      (lam x \ lam y \ ! c \ (x ==> c) ==> (y ==> c) ==> c)
   , theorem tt_intro tt [then (conv dd) (then k (bind _ x12 \ r))]
   , theorem ff_elim (! p \ ff ==> p)
@@ -824,10 +826,10 @@ main :-
              (bind bool x14 \ then (conv (land_tac dd)) (then i forall_e))))]
   , (pi T \
      theorem exists_e (! f \ (exists ' f) ==> (! c \ (! x \ f ' x ==> c) ==> c))
-     [then forall_i (bind (arr T bool) x12 \ then (conv (land_tac dd)) (then i h))])
+     [then forall_i (bind (T --> bool) x12 \ then (conv (land_tac dd)) (then i h))])
  , (pi T \ theorem exists_i (! f \ ! w \ f ' w ==> (exists ' f))
     [then forall_i
-     (bind (arr T bool) x12 \
+     (bind (T --> bool) x12 \
        then forall_i
         (bind T x13 \
           then i
@@ -890,28 +892,28 @@ main :-
      (! x \ p ' x ==> q ' x) ==> (! x \ p ' x) ==> (! x \ q ' x))
     [itaut 6]
  /********** Knaster-Tarski theorem *********/
-  , (pi A \ def in (arr A (arr (arr A bool) bool))
+  , (pi A \ def in (A --> (A --> bool) --> bool)
      (lam x \ lam j \ j ' x))
-  , (pi A \ def subseteq (arr (arr A bool) (arr (arr A bool) bool))
+  , (pi A \ def subseteq ((A --> bool) --> (A --> bool) --> bool)
      (lam x \ lam y \ ! z \ z #in x ==> z #in y))
   , (pi A \ theorem in_subseteq
      (! s \ ! t \ ! x \ s <<= t ==> x #in s ==> x #in t)
      [then forall_i
-       (bind (arr A bool) x9 \
+       (bind (A --> bool) x9 \
          then forall_i
-          (bind (arr A bool) x10 \
+          (bind (A --> bool) x10 \
             then forall_i (bind A x11 \ then (conv (land_tac dd)) (itaut 4))))])
-  , (pi A \ def monotone (arr (arr (arr A bool) (arr A bool)) bool)
+  , (pi A \ def monotone (((A --> bool) --> (A --> bool)) --> bool)
       (lam f \ ! x \ ! y \ x <<= y ==> f ' x <<= f ' y))
-  , (pi A \ def is_fixpoint (arr (arr (arr A bool) (arr A bool)) (arr (arr A bool) bool))
+  , (pi A \ def is_fixpoint (((A --> bool) --> (A --> bool)) --> ((A --> bool) --> bool))
      (lam f \ lam x \ (f ' x) <<= x && x <<= (f ' x)))
-  , (pi A \ def fixpoint (arr (arr (arr A bool) (arr A bool)) (arr A bool))
+  , (pi A \ def fixpoint (((A --> bool) --> (A --> bool)) --> (A --> bool))
      (lam f \ lam a \ ! e \ f ' e <<= e ==> a #in e))
   , (pi A \ theorem fixpoint_subseteq_any_prefixpoint
      (! f \ ! x\ f ' x <<= x ==> fixpoint ' f <<= x)
      [then inv
-       (bind (arr (arr A bool) (arr A bool)) x9 \
-         (bind (arr A bool) x10 \
+       (bind ((A --> bool) --> (A --> bool)) x9 \
+         (bind (A --> bool) x10 \
            then (conv (land_tac dd))
             (then (conv dd)
               (then forall_i
@@ -921,22 +923,22 @@ main :-
   , (pi A \ theorem fixpoint_subseteq_any_fixpoint
      (! f \ ! x\ is_fixpoint ' f ' x ==> fixpoint ' f <<= x)
      [then forall_i
-       (bind (arr (arr A bool) (arr A bool)) x9 \
+       (bind ((A --> bool) --> (A --> bool)) x9 \
          then forall_i
-          (bind (arr A bool) x10 \
+          (bind (A --> bool) x10 \
             then (conv (land_tac dd))
              (then (cutth fixpoint_subseteq_any_prefixpoint) (itaut 8))))])
   , (pi A \ theorem prefixpoint_to_prefixpoint
     (! f \ ! x \ monotone ' f ==>
       f ' x <<= x ==> f ' (f ' x) <<= f ' x)
     [then forall_i
-      (bind (arr (arr A bool) (arr A bool)) x9 \
+      (bind ((A --> bool) --> (A --> bool)) x9 \
         then forall_i
-         (bind (arr A bool) x10 \ then (conv (land_tac dd)) (itaut 6)))])
+         (bind (A --> bool) x10 \ then (conv (land_tac dd)) (itaut 6)))])
   , (pi A \ theorem fixpoint_is_prefixpoint
     (! f \ monotone ' f ==> f ' (fixpoint ' f) <<= fixpoint ' f)
      [then inv
-       (bind (arr (arr A bool) (arr A bool)) x9 \
+       (bind ((A --> bool) --> (A --> bool)) x9 \
          then (conv dd)
           (then inv
             (bind A x10 \
@@ -944,7 +946,7 @@ main :-
                (then (conv dd)
                  (then (conv b)
                    (then inv
-                     (bind (arr A bool) x11 \
+                     (bind (A --> bool) x11 \
                        thenl (cut (fixpoint ' x9 <<= x11))
                         [thenl
                           (cut (x9 ' (fixpoint ' x9) <<= x9 ' x11))
@@ -960,7 +962,7 @@ main :-
   , (pi A \ theorem fixpoint_is_fixpoint
    (! f \ monotone ' f ==> is_fixpoint ' f ' (fixpoint ' f))
     [then inv
-      (bind (arr (arr A bool) (arr A bool)) x9 \
+      (bind ((A --> bool) --> (A --> bool)) x9 \
         then (conv (depth_tac (dd [is_fixpoint])))
          (thenl inv [then (applyth fixpoint_is_prefixpoint) h,
            then (applyth fixpoint_subseteq_any_prefixpoint)
