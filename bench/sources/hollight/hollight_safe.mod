@@ -694,7 +694,7 @@ deftac (sync N) (seq Gamma _) (then (applyth ff_elim) h) :-
  mem Gamma ff.
 deftac (sync N) (seq _ (or ' _ ' _))
  (orelse (then (applyth orr) (itaut N)) (then (applyth orl) (itaut N))).
-deftac (sync N) (seq _ (exists ' _)) (then (applyth exists_i) (itaut N2)) :-
+deftac (sync N) (seq _ (exists ' _)) (then (applyth exists_i) (then (conv b) (itaut N2))) :-
  N2 is N - 2.
 
 parsetac (itaut N) (itaut N).
