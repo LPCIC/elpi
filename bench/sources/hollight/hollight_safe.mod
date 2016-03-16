@@ -884,13 +884,26 @@ main :-
       (then (conv b) (then (applyth exists_i) (then (conv b) r)))]
  , theorem test_itaut_1 ((? x \ g x) ==> ! x \ (! y \ g y ==> x) ==> x)
    [itaut 4]
+
  /********** Monotonicity of logical connectives *********/
  , theorem and_monotone (! a1 \ ! b1 \ ! a2 \ ! b2 \
     (a1 ==> b1) ==> (a2 ==> b2) ==> a1 && a2 ==> b1 && b2)
-   [itaut 2]
-  , theorem forall_monotone (! p \ ! q \
-     (! x \ p ' x ==> q ' x) ==> (! x \ p ' x) ==> (! x \ q ' x))
+    [itaut 2]
+ , theorem or_monotone (! a1 \ ! b1 \ ! a2 \ ! b2 \
+    (a1 ==> b1) ==> (a2 ==> b2) ==> a1 $$ a2 ==> b1 $$ b2)
+    [itaut 2]
+ , theorem impl_monotone (! a1 \ ! b1 \ ! a2 \ ! b2 \
+    (b1 ==> a1) ==> (a2 ==> b2) ==> (a1 ==> a2) ==> (b1 ==> b2))
+    [itaut 3]
+ , theorem not_monotone (! p \ ! q \ (p ==> q) ==> (not ' q) ==> (not ' p))
+    [itaut 3]
+ , theorem forall_monotone (! p \ ! q \
+    (! x \ p ' x ==> q ' x) ==> (! x \ p ' x) ==> (! x \ q ' x))
     [itaut 6]
+ , theorem exists_monotone (! p \ ! q \
+    (! x \ p ' x ==> q ' x) ==> (? x \ p ' x) ==> (? x \ q ' x))
+    [itaut 6]
+
  /********** Knaster-Tarski theorem *********/
   , (pi A \ def in (A --> (A --> bool) --> bool)
      (lam x \ lam j \ j ' x))
