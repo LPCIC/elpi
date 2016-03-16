@@ -229,9 +229,14 @@ next_object [] C toplevel :-
  toplevel_loop C.
 next_object toplevel C toplevel :- toplevel_loop C.
 
-toplevel_loop G :-
+read_cmd H :-
  $print "Enter \"theorem NAME STATEMENT\" or \"stop\"",
  read H,
+ !.
+read_cmd H :- read_cmd H.
+
+toplevel_loop G :-
+ read_cmd H,
  ( H = stop, !
  ; H = theorem NAME PST, !, parse PST ST, (G = theorem NAME ST (true, [ X ]) ; toplevel_loop G)
  ; $print "bad command", toplevel_loop G ).

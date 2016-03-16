@@ -405,9 +405,12 @@ let _ =
     | [t1; t2] ->
        (match eval depth t1 with
            String s ->
-            let s = Parser.parse_goal (F.pp s) in
-            let t = term_of_ast ~depth s in
-            [App (eqc, t2, [t])]
+            (try
+              let s = Parser.parse_goal (F.pp s) in
+              let t = term_of_ast ~depth s in
+              [App (eqc, t2, [t])]
+             with
+              Stream.Error msg -> prerr_endline msg; raise No_clause)
          | _ -> type_error "bad argument to string_to_term (or $string_to_term)")
     | _ -> type_error "string_to_term (or $string_to_term) takes 2 arguments");
   register_custom "$flush" (fun ~depth ~env:_ _ args ->
@@ -499,7 +502,8 @@ let _ =
               let t3 = term_of_ast ~depth t3 in
               [App (eqc, t2, [t3])]
              with 
-              Sys_error msg -> error msg)
+                Sys_error msg -> error msg
+              | Stream.Error msg -> error msg)
          | _ -> type_error "bad argument to readterm (or $readterm)")
     | _ -> type_error "readterm (or $readterm) takes 2 arguments") ;
   register_custom "$eof" (fun ~depth ~env:_ _ args ->
