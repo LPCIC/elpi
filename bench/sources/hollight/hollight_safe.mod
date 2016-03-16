@@ -176,9 +176,11 @@ check WHAT :-
 }
 
 /************ parsing and pretty-printing ********/
-parse A B :- $print "PARSE" (parse A B), fail.
 parse X Y :- $is_flex X, $is_flex Y, !, X = Y.
-parse (! F2) (forall ' lam F1) :- !, $print "ok1", pi x \ parse (F2 x) (F1 x).
+parse X (F ' G) :- $is_flex X, ($is_flex F ; $is_flex G), !, X = (F ' G).
+parse X (F ' G ' H) :- $is_flex X, ($is_flex F ; $is_flex G ; $is_flex H), !,
+ X = (F ' G ' H).
+parse (! F2) (forall ' lam F1) :- !, pi x \ parse (F2 x) (F1 x).
 parse (? F2) (exists ' lam F1) :- !, pi x \ parse (F2 x) (F1 x).
 parse (F2 = G2) (eq ' F1 ' G1) :- !, parse F2 F1, parse G2 G1.
 parse (F2 <=> G2) (eq ' F1 ' G1) :- !, parse F2 F1, parse G2 G1.
@@ -187,7 +189,7 @@ parse (F2 $$ G2) (or ' F1 ' G1) :- !, parse F2 F1, parse G2 G1.
 parse (F2 ==> G2) (impl ' F1 ' G1) :- !, parse F2 F1, parse G2 G1.
 parse (X2 #in S2) (in ' X1 ' S1) :- !, parse X2 X1, parse S2 S1.
 parse (U2 <<= V2) (subseteq ' U1 ' V1) :- !, parse U2 U1, parse V2 V1.
-parse (F2 ' G2) (F1 ' G1) :- !, $print "ok2", parse F2 F1, parse G2 G1.
+parse (F2 ' G2) (F1 ' G1) :- !, parse F2 F1, parse G2 G1.
 parse (lam F2) (lam F1) :- !, pi x \ parse (F2 x) (F1 x).
 parse A A.
 
@@ -897,18 +899,6 @@ main :-
    [itaut 3]
  , theorem impl_not_not (! a \ ! b \ (a ==> b) ==> (not ' b ==> not ' a))
    [itaut 3]
- /******************* TESTS *****************/
- , theorem test_apply (p ==> (p ==> p ==> q) ==> q)
-    [then i (then i (then apply h))]
- , theorem test_apply2 (p ==> (! x \ ! y \ x ==> x ==> y) ==> q)
-    [then i (then i (then apply h))]
- , new_basic_type mybool myrep myabs myrepabs myabsrep
-    (lam x \ ? p \ x = (p && p))
-    [then (applyth exists_i)
-      (then (conv b) (then (applyth exists_i) (then (conv b) r)))]
- , theorem test_itaut_1 ((? x \ g x) ==> ! x \ (! y \ g y ==> x) ==> x)
-   [itaut 4]
-
  /********** Monotonicity of logical connectives *********/
  , theorem and_monotone (! a1 \ ! b1 \ ! a2 \ ! b2 \
     (a1 ==> b1) ==> (a2 ==> b2) ==> a1 && a2 ==> b1 && b2)
@@ -1007,6 +997,21 @@ main :-
               (then (conv (land_tac dd))
                 (then inv
                   (then apply (then (applyth fixpoint_is_prefixpoint) h)))))]))])
+ /******************* TESTS *****************/
+ , theorem test_apply (p ==> (p ==> p ==> q) ==> q)
+    [then i (then i (then apply h))]
+ , theorem test_apply2 (p ==> (! x \ ! y \ x ==> x ==> y) ==> q)
+    [then i (then i (then apply h))]
+ , new_basic_type mybool myrep myabs myrepabs myabsrep
+    (lam x \ ? p \ x = (p && p))
+    [then (applyth exists_i)
+      (then (conv b) (then (applyth exists_i) (then (conv b) r)))]
+ , theorem test_itaut_1 ((? x \ g x) ==> ! x \ (! y \ g y ==> x) ==> x)
+   [itaut 4]
+/* , theorem test_monotone (! p \ ! q \ (p ==> q) ==>
+    (! x \ ? y \ (not ' p ==> tt && p $$ p) ==> (not ' q ==> tt && q $$ q)))
+   [ then forall_i (bind p \ then forall_i (bind q \ then i monotone)) ]
+*/
  ].
 
 /* Status and dependencies of the tactics:
