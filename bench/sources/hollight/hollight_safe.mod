@@ -830,7 +830,7 @@ main :-
      (lam (A --> bool) f \ f = (lam A g \ tt)))
   , def ff bool (! x \ x)
   , def and (bool --> bool --> bool)
-     (lam _ x \ lam _ y \ (lam _ f \ f ' x ' y) = (lam _ f \ f ' tt ' tt))
+     (lam _ x \ lam _ y \ (lam (bool --> bool --> bool) f \ f ' x ' y) = (lam _ f \ f ' tt ' tt))
   , def impl (bool --> bool --> bool) (lam _ a \ lam _ b \ a && b <=> a)
   , (pi A \ def exists ((A --> bool) --> bool)
      (lam (A --> bool) f \ ! c \ (! a \ f ' a ==> c) ==> c))
