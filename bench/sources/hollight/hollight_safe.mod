@@ -148,7 +148,7 @@ check1 (new_basic_type TYPE REP ABS REPABS ABSREP P TACTICS) HYPS :-
   REPTYP = (TYPE --> X),
   ABSTYP = (X --> TYPE),
   ABSREPTYP = (forall ' lam x \ eq ' (abs ' (rep ' x)) ' x),
-  REPABSTYP = (forall ' lam x \ eq ' (P ' x) ' (eq ' (rep ' (abs ' x)) x)),
+  REPABSTYP = (forall ' lam x \ eq ' (P ' x) ' (eq ' (rep ' (abs ' x)) ' x)),
   $print new typ TYPE,
   parse PREPTYP REPTYP, $print REP ":" PREPTYP,
   parse PABSTYP ABSTYP, $print ABS ":" PABSTYP,
