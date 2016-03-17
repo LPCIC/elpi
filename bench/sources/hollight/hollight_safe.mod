@@ -1051,24 +1051,54 @@ main :-
  , theorem test_monotone3 (monotone ' (lam p \ lam x \ ! z \ ? y \ (not ' (p ' x) ==> z && p ' y $$ y)))
    [ auto_monotone ]
    /* |- mybool2 ' tt      mybool2 ' y |- mybool2 ' (not ' y) */
+ , def mybool2f ((bool --> bool) --> (bool --> bool))
+    (lam p \ lam x \ x = tt $$ ? y \ p ' y && x = not ' y)
+ , theorem mybool2f_monotone (monotone ' mybool2f)
+   [ then (conv (depth_tac (dd [mybool2f]))) auto_monotone ]
+ , def mybool2fp (bool --> bool) (fixpoint ' mybool2f)
  , new_basic_type mybool2 myrep2 myabs2 myrepabs2 myabsrep2
-    (fixpoint ' (lam p \ lam x \ x = tt $$ ? y \ p ' y && x = not ' y))
-    [then (cutth exists_i)
-      (then lforall
-        (then (lforall tt)
-          (then apply
-            (then (conv dd)
-              (then forall_i
-                (bind (bool --> bool) x9 \
-                  then (conv (depth_tac (dd [subseteq])))
-                   (then (conv (depth_tac (dd [in])))
-                     (then (conv (depth_tac (dd [in])))
-                       (then (conv (depth_tac (dd [in])))
-                         (then (conv (depth_tac b))
-                           (then (conv (depth_tac b))
-                             (then i (then apply (itaut 1))))))))))))))]
+    mybool2fp
+    [then (conv (depth_tac (dd [mybool2fp])))
+     (then (conv (depth_tac (dd [mybool2f])))
+      (then (cutth exists_i)
+       (then lforall
+         (then (lforall tt)
+           (then apply
+             (then (conv dd)
+               (then forall_i
+                 (bind (bool --> bool) x9 \
+                   then (conv (depth_tac (dd [subseteq])))
+                    (then (conv (depth_tac (dd [in])))
+                      (then (conv (depth_tac (dd [in])))
+                        (then (conv (depth_tac (dd [in])))
+                          (then (conv (depth_tac b))
+                            (then (conv (depth_tac b))
+                              (then i (then apply (itaut 1))))))))))))))))]
  , def mytt mybool2 (myabs2 ' tt)
  , def mynot (mybool2 --> mybool2) (lam x \ myabs2 ' (not ' (myrep2 ' x)))
+/* theorem mybool2fp_ind
+    (! p \ p ' tt ==> (! y \ p ' y ==> p ' (not ' y)) ==>
+      ! x \ mybool2fp 'x ==> p ' x)
+   then (cutth fixpoint_is_prefixpoint)
+    (then (lforall A)
+      (thenl lapply [ applyth mybool2f_monotone, itaut ]))
+
+   By fixpoint_is_(pre)fixpoint + mybool2f_monotone
+
+ , theorem mybool2_ind
+    (! p \ p ' mytt ==> (! y \ p ' y ==> p ' (mynot ' y)) ==>
+      ! x \ p ' x)
+
+   By mybool2fp_ind + absrep + repabs
+
+ , theorem step0 (! x \ mynot ' (mynot ' (mynot ' x)) = mynot ' x)
+
+   By not_not_not + absrep + repabs
+
+ , theorem step1 (! x \ x = mytt $$ x = mynot ' mytt $$ x = mynot ' (mynot ' mytt))
+
+   By mybool2_ind + mynot_mynot_mynot
+*/
  ].
 
 /* Status and dependencies of the tactics:
