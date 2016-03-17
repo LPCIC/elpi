@@ -737,13 +737,21 @@ deftac monotone (seq _ (impl ' (impl ' _ ' _) ' _)) TAC :-
 deftac monotone (seq _ (impl ' (not ' _) ' _)) TAC :-
  TAC = then (applyth not_monotone) monotone.
 deftac monotone (seq _ (impl ' (forall ' lam _) ' _)) TAC :-
- TAC = then (applyth forall_monotone) monotone.
+ TAC =
+  then (conv (land_tac (rand_tac beta_expand)))
+   (then (conv (rand_tac (rand_tac beta_expand)))
+     (then (applyth forall_monotone) (then forall_i (bind _ x \
+       then (conv (depth_tac b)) (then (conv (depth_tac b)) monotone))))).
 deftac monotone (seq _ (impl ' (exists ' lam _) ' _)) TAC :-
  TAC =
   then (conv (land_tac (rand_tac beta_expand)))
    (then (conv (rand_tac (rand_tac beta_expand)))
      (then (applyth exists_monotone) (then forall_i (bind _ x \
        then (conv (depth_tac b)) (then (conv (depth_tac b)) monotone))))).
+
+parsetac auto_monotone auto_monotone.
+deftac auto_monotone _ TAC :-
+ TAC = then forall_i (bind bool p \ then forall_i (bind bool q \ then i monotone)).
 
 /********** inductive things
 
@@ -1017,20 +1025,14 @@ main :-
  , theorem test_itaut_1 ((? x \ g x) ==> ! x \ (! y \ g y ==> x) ==> x)
    [itaut 4]
  , theorem test_monotone1 (! p \ ! q \ (p ==> q) ==> (not ' p ==> tt && p $$ p) ==> (not ' q ==> tt && q $$ q))
-   [ then forall_i (bind bool p \ then forall_i (bind bool q \ then i monotone)) ]
- , (pi A \ theorem test_monotone2
+   [ auto_monotone ]
+ , theorem test_monotone2
     (! p \ ! q \ (p ==> q) ==>
      (? z \ not ' p ==> tt && p $$ z) ==>
      (? z \ not ' q ==> tt && q $$ z))
-   [then forall_i
-     (bind bool x9 \
-       then forall_i
-        (bind bool x10 \
-          then i
-           monotone))]) 
-/* , theorem test_monotone3 (! p \ ! q \ (p ==> q) ==> (! x \ ? y \ (not ' p ==> tt && p $$ p)) ==> (! x \ ? y \ (not ' q ==> tt && q $$ q)))
-   [ then forall_i (bind p \ then forall_i (bind q \ then i monotone)) ]
-*/
+   [ auto_monotone ]
+ , theorem test_monotone3 (! p \ ! q \ (p ==> q) ==> (! x \ ? y \ (not ' p ==> x && p $$ y)) ==> (! x \ ? y \ (not ' q ==> x && q $$ y)))
+   [ auto_monotone ]
  ].
 
 /* Status and dependencies of the tactics:
