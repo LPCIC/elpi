@@ -608,6 +608,10 @@ deftac (dd L) (seq _ (eq ' (D ' T) ' X))
 parsetac dd dd.
 deftac dd _ (dd L).
 
+parsetac beta_expand beta_expand.
+deftac beta_expand (seq _ (eq ' (lam x \ F x) ' (lam x \ (lam F) ' x))) TAC :-
+ TAC = then k (bind _ x \ then sym b).
+
 /* folds a definition, even if applied to arguments */
 /* BUG: it seems to fail with restriction errors in some cases */
 parsetac f f.
@@ -735,7 +739,11 @@ deftac monotone (seq _ (impl ' (not ' _) ' _)) TAC :-
 deftac monotone (seq _ (impl ' (forall ' lam _) ' _)) TAC :-
  TAC = then (applyth forall_monotone) monotone.
 deftac monotone (seq _ (impl ' (exists ' lam _) ' _)) TAC :-
- TAC = then (applyth exists_monotone) monotone.
+ TAC =
+  then (conv (land_tac (rand_tac beta_expand)))
+   (then (conv (rand_tac (rand_tac beta_expand)))
+     (then (applyth exists_monotone) (then forall_i (bind _ x \
+       then (conv (depth_tac b)) (then (conv (depth_tac b)) monotone))))).
 
 /********** inductive things
 
@@ -1010,7 +1018,17 @@ main :-
    [itaut 4]
  , theorem test_monotone1 (! p \ ! q \ (p ==> q) ==> (not ' p ==> tt && p $$ p) ==> (not ' q ==> tt && q $$ q))
    [ then forall_i (bind bool p \ then forall_i (bind bool q \ then i monotone)) ]
-/* , theorem test_monotone2 (! p \ ! q \ (p ==> q) ==> (! x \ ? y \ (not ' p ==> tt && p $$ p)) ==> (! x \ ? y \ (not ' q ==> tt && q $$ q)))
+ , (pi A \ theorem test_monotone2
+    (! p \ ! q \ (p ==> q) ==>
+     (? z \ not ' p ==> tt && p $$ z) ==>
+     (? z \ not ' q ==> tt && q $$ z))
+   [then forall_i
+     (bind bool x9 \
+       then forall_i
+        (bind bool x10 \
+          then i
+           monotone))]) 
+/* , theorem test_monotone3 (! p \ ! q \ (p ==> q) ==> (! x \ ? y \ (not ' p ==> tt && p $$ p)) ==> (! x \ ? y \ (not ' q ==> tt && q $$ q)))
    [ then forall_i (bind p \ then forall_i (bind q \ then i monotone)) ]
 */
  ].
