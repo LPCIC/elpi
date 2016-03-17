@@ -40,7 +40,7 @@ typ ind.
 /*term T TY :- $print (term T TY), fail.*/
 term T TY :- $is_flex T, !.%, $delay (term T TY) [ T ].
 term T TY :- term' T TY.
-term' (lam F) (A --> B) :- pi x\ term' x A => term (F x) B.
+term' (lam A F) (A --> B) :- pi x\ term' x A => term (F x) B.
 term' (F ' T) B :- term F (A --> B), term T A.
 term' eq (A --> A --> bool).
 
@@ -68,11 +68,11 @@ thm r (seq Gamma (eq ' X ' X)) [].
 thm (t Y) (seq Gamma (eq ' X ' Z))
  [ seq Gamma (eq ' X ' Y), seq Gamma (eq ' Y ' Z) ] :- term X A, term Y A.
 thm (m P) (seq Gamma Q) [ seq Gamma (eq ' P ' Q), seq Gamma P ] :- term P bool.
-thm b (seq Gamma (eq ' ((lam F) ' X) ' (F X))) [].
+thm b (seq Gamma (eq ' ((lam _ F) ' X) ' (F X))) [].
 thm c (seq Gamma (eq ' (F ' X) ' (G ' Y)))
  [ seq Gamma (eq ' F ' G) , seq Gamma (eq ' X ' Y) ] :- term X A, term Y A.
-thm k (seq Gamma (eq ' (lam S) ' (lam T)))
- [ bind A x \  seq Gamma (eq ' (S x) ' (T x)) ] :- term (lam S) (A --> _).
+thm k (seq Gamma (eq ' (lam A S) ' (lam A T)))
+ [ bind A x \ seq Gamma (eq ' (S x) ' (T x)) ].
 thm s (seq Gamma (eq ' P ' Q)) [ seq (P :: Gamma) Q, seq (Q :: Gamma) P ] :-
  term P bool.
 thm (h IGN) (seq Gamma P) [] :- append IGN [ P | Gamma2 ] Gamma.
@@ -147,8 +147,8 @@ check1 (new_basic_type TYPE REP ABS REPABS ABSREP P TACTICS) HYPS :-
   callback_proved existence_condition (exists ' P) TACTICS,
   REPTYP = (TYPE --> X),
   ABSTYP = (X --> TYPE),
-  ABSREPTYP = (forall ' lam x \ eq ' (abs ' (rep ' x)) ' x),
-  REPABSTYP = (forall ' lam x \ eq ' (P ' x) ' (eq ' (rep ' (abs ' x)) ' x)),
+  ABSREPTYP = (forall ' lam TYPE x \ eq ' (abs ' (rep ' x)) ' x),
+  REPABSTYP = (forall ' lam X x \ eq ' (P ' x) ' (eq ' (rep ' (abs ' x)) ' x)),
   $print new typ TYPE,
   parse PREPTYP REPTYP, $print REP ":" PREPTYP,
   parse PABSTYP ABSTYP, $print ABS ":" PABSTYP,
@@ -164,7 +164,7 @@ check1 (new_basic_type TYPE REP ABS REPABS ABSREP P TACTICS) HYPS :-
    ).
 check1 (def NAME TYP DEF) HYPS :-
   not (def0 NAME _),
-  term DEF TYP, /* TODO: INFER TYP AUTOMATICALLY */
+  term DEF TYP,
   parse PTYP TYP, $print NAME ":" PTYP,
   parse PDEF DEF, $print NAME "=" PDEF,
   HYPS = (def0 NAME DEF, term' NAME TYP).
@@ -181,8 +181,8 @@ parse X Y :- $is_flex X, $is_flex Y, !, X = Y.
 parse X (F ' G) :- $is_flex X, ($is_flex F ; $is_flex G), !, X = (F ' G).
 parse X (F ' G ' H) :- $is_flex X, ($is_flex F ; $is_flex G ; $is_flex H), !,
  X = (F ' G ' H).
-parse (! F2) (forall ' lam F1) :- !, pi x \ parse (F2 x) (F1 x).
-parse (? F2) (exists ' lam F1) :- !, pi x \ parse (F2 x) (F1 x).
+parse (! F2) (forall ' lam _ F1) :- !, pi x \ parse (F2 x) (F1 x).
+parse (? F2) (exists ' lam _ F1) :- !, pi x \ parse (F2 x) (F1 x).
 parse (F2 = G2) (eq ' F1 ' G1) :- !, parse F2 F1, parse G2 G1.
 parse (F2 <=> G2) (eq ' F1 ' G1) :- !, parse F2 F1, parse G2 G1.
 parse (F2 && G2) (and ' F1 ' G1) :- !, parse F2 F1, parse G2 G1.
@@ -191,7 +191,7 @@ parse (F2 ==> G2) (impl ' F1 ' G1) :- !, parse F2 F1, parse G2 G1.
 parse (X2 #in S2) (in ' X1 ' S1) :- !, parse X2 X1, parse S2 S1.
 parse (U2 <<= V2) (subseteq ' U1 ' V1) :- !, parse U2 U1, parse V2 V1.
 parse (F2 ' G2) (F1 ' G1) :- !, parse F2 F1, parse G2 G1.
-parse (lam F2) (lam F1) :- !, pi x \ parse (F2 x) (F1 x).
+parse (lam A F2) (lam A F1) :- !, pi x \ parse (F2 x) (F1 x).
 parse A A.
 
 /* safe_list_map that unifies the two lists if they are both flexible
@@ -227,6 +227,12 @@ parse_obj (new_basic_type TYPE REP ABS REPABS ABSREP PP TACTICS)
  (new_basic_type TYPE REP ABS REPABS ABSREP P (false,TACTICS)) :- parse PP P.
 parse_obj (def NAME PTYP PDEF) (def NAME TYP DEF) :- parse PTYP TYP, parse PDEF DEF.
 
+parse_iobj (pi C) (pi O) :- pi x \ parse_iobj (C x) (O x).
+parse_iobj (theorem NAME PST) (theorem NAME ST (true,[_])) :- parse PST ST.
+parse_iobj (new_basic_type TYPE REP ABS REPABS ABSREP PP)
+ (new_basic_type TYPE REP ABS REPABS ABSREP P (true,[_])) :- parse PP P.
+parse_iobj (def NAME PTYP PDEF) (def NAME TYP DEF) :- parse PTYP TYP, parse PDEF DEF.
+
 next_object [ C | NEXT ] CT NEXT :- parse_obj C CT.
 next_object [] C toplevel :- 
  $print "Welcome to HOL extra-light",
@@ -234,7 +240,7 @@ next_object [] C toplevel :-
 next_object toplevel C toplevel :- toplevel_loop C.
 
 read_cmd H :-
- $print "Enter \"theorem NAME STATEMENT\" or \"stop\"",
+ $print "Enter a command or \"stop\"",
  read H,
  !.
 read_cmd H :- read_cmd H.
@@ -242,8 +248,7 @@ read_cmd H :- read_cmd H.
 toplevel_loop G :-
  read_cmd H,
  ( H = stop, !
- ; H = theorem NAME PST, !, parse PST ST, (G = theorem NAME ST (true, [ X ]) ; toplevel_loop G)
- ; H = new_basic_type TYPE REP ABS REPABS ABSREP PP, !, parse PP P, (G = new_basic_type TYPE REP ABS REPABS ABSREP P (true, [ X ]) ; toplevel_loop G)
+ ; parse_iobj H PH, !, (G = PH ; $print "error", toplevel_loop G)
  ; $print "bad command", toplevel_loop G ).
 
 callback_proved NAME GOAL (false,_) :- parse PGOAL GOAL, $print NAME ":" PGOAL.
@@ -452,13 +457,13 @@ deftac conj (seq Gamma (and ' P ' Q)) TAC :-
 parsetac (andr P) (andr PP) :- parse P PP.
 deftac (andr P) (seq Gamma Q) TAC :-
  TAC =
-  (thenl (m ((lam f \ f ' P ' Q) ' (lam x \ lam y \ y)))
+  (thenl (m ((lam _ f \ f ' P ' Q) ' (lam _ x \ lam _ y \ y)))
     [ then
        %(repeat (conv (depth_tac b))) ROBUS VERSION LINE BELOW
        (then (conv (land_tac b)) (then (conv (land_tac (rator_tac b))) (conv (land_tac b))))
       r
     , thenl (conv (rator_tac id))
-       [ then (thenl (t (lam f \ f ' tt ' tt)) [ id, r ])
+       [ then (thenl (t (lam _ f \ f ' tt ' tt)) [ id, r ])
           (thenl (m (and ' P ' Q)) [ dd , id ])
        , then (repeat (conv (depth_tac b))) (th tt_intro) ]]).
 
@@ -472,13 +477,13 @@ deftac andr (seq Gamma Q) TAC :-
 parsetac (andl P) (andl PP) :- parse P PP.
 deftac (andl Q) (seq Gamma P) TAC :-
  TAC =
-  (thenl (m ((lam f \ f ' P ' Q) ' (lam x \ lam y \ x)))
+  (thenl (m ((lam _ f \ f ' P ' Q) ' (lam _ x \ lam _ y \ x)))
     [ then
        %(repeat (conv (depth_tac b))) ROBUS VERSION LINE BELOW
        (then (conv (land_tac b)) (then (conv (land_tac (rator_tac b))) (conv (land_tac b))))
       r
     , thenl (conv (rator_tac id))
-       [ then (thenl (t (lam f \ f ' tt ' tt)) [ id, r ])
+       [ then (thenl (t (lam _ f \ f ' tt ' tt)) [ id, r ])
           (thenl (m (and ' P ' Q)) [ dd , id ])
        , then (repeat (conv (depth_tac b))) (th tt_intro) ]]).
 
@@ -493,27 +498,27 @@ deftac andl (seq Gamma P) TAC :-
 
 /* |- forall ' F  -->   |- F ' x */
 parsetac forall_i forall_i.
-deftac forall_i (seq Gamma (forall ' lam G)) TAC :-
+deftac forall_i (seq Gamma (forall ' lam _ G)) TAC :-
  TAC = then (conv dd) (then k (bind _ x \ eq_true_intro)).
 
 /* forall ' F |- F ' T */
 parsetac forall_e forall_e.
 deftac forall_e (seq Gamma GX) TAC :-
- mem Gamma (forall ' (lam G)), GX = G X,
- TAC = thenl (m ((lam G) ' X)) [ b, thenl (m ((lam z \ tt) ' X))
-  [ thenl c [ then sym (thenl (m (forall ' lam G)) [dd,h ]), r ]
+ mem Gamma (forall ' (lam _ G)), GX = G X,
+ TAC = thenl (m ((lam _ G) ' X)) [ b, thenl (m ((lam _ z \ tt) ' X))
+  [ thenl c [ then sym (thenl (m (forall ' lam _ G)) [dd,h ]), r ]
   , then (conv b) (th tt_intro) ] ].
 
 /* forall ' F |- f  -->  F ' a, forall ' F |- f */
 parsetac (lforall F A) (lforall PF PA) :- parse F PF, parse A PA.
 deftac (lforall F A) (seq Gamma G) TAC :-
  TAC = thenl (m (impl ' (F A) ' G))
-  [ thenl s [ then mp forall_e, then i h ] , then (w (forall ' lam F)) i ].
+  [ thenl s [ then mp forall_e, then i h ] , then (w (forall ' lam _ F)) i ].
 
 /* forall ' F |- f  -->  F ' a, forall ' F |- f */
 parsetac (lforall A) (lforall PA) :- parse A PA.
 deftac (lforall A) (seq Gamma G) (lforall F A) :-
- mem Gamma (forall ' lam F).
+ mem Gamma (forall ' lam _ F).
 
 /* forall ' F |- f  -->  F ' a, forall ' F |- f */
 parsetac lforall lforall.
@@ -521,7 +526,7 @@ deftac lforall (seq Gamma G) (lforall A).
 
 /* forall ' F |- f  -->  F ' a, forall ' F |- f */
 parsetac (lforall_last A) (lforall_last PA) :- parse A PA.
-deftac (lforall_last A) (seq ((forall ' lam F)::Gamma) G) (lforall F A).
+deftac (lforall_last A) (seq ((forall ' lam _ F)::Gamma) G) (lforall F A).
 
 /*** false ***/
               
@@ -589,7 +594,7 @@ deftac (apply X) SEQ h :- $is_flex X, !.
 deftac (apply X) SEQ h.
 deftac (apply (impl ' P ' Q)) SEQ TAC :-
  TAC = thenl (lapply P Q) [ id, apply_last ].
-deftac (apply (forall ' lam G)) SEQ TAC :-
+deftac (apply (forall ' lam _ G)) SEQ TAC :-
  TAC = then (lforall G X) apply_last.
 
 parsetac apply_last apply_last.
@@ -611,7 +616,7 @@ parsetac dd dd.
 deftac dd _ (dd L).
 
 parsetac beta_expand beta_expand.
-deftac beta_expand (seq _ (eq ' (lam x \ F x) ' (lam x \ (lam F) ' x))) TAC :-
+deftac beta_expand (seq _ (eq ' (lam _ x \ F x) ' (lam _ x \ (lam _ F) ' x))) TAC :-
  TAC = then k (bind _ x \ then sym b).
 
 /* folds a definition, even if applied to arguments */
@@ -729,7 +734,7 @@ deftac (itaut N) SEQ TAC :-
 
 parsetac monotone monotone.
 deftac monotone (seq _ (impl ' X ' X)) (! (then i h)) :- !.
-deftac monotone (seq [forall ' lam x \ impl ' (F ' x) ' (G ' x)] (impl ' (F ' T) ' (G ' T))) (! apply) :- !.
+deftac monotone (seq [forall ' lam _ x \ impl ' (F ' x) ' (G ' x)] (impl ' (F ' T) ' (G ' T))) (! apply) :- !.
 deftac monotone (seq _ (impl ' (and ' _ ' _) ' _)) TAC :-
  TAC = then (applyth and_monotone) monotone.
 deftac monotone (seq _ (impl ' (or ' _ ' _) ' _)) TAC :-
@@ -738,20 +743,20 @@ deftac monotone (seq _ (impl ' (impl ' _ ' _) ' _)) TAC :-
  TAC = then (applyth impl_monotone) monotone.
 deftac monotone (seq _ (impl ' (not ' _) ' _)) TAC :-
  TAC = then (applyth not_monotone) monotone.
-deftac monotone (seq _ (impl ' (forall ' lam _) ' _)) TAC :-
+deftac monotone (seq _ (impl ' (forall ' lam _ _) ' _)) TAC :-
  TAC =
   then (conv (land_tac (rand_tac beta_expand)))
    (then (conv (rand_tac (rand_tac beta_expand)))
      (then (applyth forall_monotone) (then forall_i (bind _ x \
        then (conv (depth_tac b)) (then (conv (depth_tac b)) monotone))))).
-deftac monotone (seq _ (impl ' (exists ' lam _) ' _)) TAC :-
+deftac monotone (seq _ (impl ' (exists ' lam _ _) ' _)) TAC :-
  TAC =
   then (conv (land_tac (rand_tac beta_expand)))
    (then (conv (rand_tac (rand_tac beta_expand)))
      (then (applyth exists_monotone) (then forall_i (bind _ x \
        then (conv (depth_tac b)) (then (conv (depth_tac b)) monotone))))).
 
-/* expands "monotone ' (lam f \ lam x \ X f x)" into
+/* expands "monotone ' (lam _ f \ lam _ x \ X f x)" into
    "! x \ p ' x ==> q ' x |- X p y ==> X q y"
    and then calls the monotone tactic */
 parsetac auto_monotone auto_monotone.
@@ -820,17 +825,18 @@ INFINITY_AX, SELECT_AX (* axiom of choice *), ETA_AX
 main :-
  check
   [ /*********** Connectives and quantifiers ********/
-    def tt bool ((lam x \ x) = (lam x \ x))
-  , (pi A \ def forall ((A --> bool) --> bool) (lam f \ f = (lam g \ tt)))
+    def tt bool ((lam bool x \ x) = (lam bool x \ x))
+  , (pi A \ def forall ((A --> bool) --> bool)
+     (lam (A --> bool) f \ f = (lam A g \ tt)))
   , def ff bool (! x \ x)
   , def and (bool --> bool --> bool)
-     (lam x \ lam y \ (lam f \ f ' x ' y) = (lam f \ f ' tt ' tt))
-  , def impl (bool --> bool --> bool) (lam a \ lam b \ a && b <=> a)
+     (lam _ x \ lam _ y \ (lam _ f \ f ' x ' y) = (lam _ f \ f ' tt ' tt))
+  , def impl (bool --> bool --> bool) (lam _ a \ lam _ b \ a && b <=> a)
   , (pi A \ def exists ((A --> bool) --> bool)
-     (lam f \ ! c \ (! a \ f ' a ==> c) ==> c))
-  , def not (bool --> bool) (lam x \ x ==> ff)
+     (lam (A --> bool) f \ ! c \ (! a \ f ' a ==> c) ==> c))
+  , def not (bool --> bool) (lam _ x \ x ==> ff)
   , def or (bool --> bool --> bool)
-     (lam x \ lam y \ ! c \ (x ==> c) ==> (y ==> c) ==> c)
+     (lam _ x \ lam _ y \ ! c \ (x ==> c) ==> (y ==> c) ==> c)
   , theorem tt_intro tt [then (conv dd) (then k (bind _ x12 \ r))]
   , theorem ff_elim (! p \ ff ==> p)
      [then forall_i (bind bool x3\ then (conv (land_tac dd)) (then i forall_e))]
@@ -956,9 +962,9 @@ main :-
 
  /********** Knaster-Tarski theorem *********/
   , (pi A \ def in (A --> (A --> bool) --> bool)
-     (lam x \ lam j \ j ' x))
+     (lam A x \ lam (A --> bool) j \ j ' x))
   , (pi A \ def subseteq ((A --> bool) --> (A --> bool) --> bool)
-     (lam x \ lam y \ ! z \ z #in x ==> z #in y))
+     (lam (A --> bool) x \ lam (A --> bool) y \ ! z \ z #in x ==> z #in y))
   , (pi A \ theorem in_subseteq
      (! s \ ! t \ ! x \ s <<= t ==> x #in s ==> x #in t)
      [then forall_i
@@ -967,11 +973,11 @@ main :-
           (bind (A --> bool) x10 \
             then forall_i (bind A x11 \ then (conv (land_tac dd)) (itaut 4))))])
   , (pi A \ def monotone (((A --> bool) --> (A --> bool)) --> bool)
-      (lam f \ ! x \ ! y \ x <<= y ==> f ' x <<= f ' y))
+      (lam (_ A) f \ ! x \ ! y \ x <<= y ==> f ' x <<= f ' y))
   , (pi A \ def is_fixpoint (((A --> bool) --> (A --> bool)) --> ((A --> bool) --> bool))
-     (lam f \ lam x \ (f ' x) <<= x && x <<= (f ' x)))
+     (lam (_ A) f \ lam (_ A) x \ (f ' x) <<= x && x <<= (f ' x)))
   , (pi A \ def fixpoint (((A --> bool) --> (A --> bool)) --> (A --> bool))
-     (lam f \ lam a \ ! e \ f ' e <<= e ==> a #in e))
+     (lam (_ A) f \ lam A a \ ! e \ f ' e <<= e ==> a #in e))
   , (pi A \ theorem fixpoint_subseteq_any_prefixpoint
      (! f \ ! x\ f ' x <<= x ==> fixpoint ' f <<= x)
      [then inv
@@ -1039,20 +1045,20 @@ main :-
  , theorem test_apply2 (p ==> (! x \ ! y \ x ==> x ==> y) ==> q)
     [then i (then i (then apply h))]
  , new_basic_type mybool myrep myabs myrepabs myabsrep
-    (lam x \ ? p \ x = (p && p))
+    (lam _ x \ ? p \ x = (p && p))
     [then (applyth exists_i)
       (then (conv b) (then (applyth exists_i) (then (conv b) r)))]
  , theorem test_itaut_1 ((? x \ g x) ==> ! x \ (! y \ g y ==> x) ==> x)
    [itaut 4]
- , theorem test_monotone1 (monotone ' (lam p \ lam x \ not ' (p ' x) ==> tt && p ' tt $$ p ' x))
+ , theorem test_monotone1 (monotone ' (lam _ p \ lam _ x \ not ' (p ' x) ==> tt && p ' tt $$ p ' x))
    [ auto_monotone ]
- , theorem test_monotone2 (monotone ' (lam p \ lam x \ ? z \ not ' (p ' x) ==> tt && p ' tt $$ z))
+ , theorem test_monotone2 (monotone ' (lam _ p \ lam _ x \ ? z \ not ' (p ' x) ==> tt && p ' tt $$ z))
    [ auto_monotone ]
- , theorem test_monotone3 (monotone ' (lam p \ lam x \ ! z \ ? y \ (not ' (p ' x) ==> z && p ' y $$ y)))
+ , theorem test_monotone3 (monotone ' (lam _ p \ lam _ x \ ! z \ ? y \ (not ' (p ' x) ==> z && p ' y $$ y)))
    [ auto_monotone ]
    /* |- mybool2 ' tt      mybool2 ' y |- mybool2 ' (not ' y) */
  , def mybool2f ((bool --> bool) --> (bool --> bool))
-    (lam p \ lam x \ x = tt $$ ? y \ p ' y && x = not ' y)
+    (lam _ p \ lam _ x \ x = tt $$ ? y \ p ' y && x = not ' y)
  , theorem mybool2f_monotone (monotone ' mybool2f)
    [ then (conv (depth_tac (dd [mybool2f]))) auto_monotone ]
  , def mybool2fp (bool --> bool) (fixpoint ' mybool2f)
@@ -1075,7 +1081,7 @@ main :-
                             (then (conv (depth_tac b))
                               (then i (then apply (itaut 1))))))))))))))))]
  , def mytt mybool2 (myabs2 ' tt)
- , def mynot (mybool2 --> mybool2) (lam x \ myabs2 ' (not ' (myrep2 ' x)))
+ , def mynot (mybool2 --> mybool2) (lam _ x \ myabs2 ' (not ' (myrep2 ' x)))
 /* theorem mybool2fp_ind
     (! p \ p ' tt ==> (! y \ p ' y ==> p ' (not ' y)) ==>
       ! x \ mybool2fp 'x ==> p ' x)
