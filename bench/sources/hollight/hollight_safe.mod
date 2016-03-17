@@ -143,7 +143,8 @@ check1 (new_basic_type TYPE REP ABS REPABS ABSREP P TACTICS) HYPS :-
   not (term ABSREP _),
   not (term REPABS _),
   term P (X --> bool),
-  prove (exists ' P ) (false,TACTICS),
+  prove (exists ' P ) TACTICS,
+  callback_proved existence_condition (exists ' P) TACTICS,
   REPTYP = (TYPE --> X),
   ABSTYP = (X --> TYPE),
   ABSREPTYP = (forall ' lam x \ eq ' (abs ' (rep ' x)) ' x),
@@ -223,7 +224,7 @@ parsetac ww ww.
 parse_obj (pi C) (pi O) :- pi x \ parse_obj (C x) (O x).
 parse_obj (theorem NAME PST TAC) (theorem NAME ST (false,TAC)) :- parse PST ST.
 parse_obj (new_basic_type TYPE REP ABS REPABS ABSREP PP TACTICS)
- (new_basic_type TYPE REP ABS REPABS ABSREP P TACTICS) :- parse PP P.
+ (new_basic_type TYPE REP ABS REPABS ABSREP P (false,TACTICS)) :- parse PP P.
 parse_obj (def NAME PTYP PDEF) (def NAME TYP DEF) :- parse PTYP TYP, parse PDEF DEF.
 
 next_object [ C | NEXT ] CT NEXT :- parse_obj C CT.
@@ -242,6 +243,7 @@ toplevel_loop G :-
  read_cmd H,
  ( H = stop, !
  ; H = theorem NAME PST, !, parse PST ST, (G = theorem NAME ST (true, [ X ]) ; toplevel_loop G)
+ ; H = new_basic_type TYPE REP ABS REPABS ABSREP PP, !, parse PP P, (G = new_basic_type TYPE REP ABS REPABS ABSREP P (true, [ X ]) ; toplevel_loop G)
  ; $print "bad command", toplevel_loop G ).
 
 callback_proved NAME GOAL (false,_) :- parse PGOAL GOAL, $print NAME ":" PGOAL.
@@ -726,8 +728,8 @@ deftac (itaut N) SEQ TAC :-
 /********** inductive predicates package ********/
 
 parsetac monotone monotone.
-deftac monotone (seq _ (impl ' X ' X)) (then i h).
-deftac monotone (seq [I] I) (! h).
+deftac monotone (seq _ (impl ' X ' X)) (! (then i h)) :- !.
+deftac monotone (seq [forall ' lam x \ impl ' (F ' x) ' (G ' x)] (impl ' (F ' T) ' (G ' T))) (! apply) :- !.
 deftac monotone (seq _ (impl ' (and ' _ ' _) ' _)) TAC :-
  TAC = then (applyth and_monotone) monotone.
 deftac monotone (seq _ (impl ' (or ' _ ' _) ' _)) TAC :-
@@ -749,9 +751,27 @@ deftac monotone (seq _ (impl ' (exists ' lam _) ' _)) TAC :-
      (then (applyth exists_monotone) (then forall_i (bind _ x \
        then (conv (depth_tac b)) (then (conv (depth_tac b)) monotone))))).
 
+/* expands "monotone ' (lam f \ lam x \ X f x)" into
+   "! x \ p ' x ==> q ' x |- X p y ==> X q y"
+   and then calls the monotone tactic */
 parsetac auto_monotone auto_monotone.
 deftac auto_monotone _ TAC :-
- TAC = then forall_i (bind bool p \ then forall_i (bind bool q \ then i monotone)).
+ TAC =
+  then (conv dd)
+   (then forall_i (bind _ p \ (then forall_i (bind _ q \
+     then (conv (land_tac dd))
+      (then (conv (land_tac (depth_tac (dd [in]))))
+        (then (conv (land_tac (depth_tac (dd [in]))))
+          (then i
+            (then (conv dd)
+              (then forall_i (bind _ x \
+                (then (conv (land_tac dd))
+                  (then (conv (rand_tac dd))
+                    (then (conv (land_tac (rator_tac b)))
+                      (then (conv (land_tac b))
+                        (then (conv (rand_tac (rator_tac b)))
+                          (then (conv (rand_tac b))
+                            monotone)))))))))))))))).
 
 /********** inductive things
 
@@ -1024,15 +1044,31 @@ main :-
       (then (conv b) (then (applyth exists_i) (then (conv b) r)))]
  , theorem test_itaut_1 ((? x \ g x) ==> ! x \ (! y \ g y ==> x) ==> x)
    [itaut 4]
- , theorem test_monotone1 (! p \ ! q \ (p ==> q) ==> (not ' p ==> tt && p $$ p) ==> (not ' q ==> tt && q $$ q))
+ , theorem test_monotone1 (monotone ' (lam p \ lam x \ not ' (p ' x) ==> tt && p ' tt $$ p ' x))
    [ auto_monotone ]
- , theorem test_monotone2
-    (! p \ ! q \ (p ==> q) ==>
-     (? z \ not ' p ==> tt && p $$ z) ==>
-     (? z \ not ' q ==> tt && q $$ z))
+ , theorem test_monotone2 (monotone ' (lam p \ lam x \ ? z \ not ' (p ' x) ==> tt && p ' tt $$ z))
    [ auto_monotone ]
- , theorem test_monotone3 (! p \ ! q \ (p ==> q) ==> (! x \ ? y \ (not ' p ==> x && p $$ y)) ==> (! x \ ? y \ (not ' q ==> x && q $$ y)))
+ , theorem test_monotone3 (monotone ' (lam p \ lam x \ ! z \ ? y \ (not ' (p ' x) ==> z && p ' y $$ y)))
    [ auto_monotone ]
+   /* |- mybool2 ' tt      mybool2 ' y |- mybool2 ' (not ' y) */
+ , new_basic_type mybool2 myrep2 myabs2 myrepabs2 myabsrep2
+    (fixpoint ' (lam p \ lam x \ x = tt $$ ? y \ p ' y && x = not ' y))
+    [then (cutth exists_i)
+      (then lforall
+        (then (lforall tt)
+          (then apply
+            (then (conv dd)
+              (then forall_i
+                (bind (bool --> bool) x9 \
+                  then (conv (depth_tac (dd [subseteq])))
+                   (then (conv (depth_tac (dd [in])))
+                     (then (conv (depth_tac (dd [in])))
+                       (then (conv (depth_tac (dd [in])))
+                         (then (conv (depth_tac b))
+                           (then (conv (depth_tac b))
+                             (then i (then apply (itaut 1))))))))))))))]
+ , def mytt mybool2 (myabs2 ' tt)
+ , def mynot (mybool2 --> mybool2) (lam x \ myabs2 ' (not ' (myrep2 ' x)))
  ].
 
 /* Status and dependencies of the tactics:
