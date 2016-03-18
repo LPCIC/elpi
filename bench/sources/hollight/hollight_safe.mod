@@ -1106,6 +1106,10 @@ main :-
  , theorem mybool2f_monotone (monotone '' _ ' mybool2f,
    [ then (conv (depth_tac (dd [mybool2f]))) auto_monotone ])
  , def mybool2fp ((bool --> bool),(fixpoint '' _ ' mybool2f))
+/*
+ , theorem mybool2f_i
+    (! x \ mybool2f ' mybool2fp ' x ==> myboolf2p ' x)
+*/
  , new_basic_type mybool2 myrep2 myabs2 myrepabs2 myabsrep2
     mybool2fp
     [then (conv (depth_tac (dd [mybool2fp])))
@@ -1124,6 +1128,11 @@ main :-
                           (then (conv (depth_tac b))
                             (then (conv (depth_tac b))
                               (then i (then apply (itaut 1))))))))))))))))]
+ , theorem myrepabs2u
+   ((! x13 \ mybool2fp ' x13 ==> myrep2 ' (myabs2 ' x13) = x13),
+   [then (cutth myrepabs2)
+     (then forall_i
+       (bind bool x13 \ then (lforall x13) (then (applyth eq_to_impl_f) h)))])
  , def mytt (mybool2,(myabs2 ' tt))
  , def mynot ((mybool2 --> mybool2),(lam _ x \ myabs2 ' (not ' (myrep2 ' x))))
 /* theorem mybool2fp_ind
@@ -1140,11 +1149,25 @@ main :-
       ! x \ p ' x)
 
    By mybool2fp_ind + absrep + repabs
-
- , theorem step0 (! x \ mynot ' (mynot ' (mynot ' x)) = mynot ' x)
-
-   By not_not_not + absrep + repabs
-
+*/
+/*theorem step0 (! x13 \ mynot ' (mynot ' (mynot ' x13)) = mynot ' x13)
+ [then inv
+   (bind mybool2 x13 \
+     then (conv (depth_tac (dd [mynot])))
+      (then (conv (depth_tac (dd [mynot])))
+        (then (conv (depth_tac (dd [mynot])))
+          (then (conv (depth_tac (dd [mynot])))
+            (thenl
+              (conv (land_tac (rand_tac (rand_tac (applyth myrepabs2u)))))
+              [then (conv (depth_tac (dd [mybool2fp]))) daemon,
+              thenl
+               (conv
+                 (land_tac
+                   (rand_tac (rand_tac (rand_tac (applyth myrepabs2u))))))
+               [daemon,
+               then (conv (land_tac (rand_tac (applyth not_not_not)))) r]])))))]
+*/
+/*
  , theorem step1 (! x \ x = mytt $$ x = mynot ' mytt $$ x = mynot ' (mynot ' mytt))
 
    By mybool2_ind + mynot_mynot_mynot
