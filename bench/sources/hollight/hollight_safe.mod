@@ -21,6 +21,7 @@ infix  <<= 130. % subseteq
 /* Predicates exported from the kernel:
  * proves
  * check
+ * ereterm
  */
 
 { /***** Trusted code base *******/
@@ -52,6 +53,8 @@ reterm T TY :- reterm' T TY.
 reterm' (lam A F) (A --> B) :- !, pi x\ (reterm' x A :- !) => reterm (F x) B.
 reterm' (F ' T) B :- !, reterm F (A --> B).
 reterm' T TY :- term' T TY.
+
+ereterm T TY :- reterm T TY.
 
 /*propagate [ (G1 ?- term (X @ L1) TY1) ] [ (G2 ?- term (X @ L2) TY2) ] NEW :-
  list_map L1 (x\ y\ (term x y ; y = xxx)) LTY1,
@@ -680,8 +683,7 @@ deftac (conv C) (seq Gamma F) TAC :-
 
 /********** Automation ***********/
 /* TODO:
- 1) left rule for = (in the sense of coimplication) missing
- 2) our lforall gets rid of the hypothesis (bad) */
+ 1) our lforall gets rid of the hypothesis (bad) */
 /* left tries to reduce the search space via focusing */
 parsetac left left.
 deftac left (seq Gamma _) TAC :-
@@ -718,6 +720,14 @@ deftac left (seq Gamma H) TAC :-
      (then (lforall_last G)
       (then (lforall_last H)
        (thenl lapply [ h, then (w (and ' F ' G)) (then apply_last (then i i))])))))).
+deftac left (seq Gamma H) TAC :-
+ mem Gamma (eq ' F ' G),
+ ereterm F TY,
+ not ($is_flex TY), TY = bool,
+ TAC =
+  (then (g (eq ' F ' G))
+   (then (conv (land_tac (then (applyth eq_to_impl) h)))
+     (then i (w (eq ' F ' G))))).
 
 parsetac not_i not_i.
 deftac not_i (seq _ (not ' _)) (applyth not_i).
@@ -927,6 +937,12 @@ main :-
            (then (conv dd)
              (then forall_i
                (bind bool x14 \ then i (then (lforall x13) (then apply h)))))))])
+  , theorem eq_to_impl
+     ((! x13 \ ! x14 \ (x13 = x14) = ((x13 ==> x14) && (x14 ==> x13))),
+     [thenl inv [(bind bool x13 \ bind bool x14 \ then (conv (then sym h)) h),
+       (bind bool x13 \ bind bool x14 \ then (conv h) h),
+       (bind bool x13 \ bind bool x14 \ itaut 2),
+       (bind bool x13 \ bind bool x14 \ itaut 2)]])
  /******************* Logic *****************/
  , theorem or_commutative ((! a \ ! b \ a $$ b <=> b $$ a),
    [itaut 1])
@@ -964,6 +980,12 @@ main :-
    [itaut 3])
  , theorem impl_not_not ((! a \ ! b \ (a ==> b) ==> (not ' b ==> not ' a)),
    [itaut 3])
+ , theorem eq_to_impl_f (((forall '' _ ' lam bool p \ ! q \
+    (p <=> q) ==> p ==> q)),
+    [itaut 2])
+ , theorem eq_to_impl_b (((forall '' _ ' lam bool p \ ! q \
+    (p <=> q) ==> q ==> p)),
+    [itaut 2])
  /********** Monotonicity of logical connectives *********/
  , theorem and_monotone ((! a1 \ ! b1 \ ! a2 \ ! b2 \
     (a1 ==> b1) ==> (a2 ==> b2) ==> a1 && a2 ==> b1 && b2),
