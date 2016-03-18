@@ -32,7 +32,7 @@ infix  <<= 130. % subseteq
  */
 
 local thm, provable, def0, term, term', typ, loop, prove, check1, check1def,
- check1thm.
+ check1thm, reterm, reterm'.
 
 proves T TY :- provable T TY.
 
@@ -45,6 +45,13 @@ term T TY :- term' T TY.
 term' (lam A F) (A --> B) :- pi x\ term' x A => term (F x) B.
 term' (F ' T) B :- term F (A --> B), term T A.
 term' eq (A --> A --> bool).
+
+/* like term, but on terms that are already known to be well-typed */
+reterm T TY :- $is_flex T, !.%, $delay (reterm T TY) [ T ].
+reterm T TY :- reterm' T TY.
+reterm' (lam A F) (A --> B) :- !, pi x\ (reterm' x A :- !) => reterm (F x) B.
+reterm' (F ' T) B :- !, reterm F (A --> B).
+reterm' T TY :- term' T TY.
 
 /*propagate [ (G1 ?- term (X @ L1) TY1) ] [ (G2 ?- term (X @ L2) TY2) ] NEW :-
  list_map L1 (x\ y\ (term x y ; y = xxx)) LTY1,
@@ -61,6 +68,7 @@ term' p bool.
 term' q bool.
 term' f (bool --> bool).
 term' (g X) bool :- term X bool.
+reterm' (g X) bool.
 term' c bool.
 
 thm daemon (seq Gamma F) [].
@@ -68,15 +76,15 @@ thm daemon (seq Gamma F) [].
 
 thm r (seq Gamma (eq ' X ' X)) [].
 thm (t Y) (seq Gamma (eq ' X ' Z))
- [ seq Gamma (eq ' X ' Y), seq Gamma (eq ' Y ' Z) ] :- term X A, term Y A.
+ [ seq Gamma (eq ' X ' Y), seq Gamma (eq ' Y ' Z) ] :- reterm X A, term Y A.
 thm (m P) (seq Gamma Q) [ seq Gamma (eq ' P ' Q), seq Gamma P ] :- term P bool.
 thm b (seq Gamma (eq ' ((lam _ F) ' X) ' (F X))) [].
 thm c (seq Gamma (eq ' (F ' X) ' (G ' Y)))
- [ seq Gamma (eq ' F ' G) , seq Gamma (eq ' X ' Y) ] :- term X A, term Y A.
+ [ seq Gamma (eq ' F ' G) , seq Gamma (eq ' X ' Y) ] :- reterm X A, reterm Y A.
 thm k (seq Gamma (eq ' (lam A S) ' (lam A T)))
  [ bind A x \ seq Gamma (eq ' (S x) ' (T x)) ].
 thm s (seq Gamma (eq ' P ' Q)) [ seq (P :: Gamma) Q, seq (Q :: Gamma) P ] :-
- term P bool.
+ reterm P bool.
 thm (h IGN) (seq Gamma P) [] :- append IGN [ P | Gamma2 ] Gamma.
 
 thm d (seq Gamma (eq ' C ' A)) [] :- def0 C A.
