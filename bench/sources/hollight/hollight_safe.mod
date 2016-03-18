@@ -1143,16 +1143,21 @@ main :-
   one or more goals delayed on it. We never check for them and we have
   no way atm to do that. See bug -3)
 
+-2.25) major bug: in a polymorphic constant definitions, all polymorphic
+ variables in the body must occur in the type of the constant. How to enforce
+ this?
+
 -2) the test apply_2 is very slow: why?
     same for the witness for mybool
 
-0) definitions must not be recursive (check needed)
-   axioms are missing
+0) definitions must not be recursive; typing should capture it
+   (but not if $delay is commented out...)
 
-0.5) reduce and keep documented the trusted code base
+0.25) axioms are missing
 
 0.75) Observation: so far our HOL-Light is intuitionistic.
- Keep it like that?
+ Keep it like that? Note: according to Wiedijk, new_basic_types makes it
+ classical anyway (EM) provable
 
 1) the need to use delay is a very good news. It justifies our
 implementation and it easily allow to publish. We also need to add
@@ -1168,11 +1173,6 @@ The propagation rule is however harder. Consider:
 
  We will discuss about it and we basically already have
  the code in the refiner.elpi file.
-
-1.25) major bug: I think that the proof of a theorem may now force it to
-  be monomorphic, but we forget this when we assume it in check.
-  Similarly: tt is defined as (x\x)=(x\x) but what is the type of those
-  abstractions? It remains uninstantiated in the proof.
 
 2) we need to fix the ELPI problems about handling of metavariables.
  I have already discussed with Enrico about them and he could have a
