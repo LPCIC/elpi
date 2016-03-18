@@ -1133,10 +1133,10 @@ module type Indexing = sig
   val pp_key : key -> string
   type index
   val key_of : mode:[`Query | `Clause] -> depth:int -> term -> key
-  val add_clauses : key clause list -> index -> index
+  val add_clauses : key clause list -> (int * term) -> index -> index
   val get_clauses : depth:int -> term -> index -> key clause list
   val make_index : key clause list -> index
-  val diff_progs : to_:int -> index -> index -> term list
+  val local_prog : to_:int -> index -> term list
 end
 
 module TwoMapIndexing : Indexing = struct (* {{{ *)
@@ -1151,7 +1151,10 @@ type key = key1 * key2
 
 let pp_key (hd,_) = string_of_constant hd
 
-type index = (key clause list * key clause list * key clause list Ptmap.t) Ptmap.t
+type index = {
+  src : (int * term) list;
+  map : (key clause list * key clause list * key clause list Ptmap.t) Ptmap.t
+}
 
 let variablek =    -99999999
 let abstractionk = -99999998
@@ -1193,7 +1196,7 @@ let key_of ~mode:_ ~depth =
  in
   key_of_depth
 
-let get_clauses ~depth a m =
+let get_clauses ~depth a { map = m } =
  let ind,app = key_of ~mode:`Query ~depth a in
  try
   let l,flexs,h = Ptmap.find ind m in
@@ -1201,8 +1204,8 @@ let get_clauses ~depth a m =
   else (try Ptmap.find app h with Not_found -> flexs)
  with Not_found -> []
 
-let add_clauses clauses p =       
-  List.fold_left (fun m clause -> 
+let add_clauses clauses s { map = p;  src } =       
+  let p = List.fold_left (fun m clause -> 
     let ind,app = clause.key in
     try 
       let l,flexs,h = Ptmap.find ind m in
@@ -1221,8 +1224,12 @@ let add_clauses clauses p =
       Ptmap.add ind
        ([clause],[],Ptmap.add app [clause] Ptmap.empty) m
     ) p clauses
+  in
+  { map = p; src = s :: src }
 
-let make_index p = add_clauses (List.rev p) Ptmap.empty
+let make_index p =
+  let idx = add_clauses (List.rev p) (0,cutc) { map = Ptmap.empty; src = [] } in
+  { idx with src = [] } (* original program not in clauses *)
  
 (* flatten_snd = List.flatten o (List.map ~~snd~~) *)
 (* TODO: is this optimization necessary or useless? *)
@@ -1265,28 +1272,8 @@ let close_with_pis depth vars t =
    if n = 0 then t else App(pic,Lam (add_pis (n-1) t),[]) in
   add_pis vars (aux t)
 
-let diff_progs ~to_ (prog1 : index) prog2 =  
- let res =
-  flatten_snd
-   (Ptmap.to_list
-    (Ptmap.diff
-      (fun (cllist1,dummy1,dummy2) (cllist2,_,_) ->        
-        let rec get_prefix acc =
-         function
-            l when l == cllist2 -> List.rev acc
-          | hd::tl -> get_prefix (hd::acc) tl
-          | [] -> anomaly "Some clauses were deleted from the program" in
-        match get_prefix [] cllist1 with
-           [] -> None
-         | l -> Some (l,dummy1,dummy2))
-      prog1 prog2)) in
- List.rev_map
-  (fun { depth = depth; args = args; hyps = hyps; key=(key,_); vars = vars } ->
-    let app = match args with [] -> Const key | hd::tl -> App (key,hd,tl) in
-    let app = List.fold_right (fun h t -> App (implc,h,[t])) hyps app in
-    let app = close_with_pis depth vars app in
-    lift ~from:depth ~to_ app
-  ) res
+let local_prog ~to_ { src } =  
+  List.rev_map (fun (depth, t) -> lift ~from:depth ~to_ t) src
 
 end (* }}} *)
 
@@ -1294,7 +1281,10 @@ module UnifBits : Indexing = struct
 
   type key = int
 
-  type index = (key clause * int) list Ptmap.t  (* timestamp *)
+  type index = {
+    src : (int * term) list;
+    map : (key clause * int) list Ptmap.t  (* timestamp *)
+  }
 
   let key_bits =
     let n = ref 0 in
@@ -1388,15 +1378,16 @@ module UnifBits : Indexing = struct
       SPY "key-val" (fun f x -> Format.fprintf f "%s" (dec_to_bin x)) (!buf);
       !buf
 
-  let get_clauses ~depth a m =
+  let get_clauses ~depth a { map = m } =
     let ind = key_of ~mode:`Query ~depth a in
     let cl_list = List.flatten (Ptmap.find_unifiables ~functor_bits ind m) in
     List.map fst
       (List.fast_sort (fun (_,cl1) (_,cl2) -> compare cl1 cl2) cl_list)
       
-  let timestamp = ref 0    
-  let add_clauses ?(op=decr) clauses ptree =
-    List.fold_left (fun m clause -> 
+  let timestamp = ref 0
+
+  let add_clauses ?(op=decr) clauses s { map = ptree; src } =
+    let map = List.fold_left (fun m clause -> 
       let ind = clause.key in
       let clause = clause, !timestamp in
       op timestamp;
@@ -1405,16 +1396,17 @@ module UnifBits : Indexing = struct
         Ptmap.add ind (clause::cl_list) m
       with Not_found -> 
         Ptmap.add ind [clause] m
-    ) ptree clauses
+    ) ptree clauses in
+    { map; src = s :: src }
  
   let make_index p =
     timestamp := 1;
-    let m = add_clauses ~op:incr p Ptmap.empty in
+    let m = add_clauses ~op:incr p (0,cutc) { map = Ptmap.empty; src = [] } in
     timestamp := 0;
-    m
+    { m with src = [] }
 
   (* Get rid of optional arg *)
-  let add_clauses cl pt = add_clauses cl pt
+  let add_clauses cl p pt = add_clauses cl p pt
 
   (* from (key, (key clause * int) list) list  
     creates  key clause list *)
@@ -1422,9 +1414,8 @@ module UnifBits : Indexing = struct
      [] -> []
    | (_,l)::tl -> (List.map (fun (cl,_) -> cl) l) @ flatten_ tl
 
-  let diff_progs ~to_ (prog1 : index) prog2 =
-   assert false (* TO BE IMPLEMENTED BUT IT CAN ONLY BE IMPLEMENTED
-                   AUGMENTING THE DATA STRUCTURES *)
+let local_prog ~to_ { src } =  
+  List.rev_map (fun (depth, t) -> lift ~from:depth ~to_ t) src
 
 end
 
@@ -1479,7 +1470,7 @@ let safe_equal a x =
 safe_eq := safe_equal
 
 let delay_goal ~depth prog ~goal:g ~on:keys =
-  let pdiff = diff_progs ~to_:depth prog !original_program in
+  let pdiff = local_prog ~to_:depth prog in
   (*Format.fprintf Format.std_formatter
     (*"Delaying goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
     "Delaying goal: @[<hov 2> ...@ ⊢^%d %a@]\n%!"
@@ -2454,13 +2445,13 @@ end
        let clauses, lcs = clausify 0 depth [] [] 0 g1 in
        let g2 = lift ~from:depth ~to_:(depth+lcs) g2 in
        (*Format.eprintf "TO: %a \n%!" (uppterm (depth+lcs) [] 0 [||]) g2;*)
-       run (depth+lcs) (add_clauses clauses p) g2 gs next alts lvl
+       run (depth+lcs) (add_clauses clauses (depth,g1) p) g2 gs next alts lvl
     | App(c, g1, [g2]) when c == implc ->
        (*Format.eprintf "RUN: %a\n%!" (uppterm depth [] 0 [||]) g ;*)
        let clauses, lcs = clausify 0 depth [] [] 0 g1 in
        let g2 = lift ~from:depth ~to_:(depth+lcs) g2 in
        (*Format.eprintf "TO: %a \n%!" (uppterm (depth+lcs) [] 0 [||]) g2;*)
-       run (depth+lcs) (add_clauses clauses p) g2 gs next alts lvl
+       run (depth+lcs) (add_clauses clauses (depth,g1) p) g2 gs next alts lvl
 (*  This stays commented out because it slows down rev18 in a visible way!   *)
 (*  | App(c, _, _) when c == implc -> anomaly "Implication must have 2 args" *)
     | App(c, arg, []) when c == pic ->
