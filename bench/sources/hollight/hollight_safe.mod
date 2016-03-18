@@ -1106,10 +1106,28 @@ main :-
  , theorem mybool2f_monotone (monotone '' _ ' mybool2f,
    [ then (conv (depth_tac (dd [mybool2f]))) auto_monotone ])
  , def mybool2fp ((bool --> bool),(fixpoint '' _ ' mybool2f))
-/*
- , theorem mybool2f_i
-    (! x \ mybool2f ' mybool2fp ' x ==> myboolf2p ' x)
-*/
+ , theorem mybool2fp_i ((! x13 \ mybool2f ' mybool2fp ' x13 ==> mybool2fp ' x13),
+   [then forall_i
+     (bind bool x13 \
+       then (conv (rand_tac (rator_tac dd)))
+        (then (conv (land_tac (rator_tac (rand_tac dd))))
+          (then inv
+            (then (cutth fixpoint_is_prefixpoint)
+              (then (lforall mybool2f)
+                (thenl lapply [applyth mybool2f_monotone,
+                  then
+                   (g
+                     (subseteq '' bool '
+                       (mybool2f ' (fixpoint '' bool ' mybool2f)) '
+                       (fixpoint '' bool ' mybool2f)))
+                   (then (conv (depth_tac (dd [subseteq])))
+                     (then (conv (depth_tac (dd [in])))
+                       (then (conv (depth_tac (dd [in]))) (itaut 4))))]))))))])
+ , theorem mybool2fp_i1 (mybool2fp ' tt,
+    [then (applyth mybool2fp_i) (then (conv dd) (itaut 1))])
+ , theorem mybool2fp_i2 ((! x13 \ mybool2fp ' x13 ==> mybool2fp ' (not ' x13)),
+    [then inv
+      (bind bool x13 \ then (applyth mybool2fp_i) (then (conv dd) (itaut 3)))])
  , new_basic_type mybool2 myrep2 myabs2 myrepabs2 myabsrep2
     mybool2fp
     [then (conv (depth_tac (dd [mybool2fp])))
