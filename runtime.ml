@@ -1444,7 +1444,7 @@ let original_program = Fork.new_local (Obj.magic 0 : index) (* dummy value *)
  * be a tuple *)
 exception Delayed_goal of (int * index * term list * term)
 
-let safe_equal a x =
+let safe_equal a x = Hashtbl.hash a = Hashtbl.hash x (*
  match a,x with
    (Delayed_goal (depth,prog,pdiff,g),xs), (Delayed_goal (depth',prog',pdiff',g'),xs') ->
   Format.fprintf Format.str_formatter
@@ -1464,7 +1464,7 @@ let safe_equal a x =
   s1 = s2 (*
     depth = depth' && g == g' &&
      List.for_all2 (==) xs xs' *)
- | _, _ -> false
+ | _, _ -> false *)
 ;;
 
 safe_eq := safe_equal
