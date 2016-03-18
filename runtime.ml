@@ -329,7 +329,7 @@ let nablac = fst (funct_of_ast (F.from_string "nabla"))
 let entailsc = fst (funct_of_ast (F.from_string "?-"))
 let destappc = fst (funct_of_ast (F.from_string "@"))
 
-let rec dummy = App (-9999,dummy,[])
+let dummy = App (-9999,cutc,[])
 
 end (* }}} *)
 open Constants
