@@ -278,7 +278,7 @@ callback_proved NAME GOAL (false,_) :- parse PGOAL GOAL, $print NAME ":" PGOAL.
 callback_proved NAME G (true, [ TAC ]) :-
  canonical TAC CANONICALTAC,
  parse PG G,
- $print (theorem NAME PG [ CANONICALTAC ]).
+ $print (theorem NAME (PG , [ CANONICALTAC ] )).
 
 end_of_proof (true, []) :- $print "proof completed".
 end_of_proof (false, []).
