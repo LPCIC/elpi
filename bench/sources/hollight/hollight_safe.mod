@@ -242,12 +242,14 @@ parsetac ww ww.
 
 /************ interactive and non interactive loops ********/
 
-parse_obj (theorem NAME PSTTAC) (theorem NAME STTAC) :- parse_thm PSTTAC STTAC.
+parse_obj (theorem NAME PSTTAC) [theorem NAME STTAC] :- parse_thm PSTTAC STTAC.
 parse_obj (new_basic_type TYPE REP ABS REPABS ABSREP PP TACTICS)
- (new_basic_type TYPE REP ABS REPABS ABSREP P (false,TACTICS)) :- parse PP P.
+ [new_basic_type TYPE REP ABS REPABS ABSREP P (false,TACTICS)] :- parse PP P.
 parse_obj (new_basic_type TYPE REP ABS REPABS ABSREP PP)
- (new_basic_type TYPE REP ABS REPABS ABSREP P (true,[_])) :- parse PP P.
-parse_obj (def NAME PTYBO) (def NAME TYBO) :- parse_def PTYBO TYBO.
+ [new_basic_type TYPE REP ABS REPABS ABSREP P (true,[_])] :- parse PP P.
+parse_obj (def NAME PTYBO) [def NAME TYBO] :- parse_def PTYBO TYBO.
+parse_obj (inductive_def PRED PREDF PREDF_MON PRED_I K) EXP :-
+ inductive_def_pkg PRED PREDF PREDF_MON PRED_I K EXP.
 
 parse_def (pi I) (pi O) :- pi x \ parse_def (I x) (O x).
 parse_def (TY,PB) (TY,B) :- parse PB B.
@@ -256,11 +258,12 @@ parse_thm (pi I) (pi O) :- pi x \ parse_thm (I x) (O x).
 parse_thm (PST,TAC) (ST,(false,TAC)) :- !, parse PST ST.
 parse_thm PST (ST,(true,[X])) :- parse PST ST.
 
-next_object [ C | NEXT ] CT NEXT :- parse_obj C CT.
-next_object [] C toplevel :- 
+next_object [ C | NEXT ] CT CONTNEXT :-
+  parse_obj C [ CT | CONT ], append CONT NEXT CONTNEXT.
+next_object [] C CONT :- 
  $print "Welcome to HOL extra-light",
- toplevel_loop C.
-next_object toplevel C toplevel :- toplevel_loop C.
+ toplevel_loop [ C | CONT ].
+next_object toplevel C CONT :- toplevel_loop [ C | CONT ].
 
 read_cmd H :-
  $print "Enter a command or \"stop\"",
@@ -270,7 +273,7 @@ read_cmd H :- read_cmd H.
 
 toplevel_loop G :-
  read_cmd H,
- ( H = stop, !
+ ( H = stop, !, G = [stop]
  ; parse_obj H PH, !, (G = PH ; $print "error", toplevel_loop G)
  ; $print "bad command", toplevel_loop G ).
 
@@ -332,6 +335,55 @@ canonical (thenl T L) OTAC :- !,
   (S = [], !, OTAC = T ; OTAC = then T S)
  ; OTAC = thenl T L2).
 canonical T T.
+
+/************ inductive_def package ********/
+build_predicate P X [ (_,K) ] R :-
+ process_constructor P X K R.
+build_predicate P X [ (_,K) | REST ] (or ' Q ' R) :-
+ process_constructor P X K Q,
+ build_predicate P X REST R.
+
+process_constructor P X (forall '' TY ' lam TY Q) (exists '' TY ' lam TY R) :-
+ pi y \ process_constructor P X (Q y) (R y).
+process_constructor P X (impl ' H ' K) (and ' H ' R) :-
+ process_constructor P X K R.
+process_constructor P X (P ' T) (eq ' X ' T).
+
+inductive_def_pkg PRED PREDF PREDF_MONOTONE PRED_I L OUT :-
+ (pi p \ list_map (L p)
+  (x \ px \ sigma A \ sigma B \ sigma PB \ x = (A, B), parse B PB, px = (A, PB))
+  (PL p)),
+ (pi p \ pi x \ build_predicate p x (PL p) (P p x)),
+ F = (lam _ p \ lam _ x \ P p x),
+ !,
+ OUT1 =
+  [ def PREDF (_,F)
+  , theorem PREDF_MONOTONE (monotone '' _ ' PREDF,
+     [ then (conv (depth_tac (dd [PREDF]))) auto_monotone ])
+  , def PRED (_,(fixpoint '' _ ' PREDF))
+  , theorem PRED_I ((! x13 \ PREDF ' PRED ' x13 ==> PRED ' x13),
+   [then forall_i
+     (bind _ x13 \
+       then (conv (rand_tac (rator_tac dd)))
+        (then (conv (land_tac (rator_tac (rand_tac dd))))
+          (then inv
+            (then (cutth fixpoint_is_prefixpoint)
+              (then (lforall PREDF)
+                (thenl lapply [applyth PREDF_MONOTONE,
+                  then
+                   (g
+                     (subseteq '' _ '
+                       (PREDF ' (fixpoint '' _ ' PREDF)) '
+                       (fixpoint '' _ ' PREDF)))
+                   (then (conv (depth_tac (dd [subseteq])))
+                     (then (conv (depth_tac (dd [in])))
+                       (then (conv (depth_tac (dd [in])))(itaut 4))))]))))))])],
+ list_map (PL PRED) (mk_intro_thm PRED_I) OUT2,
+ append OUT1 OUT2 OUT.
+
+mk_intro_thm PRED_I (NAME,ST)
+ (theorem NAME (ST,
+   [then inv (bind* (then (applyth PRED_I) (then (conv dd) (itaut 3))))])).
 
 /************ library of basic data types ********/
 /* bounded 'a ::= 'a | bind A (F : _ -> bounded 'a) */
@@ -1100,6 +1152,9 @@ main :-
    [ auto_monotone ])
  , theorem test_monotone3 (monotone '' _ ' (lam _ p \ lam _ x \ ! z \ ? y \ (not ' (p ' x) ==> z && p ' y $$ y)),
    [ auto_monotone ])
+ , inductive_def pnn pnnF pnnF_monotone pnn_i (pnn \
+     [ (pnn_tt, pnn ' tt)
+     , (pnn_not, ! x \ pnn ' x ==> pnn ' (not ' x))])
    /* |- mybool2 ' tt      mybool2 ' y |- mybool2 ' (not ' y) */
  , def mybool2f (((bool --> bool) --> (bool --> bool)),
     (lam _ p \ lam _ x \ x = tt $$ ? y \ p ' y && x = not ' y))
