@@ -1155,6 +1155,98 @@ main :-
  , inductive_def pnn pnnF pnnF_monotone pnn_i (pnn \
      [ (pnn_tt, pnn ' tt)
      , (pnn_not, ! x \ pnn ' x ==> pnn ' (not ' x))])
+ , theorem pnn_e
+    ((! x13 \
+       (! x14 \ pnnF ' x13 ' x14 ==> x13 ' x14) ==>
+        (! x14 \ pnn ' x14 ==> x13 ' x14)) ,
+      [then forall_i
+        (bind (bool --> bool) x13 \
+          then (cutth fixpoint_subseteq_any_prefixpoint)
+           (then (lforall pnnF)
+             (then (lforall x13)
+               (then (conv (depth_tac (dd [pnn])))
+                 (then inv
+                   (bind bool x14 \
+                     then
+                      (g
+                        (impl ' (subseteq '' bool ' (pnnF ' x13) ' x13) '
+                          (subseteq '' bool ' (fixpoint '' bool ' pnnF) ' x13)))
+                      (then (conv (depth_tac (dd [subseteq])))
+                        (then (conv (depth_tac (dd [subseteq])))
+                          (then (conv (depth_tac (dd [in])))
+                            (then (conv (depth_tac (dd [in])))
+                              (then (conv (depth_tac (dd [in])))
+                                (then (conv (depth_tac (dd [in])))
+                                  (then
+                                    (w
+                                      (impl '
+                                        (subseteq '' bool ' (pnnF ' x13) ' x13) '
+                                        (subseteq '' bool '
+                                          (fixpoint '' bool ' pnnF) ' x13)))
+                                    (then inv
+                                      (thenl lapply_last [h,
+                                        then (lforall_last x14)
+                                         (then lapply_last h)])))))))))))))))])
+ , theorem pnn_has_two_values
+ ((! x13 \ pnn ' x13 ==> x13 = tt $$ x13 = ff) ,
+   [then (cutth pnn_e)
+     (then (lforall (lam bool x13 \ or ' (eq ' x13 ' tt) ' (eq ' x13 ' ff)))
+       (thenl lapply
+         [then (conv (depth_tac (dd [pnnF])))
+           (then (conv (depth_tac b))
+             (then forall_i
+               (bind bool x13 \
+                 then i
+                  (thenl left [itaut 2,
+                    then left
+                     (bind bool x14 \
+                       then left
+                        (then
+                          (g
+                            ((lam bool x15 \
+                               or ' (eq ' x15 ' tt) ' (eq ' x15 ' ff)) ' x14))
+                          (then (conv (depth_tac b))
+                            (then
+                              (w
+                                ((lam bool x15 \
+                                   or ' (eq ' x15 ' tt) ' (eq ' x15 ' ff)) '
+                                  x14))
+                              (then i
+                                (thenl left
+                                  [then (applyth orr)
+                                    (then (conv (depth_tac h))
+                                      (then (conv (depth_tac h))
+                                        (then (w (eq ' x14 ' tt))
+                                          (then (w (eq ' x13 ' (not ' x14)))
+                                            (itaut 10))))),
+                                  then (applyth orl)
+                                   (then (conv (depth_tac h))
+                                     (then (conv (depth_tac h))
+                                       (then (w (eq ' x14 ' ff))
+                                         (then (w (eq ' x13 ' (not ' x14)))
+                                           (itaut 3)))))]))))))])))),
+         then inv
+          (bind bool x13 \
+            then
+             (g
+               (forall '' bool '
+                 (lam bool x14 \
+                   impl ' (pnn ' x14) '
+                    ((lam bool x15 \ or ' (eq ' x15 ' tt) ' (eq ' x15 ' ff)) '
+                      x14))))
+             (then (conv (depth_tac b)) (then inv (then apply_last h))))]))])
+ , theorem pnn_has_two_values2
+   ((! x13 \ pnn ' x13 ==> x13 = tt $$ x13 = ff) ,
+     [then inv
+       (bind bool x13 \
+         thenl
+          (m ((lam bool x14 \ or ' (eq ' x14 ' tt) ' (eq ' x14 ' ff)) ' x13)) [b,
+          then (cutth pnn_e)
+           (then
+             (lforall (lam bool x14 \ or ' (eq ' x14 ' tt) ' (eq ' x14 ' ff)))
+             (then (thenl apply_last [id, h])
+               (then (conv (depth_tac b))
+                 (then (conv (depth_tac (dd [pnnF]))) daemon))))])])
    /* |- mybool2 ' tt      mybool2 ' y |- mybool2 ' (not ' y) */
  , def mybool2f (((bool --> bool) --> (bool --> bool)),
     (lam _ p \ lam _ x \ x = tt $$ ? y \ p ' y && x = not ' y))
