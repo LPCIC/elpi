@@ -1153,6 +1153,13 @@ main :-
        (bind bool x13 \ then (lforall x13) (then (applyth eq_to_impl_f) h)))])
  , def mytt (mybool2,(myabs2 ' tt))
  , def mynot ((mybool2 --> mybool2),(lam _ x \ myabs2 ' (not ' (myrep2 ' x))))
+ , theorem mybool2fp_myrep2 ((! x13 \ mybool2fp ' (myrep2 ' x13)) ,
+    [then inv
+     (bind mybool2 x13 \
+       then (cutth myrepabs2)
+        (then (lforall (myrep2 ' x13))
+          (then (cutth myabsrep2)
+            (then (lforall x13) (then (conv h) (thenl c [r, h]))))))]) 
 /* theorem mybool2fp_ind
     (! p \ p ' tt ==> (! y \ p ' y ==> p ' (not ' y)) ==>
       ! x \ mybool2fp 'x ==> p ' x)
@@ -1168,23 +1175,27 @@ main :-
 
    By mybool2fp_ind + absrep + repabs
 */
-/*theorem step0 (! x13 \ mynot ' (mynot ' (mynot ' x13)) = mynot ' x13)
- [then inv
-   (bind mybool2 x13 \
-     then (conv (depth_tac (dd [mynot])))
-      (then (conv (depth_tac (dd [mynot])))
-        (then (conv (depth_tac (dd [mynot])))
-          (then (conv (depth_tac (dd [mynot])))
-            (thenl
-              (conv (land_tac (rand_tac (rand_tac (applyth myrepabs2u)))))
-              [then (conv (depth_tac (dd [mybool2fp]))) daemon,
-              thenl
-               (conv
-                 (land_tac
-                   (rand_tac (rand_tac (rand_tac (applyth myrepabs2u))))))
-               [daemon,
-               then (conv (land_tac (rand_tac (applyth not_not_not)))) r]])))))]
-*/
+ , theorem step0
+    ((! x13 \ mynot ' (mynot ' (mynot ' x13)) = mynot ' x13) ,
+     [then inv
+      (bind mybool2 x13 \
+        then (repeat (conv (depth_tac (dd [mynot]))))
+         (thenl (conv (land_tac (rand_tac (rand_tac (applyth myrepabs2u)))))
+          [then (cutth mybool2fp_i2)
+            (then (lforall (myrep2 ' (myabs2 ' (not ' (myrep2 ' x13)))))
+              (then (cutth mybool2fp_myrep2)
+                (then (lforall (myabs2 ' (not ' (myrep2 ' x13))))
+                  (then apply h)))),
+          thenl
+           (conv
+             (land_tac
+               (rand_tac (rand_tac (rand_tac (applyth myrepabs2u))))))
+           [then (cutth mybool2fp_i2)
+             (then (lforall (myrep2 ' x13))
+               (then (cutth mybool2fp_myrep2)
+                 (then (lforall x13) (then apply h)))),
+           then (conv (land_tac (rand_tac (applyth not_not_not)))) r]]))])
+
 /*
  , theorem step1 (! x \ x = mytt $$ x = mynot ' mytt $$ x = mynot ' (mynot ' mytt))
 
