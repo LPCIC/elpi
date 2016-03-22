@@ -1324,6 +1324,105 @@ main :-
                                                 (then sym apply_last)))
                                             (then apply (then apply daemon))])))],
                                  h, h])))))))])))))])
+ , theorem mybool2_e2
+ ((! x18 \
+    x18 ' mytt && (! x19 \ x18 ' x19 ==> x18 ' (mynot ' x19)) ==>
+     (! x19 \ x18 ' x19)) ,
+   [thenl
+     (cut
+       (forall '' (bool2 --> prop) '
+         (lam (bool2 --> prop) x18 \
+           impl '
+            (and ' (x18 ' (myabs2 ' (myrep2 ' mytt))) '
+              (forall '' bool2 '
+                (lam bool2 x19 \
+                  impl ' (x18 ' (myabs2 ' (myrep2 ' x19))) '
+                   (x18 '
+                     (myabs2 '
+                       (myrep2 ' (mynot ' (myabs2 ' (myrep2 ' x19)))))))))
+            '
+            (forall '' bool2 '
+              (lam bool2 x19 \ x18 ' (myabs2 ' (myrep2 ' x19)))))))
+     [then
+       (g
+         (forall '' (bool2 --> prop) '
+           (lam (bool2 --> prop) x18 \
+             impl '
+              (and ' (x18 ' (myabs2 ' (myrep2 ' mytt))) '
+                (forall '' bool2 '
+                  (lam bool2 x19 \
+                    impl ' (x18 ' (myabs2 ' (myrep2 ' x19))) '
+                     (x18 '
+                       (myabs2 '
+                         (myrep2 ' (mynot ' (myabs2 ' (myrep2 ' x19)))))))))
+              '
+              (forall '' bool2 '
+                (lam bool2 x19 \ x18 ' (myabs2 ' (myrep2 ' x19)))))))
+       (then
+         (w
+           (forall '' (bool2 --> prop) '
+             (lam (bool2 --> prop) x18 \
+               impl '
+                (and ' (x18 ' (myabs2 ' (myrep2 ' mytt))) '
+                  (forall '' bool2 '
+                    (lam bool2 x19 \
+                      impl ' (x18 ' (myabs2 ' (myrep2 ' x19))) '
+                       (x18 '
+                         (myabs2 '
+                           (myrep2 ' (mynot ' (myabs2 ' (myrep2 ' x19)))))))))
+                '
+                (forall '' bool2 '
+                  (lam bool2 x19 \ x18 ' (myabs2 ' (myrep2 ' x19)))))))
+         (then (repeat (conv (depth_tac (applyth myabsrep2)))) (then i h))),
+     then forall_i
+      (bind (bool2 --> prop) x18 \
+        then (cutth pnn_e)
+         (then
+           (lforall
+             (lam prop x19 \
+               exists '' bool2 '
+                (lam bool2 x20 \
+                  and ' (eq ' x19 ' (myrep2 ' x20)) '
+                   (x18 ' (myabs2 ' x19)))))
+           (then inv
+             (bind bool2 x19 \
+               thenl
+                (cut
+                  ((lam prop x20 \
+                     exists '' bool2 '
+                      (lam bool2 x21 \
+                        and ' (eq ' x20 ' (myrep2 ' x21)) '
+                         (x18 ' (myabs2 ' x20)))) ' (myrep2 ' x19)))
+                [then
+                  (g
+                    ((lam prop x20 \
+                       exists '' bool2 '
+                        (lam bool2 x21 \
+                          and ' (eq ' x20 ' (myrep2 ' x21)) '
+                           (x18 ' (myabs2 ' x20)))) ' (myrep2 ' x19)))
+                  (then (conv (depth_tac b)) inv),
+                thenl apply
+                 [then (repeat (conv (depth_tac b)))
+                   (thenl inv
+                     [then (cutth exists_i)
+                       (then
+                         (lforall_last
+                           (lam bool2 x20 \
+                             and ' (eq ' tt ' (myrep2 ' x20)) '
+                              (x18 ' (myabs2 ' tt))))
+                         (then (lforall_last mytt)
+                           (then apply_last (then (conv b) daemon)))),
+                     (bind prop x20 \
+                       bind bool2 x21 \
+                        then (cutth exists_i)
+                         (then
+                           (lforall_last
+                             (lam bool2 x22 \
+                               and ' (eq ' (not ' x20) ' (myrep2 ' x22)) '
+                                (x18 ' (myabs2 ' (not ' x20)))))
+                           (then (lforall_last (mynot ' x21))
+                             (then apply_last (then (conv b) daemon)))))]),
+                 applyth myproprep2]]))))]])
 
 , theorem step0
     ((! x13 \ mynot ' (mynot ' (mynot ' x13)) = mynot ' x13) ,
