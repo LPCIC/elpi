@@ -1235,80 +1235,28 @@ main :-
  , inductive_def two twoF twoF_monotone two_i two_e0 two_e (two \
      [ (two_tt, two ' tt)
      , (two_ff, two ' ff) ])
-   /* |- mybool2 ' tt      mybool2 ' y |- mybool2 ' (not ' y) */
- , def mybool2f (((bool --> bool) --> (bool --> bool)),
-    (lam _ p \ lam _ x \ x = tt $$ ? y \ p ' y && x = not ' y))
- , theorem mybool2f_monotone (monotone '' _ ' mybool2f,
-   [ then (conv (depth_tac (dd [mybool2f]))) auto_monotone ])
- , def mybool2fp ((bool --> bool),(fixpoint '' _ ' mybool2f))
- , theorem mybool2fp_i ((! x13 \ mybool2f ' mybool2fp ' x13 ==> mybool2fp ' x13),
-   [then forall_i
-     (bind bool x13 \
-       then (conv (rand_tac (rator_tac dd)))
-        (then (conv (land_tac (rator_tac (rand_tac dd))))
-          (then inv
-            (then (cutth fixpoint_is_prefixpoint)
-              (then (lforall mybool2f)
-                (thenl lapply [applyth mybool2f_monotone,
-                  then
-                   (g
-                     (subseteq '' bool '
-                       (mybool2f ' (fixpoint '' bool ' mybool2f)) '
-                       (fixpoint '' bool ' mybool2f)))
-                   (then (conv (depth_tac (dd [subseteq])))
-                     (then (conv (depth_tac (dd [in])))
-                       (then (conv (depth_tac (dd [in]))) (itaut 4))))]))))))])
- , theorem mybool2fp_i1 (mybool2fp ' tt,
-    [then (applyth mybool2fp_i) (then (conv dd) (itaut 1))])
- , theorem mybool2fp_i2 ((! x13 \ mybool2fp ' x13 ==> mybool2fp ' (not ' x13)),
-    [then inv
-      (bind bool x13 \ then (applyth mybool2fp_i) (then (conv dd) (itaut 3)))])
  , new_basic_type mybool2 myrep2 myabs2 myrepabs2 myabsrep2
-    mybool2fp
-    [then (conv (depth_tac (dd [mybool2fp])))
-     (then (conv (depth_tac (dd [mybool2f])))
-      (then (cutth exists_i)
-       (then lforall
-         (then (lforall tt)
-           (then apply
-             (then (conv dd)
-               (then forall_i
-                 (bind (bool --> bool) x9 \
-                   then (conv (depth_tac (dd [subseteq])))
-                    (then (conv (depth_tac (dd [in])))
-                      (then (conv (depth_tac (dd [in])))
-                        (then (conv (depth_tac (dd [in])))
-                          (then (conv (depth_tac b))
-                            (then (conv (depth_tac b))
-                              (then i (then apply (itaut 1))))))))))))))))]
+    pnn
+    [then (cutth pnn_tt) (then (applyth exists_i) h)]
  , theorem myrepabs2u
-   ((! x13 \ mybool2fp ' x13 ==> myrep2 ' (myabs2 ' x13) = x13),
+   ((! x13 \ pnn ' x13 ==> myrep2 ' (myabs2 ' x13) = x13),
    [then (cutth myrepabs2)
      (then forall_i
        (bind bool x13 \ then (lforall x13) (then (applyth eq_to_impl_f) h)))])
  , def mytt (mybool2,(myabs2 ' tt))
  , def mynot ((mybool2 --> mybool2),(lam _ x \ myabs2 ' (not ' (myrep2 ' x))))
- , theorem mybool2fp_myrep2 ((! x13 \ mybool2fp ' (myrep2 ' x13)) ,
+ , theorem pnn_myrep2 ((! x13 \ pnn ' (myrep2 ' x13)) ,
     [then inv
      (bind mybool2 x13 \
        then (cutth myrepabs2)
         (then (lforall (myrep2 ' x13))
           (then (cutth myabsrep2)
             (then (lforall x13) (then (conv h) (thenl c [r, h]))))))]) 
-/* theorem mybool2fp_ind
-    (! p \ p ' tt ==> (! y \ p ' y ==> p ' (not ' y)) ==>
-      ! x \ mybool2fp 'x ==> p ' x)
-   then (cutth fixpoint_is_prefixpoint)
-    (then (lforall A)
-      (thenl lapply [ applyth mybool2f_monotone, itaut ]))
-
-   By fixpoint_is_(pre)fixpoint + mybool2f_monotone
-
- , theorem mybool2_ind
+/* , theorem mybool2_e
     (! p \ p ' mytt ==> (! y \ p ' y ==> p ' (mynot ' y)) ==>
       ! x \ p ' x)
 
-   By mybool2fp_ind + absrep + repabs
+   By npp_e + absrep + repabs
 */
  , theorem step0
     ((! x13 \ mynot ' (mynot ' (mynot ' x13)) = mynot ' x13) ,
@@ -1316,25 +1264,25 @@ main :-
       (bind mybool2 x13 \
         then (repeat (conv (depth_tac (dd [mynot]))))
          (thenl (conv (land_tac (rand_tac (rand_tac (applyth myrepabs2u)))))
-          [then (cutth mybool2fp_i2)
+          [then (cutth pnn_not)
             (then (lforall (myrep2 ' (myabs2 ' (not ' (myrep2 ' x13)))))
-              (then (cutth mybool2fp_myrep2)
+              (then (cutth pnn_myrep2)
                 (then (lforall (myabs2 ' (not ' (myrep2 ' x13))))
                   (then apply h)))),
           thenl
            (conv
              (land_tac
                (rand_tac (rand_tac (rand_tac (applyth myrepabs2u))))))
-           [then (cutth mybool2fp_i2)
+           [then (cutth pnn_not)
              (then (lforall (myrep2 ' x13))
-               (then (cutth mybool2fp_myrep2)
+               (then (cutth pnn_myrep2)
                  (then (lforall x13) (then apply h)))),
            then (conv (land_tac (rand_tac (applyth not_not_not)))) r]]))])
 
 /*
  , theorem step1 (! x \ x = mytt $$ x = mynot ' mytt $$ x = mynot ' (mynot ' mytt))
 
-   By mybool2_ind + mynot_mynot_mynot
+   By mybool2_e + mynot_mynot_mynot
 */
  ].
 
