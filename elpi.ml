@@ -46,7 +46,7 @@ let set_terminal_width ?(max_w=
   List.iter (fun fmt ->
     Format.pp_set_margin fmt max_w;
     Format.pp_set_ellipsis_text fmt "...";
-    Format.pp_set_max_boxes fmt 30)
+    Format.pp_set_max_boxes fmt 0)
   [ Format.err_formatter; Format.std_formatter ]
 ;;
 
