@@ -18,6 +18,12 @@ infix  <<= 130. % subseteq
  * parse                  for pretty-printing messages
  */
 
+/* Predicates exported from the trusted library:
+ * append
+ * fold2_append
+ * put_binds
+ */
+ 
 /* Predicates exported from the kernel:
  * proves
  * check
@@ -26,14 +32,33 @@ infix  <<= 130. % subseteq
 
 { /***** Trusted code base *******/
 
-/* Trusted library predicates:
- * append
- * fold2_append
- * put_binds
- */
+/***** Trusted library functions *****/
+
+/* The names with ' at the end are trusted; the ones without are
+   exported and therefore untrusted. */
+local append', fold2_append', put_binds'.
+
+append' [] L L.
+append' [ X | XS ] L [ X | RES ] :- append' XS L RES.
+append A B C :- append' A B C.
+
+fold2_append' [] [] _ [].
+fold2_append' [ X | XS ] [ Y | YS ] F OUTS :-
+ F X Y OUT, fold2_append' XS YS F OUTS2, append' OUT OUTS2 OUTS.
+fold2_append A B C D :- fold2_append' A B C D.
+
+% put_binds : list 'b -> 'a -> 'c -> list (bounded 'b) -> o
+% put_binds [ f1,...,fn ] x t [ bind t x \ f1,...,bind t x fn ]
+% binding all the xs that occur in f1,...,fn
+put_binds' [] _ _ [].
+put_binds' [ YX | YSX ] X A [ bind A Y | YYS ] :-
+ YX = Y X, put_binds' YSX X A YYS.
+put_binds A B C D :- put_binds' A B C D.
+
+/***** The HOL kernel *****/
 
 local thm, provable, def0, term, term', typ, loop, prove, check1, check1def,
- check1thm, reterm, reterm'.
+ check1thm, reterm, reterm', not_defined.
 
 proves T TY :- provable T TY.
 
@@ -88,7 +113,7 @@ thm k (seq Gamma (eq ' (lam A S) ' (lam A T)))
  [ bind A x \ seq Gamma (eq ' (S x) ' (T x)) ].
 thm s (seq Gamma (eq ' P ' Q)) [ seq (P :: Gamma) Q, seq (Q :: Gamma) P ] :-
  reterm P bool.
-thm (h IGN) (seq Gamma P) [] :- append IGN [ P | Gamma2 ] Gamma.
+thm (h IGN) (seq Gamma P) [] :- append' IGN [ P | Gamma2 ] Gamma.
 
 thm d (seq Gamma (eq ' C ' A)) [] :- def0 C A.
 thm (th NAME) (seq _ G) [] :- provable NAME G.
@@ -96,7 +121,7 @@ thm (th NAME) (seq _ G) [] :- provable NAME G.
 thm (thenll TAC1 TACN) SEQ SEQS :-
  thm TAC1 SEQ NEW,
  deftacl TACN NEW TACL,
- fold2_append TACL NEW thm SEQS.
+ fold2_append' TACL NEW thm SEQS.
 
 /*debprint _ (then _ _) :- !.
 debprint _ (thenl _ _) :- !.
@@ -115,11 +140,11 @@ thm (! TAC) SEQ SEQS :-
 thm id SEQ [ SEQ ].
 
 thm (wl Gamma1) (seq Gamma F) [ seq WGamma F ] :-
- append Gamma1 [ P | Gamma2 ] Gamma,
- append Gamma1 Gamma2 WGamma.
+ append' Gamma1 [ P | Gamma2 ] Gamma,
+ append' Gamma1 Gamma2 WGamma.
 
 thm (bind A TAC) (bind A SEQ) NEWL :-
- pi x \ term' x A => thm (TAC x) (SEQ x) (NEW x), put_binds (NEW x) x A NEWL.
+ pi x \ term' x A => thm (TAC x) (SEQ x) (NEW x), put_binds' (NEW x) x A NEWL.
 
 thm ww (bind A x \ SEQ) [ SEQ ].
 
@@ -132,7 +157,7 @@ loop [] CERTIFICATE :- end_of_proof CERTIFICATE.
 loop [ SEQ | OLD ] CERTIFICATE :-
  next_tactic [ SEQ | OLD ] CERTIFICATE ITAC,
  thm ITAC SEQ NEW,
- append NEW OLD SEQS,
+ append' NEW OLD SEQS,
  update_certificate CERTIFICATE ITAC NEW NEW_CERTIFICATE,
  loop SEQS NEW_CERTIFICATE.
 
@@ -140,30 +165,36 @@ prove G TACS :-
  (term G bool, ! ; $print "Bad statement:" G, fail),
  loop [ seq [] G ] TACS.
 
+not_defined P NAME :-
+ not (P NAME _) ; $print "Error:" NAME already defined, fail.
+
 /* check1 I O
    checks the declaration I
    returns the new assumption O */
 check1 (theorem NAME GOALTACTICS) HYPS :-
-  not (provable NAME _),
+  not_defined provable NAME,
   check1thm NAME GOALTACTICS HYPS.
-check1 (new_basic_type TYPE REP ABS REPABS ABSREP P TACTICS) HYPS :-
-  not (typ TYPE),
-  not (term REP _),
-  not (term ABS _),
-  not (term ABSREP _),
-  not (term REPABS _),
+check1 (new_basic_type TYPE REP ABS REPABS ABSREP PREPH P TACTICS) HYPS :-
+  (not (typ TYPE) ; $print "Error:" TYPE already defined, fail),
+  not_defined term REP,
+  not_defined term ABS,
+  not_defined provable ABSREP,
+  not_defined provable REPABS,
+  not_defined provable PREPH,
   term P (X --> bool),
   prove (exists '' _ ' P ) TACTICS,
   callback_proved existence_condition (exists '' _ ' P) TACTICS,
   REPTYP = (TYPE --> X),
   ABSTYP = (X --> TYPE),
   ABSREPTYP = (forall '' TYPE ' lam TYPE x \ eq ' (ABS ' (REP ' x)) ' x),
-  REPABSTYP = (forall '' X ' lam X x \ eq ' (P ' x) ' (eq ' (REP ' (ABS ' x)) ' x)),
+  REPABSTYP = (forall '' X ' lam X x \ impl ' (P ' x) ' (eq ' (REP ' (ABS ' x)) ' x)),
+  PREPHTYP = (forall '' TYPE ' lam TYPE x \ (P ' (REP ' x))),
   $print new typ TYPE,
   parse PREPTYP REPTYP, $print REP ":" PREPTYP,
   parse PABSTYP ABSTYP, $print ABS ":" PABSTYP,
   parse PABSREPTYP ABSREPTYP, $print ABSREP ":" PABSREPTYP,
   parse PREPABSTYP REPABSTYP, $print REPABS ":" PREPABSTYP,
+  parse PPREPHTYP PREPHTYP, $print PRERPH ":" PPREPHTYP,
   !,
   HYPS =
    ( typ TYPE
@@ -171,8 +202,10 @@ check1 (new_basic_type TYPE REP ABS REPABS ABSREP P TACTICS) HYPS :-
    , term' ABS ABSTYP
    , provable ABSREP ABSREPTYP
    , provable REPABS REPABSTYP
+   , provable PREPH PREPHTYP
    ).
-check1 (def NAME TYPDEF) HYPS :- not (def0 NAME _), check1def NAME TYPDEF HYPS.
+check1 (def NAME TYPDEF) HYPS :-
+ not_defined term NAME, check1def NAME TYPDEF HYPS.
 
 check1def NAME (pi I) (pi HYPS) :-
  pi x \ check1def (NAME '' x) (I x) (HYPS x).
@@ -243,10 +276,10 @@ parsetac ww ww.
 /************ interactive and non interactive loops ********/
 
 parse_obj (theorem NAME PSTTAC) [theorem NAME STTAC] :- parse_thm PSTTAC STTAC.
-parse_obj (new_basic_type TYPE REP ABS REPABS ABSREP PP TACTICS)
- [new_basic_type TYPE REP ABS REPABS ABSREP P (false,TACTICS)] :- parse PP P.
-parse_obj (new_basic_type TYPE REP ABS REPABS ABSREP PP)
- [new_basic_type TYPE REP ABS REPABS ABSREP P (true,[_])] :- parse PP P.
+parse_obj (new_basic_type TYPE REP ABS REPABS ABSREP PREP PP TACTICS)
+ [new_basic_type TYPE REP ABS REPABS ABSREP PREP P (false,TACTICS)] :- parse PP P.
+parse_obj (new_basic_type TYPE REP ABS REPABS ABSREP PREP PP)
+ [new_basic_type TYPE REP ABS REPABS ABSREP PREP P (true,[_])] :- parse PP P.
 parse_obj (def NAME PTYBO) [def NAME TYBO] :- parse_def PTYBO TYBO.
 parse_obj (inductive_def PRED PREDF PREDF_MON PRED_I PRED_E0 PRED_E K) EXP :-
  inductive_def_pkg PRED PREDF PREDF_MON PRED_I PRED_E0 PRED_E K EXP.
@@ -421,17 +454,6 @@ mk_intro_thm PRED_I (NAME,ST)
    [then inv (bind* (then (applyth PRED_I) (then (conv dd) (itaut 3))))])).
 
 /************ library of basic data types ********/
-/* bounded 'a ::= 'a | bind A (F : _ -> bounded 'a) */
-
-% put_binds : list 'b -> 'a -> 'c -> list (bounded 'b) -> o
-% put_binds [ f1,...,fn ] x t [ bind t x \ f1,...,bind t x fn ]
-% binding all the xs that occur in f1,...,fn
-%put_binds A B C D :- $print "PUT BINDS" (put_binds A B C D), fail.
-put_binds [] _ _ [].
-put_binds [ YX | YSX ] X A [ bind A Y | YYS ] :-
- YX = Y X, put_binds YSX X A YYS.
-%put_binds A B C D :- $print "KO PUT BINDS" (put_binds A B C D), fail.
-
 mk_bounded_fresh (bind _ F) (bind _ G) :- !, pi x\ mk_bounded_fresh (F x) (G x).
 mk_bounded_fresh _ X.
 
@@ -440,13 +462,6 @@ mk_list_of_bounded_fresh [S|L] [X|R] :-
  mk_bounded_fresh S X, mk_list_of_bounded_fresh L R.
 
 /* list functions */
-
-append [] L L.
-append [ X | XS ] L [ X | RES ] :- append XS L RES.
-
-fold2_append [] [] _ [].
-fold2_append [ X | XS ] [ Y | YS ] F OUTS :-
- F X Y OUT, fold2_append XS YS F OUTS2, append OUT OUTS2 OUTS.
 
 list_map [] _ [].
 list_map [X|XS] F [Y|YS] :- F X Y, list_map XS F YS.
@@ -1175,10 +1190,6 @@ main :-
     [then i (then i (then apply h))])
  , theorem test_apply2 (p ==> (! x \ ! y \ x ==> x ==> y) ==> q,
     [then i (then i (then apply h))])
- , new_basic_type mybool myrep myabs myrepabs myabsrep
-    (lam _ x \ ? p \ x = (p && p))
-    [then (applyth exists_i)
-      (then (conv b) (then (applyth exists_i) (then (conv b) r)))]
  , theorem test_itaut_1 (((? x \ g x) ==> ! x \ (! y \ g y ==> x) ==> x),
    [itaut 4])
  , theorem test_monotone1 (monotone '' _ ' (lam _ p \ lam _ x \ not ' (p ' x) ==> tt && p ' tt $$ p ' x),
@@ -1232,26 +1243,14 @@ main :-
                      (w
                        ((lam bool x14 \ or ' (eq ' x14 ' tt) ' (eq ' x14 ' ff))
                          ' x13)) (then (w (pnn ' x13)) (itaut 2))))]))]))])
- , inductive_def two twoF twoF_monotone two_i two_e0 two_e (two \
-     [ (two_tt, two ' tt)
-     , (two_ff, two ' ff) ])
- , new_basic_type mybool2 myrep2 myabs2 myrepabs2 myabsrep2
+ , inductive_def in_two in_twoF in_twoF_monotone in_two_i in_two_e0 in_two_e (in_two \
+     [ (in_two_tt, in_two ' tt)
+     , (in_two_ff, in_two ' ff) ])
+ , new_basic_type mybool2 myrep2 myabs2 myrepabs2 myabsrep2 myboolrep2
     pnn
     [then (cutth pnn_tt) (then (applyth exists_i) h)]
- , theorem myrepabs2u
-   ((! x13 \ pnn ' x13 ==> myrep2 ' (myabs2 ' x13) = x13),
-   [then (cutth myrepabs2)
-     (then forall_i
-       (bind bool x13 \ then (lforall x13) (then (applyth eq_to_impl_f) h)))])
  , def mytt (mybool2,(myabs2 ' tt))
  , def mynot ((mybool2 --> mybool2),(lam _ x \ myabs2 ' (not ' (myrep2 ' x))))
- , theorem pnn_myrep2 ((! x13 \ pnn ' (myrep2 ' x13)) ,
-    [then inv
-     (bind mybool2 x13 \
-       then (cutth myrepabs2)
-        (then (lforall (myrep2 ' x13))
-          (then (cutth myabsrep2)
-            (then (lforall x13) (then (conv h) (thenl c [r, h]))))))]) 
 /* , theorem mybool2_e
     (! p \ p ' mytt ==> (! y \ p ' y ==> p ' (mynot ' y)) ==>
       ! x \ p ' x)
@@ -1263,22 +1262,21 @@ main :-
      [then inv
       (bind mybool2 x13 \
         then (repeat (conv (depth_tac (dd [mynot]))))
-         (thenl (conv (land_tac (rand_tac (rand_tac (applyth myrepabs2u)))))
+         (thenl (conv (land_tac (rand_tac (rand_tac (applyth myrepabs2)))))
           [then (cutth pnn_not)
             (then (lforall (myrep2 ' (myabs2 ' (not ' (myrep2 ' x13)))))
-              (then (cutth pnn_myrep2)
+              (then (cutth myboolrep2)
                 (then (lforall (myabs2 ' (not ' (myrep2 ' x13))))
                   (then apply h)))),
           thenl
            (conv
              (land_tac
-               (rand_tac (rand_tac (rand_tac (applyth myrepabs2u))))))
+               (rand_tac (rand_tac (rand_tac (applyth myrepabs2))))))
            [then (cutth pnn_not)
              (then (lforall (myrep2 ' x13))
-               (then (cutth pnn_myrep2)
+               (then (cutth myboolrep2)
                  (then (lforall x13) (then apply h)))),
            then (conv (land_tac (rand_tac (applyth not_not_not)))) r]]))])
-
 /*
  , theorem step1 (! x \ x = mytt $$ x = mynot ' mytt $$ x = mynot ' (mynot ' mytt))
 
