@@ -1324,6 +1324,17 @@ main :-
                                                 (then sym apply_last)))
                                             (then apply (then apply daemon))])))],
                                  h, h])))))))])))))])
+ , theorem mytt_transfer
+   (myrep2 ' mytt = tt ,
+     [then (conv (depth_tac (dd [mytt])))
+       (then (applyth myrepabs2) (applyth pnn_tt))])
+ , theorem mynot_transfer
+   ((! x18 \ myrep2 ' (mynot ' x18) = not ' (myrep2 ' x18)) ,
+     [then (conv (depth_tac (dd [mynot])))
+       (then forall_i
+         (bind bool2 x18 \
+           then (applyth myrepabs2)
+            (then (applyth pnn_not) (applyth myproprep2))))])
  , theorem mybool2_e2
  ((! x18 \
     x18 ' mytt && (! x19 \ x18 ' x19 ==> x18 ' (mynot ' x19)) ==>
@@ -1411,7 +1422,7 @@ main :-
                              and ' (eq ' tt ' (myrep2 ' x20)) '
                               (x18 ' (myabs2 ' tt))))
                          (then (lforall_last mytt)
-                           (then apply_last (then (conv b) daemon)))),
+                           (then apply_last (then (conv b) (printtac daemon))))),
                      (bind prop x20 \
                        bind bool2 x21 \
                         then (cutth exists_i)
@@ -1421,7 +1432,7 @@ main :-
                                and ' (eq ' (not ' x20) ' (myrep2 ' x22)) '
                                 (x18 ' (myabs2 ' (not ' x20)))))
                            (then (lforall_last (mynot ' x21))
-                             (then apply_last (then (conv b) daemon)))))]),
+                             (then apply_last (then (conv b) (printtac daemon))))))]),
                  applyth myproprep2]]))))]])
 
 , theorem step0
@@ -1444,10 +1455,34 @@ main :-
                (then (cutth myproprep2)
                  (then (lforall x13) (then apply h)))),
            then (conv (land_tac (rand_tac (applyth not_not_not)))) r]]))])
-/*
- , theorem step1 (! x \ x = mytt $$ x = mynot ' mytt $$ x = mynot ' (mynot ' mytt))
+ , theorem step1
+ ((! x18 \ x18 = mytt $$ x18 = mynot ' mytt) ,
+   [then forall_i
+     (bind bool2 x18 \
+       then (cutth mybool2_e)
+        (thenl
+          (cut
+            ((lam bool2 x19 \
+               or ' (eq ' x19 ' mytt) ' (eq ' x19 ' (mynot ' mytt))) ' x18))
+          [then
+            (g
+              ((lam bool2 x19 \
+                 or ' (eq ' x19 ' mytt) ' (eq ' x19 ' (mynot ' mytt))) '
+                x18)) (then (conv (depth_tac b)) (then i h)),
+          then apply
+           (then (repeat (conv (depth_tac b)))
+             (thenl conj [then (applyth orl) r,
+               thenl inv
+                [(bind bool2 x19 \
+                   then (applyth orr) (then (conv (depth_tac h)) r)),
+                (bind bool2 x19 \
+                  then (applyth orl) (then (conv (depth_tac h)) daemon))]]))]))])
 
-   By bool2_e + mynot_mynot_mynot
+/*
+   prove lemma (mynot ' (mynot ' mytt) = mytt) and use in
+   place of last daemon
+
+   close two previous daemons using proved theorem
 */
  ].
 
