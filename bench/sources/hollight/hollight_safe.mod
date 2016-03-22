@@ -62,7 +62,7 @@ local thm, provable, def0, term, term', typ, loop, prove, check1, check1def,
 
 proves T TY :- provable T TY.
 
-typ bool.
+typ prop.
 typ ind.
 
 /*term T TY :- $print (term T TY), fail.*/
@@ -70,7 +70,7 @@ term T TY :- $is_flex T, !.%, $delay (term T TY) [ T ].
 term T TY :- term' T TY.
 term' (lam A F) (A --> B) :- pi x\ term' x A => term (F x) B.
 term' (F ' T) B :- term F (A --> B), term T A.
-term' eq (A --> A --> bool).
+term' eq (A --> A --> prop).
 
 /* like term, but on terms that are already known to be well-typed */
 reterm T TY :- $is_flex T, !.%, $delay (reterm T TY) [ T ].
@@ -92,12 +92,12 @@ ereterm T TY :- reterm T TY.
 thm C (seq Gamma G) _ :- debug, $print Gamma "|- " G " := " C, fail.
 
 /* << HACKS FOR DEBUGGING */
-term' p bool.
-term' q bool.
-term' f (bool --> bool).
-term' (g X) bool :- term X bool.
-reterm' (g X) bool.
-term' c bool.
+term' p prop.
+term' q prop.
+term' f (prop --> prop).
+term' (g X) prop :- term X prop.
+reterm' (g X) prop.
+term' c prop.
 
 thm daemon (seq Gamma F) [].
 /* >> HACKS FOR DEBUGGING */
@@ -105,14 +105,14 @@ thm daemon (seq Gamma F) [].
 thm r (seq Gamma (eq ' X ' X)) [].
 thm (t Y) (seq Gamma (eq ' X ' Z))
  [ seq Gamma (eq ' X ' Y), seq Gamma (eq ' Y ' Z) ] :- reterm X A, term Y A.
-thm (m P) (seq Gamma Q) [ seq Gamma (eq ' P ' Q), seq Gamma P ] :- term P bool.
+thm (m P) (seq Gamma Q) [ seq Gamma (eq ' P ' Q), seq Gamma P ] :- term P prop.
 thm b (seq Gamma (eq ' ((lam _ F) ' X) ' (F X))) [].
 thm c (seq Gamma (eq ' (F ' X) ' (G ' Y)))
  [ seq Gamma (eq ' F ' G) , seq Gamma (eq ' X ' Y) ] :- reterm X A, reterm Y A.
 thm k (seq Gamma (eq ' (lam A S) ' (lam A T)))
  [ bind A x \ seq Gamma (eq ' (S x) ' (T x)) ].
 thm s (seq Gamma (eq ' P ' Q)) [ seq (P :: Gamma) Q, seq (Q :: Gamma) P ] :-
- reterm P bool.
+ reterm P prop.
 thm (h IGN) (seq Gamma P) [] :- append' IGN [ P | Gamma2 ] Gamma.
 
 thm d (seq Gamma (eq ' C ' A)) [] :- def0 C A.
@@ -162,7 +162,7 @@ loop [ SEQ | OLD ] CERTIFICATE :-
  loop SEQS NEW_CERTIFICATE.
 
 prove G TACS :-
- (term G bool, ! ; $print "Bad statement:" G, fail),
+ (term G prop, ! ; $print "Bad statement:" G, fail),
  loop [ seq [] G ] TACS.
 
 not_defined P NAME :-
@@ -183,7 +183,7 @@ check_hyps (pi H) :- pi x \ check_hyps (H x).
    returns the new assumption O */
 check1 (theorem NAME GOALTACTICS) HYPS :- check1thm NAME GOALTACTICS HYPS.
 check1 (new_basic_type TYPE REP ABS REPABS ABSREP PREPH P TACTICS) HYPS :-
-  term P (X --> bool),
+  term P (X --> prop),
   prove (exists '' _ ' P ) TACTICS,
   callback_proved existence_condition (exists '' _ ' P) TACTICS,
   REPTYP = (TYPE --> X),
@@ -813,7 +813,7 @@ deftac left (seq Gamma H) TAC :-
 deftac left (seq Gamma H) TAC :-
  mem Gamma (eq ' F ' G),
  ereterm F TY,
- not ($is_flex TY), TY = bool,
+ not ($is_flex TY), TY = prop,
  TAC =
   (then (g (eq ' F ' G))
    (then (conv (land_tac (then (applyth eq_to_impl) h)))
@@ -937,7 +937,7 @@ IND_0 = @z:ind. (!x1 x2. (IND_SUC x1 = IND_SUC x2) = (x1 = x2)) /\ (!x. ~(IND_SU
 
 and then your define the natural numbers
 
-in the kernel two types: bool and ind (the type of individuals)
+in the kernel two types: prop and ind (the type of individuals)
 
 INFINITY_AX, SELECT_AX (* axiom of choice *), ETA_AX
 
@@ -948,91 +948,91 @@ INFINITY_AX, SELECT_AX (* axiom of choice *), ETA_AX
 main :-
  check
   [ /*********** Connectives and quantifiers ********/
-    def tt (bool,((lam bool x \ x) = (lam bool x \ x)))
-  , def forall (pi A \ ((A --> bool) --> bool),
-     (lam (A --> bool) f \ f = (lam A g \ tt)))
-  , def ff (bool,(! x \ x))
-  , def and ((bool --> bool --> bool),
-     (lam _ x \ lam _ y \ (lam (bool --> bool --> bool) f \ f ' x ' y) = (lam _ f \ f ' tt ' tt)))
-  , def impl ((bool --> bool --> bool),(lam _ a \ lam _ b \ a && b <=> a))
-  , def exists (pi A \ ((A --> bool) --> bool),
-     (lam (A --> bool) f \ ! c \ (! a \ f ' a ==> c) ==> c))
-  , def not ((bool --> bool),(lam _ x \ x ==> ff))
-  , def or ((bool --> bool --> bool),
+    def tt (prop,((lam prop x \ x) = (lam prop x \ x)))
+  , def forall (pi A \ ((A --> prop) --> prop),
+     (lam (A --> prop) f \ f = (lam A g \ tt)))
+  , def ff (prop,(! x \ x))
+  , def and ((prop --> prop --> prop),
+     (lam _ x \ lam _ y \ (lam (prop --> prop --> prop) f \ f ' x ' y) = (lam _ f \ f ' tt ' tt)))
+  , def impl ((prop --> prop --> prop),(lam _ a \ lam _ b \ a && b <=> a))
+  , def exists (pi A \ ((A --> prop) --> prop),
+     (lam (A --> prop) f \ ! c \ (! a \ f ' a ==> c) ==> c))
+  , def not ((prop --> prop),(lam _ x \ x ==> ff))
+  , def or ((prop --> prop --> prop),
      (lam _ x \ lam _ y \ ! c \ (x ==> c) ==> (y ==> c) ==> c))
   , theorem tt_intro (tt,[then (conv dd) (then k (bind _ x12 \ r))])
   , theorem ff_elim ((! p \ ff ==> p),
-    [then forall_i (bind bool x3\ then (conv (land_tac dd)) (then i forall_e))])
+    [then forall_i (bind prop x3\ then (conv (land_tac dd)) (then i forall_e))])
   , theorem sym ((! p \ ! q \ p = q ==> q = p),
     [then forall_i
-     (bind bool x12 \
+     (bind prop x12 \
        then forall_i
-        (bind bool x13 \
+        (bind prop x13 \
           then i (then sym h)))])
   , theorem not_e ((! p \ not ' p ==> p ==> ff),
-     [then forall_i (bind bool x3 \ then (conv (land_tac dd)) (then i h))])
+     [then forall_i (bind prop x3 \ then (conv (land_tac dd)) (then i h))])
   , theorem conj ((! p \ ! q \ p ==> q ==> p && q),
     [then forall_i
-     (bind bool x12 \
-      then forall_i (bind bool x13 \ then i (then i (then conj h))))])
+     (bind prop x12 \
+      then forall_i (bind prop x13 \ then i (then i (then conj h))))])
   , theorem andl ((! p \ ! q \ p && q ==> p),
     [then forall_i
-     (bind bool x12 \
-      then forall_i (bind bool x13 \ then i (then (andl x13) h)))])
+     (bind prop x12 \
+      then forall_i (bind prop x13 \ then i (then (andl x13) h)))])
   , theorem andr ((! p \ ! q \ p && q ==> q),
     [then forall_i
-     (bind bool x12 \
-      then forall_i (bind bool x13 \ then i (then (andr x12) h)))])
+     (bind prop x12 \
+      then forall_i (bind prop x13 \ then i (then (andr x12) h)))])
   , theorem and_e ((! p \ ! q \ ! c \ p && q ==> (p ==> q ==> c) ==> c),
      [then forall_i
-       (bind bool x12 \
+       (bind prop x12 \
          then forall_i
-          (bind bool x13 \
+          (bind prop x13 \
             then forall_i
-             (bind bool x14 \ then i (then i (thenl apply [andl, andr])))))])
+             (bind prop x14 \ then i (then i (thenl apply [andl, andr])))))])
   , theorem not_i ((! p \ (p ==> ff) ==> not ' p),
-     [then forall_i (bind bool x2 \ then i (then (conv dd) h))])
+     [then forall_i (bind prop x2 \ then i (then (conv dd) h))])
   , theorem orl ((! p \ ! q \ p ==> p $$ q),
       [then forall_i
-        (bind bool x12 \
+        (bind prop x12 \
           then forall_i
-           (bind bool x13 \
+           (bind prop x13 \
              then i
               (then (conv dd)
-                (then forall_i (bind bool x14 \ then i (then i (then apply h)))))))])
+                (then forall_i (bind prop x14 \ then i (then i (then apply h)))))))])
   , theorem orr ((! p \ ! q \ q ==> p $$ q),
       [then forall_i
-        (bind bool x12 \
+        (bind prop x12 \
           then forall_i
-           (bind bool x13 \
+           (bind prop x13 \
              then i
               (then (conv dd)
-                (then forall_i (bind bool x14 \ then i (then i (then apply h)))))))])
+                (then forall_i (bind prop x14 \ then i (then i (then apply h)))))))])
   , theorem or_e ((! p \ ! q \ ! c \ p $$ q ==> (p ==> c) ==> (q ==> c) ==> c),
      [then forall_i
-       (bind bool x12 \
+       (bind prop x12 \
          then forall_i
-          (bind bool x13 \
+          (bind prop x13 \
             then forall_i
-             (bind bool x14 \ then (conv (land_tac dd)) (then i forall_e))))])
+             (bind prop x14 \ then (conv (land_tac dd)) (then i forall_e))))])
   , theorem exists_e (pi T \
      (! f \ (exists '' T ' f) ==> (! c \ (! x \ f ' x ==> c) ==> c)),
-     [then forall_i (bind (T --> bool) x12 \ then (conv (land_tac dd)) (then i h))])
+     [then forall_i (bind (T --> prop) x12 \ then (conv (land_tac dd)) (then i h))])
  , theorem exists_i (pi T \ (! f \ ! w \ f ' w ==> (exists '' T ' f)),
     [then forall_i
-     (bind (T --> bool) x12 \
+     (bind (T --> prop) x12 \
        then forall_i
         (bind T x13 \
           then i
            (then (conv dd)
              (then forall_i
-               (bind bool x14 \ then i (then (lforall x13) (then apply h)))))))])
+               (bind prop x14 \ then i (then (lforall x13) (then apply h)))))))])
   , theorem eq_to_impl
      ((! x13 \ ! x14 \ (x13 = x14) = ((x13 ==> x14) && (x14 ==> x13))),
-     [thenl inv [(bind bool x13 \ bind bool x14 \ then (conv (then sym h)) h),
-       (bind bool x13 \ bind bool x14 \ then (conv h) h),
-       (bind bool x13 \ bind bool x14 \ itaut 2),
-       (bind bool x13 \ bind bool x14 \ itaut 2)]])
+     [thenl inv [(bind prop x13 \ bind prop x14 \ then (conv (then sym h)) h),
+       (bind prop x13 \ bind prop x14 \ then (conv h) h),
+       (bind prop x13 \ bind prop x14 \ itaut 2),
+       (bind prop x13 \ bind prop x14 \ itaut 2)]])
  /******************* Logic *****************/
  , theorem or_commutative ((! a \ ! b \ a $$ b <=> b $$ a),
    [itaut 1])
@@ -1070,10 +1070,10 @@ main :-
    [itaut 3])
  , theorem impl_not_not ((! a \ ! b \ (a ==> b) ==> (not ' b ==> not ' a)),
    [itaut 3])
- , theorem eq_to_impl_f (((forall '' _ ' lam bool p \ ! q \
+ , theorem eq_to_impl_f (((forall '' _ ' lam prop p \ ! q \
     (p <=> q) ==> p ==> q)),
     [itaut 2])
- , theorem eq_to_impl_b (((forall '' _ ' lam bool p \ ! q \
+ , theorem eq_to_impl_b (((forall '' _ ' lam prop p \ ! q \
     (p <=> q) ==> q ==> p)),
     [itaut 2])
  /********** Monotonicity of logical connectives *********/
@@ -1096,28 +1096,28 @@ main :-
     [itaut 6])
 
  /********** Knaster-Tarski theorem *********/
-  , def in (pi A \ (A --> (A --> bool) --> bool),
-     (lam A x \ lam (A --> bool) j \ j ' x))
-  , def subseteq (pi A \ ((A --> bool) --> (A --> bool) --> bool),
-     (lam (A --> bool) x \ lam (A --> bool) y \ ! z \ z #in x ==> z #in y))
+  , def in (pi A \ (A --> (A --> prop) --> prop),
+     (lam A x \ lam (A --> prop) j \ j ' x))
+  , def subseteq (pi A \ ((A --> prop) --> (A --> prop) --> prop),
+     (lam (A --> prop) x \ lam (A --> prop) y \ ! z \ z #in x ==> z #in y))
   , theorem in_subseteq (pi A \ 
      (! s \ ! t \ ! x \ s <<= t ==> x #in s ==> x #in t),
      [then forall_i
-       (bind (A --> bool) x9 \
+       (bind (A --> prop) x9 \
          then forall_i
-          (bind (A --> bool) x10 \
+          (bind (A --> prop) x10 \
             then forall_i (bind A x11 \ then (conv (land_tac dd)) (itaut 4))))])
-  , def monotone (pi A \ (((A --> bool) --> (A --> bool)) --> bool),
+  , def monotone (pi A \ (((A --> prop) --> (A --> prop)) --> prop),
       (lam (_ A) f \ ! x \ ! y \ x <<= y ==> f ' x <<= f ' y))
-  , def is_fixpoint (pi A \ (((A --> bool) --> (A --> bool)) --> ((A --> bool) --> bool)),
+  , def is_fixpoint (pi A \ (((A --> prop) --> (A --> prop)) --> ((A --> prop) --> prop)),
      (lam (_ A) f \ lam (_ A) x \ (f ' x) <<= x && x <<= (f ' x)))
-  , def fixpoint (pi A \ (((A --> bool) --> (A --> bool)) --> (A --> bool)),
+  , def fixpoint (pi A \ (((A --> prop) --> (A --> prop)) --> (A --> prop)),
      (lam (_ A) f \ lam A a \ ! e \ f ' e <<= e ==> a #in e))
   , theorem fixpoint_subseteq_any_prefixpoint (pi A \
      (! f \ ! x\ f ' x <<= x ==> fixpoint '' A ' f <<= x),
      [then inv
-       (bind ((A --> bool) --> (A --> bool)) x9 \
-         (bind (A --> bool) x10 \
+       (bind ((A --> prop) --> (A --> prop)) x9 \
+         (bind (A --> prop) x10 \
            then (conv (land_tac dd))
             (then (conv dd)
               (then forall_i
@@ -1127,21 +1127,21 @@ main :-
   , theorem fixpoint_subseteq_any_fixpoint (pi A \
      (! f \ ! x\ is_fixpoint '' A ' f ' x ==> fixpoint '' A ' f <<= x),
      [then forall_i
-       (bind ((A --> bool) --> (A --> bool)) x9 \
+       (bind ((A --> prop) --> (A --> prop)) x9 \
          then forall_i
-          (bind (A --> bool) x10 \
+          (bind (A --> prop) x10 \
             then (conv (land_tac dd))
              (then (cutth fixpoint_subseteq_any_prefixpoint) (itaut 8))))])
   , theorem prefixpoint_to_prefixpoint (pi A \
      (! f \ ! x \ monotone '' A ' f ==> f ' x <<= x ==> f ' (f ' x) <<= f ' x),
     [then forall_i
-      (bind ((A --> bool) --> (A --> bool)) x9 \
+      (bind ((A --> prop) --> (A --> prop)) x9 \
         then forall_i
-         (bind (A --> bool) x10 \ then (conv (land_tac dd)) (itaut 6)))])
+         (bind (A --> prop) x10 \ then (conv (land_tac dd)) (itaut 6)))])
   , theorem fixpoint_is_prefixpoint (pi A \
      (! f \ monotone '' A ' f ==> f ' (fixpoint '' A ' f)<<= fixpoint '' A ' f),
      [then inv
-       (bind ((A --> bool) --> (A --> bool)) x9 \
+       (bind ((A --> prop) --> (A --> prop)) x9 \
          then (conv dd)
           (then inv
             (bind A x10 \
@@ -1149,7 +1149,7 @@ main :-
                (then (conv dd)
                  (then (conv b)
                    (then inv
-                     (bind (A --> bool) x11 \
+                     (bind (A --> prop) x11 \
                        thenl (cut (fixpoint '' A ' x9 <<= x11))
                         [thenl
                           (cut (x9 ' (fixpoint '' A ' x9) <<= x9 ' x11))
@@ -1165,7 +1165,7 @@ main :-
   , theorem fixpoint_is_fixpoint (pi A \
     (! f \ monotone '' A ' f ==> is_fixpoint '' A ' f ' (fixpoint '' A ' f)),
     [then inv
-      (bind ((A --> bool) --> (A --> bool)) x9 \
+      (bind ((A --> prop) --> (A --> prop)) x9 \
         then (conv (depth_tac (dd [is_fixpoint])))
          (thenl inv [then (applyth fixpoint_is_prefixpoint) h,
            then (applyth fixpoint_subseteq_any_prefixpoint)
@@ -1194,52 +1194,52 @@ main :-
        x13 ' tt && (! x14 \ x13 ' x14 ==> x13 ' (not ' x14)) ==>
         (! x14 \ pnn ' x14 ==> x13 ' x14)) ,
    [then forall_i
-     (bind (bool --> bool) x13 \
+     (bind (prop --> prop) x13 \
        then (cutth pnn_e0)
         (then (lforall x13)
           (then i
             (thenl lapply
               [then (conv (depth_tac (dd [pnnF])))
                 (then forall_i
-                  (bind bool x14 \
+                  (bind prop x14 \
                     then i
                      % from now on the proof is ad-hoc + fragile
                      (thenl left [then (conv (depth_tac h)) (itaut 1),
                        then left
-                        (bind bool x15 \
+                        (bind prop x15 \
                           then left (then (conv (depth_tac h)) (itaut 8)))]))),
               h]))))])
  , theorem pnn_has_two_values
     ((! x13 \ pnn ' x13 ==> x13 = tt $$ x13 = ff) ,
     % applying an elimination principle is hard: it should be automatized
     [then (cutth pnn_e)
-      (then (lforall (lam bool x13 \ or ' (eq ' x13 ' tt) ' (eq ' x13 ' ff)))
+      (then (lforall (lam prop x13 \ or ' (eq ' x13 ' tt) ' (eq ' x13 ' ff)))
         (thenl lapply
           [thenl conj [then (conv b) (itaut 1),
             then (repeat (conv (depth_tac b)))
-             (then forall_i (bind bool x13 \ then i (then left (itaut 8))))],
+             (then forall_i (bind prop x13 \ then i (then left (itaut 8))))],
           then inv
-           (bind bool x13 \
+           (bind prop x13 \
              then (lforall x13)
               (thenl lapply [h,
                 then
                  (g
-                   ((lam bool x14 \ or ' (eq ' x14 ' tt) ' (eq ' x14 ' ff)) '
+                   ((lam prop x14 \ or ' (eq ' x14 ' tt) ' (eq ' x14 ' ff)) '
                      x13))
                  (then (repeat (conv (depth_tac b)))
                    (then
                      (w
-                       ((lam bool x14 \ or ' (eq ' x14 ' tt) ' (eq ' x14 ' ff))
+                       ((lam prop x14 \ or ' (eq ' x14 ' tt) ' (eq ' x14 ' ff))
                          ' x13)) (then (w (pnn ' x13)) (itaut 2))))]))]))])
  , inductive_def in_two in_twoF in_twoF_monotone in_two_i in_two_e0 in_two_e (in_two \
      [ (in_two_tt, in_two ' tt)
      , (in_two_ff, in_two ' ff) ])
- , new_basic_type mybool2 myrep2 myabs2 myrepabs2 myabsrep2 myboolrep2
+ , new_basic_type bool2 myrep2 myabs2 myrepabs2 myabsrep2 myproprep2
     pnn
     [then (cutth pnn_tt) (then (applyth exists_i) h)]
- , def mytt (mybool2,(myabs2 ' tt))
- , def mynot ((mybool2 --> mybool2),(lam _ x \ myabs2 ' (not ' (myrep2 ' x))))
-/* , theorem mybool2_e
+ , def mytt (bool2,(myabs2 ' tt))
+ , def mynot ((bool2 --> bool2),(lam _ x \ myabs2 ' (not ' (myrep2 ' x))))
+/* , theorem bool2_e
     (! p \ p ' mytt ==> (! y \ p ' y ==> p ' (mynot ' y)) ==>
       ! x \ p ' x)
 
@@ -1248,12 +1248,12 @@ main :-
  , theorem step0
     ((! x13 \ mynot ' (mynot ' (mynot ' x13)) = mynot ' x13) ,
      [then inv
-      (bind mybool2 x13 \
+      (bind bool2 x13 \
         then (repeat (conv (depth_tac (dd [mynot]))))
          (thenl (conv (land_tac (rand_tac (rand_tac (applyth myrepabs2)))))
           [then (cutth pnn_not)
             (then (lforall (myrep2 ' (myabs2 ' (not ' (myrep2 ' x13)))))
-              (then (cutth myboolrep2)
+              (then (cutth myproprep2)
                 (then (lforall (myabs2 ' (not ' (myrep2 ' x13))))
                   (then apply h)))),
           thenl
@@ -1262,13 +1262,13 @@ main :-
                (rand_tac (rand_tac (rand_tac (applyth myrepabs2))))))
            [then (cutth pnn_not)
              (then (lforall (myrep2 ' x13))
-               (then (cutth myboolrep2)
+               (then (cutth myproprep2)
                  (then (lforall x13) (then apply h)))),
            then (conv (land_tac (rand_tac (applyth not_not_not)))) r]]))])
 /*
  , theorem step1 (! x \ x = mytt $$ x = mynot ' mytt $$ x = mynot ' (mynot ' mytt))
 
-   By mybool2_e + mynot_mynot_mynot
+   By bool2_e + mynot_mynot_mynot
 */
  ].
 
@@ -1300,9 +1300,9 @@ main :-
 -3) after main, if I do stop I see thousands of delayed goal that have
     never been resumed!
 
--2.5) in the proof for mybool, at the end I provide the
+-2.5) in the proof for myprop, at the end I provide the
   witness (and X X) where X remains free (and it is not even pi-quantified).
-  If bool was empty, then X could not exist. On the other hand, if X was
+  If prop was empty, then X could not exist. On the other hand, if X was
   empty, then there would be no need to provide the proof at all.
   In any case, the symptom for X remaining free at the end of a proof is
   one or more goals delayed on it. We never check for them and we have
@@ -1311,7 +1311,7 @@ main :-
 -2.25) new_basic_type is only monomorphic at the moment. How to fix it?
 
 -2) the test apply_2 is very slow: why?
-    same for the witness for mybool
+    same for the witness for myprop
 
 0) definitions must not be recursive; typing should capture it
    (but not if $delay is commented out...)
