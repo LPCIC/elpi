@@ -58,7 +58,7 @@ put_binds A B C D :- put_binds' A B C D.
 /***** The HOL kernel *****/
 
 local thm, provable, def0, term, term', typ, loop, prove, check1, check1def,
- check1thm, reterm, reterm', not_defined.
+ check1thm, reterm, reterm', not_defined, check_hyp.
 
 proves T TY :- provable T TY.
 
@@ -168,19 +168,21 @@ prove G TACS :-
 not_defined P NAME :-
  not (P NAME _) ; $print "Error:" NAME already defined, fail.
 
+check_hyps (typ TYPE) :-
+ (not (typ TYPE) ; $print "Error:" TYPE already defined, fail), $print new TYPE.
+check_hyps (def0 NAME DEF) :- parse PDEF DEF, $print NAME "=" DEF.
+check_hyps (term' NAME TYPE) :-
+ not_defined term' NAME, parse PTYPE TYPE, $print NAME ":" TYPE.
+check_hyps (provable NAME TYPE) :-
+ not_defined provable NAME, parse PTYPE TYPE, $print NAME ":" TYPE.
+check_hyps (H1,H2) :- check_hyps H1, check_hyps H2.
+check_hyps (pi H) :- pi x \ check_hyps (H x).
+
 /* check1 I O
    checks the declaration I
    returns the new assumption O */
-check1 (theorem NAME GOALTACTICS) HYPS :-
-  not_defined provable NAME,
-  check1thm NAME GOALTACTICS HYPS.
+check1 (theorem NAME GOALTACTICS) HYPS :- check1thm NAME GOALTACTICS HYPS.
 check1 (new_basic_type TYPE REP ABS REPABS ABSREP PREPH P TACTICS) HYPS :-
-  (not (typ TYPE) ; $print "Error:" TYPE already defined, fail),
-  not_defined term REP,
-  not_defined term ABS,
-  not_defined provable ABSREP,
-  not_defined provable REPABS,
-  not_defined provable PREPH,
   term P (X --> bool),
   prove (exists '' _ ' P ) TACTICS,
   callback_proved existence_condition (exists '' _ ' P) TACTICS,
@@ -189,33 +191,16 @@ check1 (new_basic_type TYPE REP ABS REPABS ABSREP PREPH P TACTICS) HYPS :-
   ABSREPTYP = (forall '' TYPE ' lam TYPE x \ eq ' (ABS ' (REP ' x)) ' x),
   REPABSTYP = (forall '' X ' lam X x \ impl ' (P ' x) ' (eq ' (REP ' (ABS ' x)) ' x)),
   PREPHTYP = (forall '' TYPE ' lam TYPE x \ (P ' (REP ' x))),
-  $print new typ TYPE,
-  parse PREPTYP REPTYP, $print REP ":" PREPTYP,
-  parse PABSTYP ABSTYP, $print ABS ":" PABSTYP,
-  parse PABSREPTYP ABSREPTYP, $print ABSREP ":" PABSREPTYP,
-  parse PREPABSTYP REPABSTYP, $print REPABS ":" PREPABSTYP,
-  parse PPREPHTYP PREPHTYP, $print PRERPH ":" PPREPHTYP,
   !,
   HYPS =
-   ( typ TYPE
-   , term' REP REPTYP
-   , term' ABS ABSTYP
-   , provable ABSREP ABSREPTYP
-   , provable REPABS REPABSTYP
-   , provable PREPH PREPHTYP
-   ).
-check1 (def NAME TYPDEF) HYPS :-
- not_defined term NAME, check1def NAME TYPDEF HYPS.
+   ( typ TYPE, term' REP REPTYP, term' ABS ABSTYP, provable ABSREP ABSREPTYP
+   , provable REPABS REPABSTYP, provable PREPH PREPHTYP).
+check1 (def NAME TYPDEF) HYPS :- check1def NAME TYPDEF HYPS.
 
 check1def NAME (pi I) (pi HYPS) :-
  pi x \ check1def (NAME '' x) (I x) (HYPS x).
 check1def NAME (TYP,DEF) HYPS :-
- term DEF TYP,
- parse PTYP TYP, $print NAME ":" PTYP,
- parse PDEF DEF, $print NAME "=" PDEF,
- TYDECL = term' NAME TYP,
- DEFDECL = def0 NAME DEF,
- HYPS = (DEFDECL, TYDECL).
+ term DEF TYP, HYPS = (term' NAME TYP, def0 NAME DEF).
 
 check1thm NAME (pi I) (pi HYPS) :- pi x \ check1thm NAME (I x) (HYPS x).
 check1thm NAME (GOAL,TACTICS) (provable NAME GOAL) :-
@@ -225,7 +210,7 @@ check1thm NAME (GOAL,TACTICS) (provable NAME GOAL) :-
 
 check WHAT :-
  next_object WHAT C CONT,
- (C = stop, !, K = true ; check1 C H , K = (H => check CONT)),
+ (C = stop, !, K = true ; check1 C H , check_hyps H, K = (H => check CONT)),
  !, K.
 
 }
@@ -275,7 +260,8 @@ parsetac ww ww.
 
 /************ interactive and non interactive loops ********/
 
-parse_obj (theorem NAME PSTTAC) [theorem NAME STTAC] :- parse_thm PSTTAC STTAC.
+parse_obj (theorem NAME PSTTAC) [theorem NAME STTAC] :-
+ parse_thm NAME PSTTAC STTAC.
 parse_obj (new_basic_type TYPE REP ABS REPABS ABSREP PREP PP TACTICS)
  [new_basic_type TYPE REP ABS REPABS ABSREP PREP P (false,TACTICS)] :- parse PP P.
 parse_obj (new_basic_type TYPE REP ABS REPABS ABSREP PREP PP)
@@ -287,9 +273,11 @@ parse_obj (inductive_def PRED PREDF PREDF_MON PRED_I PRED_E0 PRED_E K) EXP :-
 parse_def (pi I) (pi O) :- pi x \ parse_def (I x) (O x).
 parse_def (TY,PB) (TY,B) :- parse PB B.
 
-parse_thm (pi I) (pi O) :- pi x \ parse_thm (I x) (O x).
-parse_thm (PST,TAC) (ST,(false,TAC)) :- !, parse PST ST.
-parse_thm PST (ST,(true,[X])) :- parse PST ST.
+parse_thm NAME (pi I) (pi O) :- pi x \ parse_thm NAME (I x) (O x).
+parse_thm _ (PST,TAC) (ST,(false,TAC)) :- !, parse PST ST.
+parse_thm NAME PST (ST,(true,[X])) :-
+ (not (proves NAME _) ; $print "Error:" NAME already defined, fail),
+ parse PST ST.
 
 next_object [ C | NEXT ] CT CONTNEXT :-
   parse_obj C [ CT | CONT ], append CONT NEXT CONTNEXT.
@@ -307,10 +295,10 @@ read_cmd H :- read_cmd H.
 toplevel_loop G :-
  read_cmd H,
  ( H = stop, !, G = [stop]
- ; parse_obj H PH, !, (G = PH ; $print "error", toplevel_loop G)
+ ; parse_obj H PH, !, (append PH toplevel G ; $print "error", toplevel_loop G)
  ; $print "bad command", toplevel_loop G ).
 
-callback_proved NAME GOAL (false,_) :- parse PGOAL GOAL, $print NAME ":" PGOAL.
+callback_proved _ _ (false,_).
 callback_proved NAME G (true, [ TAC ]) :-
  canonical TAC CANONICALTAC,
  parse PG G,
