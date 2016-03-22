@@ -170,11 +170,11 @@ not_defined P NAME :-
 
 check_hyps (typ TYPE) :-
  (not (typ TYPE) ; $print "Error:" TYPE already defined, fail), $print new TYPE.
-check_hyps (def0 NAME DEF) :- parse PDEF DEF, $print NAME "=" DEF.
+check_hyps (def0 NAME DEF) :- parse PDEF DEF, $print NAME "=" PDEF.
 check_hyps (term' NAME TYPE) :-
- not_defined term' NAME, parse PTYPE TYPE, $print NAME ":" TYPE.
+ not_defined term' NAME, parse PTYPE TYPE, $print NAME ":" PTYPE.
 check_hyps (provable NAME TYPE) :-
- not_defined provable NAME, parse PTYPE TYPE, $print NAME ":" TYPE.
+ not_defined provable NAME, parse PTYPE TYPE, $print NAME ":" PTYPE.
 check_hyps (H1,H2) :- check_hyps H1, check_hyps H2.
 check_hyps (pi H) :- pi x \ check_hyps (H x).
 
