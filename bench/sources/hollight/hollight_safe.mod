@@ -248,8 +248,8 @@ parse_obj (new_basic_type TYPE REP ABS REPABS ABSREP PP TACTICS)
 parse_obj (new_basic_type TYPE REP ABS REPABS ABSREP PP)
  [new_basic_type TYPE REP ABS REPABS ABSREP P (true,[_])] :- parse PP P.
 parse_obj (def NAME PTYBO) [def NAME TYBO] :- parse_def PTYBO TYBO.
-parse_obj (inductive_def PRED PREDF PREDF_MON PRED_I K) EXP :-
- inductive_def_pkg PRED PREDF PREDF_MON PRED_I K EXP.
+parse_obj (inductive_def PRED PREDF PREDF_MON PRED_I PRED_E0 PRED_E K) EXP :-
+ inductive_def_pkg PRED PREDF PREDF_MON PRED_I PRED_E0 PRED_E K EXP.
 
 parse_def (pi I) (pi O) :- pi x \ parse_def (I x) (O x).
 parse_def (TY,PB) (TY,B) :- parse PB B.
@@ -349,7 +349,7 @@ process_constructor P X (impl ' H ' K) (and ' H ' R) :-
  process_constructor P X K R.
 process_constructor P X (P ' T) (eq ' X ' T).
 
-inductive_def_pkg PRED PREDF PREDF_MONOTONE PRED_I L OUT :-
+inductive_def_pkg PRED PREDF PREDF_MONOTONE PRED_I PRED_E0 PRED_E L OUT :-
  (pi p \ list_map (L p)
   (x \ px \ sigma A \ sigma B \ sigma PB \ x = (A, B), parse B PB, px = (A, PB))
   (PL p)),
@@ -379,7 +379,42 @@ inductive_def_pkg PRED PREDF PREDF_MONOTONE PRED_I L OUT :-
                      (then (conv (depth_tac (dd [in])))
                        (then (conv (depth_tac (dd [in])))(itaut 4))))]))))))])],
  list_map (PL PRED) (mk_intro_thm PRED_I) OUT2,
- append OUT1 OUT2 OUT.
+ append OUT1 OUT2 OUT12,
+ OUT3 =
+  [ theorem PRED_E0
+    ((! x13 \
+       (! x14 \ PREDF ' x13 ' x14 ==> x13 ' x14) ==>
+        (! x14 \ PRED ' x14 ==> x13 ' x14)) ,
+      [then forall_i
+        (bind _ x13 \
+          then (cutth fixpoint_subseteq_any_prefixpoint)
+           (then (lforall PREDF)
+             (then (lforall x13)
+               (then (conv (depth_tac (dd [PRED])))
+                 (then inv
+                   (bind _ x14 \
+                     then
+                      (g
+                        (impl ' (subseteq '' _ ' (PREDF ' x13) ' x13) '
+                          (subseteq '' _ ' (fixpoint '' _ ' PREDF) ' x13)))
+                      (then (conv (depth_tac (dd [subseteq])))
+                        (then (conv (depth_tac (dd [subseteq])))
+                          (then (conv (depth_tac (dd [in])))
+                            (then (conv (depth_tac (dd [in])))
+                              (then (conv (depth_tac (dd [in])))
+                                (then (conv (depth_tac (dd [in])))
+                                  (then
+                                    (w
+                                      (impl '
+                                        (subseteq '' _ ' (PREDF ' x13) ' x13) '
+                                        (subseteq '' _ '
+                                          (fixpoint '' _ ' PREDF) ' x13)))
+                                    (then inv
+                                      (thenl lapply_last [h,
+                                        then (lforall_last x14)
+                                         (then lapply_last h)])))))))))))))))])
+  ],
+ append OUT12 OUT3 OUT.
 
 mk_intro_thm PRED_I (NAME,ST)
  (theorem NAME (ST,
@@ -1152,101 +1187,54 @@ main :-
    [ auto_monotone ])
  , theorem test_monotone3 (monotone '' _ ' (lam _ p \ lam _ x \ ! z \ ? y \ (not ' (p ' x) ==> z && p ' y $$ y)),
    [ auto_monotone ])
- , inductive_def pnn pnnF pnnF_monotone pnn_i (pnn \
+ , inductive_def pnn pnnF pnnF_monotone pnn_i pnn_e0 pnn_e (pnn \
      [ (pnn_tt, pnn ' tt)
      , (pnn_not, ! x \ pnn ' x ==> pnn ' (not ' x))])
  , theorem pnn_e
     ((! x13 \
-       (! x14 \ pnnF ' x13 ' x14 ==> x13 ' x14) ==>
+       x13 ' tt && (! x14 \ x13 ' x14 ==> x13 ' (not ' x14)) ==>
         (! x14 \ pnn ' x14 ==> x13 ' x14)) ,
-      [then forall_i
-        (bind (bool --> bool) x13 \
-          then (cutth fixpoint_subseteq_any_prefixpoint)
-           (then (lforall pnnF)
-             (then (lforall x13)
-               (then (conv (depth_tac (dd [pnn])))
-                 (then inv
-                   (bind bool x14 \
-                     then
-                      (g
-                        (impl ' (subseteq '' bool ' (pnnF ' x13) ' x13) '
-                          (subseteq '' bool ' (fixpoint '' bool ' pnnF) ' x13)))
-                      (then (conv (depth_tac (dd [subseteq])))
-                        (then (conv (depth_tac (dd [subseteq])))
-                          (then (conv (depth_tac (dd [in])))
-                            (then (conv (depth_tac (dd [in])))
-                              (then (conv (depth_tac (dd [in])))
-                                (then (conv (depth_tac (dd [in])))
-                                  (then
-                                    (w
-                                      (impl '
-                                        (subseteq '' bool ' (pnnF ' x13) ' x13) '
-                                        (subseteq '' bool '
-                                          (fixpoint '' bool ' pnnF) ' x13)))
-                                    (then inv
-                                      (thenl lapply_last [h,
-                                        then (lforall_last x14)
-                                         (then lapply_last h)])))))))))))))))])
- , theorem pnn_has_two_values
- ((! x13 \ pnn ' x13 ==> x13 = tt $$ x13 = ff) ,
-   [then (cutth pnn_e)
-     (then (lforall (lam bool x13 \ or ' (eq ' x13 ' tt) ' (eq ' x13 ' ff)))
-       (thenl lapply
-         [then (conv (depth_tac (dd [pnnF])))
-           (then (conv (depth_tac b))
-             (then forall_i
-               (bind bool x13 \
-                 then i
-                  (thenl left [itaut 2,
-                    then left
-                     (bind bool x14 \
+   [then forall_i
+     (bind (bool --> bool) x13 \
+       then (cutth pnn_e0)
+        (then (lforall x13)
+          (then i
+            (thenl lapply
+              [then (conv (depth_tac (dd [pnnF])))
+                (then forall_i
+                  (bind bool x14 \
+                    then i
+                     % from now on the proof is ad-hoc + fragile
+                     (thenl left [then (conv (depth_tac h)) (itaut 1),
                        then left
-                        (then
-                          (g
-                            ((lam bool x15 \
-                               or ' (eq ' x15 ' tt) ' (eq ' x15 ' ff)) ' x14))
-                          (then (conv (depth_tac b))
-                            (then
-                              (w
-                                ((lam bool x15 \
-                                   or ' (eq ' x15 ' tt) ' (eq ' x15 ' ff)) '
-                                  x14))
-                              (then i
-                                (thenl left
-                                  [then (applyth orr)
-                                    (then (conv (depth_tac h))
-                                      (then (conv (depth_tac h))
-                                        (then (w (eq ' x14 ' tt))
-                                          (then (w (eq ' x13 ' (not ' x14)))
-                                            (itaut 10))))),
-                                  then (applyth orl)
-                                   (then (conv (depth_tac h))
-                                     (then (conv (depth_tac h))
-                                       (then (w (eq ' x14 ' ff))
-                                         (then (w (eq ' x13 ' (not ' x14)))
-                                           (itaut 3)))))]))))))])))),
-         then inv
-          (bind bool x13 \
-            then
-             (g
-               (forall '' bool '
-                 (lam bool x14 \
-                   impl ' (pnn ' x14) '
-                    ((lam bool x15 \ or ' (eq ' x15 ' tt) ' (eq ' x15 ' ff)) '
-                      x14))))
-             (then (conv (depth_tac b)) (then inv (then apply_last h))))]))])
- , theorem pnn_has_two_values2
-   ((! x13 \ pnn ' x13 ==> x13 = tt $$ x13 = ff) ,
-     [then inv
-       (bind bool x13 \
-         thenl
-          (m ((lam bool x14 \ or ' (eq ' x14 ' tt) ' (eq ' x14 ' ff)) ' x13)) [b,
-          then (cutth pnn_e)
-           (then
-             (lforall (lam bool x14 \ or ' (eq ' x14 ' tt) ' (eq ' x14 ' ff)))
-             (then (thenl apply_last [id, h])
-               (then (conv (depth_tac b))
-                 (then (conv (depth_tac (dd [pnnF]))) daemon))))])])
+                        (bind bool x15 \
+                          then left (then (conv (depth_tac h)) (itaut 8)))]))),
+              h]))))])
+ , theorem pnn_has_two_values
+    ((! x13 \ pnn ' x13 ==> x13 = tt $$ x13 = ff) ,
+    % applying an elimination principle is hard: it should be automatized
+    [then (cutth pnn_e)
+      (then (lforall (lam bool x13 \ or ' (eq ' x13 ' tt) ' (eq ' x13 ' ff)))
+        (thenl lapply
+          [thenl conj [then (conv b) (itaut 1),
+            then (repeat (conv (depth_tac b)))
+             (then forall_i (bind bool x13 \ then i (then left (itaut 8))))],
+          then inv
+           (bind bool x13 \
+             then (lforall x13)
+              (thenl lapply [h,
+                then
+                 (g
+                   ((lam bool x14 \ or ' (eq ' x14 ' tt) ' (eq ' x14 ' ff)) '
+                     x13))
+                 (then (repeat (conv (depth_tac b)))
+                   (then
+                     (w
+                       ((lam bool x14 \ or ' (eq ' x14 ' tt) ' (eq ' x14 ' ff))
+                         ' x13)) (then (w (pnn ' x13)) (itaut 2))))]))]))])
+ , inductive_def two twoF twoF_monotone two_i two_e0 two_e (two \
+     [ (two_tt, two ' tt)
+     , (two_ff, two ' ff) ])
    /* |- mybool2 ' tt      mybool2 ' y |- mybool2 ' (not ' y) */
  , def mybool2f (((bool --> bool) --> (bool --> bool)),
     (lam _ p \ lam _ x \ x = tt $$ ? y \ p ' y && x = not ' y))
