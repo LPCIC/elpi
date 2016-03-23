@@ -43,6 +43,8 @@ type decl =
 
 type fixity = Infixl | Infixr | Infix | Prefix | Postfix
 
+exception NotInProlog
+
 (* raises Not_found is the constant has no declared fixity *)
 val min_precedence : int   (* minimal precedence in use *)
 val lam_precedence : int   (* precedence of lambda abstraction *)
