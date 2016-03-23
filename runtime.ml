@@ -1749,9 +1749,11 @@ let unif adepth e bdepth a b =
 
    (* assign *)
    | _, Arg (i,0) ->
+     begin try
       e.(i) <-
        restrict adepth ~from:(adepth+depth) ~to_:adepth e a;
       SPY "assign" (ppterm adepth [] adepth [||]) (e.(i)); true
+     with RestrictionFailure -> false end
    | _, UVar (r,origdepth,0) ->
        if not !last_call then
         trail := (Assign r) :: !trail;
