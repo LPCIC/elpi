@@ -57,20 +57,32 @@ put_binds A B C D :- put_binds' A B C D.
 
 /***** The HOL kernel *****/
 
-local thm, provable, def0, term, term', typ, loop, prove, check1, check1def,
- check1thm, reterm, reterm', not_defined, check_hyp.
+local thm, provable, def0, term, term', typ, typ', loop, prove, check1,
+ check1def, check1thm, check1axm, reterm, reterm', not_defined, check_hyp.
 
 proves T TY :- provable T TY.
 
-typ prop.
-typ ind.
+typ T :- $is_flex T, !.%delay (typ T) [ T ].
+typ T :- typ' T.
+typ' prop.
+typ' univ.
+typ' (A --> B) :- typ A, typ B.
 
 /*term T TY :- $print (term T TY), fail.*/
 term T TY :- $is_flex T, !.%, $delay (term T TY) [ T ].
 term T TY :- term' T TY.
 term' (lam A F) (A --> B) :- pi x\ term' x A => term (F x) B.
 term' (F ' T) B :- term F (A --> B), term T A.
-term' eq (A --> A --> prop).
+term' eq (A --> A --> prop).% :- typ A.
+
+term' prop_rep (prop --> univ).
+term' prop_abs (univ --> prop).
+term' pair_univ (univ --> univ --> univ).
+term' proj1_univ (univ --> univ).
+term' proj2_univ (univ --> univ).
+term' inj1_univ (univ --> univ).
+term' inj2_univ (univ --> univ).
+term' case_univ (univ --> (univ --> A) --> (univ --> A) --> A).% :- typ A.
 
 /* like term, but on terms that are already known to be well-typed */
 reterm T TY :- $is_flex T, !.%, $delay (reterm T TY) [ T ].
@@ -162,7 +174,7 @@ loop [ SEQ | OLD ] CERTIFICATE :-
  loop SEQS NEW_CERTIFICATE.
 
 prove G TACS :-
- (term G prop, ! ; $print "Bad statement:" G, fail),
+ (term G prop, ! ; parse PG G, $print "Bad statement:" PG, fail),
  loop [ seq [] G ] TACS.
 
 not_defined P NAME :-
@@ -176,12 +188,13 @@ check_hyps (term' NAME TYPE) :-
 check_hyps (provable NAME TYPE) :-
  not_defined provable NAME, parse PTYPE TYPE, $print NAME ":" PTYPE.
 check_hyps (H1,H2) :- check_hyps H1, check_hyps H2.
-check_hyps (pi H) :- pi x \ check_hyps (H x).
+check_hyps (pi H) :- pi x \ typ' x => check_hyps (H x).
 
 /* check1 I O
    checks the declaration I
    returns the new assumption O */
 check1 (theorem NAME GOALTACTICS) HYPS :- check1thm NAME GOALTACTICS HYPS.
+check1 (axiom NAME ST) HYPS :- check1axm NAME ST HYPS.
 check1 (new_basic_type TYPE REP ABS REPABS ABSREP PREPH P TACTICS) HYPS :-
   term P (X --> prop),
   prove (exists '' _ ' P ) TACTICS,
@@ -198,15 +211,21 @@ check1 (new_basic_type TYPE REP ABS REPABS ABSREP PREPH P TACTICS) HYPS :-
 check1 (def NAME TYPDEF) HYPS :- check1def NAME TYPDEF HYPS.
 
 check1def NAME (pi I) (pi HYPS) :-
- pi x \ check1def (NAME '' x) (I x) (HYPS x).
+ pi x \ typ' x => check1def (NAME '' x) (I x) (HYPS x).
 check1def NAME (TYP,DEF) HYPS :-
  term DEF TYP, HYPS = (term' NAME TYP, def0 NAME DEF).
 
-check1thm NAME (pi I) (pi HYPS) :- pi x \ check1thm NAME (I x) (HYPS x).
+check1thm NAME (pi I) (pi HYPS) :-
+ pi x \ typ' x => check1thm NAME (I x) (HYPS x).
 check1thm NAME (GOAL,TACTICS) (provable NAME GOAL) :-
   prove GOAL TACTICS,
   callback_proved NAME GOAL TACTICS,
   !.
+
+check1axm NAME (pi I) (pi HYPS) :- !,
+ pi x \ typ' x => check1axm NAME (I x) (HYPS x).
+check1axm NAME GOAL (provable NAME GOAL) :-
+ term GOAL prop, ! ; parse PGOAL GOAL, $print "Bad statement:" PGOAL, fail.
 
 check WHAT :-
  next_object WHAT C CONT,
@@ -262,6 +281,7 @@ parsetac ww ww.
 
 parse_obj (theorem NAME PSTTAC) [theorem NAME STTAC] :-
  parse_thm NAME PSTTAC STTAC.
+parse_obj (axiom NAME PTYP) [axiom NAME TYP] :- parse_axiom PTYP TYP.
 parse_obj (new_basic_type TYPE REP ABS REPABS ABSREP PREP PP TACTICS)
  [new_basic_type TYPE REP ABS REPABS ABSREP PREP P (false,TACTICS)] :- parse PP P.
 parse_obj (new_basic_type TYPE REP ABS REPABS ABSREP PREP PP)
@@ -272,6 +292,9 @@ parse_obj (inductive_def PRED PREDF PREDF_MON PRED_I PRED_E0 PRED_E K) EXP :-
 
 parse_def (pi I) (pi O) :- pi x \ parse_def (I x) (O x).
 parse_def (TY,PB) (TY,B) :- parse PB B.
+
+parse_axiom (pi I) (pi O) :- !, pi x \ parse_axiom (I x) (O x).
+parse_axiom PST ST :- parse PST ST.
 
 parse_thm NAME (pi I) (pi O) :- pi x \ parse_thm NAME (I x) (O x).
 parse_thm _ (PST,TAC) (ST,(false,TAC)) :- !, parse PST ST.
@@ -437,9 +460,10 @@ inductive_def_pkg PRED PREDF PREDF_MONOTONE PRED_I PRED_E0 PRED_E L OUT :-
   ],
  append OUT12 OUT3 OUT.
 
+/* CSC: I know why: we need reflexivity of equality in itaut */
 mk_intro_thm PRED_I (NAME,ST)
  (theorem NAME (ST,
-   [then inv (bind* (then (applyth PRED_I) (then (conv dd) (itaut 3))))])).
+   [orelse (then inv (bind* (then (applyth PRED_I) (then (conv dd) (itaut 3))))) (printtac daemon)])).
 
 /************ library of basic data types ********/
 mk_bounded_fresh (bind _ F) (bind _ G) :- !, pi x\ mk_bounded_fresh (F x) (G x).
@@ -900,48 +924,7 @@ deftac auto_monotone _ TAC :-
                         (then (conv (rand_tac (rator_tac b)))
                           (then (conv (rand_tac b))
                             monotone)))))))))))))))).
-
-/********** inductive things
-
-defined in terms of new_type_definition
-let nat_induct, nat_recurs = define_type "nat = O | S nat"
-
-val nat_induct : !P. P O /\ ....
-val nat_recurs : !f0 f1. ?f. f O = f0 /\ ...
-
-term O nat
-term S (nat --> nat)
-
-injectivity nat
-distinctiness nat
-cases nat
-
-smart way to instantiate nat_recurs
-let plus = new_recursive_definition nat_RECUR
- "!n. plus O n = n /\ (!m n. plus (S m) n = S (plus m n)"
-val plus : (!n. plus 0 n = n) /\ ....
-
-every time you introduce a type you need to prove a theorem:
- example, to define even numbers out of natural numbers you prove
- ?n. EVEN n
-
-you obtain natural numbers from the axiom
-INFINITY_AX: ?f : ind -> ind. ONE_ONE f /\ -ONTO f
-
-e.g. IND_SUC_0_EXISTS
-?(f: ind -> ind) z. (!x1 x2. (f x1 = f x2) = (x1 = x2)) /\ (!x. ~(f x = z))
-
-then use new_definition with
-IND_SUC = @(f: ind -> ind). ?z. (!x1 x2. (f x1 = f x2) = (x1 = x2)) /\ (!x. ~(f x = z))
-IND_0 = @z:ind. (!x1 x2. (IND_SUC x1 = IND_SUC x2) = (x1 = x2)) /\ (!x. ~(IND_SUC x = z))
-
-and then your define the natural numbers
-
-in the kernel two types: prop and ind (the type of individuals)
-
-INFINITY_AX, SELECT_AX (* axiom of choice *), ETA_AX
-
-*******/
+deftac auto_monotone _ daemon.
 
 /********** the library ********/
 
@@ -1033,6 +1016,16 @@ main :-
        (bind prop x13 \ bind prop x14 \ then (conv h) h),
        (bind prop x13 \ bind prop x14 \ itaut 2),
        (bind prop x13 \ bind prop x14 \ itaut 2)]])
+ /*********** Axiomatization of the universe ********/
+ , axiom prop_absrep (! p \ prop_abs ' (prop_rep ' p) = p)
+ , axiom proj1_pair_univ (! p1 \ ! p2 \
+    proj1_univ ' (pair_univ ' p1 ' p2) = p1)
+ , axiom proj2_pair_univ (! p1 \ ! p2 \
+    proj2_univ ' (pair_univ ' p1 ' p2) = p2)
+ , axiom case_univ_inj1 (pi A \ (! b \ forall '' (univ --> A) ' lam (_ A) e1 \ ! e2 \
+    case_univ ' (inj1_univ ' b) ' e1 ' e2 = e1 ' b))
+ , axiom case_univ_inj2 (pi A \ (! b \ forall '' (univ --> A) ' lam (_ A) e1 \ ! e2 \
+    case_univ ' (inj2_univ ' b) ' e1 ' e2 = e2 ' b))
  /******************* Logic *****************/
  , theorem or_commutative ((! a \ ! b \ a $$ b <=> b $$ a),
    [itaut 1])
@@ -1484,6 +1477,106 @@ main :-
 
    close two previous daemons using proved theorem
 */
+  /************* Natural numbers ***************/
+/* For debugging, monotone fails to prove this functor monotone
+ , def is_NF (((univ --> prop) --> univ --> prop),
+ lam (univ --> prop) x18 \
+  lam univ x19 \
+   x19 = pair_univ ' (prop_rep ' ff) ' (prop_rep ' ff) $$
+    (? x20 \ x18 ' x20 && x19 = pair_univ ' (prop_rep ' tt) ' x20))
+*/
+ , inductive_def is_nat is_natF is_nat_monotone is_nat_i is_nat_e0 is_nat_e
+   (is_nat \
+     [ (is_nat_z, is_nat ' (inj1_univ ' (prop_rep ' ff)))
+     , (is_nat_s, ! x \ is_nat ' x ==> is_nat ' (inj2_univ ' x))])
+ , new_basic_type nat nat_rep nat_abs nat_repabs nat_absrep nat_proprep
+    is_nat
+    [then (cutth is_nat_z) (then (applyth exists_i) h)]
+ , def z (nat, nat_abs ' (inj1_univ ' (prop_rep ' ff)))
+ , def s (nat --> nat,
+    (lam _ x \ nat_abs ' (inj2_univ ' (nat_rep ' x))))
+ /* TODO: consequence of is_nat_e by transfer principles */
+ , axiom nat_e (! p \ p ' z ==> (! n \ p ' n ==> p ' (s ' n)) ==> ! n \ p ' n)
+ , theorem nat_abs_inj
+   ((! x18 \
+      ! x19 \
+       is_nat ' x18 ==>
+        is_nat ' x19 ==> nat_abs ' x18 = nat_abs ' x19 ==> x18 = x19) ,
+     [then inv
+       (bind univ x18 \
+         bind univ x19 \
+          thenl (conv (land_tac (then sym (applyth nat_repabs)))) [h,
+           thenl (conv (rand_tac (then sym (applyth nat_repabs)))) [h,
+            then (conv (depth_tac h)) r]])])
+ , theorem nat_rep_inj
+   ((! x18 \ ! x19 \ nat_rep ' x18 = nat_rep ' x19 ==> x18 = x19) ,
+     [then inv
+       (bind nat x18 \
+         bind nat x19 \
+          then (conv (land_tac (then sym (applyth nat_absrep))))
+           (then (conv (rand_tac (then sym (applyth nat_absrep))))
+             (then (conv (depth_tac h)) r)))])
+ /* CSC: Cvetan, prove these and then move them somewhere else in their own
+    section after the Logic section */
+ , axiom pair_univ_inj_l (! x1 \ ! x2 \ ! y1 \ ! y2 \ pair_univ ' x1 ' y1 = pair_univ ' x2 ' y2 ==> x1 = x2)
+ , axiom pair_univ_inj_r (! x1 \ ! x2 \ ! y1 \ ! y2 \ pair_univ ' x1 ' y1 = pair_univ ' x2 ' y2 ==> y1 = y2)
+ , axiom prop_rep_inj (! x1 \ ! x2 \ prop_rep ' x1 = prop_rep ' x2 ==> x1 = x2)
+ , axiom inj1_univ_inj (! x1 \ ! x2 \ inj1_univ ' x1 = inj1_univ ' x2 ==> x1 = x2)
+ , axiom inj2_univ_inj (! x1 \ ! x2 \ inj2_univ ' x1 = inj2_univ ' x2 ==> x1 = x2)
+ , axiom not_eq_inj1_inj2_univ (! x \ ! y \ inj1_univ ' x = inj2_univ ' y ==> ff)
+ , theorem s_inj ((! x18 \ ! x19 \ s ' x18 = s ' x19 ==> x18 = x19) ,
+     [then (repeat (conv (depth_tac (dd [s]))))
+       (then inv
+         (bind nat x18 \
+           bind nat x19 \
+            then (applyth nat_rep_inj)
+             (then (applyth inj2_univ_inj)
+               (thenl (applyth nat_abs_inj)
+                 [then (applyth is_nat_s) (applyth nat_proprep),
+                 then (applyth is_nat_s) (applyth nat_proprep), h]))))])
+ , theorem not_equal_z_s ((! x20 \ not ' (z = s ' x20)) ,
+     [then (repeat (conv (depth_tac (dd [z]))))
+       (then (repeat (conv (depth_tac (dd [s]))))
+         (then (repeat (conv (depth_tac (dd [not]))))
+           (then inv
+             (bind nat x20 \
+               then (applyth not_eq_inj1_inj2_univ)
+                (thenl (thenl (applyth nat_abs_inj) [id, id, h])
+                  [applyth is_nat_z,
+                  then (applyth is_nat_s) (applyth nat_proprep)])))))])
+ , def nat_case (pi A \ (nat --> A --> (nat --> A) --> A,
+    lam _ n \ lam (_ A) a \ lam (_ A) f \
+     case_univ ' (nat_rep ' n) ' (lam _ x \ a) ' (lam _ p \ f ' (nat_abs ' p))))
+ , theorem nat_case_z (pi A \ ((! x21 \ ! x22 \ nat_case '' A ' z ' x21 ' x22 = x21) ,
+      [then (conv (depth_tac (dd [nat_case])))
+        (then (conv (depth_tac (dd [z])))
+          (then forall_i
+            (bind A x21 \
+              then forall_i
+               (bind (nat --> A) x22 \
+                 thenl
+                  (conv (land_tac (rator_tac (land_tac (applyth nat_repabs)))))
+                  [applyth is_nat_z,
+                  then (conv (depth_tac (applyth case_univ_inj1)))
+                   (then (conv (depth_tac b)) r)]))))]))
+ , theorem nat_case_s
+   (pi A \ (! x21 \ ! x22 \ ! x23 \
+     nat_case '' A ' (s ' x21) ' x22 ' x23 = x23 ' x21),
+     [then (conv (depth_tac (dd [nat_case])))
+       (then (conv (depth_tac (dd [s])))
+         (then forall_i
+           (bind nat x21 \
+             then forall_i
+              (bind A x22 \
+                then forall_i
+                 (bind (nat --> A) x23 \
+                   thenl
+                    (conv (land_tac (rator_tac (land_tac (applyth nat_repabs)))))
+                    [then (applyth is_nat_s) (applyth nat_proprep),
+                    then (conv (depth_tac (applyth case_univ_inj2)))
+                     (then (conv (depth_tac b))
+                       (then (conv (depth_tac (applyth nat_absrep))) r))])))))])
+
  ].
 
 /* Status and dependencies of the tactics:
