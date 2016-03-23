@@ -65,7 +65,7 @@ proves T TY :- provable T TY.
 typ T :- $is_flex T, !.%delay (typ T) [ T ].
 typ T :- typ' T.
 typ' prop.
-typ' univ.
+typ' (univ '' A '' B) :- typ A, typ B.
 typ' (A --> B) :- typ A, typ B.
 
 /*term T TY :- $print (term T TY), fail.*/
@@ -75,17 +75,17 @@ term' (lam A F) (A --> B) :- pi x\ term' x A => term (F x) B.
 term' (F ' T) B :- term F (A --> B), term T A.
 term' eq (A --> A --> prop).% :- typ A.
 
-term' prop_rep (prop --> univ).
-term' prop_abs (univ --> prop).
-term' pair_univ (univ --> univ --> univ).
-term' proj1_univ (univ --> univ).
-term' proj2_univ (univ --> univ).
-term' inj1_univ (univ --> univ).
-term' inj2_univ (univ --> univ).
-term' case_univ (univ --> (univ --> A) --> (univ --> A) --> A).% :- typ A.
+term' injection_univ (A --> univ '' A '' B).
+term' ejection_univ (univ '' A '' B --> A).
+term' pair_univ (univ '' A '' B --> univ '' A '' B --> univ '' A '' B).
+term' proj1_univ (univ '' A '' B --> univ '' A '' B).
+term' proj2_univ (univ '' A '' B --> univ '' A '' B).
+term' inj1_univ (univ '' A '' B --> univ '' A '' B).
+term' inj2_univ (univ '' A '' B --> univ '' A '' B).
+term' case_univ (univ '' A '' B --> (univ '' A '' B --> C) --> (univ '' A '' B --> C) --> C).% :- typ A.
 % rec_univ implies that all types are inhabited :-(
 % solution?: let it take in input a dummy inhabitant of A as well
-term' rec_univ (((univ --> A) --> (univ --> A)) --> (univ --> A)).% :- typ A.
+term' rec_univ (((univ '' A '' B --> C) --> (univ '' A '' B --> C)) --> (univ '' A '' B --> C)).% :- typ A.
 
 /* like term, but on terms that are already known to be well-typed */
 reterm T TY :- $is_flex T, !.%, $delay (reterm T TY) [ T ].
@@ -114,7 +114,7 @@ term' (g X) prop :- term X prop.
 reterm' (g X) prop.
 term' c prop.
 
-term' leq (univ --> univ --> prop).
+term' leq (nat --> nat --> prop).
 
 thm daemon (seq Gamma F) [].
 /* >> HACKS FOR DEBUGGING */
@@ -198,8 +198,8 @@ check_hyps (pi H) :- pi x \ typ' x => check_hyps (H x).
 /* check1 I O
    checks the declaration I
    returns the new assumption O */
-check1 (theorem NAME GOALTACTICS) HYPS :- check1thm NAME GOALTACTICS HYPS.
-check1 (axiom NAME ST) HYPS :- check1axm NAME ST HYPS.
+check1 (theorem NAME GOALTACTICS) HYPS :- check1thm NAME GOALTACTICS HYPS, !.
+check1 (axiom NAME ST) HYPS :- check1axm NAME ST HYPS, !.
 check1 (new_basic_type TYPE REP ABS REPABS ABSREP PREPH P TACTICS) HYPS :-
   term P (X --> prop),
   prove (exists '' _ ' P ) TACTICS,
@@ -213,7 +213,7 @@ check1 (new_basic_type TYPE REP ABS REPABS ABSREP PREPH P TACTICS) HYPS :-
   HYPS =
    ( typ TYPE, term' REP REPTYP, term' ABS ABSTYP, provable ABSREP ABSREPTYP
    , provable REPABS REPABSTYP, provable PREPH PREPHTYP).
-check1 (def NAME TYPDEF) HYPS :- check1def NAME TYPDEF HYPS.
+check1 (def NAME TYPDEF) HYPS :- check1def NAME TYPDEF HYPS, !.
 
 check1def NAME (pi I) (pi HYPS) :-
  pi x \ typ' x => check1def (NAME '' x) (I x) (HYPS x).
@@ -224,8 +224,7 @@ check1thm NAME (pi I) (pi HYPS) :-
  pi x \ typ' x => check1thm NAME (I x) (HYPS x).
 check1thm NAME (GOAL,TACTICS) (provable NAME GOAL) :-
   prove GOAL TACTICS,
-  callback_proved NAME GOAL TACTICS,
-  !.
+  callback_proved NAME GOAL TACTICS.
 
 check1axm NAME (pi I) (pi HYPS) :- !,
  pi x \ typ' x => check1axm NAME (I x) (HYPS x).
@@ -1023,26 +1022,30 @@ main :-
        (bind prop x13 \ bind prop x14 \ itaut 2)]])
 
  /*********** Axiomatization of the universe ********/
- , axiom prop_absrep (! p \ prop_abs ' (prop_rep ' p) = p)
- , axiom proj1_pair_univ (! p1 \ ! p2 \
+ , axiom ejection_injection_univ (pi A \
+    forall '' A ' lam A p \ ejection_univ ' (injection_univ ' p) = p)
+/* , axiom proj1_pair_univ (pi A \ pi B \ forall '' (univ '' A '' B) ' lam (_ A B) p1 \ ! p2 \
     proj1_univ ' (pair_univ ' p1 ' p2) = p1)
- , axiom proj2_pair_univ (! p1 \ ! p2 \
+ , axiom proj2_pair_univ (pi A \ pi B \ ! p1 \ forall '' (univ '' A '' B) ' lam (_ A B) p2 \
     proj2_univ ' (pair_univ ' p1 ' p2) = p2)
- , axiom case_univ_inj1 (pi A \ (! b \ forall '' (univ --> A) ' lam (_ A) e1 \ ! e2 \
+*/
+/* , axiom case_univ_inj1 (pi A \ pi B \ pi C \ (! b \ /*forall '' (univ '' A '' B --> C) ' lam (univ '' A '' B --> C)*/ ! e1 \ ! e2  \
     case_univ ' (inj1_univ ' b) ' e1 ' e2 = e1 ' b))
- , axiom case_univ_inj2 (pi A \ (! b \ forall '' (univ --> A) ' lam (_ A) e1 \ ! e2 \
+ , axiom case_univ_inj2 (pi A \ pi B \ pi C \ (! b \ forall '' (univ '' A '' B --> C) ' lam (_ A B C) e1 \ ! e2 \
     case_univ ' (inj2_univ ' b) ' e1 ' e2 = e2 ' b))
+*/
  , def well_founded (pi A \
    ((A --> A --> prop) --> prop,
     lam (_ A) lt \
      ! p \ (? x \ p ' x) ==>
       (? m \ p ' m && (! y \ p ' y ==> not ' (lt ' y ' m)))))
- , axiom rec_univ_is_fixpoint (pi A \
+/* , axiom rec_univ_is_fixpoint (pi A \
    (! lt \ well_founded '' univ ' lt ==>
     forall '' ((univ --> A) --> (univ --> A)) ' lam (_ A) h \
      (! f \ ! g \ ! i \
        (! p \ lt ' p ' i ==> f ' p = g ' p) ==> h ' f ' i = h ' g ' i) ==>
      rec_univ ' h = h ' (rec_univ ' h)))
+*/
 
  /******************* Logic *****************/
  , theorem or_commutative ((! a \ ! b \ a $$ b <=> b $$ a),
@@ -1506,12 +1509,12 @@ main :-
 */
  , inductive_def is_nat is_natF is_nat_monotone is_nat_i is_nat_e0 is_nat_e
    (is_nat \
-     [ (is_nat_z, is_nat ' (inj1_univ ' (prop_rep ' ff)))
+     [ (is_nat_z, is_nat ' (inj1_univ ' (injection_univ ' ff)))
      , (is_nat_s, ! x \ is_nat ' x ==> is_nat ' (inj2_univ ' x))])
  , new_basic_type nat nat_rep nat_abs nat_repabs nat_absrep nat_proprep
     is_nat
     [then (cutth is_nat_z) (then (applyth exists_i) h)]
- , def z (nat, nat_abs ' (inj1_univ ' (prop_rep ' ff)))
+ , def z (nat, nat_abs ' (inj1_univ ' (injection_univ ' ff)))
  , def s (nat --> nat,
     (lam _ x \ nat_abs ' (inj2_univ ' (nat_rep ' x))))
  /* TODO: consequence of is_nat_e by transfer principles */
@@ -1522,8 +1525,8 @@ main :-
        is_nat ' x18 ==>
         is_nat ' x19 ==> nat_abs ' x18 = nat_abs ' x19 ==> x18 = x19) ,
      [then inv
-       (bind univ x18 \
-         bind univ x19 \
+       (bind _ x18 \
+         bind _ x19 \
           thenl (conv (land_tac (then sym (applyth nat_repabs)))) [h,
            thenl (conv (rand_tac (then sym (applyth nat_repabs)))) [h,
             then (conv (depth_tac h)) r]])])
@@ -1539,7 +1542,7 @@ main :-
     section after the Logic section */
  , axiom pair_univ_inj_l (! x1 \ ! x2 \ ! y1 \ ! y2 \ pair_univ ' x1 ' y1 = pair_univ ' x2 ' y2 ==> x1 = x2)
  , axiom pair_univ_inj_r (! x1 \ ! x2 \ ! y1 \ ! y2 \ pair_univ ' x1 ' y1 = pair_univ ' x2 ' y2 ==> y1 = y2)
- , axiom prop_rep_inj (! x1 \ ! x2 \ prop_rep ' x1 = prop_rep ' x2 ==> x1 = x2)
+ , axiom injection_univ_inj (! x1 \ ! x2 \ injection_univ ' x1 = injection_univ ' x2 ==> x1 = x2)
  , axiom inj1_univ_inj (! x1 \ ! x2 \ inj1_univ ' x1 = inj1_univ ' x2 ==> x1 = x2)
  , axiom inj2_univ_inj (! x1 \ ! x2 \ inj2_univ ' x1 = inj2_univ ' x2 ==> x1 = x2)
  , axiom not_eq_inj1_inj2_univ (! x \ ! y \ inj1_univ ' x = inj2_univ ' y ==> ff)
@@ -1576,8 +1579,8 @@ main :-
                  thenl
                   (conv (land_tac (rator_tac (land_tac (applyth nat_repabs)))))
                   [applyth is_nat_z,
-                  then (conv (depth_tac (applyth case_univ_inj1)))
-                   (then (conv (depth_tac b)) r)]))))]))
+                  daemon /*then (conv (depth_tac (applyth case_univ_inj1)))
+                   (then (conv (depth_tac b)) r)*/]))))]))
  , theorem nat_case_s
    (pi A \ (! x21 \ ! x22 \ ! x23 \
      nat_case '' A ' (s ' x21) ' x22 ' x23 = x23 ' x21),
@@ -1592,9 +1595,10 @@ main :-
                    thenl
                     (conv (land_tac (rator_tac (land_tac (applyth nat_repabs)))))
                     [then (applyth is_nat_s) (applyth nat_proprep),
-                    then (conv (depth_tac (applyth case_univ_inj2)))
+                    daemon /*then (conv (depth_tac (applyth case_univ_inj2)))
                      (then (conv (depth_tac b))
-                       (then (conv (depth_tac (applyth nat_absrep))) r))])))))])
+                       (then (conv (depth_tac (applyth nat_absrep))) r))*/])))))])
+/*
  /* leq to be defined as an inductive definition over nat*nat,
     and then prove to be well_founded */
  , axiom wf_leq (well_founded '' _ ' leq)
@@ -1609,6 +1613,7 @@ main :-
     nat_rec_fixpoint '' A ' a ' f =
      nat_recF '' A ' a ' f ' (nat_rec_fixpoint '' A ' a ' f)) */
  %, theorem nat_rec_z (pi A \ ! a \ ! f \ nat_rec '' A ' a ' f ' z = a)
+*/
  ].
 
 /* Status and dependencies of the tactics:
