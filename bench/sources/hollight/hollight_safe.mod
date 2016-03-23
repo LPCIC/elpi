@@ -83,6 +83,9 @@ term' proj2_univ (univ --> univ).
 term' inj1_univ (univ --> univ).
 term' inj2_univ (univ --> univ).
 term' case_univ (univ --> (univ --> A) --> (univ --> A) --> A).% :- typ A.
+% rec_univ implies that all types are inhabited :-(
+% solution?: let it take in input a dummy inhabitant of A as well
+term' rec_univ (((univ --> A) --> (univ --> A)) --> (univ --> A)).% :- typ A.
 
 /* like term, but on terms that are already known to be well-typed */
 reterm T TY :- $is_flex T, !.%, $delay (reterm T TY) [ T ].
@@ -110,6 +113,8 @@ term' f (prop --> prop).
 term' (g X) prop :- term X prop.
 reterm' (g X) prop.
 term' c prop.
+
+term' leq (univ --> univ --> prop).
 
 thm daemon (seq Gamma F) [].
 /* >> HACKS FOR DEBUGGING */
@@ -1016,6 +1021,7 @@ main :-
        (bind prop x13 \ bind prop x14 \ then (conv h) h),
        (bind prop x13 \ bind prop x14 \ itaut 2),
        (bind prop x13 \ bind prop x14 \ itaut 2)]])
+
  /*********** Axiomatization of the universe ********/
  , axiom prop_absrep (! p \ prop_abs ' (prop_rep ' p) = p)
  , axiom proj1_pair_univ (! p1 \ ! p2 \
@@ -1026,6 +1032,18 @@ main :-
     case_univ ' (inj1_univ ' b) ' e1 ' e2 = e1 ' b))
  , axiom case_univ_inj2 (pi A \ (! b \ forall '' (univ --> A) ' lam (_ A) e1 \ ! e2 \
     case_univ ' (inj2_univ ' b) ' e1 ' e2 = e2 ' b))
+ , def well_founded (pi A \
+   ((A --> A --> prop) --> prop,
+    lam (_ A) lt \
+     ! p \ (? x \ p ' x) ==>
+      (? m \ p ' m && (! y \ p ' y ==> not ' (lt ' y ' m)))))
+ , axiom rec_univ_is_fixpoint (pi A \
+   (! lt \ well_founded '' univ ' lt ==>
+    forall '' ((univ --> A) --> (univ --> A)) ' lam (_ A) h \
+     (! f \ ! g \ ! i \
+       (! p \ lt ' p ' i ==> f ' p = g ' p) ==> h ' f ' i = h ' g ' i) ==>
+     rec_univ ' h = h ' (rec_univ ' h)))
+
  /******************* Logic *****************/
  , theorem or_commutative ((! a \ ! b \ a $$ b <=> b $$ a),
    [itaut 1])
@@ -1069,6 +1087,7 @@ main :-
  , theorem eq_to_impl_b (((forall '' _ ' lam prop p \ ! q \
     (p <=> q) ==> q ==> p)),
     [itaut 2])
+
  /********** Monotonicity of logical connectives *********/
  , theorem and_monotone ((! a1 \ ! b1 \ ! a2 \ ! b2 \
     (a1 ==> b1) ==> (a2 ==> b2) ==> a1 && a2 ==> b1 && b2),
@@ -1576,7 +1595,20 @@ main :-
                     then (conv (depth_tac (applyth case_univ_inj2)))
                      (then (conv (depth_tac b))
                        (then (conv (depth_tac (applyth nat_absrep))) r))])))))])
-
+ /* leq to be defined as an inductive definition over nat*nat,
+    and then prove to be well_founded */
+ , axiom wf_leq (well_founded '' _ ' leq)
+ , def nat_recF (pi A \ (A --> (A --> A) --> (univ --> A) --> (univ --> A),
+    lam A a \ lam (_ A) f \
+     lam (_ A) nat_recF \ lam _ n \
+      case_univ ' n ' (lam _ x \ a) ' (lam _ p \ f ' (nat_recF ' p))))
+ , def nat_rec_fixpoint (pi A \ (A --> (A --> A) --> univ --> A,
+    lam A a \ lam (_ A) f \ lam _ n \
+     rec_univ ' (nat_recF '' (_ A) ' a ' f) ' n))
+/* , theorem nat_rec_unfold (pi A \ ! a \ ! f \
+    nat_rec_fixpoint '' A ' a ' f =
+     nat_recF '' A ' a ' f ' (nat_rec_fixpoint '' A ' a ' f)) */
+ %, theorem nat_rec_z (pi A \ ! a \ ! f \ nat_rec '' A ' a ' f ' z = a)
  ].
 
 /* Status and dependencies of the tactics:
