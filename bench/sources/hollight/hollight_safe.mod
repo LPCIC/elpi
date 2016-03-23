@@ -77,6 +77,8 @@ term' eq (A --> A --> prop).% :- typ A.
 
 term' injection_univ (A --> univ '' A '' B).
 term' ejection_univ (univ '' A '' B --> A).
+term' inject_limit_univ ((B --> univ '' A '' B) --> univ '' A '' B).
+term' eject_limit_univ (univ '' A '' B --> (B --> univ '' A '' B)).
 term' pair_univ (univ '' A '' B --> univ '' A '' B --> univ '' A '' B).
 term' proj1_univ (univ '' A '' B --> univ '' A '' B).
 term' proj2_univ (univ '' A '' B --> univ '' A '' B).
@@ -1024,7 +1026,9 @@ main :-
  /*********** Axiomatization of the universe ********/
  , axiom ejection_injection_univ (pi A \
     forall '' A ' lam A p \ ejection_univ ' (injection_univ ' p) = p)
-/* , axiom proj1_pair_univ (pi A \ pi B \ forall '' (univ '' A '' B) ' lam (_ A B) p1 \ ! p2 \
+/* , axiom eject_inject_limit_univ (pi A \ pi B \
+    forall '' (B --> univ '' A '' B) ' lam (B --> univ '' A '' B) p \ eject_limit_univ ' (inject_limit_univ ' p) = p)
+ , axiom proj1_pair_univ (pi A \ pi B \ forall '' (univ '' A '' B) ' lam (_ A B) p1 \ ! p2 \
     proj1_univ ' (pair_univ ' p1 ' p2) = p1)
  , axiom proj2_pair_univ (pi A \ pi B \ ! p1 \ forall '' (univ '' A '' B) ' lam (_ A B) p2 \
     proj2_univ ' (pair_univ ' p1 ' p2) = p2)
