@@ -1971,45 +1971,52 @@ r :- (pi X\ pi Y\ q X Y :- pi c\ pi d\ q (Z c d) (X c d) (Y c)) => ... *)
 (* Takes the source of an implication and produces the clauses to be added to
  * the program and the number of existentially quantified constants turned
  * into globals.
+ *
+ * Invariants:
+ *  - lts is the number of lambdas crossed and it is always = List.length ts
+ *  - lcs is the number of new constants to be generated because a sigma
+ *    has been crossed
+ *  - the argument lives in (depth+lts)
+ *  - the clause will live in (depth+lcs)
  *)
-let rec clausify vars depth hyps ts lcs = function
-(*g -> Format.eprintf "CLAUSIFY %a %d %d\n%!" (ppterm (depth+List.length ts) [] 0 [||]) g depth (List.length ts); match g with*)
+let rec clausify vars depth hyps ts lts lcs = function
+(*g -> Format.eprintf "CLAUSIFY %a %d %d %d %d\n%!" (ppterm (depth+lts) [] 0 [||]) g depth lts lcs (List.length ts); match g with*)
   | App(c, g, gs) when c == andc || c == andc2 ->
-     let res = clausify vars depth hyps ts lcs g in
+     let res = clausify vars depth hyps ts lts lcs g in
      List.fold_right
-      (fun g (clauses,lcs) ->
-        let moreclauses,lcs = clausify vars depth hyps ts lcs g in
-         clauses@moreclauses,lcs
+      (fun g (clauses,lts) ->
+        let moreclauses,lts = clausify vars depth hyps ts lts lcs g in
+         clauses@moreclauses,lts
       ) gs res
   | App(c, g2, [g1]) when c == rimplc ->
-     clausify vars depth ((ts,g1)::hyps) ts lcs g2
+     clausify vars depth ((ts,g1)::hyps) ts lts lcs g2
   | App(c, _, _) when c == rimplc -> assert false
   | App(c, g1, [g2]) when c == implc ->
-     clausify vars depth ((ts,g1)::hyps) ts lcs g2
+     clausify vars depth ((ts,g1)::hyps) ts lts lcs g2
   | App(c, _, _) when c == implc -> assert false
   | App(c, arg, []) when c == sigmac ->
-     let b = get_lambda_body (depth+lcs) arg in
+     let b = get_lambda_body (depth+lts) arg in
      let args =
       List.rev (List.filter (function (Arg _) -> true | _ -> false) ts) in
      let cst =
       match args with
          [] -> Const (depth+lcs)
        | hd::rest -> App (depth+lcs,hd,rest) in
-     clausify vars depth hyps (cst::ts) (lcs+1) b
+     clausify vars depth hyps (cst::ts) (lts+1) (lcs+1) b
   | App(c, arg, []) when c == pic ->
-     let b = get_lambda_body (depth+lcs) arg in
-     clausify (vars+1) depth hyps (Arg(vars,0)::ts) lcs b
+     let b = get_lambda_body (depth+lts) arg in
+     clausify (vars+1) depth hyps (Arg(vars,0)::ts) (lts+1) lcs b
   | Const _
   | App _ as g ->
      let hyps =
       List.(flatten (rev_map (fun (ts,g) ->
-         let g = lift ~from:depth ~to_:(depth+lcs) g in
-         let g = subst (depth+lcs) ts g in
+         let g = lift ~from:(depth+lts) ~to_:(depth+lts+lcs) g in
+         let g = subst depth ts g in
           split_conj g
         ) hyps)) in
-     let g = lift ~from:depth ~to_:(depth+lcs) g in
-     let g = subst (depth+lcs) ts g in
-     (*Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
+     let g = lift ~from:(depth+lts) ~to_:(depth+lts+lcs) g in
+     let g = subst depth ts g in
+(*     Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
       (ppterm (depth+lcs) [] 0 [||]) g
       (pplist (ppterm (depth+lcs) [] 0 [||]) " , ")
       hyps ;*)
@@ -2024,11 +2031,11 @@ let rec clausify vars depth hyps ts lcs = function
       [ { depth = depth+lcs ; args= args; hyps = hyps;
           vars = vars; key=key_of ~mode:`Clause ~depth:(depth+lcs) g} ], lcs
   | UVar ({ contents=g },from,args) when g != dummy ->
-     clausify vars depth hyps ts lcs
-       (deref ~from ~to_:(depth+List.length ts) args g)
+     clausify vars depth hyps ts lts lts
+       (deref ~from ~to_:(depth+lts) args g)
   | AppUVar ({contents=g},from,args) when g != dummy -> 
-     clausify vars depth hyps ts lcs
-       (app_deref ~from ~to_:(depth+List.length ts) args g)
+     clausify vars depth hyps ts lts lts
+       (app_deref ~from ~to_:(depth+lts) args g)
   | Arg _ | AppArg _ -> anomaly "clausify called on non-heap term"
   | Lam _ | Custom _ | String _ | Int _ | Float _ ->
      error "Assuming a custom or string or int or float or function"
@@ -2444,13 +2451,13 @@ end
        run depth p g (List.map(fun x -> depth,p,x) gs'@gs) next alts lvl
     | App(c, g2, [g1]) when c == rimplc ->
        (*Format.eprintf "RUN: %a\n%!" (uppterm depth [] 0 [||]) g ;*)
-       let clauses, lcs = clausify 0 depth [] [] 0 g1 in
+       let clauses, lcs = clausify 0 depth [] [] 0 0 g1 in
        let g2 = lift ~from:depth ~to_:(depth+lcs) g2 in
        (*Format.eprintf "TO: %a \n%!" (uppterm (depth+lcs) [] 0 [||]) g2;*)
        run (depth+lcs) (add_clauses clauses (depth,g1) p) g2 gs next alts lvl
     | App(c, g1, [g2]) when c == implc ->
        (*Format.eprintf "RUN: %a\n%!" (uppterm depth [] 0 [||]) g ;*)
-       let clauses, lcs = clausify 0 depth [] [] 0 g1 in
+       let clauses, lcs = clausify 0 depth [] [] 0 0 g1 in
        let g2 = lift ~from:depth ~to_:(depth+lcs) g2 in
        (*Format.eprintf "TO: %a \n%!" (uppterm (depth+lcs) [] 0 [||]) g2;*)
        run (depth+lcs) (add_clauses clauses (depth,g1) p) g2 gs next alts lvl
@@ -2746,7 +2753,7 @@ let program_of_ast (p : Parser.decl list) : program =
          Parser.Clause t ->
           let names,_,env,t = query_of_ast_cmap lcs cmap t in
           (* Format.eprintf "%a\n%!" (uppterm 0 names 0 env) t ; *)
-          let moreclauses, morelcs = clausify (Array.length env) lcs [] [] 0 t in
+          let moreclauses, morelcs = clausify (Array.length env) lcs [] [] 0 0 t in
           List.rev_append moreclauses clauses, lcs+morelcs, cmap, cmapstack
        | Parser.Begin -> clauses, lcs, cmap, cmap::cmapstack
        | Parser.Accumulated p ->
