@@ -1483,6 +1483,19 @@ main :-
             (then (cutth mytt_transfer)
               (then (conv (depth_tac h))
                 (then (conv (depth_tac (dd [mytt]))) (thenl c [r, itaut 3])))))))])
+ , theorem mybool2_e2_daemon1
+    ((! x20 \
+      x20 ' (myabs2 ' (myrep2 ' mytt)) ==>
+       tt = myrep2 ' mytt && x20 ' (myabs2 ' tt)) ,
+     [thenl inv
+      [(bind (bool2 --> prop) x20 \
+        then (cutth mytt_transfer)
+         (then (conv (depth_tac h)) (applyth tt_intro))),
+      (bind (bool2 --> prop) x20 \ applyth tt_intro),
+      (bind (bool2 --> prop) x20 \
+       then (cutth mytt_transfer)
+        (then (g (x20 ' (myabs2 ' (myrep2 ' mytt))))
+          (then (conv (depth_tac h)) (then i h))))]])
  , theorem step1
     ((! x18 \ x18 = mytt $$ x18 = mynot ' mytt) ,
      [then forall_i
