@@ -498,6 +498,7 @@ bang P :- P, !.
 
 /********** tacticals ********/
 
+% BUG in runtime.ml if the sigma is uncommented out. It does not matter btw.
 /*sigma ff \*/ deftac fail SEQ ff.
 
 parsetac (constant_tacl TACL) (constant_tacl PTACL) :-
@@ -1032,28 +1033,25 @@ main :-
     ! A p \ ejection_univ ' (injection_univ ' p) = p)
  , axiom eject_inject_limit_univ (pi A \ pi B \
     ! (B --> univ '' A '' B) p \ eject_limit_univ ' (inject_limit_univ ' p) = p)
-/* , axiom proj1_pair_univ (pi A \ pi B \ ! (univ '' A '' B) p1 \ ! p2 \
+ , axiom proj1_pair_univ (pi A \ pi B \ ! (univ '' A '' B) p1 \ ! p2 \
     proj1_univ ' (pair_univ ' p1 ' p2) = p1)
  , axiom proj2_pair_univ (pi A \ pi B \ ! p1 \ ! (univ '' A '' B) p2 \
     proj2_univ ' (pair_univ ' p1 ' p2) = p2)
-*/
-/* , axiom case_univ_inj1 (pi A \ pi B \ pi C \ (! b \ ! (univ '' A '' B --> C) e1 \ ! e2  \
+ , axiom case_univ_inj1 (pi A \ pi B \ pi C \ (! b \ ! (univ '' A '' B --> C) e1 \ ! e2  \
     case_univ ' (inj1_univ ' b) ' e1 ' e2 = e1 ' b))
  , axiom case_univ_inj2 (pi A \ pi B \ pi C \ (! b \ ! (univ '' A '' B --> C) e1 \ ! e2 \
     case_univ ' (inj2_univ ' b) ' e1 ' e2 = e2 ' b))
-*/
  , def well_founded (pi A \
    ((A --> A --> prop) --> prop,
     lam (_ A) lt \
      ! p \ (? x \ p ' x) ==>
       (? m \ p ' m && (! y \ p ' y ==> not ' (lt ' y ' m)))))
-/* , axiom rec_univ_is_fixpoint (pi A \
-   (! lt \ well_founded '' univ ' lt ==>
-    ! ((univ --> A) --> (univ --> A)) h \
+ , axiom rec_univ_is_fixpoint (pi A \ pi B \ pi C \
+   (! lt \ well_founded '' (_ A B C) ' lt ==>
+    ! ((univ '' A '' B --> C) --> (univ '' A '' B --> C)) h \
      (! f \ ! g \ ! i \
        (! p \ lt ' p ' i ==> f ' p = g ' p) ==> h ' f ' i = h ' g ' i) ==>
      rec_univ ' h = h ' (rec_univ ' h)))
-*/
 
  /******************* Equality *****************/
  , theorem eq_reflexive (pi A \ ((! A a \ a = a),
@@ -1605,8 +1603,8 @@ main :-
                  thenl
                   (conv (land_tac (rator_tac (land_tac (applyth nat_repabs)))))
                   [applyth is_nat_z,
-                  daemon /*then (conv (depth_tac (applyth case_univ_inj1)))
-                   (then (conv (depth_tac b)) r)*/]))))]))
+                   then (conv (depth_tac (applyth case_univ_inj1)))
+                    (then (conv (depth_tac b)) r)]))))]))
  , theorem nat_case_s
    (pi A \ (! x21 \ ! x22 \ ! x23 \
      nat_case '' A ' (s ' x21) ' x22 ' x23 = x23 ' x21),
@@ -1621,9 +1619,9 @@ main :-
                    thenl
                     (conv (land_tac (rator_tac (land_tac (applyth nat_repabs)))))
                     [then (applyth is_nat_s) (applyth nat_proprep),
-                    daemon /*then (conv (depth_tac (applyth case_univ_inj2)))
+                     then (conv (depth_tac (applyth case_univ_inj2)))
                      (then (conv (depth_tac b))
-                       (then (conv (depth_tac (applyth nat_absrep))) r))*/])))))])
+                       (then (conv (depth_tac (applyth nat_absrep))) r))])))))])
 /*
  /* leq to be defined as an inductive definition over nat*nat,
     and then prove to be well_founded */
