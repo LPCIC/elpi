@@ -1474,10 +1474,19 @@ main :-
                (then (cutth myproprep2)
                  (then (lforall x13) (then apply h)))),
            then (conv (land_tac (rand_tac (applyth not_not_not)))) r]]))])
+ , theorem mynot_mynot_mytt
+    (mynot ' (mynot ' mytt) = mytt ,
+     [then (conv (depth_tac (dd [mynot])))
+      (then (cutth mynot_transfer)
+        (then (lforall mytt)
+          (then (conv (depth_tac h))
+            (then (cutth mytt_transfer)
+              (then (conv (depth_tac h))
+                (then (conv (depth_tac (dd [mytt]))) (thenl c [r, itaut 3])))))))])
  , theorem step1
- ((! x18 \ x18 = mytt $$ x18 = mynot ' mytt) ,
-   [then forall_i
-     (bind bool2 x18 \
+    ((! x18 \ x18 = mytt $$ x18 = mynot ' mytt) ,
+     [then forall_i
+      (bind bool2 x18 \
        then (cutth mybool2_e)
         (thenl
           (cut
@@ -1495,8 +1504,7 @@ main :-
                 [(bind bool2 x19 \
                    then (applyth orr) (then (conv (depth_tac h)) r)),
                 (bind bool2 x19 \
-                  then (applyth orl) (then (conv (depth_tac h)) daemon))]]))]))])
-
+                  then (applyth orl) (then (conv (depth_tac h)) (applyth mynot_mynot_mytt)))]]))]))])
 /*
    prove lemma (mynot ' (mynot ' mytt) = mytt) and use in
    place of last daemon
