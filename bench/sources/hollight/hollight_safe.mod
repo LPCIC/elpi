@@ -1294,87 +1294,6 @@ main :-
     [then (cutth pnn_tt) (then (applyth exists_i) h)]
  , def mytt (bool2,(myabs2 ' tt))
  , def mynot ((bool2 --> bool2),(lam _ x \ myabs2 ' (not ' (myrep2 ' x))))
- , theorem mybool2_e
-   ((! x18 \
-    x18 ' mytt && (! x19 \ x18 ' x19 ==> x18 ' (mynot ' x19)) ==>
-     (! x19 \ x18 ' x19)) ,
-      [then forall_i
-      (bind (bool2 --> prop) x18 \
-       then (conv (depth_tac (dd [mynot])))
-        (then (conv (depth_tac (dd [mytt])))
-          (then inv
-            (bind bool2 x19 \
-              then (conv (rand_tac (then sym (applyth myabsrep2))))
-               (thenl
-                 (cut (! prop x20 \ pnn ' x20 ==> x18 ' (myabs2 ' x20)))
-                 [then apply_last (applyth myproprep2),
-                 then (cutth pnn_e)
-                  (then inv
-                    (bind prop x20 \
-                      then
-                       (lforall
-                         (lam prop x21 \ pnn ' x21 ==> x18 ' (myabs2 ' x21)))
-                       (then
-                         (g
-                           (impl '
-                             (and '
-                               ((lam prop x21 \
-                                  impl ' (pnn ' x21) '
-                                   (x18 ' (myabs2 ' x21))) ' tt) '
-                               (forall '' prop '
-                                 (lam prop x21 \
-                                   impl '
-                                    ((lam prop x22 \
-                                       impl ' (pnn ' x22) '
-                                        (x18 ' (myabs2 ' x22))) ' x21) '
-                                    ((lam prop x22 \
-                                       impl ' (pnn ' x22) '
-                                        (x18 ' (myabs2 ' x22))) '
-                                      (not ' x21))))) '
-                             (forall '' prop '
-                               (lam prop x21 \
-                                 impl ' (pnn ' x21) '
-                                  ((lam prop x22 \
-                                     impl ' (pnn ' x22) '
-                                      (x18 ' (myabs2 ' x22))) ' x21)))))
-                         (then
-                           (w
-                             (impl '
-                               (and '
-                                 ((lam prop x21 \
-                                    impl ' (pnn ' x21) '
-                                     (x18 ' (myabs2 ' x21))) ' tt) '
-                                 (forall '' prop '
-                                   (lam prop x21 \
-                                     impl '
-                                      ((lam prop x22 \
-                                         impl ' (pnn ' x22) '
-                                          (x18 ' (myabs2 ' x22))) ' x21) '
-                                      ((lam prop x22 \
-                                         impl ' (pnn ' x22) '
-                                          (x18 ' (myabs2 ' x22))) '
-                                        (not ' x21))))) '
-                               (forall '' prop '
-                                 (lam prop x21 \
-                                   impl ' (pnn ' x21) '
-                                    ((lam prop x22 \
-                                       impl ' (pnn ' x22) '
-                                        (x18 ' (myabs2 ' x22))) ' x21)))))
-                           (then (repeat (conv (depth_tac b)))
-                             (then inv
-                               (thenl apply_last
-                                 [thenl conj [then i h,
-                                   then inv
-                                    (bind prop x21 \
-                                      then (cutth myrepabs2)
-                                       (then (lforall_last x21)
-                                         (thenl lapply_last [daemon,
-                                           then
-                                            (conv
-                                              (depth_tac
-                                                (then sym apply_last)))
-                                            (then apply (then apply daemon))])))],
-                                 h, h])))))))])))))])
  , theorem mytt_transfer
    (myrep2 ' mytt = tt ,
      [then (conv (depth_tac (dd [mytt])))
@@ -1386,7 +1305,7 @@ main :-
          (bind bool2 x18 \
            then (applyth myrepabs2)
             (then (applyth pnn_not) (applyth myproprep2))))])
- , theorem mybool2_e2
+ , theorem mybool2_e
  ((! x18 \
     x18 ' mytt && (! x19 \ x18 ' x19 ==> x18 ' (mynot ' x19)) ==>
      (! x19 \ x18 ' x19)) ,
@@ -1490,7 +1409,33 @@ main :-
                                and ' (eq ' (not ' x20) ' (myrep2 ' x22)) '
                                 (x18 ' (myabs2 ' (not ' x20)))))
                            (then (lforall_last (mynot ' x21))
-                             (then apply_last (then (conv b) (printtac daemon))))))]),
+                             (then apply_last (then (conv b)
+    (thenl inv
+     [then (conv (applyth mynot_transfer))
+       (then (conv (depth_tac (dd [not]))) (then inv (itaut 3))),
+     then (g (myrep2 ' (mynot ' x21)))
+      (then (conv (land_tac (applyth mynot_transfer)))
+        (then (conv (depth_tac (dd [not]))) (then inv (itaut 3)))),
+     then (lforall (myabs2 ' x20))
+      (thenl lapply [then (conv (depth_tac (applyth myabsrep2))) h,
+        then
+         (g
+           (x18 '
+             (myabs2 '
+               (myrep2 ' (mynot ' (myabs2 ' (myrep2 ' (myabs2 ' x20))))))))
+         (then (conv (depth_tac (applyth myabsrep2)))
+           (then (conv (depth_tac (applyth myabsrep2)))
+             (thenl (cut (x20 = myrep2 ' x21))
+               [then (conv (depth_tac h))
+                 (then (conv (depth_tac h))
+                   (then (conv (depth_tac (applyth myabsrep2)))
+                     (then i
+                       (then
+                         (conv
+                           (rand_tac
+                             (rand_tac (then sym (applyth mynot_transfer)))))
+                         (then (conv (depth_tac (applyth myabsrep2))) h))))),
+               itaut 2])))])]))))))]),
                  applyth myproprep2]]))))]])
 
 , theorem step0
@@ -1522,19 +1467,6 @@ main :-
             (then (cutth mytt_transfer)
               (then (conv (depth_tac h))
                 (then (conv (depth_tac (dd [mytt]))) (thenl c [r, itaut 3])))))))])
- , theorem mybool2_e2_daemon1
-    ((! x20 \
-      x20 ' (myabs2 ' (myrep2 ' mytt)) ==>
-       tt = myrep2 ' mytt && x20 ' (myabs2 ' tt)) ,
-     [thenl inv
-      [(bind (bool2 --> prop) x20 \
-        then (cutth mytt_transfer)
-         (then (conv (depth_tac h)) (applyth tt_intro))),
-      (bind (bool2 --> prop) x20 \ applyth tt_intro),
-      (bind (bool2 --> prop) x20 \
-       then (cutth mytt_transfer)
-        (then (g (x20 ' (myabs2 ' (myrep2 ' mytt))))
-          (then (conv (depth_tac h)) (then i h))))]])
  , theorem step1
     ((! x18 \ x18 = mytt $$ x18 = mynot ' mytt) ,
      [then forall_i
@@ -1557,12 +1489,6 @@ main :-
                    then (applyth orr) (then (conv (depth_tac h)) r)),
                 (bind bool2 x19 \
                   then (applyth orl) (then (conv (depth_tac h)) (applyth mynot_mynot_mytt)))]]))]))])
-/*
-   prove lemma (mynot ' (mynot ' mytt) = mytt) and use in
-   place of last daemon
-
-   close two previous daemons using proved theorem
-*/
   /************* Natural numbers ***************/
 /* For debugging, monotone fails to prove this functor monotone
  , def is_NF (((univ --> prop) --> univ --> prop),
