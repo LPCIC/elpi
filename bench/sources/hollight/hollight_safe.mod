@@ -187,15 +187,15 @@ prove G TACS :-
 not_defined P NAME :-
  not (P NAME _) ; $print "Error:" NAME already defined, fail.
 
-check_hyps (typ TYPE) :-
- (not (typ TYPE) ; $print "Error:" TYPE already defined, fail), $print new TYPE.
-check_hyps (def0 NAME DEF) :- parse PDEF DEF, $print NAME "=" PDEF.
-check_hyps (term' NAME TYPE) :-
- not_defined term' NAME, parse PTYPE TYPE, $print NAME ":" PTYPE.
-check_hyps (provable NAME TYPE) :-
- not_defined provable NAME, parse PTYPE TYPE, $print NAME ":" PTYPE.
-check_hyps (H1,H2) :- check_hyps H1, check_hyps H2.
-check_hyps (pi H) :- pi x \ typ' x => check_hyps (H x).
+check_hyps HS (typ TYPE) :-
+ (not (typ TYPE) ; $print "Error:" TYPE already defined, fail), $print HS new TYPE.
+check_hyps HS (def0 NAME DEF) :- parse PDEF DEF, $print HS NAME "=" PDEF.
+check_hyps HS (term' NAME TYPE) :-
+ not_defined term' NAME, parse PTYPE TYPE, $print HS NAME ":" PTYPE.
+check_hyps HS (provable NAME TYPE) :-
+ not_defined provable NAME, parse PTYPE TYPE, $print HS NAME ":" PTYPE.
+check_hyps HS (H1,H2) :- check_hyps HS H1, check_hyps HS H2.
+check_hyps HS (pi H) :- pi x \ typ' x => check_hyps [x | HS] (H x).
 
 /* check1 I O
    checks the declaration I
@@ -235,7 +235,7 @@ check1axm NAME GOAL (provable NAME GOAL) :-
 
 check WHAT :-
  next_object WHAT C CONT,
- (C = stop, !, K = true ; check1 C H , check_hyps H, K = (H => check CONT)),
+ (C = stop, !, K = true ; check1 C H , check_hyps [] H, K = (H => check CONT)),
  !, K.
 
 }
@@ -1030,9 +1030,9 @@ main :-
  /*********** Axiomatization of the universe ********/
  , axiom ejection_injection_univ (pi A \
     ! A p \ ejection_univ ' (injection_univ ' p) = p)
-/* , axiom eject_inject_limit_univ (pi A \ pi B \
+ , axiom eject_inject_limit_univ (pi A \ pi B \
     ! (B --> univ '' A '' B) p \ eject_limit_univ ' (inject_limit_univ ' p) = p)
- , axiom proj1_pair_univ (pi A \ pi B \ ! (univ '' A '' B) p1 \ ! p2 \
+/* , axiom proj1_pair_univ (pi A \ pi B \ ! (univ '' A '' B) p1 \ ! p2 \
     proj1_univ ' (pair_univ ' p1 ' p2) = p1)
  , axiom proj2_pair_univ (pi A \ pi B \ ! p1 \ ! (univ '' A '' B) p2 \
     proj2_univ ' (pair_univ ' p1 ' p2) = p2)
@@ -1112,11 +1112,11 @@ main :-
     [itaut 3])
  , theorem not_monotone ((! p \ ! q \ (p ==> q) ==> (not ' q) ==> (not ' p)),
     [itaut 3])
- , theorem forall_monotone ((! p \ ! q \
-    (! x \ p ' x ==> q ' x) ==> (! x \ p ' x) ==> (! x \ q ' x)),
+ , theorem forall_monotone (pi A \ (! p \ ! q \
+    (! A x \ p ' x ==> q ' x) ==> (! x \ p ' x) ==> (! x \ q ' x)),
     [itaut 6])
- , theorem exists_monotone ((! p \ ! q \
-    (! x \ p ' x ==> q ' x) ==> (? x \ p ' x) ==> (? x \ q ' x)),
+ , theorem exists_monotone (pi A \ (! p \ ! q \
+    (! A x \ p ' x ==> q ' x) ==> (? x \ p ' x) ==> (? x \ q ' x)),
     [itaut 6])
 
  /********** Knaster-Tarski theorem *********/
