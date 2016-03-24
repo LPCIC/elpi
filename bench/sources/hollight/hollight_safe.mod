@@ -468,10 +468,9 @@ inductive_def_pkg PRED PREDF PREDF_MONOTONE PRED_I PRED_E0 PRED_E L OUT :-
   ],
  append OUT12 OUT3 OUT.
 
-/* CSC: I know why: we need reflexivity of equality in itaut */
 mk_intro_thm PRED_I (NAME,ST)
  (theorem NAME (ST,
-   [orelse (then inv (bind* (then (applyth PRED_I) (then (conv dd) (itaut 3))))) (printtac daemon)])).
+   [(then inv (bind* (then (applyth PRED_I) (then (conv dd) (itauteq 10)))))])).
 
 /************ library of basic data types ********/
 mk_bounded_fresh (bind _ F) (bind _ G) :- !, pi x\ mk_bounded_fresh (F x) (G x).
@@ -884,6 +883,9 @@ deftac (itaut N) SEQ TAC :-
    (orelse (sync N)
    (orelse /* Hypothesis not moved to front */ (then lforall (itaut N2))
    (then lapply (itaut N1))))))).
+
+parsetac (itauteq N) (itauteq N).
+deftac (itauteq N) _ (then (cutth eq_reflexive) (itaut N)).
 
 /********** inductive predicates package ********/
 
