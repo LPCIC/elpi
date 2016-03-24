@@ -2031,10 +2031,10 @@ let rec clausify vars depth hyps ts lts lcs = function
       [ { depth = depth+lcs ; args= args; hyps = hyps;
           vars = vars; key=key_of ~mode:`Clause ~depth:(depth+lcs) g} ], lcs
   | UVar ({ contents=g },from,args) when g != dummy ->
-     clausify vars depth hyps ts lts lts
+     clausify vars depth hyps ts lts lcs
        (deref ~from ~to_:(depth+lts) args g)
   | AppUVar ({contents=g},from,args) when g != dummy -> 
-     clausify vars depth hyps ts lts lts
+     clausify vars depth hyps ts lts lcs
        (app_deref ~from ~to_:(depth+lts) args g)
   | Arg _ | AppArg _ -> anomaly "clausify called on non-heap term"
   | Lam _ | Custom _ | String _ | Int _ | Float _ ->
