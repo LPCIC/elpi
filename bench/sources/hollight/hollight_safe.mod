@@ -246,7 +246,9 @@ parse X (F ' G) :- $is_flex X, ($is_flex F ; $is_flex G), !, X = (F ' G).
 parse X (F ' G ' H) :- $is_flex X, ($is_flex F ; $is_flex G ; $is_flex H), !,
  X = (F ' G ' H).
 parse (! F2) (forall '' _ ' lam _ F1) :- !, pi x \ parse (F2 x) (F1 x).
+parse (! TY F2) (forall '' TY ' lam TY F1) :- !, pi x \ parse (F2 x) (F1 x).
 parse (? F2) (exists '' _ ' lam _ F1) :- !, pi x \ parse (F2 x) (F1 x).
+parse (? TY F2) (exists '' TY ' lam TY F1) :- !, pi x \ parse (F2 x) (F1 x).
 parse (F2 = G2) (eq ' F1 ' G1) :- !, parse F2 F1, parse G2 G1.
 parse (F2 <=> G2) (eq ' F1 ' G1) :- !, parse F2 F1, parse G2 G1.
 parse (F2 && G2) (and ' F1 ' G1) :- !, parse F2 F1, parse G2 G1.
@@ -1025,17 +1027,17 @@ main :-
 
  /*********** Axiomatization of the universe ********/
  , axiom ejection_injection_univ (pi A \
-    forall '' A ' lam A p \ ejection_univ ' (injection_univ ' p) = p)
+    ! A p \ ejection_univ ' (injection_univ ' p) = p)
 /* , axiom eject_inject_limit_univ (pi A \ pi B \
-    forall '' (B --> univ '' A '' B) ' lam (B --> univ '' A '' B) p \ eject_limit_univ ' (inject_limit_univ ' p) = p)
- , axiom proj1_pair_univ (pi A \ pi B \ forall '' (univ '' A '' B) ' lam (_ A B) p1 \ ! p2 \
+    ! (B --> univ '' A '' B) p \ eject_limit_univ ' (inject_limit_univ ' p) = p)
+ , axiom proj1_pair_univ (pi A \ pi B \ ! (univ '' A '' B) p1 \ ! p2 \
     proj1_univ ' (pair_univ ' p1 ' p2) = p1)
- , axiom proj2_pair_univ (pi A \ pi B \ ! p1 \ forall '' (univ '' A '' B) ' lam (_ A B) p2 \
+ , axiom proj2_pair_univ (pi A \ pi B \ ! p1 \ ! (univ '' A '' B) p2 \
     proj2_univ ' (pair_univ ' p1 ' p2) = p2)
 */
-/* , axiom case_univ_inj1 (pi A \ pi B \ pi C \ (! b \ /*forall '' (univ '' A '' B --> C) ' lam (univ '' A '' B --> C)*/ ! e1 \ ! e2  \
+/* , axiom case_univ_inj1 (pi A \ pi B \ pi C \ (! b \ ! (univ '' A '' B --> C) e1 \ ! e2  \
     case_univ ' (inj1_univ ' b) ' e1 ' e2 = e1 ' b))
- , axiom case_univ_inj2 (pi A \ pi B \ pi C \ (! b \ forall '' (univ '' A '' B --> C) ' lam (_ A B C) e1 \ ! e2 \
+ , axiom case_univ_inj2 (pi A \ pi B \ pi C \ (! b \ ! (univ '' A '' B --> C) e1 \ ! e2 \
     case_univ ' (inj2_univ ' b) ' e1 ' e2 = e2 ' b))
 */
  , def well_founded (pi A \
@@ -1045,12 +1047,15 @@ main :-
       (? m \ p ' m && (! y \ p ' y ==> not ' (lt ' y ' m)))))
 /* , axiom rec_univ_is_fixpoint (pi A \
    (! lt \ well_founded '' univ ' lt ==>
-    forall '' ((univ --> A) --> (univ --> A)) ' lam (_ A) h \
+    ! ((univ --> A) --> (univ --> A)) h \
      (! f \ ! g \ ! i \
        (! p \ lt ' p ' i ==> f ' p = g ' p) ==> h ' f ' i = h ' g ' i) ==>
      rec_univ ' h = h ' (rec_univ ' h)))
 */
 
+ /******************* Equality *****************/
+ , theorem eq_reflexive (pi A \ ((! A a \ a = a),
+   [ then forall_i (bind A x \ r) ]))
  /******************* Logic *****************/
  , theorem or_commutative ((! a \ ! b \ a $$ b <=> b $$ a),
    [itaut 1])
@@ -1088,11 +1093,9 @@ main :-
    [itaut 3])
  , theorem impl_not_not ((! a \ ! b \ (a ==> b) ==> (not ' b ==> not ' a)),
    [itaut 3])
- , theorem eq_to_impl_f (((forall '' _ ' lam prop p \ ! q \
-    (p <=> q) ==> p ==> q)),
+ , theorem eq_to_impl_f ((! p \ ! q \ (p <=> q) ==> p ==> q),
     [itaut 2])
- , theorem eq_to_impl_b (((forall '' _ ' lam prop p \ ! q \
-    (p <=> q) ==> q ==> p)),
+ , theorem eq_to_impl_b ((! p \ ! q \ (p <=> q) ==> q ==> p),
     [itaut 2])
 
  /********** Monotonicity of logical connectives *********/
@@ -1270,18 +1273,14 @@ main :-
             (bind bool2 x19 \
               then (conv (rand_tac (then sym (applyth myabsrep2))))
                (thenl
-                 (cut
-                   (forall '' prop '
-                     (lam prop x20 \
-                       impl ' (pnn ' x20) ' (x18 ' (myabs2 ' x20)))))
+                 (cut (! prop x20 \ pnn ' x20 ==> x18 ' (myabs2 ' x20)))
                  [then apply_last (applyth myproprep2),
                  then (cutth pnn_e)
                   (then inv
                     (bind prop x20 \
                       then
                        (lforall
-                         (lam prop x21 \
-                           impl ' (pnn ' x21) ' (x18 ' (myabs2 ' x21))))
+                         (lam prop x21 \ pnn ' x21 ==> x18 ' (myabs2 ' x21)))
                        (then
                          (g
                            (impl '
