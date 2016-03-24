@@ -67,6 +67,7 @@ typ T :- typ' T.
 typ' prop.
 typ' (univ '' A '' B) :- typ A, typ B.
 typ' (A --> B) :- typ A, typ B.
+typ' (disj_union '' A '' B) :- typ A, typ B.
 
 /*term T TY :- $print (term T TY), fail.*/
 term T TY :- $is_flex T, !.%, $delay (term T TY) [ T ].
@@ -75,6 +76,12 @@ term' (lam A F) (A --> B) :- pi x\ term' x A => term (F x) B.
 term' (F ' T) B :- term F (A --> B), term T A.
 term' eq (A --> A --> prop).% :- typ A.
 
+/* disj_union constructors and destructors */
+term' inj1_disj_union (A --> disj_union '' A '' B).
+term' inj2_disj_union (B --> disj_union '' A '' B).
+term' case_disj_union (disj_union '' A '' B --> (A --> C) --> (B --> C) --> C).% :- typ A, ...
+
+/* univ constructors and destructors */
 term' injection_univ (A --> univ '' A '' B).
 term' ejection_univ (univ '' A '' B --> A).
 term' inject_limit_univ ((B --> univ '' A '' B) --> univ '' A '' B).
@@ -1028,6 +1035,12 @@ main :-
        (bind prop x13 \ bind prop x14 \ itaut 2),
        (bind prop x13 \ bind prop x14 \ itaut 2)]])
 
+ /*********** Axiomatization of disjoint union ********/
+ , axiom case_disj_union_inj1 (pi A \ pi B \ pi C \ (! b \ ! (A --> C) e1 \ ! (B --> C) e2  \
+    case_disj_union ' (inj1_disj_union ' b) ' e1 ' e2 = e1 ' b))
+ , axiom case_disj_union_inj2 (pi A \ pi B \ pi C \ (! b \ ! (A --> C) e1 \ ! (B --> C) e2  \
+    case_disj_union ' (inj2_disj_union ' b) ' e1 ' e2 = e2 ' b))
+
  /*********** Axiomatization of the universe ********/
  , axiom ejection_injection_univ (pi A \
     ! A p \ ejection_univ ' (injection_univ ' p) = p)
@@ -1562,14 +1575,17 @@ main :-
           then (conv (land_tac (then sym (applyth nat_absrep))))
            (then (conv (rand_tac (then sym (applyth nat_absrep))))
              (then (conv (depth_tac h)) r)))])
- /* CSC: Cvetan, prove these and then move them somewhere else in their own
-    section after the Logic section */
+ /* CSC: Cvetan, prove these and then move them somewhere else in their own section after the Logic section. Also put the pi A \ pi B \ pi C everywhere */
  , axiom pair_univ_inj_l (! x1 \ ! x2 \ ! y1 \ ! y2 \ pair_univ ' x1 ' y1 = pair_univ ' x2 ' y2 ==> x1 = x2)
  , axiom pair_univ_inj_r (! x1 \ ! x2 \ ! y1 \ ! y2 \ pair_univ ' x1 ' y1 = pair_univ ' x2 ' y2 ==> y1 = y2)
  , axiom injection_univ_inj (! x1 \ ! x2 \ injection_univ ' x1 = injection_univ ' x2 ==> x1 = x2)
  , axiom inj1_univ_inj (! x1 \ ! x2 \ inj1_univ ' x1 = inj1_univ ' x2 ==> x1 = x2)
  , axiom inj2_univ_inj (! x1 \ ! x2 \ inj2_univ ' x1 = inj2_univ ' x2 ==> x1 = x2)
  , axiom not_eq_inj1_inj2_univ (! x \ ! y \ inj1_univ ' x = inj2_univ ' y ==> ff)
+ /* CSC: prove the injectivity injX_disj_union_inj as well for X = 1,2. Also put the pi A \pi B ... and move to its own section */
+ , axiom inj1_disj_union_inj (! x1 \ ! x2 \ inj1_disj_union ' x1 = inj1_disj_union ' x2 ==> x1 = x2)
+ , axiom inj2_disj_union_inj (! x1 \ ! x2 \ inj2_disj_union ' x1 = inj2_disj_union ' x2 ==> x1 = x2)
+
  , theorem s_inj ((! x18 \ ! x19 \ s ' x18 = s ' x19 ==> x18 = x19) ,
      [then (repeat (conv (depth_tac (dd [s]))))
        (then inv
@@ -1623,6 +1639,38 @@ main :-
                      (then (conv (depth_tac b))
                        (then (conv (depth_tac (applyth nat_absrep))) r))])))))])
 /*
+
+1. we need to define the lt relation over nat
+   which means
+                  n1<n2    n2<n3
+   =========     =================
+    n < S n            n1<n3
+
+0. but this is an inductive definition over pairs (n,m),
+   i.e. < : nat*nat --> bool
+   So we _first_ need to define the cartesian product of
+   two types
+
+-1. we can define A*B carving it out from
+    univ '' (disj_union '' A '' B) '' prop
+    because
+
+    A*B ::= pair A*B
+
+    can be implemented by choosing for (pair ' a ' b)
+
+    pair_univ '
+     (injection_univ ' (inj1_disj_union ' a)) '
+     (injection_univ ' (inj2_disj_union ' b))
+
+-2. but then you need to use new_basic_type with two pis
+    for A and B and, for the time being, new_basic_type
+    accepts NO PI AT ALL
+
+1. one needs to delift < : nat*nat --> bool to a < : univ*univ --> bool
+
+2. and prove it to be well-founded
+    
  /* leq to be defined as an inductive definition over nat*nat,
     and then prove to be well_founded */
  , axiom wf_leq (well_founded '' _ ' leq)
