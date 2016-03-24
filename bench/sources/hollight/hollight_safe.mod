@@ -294,6 +294,8 @@ parsetac ww ww.
 
 /************ interactive and non interactive loops ********/
 
+parsetac interactive interactive.
+
 parse_obj (theorem NAME PSTTAC) [theorem NAME STTAC] :-
  parse_thm NAME PSTTAC STTAC.
 parse_obj (axiom NAME PTYP) [axiom NAME TYP] :- parse_axiom PTYP TYP.
@@ -339,8 +341,9 @@ toplevel_loop G :-
 callback_proved _ _ (false,_).
 callback_proved NAME G (true, [ TAC ]) :-
  canonical TAC CANONICALTAC,
+ parsetac PCANONICALTAC CANONICALTAC,
  parse PG G,
- $print (theorem NAME (PG , [ CANONICALTAC ] )).
+ $print (theorem NAME (PG , [ PCANONICALTAC ] )).
 
 end_of_proof (true, []) :- $print "proof completed".
 end_of_proof (false, []).
@@ -353,6 +356,10 @@ next_tactic0 [ SEQ | OLD ] (true, [ _ | _ ]) ITAC :-
 next_tactic0 SEQS (true, CERT) ITAC :-
  $print "error",
  next_tactic SEQS (true, CERT) ITAC.
+next_tactic0 SEQS (true_then_false, (_,INT_TACS,_)) ITAC :-
+ next_tactic0 SEQS (true, INT_TACS) ITAC.
+next_tactic0 SEQS (false, [ interactive | _ ]) ITAC :-
+ next_tactic0 SEQS (true, [ _ ]) ITAC.
 next_tactic0 [ SEQ | OLD ] (false, [ TAC | _ ]) TAC.
 next_tactic0 _ (false, _) ITAC :-
  $print "aborted",
@@ -363,6 +370,19 @@ next_tactic SEQS CERT TAC :- next_tactic0 SEQS CERT PTAC, parsetac PTAC TAC.
 update_certificate (true, [ TAC | OTHER_TACS ]) ITAC NEW (true, TACS) :-
  mk_script ITAC NEW NEW_TACS TAC,
  append NEW_TACS OTHER_TACS TACS.
+update_certificate (false, [ interactive | NON_INTERACTIVE_TACS ]) ITAC NEW CERTIFICATE :-
+ update_certificate (true_then_false, (SCRIPT, [ SCRIPT ], NON_INTERACTIVE_TACS)) ITAC NEW CERTIFICATE.
+update_certificate (true_then_false, (SCRIPT,[ TAC | OTHER_TACS ],NON_INTERACTIVE_TACS)) ITAC NEW CERTIFICATE :- !,
+ mk_script ITAC NEW NEW_INTERACTIVE_TACS TAC,
+ append NEW_INTERACTIVE_TACS OTHER_TACS INTERACTIVE_TACS,
+ ( INTERACTIVE_TACS = [ _ | _ ], !,
+   CERTIFICATE =
+    (true_then_false, (SCRIPT,INTERACTIVE_TACS,NON_INTERACTIVE_TACS))
+ ; CERTIFICATE = (false, NON_INTERACTIVE_TACS),
+   $print "INTERACTIVE SUBPROOF COMPLETED",
+   canonical SCRIPT CSCRIPT,
+   parsetac PSCRIPT CSCRIPT,
+   $print PSCRIPT).
 update_certificate (false, [ _ | OTHER_TACS ]) _ _ (false, OTHER_TACS).
 
 mk_script (bind A T) NEW NEW_TACS (bind A T2) :- !,
@@ -1453,7 +1473,14 @@ main :-
                              and ' (eq ' tt ' (myrep2 ' x20)) '
                               (x18 ' (myabs2 ' tt))))
                          (then (lforall_last mytt)
-                           (then apply_last (then (conv b) (printtac daemon))))),
+                           (then apply_last (then (conv b)
+                            (thenl inv
+                             [then (cutth mytt_transfer)
+                               (then (conv (depth_tac h)) (applyth tt_intro)),
+                             (applyth tt_intro),
+                             then (cutth mytt_transfer)
+                              (then (g (x18 ' (myabs2 ' (myrep2 ' mytt))))
+                                (then (conv (depth_tac h)) (then i h)))]))))),
                      (bind prop x20 \
                        bind bool2 x21 \
                         then (cutth exists_i)
