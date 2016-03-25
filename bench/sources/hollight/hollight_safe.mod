@@ -1553,7 +1553,50 @@ main :-
                        (then (lforall x20)
                          (then (conv (depth_tac h)) (then i h))))),
                  thenl c [r, h]])))))])
- , axiom inj1_univ_inj (! x1 \ ! x2 \ inj1_univ ' x1 = inj1_univ ' x2 ==> x1 = x2)
+ , theorem inj1_univ_inj 
+   ((! x20 \ ! x21 \ inj1_univ ' x20 = inj1_univ ' x21 ==> x20 = x21) ,
+    [then inv
+     (bind (univ '' X64^20 '' X65^20) x20 \
+       bind (univ '' X64^20 '' X65^20) x21 \
+        then (cutth case_univ_inj1)
+         (then (lforall x20)
+           (then (lforall (lam (univ '' X64^20 '' X65^20) x22 \ x22))
+             (then (lforall (lam (univ '' X64^20 '' X65^20) x22 \ x22))
+               (then (cutth case_univ_inj1)
+                 (then (lforall x21)
+                   (then
+                     (lforall (lam (univ '' X64^20 '' X65^20) x22 \ x22))
+                     (then
+                       (lforall (lam (univ '' X64^20 '' X65^20) x22 \ x22))
+                       (thenl
+                         (cut
+                           (case_univ ' (inj1_univ ' x20) '
+                             (lam (univ '' X64^20 '' X65^20) x22 \ x22) '
+                             (lam (univ '' X64^20 '' X65^20) x22 \ x22) =
+                             case_univ ' (inj1_univ ' x21) '
+                              (lam (univ '' X64^20 '' X65^20) x22 \ x22) '
+                              (lam (univ '' X64^20 '' X65^20) x22 \ x22)))
+                         [then
+                           (g
+                             (case_univ ' (inj1_univ ' x20) '
+                               (lam (univ '' X64^20 '' X65^20) x22 \ x22) '
+                               (lam (univ '' X64^20 '' X65^20) x22 \ x22) =
+                               case_univ ' (inj1_univ ' x21) '
+                                (lam (univ '' X64^20 '' X65^20) x22 \ x22)
+                                '
+                                (lam (univ '' X64^20 '' X65^20) x22 \ x22)))
+                           (then (conv (depth_tac h))
+                             (then
+                               (conv (depth_tac (applyth case_univ_inj1)))
+                               (then i
+                                 (thenl
+                                   (cut
+                                     ((lam (univ '' X64^20 '' X65^20) x22 \
+                                        x22) ' x20 =
+                                       (lam (univ '' X64^20 '' X65^20)
+                                         x22 \ x22) ' x21)) [auto_monotone,
+                                   h])))),
+                         thenl c [thenl c [thenl c [r, h], r], r]])))))))))])
  , axiom inj2_univ_inj (! x1 \ ! x2 \ inj2_univ ' x1 = inj2_univ ' x2 ==> x1 = x2)
  , axiom not_eq_inj1_inj2_univ (! x \ ! y \ inj1_univ ' x = inj2_univ ' y ==> ff)
  /* CSC: prove the injectivity injX_disj_union_inj as well for X = 1,2. Also put the pi A \pi B ... and move to its own section */
