@@ -1531,7 +1531,28 @@ main :-
  /* CSC: Cvetan, prove these and then move them somewhere else in their own section after the Logic section. Also put the pi A \ pi B \ pi C everywhere */
  , axiom pair_univ_inj_l (! x1 \ ! x2 \ ! y1 \ ! y2 \ pair_univ ' x1 ' y1 = pair_univ ' x2 ' y2 ==> x1 = x2)
  , axiom pair_univ_inj_r (! x1 \ ! x2 \ ! y1 \ ! y2 \ pair_univ ' x1 ' y1 = pair_univ ' x2 ' y2 ==> y1 = y2)
- , axiom injection_univ_inj (! x1 \ ! x2 \ injection_univ ' x1 = injection_univ ' x2 ==> x1 = x2)
+ , theorem injection_univ_inj 
+   ((! x20 \ ! x21 \ injection_univ ' x20 = injection_univ ' x21 ==> x20 = x21) ,
+    [then forall_i
+      (bind X4^20 x20 \
+       then forall_i
+        (bind X4^20 x21 \
+          then i
+           (then (cutth ejection_injection_univ)
+             (then (lforall x21)
+               (thenl
+                 (cut
+                   (ejection_univ ' (injection_univ ' x20) =
+                     ejection_univ ' (injection_univ ' x21)))
+                 [then
+                   (g
+                     (ejection_univ ' (injection_univ ' x20) =
+                       ejection_univ ' (injection_univ ' x21)))
+                   (then (conv (depth_tac h))
+                     (then (cutth ejection_injection_univ)
+                       (then (lforall x20)
+                         (then (conv (depth_tac h)) (then i h))))),
+                 thenl c [r, h]])))))])
  , axiom inj1_univ_inj (! x1 \ ! x2 \ inj1_univ ' x1 = inj1_univ ' x2 ==> x1 = x2)
  , axiom inj2_univ_inj (! x1 \ ! x2 \ inj2_univ ' x1 = inj2_univ ' x2 ==> x1 = x2)
  , axiom not_eq_inj1_inj2_univ (! x \ ! y \ inj1_univ ' x = inj2_univ ' y ==> ff)
