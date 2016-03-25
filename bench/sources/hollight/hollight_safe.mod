@@ -1529,8 +1529,34 @@ main :-
            (then (conv (rand_tac (then sym (applyth nat_absrep))))
              (then (conv (depth_tac h)) r)))])
  /* CSC: Cvetan, prove these and then move them somewhere else in their own section after the Logic section. Also put the pi A \ pi B \ pi C everywhere */
- , axiom pair_univ_inj_l (! x1 \ ! x2 \ ! y1 \ ! y2 \ pair_univ ' x1 ' y1 = pair_univ ' x2 ' y2 ==> x1 = x2)
- , axiom pair_univ_inj_r (! x1 \ ! x2 \ ! y1 \ ! y2 \ pair_univ ' x1 ' y1 = pair_univ ' x2 ' y2 ==> y1 = y2)
+ , theorem pair_univ_inj_l 
+   ((! x20 \ ! x21 \ ! x22 \ ! x23 \ pair_univ ' x20 ' x22 = pair_univ ' x21 ' x23 ==> x20 = x21) ,
+    [then (repeat forall_i)
+     (bind (univ '' X7^20 '' X8^20) x20 \
+       bind (univ '' X7^20 '' X8^20) x21 \
+        bind (univ '' X7^20 '' X8^20) x22 \
+         bind (univ '' X7^20 '' X8^20) x23 \
+          then i (then (cutth proj1_pair_univ)
+             (then (lforall x20)
+               (then (lforall x22)
+                 (thenl (cut
+                     (proj1_univ ' (pair_univ ' x20 ' x22) =
+                       proj1_univ ' (pair_univ ' x21 ' x23)))
+                   [auto_monotone, thenl c [r, h]])))))])
+ , theorem pair_univ_inj_r 
+   ((! x20 \ ! x21 \ ! x22 \ ! x23 \ pair_univ ' x20 ' x22 = pair_univ ' x21 ' x23 ==> x22 = x23) ,
+    [then (repeat forall_i)
+     (bind (univ '' X4^20 '' X5^20) x20 \
+       bind (univ '' X4^20 '' X5^20) x21 \
+        bind (univ '' X4^20 '' X5^20) x22 \
+         bind (univ '' X4^20 '' X5^20) x23 \
+          then i (then (cutth proj2_pair_univ)
+             (then (lforall x20)
+               (then (lforall x22)
+                 (thenl (cut
+                     (proj2_univ ' (pair_univ ' x20 ' x22) =
+                       proj2_univ ' (pair_univ ' x21 ' x23)))
+                   [auto_monotone, thenl c [r, h]])))))])
  , theorem injection_univ_inj 
    ((! x20 \ ! x21 \ injection_univ ' x20 = injection_univ ' x21 ==> x20 = x21) ,
     [then forall_i
