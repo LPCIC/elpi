@@ -2,49 +2,9 @@
 (* license: GNU Lesser General Public License Version 2.1                    *)
 (* ------------------------------------------------------------------------- *)
 
-(* Prolog functors *)
-module ASTFuncS : sig
-  type t
-  val compare : t -> t -> int
-  val pp : Format.formatter -> t -> unit
-  val show : t -> string
-  val eq : t -> t -> bool
-  val truef : t
-  val andf : t
-  val andf2 : t
-  val orf : t
-  val implf : t
-  val rimplf : t
-  val cutf : t
-  val pif : t
-  val sigmaf : t
-  val eqf : t
-  val isf : t
-  val nilf : t
-  val consf : t
-  val from_string : string -> t
-end
-
-type term =
-   Const of ASTFuncS.t
- | Custom of ASTFuncS.t
- | App of term * term list
- | Lam of ASTFuncS.t * term
- | String of ASTFuncS.t
- | Int of int 
- | Float of float 
-
-type clause = term
-type decl =
-   Clause of clause
- | Local of ASTFuncS.t
- | Begin
- | End
- | Accumulated of decl list
+open Elpi_ast
 
 type fixity = Infixl | Infixr | Infix | Prefix | Postfix
-
-exception NotInProlog
 
 (* raises Not_found is the constant has no declared fixity *)
 val min_precedence : int   (* minimal precedence in use *)
@@ -52,7 +12,7 @@ val lam_precedence : int   (* precedence of lambda abstraction *)
 val appl_precedence : int  (* precedence of applications *)
 val inf_precedence : int   (* greater than any used precedence *)
 val list_element_prec : int
-val precedence_of : ASTFuncS.t -> fixity * int
+val precedence_of : Func.t -> fixity * int
 val parse_program : filenames:string list -> decl list
 val parse_goal : string -> term
 val parse_goal_from_stream : char Stream.t -> term

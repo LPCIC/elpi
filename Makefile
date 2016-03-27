@@ -16,7 +16,6 @@ CMX=cmx
 CMXA=cmxa
 OC=ocamlfind ocamlopt
 OCB=ocamlc
-OCP=ocamlopt
 
 all:
 	$(MAKE) trace_ppx
@@ -59,34 +58,36 @@ dist:
 
 # compilation of elpi
 
-elpi: elpi.$(CMX) latex_exporter.$(CMX) runtime.$(CMX) parser.$(CMX)
+elpi: elpi.$(CMX) elpi_latex_exporter.$(CMX) elpi_runtime.$(CMX) elpi_parser.$(CMX)
 	$(OC) -package ppx_deriving.std -linkpkg \
 		$(OCAMLOPTIONS) $(FLAGS) -o $@ \
 		camlp5.$(CMXA) unix.$(CMXA) str.$(CMXA) \
-		parser.$(CMX) ptmap.$(CMX) \
-		trace.$(CMX) runtime.$(CMX) \
-		latex_exporter.$(CMX) \
-		custom.$(CMX) elpi.$(CMX)
+		elpi_ast.$(CMX) elpi_parser.$(CMX) elpi_ptmap.$(CMX) \
+		elpi_trace.$(CMX) elpi_runtime.$(CMX) \
+		elpi_latex_exporter.$(CMX) \
+		elpi_custom.$(CMX) elpi.$(CMX)
 
 %.$(CMX): %.ml trace_ppx
 	$(OC) $(OCAMLOPTIONS) -package ppx_deriving.std -ppx './trace_ppx' -c $<
 %.cmi: %.mli
 	$(OC) $(OCAMLOPTIONS) -c $<
 
-parser.$(CMX): parser.ml parser.cmi 
-	$(OCP) $(OCAMLOPTIONS) -pp '$(PP) $(PARSE)' $(FLAGS) -o $@ -c $<
+elpi_parser.$(CMX): elpi_parser.ml elpi_parser.cmi elpi_ast.$(CMX) elpi_ast.cmi
+	$(OC) $(OCAMLOPTIONS) -pp '$(PP) $(PARSE)' $(FLAGS) -o $@ -c $<
 
 # dependencies
-elpi.$(CMX): elpi.ml ptmap.$(CMX) trace.$(CMX) runtime.$(CMX) latex_exporter.$(CMX) custom.$(CMX) parser.$(CMX)
-runtime.$(CMX): runtime.ml runtime.cmi trace.$(CMX) parser.$(CMX) ptmap.$(CMX)
-runtime.cmi: runtime.mli parser.cmi
-ptmap.cmi: ptmap.mli
-ptmap.$(CMX): ptmap.ml ptmap.cmi
-parser.cmi: parser.mli
-trace.$(CMX): trace.ml trace.cmi
-trace.cmi: trace.mli
-custom.cmi: custom.mli
-custom.$(CMX): custom.ml custom.cmi runtime.cmi runtime.$(CMX)
-latex_exporter.cmi: latex_exporter.mli parser.cmi
-latex_exporter.$(CMX): latex_exporter.ml latex_exporter.cmi parser.$(CMX) 
+elpi.$(CMX): elpi.ml elpi_ptmap.$(CMX) elpi_trace.$(CMX) elpi_runtime.$(CMX) elpi_latex_exporter.$(CMX) elpi_custom.$(CMX) elpi_parser.$(CMX)
+elpi_runtime.$(CMX): elpi_runtime.ml elpi_runtime.cmi elpi_trace.$(CMX) elpi_parser.$(CMX) elpi_ptmap.$(CMX)
+elpi_runtime.cmi: elpi_runtime.mli elpi_parser.cmi
+elpi_ptmap.cmi: elpi_ptmap.mli
+elpi_ptmap.$(CMX): elpi_ptmap.ml elpi_ptmap.cmi
+elpi_parser.cmi: elpi_parser.mli elpi_ast.cmi
+elpi_trace.$(CMX): elpi_trace.ml elpi_trace.cmi
+elpi_trace.cmi: elpi_trace.mli
+elpi_custom.cmi: elpi_custom.mli
+elpi_ast.cmi: elpi_ast.mli
+elpi_ast.$(CMX): elpi_ast.cmi
+elpi_custom.$(CMX): elpi_custom.ml elpi_custom.cmi elpi_runtime.cmi elpi_runtime.$(CMX)
+elpi_latex_exporter.cmi: elpi_latex_exporter.mli elpi_parser.cmi
+elpi_latex_exporter.$(CMX): elpi_latex_exporter.ml elpi_latex_exporter.cmi elpi_parser.$(CMX) 
 

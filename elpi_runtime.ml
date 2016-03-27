@@ -214,7 +214,7 @@ let partition_i f l =
 end (* }}} *)
 open Utils
 
-module F = Parser.ASTFuncS
+module F = Elpi_ast.Func
 
 (* TODOS:
    - There are a few TODOs with different implementative choices to
@@ -370,10 +370,10 @@ let do_app_deref = ref (fun ~from ~to_ _ _ -> assert false);;
 let m = ref [];;
 let n = ref 0;;
 
-let min_prec = Parser.min_precedence
-let appl_prec = Parser.appl_precedence
-let lam_prec = Parser.lam_precedence
-let inf_prec = Parser.inf_precedence
+let min_prec = Elpi_parser.min_precedence
+let appl_prec = Elpi_parser.appl_precedence
+let lam_prec = Elpi_parser.lam_precedence
+let inf_prec = Elpi_parser.inf_precedence
 
 let xppterm ~nice depth0 names argsdepth env f t =
   let pp_app f pphd pparg ?pplastarg (hd,args) =
@@ -451,7 +451,7 @@ let xppterm ~nice depth0 names argsdepth env f t =
      ->
       let prefix,last = flat_cons_to_list depth [] t in
       Format.fprintf f "[" ;
-      pplist (aux Parser.list_element_prec depth) "," f prefix ;
+      pplist (aux Elpi_parser.list_element_prec depth) "," f prefix ;
       if last!=nilc then begin
        Format.fprintf f " | " ;
        aux prec 1 f last
@@ -461,25 +461,25 @@ let xppterm ~nice depth0 names argsdepth env f t =
     | App (hd,x,xs) ->
        (try
          let assoc,hdlvl =
-          Parser.precedence_of (F.from_string (string_of_constant hd)) in
+          Elpi_parser.precedence_of (F.from_string (string_of_constant hd)) in
          with_parens hdlvl
          (fun _ -> match assoc with
-            Parser.Infix when List.length xs = 1 ->
+            Elpi_parser.Infix when List.length xs = 1 ->
              Format.fprintf f "@[<hov 1>%a@ %a@ %a@]"
               (aux (hdlvl+1) depth) x ppconstant hd
               (aux (hdlvl+1) depth) (List.hd xs)
-          | Parser.Infixl when List.length xs = 1 ->
+          | Elpi_parser.Infixl when List.length xs = 1 ->
              Format.fprintf f "@[<hov 1>%a@ %a@ %a@]"
               (aux hdlvl depth) x ppconstant hd
               (aux (hdlvl+1) depth) (List.hd xs)
-          | Parser.Infixr when List.length xs = 1 ->
+          | Elpi_parser.Infixr when List.length xs = 1 ->
              Format.fprintf f "@[<hov 1>%a@ %a@ %a@]"
               (aux (hdlvl+1) depth) x ppconstant hd
               (aux hdlvl depth) (List.hd xs)
-          | Parser.Prefix when xs = [] ->
+          | Elpi_parser.Prefix when xs = [] ->
              Format.fprintf f "@[<hov 1>%a@ %a@]" ppconstant hd
               (aux hdlvl depth) x
-          | Parser.Postfix when xs = [] ->
+          | Elpi_parser.Postfix when xs = [] ->
              Format.fprintf f "@[<hov 1>%a@ %a@]" (aux hdlvl depth) x
               ppconstant hd 
           | _ ->
@@ -531,7 +531,7 @@ let xppterm ~nice depth0 names argsdepth env f t =
         let c = constant_of_dbl depth in
         Format.fprintf f "%a \\@ %a" (aux inf_prec depth) c
          (aux min_prec (depth+1)) t)
-    | String str -> Format.fprintf f "\"%s\"" (Parser.ASTFuncS.show str)
+    | String str -> Format.fprintf f "\"%s\"" (Elpi_ast.Func.show str)
     | Int i -> Format.fprintf f "%d" i
     | Float x -> Format.fprintf f "%f" x
   in
@@ -576,7 +576,7 @@ let xppterm_prolog ~nice names env f t =
     | AppArg(_,_) -> assert false
     | Const s -> ppconstant f s
     | Lam t -> assert false;
-    | String str -> Format.fprintf f "\"%s\"" (Parser.ASTFuncS.show str)
+    | String str -> Format.fprintf f "\"%s\"" (Elpi_ast.Func.show str)
     | Int i -> Format.fprintf f "%d" i
     | Float x -> Format.fprintf f "%f" x
   in
@@ -1162,7 +1162,7 @@ let pp_key (hd,_) = string_of_constant hd
 
 type index = {
   src : (int * term) list;
-  map : (key clause list * key clause list * key clause list Ptmap.t) Ptmap.t
+  map : (key clause list * key clause list * key clause list Elpi_ptmap.t) Elpi_ptmap.t
 }
 
 let variablek =    -99999999
@@ -1208,36 +1208,36 @@ let key_of ~mode:_ ~depth =
 let get_clauses ~depth a { map = m } =
  let ind,app = key_of ~mode:`Query ~depth a in
  try
-  let l,flexs,h = Ptmap.find ind m in
+  let l,flexs,h = Elpi_ptmap.find ind m in
   if app=variablek then l
-  else (try Ptmap.find app h with Not_found -> flexs)
+  else (try Elpi_ptmap.find app h with Not_found -> flexs)
  with Not_found -> []
 
 let add_clauses clauses s { map = p;  src } =       
   let p = List.fold_left (fun m clause -> 
     let ind,app = clause.key in
     try 
-      let l,flexs,h = Ptmap.find ind m in
+      let l,flexs,h = Elpi_ptmap.find ind m in
       if app=variablek then
-       Ptmap.add ind
-        (clause::l,clause::flexs,Ptmap.map(fun l_rev->clause::l_rev) h)
+       Elpi_ptmap.add ind
+        (clause::l,clause::flexs,Elpi_ptmap.map(fun l_rev->clause::l_rev) h)
         m
       else
-       let l_rev = try Ptmap.find app h with Not_found -> flexs in
-        Ptmap.add ind
-         (clause::l,flexs,Ptmap.add app (clause::l_rev) h) m
+       let l_rev = try Elpi_ptmap.find app h with Not_found -> flexs in
+        Elpi_ptmap.add ind
+         (clause::l,flexs,Elpi_ptmap.add app (clause::l_rev) h) m
     with Not_found -> 
      if app=variablek then
-      Ptmap.add ind ([clause],[clause],Ptmap.empty) m
+      Elpi_ptmap.add ind ([clause],[clause],Elpi_ptmap.empty) m
      else
-      Ptmap.add ind
-       ([clause],[],Ptmap.add app [clause] Ptmap.empty) m
+      Elpi_ptmap.add ind
+       ([clause],[],Elpi_ptmap.add app [clause] Elpi_ptmap.empty) m
     ) p clauses
   in
   { map = p; src = s :: src }
 
 let make_index p =
-  let idx = add_clauses (List.rev p) (0,cutc) { map = Ptmap.empty; src = [] } in
+  let idx = add_clauses (List.rev p) (0,cutc) { map = Elpi_ptmap.empty; src = [] } in
   { idx with src = [] } (* original program not in clauses *)
  
 (* flatten_snd = List.flatten o (List.map ~~snd~~) *)
@@ -1292,7 +1292,7 @@ module UnifBits : Indexing = struct
 
   type index = {
     src : (int * term) list;
-    map : (key clause * int) list Ptmap.t  (* timestamp *)
+    map : (key clause * int) list Elpi_ptmap.t  (* timestamp *)
   }
 
   let key_bits =
@@ -1390,7 +1390,7 @@ module UnifBits : Indexing = struct
 
   let get_clauses ~depth a { map = m } =
     let ind = key_of ~mode:`Query ~depth a in
-    let cl_list = List.flatten (Ptmap.find_unifiables ~functor_bits ind m) in
+    let cl_list = List.flatten (Elpi_ptmap.find_unifiables ~functor_bits ind m) in
     List.map fst
       (List.fast_sort (fun (_,cl1) (_,cl2) -> compare cl1 cl2) cl_list)
       
@@ -1402,16 +1402,16 @@ module UnifBits : Indexing = struct
       let clause = clause, !timestamp in
       op timestamp;
       try 
-        let cl_list = Ptmap.find ind m in
-        Ptmap.add ind (clause::cl_list) m
+        let cl_list = Elpi_ptmap.find ind m in
+        Elpi_ptmap.add ind (clause::cl_list) m
       with Not_found -> 
-        Ptmap.add ind [clause] m
+        Elpi_ptmap.add ind [clause] m
     ) ptree clauses in
     { map; src = s :: src }
  
   let make_index p =
     timestamp := 1;
-    let m = add_clauses ~op:incr p (0,cutc) { map = Ptmap.empty; src = [] } in
+    let m = add_clauses ~op:incr p (0,cutc) { map = Elpi_ptmap.empty; src = [] } in
     timestamp := 0;
     { m with src = [] }
 
@@ -2660,8 +2660,7 @@ do_make_runtime := make_runtime;;
 (* }}} *)
 (* {{{ ************** "compilation" + API *********************** *)
 
-module AST = Parser
-module ConstMap = Map.Make(Parser.ASTFuncS)
+module ConstMap = Map.Make(Elpi_ast.Func)
 
 (* To assign Arg (i.e. stack) slots to unif variables in clauses *)
 type argmap = { max_arg : int; name2arg : (string * term) list }
@@ -2685,13 +2684,13 @@ let stack_funct_of_ast amap cmap f =
 ;;
 
 let rec stack_term_of_ast lvl amap cmap = function
-  | AST.Const f -> stack_funct_of_ast amap cmap f
-  | AST.Custom f ->
+  | Elpi_ast.Const f -> stack_funct_of_ast amap cmap f
+  | Elpi_ast.Custom f ->
      let cname = fst (funct_of_ast f) in
      begin try let _f = lookup_custom cname in ()
      with Not_found -> error ("No custom named " ^ F.show f) end;
      amap, Custom (cname, [])
-  | AST.App(AST.Const f, tl) ->
+  | Elpi_ast.App(Elpi_ast.Const f, tl) ->
      let amap, rev_tl =
        List.fold_left (fun (amap, tl) t ->
          let amap, t = stack_term_of_ast lvl amap cmap t in
@@ -2707,7 +2706,7 @@ let rec stack_term_of_ast lvl amap cmap = function
         | hd2::tl -> amap, App(c,hd2,tl)
         | _ -> anomaly "Application node with no arguments" end
      | _ -> error "Clause shape unsupported" end
-  | AST.App (AST.Custom f,tl) ->
+  | Elpi_ast.App (Elpi_ast.Custom f,tl) ->
      let cname = fst (funct_of_ast f) in
      begin try let _f = lookup_custom cname in ()
      with Not_found -> error ("No custom named " ^ F.show f) end;
@@ -2717,19 +2716,19 @@ let rec stack_term_of_ast lvl amap cmap = function
           (amap, t::tl))
         (amap, []) tl in
      amap, Custom(cname, List.rev rev_tl)
-  | AST.Lam (x,t) ->
+  | Elpi_ast.Lam (x,t) ->
      let cmap' = ConstMap.add x (constant_of_dbl lvl) cmap in
      let amap, t' = stack_term_of_ast (lvl+1) amap cmap' t in
      amap, Lam t'
-  | AST.App (AST.App (f,l1),l2) ->
-     stack_term_of_ast lvl amap cmap (AST.App (f, l1@l2))
-  | AST.String str -> amap, String str
-  | AST.Int i -> amap, Int i 
-  | AST.Float f -> amap, Float f 
-  | AST.App (AST.Lam _,_) -> error "Beta-redexes not in our language"
-  | AST.App (AST.String _,_) -> type_error "Applied string value"
-  | AST.App (AST.Int _,_) -> type_error "Applied integer value"
-  | AST.App (AST.Float _,_) -> type_error "Applied float value"
+  | Elpi_ast.App (Elpi_ast.App (f,l1),l2) ->
+     stack_term_of_ast lvl amap cmap (Elpi_ast.App (f, l1@l2))
+  | Elpi_ast.String str -> amap, String str
+  | Elpi_ast.Int i -> amap, Int i 
+  | Elpi_ast.Float f -> amap, Float f 
+  | Elpi_ast.App (Elpi_ast.Lam _,_) -> error "Beta-redexes not in our language"
+  | Elpi_ast.App (Elpi_ast.String _,_) -> type_error "Applied string value"
+  | Elpi_ast.App (Elpi_ast.Int _,_) -> type_error "Applied integer value"
+  | Elpi_ast.App (Elpi_ast.Float _,_) -> type_error "Applied float value"
 ;;
 
 (* BUG: I pass the empty amap, that is plainly wrong.
@@ -2739,7 +2738,7 @@ let term_of_ast ~depth t =
  let freevars = mkinterval 0 depth 0 in
  let cmap =
   List.fold_left (fun cmap i ->
-   ConstMap.add (Parser.ASTFuncS.from_string (string_of_constant i))
+   ConstMap.add (Elpi_ast.Func.from_string (string_of_constant i))
     (constant_of_dbl i) cmap
    ) ConstMap.empty freevars in
  let { max_arg = max; name2arg = l }, t =
@@ -2756,28 +2755,28 @@ let query_of_ast_cmap lcs cmap t =
 
 let query_of_ast (lcs,_) t = query_of_ast_cmap lcs ConstMap.empty t;;
 
-let program_of_ast (p : Parser.decl list) : program =
+let program_of_ast (p : Elpi_ast.decl list) : program =
  let rec aux lcs clauses =
   let clauses,lcs,_,cmapstack as res =
    List.fold_left
     (fun (clauses,lcs,cmap,cmapstack) d ->
       match d with
-         Parser.Clause t ->
+         Elpi_ast.Clause t ->
           let names,_,env,t = query_of_ast_cmap lcs cmap t in
           (* Format.eprintf "%a\n%!" (uppterm 0 names 0 env) t ; *)
           let moreclauses, morelcs = clausify (Array.length env) lcs [] [] 0 0 t in
           List.rev_append moreclauses clauses, lcs+morelcs, cmap, cmapstack
-       | Parser.Begin -> clauses, lcs, cmap, cmap::cmapstack
-       | Parser.Accumulated p ->
+       | Elpi_ast.Begin -> clauses, lcs, cmap, cmap::cmapstack
+       | Elpi_ast.Accumulated p ->
           let moreclausesrev,lcs = aux lcs p in
            moreclausesrev@clauses, lcs, cmap, cmapstack
-       | Parser.End ->
+       | Elpi_ast.End ->
           (match cmapstack with
               [] ->
                (* TODO: raise it in the parser *)
                error "End without a Begin"
             | cmap::cmapstack -> clauses, lcs, cmap, cmapstack)
-       | Parser.Local v ->
+       | Elpi_ast.Local v ->
           clauses,lcs+1, ConstMap.add v (constant_of_dbl lcs) cmap, cmapstack
     ) ([],lcs,ConstMap.empty,[]) clauses in
   if cmapstack <> [] then error "Begin without an End" else clauses,lcs in
@@ -2785,7 +2784,7 @@ let program_of_ast (p : Parser.decl list) : program =
   lcs,make_index (List.rev clausesrev)
 ;;
 
-(*let pp_FOprolog p = assert false (*CSC: port the code, see function above List.iter (fun { Parser.head = a; hyps = f } ->
+(*let pp_FOprolog p = assert false (*CSC: port the code, see function above List.iter (fun { Elpi_parser.head = a; hyps = f } ->
   let amap, cmap = empty_amap, ConstMap.empty in
   let amap, a = stack_term_of_ast 0 amap cmap a in
   let amap, f = stack_term_of_ast 0 amap cmap f in
@@ -2806,11 +2805,11 @@ let program_of_ast (p : Parser.decl list) : program =
 let rec pp_FOprolog p = 
  List.iter
   (function
-      Parser.Local _
-    | Parser.Begin
-    | Parser.End -> assert false (* TODO *)
-    | Parser.Accumulated l -> pp_FOprolog l
-    | Parser.Clause t ->
+      Elpi_ast.Local _
+    | Elpi_ast.Begin
+    | Elpi_ast.End -> assert false (* TODO *)
+    | Elpi_ast.Accumulated l -> pp_FOprolog l
+    | Elpi_ast.Clause t ->
        (* BUG: ConstMap.empty because "local" declarations are ignored ATM *)
        let names,_,env,t = query_of_ast_cmap 0 ConstMap.empty t in
        match t with

@@ -3,7 +3,8 @@
 (* ------------------------------------------------------------------------- *)
 
 
-open Parser
+open Elpi_ast
+open Elpi_parser
 
 module Utils :
  sig
@@ -48,7 +49,7 @@ type term =
   | AppUVar of term oref * (*depth:*)int * term list
   (* Misc: $custom predicates, ... *)
   | Custom of constant * term list
-  | String of ASTFuncS.t
+  | String of Func.t
   | Int of int
   | Float of float
 and 'a oref = {
@@ -61,7 +62,7 @@ and constraint_ =
     associated to *)
  exn * term oref list (* well... open type in caml < 4.02 *)
 
-val term_of_ast : depth:int -> Parser.term -> term
+val term_of_ast : depth:int -> Elpi_ast.term -> term
 val oref : 'a -> 'a oref
 
 exception No_clause
@@ -80,7 +81,7 @@ module Pp :
 
 module Constants :
  sig
-  val funct_of_ast : ASTFuncS.t -> constant * term
+  val funct_of_ast : Func.t -> constant * term
   val string_of_constant : constant -> string
 
   val eqc : constant

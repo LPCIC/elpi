@@ -24,25 +24,25 @@ open Longident
 
 let trace name ppfun body = [%expr
   let wall_clock = Unix.gettimeofday () in
-  Trace.enter [%e name] [%e ppfun];
+  Elpi_trace.enter [%e name] [%e ppfun];
   try
     let rc = [%e body] in
     let elapsed = Unix.gettimeofday () -. wall_clock in
-    Trace.exit [%e name] false elapsed;
+    Elpi_trace.exit [%e name] false elapsed;
     rc
   with
-  | Trace.TREC_CALL(f,x) ->
+  | Elpi_trace.TREC_CALL(f,x) ->
       let elapsed = Unix.gettimeofday () -. wall_clock in
-      Trace.exit [%e name] true elapsed;
+      Elpi_trace.exit [%e name] true elapsed;
       Obj.obj f (Obj.obj x)
   | e ->
       let elapsed = Unix.gettimeofday () -. wall_clock in
-      Trace.exit [%e name] false elapsed;
+      Elpi_trace.exit [%e name] false elapsed;
       raise e
 ]
 
 let spy name pp data =
-  [%expr Trace.print [%e name] [%e pp] [%e data]]
+  [%expr Elpi_trace.print [%e name] [%e pp] [%e data]]
 
 let tcall hd args =
   let rec mkapp f = function
@@ -54,7 +54,7 @@ let tcall hd args =
     match List.rev rest with
     | [] -> assert false
     | f::a -> [%expr Obj.repr [%e mkapp f a]] in
-  [%expr raise (Trace.TREC_CALL ([%e papp], Obj.repr [%e last]))]
+  [%expr raise (Elpi_trace.TREC_CALL ([%e papp], Obj.repr [%e last]))]
 
 let enabled =
   try ignore(Sys.getenv "TRACE"); true

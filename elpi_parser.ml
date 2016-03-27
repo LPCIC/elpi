@@ -2,94 +2,18 @@
 (* license: GNU Lesser General Public License Version 2.1                    *)
 (* ------------------------------------------------------------------------- *)
 
-module ASTFuncS = struct
-
-  type t = string
-  let compare = String.compare
-
-  (* Hash consing *)
-  let from_string =
-   let h = Hashtbl.create 37 in
-   function x ->
-    try Hashtbl.find h x
-    with Not_found -> Hashtbl.add h x x ; x
-
-  let pp fmt s = Format.fprintf fmt "%s" s
-  let show x = x
-  let eq = (==)
-  let truef = from_string "true"
-  let andf = from_string ","
-  let andf2 = from_string "&"
-  let orf = from_string ";"
-  let implf = from_string "=>"
-  let rimplf = from_string ":-"
-  let cutf = from_string "!"
-  let pif = from_string "pi"
-  let sigmaf = from_string "sigma"
-  let eqf = from_string "="
-  let isf = from_string "is"
-  let consf = from_string "::"
-  let nilf = from_string "nil"
-
-end
-
-type term =
-   Const of ASTFuncS.t
- | Custom of ASTFuncS.t
- | App of term * term list
- | Lam of ASTFuncS.t * term
- | String of ASTFuncS.t
- | Int of int
- | Float of float
-
-let mkLam x t = Lam (ASTFuncS.from_string x,t)
-let mkNil = Const ASTFuncS.nilf
-let mkString str = String (ASTFuncS.from_string str)
-let mkInt i = Int i
-let mkFloat f = Float f
-let mkSeq l =
- let rec aux =
-  function
-    [] -> assert false
-  | [e] -> e
-  | hd::tl -> App(Const ASTFuncS.consf,[hd;aux tl])
- in
-  aux l
-let mkIs x f = App(Const ASTFuncS.isf,[x;f])
+open Elpi_ast
 
 type fixity = Infixl | Infixr | Infix | Prefix | Postfix
 
 let set_precedence,precedence_of =
- let module ConstMap = Map.Make(ASTFuncS) in 
+ let module ConstMap = Map.Make(Func) in 
  let precs = ref ConstMap.empty in
  (fun c p -> precs := ConstMap.add c p !precs),
  (fun c -> ConstMap.find c !precs)
 ;;
 
 exception NotInProlog;;
-
-type clause = term
-type decl =
-   Clause of clause
- | Local of ASTFuncS.t
- | Begin
- | End
- | Accumulated of decl list
-
-type program = decl list
-type goal = term
-
-let mkApp =
- function
-    App(c,l1)::l2 -> App(c,l1@l2)
-  | (Custom _ | Const _) as c::l2 -> App(c,l2)
-  | _ -> raise NotInProlog
-
-let fresh_uv_names = ref (-1);;
-
-let mkFreshUVar () = incr fresh_uv_names; Const (ASTFuncS.from_string ("_" ^ string_of_int !fresh_uv_names))
-let mkCon c = Const (ASTFuncS.from_string c)
-let mkCustom c = Custom (ASTFuncS.from_string c)
 
 let parsed = ref [];;
 let cur_dirname = ref (Unix.getcwd ())
@@ -447,9 +371,9 @@ EXTEND
      | USE_SIG; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
         [Accumulated(parse lp (List.map (fun fn -> fn ^ ".sig") filenames))]
      | LOCAL; vars = LIST1 const_sym SEP SYMBOL ","; FULLSTOP ->
-        List.map (fun x -> Local x) vars
+        List.map (fun x -> mkLocal x) vars
      | LOCAL; vars = LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP ->
-        List.map (fun x -> Local x) vars
+        List.map (fun x -> mkLocal x) vars
      | LOCALKIND; LIST1 const_sym SEP SYMBOL ","; FULLSTOP -> []
      | LOCALKIND; LIST1 const_sym SEP SYMBOL ","; kind; FULLSTOP -> []
      | CLOSED; LIST1 const_sym SEP SYMBOL ","; FULLSTOP -> []
@@ -488,7 +412,7 @@ EXTEND
            | "postfix"  -> Gramext.NonA,   postrule, (Postfix,nprec)
            | "postfixl" -> Gramext.LeftA,  postrule, (Postfix,nprec)
            | _ -> assert false in
-          set_precedence cst ppinfo ;
+          set_precedence (Func.from_string cst) ppinfo ;
           let where,name = is_used nprec in
            Grammar.extend
             [Grammar.Entry.obj atom, Some where, [name, Some fixity, [rule]]];

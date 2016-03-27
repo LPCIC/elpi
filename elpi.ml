@@ -14,14 +14,14 @@ let _ =
 *)
 
 let run_prog prog query =
- let prog = Runtime.program_of_ast prog in
- let query = Runtime.query_of_ast prog query in
- Runtime.execute_loop prog query
+ let prog = Elpi_runtime.program_of_ast prog in
+ let query = Elpi_runtime.query_of_ast prog query in
+ Elpi_runtime.execute_loop prog query
 ;;
 
 let test_impl prog query =
- let prog = Runtime.program_of_ast prog in
- let query = Runtime.query_of_ast prog query in
+ let prog = Elpi_runtime.program_of_ast prog in
+ let query = Elpi_runtime.query_of_ast prog query in
  Gc.compact ();
  let time f p q =
    let t0 = Unix.gettimeofday () in
@@ -29,14 +29,14 @@ let test_impl prog query =
    let t1 = Unix.gettimeofday () in
    Printf.printf "TIME: %5.3f\n%!" (t1 -. t0);
    b in
- if time Runtime.execute_once prog query then exit 1 else exit 0
+ if time Elpi_runtime.execute_once prog query then exit 1 else exit 0
 ;;
 
 
 (* rewrites a lambda-prolog program to first-order prolog *)
 let pp_lambda_to_prolog prog =
  Printf.printf "\nRewriting λ-prolog to first-order prolog...\n\n%!";
- Runtime.pp_prolog prog
+ Elpi_runtime.pp_prolog prog
 ;;
 
 let set_terminal_width ?(max_w=
@@ -59,11 +59,11 @@ let usage () =
   Format.eprintf "\t-prolog prints files to Prolog syntax if possible\n";
   Format.eprintf "\t-latex_export prints files to LaTeX syntax\n";
 
-  Trace.usage ()
+  Elpi_trace.usage ()
 ;;
 
 let _ =
-  let argv = Trace.parse_argv Sys.argv in
+  let argv = Elpi_trace.parse_argv Sys.argv in
   let argn = Array.length argv in
   if argn = 2 && (argv.(1) = "-h" || argv.(1) = "--help") then
    begin usage () ; exit 0 end;
@@ -78,17 +78,17 @@ let _ =
   for i=j to argn - 1 do filenames := argv.(i)::!filenames done;
   set_terminal_width ();
   if test = `LatexExport then begin
-   Latex_exporter.activate () ;
-   ignore (Parser.parse_program (List.rev !filenames))
+   Elpi_latex_exporter.activate () ;
+   ignore (Elpi_parser.parse_program (List.rev !filenames))
   end else
-   let p = Parser.parse_program (List.rev !filenames) in
+   let p = Elpi_parser.parse_program (List.rev !filenames) in
    let g =
      match test with
      | `OneBatch | `LatexExport | `PPprologBatch -> "main."
      | _ ->
      Printf.printf "goal> %!";
      input_line stdin in
-   let g = Parser.parse_goal g in
+   let g = Elpi_parser.parse_goal g in
    match test with
    | `OneBatch -> test_impl p g
    | `OneInteractive -> run_prog p g
