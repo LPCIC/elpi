@@ -254,7 +254,7 @@ let _ =
     | _ -> type_error "$is_flex takes 1 argument") ;
   register_custom "$gettimeofday" (fun ~depth ~env:_ _ args ->
     match args with
-    | [t1] -> [ App (eqc, t1, [Float Unix.gettimeofday ()]) ]
+    | [t1] -> [ App (eqc, t1, [Float (Unix.gettimeofday ())]) ]
     | _ -> type_error "$gettimeofday takes 1 argument") ;
   register_custom "$closed" (fun ~depth ~env:_ _ args ->
     match args with
@@ -275,7 +275,7 @@ let _ =
         let is_lt = if t1 < 0 && t2 < 0 then t2 < t1 else t1 < t2 in
         if not is_lt then raise No_clause else []
     | _ -> type_error "$lt takes 2 arguments") ;
-  List.iter (fun p,psym,pname ->
+  List.iter (fun (p,psym,pname) ->
   register_custom pname (fun ~depth ~env:_ _ args ->
     match args with
     | [t1; t2] ->

@@ -14,17 +14,24 @@ FLAGS=-I $(shell camlp5 -where)
 OCAMLOPTIONS= -g
 CMX=cmx
 CMXA=cmxa
-OC=ocamlopt
+OC=ocamlfind ocamlopt
 OCB=ocamlc
 OCP=ocamlopt
 
 all:
-	$(MAKE) pa_notrace.cmo pa_trace.cmo
+	$(MAKE) trace_ppx
 	$(MAKE) elpi
 
 trace:
-	$(MAKE) pa_notrace.cmo pa_trace.cmo
-	$(MAKE) elpi.trace
+	$(MAKE) trace_ppx
+	-mv elpi elpi.notrace
+	$(MAKE) clean
+	TRACE=1 $(MAKE) elpi
+	mv elpi elpi.trace
+	-mv elpi.notrace elpi
+
+trace_ppx: trace_ppx.ml
+	$(OC) -package compiler-libs.common,ppx_tools.metaquot -linkpkg $< -o $@
 
 git/%:
 	rm -rf "$$PWD/elpi-$*"
@@ -40,7 +47,8 @@ runners:
 		mv elpi.git.$(t) elpi.git.$(t:runner-%=%))
 
 clean:
-	rm -f *.cmo *.cma *.cmx *.cmxa *.cmi *.o *.tex *.aux *.log *.pdf elpi elpi.trace elpi.git.*
+	rm -f *.cmo *.cma *.cmx *.cmxa *.cmi *.o *.tex *.aux *.log *.pdf
+	rm -f elpi.git.*
 
 dist:
 	git archive --format=tar --prefix=elpi-$(V)/ HEAD . \
@@ -49,43 +57,25 @@ dist:
 # compilation of elpi
 
 elpi: elpi.$(CMX) latex_exporter.$(CMX) runtime.$(CMX) parser.$(CMX)
-	$(OC) $(OCAMLOPTIONS) $(FLAGS) -o $@ \
+	$(OC) -package ppx_deriving.std -linkpkg \
+		$(OCAMLOPTIONS) $(FLAGS) -o $@ \
 		camlp5.$(CMXA) unix.$(CMXA) str.$(CMXA) \
 		parser.$(CMX) ptmap.$(CMX) \
 		trace.$(CMX) runtime.$(CMX) \
-    latex_exporter.$(CMX) \
+		latex_exporter.$(CMX) \
 		custom.$(CMX) elpi.$(CMX)
 
-elpi.trace: elpi.trace.$(CMX) latex_exporter.$(CMX) runtime.trace.$(CMX) parser.$(CMX)
-	$(OC) $(OCAMLOPTIONS) $(FLAGS) -o $@ \
-		camlp5.$(CMXA) unix.$(CMXA) str.$(CMXA) \
-		parser.$(CMX) ptmap.$(CMX) \
-		trace.$(CMX) latex_exporter.$(CMX) runtime.trace.$(CMX) \
-		custom.trace.$(CMX) elpi.trace.$(CMX)
-
-%.$(CMX): %.ml
-	$(OC) $(OCAMLOPTIONS) -pp '$(PP) pa_notrace.cmo' -c $<
-%.trace.$(CMX): %.ml
-	$(OC) $(OCAMLOPTIONS) -pp '$(PP) pa_trace.cmo' -c $<
-	mv $*.$(CMX) $*.trace.$(CMX)
-	mv $*.o $*.trace.o
+%.$(CMX): %.ml trace_ppx
+	$(OC) $(OCAMLOPTIONS) -package ppx_deriving.std -ppx './trace_ppx' -c $<
 %.cmi: %.mli
-	$(OC) $(OCAMLOPTIONS) -pp '$(PP)' -c $<
+	$(OC) $(OCAMLOPTIONS) -c $<
 
 parser.$(CMX): parser.ml parser.cmi 
 	$(OCP) $(OCAMLOPTIONS) -pp '$(PP) $(PARSE)' $(FLAGS) -o $@ -c $<
 
-pa_trace.cmo: pa_trace.ml trace.cmi
-	$(OCB)  -pp '$(PP) $(TRACESYNTAX) -DTRACE' $(FLAGS) -o $@ -c $<
-
-pa_notrace.cmo: pa_trace.ml trace.cmi
-	$(OCB)  -pp '$(PP) $(TRACESYNTAX)' $(FLAGS) -o $@ -c $<
-
 # dependencies
 elpi.$(CMX): elpi.ml ptmap.$(CMX) trace.$(CMX) runtime.$(CMX) latex_exporter.$(CMX) custom.$(CMX) parser.$(CMX)
-elpi.trace.$(CMX): elpi.ml ptmap.$(CMX) trace.$(CMX) runtime.trace.$(CMX) latex_exporter.$(CMX) custom.trace.$(CMX) parser.$(CMX)
 runtime.$(CMX): runtime.ml runtime.cmi trace.$(CMX) parser.$(CMX) ptmap.$(CMX)
-runtime.trace.$(CMX): runtime.ml runtime.cmi trace.$(CMX) parser.$(CMX) ptmap.$(CMX)
 runtime.cmi: runtime.mli parser.cmi
 ptmap.cmi: ptmap.mli
 ptmap.$(CMX): ptmap.ml ptmap.cmi
@@ -94,7 +84,6 @@ trace.$(CMX): trace.ml trace.cmi
 trace.cmi: trace.mli
 custom.cmi: custom.mli
 custom.$(CMX): custom.ml custom.cmi runtime.cmi runtime.$(CMX)
-custom.trace.$(CMX): custom.ml custom.cmi runtime.cmi runtime.trace.$(CMX)
 latex_exporter.cmi: latex_exporter.mli parser.cmi
 latex_exporter.$(CMX): latex_exporter.ml latex_exporter.cmi parser.$(CMX) 
 

@@ -601,7 +601,7 @@ let to_resume = Fork.new_local []
 
 exception Delayed_unif of int * term array * int * term * term
 
-let add_constraint0 (_,vars) as cstr =
+let add_constraint0 (_,vars as cstr) =
  delayed := cstr :: !delayed;
  List.iter (fun r -> r.rest <- cstr :: r.rest) vars
 
@@ -626,7 +626,7 @@ let add_constraint cstr =
   if not !last_call then trail := AddConstr cstr :: !trail
  end
 
-let remove_constraint0 (_,vars) as cstr =
+let remove_constraint0 (_,vars as cstr) =
  delayed := remove_from_list cstr !delayed;
  List.iter (fun r -> r.rest <- remove_from_list cstr r.rest) vars
 
@@ -760,8 +760,8 @@ let mkAppUVar r lvl l =
 let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
   let delta = from - to_ in
   let rec aux depth x =
-    TRACE "to_heap" (fun fmt -> Format.fprintf fmt "to_heap(%d,%d->%d): %a"
-      depth from to_ (ppterm (from+depth) [] argsdepth e) x)
+    [%trace "to_heap" (fun fmt -> Format.fprintf fmt "to_heap(%d,%d->%d): %a"
+      depth from to_ (ppterm (from+depth) [] argsdepth e) x) begin
     match x with
     | Const c ->
        if delta == 0 then x else                          (* optimization  *)
@@ -909,9 +909,10 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
         "Non deterministic pruning, implemented delay: t=%a, delta=%d%!"
          (ppterm depth [] argsdepth e) x delta;
        anomaly (Format.flush_str_formatter ())
+  end]
   in
     let rc = aux 0 t in
-    SPY "heap-term" (ppterm to_ [] argsdepth e) rc;
+    [%spy "heap-term" (ppterm to_ [] argsdepth e) rc];
     rc
 
 (* full_deref performs lifting only and with from <= to
@@ -923,9 +924,9 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
      t lives in from; args already live in to_
 *)
 and full_deref argsdepth ~from ~to_ args e t =
-  TRACE "full_deref" (fun fmt ->
+  [%trace "full_deref" (fun fmt ->
     Format.fprintf fmt "full_deref from:%d to:%d %a @@ %d"
-      from to_ (ppterm from [] 0 e) t args)
+      from to_ (ppterm from [] 0 e) t args) begin
  if args == 0 then
    if from == to_ then t
    else to_heap argsdepth ~from ~to_ e t
@@ -970,6 +971,7 @@ and full_deref argsdepth ~from ~to_ args e t =
      | String _
      | Int _
      | Float _ -> t
+  end]
 
 (* eat_args n [n ; ... ; n+k] (Lam_0 ... (Lam_k t)...) = n+k+1,[],t
    eat_args n [n ; ... ; n+k]@l (Lam_0 ... (Lam_k t)...) =
@@ -986,12 +988,13 @@ and eat_args depth l t =
 (* Lift is to be called only on heap terms and with from <= to *)
 (* TODO: use lift in fullderef? efficient iff it is inlined *)
 and lift ~from ~to_ t =
- TRACE "lift" (fun fmt ->
+ [%trace "lift" (fun fmt ->
    Format.fprintf fmt "@[<hov 1>from:%d@ to:%d@ %a@]"
-     from to_ (uppterm from [] 0 [||]) t)
+     from to_ (uppterm from [] 0 [||]) t) begin
  (* Dummy trail, argsdepth and e: they won't be used *)
  if from == to_ then t
  else to_heap 0 ~from ~to_ dummy_env t
+ end]
 
 (* Deref is to be called only on heap terms and with from <= to *)
 and deref ~from ~to_ args t =
@@ -1016,17 +1019,18 @@ and decrease_depth r ~from ~to_ argsno =
    every t in ts must be either an heap term or an Arg(i,0)
    the ts are lifted as usual *)
 and subst fromdepth ts t =
- TRACE "subst" (fun fmt ->
+ [%trace "subst" (fun fmt ->
    Format.fprintf fmt "@[<hov 2>t: %a@ ts: %a@]"
    (uppterm (fromdepth+1) [] 0 [||]) t (pplist (uppterm 0 [] 0 [||]) ",") ts)
+ begin
  if ts == [] then t
  else
    let len = List.length ts in
    let fromdepthlen = fromdepth + len in
    let rec aux depth tt =
-   TRACE "subst-aux" (fun fmt ->
+   [%trace "subst-aux" (fun fmt ->
      Format.fprintf fmt "@[<hov 2>t: %a@]" (uppterm (fromdepth+1) [] 0 [||]) tt)
-   match tt with
+   begin match tt with
    | Const c as x ->
       if c >= fromdepth && c < fromdepthlen then
         match List.nth ts (len-1 - (c-fromdepth)) with
@@ -1054,7 +1058,7 @@ and subst fromdepth ts t =
       let xs' = List.map (aux depth) xs in
       if xs==xs' then orig else Custom(c,xs')
    | UVar({contents=g},vardepth,argsno) when g != dummy ->
-      TCALL aux depth (deref ~from:vardepth ~to_:depth argsno g)
+      [%tcall aux depth (deref ~from:vardepth ~to_:depth argsno g)]
    | UVar(r,vardepth,argsno) as orig ->
       if vardepth+argsno <= fromdepth then orig
       else
@@ -1064,7 +1068,7 @@ and subst fromdepth ts t =
        let args = List.map (fun c -> aux depth (constant_of_dbl c)) args in
        mkAppUVar r vardepth args
    | AppUVar({ contents = t },vardepth,args) when t != dummy ->
-      TCALL aux depth (app_deref ~from:vardepth ~to_:depth args t)
+      [%tcall aux depth (app_deref ~from:vardepth ~to_:depth args t)]
    | AppUVar(r,vardepth,args) ->
       let r,vardepth,argsno =
         decrease_depth r ~from:vardepth ~to_:fromdepth 0 in
@@ -1075,18 +1079,19 @@ and subst fromdepth ts t =
    | String _
    | Int _
    | Float _ as x -> x
-   in
+   end] in
      aux fromdepthlen t
+ end]
 
 and beta depth sub t args =
- TRACE "beta" (fun fmt ->
+ [%trace "beta" (fun fmt ->
    Format.fprintf fmt "@[<hov 2>subst@ t: %a@ args: %a@]"
      (uppterm depth [] 0 [||]) t (pplist (uppterm depth [] 0 [||]) ",") args)
- match t,args with
- | Lam t',hd::tl -> TCALL beta depth (hd::sub) t' tl
+ begin match t,args with
+ | Lam t',hd::tl -> [%tcall beta depth (hd::sub) t' tl]
  | _ ->
     let t' = subst depth sub t in
-    SPY "subst-result" (ppterm depth [] 0 [||]) t';
+    [%spy "subst-result" (ppterm depth [] 0 [||]) t'];
     match args with
     | [] -> t'
     | ahd::atl ->
@@ -1104,6 +1109,7 @@ and beta depth sub t args =
          | AppUVar (r,depth,args1) -> AppUVar (r,depth,args1@args)
          | Lam _ -> anomaly "beta: some args and some lambdas"
          | String _ | Int _ | Float _ -> type_error "beta"
+ end]
 
 (* Deref is to be called only on heap terms and with from <= to
 *  The args must live in to_.
@@ -1325,13 +1331,13 @@ module UnifBits : Indexing = struct
     let set_section k left right =
       let k = abs k in
       let new_bits = (k lsl right) land (fullones lsr (key_bits - left)) in
-      TRACE "set-section" (fun fmt -> Format.fprintf fmt "@[<hv 0>%s@ %s@]"
+      [%trace "set-section" (fun fmt -> Format.fprintf fmt "@[<hv 0>%s@ %s@]"
         (dec_to_bin !buf) (dec_to_bin new_bits))
-      buf := new_bits lor !buf in
+      (buf := new_bits lor !buf) ] in
     let rec index lvl tm depth left right =
-      TRACE "index" (fun fmt -> Format.fprintf fmt "@[<hv 0>%a@]"
+      [%trace "index" (fun fmt -> Format.fprintf fmt "@[<hv 0>%a@]"
         (uppterm depth [] 0 [||]) tm)
-      match tm with
+      begin match tm with
       | Const k | Custom (k,_) ->
           set_section (if lvl=0 then k else hash k) left right 
       | UVar ({contents=t},origdepth,args) when t != dummy ->
@@ -1367,6 +1373,7 @@ module UnifBits : Indexing = struct
            index (lvl+1) arg depth j right_hd;
            if sub_arg > 0 && j + sub_arg <= left
            then subindex lvl depth j left sub_arg argl
+      end]
      and subindex lvl depth j left step = function
        | [] -> ()
        | x::xs ->
@@ -1375,7 +1382,7 @@ module UnifBits : Indexing = struct
           if j2 + step <= left then subindex lvl depth j2 left step xs
     in
       index 0 term depth key_bits 0;
-      SPY "key-val" (fun f x -> Format.fprintf f "%s" (dec_to_bin x)) (!buf);
+      [%spy "key-val" (fun f x -> Format.fprintf f "%s" (dec_to_bin x)) (!buf)];
       !buf
 
   let get_clauses ~depth a { map = m } =
@@ -1556,9 +1563,9 @@ let is_llam lvl args adepth bdepth depth left e =
   with RestrictionFailure -> false, []
 let is_llam lvl args adepth bdepth depth left e =
   let res = is_llam lvl args adepth bdepth depth left e in
-  SPY "is_llam" (fun fmt (b,map) -> Format.fprintf fmt "%d + %a = %b, %a"
+  [%spy "is_llam" (fun fmt (b,map) -> Format.fprintf fmt "%d + %a = %b, %a"
     lvl (pplist (ppterm adepth [] bdepth e) "") args b
-    (pplist (fun fmt (x,n) -> Format.fprintf fmt "%d |-> %d" x n) "") map) res;
+    (pplist (fun fmt (x,n) -> Format.fprintf fmt "%d |-> %d" x n) "") map) res];
   res
 
 let rec mknLam n t = if n = 0 then t else mknLam (n-1) (Lam t)
@@ -1595,16 +1602,16 @@ let bind r gamma l a d delta b left t e =
     end in
   let cst ?lift c b delta =
     let n = cst ?lift c b delta in
-    SPY "cst" (fun fmt (n,m) -> Format.fprintf fmt
+    [%spy "cst" (fun fmt (n,m) -> Format.fprintf fmt
       "%d -> %d (c:%d b:%d gamma:%d delta:%d d:%d)" n m c b gamma delta d)
-      (c,n);
+      (c,n)];
     n in
-  let rec bind b delta w t = TRACE "bind" (fun fmt -> Format.fprintf fmt
+  let rec bind b delta w t = [%trace "bind" (fun fmt -> Format.fprintf fmt
       "%b %d + %a = t:%a a:%d delta:%d d:%d w:%d b:%d" left gamma
       (pplist (fun fmt (x,n) -> Format.fprintf fmt "%a |-> %d"
         (ppterm a [] b e) (constant_of_dbl x) n) "") l
       (ppterm a [] b [||]) t a delta d w b)
-    match t with
+    begin match t with
     | UVar (r1,_,_) | AppUVar (r1,_,_) when r == r1 -> raise RestrictionFailure
     | Const c -> let n = cst c b delta in if n < 0 then constant_of_dbl n else Const n
     | Lam t -> Lam (bind b delta (w+1) t)
@@ -1700,11 +1707,11 @@ let bind r gamma l a d delta b left t e =
               mkAppUVar r' lvl args_here
         end
           else raise RestrictionFailure
-  in
+  end] in
   try
     r @:= mknLam new_lams (bind b delta 0 t);
     if not !last_call then trail := (Assign r) :: !trail;
-    SPY "assign(HO)" (ppterm gamma [] a [||]) (!!r);
+    [%spy "assign(HO)" (ppterm gamma [] a [||]) (!!r)];
     true
   with RestrictionFailure -> false
 ;;
@@ -1713,11 +1720,11 @@ let unif adepth e bdepth a b =
 
  (* heap=true if b is known to be a heap term *)
  let rec unif depth a bdepth b heap =
-   TRACE "unif" (fun fmt ->
+   [%trace "unif" (fun fmt ->
      Format.fprintf fmt "@[<hov 2>^%d:%a@ =%d= ^%d:%a@]%!"
        adepth (ppterm (adepth+depth) [] adepth [||]) a depth
        bdepth (ppterm (bdepth+depth) [] adepth e) b)
-   let delta = adepth - bdepth in
+   begin let delta = adepth - bdepth in
    (delta = 0 && a == b) || match a,b with
 (* TODO: test if it is better to deref first or not, i.e. the relative order
    of the clauses below *)
@@ -1752,7 +1759,7 @@ let unif adepth e bdepth a b =
      begin try
       e.(i) <-
        restrict adepth ~from:(adepth+depth) ~to_:adepth e a;
-      SPY "assign" (ppterm adepth [] adepth [||]) (e.(i)); true
+      [%spy "assign" (ppterm adepth [] adepth [||]) (e.(i))]; true
      with RestrictionFailure -> false end
    | _, UVar (r,origdepth,0) ->
        if not !last_call then
@@ -1771,7 +1778,7 @@ let unif adepth e bdepth a b =
              to_heap adepth 
                ~from:(bdepth+depth) ~to_:origdepth e a in
          r @:= t;
-         SPY "assign" (ppterm depth [] adepth [||]) t; true
+         [%spy "assign" (ppterm depth [] adepth [||]) t]; true
        with RestrictionFailure -> false end
    | UVar (r,origdepth,0), _ ->
        if not !last_call then
@@ -1792,26 +1799,26 @@ let unif adepth e bdepth a b =
              to_heap adepth 
                ~from:(adepth+depth) ~to_:origdepth e b in
          r @:= t;
-         SPY "assign" (ppterm depth [] adepth [||]) t; true
+         [%spy "assign" (ppterm depth [] adepth [||]) t]; true
        with RestrictionFailure -> false end
 
    (* simplify *)
    (* TODO: unif->deref case. Rewrite the code to do the job directly? *)
    | _, Arg (i,args) ->
       e.(i) <- fst (make_lambdas adepth args);
-      SPY "assign" (ppterm depth [] adepth [||]) (e.(i));
+      [%spy "assign" (ppterm depth [] adepth [||]) (e.(i))];
       unif depth a bdepth b heap
    | _, UVar (r,origdepth,args) ->
       if not !last_call then
        trail := (Assign r) :: !trail;
       r @:= fst (make_lambdas origdepth args);
-      SPY "assign" (ppterm depth [] adepth [||]) (!!r);
+      [%spy "assign" (ppterm depth [] adepth [||]) (!!r)];
       unif depth a bdepth b heap
    | UVar (r,origdepth,args), _ ->
       if not !last_call then
        trail := (Assign r) :: !trail;
       r @:= fst (make_lambdas origdepth args);
-      SPY "assign" (ppterm depth [] adepth [||]) (!!r);
+      [%spy "assign" (ppterm depth [] adepth [||]) (!!r)];
       unif depth a bdepth b heap
 
    (* HO *)
@@ -1886,9 +1893,10 @@ let unif adepth e bdepth a b =
    | Int s1, Int s2 -> s1==s2
    | Float s1, Float s2 -> s1 = s2
    | String s1, String s2 -> s1==s2
-   | _ -> false in
+   | _ -> false
+   end] in
  let res = unif 0 a bdepth b false in
- SPY "unif result" (fun fmt x -> Format.fprintf fmt "%b" x) res;
+ [%spy "unif result" (fun fmt x -> Format.fprintf fmt "%b" x) res];
  res
 ;;
 
@@ -2134,9 +2142,9 @@ let is_frozen c m =
 
 let matching e depth argsdepth m a b =
   let rec aux m a b =
-  TRACE "matching" (fun fmt ->
+  [%trace "matching" (fun fmt ->
    Format.fprintf fmt "%a = %a" (ppterm 0 [] 0 e) a (ppterm 0 [] 0 e) b)
-  match a,b with
+  begin match a,b with
   | UVar( { contents = t}, 0, 0), _ when t != dummy -> aux m t b
   | _, Arg(i,0) when e.(i) != dummy -> aux m a e.(i)
   | t, Arg(i,0) -> let m, t = freeze m t in e.(i) <- t; m 
@@ -2168,7 +2176,7 @@ let matching e depth argsdepth m a b =
   | Float x, Float y when x = y -> m
   | String x, String y when x == y -> m
   | _ -> raise NoMatch
-  in
+  end] in
     aux m a b
 ;;
 
@@ -2222,9 +2230,9 @@ let thaw max_depth e m t =
 ;;
 
 let thaw max_depth e m t =
-  SPY "thaw-in"  (ppterm 0 [] 0 e) t;
+  [%spy "thaw-in"  (ppterm 0 [] 0 e) t];
   let t' = thaw max_depth e m t in
-  SPY "thaw-out"  (ppterm 0 [] 0 e) t';
+  [%spy "thaw-out"  (ppterm 0 [] 0 e) t'];
   t'
 
 module HISTORY = Hashtbl.Make(struct
@@ -2436,17 +2444,17 @@ let make_runtime : unit -> (?depth:int -> 'a -> 'b -> int -> 'k) * ('k -> 'k) * 
   (* Input to be read as the orl (((p,g)::gs)::next)::alts
      depth >= 0 is the number of variables in the context. *)
   let rec run depth p g gs (next : frame) alts lvl =
-    TRACE "run" (fun fmt -> ppterm depth [] 0 [||] fmt g)
- match resume_all () with
+    [%trace "run" (fun fmt -> ppterm depth [] 0 [||] fmt g)
+ begin match resume_all () with
   None ->
 begin Format.fprintf Format.std_formatter "Undo triggered by goal resumption\n%!";
-  TCALL next_alt alts
+  [%tcall next_alt alts]
 end
  | Some ((ndepth,np,ng)::goals) ->
     run ndepth np ng (goals@(depth,p,g)::gs) next alts lvl
  | Some [] ->
     match g with
-    | c when c == cutc -> TCALL cut p gs next alts lvl
+    | c when c == cutc -> [%tcall cut p gs next alts lvl]
     | App(c, g, gs') when c == andc || c == andc2 ->
        run depth p g (List.map(fun x -> depth,p,x) gs'@gs) next alts lvl
     | App(c, g2, [g1]) when c == rimplc ->
@@ -2476,7 +2484,7 @@ end
        run depth p (app_deref ~from ~to_:depth args t) gs next alts lvl 
     | Const _ | App _ -> (* Atom case *)
        let cp = get_clauses depth g p in
-       TCALL backchain depth p g gs cp next alts lvl
+       [%tcall backchain depth p g gs cp next alts lvl]
     | Arg _ | AppArg _ -> anomaly "Not a heap term"
     | Lam _ | String _ | Int _ | Float _ -> type_error "Not a predicate"
     | UVar _ | AppUVar _ -> error "Flexible predicate"
@@ -2486,9 +2494,10 @@ end
        (match b with
           Some gs' ->
            (match List.map (fun g -> depth,p,g) gs' @ gs with
-           | [] -> TCALL pop_andl alts next lvl
+           | [] -> [%tcall pop_andl alts next lvl]
            | (depth,p,g) :: gs -> run depth p g gs next alts lvl)
-        | None -> TCALL next_alt alts)
+       | None -> [%tcall next_alt alts])
+  end]
 
   and backchain depth p g gs cp next alts lvl =
     let maybe_last_call = alts == emptyalts in
@@ -2502,9 +2511,9 @@ end
       | _ -> anomaly "ill-formed goal" in
     let args_of_g = args_of g in
     let rec select l =
-      TRACE "select" (fun fmt -> pplist ~max:1 ~boxed:true ppclause "|" fmt l)
-      match l with
-      | [] -> TCALL next_alt alts
+      [%trace "select" (fun fmt -> pplist ~max:1 ~boxed:true ppclause "|" fmt l)
+      begin match l with
+      | [] -> [%tcall next_alt alts]
       | c :: cs ->
         let old_trail = !trail in
         last_call := maybe_last_call && cs = [];
@@ -2512,7 +2521,7 @@ end
         match
          for_all2 (unif depth env c.depth) args_of_g c.args
         with
-        | false -> undo_trail old_trail; TCALL select cs
+        | false -> undo_trail old_trail; [%tcall select cs]
         | true ->
            let oldalts = alts in
            let alts = if cs = [] then alts else
@@ -2521,8 +2530,8 @@ end
            begin match c.hyps with
            | [] ->
               begin match gs with
-              | [] -> TCALL pop_andl alts next lvl
-              | (depth,p,g)::gs -> TCALL run depth p g gs next alts lvl end
+              | [] -> [%tcall pop_andl alts next lvl]
+              | (depth,p,g)::gs -> [%tcall run depth p g gs next alts lvl] end
            | h::hs ->
               let next = if gs = [] then next else FCons (lvl,gs,next) in
               let h =
@@ -2532,8 +2541,8 @@ end
                   depth,p,
                   to_heap depth ~from:c.depth ~to_:depth env x)
                 hs in
-              TCALL run depth p h hs next alts oldalts end
-    in
+              [%tcall run depth p h hs next alts oldalts] end
+      end] in
       select cp
 
   and cut p gs next alts lvl =
@@ -2552,7 +2561,7 @@ end
            None ->
             Format.fprintf Format.std_formatter
              "Undo triggered by goal resumption\n%!";
-            TCALL next_alt alts
+            [%tcall next_alt alts]
          | Some ((ndepth,p,ng)::goals) ->
             run ndepth p ng goals FNil alts lvl
          | Some [] ->
