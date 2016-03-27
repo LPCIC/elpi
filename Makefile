@@ -31,6 +31,9 @@ trace:
 	-mv elpi.notrace elpi
 
 trace_ppx: trace_ppx.ml
+	ocamlfind query ppx_tools
+	ocamlfind query ppx_deriving
+	test `ocamlc -version` = 4.02.3
 	$(OC) -package compiler-libs.common,ppx_tools.metaquot -linkpkg $< -o $@
 
 git/%:

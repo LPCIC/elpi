@@ -220,8 +220,10 @@ module F = Parser.ASTFuncS
    - There are a few TODOs with different implementative choices to
      be benchmarked *)
 
+let pp_exn fmt e = Format.fprintf fmt "%s" (Printexc.to_string e)
+
 (* Invariant: a Heap term never points to a Query term *)
-type constant = int (* De Brujin levels *)
+type constant = int (* De Brujin levels *) [@@deriving show]
 type term =
   (* Pure terms *)
   | Const of constant
@@ -247,6 +249,7 @@ and constraint_ =
     the associated list is the list of variables the constraint is
     associated to *)
  exn * term oref list (* well... open type in caml < 4.02 *)
+[@@deriving show]
 
 let (!!) { contents = x } = x
 
@@ -293,7 +296,7 @@ let funct_of_ast, constant_of_dbl, string_of_constant, new_fresh_constant =
    let n = !fresh in
    let xx = Const n in
    let p = n,xx in
-   Hashtbl.add h' n (F.pp x);
+   Hashtbl.add h' n (F.show x);
    Hashtbl.add h'' n xx;
    Hashtbl.add h x p; p),
  (function x ->
@@ -528,7 +531,7 @@ let xppterm ~nice depth0 names argsdepth env f t =
         let c = constant_of_dbl depth in
         Format.fprintf f "%a \\@ %a" (aux inf_prec depth) c
          (aux min_prec (depth+1)) t)
-    | String str -> Format.fprintf f "\"%s\"" (Parser.ASTFuncS.pp str)
+    | String str -> Format.fprintf f "\"%s\"" (Parser.ASTFuncS.show str)
     | Int i -> Format.fprintf f "%d" i
     | Float x -> Format.fprintf f "%f" x
   in
@@ -573,7 +576,7 @@ let xppterm_prolog ~nice names env f t =
     | AppArg(_,_) -> assert false
     | Const s -> ppconstant f s
     | Lam t -> assert false;
-    | String str -> Format.fprintf f "\"%s\"" (Parser.ASTFuncS.pp str)
+    | String str -> Format.fprintf f "\"%s\"" (Parser.ASTFuncS.show str)
     | Int i -> Format.fprintf f "%d" i
     | Float x -> Format.fprintf f "%f" x
   in
@@ -2675,9 +2678,9 @@ let stack_var_of_ast ({ max_arg = f; name2arg = l } as amap) n =
 let stack_funct_of_ast amap cmap f =
   try amap, ConstMap.find f cmap
   with Not_found ->
-   let c = (F.pp f).[0] in
+   let c = (F.show f).[0] in
    if ('A' <= c && c <= 'Z') || c = '_' then
-     let amap, v = stack_var_of_ast amap (F.pp f) in amap, v
+     let amap, v = stack_var_of_ast amap (F.show f) in amap, v
    else amap, snd (funct_of_ast f)
 ;;
 
@@ -2686,7 +2689,7 @@ let rec stack_term_of_ast lvl amap cmap = function
   | AST.Custom f ->
      let cname = fst (funct_of_ast f) in
      begin try let _f = lookup_custom cname in ()
-     with Not_found -> error ("No custom named " ^ F.pp f) end;
+     with Not_found -> error ("No custom named " ^ F.show f) end;
      amap, Custom (cname, [])
   | AST.App(AST.Const f, tl) ->
      let amap, rev_tl =
@@ -2707,7 +2710,7 @@ let rec stack_term_of_ast lvl amap cmap = function
   | AST.App (AST.Custom f,tl) ->
      let cname = fst (funct_of_ast f) in
      begin try let _f = lookup_custom cname in ()
-     with Not_found -> error ("No custom named " ^ F.pp f) end;
+     with Not_found -> error ("No custom named " ^ F.show f) end;
      let amap, rev_tl =
        List.fold_left (fun (amap, tl) t ->
           let amap, t = stack_term_of_ast lvl amap cmap t in

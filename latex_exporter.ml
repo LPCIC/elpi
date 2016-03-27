@@ -9,9 +9,9 @@
 let clausify t = match t with
   | Parser.App(Parser.Const f,tl) ->
      (match tl with
-        | [left;right] when Parser.ASTFuncS.pp f = (Parser.ASTFuncS.pp Parser.ASTFuncS.rimplf) ->
+        | [left;right] when Parser.ASTFuncS.show f = (Parser.ASTFuncS.show Parser.ASTFuncS.rimplf) ->
             let rec hyps andl = (match andl with
-              | Parser.App(Parser.Const f,conjl) when Parser.ASTFuncS.pp f = (Parser.ASTFuncS.pp Parser.ASTFuncS.andf) -> (match conjl with
+              | Parser.App(Parser.Const f,conjl) when Parser.ASTFuncS.show f = (Parser.ASTFuncS.show Parser.ASTFuncS.andf) -> (match conjl with
                   | x::y::nil -> x :: (hyps y) 
                   | _ -> assert false) 
               | _ -> [andl] ) in             
@@ -55,8 +55,8 @@ let create_context pairsl =
   let rec aux = function
   | [] -> []
   | (Parser.App(Parser.Const f,tl) as fla)::rest -> (match tl with
-      | [left;right] when Parser.ASTFuncS.pp f = (Parser.ASTFuncS.pp Parser.ASTFuncS.implf) -> (Some left,right) :: (aux rest)
-      | [Parser.Lam(_,_) as lam] when Parser.ASTFuncS.pp f = (Parser.ASTFuncS.pp Parser.ASTFuncS.pif) ->
+      | [left;right] when Parser.ASTFuncS.show f = (Parser.ASTFuncS.show Parser.ASTFuncS.implf) -> (Some left,right) :: (aux rest)
+      | [Parser.Lam(_,_) as lam] when Parser.ASTFuncS.show f = (Parser.ASTFuncS.show Parser.ASTFuncS.pif) ->
           let newlam = rename_bound_var lam in
           (match newlam with
             | Parser.Lam(v,t) -> 
@@ -75,7 +75,7 @@ let rec contains_var t v = match t with
  | Parser.Const f
  | Parser.Custom f ->
     (match v with 
-     | Parser.Const sym -> Parser.ASTFuncS.pp f = Parser.ASTFuncS.pp sym 
+     | Parser.Const sym -> Parser.ASTFuncS.show f = Parser.ASTFuncS.show sym 
      | _ -> assert false (* v should be a term: Const of ASTFuncS.t *))
  | Parser.App (Parser.Const hd,xs) -> 
     List.fold_left (fun rez x -> rez || (contains_var x v)) false xs 
@@ -88,7 +88,7 @@ let export_term tm =
   let rec aux prec t = match t with
     Parser.Const f 
   | Parser.Custom f -> 
-     let name = Parser.ASTFuncS.pp f in 
+     let name = Parser.ASTFuncS.show f in 
      (try "<<>>" ^ (Parser.get_literal name) ^ "<<>>" with Not_found ->
       "\\:" ^ name ^ "\\:")
         (* pp_app f ppconstant (aux max_int depth) (hd,xs) *)
@@ -131,27 +131,27 @@ let export_term tm =
     (match tl with
     | [] -> export_term prec f
     | [x] -> 
-       if (export_term prec f) == (Parser.ASTFuncS.pp Parser.ASTFuncS.pif) then
+       if (export_term prec f) == (Parser.ASTFuncS.show Parser.ASTFuncS.pif) then
         match x with
           Parser.Lam(_,_) ->  "(" ^ " \\forall " ^ (export_term x) ^ ")"
         | _ -> assert false 
        else
         (export_term f) ^ "(" ^ (export_term x) ^ ")"
     | [x;y] -> 
-       if (export_term f) == (Parser.ASTFuncS.pp Parser.ASTFuncS.eqf) then
+       if (export_term f) == (Parser.ASTFuncS.show Parser.ASTFuncS.eqf) then
         "(" ^ (export_term x) ^ " = " ^ (export_term y) ^ ")"
-       else if (export_term f) == (Parser.ASTFuncS.pp Parser.ASTFuncS.implf) then
+       else if (export_term f) == (Parser.ASTFuncS.show Parser.ASTFuncS.implf) then
         "(" ^  (export_term x) ^ " \\rightarrow " ^ (export_term y) ^ ")" 
-       else if (export_term f) == (Parser.ASTFuncS.pp Parser.ASTFuncS.andf) then
+       else if (export_term f) == (Parser.ASTFuncS.show Parser.ASTFuncS.andf) then
          "(" ^ (export_term x) ^ " \\wedge " ^ (export_term y) ^ ")"
-       else if (export_term f) == (Parser.ASTFuncS.pp Parser.ASTFuncS.orf) then
+       else if (export_term f) == (Parser.ASTFuncS.show Parser.ASTFuncS.orf) then
          "(" ^ (export_term x) ^ " \\vee " ^ (export_term y) ^ ")"
        else (export_term f) ^ "(" ^ (export_term x) ^ "," ^ (export_term y) ^ ")"
     | _ -> let last,tail = (List.hd (List.rev tl)), (List.rev (List.tl (List.rev tl))) in
       (export_term f) ^ "(" ^ (List.fold_left (fun l x -> l^(export_term x)^",") "" tail) ^ (export_term last) ^ ")" )  *)
   | Parser.Lam (x,t1) ->
-     " lambda"^ Parser.ASTFuncS.pp x^"." ^ (aux prec t1)
-  | Parser.String str -> "\\:" ^ Parser.ASTFuncS.pp str ^ "\\:"
+     " lambda"^ Parser.ASTFuncS.show x^"." ^ (aux prec t1)
+  | Parser.String str -> "\\:" ^ Parser.ASTFuncS.show str ^ "\\:"
   | Parser.Int i -> "\\:" ^ (string_of_int i) ^ "\\:" 
   | Parser.Float i -> "\\:" ^ (string_of_float i) ^ "\\:" 
   | _ -> assert false in
@@ -175,10 +175,10 @@ let export_pair = function
 let print_clause cl_pair =
  let rec print_fla f = match f with
   | Parser.Const c
-  | Parser.Custom c -> Format.printf "%s%!" (Parser.ASTFuncS.pp c)
+  | Parser.Custom c -> Format.printf "%s%!" (Parser.ASTFuncS.show c)
   | Parser.App(Parser.Const hd,tl)
   | Parser.App(Parser.Custom hd,tl) ->
-     Format.printf "(%s %!" (Parser.ASTFuncS.pp hd);
+     Format.printf "(%s %!" (Parser.ASTFuncS.show hd);
      List.iter (fun x -> print_fla x; Format.printf " %!") tl;
      Format.printf ")%!";
   | Parser.Lam(x,t) ->
@@ -204,10 +204,10 @@ let export_identifiers pair =
   List.fold_left (fun s (a,b) -> Str.global_replace a b s) name paths in
  let rec aux t = match t with
   | Parser.Const c ->
-     let name = Parser.ASTFuncS.pp c in
+     let name = Parser.ASTFuncS.show c in
      Parser.Const(Parser.ASTFuncS.from_string (replace name))
   | Parser.Custom c ->
-     let name = Parser.ASTFuncS.pp c in
+     let name = Parser.ASTFuncS.show c in
      Parser.Custom(Parser.ASTFuncS.from_string (replace name))
   | Parser.App(f,args) ->
      Parser.App(aux f, List.map (fun x -> aux x) args)
@@ -281,10 +281,10 @@ let print_label l =
 (* returns the meta-variables in term t *)
  let rec get_meta_vars t = match t with
   | Parser.Const c | Parser.Custom c -> 
-   let name = Parser.ASTFuncS.pp c in
+   let name = Parser.ASTFuncS.show c in
    if upper_case (name.[0]) then [name] else []
   | Parser.App(Parser.Const name,args) -> 
-     let name = Parser.ASTFuncS.pp name in
+     let name = Parser.ASTFuncS.show name in
      (if upper_case (name.[0]) then [name] else []) @
      (List.fold_left (fun rez arg -> rez @ (get_meta_vars arg)) [] args)
   | Parser.Lam(x,t1) -> get_meta_vars t1
@@ -295,7 +295,7 @@ let print_label l =
       let meta_vars = List.fold_left (fun rez f -> 
        rez @ (get_meta_vars f)) [] pairsl in 
       let len = ref (List.length meta_vars) in
-      "$" ^ (Parser.ASTFuncS.pp c) ^ " \\not\\in\\bigcup \\{" ^ 
+      "$" ^ (Parser.ASTFuncS.show c) ^ " \\not\\in\\bigcup \\{" ^ 
        (List.fold_right (fun var_name rez ->
         decr len; 
         (if (!len)>0 then "{,}" else "") ^ "FV(" ^ var_name ^ ")" ^ rez) meta_vars "\\} $ \\\\ ")

@@ -113,7 +113,7 @@ let _ =
    | _ -> type_error "Wrong arguments to div") ;
   register_eval "^" (fun args ->
    match args with
-     [ String x ; String y ] -> String (F.from_string (F.pp x ^ F.pp y))
+     [ String x ; String y ] -> String (F.from_string (F.show x ^ F.show y))
    | _ -> type_error "Wrong arguments to ^") ;
   register_evals [ "~" ; "i~" ; "r~" ] (fun args ->
    match args with
@@ -163,7 +163,7 @@ let _ =
    | _ -> type_error "Wrong arguments to truncate") ;
   register_eval "size" (fun args ->
    match args with
-     [ String x ] -> Int (String.length (F.pp x))
+     [ String x ] -> Int (String.length (F.show x))
    | _ -> type_error "Wrong arguments to size") ;
   register_eval "chr" (fun args ->
    match args with
@@ -171,14 +171,14 @@ let _ =
    | _ -> type_error "Wrong arguments to chr") ;
   register_eval "string_to_int" (fun args ->
    match args with
-     [ String x ] when String.length (F.pp x) = 1 ->
-       Int (int_of_char (F.pp x).[0])
+     [ String x ] when String.length (F.show x) = 1 ->
+       Int (int_of_char (F.show x).[0])
    | _ -> type_error "Wrong arguments to string_to_int") ;
   register_eval "substring" (fun args ->
    match args with
      [ String x ; Int i ; Int j ] when
-       i >= 0 && j >= 0 && String.length (F.pp x) >= i+j ->
-       String (F.from_string (String.sub (F.pp x) i j))
+       i >= 0 && j >= 0 && String.length (F.show x) >= i+j ->
+       String (F.from_string (String.sub (F.show x) i j))
    | _ -> type_error "Wrong arguments to substring") ;
   register_eval "int_to_string" (fun args ->
    match args with
@@ -233,7 +233,7 @@ let _ =
        (match eval depth t1 with
            String s ->
             (try
-              let v = Trace.get_cur_step (F.pp s) in
+              let v = Trace.get_cur_step (F.show s) in
                [ App(eqc, t2, [Int v]) ]
              with Not_found -> raise No_clause)
          | _ -> type_error "bad argument to $counter")
@@ -296,7 +296,7 @@ let _ =
        (match eval depth t1 with
            String s ->
             (try
-              let v = Sys.getenv (F.pp s) in
+              let v = Sys.getenv (F.show s) in
                [ App(eqc, t2, [String (F.from_string v)]) ]
              with Not_found -> raise No_clause)
          | _ -> type_error "bad argument to getenv (or $getenv)")
@@ -305,7 +305,7 @@ let _ =
     match args with
     | [t1; t2] ->
        (match eval depth t1 with
-           String s -> [ App (eqc, t2, [Int (Sys.command (F.pp s))]) ]
+           String s -> [ App (eqc, t2, [Int (Sys.command (F.show s))]) ]
          | _ -> type_error "bad argument to system (or $system)")
     | _ -> type_error "system (or $system) takes 2 arguments") ;
   register_custom "$is" (fun ~depth ~env:_ _ args ->
@@ -318,7 +318,7 @@ let _ =
        (match eval depth t1 with
            String s ->
             (try
-              let v = open_in (F.pp s) in
+              let v = open_in (F.show s) in
               let vv = add_in_stream v in
                [ App(eqc, t2, [Int vv]) ]
              with Sys_error msg -> error msg)
@@ -330,7 +330,7 @@ let _ =
        (match eval depth t1 with
            String s ->
             (try
-              let v = open_out (F.pp s) in
+              let v = open_out (F.show s) in
               let vv = add_out_stream v in
                [ App(eqc, t2, [Int vv]) ]
              with Sys_error msg -> error msg)
@@ -345,7 +345,7 @@ let _ =
               let v =
                open_out_gen
                 [Open_wronly; Open_append; Open_creat; Open_text] 0x664
-                (F.pp s) in
+                (F.show s) in
               let vv = add_out_stream v in
                [ App(eqc, t2, [Int vv]) ]
              with Sys_error msg -> error msg)
@@ -358,7 +358,7 @@ let _ =
            String s ->
             (try
              let filename,outch = Filename.open_temp_file "elpi" "tmp" in
-             output_string outch (F.pp s) ;
+             output_string outch (F.show s) ;
              close_out outch ;
              let v = open_in filename in
              Sys.remove filename ;
@@ -389,7 +389,7 @@ let _ =
     | [t1; t2] ->
        (match eval depth t1, eval depth t2 with
            Int n, String s ->
-            (try output_string (get_out_stream n) (F.pp s) ; []
+            (try output_string (get_out_stream n) (F.show s) ; []
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to output (or $output)")
     | _ -> type_error "output (or $output) takes 2 arguments") ;
@@ -406,7 +406,7 @@ let _ =
        (match eval depth t1 with
            String s ->
             (try
-              let s = Parser.parse_goal (F.pp s) in
+              let s = Parser.parse_goal (F.show s) in
               let t = term_of_ast ~depth s in
               [App (eqc, t2, [t])]
              with

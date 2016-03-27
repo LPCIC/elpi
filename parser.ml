@@ -14,7 +14,8 @@ module ASTFuncS = struct
     try Hashtbl.find h x
     with Not_found -> Hashtbl.add h x x ; x
 
-  let pp n = n
+  let pp fmt s = Format.fprintf fmt "%s" s
+  let show x = x
   let eq = (==)
   let truef = from_string "true"
   let andf = from_string ","

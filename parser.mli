@@ -6,7 +6,8 @@
 module ASTFuncS : sig
   type t
   val compare : t -> t -> int
-  val pp : t -> string
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
   val eq : t -> t -> bool
   val truef : t
   val andf : t
