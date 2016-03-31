@@ -54,9 +54,9 @@ let rec eval depth =
      let args = List.map (eval depth) (arg::args) in
      f args
   | UVar ({ contents = g }, from, args) when g != dummy ->
-     eval depth (deref ~from ~to_:depth args g)
+     eval depth (deref_uv ~from ~to_:depth args g)
   | AppUVar ({contents = t}, from, args) when t != dummy ->
-     eval depth (app_deref ~from ~to_:depth args t)
+     eval depth (deref_appuv ~from ~to_:depth args t)
   | UVar _
   | AppUVar _ -> error "Evaluation of a non closed term (maybe delay)"
   | Const hd ->
@@ -244,9 +244,9 @@ let _ =
   register_custom "$is_flex" (fun ~depth ~env:_ _ args ->
     let rec is_flex = function
       | UVar ({contents=t},vardepth,args) when t != dummy ->
-         is_flex (deref ~from:vardepth ~to_:depth args t)
+         is_flex (deref_uv ~from:vardepth ~to_:depth args t)
       | AppUVar ({contents=t},vardepth,args) when t != dummy ->
-         is_flex (app_deref ~from:vardepth ~to_:depth args t)
+         is_flex (deref_appuv ~from:vardepth ~to_:depth args t)
       | UVar _ | AppUVar _ -> true
       | _ -> false in
     match args with
@@ -264,9 +264,9 @@ let _ =
     let rec get_constant = function
       | Const c -> c
       | UVar ({contents=t},vardepth,args) when t != dummy ->
-         get_constant (deref ~from:vardepth ~to_:depth args t)
+         get_constant (deref_uv ~from:vardepth ~to_:depth args t)
       | AppUVar ({contents=t},vardepth,args) when t != dummy ->
-         get_constant (app_deref ~from:vardepth ~to_:depth args t)
+         get_constant (deref_appuv ~from:vardepth ~to_:depth args t)
       | _ -> error "$lt takes constants as arguments" in
     match args with
     | [t1; t2] ->

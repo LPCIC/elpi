@@ -796,10 +796,10 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ~from ~to_ t =
          maux depth t
     | AppUVar ({contents=t},vardepth,args) when t != dummy ->
        if depth == 0 then
-         app_deref ~from:vardepth ~to_ args t
+         deref_appuv ~from:vardepth ~to_ args t
        else
          (* First phase: from vardepth to from+depth *)
-         let t = app_deref ~from:vardepth ~to_:(from+depth) args t in
+         let t = deref_appuv ~from:vardepth ~to_:(from+depth) args t in
          (* Second phase: from from to to *)
          maux depth t
     | Arg (i,args) when e.(i) != dummy ->
@@ -810,7 +810,7 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ~from ~to_ t =
         try List.map (maux depth) args
         with RestrictionFailure ->
          anomaly "TODO: verify somehow that the beta-redexes corresponding to terms to be restricted are affine" in
-       app_deref ~from:argsdepth ~to_:(to_+depth) args e.(i)
+       deref_appuv ~from:argsdepth ~to_:(to_+depth) args e.(i)
 
     (* uvar, lifting *)
     | UVar (r,vardepth,argsno) when delta <= 0 ->
@@ -918,6 +918,12 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ~from ~to_ t =
      when full_deref is called inside restrict, it may be from > to_
      t lives in from; args already live in to_
 *)
+
+(* Deref is to be called only on heap terms and with from <= to *)
+and deref_uv ~from ~to_ args t =
+ (* Dummy trail, argsdepth and e: they won't be used *)
+ full_deref 0 ~from ~to_ args dummy_env t
+
 and full_deref argsdepth ~from ~to_ args e t =
   [%trace "full_deref" ("from:%d to:%d %a @@ %d"
       from to_ (ppterm from [] 0 e) t args) begin
@@ -925,6 +931,17 @@ and full_deref argsdepth ~from ~to_ args e t =
    if from == to_ then t
    else move ~adepth:argsdepth ~from ~to_ e t
  else (* O(1) reduction fragment tested here *)
+   (* eat_args n [n ; ... ; n+k] (Lam_0 ... (Lam_k t)...) = n+k+1,[],t
+      eat_args n [n ; ... ; n+k]@l (Lam_0 ... (Lam_k t)...) =
+        n+k+1,l,t if t != Lam or List.hd l != n+k+1 *)
+   let rec eat_args depth l t =
+     match t with
+     | Lam t' when l > 0 -> eat_args (depth+1) (l-1) t'
+     | UVar ({contents=t},origdepth,args) when t != dummy ->
+        eat_args depth l (deref_uv ~from:origdepth ~to_:depth args t)
+     | AppUVar  ({contents=t},origdepth,args) when t != dummy ->
+        eat_args depth l (deref_appuv ~from:origdepth ~to_:depth args t)
+     | _ -> depth,l,t in
    let from,args',t = eat_args from args t in
    let t = full_deref argsdepth ~from ~to_ 0 e t in
    if args' == 0 then t
@@ -967,18 +984,6 @@ and full_deref argsdepth ~from ~to_ args e t =
      | Float _ -> t
   end]
 
-(* eat_args n [n ; ... ; n+k] (Lam_0 ... (Lam_k t)...) = n+k+1,[],t
-   eat_args n [n ; ... ; n+k]@l (Lam_0 ... (Lam_k t)...) =
-     n+k+1,l,t if t != Lam or List.hd l != n+k+1 *)
-and eat_args depth l t =
-  match t with
-  | Lam t' when l > 0 -> eat_args (depth+1) (l-1) t'
-  | UVar ({contents=t},origdepth,args) when t != dummy ->
-     eat_args depth l (deref ~from:origdepth ~to_:depth args t)
-  | AppUVar  ({contents=t},origdepth,args) when t != dummy ->
-     eat_args depth l (app_deref ~from:origdepth ~to_:depth args t)
-  | _ -> depth,l,t
-
 (* Lift is to be called only on heap terms and with from <= to *)
 (* TODO: use lift in fullderef? efficient iff it is inlined *)
 and lift ~from ~to_ t =
@@ -988,11 +993,6 @@ and lift ~from ~to_ t =
  if from == to_ then t
  else move ~adepth:0 ~from ~to_ dummy_env t
  end]
-
-(* Deref is to be called only on heap terms and with from <= to *)
-and deref ~from ~to_ args t =
- (* Dummy trail, argsdepth and e: they won't be used *)
- full_deref 0 ~from ~to_ args dummy_env t
 
 (* UVar(_,from,argsno) -> Uvar(_,to_,argsno+from-to_) *)
 and decrease_depth r ~from ~to_ argsno =
@@ -1049,7 +1049,7 @@ and subst fromdepth ts t =
       let xs' = List.map (aux depth) xs in
       if xs==xs' then orig else Custom(c,xs')
    | UVar({contents=g},vardepth,argsno) when g != dummy ->
-      [%tcall aux depth (deref ~from:vardepth ~to_:depth argsno g)]
+      [%tcall aux depth (deref_uv ~from:vardepth ~to_:depth argsno g)]
    | UVar(r,vardepth,argsno) as orig ->
       if vardepth+argsno <= fromdepth then orig
       else
@@ -1059,7 +1059,7 @@ and subst fromdepth ts t =
        let args = List.map (fun c -> aux depth (constant_of_dbl c)) args in
        mkAppUVar r vardepth args
    | AppUVar({ contents = t },vardepth,args) when t != dummy ->
-      [%tcall aux depth (app_deref ~from:vardepth ~to_:depth args t)]
+      [%tcall aux depth (deref_appuv ~from:vardepth ~to_:depth args t)]
    | AppUVar(r,vardepth,args) ->
       let r,vardepth,argsno =
         decrease_depth r ~from:vardepth ~to_:fromdepth 0 in
@@ -1104,11 +1104,13 @@ and beta depth sub t args =
 (* Deref is to be called only on heap terms and with from <= to
 *  The args must live in to_.
 *)
-and app_deref ~from ~to_ args t = beta to_ [] (deref ~from ~to_ 0 t) args
+and deref_appuv ~from ~to_ args t = beta to_ [] (deref_uv ~from ~to_ 0 t) args
+
+
 ;;
 
-let () = Pp.do_deref := deref;;
-let () = Pp.do_app_deref := app_deref;;
+let () = Pp.do_deref := deref_uv;;
+let () = Pp.do_app_deref := deref_appuv;;
 
 (* Restrict is to be called only on heap terms *)
 let restrict ?avoid argsdepth ~from ~to_ e t =
@@ -1159,9 +1161,9 @@ let key_of ~mode:_ ~depth =
  let rec skey_of = function
     Const k -> k
   | UVar ({contents=t},origdepth,args) when t != dummy ->
-     skey_of (deref ~from:origdepth ~to_:depth args t)
+     skey_of (deref_uv ~from:origdepth ~to_:depth args t)
   | AppUVar ({contents=t},origdepth,args) when t != dummy ->
-     skey_of (app_deref ~from:origdepth ~to_:depth args t)
+     skey_of (deref_appuv ~from:origdepth ~to_:depth args t)
   | App (k,_,_)
   | Custom (k,_) -> k
   | Lam _ -> abstractionk
@@ -1182,9 +1184,9 @@ let key_of ~mode:_ ~depth =
    Const k -> k, variablek
  | UVar ({contents=t},origdepth,args) when t != dummy ->
     (* TODO: optimization: avoid dereferencing *)
-    key_of_depth (deref ~from:origdepth ~to_:depth args t)
+    key_of_depth (deref_uv ~from:origdepth ~to_:depth args t)
  | AppUVar ({contents=t},origdepth,args) when t != dummy -> 
-    key_of_depth (app_deref ~from:origdepth ~to_:depth args t)
+    key_of_depth (deref_appuv ~from:origdepth ~to_:depth args t)
  | App (k,arg2,_) -> k, skey_of arg2
  | Custom _ -> assert false
  | Arg _ | AppArg _ | Lam _ | UVar _ | AppUVar _ | String _ | Int _ | Float _->
@@ -1331,7 +1333,7 @@ module UnifBits : Indexing = struct
       | Const k | Custom (k,_) ->
           set_section (if lvl=0 then k else hash k) left right 
       | UVar ({contents=t},origdepth,args) when t != dummy ->
-         index lvl (deref ~from:origdepth ~to_:depth args t) depth left right
+         index lvl (deref_uv ~from:origdepth ~to_:depth args t) depth left right
       | Lam _ -> set_section abstractionk left right
       | String s -> set_section (hash s) left right
       | Int n -> set_section (hash n) left right
@@ -1516,12 +1518,12 @@ let rec is_flex =
    Note about dereferencing UVar(r,origdepth,args):
    - args live *here* (a/bdepth + depth)
    - !!r lives in origdepth
-   + we deref to move everything to a/bdepth + depth
+   + we deref_uv to move everything to a/bdepth + depth
    
    Note about dereferencing Arg(i,args):
    - args live *here* (bdepth + depth)
    - e.(i) lives in bdepth
-   + we deref to move everything to adepth + depth
+   + we deref_uv to move everything to adepth + depth
 *)
 
 
@@ -1534,13 +1536,13 @@ let is_llam lvl args adepth bdepth depth left e =
   let get_con = function Const x -> x | _ -> raise RestrictionFailure in
   let deref_to_const = function
     | UVar ({ contents = t }, from, args) when t != dummy ->
-        get_con (deref ~from ~to_ args t)
+        get_con (deref_uv ~from ~to_ args t)
     | AppUVar ({ contents = t }, from, args) when t != dummy -> 
-        get_con (app_deref ~from ~to_ args t)
+        get_con (deref_appuv ~from ~to_ args t)
     | Arg (i,args) when e.(i) != dummy ->
-        get_con (deref ~from:adepth ~to_ args e.(i))
+        get_con (deref_uv ~from:adepth ~to_ args e.(i))
     | AppArg (i,args) when e.(i) != dummy -> 
-        get_con (app_deref ~from:adepth ~to_ args e.(i))
+        get_con (deref_appuv ~from:adepth ~to_ args e.(i))
     | Const x -> if not left && x >= bdepth then x + (adepth-bdepth) else x
     | _ -> raise RestrictionFailure
   in
@@ -1608,15 +1610,15 @@ let bind r gamma l a d delta b left t e =
     | App (c,t,ts) -> App (cst c b delta, bind b delta w t, List.map (bind b delta w) ts)
     | Custom (c, tl) -> Custom(c, List.map (bind b delta w) tl)
     | String _ | Int _ | Float _ -> t
-    (* deref *)
+    (* deref_uv *)
     | Arg (i,args) when e.(i) != dummy ->
-        bind a 0 w (deref ~from:a ~to_:(a+d+w) args e.(i))
+        bind a 0 w (deref_uv ~from:a ~to_:(a+d+w) args e.(i))
     | AppArg (i,args) when e.(i) != dummy ->
-        bind a 0 w (app_deref ~from:a ~to_:(a+d+w) args e.(i))
+        bind a 0 w (deref_appuv ~from:a ~to_:(a+d+w) args e.(i))
     | UVar ({ contents = t }, from, args) when t != dummy ->
-        bind b delta w (deref ~from ~to_:((if left then b else a)+d+w) args t)
+        bind b delta w (deref_uv ~from ~to_:((if left then b else a)+d+w) args t)
     | AppUVar ({ contents = t }, from, args) when t != dummy ->
-        bind b delta w (app_deref ~from ~to_:((if left then b else a)+d+w) args t)
+        bind b delta w (deref_appuv ~from ~to_:((if left then b else a)+d+w) args t)
     (* pruning *)
     | (UVar _ | AppUVar _ | Arg _ | AppArg _) as _orig_ ->
         (* We deal with all flexible terms in a uniform way *)
@@ -1715,33 +1717,33 @@ let unif adepth e bdepth a b =
        bdepth (ppterm (bdepth+depth) [] adepth e) b)
    begin let delta = adepth - bdepth in
    (delta = 0 && a == b) || match a,b with
-(* TODO: test if it is better to deref first or not, i.e. the relative order
+(* TODO: test if it is better to deref_uv first or not, i.e. the relative order
    of the clauses below *)
    | UVar(r1,_,args1), UVar(r2,_,args2) when r1 == r2 -> args1 == args2
 
-   (* deref *)
+   (* deref_uv *)
    | UVar ({ contents = t }, from, args), _ when t != dummy ->
-      unif depth (deref ~from ~to_:(adepth+depth) args t) bdepth b heap
+      unif depth (deref_uv ~from ~to_:(adepth+depth) args t) bdepth b heap
    | AppUVar ({ contents = t }, from, args), _ when t != dummy -> 
-      unif depth (app_deref ~from ~to_:(adepth+depth) args t) bdepth b heap
+      unif depth (deref_appuv ~from ~to_:(adepth+depth) args t) bdepth b heap
    | _, UVar ({ contents = t }, from, args) when t != dummy ->
-      unif depth a bdepth (deref ~from ~to_:(bdepth+depth) args t) true
+      unif depth a bdepth (deref_uv ~from ~to_:(bdepth+depth) args t) true
    | _, AppUVar ({ contents = t }, from, args) when t != dummy ->
-      unif depth a bdepth (app_deref ~from ~to_:(bdepth+depth) args t) true
+      unif depth a bdepth (deref_appuv ~from ~to_:(bdepth+depth) args t) true
    | _, Arg (i,args) when e.(i) != dummy ->
-      (* XXX BROKEN deref invariant XXX
+      (* XXX BROKEN deref_uv invariant XXX
        *   args not living in to_ but in bdepth+depth *)
       unif depth a adepth
-        (deref ~from:adepth ~to_:(adepth+depth) args e.(i)) true
+        (deref_uv ~from:adepth ~to_:(adepth+depth) args e.(i)) true
    | _, AppArg (i,args) when e.(i) != dummy -> 
-      (* XXX BROKEN deref invariant XXX
+      (* XXX BROKEN deref_uv invariant XXX
        *   args not living in to_ but in bdepth+depth
        *   NOTE: the map below has been added after the XXX, but
            I believe it is wrong as well *)
       let args =
        List.map (move ~adepth ~from:bdepth ~to_:adepth e) args in
       unif depth a adepth
-        (app_deref ~from:adepth ~to_:(adepth+depth) args e.(i)) true
+        (deref_appuv ~from:adepth ~to_:(adepth+depth) args e.(i)) true
 
    (* assign *)
    | _, Arg (i,0) ->
@@ -1792,7 +1794,7 @@ let unif adepth e bdepth a b =
        with RestrictionFailure -> false end
 
    (* simplify *)
-   (* TODO: unif->deref case. Rewrite the code to do the job directly? *)
+   (* TODO: unif->deref_uv case. Rewrite the code to do the job directly? *)
    | _, Arg (i,args) ->
       e.(i) <- fst (make_lambdas adepth args);
       [%spy "assign" (ppterm depth [] adepth [||]) (e.(i))];
@@ -1953,9 +1955,9 @@ let rec list_to_lp_list = function
 
 let rec get_lambda_body depth = function
  | UVar ({ contents=g },from,args) when g != dummy ->
-    get_lambda_body depth (deref ~from ~to_:depth args g)
+    get_lambda_body depth (deref_uv ~from ~to_:depth args g)
  | AppUVar ({contents=g},from,args) when g != dummy -> 
-    get_lambda_body depth (app_deref ~from ~to_:depth args g)
+    get_lambda_body depth (deref_appuv ~from ~to_:depth args g)
  | Lam b -> b
  | _ -> error "pi/sigma applied to something that is not a Lam"
 ;;
@@ -2029,10 +2031,10 @@ let rec clausify vars depth hyps ts lts lcs = function
           vars = vars; key=key_of ~mode:`Clause ~depth:(depth+lcs) g} ], lcs
   | UVar ({ contents=g },from,args) when g != dummy ->
      clausify vars depth hyps ts lts lcs
-       (deref ~from ~to_:(depth+lts) args g)
+       (deref_uv ~from ~to_:(depth+lts) args g)
   | AppUVar ({contents=g},from,args) when g != dummy -> 
      clausify vars depth hyps ts lts lcs
-       (app_deref ~from ~to_:(depth+lts) args g)
+       (deref_appuv ~from ~to_:(depth+lts) args g)
   | Arg _ | AppArg _ -> anomaly "clausify called on non-heap term"
   | Lam _ | Custom _ | String _ | Int _ | Float _ ->
      error "Assuming a custom or string or int or float or function"
@@ -2171,13 +2173,13 @@ let matching e depth argsdepth m a b =
 let thaw max_depth e m t =
   let rec aux = function
   | UVar( { contents = t} , lvl, ano) when t != dummy ->
-      aux (deref ~from:lvl ~to_:max_depth ano t)
+      aux (deref_uv ~from:lvl ~to_:max_depth ano t)
   | AppUVar( { contents = t} , lvl, args) when t != dummy ->
-      aux (app_deref ~from:lvl ~to_:max_depth args t)
+      aux (deref_appuv ~from:lvl ~to_:max_depth args t)
   | Arg(i, ano) when e.(i) != dummy ->
-      aux (deref ~from:max_depth ~to_:max_depth ano e.(i))
+      aux (deref_uv ~from:max_depth ~to_:max_depth ano e.(i))
   | AppArg(i, args) when e.(i) != dummy ->
-      aux (app_deref ~from:max_depth ~to_:max_depth args e.(i))
+      aux (deref_appuv ~from:max_depth ~to_:max_depth args e.(i))
   | Arg(i,ano) -> e.(i) <- UVar(oref dummy,max_depth,ano); e.(i)
   | AppArg(i,args) ->
       e.(i) <- mkAppUVar (oref dummy) max_depth (List.map aux args); e.(i)
@@ -2467,9 +2469,9 @@ end
        let v = UVar(oref dummy, depth, 0) in
        run depth p (subst depth [v] f) gs next alts lvl
     | UVar ({ contents = g }, from, args) when g != dummy ->
-       run depth p (deref ~from ~to_:depth args g) gs next alts lvl
+       run depth p (deref_uv ~from ~to_:depth args g) gs next alts lvl
     | AppUVar ({contents = t}, from, args) when t != dummy ->
-       run depth p (app_deref ~from ~to_:depth args t) gs next alts lvl 
+       run depth p (deref_appuv ~from ~to_:depth args t) gs next alts lvl 
     | Const _ | App _ -> (* Atom case *)
        let cp = get_clauses depth g p in
        [%tcall backchain depth p g gs cp next alts lvl]
@@ -2493,9 +2495,9 @@ end
       | Const _ -> []
       | App(_,x,xs) -> x::xs
       | UVar ({ contents = g },origdepth,args) when g != dummy ->
-         args_of (deref ~from:origdepth ~to_:depth args g) 
+         args_of (deref_uv ~from:origdepth ~to_:depth args g) 
       | AppUVar({ contents = g },origdepth,args) when g != dummy ->
-         args_of (app_deref ~from:origdepth ~to_:depth args g) 
+         args_of (deref_appuv ~from:origdepth ~to_:depth args g) 
       | _ -> anomaly "ill-formed goal" in
     let args_of_g = args_of g in
     let rec select l =

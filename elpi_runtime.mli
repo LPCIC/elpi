@@ -101,8 +101,8 @@ val register_custom :
   unit
 
 (* Functions useful to implement custom predicates and evaluable functions *)
-val deref : from:constant -> to_:constant -> int -> term -> term
-val app_deref : from:constant -> to_:constant -> term list -> term -> term
+val deref_uv : from:constant -> to_:constant -> int -> term -> term
+val deref_appuv : from:constant -> to_:constant -> term list -> term -> term
 val is_flex : term -> term oref option
 val print_delayed : unit -> unit
 val delay_goal : depth:int -> index -> goal:term -> on:term oref list -> unit
