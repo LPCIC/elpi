@@ -966,15 +966,6 @@ and full_deref ~adepth:argsdepth e ~from ~to_ args t =
      | AppUVar (r,depth,args2) ->
         let args = mkinterval from args' 0 in
         AppUVar (r,depth,args2@List.map constant_of_dbl args)
-     | Arg(i,args2) when from = argsdepth+args2 -> Arg(i,args2+args')
-     | AppArg (i,args2) ->
-        let args = mkinterval from args' 0 in
-        AppArg (i,args2@List.map constant_of_dbl args)
-     | Arg(i,argsno) ->
-        let args1 = mkinterval argsdepth argsno 0 in
-        let args2 = mkinterval from args' 0 in
-        let args = List.map constant_of_dbl (args1@args2) in
-        AppArg (i,args)
      | UVar (r,vardepth,argsno) ->
         let args1 = mkinterval vardepth argsno 0 in
         let args2 = mkinterval from args' 0 in
@@ -983,6 +974,7 @@ and full_deref ~adepth:argsdepth e ~from ~to_ args t =
      | String _
      | Int _
      | Float _ -> t
+     | Arg _ | AppArg _ -> assert false (* Uv gets assigned only heap term *)
   end]
 
 (* Lift is to be called only on heap terms and with from <= to *)
