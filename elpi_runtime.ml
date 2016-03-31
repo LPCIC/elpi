@@ -786,11 +786,11 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ~from ~to_ t =
     (* deref *)
     | UVar ({ contents = t },vardepth,args) when t != dummy ->
        if depth == 0 then
-         full_deref ~adepth:argsdepth e ~from:vardepth ~to_ args t
+         deref_uv ~from:vardepth ~to_ args t
        else
          (* First phase: from vardepth to from+depth *)
          let t =
-            full_deref ~adepth:argsdepth e
+            deref_uv
               ~from:vardepth ~to_:(from+depth) args t in
          (* Second phase: from from to to *)
          maux depth t
@@ -803,7 +803,7 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ~from ~to_ t =
          (* Second phase: from from to to *)
          maux depth t
     | Arg (i,args) when e.(i) != dummy ->
-       full_deref ~adepth:argsdepth e ~from:argsdepth ~to_:(to_+depth) args e.(i)
+       deref_uv ~from:argsdepth ~to_:(to_+depth) args e.(i)
 
     | AppArg(i,args) when e.(i) != dummy ->
        let args =
@@ -910,27 +910,22 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ~from ~to_ t =
     [%spy "move-output" (ppterm to_ [] argsdepth e) rc];
     rc
 
-(* full_deref performs lifting only and with from <= to
+(* deref_uv performs lifting only and with from <= to
    if called on non-heap terms, it does not turn them to heap terms
    (if from=to_)
 
    Note:
-     when full_deref is called inside restrict, it may be from > to_
+     when deref_uv is called inside restrict, it may be from > to_
      t lives in from; args already live in to_
 *)
 
 (* Deref is to be called only on heap terms and with from <= to *)
 and deref_uv ~from ~to_ args t =
- (* Dummy trail, argsdepth and e: they won't be used *)
- full_deref ~adepth:0 dummy_env ~from ~to_ args t
-
-and full_deref ~adepth:argsdepth e ~from ~to_ args t =
-  [%trace "full_deref" ("from:%d to:%d %a @@ %d"
+  [%trace "deref_uv" ("from:%d to:%d %a @@ %d"
       from to_ (ppterm from [] 0 e) t args) begin
-              let e = dummy_env in
  if args == 0 then
    if from == to_ then t
-   else move ~adepth:argsdepth ~from ~to_ e t
+   else move ~adepth:0 ~from ~to_ dummy_env t
  else (* O(1) reduction fragment tested here *)
    (* eat_args n [n ; ... ; n+k] (Lam_0 ... (Lam_k t)...) = n+k+1,[],t
       eat_args n [n ; ... ; n+k]@l (Lam_0 ... (Lam_k t)...) =
@@ -944,7 +939,7 @@ and full_deref ~adepth:argsdepth e ~from ~to_ args t =
         eat_args depth l (deref_appuv ~from:origdepth ~to_:depth args t)
      | _ -> depth,l,t in
    let from,args',t = eat_args from args t in
-   let t = full_deref ~adepth:argsdepth e ~from ~to_ 0 t in
+   let t = deref_uv ~from ~to_ 0 t in
    if args' == 0 then t
    else
      match t with
@@ -958,8 +953,8 @@ and full_deref ~adepth:argsdepth e ~from ~to_ args t =
      | Custom (c,args2) ->
         let args = mkinterval from args' 0 in
         Custom (c,args2@List.map constant_of_dbl args)
-     (* TODO: when the UVar/Arg is not dummy, we call full_deref that
-        will call move that will call_full_deref again. Optimize the
+     (* TODO: when the UVar/Arg is not dummy, we call deref_uv that
+        will call move that will call_deref_uv again. Optimize the
         path *)
      | UVar(t,depth,args2) when from = depth+args2 ->
         UVar(t,depth,args2+args')
