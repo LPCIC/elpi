@@ -306,6 +306,7 @@ parse_obj (new_basic_type TYPE REP ABS REPABS ABSREP PREP PP)
 parse_obj (def NAME PTYBO) [def NAME TYBO] :- parse_def PTYBO TYBO.
 parse_obj (inductive_def PRED PREDF PREDF_MON PRED_I PRED_E0 PRED_E K) EXP :-
  inductive_def_pkg PRED PREDF PREDF_MON PRED_I PRED_E0 PRED_E K EXP.
+parse_obj stop [stop].
 
 parse_def (pi I) (pi O) :- pi x \ parse_def (I x) (O x).
 parse_def (TY,PB) (TY,B) :- parse PB B.
@@ -1727,7 +1728,7 @@ main :-
      nat_recF '' A ' a ' f ' (nat_rec_fixpoint '' A ' a ' f)) */
  %, theorem nat_rec_z (pi A \ ! a \ ! f \ nat_rec '' A ' a ' f ' z = a)
 */
- ].
+ ,stop].
 
 /* Status and dependencies of the tactics:
 +dd:
