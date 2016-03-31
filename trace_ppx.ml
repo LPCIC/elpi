@@ -44,10 +44,11 @@ let trace name ppfun body = [%expr
 let spy name pp data =
   [%expr Elpi_trace.print [%e name] [%e pp] [%e data]]
 
+let rec mkapp f = function
+  | [] -> f
+  | x :: xs -> mkapp [%expr [%e f] [%e x]] xs
+
 let tcall hd args =
-  let rec mkapp f = function
-    | [] -> f
-    | x :: xs -> mkapp [%expr [%e f] [%e x]] xs in
   let l = List.rev (hd :: args) in
   let last, rest = List.hd l, List.tl l in
   let papp =
@@ -70,6 +71,12 @@ let trace_mapper argv = { default_mapper with expr = fun mapper expr ->
       begin match pstr with
       | PStr [ { pstr_desc = Pstr_eval(
               { pexp_desc = Pexp_apply(name,[(_,pp);(_,code)]) },_)} ] ->
+        let pp =
+          match pp with
+          | { pexp_desc = Pexp_apply(hd,args) } ->
+             [%expr fun fmt -> [%e mkapp [%expr Format.fprintf fmt]
+                (hd :: List.map snd args)]]
+          | _ -> pp in
         if enabled then trace (aux name) (aux pp) (aux code)
         else aux code
       | _ -> err ~loc "use: [%trace id pp code]"

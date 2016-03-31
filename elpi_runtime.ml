@@ -748,12 +748,15 @@ let mkAppUVar r lvl l =
    * Uv occur check is performed only if avoid is passed
                 
    
-*) 
+*)
+
+let print fmt = Fmt.fprintf fmt
+
 let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ~from ~to_ t =
   let delta = from - to_ in
-  let rec aux depth x =
-    [%trace "move" (fun fmt -> Fmt.fprintf fmt "move(%d,%d->%d): %a"
-      depth from to_ (ppterm (from+depth) [] argsdepth e) x) begin
+  let rec maux depth x =
+    [%trace "move" ("adepth:%d depth:%d from:%d to:%d x:%a"
+        argsdepth depth from to_ (ppterm (from+depth) [] argsdepth e) x) begin
     match x with
     | Const c ->
        if delta == 0 then x else                          (* optimization  *)
@@ -761,17 +764,17 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ~from ~to_ t =
        if c < to_ then x else                             (* constant      *)
        raise RestrictionFailure
     | Lam f ->
-       let f' = aux (depth+1) f in
+       let f' = maux (depth+1) f in
        if f == f' then x else Lam f'
     | App (c,t,l) when delta == 0 || c < from && c < to_ ->
-       let t' = aux depth t in
-       let l' = smart_map (aux depth) l in
+       let t' = maux depth t in
+       let l' = smart_map (maux depth) l in
        if t == t' && l == l' then x else App (c,t',l')
     | App (c,t,l) when c >= from ->
-       App(c-delta, aux depth t, smart_map (aux depth) l)
+       App(c-delta, maux depth t, smart_map (maux depth) l)
     | App _ -> raise RestrictionFailure
     | Custom (c,l) ->
-       let l' = smart_map (aux depth) l in
+       let l' = smart_map (maux depth) l in
        if l == l' then x else Custom (c,l')
     | String _
     | Int _
@@ -790,7 +793,7 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ~from ~to_ t =
             full_deref argsdepth
               ~from:vardepth ~to_:(from+depth) args e t in
          (* Second phase: from from to to *)
-         aux depth t
+         maux depth t
     | AppUVar ({contents=t},vardepth,args) when t != dummy ->
        if depth == 0 then
          app_deref ~from:vardepth ~to_ args t
@@ -798,13 +801,13 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ~from ~to_ t =
          (* First phase: from vardepth to from+depth *)
          let t = app_deref ~from:vardepth ~to_:(from+depth) args t in
          (* Second phase: from from to to *)
-         aux depth t
+         maux depth t
     | Arg (i,args) when e.(i) != dummy ->
        full_deref argsdepth ~from:argsdepth ~to_:(to_+depth) args e e.(i)
 
     | AppArg(i,args) when e.(i) != dummy ->
        let args =
-        try List.map (aux depth) args
+        try List.map (maux depth) args
         with RestrictionFailure ->
          anomaly "TODO: verify somehow that the beta-redexes corresponding to terms to be restricted are affine" in
        app_deref ~from:argsdepth ~to_:(to_+depth) args e.(i)
@@ -817,7 +820,7 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ~from ~to_ t =
         let r,vardepth,argsno =
           decrease_depth r ~from:vardepth ~to_:from argsno in
         let args = mkinterval vardepth argsno 0 in
-        let args = List.map (fun c -> aux depth (constant_of_dbl c)) args in
+        let args = List.map (fun c -> maux depth (constant_of_dbl c)) args in
         mkAppUVar r vardepth args
 
     (* pruning and Arg -> UVar *)
@@ -834,7 +837,7 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ~from ~to_ t =
        if argsdepth < to_ then
         anomaly "move: assigning to an UVar whose depth is greater than the current goal depth" ;
        let args =
-        try List.map (aux depth) args
+        try List.map (maux depth) args
         with RestrictionFailure ->
          anomaly "TODO: implement deterministic restriction" in
        let r = oref dummy in
@@ -869,7 +872,7 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ~from ~to_ t =
          decrease_depth r ~from:vardepth ~to_:from 0 in
        let args0= List.map constant_of_dbl (mkinterval vardepth argsno 0) in
        let args =
-        try List.map (aux depth) (args0@args)
+        try List.map (maux depth) (args0@args)
         with RestrictionFailure -> anomaly "impossible, delta < 0"(*
          Fmt.fprintf Fmt.str_formatter
           "Non trivial pruning not implemented (maybe delay): t=%a, delta=%d%!"
@@ -883,7 +886,7 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ~from ~to_ t =
        (* TODO: code to be reviewed/tested throughly *)
        occurr_check avoid r;
        let args =
-        try List.map (aux depth) args
+        try List.map (maux depth) args
         with RestrictionFailure ->
          anomaly "TODO: implement deterministic restriction" in
        if vardepth <= to_ then
@@ -903,8 +906,8 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ~from ~to_ t =
        anomaly (Fmt.flush_str_formatter ())
   end]
   in
-    let rc = aux 0 t in
-    [%spy "heap-term" (ppterm to_ [] argsdepth e) rc];
+    let rc = maux 0 t in
+    [%spy "move-output" (ppterm to_ [] argsdepth e) rc];
     rc
 
 (* full_deref performs lifting only and with from <= to
@@ -916,8 +919,7 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ~from ~to_ t =
      t lives in from; args already live in to_
 *)
 and full_deref argsdepth ~from ~to_ args e t =
-  [%trace "full_deref" (fun fmt ->
-    Fmt.fprintf fmt "full_deref from:%d to:%d %a @@ %d"
+  [%trace "full_deref" ("from:%d to:%d %a @@ %d"
       from to_ (ppterm from [] 0 e) t args) begin
  if args == 0 then
    if from == to_ then t
@@ -980,8 +982,7 @@ and eat_args depth l t =
 (* Lift is to be called only on heap terms and with from <= to *)
 (* TODO: use lift in fullderef? efficient iff it is inlined *)
 and lift ~from ~to_ t =
- [%trace "lift" (fun fmt ->
-   Fmt.fprintf fmt "@[<hov 1>from:%d@ to:%d@ %a@]"
+ [%trace "lift" ("@[<hov 1>from:%d@ to:%d@ %a@]"
      from to_ (uppterm from [] 0 [||]) t) begin
  (* Dummy trail, argsdepth and e: they won't be used *)
  if from == to_ then t
@@ -1011,8 +1012,7 @@ and decrease_depth r ~from ~to_ argsno =
    every t in ts must be either an heap term or an Arg(i,0)
    the ts are lifted as usual *)
 and subst fromdepth ts t =
- [%trace "subst" (fun fmt ->
-   Fmt.fprintf fmt "@[<hov 2>t: %a@ ts: %a@]"
+ [%trace "subst" ("@[<hov 2>t: %a@ ts: %a@]"
    (uppterm (fromdepth+1) [] 0 [||]) t (pplist (uppterm 0 [] 0 [||]) ",") ts)
  begin
  if ts == [] then t
@@ -1020,8 +1020,7 @@ and subst fromdepth ts t =
    let len = List.length ts in
    let fromdepthlen = fromdepth + len in
    let rec aux depth tt =
-   [%trace "subst-aux" (fun fmt ->
-     Fmt.fprintf fmt "@[<hov 2>t: %a@]" (uppterm (fromdepth+1) [] 0 [||]) tt)
+   [%trace "subst-aux" ("@[<hov 2>t: %a@]" (uppterm (fromdepth+1) [] 0 [||]) tt)
    begin match tt with
    | Const c as x ->
       if c >= fromdepth && c < fromdepthlen then
@@ -1076,8 +1075,7 @@ and subst fromdepth ts t =
  end]
 
 and beta depth sub t args =
- [%trace "beta" (fun fmt ->
-   Fmt.fprintf fmt "@[<hov 2>subst@ t: %a@ args: %a@]"
+ [%trace "beta" ("@[<hov 2>subst@ t: %a@ args: %a@]"
      (uppterm depth [] 0 [||]) t (pplist (uppterm depth [] 0 [||]) ",") args)
  begin match t,args with
  | Lam t',hd::tl -> [%tcall beta depth (hd::sub) t' tl]
@@ -1323,11 +1321,11 @@ module UnifBits : Indexing = struct
     let set_section k left right =
       let k = abs k in
       let new_bits = (k lsl right) land (fullones lsr (key_bits - left)) in
-      [%trace "set-section" (fun fmt -> Fmt.fprintf fmt "@[<hv 0>%s@ %s@]"
+      [%trace "set-section" ("@[<hv 0>%s@ %s@]"
         (dec_to_bin !buf) (dec_to_bin new_bits))
       (buf := new_bits lor !buf) ] in
     let rec index lvl tm depth left right =
-      [%trace "index" (fun fmt -> Fmt.fprintf fmt "@[<hv 0>%a@]"
+      [%trace "index" ("@[<hv 0>%a@]"
         (uppterm depth [] 0 [||]) tm)
       begin match tm with
       | Const k | Custom (k,_) ->
@@ -1598,12 +1596,12 @@ let bind r gamma l a d delta b left t e =
       "%d -> %d (c:%d b:%d gamma:%d delta:%d d:%d)" n m c b gamma delta d)
       (c,n)];
     n in
-  let rec bind b delta w t = [%trace "bind" (fun fmt -> Fmt.fprintf fmt
-      "%b %d + %a = t:%a a:%d delta:%d d:%d w:%d b:%d" left gamma
-      (pplist (fun fmt (x,n) -> Fmt.fprintf fmt "%a |-> %d"
+  let rec bind b delta w t =
+    [%trace "bind" ("%b %d + %a = t:%a a:%d delta:%d d:%d w:%d b:%d"
+        left gamma (pplist (fun fmt (x,n) -> Fmt.fprintf fmt "%a |-> %d"
         (ppterm a [] b e) (constant_of_dbl x) n) "") l
-      (ppterm a [] b [||]) t a delta d w b)
-    begin match t with
+        (ppterm a [] b [||]) t a delta d w b) begin
+    match t with
     | UVar (r1,_,_) | AppUVar (r1,_,_) when r == r1 -> raise RestrictionFailure
     | Const c -> let n = cst c b delta in if n < 0 then constant_of_dbl n else Const n
     | Lam t -> Lam (bind b delta (w+1) t)
@@ -1712,8 +1710,7 @@ let unif adepth e bdepth a b =
 
  (* heap=true if b is known to be a heap term *)
  let rec unif depth a bdepth b heap =
-   [%trace "unif" (fun fmt ->
-     Fmt.fprintf fmt "@[<hov 2>^%d:%a@ =%d= ^%d:%a@]%!"
+   [%trace "unif" ("@[<hov 2>^%d:%a@ =%d= ^%d:%a@]%!"
        adepth (ppterm (adepth+depth) [] adepth [||]) a depth
        bdepth (ppterm (bdepth+depth) [] adepth e) b)
    begin let delta = adepth - bdepth in
@@ -2134,8 +2131,7 @@ let is_frozen c m =
 
 let matching e depth argsdepth m a b =
   let rec aux m a b =
-  [%trace "matching" (fun fmt ->
-   Fmt.fprintf fmt "%a = %a" (ppterm 0 [] 0 e) a (ppterm 0 [] 0 e) b)
+  [%trace "matching" ("%a = %a" (ppterm 0 [] 0 e) a (ppterm 0 [] 0 e) b)
   begin match a,b with
   | UVar( { contents = t}, 0, 0), _ when t != dummy -> aux m t b
   | _, Arg(i,0) when e.(i) != dummy -> aux m a e.(i)

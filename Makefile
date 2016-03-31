@@ -27,6 +27,7 @@ trace:
 	$(MAKE) clean
 	TRACE=1 $(MAKE) elpi
 	mv elpi elpi.trace
+	$(MAKE) clean
 	-mv elpi.notrace elpi
 
 trace_ppx: trace_ppx.ml
