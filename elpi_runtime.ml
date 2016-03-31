@@ -786,12 +786,12 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ~from ~to_ t =
     (* deref *)
     | UVar ({ contents = t },vardepth,args) when t != dummy ->
        if depth == 0 then
-         full_deref argsdepth ~from:vardepth ~to_ args e t
+         full_deref ~adepth:argsdepth e ~from:vardepth ~to_ args t
        else
          (* First phase: from vardepth to from+depth *)
          let t =
-            full_deref argsdepth
-              ~from:vardepth ~to_:(from+depth) args e t in
+            full_deref ~adepth:argsdepth e
+              ~from:vardepth ~to_:(from+depth) args t in
          (* Second phase: from from to to *)
          maux depth t
     | AppUVar ({contents=t},vardepth,args) when t != dummy ->
@@ -803,7 +803,7 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ~from ~to_ t =
          (* Second phase: from from to to *)
          maux depth t
     | Arg (i,args) when e.(i) != dummy ->
-       full_deref argsdepth ~from:argsdepth ~to_:(to_+depth) args e e.(i)
+       full_deref ~adepth:argsdepth e ~from:argsdepth ~to_:(to_+depth) args e.(i)
 
     | AppArg(i,args) when e.(i) != dummy ->
        let args =
@@ -922,11 +922,12 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ~from ~to_ t =
 (* Deref is to be called only on heap terms and with from <= to *)
 and deref_uv ~from ~to_ args t =
  (* Dummy trail, argsdepth and e: they won't be used *)
- full_deref 0 ~from ~to_ args dummy_env t
+ full_deref ~adepth:0 dummy_env ~from ~to_ args t
 
-and full_deref argsdepth ~from ~to_ args e t =
+and full_deref ~adepth:argsdepth e ~from ~to_ args t =
   [%trace "full_deref" ("from:%d to:%d %a @@ %d"
       from to_ (ppterm from [] 0 e) t args) begin
+              let e = dummy_env in
  if args == 0 then
    if from == to_ then t
    else move ~adepth:argsdepth ~from ~to_ e t
@@ -943,7 +944,7 @@ and full_deref argsdepth ~from ~to_ args e t =
         eat_args depth l (deref_appuv ~from:origdepth ~to_:depth args t)
      | _ -> depth,l,t in
    let from,args',t = eat_args from args t in
-   let t = full_deref argsdepth ~from ~to_ 0 e t in
+   let t = full_deref ~adepth:argsdepth e ~from ~to_ 0 t in
    if args' == 0 then t
    else
      match t with
