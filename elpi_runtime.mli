@@ -31,7 +31,6 @@ val query_of_ast : program -> term -> query
 val program_of_ast : decl list -> program
 val execute_once : program -> query -> bool (* true means error *)
 val execute_loop : program -> query -> unit
-val pp_prolog : decl list -> unit
 
 (* Extensions *)
 
@@ -85,6 +84,10 @@ module Constants :
   val string_of_constant : constant -> string
 
   val eqc : constant
+  val orc : constant
+  val andc : constant
+  val andc2 : constant
+  val rimplc : constant
 
   (* Value for unassigned UVar/Arg *)
   val dummy : term
@@ -105,3 +108,10 @@ val print_delayed : unit -> unit
 val delay_goal : depth:int -> index -> goal:term -> on:term oref list -> unit
 
 val lp_list_to_list : term -> term list
+
+module ConstMap : Map.S with type key = Elpi_ast.Func.t
+val query_of_ast_cmap :
+  constant ->
+  term ConstMap.t ->
+  Elpi_ast.term -> string list * int * term array * term
+val split_conj : term -> term list

@@ -2,12 +2,15 @@
 (* license: GNU Lesser General Public License Version 2.1                    *)
 (* ------------------------------------------------------------------------- *)
 
+module Fmt = Format
+module F = Elpi_ast.Func
+
 module Utils : sig
 
   val pplist : ?max:int -> ?boxed:bool ->
-    (Format.formatter -> 'a -> unit) ->
-    ?pplastelem:(Format.formatter -> 'a -> unit) ->
-      string -> Format.formatter -> 'a list -> unit
+    (Fmt.formatter -> 'a -> unit) ->
+    ?pplastelem:(Fmt.formatter -> 'a -> unit) ->
+      string -> Fmt.formatter -> 'a list -> unit
 
   val smart_map : ('a -> 'a) -> 'a list -> 'a list
 
@@ -138,15 +141,15 @@ end
 
 let pplist ?(max=max_int) ?(boxed=false) ppelem ?(pplastelem=ppelem) sep f l =
  if l <> [] then begin
-  if boxed then Format.fprintf f "@[<hov 1>";
+  if boxed then Fmt.fprintf f "@[<hov 1>";
   let args,last = match List.rev l with
     [] -> assert false;
   | head::tail -> List.rev tail,head in
-  List.iteri (fun i x -> if i = max + 1 then Format.fprintf f "..."
+  List.iteri (fun i x -> if i = max + 1 then Fmt.fprintf f "..."
                          else if i > max then ()
-                         else Format.fprintf f "%a%s@ " ppelem x sep) args;
-  Format.fprintf f "%a" pplastelem last;
-  if boxed then Format.fprintf f "@]"
+                         else Fmt.fprintf f "%a%s@ " ppelem x sep) args;
+  Fmt.fprintf f "%a" pplastelem last;
+  if boxed then Fmt.fprintf f "@]"
  end
 ;;
 
@@ -214,13 +217,12 @@ let partition_i f l =
 end (* }}} *)
 open Utils
 
-module F = Elpi_ast.Func
 
 (* TODOS:
    - There are a few TODOs with different implementative choices to
      be benchmarked *)
 
-let pp_exn fmt e = Format.fprintf fmt "%s" (Printexc.to_string e)
+let pp_exn fmt e = Fmt.fprintf fmt "%s" (Printexc.to_string e)
 
 (* Invariant: a Heap term never points to a Query term *)
 type constant = int (* De Brujin levels *) [@@deriving show]
@@ -349,16 +351,13 @@ module Pp : sig
   val ppterm :
     constant -> string list ->
     constant -> term array ->
-      Format.formatter -> term -> unit
+      Fmt.formatter -> term -> unit
 
   (* For user consumption *)
   val uppterm :
     constant -> string list ->
     constant -> term array ->
-      Format.formatter -> term -> unit
-
-  val prologppterm :
-    string list -> term array -> Format.formatter -> term -> unit
+      Fmt.formatter -> term -> unit
 
   val do_deref : (from:int -> to_:int -> int -> term -> term) ref
   val do_app_deref : (from:int -> to_:int -> term list -> term -> term) ref
@@ -379,9 +378,9 @@ let xppterm ~nice depth0 names argsdepth env f t =
   let pp_app f pphd pparg ?pplastarg (hd,args) =
    if args = [] then pphd f hd
    else
-    Format.fprintf f "@[<hov 1>%a@ %a@]" pphd hd
+    Fmt.fprintf f "@[<hov 1>%a@ %a@]" pphd hd
      (pplist pparg ?pplastelem:pplastarg "") args in
-  let ppconstant f c = Format.fprintf f "%s" (string_of_constant c) in
+  let ppconstant f c = Fmt.fprintf f "%s" (string_of_constant c) in
   let rec pp_uvar prec depth vardepth args f r =
    if !!r == dummy then begin
     let s =
@@ -392,15 +391,15 @@ let xppterm ~nice depth0 names argsdepth env f t =
       m := (r,s)::!m;
       s
     in
-     Format.fprintf f "%s%s" s
+     Fmt.fprintf f "%s%s" s
       (if vardepth=0 then "" else "^" ^ string_of_int vardepth)
    end else if nice then begin
     aux prec depth f (!do_deref ~from:vardepth ~to_:depth args !!r)
-   end else Format.fprintf f "<%a>_%d" (aux min_prec vardepth) !!r vardepth
+   end else Fmt.fprintf f "<%a>_%d" (aux min_prec vardepth) !!r vardepth
   and pp_arg prec depth f n =
    let name= try List.nth names n with Failure _ -> "A" ^ string_of_int n in
    if try env.(n) == dummy with Invalid_argument _ -> true then
-    Format.fprintf f "%s" name
+    Fmt.fprintf f "%s" name
    else if nice then begin
     if argsdepth <= depth then
      let dereffed = !do_deref ~from:argsdepth ~to_:depth 0 env.(n) in
@@ -408,8 +407,8 @@ let xppterm ~nice depth0 names argsdepth env f t =
     else
      (* The instantiated Args live at an higher depth, and that's ok.
         But if we try to deref we make an imperative mess *)
-     Format.fprintf f "≪%a≫_%d" (aux min_prec argsdepth) env.(n) argsdepth
-   end else Format.fprintf f "≪%a≫_%d" (aux min_prec argsdepth) env.(n) argsdepth
+     Fmt.fprintf f "≪%a≫_%d" (aux min_prec argsdepth) env.(n) argsdepth
+   end else Fmt.fprintf f "≪%a≫_%d" (aux min_prec argsdepth) env.(n) argsdepth
 
   (* ::(a, ::(b, nil))  -->  [a,b] *)
   and flat_cons_to_list depth acc t = match t with
@@ -443,20 +442,20 @@ let xppterm ~nice depth0 names argsdepth env f t =
   and aux prec depth f t =
    let with_parens ?(test=true) myprec h =
     if test && myprec < prec then
-     (Format.fprintf f "(" ; h () ; Format.fprintf f ")")
+     (Fmt.fprintf f "(" ; h () ; Fmt.fprintf f ")")
     else h () in
    match t with
    | t when nice &&
       match t with App (hd,_,_) when hd==consc -> true | _ -> t==nilc
      ->
       let prefix,last = flat_cons_to_list depth [] t in
-      Format.fprintf f "[" ;
+      Fmt.fprintf f "[" ;
       pplist (aux Elpi_parser.list_element_prec depth) "," f prefix ;
       if last!=nilc then begin
-       Format.fprintf f " | " ;
+       Fmt.fprintf f " | " ;
        aux prec 1 f last
       end;   
-      Format.fprintf f "]"
+      Fmt.fprintf f "]"
     | Const s -> ppconstant f s 
     | App (hd,x,xs) ->
        (try
@@ -465,22 +464,22 @@ let xppterm ~nice depth0 names argsdepth env f t =
          with_parens hdlvl
          (fun _ -> match assoc with
             Elpi_parser.Infix when List.length xs = 1 ->
-             Format.fprintf f "@[<hov 1>%a@ %a@ %a@]"
+             Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
               (aux (hdlvl+1) depth) x ppconstant hd
               (aux (hdlvl+1) depth) (List.hd xs)
           | Elpi_parser.Infixl when List.length xs = 1 ->
-             Format.fprintf f "@[<hov 1>%a@ %a@ %a@]"
+             Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
               (aux hdlvl depth) x ppconstant hd
               (aux (hdlvl+1) depth) (List.hd xs)
           | Elpi_parser.Infixr when List.length xs = 1 ->
-             Format.fprintf f "@[<hov 1>%a@ %a@ %a@]"
+             Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
               (aux (hdlvl+1) depth) x ppconstant hd
               (aux hdlvl depth) (List.hd xs)
           | Elpi_parser.Prefix when xs = [] ->
-             Format.fprintf f "@[<hov 1>%a@ %a@]" ppconstant hd
+             Fmt.fprintf f "@[<hov 1>%a@ %a@]" ppconstant hd
               (aux hdlvl depth) x
           | Elpi_parser.Postfix when xs = [] ->
-             Format.fprintf f "@[<hov 1>%a@ %a@]" (aux hdlvl depth) x
+             Fmt.fprintf f "@[<hov 1>%a@ %a@]" (aux hdlvl depth) x
               ppconstant hd 
           | _ ->
              pp_app f ppconstant (aux inf_prec depth)
@@ -500,7 +499,7 @@ let xppterm ~nice depth0 names argsdepth env f t =
     | UVar (r,vardepth,argsno) when not nice ->
        let args = mkinterval vardepth argsno 0 in
        with_parens ~test:(args <> []) appl_prec (fun _ ->
-        Format.fprintf f "." ;
+        Fmt.fprintf f "." ;
         pp_app f (pp_uvar inf_prec depth vardepth 0) ppconstant (r,args))
     | UVar (r,vardepth,argsno) when !!r == dummy ->
        let diff = vardepth - depth0 in
@@ -529,63 +528,17 @@ let xppterm ~nice depth0 names argsdepth env f t =
     | Lam t ->
        with_parens lam_prec (fun _ ->
         let c = constant_of_dbl depth in
-        Format.fprintf f "%a \\@ %a" (aux inf_prec depth) c
+        Fmt.fprintf f "%a \\@ %a" (aux inf_prec depth) c
          (aux min_prec (depth+1)) t)
-    | String str -> Format.fprintf f "\"%s\"" (Elpi_ast.Func.show str)
-    | Int i -> Format.fprintf f "%d" i
-    | Float x -> Format.fprintf f "%f" x
+    | String str -> Fmt.fprintf f "\"%s\"" (F.show str)
+    | Int i -> Fmt.fprintf f "%d" i
+    | Float x -> Fmt.fprintf f "%f" x
   in
-    try aux min_prec depth0 f t with e -> Format.fprintf f "EXN PRINTING: %s" (Printexc.to_string e)
-;;
-
-(* pp for first-order prolog *) 
-let xppterm_prolog ~nice names env f t =
-  let pp_app f pphd pparg (hd,args) =
-   if args = [] then pphd f hd
-   else begin
-    Format.fprintf f "@[<hov 1>%a(%a@]" pphd hd (pplist pparg ",") args;
-    Format.fprintf f "%s" ")";
-   end in
-  let ppconstant f c = Format.fprintf f "%s" (string_of_constant c) in
-  let rec pp_arg f n =
-   let name= try List.nth names n with Failure _ -> "A" ^ string_of_int n in
-   if env.(n) == dummy then Format.fprintf f "%s" name
-   (* TODO: (potential?) bug here, the argument is not lifted
-      from g_depth (currently not even passed to the function)
-      to depth (not passed as well) *)
-   else if nice then aux f env.(n)
-   else Format.fprintf f "≪%a≫ " aux env.(n)
-  and aux f = function
-      App (hd,x,xs) ->
-        if hd==eqc then
-         Format.fprintf f "@[<hov 1>%a@ =@ %a@]" aux x aux (List.hd xs) 
-        else if hd==orc then        
-                       (* (%a) ? *)
-         Format.fprintf f "%a" (pplist aux ";") (x::xs)  
-        else if hd==andc || hd == andc2 then    
-         Format.fprintf f "%a" (pplist aux ",") (x::xs)  
-        else if hd==rimplc then (
-          assert (List.length xs = 1);
-          Format.fprintf f "@[<hov 1>(%a@ :-@ %a@])" aux x aux (List.hd xs)
-        ) else pp_app f ppconstant aux (hd,x::xs) 
-    | Custom (hd,xs) ->  assert false;
-    | UVar _
-    | AppUVar _ -> assert false
-    | Arg (n,0) -> pp_arg f n
-    | Arg _
-    | AppArg(_,_) -> assert false
-    | Const s -> ppconstant f s
-    | Lam t -> assert false;
-    | String str -> Format.fprintf f "\"%s\"" (Elpi_ast.Func.show str)
-    | Int i -> Format.fprintf f "%d" i
-    | Float x -> Format.fprintf f "%f" x
-  in
-    aux f t
+    try aux min_prec depth0 f t with e -> Fmt.fprintf f "EXN PRINTING: %s" (Printexc.to_string e)
 ;;
 
 let ppterm = xppterm ~nice:false
 let uppterm = xppterm ~nice:true
-let prologppterm = xppterm_prolog ~nice:true 
 
 end (* }}} *)
 open Pp
@@ -617,7 +570,7 @@ let rec safe_list_mem x = function
 
 let add_constraint cstr =
  if safe_list_mem cstr !delayed then begin
-  (*Format.fprintf Format.std_formatter "Duplicate delayed goal skipped\n%!" ;*)
+  (*Fmt.fprintf Fmt.std_formatter "Duplicate delayed goal skipped\n%!" ;*)
   (*assert false*) ()
  end else begin
   (*!print_cstr cstr ;*)
@@ -645,7 +598,7 @@ let remove_constraint cstr =
 let (@:=) r v =
   if r.rest <> [] then
     begin
-     (*Format.fprintf Format.std_formatter
+     (*Fmt.fprintf Fmt.std_formatter
        "@[<hov 2>%d delayed goal(s) to resume since@ %a <-@ %a@]@\n%!"
           (List.length r.rest)
           (ppterm 0 [] 0 [||]) (UVar(r,0,0))
@@ -760,10 +713,46 @@ let mkAppUVar r lvl l =
       the first inequality because a clause always enter a program at a depth
       (from) smaller than when it is used (depthargs).
 *)
-let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
+
+(* [move ~from ~to ?avoid t] relocates a term t by amount (= to - from).
+   In the diagrams below, c is a constant, l is locally bound variable
+   (i.e. bound after from). The resulting term lives in the heap and avoid,
+   if passed, is occur checked.
+
+   - If amount is > 0 then Const nodes >= from are lifted by amount
+
+       c1       --->   c1
+       c2 from  --->   c2
+       l3       -         to
+       l4       -`->   l4
+                 `->   l5
+
+   - If amount is < 0 then Const nodes between to and from are ensured not
+     to occur in the result, otherwise RestrictionFailure is reaised.
+     Const nodes >= from are de-lifted by amount
+
+       c1       --->   c1 to                    c1       --->   c1 to
+       c2 from  --->  Error                        from   ,->   l2   
+       l3                                       l3       -,->   l3    
+       l4                                       l4       -           
+
+   * Property: move ~to ~from (move ~from ~to t) = t
+     - if from <= to
+     - if to > from and no Const >= to and < from occurs in t
+       where occurs also means in the scope of an Uv
+
+   * Args:
+     - when defined in e the corresponding term lives in adepth
+     - when undefined they are turned into Uv (heapification)
+   
+   * Uv occur check is performed only if avoid is passed
+                
+   
+*) 
+let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ~from ~to_ t =
   let delta = from - to_ in
   let rec aux depth x =
-    [%trace "to_heap" (fun fmt -> Format.fprintf fmt "to_heap(%d,%d->%d): %a"
+    [%trace "move" (fun fmt -> Fmt.fprintf fmt "move(%d,%d->%d): %a"
       depth from to_ (ppterm (from+depth) [] argsdepth e) x) begin
     match x with
     | Const c ->
@@ -834,7 +823,7 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
     (* pruning and Arg -> UVar *)
     | Arg (i,args) ->
        if argsdepth < to_ then
-        anomaly "to_heap: assigning to an UVar whose depth is greater than the current goal depth" ;
+        anomaly "move: assigning to an UVar whose depth is greater than the current goal depth" ;
        let r = oref dummy in
        let v = UVar(r,to_,0) in
        e.(i) <- v;
@@ -843,7 +832,7 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
     | AppArg(i,args) when
       List.for_all (cannot_be_restricted e ~args_safe:(argsdepth=to_)) args ->
        if argsdepth < to_ then
-        anomaly "to_heap: assigning to an UVar whose depth is greater than the current goal depth" ;
+        anomaly "move: assigning to an UVar whose depth is greater than the current goal depth" ;
        let args =
         try List.map (aux depth) args
         with RestrictionFailure ->
@@ -854,10 +843,10 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
        mkAppUVar r to_ args
 
     | AppArg _ ->
-       Format.fprintf Format.str_formatter
+       Fmt.fprintf Fmt.str_formatter
         "Non deterministic pruning, implemented delay: t=%a, delta=%d%!"
          (ppterm depth [] argsdepth e) x delta;
-       anomaly (Format.flush_str_formatter ())
+       anomaly (Fmt.flush_str_formatter ())
 
     | UVar (r,vardepth,argsno) ->
        occurr_check avoid r;
@@ -882,10 +871,10 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
        let args =
         try List.map (aux depth) (args0@args)
         with RestrictionFailure -> anomaly "impossible, delta < 0"(*
-         Format.fprintf Format.str_formatter
+         Fmt.fprintf Fmt.str_formatter
           "Non trivial pruning not implemented (maybe delay): t=%a, delta=%d%!"
            (ppterm depth [] argsdepth e) x delta;
-         anomaly (Format.flush_str_formatter ())*)
+         anomaly (Fmt.flush_str_formatter ())*)
        in
        mkAppUVar r vardepth args
 
@@ -908,10 +897,10 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
        end
 
     | AppUVar _ ->
-       Format.fprintf Format.str_formatter
+       Fmt.fprintf Fmt.str_formatter
         "Non deterministic pruning, implemented delay: t=%a, delta=%d%!"
          (ppterm depth [] argsdepth e) x delta;
-       anomaly (Format.flush_str_formatter ())
+       anomaly (Fmt.flush_str_formatter ())
   end]
   in
     let rc = aux 0 t in
@@ -928,11 +917,11 @@ let rec to_heap argsdepth ~from ~to_ ?(avoid=def_avoid) e t =
 *)
 and full_deref argsdepth ~from ~to_ args e t =
   [%trace "full_deref" (fun fmt ->
-    Format.fprintf fmt "full_deref from:%d to:%d %a @@ %d"
+    Fmt.fprintf fmt "full_deref from:%d to:%d %a @@ %d"
       from to_ (ppterm from [] 0 e) t args) begin
  if args == 0 then
    if from == to_ then t
-   else to_heap argsdepth ~from ~to_ e t
+   else move ~adepth:argsdepth ~from ~to_ e t
  else (* O(1) reduction fragment tested here *)
    let from,args',t = eat_args from args t in
    let t = full_deref argsdepth ~from ~to_ 0 e t in
@@ -950,7 +939,7 @@ and full_deref argsdepth ~from ~to_ args e t =
         let args = mkinterval from args' 0 in
         Custom (c,args2@List.map constant_of_dbl args)
      (* TODO: when the UVar/Arg is not dummy, we call full_deref that
-        will call to_heap that will call_full_deref again. Optimize the
+        will call move that will call_full_deref again. Optimize the
         path *)
      | UVar(t,depth,args2) when from = depth+args2 ->
         UVar(t,depth,args2+args')
@@ -992,11 +981,11 @@ and eat_args depth l t =
 (* TODO: use lift in fullderef? efficient iff it is inlined *)
 and lift ~from ~to_ t =
  [%trace "lift" (fun fmt ->
-   Format.fprintf fmt "@[<hov 1>from:%d@ to:%d@ %a@]"
+   Fmt.fprintf fmt "@[<hov 1>from:%d@ to:%d@ %a@]"
      from to_ (uppterm from [] 0 [||]) t) begin
  (* Dummy trail, argsdepth and e: they won't be used *)
  if from == to_ then t
- else to_heap 0 ~from ~to_ dummy_env t
+ else move ~adepth:0 ~from ~to_ dummy_env t
  end]
 
 (* Deref is to be called only on heap terms and with from <= to *)
@@ -1023,7 +1012,7 @@ and decrease_depth r ~from ~to_ argsno =
    the ts are lifted as usual *)
 and subst fromdepth ts t =
  [%trace "subst" (fun fmt ->
-   Format.fprintf fmt "@[<hov 2>t: %a@ ts: %a@]"
+   Fmt.fprintf fmt "@[<hov 2>t: %a@ ts: %a@]"
    (uppterm (fromdepth+1) [] 0 [||]) t (pplist (uppterm 0 [] 0 [||]) ",") ts)
  begin
  if ts == [] then t
@@ -1032,7 +1021,7 @@ and subst fromdepth ts t =
    let fromdepthlen = fromdepth + len in
    let rec aux depth tt =
    [%trace "subst-aux" (fun fmt ->
-     Format.fprintf fmt "@[<hov 2>t: %a@]" (uppterm (fromdepth+1) [] 0 [||]) tt)
+     Fmt.fprintf fmt "@[<hov 2>t: %a@]" (uppterm (fromdepth+1) [] 0 [||]) tt)
    begin match tt with
    | Const c as x ->
       if c >= fromdepth && c < fromdepthlen then
@@ -1088,7 +1077,7 @@ and subst fromdepth ts t =
 
 and beta depth sub t args =
  [%trace "beta" (fun fmt ->
-   Format.fprintf fmt "@[<hov 2>subst@ t: %a@ args: %a@]"
+   Fmt.fprintf fmt "@[<hov 2>subst@ t: %a@ args: %a@]"
      (uppterm depth [] 0 [||]) t (pplist (uppterm depth [] 0 [||]) ",") args)
  begin match t,args with
  | Lam t',hd::tl -> [%tcall beta depth (hd::sub) t' tl]
@@ -1126,7 +1115,7 @@ let () = Pp.do_app_deref := app_deref;;
 (* Restrict is to be called only on heap terms *)
 let restrict ?avoid argsdepth ~from ~to_ e t =
  if from = to_ && avoid == None then t
- else to_heap ?avoid argsdepth ~from ~to_ e t
+ else move ?avoid ~adepth:argsdepth ~from ~to_ e t
 
 (* }}} *)
 
@@ -1273,7 +1262,7 @@ let close_with_pis depth vars t =
        (* TODO: quick hack here, but it does not work for AppUVar *)
        lift ~from:depth ~to_:(depth+vars) orig
     | AppUVar(r,vardepth,args) ->
-       assert false (* TODO, essentialy almost copy the code from to_heap delta < 0 *)
+       assert false (* TODO, essentialy almost copy the code from move delta < 0 *)
     | Lam t -> Lam (aux t)
     | (String _ | Int _ | Float _) as x -> x
   in
@@ -1334,11 +1323,11 @@ module UnifBits : Indexing = struct
     let set_section k left right =
       let k = abs k in
       let new_bits = (k lsl right) land (fullones lsr (key_bits - left)) in
-      [%trace "set-section" (fun fmt -> Format.fprintf fmt "@[<hv 0>%s@ %s@]"
+      [%trace "set-section" (fun fmt -> Fmt.fprintf fmt "@[<hv 0>%s@ %s@]"
         (dec_to_bin !buf) (dec_to_bin new_bits))
       (buf := new_bits lor !buf) ] in
     let rec index lvl tm depth left right =
-      [%trace "index" (fun fmt -> Format.fprintf fmt "@[<hv 0>%a@]"
+      [%trace "index" (fun fmt -> Fmt.fprintf fmt "@[<hv 0>%a@]"
         (uppterm depth [] 0 [||]) tm)
       begin match tm with
       | Const k | Custom (k,_) ->
@@ -1385,7 +1374,7 @@ module UnifBits : Indexing = struct
           if j2 + step <= left then subindex lvl depth j2 left step xs
     in
       index 0 term depth key_bits 0;
-      [%spy "key-val" (fun f x -> Format.fprintf f "%s" (dec_to_bin x)) (!buf)];
+      [%spy "key-val" (fun f x -> Fmt.fprintf f "%s" (dec_to_bin x)) (!buf)];
       !buf
 
   let get_clauses ~depth a { map = m } =
@@ -1435,7 +1424,7 @@ end
 open TwoMapIndexing
 
 let ppclause f { args = args; hyps = hyps; key = hd } =
-  Format.fprintf f "@[<hov 1>%s %a :- %a.@]" (pp_key hd)
+  Fmt.fprintf f "@[<hov 1>%s %a :- %a.@]" (pp_key hd)
      (pplist (uppterm 0 [] 0 [||]) "") args
      (pplist (uppterm 0 [] 0 [||]) ",") hyps
 
@@ -1457,18 +1446,18 @@ exception Delayed_goal of (int * index * term list * term)
 let safe_equal a x = Hashtbl.hash a = Hashtbl.hash x (*
  match a,x with
    (Delayed_goal (depth,prog,pdiff,g),xs), (Delayed_goal (depth',prog',pdiff',g'),xs') ->
-  Format.fprintf Format.str_formatter
+  Fmt.fprintf Fmt.str_formatter
     (*"Delaying goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
     "@[<hov 2> ...@ ⊢ %a@]\n%!"
       (*(pplist (uppterm depth [] 0 [||]) ",") pdiff*)
       (uppterm depth [] 0 [||]) g ;
-  let s1 = Format.flush_str_formatter () in
-  Format.fprintf Format.str_formatter
+  let s1 = Fmt.flush_str_formatter () in
+  Fmt.fprintf Fmt.str_formatter
     (*"Delaying goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
     "@[<hov 2> ...@ ⊢ %a@]\n%!"
       (*(pplist (uppterm depth [] 0 [||]) ",") pdiff*)
       (uppterm depth' [] 0 [||]) g' ;
-  let s2 = Format.flush_str_formatter () in
+  let s2 = Fmt.flush_str_formatter () in
   (*prerr_endline ("Compare1: " ^ s1);
   prerr_endline ("Compare2: " ^ s2);*)
   s1 = s2 (*
@@ -1481,7 +1470,7 @@ safe_eq := safe_equal
 
 let delay_goal ~depth prog ~goal:g ~on:keys =
   let pdiff = local_prog ~to_:depth prog in
-  (*Format.fprintf Format.std_formatter
+  (*Fmt.fprintf Fmt.std_formatter
     (*"Delaying goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
     "Delaying goal: @[<hov 2> ...@ ⊢^%d %a@]\n%!"
       (*(pplist (uppterm depth [] 0 [||]) ",") pdiff*) depth
@@ -1493,7 +1482,7 @@ let delay_goal ~depth prog ~goal:g ~on:keys =
 print_cstr :=
  (function
    | (Delayed_goal (depth,prog,pdiff,g), keys) ->
-     Format.fprintf Format.std_formatter
+     Fmt.fprintf Fmt.std_formatter
        (*"Delaying goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
        "Delaying goal: @[<hov 2> ...@ ⊢^%d %a@]\n%!"
          (*(pplist (uppterm depth [] 0 [||]) ",") pdiff*) depth
@@ -1566,9 +1555,9 @@ let is_llam lvl args adepth bdepth depth left e =
   with RestrictionFailure -> false, []
 let is_llam lvl args adepth bdepth depth left e =
   let res = is_llam lvl args adepth bdepth depth left e in
-  [%spy "is_llam" (fun fmt (b,map) -> Format.fprintf fmt "%d + %a = %b, %a"
+  [%spy "is_llam" (fun fmt (b,map) -> Fmt.fprintf fmt "%d + %a = %b, %a"
     lvl (pplist (ppterm adepth [] bdepth e) "") args b
-    (pplist (fun fmt (x,n) -> Format.fprintf fmt "%d |-> %d" x n) "") map) res];
+    (pplist (fun fmt (x,n) -> Fmt.fprintf fmt "%d |-> %d" x n) "") map) res];
   res
 
 let rec mknLam n t = if n = 0 then t else mknLam (n-1) (Lam t)
@@ -1605,13 +1594,13 @@ let bind r gamma l a d delta b left t e =
     end in
   let cst ?lift c b delta =
     let n = cst ?lift c b delta in
-    [%spy "cst" (fun fmt (n,m) -> Format.fprintf fmt
+    [%spy "cst" (fun fmt (n,m) -> Fmt.fprintf fmt
       "%d -> %d (c:%d b:%d gamma:%d delta:%d d:%d)" n m c b gamma delta d)
       (c,n)];
     n in
-  let rec bind b delta w t = [%trace "bind" (fun fmt -> Format.fprintf fmt
+  let rec bind b delta w t = [%trace "bind" (fun fmt -> Fmt.fprintf fmt
       "%b %d + %a = t:%a a:%d delta:%d d:%d w:%d b:%d" left gamma
-      (pplist (fun fmt (x,n) -> Format.fprintf fmt "%a |-> %d"
+      (pplist (fun fmt (x,n) -> Fmt.fprintf fmt "%a |-> %d"
         (ppterm a [] b e) (constant_of_dbl x) n) "") l
       (ppterm a [] b [||]) t a delta d w b)
     begin match t with
@@ -1724,7 +1713,7 @@ let unif adepth e bdepth a b =
  (* heap=true if b is known to be a heap term *)
  let rec unif depth a bdepth b heap =
    [%trace "unif" (fun fmt ->
-     Format.fprintf fmt "@[<hov 2>^%d:%a@ =%d= ^%d:%a@]%!"
+     Fmt.fprintf fmt "@[<hov 2>^%d:%a@ =%d= ^%d:%a@]%!"
        adepth (ppterm (adepth+depth) [] adepth [||]) a depth
        bdepth (ppterm (bdepth+depth) [] adepth e) b)
    begin let delta = adepth - bdepth in
@@ -1753,7 +1742,7 @@ let unif adepth e bdepth a b =
        *   NOTE: the map below has been added after the XXX, but
            I believe it is wrong as well *)
       let args =
-       List.map (to_heap adepth ~from:bdepth ~to_:adepth e) args in
+       List.map (move ~adepth ~from:bdepth ~to_:adepth e) args in
       unif depth a adepth
         (app_deref ~from:adepth ~to_:(adepth+depth) args e.(i)) true
 
@@ -1775,10 +1764,10 @@ let unif adepth e bdepth a b =
            else
              (* First step: we restrict the l.h.s. to the r.h.s. level *)
              let a =
-               to_heap ~avoid:r adepth 
+               move ~avoid:r ~adepth 
                  ~from:adepth ~to_:bdepth e a in
              (* Second step: we restrict the l.h.s. *)
-             to_heap adepth 
+             move ~adepth 
                ~from:(bdepth+depth) ~to_:origdepth e a in
          r @:= t;
          [%spy "assign" (ppterm depth [] adepth [||]) t]; true
@@ -1791,15 +1780,15 @@ let unif adepth e bdepth a b =
            if depth=0 then
              if origdepth = bdepth && heap then b
              else
-               to_heap ~avoid:r adepth 
+               move ~avoid:r ~adepth 
                  ~from:bdepth ~to_:origdepth e b
            else
              (* First step: we lift the r.h.s. to the l.h.s. level *)
              let b =
-               to_heap ~avoid:r adepth 
+               move ~avoid:r ~adepth 
                  ~from:bdepth ~to_:adepth e b in
              (* Second step: we restrict the r.h.s. *)
-             to_heap adepth 
+             move ~adepth 
                ~from:(adepth+depth) ~to_:origdepth e b in
          r @:= t;
          [%spy "assign" (ppterm depth [] adepth [||]) t]; true
@@ -1832,7 +1821,7 @@ let unif adepth e bdepth a b =
          e.(i) <- UVar(r,adepth,0);
          bind r adepth args adepth depth delta bdepth false other e
        else begin
-       Format.fprintf Format.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth [||]) a (uppterm depth [] bdepth e) b ;
+       Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth [||]) a (uppterm depth [] bdepth e) b ;
        let r = oref dummy in
        e.(i) <- UVar(r,adepth,0);
        let delayed_goal = Delayed_unif (adepth+depth,e,bdepth+depth,a,b) in
@@ -1850,7 +1839,7 @@ let unif adepth e bdepth a b =
        if is_llam then
          bind r lvl args adepth depth delta bdepth true other e
        else begin
-       Format.fprintf Format.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth [||]) a (uppterm depth [] bdepth [||]) b ;
+       Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth [||]) a (uppterm depth [] bdepth [||]) b ;
        let delayed_goal = Delayed_unif (adepth+depth,e,bdepth+depth,a,b) in
        let (_,vars) as delayed_goal =
         match is_flex other with
@@ -1865,7 +1854,7 @@ let unif adepth e bdepth a b =
        if is_llam then
          bind r lvl args adepth depth delta bdepth false other e
        else begin
-       Format.fprintf Format.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth [||]) a (uppterm depth [] bdepth e) b ;
+       Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth [||]) a (uppterm depth [] bdepth e) b ;
        let delayed_goal = Delayed_unif (adepth+depth,e,bdepth+depth,a,b) in
        let delayed_goal =
         match is_flex other with
@@ -1899,7 +1888,7 @@ let unif adepth e bdepth a b =
    | _ -> false
    end] in
  let res = unif 0 a bdepth b false in
- [%spy "unif result" (fun fmt x -> Format.fprintf fmt "%b" x) res];
+ [%spy "unif result" (fun fmt x -> Fmt.fprintf fmt "%b" x) res];
  res
 ;;
 
@@ -1991,7 +1980,7 @@ r :- (pi X\ pi Y\ q X Y :- pi c\ pi d\ q (Z c d) (X c d) (Y c)) => ... *)
  *  - the clause will live in (depth+lcs)
  *)
 let rec clausify vars depth hyps ts lts lcs = function
-(*g -> Format.eprintf "CLAUSIFY %a %d %d %d %d\n%!" (ppterm (depth+lts) [] 0 [||]) g depth lts lcs (List.length ts); match g with*)
+(*g -> Fmt.eprintf "CLAUSIFY %a %d %d %d %d\n%!" (ppterm (depth+lts) [] 0 [||]) g depth lts lcs (List.length ts); match g with*)
   | App(c, g, gs) when c == andc || c == andc2 ->
      let res = clausify vars depth hyps ts lts lcs g in
      List.fold_right
@@ -2027,7 +2016,7 @@ let rec clausify vars depth hyps ts lts lcs = function
         ) hyps)) in
      let g = lift ~from:(depth+lts) ~to_:(depth+lts+lcs) g in
      let g = subst depth ts g in
-(*     Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
+(*     Fmt.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
       (ppterm (depth+lcs) [] 0 [||]) g
       (pplist (ppterm (depth+lcs) [] 0 [||]) " , ")
       hyps ;*)
@@ -2146,7 +2135,7 @@ let is_frozen c m =
 let matching e depth argsdepth m a b =
   let rec aux m a b =
   [%trace "matching" (fun fmt ->
-   Format.fprintf fmt "%a = %a" (ppterm 0 [] 0 e) a (ppterm 0 [] 0 e) b)
+   Fmt.fprintf fmt "%a = %a" (ppterm 0 [] 0 e) a (ppterm 0 [] 0 e) b)
   begin match a,b with
   | UVar( { contents = t}, 0, 0), _ when t != dummy -> aux m t b
   | _, Arg(i,0) when e.(i) != dummy -> aux m a e.(i)
@@ -2288,7 +2277,7 @@ let propagate constr j history =
    | x -> 
        let min_depth, ctx, g = find_entails max_depth ruledepth x in
        (min_depth, ctx, g) in
- (*Format.fprintf Format.std_formatter "PROPAGATION %d\n%!" j;*)
+ (*Fmt.fprintf Fmt.std_formatter "PROPAGATION %d\n%!" j;*)
  let query =
   let dummyv = UVar (oref dummy, 0, 0) in
    App(propagatec,dummyv,[dummyv ; dummyv]) in
@@ -2329,7 +2318,7 @@ let propagate constr j history =
      in
       aux (headsno - 1) !delayed in
 
-     (*Format.fprintf Format.std_formatter "COMBINATIONS %d\n%!"
+     (*Fmt.fprintf Fmt.std_formatter "COMBINATIONS %d\n%!"
        (List.length combinations);*)
      
     let combinations =
@@ -2342,7 +2331,7 @@ let propagate constr j history =
       let hitem = clause,heads in
       no_such_j := false;
       if HISTORY.mem history hitem then begin
-        Format.fprintf Format.std_formatter "pruned\n%!" ;
+        Fmt.fprintf Fmt.std_formatter "pruned\n%!" ;
         None
         end
       else
@@ -2372,7 +2361,7 @@ let propagate constr j history =
            List.(gg2 |> map sequent_of_pattern |> map lift_pattern_sequent) in
 
          let e = Array.make nargs dummy in
-         (*Format.fprintf Format.std_formatter "attempt: %a = %a\n%!"
+         (*Fmt.fprintf Fmt.std_formatter "attempt: %a = %a\n%!"
            (pplist (uppterm max_depth [] 0 [||]) ",") (to_match @ to_remove)
            (pplist (fun fmt (_,_,g) ->
               uppterm max_depth [] 0 e fmt g) ",")
@@ -2394,11 +2383,11 @@ let propagate constr j history =
          
          let gg3 = lift_pat ~from:0 ~to_:max_depth g3 in
          match hyps with
-         | [] -> Format.fprintf Format.std_formatter "Empty guard\n%!";
+         | [] -> Fmt.fprintf Fmt.std_formatter "Empty guard\n%!";
                  Some(heads_to_remove,[(max_depth,p,[],thaw max_depth e m gg3)])
          | h1 :: hs ->
             let query = [],max_depth,e,App(andc,h1,hs) in
-            (*Format.fprintf Format.std_formatter "Starting runtime\n%!";*)
+            (*Fmt.fprintf Fmt.std_formatter "Starting runtime\n%!";*)
             (try
               (* CSC: I am not at all sure about the second occurrence of
                  max_depth below *)
@@ -2406,12 +2395,12 @@ let propagate constr j history =
               if not (no_delayed ()) then begin
                 anomaly "propagation rules must not $delay"
               end;
-              (*Format.fprintf Format.std_formatter "Ending runtime (ok)\n%!";*)
+              (*Fmt.fprintf Fmt.std_formatter "Ending runtime (ok)\n%!";*)
               Some(heads_to_remove,[(max_depth,p,[],thaw max_depth e m gg3)])
             with No_clause ->
-              Format.fprintf Format.std_formatter "Ending runtime (fail)\n%!";
+              Fmt.fprintf Fmt.std_formatter "Ending runtime (fail)\n%!";
               None)
-       with NoMatch -> (*Format.fprintf Format.std_formatter "NoMatch\n%!";*)None)
+       with NoMatch -> (*Fmt.fprintf Fmt.std_formatter "NoMatch\n%!";*)None)
      | _ -> anomaly "propagate expects 3 args") rules
  in
  match result with
@@ -2424,14 +2413,14 @@ let print_delayed () =
  List.iter
   (function
    | Delayed_unif (ad,e,bd,a,b),l ->
-      Format.fprintf Format.std_formatter
+      Fmt.fprintf Fmt.std_formatter
        "delayed goal: @[<hov 2>^%d:%a@ == ^%d:%a on %a@]\n%!"
         ad (uppterm ad [] 0 [||]) a
         bd (uppterm ad [] ad e) b
         (pplist (uppterm ad [] 0 [||]) ",")
         (List.map (fun r -> UVar(r,0,0)) l)
    | Delayed_goal (depth,_,pdiff,g),l ->
-      Format.fprintf Format.std_formatter
+      Fmt.fprintf Fmt.std_formatter
         "delayed goal: @[<hov 2> %a@ ⊢ %a on %a@]\n%!"
           (pplist (uppterm depth [] 0 [||]) ",") pdiff
           (uppterm depth [] 0 [||]) g
@@ -2450,7 +2439,7 @@ let make_runtime : unit -> (?depth:int -> 'a -> 'b -> int -> 'k) * ('k -> 'k) * 
     [%trace "run" (fun fmt -> ppterm depth [] 0 [||] fmt g)
  begin match resume_all () with
   None ->
-begin Format.fprintf Format.std_formatter "Undo triggered by goal resumption\n%!";
+begin Fmt.fprintf Fmt.std_formatter "Undo triggered by goal resumption\n%!";
   [%tcall next_alt alts]
 end
  | Some ((ndepth,np,ng)::goals) ->
@@ -2461,16 +2450,16 @@ end
     | App(c, g, gs') when c == andc || c == andc2 ->
        run depth p g (List.map(fun x -> depth,p,x) gs'@gs) next alts lvl
     | App(c, g2, [g1]) when c == rimplc ->
-       (*Format.eprintf "RUN: %a\n%!" (uppterm depth [] 0 [||]) g ;*)
+       (*Fmt.eprintf "RUN: %a\n%!" (uppterm depth [] 0 [||]) g ;*)
        let clauses, lcs = clausify 0 depth [] [] 0 0 g1 in
        let g2 = lift ~from:depth ~to_:(depth+lcs) g2 in
-       (*Format.eprintf "TO: %a \n%!" (uppterm (depth+lcs) [] 0 [||]) g2;*)
+       (*Fmt.eprintf "TO: %a \n%!" (uppterm (depth+lcs) [] 0 [||]) g2;*)
        run (depth+lcs) (add_clauses clauses (depth,g1) p) g2 gs next alts lvl
     | App(c, g1, [g2]) when c == implc ->
-       (*Format.eprintf "RUN: %a\n%!" (uppterm depth [] 0 [||]) g ;*)
+       (*Fmt.eprintf "RUN: %a\n%!" (uppterm depth [] 0 [||]) g ;*)
        let clauses, lcs = clausify 0 depth [] [] 0 0 g1 in
        let g2 = lift ~from:depth ~to_:(depth+lcs) g2 in
-       (*Format.eprintf "TO: %a \n%!" (uppterm (depth+lcs) [] 0 [||]) g2;*)
+       (*Fmt.eprintf "TO: %a \n%!" (uppterm (depth+lcs) [] 0 [||]) g2;*)
        run (depth+lcs) (add_clauses clauses (depth,g1) p) g2 gs next alts lvl
 (*  This stays commented out because it slows down rev18 in a visible way!   *)
 (*  | App(c, _, _) when c == implc -> anomaly "Implication must have 2 args" *)
@@ -2538,11 +2527,11 @@ end
            | h::hs ->
               let next = if gs = [] then next else FCons (lvl,gs,next) in
               let h =
-                to_heap depth ~from:c.depth ~to_:depth env h in
+                move ~adepth:depth ~from:c.depth ~to_:depth env h in
               let hs =
                 List.map (fun x->
                   depth,p,
-                  to_heap depth ~from:c.depth ~to_:depth env x)
+                  move ~adepth:depth ~from:c.depth ~to_:depth env x)
                 hs in
               [%tcall run depth p h hs next alts oldalts] end
       end] in
@@ -2562,15 +2551,15 @@ end
     | FNil ->
         (match resume_all () with
            None ->
-            Format.fprintf Format.std_formatter
+            Fmt.fprintf Fmt.std_formatter
              "Undo triggered by goal resumption\n%!";
             [%tcall next_alt alts]
          | Some ((ndepth,p,ng)::goals) ->
             run ndepth p ng goals FNil alts lvl
          | Some [] ->
-            Format.fprintf Format.std_formatter "===================\n%!";
+            Fmt.fprintf Fmt.std_formatter "===================\n%!";
             print_delayed ();
-            Format.fprintf Format.std_formatter "===================\n%!";
+            Fmt.fprintf Fmt.std_formatter "===================\n%!";
             alts)
     | FCons (_,[],_) -> anomaly "empty stack frame"
     | FCons(lvl,(depth,p,g)::gs,next) -> run depth p g gs next alts lvl
@@ -2588,7 +2577,7 @@ end;*)
      | (Delayed_unif (ad,e,bd,a,b), vars) as exn :: rest ->
          remove_constraint exn;
          to_resume := rest;
-         (*Format.fprintf Format.std_formatter
+         (*Fmt.fprintf Fmt.std_formatter
           "Resuming @[<hov 2>^%d:%a@ == ^%d:%a@]\n%!"
            ad (uppterm ad [] 0 [||]) a
            bd (uppterm ad [] ad e) b;*)
@@ -2596,7 +2585,7 @@ end;*)
      | (Delayed_goal((depth,_,pdiff,g) as dpg), _) as exn :: rest ->
          remove_constraint exn;
          to_resume := rest;
-         (*Format.fprintf Format.std_formatter
+         (*Fmt.fprintf Fmt.std_formatter
           "Resuming goal: @[<hov 2> ...@ ⊢^%d %a@]\n%!"
           (*"Resuming goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
           (*(pplist (uppterm depth [] 0 [||]) ",") pdiff*)
@@ -2605,7 +2594,7 @@ end;*)
      | _ -> anomaly "Unknown constraint type"
    done ;
    (* Phase 2: we propagate the constraints *)
-   (*if !new_delayed <> [] then Format.fprintf Format.std_formatter "RESUME ALL\n%!";*)
+   (*if !new_delayed <> [] then Fmt.fprintf Fmt.std_formatter "RESUME ALL\n%!";*)
    let history = HISTORY.create 17 in
    if !ok then begin
     while !new_delayed <> [] do
@@ -2617,12 +2606,12 @@ end;*)
           | `Matched (to_be_removed,to_be_added) ->
              (*List.iter (function
                 (Delayed_goal ((depth,_,_,g)),_) ->
-                  Format.fprintf Format.std_formatter
+                  Fmt.fprintf Fmt.std_formatter
                    "Killing goal: @[<hov 2> ... ⊢^%d %a@]\n%!" depth (uppterm depth [] 0 [||]) g
               | _ -> ()) to_be_removed ;*)
              List.iter remove_constraint to_be_removed ;
              (*List.iter (fun (depth,_,_,g) ->
-                  Format.fprintf Format.std_formatter
+                  Fmt.fprintf Fmt.std_formatter
                    "Additional goal: @[<hov 2> ... ⊢^%d %a@]\n%!" depth (uppterm depth [] 0 [||]) g)
                to_be_added ;*)
              (*List.iter add_constraint to_be_added*)
@@ -2649,7 +2638,7 @@ end;*)
   (fun ?(depth=0) p (_,argsdepth,q_env,q) ->
      set original_program p;
      exec (fun lcs ->
-     let q = to_heap argsdepth ~from:depth ~to_:depth q_env q in
+     let q = move ~adepth:argsdepth ~from:depth ~to_:depth q_env q in
      run lcs p q [] FNil emptyalts emptyalts)),
   (fun alts -> exec next_alt alts),
   (fun () -> get delayed = [])
@@ -2660,7 +2649,7 @@ do_make_runtime := make_runtime;;
 (* }}} *)
 (* {{{ ************** "compilation" + API *********************** *)
 
-module ConstMap = Map.Make(Elpi_ast.Func)
+module ConstMap = Map.Make(F)
 
 (* To assign Arg (i.e. stack) slots to unif variables in clauses *)
 type argmap = { max_arg : int; name2arg : (string * term) list }
@@ -2738,13 +2727,13 @@ let term_of_ast ~depth t =
  let freevars = mkinterval 0 depth 0 in
  let cmap =
   List.fold_left (fun cmap i ->
-   ConstMap.add (Elpi_ast.Func.from_string (string_of_constant i))
+   ConstMap.add (F.from_string (string_of_constant i))
     (constant_of_dbl i) cmap
    ) ConstMap.empty freevars in
  let { max_arg = max; name2arg = l }, t =
   stack_term_of_ast depth empty_amap cmap t in
  let env = Array.make max dummy in
- to_heap argsdepth ~from:depth ~to_:depth ~avoid:def_avoid env t
+ move ~adepth:argsdepth ~from:depth ~to_:depth ~avoid:def_avoid env t
 ;;
 
 let query_of_ast_cmap lcs cmap t =
@@ -2763,7 +2752,7 @@ let program_of_ast (p : Elpi_ast.decl list) : program =
       match d with
          Elpi_ast.Clause t ->
           let names,_,env,t = query_of_ast_cmap lcs cmap t in
-          (* Format.eprintf "%a\n%!" (uppterm 0 names 0 env) t ; *)
+          (* Fmt.eprintf "%a\n%!" (uppterm 0 names 0 env) t ; *)
           let moreclauses, morelcs = clausify (Array.length env) lcs [] [] 0 0 t in
           List.rev_append moreclauses clauses, lcs+morelcs, cmap, cmapstack
        | Elpi_ast.Begin -> clauses, lcs, cmap, cmap::cmapstack
@@ -2784,49 +2773,8 @@ let program_of_ast (p : Elpi_ast.decl list) : program =
   lcs,make_index (List.rev clausesrev)
 ;;
 
-(*let pp_FOprolog p = assert false (*CSC: port the code, see function above List.iter (fun { Elpi_parser.head = a; hyps = f } ->
-  let amap, cmap = empty_amap, ConstMap.empty in
-  let amap, a = stack_term_of_ast 0 amap cmap a in
-  let amap, f = stack_term_of_ast 0 amap cmap f in
-  let { max_arg = max; name2arg = l } = amap in
-  let names = List.rev_map fst l in
-  let env = Array.make max dummy in
-  if f = truec then
-   Format.eprintf "@[<hov 1>%a%a.@]\n%!"
-     (pp_FOprolog names env) a
-     (pplist (pp_FOprolog names env) ",") (split_conj f)
-  else
-   Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
-     (pp_FOprolog names env) a
-     (pplist (pp_FOprolog names env) ",") (split_conj f)) p*)
-;;*)
-
-
-let rec pp_FOprolog p = 
- List.iter
-  (function
-      Elpi_ast.Local _
-    | Elpi_ast.Begin
-    | Elpi_ast.End -> assert false (* TODO *)
-    | Elpi_ast.Accumulated l -> pp_FOprolog l
-    | Elpi_ast.Clause t ->
-       (* BUG: ConstMap.empty because "local" declarations are ignored ATM *)
-       let names,_,env,t = query_of_ast_cmap 0 ConstMap.empty t in
-       match t with
-       | App(_, Custom _, _) | App(_,_,(Custom _)::_) -> ()  
-       | App(hd,a,[f]) when hd == rimplc -> 
-         Format.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
-          (prologppterm names env) a
-          (pplist (prologppterm names env) ",") (split_conj f);
-       | _ -> 
-         Format.eprintf "@[<hov 1>%a.@]\n%!" (prologppterm names env) t 
-  ) p  
- ;;
-
- 
 (* RUN with non indexed engine *)
 type query = string list * int * term array * term
-let pp_prolog = pp_FOprolog
 
 let execute_once (depth,p) q =
  let run, cont, _ = make_runtime () in
@@ -2842,9 +2790,9 @@ let execute_loop (depth,p) ((q_names,q_argsdepth,q_env,q) as qq) =
   f x ;
   let time1 = Unix.gettimeofday() in
   prerr_endline ("Execution time: "^string_of_float(time1 -. time0));
- (* Format.eprintf "Raw Result: %a\n%!" (ppterm depth q_names q_argsdepth q_env) q ;*)
-  Format.eprintf "Result: \n%!" ;
-  List.iteri (fun i name -> Format.eprintf "@[<hov 1>%s=%a@]\n%!" name
+ (* Fmt.eprintf "Raw Result: %a\n%!" (ppterm depth q_names q_argsdepth q_env) q ;*)
+  Fmt.eprintf "Result: \n%!" ;
+  List.iteri (fun i name -> Fmt.eprintf "@[<hov 1>%s=%a@]\n%!" name
    (uppterm depth q_names 0 q_env) q_env.(i)) q_names in
  do_with_infos (fun _ -> k := (run p qq depth)) ();
  while !k != emptyalts do

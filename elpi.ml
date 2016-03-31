@@ -36,7 +36,7 @@ let test_impl prog query =
 (* rewrites a lambda-prolog program to first-order prolog *)
 let pp_lambda_to_prolog prog =
  Printf.printf "\nRewriting λ-prolog to first-order prolog...\n\n%!";
- Elpi_runtime.pp_prolog prog
+ Elpi_prolog_exporter.pp_prolog prog
 ;;
 
 let set_terminal_width ?(max_w=

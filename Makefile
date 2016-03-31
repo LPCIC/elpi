@@ -15,7 +15,7 @@ OCAMLOPTIONS= -g
 CMX=cmx
 CMXA=cmxa
 OC=ocamlfind ocamlopt
-OCB=ocamlc
+OD=ocamlfind ocamldep
 
 all:
 	$(MAKE) trace_ppx
@@ -50,7 +50,7 @@ runners:
 
 clean:
 	rm -f *.cmo *.cma *.cmx *.cmxa *.cmi *.o *.tex *.aux *.log *.pdf
-	rm -f elpi.git.*
+	rm -f elpi.git.* .depends .depends.parser
 
 dist:
 	git archive --format=tar --prefix=elpi-$(V)/ HEAD . \
@@ -58,13 +58,14 @@ dist:
 
 # compilation of elpi
 
-elpi: elpi.$(CMX) elpi_latex_exporter.$(CMX) elpi_runtime.$(CMX) elpi_parser.$(CMX)
+elpi: elpi.$(CMX) elpi_prolog_exporter.$(CMX) elpi_latex_exporter.$(CMX) elpi_runtime.$(CMX) elpi_parser.$(CMX)
 	$(OC) -package ppx_deriving.std -linkpkg \
 		$(OCAMLOPTIONS) $(FLAGS) -o $@ \
 		camlp5.$(CMXA) unix.$(CMXA) str.$(CMXA) \
 		elpi_ast.$(CMX) elpi_parser.$(CMX) elpi_ptmap.$(CMX) \
 		elpi_trace.$(CMX) elpi_runtime.$(CMX) \
 		elpi_latex_exporter.$(CMX) \
+		elpi_prolog_exporter.$(CMX) \
 		elpi_custom.$(CMX) elpi.$(CMX)
 
 %.$(CMX): %.ml trace_ppx
@@ -76,18 +77,11 @@ elpi_parser.$(CMX): elpi_parser.ml elpi_parser.cmi elpi_ast.$(CMX) elpi_ast.cmi
 	$(OC) $(OCAMLOPTIONS) -pp '$(PP) $(PARSE)' $(FLAGS) -o $@ -c $<
 
 # dependencies
-elpi.$(CMX): elpi.ml elpi_ptmap.$(CMX) elpi_trace.$(CMX) elpi_runtime.$(CMX) elpi_latex_exporter.$(CMX) elpi_custom.$(CMX) elpi_parser.$(CMX)
-elpi_runtime.$(CMX): elpi_runtime.ml elpi_runtime.cmi elpi_trace.$(CMX) elpi_parser.$(CMX) elpi_ptmap.$(CMX)
-elpi_runtime.cmi: elpi_runtime.mli elpi_parser.cmi
-elpi_ptmap.cmi: elpi_ptmap.mli
-elpi_ptmap.$(CMX): elpi_ptmap.ml elpi_ptmap.cmi
-elpi_parser.cmi: elpi_parser.mli elpi_ast.cmi
-elpi_trace.$(CMX): elpi_trace.ml elpi_trace.cmi
-elpi_trace.cmi: elpi_trace.mli
-elpi_custom.cmi: elpi_custom.mli
-elpi_ast.cmi: elpi_ast.mli
-elpi_ast.$(CMX): elpi_ast.cmi
-elpi_custom.$(CMX): elpi_custom.ml elpi_custom.cmi elpi_runtime.cmi elpi_runtime.$(CMX)
-elpi_latex_exporter.cmi: elpi_latex_exporter.mli elpi_parser.cmi
-elpi_latex_exporter.$(CMX): elpi_latex_exporter.ml elpi_latex_exporter.cmi elpi_parser.$(CMX) 
+include .depends .depends.parser
 
+.depends: $(filter-out elpi_parser.ml, $(wildcard *.ml *.mli))
+	$(OD) $^ > $@
+.depends.parser: elpi_parser.ml
+	$(OD) -pp '$(PP) $(PARSE)' $< > $@
+# only registers hooks, not detected by ocamldep
+elpi.cmx : elpi_custom.cmx
