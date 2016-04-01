@@ -63,6 +63,7 @@ and constraint_ =
 
 val term_of_ast : depth:int -> Elpi_ast.term -> term
 val oref : 'a -> 'a oref
+val pp_term : Format.formatter -> term -> unit
 
 exception No_clause
 
