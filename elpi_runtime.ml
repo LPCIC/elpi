@@ -2007,10 +2007,13 @@ let register_custom, lookup_custom =
       Hashtbl.t)
    =
      Hashtbl.create 17 in
- (fun s ->
+ (fun s f ->
     if s = "" || s.[0] <> '$' then
       anomaly ("Custom predicate name " ^ s ^ " must begin with $");
-    Hashtbl.add customs (fst (funct_of_ast (F.from_string s)))),
+    let idx = fst (funct_of_ast (F.from_string s)) in
+    if Hashtbl.mem customs idx then
+      anomaly ("Duplicate custom predicate name " ^ s);
+    Hashtbl.add customs idx f),
  Hashtbl.find customs
 ;;
 
