@@ -89,6 +89,7 @@ let usage () =
   F.eprintf "\t-trace-on  enable trace printing\n";
   F.eprintf "\t-trace-skip REX  ignore trace items matching REX\n";
   F.eprintf "\t-trace-only REX  trace only items matching REX\n";
+  F.eprintf "\t-trace-maxbox NUM  Format max_boxes set to NUM\n";
 ;;
 
 let parse_argv argv =
@@ -109,6 +110,9 @@ let parse_argv argv =
          aux rest
     | "-trace-only" :: expr :: rest ->
          only := expr :: !only;
+         aux rest
+    | "-trace-maxbox" :: num :: rest ->
+         Format.pp_set_max_boxes Format.err_formatter (int_of_string num);
          aux rest
     | x :: rest -> x :: aux rest in
   let rest = aux (Array.to_list argv) in
