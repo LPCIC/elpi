@@ -1612,7 +1612,6 @@ main :-
                                          x22 \ x22) ' x21)) [auto_monotone,
                                    h])))),
                          thenl c [thenl c [thenl c [r, h], r], r]])))))))))])
-
  , theorem inj2_univ_inj
    (pi A \ pi B \ (! (univ '' A '' B) x22 \ ! x23 \ inj2_univ ' x22 = inj2_univ ' x23 ==> x22 = x23) ,
     [then (repeat forall_i)
@@ -1623,28 +1622,6 @@ main :-
            (then (lforall x22)
              (then (lforall (X6^22 x22 x23 x22 x23))
                (then (lforall (X7^22 x22 x23 x22 x23)) auto_monotone)))))])  
-
-/*
- , theorem inj2_univ_inj 
-   ((! x20 \ ! x21 \ inj2_univ ' x20 = inj2_univ ' x21 ==> x20 = x21) , 
-    [then (repeat forall_i)
-     (bind (univ '' X8^20 '' X9^20) x20 \
-       bind (univ '' X8^20 '' X9^20) x21 \
-        then i (then (cutth case_univ_inj2)
-           (then (lforall x20)
-             (then (lforall (X4^20 x20 x21))
-               (then (lforall (X5^20 x20 x21))
-                 (thenl (cut ((case_univ ' (inj2_univ ' x20) '
-                   X6^20 x20 x21 x20 x21 ' X7^20 x20 x21 x20 x21 =
-                        X7^20 x20 x21 x20 x21 ' x20) =
-                       (case_univ ' (inj2_univ ' x21) '
-                         X6^20 x20 x21 x20 x21 ' X7^20 x20 x21 x20 x21 =
-                         X7^20 x20 x21 x20 x21 ' x20))) [auto_monotone,
-                   thenl c
-                    [thenl c [r, thenl c [thenl c [thenl c [r, h], r], r]],
-                    r]]))))))])
-*/
-
  , axiom not_eq_inj1_inj2_univ (! x \ ! y \ inj1_univ ' x = inj2_univ ' y ==> ff)
  /* CSC: prove the injectivity injX_disj_union_inj as well for X = 1,2. Also put the pi A \pi B ... and move to its own section */
  , axiom inj1_disj_union_inj (! x1 \ ! x2 \ inj1_disj_union ' x1 = inj1_disj_union ' x2 ==> x1 = x2)
