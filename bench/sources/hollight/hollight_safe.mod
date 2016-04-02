@@ -1545,12 +1545,12 @@ main :-
                        proj1_univ ' (pair_univ ' x21 ' x23)))
                    [auto_monotone, thenl c [r, h]])))))])
  , theorem pair_univ_inj_r 
-   ((! x20 \ ! x21 \ ! x22 \ ! x23 \ pair_univ ' x20 ' x22 = pair_univ ' x21 ' x23 ==> x22 = x23) ,
+   (pi A \ pi B \ (! (univ '' A '' B) x20 \ ! x21 \ ! x22 \ ! x23 \ pair_univ ' x20 ' x22 = pair_univ ' x21 ' x23 ==> x22 = x23) ,
     [then (repeat forall_i)
-     (bind (univ '' X4^20 '' X5^20) x20 \
-       bind (univ '' X4^20 '' X5^20) x21 \
-        bind (univ '' X4^20 '' X5^20) x22 \
-         bind (univ '' X4^20 '' X5^20) x23 \
+     (bind (univ '' A '' B) x20 \
+       bind (univ '' A '' B) x21 \
+        bind (univ '' A '' B) x22 \
+         bind (univ '' A '' B) x23 \
           then i (then (cutth proj2_pair_univ)
              (then (lforall x20)
                (then (lforall x22)
@@ -1558,7 +1558,6 @@ main :-
                      (proj2_univ ' (pair_univ ' x20 ' x22) =
                        proj2_univ ' (pair_univ ' x21 ' x23)))
                    [auto_monotone, thenl c [r, h]])))))])
- 
  , theorem injection_univ_inj 
    ((! x20 \ ! x21 \ injection_univ ' x20 = injection_univ ' x21 ==> x20 = x21) ,
     [thenl inv [(bind prop x20 \ bind prop x21 \
@@ -1568,51 +1567,19 @@ main :-
         (then (g (injection_univ ' x20 = injection_univ ' x21))
                 auto_monotone)))),
      (bind prop x20 \ bind prop x21 \ auto_monotone)]])
- 
- , theorem inj1_univ_inj 
-   ((! x20 \ ! x21 \ inj1_univ ' x20 = inj1_univ ' x21 ==> x20 = x21) ,
+ , theorem inj1_univ_inj
+   (pi A \ pi B \ (! (univ '' A '' B) x20 \ ! x21 \ inj1_univ ' x20 = inj1_univ ' x21 ==> x20 = x21) ,
     [then inv
-     (bind (univ '' X64^20 '' X65^20) x20 \
-       bind (univ '' X64^20 '' X65^20) x21 \
-        then (cutth case_univ_inj1)
-         (then (lforall x20)
-           (then (lforall (lam (univ '' X64^20 '' X65^20) x22 \ x22))
-             (then (lforall (lam (univ '' X64^20 '' X65^20) x22 \ x22))
-               (then (cutth case_univ_inj1)
-                 (then (lforall x21)
-                   (then
-                     (lforall (lam (univ '' X64^20 '' X65^20) x22 \ x22))
-                     (then
-                       (lforall (lam (univ '' X64^20 '' X65^20) x22 \ x22))
-                       (thenl
-                         (cut
-                           (case_univ ' (inj1_univ ' x20) '
-                             (lam (univ '' X64^20 '' X65^20) x22 \ x22) '
-                             (lam (univ '' X64^20 '' X65^20) x22 \ x22) =
-                             case_univ ' (inj1_univ ' x21) '
-                              (lam (univ '' X64^20 '' X65^20) x22 \ x22) '
-                              (lam (univ '' X64^20 '' X65^20) x22 \ x22)))
-                         [then
-                           (g
-                             (case_univ ' (inj1_univ ' x20) '
-                               (lam (univ '' X64^20 '' X65^20) x22 \ x22) '
-                               (lam (univ '' X64^20 '' X65^20) x22 \ x22) =
-                               case_univ ' (inj1_univ ' x21) '
-                                (lam (univ '' X64^20 '' X65^20) x22 \ x22)
-                                '
-                                (lam (univ '' X64^20 '' X65^20) x22 \ x22)))
-                           (then (conv (depth_tac h))
-                             (then
-                               (conv (depth_tac (applyth case_univ_inj1)))
-                               (then i
-                                 (thenl
-                                   (cut
-                                     ((lam (univ '' X64^20 '' X65^20) x22 \
-                                        x22) ' x20 =
-                                       (lam (univ '' X64^20 '' X65^20)
-                                         x22 \ x22) ' x21)) [auto_monotone,
-                                   h])))),
-                         thenl c [thenl c [thenl c [r, h], r], r]])))))))))])
+     (bind (univ '' A '' B) x20 \ bind (univ '' A '' B) x21 \
+        thenl (t (case_univ ' (inj1_univ ' x20) '
+             (lam (univ '' A '' B) x22 \ x22) '
+             (lam (univ '' A '' B) x22 \ x22)))
+         [then sym
+           (then (conv (land_tac (applyth case_univ_inj1)))
+             (then (conv (land_tac b)) r)),
+         then (conv (depth_tac h))
+          (then (conv (land_tac (applyth case_univ_inj1)))
+            (then (conv (land_tac b)) r))])])
  , theorem inj2_univ_inj
    (pi A \ pi B \ (! (univ '' A '' B) x22 \ ! x23 \ inj2_univ ' x22 = inj2_univ ' x23 ==> x22 = x23) ,
     [then (repeat forall_i)
