@@ -967,8 +967,12 @@ deftac auto_monotone _ daemon.
 
 /********** the library ********/
 
-main :-
- check
+main :- the_library L, append L [stop] Lstop, check Lstop.
+
+go :- the_library L, check L.
+
+the_library L :-
+ L =
   [ /*********** Connectives and quantifiers ********/
     def tt (prop,((lam prop x \ x) = (lam prop x \ x)))
   , def forall (pi A \ ((A --> prop) --> prop),
@@ -1754,7 +1758,7 @@ main :-
      nat_recF '' A ' a ' f ' (nat_rec_fixpoint '' A ' a ' f)) */
  %, theorem nat_rec_z (pi A \ ! a \ ! f \ nat_rec '' A ' a ' f ' z = a)
 */
- ,stop].
+ ].
 
 /* Status and dependencies of the tactics:
 +dd:

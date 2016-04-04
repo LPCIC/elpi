@@ -731,7 +731,7 @@ let mkAppUVar r lvl l =
                  `->   l5
 
    - If amount is < 0 then Const nodes between to and from are ensured not
-     to occur in the result, otherwise RestrictionFailure is reaised.
+     to occur in the result, otherwise RestrictionFailure is raised.
      Const nodes >= from are de-lifted by amount
 
        c1       --->   c1 to                    c1       --->   c1 to
@@ -817,7 +817,9 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ?(depth=0) ~from ~to_ t =
        let v = UVar(r,to_,0) in
        e.(i) <- v;
        if args == 0 then v else UVar(r,to_,args)
-    | AppArg(i, args) ->
+    | AppArg(i, args) when
+      List.for_all (deterministic_restriction e ~args_safe:(argsdepth=to_)) args
+      ->
        (* assign to UVar whose depth is greater than the current goal depth *)
        if argsdepth < to_ then anomaly "move: invalid AppArg heapification";
        let args =
@@ -828,6 +830,11 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ?(depth=0) ~from ~to_ t =
        let v = UVar(r,to_,0) in
        e.(i) <- v;
        mkAppUVar r to_ args
+    | AppArg _ ->
+       Fmt.fprintf Fmt.str_formatter
+        "Non deterministic pruning, implemented delay: t=%a, delta=%d%!"
+         (ppterm depth [] argsdepth e) x delta;
+       anomaly (Fmt.flush_str_formatter ())
 
     (* restriction/lifting of UVar *)
     | UVar (r,vardepth,argsno) ->
@@ -843,6 +850,8 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ?(depth=0) ~from ~to_ t =
        else
          if vardepth + argsno <= to_ then x
          else begin
+           (* TODO/BUG: I believe this assert to be false; if it is, the
+              code below is wrong when the assert fails *)
            assert (vardepth+argsno <= from);
            let assignment,fresh = make_lambdas (to_-argsno) argsno in
            if not !last_call then
@@ -864,7 +873,9 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ?(depth=0) ~from ~to_ t =
           try List.map (maux depth) (args0@args)
           with RestrictionFailure -> anomaly "impossible, delta < 0" in
          mkAppUVar r vardepth args
-       else
+       else if List.for_all (deterministic_restriction e ~args_safe:(argsdepth=to_)) args then
+         (* TODO: this branch is to be reviewed/tested throughly, unless
+            Enrico is now confident with it *)
          let args =
            try List.map (maux depth) args
            with RestrictionFailure ->
@@ -875,13 +886,19 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ?(depth=0) ~from ~to_ t =
            if not !last_call then trail := (Assign r) :: !trail;
            r @:= newvar;
            mkAppUVar r vardepth args
+       else begin
+        Fmt.fprintf Fmt.str_formatter
+         "Non deterministic pruning, implemented delay: t=%a, delta=%d%!"
+          (ppterm depth [] argsdepth e) x delta;
+        anomaly (Fmt.flush_str_formatter ())
+       end
   end]
   in
     let rc = maux depth t in
     [%spy "move-output" (ppterm to_ [] argsdepth e) rc];
     rc
 
-(* Lift is to be called only on heap terms *)
+(* Hmove is to be called only on heap terms *)
 and hmove ~from ~to_ ?depth t =
  [%trace "hmove" ("@[<hov 1>from:%d@ to:%d@ %a@]"
      from to_ (uppterm from [] 0 [||]) t) begin
@@ -996,20 +1013,6 @@ and beta depth sub t args =
          | String _ | Int _ | Float _ -> type_error "beta"
  end]
 
-(* Deref is to be called only on heap terms and with from <= to
-*  The args must live in to_.
-*)
-and deref_appuv ~from ~to_ args t = beta to_ [] (deref_uv ~from ~to_ 0 t) args
-
-(* deref_uv performs lifting only and with from <= to
-   if called on non-heap terms, it does not turn them to heap terms
-   (if from=to_)
-
-   Note:
-     when deref_uv is called inside restrict, it may be from > to_
-     t lives in from; args already live in to_
-*)
-   
 (* eat_args n [n ; ... ; n+k] (Lam_0 ... (Lam_k t)...) = n+k+1,[],t
    eat_args n [n ; ... ; n+k]@l (Lam_0 ... (Lam_k t)...) =
      n+k+1,l,t if t != Lam or List.hd l != n+k+1 *)
@@ -1022,7 +1025,23 @@ and eat_args depth l t =
      eat_args depth l (deref_appuv ~from:origdepth ~to_:depth args t)
   | _ -> depth,l,t
 
+(* CSC: The following set of comments are to be revised. I found them scattered
+   around and they refer to old names. They are also somehow duplicated *)
 (* Deref is to be called only on heap terms and with from <= to *)
+(* Deref is to be called only on heap terms and with from <= to
+*  The args must live in to_.
+*)
+(* deref_uv performs lifting only and with from <= to
+   if called on non-heap terms, it does not turn them to heap terms
+   (if from=to_)
+
+   Note:
+     when deref_uv is called inside restrict, it may be from > to_
+     t lives in from; args already live in to_
+*)
+   
+and deref_appuv ~from ~to_ args t = beta to_ [] (deref_uv ~from ~to_ 0 t) args
+
 and deref_uv ~from ~to_ args t =
   [%trace "deref_uv" ("from:%d to:%d %a @@ %d"
       from to_ (ppterm from [] 0 dummy_env) t args) begin
@@ -2688,7 +2707,7 @@ let term_of_ast ~depth t =
  let { max_arg = max; name2arg = l }, t =
   stack_term_of_ast depth empty_amap cmap t in
  let env = Array.make max dummy in
- move ~adepth:argsdepth ~from:depth ~to_:depth ~avoid:def_avoid env t
+ move ~adepth:argsdepth ~from:depth ~to_:depth env t
 ;;
 
 let query_of_ast_cmap lcs cmap t =
