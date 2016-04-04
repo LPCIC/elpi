@@ -1590,11 +1590,70 @@ main :-
            (then (lforall x22)
              (then (lforall (X6^22 x22 x23 x22 x23))
                (then (lforall (X7^22 x22 x23 x22 x23)) auto_monotone)))))])  
- , axiom not_eq_inj1_inj2_univ (! x \ ! y \ inj1_univ ' x = inj2_univ ' y ==> ff)
- /* CSC: prove the injectivity injX_disj_union_inj as well for X = 1,2. Also put the pi A \pi B ... and move to its own section */
- , axiom inj1_disj_union_inj (! x1 \ ! x2 \ inj1_disj_union ' x1 = inj1_disj_union ' x2 ==> x1 = x2)
- , axiom inj2_disj_union_inj (! x1 \ ! x2 \ inj2_disj_union ' x1 = inj2_disj_union ' x2 ==> x1 = x2)
+ , theorem not_eq_inj1_inj2_univ
+   ((! x20 \ ! x21 \ inj1_univ ' x20 = inj2_univ ' x21 ==> ff) ,
+    [then inv
+     (bind (univ '' X14^20 '' X15^20) x20 \
+       bind (univ '' X14^20 '' X15^20) x21 \
+        then (cutth case_univ_inj1)
+         (then (lforall x20)
+           (then (lforall (X6^20 x20 x21))
+             (then (lforall (X7^20 x20 x21))
+               (then (cutth case_univ_inj2)
+                 (then (lforall x21)
+                   (then (lforall (X8^20 x20 x21))
+                     (then (lforall (X9^20 x20 x21))
+                       (then (cut
+                         ((case_univ ' (inj1_univ ' x20) '
+                            X10^20 x20 x21 x20 x21 '
+                            X11^20 x20 x21 x20 x21 =
+                            X10^20 x20 x21 x20 x21 ' x20) =
+                          (case_univ ' (inj2_univ ' x21) '
+                            X12^20 x20 x21 x20 x21 '
+                             X13^20 x20 x21 x20 x21 =
+                             X13^20 x20 x21 x20 x21 ' x21)))
+                         auto_monotone)))))))))])
+/* Why does not work? 
+ , theorem not_eq_inj1_inj2_univ
+   (pi A \ pi B \ (! (univ '' A '' B) x20 \ ! x21 \ inj1_univ ' x20 = inj2_univ ' x21 ==> ff) ,
+    [then inv (bind (univ '' A '' B) x20 \
+       bind (univ '' A '' B) x21 \ then (cutth case_univ_inj1)
+         (then (lforall x20)
+           (then (lforall (X6^20 x20 x21))
+             (then (lforall (X7^20 x20 x21))
+               (then (cutth case_univ_inj2)
+                 (then (lforall x21)
+                   (then (lforall (X8^20 x20 x21))
+                     (then (lforall (X9^20 x20 x21))
+                       (then (cut
+                           ((case_univ ' (inj1_univ ' x20) '
+                              X10^20 x20 x21 x20 x21 '
+                              X11^20 x20 x21 x20 x21 =
+                              X10^20 x20 x21 x20 x21 ' x20) =
+                             (case_univ ' (inj2_univ ' x21) '
+                               X12^20 x20 x21 x20 x21 '
+                               X13^20 x20 x21 x20 x21 =
+                               X13^20 x20 x21 x20 x21 ' x21)))
+                         auto_monotone)))))))))])
+*/
 
+ /* CSC: prove the injectivity injX_disj_union_inj as well for X = 1,2. Also put the pi A \pi B ... and move to its own section */
+ , theorem inj1_disj_union_inj
+   (pi A \ (! A x20 \ ! x21 \ inj1_disj_union ' x20 = inj1_disj_union ' x21 ==> x20 = x21) ,
+    [then forall_i
+     (bind A x20 \
+       then forall_i
+        (bind A x21 \
+          then i (then (cutth case_disj_union_inj1)
+            (then (lforall x20) auto_monotone))))])
+ , theorem inj2_disj_union_inj
+   (pi A \ (! A x20 \ ! x21 \ inj2_disj_union ' x20 = inj2_disj_union ' x21 ==> x20 = x21) ,
+    [then forall_i
+     (bind A x20 \
+       then forall_i
+        (bind A x21 \
+          then i (then (cutth case_disj_union_inj2)
+            (then (lforall x20) auto_monotone))))])
  , theorem s_inj ((! x18 \ ! x19 \ s ' x18 = s ' x19 ==> x18 = x19) ,
      [then (repeat (conv (depth_tac (dd [s]))))
        (then inv
