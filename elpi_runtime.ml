@@ -772,7 +772,8 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
  let delta = from - to_ in
  let rc =
   if delta = 0 && e == empty_env && avoid == None then t (* Nothing to do! *)
- else
+ else begin
+  (*if delta = 0 && e == empty_env && avoid <> None then prerr_endline "# EXPENSIVE OCCUR CHECK";*)
   let rec maux e depth x =
     [%trace "move" ("adepth:%d depth:%d from:%d to:%d x:%a"
         argsdepth depth from to_ (ppterm (from+depth) [] argsdepth e) x) begin
@@ -903,6 +904,7 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
   end]
   in
    maux e depth t
+  end
  in
   [%spy "move-output" (ppterm to_ [] argsdepth e) rc];
   rc
