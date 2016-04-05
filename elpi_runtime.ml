@@ -362,13 +362,13 @@ module Pp : sig
     constant -> term array ->
       Fmt.formatter -> term -> unit
 
-  val do_deref : (from:int -> to_:int -> int -> term -> term) ref
-  val do_app_deref : (from:int -> to_:int -> term list -> term -> term) ref
+  val do_deref : (?avoid:term oref -> from:int -> to_:int -> int -> term -> term) ref
+  val do_app_deref : (?avoid:term oref -> from:int -> to_:int -> term list -> term -> term) ref
 
 end = struct (* {{{ *)
 
-let do_deref = ref (fun ~from ~to_ _ _ -> assert false);;
-let do_app_deref = ref (fun ~from ~to_ _ _ -> assert false);;
+let do_deref = ref (fun ?avoid ~from ~to_ _ _ -> assert false);;
+let do_app_deref = ref (fun ?avoid ~from ~to_ _ _ -> assert false);;
 let m = ref [];;
 let n = ref 0;;
 
@@ -655,8 +655,10 @@ let deterministic_restriction e ~args_safe t =
 
 exception RestrictionFailure
 
-let def_avoid = oref dummy
-let occurr_check r1 r2 = if r1 == r2 then raise RestrictionFailure
+let occurr_check r1 r2 =
+  match r1 with
+  | None -> ()
+  | Some r1 -> if r1 == r2 then raise RestrictionFailure
 
 let empty_env = [||]
 
@@ -765,10 +767,11 @@ let mkAppUVar r lvl l =
    
 *)
 
-let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ?(depth=0) ~from ~to_ t =
+let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
+(* TODO: to disable occur_check add something like: let avoid = None in *)
  let delta = from - to_ in
  let rc =
-  if delta = 0 && e == empty_env && avoid == def_avoid then t (*Nothing to do!*)
+  if delta = 0 && e == empty_env && avoid == None then t (* Nothing to do! *)
  else
   let rec maux e depth x =
     [%trace "move" ("adepth:%d depth:%d from:%d to:%d x:%a"
@@ -797,23 +800,23 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ?(depth=0) ~from ~to_ t =
     | Float _ -> x
 
     (* fast path with no deref... *)
-    | UVar (r,_,_) when delta == 0 -> occurr_check avoid r; x
+    | UVar _ when delta == 0 && avoid == None -> x
 
     (* deref *)
     | UVar ({ contents = t }, vardepth, args) when t != dummy ->
-       if depth == 0 then deref_uv ~from:vardepth ~to_ args t
+       if depth == 0 then deref_uv ?avoid ~from:vardepth ~to_ args t
        else maux empty_env depth (deref_uv ~from:vardepth ~to_:(from+depth) args t)
     | AppUVar ({ contents = t }, vardepth, args) when t != dummy ->
-       if depth == 0 then deref_appuv ~from:vardepth ~to_ args t
+       if depth == 0 then deref_appuv ?avoid ~from:vardepth ~to_ args t
        else maux empty_env depth (deref_appuv ~from:vardepth ~to_:(from+depth) args t)
     | Arg (i, args) when e.(i) != dummy ->
-       deref_uv ~from:argsdepth ~to_:(to_+depth) args e.(i)
+       deref_uv ?avoid ~from:argsdepth ~to_:(to_+depth) args e.(i)
     | AppArg(i, args) when e.(i) != dummy ->
        let args =
         try smart_map (maux e depth) args
         with RestrictionFailure ->
           anomaly "move: could check if unrestrictable args are unused" in
-       deref_appuv ~from:argsdepth ~to_:(to_+depth) args e.(i)
+       deref_appuv ?avoid ~from:argsdepth ~to_:(to_+depth) args e.(i)
 
     (* heapification/restriction of Arg and AppArg *)
     | Arg (i, args) ->
@@ -911,7 +914,6 @@ and hmove ?avoid ~from ~to_ t =
      from to_ (uppterm from [] 0 empty_env) t) begin
  move ?avoid ~adepth:0 ~from ~to_ empty_env t
  end]
-
 
 (* UVar(_,from,argsno) -> Uvar(_,to_,argsno+from-to_) *)
 and decrease_depth r ~from ~to_ argsno =
@@ -1047,15 +1049,16 @@ and eat_args depth l t =
      t lives in from; args already live in to_
 *)
    
-and deref_appuv ~from ~to_ args t = beta to_ [] (deref_uv ~from ~to_ 0 t) args
+and deref_appuv ?avoid ~from ~to_ args t =
+  beta to_ [] (deref_uv ?avoid ~from ~to_ 0 t) args
 
-and deref_uv ~from ~to_ args t =
+and deref_uv ?avoid ~from ~to_ args t =
   [%trace "deref_uv" ("from:%d to:%d %a @@ %d"
       from to_ (ppterm from [] 0 empty_env) t args) begin
- if args == 0 then hmove ~from ~to_ t
+ if args == 0 then hmove ?avoid ~from ~to_ t
  else (* O(1) reduction fragment tested here *)
    let from,args',t = eat_args from args t in
-   let t = deref_uv ~from ~to_ 0 t in
+   let t = deref_uv ?avoid ~from ~to_ 0 t in
    if args' == 0 then t
    else
      match t with
