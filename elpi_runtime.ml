@@ -766,8 +766,11 @@ let mkAppUVar r lvl l =
 *)
 
 let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ?(depth=0) ~from ~to_ t =
-  let delta = from - to_ in
-  let rec maux depth x =
+ let delta = from - to_ in
+ let rc =
+  if delta = 0 && e == empty_env && avoid == def_avoid then t (*Nothing to do!*)
+ else
+  let rec maux e depth x =
     [%trace "move" ("adepth:%d depth:%d from:%d to:%d x:%a"
         argsdepth depth from to_ (ppterm (from+depth) [] argsdepth e) x) begin
     match x with
@@ -777,17 +780,17 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ?(depth=0) ~from ~to_ t =
        if c < to_ then x else                             (* constant      *)
        raise RestrictionFailure
     | Lam f ->
-       let f' = maux (depth+1) f in
+       let f' = maux e (depth+1) f in
        if f == f' then x else Lam f'
     | App (c,t,l) when delta == 0 || c < from && c < to_ ->
-       let t' = maux depth t in
-       let l' = smart_map (maux depth) l in
+       let t' = maux e depth t in
+       let l' = smart_map (maux e depth) l in
        if t == t' && l == l' then x else App (c,t',l')
     | App (c,t,l) when c >= from ->
-       App(c-delta, maux depth t, smart_map (maux depth) l)
+       App(c-delta, maux e depth t, smart_map (maux e depth) l)
     | App _ -> raise RestrictionFailure
     | Custom (c,l) ->
-       let l' = smart_map (maux depth) l in
+       let l' = smart_map (maux e depth) l in
        if l == l' then x else Custom (c,l')
     | String _
     | Int _
@@ -799,15 +802,15 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ?(depth=0) ~from ~to_ t =
     (* deref *)
     | UVar ({ contents = t }, vardepth, args) when t != dummy ->
        if depth == 0 then deref_uv ~from:vardepth ~to_ args t
-       else maux depth (deref_uv ~from:vardepth ~to_:(from+depth) args t)
+       else maux empty_env depth (deref_uv ~from:vardepth ~to_:(from+depth) args t)
     | AppUVar ({ contents = t }, vardepth, args) when t != dummy ->
        if depth == 0 then deref_appuv ~from:vardepth ~to_ args t
-       else maux depth (deref_appuv ~from:vardepth ~to_:(from+depth) args t)
+       else maux empty_env depth (deref_appuv ~from:vardepth ~to_:(from+depth) args t)
     | Arg (i, args) when e.(i) != dummy ->
        deref_uv ~from:argsdepth ~to_:(to_+depth) args e.(i)
     | AppArg(i, args) when e.(i) != dummy ->
        let args =
-        try smart_map (maux depth) args
+        try smart_map (maux e depth) args
         with RestrictionFailure ->
           anomaly "move: could check if unrestrictable args are unused" in
        deref_appuv ~from:argsdepth ~to_:(to_+depth) args e.(i)
@@ -825,7 +828,7 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ?(depth=0) ~from ~to_ t =
        (* assign to UVar whose depth is greater than the current goal depth *)
        if argsdepth < to_ then anomaly "move: invalid AppArg heapification";
        let args =
-        try List.map (maux depth) args
+        try List.map (maux e depth) args
         with RestrictionFailure ->
          anomaly "TODO: implement deterministic restriction" in
        let r = oref dummy in
@@ -847,7 +850,7 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ?(depth=0) ~from ~to_ t =
            let r,vardepth,argsno =
              decrease_depth r ~from:vardepth ~to_:from argsno in
            let args = mkinterval vardepth argsno 0 in
-           let args = List.map (maux depth) args in
+           let args = List.map (maux empty_env depth) args in
            mkAppUVar r vardepth args
        else
          if vardepth + argsno <= to_ then x
@@ -872,14 +875,14 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ?(depth=0) ~from ~to_ t =
            decrease_depth r ~from:vardepth ~to_:from 0 in
          let args0= mkinterval vardepth argsno 0 in
          let args =
-          try List.map (maux depth) (args0@args)
+          try List.map (maux e depth) (args0@args)
           with RestrictionFailure -> anomaly "impossible, delta < 0" in
          mkAppUVar r vardepth args
        else if List.for_all (deterministic_restriction e ~args_safe:(argsdepth=to_)) args then
          (* TODO: this branch is to be reviewed/tested throughly, unless
             Enrico is now confident with it *)
          let args =
-           try List.map (maux depth) args
+           try List.map (maux e depth) args
            with RestrictionFailure ->
              anomaly "TODO: implement deterministic restriction" in
          if vardepth <= to_ then mkAppUVar r vardepth args
@@ -896,17 +899,17 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ?(depth=0) ~from ~to_ t =
        end
   end]
   in
-    let rc = maux depth t in
-    [%spy "move-output" (ppterm to_ [] argsdepth e) rc];
-    rc
+   maux e depth t
+ in
+  [%spy "move-output" (ppterm to_ [] argsdepth e) rc];
+  rc
 
-(* Hmove is like move, but it is optimized for heap terms and it must
-   be called on heap terms only *)
+(* Hmove is like move for heap terms. By setting env to empty_env, it triggers
+   fast paths in move (no need to heapify, the term already lives in the heap)*)
 and hmove ?avoid ~from ~to_ t =
  [%trace "hmove" ("@[<hov 1>from:%d@ to:%d@ %a@]"
      from to_ (uppterm from [] 0 empty_env) t) begin
-   if from = to_ && avoid == None then t
-   else move ?avoid ~adepth:0 ~from ~to_ empty_env t
+ move ?avoid ~adepth:0 ~from ~to_ empty_env t
  end]
 
 
@@ -1743,8 +1746,7 @@ let bind r gamma l a d delta b left t e =
        begin try
          let t =
            if depth=0 then
-             if origdepth = bdepth && e == empty_env then b
-             else move ~avoid:r ~adepth ~from:bdepth ~to_:origdepth e b
+             move ~avoid:r ~adepth ~from:bdepth ~to_:origdepth e b
            else
              (* First step: we lift the r.h.s. to the l.h.s. level *)
              let b = move ~avoid:r ~adepth ~from:bdepth ~to_:adepth e b in
