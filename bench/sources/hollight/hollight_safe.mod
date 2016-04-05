@@ -1586,38 +1586,33 @@ the_library L :-
             (then (conv (land_tac b)) r))])])
  , theorem inj2_univ_inj
    (pi A \ pi B \ (! (univ '' A '' B) x22 \ ! x23 \ inj2_univ ' x22 = inj2_univ ' x23 ==> x22 = x23) ,
-    [then (repeat forall_i)
-     (bind (univ '' A '' B) x22 \
-       bind (univ '' A '' B) x23 \
-        then i
-         (then (cutth case_univ_inj2)
-           (then (lforall x22)
-             (then (lforall (X6^22 x22 x23 x22 x23))
-               (then (lforall (X7^22 x22 x23 x22 x23)) auto_monotone)))))])  
+    [then inv
+     (bind (univ '' A '' B) x20 \ bind (univ '' A '' B) x21 \
+        thenl (t (case_univ ' (inj2_univ ' x20) '
+             (lam (univ '' A '' B) x22 \ x22) '
+             (lam (univ '' A '' B) x22 \ x22)))
+         [then sym
+           (then (conv (land_tac (applyth case_univ_inj2)))
+             (then (conv (land_tac b)) r)),
+         then (conv (depth_tac h))
+          (then (conv (land_tac (applyth case_univ_inj2)))
+            (then (conv (land_tac b)) r))])])
  , theorem not_eq_inj1_inj2_univ 
    (pi A \ pi B \ (! (univ '' A '' B) x22 \ ! x23 \ inj1_univ ' x22 = inj2_univ ' x23 ==> ff) ,
-    [then inv
+   [then inv
      (bind (univ '' A '' B) x22 \
        bind (univ '' A '' B) x23 \
         then (cutth case_univ_inj1)
          (then (lforall x22)
-           (then (lforall (X10^22 x22 x23 x22 x23))
-             (then (lforall (X11^22 x22 x23 x22 x23))
-               (then (cutth case_univ_inj2)
-                 (then (lforall x23)
-                   (then (lforall (X12^22 x22 x23 x22 x23))
-                     (then (lforall (X13^22 x22 x23 x22 x23))
-                       (then
-                         (cut
-                           ((case_univ ' (inj1_univ ' x22) '
-                              X14^22 x22 x23 x22 x23 x22 x23 '
-                              X15^22 x22 x23 x22 x23 x22 x23 =
-                              X14^22 x22 x23 x22 x23 x22 x23 ' x22) =
-                            (case_univ ' (inj2_univ ' x23) '
-                              X16^22 x22 x23 x22 x23 x22 x23 '
-                              X17^22 x22 x23 x22 x23 x22 x23 =
-                              X17^22 x22 x23 x22 x23 x22 x23 ' x23)))
-                         auto_monotone)))))))))])
+           (then (lforall (lam (univ '' A '' B) x24 \ ff))
+             (then (lforall (lam (univ '' A '' B) x24 \ tt))
+               (thenl (m ((lam (univ '' A '' B) x24 \ ff) ' x22)) [b,
+                 then (conv (then sym h))
+                  (then (wl [])
+                    (then (conv (depth_tac h))
+                      (then (wl [])
+                        (then (conv (applyth case_univ_inj2))
+                          (then (conv b) (itaut 1))))))])))))])
  /* CSC: prove the injectivity injX_disj_union_inj as well for X = 1,2. Also put the pi A \pi B ... and move to its own section */
  , theorem inj1_disj_union_inj
    (pi A \ (! A x20 \ ! x21 \ inj1_disj_union ' x20 = inj1_disj_union ' x21 ==> x20 = x21) ,
