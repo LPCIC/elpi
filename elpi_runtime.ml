@@ -614,7 +614,7 @@ let (@:=) r v =
 let oref x = { contents = x; rest = [] }
 
 
-(* {{{ ************** to_heap/restrict/deref ******************** *)
+(* {{{ ************** move/hmove/deref_* ******************** *)
 
 exception NotInTheFragment
 (* in_fragment n [n;...;n+m-1] = m
@@ -668,9 +668,11 @@ let mkAppUVar r lvl l =
   try UVar(r,lvl,in_fragment lvl l)
   with NotInTheFragment -> AppUVar(r,lvl,l)
 
-(* To_heap performs at once:
+(* move performs at once:
    1) refreshing of the arguments into variables (heapifycation)
-   2) restriction/occur-check (see restrict function below)
+   2) restriction/occur-check
+
+   hmove is the variant that only does 2
 
    when from = to, i.e. delta = 0:
      (-infty,+infty) -> (-infty,+infty)
@@ -898,13 +900,15 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ?(depth=0) ~from ~to_ t =
     [%spy "move-output" (ppterm to_ [] argsdepth e) rc];
     rc
 
-(* Hmove is to be called only on heap terms *)
-and hmove ~from ~to_ ?depth t =
+(* Hmove is like move, but it is optimized for heap terms and it must
+   be called on heap terms only *)
+and hmove ?avoid ~from ~to_ t =
  [%trace "hmove" ("@[<hov 1>from:%d@ to:%d@ %a@]"
      from to_ (uppterm from [] 0 [||]) t) begin
-   if from == to_ then t
-   else move ~adepth:0 ~from ~to_ ?depth dummy_env t
+   if from = to_ && avoid == None then t
+   else move ?avoid ~adepth:0 ~from ~to_ dummy_env t
  end]
+
 
 (* UVar(_,from,argsno) -> Uvar(_,to_,argsno+from-to_) *)
 and decrease_depth r ~from ~to_ argsno =
@@ -1085,11 +1089,6 @@ and deref_uv ~from ~to_ args t =
 
 let () = Pp.do_deref := deref_uv;;
 let () = Pp.do_app_deref := deref_appuv;;
-
-(* Restrict is to be called only on heap terms *)
-let restrict ?avoid argsdepth ~from ~to_ e t =
- if from = to_ && avoid == None then t
- else move ?avoid ~adepth:argsdepth ~from ~to_ e t
 
 (* }}} *)
 
@@ -1722,8 +1721,7 @@ let unif adepth e bdepth a b =
    (* assign *)
    | _, Arg (i,0) ->
      begin try
-      e.(i) <-
-       restrict adepth ~from:(adepth+depth) ~to_:adepth e a;
+      e.(i) <- hmove ~from:(adepth+depth) ~to_:adepth a;
       [%spy "assign" (ppterm adepth [] adepth [||]) (e.(i))]; true
      with RestrictionFailure -> false end
    | _, UVar (r,origdepth,0) ->
@@ -1732,16 +1730,12 @@ let unif adepth e bdepth a b =
        begin try
          let t =
            if depth = 0 then
-             restrict ~avoid:r adepth 
-               ~from:adepth ~to_:origdepth e a
+             hmove ~avoid:r ~from:adepth ~to_:origdepth a
            else
-             (* First step: we restrict the l.h.s. to the r.h.s. level *)
-             let a =
-               move ~avoid:r ~adepth 
-                 ~from:adepth ~to_:bdepth e a in
+             (* First step: we lift the l.h.s. to the r.h.s. level *)
+             let a = hmove ~avoid:r ~from:adepth ~to_:bdepth a in
              (* Second step: we restrict the l.h.s. *)
-             move ~adepth 
-               ~from:(bdepth+depth) ~to_:origdepth e a in
+             hmove ~from:(bdepth+depth) ~to_:origdepth a in
          r @:= t;
          [%spy "assign" (ppterm depth [] adepth [||]) t]; true
        with RestrictionFailure -> false end
@@ -1752,17 +1746,12 @@ let unif adepth e bdepth a b =
          let t =
            if depth=0 then
              if origdepth = bdepth && heap then b
-             else
-               move ~avoid:r ~adepth 
-                 ~from:bdepth ~to_:origdepth e b
+             else move ~avoid:r ~adepth ~from:bdepth ~to_:origdepth e b
            else
-             (* First step: we hmove the r.h.s. to the l.h.s. level *)
-             let b =
-               move ~avoid:r ~adepth 
-                 ~from:bdepth ~to_:adepth e b in
+             (* First step: we lift the r.h.s. to the l.h.s. level *)
+             let b = move ~avoid:r ~adepth ~from:bdepth ~to_:adepth e b in
              (* Second step: we restrict the r.h.s. *)
-             move ~adepth 
-               ~from:(adepth+depth) ~to_:origdepth e b in
+             hmove ~from:(adepth+depth) ~to_:origdepth b in
          r @:= t;
          [%spy "assign" (ppterm depth [] adepth [||]) t]; true
        with RestrictionFailure -> false end
@@ -2501,12 +2490,10 @@ end
               | (depth,p,g)::gs -> [%tcall run depth p g gs next alts lvl] end
            | h::hs ->
               let next = if gs = [] then next else FCons (lvl,gs,next) in
-              let h =
-                move ~adepth:depth ~from:c.depth ~to_:depth env h in
+              let h = move ~adepth:depth ~from:c.depth ~to_:depth env h in
               let hs =
                 List.map (fun x->
-                  depth,p,
-                  move ~adepth:depth ~from:c.depth ~to_:depth env x)
+                  depth,p, move ~adepth:depth ~from:c.depth ~to_:depth env x)
                 hs in
               [%tcall run depth p h hs next alts oldalts] end
       end] in
