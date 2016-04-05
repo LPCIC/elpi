@@ -604,8 +604,8 @@ let (@:=) r v =
      (*Fmt.fprintf Fmt.std_formatter
        "@[<hov 2>%d delayed goal(s) to resume since@ %a <-@ %a@]@\n%!"
           (List.length r.rest)
-          (ppterm 0 [] 0 [||]) (UVar(r,0,0))
-          (ppterm 0 [] 0 [||]) v;*)
+          (ppterm 0 [] 0 empty_env) (UVar(r,0,0))
+          (ppterm 0 [] 0 empty_env) v;*)
      to_resume := r.rest @ !to_resume
     end;
  r.contents <- v
@@ -658,7 +658,7 @@ exception RestrictionFailure
 let def_avoid = oref dummy
 let occurr_check r1 r2 = if r1 == r2 then raise RestrictionFailure
 
-let dummy_env = [||]
+let empty_env = [||]
 
 let rec make_lambdas destdepth args =
  if args = 0 then let x = UVar(oref dummy,destdepth,0) in x,x
@@ -904,9 +904,9 @@ let rec move ~adepth:argsdepth e ?(avoid=def_avoid) ?(depth=0) ~from ~to_ t =
    be called on heap terms only *)
 and hmove ?avoid ~from ~to_ t =
  [%trace "hmove" ("@[<hov 1>from:%d@ to:%d@ %a@]"
-     from to_ (uppterm from [] 0 [||]) t) begin
+     from to_ (uppterm from [] 0 empty_env) t) begin
    if from = to_ && avoid == None then t
-   else move ?avoid ~adepth:0 ~from ~to_ dummy_env t
+   else move ?avoid ~adepth:0 ~from ~to_ empty_env t
  end]
 
 
@@ -929,14 +929,14 @@ and decrease_depth r ~from ~to_ argsno =
    the ts are lifted as usual *)
 and subst fromdepth ts t =
  [%trace "subst" ("@[<hov 2>t: %a@ ts: %a@]"
-   (uppterm (fromdepth+1) [] 0 [||]) t (pplist (uppterm 0 [] 0 [||]) ",") ts)
+   (uppterm (fromdepth+1) [] 0 empty_env) t (pplist (uppterm 0 [] 0 empty_env) ",") ts)
  begin
  if ts == [] then t
  else
    let len = List.length ts in
    let fromdepthlen = fromdepth + len in
    let rec aux depth tt =
-   [%trace "subst-aux" ("@[<hov 2>t: %a@]" (uppterm (fromdepth+1) [] 0 [||]) tt)
+   [%trace "subst-aux" ("@[<hov 2>t: %a@]" (uppterm (fromdepth+1) [] 0 empty_env) tt)
    begin match tt with
    | Const c as x ->
       if c >= fromdepth && c < fromdepthlen then
@@ -992,12 +992,12 @@ and subst fromdepth ts t =
 
 and beta depth sub t args =
  [%trace "beta" ("@[<hov 2>subst@ t: %a@ args: %a@]"
-     (uppterm depth [] 0 [||]) t (pplist (uppterm depth [] 0 [||]) ",") args)
+     (uppterm depth [] 0 empty_env) t (pplist (uppterm depth [] 0 empty_env) ",") args)
  begin match t,args with
  | Lam t',hd::tl -> [%tcall beta depth (hd::sub) t' tl]
  | _ ->
     let t' = subst depth sub t in
-    [%spy "subst-result" (ppterm depth [] 0 [||]) t'];
+    [%spy "subst-result" (ppterm depth [] 0 empty_env) t'];
     match args with
     | [] -> t'
     | ahd::atl ->
@@ -1048,7 +1048,7 @@ and deref_appuv ~from ~to_ args t = beta to_ [] (deref_uv ~from ~to_ 0 t) args
 
 and deref_uv ~from ~to_ args t =
   [%trace "deref_uv" ("from:%d to:%d %a @@ %d"
-      from to_ (ppterm from [] 0 dummy_env) t args) begin
+      from to_ (ppterm from [] 0 empty_env) t args) begin
  if args == 0 then hmove ~from ~to_ t
  else (* O(1) reduction fragment tested here *)
    let from,args',t = eat_args from args t in
@@ -1301,7 +1301,7 @@ module UnifBits : Indexing = struct
       (buf := new_bits lor !buf) ] in
     let rec index lvl tm depth left right =
       [%trace "index" ("@[<hv 0>%a@]"
-        (uppterm depth [] 0 [||]) tm)
+        (uppterm depth [] 0 empty_env) tm)
       begin match tm with
       | Const k | Custom (k,_) ->
           set_section (if lvl=0 then k else hash k) left right 
@@ -1398,8 +1398,8 @@ open TwoMapIndexing
 
 let ppclause f { args = args; hyps = hyps; key = hd } =
   Fmt.fprintf f "@[<hov 1>%s %a :- %a.@]" (pp_key hd)
-     (pplist (uppterm 0 [] 0 [||]) "") args
-     (pplist (uppterm 0 [] 0 [||]) ",") hyps
+     (pplist (uppterm 0 [] 0 empty_env) "") args
+     (pplist (uppterm 0 [] 0 empty_env) ",") hyps
 
 (* {{{ ************** unification ******************************* *)
 
@@ -1422,14 +1422,14 @@ let safe_equal a x = Hashtbl.hash a = Hashtbl.hash x (*
   Fmt.fprintf Fmt.str_formatter
     (*"Delaying goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
     "@[<hov 2> ...@ ⊢ %a@]\n%!"
-      (*(pplist (uppterm depth [] 0 [||]) ",") pdiff*)
-      (uppterm depth [] 0 [||]) g ;
+      (*(pplist (uppterm depth [] 0 empty_env) ",") pdiff*)
+      (uppterm depth [] 0 empty_env) g ;
   let s1 = Fmt.flush_str_formatter () in
   Fmt.fprintf Fmt.str_formatter
     (*"Delaying goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
     "@[<hov 2> ...@ ⊢ %a@]\n%!"
-      (*(pplist (uppterm depth [] 0 [||]) ",") pdiff*)
-      (uppterm depth' [] 0 [||]) g' ;
+      (*(pplist (uppterm depth [] 0 empty_env) ",") pdiff*)
+      (uppterm depth' [] 0 empty_env) g' ;
   let s2 = Fmt.flush_str_formatter () in
   (*prerr_endline ("Compare1: " ^ s1);
   prerr_endline ("Compare2: " ^ s2);*)
@@ -1446,8 +1446,8 @@ let delay_goal ~depth prog ~goal:g ~on:keys =
   (*Fmt.fprintf Fmt.std_formatter
     (*"Delaying goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
     "Delaying goal: @[<hov 2> ...@ ⊢^%d %a@]\n%!"
-      (*(pplist (uppterm depth [] 0 [||]) ",") pdiff*) depth
-      (uppterm depth [] 0 [||]) g ;*)
+      (*(pplist (uppterm depth [] 0 empty_env) ",") pdiff*) depth
+      (uppterm depth [] 0 empty_env) g ;*)
   let delayed_goal = (Delayed_goal (depth,prog,pdiff,g), keys) in
   add_constraint delayed_goal
 ;;
@@ -1458,8 +1458,8 @@ print_cstr :=
      Fmt.fprintf Fmt.std_formatter
        (*"Delaying goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
        "Delaying goal: @[<hov 2> ...@ ⊢^%d %a@]\n%!"
-         (*(pplist (uppterm depth [] 0 [||]) ",") pdiff*) depth
-         (uppterm depth [] 0 [||]) g
+         (*(pplist (uppterm depth [] 0 empty_env) ",") pdiff*) depth
+         (uppterm depth [] 0 empty_env) g
    | _ -> ())
 ;;
    
@@ -1575,7 +1575,7 @@ let bind r gamma l a d delta b left t e =
     [%trace "bind" ("%b %d + %a = t:%a a:%d delta:%d d:%d w:%d b:%d"
         left gamma (pplist (fun fmt (x,n) -> Fmt.fprintf fmt "%a |-> %d"
         (ppterm a [] b e) (constant_of_dbl x) n) "") l
-        (ppterm a [] b [||]) t a delta d w b) begin
+        (ppterm a [] b empty_env) t a delta d w b) begin
     match t with
     | UVar (r1,_,_) | AppUVar (r1,_,_) when r == r1 -> raise RestrictionFailure
     | Const c -> let n = cst c b delta in if n < 0 then constant_of_dbl n else Const n
@@ -1676,7 +1676,7 @@ let bind r gamma l a d delta b left t e =
   try
     r @:= mknLam new_lams (bind b delta 0 t);
     if not !last_call then trail := (Assign r) :: !trail;
-    [%spy "assign(HO)" (ppterm gamma [] a [||]) (!!r)];
+    [%spy "assign(HO)" (ppterm gamma [] a empty_env) (!!r)];
     true
   with RestrictionFailure -> false
 ;;
@@ -1684,9 +1684,9 @@ let bind r gamma l a d delta b left t e =
 let unif adepth e bdepth a b =
 
  (* heap=true if b is known to be a heap term *)
- let rec unif depth a bdepth b heap =
+ let rec unif depth a bdepth b e =
    [%trace "unif" ("@[<hov 2>^%d:%a@ =%d= ^%d:%a@]%!"
-       adepth (ppterm (adepth+depth) [] adepth [||]) a depth
+       adepth (ppterm (adepth+depth) [] adepth empty_env) a depth
        bdepth (ppterm (bdepth+depth) [] adepth e) b)
    begin let delta = adepth - bdepth in
    (delta = 0 && a == b) || match a,b with
@@ -1696,18 +1696,18 @@ let unif adepth e bdepth a b =
 
    (* deref_uv *)
    | UVar ({ contents = t }, from, args), _ when t != dummy ->
-      unif depth (deref_uv ~from ~to_:(adepth+depth) args t) bdepth b heap
+      unif depth (deref_uv ~from ~to_:(adepth+depth) args t) bdepth b e
    | AppUVar ({ contents = t }, from, args), _ when t != dummy -> 
-      unif depth (deref_appuv ~from ~to_:(adepth+depth) args t) bdepth b heap
+      unif depth (deref_appuv ~from ~to_:(adepth+depth) args t) bdepth b e
    | _, UVar ({ contents = t }, from, args) when t != dummy ->
-      unif depth a bdepth (deref_uv ~from ~to_:(bdepth+depth) args t) true
+      unif depth a bdepth (deref_uv ~from ~to_:(bdepth+depth) args t) empty_env
    | _, AppUVar ({ contents = t }, from, args) when t != dummy ->
-      unif depth a bdepth (deref_appuv ~from ~to_:(bdepth+depth) args t) true
+      unif depth a bdepth (deref_appuv ~from ~to_:(bdepth+depth) args t) empty_env
    | _, Arg (i,args) when e.(i) != dummy ->
       (* XXX BROKEN deref_uv invariant XXX
        *   args not living in to_ but in bdepth+depth *)
       unif depth a adepth
-        (deref_uv ~from:adepth ~to_:(adepth+depth) args e.(i)) true
+        (deref_uv ~from:adepth ~to_:(adepth+depth) args e.(i)) empty_env
    | _, AppArg (i,args) when e.(i) != dummy -> 
       (* XXX BROKEN deref_uv invariant XXX
        *   args not living in to_ but in bdepth+depth
@@ -1716,13 +1716,13 @@ let unif adepth e bdepth a b =
       let args =
        List.map (move ~adepth ~from:bdepth ~to_:adepth e) args in
       unif depth a adepth
-        (deref_appuv ~from:adepth ~to_:(adepth+depth) args e.(i)) true
+        (deref_appuv ~from:adepth ~to_:(adepth+depth) args e.(i)) empty_env
 
    (* assign *)
    | _, Arg (i,0) ->
      begin try
       e.(i) <- hmove ~from:(adepth+depth) ~to_:adepth a;
-      [%spy "assign" (ppterm adepth [] adepth [||]) (e.(i))]; true
+      [%spy "assign" (ppterm adepth [] adepth empty_env) (e.(i))]; true
      with RestrictionFailure -> false end
    | _, UVar (r,origdepth,0) ->
        if not !last_call then
@@ -1737,7 +1737,7 @@ let unif adepth e bdepth a b =
              (* Second step: we restrict the l.h.s. *)
              hmove ~from:(bdepth+depth) ~to_:origdepth a in
          r @:= t;
-         [%spy "assign" (ppterm depth [] adepth [||]) t]; true
+         [%spy "assign" (ppterm depth [] adepth empty_env) t]; true
        with RestrictionFailure -> false end
    | UVar (r,origdepth,0), _ ->
        if not !last_call then
@@ -1745,7 +1745,7 @@ let unif adepth e bdepth a b =
        begin try
          let t =
            if depth=0 then
-             if origdepth = bdepth && heap then b
+             if origdepth = bdepth && e == empty_env then b
              else move ~avoid:r ~adepth ~from:bdepth ~to_:origdepth e b
            else
              (* First step: we lift the r.h.s. to the l.h.s. level *)
@@ -1753,27 +1753,27 @@ let unif adepth e bdepth a b =
              (* Second step: we restrict the r.h.s. *)
              hmove ~from:(adepth+depth) ~to_:origdepth b in
          r @:= t;
-         [%spy "assign" (ppterm depth [] adepth [||]) t]; true
+         [%spy "assign" (ppterm depth [] adepth empty_env) t]; true
        with RestrictionFailure -> false end
 
    (* simplify *)
    (* TODO: unif->deref_uv case. Rewrite the code to do the job directly? *)
    | _, Arg (i,args) ->
       e.(i) <- fst (make_lambdas adepth args);
-      [%spy "assign" (ppterm depth [] adepth [||]) (e.(i))];
-      unif depth a bdepth b heap
+      [%spy "assign" (ppterm depth [] adepth empty_env) (e.(i))];
+      unif depth a bdepth b e
    | _, UVar (r,origdepth,args) ->
       if not !last_call then
        trail := (Assign r) :: !trail;
       r @:= fst (make_lambdas origdepth args);
-      [%spy "assign" (ppterm depth [] adepth [||]) (!!r)];
-      unif depth a bdepth b heap
+      [%spy "assign" (ppterm depth [] adepth empty_env) (!!r)];
+      unif depth a bdepth b e
    | UVar (r,origdepth,args), _ ->
       if not !last_call then
        trail := (Assign r) :: !trail;
       r @:= fst (make_lambdas origdepth args);
-      [%spy "assign" (ppterm depth [] adepth [||]) (!!r)];
-      unif depth a bdepth b heap
+      [%spy "assign" (ppterm depth [] adepth empty_env) (!!r)];
+      unif depth a bdepth b e
 
    (* HO *)
    | other, AppArg(i,args) ->
@@ -1783,7 +1783,7 @@ let unif adepth e bdepth a b =
          e.(i) <- UVar(r,adepth,0);
          bind r adepth args adepth depth delta bdepth false other e
        else begin
-       Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth [||]) a (uppterm depth [] bdepth e) b ;
+       Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth empty_env) a (uppterm depth [] bdepth e) b ;
        let r = oref dummy in
        e.(i) <- UVar(r,adepth,0);
        let delayed_goal = Delayed_unif (adepth+depth,e,bdepth+depth,a,b) in
@@ -1801,7 +1801,7 @@ let unif adepth e bdepth a b =
        if is_llam then
          bind r lvl args adepth depth delta bdepth true other e
        else begin
-       Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth [||]) a (uppterm depth [] bdepth [||]) b ;
+       Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth empty_env) a (uppterm depth [] bdepth empty_env) b ;
        let delayed_goal = Delayed_unif (adepth+depth,e,bdepth+depth,a,b) in
        let (_,vars) as delayed_goal =
         match is_flex other with
@@ -1816,7 +1816,7 @@ let unif adepth e bdepth a b =
        if is_llam then
          bind r lvl args adepth depth delta bdepth false other e
        else begin
-       Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth [||]) a (uppterm depth [] bdepth e) b ;
+       Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth empty_env) a (uppterm depth [] bdepth e) b ;
        let delayed_goal = Delayed_unif (adepth+depth,e,bdepth+depth,a,b) in
        let delayed_goal =
         match is_flex other with
@@ -1833,12 +1833,12 @@ let unif adepth e bdepth a b =
       ((delta=0 || c1 < bdepth) && c1=c2
        || c1 >= adepth && c1 = c2 + delta)
        &&
-       (delta=0 && x2 == y2 || unif depth x2 bdepth y2 heap) &&
-       for_all2 (fun x y -> unif depth x bdepth y heap) xs ys
+       (delta=0 && x2 == y2 || unif depth x2 bdepth y2 e) &&
+       for_all2 (fun x y -> unif depth x bdepth y e) xs ys
    | Custom (c1,xs), Custom (c2,ys) ->
        (* Inefficient comparison *)
-       c1 = c2 && for_all2 (fun x y -> unif depth x bdepth y heap) xs ys
-   | Lam t1, Lam t2 -> unif (depth+1) t1 bdepth t2 heap
+       c1 = c2 && for_all2 (fun x y -> unif depth x bdepth y e) xs ys
+   | Lam t1, Lam t2 -> unif (depth+1) t1 bdepth t2 e
    | Const c1, Const c2 ->
       if c1 < bdepth then c1=c2 else c1 >= adepth && c1 = c2 + delta
    (*| Const c1, Const c2 when c1 < bdepth -> c1=c2
@@ -1849,7 +1849,7 @@ let unif adepth e bdepth a b =
    | String s1, String s2 -> s1==s2
    | _ -> false
    end] in
- let res = unif 0 a bdepth b false in
+ let res = unif 0 a bdepth b e in
  [%spy "unif result" (fun fmt x -> Fmt.fprintf fmt "%b" x) res];
  res
 ;;
@@ -1942,7 +1942,7 @@ r :- (pi X\ pi Y\ q X Y :- pi c\ pi d\ q (Z c d) (X c d) (Y c)) => ... *)
  *  - the clause will live in (depth+lcs)
  *)
 let rec clausify vars depth hyps ts lts lcs = function
-(*g -> Fmt.eprintf "CLAUSIFY %a %d %d %d %d\n%!" (ppterm (depth+lts) [] 0 [||]) g depth lts lcs (List.length ts); match g with*)
+(*g -> Fmt.eprintf "CLAUSIFY %a %d %d %d %d\n%!" (ppterm (depth+lts) [] 0 empty_env) g depth lts lcs (List.length ts); match g with*)
   | App(c, g, gs) when c == andc || c == andc2 ->
      let res = clausify vars depth hyps ts lts lcs g in
      List.fold_right
@@ -1979,8 +1979,8 @@ let rec clausify vars depth hyps ts lts lcs = function
      let g = hmove ~from:(depth+lts) ~to_:(depth+lts+lcs) g in
      let g = subst depth ts g in
 (*     Fmt.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
-      (ppterm (depth+lcs) [] 0 [||]) g
-      (pplist (ppterm (depth+lcs) [] 0 [||]) " , ")
+      (ppterm (depth+lcs) [] 0 empty_env) g
+      (pplist (ppterm (depth+lcs) [] 0 empty_env) " , ")
       hyps ;*)
      let args =
       match g with
@@ -2326,7 +2326,7 @@ let propagate constr j history =
 
          let e = Array.make nargs dummy in
          (*Fmt.fprintf Fmt.std_formatter "attempt: %a = %a\n%!"
-           (pplist (uppterm max_depth [] 0 [||]) ",") (to_match @ to_remove)
+           (pplist (uppterm max_depth [] 0 empty_env) ",") (to_match @ to_remove)
            (pplist (fun fmt (_,_,g) ->
               uppterm max_depth [] 0 e fmt g) ",")
            (patterns_sequent1 @ patterns_sequent2);*)
@@ -2379,16 +2379,16 @@ let print_delayed () =
    | Delayed_unif (ad,e,bd,a,b),l ->
       Fmt.fprintf Fmt.std_formatter
        "delayed goal: @[<hov 2>^%d:%a@ == ^%d:%a on %a@]\n%!"
-        ad (uppterm ad [] 0 [||]) a
+        ad (uppterm ad [] 0 empty_env) a
         bd (uppterm ad [] ad e) b
-        (pplist (uppterm ad [] 0 [||]) ",")
+        (pplist (uppterm ad [] 0 empty_env) ",")
         (List.map (fun r -> UVar(r,0,0)) l)
    | Delayed_goal (depth,_,pdiff,g),l ->
       Fmt.fprintf Fmt.std_formatter
         "delayed goal: @[<hov 2> %a@ ⊢ %a on %a@]\n%!"
-          (pplist (uppterm depth [] 0 [||]) ",") pdiff
-          (uppterm depth [] 0 [||]) g
-          (pplist (uppterm depth [] 0 [||]) ",")
+          (pplist (uppterm depth [] 0 empty_env) ",") pdiff
+          (uppterm depth [] 0 empty_env) g
+          (pplist (uppterm depth [] 0 empty_env) ",")
           (List.map (fun r -> UVar(r,0,0)) l)
        (* CSC: Bug here: print at the right precedence *)
    | _ -> assert false) !delayed
@@ -2400,7 +2400,7 @@ let make_runtime : unit -> (?depth:int -> 'a -> 'b -> int -> 'k) * ('k -> 'k) * 
   (* Input to be read as the orl (((p,g)::gs)::next)::alts
      depth >= 0 is the number of variables in the context. *)
   let rec run depth p g gs (next : frame) alts lvl =
-    [%trace "run" (fun fmt -> ppterm depth [] 0 [||] fmt g)
+    [%trace "run" (fun fmt -> ppterm depth [] 0 empty_env fmt g)
  begin match resume_all () with
   None ->
 begin Fmt.fprintf Fmt.std_formatter "Undo triggered by goal resumption\n%!";
@@ -2414,16 +2414,16 @@ end
     | App(c, g, gs') when c == andc || c == andc2 ->
        run depth p g (List.map(fun x -> depth,p,x) gs'@gs) next alts lvl
     | App(c, g2, [g1]) when c == rimplc ->
-       (*Fmt.eprintf "RUN: %a\n%!" (uppterm depth [] 0 [||]) g ;*)
+       (*Fmt.eprintf "RUN: %a\n%!" (uppterm depth [] 0 empty_env) g ;*)
        let clauses, lcs = clausify 0 depth [] [] 0 0 g1 in
        let g2 = hmove ~from:depth ~to_:(depth+lcs) g2 in
-       (*Fmt.eprintf "TO: %a \n%!" (uppterm (depth+lcs) [] 0 [||]) g2;*)
+       (*Fmt.eprintf "TO: %a \n%!" (uppterm (depth+lcs) [] 0 empty_env) g2;*)
        run (depth+lcs) (add_clauses clauses (depth,g1) p) g2 gs next alts lvl
     | App(c, g1, [g2]) when c == implc ->
-       (*Fmt.eprintf "RUN: %a\n%!" (uppterm depth [] 0 [||]) g ;*)
+       (*Fmt.eprintf "RUN: %a\n%!" (uppterm depth [] 0 empty_env) g ;*)
        let clauses, lcs = clausify 0 depth [] [] 0 0 g1 in
        let g2 = hmove ~from:depth ~to_:(depth+lcs) g2 in
-       (*Fmt.eprintf "TO: %a \n%!" (uppterm (depth+lcs) [] 0 [||]) g2;*)
+       (*Fmt.eprintf "TO: %a \n%!" (uppterm (depth+lcs) [] 0 empty_env) g2;*)
        run (depth+lcs) (add_clauses clauses (depth,g1) p) g2 gs next alts lvl
 (*  This stays commented out because it slows down rev18 in a visible way!   *)
 (*  | App(c, _, _) when c == implc -> anomaly "Implication must have 2 args" *)
@@ -2446,7 +2446,7 @@ end
     | UVar _ | AppUVar _ -> error "Flexible predicate"
     | Custom(c, args) ->
        let f = try lookup_custom c with Not_found -> anomaly"no such custom" in
-       let b = try Some (f depth [||] p args) with No_clause -> None in
+       let b = try Some (f depth empty_env p args) with No_clause -> None in
        (match b with
           Some gs' ->
            (match List.map (fun g -> depth,p,g) gs' @ gs with
@@ -2541,7 +2541,7 @@ end;*)
          to_resume := rest;
          (*Fmt.fprintf Fmt.std_formatter
           "Resuming @[<hov 2>^%d:%a@ == ^%d:%a@]\n%!"
-           ad (uppterm ad [] 0 [||]) a
+           ad (uppterm ad [] 0 empty_env) a
            bd (uppterm ad [] ad e) b;*)
          ok := unif ad e bd a b
      | (Delayed_goal((depth,_,pdiff,g) as dpg), _) as exn :: rest ->
@@ -2550,8 +2550,8 @@ end;*)
          (*Fmt.fprintf Fmt.std_formatter
           "Resuming goal: @[<hov 2> ...@ ⊢^%d %a@]\n%!"
           (*"Resuming goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
-          (*(pplist (uppterm depth [] 0 [||]) ",") pdiff*)
-          depth (uppterm depth [] 0 [||]) g ;*)
+          (*(pplist (uppterm depth [] 0 empty_env) ",") pdiff*)
+          depth (uppterm depth [] 0 empty_env) g ;*)
          to_be_resumed := dpg :: !to_be_resumed
      | _ -> anomaly "Unknown constraint type"
    done ;
@@ -2569,12 +2569,12 @@ end;*)
              (*List.iter (function
                 (Delayed_goal ((depth,_,_,g)),_) ->
                   Fmt.fprintf Fmt.std_formatter
-                   "Killing goal: @[<hov 2> ... ⊢^%d %a@]\n%!" depth (uppterm depth [] 0 [||]) g
+                   "Killing goal: @[<hov 2> ... ⊢^%d %a@]\n%!" depth (uppterm depth [] 0 empty_env) g
               | _ -> ()) to_be_removed ;*)
              List.iter remove_constraint to_be_removed ;
              (*List.iter (fun (depth,_,_,g) ->
                   Fmt.fprintf Fmt.std_formatter
-                   "Additional goal: @[<hov 2> ... ⊢^%d %a@]\n%!" depth (uppterm depth [] 0 [||]) g)
+                   "Additional goal: @[<hov 2> ... ⊢^%d %a@]\n%!" depth (uppterm depth [] 0 empty_env) g)
                to_be_added ;*)
              (*List.iter add_constraint to_be_added*)
              to_be_resumed := to_be_added @ !to_be_resumed )
