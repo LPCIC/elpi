@@ -1681,10 +1681,8 @@ let bind r gamma l a d delta b left t e =
   with RestrictionFailure -> false
 ;;
 
-let unif adepth e bdepth a b =
-
  (* heap=true if b is known to be a heap term *)
- let rec unif depth a bdepth b e =
+ let rec unif depth adepth a bdepth b e =
    [%trace "unif" ("@[<hov 2>^%d:%a@ =%d= ^%d:%a@]%!"
        adepth (ppterm (adepth+depth) [] adepth empty_env) a depth
        bdepth (ppterm (bdepth+depth) [] adepth e) b)
@@ -1696,17 +1694,17 @@ let unif adepth e bdepth a b =
 
    (* deref_uv *)
    | UVar ({ contents = t }, from, args), _ when t != dummy ->
-      unif depth (deref_uv ~from ~to_:(adepth+depth) args t) bdepth b e
+      unif depth adepth (deref_uv ~from ~to_:(adepth+depth) args t) bdepth b e
    | AppUVar ({ contents = t }, from, args), _ when t != dummy -> 
-      unif depth (deref_appuv ~from ~to_:(adepth+depth) args t) bdepth b e
+      unif depth adepth (deref_appuv ~from ~to_:(adepth+depth) args t) bdepth b e
    | _, UVar ({ contents = t }, from, args) when t != dummy ->
-      unif depth a bdepth (deref_uv ~from ~to_:(bdepth+depth) args t) empty_env
+      unif depth adepth a bdepth (deref_uv ~from ~to_:(bdepth+depth) args t) empty_env
    | _, AppUVar ({ contents = t }, from, args) when t != dummy ->
-      unif depth a bdepth (deref_appuv ~from ~to_:(bdepth+depth) args t) empty_env
+      unif depth adepth a bdepth (deref_appuv ~from ~to_:(bdepth+depth) args t) empty_env
    | _, Arg (i,args) when e.(i) != dummy ->
       (* XXX BROKEN deref_uv invariant XXX
        *   args not living in to_ but in bdepth+depth *)
-      unif depth a adepth
+      unif depth adepth a adepth
         (deref_uv ~from:adepth ~to_:(adepth+depth) args e.(i)) empty_env
    | _, AppArg (i,args) when e.(i) != dummy -> 
       (* XXX BROKEN deref_uv invariant XXX
@@ -1715,7 +1713,7 @@ let unif adepth e bdepth a b =
            I believe it is wrong as well *)
       let args =
        List.map (move ~adepth ~from:bdepth ~to_:adepth e) args in
-      unif depth a adepth
+      unif depth adepth a adepth
         (deref_appuv ~from:adepth ~to_:(adepth+depth) args e.(i)) empty_env
 
    (* assign *)
@@ -1761,19 +1759,19 @@ let unif adepth e bdepth a b =
    | _, Arg (i,args) ->
       e.(i) <- fst (make_lambdas adepth args);
       [%spy "assign" (ppterm depth [] adepth empty_env) (e.(i))];
-      unif depth a bdepth b e
+      unif depth adepth a bdepth b e
    | _, UVar (r,origdepth,args) ->
       if not !last_call then
        trail := (Assign r) :: !trail;
       r @:= fst (make_lambdas origdepth args);
       [%spy "assign" (ppterm depth [] adepth empty_env) (!!r)];
-      unif depth a bdepth b e
+      unif depth adepth a bdepth b e
    | UVar (r,origdepth,args), _ ->
       if not !last_call then
        trail := (Assign r) :: !trail;
       r @:= fst (make_lambdas origdepth args);
       [%spy "assign" (ppterm depth [] adepth empty_env) (!!r)];
-      unif depth a bdepth b e
+      unif depth adepth a bdepth b e
 
    (* HO *)
    | other, AppArg(i,args) ->
@@ -1833,12 +1831,12 @@ let unif adepth e bdepth a b =
       ((delta=0 || c1 < bdepth) && c1=c2
        || c1 >= adepth && c1 = c2 + delta)
        &&
-       (delta=0 && x2 == y2 || unif depth x2 bdepth y2 e) &&
-       for_all2 (fun x y -> unif depth x bdepth y e) xs ys
+       (delta=0 && x2 == y2 || unif depth adepth x2 bdepth y2 e) &&
+       for_all2 (fun x y -> unif depth adepth x bdepth y e) xs ys
    | Custom (c1,xs), Custom (c2,ys) ->
        (* Inefficient comparison *)
-       c1 = c2 && for_all2 (fun x y -> unif depth x bdepth y e) xs ys
-   | Lam t1, Lam t2 -> unif (depth+1) t1 bdepth t2 e
+       c1 = c2 && for_all2 (fun x y -> unif depth adepth x bdepth y e) xs ys
+   | Lam t1, Lam t2 -> unif (depth+1) adepth t1 bdepth t2 e
    | Const c1, Const c2 ->
       if c1 < bdepth then c1=c2 else c1 >= adepth && c1 = c2 + delta
    (*| Const c1, Const c2 when c1 < bdepth -> c1=c2
@@ -1848,8 +1846,11 @@ let unif adepth e bdepth a b =
    | Float s1, Float s2 -> s1 = s2
    | String s1, String s2 -> s1==s2
    | _ -> false
-   end] in
- let res = unif 0 a bdepth b e in
+   end]
+;;
+
+let unif adepth e bdepth a b =
+ let res = unif 0 adepth a bdepth b e in
  [%spy "unif result" (fun fmt x -> Fmt.fprintf fmt "%b" x) res];
  res
 ;;
