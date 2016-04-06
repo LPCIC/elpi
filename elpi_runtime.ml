@@ -614,9 +614,14 @@ let rec in_fragment expected =
  function
    [] -> 0
  | Const c::tl when c = expected -> 1 + in_fragment (expected+1) tl
+ | UVar ({ contents = t; closed = true},_,_)::tl -> (* ??? XXX *)
+    in_fragment expected (t :: tl)
+(* Invariant not true anymore, since we may not deref aggressively
+   to avoid occur-check
  | UVar (r,_,_)::_
  | AppUVar (r,_,_)::_ when !!r != dummy ->
-    anomaly "non dereferenced terms in in_fragment"
+     anomaly "non dereferenced terms in in_fragment"
+*)
  | _ -> raise NotInTheFragment
 
 exception NonMetaClosed
