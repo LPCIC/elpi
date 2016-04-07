@@ -328,8 +328,8 @@ next_object [] C CONT :-
 next_object toplevel C CONT :- toplevel_loop [ C | CONT ].
 
 read_cmd H :-
- $print "Enter a command or \"stop\"",
- read H,
+ $print "Enter a command or \"stop.\"",
+ flush std_out, $readterm std_in H,
  !.
 read_cmd H :- read_cmd H.
 
@@ -397,7 +397,8 @@ mk_script ITAC NEW NEW_TACS (thenl ITAC NEW_TACS) :-
 read_in_context (bind A K) (bind A TAC) BACKTRACK :-
  pi x \ term' x A => read_in_context (K x) (TAC x) BACKTRACK.
 read_in_context (seq A B) TAC BACKTRACK :-
- read TAC, (TAC = backtrack, !, BACKTRACK = (!, fail) ; BACKTRACK = true).
+ flush std_out, $readterm std_in TAC,
+ (TAC = backtrack, !, BACKTRACK = (!, fail) ; BACKTRACK = true).
 
 print_sequent (seq Gamma G) :-
  $print,
