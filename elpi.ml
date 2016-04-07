@@ -84,11 +84,12 @@ let _ =
    let p = Elpi_parser.parse_program (List.rev !filenames) in
    let g =
      match test with
-     | `OneBatch | `LatexExport | `PPprologBatch -> "main."
+     | `OneBatch | `LatexExport | `PPprologBatch ->
+       Elpi_parser.parse_goal "main."
      | _ ->
      Printf.printf "goal> %!";
-     input_line stdin in
-   let g = Elpi_parser.parse_goal g in
+     let strm = Stream.of_channel stdin in
+     Elpi_parser.parse_goal_from_stream strm in
    match test with
    | `OneBatch -> test_impl p g
    | `OneInteractive -> run_prog p g
