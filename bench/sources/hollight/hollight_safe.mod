@@ -964,7 +964,6 @@ deftac auto_monotone _ TAC :-
                         (then (conv (rand_tac (rator_tac b)))
                           (then (conv (rand_tac b))
                             monotone)))))))))))))))).
-deftac auto_monotone _ daemon.
 
 /********** the library ********/
 
@@ -1496,13 +1495,6 @@ the_library L :-
                 (bind bool2 x19 \
                   then (applyth orl) (then (conv (depth_tac h)) (applyth mynot_mynot_mytt)))]]))]))])
   /************* Natural numbers ***************/
-/* For debugging, monotone fails to prove this functor monotone
- , def is_NF (((univ --> prop) --> univ --> prop),
- lam (univ --> prop) x18 \
-  lam univ x19 \
-   x19 = pair_univ ' (prop_rep ' ff) ' (prop_rep ' ff) $$
-    (? x20 \ x18 ' x20 && x19 = pair_univ ' (prop_rep ' tt) ' x20))
-*/
  , inductive_def is_nat is_natF is_nat_monotone is_nat_i is_nat_e0 is_nat_e
    (is_nat \
      [ (is_nat_z, is_nat ' (inj1_univ ' (injection_univ ' ff)))
@@ -1537,32 +1529,28 @@ the_library L :-
  /* CSC: Cvetan, prove these and then move them somewhere else in their own section after the Logic section. Also put the pi A \ pi B \ pi C everywhere */
  , theorem pair_univ_inj_l 
    (pi A \ pi B \ (! (univ '' A '' B) x20 \ ! x21 \ ! x22 \ ! x23 \ pair_univ ' x20 ' x22 = pair_univ ' x21 ' x23 ==> x20 = x21) ,
-    [then (repeat forall_i)
-     (bind (univ '' A '' B) x20 \
-       bind (univ '' A '' B) x21 \
-        bind (univ '' A '' B) x22 \
-         bind (univ '' A '' B) x23 \
-          then i (then (cutth proj1_pair_univ)
-             (then (lforall x20)
-               (then (lforall x22)
-                 (thenl (cut
-                     (proj1_univ ' (pair_univ ' x20 ' x22) =
-                       proj1_univ ' (pair_univ ' x21 ' x23)))
-                   [auto_monotone, thenl c [r, h]])))))])
+   [then (repeat forall_i)
+     (bind (univ '' A '' B) x22 \
+       bind (univ '' A '' B) x23 \
+        bind (univ '' A '' B) x24 \
+         bind (univ '' A '' B) x25 \
+          then i
+           (then (cutth proj1_pair_univ)
+             (then (lforall x22)
+               (then (conv (land_tac (then sym apply)))
+                 (then (conv (depth_tac h)) (applyth proj1_pair_univ))))))])
  , theorem pair_univ_inj_r 
    (pi A \ pi B \ (! (univ '' A '' B) x20 \ ! x21 \ ! x22 \ ! x23 \ pair_univ ' x20 ' x22 = pair_univ ' x21 ' x23 ==> x22 = x23) ,
-    [then (repeat forall_i)
-     (bind (univ '' A '' B) x20 \
-       bind (univ '' A '' B) x21 \
-        bind (univ '' A '' B) x22 \
-         bind (univ '' A '' B) x23 \
-          then i (then (cutth proj2_pair_univ)
-             (then (lforall x20)
-               (then (lforall x22)
-                 (thenl (cut
-                     (proj2_univ ' (pair_univ ' x20 ' x22) =
-                       proj2_univ ' (pair_univ ' x21 ' x23)))
-                   [auto_monotone, thenl c [r, h]])))))])
+   [then (repeat forall_i)
+     (bind (univ '' A '' B) x22 \
+       bind (univ '' A '' B) x23 \
+        bind (univ '' A '' B) x24 \
+         bind (univ '' A '' B) x25 \
+          then i
+           (then (cutth proj2_pair_univ)
+             (then (lforall x22)
+               (then (conv (land_tac (then sym apply)))
+                 (then (conv (depth_tac h)) (applyth proj2_pair_univ))))))])
  , theorem injection_univ_inj 
    ((! x20 \ ! x21 \ injection_univ ' x20 = injection_univ ' x21 ==> x20 = x21) ,
     [thenl inv [(bind prop x20 \ bind prop x21 \
@@ -1570,8 +1558,8 @@ the_library L :-
       (then (lforall x21)
        (then (conv (depth_tac (then sym h)))
         (then (g (injection_univ ' x20 = injection_univ ' x21))
-                auto_monotone)))),
-     (bind prop x20 \ bind prop x21 \ auto_monotone)]])
+                daemon)))),
+     (bind prop x20 \ bind prop x21 \ daemon)]])
  , theorem inj1_univ_inj
    (pi A \ pi B \ (! (univ '' A '' B) x20 \ ! x21 \ inj1_univ ' x20 = inj1_univ ' x21 ==> x20 = x21) ,
     [then inv
@@ -1622,7 +1610,7 @@ the_library L :-
        then forall_i
         (bind A x21 \
           then i (then (cutth case_disj_union_inj1)
-            (then (lforall x20) auto_monotone))))])
+            (then (lforall x20) daemon))))])
  , theorem inj2_disj_union_inj
    (pi A \ (! A x20 \ ! x21 \ inj2_disj_union ' x20 = inj2_disj_union ' x21 ==> x20 = x21) ,
     [then forall_i
@@ -1630,7 +1618,7 @@ the_library L :-
        then forall_i
         (bind A x21 \
           then i (then (cutth case_disj_union_inj2)
-            (then (lforall x20) auto_monotone))))])
+            (then (lforall x20) daemon))))])
  , theorem s_inj ((! x18 \ ! x19 \ s ' x18 = s ' x19 ==> x18 = x19) ,
      [then (repeat (conv (depth_tac (dd [s]))))
        (then inv
