@@ -1838,9 +1838,6 @@ the_library L :-
 */
 
 /*
--3) after main, if I do stop I see thousands of delayed goal that have
-    never been resumed!
-
 -2.5) in the proof for myprop, at the end I provide the
   witness (and X X) where X remains free (and it is not even pi-quantified).
   If prop was empty, then X could not exist. On the other hand, if X was
@@ -1857,7 +1854,10 @@ the_library L :-
 0) definitions must not be recursive; typing should capture it
    (but not if $delay is commented out...)
 
-0.25) axioms are missing
+0.25) occurr check in bind case still missing :-(
+
+0.50) case AppUvar vs AppUVar in unification is bugged (e.g.)
+      X^2 x0 x1 = X^2 x0 x1
 
 0.75) Observation: so far our HOL-Light is intuitionistic.
  Keep it like that? Note: according to Wiedijk, new_basic_types makes it
