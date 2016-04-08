@@ -22,6 +22,9 @@ module Func : sig
   val isf : t
   val nilf : t
   val consf : t
+  val letf : t
+  val arrowf : t
+
   val from_string : string -> t
 end
 
@@ -46,6 +49,8 @@ type decl =
  | Local of Func.t
  | Begin
  | End
+ | Mode of (Func.t * bool list * Func.t option) list
+ | Constraint of Func.t list
  | Accumulated of decl list
 
 val mkLocal : string -> decl
@@ -63,4 +68,5 @@ val mkFloat : float -> term
 val mkInt : int -> term
 val mkString : string -> term
 val mkFreshUVar : unit -> term
+val mkFreshName : unit -> term
 val mkLam : string -> term -> term

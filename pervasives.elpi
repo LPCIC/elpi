@@ -64,7 +64,9 @@ infix  <  130.       infix  i<  130.     infix  r<  130.     infix  s<  130.
 infix  >= 130.       infix  i>= 130.     infix  r>= 130.     infix  s>= 130.
 infix  =< 130.       infix  i=< 130.     infix  r=< 130.     infix  s=< 130.
 infix  =  130.
+infix  := 130.
 infix  is 130.
+infixr as 129.
 infixr => 129.
 infixr &  120.
 infix  ?- 115.

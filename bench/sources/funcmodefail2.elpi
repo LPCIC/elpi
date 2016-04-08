@@ -1,0 +1,10 @@
+function {
+  copy (app X XS) -> (app Y YS) :- Y := copy X, YS := copy XS.
+  % rec lincheck
+  copy (lam F) -> (lam G) :- pi x\ (pi w\ w := copy w) => G x := copy (F x).
+  copy c -> c.
+}
+
+main :-  (copy X Y, $print "gen mode is wrong", !, false);
+         (copy (lam x\app (W x) c) R, $print "rec gen mode is wrong", !, false);
+         ($print "ok", copy (lam x\app (W x) c) R, $print R).

@@ -170,6 +170,7 @@ let constant = "CONSTANT" (* to use physical equality *)
 let tok = lexer
   [ ucase idcharstar -> constant,$buf 
   | lcase idcharstar -> constant,$buf
+  | schar2 ?= [ 'A'-'Z' ] -> constant,$buf
   | schar2 idcharstar -> constant,$buf
   | '$' lcase idcharstar -> "BUILTIN",$buf
   | '$' idcharstar -> constant,$buf
@@ -182,9 +183,11 @@ let tok = lexer
   | '_' idcharplus -> constant,$buf
   | ":-"  -> constant,$buf
   | ":"  -> "COLON",$buf
+  | ":="  -> constant,$buf
   | "::"  -> constant,$buf
   | ',' -> constant,$buf
   | ';' -> constant,$buf
+  | '?' -> constant,$buf
   | '.' -> "FULLSTOP",$buf
   | '.' num -> "FLOAT",$buf
   | '\\' -> "BIND","\\"
@@ -231,6 +234,8 @@ let rec lex c = parser bp
          | "accum_sig" -> "ACCUM_SIG", "accum_sig"
          | "use_sig" -> "USE_SIG", "use_sig"
          | "local" -> "LOCAL", "local"
+         | "mode" -> "MODE", "mode"
+         | "constraint" -> "CONSTRAINT", "constraint"
          | "localkind" -> "LOCALKIND", "localkind"
          | "useonly" -> "USEONLY", "useonly"
          | "exportdef" -> "EXPORTDEF", "exportdef"
@@ -354,12 +359,20 @@ EXTEND
   filename:
     [[ c = CONSTANT -> c
      | c = LITERAL -> c ]];
+  mode :
+    [[ LPAREN; c = CONSTANT;
+       l = LIST1 [ CONSTANT "i" -> true | CONSTANT "o" -> false ]; RPAREN;
+       alias = OPT[ CONSTANT "xas"; c = CONSTANT -> Func.from_string c ] ->
+      Func.from_string c,l,alias]];
   clause :
     [[ f = atom; FULLSTOP ->
        (!PointerFunc.latex_export).PointerFunc.export f ;
        [Clause f]
      | LCURLY -> [Begin]
      | RCURLY -> [End]
+     | MODE; m = LIST1 mode SEP SYMBOL ","; FULLSTOP -> [Mode m]
+     | CONSTRAINT; names=LIST0 CONSTANT; LCURLY ->
+         [ Constraint (List.map Func.from_string names) ]
      | MODULE; CONSTANT; FULLSTOP -> []
      | SIG; CONSTANT; FULLSTOP -> []
      | ACCUMULATE; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
@@ -449,12 +462,13 @@ EXTEND
   premise : [[ a = atom -> a ]];
   atom :
    [ "term"
-      [ hd = atom; args = LIST1 atom LEVEL "abstterm" -> mkApp (hd::args) ]
+      [ hd = atom; args = LIST1 atom LEVEL "abstterm" -> mkApp (hd :: args) ]
    | "abstterm"
       [ c = CONSTANT; OPT [ COLON ; type_ ] ; b = OPT [ BIND; a = atom LEVEL "0" -> a ] ->
           (match b with
               None -> mkCon c
             | Some b -> mkLam c b)
+      | c = ARROW; a = atom LEVEL "abstterm" -> mkApp [mkCon c; a]
       | u = FRESHUV ; OPT [ COLON ; type_ ] -> mkFreshUVar ()
       | s = LITERAL -> mkString s
       | s = INTEGER -> mkInt (int_of_string s) 

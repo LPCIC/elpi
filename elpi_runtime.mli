@@ -59,11 +59,17 @@ and constraint_ =
  (* exn is the constraint;
     the associated list is the list of variables the constraint is
     associated to *)
- exn * term oref list (* well... open type in caml < 4.02 *)
+  cstr * term attributed_ref list (* well... open type in caml < 4.02 *)
+and cstr =
+ | Delayed_goal of dg
+ | Delayed_unif of int * term array * int * term * term
+and dg
+and mode = bool list
 
 val term_of_ast : depth:int -> Elpi_ast.term -> term
 val oref : 'a -> 'a oref
 val pp_term : Format.formatter -> term -> unit
+val show_term : term -> string
 
 exception No_clause
 
@@ -100,13 +106,18 @@ val register_custom :
   string ->
   (depth:int -> env:term array -> index -> term list -> term list) ->
   unit
+val register_ll_custom :
+  string ->
+  (depth:int -> env:term array -> index -> mode:mode -> term list -> term list * mode) ->
+  unit
 
 (* Functions useful to implement custom predicates and evaluable functions *)
 val deref_uv : ?avoid:term oref -> from:constant -> to_:constant -> int -> term -> term
 val deref_appuv : ?avoid:term oref -> from:constant -> to_:constant -> term list -> term -> term
 val is_flex : term -> term oref option
 val print_delayed : unit -> unit
-val delay_goal : depth:int -> index -> goal:term -> on:term oref list -> unit
+val delay_goal : depth:int -> index -> goal:term -> on:term attributed_ref list -> mode:mode -> unit
+val declare_constraint : depth:int -> index -> goal:term -> on:term attributed_ref list -> mode:mode -> unit
 
 val lp_list_to_list : term -> term list
 

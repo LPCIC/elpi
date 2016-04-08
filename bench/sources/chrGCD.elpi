@@ -1,0 +1,16 @@
+gcd A B :- $is_flex B, !, $delay (gcd A B) B.
+
+% assert result is OK
+gcd 11 1.
+gcd 7 2.
+
+main :- gcd 99 X, 
+        gcd 66 X, gcd 14 Y,
+        gcd 22 X, gcd 77 Y,
+        X = 1, Y = 2.
+
+constraint gcd {
+  rule [ (gcd A X) ] [ (gcd B Y) ] -> (gcd C X) :- X = Y, A < B, C is (B - A).
+}
+
+

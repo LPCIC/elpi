@@ -78,7 +78,9 @@ let rec pp_FOprolog p =
  List.iter
   (function
       Local _
+    | Mode _
     | Begin
+    | Constraint _
     | End -> assert false (* TODO *)
     | Accumulated l -> pp_FOprolog l
     | Clause t ->

@@ -1,0 +1,9 @@
+function {
+  is_meta(X @ L) A B :- A = X, B = L.
+}
+main :- 
+  is_meta X1 X1 [],
+  (pi y\ is_meta (X1 y) X1 [y]),
+  is_meta X2 A B,
+  (pi y\ sigma C\ is_meta (X3 y) C (D y)),
+  $print A B C D. % with trace you see C is restricted

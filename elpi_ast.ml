@@ -30,6 +30,8 @@ module Func = struct
   let isf = from_string "is"
   let consf = from_string "::"
   let nilf = from_string "nil"
+  let letf = from_string ":="
+  let arrowf = from_string "->"
 
 end
 
@@ -64,6 +66,8 @@ type decl =
  | Local of Func.t
  | Begin
  | End
+ | Mode of (Func.t * bool list * Func.t option) list
+ | Constraint of Func.t list
  | Accumulated of decl list
 
 let mkLocal x = Local (Func.from_string x)
@@ -80,7 +84,8 @@ let mkApp =
   | _ -> raise NotInProlog
 
 let fresh_uv_names = ref (-1);;
-
 let mkFreshUVar () = incr fresh_uv_names; Const (Func.from_string ("_" ^ string_of_int !fresh_uv_names))
+let fresh_names = ref (-1);;
+let mkFreshName () = incr fresh_names; Const (Func.from_string ("__" ^ string_of_int !fresh_names))
 let mkCon c = Const (Func.from_string c)
 let mkCustom c = Custom (Func.from_string c)

@@ -1,0 +1,42 @@
+mode term(i).
+
+  term (app X Y) :- term X, term Y.
+  term (lam F) :- pi x\ term x => term (F x).
+  % term (? as W) :- $constraint (term W) W.
+  term X :- $constraint (term X) X.
+
+
+eq_as_set [] [].
+eq_as_set [X|XS] YS :-
+  remove_all X XS XS',
+  mem X YS, remove_all X YS YS',
+  eq_as_set XS' YS'.
+
+mem X [X|XS] :- !.
+mem X [_|XS] :- mem X XS.
+
+remove_all X [X|XS] YS :- !, remove_all X XS YS.
+remove_all X [Z|XS] [Z|YS] :- remove_all X XS YS.
+remove_all X [] [].
+
+constraint term {
+  rule [ (G1 ?- term (?X LX)) ] [ (G2 ?- term (?Y LY)) ] true :-
+    X = Y, G1 = G2, eq_as_set LX LY.
+}
+
+main :- pi x\ crap x => term (app (lam w\ X w) Y),
+        $is_flex X,
+        $print "1", $print_delayed,
+        (Y = lam x\app x x),
+        $print "2", $print_delayed,
+        (X = x\x),
+        $print "3", $print_delayed,
+        term A, (orrible => term A),
+        $print "4", $print_delayed,
+        A = (lam x\x),
+        (pi w\ term (B w w)),
+$print_delayed,
+        (term (lam p\ lam q\ B p q)),
+        (term (lam p\ lam q\ B q p)),
+        $print "5", $print_delayed.
+  
