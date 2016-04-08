@@ -58,7 +58,8 @@ put_binds A B C D :- put_binds' A B C D.
 /***** The HOL kernel *****/
 
 local thm, provable, def0, term, term', typ, typ', loop, prove, check1,
- check1def, check1thm, check1axm, reterm, reterm', not_defined, check_hyp.
+ check1def, check1thm, check1axm, check1nbt,
+ reterm, reterm', not_defined, check_hyp.
 
 proves T TY :- provable T TY.
 
@@ -209,19 +210,7 @@ check_hyps HS (pi H) :- pi x \ typ' x => check_hyps [x | HS] (H x).
    returns the new assumption O */
 check1 (theorem NAME GOALTACTICS) HYPS :- check1thm NAME GOALTACTICS HYPS, !.
 check1 (axiom NAME ST) HYPS :- check1axm NAME ST HYPS, !.
-check1 (new_basic_type TYPE REP ABS REPABS ABSREP PREPH P TACTICS) HYPS :-
-  term P (X --> prop),
-  prove (exists '' _ ' P ) TACTICS,
-  callback_proved existence_condition (exists '' _ ' P) TACTICS,
-  REPTYP = (TYPE --> X),
-  ABSTYP = (X --> TYPE),
-  ABSREPTYP = (forall '' TYPE ' lam TYPE x \ eq ' (ABS ' (REP ' x)) ' x),
-  REPABSTYP = (forall '' X ' lam X x \ impl ' (P ' x) ' (eq ' (REP ' (ABS ' x)) ' x)),
-  PREPHTYP = (forall '' TYPE ' lam TYPE x \ (P ' (REP ' x))),
-  !,
-  HYPS =
-   ( typ TYPE, term' REP REPTYP, term' ABS ABSTYP, provable ABSREP ABSREPTYP
-   , provable REPABS REPABSTYP, provable PREPH PREPHTYP).
+check1 (new_basic_type TYPE REP ABS REPABS ABSREP PREPH P_TACTICS) HYPS :- check1nbt TYPE REP ABS REPABS ABSREP PREPH P_TACTICS HYPS, !.
 check1 (def NAME TYPDEF) HYPS :- check1def NAME TYPDEF HYPS, !.
 
 check1def NAME (pi I) (pi HYPS) :-
@@ -239,6 +228,22 @@ check1axm NAME (pi I) (pi HYPS) :- !,
  pi x \ typ' x => check1axm NAME (I x) (HYPS x).
 check1axm NAME GOAL (provable NAME GOAL) :-
  term GOAL prop, ! ; parse PGOAL GOAL, $print "Bad statement:" PGOAL, fail.
+
+check1nbt TYPE REP ABS REPABS ABSREP PREPH (pi P_TACTICS) (pi HYPS) :-
+ pi x \ typ' x => check1nbt (TYPE '' x) (REP '' x) (ABS '' x) REPABS ABSREP PREPH (P_TACTICS x) (HYPS x).
+check1nbt TYPE REP ABS REPABS ABSREP PREPH (P,TACTICS) HYPS :-
+  term P (X --> prop),
+  prove (exists '' _ ' P ) TACTICS,
+  callback_proved existence_condition (exists '' _ ' P) TACTICS,
+  REPTYP = (TYPE --> X),
+  ABSTYP = (X --> TYPE),
+  ABSREPTYP = (forall '' TYPE ' lam TYPE x \ eq ' (ABS ' (REP ' x)) ' x),
+  REPABSTYP = (forall '' X ' lam X x \ impl ' (P ' x) ' (eq ' (REP ' (ABS ' x)) ' x)),
+  PREPHTYP = (forall '' TYPE ' lam TYPE x \ (P ' (REP ' x))),
+  !,
+  HYPS =
+   ( typ TYPE, term' REP REPTYP, term' ABS ABSTYP, provable ABSREP ABSREPTYP
+   , provable REPABS REPABSTYP, provable PREPH PREPHTYP).
 
 check WHAT :-
  next_object WHAT C CONT,
@@ -299,10 +304,8 @@ parsetac interactive interactive.
 parse_obj (theorem NAME PSTTAC) [theorem NAME STTAC] :-
  parse_thm NAME PSTTAC STTAC.
 parse_obj (axiom NAME PTYP) [axiom NAME TYP] :- parse_axiom PTYP TYP.
-parse_obj (new_basic_type TYPE REP ABS REPABS ABSREP PREP PP TACTICS)
- [new_basic_type TYPE REP ABS REPABS ABSREP PREP P (false,TACTICS)] :- parse PP P.
-parse_obj (new_basic_type TYPE REP ABS REPABS ABSREP PREP PP)
- [new_basic_type TYPE REP ABS REPABS ABSREP PREP P (true,[_])] :- parse PP P.
+parse_obj (new_basic_type TYPE REP ABS REPABS ABSREP PREP PP_TACTICS)
+ [new_basic_type TYPE REP ABS REPABS ABSREP PREP P_TACTICS] :- parse_nbt PP_TACTICS P_TACTICS.
 parse_obj (def NAME PTYBO) [def NAME TYBO] :- parse_def PTYBO TYBO.
 parse_obj (inductive_def PRED PREDF PREDF_MON PRED_I PRED_E0 PRED_E K) EXP :-
  inductive_def_pkg PRED PREDF PREDF_MON PRED_I PRED_E0 PRED_E K EXP.
@@ -316,9 +319,13 @@ parse_axiom PST ST :- parse PST ST.
 
 parse_thm NAME (pi I) (pi O) :- pi x \ parse_thm NAME (I x) (O x).
 parse_thm _ (PST,TAC) (ST,(false,TAC)) :- !, parse PST ST.
-parse_thm NAME PST (ST,(true,[X])) :-
+parse_thm NAME PST (ST,(true,[_])) :-
  (not (proves NAME _) ; $print "Error:" NAME already defined, fail),
  parse PST ST.
+
+parse_nbt (pi I) (pi O) :- !, pi x \ parse_nbt (I x) (O x).
+parse_nbt (PP,TACTICS) (P,(false,TACTICS)) :- parse PP P.
+parse_nbt PP (P,(true,[_])) :- parse PP P.
 
 next_object [ C | NEXT ] CT CONTNEXT :-
   parse_obj C [ CT | CONT ], append CONT NEXT CONTNEXT.
@@ -1295,8 +1302,8 @@ the_library L :-
      [ (in_two_tt, in_two ' tt)
      , (in_two_ff, in_two ' ff) ])
  , new_basic_type bool2 myrep2 myabs2 myrepabs2 myabsrep2 myproprep2
-    pnn
-    [then (cutth pnn_tt) (then (applyth exists_i) h)]
+    (pnn,
+    [then (cutth pnn_tt) (then (applyth exists_i) h)])
  , def mytt (bool2,(myabs2 ' tt))
  , def mynot ((bool2 --> bool2),(lam _ x \ myabs2 ' (not ' (myrep2 ' x))))
  , theorem mytt_transfer
@@ -1500,8 +1507,8 @@ the_library L :-
      [ (is_nat_z, is_nat ' (inj1_univ ' (injection_univ ' ff)))
      , (is_nat_s, ! x \ is_nat ' x ==> is_nat ' (inj2_univ ' x))])
  , new_basic_type nat nat_rep nat_abs nat_repabs nat_absrep nat_proprep
-    is_nat
-    [then (cutth is_nat_z) (then (applyth exists_i) h)]
+    (is_nat,
+    [then (cutth is_nat_z) (then (applyth exists_i) h)])
  , def z (nat, nat_abs ' (inj1_univ ' (injection_univ ' ff)))
  , def s (nat --> nat,
     (lam _ x \ nat_abs ' (inj2_univ ' (nat_rep ' x))))
@@ -1763,6 +1770,37 @@ the_library L :-
                      then (conv (depth_tac (applyth case_univ_inj2)))
                      (then (conv (depth_tac b))
                        (then (conv (depth_tac (applyth nat_absrep))) r))])))))])
+ /******* Cartesian product of types ******/
+ /* TODO: this is an inductive type as well: generalize
+    inductive_type to type abstractions */
+ , def is_pair (pi A \ pi B \
+  (univ '' (disj_union '' A '' B) '' prop --> prop),
+  lam (_ A B) p \ ? A a \ ? B b \
+   p =
+    pair_univ '
+     (injection_univ ' (inj1_disj_union ' a)) '
+     (injection_univ ' (inj2_disj_union ' b)))
+ , new_basic_type prod prod_rep prod_abs prod_repabs prod_absrep prod_proprep
+    (pi A \ pi B \ is_pair '' A '' B, [daemon])
+ , def pair (pi A \ pi B \
+    (A --> B --> prod '' A '' B,
+    lam A a \ lam B b \
+     prod_abs '' A '' B '
+      (pair_univ '
+       (injection_univ ' (inj1_disj_union ' a)) '
+       (injection_univ ' (inj2_disj_union ' b)))
+    ))
+ /* TODO: define fst and snd and prove the usual lemmas
+    fst ' (pair ' a ' b) = a */
+ /************** Back to natural numbers ***************/
+/* , inductive_def clt cltF clt_monotone clt_i clt_e0 clt_e
+   (lt \
+     [ (clt_s, ! n \ lt ' (pair '' _ '' _ ' n ' (s ' n)))
+     , (clt_trans, ! n1 \ ! n2 \ ! n3 \
+         lt ' (pair '' _ '' _ ' n1 ' n2) ==>
+         lt ' (pair '' _ '' _ ' n2 ' n3) ==>
+         lt ' (pair '' _ '' _ ' n1 ' n3)) ])   */
+ /* TODO: define lt that takes two naturals, not a pair */
 /*
 
 1. we need to define the lt relation over nat
@@ -1770,27 +1808,6 @@ the_library L :-
                   n1<n2    n2<n3
    =========     =================
     n < S n            n1<n3
-
-0. but this is an inductive definition over pairs (n,m),
-   i.e. < : nat*nat --> bool
-   So we _first_ need to define the cartesian product of
-   two types
-
--1. we can define A*B carving it out from
-    univ '' (disj_union '' A '' B) '' prop
-    because
-
-    A*B ::= pair A*B
-
-    can be implemented by choosing for (pair ' a ' b)
-
-    pair_univ '
-     (injection_univ ' (inj1_disj_union ' a)) '
-     (injection_univ ' (inj2_disj_union ' b))
-
--2. but then you need to use new_basic_type with two pis
-    for A and B and, for the time being, new_basic_type
-    accepts NO PI AT ALL
 
 1. one needs to delift < : nat*nat --> bool to a < : univ*univ --> bool
 
