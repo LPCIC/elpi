@@ -1583,7 +1583,7 @@ the_library L :-
        (then (conv (depth_tac (then sym h)))
         (then (g (injection_univ ' x20 = injection_univ ' x21))
                 daemon)))),
-     (bind prop x20 \ bind prop x21 \ daemon)]])
+     (bind prop x20 \ bind prop x21 \ daemon)]])   */
  , theorem inj1_univ_inj
    (pi A \ pi B \ (! (univ '' A '' B) x20 \ ! x21 \ inj1_univ ' x20 = inj1_univ ' x21 ==> x20 = x21) ,
     [then inv
