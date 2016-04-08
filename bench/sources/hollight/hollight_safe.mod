@@ -1551,6 +1551,30 @@ the_library L :-
              (then (lforall x22)
                (then (conv (land_tac (then sym apply)))
                  (then (conv (depth_tac h)) (applyth proj2_pair_univ))))))])
+
+ , theorem injection_univ_inj
+   (pi A \ (! A x20 \ ! x21 \ injection_univ ' x20 = injection_univ ' x21 ==> x20 = x21) ,
+    [then forall_i
+     (bind A x20 \
+       then forall_i
+        (bind A x21 \
+          then (then (cutth ejection_injection_univ) (lforall x21))
+           (then (then (cutth ejection_injection_univ) (lforall x20))
+             (then i
+               (thenl
+                 (cut
+                   (ejection_univ ' (injection_univ ' x20) =
+                     ejection_univ ' (injection_univ ' x21)))
+                 [thenl
+                   (cut
+                     ((ejection_univ ' (injection_univ ' x20) =
+                        ejection_univ ' (injection_univ ' x21)) =
+                       (x20 = x21)))
+                   [then (conv (depth_tac (then sym h))) h,
+                   thenl c [thenl c [r, h], h]], thenl c [r, h]])))))])
+
+
+/*
  , theorem injection_univ_inj 
    ((! x20 \ ! x21 \ injection_univ ' x20 = injection_univ ' x21 ==> x20 = x21) ,
     [thenl inv [(bind prop x20 \ bind prop x21 \
@@ -1603,6 +1627,38 @@ the_library L :-
                         (then (conv (applyth case_univ_inj2))
                           (then (conv b) (itaut 1))))))])))))])
  /* CSC: prove the injectivity injX_disj_union_inj as well for X = 1,2. Also put the pi A \pi B ... and move to its own section */
+
+ , theorem inj1_disj_union_inj
+   (pi A \ (! A x21 \ ! x22 \ inj1_disj_union ' x21 = inj1_disj_union ' x22 ==> x21 = x22) ,
+    [then (repeat forall_i)
+     (bind A x21 \ bind A x22 \ then i
+      (then (cutth case_disj_union_inj1)
+       (then (cutth case_disj_union_inj1)
+        (then (lforall x21)
+         (then (lforall x22)
+          (then (repeat (lforall (lam A x23 \ x23)))
+           (thenl (cut ((lam A x23 \ x23) ' x21 = x21))
+            [thenl (cut ((lam A x23 \ x23) ' x22 = x22))
+             [thenl (cut
+              (case_disj_union ' (inj1_disj_union ' x22) '
+               (lam A x23 \ x23) ' (lam A x23 \ x23) =
+               case_disj_union ' (inj1_disj_union ' x21) '
+               (lam A x23 \ x23) ' (lam A x23 \ x23)))
+                [thenl (cut
+                 (case_disj_union ' (inj1_disj_union ' x22) '
+                  (lam A x23 \ x23) ' (lam A x23 \ x23) = x22))
+                   [thenl (cut
+                    (case_disj_union ' (inj1_disj_union ' x21) '
+                     (lam A x23 \ x23) ' (lam A x23 \ x23) = x21))
+                      [then (conv (depth_tac (then sym h)))
+                       (then (conv (depth_tac (then sym h)))
+                        (then sym h)),
+                          then (conv (depth_tac (then sym h))) h],
+                          then (conv (depth_tac (then sym h))) h],
+                         thenl c [thenl c [thenl c [r, then sym h], r], r]],
+                       b], b])))))))])
+
+/*
  , theorem inj1_disj_union_inj
    (pi A \ (! A x20 \ ! x21 \ inj1_disj_union ' x20 = inj1_disj_union ' x21 ==> x20 = x21) ,
     [then forall_i
@@ -1611,6 +1667,41 @@ the_library L :-
         (bind A x21 \
           then i (then (cutth case_disj_union_inj1)
             (then (lforall x20) daemon))))])
+*/
+
+ , theorem inj2_disj_union_inj
+   (pi A \ (! A x21 \ ! x22 \ inj2_disj_union ' x21 = inj2_disj_union ' x22 ==> x21 = x22) ,
+    [then (repeat forall_i)
+     (bind A x21 \ bind A x22 \ then i
+      (then (cutth case_disj_union_inj2)
+       (then (cutth case_disj_union_inj2)
+        (then (lforall x21)
+         (then (lforall x22)
+          (then (repeat (lforall (lam A x23 \ x23)))
+           (thenl (cut ((lam A x23 \ x23) ' x21 = x21))
+            [thenl (cut ((lam A x23 \ x23) ' x22 = x22))
+             [thenl (cut
+              (case_disj_union ' (inj2_disj_union ' x22) '
+               (lam A x23 \ x23) ' (lam A x23 \ x23) =
+               case_disj_union ' (inj2_disj_union ' x21) '
+               (lam A x23 \ x23) ' (lam A x23 \ x23)))
+                [thenl (cut
+                 (case_disj_union ' (inj2_disj_union ' x22) '
+                  (lam A x23 \ x23) ' (lam A x23 \ x23) = x22))
+                   [thenl (cut
+                    (case_disj_union ' (inj2_disj_union ' x21) '
+                     (lam A x23 \ x23) ' (lam A x23 \ x23) = x21))
+                      [then (conv (depth_tac (then sym h)))
+                       (then (conv (depth_tac (then sym h)))
+                        (then sym h)),
+                          then (conv (depth_tac (then sym h))) h],
+                          then (conv (depth_tac (then sym h))) h],
+                         thenl c [thenl c [thenl c [r, then sym h], r], r]],
+                       b], b])))))))])
+
+
+
+/*
  , theorem inj2_disj_union_inj
    (pi A \ (! A x20 \ ! x21 \ inj2_disj_union ' x20 = inj2_disj_union ' x21 ==> x20 = x21) ,
     [then forall_i
@@ -1619,6 +1710,7 @@ the_library L :-
         (bind A x21 \
           then i (then (cutth case_disj_union_inj2)
             (then (lforall x20) daemon))))])
+*/
  , theorem s_inj ((! x18 \ ! x19 \ s ' x18 = s ' x19 ==> x18 = x19) ,
      [then (repeat (conv (depth_tac (dd [s]))))
        (then inv
