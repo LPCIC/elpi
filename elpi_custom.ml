@@ -504,7 +504,8 @@ let _ =
               [App (eqc, t2, [t3])]
              with 
                 Sys_error msg -> error msg
-              | Stream.Error msg -> error msg)
+              | Stream.Error msg -> prerr_endline msg; raise No_clause
+              | Elpi_ast.NotInProlog -> prerr_endline "Beta redexes not allowed"; raise No_clause)
          | _ -> type_error "bad argument to readterm (or $readterm)")
     | _ -> type_error "readterm (or $readterm) takes 2 arguments") ;
   register_custom "$eof" (fun ~depth ~env:_ _ args ->
