@@ -93,9 +93,9 @@ term' proj2_univ (univ '' A '' B --> univ '' A '' B).
 term' inj1_univ (univ '' A '' B --> univ '' A '' B).
 term' inj2_univ (univ '' A '' B --> univ '' A '' B).
 term' case_univ (univ '' A '' B --> (univ '' A '' B --> C) --> (univ '' A '' B --> C) --> C).% :- typ A.
-% rec_univ implies that all types are inhabited :-(
+% rec implies that all types are inhabited :-(
 % solution?: let it take in input a dummy inhabitant of A as well
-term' rec_univ (((univ '' A '' B --> C) --> (univ '' A '' B --> C)) --> (univ '' A '' B --> C)).% :- typ A.
+term' rec (((A --> B) --> (A --> B)) --> (A --> B)).% :- typ A.
 
 /* like term, but on terms that are already known to be well-typed */
 reterm T TY :- $is_flex T, !.%, $delay (reterm T TY) [ T ].
@@ -123,8 +123,6 @@ term' f (prop --> prop).
 term' (g X) prop :- term X prop.
 reterm' (g X) prop.
 term' c prop.
-
-term' leq (nat --> nat --> prop).
 
 thm daemon (seq Gamma F) [].
 /* >> HACKS FOR DEBUGGING */
@@ -425,31 +423,56 @@ canonical (thenl T L) OTAC :- !,
 canonical T T.
 
 /************ inductive_def package ********/
-build_predicate P X [ (_,K) ] R :-
- process_constructor P X K R.
-build_predicate P X [ (_,K) | REST ] (or ' Q ' R) :-
- process_constructor P X K Q,
- build_predicate P X REST R.
-
-process_constructor P X (forall '' TY ' lam TY Q) (exists '' TY ' lam TY R) :-
- pi y \ process_constructor P X (Q y) (R y).
-process_constructor P X (impl ' H ' K) (and ' H ' R) :-
- process_constructor P X K R.
-process_constructor P X (P ' T) (eq ' X ' T).
-
-inductive_def_pkg PRED PREDF PREDF_MONOTONE PRED_I PRED_E0 PRED_E L OUT :-
+parse_inductive_def_spec (pi F) (pi PF) :- !,
+ pi A \ parse_inductive_def_spec (F A) (PF A).
+parse_inductive_def_spec (param TY F) (param PTY PF) :- !,
+ parse TY PTY, pi x \ parse_inductive_def_spec (F x) (PF x).
+parse_inductive_def_spec L PL :-
  (pi p \ list_map (L p)
   (x \ px \ sigma A \ sigma B \ sigma PB \ x = (A, B), parse B PB, px = (A, PB))
-  (PL p)),
- (pi p \ pi x \ build_predicate p x (PL p) (P p x)),
- F = (lam _ p \ lam _ x \ P p x),
- !,
- OUT1 =
-  [ def PREDF (_,F)
-  , theorem PREDF_MONOTONE (monotone '' _ ' PREDF,
-     [ then (conv (depth_tac (dd [PREDF]))) auto_monotone ])
-  , def PRED (_,(fixpoint '' _ ' PREDF))
-  , theorem PRED_I ((! x13 \ PREDF ' PRED ' x13 ==> PRED ' x13),
+  (PL p)).
+
+build_quantified_predicate (pi I) (pi O) :- !,
+ pi A \ build_quantified_predicate (I A) (O A).
+build_quantified_predicate (param TY I) (TY --> TYP, lam TY BO) :- !,
+ pi x \ build_quantified_predicate (I x) (TYP, BO x).
+build_quantified_predicate L (_, lam _ p \ lam _ x \ P p x) :-
+ pi p \ pi x \ build_predicate (L p) p x (P p x).
+
+build_predicate [ (_,K) ] P X R :- !,
+ process_constructor K P X R.
+build_predicate [ (_,K) | REST ] P X (or ' Q ' R) :-
+ process_constructor K P X Q,
+ build_predicate REST P X R.
+
+process_constructor (forall '' TY ' lam TY Q) P X (exists '' TY ' lam TY R) :-
+ pi y \ process_constructor (Q y) P X (R y).
+process_constructor (impl ' H ' K) P X (and ' H ' R) :-
+ process_constructor K P X R.
+process_constructor (P ' T) P X (eq ' X ' T).
+
+prove_monotonicity_thm (pi F) PREDF APREDF (pi THM) :- !,
+ pi A \ prove_monotonicity_thm (F A) PREDF (APREDF '' A) (THM A).
+prove_monotonicity_thm (param TY F) PREDF APREDF (forall '' TY ' lam TY STM, PROOF) :- !,
+ pi x \ prove_monotonicity_thm (F x) PREDF (APREDF ' x) (STM x, PROOF).
+prove_monotonicity_thm _ PREDF APREDF THM :-
+ THM =
+  (monotone '' _ ' APREDF,
+   [ then inv (bind* (then (conv (depth_tac (dd [PREDF]))) auto_monotone)) ]).
+
+state_fixpoint_def (pi F) PREDF (pi DEF) :- !,
+ pi A \ state_fixpoint_def (F A) (PREDF '' A) (DEF A).
+state_fixpoint_def (param TY F) PREDF (_, lam TY BO) :- !,
+ pi x \ state_fixpoint_def (F x) (PREDF ' x) (_, BO x).
+state_fixpoint_def _ PREDF (_, fixpoint '' _ ' PREDF).
+
+prove_fix_intro_thm (pi F) PREDF PRED PREDF_MONOTONE (pi THM) :- !,
+ pi A \ prove_fix_intro_thm (F A) (PREDF '' A) (PRED '' A) PREDF_MONOTONE (THM A).
+prove_fix_intro_thm (param TY F) PREDF PRED PREDF_MONOTONE (forall '' TY ' lam TY STM, [ then forall_i (bind _ PROOF) ]) :- !,
+ pi x \ prove_fix_intro_thm (F x) (PREDF ' x) (PRED ' x) PREDF_MONOTONE (STM x, [ PROOF x ]).
+prove_fix_intro_thm _ PREDF PRED PREDF_MONOTONE THM :-
+ THM =
+  ((! x \ PREDF ' PRED ' x ==> PRED ' x),
    [then forall_i
      (bind _ x13 \
        then (conv (rand_tac (rator_tac dd)))
@@ -465,48 +488,82 @@ inductive_def_pkg PRED PREDF PREDF_MONOTONE PRED_I PRED_E0 PRED_E L OUT :-
                        (fixpoint '' _ ' PREDF)))
                    (then (conv (depth_tac (dd [subseteq])))
                      (then (conv (depth_tac (dd [in])))
-                       (then (conv (depth_tac (dd [in])))(itaut 4))))]))))))])],
- list_map (PL PRED) (mk_intro_thm PRED_I) OUT2,
- append OUT1 OUT2 OUT12,
- OUT3 =
-  [ theorem PRED_E0
-    ((! x13 \
-       (! x14 \ PREDF ' x13 ' x14 ==> x13 ' x14) ==>
-        (! x14 \ PRED ' x14 ==> x13 ' x14)) ,
-      [then forall_i
-        (bind _ x13 \
-          then (cutth fixpoint_subseteq_any_prefixpoint)
-           (then (lforall PREDF)
-             (then (lforall x13)
-               (then (conv (depth_tac (dd [PRED])))
-                 (then inv
-                   (bind _ x14 \
-                     then
-                      (g
-                        (impl ' (subseteq '' _ ' (PREDF ' x13) ' x13) '
-                          (subseteq '' _ ' (fixpoint '' _ ' PREDF) ' x13)))
+                       (then (conv (depth_tac (dd [in])))(itaut 4))))]))))))]).
+
+prove_fix_elim_thm (pi F) PREDF PRED OPRED (pi THM) :- !,
+ pi A \ prove_fix_elim_thm (F A) (PREDF '' A) (PRED '' A) OPRED (THM A).
+prove_fix_elim_thm (param TY F) PREDF PRED OPRED (forall '' TY ' lam TY STM, [ then forall_i (bind _ PROOF) ]) :- !,
+ pi x \ prove_fix_elim_thm (F x) (PREDF ' x) (PRED ' x) OPRED (STM x, [ PROOF x ]).
+prove_fix_elim_thm _ PREDF PRED OPRED THM :-
+ THM =
+  ((! x13 \
+     (! x14 \ PREDF ' x13 ' x14 ==> x13 ' x14) ==>
+      (! x14 \ PRED ' x14 ==> x13 ' x14)) ,
+    [then forall_i
+      (bind _ x23 \
+        then (cutth fixpoint_subseteq_any_prefixpoint)
+         (then (lforall PREDF)
+           (then (lforall x23)
+             (then (conv (depth_tac (dd [OPRED])))
+               (then inv
+                 (bind _ x24 \
+                   then
+                    (g
+                      (impl ' (subseteq '' _ ' (PREDF ' x23) ' x23) '
+                        (subseteq '' _ ' (fixpoint '' _ ' PREDF) ' x23)))
+                    (then (conv (depth_tac (dd [subseteq])))
                       (then (conv (depth_tac (dd [subseteq])))
-                        (then (conv (depth_tac (dd [subseteq])))
+                        (then (conv (depth_tac (dd [in])))
                           (then (conv (depth_tac (dd [in])))
                             (then (conv (depth_tac (dd [in])))
                               (then (conv (depth_tac (dd [in])))
-                                (then (conv (depth_tac (dd [in])))
-                                  (then
-                                    (w
-                                      (impl '
-                                        (subseteq '' _ ' (PREDF ' x13) ' x13) '
-                                        (subseteq '' _ '
-                                          (fixpoint '' _ ' PREDF) ' x13)))
-                                    (then inv
-                                      (thenl lapply_last [h,
-                                        then (lforall_last x14)
-                                         (then lapply_last h)])))))))))))))))])
-  ],
- append OUT12 OUT3 OUT.
+                                (then
+                                  (w
+                                    (impl '
+                                      (subseteq '' _ ' (PREDF ' x23) ' x23) '
+                                      (subseteq '' _ '
+                                        (fixpoint '' _ ' PREDF) ' x23)))
+                                  (then inv
+                                    (thenl lapply_last [h,
+                                      then (lforall_last x24)
+                                       (then lapply_last h)])))))))))))))))]).
+
+prove_intro_thms (pi F) PRED PRED_I INTROTHMS :- !,
+ pi A \
+  prove_intro_thms (F A) (PRED '' A) PRED_I (OUT A),
+  list_map (OUT A)
+   (i \ o \ sigma Y \ i = (theorem NAME (P A)), o = theorem NAME (pi P))
+   INTROTHMS.
+prove_intro_thms (param TY F) PRED PRED_I INTROTHMS :- !,
+ pi x \
+  prove_intro_thms (F x) (PRED ' x) PRED_I (OUT x),
+  list_map (OUT x)
+   (i \ o \ sigma Y \
+     i = (theorem NAME (STM x, [ PROOF x ])),
+     o = theorem NAME (forall '' TY ' lam TY STM, [ then forall_i (bind TY PROOF) ]))
+   INTROTHMS.
+prove_intro_thms L PRED PRED_I INTROTHMS :-
+ list_map (L PRED) (mk_intro_thm PRED_I) INTROTHMS.
 
 mk_intro_thm PRED_I (NAME,ST)
  (theorem NAME (ST,
    [(then inv (bind* (then (applyth PRED_I) (then (conv dd) (itauteq 10)))))])).
+
+inductive_def_pkg PRED PREDF PREDF_MONOTONE PRED_I PRED_E0 PRED_E L OUT :-
+ parse_inductive_def_spec L PL,
+ build_quantified_predicate PL F,
+ prove_monotonicity_thm PL PREDF PREDF MONTHM,
+ state_fixpoint_def PL PREDF FIXDEF,
+ prove_fix_intro_thm PL PREDF PRED PREDF_MONOTONE INTROTHM,
+ prove_intro_thms PL PRED PRED_I INTROTHMS,
+ prove_fix_elim_thm PL PREDF PRED PRED ELIMTHM,
+ OUT1 =
+  [ def PREDF F
+  , theorem PREDF_MONOTONE MONTHM
+  , def PRED FIXDEF
+  , theorem PRED_I INTROTHM
+  , theorem PRED_E0 ELIMTHM ],
+ append OUT1 INTROTHMS OUT.
 
 /************ library of basic data types ********/
 mk_bounded_fresh (bind _ F) (bind _ G) :- !, pi x\ mk_bounded_fresh (F x) (G x).
@@ -1086,17 +1143,6 @@ the_library L :-
     case_univ ' (inj1_univ ' b) ' e1 ' e2 = e1 ' b))
  , axiom case_univ_inj2 (pi A \ pi B \ pi C \ (! b \ ! (univ '' A '' B --> C) e1 \ ! e2 \
     case_univ ' (inj2_univ ' b) ' e1 ' e2 = e2 ' b))
- , def well_founded (pi A \
-   ((A --> A --> prop) --> prop,
-    lam (_ A) lt \
-     ! p \ (? x \ p ' x) ==>
-      (? m \ p ' m && (! y \ p ' y ==> not ' (lt ' y ' m)))))
- , axiom rec_univ_is_fixpoint (pi A \ pi B \ pi C \
-   (! lt \ well_founded '' (_ A B C) ' lt ==>
-    ! ((univ '' A '' B --> C) --> (univ '' A '' B --> C)) h \
-     (! f \ ! g \ ! i \
-       (! p \ lt ' p ' i ==> f ' p = g ' p) ==> h ' f ' i = h ' g ' i) ==>
-     rec_univ ' h = h ' (rec_univ ' h)))
 
  /******************* Equality *****************/
  , theorem eq_reflexive (pi A \ ((! A a \ a = a),
@@ -1361,6 +1407,22 @@ the_library L :-
               (then (conv (land_tac dd))
                 (then inv
                   (then apply (then (applyth fixpoint_is_prefixpoint) h)))))]))])
+
+ /*********** Axiomatization of well-founded recursion ********/
+ , inductive_def acc accF accF_monotone acc_i0 acc_e0 acc_e
+    (pi A \ param (A --> A --> prop) lt \ acc \
+     [ (acc_i, ! x \ (! y \ lt ' y ' x ==> acc ' y) ==> acc ' x) ])
+
+ , def well_founded (pi A \ ((A --> A --> prop) --> prop,
+    lam (_ A) lt \ ! x \ acc '' A ' lt ' x))
+
+ , axiom rec_is_fixpoint (pi A \ pi B \
+   (! lt \ well_founded '' A ' lt ==>
+    ! ((A --> B) --> (A --> B)) h \
+     (! f \ ! g \ ! i \
+       (! p \ lt ' p ' i ==> f ' p = g ' p) ==> h ' f ' i = h ' g ' i) ==>
+     rec ' h = h ' (rec ' h)))
+
  /******************* TESTS *****************/
  , theorem test_apply (p ==> (p ==> p ==> q) ==> q,
     [then i (then i (then apply h))])
