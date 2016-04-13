@@ -1684,6 +1684,30 @@ the_library L :-
                    then (applyth orr) (then (conv (depth_tac h)) r)),
                 (bind bool2 x19 \
                   then (applyth orl) (then (conv (depth_tac h)) (applyth mynot_mynot_mytt)))]]))]))])
+
+ /******* Cartesian product of types ******/
+ /* TODO: this is an inductive type as well: generalize
+    inductive_type to type abstractions */
+ , def is_pair (pi A \ pi B \
+  (univ '' (disj_union '' A '' B) '' prop --> prop),
+  lam (_ A B) p \ ? A a \ ? B b \
+   p =
+    pair_univ '
+     (injection_univ ' (inj1_disj_union ' a)) '
+     (injection_univ ' (inj2_disj_union ' b)))
+ , new_basic_type prod prod_rep prod_abs prod_repabs prod_absrep prod_proprep
+    (pi A \ pi B \ is_pair '' A '' B, [daemon])
+ , def pair (pi A \ pi B \
+    (A --> B --> prod '' A '' B,
+    lam A a \ lam B b \
+     prod_abs '' A '' B '
+      (pair_univ '
+       (injection_univ ' (inj1_disj_union ' a)) '
+       (injection_univ ' (inj2_disj_union ' b)))
+    ))
+ /* TODO: define fst and snd and prove the usual lemmas
+    fst ' (pair ' a ' b) = a */
+
   /************* Natural numbers ***************/
  , inductive_def is_nat is_natF is_nat_monotone is_nat_i is_nat_e0 is_nat_e
    (is_nat \
@@ -1769,30 +1793,7 @@ the_library L :-
                      (then (conv (depth_tac b))
                        (then (conv (depth_tac (applyth nat_absrep))) r))])))))])
 
- /******* Cartesian product of types ******/
- /* TODO: this is an inductive type as well: generalize
-    inductive_type to type abstractions */
- , def is_pair (pi A \ pi B \
-  (univ '' (disj_union '' A '' B) '' prop --> prop),
-  lam (_ A B) p \ ? A a \ ? B b \
-   p =
-    pair_univ '
-     (injection_univ ' (inj1_disj_union ' a)) '
-     (injection_univ ' (inj2_disj_union ' b)))
- , new_basic_type prod prod_rep prod_abs prod_repabs prod_absrep prod_proprep
-    (pi A \ pi B \ is_pair '' A '' B, [daemon])
- , def pair (pi A \ pi B \
-    (A --> B --> prod '' A '' B,
-    lam A a \ lam B b \
-     prod_abs '' A '' B '
-      (pair_univ '
-       (injection_univ ' (inj1_disj_union ' a)) '
-       (injection_univ ' (inj2_disj_union ' b)))
-    ))
- /* TODO: define fst and snd and prove the usual lemmas
-    fst ' (pair ' a ' b) = a */
 
- /************** Back to natural numbers ***************/
  , theorem pred_well_founded
    (well_founded '' nat ' (lam nat x21 \ lam nat x22 \ x22 = s ' x21) ,
    [then (conv dd)
@@ -1800,11 +1801,69 @@ the_library L :-
        (bind nat x21 \
          thenl (applyth nat_e)
           [then (applyth acc_i)
-            (then (conv (depth_tac b)) (then (conv (depth_tac b)) daemon)),
+            (then (repeat (conv (depth_tac b)))
+              (then inv
+                (bind nat x22 \
+                  then (applyth ff_elim) (then (cutth not_equal_z_s) (itaut 4))))),
           then inv
            (bind nat x22 \
              then (applyth acc_i)
-              (then (conv (depth_tac b)) (then (conv (depth_tac b)) daemon)))]))])
+              (then (repeat (conv (depth_tac b)))
+                (then inv
+                  (bind nat x23 \
+                    then (cutth s_inj)
+                     (then (lforall x22)
+                       (then (lforall x23)
+                         (thenl lapply [h,
+                           then (conv (rand_tac (then sym h))) h])))))))]))])
+ , def nat_recF (pi A \
+    A --> (nat --> A --> A) --> (nat --> A) --> (nat --> A)
+    , lam A a \ lam (_ A) f \ lam (_ A) rec \ lam _ n \
+       nat_case '' A ' n ' a ' (lam _ p \ f ' p ' (rec ' p)))
+ , def nat_rec (pi A \
+    A --> (nat --> A --> A) --> nat --> A
+    , lam A a \ lam (_ A) f \ rec ' (nat_recF '' A ' a ' f))
+ , theorem nat_rec_ok0 (pi A \
+   ((! a \ ! f \
+     nat_rec '' A ' a ' f = nat_recF '' A ' a ' f ' (nat_rec '' A ' a ' f)) ,
+   [then inv
+     (bind A x22 \
+       bind (nat --> A --> A) x23 \
+        then (repeat (conv (depth_tac (dd [nat_rec]))))
+         (thenl (applyth rec_is_fixpoint) [applyth pred_well_founded,
+           then (repeat (conv (depth_tac b)))
+            (then (repeat (conv (depth_tac (dd [nat_recF]))))
+              (then forall_i
+                (bind (nat --> A) x24 \
+                  then forall_i
+                   (bind (nat --> A) x25 \
+                     then (conv (rand_tac beta_expand))
+                      (thenl (applyth nat_e)
+                        [then (conv (depth_tac b))
+                          (then inv
+                            (then (conv (land_tac (applyth nat_case_z)))
+                              (then (conv (rand_tac (applyth nat_case_z))) r))),
+                        then (repeat (conv (depth_tac b)))
+                         (then inv
+                           (bind nat x26 \
+                             then (conv (rand_tac (applyth nat_case_s)))
+                              (then (conv (land_tac (applyth nat_case_s)))
+                                (then (repeat (conv (depth_tac b)))
+                                  (then (lforall x26)
+                                    (thenl lapply [r,
+                                      then (conv (land_tac (rand_tac h))) r]))))))])))))]))]))
+ , theorem nat_rec_ok (pi A \
+   (! a \ ! f \ ! n \
+     nat_rec '' A ' a ' f ' n =
+      nat_case '' A ' n ' a ' (lam _ p \ f ' p ' (nat_rec '' A ' a ' f ' p))),
+   [then inv
+     (bind A x22 \
+       bind (nat --> A --> A) x23 \
+        bind nat x24 \
+         then (conv (land_tac (rator_tac (applyth nat_rec_ok0))))
+          (then (conv (depth_tac (dd [nat_recF]))) r))])
+
+ /************* Arithmetics: plus ***************/
 
  ].
 
@@ -1841,8 +1900,6 @@ the_library L :-
   one or more goals delayed on it. We never check for them and we have
   no way atm to do that. See bug -3)
 
--2.25) new_basic_type is only monomorphic at the moment. How to fix it?
-
 -2) the test apply_2 is very slow: why?
     same for the witness for myprop
 
@@ -1854,41 +1911,16 @@ the_library L :-
 0.50) case AppUvar vs AppUVar in unification is bugged (e.g.)
       X^2 x0 x1 = X^2 x0 x1
 
-0.75) Observation: so far our HOL-Light is intuitionistic.
- Keep it like that? Note: according to Wiedijk, new_basic_types makes it
- classical anyway (EM) provable
-
-1) the need to use delay is a very good news. It justifies our
-implementation and it easily allow to publish. We also need to add
-the corresponding constraint propagation rules that implement the
-unicity of typing meta-theorem. I.e.
-  |- term X A,  |- term X B ==> |- A = B
-
-The propagation rule is however harder. Consider:
-
-  term x A |- term (X x) B,   |- term (X 0) C
-  ===> A = nat, B = C
-
-
- We will discuss about it and we basically already have
- the code in the refiner.elpi file.
-
 2) we need to fix the ELPI problems about handling of metavariables.
  I have already discussed with Enrico about them and he could have a
  shot at them. Namely:
- a) occur check + optimization to avoid it when possible
+ a) occur check + optimization to avoid it when possible (IN PROGRESS)
  b) unimplemented cases of restriction (IN PROGRESS)
 
 3) once we let metavariables reach the goals, the current HOL-light 
  tactic implementation becomes too fragile. We should let the user 
  refer to hypotheses at least by number if not by name. But we better
  have a bidirectional successor/predecessor via $delay
-
-4) we must implement type declarations and in particular inductive 
- types for HOL-light. It should also be a nice exercise in lambda-
- Prolog and the resulting code is likely to be easier than the 
- corresponding ML one. However, I never really had a look at the 
- mechanism used by HOL and we need to study it first
 
 5) we could implement an automated theorem prover in lambdaProlog
  that works or is interfaced with the HOL-light code. There are
