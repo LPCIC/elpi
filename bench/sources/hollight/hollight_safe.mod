@@ -266,6 +266,7 @@ parse (F2 $$ G2) (or ' F1 ' G1) :- !, parse F2 F1, parse G2 G1.
 parse (F2 ==> G2) (impl ' F1 ' G1) :- !, parse F2 F1, parse G2 G1.
 parse (X2 #in S2) (in '' _ ' X1 ' S1) :- !, parse X2 X1, parse S2 S1.
 parse (U2 <<= V2) (subseteq '' _ ' U1 ' V1) :- !, parse U2 U1, parse V2 V1.
+parse (F2 + G2) (plus ' F1 ' G1) :- !, parse F2 F1, parse G2 G1.
 parse (F2 ' G2) (F1 ' G1) :- !, parse F2 F1, parse G2 G1.
 parse (lam A F2) (lam A F1) :- !, pi x \ parse (F2 x) (F1 x).
 parse A A.
@@ -1147,6 +1148,7 @@ the_library L :-
  /******************* Equality *****************/
  , theorem eq_reflexive (pi A \ ((! A a \ a = a),
    [ then forall_i (bind A x \ r) ]))
+
  /******************* Logic *****************/
  , theorem or_commutative ((! a \ ! b \ a $$ b <=> b $$ a),
    [itaut 1])
@@ -1864,6 +1866,60 @@ the_library L :-
           (then (conv (depth_tac (dd [nat_recF]))) r))])
 
  /************* Arithmetics: plus ***************/
+ , def plus (nat --> nat --> nat,
+    lam _ n \ lam _ m \
+     nat_rec '' _ ' m ' (lam _ p \ lam _ sum \ s ' sum)' n)
+ , theorem plus_z ((! n \ z + n = n),
+   [then (conv (depth_tac (dd [plus])))
+     (then inv
+       (bind nat x21 \
+         then (conv (land_tac (applyth nat_rec_ok)))
+          (then (conv (land_tac (applyth nat_case_z))) r)))])
+ , theorem plus_s ((! n \ ! m \  s ' n + m = s ' (n + m)),
+   [then (repeat (conv (depth_tac (dd [plus]))))
+     (then inv
+       (bind nat x21 \
+         bind nat x22 \
+          then (conv (land_tac (applyth nat_rec_ok)))
+           (then (conv (land_tac (applyth nat_case_s)))
+             (then (repeat (conv (depth_tac b))) r))))])
+ , theorem plus_n_z ((! n \ n + z = n),
+   [then (conv (rand_tac beta_expand))
+     (thenl (applyth nat_e) [then (conv b) (applyth plus_z),
+       then (repeat (conv (depth_tac b)))
+        (then inv
+          (bind nat x21 \
+            then (conv (land_tac (applyth plus_s)))
+             (then (conv (depth_tac h)) r)))])])
+ , theorem plus_n_s ((! n \ ! m \ n + (s ' m) = s ' (n + m)),
+   [then (conv (rand_tac beta_expand))
+     (thenl (applyth nat_e)
+       [then (conv b)
+         (then inv
+           (bind nat x21 \ then (repeat (conv (depth_tac (applyth plus_z)))) r)),
+       then (repeat (conv (depth_tac b)))
+        (then inv
+          (bind nat x21 \
+            bind nat x22 \
+             then (conv (land_tac (applyth plus_s)))
+              (thenl c [r,
+                then (conv (land_tac apply)) (then sym (applyth plus_s))])))])])
+ , theorem plus_comm ((! n \ ! m \ n + m = m + n),
+   [then (conv (rand_tac beta_expand))
+     (thenl (applyth nat_e)
+       [then (conv b)
+         (then inv
+           (bind nat x21 \
+             then (conv (land_tac (applyth plus_z)))
+              (then sym (applyth plus_n_z)))),
+       then (repeat (conv (depth_tac b)))
+        (then inv
+          (bind nat x21 \
+            bind nat x22 \
+             then (conv (land_tac (applyth plus_s)))
+              (then sym
+                (then (conv (land_tac (applyth plus_n_s)))
+                  (thenl c [r, then sym apply])))))])])
 
  ].
 
