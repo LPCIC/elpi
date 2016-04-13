@@ -1768,6 +1768,7 @@ the_library L :-
                      then (conv (depth_tac (applyth case_univ_inj2)))
                      (then (conv (depth_tac b))
                        (then (conv (depth_tac (applyth nat_absrep))) r))])))))])
+
  /******* Cartesian product of types ******/
  /* TODO: this is an inductive type as well: generalize
     inductive_type to type abstractions */
@@ -1790,42 +1791,21 @@ the_library L :-
     ))
  /* TODO: define fst and snd and prove the usual lemmas
     fst ' (pair ' a ' b) = a */
+
  /************** Back to natural numbers ***************/
-/* , inductive_def clt cltF clt_monotone clt_i clt_e0 clt_e
-   (lt \
-     [ (clt_s, ! n \ lt ' (pair '' _ '' _ ' n ' (s ' n)))
-     , (clt_trans, ! n1 \ ! n2 \ ! n3 \
-         lt ' (pair '' _ '' _ ' n1 ' n2) ==>
-         lt ' (pair '' _ '' _ ' n2 ' n3) ==>
-         lt ' (pair '' _ '' _ ' n1 ' n3)) ])   */
- /* TODO: define lt that takes two naturals, not a pair */
-/*
+ , theorem pred_well_founded
+   (well_founded '' nat ' (lam nat x21 \ lam nat x22 \ x22 = s ' x21) ,
+   [then (conv dd)
+     (then forall_i
+       (bind nat x21 \
+         thenl (applyth nat_e)
+          [then (applyth acc_i)
+            (then (conv (depth_tac b)) (then (conv (depth_tac b)) daemon)),
+          then inv
+           (bind nat x22 \
+             then (applyth acc_i)
+              (then (conv (depth_tac b)) (then (conv (depth_tac b)) daemon)))]))])
 
-1. we need to define the lt relation over nat
-   which means
-                  n1<n2    n2<n3
-   =========     =================
-    n < S n            n1<n3
-
-1. one needs to delift < : nat*nat --> bool to a < : univ*univ --> bool
-
-2. and prove it to be well-founded
-    
- /* leq to be defined as an inductive definition over nat*nat,
-    and then prove to be well_founded */
- , axiom wf_leq (well_founded '' _ ' leq)
- , def nat_recF (pi A \ (A --> (A --> A) --> (univ --> A) --> (univ --> A),
-    lam A a \ lam (_ A) f \
-     lam (_ A) nat_recF \ lam _ n \
-      case_univ ' n ' (lam _ x \ a) ' (lam _ p \ f ' (nat_recF ' p))))
- , def nat_rec_fixpoint (pi A \ (A --> (A --> A) --> univ --> A,
-    lam A a \ lam (_ A) f \ lam _ n \
-     rec_univ ' (nat_recF '' (_ A) ' a ' f) ' n))
-/* , theorem nat_rec_unfold (pi A \ ! a \ ! f \
-    nat_rec_fixpoint '' A ' a ' f =
-     nat_recF '' A ' a ' f ' (nat_rec_fixpoint '' A ' a ' f)) */
- %, theorem nat_rec_z (pi A \ ! a \ ! f \ nat_rec '' A ' a ' f ' z = a)
-*/
  ].
 
 /* Status and dependencies of the tactics:
