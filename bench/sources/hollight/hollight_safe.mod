@@ -93,8 +93,6 @@ term' proj2_univ (univ '' A '' B --> univ '' A '' B).
 term' inj1_univ (univ '' A '' B --> univ '' A '' B).
 term' inj2_univ (univ '' A '' B --> univ '' A '' B).
 term' case_univ (univ '' A '' B --> (univ '' A '' B --> C) --> (univ '' A '' B --> C) --> C).% :- typ A.
-% rec implies that all types are inhabited :-(
-% solution?: let it take in input a dummy inhabitant of A as well
 term' rec (((A --> B) --> (A --> B)) --> (A --> B)).% :- typ A.
 
 /* like term, but on terms that are already known to be well-typed */
@@ -117,13 +115,6 @@ ereterm T TY :- reterm T TY.
 thm C (seq Gamma G) _ :- debug, $print Gamma "|- " G " := " C, fail.
 
 /* << HACKS FOR DEBUGGING */
-term' p prop.
-term' q prop.
-term' f (prop --> prop).
-term' (g X) prop :- term X prop.
-reterm' (g X) prop.
-term' c prop.
-
 thm daemon (seq Gamma F) [].
 /* >> HACKS FOR DEBUGGING */
 
@@ -1426,12 +1417,14 @@ the_library L :-
      rec ' h = h ' (rec ' h)))
 
  /******************* TESTS *****************/
+ /* The first three tests are commented out because they require extra-hacks
+    in the kernel to avoid quantifying over p, q and g.
  , theorem test_apply (p ==> (p ==> p ==> q) ==> q,
     [then i (then i (then apply h))])
  , theorem test_apply2 (p ==> (! x \ ! y \ x ==> x ==> y) ==> q,
     [then i (then i (then apply h))])
  , theorem test_itaut_1 (((? x \ g x) ==> ! x \ (! y \ g y ==> x) ==> x),
-   [itaut 4])
+   [itaut 4])*/
  , theorem test_monotone1 (monotone '' _ ' (lam _ p \ lam _ x \ not ' (p ' x) ==> tt && p ' tt $$ p ' x),
    [ auto_monotone ])
  , theorem test_monotone2 (monotone '' _ ' (lam _ p \ lam _ x \ ? z \ not ' (p ' x) ==> tt && p ' tt $$ z),
