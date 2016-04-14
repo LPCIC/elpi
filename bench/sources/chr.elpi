@@ -1,0 +1,34 @@
+% Examples that must succeed:
+% term (lam x \ X x) (arr A nat), term (lam x \ X x) (arr bool B).
+% term (lam x \ lam y \ X (app x y)) (arr (arr A Y) (arr A nat)), term (lam x \ X x) (arr bool B).
+
+% Examples that must fail:
+% term (lam x \ X x) (arr A nat), term (lam x \ X) (arr bool B).
+% term (lam x \ X x) (arr nat nat), term (lam x \ X x) (arr bool B).
+% term (lam x \ lam y \ X (app x y)) (arr X (arr A nat)), term (lam x \ X x) (arr bool B).
+% -- reason: (app x y) is not well typed when X and A are frozen
+
+mode term(i o) {
+  term (app X Y) B :- term X (arr A B), term Y A.
+  term (lam F) (arr A B) :- pi x\ term x A => term (F x) B.
+  term (?? as X) A :- $constraint (term X A) X.
+}
+
+infixr ====> 126. % Implication where the l.h.s. is a list of propositions.
+
+constraint term {
+  rule [ (GX ?- term (?? X LX) TX) ] [ (GY ?- term (?? Y LY) TY) ] (CTXCONSTR, TX = TY) :-
+    X = Y, compatible GX LX GY LY CTXCONSTR.
+}
+
+%compatible A B C D E :- $print "##" (compatible A B C D E), fail.
+compatible _ [] _ [] true :- !.
+compatible GX [X|XS] GY [Y|YS] (TX = TY, K) :-
+ (GX ====> term X TX),
+ (GY ====> term Y TY),
+ !,
+ compatible GX XS GY YS K.
+compatible _ _ _ _ false.
+
+    [] ====> T :- T.
+[X|XS] ====> T :- X => (XS ====> T).

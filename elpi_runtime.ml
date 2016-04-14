@@ -372,7 +372,7 @@ let nilc = snd (funct_of_ast F.nilf)
 let consc = fst (funct_of_ast F.consf)
 let nablac = fst (funct_of_ast (F.from_string "nabla"))
 let entailsc = fst (funct_of_ast (F.from_string "?-"))
-let uvc = fst (funct_of_ast (F.from_string "?"))
+let uvc = fst (funct_of_ast (F.from_string "??"))
 let asc = fst (funct_of_ast (F.from_string "as"))
 let letc = fst (funct_of_ast (F.from_string ":="))
 
@@ -1847,16 +1847,56 @@ let rec list_to_lp_list = function
       unif matching depth adepth a adepth
         (deref_appuv ~from:adepth ~to_:(adepth+depth) args e.(i)) empty_env aclosed bclosed
 
+   (* UVar introspection *)
+   | (UVar _ | AppUVar _), Const c when c == uvc && matching -> true
+   | (UVar(r,vd,_) | AppUVar(r,vd,_)), App(c,hd,[]) when c == uvc && matching ->
+      unif matching depth adepth (UVar(r,vd,0)) bdepth hd e aclosed bclosed
+   | UVar(r,vd,ano), App(c,hd,[arg]) when c == uvc && matching ->
+      let basedepth = 0 in (* XXX BUG? WE CAN DO BETTER *)
+      let r,implargs =
+       if vd <= basedepth then r,0
+       else begin
+        let r' = oref dummy in
+        let implargs = vd - basedepth in
+        let newvar = UVar(r',basedepth,implargs) in
+        if not !last_call then trail := (Assign r) :: !trail;
+        r @:= newvar;
+        [%spy "assign" (ppterm depth [] adepth empty_env) (!!r)];
+        r', implargs
+       end in
+      unif matching depth adepth (UVar(r,0,0)) bdepth hd e aclosed bclosed &&
+      let args = list_to_lp_list (mkinterval basedepth (implargs + ano) 0) in
+      unif matching depth adepth args bdepth arg e aclosed bclosed
+   | AppUVar(r,vd,args), App(c,hd,[arg]) when c == uvc && matching ->
+      (* CODE CUT&PASTE FROM CASE ABOVE *)
+      let basedepth = 0 in (* XXX BUG? WE CAN DO BETTER *)
+      let r,implargs =
+       if vd <= basedepth then r,0
+       else begin
+        let r' = oref dummy in
+        let implargs = vd - basedepth in
+        let newvar = UVar(r',basedepth,implargs) in
+        if not !last_call then trail := (Assign r) :: !trail;
+        r @:= newvar;
+        [%spy "assign" (ppterm depth [] adepth empty_env) (!!r)];
+        r', implargs
+       end in
+      let args = mkinterval basedepth implargs 0 @ args in
+      unif matching depth adepth (UVar(r,vd,0)) bdepth hd e aclosed bclosed &&
+      let args = list_to_lp_list args in
+      unif matching depth adepth args bdepth arg e aclosed bclosed
+   | _, (Const c | App(c,_,_)) when c == uvc ->
+      error (string_of_constant uvc ^ " can be used only in matching and takes 0, 1 or 2 args")
+
+
    (* assign *)
    | _, Arg (i,0) ->
-       if a = Const uvc then true else
      begin try
       e.(i) <- hmove ~from:(adepth+depth) ~to_:adepth a;
       [%spy "assign" (ppterm adepth [] adepth empty_env) (e.(i))]; true
      with RestrictionFailure -> false end
    | _, UVar (r,origdepth,0) when not matching || 
          (match a with UVar _ | AppUVar _ -> true | _ -> false) ->
-       if a = Const uvc then true else
        let avoid = if aclosed then None else Some r in
        if not !last_call then
         trail := (Assign r) :: !trail;
@@ -1870,10 +1910,9 @@ let rec list_to_lp_list = function
              (* Second step: we restrict the l.h.s. *)
              hmove ~from:(bdepth+depth) ~to_:origdepth a in
          r @:= t;
-         [%spy "assign" (ppterm depth [] adepth empty_env) t]; true
+         [%spy "assign" (fun fmt tt -> Fmt.fprintf fmt "%a := %a" (ppterm depth [] bdepth empty_env) (UVar (r,origdepth,0)) (ppterm depth [] adepth empty_env) tt) t]; true
        with RestrictionFailure -> false end
    | UVar (r,origdepth,0), _ when not matching ->
-       if b = Const uvc then true else
        let avoid = if bclosed then None else Some r in
        if not !last_call then
         trail := (Assign r) :: !trail;
@@ -1887,7 +1926,7 @@ let rec list_to_lp_list = function
              (* Second step: we restrict the r.h.s. *)
              hmove ~from:(adepth+depth) ~to_:origdepth b in
          r @:= t;
-         [%spy "assign" (ppterm depth [] adepth empty_env) t]; true
+         [%spy "assign" (fun fmt tt -> Fmt.fprintf fmt "%a := %a" (ppterm depth [] adepth empty_env) (UVar (r,origdepth,0)) (ppterm depth [] adepth empty_env) tt) t]; true
        with RestrictionFailure -> false end
 
    (* simplify *)
@@ -1960,21 +1999,6 @@ let rec list_to_lp_list = function
        true
        end
   
-   (* UVar introspection *)
-   | (UVar _ | AppUVar _), Const c when c == uvc && matching -> true
-   | (UVar(r,vd,_) | AppUVar(r,vd,_)), App(c,hd,[]) when c == uvc && matching ->
-      unif matching depth adepth (UVar(r,vd,0)) bdepth hd e aclosed bclosed
-   | UVar(r,vd,ano), App(c,hd,[arg]) when c == uvc && matching ->
-      unif matching depth adepth (UVar(r,vd,0)) bdepth hd e aclosed bclosed &&
-      let args = list_to_lp_list (mkinterval vd ano 0) in
-      unif matching depth adepth args bdepth arg e aclosed bclosed
-   | AppUVar(r,vd,args), App(c,hd,[arg]) when c == uvc && matching ->
-      unif matching depth adepth (UVar(r,vd,0)) bdepth hd e aclosed bclosed &&
-      let args = list_to_lp_list args in
-      unif matching depth adepth args bdepth arg e aclosed bclosed
-   | _, (Const c | App(c,_,_)) when c == uvc ->
-      error "? can be used only in matching and takes 0, 1 or 2 args"
-
    (* recursion *)
    | App (c1,x2,xs), App (c2,y2,ys) ->
       (* Compressed cut&past from Const vs Const case below +
@@ -2245,6 +2269,7 @@ let rec freeze m = function
       (try m, list_assq1 r m
        with Not_found ->
          let n, x = new_fresh_constant () in
+         [%spy "freeze" (fun fmt tt -> Fmt.fprintf fmt "%s == %a" (string_of_constant n) (ppterm 0 [] 0 empty_env) tt) (UVar (r,lvl,0))];
          ((r,lvl),(x,n)) :: m, (x,n)) in
      m, (match mkinterval 0 (lvl+ano) 0 with
         | [] -> c
@@ -2255,6 +2280,7 @@ let rec freeze m = function
       (try m, list_assq1 r m
        with Not_found ->
          let n, x = new_fresh_constant () in
+         [%spy "freeze" (fun fmt tt -> Fmt.fprintf fmt "%s == %a" (string_of_constant n) (ppterm 0 [] 0 empty_env) tt) (UVar (r,lvl,0))];
          ((r,lvl),(x,n)) :: m, (x,n)) in
      let m, args = List.fold_right (fun x (m,l) ->
         let m, x = freeze m x in
