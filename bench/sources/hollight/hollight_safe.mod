@@ -546,7 +546,7 @@ prove_intro_thms L PRED PRED_I INTROTHMS :-
 
 mk_intro_thm PRED_I (NAME,ST)
  (theorem NAME (ST,
-   [(then inv (bind* (then (applyth PRED_I) (then (conv dd) (itauteq 10)))))])).
+   [ (then inv (bind* (then (applyth PRED_I) (then (conv dd) (itauteq 6))))) ])).
 
 inductive_def_pkg PRED PREDF PREDF_MONOTONE PRED_I PRED_E0 PRED_E L OUT :-
  parse_inductive_def_spec L PL,
