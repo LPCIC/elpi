@@ -283,11 +283,6 @@ let no_mode = []
 
 let destConst = function Const x -> x | _ -> assert false
 
-let head_of = function
-  | Const x -> x
-  | App(x,_,_) -> x
-  | _ -> anomaly "todo deref"
-
 let (!!) { contents = x } = x
 
 module Constants : sig
@@ -1569,7 +1564,7 @@ let print_delayed () =
 
 print_cstr :=
  (function
-         | (Delayed_goal { depth; prog; pdiff; goal }, keys) ->
+   | (Delayed_goal { depth; prog; pdiff; goal }, keys) ->
      Fmt.fprintf Fmt.std_formatter
        (*"Delaying goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
        "Delaying goal: @[<hov 2> ...@ ⊢^%d %a@]\n%!"
@@ -2478,6 +2473,14 @@ let delay_goal ?(filter_ctx=fun _ -> true) ~depth prog ~goal:g ~on:keys ~mode =
   let delayed_goal = (Delayed_goal { depth; prog = Obj.magic prog; pdiff; goal = g }, keys) in
   add_constraint delayed_goal
 ;;
+
+let rec head_of = function
+  | Const x -> x
+  | App(x,_,_) -> x
+  | AppUVar(r,_,_)
+  | UVar(r,_,_) when !!r != dummy -> head_of !!r
+  | _ -> anomaly "strange head"
+
 let declare_constraint ~depth prog ~goal:g ~on:keys ~mode =
   let clique = CHR.clique_of (head_of g) !chrules in 
   (* XXX head_of is weak because no clausify ??? XXX *)
