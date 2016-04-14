@@ -77,6 +77,7 @@ term' (lam A F) (A --> B) :- pi x\ term' x A => term (F x) B.
 term' (F ' T) B :- term F (A --> B), term T A.
 term' eq (A --> A --> prop).% :- typ A.
 
+/* Constructive notions, implementable in classical HOL */
 /* disj_union constructors and destructors */
 term' inj1_disj_union (A --> disj_union '' A '' B).
 term' inj2_disj_union (B --> disj_union '' A '' B).
@@ -93,7 +94,13 @@ term' proj2_univ (univ '' A '' B --> univ '' A '' B).
 term' inj1_univ (univ '' A '' B --> univ '' A '' B).
 term' inj2_univ (univ '' A '' B --> univ '' A '' B).
 term' case_univ (univ '' A '' B --> (univ '' A '' B --> C) --> (univ '' A '' B --> C) --> C).% :- typ A.
+
+/* fixpoint operator */
 term' rec (((A --> B) --> (A --> B)) --> (A --> B)).% :- typ A.
+
+/* choice axiom (all types are inhabited) */
+term' choose A.
+/* End of constructive notions */
 
 /* like term, but on terms that are already known to be well-typed */
 reterm T TY :- $is_flex T, !.%, $delay (reterm T TY) [ T ].
