@@ -18,4 +18,4 @@ val dverbose : bool ref
 val get_cur_step : string -> int
 
 val parse_argv : string array -> string array
-val usage: unit -> unit
+val usage: string

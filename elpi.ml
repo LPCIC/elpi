@@ -51,48 +51,50 @@ let set_terminal_width ?(max_w=
 ;;
 
 
-let usage () =
-  Format.eprintf "\nusage: elpi [OPTIONS]... [FILENAME]...\n";
-
-  Format.eprintf "\nmain options:\n";
-  Format.eprintf "\t-test runs the query \"main\"\n";
-  Format.eprintf "\t-prolog prints files to Prolog syntax if possible\n";
-  Format.eprintf "\t-latex_export prints files to LaTeX syntax\n";
-
-  Elpi_trace.usage ()
+let usage =
+  "\nusage: elpi [OPTION].. [FILE]..\n" ^ 
+  "\nmain options:\n" ^ 
+  "\t-test runs the query \"main\"\n" ^ 
+  "\t-print-prolog prints files to Prolog syntax if possible, then exit\n" ^ 
+  "\t-print-latex prints files to LaTeX syntax, then exit\n" ^ 
+  "\t-print prints files after desugar, then exit\n" ^ 
+  Elpi_trace.usage
 ;;
 
 let _ =
-  let argv = Elpi_trace.parse_argv Sys.argv in
-  let argn = Array.length argv in
-  if argn = 2 && (argv.(1) = "-h" || argv.(1) = "--help") then
-   begin usage () ; exit 0 end;
-  (* j=1 iff -test is not passed *)
-  let j,test =
-   if argn = 1 then 1,`OneInteractive
-   else if argv.(1) = "-test" then 2,`OneBatch
-   else if argv.(1) = "-prolog" then 2,`PPprologBatch
-   else if argv.(1) = "-latex_export" then 2,`LatexExport
-   else 1,`OneInteractive in
-  let filenames = ref [] in
-  for i=j to argn - 1 do filenames := argv.(i)::!filenames done;
+  let test = ref false in
+  let print_prolog = ref false in
+  let print_latex = ref false in
+  let print_lprolog = ref false in
+  let rec aux = function
+    | [] -> []
+    | "-test" :: rest -> test := true; aux rest
+    | "-print-prolog" :: rest -> print_prolog := true; aux rest
+    | "-print-latex" :: rest -> print_latex := true; aux rest
+    | "-print" :: rest -> print_lprolog := true; aux rest
+    | ("-h" | "--help") :: _ -> Printf.eprintf "%s" usage; exit 0
+    | s :: _ when String.length s > 0 && s.[0] == '-' ->
+        Printf.eprintf "Unrecognized option: %s\n%s" s usage; exit 1
+    | x :: rest -> x :: aux rest in
+  let files = aux (List.tl (Array.to_list (Elpi_trace.parse_argv Sys.argv))) in
   set_terminal_width ();
-  if test = `LatexExport then begin
-   Elpi_latex_exporter.activate () ;
-   ignore (Elpi_parser.parse_program (List.rev !filenames))
-  end else
-   let p = Elpi_parser.parse_program (List.rev !filenames) in
-   let g =
-     match test with
-     | `OneBatch | `LatexExport | `PPprologBatch ->
-       Elpi_parser.parse_goal "main."
-     | _ ->
-     Printf.printf "goal> %!";
-     let strm = Stream.of_channel stdin in
-     Elpi_parser.parse_goal_from_stream strm in
-   match test with
-   | `OneBatch -> test_impl p g
-   | `OneInteractive -> run_prog p g
-   | `PPprologBatch -> pp_lambda_to_prolog p  
-   | `LatexExport -> ()
+  if !print_latex then Elpi_latex_exporter.activate () ;
+  let p = Elpi_parser.parse_program files in
+  if !print_latex then exit 0;
+  if !print_prolog then (pp_lambda_to_prolog p; exit 0);
+  if !print_lprolog then begin
+    Format.eprintf "@[<v>";
+    let _ = Elpi_runtime.program_of_ast ~print:true p in
+    Format.eprintf "@]%!";
+    exit 0;
+    end;
+  let g =
+   if !test then Elpi_parser.parse_goal "main."
+   else begin
+    Printf.printf "goal> %!";
+    let strm = Stream.of_channel stdin in
+    Elpi_parser.parse_goal_from_stream strm
+   end in
+  if !test then test_impl p g
+  else run_prog p g
 ;;

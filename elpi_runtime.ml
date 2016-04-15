@@ -2713,7 +2713,7 @@ let query_of_ast_cmap lcs cmap t =
 
 let query_of_ast (lcs,_) t = query_of_ast_cmap lcs ConstMap.empty t;;
 
-let program_of_ast (p : Elpi_ast.decl list) : program =
+let program_of_ast ?(print=false) (p : Elpi_ast.decl list) : program =
  let rec aux lcs clauses =
   let clauses,lcs,_,cmapstack as res =
    List.fold_left
@@ -2721,7 +2721,7 @@ let program_of_ast (p : Elpi_ast.decl list) : program =
       match d with
          Elpi_ast.Clause t ->
           let names,_,env,t = query_of_ast_cmap lcs cmap t in
-          (* Fmt.eprintf "%a\n%!" (uppterm 0 names 0 env) t ; *)
+          if print then Fmt.eprintf "%a.@;" (uppterm 0 names 0 env) t;
           let moreclauses, morelcs = clausify (Array.length env) lcs [] [] 0 0 t in
           List.rev_append moreclauses clauses, lcs+morelcs, cmap, cmapstack
        | Elpi_ast.Begin -> clauses, lcs, cmap, cmap::cmapstack

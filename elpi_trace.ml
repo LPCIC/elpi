@@ -81,15 +81,15 @@ let exit k tailcall ?(e=OK) time =
       (make_indent ()) (if tailcall then "->" else pr_exc e) time;
   decr level
 
-let usage () =
-  F.eprintf "\ntracing facility options:\n";
-  F.eprintf "\t-trace-v  verbose\n";
-  F.eprintf "\t-trace-at FUNCNAME START STOP  print trace between call START\n";
-  F.eprintf "\t\tand STOP of function FNAME\n";
-  F.eprintf "\t-trace-on  enable trace printing\n";
-  F.eprintf "\t-trace-skip REX  ignore trace items matching REX\n";
-  F.eprintf "\t-trace-only REX  trace only items matching REX\n";
-  F.eprintf "\t-trace-maxbox NUM  Format max_boxes set to NUM\n";
+let usage =
+  "\ntracing facility options:\n" ^
+  "\t-trace-v  verbose\n" ^
+  "\t-trace-at FUNCNAME START STOP  print trace between call START\n" ^
+  "\t\tand STOP of function FNAME\n" ^
+  "\t-trace-on  enable trace printing\n" ^
+  "\t-trace-skip REX  ignore trace items matching REX\n" ^
+  "\t-trace-only REX  trace only items matching REX\n" ^
+  "\t-trace-maxbox NUM  Format max_boxes set to NUM\n"
 ;;
 
 let parse_argv argv =

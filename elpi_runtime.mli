@@ -28,7 +28,7 @@ type program
 type index
 
 val query_of_ast : program -> term -> query
-val program_of_ast : decl list -> program
+val program_of_ast : ?print:bool -> decl list -> program
 val execute_once : program -> query -> bool (* true means error *)
 val execute_loop : program -> query -> unit
 
