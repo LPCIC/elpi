@@ -564,18 +564,9 @@ let add_constraint0 (_,vars as cstr) =
  delayed := cstr :: !delayed;
  List.iter (fun r -> r.rest <- cstr :: r.rest) vars
 
-let safe_eq = ref (fun _ -> assert false);; 
 let print_cstr = ref (fun _ -> assert false);; 
 
-let rec safe_list_mem x = function
-    [] -> false
-  | a::l -> !safe_eq a x || safe_list_mem x l
-
 let add_constraint cstr =
- if safe_list_mem cstr !delayed then begin
-  (*Fmt.fprintf Fmt.std_formatter "Duplicate delayed goal skipped\n%!" ;*)
-  (*assert false*) ()
- end else begin
   (*!print_cstr cstr ;*)
   add_constraint0 cstr ;
   (match cstr with
@@ -583,7 +574,6 @@ let add_constraint cstr =
     | _ (* Delayed_goal _ *) ->
        new_delayed := (cstr, 0) :: !new_delayed);
   if not !last_call then trail := AddConstr cstr :: !trail
- end
 
 let remove_constraint0 (_,vars as cstr) =
  delayed := remove_from_list cstr !delayed;
@@ -1115,7 +1105,7 @@ module type Indexing = sig
   val add_clauses : key clause list -> (int * term) -> index -> index
   val get_clauses : depth:int -> term -> index -> key clause list
   val make_index : key clause list -> index
-  val local_prog : to_:int -> index -> term list
+  val local_prog : index -> ((*depth:*)int * term) list
 end
 
 module TwoMapIndexing : Indexing = struct (* {{{ *)
@@ -1251,8 +1241,7 @@ let close_with_pis depth vars t =
    if n = 0 then t else App(pic,Lam (add_pis (n-1) t),[]) in
   add_pis vars (aux t)
 
-let local_prog ~to_ { src } =  
-  List.rev_map (fun (depth, t) -> hmove ~from:depth ~to_ t) src
+let local_prog { src } =  src
 
 end (* }}} *)
 
@@ -1394,8 +1383,7 @@ module UnifBits : Indexing = struct
      [] -> []
    | (_,l)::tl -> (List.map (fun (cl,_) -> cl) l) @ flatten_ tl
 
-let local_prog ~to_ { src } =  
-  List.rev_map (fun (depth, t) -> hmove ~from:depth ~to_ t) src
+let local_prog { src } = src 
 
 end
 
@@ -1422,39 +1410,14 @@ let original_program = Fork.new_local (Obj.magic 0 : index) (* dummy value *)
  * depth (but for orig_prog) *)
 (* CAVEAT: we are going to use pointer equality on the contents, so it must
  * be a tuple *)
-exception Delayed_goal of (int * index * term list * term)
-
-let safe_equal a x = Hashtbl.hash a = Hashtbl.hash x (*
- match a,x with
-   (Delayed_goal (depth,prog,pdiff,g),xs), (Delayed_goal (depth',prog',pdiff',g'),xs') ->
-  Fmt.fprintf Fmt.str_formatter
-    (*"Delaying goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
-    "@[<hov 2> ...@ ⊢ %a@]\n%!"
-      (*(pplist (uppterm depth [] 0 empty_env) ",") pdiff*)
-      (uppterm depth [] 0 empty_env) g ;
-  let s1 = Fmt.flush_str_formatter () in
-  Fmt.fprintf Fmt.str_formatter
-    (*"Delaying goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
-    "@[<hov 2> ...@ ⊢ %a@]\n%!"
-      (*(pplist (uppterm depth [] 0 empty_env) ",") pdiff*)
-      (uppterm depth' [] 0 empty_env) g' ;
-  let s2 = Fmt.flush_str_formatter () in
-  (*prerr_endline ("Compare1: " ^ s1);
-  prerr_endline ("Compare2: " ^ s2);*)
-  s1 = s2 (*
-    depth = depth' && g == g' &&
-     List.for_all2 (==) xs xs' *)
- | _, _ -> false *)
-;;
-
-safe_eq := safe_equal
+exception Delayed_goal of (int * index * ((*depth:*)int * term) list * term)
 
 let delay_goal ~depth prog ~goal:g ~on:keys =
-  let pdiff = local_prog ~to_:depth prog in
+  let pdiff = local_prog prog in
   (*Fmt.fprintf Fmt.std_formatter
     (*"Delaying goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
     "Delaying goal: @[<hov 2> ...@ ⊢^%d %a@]\n%!"
-      (*(pplist (uppterm depth [] 0 empty_env) ",") pdiff*) depth
+      (*(pplist (fun fmt (depth,t) -> uppterm depth [] 0 empty_env fmt t) ",") pdiff*) depth
       (uppterm depth [] 0 empty_env) g ;*)
   let delayed_goal = (Delayed_goal (depth,prog,pdiff,g), keys) in
   add_constraint delayed_goal
@@ -1466,7 +1429,7 @@ print_cstr :=
      Fmt.fprintf Fmt.std_formatter
        (*"Delaying goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
        "Delaying goal: @[<hov 2> ...@ ⊢^%d %a@]\n%!"
-         (*(pplist (uppterm depth [] 0 empty_env) ",") pdiff*) depth
+         (*(pplist (fun fmt (depth,t) -> uppterm depth [] 0 empty_env fmt t) ",") pdiff*) depth
          (uppterm depth [] 0 empty_env) g
    | _ -> ())
 ;;
@@ -2313,7 +2276,7 @@ let propagate constr j history =
          List.fold_left (fun acc (d,_,_) -> max d acc) ruledepth heads_sequent in
        let contexts, goals_at_max_depth =
          List.fold_right (fun (d,p,g) (ctxs, gs) ->
-           (d,p) :: ctxs, hmove ~from:d ~to_:max_depth g :: gs)
+           p :: ctxs, hmove ~from:d ~to_:max_depth g :: gs)
            heads_sequent ([],[]) in
 
        let to_match, to_remove =
@@ -2343,7 +2306,7 @@ let propagate constr j history =
          let m = List.fold_left2 match_p m  to_remove patterns_sequent2 in
          (* check all aligned max_depth *)
          let contexts_at_max_depth = contexts |>
-           List.map (fun (d,p) -> List.map (hmove ~from:d ~to_:max_depth) p) in
+           List.map (fun p -> List.map (fun (d,t) -> hmove ~from:d ~to_:max_depth t) p) in
          let ctxs_to_match, ctxs_to_remove =
            partition_i (fun i _ -> i < leng1) contexts_at_max_depth in
 
@@ -2394,7 +2357,7 @@ let print_delayed () =
    | Delayed_goal (depth,_,pdiff,g),l ->
       Fmt.fprintf Fmt.std_formatter
         "delayed goal: @[<hov 2> %a@ ⊢ %a on %a@]\n%!"
-          (pplist (uppterm depth [] 0 empty_env) ",") pdiff
+          (pplist (fun fmt (depth,t) -> uppterm depth [] 0 empty_env fmt t) ",") pdiff
           (uppterm depth [] 0 empty_env) g
           (pplist (uppterm depth [] 0 empty_env) ",")
           (List.map (fun r -> UVar(r,0,0)) l)

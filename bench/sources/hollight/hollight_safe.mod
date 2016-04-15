@@ -71,7 +71,7 @@ typ' (A --> B) :- typ A, typ B.
 typ' (disj_union '' A '' B) :- typ A, typ B.
 
 /*term T TY :- $print (term T TY), fail.*/
-term T TY :- $is_flex T, !.%, $delay (term T TY) [ T ].
+term T TY :- $is_flex T, !, $delay (term T TY) [ T ].
 term T TY :- term' T TY.
 term' (lam A F) (A --> B) :- pi x\ term' x A => term (F x) B.
 term' (F ' T) B :- term F (A --> B), term T A.
@@ -103,7 +103,7 @@ term' choose A.
 /* End of constructive notions */
 
 /* like term, but on terms that are already known to be well-typed */
-reterm T TY :- $is_flex T, !.%, $delay (reterm T TY) [ T ].
+reterm T TY :- $is_flex T, !, $delay (reterm T TY) [ T ].
 reterm T TY :- reterm' T TY.
 reterm' (lam A F) (A --> B) :- !, pi x\ (reterm' x A :- !) => reterm (F x) B.
 reterm' (F ' T) B :- !, reterm F (A --> B).
@@ -243,7 +243,7 @@ check1nbt TYPE REP ABS REPABS ABSREP PREPH (P,TACTICS) HYPS :-
 
 check WHAT :-
  next_object WHAT C CONT,
- (C = stop, !, K = true ; check1 C H , check_hyps [] H, K = (H => check CONT)),
+ (C = stop, !, K = true ; check1 C H , check_hyps [] H, $print_delayed, K = (H => check CONT)),
  !, K.
 
 }
