@@ -600,7 +600,7 @@ let to_resume = Fork.new_local []
 
 module CMap = Map.Make(Constants)
 
-let modes = (*Fork.new_local*) ref CMap.empty
+let modes = Fork.new_local CMap.empty
 
 type 'key clause =
   { depth : int; args : term list; hyps : term list; vars : int; key : 'key; mode: mode }
