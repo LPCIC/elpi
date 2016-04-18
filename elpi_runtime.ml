@@ -1792,10 +1792,10 @@ let rec list_to_lp_list = function
   | x::xs -> App(consc,x,[list_to_lp_list xs])
 ;;
  let rec unif matching depth adepth a bdepth b e =
-   [%trace "unif" ("@[<hov 2>^%d%s%a@ =%d%s= ^%d%s%a@]%!"
-       adepth (color aclosed ":") (ppterm (adepth+depth) [] adepth empty_env) a
+   [%trace "unif" ("@[<hov 2>^%d%a@ =%d%s= ^%d%a@]%!"
+       adepth (ppterm (adepth+depth) [] adepth empty_env) a
        depth (if matching then "m" else "")
-       bdepth (color bclosed ":") (ppterm (bdepth+depth) [] adepth e) b)
+       bdepth (ppterm (bdepth+depth) [] adepth e) b)
    begin let delta = adepth - bdepth in
    (delta = 0 && a == b) || match a,b with
   
@@ -1885,8 +1885,7 @@ let rec list_to_lp_list = function
       e.(i) <- hmove ~from:(adepth+depth) ~to_:adepth a;
       [%spy "assign" (ppterm adepth [] adepth empty_env) (e.(i))]; true
      with RestrictionFailure -> false end
-   | _, UVar (r,origdepth,0) when not matching || 
-         (match a with UVar _ | AppUVar _ -> true | _ -> false) ->
+   | _, UVar (r,origdepth,0) ->
        if not !last_call then
         trail := (Assign r) :: !trail;
        begin try
@@ -2452,11 +2451,13 @@ let chrules = Fork.new_local CHR.empty
 let delay_goal ?(filter_ctx=fun _ -> true) ~depth prog ~goal:g ~on:keys =
   let pdiff = local_prog prog in
   let pdiff = List.filter filter_ctx pdiff in
+(*
   [%spy "delay-goal" (fun fmt (depth,x)-> Fmt.fprintf fmt
     (*"Delaying goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
     "@[<hov 2> ...@ ⊢^%d %a@]\n%!"
       (*(pplist (uppterm depth [] 0 empty_env) ",") pdiff*) depth
       (uppterm depth [] 0 empty_env) x) g];
+*)
   let delayed_goal = (Delayed_goal { depth; prog = Obj.magic prog; pdiff; goal = g }, keys) in
   add_constraint delayed_goal
 ;;
@@ -2664,7 +2665,7 @@ let make_runtime : unit -> (?pr_delay:bool -> ?depth:int -> 'a -> 'b -> 'c -> in
   (* Input to be read as the orl (((p,g)::gs)::next)::alts
      depth >= 0 is the number of variables in the context. *)
   let rec run depth p g gs (next : frame) alts lvl =
-    [%trace "run" ("%a %a" pp_mode fm (ppterm depth [] 0 empty_env) g)
+    [%trace "run" ("%a" (ppterm depth [] 0 empty_env) g)
  begin match resume_all () with
   None ->
 begin Fmt.fprintf Fmt.std_formatter "Undo triggered by goal resumption\n%!";
