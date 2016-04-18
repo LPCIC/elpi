@@ -362,7 +362,14 @@ EXTEND
   mode :
     [[ LPAREN; c = CONSTANT;
        l = LIST1 [ CONSTANT "i" -> true | CONSTANT "o" -> false ]; RPAREN;
-       alias = OPT[ CONSTANT "xas"; c = CONSTANT -> Func.from_string c ] ->
+       alias = OPT[ CONSTANT "xas"; c = CONSTANT;
+                 subst = OPT [ LPAREN;
+                               l = LIST1 [ c1 = CONSTANT; ARROW;
+                                       c2 = CONSTANT ->
+                                (Func.from_string c1, Func.from_string c2) ]
+                 SEP SYMBOL ","; RPAREN -> l ] ->
+                 Func.from_string c,
+                 match subst with None -> [] | Some l -> l ] ->
       Func.from_string c,l,alias]];
   clause :
     [[ f = atom; FULLSTOP ->

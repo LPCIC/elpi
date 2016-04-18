@@ -49,7 +49,7 @@ type decl =
  | Local of Func.t
  | Begin
  | End
- | Mode of (Func.t * bool list * Func.t option) list
+ | Mode of (Func.t * bool list * (Func.t * (Func.t * Func.t) list) option) list
  | Constraint of Func.t list
  | Accumulated of decl list
 

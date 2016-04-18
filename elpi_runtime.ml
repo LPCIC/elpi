@@ -280,6 +280,7 @@ and mode = bool list [@@deriving show]
 
 let no_mode = []
 
+type md = Mono of mode | Multi of (constant * (constant * constant) list) list
 
 let destConst = function Const x -> x | _ -> assert false
 
@@ -2103,18 +2104,18 @@ r :- (pi X\ pi Y\ q X Y :- pi c\ pi d\ q (Z c d) (X c d) (Y c)) => ... *)
  *  - the clause will live in (depth+lcs)
  *)
 
-let rec term_map ok nk = function
-  | Const x when x == ok -> constant_of_dbl nk
+let rec term_map m = function
+  | Const x when List.mem_assoc x m -> constant_of_dbl (List.assoc x m)
   | Const _ as x -> x
-  | App(c,x,xs) when c == ok ->
-      App(nk,term_map ok nk x, smart_map (term_map ok nk) xs)
-  | App(c,x,xs) -> App(c,term_map ok nk x, smart_map (term_map ok nk ) xs)
-  | Lam x -> Lam (term_map ok nk x)
+  | App(c,x,xs) when List.mem_assoc c m ->
+      App(List.assoc c m,term_map m x, smart_map (term_map m) xs)
+  | App(c,x,xs) -> App(c,term_map m x, smart_map (term_map m ) xs)
+  | Lam x -> Lam (term_map m x)
   | UVar _ as x -> x
-  | AppUVar(r,lvl,xs) -> AppUVar(r,lvl,smart_map (term_map ok nk) xs)
+  | AppUVar(r,lvl,xs) -> AppUVar(r,lvl,smart_map (term_map m) xs)
   | Arg _ as x -> x
-  | AppArg(i,xs) -> AppArg(i,smart_map (term_map ok nk) xs)
-  | Custom(c,xs) -> Custom(c,smart_map (term_map ok nk) xs)
+  | AppArg(i,xs) -> AppArg(i,smart_map (term_map m) xs)
+  | Custom(c,xs) -> Custom(c,smart_map (term_map m) xs)
   | (Int _ | String _ | Float _) as x -> x
 
 let clausify vars depth t =
@@ -2172,19 +2173,19 @@ let clausify vars depth t =
      let all_modes =
       let mode =
         try CMap.find hd !modes
-        with Not_found -> `Multi [] in
+        with Not_found -> Multi [] in
       match mode with
-      | `Mono [] -> assert false
-      | `Mono m -> [g,args,hyps,m]
-      | `Multi l ->
+      | Mono [] -> assert false
+      | Mono m -> [g,args,hyps,m]
+      | Multi l ->
            (g,args,hyps,[]) ::
-           List.map (fun k ->
-             let map = term_map hd k in
+           List.map (fun (k,subst) ->
+             let map = term_map ((hd,k) :: subst) in
              match CMap.find k !modes with
              | exception Not_found -> assert false
-             | `Multi _ -> assert false
+             | Multi _ -> assert false
              (* not smart *)
-             | `Mono m -> map g, List.map map args, List.map map hyps, m 
+             | Mono m -> map g, List.map map args, List.map map hyps, m 
          ) l in
       List.map (fun (g,args,hyps,mode) ->
               let c = { depth = depth+lcs ; args= args; hyps = hyps; mode;
@@ -3053,17 +3054,22 @@ let program_of_ast ?(print=false) (p : Elpi_ast.decl list) : program =
             List.iter (fun (c,l,alias) ->
              let key = fst (funct_of_ast c) in
              let mode = l in
-             let alias = option_map (fun x -> fst (funct_of_ast x)) alias in
+             let alias = option_map (fun (x,s) ->
+               fst (funct_of_ast x),
+               List.map (fun (x,y) ->
+                fst (funct_of_ast x),
+                fst (funct_of_ast y) ) s
+               ) alias in
              match alias with
-             | None -> modes := CMap.add key (`Mono mode) !modes
-             | Some a ->
-                  modes := CMap.add a (`Mono mode) !modes;
+             | None -> modes := CMap.add key (Mono mode) !modes
+             | Some (a,subst) ->
+                  modes := CMap.add a (Mono mode) !modes;
                   match CMap.find key !modes with
-                  | `Mono _ -> assert false
-                  | `Multi l ->
-                      modes := CMap.add key (`Multi (a :: l)) !modes
+                  | Mono _ -> assert false
+                  | Multi l ->
+                      modes := CMap.add key (Multi ((a,subst)::l)) !modes
                   | exception Not_found ->
-                      modes := CMap.add key (`Multi [a]) !modes
+                      modes := CMap.add key (Multi [a,subst]) !modes
             ) m;
             clauses,lcs,chr,cmap,cmapstack,clique
        | Elpi_ast.Constraint fl ->

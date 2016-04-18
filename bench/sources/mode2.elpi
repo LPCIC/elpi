@@ -19,8 +19,13 @@ mode (pp i o) xas parse , (pp o i) xas pprint.
  pp (X1 = Y1)  (eq ' X2 ' Y2) :- pp X1 X2, pp Y1 Y2.
  pp (X1 <=> Y1)  (eq ' X2 ' Y2) :- pp X1 X2, pp Y1 Y2.
  pp (F2 && G2) (and ' F1 ' G1) :- pp F2 F1, pp G2 G1.
- pp true true.
  pp A A.
+
+
+mode (pp_tac i o) xas parse_tac(pp -> parse),
+     (pp_tac o i) xas print_tac(pp -> pprint).
+
+pp_tac (tac T) (tac S) :- pp T S.
 
  main :-
    (term c => term (app (lam w\ X w) (app c Y))),
