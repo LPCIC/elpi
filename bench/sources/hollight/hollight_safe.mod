@@ -77,46 +77,6 @@ term' (F ' T) B :- term F (A --> B), term T A.
 term' (eq '' A) (A --> A --> prop) :- typ A.
 reterm' (eq '' A) (A --> A --> prop).
 
-/* Constructive notions, implementable in classical HOL */
-/* disj_union constructors and destructors */
-term' (inj1_disj_union '' A '' B) (A --> disj_union '' A '' B) :- typ A, typ B.
-reterm' (inj1_disj_union '' A '' B) (A --> disj_union '' A '' B).
-term' (inj2_disj_union '' A '' B) (B --> disj_union '' A '' B) :- typ A, typ B.
-reterm' (inj2_disj_union '' A '' B) (B --> disj_union '' A '' B).
-term' (case_disj_union '' A '' B '' C) (disj_union '' A '' B --> (A --> C) --> (B --> C) --> C) :- typ A, typ B, typ C.
-reterm' (case_disj_union '' A '' B '' C) (disj_union '' A '' B --> (A --> C) --> (B --> C) --> C).
-
-/* univ constructors and destructors */
-term' (injection_univ '' A '' B) (A --> univ '' A '' B) :- typ A, typ B.
-reterm' (injection_univ '' A '' B) (A --> univ '' A '' B).
-term' (ejection_univ '' A '' B) (univ '' A '' B --> A) :- typ A, typ B.
-reterm' (ejection_univ '' A '' B) (univ '' A '' B --> A).
-term' (inject_limit_univ '' A '' B) ((B --> univ '' A '' B) --> univ '' A '' B) :- typ A, typ B.
-reterm' (inject_limit_univ '' A '' B) ((B --> univ '' A '' B) --> univ '' A '' B).
-term' (eject_limit_univ '' A '' B) (univ '' A '' B --> (B --> univ '' A '' B)) :- typ A, typ B.
-reterm' (eject_limit_univ '' A '' B) (univ '' A '' B --> (B --> univ '' A '' B)).
-term' (pair_univ '' A '' B) (univ '' A '' B --> univ '' A '' B --> univ '' A '' B) :- typ A, typ B.
-reterm' (pair_univ '' A '' B) (univ '' A '' B --> univ '' A '' B --> univ '' A '' B).
-term' (proj1_univ '' A '' B) (univ '' A '' B --> univ '' A '' B) :- typ A, typ B.
-reterm' (proj1_univ '' A '' B) (univ '' A '' B --> univ '' A '' B).
-term' (proj2_univ '' A '' B) (univ '' A '' B --> univ '' A '' B) :- typ A, typ B.
-reterm' (proj2_univ '' A '' B) (univ '' A '' B --> univ '' A '' B).
-term' (inj1_univ '' A '' B) (univ '' A '' B --> univ '' A '' B) :- typ A, typ B.
-reterm' (inj1_univ '' A '' B) (univ '' A '' B --> univ '' A '' B).
-term' (inj2_univ '' A '' B) (univ '' A '' B --> univ '' A '' B) :- typ A, typ B.
-reterm' (inj2_univ '' A '' B) (univ '' A '' B --> univ '' A '' B).
-term' (case_univ '' A '' B '' C) (univ '' A '' B --> (univ '' A '' B --> C) --> (univ '' A '' B --> C) --> C) :- typ A, typ B, typ C.
-reterm' (case_univ '' A '' B '' C) (univ '' A '' B --> (univ '' A '' B --> C) --> (univ '' A '' B --> C) --> C).
-
-/* fixpoint operator */
-term' (rec '' A '' B) (((A --> B) --> (A --> B)) --> (A --> B)) :- typ A, typ B.
-reterm' (rec '' A '' B) (((A --> B) --> (A --> B)) --> (A --> B)).
-
-/* choice axiom (all types are inhabited) */
-term' (choose '' A) A :- typ A.
-reterm' (choose '' A) A.
-/* End of constructive notions */
-
 /* like term, but on terms that are already known to be well-typed */
 reterm T TY :- $is_flex T, !, $delay (reterm T TY) [ T ].
 reterm T TY :- reterm' T TY.
@@ -223,12 +183,18 @@ check1 (theorem NAME GOALTACTICS) HYPS :- check1thm NAME GOALTACTICS HYPS, !.
 check1 (axiom NAME ST) HYPS :- check1axm NAME ST HYPS, !.
 check1 (new_basic_type TYPE REP ABS REPABS ABSREP PREPH P_TACTICS) HYPS :- check1nbt TYPE REP ABS REPABS ABSREP PREPH P_TACTICS true HYPS, !.
 check1 (def NAME TYPDEF) HYPS :- check1def NAME TYPDEF true HYPS, !.
+check1 (decl NAME TYP) HYPS :- check1decl NAME TYP true HYPS, !.
 
 check1def NAME (pi I) HYPSUCHTHAT (pi HYPS) :-
  pi x \ typ' x => check1def (NAME '' x) (I x) (HYPSUCHTHAT, typ x) (HYPS x).
 check1def NAME (TYP,DEF) HYPSUCHTHAT HYPS :-
- term DEF TYP,
+ typ TYP, term DEF TYP,
  HYPS = ((HYPSUCHTHAT => term' NAME TYP), reterm' NAME TYP, def0 NAME DEF).
+
+check1decl NAME (pi I) HYPSUCHTHAT (pi HYPS) :-
+ pi x \ typ' x => check1decl (NAME '' x) (I x) (HYPSUCHTHAT, typ x) (HYPS x).
+check1decl NAME TYP HYPSUCHTHAT HYPS :-
+ typ TYP, HYPS = ((HYPSUCHTHAT => term' NAME TYP), reterm' NAME TYP).
 
 check1thm NAME (pi I) (pi HYPS) :-
  pi x \ typ' x => check1thm NAME (I x) (HYPS x).
@@ -324,6 +290,7 @@ parse_obj (axiom NAME PTYP) [axiom NAME TYP] :- parse_axiom PTYP TYP.
 parse_obj (new_basic_type TYPE REP ABS REPABS ABSREP PREP PP_TACTICS)
  [new_basic_type TYPE REP ABS REPABS ABSREP PREP P_TACTICS] :- parse_nbt PP_TACTICS P_TACTICS.
 parse_obj (def NAME PTYBO) [def NAME TYBO] :- parse_def PTYBO TYBO.
+parse_obj (decl NAME TY) [decl NAME TY].
 parse_obj (inductive_def PRED PREDF PREDF_MON PRED_I PRED_E0 PRED_E K) EXP :-
  inductive_def_pkg PRED PREDF PREDF_MON PRED_I PRED_E0 PRED_E K EXP.
 parse_obj stop [stop].
@@ -1055,8 +1022,14 @@ go :- the_library L, check L.
 
 the_library L :-
  L =
-  [ /*********** Connectives and quantifiers ********/
-    def tt (prop,((lam prop x \ x) = (lam prop x \ x)))
+  [ /******** Primivite operators hard-coded in the kernel ******/
+  % decl eq (pi A \ A --> A --> prop)
+
+  /********** Axiomatization of choice over types ********/
+    decl choose (pi A \ A)
+
+  /*********** Connectives and quantifiers ********/
+  , def tt (prop,((lam prop x \ x) = (lam prop x \ x)))
   , def forall (pi A \ ((A --> prop) --> prop),
      (lam (A --> prop) f \ f = (lam A g \ tt)))
   , def ff (prop,(! x \ x))
@@ -1143,12 +1116,25 @@ the_library L :-
        (bind prop x13 \ bind prop x14 \ itaut 2)]])
 
  /*********** Axiomatization of disjoint union ********/
- , axiom case_disj_union_inj1 (pi A \ pi B \ pi C \ (! b \ ! (A --> C) e1 \ ! (B --> C) e2  \
+  , decl inj1_disj_union (pi A \pi B \ A --> disj_union '' A '' B)
+  , decl inj2_disj_union (pi A \ pi B \ B --> disj_union '' A '' B)
+  , decl case_disj_union (pi A \pi B \ pi C \ disj_union '' A '' B --> (A --> C) --> (B --> C) --> C)
+  , axiom case_disj_union_inj1 (pi A \ pi B \ pi C \ (! b \ ! (A --> C) e1 \ ! (B --> C) e2  \
     case_disj_union '' A '' B '' C ' (inj1_disj_union '' A '' B ' b) ' e1 ' e2 = e1 ' b))
- , axiom case_disj_union_inj2 (pi A \ pi B \ pi C \ (! b \ ! (A --> C) e1 \ ! (B --> C) e2  \
+  , axiom case_disj_union_inj2 (pi A \ pi B \ pi C \ (! b \ ! (A --> C) e1 \ ! (B --> C) e2  \
     case_disj_union '' A '' B '' C ' (inj2_disj_union '' A '' B ' b) ' e1 ' e2 = e2 ' b))
 
  /*********** Axiomatization of the universe ********/
+ , decl injection_univ (pi A \pi B \ A --> univ '' A '' B)
+ , decl ejection_univ (pi A \pi B \ univ '' A '' B --> A)
+ , decl inject_limit_univ (pi A \pi B \ (B --> univ '' A '' B) --> univ '' A '' B)
+ , decl eject_limit_univ (pi A \ pi B \ univ '' A '' B --> (B --> univ '' A '' B))
+ , decl pair_univ (pi A \pi B \ univ '' A '' B --> univ '' A '' B --> univ '' A '' B)
+ , decl proj1_univ (pi A \ pi B \ univ '' A '' B --> univ '' A '' B)
+ , decl proj2_univ (pi A \pi B \ univ '' A '' B --> univ '' A '' B)
+ , decl inj1_univ (pi A \pi B \ univ '' A '' B --> univ '' A '' B)
+ , decl inj2_univ (pi A \pi B \ univ '' A '' B --> univ '' A '' B)
+ , decl case_univ (pi A \pi B \ pi C \ univ '' A '' B --> (univ '' A '' B --> C) --> (univ '' A '' B --> C) --> C)
  , axiom ejection_injection_univ (pi A \ pi B \
     ! A p \ ejection_univ '' A '' B ' (injection_univ '' A '' B ' p) = p)
  , axiom eject_inject_limit_univ (pi A \ pi B \
@@ -1209,7 +1195,6 @@ the_library L :-
     [itaut 2])
 
 /*************** Properties inj/disj/univ ***********/
-
  , theorem pair_univ_inj_l 
    (pi A \ pi B \ (! (univ '' A '' B) x20 \ ! x21 \ ! x22 \ ! x23 \ pair_univ '' A '' B ' x20 ' x22 = pair_univ '' A '' B ' x21 ' x23 ==> x20 = x21) ,
    [then (repeat forall_i)
@@ -1432,6 +1417,7 @@ the_library L :-
                   (then apply (then (applyth fixpoint_is_prefixpoint) h)))))]))])
 
  /*********** Axiomatization of well-founded recursion ********/
+ , decl rec (pi A \pi B \ ((A --> B) --> (A --> B)) --> (A --> B))
  , inductive_def acc accF accF_monotone acc_i0 acc_e0 acc_e
     (pi A \ param (A --> A --> prop) lt \ acc \
      [ (acc_i, ! x \ (! y \ lt ' y ' x ==> acc ' y) ==> acc ' x) ])
