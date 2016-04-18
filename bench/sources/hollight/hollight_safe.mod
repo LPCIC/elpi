@@ -75,38 +75,53 @@ term T TY :- term' T TY.
 term' (lam A F) (A --> B) :- typ A, pi x\ term' x A => term (F x) B.
 term' (F ' T) B :- term F (A --> B), term T A.
 term' (eq '' A) (A --> A --> prop) :- typ A.
+reterm' (eq '' A) (A --> A --> prop).
 
 /* Constructive notions, implementable in classical HOL */
 /* disj_union constructors and destructors */
 term' (inj1_disj_union '' A '' B) (A --> disj_union '' A '' B) :- typ A, typ B.
+reterm' (inj1_disj_union '' A '' B) (A --> disj_union '' A '' B).
 term' (inj2_disj_union '' A '' B) (B --> disj_union '' A '' B) :- typ A, typ B.
+reterm' (inj2_disj_union '' A '' B) (B --> disj_union '' A '' B).
 term' (case_disj_union '' A '' B '' C) (disj_union '' A '' B --> (A --> C) --> (B --> C) --> C) :- typ A, typ B, typ C.
+reterm' (case_disj_union '' A '' B '' C) (disj_union '' A '' B --> (A --> C) --> (B --> C) --> C).
 
 /* univ constructors and destructors */
 term' (injection_univ '' A '' B) (A --> univ '' A '' B) :- typ A, typ B.
+reterm' (injection_univ '' A '' B) (A --> univ '' A '' B).
 term' (ejection_univ '' A '' B) (univ '' A '' B --> A) :- typ A, typ B.
+reterm' (ejection_univ '' A '' B) (univ '' A '' B --> A).
 term' (inject_limit_univ '' A '' B) ((B --> univ '' A '' B) --> univ '' A '' B) :- typ A, typ B.
+reterm' (inject_limit_univ '' A '' B) ((B --> univ '' A '' B) --> univ '' A '' B).
 term' (eject_limit_univ '' A '' B) (univ '' A '' B --> (B --> univ '' A '' B)) :- typ A, typ B.
+reterm' (eject_limit_univ '' A '' B) (univ '' A '' B --> (B --> univ '' A '' B)).
 term' (pair_univ '' A '' B) (univ '' A '' B --> univ '' A '' B --> univ '' A '' B) :- typ A, typ B.
+reterm' (pair_univ '' A '' B) (univ '' A '' B --> univ '' A '' B --> univ '' A '' B).
 term' (proj1_univ '' A '' B) (univ '' A '' B --> univ '' A '' B) :- typ A, typ B.
+reterm' (proj1_univ '' A '' B) (univ '' A '' B --> univ '' A '' B).
 term' (proj2_univ '' A '' B) (univ '' A '' B --> univ '' A '' B) :- typ A, typ B.
+reterm' (proj2_univ '' A '' B) (univ '' A '' B --> univ '' A '' B).
 term' (inj1_univ '' A '' B) (univ '' A '' B --> univ '' A '' B) :- typ A, typ B.
+reterm' (inj1_univ '' A '' B) (univ '' A '' B --> univ '' A '' B).
 term' (inj2_univ '' A '' B) (univ '' A '' B --> univ '' A '' B) :- typ A, typ B.
+reterm' (inj2_univ '' A '' B) (univ '' A '' B --> univ '' A '' B).
 term' (case_univ '' A '' B '' C) (univ '' A '' B --> (univ '' A '' B --> C) --> (univ '' A '' B --> C) --> C) :- typ A, typ B, typ C.
+reterm' (case_univ '' A '' B '' C) (univ '' A '' B --> (univ '' A '' B --> C) --> (univ '' A '' B --> C) --> C).
 
 /* fixpoint operator */
 term' (rec '' A '' B) (((A --> B) --> (A --> B)) --> (A --> B)) :- typ A, typ B.
+reterm' (rec '' A '' B) (((A --> B) --> (A --> B)) --> (A --> B)).
 
 /* choice axiom (all types are inhabited) */
 term' (choose '' A) A :- typ A.
+reterm' (choose '' A) A.
 /* End of constructive notions */
 
 /* like term, but on terms that are already known to be well-typed */
 reterm T TY :- $is_flex T, !, $delay (reterm T TY) [ T ].
 reterm T TY :- reterm' T TY.
-reterm' (lam A F) (A --> B) :- !, pi x\ (reterm' x A :- !) => reterm (F x) B.
-reterm' (F ' T) B :- !, reterm F (A --> B).
-reterm' T TY :- term' T TY.
+reterm' (lam A F) (A --> B) :- pi x\ reterm' x A => reterm (F x) B.
+reterm' (F ' T) B :- reterm F (A --> B).
 
 /*propagate [ (G1 ?- term (X @ L1) TY1) ] [ (G2 ?- term (X @ L2) TY2) ] NEW :-
  list_map L1 (x\ y\ (term x y ; y = xxx)) LTY1,
@@ -163,7 +178,7 @@ thm (wl Gamma1) (seq Gamma F) [ seq WGamma F ] :-
  append' Gamma1 Gamma2 WGamma.
 
 thm (bind A TAC) (bind A SEQ) NEWL :-
- pi x \ term' x A => thm (TAC x) (SEQ x) (NEW x), put_binds' (NEW x) x A NEWL.
+ pi x \ term' x A => reterm' x A => thm (TAC x) (SEQ x) (NEW x), put_binds' (NEW x) x A NEWL.
 
 thm ww (bind A x \ SEQ) [ SEQ ].
 
@@ -182,7 +197,9 @@ loop [ SEQ | OLD ] CERTIFICATE :-
 
 prove G TACS :-
  (term G prop, ! ; parse PG G, $print "Bad statement:" PG, fail),
- loop [ seq [] G ] TACS.
+% (TACS = (false,_), ! ;
+ loop [ seq [] G ] TACS
+. % ).
 
 not_defined P NAME :-
  not (P NAME _) ; $print "Error:" NAME already defined, fail.
@@ -192,6 +209,7 @@ check_hyps HS (typ' TYPE) :-
 check_hyps HS (def0 NAME DEF) :- parse PDEF DEF, $print HS NAME "=" PDEF.
 check_hyps HS (term' NAME TYPE) :-
  not_defined term' NAME, parse PTYPE TYPE, $print HS NAME ":" PTYPE.
+check_hyps HS (reterm' _ _).
 check_hyps HS (provable NAME TYPE) :-
  not_defined provable NAME, parse PTYPE TYPE, $print HS NAME ":" PTYPE.
 check_hyps HS (H1,H2) :- check_hyps HS H1, check_hyps HS H2.
@@ -210,7 +228,7 @@ check1def NAME (pi I) HYPSUCHTHAT (pi HYPS) :-
  pi x \ typ' x => check1def (NAME '' x) (I x) (HYPSUCHTHAT, typ x) (HYPS x).
 check1def NAME (TYP,DEF) HYPSUCHTHAT HYPS :-
  term DEF TYP,
- HYPS = ((HYPSUCHTHAT => term' NAME TYP), def0 NAME DEF).
+ HYPS = ((HYPSUCHTHAT => term' NAME TYP), reterm' NAME TYP, def0 NAME DEF).
 
 check1thm NAME (pi I) (pi HYPS) :-
  pi x \ typ' x => check1thm NAME (I x) (HYPS x).
@@ -236,8 +254,10 @@ check1nbt TYPE REP ABS REPABS ABSREP PREPH (P,TACTICS) HYPSUCHTHAT HYPS :-
   PREPHTYP = (forall '' TYPE ' lam TYPE x \ (P ' (REP ' x))),
   !,
   HYPS =
-   ( (HYPSUCHTHAT => typ' TYPE), (HYPSUCHTHAT => term' REP REPTYP)
-   , (HYPSUCHTHAT => term' ABS ABSTYP), provable ABSREP ABSREPTYP
+   ( (HYPSUCHTHAT => typ' TYPE)
+   , (HYPSUCHTHAT => term' REP REPTYP), reterm' REP REPTYP
+   , (HYPSUCHTHAT => term' ABS ABSTYP), reterm' ABS ABSTYP
+   , provable ABSREP ABSREPTYP
    , provable REPABS REPABSTYP, provable PREPH PREPHTYP).
 
 check WHAT :-
@@ -399,7 +419,7 @@ mk_script ITAC NEW NEW_TACS (thenl ITAC NEW_TACS) :-
  mk_list_of_bounded_fresh NEW NEW_TACS.
 
 read_in_context (bind A K) (bind A TAC) BACKTRACK :-
- pi x \ term' x A => read_in_context (K x) (TAC x) BACKTRACK.
+ pi x \ /* term' x A => reterm ' x A => */ read_in_context (K x) (TAC x) BACKTRACK.
 read_in_context (seq A B) TAC BACKTRACK :-
  flush std_out, $readterm std_in TAC,
  (TAC = backtrack, !, BACKTRACK = (!, fail) ; BACKTRACK = true).
@@ -546,7 +566,7 @@ prove_intro_thms L PRED PRED_I INTROTHMS :-
 
 mk_intro_thm PRED_I (NAME,ST)
  (theorem NAME (ST,
-   [ (then inv (bind* (then (applyth PRED_I) (then (conv dd) (itauteq 6))))) /* TOO MANY GOALS DELAYED ON typ (???): USE daemon INSTEAD */ ])).
+   [ daemon /*(then inv (bind* (then (applyth PRED_I) (then (conv dd) (itauteq 6)))))*/ /* TOO MANY GOALS DELAYED ON typ (???): USE daemon INSTEAD */ ])).
 
 inductive_def_pkg PRED PREDF PREDF_MONOTONE PRED_I PRED_E0 PRED_E L OUT :-
  parse_inductive_def_spec L PL,
