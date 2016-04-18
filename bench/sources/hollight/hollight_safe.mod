@@ -85,6 +85,11 @@ reterm (?? as T) TY :- $constraint (reterm T TY) T.
 constraint reterm term typ {
 %  rule [ (reterm (?? K []) T1) ] [ (reterm (?? K []) T2) ] (T1 = T2).
 %  rule [ (term (?? K []) T1) ] [ (term (?? K []) T2) ] (T1 = T2).
+%   rule [ (typ (?? K _)) ] [ (typ (?? K _)) ] true.
+ rule [ (G1 ?- term (?? K1 L1) T1) ] [ (G2 ?- term (?? K2 L2) T2) ] true
+   :- % $print "1#######################" G1 K1 L1,
+      % $print "2#######################" G2 K2 L2,
+      K1 = K2, L1 = L2, T1 = T2, G1 = G2.
 }
 
 

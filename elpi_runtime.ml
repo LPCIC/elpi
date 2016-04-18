@@ -600,7 +600,7 @@ let to_resume = Fork.new_local []
 
 module CMap = Map.Make(Constants)
 
-let modes = (*Fork.new_local*) ref CMap.empty
+let modes = Fork.new_local CMap.empty
 
 type 'key clause =
   { depth : int; args : term list; hyps : term list; vars : int; key : 'key; mode: mode }
@@ -2244,16 +2244,18 @@ let rec list_assq1 p = function
   | _ :: rest -> list_assq1 p rest
 ;;
 
-let rec freeze m = function
-  | UVar( { contents = t} , 0,0) when t != dummy -> freeze m t
-  | UVar( { contents = t} , _,_) when t != dummy -> assert false
+let rec freeze ad m = function
+  | UVar( { contents = t} , 0,0) when t != dummy -> freeze ad m t
+  | UVar( { contents = t} , vardepth, args) when t != dummy ->
+      freeze ad m (deref_uv ~from:vardepth ~to_:ad args t)
+    
   | AppUVar ( { contents = t }, _, _) when t != dummy -> assert false
   | UVar( r, lvl, ano) ->
      let m, (c, n) =
       (try m, list_assq1 r m
        with Not_found ->
          let n, x = new_fresh_constant () in
-         [%spy "freeze" (fun fmt tt -> Fmt.fprintf fmt "%s == %a" (string_of_constant n) (ppterm 0 [] 0 empty_env) tt) (UVar (r,lvl,0))];
+         [%spy "freeze ad" (fun fmt tt -> Fmt.fprintf fmt "%s == %a" (string_of_constant n) (ppterm 0 [] 0 empty_env) tt) (UVar (r,lvl,0))];
          ((r,lvl),(x,n)) :: m, (x,n)) in
      m, (match mkinterval 0 (lvl+ano) 0 with
         | [] -> c
@@ -2264,34 +2266,34 @@ let rec freeze m = function
       (try m, list_assq1 r m
        with Not_found ->
          let n, x = new_fresh_constant () in
-         [%spy "freeze" (fun fmt tt -> Fmt.fprintf fmt "%s == %a" (string_of_constant n) (ppterm 0 [] 0 empty_env) tt) (UVar (r,lvl,0))];
+         [%spy "freeze ad" (fun fmt tt -> Fmt.fprintf fmt "%s == %a" (string_of_constant n) (ppterm 0 [] 0 empty_env) tt) (UVar (r,lvl,0))];
          ((r,lvl),(x,n)) :: m, (x,n)) in
      let m, args = List.fold_right (fun x (m,l) ->
-        let m, x = freeze m x in
+        let m, x = freeze ad m x in
         (m, x ::l)) args (m,[]) in
      m, (match mkinterval 0 lvl 0 @ args with
         | [] -> c
         | [x] -> App(n,x,[])
         | x::xs -> App(n,x,xs))
   | App(c,x,xs) ->
-      let m, x = freeze m x in
+      let m, x = freeze ad m x in
       let m, xs = List.fold_right (fun x (m,l) ->
-        let m, x = freeze m x in
+        let m, x = freeze ad m x in
         (m, x ::l)) xs (m,[]) in
       m, App(c,x,xs)
   | Const _ as x -> m, x
-  | Arg _ | AppArg _ -> anomaly "freeze: not an heap term"
-  | Lam t -> let m, t = freeze m t in m, Lam t
+  | Arg _ | AppArg _ -> anomaly "freeze ad: not an heap term"
+  | Lam t -> let m, t = freeze ad m t in m, Lam t
   | (Int _ | Float _ | String _) as x -> m, x
   | Custom(c,xs) ->
       let m, xs = List.fold_right (fun x (m,l) ->
-        let m, x = freeze m x in
+        let m, x = freeze ad m x in
         (m, x ::l)) xs (m,[]) in
       m, Custom(c,xs)
 ;;
-let freeze m t =
+let freeze ad m t =
   [%spy "freeze-in"  (ppterm 0 [] 0 empty_env) t];
-  let m, t' = freeze m t in
+  let m, t' = freeze ad  m t in
   [%spy "freeze-out"  (ppterm 0 [] 0 empty_env) t'];
   m, t'
 
@@ -2318,7 +2320,7 @@ let matching e depth argsdepth m a b =
   then
     fst(Array.fold_left (fun (m,i) ei ->
       if ei != dummy then
-        let m, ei = freeze m ei in
+        let m, ei = freeze argsdepth m ei in
         e.(i) <- ei;
         m,i+1
       else
@@ -2597,7 +2599,7 @@ let propagate constr j history =
            (pplist (fun fmt (_,_,g) ->
               uppterm max_depth [] 0 e fmt g) ",")
            (patterns_sequent1 @ patterns_sequent2);*)
-         let match_p m t (d,_,g) = matching e max_depth (max_depth-d) m t g in
+         let match_p m t (d,_,pat) = matching e max_depth (max_depth(*-d*)) m t pat in
          let m = List.fold_left2 match_p [] to_match  patterns_sequent1 in
          let m = List.fold_left2 match_p m  to_remove patterns_sequent2 in
          (* check all aligned max_depth *)
