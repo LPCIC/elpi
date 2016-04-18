@@ -15,7 +15,7 @@ infix  <<= 130. % subseteq
  * next_tactic            next tactic to use
  * update_certificate     get new certificate after tactic application
  * end_of_proof           is the certificate/proof empty?
- * parse                  for pretty-printing messages
+ * ppterm              for pretty-printing messages
  */
 
 /* Predicates exported from the trusted library:
@@ -156,7 +156,7 @@ loop [ SEQ | OLD ] CERTIFICATE :-
  loop SEQS NEW_CERTIFICATE.
 
 prove G TACS :-
- (term G prop, ! ; parse PG G, $print "Bad statement:" PG, fail),
+ (term G prop, ! ; ppterm PG G, $print "Bad statement:" PG, fail),
 % (TACS = (false,_), ! ;
  loop [ seq [] G ] TACS
 . % ).
@@ -166,12 +166,12 @@ not_defined P NAME :-
 
 check_hyps HS (typ' TYPE) :-
  (not (typ' TYPE) ; $print "Error:" TYPE already defined, fail), $print HS new TYPE.
-check_hyps HS (def0 NAME DEF) :- parse PDEF DEF, $print HS NAME "=" PDEF.
+check_hyps HS (def0 NAME DEF) :- ppterm PDEF DEF, $print HS NAME "=" PDEF.
 check_hyps HS (term' NAME TYPE) :-
- not_defined term' NAME, parse PTYPE TYPE, $print HS NAME ":" PTYPE.
+ not_defined term' NAME, ppterm PTYPE TYPE, $print HS NAME ":" PTYPE.
 check_hyps HS (reterm' _ _).
 check_hyps HS (provable NAME TYPE) :-
- not_defined provable NAME, parse PTYPE TYPE, $print HS NAME ":" PTYPE.
+ not_defined provable NAME, ppterm PTYPE TYPE, $print HS NAME ":" PTYPE.
 check_hyps HS (H1,H2) :- check_hyps HS H1, check_hyps HS H2.
 check_hyps HS (pi H) :- pi x \ typ' x => check_hyps [x | HS] (H x).
 check_hyps HS (_ => H2) :- check_hyps HS H2.
@@ -205,7 +205,7 @@ check1thm NAME (GOAL,TACTICS) (provable NAME GOAL) :-
 check1axm NAME (pi I) (pi HYPS) :- !,
  pi x \ typ' x => check1axm NAME (I x) (HYPS x).
 check1axm NAME GOAL (provable NAME GOAL) :-
- term GOAL prop, ! ; parse PGOAL GOAL, $print "Bad statement:" PGOAL, fail.
+ term GOAL prop, ! ; ppterm PGOAL GOAL, $print "Bad statement:" PGOAL, fail.
 
 check1nbt TYPE REP ABS REPABS ABSREP PREPH (pi P_TACTICS) HYPSUCHTHAT (pi HYPS) :-
  pi x \ typ' x => check1nbt (TYPE '' x) (REP '' x) (ABS '' x) REPABS ABSREP PREPH (P_TACTICS x) (HYPSUCHTHAT, typ x) (HYPS x).
@@ -234,55 +234,59 @@ check WHAT :-
 }
 
 /************ parsing and pretty-printing ********/
-parse X Y :- $is_flex X, $is_flex Y, !, X = Y.
-parse X (F ' G) :- $is_flex X, ($is_flex F ; $is_flex G), !, X = (F ' G).
-parse X (F ' G ' H) :- $is_flex X, ($is_flex F ; $is_flex G ; $is_flex H), !,
+% ppterm/parseterm
+ppterm X Y :- ppp X Y. parseterm X Y :- ppp X Y.
+ppp X Y :- $is_flex X, $is_flex Y, !, X = Y.
+ppp X (F ' G) :- $is_flex X, ($is_flex F ; $is_flex G), !, X = (F ' G).
+ppp X (F ' G ' H) :- $is_flex X, ($is_flex F ; $is_flex G ; $is_flex H), !,
  X = (F ' G ' H).
-parse (! F2) (forall '' _ ' lam _ F1) :- !, pi x \ parse (F2 x) (F1 x).
-parse (! TY F2) (forall '' TY ' lam TY F1) :- !, pi x \ parse (F2 x) (F1 x).
-parse (? F2) (exists '' _ ' lam _ F1) :- !, pi x \ parse (F2 x) (F1 x).
-parse (? TY F2) (exists '' TY ' lam TY F1) :- !, pi x \ parse (F2 x) (F1 x).
+ppp (! F2) (forall '' _ ' lam _ F1) :- !, pi x \ ppp (F2 x) (F1 x).
+ppp (! TY F2) (forall '' TY ' lam TY F1) :- !, pi x \ ppp (F2 x) (F1 x).
+ppp (? F2) (exists '' _ ' lam _ F1) :- !, pi x \ ppp (F2 x) (F1 x).
+ppp (? TY F2) (exists '' TY ' lam TY F1) :- !, pi x \ ppp (F2 x) (F1 x).
 %TODO: use <=> only when the type is prop.
-parse (F2 = G2) (eq '' _ ' F1 ' G1) :- !, parse F2 F1, parse G2 G1.
-parse (F2 <=> G2) (eq '' _ ' F1 ' G1) :- !, parse F2 F1, parse G2 G1.
-parse (F2 && G2) (and ' F1 ' G1) :- !, parse F2 F1, parse G2 G1.
-parse (F2 $$ G2) (or ' F1 ' G1) :- !, parse F2 F1, parse G2 G1.
-parse (F2 ==> G2) (impl ' F1 ' G1) :- !, parse F2 F1, parse G2 G1.
-parse (X2 #in S2) (in '' _ ' X1 ' S1) :- !, parse X2 X1, parse S2 S1.
-parse (U2 <<= V2) (subseteq '' _ ' U1 ' V1) :- !, parse U2 U1, parse V2 V1.
-parse (F2 + G2) (plus ' F1 ' G1) :- !, parse F2 F1, parse G2 G1.
-parse (F2 ' G2) (F1 ' G1) :- !, parse F2 F1, parse G2 G1.
-parse (lam A F2) (lam A F1) :- !, pi x \ parse (F2 x) (F1 x).
-parse A A.
+ppp (F2 = G2) (eq '' _ ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
+ppp (F2 <=> G2) (eq '' _ ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
+ppp (F2 && G2) (and ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
+ppp (F2 $$ G2) (or ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
+ppp (F2 ==> G2) (impl ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
+ppp (X2 #in S2) (in '' _ ' X1 ' S1) :- !, ppp X2 X1, ppp S2 S1.
+ppp (U2 <<= V2) (subseteq '' _ ' U1 ' V1) :- !, ppp U2 U1, ppp V2 V1.
+ppp (F2 + G2) (plus ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
+ppp (F2 ' G2) (F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
+ppp (lam A F2) (lam A F1) :- !, pi x \ ppp (F2 x) (F1 x).
+ppp A A.
 
 /* safe_list_map that unifies the two lists if they are both flexible
    probably only useful for parsing/pretty-printing */
 safe_list_map L1 _ L2 :- $is_flex L1, $is_flex L2, !, L1 = L2.
 safe_list_map L1 F L2 :- list_map L1 F L2.
 
-parsetac daemon daemon.
-parsetac r r.
-parsetac (t Y) (t PY) :- parse Y PY.
-parsetac (m Y) (m PY) :- parse Y PY.
-parsetac b b.
-parsetac c c.
-parsetac k k.
-parsetac s s.
-parsetac (h Gamma) (h PGamma) :- safe_list_map Gamma parse PGamma.
-parsetac d d.
-parsetac (th NAME) (th NAME).
-parsetac (thenll TAC1 TACN) (thenll PTAC1 PTACN) :-
- parsetac TAC1 PTAC1, parsetac TACN PTACN.
-parsetac (! TAC) (! PTAC) :- parsetac TAC PTAC.
-parsetac id id.
-parsetac (wl Gamma) (wl PGamma) :- safe_list_map Gamma parse PGamma.
-parsetac (bind A TAC) (bind PA PTAC) :-
- parse A PA, pi x \ parsetac (TAC x) (PTAC x).
-parsetac ww ww.
+% pptac(ppterm)/parsetac(parseterm)
+pptac X Y :- ppptac X Y.  parsetac X Y :- ppptac X Y.
+ppptac daemon daemon.
+ppptac r r.
+ppptac (t Y) (t PY) :- ppp Y PY.
+ppptac (m Y) (m PY) :- ppp Y PY.
+ppptac b b.
+ppptac c c.
+ppptac k k.
+ppptac s s.
+ppptac (h Gamma) (h PGamma) :- safe_list_map Gamma ppp PGamma.
+ppptac d d.
+ppptac (th NAME) (th NAME).
+ppptac (thenll TAC1 TACN) (thenll PTAC1 PTACN) :-
+ ppptac TAC1 PTAC1, ppptac TACN PTACN.
+ppptac (! TAC) (! PTAC) :- ppptac TAC PTAC.
+ppptac id id.
+ppptac (wl Gamma) (wl PGamma) :- safe_list_map Gamma ppp PGamma.
+ppptac (bind A TAC) (bind PA PTAC) :-
+ ppp A PA, pi x \ ppptac (TAC x) (PTAC x).
+ppptac ww ww.
 
 /************ interactive and non interactive loops ********/
 
-parsetac interactive interactive.
+ppptac interactive interactive.
 
 parse_obj (theorem NAME PSTTAC) [theorem NAME STTAC] :-
  parse_thm NAME PSTTAC STTAC.
@@ -296,20 +300,20 @@ parse_obj (inductive_def PRED PREDF PREDF_MON PRED_I PRED_E0 PRED_E K) EXP :-
 parse_obj stop [stop].
 
 parse_def (pi I) (pi O) :- pi x \ parse_def (I x) (O x).
-parse_def (TY,PB) (TY,B) :- parse PB B.
+parse_def (TY,PB) (TY,B) :- parseterm PB B.
 
 parse_axiom (pi I) (pi O) :- !, pi x \ parse_axiom (I x) (O x).
-parse_axiom PST ST :- parse PST ST.
+parse_axiom PST ST :- parseterm PST ST.
 
 parse_thm NAME (pi I) (pi O) :- pi x \ parse_thm NAME (I x) (O x).
-parse_thm _ (PST,TAC) (ST,(false,TAC)) :- !, parse PST ST.
+parse_thm _ (PST,TAC) (ST,(false,TAC)) :- !, parseterm PST ST.
 parse_thm NAME PST (ST,(true,[_])) :-
  (not (proves NAME _) ; $print "Error:" NAME already defined, fail),
- parse PST ST.
+ parseterm PST ST.
 
 parse_nbt (pi I) (pi O) :- !, pi x \ parse_nbt (I x) (O x).
-parse_nbt (PP,TACTICS) (P,(false,TACTICS)) :- parse PP P.
-parse_nbt PP (P,(true,[_])) :- parse PP P.
+parse_nbt (PP,TACTICS) (P,(false,TACTICS)) :- parseterm PP P.
+parse_nbt PP (P,(true,[_])) :- parseterm PP P.
 
 next_object [ C | NEXT ] CT CONTNEXT :-
   parse_obj C [ CT | CONT ], append CONT NEXT CONTNEXT.
@@ -333,8 +337,8 @@ toplevel_loop G :-
 callback_proved _ _ (false,_).
 callback_proved NAME G (true, [ TAC ]) :-
  canonical TAC CANONICALTAC,
- parsetac PCANONICALTAC CANONICALTAC,
- parse PG G,
+ pptac PCANONICALTAC CANONICALTAC,
+ ppterm PG G,
  $print (theorem NAME (PG , [ PCANONICALTAC ] )).
 
 end_of_proof (true, []) :- $print "proof completed".
@@ -373,7 +377,7 @@ update_certificate (true_then_false, (SCRIPT,[ TAC | OTHER_TACS ],NON_INTERACTIV
  ; CERTIFICATE = (false, NON_INTERACTIVE_TACS),
    $print "INTERACTIVE SUBPROOF COMPLETED",
    canonical SCRIPT CSCRIPT,
-   parsetac PSCRIPT CSCRIPT,
+   pptac PSCRIPT CSCRIPT,
    $print PSCRIPT).
 update_certificate (false, [ _ | OTHER_TACS ]) _ _ (false, OTHER_TACS).
 
@@ -393,9 +397,9 @@ read_in_context (seq A B) TAC BACKTRACK :-
 
 print_sequent (seq Gamma G) :-
  $print,
- list_iter_rev Gamma (x \ sigma PX \ parse PX x, $print PX),
+ list_iter_rev Gamma (x \ sigma PX \ ppterm PX x, $print PX),
  $print "|------------------",
- parse PG G, $print PG.
+ ppterm PG G, $print PG.
 print_sequent (bind A F) :- pi x \ print_sequent (F x).
 
 /* turns thenl into then */
@@ -412,10 +416,10 @@ canonical T T.
 parse_inductive_def_spec (pi F) (pi PF) :- !,
  pi A \ parse_inductive_def_spec (F A) (PF A).
 parse_inductive_def_spec (param TY F) (param PTY PF) :- !,
- parse TY PTY, pi x \ parse_inductive_def_spec (F x) (PF x).
+ ppp TY PTY, pi x \ parse_inductive_def_spec (F x) (PF x).
 parse_inductive_def_spec L PL :-
  (pi p \ list_map (L p)
-  (x \ px \ sigma A \ sigma B \ sigma PB \ x = (A, B), parse B PB, px = (A, PB))
+  (x \ px \ sigma A \ sigma B \ sigma PB \ x = (A, B), parseterm B PB, px = (A, PB))
   (PL p)).
 
 build_quantified_predicate (pi I) (pi O) :- !,
@@ -580,58 +584,58 @@ bang P :- P, !.
 % BUG in runtime.ml if the sigma is uncommented out. It does not matter btw.
 /*sigma ff \*/ deftac fail SEQ ff.
 
-parsetac (constant_tacl TACL) (constant_tacl PTACL) :-
- list_map TACL parsetac PTACL.
+ppptac (constant_tacl TACL) (constant_tacl PTACL) :-
+ list_map TACL ppptac PTACL.
 deftacl (constant_tacl TACL) SEQS TACL.
 
-parsetac (thenl TAC TACL) (thenl PTAC PTACL) :-
- parsetac TAC PTAC, list_map TACL parsetac PTACL. 
+ppptac (thenl TAC TACL) (thenl PTAC PTACL) :-
+ ppptac TAC PTAC, list_map TACL ppptac PTACL. 
 deftac (thenl TAC TACL) SEQ XTAC :-
  XTAC = thenll TAC (constant_tacl TACL).
 
-parsetac (all_equals_list TAC) (all_equals_list PTAC) :- parsetac TAC PTAC.
+ppptac (all_equals_list TAC) (all_equals_list PTAC) :- ppptac TAC PTAC.
 deftacl (all_equals_list TAC2) SEQS TACL :-
  mk_constant_list SEQS TAC2 TACL.
 
-parsetac (then TAC1 TAC2) (then PTAC1 PTAC2) :-
- parsetac TAC1 PTAC1, parsetac TAC2 PTAC2.
+ppptac (then TAC1 TAC2) (then PTAC1 PTAC2) :-
+ ppptac TAC1 PTAC1, ppptac TAC2 PTAC2.
 deftac (then TAC1 TAC2) SEQ XTAC :-
  XTAC = thenll TAC1 (all_equals_list TAC2).
 
-parsetac (then! TAC1 TAC2) (then! PTAC1 PTAC2) :-
- parsetac TAC1 PTAC1, parsetac TAC2 PTAC2.
+ppptac (then! TAC1 TAC2) (then! PTAC1 PTAC2) :-
+ ppptac TAC1 PTAC1, ppptac TAC2 PTAC2.
 deftac (then! TAC1 TAC2) _ (then (! TAC1) TAC2).
 
-parsetac (orelse TAC1 TAC2) (orelse PTAC1 PTAC2) :-
- parsetac TAC1 PTAC1, parsetac TAC2 PTAC2.
+ppptac (orelse TAC1 TAC2) (orelse PTAC1 PTAC2) :-
+ ppptac TAC1 PTAC1, ppptac TAC2 PTAC2.
 deftac (orelse TAC1 TAC2) SEQ XTAC :-
  XTAC = TAC1 ; XTAC = TAC2.
 
-parsetac (orelse! TAC1 TAC2) (orelse! PTAC1 PTAC2) :-
- parsetac TAC1 PTAC1, parsetac TAC2 PTAC2.
+ppptac (orelse! TAC1 TAC2) (orelse! PTAC1 PTAC2) :-
+ ppptac TAC1 PTAC1, ppptac TAC2 PTAC2.
 deftac (orelse! TAC1 TAC2) _ (orelse (! TAC1) TAC2).
 
-parsetac (bind* TAC) (bind* PTAC) :- parsetac TAC PTAC.
+ppptac (bind* TAC) (bind* PTAC) :- ppptac TAC PTAC.
 deftac (bind* TAC) SEQ (orelse! (bind _ x \ bind* TAC) TAC).
 
-parsetac (repeat TAC) (repeat PTAC) :- parsetac TAC PTAC.
+ppptac (repeat TAC) (repeat PTAC) :- ppptac TAC PTAC.
 deftac (repeat TAC) SEQ XTAC :-
  ( XTAC = then TAC (repeat (bind* TAC))
  ; XTAC = id).
 
-parsetac (repeat! TAC) (repeat! PTAC) :- parsetac TAC PTAC.
+ppptac (repeat! TAC) (repeat! PTAC) :- ppptac TAC PTAC.
 deftac (repeat! TAC) SEQ (orelse! (then! TAC (repeat! (bind* TAC))) id).
 
-parsetac (printtac TAC) (printtac PTAC) :- parsetac TAC PTAC.
-deftac (printtac TAC) SEQ TAC :-
+ppptac (pptac TAC) (pptac PTAC) :- ppptac TAC PTAC.
+deftac (pptac TAC) SEQ TAC :-
  $print "SEQ" SEQ ":=" TAC.
 
-parsetac (time TAC) (time PTAC) :- parsetac TAC PTAC.
+ppptac (time TAC) (time PTAC) :- ppptac TAC PTAC.
 deftac (time TAC) SEQ XTAC :-
  $gettimeofday B,
  XTAC = thenll TAC (time_after TAC B).
 
-parsetac (time_after TAC B) (time_after PTAC B) :- parsetac TAC PTAC.
+ppptac (time_after TAC B) (time_after PTAC B) :- ppptac TAC PTAC.
 deftacl (time_after TAC B) SEQS TACL :-
  $gettimeofday A,
  D is A - B,
@@ -639,26 +643,26 @@ deftacl (time_after TAC B) SEQS TACL :-
  $print "TIME SPENT " D "FOR" TAC.
 
 /* For debugging only (?) For capturing metavariables */
-parsetac (inspect (seq Gamma F) TAC) (inspect (seq PGamma PF) PTAC) :-
- list_map SEQ parse PSEQ, parse F PF, parsetac TAC PTAC.
+ppptac (inspect (seq Gamma F) TAC) (inspect (seq PGamma PF) PTAC) :-
+ list_map SEQ ppp PSEQ, ppp F PF, ppptac TAC PTAC.
 deftac (inspect SEQ TAC) SEQ TAC.
 
 /********** tactics ********/
 
-parsetac (w G) (w PG) :- parse G PG.
+ppptac (w G) (w PG) :- ppp G PG.
 deftac (w G) (seq Gamma _) (wl Gamma1) :-
  append Gamma1 [ G | _ ] Gamma.
 
-parsetac h h.
+ppptac h h.
 deftac h SEQ (h L).
 
 /*** eq ***/
 
-parsetac sym sym.
+ppptac sym sym.
 deftac sym (seq Gamma (eq '' T ' L ' R)) TAC :-
  TAC = thenl (m (eq '' T ' R ' R)) [ thenl c [ thenl c [ r , id ] , r ] , r ].
 
-parsetac eq_true_intro eq_true_intro.
+ppptac eq_true_intro eq_true_intro.
 deftac eq_true_intro (seq Gamma (eq '' prop ' P ' tt)) TAC :-
  TAC = thenl s [ th tt_intro, wl [] ].
 
@@ -666,7 +670,7 @@ deftac eq_true_intro (seq Gamma (eq '' prop ' P ' tt)) TAC :-
 
 /*** and ***/
 
-parsetac conj conj.
+ppptac conj conj.
 deftac conj (seq Gamma (and ' P ' Q)) TAC :-
  TAC =
   then
@@ -678,7 +682,7 @@ deftac conj (seq Gamma (and ' P ' Q)) TAC :-
    ww.
 
 /* Gamma  "|-"  q    --->   Gamma "|-" and ' p ' q*/
-parsetac (andr P) (andr PP) :- parse P PP.
+ppptac (andr P) (andr PP) :- ppp P PP.
 deftac (andr P) (seq Gamma Q) TAC :-
  TAC =
   (thenl (m ((lam _ f \ f ' P ' Q) ' (lam _ x \ lam _ y \ y)))
@@ -692,13 +696,13 @@ deftac (andr P) (seq Gamma Q) TAC :-
        , then (repeat (conv (depth_tac b))) (th tt_intro) ]]).
 
 /* (and ' p ' q) :: nil  "|-"  q */
-parsetac andr andr.
+ppptac andr andr.
 deftac andr (seq Gamma Q) TAC :-
  mem Gamma (and ' P ' Q),
  TAC = then (andr P) h.
 
 /* Gamma  "|-"  p    --->   Gamma "|-" and ' p ' q*/
-parsetac (andl P) (andl PP) :- parse P PP.
+ppptac (andl P) (andl PP) :- ppp P PP.
 deftac (andl Q) (seq Gamma P) TAC :-
  TAC =
   (thenl (m ((lam _ f \ f ' P ' Q) ' (lam _ x \ lam _ y \ x)))
@@ -712,7 +716,7 @@ deftac (andl Q) (seq Gamma P) TAC :-
        , then (repeat (conv (depth_tac b))) (th tt_intro) ]]).
 
 /* (and ' p ' q) :: nil  "|-"  p */
-parsetac andl andl.
+ppptac andl andl.
 deftac andl (seq Gamma P) TAC :-
  mem Gamma (and ' P ' Q),
  TAC = then (andl Q) h.
@@ -721,12 +725,12 @@ deftac andl (seq Gamma P) TAC :-
 /*** forall ***/
 
 /* |- forall ' F  -->   |- F ' x */
-parsetac forall_i forall_i.
+ppptac forall_i forall_i.
 deftac forall_i (seq Gamma (forall '' _ ' lam _ G)) TAC :-
  TAC = then (conv dd) (then k (bind _ x \ eq_true_intro)).
 
 /* forall ' F |- F ' T */
-parsetac forall_e forall_e.
+ppptac forall_e forall_e.
 deftac forall_e (seq Gamma GX) TAC :-
  mem Gamma (forall '' _ ' (lam _ G)), GX = G X,
  TAC = thenl (m ((lam _ G) ' X)) [ b, thenl (m ((lam _ z \ tt) ' X))
@@ -734,22 +738,22 @@ deftac forall_e (seq Gamma GX) TAC :-
   , then (conv b) (th tt_intro) ] ].
 
 /* forall ' F |- f  -->  F ' a, forall ' F |- f */
-parsetac (lforall F A) (lforall PF PA) :- parse F PF, parse A PA.
+ppptac (lforall F A) (lforall PF PA) :- ppp F PF, ppp A PA.
 deftac (lforall F A) (seq Gamma G) TAC :-
  TAC = thenl (m (impl ' (F A) ' G))
   [ thenl s [ then mp forall_e, then i h ] , then (w (forall '' _ ' lam _ F)) i ].
 
 /* forall ' F |- f  -->  F ' a, forall ' F |- f */
-parsetac (lforall A) (lforall PA) :- parse A PA.
+ppptac (lforall A) (lforall PA) :- ppp A PA.
 deftac (lforall A) (seq Gamma G) (lforall F A) :-
  mem Gamma (forall '' _ ' lam _ F).
 
 /* forall ' F |- f  -->  F ' a, forall ' F |- f */
-parsetac lforall lforall.
+ppptac lforall lforall.
 deftac lforall (seq Gamma G) (lforall A).
 
 /* forall ' F |- f  -->  F ' a, forall ' F |- f */
-parsetac (lforall_last A) (lforall_last PA) :- parse A PA.
+ppptac (lforall_last A) (lforall_last PA) :- ppp A PA.
 deftac (lforall_last A) (seq ((forall '' _ ' lam _ F)::Gamma) G) (lforall F A).
 
 /*** false ***/
@@ -757,52 +761,52 @@ deftac (lforall_last A) (seq ((forall '' _ ' lam _ F)::Gamma) G) (lforall F A).
 /*** impl ***/
 
 /* |- p=>q  -->  p |- q */
-parsetac i i.
+ppptac i i.
 deftac i (seq Gamma (impl ' P ' Q)) TAC :-
  TAC = then (conv dd) (thenl s [ andl, thenl conj [ h [], id ]]).
 
 /* p=>q |- q  -->  |- p */
-parsetac (mp P) (mp PP) :- parse P PP.
+ppptac (mp P) (mp PP) :- ppp P PP.
 deftac (mp P) (seq Gamma Q) TAC :-
  TAC = then (andr P) (thenl (m P) [ then sym (thenl (m (impl ' P ' Q)) [ dd , h ]) , id ]).
 
 /* p=>q |- q  -->  |- p */
-parsetac mp mp.
+ppptac mp mp.
 deftac mp (seq Gamma Q) (mp P) :-
  mem Gamma (impl ' P ' Q).
 
 /* |- q   -->   p |- q  and  |- p */
-parsetac (cut P) (cut PP) :- parse P PP.
+ppptac (cut P) (cut PP) :- ppp P PP.
 deftac (cut P) (seq Gamma Q) TAC :-
  TAC = then (andr P) (thenl (m P) [then sym (thenl (m (impl ' P ' Q)) [then (conv (land_tac dd)) r, i] ) , id]). 
 
 /* |-q  --> p |- q   where the theorem T proves p */
-parsetac (cutth P) (cutth PP) :- parse P PP.
+ppptac (cutth P) (cutth PP) :- ppp P PP.
 deftac (cutth T) SEQ TAC :-
  proves T X,
  TAC = (thenl (cut X) [ id, th T ]).
 
 /* applies the theorem T */
-parsetac (applyth P) (applyth PP) :- parse P PP.
+ppptac (applyth P) (applyth PP) :- ppp P PP.
 deftac (applyth T) SEQ (then (cutth T) apply_last).
 
 /* impl p q, Gamma |- f   --->   /*impl q f*/ Gamma |- p  ,  q, Gamma |- f */
-parsetac (lapply P Q) (lapply PP PQ) :- parse P PP, parse Q PQ.
+ppptac (lapply P Q) (lapply PP PQ) :- ppp P PP, ppp Q PQ.
 deftac (lapply P Q) (seq Gamma F) TAC :-
  TAC =
   thenl (m (impl ' Q ' F)) [ thenl s [ then (mp Q) (then (w (impl ' Q ' F)) (then (mp P) (w (impl ' P ' Q)))) , then i (h [A]) ] , then (w (impl ' P ' Q)) (then i id) ].
 
 /* impl p q, Gamma |- f   --->   /*impl q f*/ Gamma |- p  ,  q, Gamma |- f */
-parsetac lapply lapply.
+ppptac lapply lapply.
 deftac lapply (seq Gamma F) (lapply P Q) :-
  mem Gamma (impl ' P ' Q).
 
 /* impl p q, Gamma |- f   --->   /*impl q f*/ Gamma |- p  ,  q, Gamma |- f */
-parsetac lapply_last lapply_last.
+ppptac lapply_last lapply_last.
 deftac lapply_last (seq ((impl ' P ' Q)::Gamma) F) (lapply P Q).
 
 /* p |- f ---> p |- p ==> f */
-parsetac (g P) (g PP) :- parse P PP.
+ppptac (g P) (g PP) :- ppp P PP.
 deftac (g P) (seq _ F) TAC :-
  TAC =
   (thenl (m (impl ' P ' F)) [thenl s [then mp h , then i h] , id ]).
@@ -813,7 +817,7 @@ deftac (g P) (seq _ F) TAC :-
 
 /**** apply, i.e. forall + impl ****/
 
-parsetac (apply X) (apply PX) :- parse X PX.
+ppptac (apply X) (apply PX) :- ppp X PX.
 deftac (apply X) SEQ h :- $is_flex X, !.
 deftac (apply X) SEQ h.
 deftac (apply (impl ' P ' Q)) SEQ TAC :-
@@ -821,10 +825,10 @@ deftac (apply (impl ' P ' Q)) SEQ TAC :-
 deftac (apply (forall '' _ ' lam _ G)) SEQ TAC :-
  TAC = then (lforall G X) apply_last.
 
-parsetac apply_last apply_last.
+ppptac apply_last apply_last.
 deftac apply_last (seq (H::Gamma) F) (apply H).
 
-parsetac apply apply.
+ppptac apply apply.
 deftac apply (seq Gamma F) (apply H) :-
  mem Gamma H.
 
@@ -834,51 +838,51 @@ strip_constant (I '' _) H :- !, strip_constant I H.
 strip_constant H H.
 
 /* expands definitions, even if applied to arguments */
-parsetac (dd L) (dd L).
+ppptac (dd L) (dd L).
 deftac (dd L) (seq _ (eq '' _ ' T ' X)) d :- strip_constant T H, bang (mem L H).
 deftac (dd L) (seq _ (eq '' _ ' (D ' T) ' X))
  (thenl (t A) [thenl c [dd L , r], b]).
 
-parsetac dd dd.
+ppptac dd dd.
 deftac dd _ (dd L).
 
-parsetac beta_expand beta_expand.
+ppptac beta_expand beta_expand.
 deftac beta_expand (seq _ (eq '' _ ' (lam _ x \ F x) ' (lam _ x \ (lam _ F) ' x))) TAC :-
  TAC = then k (bind _ x \ then sym b).
 
 /* folds a definition, even if applied to arguments */
 /* BUG: it seems to fail with restriction errors in some cases */
-parsetac f f.
+ppptac f f.
 deftac f SEQ (then sym dd).
 
-parsetac (rand_tac C) (rand_tac PC) :- parsetac C PC.
+ppptac (rand_tac C) (rand_tac PC) :- ppptac C PC.
 deftac (rand_tac C) SEQ TAC :-
   TAC = thenl c [ r , C ].
 
-parsetac (rator_tac C) (rator_tac PC) :- parsetac C PC.
+ppptac (rator_tac C) (rator_tac PC) :- ppptac C PC.
 deftac (rator_tac C) SEQ TAC :-
   TAC = thenl c [ C , r ].
 
-parsetac (abs_tac C) (abs_tac PC) :- parsetac C PC.
+ppptac (abs_tac C) (abs_tac PC) :- ppptac C PC.
 deftac (abs_tac C) SEQ TAC :-
   TAC = then k (bind A x \ C).
 
-parsetac (land_tac C) (land_tac PC) :- parsetac C PC.
+ppptac (land_tac C) (land_tac PC) :- ppptac C PC.
 deftac (land_tac C) SEQ TAC :-
   TAC = thenl c [ thenl c [ r, C ] , r ].
 
-parsetac (sub_tac C) (sub_tac PC) :- parsetac C PC.
+ppptac (sub_tac C) (sub_tac PC) :- ppptac C PC.
 deftac (sub_tac C) SEQ TAC :-
   TAC = orelse (rand_tac C) (orelse (rator_tac C) (abs_tac C)).
 
-parsetac (try TAC) (try PTAC) :- parsetac TAC PTAC.
+ppptac (try TAC) (try PTAC) :- ppptac TAC PTAC.
 deftac (try TAC) SEQ (orelse TAC id).
 
-parsetac (depth_tac C) (depth_tac PC) :- parsetac C PC.
+ppptac (depth_tac C) (depth_tac PC) :- ppptac C PC.
 deftac (depth_tac C) SEQ TAC :-
   TAC = then (try C) (sub_tac (depth_tac C)).
 
-parsetac (conv C) (conv PC) :- parsetac C PC.
+ppptac (conv C) (conv PC) :- ppptac C PC.
 deftac (conv C) (seq Gamma F) TAC :-
  TAC = thenl (m G) [ then sym C , id ].
 
@@ -886,7 +890,7 @@ deftac (conv C) (seq Gamma F) TAC :-
 /* TODO:
  1) our lforall gets rid of the hypothesis (bad) */
 /* left tries to reduce the search space via focusing */
-parsetac left left.
+ppptac left left.
 deftac left (seq Gamma _) TAC :-
  mem Gamma (not ' F),
  TAC =
@@ -929,10 +933,10 @@ deftac left (seq Gamma H) TAC :-
    (then (conv (land_tac (then (applyth eq_to_impl) h)))
      (then i (w (eq '' TY ' F ' G))))).
 
-parsetac not_i not_i.
+ppptac not_i not_i.
 deftac not_i (seq _ (not ' _)) (applyth not_i).
 
-parsetac inv inv.
+ppptac inv inv.
 deftac inv _ TAC :-
  TAC =
  (then!
@@ -940,7 +944,7 @@ deftac inv _ TAC :-
    (orelse! conj (orelse! forall_i (orelse! i (orelse! not_i s)))))
   (bind* (repeat! left))).
 
-parsetac (sync N) (sync N).
+ppptac (sync N) (sync N).
 deftac (sync N) (seq _ tt) (th tt_intro).
 deftac (sync N) (seq Gamma _) (then (applyth ff_elim) h) :-
  mem Gamma ff.
@@ -949,7 +953,7 @@ deftac (sync N) (seq _ (or ' _ ' _))
 deftac (sync N) (seq _ (exists '' _ ' _)) (then (applyth exists_i) (then (conv b) (itaut N2))) :-
  N2 is N - 2.
 
-parsetac (itaut N) (itaut N).
+ppptac (itaut N) (itaut N).
 deftac (itaut N) SEQ fail :- N =< 0, !.
 deftac (itaut N) SEQ TAC :-
  %$print (itaut N) SEQ,
@@ -963,12 +967,12 @@ deftac (itaut N) SEQ TAC :-
    (orelse /* Hypothesis not moved to front */ (then lforall (itaut N2))
    (then lapply (itaut N1))))))).
 
-parsetac (itauteq N) (itauteq N).
+ppptac (itauteq N) (itauteq N).
 deftac (itauteq N) _ (then (cutth eq_reflexive) (itaut N)).
 
 /********** inductive predicates package ********/
 
-parsetac monotone monotone.
+ppptac monotone monotone.
 deftac monotone (seq _ (impl ' X ' X)) (! (then i h)) :- !.
 deftac monotone (seq [forall '' _ ' lam _ x \ impl ' (F ' x) ' (G ' x)] (impl ' (F ' T) ' (G ' T))) (! apply) :- !.
 deftac monotone (seq _ (impl ' (and ' _ ' _) ' _)) TAC :-
@@ -995,7 +999,7 @@ deftac monotone (seq _ (impl ' (exists '' _ ' lam _ _) ' _)) TAC :-
 /* expands "monotone ' (lam _ f \ lam _ x \ X f x)" into
    "! x \ p ' x ==> q ' x |- X p y ==> X q y"
    and then calls the monotone tactic */
-parsetac auto_monotone auto_monotone.
+ppptac auto_monotone auto_monotone.
 deftac auto_monotone _ TAC :-
  TAC =
   then (conv dd)
