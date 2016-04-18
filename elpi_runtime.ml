@@ -1233,7 +1233,8 @@ let abstractionk = -99999998
 
 let key_of ~mode:_ ~depth =
  let rec skey_of = function
-    Const k -> k
+    Const k when k = uvc -> variablek
+  | Const k -> k
   | UVar ({contents=t},origdepth,args) when t != dummy ->
      skey_of (deref_uv ~from:origdepth ~to_:depth args t)
   | AppUVar ({contents=t},origdepth,args) when t != dummy ->
