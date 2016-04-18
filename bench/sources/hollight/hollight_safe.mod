@@ -56,30 +56,24 @@ put_binds A B C D :- put_binds' A B C D.
 
 /***** The HOL kernel *****/
 
-local thm, provable, def0, term, typ, typ', loop, prove, check1,
+local thm, provable, def0, term, typ, loop, prove, check1,
  check1def, check1thm, check1axm, check1nbt,
  reterm, not_defined, check_hyps.
 
 proves T TY :- provable T TY.
 
-typ T :- !. % THIS LINE SHOULD BE REMOVED. BUT IT MORE THAN DOUBLES THE COMPUTATION TIME. WHY?
-typ T :- $is_flex T, !, $delay (typ T) [ T ].
-typ T :- typ' T.
-typ' prop.
-typ' (univ '' A '' B) :- typ A, typ B.
-typ' (A --> B) :- typ A, typ B.
-typ' (disj_union '' A '' B) :- typ A, typ B.
+mode (typ i).
+typ prop.
+typ (univ '' A '' B) :- typ A, typ B.
+typ (A --> B) :- typ A, typ B.
+typ (disj_union '' A '' B) :- typ A, typ B.
+typ (?? as T) :- $constraint (typ T) T.
 
 mode (term i o).
 term (lam A F) (A --> B) :- typ A, pi x\ term x A => term (F x) B.
 term (F ' T) B :- term F (A --> B), term T A.
 term (eq '' A) (A --> A --> prop) :- typ A.
 term (?? as T) TY :- $constraint (term T TY) T.
-
-constraint term {
-%  rule [ (term (?? K []) T1) ] [ (term (?? K []) T2) ] (T1 = T2).
-}
-
 
 /* like term, but on terms that are already known to be well-typed */
 mode (reterm i o).
@@ -88,9 +82,12 @@ reterm (F ' T) B :- reterm F (A --> B).
 reterm (eq '' A) (A --> A --> prop).
 reterm (?? as T) TY :- $constraint (reterm T TY) T.
 
-constraint reterm {
+constraint reterm term typ {
 %  rule [ (reterm (?? K []) T1) ] [ (reterm (?? K []) T2) ] (T1 = T2).
+%  rule [ (term (?? K []) T1) ] [ (term (?? K []) T2) ] (T1 = T2).
 }
+
+
 
 /*propagate [ (G1 ?- term (X @ L1) TY1) ] [ (G2 ?- term (X @ L2) TY2) ] NEW :-
  list_map L1 (x\ y\ (term x y ; y = xxx)) LTY1,
@@ -173,8 +170,8 @@ prove G TACS :-
 not_defined P NAME :-
  not (P NAME _) ; $print "Error:" NAME already defined, fail.
 
-check_hyps HS (typ' TYPE) :-
- (not (typ' TYPE) ; $print "Error:" TYPE already defined, fail), $print HS new TYPE.
+check_hyps HS (typ TYPE) :-
+ (not (typ TYPE) ; $print "Error:" TYPE already defined, fail), $print HS new TYPE.
 check_hyps HS (def0 NAME DEF) :- ppterm PDEF DEF, $print HS NAME "=" PDEF.
 check_hyps HS (term NAME TYPE) :-
  not_defined term NAME, ppterm PTYPE TYPE, $print HS NAME ":" PTYPE.
@@ -182,7 +179,7 @@ check_hyps HS (reterm _ _).
 check_hyps HS (provable NAME TYPE) :-
  not_defined provable NAME, ppterm PTYPE TYPE, $print HS NAME ":" PTYPE.
 check_hyps HS (H1,H2) :- check_hyps HS H1, check_hyps HS H2.
-check_hyps HS (pi H) :- pi x \ typ' x => check_hyps [x | HS] (H x).
+check_hyps HS (pi H) :- pi x \ typ x => check_hyps [x | HS] (H x).
 check_hyps HS (_ => H2) :- check_hyps HS H2.
 
 /* check1 I O
@@ -195,29 +192,29 @@ check1 (def NAME TYPDEF) HYPS :- check1def NAME TYPDEF true HYPS, !.
 check1 (decl NAME TYP) HYPS :- check1decl NAME TYP true HYPS, !.
 
 check1def NAME (pi I) HYPSUCHTHAT (pi HYPS) :-
- pi x \ typ' x => check1def (NAME '' x) (I x) (HYPSUCHTHAT, typ x) (HYPS x).
+ pi x \ typ x => check1def (NAME '' x) (I x) (HYPSUCHTHAT, typ x) (HYPS x).
 check1def NAME (TYP,DEF) HYPSUCHTHAT HYPS :-
  typ TYP, term DEF TYP,
  HYPS = ((HYPSUCHTHAT => term NAME TYP), reterm NAME TYP, def0 NAME DEF).
 
 check1decl NAME (pi I) HYPSUCHTHAT (pi HYPS) :-
- pi x \ typ' x => check1decl (NAME '' x) (I x) (HYPSUCHTHAT, typ x) (HYPS x).
+ pi x \ typ x => check1decl (NAME '' x) (I x) (HYPSUCHTHAT, typ x) (HYPS x).
 check1decl NAME TYP HYPSUCHTHAT HYPS :-
  typ TYP, HYPS = ((HYPSUCHTHAT => term NAME TYP), reterm NAME TYP).
 
 check1thm NAME (pi I) (pi HYPS) :-
- pi x \ typ' x => check1thm NAME (I x) (HYPS x).
+ pi x \ typ x => check1thm NAME (I x) (HYPS x).
 check1thm NAME (GOAL,TACTICS) (provable NAME GOAL) :-
   prove GOAL TACTICS,
   callback_proved NAME GOAL TACTICS.
 
 check1axm NAME (pi I) (pi HYPS) :- !,
- pi x \ typ' x => check1axm NAME (I x) (HYPS x).
+ pi x \ typ x => check1axm NAME (I x) (HYPS x).
 check1axm NAME GOAL (provable NAME GOAL) :-
  term GOAL prop, ! ; ppterm PGOAL GOAL, $print "Bad statement:" PGOAL, fail.
 
 check1nbt TYPE REP ABS REPABS ABSREP PREPH (pi P_TACTICS) HYPSUCHTHAT (pi HYPS) :-
- pi x \ typ' x => check1nbt (TYPE '' x) (REP '' x) (ABS '' x) REPABS ABSREP PREPH (P_TACTICS x) (HYPSUCHTHAT, typ x) (HYPS x).
+ pi x \ typ x => check1nbt (TYPE '' x) (REP '' x) (ABS '' x) REPABS ABSREP PREPH (P_TACTICS x) (HYPSUCHTHAT, typ x) (HYPS x).
 check1nbt TYPE REP ABS REPABS ABSREP PREPH (P,TACTICS) HYPSUCHTHAT HYPS :-
   term P (X --> prop),
   prove (exists '' _ ' P ) TACTICS,
@@ -229,7 +226,7 @@ check1nbt TYPE REP ABS REPABS ABSREP PREPH (P,TACTICS) HYPSUCHTHAT HYPS :-
   PREPHTYP = (forall '' TYPE ' lam TYPE x \ (P ' (REP ' x))),
   !,
   HYPS =
-   ( (HYPSUCHTHAT => typ' TYPE)
+   ( (HYPSUCHTHAT => typ TYPE)
    , (HYPSUCHTHAT => term REP REPTYP), reterm REP REPTYP
    , (HYPSUCHTHAT => term ABS ABSTYP), reterm ABS ABSTYP
    , provable ABSREP ABSREPTYP
@@ -257,8 +254,8 @@ ppp (! TY F2) (forall '' TY ' lam TY F1) :- !, pi x \ ppp (F2 x) (F1 x).
 ppp (? F2) (exists '' _ ' lam _ F1) :- !, pi x \ ppp (F2 x) (F1 x).
 ppp (? TY F2) (exists '' TY ' lam TY F1) :- !, pi x \ ppp (F2 x) (F1 x).
 %TODO: use <=> only when the type is prop.
+ppp (F2 <=> G2) (eq '' prop ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
 ppp (F2 = G2) (eq '' _ ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
-ppp (F2 <=> G2) (eq '' _ ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
 ppp (F2 && G2) (and ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
 ppp (F2 $$ G2) (or ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
 ppp (F2 ==> G2) (impl ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
