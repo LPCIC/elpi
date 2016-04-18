@@ -1,0 +1,32 @@
+mode (term i).
+
+term (app X Y) :- term X, term Y.
+term (lam F) :- pi x\ term x => term (F x).
+term X :- $constraint (term X) X.
+
+infixl '   255. % infix application
+infixl &&  128. % and
+infixr <=> 125. % iff
+
+mode (pp i o) xas parse , (pp o i) xas pprint.
+
+ % goal: parse/print/pp -> just run
+ % hyp: pp -> index as pp
+ %            index as print and replace all occs of pp with print
+ %            index as parse ...
+ %      print/parse -> index as parse or print
+
+ pp (X1 = Y1)  (eq ' X2 ' Y2) :- pp X1 X2, pp Y1 Y2.
+ pp (X1 <=> Y1)  (eq ' X2 ' Y2) :- pp X1 X2, pp Y1 Y2.
+ pp (F2 && G2) (and ' F1 ' G1) :- pp F2 F1, pp G2 G1.
+ pp true true.
+ pp A A.
+
+ main :-
+   (term c => term (app (lam w\ X w) (app c Y))),
+   $is_flex X, $is_flex Y, $print_delayed,
+   (pi x\ pp "nice" x => parse ((V1 <=> true) && "nice") (P1 x)), $print P1,
+   (pi x\ pp "ugly" x => pprint (P2 x) (P1 x)), $print P2,
+   pprint Q1 (eq ' V2 ' V3), $print Q1.
+
+
