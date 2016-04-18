@@ -1,10 +1,8 @@
-mode term(i).
+mode (term i).
 
   term (app X Y) :- term X, term Y.
   term (lam F) :- pi x\ term x => term (F x).
-  % term (? as W) :- $constraint (term W) W.
   term X :- $constraint (term X) X.
-
 
 eq_as_set [] [].
 eq_as_set [X|XS] YS :-
@@ -20,7 +18,7 @@ remove_all X [Z|XS] [Z|YS] :- remove_all X XS YS.
 remove_all X [] [].
 
 constraint term {
-  rule [ (G1 ?- term (?X LX)) ] [ (G2 ?- term (?Y LY)) ] true :-
+  rule [ (G1 ?- term (?? X LX)) ] [ (G2 ?- term (?? Y LY)) ] true :-
     X = Y, G1 = G2, eq_as_set LX LY.
 }
 
