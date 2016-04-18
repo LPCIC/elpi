@@ -62,7 +62,9 @@ local thm, provable, def0, term, typ, typ', loop, prove, check1,
 
 proves T TY :- provable T TY.
 
-typ T :- !. % THIS LINE SHOULD BE REMOVED. BUT IT MORE THAN DOUBLES THE COMPUTATION TIME. WHY?
+typ T :- !. % this line temporarily drops checking of well-formedness for types
+            % to avoid too much slow down. It is ultimately due to re-typing
+            % terms that should be recognized as already well typed.
 typ T :- $is_flex T, !, $delay (typ T) [ T ].
 typ T :- typ' T.
 typ' prop.
@@ -83,17 +85,7 @@ reterm (F ' T) B :- reterm F (A --> B).
 reterm (eq '' A) (A --> A --> prop).
 reterm (?? as T) TY :- $constraint (reterm T TY) T.
 
-constraint term reterm {
-
-}
-
-
-/*propagate [ (G1 ?- term (X @ L1) TY1) ] [ (G2 ?- term (X @ L2) TY2) ] NEW :-
- list_map L1 (x\ y\ (term x y ; y = xxx)) LTY1,
- list_map L2 (x\ y\ (term x y ; y = xxx)) LTY2,
- NEW = (TY1 = TY2, LTY1 = LTY2).*/
-
-/*propagate [ (G ?- term (X @ L) TY) ] [ (G ?- term (X @ L) TY) ] true .*/
+constraint term reterm { /* No propagation rules for now */}
 
 % thm : bounded tactic -> bounded sequent -> list (bounded sequent) -> o
 thm C (seq Gamma G) _ :- debug, $print Gamma "|- " G " := " C, fail.
@@ -252,9 +244,8 @@ ppp (! F2) (forall '' _ ' lam _ F1) :- !, pi x \ ppp (F2 x) (F1 x).
 ppp (! TY F2) (forall '' TY ' lam TY F1) :- !, pi x \ ppp (F2 x) (F1 x).
 ppp (? F2) (exists '' _ ' lam _ F1) :- !, pi x \ ppp (F2 x) (F1 x).
 ppp (? TY F2) (exists '' TY ' lam TY F1) :- !, pi x \ ppp (F2 x) (F1 x).
-%TODO: use <=> only when the type is prop.
+ppp (F2 <=> G2) (eq '' prop ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
 ppp (F2 = G2) (eq '' _ ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
-ppp (F2 <=> G2) (eq '' _ ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
 ppp (F2 && G2) (and ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
 ppp (F2 $$ G2) (or ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
 ppp (F2 ==> G2) (impl ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
