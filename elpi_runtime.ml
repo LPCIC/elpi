@@ -3051,15 +3051,19 @@ let program_of_ast ?(print=false) (p : Elpi_ast.decl list) : program =
        | Elpi_ast.Local v ->
           clauses,lcs+1, chr, ConstMap.add v (constant_of_dbl lcs) cmap, cmapstack, clique
        | Elpi_ast.Mode m ->
+            let funct_of_ast c =
+              try
+                match ConstMap.find c cmap with
+                | Const x -> x 
+                | _ -> assert false
+              with Not_found -> fst (funct_of_ast c) in
             List.iter (fun (c,l,alias) ->
-             let key = fst (funct_of_ast c) in
+             let key = funct_of_ast c in
              let mode = l in
              let alias = option_map (fun (x,s) ->
-               fst (funct_of_ast x),
-               List.map (fun (x,y) ->
-                fst (funct_of_ast x),
-                fst (funct_of_ast y) ) s
-               ) alias in
+               funct_of_ast x,
+               List.map (fun (x,y) -> funct_of_ast x, funct_of_ast y) s) alias
+             in
              match alias with
              | None -> modes := CMap.add key (Mono mode) !modes
              | Some (a,subst) ->
