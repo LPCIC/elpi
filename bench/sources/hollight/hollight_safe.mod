@@ -71,23 +71,26 @@ typ' (A --> B) :- typ A, typ B.
 typ' (disj_union '' A '' B) :- typ A, typ B.
 
 mode (term i o).
-
-% term T TY :- $is_flex T, !, $delay (term T TY) [ T ].
-% term T TY :- term T TY.
 term (lam A F) (A --> B) :- typ A, pi x\ term x A => term (F x) B.
 term (F ' T) B :- term F (A --> B), term T A.
 term (eq '' A) (A --> A --> prop) :- typ A.
-term (?? as T) TY :- !, $delay (term T TY) T.
-reterm (eq '' A) (A --> A --> prop).
+term (?? as T) TY :- $constraint (term T TY) T.
 
-mode (reterm i o).
+constraint term {
+%  rule [ (term (?? K []) T1) ] [ (term (?? K []) T2) ] (T1 = T2).
+}
+
 
 /* like term, but on terms that are already known to be well-typed */
-%reterm T TY :- $is_flex T, !, $delay (reterm T TY) [ T ].
-% reterm T TY :- reterm T TY.
-reterm (?? as T) TY :- !, $delay (reterm T TY) T.
+mode (reterm i o).
 reterm (lam A F) (A --> B) :- pi x\ reterm x A => reterm (F x) B.
 reterm (F ' T) B :- reterm F (A --> B).
+reterm (eq '' A) (A --> A --> prop).
+reterm (?? as T) TY :- $constraint (reterm T TY) T.
+
+constraint reterm {
+%  rule [ (reterm (?? K []) T1) ] [ (reterm (?? K []) T2) ] (T1 = T2).
+}
 
 /*propagate [ (G1 ?- term (X @ L1) TY1) ] [ (G2 ?- term (X @ L2) TY2) ] NEW :-
  list_map L1 (x\ y\ (term x y ; y = xxx)) LTY1,

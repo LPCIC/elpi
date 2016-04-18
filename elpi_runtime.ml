@@ -1794,7 +1794,7 @@ let rec list_to_lp_list = function
   | x::xs -> App(consc,x,[list_to_lp_list xs])
 ;;
  let rec unif matching depth adepth a bdepth b e =
-   [%trace "unif" ("@[<hov 2>^%d%a@ =%d%s= ^%d%a@]%!"
+   [%trace "unif" ("@[<hov 2>^%d:%a@ =%d%s= ^%d:%a@]%!"
        adepth (ppterm (adepth+depth) [] adepth empty_env) a
        depth (if matching then "m" else "")
        bdepth (ppterm (bdepth+depth) [] adepth e) b)
@@ -1877,10 +1877,11 @@ let rec list_to_lp_list = function
       unif matching depth adepth (UVar(r,vd,0)) bdepth hd e &&
       let args = list_to_lp_list args in
       unif matching depth adepth args bdepth arg e
-   | _, (Const c | App(c,_,_)) when c == uvc ->
-      error (string_of_constant uvc ^ " can be used only in matching and takes 0, 1 or 2 args")
+   | _, (Const c | App(c,_,_)) when c == uvc -> false
+   (*
+      error (string_of_constant uvc ^ " can be used only in matching and takes 0, 1 or 2 args " ^ show_term a)
 
-
+*)
    (* assign *)
    | _, Arg (i,0) ->
      begin try
@@ -3077,8 +3078,14 @@ let program_of_ast ?(print=false) (p : Elpi_ast.decl list) : program =
             ) m;
             clauses,lcs,chr,cmap,cmapstack,clique
        | Elpi_ast.Constraint fl ->
+            let funct_of_ast c =
+              try
+                match ConstMap.find c cmap with
+                | Const x -> x 
+                | _ -> assert false
+              with Not_found -> fst (funct_of_ast c) in
            if clique <> None then error "nested constraint";
-           let fl = List.map (fun x -> fst (Constants.funct_of_ast x)) fl in
+           let fl = List.map (fun x -> funct_of_ast x) fl in
            let chr, clique = CHR.new_clique fl chr in
             clauses,lcs,chr,cmap,cmap::cmapstack, Some clique
     ) ([],lcs,chr,ConstMap.empty,[],None) clauses in
