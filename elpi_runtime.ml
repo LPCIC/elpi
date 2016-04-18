@@ -1528,6 +1528,7 @@ type program = {
   query_depth : int; (* number of sigma/local-introduced variables *)
   idx : index;
   chr : key CHR.t;
+  modes : md CMap.t;
 }
 
 type goal = (*depth:*)int * index * term
@@ -2233,7 +2234,7 @@ let register_custom, lookup_custom =
  Hashtbl.find customs
 ;;
 
-let do_make_runtime : (unit -> (?pr_delay:bool -> ?depth:int -> 'a -> 'b -> 'c -> int -> 'k) * 'e * 'f) ref =
+let do_make_runtime : (unit -> (?pr_delay:bool -> ?depth:int -> 'a -> 'b -> 'c -> md CMap.t -> int -> 'k) * 'e * 'f) ref =
  ref (function () -> anomaly "do_make_runtime not initialized")
 
 exception NoMatch
@@ -2246,8 +2247,8 @@ let rec list_assq1 p = function
 
 let rec freeze ad m = function
   | UVar( { contents = t} , 0,0) when t != dummy -> freeze ad m t
-  | UVar( { contents = t} , vardepth, args) when t != dummy ->
-      freeze ad m (deref_uv ~from:vardepth ~to_:ad args t)
+  | UVar( { contents = t} , vardepth, args) when t != dummy -> assert false
+(*      freeze ad m (deref_uv ~from:vardepth ~to_:ad args t)*)
     
   | AppUVar ( { contents = t }, _, _) when t != dummy -> assert false
   | UVar( r, lvl, ano) ->
@@ -2283,7 +2284,7 @@ let rec freeze ad m = function
       m, App(c,x,xs)
   | Const _ as x -> m, x
   | Arg _ | AppArg _ -> anomaly "freeze ad: not an heap term"
-  | Lam t -> let m, t = freeze ad m t in m, Lam t
+  | Lam t -> let m, t = freeze (ad+1) m t in m, Lam t
   | (Int _ | Float _ | String _) as x -> m, x
   | Custom(c,xs) ->
       let m, xs = List.fold_right (fun x (m,l) ->
@@ -2644,7 +2645,7 @@ let propagate constr j history =
             (try
               (* CSC: I am not at all sure about the second occurrence of
                  max_depth below *)
-              let _ = run ~depth:max_depth p query CHR.empty max_depth in
+              let _ = run ~depth:max_depth p query CHR.empty CMap.empty max_depth in
               if not (no_delayed ()) then begin
                 anomaly "propagation rules must not $delay"
               end;
@@ -2665,7 +2666,7 @@ let propagate constr j history =
 
 (* The block of recursive functions spares the allocation of a Some/None
  * at each iteration in order to know if one needs to backtrack or continue *)
-let make_runtime : unit -> (?pr_delay:bool -> ?depth:int -> 'a -> 'b -> 'c -> int -> 'k) * (?pr_delay:bool -> 'k -> 'k) * (unit -> bool) =
+let make_runtime : unit -> (?pr_delay:bool -> ?depth:int -> 'a -> 'b -> 'c -> md CMap.t -> int -> 'k) * (?pr_delay:bool -> 'k -> 'k) * (unit -> bool) =
 
   (* Input to be read as the orl (((p,g)::gs)::next)::alts
      depth >= 0 is the number of variables in the context. *)
@@ -2866,9 +2867,10 @@ end;*)
  (* Finally the runtime *)
  fun () ->
   let { Fork.exec = exec ; get = get ; set = set } = Fork.fork () in
-  (fun ?(pr_delay=false) ?(depth=0) p (_,argsdepth,q_env,q) chr ->
+  (fun ?(pr_delay=false) ?(depth=0) p (_,argsdepth,q_env,q) chr mds ->
      set original_program p;
      set chrules chr;
+     set modes mds;
      exec (fun lcs ->
      let q = move ~adepth:argsdepth ~from:depth ~to_:depth q_env q in
      let alts = run lcs p q [] FNil emptyalts emptyalts in
@@ -3095,20 +3097,21 @@ let program_of_ast ?(print=false) (p : Elpi_ast.decl list) : program =
  let clausesrev,lcs,chr = aux 0 p CHR.empty in
  { query_depth = lcs;
    idx = make_index (List.rev clausesrev);
-   chr }
+   chr;
+   modes = !modes}
 ;;
 
 (* RUN with non indexed engine *)
 type query = string list * int * term array * term
 
-let execute_once { query_depth = depth; idx = p; chr } q =
+let execute_once { query_depth = depth; idx = p; chr; modes } q =
  let run, cont, _ = make_runtime () in
- try ignore (run ~pr_delay:true p q chr depth) ; false
+ try ignore (run ~pr_delay:true p q chr modes depth) ; false
  with No_clause | Non_linear -> true
 ;;
 
 let execute_loop
-  { query_depth = depth; idx = p; chr } ((q_names,q_argsdepth,q_env,q) as qq) 
+  { query_depth = depth; idx = p; chr; modes } ((q_names,q_argsdepth,q_env,q) as qq) 
 =
  let run, cont, _ = make_runtime () in
  let k = ref emptyalts in
@@ -3125,7 +3128,7 @@ let execute_loop
   List.iteri (fun i name -> Fmt.eprintf "@[<hov 1>%s=%a@]\n%!" name
    (ppterm depth q_names 0 q_env) q_env.(i)) q_names;
   in
- do_with_infos (fun _ -> k := (run ~pr_delay:true p qq chr depth)) ();
+ do_with_infos (fun _ -> k := (run ~pr_delay:true p qq chr modes depth)) ();
  while !k != emptyalts do
    prerr_endline "More? (Y/n)";
    if read_line() = "n" then k := emptyalts else
