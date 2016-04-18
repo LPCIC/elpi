@@ -1287,7 +1287,7 @@ let add_clauses clauses s { map = p;  src } =
       let l,flexs,h = Elpi_ptmap.find ind m in
       if matching then
         if app == variablek then
-          Elpi_ptmap.add ind (clause :: l, flexs, h) m
+          Elpi_ptmap.add ind (clause :: l, clause :: flexs, h) m
         else
           let l_rev = try Elpi_ptmap.find app h with Not_found -> flexs in
           Elpi_ptmap.add ind (l, flexs, Elpi_ptmap.add app (clause::l_rev) h) m
@@ -1303,7 +1303,7 @@ let add_clauses clauses s { map = p;  src } =
     with
     | Not_found when matching ->
      if app == variablek then
-      Elpi_ptmap.add ind ([clause],[],Elpi_ptmap.empty) m
+      Elpi_ptmap.add ind ([clause],[clause],Elpi_ptmap.empty) m
      else
       Elpi_ptmap.add ind
        ([],[],Elpi_ptmap.add app [clause] Elpi_ptmap.empty) m
