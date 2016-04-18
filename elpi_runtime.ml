@@ -600,7 +600,7 @@ let to_resume = Fork.new_local []
 
 module CMap = Map.Make(Constants)
 
-let modes = Fork.new_local CMap.empty
+let modes = (*Fork.new_local*) ref CMap.empty
 
 type 'key clause =
   { depth : int; args : term list; hyps : term list; vars : int; key : 'key; mode: mode }
@@ -1289,7 +1289,7 @@ let add_clauses clauses s { map = p;  src } =
       let l,flexs,h = Elpi_ptmap.find ind m in
       if matching then
         if app == variablek then
-          Elpi_ptmap.add ind (clause :: l, clause :: flexs, h) m
+          Elpi_ptmap.add ind (clause :: l, clause :: flexs, Elpi_ptmap.map (fun l_rev -> clause::l_rev) h) m
         else
           let l_rev = try Elpi_ptmap.find app h with Not_found -> flexs in
           Elpi_ptmap.add ind (l, flexs, Elpi_ptmap.add app (clause::l_rev) h) m
