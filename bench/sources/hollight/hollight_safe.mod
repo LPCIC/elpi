@@ -56,9 +56,9 @@ put_binds A B C D :- put_binds' A B C D.
 
 /***** The HOL kernel *****/
 
-local thm, provable, def0, term, term', typ, typ', loop, prove, check1,
+local thm, provable, def0, term, typ, typ', loop, prove, check1,
  check1def, check1thm, check1axm, check1nbt,
- reterm, reterm', not_defined, check_hyps.
+ reterm, not_defined, check_hyps.
 
 proves T TY :- provable T TY.
 
@@ -70,18 +70,24 @@ typ' (univ '' A '' B) :- typ A, typ B.
 typ' (A --> B) :- typ A, typ B.
 typ' (disj_union '' A '' B) :- typ A, typ B.
 
-term T TY :- $is_flex T, !, $delay (term T TY) [ T ].
-term T TY :- term' T TY.
-term' (lam A F) (A --> B) :- typ A, pi x\ term' x A => term (F x) B.
-term' (F ' T) B :- term F (A --> B), term T A.
-term' (eq '' A) (A --> A --> prop) :- typ A.
-reterm' (eq '' A) (A --> A --> prop).
+mode (term i o).
+
+% term T TY :- $is_flex T, !, $delay (term T TY) [ T ].
+% term T TY :- term T TY.
+term (lam A F) (A --> B) :- typ A, pi x\ term x A => term (F x) B.
+term (F ' T) B :- term F (A --> B), term T A.
+term (eq '' A) (A --> A --> prop) :- typ A.
+term (?? as T) TY :- !, $delay (term T TY) T.
+reterm (eq '' A) (A --> A --> prop).
+
+mode (reterm i o).
 
 /* like term, but on terms that are already known to be well-typed */
-reterm T TY :- $is_flex T, !, $delay (reterm T TY) [ T ].
-reterm T TY :- reterm' T TY.
-reterm' (lam A F) (A --> B) :- pi x\ reterm' x A => reterm (F x) B.
-reterm' (F ' T) B :- reterm F (A --> B).
+%reterm T TY :- $is_flex T, !, $delay (reterm T TY) [ T ].
+% reterm T TY :- reterm T TY.
+reterm (?? as T) TY :- !, $delay (reterm T TY) T.
+reterm (lam A F) (A --> B) :- pi x\ reterm x A => reterm (F x) B.
+reterm (F ' T) B :- reterm F (A --> B).
 
 /*propagate [ (G1 ?- term (X @ L1) TY1) ] [ (G2 ?- term (X @ L2) TY2) ] NEW :-
  list_map L1 (x\ y\ (term x y ; y = xxx)) LTY1,
@@ -138,7 +144,7 @@ thm (wl Gamma1) (seq Gamma F) [ seq WGamma F ] :-
  append' Gamma1 Gamma2 WGamma.
 
 thm (bind A TAC) (bind A SEQ) NEWL :-
- pi x \ term' x A => reterm' x A => thm (TAC x) (SEQ x) (NEW x), put_binds' (NEW x) x A NEWL.
+ pi x \ term x A => reterm x A => thm (TAC x) (SEQ x) (NEW x), put_binds' (NEW x) x A NEWL.
 
 thm ww (bind A x \ SEQ) [ SEQ ].
 
@@ -167,9 +173,9 @@ not_defined P NAME :-
 check_hyps HS (typ' TYPE) :-
  (not (typ' TYPE) ; $print "Error:" TYPE already defined, fail), $print HS new TYPE.
 check_hyps HS (def0 NAME DEF) :- ppterm PDEF DEF, $print HS NAME "=" PDEF.
-check_hyps HS (term' NAME TYPE) :-
- not_defined term' NAME, ppterm PTYPE TYPE, $print HS NAME ":" PTYPE.
-check_hyps HS (reterm' _ _).
+check_hyps HS (term NAME TYPE) :-
+ not_defined term NAME, ppterm PTYPE TYPE, $print HS NAME ":" PTYPE.
+check_hyps HS (reterm _ _).
 check_hyps HS (provable NAME TYPE) :-
  not_defined provable NAME, ppterm PTYPE TYPE, $print HS NAME ":" PTYPE.
 check_hyps HS (H1,H2) :- check_hyps HS H1, check_hyps HS H2.
@@ -189,12 +195,12 @@ check1def NAME (pi I) HYPSUCHTHAT (pi HYPS) :-
  pi x \ typ' x => check1def (NAME '' x) (I x) (HYPSUCHTHAT, typ x) (HYPS x).
 check1def NAME (TYP,DEF) HYPSUCHTHAT HYPS :-
  typ TYP, term DEF TYP,
- HYPS = ((HYPSUCHTHAT => term' NAME TYP), reterm' NAME TYP, def0 NAME DEF).
+ HYPS = ((HYPSUCHTHAT => term NAME TYP), reterm NAME TYP, def0 NAME DEF).
 
 check1decl NAME (pi I) HYPSUCHTHAT (pi HYPS) :-
  pi x \ typ' x => check1decl (NAME '' x) (I x) (HYPSUCHTHAT, typ x) (HYPS x).
 check1decl NAME TYP HYPSUCHTHAT HYPS :-
- typ TYP, HYPS = ((HYPSUCHTHAT => term' NAME TYP), reterm' NAME TYP).
+ typ TYP, HYPS = ((HYPSUCHTHAT => term NAME TYP), reterm NAME TYP).
 
 check1thm NAME (pi I) (pi HYPS) :-
  pi x \ typ' x => check1thm NAME (I x) (HYPS x).
@@ -221,8 +227,8 @@ check1nbt TYPE REP ABS REPABS ABSREP PREPH (P,TACTICS) HYPSUCHTHAT HYPS :-
   !,
   HYPS =
    ( (HYPSUCHTHAT => typ' TYPE)
-   , (HYPSUCHTHAT => term' REP REPTYP), reterm' REP REPTYP
-   , (HYPSUCHTHAT => term' ABS ABSTYP), reterm' ABS ABSTYP
+   , (HYPSUCHTHAT => term REP REPTYP), reterm REP REPTYP
+   , (HYPSUCHTHAT => term ABS ABSTYP), reterm ABS ABSTYP
    , provable ABSREP ABSREPTYP
    , provable REPABS REPABSTYP, provable PREPH PREPHTYP).
 
@@ -235,11 +241,14 @@ check WHAT :-
 
 /************ parsing and pretty-printing ********/
 % ppterm/parseterm
-ppterm X Y :- ppp X Y. parseterm X Y :- ppp X Y.
-ppp X Y :- $is_flex X, $is_flex Y, !, X = Y.
-ppp X (F ' G) :- $is_flex X, ($is_flex F ; $is_flex G), !, X = (F ' G).
-ppp X (F ' G ' H) :- $is_flex X, ($is_flex F ; $is_flex G ; $is_flex H), !,
- X = (F ' G ' H).
+%ppterm X Y :- ppp X Y. parseterm X Y :- ppp X Y.
+%ppp X Y :- $is_flex X, $is_flex Y, !, X = Y.
+%ppp X (F ' G) :- $is_flex X, ($is_flex F ; $is_flex G), !, X = (F ' G).
+%ppp X (F ' G ' H) :- $is_flex X, ($is_flex F ; $is_flex G ; $is_flex H), !,
+% X = (F ' G ' H).
+
+mode (ppp o i) xas ppterm, (ppp i o) xas parseterm.
+
 ppp (! F2) (forall '' _ ' lam _ F1) :- !, pi x \ ppp (F2 x) (F1 x).
 ppp (! TY F2) (forall '' TY ' lam TY F1) :- !, pi x \ ppp (F2 x) (F1 x).
 ppp (? F2) (exists '' _ ' lam _ F1) :- !, pi x \ ppp (F2 x) (F1 x).
@@ -263,7 +272,11 @@ safe_list_map L1 _ L2 :- $is_flex L1, $is_flex L2, !, L1 = L2.
 safe_list_map L1 F L2 :- list_map L1 F L2.
 
 % pptac(ppterm)/parsetac(parseterm)
-pptac X Y :- ppptac X Y.  parsetac X Y :- ppptac X Y.
+% pptac X Y :- ppptac X Y.  parsetac X Y :- ppptac X Y.
+
+mode (ppptac i o) xas parsetac(ppp -> parseterm),
+     (ppptac o i) xas pptac(ppp -> ppterm).
+
 ppptac daemon daemon.
 ppptac r r.
 ppptac (t Y) (t PY) :- ppp Y PY.
@@ -390,7 +403,7 @@ mk_script ITAC NEW NEW_TACS (thenl ITAC NEW_TACS) :-
  mk_list_of_bounded_fresh NEW NEW_TACS.
 
 read_in_context (bind A K) (bind A TAC) BACKTRACK :-
- pi x \ /* term' x A => reterm ' x A => */ read_in_context (K x) (TAC x) BACKTRACK.
+ pi x \ /* term x A => reterm ' x A => */ read_in_context (K x) (TAC x) BACKTRACK.
 read_in_context (seq A B) TAC BACKTRACK :-
  flush std_out, $readterm std_in TAC,
  (TAC = backtrack, !, BACKTRACK = (!, fail) ; BACKTRACK = true).
