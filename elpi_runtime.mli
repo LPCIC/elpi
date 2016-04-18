@@ -44,14 +44,14 @@ type term =
   | Arg of (*id:*)int * (*argsno:*)int
   | AppArg of (*id*)int * term list
   (* Heap terms: unif variables in the query *)
-  | UVar of term oref * (*depth:*)int * (*argsno:*)int
-  | AppUVar of term oref * (*depth:*)int * term list
+  | UVar of term attributed_ref * (*depth:*)int * (*argsno:*)int
+  | AppUVar of term attributed_ref * (*depth:*)int * term list
   (* Misc: $custom predicates, ... *)
   | Custom of constant * term list
   | String of Func.t
   | Int of int
   | Float of float
-and 'a oref = {
+and 'a attributed_ref = {
   mutable contents : 'a;
   mutable rest : constraint_ list
 }
@@ -67,7 +67,7 @@ and dg
 and mode = bool list
 
 val term_of_ast : depth:int -> Elpi_ast.term -> term
-val oref : 'a -> 'a oref
+val oref : 'a -> 'a attributed_ref
 val pp_term : Format.formatter -> term -> unit
 val show_term : term -> string
 
@@ -106,18 +106,14 @@ val register_custom :
   string ->
   (depth:int -> env:term array -> index -> term list -> term list) ->
   unit
-val register_ll_custom :
-  string ->
-  (depth:int -> env:term array -> index -> mode:mode -> term list -> term list * mode) ->
-  unit
 
 (* Functions useful to implement custom predicates and evaluable functions *)
-val deref_uv : ?avoid:term oref -> from:constant -> to_:constant -> int -> term -> term
-val deref_appuv : ?avoid:term oref -> from:constant -> to_:constant -> term list -> term -> term
-val is_flex : term -> term oref option
+val deref_uv : ?avoid:term attributed_ref -> from:constant -> to_:constant -> int -> term -> term
+val deref_appuv : ?avoid:term attributed_ref -> from:constant -> to_:constant -> term list -> term -> term
+val is_flex : term -> term attributed_ref option
 val print_delayed : unit -> unit
-val delay_goal : depth:int -> index -> goal:term -> on:term attributed_ref list -> mode:mode -> unit
-val declare_constraint : depth:int -> index -> goal:term -> on:term attributed_ref list -> mode:mode -> unit
+val delay_goal : depth:int -> index -> goal:term -> on:term attributed_ref list -> unit
+val declare_constraint : depth:int -> index -> goal:term -> on:term attributed_ref list -> unit
 
 val lp_list_to_list : term -> term list
 

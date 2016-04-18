@@ -204,11 +204,11 @@ let really_input ic s ofs len =
   else unsafe_really_input 0 ic s ofs len
 
 let _ =
-  register_ll_custom "$delay" (fun ~depth ~env p ~mode args ->
+  register_custom "$delay" (fun ~depth ~env p args ->
     match args with
     | [t1; t2] ->
       (match is_flex t2 with
-        | Some v2 -> delay_goal ~depth p ~goal:t1 ~on:[v2] ~mode; [], [](*XX*)
+        | Some v2 -> delay_goal ~depth p ~goal:t1 ~on:[v2]; []
         | None ->
             let v2 =
               List.map (function
@@ -216,14 +216,14 @@ let _ =
                | None -> type_error
             "the second arg of $delay must be flexible or a list of flexibles")
               (List.map is_flex (lp_list_to_list t2)) in
-            delay_goal ~depth p ~goal:t1 ~on:v2 ~mode; [], [](* XXdynmode *))
+            delay_goal ~depth p ~goal:t1 ~on:v2; [])
     | _ -> type_error "$delay takes 2 arguments"
     );
-  register_ll_custom "$constraint" (fun ~depth ~env p ~mode args ->
+  register_custom "$constraint" (fun ~depth ~env p args ->
     match args with
     | [t1; t2] ->
       (match is_flex t2 with
-        | Some v2 -> declare_constraint ~depth p ~goal:t1 ~on:[v2] ~mode; [], []
+        | Some v2 -> declare_constraint ~depth p ~goal:t1 ~on:[v2]; []
         | None ->
             let v2 =
               List.map (function
@@ -231,7 +231,7 @@ let _ =
                | None -> type_error
             "the second arg of $constraint must be flexible or a list of flexibles")
               (List.map is_flex (lp_list_to_list t2)) in
-            declare_constraint ~depth p ~goal:t1 ~on:v2 ~mode; [], [])
+            declare_constraint ~depth p ~goal:t1 ~on:v2; [])
     | _ -> type_error "$constraint takes 2 arguments"
     );
   register_custom "$dprint" (fun ~depth ~env _ args ->

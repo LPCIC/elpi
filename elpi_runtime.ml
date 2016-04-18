@@ -251,8 +251,8 @@ type term =
   | Arg of (*id:*)int * (*argsno:*)int
   | AppArg of (*id*)int * term list
   (* Heap terms: unif variables in the query *)
-  | UVar of term oref * (*depth:*)int * (*argsno:*)int
-  | AppUVar of term oref * (*depth:*)int * term list
+  | UVar of term attributed_ref * (*depth:*)int * (*argsno:*)int
+  | AppUVar of term attributed_ref * (*depth:*)int * term list
   (* Misc: $custom predicates, ... *)
   | Custom of constant * term list
   | String of F.t
@@ -272,7 +272,7 @@ and cstr =
  | Delayed_unif of int * term array * int * term * term
 and dg = { depth : int;
            prog : block [@equal fun _ _ -> true];
-           pdiff : term list;
+           pdiff : (int * term) list;
            goal : term }
 and block = int
 [@@deriving show,eq]
@@ -401,8 +401,8 @@ module Pp : sig
     constant -> term array ->
       Fmt.formatter -> term -> unit
 
-  val do_deref : (?avoid:term oref -> from:int -> to_:int -> int -> term -> term) ref
-  val do_app_deref : (?avoid:term oref -> from:int -> to_:int -> term list -> term -> term) ref
+  val do_deref : (?avoid:term attributed_ref -> from:int -> to_:int -> int -> term -> term) ref
+  val do_app_deref : (?avoid:term attributed_ref -> from:int -> to_:int -> term list -> term -> term) ref
 
 end = struct (* {{{ *)
 
@@ -586,7 +586,7 @@ end (* }}} *)
 open Pp
 
 type trail_item =
-   Assign of term oref
+   Assign of term attributed_ref
  | AddConstr of constraint_
  | DelConstr of constraint_
 
@@ -713,7 +713,7 @@ let rec in_fragment expected =
  function
    [] -> 0
  | Const c::tl when c = expected -> 1 + in_fragment (expected+1) tl
- | UVar ({ contents = t; closed = true},_,_)::tl -> (* ??? XXX *)
+ | UVar ({ contents = t} ,_,_)::tl -> (* ??? XXX *)
     in_fragment expected (t :: tl)
 (* Invariant not true anymore, since we may not deref aggressively
    to avoid occur-check
@@ -865,7 +865,7 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
 (* TODO: to disable occur_check add something like: let avoid = None in *)
  let delta = from - to_ in
  let rc =
-         if delta = 0 && e == empty_env && avoid == None then (closed := false; t) (* Nothing to do! *)
+         if delta = 0 && e == empty_env && avoid == None then t (* Nothing to do! *)
  else begin
   (*if delta = 0 && e == empty_env && avoid <> None then prerr_endline "# EXPENSIVE OCCUR CHECK";*)
   let rec maux e depth x =
@@ -1528,7 +1528,7 @@ type program = {
   chr : key CHR.t;
 }
 
-type goal = (*depth:*)int * index * (*dm*)mode * (*fm:*)mode * term
+type goal = (*depth:*)int * index * term
 
 let original_program = Fork.new_local (Obj.magic 0 : index) (* dummy value *)
 
@@ -1536,11 +1536,6 @@ let original_program = Fork.new_local (Obj.magic 0 : index) (* dummy value *)
  * depth (but for orig_prog) *)
 (* CAVEAT: we are going to use pointer equality on the contents, so it must
  * be a tuple *)
-
-let safe_equal = equal_constraint_ ;;
-
-safe_eq := safe_equal
-
 let print_delayed () =
  List.iter
   (function
@@ -1554,7 +1549,7 @@ let print_delayed () =
    | Delayed_goal { depth; pdiff; goal = g },l ->
       Fmt.fprintf Fmt.std_formatter
         "delayed goal: @[<hov 2> %a@ ⊢ %a on %a@]\n%!"
-          (pplist (uppterm depth [] 0 empty_env) ",") pdiff
+          (pplist (fun fmt (depth,t) -> uppterm depth [] 0 empty_env fmt t) ",") pdiff
           (uppterm depth [] 0 empty_env) g
           (pplist (uppterm depth [] 0 empty_env) ",")
           (List.map (fun r -> UVar(r,0,0)) l)
@@ -1796,7 +1791,7 @@ let rec list_to_lp_list = function
   | [] -> nilc
   | x::xs -> App(consc,x,[list_to_lp_list xs])
 ;;
- let rec unif matching depth adepth a bdepth b e aclosed bclosed =
+ let rec unif matching depth adepth a bdepth b e =
    [%trace "unif" ("@[<hov 2>^%d%s%a@ =%d%s= ^%d%s%a@]%!"
        adepth (color aclosed ":") (ppterm (adepth+depth) [] adepth empty_env) a
        depth (if matching then "m" else "")
@@ -1806,11 +1801,11 @@ let rec list_to_lp_list = function
   
    (* _ as X binding *)
    | _, App(c,arg,[(Arg _ | AppArg _) as as_this]) when c == asc ->
-      unif matching depth adepth a bdepth arg e aclosed bclosed &&
-      unif matching depth adepth a bdepth as_this e aclosed bclosed
+      unif matching depth adepth a bdepth arg e &&
+      unif matching depth adepth a bdepth as_this e 
    | _, App(c,arg,_) when c == asc -> error "syntax error in as"
    | App(c,arg,_), _ when c == asc ->
-      unif matching depth adepth arg bdepth b e aclosed bclosed
+      unif matching depth adepth arg bdepth b e
 
 (* TODO: test if it is better to deref_uv first or not, i.e. the relative order
    of the clauses below *)
@@ -1818,19 +1813,19 @@ let rec list_to_lp_list = function
 
    (* deref_uv *)
    | UVar ({ contents = t }, from, args), _ when t != dummy ->
-      unif depth adepth (deref_uv ~from ~to_:(adepth+depth) args t) bdepth b e
+      unif matching depth adepth (deref_uv ~from ~to_:(adepth+depth) args t) bdepth b e
    | AppUVar ({ contents = t }, from, args), _ when t != dummy -> 
-      unif depth adepth (deref_appuv ~from ~to_:(adepth+depth) args t) bdepth b e
+      unif matching depth adepth (deref_appuv ~from ~to_:(adepth+depth) args t) bdepth b e
    | _, UVar ({ contents = t }, from, args) when t != dummy ->
-      unif depth adepth a bdepth (deref_uv ~from ~to_:(bdepth+depth) args t) empty_env
+      unif matching depth adepth a bdepth (deref_uv ~from ~to_:(bdepth+depth) args t) empty_env
    | _, AppUVar ({ contents = t }, from, args) when t != dummy ->
-      unif depth adepth a bdepth (deref_appuv ~from ~to_:(bdepth+depth) args t) empty_env
+      unif matching depth adepth a bdepth (deref_appuv ~from ~to_:(bdepth+depth) args t) empty_env
    | _, Arg (i,args) when e.(i) != dummy ->
 (*        if matching then raise Non_linear; *)
       (* XXX BROKEN deref_uv invariant XXX
        *   args not living in to_ but in bdepth+depth *)
       unif matching depth adepth a adepth
-        (deref_uv ~from:adepth ~to_:(adepth+depth) args e.(i)) empty_env aclosed bclosed
+        (deref_uv ~from:adepth ~to_:(adepth+depth) args e.(i)) empty_env
    | _, AppArg (i,args) when e.(i) != dummy -> 
 (*        if matching then raise Non_linear; *)
       (* XXX BROKEN deref_uv invariant XXX
@@ -1840,12 +1835,12 @@ let rec list_to_lp_list = function
       let args =
        List.map (move ~adepth ~from:bdepth ~to_:adepth e) args in
       unif matching depth adepth a adepth
-        (deref_appuv ~from:adepth ~to_:(adepth+depth) args e.(i)) empty_env aclosed bclosed
+        (deref_appuv ~from:adepth ~to_:(adepth+depth) args e.(i)) empty_env
 
    (* UVar introspection *)
    | (UVar _ | AppUVar _), Const c when c == uvc && matching -> true
    | (UVar(r,vd,_) | AppUVar(r,vd,_)), App(c,hd,[]) when c == uvc && matching ->
-      unif matching depth adepth (UVar(r,vd,0)) bdepth hd e aclosed bclosed
+      unif matching depth adepth (UVar(r,vd,0)) bdepth hd e
    | UVar(r,vd,ano), App(c,hd,[arg]) when c == uvc && matching ->
       let basedepth = 0 in (* XXX BUG? WE CAN DO BETTER *)
       let r,implargs =
@@ -1859,9 +1854,9 @@ let rec list_to_lp_list = function
         [%spy "assign" (ppterm depth [] adepth empty_env) (!!r)];
         r', implargs
        end in
-      unif matching depth adepth (UVar(r,0,0)) bdepth hd e aclosed bclosed &&
+      unif matching depth adepth (UVar(r,0,0)) bdepth hd e &&
       let args = list_to_lp_list (mkinterval basedepth (implargs + ano) 0) in
-      unif matching depth adepth args bdepth arg e aclosed bclosed
+      unif matching depth adepth args bdepth arg e
    | AppUVar(r,vd,args), App(c,hd,[arg]) when c == uvc && matching ->
       (* CODE CUT&PASTE FROM CASE ABOVE *)
       let basedepth = 0 in (* XXX BUG? WE CAN DO BETTER *)
@@ -1877,9 +1872,9 @@ let rec list_to_lp_list = function
         r', implargs
        end in
       let args = mkinterval basedepth implargs 0 @ args in
-      unif matching depth adepth (UVar(r,vd,0)) bdepth hd e aclosed bclosed &&
+      unif matching depth adepth (UVar(r,vd,0)) bdepth hd e &&
       let args = list_to_lp_list args in
-      unif matching depth adepth args bdepth arg e aclosed bclosed
+      unif matching depth adepth args bdepth arg e
    | _, (Const c | App(c,_,_)) when c == uvc ->
       error (string_of_constant uvc ^ " can be used only in matching and takes 0, 1 or 2 args")
 
@@ -1892,7 +1887,6 @@ let rec list_to_lp_list = function
      with RestrictionFailure -> false end
    | _, UVar (r,origdepth,0) when not matching || 
          (match a with UVar _ | AppUVar _ -> true | _ -> false) ->
-       let avoid = if aclosed then None else Some r in
        if not !last_call then
         trail := (Assign r) :: !trail;
        begin try
@@ -1908,7 +1902,6 @@ let rec list_to_lp_list = function
          [%spy "assign" (fun fmt tt -> Fmt.fprintf fmt "%a := %a" (ppterm depth [] bdepth empty_env) (UVar (r,origdepth,0)) (ppterm depth [] adepth empty_env) tt) t]; true
        with RestrictionFailure -> false end
    | UVar (r,origdepth,0), _ when not matching ->
-       let avoid = if bclosed then None else Some r in
        if not !last_call then
         trail := (Assign r) :: !trail;
        begin try
@@ -1929,19 +1922,19 @@ let rec list_to_lp_list = function
    | _, Arg (i,args) ->
       e.(i) <- fst (make_lambdas adepth args);
       [%spy "assign" (ppterm depth [] adepth empty_env) (e.(i))];
-      unif matching depth adepth a bdepth b e aclosed bclosed
+      unif matching depth adepth a bdepth b e
    | _, UVar (r,origdepth,args) (*when not matching*) when args>0 ->
       if not !last_call then
        trail := (Assign r) :: !trail;
       r @:= fst (make_lambdas origdepth args);
       [%spy "assign" (ppterm depth [] adepth empty_env) (!!r)];
-      unif matching depth adepth a bdepth b e aclosed bclosed
+      unif matching depth adepth a bdepth b e
    | UVar (r,origdepth,args), _ (*when not matching*) when args >0 ->
       if not !last_call then
        trail := (Assign r) :: !trail;
       r @:= fst (make_lambdas origdepth args);
       [%spy "assign" (ppterm depth [] adepth empty_env) (!!r)];
-      unif matching depth adepth a bdepth b e aclosed bclosed
+      unif matching depth adepth a bdepth b e
 
    (* HO *)
    | other, AppArg(i,args) ->
@@ -2001,12 +1994,12 @@ let rec list_to_lp_list = function
       ((delta=0 || c1 < bdepth) && c1=c2
        || c1 >= adepth && c1 = c2 + delta)
        &&
-       (delta=0 && x2 == y2 || unif matching depth adepth x2 bdepth y2 e aclosed bclosed) &&
-       for_all2 (fun x y -> unif matching depth adepth x bdepth y e aclosed bclosed) xs ys
+       (delta=0 && x2 == y2 || unif matching depth adepth x2 bdepth y2 e) &&
+       for_all2 (fun x y -> unif matching depth adepth x bdepth y e) xs ys
    | Custom (c1,xs), Custom (c2,ys) ->
        (* Inefficient comparison *)
-       c1 = c2 && for_all2 (fun x y -> unif matching depth adepth x bdepth y e aclosed bclosed) xs ys
-   | Lam t1, Lam t2 -> unif matching (depth+1) adepth t1 bdepth t2 e aclosed bclosed
+       c1 = c2 && for_all2 (fun x y -> unif matching depth adepth x bdepth y e) xs ys
+   | Lam t1, Lam t2 -> unif matching (depth+1) adepth t1 bdepth t2 e
    | Const c1, Const c2 ->
       if c1 < bdepth then c1=c2 else c1 >= adepth && c1 = c2 + delta
    (*| Const c1, Const c2 when c1 < bdepth -> c1=c2
@@ -2022,7 +2015,7 @@ let rec list_to_lp_list = function
 (* FISSA PRECEDENZA PER AS e FISSA INDEXING per AS e fai coso generale in unif *)
 
 let unif ?(matching=false) adepth e bdepth a b =
- let res = unif matching 0 adepth a bdepth b e false false in
+ let res = unif matching 0 adepth a bdepth b e in
  [%spy "unif result" (fun fmt x -> Fmt.fprintf fmt "%b" x) res];
  res
 ;;
@@ -2059,7 +2052,6 @@ type frame =
 and alternative = {
   lvl : alternative;
   program : index;
-  dynmodes : mode;
   depth : int;
   goal : term;
   goals : goal list;
@@ -2219,10 +2211,10 @@ let clausify vars depth t =
 
 exception No_clause
 
-let register_custom, register_ll_custom, lookup_custom =
+let register_custom, lookup_custom =
  let (customs :
       (* Must either raise No_clause or succeed with the list of new goals *)
-      ('a, depth:int -> env:term array -> index -> mode:mode -> term list -> term list * mode)
+      ('a, depth:int -> env:term array -> index -> term list -> term list)
       Hashtbl.t)
    =
      Hashtbl.create 17 in
@@ -2233,10 +2225,6 @@ let register_custom, register_ll_custom, lookup_custom =
     if Hashtbl.mem customs idx then
       anomaly ("Duplicate custom predicate name " ^ s);
     idx in
- (fun s f ->
-    let idx = check s in
-    Hashtbl.add customs idx
-      (fun ~depth ~env idx ~mode:_ args -> f ~depth ~env idx args, [])),
  (fun s f ->
     let idx = check s in
     Hashtbl.add customs idx f),
@@ -2255,7 +2243,6 @@ let rec list_assq1 p = function
 ;;
 
 let rec freeze m = function
-  | UVar( { closed = true; contents = t}, _,0) as x when t != dummy -> m, x
   | UVar( { contents = t} , 0,0) when t != dummy -> freeze m t
   | UVar( { contents = t} , _,_) when t != dummy -> assert false
   | AppUVar ( { contents = t }, _, _) when t != dummy -> assert false
@@ -2462,14 +2449,14 @@ let lift_pat ~from ~to_ t =
 
 let chrules = Fork.new_local CHR.empty
 
-let delay_goal ?(filter_ctx=fun _ -> true) ~depth prog ~goal:g ~on:keys ~mode =
-  let pdiff = local_prog ~to_:depth prog in
+let delay_goal ?(filter_ctx=fun _ -> true) ~depth prog ~goal:g ~on:keys =
+  let pdiff = local_prog prog in
   let pdiff = List.filter filter_ctx pdiff in
-  [%spy "delay-goal" (fun fmt -> Fmt.fprintf fmt
+  [%spy "delay-goal" (fun fmt (depth,x)-> Fmt.fprintf fmt
     (*"Delaying goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
     "@[<hov 2> ...@ ⊢^%d %a@]\n%!"
       (*(pplist (uppterm depth [] 0 empty_env) ",") pdiff*) depth
-      (uppterm depth [] 0 empty_env)) g];
+      (uppterm depth [] 0 empty_env) x) g];
   let delayed_goal = (Delayed_goal { depth; prog = Obj.magic prog; pdiff; goal = g }, keys) in
   add_constraint delayed_goal
 ;;
@@ -2481,13 +2468,13 @@ let rec head_of = function
   | UVar(r,_,_) when !!r != dummy -> head_of !!r
   | _ -> anomaly "strange head"
 
-let declare_constraint ~depth prog ~goal:g ~on:keys ~mode =
+let declare_constraint ~depth prog ~goal:g ~on:keys =
   let clique = CHR.clique_of (head_of g) !chrules in 
   (* XXX head_of is weak because no clausify ??? XXX *)
-  delay_goal ~filter_ctx:(fun x -> CSet.mem (head_of x) clique)
-    ~depth prog ~goal:g ~on:keys ~mode
-let delay_goal ~depth prog ~goal:g ~on:keys ~mode =
-  delay_goal ~depth prog ~goal:g ~on:keys ~mode
+  delay_goal ~filter_ctx:(fun (_,x) -> CSet.mem (head_of x) clique)
+    ~depth prog ~goal:g ~on:keys
+let delay_goal ~depth prog ~goal:g ~on:keys =
+  delay_goal ~depth prog ~goal:g ~on:keys
 
 
 (* constr is a new_delayed constraint;
@@ -2676,62 +2663,62 @@ let make_runtime : unit -> (?pr_delay:bool -> ?depth:int -> 'a -> 'b -> 'c -> in
 
   (* Input to be read as the orl (((p,g)::gs)::next)::alts
      depth >= 0 is the number of variables in the context. *)
-  let rec run depth p dm fm g gs (next : frame) alts lvl =
+  let rec run depth p g gs (next : frame) alts lvl =
     [%trace "run" ("%a %a" pp_mode fm (ppterm depth [] 0 empty_env) g)
- begin match resume_all fm with
+ begin match resume_all () with
   None ->
 begin Fmt.fprintf Fmt.std_formatter "Undo triggered by goal resumption\n%!";
   [%tcall next_alt alts]
 end
- | Some ((ndepth,np,ndm,nfm,ng)::goals) ->
-    run ndepth np ndm nfm ng (goals@(depth,p,dm,fm,g)::gs) next alts lvl
+ | Some ((ndepth,np,ng)::goals) ->
+    run ndepth np ng (goals@(depth,p,g)::gs) next alts lvl
  | Some [] ->
     match g with
     | c when c == cutc -> [%tcall cut p gs next alts lvl]
     | App(c, g, gs') when c == andc || c == andc2 ->
-       run depth p dm fm g (List.map(fun x -> depth,p,dm,fm,x) gs'@gs) next alts lvl
+       run depth p g (List.map(fun x -> depth,p,x) gs'@gs) next alts lvl
     | App(c, g2, [g1]) when c == rimplc ->
        (*Fmt.eprintf "RUN: %a\n%!" (uppterm depth [] 0 empty_env) g ;*)
        let clauses, lcs = clausify 0 depth g1 in
        let g2 = hmove ~from:depth ~to_:(depth+lcs) g2 in
        (*Fmt.eprintf "TO: %a \n%!" (uppterm (depth+lcs) [] 0 empty_env) g2;*)
-       run (depth+lcs) (add_clauses clauses (depth,g1) p) dm fm g2 gs next alts lvl
+       run (depth+lcs) (add_clauses clauses (depth,g1) p) g2 gs next alts lvl
     | App(c, g1, [g2]) when c == implc ->
        (*Fmt.eprintf "RUN: %a\n%!" (uppterm depth [] 0 empty_env) g ;*)
        let clauses, lcs = clausify 0 depth g1 in
        let g2 = hmove ~from:depth ~to_:(depth+lcs) g2 in
        (*Fmt.eprintf "TO: %a \n%!" (uppterm (depth+lcs) [] 0 empty_env) g2;*)
-       run (depth+lcs) (add_clauses clauses (depth,g1) p) dm fm g2 gs next alts lvl
+       run (depth+lcs) (add_clauses clauses (depth,g1) p) g2 gs next alts lvl
 (*  This stays commented out because it slows down rev18 in a visible way!   *)
 (*  | App(c, _, _) when c == implc -> anomaly "Implication must have 2 args" *)
     | App(c, arg, []) when c == pic ->
        let f = get_lambda_body depth arg in
-       run (depth+1) p dm fm f gs next alts lvl
+       run (depth+1) p f gs next alts lvl
     | App(c, arg, []) when c == sigmac ->
        let f = get_lambda_body depth arg in
        let v = UVar(oref dummy, depth, 0) in
-       run depth p dm fm (subst depth [v] f) gs next alts lvl
+       run depth p (subst depth [v] f) gs next alts lvl
     | UVar ({ contents = g }, from, args) when g != dummy ->
-       run depth p dm fm (deref_uv ~from ~to_:depth args g) gs next alts lvl
+       run depth p (deref_uv ~from ~to_:depth args g) gs next alts lvl
     | AppUVar ({contents = t}, from, args) when t != dummy ->
-       run depth p dm fm (deref_appuv ~from ~to_:depth args t) gs next alts lvl 
+       run depth p (deref_appuv ~from ~to_:depth args t) gs next alts lvl 
     | Const _ | App _ -> (* Atom case *)
        let cp = get_clauses depth g p in
-       [%tcall backchain dm depth p g gs cp next alts lvl]
+       [%tcall backchain depth p g gs cp next alts lvl]
     | Arg _ | AppArg _ -> anomaly "Not a heap term"
     | Lam _ | String _ | Int _ | Float _ -> type_error "Not a predicate"
     | UVar _ | AppUVar _ -> error "Flexible predicate"
     | Custom(c, args) ->
        let f = try lookup_custom c with Not_found -> anomaly"no such custom" in
-       match f depth empty_env p dm args with
-       | (gs', dm) ->
-          (match List.map (fun g -> depth,p,dm,[],g) gs' @ gs with
+       match f depth empty_env p args with
+       | gs' ->
+          (match List.map (fun g -> depth,p,g) gs' @ gs with
            | [] -> [%tcall pop_andl alts next lvl]
-           | (depth,p,dm,fm,g) :: gs -> run depth p dm fm g gs next alts lvl)
+           | (depth,p,g) :: gs -> run depth p g gs next alts lvl)
        | exception No_clause -> [%tcall next_alt alts]
   end]
 
-  and backchain dynamic_mode depth p g gs cp next alts lvl =
+  and backchain depth p g gs cp next alts lvl =
     let maybe_last_call = alts == emptyalts in
     let rec args_of = function
       | Const k -> k, []
@@ -2759,21 +2746,20 @@ end
            let oldalts = alts in
            let alts = if cs = [] then alts else
              { program = p; depth = depth; goal = g; goals = gs; stack = next;
-               dynmodes = dynamic_mode;
                trail = old_trail; clauses = cs; lvl = lvl ; next = alts} in
            begin match c.hyps with
            | [] ->
               begin match gs with
               | [] -> [%tcall pop_andl alts next lvl]
-              | (depth,p,dm,fm,g)::gs -> [%tcall run depth p dm fm g gs next alts lvl] end
+              | (depth,p,g)::gs -> [%tcall run depth p g gs next alts lvl] end
            | h::hs ->
               let next = if gs = [] then next else FCons (lvl,gs,next) in
               let h = move ~adepth:depth ~from:c.depth ~to_:depth env h in
               let hs =
                 List.map (fun x->
-                  depth,p,dynamic_mode,c.mode,move ~adepth:depth ~from:c.depth ~to_:depth env x)
+                  depth,p,move ~adepth:depth ~from:c.depth ~to_:depth env x)
                 hs in
-              [%tcall run depth p dynamic_mode c.mode h hs next alts oldalts] end
+              [%tcall run depth p h hs next alts oldalts] end
       end] in
       select cp
 
@@ -2784,24 +2770,24 @@ end
     if alts == emptyalts then trail := [];
     match gs with
     | [] -> pop_andl alts next lvl
-    | (depth, p, dm, fm, g) :: gs -> run depth p dm fm g gs next alts lvl
+    | (depth, p, g) :: gs -> run depth p g gs next alts lvl
 
   and pop_andl alts next lvl =
    match next with
     | FNil ->
-                    (match resume_all [] with
+        (match resume_all () with
            None ->
             Fmt.fprintf Fmt.std_formatter
              "Undo triggered by goal resumption\n%!";
             [%tcall next_alt alts]
-         | Some ((ndepth,p,dm,fm,ng)::goals) ->
-            run ndepth p dm fm ng goals FNil alts lvl
+         | Some ((ndepth,p,ng)::goals) ->
+            run ndepth p ng goals FNil alts lvl
          | Some [] -> alts)
     | FCons (_,[],_) -> anomaly "empty stack frame"
-    | FCons(lvl,(depth,p,dm,fm,g)::gs,next) ->
-        run depth p dm fm g gs next alts lvl
+    | FCons(lvl,(depth,p,g)::gs,next) ->
+        run depth p g gs next alts lvl
 
-  and resume_all fm =
+  and resume_all () =
 (*     if fm then Some [] else *)
 (*if (!to_resume <> []) then begin
 prerr_endline ("## RESUME ALL R " ^ string_of_int (List.length !to_resume));
@@ -2857,7 +2843,7 @@ end;*)
              to_be_resumed := to_be_added @ !to_be_resumed )
      | _ -> anomaly "Empty list"
     done;
-    Some (List.map (fun { depth = d; prog = p; goal = g } -> d,Obj.magic p,[],no_mode,g) (List.rev !to_be_resumed))
+    Some (List.map (fun { depth = d; prog = p; goal = g } -> d,Obj.magic p,g) (List.rev !to_be_resumed))
    end
    else None
 
@@ -2865,10 +2851,9 @@ end;*)
    if alts == emptyalts then raise No_clause
    else
     let { program = p; clauses = clauses; goal = g; goals = gs; stack = next;
-          dynmodes;
           trail = old_trail; depth = depth; lvl = lvl; next = alts} = alts in
     undo_trail old_trail;
-    backchain dynmodes depth p g gs clauses next alts lvl (* XXX *)
+    backchain depth p g gs clauses next alts lvl (* XXX *)
   in
 
 
@@ -2880,7 +2865,7 @@ end;*)
      set chrules chr;
      exec (fun lcs ->
      let q = move ~adepth:argsdepth ~from:depth ~to_:depth q_env q in
-     let alts = run lcs p [] [] q [] FNil emptyalts emptyalts in
+     let alts = run lcs p q [] FNil emptyalts emptyalts in
      if pr_delay then begin
        Fmt.fprintf Fmt.std_formatter "===== delayed ======\n%!";
        print_delayed ();
