@@ -1229,18 +1229,19 @@ type index = {
   map : (key clause list * key clause list * key clause list Elpi_ptmap.t) Elpi_ptmap.t
 }
 
-let variablek =    -99999999
-let abstractionk = -99999998
+let variablek =       -99999999
+let mustbevariablek = -99999998
+let abstractionk =    -99999997
 
 let key_of ~mode:_ ~depth =
  let rec skey_of = function
-    Const k when k = uvc -> variablek
+    Const k when k = uvc -> mustbevariablek
   | Const k -> k
   | UVar ({contents=t},origdepth,args) when t != dummy ->
      skey_of (deref_uv ~from:origdepth ~to_:depth args t)
   | AppUVar ({contents=t},origdepth,args) when t != dummy ->
      skey_of (deref_appuv ~from:origdepth ~to_:depth args t)
-  | App (k,_,_) when k = uvc -> variablek
+  | App (k,_,_) when k = uvc -> mustbevariablek
   | App (k,a,_) when k = asc -> skey_of a
   | App (k,_,_)
   | Custom (k,_) -> k
@@ -1272,6 +1273,7 @@ let key_of ~mode:_ ~depth =
     raise (Failure "Not a predicate")
  in
   key_of_depth
+;;
 
 let get_clauses ~depth a { map = m } =
  let ind,app = key_of ~mode:`Query ~depth a in
@@ -1287,34 +1289,25 @@ let add_clauses clauses s { map = p;  src } =
     let ind,app = clause.key in
     try 
       let l,flexs,h = Elpi_ptmap.find ind m in
-      if matching then
-        if app == variablek then
-          Elpi_ptmap.add ind (clause :: l, clause :: flexs, Elpi_ptmap.map (fun l_rev -> clause::l_rev) h) m
-        else
-          let l_rev = try Elpi_ptmap.find app h with Not_found -> flexs in
-          Elpi_ptmap.add ind (l, flexs, Elpi_ptmap.add app (clause::l_rev) h) m
-      else
-      if app == variablek then
-       Elpi_ptmap.add ind
-        (clause::l,clause::flexs,Elpi_ptmap.map(fun l_rev->clause::l_rev) h)
-        m
-      else
-       let l_rev = try Elpi_ptmap.find app h with Not_found -> flexs in
-        Elpi_ptmap.add ind
-         (clause::l,flexs,Elpi_ptmap.add app (clause::l_rev) h) m
+      if app == variablek then begin
+        Elpi_ptmap.add ind (clause :: l, clause :: flexs, Elpi_ptmap.map (fun l_rev -> clause::l_rev) h) m
+      end else if app == mustbevariablek then begin
+        Elpi_ptmap.add ind (clause :: l, flexs, h) m
+      end else begin
+        let l_rev = try Elpi_ptmap.find app h with Not_found -> flexs in
+        let l = if matching then l else clause :: l in
+        Elpi_ptmap.add ind (l, flexs, Elpi_ptmap.add app (clause::l_rev) h) m
+      end
     with
-    | Not_found when matching ->
-     if app == variablek then
-      Elpi_ptmap.add ind ([clause],[clause],Elpi_ptmap.empty) m
-     else
-      Elpi_ptmap.add ind
-       ([],[],Elpi_ptmap.add app [clause] Elpi_ptmap.empty) m
     | Not_found -> 
      if app=variablek then
       Elpi_ptmap.add ind ([clause],[clause],Elpi_ptmap.empty) m
+     else if app=mustbevariablek then
+      Elpi_ptmap.add ind ([clause],[],Elpi_ptmap.empty) m
      else
+      let l = if matching then [] else [clause] in
       Elpi_ptmap.add ind
-       ([clause],[],Elpi_ptmap.add app [clause] Elpi_ptmap.empty) m
+       (l,[],Elpi_ptmap.add app [clause] Elpi_ptmap.empty) m
     ) p clauses
   in
   { map = p; src = s :: src }
