@@ -1229,8 +1229,8 @@ type index = {
   map : (key clause list * key clause list * key clause list Elpi_ptmap.t) Elpi_ptmap.t
 }
 
-let variablek =       -99999999
-let mustbevariablek = -99999998
+let variablek =       -99999999 (* a flexible term like X t *)
+let mustbevariablek = -99999998 (* ?? or ?? t or ?? l t *)
 let abstractionk =    -99999997
 
 let key_of ~mode:_ ~depth =
@@ -1289,10 +1289,13 @@ let add_clauses clauses s { map = p;  src } =
     let ind,app = clause.key in
     try 
       let l,flexs,h = Elpi_ptmap.find ind m in
+      (* X matches both rigid and flexible terms *)
       if app == variablek then begin
         Elpi_ptmap.add ind (clause :: l, clause :: flexs, Elpi_ptmap.map (fun l_rev -> clause::l_rev) h) m
+      (* ?? matches only flexible terms *)
       end else if app == mustbevariablek then begin
         Elpi_ptmap.add ind (clause :: l, flexs, h) m
+      (* a rigid term matches flexible terms only in unification mode *)
       end else begin
         let l_rev = try Elpi_ptmap.find app h with Not_found -> flexs in
         let l = if matching then l else clause :: l in
