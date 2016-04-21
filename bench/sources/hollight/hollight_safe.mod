@@ -1,5 +1,4 @@
 infixr --> 126. % type arrow
-
 infixl '   255. % infix application
 infixl ''  255. % infix System-F application
 infixl &&  128. % and
@@ -15,7 +14,8 @@ infix  <<= 130. % subseteq
  * next_tactic            next tactic to use
  * update_certificate     get new certificate after tactic application
  * end_of_proof           is the certificate/proof empty?
- * ppterm              for pretty-printing messages
+ * ppterm                 for pretty-printing messages
+ * deftac                 tactic definition
  */
 
 /* Predicates exported from the trusted library:
