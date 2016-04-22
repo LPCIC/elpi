@@ -34,6 +34,8 @@ let make_absolute filename =
 let tjpath =
  let tjpath = try Sys.getenv "TJPATH" with Not_found -> "" in
  let tjpath = Str.split (Str.regexp ":") tjpath in
+ let execname = Unix.readlink "/proc/self/exe" in
+ let tjpath = tjpath @ [ Filename.dirname execname ] in
  let tjpath = List.map (fun f -> make_absolute (readsymlinks f)) tjpath in
  tjpath
 
@@ -520,8 +522,7 @@ let parse_program (*?(ontop=[])*) ~filenames : program =
           raise (Stream.Error ("unable to insert clause "^CN.to_string name));
         newprog in
   List.fold_left insert ontop insertions*)
-  let execname = Unix.readlink "/proc/self/exe" in
-  let pervasives = Filename.dirname execname ^ "/pervasives.elpi" in
+  let pervasives = "pervasives.elpi" in
   parse lp (pervasives::filenames)
 ;;
 
