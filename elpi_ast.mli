@@ -24,8 +24,11 @@ module Func : sig
   val consf : t
   val letf : t
   val arrowf : t
+  val sequentf : t
 
   val from_string : string -> t
+
+  module Map : Map.S with type key = t
 end
 
 type term =
@@ -44,6 +47,32 @@ val show_term : term -> string
 
 
 type clause = term
+type ('term,'func_t) chr = {
+  to_match : ('term * 'term) list;
+  to_remove : ('term * 'term) list;
+  alignement : 'func_t list;
+  guard : 'term option;
+  new_goal : 'term option;
+  depth : int; (* not parsed *)
+  nargs : int; (* not parsed *)
+}
+
+val create_chr :
+  ?to_match:('a * 'a) list ->
+  ?to_remove:('a * 'a) list ->
+  ?alignement:'b list ->
+  ?guard:'a ->
+  ?new_goal:'a -> ?depth:int -> ?nargs:int -> unit -> ('a, 'b) chr
+
+val pp_chr : 
+  (Format.formatter -> 'term -> unit) ->
+  (Format.formatter -> 'func_t -> unit) ->
+     Format.formatter -> ('term,'func_t) chr -> unit
+val show_chr :
+  (Format.formatter -> 'term -> unit) ->
+  (Format.formatter -> 'func_t -> unit) ->
+     ('term,'func_t) chr -> string
+
 type decl =
    Clause of clause
  | Local of Func.t
@@ -51,11 +80,16 @@ type decl =
  | End
  | Mode of (Func.t * bool list * (Func.t * (Func.t * Func.t) list) option) list
  | Constraint of Func.t list
+ | Chr of (term, Func.t) chr
  | Accumulated of decl list
 
 val mkLocal : string -> decl
 
 type program = decl list
+
+val pp_program : Format.formatter -> program -> unit
+val show_program : program -> string
+
 type goal = term
 exception NotInProlog
 

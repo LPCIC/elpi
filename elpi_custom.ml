@@ -50,7 +50,7 @@ let rec eval depth =
   | App (hd,arg,args) ->
      let f =
       try lookup_eval hd
-      with Not_found -> anomaly (string_of_constant hd ^ " not evaluable") in
+      with Not_found -> anomaly (show hd ^ " not evaluable") in
      let args = List.map (eval depth) (arg::args) in
      f args
   | UVar ({ contents = g }, from, args) when g != dummy ->
@@ -62,7 +62,7 @@ let rec eval depth =
   | Const hd ->
      let f =
       try lookup_eval hd
-      with Not_found -> anomaly (string_of_constant hd ^ " not evaluable") in
+      with Not_found -> anomaly (show hd ^ " not evaluable") in
      f []
   | String _
   | Int _

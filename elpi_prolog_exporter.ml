@@ -18,7 +18,7 @@ let xppterm_prolog ~nice names env f t =
     Fmt.fprintf f "@[<hov 1>%a(%a@]" pphd hd (pplist pparg ",") args;
     Fmt.fprintf f "%s" ")";
    end in
-  let ppconstant f c = Fmt.fprintf f "%s" (string_of_constant c) in
+  let ppconstant f c = Fmt.fprintf f "%s" (show c) in
   let rec pp_arg f n =
    let name= try List.nth names n with Failure _ -> "A" ^ string_of_int n in
    if env.(n) == dummy then Fmt.fprintf f "%s" name
@@ -81,11 +81,12 @@ let rec pp_FOprolog p =
     | Mode _
     | Begin
     | Constraint _
+    | Chr _
     | End -> assert false (* TODO *)
     | Accumulated l -> pp_FOprolog l
     | Clause t ->
        (* BUG: ConstMap.empty because "local" declarations are ignored ATM *)
-       let names,_,env,t = query_of_ast_cmap 0 ConstMap.empty t in
+       let names,_,env,t = query_of_ast_cmap 0 Func.Map.empty t in
        match t with
        | App(_, Custom _, _) | App(_,_,(Custom _)::_) -> ()  
        | App(hd,a,[f]) when hd == rimplc -> 

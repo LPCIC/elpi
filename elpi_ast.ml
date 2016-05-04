@@ -4,6 +4,8 @@
 
 module Func = struct
 
+  module Self = struct
+
   type t = string
   let compare = String.compare
 
@@ -32,6 +34,12 @@ module Func = struct
   let nilf = from_string "nil"
   let letf = from_string ":="
   let arrowf = from_string "->"
+  let sequentf = from_string "?-"
+
+  end
+
+  include Self
+  module Map = Map.Make(Self)
 
 end
 
@@ -60,7 +68,19 @@ let mkSeq l =
   aux l
 let mkIs x f = App(Const Func.isf,[x;f])
 
-type clause = term
+type clause = term [@@deriving show]
+
+type ('term,'func_t) chr = {
+  to_match : ('term * 'term) list;
+  to_remove : ('term * 'term) list;
+  alignement : 'func_t list;
+  guard : 'term option;
+  new_goal : 'term option;
+  depth : int [@default 0];
+  nargs : int [@default 0];
+}
+[@@deriving show, create]
+
 type decl =
    Clause of clause
  | Local of Func.t
@@ -68,11 +88,13 @@ type decl =
  | End
  | Mode of (Func.t * bool list * (Func.t * (Func.t * Func.t) list) option) list
  | Constraint of Func.t list
+ | Chr of (term, Func.t) chr
  | Accumulated of decl list
+[@@deriving show]
 
 let mkLocal x = Local (Func.from_string x)
 
-type program = decl list
+type program = decl list [@@deriving show]
 type goal = term
 
 exception NotInProlog

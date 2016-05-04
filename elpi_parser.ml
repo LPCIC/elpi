@@ -237,6 +237,7 @@ let rec lex c = parser bp
          | "use_sig" -> "USE_SIG", "use_sig"
          | "local" -> "LOCAL", "local"
          | "mode" -> "MODE", "mode"
+         | "rule" -> "RULE", "rule"
          | "constraint" -> "CONSTRAINT", "constraint"
          | "localkind" -> "LOCALKIND", "localkind"
          | "useonly" -> "USEONLY", "useonly"
@@ -373,6 +374,23 @@ EXTEND
                  Func.from_string c,
                  match subst with None -> [] | Some l -> l ] ->
       Func.from_string c,l,alias]];
+  chrrule :
+    [[ to_match = LIST0 sequent;
+       to_remove = OPT [ BIND; l = LIST1 sequent -> l ];
+       alignement = OPT [ SYMBOL ">"; cl = LIST1 CONSTANT SEP SYMBOL "~" -> cl ];
+       guard = OPT [ PIPE; a = atom LEVEL "abstterm" -> a ];
+       new_goal = OPT [ SYMBOL "<=>"; g = atom -> g ] ->
+         let to_remove = match to_remove with None -> [] | Some l -> l in
+         let alignement = match alignement with None -> [] | Some l -> l in
+         let alignement = List.map Func.from_string alignement in
+         create_chr ~to_match ~to_remove ~alignement ?guard ?new_goal ()
+    ]];
+  sequent :
+    [[ LPAREN; t1 = atom; RPAREN ->
+         match t1 with
+         | App(Const x,[a;b]) when Func.equal x Func.sequentf -> a, b
+         | _ -> mkFreshUVar (), t1
+    ]];
   clause :
     [[ f = atom; FULLSTOP ->
        (!PointerFunc.latex_export).PointerFunc.export f ;
@@ -380,6 +398,7 @@ EXTEND
      | LCURLY -> [Begin]
      | RCURLY -> [End]
      | MODE; m = LIST1 mode SEP SYMBOL ","; FULLSTOP -> [Mode m]
+     | RULE; r = chrrule; FULLSTOP -> [Chr r]
      | CONSTRAINT; names=LIST0 CONSTANT; LCURLY ->
          [ Constraint (List.map Func.from_string names) ]
      | MODULE; CONSTANT; FULLSTOP -> []

@@ -52,19 +52,14 @@ type term =
   | Int of int
   | Float of float
 and 'a attributed_ref = {
-  mutable contents : 'a;
-  mutable rest : constraint_ list
+  mutable contents : 'a [@printer fun _ _ -> ()];
+  mutable rest : stuck_goal list [@printer fun _ _ -> ()] [@equal fun _ _ -> true];
 }
-and constraint_ =
- (* exn is the constraint;
-    the associated list is the list of variables the constraint is
-    associated to *)
-  cstr * term attributed_ref list (* well... open type in caml < 4.02 *)
-and cstr =
- | Delayed_goal of dg
- | Delayed_unif of int * term array * int * term * term
-and dg
-and mode = bool list
+and stuck_goal = {
+  blockers : term attributed_ref list;
+  kind : stuck_goal_kind;
+}
+and stuck_goal_kind
 
 val term_of_ast : depth:int -> Elpi_ast.term -> term
 val oref : 'a -> 'a attributed_ref
@@ -88,7 +83,7 @@ module Pp :
 module Constants :
  sig
   val funct_of_ast : Func.t -> constant * term
-  val string_of_constant : constant -> string
+  val show : constant -> string
 
   val eqc : constant
   val orc : constant
@@ -117,9 +112,8 @@ val declare_constraint : depth:int -> index -> goal:term -> on:term attributed_r
 
 val lp_list_to_list : term -> term list
 
-module ConstMap : Map.S with type key = Elpi_ast.Func.t
 val query_of_ast_cmap :
   constant ->
-  term ConstMap.t ->
+  term Func.Map.t ->
   Elpi_ast.term -> string list * int * term array * term
 val split_conj : term -> term list
