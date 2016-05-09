@@ -928,7 +928,7 @@ let deterministic_restriction e ~args_safe t =
   | App (_,t,l) -> aux t; List.iter aux l
   | Custom (_,l) -> List.iter aux l
   | UVar (r,_,_) 
-  | AppUVar (r,_,_) when !!r != C.dummy -> raise NonMetaClosed
+  | AppUVar (r,_,_) when !!r == C.dummy -> raise NonMetaClosed
   | UVar (r,_,_) -> aux !!r
   | AppUVar (r,_,l) -> aux !!r ; List.iter aux l
   | Arg (i,_) when e.(i) == C.dummy && not args_safe -> raise NonMetaClosed
@@ -1129,7 +1129,7 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
        mkAppUVar r to_ args
     | AppArg _ ->
        Fmt.fprintf Fmt.str_formatter
-        "Non deterministic pruning, implemented delay: t=%a, delta=%d%!"
+        "Non deterministic pruning, delay to be implemented: t=%a, delta=%d%!"
          (ppterm depth [] argsdepth e) x delta;
        anomaly (Fmt.flush_str_formatter ())
 
@@ -1185,7 +1185,7 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
            mkAppUVar r vardepth args
        else begin
         Fmt.fprintf Fmt.str_formatter
-         "Non deterministic pruning, implemented delay: t=%a, delta=%d%!"
+         "Non deterministic pruning, delay to be implemented: t=%a, delta=%d%!"
           (ppterm depth [] argsdepth e) x delta;
         anomaly (Fmt.flush_str_formatter ())
        end
