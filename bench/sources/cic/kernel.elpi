@@ -1,0 +1,28 @@
+% Type checker for CIC %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Universe: U := user defined
+
+% Sort: S := prop   universe of propositions
+%         |  type U universe U
+
+% Closed term: T, U, V, W := sort S                          sort S
+%                         |  prod        W F where F: T => T product of type W in F
+%                         |  abst        W F where F: T => T abstraction of type W in F
+%                         |  abbr V      W F where F: T => T abbreviation of V of type W in F
+%                         |  appl [T|VS]                     application of T to list VS
+
+% Predicates: r+whd T1 T2 = weak head computation from T1 to T2
+
+% WEAK HEAD COMPUTATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% local delta
+r+whd (abbr V _ F) X :- !, r+whd (F V) X.
+
+% beta
+r+whd (appl [abst _ F , V | VS]) X :- !, r+whd (F V) X.
+
+% contextual for application
+r+whd [T1 | VS] X := !, r+whd T1 T2, r+whd [T2 | VS] X
+
+% normal form
+r+whd X X.
