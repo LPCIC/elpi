@@ -5,24 +5,107 @@
 % Sort: S := prop   universe of propositions
 %         |  type U universe U
 
-% Closed term: T, U, V, W := sort S                          sort S
-%                         |  prod        W F where F: T => T product of type W in F
-%                         |  abst        W F where F: T => T abstraction of type W in F
-%                         |  abbr V      W F where F: T => T abbreviation of V of type W in F
-%                         |  appl [T|VS]                     application of T to list VS
+% Closed term: T, U, V, W := sort S                        sort S
+%                         |  prod      W F where F: T => T product of type W in F
+%                         |  abst      W F where F: T => T abstraction of type W in F
+%                         |  abbr V    W F where F: T => T abbreviation of V of type W in F
+%                         |  appl T VS                     application of T to list VS
 
-% Predicates: r+whd T1 T2 = weak head computation from T1 to T2
+% Predicates: whd+0 T A C E = weak head computation of (appl T A)
+                              passed to the continuation C
+
+% HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+append [] A A :- !.
+
+append [V|A1] A [V|A2] :- !, append A1 A A2.
 
 % WEAK HEAD COMPUTATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % local delta
-r+whd (abbr V _ F) X :- !, r+whd (F V) X.
+whd+0 (abbr V W F) A C E :- !, pi x\ r+exp E x V =>
+                            whd+0 (F x) A C E.
 
 % beta
-r+whd (appl [abst _ F , V | VS]) X :- !, r+whd (F V) X.
+whd+0 (abst W F) [V|A] C E :- !, whd+0 (abbr V W F) A C E.
 
 % contextual for application
-r+whd [T1 | VS] X := !, r+whd T1 T2, r+whd [T2 | VS] X
+whd+0 (appl T VS) A C E :- !, append VS A1 A2, whd+0 T A2 C E.
 
 % normal form
-r+whd X X.
+whd+0 T A C E :- C T A.
+
+% CONVERSION HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+conv+s [] [] :- !.
+
+conv+s [V1|A1] [V2|A2] :- !, conv+s A1 A2, conv+1 V1 V2.
+
+conv+1 T1 T2 :- whd+0 T1 [] (conv+r T2 []) e+l.
+
+conv+l T1 A1 U2 A2 :- whd+0 T1 A1 (conv+x U2 A2) e+l.
+
+conv+r T2 A2 U1 A1 :- whd+0 T2 A2 (conv+0 U1 A1) e+r.
+
+conv+x U2 A2 U1 A1 :- conv+0 U1 A1 U2 A2.
+
+% CONVERSION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% reflexivity
+conv+0 U A1 U A2 :- conv+s A1 A2, !.
+
+% xi for product
+conv+0 (prod W1 F1) [] (prod W2 F2) [] :- !, conv+1 W1 W2,
+                                          pi x\ conv+1 (F1 x) (F2 x).
+% xi for abstraction
+conv+0 (abst W1 F1) [] (abst W2 F2) [] :- !, conv+1 W1 W2,
+                                          pi x\ conv+1 (F1 x) (F2 x).
+% left delta expansion
+conv+0 T1 A1 T2 A2 :- r+exp e+l T1 V1, !, conv+l V1 A1 T2 A2.
+
+% right delta expansion
+conv+0 T1 A1 T2 A2 :- r+exp e+r T2 V2, conv+r V2 A2 T1 A1.
+
+% VALIDITY + INFERRED TYPE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Note: some types are inferred for nothing
+
+valid+0 (abbr V W F1) (abbr V W F2) :- !, valid+0 V X, valid+0 W _, valid+1 X W,
+                                       pi x\ t+exp x W => (pi E\ r+exp E x V) =>
+                                       valid+0 (F1 x) (F2 x).
+
+valid+0 (prod W F) (sort S3) := !, valid+0 W X, valid+l X (sort S1),
+                                pi x\ t+exp x W => valid+0 (F x) (Y x),
+                                pi x\ t+exp x W => valid+l (Y x) (sort S2),
+                                pts+triple S1 S2 S3.
+
+valid+0 (abst W F1) (prod W F2) :- !, valid+0 (prod W F2) _,
+                                   pi x\ t+exp x W => valid+0 (F1 x) (F2 x).
+
+valid+0 (sort S1) (sort S2) :- !, pts+pair S1 S2.
+
+valid+0 (appl T1 VS) X :- !, valid+0 T1 T2, whd+1 T2 VS X [].
+
+valid+0 x W := t+exp x W.
+
+% TYPE CONVERSION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+valid+1 U1 U2 :- conv+1 T1 T2.
+
+valid+l U1 U2 :- conv+l U1 [] U2 [].
+
+% EXTENDED WEAK HEAD COMPUTATION HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+whd+1 T A C :- whd+0 T A (whd+a C) e+r.
+
+vhd+x C T A :- whd+a T A C.
+
+% EXTENDED WEAK HEAD COMPUTATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% normal form
+whd+a T [] C :- !, C U.
+
+% pi, a.k.a. eat_prods
+whd+a (prod W F) [V|A] C :- !, valid+0 V X, valid+1 X W,
+                            whd+1 (abbr V W F) A C.
+% delta expansion
+whd+a T1 A C :- r+exp e+r T1 T2, whd+1 T2 A C.
