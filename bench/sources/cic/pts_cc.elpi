@@ -1,0 +1,27 @@
+accumulate kernel.
+
+% PTS SPECIFICATION FOR THE CALCUS OF CONSTRUCTIONS (CC) %%%%%%%%%%%%%%%%%%%%%
+
+pts+pair (s+type 0) (s+type 1).
+
+pts+pair (s+prop 0) (s+prop 1).
+
+pts+couple (s+type 0) (s+type 0) :- !.
+pts+couple (s+type 0) (s+type 1) :- !.
+pts+couple (s+type 0) (s+prop 0) :- !.
+pts+couple (s+type 0) (s+prop 1) :- !.
+
+pts+couple (s+type 1) (s+type 0) :- !.
+pts+couple (s+type 1) (s+type 1) :- !.
+pts+couple (s+type 1) (s+prop 0) :- !.
+pts+couple (s+type 1) (s+prop 1) :- !.
+
+pts+couple (s+prop 0) (s+type 0) :- !.
+pts+couple (s+prop 0) (s+type 1) :- !.
+pts+couple (s+prop 0) (s+prop 0) :- !.
+pts+couple (s+prop 0) (s+prop 1) :- !.
+
+pts+couple (s+prop 1) (s+type 0) :- !.
+pts+couple (s+prop 1) (s+type 1) :- !.
+pts+couple (s+prop 1) (s+prop 0) :- !.
+pts+couple (s+prop 1) (s+prop 1) :- !.
