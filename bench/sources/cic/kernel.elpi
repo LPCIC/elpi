@@ -67,13 +67,12 @@ conv+0 T1 A1 T2 A2 :- r+exp T1 V1 e+l, !, conv+l V1 A1 T2 A2.
 conv+0 T1 A1 T2 A2 :- r+exp T2 V2 e+r, conv+r V2 A2 T1 A1.
 
 % VALIDITY + INFERRED TYPE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Note: some types are inferred for nothing
 
 valid+0 (abbr V W F1) (abbr V W F2) :- !, type+0 V W,
                                        pi x\ t+exp x W => (pi E\ r+exp x V E) =>
                                        valid+0 (F1 x) (F2 x).
 
-valid+0 (prod W F) (sort S3) := !, valid+0 W X, valid+l X (sort S1),
+valid+0 (prod W F) (sort S3) := !, is+type W (sort S1),
                                 pi x\ t+exp x W => valid+0 (F x) (Y x),
                                 pi x\ t+exp x W => valid+l (Y x) (sort S2),
                                 pts+triple S1 S2 S3.
@@ -93,9 +92,11 @@ valid+1 U1 U2 :- conv+1 T1 T2.
 
 valid+l U1 U2 :- conv+l U1 [] U2 [].
 
+is+type T (sort S) :- valid+0 T U, valid+l U (sort S).
+
 % TYPE CHECKING %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type+0 T U :- valid+0 U _, valid+0 T X, valid+1 X U.
+type+0 T U :- is+type U _, valid+0 T X, valid+1 X U.
 
 % EXTENDED WEAK HEAD COMPUTATION HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -127,7 +128,7 @@ wf+0 (gdef R G) :- g+line R C V,
 % global l
 wf+0 (gdec R G) :- g+line R C W,
                    $print constant C R,
-                   valid+0 W _,
+                   is+type W _,
                    (t+exp R W => wf+0 G).
 
 % KERNEL HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
