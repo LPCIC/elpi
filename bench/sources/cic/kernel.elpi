@@ -1,4 +1,4 @@
-% Type checker for CIC %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Type checker for a generic PTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Universe: U := user defined
 
@@ -8,48 +8,67 @@
 % Closed term: T, U, V, W := sort S                        sort S
 %                         |  prod      W F where F: T => T product of type W in F
 %                         |  abst      W F where F: T => T abstraction of type W in F
-%                         |  abbr V    W F where F: T => T abbreviation of V of type W in F
+%                         |  abbr   V  W F where F: T => T abbreviation of V of type W in F
 %                         |  appl T VS                     application of T to list VS
 
-% Predicates: whd+0 T A C E = weak head computation of (appl T A)
-                              passed to continuation C
+% Predicates: whd+0 T A C = weak head computation of (appl T A)
+                            passed to continuation C
 
 % HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-append [] A A :- !.
+append A B C :- $print (append A B C), fail.
 
-append [V|A1] A [V|A2] :- !, append A1 A A2.
+append [] A A.
 
-% WEAK HEAD COMPUTATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+append [V|A1] A [V|A2] :-  append A1 A A2.
 
-% local delta
-whd+0 (abbr V W F) A C E :- !, pi x\ r+exp x V E =>
-                            whd+0 (F x) A C E.
+% WEAK HEAD COMPUTATION WITHOUT DELTA-EXPANSION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+whd+0 T A C :- $print (whd+0 T A C), fail. 
+
+% sigma for abbreviation
+whd+0 (abbr V W F) A C :- !, pi x\ r+exp x V => whd+0 (F x) A C.
 
 % beta
-whd+0 (abst W F) [V|A] C E :- !, whd+0 (abbr V W F) A C E.
+whd+0 (abst W F) [V|A] C :- !, whd+0 (abbr V W F) A C.
 
 % contextual for application
-whd+0 (appl T VS) A C E :- !, append VS A1 A2, whd+0 T A2 C E.
+whd+0 (appl T VS) A1 C :- !, $print "prima_append", append VS A1 A2, $print "dopo_append", whd+0 T A2 C.
 
 % normal form
-whd+0 T A C E :- C T A.
+whd+0 T A C :- C T A.
 
 % CONVERSION HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-conv+s [] [] :- !.
+conv+s [] [].
 
-conv+s [V1|A1] [V2|A2] :- !, conv+s A1 A2, conv+1 V1 V2.
+conv+s [V1|A1] [V2|A2] :- conv+s A1 A2, conv+1 V1 V2.
 
-conv+1 T1 T2 :- whd+0 T1 [] (conv+r T2 []) e+l.
 
-conv+l T1 A1 U2 A2 :- whd+0 T1 A1 (conv+x U2 A2) e+l.
 
-conv+r T2 A2 U1 A1 :- whd+0 T2 A2 (conv+0 U1 A1) e+r.
+conv+1 T1 T2 :- $print conv+1 T1 T2, fail. 
+
+conv+1 T1 T2 :- whd+0 T1 [] (conv+r T2 []).
+
+
+
+conv+l T1 A1 U2 A2 :- $print conv+l T1 U2, fail. 
+
+conv+l T1 A1 U2 A2 :- whd+0 T1 A1 (conv+x U2 A2).
+
+
+
+conv+r T2 A2 U1 A1 :- $print conv+r T2 U1, fail. 
+
+conv+r T2 A2 U1 A1 :- whd+0 T2 A2 (conv+0 U1 A1).
+
+
 
 conv+x U2 A2 U1 A1 :- conv+0 U1 A1 U2 A2.
 
 % CONVERSION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+conv+0 U1 A1 U2 A2 :- $print conv+0 U1 U2, fail. 
 
 % reflexivity
 conv+0 U A1 U A2 :- conv+s A1 A2, !.
@@ -61,37 +80,42 @@ conv+0 (prod W1 F1) [] (prod W2 F2) [] :- !, conv+1 W1 W2,
 conv+0 (abst W1 F1) [] (abst W2 F2) [] :- !, conv+1 W1 W2,
                                           pi x\ conv+1 (F1 x) (F2 x).
 % left delta expansion
-conv+0 T1 A1 T2 A2 :- r+exp T1 V1 e+l, !, conv+l V1 A1 T2 A2.
+conv+0 T1 A1 T2 A2 :- r+exp T1 V1, !, conv+l V1 A1 T2 A2.
 
 % right delta expansion
-conv+0 T1 A1 T2 A2 :- r+exp T2 V2 e+r, conv+r V2 A2 T1 A1.
+conv+0 T1 A1 T2 A2 :- r+exp T2 V2, !, conv+r V2 A2 T1 A1.
 
 % VALIDITY + INFERRED TYPE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-valid+0 (abbr V W F1) (abbr V W F2) :- !, type+0 V W,
-                                       pi x\ t+exp x W => (pi E\ r+exp x V E) =>
+print_hyps :- valid+0 X W, $print "HYP" X W, fail.
+
+valid+0 T U :- $print valid+0 T "::" U, print_hyps, fail. 
+
+valid+0 (abbr V W F1) (abbr V W F2) :- type+0 V W,
+                                       pi x\ valid+0 x W => r+exp x V =>
                                        valid+0 (F1 x) (F2 x).
 
-valid+0 (prod W F) (sort S3) := !, is+type W (sort S1),
-                                pi x\ t+exp x W => valid+0 (F x) (Y x),
-                                pi x\ t+exp x W => valid+l (Y x) (sort S2),
+valid+0 (prod W F) (sort S3) :- is+type W (sort S1),
+                                pi x\ valid+0 x W =>
+                                 (valid+0 (F x) (Y x),
+                                  % CSC usare whd-l al posto di valid+l?
+                                  valid+l (Y x) (sort S2)),
                                 pts+triple S1 S2 S3.
 
-valid+0 (abst W F1) (prod W F2) :- !, valid+0 (prod W F2) _,
-                                   pi x\ t+exp x W => valid+0 (F1 x) (F2 x).
+valid+0 (abst W F1) (prod W F2) :- pi x\ valid+0 x W => valid+0 (F1 x) (F2 x),
+                                   valid+0 (prod W F2) _.
 
-valid+0 (sort S1) (sort S2) :- !, pts+pair S1 S2.
+valid+0 (sort S1) (sort S2) :- pts+pair S1 S2.
 
-valid+0 (appl T1 VS) X :- !, valid+0 T1 T2, (C X => whd+1 T2 VS C).
-
-valid+0 x W := t+exp x W.
+valid+0 (appl T1 VS) X :- valid+0 T1 T2, whd+1 T2 VS (T \ X = T).
 
 % TYPE CONVERSION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-valid+1 U1 U2 :- conv+1 T1 T2.
+valid+1 U1 U2 :- conv+1 U1 U2.
 
 valid+l U1 U2 :- conv+l U1 [] U2 [].
 
+% CSC: whd-l al posto di valid+l?
 is+type T (sort S) :- valid+0 T U, valid+l U (sort S).
 
 % TYPE CHECKING %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -100,37 +124,55 @@ type+0 T U :- is+type U _, valid+0 T X, valid+1 X U.
 
 % EXTENDED WEAK HEAD COMPUTATION HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-whd+1 T A C :- whd+0 T A (whd+a C) e+r.
+whd+1 T A C :- $print whd+1 T, fail. 
 
-vhd+x C T A :- whd+a T A C.
+% CSC: buttare via dx/sx ovunque
+whd+1 T A C :- whd+0 T A (whd+a C) e+r.
 
 % EXTENDED WEAK HEAD COMPUTATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+whd+a C T A :- $print (whd+a C T A), fail. 
+
 % normal form
-whd+a T [] C :- !, C U.
+whd+a C T [] :- !, C T.
+
+% CSC: BUG qui sopra. Se T contiene delle variabili legate da let-in
+% CSC: formatisi durante la conversione/riduzione, ci sarebbe scope-extrusion
+% CSC: dei let-in. Bisogna fare unwind, ovvero una passata sul termine
+% CSC: alla fine della whd usata nella eat-prods (e anche in altre parti)
+% CSC: ma la unwind deve aprire solo i let-in messi in conversione, e non
+% CSC: quelli messi in tipaggio, che possono rimanere. Quindi sdoppiare
+% CSC: r+exp in due: valid+0 che usi per il tipaggio e r+exp che usi come
+% CSC: sharing nella macchina.
 
 % pi, a.k.a. eat_prods
-whd+a (prod W F) [V|A] C :- !, valid+0 V X, valid+1 X W,
+% CSC: compattare valid+0 + valid+1 in una type-con-tipo-atteso
+% CSC: ridefinire type+0 usando la type-con-tipo-atteso
+whd+a C (prod W F) [V|A] :- !, valid+0 V X, valid+1 X W,
                             whd+1 (abbr V W F) A C.
 % delta expansion
-whd+a T1 A C :- r+exp T1 T2 e+r, whd+1 T2 A C.
+% CSC: la whd+0 e' una whd-no-delta. Definire una whd-delta
+% CSC: e usarla nella whd+1 in modo da togliere riga qua sotto
+whd+a C T1 A :- r+exp T1 T2 e+r, whd+1 T2 A C.
 
 % VALIDITY FOR GLOBAL ENVIRONMENTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 wf+0 gtop.
 
-% global delta
+% sigma for definition
 wf+0 (gdef R G) :- g+line R C V,
                    $print constant C R,
                    valid+0 V W,
-                   (t+exp R W => (pi E\ r+exp R V E) => wf+0 G).
+                   (valid+0 R W => r+exp R V => wf+0 G).
 
-% global l
+% xi for declaration
 wf+0 (gdec R G) :- g+line R C W,
                    $print constant C R,
                    is+type W _,
-                   (t+exp R W => wf+0 G).
+                   (valid+0 R W => wf+0 G).
 
 % KERNEL HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-pts+triple S1 S2 S2 :- !, pts+couple S1 S2.
+pts+triple S1 S2 S2 :- pts+couple S1 S2.
+
+g+line A B C :- $print g+line A, fail.

@@ -1,6 +1,7 @@
 accumulate kernel.
 
 % PTS SPECIFICATION FOR THE CALCUS OF CONSTRUCTIONS (CC) %%%%%%%%%%%%%%%%%%%%%
+% (This is λC with two ⋆ and two ◻)
 
 pts+pair (s+type 0) (s+type 1).
 
