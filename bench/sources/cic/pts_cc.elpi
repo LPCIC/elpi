@@ -1,28 +1,32 @@
 accumulate kernel.
 
 % PTS SPECIFICATION FOR THE CALCUS OF CONSTRUCTIONS (CC) %%%%%%%%%%%%%%%%%%%%%
-% (This is λC with two ⋆ and two ◻)
 
 pts+pair (s+type 0) (s+type 1).
 
 pts+pair (s+prop 0) (s+prop 1).
 
+% (star, star, star)
 pts+couple (s+type 0) (s+type 0) :- !.
-pts+couple (s+type 0) (s+type 1) :- !.
 pts+couple (s+type 0) (s+prop 0) :- !.
-pts+couple (s+type 0) (s+prop 1) :- !.
-
-pts+couple (s+type 1) (s+type 0) :- !.
-pts+couple (s+type 1) (s+type 1) :- !.
-pts+couple (s+type 1) (s+prop 0) :- !.
-pts+couple (s+type 1) (s+prop 1) :- !.
-
 pts+couple (s+prop 0) (s+type 0) :- !.
-pts+couple (s+prop 0) (s+type 1) :- !.
 pts+couple (s+prop 0) (s+prop 0) :- !.
+
+% (star, box, box)
+pts+couple (s+type 0) (s+type 1) :- !.
+pts+couple (s+type 0) (s+prop 1) :- !.
+pts+couple (s+prop 0) (s+type 1) :- !.
 pts+couple (s+prop 0) (s+prop 1) :- !.
 
-pts+couple (s+prop 1) (s+type 0) :- !.
+% (box, box, box)
+pts+couple (s+type 1) (s+type 1) :- !.
+pts+couple (s+type 1) (s+prop 1) :- !.
 pts+couple (s+prop 1) (s+type 1) :- !.
-pts+couple (s+prop 1) (s+prop 0) :- !.
 pts+couple (s+prop 1) (s+prop 1) :- !.
+
+% (box, star, star) impredicative
+
+pts+couple (s+type 1) (s+type 0) :- !.
+pts+couple (s+type 1) (s+prop 0) :- !.
+pts+couple (s+prop 1) (s+type 0) :- !.
+pts+couple (s+prop 1) (s+prop 0) :- !.
