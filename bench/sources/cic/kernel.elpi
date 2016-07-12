@@ -192,12 +192,12 @@ is+valid gtop.
 
 % sigma for definition.
 is+valid (gdef R G) :- g+line+2 R N V W,
-                       $print constant N R,
+%                       $print constant N R,
                        has+type V W,
                        (r+step R V => t+step R W => is+valid G).
 % xi for declaration.
 is+valid (gdec R G) :- g+line+1 R N W,
-                       $print constant N R,
+%                       $print constant N R,
                        has+sort W _,
                        (t+step R W => is+valid G).
 
