@@ -6,26 +6,25 @@ pts+pair (s+type 0) (s+type 1).
 
 pts+pair (s+prop 0) (s+prop 1).
 
-% (star, star, star)
+% (star, star, star).
 pts+couple (s+type 0) (s+type 0) :- !.
 pts+couple (s+type 0) (s+prop 0) :- !.
 pts+couple (s+prop 0) (s+type 0) :- !.
 pts+couple (s+prop 0) (s+prop 0) :- !.
 
-% (star, box, box)
+% (star, box, box).
 pts+couple (s+type 0) (s+type 1) :- !.
 pts+couple (s+type 0) (s+prop 1) :- !.
 pts+couple (s+prop 0) (s+type 1) :- !.
 pts+couple (s+prop 0) (s+prop 1) :- !.
 
-% (box, box, box)
+% (box, box, box).
 pts+couple (s+type 1) (s+type 1) :- !.
 pts+couple (s+type 1) (s+prop 1) :- !.
 pts+couple (s+prop 1) (s+type 1) :- !.
 pts+couple (s+prop 1) (s+prop 1) :- !.
 
-% (box, star, star) impredicative
-
+% impredicative: (box, star, star).
 pts+couple (s+type 1) (s+type 0) :- !.
 pts+couple (s+type 1) (s+prop 0) :- !.
 pts+couple (s+prop 1) (s+type 0) :- !.

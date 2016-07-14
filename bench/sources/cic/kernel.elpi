@@ -149,6 +149,7 @@ t+step (appl T1 A) T :- t+step T1 T2, whd+delta+pi T2 A T.
 t+step (abbr V W F1) (abbr V W F2) :- has+type V W,
                                       pi x\ t+step x W => r+step x V =>
                                       t+step (F1 x) (F2 x).
+
 % X for product.
 t+step (prod W F) (sort S3) :- has+sort W S1,
                                pi x\ t+step x W => has+sort (F x) S2,
@@ -157,14 +158,14 @@ t+step (prod W F) (sort S3) :- has+sort W S1,
 t+step (abst W F1) (prod W F2) :- has+sort W S1,
                                   pi x\ t+step x W =>
                                         (t+step (F1 x) (F2 x), has+sort (F2 x) S2),
-                                  pts+triple S1 S2 _.
+                                  pts+triple S1 S2 S3.
 
 % TYPE CHECKING %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % has+sort T S :- $print (has+sort T S), fail.
 
 % fast path for T being a sort.
-has+sort (sort S1) S2 :- !, t+step (sort S1) (sort S2).
+has+sort (sort S1) S :- !, t+step (sort S1) (sort S).
 
 has+sort T S :- t+step T U, red+whnf U [] (sort S) [].
 
@@ -172,11 +173,8 @@ has+sort T S :- t+step T U, red+whnf U [] (sort S) [].
 
 % has+checked+type T U :- $print (has+checked+type T U), fail.
 
-% fast path for T and U being sorts.
-has+checked+type (sort S1) (sort S2) :- !, t+step (sort S1) (sort S2).
-
-% fast path for T and U being sorts.
-has+checked+type T (sort S2) :- !, has+sort T S2.
+% fast path for U being a sort.
+has+checked+type T (sort S) :- !, has+sort T S.
 
 has+checked+type T U :- t+step T X, conv+main X U.
 
@@ -184,7 +182,10 @@ has+checked+type T U :- t+step T X, conv+main X U.
 
 % has+type T U :- $print (has+type T U), fail.
 
-has+type T U :- has+sort U _, has+checked+type T U.
+% fast path for U being a sort.
+has+type T (sort S) :- !, has+sort T S.
+
+has+type T U :- has+sort U S, has+checked+type T U.
 
 % VALIDITY FOR GLOBAL ENVIRONMENTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -198,9 +199,9 @@ is+valid (gdef R G) :- g+line+2 R N V W,
 % xi for declaration.
 is+valid (gdec R G) :- g+line+1 R N W,
 %                       $print constant N R,
-                       has+sort W _,
+                       has+sort W S,
                        (t+step R W => is+valid G).
 
 % KERNEL HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-pts+triple S1 S2 S2 :- pts+couple S1 S2.
+pts+triple S1 S2 S2 :- pts+couple S1 S2, !.

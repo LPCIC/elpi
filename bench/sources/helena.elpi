@@ -174,19 +174,27 @@ conv+0 (prod L W1 T1) satom M1 M2 satom (prod L W2 T2) :- !,
 
 conv+0 T S1 M M S2 T :- conv+s S1 S2, !.
 
-% left expansion
-conv+0 T1 S1 M1 M2 S2 T2 :- r+exp T1 M1 e+sn M T, ok+l T1 M1 M M2 T2, !, conv+l T S1 M M2 S2 T2.
-% conv+0 T1 S1 M1 M2 S2 T2 :- r+exp T1 M1 e+sn M T, ok+l T1 M1 M M2 T2, !, $print exp-l, conv+l T S1 M M2 S2 T2.
+% candidate left expansion
+conv+0 T1 S1 M1 M2 S2 T2 :- r+exp T1 M1 e+sn M T, !, maybe+sn T1 S1 M1 T M M2 S2 T2.
 
-% right expansion
+% forced right expansion
 conv+0 T1 S1 M1 M2 S2 T2 :- r+exp T2 M2 e+dx M T, conv+r T S2 M M1 S1 T1.
 % conv+0 T1 S1 M1 M2 S2 T2 :- r+exp T2 M2 e+dx M T, $print exp-r, conv+r T S2 M M1 S1 T1.
 
-ok+l T1 m+1 m+0 M2 T2 :- !.
+% preferred left expansion
+maybe+sn T1 S1 m+1 T m+0 M2 S2 T2 :- !, conv+l T S1 m+0 M2 S2 T2.
 
-ok+l T1 M1 M M2 T2 :- r+exp T2 M2 e+dx N U, !, $lt T2 T1.
+% candidate right expansion
+maybe+sn T1 S1 M1 T M M2 S2 T2 :- r+exp T2 M2 e+dx N U, !, age+check T1 S1 M1 T M N U M2 S2 T2.
 
-ok+l T1 M1 M M2 T2.
+% forced left expansion
+maybe+sn T1 S1 M1 T M M2 S2 T2 :- conv+l T S1 M M2 S2 T2.
+
+% age-implied left expansion
+age+check T1 S1 M1 T M N U M2 S2 T2 :- $lt T2 T1, !, conv+l T S1 M M2 S2 T2.
+
+% age-implied right expansion
+age+check T1 S1 M1 T M N U M2 S2 T2 :- conv+r U S2 N M1 S1 T1.
 
 % EXTENDED APPLICABILITY %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
