@@ -17,6 +17,8 @@ module R = NCicReduction
 module S = NCicSubstitution 
 module U = NCicUtils
 module E = NCicEnvironment
+(* FG: extension for ELPI *)
+module LP = NCicELPI
 
 exception TypeCheckerFailure of string Lazy.t
 exception AssertFailure of string Lazy.t

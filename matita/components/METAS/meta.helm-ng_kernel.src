@@ -1,4 +1,4 @@
-requires="helm-extlib"
+requires="helm-extlib ppx_deriving.std elpi"
 version="0.0.1"
 archive(byte)="ng_kernel.cma"
 archive(native)="ng_kernel.cmxa"

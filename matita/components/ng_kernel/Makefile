@@ -13,7 +13,7 @@ INTERFACE_FILES = \
 	nCicPp.mli
 
 IMPLEMENTATION_FILES = \
-  nCic.ml $(INTERFACE_FILES:%.mli=%.ml)
+  nCic.ml nCicELPI.ml $(INTERFACE_FILES:%.mli=%.ml)
 EXTRA_OBJECTS_TO_INSTALL = 
 EXTRA_OBJECTS_TO_CLEAN =
 %.cmo: OCAMLOPTIONS += -w Ae

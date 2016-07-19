@@ -116,4 +116,3 @@ check-ocaml-ver:
 	$(H)ocamlfind query ppx_tools > /dev/null
 	$(H)ocamlfind query ppx_deriving > /dev/null
 	$(H)test `ocamlc -version` = 4.02.3
-
