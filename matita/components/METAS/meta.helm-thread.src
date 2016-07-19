@@ -1,0 +1,7 @@
+requires=""
+version="0.0.1"
+archive(byte,mt)="thread.cma"
+archive(native,mt)="thread.cmxa"
+archive(byte)="thread_fake.cma"
+archive(native)="thread_fake.cmxa"
+linkopts=""

@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+
+<entities-table>
+  <entity name="def" value="&#x0225d;"/>  <!-- ≝ -->
+  <entity name="neq" value="&#x02260;"/>  <!-- ≠ -->
+  <entity name="leq" value="&#x02264;"/>  <!-- ≤ -->
+  <entity name="geq" value="&#x02265;"/>  <!-- ≥ -->
+  <entity name="nleq" value="&#x02270;"/> <!-- ≰ -->
+  <entity name="ngeq" value="&#x02271;"/> <!-- ≱ -->
+  <entity name="to" value="&#x02192;"/>   <!-- → -->
+  <entity name="divides" value="&#x02223;"/>  <!-- ∣ -->
+  <entity name="ndivides" value="&#x02224;"/>  <!-- ∤ -->
+  <entity name="circ" value="&#x02218;"/>  <!-- ∤ -->
+</entities-table>
+
+<!-- vim: set encoding=utf8: -->

@@ -1,0 +1,5 @@
+requires="helm-ng_refiner helm-registry helm-library"
+version="0.0.1"
+archive(byte)="ng_library.cma"
+archive(native)="ng_library.cmxa"
+linkopts=""

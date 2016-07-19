@@ -1,0 +1,378 @@
+<?xml version="1.0"?>
+
+<!--
+ This file is part of EdiTeX, an editor of mathematical
+ expressions based on TeX syntax.
+ 
+ Copyright (C) 2002-2003 Luca Padovani <lpadovan@cs.unibo.it>,
+                    2003 Paolo Marinelli <pmarinel@cs.unibo.it>.
+
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 2.1 of the License, or (at your option) any later version.
+
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+ For more information, please visit the project's home page
+ http://helm.cs.unibo.it/editex/
+ or send an email to <lpadovan@cs.unibo.it>
+-->
+
+<dictionary name="TeX">
+
+  <include href="dictionary-basic.xml"/>
+
+  <!-- Greek Letters (lower case) -->
+
+  <entry name="alpha"      class="i" val="&#x03b1;"/>
+  <entry name="beta"       class="i" val="&#x03b2;"/>
+  <entry name="gamma"      class="i" val="&#x03b3;"/>
+  <entry name="delta"      class="i" val="&#x03b4;"/>
+  <entry name="epsilon"    class="i" val="&#x03f5;"/>
+  <entry name="varepsilon" class="i" val="&#x03b5;"/>
+  <entry name="zeta"       class="i" val="&#x03b6;"/>
+  <entry name="eta"        class="i" val="&#x03b7;"/>
+  <entry name="theta"      class="i" val="&#x03b8;"/>
+  <entry name="vartheta"   class="i" val="&#x03d1;"/>
+  <entry name="iota"       class="i" val="&#x03b9;"/>
+  <entry name="kappa"      class="i" val="&#x03ba;"/>
+  <entry name="lambda"     class="i" val="&#x03bb;"/>
+  <entry name="mu"         class="i" val="&#x03bc;"/>
+  <entry name="nu"         class="i" val="&#x03bd;"/>
+  <entry name="xi"         class="i" val="&#x03be;"/>
+  <entry name="o"          class="i" val="&#x03bf;"/>
+  <entry name="pi"         class="i" val="&#x03c0;"/>
+  <entry name="varpi"      class="i" val="&#x03d6;"/>
+  <entry name="rho"        class="i" val="&#x03c1;"/>
+  <entry name="varrho"     class="i" val="&#x03f1;"/>
+  <entry name="sigma"      class="i" val="&#x03c3;"/>
+  <entry name="varsigma"   class="i" val="&#x03c2;"/>
+  <entry name="tau"        class="i" val="&#x03c4;"/>
+  <entry name="upsilon"    class="i" val="&#x03c5;"/>
+  <entry name="phi"        class="i" val="&#x03d5;"/>
+  <entry name="varphi"     class="i" val="&#x03c6;"/>
+  <entry name="chi"        class="i" val="&#x03c7;"/>
+  <entry name="psi"        class="i" val="&#x03c8;"/>
+  <entry name="omega"      class="i" val="&#x03c9;"/>
+
+  <!-- Greek Letters (upper case) -->
+
+  <entry name="Gamma"   class="i" val="&#x0393;"/>
+  <entry name="Delta"   class="i" val="&#x0394;"/>
+  <entry name="Theta"   class="i" val="&#x0398;"/>
+  <entry name="Lambda"  class="i" val="&#x039b;"/>
+  <entry name="Xi"      class="i" val="&#x039e;"/>
+  <entry name="Pi"      class="i" val="&#x03a0;"/>
+  <entry name="Sigma"   class="i" val="&#x03a3;"/>
+  <entry name="Upsilon" class="i" val="&#x03d2;"/>
+  <entry name="Phi"     class="i" val="&#x03a6;"/>
+  <entry name="Psi"     class="i" val="&#x03a8;"/>
+  <entry name="Omega"   class="i" val="&#x03a9;"/>
+
+  <!-- Symbols of Type Ord -->
+
+  <entry name="aleph"       class="i" val="&#x2135;"/>
+  <entry name="hbar"        class="i" val="&#x210f;&#xfe00;"/>
+  <entry name="imath"       class="i" val="&#x0131;"/>
+  <entry name="jmath"       class="i" val="&#x006a;&#xfe00;"/>
+  <entry name="ell"         class="i" val="&#x2113;"/>
+  <entry name="wp"          class="i" val="&#x2118;"/>
+  <entry name="Re"          class="o" val="&#x211c;"/>
+  <entry name="Im"          class="o" val="&#x2111;"/>
+  <entry name="partial"     class="o" val="&#x2202;"/>
+  <entry name="infty"       class="i" val="&#x221e;"/>
+  <entry name="prime"       class="o" val="&#x2032;"/>
+  <entry name="emptyset"    class="i" val="&#x2205;&#xfe00;"/>
+  <entry name="nabla"       class="o" val="&#x2207;"/>
+  <entry name="surd"        class="o" val="????"/>
+  <entry name="top"         class="i" val="&#x22a4;"/>
+  <entry name="bot"         class="i" val="&#x22a5;"/>
+  <entry name="|"           class="o" val="|" delimiter="1"/>
+  <entry name="angle"       class="o" val="&#x2220;"/>
+  <entry name="triangle"    class="o" val="&#x25b5;"/>
+  <entry name="backslash"   class="o" val="\"/>
+  <entry name="forall"      class="o" val="&#x2200;"/>
+  <entry name="exists"      class="o" val="&#x2203;"/>
+  <entry name="neg"         class="o" val="&#x00ac;"/>
+  <entry name="lnot"        class="o" val="&#x00ac;"/>
+  <entry name="flat"        class="i" val="&#x266d;"/>
+  <entry name="natural"     class="i" val="&#x266e;"/>
+  <entry name="sharp"       class="i" val="&#x266f;"/>
+  <entry name="clubsuit"    class="i" val="&#x2663;"/>
+  <entry name="diamondsuit" class="i" val="&#x2662;"/>
+  <entry name="heartsuit"   class="i" val="&#x2661;"/>
+  <entry name="spadesuit"   class="i" val="&#x2660;"/>
+
+  <!-- Large Operators -->
+
+  <entry name="sum"         class="o" val="&#x2211;" limits="1"/>
+  <entry name="prod"        class="o" val="&#x220f;" limits="1"/>
+  <entry name="coprod"      class="o" val="&#x2210;" limits="1"/>
+  <entry name="int"         class="o" val="&#x222b;" limits="1"/>
+  <entry name="oint"        class="o" val="&#x222e;" limits="1"/>
+  <entry name="bigcap"      class="o" val="&#x22c2;" limits="1"/>
+  <entry name="bigcup"      class="o" val="&#x22c3;" limits="1"/>
+  <entry name="bigsqcup"    class="o" val="&#x2294;" limits="1"/>
+  <entry name="bigvee"      class="o" val="&#x22c1;" limits="1"/>
+  <entry name="bigwedge"    class="o" val="&#x22c0;" limits="1"/>
+  <entry name="bigodot"     class="o" val="&#x2299;" limits="1"/>
+  <entry name="bigotimes"   class="o" val="&#x2297;" limits="1"/>
+  <entry name="bigoplus"    class="o" val="&#x2295;" limits="1"/>
+  <entry name="biguplus"    class="o" val="&#x228e;" limits="1"/>
+
+  <!-- Binary Operations -->
+
+  <entry name="pm"              class="o" val="&#x00b1;"/>
+  <entry name="mp"              class="o" val="&#x2213;"/>
+  <entry name="setminus"        class="o" val="&#x2216;"/>
+  <entry name="cdot"            class="o" val="&#x010b;"/>
+  <entry name="times"           class="o" val="&#x00d7;"/>
+  <entry name="ast"             class="o" val="&#x002a;"/>
+  <entry name="star"            class="o" val="&#x22c6;"/>
+  <entry name="diamond"         class="o" val="&#x22c4;"/>
+  <entry name="circ"            class="o" val="&#x005e;"/>
+  <entry name="bullet"          class="o" val="&#x2022;"/>
+  <entry name="div"             class="o" val="&#x00f7;"/>
+  <entry name="cap"             class="o" val="&#x2229;"/>
+  <entry name="cup"             class="o" val="&#x222a;"/>
+  <entry name="uplus"           class="o" val="&#x228e;"/>
+  <entry name="sqcap"           class="o" val="&#x2293;"/>
+  <entry name="sqcup"           class="o" val="&#x2294;"/>
+  <entry name="triangleleft"    class="o" val="&#x25c3;"/>
+  <entry name="triangleright"   class="o" val="&#x25b9;"/>
+  <entry name="wr"              class="o" val="&#x2240;"/>
+  <entry name="bigcirc"         class="o" val="&#x25ef;"/>
+  <entry name="bigtriangleup"   class="o" val="&#x25b3;"/>
+  <entry name="bigtriangledown" class="o" val="&#x25bd;"/>
+  <entry name="vee"             class="o" val="&#x2228;"/>
+  <entry name="lor"             class="o" val="&#x2228;"/>
+  <entry name="wedge"           class="o" val="&#x2227;"/>
+  <entry name="land"            class="o" val="&#x2227;"/>
+  <entry name="oplus"           class="o" val="&#x2295;"/>
+  <entry name="ominus"          class="o" val="&#x2296;"/>
+  <entry name="otimes"          class="o" val="&#x2297;"/>
+  <entry name="oslash"          class="o" val="&#x00f8;"/>
+  <entry name="odot"            class="o" val="&#x2299;"/>
+  <entry name="dagger"          class="o" val="&#x2020;"/>
+  <entry name="ddagger"         class="o" val="&#x2021;"/>
+  <entry name="amalg"           class="o" val="&#x2a3f;"/>
+
+  <!-- Relations -->
+
+  <entry name="leq"            class="o" val="&#x2264;"/>
+  <entry name="le"             class="o" val="&#x2264;"/>
+  <entry name="prec"           class="o" val="&#x227a;"/>
+  <entry name="preceq"         class="o" val="&#x2aaf;"/>
+  <entry name="ll"             class="o" val="&#x226a;"/>
+  <entry name="subset"         class="o" val="&#x2282;"/>
+  <entry name="subseteq"       class="o" val="&#x2286;"/>
+  <entry name="in"             class="o" val="&#x2208;"/>
+  <entry name="vdash"          class="o" val="&#x22a2;"/>
+  <entry name="smile"          class="o" val="&#x2323;"/>
+  <entry name="frown"          class="o" val="&#x2322;"/>
+  <entry name="propto"         class="o" val="&#x221d;"/>
+  <entry name="geq"            class="o" val="&#x2265;"/>
+  <entry name="ge"             class="o" val="&#x2265;"/>
+  <entry name="succ"           class="o" val="&#x227b;"/>
+  <entry name="succeq"         class="o" val="&#x227d;"/>
+  <entry name="gg"             class="o" val="&#x226b;"/>
+  <entry name="supset"         class="o" val="&#x2283;"/>
+  <entry name="supseteq"       class="o" val="&#x2287;"/>
+  <entry name="sqsupseteq"     class="o" val="&#x2292;"/>
+  <entry name="notin"          class="o" val="&#x2209;"/>
+  <entry name="dashv"          class="o" val="&#x22a3;"/>
+  <entry name="mid"            class="o" val="&#x2223;"/>
+  <entry name="parallet"       class="o" val="????"/>
+  <entry name="equiv"          class="o" val="&#x2261;"/>
+  <entry name="sim"            class="o" val="&#x223c;"/>
+  <entry name="simeq"          class="o" val="&#x2243;"/>
+  <entry name="asymp"          class="o" val="&#x224d;"/>
+  <entry name="approx"         class="o" val="&#x2248;"/>
+  <entry name="cong"           class="o" val="&#x2245;"/>
+  <entry name="bowtie"         class="o" val="&#x22c8;"/>
+  <entry name="ni"             class="o" val="&#x220b;"/>
+  <entry name="owns"           class="o" val="&#x220b;"/>
+  <entry name="models"         class="o" val="&#x22a7;"/>
+  <entry name="doteq"          class="o" val="&#x2250;"/>
+  <entry name="perp"           class="o" val="&#x22a5;"/>
+
+  <entry name="not"            pattern="#1" embellishment="1"/>
+  <entry name="ne"             class="o" val="&#x2260;"/>
+
+  <!-- Arrows -->
+
+  <entry name="leftarrow"      	   class="o" val="&#x2190;"/>
+  <entry name="gets"           	   class="o" val="&#x2190;"/>
+  <entry name="Leftarrow"      	   class="o" val="&#x21d0;"/>
+  <entry name="rightarrow"     	   class="o" val="&#x2192;"/>
+  <entry name="to"             	   class="o" val="&#x2192;"/>
+  <entry name="Rightarrow"     	   class="o" val="&#x21d2;"/>
+  <entry name="leftrightarrow" 	   class="o" val="&#x2194;"/>
+  <entry name="Leftrightarrow" 	   class="o" val="&#x21d4;"/>
+  <entry name="mapsto"         	   class="o" val="&#x21a6;"/>
+  <entry name="hookleftarrow"  	   class="o" val="&#x21a9;"/>
+  <entry name="uparrow"        	   class="o" val="&#x2191;"/>
+  <entry name="downarrow"      	   class="o" val="&#x2193;"/>
+  <entry name="updownarrow"    	   class="o" val="&#x2195;"/>
+  <entry name="nearrow"        	   class="o" val="&#x2197;"/>
+  <entry name="nwarrow"        	   class="o" val="&#x2196;"/>
+  <entry name="longleftarrow"  	   class="o" val="????;"/>
+  <entry name="Longleftarrow"  	   class="o" val="????"/>
+  <entry name="longrightarrow" 	   class="o" val="????"/>
+  <entry name="Longrightarrow" 	   class="o" val="&#x21d2;"/>
+  <entry name="longleftrightarrow" class="o" val="????"/>
+  <entry name="Longleftrightarrow" class="o" val="????"/>
+  <entry name="longmapsto"     	   class="o" val="????"/>
+  <entry name="hookrightarrow" 	   class="o" val="&#x21aa;"/>
+  <entry name="Uparrow"        	   class="o" val="&#x21d1;"/>
+  <entry name="Downarrow"      	   class="o" val="&#x21d3;"/>
+  <entry name="searrow"        	   class="o" val="&#x2198;"/>
+  <entry name="swarrow"        	   class="o" val="&#x2199;"/>
+
+  <entry name="buildrel" pattern="#1\over#2" embellishment="1"/>
+
+  <!-- Delimiters -->
+
+  <entry name="lbrack"         class="o" val="[" delimiter="1"/>
+  <entry name="rbrack"         class="o" val="]" delimiter="1"/>
+  <entry name="vert"           class="o" val="|" delimiter="1"/>
+  <entry name="Vert"           class="o" val="&#x2016;" delimiter="1"/>
+  <entry name="lbrace"         class="o" val="{" delimiter="1"/>
+  <entry name="{"              class="o" val="{" delimiter="1"/>
+  <entry name="rbrace"         class="o" val="}" delimiter="1"/>
+  <entry name="}"              class="o" val="}" delimiter="1"/>
+  <entry name="lfloor"         class="o" val="&#x230a;" delimiter="1"/>
+  <entry name="rfloor"         class="o" val="&#x230b;" delimiter="1"/>
+  <entry name="langle"         class="o" val="&#x2329;" delimiter="1"/>
+  <entry name="rangle"         class="o" val="&#x232a;" delimiter="1"/>
+  <entry name="lceil"          class="o" val="&#x2308;" delimiter="1"/>
+  <entry name="rceil"          class="o" val="&#x2309;" delimiter="1"/>
+
+  <entry name="left"           pattern="#1" embellishment="1" delimiter="1"/>
+  <entry name="right"          pattern="#1" embellishment="1" delimiter="1"/>
+  <entry name="bigl"           pattern="#1" embellishment="1" delimiter="1"/>
+  <entry name="bigr"           pattern="#1" embellishment="1" delimiter="1"/>
+  <entry name="bigm"           pattern="#1" embellishment="1" delimiter="1"/>
+  <entry name="big"            pattern="#1" embellishment="1" delimiter="1"/>
+  <entry name="Bigl"           pattern="#1" embellishment="1" delimiter="1"/>
+  <entry name="Bigr"           pattern="#1" embellishment="1" delimiter="1"/>
+  <entry name="Bigm"           pattern="#1" embellishment="1" delimiter="1"/>
+  <entry name="biggl"          pattern="#1" embellishment="1" delimiter="1"/>
+  <entry name="biggr"          pattern="#1" embellishment="1" delimiter="1"/>
+  <entry name="biggm"          pattern="#1" embellishment="1" delimiter="1"/>
+  <entry name="Biggl"          pattern="#1" embellishment="1" delimiter="1"/>
+  <entry name="Biggr"          pattern="#1" embellishment="1" delimiter="1"/>
+  <entry name="Biggm"          pattern="#1" embellishment="1" delimiter="1"/>
+
+  <!-- Accents -->
+
+  <entry name="hat"       pattern="#1" embellishment="1"/>
+  <entry name="widehat"   pattern="#1" embellishment="1"/>
+  <entry name="check"     pattern="#1" embellishment="1"/>
+  <entry name="tilde"     pattern="#1" embellishment="1"/>
+  <entry name="widetilde" pattern="#1" embellishment="1"/>
+  <entry name="acute"     pattern="#1" embellishment="1"/>
+  <entry name="grave"     pattern="#1" embellishment="1"/>
+  <entry name="dot"       pattern="#1" embellishment="1"/>
+  <entry name="ddot"      pattern="#1" embellishment="1"/>
+  <entry name="breve"     pattern="#1" embellishment="1"/>
+  <entry name="bar"       pattern="#1" embellishment="1"/>
+  <entry name="vec"       pattern="#1" embellishment="1"/>
+
+  <!-- Elementary Math Control Sequences -->
+
+  <entry name="overline"  pattern="#1"/>
+  <entry name="underline" pattern="#1"/>
+  <entry name="sqrt"      pattern="#1"/>
+  <entry name="root"      pattern="#1\of#2"/>
+  <entry name="over"      pattern="{}"/>
+  <entry name="atop"      pattern="{}"/>
+  <entry name="choose"    pattern="{}"/>
+  <entry name="brace"     pattern="{}"/>
+  <entry name="brack"     pattern="{}"/>
+
+  <!-- Style -->
+
+  <entry name="displaystyle"      pattern="}"/>
+  <entry name="textstyle"         pattern="}"/>
+  <entry name="scriptstyle"       pattern="}"/>
+  <entry name="scriptscriptstyle" pattern="}"/>
+
+  <!-- Non-Italic Function Names -->
+
+  <entry name="arccos" class="i" val="arccos"/>
+  <entry name="arcsin" class="i" val="arcsin"/>
+  <entry name="arctan" class="i" val="arctan"/>
+  <entry name="arg"    class="i" val="arg"/>
+  <entry name="cos"    class="i" val="cos"/>
+  <entry name="cosh"   class="i" val="cosh"/>
+  <entry name="cot"    class="i" val="cot"/>
+  <entry name="coth"   class="i" val="coth"/>
+  <entry name="csc"    class="i" val="csc"/>
+  <entry name="exp"    class="i" val="exp"/>
+  <entry name="deg"    class="i" val="deg"/>
+  <entry name="det"    class="o" val="det" limits="1"/>
+  <entry name="dim"    class="i" val="dim"/>
+  <entry name="gcd"    class="o" val="gcd" limits="1"/>
+  <entry name="hom"    class="i" val="hom"/>
+  <entry name="inf"    class="o" val="inf" limits="1"/>
+  <entry name="ker"    class="i" val="ker"/>
+  <entry name="lg"     class="i" val="lg"/>
+  <entry name="lim"    class="o" val="lim" limits="1"/>
+  <entry name="liminf" class="o" val="liminf" limits="1"/>
+  <entry name="limsup" class="o" val="limsup" limits="1"/>
+  <entry name="ln"     class="i" val="ln"/>
+  <entry name="log"    class="i" val="log"/>
+  <entry name="max"    class="o" val="max" limits="1"/>
+  <entry name="min"    class="o" val="max" limits="1"/>
+  <entry name="Pr"     class="o" val="Pr" limits="1"/>
+  <entry name="sec"    class="i" val="sec"/>
+  <entry name="sin"    class="i" val="sin"/>
+  <entry name="sinh"   class="i" val="sinh"/>
+  <entry name="sup"    class="o" limits="1"/>
+  <entry name="tan"    class="i" val="tan"/>
+  <entry name="tanh"   class="i" val="tanh"/>
+  <entry name="pmod"   pattern="#1"/>
+  <entry name="bmod"   class="o" val="mod"/>
+
+  <!-- Ellipses -->
+
+  <entry name="dots"  	       class="i" val="&#x2026;"/>
+  <entry name="ldots" 	       class="i" val="&#x2026;"/>
+  <entry name="cdots" 	       class="i" val="&#x22ef;"/>
+  <entry name="vdots" 	       class="i" val="&#x22ee;"/>
+  <entry name="ddots" 	       class="i" val="&#x22f1;"/>
+
+  <!-- Fonts -->
+
+  <entry name="rm" pattern="}"/>
+  <entry name="bf" pattern="}"/>
+  <entry name="tt" pattern="}"/>
+  <entry name="sl" pattern="}"/>
+  <entry name="it" pattern="}"/>
+
+  <!-- Horizontal Spacing -->
+
+  <entry name=","/>
+  <entry name="&gt;"/>
+  <entry name=";"/>
+  <entry name="!"/>
+
+  <!-- Braces and Matrices -->
+
+  <entry name="matrix"       pattern="#1" table="1"/>
+  <entry name="pmatrix"      pattern="#1" table="1"/>
+  <entry name="bordermatrix" pattern="#1" table="1"/>
+  <entry name="overbrace"    pattern="#1" limits="1"/>
+  <entry name="underbrace"   pattern="#1" limits="1"/>
+  <entry name="cases"        pattern="#1" table="1"/>
+
+</dictionary>

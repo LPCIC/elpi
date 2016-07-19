@@ -1,0 +1,54 @@
++letin: basta la refine fatta con occurcheck
++cut:   letin; clearbody ~-1 (cosa sia ~-1 è da capirsi)
+
+-generalize:
+  a) verificare che tutti i termini selezionati siano convertibili
+  b) spostare i termini selezionati nel contesto corrente/spostare il
+     termine bucato sotto un lambda
+  c) bucare e liftare deve essere fatto contemporaneamente
+  d) poi usare tatticali per fare cut + apply
+
+=fail:
+=id:
+
+apply:
+applyS:
+intros:
+elim:
+cases:
+rewrite:
+??replace: rewrite (?:A=B); [2: apply eq_a_b ] 
+=auto/demodulate/solve_rewrite:
+change:
+clear/clearbody:
+destruct:
+inversion:
+lapply:
+??compose:
+whd/simpl/normalize:
+fold:
+unfold:
+
+assumption:
+constructor:
+exists:
+left:
+right:
+reflexivity:
+symmetry:
+transitivity:
+split:
+
+decompose:
+
+#####
+absurd:
+contradiction:
+exact:
+elim_type:
+fourier:
+ring:
+
+####
+applyP:
+fwd_simpl:

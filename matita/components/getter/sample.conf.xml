@@ -1,0 +1,50 @@
+<helm_registry>
+  <section name="getter">
+    <key name="cache_dir">/tmp/helm/cache</key>
+    <key name="dtd_dir">/projects/helm/xml/dtd</key>
+    <key name="port">58081</key>
+    <key name="log_level">180</key>
+    <key name="log_file">http_getter.log</key>
+    <key name="prefix">
+      theory:/  file:///projects/helm/library/theories/
+    </key>
+    <key name="prefix">
+      xslt:/    file:///projects/helm/xml/stylesheets_ccorn/
+    </key>
+    <key name="prefix">
+      xslt:/    file:///projects/helm/xml/stylesheets_hanane/
+    </key>
+    <key name="prefix">
+      xslt:/    file:///projects/helm/xml/on-line/xslt/
+    </key>
+    <key name="prefix">
+      xslt:/    file:///projects/helm/nuprl/NuPRL/nuprl_stylesheets/
+    </key>
+    <key name="prefix">
+      nuprl:/   http://www.cs.uwyo.edu/~nuprl/helm-library/
+    </key>
+    <key name="prefix">
+      xslt:/    file:///projects/helm/xml/stylesheets/
+    </key>
+    <key name="prefix">
+      xslt:/    file:///projects/helm/xml/stylesheets/generated/
+    </key>
+    <key name="prefix">
+      theory:/residual_theory_in_lambda_calculus/
+      http://helm.cs.unibo.it/~sacerdot/huet_lambda_calculus_mowgli/residual_theory_in_lambda_calculus/
+    </key>
+    <key name="prefix">
+      theory:/IDA/
+      http://mowgli.cs.unibo.it/~sacerdot/ida/IDA/
+    </key>
+    <key name="prefix">
+      cic:/     file:///projects/helm/library/coq_contribs/
+      legacy
+    </key>
+    <key name="prefix">
+      cic:/matita/
+      file:///projects/helm/library/matita/
+      ro
+    </key>
+  </section>
+</helm_registry>

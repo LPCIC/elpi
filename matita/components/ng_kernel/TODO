@@ -1,0 +1,22 @@
+muovere la split_prods nella riduzione e usarla nel caso di convertibilità di 2 match
+in are_convertible togliere il caso Prop,Prop in quanto catturato da ===
+in are_convertible togliere il caso Meta,Meta in quanto catturato da ===
+in are_convertible caso Meta,Meta non fare lift ma accorcia il ctx
+
+taggare le meta con tag::Type e in sort_of_prod verificare che i Pi
+tra meta coinvolgano meta taggate. Il tag potrebbe contenere un bound,
+in modo che si possano taggare anche meta quando si unifica ? ==vs== Type_k
+e la si tagga con bound a seconda del test_eq_only <= k.
+
+?1 <= Type_i -->>  ?1 := ?2,   ?2 : Type_i+1
+
+nel vecchio nucleo la height_of di un b-redex fa 0 e quindi riduci in forma
+normale. Spostare la small_delta_step. 
+
+
+@ tra universi senza duplicati
+-------
+?1 = t
+  (?1,?2)::(?2,t)::subst
+  where ctx ?2 è minimale per t
+  poi le subst (?n,?m) le risolvi subito

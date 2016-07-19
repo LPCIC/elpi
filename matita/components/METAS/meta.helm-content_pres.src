@@ -1,0 +1,4 @@
+requires="helm-content helm-syntax_extensions camlp5.gramlib ulex08 helm-grafite"
+version="0.0.1"
+archive(byte)="content_pres.cma"
+archive(native)="content_pres.cmxa"

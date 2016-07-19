@@ -1,0 +1,3 @@
+helm_registry.cmi :
+helm_registry.cmo : helm_registry.cmi
+helm_registry.cmx : helm_registry.cmi

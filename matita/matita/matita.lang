@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<language id="grafite" _name="grafite" version="2.0" _section="Sources">
+  <metadata>
+    <property name="mimetypes">text/x-matita</property>
+    <property name="globs">*.ma</property>
+    <property name="block-comment-start">(*</property>
+    <property name="block-comment-end">*)</property>
+  </metadata>
+
+  <styles>
+    <style id="comment" _name="Comment" map-to="def:comment"/>
+    <style id="string" _name="String" map-to="def:string"/>
+    <style id="escape" _name="Escape" map-to="def:string"/>
+    <style id="keyword" _name="Keyword" map-to="def:keyword"/>
+    <style id="type" _name="Data Type" map-to="def:type"/>
+    <style id="latex" _name="LaTeX Escaped" map-to="def:special-char"/>
+    <style id="macros" _name="Macros" map-to="def:keyword"/>
+    <style id="tinycals" _name="Tinycals" map-to="def:keyword"/>
+    <style id="quantifiers" _name="Quantifiers" map-to="def:type"/>
+  </styles>
+
+  <definitions>
+    <define-regex id="char-esc">\\"|[0-9a-zA-Z]</define-regex>
+    <context id="escape-seq" style-ref="escape">
+      <match>\%{char-esc}</match>
+    </context>
+    <!-- here's the main context -->
+    <context id="grafite">
+      <include>
+	<context id="comment" style-ref="comment">
+	  <start>\(\*</start>
+	  <end>\*\)</end>
+	  <include>
+	    <context ref="string"/>
+	    <context id="comment-in-comment" style-ref="comment">
+	      <start>\(\*</start>
+	      <end>\*\)</end>
+	      <include>
+		<context ref="string"/>
+		<context ref="comment-in-comment"/>
+		<context ref="def:in-comment:*"/>
+	      </include>
+	    </context>
+	    <context ref="def:in-comment:*"/>
+	  </include>
+	</context>
+	<context id="string" style-ref="string">
+	  <start>"</start>
+	  <end>"</end>
+	  <include>
+	    <context ref="escape-seq"/>
+	  </include>
+	</context>
+	<context id="character-constant" style-ref="string">
+	  <match>('\%{char-esc}')|('[^\\']')</match>
+	</context>
+	<context id="latex" style-ref="latex">
+	 <prefix>\\</prefix>
+         <keyword>def</keyword>
+         <keyword>forall</keyword>
+         <keyword>lambda</keyword>
+         <keyword>to</keyword>
+         <keyword>exists</keyword>
+         <keyword>Rightarrow</keyword>
+         <keyword>Assign</keyword>
+         <keyword>land</keyword>
+         <keyword>lor</keyword>
+         <keyword>lnot</keyword>
+         <keyword>liff</keyword>
+         <keyword>subst</keyword>
+         <keyword>vdash</keyword>
+         <keyword>iforall</keyword>
+         <keyword>iexists</keyword>
+	</context>
+	<!-- Flow control & common keywords -->
+	<context id="keywords" style-ref="keyword">
+
+	 <!-- source -->
+         <keyword>implied</keyword>
+
+	 <!-- objects -->
+         <keyword>theorem</keyword>
+         <keyword>record</keyword>
+         <keyword>definition</keyword>
+         <keyword>inductive</keyword>
+         <keyword>coinductive</keyword>
+         <keyword>fact</keyword>
+	 <keyword>lemma</keyword>
+         <keyword>remark</keyword>
+         <keyword>axiom</keyword>
+
+         <!-- tactics -->
+         <keyword>apply</keyword>	    	 
+         <keyword>applyS</keyword>	    	 
+         <keyword>cases</keyword>	    	 
+         <keyword>letin</keyword>	    	 
+         <keyword>auto</keyword>	    	 
+         <keyword>elim</keyword>	    	 
+         <keyword>whd</keyword>	    	 
+         <keyword>normalize</keyword>	    	 
+         <keyword>assumption</keyword>	    	 
+         <keyword>generalize</keyword>	    	 
+         <keyword>change</keyword>	    	 
+         <keyword>rewrite</keyword>	    	 
+         <keyword>cut</keyword>	    	 
+         <keyword>inversion</keyword>
+         <keyword>lapply</keyword>
+         <keyword>destruct</keyword> 
+
+          <!-- commands -->
+          <keyword>alias</keyword>
+          <keyword>and</keyword>
+          <keyword>as</keyword>
+          <keyword>associative</keyword>
+          <keyword>coercion</keyword>
+          <keyword>prefer</keyword>
+          <keyword>nocomposites</keyword>
+          <keyword>coinductive</keyword>
+          <keyword>constraint</keyword>          
+          <keyword>corec</keyword>
+          <keyword>cyclic</keyword>
+          <keyword>default</keyword>
+          <keyword>discriminator</keyword>
+          <keyword>for</keyword>
+          <keyword>include</keyword>
+          <keyword>include'</keyword>
+          <keyword>inductive</keyword>
+          <keyword>inverter</keyword>
+          <keyword>in</keyword>
+          <keyword>interpretation</keyword>
+	  <keyword>left</keyword>          
+          <keyword>let</keyword>
+          <keyword>match</keyword>
+          <keyword>names</keyword>
+	  <keyword>non</keyword>          
+	  <keyword>notation</keyword>
+          <keyword>on</keyword>
+          <keyword>precedence</keyword>
+          <keyword>qed</keyword>
+          <keyword>defined</keyword>
+          <keyword>rec</keyword>
+          <keyword>record</keyword>
+          <keyword>return</keyword>
+	  <keyword>right</keyword>          
+          <keyword>source</keyword>    
+          <keyword>to</keyword>
+          <keyword>universe</keyword>          
+	  <keyword>using</keyword>
+          <keyword>with</keyword>
+         
+         
+          <!-- commands -->
+          <keyword>unification</keyword>
+          <keyword>hint</keyword>
+          <keyword>coercion</keyword>
+          <keyword>inverter</keyword>
+          <keyword>qed</keyword>
+
+          <!-- macros -->
+          <keyword>check</keyword>
+          <keyword>eval</keyword>
+          <keyword>hint</keyword>
+          <keyword>set</keyword>
+          <keyword>auto</keyword>
+          <keyword>nodefaults</keyword>
+          <keyword>coercions</keyword>
+          <keyword>comments</keyword>
+          <keyword>debug</keyword>
+         
+          <!-- tinycals -->
+          <keyword>try</keyword>
+          <keyword>solve</keyword>
+          <keyword>do</keyword>
+          <keyword>repeat</keyword>
+          <keyword>first</keyword>
+          <keyword>focus</keyword>
+          <keyword>unfocus</keyword>
+          <keyword>progress</keyword>
+          <keyword>skip</keyword>
+	</context>
+	<context id="types" style-ref="type">
+	  <!-- sorts -->
+          <keyword>Prop</keyword>
+          <keyword>Type[0]</keyword>
+          <keyword>CProp[0]</keyword>
+          <keyword>Type[1]</keyword>
+          <keyword>CProp[1]</keyword>
+          <keyword>Type[2]</keyword>
+          <keyword>CProp[2]</keyword>
+	</context>
+        <context id="quantifiers" style-ref="quantifiers">
+          <!-- quantifiers -->
+          <match>∀|∃|λ|=|→|⇒|…|≝|≡|\?</match>
+        </context>
+        <context id="tinycals" style-ref="tinycals">
+		<match>\[|\||\]|\{|\}|>|//|&lt;|@|\$|#|\\\\|;|\.|:>|:|-</match>
+        </context>
+      </include>
+    </context>
+  </definitions>
+</language>

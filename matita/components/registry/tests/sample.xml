@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<helm_registry>
+  <section name="annotations">
+    <key name="dir">file:///home/zack/miohelm/objects</key>
+    <key name="url">file:///home/zack/miohelm/objects</key>
+  </section>
+  <section name="getter">
+    <key name="mode">remote</key>
+    <key name="url">http://localhost:58081</key>
+  </section>
+  <section name="triciclo">
+    <key name="merge1">yes</key>
+  </section>
+  <section name="triciclo">
+    <include href="tests/sample_include.xml" />
+  </section>
+  <section name="triciclo">
+    <key name="merge2">yes</key>
+  </section>
+  <section name="types">
+    <key name="string">debian</key>
+    <key name="int">1</key>
+    <key name="bool">false</key>
+    <key name="float">2.5</key>
+    <key name="int_list">11</key>
+    <key name="int_list">13</key>
+    <key name="int_list">17</key>
+    <key name="int_list">19</key>
+    <key name="int_float_pair">19 23.2</key>
+  </section>
+  <section name="uwobo">
+    <key name="url">http://localhost:58080/</key>
+  </section>
+</helm_registry>

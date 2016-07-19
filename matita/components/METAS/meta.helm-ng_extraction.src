@@ -1,0 +1,5 @@
+requires="helm-ng_kernel helm-registry"
+version="0.0.1"
+archive(byte)="ng_extraction.cma"
+archive(native)="ng_extraction.cmxa"
+linkopts=""

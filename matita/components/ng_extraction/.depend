@@ -1,0 +1,34 @@
+nCicExtraction.cmi :
+coq.cmi :
+ocamlExtractionTable.cmi : miniml.cmo coq.cmi
+mlutil.cmi : ocamlExtractionTable.cmi miniml.cmo coq.cmi
+common.cmi : ocamlExtractionTable.cmi mlutil.cmi miniml.cmo coq.cmi
+extraction.cmi : ocamlExtractionTable.cmi miniml.cmo coq.cmi
+ocaml.cmi : ocamlExtractionTable.cmi miniml.cmo coq.cmi
+ocamlExtraction.cmi : ocamlExtractionTable.cmi
+miniml.cmo : coq.cmi
+miniml.cmx : coq.cmx
+nCicExtraction.cmo : nCicExtraction.cmi
+nCicExtraction.cmx : nCicExtraction.cmi
+coq.cmo : coq.cmi
+coq.cmx : coq.cmi
+ocamlExtractionTable.cmo : miniml.cmo coq.cmi ocamlExtractionTable.cmi
+ocamlExtractionTable.cmx : miniml.cmx coq.cmx ocamlExtractionTable.cmi
+mlutil.cmo : ocamlExtractionTable.cmi miniml.cmo coq.cmi mlutil.cmi
+mlutil.cmx : ocamlExtractionTable.cmx miniml.cmx coq.cmx mlutil.cmi
+common.cmo : ocamlExtractionTable.cmi mlutil.cmi miniml.cmo coq.cmi \
+    common.cmi
+common.cmx : ocamlExtractionTable.cmx mlutil.cmx miniml.cmx coq.cmx \
+    common.cmi
+extraction.cmo : ocamlExtractionTable.cmi mlutil.cmi miniml.cmo coq.cmi \
+    common.cmi extraction.cmi
+extraction.cmx : ocamlExtractionTable.cmx mlutil.cmx miniml.cmx coq.cmx \
+    common.cmx extraction.cmi
+ocaml.cmo : ocamlExtractionTable.cmi mlutil.cmi miniml.cmo coq.cmi \
+    common.cmi ocaml.cmi
+ocaml.cmx : ocamlExtractionTable.cmx mlutil.cmx miniml.cmx coq.cmx \
+    common.cmx ocaml.cmi
+ocamlExtraction.cmo : ocamlExtractionTable.cmi ocaml.cmi extraction.cmi \
+    coq.cmi ocamlExtraction.cmi
+ocamlExtraction.cmx : ocamlExtractionTable.cmx ocaml.cmx extraction.cmx \
+    coq.cmx ocamlExtraction.cmi

@@ -1,0 +1,15 @@
+
+Helm Utf8 macro syntax extension for Camlp4
+
+Sample file:
+
+  --- test.ml ---
+
+  prerr_endline <:unicode<lambda>>
+
+  ---------------
+
+Compile it with:
+
+  ocamlfind ocamlc -package helm-utf8_macros -syntax camlp5o test.ml
+

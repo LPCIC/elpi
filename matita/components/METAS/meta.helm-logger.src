@@ -1,0 +1,5 @@
+requires=""
+version="0.0.1"
+archive(byte)="logger.cma"
+archive(native)="logger.cmxa"
+linkopts=""

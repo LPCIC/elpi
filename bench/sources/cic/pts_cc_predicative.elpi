@@ -1,5 +1,3 @@
-accumulate kernel.
-
 % PTS SPECIFICATION FOR THE PREDICATIVE CALCUS OF CONSTRUCTIONS (CC) %%%%%%%%%
 
 pts+pair (s+type 0) (s+type 1).

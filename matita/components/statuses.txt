@@ -1,0 +1,20 @@
+grafitetypes(baseuri,ng_mode)
+ |--> dumpable(dump=objs+dependencies+includes)
+ |--> nciclibrary(timestamp)
+ |--> grafiteparser(db=ast_statement grammarentry)
+ |     |--> cicnotationparser(db=grammars+keywords+items)
+ |
+ |--> termcontentpres(db=level1_patterns21,compiled21,pattern21_matrix,counter)
+ |
+ |--> tac(obj,stack)
+       |--> auto(automation_cache)
+       |--> eq(eq_cache)
+       |--> grafitedisambiguate(db=aliases+multi_aliases+new_aliases)
+             |--> interpretation(db=level2_patterns32,compiled32,
+                   |                pattern32_matrix,counter)
+                   |--> nciccoercion(db=...)
+                         |--> unif_hint(db=...)
+
+applytransformation()
+ |--> termcontentpres(...)
+ |--> interpretation(...)

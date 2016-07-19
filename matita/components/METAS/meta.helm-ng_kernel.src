@@ -1,0 +1,5 @@
+requires="helm-extlib"
+version="0.0.1"
+archive(byte)="ng_kernel.cma"
+archive(native)="ng_kernel.cmxa"
+linkopts=""

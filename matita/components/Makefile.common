@@ -1,0 +1,155 @@
+H=@
+
+# This Makefile must be included by another one defining:
+#  $PACKAGE
+#  $PREDICATES
+#  $INTERFACE_FILES
+#  $IMPLEMENTATION_FILES
+#  $EXTRA_OBJECTS_TO_INSTALL
+#  $EXTRA_OBJECTS_TO_CLEAN
+# and put in a directory where there is a .depend or .depend.opt file.
+
+# $OCAMLFIND must be set to a meaningful vaule, including OCAMLPATH=
+
+ifeq ($(ANNOT),true)
+  ANNOTOPTION = -dtypes
+else
+  ANNOTOPTION =
+endif
+
+PREPROCOPTIONS = -pp camlp5o
+SYNTAXOPTIONS = -syntax camlp5o
+PREREQ =
+OCAMLOPTIONS = -package "$(REQUIRES)" -predicates "$(PREDICATES)" -thread -rectypes $(ANNOTOPTION)
+OCAMLDEBUGOPTIONS = -g
+#OCAML_PROF=p -p a
+OCAMLARCHIVEOPTIONS =
+REQUIRES := $(shell $(OCAMLFIND) -query -format '%(requires)' helm-$(PACKAGE))
+OCAMLC = $(OCAMLFIND) ocamlc$(OCAML_PROF) $(OCAMLDEBUGOPTIONS) $(OCAMLOPTIONS) $(PREPROCOPTIONS)
+#OCAMLOPT_DEBUG_FLAGS = -p
+OCAMLOPT = $(OCAMLFIND) opt $(OCAMLOPTIONS) $(PREPROCOPTIONS) $(OCAMLOPT_DEBUG_FLAGS)
+OCAMLDEP = $(OCAMLFIND) ocamldep -package "camlp5 $(CAMLP5REQUIRES)" $(SYNTAXOPTIONS) $(OCAMLDEPOPTIONS) 
+OCAMLLEX = ocamllex
+OCAMLYACC = ocamlyacc
+
+OCAMLC_P4 = $(OCAMLFIND) ocamlc $(OCAMLDEBUGOPTIONS) $(OCAMLOPTIONS) $(SYNTAXOPTIONS)
+OCAMLOPT_P4 = $(OCAMLFIND) opt $(OCAMLOPTIONS) $(SYNTAXOPTIONS)
+
+LIBRARIES = $(shell $(OCAMLFIND) query -recursive -predicates "byte $(PREDICATES)" -format "%d/%a" $(REQUIRES))
+LIBRARIES_OPT = $(shell $(OCAMLFIND) query -recursive -predicates "native $(PREDICATES)" -format "%d/%a" $(REQUIRES))
+LIBRARIES_DEPS := \
+	$(foreach X,$(filter-out /usr/lib/ocaml%,$(LIBRARIES)),\
+		$(wildcard \
+			$(shell dirname $(X))/*.mli \
+			$(shell dirname $(X))/*.ml \
+			$(shell dirname $(X))/paramodulation/*.ml \
+			$(shell dirname $(X))/paramodultation/*.mli))
+
+
+ARCHIVE = $(PACKAGE).cma
+ARCHIVE_OPT = $(PACKAGE).cmxa
+OBJECTS_TO_INSTALL = $(ARCHIVE) $(ARCHIVE_OPT) $(ARCHIVE_OPT:%.cmxa=%.a) \
+                     $(INTERFACE_FILES) $(INTERFACE_FILES:%.mli=%.cmi) \
+                     $(EXTRA_OBJECTS_TO_INSTALL)
+DEPEND_FILES = $(INTERFACE_FILES) $(IMPLEMENTATION_FILES)
+
+$(ARCHIVE): $(IMPLEMENTATION_FILES:%.ml=%.cmo) $(LIBRARIES)
+	$(H)if [ $(PACKAGE) != dummy ]; then \
+	echo "  OCAMLC -a $@";\
+	$(OCAMLC) $(OCAMLARCHIVEOPTIONS) -a -o $@ \
+		$(IMPLEMENTATION_FILES:%.ml=%.cmo); fi
+
+$(ARCHIVE_OPT): $(IMPLEMENTATION_FILES:%.ml=%.cmx) $(LIBRARIES_OPT)
+	$(H)if [ $(PACKAGE) != dummy ]; then \
+	echo "  OCAMLOPT -a $@";\
+	$(OCAMLOPT) $(OCAMLARCHIVEOPTIONS) -a -o $@ \
+		$(IMPLEMENTATION_FILES:%.ml=%.cmx); fi
+
+prereq: $(PREREQ)
+all: prereq $(IMPLEMENTATION_FILES:%.ml=%.cmo) $(ARCHIVE)
+	@echo -n 
+opt: prereq $(IMPLEMENTATION_FILES:%.ml=%.cmx) $(ARCHIVE_OPT)
+	@echo -n 
+test: test.ml $(ARCHIVE)
+	$(OCAMLC) $(ARCHIVE) -linkpkg -o $@ $<
+test.opt: test.ml $(ARCHIVE_OPT)
+	$(OCAMLOPT) $(ARCHIVE_OPT) -linkpkg -o $@ $<
+install:
+uninstall:
+
+depend:: $(DEPEND_FILES)
+	$(H)echo "  OCAMLDEP"
+	$(H)$(OCAMLDEP) $(INTERFACE_FILES) $(IMPLEMENTATION_FILES) > .depend
+depend.opt:: $(DEPEND_FILES)
+	$(H)echo "  OCAMLDEP -native"
+	$(H)$(OCAMLDEP) -native \
+		$(INTERFACE_FILES) $(IMPLEMENTATION_FILES) > .depend.opt
+
+$(PACKAGE).ps: .dep.dot
+	dot -Tps -o $@ $<
+
+# FG: .depend or .depend.opt? 
+.dep.dot: .depend
+	ocamldot < .depend > $@
+
+%.cmi: %.mli
+	@echo "  OCAMLC $<"
+	$(H)$(OCAMLC) -c $<
+%.cmo %.cmi: %.ml
+	@echo "  OCAMLC $<"
+	$(H)$(OCAMLC) -c $<
+%.cmx: %.ml
+	@echo "  OCAMLOPT $<"
+	$(H)$(OCAMLOPT) -c $<
+%.annot: %.ml
+	$(OCAMLC) -dtypes $(PKGS) -c $<
+%.ml %.mli: %.mly
+	$(OCAMLYACC) $<
+%.ml: %.mll
+	$(OCAMLLEX) $<
+
+ifneq ($(MAKECMDGOALS), clean)
+$(IMPLEMENTATION_FILES:%.ml=%.cmo): $(LIBRARIES)
+$(IMPLEMENTATION_FILES:%.ml=%.cmi): $(LIBRARIES_DEPS)
+$(IMPLEMENTATION_FILES:%.ml=%.cmx): $(LIBRARIES_OPT)
+endif
+
+clean:
+	rm -f *.cm[ioax] *.cmxa *.o *.a *.annot $(EXTRA_OBJECTS_TO_CLEAN)
+	if [ -f test ]; then rm -f test; else true; fi
+	if [ -f test.opt ]; then rm -f test.opt; else true; fi
+
+backup:
+	cd ..; tar cvzf $(PACKAGE)_$(shell date +%s).tar.gz $(PACKAGE)
+
+ocamlinit:
+	echo "#use \"topfind\";;" > .ocamlinit
+	echo "#thread;;" >> .ocamlinit
+	for p in $(REQUIRES); do echo "#require \"$$p\";;" >> .ocamlinit; done
+	echo "#load \"$(PACKAGE).cma\";;" >> .ocamlinit
+
+# $(STATS_EXCLUDE) may be defined in libraries' Makefile to exclude some file
+# from statistics collection
+STATS_FILES = \
+	$(shell find . -maxdepth 1 -type f -name \*.ml $(foreach f,$(STATS_EXCLUDE),-not -name $(f))) \
+	$(shell find . -maxdepth 1 -type f -name \*.mli $(foreach f,$(STATS_EXCLUDE),-not -name $(f)))
+.stats: $(STATS_FILES)
+	rm -f .stats
+	echo -n "LOC:" >> .stats
+	wc -l $(STATS_FILES) | tail -1 | awk '{ print $$1 }' >> .stats
+
+.PHONY: all opt backup depend depend.opt install uninstall clean ocamlinit
+
+ifeq ($(MAKECMDGOALS),)
+  include .depend   
+endif
+
+ifeq ($(MAKECMDGOALS), all)
+  include .depend   
+endif
+
+ifeq ($(MAKECMDGOALS), opt)
+  include .depend.opt   
+endif
+
+NULL =

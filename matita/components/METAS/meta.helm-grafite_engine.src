@@ -1,0 +1,5 @@
+requires="helm-library helm-grafite helm-ng_tactics helm-ng_library helm-ng_extraction"
+version="0.0.1"
+archive(byte)="grafite_engine.cma"
+archive(native)="grafite_engine.cmxa"
+linkopts=""

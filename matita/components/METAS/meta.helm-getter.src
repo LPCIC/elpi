@@ -1,0 +1,5 @@
+requires="http unix pcre zip helm-xml helm-logger helm-ng_kernel helm-registry"
+version="0.0.1"
+archive(byte)="getter.cma"
+archive(native)="getter.cmxa"
+linkopts=""

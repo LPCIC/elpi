@@ -1,0 +1,5 @@
+requires="helm-grafite ulex08 helm-ng_disambiguation helm-ng_library helm-content_pres"
+version="0.0.1"
+archive(byte)="grafite_parser.cma"
+archive(native)="grafite_parser.cmxa"
+linkopts=""

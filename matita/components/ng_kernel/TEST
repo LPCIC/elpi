@@ -1,0 +1,210 @@
+CONTENUTO alluris.txt.OK, NEW typing, OLD typing
+
+matita       11.89 11.71                      tranne freescale
+Coq                       fixpoints
+BellLabs      0.21  0.22
+Cachan                    .....
+Dyade                     fixpoints
+Eindhoven     0.23  0.85
+IdealX        0.05  0.06
+Lyon                      impredicative set
+Marseille     1.04  2.23
+Montevideo    1.90  4.29
+Muenchen      0.05  0.07
+Nancy         0.13  0.24
+Orsay                     fixpoints
+Paris         0.39  0.48
+Rocq                      impredicative set   tranne ails, coc, higman,
+                                              ALGEBRA/CATEGORY_THEORY
+Sophia-Antipolis                              tranne algebra, buchberger,
+                                              math_groups, float, geometry
+Suresnes                  fixpoints
+Utrecht       0.82  0.92
+
+++++++++++++++++
+
+TODO: Andrea mi ha cassato la parte sulla reentrance; secondo me quella e'
+importante
+
+ATTENZIONE: cosa succede con un PTS non full? Un (Prod : Type) non lo tipiamo,
+ma tipiamo (Lambda : Type)!
+
+file bug_universi.ma: sbaglia a fare il ranking!
+
+[CoRN: calcolo grafi da caricare troppo lento]
+[Coq: calcolo grafi da caricare troppo lento]
+[Sophia-Antipolis: calcolo grafi da caricare troppo lento]
+
+CoRN: type-checking vecchio nucleo troppo lento
+Rocq/AILS: type-checking vecchio nucleo troppo lento
+Rocq/COC: type-checking vecchio nucleo troppo lento
+nijmegen: type-checking vecchio nucleo troppo lento
+Sophia-Antipolis/Float: vecchio nucleo troppo lento
+Sophia-Antipolis/geometry: vecchio nucleo troppo lento
+Rocq/ALGEBRA/CATEGORY_THEORY: vecchio nucleo troppo lento
+
+## = diventato addirittura velocissimo dopo universi + proof irrelevance + altezze
+##Sophia-Antipolis/Algebra: nuovo nucleo diverge
+##   cic:/Sophia-Antipolis/Algebra/Sub_module/submodule_op.con
+##Sophia-Antipolis/Buchberger: nuovo nucleo diverge
+##   cic:/Sophia-Antipolis/Buchberger/BuchRed/redbuch_stable.con
+matita/freescale: nuovo nucleo molto piu' lento del vecchio?
+
+lannion: nuovo nucleo impredicative set
+rocq.higman: nuovo nucleo impredicative set
+lyon.impredicative_set: nuovo nucleo impredicative set
+
+============= IMPREDICATIVE SET ======================
+Lannion/Continuations
+Lyon/GraphBasics
+Lyon/Multiplier
+Lyon/CoinductiveExamples
+Lyon/Streams
+Rocq/Paradoxes: Hurkens e Russell
+Rocq/HistoricalExamples
+Rocq/HigmanNW
+
+============= CONVERSIONE FIX GENERATIVI ================
+cic:/Coq/IntMap/Lsort/alist_nth_ad_semantics.con
+Appl: wrong application of le_S_n: the parameter H1 has type
+le (S (S n0)) (length (prod ad A) (cons (prod ad A) (pair ad A a y) l0))
+but it should have type
+le (S (S n0)) (S (alist_nth_ad_semantics___1(0) A l0))
+
+cic:/Suresnes/MiniC/Utilitaires/BlockDecl/bdecl_mapkSpec.con
+Appl: wrong application of ...
+  (eq (prod (list Key) Data) (pair (list Key) Data lk d)
+    (pair (list Key) Data x0 x))
+  (In___1(0) (prod (list Key) Data) (pair (list Key) Data x0 x) lm), found or
+  (eq (prod (list Key) Data) (pair (list Key) Data lk d)
+    (pair (list Key) Data x0 x))
+  (bdecl_mapkSpec___1(0) Key Data (pair (list Key) Data x0 x) lm)
+
+cic:/Dyade/Otway-Rees/inv1rel5/POinv1rel5.con
+Appl: wrong application of AlreadyIn1: the parameter or_introl (eq C (B2C (K2B (KeyAB d0 d1))) (B2C (K2B (KeyAB d0 d1))))
+  (POinv1rel5___1(0) (B2C (K2B (KeyAB d0 d1))) (app C l rngDDKKeyAB))
+  (refl_equal C (B2C (K2B (KeyAB d0 d1)))) has type
+or (eq C (B2C (K2B (KeyAB d0 d1))) (B2C (K2B (KeyAB d0 d1))))
+  (POinv1rel5___1(0) (B2C (K2B (KeyAB d0 d1))) (app C l rngDDKKeyAB))
+but it should have type
+In C (B2C (K2B (KeyAB d0 d1)))
+  (cons C (B2C (K2B (KeyAB d0 d1))) (app C l rngDDKKeyAB))
+
+cic:/Dyade/Otway-Rees/invprel5/POinvprel5.con
+Appl: wrong application of AlreadyIn1: the parameter or_introl (eq C (B2C (K2B (KeyAB d0 d1))) (B2C (K2B (KeyAB d0 d1))))
+  (POinv1rel5___1(0) (B2C (K2B (KeyAB d0 d1))) (app C l rngDDKKeyABminusKab))
+  (refl_equal C (B2C (K2B (KeyAB d0 d1)))) has type
+or (eq C (B2C (K2B (KeyAB d0 d1))) (B2C (K2B (KeyAB d0 d1))))
+  (POinv1rel5___1(0) (B2C (K2B (KeyAB d0 d1))) (app C l rngDDKKeyABminusKab))
+but it should have type
+In C (B2C (K2B (KeyAB d0 d1)))
+  (cons C (B2C (K2B (KeyAB d0 d1))) (app C l rngDDKKeyABminusKab))
+
+cic:/Coq/NArith/Pnat/Pmult_nat_l_plus_morphism.con
+Branch for constructor xI :=
+λp0:positive.
+ λn:nat. refl_equal nat (plus n (Pmult_nat (Pplus_carry p p0) (plus n n)))
+has type ∀p0: positive.
+ ∀n: nat.
+  eq nat (plus n (Pmult_nat (Pplus_carry p p0) (plus n n)))
+    (plus n (Pmult_nat (Pplus_carry p p0) (plus n n)))
+not convertible with positive
+ → (λp0:positive.
+       ∀n: nat.
+        eq nat (Pmult_nat (Pplus_carry (xI p) p0) n)
+          (plus n (Pmult_nat (Pplus (xI p) p0) n))) (xI __1)
+
+cic:/Coq/NArith/Pnat/Pmult_nat_l_plus_morphism.con
+has type ∀p0: positive.
+ ∀m: nat.
+  eq nat (Pmult_nat (Pplus_carry p p0) (plus m m))
+    (plus (plus m (Pmult_nat p (plus m m)))
+      (plus m (Pmult_nat p0 (plus m m))))
+not convertible with positive
+ → (λp0:positive.
+       ∀n: nat.
+        eq nat (Pmult_nat (Pplus (xI p) p0) n)
+          (plus (Pmult_nat (xI p) n) (Pmult_nat p0 n))) (xI __1)
+
+cic:/Coq/NArith/BinPos/Pplus_carry_spec.con
+has type ∀p0: positive. eq positive (xI (Pplus_carry p p0)) (xI (Pplus_carry p p0))
+not convertible with positive
+ → (λp0:positive.
+       eq positive (Pplus_carry (xI p) p0) (Psucc (Pplus (xI p) p0)))
+       (xI __1)
+
+cic:/Coq/NArith/BinPos/Pplus_comm.con
+has type ∀p0: positive. eq positive (xO (Pplus_carry p p0)) (xO (Pplus_carry p0 p))
+not convertible with positive
+ → (λp0:positive. eq positive (Pplus (xI p) p0) (Pplus p0 (xI p)))
+       (xI __1)
+
+cic:/Coq/NArith/BinPos/Pplus_succ_permute_r.con
+has type ∀p0: positive.
+ eq positive (xI (Pplus p (Psucc p0))) (xI (Pplus_carry p p0))
+not convertible with positive
+ → (λp0:positive.
+       eq positive (Pplus (xI p) (Psucc p0)) (Psucc (Pplus (xI p) p0)))
+       (xI __1)
+
+cic:/Coq/NArith/BinPos/Pplus_assoc.con
+ eq positive (xI (Pplus x1 (Pplus_carry y0 z0)))
+   (xI (Pplus (Pplus_carry x1 y0) z0))
+not convertible with positive
+ → (λp:positive.
+       eq positive (Pplus (xI x1) (Pplus (xI y0) p))
+         (Pplus (Pplus (xI x1) (xI y0)) p)) (xI __1)
+
+cic:/Coq/NArith/BinPos/Pplus_reg_r.con
+has type ∀y1: positive.
+ ∀H: eq positive (xO (Pplus_carry x1 z0)) (xO (Pplus_carry y1 z0)).
+  eq positive (xI x1) (xI y1)
+not convertible with positive
+ → (λp:positive.
+       eq positive (Pplus (xI x1) (xI z0)) (Pplus p (xI z0))
+        → eq positive (xI x1) p) (xI __1)
+
+cic:/Coq/NArith/BinPos/ZL10.con
+has type ∀q: positive.
+ ∀H: eq positive_mask (Pdouble_plus_one_mask (Pminus_mask p q)) (IsPos xH).
+  eq positive_mask (Pdouble_mask (Pminus_mask p q)) IsNul
+not convertible with positive
+ → (λp0:positive.
+       eq positive_mask (Pminus_mask (xI p) p0) (IsPos xH)
+        → eq positive_mask (Pminus_mask_carry (xI p) p0) IsNul) (xO __1)
+      End: cic:/Coq/NArith/BinPos/ZL10.con
+
+cic:/Coq/NArith/BinPos/Pminus_mask_Gt.con
+has type ∀q: positive.
+ ∀H: eq comparison (Pcompare p q Eq) Gt.
+  ex positive
+    (λh:positive.
+      and (eq positive_mask (Pdouble_mask (Pminus_mask p q)) (IsPos h))
+        (and
+          (eq positive
+            match h return λp0:positive. positive
+             [ xI ⇒ λy':positive. xO (Pplus_carry q y')
+             | xO ⇒ λy':positive. xI (Pplus q y')
+             | xH ⇒ xO (Psucc q)]  (xI p))
+          (or (eq positive h xH)
+            (eq positive_mask (Pdouble_plus_one_mask (Pminus_mask_carry p q))
+              (IsPos (Ppred h))))))
+not convertible with positive
+ → (λp0:positive.
+       eq comparison (Pcompare (xI p) p0 Eq) Gt
+        → ex positive
+              (λh:positive.
+                and (eq positive_mask (Pminus_mask (xI p) p0) (IsPos h))
+                  (and (eq positive (Pplus p0 h) (xI p))
+                    (or (eq positive h xH)
+                      (eq positive_mask (Pminus_mask_carry (xI p) p0)
+                        (IsPos (Ppred h))))))) (xI __1)
+
+cic:/Coq/NArith/BinPos/Pplus_diag.con
+∀x0: positive.
+ ∀IHx: eq positive (Pplus x0 x0) (xO x0).
+  eq positive (xO (Pplus_carry x0 x0)) (xO (xI x0))
+but it should have type
+∀p: positive.
+ eq positive (Pplus p p) (xO p)
+  → eq positive (Pplus (xI p) (xI p)) (xO (xI p))

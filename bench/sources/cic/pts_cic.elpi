@@ -1,0 +1,18 @@
+% PTS SPECIFICATION FOR THE CALCUS OF (CO)INDUCTIVE CONSTRUCTIONS (CIC) %%%%%%
+
+pts+pair (s+prop 0) (s+type 0).
+
+pts+pair (s+type i) (s+type j) :- j is i+1.
+
+% (star, star, star), impredicative (box, star, star).
+pts+triple S (s+prop 0) (s+prop 0) :- !.
+
+% (star, star, star), (star, box, box), (box, box, box).
+pts+triple (s+type i) (s+type j) (s+type j) :- i <= j, !.
+
+% not in the Cube: (box, star, box)
+pts+triple (s+type i) (s+type j) (s+type i) :- j < i, !.
+
+% cumulativity
+pts+sub (s+prop 0) (s+type i) :-.
+pts+sub (s+type j) (s+type i) :- j < i.

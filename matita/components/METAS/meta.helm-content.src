@@ -1,0 +1,4 @@
+requires="helm-library helm-ng_kernel"
+version="0.0.1"
+archive(byte)="content.cma"
+archive(native)="content.cmxa"

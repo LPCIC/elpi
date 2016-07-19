@@ -1,0 +1,24 @@
+% type checker extension managing global evironments (Grundlagen) %%%%%%%%%%%%
+
+% Global environment G := gtop      empty
+%                      |  gdec R G  declaration of R after G
+%                      |  gdef R G  definition of R after G
+
+% Predicates: * is+valid G  validity test for global environment G
+
+accumulate kernel_pts.
+
+% VALIDITY FOR GLOBAL ENVIRONMENTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+is+valid gtop.
+
+% sigma for definition.
+is+valid (gdef R G) :- g+line+2 R N V W,
+%                       $print constant N R,
+                       has+type V W,
+                       (r+step R V => t+step R W => is+valid G).
+% xi for declaration.
+is+valid (gdec R G) :- g+line+1 R N W,
+%                       $print constant N R,
+                       has+sort W S,
+                       (t+step R W => is+valid G).

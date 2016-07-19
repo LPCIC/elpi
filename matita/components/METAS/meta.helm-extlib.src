@@ -1,0 +1,5 @@
+requires="str unix camlp5.gramlib"
+version="0.0.1"
+archive(byte)="extlib.cma"
+archive(native)="extlib.cmxa"
+linkopts=""

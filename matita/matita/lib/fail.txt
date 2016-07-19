@@ -1,0 +1,27 @@
+matitac.opt turing/multi_to_mono/multi_to_mono.maFAIL 0m00.54s 0m00.52s 0m00.01s 
+matitac.opt binding/names.ma                     FAIL 0m00.07s 0m00.07s 0m00.00s 
+matitac.opt binding/fp.ma
+ matitac.opt binding/names.ma                    FAIL 0m00.12s 0m00.12s 0m00.00s 
+matitac.opt binding/fp.ma                        FAIL 0m00.13s 0m00.12s 0m00.00s 
+matitac.opt binding/ln.ma
+ matitac.opt binding/names.ma                    FAIL 0m00.07s 0m00.07s 0m00.00s 
+matitac.opt binding/ln.ma                        FAIL 0m00.43s 0m00.43s 0m00.00s 
+matitac.opt binding/ln_concrete.ma
+ matitac.opt binding/names.ma                    FAIL 0m00.06s 0m00.06s 0m00.00s 
+matitac.opt binding/ln_concrete.ma               FAIL 0m00.49s 0m00.48s 0m00.00s 
+matitac.opt finite_lambda/reduction.ma
+ matitac.opt finite_lambda/terms_and_types.ma    FAIL 0m00.47s 0m00.47s 0m00.00s 
+matitac.opt finite_lambda/reduction.ma           FAIL 0m00.48s 0m00.47s 0m00.00s 
+matitac.opt finite_lambda/typing.ma
+ matitac.opt finite_lambda/reduction.ma
+  matitac.opt finite_lambda/terms_and_types.ma   FAIL 0m00.39s 0m00.39s 0m00.00s 
+ matitac.opt finite_lambda/reduction.ma          FAIL 0m00.39s 0m00.39s 0m00.00s 
+matitac.opt finite_lambda/typing.ma              FAIL 0m00.39s 0m00.39s 0m00.00s 
+matitac.opt finite_lambda/confluence.ma
+ matitac.opt finite_lambda/reduction.ma
+  matitac.opt finite_lambda/terms_and_types.ma   FAIL 0m00.42s 0m00.41s 0m00.00s 
+ matitac.opt finite_lambda/reduction.ma          FAIL 0m00.42s 0m00.42s 0m00.00s 
+matitac.opt finite_lambda/confluence.ma          FAIL 0m00.42s 0m00.42s 0m00.00s 
+matitac.opt finite_lambda/terms_and_types.ma     FAIL 0m00.38s 0m00.38s 0m00.00s 
+matitac.opt reverse_complexity/toolkit.ma        FAIL 0m14.70s 0m14.62s 0m00.07s 
+matitac.opt reverse_complexity/hierarchy.ma      FAIL 0m00.71s 0m00.70s 0m00.00s 

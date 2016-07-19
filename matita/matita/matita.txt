@@ -1,0 +1,458 @@
+### 
+ Regole di eliminazione per tipi induttivi:
+ >   - as you point it out, unit implies small, hence the clause "if
+ >   Environ.engagement ..." is useles; revision 1.46 apparently missed
+ >   this point;
+ and I was wrong. Components of constructors that are arities in Prop
+ (i.e. of the form ... -> Prop) are considered as unit (at least in
+ Coq). Hence you can have non small unit types. The typical example is
+
+  Inductive T : Prop := C : Prop -> T.
+
+ As a consequence, my modification of the code of Indtypes.allowed_sorts
+ introduced a consistency hole (with elimination from T to Type, Prop
+ becomes equivalent to T and system Type:Type becomes a subsystem of
+ Coq). If you have a similar allowance in Matita, it may be problematic
+ too.
+
+
+
+** introdurre una tattica primitiva "enlarge_metasenv" che cambia il metasenv
+   aggiungendo nuove meta e tenendo traccia dei nuovi goal aperti; usarla
+   ovunque rimuovendo ProofEngineHelpers.compare_metasenv. Questo dovrebbe
+   anche permettere a lungo termine di rendere lo stato un tipo opaco.
+
+
+Possibile causa di rallentamenti:
+1. The last commit that fixed unification of compound coercions with
+   applied atomic coercions used to introduce too many compound coercions
+   at the end. In this commit we fix the problem in a brutal way by
+   mergin coercions every time CicMetaSubst.apply_subst is called.
+   To be refined later on.
+
+  Ferruccio ha cambiato matita.lang:
+  >      <keyword>iforall</keyword>
+  >      <keyword>iexists</keyword>
+
+TODO
+  NUCLEO
+   - http://mowgli.cs.unibo.it:58084/proofCheck?uri=cic:/Coq/Reals/Rtopology/interior_P3.con
+  - i files di coq non hanno gli universi e hanno Type senza l'id numerico
+    per ora vengono considerati come con grafo vuoto... 
+  - limit_mul non compila (usare test_library per testare l'intera libreria)
+    (15:06:07) Zack: http://www.cs.unibo.it/cgi-bin/viewcvs.cgi/helm/gTopLevel/testlibrary.ml?rev=1.20&hideattic=0&content-type=text/vnd.viewcvs-markup
+  - PREOCCUPANTE: per 
+    inductive i : Prop := K : True (*-> i*) -> i.
+    noi generiamo i_rec e i_rect con e senza il commento qui sopra; Coq NON
+    genera i_rec e i_rect quando c'e' un argomento ricorsivo.
+    (CSC: manca vincolo aggiuntivo non dipendente dalla sorta per il caso in
+    questione) -> CSC, parzialmente risolto, da finire
+  - Set predicativo
+  - bug universi e tipi induttivi (anche in cicElim.ml!!!)
+    
+  TATTICHE
+  - coercions verso sorte:
+    1. coercere a una sorta in posizione controvariante: andare verso Prop,
+       altrimenti verso {Type,Set,CProp} (indifferentemente?)
+    2. coercere a una sorta in posizione covariante: la scelta piu' safe e'
+       andare verso Type, poi verso CProp, poi verso Set, poi verso Prop.
+       Unico problema: la scelta piu' safe e' anche quella pessima dal punto
+       di vista dell'estrazione di codice :-(
+  - fare normalize_pattern : pattern -> goal -> pattern e usarla per
+    abilitare fase 2 in fold e rewrite
+  - apply puo' generare termini non ben tipati.
+    Esempio: p = q e fare apply eq_ind' di p!
+  - generazione di principi di co-induzione per co-induttivi
+  - ARGOMENTI IMPLICIT: li vogliamo? come? come disabilitarli localmente?
+  - file elim.ma: vengono creati lambda dummy e referenziati nell'outtype di
+    un case
+  - tattiche e fallimenti: una tattica che non progredisce dovrebbe fallire
+  - comportamento di tutte le tattiche nei confronti dei let-in
+  - elim con pattern
+  - Dare errore significativo al posto di NotWellTypedInterpreation -> CSC
+  - elim_intros_simpl e rewrite_simpl: ora non viene usata dal
+               ^^^^^^           ^^^^^^
+    toplevel la variante che semplifica. Capire quali sono i problemi
+    e/o cosa fare delle varianti con semplificazione.
+    (con sintassi concreta alla \section*, analogamente cut e similia che fanno
+    intros... ) -> CSC
+  - eta_expand non usata da nessuno? (ask Andrea?)
+  - eliminare eta_fix? (aspettare notazione) (correlato con sopra?)
+  - bug di ferruccio: fare un refresh dei nomi dopo l'applicazione
+    di una tattica. Di quali nomi fare refresh? (Andrea) di quelli
+    veramente ambigui, ovvero dell'ultimo binder tale che sotto di
+    esso un nome viene usato in maniera ambigua. Esempio:
+    \lambda x. \lambda x. (x x) (dove una x e' -2) ==> fare refresh
+    \lambda x. \lambda x. (x x) (dove entrambe sono -1) ==> non fare refresh
+    Capita quando un tipo dall'environment (e.g. \lambda x.T)
+    viene inserito in un contesto (e.g. x:nat) dove le variabili
+    sono gia' state legate in precedenza.
+
+  GUI GRAFICA
+  - cut & paste di pattern profondi nelle ipotesi
+  - cut & paste di inner-types non chiusi non funzionanti
+  - cut & paste di congetture nello script delle prove non funzionante
+  - keybinding globali: CTRL-{su,giu,...} devono fungere anche quando altre
+    finestre hanno il focus (e.g. cicBrowser). C'e' gia' da qualche parte il
+    codice che aggiunge i keybinding a tutte le eventBox, e' da ripristinare
+  - la finestrella per i development ha i pulsanti non sensitive.
+  - l'entry "Save" da menu non e' context sensitive (ti fa salvare anche
+    quando il file non e' stato modificato)
+  - non semplificherebbe le cose fare in modo che matitaScript sia un widget
+    (cosi' come lo e' matitaMathView) che eredita da GtkSourceView e mantiene
+    internamente lo status di matita etc. Appositi segnali permetterebbero di
+    evitare tutte le chiamate al singleton #instance di matitaScript, che
+    verrebbe creato dentro a matitaGui (o forse meglio dentro a matita e passato
+    a matitaGui). Si semplificherebbe forse anche la gestione di script
+    multipli? Forse no, perche' comunque ci puo' essere sempre solamente uno
+    ed un solo matitaScript (da spostare da un tab a un altro).
+  - la barra di stato: c'e' ma non funziona?
+
+  - feedback su hyperlink nei sequenti e nel browser: rendere visibili gli
+    hyperlink (cursore a "manina"? hyperlink evidenziati?). La maction che
+    collassa la prova e' fastidiosa: la prova si chiude se non si clicca
+    correttamente su un hyperlink (anche tooltip sui bottoni)
+
+  - che farne della palette delle tattiche?
+  - script outline, o meglio: modulo per la gestione del testo dello script
+    -> Zack
+  - riattaccare hbugs (brrr...) -> Zack
+
+  - supportare l'apertura di piu' script contemporaneamente in tab/finestre
+    diversi/e
+
+  GUI LOGICA
+  - -nodb non usato da disambiguazione: dopo il primo errore si ottiene
+    un errore di identificatore non trovato (dalla locate?)
+  - generazione di dipendenze verso .moo di Coq (non esistenti!) -> Zack
+  - proposta di Zack: NON calcolare (ed esportare) per default gli inner-types;
+    aggiungere un'opzione per questo a matitac (riduce drasticamente il tempo
+    di qed)
+  - la funzione alias_diff e' lentissima (anche se CSC l'ha accellerata di
+    un fattore 3x) e puo' essere evitata: chi vuole aggiungere alias (la
+    disambiguazione, il comando "alias" e l'add_obj) deve indicare
+    esplicitamente quali sono i nuovi alias, evitando cosi' la diff per
+    scoprirlo
+  - matitac deve fallire quando matita vuole aggiungere un alias!
+  - default equality e famiglia non e' undo-aware
+  - le coercion non sono undo-aware
+  - nuovo pretty-printer testuale: non stampa usando la notazione
+    (e.g. guardare output di matitac)
+  - matitamake foo/a.ma non funziona; bisogna chiamarlo con
+    matitamake /x/y/z/foo/a.ma
+  - notazione per i numeri -> Luca e Zack
+  - non chiudere transitivamente i moo ?? 
+
+  DEMONI E ALTRO
+
+DONE
+- compilare Whelp -> Gares, Zack, CSC
+- assiomi (manca sintassi concreta e AST) -> CSC
+- in MatitaEngine unificare/rimuovere eval_string, eval_from_stream e
+  eval_from_stream_greedy -> CSC
+- menu contestuale (tasto dx) nel sequent viewer -> Zack
+- in generale: invece di spiegare gli errori nel momento in cui si sollevano
+  le eccezioni, farlo quando vengono presentate all'utente. Motivo: il calcolo
+  del messaggio di errore puo' essere estremamente costoso (e' gia' successo!)
+  quando poi il messaggio non serve!!! -> CSC
+- matitaclean all (non troglie i moo?) -> Gares
+- matitaclean (e famiglia) non cancellano le directory vuote
+  (e per giunta il cicbrowser le mostra :-) -> Gares
+- missing feature unification: applicazione di teoremi (~A) quando il goal
+  e' False o di teoremi $symmetric R P$ quando il goal e' $P(x,y)$.
+  Fare un passo di delta[-beta?][-iota-etc.] quando da una parte c'e' una
+  testa rigida (che si espande in una freccia)? Ma il punto e' che il bug
+  non e' di unificazione, bensi' nella fase di preparazione del goal per
+  la apply -> CSC, Gares
+- Guardare il commento
+  (*CSC: this code is suspect and/or bugged: we try first without reduction
+  and then using whd. However, the saturate_term always tries with full
+  reduction without delta. *)
+  in primitiveTactics.ml. Potrebbe essere causa di rallentamento della apply
+  oltre che di bug! -> CSC, Gares
+- codice di inizializzazione di matita, matitac, matitatop replicato e non
+  in sync -> Gares
+- tutte gli script che parsano (e.g. matitaclean, matitadep) debbono
+  processare la notazione per evitare errori di parsing (visibili ora
+  che e' stata committata la contrib list)! -> Gares
+- E' possibile fare "Build" senza selezionare nulla, ottenendo un
+  assert false -> Gares
+- disambiguazione: attualmente io (CSC) ho committato la versione di
+  disambiguate.ml che NON ricorda gli alias in caso di disambiguazione
+  univoca (senza scelte per l'utente). [ cercare commento "Experimental" ]
+  Il problema di questa soluzione e' che rallenta in maniera significativa
+  l'esecuzione degli script. DOMANDA: quanto costano le fasi di
+  fetch/decode/execute delle linee dello script?
+  Una possibile alternativa e' avere alias "soft": se la disambiguazione
+  fallisce gli alias soft vengono ripuliti e si riprova.
+  Altra soluzione (Gares): avere alias multipli e provare tutti gli alias
+  multipli. Da combinare con il "ritenta con istanze multiple in caso di
+  fallimento".
+  SOLUZIONE PENSATA CON ANDREA: 1. la interpretate aggiunge un alias
+  implicito; 2. gli alias vengono ricordati come nella soluzione originale
+  (e veloce); 3. se la disambiguazione fallisce, allora gli alias vengono
+  dimenticati (quali? tutti? tutti tranne quelli chiesti all'utente?)
+  e si ritenta; se fallisce ancora si generano
+  istanze differenti e si ritenta; 4. ritentare anche senza e poi con
+  coercions? oppure ordinare preferendo la soluzione che non ha introdotto
+  coercions?; 5. che fare se alla fine restano piu' scelte? se si mettono
+  gli alias nello script viene un paciugo, credo! in particolare quando
+  vengono usate n istanze -> Zack, CSC
+- theorem t: True. elim O. ==> BOOM! unificazione di una testa flessibile con
+  True -> Gares
+- parsing contestuale (tattiche replace, change e forse altre)
+  capire dove fare la select per avere i contesti in cui disambiguare gli
+  altri argomenti. -> Zack
+- tattica unfold su rel a let-in bound variables: c'e' ancora un bug
+  aperto: "unfold x in H:..." la x passata alla unfold vive nel contesto
+  del goal e non in quello del pattern. Pertanto invece di cercare di
+  fare unfolding di x viene fatto unfolding di altro.
+  Soluzione: la funzione ProofEngineHelpers.select deve tornare una
+  funzione per rilocare i termini nel contesto giusto.
+  Esempio:
+   theorem t: let uno \def S O in uno + uno = S uno \to uno=uno.
+    intros. unfold uno in H.
+  NOTA: questo bug e' legato a quello di parsing in presenza di tattiche
+  con pattern, visto che in tal caso e' l'intero parsing a dover essere
+  fatto in un contesto differente. Risolvendo quel bug si risolve
+  automaticamente anche questo.
+  -> Zack
+- Usare il cicbrowser per fare "Whelp instance": lui riscrive la barra
+  con la notazione alla Coq V7.0 che non riesce piu' a riparsare! -> Zack
+- implementare inclusione file di configurazione (perche' ora tutti
+  i demoni scopiazzano venti righe per via del getter embedded :-( -> Zack
+- simplify non debbono zeta-espandere i let-in -> CSC, Gares
+- integrare nuova contrib ferruccio nel bench notturno e rilocarla in
+  contribs o qualcosa del genere -> CSC
+- CRITICO: quando l'environment non e' trusted non compila la library di
+  matita!!! -> Gares, CSC
+- bug di unsharing -> CSC
+- CRITICO (trovato anche da Ferruccio): typechecking di
+  cic:/Coq/ring/Quote/index_eq_prop.con
+  asserzione del nucleo (applicazione senza argomenti). -> CSC
+- verificare se tutte le query sono ora ottimizzate (usando il comando
+  explain) e usano gli indici in maniera ottimale; inoltre migliorare gli
+  indici sulle tabelle hits and count -> CSC
+- ???????????? Perche'?
+  mowgli:~# du -s /var/lib/mysql/mowgli/
+  250696  /var/lib/mysql/mowgli/
+  mowgli:~# du -s /var/lib/mysql/matita/
+  455096  /var/lib/mysql/matita/ -> CSC
+- library/nat/primes.ma: ex_prime ci mette un secolo il db (binding) a fare
+  la Mysql.exec che ritorna una lista vuota di risultati. Investigare.
+  Anche peggio in library/nat/minimization/f_max_true. -> CSC
+- integrare il famoso logo mancante (anche nell'About dialog) -> CSC
+- invertibilita' dell'inserimento automatico di alias: quando si torna
+  su bisognerebbe tornare su di un passo e non fare undo degli alias
+  (Zack: nella history ci sono anche gli offset per sapere a che pezzo di
+  script uno stato appartiene) -> CSC
+- bug di refresh del widget quando si avanza ("swap" tra la finestra dei
+  sequenti e la finestra dello script) -> CSC
+- sensitiveness per goto begin/end/etc. (???) -> Gares
+- cut&paste stile "X": rimane la parte blu e lockata! -> CSC
+- highlight degli errori di parsing nello script -> CSC
+- quando si fa una locate nel cicbrowser viene mangiato un pezzo di testo
+  dalla finestra principale!!! -> CSC
+- sensitiveness per copy/paste/cut/delete nel menu Edit -> CSC
+- fare "matita foo" (dove foo non esiste), cambiare qualcosa e uscire senza
+  salvare. In verita' foo e' stato scritto lo stesso! -> CSC
+- matitaclean deve rimuovere anche i .moo; in alternativa il makefile
+  non deve basarsi sui .moo per decidere se qualcosa e' stato compilato o meno
+  -> CSC, Gares
+- matitaclean all (o matitamake cleanall) dovrebbe radere al suolo la
+  directory .matita -> CSC, Gares
+- icone standard per zoom-in/out/= e piu' aderenza alle Gnome Interface
+  Guidelines (e.g. about dialog) -> CSC
+- salvare la parte di testo lockata dagli effetti di undo/redo con
+  (shift-)ctrl-Z e anche usando il menu che si apre con il tasto destro -> CSC
+- fare in modo che il testo caricato inizialmente da matita non sia
+  undoable (usando i metodi begin/end_not_undoable_action di gtk_source_view)
+  -> Gares
+- Implementare menu edit: cut/copy/undo/etc. -> CSC
+- gestione dei path per include: il path deve essere assoluto? da decidere ...
+  ( -I ?? o chiedere a matitamake la root e farci una find? ) -> Gares
+- freeze durante avanzamento -> Gares, CSC
+- tornare indietro (verso il cursore) in matita dovrebbe essere O(1) e non un
+  Undo passo passo (sembra che il collo di bottiglia sia fare iterare su ogni
+  uri da togliere (accorpare almeno il lavoro sul db magari aiuta) -> Gares, CSC
+- quando si sposta il punto di esecuzione dello script cambiare la parte di
+  script visibile nella finestra dello script -> Gares, CSC
+- find & replace -> Gares
+- Bug di cut&paste: se si fa cut&paste di testo lockato si ottiene testo
+  lockato! -> Gares
+- Bug: non disambigua
+  inductive i (x:nat) : bool \to Prop \def K : bool \to (i x true) \to (i x false).
+  perche' non inserisce nat nel domain di disambiguazione. Deve esserci un bug
+  stupido da qualche parte -> CSC
+- Bug vari nella generazione dei principi di eliminazione:
+   1. generazione nomi (usa ref incrementata localmente) -> Andrea
+   2. prodotti dipendenti come non-dipendenti (visibili eseguendo passo
+      passo il test inversion.ma) -> CSC, Gares
+   3. usato trucco outtype non dipendenti per il case -> CSC, Gares
+- controllo per script modificato o meno prima di uscire  -> Gares
+- LApply deve prendere in input gli identificatori che va a generare;
+  lascio a Ferruccio la scelta della sintassi concreta    -> Ferruccio
+- fare tornare a matitac -1 quando lo stato finale e' 
+  diverso da No_proof, non eseguire comandi quando lo 
+  stato e' diverso da No_proof                            -> CSC
+- uri_of_term and term_of_uri: cambiare il tipo per far 
+  tornare delle uri!!!                                    -> CSC
+- intro = intros 1                                        -> Gares
+- timetravel (urimanager)                                 -> Gares
+- implementare macro in matitaScript.ml                   -> Gares
+- history deve aggiornare anche la whelp bar              -> Gares
+- commenti exeguibili (forse devono essere una lista e non 
+  un singolo executable e forse devono contenere anche Note 
+  e non solo Executable)                                  -> Gares
+- spostare il codice di creazione delle tabelle da
+  MatitaDb, al momento quelle create da matita possono
+  andare out of sync con quelle create dai file .sql      -> Gares
+- tree update in background                               -> Gares
+- update del getter in background                         -> Zack
+- agganciare href_callback del sequent_viewer             -> Zack
+- shortcut varie per script handling                      -> Zack
+- operazioni rimanenti su script (top, bottom, jump)      -> Zack
+- lighting-ls-getter in matita                            -> Gares
+- riagganciare toolbar                                    -> Zack
+- evitare che n-mila tattiche Goal siano nello script
+  (una per ogni cambio di tab)                            -> Zack
+- implementazione comandi rimanenti in matitaEngine.ml    -> Gares
+- sintassi per gli alias                                  -> Gares
+- implementazione script handling (sopra engine)          -> Zack
+- matitaSync all'indietro                                 -> Gares
+- riagganciare GUI                                        -> Zack
+
+(**********************************************************************)
+
+comandi:
+ - interattivi (solo da gui)
+   - Macro/Comandi (check, print, hint, undo, locate, match)
+     potrebbero anche non avere sintassi concreta, del tipo che 
+     check e' solo un bottone che apre una finetra in cui puoi 
+     scrivere un termine o selezionarlo dalla prova corrente
+ - batch (sono gli unici che stanno nel .ma)
+   - Tattiche, theorem, alias (cambiano la prova)
+
+
+          MOUSE
+-------------------------------------------+
+ gui (macro: hint)                         |      SHELL 
+     (disambiguatore)                      | 
+         +-----------------+---------------+-----------------------------------
+         | matita (status) |               | matitac 
+         | (log) (sync)    |    but2log    | fold ( fun s l -> engine l s) file
+         +-----------------+---------------+-----------------------------------
+         |  lingua:/sintassi concreta non ambigua delle tattiche+Qed,Thm,alias/ 
+         +----------------------------------------------------------
+         |            engine: TacticAst (cic) -> status -> status
+         |               ma non usa il campo alias dello status
+---------+----------------------------------------------------------
+                            ocaml                 
+--------------------------------------------------------------------
+
+
+engine: 
+ - accetta solo linee non ambigue
+ - alias: 
+     alias ident nat = "cic:/matita/gares/nat.ind#(1/1)".
+     alias number = (natural|real|positive|integer).
+     
+
+
+matita:
+ - mantiene uno stack di stati
+ - mantiene un log sync con gli stati
+ - offre delle api per generare la sintassi concreta che puo' servire
+   alla gui (la gui fa una chiamata a funzione e matita genera "auto."
+   cosi' la sintassi la gui non la vede mai e la tratta al massimo come un 
+   testo semplice e basta (insomma, metterei in matita il generatore di
+   sintassi concreta) but2log
+ - ha il controllo... ovvero anche la gui viene usata da matita, o per sapere 
+   la prossima azione o per chidere di scegliere il termine tra una lista
+
+ (stato :: tl) (log , (start,end) :: tl) 
+
+ +----------+
+ |          |
+ +----------+
+
+gui:
+ - step
+ - choose
+
+stato:
+ - alias 
+ - proof status option
+ - metadati relativi allo script per il sync
+ - settings "baseuri/url/" eccc
+ - 
+
+alias
+ - sintassi concreta 
+
+engine prende in input 
+ - AST di Cic (tactic ast)
+ 
+sync:
+ - presi 2 stati fa il diff e lo somma/sottrae al DB
+
+(**********************************************************************)
+
+script handling
+- ad ogni script sul quale l'utente sta lavorando corrispondono
+  - un modello (vedi sotto)
+  - un buffer di testo gtk + attributi (usati principalmente per distinguere la
+    parte di testo immodificabile da quella modificabile)
+  - una lista di observer che vengono notificati ad ogni cambiamento di stato
+- un modello di script e' composto da:
+  - una lista di stringhe (inizialmente vuota) detta "statement list". Ogni
+    elemento della lista corrisponde ad uno statement (nel senso di
+    TacticAst.statement) gia' valutato dall'engine. La parte immodificabile del
+    buffer di testo corrisponde con le stringhe contenute nella lista
+  - una lista di stati (inizialmente contenente lo stato vuoto) detta "state
+    list". Si ha l'invariante che la lunghezza di tale lista e' uguale alla
+    lunghezza della statements list + 1. Lo stato i-esimo della lista di stati
+    e' lo stato di matita _prima_ dell'esecuzione dell i-esimo statement
+  - una stringa, detta "future text", corrispondente alla parte di testo dello
+    script non ancora valutata. L'ultimo stato della state list e' lo stato
+    corrente di matita
+- relazione tra modello e buffer di testo gtk
+  - le modifiche al testo del buffer sono possibili solo nella parta non ancora
+    valutata. Ognuna di esse viene apportata _anche_ al future text
+  - invariante: e' sempre possibile riscrivere ("redraw") l'intero contenuto del
+    buffer di testo a partire dal modello, attributi compresi
+- oggetto script
+  - metodi
+    - new: gtk_text_buffer -> script
+    - redraw: unit (* ridisegna il contenuto del buffer di testo *)
+    - advance: ?statement:string -> unit -> unit
+        (* valuta il primo statement del future text (usando eval_statement
+        (puo' fallire con una eccezione)), rimuove il testo corrispondente dal
+        future text, aggiunge alla statement list una entry per ogni statement
+        ritornato da eval_statement, aggiunge il nuovo stato alla state list,
+        invoka tutti gli observer
+        Se c'e' l'argomento opzionale statement, quello e' il testo che viene
+        passato ad eval_statement, se ha successo nessuna rimozione dal future
+        text viene effettuata *)
+    - retract: unit -> unit
+        (* sposta l'ultimo statement della statement list al future text, toglie
+        l'ultimo stato della state list, MatitaSync.time_travel
+        ~present:ultimo_stato ~past:stato_precedente *)
+    - private eval_statement: string -> MatitaTypes.status * string list
+        (* parsa lo statement
+        - se e' un Command o un Tactical (vedi TacticAst) invoca MatitaEngine
+          passando lo stato corrente
+        - se e' una Macro la gestisce (= tutte le Macro sono implementate qua)
+          Ritorna una lista di coppie <stato, statement>. La proiezione sulla
+          prima componente rappresenta gli stati da aggiungere alla state list;
+          quella sulla seconda gli statement da aggiungere alla statement list.
+        *)
+    (* gestione degli observer *)
+    - add_observer: (MatitaTypes.status -> unit) -> observer_id
+    - remove_observer: observer_id -> unit
+    (* gestione del salvataggio *)
+    - save_to: string -> unit        (* ridisegna su file *)
+    - load_from: string -> unit
+        (* retract fino allo stato zero, nuovo stato con future text pari al
+        contenuto del file passato *)
+

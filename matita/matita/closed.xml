@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<b:box xmlns:m="http://www.w3.org/1998/Math/MathML" xmlns:b="http://helm.cs.unibo.it/2003/BoxML">
+  <b:h>
+    <b:space width="2em"/>
+    <b:v>
+      <b:space height="2ex"/>
+      <b:v>
+        <b:decor style="box">
+	  <b:space width="1ex" height="1ex"/>
+	</b:decor>
+	<b:space height="1ex"/>
+	<b:text>This goal has already been closed.</b:text>
+	<b:text>Use the "skip" command to throw it away.</b:text>
+      </b:v>
+    </b:v>
+  </b:h>
+</b:box>

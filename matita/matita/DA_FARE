@@ -1,0 +1,33 @@
+MATITA 1.0:
+  matitaMathView*: selezione semantica, hyperlink, etc.
+  coercion declaration has no "nocomposites" option, and no compact syntax.
+
+Problemi (MATITA 1.0):
+  matitaEngine: durante la compilazione, che accade allo storage/env? dovrei
+   ripulirlo, immagino
+
+  matitaGui: come faccio in uno stato funzionale a settare le interpretazioni?
+   dovrei farlo su ogni elemento della history, ma sarebbe troppo costoso
+
+matitac: non entra nelle dir
+matita: due file anonimi stessa base uri
+matita: il pulsante close non si ingrigisce quando non ci sono piu' script
+        aperti
+
+A) passare lo status con il metodo di pretty-printing in giro ovunque
+B) rendere globali le informazioni sull'inclusione :-( (magari iterando sulla
+   lista dei locali) e combinarle con il "non caricare oggetti non ancora
+   inclusi" per poter ri-compilare un file. Dovrebbe risolvere due scenari:
+   1) A -> C, B -> C, C e' caricato, carico oggetti di C, B carica C
+      ricompilandolo e mischio oggetti
+   2) A -> C, edito A, torno in cima ad A, apro C, non mi fa editare C
+
+Bug: si chiude un tab ma resta il suo status :-) specie se e' l'ultimo tab
+
+Idea (Enrico):
+ - ogni oggetto ha il suo status con il suo env che e' una vista su quella
+   globale
+ - c'e' poi l'env attuale globale che e' una cache condivisa del disco;
+   oggetti nella cache del disco sono coppie uri/data;
+   funziona bene se combinato con "carica tutti gli oggetti all'include";
+   funziona bene se combinato con cambio universi e/o assiomi

@@ -1,0 +1,7 @@
+requires="str"
+version="0.0.1"
+archive(byte)="utf8_macros.cma"
+archive(native)="utf8_macros.cmxa"
+requires(syntax,preprocessor)="camlp5"
+archive(syntax,preprocessor)="pa_extend.cmo pa_unicode_macro.cma profiling_macros.cma"
+linkopts=""

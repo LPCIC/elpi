@@ -1,0 +1,4 @@
+requires="helm-content helm-ng_kernel"
+version="0.0.1"
+archive(byte)="grafite.cma"
+archive(native)="grafite.cmxa"

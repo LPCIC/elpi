@@ -1,0 +1,5 @@
+requires="helm-ng_kernel"
+version="0.0.1"
+archive(byte)="ng_refiner.cma"
+archive(native)="ng_refiner.cmxa"
+linkopts=""

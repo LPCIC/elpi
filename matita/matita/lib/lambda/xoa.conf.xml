@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<helm_registry>
+  <section name="matita">
+    <key name="rt_base_dir">$(MATITA_RT_BASE_DIR)</key>
+  </section>
+  <section name="xoa">
+    <key name="output_dir">lib/</key>
+    <key name="objects">lambda/background/xoa</key>
+    <key name="notations">lambda/background/xoa_notation</key>
+    <key name="include">basics/pts.ma</key>
+    <key name="ex">1 2</key>
+    <key name="ex">2 2</key>
+    <key name="ex">2 3</key>
+    <key name="ex">3 1</key>
+    <key name="ex">3 2</key>
+    <key name="ex">3 3</key>
+    <key name="ex">3 4</key>
+    <key name="ex">4 1</key>
+    <key name="ex">4 2</key>
+    <key name="ex">4 3</key>
+    <key name="or">3</key>
+  </section>
+</helm_registry>

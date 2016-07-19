@@ -1,0 +1,126 @@
+A compact kernel for the calculus of inductive constructions
+
+descrizione di CIC (17pp) Andrea
+   105 nCic.ml
+   106 nCicUtils.ml
+   134 nReference.ml (Pp usa environment, spostare nomi in ref?)
+  - descrizione pragmatica di CIC (3pp)
+  - motivare scelte (cosa era costoso)
+  - confronto con il vecchio (sia calcolo che implementazione)
+  - descrizione ADT
+  - iteratore (lift?)
+  - self reference e debruijnate
+  - locally nameless
+  - sections (costi benefici, dentro/fuori kernel)
+  - modules
+
+descrizione environment(2pp) CSC
+  93 nCicEnvironment.ml
+  - frozen e ciclicità
+  - trust, libreria -vs- env
+
+descrizione di Subst (1pp)
+  96 nCicSubstitution.ml
+  - fattorizzazione di 3 subst
+    - subst, e psubst (per unwind e kernel)
+    - subst meta (con parametro per non liftare)
+
+descrizione riduzione(8pp) Gares
+   599 nCicReduction.ml
+   - macchinine 
+     - strategia doppia
+   - conversion
+     - su macchine
+     - height of objects (todo)
+     - irrelevance (fare il checking che gli irrelev dichiarati siano irrel)
+   - asymmetric convertion
+
+descrizione type_checker(15pp) Wilmer(guardia) 
+  1183 nCicTypeChecker.ml
+    - ricorsione guardata
+    - positività
+    - proof irrelevance
+    - metasenv consistency
+    - tensione tra typechecking di termini aperti e 
+      chi se ne frega, qed lavora su termini chiusi
+    - universi, check contro inferenza
+
+testing/conclusioni?
+  - conversione old/new e problematiche
+
+biblio
+  - crafting, matita JAR
+  - barthe, gregoire 5k
+  - pollack, harper syntax directed rules
+  - CIC... chrinstine, coquand, benjamin
+  - jojgov, munoz, strecker Metas
+  - 
+
+
+appendice
+
+  nCicEnvironment.mli:val get_checked_obj: NUri.uri -> NCic.obj
+  nCicEnvironment.mli:val get_obj: NUri.uri -> bool * NCic.obj
+  nCicEnvironment.mli:val add_obj: NCic.obj -> unit
+  nCicEnvironment.mli:val get_checked_def:
+  nCicEnvironment.mli:val get_checked_indtys:
+  nCicEnvironment.mli:val get_checked_fixes:
+  nCicEnvironment.mli:val get_checked_cofixes:
+  nCicEnvironment.mli:val get_indty_leftno: NReference.reference -> int
+  nCicPp.mli:val ppterm: 
+  nCicPp.mli:val ppobj: NCic.obj -> string
+  nCicReduction.mli:val whd : 
+  nCicReduction.mli:val are_convertible : 
+  nCicReduction.mli:val head_beta_reduce: ?delta:int -> ?upto:int -> NCic.term -> NCic.term
+  nCicSubstitution.mli:val lift : ?from:int -> int -> NCic.term -> NCic.term
+  nCicSubstitution.mli:val subst : ?avoid_beta_redexes:bool -> NCic.term -> NCic.term -> NCic.term
+  nCicSubstitution.mli:val psubst : 
+  nCicSubstitution.mli:val subst_meta : NCic.local_context -> NCic.term -> NCic.term
+  nCicTypeChecker.mli:val typecheck_obj : NCic.obj -> unit
+  nCicTypeChecker.mli:val typeof: 
+  nCicUtils.mli:val sharing_map: ('a -> 'a) -> 'a list -> 'a list
+  nCicUtils.mli:val expand_local_context : NCic.lc_kind -> NCic.term list
+  nCicUtils.mli:val lookup_subst: int ->  NCic.substitution -> NCic.subst_entry
+  nCicUtils.mli:val lookup_meta: int ->  NCic.metasenv -> NCic.conjecture
+  nCicUtils.mli:val fold:
+  nCicUtils.mli:val map:
+  nCicUtils.mli:val is_closed: NCic.term -> bool
+  nReference.mli:val eq: reference -> reference -> bool
+  nReference.mli:val string_of_reference: reference -> string 
+  nUri.mli:val string_of_uri: uri -> string
+  nUri.mli:val uri_of_string: string -> uri
+  nUri.mli:val eq: uri -> uri -> bool
+
+dimensione
+
+   vecchio: 
+   244 cic.ml
+   459 cicEnvironment.ml
+    62 cicLogger.ml
+   534 cicPp.ml
+  1244 cicReduction.ml
+   451 cicSubstitution.ml
+  2101 cicTypeChecker.ml
+   147 cicUnivUtils.ml
+   934 cicUniv.ml
+    66 cicUtil.ml
+   245 uriManager.ml
+   =====
+  6487
+
+   809 ../cic/cicParser.ml
+
+  nuovo:
+   105 nCic.ml
+   134 nReference.ml
+   106 nCicUtils.ml
+    93 nCicEnvironment.ml
+   599 nCicReduction.ml
+    96 nCicSubstitution.ml
+  1183 nCicTypeChecker.ml
+   173 nCicPp.ml
+    41 nUri.ml
+    =====
+  2530
+
+

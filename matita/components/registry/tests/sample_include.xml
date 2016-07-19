@@ -1,0 +1,15 @@
+<helm_registry>
+  <section name="foo1">
+    <key name="bar2">aaa</key>
+    <key name="bar3">bbb</key>
+  </section>
+  <section name="foo2">
+    <key name="bar1">quux</key>
+  </section>
+  <key name="basedir">/public/helm_library</key>
+  <key name="constant_type_file">$(triciclo.basedir)/constanttype</key>
+  <key name="environment_file">$(triciclo.basedir)/environment</key>
+  <key name="inner_types_file">$(triciclo.basedir)/innertypes</key>
+  <key name="proof_file">$(triciclo.basedir)/currentproof</key>
+  <key name="proof_file_type">$(triciclo.basedir)/currentprooftype</key>
+</helm_registry>

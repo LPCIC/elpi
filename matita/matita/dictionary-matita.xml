@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<dictionary>
+ <operator name="(" form="prefix" fence="true" stretchy="false" lspace="0em" rspace="0em"/>
+ <operator name="(" form="infix" fence="true" stretchy="false" lspace="0em" rspace="0em"/>
+ <operator name=")" form="postfix" fence="true" stretchy="false" lspace="0em" rspace="0em"/>
+ <operator name=")" form="infix" fence="true" stretchy="false" lspace="0em" rspace="0em"/>
+ <operator name="[" form="prefix" fence="true" stretchy="false" lspace="0em" rspace="0em"/>
+ <operator name="[" form="infix" fence="true" stretchy="false" lspace="0em" rspace="0em"/>
+ <operator name="]" form="postfix" fence="true" stretchy="false" lspace="0em" rspace="0em"/>
+ <operator name="]" form="infix" fence="true" stretchy="false" lspace="0em" rspace="0em"/>
+ <operator name="{" form="prefix" fence="true" stretchy="false" lspace="0em" rspace="0em"/>
+ <operator name="{" form="infix" fence="true" stretchy="false" lspace="0em" rspace="0em"/>
+ <operator name="}" form="postfix" fence="true" stretchy="false" lspace="0em" rspace="0em"/>
+ <operator name="}" form="infix" fence="true" stretchy="false" lspace="0em" rspace="0em"/>
+</dictionary>

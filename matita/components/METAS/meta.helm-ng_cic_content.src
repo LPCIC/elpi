@@ -1,0 +1,4 @@
+requires="helm-library helm-ng_library helm-grafite helm-content helm-ng_refiner"
+version="0.0.1"
+archive(byte)="ng_cic_content.cma"
+archive(native)="ng_cic_content.cmxa"
