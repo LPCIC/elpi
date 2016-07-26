@@ -63,7 +63,6 @@ gdome2 \
 http \
 lablgtk2 \
 lablgtk2.sourceview2 \
-mysql \
 netstring \
 ulex08 \
 zip \
@@ -93,7 +92,7 @@ lablgtk2.sourceview2 \
 for r in $FINDLIB_LIBSREQUIRES $FINDLIB_REQUIRES
 do
   AC_MSG_CHECKING(for $r ocaml library)
-  if OCAMLPATH=$OCAMLPATH $OCAMLFIND query $r &> /dev/null; then
+  if OCAMLPATH=$OCAMLPATH:/usr/lib/ocaml:../ $OCAMLFIND query $r &> /dev/null; then
     AC_MSG_RESULT(yes)
   else
     AC_MSG_ERROR(could not find $r ocaml library)
