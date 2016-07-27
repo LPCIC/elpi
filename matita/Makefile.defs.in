@@ -1,4 +1,4 @@
-OCAMLPATH ?= @OCAMLPATH@:@OCAMLPATH@/../../..:@OCAMLPATH@/../opam/system/lib/:/usr/lib/ocaml/
+OCAMLPATH ?= @OCAMLPATH@:@OCAMLPATH@/../../..:$(HOME)/.opam/system/lib/:/usr/lib/ocaml/
 OCAMLFIND = OCAMLPATH=$(OCAMLPATH) @OCAMLFIND@
 CAMLP5O = @CAMLP5O@
 LABLGLADECC = @LABLGLADECC@
