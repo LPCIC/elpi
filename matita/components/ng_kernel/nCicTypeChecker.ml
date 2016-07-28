@@ -20,6 +20,11 @@ module E = NCicEnvironment
 (* FG: extension for ELPI *)
 module LP = NCicELPI
 
+let log b =
+   if b then HLog.error "ELPI validation failed!"
+   else HLog.message "ELPI validation OK!"
+(*FG: end of extension for ELPI *)
+
 exception TypeCheckerFailure of string Lazy.t
 exception AssertFailure of string Lazy.t
 
@@ -1270,11 +1275,17 @@ let typecheck_obj status (uri,height,metasenv,subst,kind) =
         "inferred type:\n%s\nexpected type:\n%s")
         (status#ppterm ~subst ~metasenv ~context:[] ty_te) 
         (status#ppterm ~subst ~metasenv ~context:[] ty))));
-      check_relevance status ~subst ~metasenv [] relevance ty
+      check_relevance status ~subst ~metasenv [] relevance ty;
       (*check_relevance status ~in_type:false ~subst ~metasenv relevance te*)
+(* FG: extension for ELPI *)
+      log (LP.has_type te ty)
+(* FG: end of extension for ELPI *)
    | C.Constant (relevance,_,None,ty,_) ->
       ignore (typeof status ~subst ~metasenv [] ty);
-      check_relevance status ~subst ~metasenv [] relevance ty
+      check_relevance status ~subst ~metasenv [] relevance ty;
+(* FG: extension for ELPI *)
+      log (LP.has_some_sort ty)
+(* FG: end of extension for ELPI *)
    | C.Inductive (_, leftno, tyl, _) -> 
        check_mutual_inductive_defs status uri ~metasenv ~subst leftno tyl
    | C.Fixpoint (inductive,fl,_) ->

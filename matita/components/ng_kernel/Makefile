@@ -8,12 +8,13 @@ INTERFACE_FILES = \
 	nCicSubstitution.mli \
 	nCicEnvironment.mli \
 	nCicReduction.mli \
+        nCicELPI.mli \
 	nCicTypeChecker.mli \
 	nCicUntrusted.mli \
 	nCicPp.mli
 
 IMPLEMENTATION_FILES = \
-  nCic.ml nCicELPI.ml $(INTERFACE_FILES:%.mli=%.ml)
+  nCic.ml $(INTERFACE_FILES:%.mli=%.ml)
 EXTRA_OBJECTS_TO_INSTALL = 
 EXTRA_OBJECTS_TO_CLEAN =
 %.cmo: OCAMLOPTIONS += -w Ae
