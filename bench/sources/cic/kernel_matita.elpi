@@ -1,0 +1,5 @@
+% type checker extension managing Matita interface %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+accumulate kernel_pts.
+
+t+step T U :- $t+step T U.

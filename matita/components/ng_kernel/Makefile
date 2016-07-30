@@ -8,10 +8,10 @@ INTERFACE_FILES = \
 	nCicSubstitution.mli \
 	nCicEnvironment.mli \
 	nCicReduction.mli \
+	nCicPp.mli \
         nCicELPI.mli \
 	nCicTypeChecker.mli \
-	nCicUntrusted.mli \
-	nCicPp.mli
+	nCicUntrusted.mli
 
 IMPLEMENTATION_FILES = \
   nCic.ml $(INTERFACE_FILES:%.mli=%.ml)

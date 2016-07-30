@@ -16,4 +16,8 @@ include "basics/logic.ma".
 
 axiom success: Prop.
 
-axiom failure: Type[2].
+axiom failure: Type[1].
+
+definition a: Type[0] ≝ Prop.
+
+definition b: Type[0] ≝ a.

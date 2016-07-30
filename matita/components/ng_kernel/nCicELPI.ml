@@ -12,6 +12,8 @@
 module U   = NUri
 module R   = NReference
 module C   = NCic
+module P   = NCicPp
+module E   = NCicEnvironment
 module LPA = Elpi_ast
 module LPX = Elpi_latex_exporter (* initializes the parser, puah :( *)
 module LPP = Elpi_parser
@@ -80,15 +82,56 @@ and lp_terms c = function
    | []      -> mk_nil
    | v :: vs -> mk_cons (lp_term c v) (lp_terms c vs)
 
+let status = new P.status
+
+let resolve_gref r =
+   let R.Ref (_, kind) = r in
+   match kind with 
+      | R.Decl ->
+         let _, _, u, _, _ = E.get_checked_decl status r in
+         None, lp_term [] u 
+      | R.Def _ ->
+         let _, _, t, u, _, _ = E.get_checked_def status r in
+         Some (lp_term [] t), lp_term [] u 
+      | R.Fix _ -> assert false
+      | R.CoFix _ -> assert false
+      | R.Ind _   -> assert false
+      | R.Con _  -> assert false
+
+let show = LPR.Constants.show
+
+let dummy = LPR.Constants.dummy
+
+let fail () = raise LPR.No_clause
+
+let rec get_constant depth = function
+   | LPR.Const c                                                    ->
+      show c
+   | LPR.UVar ({LPR.contents=t;_},vardepth,args) when t != dummy    ->
+      get_constant depth (LPR.deref_uv ~from:vardepth ~to_:depth args t)
+   | LPR.AppUVar ({LPR.contents=t;_},vardepth,args) when t != dummy ->
+      get_constant depth (LPR.deref_appuv ~from:vardepth ~to_:depth args t)
+   | _ -> fail ()
+
+let eqc = LPR.Constants.eqc
+
+let t_step ~depth ~env:_ _ = function
+   | [t1; t2] -> 
+      let r = R.reference_of_string (get_constant depth t1) in
+      begin match resolve_gref r with
+          | _, u -> [LPR.App (eqc, t2, [LPR.term_of_ast ~depth u])]
+      end
+   | _ -> fail ()
+
+
 (* initialization ***********************************************************)
 
-let filenames = ["kernel_pts.elpi"; "pts_cic.elpi"]
+let _ =
+   LPR.register_custom "$t+step" t_step
+
+let filenames = ["kernel_matita.elpi"; "pts_cic.elpi"]
 
 let program = ref (LPR.program_of_ast (LPP.parse_program ~filenames))
-
-let _ =
-   Printf.printf "LP.register_custom\n%!";
-   LPR.register_custom "$pippo" (fun ~depth:_ ~env:_ _ ts -> ts)
 
 (* interface ****************************************************************)
 
