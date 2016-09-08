@@ -20,6 +20,8 @@ OD=ocamlfind ocamldep
 all:
 	$(MAKE) trace_ppx
 	$(MAKE) elpi
+	$(MAKE) elpi.cmxa
+	$(MAKE) META.elpi
 
 trace:
 	$(MAKE) trace_ppx
@@ -51,7 +53,7 @@ runners:
 
 clean:
 	rm -f *.cmo *.cma *.cmx *.cmxa *.cmi *.o *.tex *.aux *.log *.pdf
-	rm -f elpi.git.* .depends .depends.parser
+	rm -f elpi.git.* .depends .depends.parser META.*
 
 dist:
 	git archive --format=tar --prefix=elpi-$(V)/ HEAD . \
@@ -59,15 +61,23 @@ dist:
 
 # compilation of elpi
 
+OC_OPTIONS = -linkpkg $(OCAMLOPTIONS) $(FLAGS)
+
+ELPI_DEPENDS = camlp5.$(CMXA) unix.$(CMXA) str.$(CMXA)
+
+ELPI_COMPONENTS = \
+  elpi_ast.$(CMX) elpi_parser.$(CMX) elpi_ptmap.$(CMX) \
+  elpi_trace.$(CMX) elpi_runtime.$(CMX) \
+  elpi_latex_exporter.$(CMX) \
+  elpi_prolog_exporter.$(CMX) \
+  elpi_custom.$(CMX)
+
+elpi.cmxa: elpi_prolog_exporter.$(CMX) elpi_latex_exporter.$(CMX) elpi_runtime.$(CMX) elpi_parser.$(CMX)
+	echo OCAMLOPT -a $@
+	$(OC) $(OC_OPTIONS) -o $@ -a $(ELPI_COMPONENTS)
+
 elpi: elpi.$(CMX) elpi_prolog_exporter.$(CMX) elpi_latex_exporter.$(CMX) elpi_runtime.$(CMX) elpi_parser.$(CMX)
-	$(OC) -package ppx_deriving.std -linkpkg \
-		$(OCAMLOPTIONS) $(FLAGS) -o $@ \
-		camlp5.$(CMXA) unix.$(CMXA) str.$(CMXA) \
-		elpi_ast.$(CMX) elpi_parser.$(CMX) elpi_ptmap.$(CMX) \
-		elpi_trace.$(CMX) elpi_runtime.$(CMX) \
-		elpi_latex_exporter.$(CMX) \
-		elpi_prolog_exporter.$(CMX) \
-		elpi_custom.$(CMX) elpi.$(CMX)
+	$(OC) -package ppx_deriving.std $(OC_OPTIONS) -o $@ $(ELPI_DEPENDS) $(ELPI_COMPONENTS) elpi.$(CMX)
 
 %.$(CMX): %.ml trace_ppx
 	$(OC) $(OCAMLOPTIONS) -package ppx_deriving.std -ppx './trace_ppx' -c $<
@@ -86,3 +96,9 @@ include .depends .depends.parser
 	$(OD) -pp '$(PP) $(PARSE)' $< > $@
 # only registers hooks, not detected by ocamldep
 elpi.cmx : elpi_custom.cmx
+
+META.%: LIBSPATH = $(PWD)
+
+META.%: meta.%.src
+	@cp $< $@
+	@echo "directory=\"$(LIBSPATH)\"" >> $@
