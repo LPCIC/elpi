@@ -27,7 +27,8 @@ trace:
 	$(MAKE) trace_ppx
 	-mv elpi elpi.notrace
 	$(MAKE) clean
-	TRACE=1 $(MAKE) elpi
+	TRACE=1 $(MAKE) elpi.cmxa
+	$(MAKE) elpi
 	mv elpi elpi.trace
 	$(MAKE) clean
 	-mv elpi.notrace elpi
