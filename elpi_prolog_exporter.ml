@@ -7,7 +7,7 @@ module Fmt = Format
 
 open Elpi_ast
 open Elpi_runtime
-open Utils
+open Elpi_util
 open Constants
 
 (* pp for first-order prolog *) 

@@ -6,23 +6,6 @@
 open Elpi_ast
 open Elpi_parser
 
-module Utils :
- sig
-  (* A regular error *)
-  val error : string -> 'a
-
-  (* An invariant is broken, i.e. a bug *)
-  val anomaly : string -> 'a
-  
-  (* If we type check the program, then these are anomalies *)
-  val type_error : string -> 'a
-
-  val pplist : ?max:int -> ?boxed:bool ->
-    (Format.formatter -> 'a -> unit) ->
-    ?pplastelem:(Format.formatter -> 'a -> unit) ->
-      string -> Format.formatter -> 'a list -> unit
- end
-
 type query
 type program
 type index

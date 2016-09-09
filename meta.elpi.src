@@ -1,0 +1,4 @@
+archive(byte)="elpi.cma"
+archive(native)="elpi.cmxa"
+linkopts=""
+requires="camlp5.gramlib unix str"

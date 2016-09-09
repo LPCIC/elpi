@@ -4,7 +4,7 @@
 
 
 open Elpi_runtime;;
-open Elpi_runtime.Utils;;
+open Elpi_util;;
 open Elpi_runtime.Pp;;
 open Elpi_runtime.Constants;;
 module F = Elpi_ast.Func;;
