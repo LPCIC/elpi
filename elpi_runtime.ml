@@ -698,7 +698,6 @@ module HO : sig
     ?avoid:term_attributed_ref ->
     from:int -> to_:int -> term -> term
 
-
   (* simultaneous substitution *)
   val subst : int -> term list -> term -> term
 
@@ -2162,7 +2161,7 @@ let clausify vars depth t =
       List.map (fun (g,args,hyps,mode) ->
               let c = { depth = depth+lcs ; args= args; hyps = hyps; mode;
           vars = vars; key=key_of ~mode:`Clause ~depth:(depth+lcs) g} in
-              [%spy "extra" (ppclause pp_key) c];
+              [%spy "extra" ppclause c];
               c
           )
        all_modes, lcs
@@ -2370,6 +2369,7 @@ let ppmap fmt (g,l) =
 
   (* Limited to bijections *)
 let align_frozen { arg2goal } e alignement ngoals =
+  if alignement = [] then () else begin
   [%spy "alignement-alignement" (fun fmt m ->
     Fmt.fprintf fmt "%a%!" (pplist pp_int ";") m) alignement];
   [%spy "alignement-arg2goal" (fun fmt m ->
@@ -2405,6 +2405,7 @@ let align_frozen { arg2goal } e alignement ngoals =
         e.(i) <- replace_const map e.(i)
     with Not_found -> ()
   ) e
+  end
 
 (*
   let rec aux m a b =
@@ -2722,6 +2723,7 @@ let propagate { CS.cstr; cstr_position } history =
               Fmt.fprintf fmt "%a ?- %a"
                (pplist (uppterm 0 [] 0 empty_env) "; ") (List.map snd a)
                (uppterm 0 [] 0 empty_env) b in
+(*
            Fmt.eprintf
              "CHR: @[<v>%a@ on   %a@ %s %a@]\n%!"
               (Elpi_ast.pp_chr pp_term C.pp) propagation_rule
@@ -2729,6 +2731,8 @@ let propagate { CS.cstr; cstr_position } history =
                 (List.combine constraints_contexts constraints_goals)
               (if success then "new " else "guard fails")
               (uppterm 0 [] 0 e) ng
+*)
+()
          in
 
          let _, constraints_to_remove =
@@ -2924,7 +2928,7 @@ end
     let k, args_of_g = args_of g in
     let rec select l =
       [%trace "select" (fun fmt ->
-          pplist ~max:1 ~boxed:true (ppclause pp_key) "|" fmt l)
+          pplist ~max:1 ~boxed:true ppclause "|" fmt l)
       begin match l with
       | [] -> [%tcall next_alt alts]
       | c :: cs ->
