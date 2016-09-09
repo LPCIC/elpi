@@ -4,22 +4,31 @@
 
 module Fmt = Format
 module F = Elpi_ast.Func
-
 open Elpi_util
-
-(* TODOS:
-   - There are a few TODOs with different implementative choices to
-     be benchmarked *)
 
 (******************************************************************************
   Terms: data type definition and printing
  ******************************************************************************)
-let show_const = ref (fun _ -> assert false)
+
+(* To break circularity, we open the index type (index of clauses) here
+ * and extend it with the Index constructor when such data type will be
+ * defined.  The same for chr with CHR.t *)
+type index = ..
+let pp_index = mk_extensible_printer ()
+type chr = ..
+let pp_chr = mk_extensible_printer ()
+
+(* Used by pretty printers, to be later instantiated in module Constants *)
+let pp_const = mk_extensible_printer ()
+type constant = int (* De Bruijn levels *)
+[@printer (pp_extensible pp_const)]
+[@@deriving show, eq]
+
+(* To be instantiated after the dummy term is defined *)
+let pp_oref = mk_extensible_printer ()
 
 (* Invariant: a Heap term never points to a Query term *)
-type constant = int (* De Bruijn levels *)
-[@printer fun fmt x -> Fmt.fprintf fmt "\"%s\"" (!show_const x)]
-[@@deriving show, eq]
+let id_term = UUID.make ()
 type term =
   (* Pure terms *)
   | Const of constant
@@ -29,19 +38,20 @@ type term =
   | Arg of (*id:*)int * (*argsno:*)int
   | AppArg of (*id*)int * term list
   (* Heap terms: unif variables in the query *)
-  | UVar of term attributed_ref * (*depth:*)int * (*argsno:*)int
-  | AppUVar of term attributed_ref * (*depth:*)int * term list
+  | UVar of term_attributed_ref * (*depth:*)int * (*argsno:*)int
+  | AppUVar of term_attributed_ref * (*depth:*)int * term list
   (* Misc: $custom predicates, ... *)
   | Custom of constant * term list
   | String of F.t
   | Int of int
   | Float of float
-and 'a attributed_ref = {
-  mutable contents : 'a [@printer fun _ _ -> ()];
-  mutable rest : stuck_goal list [@printer fun _ _ -> ()] [@equal fun _ _ -> true];
+and term_attributed_ref = {
+  mutable contents : term [@printer (pp_extensible_any ~id:id_term pp_oref)];
+  mutable rest : stuck_goal list [@printer fun _ _ -> ()]
+                                 [@equal fun _ _ -> true];
 }
 and stuck_goal = {
-  blockers : term attributed_ref list;
+  blockers : term_attributed_ref list;
   kind : stuck_goal_kind;
 }
 and stuck_goal_kind =
@@ -56,18 +66,27 @@ and unification_def = {
 }
 and constraint_def = {
   depth : int;
-  prog : block [@equal fun _ _ -> true];
+  prog : index [@equal fun _ _ -> true]
+               [@printer (pp_extensible pp_index)];
   pdiff : (int * term) list;
   goal : term;
 }
-and block = int [@@deriving show,eq] (* program..needed? parametrize term? *)
+[@@deriving show, eq]
 
 let destConst = function Const x -> x | _ -> assert false
 
+(* Our ref data type: creation and dereference.  Assignment is defined
+   After the constraint store, since assigning may wake up some constraints *)
+let oref x = { contents = x; rest = [] }
 let (!!) { contents = x } = x
 
+(* Arg/AppArg point to environments, here the empty one *)
+type env = term array
 let empty_env = [||]
 
+(* - negative constants are global names
+   - constants are hashconsed (terms)
+   - we use special constants to represent !, pi, sigma *)
 module Constants : sig
 
   val funct_of_ast : F.t -> constant * term
@@ -76,8 +95,7 @@ module Constants : sig
   val pp : Format.formatter -> constant -> unit
   val fresh : unit -> constant * term
  
-  (* To keep the type of terms small, we use special constants
-   * for ! = pi , sigma ... *)
+  (* To keep the type of terms small, we use special constants for !, =, pi.. *)
   (* {{{ *)
   val cutc   : term
   val truec  : term
@@ -107,6 +125,9 @@ module Constants : sig
 
   module Set : Set.S with type elt = t
   module Map : Map.S with type key = t
+
+  (* mkinterval d n 0 = [d; ...; d+n-1] *)
+  val mkinterval : int -> int -> int -> term list
 
 end = struct (* {{{ *)
 
@@ -174,41 +195,73 @@ module Set = Set.Make(Self)
 
 include Self
 
-let () = show_const := show;;
+let () = extend_printer pp_const (fun fmt i ->
+  Fmt.fprintf fmt "%s" (show i);
+  `Printed)
 
-end (* }}} *)
-module C = Constants
+let () = extend_printer pp_oref (fun fmt (id,t) ->
+  if UUID.equal id id_term then `Passed
+  else
+    let t : term = Obj.obj t in
+    if t == dummy then Fmt.fprintf fmt "_"
+    else pp_term fmt t;
+    `Printed)
 
 (* mkinterval d n 0 = [d; ...; d+n-1] *)
 let rec mkinterval depth argsno n =
  if n = argsno then []
- else C.of_dbl (n+depth)::mkinterval depth argsno (n+1)
+ else of_dbl (n+depth)::mkinterval depth argsno (n+1)
 ;;
+
+end (* }}} *)
+module C = Constants
+
+(* true=input, false=output *)
+type mode = bool list [@@deriving show]
+
+type mode_decl =
+  | Mono of mode
+  | Multi of (constant * (constant * constant) list) list
+
+(* An elpi program, as parsed.  But for idx and query_depth that are threaded
+   around in the main loop, chr and modes are globally stored in Constraints
+   and Clausify. *)
+type program = {
+  (* n of sigma/local-introduced variables *)
+  query_depth : int;
+  (* the lambda-Prolog program: an indexed list of clauses *) 
+  idx : index [@printer (pp_extensible pp_index)];
+  (* constraint handling rules *)
+  chr : chr [@printer (pp_extensible pp_chr)];
+  modes : mode_decl C.Map.t; 
+}
+type query = string list * int * env * term
+exception No_clause
+
+(* Dereferencing an UVar(r,args) when !!r != dummy requires a function
+   of this kind.  The pretty printer needs one but will only be defined
+   later, since we need, for example, beta reduction to implement it *)
+type 'args deref_fun =
+  ?avoid:term_attributed_ref -> from:int -> to_:int -> 'args -> term -> term
 
 module Pp : sig
  
   (* Low level printing *)
   val ppterm :
-    constant -> string list ->
-    constant -> term array ->
-      Fmt.formatter -> term -> unit
+    (*depth:*)int -> (*names:*)string list -> (*argsdepth:*)int -> env ->
+    Fmt.formatter -> term -> unit
 
   (* For user consumption *)
   val uppterm :
-    constant -> string list ->
-    constant -> term array ->
-      Fmt.formatter -> term -> unit
+    (*depth:*)int -> (*names:*)string list -> (*argsdepth:*)int -> env ->
+    Fmt.formatter -> term -> unit
 
   (* To be assigned later, used to dereference an UVar/AppUVar *)
-  type 'args deref_fun =
-    ?avoid:term attributed_ref -> from:int -> to_:int -> 'args -> term -> term
   val do_deref : int deref_fun ref
   val do_app_deref : term list deref_fun ref
 
 end = struct (* {{{ *)
 
-type 'args deref_fun =
-  ?avoid:term attributed_ref -> from:int -> to_:int -> 'args -> term -> term
 let do_deref = ref (fun ?avoid ~from ~to_ _ _ -> assert false);;
 let do_app_deref = ref (fun ?avoid ~from ~to_ _ _ -> assert false);;
 let m = ref [];;
@@ -342,7 +395,7 @@ let xppterm ~nice depth0 names argsdepth env f t =
         pp_app f ppconstant (aux inf_prec depth)
          ~pplastarg:(aux_last inf_prec depth) (hd,xs))
     | UVar (r,vardepth,argsno) when not nice ->
-       let args = List.map destConst (mkinterval vardepth argsno 0) in
+       let args = List.map destConst (C.mkinterval vardepth argsno 0) in
        with_parens ~test:(args <> []) appl_prec (fun _ ->
         Fmt.fprintf f "." ;
         pp_app f (pp_uvar inf_prec depth vardepth 0) ppconstant (r,args))
@@ -351,7 +404,7 @@ let xppterm ~nice depth0 names argsdepth env f t =
        let diff = if diff >= 0 then diff else 0 in
        let vardepth = vardepth - diff in
        let argsno = argsno + diff in
-       let args = List.map destConst (mkinterval vardepth argsno 0) in
+       let args = List.map destConst (C.mkinterval vardepth argsno 0) in
        with_parens ~test:(args <> []) appl_prec (fun _ ->
         pp_app f (pp_uvar inf_prec depth vardepth 0) ppconstant (r,args))
     | UVar (r,vardepth,argsno) ->
@@ -363,7 +416,7 @@ let xppterm ~nice depth0 names argsdepth env f t =
         pp_app f (pp_uvar inf_prec depth vardepth 0) (aux inf_prec depth)
          ~pplastarg:(aux_last inf_prec depth) (r,terms))
     | Arg (n,argsno) ->
-       let args = List.map destConst (mkinterval argsdepth argsno 0) in
+       let args = List.map destConst (C.mkinterval argsdepth argsno 0) in
        with_parens ~test:(args <> []) appl_prec (fun _ ->
         pp_app f (pp_arg prec depth) ppconstant (n,args))
     | AppArg (v,terms) ->
@@ -388,49 +441,68 @@ let uppterm = xppterm ~nice:true
 end (* }}} *)
 open Pp
 
-(******************************************************************************)
+(******************************************************************************
+  Stores for:
+   - backtracking (trail)
+   - constraints (delayed goals)
+   - constraint handling rules (propagation rules)
+  Note: propagation code for CHR rules is later
+ ******************************************************************************)
 
-type propagation_item = {
-  cstr : constraint_def;
-  cstr_position : int;
-}
-
-let incr_generation { cstr; cstr_position } =
-  { cstr; cstr_position = cstr_position + 1 }
-
-(* To hide low level APIs of ConstraintStore needed by Trail *)
+(* Together to hide low level APIs of ConstraintStore needed by Trail *)
 module ConstraintStoreAndTrail : sig
 
- val new_delayed      : propagation_item list ref (* int for propagation *)
- val to_resume        : stuck_goal list ref
+  type propagation_item = {
+     cstr : constraint_def;
+     cstr_position : int;
+  }
 
- val declare_new : stuck_goal -> unit
- val remove_old : stuck_goal -> unit
- val remove_old_constraint : constraint_def -> unit
+  val new_delayed      : propagation_item list ref
+  val to_resume        : stuck_goal list ref
 
- val contents : unit -> constraint_def list
+  val declare_new : stuck_goal -> unit
+  val remove_old : stuck_goal -> unit
+  val remove_old_constraint : constraint_def -> unit
 
- val print : Fmt.formatter -> unit
+  val contents : unit -> constraint_def list
+  val print : Fmt.formatter -> unit
 
- type trail_item =
- | Assignement of term attributed_ref
- | StuckGoalAddition of stuck_goal
- | StuckGoalRemoval of stuck_goal
+  (* ---------------------------------------------------- *)
 
- type trail = trail_item list
- val trail : trail ref
- val last_call : bool ref
+  type trail_item =
+  | Assignement of term_attributed_ref
+  | StuckGoalAddition of stuck_goal
+  | StuckGoalRemoval of stuck_goal
+  type trail = trail_item list
 
- val undo : old_trail:trail -> unit
+  (* Exposed to save a copy, not to modify  XXX 4.03 [@inline] get_trail *)
+  val trail : trail ref
 
- val trail_this : trail_item -> unit (* XXX 4.03 [@inline] *)
+  (* If true, no need to trail an imperative action.  Not part of trial_this
+   * because you can save allocations and a function call by testing locally *)
+  val last_call : bool ref
 
- module Ugly : sig val delayed : stuck_goal list ref end
+  (* add an item to the trail  XXX 4.03 [@inline] *)
+  val trail_this : trail_item -> unit
+
+  (* backtrack *)
+  val undo : old_trail:trail -> unit
+
+  (* ---------------------------------------------------- *)
+
+  (* This is only used to know if the program execution is really over,
+     I.e. to implement the last component of the runtime data type *)
+  module Ugly : sig val delayed : stuck_goal list ref end
 
 end = struct (* {{{ *)
 
+ type propagation_item = {
+    cstr : constraint_def;
+    cstr_position : int;
+ }
+
 type trail_item =
-| Assignement of term attributed_ref
+| Assignement of term_attributed_ref
 | StuckGoalAddition of stuck_goal
 | StuckGoalRemoval of stuck_goal
 
@@ -529,26 +601,28 @@ end (* }}} *)
 module T  = ConstraintStoreAndTrail
 module CS = ConstraintStoreAndTrail
 
-
-type mode = bool list [@@deriving show]
-type 'key clause = {
-  depth : int;
-  args : term list;
-  hyps : term list;
-  vars : int;
-  key : 'key;
-  mode: mode;
-}
-
-let pp_clause pp_key f { args = args; hyps = hyps; key = hd } =
-  Fmt.fprintf f "@[<hov 1>%s %a :- %a.@]" (pp_key hd)
-     (pplist (uppterm 0 [] 0 empty_env) "") args
-     (pplist (uppterm 0 [] 0 empty_env) ",") hyps
+(* Assigning an UVar wakes up suspended goals/constraints *)
+let (@:=) r v =
+  if r.rest <> [] then
+    begin
+     (*Fmt.fprintf Fmt.std_formatter
+       "@[<hov 2>%d delayed goal(s) to resume since@ %a <-@ %a@]@\n%!"
+          (List.length r.rest)
+          (ppterm 0 [] 0 empty_env) (UVar(r,0,0))
+          (ppterm 0 [] 0 empty_env) v;*)
+     CS.to_resume := r.rest @ !CS.to_resume
+    end;
+ r.contents <- v
+;;
 
 module CHR : sig
 
+  (* a set of rules *)
   type t
-  type clique
+
+  (* a set of predicates contributing to represent a constraint *)
+  type clique 
+
   type rule = (term, int) Elpi_ast.chr
 
   val empty : t
@@ -559,11 +633,22 @@ module CHR : sig
   
   val rules_for : constant -> t -> rule list
 
+  (* to store CHR.t in program *)
+  val wrap_chr : t -> chr
+  val unwrap_chr : chr -> t
+
 end = struct (* {{{ *)
 
   type rule = (term, int) Elpi_ast.chr
   type t = { cliques : C.Set.t C.Map.t; rules : rule list C.Map.t }
   type clique = C.Set.t
+
+  type chr += Chr of t
+  let () = extend_printer pp_chr (fun fmt -> function
+    | Chr c -> Fmt.fprintf fmt "<CHRs>";`Printed
+    | _ -> `Passed)
+  let wrap_chr x = Chr x
+  let unwrap_chr = function Chr x -> x | _ -> assert false
 
   let empty = { cliques = C.Map.empty; rules = C.Map.empty }
 
@@ -595,21 +680,38 @@ end = struct (* {{{ *)
 
 end (* }}} *)
 
-let (@:=) r v =
-  if r.rest <> [] then
-    begin
-     (*Fmt.fprintf Fmt.std_formatter
-       "@[<hov 2>%d delayed goal(s) to resume since@ %a <-@ %a@]@\n%!"
-          (List.length r.rest)
-          (ppterm 0 [] 0 empty_env) (UVar(r,0,0))
-          (ppterm 0 [] 0 empty_env) v;*)
-     CS.to_resume := r.rest @ !CS.to_resume
-    end;
- r.contents <- v
-;;
+(******************************************************************************
+  Unification (dereferencing and lift, to_heap)
+ ******************************************************************************)
 
-let oref x = { contents = x; rest = [] }
+module HO : sig
 
+  val unif : ?matching:bool -> int -> env -> int -> term -> term -> bool
+
+  (* lift/restriction/heapification with occur_check *)
+  val move : 
+    adepth:int -> env -> ?avoid:term_attributed_ref -> ?depth:int ->
+    from:int -> to_:int -> term -> term
+  
+  (* like move but for heap terms (no heapification) *)
+  val hmove :
+    ?avoid:term_attributed_ref ->
+    from:int -> to_:int -> term -> term
+
+
+  (* simultaneous substitution *)
+  val subst : int -> term list -> term -> term
+
+  val deref_uv : int deref_fun
+  val deref_appuv : term list deref_fun
+
+  val mkAppUVar : term_attributed_ref -> int -> term list -> term
+  val mkAppArg : int -> int -> term list -> term
+  val is_flex : term -> term_attributed_ref option
+  val list_to_lp_list : term list -> term
+    
+end = struct 
+(* {{{ *)
 
 (* {{{ ************** move/hmove/deref_* ******************** *)
 
@@ -669,6 +771,10 @@ let rec make_lambdas destdepth args =
 let mkAppUVar r lvl l =
   try UVar(r,lvl,in_fragment lvl l)
   with NotInTheFragment -> AppUVar(r,lvl,l)
+
+let mkAppArg i fromdepth xxs' =
+  try Arg(i,in_fragment fromdepth xxs')
+  with NotInTheFragment -> AppArg (i,xxs')
 
 (* move performs at once:
    1) refreshing of the arguments into variables (heapifycation)
@@ -853,7 +959,7 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
          else
            let r,vardepth,argsno =
              decrease_depth r ~from:vardepth ~to_:from argsno in
-           let args = mkinterval vardepth argsno 0 in
+           let args = C.mkinterval vardepth argsno 0 in
            let args = List.map (maux empty_env depth) args in
            mkAppUVar r vardepth args
        else
@@ -877,7 +983,7 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
        if delta < 0 then
          let r,vardepth,argsno =
            decrease_depth r ~from:vardepth ~to_:from 0 in
-         let args0= mkinterval vardepth argsno 0 in
+         let args0= C.mkinterval vardepth argsno 0 in
          let args =
           try List.map (maux e depth) (args0@args)
           with RestrictionFailure -> anomaly "impossible, delta < 0" in
@@ -959,9 +1065,7 @@ and subst fromdepth ts t =
       let xxs' = x'::xs' in
       if c >= fromdepth && c < fromdepthlen then
         match List.nth ts (len-1 - (c-fromdepth)) with
-        | Arg(i,0) -> begin
-           try Arg(i,in_fragment fromdepth xxs')
-           with NotInTheFragment -> AppArg (i,xxs') end
+        | Arg(i,0) -> mkAppArg i fromdepth xxs'
         | t ->
            let t = hmove ~from:fromdepth ~to_:depth t in
            beta depth [] t xxs'
@@ -978,7 +1082,7 @@ and subst fromdepth ts t =
       else
        let r,vardepth,argsno =
          decrease_depth r ~from:vardepth ~to_:fromdepth argsno in
-       let args = mkinterval vardepth argsno 0 in
+       let args = C.mkinterval vardepth argsno 0 in
        let args = List.map (aux depth) args in
        mkAppUVar r vardepth args
    | AppUVar({ contents = t },vardepth,args) when t != C.dummy ->
@@ -986,7 +1090,7 @@ and subst fromdepth ts t =
    | AppUVar(r,vardepth,args) ->
       let r,vardepth,argsno =
         decrease_depth r ~from:vardepth ~to_:fromdepth 0 in
-      let args0 = mkinterval vardepth argsno 0 in
+      let args0 = C.mkinterval vardepth argsno 0 in
       let args = List.map (aux depth) (args0@args) in
       mkAppUVar r vardepth args
    | Lam t -> Lam (aux (depth+1) t)
@@ -1017,7 +1121,7 @@ and beta depth sub t args =
          | UVar (r,n,m) -> begin
             try UVar(r,n,m + in_fragment (n+m) args)
             with NotInTheFragment ->
-              let args1 = mkinterval n m 0 in
+              let args1 = C.mkinterval n m 0 in
               AppUVar (r,n,args1@args) end
          | AppUVar (r,depth,args1) -> AppUVar (r,depth,args1@args)
          | Lam _ -> anomaly "beta: some args and some lambdas"
@@ -1066,13 +1170,13 @@ and deref_uv ?avoid ~from ~to_ args t =
      match t with
      | Lam _ -> anomaly "eat_args went crazy"
      | Const c ->
-        let args = mkinterval (from+1) (args'-1) 0 in
+        let args = C.mkinterval (from+1) (args'-1) 0 in
         App (c,C.of_dbl from, args)
      | App (c,arg,args2) ->
-        let args = mkinterval from args' 0 in
+        let args = C.mkinterval from args' 0 in
         App (c,arg,args2 @ args)
      | Custom (c,args2) ->
-        let args = mkinterval from args' 0 in
+        let args = C.mkinterval from args' 0 in
         Custom (c,args2 @ args)
      (* TODO: when the UVar/Arg is not C.dummy, we call deref_uv that
         will call move that will call_deref_uv again. Optimize the
@@ -1080,11 +1184,11 @@ and deref_uv ?avoid ~from ~to_ args t =
      | UVar(t,depth,args2) when from = depth+args2 ->
         UVar(t,depth,args2+args')
      | AppUVar (r,depth,args2) ->
-        let args = mkinterval from args' 0 in
+        let args = C.mkinterval from args' 0 in
         AppUVar (r,depth,args2 @ args)
      | UVar (r,vardepth,argsno) ->
-        let args1 = mkinterval vardepth argsno 0 in
-        let args2 = mkinterval from args' 0 in
+        let args1 = C.mkinterval vardepth argsno 0 in
+        let args2 = C.mkinterval from args' 0 in
         let args = args1 @ args2 in
         AppUVar (r,vardepth,args)
      | String _
@@ -1100,339 +1204,7 @@ let () = Pp.do_app_deref := deref_appuv;;
 
 (* }}} *)
 
- 
-(* {{{ ************** indexing ********************************** *)
-
-module type Indexing = sig
-
-  type key
-  val pp_key : key -> string
-  type index
-  val key_of : mode:[`Query | `Clause] -> depth:int -> term -> key
-  val hd_pred : key clause -> constant
-  val add_clauses : key clause list -> (int * term) -> index -> index
-  val get_clauses : depth:int -> term -> index -> key clause list
-  val make_index : key clause list -> index
-  val local_prog : index -> ((*depth:*)int * term) list
-end
-
-module TwoMapIndexing : Indexing = struct (* {{{ *)
-
-(* all clauses: used when the query is flexible
-   all flexible clauses: used when the query is rigid and the map
-                        for that atom is empty
-   map: used when the query is rigid before trying the all flexible clauses *)
-type key1 = int
-type key2 = int
-type key = key1 * key2
-let hd_pred { key = (hd,_) } = hd
-
-let pp_key (hd,_) = C.show hd
-
-type index = {
-  src : (int * term) list;
-  map : (key clause list * key clause list * key clause list Elpi_ptmap.t) Elpi_ptmap.t
-}
-
-let variablek =       -99999999 (* a flexible term like X t *)
-let mustbevariablek = -99999998 (* ?? or ?? t or ?? l t *)
-let abstractionk =    -99999997
-
-let key_of ~mode:_ ~depth =
- let rec skey_of = function
-    Const k when k = C.uvc -> mustbevariablek
-  | Const k -> k
-  | UVar ({contents=t},origdepth,args) when t != C.dummy ->
-     skey_of (deref_uv ~from:origdepth ~to_:depth args t)
-  | AppUVar ({contents=t},origdepth,args) when t != C.dummy ->
-     skey_of (deref_appuv ~from:origdepth ~to_:depth args t)
-  | App (k,_,_) when k = C.uvc -> mustbevariablek
-  | App (k,a,_) when k = C.asc -> skey_of a
-  | App (k,_,_)
-  | Custom (k,_) -> k
-  | Lam _ -> abstractionk
-  | Arg _ | UVar _ | AppArg _ | AppUVar _ -> variablek
-  | String str -> 
-     let hash = -(Hashtbl.hash str) in
-     if hash > abstractionk then hash
-     else hash+2 
-  | Int i -> 
-     let hash = -(Hashtbl.hash i) in
-     if hash > abstractionk then hash
-     else hash+1024
-  | Float f -> 
-     let hash = -(Hashtbl.hash f) in
-     if hash > abstractionk then hash
-     else hash+1024 in           
- let rec key_of_depth = function
-   Const k -> k, variablek
- | UVar ({contents=t},origdepth,args) when t != C.dummy ->
-    (* TODO: optimization: avoid dereferencing *)
-    key_of_depth (deref_uv ~from:origdepth ~to_:depth args t)
- | AppUVar ({contents=t},origdepth,args) when t != C.dummy -> 
-    key_of_depth (deref_appuv ~from:origdepth ~to_:depth args t)
- | App(k,arg,_) when k == C.asc -> key_of_depth arg
- | App (k,arg2,_) -> k, skey_of arg2
- | Custom _ -> assert false
- | Arg _ | AppArg _ | Lam _ | UVar _ | AppUVar _ | String _ | Int _ | Float _->
-    raise (Failure "Not a predicate")
- in
-  key_of_depth
-;;
-
-let get_clauses ~depth a { map = m } =
- let ind,app = key_of ~mode:`Query ~depth a in
- try
-  let l,flexs,h = Elpi_ptmap.find ind m in
-  if app=variablek then l
-  else (try Elpi_ptmap.find app h with Not_found -> flexs)
- with Not_found -> []
-
-let add_clauses clauses s { map = p;  src } =       
-  let p = List.fold_left (fun m clause ->
-    let matching = match clause.mode with [] -> false | x :: _ -> x in
-    let ind,app = clause.key in
-    try 
-      let l,flexs,h = Elpi_ptmap.find ind m in
-      (* X matches both rigid and flexible terms *)
-      if app == variablek then begin
-        Elpi_ptmap.add ind (clause :: l, clause :: flexs, Elpi_ptmap.map (fun l_rev -> clause::l_rev) h) m
-      (* ?? matches only flexible terms *)
-      end else if app == mustbevariablek then begin
-        Elpi_ptmap.add ind (clause :: l, flexs, h) m
-      (* a rigid term matches flexible terms only in unification mode *)
-      end else begin
-        let l_rev = try Elpi_ptmap.find app h with Not_found -> flexs in
-        let l = if matching then l else clause :: l in
-        Elpi_ptmap.add ind (l, flexs, Elpi_ptmap.add app (clause::l_rev) h) m
-      end
-    with
-    | Not_found -> 
-     if app=variablek then
-      Elpi_ptmap.add ind ([clause],[clause],Elpi_ptmap.empty) m
-     else if app=mustbevariablek then
-      Elpi_ptmap.add ind ([clause],[],Elpi_ptmap.empty) m
-     else
-      let l = if matching then [] else [clause] in
-      Elpi_ptmap.add ind
-       (l,[],Elpi_ptmap.add app [clause] Elpi_ptmap.empty) m
-    ) p clauses
-  in
-  { map = p; src = s :: src }
-
-let make_index p =
-  let idx = add_clauses (List.rev p) (0,C.cutc) { map = Elpi_ptmap.empty; src = [] } in
-  { idx with src = [] } (* original program not in clauses *)
- 
-(* flatten_snd = List.flatten o (List.map ~~snd~~) *)
-(* TODO: is this optimization necessary or useless? *)
-let rec flatten_snd =
- function
-    [] -> []
-  | (_,(hd,_,_))::tl -> hd @ flatten_snd tl 
-
-let close_with_pis depth vars t =
- if vars = 0 then t
- else
-  (* lifts the term by vars + replaces Arg(i,..) with x_{depth+i} *)
-  let fix_const c = if c < depth then c else c + vars in
-  (* TODO: the next function is identical to lift_pat, up to the
-     instantiation of Args. The two codes should be unified *)
-  let rec aux =
-   function
-    | Const c -> C.of_dbl (fix_const c)
-    | Arg (i,argsno) ->
-       (match mkinterval (depth+vars) argsno 0 with
-        | [] -> Const(i+depth)
-        | [x] -> App(i+depth,x,[])
-        | x::xs -> App(i+depth,x,xs))
-    | AppArg (i,args) ->
-       (match List.map aux args with
-        | [] -> anomaly "AppArg to 0 args"
-        | [x] -> App(i+depth,x,[])
-        | x::xs -> App(i+depth,x,xs))
-    | App(c,x,xs) -> App(fix_const c,aux x,List.map aux xs)
-    | Custom(c,xs) -> Custom(c,List.map aux xs)
-    | UVar(_,_,_) as orig ->
-       (* TODO: quick hack here, but it does not work for AppUVar *)
-       hmove ~from:depth ~to_:(depth+vars) orig
-    | AppUVar(r,vardepth,args) ->
-       assert false (* TODO, essentialy almost copy the code from move delta < 0 *)
-    | Lam t -> Lam (aux t)
-    | (String _ | Int _ | Float _) as x -> x
-  in
-  let rec add_pis n t =
-   if n = 0 then t else App(C.pic,Lam (add_pis (n-1) t),[]) in
-  add_pis vars (aux t)
-
-let local_prog { src } =  src
-
-end (* }}} *)
-
-module UnifBits : Indexing = struct (* {{{ *)
-
-  type key = int
-
-  type index = {
-    src : (int * term) list;
-    map : (key clause * int) list Elpi_ptmap.t  (* timestamp *)
-  }
-
-  let key_bits =
-    let n = ref 0 in
-    let m = ref max_int in
-    while !m <> 0 do incr n; m := !m lsr 1; done;
-    !n
-
-  let hash x = Hashtbl.hash x * 62653
-  let fullones = 1 lsl key_bits -1
-  let fullzeros = 0
-  let abstractionk = 1022   (* TODO *)
-  let functor_bits = 6
-  let fst_arg_bits = 15
-  let max_depth = 1
-  let min_slot = 5
-
-
-  let hd_pred { key } = (- (key land (1 lsl functor_bits - 1)))
-  let pp_key hd = C.show (- (hd land (1 lsl functor_bits - 1)))
-
-  let dec_to_bin num =
-    let rec aux x = 
-     if x==1 then "1" else
-     if x==0 then "0" else 
-     if x mod 2 == 1 then (aux (x/2))^"1"
-     else (aux (x/2))^"0"
-    in
-    let addzero str =
-     let s = ref "" in
-     for i=1 to (key_bits - (String.length str)) do
-      s := "0"^(!s)
-     done; 
-     !s ^ str
-    in
-     addzero (aux num)
-
-  let key_of ~mode ~depth term =
-    let buf = ref 0 in 
-    let set_section k left right =
-      let k = abs k in
-      let new_bits = (k lsl right) land (fullones lsr (key_bits - left)) in
-      [%trace "set-section" ("@[<hv 0>%s@ %s@]"
-        (dec_to_bin !buf) (dec_to_bin new_bits))
-      (buf := new_bits lor !buf) ] in
-    let rec index lvl tm depth left right =
-      [%trace "index" ("@[<hv 0>%a@]"
-        (uppterm depth [] 0 empty_env) tm)
-      begin match tm with
-      | Const k | Custom (k,_) ->
-          set_section (if lvl=0 then k else hash k) left right 
-      | UVar ({contents=t},origdepth,args) when t != C.dummy ->
-         index lvl (deref_uv ~from:origdepth ~to_:depth args t) depth left right
-      | Lam _ -> set_section abstractionk left right
-      | String s -> set_section (hash s) left right
-      | Int n -> set_section (hash n) left right
-      | Float n -> set_section (hash n) left right
-      | Arg _ | UVar _ | AppArg _ | AppUVar _ ->
-         if mode = `Clause then set_section fullones left right
-         else set_section fullzeros left right
-      | App (k,arg,argl) -> 
-         let slot = left - right in
-         if lvl >= max_depth || slot < min_slot
-         then set_section ( if lvl=0 then k else hash k) left right
-         else
-           let nk, hd, fst_arg, sub_arg =
-             if lvl = 0 then
-               let sub_slots = List.length argl in
-               if sub_slots = 0 then
-                 k,functor_bits,slot-functor_bits,0
-               else
-                 let args_bits = slot - functor_bits - fst_arg_bits in
-                 let sub_arg = args_bits / sub_slots in
-                 k,functor_bits,fst_arg_bits + args_bits mod sub_slots, sub_arg
-             else
-               let sub_slots = List.length argl + 2 in
-               let sub_arg = slot / sub_slots in
-               hash k, sub_arg, sub_arg + slot mod sub_slots, sub_arg  in
-           let right_hd = right + hd in
-           set_section nk right_hd right;
-           let j = right + hd + fst_arg in
-           index (lvl+1) arg depth j right_hd;
-           if sub_arg > 0 && j + sub_arg <= left
-           then subindex lvl depth j left sub_arg argl
-      end]
-     and subindex lvl depth j left step = function
-       | [] -> ()
-       | x::xs ->
-          let j2 = j + step in
-          index (lvl+1) x depth j2 j;
-          if j2 + step <= left then subindex lvl depth j2 left step xs
-    in
-      index 0 term depth key_bits 0;
-      [%spy "key-val" (fun f x -> Fmt.fprintf f "%s" (dec_to_bin x)) (!buf)];
-      !buf
-
-  let get_clauses ~depth a { map = m } =
-    let ind = key_of ~mode:`Query ~depth a in
-    let cl_list = List.flatten (Elpi_ptmap.find_unifiables ~functor_bits ind m) in
-    List.map fst
-      (List.fast_sort (fun (_,cl1) (_,cl2) -> compare cl1 cl2) cl_list)
-      
-  let timestamp = ref 0
-
-  let add_clauses ?(op=decr) clauses s { map = ptree; src } =
-    let map = List.fold_left (fun m clause -> 
-      let ind = clause.key in
-      let clause = clause, !timestamp in
-      op timestamp;
-      try 
-        let cl_list = Elpi_ptmap.find ind m in
-        Elpi_ptmap.add ind (clause::cl_list) m
-      with Not_found -> 
-        Elpi_ptmap.add ind [clause] m
-    ) ptree clauses in
-    { map; src = s :: src }
- 
-  let make_index p =
-    timestamp := 1;
-    let m = add_clauses ~op:incr p (0,C.cutc) { map = Elpi_ptmap.empty; src = [] } in
-    timestamp := 0;
-    { m with src = [] }
-
-  (* Get rid of optional arg *)
-  let add_clauses cl p pt = add_clauses cl p pt
-
-  (* from (key, (key clause * int) list) list  
-    creates  key clause list *)
-  let rec flatten_ = function
-     [] -> []
-   | (_,l)::tl -> (List.map (fun (cl,_) -> cl) l) @ flatten_ tl
-
-let local_prog { src } = src 
-
-end (* }}} *)
-
-(* }}} *)
-  
-(* open UnifBits *)
-open TwoMapIndexing
-
 (* {{{ ************** unification ******************************* *)
-
-type mode_decl = Mono of mode | Multi of (constant * (constant * constant) list) list
-let modes = Fork.new_local C.Map.empty
-
-type index = TwoMapIndexing.index
-type program = {
-  query_depth : int; (* number of sigma/local-introduced variables *)
-  idx : index;
-  chr : CHR.t;
-  modes : mode_decl C.Map.t;
-}
-
-type goal = (*depth:*)int * index * term
-
-let original_program = Fork.new_local (Obj.magic 0 : index) (* C.dummy value *)
 
 (* is_flex is to be called only on heap terms *)
 let rec is_flex =
@@ -1650,7 +1422,7 @@ let bind r gamma l a d delta b left t e =
     true
   with RestrictionFailure -> false
 ;;
-exception Non_linear
+(* exception Non_linear *)
 
 let rec list_to_lp_list = function
   | [] -> C.nilc
@@ -1720,7 +1492,7 @@ let rec list_to_lp_list = function
         r', implargs
        end in
       unif matching depth adepth (UVar(r,0,0)) bdepth hd e &&
-      let args = list_to_lp_list (mkinterval basedepth (implargs + ano) 0) in
+      let args = list_to_lp_list (C.mkinterval basedepth (implargs + ano) 0) in
       unif matching depth adepth args bdepth arg e
    | AppUVar(r,vd,args), App(c,hd,[arg]) when c == C.uvc && matching ->
       (* CODE CUT&PASTE FROM CASE ABOVE *)
@@ -1736,7 +1508,7 @@ let rec list_to_lp_list = function
         [%spy "assign" (ppterm depth [] adepth empty_env) (!!r)];
         r', implargs
        end in
-      let args = mkinterval basedepth implargs 0 @ args in
+      let args = C.mkinterval basedepth implargs 0 @ args in
       unif matching depth adepth (UVar(r,vd,0)) bdepth hd e &&
       let args = list_to_lp_list args in
       unif matching depth adepth args bdepth arg e
@@ -1883,31 +1655,402 @@ let unif ?(matching=false) adepth e bdepth a b =
    The tail recursive version is even slower. *)
 
 (* }}} *)
-(* {{{ ************** backtracking ****************************** *)
 
-
-(* The activation frames points to the choice point that
-   cut should backtrack to, i.e. the first one not to be
-   removed. For bad reasons, we call it lvl in the code. *)
-type frame =
- | FNil
-(* TODO: to save memory, introduce a list of triples *)
- | FCons of (*lvl:*)alternative * goal list * frame
-and alternative = {
-  lvl : alternative;
-  program : index;
-  depth : int;
-  goal : term;
-  goals : goal list;
-  stack : frame;
-  trail : T.trail;
-  clauses : key clause list;
-  next : alternative
-}
-let emptyalts : alternative = Obj.magic 0
-
+end
 (* }}} *)
+open HO
 
+(******************************************************************************
+  Indexing
+ ******************************************************************************)
+
+module type Indexing = sig
+
+  type key
+  val pp_key : key -> string
+
+  (* a clause is: "key args :- hyps." the head is split into its main symbol
+   * and its arguments.  This is because the unification/matching of the head
+   * symbol is made by the indexing machinery.  We don't support unification
+   * variables in head position *)
+  type clause = {
+    depth : int;
+    args : term list;
+    hyps : term list;
+    vars : int;
+    key : key;
+    mode: mode;
+  }
+  val ppclause : Fmt.formatter -> clause -> unit
+
+  type idx
+  val key_of : mode:[`Query | `Clause] -> depth:int -> term -> key
+  val hd_pred : clause -> constant
+  val add_clauses : clause list -> (int * term) -> idx -> idx
+  val get_clauses : depth:int -> term -> idx -> clause list
+  val make_index : clause list -> idx
+  val local_prog : idx -> ((*depth:*)int * term) list
+end
+module TwoMapIndexing : Indexing = struct (* {{{ *)
+
+(* all clauses: used when the query is flexible
+   all flexible clauses: used when the query is rigid and the map
+                        for that atom is empty
+   map: used when the query is rigid before trying the all flexible clauses *)
+type key1 = int
+type key2 = int
+type key = key1 * key2
+
+let pp_key (hd,_) = C.show hd
+  
+type clause = {
+    depth : int;
+    args : term list;
+    hyps : term list;
+    vars : int;
+    key : key;
+    mode: mode;
+  }
+
+let hd_pred { key = (hd,_) } = hd
+
+let ppclause f { args = args; hyps = hyps; key = hd } =
+  Fmt.fprintf f "@[<hov 1>%s %a :- %a.@]" (pp_key hd)
+     (pplist (uppterm 0 [] 0 empty_env) "") args
+     (pplist (uppterm 0 [] 0 empty_env) ",") hyps
+
+type idx = {
+  src : (int * term) list;
+  map : (clause list * clause list * clause list Elpi_ptmap.t) Elpi_ptmap.t
+}
+
+let variablek =       -99999999 (* a flexible term like X t *)
+let mustbevariablek = -99999998 (* ?? or ?? t or ?? l t *)
+let abstractionk =    -99999997
+
+let key_of ~mode:_ ~depth =
+ let rec skey_of = function
+    Const k when k = C.uvc -> mustbevariablek
+  | Const k -> k
+  | UVar ({contents=t},origdepth,args) when t != C.dummy ->
+     skey_of (deref_uv ~from:origdepth ~to_:depth args t)
+  | AppUVar ({contents=t},origdepth,args) when t != C.dummy ->
+     skey_of (deref_appuv ~from:origdepth ~to_:depth args t)
+  | App (k,_,_) when k = C.uvc -> mustbevariablek
+  | App (k,a,_) when k = C.asc -> skey_of a
+  | App (k,_,_)
+  | Custom (k,_) -> k
+  | Lam _ -> abstractionk
+  | Arg _ | UVar _ | AppArg _ | AppUVar _ -> variablek
+  | String str -> 
+     let hash = -(Hashtbl.hash str) in
+     if hash > abstractionk then hash
+     else hash+2 
+  | Int i -> 
+     let hash = -(Hashtbl.hash i) in
+     if hash > abstractionk then hash
+     else hash+1024
+  | Float f -> 
+     let hash = -(Hashtbl.hash f) in
+     if hash > abstractionk then hash
+     else hash+1024 in           
+ let rec key_of_depth = function
+   Const k -> k, variablek
+ | UVar ({contents=t},origdepth,args) when t != C.dummy ->
+    (* TODO: optimization: avoid dereferencing *)
+    key_of_depth (deref_uv ~from:origdepth ~to_:depth args t)
+ | AppUVar ({contents=t},origdepth,args) when t != C.dummy -> 
+    key_of_depth (deref_appuv ~from:origdepth ~to_:depth args t)
+ | App(k,arg,_) when k == C.asc -> key_of_depth arg
+ | App (k,arg2,_) -> k, skey_of arg2
+ | Custom _ -> assert false
+ | Arg _ | AppArg _ | Lam _ | UVar _ | AppUVar _ | String _ | Int _ | Float _->
+    raise (Failure "Not a predicate")
+ in
+  key_of_depth
+;;
+
+let get_clauses ~depth a { map = m } =
+ let ind,app = key_of ~mode:`Query ~depth a in
+ try
+  let l,flexs,h = Elpi_ptmap.find ind m in
+  if app=variablek then l
+  else (try Elpi_ptmap.find app h with Not_found -> flexs)
+ with Not_found -> []
+
+let add_clauses clauses s { map = p;  src } =       
+  let p = List.fold_left (fun m clause ->
+    let matching = match clause.mode with [] -> false | x :: _ -> x in
+    let ind,app = clause.key in
+    try 
+      let l,flexs,h = Elpi_ptmap.find ind m in
+      (* X matches both rigid and flexible terms *)
+      if app == variablek then begin
+        Elpi_ptmap.add ind (clause :: l, clause :: flexs, Elpi_ptmap.map (fun l_rev -> clause::l_rev) h) m
+      (* ?? matches only flexible terms *)
+      end else if app == mustbevariablek then begin
+        Elpi_ptmap.add ind (clause :: l, flexs, h) m
+      (* a rigid term matches flexible terms only in unification mode *)
+      end else begin
+        let l_rev = try Elpi_ptmap.find app h with Not_found -> flexs in
+        let l = if matching then l else clause :: l in
+        Elpi_ptmap.add ind (l, flexs, Elpi_ptmap.add app (clause::l_rev) h) m
+      end
+    with
+    | Not_found -> 
+     if app=variablek then
+      Elpi_ptmap.add ind ([clause],[clause],Elpi_ptmap.empty) m
+     else if app=mustbevariablek then
+      Elpi_ptmap.add ind ([clause],[],Elpi_ptmap.empty) m
+     else
+      let l = if matching then [] else [clause] in
+      Elpi_ptmap.add ind
+       (l,[],Elpi_ptmap.add app [clause] Elpi_ptmap.empty) m
+    ) p clauses
+  in
+  { map = p; src = s :: src }
+
+let make_index p =
+  let idx = add_clauses (List.rev p) (0,C.cutc) { map = Elpi_ptmap.empty; src = [] } in
+  { idx with src = [] } (* original program not in clauses *)
+ 
+(* flatten_snd = List.flatten o (List.map ~~snd~~) *)
+(* TODO: is this optimization necessary or useless? *)
+let rec flatten_snd =
+ function
+    [] -> []
+  | (_,(hd,_,_))::tl -> hd @ flatten_snd tl 
+
+let close_with_pis depth vars t =
+ if vars = 0 then t
+ else
+  (* lifts the term by vars + replaces Arg(i,..) with x_{depth+i} *)
+  let fix_const c = if c < depth then c else c + vars in
+  (* TODO: the next function is identical to lift_pat, up to the
+     instantiation of Args. The two codes should be unified *)
+  let rec aux =
+   function
+    | Const c -> C.of_dbl (fix_const c)
+    | Arg (i,argsno) ->
+       (match C.mkinterval (depth+vars) argsno 0 with
+        | [] -> Const(i+depth)
+        | [x] -> App(i+depth,x,[])
+        | x::xs -> App(i+depth,x,xs))
+    | AppArg (i,args) ->
+       (match List.map aux args with
+        | [] -> anomaly "AppArg to 0 args"
+        | [x] -> App(i+depth,x,[])
+        | x::xs -> App(i+depth,x,xs))
+    | App(c,x,xs) -> App(fix_const c,aux x,List.map aux xs)
+    | Custom(c,xs) -> Custom(c,List.map aux xs)
+    | UVar(_,_,_) as orig ->
+       (* TODO: quick hack here, but it does not work for AppUVar *)
+       hmove ~from:depth ~to_:(depth+vars) orig
+    | AppUVar(r,vardepth,args) ->
+       assert false (* TODO, essentialy almost copy the code from move delta < 0 *)
+    | Lam t -> Lam (aux t)
+    | (String _ | Int _ | Float _) as x -> x
+  in
+  let rec add_pis n t =
+   if n = 0 then t else App(C.pic,Lam (add_pis (n-1) t),[]) in
+  add_pis vars (aux t)
+
+let local_prog { src } =  src
+
+end (* }}} *)
+module UnifBits : Indexing = struct (* {{{ *)
+
+  type key = int
+
+  type clause = {
+    depth : int;
+    args : term list;
+    hyps : term list;
+    vars : int;
+    key : key;
+    mode: mode;
+  }
+
+  type idx = {
+    src : (int * term) list;
+    map : (clause * int) list Elpi_ptmap.t  (* timestamp *)
+  }
+
+  let key_bits =
+    let n = ref 0 in
+    let m = ref max_int in
+    while !m <> 0 do incr n; m := !m lsr 1; done;
+    !n
+
+  let hash x = Hashtbl.hash x * 62653
+  let fullones = 1 lsl key_bits -1
+  let fullzeros = 0
+  let abstractionk = 1022   (* TODO *)
+  let functor_bits = 6
+  let fst_arg_bits = 15
+  let max_depth = 1
+  let min_slot = 5
+
+
+  let hd_pred { key } = (- (key land (1 lsl functor_bits - 1)))
+  let pp_key hd = C.show (- (hd land (1 lsl functor_bits - 1)))
+
+  let ppclause f { args = args; hyps = hyps; key = hd } =
+    Fmt.fprintf f "@[<hov 1>%s %a :- %a.@]" (pp_key hd)
+       (pplist (uppterm 0 [] 0 empty_env) "") args
+       (pplist (uppterm 0 [] 0 empty_env) ",") hyps
+
+  let dec_to_bin num =
+    let rec aux x = 
+     if x==1 then "1" else
+     if x==0 then "0" else 
+     if x mod 2 == 1 then (aux (x/2))^"1"
+     else (aux (x/2))^"0"
+    in
+    let addzero str =
+     let s = ref "" in
+     for i=1 to (key_bits - (String.length str)) do
+      s := "0"^(!s)
+     done; 
+     !s ^ str
+    in
+     addzero (aux num)
+
+  let key_of ~mode ~depth term =
+    let buf = ref 0 in 
+    let set_section k left right =
+      let k = abs k in
+      let new_bits = (k lsl right) land (fullones lsr (key_bits - left)) in
+      [%trace "set-section" ("@[<hv 0>%s@ %s@]"
+        (dec_to_bin !buf) (dec_to_bin new_bits))
+      (buf := new_bits lor !buf) ] in
+    let rec index lvl tm depth left right =
+      [%trace "index" ("@[<hv 0>%a@]"
+        (uppterm depth [] 0 empty_env) tm)
+      begin match tm with
+      | Const k | Custom (k,_) ->
+          set_section (if lvl=0 then k else hash k) left right 
+      | UVar ({contents=t},origdepth,args) when t != C.dummy ->
+         index lvl (deref_uv ~from:origdepth ~to_:depth args t) depth left right
+      | Lam _ -> set_section abstractionk left right
+      | String s -> set_section (hash s) left right
+      | Int n -> set_section (hash n) left right
+      | Float n -> set_section (hash n) left right
+      | Arg _ | UVar _ | AppArg _ | AppUVar _ ->
+         if mode = `Clause then set_section fullones left right
+         else set_section fullzeros left right
+      | App (k,arg,argl) -> 
+         let slot = left - right in
+         if lvl >= max_depth || slot < min_slot
+         then set_section ( if lvl=0 then k else hash k) left right
+         else
+           let nk, hd, fst_arg, sub_arg =
+             if lvl = 0 then
+               let sub_slots = List.length argl in
+               if sub_slots = 0 then
+                 k,functor_bits,slot-functor_bits,0
+               else
+                 let args_bits = slot - functor_bits - fst_arg_bits in
+                 let sub_arg = args_bits / sub_slots in
+                 k,functor_bits,fst_arg_bits + args_bits mod sub_slots, sub_arg
+             else
+               let sub_slots = List.length argl + 2 in
+               let sub_arg = slot / sub_slots in
+               hash k, sub_arg, sub_arg + slot mod sub_slots, sub_arg  in
+           let right_hd = right + hd in
+           set_section nk right_hd right;
+           let j = right + hd + fst_arg in
+           index (lvl+1) arg depth j right_hd;
+           if sub_arg > 0 && j + sub_arg <= left
+           then subindex lvl depth j left sub_arg argl
+      end]
+     and subindex lvl depth j left step = function
+       | [] -> ()
+       | x::xs ->
+          let j2 = j + step in
+          index (lvl+1) x depth j2 j;
+          if j2 + step <= left then subindex lvl depth j2 left step xs
+    in
+      index 0 term depth key_bits 0;
+      [%spy "key-val" (fun f x -> Fmt.fprintf f "%s" (dec_to_bin x)) (!buf)];
+      !buf
+
+  let get_clauses ~depth a { map = m } =
+    let ind = key_of ~mode:`Query ~depth a in
+    let cl_list = List.flatten (Elpi_ptmap.find_unifiables ~functor_bits ind m) in
+    List.map fst
+      (List.fast_sort (fun (_,cl1) (_,cl2) -> compare cl1 cl2) cl_list)
+      
+  let timestamp = ref 0
+
+  let add_clauses ?(op=decr) clauses s { map = ptree; src } =
+    let map = List.fold_left (fun m clause -> 
+      let ind = clause.key in
+      let clause = clause, !timestamp in
+      op timestamp;
+      try 
+        let cl_list = Elpi_ptmap.find ind m in
+        Elpi_ptmap.add ind (clause::cl_list) m
+      with Not_found -> 
+        Elpi_ptmap.add ind [clause] m
+    ) ptree clauses in
+    { map; src = s :: src }
+ 
+  let make_index p =
+    timestamp := 1;
+    let m = add_clauses ~op:incr p (0,C.cutc) { map = Elpi_ptmap.empty; src = [] } in
+    timestamp := 0;
+    { m with src = [] }
+
+  (* Get rid of optional arg *)
+  let add_clauses cl p pt = add_clauses cl p pt
+
+  (* from (key, (key clause * int) list) list  
+    creates  key clause list *)
+  let rec flatten_ = function
+     [] -> []
+   | (_,l)::tl -> (List.map (fun (cl,_) -> cl) l) @ flatten_ tl
+
+let local_prog { src } = src 
+
+end (* }}} *)
+
+(* open UnifBits *)
+open TwoMapIndexing
+type idx = TwoMapIndexing.idx
+
+let original_prolog_program = Fork.new_local (make_index [])
+
+(******************************************************************************
+  Dynamic Prolog program
+ ******************************************************************************)
+
+module Clausify : sig
+
+  val clausify : int -> constant -> term -> clause list * int
+  
+  val modes : mode_decl C.Map.t Fork.local_ref
+
+  val lp_list_to_list : term -> term list
+  val get_lambda_body : int -> term -> term
+  val split_conj : term -> term list
+
+end = struct  (* {{{ *)
+let modes = Fork.new_local C.Map.empty
+
+let rec term_map m = function
+  | Const x when List.mem_assoc x m -> C.of_dbl (List.assoc x m)
+  | Const _ as x -> x
+  | App(c,x,xs) when List.mem_assoc c m ->
+      App(List.assoc c m,term_map m x, smart_map (term_map m) xs)
+  | App(c,x,xs) -> App(c,term_map m x, smart_map (term_map m ) xs)
+  | Lam x -> Lam (term_map m x)
+  | UVar _ as x -> x
+  | AppUVar(r,lvl,xs) -> AppUVar(r,lvl,smart_map (term_map m) xs)
+  | Arg _ as x -> x
+  | AppArg(i,xs) -> AppArg(i,smart_map (term_map m) xs)
+  | Custom(c,xs) -> Custom(c,smart_map (term_map m) xs)
+  | (Int _ | String _ | Float _) as x -> x
 let rec split_conj = function
   | App(c, hd, args) when c == C.andc || c == C.andc2 ->
       split_conj hd @ List.(flatten (map split_conj args))
@@ -1946,20 +2089,6 @@ r :- (pi X\ pi Y\ q X Y :- pi c\ pi d\ q (Z c d) (X c d) (Y c)) => ... *)
  *  - the argument lives in (depth+lts)
  *  - the clause will live in (depth+lcs)
  *)
-
-let rec term_map m = function
-  | Const x when List.mem_assoc x m -> C.of_dbl (List.assoc x m)
-  | Const _ as x -> x
-  | App(c,x,xs) when List.mem_assoc c m ->
-      App(List.assoc c m,term_map m x, smart_map (term_map m) xs)
-  | App(c,x,xs) -> App(c,term_map m x, smart_map (term_map m ) xs)
-  | Lam x -> Lam (term_map m x)
-  | UVar _ as x -> x
-  | AppUVar(r,lvl,xs) -> AppUVar(r,lvl,smart_map (term_map m) xs)
-  | Arg _ as x -> x
-  | AppArg(i,xs) -> AppArg(i,smart_map (term_map m) xs)
-  | Custom(c,xs) -> Custom(c,smart_map (term_map m) xs)
-  | (Int _ | String _ | Float _) as x -> x
 
 let clausify vars depth t =
   let rec claux vars depth hyps ts lts lcs t =
@@ -2033,7 +2162,7 @@ let clausify vars depth t =
       List.map (fun (g,args,hyps,mode) ->
               let c = { depth = depth+lcs ; args= args; hyps = hyps; mode;
           vars = vars; key=key_of ~mode:`Clause ~depth:(depth+lcs) g} in
-              [%spy "extra" (pp_clause pp_key) c];
+              [%spy "extra" (ppclause pp_key) c];
               c
           )
        all_modes, lcs
@@ -2050,53 +2179,79 @@ let clausify vars depth t =
   end] in
     claux vars depth [] [] 0 0 t
 ;;
+end (* }}} *) 
+open Clausify
 
-(* {{{ ************** run *************************************** *)
+(******************************************************************************
+  Choice stack
+ ******************************************************************************)
 
-exception No_clause
+(* This has to stay here, we want no Index wrap around idx *)
+type goal = (*depth:*)int * idx * term
 
-let register_custom, lookup_custom =
- let (customs :
-      (* Must either raise No_clause or succeed with the list of new goals *)
-      ('a, depth:int -> env:term array -> index -> term list -> term list)
-      Hashtbl.t)
-   =
-     Hashtbl.create 17 in
- let check s = 
-    if s = "" || s.[0] <> '$' then
-      anomaly ("Custom predicate name " ^ s ^ " must begin with $");
-    let idx = fst (C.funct_of_ast (F.from_string s)) in
-    if Hashtbl.mem customs idx then
-      anomaly ("Duplicate custom predicate name " ^ s);
-    idx in
- (fun s f ->
-    let idx = check s in
-    Hashtbl.add customs idx f),
- Hashtbl.find customs
-;;
+(* The activation frames points to the choice point that
+   cut should backtrack to, i.e. the first one not to be
+   removed. For bad reasons, we call it lvl in the code. *)
+type frame =
+ | FNil
+ | FCons of (*lvl:*)alternative * goal list * frame
+and alternative = {
+  lvl : alternative;
+  program : idx;
+  depth : int;
+  goal : term;
+  goals : goal list;
+  stack : frame;
+  trail : T.trail;
+  clauses : clause list;
+  next : alternative
+}
+let emptyalts : alternative = Obj.magic 0
 
-let do_make_runtime : (unit -> (?pr_delay:bool -> ?depth:int -> 'a -> 'b -> 'c -> mode_decl C.Map.t -> int -> 'k) * 'e * 'f) ref =
- ref (function () -> anomaly "do_make_runtime not initialized")
+(******************************************************************************
+  Constraint propagation
+ ******************************************************************************)
 
+(* To break mutual recursion between  Constraints and runtime *)
+type start = ?pr_delay:bool -> ?depth:int ->
+  idx -> query -> CHR.t -> mode_decl C.Map.t -> int -> alternative
+and next = ?pr_delay:bool -> alternative -> alternative
+and no_delay = unit -> bool (* true = no leftover *)
+and runtime = start * next * no_delay 
+
+let do_make_runtime : (unit -> runtime) ref =
+ ref (fun () -> anomaly "do_make_runtime not initialized")
 
 module Constraints : sig
     
-  val propagation : constraint_def list ref -> (int * 'a * term) list
+  val propagation : constraint_def list ref -> (int * idx * term) list
 
   val chrules : CHR.t Fork.local_ref
 
   val delay_goal :
-    depth:int -> index -> goal:term -> on:term attributed_ref list -> unit
+    depth:int -> idx -> goal:term -> on:term_attributed_ref list -> unit
 
+  (* Like delay_goal, but the context is trimmed according to the clique
+   * the constraint lives in *)
   val declare_constraint :
-    depth:int -> index -> goal:term -> on:term attributed_ref list -> unit
+    depth:int -> idx -> goal:term -> on:term_attributed_ref list -> unit
 
-end = struct
+  val wrap_index : idx -> index
+  val unwrap_index : index -> idx
+
+end = struct (* {{{ *)
 
 exception NoMatch
 
+type index += Index of TwoMapIndexing.idx
+let () = extend_printer pp_index (fun fmt -> function
+  | Index _ -> Fmt.fprintf fmt "<index>";`Printed
+  | _ -> `Passed)
+let wrap_index x = Index x
+let unwrap_index = function Index x -> x | _ -> assert false
+
 type freeze_map = {
-  uv2c : (term attributed_ref * int * term * constant) list;
+  uv2c : (term_attributed_ref * int * term * constant) list;
   arg2goal : (int * int) list;
 }
 
@@ -2137,7 +2292,7 @@ let rec freeze ad m = function
   | AppUVar ( { contents = t }, _, _) when t != C.dummy -> assert false
   | UVar( r, lvl, ano) ->
      let m, c, n = freeze_uv r lvl m in
-     m, (match mkinterval 0 (lvl+ano) 0 with
+     m, (match C.mkinterval 0 (lvl+ano) 0 with
         | [] -> c
         | [x] -> App(n,x,[])
         | x::xs -> App(n,x,xs))
@@ -2146,7 +2301,7 @@ let rec freeze ad m = function
      let m, args = List.fold_right (fun x (m,l) ->
         let m, x = freeze ad m x in
         (m, x ::l)) args (m,[]) in
-     m, (match mkinterval 0 lvl 0 @ args with
+     m, (match C.mkinterval 0 lvl 0 @ args with
         | [] -> c
         | [x] -> App(n,x,[])
         | x::xs -> App(n,x,xs))
@@ -2395,7 +2550,7 @@ let delay_goal ?(filter_ctx=fun _ -> true) ~depth prog ~goal:g ~on:keys =
       (*(pplist (uppterm depth [] 0 empty_env) ",") pdiff*) depth
       (uppterm depth [] 0 empty_env) x) g];
 *)
-  let kind = Constraint { depth; prog = Obj.magic prog; pdiff; goal = g } in
+  let kind = Constraint { depth; prog = Index prog; pdiff; goal = g } in
   CS.declare_new { kind ; blockers = keys }
 ;;
 
@@ -2443,7 +2598,7 @@ let mk_permutations len pivot pivot_position rest =
    cstr_position is its position, so far, wrt all other constraints
      when matched against chr rules;
    the two lists in output are the constraints to be removed and added *)
-let propagate { cstr; cstr_position } history =
+let propagate { CS.cstr; cstr_position } history =
  let sequent_of_constr { depth; pdiff = p; goal = t } = depth, p, t in
 (*
  let rec find_entails nargs_ref max_depth n = function
@@ -2469,13 +2624,13 @@ let propagate { cstr; cstr_position } history =
     implication. Otherwise ~depth:0 is wrong and I do not see any
     reasonable semantics (i.e. a semantics where the scoping is not
     violated). For the same reason I took the propagate clauses from
-    the !original_program. *)
+    the !original_prolog_program. *)
  let rules =
    let _,_,t = sequent_of_constr cstr in
    let hd = head_of t in
    CHR.rules_for hd !chrules in
 
- let p = !original_program in
+ let p = !original_prolog_program in
 
  let run,_,no_delayed = !do_make_runtime () in
  let no_such_j = ref true in
@@ -2587,7 +2742,7 @@ let propagate { cstr; cstr_position } history =
                 let goal = lift_pat ~from:ruledepth ~to_:max_depth new_goal in
                 let goal = thaw max_depth e m goal in
                 pp_action true goal;
-                let prog, pdiff, depth = Obj.magic p, [], max_depth in
+                let prog, pdiff, depth = Index p, [], max_depth in
                 Some(constraints_to_remove, [ { depth; prog; pdiff; goal } ])
              end
          | Some guard ->
@@ -2603,7 +2758,7 @@ let propagate { cstr; cstr_position } history =
                  let goal = lift_pat ~from:ruledepth ~to_:max_depth new_goal in
                  let goal = thaw max_depth e m goal in
                  pp_action true goal;
-                 let prog, pdiff, depth = Obj.magic p, [], max_depth in
+                 let prog, pdiff, depth = Index p, [], max_depth in
                  Some(constraints_to_remove,[ { depth; prog; pdiff; goal }])
              end
             with No_clause ->
@@ -2620,6 +2775,9 @@ let propagate { cstr; cstr_position } history =
  | None when !no_such_j -> `NoSuchJ
  | _ -> `NoMatch
 ;;
+
+let incr_generation { CS.cstr; cstr_position } =
+  { CS.cstr; cstr_position = cstr_position + 1 }
 
 let propagation to_be_resumed =
   let history = HISTORY.create 17 in
@@ -2644,13 +2802,57 @@ let propagation to_be_resumed =
            (*List.iter add_constraint to_be_added*)
            to_be_resumed := to_be_added @ !to_be_resumed )
   done;
-  List.map (fun { depth = d; prog = p; goal = g } -> d,Obj.magic p,g) (List.rev !to_be_resumed)
+  List.map (fun { depth = d; prog = p; goal = g } ->
+    let idx = match p with Index p -> p | _ -> assert false in
+    d, idx, g)
+  (List.rev !to_be_resumed)
 
-end
+end (* }}} *)
+
+(******************************************************************************
+  Main loop = SLD + delay/resumption
+ ******************************************************************************)
+
+module Mainloop : sig
+
+  val make_runtime : unit -> runtime
+
+  val register_custom : string ->
+    (depth:int -> env:term array -> idx -> term list -> term list) ->
+      unit
+
+  val is_custom_declared : constant -> bool
+
+end = struct (* {{{ *)
+
+let register_custom, lookup_custom =
+ let (customs :
+      (* Must either raise No_clause or succeed with the list of new goals *)
+      ('a, depth:int -> env:term array -> idx -> term list -> term list)
+      Hashtbl.t)
+   =
+     Hashtbl.create 17 in
+ let check s = 
+    if s = "" || s.[0] <> '$' then
+      anomaly ("Custom predicate name " ^ s ^ " must begin with $");
+    let idx = fst (C.funct_of_ast (F.from_string s)) in
+    if Hashtbl.mem customs idx then
+      anomaly ("Duplicate custom predicate name " ^ s);
+    idx in
+ (fun s f ->
+    let idx = check s in
+    Hashtbl.add customs idx f),
+ Hashtbl.find customs
+;;
+
+let is_custom_declared x =
+  try let _f = lookup_custom x in true
+  with Not_found -> false
+;;
 
 (* The block of recursive functions spares the allocation of a Some/None
  * at each iteration in order to know if one needs to backtrack or continue *)
-let make_runtime : unit -> (?pr_delay:bool -> ?depth:int -> 'a -> 'b -> 'c -> mode_decl C.Map.t -> int -> 'k) * (?pr_delay:bool -> 'k -> 'k) * (unit -> bool) =
+let make_runtime : unit -> runtime =
 
   (* Input to be read as the orl (((p,g)::gs)::next)::alts
      depth >= 0 is the number of variables in the context. *)
@@ -2722,7 +2924,7 @@ end
     let k, args_of_g = args_of g in
     let rec select l =
       [%trace "select" (fun fmt ->
-          pplist ~max:1 ~boxed:true (pp_clause pp_key) "|" fmt l)
+          pplist ~max:1 ~boxed:true (ppclause pp_key) "|" fmt l)
       begin match l with
       | [] -> [%tcall next_alt alts]
       | c :: cs ->
@@ -2806,7 +3008,7 @@ end;*)
           (*"Resuming goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
           (*(pplist (uppterm depth [] 0 empty_env) ",") pdiff*)
           depth (uppterm depth [] 0 empty_env) g ;*)
-         to_be_resumed := Obj.magic dpg :: !to_be_resumed
+         to_be_resumed := dpg :: !to_be_resumed
      | _ -> anomaly "Unknown constraint type"
    done ;
    (* Phase 2: we propagate the constraints *)
@@ -2829,7 +3031,7 @@ end;*)
  fun () ->
   let { Fork.exec = exec ; get = get ; set = set } = Fork.fork () in
   (fun ?(pr_delay=false) ?(depth=0) p (_,argsdepth,q_env,q) chr mds ->
-     set original_program p;
+     set original_prolog_program p;
      set Constraints.chrules chr;
      set modes mds;
      exec (fun lcs ->
@@ -2855,8 +3057,25 @@ end;*)
 
 do_make_runtime := make_runtime;;
 
-(* }}} *)
-(* {{{ ************** "compilation" + API *********************** *)
+end (* }}} *)
+open Mainloop
+
+(******************************************************************************
+  "Compiler" from AST to program
+ ******************************************************************************)
+
+module Compiler : sig
+
+  val program_of_ast : ?print:bool -> Elpi_ast.decl list -> program
+  val query_of_ast : program -> Elpi_ast.term -> query
+  val term_of_ast : depth:int -> Elpi_ast.term -> term
+
+  val query_of_ast_cmap :
+    constant ->
+    term F.Map.t ->
+    Elpi_ast.term -> string list * int * term array * term
+
+end = struct (* {{{ *)
 
 (* To assign Arg (i.e. stack) slots to unif variables in clauses *)
 type argmap = { max_arg : int; name2arg : (string * term) list }
@@ -2913,8 +3132,7 @@ let rec stack_term_of_ast ?(inner=false) lvl amap cmap = function
   | Elpi_ast.Const f -> stack_funct_of_ast amap cmap f
   | Elpi_ast.Custom f ->
      let cname = fst (C.funct_of_ast f) in
-     begin try let _f = lookup_custom cname in ()
-     with Not_found -> error ("No custom named " ^ F.show f) end;
+     if not (is_custom_declared cname) then error ("No custom named "^F.show f);
      amap, Custom (cname, [])
   | Elpi_ast.App(Elpi_ast.Const f, tl) ->
      let f, tl = desugar inner f tl in
@@ -2926,17 +3144,14 @@ let rec stack_term_of_ast ?(inner=false) lvl amap cmap = function
      let tl = List.rev rev_tl in
      let amap, c = stack_funct_of_ast amap cmap f in
      begin match c with
-     | Arg (v,0) -> begin try
-        let tl = in_fragment 0 tl in amap, Arg(v,tl)
-        with NotInTheFragment -> amap, AppArg(v,tl) end
+     | Arg (v,0) -> amap, mkAppArg v 0 tl
      | Const c -> begin match tl with
         | hd2::tl -> amap, App(c,hd2,tl)
         | _ -> anomaly "Application node with no arguments" end
      | _ -> error "Clause shape unsupported" end
   | Elpi_ast.App (Elpi_ast.Custom f,tl) ->
      let cname = fst (C.funct_of_ast f) in
-     begin try let _f = lookup_custom cname in ()
-     with Not_found -> error ("No custom named " ^ F.show f) end;
+     if not (is_custom_declared cname) then error ("No custom named "^F.show f);
      let amap, rev_tl =
        List.fold_left (fun (amap, tl) t ->
           let amap, t = stack_term_of_ast ~inner:true lvl amap cmap t in
@@ -2962,7 +3177,7 @@ let rec stack_term_of_ast ?(inner=false) lvl amap cmap = function
    Therefore the function only works on meta-closed terms. *)
 let term_of_ast ~depth t =
  let argsdepth = depth in
- let freevars = mkinterval 0 depth 0 in
+ let freevars = C.mkinterval 0 depth 0 in
  let cmap =
   List.fold_left (fun cmap i ->
    F.Map.add (F.from_string (C.show (destConst i))) i cmap
@@ -3075,22 +3290,26 @@ let program_of_ast ?(print=false) (p : Elpi_ast.decl list) : program =
   if cmapstack <> [] then error "Begin without an End" else clauses,lcs,chr in
  let clausesrev,lcs,chr = aux 0 p CHR.empty in
  { query_depth = lcs;
-   idx = make_index (List.rev clausesrev);
-   chr;
+   idx = Constraints.wrap_index (make_index (List.rev clausesrev));
+   chr = CHR.wrap_chr chr;
    modes = !modes}
 ;;
 
-(* RUN with non indexed engine *)
-type query = string list * int * term array * term
+end (* }}} *)
+
+(******************************************************************************
+  API
+ ******************************************************************************)
 
 let execute_once { query_depth = depth; idx = p; chr; modes } q =
  let run, cont, _ = make_runtime () in
- try ignore (run ~pr_delay:true p q chr modes depth) ; false
- with No_clause | Non_linear -> true
+ try ignore (run ~pr_delay:true (Constraints.unwrap_index p) q (CHR.unwrap_chr chr) modes depth) ; false
+ with No_clause (*| Non_linear*) -> true
 ;;
 
 let execute_loop
-  { query_depth = depth; idx = p; chr; modes } ((q_names,q_argsdepth,q_env,q) as qq) 
+  { query_depth = depth; idx = p; chr; modes }
+  ((q_names,q_argsdepth,q_env,q) as qq) 
 =
  let run, cont, _ = make_runtime () in
  let k = ref emptyalts in
@@ -3099,7 +3318,8 @@ let execute_loop
   f x ;
   let time1 = Unix.gettimeofday() in
   prerr_endline ("Execution time: "^string_of_float(time1 -. time0));
- (* Fmt.eprintf "Raw Result: %a\n%!" (ppterm depth q_names q_argsdepth q_env) q ;*)
+ (* Fmt.eprintf "Raw Result: %a\n%!"
+    (ppterm depth q_names q_argsdepth q_env) q ;*)
   Fmt.eprintf "Result: \n%!" ;
   List.iteri (fun i name -> Fmt.eprintf "@[<hov 1>%s=%a@]\n%!" name
    (uppterm depth q_names 0 q_env) q_env.(i)) q_names;
@@ -3107,7 +3327,7 @@ let execute_loop
   List.iteri (fun i name -> Fmt.eprintf "@[<hov 1>%s=%a@]\n%!" name
    (ppterm depth q_names 0 q_env) q_env.(i)) q_names;
   in
- do_with_infos (fun _ -> k := (run ~pr_delay:true p qq chr modes depth)) ();
+ do_with_infos (fun _ -> k := (run ~pr_delay:true (Constraints.unwrap_index p) qq (CHR.unwrap_chr chr) modes depth)) ();
  while !k != emptyalts do
    prerr_endline "More? (Y/n)";
    if read_line() = "n" then k := emptyalts else
@@ -3116,10 +3336,19 @@ let execute_loop
  done
 ;;
 
-(* }}} *)
-
 let delay_goal = Constraints.delay_goal
 let declare_constraint = Constraints.declare_constraint
 let print_delayed () = CS.print Fmt.std_formatter
+let is_flex = HO.is_flex
+let deref_uv = HO.deref_uv
+let deref_appuv = HO.deref_appuv
+let register_custom = Mainloop.register_custom
+let make_runtime = Mainloop.make_runtime
+let program_of_ast = Compiler.program_of_ast
+let query_of_ast = Compiler.query_of_ast
+let query_of_ast_cmap = Compiler.query_of_ast_cmap
+let term_of_ast = Compiler.term_of_ast
+let lp_list_to_list = Clausify.lp_list_to_list
+let split_conj = Clausify.split_conj
 
 (* vim: set foldmethod=marker: *)

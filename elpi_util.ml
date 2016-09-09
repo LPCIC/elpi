@@ -210,3 +210,24 @@ module UUID = struct
 
  include Self
 end        
+
+type 'a extensible_printer =
+  (Format.formatter -> 'a -> [`Printed | `Passed]) ref
+let mk_extensible_printer () =
+  ref (fun fmt _ -> Fmt.fprintf fmt "please extend this printer"; `Printed)
+let extend_printer r f =
+  let g = !r in
+  r := (fun fmt x ->
+          match f fmt x with
+          | `Printed -> `Printed
+          | `Passed -> g fmt x)
+
+let pp_extensible r fmt x =
+  match !r fmt x with
+  | `Printed -> ()
+  | `Passed -> assert false
+let pp_extensible_any r ~id fmt x =
+  match !r fmt (id,Obj.repr x) with
+  | `Printed -> ()
+  | `Passed -> assert false
+

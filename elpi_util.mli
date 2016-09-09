@@ -29,6 +29,23 @@ val pp_option :
 val option_mapacc :
   ('acc -> 'a -> 'acc * 'b) -> 'acc -> 'a option -> 'acc * 'b option
 
+(***************** Unique ID ****************)
+
+module UUID : sig
+
+ type t
+ val compare : t -> t -> int
+ val equal : t -> t -> bool
+ val hash : t -> int
+ val pp : Format.formatter -> t -> unit
+ val show : t -> string
+
+ val make : unit -> t
+
+ module Htbl : Hashtbl.S with type key = t
+
+end
+
 (******************** printing ******************)
 
 val pplist : ?max:int -> ?boxed:bool ->
@@ -40,6 +57,18 @@ val pp_pair :
   (Format.formatter -> 'a -> unit) ->
   (Format.formatter -> 'b -> unit) ->
     Format.formatter -> 'a * 'b -> unit
+
+(* for open types *)
+type 'a extensible_printer
+val mk_extensible_printer : unit -> 'a extensible_printer
+val extend_printer :
+  'a extensible_printer ->
+  (Format.formatter -> 'a -> [`Printed | `Passed]) ->
+     unit
+val pp_extensible :
+  'a extensible_printer -> Format.formatter -> 'a -> unit
+val pp_extensible_any :
+  (UUID.t * Obj.t) extensible_printer -> id:UUID.t -> Format.formatter -> 'a -> unit
 
 (******************** runtime is reentrant ******************)
 
@@ -72,19 +101,3 @@ val anomaly : string -> 'a
 (* If we type check the program, then these are anomalies *)
 val type_error : string -> 'a
 
-(***************** Unique ID ****************)
-
-module UUID : sig
-
- type t
- val compare : t -> t -> int
- val equal : t -> t -> bool
- val hash : t -> int
- val pp : Format.formatter -> t -> unit
- val show : t -> string
-
- val make : unit -> t
-
- module Htbl : Hashtbl.S with type key = t
-
-end
