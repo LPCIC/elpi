@@ -22,6 +22,36 @@ module LPC = Elpi_custom (* registers the custom predicates, if we need them *)
 
 (* internals ****************************************************************)
 
+let status = new P.status
+
+let rt_gref r =
+   let R.Ref (uri, spec) = r in
+   let _, _, _, _, obj = E.get_checked_obj status uri in
+   match obj, spec with 
+      | C.Constant (_, _, None, u, _)  , R.Decl          ->
+         None, u
+      | C.Constant (_, _, Some t, u, _), R.Def _         ->
+         Some t, u
+      | C.Fixpoint (true, fs, _)       , R.Fix (i, _, _) ->
+         let _, _, _, u, t = List.nth fs i in
+         Some t, u
+      | C.Fixpoint (false, fs, _)      , R.CoFix i       ->
+         let _, _, _, u, t = List.nth fs i in
+         Some t, u
+      | C.Inductive (_, _, us, _)      , R.Ind (_, i, _) ->
+         let _, _, u, _ = List.nth us i in
+         None, u
+      | C.Inductive (_, _, us, _)      , R.Con (i, j, _) ->
+         let _, _, _, ts = List.nth us i in
+         let _, _, u = List.nth ts (pred j) in
+         None, u
+      | _                                                ->
+         assert false
+
+let split_constructor = function
+   | R.Ref (_, R.Con (_, j, _)) -> Some (pred j)
+   |_                           -> None
+
 let id x = "u+" ^ x
 
 let univ_of u =
@@ -64,6 +94,8 @@ let mk_has_some_sort u = LPA.mkApp [LPA.mkCon "has+sort"; u; LPA.mkFreshUVar ()]
 
 let mk_has_type t u = LPA.mkApp [LPA.mkCon "has+type"; t; u]
 
+let mk_eq t1 t2 = LPR.App (LPR.Constants.eqc, t1, [t2])
+
 (* matita to elpi *)
 let rec lp_term c = function
    | C.Meta _
@@ -82,21 +114,11 @@ and lp_terms c = function
    | []      -> mk_nil
    | v :: vs -> mk_cons (lp_term c v) (lp_terms c vs)
 
-let status = new P.status
+let mk_term ~depth t =
+   LPR.term_of_ast ~depth (lp_term [] t)
 
-let resolve_gref r =
-   let R.Ref (_, kind) = r in
-   match kind with 
-      | R.Decl ->
-         let _, _, u, _, _ = E.get_checked_decl status r in
-         None, lp_term [] u 
-      | R.Def _ ->
-         let _, _, t, u, _, _ = E.get_checked_def status r in
-         Some (lp_term [] t), lp_term [] u 
-      | R.Fix _ -> assert false
-      | R.CoFix _ -> assert false
-      | R.Ind _   -> assert false
-      | R.Con _  -> assert false
+let mk_int ~depth i =
+   LPR.term_of_ast ~depth (LPA.mkInt i)
 
 let show = LPR.Constants.show
 
@@ -104,30 +126,53 @@ let dummy = LPR.Constants.dummy
 
 let fail () = raise LPR.No_clause
 
-let rec get_constant depth = function
+let rec get_gref ~depth = function
    | LPR.Const c                                                    ->
-      show c
+       if c >= 0 then fail () else R.reference_of_string (show c)
    | LPR.UVar ({LPR.contents=t;_},vardepth,args) when t != dummy    ->
-      get_constant depth (LPR.deref_uv ~from:vardepth ~to_:depth args t)
+      get_gref ~depth (LPR.deref_uv ~from:vardepth ~to_:depth args t)
    | LPR.AppUVar ({LPR.contents=t;_},vardepth,args) when t != dummy ->
-      get_constant depth (LPR.deref_appuv ~from:vardepth ~to_:depth args t)
-   | _ -> fail ()
+      get_gref ~depth (LPR.deref_appuv ~from:vardepth ~to_:depth args t)
+   | _                                                              -> fail ()
 
-let eqc = LPR.Constants.eqc
+let get_gref f ~depth t =
+   try f (get_gref ~depth t) with
+      | Failure "nth"
+      | Invalid_argument "List.nth"
+      | R.IllFormedReference _
+      | E.ObjectNotFound _
+      | LPR.No_clause           -> fail ()
 
 let t_step ~depth ~env:_ _ = function
    | [t1; t2] -> 
-      let r = R.reference_of_string (get_constant depth t1) in
-      begin match resolve_gref r with
-          | _, u -> [LPR.App (eqc, t2, [LPR.term_of_ast ~depth u])]
+      begin match get_gref rt_gref ~depth t1 with
+          | _, u1 -> [mk_eq (mk_term ~depth u1) t2]
       end
-   | _ -> fail ()
+   | _        -> fail ()
+
+let r_step ~depth ~env:_ _ = function
+   | [t1; t2] -> 
+      begin match get_gref rt_gref ~depth t1 with
+          | Some u1, _ -> [mk_eq (mk_term ~depth u1) t2]
+          | _          -> fail ()
+      end
+   | _        -> fail ()
+
+let constructor ~depth ~env:_ _ = function
+   | [t1; t2] -> 
+      begin match get_gref split_constructor ~depth t1 with
+          | Some j -> [mk_eq (mk_int ~depth j) t2]
+          | _      -> fail ()
+      end
+   | _        -> fail ()
 
 
 (* initialization ***********************************************************)
 
 let _ =
-   LPR.register_custom "$t+step" t_step
+   LPR.register_custom "$t+step" t_step;
+   LPR.register_custom "$r+step" r_step;
+   LPR.register_custom "$constructor" constructor
 
 let filenames = ["kernel_matita.elpi"; "pts_cic.elpi"]
 
