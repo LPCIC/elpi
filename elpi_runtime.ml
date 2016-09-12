@@ -200,7 +200,7 @@ let () = extend_printer pp_const (fun fmt i ->
   `Printed)
 
 let () = extend_printer pp_oref (fun fmt (id,t) ->
-  if UUID.equal id id_term then `Passed
+  if not (UUID.equal id id_term) then `Passed
   else
     let t : term = Obj.obj t in
     if t == dummy then Fmt.fprintf fmt "_"
