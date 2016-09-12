@@ -2370,7 +2370,7 @@ let ppmap fmt (g,l) =
 ;;
 
   (* Limited to bijections *)
-let align_frozen { arg2goal } e alignement ngoals =
+let align_frozen ({ arg2goal } as m) e alignement ngoals =
   if alignement = [] then () else begin
   [%spy "alignement-alignement" (fun fmt m ->
     Fmt.fprintf fmt "%a%!" (pplist pp_int ";") m) alignement];
@@ -2386,9 +2386,22 @@ let align_frozen { arg2goal } e alignement ngoals =
   if List.length gs <> List.length uniq_gs || List.length gs <> ngoals then
     error "Alignement invalid: 1 key per goal";
   let (bkey, bgoal), todo = List.hd kg, List.tl kg in
+  (* quick check for same key *)
+  let same_k = ref None in
   let mkconstlist l =
-    let l = lp_list_to_list l in
-    List.map (function Const x -> x | _ -> error "align on non var list") l in
+    let k, l =
+      match l with
+      | App(c,arg,args) when is_frozen c m -> Constants.of_dbl c, arg::args
+      | Const c as x when is_frozen c m -> x, [] 
+          (* XXX In this case we should spread apart all variables,
+           * or assert they are never compared/mixed (hard with dependent types *)
+      | _ -> Constants.dummy, lp_list_to_list l in
+    if !same_k == None then same_k := Some k;
+    if option_get !same_k != k then raise NoMatch;
+    List.map (function
+      | Const x -> x
+      | t -> error ("align on non var list: " ^
+                    Format.asprintf "%a" (ppterm 0 [] 0 e) t)) l in
   let bkey = mkconstlist e.(bkey) in
   let todo =
     List.map (fun (key, goal) -> goal, bkey, mkconstlist e.(key)) todo in
@@ -2408,6 +2421,7 @@ let align_frozen { arg2goal } e alignement ngoals =
     with Not_found -> ()
   ) e
   end
+;;
 
 (*
   let rec aux m a b =

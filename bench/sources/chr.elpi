@@ -8,17 +8,20 @@
 % term (lam x \ lam y \ X (app x y)) (arr X (arr A nat)), term (lam x \ X x) (arr bool B).
 % -- reason: (app x y) is not well typed when X and A are frozen
 
-mode term(i o) {
-  term (app X Y) B :- term X (arr A B), term Y A.
-  term (lam F) (arr A B) :- pi x\ term x A => term (F x) B.
-  term (?? as X) A :- $constraint (term X A) X.
-}
+mode (term i o).
+
+term (app X Y) B :- term X (arr A B), term Y A.
+term (lam F) (arr A B) :- pi x\ term x A => term (F x) B.
+term (?? as X) A :- $constraint (term X A) X.
 
 infixr ====> 126. % Implication where the l.h.s. is a list of propositions.
 
 constraint term {
-  rule [ (GX ?- term (?? X LX) TX) ] [ (GY ?- term (?? Y LY) TY) ] (CTXCONSTR, TX = TY) :-
-    X = Y, compatible GX LX GY LY CTXCONSTR.
+  rule (GX ?- term (?? X LX) TX)
+     \ (GY ?- term (?? Y LY) TY)
+     > X ~ Y
+     | (compatible GX LX GY LY CTXCONSTR)
+   <=> (CTXCONSTR, TX = TY).
 }
 
 %compatible A B C D E :- $print "##" (compatible A B C D E), fail.
@@ -32,3 +35,26 @@ compatible _ _ _ _ false.
 
     [] ====> T :- T.
 [X|XS] ====> T :- X => (XS ====> T).
+
+spy P :- $print "[" P, P, $print "]ok", !.
+spy P :- $print "]fail", fail.
+
+main :- 
+  (sigma X\
+    term b2n (arr bool nat) =>
+      (term (lam x \ X x) (arr A nat),
+       term (lam x \ X x) (arr bool B),
+       spy (not(X = x\x)),
+       spy (X = x\ app b2n x))),
+
+  (sigma X\sigma T1\sigma T2\sigma TY1\sigma TY2\
+    term b2n (arr bool nat) =>
+     (T1 = (lam f \ lam y \ X (app f y)), TY1 = (arr (arr A Y) (arr A nat)),
+      T2 = (lam x \ X x), TY2 = (arr bool B),
+      term T1 TY1, term T2 TY2,
+      spy (not(X = x\x)),
+      spy (X = x\ app b2n x),
+      $print T1 ":" TY1,
+      $print T2 ":" TY2)),
+
+  true.
