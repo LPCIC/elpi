@@ -2224,6 +2224,7 @@ let do_make_runtime : (unit -> runtime) ref =
 module Constraints : sig
     
   val propagation : constraint_def list ref -> (int * idx * term) list
+  val resumption : constraint_def list -> (int * idx * term) list
 
   val chrules : CHR.t Fork.local_ref
 
@@ -2783,6 +2784,12 @@ let propagate { CS.cstr; cstr_position } history =
 let incr_generation { CS.cstr; cstr_position } =
   { CS.cstr; cstr_position = cstr_position + 1 }
 
+let resumption to_be_resumed =
+  List.map (fun { depth = d; prog = p; goal = g } ->
+    let idx = match p with Index p -> p | _ -> assert false in
+    d, idx, g)
+  (List.rev to_be_resumed)
+
 let propagation to_be_resumed =
   let history = HISTORY.create 17 in
   while !CS.new_delayed <> [] do
@@ -2806,10 +2813,7 @@ let propagation to_be_resumed =
            (*List.iter add_constraint to_be_added*)
            to_be_resumed := to_be_added @ !to_be_resumed )
   done;
-  List.map (fun { depth = d; prog = p; goal = g } ->
-    let idx = match p with Index p -> p | _ -> assert false in
-    d, idx, g)
-  (List.rev !to_be_resumed)
+  resumption !to_be_resumed
 
 end (* }}} *)
 
@@ -2868,7 +2872,7 @@ begin Fmt.fprintf Fmt.std_formatter "Undo triggered by goal resumption\n%!";
   [%tcall next_alt alts]
 end
  | Some ((ndepth,np,ng)::goals) ->
-    run ndepth np ng (goals@(depth,p,g)::gs) next alts lvl
+    [%tcall run ndepth np ng (goals@(depth,p,g)::gs) next alts lvl]
  | Some [] ->
     match g with
     | c when c == C.cutc -> [%tcall cut p gs next alts lvl]
@@ -3017,8 +3021,9 @@ end;*)
    done ;
    (* Phase 2: we propagate the constraints *)
    if !ok then
+     (* Optimization: check here new_delayed *)
      if !CS.new_delayed <> [] then Some (Constraints.propagation to_be_resumed)
-     else Some []
+     else Some (Constraints.resumption !to_be_resumed)
    else None
 
   and next_alt alts =
