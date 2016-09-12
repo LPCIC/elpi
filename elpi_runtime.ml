@@ -2214,6 +2214,7 @@ let emptyalts : alternative = Obj.magic 0
 (* To break mutual recursion between  Constraints and runtime *)
 type start = ?pr_delay:bool -> ?depth:int ->
   idx -> query -> CHR.t -> mode_decl C.Map.t -> int -> alternative
+  (* XXX the last int (locals) and depth have to be understood *)
 and next = ?pr_delay:bool -> alternative -> alternative
 and no_delay = unit -> bool (* true = no leftover *)
 and runtime = start * next * no_delay 
@@ -2753,7 +2754,7 @@ let propagate { CS.cstr; cstr_position } history =
          | Some guard ->
             let query = [],max_depth,e,guard in
             (try
-              let _ = run ~depth:max_depth p query CHR.empty C.Map.empty ruledepth in
+              let _ = run ~depth:max_depth p query CHR.empty C.Map.empty max_depth in
               if not (no_delayed ()) then begin
                 anomaly "propagation rules must not $delay"
               end;
