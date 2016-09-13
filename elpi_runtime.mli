@@ -17,6 +17,9 @@ val execute_once : program -> query -> bool (* true means error *)
 val execute_loop : program -> query -> unit
 
 (* Extension API *)
+val cint: int Elpi_util.CData.cdata
+val cfloat: float Elpi_util.CData.cdata
+val cstring:  Elpi_ast.Func.t Elpi_util.CData.cdata
 type idx
 type constant = int (* De Brujin levels *)
 type term =
@@ -32,9 +35,7 @@ type term =
   | AppUVar of term_attributed_ref * (*depth:*)int * term list
   (* Misc: $custom predicates, ... *)
   | Custom of constant * term list
-  | String of Func.t
-  | Int of int
-  | Float of float
+  | CData of Elpi_util.CData.t
 and term_attributed_ref = {
   mutable contents : term;
   mutable rest : stuck_goal list;

@@ -64,129 +64,113 @@ let rec eval depth =
       try lookup_eval hd
       with Not_found -> anomaly (show hd ^ " not evaluable") in
      f []
-  | String _
-  | Int _
-  | Float _ as x -> x
+  | CData _ as x -> x
 ;;
 
 let register_evals l f = List.iter (fun i -> register_eval i f) l;;
 
 let _ =
-  register_eval "std_in" (fun args ->
-   match args with
-     [] -> Int cstdin
+  let open CData in
+  register_eval "std_in" (function
+   | [] -> CData (cint.cin cstdin)
    | _ -> type_error "Wrong arguments to stin") ;
-  register_eval "std_out" (fun args ->
-   match args with
-     [] -> Int cstdout
+  register_eval "std_out" (function
+   | [] -> CData (cint.cin cstdout)
    | _ -> type_error "Wrong arguments to stout") ;
-  register_eval "std_err" (fun args ->
-   match args with
-     [] -> Int cstderr
+  register_eval "std_err" (function
+   | [] -> CData (cint.cin cstderr)
    | _ -> type_error "Wrong arguments to sterr") ;
-  register_evals [ "-" ; "i-" ; "r-" ] (fun args ->
-   match args with
-     [ Int x ; Int y ] -> Int (x - y)
-   | [ Float x ; Float y ] -> Float (x -. y)
+  register_evals [ "-" ; "i-" ; "r-" ] (function
+   | [ CData x ; CData y ] when ty2 cint x y -> CData(morph2 cint (-) x y)
+   | [ CData x ; CData y ] when ty2 cfloat x y -> CData(morph2 cfloat (-.) x y)
    | _ -> type_error "Wrong arguments to -/i-/r-") ;
-  register_evals [ "+" ; "i+" ; "r+" ] (fun args ->
-   match args with
-     [ Int x ; Int y ] -> Int (x + y)
-   | [ Float x ; Float y ] -> Float (x +. y)
+  register_evals [ "+" ; "i+" ; "r+" ] (function
+   | [ CData x ; CData y ] when ty2 cint x y -> CData(morph2 cint (+) x y)
+   | [ CData x ; CData y ] when ty2 cfloat x y -> CData(morph2 cfloat (+.) x y)
    | _ -> type_error "Wrong arguments to +/i+/r+") ;
-  register_eval "*" (fun args ->
-   match args with
-     [ Int x ; Int y ] -> Int (x * y)
-   | [ Float x ; Float y ] -> Float (x *. y)
+  register_eval "*" (function
+   | [ CData x ; CData y ] when ty2 cint x y -> CData(morph2 cint ( * ) x y)
+   | [ CData x ; CData y ] when ty2 cfloat x y -> CData(morph2 cfloat ( *.) x y)
    | _ -> type_error "Wrong arguments to *") ;
-  register_eval "/" (fun args ->
-   match args with
-     [ Float x ; Float y ] -> Float (x /. y)
+  register_eval "/" (function
+   | [ CData x ; CData y ] when ty2 cfloat x y -> CData(morph2 cfloat ( /.) x y)
    | _ -> type_error "Wrong arguments to /") ;
-  register_eval "mod" (fun args ->
-   match args with
-     [ Int x ; Int y ] -> Int (x mod y)
+  register_eval "mod" (function
+   | [ CData x ; CData y ] when ty2 cint x y -> CData(morph2 cint (mod) x y)
    | _ -> type_error "Wrong arguments to mod") ;
-  register_eval "div" (fun args ->
-   match args with
-     [ Int x ; Int y ] -> Int (x / y)
+  register_eval "div" (function
+   | [ CData x ; CData y ] when ty2 cint x y -> CData(morph2 cint (/) x y)
    | _ -> type_error "Wrong arguments to div") ;
-  register_eval "^" (fun args ->
-   match args with
-     [ String x ; String y ] -> String (F.from_string (F.show x ^ F.show y))
+  register_eval "^" (function
+   | [ CData x ; CData y ] when ty2 cstring x y ->
+         CData(morph2 cstring
+           (fun x y -> F.(from_string (show x ^ show y))) x y)
    | _ -> type_error "Wrong arguments to ^") ;
-  register_evals [ "~" ; "i~" ; "r~" ] (fun args ->
-   match args with
-     [ Int x ] -> Int (-x)
-   | [ Float x ] -> Float (-. x)
+  register_evals [ "~" ; "i~" ; "r~" ] (function
+   | [ CData x ] when cint.isc x -> CData(morph1 cint (~-) x)
+   | [ CData x ] when cfloat.isc x -> CData(morph1 cfloat (~-.) x)
    | _ -> type_error "Wrong arguments to ~/i~/r~") ;
-  register_evals [ "abs" ; "iabs" ; "rabs" ] (fun args ->
-   match args with
-     [ Int x ] -> Int (abs x)
-   | [ Float x ] -> Float (abs_float x)
+  register_evals [ "abs" ; "iabs" ; "rabs" ] (function
+   | [ CData x ] when cint.isc x -> CData(map cint cint abs x)
+   | [ CData x ] when cfloat.isc x -> CData(map cfloat cfloat abs_float x)
    | _ -> type_error "Wrong arguments to abs/iabs/rabs") ;
-  register_eval "int_to_real" (fun args ->
-   match args with
-     [ Int x ] -> Float (float_of_int x)
+  register_eval "int_to_real" (function
+   | [ CData x ] when cint.isc x -> CData(map cint cfloat float_of_int x)
    | _ -> type_error "Wrong arguments to int_to_real") ;
-  register_eval "sqrt" (fun args ->
-   match args with
-     [ Float x ] -> Float (sqrt x)
+  register_eval "sqrt" (function
+   | [ CData x ] when cfloat.isc x -> CData(map cfloat cfloat sqrt x)
    | _ -> type_error "Wrong arguments to sqrt") ;
-  register_eval "sin" (fun args ->
-   match args with
-     [ Float x ] -> Float (sin x)
+  register_eval "sin" (function
+   | [ CData x ] when cfloat.isc x -> CData(map cfloat cfloat sqrt x)
    | _ -> type_error "Wrong arguments to sin") ;
-  register_eval "cos" (fun args ->
-   match args with
-     [ Float x ] -> Float (cos x)
+  register_eval "cos" (function
+   | [ CData x ] when cfloat.isc x -> CData(map cfloat cfloat cos x)
    | _ -> type_error "Wrong arguments to cosin") ;
-  register_eval "arctan" (fun args ->
-   match args with
-     [ Float x ] -> Float (atan x)
+  register_eval "arctan" (function
+   | [ CData x ] when cfloat.isc x -> CData(map cfloat cfloat atan x)
    | _ -> type_error "Wrong arguments to arctan") ;
-  register_eval "ln" (fun args ->
-   match args with
-     [ Float x ] -> Float (log x)
+  register_eval "ln" (function
+   | [ CData x ] when cfloat.isc x -> CData(map cfloat cfloat log x)
    | _ -> type_error "Wrong arguments to ln") ;
-  register_eval "floor" (fun args ->
-   match args with
-     [ Float x ] -> Int (int_of_float (floor x))
+  register_eval "floor" (function
+   | [ CData x ] when cfloat.isc x ->
+         CData(map cfloat cint (fun x -> int_of_float (floor x)) x)
    | _ -> type_error "Wrong arguments to floor") ;
-  register_eval "ceil" (fun args ->
-   match args with
-     [ Float x ] -> Int (int_of_float (ceil x))
+  register_eval "ceil" (function
+   | [ CData x ] when cfloat.isc x ->
+         CData(map cfloat cint (fun x -> int_of_float (ceil x)) x)
    | _ -> type_error "Wrong arguments to ceil") ;
-  register_eval "truncate" (fun args ->
-   match args with
-     [ Float x ] -> Int (truncate x)
+  register_eval "truncate" (function
+   | [ CData x ] when cfloat.isc x -> CData(map cfloat cint truncate x)
    | _ -> type_error "Wrong arguments to truncate") ;
-  register_eval "size" (fun args ->
-   match args with
-     [ String x ] -> Int (String.length (F.show x))
+  register_eval "size" (function
+   | [ CData x ] when cstring.isc x ->
+         CData(map cstring cint (fun x -> String.length (F.show x)) x)
    | _ -> type_error "Wrong arguments to size") ;
-  register_eval "chr" (fun args ->
-   match args with
-     [ Int x ] -> String (F.from_string (String.make 1 (char_of_int x)))
+  register_eval "chr" (function
+   | [ CData x ] when cint.isc x ->
+         CData(map cint cstring
+           (fun x -> F.from_string (String.make 1 (char_of_int x))) x)
    | _ -> type_error "Wrong arguments to chr") ;
-  register_eval "string_to_int" (fun args ->
-   match args with
-     [ String x ] when String.length (F.show x) = 1 ->
-       Int (int_of_char (F.show x).[0])
+  register_eval "string_to_int" (function
+   | [ CData x ] when cstring.isc x &&
+                      String.length (F.show (cstring.cout x)) = 1 ->
+       CData(map cstring cint (fun x -> int_of_char (F.show x).[0]) x)
    | _ -> type_error "Wrong arguments to string_to_int") ;
-  register_eval "substring" (fun args ->
-   match args with
-     [ String x ; Int i ; Int j ] when
-       i >= 0 && j >= 0 && String.length (F.show x) >= i+j ->
-       String (F.from_string (String.sub (F.show x) i j))
-   | _ -> type_error "Wrong arguments to substring") ;
-  register_eval "int_to_string" (fun args ->
-   match args with
-     [ Int x ] -> String (F.from_string (string_of_int x))
+  register_eval "substring" (function
+   | [ CData x ; CData i ; CData j ] when cstring.isc x && ty2 cint i j ->
+       let x = cstring.cout x and i = cint.cout i and j = cint.cout j in
+       if i >= 0 && j >= 0 && String.length (F.show x) >= i+j then
+         CData(cstring.cin (F.from_string (String.sub (F.show x) i j)))
+       else type_error "Wrong arguments to substring"
+   | _ -> type_error "Wrong argument type to substring") ;
+  register_eval "int_to_string" (function
+   | [ CData x ] when cint.isc x ->
+         CData(map cint cstring (fun x -> (F.from_string (string_of_int x))) x)
    | _ -> type_error "Wrong arguments to int_to_string") ;
-  register_eval "real_to_string" (fun args ->
-   match args with
-     [ Float x ] -> String (F.from_string (string_of_float x))
+  register_eval "real_to_string" (function
+   | [ CData x ] when cfloat.isc x ->
+         CData(map cfloat cstring (fun x -> F.from_string(string_of_float x)) x)
    | _ -> type_error "Wrong arguments to real_to_string")
 ;;
 
@@ -203,9 +187,15 @@ let really_input ic s ofs len =
   then invalid_arg "really_input"
   else unsafe_really_input 0 ic s ofs len
 
+type polyop = {
+  p : 'a. 'a -> 'a -> bool;
+  psym : string;
+  pname : string;
+}
+
 let _ =
-  register_custom "$delay" (fun ~depth ~env p args ->
-    match args with
+  let open CData in
+  register_custom "$delay" (fun ~depth ~env p -> function
     | [t1; t2] ->
       (match is_flex t2 with
         | Some v2 -> delay_goal ~depth p ~goal:t1 ~on:[v2]; []
@@ -219,8 +209,7 @@ let _ =
             delay_goal ~depth p ~goal:t1 ~on:v2; [])
     | _ -> type_error "$delay takes 2 arguments"
     );
-  register_custom "$constraint" (fun ~depth ~env p args ->
-    match args with
+  register_custom "$constraint" (fun ~depth ~env p -> function
     | [t1; t2] ->
       (match is_flex t2 with
         | Some v2 -> declare_constraint ~depth p ~goal:t1 ~on:[v2]; []
@@ -242,14 +231,14 @@ let _ =
     Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
      (pplist (uppterm depth [] 0 env) " ") args ;
     []) ;
-  register_custom "$counter" (fun ~depth ~env:_ _ args ->
-    match args with
+  register_custom "$counter" (fun ~depth ~env:_ _ -> function
     | [t1; t2] ->
+       let open CData in
        (match eval depth t1 with
-           String s ->
+           CData s when cstring.isc s ->
             (try
-              let v = Elpi_trace.get_cur_step (F.show s) in
-               [ App(eqc, t2, [Int v]) ]
+              let v = Elpi_trace.get_cur_step (F.show (cstring.cout s)) in
+               [ App(eqc, t2, [CData (cint.cin v)]) ]
              with Not_found -> raise No_clause)
          | _ -> type_error "bad argument to $counter")
     | _ -> type_error "$counter takes 2 arguments") ;
@@ -267,12 +256,10 @@ let _ =
     match args with
     | [t1] -> if is_flex t1 then [] else raise No_clause
     | _ -> type_error "$is_flex takes 1 argument") ;
-  register_custom "$gettimeofday" (fun ~depth ~env:_ _ args ->
-    match args with
-    | [t1] -> [ App (eqc, t1, [Float (Unix.gettimeofday ())]) ]
+  register_custom "$gettimeofday" (fun ~depth ~env:_ _ -> function
+    | [t1] -> [ App (eqc, t1, [CData(cfloat.cin (Unix.gettimeofday ()))])]
     | _ -> type_error "$gettimeofday takes 1 argument") ;
-  register_custom "$closed" (fun ~depth ~env:_ _ args ->
-    match args with
+  register_custom "$closed" (fun ~depth ~env:_ _ -> function
     | [t1] -> [ App (eqc, t1, [UVar(oref dummy,0,0)]) ]
     | _ -> type_error "$closed takes 1 argument") ;
   register_custom "$lt" (fun ~depth ~env:_ _ args ->
@@ -290,138 +277,136 @@ let _ =
         let is_lt = if t1 < 0 && t2 < 0 then t2 < t1 else t1 < t2 in
         if not is_lt then raise No_clause else []
     | _ -> type_error "$lt takes 2 arguments") ;
-  List.iter (fun (p,psym,pname) ->
-  register_custom pname (fun ~depth ~env:_ _ args ->
-    match args with
+  List.iter (fun { p; psym; pname } ->
+  register_custom pname (fun ~depth ~env:_ _ -> function
     | [t1; t2] ->
         let t1 = eval depth t1 in
         let t2 = eval depth t2 in
         (match t1,t2 with
-           Int _,    Int _
-         | Float _,  Float _
-         | String _, String _ ->
-            if not (p t1 t2) then raise No_clause else []
+         | CData x, CData y ->
+             if ty2 cint x y then let out = cint.cout in
+               if p (out x) (out y) then [] else raise No_clause
+             else if ty2 cfloat x y then let out = cfloat.cout in
+               if p (out x) (out y) then [] else raise No_clause
+             else if ty2 cstring x y then let out = cstring.cout in
+               if p (out x) (out y) then [] else raise No_clause
+             else 
+           type_error ("Wrong arguments to " ^ psym ^ " (or to " ^ pname^ ")")
          | _ ->
            type_error ("Wrong arguments to " ^ psym ^ " (or to " ^ pname^ ")"))
     | _ -> type_error (psym ^ " (or " ^ pname ^ ") takes 2 arguments"))
-  ) [(<),"<","$lt_" ; (>),">","$gt_" ; (<=),"=<","$le_" ; (>=),">=","$ge_"] ;
-  register_custom "$getenv" (fun ~depth ~env:_ _ args ->
-    match args with
+  ) [ { p = (<);  psym = "<";  pname = "$lt_" } ;
+      { p = (>);  psym = ">";  pname = "$gt_" } ;
+      { p = (<=); psym = "=<"; pname = "$le_" } ;
+      { p = (>=); psym = ">="; pname = "$ge_" } ] ;
+  register_custom "$getenv" (fun ~depth ~env:_ _ -> function
     | [t1; t2] ->
        (match eval depth t1 with
-           String s ->
+           CData s when cstring.isc s ->
             (try
-              let v = Sys.getenv (F.show s) in
-               [ App(eqc, t2, [String (F.from_string v)]) ]
+              let v = Sys.getenv (F.show (cstring.cout s)) in
+               [ App(eqc, t2, [CData(cstring.cin (F.from_string v))]) ]
              with Not_found -> raise No_clause)
          | _ -> type_error "bad argument to getenv (or $getenv)")
     | _ -> type_error "getenv (or $getenv) takes 2 arguments") ;
-  register_custom "$system" (fun ~depth ~env:_ _ args ->
-    match args with
+  register_custom "$system" (fun ~depth ~env:_ _ -> function
     | [t1; t2] ->
        (match eval depth t1 with
-           String s -> [ App (eqc, t2, [Int (Sys.command (F.show s))]) ]
+           CData s when cstring.isc s ->
+              [ App (eqc, t2, [CData (cint.cin (Sys.command (F.show (cstring.cout s))))]) ]
          | _ -> type_error "bad argument to system (or $system)")
     | _ -> type_error "system (or $system) takes 2 arguments") ;
-  register_custom "$is" (fun ~depth ~env:_ _ args ->
-    match args with
+  register_custom "$is" (fun ~depth ~env:_ _ -> function
     | [t1; t2] -> [ App (eqc, t1, [eval depth t2]) ]
     | _ -> type_error "is (or $is) takes 2 arguments") ;
-  register_custom "$open_in" (fun ~depth ~env:_ _ args ->
-    match args with
+  register_custom "$open_in" (fun ~depth ~env:_ _ -> function
     | [t1; t2] ->
        (match eval depth t1 with
-           String s ->
+           CData s when cstring.isc s ->
             (try
-              let v = open_in (F.show s) in
+              let v = open_in (F.show (cstring.cout s)) in
               let vv = add_in_stream v in
-               [ App(eqc, t2, [Int vv]) ]
+               [ App(eqc, t2, [CData (cint.cin vv)]) ]
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to open_in (or $open_in)")
     | _ -> type_error "open_in (or $open_in) takes 2 arguments") ;
-  register_custom "$open_out" (fun ~depth ~env:_ _ args ->
-    match args with
+  register_custom "$open_out" (fun ~depth ~env:_ _ -> function
     | [t1; t2] ->
        (match eval depth t1 with
-           String s ->
+           CData s when cstring.isc s ->
             (try
-              let v = open_out (F.show s) in
+              let v = open_out (F.show (cstring.cout s)) in
               let vv = add_out_stream v in
-               [ App(eqc, t2, [Int vv]) ]
+               [ App(eqc, t2, [CData (cint.cin vv)]) ]
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to open_out (or $open_out)")
     | _ -> type_error "open_out (or $open_out) takes 2 arguments") ;
-  register_custom "$open_append" (fun ~depth ~env:_ _ args ->
-    match args with
+  register_custom "$open_append" (fun ~depth ~env:_ _ -> function
     | [t1; t2] ->
        (match eval depth t1 with
-           String s ->
+           CData s when cstring.isc s ->
             (try
               let v =
                open_out_gen
                 [Open_wronly; Open_append; Open_creat; Open_text] 0x664
-                (F.show s) in
+                (F.show (cstring.cout s)) in
               let vv = add_out_stream v in
-               [ App(eqc, t2, [Int vv]) ]
+               [ App(eqc, t2, [CData (cint.cin vv)]) ]
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to open_append (or $open_append)")
     | _ -> type_error "open_append (or $open_append) takes 2 arguments") ;
-  register_custom "$open_string" (fun ~depth ~env:_ _ args ->
-    match args with
+  register_custom "$open_string" (fun ~depth ~env:_ _ -> function
     | [t1; t2] ->
        (match eval depth t1 with
-           String s ->
+           CData s when cstring.isc s ->
             (try
              let filename,outch = Filename.open_temp_file "elpi" "tmp" in
-             output_string outch (F.show s) ;
+             output_string outch (F.show (cstring.cout s)) ;
              close_out outch ;
              let v = open_in filename in
              Sys.remove filename ;
              let vv = add_in_stream v in
-              [ App(eqc, t2, [Int vv]) ]
+              [ App(eqc, t2, [CData(cint.cin vv)]) ]
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to open_in (or $open_in)")
     | _ -> type_error "open_in (or $open_in) takes 2 arguments") ;
-  register_custom "$close_in" (fun ~depth ~env:_ _ args ->
-    match args with
+  register_custom "$close_in" (fun ~depth ~env:_ _ -> function
     | [t1] ->
        (match eval depth t1 with
-           Int s ->
-            (try close_in (fst (get_in_stream s)); []
+           CData s when cint.isc s ->
+            (try close_in (fst (get_in_stream (cint.cout s))); []
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to close_in (or $close_in)")
     | _ -> type_error "close_in (or $close_in) takes 1 argument") ;
-  register_custom "$close_out" (fun ~depth ~env:_ _ args ->
-    match args with
+  register_custom "$close_out" (fun ~depth ~env:_ _ -> function
     | [t1] ->
        (match eval depth t1 with
-           Int s ->
-            (try close_out(get_out_stream s); [] with Sys_error msg->error msg)
+           CData s when cint.isc s ->
+            (try close_out(get_out_stream (cint.cout s)); []
+             with Sys_error msg->error msg)
          | _ -> type_error "bad argument to close_out (or $close_out)")
     | _ -> type_error "close_out (or $close_out) takes 1 argument") ;
-  register_custom "$output" (fun ~depth ~env:_ _ args ->
-    match args with
+  register_custom "$output" (fun ~depth ~env:_ _ -> function
     | [t1; t2] ->
        (match eval depth t1, eval depth t2 with
-           Int n, String s ->
-            (try output_string (get_out_stream n) (F.show s) ; []
+           CData n, CData s when cint.isc n && cstring.isc s ->
+            (try output_string (get_out_stream (cint.cout n))
+              (F.show (cstring.cout s)) ; []
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to output (or $output)")
     | _ -> type_error "output (or $output) takes 2 arguments") ;
-  register_custom "$term_to_string" (fun ~depth ~env _ args ->
-    match args with
+  register_custom "$term_to_string" (fun ~depth ~env _ -> function
     | [t1; t2] ->
        Format.fprintf Format.str_formatter "%a" (uppterm depth [] 0 env) t1 ;
        let s = Format.flush_str_formatter () in
-       [App(eqc,t2,[String (F.from_string s)])]
+       [App(eqc,t2,[CData(cstring.cin (F.from_string s))])]
     | _ -> type_error "term_to_string (or $term_to_string) takes 2 arguments");
-  register_custom "$string_to_term" (fun ~depth ~env _ args ->
-    match args with
+  register_custom "$string_to_term" (fun ~depth ~env _ -> function
     | [t1; t2] ->
        (match eval depth t1 with
-           String s ->
+           CData s when cstring.isc s ->
             (try
-              let s = Elpi_parser.parse_goal (F.show s) in
+              let s = Elpi_parser.parse_goal (F.show (cstring.cout s)) in
               let t = term_of_ast ~depth s in
               [App (eqc, t2, [t])]
              with
@@ -429,25 +414,24 @@ let _ =
               | Elpi_ast.NotInProlog -> prerr_endline "Beta redexes not allowed"; raise No_clause)
          | _ -> type_error "bad argument to string_to_term (or $string_to_term)")
     | _ -> type_error "string_to_term (or $string_to_term) takes 2 arguments");
-  register_custom "$flush" (fun ~depth ~env:_ _ args ->
-    match args with
+  register_custom "$flush" (fun ~depth ~env:_ _ -> function
     | [t1] ->
        (match eval depth t1 with
-           Int n ->
-            (try flush (get_out_stream n) ; []
+           CData n when cint.isc n ->
+            (try flush (get_out_stream (cint.cout n)) ; []
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to flush (or $flush)")
     | _ -> type_error "flush (or $flush) takes 2 arguments") ;
-  register_custom "$halt" (fun ~depth ~env:_ _ args ->
-    match args with
+  register_custom "$halt" (fun ~depth ~env:_ _ -> function
     | [] -> exit 0
     | _ -> type_error "halt (or $halt) takes 0 arguments") ;
-  register_custom "$input" (fun ~depth ~env:_ _ args ->
-    match args with
+  register_custom "$input" (fun ~depth ~env:_ _ -> function
     | [t1 ; t2 ; t3] ->
        (match eval depth t1, eval depth t2 with
-           Int s, Int n ->
+           CData s, CData n when ty2 cint s n ->
             (try
+              let n = cint.cout n in
+              let s = cint.cout s in
               let ch,lookahead = get_in_stream s in
               let buf = String.make n ' ' in
               let start,n =
@@ -457,17 +441,17 @@ let _ =
               let read = really_input ch buf start n in
               let str = String.sub buf 0 (read + start) in
               set_lookahead s None ;
-              [App (eqc, t3, [String (F.from_string str)])]
+              [App (eqc, t3, [CData (cstring.cin (F.from_string str))])]
              with 
               Sys_error msg -> error msg)
          | _ -> type_error "bad argument to input (or $input)")
     | _ -> type_error "input (or $input) takes 3 arguments") ;
-  register_custom "$input_line" (fun ~depth ~env:_ _ args ->
-    match args with
+  register_custom "$input_line" (fun ~depth ~env:_ _ -> function
     | [t1 ; t2] ->
        (match eval depth t1 with
-           Int s ->
+           CData n when cint.isc n ->
             (try
+              let s = cint.cout n in
               let ch,lookahead = get_in_stream s in
               let str = try input_line ch with End_of_file -> "" in
               set_lookahead s None ;
@@ -475,17 +459,17 @@ let _ =
                match lookahead with
                   None -> str
                 | Some c -> String.make 1 c ^ str in
-              [App (eqc, t2, [String (F.from_string str)])]
+              [App (eqc, t2, [CData (cstring.cin (F.from_string str))])]
              with 
               Sys_error msg -> error msg)
          | _ -> type_error "bad argument to input_line (or $input_line)")
     | _ -> type_error "input_line (or $input_line) takes 2 arguments") ;
-  register_custom "$lookahead" (fun ~depth ~env:_ _ args ->
-    match args with
+  register_custom "$lookahead" (fun ~depth ~env:_ _ -> function
     | [t1 ; t2] ->
        (match eval depth t1 with
-           Int s ->
+           CData n when cint.isc n ->
             (try
+              let s = cint.cout n in
               let ch,lookahead = get_in_stream s in
               let c =
                match lookahead with
@@ -497,17 +481,17 @@ let _ =
                      String.make 1 c
                     with End_of_file -> "")
               in
-              [App (eqc, t2, [String (F.from_string c)])]
+              [App (eqc, t2, [CData (cstring.cin (F.from_string c))])]
              with 
               Sys_error msg -> error msg)
          | _ -> type_error "bad argument to lookahead (or $lookahead)")
     | _ -> type_error "lookahead (or $lookahead) takes 2 arguments") ;
-  register_custom "$readterm" (fun ~depth ~env:_ _ args ->
-    match args with
+  register_custom "$readterm" (fun ~depth ~env:_ _ -> function
     | [t1 ; t2] ->
        (match eval depth t1 with
-           Int s ->
+           CData n when cint.isc n ->
             (try
+              let s = cint.cout n in
               let ch,lookahead = get_in_stream s in
               let strm = Stream.of_channel ch in
               let strm =
@@ -526,12 +510,12 @@ let _ =
   register_custom "$print_ast" (fun ~depth ~env:_ _ args -> 
     List.iter (Format.eprintf "%a" pp_term) args; []
   );
-  register_custom "$eof" (fun ~depth ~env:_ _ args ->
-    match args with
+  register_custom "$eof" (fun ~depth ~env:_ _ -> function
     | [t1] ->
        (match eval depth t1 with
-           Int s ->
+           CData n when cint.isc n ->
             (try
+              let s = cint.cout n in
               let ch,lookahead = get_in_stream s in
               match lookahead with
                  Some c -> raise No_clause

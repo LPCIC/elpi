@@ -48,9 +48,7 @@ let xppterm_prolog ~nice names env f t =
     | AppArg(_,_) -> assert false
     | Const s -> ppconstant f s
     | Lam t -> assert false;
-    | String str -> Fmt.fprintf f "\"%s\"" (F.show str)
-    | Int i -> Fmt.fprintf f "%d" i
-    | Float x -> Fmt.fprintf f "%f" x
+    | CData x -> CData.pp f x
   in
     aux f t
 ;;

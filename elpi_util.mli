@@ -101,3 +101,29 @@ val anomaly : string -> 'a
 (* If we type check the program, then these are anomalies *)
 val type_error : string -> 'a
 
+(* ****************** external data *****************)
+
+module CData : sig
+  type t
+
+  type 'a data_declaration = {
+    data_pp : Format.formatter -> 'a -> unit;
+    data_eq : 'a -> 'a -> bool;
+    data_hash : 'a -> int;
+  }
+
+  type 'a cdata = { cin : 'a -> t; isc : t -> bool; cout: t -> 'a }
+
+  val declare : 'a data_declaration -> 'a cdata
+  val pp : Format.formatter -> t -> unit
+  val equal : t -> t -> bool
+  val hash : t -> int
+
+  val morph1 : 'a cdata -> ('a -> 'a) -> t -> t
+
+  val ty2 : 'a cdata -> t -> t -> bool
+  val morph2 : 'a cdata -> ('a -> 'a -> 'a) -> t -> t -> t
+  
+  val map : 'a cdata -> 'b cdata -> ('a -> 'b) -> t -> t
+end
+

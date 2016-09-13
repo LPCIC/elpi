@@ -231,3 +231,46 @@ let pp_extensible_any r ~id fmt x =
   | `Printed -> ()
   | `Passed -> assert false
 
+module CData = struct
+  type t = {
+    t : Obj.t;
+    ty : int;
+  }
+
+  type 'a data_declaration = {
+    data_pp : Format.formatter -> 'a -> unit;
+    data_eq : 'a -> 'a -> bool;
+    data_hash : 'a -> int;
+  }
+
+  type 'a cdata = { cin : 'a -> t; isc : t -> bool; cout: t -> 'a }
+
+module M = Map.Make(struct type t = int let compare x y = x - y end)
+let m : t data_declaration M.t ref = ref M.empty
+
+let cget x = Obj.obj x.t
+let pp f x = (M.find x.ty !m).data_pp f x
+let equal x y = x.ty = y.ty && (M.find x.ty !m).data_eq x y
+let hash x = (M.find x.ty !m).data_hash x
+let ty2 { isc } ({ ty = t1 } as x) { ty = t2 } = isc x && t1 = t2
+
+let fresh_tid =
+  let tid = ref 0 in
+  fun () -> incr tid; !tid
+
+let declare { data_eq; data_pp; data_hash } =
+  let tid = fresh_tid () in
+  m := M.add tid { data_pp = (fun f x -> data_pp f (cget x));
+                   data_eq = (fun x y -> data_eq (cget x) (cget y));
+                   data_hash = (fun x -> data_hash (cget x));
+       } !m;
+  { cin = (fun v -> { t = Obj.repr v; ty = tid });
+    isc = (fun c -> c.ty = tid);
+    cout = (fun c -> assert(c.ty = tid); cget c) }
+
+  let morph1 { cin; cout } f x = cin (f (cout x))
+  let morph2 { cin; cout } f x y = cin (f (cout x) (cout y))
+  
+  let map { cout } { cin } f x = cin (f (cout x))
+end
+  

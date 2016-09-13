@@ -6,6 +6,25 @@ module Fmt = Format
 module F = Elpi_ast.Func
 open Elpi_util
 
+let { CData.cin = in_float; isc = is_float; cout = out_float } as cfloat =
+  CData.(declare {
+    data_pp = (fun f x -> Fmt.fprintf f "%f" x);
+    data_eq = (==);
+    data_hash = Hashtbl.hash;
+  })
+let { CData.cin = in_int; isc = is_int; cout = out_int } as cint =
+  CData.(declare {
+    data_pp = (fun f x -> Fmt.fprintf f "%d" x);
+    data_eq = (==);
+    data_hash = Hashtbl.hash;
+  })
+let { CData.cin = in_string; isc = is_string; cout = out_string } as cstring =
+  CData.(declare {
+    data_pp = (fun f x -> Fmt.fprintf f "\"%s\"" (F.show x));
+    data_eq = (==);
+    data_hash = Hashtbl.hash;
+  })
+
 (******************************************************************************
   Terms: data type definition and printing
  ******************************************************************************)
@@ -42,9 +61,7 @@ type term =
   | AppUVar of term_attributed_ref * (*depth:*)int * term list
   (* Misc: $custom predicates, ... *)
   | Custom of constant * term list
-  | String of F.t
-  | Int of int
-  | Float of float
+  | CData of CData.t
 and term_attributed_ref = {
   mutable contents : term [@printer (pp_extensible_any ~id:id_term pp_oref)];
   mutable rest : stuck_goal list [@printer fun _ _ -> ()]
@@ -428,9 +445,7 @@ let xppterm ~nice depth0 names argsdepth env f t =
         let c = C.of_dbl depth in
         Fmt.fprintf f "%a \\@ %a" (aux inf_prec depth) c
          (aux min_prec (depth+1)) t)
-    | String str -> Fmt.fprintf f "\"%s\"" (F.show str)
-    | Int i -> Fmt.fprintf f "%d" i
-    | Float x -> Fmt.fprintf f "%f" x
+    | CData d -> CData.pp f d
   in
     try aux min_prec depth0 f t with e -> Fmt.fprintf f "EXN PRINTING: %s" (Printexc.to_string e)
 ;;
@@ -749,9 +764,7 @@ let deterministic_restriction e ~args_safe t =
   | Arg (i,_) -> if e.(i) != C.dummy then aux e.(i)
   | AppArg (i,l) -> aux e.(i) ; List.iter aux l
   | Const _
-  | String _
-  | Int _
-  | Float _ -> ()
+  | CData _ -> ()
  in
   try aux t ; true
   with NonMetaClosed -> false
@@ -901,9 +914,7 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
     | Custom (c,l) ->
        let l' = smart_map (maux e depth) l in
        if l == l' then x else Custom (c,l')
-    | String _
-    | Int _
-    | Float _ -> x
+    | CData _ -> x
 
     (* fast path with no deref... *)
     | UVar _ when delta == 0 && avoid == None -> x
@@ -1093,9 +1104,7 @@ and subst fromdepth ts t =
       let args = List.map (aux depth) (args0@args) in
       mkAppUVar r vardepth args
    | Lam t -> Lam (aux (depth+1) t)
-   | String _
-   | Int _
-   | Float _ as x -> x
+   | CData _ as x -> x
    end] in
      aux fromdepthlen t
  end]
@@ -1124,7 +1133,7 @@ and beta depth sub t args =
               AppUVar (r,n,args1@args) end
          | AppUVar (r,depth,args1) -> AppUVar (r,depth,args1@args)
          | Lam _ -> anomaly "beta: some args and some lambdas"
-         | String _ | Int _ | Float _ -> type_error "beta"
+         | CData _ -> type_error "beta"
  end]
 
 (* eat_args n [n ; ... ; n+k] (Lam_0 ... (Lam_k t)...) = n+k+1,[],t
@@ -1190,9 +1199,7 @@ and deref_uv ?avoid ~from ~to_ args t =
         let args2 = C.mkinterval from args' 0 in
         let args = args1 @ args2 in
         AppUVar (r,vardepth,args)
-     | String _
-     | Int _
-     | Float _ -> t
+     | CData _ -> t
      | Arg _ | AppArg _ -> assert false (* Uv gets assigned only heap term *)
   end]
 
@@ -1212,7 +1219,7 @@ let rec is_flex =
   | UVar ({ contents = t }, _, _)
   | AppUVar ({ contents = t }, _, _) when t != C.dummy -> is_flex t
   | UVar (r, _, _) | AppUVar (r, _, _) -> Some r
-  | Const _ | Lam _ | App _ | Custom _ | String _ | Int _ | Float _ -> None
+  | Const _ | Lam _ | App _ | Custom _ | CData _ -> None
 
 (* Invariants:                                          |
    adepth: depth of a (query, heap term)                - bdepth       b
@@ -1323,7 +1330,7 @@ let bind r gamma l a d delta b left t e =
     | Lam t -> Lam (bind b delta (w+1) t)
     | App (c,t,ts) -> App (cst c b delta, bind b delta w t, List.map (bind b delta w) ts)
     | Custom (c, tl) -> Custom(c, List.map (bind b delta w) tl)
-    | String _ | Int _ | Float _ -> t
+    | CData _ -> t
     (* deref_uv *)
     | Arg (i,args) when e.(i) != C.dummy ->
         bind a 0 w (deref_uv ~from:a ~to_:(a+d+w) args e.(i))
@@ -1635,9 +1642,7 @@ let rec list_to_lp_list = function
    (*| Const c1, Const c2 when c1 < bdepth -> c1=c2
      | Const c, Const _ when c >= bdepth && c < adepth -> false
      | Const c1, Const c2 when c1 = c2 + delta -> true*)
-   | Int s1, Int s2 -> s1==s2
-   | Float s1, Float s2 -> s1 = s2
-   | String s1, String s2 -> s1==s2
+   | CData d1, CData d2 -> CData.equal d1 d2
    | _ -> false
    end]
 ;;
@@ -1741,18 +1746,10 @@ let key_of ~mode:_ ~depth =
   | Custom (k,_) -> k
   | Lam _ -> abstractionk
   | Arg _ | UVar _ | AppArg _ | AppUVar _ -> variablek
-  | String str -> 
-     let hash = -(Hashtbl.hash str) in
+  | CData d -> 
+     let hash = -(CData.hash d) in
      if hash > abstractionk then hash
-     else hash+2 
-  | Int i -> 
-     let hash = -(Hashtbl.hash i) in
-     if hash > abstractionk then hash
-     else hash+1024
-  | Float f -> 
-     let hash = -(Hashtbl.hash f) in
-     if hash > abstractionk then hash
-     else hash+1024 in           
+     else hash+2 (* ?? *) in           
  let rec key_of_depth = function
    Const k -> k, variablek
  | UVar ({contents=t},origdepth,args) when t != C.dummy ->
@@ -1763,7 +1760,7 @@ let key_of ~mode:_ ~depth =
  | App(k,arg,_) when k == C.asc -> key_of_depth arg
  | App (k,arg2,_) -> k, skey_of arg2
  | Custom _ -> assert false
- | Arg _ | AppArg _ | Lam _ | UVar _ | AppUVar _ | String _ | Int _ | Float _->
+ | Arg _ | AppArg _ | Lam _ | UVar _ | AppUVar _ | CData _->
     raise (Failure "Not a predicate")
  in
   key_of_depth
@@ -1848,7 +1845,7 @@ let close_with_pis depth vars t =
     | AppUVar(r,vardepth,args) ->
        assert false (* TODO, essentialy almost copy the code from move delta < 0 *)
     | Lam t -> Lam (aux t)
-    | (String _ | Int _ | Float _) as x -> x
+    | CData _ as x -> x
   in
   let rec add_pis n t =
    if n = 0 then t else App(C.pic,Lam (add_pis (n-1) t),[]) in
@@ -1932,9 +1929,7 @@ module UnifBits : Indexing = struct (* {{{ *)
       | UVar ({contents=t},origdepth,args) when t != C.dummy ->
          index lvl (deref_uv ~from:origdepth ~to_:depth args t) depth left right
       | Lam _ -> set_section abstractionk left right
-      | String s -> set_section (hash s) left right
-      | Int n -> set_section (hash n) left right
-      | Float n -> set_section (hash n) left right
+      | CData s -> set_section (CData.hash s) left right
       | Arg _ | UVar _ | AppArg _ | AppUVar _ ->
          if mode = `Clause then set_section fullones left right
          else set_section fullzeros left right
@@ -2049,7 +2044,7 @@ let rec term_map m = function
   | Arg _ as x -> x
   | AppArg(i,xs) -> AppArg(i,smart_map (term_map m) xs)
   | Custom(c,xs) -> Custom(c,smart_map (term_map m) xs)
-  | (Int _ | String _ | Float _) as x -> x
+  | CData _ as x -> x
 let rec split_conj = function
   | App(c, hd, args) when c == C.andc || c == C.andc2 ->
       split_conj hd @ List.(flatten (map split_conj args))
@@ -2138,7 +2133,7 @@ let clausify vars depth t =
          Const h -> h, []
        | App(h,x,xs) -> h, x::xs
        | Arg _ | AppArg _ -> assert false 
-       | Lam _ | Custom _ | String _ | Int _ | Float _ -> assert false
+       | Lam _ | Custom _ | CData _ -> assert false
        | UVar _ | AppUVar _ -> assert false
      in
      let all_modes =
@@ -2172,7 +2167,7 @@ let clausify vars depth t =
      claux vars depth hyps ts lts lcs
        (deref_appuv ~from ~to_:(depth+lts) args g)
   | Arg _ | AppArg _ -> anomaly "claux called on non-heap term"
-  | Lam _ | Custom _ | String _ | Int _ | Float _ ->
+  | Lam _ | Custom _ | CData _ ->
      error "Assuming a custom or string or int or float or function"
   | UVar _ | AppUVar _ -> error "Flexible assumption"
   end] in
@@ -2315,7 +2310,7 @@ let rec freeze ad m = function
   | Const _ as x -> m, x
   | Arg _ | AppArg _ -> anomaly "freeze ad: not an heap term"
   | Lam t -> let m, t = freeze (ad+1) m t in m, Lam t
-  | (Int _ | Float _ | String _) as x -> m, x
+  | CData _ as x -> m, x
   | Custom(c,xs) ->
       let m, xs = List.fold_right (fun x (m,l) ->
         let m, x = freeze ad m x in
@@ -2355,7 +2350,7 @@ let replace_const m t =
         App((try List.assoc c m with Not_found -> c),
             rcaux x, smart_map rcaux xs)
     | Custom(c,xs) -> Custom(c,smart_map rcaux xs)
-    | (String _ | Int _ | Float _ | UVar _) as x -> x
+    | (CData _ | UVar _) as x -> x
     | Arg _ | AppArg _ -> assert false
     | AppUVar(r,lvl,args) -> AppUVar(r,lvl,smart_map rcaux args) in
   [%spy "alignement-replace-in" pp_term t];
@@ -2503,7 +2498,7 @@ let thaw max_depth e m t =
          r @:= UVar(r',0,lvl);
          UVar (r', 0, 0)
       with Not_found -> orig)
-  | (Int _ | Float _ | String _) as x -> x
+  | CData _ as x -> x
   | Custom(c,ts) -> Custom(c,List.map (aux) ts)
   | Lam t -> Lam (aux t)
   | AppUVar(r,lvl,args) -> mkAppUVar r lvl (List.map (aux) args)
@@ -2550,7 +2545,7 @@ let lift_pat ~from ~to_ t =
      hmove ~from ~to_ x
   | AppUVar _ -> assert false
   | Custom(c,xs) -> Custom(c,List.map aux xs)
-  | (String _ | Int _ | Float _) as x -> x
+  | CData _ as x -> x
   in
     aux t
 ;;
@@ -2733,7 +2728,7 @@ let propagate { CS.cstr; cstr_position } history =
 
          let pp_action success ng =
            if success then
-           let pp_seq fmt (a,(_,b)) =
+           let _pp_seq fmt (a,(_,b)) =
              if a = [] then uppterm 0 [] 0 empty_env fmt b
              else
               Fmt.fprintf fmt "%a ?- %a"
@@ -2922,7 +2917,7 @@ end
        let cp = get_clauses depth g p in
        [%tcall backchain depth p g gs cp next alts lvl]
     | Arg _ | AppArg _ -> anomaly "Not a heap term"
-    | Lam _ | String _ | Int _ | Float _ -> type_error "Not a predicate"
+    | Lam _ | CData _ -> type_error "Not a predicate"
     | UVar _ | AppUVar _ -> error "Flexible predicate"
     | Custom(c, args) ->
        let f = try lookup_custom c with Not_found -> anomaly"no such custom" in
@@ -3188,9 +3183,9 @@ let rec stack_term_of_ast ?(inner=false) lvl amap cmap = function
      amap, Lam t'
   | Elpi_ast.App (Elpi_ast.App (f,l1),l2) ->
      stack_term_of_ast ~inner lvl amap cmap (Elpi_ast.App (f, l1@l2))
-  | Elpi_ast.String str -> amap, String str
-  | Elpi_ast.Int i -> amap, Int i 
-  | Elpi_ast.Float f -> amap, Float f 
+  | Elpi_ast.String str -> amap, CData (in_string str)
+  | Elpi_ast.Int i -> amap, CData (in_int i)
+  | Elpi_ast.Float f -> amap, CData (in_float f)
   | Elpi_ast.App (Elpi_ast.Lam _,_) -> error "Beta-redexes not in our language"
   | Elpi_ast.App (Elpi_ast.String _,_) -> type_error "Applied string value"
   | Elpi_ast.App (Elpi_ast.Int _,_) -> type_error "Applied integer value"
