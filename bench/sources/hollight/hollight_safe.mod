@@ -1,3 +1,5 @@
+% vim: set ft=lprolog:
+
 infixr --> 126. % type arrow
 infixl '   255. % infix application
 infixl ''  255. % infix System-F application
