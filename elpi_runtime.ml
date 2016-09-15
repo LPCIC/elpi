@@ -204,7 +204,7 @@ let dummy = App (-9999,cutc,[])
 
 module Self = struct
   type t = constant
-  let compare = compare
+  let compare x y = x - y
 end
 
 module Map = Map.Make(Self)
