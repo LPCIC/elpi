@@ -66,10 +66,10 @@ OC_OPTIONS = -linkpkg $(OCAMLOPTIONS) $(FLAGS)
 ELPI_DEPENDS = camlp5.$(CMXA) unix.$(CMXA) str.$(CMXA)
 
 ELPI_COMPONENTS = \
-  elpi_ast.$(CMX) elpi_parser.$(CMX) elpi_ptmap.$(CMX) \
-  elpi_util.$(CMX) elpi_trace.$(CMX) elpi_runtime.$(CMX) \
-  elpi_latex_exporter.$(CMX) \
-  elpi_prolog_exporter.$(CMX)
+  elpi_trace.$(CMX) \
+  elpi_util.$(CMX) elpi_ast.$(CMX) elpi_parser.$(CMX) elpi_ptmap.$(CMX) \
+  elpi_runtime.$(CMX) \
+  elpi_latex_exporter.$(CMX) elpi_prolog_exporter.$(CMX)
 
 elpi.cmxa: $(ELPI_COMPONENTS)
 	@echo OCAMLOPT -a $@
