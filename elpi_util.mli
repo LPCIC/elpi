@@ -80,7 +80,9 @@ module Fork : sig
   val new_local : 'a -> 'a local_ref
 
   type process = {
-    (* To run a function in the child process *)
+    (* To run a function f in the child process, no effect from f
+     * is visible after exec, but running f again trough the same exec
+     * (in the same process) sees such effects *)
     exec : 'a 'b. ('a -> 'b) -> 'a -> 'b;
 
     (* To get/set values from the memory of the child *)

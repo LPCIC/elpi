@@ -181,15 +181,18 @@ module Fork = struct
     let saved_globals = Global.backup () in 
     let my_globals = ref (Global.initial_backup ()) in
     let ensure_runtime f x =
+      [%spy "exec-begin" (fun _ _ -> ()) ()];
       Global.restore !my_globals;
       try
        let rc = f x in
        my_globals := Global.backup ();
        Global.restore saved_globals;
+       [%spy "exec-end" (fun _ _ -> ()) ()];
        rc
       with e ->
        my_globals := Global.backup ();
        Global.restore saved_globals;
+       [%spy "exec-end" (fun _ _ -> ()) ()];
        raise e in
     { exec = ensure_runtime;
       get = (fun p -> Global.get_value p !my_globals);
