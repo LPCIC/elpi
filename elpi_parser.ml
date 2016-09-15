@@ -352,6 +352,17 @@ let is_used n =
   res
 ;;
 
+let desugar_multi_binder = function
+  | App(Const hd as binder,args)
+    when Func.(equal hd pif || equal hd sigmaf) && List.length args > 1 ->
+      let last, rev_rest = let l = List.rev args in List.hd l, List.tl l in
+      let names = List.map (function
+        | Const x -> Func.show x
+        | _ -> Elpi_util.error "multi binder syntax") rev_rest in
+      let body = mkApp [binder;last] in
+      List.fold_left (fun bo name -> mkApp [binder;mkLam name bo]) body names
+  | t -> t
+;;
 
 EXTEND
   GLOBAL: lp goal;
@@ -490,7 +501,8 @@ EXTEND
   premise : [[ a = atom -> a ]];
   atom :
    [ "term"
-      [ hd = atom; args = LIST1 atom LEVEL "abstterm" -> mkApp (hd :: args) ]
+      [ hd = atom; args = LIST1 atom LEVEL "abstterm" ->
+         desugar_multi_binder (mkApp (hd :: args)) ]
    | "abstterm"
       [ c = CONSTANT; OPT [ COLON ; type_ ] ; b = OPT [ BIND; a = atom LEVEL "0" -> a ] ->
           (match b with
