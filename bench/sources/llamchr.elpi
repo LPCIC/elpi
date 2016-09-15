@@ -1,0 +1,57 @@
+mode (term i o).
+
+term (app X Y) B :- term X (arr A B), term Y A.
+term (lam A F) (arr A B) :- pi x\ term x A => term (F x) B.
+term (?? as X) A :- $constraint (term X A) X.
+term true bool.
+term false bool.
+term zero nat.
+term succ (arr nat nat).
+
+infixr ====> 126. % Implication where the l.h.s. is a list of propositions.
+
+constraint term {
+  rule (GX ?- term (?? _ LX as KX) TX)
+     \ (GY ?- term (?? _ LY as KY) TY)
+     > KX ~ KY
+     | (compatible GX LX GY LY CTXCONSTR)
+   <=> (CTXCONSTR, TX = TY).
+}
+
+% resilient to dummy ctx variables
+both_or_none P Q :- P, !, Q.
+both_or_none P Q :- not P, not Q.
+
+compatible _ [] _ [] true :- !.
+compatible GX [X|XS] GY [Y|YS] (TX = TY, K) :-
+ both_or_none (GX ====> term X TX) (GY ====> term Y TY),
+ !,
+ compatible GX XS GY YS K.
+compatible _ _ _ _ false.
+
+    [] ====> T :- T.
+[X|XS] ====> T :- X => (XS ====> T).
+
+spy P :- $print "[" P, P, $print "]ok", !.
+spy P :- $print "]fail", fail.
+
+mode (watch i).
+watch (?? as X) :- $constraint ($print "watch" X) X, !.
+watch X :- $print "watch" X.
+
+main :- 
+  % this is tricky becasuse X sees w, so CHR has to deal with a dirty context
+  pi w\ (sigma X A B C A' B' T1 T2 \ pi v\
+    term b2n (arr bool nat) =>
+      (T1 = (lam _ x \ lam _ y\ X x y),
+       T2 = (lam _ x \ lam _ y\ X y x),
+       term T1 (arr A (arr B nat)),
+       term T2 (arr A' (arr B' C)),
+       $print A A' B B' C "|" T1 "|" T2,
+       spy (X = x\y\ x),
+       $print A A' B B' C "|" T1 "|" T2,
+       spy (term (app T2 false) _),
+       $print A A' B B' C "|" T1 "|" T2)),
+  true.
+
+% vim: set ft=lprolog:
