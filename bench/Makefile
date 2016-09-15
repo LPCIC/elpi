@@ -66,6 +66,6 @@ plot:
 	$(H)echo Results: `ls $$PWD/*svg`
 
 prepare:
-	$(H)make -C ..
+	$(H)cd ..; make
 
 .PHONY: all prepare only plot
