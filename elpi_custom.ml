@@ -530,3 +530,42 @@ let _ =
          | _ -> type_error "bad argument to eof (or $eof)")
     | _ -> type_error "eof (or $eof) takes 1 argument") ;
 ;;
+
+let () =
+  let uty = CustomConstraints.declare_constraint
+    ~name:"universes"
+    ~pp:(fun _ _ -> ())
+    ~empty:UGraph.initial_universes in
+  let { CData.cin = in_lvl; isc = is_lvl; cout = out_lvl } as clvl =
+    CData.(declare {
+    data_pp = (fun f x -> Format.fprintf f "%s" (Univ.Level.to_string x));
+    data_eq = (fun x y -> UGraph.check_eq (CustomConstraints.read uty)
+      Univ.Universe.(make x) Univ.Universe.(make y));
+    data_hash = Univ.Level.hash;
+  }) in
+  let open CData in
+  let c = ref 0 in
+  register_custom "$univ_eq" (fun ~depth ~env:_ _ -> function
+    | [t1; t2] ->
+        let t1 = eval depth t1 in
+        let t2 = eval depth t2 in
+        (match t1,t2 with
+         | CData x, CData y when ty2 clvl x y ->
+             let x = clvl.cout x and y = clvl.cout y in
+             CustomConstraints.update uty (UGraph.enforce_constraint (x,Univ.Eq,y));
+             []
+         | _ -> type_error ("Wrong arguments to univ_eq"))
+    | _ -> type_error ("Wrong arguments to univ_eq"));
+  register_custom "$mk_univ" (fun ~depth ~env:_ _ -> function
+    | [t1] ->
+                    incr c;
+                    let l = Univ.Level.make "foo" !c in
+                    CustomConstraints.update uty (UGraph.add_universe l false);
+
+                    [ App(eqc, t1, [CData (clvl.cin l)]) ]
+    | _ -> type_error ("Wrong arguments to mk_univ"))
+
+;;
+
+
+        

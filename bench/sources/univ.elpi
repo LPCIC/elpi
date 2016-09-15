@@ -1,0 +1,7 @@
+% vim:set ft=lprolog:
+
+main :-
+  $mk_univ U1,
+  $mk_univ U2,
+  not(U1 = U2),
+  (( $univ_eq U1 U2, U1 = U2, $print "ok", fail) ; not(U1 = U2)).
