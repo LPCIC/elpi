@@ -80,6 +80,22 @@ module Constants :
   val dummy : term
  end
 
+
+module CustomConstraints : sig
+  type 'a constraint_type
+
+  (* Must be purely functional *)
+  val declare_constraint :
+    name:string ->
+    pp:(Format.formatter -> 'a -> unit) ->
+    empty:'a ->
+      'a constraint_type
+
+  val update : 'a constraint_type -> ('a -> 'a) -> unit
+  val read : 'a constraint_type -> 'a
+end
+
+
 (* Custom predicates like $print. Must either raise No_clause or succeed
    with the list of new goals *)
 val register_custom :

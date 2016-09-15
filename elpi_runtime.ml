@@ -6,6 +6,8 @@ module Fmt = Format
 module F = Elpi_ast.Func
 open Elpi_util
 
+module IM = Map.Make(struct type t = int let compare x y = x - y end)
+
 let { CData.cin = in_float; isc = is_float; cout = out_float } as cfloat =
   CData.(declare {
     data_pp = (fun f x -> Fmt.fprintf f "%f" x);
@@ -482,6 +484,22 @@ module ConstraintStoreAndTrail : sig
   val contents : unit -> constraint_def list
   val print : Fmt.formatter -> unit
 
+  module Custom : sig
+    type 'a constraint_type
+
+    (* Must be purely functional *)
+    val declare_constraint :
+      name:string ->
+      pp:(Fmt.formatter -> 'a -> unit) ->
+      empty:'a ->
+        'a constraint_type
+
+    val update : 'a constraint_type -> ('a -> 'a) -> unit
+    val read : 'a constraint_type -> 'a
+  end
+  type custom_constraints
+  val custom_constraints : custom_constraints Fork.local_ref
+
   (* ---------------------------------------------------- *)
 
   type trail_item =
@@ -492,8 +510,8 @@ module ConstraintStoreAndTrail : sig
   val pp_trail_item : Fmt.formatter -> trail_item -> unit
 
   (* Exposed to save a copy, not to modify  XXX 4.03 [@inline] get_trail *)
-  val trail : trail ref
-  val empty_trail : trail ref
+  val trail : trail Fork.local_ref
+  val empty_trail : trail Fork.local_ref
 
   (* If true, no need to trail an imperative action.  Not part of trial_this
    * because you can save allocations and a function call by testing locally *)
@@ -503,7 +521,8 @@ module ConstraintStoreAndTrail : sig
   val trail_this : trail_item -> unit
 
   (* backtrack *)
-  val undo : old_trail:trail -> unit
+  val undo :
+    old_trail:trail -> ?old_constraints:custom_constraints -> unit -> unit
 
   val print_trail : Fmt.formatter -> unit
 
@@ -519,6 +538,31 @@ end = struct (* {{{ *)
     cstr : constraint_def;
     cstr_position : int;
  }
+
+  type custom_constraints = Obj.t IM.t
+  let custom_constraints = Fork.new_local IM.empty
+  let custom_constraints_declarations = ref IM.empty
+  module Custom = struct
+    type 'a constraint_type = int
+
+    let cid = ref 0
+    let declare_constraint ~name ~pp ~empty =
+      incr cid;
+      custom_constraints_declarations :=
+        IM.add !cid (name,Obj.repr pp, Obj.repr empty) !custom_constraints_declarations;
+      !cid
+
+    let find id =
+      try IM.find id !custom_constraints
+      with Not_found ->
+        let _, _, init = IM.find id !custom_constraints_declarations in
+        init
+
+    let update id f =
+      custom_constraints :=
+        IM.add id (Obj.repr (f (Obj.obj (find id)))) !custom_constraints
+    let read id = Obj.obj (find id)
+  end
 
 type trail_item =
 | Assignement of term_attributed_ref
@@ -592,7 +636,7 @@ let remove_old_constraint cd =
     (function { kind = Constraint x } -> x == cd | _ -> false) !delayed in
   remove_old c
 
-let undo ~old_trail =
+let undo ~old_trail ?old_constraints () =
 (* Invariant: to_resume and new_delayed are always empty when a choice
    point is created. This invariant is likely to break in the future,
    when we allow more interesting constraints and constraint propagation
@@ -606,7 +650,10 @@ let undo ~old_trail =
     | StuckGoalAddition sg :: rest -> remove sg; trail := rest
     | StuckGoalRemoval sg :: rest -> add sg; trail := rest
     | [] -> anomaly "undo to unknown trail"
-  done
+  done;
+  match old_constraints with
+  | Some old_constraints -> custom_constraints := old_constraints
+  | None -> ()
 ;;
 
 let print fmt =
@@ -2213,6 +2260,7 @@ and alternative = {
   goals : goal list;
   stack : frame;
   trail : T.trail;
+  custom_constraints : T.custom_constraints;
   clauses : clause list;
   next : alternative
 }
@@ -2278,8 +2326,6 @@ let () = extend_printer pp_prolog_prog (fun fmt -> function
   | _ -> `Passed)
 let wrap_prolog_prog x = Index x
 let unwrap_prolog_prog = function Index x -> x | _ -> assert false
-
-module IM = Map.Make(struct type t = int let compare x y = x - y end)
 
 type freeze_map = {
   c2uv : (term_attributed_ref * int * term) C.Map.t;
@@ -2947,12 +2993,13 @@ end
          for_all3b (fun x y b -> unif ~matching:b depth env c.depth x y)
            args_of_g c.args c.mode false
         with
-        | false -> T.undo old_trail; [%tcall select cs]
+        | false -> T.undo old_trail (); [%tcall select cs]
         | true ->
            let oldalts = alts in
            let alts = if cs = [] then alts else
              { program = p; depth = depth; goal = g; goals = gs; stack = next;
-               trail = old_trail; clauses = cs; lvl = lvl ; next = alts} in
+               trail = old_trail; custom_constraints = !CS.custom_constraints;
+               clauses = cs; lvl = lvl ; next = alts} in
            begin match c.hyps with
            | [] ->
               begin match gs with
@@ -2973,6 +3020,7 @@ end
     (* cut the or list until the last frame not to be cut (called lvl) *)
     let rec prune alts = if alts == lvl then alts else prune alts.next in
     let alts = prune alts in
+    (* XXX what about custom constraints *)
     if alts == noalts then T.trail := !T.empty_trail;
     match gs with
     | [] -> pop_andl alts next lvl
@@ -3034,8 +3082,9 @@ end;*)
    if alts == noalts then raise No_clause
    else
     let { program = p; clauses = clauses; goal = g; goals = gs; stack = next;
-          trail = old_trail; depth = depth; lvl = lvl; next = alts} = alts in
-    T.undo old_trail;
+          trail = old_trail; custom_constraints = old_constraints;
+          depth = depth; lvl = lvl; next = alts} = alts in
+    T.undo ~old_trail ~old_constraints ();
     backchain depth p g gs clauses next alts lvl (* XXX *)
   in
 
@@ -3074,7 +3123,7 @@ end;*)
      let alts = next_alt alts in
      pr_constraints ();
      alts) in
-  let destroy () = exec (fun () -> T.undo ~old_trail:[]) () in
+  let destroy () = exec (fun () -> T.undo ~old_trail:[] ()) () in
   { search; next_solution; exec; get; destroy }
 ;;
 
@@ -3370,5 +3419,6 @@ let query_of_ast_cmap = Compiler.query_of_ast_cmap
 let term_of_ast = Compiler.term_of_ast
 let lp_list_to_list = Clausify.lp_list_to_list
 let split_conj = Clausify.split_conj
+module CustomConstraints = CS.Custom
 
 (* vim: set foldmethod=marker: *)
