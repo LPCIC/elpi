@@ -18,9 +18,10 @@ main :-
 
 `mode` lets one reuse the same code in different modes.
 When an argument is in `input` no unification variable is
-instantiated (matching, TO BE CLARIFIED: CSC is for only directly, Enrico
-is leaning toward a simple no, code does "no").  The mode directive
-has also the following effect on code generation
+instantiated, unless it comes from an output (non linear pattern).
+This is needed to make the `pp A A` line work.
+
+The mode directive has also the following effect on code generation
 
 - goal: parse/print/pp -> just run as is
 - hyp: pp -> index as pp, index as print and replace all occs of pp with print,
