@@ -32,8 +32,8 @@ let { CData.cin = in_string; isc = is_string; cout = out_string } as cstring =
 (* To break circularity, we open the index type (index of clauses) here
  * and extend it with the Index constructor when such data type will be
  * defined.  The same for chr with CHR.t *)
-type index = ..
-let pp_index = mk_extensible_printer ()
+type prolog_prog = ..
+let pp_prolog_prog = mk_extensible_printer ()
 type chr = ..
 let pp_chr = mk_extensible_printer ()
 
@@ -83,8 +83,8 @@ and unification_def = {
 }
 and constraint_def = {
   depth : int;
-  prog : index [@equal fun _ _ -> true]
-               [@printer (pp_extensible pp_index)];
+  prog : prolog_prog [@equal fun _ _ -> true]
+               [@printer (pp_extensible pp_prolog_prog)];
   pdiff : (int * term) list;
   goal : term;
 }
@@ -216,14 +216,6 @@ let () = extend_printer pp_const (fun fmt i ->
   Fmt.fprintf fmt "%s" (show i);
   `Printed)
 
-let () = extend_printer pp_oref (fun fmt (id,t) ->
-  if not (UUID.equal id id_term) then `Passed
-  else
-    let t : term = Obj.obj t in
-    if t == dummy then Fmt.fprintf fmt "_"
-    else pp_term fmt t;
-    `Printed)
-
 (* mkinterval d n 0 = [d; ...; d+n-1] *)
 let rec mkinterval depth argsno n =
  if n = argsno then []
@@ -247,7 +239,7 @@ type program = {
   (* n of sigma/local-introduced variables *)
   query_depth : int;
   (* the lambda-Prolog program: an indexed list of clauses *) 
-  idx : index [@printer (pp_extensible pp_index)];
+  prolog_program : prolog_prog [@printer (pp_extensible pp_prolog_prog)];
   (* constraint handling rules *)
   chr : chr [@printer (pp_extensible pp_chr)];
   modes : mode_decl C.Map.t; 
@@ -453,6 +445,14 @@ let xppterm ~nice depth0 names argsdepth env f t =
 let ppterm = xppterm ~nice:false
 let uppterm = xppterm ~nice:true
 
+let () = extend_printer pp_oref (fun fmt (id,t) ->
+  if not (UUID.equal id id_term) then `Passed
+  else
+    let t : term = Obj.obj t in
+    if t == C.dummy then Fmt.fprintf fmt "_"
+    else uppterm 0  [] 0 empty_env fmt t;
+    `Printed)
+
 end (* }}} *)
 open Pp
 
@@ -489,9 +489,11 @@ module ConstraintStoreAndTrail : sig
   | StuckGoalAddition of stuck_goal
   | StuckGoalRemoval of stuck_goal
   type trail = trail_item list
+  val pp_trail_item : Fmt.formatter -> trail_item -> unit
 
   (* Exposed to save a copy, not to modify  XXX 4.03 [@inline] get_trail *)
   val trail : trail ref
+  val empty_trail : trail ref
 
   (* If true, no need to trail an imperative action.  Not part of trial_this
    * because you can save allocations and a function call by testing locally *)
@@ -502,6 +504,8 @@ module ConstraintStoreAndTrail : sig
 
   (* backtrack *)
   val undo : old_trail:trail -> unit
+
+  val print_trail : Fmt.formatter -> unit
 
   (* ---------------------------------------------------- *)
 
@@ -520,10 +524,13 @@ type trail_item =
 | Assignement of term_attributed_ref
 | StuckGoalAddition of stuck_goal
 | StuckGoalRemoval of stuck_goal
+[@@deriving show]
 
 type trail = trail_item list
+[@@deriving show]
 
 let trail = Fork.new_local []
+let empty_trail = Fork.new_local []
 let last_call = Fork.new_local false;;
 
 module Ugly = struct let delayed : stuck_goal list ref = Fork.new_local [] end
@@ -531,7 +538,10 @@ open Ugly
 let contents () =
   map_filter (function { kind = Constraint c } -> Some c | _ -> None) !delayed
 
-let trail_this i = if not !last_call then trail := i :: !trail ;;
+let trail_this i = 
+  [%spy "trail-this" (fun fmt i ->
+     Fmt.fprintf fmt "last_call:%b item:%a" !last_call pp_trail_item i) i];
+  if not !last_call then trail := i :: !trail ;;
 
 let remove ({ blockers } as sg) =
  [%spy "remove" (fun fmt -> Fmt.fprintf fmt "%a" pp_stuck_goal) sg];
@@ -545,6 +555,11 @@ let add ({ blockers } as sg) =
 
 let new_delayed = Fork.new_local []
 let to_resume = Fork.new_local []
+
+let print_trail fmt =
+  pp_trail fmt !trail;
+  Fmt.fprintf fmt "to_resume:%d new_delayed:%d\n%!"
+    (List.length !to_resume) (List.length !new_delayed)
 
 let declare_new cstr =
   add cstr ;
@@ -583,6 +598,8 @@ let undo ~old_trail =
    when we allow more interesting constraints and constraint propagation
    rules. *)
   to_resume := []; new_delayed := [];
+  [%spy "trail-undo-from" pp_trail !trail];
+  [%spy "trail-undo-to" pp_trail old_trail];
   while !trail != old_trail do
     match !trail with
     | Assignement r :: rest -> r.contents <- C.dummy; trail := rest
@@ -620,11 +637,8 @@ module CS = ConstraintStoreAndTrail
 let (@:=) r v =
   if r.rest <> [] then
     begin
-     (*Fmt.fprintf Fmt.std_formatter
-       "@[<hov 2>%d delayed goal(s) to resume since@ %a <-@ %a@]@\n%!"
-          (List.length r.rest)
-          (ppterm 0 [] 0 empty_env) (UVar(r,0,0))
-          (ppterm 0 [] 0 empty_env) v;*)
+    [%spy "assign-to_resume" (fun fmt l ->
+        Fmt.fprintf fmt "%d" (List.length l)) r.rest];
      CS.to_resume := r.rest @ !CS.to_resume
     end;
  r.contents <- v
@@ -1434,7 +1448,8 @@ let rec list_to_lp_list = function
   | [] -> C.nilc
   | x::xs -> App(C.consc,x,[list_to_lp_list xs])
 ;;
- let rec unif matching depth adepth a bdepth b e =
+
+let rec unif matching depth adepth a bdepth b e =
    [%trace "unif" ("@[<hov 2>^%d:%a@ =%d%s= ^%d:%a@]%!"
        adepth (ppterm (adepth+depth) [] adepth empty_env) a
        depth (if matching then "m" else "")
@@ -1566,13 +1581,13 @@ let rec list_to_lp_list = function
       e.(i) <- fst (make_lambdas adepth args);
       [%spy "assign" (ppterm depth [] adepth empty_env) (e.(i))];
       unif matching depth adepth a bdepth b e
-   | _, UVar (r,origdepth,args) (*when not matching*) when args>0 ->
+   | _, UVar (r,origdepth,args) when args > 0 ->
       if not !T.last_call then
        T.trail := (T.Assignement r) :: !T.trail;
       r @:= fst (make_lambdas origdepth args);
       [%spy "assign" (ppterm depth [] adepth empty_env) (!!r)];
       unif matching depth adepth a bdepth b e
-   | UVar (r,origdepth,args), _ (*when not matching*) when args >0 ->
+   | UVar (r,origdepth,args), _ when args > 0 ->
       if not !T.last_call then
        T.trail := (T.Assignement r) :: !T.trail;
       r @:= fst (make_lambdas origdepth args);
@@ -1609,7 +1624,7 @@ let rec list_to_lp_list = function
        CS.declare_new { kind; blockers };
        true
        end
-   | other, AppUVar (r, lvl,args) when not matching ->
+   | other, AppUVar (r, lvl,args) ->
        let is_llam, args = is_llam lvl args adepth bdepth depth false e in
        if is_llam then
          bind r lvl args adepth depth delta bdepth false other e
@@ -2013,7 +2028,8 @@ end (* }}} *)
 open TwoMapIndexing
 type idx = TwoMapIndexing.idx
 
-let original_prolog_program = Fork.new_local (make_index [])
+(* Used to pass the program to the CHR runtime *)
+let orig_prolog_program = Fork.new_local (make_index [])
 
 (******************************************************************************
   Dynamic Prolog program
@@ -2200,22 +2216,39 @@ and alternative = {
   clauses : clause list;
   next : alternative
 }
-let emptyalts : alternative = Obj.magic 0
+let noalts : alternative = Obj.magic 0
 
 (******************************************************************************
   Constraint propagation
  ******************************************************************************)
 
-(* To break mutual recursion between  Constraints and runtime *)
-type start = ?pr_delay:bool -> ?depth:int ->
-  idx -> query -> CHR.t -> mode_decl C.Map.t -> int -> alternative
-  (* XXX the last int (locals) and depth have to be understood *)
-and next = ?pr_delay:bool -> alternative -> alternative
-and no_delay = unit -> bool (* true = no leftover *)
-and runtime = start * next * no_delay 
+(* A runtime is a function to search for the first solution to the query
+ * plus a function to find the next one.
+ * The low level part of the runtime give access to the runtime memory.
+ * One can for example execute code before starting the runtime and such
+ * code may have effects "outside" the runtime that are trailed.  The destroy
+ * function takes care of cleaning up the mess.
+ *
+ * The supported workflow is
+ *   exec          optional, many times
+ *   search        mandatory, 1 time
+ *   next          optional, repeat until No_clause is thrown
+ *   destroy       optional, 1 time, useful in nested runtimes
+ *)
 
-let do_make_runtime : (unit -> runtime) ref =
- ref (fun () -> anomaly "do_make_runtime not initialized")
+type runtime = {
+  search : query -> alternative;
+  next_solution : alternative -> alternative;
+
+  (* low level part *)
+  destroy : unit -> unit;
+  exec : 'a 'b. ('a -> 'b) -> 'a -> 'b;
+  get : 'a. 'a Fork.local_ref -> 'a;
+}
+
+         
+let do_make_runtime : (?print_constraints:bool -> program -> runtime) ref =
+ ref (fun ?print_constraints _ -> anomaly "do_make_runtime not initialized")
 
 module Constraints : sig
     
@@ -2232,91 +2265,105 @@ module Constraints : sig
   val declare_constraint :
     depth:int -> idx -> goal:term -> on:term_attributed_ref list -> unit
 
-  val wrap_index : idx -> index
-  val unwrap_index : index -> idx
+  val wrap_prolog_prog : idx -> prolog_prog
+  val unwrap_prolog_prog : prolog_prog -> idx
 
 end = struct (* {{{ *)
 
 exception NoMatch
 
-type index += Index of TwoMapIndexing.idx
-let () = extend_printer pp_index (fun fmt -> function
-  | Index _ -> Fmt.fprintf fmt "<index>";`Printed
+type prolog_prog += Index of TwoMapIndexing.idx
+let () = extend_printer pp_prolog_prog (fun fmt -> function
+  | Index _ -> Fmt.fprintf fmt "<prolog_prog>";`Printed
   | _ -> `Passed)
-let wrap_index x = Index x
-let unwrap_index = function Index x -> x | _ -> assert false
+let wrap_prolog_prog x = Index x
+let unwrap_prolog_prog = function Index x -> x | _ -> assert false
+
+module IM = Map.Make(struct type t = int let compare x y = x - y end)
 
 type freeze_map = {
-  uv2c : (term_attributed_ref * int * term * constant) list;
-  arg2goal : (int * int) list;
+  c2uv : (term_attributed_ref * int * term) C.Map.t;
+  arg2goal : int IM.t;
 }
 
-let empty_freeze_map = { uv2c = []; arg2goal = [] }
+exception Found of constant * term
 
-let freeze_uv r lvl ({ uv2c } as fm) =
-  let rec fuvaux = function
-    | [] ->
-       let n, x = C.fresh () in
-       [%spy "freeze-add" (fun fmt tt ->
-          Fmt.fprintf fmt "%s == %a" (C.show n) (ppterm 0 [] 0 empty_env) tt)
-          (UVar (r,lvl,0))];
-       { fm with uv2c = (r,lvl,x,n) :: uv2c }, x, n
-    | (x,_,t,c) :: rest -> if x == r then fm, t, c else fuvaux rest in
-  fuvaux uv2c
+(* This is linear, but a ref cannot be sorted nor hashed since it is moved
+ * by the Gc *)
+let uv2c r { c2uv } =
+  try
+    C.Map.iter (fun c (r',_,t) -> if r == r' then raise (Found(c,t))) c2uv;
+    raise Not_found
+  with Found(c, t) -> c, t
 
-let frozenc2uv p fm =
-  let rec f2uvaux = function
-    | [] -> raise Not_found
-    | (r,lvl,_,c) :: rest -> if c == p then r,lvl else f2uvaux rest in
-  f2uvaux fm.uv2c
+let empty_freeze_map = { c2uv = C.Map.empty; arg2goal = IM.empty }
 
-let frozenc2t p fm =
-  let rec f2taux = function
-    | [] -> raise Not_found
-    | (_,_,t,c) :: rest -> if c == p then t else f2taux rest in
-  f2taux fm.uv2c
+let freeze_uv r lvl ({ c2uv } as fm) =
+  try fm, uv2c r fm
+  with Not_found ->
+    let n, x as nx = C.fresh () in
+    [%spy "freeze-add" (fun fmt tt ->
+       Fmt.fprintf fmt "%s == %a" (C.show n) (ppterm 0 [] 0 empty_env) tt)
+       (UVar (r,lvl,0))];
+    { fm with c2uv = C.Map.add n (r,lvl,x) c2uv }, nx
+
+let frozenc2uv p { c2uv } = C.Map.find p c2uv
+let frozenc2t p { c2uv } = let _, _, t = C.Map.find p c2uv in t
 
 let is_frozen c m =
    try let _t = frozenc2t c m in true
    with Not_found -> false
 
-let rec freeze ad m = function
-  | UVar( { contents = t} , 0,0) when t != C.dummy -> freeze ad m t
-  | UVar( { contents = t} , vardepth, args) when t != C.dummy -> assert false
-(*      freeze ad m (deref_uv ~from:vardepth ~to_:ad args t)*)
-    
-  | AppUVar ( { contents = t }, _, _) when t != C.dummy -> assert false
-  | UVar( r, lvl, ano) ->
-     let m, c, n = freeze_uv r lvl m in
-     m, (match C.mkinterval 0 (lvl+ano) 0 with
-        | [] -> c
-        | [x] -> App(n,x,[])
-        | x::xs -> App(n,x,xs))
-  | AppUVar( r, lvl, args ) ->
-     let m, c, n = freeze_uv r lvl m in
-     let m, args = List.fold_right (fun x (m,l) ->
-        let m, x = freeze ad m x in
-        (m, x ::l)) args (m,[]) in
-     m, (match C.mkinterval 0 lvl 0 @ args with
-        | [] -> c
-        | [x] -> App(n,x,[])
-        | x::xs -> App(n,x,xs))
-  | App(c,x,xs) ->
-      let m, x = freeze ad m x in
-      let m, xs = List.fold_right (fun x (m,l) ->
-        let m, x = freeze ad m x in
-        (m, x ::l)) xs (m,[]) in
-      m, App(c,x,xs)
-  | Const _ as x -> m, x
-  | Arg _ | AppArg _ -> anomaly "freeze ad: not an heap term"
-  | Lam t -> let m, t = freeze (ad+1) m t in m, Lam t
-  | CData _ as x -> m, x
-  | Custom(c,xs) ->
-      let m, xs = List.fold_right (fun x (m,l) ->
-        let m, x = freeze ad m x in
-        (m, x ::l)) xs (m,[]) in
-      m, Custom(c,xs)
+let freeze ad m t =
+  let m = ref m in
+  let freeze_uv r lvl =
+    let m', nc = freeze_uv r lvl !m in
+    m := m';
+    nc in
+  let rec freeze ad orig = match orig with
+    | UVar( { contents = t} , 0,0) when t != C.dummy -> freeze ad t
+    | UVar( { contents = t} , vardepth, args) when t != C.dummy ->
+(*                     assert false; *)
+        freeze ad (deref_uv ~from:vardepth ~to_:ad args t)
+      
+    | AppUVar ( { contents = t }, _, _) when t != C.dummy -> assert false
+    | UVar( r, lvl, ano) ->
+       let n, c = freeze_uv r lvl in
+       (match C.mkinterval 0 (lvl+ano) 0 with
+       | [] -> c
+       | [x] -> App(n,x,[])
+       | x::xs -> App(n,x,xs))
+    | AppUVar( r, lvl, args ) ->
+       let n, c = freeze_uv r lvl in
+       let args = freeze_list ad args args in
+       (match C.mkinterval 0 lvl 0 @ args with
+       | [] -> c
+       | [x] -> App(n,x,[])
+       | x::xs -> App(n,x,xs))
+    | App(c,x,xs) ->
+        let x' = freeze ad x in
+        let xs' = freeze_list ad xs xs in
+        if x == x' && xs == xs' then orig else App(c,x',xs')
+    | Const _ -> orig
+    | Arg _ | AppArg _ -> anomaly "freeze ad: not an heap term"
+    | Lam t -> let t' = freeze (ad+1) t in if t == t' then orig else Lam t'
+    | CData _ -> orig
+    | Custom(c,xs) ->
+        let xs' = freeze_list ad xs xs in
+        if xs == xs' then orig else Custom(c,xs')
+  and freeze_list ad l orig =
+    match l with
+    | [] -> l
+    | x :: xs ->
+       let xs' = freeze_list ad xs (List.tl orig) in
+       let x' = freeze ad x in
+       if x == x' && xs == xs' then orig
+       else x' :: xs'
+  in
+  let t = freeze ad t in
+  !m, t
 ;;
+
 let freeze ad m t =
   [%spy "freeze-in"  (ppterm 0 [] 0 empty_env) t];
   let m, t' = freeze ad  m t in
@@ -2326,10 +2373,11 @@ let freeze ad m t =
 let freeze_matched_args goalno e argsdepth m =
   let m, _ =
     Array.fold_left (fun (m,i) ei ->
-      (if ei != C.dummy && not (List.mem_assoc i m.arg2goal) then (* XXX ugly, arg2goal also used to not-repeat twice the freeze *)
+      (if ei != C.dummy && not (IM.mem i m.arg2goal) then
+              (* XXX ugly, arg2goal also used to not-repeat twice the freeze *)
         let m, ei = freeze argsdepth m ei in
         e.(i) <- ei;
-        { m with arg2goal = (i,goalno) :: m.arg2goal }
+        { m with arg2goal = IM.add i goalno m.arg2goal }
       else
         m),i+1)
      (m,0) e in
@@ -2370,10 +2418,11 @@ let align_frozen ({ arg2goal } as m) e alignement ngoals =
   [%spy "alignement-alignement" (fun fmt m ->
     Fmt.fprintf fmt "%a%!" (pplist pp_int ";") m) alignement];
   [%spy "alignement-arg2goal" (fun fmt m ->
-    Fmt.fprintf fmt "%a%!" (pplist (pp_pair pp_int pp_int) ";") m) arg2goal];
+    Fmt.fprintf fmt "%a%!" (pplist (pp_pair pp_int pp_int) ";") m)
+     (IM.bindings arg2goal)];
   if List.length alignement <> List.length (uniq (List.sort compare alignement))
     then error "Alignement with duplicates";
-  let kg = List.map (fun i -> i,List.assoc i arg2goal) alignement in
+  let kg = List.map (fun i -> i,IM.find i arg2goal) alignement in
   let gs = List.map snd kg in
   [%spy "alignement-gs" (fun fmt m ->
     Fmt.fprintf fmt "%a%!" (pplist pp_int ";") m) gs];
@@ -2388,8 +2437,8 @@ let align_frozen ({ arg2goal } as m) e alignement ngoals =
       match l with
       | App(c,arg,args) when is_frozen c m -> Constants.of_dbl c, arg::args
       | Const c as x when is_frozen c m -> x, [] 
-          (* XXX In this case we should spread apart all variables,
-           * or assert they are never compared/mixed (hard with dependent types *)
+        (* XXX In this case we should spread apart all variables,
+         * or assert they are never compared/mixed (hard with dependent types *)
       | _ -> Constants.dummy, lp_list_to_list l in
     if !same_k == None then same_k := Some k;
     if option_get !same_k != k then raise NoMatch;
@@ -2409,53 +2458,13 @@ let align_frozen ({ arg2goal } as m) e alignement ngoals =
       (pplist ppmap ";") m) maps];
   Array.iteri (fun i value ->
     try
-      let goal = List.assoc i arg2goal in
+      let goal = IM.find i arg2goal in
       if goal <> bgoal then
         let map = List.assoc goal maps in 
         e.(i) <- replace_const map e.(i)
     with Not_found -> ()
   ) e
   end
-;;
-
-(*
-  let rec aux m a b =
-  [%trace "matching" ("%a = %a" (ppterm 0 [] 0 e) a (ppterm 0 [] 0 e) b)
-  begin match a,b with
-  | UVar( { contents = t}, 0, 0), _ when t != C.dummy -> aux m t b
-  | _, Arg(i,0) when e.(i) != C.dummy -> aux m a e.(i)
-  | t, Arg(i,0) -> let m, t = freeze m t in e.(i) <- t; m 
-  | t, App(c,Arg(i,0),[Arg(j,0)]) when c == destappc ->
-      let m, t = freeze m t in
-      (match t with
-      | Const f when is_frozen f m -> e.(i) <- a; e.(j) <- nilc; m
-      | App(f,x,xs) when is_frozen f m->
-         e.(i) <- list_assq21 f m; e.(j) <- list_to_lp_list (x::xs); m
-      | _ -> raise NoMatch)
-  | UVar( r,0,0), (Const _ as d) ->
-      (try
-        let c = fst (list_assq1 r m) in
-        if c == d then m else raise NoMatch
-      with Not_found -> raise NoMatch)
-  | App(c1,x,xs), App(c2,y,ys) when c1 == c2 ->
-      let m = aux m x y in
-      let m = List.fold_left2 aux m xs ys in
-      m
-  | Const c1, Const c2 ->
-      if c1 >= depth && c2 >= depth then if a == b then m else raise NoMatch
-      else
-        if a == b then m (* FIXME in the HO case *)
-        else
-          raise NoMatch
-  | _, AppArg _ -> assert false
-  | Lam a, Lam b -> aux m a b
-  | Int x, Int y when x == y -> m
-  | Float x, Float y when x = y -> m
-  | String x, String y when x == y -> m
-  | _ -> raise NoMatch
-  end] in
-    aux m a b
-*)
 ;;
 
 let thaw max_depth e m t =
@@ -2473,7 +2482,7 @@ let thaw max_depth e m t =
       e.(i) <- mkAppUVar (oref C.dummy) max_depth (List.map aux args); e.(i)
   | App(c,x,xs) ->
       (try
-        let r, lvl = frozenc2uv c m in
+        let r, lvl, _ = frozenc2uv c m in
         if List.length xs + 1 >= lvl then
          let _, xs = partition_i (fun i t ->
            if i < lvl then begin
@@ -2488,7 +2497,7 @@ let thaw max_depth e m t =
         App(c,aux x, List.map (aux) xs))
   | Const x as orig ->
      (try
-        let r, lvl = frozenc2uv x m in
+        let r, lvl, _ = frozenc2uv x m in
         if lvl = 0 then
          UVar(r,lvl,0)
         else
@@ -2555,13 +2564,11 @@ let chrules = Fork.new_local CHR.empty
 let delay_goal ?(filter_ctx=fun _ -> true) ~depth prog ~goal:g ~on:keys =
   let pdiff = local_prog prog in
   let pdiff = List.filter filter_ctx pdiff in
-(*
-  [%spy "delay-goal" (fun fmt (depth,x)-> Fmt.fprintf fmt
+  [%spy "delay-goal" (fun fmt x-> Fmt.fprintf fmt
     (*"Delaying goal: @[<hov 2> %a@ ⊢^%d %a@]\n%!"*)
     "@[<hov 2> ...@ ⊢^%d %a@]\n%!"
       (*(pplist (uppterm depth [] 0 empty_env) ",") pdiff*) depth
       (uppterm depth [] 0 empty_env) x) g];
-*)
   let kind = Constraint { depth; prog = Index prog; pdiff; goal = g } in
   CS.declare_new { kind ; blockers = keys }
 ;;
@@ -2569,6 +2576,7 @@ let delay_goal ?(filter_ctx=fun _ -> true) ~depth prog ~goal:g ~on:keys =
 let rec head_of = function
   | Const x -> x
   | App(x,_,_) -> x
+  | Custom(x,_) -> x
   | AppUVar(r,_,_)
   | UVar(r,_,_) when !!r != C.dummy -> head_of !!r
   | _ -> anomaly "strange head"
@@ -2636,15 +2644,16 @@ let propagate { CS.cstr; cstr_position } history =
     implication. Otherwise ~depth:0 is wrong and I do not see any
     reasonable semantics (i.e. a semantics where the scoping is not
     violated). For the same reason I took the propagate clauses from
-    the !original_prolog_program. *)
+    the !orig_prolog_program. *)
  let rules =
    let _,_,t = sequent_of_constr cstr in
    let hd = head_of t in
    CHR.rules_for hd !chrules in
 
- let p = !original_prolog_program in
+ let prolog_program = wrap_prolog_prog !orig_prolog_program in
+ let modes = !modes in
+ let chr = CHR.(wrap_chr empty) in
 
- let run,_,no_delayed = !do_make_runtime () in
  let no_such_j = ref true in
 
  let result =
@@ -2692,9 +2701,9 @@ let propagate { CS.cstr; cstr_position } history =
            p :: ctxs, (d,g) :: gs)
            constraints ([],[]) in
 
-       let patterns, e =
-         let patterns = List.map (sequent_of_pat ruledepth) patterns in
-         patterns, Array.make nargs C.dummy in
+       let patterns = List.map (sequent_of_pat ruledepth) patterns in
+
+       let e = Array.make nargs C.dummy in
 
        let patterns_contexts, patterns_goals =
          List.fold_right (fun (d,ctx,g) (ctxs, gs) ->
@@ -2706,85 +2715,69 @@ let propagate { CS.cstr; cstr_position } history =
          let t = hmove ~from:dt ~to_:max_depth t in
          let pat = lift_pat ~from:dp ~to_:max_depth pat in
          match_same_depth_and_freeze i e max_depth m t pat in
+
        let match_ctx i m lt (dp,pctx) =
          let lt = List.map (fun (d,t) -> hmove ~from:d ~to_:max_depth t) lt in
          let t = list_to_lp_list lt in
          let pctx = lift_pat ~from:dp ~to_:max_depth pctx in
          match_same_depth_and_freeze i e max_depth m t pctx in
 
-       try
-         [%spy "propagate-try-rule" (Elpi_ast.pp_chr pp_term C.pp) propagation_rule];
-         [%spy "propagate-try-on"
-            (pplist (pp_pair pp_int pp_term) ";") constraints_goals];
+       let program = { (* runs deep enough to let one use all pi-vars *)
+         chr; prolog_program; modes; query_depth = max_depth;
+       } in
+       let { search; get; exec; destroy } =
+         !do_make_runtime  ~print_constraints:false program in
+       let check = function
+         | None -> ()
+         | Some guard -> try
+             let _ = search ([],max_depth,e, guard) in
+             if get CS.Ugly.delayed <> [] then
+               error "propagation rules must not $delay"
+           with No_clause -> raise NoMatch in
 
-         let m = fold_left2i match_p empty_freeze_map constraints_goals patterns_goals in
+       let result = try
 
-         let m = fold_left2i match_ctx m constraints_contexts patterns_contexts in
-         align_frozen m e alignement patsno;
+         (* matching *)
+         let m = exec (fun m ->      
+           [%spy "propagate-trail" (fun fmt _ -> T.print_trail fmt) ()];
+           [%spy "propagate-try-rule"
+             (Elpi_ast.pp_chr pp_term C.pp) propagation_rule];
+           [%spy "propagate-try-on"
+             (pplist (pp_pair pp_int pp_term) ";") constraints_goals];
+
+           let m = fold_left2i match_p m
+             constraints_goals patterns_goals in
+           let m = fold_left2i match_ctx m
+             constraints_contexts patterns_contexts in
+           align_frozen m e alignement patsno;
+           [%spy "propagate-trail" (fun fmt _ -> T.print_trail fmt) ()];
+           T.to_resume := [];
+           assert(!T.new_delayed = []);
+           m) empty_freeze_map in
 
          [%spy "propagate-try-rule-guard" (fun fmt () -> Format.fprintf fmt 
-             "@[<hov 2>%a@]"
-              (pp_option (uppterm 0 [] 0 e)) condition) ()];
+             "@[<hov 2>%a@]" (pp_option (uppterm 0 [] 0 e)) condition) ()];
 
-         let pp_action success ng =
-           if success then
-           let _pp_seq fmt (a,(_,b)) =
-             if a = [] then uppterm 0 [] 0 empty_env fmt b
-             else
-              Fmt.fprintf fmt "%a ?- %a"
-               (pplist (uppterm 0 [] 0 empty_env) "; ") (List.map snd a)
-               (uppterm 0 [] 0 empty_env) b in
-(*
-           Fmt.eprintf
-             "CHR: @[<v>%a@ on   %a@ %s %a@]\n%!"
-              (Elpi_ast.pp_chr pp_term C.pp) propagation_rule
-              (pplist pp_seq " ")
-                (List.combine constraints_contexts constraints_goals)
-              (if success then "new " else "guard fails")
-              (uppterm 0 [] 0 e) ng
-*)
-()
-         in
+         (* guard *)
+         check condition;
 
+         (* result *)
          let _, constraints_to_remove =
            partition_i (fun i _ -> i < len_pats_to_match) orig_constraints in
-
-         match condition with
-         | None ->
-             begin match new_goal with
-             | None -> Some(constraints_to_remove, [])
-             | Some new_goal ->
-                let goal = lift_pat ~from:ruledepth ~to_:max_depth new_goal in
-                let goal = thaw max_depth e m goal in
-                pp_action true goal;
-                let prog, pdiff, depth = Index p, [], max_depth in
-                Some(constraints_to_remove, [ { depth; prog; pdiff; goal } ])
-             end
-         | Some guard ->
-            let query = [],max_depth,e,guard in
-            (try
-              let _ = run ~depth:max_depth p query CHR.empty C.Map.empty max_depth in
-              if not (no_delayed ()) then begin
-                anomaly "propagation rules must not $delay"
-              end;
-             begin match new_goal with
-             | None -> Some(constraints_to_remove, [])
-             | Some new_goal ->
-                 let goal = lift_pat ~from:ruledepth ~to_:max_depth new_goal in
-                 let goal = thaw max_depth e m goal in
-                 pp_action true goal;
-                 let prog, pdiff, depth = Index p, [], max_depth in
-                 Some(constraints_to_remove,[ { depth; prog; pdiff; goal }])
-             end
-            with No_clause ->
-              [%spy "propagate-try-rule-fail" (fun fmt () -> Format.fprintf fmt
-                "NoClause") ()];
-              pp_action false C.cutc;
-              None)
+         match new_goal with
+         | None -> Some(constraints_to_remove, [])
+         | Some new_goal ->
+             let goal = lift_pat ~from:ruledepth ~to_:max_depth new_goal in
+             let goal = thaw max_depth e m goal in
+             let prog, pdiff, depth = prolog_program, [], max_depth in
+             Some(constraints_to_remove, [ { depth; prog; pdiff; goal } ])
        with NoMatch ->
-         [%spy "propagate-try-rule-fail" (fun fmt () -> Format.fprintf fmt
-            "NoMatch") ()];
-         None)) in
+         [%spy "propagate-try-rule-fail" (fun _ _ -> ()) ()];
+         None
+       in
+       destroy ();
+       result))
+ in
  match result with
  | Some x -> `Matched x
  | None when !no_such_j -> `NoSuchJ
@@ -2797,6 +2790,7 @@ let incr_generation { CS.cstr; cstr_position } =
 let resumption to_be_resumed =
   List.map (fun { depth = d; prog = p; goal = g } ->
     let idx = match p with Index p -> p | _ -> assert false in
+    [%spy "propagation-resume" (fun fmt _ -> ()) ()];
     d, idx, g)
   (List.rev to_be_resumed)
 
@@ -2833,7 +2827,7 @@ end (* }}} *)
 
 module Mainloop : sig
 
-  val make_runtime : unit -> runtime
+  val make_runtime : ?print_constraints:bool -> program -> runtime
 
   val register_custom : string ->
     (depth:int -> env:term array -> idx -> term list -> term list) ->
@@ -2870,7 +2864,7 @@ let is_custom_declared x =
 
 (* The block of recursive functions spares the allocation of a Some/None
  * at each iteration in order to know if one needs to backtrack or continue *)
-let make_runtime : unit -> runtime =
+let make_runtime : ?print_constraints:bool -> program -> runtime =
 
   (* Input to be read as the orl (((p,g)::gs)::next)::alts
      depth >= 0 is the number of variables in the context. *)
@@ -2930,7 +2924,7 @@ end
   end]
 
   and backchain depth p g gs cp next alts lvl =
-    let maybe_last_call = alts == emptyalts in
+    let maybe_last_call = alts == noalts in
     let rec args_of = function
       | Const k -> k, []
       | App(k,x,xs) -> k, x::xs
@@ -2979,7 +2973,7 @@ end
     (* cut the or list until the last frame not to be cut (called lvl) *)
     let rec prune alts = if alts == lvl then alts else prune alts.next in
     let alts = prune alts in
-    if alts == emptyalts then T.trail := [];
+    if alts == noalts then T.trail := !T.empty_trail;
     match gs with
     | [] -> pop_andl alts next lvl
     | (depth, p, g) :: gs -> run depth p g gs next alts lvl
@@ -3037,7 +3031,7 @@ end;*)
    else None
 
   and next_alt alts =
-   if alts == emptyalts then raise No_clause
+   if alts == noalts then raise No_clause
    else
     let { program = p; clauses = clauses; goal = g; goals = gs; stack = next;
           trail = old_trail; depth = depth; lvl = lvl; next = alts} = alts in
@@ -3047,31 +3041,41 @@ end;*)
 
 
  (* Finally the runtime *)
- fun () ->
+ fun ?(print_constraints=true)
+     { query_depth = d; prolog_program = prog; chr; modes = mds } ->
   let { Fork.exec = exec ; get = get ; set = set } = Fork.fork () in
-  (fun ?(pr_delay=false) ?(depth=0) p (_,argsdepth,q_env,q) chr mds ->
-     set original_prolog_program p;
-     set Constraints.chrules chr;
-     set modes mds;
-     exec (fun lcs ->
-     let q = move ~adepth:argsdepth ~from:depth ~to_:depth q_env q in
-     let alts = run lcs p q [] FNil emptyalts emptyalts in
-     if pr_delay then begin
-       Fmt.fprintf Fmt.std_formatter "===== delayed ======\n%!";
-       CS.print Fmt.std_formatter;
-       Fmt.fprintf Fmt.std_formatter "====================\n%!";
-     end;
-     alts)),
-  (fun ?(pr_delay=false) alts ->
-     exec (fun alts -> 
-       let alts = next_alt alts in
-       if pr_delay then begin
-         Fmt.fprintf Fmt.std_formatter "===== delayed ======\n%!";
-         CS.print Fmt.std_formatter;
-         Fmt.fprintf Fmt.std_formatter "====================\n%!";
-       end;
-       alts) alts),
-  (fun () -> get CS.Ugly.delayed = [])
+  let depth = ref 0 in (* Initial depth, i.e. number of locals *)
+  let chr = CHR.unwrap_chr chr in
+  let prog = Constraints.unwrap_prolog_prog prog in
+  set orig_prolog_program prog;
+  set Constraints.chrules chr;
+  set modes mds;
+  set T.empty_trail [];
+  set T.trail !T.empty_trail;
+  set T.last_call false;
+  set CS.new_delayed [];
+  set CS.to_resume [];
+  set CS.Ugly.delayed [];
+  depth := d;
+  let pr_constraints () =
+    if not print_constraints then ();
+    Fmt.fprintf Fmt.std_formatter "===== delayed ======\n%!";
+    CS.print Fmt.std_formatter;
+    Fmt.fprintf Fmt.std_formatter "====================\n%!";
+    in
+  let search = exec (fun (_,adepth,q_env,q) ->
+     let q = move ~adepth ~depth:adepth ~from:adepth ~to_:adepth q_env q in
+     [%spy "run-trail" (fun fmt _ -> T.print_trail fmt) ()];
+     T.empty_trail := !T.trail;
+     let alts = run !depth !orig_prolog_program q [] FNil noalts noalts in
+     pr_constraints ();
+     alts) in
+  let next_solution = exec (fun alts -> 
+     let alts = next_alt alts in
+     pr_constraints ();
+     alts) in
+  let destroy () = exec (fun () -> T.undo ~old_trail:[]) () in
+  { search; next_solution; exec; get; destroy }
 ;;
 
 do_make_runtime := make_runtime;;
@@ -3309,7 +3313,7 @@ let program_of_ast ?(print=false) (p : Elpi_ast.decl list) : program =
   if cmapstack <> [] then error "Begin without an End" else clauses,lcs,chr in
  let clausesrev,lcs,chr = aux 0 p CHR.empty in
  { query_depth = lcs;
-   idx = Constraints.wrap_index (make_index (List.rev clausesrev));
+   prolog_program = Constraints.wrap_prolog_prog (make_index (List.rev clausesrev));
    chr = CHR.wrap_chr chr;
    modes = !modes}
 ;;
@@ -3320,18 +3324,15 @@ end (* }}} *)
   API
  ******************************************************************************)
 
-let execute_once { query_depth = depth; idx = p; chr; modes } q =
- let run, cont, _ = make_runtime () in
- try ignore (run ~pr_delay:true (Constraints.unwrap_index p) q (CHR.unwrap_chr chr) modes depth) ; false
+let execute_once program q =
+ let { search } = make_runtime ~print_constraints:true program in
+ try ignore (search q) ; false
  with No_clause (*| Non_linear*) -> true
 ;;
 
-let execute_loop
-  { query_depth = depth; idx = p; chr; modes }
-  ((q_names,q_argsdepth,q_env,q) as qq) 
-=
- let run, cont, _ = make_runtime () in
- let k = ref emptyalts in
+let execute_loop program ((q_names,q_argsdepth,q_env,q) as qq) =
+ let { search; next_solution } = make_runtime ~print_constraints:true program in
+ let k = ref noalts in
  let do_with_infos f x =
   let time0 = Unix.gettimeofday() in
   f x ;
@@ -3341,17 +3342,17 @@ let execute_loop
     (ppterm depth q_names q_argsdepth q_env) q ;*)
   Fmt.eprintf "Result: \n%!" ;
   List.iteri (fun i name -> Fmt.eprintf "@[<hov 1>%s=%a@]\n%!" name
-   (uppterm depth q_names 0 q_env) q_env.(i)) q_names;
+   (uppterm program.query_depth q_names 0 q_env) q_env.(i)) q_names;
   Fmt.eprintf "Raw result: \n%!" ;
   List.iteri (fun i name -> Fmt.eprintf "@[<hov 1>%s=%a@]\n%!" name
-   (ppterm depth q_names 0 q_env) q_env.(i)) q_names;
+   (ppterm program.query_depth q_names 0 q_env) q_env.(i)) q_names;
   in
- do_with_infos (fun _ -> k := (run ~pr_delay:true (Constraints.unwrap_index p) qq (CHR.unwrap_chr chr) modes depth)) ();
- while !k != emptyalts do
+ do_with_infos (fun x -> k := search x) qq;
+ while !k != noalts do
    prerr_endline "More? (Y/n)";
-   if read_line() = "n" then k := emptyalts else
-    try do_with_infos (fun _ -> k := cont ~pr_delay:true !k) ()
-    with No_clause -> prerr_endline "Fail"; k := emptyalts
+   if read_line() = "n" then k := noalts else
+    try do_with_infos (fun _ -> k := next_solution !k) ()
+    with No_clause -> prerr_endline "Fail"; k := noalts
  done
 ;;
 
