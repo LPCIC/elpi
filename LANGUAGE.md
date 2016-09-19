@@ -62,7 +62,8 @@ pp4 (?? K L as V) :-  $print "a flexible term " V.
 ```
 Only `V` is a proper term, `K` and `L` are not.
 
-The `as` clause is available everywhere, not just in matching mode.
+The `as` clause is available everywhere, not just in matching mode,
+but not on the top level term: `foo X as G :- ..` is not supported (error NYI).
 
 ## delay and constraint
 
@@ -196,4 +197,13 @@ This time `LX` and `LY` are used to align the goals and it is now legit
 to inject `TX = TY` in the main runtime.  This fails if something like
 `term (X (app f y)) T` gets suspended, since alignment only works
 in the l-lambda fragment.
+
+## Sugar
+
+- `sigma X Y\ t` is expanded to `sigma X\ sigma Y\ t`.
+- `pi x y\ t` is expanded to `pi x\ pi y\ t`.
+
+- `constraint (foo X) on X` is expanded to
+  `foo (?? as X) :- $constraint (foo X) X`
+
 
