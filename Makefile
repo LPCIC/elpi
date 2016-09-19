@@ -15,7 +15,7 @@ OCAMLOPTIONS= -g
 CMX=cmx
 CMXA=cmxa
 OC=OCAMLPATH=$(PWD) ocamlfind ocamlopt
-OD=OCAMLPATH=$(PWD) ocamlfind ocamldep
+OD=OCAMLPATH=$(PWD) ocamlfind ocamldep -native
 H=@
 
 all: check-ocaml-ver
