@@ -358,16 +358,17 @@ let flag = ref false;;
 
 let activate () = flag := true;;
 
-let export_clause cl =
+let export_clause { Elpi_ast.body = cl ; id } =
  if not !flag then ()
  else begin
+  let id = match id with Some x -> x | _ -> "" in
   let clpair = eta_expand_clause cl in
   let create_pairs = create_context (fst clpair,snd clpair) in
   let fst_ = fst create_pairs in
   let snd_ = snd create_pairs in (*list of fresh vars*)
   let pair_var_metalist = not_in snd_ fst_ in
   let fresh_vars = print_label pair_var_metalist in
-  let label = if fresh_vars = "" then "" else
+  let label = id ^ if fresh_vars = "" then "" else
    "\\tiny\n\\begin{tabular}{l}\n" ^ fresh_vars ^ "\n\\end{tabular} \n" in
   let consequence = export_pair (None,fst clpair) in
   let axioms = List.fold_right (fun cl1 l1 -> (export_pair cl1) ^ " \\\\ " ^ l1 ) fst_ "" in

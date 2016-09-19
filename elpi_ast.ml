@@ -68,7 +68,11 @@ let mkSeq l =
   aux l
 let mkIs x f = App(Const Func.isf,[x;f])
 
-type clause = term [@@deriving show]
+type clause = {
+  id : string option;
+  insert : ([ `Before | `After ] * string) option;
+  body : term;
+}[@@deriving show]
 
 type ('term,'func_t) chr = {
   to_match : ('term * 'term) list;

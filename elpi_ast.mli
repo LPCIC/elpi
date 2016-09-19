@@ -46,7 +46,11 @@ val pp_term : Format.formatter -> term -> unit
 val show_term : term -> string
 
 
-type clause = term
+type clause = {
+  id : string option;
+  insert : ([ `Before | `After ] * string) option;
+  body : term;
+}
 type ('term,'func_t) chr = {
   to_match : ('term * 'term) list;
   to_remove : ('term * 'term) list;

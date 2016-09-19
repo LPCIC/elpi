@@ -269,7 +269,7 @@ and literatecomment c = parser
       let list_str = Str.split (Str.regexp " +") buf in
       (match list_str with
        | [s1;s2] -> set_liter_map s1 s2; 
-       | _ -> prerr_endline ("Wrong syntax: " ^ buf); exit 1);
+       | _ -> prerr_endline ("Wrong syntax: literate comment: " ^ buf); exit 1);
   (*   print_lit_map (); *)
   (*   prerr_endline buf; (*register imperatively*) *)
       lex c s
@@ -402,10 +402,19 @@ EXTEND
          | App(Const x,[a;b]) when Func.equal x Func.sequentf -> a, b
          | _ -> mkFreshUVar (), t1
     ]];
+  clname : [[ COLON; CONSTANT "name";
+              name = [ c = CONSTANT -> c | l = LITERAL -> l] -> name ]];
+  clinsert :
+     [[ COLON; CONSTANT "before";
+              name = [ c = CONSTANT -> c | l = LITERAL -> l] -> `Before, name
+      | COLON; CONSTANT "after";
+              name = [ c = CONSTANT -> c | l = LITERAL -> l] -> `After, name
+    ]];
   clause :
-    [[ f = atom; FULLSTOP ->
-       (!PointerFunc.latex_export).PointerFunc.export f ;
-       [Clause f]
+    [[ id = OPT clname; insert = OPT clinsert; f = atom; FULLSTOP ->
+       let c = { id; insert; body = f } in
+       (!PointerFunc.latex_export).PointerFunc.export c ;
+       [Clause c]
      | LCURLY -> [Begin]
      | RCURLY -> [End]
      | MODE; m = LIST1 mode SEP SYMBOL ","; FULLSTOP -> [Mode m]

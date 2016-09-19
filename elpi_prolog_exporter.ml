@@ -82,7 +82,7 @@ let rec pp_FOprolog p =
     | Chr _
     | End -> assert false (* TODO *)
     | Accumulated l -> pp_FOprolog l
-    | Clause t ->
+    | Clause { Elpi_ast.body = t } ->
        (* BUG: ConstMap.empty because "local" declarations are ignored ATM *)
        let names,_,env,t = query_of_ast_cmap 0 Func.Map.empty t in
        match t with

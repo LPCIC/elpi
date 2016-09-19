@@ -3290,11 +3290,52 @@ let chr_of_ast depth cmap r =
   let nargs = amap.max_arg in
   { to_match; to_remove; guard; new_goal; alignement; depth; nargs }
 
+let sort_insertion l =
+  let rec insert loc name c = function
+    | [] -> error ("no clause named " ^ name)
+    | { Elpi_ast.id = Some n } as x :: xs when n = name ->
+         if loc = `Before then c :: x :: xs
+         else x :: c :: xs
+    | x :: xs -> x :: insert loc name c xs in
+  let rec aux acc = function
+    | [] -> acc
+    | { Elpi_ast.insert = Some (loc,name) } as x :: xs ->
+          aux (insert loc name x acc) xs
+    | x :: xs -> aux (acc @ [x]) xs
+  in
+  aux [] l
+
+type comp_state = {
+  program : clause list;
+  lcs : int;
+  chr : CHR.t;
+  clique : CHR.clique option;  
+  
+  block : Elpi_ast.clause list;
+  cmap : term F.Map.t;
+  (* nesting *)
+  ctx : (Elpi_ast.clause list * term F.Map.t) list;
+}
+
 let program_of_ast ?(print=false) (p : Elpi_ast.decl list) : program =
- let rec aux lcs clauses chr =
-  let clauses,lcs,chr,_,cmapstack,_ =
-   List.fold_left
-    (fun (clauses,lcs,chr,cmap,cmapstack,clique) d ->
+ let clausify_block program block lcs cmap =
+   let l = sort_insertion block in
+   let clauses, lcs = List.fold_left (fun (clauses,lcs) { Elpi_ast.body } ->
+      let names,_,env,t = query_of_ast_cmap lcs cmap body in
+      if print then Fmt.eprintf "%a.@;" (uppterm 0 names 0 env) t;
+      let moreclauses, morelcs = clausify (Array.length env) lcs t in
+      clauses @ List.rev moreclauses, lcs + morelcs
+     ) ([],lcs) l in
+   program @ clauses, lcs
+ in
+ let clauses, lcs, chr =
+   let rec aux ({ program; cmap; block; lcs; chr; clique; ctx } as cs)= function
+   | [] ->
+       if ctx <> [] then error "Begin without an End";
+       let program, lcs = clausify_block program block lcs cmap in
+       program, lcs, chr
+
+   | d :: todo ->
       match d with
       | Elpi_ast.Chr r ->
           let clique =
@@ -3303,24 +3344,22 @@ let program_of_ast ?(print=false) (p : Elpi_ast.decl list) : program =
             | Some c -> c in
           let rule = chr_of_ast lcs cmap r in
           let chr = CHR.add_rule clique rule chr in
-         (clauses,lcs,chr,cmap,cmapstack,Some clique)
-      | Elpi_ast.Clause t ->
-          let names,_,env,t = query_of_ast_cmap lcs cmap t in
-          if print then Fmt.eprintf "%a.@;" (uppterm 0 names 0 env) t;
-          let moreclauses, morelcs = clausify (Array.length env) lcs t in
-          moreclauses @ clauses, lcs+morelcs, chr,cmap, cmapstack, clique
-       | Elpi_ast.Begin -> clauses, lcs, chr,cmap, cmap::cmapstack, clique
+          aux { cs with chr } todo
+      | Elpi_ast.Clause c ->
+          aux { cs with block = (block @ [c]) } todo
+       | Elpi_ast.Begin ->
+          aux { cs with block = []; ctx = (block,cmap) :: ctx } todo
        | Elpi_ast.Accumulated p ->
-          let moreclausesrev,lcs,chr = aux lcs p chr in
-           moreclausesrev@clauses, lcs, chr,cmap, cmapstack, clique
+          aux cs (p @ todo)
        | Elpi_ast.End ->
-          (match cmapstack with
-              [] ->
-               (* TODO: raise it in the parser *)
-               error "End without a Begin"
-            | cmap::cmapstack -> clauses, lcs, chr,cmap, cmapstack, None)
+          if ctx = [] then error "End without a Begin";
+          let program, lcs = clausify_block program block lcs cmap in
+          let block, cmap = List.hd ctx in
+          let ctx = List.tl ctx in
+          aux { cs with block; cmap; ctx; lcs; clique = None } todo
        | Elpi_ast.Local v ->
-          clauses,lcs+1, chr, F.Map.add v (C.of_dbl lcs) cmap, cmapstack, clique
+          aux {cs with lcs = lcs + 1;
+                       cmap = F.Map.add v (C.of_dbl lcs) cmap } todo
        | Elpi_ast.Mode m ->
             let funct_of_ast c =
               try
@@ -3346,7 +3385,7 @@ let program_of_ast ?(print=false) (p : Elpi_ast.decl list) : program =
                   | exception Not_found ->
                       modes := C.Map.add key (Multi [a,subst]) !modes
             ) m;
-            clauses,lcs,chr,cmap,cmapstack,clique
+            aux cs todo
        | Elpi_ast.Constraint fl ->
             let funct_of_ast c =
               try
@@ -3357,12 +3396,14 @@ let program_of_ast ?(print=false) (p : Elpi_ast.decl list) : program =
            if clique <> None then error "nested constraint";
            let fl = List.map (fun x -> funct_of_ast x) fl in
            let chr, clique = CHR.new_clique fl chr in
-            clauses,lcs,chr,cmap,cmap::cmapstack, Some clique
-    ) ([],lcs,chr,F.Map.empty,[],None) clauses in
-  if cmapstack <> [] then error "Begin without an End" else clauses,lcs,chr in
- let clausesrev,lcs,chr = aux 0 p CHR.empty in
+           aux { cs with chr; clique = Some clique; block = [];
+                         ctx = (block,cmap) :: ctx } todo
+   in
+     aux { program = []; block = []; lcs = 0; chr = CHR.empty;
+           cmap = F.Map.empty; ctx = []; clique = None } p
+ in
  { query_depth = lcs;
-   prolog_program = Constraints.wrap_prolog_prog (make_index (List.rev clausesrev));
+   prolog_program = Constraints.wrap_prolog_prog (make_index clauses);
    chr = CHR.wrap_chr chr;
    modes = !modes}
 ;;
