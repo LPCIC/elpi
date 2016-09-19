@@ -1,19 +1,16 @@
 mode (gcd i i).
 
-gcd A (?? as B) :- $print (gcd A B), $constraint (gcd A B) B.
+gcd A (?? as B) :- $constraint (gcd A B) B.
 
 % assert result is OK
-gcd 11 1.
-gcd 7 2.
+gcd 11 group-1 :- $print "group 1 solved".
+gcd 7 group-2 :- $print "group 2 solved".
 
-main :- gcd 99 X, 
-        gcd 66 X, gcd 14 Y,
-        gcd 22 X, gcd 77 Y,
-        X = 1, Y = 2.
+main :- gcd 99 X, gcd 66 X, gcd 14 Y, gcd 22 X, gcd 77 Y,
+        % we then force a resumption to check only GCDs are there
+        X = group-1, Y = group-2.
 
 constraint gcd {
-  rule (gcd A X) \ (gcd B Y) | (X = Y, A < B) <=> (C is (B - A), gcd C X).
-  rule (gcd A X) \ (gcd B Y) | (X = Y, A = B).
+  rule (gcd A X) \ (gcd B Y) > X ~ Y | (A = B).
+  rule (gcd A X) \ (gcd B Y) > X ~ Y | (A < B) <=> (C is (B - A), gcd C X).
 }
-
-
