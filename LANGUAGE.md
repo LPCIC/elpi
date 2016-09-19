@@ -65,6 +65,26 @@ Only `V` is a proper term, `K` and `L` are not.
 The `as` clause is available everywhere, not just in matching mode,
 but not on the top level term: `foo X as G :- ..` is not supported (error NYI).
 
+Clauses parted of the initial program can be grafted before/after other
+(named) rules (extension points).  Contents of `a.elpi`
+```
+:name r1
+c X :- $print "1", fail.
+
+:name r2
+c X :- $print "2".
+
+```
+In file `b.elpi`
+```
+accumulate a.
+:name mid :before r2
+c X :- $print "1.5", fail.
+
+main :- c 1. % prints 1, 1.5, 2
+
+```
+
 ## delay and constraint
 
 Goals can be delayed on a (list of) flexible terms.
