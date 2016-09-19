@@ -3107,10 +3107,10 @@ end;*)
   set CS.Ugly.delayed [];
   depth := d;
   let pr_constraints () =
-    if not print_constraints then ();
+    if print_constraints then begin
     Fmt.fprintf Fmt.std_formatter "===== delayed ======\n%!";
     CS.print Fmt.std_formatter;
-    Fmt.fprintf Fmt.std_formatter "====================\n%!";
+    Fmt.fprintf Fmt.std_formatter "====================\n%!"; end
     in
   let search = exec (fun (_,adepth,q_env,q) ->
      let q = move ~adepth ~depth:adepth ~from:adepth ~to_:adepth q_env q in
