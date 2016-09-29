@@ -1,5 +1,35 @@
+accumulate kernel_pts.
+
 % type checker extension managing Matita interface %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-accumulate kernel_pts.
+% Closed term: T, U, V, W := case V A W U  match V with constructors of W and select branch in A of type U
+
+% Stack: P                := cframe A W U P  case frame (continuations)
+
+% EXTRA REDUCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+get+branch J (cframe A _ _ P) T P :- nth A J T. 
+
+get+branch J [V|P1] T [V|P2] :- get+branch J P1 T P2.
+
+%
+
+% extra delta
+r+step T1 T2 :- $r+step T1 T2.
+
+% nu for case
+whd+extra (case V A W U) P V (cframe A W U P) :- !.
+
+% iota for case
+whd+extra T1 P1 T2 P2 :- $constructor T1 J, !, get+branch J P1 T2 P2.
+
+% CONVERSION HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+conv+args (cframe A1 W U1 P1) (cframe A2 W U2 P2) :- conv+args P1 P2, conv+main U1 U2, conv+args A1 A2.
+
+% VALIDITY + INFERRED TYPE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% not complete ...
+t+step (case V A W U) U :- has+type V W, has+sort U S.
 
 t+step T U :- $t+step T U.

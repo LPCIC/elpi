@@ -88,7 +88,7 @@ let mk_abbr n v w t = LPA.mkApp [LPA.mkCon "abst"; v; w; LPA.mkLam n t]
 
 let mk_appl t vs = LPA.mkApp [LPA.mkCon "appl"; t; vs]
 
-let mk_case w v u ts = LPA.mkApp [LPA.mkCon "case"; w; v; u; ts]
+let mk_case w v u ts = LPA.mkApp [LPA.mkCon "case"; v; ts; w; u]
 
 let mk_has_some_sort u = LPA.mkApp [LPA.mkCon "has+sort"; u; LPA.mkFreshUVar ()]
 
@@ -165,7 +165,6 @@ let constructor ~depth ~env:_ _ = function
           | _      -> fail ()
       end
    | _        -> fail ()
-
 
 (* initialization ***********************************************************)
 

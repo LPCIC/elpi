@@ -1,0 +1,17 @@
+% Library of operations on lists %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% APPEND %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% append A P1 P2 :- $print (append A P1 P2), fail.
+
+append [] P P.
+
+append [V|A] P1 [V|P2] :- append A P1 P2.
+
+% NTH %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% nth A I X :- $print (nth A I X), fail.
+
+nth [A|L] 0 A :- !.
+
+nth [A|L] I X :- J is I - 1, nth L J X.
