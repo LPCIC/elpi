@@ -91,6 +91,7 @@ module CustomConstraints : sig
     empty:'a ->
       'a constraint_type
 
+  (* may raise No_clause *)
   val update : 'a constraint_type -> ('a -> 'a) -> unit
   val read : 'a constraint_type -> 'a
 end

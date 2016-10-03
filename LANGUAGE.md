@@ -102,6 +102,12 @@ Constraints do receive a special treatment: their proof context is
 filtered according to the clique they are declared in and they are
 manipulated by CHR rules (see CHR section).
 
+`ELpi_runtime.CustomConstraints` lets one declare custom constraint types
+and `Elpi_runtime.register_custom` lets one add predicates that update the
+constraint set.  Such constraint set must be functional since backtracking
+keeps a pointer to the old set in order to backjump.  Updating the constraint
+set may railse `No_clause` and trigger backtracking.
+
 ### CHR
 
 ```
