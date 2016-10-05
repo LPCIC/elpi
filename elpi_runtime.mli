@@ -115,7 +115,7 @@ val declare_constraint : depth:int -> idx -> goal:term -> on:term_attributed_ref
 val lp_list_to_list : term -> term list
 
 val query_of_ast_cmap :
-  constant ->
+  int ->
   term Func.Map.t ->
   Elpi_ast.term -> string list * int * term array * term
 val split_conj : term -> term list

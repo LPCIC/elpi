@@ -26,6 +26,7 @@ module Func : sig
   val arrowf : t
   val sequentf : t
 
+  val dummyname : t
   val from_string : string -> t
 
   module Map : Map.S with type key = t
@@ -86,6 +87,7 @@ type decl =
  | Constraint of Func.t list
  | Chr of (term, Func.t) chr
  | Accumulated of decl list
+ | Macro of Func.t * term
 
 val mkLocal : string -> decl
 

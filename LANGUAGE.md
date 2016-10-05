@@ -85,6 +85,14 @@ main :- c 1. % prints 1, 1.5, 2
 
 ```
 
+## Sugar
+
+bofh.
+```
+macro @name :- value.
+main :- foo @name.  %--> foo value.
+```
+
 ## delay and constraint
 
 Goals can be delayed on a (list of) flexible terms.

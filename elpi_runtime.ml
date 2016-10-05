@@ -3143,8 +3143,9 @@ module Compiler : sig
   val term_of_ast : depth:int -> Elpi_ast.term -> term
 
   val query_of_ast_cmap :
-    constant ->
-    term F.Map.t ->
+    int ->
+    cmap:term F.Map.t ->
+    macro:Elpi_ast.term F.Map.t ->
     Elpi_ast.term -> string list * int * term array * term
 
 end = struct (* {{{ *)
@@ -3161,13 +3162,14 @@ let stack_var_of_ast ({ max_arg = f; name2arg = l } as amap) n =
   { max_arg = f+1 ; name2arg = (n,n')::l }, n'
 ;;
 
-let stack_funct_of_ast amap cmap f =
-  try amap, F.Map.find f cmap
-  with Not_found ->
+let is_uvar_name f = 
    let c = (F.show f).[0] in
-   if ('A' <= c && c <= 'Z') || c = '_' then
-     let amap, v = stack_var_of_ast amap (F.show f) in amap, v
-   else amap, snd (C.funct_of_ast f)
+   ('A' <= c && c <= 'Z') || c = '_'
+;;
+
+let is_macro_name f = 
+   let c = (F.show f).[0] in
+   c = '@'
 ;;
 
 let desugar inner s args =
@@ -3199,50 +3201,75 @@ let desugar inner s args =
     if inner then pif, [Lam(varname var, App(Const rimplf, args))]
     else rimplf, args
   | _ -> s, args
+;;
       
-let rec stack_term_of_ast ?(inner=false) lvl amap cmap = function
-  | Elpi_ast.Const f -> stack_funct_of_ast amap cmap f
-  | Elpi_ast.Custom f ->
-     let cname = fst (C.funct_of_ast f) in
-     if not (is_custom_declared cname) then error ("No custom named "^F.show f);
-     amap, Custom (cname, [])
-  | Elpi_ast.App(Elpi_ast.Const f, tl) ->
-     let f, tl = desugar inner f tl in
-     let amap, rev_tl =
-       List.fold_left (fun (amap, tl) t ->
-         let amap, t = stack_term_of_ast ~inner:true lvl amap cmap t in
-         (amap, t::tl))
-        (amap, []) tl in
-     let tl = List.rev rev_tl in
-     let amap, c = stack_funct_of_ast amap cmap f in
-     begin match c with
-     | Arg (v,0) -> amap, mkAppArg v 0 tl
-     | Const c -> begin match tl with
-        | hd2::tl -> amap, App(c,hd2,tl)
-        | _ -> anomaly "Application node with no arguments" end
-     | _ -> error "Clause shape unsupported" end
-  | Elpi_ast.App (Elpi_ast.Custom f,tl) ->
-     let cname = fst (C.funct_of_ast f) in
-     if not (is_custom_declared cname) then error ("No custom named "^F.show f);
-     let amap, rev_tl =
-       List.fold_left (fun (amap, tl) t ->
-          let amap, t = stack_term_of_ast ~inner:true lvl amap cmap t in
-          (amap, t::tl))
-        (amap, []) tl in
-     amap, Custom(cname, List.rev rev_tl)
-  | Elpi_ast.Lam (x,t) ->
-     let cmap' = F.Map.add x (C.of_dbl lvl) cmap in
-     let amap, t' = stack_term_of_ast ~inner:true (lvl+1) amap cmap' t in
-     amap, Lam t'
-  | Elpi_ast.App (Elpi_ast.App (f,l1),l2) ->
-     stack_term_of_ast ~inner lvl amap cmap (Elpi_ast.App (f, l1@l2))
-  | Elpi_ast.String str -> amap, CData (in_string str)
-  | Elpi_ast.Int i -> amap, CData (in_int i)
-  | Elpi_ast.Float f -> amap, CData (in_float f)
-  | Elpi_ast.App (Elpi_ast.Lam _,_) -> error "Beta-redexes not in our language"
-  | Elpi_ast.App (Elpi_ast.String _,_) -> type_error "Applied string value"
-  | Elpi_ast.App (Elpi_ast.Int _,_) -> type_error "Applied integer value"
-  | Elpi_ast.App (Elpi_ast.Float _,_) -> type_error "Applied float value"
+let stack_term_of_ast lvl amap cmap macro ast =
+  let module A = Elpi_ast in
+        
+  let rec stack_macro_of_ast inner lvl amap cmap f =
+    try aux inner lvl amap cmap (F.Map.find f macro)
+    with Not_found -> error ("Undeclared macro " ^ F.show f) 
+  
+  and stack_funct_of_ast inner lvl amap cmap f =
+    try amap, F.Map.find f cmap
+    with Not_found ->
+     if is_uvar_name f then
+       stack_var_of_ast amap (F.show f)
+     else if is_macro_name f then
+       stack_macro_of_ast inner lvl amap cmap f
+     else amap, snd (C.funct_of_ast f)
+
+  and stack_custom_of_ast f =
+    let cname = fst (C.funct_of_ast f) in
+    if not (is_custom_declared cname) then error("No custom named "^F.show f);
+    cname
+  
+  and aux inner lvl amap cmap = function
+    | A.Const f -> stack_funct_of_ast inner lvl amap cmap f
+    | A.Custom f ->
+       let cname = stack_custom_of_ast f in
+       amap, Custom (cname, [])
+    | A.App(A.Const f, tl) ->
+       let f, tl = desugar inner f tl in
+       let amap, rev_tl =
+         List.fold_left (fun (amap, tl) t ->
+           let amap, t = aux true lvl amap cmap t in
+           (amap, t::tl))
+          (amap, []) tl in
+       let tl = List.rev rev_tl in
+       let amap, c = stack_funct_of_ast inner lvl amap cmap f in
+       begin match c with
+       | Arg (v,0) -> amap, mkAppArg v 0 tl
+       | Const c -> begin match tl with
+          | hd2::tl -> amap, App(c,hd2,tl)
+          | _ -> anomaly "Application node with no arguments" end
+       | _ -> error "Clause shape unsupported" end
+    | A.App (A.Custom f,tl) ->
+       let cname = stack_custom_of_ast f in
+       let amap, rev_tl =
+         List.fold_left (fun (amap, tl) t ->
+            let amap, t = aux true lvl amap cmap t in
+            (amap, t::tl))
+          (amap, []) tl in
+       amap, Custom(cname, List.rev rev_tl)
+    | A.Lam (x,t) when A.Func.(equal x dummyname)->
+       let amap, t' = aux true (lvl+1) amap cmap t in
+       amap, Lam t'
+    | A.Lam (x,t) ->
+       let cmap' = F.Map.add x (C.of_dbl lvl) cmap in
+       let amap, t' = aux true (lvl+1) amap cmap' t in
+       amap, Lam t'
+    | A.App (A.App (f,l1),l2) ->
+       aux inner lvl amap cmap (A.App (f, l1@l2))
+    | A.String str -> amap, CData (in_string str)
+    | A.Int i -> amap, CData (in_int i)
+    | A.Float f -> amap, CData (in_float f)
+    | A.App (A.Lam _,_) -> error "Beta-redexes not in our language"
+    | A.App (A.String _,_) -> type_error "Applied string value"
+    | A.App (A.Int _,_) -> type_error "Applied integer value"
+    | A.App (A.Float _,_) -> type_error "Applied float value"
+  in
+    aux false lvl amap cmap (spill ast)
 ;;
 
 (* BUG: I pass the empty amap, that is plainly wrong.
@@ -3255,24 +3282,24 @@ let term_of_ast ~depth t =
    F.Map.add (F.from_string (C.show (destConst i))) i cmap
    ) F.Map.empty freevars in
  let { max_arg = max; name2arg = l }, t =
-  stack_term_of_ast depth empty_amap cmap t in
+  stack_term_of_ast depth empty_amap cmap F.Map.empty t in
  let env = Array.make max C.dummy in
  move ~adepth:argsdepth ~from:depth ~to_:depth env t
 ;;
 
-let query_of_ast_cmap lcs cmap t =
+let query_of_ast_cmap lcs ~cmap ~macro t =
   let { max_arg = max; name2arg = l }, t =
-    stack_term_of_ast lcs empty_amap cmap t in
+    stack_term_of_ast lcs empty_amap cmap macro t in
   List.rev_map fst l, 0, Array.make max C.dummy, t
 ;;
 
 let query_of_ast { query_depth = lcs } t =
-  query_of_ast_cmap lcs F.Map.empty t;;
+  query_of_ast_cmap lcs ~cmap:F.Map.empty ~macro:F.Map.empty t;;
 
-let chr_of_ast depth cmap r =
+let chr_of_ast depth cmap macro r =
   let open Elpi_ast in
   let amap = empty_amap in
-  let intern amap t = stack_term_of_ast depth amap cmap t in
+  let intern amap t = stack_term_of_ast depth amap cmap macro t in
   let intern2 amap (t1,t2) =
     let amap, t1 = intern amap t1 in
     let amap, t2 = intern amap t2 in
@@ -3290,38 +3317,45 @@ let chr_of_ast depth cmap r =
   let nargs = amap.max_arg in
   { to_match; to_remove; guard; new_goal; alignement; depth; nargs }
 
+type temp = {
+  block : (Elpi_ast.term F.Map.t * Elpi_ast.clause) list;
+  cmap : term F.Map.t;
+  macro : Elpi_ast.term F.Map.t;
+}
+type comp_state = {
+  program : clause list;
+  lcs : int;
+  chr : CHR.t;
+
+  tmp : temp;
+
+  (* nesting *)
+  clique : CHR.clique option;  
+  ctx : temp list;
+}
+
 let sort_insertion l =
   let rec insert loc name c = function
     | [] -> error ("no clause named " ^ name)
-    | { Elpi_ast.id = Some n } as x :: xs when n = name ->
+    | (_,{ Elpi_ast.id = Some n }) as x :: xs when n = name ->
          if loc = `Before then c :: x :: xs
          else x :: c :: xs
     | x :: xs -> x :: insert loc name c xs in
   let rec aux acc = function
     | [] -> acc
-    | { Elpi_ast.insert = Some (loc,name) } as x :: xs ->
+    | (_,{ Elpi_ast.insert = Some (loc,name) }) as x :: xs ->
           aux (insert loc name x acc) xs
     | x :: xs -> aux (acc @ [x]) xs
   in
   aux [] l
-
-type comp_state = {
-  program : clause list;
-  lcs : int;
-  chr : CHR.t;
-  clique : CHR.clique option;  
-  
-  block : Elpi_ast.clause list;
-  cmap : term F.Map.t;
-  (* nesting *)
-  ctx : (Elpi_ast.clause list * term F.Map.t) list;
-}
+;;
 
 let program_of_ast ?(print=false) (p : Elpi_ast.decl list) : program =
  let clausify_block program block lcs cmap =
    let l = sort_insertion block in
-   let clauses, lcs = List.fold_left (fun (clauses,lcs) { Elpi_ast.body } ->
-      let names,_,env,t = query_of_ast_cmap lcs cmap body in
+   let clauses, lcs =
+     List.fold_left (fun (clauses,lcs) (macro,{ Elpi_ast.body }) ->
+      let names,_,env,t = query_of_ast_cmap lcs ~cmap ~macro body in
       if print then Fmt.eprintf "%a.@;" (uppterm 0 names 0 env) t;
       let moreclauses, morelcs = clausify (Array.length env) lcs t in
       clauses @ List.rev moreclauses, lcs + morelcs
@@ -3329,7 +3363,8 @@ let program_of_ast ?(print=false) (p : Elpi_ast.decl list) : program =
    program @ clauses, lcs
  in
  let clauses, lcs, chr =
-   let rec aux ({ program; cmap; block; lcs; chr; clique; ctx } as cs)= function
+   let rec aux ({ program; lcs; chr; clique;
+                  tmp = ({ block; cmap; macro } as tmp); ctx } as cs) = function
    | [] ->
        if ctx <> [] then error "Begin without an End";
        let program, lcs = clausify_block program block lcs cmap in
@@ -3342,65 +3377,70 @@ let program_of_ast ?(print=false) (p : Elpi_ast.decl list) : program =
             match clique with
             | None -> error "CH rules allowed only in constraint block"
             | Some c -> c in
-          let rule = chr_of_ast lcs cmap r in
+          let rule = chr_of_ast lcs cmap macro r in
           let chr = CHR.add_rule clique rule chr in
           aux { cs with chr } todo
       | Elpi_ast.Clause c ->
-          aux { cs with block = (block @ [c]) } todo
-       | Elpi_ast.Begin ->
-          aux { cs with block = []; ctx = (block,cmap) :: ctx } todo
-       | Elpi_ast.Accumulated p ->
-          aux cs (p @ todo)
-       | Elpi_ast.End ->
-          if ctx = [] then error "End without a Begin";
-          let program, lcs = clausify_block program block lcs cmap in
-          let block, cmap = List.hd ctx in
-          let ctx = List.tl ctx in
-          aux { cs with block; cmap; ctx; lcs; clique = None } todo
-       | Elpi_ast.Local v ->
-          aux {cs with lcs = lcs + 1;
-                       cmap = F.Map.add v (C.of_dbl lcs) cmap } todo
-       | Elpi_ast.Mode m ->
-            let funct_of_ast c =
-              try
-                match F.Map.find c cmap with
-                | Const x -> x 
-                | _ -> assert false
-              with Not_found -> fst (C.funct_of_ast c) in
-            List.iter (fun (c,l,alias) ->
-             let key = funct_of_ast c in
-             let mode = l in
-             let alias = option_map (fun (x,s) ->
-               funct_of_ast x,
-               List.map (fun (x,y) -> funct_of_ast x, funct_of_ast y) s) alias
-             in
-             match alias with
-             | None -> modes := C.Map.add key (Mono mode) !modes
-             | Some (a,subst) ->
-                  modes := C.Map.add a (Mono mode) !modes;
-                  match C.Map.find key !modes with
-                  | Mono _ -> assert false
-                  | Multi l ->
-                      modes := C.Map.add key (Multi ((a,subst)::l)) !modes
-                  | exception Not_found ->
-                      modes := C.Map.add key (Multi [a,subst]) !modes
-            ) m;
-            aux cs todo
-       | Elpi_ast.Constraint fl ->
-            let funct_of_ast c =
-              try
-                match F.Map.find c cmap with
-                | Const x -> x 
-                | _ -> assert false
-              with Not_found -> fst (C.funct_of_ast c) in
-           if clique <> None then error "nested constraint";
-           let fl = List.map (fun x -> funct_of_ast x) fl in
-           let chr, clique = CHR.new_clique fl chr in
-           aux { cs with chr; clique = Some clique; block = [];
-                         ctx = (block,cmap) :: ctx } todo
+          aux { cs with tmp = { tmp with block = (block @ [macro,c])} } todo
+      | Elpi_ast.Begin ->
+          aux { cs with tmp = { tmp with block = [] }; ctx = tmp :: ctx } todo
+      | Elpi_ast.Accumulated p ->
+         aux cs (p @ todo)
+      | Elpi_ast.End ->
+         if ctx = [] then error "End without a Begin";
+         let program, lcs = clausify_block program block lcs cmap in
+         let tmp = List.hd ctx in
+         let ctx = List.tl ctx in
+         aux { cs with tmp; ctx; lcs; clique = None } todo
+      | Elpi_ast.Local v ->
+         aux {cs with lcs = lcs + 1;
+              tmp = { tmp with cmap = F.Map.add v (C.of_dbl lcs) cmap }} todo
+      | Elpi_ast.Macro(n, body) ->
+         aux { cs with tmp = { tmp with macro = F.Map.add n body macro }} todo
+      | Elpi_ast.Mode m ->
+           let funct_of_ast c =
+             try
+               match F.Map.find c cmap with
+               | Const x -> x 
+               | _ -> assert false
+             with Not_found -> fst (C.funct_of_ast c) in
+           List.iter (fun (c,l,alias) ->
+            let key = funct_of_ast c in
+            let mode = l in
+            let alias = option_map (fun (x,s) ->
+              funct_of_ast x,
+              List.map (fun (x,y) -> funct_of_ast x, funct_of_ast y) s) alias
+            in
+            match alias with
+            | None -> modes := C.Map.add key (Mono mode) !modes
+            | Some (a,subst) ->
+                 modes := C.Map.add a (Mono mode) !modes;
+                 match C.Map.find key !modes with
+                 | Mono _ -> assert false
+                 | Multi l ->
+                     modes := C.Map.add key (Multi ((a,subst)::l)) !modes
+                 | exception Not_found ->
+                     modes := C.Map.add key (Multi [a,subst]) !modes
+           ) m;
+           aux cs todo
+      | Elpi_ast.Constraint fl ->
+           let funct_of_ast c =
+             try
+               match F.Map.find c cmap with
+               | Const x -> x 
+               | _ -> assert false
+             with Not_found -> fst (C.funct_of_ast c) in
+          if clique <> None then error "nested constraint";
+          let fl = List.map (fun x -> funct_of_ast x) fl in
+          let chr, clique = CHR.new_clique fl chr in
+          aux { cs with chr; clique = Some clique;
+                        tmp = { block = []; cmap; macro };
+                        ctx = { block; cmap; macro } :: ctx } todo
    in
-     aux { program = []; block = []; lcs = 0; chr = CHR.empty;
-           cmap = F.Map.empty; ctx = []; clique = None } p
+     aux { program = []; lcs = 0; chr = CHR.empty; clique = None;
+           tmp = { block = []; cmap = F.Map.empty; macro = F.Map.empty };
+           ctx = []; }
+         p
  in
  { query_depth = lcs;
    prolog_program = Constraints.wrap_prolog_prog (make_index clauses);
@@ -3456,7 +3496,7 @@ let register_custom = Mainloop.register_custom
 let make_runtime = Mainloop.make_runtime
 let program_of_ast = Compiler.program_of_ast
 let query_of_ast = Compiler.query_of_ast
-let query_of_ast_cmap = Compiler.query_of_ast_cmap
+let query_of_ast_cmap lvl cmap = Compiler.query_of_ast_cmap lvl ~cmap ~macro:F.Map.empty
 let term_of_ast = Compiler.term_of_ast
 let lp_list_to_list = Clausify.lp_list_to_list
 let split_conj = Clausify.split_conj

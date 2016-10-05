@@ -35,6 +35,7 @@ module Func = struct
   let letf = from_string ":="
   let arrowf = from_string "->"
   let sequentf = from_string "?-"
+  let dummyname = from_string "%dummy"
 
   end
 
@@ -94,6 +95,7 @@ type decl =
  | Constraint of Func.t list
  | Chr of (term, Func.t) chr
  | Accumulated of decl list
+ | Macro of Func.t * term
 [@@deriving show]
 
 let mkLocal x = Local (Func.from_string x)

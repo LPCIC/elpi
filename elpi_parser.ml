@@ -237,6 +237,7 @@ let rec lex c = parser bp
          | "use_sig" -> "USE_SIG", "use_sig"
          | "local" -> "LOCAL", "local"
          | "mode" -> "MODE", "mode"
+         | "macro" -> "MACRO", "macro"
          | "rule" -> "RULE", "rule"
          | "constraint" -> "CONSTRAINT", "constraint"
          | "localkind" -> "LOCALKIND", "localkind"
@@ -364,6 +365,14 @@ let desugar_multi_binder = function
   | t -> t
 ;;
 
+let desugar_macro = function
+  | App(Const hd,[Const name; body]) when Func.(equal hd rimplf) ->
+      if ((Func.show name).[0] != '@') then
+        raise (Stream.Error "Macro name must begin with @");
+      name, body
+  | _ -> raise (Stream.Error "Illformed macro")
+;;
+
 EXTEND
   GLOBAL: lp goal;
   lp: [ [ cl = LIST0 clause; EOF -> List.concat cl ] ];
@@ -418,6 +427,9 @@ EXTEND
      | LCURLY -> [Begin]
      | RCURLY -> [End]
      | MODE; m = LIST1 mode SEP SYMBOL ","; FULLSTOP -> [Mode m]
+     | MACRO; b = atom; FULLSTOP ->
+         let name, body = desugar_macro b in
+         [Macro(name, body)]
      | RULE; r = chrrule; FULLSTOP -> [Chr r]
      | CONSTRAINT; names=LIST0 CONSTANT; LCURLY ->
          [ Constraint (List.map Func.from_string names) ]
@@ -513,10 +525,8 @@ EXTEND
       [ hd = atom; args = LIST1 atom LEVEL "abstterm" ->
          desugar_multi_binder (mkApp (hd :: args)) ]
    | "abstterm"
-      [ c = CONSTANT; OPT [ COLON ; type_ ] ; b = OPT [ BIND; a = atom LEVEL "0" -> a ] ->
-          (match b with
-              None -> mkCon c
-            | Some b -> mkLam c b)
+      [ c=CONSTANT; OPT[COLON;type_]; b=OPT[BIND; a = atom LEVEL "0" -> a ] ->
+          (match b with None -> mkCon c | Some b -> mkLam c b)
       | c = ARROW; a = atom LEVEL "abstterm" -> mkApp [mkCon c; a]
       | u = FRESHUV ; OPT [ COLON ; type_ ] -> mkFreshUVar ()
       | s = LITERAL -> mkString s
