@@ -534,6 +534,7 @@ EXTEND
       | s = FLOAT -> mkFloat (float_of_string s) 
       | bt = BUILTIN ; OPT [ COLON ; type_ ] -> mkCustom bt
       | LPAREN; a = atom; RPAREN -> a
+      | LCURLY; a = atom; RCURLY -> mkApp [Const Func.spillf;a]
         (* 120 is the first level after 110, which is that of ,
            Warning: keep the hard-coded constant in sync with
            the list_element_prec below :-(

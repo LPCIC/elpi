@@ -27,6 +27,8 @@ module Func : sig
   val sequentf : t
 
   val dummyname : t
+  val spillf : t
+
   val from_string : string -> t
 
   module Map : Map.S with type key = t

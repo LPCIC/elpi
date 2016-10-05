@@ -134,6 +134,8 @@ module Constants : sig
   val uvc : constant
   val asc : constant
   val letc : constant
+
+  val spillc : constant
   (* }}} *)
 
   (* Value for unassigned UVar/Arg *)
@@ -201,6 +203,7 @@ let entailsc = fst (funct_of_ast (F.from_string "?-"))
 let uvc = fst (funct_of_ast (F.from_string "??"))
 let asc = fst (funct_of_ast (F.from_string "as"))
 let letc = fst (funct_of_ast (F.from_string ":="))
+let spillc = fst (funct_of_ast (F.spillf))
 
 let dummy = App (-9999,cutc,[])
 
@@ -3269,6 +3272,49 @@ let stack_term_of_ast lvl amap cmap macro ast =
     | A.App (A.Int _,_) -> type_error "Applied integer value"
     | A.App (A.Float _,_) -> type_error "Applied float value"
   in
+  let spill ast =
+    let spilled_name = ref 0 in
+    let mkSpilledName () =
+      incr spilled_name;
+      F.from_string ("Spilled_" ^ string_of_int !spilled_name) in
+    let add_spilled sp t =
+      match sp with
+      | [] -> t
+      | _ ->
+        List.fold_left (fun acc (n,_) ->
+            A.(App(Const F.sigmaf, [Lam (n, acc)])))
+          A.(App(Const F.andf,List.map snd sp @ [t])) sp in
+    (* FIXME: should be type based, not context based *)
+    let rec aux toplevel = function
+      | A.App(A.Const c,fcall :: rest) when F.(equal c spillf) ->
+         let n = mkSpilledName () in
+         let fspills, fcall = aux false fcall in
+         let spills, args = List.split (List.map (aux false) rest) in
+         let spills = fspills @ List.flatten spills in
+         spills @ [n,A.mkApp [fcall; A.Const n]], A.Const n
+      | A.App(A.Const c, args)
+         when F.(List.exists (equal c) [andf;andf2;orf;rimplf]) ->
+         let spills, args = List.split (List.map (aux true) args) in
+         assert(List.flatten spills = []);
+         [], A.App(A.Const c, args)
+      | A.App(A.Const c, [A.Lam (n,arg)])
+         when F.(List.exists (equal c) [pif;sigmaf]) ->
+         let spills, arg = aux true arg in
+         assert(spills = []);
+         [], A.App(A.Const c, [A.Lam (n,arg)])
+      | A.App(c,args) ->
+         let spills, args = List.split (List.map (aux false) args) in
+         let spills = List.flatten spills in
+         if toplevel then [], add_spilled spills (A.App(c, args))
+         else spills, A.App(c,args)
+      | (A.String _|A.Float _|A.Int _|A.Const _|A.Custom _) as x -> [], x
+      | A.Lam(x,t) ->
+         let sp, t = aux false t in
+         if sp <> [] then error "Not supported yet (spill lambda)";
+         [], A.Lam (x,t)
+    in
+      let sp, t = aux true ast in
+      assert(sp = []); t in
     aux false lvl amap cmap (spill ast)
 ;;
 

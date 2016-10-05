@@ -109,6 +109,13 @@ main :-
 %-->  bar X Foo.
 ```
 
+limited to predicates, still untyped.
+```
+main :-
+     bar {foo X} Z.
+%--> (sigma Y\ foo X Y, bar Y Z),
+```
+
 ## delay and constraint
 
 Goals can be delayed on a (list of) flexible terms.
