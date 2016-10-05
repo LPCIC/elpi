@@ -93,6 +93,22 @@ macro @name :- value.
 main :- foo @name.  %--> foo value.
 ```
 
+
+inefficient.
+```
+     append [X|XS] L -> [X|R] :- append XS L R.
+%--> append [X|XS] L TMP :- TMP = [X|R], append XS L R.
+     append [] L -> L.
+%--> append [] L TMP :- TMP = L.
+```
+
+not very useful.
+```
+main :-
+      Foo := bar X.
+%-->  bar X Foo.
+```
+
 ## delay and constraint
 
 Goals can be delayed on a (list of) flexible terms.
