@@ -528,7 +528,9 @@ EXTEND
       [ c=CONSTANT; OPT[COLON;type_]; b=OPT[BIND; a = atom LEVEL "0" -> a ] ->
           (match b with None -> mkCon c | Some b -> mkLam c b)
       | c = ARROW; a = atom LEVEL "abstterm" -> mkApp [mkCon c; a]
-      | u = FRESHUV ; OPT [ COLON ; type_ ] -> mkFreshUVar ()
+      | u=FRESHUV; OPT[COLON;type_]; b=OPT[BIND; a = atom LEVEL "0" -> a ] ->
+          (match b with None -> mkFreshUVar () | Some b ->
+           mkLam Func.(show dummyname)  b)
       | s = LITERAL -> mkString s
       | s = INTEGER -> mkInt (int_of_string s) 
       | s = FLOAT -> mkFloat (float_of_string s) 
