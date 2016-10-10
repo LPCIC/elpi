@@ -2,40 +2,49 @@ accumulate list.
 
 % Extensible type checker for a generic PTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Global reference R      := identifier
+% Global reference R        := identifier
 
-% Closed term: T, U, V, W := sort S        sort S
-%                         |  prod     W F  product of type W in F
-%                         |  abst     W F  abstraction of type W in F
-%                         |  abbr   V W F  abbreviation of V of type W in F
-%                         |  appl T A      application of T to list A
+% Closed term: T, U, V, W   := sort S        sort S
+%                           |  prod     W F  product of type W in F
+%                           |  abst     W F  abstraction of type W in F
+%                           |  abbr   V W F  abbreviation of V of type W in F
+%                           |  appl T A      application of T to list A
 
-% Functional term: F      := function of type T => T
+% Functional term: F        := function of type T => T
 
-% Closed term list: A     := [] | [V|A]  defined by the system
+% Closed term list: A, B    := [] | [V|A]  defined by the system
 
-% Stack: P                := []     empty
-%                         :  [V|P]  application frame (argument)
+% Stack: P                  := []     empty
+%                           :  [V|P]  application frame (argument)
 
 % Continuation: C
 
-% Predicates: whd+no+delta T P C     multistep weak head reduct of T after P
-%                                    without delta-expansion, passed to continuation C
-%             whd+delta+pi T1 P T2   multistep weak head reduction of T1 after P to T2
-%                                    with delta-expansion and validating pi-reduction
-%             red+whnf T1 P1 T2 P2   reducibility test for generic T1 after P1 to whnf of T2 after P2
-%             conv+main T1 T2        convertibility test for generic T1 and T2
-%             conv+args P1 P2        convertibility test for generic stacks P1 and P2
-%             conv+whnf U1 P1 U2 P2  convertibility test for whnf's U1 after P1 and U2 after P2
-%             t+step T U             inference of a type U for T
-%           * has+sort T S           test for T having sort S
-%             has+checked+type T U   test for T having checked type U
-%           * has+type T U           test for T having generic type U
+% Type inclusion mode: I, J := i+sn  lhs may be smaller than rhs
+%                           :  i+dx  rhs may be smaller than lhs
+%                           :  i+rc  the two sides mus be equal
+
+% Predicates: whd+no+delta T P C       multistep weak head reduct of T after P
+%                                      without delta-expansion, passed to continuation C
+%             whd+delta+pi T1 P T2     multistep weak head reduction of T1 after P to T2
+%                                      with delta-expansion and validating pi-reduction
+%             whd+delta T1 P C T2      multistep weak head reduction with delta-expansion,
+%                                      of T1 after P passed to relation C returning T2                                      
+%             red+whnf T1 P1 I T2 P2   reducibility test for generic T1 after P1 to whnf of T2 after P2
+%             conv+main T1 I T2        convertibility test for generic T1 and T2
+%             conv+args P1 P2          convertibility test for generic stacks P1 and P2
+%             conv+whnf U1 P1 I U2 P2  convertibility test for whnf's U1 after P1 and U2 after P2
+%             t+step T U               inference of a type U for T
+%           * has+sort T S             test for T having sort S
+%             has+checked+type T U     test for T having checked type U
+%           * has+type T U             test for T having generic type U
 
 % WEAK HEAD COMPUTATION WITHOUT DELTA-EXPANSION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % we delay delta-expansion to possibly avoid it.
-% whd+no+delta T P C :- $print (whd+no+delta T P C), fail.
+% whd+no+delta T P C :- on+focus, $print (whd+no+delta T P), fail.
+
+% normal form for meta-variables.
+whd+no+delta T P C :- is_flex T, !, C T P.
 
 % sigma for abbreviation + theta.
 whd+no+delta (abbr V W F) P C :- !, pi x\ r+step x V =>
@@ -47,15 +56,15 @@ whd+no+delta (abst W F) [V|P] C :- !, whd+no+delta (abbr V W F) P C.
 whd+no+delta (appl T A) P1 C :- !, append A P1 P2,
                                 whd+no+delta T P2 C.
 % hook for extra reductions.
-% whd+no+delta T1 P1 C :- whd+extra T1 P1 T2 P2, !, whd+no+delta T2 P2 C.
+whd+no+delta T1 P1 C :- whd+extra T1 P1 T2 P2, !, whd+no+delta T2 P2 C.
 
 % normal form.
-whd+no+delta T P C :- C T P.
+whd+no+delta T P C :- C T P, !.
 
-% WEAK HEAD COMPUTATION WITH PI-REDUCTION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% WEAK HEAD COMPUTATION WITH DELTA EXPANSION AND PI-REDUCTION %%%%%%%%%%%%%%%%
 
 % aka eat_prods
-% whd+delta+pi T1 P T2 :- $print (whd+delta+pi T1 P T2), fail.
+% whd+delta+pi T1 P T2 :- on+focus, $print (whd+delta+pi T1 P T2), fail.
 
 % reflexivity.
 whd+delta+pi T [] T :- !.
@@ -79,110 +88,151 @@ whd+delta+pi T1 P T2 :- r+step T1 T, !, whd+delta+pi T P T2.
 % hook for extra reductions.
 whd+delta+pi T1 P1 T :- whd+extra T1 P1 T2 P2, !, whd+delta+pi T2 P2 T.
 
+% WEAK HEAD COMPUTATION WITH DELTA EXPANSION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% whd+delta T1 P C T2 :- on+focus, $print (whd+delta T1 P C T2), fail.
+
+% beta.
+whd+delta (abst W F) [V|P] C T2 :- !, whd+delta (abbr V W F) P C T2.
+
+% nu for application.
+whd+delta (appl T1 A) P1 C T2 :- !, append A P1 P2,
+                                 whd+delta T1 P2 C T2.
+% sigma for abbreviation + theta.
+whd+delta (abbr V W F1) P C (abbr V W F2) :- !, pi x\ r+step x V =>
+                                                      whd+delta (F1 x) P C (F2 x).
+% delta.
+whd+delta T1 P C T2 :- r+step T1 T, !, whd+delta T P C T2.
+
+% hook for extra reductions.
+whd+delta T1 P1 C T :- whd+extra T1 P1 T2 P2, !, whd+delta T2 P2 C T.
+
+% normal form
+whd+delta T1 P C T2 :- C T1 P T2, !.
+
 % CONVERSION HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% red+whnf T1 P1 U2 P2 :- $print (red+whnf T1 P1 U2 P2), fail.
+i+not i+sn i+dx.
 
-red+whnf T1 P1 U2 P2 :- whd+no+delta T1 P1 (conv+whnf U2 P2).
+i+not i+dx i+sn.
+
+i+not i+rc i+rc.
+
+% red+whnf T1 P1 I U2 P2 :- on+focus, $print (red+whnf T1 P1 I U2 P2), fail.
+
+red+whnf T1 P1 I U2 P2 :- whd+no+delta T1 P1 (conv+whnf U2 P2 I), !.
 
 %
 
-% conv+main T1 T2 :- $print (conv+main T1 T2), fail.
+% conv+main T1 I T2 :- on+focus, $print (conv+main T1 I T2), fail.
 
-conv+main T1 T2 :- whd+no+delta T1 [] (red+whnf T2 []).
+conv+main T1 I T2 :- whd+no+delta T1 [] (red+whnf T2 [] I), !.
 
 %
+
+% conv+args P1 P2 :- on+focus, $print (conv+args P1 P2), fail.
 
 conv+args [] [].
 
-conv+args [V1|P1] [V2|P2] :- conv+args P1 P2, conv+main V1 V2.
+conv+args [V1|P1] [V2|P2] :- conv+args P1 P2, conv+main V1 i+rc V2.
 
 % CONVERSION OF WHNF'S %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% conv+whnf T1 P1 T2 P2 :- $print (conv+whnf T1 P1 T2 P2), fail.
+% conv+whnf T1 P1 I T2 P2 :- on+focus, $print (conv+whnf T1 P1 I T2 P2), fail.
 
 % reflexivity.
-conv+whnf T P1 T P2 :- conv+args P1 P2, !.
+conv+whnf T P1 I T P2 :- conv+args P1 P2, !.
+
+% left subsumption for sort
+conv+whnf (sort S1) [] i+sn (sort S2) [] :- pts+sub S1 S2, !.
+
+% right subsumption for sort
+conv+whnf (sort S1) [] i+dx (sort S2) [] :- !, pts+sub S2 S1.
 
 % xi for product.
-conv+whnf (prod W1 F1) [] (prod W2 F2) [] :- !, conv+main W1 W2,
-                                             pi x\ conv+main (F1 x) (F2 x).
+conv+whnf (prod W1 F1) [] I (prod W2 F2) [] :- !, conv+main W1 i+rc W2,
+                                               pi x\ conv+main (F1 x) I (F2 x).
 % xi for abstraction.
-conv+whnf (abst W1 F1) [] (abst W2 F2) [] :- !, conv+main W1 W2,
-                                             pi x\ conv+main (F1 x) (F2 x).
+conv+whnf (abst W1 F1) [] I (abst W2 F2) [] :- !, conv+main W1 i+rc W2,
+                                               pi x\ conv+main (F1 x) i+rc (F2 x).
 % candidate left delta.
-conv+whnf T1 P1 T2 P2 :- r+step T1 V1, !, maybe+sn T1 V1 P1 T2 P2.
+conv+whnf T1 P1 I T2 P2 :- r+step T1 V1, !, maybe+sn T1 V1 P1 I T2 P2.
 
 % forced right delta.
-conv+whnf T1 P1 T2 P2 :- r+step T2 V2, !, red+whnf V2 P2 T1 P1.
+conv+whnf T1 P1 I T2 P2 :- r+step T2 V2, !, red+whnf V2 P2 I T1 P1.
 
-maybe+sn T1 V1 P1 T2 P2 :- r+step T2 V2, !, check+age T1 V1 P1 T2 V2 P2.
+%
+
+maybe+sn T1 V1 P1 I T2 P2 :- r+step T2 V2, !, check+age T1 V1 P1 I T2 V2 P2.
 
 % forced left delta.
-maybe+sn T1 V1 P1 T2 P2 :- red+whnf V1 P1 T2 P2. 
+maybe+sn T1 V1 P1 I T2 P2 :- i+not I J, red+whnf V1 P1 J T2 P2. 
 
 %
 
 % age-implied left delta.
-check+age T1 V1 P1 T2 V2 P2 :- $lt T2 T1, !, red+whnf V1 P1 T2 P2.
+check+age T1 V1 P1 I T2 V2 P2 :- $lt T2 T1, !, i+not I J, red+whnf V1 P1 J T2 P2.
 
 % age-implied right delta.
-check+age T1 V1 P1 T2 V2 P2 :- red+whnf V2 P2 T1 P1.
+check+age T1 V1 P1 I T2 V2 P2 :- red+whnf V2 P2 I T1 P1.
 
 % VALIDITY + INFERRED TYPE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-print_hyps :- t+step X W, $print "HYP" X W.
+% print_hyps :- t+step X W, on+focus, $print "HYP" X W.
 
-print_hyp X :- t+step X W, $print "HYP" X W.
+% print_hyp X :- t+step X W, on+focus, $print "HYP" X W.
 
-% t+step T U :- $print (t+step T U), fail.
+% t+step T U :- on+focus, $print (t+step T U), fail.
 
 % S.
-t+step (sort S1) (sort S2) :- pts+pair S1 S2.
+t+step (sort S1) (sort S2) :- !, pts+pair S1 S2.
 
 % N.
-t+step (appl T1 A) T :- t+step T1 T2, whd+delta+pi T2 A T.
+t+step (appl T1 A) T :- !, t+step T1 T2, whd+delta+pi T2 A T.
 
 % Sigma.
-t+step (abbr V W F1) (abbr V W F2) :- has+type V W,
+t+step (abbr V W F1) (abbr V W F2) :- !, has+type V W,
                                       pi x\ t+step x W => r+step x V =>
                                       t+step (F1 x) (F2 x).
 % X for product.
-t+step (prod W F) (sort S3) :- has+sort W S1,
+t+step (prod W F) (sort S3) :- !, has+sort W S1,
                                pi x\ t+step x W => has+sort (F x) S2,
                                pts+triple S1 S2 S3.
 % X for abstraction.
-t+step (abst W F1) (prod W F2) :- has+sort W S1,
+t+step (abst W F1) (prod W F2) :- !, has+sort W S1,
                                   pi x\ t+step x W =>
-                                        (t+step (F1 x) (F2 x), has+sort (F2 x) (S x), S x = S2),
+                                        (t+step (F1 x) (F2 x), has+sort (F2 x) S2),
                                   pts+triple S1 S2 S3.
 
 % TYPE CHECKING %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% has+sort T S :- $print (has+sort T S), fail.
+% has+sort T S :- on+focus, $print (has+sort T S), fail.
 
 % fast path for T being a sort.
-has+sort (sort S1) S :- !, t+step (sort S1) (sort S).
+has+sort (sort S1) S2 :- t+step (sort S1) (sort S2), !.
 
-has+sort T S :- t+step T U, red+whnf U [] (sort S) [].
+% fast path for T being a subsumed sort.
+has+sort (sort S1) S2 :- !, t+step (sort S1) (sort S), pts+sub S S2.
+
+has+sort T S :- t+step T U, red+whnf U [] i+dx (sort S) [].
 
 %
 
-% has+checked+type T U :- $print (has+checked+type T U), fail.
+% has+checked+type T U :- on+focus, $print (has+checked+type T U), fail.
 
 % fast path for U being a sort.
 has+checked+type T (sort S) :- !, has+sort T S.
 
-has+checked+type T U :- t+step T X, conv+main X U.
+has+checked+type T U :- t+step T X, conv+main X i+sn U, !.
 
 %
 
-% has+type T U :- $print (has+type T U), fail.
+% has+type T U :- on+focus, $print (has+type T U), fail.
 
 % fast path for U being a sort.
 has+type T (sort S) :- !, has+sort T S.
 
-has+type T U :- has+sort U S, has+checked+type T U.
+has+type T U :- has+sort U S, has+checked+type T U, !.
 
 % KERNEL HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

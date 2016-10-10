@@ -10,7 +10,7 @@
       V_______________________________________________________________ *)
 
 (* has_some_sort u is false (?) if the type of u is a sort *)
-val has_some_sort: NCic.term -> bool
+val has_some_sort: NReference.reference -> NCic.term -> bool
 
 (* has_type t u is false (?) if the type of t is u *)
-val has_type: NCic.term -> NCic.term -> bool
+val has_type: NReference.reference -> NCic.term -> NCic.term -> bool

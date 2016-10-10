@@ -1,20 +1,50 @@
 % PTS SPECIFICATION FOR THE CALCUS OF (CO)INDUCTIVE CONSTRUCTIONS (CIC) %%%%%%
 
-univ+pair u+0 u+1.
+univ+pair u+0 u+1 :- !.
 
-pts+pair (s+prop u+0) (s+type u+0).
+univ+pair u+1 u+2 :- !.
 
-pts+pair (s+type U1) (s+type U2) :- univ+pair U1 U2.
+univ+pair u+2 u+3 :- !.
+
+univ+pair u+3 u+4 :- !.
+
+univ+pair u+4 u+5 :- !.
+
+univ+chain U1 U2 :- univ+pair U1 U2, !.
+
+univ+chain U1 U2 :- univ+pair U1 U, univ+chain U U2, !.
+
+pts+pair (s+prop u+0) (s+type u+0) :- !.
+
+pts+pair (s+type U1) (s+type U2) :- univ+pair U1 U2, !.
+
+pts+pair (s+cprop U1) (s+type U2) :- univ+pair U1 U2, !.
 
 % (star, star, star), impredicative (box, star, star).
 pts+triple S (s+prop u+0) (s+prop u+0) :- !.
 
-% (star, star, star), (star, box, box), (box, box, box).
-% pts+triple (s+type i) (s+type j) (s+type j) :- i <= j, !.
+% (star, star, star), (box, box, box).
+pts+triple (s+type U) (s+type U) (s+type U) :- !.
+pts+triple (s+type U) (s+cprop U) (s+cprop U) :- !.
+pts+triple (s+cprop U) (s+type U) (s+type U) :- !.
+pts+triple (s+cprop U) (s+cprop U) (s+cprop U) :- !.
+
+% (star, box, box).
+pts+triple (s+prop u+0) S S :- !.
+pts+triple (s+type U1) (s+type U2) (s+type U2) :- univ+chain U1 U2, !.
+pts+triple (s+type U1) (s+cprop U2) (s+cprop U2) :- univ+chain U1 U2, !.
+pts+triple (s+cprop U1) (s+type U2) (s+type U2) :- univ+chain U1 U2, !.
+pts+triple (s+cprop U1) (s+cprop U2) (s+cprop U2) :- univ+chain U1 U2, !.
 
 % not in the Cube: (box, star, box)
-% pts+triple (s+type i) (s+type j) (s+type i) :- j < i, !.
+pts+triple (s+type U2) (s+type U1) (s+type U2) :- univ+chain U1 U2, !.
+pts+triple (s+type U2) (s+cprop U1) (s+cprop U2) :- univ+chain U1 U2, !.
+pts+triple (s+cprop U2) (s+type U1) (s+type U2) :- univ+chain U1 U2, !.
+pts+triple (s+cprop U2) (s+cprop U1) (s+cprop U2) :- univ+chain U1 U2, !.
 
 % cumulativity
-% pts+sub (s+prop 0) (s+type i).
-% pts+sub (s+type j) (s+type i) :- j < i.
+pts+sub (s+prop u+0) (s+type U) :- !.
+pts+sub (s+prop u+0) (s+cprop U) :- !.
+pts+sub (s+type U1) (s+type U2) :- !, univ+chain U1 U2.
+pts+sub (s+cprop U1) (s+type U2) :- !, univ+chain U1 U2.
+pts+sub (s+cprop U1) (s+cprop U2) :- !, univ+chain U1 U2.

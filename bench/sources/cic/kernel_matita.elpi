@@ -8,28 +8,36 @@ accumulate kernel_pts.
 
 % EXTRA REDUCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-get+branch J (cframe A _ _ P) T P :- nth A J T. 
+get+branch J (cframe A _ _ P) T P [] :- nth A J T.
 
-get+branch J [V|P1] T [V|P2] :- get+branch J P1 T P2.
+get+branch J [V|P] T P1 [V|P2] :- get+branch J P T P1 P2.
 
 %
 
 % extra delta
-r+step T1 T2 :- $r+step T1 T2.
+r+step T1 T2 :- $r+step T1 T2, !.
 
 % nu for case
 whd+extra (case V A W U) P V (cframe A W U P) :- !.
 
 % iota for case
-whd+extra T1 P1 T2 P2 :- $constructor T1 J, !, get+branch J P1 T2 P2.
+% note: the left arguments must be removed
+whd+extra T1 P1 T2 P2 :- $constructor T1 J K, !, get+branch J P1 T2 P A,
+                         split A K SN DX, append DX P P2.
 
 % CONVERSION HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-conv+args (cframe A1 W U1 P1) (cframe A2 W U2 P2) :- conv+args P1 P2, conv+main U1 U2, conv+args A1 A2.
+conv+args (cframe A1 W U1 P1) (cframe A2 W U2 P2) :- conv+args P1 P2, 
+                                                     conv+main U1 i+rc U2, conv+args A1 A2.
+
+% VALIDITY + INFERRED TYPE HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+out+type V W0 U0 W0 P (appl U0 DXV) :- $inductive W0 K, split P K SN DX,
+                                       append DX [V] DXV.
 
 % VALIDITY + INFERRED TYPE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% not complete ...
-t+step (case V A W U) U :- has+type V W, has+sort U S.
+% not complete, we just compute the output type ...
+t+step (case V A W0 U0) U :- !, t+step V W, whd+delta W [] (out+type V W0 U0) U.
 
-t+step T U :- $t+step T U.
+t+step T U :- $t+step T U, !.

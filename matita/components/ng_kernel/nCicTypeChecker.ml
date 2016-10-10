@@ -1278,13 +1278,15 @@ let typecheck_obj status (uri,height,metasenv,subst,kind) =
       check_relevance status ~subst ~metasenv [] relevance ty;
       (*check_relevance status ~in_type:false ~subst ~metasenv relevance te*)
 (* FG: extension for ELPI *)
-      log (LP.has_type te ty)
+      let r = Ref.reference_of_spec uri (Ref.Def height) in
+      log (LP.has_type r te ty)
 (* FG: end of extension for ELPI *)
    | C.Constant (relevance,_,None,ty,_) ->
       ignore (typeof status ~subst ~metasenv [] ty);
       check_relevance status ~subst ~metasenv [] relevance ty;
 (* FG: extension for ELPI *)
-      log (LP.has_some_sort ty)
+      let r = Ref.reference_of_spec uri Ref.Decl in
+      log (LP.has_some_sort r ty)
 (* FG: end of extension for ELPI *)
    | C.Inductive (_, leftno, tyl, _) -> 
        check_mutual_inductive_defs status uri ~metasenv ~subst leftno tyl

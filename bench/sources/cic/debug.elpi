@@ -1,0 +1,30 @@
+% DEBUGGING %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+r+step (sort S) T2 :- !, fail.
+
+r+step (abst W F) T2 :- !, fail.
+
+% r+step T1 T2 :- on+focus, $print (r+step T1 T2), fail.
+
+% whd+extra T1 P1 T2 P2 :- on+focus, $print (whd+extra T1 P1 T2 P2), fail.
+
+% whd+delta+pi T1 P T2 :- on+focus, $print (whd+delta+pi T1 P T2), fail.
+
+%%
+
+% conv+main T1 I T2 :- on+focus, $print (++conv+main T1 I T2), fail.
+
+conv+whnf T1 P1 I T2 P2 :- on+focus, $print (++conv+whnf T1 P1 I T2 P2), fail.
+
+% t+step T U :- on+focus, $print (++t+step T U), fail.
+
+% has+checked+type T U :- on+focus, $print (++has+checked+type T U), fail.
+
+% pts+pair S1 S2 :- on+focus, $print (++pts+pair S1 S2), fail.
+
+% pts+triple S1 S2 S3 :- on+focus, $print (++pts+triple S1 S2 S3), fail.
+
+% pts+sub S1 S2 :- on+focus, $print (++pts+sub S1 S2), fail.
+
+on+focus.
+% :- $current "cic:/matita/basics/logic/R2.def(3)".
