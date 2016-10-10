@@ -143,3 +143,12 @@ read S :- flush std_out, input_line std_in X, string_to_term X S.
 stop :- halt.
 
 time T :- $gettimeofday B, T, $gettimeofday A, D is A - B, $print "TIME" D T.
+
+type $$=   X -> X -> prop.
+type $$::  X -> list X -> list X.
+type $$[]  list X.
+type $$is  X -> X -> prop.
+type $$$term_to_string X -> string -> prop.
+type $$$print X -> Y.
+type $$:- prop -> prop -> prop.
+type $$, prop -> Y.

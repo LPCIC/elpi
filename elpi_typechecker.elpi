@@ -103,18 +103,8 @@ typecheck-program P E :-
 
 % --------- pervasives ?
 
-type $$=   X -> X -> prop.
-type $$`:  X -> Y -> prop.
-type $$::  X -> list X -> list X.
-type $$[]  list X.
-type $$=   X -> X -> prop.
-type $$is  X -> X -> prop.
-type $$$term_to_string X -> string -> prop.
 type of X -> Y -> list Z -> prop.
-type $$$print X -> Y.
-type $$, prop -> Y.
 type $$-> X -> X -> prop.
-type $$:- prop -> prop -> prop.
 type wrong-arity A -> B -> list A -> err.
 
 main :- foo X, foo X Y.
