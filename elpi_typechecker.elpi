@@ -53,7 +53,8 @@ mode (of i o i). % BUG: matching generates chains?
 
 of (-> A B) T E :- of A TA E, of B TB E, TA = TB.
 
-of (cdata CData) Ty E :- $is_cdata CData CTy, !, Ty = CTy.
+of (cdata CData) Ty E :-
+  $is_cdata CData CTy, !, assert (Ty = CTy) (type-err CData CTy Ty).
 
 of (app [HD|ARGS]) TY E :- !,
   of HD HDTY E, of-app HDTY ARGS TY HD (Done - Done) E.

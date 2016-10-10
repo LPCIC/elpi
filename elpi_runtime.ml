@@ -3607,7 +3607,7 @@ let enable_typechecking () =
       let c, _ = C.funct_of_ast (F.from_string "typecheck-program") in
       [], 0, [||], App(c,clist,[tlist]) in
     if execute_once checker query then
-      error "Type checking failure";
+      Printf.eprintf "Anomaly: Type checking aborts\n%!";
     )
 ;;
 
