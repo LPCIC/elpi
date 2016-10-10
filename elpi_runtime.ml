@@ -124,17 +124,21 @@ module Constants : sig
   val show : constant -> string
   val pp : Format.formatter -> constant -> unit
   val fresh : unit -> constant * term
+  val from_string : string -> constant
  
   (* To keep the type of terms small, we use special constants for !, =, pi.. *)
   (* {{{ *)
   val cutc   : term
   val truec  : term
   val andc   : constant
+  val andt   : term
   val andc2  : constant
   val orc    : constant
   val implc  : constant
   val rimplc  : constant
+  val rimpl  : term
   val pic    : constant
+  val pi    : term
   val sigmac : constant
   val eqc    : constant
   val rulec : constant
@@ -145,6 +149,7 @@ module Constants : sig
   val uvc : constant
   val asc : constant
   val letc : constant
+  val arrowc : constant
 
   val spillc : constant
   (* }}} *)
@@ -194,16 +199,19 @@ let funct_of_ast, of_dbl, show, fresh =
    Hashtbl.add h' n ("frozen-"^string_of_int n);
    n,Const n)
 ;;
+
 let pp fmt c = Format.fprintf fmt "%s" (show c)
+
+let from_string s = fst (funct_of_ast F.(from_string s))
 
 let cutc = snd (funct_of_ast F.cutf)
 let truec = snd (funct_of_ast F.truef)
-let andc = fst (funct_of_ast F.andf)
+let andc, andt = funct_of_ast F.andf
 let andc2 = fst (funct_of_ast F.andf2)
 let orc = fst (funct_of_ast F.orf)
 let implc = fst (funct_of_ast F.implf)
-let rimplc = fst (funct_of_ast F.rimplf)
-let pic = fst (funct_of_ast F.pif)
+let rimplc, rimpl = funct_of_ast F.rimplf
+let pic, pi = funct_of_ast F.pif
 let sigmac = fst (funct_of_ast F.sigmaf)
 let eqc = fst (funct_of_ast F.eqf)
 let rulec = fst (funct_of_ast (F.from_string "rule"))
@@ -215,6 +223,7 @@ let uvc = fst (funct_of_ast (F.from_string "??"))
 let asc = fst (funct_of_ast (F.from_string "as"))
 let letc = fst (funct_of_ast (F.from_string ":="))
 let spillc = fst (funct_of_ast (F.spillf))
+let arrowc = fst (funct_of_ast F.arrowf)
 
 let dummy = App (-9999,cutc,[])
 
@@ -3150,6 +3159,8 @@ open Mainloop
   "Compiler" from AST to program
  ******************************************************************************)
 
+let typecheck = ref (fun clauses types -> ())
+
 module Compiler : sig
 
   val program_of_ast : ?print:bool -> Elpi_ast.decl list -> program
@@ -3192,7 +3203,7 @@ let desugar inner s args =
   let varname = function Const x -> x | _ -> assert false in
   let last_is_arrow l =
     match List.rev l with
-    | App(Const f,_) :: _ -> equal f arrowf
+    | App(Const f,[_]) :: _ -> equal f arrowf
     | _ -> false in  
   let chop_last_app l =
     match List.rev l with
@@ -3380,7 +3391,7 @@ type temp = {
   macro : Elpi_ast.term F.Map.t;
 }
 type comp_state = {
-  program : clause list;
+  program : (CData.t(*loc*) * string list * clause) list;
   lcs : int;
   chr : CHR.t;
 
@@ -3389,6 +3400,9 @@ type comp_state = {
   (* nesting *)
   clique : CHR.clique option;  
   ctx : temp list;
+
+  (* metadata *)
+  types : (term * int * term) list;
 }
 
 let sort_insertion l =
@@ -3411,21 +3425,22 @@ let program_of_ast ?(print=false) (p : Elpi_ast.decl list) : program =
  let clausify_block program block lcs cmap =
    let l = sort_insertion block in
    let clauses, lcs =
-     List.fold_left (fun (clauses,lcs) (macro,{ Elpi_ast.body }) ->
+     List.fold_left (fun (clauses,lcs) (macro,{ Elpi_ast.body; loc }) ->
       let names,_,env,t = query_of_ast_cmap lcs ~cmap ~macro body in
       if print then Fmt.eprintf "%a.@;" (uppterm 0 names 0 env) t;
       let moreclauses, morelcs = clausify (Array.length env) lcs t in
-      clauses @ List.rev moreclauses, lcs + morelcs
+      let loc = in_loc loc in
+      clauses @ List.(map (fun x -> loc,names,x) (rev moreclauses)), lcs + morelcs
      ) ([],lcs) l in
    program @ clauses, lcs
  in
- let clauses, lcs, chr =
+ let clauses, lcs, chr, types =
    let rec aux ({ program; lcs; chr; clique;
                   tmp = ({ block; cmap; macro } as tmp); ctx } as cs) = function
    | [] ->
        if ctx <> [] then error "Begin without an End";
        let program, lcs = clausify_block program block lcs cmap in
-       program, lcs, chr
+       program, lcs, chr, cs.types
 
    | d :: todo ->
       match d with
@@ -3437,6 +3452,10 @@ let program_of_ast ?(print=false) (p : Elpi_ast.decl list) : program =
           let rule = chr_of_ast lcs cmap macro r in
           let chr = CHR.add_rule clique rule chr in
           aux { cs with chr } todo
+      | Elpi_ast.Type(name,typ) ->
+          let _, name = C.funct_of_ast name in
+          let _,_,env,typ = query_of_ast_cmap lcs ~cmap ~macro typ in
+          aux { cs with types = (name,Array.length env,typ) :: cs.types } todo
       | Elpi_ast.Clause c ->
           aux { cs with tmp = { tmp with block = (block @ [macro,c])} } todo
       | Elpi_ast.Begin ->
@@ -3448,7 +3467,7 @@ let program_of_ast ?(print=false) (p : Elpi_ast.decl list) : program =
          let program, lcs = clausify_block program block lcs cmap in
          let tmp = List.hd ctx in
          let ctx = List.tl ctx in
-         aux { cs with tmp; ctx; lcs; clique = None } todo
+         aux { cs with program; tmp; ctx; lcs; clique = None } todo
       | Elpi_ast.Local v ->
          aux {cs with lcs = lcs + 1;
               tmp = { tmp with cmap = F.Map.add v (C.of_dbl lcs) cmap }} todo
@@ -3496,9 +3515,11 @@ let program_of_ast ?(print=false) (p : Elpi_ast.decl list) : program =
    in
      aux { program = []; lcs = 0; chr = CHR.empty; clique = None;
            tmp = { block = []; cmap = F.Map.empty; macro = F.Map.empty };
-           ctx = []; }
+           ctx = []; types = [] }
          p
  in
+ !typecheck clauses types;
+ let clauses = List.map (fun (_,_,x) -> x) clauses in
  { query_depth = lcs;
    prolog_program = Constraints.wrap_prolog_prog (make_index clauses);
    chr = CHR.wrap_chr chr;
@@ -3515,6 +3536,79 @@ let execute_once program q =
  let { search } = make_runtime ~print_constraints:true program in
  try ignore (search q) ; false
  with No_clause (*| Non_linear*) -> true
+;;
+
+
+let mkQApp =
+  let appc, _ = C.funct_of_ast (F.from_string "app") in
+  fun l -> App(appc,list_to_lp_list l,[])
+
+let quote_term ?(app=true) vars term =
+  let lamc, _ = C.funct_of_ast (F.from_string "lam") in
+  let cdatac, _ = C.funct_of_ast (F.from_string "cdata") in
+  let reloc n = if n < 0 then n else n + vars in
+  let rec aux depth = function
+    | Const n -> C.of_dbl (reloc n)
+    | Lam x -> App(lamc,aux (depth+1) x,[])
+    | App(c,Lam f,[]) when c == C.pic || c == C.sigmac ->
+        App(c,Lam (aux (depth+1) f), [])
+    | App(c,f,[]) when c == C.pic || c == C.sigmac ->
+        App(c,aux depth f, [])
+    | App(c,s,[t]) when c == C.arrowc -> App(c,aux depth s,[aux depth t])
+    | App(hd,x,xs) when not app ->
+        App(reloc hd, aux depth x, List.map (aux depth) xs)
+    | App(hd,x,xs) ->
+        mkQApp (C.of_dbl (reloc hd) :: List.map (aux depth) (x::xs))
+    | Arg(id,0) -> C.of_dbl id
+    | Arg(id,argno) -> mkQApp (C.of_dbl id :: C.mkinterval vars argno 0)
+    | AppArg(id,xs) -> mkQApp (C.of_dbl id :: List.map (aux depth) xs)
+    | UVar ({ contents = g }, from, args) when g != C.dummy ->
+       aux depth (deref_uv ~from ~to_:depth args g)
+    | AppUVar ({contents = t}, from, args) when t != C.dummy ->
+       aux depth (deref_appuv ~from ~to_:depth args t)
+    | UVar _ | AppUVar _ -> assert false
+    | Custom(c,[]) -> C.of_dbl c
+    | Custom(c,args) ->
+        mkQApp (C.of_dbl (reloc c) :: List.map (aux depth) args)
+    | CData _ as x -> App(cdatac,x,[])
+  in
+    aux vars term
+
+let rec piclose t = function
+  | 0 -> t
+  | n -> App(C.pic,Lam (piclose t (n-1)),[])
+
+let quote_clause (loc, names, { key; args; hyps; vars }) =
+  (* horrible hack *)
+  let hdc, hd = C.funct_of_ast (F.from_string (pp_key key)) in
+  let head = match args with
+    | [] -> hd
+    | x::xs -> App(hdc,x,xs) in
+  let t =
+    if hyps = [] then quote_term vars head
+    else
+      mkQApp [C.rimpl;
+              quote_term vars head;
+              mkQApp (C.andt :: List.map (quote_term vars) hyps)]
+  in
+  let names = List.map (fun x -> CData(in_string (F.from_string x))) names in
+  App(C.andc,CData loc,[list_to_lp_list names;piclose t vars])
+;;
+
+let enable_typechecking () =
+  let checker = Compiler.program_of_ast
+    (Elpi_parser.parse_program ["elpi_typechecker.elpi"]) in
+  typecheck := (fun clauses types ->
+    let clist = list_to_lp_list (List.map quote_clause clauses) in
+    let tlist = list_to_lp_list (List.map (fun (name,n,typ) ->
+        App(C.from_string "`:",name,[piclose (quote_term ~app:false 0 typ) n]))
+      types) in
+    let query =
+      let c, _ = C.funct_of_ast (F.from_string "typecheck-program") in
+      [], 0, [||], App(c,clist,[tlist]) in
+    if execute_once checker query then
+      error "Type checking failure";
+    )
 ;;
 
 let execute_loop program ((q_names,q_argsdepth,q_env,q) as qq) =

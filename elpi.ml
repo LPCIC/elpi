@@ -95,6 +95,7 @@ let _ =
     let strm = Stream.of_channel stdin in
     Elpi_parser.parse_goal_from_stream strm
    end in
+  Elpi_runtime.enable_typechecking ();
   if !test then test_impl p g
   else run_prog p g
 ;;

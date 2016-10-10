@@ -119,3 +119,5 @@ val query_of_ast_cmap :
   term Func.Map.t ->
   Elpi_ast.term -> string list * int * term array * term
 val split_conj : term -> term list
+
+val enable_typechecking : unit -> unit

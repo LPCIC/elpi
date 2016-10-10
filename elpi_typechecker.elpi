@@ -1,0 +1,121 @@
+% vim: set ft=lprolog:
+
+if B T _ :- B, !, T.
+if _ _ E :- E.
+
+append [X|XS] L [X|L1]  :- append XS L L1 .
+append [] L L .
+
+infix `: 141.
+
+% --------- error reporting 
+assert P _ :- P, !.
+assert _ Err :-
+ checking PNAME,
+ LOC is {$term_to_string PNAME} ^ "\n",
+ MSG is {$term_to_string {$counter "run"}} ^ " " ^ LOC ^ {print-err Err} ^ "\n",
+ $print MSG.
+
+print-err (type-err Name Ty ExpectedTy) R :-
+  $term_to_string Ty T1,
+  $term_to_string ExpectedTy T2,
+  $term_to_string {pp Name} N,
+  R is N ^ " has type " ^ T1 ^ " but is used with type " ^ T2.
+print-err (wrong-arity Term Type RemainingArgs) R :-
+  $term_to_string {pp Term} T,
+  $term_to_string Type Ty,
+  $term_to_string {pp-list RemainingArgs} A,
+  R is T ^ " has type " ^ Ty ^ " but is applied to " ^ A.
+
+mode (pp i o).
+pp (app [HD|L]) T :-
+  if (pp HD PHD, not (HD = PHD))
+    (pp-list L PL, mk-app [c PHD|PL] T)
+    (pp-list [HD|L] PL, mk-app PL T).
+pp X X.
+
+mkde (pp-list i o).
+pp-list [X|XS] [Y|L] :- pp-list XS L, pp X Y.
+pp-list [] [].
+
+mode (mk-app i o).
+unsafe-cast X X.
+type unsafe-cast A -> B -> prop.
+mk-app [X] X.
+mk-app [X, A|XS] T :- unsafe-cast X X', mk-app [X' A | XS] T.
+
+% --------- typing of terms
+mode (refresh-poly-ty i o).
+refresh-poly-ty (pi F) T :- !, refresh-poly-ty (F FRESH) T.
+refresh-poly-ty X X.
+
+mode (of i o i). % BUG: matching generates chains?
+
+of (-> A B) T E :- of A TA E, of B TB E, TA = TB.
+
+of (cdata CData) Ty E :- $is_cdata CData CTy, !, Ty = CTy.
+
+of (app [HD|ARGS]) TY E :- !,
+  of HD HDTY E, of-app HDTY ARGS TY HD (Done - Done) E.
+of (pi F) Ty E :- !, Ty = prop, pi x\
+ ( (pi E\ of x T E),
+   (pi E A Tx\ of (x A) Tx E :- of A TA E, T = -> TA Tx),
+   (pi E A B Tx\ of (x A B) Tx E :- of A TA E, of B TB E, T = -> TA (-> TB Tx)))
+ => of (F x) prop E.
+of (sigma F) Ty E :- !, Ty = prop, pi x\ of x FRESH _ => of (F x) prop E.
+
+of Id ETy [Id `: PTy|E] :- !,
+  refresh-poly-ty PTy Ty, assert (Ty = ETy) (type-err Id Ty ETy).
+of Id Ty [_|E] :- !, of Id Ty E.
+of Id Ty (?? as TL) :- TL = [Id `: Ty|FRESH].
+
+of Id Ty _ :- of Id ETy _, assert false (type-err Id Ty ETy).
+
+of-app (-> T TS) [X|XS] TGT HD (B - BT) E :- !,
+  of X T E, BT = X :: TL, of-app TS XS TGT HD (B - TL) E.
+of-app Ty [] TGT HD (D - []) _ :- !,
+  assert (TGT = Ty) (type-err (app [HD|D]) Ty TGT).
+of-app Ty Args _ HD (D - []) _ :- !,
+  assert false (wrong-arity (app [HD|D]) Ty Args).
+
+% --------- typing of clauses
+%  we get names for Args
+
+typecheck [] E.
+typecheck [($$, Loc Names Clause)|Rest] E :-
+  %$print {$counter "run"} "type checking " Clause,
+  checking Loc => of-clause Names Clause E, !,
+  typecheck Rest E.
+
+of-clause [N|NS] (pi C) E :- !, pi x\ 
+ ( (pp x N :- !),
+   (pi E\ of x T E :- !),
+   (pi E A Tx\ of (x A) Tx E :- !, of A TA E, T = -> TA Tx),
+   (pi E A B Tx\ of (x A B) Tx E :- !, of A TA E, of B TB E, T = -> TA (-> TB Tx)))
+  => of-clause NS (C x) E.
+of-clause _ C E :- of C prop E.
+
+typecheck-program P E :-
+  typecheck P {append E FRESH},
+  true.
+  % $print "given:" E,
+  % $print "inferred:" FRESH.
+
+% --------- pervasives ?
+
+type $$=   X -> X -> prop.
+type $$`:  X -> Y -> prop.
+type $$::  X -> list X -> list X.
+type $$[]  list X.
+type $$=   X -> X -> prop.
+type $$is  X -> X -> prop.
+type $$$term_to_string X -> string -> prop.
+type of X -> Y -> list Z -> prop.
+type $$$print X -> Y.
+type $$, prop -> Y.
+type $$-> X -> X -> prop.
+type $$:- prop -> prop -> prop.
+type wrong-arity A -> B -> list A -> err.
+
+main :- foo X, foo X Y.
+

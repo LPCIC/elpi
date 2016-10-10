@@ -17,6 +17,8 @@ exception NotInProlog;;
 
 let parsed = ref [];;
 let cur_dirname = ref (Unix.getcwd ())
+let last_loc : Ploc.t ref = ref (Ploc.make_loc "dummy" 1 0 (0, 0) "")
+let set_fname fname = last_loc := (Ploc.make_loc fname 1 0 (0, 0) "")
 
 let rec readsymlinks f =
   try
@@ -45,7 +47,8 @@ module PointerFunc = struct
     'a 'b. path:string -> shortpath:string -> ('a -> 'b) -> 'a -> 'b
    ; export: clause -> unit}
  let latex_export =
-  ref {process=(fun ~path -> assert false) ; export=(fun _ -> assert false)}
+  ref { process = (fun ~path  ~shortpath f x -> f x);
+        export = (fun _ -> ()) }
  let set_latex_export f = latex_export := f
 end;;
 
@@ -82,9 +85,11 @@ let rec parse_one e (origfilename as filename) =
    iter_tjpath (!cur_dirname :: tjpath)
  in
  let inode = (Unix.stat filename).Unix.st_ino in
- if List.mem inode !parsed then begin
+ if List.mem_assoc inode !parsed then begin
   Printf.eprintf "already loaded %s\n%!" origfilename;
-  []
+  match !(List.assoc inode !parsed) with
+  | None -> []
+  | Some l -> l
  end else begin
   let sigs =
    if Filename.check_suffix filename ".sig" then []
@@ -95,14 +100,17 @@ let rec parse_one e (origfilename as filename) =
      parse_one e origsigname
     else [] in
   Printf.eprintf "loading %s\n%!" origfilename;
-  parsed := inode::!parsed ;
+  let ast = ref None in
+  parsed := (inode,ast) ::!parsed ;
   let ch = open_in filename in
   let saved_cur_dirname = !cur_dirname in
   cur_dirname := symlink_dirname filename;
   sigs @
   try
+   set_fname filename;
    let res = (!PointerFunc.latex_export).PointerFunc.process ~path:filename
     ~shortpath:origfilename (Grammar.Entry.parse e) (Stream.of_channel ch)in
+   ast := Some res;
    close_in ch;
    cur_dirname := saved_cur_dirname;
    res
@@ -144,7 +152,7 @@ let hex = lexer [ '0'-'9' | 'A'-'F' | 'a'-'f' ]
 let schar2 =
  lexer [ '+'  | '*' | '/' | '^' | '<' | '>' | '`' | '\'' | '?' | '@' | '#'
        | '~' | '=' | '&' | '!' ]
-let schar = lexer [ schar2 | '-' | '$' | '_' ]
+let schar = lexer [ schar2 | '-' | '$' | '_' | ':' ]
 let lcase = lexer [ 'a'-'z' ]
 let ucase = lexer [ 'A'-'Z' ]
 let idchar = lexer [ lcase | ucase | digit | schar ]
@@ -167,6 +175,10 @@ let rec stringchar = lexer
  | _ ]
 let rec string = lexer [ '"' / '"' string | '"' / | stringchar string ]
 
+let notspace = lexer [ '!' - '~' ]
+let rec notspacestar = lexer [ notspace notspacestar | ]
+let notspaceplus = lexer [ notspace notspacestar ]
+
 let constant = "CONSTANT" (* to use physical equality *)
 
 let tok = lexer
@@ -175,6 +187,7 @@ let tok = lexer
   | schar2 ?= [ 'A'-'Z' ] -> constant,$buf
   | schar2 idcharstar -> constant,$buf
   | '$' lcase idcharstar -> "BUILTIN",$buf
+  | '$' '$' notspaceplus -> "ESCAPE",  String.(sub $buf 2 (length $buf - 2))
   | '$' idcharstar -> constant,$buf
   | num -> "INTEGER",$buf
   | num ?= [ '.' '0'-'9' ] '.' num -> "FLOAT",$buf
@@ -218,14 +231,22 @@ let set_liter_map,get_literal,print_lit_map =
  (fun s -> LitMap.find s !lit_map),
  (fun () -> LitMap.iter (fun s1 s2 -> Format.printf "\n%s -> %s\n%!" s1 s2) !lit_map);;
 
+let succ_line loc =
+  Ploc.make_loc (Ploc.file_name loc) (Ploc.line_nb loc + 1) 0
+                (Ploc.last_pos loc, Ploc.last_pos loc) (Ploc.comment loc)
 
-let rec lex c = parser bp
-  | [< '( ' ' | '\n' | '\t' | '\r' ); s >] -> lex c s
-  | [< '( '%' ); '( '!'); s >] -> literatecomment c s
-  | [< '( '%' ); s >] -> comment c s
-  | [< ?= [ '/'; '*' ]; '( '/' ); '( '*' ); s >] -> comment2 0 c s
+let set_loc_pos loc bp ep =
+  Ploc.sub loc (bp - Ploc.first_pos loc) (ep - bp)
+
+let rec lex loc c = parser bp
+  | [< '( ' ' | '\t' | '\r' ); s >] -> lex loc c s
+  | [< '( '\n' ) ; s >] -> lex (succ_line loc) c s
+  | [< '( '%' ); '( '!'); s >] -> literatecomment loc c s
+  | [< '( '%' ); s >] -> comment loc c s
+  | [< ?= [ '/'; '*' ]; '( '/' ); '( '*' ); s >] -> comment2 loc 0 c s
   | [< s >] ep ->
-       if option_eq (Stream.peek s) None then ("EOF",""), (bp, ep)
+       if option_eq (Stream.peek s) None
+       then ("EOF",""), (set_loc_pos loc bp ep)
        else
         let (x,y) as res = tok c s in
         (if x == constant then
@@ -259,12 +280,13 @@ let rec lex c = parser bp
         
          | x when StringSet.mem x !symbols -> "SYMBOL",x
         
-         | _ -> res) else res), (bp, ep)
-and skip_to_dot c = parser
-  | [< '( '.' ); s >] -> lex c s
-  | [< '_ ; s >] -> skip_to_dot c s
-and literatecomment c = parser
+         | _ -> res) else res), (set_loc_pos loc bp ep)
+and skip_to_dot loc c = parser
+  | [< '( '.' ); s >] -> lex loc c s
+  | [< '_ ; s >] -> skip_to_dot loc c s
+and literatecomment loc c = parser
   | [< '( '\n' ); s >] ->
+      let loc = succ_line loc in
       let buf = Buffer.contents literatebuf in
       Buffer.reset literatebuf;
       let list_str = Str.split (Str.regexp " +") buf in
@@ -273,29 +295,37 @@ and literatecomment c = parser
        | _ -> prerr_endline ("Wrong syntax: literate comment: " ^ buf); exit 1);
   (*   print_lit_map (); *)
   (*   prerr_endline buf; (*register imperatively*) *)
-      lex c s
-  | [< '_ as x ; s >] -> Buffer.add_char literatebuf x; literatecomment c s
-and comment c = parser
-  | [< '( '\n' ); s >] -> lex c s
-  | [< '_ ; s >] -> comment c s
-and comment2 lvl c = parser
+      lex loc c s
+  | [< '_ as x ; s >] -> Buffer.add_char literatebuf x; literatecomment loc c s
+and comment loc c = parser
+  | [< '( '\n' ); s >] -> lex (succ_line loc) c s
+  | [< '_ ; s >] -> comment loc c s
+and comment2 loc lvl c = parser
   | [< ?= [ '*'; '/' ]; '( '*' ); '( '/'); s >] ->
-      if lvl = 0 then lex c s else comment2 (lvl-1) c s
-  | [< ?= [ '/'; '*' ]; '( '/' ); '( '*' ); s >] -> comment2 (lvl+1) c s
-  | [< '_ ; s >] -> comment2 lvl c s
+      if lvl = 0 then lex loc c s else comment2 loc (lvl-1) c s
+  | [< ?= [ '/'; '*' ]; '( '/' ); '( '*' ); s >] -> comment2 loc (lvl+1) c s
+  | [< '_ ; s >] -> comment2 loc lvl c s
 
 
 open Plexing
 
+(* For some reason, the [Ploc.after] function of Camlp5 does not update line
+   numbers, so we define our own function that does it. *)
+let after loc =
+  let line_nb = Ploc.line_nb_last loc in
+  let bol_pos = Ploc.bol_pos_last loc in
+  Ploc.make_loc (Ploc.file_name loc) line_nb bol_pos
+                (Ploc.last_pos loc, Ploc.last_pos loc) (Ploc.comment loc)
+
 let lex_fun s =
   let tab = Hashtbl.create 207 in
-  let last = ref Ploc.dummy in
   (Stream.from (fun id ->
-     let tok, loc = lex Lexbuf.empty s in
-     last := Ploc.make_unlined loc;
-     Hashtbl.add tab id !last;
+     let tok, loc = lex !last_loc Lexbuf.empty s in
+     last_loc := after loc;
+     Hashtbl.add tab id loc;
      Some tok)),
-  (fun id -> try Hashtbl.find tab id with Not_found -> !last)
+  (fun id -> try Hashtbl.find tab id with Not_found -> !last_loc)
+;;
 
 let tok_match =
  function
@@ -378,7 +408,8 @@ EXTEND
   lp: [ [ cl = LIST0 clause; EOF -> List.concat cl ] ];
   const_sym:
     [[ c = CONSTANT -> c
-     | s = SYMBOL -> s ]];
+     | s = SYMBOL -> s
+     | e = ESCAPE -> e ]];
   filename:
     [[ c = CONSTANT -> c
      | c = LITERAL -> c ]];
@@ -421,7 +452,7 @@ EXTEND
     ]];
   clause :
     [[ id = OPT clname; insert = OPT clinsert; f = atom; FULLSTOP ->
-       let c = { id; insert; body = f } in
+       let c = { loc; id; insert; body = f } in
        (!PointerFunc.latex_export).PointerFunc.export c ;
        [Clause c]
      | LCURLY -> [Begin]
@@ -455,8 +486,10 @@ EXTEND
      | USEONLY; LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP -> []
      | EXPORTDEF; LIST1 const_sym SEP SYMBOL ","; FULLSTOP -> []
      | EXPORTDEF; LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP -> []
-     | TYPE; LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP -> []
-     | KIND; LIST1 const_sym SEP SYMBOL ","; kind; FULLSTOP -> []
+     | TYPE; names = LIST1 const_sym SEP SYMBOL ","; t = type_; FULLSTOP ->
+         List.map (fun n -> Type(Func.from_string n,t)) names
+     | KIND; names = LIST1 const_sym SEP SYMBOL ","; t = kind; FULLSTOP ->
+         List.map (fun n -> Type(Func.from_string n,t)) names
      | TYPEABBREV; abbrform; TYPE; FULLSTOP -> []
      | fix = FIXITY; syms = LIST1 const_sym SEP SYMBOL ","; prec = INTEGER; FULLSTOP ->
         let nprec = int_of_string prec in
@@ -500,17 +533,17 @@ EXTEND
           []
     ]];
   kind:
-    [[ TYPE -> ()
-     | TYPE; ARROW; kind -> ()
+    [[ t = TYPE -> mkCon t
+     | t = TYPE; a = ARROW; k = kind -> mkApp [mkCon a; mkCon t; k]
     ]];
   type_:
-    [[ ctype -> ()
-     | ctype; ARROW; type_ -> ()
+    [[ c = ctype -> c
+     | s = ctype; a = ARROW; t = type_ -> mkApp [mkCon a; s; t]
     ]];
   ctype:
-    [[ CONSTANT -> ()
-     | CONSTANT; LIST1 ctype -> ()
-     | LPAREN; type_; RPAREN -> ()
+    [[ c = CONSTANT -> mkCon c
+     | c = CONSTANT; l = LIST1 ctype -> mkApp (mkCon c :: l)
+     | LPAREN; t = type_; RPAREN -> t
     ]];
   abbrform:
     [[ CONSTANT -> ()
@@ -547,7 +580,10 @@ EXTEND
           if List.length xs = 0 && tl <> mkNil then 
             raise (Token.Error ("List with no elements cannot have a tail"));
           if List.length xs = 0 then mkNil
-          else mkSeq (xs@[tl]) ]];
+          else mkSeq (xs@[tl]) ]
+   | "wtf" 
+      [ s = ESCAPE -> mkCon s ]
+      ];
 END
 
 (* 120 is the first level after 110, which is that of , *)

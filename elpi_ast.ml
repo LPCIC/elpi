@@ -31,7 +31,7 @@ module Func = struct
   let eqf = from_string "="
   let isf = from_string "is"
   let consf = from_string "::"
-  let nilf = from_string "nil"
+  let nilf = from_string "[]"
   let letf = from_string ":="
   let arrowf = from_string "->"
   let sequentf = from_string "?-"
@@ -72,6 +72,7 @@ let mkSeq l =
 let mkIs x f = App(Const Func.isf,[x;f])
 
 type clause = {
+  loc : Ploc.t [@printer fun _ _ -> ()];
   id : string option;
   insert : ([ `Before | `After ] * string) option;
   body : term;
@@ -98,6 +99,7 @@ type decl =
  | Chr of (term, Func.t) chr
  | Accumulated of decl list
  | Macro of Func.t * term
+ | Type of Func.t * term
 [@@deriving show]
 
 let mkLocal x = Local (Func.from_string x)

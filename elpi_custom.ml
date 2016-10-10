@@ -67,6 +67,13 @@ let rec eval depth =
   | CData _ as x -> x
 ;;
 
+let rec deref_head depth = function
+  | UVar ({ contents = g }, from, args) when g != dummy ->
+     deref_head depth (deref_uv ~from ~to_:depth args g)
+  | AppUVar ({contents = t}, from, args) when t != dummy ->
+     deref_head depth (deref_appuv ~from ~to_:depth args t)
+  | x -> x
+
 let register_evals l f = List.iter (fun i -> register_eval i f) l;;
 
 let _ =
@@ -529,6 +536,15 @@ let _ =
               Sys_error msg -> error msg)
          | _ -> type_error "bad argument to eof (or $eof)")
     | _ -> type_error "eof (or $eof) takes 1 argument") ;
+
+  register_custom "$is_cdata" (fun ~depth ~env:_ _ -> function
+    | [t1;t2] ->
+       (match deref_head depth t1 with
+       | CData n -> [ App(eqc, t2, [
+                snd (Elpi_runtime.Constants.funct_of_ast (F.from_string (CData.name n)))])]
+       | _ -> raise No_clause)
+    | _ -> type_error "$is_cdata")
+
 ;;
 
 let () =

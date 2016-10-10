@@ -50,6 +50,7 @@ val show_term : term -> string
 
 
 type clause = {
+  loc : Ploc.t;
   id : string option;
   insert : ([ `Before | `After ] * string) option;
   body : term;
@@ -90,6 +91,7 @@ type decl =
  | Chr of (term, Func.t) chr
  | Accumulated of decl list
  | Macro of Func.t * term
+ | Type of Func.t * term
 
 val mkLocal : string -> decl
 

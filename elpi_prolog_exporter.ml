@@ -81,6 +81,7 @@ let rec pp_FOprolog p =
     | Constraint _
     | Chr _
     | Macro _
+    | Type _
     | End -> assert false (* TODO *)
     | Accumulated l -> pp_FOprolog l
     | Clause { Elpi_ast.body = t } ->
