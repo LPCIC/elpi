@@ -1,5 +1,10 @@
 % vim: set ft=lprolog:
 
+macro @app :- elpi_app.
+macro @lam :- elpi_lam.
+macro @cdata :- elpi_cdata.
+
+
 if B T _ :- B, !, T.
 if _ _ E :- E.
 
@@ -28,7 +33,7 @@ print-err (wrong-arity Term Type RemainingArgs) R :-
   R is T ^ " has type " ^ Ty ^ " but is applied to " ^ A.
 
 mode (pp i o).
-pp (app [HD|L]) T :-
+pp (@app [HD|L]) T :- !,
   if (pp HD PHD, not (HD = PHD))
     (pp-list L PL, mk-app [c PHD|PL] T)
     (pp-list [HD|L] PL, mk-app PL T).
@@ -53,10 +58,10 @@ mode (of i o i). % BUG: matching generates chains?
 
 of (-> A B) T E :- of A TA E, of B TB E, TA = TB.
 
-of (cdata CData) Ty E :-
+of (@cdata CData) Ty E :-
   $is_cdata CData CTy, !, assert (Ty = CTy) (type-err CData CTy Ty).
 
-of (app [HD|ARGS]) TY E :- !,
+of (@app [HD|ARGS]) TY E :- !,
   of HD HDTY E, of-app HDTY ARGS TY HD (Done - Done) E.
 of (pi F) Ty E :- !, Ty = prop, pi x\
  ( (pi E\ of x T E),
@@ -75,16 +80,16 @@ of Id Ty _ :- of Id ETy _, assert false (type-err Id Ty ETy).
 of-app (-> T TS) [X|XS] TGT HD (B - BT) E :- !,
   of X T E, BT = X :: TL, of-app TS XS TGT HD (B - TL) E.
 of-app Ty [] TGT HD (D - []) _ :- !,
-  assert (TGT = Ty) (type-err (app [HD|D]) Ty TGT).
+  assert (TGT = Ty) (type-err (@app [HD|D]) Ty TGT).
 of-app Ty Args _ HD (D - []) _ :- !,
-  assert false (wrong-arity (app [HD|D]) Ty Args).
+  assert false (wrong-arity (@app [HD|D]) Ty Args).
 
 % --------- typing of clauses
 %  we get names for Args
 
 typecheck [] E.
 typecheck [($$, Loc Names Clause)|Rest] E :-
-  %$print {$counter "run"} "type checking " Clause,
+  % $print {$counter "run"} "type checking " Clause,
   checking Loc => of-clause Names Clause E, !,
   typecheck Rest E.
 

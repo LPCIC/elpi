@@ -3540,12 +3540,12 @@ let execute_once program q =
 
 
 let mkQApp =
-  let appc, _ = C.funct_of_ast (F.from_string "app") in
+  let appc, _ = C.funct_of_ast (F.from_string "elpi_app") in
   fun l -> App(appc,list_to_lp_list l,[])
 
 let quote_term ?(app=true) vars term =
-  let lamc, _ = C.funct_of_ast (F.from_string "lam") in
-  let cdatac, _ = C.funct_of_ast (F.from_string "cdata") in
+  let lamc, _ = C.funct_of_ast (F.from_string "elpi_lam") in
+  let cdatac, _ = C.funct_of_ast (F.from_string "elpi_cdata") in
   let reloc n = if n < 0 then n else n + vars in
   let rec aux depth = function
     | Const n -> C.of_dbl (reloc n)
