@@ -538,6 +538,7 @@ let () =
     ~empty:UGraph.initial_universes in
   let { CData.cin = in_lvl; isc = is_lvl; cout = out_lvl } as clvl =
     CData.(declare {
+    data_name = "universe level";
     data_pp = (fun f x -> Format.fprintf f "%s" (Univ.Level.to_string x));
     data_eq = (fun x y -> UGraph.check_eq (CustomConstraints.read uty)
       Univ.Universe.(make x) Univ.Universe.(make y));

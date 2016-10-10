@@ -109,6 +109,7 @@ module CData : sig
   type t
 
   type 'a data_declaration = {
+    data_name : string;
     data_pp : Format.formatter -> 'a -> unit;
     data_eq : 'a -> 'a -> bool;
     data_hash : 'a -> int;
@@ -118,8 +119,10 @@ module CData : sig
 
   val declare : 'a data_declaration -> 'a cdata
   val pp : Format.formatter -> t -> unit
+  val show : t -> string
   val equal : t -> t -> bool
   val hash : t -> int
+  val name : t -> string
 
   val morph1 : 'a cdata -> ('a -> 'a) -> t -> t
 

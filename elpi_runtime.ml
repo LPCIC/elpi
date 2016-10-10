@@ -10,19 +10,30 @@ module IM = Map.Make(struct type t = int let compare x y = x - y end)
 
 let { CData.cin = in_float; isc = is_float; cout = out_float } as cfloat =
   CData.(declare {
+    data_name = "float";
     data_pp = (fun f x -> Fmt.fprintf f "%f" x);
     data_eq = (==);
     data_hash = Hashtbl.hash;
   })
 let { CData.cin = in_int; isc = is_int; cout = out_int } as cint =
   CData.(declare {
+    data_name = "int";
     data_pp = (fun f x -> Fmt.fprintf f "%d" x);
     data_eq = (==);
     data_hash = Hashtbl.hash;
   })
 let { CData.cin = in_string; isc = is_string; cout = out_string } as cstring =
   CData.(declare {
+    data_name = "string";
     data_pp = (fun f x -> Fmt.fprintf f "\"%s\"" (F.show x));
+    data_eq = (==);
+    data_hash = Hashtbl.hash;
+  })
+let { CData.cin = in_loc; isc = is_loc; cout = out_loc } as cloc =
+  CData.(declare {
+    data_name = "loc";
+    data_pp = (fun f x ->
+      Fmt.fprintf f "%s:%d:" (Ploc.file_name x) (Ploc.line_nb x));
     data_eq = (==);
     data_hash = Hashtbl.hash;
   })
@@ -1197,7 +1208,7 @@ and beta depth sub t args =
               AppUVar (r,n,args1@args) end
          | AppUVar (r,depth,args1) -> AppUVar (r,depth,args1@args)
          | Lam _ -> anomaly "beta: some args and some lambdas"
-         | CData _ -> type_error "beta"
+         | CData x -> type_error (Printf.sprintf "beta: '%s'" (CData.show x))
  end]
 
 (* eat_args n [n ; ... ; n+k] (Lam_0 ... (Lam_k t)...) = n+k+1,[],t

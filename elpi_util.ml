@@ -241,6 +241,7 @@ module CData = struct
   }
 
   type 'a data_declaration = {
+    data_name : string;
     data_pp : Format.formatter -> 'a -> unit;
     data_eq : 'a -> 'a -> bool;
     data_hash : 'a -> int;
@@ -255,15 +256,21 @@ let cget x = Obj.obj x.t
 let pp f x = (M.find x.ty !m).data_pp f x
 let equal x y = x.ty = y.ty && (M.find x.ty !m).data_eq x y
 let hash x = (M.find x.ty !m).data_hash x
+let name x = (M.find x.ty !m).data_name
 let ty2 { isc } ({ ty = t1 } as x) { ty = t2 } = isc x && t1 = t2
+let show x =
+  let b = Buffer.create 22 in
+  Format.fprintf (Format.formatter_of_buffer b) "@[%a@]" pp x;
+  Buffer.contents b
 
 let fresh_tid =
   let tid = ref 0 in
   fun () -> incr tid; !tid
 
-let declare { data_eq; data_pp; data_hash } =
+let declare { data_eq; data_pp; data_hash; data_name } =
   let tid = fresh_tid () in
-  m := M.add tid { data_pp = (fun f x -> data_pp f (cget x));
+  m := M.add tid { data_name;
+                   data_pp = (fun f x -> data_pp f (cget x));
                    data_eq = (fun x y -> data_eq (cget x) (cget y));
                    data_hash = (fun x -> data_hash (cget x));
        } !m;
