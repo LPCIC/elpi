@@ -1,0 +1,5 @@
+S .
+B .
+PKG ppx_deriving.std ppx_deriving.runtime
+PKG camlp5
+FLG -ppx './trace_ppx'

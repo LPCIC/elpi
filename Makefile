@@ -83,11 +83,11 @@ elpi: elpi.$(CMX) elpi_custom.$(CMX) META.elpi
 
 %.$(CMX): %.ml trace_ppx
 	@echo OCAMLOPT $@ $(if $(TRACE),TRACE=$(TRACE),)
-	$(H)$(OC) $(OCAMLOPTIONS) -package ppx_deriving.std -ppx './trace_ppx'\
+	$(H)$(OC) $(OCAMLOPTIONS) -package camlp5,ppx_deriving.std -ppx './trace_ppx'\
 	       	-c $<
 %.cmi: %.mli
 	@echo OCAMLOPT $@
-	$(H)$(OC) $(OCAMLOPTIONS) -c $<
+	$(H)$(OC) $(OCAMLOPTIONS) -package camlp5 -c $<
 
 elpi_parser.$(CMX): elpi_parser.ml elpi_parser.cmi elpi_ast.$(CMX) elpi_ast.cmi
 	@echo OCAMLOPT $@
