@@ -37,6 +37,7 @@ pp (@app [HD|L]) T :- !,
   if (pp HD PHD, not (HD = PHD))
     (pp-list L PL, mk-app [c PHD|PL] T)
     (pp-list [HD|L] PL, mk-app PL T).
+pp (@lam F) T :- !, pi x\ pp (F x) (T x).
 pp X X.
 
 mkde (pp-list i o).
@@ -63,6 +64,13 @@ of (@cdata CData) Ty E :-
 
 of (@app [HD|ARGS]) TY E :- !,
   of HD HDTY E, of-app HDTY ARGS TY HD (Done - Done) E.
+of (@lam F) TY E :- !,
+  Ty = -> A B,
+( (pi E\ of x T E),
+   (pi E A Tx\ of (x A) Tx E :- of A TA E, T = -> TA Tx),
+   (pi E A B Tx\ of (x A B) Tx E :- of A TA E, of B TB E, T = -> TA (-> TB Tx)))
+ => of (F x) B E.
+
 of (pi F) Ty E :- !, Ty = prop, pi x\
  ( (pi E\ of x T E),
    (pi E A Tx\ of (x A) Tx E :- of A TA E, T = -> TA Tx),

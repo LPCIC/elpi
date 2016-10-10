@@ -3549,7 +3549,7 @@ let quote_term ?(app=true) vars term =
   let reloc n = if n < 0 then n else n + vars in
   let rec aux depth = function
     | Const n -> C.of_dbl (reloc n)
-    | Lam x -> App(lamc,aux (depth+1) x,[])
+    | Lam x -> App(lamc,Lam (aux (depth+1) x),[])
     | App(c,Lam f,[]) when c == C.pic || c == C.sigmac ->
         App(c,Lam (aux (depth+1) f), [])
     | App(c,f,[]) when c == C.pic || c == C.sigmac ->
