@@ -12,33 +12,27 @@ append [X|XS] L [X|L1]  :- append XS L L1 .
 append [] L L .
 
 infix `: 141.
+type $$?? A.
+
+spy P :- $print "----<<---- enter: " P, P, $print "---->>---- exit: " P, !.
+spy P :- $print "---->>---- fail: " P, fail.
 
 % --------- error reporting 
 assert P _ :- P, !.
-assert _ Err :-
- checking PNAME,
- LOC is {$term_to_string PNAME} ^ "\n",
- MSG is {$term_to_string {$counter "run"}} ^ " " ^ LOC ^ {print-err Err} ^ "\n",
- $print MSG.
-
-print-err (type-err Name Ty ExpectedTy) R :-
-  $term_to_string Ty T1,
-  $term_to_string ExpectedTy T2,
-  $term_to_string {pp Name} N,
-  R is N ^ " has type " ^ T1 ^ " but is used with type " ^ T2.
-print-err (wrong-arity Term Type RemainingArgs) R :-
-  $term_to_string {pp Term} T,
-  $term_to_string Type Ty,
-  $term_to_string {pp-list RemainingArgs} A,
-  R is T ^ " has type " ^ Ty ^ " but is applied to " ^ A.
+assert _ (type-err T Ty ETy) :- !, checking LOC,
+  $print LOC "Type error:" {pp T} "has type" Ty "but is used with type" ETy.
+assert _ (wrong-arity T Ty A) :- !, checking LOC,
+  $print LOC "Type error:" {pp T} "has type" Ty "but is applied to" {pp-list A}.
 
 mode (pp i o).
+type pp A -> B -> prop.
 pp (@app [HD|L]) T :- !,
   if (pp HD PHD, not (HD = PHD))
     (pp-list L PL, mk-app [c PHD|PL] T)
     (pp-list [HD|L] PL, mk-app PL T).
 pp (@lam F) T :- !, pi x\ pp (F x) (T x).
-pp X X.
+pp X X :- !.
+pp _ "unprintable". % pp should never fail
 
 mkde (pp-list i o).
 pp-list [X|XS] [Y|L] :- pp-list XS L, pp X Y.
@@ -52,20 +46,20 @@ mk-app [X, A|XS] T :- unsafe-cast X X', mk-app [X' A | XS] T.
 
 % --------- typing of terms
 mode (refresh-poly-ty i o).
-refresh-poly-ty (pi F) T :- !, refresh-poly-ty (F FRESH) T.
+refresh-poly-ty (pi F) T :- !, refresh-poly-ty (F _FRESH) T.
 refresh-poly-ty X X.
 
 mode (of i o i). % BUG: matching generates chains?
 
-of (-> A B) T E :- of A TA E, of B TB E, TA = TB.
+of (-> A B) _ E :- of A _ E, of B _ E.
 
-of (@cdata CData) Ty E :-
+of (@cdata CData) Ty _ :-
   $is_cdata CData CTy, !, assert (Ty = CTy) (type-err CData CTy Ty).
 
 of (@app [HD|ARGS]) TY E :- !,
   of HD HDTY E, of-app HDTY ARGS TY HD (Done - Done) E.
-of (@lam F) TY E :- !,
-  Ty = -> A B,
+of (@lam F) Ty E :- !,
+  Ty = -> _A B,
 ( (pi E\ of x T E),
    (pi E A Tx\ of (x A) Tx E :- of A TA E, T = -> TA Tx),
    (pi E A B Tx\ of (x A B) Tx E :- of A TA E, of B TB E, T = -> TA (-> TB Tx)))
@@ -76,12 +70,14 @@ of (pi F) Ty E :- !, Ty = prop, pi x\
    (pi E A Tx\ of (x A) Tx E :- of A TA E, T = -> TA Tx),
    (pi E A B Tx\ of (x A B) Tx E :- of A TA E, of B TB E, T = -> TA (-> TB Tx)))
  => of (F x) prop E.
-of (sigma F) Ty E :- !, Ty = prop, pi x\ of x FRESH _ => of (F x) prop E.
+of (sigma F) Ty E :- !, Ty = prop, pi x\
+   (pi E\ of x _FRESH E)
+ => of (F x) prop E.
 
-of Id ETy [Id `: PTy|E] :- !,
+of Id ETy [Id `: PTy | _] :- !,
   refresh-poly-ty PTy Ty, assert (Ty = ETy) (type-err Id Ty ETy).
 of Id Ty [_|E] :- !, of Id Ty E.
-of Id Ty (?? as TL) :- TL = [Id `: Ty|FRESH].
+of Id Ty (?? as TL) :- assert (TL = [Id `: Ty| _FRESH]) (type-err Id Ty wtf).
 
 of Id Ty _ :- of Id ETy _, assert false (type-err Id Ty ETy).
 
@@ -95,7 +91,7 @@ of-app Ty Args _ HD (D - []) _ :- !,
 % --------- typing of clauses
 %  we get names for Args
 
-typecheck [] E.
+typecheck [] _.
 typecheck [($$, Loc Names Clause)|Rest] E :-
   % $print {$counter "run"} "type checking " Clause,
   checking Loc => of-clause Names Clause E, !,
@@ -103,23 +99,80 @@ typecheck [($$, Loc Names Clause)|Rest] E :-
 
 of-clause [N|NS] (pi C) E :- !, pi x\ 
  ( (pp x N :- !),
-   (pi E\ of x T E :- !),
-   (pi E A Tx\ of (x A) Tx E :- !, of A TA E, T = -> TA Tx),
-   (pi E A B Tx\ of (x A B) Tx E :- !, of A TA E, of B TB E, T = -> TA (-> TB Tx)))
+   (pi E Tf\ of x Tf E :- !, assert (T = Tf) (type-err x T Tf)),
+   (pi E A Tx TA\ of (x A) Tx E :- !, of A TA E, assert (T = -> TA Tx) (type-err x T (-> TA Tx))),
+   (pi E A B Tx\ of (x A B) Tx E :- !, of A TA E, of B TB E, /*FIXME*/T = -> TA (-> TB Tx)))
   => of-clause NS (C x) E.
 of-clause _ C E :- of C prop E.
 
 typecheck-program P E :-
-  typecheck P {append E FRESH},
+  typecheck P {append E _FRESH},
+  warn-linear P,
   true.
   % $print "given:" E,
   % $print "inferred:" FRESH.
 
-% --------- pervasives ?
-
 type of X -> Y -> list Z -> prop.
 type $$-> X -> X -> prop.
 type wrong-arity A -> B -> list A -> err.
+type $$as A -> A -> A.
 
 main :- foo X, foo X Y.
+
+% ---------- warnings
+
+mode (report i).
+report [].
+report [V `: 1 + ?? |NS] :- !,
+  pp V VN,
+  if (not($rex_match "^_" VN))
+    (checking LOC,
+     MSG is "Warning: " ^ VN ^ " is linear, name it _" ^ VN ^ " please",
+     $print LOC MSG)
+    true,
+  report NS.
+report [V `: ?? |NS] :-
+  checking LOC, $print LOC {pp V} "is unused", report NS.
+report [_ `: _ | NS] :- report NS.
+
+type count A -> list B -> prop.
+count (pi F) E :- pi x\
+ ( (pi E A\ count (x A) E :- !, count x E, count A E),
+   (pi E A B\ count (x A B) E :- !, count x E, count A E, count B E)
+ ) => count (F x) E.
+count (sigma F) E :- pi x\
+ ( (pi E A\ count (x A) E :- !, count x E, count A E),
+   (pi E A B\ count (x A B) E :- !, count x E, count A E, count B E)
+ ) => count (F x) E.
+count (@lam F) E :- pi x\
+ ( (pi E A\ count (x A) E :- !, count x E, count A E),
+   (pi E A B\ count (x A B) E :- !, count x E, count A E, count B E)
+ ) => count (F x) E.
+count (@app [X|XS]) E :- !, count X E, count (@app XS) E.
+count (@app []) _ :- !.
+count (-> A B) E :- !, count A E, count B E.
+count X E :- var X, !, incr X E.
+count _ _.
+
+mode (incr i i).
+incr X [X `: K | _] :- add1 K.
+incr X [_ | XS] :- incr X XS.
+
+mode (add1 i).
+add1 (?? as K) :- K = 1 + _FRESH.
+add1 (1 + K) :- add1 K.
+
+check-non-linear [N|NS] (pi C) L :- pi x\
+  ( (pp x N :- !),
+    (var x),
+    (pi E A\ count (x A) E :- !, count x E, count A E),
+    (pi E A B\ count (x A B) E :- !, count x E, count A E, count B E)
+ ) => check-non-linear NS (C x) [x `: _FRESH | L].
+check-non-linear _ C L :-
+  count C L, report L.
+
+warn-linear [].
+warn-linear [($$, Loc Names Clause)|CS] :-
+  checking Loc =>  check-non-linear Names Clause [],
+  warn-linear CS.
 

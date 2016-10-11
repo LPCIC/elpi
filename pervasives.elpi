@@ -128,11 +128,11 @@ true.
 
 X = X.
 
-(A ; B) :- A.
-(A ; B) :- B.
+(A ; _B) :- A.
+(_A ; B) :- B.
 
 not X :- X, !, fail.
-not X.
+not _X.
 
 printterm S T :- term_to_string T T', output S T'.
 
