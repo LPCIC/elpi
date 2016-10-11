@@ -23,6 +23,25 @@ module LP = NCicELPI
 let log b =
    if b then HLog.error "ELPI validation failed!"
    else HLog.message "ELPI validation OK!"
+
+let total_matita_time = ref 0.0
+let total_elpi_time = ref 0.0
+
+let _ = at_exit
+ (fun () ->
+   prerr_endline ("Matita whole type-checking time: " ^
+    string_of_float !total_matita_time) ;
+   prerr_endline ("ELPI whole type-checking time: " ^
+    string_of_float !total_elpi_time))
+
+let benchmark f g =
+ let t0 = Unix.gettimeofday () in
+ f () ;
+ let t1 = Unix.gettimeofday () in
+ g () ;
+ let t2 = Unix.gettimeofday () in
+ total_matita_time := !total_matita_time +. t1 -. t0 ;
+ total_elpi_time := !total_elpi_time +. t2 -. t1
 (*FG: end of extension for ELPI *)
 
 exception TypeCheckerFailure of string Lazy.t
@@ -1267,6 +1286,7 @@ let typecheck_obj status (uri,height,metasenv,subst,kind) =
  typecheck_subst status ~metasenv subst;
  match kind with
    | C.Constant (relevance,_,Some te,ty,_) ->
+      benchmark (fun () ->
       let _ = typeof status ~subst ~metasenv [] ty in
       let ty_te = typeof status ~subst ~metasenv [] te in
       if not (R.are_convertible status ~metasenv ~subst [] ty_te ty) then
@@ -1276,17 +1296,22 @@ let typecheck_obj status (uri,height,metasenv,subst,kind) =
         (status#ppterm ~subst ~metasenv ~context:[] ty_te) 
         (status#ppterm ~subst ~metasenv ~context:[] ty))));
       check_relevance status ~subst ~metasenv [] relevance ty;
+      ) (fun () ->
       (*check_relevance status ~in_type:false ~subst ~metasenv relevance te*)
 (* FG: extension for ELPI *)
       let r = Ref.reference_of_spec uri (Ref.Def height) in
       log (LP.has_type r te ty)
+      )
 (* FG: end of extension for ELPI *)
    | C.Constant (relevance,_,None,ty,_) ->
+      benchmark (fun () ->
       ignore (typeof status ~subst ~metasenv [] ty);
       check_relevance status ~subst ~metasenv [] relevance ty;
+      ) (fun () ->
 (* FG: extension for ELPI *)
       let r = Ref.reference_of_spec uri Ref.Decl in
       log (LP.has_some_sort r ty)
+      )
 (* FG: end of extension for ELPI *)
    | C.Inductive (_, leftno, tyl, _) -> 
        check_mutual_inductive_defs status uri ~metasenv ~subst leftno tyl
