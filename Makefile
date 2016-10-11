@@ -70,13 +70,13 @@ ELPI_COMPONENTS = \
   elpi_trace.$(CMX) \
   elpi_util.$(CMX) elpi_ast.$(CMX) elpi_parser.$(CMX) elpi_ptmap.$(CMX) \
   elpi_runtime.$(CMX) \
-  elpi_latex_exporter.$(CMX) elpi_prolog_exporter.$(CMX)
+  elpi_latex_exporter.$(CMX) elpi_prolog_exporter.$(CMX) elpi_custom.$(CMX)
 
 elpi.cmxa: $(ELPI_COMPONENTS)
 	@echo OCAMLOPT -a $@
 	$(H)$(OC) $(OC_OPTIONS) -o $@ -a $(ELPI_COMPONENTS)
 
-elpi: elpi.$(CMX) elpi_custom.$(CMX) META.elpi
+elpi: elpi.$(CMX) META.elpi
 	@echo OCAMLOPT $@
 	$(H)$(OC) $(OC_OPTIONS) -package elpi \
 		-o $@ elpi_custom.$(CMX) elpi.$(CMX)
