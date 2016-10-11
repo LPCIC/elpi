@@ -66,7 +66,7 @@ OC_OPTIONS = -linkpkg $(OCAMLOPTIONS) $(FLAGS)
 ELPI_DEPENDS = camlp5.$(CMXA) unix.$(CMXA) str.$(CMXA)
 
 ELPI_COMPONENTS = \
-  coq.$(CMX) univ.$(CMX) uGraph.$(CMX) \
+  coqlib.$(CMX) univ.$(CMX) uGraph.$(CMX) \
   elpi_trace.$(CMX) \
   elpi_util.$(CMX) elpi_ast.$(CMX) elpi_parser.$(CMX) elpi_ptmap.$(CMX) \
   elpi_runtime.$(CMX) \
