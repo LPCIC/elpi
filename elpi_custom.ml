@@ -300,6 +300,21 @@ let _ =
         let is_lt = if t1 < 0 && t2 < 0 then t2 < t1 else t1 < t2 in
         if not is_lt then raise No_clause else []
     | _ -> type_error "$lt takes 2 arguments") ;
+(* FG: this should replace $lt *)
+  register_custom "$level" (fun ~depth ~env:_ _ args ->
+    let rec get_constant = function
+      | Const c -> c
+      | UVar ({contents=t},vardepth,args) when t != dummy ->
+         get_constant (deref_uv ~from:vardepth ~to_:depth args t)
+      | AppUVar ({contents=t},vardepth,args) when t != dummy ->
+         get_constant (deref_appuv ~from:vardepth ~to_:depth args t)
+      | _ -> error "$level takes a constant as first argument" in
+    match args with
+    | [t1; t2] ->
+        let l1 = get_constant t1 in
+        [ App (eqc, t2, [CData (cint.cin l1)])]
+    | _ -> type_error "$level takes 2 arguments") ;
+(* FG: end *)
   List.iter (fun { p; psym; pname } ->
   register_custom pname (fun ~depth ~env:_ _ -> function
     | [t1; t2] ->
