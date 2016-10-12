@@ -88,7 +88,7 @@ let mk_prod n w t = LPA.mkApp [LPA.mkCon "prod"; w; LPA.mkLam (mk_name n) t]
 
 let mk_abst n w t = LPA.mkApp [LPA.mkCon "abst"; w; LPA.mkLam (mk_name n) t]
 
-let mk_abbr n v w t = LPA.mkApp [LPA.mkCon "abst"; v; w; LPA.mkLam (mk_name n) t]
+let mk_abbr n v w t = LPA.mkApp [LPA.mkCon "abbr"; v; w; LPA.mkLam (mk_name n) t]
 
 let mk_appl t vs = LPA.mkApp [LPA.mkCon "appl"; t; vs]
 
@@ -97,9 +97,7 @@ let mk_case w v u ts = LPA.mkApp [LPA.mkCon "case"; v; ts; w; u]
 let mk_has_some_sort u = LPA.mkApp [LPA.mkCon "has+sort"; u; LPA.mkFreshUVar ()]
 
 let mk_has_type t u = LPA.mkApp [LPA.mkCon "has+type"; t; u]
-(*
-let mk_print args = LPA.mkApp (LPA.mkCustom "$print" :: args)
-*)
+
 (* matita to elpi *)
 let rec lp_term c = function
    | C.Meta _

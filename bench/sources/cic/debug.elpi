@@ -14,7 +14,7 @@ r+step (abst W F) T2 :- !, fail.
 
 % conv+main T1 I T2 :- on+focus, $print (++conv+main T1 I T2), fail.
 
-conv+whnf T1 P1 I T2 P2 :- on+focus, $print (++conv+whnf T1 P1 I T2 P2), fail.
+% conv+whnf T1 P1 I T2 P2 :- on+focus, $print (++conv+whnf T1 P1 I T2 P2), fail.
 
 % t+step T U :- on+focus, $print (++t+step T U), fail.
 
