@@ -21,18 +21,19 @@ accumulate list.
 
 % Type inclusion mode: I, J := i+sn  lhs may be smaller than rhs
 %                           :  i+dx  rhs may be smaller than lhs
-%                           :  i+rc  the two sides mus be equal
+%                           :  i+rc  the two sides must be equal
 
 % Predicates: whd+no+delta T P C       multistep weak head reduct of T after P
 %                                      without delta-expansion, passed to continuation C
 %             whd+delta+pi T1 P T2     multistep weak head reduction of T1 after P to T2
 %                                      with delta-expansion and validating pi-reduction
 %             whd+delta T1 P C T2      multistep weak head reduction with delta-expansion,
-%                                      of T1 after P passed to relation C returning T2                                      
+%                                      of T1 after P passed to relation C returning T2
 %             red+whnf T1 P1 I T2 P2   reducibility test for generic T1 after P1 to whnf of T2 after P2
 %             conv+main T1 I T2        convertibility test for generic T1 and T2
 %             conv+args P1 P2          convertibility test for generic stacks P1 and P2
 %             conv+whnf U1 P1 I U2 P2  convertibility test for whnf's U1 after P1 and U2 after P2
+%             r+step+h T1 H T2         transition to T2 from constant T1 with level/age/heght H
 %             t+step T U               inference of a type U for T
 %           * has+sort T S             test for T having sort S
 %             has+checked+type T U     test for T having checked type U
@@ -83,14 +84,14 @@ whd+delta+pi (prod W F) [V|P] T2 :- !, has+checked+type V W,
 whd+delta+pi (abbr V W F1) P (abbr V W F2) :- !, pi x\ r+step x V =>
                                                        whd+delta+pi (F1 x) P (F2 x).
 % delta.
-whd+delta+pi T1 P T2 :- r+step T1 T, !, whd+delta+pi T P T2.
+whd+delta+pi T1 P T2 :- r+step+h T1 _ T, !, whd+delta+pi T P T2.
 
 % hook for extra reductions.
 whd+delta+pi T1 P1 T :- whd+extra T1 P1 T2 P2, !, whd+delta+pi T2 P2 T.
 
 % WEAK HEAD COMPUTATION WITH DELTA EXPANSION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% whd+delta T1 P C T2 :- on+focus, $print (whd+delta T1 P C T2), fail.
+% whd+delta T1 P C T2 :- on+focus, $print (whd+delta T1 P T2), fail.
 
 % beta.
 whd+delta (abst W F) [V|P] C T2 :- !, whd+delta (abbr V W F) P C T2.
@@ -102,7 +103,7 @@ whd+delta (appl T1 A) P1 C T2 :- !, append A P1 P2,
 whd+delta (abbr V W F1) P C (abbr V W F2) :- !, pi x\ r+step x V =>
                                                       whd+delta (F1 x) P C (F2 x).
 % delta.
-whd+delta T1 P C T2 :- r+step T1 T, !, whd+delta T P C T2.
+whd+delta T1 P C T2 :- r+step+h T1 _ T, !, whd+delta T P C T2.
 
 % hook for extra reductions.
 whd+delta T1 P1 C T :- whd+extra T1 P1 T2 P2, !, whd+delta T2 P2 C T.
@@ -156,25 +157,31 @@ conv+whnf (prod W1 F1) [] I (prod W2 F2) [] :- !, conv+main W1 i+rc W2,
 conv+whnf (abst W1 F1) [] I (abst W2 F2) [] :- !, conv+main W1 i+rc W2,
                                                pi x\ conv+main (F1 x) i+rc (F2 x).
 % candidate left delta.
-conv+whnf T1 P1 I T2 P2 :- r+step T1 V1, !, maybe+sn T1 V1 P1 I T2 P2.
+conv+whnf T1 P1 I T2 P2 :- r+step+h T1 H1 V1, !, maybe+sn T1 H1 V1 P1 I T2 P2.
 
 % forced right delta.
-conv+whnf T1 P1 I T2 P2 :- r+step T2 V2, !, red+whnf V2 P2 I T1 P1.
+conv+whnf T1 P1 I T2 P2 :- r+step+h T2 _ V2, !, red+whnf V2 P2 I T1 P1.
 
-%
+% AGE/HEIGHT-CONTROLLED DELTA %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-maybe+sn T1 V1 P1 I T2 P2 :- r+step T2 V2, !, check+age T1 V1 P1 I T2 V2 P2.
+maybe+sn T1 H1 V1 P1 I T2 P2 :- r+step+h T2 H2 V2, !, check+h T1 H1 V1 P1 I T2 H2 V2 P2.
 
 % forced left delta.
-maybe+sn T1 V1 P1 I T2 P2 :- i+not I J, red+whnf V1 P1 J T2 P2. 
+maybe+sn T1 _ V1 P1 I T2 P2 :- i+not I J, red+whnf V1 P1 J T2 P2.
 
 %
 
-% age-implied left delta.
-check+age T1 V1 P1 I T2 V2 P2 :- $lt T2 T1, !, i+not I J, red+whnf V1 P1 J T2 P2.
+% age/hight-implied left delta.
+check+h T1 H1 V1 P1 I T2 H2 V2 P2 :- lt+h H2 H1, !, i+not I J, red+whnf V1 P1 J T2 P2.
 
-% age-implied right delta.
-check+age T1 V1 P1 I T2 V2 P2 :- red+whnf V2 P2 I T1 P1.
+% age/hight-implied right delta.
+check+h T1 _ V1 P1 I T2 _ V2 P2 :- red+whnf V2 P2 I T1 P1.
+
+%
+
+lt+h H1 H2 :- H1 < 0, H2 < 0, !, H2 < H1.
+
+lt+h H1 H2 :- H1 < H2.
 
 % VALIDITY + INFERRED TYPE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -235,5 +242,7 @@ has+type T (sort S) :- !, has+sort T S.
 has+type T U :- has+sort U S, has+checked+type T U, !.
 
 % KERNEL HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+r+step+h T1 H T2 :- r+step T1 T2, !, $level T1 H.
 
 pts+triple S1 S2 S2 :- pts+couple S1 S2, !.

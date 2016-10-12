@@ -1,8 +1,8 @@
 % DEBUGGING %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-r+step (sort S) T2 :- !, fail.
+r+step+h (sort S) _ _ :- !, fail.
 
-r+step (abst W F) T2 :- !, fail.
+r+step+h (abst W F) _ _ :- !, fail.
 
 % r+step T1 T2 :- on+focus, $print (r+step T1 T2), fail.
 
@@ -26,5 +26,4 @@ r+step (abst W F) T2 :- !, fail.
 
 % pts+sub S1 S2 :- on+focus, $print (++pts+sub S1 S2), fail.
 
-on+focus.
-% :- $current "cic:/matita/basics/logic/R2.def(3)".
+% on+focus :- $current "cic:/matita/arithmetics/nat/plus_plus_comm_23.def(7)".

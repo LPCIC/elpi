@@ -15,7 +15,7 @@ get+branch J [V|P] T P1 [V|P2] :- get+branch J P T P1 P2.
 %
 
 % extra delta
-r+step T1 T2 :- $r+step T1 T2, !.
+r+step+h T1 H T2 :- $r+step+h T1 H T2, !.
 
 % nu for case
 whd+extra (case V A W U) P V (cframe A W U P) :- !.

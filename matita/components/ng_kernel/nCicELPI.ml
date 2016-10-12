@@ -30,14 +30,14 @@ let rt_gref r =
    match obj, spec with 
       | C.Constant (_, _, None, u, _)  , R.Decl          ->
          None, u
-      | C.Constant (_, _, Some t, u, _), R.Def _         ->
-         Some t, u
-      | C.Fixpoint (true, fs, _)       , R.Fix (i, _, _) ->
+      | C.Constant (_, _, Some t, u, _), R.Def h         ->
+         Some (h, t), u
+      | C.Fixpoint (true, fs, _)       , R.Fix (i, _, h) ->
          let _, _, _, u, t = List.nth fs i in
-         Some t, u
+         Some (h, t), u
       | C.Fixpoint (false, fs, _)      , R.CoFix i       ->
-         let _, _, _, u, t = List.nth fs i in
-         Some t, u
+         let _, _, _, u, _ = List.nth fs i in
+         None, u
       | C.Inductive (_, _, us, _)      , R.Ind (_, i, _) ->
          let _, _, u, _ = List.nth us i in
          None, u
@@ -157,11 +157,11 @@ let t_step ~depth ~env:_ _ = function
       end
    | _        -> fail ()
 
-let r_step ~depth ~env:_ _ = function
-   | [t1; t2] -> 
+let r_step_h ~depth ~env:_ _ = function
+   | [t1; t2; t3] ->
       begin match get_gref rt_gref ~depth t1 with
-          | Some u1, _ -> [mk_eq (mk_term ~depth u1) t2]
-          | _          -> fail ()
+          | Some (h, u1), _ -> [mk_eq (mk_int ~depth (-h)) t2; mk_eq (mk_term ~depth u1) t3]
+          | _               -> fail ()
       end
    | _        -> fail ()
 
@@ -191,7 +191,7 @@ let current ~depth ~env:_ _ args = match args, !current_ref with
 
 let _ =
    LPR.register_custom "$t+step" t_step;
-   LPR.register_custom "$r+step" r_step;
+   LPR.register_custom "$r+step+h" r_step_h;
    LPR.register_custom "$constructor" constructor;
    LPR.register_custom "$inductive" inductive;
    LPR.register_custom "$current" current
