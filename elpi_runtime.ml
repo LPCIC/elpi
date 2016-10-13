@@ -382,7 +382,7 @@ let xppterm ~nice depth0 names argsdepth env f t =
      ->
       let prefix,last = flat_cons_to_list depth [] t in
       Fmt.fprintf f "[" ;
-      pplist (aux Elpi_parser.list_element_prec depth) "," f prefix ;
+      pplist ~boxed:true (aux Elpi_parser.list_element_prec depth) "," f prefix ;
       if last != C.nilc then begin
        Fmt.fprintf f " | " ;
        aux prec 1 f last

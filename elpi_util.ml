@@ -6,7 +6,7 @@ module Fmt = Format
 
 let pplist ?(max=max_int) ?(boxed=false) ppelem ?(pplastelem=ppelem) sep f l =
  if l <> [] then begin
-  if boxed then Fmt.fprintf f "@[<hov 1>";
+  if boxed then Fmt.fprintf f "@[<hov>";
   let args,last = match List.rev l with
     [] -> assert false;
   | head::tail -> List.rev tail,head in
