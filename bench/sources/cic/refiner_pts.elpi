@@ -1,0 +1,8 @@
+mode (t+step i o).
+mode (pts+pair i o).
+
+accumulate kernel_pts.
+accumulate pts_cic.
+
+t+step (?? as K) T :- $constraint (t+step K T) K.
+pts+pair (?? as S) T :- $constraint (pts+pair S T) S.
