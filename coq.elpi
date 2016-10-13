@@ -366,7 +366,7 @@ test2 :-
 
 test1 :-
   $print "\nBuild of match return predicate shape",
-  of (match (app [indc @vectN, indt @nat]) RTY Bs) T M,
+  of (match (app [indc @vectN, indt @nat]) _ _) _ M,
   $print {pp M}.
 
 % vim:set ft=lprolog spelllang=:
