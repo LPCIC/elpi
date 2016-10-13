@@ -1,5 +1,7 @@
 % type checker extension managing global evironments (Grundlagen) %%%%%%%%%%%%
 
+% Global reference R        := identifier
+
 % Global environment G := gtop      empty
 %                      |  gdec R G  declaration of R after G
 %                      |  gdef R G  definition of R after G

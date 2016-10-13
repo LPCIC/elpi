@@ -2,8 +2,6 @@ accumulate list.
 
 % Extensible type checker for a generic PTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Global reference R        := identifier
-
 % Closed term: T, U, V, W   := sort S        sort S
 %                           |  prod     W F  product of type W in F
 %                           |  abst     W F  abstraction of type W in F
@@ -33,7 +31,7 @@ accumulate list.
 %             conv+main T1 I T2        convertibility test for generic T1 and T2
 %             conv+args P1 P2          convertibility test for generic stacks P1 and P2
 %             conv+whnf U1 P1 I U2 P2  convertibility test for whnf's U1 after P1 and U2 after P2
-%             r+step+h T1 H T2         transition to T2 from constant T1 with level/age/heght H
+%             r+step+h T1 P1 H T2 P2   transition to T2 after P2 from constant T1 with level/age/heght H after P1
 %             t+step T U               inference of a type U for T
 %           * has+sort T S             test for T having sort S
 %             has+checked+type T U     test for T having checked type U

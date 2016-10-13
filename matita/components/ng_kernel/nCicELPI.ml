@@ -56,6 +56,10 @@ let split_inductive = function
    | R.Ref (_, R.Ind (_, _, k)) -> Some k
    |_                           -> None
 
+let split_fixpoint = function
+   | R.Ref (_, R.Fix (_, l, _)) -> Some l
+   |_                           -> None
+
 let id x = "u+" ^ x
 
 let univ_of u =
@@ -181,6 +185,14 @@ let inductive ~depth ~env:_ _ = function
       end
    | _        -> fail ()
 
+let fixpoint ~depth ~env:_ _ = function
+   | [t1; t2] ->
+      begin match get_gref split_fixpoint ~depth t1 with
+          | Some l -> [mk_eq (mk_int ~depth l) t2]
+          | _      -> fail ()
+      end
+   | _        -> fail ()
+
 let current_ref = ref None
 
 let current ~depth ~env:_ _ args = match args, !current_ref with
@@ -194,6 +206,7 @@ let _ =
    LPR.register_custom "$r+step+h" r_step_h;
    LPR.register_custom "$constructor" constructor;
    LPR.register_custom "$inductive" inductive;
+   LPR.register_custom "$fixpoint" fixpoint;
    LPR.register_custom "$current" current
 
 let filenames = ["kernel_matita.elpi"; "pts_cic.elpi"; "debug.elpi"]
