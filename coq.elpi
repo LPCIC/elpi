@@ -73,6 +73,9 @@ nth 0 [X|_] X :- !.
 nth N [_|XS] R :- !, N1 is N - 1, nth N1 XS R.
 nth _ _ _ :- $print "nth", halt.
 
+ignore P :- P, !.
+ignore _.
+
 %%%%% terms %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 macro @kn :- string.
@@ -168,7 +171,7 @@ unif T (app [fix N Rno F|AS]) :- nth-ctx Rno AS LA A RA, whd-indc A KN KA, !,
 % ctx (stuck terms)
 unif (app [indt KN|L1]) (app [indt KN|L2]) :- !, unif-list L1 L2.
 unif (app [indc KN|L1]) (app [indc KN|L2]) :- !, unif-list L1 L2.
-unif (lam N T1 F1) (lam _ T2 F2) :- !, unif T1 T2,
+unif (lam N T1 F1) (lam M T2 F2) :- !, ignore(N = M), unif T1 T2,
   pi x\ ((pp x N :- !), unif x x, of x T1 x) => unif (F1 x) (F2 x). % of needed ?
 unif (prod T1 F1) (prod T2 F2) :- !, unif T1 T2,
   pi x\ (unif x x, of x T1 x) => unif (F1 x) (F2 x). % of needed ?
@@ -214,16 +217,17 @@ mode (of i o o).
 
 of (lam N S F) (prod S2 T) (lam N S2 F2) :- /*FIXME bidir */
   of S (sort _U) S2,
-  pi x\ ((pi Tx\ of x Tx x :- !, unif S2 Tx),
-         (pp x N :- !),(unif x x)
-        ) => of (F x) (T x) (F2 x).
+  pi x\ (pi Tx\ of x Tx x :- !, unif S2 Tx) =>
+        (pp x N :- !) =>
+        (unif x x) =>
+          of (F x) (T x) (F2 x).
 
 of (app [Hd|Args]) TyApp App :-
   %$print "APP " {pp (app [Hd|Args])},
   of Hd Prod Hd1, eat-prod Hd1 Prod [] Args App TyApp.
 
 of (prod S F) (sort U) (prod ResS ResF) :-
-  of S (sort U1) ResS, (pi x \ (of x (sort U1) x, unif x x) => of (F x) (sort U2) (ResF x)),
+  of S (sort U1) ResS, (pi x \ (of x (sort U1) x) => (unif x x) => of (F x) (sort U2) (ResF x)),
   pts U1 U2 U.
 
 of (match T Rty Bs) ResRtyInst (match ResT ResRty ResBs) :-
@@ -252,7 +256,7 @@ of (let Ty Bo F) TyFx (let ResTy ResBo ResF) :-
   pi x\ (of x ResTy x, val x ResBo) => of (F x) TyFx (ResF x).
 
 of (fix N Rno BoF) ResTy (fix N Rno ResBoF) :-
-  pi f\ (pp f N, of f ResTy f,unif f f) => of (BoF f) ResTy (ResBoF f).
+  pi f\ (pp f N) => (of f ResTy f) => (unif f f) => of (BoF f) ResTy (ResBoF f).
  
 type mk-rty list term -> term -> term -> term -> prop. 
 mk-rty ARGS HD (prod S T) (lam _ S F) :- !,
