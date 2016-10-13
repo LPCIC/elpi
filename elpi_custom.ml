@@ -557,6 +557,16 @@ let _ =
        | _ -> type_error "$rex_match")
     | _ -> type_error "$rex_match") ;
 
+  register_custom "$rex_replace" (fun ~depth ~env:_ _ -> function
+          | [t1;t2;t3;t4] ->
+       (match deref_head depth t1, deref_head depth t2,  deref_head depth t3 with
+       | CData rex, CData repl, CData subj when List.for_all cstring.isc [rex; repl; subj] ->
+           let rex = Str.regexp (Elpi_ast.Func.show (cstring.cout rex)) in
+           let repl = Elpi_ast.Func.show (cstring.cout repl) in
+           let subj = Elpi_ast.Func.show (cstring.cout subj) in
+           [ App(eqc, CData (cstring.cin (F.from_string (Str.global_replace rex repl subj))), [t4]) ]
+       | _ -> type_error "$rex_replace")
+    | _ -> type_error "$rex_replace") ;
 
 ;;
 
