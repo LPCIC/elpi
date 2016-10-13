@@ -2644,6 +2644,9 @@ let delay_goal ?(filter_ctx=fun _ -> true) ~depth prog ~goal:g ~on:keys =
 
 let rec head_of = function
   | Const x -> x
+  | App(x,Lam f,_) when C.(x == pic) -> head_of f
+  | App(x,hd,_) when C.(x == rimplc) -> head_of hd
+  | App(x,hd,_) when C.(x == andc) -> head_of hd (* FIXME *)
   | App(x,_,_) -> x
   | Custom(x,_) -> x
   | AppUVar(r,_,_)

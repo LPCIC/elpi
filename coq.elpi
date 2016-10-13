@@ -214,8 +214,9 @@ mode (of i o o).
 
 of (lam N S F) (prod S2 T) (lam N S2 F2) :- /*FIXME bidir */
   of S (sort _U) S2,
-  pi x\ ((pp x N :- !),(unif x x),
-         (pi Tx\ of x Tx x :- !, unif S2 Tx)) => of (F x) (T x) (F2 x).
+  pi x\ ((pi Tx\ of x Tx x :- !, unif S2 Tx),
+         (pp x N :- !),(unif x x)
+        ) => of (F x) (T x) (F2 x).
 
 of (app [Hd|Args]) TyApp App :-
   %$print "APP " {pp (app [Hd|Args])},
@@ -236,7 +237,7 @@ of (match T Rty Bs) ResRtyInst (match ResT ResRty ResBs) :-
   map (subst-prod LArgs) Ks KsLArgs,
   % Rty skeleton (uknown ending) = lam rargs, lam e : indt largs rargs, ?
   mk-rty [] {mk-app (indt KN) LArgs} TyLArgs ResRtyRaw, 
-  of ResRtyRaw _ ResRty, Rty = ResRty, % FIXME unif
+  of ResRtyRaw _ ResRty, unif Rty ResRty,
   % Rty must type each branch
   map2 (mk-bty Rty Lno Rno) KsLArgs Kn BsTy,
   map2 of Bs BsTy ResBs,
