@@ -16,9 +16,12 @@ accumulate kernel_pts.
 % pts+triple S (?? as T) U :- !, $constraint (pts+triple S T U) T.
 % accumulate pts_cic.
 
-pts+sub S1 S2 :- leq S1 S2.
-pts+triple S1 S2 S3 :- leq S1 S3, leq S2 S3.
-pts+pair S1 S2 :- ltn S1 S2.
+spy P :- $print "----<<---- enter: " P, P, $print "---->>---- exit: " P, !.
+spy P :- $print "---->>---- fail: " P, fail.
+
+pts+sub S1 S2       :- spy(leq S1 S2).
+pts+triple S1 S2 S3 :- spy(leq S1 S3, leq S2 S3).
+pts+pair S1 S2      :- spy(ltn S1 S2).
 
 constraint t+step pts+pair pts+triple {
 }
@@ -57,3 +60,5 @@ constraint leq ltn {
 
 }
 
+% test:
+%  T = (appl (abst (sort u0) x \ F x) [sort W]), t+step T TY, $print T TY.
