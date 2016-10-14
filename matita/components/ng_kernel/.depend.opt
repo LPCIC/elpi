@@ -5,7 +5,7 @@ nCicSubstitution.cmi : nCic.cmx
 nCicEnvironment.cmi : nUri.cmi nReference.cmi nCic.cmx
 nCicReduction.cmi : nCic.cmx
 nCicPp.cmi : nReference.cmi nCic.cmx
-nCicELPI.cmi : nReference.cmi nCic.cmx
+nCicELPI.cmi : nCic.cmx
 nCicTypeChecker.cmi : nUri.cmi nReference.cmi nCic.cmx
 nCicUntrusted.cmi : nCic.cmx
 nCic.cmo : nUri.cmi nReference.cmi

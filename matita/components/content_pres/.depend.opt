@@ -4,27 +4,35 @@ cicNotationParser.cmi :
 mpresentation.cmi :
 box.cmi :
 content2presMatcher.cmi :
-termContentPres.cmi :
-boxPp.cmi :
-cicNotationPres.cmi :
-content2pres.cmi :
+termContentPres.cmi : cicNotationParser.cmi
+boxPp.cmi : mpresentation.cmi cicNotationPres.cmi box.cmi
+cicNotationPres.cmi : mpresentation.cmi box.cmi
+content2pres.cmi : termContentPres.cmi cicNotationPres.cmi
 renderingAttrs.cmo : renderingAttrs.cmi
 renderingAttrs.cmx : renderingAttrs.cmi
 cicNotationLexer.cmo : cicNotationLexer.cmi
 cicNotationLexer.cmx : cicNotationLexer.cmi
-cicNotationParser.cmo : cicNotationParser.cmi
-cicNotationParser.cmx : cicNotationParser.cmi
+cicNotationParser.cmo : cicNotationLexer.cmi cicNotationParser.cmi
+cicNotationParser.cmx : cicNotationLexer.cmx cicNotationParser.cmi
 mpresentation.cmo : mpresentation.cmi
 mpresentation.cmx : mpresentation.cmi
-box.cmo : box.cmi
-box.cmx : box.cmi
+box.cmo : renderingAttrs.cmi box.cmi
+box.cmx : renderingAttrs.cmx box.cmi
 content2presMatcher.cmo : content2presMatcher.cmi
 content2presMatcher.cmx : content2presMatcher.cmi
-termContentPres.cmo : termContentPres.cmi
-termContentPres.cmx : termContentPres.cmi
-boxPp.cmo : boxPp.cmi
-boxPp.cmx : boxPp.cmi
-cicNotationPres.cmo : cicNotationPres.cmi
-cicNotationPres.cmx : cicNotationPres.cmi
-content2pres.cmo : content2pres.cmi
-content2pres.cmx : content2pres.cmi
+termContentPres.cmo : renderingAttrs.cmi content2presMatcher.cmi \
+    cicNotationParser.cmi termContentPres.cmi
+termContentPres.cmx : renderingAttrs.cmx content2presMatcher.cmx \
+    cicNotationParser.cmx termContentPres.cmi
+boxPp.cmo : renderingAttrs.cmi mpresentation.cmi cicNotationPres.cmi box.cmi \
+    boxPp.cmi
+boxPp.cmx : renderingAttrs.cmx mpresentation.cmx cicNotationPres.cmx box.cmx \
+    boxPp.cmi
+cicNotationPres.cmo : renderingAttrs.cmi mpresentation.cmi box.cmi \
+    cicNotationPres.cmi
+cicNotationPres.cmx : renderingAttrs.cmx mpresentation.cmx box.cmx \
+    cicNotationPres.cmi
+content2pres.cmo : termContentPres.cmi renderingAttrs.cmi mpresentation.cmi \
+    cicNotationPres.cmi box.cmi content2pres.cmi
+content2pres.cmx : termContentPres.cmx renderingAttrs.cmx mpresentation.cmx \
+    cicNotationPres.cmx box.cmx content2pres.cmi
