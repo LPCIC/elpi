@@ -3,15 +3,17 @@ mode (pts+triple i i o).
 mode (pts+pair i o).
 mode (has+sort i o).
 
+has+sort A B :- $print "BBB" (has+sort A B), fail.
+
+t+step (?? as K) T :- !, $constraint (t+step K T) K.
+pts+pair (?? as S) T :- !, $constraint (pts+pair S T) S.
+pts+triple (?? as S) (?? as T) U :- !, $constraint (pts+triple S T U) [S,T].
+pts+triple (?? as S) T U :- !, $constraint (pts+triple S T U) S.
+pts+triple S (?? as T) U :- !, $constraint (pts+triple S T U) T.
+has+sort (?? as S) T :- !, $constraint (has+sort S T) S.
+
 accumulate kernel_pts.
 accumulate pts_cic.
-
-t+step (?? as K) T :- $constraint (t+step K T) K.
-pts+pair (?? as S) T :- $constraint (pts+pair S T) S.
-pts+triple (?? as S) (?? as T) U :- $constraint (pts+triple S T U) [S,T].
-pts+triple (?? as S) T U :- $constraint (pts+triple S T U) S.
-pts+triple S (?? as T) U :- $constraint (pts+triple S T U) T.
-has+sort (?? as S) T :- $constraint (has+sort S T) S.
 
 constraint t+step pts+pair pts+triple {
 }
