@@ -12,7 +12,7 @@ accumulate list.
 
 % Closed term list: A, B    := [] | [V|A]  defined by the system
 
-% Stack: P                  := []     empty
+% Stack: P, Q               := []     empty
 %                           :  [V|P]  application frame (argument)
 
 % Continuation: C
@@ -23,7 +23,7 @@ accumulate list.
 
 % Predicates: whd+no+delta T P C       multistep weak head reduct of T after P
 %                                      without delta-expansion, passed to continuation C
-%             whd+delta+pi T1 P T2     multistep weak head reduction of T1 after P to T2
+%             whd+delta+pi T1 P Q T2   multistep weak head reduction of T1 after P and Q to T2
 %                                      with delta-expansion and validating pi-reduction
 %             whd+delta T1 P C T2      multistep weak head reduction with delta-expansion,
 %                                      of T1 after P passed to relation C returning T2
@@ -63,29 +63,29 @@ whd+no+delta T P C :- C T P, !.
 % WEAK HEAD COMPUTATION WITH DELTA EXPANSION AND PI-REDUCTION %%%%%%%%%%%%%%%%
 
 % aka eat_prods
-% whd+delta+pi T1 P T2 :- on+focus, $print (whd+delta+pi T1 P T2), fail.
+% whd+delta+pi T1 P Q T2 :- on+focus, $print (whd+delta+pi T1 P Q T2), fail.
 
 % reflexivity.
-whd+delta+pi T [] T :- !.
+whd+delta+pi T [] [] T :- !.
 
 % beta.
-whd+delta+pi (abst W F) [V|P] T2 :- !, whd+delta+pi (abbr V W F) P T2.
+whd+delta+pi (abst W F) [V|P] Q T2 :- !, whd+delta+pi (abbr V W F) P Q T2.
 
 % nu for application.
-whd+delta+pi (appl T1 A) P1 T2 :- !, append A P1 P2,
-                                  whd+delta+pi T1 P2 T2.
+whd+delta+pi (appl T1 A) P1 Q T2 :- !, append A P1 P2,
+                                    whd+delta+pi T1 P2 Q T2.
 % validating pi.
-whd+delta+pi (prod W F) [V|P] T2 :- !, has+checked+type V W,
-                                    whd+delta+pi (abbr V W F) P T2.
+whd+delta+pi (prod W F) [] [V|Q] T2 :- !, has+checked+type V W,
+                                       whd+delta+pi (abbr V W F) [] Q T2.
 
 % sigma for abbreviation + theta.
-whd+delta+pi (abbr V W F1) P (abbr V W F2) :- !, pi x\ r+step x V =>
-                                                       whd+delta+pi (F1 x) P (F2 x).
+whd+delta+pi (abbr V W F1) P Q (abbr V W F2) :- !, pi x\ r+step x V =>
+                                                         whd+delta+pi (F1 x) P Q (F2 x).
 % delta.
-whd+delta+pi T1 P T2 :- r+step+h T1 _ T, !, whd+delta+pi T P T2.
+whd+delta+pi T1 P Q T2 :- r+step+h T1 _ T, !, whd+delta+pi T P Q T2.
 
 % hook for extra reductions.
-whd+delta+pi T1 P1 T :- whd+extra T1 P1 T2 P2, !, whd+delta+pi T2 P2 T.
+whd+delta+pi T1 P1 Q T :- whd+extra T1 P1 T2 P2, !, whd+delta+pi T2 P2 Q T.
 
 % WEAK HEAD COMPUTATION WITH DELTA EXPANSION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -196,7 +196,7 @@ lt+h H1 H2 :- H1 < H2.
 t+step (sort S1) (sort S2) :- !, pts+pair S1 S2.
 
 % N.
-t+step (appl T1 A) T :- !, t+step T1 T2, whd+delta+pi T2 A T.
+t+step (appl T1 A) T :- !, t+step T1 T2, whd+delta+pi T2 [] A T.
 
 % Sigma.
 t+step (abbr V W F1) (abbr V W F2) :- !, has+type V W,
