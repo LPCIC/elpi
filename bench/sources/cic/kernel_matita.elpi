@@ -2,6 +2,8 @@ accumulate kernel_pts.
 
 % type checker extension managing Matita interface %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% Quantities privided by Matita: I, J, K := integers
+
 % Closed term: T, U, V, W := case V A W U  match V with constructors of W and select branch in A of type U
 
 % Stack: P                := cframe A W U P  case frame (continuations)

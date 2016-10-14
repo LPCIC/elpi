@@ -2,6 +2,8 @@ accumulate list.
 
 % Extensible type checker for a generic PTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% Level/age/heght: H := integer
+
 % Closed term: T, U, V, W   := sort S        sort S
 %                           |  prod     W F  product of type W in F
 %                           |  abst     W F  abstraction of type W in F
@@ -17,7 +19,7 @@ accumulate list.
 
 % Continuation: C
 
-% Type inclusion mode: I, J := i+sn  lhs may be smaller than rhs
+% Type inclusion mode: M, N := i+sn  lhs may be smaller than rhs
 %                           :  i+dx  rhs may be smaller than lhs
 %                           :  i+rc  the two sides must be equal
 
@@ -27,10 +29,10 @@ accumulate list.
 %                                      with delta-expansion and validating pi-reduction
 %             whd+delta T1 P C T2      multistep weak head reduction with delta-expansion,
 %                                      of T1 after P passed to relation C returning T2
-%             red+whnf T1 P1 I T2 P2   reducibility test for generic T1 after P1 to whnf of T2 after P2
-%             conv+main T1 I T2        convertibility test for generic T1 and T2
+%             red+whnf T1 P1 M T2 P2   reducibility test for generic T1 after P1 to whnf of T2 after P2
+%             conv+main T1 M T2        convertibility test for generic T1 and T2
 %             conv+args P1 P2          convertibility test for generic stacks P1 and P2
-%             conv+whnf U1 P1 I U2 P2  convertibility test for whnf's U1 after P1 and U2 after P2
+%             conv+whnf U1 P1 M U2 P2  convertibility test for whnf's U1 after P1 and U2 after P2
 %             r+step+h T1 P1 H T2 P2   transition to T2 after P2 from constant T1 with level/age/heght H after P1
 %             t+step T U               inference of a type U for T
 %           * has+sort T S             test for T having sort S
@@ -117,15 +119,15 @@ i+not i+dx i+sn.
 
 i+not i+rc i+rc.
 
-% red+whnf T1 P1 I U2 P2 :- on+focus, $print (red+whnf T1 P1 I U2 P2), fail.
+% red+whnf T1 P1 M U2 P2 :- on+focus, $print (red+whnf T1 P1 M U2 P2), fail.
 
-red+whnf T1 P1 I U2 P2 :- whd+no+delta T1 P1 (conv+whnf U2 P2 I), !.
+red+whnf T1 P1 M U2 P2 :- whd+no+delta T1 P1 (conv+whnf U2 P2 M), !.
 
 %
 
-% conv+main T1 I T2 :- on+focus, $print (conv+main T1 I T2), fail.
+% conv+main T1 M T2 :- on+focus, $print (conv+main T1 M T2), fail.
 
-conv+main T1 I T2 :- whd+no+delta T1 [] (red+whnf T2 [] I), !.
+conv+main T1 M T2 :- whd+no+delta T1 [] (red+whnf T2 [] M), !.
 
 %
 
@@ -137,7 +139,7 @@ conv+args [V1|P1] [V2|P2] :- conv+args P1 P2, conv+main V1 i+rc V2.
 
 % CONVERSION OF WHNF'S %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% conv+whnf T1 P1 I T2 P2 :- on+focus, $print (conv+whnf T1 P1 I T2 P2), fail.
+% conv+whnf T1 P1 M T2 P2 :- on+focus, $print (conv+whnf T1 P1 M T2 P2), fail.
 
 % left subsumption for sort
 conv+whnf (sort S1) [] i+sn (sort S2) [] :- !, pts+sub S1 S2.
@@ -145,38 +147,38 @@ conv+whnf (sort S1) [] i+sn (sort S2) [] :- !, pts+sub S1 S2.
 % right subsumption for sort
 conv+whnf (sort S1) [] i+dx (sort S2) [] :- !, pts+sub S2 S1.
 
-% subsumption for sort
+% reflexivity for sort
 conv+whnf (sort S1) [] i+rc (sort S1) [] :- !.
 
-% reflexivity.
-conv+whnf T P1 I T P2 :- conv+args P1 P2, !.
+% reflexivity: generl case.
+conv+whnf T P1 M T P2 :- conv+args P1 P2, !.
 
 % xi for product.
-conv+whnf (prod W1 F1) [] I (prod W2 F2) [] :- !, conv+main W1 i+rc W2,
-                                               pi x\ conv+main (F1 x) I (F2 x).
+conv+whnf (prod W1 F1) [] M (prod W2 F2) [] :- !, conv+main W1 i+rc W2,
+                                               pi x\ conv+main (F1 x) M (F2 x).
 % xi for abstraction.
-conv+whnf (abst W1 F1) [] I (abst W2 F2) [] :- !, conv+main W1 i+rc W2,
+conv+whnf (abst W1 F1) [] M (abst W2 F2) [] :- !, conv+main W1 i+rc W2,
                                                pi x\ conv+main (F1 x) i+rc (F2 x).
 % candidate left delta.
-conv+whnf T1 P1 I T2 P2 :- r+step+h T1 H1 V1, !, maybe+sn T1 H1 V1 P1 I T2 P2.
+conv+whnf T1 P1 M T2 P2 :- r+step+h T1 H1 V1, !, maybe+sn T1 H1 V1 P1 M T2 P2.
 
 % forced right delta.
-conv+whnf T1 P1 I T2 P2 :- r+step+h T2 _ V2, !, red+whnf V2 P2 I T1 P1.
+conv+whnf T1 P1 M T2 P2 :- r+step+h T2 _ V2, !, red+whnf V2 P2 M T1 P1.
 
 % AGE/HEIGHT-CONTROLLED DELTA %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-maybe+sn T1 H1 V1 P1 I T2 P2 :- r+step+h T2 H2 V2, !, check+h T1 H1 V1 P1 I T2 H2 V2 P2.
+maybe+sn T1 H1 V1 P1 M T2 P2 :- r+step+h T2 H2 V2, !, check+h T1 H1 V1 P1 M T2 H2 V2 P2.
 
 % forced left delta.
-maybe+sn T1 _ V1 P1 I T2 P2 :- i+not I J, red+whnf V1 P1 J T2 P2.
+maybe+sn T1 _ V1 P1 M T2 P2 :- i+not M N, red+whnf V1 P1 N T2 P2.
 
 %
 
 % age/hight-implied left delta.
-check+h T1 H1 V1 P1 I T2 H2 V2 P2 :- lt+h H2 H1, !, i+not I J, red+whnf V1 P1 J T2 P2.
+check+h T1 H1 V1 P1 M T2 H2 V2 P2 :- lt+h H2 H1, !, i+not M N, red+whnf V1 P1 N T2 P2.
 
 % age/hight-implied right delta.
-check+h T1 _ V1 P1 I T2 _ V2 P2 :- red+whnf V2 P2 I T1 P1.
+check+h T1 _ V1 P1 M T2 _ V2 P2 :- red+whnf V2 P2 M T1 P1.
 
 %
 
