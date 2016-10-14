@@ -48,3 +48,4 @@ pts+sub (s+prop u+0) (s+cprop U) :- !.
 pts+sub (s+type U1) (s+type U2) :- !, univ+chain U1 U2.
 pts+sub (s+cprop U1) (s+type U2) :- !, univ+chain U1 U2.
 pts+sub (s+cprop U1) (s+cprop U2) :- !, univ+chain U1 U2.
+pts+sub S S :- !.

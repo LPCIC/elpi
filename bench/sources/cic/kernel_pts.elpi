@@ -139,14 +139,17 @@ conv+args [V1|P1] [V2|P2] :- conv+args P1 P2, conv+main V1 i+rc V2.
 
 % conv+whnf T1 P1 I T2 P2 :- on+focus, $print (conv+whnf T1 P1 I T2 P2), fail.
 
-% reflexivity.
-conv+whnf T P1 I T P2 :- conv+args P1 P2, !.
-
 % left subsumption for sort
-conv+whnf (sort S1) [] i+sn (sort S2) [] :- pts+sub S1 S2, !.
+conv+whnf (sort S1) [] i+sn (sort S2) [] :- !, pts+sub S1 S2.
 
 % right subsumption for sort
 conv+whnf (sort S1) [] i+dx (sort S2) [] :- !, pts+sub S2 S1.
+
+% subsumption for sort
+conv+whnf (sort S1) [] i+rc (sort S1) [] :- !.
+
+% reflexivity.
+conv+whnf T P1 I T P2 :- conv+args P1 P2, !.
 
 % xi for product.
 conv+whnf (prod W1 F1) [] I (prod W2 F2) [] :- !, conv+main W1 i+rc W2,
