@@ -36,6 +36,8 @@ type term =
   (* Misc: $custom predicates, ... *)
   | Custom of constant * term list
   | CData of Elpi_util.CData.t
+  | Cons of term * term
+  | Nil
 and term_attributed_ref = {
   mutable contents : term;
   mutable rest : stuck_goal list;

@@ -64,6 +64,7 @@ let rec eval depth =
       try lookup_eval hd
       with Not_found -> anomaly (show hd ^ " not evaluable") in
      f []
+  | Nil | Cons _ -> assert false (* TODO? *)
   | CData _ as x -> x
 ;;
 
