@@ -66,12 +66,14 @@ let _ =
   let print_prolog = ref false in
   let print_latex = ref false in
   let print_lprolog = ref false in
+  let typecheck = ref true in
   let rec aux = function
     | [] -> []
     | "-test" :: rest -> test := true; aux rest
     | "-print-prolog" :: rest -> print_prolog := true; aux rest
     | "-print-latex" :: rest -> print_latex := true; aux rest
     | "-print" :: rest -> print_lprolog := true; aux rest
+    | "-no-tc" :: rest -> typecheck := false; aux rest
     | ("-h" | "--help") :: _ -> Printf.eprintf "%s" usage; exit 0
     | s :: _ when String.length s > 0 && s.[0] == '-' ->
         Printf.eprintf "Unrecognized option: %s\n%s" s usage; exit 1
@@ -95,7 +97,7 @@ let _ =
     let strm = Stream.of_channel stdin in
     Elpi_parser.parse_goal_from_stream strm
    end in
-  Elpi_runtime.enable_typechecking ();
+  if !typecheck then Elpi_runtime.enable_typechecking ();
   if !test then test_impl p g
   else run_prog p g
 ;;
