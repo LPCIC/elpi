@@ -99,6 +99,7 @@ macro @prop :- (sort prop).
 
 macro @rex :- "\\(Coq.Init.\\(Datatypes\\|Peano\\)\\|Coq.Vectors\\)\\.".
 type pp A -> B -> prop.
+mode (pp i o).
 pp (app L) (app L1) :- !, pp-list L L1.
 pp (lam N T F) (lam N T1 F1) :- !, pp T T1, pi x\ (pp x N :- !) => pp (F x) (F1 x).
 pp (fix N R B) (fix N R B1) :- !, pi f\ (pp f N :- !) => pp (B f) (B1 f).
