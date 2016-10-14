@@ -67,14 +67,14 @@ let univ_of u =
    with Scanf.Scan_failure _ | End_of_file -> assert false
 
 let mk_univ s =
-   let sort, univ = match s with
-      | C.Prop             -> "s+prop", "u+0"
-      | C.Type []          -> "s+type", "u+0"
-      | C.Type [`Type, u]  -> "s+type", univ_of u
-      | C.Type [`CProp, u] -> "s+cprop", univ_of u
+   let cons = match s with
+      | C.Prop             -> ["s+prop"]
+      | C.Type []          -> ["s+type"; "u+0"]
+      | C.Type [`Type, u]  -> ["s+type"; univ_of u]
+      | C.Type [`CProp, u] -> ["s+cprop"; univ_of u]
       | _                  -> assert false (* for now we process just universes in normal form *)
    in
-   LPA.mkApp [LPA.mkCon sort; LPA.mkCon univ]
+   LPA.mkApp (List.map LPA.mkCon cons)
 
 let mk_nil = LPA.mkNil
 

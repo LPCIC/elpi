@@ -14,14 +14,14 @@ univ+chain U1 U2 :- univ+pair U1 U2, !.
 
 univ+chain U1 U2 :- univ+pair U1 U, univ+chain U U2, !.
 
-pts+pair (s+prop u+0) (s+type u+0) :- !.
+pts+pair s+prop (s+type u+0) :- !.
 
 pts+pair (s+type U1) (s+type U2) :- univ+pair U1 U2, !.
 
 pts+pair (s+cprop U1) (s+type U2) :- univ+pair U1 U2, !.
 
 % (star, star, star), impredicative (box, star, star).
-pts+triple S (s+prop u+0) (s+prop u+0) :- !.
+pts+triple S s+prop s+prop :- !.
 
 % (star, star, star), (box, box, box).
 pts+triple (s+type U) (s+type U) (s+type U) :- !.
@@ -30,7 +30,7 @@ pts+triple (s+cprop U) (s+type U) (s+type U) :- !.
 pts+triple (s+cprop U) (s+cprop U) (s+cprop U) :- !.
 
 % (star, box, box).
-pts+triple (s+prop u+0) S S :- !.
+pts+triple s+prop S S :- !.
 pts+triple (s+type U1) (s+type U2) (s+type U2) :- univ+chain U1 U2, !.
 pts+triple (s+type U1) (s+cprop U2) (s+cprop U2) :- univ+chain U1 U2, !.
 pts+triple (s+cprop U1) (s+type U2) (s+type U2) :- univ+chain U1 U2, !.
@@ -44,8 +44,8 @@ pts+triple (s+cprop U2) (s+cprop U1) (s+cprop U2) :- univ+chain U1 U2, !.
 
 % cumulativity
 pts+sub S S :- !.
-pts+sub (s+prop u+0) (s+type U) :- !.
-pts+sub (s+prop u+0) (s+cprop U) :- !.
+pts+sub s+prop (s+type U) :- !.
+pts+sub s+prop (s+cprop U) :- !.
 pts+sub (s+type U1) (s+type U2) :- !, univ+chain U1 U2.
 pts+sub (s+cprop U1) (s+type U2) :- !, univ+chain U1 U2.
 pts+sub (s+cprop U1) (s+cprop U2) :- !, univ+chain U1 U2.
