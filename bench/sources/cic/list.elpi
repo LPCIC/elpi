@@ -23,3 +23,11 @@ nth [A|L] M B :- N is M - 1, nth L N B.
 split L 0 [] L :- !.
 
 split [A|L] M [A|L1] L2 :- N is M - 1, split L N L1 L2.
+
+% SUBST %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% subst L1 M C L2 :- $print (subst L1 M L2), fail.
+
+subst [A1|L] 0 C [A2|L] :- !, C A1 A2.
+
+subst [A|L1] M C [A|L2] :- N is M - 1, subst L1 N C L2.

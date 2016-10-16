@@ -6,18 +6,38 @@ accumulate kernel_pts.
 
 % Closed term: T, U, V, W := case V A W U  match V with constructors of W and select branch in A of type U
 
-% Stack: P                := cframe A W U P  case frame (continuations)
+% Stack: P, Q := cframe A W U P  case frame (continuations)
 
-% EXTRA REDUCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% LIST HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+append (cframe A W U P1) P2 (cframe A W U P) :- append P1 P2 P.
+
+% EXTRA REDUCTIONS HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+is+constructor V P V P :- $constructor V _ _.
+
+%
+
+whd+to+constructor V1 V2 :- whd+delta V1 [] is+constructor V2.
+
+%
+
+% check+fixpoint T1 P1 P2 :- on+focus, $print (check+fixpoint T1 P1 P2), fail.
+
+check+fixpoint T1 P1 P2 :- $fixpoint T1 L, !, subst P1 L whd+to+constructor P2.
+
+check+fixpoint T1 P P, !.
+
+%
 
 get+branch J (cframe A _ _ P) T P [] :- nth A J T.
 
 get+branch J [V|P] T P1 [V|P2] :- get+branch J P T P1 P2.
 
-%
+% EXTRA REDUCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % extra delta
-r+step+h T1 H T2 :- $r+step+h T1 H T2, !.
+r+step+h T1 P1 H T2 P2 :- $r+step+h T1 H T2, !, check+fixpoint T1 P1 P2.
 
 % nu for case
 whd+extra (case V A W U) P V (cframe A W U P) :- !.
@@ -34,12 +54,12 @@ conv+args (cframe A1 W U1 P1) (cframe A2 W U2 P2) :- conv+args P1 P2,
 
 % VALIDITY + INFERRED TYPE HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-out+type V W0 U0 W0 P (appl U0 DXV) :- $inductive W0 K, split P K SN DX,
-                                       append DX [V] DXV.
+mk+out+type V W0 U0 W0 P U0 DXV :- $inductive W0 K, split P K SN DX,
+                                   append DX [V] DXV.
 
 % VALIDITY + INFERRED TYPE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % not complete, we just compute the output type ...
-t+step (case V A W0 U0) U :- !, t+step V W, whd+delta W [] (out+type V W0 U0) U.
+t+step (case V A W0 U0) U :- !, t+step V W, whd+delta W [] (mk+out+type V W0 U0) U.
 
 t+step T U :- $t+step T U, !.

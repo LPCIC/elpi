@@ -20,10 +20,12 @@ r+step+h (abst W F) _ _ :- !, fail.
 
 % has+checked+type T U :- on+focus, $print (++has+checked+type T U), fail.
 
+% check+fixpoint T1 P1 P2 :- on+focus, $print (check++fixpoint T1 P1 P2), fail.
+
 % pts+pair S1 S2 :- on+focus, $print (++pts+pair S1 S2), fail.
 
 % pts+triple S1 S2 S3 :- on+focus, $print (++pts+triple S1 S2 S3), fail.
 
 % pts+sub S1 S2 :- on+focus, $print (++pts+sub S1 S2), fail.
 
-% on+focus :- $current "cic:/matita/arithmetics/nat/plus_plus_comm_23.def(7)".
+% on+focus :- $current "cic:/matita/arithmetics/factorial/le_fact_10.def(11)".
