@@ -1572,6 +1572,8 @@ let rec list_to_lp_list = function
   | x::xs -> Cons(x,list_to_lp_list xs)
 ;;
 
+let delay_hard_unif_problems = Fork.new_local false
+
 let rec unif matching depth adepth a bdepth b e =
    [%trace "unif" ("@[<hov 2>^%d:%a@ =%d%s= ^%d:%a@]%!"
        adepth (ppterm (adepth+depth) [] adepth empty_env) a
@@ -1730,7 +1732,7 @@ let rec unif matching depth adepth a bdepth b e =
          let r = oref C.dummy in
          e.(i) <- UVar(r,adepth,0);
          bind r adepth args adepth depth delta bdepth false other e
-       else begin
+       else if !delay_hard_unif_problems then begin
        Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth empty_env) a (uppterm depth [] bdepth e) b ;
        let r = oref C.dummy in
        e.(i) <- UVar(r,adepth,0);
@@ -1741,24 +1743,24 @@ let rec unif matching depth adepth a bdepth b e =
          | Some r' -> if r==r' then [r] else [r;r'] in
        CS.declare_new { kind; blockers };
        true
-       end
+       end else false
    | AppUVar({ rest = _ :: _ },_,_), (AppUVar ({ rest = [] },_,_) | UVar ({ rest = [] },_,_)) -> unif matching depth bdepth b adepth a e
    | AppUVar (r, lvl,args), other when not matching ->
        let is_llam, args = is_llam lvl args adepth bdepth depth true e in
        if is_llam then
          bind r lvl args adepth depth delta bdepth true other e
-       else begin
+       else if !delay_hard_unif_problems then begin
        Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth empty_env) a (uppterm depth [] bdepth empty_env) b ;
        let kind = Unification {adepth = adepth+depth; env = e; bdepth = bdepth+depth; a; b} in
        let blockers = match is_flex other with | None -> [r] | Some r' -> [r;r'] in
        CS.declare_new { kind; blockers };
        true
-       end
+       end else false
    | other, AppUVar (r, lvl,args) ->
        let is_llam, args = is_llam lvl args adepth bdepth depth false e in
        if is_llam then
          bind r lvl args adepth depth delta bdepth false other e
-       else begin
+       else if !delay_hard_unif_problems then begin
        Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth empty_env) a (uppterm depth [] bdepth e) b ;
        let kind = Unification {adepth = adepth+depth; env = e; bdepth = bdepth+depth; a; b} in
        let blockers =
@@ -1767,7 +1769,7 @@ let rec unif matching depth adepth a bdepth b e =
          | Some r' -> if r==r' then [r] else [r;r'] in
        CS.declare_new { kind; blockers };
        true
-       end
+       end else false
   
    (* recursion *)
    | App (c1,x2,xs), App (c2,y2,ys) ->
@@ -3747,6 +3749,7 @@ let query_of_ast_cmap lvl cmap = Compiler.query_of_ast_cmap lvl ~cmap ~macro:F.M
 let term_of_ast = Compiler.term_of_ast
 let lp_list_to_list = Clausify.lp_list_to_list
 let split_conj = Clausify.split_conj
+let llam_unify ad e bd a b = HO.unif ad e bd a b
 module CustomConstraints = CS.Custom
 
 (* vim: set foldmethod=marker: *)

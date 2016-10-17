@@ -123,3 +123,9 @@ val query_of_ast_cmap :
 val split_conj : term -> term list
 
 val enable_typechecking : unit -> unit
+
+type coref_data
+val coref : coref_data Elpi_util.CData.cdata
+val assign_coref : Elpi_util.CData.t -> term -> unit
+
+val llam_unify : int -> term array -> int -> term -> term -> bool
