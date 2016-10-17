@@ -23,9 +23,10 @@ safe-dest-app X X [].
 type mk-app term -> list term -> term -> prop.
 mk-app HD [] HD :- !.
 mk-app (app L) Args (app LArgs) :- !, append L Args LArgs.
+mk-app (?? as K) [A|Args] R :- !, unsafe-cast K K', mk-app (K' A) Args R.
 mk-app HD Args (app [HD|Args]).
 
-spy P :- $print "----<<---- enter: " P, P, $print "---->>---- exit: " P, !.
+spy P :- $print "----<<---- enter: " {$counter "run"} P, P, $print "---->>---- exit: " P, !.
 spy P :- $print "---->>---- fail: " P, fail.
 
 list-chop [] 0 0 [] [].
@@ -150,9 +151,10 @@ whd-indc A KN KA :- whd-w-delta A B, !, safe-dest-app B (indc KN) KA.
 mode (unif i i).
 %unif A B :- $print "unif" {pp A} {pp B}, fail.
 
-unif (?? as K) (?? as J) :- !,K = J. % FIXME
-unif (?? as K) T :- !,/*bind L T T1,*/ K = T. % FIXME
-unif T (?? as K) :- !,K = T. % FIXME
+unif (?? as K) T :- $llam_unif K T, !.
+unif T (?? as K) :- $llam_unif T K, !.
+unif (?? V L) T :- !, bind-list L T V1, $assign V V1.
+unif T (?? V L) :- !, bind-list L T V1, $assign V V1.
 unif (sort _) (sort _) :- !.  % FIXME
 unif (indt KN) (indt KN) :- !.
 unif (indc KN) (indc KN) :- !.
@@ -191,33 +193,48 @@ unif T (app [const C|L2]) :- unfold C L2 T', !, unif T T'.
 unif (const C) T :- unfold C [] T', !, unif T' T.
 unif T (const C) :- unfold C [] T', !, unif T T'.
 
-% heigen variables applied
-unif (app [X|XS]) (app [Y|YS]) :- unif X Y, !, unif-list XS YS.
+% heigen variables
+unif (app [X|XS]) (app [Y|YS]) :- $is_name X, !, X = Y, unif-list XS YS.
+unif X Y :- $is_name X, !, X = Y.
 
-unif X Y :- !, $print "Error: " {pp X} {pp Y} " barebone " X " vs " Y.
+unif X Y :- !, $print "Error: " {pp X} "vs" {pp Y} " barebone " X " vs " Y, halt.
 
 mode (unif-list i i).
 unif-list [] [].
-unif-list [X|XS] [Y|YS] :- unif X Y, unif-list XS YS.
+unif-list [X|XS] [Y|YS] :- (unif X Y), unif-list XS YS.
 
 type bind-list list term -> term -> A -> prop.
 mode (bind-list i i o).
-bind-list [] T T.
-bind-list [V|VS] T R :- !, pi x\ bind V x T (T' x), bind-list VS (T' x) (R x).
+bind-list [] T T' :- (copy T T').
+bind-list [V|VS] T R :- matchable V VM, !, pi x\ (VM x) => (/*$print "bind" (VM x),*/ bind-list VS T (R x)).
 
-type bind term -> term -> term -> term -> prop.
-mode (bind i i i o).
-%bind A B C _ :- $print "bind" A B C, fail.
-bind X C X C :- !.
-bind _ _ (const _ as C) C :- !.
-bind _ _ (indc _ as C) C :- !.
-bind _ _ (indt _ as C) C :- !.
-bind _ _ (sort _ as C) C :- !.
-bind X C (fix N Rno F) (fix N Rno F1) :- !, pi x\ (bind X C x x :- !) => bind X C (F x) (F1 x).
-bind X C (match T Rty B) (match T1 Rty1 B1) :- !, bind X C T T1, bind X C Rty Rty1, map (bind X C) B B1.
-bind X C (app L) (app L1) :- !, map (bind X C) L L1.
-bind X C (lam N T F) (lam N T1 F1) :- !, bind X C T T1, pi x\ (bind X C x x :- !) => bind X C (F x) (F1 x).
-bind X C (prod T F) (prod T1 F1) :- !, bind X C T T1, pi x\ (bind X C x x :- !) => bind X C (F x) (F1 x).
+type matchable term -> (term -> prop) -> prop.
+mode (matchable i o).
+matchable (const _ as C) (copy C).
+matchable (indt _ as C)  (copy C).
+matchable (indc _ as C)  (copy C).
+matchable (app [const _ as C|AS]) (x\ copy (app [C|L]) x :- unif-list AS L).
+matchable (app [indt _ as C|AS]) (x\ copy (app [C|L]) x :- unif-list AS L).
+matchable (app [indc _ as C|AS]) (x\ copy (app [C|L]) x :- unif-list AS L).
+matchable (app [C|AS]) (x\ copy (app [C|L]) x :- unif-list AS L) :- $is_name C.
+matchable ?? (x\ true) :- !.
+matchable X (x\copy X x :- /*$print "GRAB" X "as" x*/true) :- !, $is_name X.
+
+
+type copy term -> term -> prop.
+mode (copy i o).
+%copy C W :- $print "copy" C W, fail.
+copy (const _ as C) C :- !.
+copy (indc _ as C) C :- !.
+copy (indt _ as C) C :- !.
+copy (sort _ as C) C :- !.
+copy (fix N Rno F) (fix N Rno F1) :- !, pi x\ (pp x N :- !) => copy (F x) (F1 x).
+copy (match T Rty B) (match T1 Rty1 B1) :- !, copy T T1, copy Rty Rty1, map (copy) B B1.
+copy (app L) (app L1) :- !, map copy L L1.
+copy (lam N T F) (lam N T1 F1) :- !, copy T T1, pi x\ (pp x N :- !) => copy (F x) (F1 x).
+copy (prod T F) (prod T1 F1) :- !, copy T T1, pi x\ copy (F x) (F1 x).
+copy (?? M L as K) W :- map copy L L1, mk-app M L1 W.
+copy X Y :- $is_name X, !, X = Y. % we have no way to assert exhaustiveness
 
 %%%%% eat-prod head head-ty args-done todo-args refined-app refined-ty %%%%%%%%
 
@@ -393,6 +410,10 @@ test1 :-
 test-bind :-
   $print "\nBind",
   coq-env-const @append _ Bo,
-  bind-list [indt @vect, const @plus] Bo T, $print {pp (lam "VECT" _ (x\lam "PLUS" _ (T x)))}.
+  bind-list [indt @vect, const @plus] Bo T, !, $print {pp (lam "VECT" _ (x\lam "PLUS" _ (T x)))},
+  $print "\nBind",
+  pi x f\ sigma V\ unif (V (app[f, x, app[const @plus, indc @nat0, x]]))
+                           (app[f,app[f, app[const @plus,indc @nat0, x], x]]),
+    $print {pp (lam "fx0+x" _ x\ (V x))}.
 
 % vim:set ft=lprolog spelllang=:
