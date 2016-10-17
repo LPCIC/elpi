@@ -3626,9 +3626,9 @@ end (* }}} *)
  ******************************************************************************)
 
 let execute_once program q =
- let { search } = make_runtime ~print_constraints:true program in
- try ignore (search q) ; false
- with No_clause (*| Non_linear*) -> true
+ let { search; destroy } = make_runtime ~print_constraints:true program in
+ try ignore (search q) ; destroy (); false
+ with No_clause (*| Non_linear*) -> destroy (); true
 ;;
 
 
