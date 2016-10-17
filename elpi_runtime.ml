@@ -3250,7 +3250,7 @@ let typecheck = ref (fun clauses types -> ())
 
 module Compiler : sig
 
-  val program_of_ast : ?print:bool -> Elpi_ast.decl list -> program
+  val program_of_ast : ?print:[`Yes|`Raw] -> Elpi_ast.decl list -> program
   val query_of_ast : program -> Elpi_ast.term -> query
   val term_of_ast : depth:int -> Elpi_ast.term -> term
 
@@ -3513,13 +3513,14 @@ let sort_insertion l =
   aux [] l
 ;;
 
-let program_of_ast ?(print=false) (p : Elpi_ast.decl list) : program =
+let program_of_ast ?print (p : Elpi_ast.decl list) : program =
  let clausify_block program block lcs cmap =
    let l = sort_insertion block in
    let clauses, lcs =
      List.fold_left (fun (clauses,lcs) (macro,{ Elpi_ast.body; loc }) ->
       let names,_,env,t = query_of_ast_cmap lcs ~cmap ~macro body in
-      if print then Fmt.eprintf "%a.@;" (uppterm 0 names 0 env) t;
+      if print = Some `Yes then Fmt.eprintf "%a.@;" (uppterm 0 names 0 env) t;
+      if print = Some `Raw then Fmt.eprintf "%a.@;" pp_term t;
       let moreclauses, morelcs = clausify (Array.length env) lcs t in
       let loc = in_loc loc in
       clauses @ List.(map (fun x -> loc,names,x) (rev moreclauses)), lcs + morelcs
