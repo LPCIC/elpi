@@ -113,6 +113,16 @@ let destConst = function Const x -> x | _ -> assert false
 let oref x = { contents = x; rest = [] }
 let (!!) { contents = x } = x
 
+let { CData.cin = in_oref; isc = is_oref; cout = out_oref } as coref =
+  CData.(declare {
+    data_name = "oref";
+    data_pp = (fun f (x,lvl,n) ->
+      Fmt.fprintf f "%a(level %d, nargs %d )" pp_term_attributed_ref x lvl n);
+    data_eq = (==);
+    data_hash = Hashtbl.hash;
+  })
+type coref_data = term_attributed_ref * int * int
+
 (* Arg/AppArg point to environments, here the empty one *)
 type env = term array
 let empty_env = [||]
@@ -728,6 +738,7 @@ let (@:=) r v =
     end;
  r.contents <- v
 ;;
+let assign_coref c t = assert(is_oref c); let r, _, _ = out_oref c in r @:= t
 
 (* UVar 2 UVar assignment, constraints are inherited *)
 let (@:==) r v r1 =
@@ -1609,8 +1620,10 @@ let rec unif matching depth adepth a bdepth b e =
 
    (* UVar introspection *)
    | (UVar _ | AppUVar _), Const c when c == C.uvc && matching -> true
-   | (UVar(r,vd,_) | AppUVar(r,vd,_)), App(c,hd,[]) when c == C.uvc && matching ->
-      unif matching depth adepth (UVar(r,vd,0)) bdepth hd e
+   | UVar(r,vd,nargs), App(c,hd,[]) when c == C.uvc && matching ->
+      unif matching depth adepth (CData (in_oref (r,vd,nargs))) bdepth hd e
+   | AppUVar(r,vd,args), App(c,hd,[]) when c == C.uvc && matching ->
+      unif matching depth adepth (CData (in_oref (r,vd,List.length args))) bdepth hd e
    | UVar(r,vd,ano), App(c,hd,[arg]) when c == C.uvc && matching ->
       let basedepth = 0 in (* XXX BUG? WE CAN DO BETTER *)
       let r,implargs =
@@ -1624,7 +1637,7 @@ let rec unif matching depth adepth a bdepth b e =
         [%spy "assign" (ppterm depth [] adepth empty_env) (!!r)];
         r', implargs
        end in
-      unif matching depth adepth (UVar(r,0,0)) bdepth hd e &&
+      unif matching depth adepth (CData (in_oref (r,vd,ano))) bdepth hd e &&
       let args = list_to_lp_list (C.mkinterval basedepth (implargs + ano) 0) in
       unif matching depth adepth args bdepth arg e
    | AppUVar(r,vd,args), App(c,hd,[arg]) when c == C.uvc && matching ->
@@ -1642,7 +1655,7 @@ let rec unif matching depth adepth a bdepth b e =
         r', implargs
        end in
       let args = C.mkinterval basedepth implargs 0 @ args in
-      unif matching depth adepth (UVar(r,vd,0)) bdepth hd e &&
+      unif matching depth adepth (CData (in_oref (r,vd,List.length args))) bdepth hd e &&
       let args = list_to_lp_list args in
       unif matching depth adepth args bdepth arg e
    | _, (Const c | App(c,_,_)) when c == C.uvc -> false
