@@ -503,6 +503,8 @@ module ConstraintStoreAndTrail : sig
   val new_delayed      : propagation_item list ref
   val to_resume        : stuck_goal list ref
 
+  val pivot : old:term_attributed_ref -> term_attributed_ref -> stuck_goal list -> stuck_goal list
+
   val declare_new : stuck_goal -> unit
   val remove_old : stuck_goal -> unit
   val remove_old_constraint : constraint_def -> unit
@@ -631,6 +633,16 @@ let print_trail fmt =
   Fmt.fprintf fmt "to_resume:%d new_delayed:%d\n%!"
     (List.length !to_resume) (List.length !new_delayed)
 
+let pivot ~old:r r1 sg =
+  let rc = ref [] in
+  delayed := List.map (fun d ->
+    if List.memq d sg then
+      let x = { d with blockers = List.map (fun v -> if v == r then r1 else v) d.blockers } in
+      rc := x :: !rc;
+      x
+    else d) !delayed;
+  List.rev !rc
+
 let declare_new cstr =
   add cstr ;
   begin match cstr.kind with
@@ -713,6 +725,16 @@ let (@:=) r v =
     [%spy "assign-to_resume" (fun fmt l ->
         Fmt.fprintf fmt "%d" (List.length l)) r.rest];
      CS.to_resume := r.rest @ !CS.to_resume
+    end;
+ r.contents <- v
+;;
+
+(* UVar 2 UVar assignment, constraints are inherited *)
+let (@:==) r v r1 =
+  if r.rest <> [] then
+    begin
+    r1.rest <- CS.pivot r r1 r.rest;
+    (* r.rest <- []; FIXME *)
     end;
  r.contents <- v
 ;;
@@ -1136,7 +1158,7 @@ and decrease_depth r ~from ~to_ argsno =
   let newvar = UVar(newr,to_,from-to_) in
   if not !T.last_call then
    T.trail := (T.Assignement r) :: !T.trail;
-  r @:= newvar;
+  (r @:== newvar) newr;
   newr,to_,newargsno
 
 (* simultaneous substitution of ts for [depth,depth+|ts|)
@@ -1598,7 +1620,7 @@ let rec unif matching depth adepth a bdepth b e =
         let implargs = vd - basedepth in
         let newvar = UVar(r',basedepth,implargs) in
         if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
-        r @:= newvar;
+        (r @:== newvar) r';
         [%spy "assign" (ppterm depth [] adepth empty_env) (!!r)];
         r', implargs
        end in
@@ -1615,7 +1637,7 @@ let rec unif matching depth adepth a bdepth b e =
         let implargs = vd - basedepth in
         let newvar = UVar(r',basedepth,implargs) in
         if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
-        r @:= newvar;
+        (r @:== newvar) r';
         [%spy "assign" (ppterm depth [] adepth empty_env) (!!r)];
         r', implargs
        end in
@@ -1634,6 +1656,8 @@ let rec unif matching depth adepth a bdepth b e =
       e.(i) <- hmove ~from:(adepth+depth) ~to_:adepth a;
       [%spy "assign" (ppterm adepth [] adepth empty_env) (e.(i))]; true
      with RestrictionFailure -> false end
+   | UVar({ rest = [] },_,0), UVar ({ rest = _ :: _ },_,0) -> unif matching depth bdepth b adepth a e
+   | AppUVar({ rest = [] },_,_), UVar ({ rest = _ :: _ },_,0) -> unif matching depth bdepth b adepth a e
    | _, UVar (r,origdepth,0) ->
        if not !T.last_call then
         T.trail := (T.Assignement r) :: !T.trail;
@@ -1671,6 +1695,8 @@ let rec unif matching depth adepth a bdepth b e =
       e.(i) <- fst (make_lambdas adepth args);
       [%spy "assign" (ppterm depth [] adepth empty_env) (e.(i))];
       unif matching depth adepth a bdepth b e
+   | UVar({ rest = [] },_,a1), UVar ({ rest = _ :: _ },_,a2) when a1 + a2 > 0 -> unif matching depth bdepth b adepth a e
+   | AppUVar({ rest = [] },_,_), UVar ({ rest = _ :: _ },_,a2) when  a2 > 0 -> unif matching depth bdepth b adepth a e
    | _, UVar (r,origdepth,args) when args > 0 ->
       if not !T.last_call then
        T.trail := (T.Assignement r) :: !T.trail;
@@ -1703,6 +1729,7 @@ let rec unif matching depth adepth a bdepth b e =
        CS.declare_new { kind; blockers };
        true
        end
+   | AppUVar({ rest = _ :: _ },_,_), (AppUVar ({ rest = [] },_,_) | UVar ({ rest = [] },_,_)) -> unif matching depth bdepth b adepth a e
    | AppUVar (r, lvl,args), other when not matching ->
        let is_llam, args = is_llam lvl args adepth bdepth depth true e in
        if is_llam then
