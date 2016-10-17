@@ -1406,7 +1406,7 @@ let bind r gamma l a d delta b left t e =
     if left then begin
       if c < gamma && c < b then c
       else
-        let c = if hmove then c + delta else c in
+        let c = if hmove && c >= b then c + delta else c in
         if c < gamma then c
         else if c >= a + d then c + new_lams - (a+d - gamma)
         else pos c + gamma
