@@ -107,9 +107,11 @@ let rec parse_one e (origfilename as filename) =
   cur_dirname := symlink_dirname filename;
   sigs @
   try
+   let loc = !last_loc in
    set_fname filename;
    let res = (!PointerFunc.latex_export).PointerFunc.process ~path:filename
     ~shortpath:origfilename (Grammar.Entry.parse e) (Stream.of_channel ch)in
+   last_loc := loc;
    ast := Some res;
    close_in ch;
    cur_dirname := saved_cur_dirname;
