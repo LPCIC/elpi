@@ -32,7 +32,7 @@ pp (@app [HD|L]) T :- !,
     (pp-list [HD|L] PL, mk-app PL T).
 pp (@lam F) T :- !, pi x\ pp (F x) (T x).
 pp X X :- !.
-pp _ "unprintable". % pp should never fail
+pp _ unprintable. % pp should never fail
 
 mkde (pp-list i o).
 pp-list [X|XS] [Y|L] :- pp-list XS L, pp X Y.

@@ -152,3 +152,6 @@ type $$$term_to_string X -> string -> prop.
 type $$$print X -> Y.
 type $$:- prop -> prop -> prop.
 type $$, prop -> Y.
+type $$?? A.
+type $$as A -> A -> A.
+type $$$constraint A -> B -> prop.
