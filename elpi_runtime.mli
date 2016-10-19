@@ -43,7 +43,7 @@ and term_attributed_ref = {
   mutable rest : stuck_goal list;
 }
 and stuck_goal = {
-  blockers : term_attributed_ref list;
+  mutable blockers : term_attributed_ref list;
   kind : stuck_goal_kind;
 }
 and stuck_goal_kind

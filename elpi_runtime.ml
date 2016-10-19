@@ -84,7 +84,7 @@ and term_attributed_ref = {
                                  [@equal fun _ _ -> true];
 }
 and stuck_goal = {
-  blockers : term_attributed_ref list;
+  mutable blockers : term_attributed_ref list;
   kind : stuck_goal_kind;
 }
 and stuck_goal_kind =
@@ -645,12 +645,11 @@ let print_trail fmt =
 
 let pivot ~old:r r1 sg =
   let rc = ref [] in
-  delayed := List.map (fun d ->
-    if List.memq d sg then
-      let x = { d with blockers = List.map (fun v -> if v == r then r1 else v) d.blockers } in
-      rc := x :: !rc;
-      x
-    else d) !delayed;
+  List.iter (fun d ->
+    if List.memq d sg then begin
+      d.blockers <- List.map (fun v -> if v == r then r1 else v) d.blockers;
+      rc := d :: !rc
+    end) !delayed;
   List.rev !rc
 
 let declare_new cstr =
@@ -694,7 +693,13 @@ let undo ~old_trail ?old_constraints () =
   [%spy "trail-undo-to" pp_trail old_trail];
   while !trail != old_trail do
     match !trail with
-    | Assignement r :: rest -> r.contents <- C.dummy; trail := rest
+    | Assignement r :: rest ->
+       (match r.contents with
+       | UVar({ rest = _ :: _ } as r',_,_)
+       | AppUVar({ rest = _ :: _ } as r',_,_) -> r.rest <- pivot ~old:r' r r'.rest
+       | _ -> ());
+       r.contents <- C.dummy;
+       trail := rest
     | StuckGoalAddition sg :: rest -> remove sg; trail := rest
     | StuckGoalRemoval sg :: rest -> add sg; trail := rest
     | [] -> anomaly "undo to unknown trail"
