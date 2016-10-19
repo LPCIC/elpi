@@ -74,10 +74,10 @@ of (sigma F) Ty E :- !, Ty = prop, pi x\
    (pi E\ of x _FRESH E)
  => of (F x) prop E.
 
-of Id ETy [Id `: PTy | _] :- !,
+of Id Ty (node Id PTy _ _) :- !,
   refresh-poly-ty PTy Ty, assert (Ty = ETy) (type-err Id Ty ETy).
-of Id Ty [_|E] :- !, of Id Ty E.
-of Id Ty (?? as TL) :- assert (TL = [Id `: Ty| _FRESH]) (type-err Id Ty wtf).
+of Id Ty (node Id1 _ L R) :- !, if ($lt Id Id1) (of Id Ty L) (of Id Ty R).
+of Id Ty (?? as TL) :- assert (TL = (node Id  Ty _FRESH1 _FRESH2)) (type-err Id Ty wtf).
 
 of Id Ty _ :- of Id ETy _, assert false (type-err Id Ty ETy).
 
@@ -93,7 +93,7 @@ of-app Ty Args _ HD (D - []) _ :- !,
 
 typecheck [] _.
 typecheck [($$, Loc Names Clause)|Rest] E :-
-  % $print {$counter "run"} "type checking " Clause,
+  % $print {$counter "run"} "type checking " Loc,
   checking Loc => of-clause Names Clause E, !,
   typecheck Rest E.
 
@@ -105,9 +105,19 @@ of-clause [N|NS] (pi C) E :- !, pi x\
   => of-clause NS (C x) E.
 of-clause _ C E :- of C prop E.
 
-typecheck-program P E :-
-  typecheck P {append E _FRESH},
+l2t [] _.
+l2t [Id `: Ty | L] E :- of Id Ty E, l2t L E.
+
+typecheck-program P EL :-
+  l2t EL E,
+  $gettimeofday Begin,
+  typecheck P E,
+  $gettimeofday Mid,
+  Time is Mid - Begin,
+  $print "End type checking" Time,
   warn-linear P,
+  WTime is {$gettimeofday} - Mid,
+  $print "End warning" WTime,
   true.
   % $print "given:" E,
   % $print "inferred:" FRESH.
@@ -115,7 +125,6 @@ typecheck-program P E :-
 type of X -> Y -> list Z -> prop.
 type $$-> X -> X -> prop.
 type wrong-arity A -> B -> list A -> err.
-type $$as A -> A -> A.
 
 main :- foo X, foo X Y.
 
