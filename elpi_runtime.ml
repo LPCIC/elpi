@@ -1568,7 +1568,7 @@ let bind r gamma l a d delta b left t e =
     if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
     [%spy "assign(HO)" (ppterm gamma [] a empty_env) (!!r)];
     true
-  with RestrictionFailure -> false
+  with RestrictionFailure -> [%spy "bind result" (fun fmt x -> Fmt.fprintf fmt "%b" x) false];false
 ;;
 (* exception Non_linear *)
 
