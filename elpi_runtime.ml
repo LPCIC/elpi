@@ -3403,11 +3403,11 @@ let stack_term_of_ast lvl amap cmap macro ast =
       F.from_string ("Spilled_" ^ string_of_int !spilled_name) in
     let add_spilled sp t =
       match sp with
-      | [] -> t
+      | [] -> [], t
       | _ ->
-        List.fold_left (fun acc (n,_) ->
-            A.(App(Const F.sigmaf, [Lam (n, acc)])))
-          A.(App(Const F.andf,List.map snd sp @ [t])) sp in
+          let to_spill = map_filter snd sp in
+          List.map (fun (x,_) -> x, None) sp,
+          A.(App(Const F.andf, to_spill @ [t])) in
     (* FIXME: should be type based, not context based *)
     let rec aux toplevel = function
       | A.App(A.Const c,fcall :: rest) when F.(equal c spillf) ->
@@ -3415,21 +3415,24 @@ let stack_term_of_ast lvl amap cmap macro ast =
          let fspills, fcall = aux false fcall in
          let spills, args = List.split (List.map (aux false) rest) in
          let spills = fspills @ List.flatten spills in
-         spills @ [n,A.mkApp [fcall; A.Const n]], A.Const n
+         spills @ [n,Some (A.mkApp [fcall; A.Const n])], A.Const n
       | A.App(A.Const c, args)
          when F.(List.exists (equal c) [andf;andf2;orf;rimplf]) ->
          let spills, args = List.split (List.map (aux true) args) in
-         assert(List.flatten spills = []);
-         [], A.App(A.Const c, args)
+         let spills = List.flatten spills in
+         assert(map_filter snd spills = []);
+         spills, A.App(A.Const c, args)
       | A.App(A.Const c, [A.Lam (n,arg)])
          when F.(List.exists (equal c) [pif;sigmaf]) ->
          let spills, arg = aux true arg in
-         assert(spills = []);
+         assert(map_filter snd spills = []);
+         let arg = List.fold_left (fun acc (n,_) ->
+            A.(App(Const F.sigmaf, [Lam (n, acc)]))) arg spills in
          [], A.App(A.Const c, [A.Lam (n,arg)])
       | A.App(c,args) ->
          let spills, args = List.split (List.map (aux false) args) in
          let spills = List.flatten spills in
-         if toplevel then [], add_spilled spills (A.App(c, args))
+         if toplevel then add_spilled spills (A.App(c, args))
          else spills, A.App(c,args)
       | (A.String _|A.Float _|A.Int _|A.Const _|A.Custom _) as x -> [], x
       | A.Lam(x,t) ->
@@ -3438,7 +3441,7 @@ let stack_term_of_ast lvl amap cmap macro ast =
          [], A.Lam (x,t)
     in
       let sp, t = aux true ast in
-      assert(sp = []); t in
+      assert(map_filter snd sp = []); t in
     aux false lvl amap cmap (spill ast)
 ;;
 
