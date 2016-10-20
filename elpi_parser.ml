@@ -402,6 +402,13 @@ let desugar_macro = function
       if ((Func.show name).[0] != '@') then
         raise (Stream.Error "Macro name must begin with @");
       name, body
+  | App(Const hd,[App(Const name,args); body]) when Func.(equal hd rimplf) ->
+      if ((Func.show name).[0] != '@') then
+        raise (Stream.Error "Macro name must begin with @");
+      let names = List.map (function
+        | Const x -> Func.show x
+        | _ -> Elpi_util.error "macro binder syntax") args in
+      name, List.fold_right mkLam names body
   | _ -> raise (Stream.Error "Illformed macro")
 ;;
 

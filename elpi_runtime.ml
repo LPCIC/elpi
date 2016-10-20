@@ -137,7 +137,8 @@ module Constants : sig
   val show : constant -> string
   val pp : Format.formatter -> constant -> unit
   val fresh : unit -> constant * term
-  val from_string : string -> constant
+  val from_string : string -> term
+  val from_stringc : string -> constant
  
   (* To keep the type of terms small, we use special constants for !, =, pi.. *)
   (* {{{ *)
@@ -217,7 +218,8 @@ let funct_of_ast, of_dbl, show, fresh =
 
 let pp fmt c = Format.fprintf fmt "%s" (show c)
 
-let from_string s = fst (funct_of_ast F.(from_string s))
+let from_stringc s = fst (funct_of_ast F.(from_string s))
+let from_string s = snd (funct_of_ast F.(from_string s))
 
 let cutc = snd (funct_of_ast F.cutf)
 let truec = snd (funct_of_ast F.truef)
@@ -3013,7 +3015,7 @@ let register_custom, lookup_custom =
  let check s = 
     if s = "" || s.[0] <> '$' then
       anomaly ("Custom predicate name " ^ s ^ " must begin with $");
-    let idx = fst (C.funct_of_ast (F.from_string s)) in
+    let idx = C.from_stringc s in
     if Hashtbl.mem customs idx then
       anomaly ("Duplicate custom predicate name " ^ s);
     idx in
@@ -3277,10 +3279,11 @@ type argmap = { max_arg : int; name2arg : (string * term) list }
 
 let empty_amap = { max_arg = 0; name2arg = [] }
 
-let stack_var_of_ast ({ max_arg = f; name2arg = l } as amap) n =
+let stack_arg_of_ast ({ max_arg = f; name2arg = l } as amap) n =
  try amap, List.assoc n l
  with Not_found ->
-  let n' = Arg (f,0) in
+  let n' = C.(from_string Printf.(sprintf "%%Arg%d" f)) in
+  (* Turned into Arg later *)
   { max_arg = f+1 ; name2arg = (n,n')::l }, n'
 ;;
 
@@ -3336,7 +3339,7 @@ let stack_term_of_ast lvl amap cmap macro ast =
     try amap, F.Map.find f cmap
     with Not_found ->
      if is_uvar_name f then
-       stack_var_of_ast amap (F.show f)
+       stack_arg_of_ast amap (F.show f)
      else if is_macro_name f then
        stack_macro_of_ast inner lvl amap cmap f
      else amap, snd (C.funct_of_ast f)
@@ -3366,10 +3369,11 @@ let stack_term_of_ast lvl amap cmap macro ast =
        let tl = List.rev rev_tl in
        let amap, c = stack_funct_of_ast inner lvl amap cmap f in
        begin match c with
-       | Arg (v,0) -> amap, mkAppArg v 0 tl
        | Const c -> begin match tl with
           | hd2::tl -> amap, App(c,hd2,tl)
           | _ -> anomaly "Application node with no arguments" end
+       | Lam _ -> (* macro with args *)
+          amap, deref_appuv ~from:lvl ~to_:lvl tl c
        | _ -> error "Clause shape unsupported" end
     | A.App (A.Custom f,tl) ->
        let cname = stack_custom_of_ast f in
@@ -3442,7 +3446,28 @@ let stack_term_of_ast lvl amap cmap macro ast =
     in
       let sp, t = aux true ast in
       assert(map_filter snd sp = []); t in
-    aux false lvl amap cmap (spill ast)
+  let arg_cst c args =
+    let name = C.(show c) in
+    if Str.(string_match (regexp "%Arg") name 0) then
+      let from = Str.match_end () in
+      let no = String.(sub name from Str.(length name - from)) in
+      let argno = int_of_string no in
+      mkAppArg argno lvl args
+    else if args = [] then C.of_dbl c
+    else App(c,List.hd args,List.tl args) in
+  let rec argify = function
+    | Const c -> arg_cst c []
+    | App(c,x,xs) -> arg_cst c (List.map argify (x::xs))
+    | Lam t -> Lam(argify t)
+    | CData _ as x -> x
+    | Custom(c,xs) -> Custom(c,List.map argify xs)
+    | UVar _ | AppUVar _ | Arg _ | AppArg _ -> assert false
+    | Nil as x -> x
+    | Cons(x,xs) -> Cons(argify x,argify xs) in
+  let spilled_ast = spill ast in
+  let amap, term_no_args = aux false lvl amap cmap spilled_ast in
+  { amap with name2arg = List.map (fun (n,t) -> n, argify t) amap.name2arg },
+  argify term_no_args
 ;;
 
 (* BUG: I pass the empty amap, that is plainly wrong.
@@ -3454,7 +3479,7 @@ let term_of_ast ~depth t =
   List.fold_left (fun cmap i ->
    F.Map.add (F.from_string (C.show (destConst i))) i cmap
    ) F.Map.empty freevars in
- let { max_arg = max; name2arg = l }, t =
+ let { max_arg = max }, t =
   stack_term_of_ast depth empty_amap cmap F.Map.empty t in
  let env = Array.make max C.dummy in
  move ~adepth:argsdepth ~from:depth ~to_:depth env t
@@ -3646,12 +3671,12 @@ let execute_once program q =
 
 
 let mkQApp =
-  let appc, _ = C.funct_of_ast (F.from_string "elpi_app") in
+  let appc = C.from_stringc "elpi_app" in
   fun l -> App(appc,list_to_lp_list l,[])
 
 let quote_term ?(app=true) vars term =
-  let lamc, _ = C.funct_of_ast (F.from_string "elpi_lam") in
-  let cdatac, _ = C.funct_of_ast (F.from_string "elpi_cdata") in
+  let lamc = C.from_stringc "elpi_lam" in
+  let cdatac = C.from_stringc "elpi_cdata" in
   let reloc n = if n < 0 then n else n + vars in
   let rec aux depth = function
     | Const n -> C.of_dbl (reloc n)
@@ -3710,10 +3735,10 @@ let enable_typechecking () =
   typecheck := (fun clauses types ->
     let clist = list_to_lp_list (List.map quote_clause clauses) in
     let tlist = list_to_lp_list (List.map (fun (name,n,typ) ->
-        App(C.from_string "`:",name,[piclose (quote_term ~app:false 0 typ) n]))
+        App(C.from_stringc "`:",name,[piclose (quote_term ~app:false 0 typ) n]))
       types) in
     let query =
-      let c, _ = C.funct_of_ast (F.from_string "typecheck-program") in
+      let c = C.from_stringc "typecheck-program" in
       [], 0, [||], App(c,clist,[tlist]) in
     if execute_once checker query then
       Printf.eprintf "Anomaly: Type checking aborts\n%!";
