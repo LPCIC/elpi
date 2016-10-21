@@ -3270,6 +3270,7 @@ module Compiler : sig
     int ->
     cmap:term F.Map.t ->
     macro:Elpi_ast.term F.Map.t ->
+    types:(term * int * term) list ->
     Elpi_ast.term -> string list * int * term array * term
 
 end = struct (* {{{ *)
@@ -3328,9 +3329,44 @@ let desugar inner s args =
   | _ -> s, args
 ;;
       
-let stack_term_of_ast lvl amap cmap macro ast =
+let stack_term_of_ast lvl amap cmap macro types ast =
   let module A = Elpi_ast in
-        
+
+  (* This sucks: types and mode declarations should be merged XXX *)    
+  let arity t =
+    let (c,ct), args =
+      match t with
+      | A.App (A.Const f,args) -> C.funct_of_ast f, args
+      | A.App (A.Custom f,args) -> C.funct_of_ast f, args
+      | A.Const c -> C.funct_of_ast c, []
+      | A.Custom c -> C.funct_of_ast c, []
+      | _ -> error ("only applications can be spilled: " ^ A.show_term t) in
+    let nargs = List.length args in
+    let missing_args =
+      try
+        let _,_,ty = List.find (fun (t,_,_) -> t == ct) types in
+        let rec napp = function App(_,_,[x]) -> 1 + napp x | _ -> 0 in
+        napp ty - nargs 
+      with Not_found ->
+        match C.Map.find c !modes with
+        | Mono l ->
+            let arity = List.length l in
+            let missing = arity - nargs in
+            let output_suffix =
+              let rec aux = function false :: l -> 1 + aux l | _ -> 0 in
+              aux (List.rev l) in
+            if missing > output_suffix then
+              error Printf.(sprintf
+              "cannot spill %s: only %d out of %d missing arguments are outputs"
+              (A.show_term t) output_suffix missing);
+            missing
+        | Multi _ -> error ("cannot spill multi mode relation " ^ C.show c)
+        | exception Not_found ->
+           error ("cannot spill, unknown arity of " ^ C.show c) in
+    if missing_args <= 0 then
+      error ("cannot spill fully applied " ^ A.show_term t);
+    missing_args in
+
   let rec stack_macro_of_ast inner lvl amap cmap f =
     try aux inner lvl amap cmap (F.Map.find f macro)
     with Not_found -> error ("Undeclared macro " ^ F.show f) 
@@ -3402,49 +3438,67 @@ let stack_term_of_ast lvl amap cmap macro ast =
   in
   let spill ast =
     let spilled_name = ref 0 in
-    let mkSpilledName () =
-      incr spilled_name;
-      F.from_string ("Spilled_" ^ string_of_int !spilled_name) in
+    let rec mkSpilledNames n =
+      if n == 0 then []
+      else begin
+        incr spilled_name;
+        let name = F.from_string ("Spilled_" ^ string_of_int !spilled_name) in
+        name :: mkSpilledNames (n-1)
+      end in
     let add_spilled sp t =
       match sp with
-      | [] -> [], t
+      | [] -> [], [t]
       | _ ->
           let to_spill = map_filter snd sp in
           List.map (fun (x,_) -> x, None) sp,
-          A.(App(Const F.andf, to_spill @ [t])) in
-    (* FIXME: should be type based, not context based *)
+          [A.(App(Const F.andf, to_spill @ [t]))] in
+    let rec mapflat2 f l =
+      let l1, l2 = List.(split (map f l)) in
+      List.flatten l1, List.flatten l2 in
     let rec aux toplevel = function
       | A.App(A.Const c,fcall :: rest) when F.(equal c spillf) ->
-         let n = mkSpilledName () in
+         let ns = mkSpilledNames (arity fcall) in
          let fspills, fcall = aux false fcall in
-         let spills, args = List.split (List.map (aux false) rest) in
-         let spills = fspills @ List.flatten spills in
-         spills @ [n,Some (A.mkApp [fcall; A.Const n])], A.Const n
+         assert(List.length fcall = 1);
+         let fcall = List.hd fcall in
+         let spills, args = mapflat2 (aux false) rest in
+         let args = List.map (fun x -> A.Const x) ns in
+         fspills @ spills @ [ns,Some (A.mkApp (fcall :: args))], args
       | A.App(A.Const c, args)
          when F.(List.exists (equal c) [andf;andf2;orf;rimplf]) ->
-         let spills, args = List.split (List.map (aux true) args) in
-         let spills = List.flatten spills in
+         let spills, args = mapflat2 (aux true) args in
          assert(map_filter snd spills = []);
-         spills, A.App(A.Const c, args)
+         spills, [A.App(A.Const c, args)]
       | A.App(A.Const c, [A.Lam (n,arg)])
          when F.(List.exists (equal c) [pif;sigmaf]) ->
          let spills, arg = aux true arg in
+         assert(List.length arg = 1);
+         let arg = List.hd arg in
          assert(map_filter snd spills = []);
-         let arg = List.fold_left (fun acc (n,_) ->
-            A.(App(Const F.sigmaf, [Lam (n, acc)]))) arg spills in
-         [], A.App(A.Const c, [A.Lam (n,arg)])
+         let arg = List.fold_left (fun acc (ns,_) ->
+           List.fold_left (fun acc n ->
+            A.(App(Const F.sigmaf, [Lam (n, acc)]))) acc ns) arg spills in
+         [], [A.App(A.Const c, [A.Lam (n,arg)])]
+      | A.App(A.Const c, args)
+         when F.(List.exists (equal c) [implf;rimplf]) ->
+         let spills, args = mapflat2 (aux true) args in
+         assert(map_filter snd spills = []);
+         spills, [A.App(A.Const c, args)]
       | A.App(c,args) ->
-         let spills, args = List.split (List.map (aux false) args) in
-         let spills = List.flatten spills in
+         let spills, args = mapflat2 (aux false) args in
          if toplevel then add_spilled spills (A.App(c, args))
-         else spills, A.App(c,args)
-      | (A.String _|A.Float _|A.Int _|A.Const _|A.Custom _) as x -> [], x
+         else spills, [A.App(c,args)]
+      | (A.String _|A.Float _|A.Int _|A.Const _|A.Custom _) as x -> [], [x]
       | A.Lam(x,t) ->
          let sp, t = aux false t in
          if sp <> [] then error "Not supported yet (spill lambda)";
-         [], A.Lam (x,t)
+         assert(List.length t = 1);
+         let t = List.hd t in
+         [], [A.Lam (x,t)]
     in
       let sp, t = aux true ast in
+      assert(List.length t = 1);
+      let t = List.hd t in
       assert(map_filter snd sp = []); t in
   let arg_cst c args =
     let name = C.(show c) in
@@ -3480,24 +3534,25 @@ let term_of_ast ~depth t =
    F.Map.add (F.from_string (C.show (destConst i))) i cmap
    ) F.Map.empty freevars in
  let { max_arg = max }, t =
-  stack_term_of_ast depth empty_amap cmap F.Map.empty t in
+   stack_term_of_ast depth empty_amap cmap F.Map.empty [] t in
  let env = Array.make max C.dummy in
  move ~adepth:argsdepth ~from:depth ~to_:depth env t
 ;;
 
-let query_of_ast_cmap lcs ~cmap ~macro t =
+let query_of_ast_cmap lcs ~cmap ~macro ~types t =
   let { max_arg = max; name2arg = l }, t =
-    stack_term_of_ast lcs empty_amap cmap macro t in
+    stack_term_of_ast lcs empty_amap cmap macro types t in
   List.rev_map fst l, 0, Array.make max C.dummy, t
 ;;
 
 let query_of_ast { query_depth = lcs } t =
-  query_of_ast_cmap lcs ~cmap:F.Map.empty ~macro:F.Map.empty t;;
+  query_of_ast_cmap lcs ~cmap:F.Map.empty ~macro:F.Map.empty ~types:[] t
+;;
 
 let chr_of_ast depth cmap macro r =
   let open Elpi_ast in
   let amap = empty_amap in
-  let intern amap t = stack_term_of_ast depth amap cmap macro t in
+  let intern amap t = stack_term_of_ast depth amap cmap macro [] t in
   let intern2 amap (t1,t2) =
     let amap, t1 = intern amap t1 in
     let amap, t2 = intern amap t2 in
@@ -3552,11 +3607,11 @@ let sort_insertion l =
 ;;
 
 let program_of_ast ?print (p : Elpi_ast.decl list) : program =
- let clausify_block program block lcs cmap =
+ let clausify_block program block lcs cmap types =
    let l = sort_insertion block in
    let clauses, lcs =
      List.fold_left (fun (clauses,lcs) (macro,{ Elpi_ast.body; loc }) ->
-      let names,_,env,t = query_of_ast_cmap lcs ~cmap ~macro body in
+      let names,_,env,t = query_of_ast_cmap lcs ~cmap ~macro ~types body in
       if print = Some `Yes then Fmt.eprintf "%a.@;" (uppterm 0 names 0 env) t;
       if print = Some `Raw then Fmt.eprintf "%a.@;" pp_term t;
       let moreclauses, morelcs = clausify (Array.length env) lcs t in
@@ -3566,11 +3621,11 @@ let program_of_ast ?print (p : Elpi_ast.decl list) : program =
    program @ clauses, lcs
  in
  let clauses, lcs, chr, types =
-   let rec aux ({ program; lcs; chr; clique;
+   let rec aux ({ program; lcs; chr; clique; types;
                   tmp = ({ block; cmap; macro } as tmp); ctx } as cs) = function
    | [] ->
        if ctx <> [] then error "Begin without an End";
-       let program, lcs = clausify_block program block lcs cmap in
+       let program, lcs = clausify_block program block lcs cmap types in
        program, lcs, chr, cs.types
 
    | d :: todo ->
@@ -3583,10 +3638,10 @@ let program_of_ast ?print (p : Elpi_ast.decl list) : program =
           let rule = chr_of_ast lcs cmap macro r in
           let chr = CHR.add_rule clique rule chr in
           aux { cs with chr } todo
-      | Elpi_ast.Type(name,typ) ->
+      | Elpi_ast.Type(name,typ) ->  (* Check ARITY against MODE *)
           let _, name = C.funct_of_ast name in
-          let _,_,env,typ = query_of_ast_cmap lcs ~cmap ~macro typ in
-          aux { cs with types = (name,Array.length env,typ) :: cs.types } todo
+          let _,_,env,typ = query_of_ast_cmap lcs ~cmap ~macro ~types typ in
+          aux { cs with types = (name,Array.length env,typ) :: types } todo
       | Elpi_ast.Clause c ->
           aux { cs with tmp = { tmp with block = (block @ [macro,c])} } todo
       | Elpi_ast.Begin ->
@@ -3595,7 +3650,7 @@ let program_of_ast ?print (p : Elpi_ast.decl list) : program =
          aux cs (p @ todo)
       | Elpi_ast.End ->
          if ctx = [] then error "End without a Begin";
-         let program, lcs = clausify_block program block lcs cmap in
+         let program, lcs = clausify_block program block lcs cmap types in
          let tmp = List.hd ctx in
          let ctx = List.tl ctx in
          aux { cs with program; tmp; ctx; lcs; clique = None } todo
@@ -3604,7 +3659,7 @@ let program_of_ast ?print (p : Elpi_ast.decl list) : program =
               tmp = { tmp with cmap = F.Map.add v (C.of_dbl lcs) cmap }} todo
       | Elpi_ast.Macro(n, body) ->
          aux { cs with tmp = { tmp with macro = F.Map.add n body macro }} todo
-      | Elpi_ast.Mode m ->
+      | Elpi_ast.Mode m -> (* Check ARITY against TYPE *)
            let funct_of_ast c =
              try
                match F.Map.find c cmap with
@@ -3781,7 +3836,7 @@ let register_custom = Mainloop.register_custom
 let make_runtime = Mainloop.make_runtime
 let program_of_ast = Compiler.program_of_ast
 let query_of_ast = Compiler.query_of_ast
-let query_of_ast_cmap lvl cmap = Compiler.query_of_ast_cmap lvl ~cmap ~macro:F.Map.empty
+let query_of_ast_cmap lvl cmap = Compiler.query_of_ast_cmap lvl ~cmap ~macro:F.Map.empty ~types:[]
 let term_of_ast = Compiler.term_of_ast
 let lp_list_to_list = Clausify.lp_list_to_list
 let split_conj = Clausify.split_conj
