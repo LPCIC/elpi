@@ -8,9 +8,6 @@ macro @cdata :- elpi_cdata.
 if B T _ :- B, !, T.
 if _ _ E :- E.
 
-append [X|XS] L [X|L1]  :- append XS L L1 .
-append [] L L .
-
 infix `: 141.
 type $$?? A.
 
@@ -34,7 +31,7 @@ pp (@lam F) T :- !, pi x\ pp (F x) (T x).
 pp X X :- !.
 pp _ unprintable. % pp should never fail
 
-mkde (pp-list i o).
+mode (pp-list i o).
 pp-list [X|XS] [Y|L] :- pp-list XS L, pp X Y.
 pp-list [] [].
 
@@ -74,7 +71,7 @@ of (sigma F) Ty E :- !, Ty = prop, pi x\
    (pi E\ of x _FRESH E)
  => of (F x) prop E.
 
-of Id Ty (node Id PTy _ _) :- !,
+of Id ETy (node Id PTy _ _) :- !,
   refresh-poly-ty PTy Ty, assert (Ty = ETy) (type-err Id Ty ETy).
 of Id Ty (node Id1 _ L R) :- !, if ($lt Id Id1) (of Id Ty L) (of Id Ty R).
 of Id Ty (?? as TL) :- assert (TL = (node Id  Ty _FRESH1 _FRESH2)) (type-err Id Ty wtf).
@@ -106,7 +103,9 @@ of-clause [N|NS] (pi C) E :- !, pi x\
 of-clause _ C E :- of C prop E.
 
 l2t [] _.
-l2t [Id `: Ty | L] E :- of Id Ty E, l2t L E.
+l2t [Id `: Ty | L] E :-
+  if (of Id Ty E) (l2t L E)
+     ($print "duplicate type declaration for" Id, l2t L E).
 
 typecheck-program P EL :-
   l2t EL E,

@@ -155,3 +155,6 @@ type $$, prop -> Y.
 type $$?? A.
 type $$as A -> A -> A.
 type $$$constraint A -> B -> prop.
+type $$$gettimeofday float -> prop.
+type $$$counter string -> int -> prop.
+type $$- A -> A -> A.
