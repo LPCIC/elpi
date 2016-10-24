@@ -1621,39 +1621,14 @@ let rec unif matching depth adepth a bdepth b e =
 
    (* UVar introspection *)
    | (UVar _ | AppUVar _), Const c when c == C.uvc && matching -> true
-   | (UVar(r,vd,_) | AppUVar(r,vd,_)), App(c,hd,[]) when c == C.uvc && matching ->
+   | UVar(r,vd,ano), App(c,hd,[]) when c == C.uvc && matching ->
+      unif matching depth adepth (UVar(r,vd,ano)) bdepth hd e
+   | AppUVar(r,vd,_), App(c,hd,[]) when c == C.uvc && matching ->
       unif matching depth adepth (UVar(r,vd,0)) bdepth hd e
    | UVar(r,vd,ano), App(c,hd,[arg]) when c == C.uvc && matching ->
-      let basedepth = 0 in (* XXX BUG? WE CAN DO BETTER *)
-      let r,implargs =
-       if vd <= basedepth then r,0
-       else begin
-        let r' = oref C.dummy in
-        let implargs = vd - basedepth in
-        let newvar = UVar(r',basedepth,implargs) in
-        if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
-        (r @:== newvar) r';
-        [%spy "assign" (ppterm depth [] adepth empty_env) (!!r)];
-        r', implargs
-       end in
-      unif matching depth adepth (UVar(r,0,0)) bdepth hd e &&
-      let args = list_to_lp_list (C.mkinterval basedepth (implargs + ano) 0) in
-      unif matching depth adepth args bdepth arg e
+      unif matching depth adepth a bdepth hd e &&
+      unif matching depth adepth Nil bdepth arg e
    | AppUVar(r,vd,args), App(c,hd,[arg]) when c == C.uvc && matching ->
-      (* CODE CUT&PASTE FROM CASE ABOVE *)
-      let basedepth = 0 in (* XXX BUG? WE CAN DO BETTER *)
-      let r,implargs =
-       if vd <= basedepth then r,0
-       else begin
-        let r' = oref C.dummy in
-        let implargs = vd - basedepth in
-        let newvar = UVar(r',basedepth,implargs) in
-        if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
-        (r @:== newvar) r';
-        [%spy "assign" (ppterm depth [] adepth empty_env) (!!r)];
-        r', implargs
-       end in
-      let args = C.mkinterval basedepth implargs 0 @ args in
       unif matching depth adepth (UVar(r,vd,0)) bdepth hd e &&
       let args = list_to_lp_list args in
       unif matching depth adepth args bdepth arg e
