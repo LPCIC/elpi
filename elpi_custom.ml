@@ -275,17 +275,6 @@ let _ =
     match args with
     | [t1] -> if is_name t1 then [] else raise No_clause
     | _ -> type_error "$is_name takes 1 argument") ;
-  register_custom "$assign" (fun ~depth ~env:_ _ args ->
-    let rec get_oref = function
-      | UVar ({contents=t},vardepth,args) when t != dummy ->
-         get_oref (deref_uv ~from:vardepth ~to_:depth args t)
-      | AppUVar ({contents=t},vardepth,args) when t != dummy ->
-         get_oref (deref_appuv ~from:vardepth ~to_:depth args t)
-      | CData d when coref.isc d -> d
-      | _ -> raise No_clause in
-    match args with
-    | [t1;t2] -> assign_coref (get_oref t1) t2; []
-    | _ -> type_error "$assign takes 2 argument") ;
   register_custom "$llam_unif" (fun ~depth ~env _ args ->
     match args with
     | [t1;t2] -> (try if llam_unify depth env depth t1 t2 then [] else raise No_clause with _ -> raise No_clause)
