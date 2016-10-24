@@ -581,8 +581,8 @@ let _ =
            let repl = Elpi_ast.Func.show (cstring.cout repl) in
            let subj = Elpi_ast.Func.show (cstring.cout subj) in
            [ App(eqc, CData (cstring.cin (F.from_string (Str.global_replace rex repl subj))), [t4]) ]
-       | _ -> type_error "$rex_replace")
-    | _ -> type_error "$rex_replace") ;
+       | _ -> type_error "$rex_replace not 3 strings")
+    | _ -> type_error "$rex_replace not 4 args") ;
 
 ;;
 
