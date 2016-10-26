@@ -2007,8 +2007,9 @@ module UnifBits : Indexing = struct (* {{{ *)
   let hash x = Hashtbl.hash x * 62653
   let fullones = 1 lsl key_bits -1
   let fullzeros = 0
+  let weird = hash min_int
   let abstractionk = 1022   (* TODO *)
-  let functor_bits = 6
+  let functor_bits = 9
   let fst_arg_bits = 15
   let max_depth = 1
   let min_slot = 5
@@ -2038,35 +2039,52 @@ module UnifBits : Indexing = struct (* {{{ *)
     in
      addzero (aux num)
 
+  let dec_to_bin2 num =
+    let rec aux x = 
+     if x==1 then "1" else
+     if x==0 then "0" else 
+     if x mod 2 == 1 then (aux (x/2))^"1"
+     else (aux (x/2))^"0"
+    in
+     aux num
+
   let key_of ~mode ~depth term =
     let buf = ref 0 in 
-    let set_section k left right =
+    let set_section c k left right =
       let k = abs k in
       let new_bits = (k lsl right) land (fullones lsr (key_bits - left)) in
-      [%trace "set-section" ("@[<hv 0>%s@ %s@]"
-        (dec_to_bin !buf) (dec_to_bin new_bits))
-      (buf := new_bits lor !buf) ] in
+(*
+      Printf.eprintf "%s%s%s %s\n%!" (String.make (key_bits - left) ' ')
+                                  (dec_to_bin2 (new_bits lsr right))
+                                  (String.make right ' ')
+                                  (C.show c);
+*)
+      (buf := new_bits lor !buf) in
     let rec index lvl tm depth left right =
       [%trace "index" ("@[<hv 0>%a@]"
         (uppterm depth [] 0 empty_env) tm)
       begin match tm with
+      | App (k,arg,_) when k == C.asc -> 
+         index lvl arg depth left right
+      | (App (k,_,_) | Const k) when k == C.uvc -> 
+         set_section k weird left right
       | Const k | Custom (k,_) ->
-          set_section (if lvl=0 then k else hash k) left right 
+          set_section k (if lvl=0 then k else hash k) left right 
       | Nil ->
-          set_section (if lvl=0 then C.nilc else hash C.nilc) left right 
+          set_section C.nilc (if lvl=0 then C.nilc else hash C.nilc) left right 
       | Cons _ ->
-          set_section (if lvl=0 then C.consc else hash C.consc) left right 
+          set_section C.consc (if lvl=0 then C.consc else hash C.consc) left right 
       | UVar ({contents=t},origdepth,args) when t != C.dummy ->
          index lvl (deref_uv ~from:origdepth ~to_:depth args t) depth left right
-      | Lam _ -> set_section abstractionk left right
-      | CData s -> set_section (CData.hash s) left right
+      | Lam _ -> set_section abstractionk abstractionk left right
+      | CData s -> set_section C.(from_stringc "CData") (CData.hash s) left right
       | Arg _ | UVar _ | AppArg _ | AppUVar _ ->
-         if mode = `Clause then set_section fullones left right
-         else set_section fullzeros left right
+         if mode = `Clause then set_section C.uvc fullones left right
+         else set_section C.uvc fullzeros left right
       | App (k,arg,argl) -> 
          let slot = left - right in
          if lvl >= max_depth || slot < min_slot
-         then set_section ( if lvl=0 then k else hash k) left right
+         then set_section k (if lvl=0 then k else hash k) left right
          else
            let nk, hd, fst_arg, sub_arg =
              if lvl = 0 then
@@ -2082,7 +2100,7 @@ module UnifBits : Indexing = struct (* {{{ *)
                let sub_arg = slot / sub_slots in
                hash k, sub_arg, sub_arg + slot mod sub_slots, sub_arg  in
            let right_hd = right + hd in
-           set_section nk right_hd right;
+           set_section k nk right_hd right;
            let j = right + hd + fst_arg in
            index (lvl+1) arg depth j right_hd;
            if sub_arg > 0 && j + sub_arg <= left
@@ -2096,7 +2114,7 @@ module UnifBits : Indexing = struct (* {{{ *)
           if j2 + step <= left then subindex lvl depth j2 left step xs
     in
       index 0 term depth key_bits 0;
-      [%spy "key-val" (fun f x -> Fmt.fprintf f "%s" (dec_to_bin x)) (!buf)];
+(*       Format.eprintf "%s %a\n\n%!" (dec_to_bin !buf) (uppterm 0 [] 0 empty_env) term; *)
       !buf
 
   let get_clauses ~depth a { map = m } =
@@ -2138,6 +2156,11 @@ module UnifBits : Indexing = struct (* {{{ *)
 let local_prog { src } = src 
 
 end (* }}} *)
+
+(*
+open UnifBits
+type idx = UnifBits.idx
+*)
 
 (* open UnifBits *)
 open TwoMapIndexing
@@ -2391,7 +2414,7 @@ end = struct (* {{{ *)
 
 exception NoMatch
 
-type prolog_prog += Index of TwoMapIndexing.idx
+type prolog_prog += Index of idx
 let () = extend_printer pp_prolog_prog (fun fmt -> function
   | Index _ -> Fmt.fprintf fmt "<prolog_prog>";`Printed
   | _ -> `Passed)
