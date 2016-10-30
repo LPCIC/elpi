@@ -1,16 +1,20 @@
 % DEBUGGING %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-r+step+h (sort S) _ _ :- !, fail.
+r+step+h (sort S) _ _ _ :- !, fail.
 
-r+step+h (abst W F) _ _ :- !, fail.
+r+step+h (abst W F) _ _ _ :- !, fail.
 
-% r+step T1 T2 :- on+focus, $print (r+step T1 T2), fail.
+% r+step+h T1 H T T2 :- on+focus, $print (++r+step+h T1 H T T2), fail.
 
-% whd+extra T1 P1 T2 P2 :- on+focus, $print (whd+extra T1 P1 T2 P2), fail.
+% whd+extra T1 P1 T2 P2 :- on+focus, $print (++whd+extra T1 P1 T2 P2), fail.
 
-% whd+delta+pi T1 P T2 :- on+focus, $print (whd+delta+pi T1 P T2), fail.
+% unwind+whd+delta+pi T1 P T2 :- on+focus, $print (++unwind+whd+delta+pi T1 P T2), fail.
 
 %%
+
+% r+step+r T1 P1 T T2 P2 :- on+focus, $print (++r+step+r T1 P1 T T2 P2), fail.
+
+% unwind+whd+delta T1 P C T2 :- on+focus, $print (++unwind+whd+delta T1 P T2), fail.
 
 % conv+main T1 I T2 :- on+focus, $print (++conv+main T1 I T2), fail.
 
@@ -20,7 +24,7 @@ r+step+h (abst W F) _ _ :- !, fail.
 
 % has+checked+type T U :- on+focus, $print (++has+checked+type T U), fail.
 
-% check+fixpoint T1 P1 P2 :- on+focus, $print (check++fixpoint T1 P1 P2), fail.
+% check+fixpoint T1 P1 P2 :- on+focus, $print (check+fixpoint T1 P1 P2), fail.
 
 % pts+pair S1 S2 :- on+focus, $print (++pts+pair S1 S2), fail.
 
@@ -28,4 +32,5 @@ r+step+h (abst W F) _ _ :- !, fail.
 
 % pts+sub S1 S2 :- on+focus, $print (++pts+sub S1 S2), fail.
 
-% on+focus :- $current "cic:/matita/arithmetics/factorial/le_fact_10.def(11)".
+% on+focus :- $current "cic:/matita/arithmetics/prova/prova2.def(3)".
+% cic:/matita/arithmetics/factorial/le_fact_10.def(11)".
