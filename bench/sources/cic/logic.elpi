@@ -1,0 +1,18 @@
+% Library of additional logic operators %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% OR-ELSE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% orelse A B :- $print (orelse A B), fail.
+
+orelse A _B :- A, !.
+
+orelse _A B :- B.
+
+% IF %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% if A B :- orelse (not A) B.
+% if A B :- $print (if A B), fail.
+
+if A B :- A, !, B.
+
+if A _B.

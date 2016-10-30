@@ -21,7 +21,7 @@ is+constructor V P V P :- $constructor V _ _.
 % unwind+whd+to+constructor V1 V2 :- on+focus, $print (unwind+whd+to+constructor+begin V1), fail.
 
 unwind+whd+to+constructor V1 V2 :- unwind+whd+delta V1 [] is+constructor V2.
-%                                  xor (not on+focus) ($print (unwind+whd+to+constructor+end V2)).
+%                                  if on+focus ($print (unwind+whd+to+constructor+end V2)).
 %
 
 get+branch J (cframe A _ _ P) T P [] :- nth A J T.
@@ -36,7 +36,7 @@ r+step+h T1 H T2 T2 :- $r+step+h T1 H T2, !.
 % check constructor before expanding fixpoint
 r+step+extra T1 P1 P2 :- $fixpoint T1 L, !,
                          subst P1 L unwind+whd+to+constructor P2.
-%                        xor (not on+focus) ($print global-delta-fix).
+%                        if on+focus ($print global-delta-fix).
 
 % nu for case
 whd+extra (case V A W U) P V (cframe A W U P) :- !.
@@ -44,7 +44,7 @@ whd+extra (case V A W U) P V (cframe A W U P) :- !.
 % iota for case
 % note: the left arguments must be removed
 whd+extra T1 P1 T2 P2 :- $constructor T1 J K, !,
-%                        xor (not on+focus) ($print iota),
+%                        if on+focus ($print iota),
                          get+branch J P1 T2 P A, split A K SN DX, append DX P P2.
 
 % case frame on t-stack (white register) is dropped

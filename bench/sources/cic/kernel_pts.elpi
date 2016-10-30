@@ -1,3 +1,4 @@
+accumulate logic.
 accumulate list.
 
 % Extensible type checker for a generic PTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -42,10 +43,6 @@ accumulate list.
 %             has+checked+type T U           test for T having checked type U
 %           * has+type T U                   test for T having generic type U
 
-xor A _B :- A, !.
-
-xor _A B :- B.
-
 % WEAK HEAD COMPUTATION WITHOUT DELTA-EXPANSION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % we delay delta-expansion to possibly avoid it.
@@ -56,16 +53,16 @@ whd+no+delta T P C :- is_flex T, !, C T P.
 
 % sigma for abbreviation + theta.
 whd+no+delta (abbr V W F) P C :- !, pi x\ r+step x V X =>
-%                                         xor (not on+focus) ($print theta),
+%                                         if on+focus ($print theta),
                                           whd+no+delta (F x) P C.
 % beta.
 whd+no+delta (abst W F) [V|P] C :- !,
-%                                  xor (not on+focus) ($print beta),
+%                                  if on+focus ($print beta),
                                    whd+no+delta (abbr V W F) P C.
 
 % nu for application.
 whd+no+delta (appl T A) P1 C :- !, append A P1 P2,
-%                                  xor (not on+focus) ($print nu),
+%                                  if on+focus ($print nu),
                                    whd+no+delta T P2 C.
 % hook for extra reductions.
 whd+no+delta T1 P1 C :- whd+extra T1 P1 T2 P2, !, whd+no+delta T2 P2 C.
@@ -79,18 +76,18 @@ whd+no+delta T P C :- C T P, !.
 
 % beta.
 unwind+whd+no+delta (abst W F) [V|P] T2 :- !,
-%                                          xor (not on+focus) ($print beta),
+%                                          if on+focus ($print beta),
                                            unwind+whd+no+delta (abbr V W F) P T2.
 
 % nu for application.
 unwind+whd+no+delta (appl T1 A) P1 T2 :- !, append A P1 P2,
-%                                        xor (not on+focus) ($print nu),
+%                                        if on+focus ($print nu),
                                          unwind+whd+no+delta T1 P2 T2.
 % sigma for abbreviation + theta + zeta.
 unwind+whd+no+delta (abbr V1 W F1) P1 Y :- !, pi x\ r+step x V1 X => (
-%                                                   xor (not on+focus) ($print theta),
+%                                                   if on+focus ($print theta),
                                                     unwind+whd+no+delta (F1 x) P1 (F2 x),
-                                                    xor (F2 x = Y) (r+unwind V1 X V2, abbr V2 W F2 = Y)
+                                                    orelse (F2 x = Y) (r+unwind V1 X V2, abbr V2 W F2 = Y)
                                               ).
 % hook for extra reductions.
 unwind+whd+no+delta T1 P1 T :- whd+extra T1 P1 T2 P2, !, unwind+whd+no+delta T2 P2 T.
@@ -110,12 +107,12 @@ unwind+whd+delta+pi T [] [] T :- !.
 
 % beta.
 unwind+whd+delta+pi (abst W F) [V|P] Q T2 :- !,
-%                                            xor (not on+focus) ($print beta),
+%                                            if on+focus ($print beta),
                                              unwind+whd+delta+pi (abbr V W F) P Q T2.
 
 % nu for application.
 unwind+whd+delta+pi (appl T1 A) P1 Q T2 :- !, append A P1 P2,
-%                                          xor (not on+focus) ($print nu),
+%                                          if on+focus ($print nu),
                                            unwind+whd+delta+pi T1 P2 Q T2.
 % validating pi.
 unwind+whd+delta+pi (prod W F) [] [V|Q] T2 :- !, has+checked+type V W,
@@ -123,9 +120,9 @@ unwind+whd+delta+pi (prod W F) [] [V|Q] T2 :- !, has+checked+type V W,
 
 % sigma for abbreviation + theta + zeta.
 unwind+whd+delta+pi (abbr V1 W F1) P Q Y :- !, pi x\ r+step x V1 X => (
-%                                                    xor (not on+focus) ($print theta),
+%                                                    if on+focus ($print theta),
                                                      unwind+whd+delta+pi (F1 x) P Q (F2 x),
-                                                     xor (F2 x = Y) (r+unwind V1 X V2, abbr V2 W F2 = Y)
+                                                     orelse (F2 x = Y) (r+unwind V1 X V2, abbr V2 W F2 = Y)
                                                ).
 % delta.
 unwind+whd+delta+pi T1 P1 Q T2 :- r+step+h T1 _ X T, !,
@@ -140,18 +137,18 @@ unwind+whd+delta+pi T1 P1 Q T :- whd+extra T1 P1 T2 P2, !, unwind+whd+delta+pi T
 
 % beta.
 unwind+whd+delta (abst W F) [V|P] C T2 :- !,
-%                                         xor (not on+focus) ($print beta),
+%                                         if on+focus ($print beta),
                                           unwind+whd+delta (abbr V W F) P C T2.
 
 % nu for application.
 unwind+whd+delta (appl T1 A) P1 C T2 :- !, append A P1 P2,
-%                                       xor (not on+focus) ($print nu),
+%                                       if on+focus ($print nu),
                                         unwind+whd+delta T1 P2 C T2.
 % sigma for abbreviation + theta + zeta.
 unwind+whd+delta (abbr V1 W F1) P C Y :- !, pi x\ r+step x V1 X => (
-%                                                 xor (not on+focus) ($print theta),
+%                                                 if on+focus ($print theta),
                                                   unwind+whd+delta (F1 x) P C (F2 x),
-                                                  xor (F2 x = Y) (r+unwind V1 X V2, abbr V2 W F2 = Y)
+                                                  orelse (F2 x = Y) (r+unwind V1 X V2, abbr V2 W F2 = Y)
                                             ).
 % delta.
 unwind+whd+delta T1 P1 C T2 :- r+step+h T1 _ X T, !,
@@ -201,7 +198,7 @@ conv+whnf (sort S1) [] i+dx (sort S2) [] :- !, pts+sub S2 S1.
 
 % reflexivity: fast path for alpha-convertible stacks
 conv+whnf T P M T P :- !.
-% , xor (not on+focus) ($print reflexivity).
+% , if on+focus ($print reflexivity).
 
 % reflexivity: generl case.
 conv+whnf T P1 M T P2 :- conv+args P1 P2, !.
@@ -290,7 +287,7 @@ has+sort T S :- t+step T U, red+whnf U [] i+dx (sort S) [].
 has+checked+type T (sort S) :- !, has+sort T S.
 
 has+checked+type T U :- t+step T X,
-%                       xor (not on+focus) ($print conversion),
+%                       if on+focus ($print conversion),
                         conv+main X i+sn U, !.
 
 %
