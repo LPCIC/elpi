@@ -1,0 +1,11 @@
+% Library of operators related to lambda-calculus %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% LESS-THAN FOR HEIGHTS/AGES/LEVELS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% support for controlled delta-expansion
+% local names : H >= 0, greater is newer
+% global names: H < 0, lesser is newer
+
+lt+h H1 H2 :- H1 < 0, H2 < 0, !, H2 < H1.
+
+lt+h H1 H2 :- H1 < H2.

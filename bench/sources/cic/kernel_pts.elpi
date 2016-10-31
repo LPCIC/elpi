@@ -1,5 +1,6 @@
 accumulate logic.
 accumulate list.
+accumulate lambda.
 
 % Extensible type checker for a generic PTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -231,12 +232,6 @@ check+h T1 P1 H1 X V M T2 P2 H2 _ _ :- lt+h H2 H1, !,
 
 % age/hight-implied right delta.
 check+h T1 P1 _ _ _ M T2 P2 _ X V :- r+step+r T2 P2 X V P, red+whnf V P M T1 P1.
-
-%
-
-lt+h H1 H2 :- H1 < 0, H2 < 0, !, H2 < H1.
-
-lt+h H1 H2 :- H1 < H2.
 
 % VALIDITY + INFERRED TYPE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
