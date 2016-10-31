@@ -102,14 +102,14 @@ unwind+whd+l+delta T1 P1 T2 :- r+step+h T1 H1 X T, H1 >= 0, !,
 unwind+whd+l+delta T1 P1 T :- whd+extra T1 P1 T2 P2, !, unwind+whd+l+delta T2 P2 T.
 
 % normal form
-unwind+whd+l+delta T1 P1 (appl T2 P2) :- !.
+unwind+whd+l+delta T1 P1 (appl T1 P1) :- !.
 
 % WEAK HEAD COMPUTATION WITH DELTA EXPANSION AND PI-REDUCTION + UNWIND %%%%%%%
 
 % - aka eat_prods
 % - the staks P and Q resamble respectively the registers Yellow and White
 %   of de Bruijn validation machine for Delta-Lambda
-% unwind+whd+delta+pi T1 P Q T2 :- on+focus, $print (unwind+whd+delta+pi T1 P Q T2), fail.
+% unwind+whd+delta+pi T1 P Q T2 :- on+focus, $print (unwind+whd+delta+pi T1 P Q), fail.
 
 % reflexivity.
 unwind+whd+delta+pi T [] [] T :- !.
@@ -142,7 +142,7 @@ unwind+whd+delta+pi T1 P1 Q T :- whd+extra T1 P1 T2 P2, !, unwind+whd+delta+pi T
 
 % WEAK HEAD COMPUTATION WITH DELTA EXPANSION + UNWIND %%%%%%%%%%%%%%%%%%%%%%%%
 
-% unwind+whd+delta T1 P C T2 :- on+focus, $print (unwind+whd+delta T1 P T2), fail.
+% unwind+whd+delta T1 P C T2 :- on+focus, $print (unwind+whd+delta T1 P), fail.
 
 % beta.
 unwind+whd+delta (abst W F) [V|P] C T2 :- !,
@@ -206,8 +206,7 @@ conv+whnf (sort S1) [] i+sn (sort S2) [] :- !, pts+sub S1 S2.
 conv+whnf (sort S1) [] i+dx (sort S2) [] :- !, pts+sub S2 S1.
 
 % reflexivity: fast path for alpha-convertible stacks
-conv+whnf T P M T P :- !.
-% , if on+focus ($print reflexivity).
+conv+whnf T P M T P :- ! /* , if on+focus ($print reflexivity) */.
 
 % reflexivity: generl case.
 conv+whnf T P1 M T P2 :- conv+args P1 P2, !.
@@ -311,20 +310,22 @@ r+step+h T1 H T T2 :- r+step T1 T T2, !, $level T1 H.
 
 % r+step+r T1 P1 T T2 P2 :- on+focus, $print (r+step+r T1 P1 T T2 P2), fail.
 
-r+step+r T1 P1 T T2 P2 :- set+t2 T T2, set+p2 T1 P1 P2, !.
+r+step+r T1 P1 T T2 P2 :- r+set+code T T2, r+set+stack T1 P1 P2, !.
 
 %
 
-% set+t2 T T2 :- is_flex T2, !, unwind+whd+l+delta T [] T2.
+% r+set+code T T2 :- on+focus, $print (r+set+code T T2), fail.
 
-set+t2 T T2 :- T = T2, !.
+r+set+code T T2 :- is_flex T2, !, unwind+whd+l+delta T [] T2.
+
+r+set+code T T2 :- /* T = T2, */ !.
 
 %
 
 % hook for extra checks before delta
-set+p2 T1 P1 P2 :- r+step+extra T1 P1 P2, !.
+r+set+stack T1 P1 P2 :- r+step+extra T1 P1 P2, !.
 
-set+p2 _ P1 P1 :- !.
+r+set+stack _ P1 P1 :- !.
 
 %
 
