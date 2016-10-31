@@ -25,10 +25,10 @@ accumulate lambda.
 %                           :  i+dx  rhs may be smaller than lhs
 %                           :  i+rc  the two sides must be equal
 
-% Predicates: whd+no+delta T P C             multistep weak head reduct of T after P
-%                                            without delta-expansion, passed to continuation C
-%             unwind+whd+no+delta T1 P1 T2   multistep weak head reduct of T1 after P1 to T2
-%                                            without delta-expansion
+% Predicates: whd+l+delta T P C              multistep weak head reduct of T after P
+%                                            with local delta-expansion, passed to continuation C
+%             unwind+whd+l+delta T1 P1 T2    multistep weak head reduct of T1 after P1 to T2
+%                                            with local delta-expansion
 %             unwind+whd+delta+pi T1 P Q T2  multistep weak head reduction of T1 after P and Q to T2
 %                                            with delta-expansion and validating pi-reduction
 %             unwind+whd+delta T1 P C T2     multistep weak head reduction with delta-expansion,
@@ -44,57 +44,65 @@ accumulate lambda.
 %             has+checked+type T U           test for T having checked type U
 %           * has+type T U                   test for T having generic type U
 
-% WEAK HEAD COMPUTATION WITHOUT DELTA-EXPANSION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% WEAK HEAD COMPUTATION WITH LOCAL DELTA-EXPANSION %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% we delay delta-expansion to possibly avoid it.
-% whd+no+delta T P C :- on+focus, $print (whd+no+delta T P), fail.
+% we delay global delta-expansion to possibly avoid it.
+% whd+l+delta T P C :- on+focus, $print (whd+l+delta T P), fail.
 
 % normal form for meta-variables.
-whd+no+delta T P C :- is_flex T, !, C T P.
+whd+l+delta T P C :- is_flex T, !, C T P.
 
 % sigma for abbreviation + theta.
-whd+no+delta (abbr V W F) P C :- !, pi x\ r+step x V X =>
-%                                         if on+focus ($print theta),
-                                          whd+no+delta (F x) P C.
+whd+l+delta (abbr V W F) P C :- !, pi x\ r+step x V X =>
+%                                        if on+focus ($print theta),
+                                         whd+l+delta (F x) P C.
 % beta.
-whd+no+delta (abst W F) [V|P] C :- !,
-%                                  if on+focus ($print beta),
-                                   whd+no+delta (abbr V W F) P C.
+whd+l+delta (abst W F) [V|P] C :- !,
+%                                 if on+focus ($print beta),
+                                  whd+l+delta (abbr V W F) P C.
 
 % nu for application.
-whd+no+delta (appl T A) P1 C :- !, append A P1 P2,
-%                                  if on+focus ($print nu),
-                                   whd+no+delta T P2 C.
+whd+l+delta (appl T A) P1 C :- !, append A P1 P2,
+%                                 if on+focus ($print nu),
+                                  whd+l+delta T P2 C.
+% local delta.
+whd+l+delta T1 P1 C :- r+step+h T1 H1 X T, H1 >= 0, !,
+                       r+step+r T1 P1 X T P, whd+l+delta T P C.
+
 % hook for extra reductions.
-whd+no+delta T1 P1 C :- whd+extra T1 P1 T2 P2, !, whd+no+delta T2 P2 C.
+whd+l+delta T1 P1 C :- whd+extra T1 P1 T2 P2, !, whd+l+delta T2 P2 C.
 
 % normal form.
-whd+no+delta T P C :- C T P, !.
+whd+l+delta T P C :- C T P, !.
 
-% WEAK HEAD COMPUTATION WITHOUT DELTA EXPANSION + UNWIND %%%%%%%%%%%%%%%%%%%%%
+% WEAK HEAD COMPUTATION WITH LOCAL DELTA EXPANSION + UNWIND %%%%%%%%%%%%%%%%%%
 
-% unwind+whd+no+delta T1 P1 T2 :- on+focus, $print (unwind+whd+no+delta T1 P1), fail.
+% unwind+whd+l+delta T1 P1 T2 :- on+focus, $print (unwind+whd+l+delta T1 P1), fail.
 
 % beta.
-unwind+whd+no+delta (abst W F) [V|P] T2 :- !,
-%                                          if on+focus ($print beta),
-                                           unwind+whd+no+delta (abbr V W F) P T2.
+unwind+whd+l+delta (abst W F) [V|P] T2 :- !,
+%                                         if on+focus ($print beta),
+                                          unwind+whd+l+delta (abbr V W F) P T2.
 
 % nu for application.
-unwind+whd+no+delta (appl T1 A) P1 T2 :- !, append A P1 P2,
-%                                        if on+focus ($print nu),
-                                         unwind+whd+no+delta T1 P2 T2.
+unwind+whd+l+delta (appl T1 A) P1 T2 :- !, append A P1 P2,
+%                                       if on+focus ($print nu),
+                                        unwind+whd+l+delta T1 P2 T2.
 % sigma for abbreviation + theta + zeta.
-unwind+whd+no+delta (abbr V1 W F1) P1 Y :- !, pi x\ r+step x V1 X => (
-%                                                   if on+focus ($print theta),
-                                                    unwind+whd+no+delta (F1 x) P1 (F2 x),
-                                                    orelse (F2 x = Y) (r+unwind V1 X V2, abbr V2 W F2 = Y)
+unwind+whd+l+delta (abbr V1 W F1) P1 Y :- !, pi x\ r+step x V1 X => (
+%                                                  if on+focus ($print theta),
+                                                   unwind+whd+l+delta (F1 x) P1 (F2 x),
+                                                   orelse (F2 x = Y) (r+unwind V1 X V2, abbr V2 W F2 = Y)
                                               ).
+% local delta.
+unwind+whd+l+delta T1 P1 T2 :- r+step+h T1 H1 X T, H1 >= 0, !,
+                               r+step+r T1 P1 X T P, unwind+whd+l+delta T P T2.
+
 % hook for extra reductions.
-unwind+whd+no+delta T1 P1 T :- whd+extra T1 P1 T2 P2, !, unwind+whd+no+delta T2 P2 T.
+unwind+whd+l+delta T1 P1 T :- whd+extra T1 P1 T2 P2, !, unwind+whd+l+delta T2 P2 T.
 
 % normal form
-unwind+whd+no+delta T1 P1 (appl T2 P2) :- !.
+unwind+whd+l+delta T1 P1 (appl T2 P2) :- !.
 
 % WEAK HEAD COMPUTATION WITH DELTA EXPANSION AND PI-REDUCTION + UNWIND %%%%%%%
 
@@ -171,13 +179,13 @@ i+not i+rc i+rc.
 
 % red+whnf T1 P1 M U2 P2 :- on+focus, $print (red+whnf T1 P1 M U2 P2), fail.
 
-red+whnf T1 P1 M U2 P2 :- whd+no+delta T1 P1 (conv+whnf U2 P2 M), !.
+red+whnf T1 P1 M U2 P2 :- whd+l+delta T1 P1 (conv+whnf U2 P2 M), !.
 
 %
 
 % conv+main T1 M T2 :- on+focus, $print (conv+main T1 M T2), fail.
 
-conv+main T1 M T2 :- whd+no+delta T1 [] (red+whnf T2 [] M), !.
+conv+main T1 M T2 :- whd+l+delta T1 [] (red+whnf T2 [] M), !.
 
 %
 
@@ -307,7 +315,7 @@ r+step+r T1 P1 T T2 P2 :- set+t2 T T2, set+p2 T1 P1 P2, !.
 
 %
 
-% set+t2 T T2 :- is_flex T2, !, unwind+whd+no+delta T [] T2.
+% set+t2 T T2 :- is_flex T2, !, unwind+whd+l+delta T [] T2.
 
 set+t2 T T2 :- T = T2, !.
 
