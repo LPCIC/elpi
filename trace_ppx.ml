@@ -44,6 +44,9 @@ let trace name ppfun body = [%expr
 let spy name pp data =
   [%expr Elpi_trace.print [%e name] [%e pp] [%e data]]
 
+let log name key data =
+  [%expr Elpi_trace.log [%e name] [%e key] [%e data]]
+
 let rec mkapp f = function
   | [] -> f
   | x :: xs -> mkapp [%expr [%e f] [%e x]] xs
@@ -96,6 +99,14 @@ let trace_mapper argv = { default_mapper with expr = fun mapper expr ->
         if enabled then spy (aux name) (aux pp) (aux code)
         else [%expr ()]
       | _ -> err ~loc "use: [%spy id pp data]"
+      end
+  | { pexp_desc = Pexp_extension ({ txt = "log"; loc }, pstr) } ->
+      begin match pstr with
+      | PStr [ { pstr_desc = Pstr_eval(
+              { pexp_desc = Pexp_apply(name,[(_,key);(_,code)]) },_)} ] ->
+        if enabled then log (aux name) (aux key) (aux code)
+        else [%expr ()]
+      | _ -> err ~loc "use: [%log id data]"
       end
   | x -> default_mapper.expr mapper x;
 }

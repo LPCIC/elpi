@@ -81,6 +81,21 @@ let exit k tailcall ?(e=OK) time =
       (make_indent ()) (if tailcall then "->" else pr_exc e) time;
   decr level
 
+
+(* we should make another file... *)
+let collecting_stats = ref false
+let logs = ref []
+let log name key value =
+  if !collecting_stats then
+    logs := (name,key,get_cur_step "run",value) :: !logs
+let () = 
+  at_exit (fun () ->
+    if !logs != [] then begin
+      List.iter (fun (name,key,step,value) ->
+        Printf.eprintf "stats@run %d: %s %s %d\n" step name key value)
+      !logs
+    end)
+
 let usage =
   "\ntracing facility options:\n" ^
   "\t-trace-v  verbose\n" ^
@@ -89,7 +104,8 @@ let usage =
   "\t-trace-on  enable trace printing\n" ^
   "\t-trace-skip REX  ignore trace items matching REX\n" ^
   "\t-trace-only REX  trace only items matching REX\n" ^
-  "\t-trace-maxbox NUM  Format max_boxes set to NUM\n"
+  "\t-trace-maxbox NUM  Format max_boxes set to NUM\n" ^
+  "\t-stats-on  Collect statistics\n"
 ;;
 
 let parse_argv argv =
@@ -105,6 +121,7 @@ let parse_argv argv =
          where := (fname, int_of_string start, int_of_string stop);
          aux rest
     | "-trace-on" :: rest -> on := true; aux rest
+    | "-stats-on" :: rest -> collecting_stats := true; aux rest
     | "-trace-skip" :: expr :: rest ->
          skip := expr :: !skip;
          aux rest

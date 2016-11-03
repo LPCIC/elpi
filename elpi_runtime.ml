@@ -1827,8 +1827,6 @@ type key1 = int
 type key2 = int
 type key = key1 * key2
 
-let pp_key (hd,_) = C.show hd
-  
 type clause = {
     depth : int;
     args : term list;
@@ -1840,11 +1838,6 @@ type clause = {
 
 let hd_pred { key = (hd,_) } = hd
 
-let ppclause f { args = args; hyps = hyps; key = hd } =
-  Fmt.fprintf f "@[<hov 1>%s %a :- %a.@]" (pp_key hd)
-     (pplist (uppterm 0 [] 0 empty_env) "") args
-     (pplist (uppterm 0 [] 0 empty_env) ",") hyps
-
 type idx = {
   src : (int * term) list;
   map : (clause list * clause list * clause list Elpi_ptmap.t) Elpi_ptmap.t
@@ -1853,6 +1846,20 @@ type idx = {
 let variablek =       -99999999 (* a flexible term like X t *)
 let mustbevariablek = -99999998 (* ?? or ?? t or ?? l t *)
 let abstractionk =    -99999997
+
+let pp_key (hd,v) = C.show hd ^ "." ^
+       if v == variablek then "(uvar)"
+  else if v == abstractionk then "(lambda)"
+  else if v < 0 then
+    let s = C.show v in
+    if Str.string_match (Str.regexp "^-?[0-9]*$") s 0 then "(cdata)"
+    else s
+  else "(heigen)"
+  
+let ppclause f { args = args; hyps = hyps; key = (hd,_) } =
+  Fmt.fprintf f "@[<hov 1>%s %a :- %a.@]" (C.show hd)
+     (pplist (uppterm 0 [] 0 empty_env) "") args
+     (pplist (uppterm 0 [] 0 empty_env) ",") hyps
 
 let key_of ~mode:_ ~depth =
  let rec skey_of = function
@@ -1892,11 +1899,15 @@ let key_of ~mode:_ ~depth =
 
 let get_clauses ~depth a { map = m } =
  let ind,app = key_of ~mode:`Query ~depth a in
- try
-  let l,flexs,h = Elpi_ptmap.find ind m in
-  if app=variablek then l
-  else (try Elpi_ptmap.find app h with Not_found -> flexs)
- with Not_found -> []
+ let rc =
+   try
+    let l,flexs,h = Elpi_ptmap.find ind m in
+    if app=variablek then l
+    else (try Elpi_ptmap.find app h with Not_found -> flexs)
+   with Not_found -> []
+ in
+ [%log "get_clauses" (pp_key (ind,app)) (List.length rc)];
+ rc
 
 let add_clauses clauses s { map = p;  src } =       
   let p = List.fold_left (fun m clause ->
@@ -2120,6 +2131,7 @@ module UnifBits : Indexing = struct (* {{{ *)
   let get_clauses ~depth a { map = m } =
     let ind = key_of ~mode:`Query ~depth a in
     let cl_list = List.flatten (Elpi_ptmap.find_unifiables ~functor_bits ind m) in
+    [%log "get_clauses" (pp_key ind) (List.length cl_list)];
     List.map fst
       (List.fast_sort (fun (_,cl1) (_,cl2) -> compare cl1 cl2) cl_list)
       

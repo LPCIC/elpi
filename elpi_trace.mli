@@ -9,6 +9,8 @@ val enter : string ->  (Format.formatter -> unit) -> unit
 val print : string -> (Format.formatter -> 'a -> unit) -> 'a -> unit
 val exit : string -> bool -> ?e:exn -> float -> unit
 
+val log : string -> string -> int -> unit
+
 exception Unknown
 val pr_exn : (exn -> string) -> unit
 
