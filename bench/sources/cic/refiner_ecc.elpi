@@ -12,10 +12,18 @@ t+step nat (sort type0).
 t+step o nat.
 t+step s (prod nat x \ nat).
 
+copy nat nat.
+copy o o.
+copy s s.
+
 % vectors
 t+step vect (prod (sort type0) a \ prod nat x \ sort type0).
 t+step vnil (prod (sort type0) a \  appl vect [a,o]).
 t+step vcons (prod (sort type0) a \ prod nat n \ prod a hd \ prod (appl vect [a,n]) tl \ appl vect [a,s n]).
+
+copy vect vect.
+copy vnil vnil.
+copy vcons vcons.
 
 % kernel tests:
 %  T = (appl vcons [nat,o,o,appl vnil [nat]]),   t+step T TY, $print T TY.

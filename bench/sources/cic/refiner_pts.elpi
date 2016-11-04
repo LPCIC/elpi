@@ -3,11 +3,51 @@
 % vim: set ft=lprolog:
 mode (t+step i o).
 mode (has+sort i o).
+mode (conv+whnf i i i i i).
 t+step (?? as K) T :- !, $constraint (t+step K T) K.
 has+sort (?? as S) T :- !, $constraint (has+sort S T) S.
 
-constraint t+step has+sort {
+conv+whnf A B C D E :- $print "##" (conv+whnf A B C D E), fail.
+
+% Bug1: ci possono essere let-in sulle var in Ti
+% Bug2: potrebbe servire un <= se il secondo è una sorta
+%conv+whnf (?? as T1) [] _M T2 L2 :- !, $llam_unif T1 {zip T2 L2}.
+conv+whnf T1 L1 _M (?? as V) L2 :- !, bind-list L2 {zip T1 L1} V.
+
+conv+whnf (?? as T1) L1 M T2 L2 :- !, $constraint (conv+whnf T1 L1 M T2 L2) T1.
+conv+whnf T1 L1 M (?? as T2) L2 :- !, $constraint (conv+whnf T1 L1 M T2 L2) T2.
+
+constraint t+step has+sort conv+whnf r+step {
 }
+
+%%% library
+mode (zip i i o).
+zip HD [] HD :- !.
+zip (appl HD TL) Args (appl HD TLArgs) :- !, append TL Args TLArgs.
+zip HD Args (appl HD Args).
+
+is_rigid C :- $is_name C. % ; C = const _ ; C = indt _ ; C = indc _
+
+mode (bind-list i i o).
+bind-list [] T T' :- copy T T'.
+bind-list [ ?? |VS] T R :- !, pi x\ bind-list VS T (R x).
+bind-list [appl C AS | VS] T R :- is_rigid C, !,
+  pi x\ (pi L\ copy (app[C|L]) x :- conv+args L AS) => bind-list VS T (R x).
+bind-list [C|VS] T R :- is_rigid C, !,
+  pi x\ copy C x => bind-list VS T (R x).
+
+mode (copy i o).
+copy A B :- $print "AA" (copy A B), fail.
+copy X Y :- r+step X Y _. % Bang or not???
+copy X Y :- $is_name X, X = Y, !.
+copy X Y :- $is_name X, r+step X T _, !, copy T Y.
+copy (sort _ as C) C :- !.
+copy (appl X1 L1) (appl X2 L2) :- copy X1 X2, $print "UU", map copy L1 L2.
 
 % test:
 %  T = (appl (abst (sort u0) x \ F x) [sort W]), t+step T TY, $print T TY.
+%  T = (appl (abst nat x \ x) [X]), t+step T TY, $print T TY.
+
+% bad tests: (A non dovrebbe diventare una sort)
+% T = (appl (abst A x \ F x) [sort W]), t+step T TY, $print T TY.
+

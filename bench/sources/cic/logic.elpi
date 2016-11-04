@@ -15,4 +15,4 @@ orelse _A B :- B.
 
 if A B :- A, !, B.
 
-if A _B.
+if _A _B.
