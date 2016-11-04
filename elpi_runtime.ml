@@ -1151,10 +1151,15 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
 (* Hmove is like move for heap terms. By setting env to empty_env, it triggers
    fast paths in move (no need to heapify, the term already lives in the heap)*)
 and hmove ?avoid ~from ~to_ t =
+        let t' = 
  [%trace "hmove" ("@[<hov 1>from:%d@ to:%d@ %a@]"
      from to_ (uppterm from [] 0 empty_env) t) begin
    move ?avoid ~adepth:0 ~from ~to_ empty_env t
- end]
+ end] in
+        [%log "hmove" ((if avoid = None then "" else "oc+") ^
+                       (if from = to_ then "" else "lift/prune"))
+                      (if t == t' then 1 else 0)];
+        t'
 
 (* UVar(_,from,argsno) -> Uvar(_,to_,argsno+from-to_) *)
 and decrease_depth r ~from ~to_ argsno =
