@@ -1037,7 +1037,7 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
        let hd' = maux e depth hd in
        let tl' = maux e depth tl in
        if hd == hd' && tl == tl' then x else Cons(hd',tl')
-    | Nil -> Nil
+    | Nil -> x
 
     (* fast path with no deref... *)
     | UVar _ when delta == 0 && avoid == None -> x
@@ -3272,17 +3272,29 @@ module Compiler : sig
 
 end = struct (* {{{ *)
 
+module SM = Map.Make(String)
+
 (* To assign Arg (i.e. stack) slots to unif variables in clauses *)
-type argmap = { max_arg : int; name2arg : (string * term) list }
+type argmap = {
+  lvl : int; (* cross call assertion: all args live in the same lvl *)
+  max_arg : int;
+  name2arg : (term * int) SM.t;       (* "X" -> Const "%Arg4", 4 *)
+  argc2name : (string * int) C.Map.t; (* "%Arg4" -> "X", 4 *)
+   (* constant used for symbolic pre-computation, real Arg number *)
+}
 
-let empty_amap = { max_arg = 0; name2arg = [] }
+let empty_amap lvl = { lvl; max_arg = 0; name2arg = SM.empty; argc2name = C.Map.empty }
 
-let stack_arg_of_ast ({ max_arg = f; name2arg = l } as amap) n =
- try amap, List.assoc n l
+let stack_arg_of_ast cur_lvl ({ lvl; max_arg = f; name2arg = l } as amap) n =
+ assert(lvl = cur_lvl);
+ try amap, fst (SM.find n l)
  with Not_found ->
-  let n' = C.(from_string Printf.(sprintf "%%Arg%d" f)) in
-  (* Turned into Arg later *)
-  { max_arg = f+1 ; name2arg = (n,n')::l }, n'
+  let cname = Printf.(sprintf "%%Arg%d" f) in
+  let n' = C.(from_string cname) in
+  let nc = C.(from_stringc cname) in
+  { lvl; max_arg = f+1 ;
+    name2arg = SM.add n (n',f) l;
+    argc2name = C.Map.add nc (n,f) amap.argc2name }, n'
 ;;
 
 let is_uvar_name f = 
@@ -3368,13 +3380,13 @@ let stack_term_of_ast lvl amap cmap macro types ast =
     try aux inner lvl amap cmap (F.Map.find f macro)
     with Not_found -> error ("Undeclared macro " ^ F.show f) 
   
-  and stack_funct_of_ast inner lvl amap cmap f =
+  and stack_funct_of_ast inner curlvl amap cmap f =
     try amap, F.Map.find f cmap
     with Not_found ->
      if is_uvar_name f then
-       stack_arg_of_ast amap (F.show f)
+       stack_arg_of_ast lvl amap (F.show f)
      else if is_macro_name f then
-       stack_macro_of_ast inner lvl amap cmap f
+       stack_macro_of_ast inner curlvl amap cmap f
      else amap, snd (C.funct_of_ast f)
 
   and stack_custom_of_ast f =
@@ -3497,28 +3509,24 @@ let stack_term_of_ast lvl amap cmap macro types ast =
       assert(List.length t = 1);
       let t = List.hd t in
       assert(map_filter snd sp = []); t in
-  let arg_cst c args =
-    let name = C.(show c) in
-    if Str.(string_match (regexp "%Arg") name 0) then
-      let from = Str.match_end () in
-      let no = String.(sub name from Str.(length name - from)) in
-      let argno = int_of_string no in
+  let arg_cst amap c args =
+    if C.Map.mem c amap then
+      let _, argno = C.Map.find c amap in
       mkAppArg argno lvl args
     else if args = [] then C.of_dbl c
     else App(c,List.hd args,List.tl args) in
-  let rec argify = function
-    | Const c -> arg_cst c []
-    | App(c,x,xs) -> arg_cst c (List.map argify (x::xs))
-    | Lam t -> Lam(argify t)
+  let rec argify amap = function
+    | Const c -> arg_cst amap c []
+    | App(c,x,xs) -> arg_cst amap c (List.map (argify amap) (x::xs))
+    | Lam t -> Lam(argify amap t)
     | CData _ as x -> x
-    | Custom(c,xs) -> Custom(c,List.map argify xs)
+    | Custom(c,xs) -> Custom(c,List.map (argify amap) xs)
     | UVar _ | AppUVar _ | Arg _ | AppArg _ -> assert false
     | Nil as x -> x
-    | Cons(x,xs) -> Cons(argify x,argify xs) in
+    | Cons(x,xs) -> Cons(argify amap x,argify amap xs) in
   let spilled_ast = spill ast in
   let amap, term_no_args = aux false lvl amap cmap spilled_ast in
-  { amap with name2arg = List.map (fun (n,t) -> n, argify t) amap.name2arg },
-  argify term_no_args
+  amap, argify amap.argc2name term_no_args
 ;;
 
 (* BUG: I pass the empty amap, that is plainly wrong.
@@ -3531,15 +3539,17 @@ let term_of_ast ~depth t =
    F.Map.add (F.from_string (C.show (destConst i))) i cmap
    ) F.Map.empty freevars in
  let { max_arg = max }, t =
-   stack_term_of_ast depth empty_amap cmap F.Map.empty [] t in
+   stack_term_of_ast depth (empty_amap depth) cmap F.Map.empty [] t in
  let env = Array.make max C.dummy in
  move ~adepth:argsdepth ~from:depth ~to_:depth env t
 ;;
 
 let query_of_ast_cmap lcs ~cmap ~macro ~types t =
   let { max_arg = max; name2arg = l }, t =
-    stack_term_of_ast lcs empty_amap cmap macro types t in
-  List.rev_map fst l, 0, Array.make max C.dummy, t
+    stack_term_of_ast lcs (empty_amap lcs) cmap macro types t in
+  let l = SM.bindings l in
+  let l = List.sort (fun (_,(_,x)) (_,(_,y)) -> compare x y) l in
+  List.map fst l, 0, Array.make max C.dummy, t
 ;;
 
 let query_of_ast { query_depth = lcs } t =
@@ -3548,16 +3558,15 @@ let query_of_ast { query_depth = lcs } t =
 
 let chr_of_ast depth cmap macro r =
   let open Elpi_ast in
-  let amap = empty_amap in
+  let amap = empty_amap depth in
   let intern amap t = stack_term_of_ast depth amap cmap macro [] t in
   let intern2 amap (t1,t2) =
     let amap, t1 = intern amap t1 in
     let amap, t2 = intern amap t2 in
     amap, (t1,t2) in
   let internArg { name2arg } f =
-    match List.assoc (F.show f) name2arg with
-    | Arg(n,_) -> n
-    | _ -> anomaly "stack_funct_of_ast gone crazy"
+    match SM.find (F.show f) name2arg with
+    | (_, n) -> n
     | exception Not_found -> error "alignement on a non Arg" in
   let amap, to_match = map_acc intern2 amap r.to_match in
   let amap, to_remove = map_acc intern2 amap r.to_remove in
