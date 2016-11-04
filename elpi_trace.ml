@@ -15,11 +15,75 @@ let filter = ref []
 let fonly = ref []
 let hot = ref false
 let hot_level = ref 0
+let collect_perf = ref false
+let trace_noprint = ref false
+
+type perf_frame = {
+  name : string;
+  self : float;
+  progeny : perf_frame M.t;
+}
+
+let perf_stack = ref [{name = "main"; self = 0.0; progeny = M.empty }]
+
+let collect_perf_enter n =
+  if !collect_perf then
+  match !perf_stack with
+  | { progeny } :: _ when M.mem n progeny ->
+       perf_stack := M.find n progeny :: !perf_stack
+  | _ ->
+       perf_stack := { name = n; self = 0.0; progeny = M.empty } :: !perf_stack
+
+let rec merge m1 m2 =
+  M.fold (fun _ ({ name; self; progeny } as v) m ->
+     try
+       let { self = t; progeny = p } = M.find name m in
+       M.add name { name; self = self +. t; progeny = merge progeny p } m
+     with Not_found -> M.add name v m) m1 m2
+
+let collect_perf_exit time =
+  if !collect_perf then
+  match !perf_stack with
+  | { name = n1 } as top :: ({ name = n2} as prev) :: rest when n1 = n2 ->
+      perf_stack := { name = n2;
+                      self = prev.self; 
+                      progeny = merge top.progeny prev.progeny } :: rest
+  | top :: ({ progeny } as prev) :: rest ->
+      let top = { top with self = top.self +. time } in
+      perf_stack := { prev with progeny = M.add top.name top progeny } :: rest
+  | _ -> assert false
+
+let rec print_tree hot { name; self; progeny } indent =
+  let tprogeny, (phot, thot) =
+    M.fold (fun n { self } (x,(_,m as top)) ->
+              x +. self, (if self > m then (n,self) else top))
+      progeny (0.0,("",0.0)) in
+  let phot =
+    if thot *. 2.0 > tprogeny && M.cardinal progeny > 1 && indent < 6
+    then phot else "" in
+  Printf.eprintf "%s- %-20s %s %6.3f %6.3f %s\n"
+    String.(make indent ' ' ) name String.(make (max 0 (20-indent)) ' ' )
+    self (self -. tprogeny) (if name = hot then "!" else "");
+  M.iter (fun _ t -> print_tree phot t (indent + 2)) progeny
+
+let print_perf () =
+  while List.length !perf_stack > 1 do collect_perf_exit 0.0; done;
+  match !perf_stack with
+  | [ { progeny } ] ->
+        Printf.eprintf "  %-20s %s %6s %6s\n" "name"
+          String.(make 20 ' ' ) "total" "self";
+        Printf.eprintf "%s\n" (String.make 80 '-');
+        M.iter (fun _ t -> print_tree "run" t 0) progeny
+  | _ -> assert false
+
+let () = at_exit (fun () -> if !collect_perf then print_perf ())
 
 let get_cur_step k = try M.find k !cur_step with Not_found -> 0
 
 let condition k =
+  (* -trace-on *)
   !debug &&
+    (* -trace-at *)
     let loc, first_step, last_step = !where_loc in
     ((!hot && k <> loc) ||
        (k = loc &&
@@ -27,7 +91,9 @@ let condition k =
        hot := cur_step >= first_step && cur_step <= last_step;
        if !hot && !hot_level = 0 then hot_level := !level;
        !hot))
+    (* -trace-skip *)
     && (!fonly = [] || List.exists (fun p -> Str.string_match p k 0) !fonly)
+    (* -trace-only *)
     && not(List.exists (fun p -> Str.string_match p k 0) !filter)
 
 let init ?(where="",0,max_int) ?(skip=[]) ?(only=[]) ?(verbose=false) b =
@@ -45,16 +111,21 @@ let incr_cur_step k =
 let make_indent () =
   String.make (max 0 (!level - !hot_level)) ' '
 
+let print_enter k msg = 
+  if not !trace_noprint then
+    Format.eprintf "%s%s %d {{{@[<hov1> %a@]\n%!"
+      (make_indent ()) k (get_cur_step k) (fun fmt () -> msg fmt) ()
+
 let enter k msg =
   incr level;
   incr_cur_step k;
   if condition k then begin
-    Format.eprintf "%s%s %d {{{@[<hov1> %a@]\n%!"
-      (make_indent ()) k (get_cur_step k) (fun fmt () -> msg fmt) ();
+    print_enter k msg;
+    collect_perf_enter k;
   end
 
 let print name f x = 
-  if condition name then
+ if not !trace_noprint && condition name then
     Format.eprintf "%s %s =@[<hov1> %a@]\n%!" (make_indent ()) name f x
 
 let printers = ref []
@@ -75,12 +146,17 @@ let pr_exn f = printers := f :: !printers
 
 exception TREC_CALL of Obj.t * Obj.t (* ('a -> 'b) * 'a *)
 
-let exit k tailcall ?(e=OK) time =
-  if condition k then
+let print_exit k tailcall e time =
+  if not !trace_noprint then
     Format.eprintf "%s}}} %s  (%.3fs)\n%!"
-      (make_indent ()) (if tailcall then "->" else pr_exc e) time;
-  decr level
+      (make_indent ()) (if tailcall then "->" else pr_exc e) time
 
+let exit k tailcall ?(e=OK) time =
+  if condition k then begin
+    print_exit k tailcall e time;
+    collect_perf_exit time;
+  end;
+  decr level
 
 (* we should make another file... *)
 let collecting_stats = ref false
@@ -105,7 +181,8 @@ let usage =
   "\t-trace-skip REX  ignore trace items matching REX\n" ^
   "\t-trace-only REX  trace only items matching REX\n" ^
   "\t-trace-maxbox NUM  Format max_boxes set to NUM\n" ^
-  "\t-stats-on  Collect statistics\n"
+  "\t-stats-on  Collect statistics\n" ^
+  "\t-perf-on  Disable trace output, but keep perf\n" 
 ;;
 
 let parse_argv argv =
@@ -120,7 +197,7 @@ let parse_argv argv =
     | "-trace-at" :: fname :: start :: stop :: rest ->
          where := (fname, int_of_string start, int_of_string stop);
          aux rest
-    | "-trace-on" :: rest -> on := true; aux rest
+    | "-trace-on" :: rest -> trace_noprint := false; on := true; aux rest
     | "-stats-on" :: rest -> collecting_stats := true; aux rest
     | "-trace-skip" :: expr :: rest ->
          skip := expr :: !skip;
@@ -131,6 +208,8 @@ let parse_argv argv =
     | "-trace-maxbox" :: num :: rest ->
          Format.pp_set_max_boxes Format.err_formatter (int_of_string num);
          aux rest
+    | "-perf-on" :: rest ->
+         collect_perf := true; on := true; trace_noprint := true; aux rest
     | x :: rest -> x :: aux rest in
   let rest = aux (Array.to_list argv) in
   init ~where:!where ~verbose:!verbose ~only:!only ~skip:!skip !on;
