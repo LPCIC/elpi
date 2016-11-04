@@ -1,0 +1,2 @@
+spy P :- $print "----<<---- enter: " P, P, $print "---->>---- exit: " P, !.
+spy P :- $print "---->>---- fail: " P, fail.

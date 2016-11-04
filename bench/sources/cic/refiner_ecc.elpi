@@ -1,0 +1,6 @@
+accumulate pts_cic_floating.
+accumulate refiner_pts.
+accumulate kernel_pts.
+
+% test:
+%  T = (appl (abst (sort u0) x \ F x) [sort W]), t+step T TY, $print T TY.

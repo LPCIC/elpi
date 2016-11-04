@@ -1,63 +1,12 @@
+%% To be accumulated *before* kernel_pts to turn the kernel into a refiner
+
 % vim: set ft=lprolog:
 mode (t+step i o).
-mode (pts+triple i i o).
-mode (pts+pair i o).
 mode (has+sort i o).
-
-has+sort A B :- $print "BBB" (has+sort A B), fail.
-
 t+step (?? as K) T :- !, $constraint (t+step K T) K.
 has+sort (?? as S) T :- !, $constraint (has+sort S T) S.
-accumulate kernel_pts.
 
-% pts+pair (?? as S) T :- !, $constraint (pts+pair S T) S.
-% pts+triple (?? as S) (?? as T) U :- !, $constraint (pts+triple S T U) [S,T].
-% pts+triple (?? as S) T U :- !, $constraint (pts+triple S T U) S.
-% pts+triple S (?? as T) U :- !, $constraint (pts+triple S T U) T.
-% accumulate pts_cic.
-
-spy P :- $print "----<<---- enter: " P, P, $print "---->>---- exit: " P, !.
-spy P :- $print "---->>---- fail: " P, fail.
-
-pts+sub S1 S2       :- spy(leq S1 S2).
-pts+triple S1 S2 S3 :- spy(leq S1 S3, leq S2 S3).
-pts+pair S1 S2      :- spy(ltn S1 S2).
-
-constraint t+step pts+pair pts+triple {
-}
-
-mode (leq i i).
-leq (?? as A) (?? as B) :- !,  $constraint (leq A B) [A,B].
-leq A         (?? as B) :- !,  $constraint (leq A B) [B].
-leq (?? as A) B         :- !,  $constraint (leq A B) [A].
-
-mode (ltn i i).
-ltn (?? as A) (?? as B) :- !,  $constraint (ltn A B) [A,B].
-ltn A         (?? as B) :- !,  $constraint (ltn A B) [B].
-ltn (?? as A) B         :- !,  $constraint (ltn A B) [A].
-
-constraint leq ltn {
-  % incompat (FIRST!!)
-  rule (leq X Y) (ltn Y1 X1) | (X = X1, Y = Y1) <=> false.
-  rule (ltn X Y) (ltn Y1 X1) | (X = X1, Y = Y1) <=> false.
-  rule (ltn X Y) | (X = Y) <=> false.
-  
-  % refl
-  rule \ (leq X Y) | (X = Y).
-
-  % atisym
-  rule (leq X Y) \ (leq Y1 X1) | (X = X1, Y = Y1) <=> (Y = X).
-
-  % trans
-  rule (leq X Y) (leq Y1 Z) | (Y = Y1) <=> (leq X Z).
-  rule (leq X Y) (ltn Y1 Z) | (Y = Y1) <=> (ltn X Z).
-  rule (ltn X Y) (leq Y1 Z) | (Y = Y1) <=> (ltn X Z).
-  rule (ltn X Y) (ltn Y1 Z) | (Y = Y1) <=> (ltn X Z).
-
-  % idempotence
-  rule (leq X Y) \ (leq X1 Y1) | (X = X1, Y = Y1).
-  rule (ltn X Y) \ (ltn X1 Y1) | (X = X1, Y = Y1).
-
+constraint t+step has+sort {
 }
 
 % test:

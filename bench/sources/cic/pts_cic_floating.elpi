@@ -1,0 +1,37 @@
+pts+sub S1 S2       :- leq S1 S2.
+pts+triple S1 S2 S3 :- leq S1 S3, leq S2 S3.
+pts+pair S1 S2      :- ltn S1 S2.
+
+mode (leq i i).
+leq (?? as A) (?? as B) :- !,  $constraint (leq A B) [A,B].
+leq A         (?? as B) :- !,  $constraint (leq A B) [B].
+leq (?? as A) B         :- !,  $constraint (leq A B) [A].
+
+mode (ltn i i).
+ltn (?? as A) (?? as B) :- !,  $constraint (ltn A B) [A,B].
+ltn A         (?? as B) :- !,  $constraint (ltn A B) [B].
+ltn (?? as A) B         :- !,  $constraint (ltn A B) [A].
+
+constraint leq ltn {
+  % incompat (FIRST!!)
+  rule (leq X Y) (ltn Y1 X1) | (X = X1, Y = Y1) <=> false.
+  rule (ltn X Y) (ltn Y1 X1) | (X = X1, Y = Y1) <=> false.
+  rule (ltn X Y) | (X = Y) <=> false.
+  
+  % refl
+  rule \ (leq X Y) | (X = Y).
+
+  % atisym
+  rule (leq X Y) \ (leq Y1 X1) | (X = X1, Y = Y1) <=> (Y = X).
+
+  % trans
+  rule (leq X Y) (leq Y1 Z) | (Y = Y1) <=> (leq X Z).
+  rule (leq X Y) (ltn Y1 Z) | (Y = Y1) <=> (ltn X Z).
+  rule (ltn X Y) (leq Y1 Z) | (Y = Y1) <=> (ltn X Z).
+  rule (ltn X Y) (ltn Y1 Z) | (Y = Y1) <=> (ltn X Z).
+
+  % idempotence
+  rule (leq X Y) \ (leq X1 Y1) | (X = X1, Y = Y1).
+  rule (ltn X Y) \ (ltn X1 Y1) | (X = X1, Y = Y1).
+
+}
