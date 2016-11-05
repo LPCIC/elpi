@@ -52,7 +52,7 @@ mk+appl T A (appl T A) :- !.
 
 % DELTA-EXPANSION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-r+step+h T1 H T T2 :- r+step T1 T T2, !, $level T1 H.
+r+step+h T1 H T T2 :- r+step T1 T T2, !, level T1 H.
 
 %
 

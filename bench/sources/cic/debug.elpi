@@ -32,5 +32,5 @@ r+step+h (abst W F) _ _ _ :- !, fail.
 
 % pts+sub S1 S2 :- on+focus, $print (++pts+sub S1 S2), fail.
 
-% on+focus :- $current "cic:/matita/arithmetics/prova/prova2.def(3)"
+% on+focus :- current "cic:/matita/arithmetics/prova/prova2.def(3)"
 % /* "cic:/matita/arithmetics/factorial/le_fact_10.def(11)" */.

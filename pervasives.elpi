@@ -122,6 +122,10 @@ is_flex X :- $is_flex X. % is_flex X :- not (not (X = x_unused_x))
                          % resume a goal that checks again is_flex X
                          % returning true in place of false!
 
+level X Y :- $level X Y. % Y = level of constant X
+                         % Y < 0 if X is global, 0 <= Y if X is local
+                         % fails if X is not a constant
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% PREDEFINED PREDICATES %%%%%%%%%%%%%%%%%%%%%%%
 
 true.

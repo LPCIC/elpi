@@ -2,15 +2,11 @@
 
 % APPEND %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% append L1 L2 L :- $print (append L1 L2 L), fail.
-
 append [] L L.
 
 append [A|L1] L2 [A|L] :- append L1 L2 L.
 
 % NTH %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% nth L M A :- $print (nth L M A), fail.
 
 nth [A|_L] 0 A :- !.
 
@@ -18,21 +14,18 @@ nth [_A|L] M B :- N is M - 1, nth L N B.
 
 % SPLIT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% split L M L1 L2 :- $print (split L M L1 L2), fail.
-
 split L 0 [] L :- !.
 
 split [A|L] M [A|L1] L2 :- N is M - 1, split L N L1 L2.
 
 % SUBST %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% subst L1 M C L2 :- $print (subst L1 M L2), fail.
-
 subst [A1|L] 0 C [A2|L] :- !, C A1 A2.
 
 subst [A|L1] M C [A|L2] :- N is M - 1, subst L1 N C L2.
 
-% MAP %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% MAP %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 map _ [] [].
+
 map F [X|XS] [Y|YS] :- F X Y, map F XS YS.

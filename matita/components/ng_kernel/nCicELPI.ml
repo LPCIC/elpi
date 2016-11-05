@@ -154,14 +154,14 @@ let get_gref f ~depth t =
       | E.ObjectNotFound _
       | LPR.No_clause           -> fail ()
 
-let t_step ~depth ~env:_ _ = function
+let t_step_global ~depth ~env:_ _ = function
    | [t1; t2] -> 
       begin match get_gref rt_gref ~depth t1 with
           | _, u1 -> [mk_eq (mk_term ~depth u1) t2]
       end
    | _        -> fail ()
 
-let r_step_h ~depth ~env:_ _ = function
+let r_step_global ~depth ~env:_ _ = function
    | [t1; t2; t3] ->
       begin match get_gref rt_gref ~depth t1 with
           | Some (h, u1), _ -> [mk_eq (mk_int ~depth (-h)) t2; mk_eq (mk_term ~depth u1) t3]
@@ -202,14 +202,18 @@ let current ~depth ~env:_ _ args = match args, !current_ref with
 (* initialization ***********************************************************)
 
 let _ =
-   LPR.register_custom "$t+step" t_step;
-   LPR.register_custom "$r+step+h" r_step_h;
+   LPR.register_custom "$t+step+global" t_step_global;
+   LPR.register_custom "$r+step+global" r_step_global;
    LPR.register_custom "$constructor" constructor;
    LPR.register_custom "$inductive" inductive;
    LPR.register_custom "$fixpoint" fixpoint;
    LPR.register_custom "$current" current
 
-let filenames = ["kernel_matita.elpi"; "pts_cic.elpi"; "debug.elpi"]
+let filenames = ["environment_matita.elpi";
+                 "kernel_inductives.elpi";
+                 "pts_cic.elpi";
+                 "debug.elpi";
+                ]
 
 let program = ref (LPR.program_of_ast (LPP.parse_program ~filenames))
 

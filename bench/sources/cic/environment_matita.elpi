@@ -1,0 +1,29 @@
+% Interface with Matita ITP %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% These custom predicates are defined in NCicELPI.ml
+
+inductive T K :- $inductive T K. % if T is an iductive type,
+                                 % K is the number of its left parameters;
+                                 % fail otherwise
+
+
+constructor T J K :- $constructor T J K. % if T is a constructor,
+                                         % J is its position in the constructors list (0 based),
+                                         % K is the number of its left parameters;
+                                         % fail otherwise
+
+fixpoint T L :- $fixpoint T L. % if T is a fixpoint,
+                               % L is the number of its recursive argument (0 based);
+                               % fail otherwise
+
+r+step+global T1 H T2 :- $r+step+global T1 H T2. % if T1 is a delta-expandable reference,
+                                                 % H is its opposed height (i.e. H < 0),
+                                                 % T2 is its delta-expansion;
+                                                 % fail otherwise
+
+t+step+global T U :- $t+step+global T U. % if T is a global reference,
+                                         % U is its inferred type;
+                                         % fail otherwise
+
+current X :- $current X. % true if we are checking object X,
+                         % X must be a *string* produced by NReference.string_of_reference;
+                         % fail otherwise
