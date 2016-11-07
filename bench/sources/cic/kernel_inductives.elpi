@@ -55,7 +55,7 @@ unwind+whd+delta+pi T1 P (cframe _ _ _ Q) T2 :- !, unwind+whd+delta+pi T1 P Q T2
 % CONVERSION HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 conv+args (cframe A1 W U1 P1) (cframe A2 W U2 P2) :- !, conv+args P1 P2,
-                                                     conv+main U1 i+rc U2, conv+args A1 A2.
+                                                     conv+top U1 i+rc U2, conv+args A1 A2.
 
 % VALIDITY + INFERRED TYPE HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
