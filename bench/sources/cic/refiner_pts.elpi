@@ -22,7 +22,9 @@ constraint t+step has+sort conv+whnf r+step {
    | (compat G1 L1 T1 G2 L2 T2 L3) <=> $print L3, L3.
 }
 
-compat G1 [] T1 G2 [] T2 (T1 = T2).
+compat G1 [] T1 G2 [] T2 H :-
+ append G1 G2 G12,
+ foldimpl G12 (conv+top T1 i+rc T2) H.
 compat G1 [X1|XS1] T1 G2 [X2|XS2] T2 K :-
  foldimpl G1 (t+step X1 U1) H1,
  foldimpl G2 (t+step X2 U2) H2,
