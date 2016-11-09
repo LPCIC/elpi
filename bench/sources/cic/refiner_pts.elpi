@@ -19,13 +19,17 @@ conv+whnf T1 L1 M (?? as T2) L2 :- !, $constraint (conv+whnf T1 L1 M T2 L2) T2.
 
 constraint t+step has+sort conv+whnf r+step {
   rule (G1 ?- t+step (?? X1 L1) T1) \ (G2 ?- t+step (?? X2 L2) T2) > X1 ~ X2
-   | (compat G1 L1 T1 G2 L2 T2 L3) <=> $print L3, L3.
+   | ($print "###" L1, is_canonical L1, $print "###OK", compat G1 L1 T1 G2 L2 T2 L3) <=> $print L3, L3.
 }
 
-compat G1 [] T1 G2 [] T2 H :-
+is_canonical [].
+is_canonical [X|XS] :- $is_name X, is_canonical XS.
+
+% (G2 ?- T2) is the canonical one
+compat G2 [] T2 G1 [] T1 H :-
  append G1 G2 G12,
- foldimpl G12 (conv+top T1 i+rc T2) H.
-compat G1 [X1|XS1] T1 G2 [X2|XS2] T2 K :-
+ foldimpl G12 (conv+top T2 i+rc T1) H.
+compat G2 [X2|XS2] T2 G1 [X1|XS1] T1 K :-
  foldimpl G1 (t+step X1 U1) H1,
  foldimpl G2 (t+step X2 U2) H2,
  append G1 G2 G12,
@@ -34,7 +38,7 @@ compat G1 [X1|XS1] T1 G2 [X2|XS2] T2 K :-
  K = (H1, H2, H3, K2).
 
 % Test for unicity of typing:
-% (t+step c nat => t+step v (appl vect [nat,c]) => t+step (X c v) nat), (t+step d nat => t+step w (appl vect [nat,appl s [d]]) => t+step (X (appl s [d]) w) T).
+% pi v \ pi w \ pi c \ pi d \ (t+step c nat => t+step v (appl vect [nat,c]) => t+step (X c v) nat), (t+step d nat => t+step w (appl vect [nat,appl s [d]]) => t+step (X (appl s [d]) w) T).
 
 foldimpl [] T T.
 foldimpl [H|HS] T (H => R) :- foldimpl HS T R.
