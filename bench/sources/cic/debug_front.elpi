@@ -1,0 +1,32 @@
+% DEBUG FRONT END %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% on+focus :- current "cic:/matita/arithmetics/prova/prova2.def(3)".
+% /* "cic:/matita/arithmetics/factorial/le_fact_10.def(11)" */.
+
+% r+step+r T1 P1 T T2 P2 :- on+focus, $print (r+step+r T1 P1 T T2 P2), fail.
+
+% r+set+code T T2 :- on+focus, $print (r+set+code T T2), fail.
+
+% whd+l+delta T P C :- on+focus, $print (whd+l+delta T P), fail.
+
+% unwind+whd+l+delta T1 P1 T2 :- on+focus, $print (unwind+whd+l+delta T1 P1), fail.
+
+% unwind+whd+delta+pi T1 P Q T2 :- on+focus, $print (unwind+whd+delta+pi T1 P Q), fail.
+
+% unwind+whd+delta T1 P C T2 :- on+focus, $print (unwind+whd+delta T1 P), fail.
+
+% red+whnf T1 P1 M U2 P2 :- on+focus, $print (red+whnf T1 P1 M U2 P2), fail.
+
+% conv+top T1 M T2 :- on+focus, $print (conv+top T1 M T2), fail.
+
+% conv+args P1 P2 :- on+focus, $print (conv+args P1 P2), fail.
+
+% conv+whnf T1 P1 M T2 P2 :- on+focus, $print (conv+whnf T1 P1 M T2 P2), fail.
+
+% t+step T U :- on+focus, $print (t+step T U), fail.
+
+% has+sort T S :- on+focus, $print (has+sort T S), fail.
+
+% has+checked+type T U :- on+focus, $print (has+checked+type T U), fail.
+
+% has+type T U :- on+focus, $print (has+type T U), fail.

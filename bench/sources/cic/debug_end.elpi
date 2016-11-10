@@ -1,4 +1,4 @@
-% DEBUGGING %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% DEBUG BACK END %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 r+step+h (sort S) _ _ _ :- !, fail.
 
@@ -10,15 +10,15 @@ r+step+h (abst W F) _ _ _ :- !, fail.
 
 % unwind+whd+delta+pi T1 P T2 :- on+focus, $print (++unwind+whd+delta+pi T1 P T2), fail.
 
-%%
+%
 
 % r+step+r T1 P1 T T2 P2 :- on+focus, $print (++r+step+r T1 P1 T T2 P2), fail.
 
 % unwind+whd+delta T1 P C T2 :- on+focus, $print (++unwind+whd+delta T1 P T2), fail.
 
-% conv+main T1 I T2 :- on+focus, $print (++conv+main T1 I T2), fail.
+% conv+main T1 M T2 :- on+focus, $print (++conv+main T1 M T2), fail.
 
-% conv+whnf T1 P1 I T2 P2 :- on+focus, $print (++conv+whnf T1 P1 I T2 P2), fail.
+% conv+whnf T1 P1 M T2 P2 :- on+focus, $print (++conv+whnf T1 P1 M T2 P2), fail.
 
 % t+step T U :- on+focus, $print (++t+step T U), fail.
 
@@ -31,6 +31,3 @@ r+step+h (abst W F) _ _ _ :- !, fail.
 % pts+triple S1 S2 S3 :- on+focus, $print (++pts+triple S1 S2 S3), fail.
 
 % pts+sub S1 S2 :- on+focus, $print (++pts+sub S1 S2), fail.
-
-% on+focus :- current "cic:/matita/arithmetics/prova/prova2.def(3)".
-% /* "cic:/matita/arithmetics/factorial/le_fact_10.def(11)" */.

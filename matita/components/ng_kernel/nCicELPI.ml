@@ -210,9 +210,10 @@ let _ =
    LPR.register_custom "$current" current
 
 let filenames = ["environment_matita.elpi";
+                 "debug_front.elpi";
                  "kernel_inductives.elpi";
                  "pts_cic.elpi";
-                 "debug.elpi";
+                 "debug_end.elpi";
                 ]
 
 let program = ref (LPR.program_of_ast (LPP.parse_program ~filenames))
