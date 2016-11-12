@@ -2257,6 +2257,11 @@ let clausify vars depth t =
   [%trace "clausify" ("%a %d %d %d %d\n%!"
       (ppterm (depth+lts) [] 0 empty_env) t depth lts lcs (List.length ts)) begin
   match t with
+    Nil -> [],lts
+  | Cons(g1,g2) ->
+     let clauses,lts = claux vars depth hyps ts lts lcs g1 in
+     let moreclauses,lts = claux vars depth hyps ts lts lcs g2 in
+      clauses@moreclauses,lts
   | App(c, g, gs) when c == C.andc || c == C.andc2 ->
      let res = claux vars depth hyps ts lts lcs g in
      List.fold_right
@@ -2336,8 +2341,8 @@ let clausify vars depth t =
      claux vars depth hyps ts lts lcs
        (deref_appuv ~from ~to_:(depth+lts) args g)
   | Arg _ | AppArg _ -> anomaly "claux called on non-heap term"
-  | Lam _ | Custom _ | CData _ | Nil | Cons _ ->
-     error "Assuming a custom or string or int or float or function or list"
+  | Lam _ | Custom _ | CData _ ->
+     error "Assuming a custom or string or int or float or function"
   | UVar _ | AppUVar _ -> error "Flexible assumption"
   end] in
     claux vars depth [] [] 0 0 t
