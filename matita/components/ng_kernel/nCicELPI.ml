@@ -22,6 +22,24 @@ module LPC = Elpi_custom (* registers the custom predicates, if we need them *)
 
 (* internals ****************************************************************)
 
+type encoding = FG | CSC
+
+type tag = SORT | PROD | ABST | ABBR | APPL | CASE
+
+let encoding = CSC
+
+let xlate tag = match encoding, tag with
+   | _  , SORT -> "sort"
+   | FG , PROD -> "prod"
+   | CSC, PROD -> "arr"
+   | FG , ABST -> "abst"
+   | CSC, ABST -> "lam"
+   | _  , ABBR -> "abbr"
+   | FG , APPL -> "appl"
+   | CSC, APPL -> "app"
+   | FG , CASE -> "case"
+   | CSC, CASE -> "match"
+
 let status = new P.status
 
 let rt_gref r =
@@ -80,27 +98,31 @@ let mk_nil = LPA.mkNil
 
 let mk_cons v vs = LPA.mkSeq [v; vs]
 
+let mk_head x = LPA.mkCon (xlate x)
+
 let mk_name i = Printf.sprintf "x%u" i
 
 let mk_lref c i = LPA.mkCon (mk_name (c - i))
 
 let mk_gref r = LPA.mkCon (R.string_of_reference r)
 
-let mk_sort s = LPA.mkApp [LPA.mkCon "sort"; mk_univ s]
+let mk_sort s = LPA.mkApp [mk_head SORT; mk_univ s]
 
-let mk_prod n w t = LPA.mkApp [LPA.mkCon "prod"; w; LPA.mkLam (mk_name n) t]
+let mk_prod n w t = LPA.mkApp [mk_head PROD; w; LPA.mkLam (mk_name n) t]
 
-let mk_abst n w t = LPA.mkApp [LPA.mkCon "abst"; w; LPA.mkLam (mk_name n) t]
+let mk_abst n w t = LPA.mkApp [mk_head ABST; w; LPA.mkLam (mk_name n) t]
 
-let mk_abbr n v w t = LPA.mkApp [LPA.mkCon "abbr"; v; w; LPA.mkLam (mk_name n) t]
+let mk_abbr n v w t = match encoding with
+   | FG  -> LPA.mkApp [mk_head ABBR; v; w; LPA.mkLam (mk_name n) t]
+   | CSC -> LPA.mkApp [mk_head ABBR; w; v; LPA.mkLam (mk_name n) t]
 
-let mk_appl t vs = LPA.mkApp [LPA.mkCon "appl"; t; vs]
+let mk_appl t v = LPA.mkApp [mk_head APPL; t; v]
 
-let mk_case w v u ts = LPA.mkApp [LPA.mkCon "case"; v; ts; w; u]
+let mk_case w v u ts = LPA.mkApp [mk_head CASE; v; ts; w; u]
 
-let mk_has_some_sort u = LPA.mkApp [LPA.mkCon "has+sort"; u; LPA.mkFreshUVar ()]
+let mk_is_type u = LPA.mkApp [LPA.mkCon "is_type"; u]
 
-let mk_has_type t u = LPA.mkApp [LPA.mkCon "has+type"; t; u]
+let mk_has_type t u = LPA.mkApp [LPA.mkCon "has_type"; t; u]
 
 (* matita to elpi *)
 let rec lp_term c = function
@@ -112,8 +134,14 @@ let rec lp_term c = function
    | C.Prod (_, w, t)      -> mk_prod c (lp_term c w) (lp_term (succ c) t)
    | C.Lambda (_, w, t)    -> mk_abst c (lp_term c w) (lp_term (succ c) t)
    | C.LetIn (_, w, v, t)  -> mk_abbr c (lp_term c v) (lp_term c w) (lp_term (succ c) t)
-   | C.Appl (t :: vs)      -> mk_appl (lp_term c t) (lp_terms c vs)
    | C.Appl []             -> assert false
+   | C.Appl [t]            -> lp_term c t
+(* CSC *)
+   | C.Appl [t; v]         -> mk_appl (lp_term c t) (lp_term c v)
+   | C.Appl (t :: v :: vs) -> lp_term c (C.Appl (C.Appl [t; v] :: vs))
+(* FG now
+   | C.Appl (t :: vs)      -> mk_appl (lp_term c t) (lp_terms c vs)
+*)
    | C.Match (r, u, v, ts) -> mk_case (mk_gref r) (lp_term c v) (lp_term c u) (lp_terms c ts)
 
 and lp_terms c = function
@@ -154,14 +182,14 @@ let get_gref f ~depth t =
       | E.ObjectNotFound _
       | LPR.No_clause           -> fail ()
 
-let t_step_global ~depth ~env:_ _ = function
+let get_type ~depth ~env:_ _ = function
    | [t1; t2] -> 
       begin match get_gref rt_gref ~depth t1 with
           | _, u1 -> [mk_eq (mk_term ~depth u1) t2]
       end
    | _        -> fail ()
 
-let r_step_global ~depth ~env:_ _ = function
+let get_expansion ~depth ~env:_ _ = function
    | [t1; t2; t3] ->
       begin match get_gref rt_gref ~depth t1 with
           | Some (h, u1), _ -> [mk_eq (mk_int ~depth (-h)) t2; mk_eq (mk_term ~depth u1) t3]
@@ -169,7 +197,7 @@ let r_step_global ~depth ~env:_ _ = function
       end
    | _        -> fail ()
 
-let constructor ~depth ~env:_ _ = function
+let get_constructor ~depth ~env:_ _ = function
    | [t1; t2; t3] -> 
       begin match get_gref split_constructor ~depth t1 with
           | Some (j, k) -> [mk_eq (mk_int ~depth j) t2; mk_eq (mk_int ~depth k) t3]
@@ -177,7 +205,7 @@ let constructor ~depth ~env:_ _ = function
       end
    | _            -> fail ()
 
-let inductive ~depth ~env:_ _ = function
+let get_inductive ~depth ~env:_ _ = function
    | [t1; t2] -> 
       begin match get_gref split_inductive ~depth t1 with
           | Some j -> [mk_eq (mk_int ~depth j) t2]
@@ -185,7 +213,7 @@ let inductive ~depth ~env:_ _ = function
       end
    | _        -> fail ()
 
-let fixpoint ~depth ~env:_ _ = function
+let get_fixpoint ~depth ~env:_ _ = function
    | [t1; t2] ->
       begin match get_gref split_fixpoint ~depth t1 with
           | Some l -> [mk_eq (mk_int ~depth l) t2]
@@ -193,28 +221,33 @@ let fixpoint ~depth ~env:_ _ = function
       end
    | _        -> fail ()
 
-let current_ref = ref None
+let current = ref None
 
-let current ~depth ~env:_ _ args = match args, !current_ref with
+let on_object ~depth ~env:_ _ args = match args, !current with
    | [t1], Some s -> [mk_eq (mk_string ~depth s) t1]
    | _            -> fail ()
 
 (* initialization ***********************************************************)
 
 let _ =
-   LPR.register_custom "$t+step+global" t_step_global;
-   LPR.register_custom "$r+step+global" r_step_global;
-   LPR.register_custom "$constructor" constructor;
-   LPR.register_custom "$inductive" inductive;
-   LPR.register_custom "$fixpoint" fixpoint;
-   LPR.register_custom "$current" current
+   LPR.register_custom "$get_type" get_type;
+   LPR.register_custom "$get_expansion" get_expansion;
+   LPR.register_custom "$get_constructor" get_constructor;
+   LPR.register_custom "$get_inductive" get_inductive;
+   LPR.register_custom "$get_fixpoint" get_fixpoint;
+   LPR.register_custom "$on_object" on_object
 
-let filenames = ["environment_matita.elpi";
-                 "debug_front.elpi";
-                 "kernel_inductives.elpi";
-                 "pts_cic.elpi";
-                 "debug_end.elpi";
-                ]
+let filenames = match encoding with
+   | FG  -> ["environment_matita.elpi";
+             "debug_front.elpi";
+             "kernel_inductives.elpi";
+             "pts_cic.elpi";
+             "debug_end.elpi";
+            ]
+   | CSC -> [ "PTS_matita.elpi";
+              "PTS_kernel_machine.elpi";
+            ]
+
 
 let program = ref (LPR.program_of_ast (LPP.parse_program ~filenames))
 
@@ -223,13 +256,13 @@ let program = ref (LPR.program_of_ast (LPP.parse_program ~filenames))
 let execute r query =
    let str = R.string_of_reference r in
    Printf.printf "?? %s\n%!" str;
-   current_ref := Some str;
+   current := Some str;
    let b = LPR.execute_once !program (LPR.query_of_ast !program query) in
    let result = if b then "KO" else "OK" in
    Printf.printf "%s %s\n%!" result str; b
 
-let has_some_sort r u =
-   let query = mk_has_some_sort (lp_term 0 u) in
+let is_type r u =
+   let query = mk_is_type (lp_term 0 u) in
    execute r query
 
 let has_type r t u =

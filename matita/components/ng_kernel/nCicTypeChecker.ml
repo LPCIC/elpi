@@ -1310,7 +1310,7 @@ let typecheck_obj status (uri,height,metasenv,subst,kind) =
       ) (fun () ->
 (* FG: extension for ELPI *)
       let r = Ref.reference_of_spec uri Ref.Decl in
-      log (LP.has_some_sort r ty)
+      log (LP.is_type r ty)
       )
 (* FG: end of extension for ELPI *)
    | C.Inductive (_, leftno, tyl, _) -> 

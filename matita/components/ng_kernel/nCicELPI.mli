@@ -9,8 +9,8 @@
      \ /   This software is distributed as is, NO WARRANTY.     
       V_______________________________________________________________ *)
 
-(* has_some_sort u is false (?) if the type of u is a sort *)
-val has_some_sort: NReference.reference -> NCic.term -> bool
+(* is_type r u is false (?) if the type of u is a sort *)
+val is_type: NReference.reference -> NCic.term -> bool
 
-(* has_type t u is false (?) if the type of t is u *)
+(* has_type r t u is false (?) if the type of t is u *)
 val has_type: NReference.reference -> NCic.term -> NCic.term -> bool
