@@ -1,1 +1,1 @@
-export TJPATH=../../../../:../../../../bench/sources/cic/
+export TJPATH=../../../../:../../../../../papers/DALEFEST/elpi/
