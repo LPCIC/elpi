@@ -20,7 +20,7 @@ H=@
 
 all: check-ocaml-ver
 	$(H)$(MAKE) --no-print-directory trace_ppx
-	$(H)$(MAKE) --no-print-directory elpi.cmxa
+	$(H)$(MAKE) --no-print-directory elpi.$(CMXA)
 	$(H)$(MAKE) --no-print-directory META.elpi
 	$(H)$(MAKE) --no-print-directory elpi
 
@@ -28,7 +28,7 @@ trace: check-ocaml-ver
 	$(H)$(MAKE) --no-print-directory trace_ppx
 	-$(H)mv elpi elpi.notrace
 	$(H)$(MAKE) --no-print-directory clean
-	$(H)TRACE=1 $(MAKE) --no-print-directory elpi.cmxa
+	$(H)TRACE=1 $(MAKE) --no-print-directory elpi.$(CMXA)
 	$(H)$(MAKE) --no-print-directory elpi
 	$(H)mv elpi elpi.trace
 	$(H)$(MAKE) --no-print-directory clean
@@ -72,7 +72,7 @@ ELPI_COMPONENTS = \
   elpi_runtime.$(CMX) \
   elpi_latex_exporter.$(CMX) elpi_prolog_exporter.$(CMX) elpi_custom.$(CMX)
 
-elpi.cmxa: $(ELPI_COMPONENTS)
+elpi.$(CMXA): $(ELPI_COMPONENTS)
 	@echo OCAMLOPT -a $@
 	$(H)$(OC) $(OC_OPTIONS) -o $@ -a $(ELPI_COMPONENTS)
 
@@ -104,6 +104,7 @@ include .depends .depends.parser
 	$(H)$(OD) -pp '$(PP) $(PARSE)' $< > $@
 # only registers hooks, not detected by ocamldep
 elpi.cmx : elpi_custom.cmx
+elpi.cmo : elpi_custom.cmo
 
 META.%: LIBSPATH = $(PWD)
 META.%: meta.%.src
