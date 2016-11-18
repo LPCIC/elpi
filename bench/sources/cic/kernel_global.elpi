@@ -1,0 +1,47 @@
+% Support for global declarations/definitions
+
+% SUPPORT FOR CALL BY NEED %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+r+step+r T1 P1 T T2 P2 :- r+set+code T T2, r+set+stack T1 P1 P2, !.
+
+r+set+code T T2 :- if (is_flex T2) (unwind+whd+l+delta T [] T2).
+
+r+set+stack _ P1 P1 :- !.
+
+% extra conversions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% parallel delta (local + global)
+conv+main T P1 M T P2 :- r+step+h T _ X V,
+                         r+step+r T P1 X V Q1, r+step+r T P2 X V Q2, !,
+%                        if on+focus ($print parallel-delta),
+                         conv+main V Q1 M V Q2.
+% candidate left delta.
+conv+main T1 P1 M T2 P2 :- r+step+h T1 H1 X1 V1, !, maybe+sn T1 P1 H1 X1 V1 M T2 P2.
+
+% forced right delta.
+conv+main T1 P1 M T2 P2 :- r+step+h T2 _ X V, r+step+r T2 P2 X V P, !, conv+main T1 P1 M V P.
+
+%
+
+% candidate right delta.
+maybe+sn T1 P1 H1 X1 V1 M T2 P2 :- r+step+h T2 H2 X2 V2, !, check+h T1 P1 H1 X1 V1 M T2 P2 H2 X2 V2.
+
+% forced left delta.
+maybe+sn T1 P1 _ X V M T2 P2 :- r+step+r T1 P1 X V P, !, conv+main V P M T2 P2.
+
+% AGE/HEIGHT-CONTROLLED DELTA %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% age/hight-implied left delta: lt_height H2 H1 removed for now.
+check+h T1 P1 H1 X V M T2 P2 H2 _ _ :- r+step+r T1 P1 X V P, !, conv+main V P M T2 P2.
+
+% age/hight-implied right delta.
+check+h T1 P1 _ _ _ M T2 P2 _ X V :- r+step+r T2 P2 X V P, !, conv+main T1 P1 M V P.
+
+% EXTRA REDUCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% extra delta
+r+step+h T1 H T2 T2 :- get_expansion T1 H T2, !.
+
+% VALIDITY + INFERRED TYPE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+t+step T U :- get_type T U, !.

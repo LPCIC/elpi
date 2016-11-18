@@ -1,0 +1,11 @@
+% Interace with Matita ITP
+
+% QUERIES TO THE ENVIRONMENT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+accumulate environment_matita.elpi.
+
+% QUERIES FROM THE ENVIRONMENT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+has_type T U :- has+type T U.
+
+is_type U :- has+sort U S.

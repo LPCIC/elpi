@@ -6,19 +6,21 @@ r+step+h (abst W F) _ _ _ :- !, fail.
 
 % r+step+h T1 H T T2 :- on+focus, $print (++r+step+h T1 H T T2), fail.
 
-% whd+extra T1 P1 T2 P2 :- on+focus, $print (++whd+extra T1 P1 T2 P2), fail.
-
-% unwind+whd+delta+pi T1 P T2 :- on+focus, $print (++unwind+whd+delta+pi T1 P T2), fail.
-
 %
 
 % r+step+r T1 P1 T T2 P2 :- on+focus, $print (++r+step+r T1 P1 T T2 P2), fail.
 
+% whd+basic T1 P1 M T2 P2 :- on+focus, $print (++whd+basic T1 P1 M T2 P2), fail.
+
+% unwind+whd+delta+pi T1 P Q T2 :- on+focus, $print (++unwind+whd+delta+pi T1 P Q T2), fail.
+
 % unwind+whd+delta T1 P C T2 :- on+focus, $print (++unwind+whd+delta T1 P T2), fail.
 
-% conv+main T1 M T2 :- on+focus, $print (++conv+main T1 M T2), fail.
+% conv+eq T1 T2 :- on+focus, $print (++conv+eq T1 T2), fail.
 
-% conv+whnf T1 P1 M T2 P2 :- on+focus, $print (++conv+whnf T1 P1 M T2 P2), fail.
+% conv+sub T1 T2 :- on+focus, $print (++conv+sub T1 T2), fail.
+
+% conv+main T1 P1 M T2 P2 :- on+focus, $print (++conv+main T1 P1 M T2 P2), fail.
 
 % t+step T U :- on+focus, $print (++t+step T U), fail.
 

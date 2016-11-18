@@ -238,10 +238,9 @@ let _ =
    LPR.register_custom "$on_object" on_object
 
 let filenames = match encoding with
-   | FG  -> ["environment_matita.elpi";
-             "debug_front.elpi";
-             "kernel_inductives.elpi";
-             "pts_cic.elpi";
+   | FG  -> ["debug_front.elpi";
+             "kernel_matita.elpi";
+             "kernel.elpi";
              "debug_end.elpi";
             ]
    | CSC -> [ "PTS_matita.elpi";

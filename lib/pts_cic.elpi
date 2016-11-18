@@ -42,8 +42,7 @@ pts+triple (s+type U2) (s+cprop U1) (s+cprop U2) :- univ+chain U1 U2, !.
 pts+triple (s+cprop U2) (s+type U1) (s+type U2) :- univ+chain U1 U2, !.
 pts+triple (s+cprop U2) (s+cprop U1) (s+cprop U2) :- univ+chain U1 U2, !.
 
-% cumulativity
-pts+sub S S :- !.
+% cumulativity (transitive, but not reflexive)
 pts+sub s+prop (s+type U) :- !.
 pts+sub s+prop (s+cprop U) :- !.
 pts+sub (s+type U1) (s+type U2) :- !, univ+chain U1 U2.

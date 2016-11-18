@@ -1,8 +1,6 @@
-accumulate kernel_pts.
+% Type checker extension for inductive types and recursive functions %%%%%%%%%
 
-% Type checker extension managing Matita interface %%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% Quantities privided by Matita: I, J, K := integers
+% Quantities privided by the environment: I, J, K := integers
 
 % Closed term: T, U, V, W := case V A W U  match V with constructors of W and select branch in A of type U
 
@@ -12,32 +10,26 @@ accumulate kernel_pts.
 
 append (cframe A W U P1) P2 (cframe A W U P) :- append P1 P2 P.
 
-rev_map F (cframe A1 W U1 P1) (cframe A2 W U2 P2) :- rev_map F P1 P2,
-                                                     F U1 U2, rev_map F A1 A2.
+forall2 (cframe A1 W U1 P1) (cframe A2 W U2 P2) F :- F U1 U2, forall2 A1 A2 F, forall2 P1 P2 F.
 
 % EXTRA REDUCTIONS HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-is+constructor V P V P :- constructor V _ _.
+is+constructor V P V P :- get_constructor V _ _.
 
 %
-
-% unwind+whd+to+constructor V1 V2 :- on+focus, $print (unwind+whd+to+constructor+begin V1), fail.
 
 unwind+whd+to+constructor V1 V2 :- unwind+whd+delta V1 [] is+constructor V2.
-%                                  if on+focus ($print (unwind+whd+to+constructor+end V2)).
+                                  if on+focus ($print (unwind+whd+to+constructor+end V2)).
 %
 
-get+branch J (cframe A _ _ P) T P [] :- nth A J T.
+get+branch (cframe A _ _ P) J T P [] :- nth A J T.
 
-get+branch J [V|P] T P1 [V|P2] :- get+branch J P T P1 P2.
+get+branch [V|P] J T P1 [V|P2] :- get+branch P J T P1 P2.
 
 % EXTRA REDUCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% extra delta
-r+step+h T1 H T2 T2 :- r+step+global T1 H T2, !.
-
 % check constructor before expanding fixpoint
-r+set+stack T1 P1 P2 :- fixpoint T1 L, !,
+r+set+stack T1 P1 P2 :- get_fixpoint T1 L, !,
                         subst P1 L unwind+whd+to+constructor P2
 %                     , if on+focus ($print global-delta-fix)
                         .
@@ -46,8 +38,8 @@ whd+basic (case V A W U) P _ V (cframe A W U P) :- !.
 
 % iota for case
 % note: the left arguments must be removed
-whd+basic T1 P1 _ T2 P2 :- constructor T1 J K, !,
-                           get+branch J P1 T2 P A, split A K SN DX, append DX P P2
+whd+basic T1 P1 _ T2 P2 :- get_constructor T1 J K, !,
+                           get+branch P1 J T2 P A, split A K SN DX, append DX P P2
 %                        , if on+focus ($print iota)
                            .
 
@@ -56,14 +48,10 @@ unwind+whd+delta+pi T1 P (cframe _ _ _ Q) T2 :- !, unwind+whd+delta+pi T1 P Q T2
 
 % VALIDITY + INFERRED TYPE HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-mk+out+type V W0 U0 W0 P U0 DXV :- inductive W0 K, split P K SN DX,
+mk+out+type V W0 U0 W0 P U0 DXV :- get_inductive W0 K, split P K SN DX,
                                    append DX [V] DXV.
 
 % VALIDITY + INFERRED TYPE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % not complete, we just compute the output type ...
 t+step (case V A W0 U0) U :- !, t+step V W, unwind+whd+delta W [] (mk+out+type V W0 U0) U.
-
-t+step T U :- t+step+global T U, !.
-
-% KERNEL %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
