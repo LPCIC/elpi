@@ -33,13 +33,15 @@ let make_absolute filename =
   if not (Filename.is_relative filename) then filename
   else Filename.concat !cur_dirname filename
 
-let tjpath =
+let cur_tjpath = ref []
+
+let set_tjpath paths =
  let tjpath = try Sys.getenv "TJPATH" with Not_found -> "" in
  let tjpath = Str.split (Str.regexp ":") tjpath in
  let execname = Unix.readlink "/proc/self/exe" in
- let tjpath = tjpath @ [ Filename.dirname execname ] in
+ let tjpath = paths @ tjpath @ [ Filename.dirname execname ] in
  let tjpath = List.map (fun f -> make_absolute (readsymlinks f)) tjpath in
- tjpath
+ cur_tjpath := tjpath
 
 module PointerFunc = struct
  type latex_export =
@@ -82,7 +84,7 @@ let rec parse_one e (origfilename as filename) =
      else raise (Failure ("file not found in $TJPATH: " ^ origfilename)) in
    prefixname,filename
   in
-   iter_tjpath (!cur_dirname :: tjpath)
+   iter_tjpath (!cur_dirname :: !cur_tjpath)
  in
  let inode = (Unix.stat filename).Unix.st_ino in
  if List.mem_assoc inode !parsed then begin
@@ -600,7 +602,7 @@ let list_element_prec = 120
 
 let my_program_only = ref [];;
 
-let parse_program (*?(ontop=[])*) ~filenames : program =
+let parse_program (*?(ontop=[])*) ~paths ~filenames : program =
   (* let insertions = parse plp s in
   let insert prog = function
     | item, (`Here | `End) -> prog @ [item]
@@ -620,6 +622,7 @@ let parse_program (*?(ontop=[])*) ~filenames : program =
           raise (Stream.Error ("unable to insert clause "^CN.to_string name));
         newprog in
   List.fold_left insert ontop insertions*)
+  set_tjpath paths;
   let pervasives = "pervasives.elpi" in
   parse lp (pervasives::filenames)
 ;;

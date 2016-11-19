@@ -20,15 +20,41 @@ module LPP = Elpi_parser
 module LPR = Elpi_runtime
 module LPC = Elpi_custom (* registers the custom predicates, if we need them *)
 
-(* internals ****************************************************************)
-
-type encoding = FG | CSC
+type kernel_t = NO | FG | CSC
 
 type tag = SORT | PROD | ABST | ABBR | APPL | CASE
 
-let encoding = CSC
+(* variables ****************************************************************)
 
-let xlate tag = match encoding, tag with
+let matita_dir = Filename.dirname (Sys.argv.(0))
+
+let kernel = ref NO
+
+let get_program kernel =
+   let paths, filenames = match kernel with
+      | NO  -> ["../.."; ], []
+      | FG  -> ["../.."; "../../lib"; "../../bench/sources/cic"; ],
+               ["debug_front.elpi";
+                "kernel_matita.elpi";
+                "kernel.elpi";
+                "debug_end.elpi";
+               ]
+      | CSC -> ["../.."; "../../../papers/DALEFEST/elpi"; ],
+               [ "PTS_matita.elpi";
+                 "PTS_kernel_machine.elpi";
+               ]
+   in
+   let paths = List.map (Filename.concat matita_dir) paths in
+   LPR.program_of_ast (LPP.parse_program ~paths ~filenames)
+
+let program = ref (get_program !kernel)
+
+let current = ref None
+
+(* internals ****************************************************************)
+
+let xlate tag = match !kernel, tag with
+   | NO , _    -> "??"
    | _  , SORT -> "sort"
    | FG , PROD -> "prod"
    | CSC, PROD -> "arr"
@@ -112,9 +138,9 @@ let mk_prod n w t = LPA.mkApp [mk_head PROD; w; LPA.mkLam (mk_name n) t]
 
 let mk_abst n w t = LPA.mkApp [mk_head ABST; w; LPA.mkLam (mk_name n) t]
 
-let mk_abbr n v w t = match encoding with
-   | FG  -> LPA.mkApp [mk_head ABBR; v; w; LPA.mkLam (mk_name n) t]
-   | CSC -> LPA.mkApp [mk_head ABBR; w; v; LPA.mkLam (mk_name n) t]
+let mk_abbr n v w t = match !kernel with
+   | NO | FG -> LPA.mkApp [mk_head ABBR; v; w; LPA.mkLam (mk_name n) t]
+   | CSC     -> LPA.mkApp [mk_head ABBR; w; v; LPA.mkLam (mk_name n) t]
 
 let mk_appl t v = LPA.mkApp [mk_head APPL; t; v]
 
@@ -136,12 +162,9 @@ let rec lp_term c = function
    | C.LetIn (_, w, v, t)  -> mk_abbr c (lp_term c v) (lp_term c w) (lp_term (succ c) t)
    | C.Appl []             -> assert false
    | C.Appl [t]            -> lp_term c t
-(* CSC *)
+   | C.Appl (t :: vs) when !kernel <> CSC -> mk_appl (lp_term c t) (lp_terms c vs)
    | C.Appl [t; v]         -> mk_appl (lp_term c t) (lp_term c v)
    | C.Appl (t :: v :: vs) -> lp_term c (C.Appl (C.Appl [t; v] :: vs))
-(* FG now
-   | C.Appl (t :: vs)      -> mk_appl (lp_term c t) (lp_terms c vs)
-*)
    | C.Match (r, u, v, ts) -> mk_case (mk_gref r) (lp_term c v) (lp_term c u) (lp_terms c ts)
 
 and lp_terms c = function
@@ -221,8 +244,6 @@ let get_fixpoint ~depth ~env:_ _ = function
       end
    | _        -> fail ()
 
-let current = ref None
-
 let on_object ~depth ~env:_ _ args = match args, !current with
    | [t1], Some s -> [mk_eq (mk_string ~depth s) t1]
    | _            -> fail ()
@@ -237,20 +258,17 @@ let _ =
    LPR.register_custom "$get_fixpoint" get_fixpoint;
    LPR.register_custom "$on_object" on_object
 
-let filenames = match encoding with
-   | FG  -> ["debug_front.elpi";
-             "kernel_matita.elpi";
-             "kernel.elpi";
-             "debug_end.elpi";
-            ]
-   | CSC -> [ "PTS_matita.elpi";
-              "PTS_kernel_machine.elpi";
-            ]
-
-
-let program = ref (LPR.program_of_ast (LPP.parse_program ~filenames))
-
 (* interface ****************************************************************)
+
+let set_kernel e =
+   kernel := e; program := get_program e
+
+(* Note: to be replaced by String.uppercase_ascii *)
+let set_kernel_from_string s = match String.uppercase s with
+   | "NO"  -> set_kernel NO
+   | "FG"  -> set_kernel FG
+   | "CSC" -> set_kernel CSC
+   | _     -> ()
 
 let execute r query =
    let str = R.string_of_reference r in

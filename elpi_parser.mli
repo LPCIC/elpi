@@ -13,7 +13,7 @@ val appl_precedence : int  (* precedence of applications *)
 val inf_precedence : int   (* greater than any used precedence *)
 val list_element_prec : int
 val precedence_of : Func.t -> fixity * int
-val parse_program : filenames:string list -> decl list
+val parse_program : paths:string list -> filenames:string list -> decl list
 val parse_goal : string -> term
 val parse_goal_from_stream : char Stream.t -> term
 val get_literal : string -> string

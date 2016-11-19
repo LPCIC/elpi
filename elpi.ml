@@ -83,10 +83,10 @@ let _ =
     | s :: _ when String.length s > 0 && s.[0] == '-' ->
         Printf.eprintf "Unrecognized option: %s\n%s" s usage; exit 1
     | x :: rest -> x :: aux rest in
-  let files = aux (List.tl (Array.to_list (Elpi_trace.parse_argv Sys.argv))) in
+  let filenames = aux (List.tl (Array.to_list (Elpi_trace.parse_argv Sys.argv))) in
   set_terminal_width ();
   if !print_latex then Elpi_latex_exporter.activate () ;
-  let p = Elpi_parser.parse_program files in
+  let p = Elpi_parser.parse_program ~paths:[] ~filenames in
   if !print_ast then begin
     Format.eprintf "%a" Elpi_ast.pp_program p;
     exit 0;

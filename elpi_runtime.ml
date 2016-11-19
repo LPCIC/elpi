@@ -3797,7 +3797,7 @@ let quote_clause (loc, names, { key; args; hyps; vars }) =
 
 let enable_typechecking () =
   let checker = Compiler.program_of_ast
-    (Elpi_parser.parse_program ["elpi_typechecker.elpi"]) in
+    (Elpi_parser.parse_program ~paths:[] ~filenames:["elpi_typechecker.elpi"]) in
   typecheck := (fun clauses types ->
     let clist = list_to_lp_list (List.map quote_clause clauses) in
     let tlist = list_to_lp_list (List.map (fun (name,n,typ) ->

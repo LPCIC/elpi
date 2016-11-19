@@ -34,9 +34,13 @@ open GrafiteTypes
 
 let _ = 
   MatitaInit.add_cmdline_spec
-    ["-tptppath",Arg.String 
+    ["-tptppath", Arg.String
       (fun s -> Helm_registry.set_string "matita.tptppath" s),
-      "Where to find the Axioms/ and Problems/ directory"];
+      "Where to find the Axioms/ and Problems/ directory";
+     "-elpi", Arg.String
+      NCicELPI.set_kernel_from_string,
+      "the prolog kernel to use: NO, CSC, FG";
+    ];
   MatitaInit.initialize_all ();
   MatitaMisc.reset_font_size ()
 ;;
