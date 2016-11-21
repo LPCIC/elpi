@@ -144,7 +144,7 @@ let mk_abbr n v w t = match !kernel with
 
 let mk_appl t v = LPA.mkApp [mk_head APPL; t; v]
 
-let mk_case w v u ts = LPA.mkApp [mk_head CASE; v; ts; w; u]
+let mk_case w v u ts = LPA.mkApp [mk_head CASE; w; u; v; ts]
 
 let mk_is_type u = LPA.mkApp [LPA.mkCon "is_type"; u]
 
