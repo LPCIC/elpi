@@ -275,6 +275,13 @@ let _ =
     match args with
     | [t1] -> if is_name t1 then [] else raise No_clause
     | _ -> type_error "$is_name takes 1 argument") ;
+  register_custom "$names" (fun ~depth ~env:_ _ args ->
+    let rec mk_local_vars a l =
+      if l < 0 then a else mk_local_vars (Cons (Const l, a)) (pred l)
+    in
+    match args with
+    | [t1] -> [App(eqc, t1, [mk_local_vars Nil (pred depth)])]
+    | _    -> type_error "$names takes 1 argument") ;
   register_custom "$llam_unif" (fun ~depth ~env _ args ->
     match args with
     | [t1;t2] -> (try if llam_unify depth env depth t1 t2 then [] else raise No_clause with _ -> raise No_clause)
