@@ -14,6 +14,7 @@ module R   = NReference
 module C   = NCic
 module P   = NCicPp
 module E   = NCicEnvironment
+module LPT = Elpi_trace
 module LPA = Elpi_ast
 module LPX = Elpi_latex_exporter (* initializes the parser, puah :( *)
 module LPP = Elpi_parser
@@ -271,6 +272,9 @@ let set_kernel_from_string s = match String.uppercase s with
    | "FG"  -> set_kernel FG
    | "CSC" -> set_kernel CSC
    | _     -> ()
+
+let set_trace () =
+   ignore (LPT.parse_argv [| "-perf-on"; "-trace-at"; "run"; "1"; "99999999" |])
 
 let execute r query =
    let str = R.string_of_reference r in

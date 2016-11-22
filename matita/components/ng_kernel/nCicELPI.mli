@@ -12,6 +12,9 @@
 (* use this kernel: valid values "NO" (default), "CSC", "FG" *)
 val set_kernel_from_string: string -> unit
 
+(* turn tracing facility on *)
+val set_trace: unit -> unit
+
 (* is_type r u is false (?) if the type of u is a sort *)
 val is_type: NReference.reference -> NCic.term -> bool
 

@@ -40,6 +40,9 @@ let _ =
      "-elpi", Arg.String
       NCicELPI.set_kernel_from_string,
       "the prolog kernel to use: NO, CSC, FG";
+     "-elpi-trace", Arg.Unit
+      NCicELPI.set_trace,
+      "turn on prolog query tracing";
     ];
   MatitaInit.initialize_all ();
   MatitaMisc.reset_font_size ()
