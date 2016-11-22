@@ -40,8 +40,11 @@ let benchmark f g =
  let t1 = Unix.gettimeofday () in
  g () ;
  let t2 = Unix.gettimeofday () in
- total_matita_time := !total_matita_time +. t1 -. t0 ;
- total_elpi_time := !total_elpi_time +. t2 -. t1
+ let d1, d2 = t1 -. t0, t2 -. t1 in
+ total_matita_time := !total_matita_time +. d1 ;
+ total_elpi_time := !total_elpi_time +. d2;
+ Printf.printf "Matita type-checking time: %f\n" d1;
+ Printf.printf "ELPI type-checking time: %f\n" d2
 (*FG: end of extension for ELPI *)
 
 exception TypeCheckerFailure of string Lazy.t
