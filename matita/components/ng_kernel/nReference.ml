@@ -92,9 +92,9 @@ fun s ->
     let new_reference =
       try
         let dot = String.rindex s '+' in
-        let prefix = String.sub s 0 (dot+1) in
+        let prefix = String.sub s 0 dot in
         let suffix = String.sub s (dot+1) 3 in
-        let u = NUri.uri_of_string (prefix ^ uri_suffix_of_ref_suffix suffix) in
+        let u = NUri.uri_of_string (prefix ^ "." ^ uri_suffix_of_ref_suffix suffix) in
         match suffix with
         | "dec" -> Ref (u, Decl)
         | "def" -> let i = get1 s dot in Ref (u, Def i)
@@ -111,7 +111,7 @@ fun s ->
 
 let string_of_reference (Ref (u,indinfo)) =
   let s = NUri.string_of_uri u in
-  let dot = String.rindex s '+' in
+  let dot = String.rindex s '.' in
   let s2 = String.sub s 0 dot in
   match indinfo with
   | Decl ->  s2 ^ "+dec"
