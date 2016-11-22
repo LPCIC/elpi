@@ -11,6 +11,8 @@
 
 (* $Id: nCicRefiner.mli 9227 2008-11-21 16:00:06Z tassi $ *)
 
+module Ref = NReference
+
 let debug s = prerr_endline (Lazy.force s);;
 let debug _ = ();;
 
@@ -62,7 +64,10 @@ class virtual status =
    = fun o -> {< db = o#uhint_db >}
  end
 
-let dummy = NCic.Const (NReference.reference_of_string "cic:/dummy_conv.dec");;
+let dummy =
+ let uri = NUri.uri_of_string "cic:/matita/dummy/dec.con" in
+ NCic.Const (Ref.reference_of_spec uri Ref.Decl);;
+
 let pair t1 t2 = (NCic.Appl [dummy;t1;t2]) ;;
 
 let index_hint status context t1 t2 precedence =
@@ -176,11 +181,11 @@ let db () =
               in 
               let n1 = 
                 NCic.Appl (NCic.Const(OCic2NCic.reference_of_ouri 
-                 u1 (NReference.Def h1)) :: mk_rels (List.length ctx))
+                 u1 (Ref.Def h1)) :: mk_rels (List.length ctx))
               in
               let n2 = 
                 NCic.Appl (NCic.Const(OCic2NCic.reference_of_ouri 
-                 u2 (NReference.Def h2)) :: mk_rels (List.length ctx))
+                 u2 (Ref.Def h2)) :: mk_rels (List.length ctx))
               in
                 [ctx,b1,b2; ctx,b1,n2; ctx,n1,b2; ctx,n1,n2]
               end else []

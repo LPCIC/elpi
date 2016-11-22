@@ -178,6 +178,16 @@ in
   name' ^ (if last = -1 then "" else string_of_int (last + 1))
 with exn -> prerr_endline ("XXX" ^ Printexc.to_string exn); assert false
 
+(* let eq, eq_refl =
+    let uri = NUri.uri_of_string "cic:/matita/ng/Plogic/equality/eq.ind" in
+    C.Const (Ref.reference_of_spec uri (Ref.Ind (true,0,2))),
+    C.Const (Ref.reference_of_spec uri Ref.Con (0,1,2))
+*)
+let eq, eq_refl = 
+ let uri = NUri.uri_of_string "cic:/matita/basics/jmeq/jmeq.ind" in
+ C.Const (Ref.reference_of_spec uri (Ref.Ind(true,0,2))),
+ C.Const (Ref.reference_of_spec uri (Ref.Con(0,1,2)))
+
 let rec typeof (status:#NCicCoercion.status)
   ?(localise=fun _ -> Stdpp.dummy_loc) 
   metasenv subst context term expty 
@@ -603,7 +613,7 @@ and try_coercions status
         (* {{{ helper functions *)
         let get_cl_and_left_p refit outty =
           match refit with
-          | NReference.Ref (uri, NReference.Ind (_,tyno,leftno)) ->
+          | Ref.Ref (uri, Ref.Ind (_,tyno,leftno)) ->
              let _, leftno, itl, _, _ = NCicEnvironment.get_checked_indtys status r in
              let _, _, ty, cl = List.nth itl tyno in
              let constructorsno = List.length cl in
@@ -678,10 +688,6 @@ and try_coercions status
                 (List.map (NCicSubstitution.lift status 1) right_p) (NCicSubstitution.lift status 1 matched) (n-1))
           | _ -> assert false
         in
-        (*let eq = C.Const (NReference.reference_of_string ("cic:/matita/ng/Plogic/equality/eq.ind(1,0,2)")) in
-        let eq_refl = C.Const (NReference.reference_of_string ("cic:/matita/ng/Plogic/equality/eq.con(0,1,2)")) in*)
-        let eq = C.Const (NReference.reference_of_string ("cic:/matita/basics/jmeq/jmeq.ind(1,0,2)")) in
-        let eq_refl = C.Const (NReference.reference_of_string ("cic:/matita/basics/jmeq/jmeq.con(0,1,2)")) in
         let add_params 
           metasenv subst context cty outty mty m i 
         =
@@ -1014,8 +1020,8 @@ and sort_of_prod status localise metasenv subst context orig_s orig_t (name,s)
 and guess_name status subst ctx ty = 
   let aux initial = "#" ^ String.make 1 initial in
   match ty with
-  | C.Const (NReference.Ref (u,_))
-  | C.Appl (C.Const (NReference.Ref (u,_)) :: _) ->
+  | C.Const (Ref.Ref (u,_))
+  | C.Appl (C.Const (Ref.Ref (u,_)) :: _) ->
       aux (String.sub (NUri.name_of_uri u) 0 1).[0] 
   | C.Prod _ -> aux 'f' 
   | C.Meta (n,lc) -> 
@@ -1106,7 +1112,7 @@ and eat_prods status ~localise force_ty metasenv subst context expty orig_t orig
           aux metasenv subst (arg :: args_so_far) he meta tl
       | C.Match (_,_,C.Meta _,_) 
       | C.Match (_,_,C.Appl (C.Meta _ :: _),_) 
-      | C.Appl (C.Const (NReference.Ref (_, NReference.Fix _)) :: _) ->
+      | C.Appl (C.Const (Ref.Ref (_, Ref.Fix _)) :: _) ->
           raise (Uncertain (lazy (localise orig_he, Printf.sprintf
             ("The term %s is here applied to %d arguments but expects " ^^
             "only %d arguments") (status#ppterm ~metasenv ~subst ~context he)
@@ -1171,8 +1177,8 @@ let undebruijnate status inductive ref t rev_fl =
       (fun (_,_,rno,_,_,_) i -> 
          let i = len - i - 1 in
          C.Const 
-           (if inductive then NReference.mk_fix i rno ref
-            else NReference.mk_cofix i ref))
+           (if inductive then Ref.mk_fix i rno ref
+            else Ref.mk_cofix i ref))
       rev_fl)
     t
 ;; 
@@ -1224,9 +1230,9 @@ let typeof_obj
           (fun (relevance,name,k,ty,dbo) ->
             let bo = 
               undebruijnate status inductive 
-               (NReference.reference_of_spec uri 
-                 (if inductive then NReference.Fix (0,k,0) 
-                  else NReference.CoFix 0)) dbo rev_fl
+               (Ref.reference_of_spec uri 
+                 (if inductive then Ref.Fix (0,k,0) 
+                  else Ref.CoFix 0)) dbo rev_fl
             in
               relevance,name,k,ty,bo)
           fl
@@ -1365,8 +1371,8 @@ let typeof_obj
                     if i <= leftno  then
                      C.Rel i
                     else
-                     C.Const (NReference.reference_of_spec uri
-                      (NReference.Ind (ind,relsno - i,leftno))))
+                     C.Const (Ref.reference_of_spec uri
+                      (Ref.Ind (ind,relsno - i,leftno))))
                   (HExtlib.list_seq 1 (relsno+1))
                    te in
                let te =

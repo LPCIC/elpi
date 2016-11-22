@@ -25,11 +25,13 @@
 
 (* $Id: cicPp.ml 7413 2007-05-29 15:30:53Z tassi $ *)
 
+module Ref = NReference
+
 let fix_sorts t = t;;
 let apply_subst subst t = assert (subst=[]); t;;
 
-type typformerreference = NReference.reference
-type reference = NReference.reference
+type typformerreference = Ref.reference
+type reference = Ref.reference
 
 type kind =
   | Type
@@ -130,13 +132,13 @@ let rec size_of_term =
     | UnsafeCoerce t -> 1 + size_of_term t
 ;;
 
-module ReferenceMap = Map.Make(struct type t = NReference.reference let compare = NReference.compare end)
+module ReferenceMap = Map.Make(struct type t = Ref.reference let compare = Ref.compare end)
 
 module GlobalNames = Set.Make(String)
 
 type info_el =
  string * [`Type of typ_context * typ option | `Constructor of typ | `Function of typ ]
-type info = (NReference.reference * info_el) list
+type info = (Ref.reference * info_el) list
 type db = info_el ReferenceMap.t * GlobalNames.t
 
 let empty_info = []
@@ -146,15 +148,16 @@ type obj_kind =
  | TypeDefinition of typ_former_def
  | TermDeclaration of term_former_decl
  | TermDefinition of term_former_def
- | LetRec of (info * NReference.reference * obj_kind) list
+ | LetRec of (info * Ref.reference * obj_kind) list
    (* reference, left, right, constructors *)
- | Algebraic of (info * NReference.reference * typ_context * typ_context * (NReference.reference * typ) list) list
+ | Algebraic of (info * Ref.reference * typ_context * typ_context * (Ref.reference * typ) list) list
 
-type obj = info * NReference.reference * obj_kind
+type obj = info * Ref.reference * obj_kind
 
 (* For LetRec and Algebraic blocks *)
 let dummyref =
- NReference.reference_of_string "cic:/matita/dummy/dummy.ind(1,1,1)"
+ let uri = NUri.uri_of_string "cic:/matita/dummy/indty.ind" in
+ Ref.reference_of_spec uri (Ref.Ind (true,1,1))
 
 type not_term = [`Kind | `KindOrType | `PropKind | `Proposition | `Type];;
 
@@ -185,7 +188,7 @@ let rec classify_not_term status context t =
      classify_not_term status ((b,NCic.Decl s)::context) t
   | NCic.Implicit _
   | NCic.LetIn _
-  | NCic.Const (NReference.Ref (_,NReference.CoFix _))
+  | NCic.Const (Ref.Ref (_,Ref.CoFix _))
   | NCic.Appl [] ->
      assert false (* NOT POSSIBLE *)
   | NCic.Lambda (n,s,t) ->
@@ -195,10 +198,10 @@ let rec classify_not_term status context t =
   | NCic.Match (_,_,_,pl) ->
      let classified_pl = List.map (classify_not_term status context) pl in
       sup classified_pl
-  | NCic.Const (NReference.Ref (_,NReference.Fix _)) ->
+  | NCic.Const (Ref.Ref (_,Ref.Fix _)) ->
      assert false (* IMPOSSIBLE *)
   | NCic.Meta _ -> assert false (* TODO *)
-  | NCic.Appl (NCic.Const (NReference.Ref (_,NReference.Fix (i,_,_)) as r)::_)->
+  | NCic.Appl (NCic.Const (Ref.Ref (_,Ref.Fix (i,_,_)) as r)::_)->
      let l,_,_ = NCicEnvironment.get_checked_fixes_or_cofixes status r in
      let _,_,_,_,bo = List.nth l i in
       classify_not_term status [] bo
@@ -223,7 +226,7 @@ let rec classify_not_term status context t =
       (match List.nth context (n-1) with
           _,NCic.Decl typ -> find_sort typ
         | _,NCic.Def _ -> assert false (* IMPOSSIBLE *))
-  | NCic.Const (NReference.Ref (_,NReference.Decl) as ref) ->
+  | NCic.Const (Ref.Ref (_,Ref.Decl) as ref) ->
      let _,_,ty,_,_ = NCicEnvironment.get_checked_decl status ref in
       (match classify_not_term status [] ty with
         | `Proposition
@@ -231,7 +234,7 @@ let rec classify_not_term status context t =
         | `Kind
         | `KindOrType -> `Type
         | `PropKind -> `Proposition)
-  | NCic.Const (NReference.Ref (_,NReference.Ind _) as ref) ->
+  | NCic.Const (Ref.Ref (_,Ref.Ind _) as ref) ->
      let _,_,ityl,_,i = NCicEnvironment.get_checked_indtys status ref in
      let _,_,arity,_ = List.nth ityl i in
       (match classify_not_term status [] arity with
@@ -240,8 +243,8 @@ let rec classify_not_term status context t =
         | `KindOrType -> assert false (* IMPOSSIBLE *)
         | `Kind -> `Type
         | `PropKind -> `Proposition)
-  | NCic.Const (NReference.Ref (_,NReference.Con _))
-  | NCic.Const (NReference.Ref (_,NReference.Def _)) ->
+  | NCic.Const (Ref.Ref (_,Ref.Con _))
+  | NCic.Const (Ref.Ref (_,Ref.Def _)) ->
      assert false (* IMPOSSIBLE *)
 ;;
 
@@ -377,10 +380,10 @@ let rec split_typ_lambdas status n ~metasenv context typ =
 
 let rev_context_of_typformer status ~metasenv context =
  function
-    NCic.Const (NReference.Ref (_,NReference.Ind _) as ref)
-  | NCic.Const (NReference.Ref (_,NReference.Def _) as ref)
-  | NCic.Const (NReference.Ref (_,NReference.Decl) as ref)
-  | NCic.Const (NReference.Ref (_,NReference.Fix _) as ref) ->
+    NCic.Const (Ref.Ref (_,Ref.Ind _) as ref)
+  | NCic.Const (Ref.Ref (_,Ref.Def _) as ref)
+  | NCic.Const (Ref.Ref (_,Ref.Decl) as ref)
+  | NCic.Const (Ref.Ref (_,Ref.Fix _) as ref) ->
      (try
        match snd (ReferenceMap.find ref (fst status#extraction_db)) with
           `Type (ctx,_) -> List.rev ctx
@@ -405,8 +408,8 @@ let rev_context_of_typformer status ~metasenv context =
      let typ = kind_of status ~metasenv typ_ctx typ in
       List.rev (fst (split_kind_prods [] typ))
   | NCic.Meta _ -> assert false (* TODO *)
-  | NCic.Const (NReference.Ref (_,NReference.Con _))
-  | NCic.Const (NReference.Ref (_,NReference.CoFix _))
+  | NCic.Const (Ref.Ref (_,Ref.Con _))
+  | NCic.Const (Ref.Ref (_,Ref.CoFix _))
   | NCic.Sort _ | NCic.Implicit _ | NCic.Lambda _ | NCic.LetIn _
   | NCic.Appl _ | NCic.Prod _ ->
      assert false (* IMPOSSIBLE *)
@@ -434,7 +437,7 @@ let rec typ_of status ~metasenv context k =
   | NCic.Rel n -> Var n
   | NCic.Const ref -> TConst ref
   | NCic.Match (_,_,_,_)
-  | NCic.Appl (NCic.Const (NReference.Ref (_,NReference.Fix _))::_) ->
+  | NCic.Appl (NCic.Const (Ref.Ref (_,Ref.Fix _))::_) ->
      Top
   | NCic.Appl (he::args) ->
      let rev_he_context= rev_context_of_typformer status ~metasenv context he in
@@ -521,7 +524,7 @@ let fomega_lookup status ref =
    | `Function _ -> assert false
  with
   Not_found ->
-prerr_endline ("BUG, THIS SHOULD NEVER HAPPEN " ^ NReference.string_of_reference ref); None
+prerr_endline ("BUG, THIS SHOULD NEVER HAPPEN " ^ Ref.string_of_reference ref); None
 
 let rec fomega_whd status ty =
  match ty with
@@ -548,7 +551,7 @@ let rec fomega_conv status t1 t2 =
     Var n, Var m -> n=m
   | Unit, Unit -> true
   | Top, Top -> true
-  | TConst r1, TConst r2 -> NReference.eq r1 r2
+  | TConst r1, TConst r2 -> Ref.eq r1 r2
   | Arrow (s1,t1), Arrow (s2,t2) ->
      fomega_conv status s1 s2 && fomega_conv status t1 t2
   | TSkip t1, TSkip t2 -> fomega_conv status t1 t2
@@ -574,11 +577,11 @@ let type_of_constructor status ref =
 
 let type_of_appl_he status ~metasenv context =
  function
-    NCic.Const (NReference.Ref (_,NReference.Con _) as ref)
-  | NCic.Const (NReference.Ref (_,NReference.Def _) as ref)
-  | NCic.Const (NReference.Ref (_,NReference.Decl) as ref)
-  | NCic.Const (NReference.Ref (_,NReference.Fix _) as ref)
-  | NCic.Const (NReference.Ref (_,NReference.CoFix _) as ref) ->
+    NCic.Const (Ref.Ref (_,Ref.Con _) as ref)
+  | NCic.Const (Ref.Ref (_,Ref.Def _) as ref)
+  | NCic.Const (Ref.Ref (_,Ref.Decl) as ref)
+  | NCic.Const (Ref.Ref (_,Ref.Fix _) as ref)
+  | NCic.Const (Ref.Ref (_,Ref.CoFix _) as ref) ->
      (try
        match snd (ReferenceMap.find ref (fst status#extraction_db)) with
           `Type _ -> assert false
@@ -586,7 +589,7 @@ let type_of_appl_he status ~metasenv context =
         | `Function ty -> ty
       with
        Not_found -> assert false)
-  | NCic.Const (NReference.Ref (_,NReference.Ind _)) ->
+  | NCic.Const (Ref.Ref (_,Ref.Ind _)) ->
      assert false (* IMPOSSIBLE *)
   | NCic.Rel n ->
      (match List.nth context (n-1) with
@@ -685,7 +688,7 @@ let rec term_of status ~metasenv context =
         try
          HExtlib.list_mapi
           (fun pat i ->
-            let ref = NReference.mk_constructor (i+1) ref in
+            let ref = Ref.mk_constructor (i+1) ref in
             let ty = 
              (* BUG HERE, QUICK BUG WRONG PATCH IN PLACE *)
              try
@@ -801,7 +804,7 @@ let fresh_name_of_ref status ref =
  (*CSC: Patch while we wait for separate compilation *)
  let candidate =
   let name = NCicPp.r2s status true ref in
-  let NReference.Ref (uri,_) = ref in
+  let Ref.Ref (uri,_) = ref in
   let path = NUri.baseuri_of_uri uri in
   let path = String.sub path 5 (String.length path - 5) in
   let path = Str.global_replace (Str.regexp "/") "_" path in
@@ -879,7 +882,7 @@ let object_of_inductive status ~metasenv uri ind leftno il =
           let ctx,_ = split_kind_prods [] arity in
           let right,left = HExtlib.split_nth (List.length ctx - leftno) ctx in
           let ref =
-           NReference.reference_of_spec uri (NReference.Ind (ind,i,leftno)) in
+           Ref.reference_of_spec uri (Ref.Ind (ind,i,leftno)) in
           let info = ref,`Type (ctx,None) in
           let status,info = register_name_and_info status info in
           let _,status,cl_rev,infos =
@@ -890,7 +893,7 @@ let object_of_inductive status ~metasenv uri ind leftno il =
               let ty = typ_of status ~metasenv ctx ty in
               let left = term_ctx_of_type_ctx left in
               let full_ty = glue_ctx_typ left ty in
-              let ref = NReference.mk_constructor j ref in
+              let ref = Ref.mk_constructor j ref in
               let info = ref,`Constructor full_ty in
               let status,info = register_name_and_info status info in
                j+1,status,((ref,ty)::res),info::infos
@@ -908,7 +911,7 @@ let object_of status (uri,height,metasenv,subst,obj_kind) =
   let obj_kind = apply_subst subst obj_kind in
       match obj_kind with
         | NCic.Constant (_,_,None,ty,_) ->
-          let ref = NReference.reference_of_spec uri NReference.Decl in
+          let ref = Ref.reference_of_spec uri Ref.Decl in
           (match classify status ~metasenv [] ty with
             | `Kind ->
               let ty = kind_of status ~metasenv [] ty in
@@ -927,7 +930,7 @@ let object_of status (uri,height,metasenv,subst,obj_kind) =
                 TermDeclaration (split_typ_prods [] ty))
             | `Term _ -> status, Failure "Type classified as a term.  This is a bug.")
         | NCic.Constant (_,_,Some bo,ty,_) ->
-           let ref = NReference.reference_of_spec uri (NReference.Def height) in
+           let ref = Ref.reference_of_spec uri (Ref.Def height) in
             object_of_constant status ~metasenv ref bo ty
         | NCic.Fixpoint (fix_or_cofix,fs,_) ->
           let _,status,objs =
@@ -935,10 +938,10 @@ let object_of status (uri,height,metasenv,subst,obj_kind) =
             (fun (_,_name,recno,ty,bo) (i,status,res) ->
               let ref =
                if fix_or_cofix then
-                NReference.reference_of_spec
-                 uri (NReference.Fix (i,recno,height))
+                Ref.reference_of_spec
+                 uri (Ref.Fix (i,recno,height))
                else
-                NReference.reference_of_spec uri (NReference.CoFix i)
+                Ref.reference_of_spec uri (Ref.CoFix i)
               in
               let status,obj = object_of_constant ~metasenv status ref bo ty in
                 match obj with
@@ -1041,7 +1044,7 @@ let classify_reference status ref =
    | `Function _ -> `FunctionName
  with
   Not_found ->
-prerr_endline ("BUG, THIS SHOULD NEVER HAPPEN " ^ NReference.string_of_reference ref); `FunctionName
+prerr_endline ("BUG, THIS SHOULD NEVER HAPPEN " ^ Ref.string_of_reference ref); `FunctionName
 ;;
 
 let capitalize classification name =
@@ -1057,7 +1060,7 @@ let pp_ref status ref =
  capitalize (classify_reference status ref)
   (try fst (ReferenceMap.find ref (fst status#extraction_db))
    with Not_found ->
-prerr_endline ("BUG with coercions: " ^ NReference.string_of_reference ref);
+prerr_endline ("BUG with coercions: " ^ Ref.string_of_reference ref);
 (*assert false*)
  NCicPp.r2s status true ref (* BUG: this should never happen *)
 )
@@ -1146,7 +1149,7 @@ let rec pretty_print_term status ctxt =
          String.concat " ;\n"
            (HExtlib.list_mapi
              (fun (bound_names,rhs) i ->
-               let ref = NReference.mk_constructor (i+1) r in
+               let ref = Ref.mk_constructor (i+1) r in
                let name = pp_ref status ref in
                let ctxt,bound_names =
                 pretty_print_term_context status ctxt bound_names in

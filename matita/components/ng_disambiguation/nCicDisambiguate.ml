@@ -167,7 +167,8 @@ let interpretate_term_and_interpretate_term_option (status: #NCic.status)
                    "branch pattern must be \"_\"")))
            ) branches in
          let indtype_ref =
-          NReference.reference_of_string "cic:/fake_indty.ind(0,0,0)"
+          let uri = NUri.uri_of_string "cic:/matita/dummy/indty.ind" in 
+          NRef.reference_of_spec uri (NRef.Ind (true,1,1))
          in
           NCic.Match (indtype_ref, cic_outtype, cic_term,
            (List.map do_branch branches))
@@ -177,7 +178,7 @@ let interpretate_term_and_interpretate_term_option (status: #NCic.status)
           | Some (indty_ident, _) ->
              (match Disambiguate.resolve ~env ~mk_choice 
                 (DT.Id indty_ident) (`Args []) with
-              | NCic.Const (NReference.Ref (_,NReference.Ind _) as r) -> r
+              | NCic.Const (NRef.Ref (_,NRef.Ind _) as r) -> r
               | NCic.Implicit _ ->
                  raise (Disambiguate.Try_again 
                   (lazy "The type of the term to be matched is still unknown"))
@@ -205,9 +206,9 @@ let interpretate_term_and_interpretate_term_option (status: #NCic.status)
 *)
               (match Disambiguate.resolve ~env ~mk_choice
                 (DT.Id (fst_constructor branches)) (`Args []) with
-              | NCic.Const (NReference.Ref (_,NReference.Con _) as r) -> 
+              | NCic.Const (NRef.Ref (_,NRef.Con _) as r) -> 
                    let b,_,_,_,_= NCicEnvironment.get_checked_indtys status r in
-                   NReference.mk_indty b r
+                   NRef.mk_indty b r
               | NCic.Implicit _ ->
                  raise (Disambiguate.Try_again 
                   (lazy "The type of the term to be matched is still unknown"))
@@ -322,7 +323,7 @@ let interpretate_term_and_interpretate_term_option (status: #NCic.status)
     | NotationPt.Uri (uri, subst) ->
        assert (subst = None);
        (try
-         NCic.Const (NReference.reference_of_string uri)
+         NCic.Const (NRef.reference_of_string uri)
         with NRef.IllFormedReference _ ->
          NotationPt.fail loc "Ill formed reference")
     | NotationPt.NRef nref -> NCic.Const nref
@@ -466,7 +467,7 @@ let interpretate_obj status
       List.fold_left
        (fun (i,res) (name,_,_,_) ->
          let nref =
-          NReference.reference_of_spec uri (NReference.Ind (inductive,i,leftno))
+          NRef.reference_of_spec uri (NRef.Ind (inductive,i,leftno))
          in
           i+1,(name,nref)::res)
        (0,[]) tyl) in
@@ -521,7 +522,7 @@ let interpretate_obj status
       (interpretate_term status ~obj_context:[] ~context ~env ~uri:None
         ~is_path:false ty) in
     let nref =
-     NReference.reference_of_spec uri (NReference.Ind (true,0,leftno)) in
+     NRef.reference_of_spec uri (NRef.Ind (true,0,leftno)) in
     let obj_context = [name,nref] in
     let fields' =
      snd (
@@ -555,9 +556,9 @@ let interpretate_obj status
        List.fold_left
          (fun (i,acc) (_,(name,_),_,k) -> 
           (i+1, 
-            (ncic_name_of_ident name, NReference.reference_of_spec uri 
-             (if inductive then NReference.Fix (i,k,0)
-              else NReference.CoFix i)) :: acc))
+            (ncic_name_of_ident name, NRef.reference_of_spec uri 
+             (if inductive then NRef.Fix (i,k,0)
+              else NRef.CoFix i)) :: acc))
          (0,[]) defs
      in
      let inductiveFuns =
