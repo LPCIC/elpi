@@ -40,8 +40,10 @@ let get_program kernel =
                 "debug_end.elpi";
                ]
       | CSC -> ["../.."; "../../../papers/DALEFEST/elpi"; ],
-               [ "PTS_matita.elpi";
+               [ "trace_kernel.elpi";
+                 "PTS_matita.elpi";
                  "PTS_kernel_machine.elpi";
+                 "debug_kernel.elpi";
                ]
    in
    let paths = List.map (Filename.concat matita_dir) paths in
