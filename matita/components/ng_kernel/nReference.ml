@@ -46,14 +46,14 @@ module MapStringsToReference = Map.Make(OrderedStrings);;
 let set_of_reference = ref MapStringsToReference.empty;;
 
 (* Note: valid ELPI constant
- * '+' not allowed in path and name
+ * '#' not allowed in path and name
  *
- * Decl                   cic:/path/name+dec
- * Def                    cic:/path/name+def<i>
- * Fix of int * int       cic:/path/name+fix<i/j/h>
- * CoFix of int           cic:/path/name+cfx<i>
- * Ind of int             cic:/path/name+ind<b/i/l>
- * Con of int * int       cic:/path/name+con<i/j/l>
+ * Decl                   cic:/path/name#dec
+ * Def                    cic:/path/name#def/i
+ * Fix of int * int       cic:/path/name#fix/i/j/h
+ * CoFix of int           cic:/path/name#cfx/i
+ * Ind of int             cic:/path/name#ind/b/i/l
+ * Con of int * int       cic:/path/name#con/i/j/l
  *)
 
 let uri_suffix_of_ref_suffix = function
@@ -68,7 +68,7 @@ let reference_of_string =
     let comma = String.rindex_from s (comma2-1) '/' in
     let s_i = String.sub s (dot+5) (comma-dot-5) in
     let s_j = String.sub s (comma+1) (comma2-comma-1) in
-    let s_h = String.sub s (comma2+1) (String.length s-comma2-2) in
+    let s_h = String.sub s (comma2+1) (String.length s-comma2-1) in
     let i = int_of_string s_i in
     let j = int_of_string s_j in
     let h = int_of_string s_h in
@@ -76,14 +76,14 @@ let reference_of_string =
   in
 (*
   let get2 s dot =
-    let comma = String.rindex s ',' in
+    let comma = String.rindex s '/' in
     let i = int_of_string (String.sub s (dot+5) (comma-dot-5)) in
-    let j = int_of_string (String.sub s (comma+1) (String.length s-comma-2)) in
+    let j = int_of_string (String.sub s (comma+1) (String.length s-comma-1)) in
     i,j
   in
 *)
   let get1 s dot =
-    let i = int_of_string (String.sub s (dot+5) (String.length s-1-dot-5)) in
+    let i = int_of_string (String.sub s (dot+5) (String.length s-dot-5)) in
     i
   in
 fun s ->
@@ -91,7 +91,7 @@ fun s ->
   with Not_found ->
     let new_reference =
       try
-        let dot = String.rindex s '+' in
+        let dot = String.rindex s '#' in
         let prefix = String.sub s 0 dot in
         let suffix = String.sub s (dot+1) 3 in
         let u = NUri.uri_of_string (prefix ^ "." ^ uri_suffix_of_ref_suffix suffix) in
@@ -114,16 +114,16 @@ let string_of_reference (Ref (u,indinfo)) =
   let dot = String.rindex s '.' in
   let s2 = String.sub s 0 dot in
   match indinfo with
-  | Decl ->  s2 ^ "+dec"
-  | Def h -> s2 ^ "+def<" ^ string_of_int h ^ ">"
+  | Decl ->  s2 ^ "#dec"
+  | Def h -> s2 ^ "#def/" ^ string_of_int h
   | Fix (i,j,h)  -> 
-      s2 ^ "+fix<" ^ string_of_int i ^ "/" ^
-      string_of_int j ^ "/" ^ string_of_int h ^ ">"
-  | CoFix i -> s2 ^ "+cfx<" ^ string_of_int i ^ ">"
-  | Ind (b,i,l)->s2 ^"+ind<" ^(if b then "1" else "0")^ "/" ^ string_of_int i ^
-      "/" ^ string_of_int l ^ ">"
-  | Con (i,j,l) -> s2 ^ "+con<" ^ string_of_int i ^ "/" ^ string_of_int j ^
-      "/" ^ string_of_int l ^ ">"
+      s2 ^ "#fix/" ^ string_of_int i ^ "/" ^
+      string_of_int j ^ "/" ^ string_of_int h
+  | CoFix i -> s2 ^ "#cfx/" ^ string_of_int i
+  | Ind (b,i,l)->s2 ^"#ind/" ^(if b then "1" else "0")^ "/" ^ string_of_int i ^
+      "/" ^ string_of_int l
+  | Con (i,j,l) -> s2 ^ "#con/" ^ string_of_int i ^ "/" ^ string_of_int j ^
+      "/" ^ string_of_int l
 ;;
 
 let mk_constructor j = function
