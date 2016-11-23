@@ -333,7 +333,9 @@ class cicBrowser_impl ~(history:MatitaTypes.mathViewer_entry MatitaMisc.history)
       HExtlib.safe_remove filename
   in
   object (self)
-    val mutable gviz_uri = NReference.reference_of_string "cic:/dummy.dec";
+    val mutable gviz_uri =
+      let uri = NUri.uri_of_string "cic:/dummy/dec.con" in
+      NReference.reference_of_spec uri NReference.Decl;
 
     val dep_contextual_menu = GMenu.menu ()
 
