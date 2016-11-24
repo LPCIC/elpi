@@ -46,7 +46,7 @@ qed.
 lemma inject_trans_def :∀sig:FinSet.∀n,i:nat.i < S n → 
   ∀M,v,s,a,sn,an,mn.
   trans sig M 〈s,a〉 = 〈sn,an,mn〉 → 
-  cic:/matita/turing/turing/trans.fix(0,2,9) sig n (inject_TM sig M n i) 〈s,change_vec ? (S n) v a i〉 = 
+  cic:/matita/turing/turing/trans#fix:0:2:9 sig n (inject_TM sig M n i) 〈s,change_vec ? (S n) v a i〉 = 
     〈sn,change_vec ? (S n) (null_action ? n) 〈an,mn〉 i〉.
 #sig #n #i #Hlt #M #v #s #a #sn #an #mn #Htrans
 whd in ⊢ (??%?); >nth_change_vec // >Htrans //
@@ -58,7 +58,7 @@ lemma inj_ter: ∀A,B,C.∀p:A×B×C.
 
 lemma inject_step : ∀sig,n,M,i,q,t,nq,nt,v. i < S n →
   step sig M (mk_config ?? q t) = mk_config ?? nq nt → 
-  cic:/matita/turing/turing/step.def(12) sig n (inject_TM sig M n i) 
+  cic:/matita/turing/turing/step#def:12 sig n (inject_TM sig M n i) 
     (mk_mconfig ?? n q (change_vec ? (S n) v t i)) 
   = mk_mconfig ?? n nq (change_vec ? (S n) v nt i).
 #sig #n #M #i #q #t #nq #nt #v #lein whd in ⊢ (??%?→?);
@@ -78,7 +78,7 @@ cases (decidable_eq_nat … i i0) #Hii0
 qed. 
 
 lemma halt_inject: ∀sig,n,M,i,x.
-  cic:/matita/turing/turing/halt.fix(0,2,9) sig n (inject_TM sig M n i) x
+  cic:/matita/turing/turing/halt#fix:0:2:9 sig n (inject_TM sig M n i) x
    = halt sig M x.
 // qed.
 
@@ -88,7 +88,7 @@ qed.
 
 lemma loop_inject: ∀sig,n,M,i,k,ins,int,outs,outt,vt.i < S n → 
  loopM sig M k (mk_config ?? ins int) = Some ? (mk_config ?? outs outt) → 
- cic:/matita/turing/turing/loopM.def(13) sig n (inject_TM sig M n i) k (mk_mconfig ?? n ins (change_vec ?? vt int i))
+ cic:/matita/turing/turing/loopM#def:13 sig n (inject_TM sig M n i) k (mk_mconfig ?? n ins (change_vec ?? vt int i))
   =Some ? (mk_mconfig sig ? n outs (change_vec ?? vt outt i)).
 #sig #n #M #i #k elim k -k
   [#ins #int #outs #outt #vt #Hin normalize in ⊢ (%→?); #H destruct
