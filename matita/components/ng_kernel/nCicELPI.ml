@@ -141,9 +141,7 @@ let mk_prod n w t = LPA.mkApp [mk_head PROD; w; LPA.mkLam (mk_name n) t]
 
 let mk_abst n w t = LPA.mkApp [mk_head ABST; w; LPA.mkLam (mk_name n) t]
 
-let mk_abbr n v w t = match !kernel with
-   | NO | FG -> LPA.mkApp [mk_head ABBR; v; w; LPA.mkLam (mk_name n) t]
-   | CSC     -> LPA.mkApp [mk_head ABBR; w; v; LPA.mkLam (mk_name n) t]
+let mk_abbr n w v t = LPA.mkApp [mk_head ABBR; w; v; LPA.mkLam (mk_name n) t]
 
 let mk_appl t v = LPA.mkApp [mk_head APPL; t; v]
 
@@ -162,7 +160,7 @@ let rec lp_term c = function
    | C.Sort s              -> mk_sort s
    | C.Prod (_, w, t)      -> mk_prod c (lp_term c w) (lp_term (succ c) t)
    | C.Lambda (_, w, t)    -> mk_abst c (lp_term c w) (lp_term (succ c) t)
-   | C.LetIn (_, w, v, t)  -> mk_abbr c (lp_term c v) (lp_term c w) (lp_term (succ c) t)
+   | C.LetIn (_, w, v, t)  -> mk_abbr c (lp_term c w) (lp_term c v) (lp_term (succ c) t)
    | C.Appl []             -> assert false
    | C.Appl [t]            -> lp_term c t
    | C.Appl (t :: vs) when !kernel <> CSC -> mk_appl (lp_term c t) (lp_terms c vs)
