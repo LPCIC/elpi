@@ -180,9 +180,6 @@ let mk_term ~depth t =
 let mk_int ~depth i =
    LPR.term_of_ast ~depth (LPA.mkInt i)
 
-let mk_string ~depth s =
-   LPR.term_of_ast ~depth (LPA.mkString s)
-
 let mk_eq t1 t2 = LPR.App (LPR.Constants.eqc, t1, [t2])
 
 let show = LPR.Constants.show
@@ -248,7 +245,7 @@ let get_fixpoint ~depth ~env:_ _ = function
    | _        -> fail ()
 
 let on_object ~depth ~env:_ _ args = match args, !current with
-   | [t1], Some s -> [mk_eq (mk_string ~depth s) t1]
+   | [t1], Some t -> [mk_eq (mk_term ~depth t) t1]
    | _            -> fail ()
 
 (* initialization ***********************************************************)
@@ -279,7 +276,7 @@ let set_trace () =
 let execute r query =
    let str = R.string_of_reference r in
    Printf.printf "?? %s\n%!" str;
-   current := Some str;
+   current := Some (C.Const r);
    let b = LPR.execute_once !program (LPR.query_of_ast !program query) in
    let result = if b then "KO" else "OK" in
    Printf.printf "%s %s\n%!" result str; b

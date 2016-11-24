@@ -29,9 +29,9 @@ get_type T U :- $get_type T U. % if T is a global reference,
                                % U is its inferred type;
                                % false otherwise
 
-type on_object string -> prop.
+type on_object term -> prop.
 on_object X :- $on_object X. % true if we are checking object X,
-                             % X must be a *string* produced by NReference.string_of_reference;
+                             % X must be a constant produced by NReference.string_of_reference;
                              % false otherwise
 
 % Queries issued by NCicELPI.ml
