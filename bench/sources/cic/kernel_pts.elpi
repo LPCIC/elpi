@@ -22,18 +22,18 @@
 %            :  on+sub   type inclusion:  lhs may be smaller than rhs
 %            :  on+eq    type inclusion:  the two sides must be equal
 
-% Predicates: unwind+whd+l+delta T1 P1 T2    multistep weak head reduct of T1 after P1 to T2
+% Predicates: whd+basic T1 P1 M T2 P2        1-step weak head reduct of T1 after P1 to T2 after P2
+%             unwind+whd+l+delta T1 P1 T2    multistep weak head reduct of T1 after P1 to T2
 %                                            with local delta-expansion
 %             unwind+whd+delta+pi T1 P Q T2  multistep weak head reduction of T1 after P and Q to T2
 %                                            with delta-expansion and validating pi-reduction
 %             unwind+whd+delta T1 P C T2     multistep weak head reduction with delta-expansion,
 %                                            of T1 after P passed to relation C returning T2
-%             conv+top T1 M T2               convertibility test for generic T1 and T2
-%             conv+main T1 P1 M T2 P2        convertibility test for generic T1 after P1 and T2 after P2
-%             conv+args P1 P2                convertibility test for generic stacks P1 and P2
-%             conv+main U1 P1 M U2 P2        convertibility test for whnf's U1 after P1 and U2 after P2
-%             r+step+h T1 H X T2             transition to T2 from constant T1 with level/age/heght H
-%                                            the call-by-need reduction strategy uses X, that reduces to T2 
+%             conv+eq T1 T2                  convertibility test for T1 and T2 without subsumption
+%             conv+sub T1 T2                 convertibility test for T1 and T2 with subsumption
+%             conv+main T1 P1 M T2 P2        convertibility test for T1 after P1 and T2 after P2
+%             l+subst T1 T T2                transition to T2 from constant T1
+%                                            the call-by-need reduction strategy uses T, that reduces to T2 
 %             t+step T U                     inference of a type U for T
 %           * has+sort T S                   test for T having type (sort S)
 %             has+checked+type T U           test for T having checked type U
@@ -41,15 +41,11 @@
 
 % CONSTRUCTORS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-mk+appl T [] T :- !.
+unwind+stack [] T T :- !.
 
-mk+appl T A (appl T A) :- !.
+unwind+stack A T (appl T A) :- !.
 
 % DELTA-EXPANSION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-r+step+h T1 H T T2 :- r+step T1 T T2, !, level T1 H.
-
-%
 
 r+unwind T1 _T2 T1 :- /* is_flex _T2, */ !.
 
@@ -66,11 +62,8 @@ whd+basic (appl T A) P1 M T P2 :- !, append A P1 P2
 %                               , if on+focus ($print nu)
                                   .
 % local delta.
-whd+basic T1 P1 on+conv T2 P2 :- r+step+h T1 H X T2, H >= 0, !,
-                                 r+step+r T1 P1 X T2 P2.
-% local delta + global delta.
-whd+basic T1 P1 on+whd T2 P2 :- r+step+h T1 _ X T2, !,
-                                r+step+r T1 P1 X T2 P2.
+whd+basic T1 P M T2 P :- l+subst T1 X T2, !,
+                         if (is_flex T2) (unwind+whd+l+delta X [] T2).
 
 % RESTRICTED WEAK HEAD COMPUTATION FOR CONVERSION + UNWIND %%%%%%%%%%%%%%%%%%%
 
@@ -78,13 +71,13 @@ whd+basic T1 P1 on+whd T2 P2 :- r+step+h T1 _ X T2, !,
 unwind+whd+l+delta T1 P1 T :- whd+basic T1 P1 on+conv T2 P2, !, unwind+whd+l+delta T2 P2 T.
 
 % sigma for abbreviation + theta + zeta.
-unwind+whd+l+delta (abbr W V1 F1) P1 Y :- !, pi x\ r+step x V1 X => (
+unwind+whd+l+delta (abbr W V1 F1) P1 Y :- !, pi x\ l+subst x V1 X => (
 %                                                  if on+focus ($print theta),
                                                    unwind+whd+l+delta (F1 x) P1 (F2 x),
                                                    orelse (F2 x = Y) (r+unwind V1 X V2, abbr W V2 F2 = Y)
                                              ).
 % normal form
-unwind+whd+l+delta T1 P1 T2 :- !, mk+appl T1 P1 T2.
+unwind+whd+l+delta T1 P1 T2 :- !, unwind+stack P1 T1 T2.
 
 % FULL WEAK HEAD COMPUTATION WITH PI-REDUCTION + UNWIND %%%%%%%%%%%%%%%%%%%%%%
 % - aka eat_prods
@@ -102,7 +95,7 @@ unwind+whd+delta+pi (prod W F) [] [V|Q] T2 :- !, has+checked+type V W,
                                               unwind+whd+delta+pi (abbr W V F) [] Q T2.
 
 % sigma for abbreviation + theta + zeta.
-unwind+whd+delta+pi (abbr W V1 F1) P Q Y :- !, pi x\ r+step x V1 X => (
+unwind+whd+delta+pi (abbr W V1 F1) P Q Y :- !, pi x\ l+subst x V1 X => (
 %                                                    if on+focus ($print theta),
                                                      unwind+whd+delta+pi (F1 x) P Q (F2 x),
                                                      orelse (F2 x = Y) (r+unwind V1 X V2, abbr W V2 F2 = Y)
@@ -114,13 +107,13 @@ unwind+whd+delta+pi (abbr W V1 F1) P Q Y :- !, pi x\ r+step x V1 X => (
 unwind+whd+delta T1 P1 C T :- whd+basic T1 P1 on+whd T2 P2, !, unwind+whd+delta T2 P2 C T.
 
 % sigma for abbreviation + theta + zeta.
-unwind+whd+delta (abbr W V1 F1) P C Y :- !, pi x\ r+step x V1 X => (
+unwind+whd+delta (abbr W V1 F1) P C Y :- !, pi x\ l+subst x V1 X => (
 %                                                 if on+focus ($print theta),
                                                   unwind+whd+delta (F1 x) P C (F2 x),
                                                   orelse (F2 x = Y) (r+unwind V1 X V2, abbr W V2 F2 = Y)
                                             ).
 % normal form
-unwind+whd+delta T1 P1 C T :- C T1 P1 T2 P2, !, mk+appl T2 P2 T.
+unwind+whd+delta T1 P1 C T :- C T1 P1 T2 P2, !, unwind+stack P2 T2 T.
 
 % CONVERSION HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -143,7 +136,7 @@ conv+main T P1 _ T P2 :- forall2 P1 P2 conv+eq, !.
 conv+main T1 P1 M T2 P2 :- whd+basic T1 P1 on+conv T P, !, conv+main T P M T2 P2.
 
 % left sigma for abbreviation + theta.
-conv+main (abbr _ V1 F1) P1 M T2 P2 :- !, pi x\ r+step x V1 _ =>
+conv+main (abbr _ V1 F1) P1 M T2 P2 :- !, pi x\ l+subst x V1 _ =>
 %                                      if on+focus ($print theta),
                                        conv+main (F1 x) P1 M T2 P2.
 
@@ -151,7 +144,7 @@ conv+main (abbr _ V1 F1) P1 M T2 P2 :- !, pi x\ r+step x V1 _ =>
 conv+main T1 P1 M T2 P2 :- whd+basic T2 P2 on+conv T P, !, conv+main T1 P1 M T P.
 
 % right sigma for abbreviation + theta.
-conv+main T1 P1 M (abbr _ V2 F2) P2 :- !, pi x\ r+step x V2 _X =>
+conv+main T1 P1 M (abbr _ V2 F2) P2 :- !, pi x\ l+subst x V2 _X =>
 %                                      if on+focus ($print theta),
                                        conv+main T1 P1 M (F2 x) P2.
 % xi for product.
@@ -171,7 +164,7 @@ t+step (appl T1 A) T :- !, t+step T1 T2, unwind+whd+delta+pi T2 [] A T.
 
 % Sigma.
 t+step (abbr W V F1) (abbr W V F2) :- !, has+type V W,
-                                      pi x\ (t+step x W :- !) => r+step x V _X =>
+                                      pi x\ (t+step x W :- !) => l+subst x V _X =>
                                       t+step (F1 x) (F2 x).
 % X for product.
 t+step (prod W F) (sort S3) :- !, has+sort W S1,

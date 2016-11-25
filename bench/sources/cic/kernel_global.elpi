@@ -1,47 +1,59 @@
 % Support for global declarations/definitions
 
-% SUPPORT FOR CALL BY NEED %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+type env term -> int -> term -> prop. /* name, height, definiens */
 
-r+step+r T1 P1 T T2 P2 :- r+set+code T T2, r+set+stack T1 P1 P2, !.
+% note: reductions (call-by-need?) in this predicate, *not* in env
+% note: only reductions on the stack for now
+type expand term -> stack -> stack -> prop. /* name, old stack, new stack */
 
-r+set+code T T2 :- if (is_flex T2) (unwind+whd+l+delta T [] T2).
+% EXPAND %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-r+set+stack _ P1 P1 :- !.
+% base case (the stack does not change)
+expand _ P P.
 
-% extra conversions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% left delta
+expand_sn T1 U1 P1 M T2 P2 :- expand T1 P1 Q1, conv+main U1 Q1 M T2 P2.
 
-% parallel delta (local + global)
-conv+main T P1 M T P2 :- r+step+h T _ X V,
-                         r+step+r T P1 X V Q1, r+step+r T P2 X V Q2, !,
-%                        if on+focus ($print parallel-delta),
-                         conv+main V Q1 M V Q2.
+% right delta
+expand_dx T1 P1 M T2 U2 P2 :- expand T2 P2 Q2, conv+main T1 P1 M U2 Q2.
+
+% FORCED DELTA (conv+main) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% parallel delta.
+conv+main T P1 M T P2 :- env T _ U, !,
+                         expand T P1 Q1, expand T P2 Q2, conv+main U Q1 M U Q2.
+
 % candidate left delta.
-conv+main T1 P1 M T2 P2 :- r+step+h T1 H1 X1 V1, !, maybe+sn T1 P1 H1 X1 V1 M T2 P2.
+conv+main T1 P1 M T2 P2 :- env T1 H1 U1, !, check_rhs T1 P1 H1 U1 M T2 P2.
 
 % forced right delta.
-conv+main T1 P1 M T2 P2 :- r+step+h T2 _ X V, r+step+r T2 P2 X V P, !, conv+main T1 P1 M V P.
-
-%
+conv+main T1 P1 M T2 P2 :- env T2 _ U2, !, expand_dx T1 P1 M T2 U2 P2.
 
 % candidate right delta.
-maybe+sn T1 P1 H1 X1 V1 M T2 P2 :- r+step+h T2 H2 X2 V2, !, check+h T1 P1 H1 X1 V1 M T2 P2 H2 X2 V2.
+check_rhs T1 P1 H1 U1 M T2 P2 :- env T2 H2 U2, !,
+                                 check_height T1 P1 H1 U1 M T2 P2 H2 U2.
 
 % forced left delta.
-maybe+sn T1 P1 _ X V M T2 P2 :- r+step+r T1 P1 X V P, !, conv+main V P M T2 P2.
+check_rhs T1 P1 _ U1 M T2 P2 :- expand_sn T1 U1 P1 M T2 P2.
 
-% AGE/HEIGHT-CONTROLLED DELTA %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% IMPLIED DELTA (conv+main) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% age/hight-implied left delta: lt_height H2 H1 removed for now.
-check+h T1 P1 H1 X V M T2 P2 H2 _ _ :- r+step+r T1 P1 X V P, !, conv+main V P M T2 P2.
+% age/hight-implied left delta first.
+check_height T1 P1 H1 U1 M T2 P2 H2 U2 :- H1 < H2, !,
+                                          orelse (expand_sn T1 U1 P1 M T2 P2)
+                                                 (expand_dx T1 P1 M T2 U2 P2).
+% age/hight-implied right delta first.
+check_height T1 P1 _ U1 M T2 P2 _ U2 :- orelse (expand_dx T1 P1 M T2 U2 P2)
+                                               (expand_sn T1 U1 P1 M T2 P2).
 
-% age/hight-implied right delta.
-check+h T1 P1 _ _ _ M T2 P2 _ X V :- r+step+r T2 P2 X V P, !, conv+main T1 P1 M V P.
+% FORCED DELTA (whd+basic) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% EXTRA REDUCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% global delta.
+whd+basic T1 P1 on+whd T2 P2 :- env T1 _ T2, !, expand T1 P1 P2.
 
-% extra delta
-r+step+h T1 H T2 T2 :- get_expansion T1 H T2, !.
+% INTERFACE WITH ENVIRONMENT %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% instantiable with environment_matita.elpi
 
-% VALIDITY + INFERRED TYPE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+env T H U :- get_expansion T H U.
 
 t+step T U :- get_type T U, !.
