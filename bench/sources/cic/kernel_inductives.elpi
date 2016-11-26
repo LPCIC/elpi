@@ -29,10 +29,10 @@ get+branch [V|P] J T P1 [V|P2] :- get+branch P J T P1 P2.
 % EXTRA REDUCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % check constructor before expanding fixpoint
-r+set+stack T1 P1 P2 :- get_fixpoint T1 L, !,
-                        subst P1 L unwind+whd+to+constructor P2
-%                     , if on+focus ($print global-delta-fix)
-                        .
+expand T1 P1 P2 :- get_fixpoint T1 L, !,
+                   subst P1 L unwind+whd+to+constructor P2
+%                , if on+focus ($print global-delta-fix)
+                   .
 % nu for case
 whd+basic (case W U V A) P _ V (cframe W U A P) :- !.
 
