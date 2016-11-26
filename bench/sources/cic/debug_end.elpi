@@ -1,20 +1,10 @@
 % DEBUG BACK END %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-r+step+h (sort S) _ _ _ :- !, fail.
-
-r+step+h (abst W F) _ _ _ :- !, fail.
-
-% r+step+h T1 H T T2 :- on+focus, $print (++r+step+h T1 H T T2), fail.
-
-%
-
-% r+step+r T1 P1 T T2 P2 :- on+focus, $print (++r+step+r T1 P1 T T2 P2), fail.
-
 % whd+basic T1 P1 M T2 P2 :- on+focus, $print (++whd+basic T1 P1 M T2 P2), fail.
 
-% unwind+whd+delta+pi T1 P Q T2 :- on+focus, $print (++unwind+whd+delta+pi T1 P Q T2), fail.
+% unwind+whd+pi T1 P Q T2 :- on+focus, $print (++unwind+whd+pi T1 P Q T2), fail.
 
-% unwind+whd+delta T1 P C T2 :- on+focus, $print (++unwind+whd+delta T1 P T2), fail.
+% unwind+whd+long T1 P C T2 :- on+focus, $print (++unwind+whd+long T1 P T2), fail.
 
 % conv+eq T1 T2 :- on+focus, $print (++conv+eq T1 T2), fail.
 

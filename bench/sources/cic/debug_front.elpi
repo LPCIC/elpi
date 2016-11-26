@@ -1,17 +1,12 @@
 % DEBUG FRONT END %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% on+focus :- on_object cic:/matita/arithmetics/nat/minus_S_S#def:2".
-% /* "cic:/matita/arithmetics/factorial/le_fact_10#def:11" */.
-
-% r+step+r T1 P1 T T2 P2 :- on+focus, $print (r+step+r T1 P1 T T2 P2), fail.
-
-% r+set+code T T2 :- on+focus, $print (r+set+code T T2), fail.
+% on+focus :- on_object cic:/matita/arithmetics/factorial/le_fact_10#def:11.
 
 % whd+basic T1 P1 M U2 P2 :- on+focus, $print (whd+basic T1 P1 M U2 P2), fail.
 
-% unwind+whd+delta+pi T1 P Q T2 :- on+focus, $print (unwind+whd+delta+pi T1 P Q), fail.
+% unwind+whd+pi T1 P Q T2 :- on+focus, $print (unwind+whd+pi T1 P Q), fail.
 
-% unwind+whd+delta T1 P C T2 :- on+focus, $print (unwind+whd+delta T1 P), fail.
+% unwind+whd+long T1 P C T2 :- on+focus, $print (unwind+whd+long T1 P), fail.
 
 % conv+eq T1 T2 :- on+focus, $print (conv+eq T1 T2), fail.
 

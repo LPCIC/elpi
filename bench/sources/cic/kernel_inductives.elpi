@@ -18,7 +18,7 @@ is+constructor V P V P :- get_constructor V _ _.
 
 %
 
-unwind+whd+to+constructor V1 V2 :- unwind+whd+delta V1 [] is+constructor V2.
+unwind+whd+to+constructor V1 V2 :- unwind+whd+long V1 [] is+constructor V2.
 %                                  if on+focus ($print (unwind+whd+to+constructor+end V2)).
 %
 
@@ -44,7 +44,7 @@ whd+basic T1 P1 _ T2 P2 :- get_constructor T1 J K, !,
                            .
 
 % drop case frame on t-stack (white register)
-unwind+whd+delta+pi T1 P (cframe _ _ _ Q) T2 :- !, unwind+whd+delta+pi T1 P Q T2.
+unwind+whd+pi T1 P (cframe _ _ _ Q) T2 :- !, unwind+whd+pi T1 P Q T2.
 
 % VALIDITY + INFERRED TYPE HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -54,4 +54,4 @@ mk+out+type W0 U0 V W0 P U0 DXV :- get_inductive W0 K, split P K SN DX,
 % VALIDITY + INFERRED TYPE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % not complete, we just compute the output type ...
-t+step (case W0 U0 V A) U :- !, t+step V W, unwind+whd+delta W [] (mk+out+type W0 U0 V) U.
+t+step (case W0 U0 V A) U :- !, t+step V W, unwind+whd+long W [] (mk+out+type W0 U0 V) U.
