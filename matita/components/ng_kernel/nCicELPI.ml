@@ -163,7 +163,6 @@ let rec lp_term c = function
    | C.LetIn (_, w, v, t)  -> mk_abbr c (lp_term c w) (lp_term c v) (lp_term (succ c) t)
    | C.Appl []             -> assert false
    | C.Appl [t]            -> lp_term c t
-   | C.Appl (t :: vs) when !kernel <> CSC -> mk_appl (lp_term c t) (lp_terms c vs)
    | C.Appl [t; v]         -> mk_appl (lp_term c t) (lp_term c v)
    | C.Appl (t :: v :: vs) -> lp_term c (C.Appl (C.Appl [t; v] :: vs))
    | C.Match (r, u, v, ts) -> mk_case (mk_gref r) (lp_term c v) (lp_term c u) (lp_terms c ts)

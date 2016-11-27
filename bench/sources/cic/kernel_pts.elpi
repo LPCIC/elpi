@@ -6,11 +6,9 @@
 %                           |  prod W   F  product of type W in F
 %                           |  abst W   F  abstraction of type W in F
 %                           |  abbr W V F  abbreviation of V of type W in F
-%                           |  appl T A    application of T to list A
+%                           |  appl T V    application of T to V
 
 % Functional term: F        := function of type T => T
-
-% Closed term list: A, B    := [] | [V|A]  defined by the system
 
 % Stack: P, Q               := []     empty
 %                           :  [V|P]  application frame (argument)
@@ -41,9 +39,15 @@
 
 % CONSTRUCTORS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+wind+stack (appl T1 V1) P1 T2 P2 :- wind+stack T1 [V1|P1] T2 P2 :- !.
+
+wind+stack T P T P :- !.
+
+%
+
 unwind+stack [] T T :- !.
 
-unwind+stack A T (appl T A) :- !.
+unwind+stack [V1|P1] T1 T2 :- !, unwind+stack P1 (appl T1 V1) T2.
 
 % DELTA-EXPANSION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -58,9 +62,9 @@ whd+basic (abst W F) [V|P] M (abbr W V F) P :- !
 %                                            , if on+focus ($print beta)
                                                .
 % nu for application.
-whd+basic (appl T A) P1 M T P2 :- !, append A P1 P2
-%                               , if on+focus ($print nu)
-                                  .
+whd+basic (appl T V) P M T [V|P] :- !
+%                                 , if on+focus ($print nu)
+                                    .
 % local delta.
 whd+basic T1 P M T2 P :- l+subst T1 X T2, !,
                          if (is_flex T2) (unwind+whd+short X [] T2).
@@ -160,7 +164,7 @@ conv+main (abst W1 F1) [] _M (abst W2 F2) [] :- !, conv+eq W1 W2,
 t+step (sort S1) (sort S2) :- !, pts+pair S1 S2.
 
 % N.
-t+step (appl T1 A) T :- !, t+step T1 T2, unwind+whd+pi T2 [] A T.
+t+step (appl T1 V1) T2 :- !, wind+stack T1 [V1] T P, t+step T U, unwind+whd+pi U [] P T2.
 
 % Sigma.
 t+step (abbr W V F1) (abbr W V F2) :- !, has+type V W,

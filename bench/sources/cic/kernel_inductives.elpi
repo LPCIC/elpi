@@ -4,6 +4,8 @@
 
 % Closed term: T, U, V, W := case W U V A        match V with constructors of W and select branch in A of type U
 
+% Closed term list: A, B  := [] | [V|A]          defined by the system
+
 % Stack: P, Q             := case_frame W U A P  case frame (continuations)
 
 % LIST HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -27,6 +29,9 @@ get+branch (case_frame _ _ A P) J T P [] :- nth A J T.
 get+branch [V|P] J T P1 [V|P2] :- get+branch P J T P1 P2.
 
 % EXTRA REDUCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% unwind for case
+unwind+stack (case_frame W U A P) V1 V2 :- unwind+stack P (case W U V1 A) V2.
 
 % check constructor before expanding fixpoint
 expand T1 P1 P2 :- get_fixpoint T1 L, !,
