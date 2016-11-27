@@ -2,15 +2,15 @@
 
 % Quantities privided by the environment: I, J, K := integers
 
-% Closed term: T, U, V, W := case W U V A  match V with constructors of W and select branch in A of type U
+% Closed term: T, U, V, W := case W U V A        match V with constructors of W and select branch in A of type U
 
-% Stack: P, Q := cframe W U A P  case frame (continuations)
+% Stack: P, Q             := case_frame W U A P  case frame (continuations)
 
 % LIST HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-append (cframe W U A P1) P2 (cframe W U A P) :- append P1 P2 P.
+append (case_frame W U A P1) P2 (case_frame W U A P) :- append P1 P2 P.
 
-forall2 (cframe W U1 A1 P1) (cframe W U2 A2 P2) F :- F U1 U2, forall2 A1 A2 F, forall2 P1 P2 F.
+forall2 (case_frame W U1 A1 P1) (case_frame W U2 A2 P2) F :- F U1 U2, forall2 A1 A2 F, forall2 P1 P2 F.
 
 % EXTRA REDUCTIONS HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -22,7 +22,7 @@ unwind+whd+to+constructor V1 V2 :- unwind+whd+long V1 [] is+constructor V2.
 %                                  if on+focus ($print (unwind+whd+to+constructor+end V2)).
 %
 
-get+branch (cframe _ _ A P) J T P [] :- nth A J T.
+get+branch (case_frame _ _ A P) J T P [] :- nth A J T.
 
 get+branch [V|P] J T P1 [V|P2] :- get+branch P J T P1 P2.
 
@@ -34,7 +34,7 @@ expand T1 P1 P2 :- get_fixpoint T1 L, !,
 %                , if on+focus ($print global-delta-fix)
                    .
 % nu for case
-whd+basic (case W U V A) P _ V (cframe W U A P) :- !.
+whd+basic (case W U V A) P _ V (case_frame W U A P) :- !.
 
 % iota for case
 % note: the left arguments must be removed
@@ -44,7 +44,7 @@ whd+basic T1 P1 _ T2 P2 :- get_constructor T1 J K, !,
                            .
 
 % drop case frame on t-stack (white register)
-unwind+whd+pi T1 P (cframe _ _ _ Q) T2 :- !, unwind+whd+pi T1 P Q T2.
+unwind+whd+pi T1 P (case_frame _ _ _ Q) T2 :- !, unwind+whd+pi T1 P Q T2.
 
 % VALIDITY + INFERRED TYPE HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
