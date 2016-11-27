@@ -10,8 +10,6 @@
 
 % LIST HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-append (case_frame W U A P1) P2 (case_frame W U A P) :- append P1 P2 P.
-
 forall2 (case_frame W U1 A1 P1) (case_frame W U2 A2 P2) F :- F U1 U2, forall2 A1 A2 F, forall2 P1 P2 F.
 
 % EXTRA REDUCTIONS HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -47,9 +45,6 @@ whd+basic T1 P1 _ T2 P2 :- get_constructor T1 J K, !,
                            get+branch P1 J T2 P A, split A K SN DX, append DX P P2
 %                        , if on+focus ($print iota)
                            .
-
-% drop case frame on t-stack (white register)
-unwind+whd+pi T1 P (case_frame _ _ _ Q) T2 :- !, unwind+whd+pi T1 P Q T2.
 
 % VALIDITY + INFERRED TYPE HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
