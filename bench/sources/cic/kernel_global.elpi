@@ -19,10 +19,6 @@ expand_dx T1 P1 M T2 U2 P2 :- expand T2 P2 Q2, conv+main T1 P1 M U2 Q2.
 
 % FORCED DELTA (conv+main) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% parallel delta.
-% conv+main T P1 M T P2 :- env T _ U, expand T P1 Q1, expand T P2 Q2, !,
-%                          conv+main U Q1 M U Q2.
-
 % candidate left delta.
 conv+main T1 P1 M T2 P2 :- env T1 H1 U1, !, check_rhs T1 P1 H1 U1 M T2 P2.
 
@@ -38,6 +34,11 @@ check_rhs T1 P1 _ U1 M T2 P2 :- expand_sn T1 U1 P1 M T2 P2.
 
 % IMPLIED DELTA (conv+main) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% parallel delta.
+check_height T1 P1 H U1 M T2 P2 H U2 :- !, ifnotelse (expand T1 P1 Q1) (expand_dx T1 P1 M T2 U2 P2) (
+                                           ifnotelse (expand T2 P2 Q2) (conv+main U1 Q1 M T2 P2)
+                                                     (conv+main U1 Q1 M U2 Q2)
+                                           ).
 % age/hight-implied left delta first.
 check_height T1 P1 H1 U1 M T2 P2 H2 U2 :- H1 < H2, !,
                                           orelse (expand_sn T1 U1 P1 M T2 P2)
