@@ -34,12 +34,15 @@ let _ = at_exit
    prerr_endline ("ELPI whole type-checking time: " ^
     string_of_float !total_elpi_time))
 
+let now () =
+  let {Unix.tms_utime = u} = Unix.times () in u
+
 let benchmark f g =
- let t0 = Unix.gettimeofday () in
+ let t0 = now () in
  f () ;
- let t1 = Unix.gettimeofday () in
+ let t1 = now () in
  g () ;
- let t2 = Unix.gettimeofday () in
+ let t2 = now () in
  let d1, d2 = t1 -. t0, t2 -. t1 in
  total_matita_time := !total_matita_time +. d1 ;
  total_elpi_time := !total_elpi_time +. d2;
