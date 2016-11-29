@@ -3729,8 +3729,8 @@ end (* }}} *)
   API
  ******************************************************************************)
 
-let execute_once program q =
- let { search; destroy } = make_runtime ~print_constraints:true program in
+let execute_once ~print_constraints program q =
+ let { search; destroy } = make_runtime ~print_constraints program in
  try ignore (search q) ; destroy (); false
  with No_clause (*| Non_linear*) -> destroy (); true
 ;;
@@ -3806,7 +3806,7 @@ let enable_typechecking () =
     let query =
       let c = C.from_stringc "typecheck-program" in
       [], 0, [||], App(c,clist,[tlist]) in
-    if execute_once checker query then
+    if execute_once ~print_constraints:true checker query then
       Printf.eprintf "Anomaly: Type checking aborts\n%!";
     )
 ;;

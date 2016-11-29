@@ -29,7 +29,7 @@ let test_impl prog query =
    let t1 = Unix.gettimeofday () in
    Printf.printf "TIME: %5.3f\n%!" (t1 -. t0);
    b in
- if time Elpi_runtime.execute_once prog query then exit 1 else exit 0
+ if time (Elpi_runtime.execute_once ~print_constraints:true) prog query then exit 1 else exit 0
 ;;
 
 

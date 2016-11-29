@@ -54,6 +54,8 @@ let program = ref (get_program !kernel)
 
 let current = ref None
 
+let verbose = ref true
+
 (* internals ****************************************************************)
 
 let xlate tag = match !kernel, tag with
@@ -267,16 +269,19 @@ let set_kernel_from_string s = match String.uppercase s with
    | "CSC" -> set_kernel CSC
    | _     -> ()
 
-let set_trace () =
+let trace () =
    ignore (LPT.parse_argv [| "-perf-on"; "-trace-at"; "run"; "1"; "99999999" |])
+
+let quiet () =
+   verbose := false
 
 let execute r query =
    let str = R.string_of_reference r in
-   Printf.printf "?? %s\n%!" str;
+   if !verbose then Printf.printf "?? %s\n%!" str;
    current := Some (C.Const r);
-   let b = LPR.execute_once !program (LPR.query_of_ast !program query) in
+   let b = LPR.execute_once !program ~print_constraints:!verbose (LPR.query_of_ast !program query) in
    let result = if b then "KO" else "OK" in
-   Printf.printf "%s %s\n%!" result str; b
+   if !verbose then Printf.printf "%s %s\n%!" result str; b
 
 let is_type r u =
    let query = mk_is_type (lp_term 0 u) in

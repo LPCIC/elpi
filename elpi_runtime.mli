@@ -13,7 +13,7 @@ type program
 
 val query_of_ast : program -> Elpi_ast.term -> query
 val program_of_ast : ?print:[`Yes|`Raw] -> Elpi_ast.decl list -> program
-val execute_once : program -> query -> bool (* true means error *)
+val execute_once : print_constraints:bool -> program -> query -> bool (* true means error *)
 val execute_loop : program -> query -> unit
 
 (* Extension API *)
