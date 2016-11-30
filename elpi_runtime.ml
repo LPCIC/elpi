@@ -1174,8 +1174,8 @@ and decrease_depth r ~from ~to_ argsno =
    every t in ts must be either an heap term or an Arg(i,0)
    the ts are lifted as usual *)
 and subst fromdepth ts t =
- [%trace "subst" ("@[<hov 2>t: %a@ ts: %a@]"
-   (uppterm (fromdepth+1) [] 0 empty_env) t (pplist (uppterm 0 [] 0 empty_env) ",") ts)
+ [%trace "subst" ("@[<hov 2>fromdepth:%d t: %a@ ts: %a@]" fromdepth
+   (uppterm (fromdepth) [] 0 empty_env) t (pplist (uppterm fromdepth [] 0 empty_env) ",") ts)
  begin
  if ts == [] then t
  else
@@ -1200,8 +1200,8 @@ and subst fromdepth ts t =
         match List.nth ts (len-1 - (c-fromdepth)) with
         | Arg(i,0) -> mkAppArg i fromdepth xxs'
         | t ->
-           let t = hmove ~from:fromdepth ~to_:depth t in
-           beta depth [] t xxs'
+           let t = hmove ~from:fromdepth ~to_:(depth-len) t in
+           beta (depth-len) [] t xxs'
       else if c < fromdepth then
         if x==x' && xs==xs' then orig else App(c,x',xs')
       else App(c-len,x',xs')
