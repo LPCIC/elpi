@@ -78,7 +78,8 @@ unwind+whd+short T1 P1 T :- whd+basic T1 P1 on+conv T2 P2, !, unwind+whd+short T
 unwind+whd+short (abbr W V1 F1) P1 Y :- !, pi x\ l+subst x V1 X => (
 %                                                if on+focus ($print theta),
                                                  unwind+whd+short (F1 x) P1 (F2 x),
-                                                 orelse (F2 x = Y) (r+unwind V1 X V2, abbr W V2 F2 = Y)
+                                                 ifnotelse (occurs x (F2 x)) (F2 x = Y)
+                                                           (r+unwind V1 X V2, abbr W V2 F2 = Y)
                                            ).
 % normal form
 unwind+whd+short T1 P1 T2 :- !, unwind+stack P1 T1 T2.
@@ -102,7 +103,8 @@ unwind+whd+pi (prod W F) [] [V|Q] T2 :- !, has+checked+type V W,
 unwind+whd+pi (abbr W V1 F1) P Q Y :- !, pi x\ l+subst x V1 X => (
 %                                              if on+focus ($print theta),
                                                unwind+whd+pi (F1 x) P Q (F2 x),
-                                               orelse (F2 x = Y) (r+unwind V1 X V2, abbr W V2 F2 = Y)
+                                               ifnotelse (occurs x (F2 x)) (F2 x = Y)
+                                                         (r+unwind V1 X V2, abbr W V2 F2 = Y)
                                          ).
 
 % FULL WEAK HEAD COMPUTATION + UNWIND %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -114,7 +116,8 @@ unwind+whd+long T1 P1 C T :- whd+basic T1 P1 on+whd T2 P2, !, unwind+whd+long T2
 unwind+whd+long (abbr W V1 F1) P C Y :- !, pi x\ l+subst x V1 X => (
 %                                                if on+focus ($print theta),
                                                  unwind+whd+long (F1 x) P C (F2 x),
-                                                 orelse (F2 x = Y) (r+unwind V1 X V2, abbr W V2 F2 = Y)
+                                                 ifnotelse (occurs x (F2 x)) (F2 x = Y)
+                                                           (r+unwind V1 X V2, abbr W V2 F2 = Y)
                                            ).
 % normal form
 unwind+whd+long T1 P1 C T :- C T1 P1 T2 P2, !, unwind+stack P2 T2 T.
