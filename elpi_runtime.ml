@@ -712,7 +712,7 @@ let print fmt =
         (List.map (fun r -> UVar(r,0,0)) l)
    | { kind = Constraint { depth; pdiff; goal = g } ; blockers = l } ->
       Fmt.fprintf fmt
-        "delayed goal: @[<hov 2> %a@ ⊢ %a on %a@]\n%!"
+        " @[<hov 2> %a@ ⊢ %a on %a@]\n%!"
           (pplist (fun fmt (depth,t) -> uppterm depth [] 0 empty_env fmt t) ",") pdiff
           (uppterm depth [] 0 empty_env) g
           (pplist (uppterm depth [] 0 empty_env) ",")
@@ -3231,10 +3231,10 @@ end;*)
   set CS.Ugly.delayed [];
   depth := d;
   let pr_constraints () =
-    if print_constraints then begin
-    Fmt.fprintf Fmt.std_formatter "===== delayed ======\n%!";
+    if print_constraints && CS.contents () <> [] then begin
+    Fmt.fprintf Fmt.std_formatter "===== constraints ======\n%!";
     CS.print Fmt.std_formatter;
-    Fmt.fprintf Fmt.std_formatter "====================\n%!"; end
+    Fmt.fprintf Fmt.std_formatter "========================\n%!"; end
     in
   let search = exec (fun (_,adepth,q_env,q) ->
      let q = move ~adepth ~depth:adepth ~from:adepth ~to_:adepth q_env q in
@@ -3821,14 +3821,15 @@ let execute_loop program ((q_names,q_argsdepth,q_env,q) as qq) =
   prerr_endline ("Execution time: "^string_of_float(time1 -. time0));
  (* Fmt.eprintf "Raw Result: %a\n%!"
     (ppterm depth q_names q_argsdepth q_env) q ;*)
-  Fmt.eprintf "Result: \n%!" ;
+  Fmt.eprintf "Success\n%!" ;
   List.iteri (fun i name -> Fmt.eprintf "@[<hov 1>%s=%a@]\n%!" name
    (uppterm program.query_depth q_names 0 q_env) q_env.(i)) q_names;
   Fmt.eprintf "Raw result: \n%!" ;
   List.iteri (fun i name -> Fmt.eprintf "@[<hov 1>%s=%a@]\n%!" name
    (ppterm program.query_depth q_names 0 q_env) q_env.(i)) q_names;
   in
- do_with_infos (fun x -> k := search x) qq;
+ begin try do_with_infos (fun x -> k := search x) qq;
+ with No_clause -> prerr_endline "Fail"; end;
  while !k != noalts do
    prerr_endline "More? (Y/n)";
    if read_line() = "n" then k := noalts else
