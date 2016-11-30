@@ -195,6 +195,29 @@ let really_input ic s ofs len =
   then invalid_arg "really_input"
   else unsafe_really_input 0 ic s ofs len
 
+(* constant x occurs in term t with level d? *)
+let rec occurs x d t =
+   let rec aux = function
+     | Const c                          -> c = x
+     | Lam t                            -> occurs x (succ d) t
+     | App (c, v, vs)                   -> c = x || aux v || auxs vs
+     | UVar ({contents = t}, dt, 0)     -> occurs x dt t
+     | UVar ({contents = t}, dt, n)     -> occurs x dt t || (dt <= x && x < dt+n)
+     | AppUVar ({contents = t}, dt, vs) -> occurs x dt t || auxs vs
+     | Arg _
+     | AppArg _                         -> anomaly "Not a heap term"
+     | Custom (_, vs)                   -> auxs vs
+     | Cons (v1, v2)                    -> aux v1 || aux v2
+     | Nil
+     | CData _                          -> false
+   and auxs = function
+     | []      -> false
+     | t :: ts -> aux t || auxs ts
+   in
+   if d <= x then false
+   else if t == dummy then true
+   else aux t
+
 type polyop = {
   p : 'a. 'a -> 'a -> bool;
   psym : string;
@@ -282,6 +305,17 @@ let _ =
     match args with
     | [t1] -> [App(eqc, t1, [mk_local_vars Nil (pred depth)])]
     | _    -> type_error "$names takes 1 argument") ;
+  register_custom "$occurs" (fun ~depth ~env:_ _ args ->
+    let rec occurs_in t2 = function
+      | UVar ({contents=t},vardepth,args) when t != dummy ->
+         occurs_in t2 (deref_uv ~from:vardepth ~to_:depth args t)
+      | AppUVar ({contents=t},vardepth,args) when t != dummy ->
+         occurs_in t2 (deref_appuv ~from:vardepth ~to_:depth args t)
+      | Const n -> occurs n depth t2
+      | _       -> false in
+    match args with
+    | [t1; t2] -> if occurs_in t2 t1 then [] else raise No_clause
+    | _ -> type_error "$occurs takes 2 arguments") ;
   register_custom "$llam_unif" (fun ~depth ~env _ args ->
     match args with
     | [t1;t2] -> (try if llam_unify depth env depth t1 t2 then [] else raise No_clause with _ -> raise No_clause)
