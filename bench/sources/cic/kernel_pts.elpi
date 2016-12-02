@@ -209,7 +209,3 @@ has+checked+type T U :- t+step T X,
 
 % was: has+sort U S
 has+type T U :- t+step U _S, has+checked+type T U, !.
-
-% KERNEL HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-pts+triple S1 S2 S2 :- pts+couple S1 S2, !.
