@@ -21,7 +21,7 @@ module LPP = Elpi_parser
 module LPR = Elpi_runtime
 module LPC = Elpi_custom (* registers the custom predicates, if we need them *)
 
-type kernel_t = NO | FG | CSC
+type kernel_t = NO | FG1 | FG2 | CSC
 
 type tag = SORT | PROD | ABST | ABBR | APPL | CASE
 
@@ -34,11 +34,23 @@ let kernel = ref NO
 let get_program kernel =
    let paths, filenames = match kernel with
       | NO  -> ["../.."; ], []
-      | FG  -> ["../.."; "../../lib"; "../../bench/sources/cic"; ],
+(*
+      | FG1 -> ["../.."; "../../lib"; "../../bench/sources/cic"; ],
                ["debug_front.elpi";
                 "kernel_matita.elpi";
                 "kernel.elpi";
                 "debug_end.elpi";
+               ]
+*)
+      | FG1 -> ["../.."; "../../lib"; "../../bench/sources/cic/alt_1"; ],
+               [ "kernel_trace.elpi";
+                 "kernel.elpi";
+                 "kernel_matita.elpi";
+               ]
+      | FG2 -> ["../.."; "../../lib"; "../../bench/sources/cic/alt_2"; ],
+               [ "kernel_trace.elpi";
+                 "kernel.elpi";
+                 "kernel_matita.elpi";
                ]
       | CSC -> ["../.."; "../../../papers/DALEFEST/elpi"; ],
                [ "trace_kernel.elpi";
@@ -61,14 +73,18 @@ let verbose = ref true
 let xlate tag = match !kernel, tag with
    | NO , _    -> "??"
    | _  , SORT -> "sort"
-   | FG , PROD -> "prod"
+   | FG1, PROD -> "prod"
+   | FG2, PROD -> "prod"
    | CSC, PROD -> "arr"
-   | FG , ABST -> "abst"
+   | FG1 ,ABST -> "abst"
+   | FG2 ,ABST -> "abst"
    | CSC, ABST -> "lam"
    | _  , ABBR -> "abbr"
-   | FG , APPL -> "appl"
+   | FG1 ,APPL -> "appl"
+   | FG2 ,APPL -> "appl"
    | CSC, APPL -> "app"
-   | FG , CASE -> "case"
+   | FG1 ,CASE -> "case"
+   | FG2 ,CASE -> "case"
    | CSC, CASE -> "match"
 
 let status = new P.status
@@ -265,7 +281,8 @@ let set_kernel e =
 (* Note: to be replaced by String.uppercase_ascii *)
 let set_kernel_from_string s = match String.uppercase s with
    | "NO"  -> set_kernel NO
-   | "FG"  -> set_kernel FG
+   | "FG1" -> set_kernel FG1
+   | "FG2" -> set_kernel FG2
    | "CSC" -> set_kernel CSC
    | _     -> ()
 

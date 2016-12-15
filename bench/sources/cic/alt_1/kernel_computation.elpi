@@ -1,0 +1,57 @@
+% BASIC COMPUTATION FRAMEWORK %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% documentation in kernel.txt.
+
+% dec X T %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type dec term -> term -> prop.
+
+% def X M T S P %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type def term -> reduction_mode -> term -> stack -> stack -> prop.
+
+% from_local X M C D %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type from_local term -> reduction_mode -> (term -> stack -> stack -> prop) -> prop -> prop.
+
+% no reduction.
+from_local X M C (C T S P) :-
+  def X M T S P, !.
+
+% short reduction.
+from_local X on_short C
+  (steps T1 S1 P1 on_short
+     (T2\ S2\ P2\ def X on_short T2 S2 P2 => C T2 S2 P2)
+  ) :-
+  def X on_no T1 S1 P1, !.
+
+% steps T S P M C %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type steps term -> stack -> reduction_mode -> (term -> stack -> stack -> prop) -> prop.
+
+% local delta.
+steps T1 S1 P1 M C :-
+  $is_name T1,
+  from_local T1 M
+    (T2\ S\ P\ sigma S2\ sigma P2\
+      append S S1 S2, append P P1 P2, steps T2 S2 P2 M C
+    ) D,
+  !, D.
+
+% nu (wind) for higher level application.
+steps (hlap T V) S P M C :-
+  !, steps T S [V|P] M C.
+
+% nu (wind) for application.
+steps (appl T V) S P M C :-
+  !, steps T [V|S] P M C.
+
+% beta.
+steps (abst W F) [V|S] P M C :-
+  !, steps (abbr W V F) S P M C.
+
+% xi for abbreviation + theta.
+steps (abbr W V F) S P M C :-
+  !, pi x\ dec x W => def x on_no V [] [] => steps (F x) S P M C.
+
+% reflexivity.
+steps T S P _ C :- C T S P.

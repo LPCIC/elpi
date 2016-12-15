@@ -1,0 +1,15 @@
+% INTERFACE WITH THE MATITA ITP %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% PTS specification %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+accumulate pts_cic.
+
+% queries to the environment %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+accumulate environment_matita.elpi.
+
+% queries from the environment %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+has_type T U :- has_exp_type T U.
+
+is_type U :- has_exp_sort U _.

@@ -1,0 +1,55 @@
+% TYPECHECKER FOR A GENERIC PTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% documentation in kernel.txt.
+
+% steps (extension) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% validating pi.
+steps (prod W F) [] [V|P] M C :-
+  !, has_checked_type V W, steps (abbr W V F) [] P M C.
+
+% inf_type T1 T2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type inf_type term -> term -> prop.
+
+% t-step for local reference.
+inf_type T1 T2 :- $is_name T1, dec T1 T2.
+
+% S.
+inf_type (sort Y1) (sort Y2) :- pts+pair Y1 Y2.
+
+% N.
+inf_type (appl T1 V) (hlap T2 V) :- inf_type T1 T2.
+
+% X for product.
+inf_type (prod W F) (sort S3) :-
+  has_exp_sort W S1,
+  pi x\ dec x W => has_exp_sort (F x) S2,
+  pts+triple S1 S2 S3.
+
+% X for abstraction.
+inf_type (abst W F1) (prod W F2) :-
+  has_exp_sort W _,
+  pi x\ dec x W => inf_type (F1 x) (F2 x).
+
+% X for abbreviation.
+inf_type (abbr W V F1) (abbr W V F2) :-
+  has_exp_type V W,
+  pi x\ dec x W => def x on_no V [] [] => inf_type (F1 x) (F2 x).
+
+% has_exp_sort T Y %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type has_exp_sort term -> universe -> prop.
+
+has_exp_sort T1 Y :- inf_type T1 T, conv_eq T (sort Y).
+
+% has_checked_type T1 T2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type has_checked_type term -> term -> prop.
+
+has_checked_type T1 T2 :- inf_type T1 T, conv_sub T T2.
+
+% has_exp_type T1 T2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type has_exp_type term -> term -> prop.
+
+has_exp_type T1 T2 :- inf_type T2 _, has_checked_type T1 T2.

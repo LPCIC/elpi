@@ -1,0 +1,102 @@
+% SUPPORT FOR GLOBAL DECLARATIONS AND DEFINITIONS
+% documentation in kernel.txt.
+
+% env T1 H T2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type env term -> int -> term -> prop. /* name, height, definiens */
+
+% interface with the environment (instantiable with environment_matita.elpi)
+env T1 H T2 :- get_expansion T1 H T2.
+
+% expand %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% note: reductions (call-by-need?) in this predicate, *not* in env
+% note: only reductions on the stack for now
+type expand term -> stack -> (stack -> prop) -> prop.
+
+% base case (the stack does not change)
+expand _ S C :- C S.
+
+% from_local (extension) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% non-optimized (but faster?) long computation.
+from_local X on_long C
+  (steps T1 S1 P1 on_long
+    (T2\ S2\ P2\ def X on_long T2 S2 P2 => C T2 S2 P2)
+  ) :-
+  def X on_no T1 S1 P1, !.
+
+% optimized long computation.
+% from_local X on_long C
+%   (steps T1 S1 P1 on_short
+%     (T\ S\ P\ def X on_short T S P =>
+%       (steps T S P on_long
+%         (T2\ S2\ P2\ def X on_long T2 S2 P2 => C T2 S2 P2)
+%       )
+%     )
+%   ) :-
+%   def X on_no T1 S1 P1, !.
+
+% steps (extension) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% global delta.
+steps T1 S1 P on_long C :-
+  env T1 _ T2,
+  expand T1 S1 (S2\ steps T2 S2 P on_long C), !.
+
+% conv_whnf (forced delta) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% candidate left delta.
+conv_whnf T1 S1 P1 M T2 S2 P2 :-
+  env T1 H1 U1, !,
+  check_rhs T1 S1 P1 H1 U1 M T2 S2 P2.
+
+% forced right delta.
+conv_whnf T1 S1 P1 M T2 S2 P2 :-
+  env T2 _ U2, !,
+  expand_dx T1 S1 P1 M T2 U2 S2 P2.
+
+% candidate right delta.
+check_rhs T1 S1 P1 H1 U1 M T2 S2 P2 :-
+  env T2 H2 U2, !,
+  check_height T1 S1 P1 H1 U1 M T2 S2 P2 H2 U2.
+
+% forced left delta.
+check_rhs T1 S1 P1 _ U1 M T2 S2 P2 :-
+  expand_sn T1 U1 S1 P1 M T2 S2 P2.
+
+% conv_whnf (implied delta) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% parallel delta.
+% check_height T1 S1 H U1 M T2 S2 H U2 :- !, ifnotelse (expand T1 S1 Q1) (expand_dx T1 S1 M T2 U2 S2) (
+%                                            ifnotelse (expand T2 S2 Q2) (conv_main U1 Q1 M T2 S2)
+%                                                      (conv_main U1 Q1 M U2 Q2)
+%                                            ).
+
+% age/hight-implied left delta first.
+check_height T1 S1 P1 H1 U1 M T2 S2 P2 H2 U2 :-
+  H1 < H2, !,
+  ifnot (expand_sn T1 U1 S1 P1 M T2 S2 P2) (expand_dx T1 S1 P1 M T2 U2 S2 P2).
+
+% age/hight-implied right delta first.
+check_height T1 S1 P1 _ U1 M T2 S2 P2 _ U2 :-
+  ifnot (expand_dx T1 S1 P1 M T2 U2 S2 P2) (expand_sn T1 U1 S1 P1 M T2 S2 P2).
+
+% conv_whnf (helpers) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+% left delta
+expand_sn T1 U1 S1 P1 M T2 S2 P2 :-
+  expand T1 S1
+    (R\ steps U1 R P1 on_short (T\ S\ P\ conv_whnf T S P M T2 S2 P2)).
+
+% right delta
+expand_dx T1 S1 P1 M T2 U2 S2 P2 :-
+  expand T2 S2
+    (R\ steps U2 R P2 on_short (T\ S\ P\ conv_whnf T1 S1 P1 M T S P)).
+
+% inf_type (extension) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% interface with environment (instantiable with environment_matita.elpi)
+inf_type T1 T2 :- get_type T1 T2.

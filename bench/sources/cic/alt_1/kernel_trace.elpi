@@ -1,0 +1,45 @@
+% SUPPORT FOR KERNEL TRACE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% on_focus :- on_object cic:/matita/arithmetics/factorial/le_fact_10#def:11.
+
+% utilities %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+trace P :- if on_focus ($print "----<<---- enter: " {$counter "run"} P), P,
+           if on_focus ($print "---->>---- exit: " P), !.
+trace P :- if on_focus ($print "---->>---- fail: " P), fail.
+
+at_end :- fail.
+
+% predicates in the local environment %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+defs :- on_focus, def X M T S P, $print "*" (def X M T S P), fail.
+
+decs :- on_focus, dec T1 T2, $print "*" (dec T1 T2), fail.
+
+% predicates from kernel_pts %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% inf_type T1 T2 :- on_focus, $print (inf_type T1 T2), at_end.
+
+% has_exp_sort T Y :- on_focus, $print (has_exp_sort T Y), at_end.
+
+% has_checked_type T1 T2 :- on_focus, $print (has_checked_type T1 T2), at_end.
+
+% has_exp_type T1 T2 :- on_focus, $print (has_exp_type T1 T2), at_end.
+
+% predicates from kernel_conversion %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% conv_main T1 S1 P1 M T2 S2 P2 :- on_focus, $print (conv_main T1 S1 P1 M T2 S2 P2), at_end.
+
+% conv_whnf T1 S1 P1 M T2 S2 P2 :- on_focus, $print (conv_whnf T1 S1 P1 M T2 S2 P2), at_end.
+
+% conv_stacks S1 S2 :- on_focus, $print (conv_stacks S1 S2), at_end.
+
+% conv_eq T1 T2 :- on_focus, $print (conv_eq T1 T2), at_end.
+
+% conv_sub T1 T2 :- on_focus, $print (conv_sub T1 T2), at_end.
+
+% predicates from kernel_computation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% from_local X M C D :- on_focus, $print (from_local X M), at_end.
+
+% steps T S P M C :- on_focus, $print (steps T S P M), at_end.

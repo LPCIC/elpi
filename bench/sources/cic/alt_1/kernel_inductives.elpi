@@ -1,0 +1,53 @@
+% SUPPORT FOR INDUCTIVE TYPES AND RECURSIVE DEFINITIONS %%%%%%%%%%%%%%%%%%%%%%
+% documentation in kernel.txt.
+
+% unwind T1 S P T2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type unwind term -> stack -> stack -> term -> prop.
+
+unwind T1 S P T2 :- fold_left S appl T1 T, fold_left P hlap T T2.
+
+% steps (extension) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% iota for case.
+% note: the left arguments must be removed.
+steps (case _ _ V1 A) S P M C :-
+  steps V1 [] [] on_long
+    (V2\ S2\ P2\ sigma SN\ sigma DX\ sigma T2\
+      P2 = [],
+      get_constructor V2 J K, split S2 K SN DX,
+      nth A J T2, append DX S S2, steps T2 S2 P M C
+    ), !.
+
+% validating iota for higher-level case (switch).
+% Note: not complete, we just compute the output type ...
+steps (hlsw W0 U0 V A) S P M C :-
+  !, inf_type V W1,
+  steps W1 [] [] on_long
+    (W2\ S2\ P2\ sigma SN\ sigma DX\ sigma DXV\
+      W2 = W0, P2 = [],
+      get_inductive W0 K, split S2 K SN DX,
+      append DX [V|S] DXV, steps U0 DXV P M C
+    ).
+
+% conv_whnf (extension) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Note: missing irrelevance of V1 and V2 when W in Prop.
+conv_whnf (case W U1 V1 A1) S1 [] _ (case W U2 V2 A2) S2 [] :-
+  conv_eq U1 U2, conv_eq V1 V2, forall2 A1 A2 conv_eq, conv_stacks S1 S2.
+
+% inf_type (extension) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+inf_type (case W0 U0 V A) (hlsw W0 U0 V A).
+
+% expand (extension) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% check constructor before expanding fixpoint
+expand T S1 C :-
+  get_fixpoint T L, !,
+  split S1 L FST [V1|SND],
+  steps V1 [] [] on_long
+    (V\ S\ P\ sigma V2\ sigma S2\
+       get_constructor V _ _,
+       unwind V S P V2, append FST [V2|SND] S2, C S2
+    ).

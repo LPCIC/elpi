@@ -1,0 +1,53 @@
+% BASIC CONVERSION FRAMEWORK %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% documentation in kernel.txt.
+
+% conv_main T1 S1 P1 M T2 S2 P2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type conv_main term -> stack -> stack -> conversion_mode -> term -> stack -> stack -> prop.
+
+% reflexivity: fast path for alpha-convertible stacks.
+conv_main T S P _ T S P :- !.
+
+conv_main T1 S1 P1 M T2 S2 P2 :-
+  steps T1 S1 P1 on_short (T3\ S3\ P3\
+  steps T2 S2 P2 on_short (T4\ S4\ P4\
+  conv_whnf T3 S3 P3 M T4 S4 P4)).
+
+% conv_whnf T1 S1 P1 M T2 S2 P2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type conv_whnf term -> stack -> stack -> conversion_mode -> term -> stack -> stack -> prop.
+
+% reflexivity: fast path for alpha-convertible stacks.
+conv_whnf T S P _ T S P :- !.
+
+% left subsumption for sort.
+conv_whnf (sort Y1) [] [] on_sub (sort Y2) [] [] :- !, pts+sub Y1 Y2.
+
+% reflexivity: generl case.
+conv_whnf T S1 [] _ T S2 [] :- conv_stacks S1 S2, !.
+
+% xi for product.
+conv_whnf (prod W1 F1) [] [] M (prod W2 F2) [] [] :-
+  conv_eq W1 W2, pi x\ dec x W1 => conv_main (F1 x) [] [] M (F2 x) [] [].
+
+% xi for abstraction.
+conv_whnf (abst W1 F1) [] [] _ (abst W2 F2) [] [] :-
+  conv_eq W1 W2, pi x\ dec x W1 => conv_eq (F1 x) (F2 x).
+
+% conv_stacks S1 S2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type conv_stacks stack -> stack -> prop.
+
+conv_stacks S1 S2 :- forall2 S1 S2 conv_eq.
+
+% conv_eq T1 T2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type conv_eq term -> term -> prop.
+
+conv_eq T1 T2 :- conv_main T1 [] [] on_eq T2 [] [].
+
+% conv_sub T1 T2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type conv_sub term -> term -> prop.
+
+conv_sub T1 T2 :- conv_main T1 [] [] on_sub T2 [] [].
