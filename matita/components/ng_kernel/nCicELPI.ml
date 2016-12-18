@@ -21,9 +21,27 @@ module LPP = Elpi_parser
 module LPR = Elpi_runtime
 module LPC = Elpi_custom (* registers the custom predicates, if we need them *)
 
-type kernel_t = NO | FG1 | FG2 | CSC
+type kernel_t = NO | FG of int | CSC
 
 type tag = SORT | PROD | ABST | ABBR | APPL | CASE
+
+type query = QueryType | QueryExpansion
+
+type query_result = GetType of LPA.term
+                  | GetExpansion of (int * LPA.term)
+(*
+                  | GetConstructor
+                  | GetInductive
+                  | GetFixpoint
+*)
+
+module Query = struct
+   type t = query * R.reference
+   let equal (q1, r1) (q2, r2) = (q1 = q2) && R.eq r1 r2
+   let hash (q, r) = Hashtbl.hash q + R.hash r
+end
+
+module QH = Hashtbl.Make(Query)
 
 (* variables ****************************************************************)
 
@@ -33,31 +51,29 @@ let kernel = ref NO
 
 let get_program kernel =
    let paths, filenames = match kernel with
-      | NO  -> ["../.."; ], []
-(*
-      | FG1 -> ["../.."; "../../lib"; "../../bench/sources/cic"; ],
-               ["debug_front.elpi";
-                "kernel_matita.elpi";
-                "kernel.elpi";
-                "debug_end.elpi";
-               ]
-*)
-      | FG1 -> ["../.."; "../../lib"; "../../bench/sources/cic/alt_1"; ],
-               [ "kernel_trace.elpi";
-                 "kernel.elpi";
+      | FG 0 -> ["../.."; "../../lib"; "../../bench/sources/cic"; ],
+                ["debug_front.elpi";
                  "kernel_matita.elpi";
-               ]
-      | FG2 -> ["../.."; "../../lib"; "../../bench/sources/cic/alt_2"; ],
-               [ "kernel_trace.elpi";
                  "kernel.elpi";
-                 "kernel_matita.elpi";
-               ]
-      | CSC -> ["../.."; "../../../papers/DALEFEST/elpi"; ],
-               [ "trace_kernel.elpi";
-                 "PTS_matita.elpi";
-                 "PTS_kernel_machine.elpi";
-                 "debug_kernel.elpi";
-               ]
+                 "debug_end.elpi";
+                ]
+      | FG 1 -> ["../.."; "../../lib"; "../../bench/sources/cic/alt_1"; ],
+                [ "kernel_trace.elpi";
+                  "kernel.elpi";
+                  "kernel_matita.elpi";
+                ]
+      | FG 2 -> ["../.."; "../../lib"; "../../bench/sources/cic/alt_2"; ],
+                [ "kernel_trace.elpi";
+                  "kernel.elpi";
+                  "kernel_matita.elpi";
+                ]
+      | CSC  -> ["../.."; "../../../papers/DALEFEST/elpi"; ],
+                [ "trace_kernel.elpi";
+                  "PTS_matita.elpi";
+                  "PTS_kernel_machine.elpi";
+                  "debug_kernel.elpi";
+                ]
+      | _    -> ["../.."; ], []
    in
    let paths = List.map (Filename.concat matita_dir) paths in
    LPR.program_of_ast (LPP.parse_program ~paths ~filenames)
@@ -68,31 +84,34 @@ let current = ref None
 
 let verbose = ref true
 
+let caching = ref false
+
+(* guess based on nat.ma *)
+let cache_size = 223
+
+let cache = QH.create cache_size
+
 (* internals ****************************************************************)
 
 let xlate tag = match !kernel, tag with
-   | NO , _    -> "??"
-   | _  , SORT -> "sort"
-   | FG1, PROD -> "prod"
-   | FG2, PROD -> "prod"
-   | CSC, PROD -> "arr"
-   | FG1 ,ABST -> "abst"
-   | FG2 ,ABST -> "abst"
-   | CSC, ABST -> "lam"
-   | _  , ABBR -> "abbr"
-   | FG1 ,APPL -> "appl"
-   | FG2 ,APPL -> "appl"
-   | CSC, APPL -> "app"
-   | FG1 ,CASE -> "case"
-   | FG2 ,CASE -> "case"
-   | CSC, CASE -> "match"
+   | NO  , _    -> "??"
+   | _   , SORT -> "sort"
+   | FG _, PROD -> "prod"
+   | CSC , PROD -> "arr"
+   | FG _, ABST -> "abst"
+   | CSC , ABST -> "lam"
+   | _   , ABBR -> "abbr"
+   | FG _, APPL -> "appl"
+   | CSC , APPL -> "app"
+   | FG _, CASE -> "case"
+   | CSC , CASE -> "match"
 
 let status = new P.status
 
 let rt_gref r =
    let R.Ref (uri, spec) = r in
    let _, _, _, _, obj = E.get_checked_obj status uri in
-   match obj, spec with 
+   match obj, spec with
       | C.Constant (_, _, None, u, _)  , R.Decl          ->
          None, u
       | C.Constant (_, _, Some t, u, _), R.Def h         ->
@@ -113,17 +132,7 @@ let rt_gref r =
       | _                                                ->
          assert false
 
-let split_constructor = function
-   | R.Ref (_, R.Con (_, j, k)) -> Some (pred j, k)
-   |_                           -> None
-
-let split_inductive = function
-   | R.Ref (_, R.Ind (_, _, k)) -> Some k
-   |_                           -> None
-
-let split_fixpoint = function
-   | R.Ref (_, R.Fix (_, l, _)) -> Some l
-   |_                           -> None
+let fail () = raise LPR.No_clause
 
 let id x = "u+" ^ x
 
@@ -189,8 +198,47 @@ and lp_terms c = function
    | []      -> mk_nil
    | v :: vs -> mk_cons (lp_term c v) (lp_terms c vs)
 
+let split_type r =
+   let aux () =
+      let _, u = rt_gref r in lp_term 0 u
+   in
+   if !caching then match QH.find_all cache (QueryType, r) with
+      | [GetType x] -> x
+      | []          ->
+         let x = aux () in
+         QH.add cache (QueryType, r) (GetType x);
+         x
+      | _           -> assert false
+   else aux ()
+
+let split_expansion r =
+   let aux () = match rt_gref r with
+      | Some (h, t), _ -> h, lp_term 0 t
+      | _              -> fail ()
+   in
+   if !caching then match QH.find_all cache (QueryExpansion, r) with
+      | [GetExpansion x] -> x
+      | []               ->
+         let x = aux () in
+         QH.add cache (QueryExpansion, r) (GetExpansion x);
+         x
+      | _                -> assert false
+   else aux ()
+
+let split_constructor = function
+   | R.Ref (_, R.Con (_, j, k)) -> pred j, k
+   |_                           -> fail ()
+
+let split_inductive = function
+   | R.Ref (_, R.Ind (_, _, k)) -> k
+   |_                           -> fail ()
+
+let split_fixpoint = function
+   | R.Ref (_, R.Fix (_, l, _)) -> l
+   |_                           -> fail ()
+
 let mk_term ~depth t =
-   LPR.term_of_ast ~depth (lp_term 0 t)
+   LPR.term_of_ast ~depth t
 
 let mk_int ~depth i =
    LPR.term_of_ast ~depth (LPA.mkInt i)
@@ -200,8 +248,6 @@ let mk_eq t1 t2 = LPR.App (LPR.Constants.eqc, t1, [t2])
 let show = LPR.Constants.show
 
 let dummy = LPR.Constants.dummy
-
-let fail () = raise LPR.No_clause
 
 let rec get_gref ~depth = function
    | LPR.Const c                                                    ->
@@ -221,46 +267,39 @@ let get_gref f ~depth t =
       | LPR.No_clause           -> fail ()
 
 let get_type ~depth ~env:_ _ = function
-   | [t1; t2] -> 
-      begin match get_gref rt_gref ~depth t1 with
-          | _, u1 -> [mk_eq (mk_term ~depth u1) t2]
-      end
+   | [t1; t2] ->
+      let u1 = get_gref split_type ~depth t1 in
+      [mk_eq (mk_term ~depth u1) t2]
    | _        -> fail ()
 
 let get_expansion ~depth ~env:_ _ = function
    | [t1; t2; t3] ->
-      begin match get_gref rt_gref ~depth t1 with
-          | Some (h, u1), _ -> [mk_eq (mk_int ~depth (-h)) t2; mk_eq (mk_term ~depth u1) t3]
-          | _               -> fail ()
-      end
-   | _        -> fail ()
+      let h, t = get_gref split_expansion ~depth t1 in
+      [mk_eq (mk_int ~depth (-h)) t2; mk_eq (mk_term ~depth t) t3]
+   | _            -> fail ()
 
 let get_constructor ~depth ~env:_ _ = function
-   | [t1; t2; t3] -> 
-      begin match get_gref split_constructor ~depth t1 with
-          | Some (j, k) -> [mk_eq (mk_int ~depth j) t2; mk_eq (mk_int ~depth k) t3]
-          | _           -> fail ()
-      end
+   | [t1; t2; t3] ->
+      let j, k = get_gref split_constructor ~depth t1 in
+      [mk_eq (mk_int ~depth j) t2; mk_eq (mk_int ~depth k) t3]
    | _            -> fail ()
 
 let get_inductive ~depth ~env:_ _ = function
-   | [t1; t2] -> 
-      begin match get_gref split_inductive ~depth t1 with
-          | Some j -> [mk_eq (mk_int ~depth j) t2]
-          | _      -> fail ()
-      end
+   | [t1; t2] ->
+      let j = get_gref split_inductive ~depth t1 in
+      [mk_eq (mk_int ~depth j) t2]
    | _        -> fail ()
 
 let get_fixpoint ~depth ~env:_ _ = function
    | [t1; t2] ->
-      begin match get_gref split_fixpoint ~depth t1 with
-          | Some l -> [mk_eq (mk_int ~depth l) t2]
-          | _      -> fail ()
-      end
+      let l = get_gref split_fixpoint ~depth t1 in
+      [mk_eq (mk_int ~depth l) t2]
    | _        -> fail ()
 
 let on_object ~depth ~env:_ _ args = match args, !current with
-   | [t1], Some t -> [mk_eq (mk_term ~depth t) t1]
+   | [t1], Some t ->
+      let t = lp_term 0 t in
+      [mk_eq (mk_term ~depth t) t1]
    | _            -> fail ()
 
 (* initialization ***********************************************************)
@@ -281,16 +320,35 @@ let set_kernel e =
 (* Note: to be replaced by String.uppercase_ascii *)
 let set_kernel_from_string s = match String.uppercase s with
    | "NO"  -> set_kernel NO
-   | "FG1" -> set_kernel FG1
-   | "FG2" -> set_kernel FG2
+   | "FG0" -> set_kernel (FG 0)
+   | "FG1" -> set_kernel (FG 1)
+   | "FG2" -> set_kernel (FG 2)
    | "CSC" -> set_kernel CSC
    | _     -> ()
 
-let trace () =
+let trace_on () =
    ignore (LPT.parse_argv [| "-perf-on"; "-trace-at"; "run"; "1"; "99999999" |])
 
-let quiet () =
+let prints_off () =
    verbose := false
+
+let cache_on () =
+   caching := true
+
+let at_exit () =
+(*
+   let string_of_query = function
+      | QueryType      -> "?TypeOf"
+      | QueryExpansion -> "?ExpansionOf"
+   in
+   let map (q, r) _ =
+      Printf.eprintf "%s %s\n%!" (string_of_query q) (R.string_of_reference r)
+   in
+      QH.iter map cache;
+*)
+   if !caching then begin
+      Printf.eprintf "cache length: %u\n%!" (QH.length cache)
+   end
 
 let execute r query =
    let str = R.string_of_reference r in

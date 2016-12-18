@@ -39,13 +39,16 @@ let _ =
       "Where to find the Axioms/ and Problems/ directory";
      "-elpi", Arg.String
       NCicELPI.set_kernel_from_string,
-      "the prolog kernel to use: NO, CSC, FG";
+      "the prolog kernel to use: NO, CSC, FG0, FG1";
      "-elpi-trace", Arg.Unit
-      NCicELPI.trace,
+      NCicELPI.trace_on,
       "turn on prolog query tracing";
      "-elpi-quiet", Arg.Unit
-      NCicELPI.quiet,
+      NCicELPI.prints_off,
       "turn off prolog informational prints";
+     "-elpi-cache", Arg.Unit
+      NCicELPI.cache_on,
+      "turn on prolog query caching";
     ];
   MatitaInit.initialize_all ();
   MatitaMisc.reset_font_size ()

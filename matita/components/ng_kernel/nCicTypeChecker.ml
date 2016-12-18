@@ -27,15 +27,17 @@ let log b =
 let total_matita_time = ref 0.0
 let total_elpi_time = ref 0.0
 
-let _ = at_exit
- (fun () ->
-   prerr_endline ("Matita whole type-checking time: " ^
-    string_of_float !total_matita_time) ;
-   prerr_endline ("ELPI whole type-checking time: " ^
-    string_of_float !total_elpi_time))
+let _ =
+ at_exit
+  (fun () ->
+    print_endline ("Matita whole type-checking time: " ^
+     string_of_float !total_matita_time) ;
+    print_endline ("ELPI whole type-checking time: " ^
+     string_of_float !total_elpi_time));
+ at_exit LP.at_exit
 
 let now () =
-  let {Unix.tms_utime = u} = Unix.times () in u
+  let {Unix.tms_utime = u; _} = Unix.times () in u
 
 let benchmark f g =
  let t0 = now () in

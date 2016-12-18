@@ -9,14 +9,20 @@
      \ /   This software is distributed as is, NO WARRANTY.     
       V_______________________________________________________________ *)
 
-(* use this kernel: valid values "NO" (default), "CSC", "FG" *)
+(* use this kernel: valid values "NO" (default), "CSC", "FG0", "FG1" *)
 val set_kernel_from_string: string -> unit
 
 (* turn trace facility on *)
-val trace: unit -> unit
+val trace_on: unit -> unit
 
 (* turn informational prints off *)
-val quiet: unit -> unit
+val prints_off: unit -> unit
+
+(* turn cache on *)
+val cache_on: unit -> unit
+
+(* actions to take at exit, if any *)
+val at_exit: unit -> unit
 
 (* is_type r u is false (?) if the type of u is a sort *)
 val is_type: NReference.reference -> NCic.term -> bool
