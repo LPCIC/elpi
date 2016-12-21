@@ -2,10 +2,11 @@
 
 % Custom predicates defined by NCicELPI.ml
 
-type get_inductive term -> int -> prop.
-get_inductive T K :- $get_inductive T K. % if T is an iductive type,
-                                         % K is the number of its left parameters;
-                                         % false otherwise
+type get_inductive term -> int -> list term -> prop.
+get_inductive T K TS :- $get_inductive T K TS. % if T is an iductive type,
+                                               % K is the number of its left parameters,
+                                               % TS is the list of its constructors;
+                                               % false otherwise
 
 type get_constructor term -> int -> int -> prop.
 get_constructor T J K :- $get_constructor T J K. % if T is a constructor,

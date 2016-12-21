@@ -48,7 +48,7 @@ whd+basic T1 P1 _ T2 P2 :- get_constructor T1 J K, !,
 
 % VALIDITY + INFERRED TYPE HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-mk+out+type W0 U0 V W0 P U0 DXV :- get_inductive W0 K, split P K SN DX,
+mk+out+type W0 U0 V W0 P U0 DXV :- get_inductive W0 K _, split P K SN DX,
                                    append DX [V] DXV.
 
 % VALIDITY + INFERRED TYPE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

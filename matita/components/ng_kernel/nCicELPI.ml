@@ -91,7 +91,11 @@ let cache_size = 223
 
 let cache = QH.create cache_size
 
+let status = new P.status
+
 (* internals ****************************************************************)
+
+let fail () = raise LPR.No_clause
 
 let xlate tag = match !kernel, tag with
    | NO  , _    -> "??"
@@ -105,8 +109,6 @@ let xlate tag = match !kernel, tag with
    | CSC , APPL -> "app"
    | FG _, CASE -> "case"
    | CSC , CASE -> "match"
-
-let status = new P.status
 
 let rt_gref r =
    let R.Ref (uri, spec) = r in
@@ -126,13 +128,21 @@ let rt_gref r =
          let _, _, u, _ = List.nth us i in
          None, u
       | C.Inductive (_, _, us, _)      , R.Con (i, j, _) ->
-         let _, _, _, ts = List.nth us i in
-         let _, _, u = List.nth ts (pred j) in
-         None, u
+         let _, _, _, ws = List.nth us i in
+         let _, _, w = List.nth ws (pred j) in
+         None, w
       | _                                                ->
          assert false
 
-let fail () = raise LPR.No_clause
+let ind_gref r =
+   let R.Ref (uri, spec) = r in
+   let _, _, _, _, obj = E.get_checked_obj status uri in
+   match obj, spec with
+      | C.Inductive (_, _, us, _)      , R.Ind (_, i, k) ->
+         let _, _, _, ws = List.nth us i in
+         uri, i, k, List.length ws
+      | _                                                ->
+         fail ()
 
 let id x = "u+" ^ x
 
@@ -225,12 +235,17 @@ let split_expansion r =
       | _                -> assert false
    else aux ()
 
+let split_inductive r =
+   let uri, i, k, l = ind_gref r in
+   let rec mk_list js j =
+      if j < 0 then js else
+      let s = R.reference_of_spec uri (R.Con (i,j,k)) in
+      mk_list (mk_cons (mk_gref s) js) (pred j)
+   in
+   k, mk_list mk_nil (pred l)
+
 let split_constructor = function
    | R.Ref (_, R.Con (_, j, k)) -> pred j, k
-   |_                           -> fail ()
-
-let split_inductive = function
-   | R.Ref (_, R.Ind (_, _, k)) -> k
    |_                           -> fail ()
 
 let split_fixpoint = function
@@ -285,9 +300,9 @@ let get_constructor ~depth ~env:_ _ = function
    | _            -> fail ()
 
 let get_inductive ~depth ~env:_ _ = function
-   | [t1; t2] ->
-      let j = get_gref split_inductive ~depth t1 in
-      [mk_eq (mk_int ~depth j) t2]
+   | [t1; t2; t3] ->
+      let k, ts = get_gref split_inductive ~depth t1 in
+      [mk_eq (mk_int ~depth k) t2; mk_eq (mk_term ~depth ts) t3]
    | _        -> fail ()
 
 let get_fixpoint ~depth ~env:_ _ = function
