@@ -158,8 +158,8 @@ conv+main T1 P1 M (abbr _ V2 F2) P2 :- !, pi x\ l+subst x V2 _X =>
 conv+main (prod W1 F1) [] M (prod W2 F2) [] :- !, conv+eq W1 W2,
                                                pi x\ conv+main (F1 x) [] M (F2 x) [].
 % xi for abstraction.
-conv+main (abst W1 F1) [] _M (abst W2 F2) [] :- !, conv+eq W1 W2,
-                                                pi x\ conv+eq (F1 x) (F2 x).
+conv+main (abst W1 F1) [] on+eq (abst W2 F2) [] :- !, conv+eq W1 W2,
+                                                   pi x\ conv+eq (F1 x) (F2 x).
 
 % VALIDITY + INFERRED TYPE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
