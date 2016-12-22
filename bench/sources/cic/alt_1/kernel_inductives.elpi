@@ -21,11 +21,15 @@ steps (case _ _ V1 TS) S P M C :-
 
 % validating iota for higher-level case (switch).
 % Note: not complete, we just compute the output type ...
-steps (hlsw W U V W1 K JS US) S P M C :- !,
+steps (hlsw W U V TS) S P M C :-
+  !, get_inductive W K VS,
+  inf_type V W1, inf_type W T1, inf_type U T2,
   steps W1 [] [] on_long
     (W2\ S2\ P2\ sigma SN\ sigma DX\ sigma DXV\
       W2 = W, P2 = [],
-      split S2 K SN DX, forall2 JS US (T1\ T2\ true),
+      split S2 K SN DX,
+      conv_case_type T1 W K SN DX T2,
+      forall2 VS TS (V0\ T0\ true),
       append DX [V|S] DXV, steps U DXV P M C
     ).
 
@@ -37,8 +41,7 @@ conv_whnf (case W U1 V1 A1) S1 [] _ (case W U2 V2 A2) S2 [] :-
 
 % inf_type (extension) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-inf_type (case W U V TS) (hlsw W U V W1 K JS US) :-
-  get_inductive W K JS, inf_type V W1, forall2 TS US inf_type.
+inf_type (case W U V TS) (hlsw W U V TS).
 
 % expand (extension) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

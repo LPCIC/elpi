@@ -4,6 +4,7 @@ accumulate logic.
 accumulate list.
 accumulate kernel_pts.
 accumulate kernel_conversion.
+accumulate kernel_case_type.
 accumulate kernel_inductives.
 accumulate kernel_global.
 accumulate kernel_computation.

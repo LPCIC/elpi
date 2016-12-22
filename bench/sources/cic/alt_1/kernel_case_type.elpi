@@ -1,0 +1,54 @@
+% ADDITIONAL CONVERSION FRAMEWORK FOR CHECKING CASE TYPE %%%%%%%%%%%%%%%%%%%%%
+% documentation in kernel.txt.
+
+% conv1_sn T1 S1 P1 M T2 S2 P2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type conv1_sn term -> stack -> stack -> conversion_mode -> term -> stack -> stack -> prop.
+
+conv1_sn T1 S1 P1 M T2 S2 P2 :-
+  steps T1 S1 P1 on_long (T\ S\ P\ conv1_whnf T S P M T2 S2 P2).
+
+% conv1_dx T1 S1 P1 M T2 S2 P2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type conv1_dx term -> stack -> stack -> conversion_mode -> term -> stack -> stack -> prop.
+
+conv1_dx T1 S1 P1 M T2 S2 P2 :-
+  steps T2 S2 P2 on_long (T\ S\ P\ conv1_whnf T1 S1 P1 M T S P).
+
+% conv1_main T1 S1 P1 M T2 S2 P2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type conv1_main term -> stack -> stack -> conversion_mode -> term -> stack -> stack -> prop.
+
+conv1_main T1 S1 P1 M T2 S2 P2 :-
+  steps T1 S1 P1 on_long (T\ S\ P\ conv1_dx T S P M T2 S2 P2).
+
+% conv1_whnf T1 S1 P1 M T2 S2 P2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% removing left product (on_case_type).
+conv1_whnf (prod W1 F1) [] [] (on_case_type W K S [V|SN] DX) (prod W2 F2) [] [] :- !,
+  pi x\ dec x W1 => def x on_no V [] [] =>
+    conv1_sn (F1 x) [] [] (on_case_type W K S SN DX) (prod W2 F2) [] [].
+
+% xi for right product (on_case_type).
+conv1_whnf (prod W1 F1) [] [] (on_case_type W K S [] [_|DX]) (prod W2 F2) [] [] :- !,
+  conv_eq W1 W2, pi x\ dec x W1 =>
+    conv1_main (F1 x) [] [] (on_case_type W K S [] DX) (F2 x) [] [].
+
+% final checks (on_case_type).
+conv1_whnf (sort YI) [] [] (on_case_type W1 K SN1 [] []) (prod W2 F2) [] [] :-
+  steps W2 [] [] on_long
+    (W\ S\ P\ sigma SN\ sigma DX\
+      W = W1, P = [], split S K SN DX, conv_stacks SN1 SN
+    ),
+  pi x\ dec x W2 =>
+    conv1_dx (sort YI) [] [] on_case_proj (F2 x) [] [].
+
+% projectability (on_case_type)
+% note: we do nothing for now ...
+conv1_whnf (sort YI) [] [] on_case_proj (sort YO) [] [] :- true.
+
+% conv_case_type T1 S1 S2 T2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type conv_case_type term -> term -> int -> stack -> stack -> term -> prop.
+
+conv_case_type T1 W K SN DX T2 :- conv1_main T1 [] [] (on_case_type W K SN SN DX) T2 [] [].
