@@ -28,6 +28,10 @@ decs :- on_focus, dec T1 T2, $print "*" (dec T1 T2), fail.
 
 % predicates from kernel_conversion %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% conv_sn T1 S1 P1 M T2 S2 P2 :- on_focus, $print (conv_sn T1 S1 P1 M T2 S2 P2), at_end.
+
+% conv_dx T1 S1 P1 M T2 S2 P2 :- on_focus, $print (conv_dx T1 S1 P1 M T2 S2 P2), at_end.
+
 % conv_main T1 S1 P1 M T2 S2 P2 :- on_focus, $print (conv_main T1 S1 P1 M T2 S2 P2), at_end.
 
 % conv_whnf T1 S1 P1 M T2 S2 P2 :- on_focus, $print (conv_whnf T1 S1 P1 M T2 S2 P2), at_end.

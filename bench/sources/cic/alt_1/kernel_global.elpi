@@ -17,6 +17,16 @@ type expand term -> stack -> (stack -> prop) -> prop.
 % base case (the stack does not change)
 expand _ S C :- C S.
 
+% expand (helpers) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% left delta
+expand_sn T1 U1 S1 P1 M T2 S2 P2 :-
+  expand T1 S1 (R\ conv_sn U1 R P1 M T2 S2 P2).
+
+% right delta
+expand_dx T1 S1 P1 M T2 U2 S2 P2 :-
+  expand T2 S2 (R\ conv_dx T1 S1 P1 M U2 R P2).
+
 % from_local (extension) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % non-optimized (but faster?) long computation.
@@ -81,20 +91,6 @@ check_height T1 S1 P1 H1 U1 M T2 S2 P2 H2 U2 :-
 % age/hight-implied right delta first.
 check_height T1 S1 P1 _ U1 M T2 S2 P2 _ U2 :-
   ifnot (expand_dx T1 S1 P1 M T2 U2 S2 P2) (expand_sn T1 U1 S1 P1 M T2 S2 P2).
-
-% conv_whnf (helpers) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-
-% left delta
-expand_sn T1 U1 S1 P1 M T2 S2 P2 :-
-  expand T1 S1
-    (R\ steps U1 R P1 on_short (T\ S\ P\ conv_whnf T S P M T2 S2 P2)).
-
-% right delta
-expand_dx T1 S1 P1 M T2 U2 S2 P2 :-
-  expand T2 S2
-    (R\ steps U2 R P2 on_short (T\ S\ P\ conv_whnf T1 S1 P1 M T S P)).
 
 % inf_type (extension) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

@@ -1,6 +1,20 @@
 % BASIC CONVERSION FRAMEWORK %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % documentation in kernel.txt.
 
+% conv_sn T1 S1 P1 M T2 S2 P2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type conv_sn term -> stack -> stack -> conversion_mode -> term -> stack -> stack -> prop.
+
+conv_sn T1 S1 P1 M T2 S2 P2 :-
+  steps T1 S1 P1 on_short (T\ S\ P\ conv_whnf T S P M T2 S2 P2).
+
+% conv_dx T1 S1 P1 M T2 S2 P2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type conv_dx term -> stack -> stack -> conversion_mode -> term -> stack -> stack -> prop.
+
+conv_dx T1 S1 P1 M T2 S2 P2 :-
+  steps T2 S2 P2 on_short (T\ S\ P\ conv_whnf T1 S1 P1 M T S P).
+
 % conv_main T1 S1 P1 M T2 S2 P2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 type conv_main term -> stack -> stack -> conversion_mode -> term -> stack -> stack -> prop.
@@ -9,9 +23,7 @@ type conv_main term -> stack -> stack -> conversion_mode -> term -> stack -> sta
 conv_main T S P _ T S P :- !.
 
 conv_main T1 S1 P1 M T2 S2 P2 :-
-  steps T1 S1 P1 on_short (T3\ S3\ P3\
-  steps T2 S2 P2 on_short (T4\ S4\ P4\
-  conv_whnf T3 S3 P3 M T4 S4 P4)).
+  steps T1 S1 P1 on_short (T\ S\ P\ conv_dx T S P M T2 S2 P2).
 
 % conv_whnf T1 S1 P1 M T2 S2 P2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
