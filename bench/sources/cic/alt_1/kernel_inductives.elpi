@@ -13,14 +13,14 @@ unwind T1 S P T2 :- fold_left S appl T1 T, fold_left P hlap T T2.
 % note: the left arguments must be removed.
 steps (case _ _ V1 TS) S P M C :-
   steps V1 [] [] on_long
-    (V2\ S2\ P2\ sigma SN\ sigma DX\ sigma T2\
+    (V2\ S2\ P2\ sigma SN\ sigma DX\ sigma T0\ sigma S0\
       P2 = [],
       get_constructor V2 J K, split S2 K SN DX,
-      nth TS J T2, append DX S S2, steps T2 S2 P M C
+      nth TS J T0, append DX S S0, steps T0 S0 P M C
     ), !.
 
 % validating iota for higher-level case (switch).
-% Note: not complete, we just compute the output type ...
+% Note: not complete, we do not check allowed sort elimination ...
 steps (hlsw W U V TS) S P M C :-
   !, get_inductive W K VS,
   inf_type V W1, inf_type W T1, inf_type U T2,

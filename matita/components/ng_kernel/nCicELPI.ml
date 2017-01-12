@@ -238,11 +238,11 @@ let split_expansion r =
 let split_inductive r =
    let uri, i, k, l = ind_gref r in
    let rec mk_list js j =
-      if j < 0 then js else
+      if j < 1 then js else
       let s = R.reference_of_spec uri (R.Con (i,j,k)) in
       mk_list (mk_cons (mk_gref s) js) (pred j)
    in
-   k, mk_list mk_nil (pred l)
+   k, mk_list mk_nil l
 
 let split_constructor = function
    | R.Ref (_, R.Con (_, j, k)) -> pred j, k
@@ -303,7 +303,7 @@ let get_inductive ~depth ~env:_ _ = function
    | [t1; t2; t3] ->
       let k, ts = get_gref split_inductive ~depth t1 in
       [mk_eq (mk_int ~depth k) t2; mk_eq (mk_term ~depth ts) t3]
-   | _        -> fail ()
+   | _            -> fail ()
 
 let get_fixpoint ~depth ~env:_ _ = function
    | [t1; t2] ->
