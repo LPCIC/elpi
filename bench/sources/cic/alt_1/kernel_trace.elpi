@@ -1,5 +1,26 @@
 % SUPPORT FOR KERNEL TRACE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% some theorems requiring proof irrilevance (not implemented yet)
+
+% cic:/matita/basics/logic/lemmaK#def:2
+% cic:/matita/basics/jmeq/K#def:2
+% cic:/matita/basics/jmeq/E#def:6
+% cic:/matita/basics/deqsets/eq_sigma_true#def:5
+% cic:/matita/basics/vectors/Vector_eq#def:3
+% cic:/matita/basics/vectors/vec_expand#def:5
+% cic:/matita/basics/vectors/vector_nil#def:3
+% cic:/matita/basics/vectors/change_vec_cons_tail#def:6
+% cic:/matita/basics/vectors/pmap_vec_cons#def:9
+
+% some slow theorems (mostly because of missing proof irrelevance)
+
+%   1 cic:/matita/basics/finset/enumn_complete_aux#def:12
+%  11 cic:/matita/basics/jmeq/E#def:6
+% 168 cic:/matita/basics/vectors/pmap_vec_cons#def:9
+% 329 cic:/matita/basics/vectors/vec_expand#def:5
+% 371 cic:/matita/basics/vectors/change_vec_cons_tail#def:6
+% ??? cic:/matita/basics/vectors/pmap_change#def:10
+
 % on_focus :- on_object cic:/matita/arithmetics/factorial/le_fact_10#def:11.
 
 % utilities %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -41,6 +62,10 @@ decs :- on_focus, dec T1 T2, $print "*" (dec T1 T2), fail.
 % conv_eq T1 T2 :- on_focus, $print (conv_eq T1 T2), at_end.
 
 % conv_sub T1 T2 :- on_focus, $print (conv_sub T1 T2), at_end.
+
+% predicates from kernel_case_branch %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% conv2_whnf T1 S1 P1 M T2 S2 P2 :- on_focus, $print (conv2_whnf T1 S1 P1 M T2 S2 P2), at_end.
 
 % predicates from kernel_computation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

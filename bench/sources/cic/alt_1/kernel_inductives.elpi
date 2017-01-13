@@ -29,7 +29,12 @@ steps (hlsw W U V TS) S P M C :-
       W2 = W, P2 = [],
       split S2 K SN DX,
       conv_case_type T1 W K SN DX T2,
-      forall2 VS TS (V0\ T0\ true),
+      forall2 VS TS
+        (V0\ T0\ sigma W0\ sigma U0\ sigma SNV0\
+           inf_type V0 W0, inf_type T0 U0,
+           fold_left SN appl V0 SNV0,
+           conv_case_branch W0 SNV0 K SN U U0
+        ),
       append DX [V|S] DXV, steps U DXV P M C
     ).
 
