@@ -24,6 +24,8 @@ conv2_main T1 S1 P1 M T2 S2 P2 :-
 
 % conv2_whnf T1 S1 P1 M T2 S2 P2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+type conv2_whnf term -> stack -> stack -> conversion_mode -> term -> stack -> stack -> prop.
+
 % removing left product (on_case_branch).
 conv2_whnf (prod W1 F1) [] [] (on_case_branch V0 K U0 [V|SN]) U2 S2 [] :- !,
   pi x\ dec x W1 => def x on_no V [] [] =>
