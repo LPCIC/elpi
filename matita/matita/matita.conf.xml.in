@@ -14,7 +14,7 @@
     <!-- <key name="auto_disambiguation">true</key> -->
     <!-- Debug only. Stay away. -->
     <!-- <key name="environment_trust">true</key> -->
-    <key name="basedir">$(user.home)/.matita</key>
+    <key name="basedir">$(user.home)/.elpi</key>
     <!-- Where support files are installed -->
     <key name="rt_base_dir">@RT_BASE_DIR@</key>
     <!-- Metadata owner. It will be used to create user-specific tables
