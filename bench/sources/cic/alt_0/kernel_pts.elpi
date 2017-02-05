@@ -122,6 +122,22 @@ unwind+whd+long (abbr W V1 F1) P C Y :- !, pi x\ l+subst x V1 X => (
 % normal form
 unwind+whd+long T1 P1 C T :- C T1 P1 T2 P2, !, unwind+stack P2 T2 T.
 
+% FULL WEAK HEAD COMPUTATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% basic reductions.
+whd+long T1 P1 C T :- whd+basic T1 P1 on+whd T2 P2, !, whd+long T2 P2 C T.
+
+% sigma for abbreviation + theta + zeta.
+unwind+whd+long (abbr W V1 F1) P C Y :- !, pi x\ l+subst x V1 X => (
+%                                                if on+focus ($print theta),
+                                                 unwind+whd+long (F1 x) P C (F2 x),
+                                                 ifnotelse (occurs x (F2 x)) (F2 x = Y)
+                                                           (r+unwind V1 X V2, abbr W V2 F2 = Y)
+                                           ).
+% normal form
+unwind+whd+long T1 P1 C T :- C T1 P1 T2 P2, !, unwind+stack P2 T2 T.
+
+
 % CONVERSION HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 conv+eq T1 T2 :- conv+main T1 [] on+eq T2 [], !.

@@ -51,7 +51,7 @@ let kernel = ref NO
 
 let get_program kernel =
    let paths, filenames = match kernel with
-      | FG 0 -> ["../.."; "../../lib"; "../../bench/sources/cic"; ],
+      | FG 0 -> ["../.."; "../../lib"; "../../bench/sources/cic/alt_0"; ],
                 ["debug_front.elpi";
                  "kernel_matita.elpi";
                  "kernel.elpi";

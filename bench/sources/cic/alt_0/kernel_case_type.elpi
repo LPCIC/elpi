@@ -1,0 +1,43 @@
+% checks on case output type.
+% kernel_inductives invokes conv+case+type
+
+% left basic reductions.
+conv1+main T1 P1 M T2 P2 :- whd+basic T1 P1 on+conv T P, !, conv1+main T P M T2 P2.
+
+% left sigma for abbreviation + theta.
+conv1+main (abbr _ V1 F1) P1 M T2 P2 :- !, pi x\ l+subst x V1 _ =>
+%                                      if on+focus ($print theta),
+                                       conv1+main (F1 x) P1 M T2 P2.
+
+% right basic reductions.
+conv1+main T1 P1 M T2 P2 :- whd+basic T2 P2 on+conv T P, !, conv1+main T1 P1 M T P.
+
+% right sigma for abbreviation + theta.
+conv1+main T1 P1 M (abbr _ V2 F2) P2 :- !, pi x\ l+subst x V2 _X =>
+%                                      if on+focus ($print theta),
+                                       conv1+main T1 P1 M (F2 x) P2.
+
+% removing left product (on+case+type).
+conv1+main (prod W1 F1) [] (on+case+type W K S [V|SN] DX) U2 S2 :- !,
+  pi x\ l+subst x V X => conv1+main (F1 x) [] (on+case+type W K S SN DX) U2 S2.
+
+% xi for right product (on+case+type).
+conv1+main (prod W1 F1) [] (on+case+type W K S [] [_|DX]) (prod W2 F2) [] :- !,
+  conv+eq W1 W2,
+  pi x\ conv1+main (F1 x) [] (on+case+type W K S [] DX) (F2 x) [].
+
+% final checks (on+case+type).
+conv1+main (sort YI) [] (on+case+type W1 K SN1 [] []) (prod W2 F2) [] :-
+  $print "QUI_0",
+  unwind+whd+long W2 []
+    (W\ S\ sigma SN\ sigma DX\
+      W = W1, split S K SN DX, forall2 SN1 SN conv+eq
+    ) _,
+  $print "QUI_1",
+  pi x\ conv1+main (sort YI) [] on+case+proj (F2 x) [].
+
+% projectability (on+case+proj)
+% note: we do nothing for now ...
+conv1+main (sort YI) [] on+case+proj (sort YO) [] :- true.
+
+conv+case+type T1 W K SN DX T2 :- conv1+main T1 [] (on+case+type W K SN SN DX) T2 [].
