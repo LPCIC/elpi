@@ -48,20 +48,20 @@ whd+basic T1 P1 _ T2 P2 :- get_constructor T1 J K, !,
 
 % VALIDITY + INFERRED TYPE HELPERS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-check+branch U K SN V0 T0 :- true.
-% t+step V0 W0, t+step T0 U0,
-% fold_left SN appl V0 SNV0,
-% conv+case+branch W0 SNV0 K SN U U0.
+check+branch U K SN V0 T0 :-
+  t+step V0 W0, t+step T0 U0,
+  fold_left SN appl V0 SNV0,
+  conv+case+branch W0 SNV0 K SN U U0.
 
 mk+out+type W U V TS W S U DXV :-
- get_inductive W K VS, split S K SN DX,
- t+step W T1, t+step U T2,
- conv+case+type T1 W K SN DX T2,
- forall2 VS TS (check+branch U K SN),
- append DX [V] DXV.
+  get_inductive W K VS, split S K SN DX,
+  t+step W T1, t+step U T2,
+  conv+case+type T1 W K SN DX T2,
+  forall2 VS TS (check+branch U K SN),
+  append DX [V] DXV.
 
 % VALIDITY + INFERRED TYPE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % not complete, we do not check allowed sort elimination
 t+step (case W U V A) X :- !,
- t+step V W1, unwind+whd+long W1 [] (mk+out+type W U V A) X.
+  t+step V W1, unwind+whd+long W1 [] (mk+out+type W U V A) X.
