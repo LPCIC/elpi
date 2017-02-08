@@ -29,3 +29,9 @@ val is_type: NReference.reference -> NCic.term -> bool
 
 (* has_type r t u is false (?) if the type of t is u *)
 val has_type: NReference.reference -> NCic.term -> NCic.term -> bool
+
+(* approx c r t v w is false (?) if v of inferred type w refines t in context c *)
+val approx: NReference.reference -> NCic.context -> NCic.term -> NCic.term -> NCic.term -> bool
+
+(* approx_cast r c t u v is false (?) if v refines t of expected type u in context c *)
+val approx_cast: NReference.reference -> NCic.context -> NCic.term -> NCic.term -> NCic.term -> bool

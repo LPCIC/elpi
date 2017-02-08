@@ -21,9 +21,11 @@ module LPP = Elpi_parser
 module LPR = Elpi_runtime
 module LPC = Elpi_custom (* registers the custom predicates, if we need them *)
 
+exception NotImplemented of string
+
 type kernel_t = NO | FG of int | CSC
 
-type tag = SORT | PROD | ABST | ABBR | APPL | CASE
+type tag = SORT | PROD | ABST | ABBR | APPL | CASE | TERM | VECT
 
 type query = QueryType | QueryExpansion
 
@@ -48,6 +50,8 @@ module QH = Hashtbl.Make(Query)
 let matita_dir = Filename.dirname (Sys.argv.(0))
 
 let kernel = ref NO
+
+let not_implemented s = raise (NotImplemented ("elpi: not implemented: " ^ s))
 
 let get_program kernel =
    let paths, filenames = match kernel with
@@ -109,6 +113,8 @@ let xlate tag = match !kernel, tag with
    | CSC , APPL -> "app"
    | FG _, CASE -> "case"
    | CSC , CASE -> "match"
+   | _   , TERM -> "term"
+   | _   , VECT -> "vect"
 
 let rt_gref r =
    let R.Ref (uri, spec) = r in
@@ -164,6 +170,12 @@ let mk_nil = LPA.mkNil
 
 let mk_cons v vs = LPA.mkSeq [v; vs]
 
+let mk_pi n f = LPA.mkApp [LPA.mkCon "pi"; LPA.mkLam n f]
+
+let mk_impl a b = LPA.mkApp [LPA.mkCon "=>"; a; b]
+
+let mk_pi_impl n a b = mk_pi n (mk_impl a b)
+
 let mk_head x = LPA.mkCon (xlate x)
 
 let mk_name i = Printf.sprintf "x%u" i
@@ -184,14 +196,30 @@ let mk_appl t v = LPA.mkApp [mk_head APPL; t; v]
 
 let mk_case w v u ts = LPA.mkApp [mk_head CASE; w; u; v; ts]
 
+let mk_term () = LPA.mkApp [mk_head TERM]
+
+let mk_vect () = LPA.mkApp [mk_head VECT]
+
 let mk_is_type u = LPA.mkApp [LPA.mkCon "is_type"; u]
 
 let mk_has_type t u = LPA.mkApp [LPA.mkCon "has_type"; t; u]
 
+let mk_approx t v w = LPA.mkApp [LPA.mkCon "approx"; t; v; w]
+
+let mk_approx_cast t u v = LPA.mkApp [LPA.mkCon "approx_cast"; t; u; v]
+
+let mk_ldec n w = LPA.mkApp [LPA.mkCon "ldec"; LPA.mkCon n; w]
+
+let mk_ldef n w v = LPA.mkApp [LPA.mkCon "ldef"; LPA.mkCon n; w; v]
+
 (* matita to elpi *)
 let rec lp_term c = function
-   | C.Meta _
-   | C.Implicit _          -> assert false (* for now we process just closed terms *)
+   | C.Implicit `Closed 
+   | C.Implicit `Type
+   | C.Implicit `Term      -> mk_term ()
+   | C.Implicit `Vector    -> mk_vect ()
+   | C.Implicit _          -> assert false (* are these cases meaningful? *) 
+   | C.Meta _              -> not_implemented "meta" (* for now we process just closed terms *)
    | C.Rel i               -> mk_lref c i
    | C.Const r             -> mk_gref r
    | C.Sort s              -> mk_sort s
@@ -207,6 +235,21 @@ let rec lp_term c = function
 and lp_terms c = function
    | []      -> mk_nil
    | v :: vs -> mk_cons (lp_term c v) (lp_terms c vs)
+
+let lp_context query c =
+   let rec aux i = function
+      | []                     -> query i  
+      | (_, C.Decl w) :: c     -> 
+         let n = mk_name i in
+         let w = lp_term i w in
+         mk_pi_impl n (mk_ldec n w) (aux (succ i) c)
+      | (_, C.Def (v, w)) :: c -> 
+         let n = mk_name i in
+         let w = lp_term i w in
+         let v = lp_term i v in
+         mk_pi_impl n (mk_ldef n w v) (aux (succ i) c)
+   in
+   aux 0 (List.rev c)
 
 let split_type r =
    let aux () =
@@ -374,9 +417,25 @@ let execute r query =
    if !verbose then Printf.printf "%s %s\n%!" result str; b
 
 let is_type r u =
+try
    let query = mk_is_type (lp_term 0 u) in
    execute r query
+with NotImplemented s -> HLog.error s; true
 
 let has_type r t u =
+try
    let query = mk_has_type (lp_term 0 t) (lp_term 0 u) in
    execute r query
+with NotImplemented s -> HLog.error s; true
+
+let approx r c t v w =
+try
+   let query i = mk_approx (lp_term i t) (lp_term i v) (lp_term i w) in
+   execute r (lp_context query c)
+with NotImplemented s -> HLog.error s; true
+
+let approx_cast r c t u v =
+try
+   let query i = mk_approx_cast (lp_term i t) (lp_term i u) (lp_term i v) in
+   execute r (lp_context query c)
+with NotImplemented s -> HLog.error s; true

@@ -17,6 +17,18 @@ exception AssertFailure of string Lazy.t;;
 
 module C = NCic
 module Ref = NReference
+(* FG: extension for ELPI *)
+module LP = NCicELPI
+
+let log b =
+   if b then HLog.error "ELPI refinement failed!"
+   else HLog.message "ELPI refinement OK!"
+
+let current = 
+  let uri = NUri.uri_of_string "cic:/matita/dummy/indty.ind" in 
+  let r = Ref.reference_of_spec uri (Ref.Ind (true,1,1)) in
+  ref r
+(*FG: end of extension for ELPI *)
 
 type 'a expected_type = [ `XTNone       (* unknown *)
                         | `XTSome of 'a (* the given term *) 
@@ -1142,6 +1154,20 @@ and eat_prods status ~localise force_ty metasenv subst context expty orig_t orig
   (*D*)in outside true; rc with exc -> outside false; raise exc
 ;;
 
+(* FG: extension for ELPI *)
+let typeof status ?localise 
+  metasenv subst context term expty 
+=
+  let res = typeof status ?localise metasenv subst context term expty in
+  let _, _, refined_term, ty = res in
+  begin match expty with
+     | `XTNone       -> log (LP.approx !current context term refined_term ty)
+     | `XTSome expty -> log (LP.approx_cast !current context term expty refined_term)
+     | _             -> ()
+  end;
+  res 
+(*FG: end of extension for ELPI *)
+
 let rec first f l1 l2 =
   match l1,l2 with
   | x1::tl1, x2::tl2 -> 
@@ -1391,5 +1417,5 @@ let typeof_obj
      in
       uri, height, metasenv, subst, C.Inductive (ind, leftno, itl, attr)
 ;;
-
+  
 (* vim:set foldmethod=marker: *)

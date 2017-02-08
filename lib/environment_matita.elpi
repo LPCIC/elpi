@@ -42,3 +42,9 @@ type has_type term -> term -> prop.
 
 /* is_type U: U is a type */
 type is_type term -> prop.
+
+/* approx T V W: V with inferred type W refines T */
+type approx term -> term -> term -> prop.
+
+/* approx_cast T U V: V refines T with expected type U */
+type approx_cast term -> term -> term -> prop.
