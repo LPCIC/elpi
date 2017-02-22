@@ -25,7 +25,7 @@ exception NotImplemented of string
 
 type kernel_t = NO | FG of int | CSC
 
-type tag = SORT | PROD | ABST | ABBR | APPL | CASE | TERM | VECT
+type tag = SORT | PROD | ABST | ABBR | APPL | CASE | HOLE | VECT
 
 type query = QueryType | QueryExpansion
 
@@ -74,7 +74,7 @@ let get_program kernel =
       | CSC  -> ["../.."; "../../../papers/DALEFEST/elpi"; ],
                 [ "trace_kernel.elpi";
                   "PTS_matita.elpi";
-                  "PTS_kernel_machine.elpi";
+                  "PTS_refiner_machine.elpi";
                   "debug_kernel.elpi";
                 ]
       | _    -> ["../.."; ], []
@@ -113,7 +113,7 @@ let xlate tag = match !kernel, tag with
    | CSC , APPL -> "app"
    | FG _, CASE -> "case"
    | CSC , CASE -> "match"
-   | _   , TERM -> "term"
+   | _   , HOLE -> "hole"
    | _   , VECT -> "vect"
 
 let rt_gref r =
@@ -196,7 +196,7 @@ let mk_appl t v = LPA.mkApp [mk_head APPL; t; v]
 
 let mk_case w v u ts = LPA.mkApp [mk_head CASE; w; u; v; ts]
 
-let mk_term () = LPA.mkApp [mk_head TERM]
+let mk_hole () = LPA.mkApp [mk_head HOLE]
 
 let mk_vect () = LPA.mkApp [mk_head VECT]
 
@@ -216,7 +216,7 @@ let mk_ldef n w v = LPA.mkApp [LPA.mkCon "ldef"; LPA.mkCon n; w; v]
 let rec lp_term c = function
    | C.Implicit `Closed 
    | C.Implicit `Type
-   | C.Implicit `Term      -> mk_term ()
+   | C.Implicit `Term      -> mk_hole ()
    | C.Implicit `Vector    -> mk_vect ()
    | C.Implicit _          -> assert false (* are these cases meaningful? *) 
    | C.Meta _              -> not_implemented "meta" (* for now we process just closed terms *)

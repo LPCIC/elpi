@@ -3,6 +3,9 @@
 if A B :- A, !, B.
 if _A _B.
 
+ifelse A B _C :- A, !, B.
+ifelse _A _B C :- C.
+
 ifnot A _B :- A, !.
 ifnot _A B :- B.
 
