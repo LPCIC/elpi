@@ -385,7 +385,10 @@ let set_kernel_from_string s = match String.uppercase s with
    | _     -> ()
 
 let trace_on () =
-   ignore (LPT.parse_argv [| "-perf-on"; "-trace-at"; "run"; "1"; "99999999" |])
+   let rest = LPT.parse_argv [| "-trace-on"; "-trace-at"; "run"; "1"; "99999999";
+                                "-trace-only"; "add"; "-trace-only"; "remove" |]
+   in
+   assert (rest = [||])
 
 let prints_off () =
    verbose := false

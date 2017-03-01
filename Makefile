@@ -19,20 +19,19 @@ OD=OCAMLPATH=$(PWD) ocamlfind ocamldep -native
 H=@
 
 all: check-ocaml-ver
+	$(H)$(MAKE) --no-print-directory clean
 	$(H)$(MAKE) --no-print-directory trace_ppx
 	$(H)$(MAKE) --no-print-directory elpi.$(CMXA)
 	$(H)$(MAKE) --no-print-directory META.elpi
 	$(H)$(MAKE) --no-print-directory elpi
 
 trace: check-ocaml-ver
-	$(H)$(MAKE) --no-print-directory trace_ppx
-	-$(H)mv elpi elpi.notrace
 	$(H)$(MAKE) --no-print-directory clean
+	$(H)$(MAKE) --no-print-directory trace_ppx
 	$(H)TRACE=1 $(MAKE) --no-print-directory elpi.$(CMXA)
+	$(H)$(MAKE) --no-print-directory META.elpi
 	$(H)$(MAKE) --no-print-directory elpi
 	$(H)mv elpi elpi.trace
-	$(H)$(MAKE) --no-print-directory clean
-	-$(H)mv elpi.notrace elpi
 
 trace_ppx: trace_ppx.ml
 	$(H)$(OC) -package compiler-libs.common,ppx_tools.metaquot \
