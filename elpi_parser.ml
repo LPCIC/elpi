@@ -439,13 +439,18 @@ EXTEND
   chrrule :
     [[ to_match = LIST0 sequent;
        to_remove = OPT [ BIND; l = LIST1 sequent -> l ];
-       alignement = OPT [ SYMBOL ">"; cl = LIST1 CONSTANT SEP SYMBOL "~" -> cl ];
+       alignement = OPT [ a =
+         [ SYMBOL ">"; cl = LIST1 CONSTANT SEP SYMBOL "~" -> (cl,`Align)
+         | SYMBOL ">>"; cl = LIST1 CONSTANT SEP SYMBOL "=" -> (cl,`Spread) ] -> a ];
        guard = OPT [ PIPE; a = atom LEVEL "abstterm" -> a ];
        new_goal = OPT [ SYMBOL "<=>"; g = atom -> g ] ->
          let to_remove = match to_remove with None -> [] | Some l -> l in
-         let alignement = match alignement with None -> [] | Some l -> l in
-         let alignement = List.map Func.from_string alignement in
-         create_chr ~to_match ~to_remove ~alignement ?guard ?new_goal ()
+         let alignement =
+           match alignement with
+           | None -> None
+           | Some (alignement,x) ->
+               Some (List.map Func.from_string alignement,x) in
+         create_chr ~to_match ~to_remove ?alignement ?guard ?new_goal ()
     ]];
   sequent :
     [[ LPAREN; t1 = atom; RPAREN ->
