@@ -627,14 +627,13 @@ let trail_this i =
 
 let remove ({ blockers } as sg) =
  [%spy "remove" (fun fmt -> Fmt.fprintf fmt "%a" pp_stuck_goal) sg];
- Printf.eprintf "remove: %u\n%!" (get_auxsg sg !auxsg);
+(* Printf.eprintf "remove: %u\n%!" (get_auxsg sg !auxsg); *)
  delayed := remove_from_list sg !delayed;
- Printf.eprintf "aaa";
  List.iter (fun r -> r.rest <- remove_from_list sg r.rest) blockers
 
 let add ({ blockers } as sg) =
  [%spy "add" (fun fmt -> Fmt.fprintf fmt "%a" pp_stuck_goal) sg];
- Printf.eprintf "add   : %u\n%!" (List.length !auxsg);
+(* Printf.eprintf "add   : %u\n%!" (List.length !auxsg); *)
  auxsg := sg :: !auxsg;
  delayed := sg :: !delayed;
  List.iter (fun r -> r.rest <- sg :: r.rest) blockers
