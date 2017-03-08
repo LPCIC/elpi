@@ -515,8 +515,6 @@ module ConstraintStoreAndTrail : sig
   val new_delayed      : propagation_item list ref
   val to_resume        : stuck_goal list ref
 
-  val pivot : old:term_attributed_ref -> term_attributed_ref -> stuck_goal list -> stuck_goal list
-
   val declare_new : stuck_goal -> unit
   val remove_old : stuck_goal -> unit
   val remove_old_constraint : constraint_def -> unit
@@ -649,15 +647,6 @@ let print_trail fmt =
   Fmt.fprintf fmt "to_resume:%d new_delayed:%d\n%!"
     (List.length !to_resume) (List.length !new_delayed)
 
-let pivot ~old:r r1 sg =
-  let rc = ref [] in
-  List.iter (fun d ->
-    if List.memq d sg then begin
-      d.blockers <- List.map (fun v -> if v == r then r1 else v) d.blockers;
-      rc := d :: !rc
-    end) !delayed;
-  List.rev !rc
-
 let declare_new cstr =
   add cstr ;
   begin match cstr.kind with
@@ -700,10 +689,6 @@ let undo ~old_trail ?old_constraints () =
   while !trail != old_trail do
     match !trail with
     | Assignement r :: rest ->
-       (match r.contents with
-       | UVar({ rest = _ :: _ } as r',_,_)
-       | AppUVar({ rest = _ :: _ } as r',_,_) -> r.rest <- pivot ~old:r' r r'.rest
-       | _ -> ());
        r.contents <- C.dummy;
        trail := rest
     | StuckGoalAddition sg :: rest -> remove sg; trail := rest
@@ -746,17 +731,6 @@ let (@:=) r v =
     [%spy "assign-to_resume" (fun fmt l ->
         Fmt.fprintf fmt "%d" (List.length l)) r.rest];
      CS.to_resume := r.rest @ !CS.to_resume
-    end;
- r.contents <- v
-;;
-
-(* UVar 2 UVar assignment, constraints are inherited *)
-let (@:==) r v r1 =
-  if r.rest <> [] then
-    begin
-    r1.rest <- CS.pivot r r1 r.rest;
-    Printf.eprintf "POSSIBILE PROBLEMA 1: la gestione del r.rest e' corretta?";
-    (* r.rest <- []; FIXME *)
     end;
  r.contents <- v
 ;;
@@ -1179,8 +1153,8 @@ and decrease_depth r ~from ~to_ argsno =
   let newargsno = argsno+from-to_ in
   let newvar = UVar(newr,to_,from-to_) in
   if not !T.last_call then
-   T.trail := (T.Assignement r) :: !T.trail;
-  (r @:== newvar) newr;
+    T.trail := (T.Assignement r) :: !T.trail;
+  r @:= newvar;
   newr,to_,newargsno
 
 (* simultaneous substitution of ts for [depth,depth+|ts|)
