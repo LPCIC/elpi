@@ -202,8 +202,10 @@ let funct_of_ast, of_dbl, show, fresh =
  (fun () ->
    decr fresh;
    let n = !fresh in
+   let xx = Const n in
    Hashtbl.add h' n ("frozen-"^string_of_int n);
-   n,Const n)
+   Hashtbl.add h'' n xx;
+   n,xx)
 ;;
 
 let pp fmt c = Format.fprintf fmt "%s" (show c)
@@ -2580,29 +2582,34 @@ let align_frozen ({ arg2goal } as m) e alignement ngoals =
   let uniq_gs = uniq (List.sort compare gs) in
   if List.length gs <> List.length uniq_gs || List.length gs <> ngoals then
     error "Alignement invalid: 1 key per goal";
+  [%spy "alignement-xxxx1" (fun _ _ -> ()) ()];
   let (bkey, bgoal), todo = List.hd kg, List.tl kg in
   (* quick check for same key *)
   let same_k = ref None in
   let mkconstlist l =
+  [%spy "alignement-xxxxl" pp_term l];
     let k, l =
       match l with
       | App(c,arg,args) when is_frozen c m -> Constants.of_dbl c, arg::args
       | Const c as x when is_frozen c m -> x, [] 
-        (* XXX In this case we should spread apart all variables,
-         * or assert they are never compared/mixed (hard with dependent types *)
+        (* XXX In this case we should assert mode = `spread *)
       | _ -> Constants.dummy, lp_list_to_list l in
+  [%spy "alignement-xxxxk" pp_term k];
     if !same_k == None then same_k := Some k;
-    if option_get !same_k != k then raise NoMatch;
+    if option_get !same_k <> k then raise NoMatch;
     List.map (function
       | Const x -> x
       | t -> error ("align on non var list: " ^
                     Format.asprintf "%a" (ppterm 0 [] 0 e) t)) l in
   let bkey = mkconstlist e.(bkey) in
+  [%spy "alignement-xxxx2" (fun _ _ -> ()) ()];
   let todo =
     List.map (fun (key, goal) -> goal, bkey, mkconstlist e.(key)) todo in
+  [%spy "alignement-xxxx2.5" (fun _ _ -> ()) ()];
   let mkmap base tgt =
     if List.length base <> List.length tgt then raise NoMatch else
     List.combine tgt base in
+  [%spy "alignement-xxxx3" (fun _ _ -> ()) ()];
   let maps = List.map (fun (g,base,tgt) -> g,mkmap base tgt) todo in
   [%spy "alignement" (fun fmt m ->
     Fmt.fprintf fmt "%a%!"
@@ -2653,7 +2660,7 @@ let thaw max_depth e m t =
          UVar(r,lvl,0)
         else
          let r' = oref C.dummy in
-         if not !T.last_call then T.trail := (Assignement r) :: !T.trail;
+         if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
          r @:= UVar(r',0,lvl);
          UVar (r', 0, 0)
       with Not_found -> orig)
@@ -2850,12 +2857,29 @@ let propagate { CS.cstr; cstr_position } history =
        let constraints = List.map sequent_of_constr constraints in
 
        (* max depth of rule and constraints involved in the matching *)
-       let max_depth =
-         List.fold_left (fun acc (d,_,_) -> max d acc) ruledepth constraints in
+
+       let max_depth, constraints, alignement =
+         match alignement with
+         | l,`Align -> 
+
+             let max_depth,constraints =
+               let max_depth =
+                 List.fold_left (fun acc (d,_,_) -> max d acc)
+                   ruledepth constraints in
+               max_depth, List.map (fun (a,b,c) -> max_depth,a,b,c) constraints in
+               max_depth, constraints, l
+         | l,`Spread ->
+
+            let max_depth, constraints =
+             let max_depth,constraints = 
+              List.fold_left (fun (acc,res) (d,x,y) -> acc+(d - ruledepth),(acc,d,x,y)::res)
+                (ruledepth,[]) constraints in
+             max_depth, List.rev constraints in
+            max_depth, constraints, l in
 
        let constraints_contexts, constraints_goals =
-         List.fold_right (fun (d,p,g) (ctxs, gs) ->
-           p :: ctxs, (d,g) :: gs)
+         List.fold_right (fun (dto,d,p,g) (ctxs, gs) ->
+           (dto,p) :: ctxs, (dto,d,g) :: gs)
            constraints ([],[]) in
 
        let patterns = List.map (sequent_of_pat ruledepth) patterns in
@@ -2864,20 +2888,23 @@ let propagate { CS.cstr; cstr_position } history =
 
        let patterns_contexts, patterns_goals =
          List.fold_right (fun (d,ctx,g) (ctxs, gs) ->
-           if d > max_depth then raise NoMatch;
            (d, ctx) :: ctxs, (d,g) :: gs)
            patterns ([],[]) in
          
-       let match_p i m (dt,t) (dp,pat) =
-         let t = hmove ~from:dt ~to_:max_depth t in
-         let pat = lift_pat ~from:dp ~to_:max_depth pat in
-         match_same_depth_and_freeze i e max_depth m t pat in
+       let match_p i m (dto,dt,t) (dp,pat) =
+         [%spy "matching-lift-from" pp_int dt];
+         [%spy "matching-lift-to" pp_int dto];
+         [%spy "matching-lift-in" pp_term t];
+         let t = hmove ~from:ruledepth ~to_:dto t in
+         [%spy "matching-lift-out" pp_term t];
+         let pat = lift_pat ~from:dp ~to_:dto pat in
+         match_same_depth_and_freeze i e dto m t pat in
 
-       let match_ctx i m lt (dp,pctx) =
-         let lt = List.map (fun (d,t) -> hmove ~from:d ~to_:max_depth t) lt in
+       let match_ctx i m (dto,lt) (dp,pctx) =
+         let lt = List.map (fun (d,t) -> hmove ~from:ruledepth ~to_:dto t) lt in
          let t = list_to_lp_list lt in
-         let pctx = lift_pat ~from:dp ~to_:max_depth pctx in
-         match_same_depth_and_freeze i e max_depth m t pctx in
+         let pctx = lift_pat ~from:dp ~to_:dto pctx in
+         match_same_depth_and_freeze i e dto m t pctx in
 
        let program = { (* runs deep enough to let one use all pi-vars *)
          chr; prolog_program; modes; query_depth = max_depth;
@@ -2900,7 +2927,8 @@ let propagate { CS.cstr; cstr_position } history =
            [%spy "propagate-try-rule"
              (Elpi_ast.pp_chr pp_term C.pp) propagation_rule];
            [%spy "propagate-try-on"
-             (pplist (pp_pair pp_int pp_term) ";") constraints_goals];
+             (pplist (pp_pair pp_int pp_term) ";") 
+               (List.map (fun (_,a,b) -> a,b) constraints_goals)];
 
            let m = fold_left2i match_p m
              constraints_goals patterns_goals in
@@ -3564,7 +3592,8 @@ let chr_of_ast depth cmap macro r =
   let amap, to_remove = map_acc intern2 amap r.to_remove in
   let amap, guard = option_mapacc intern amap r.guard in
   let amap, new_goal = option_mapacc intern amap r.new_goal in
-  let alignement = List.map (internArg amap) r.alignement in
+  let alignement =
+    List.map (internArg amap) (fst r.alignement), snd r.alignement in
   let nargs = amap.max_arg in
   { to_match; to_remove; guard; new_goal; alignement; depth; nargs }
 

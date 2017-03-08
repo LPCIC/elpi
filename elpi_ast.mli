@@ -55,10 +55,11 @@ type clause = {
   insert : ([ `Before | `After ] * string) option;
   body : term;
 }
+type 'func alignement =  'func list * [ `Spread | `Align ]
 type ('term,'func_t) chr = {
   to_match : ('term * 'term) list;
   to_remove : ('term * 'term) list;
-  alignement : 'func_t list;
+  alignement : 'func_t alignement;
   guard : 'term option;
   new_goal : 'term option;
   depth : int; (* not parsed *)
@@ -68,7 +69,7 @@ type ('term,'func_t) chr = {
 val create_chr :
   ?to_match:('a * 'a) list ->
   ?to_remove:('a * 'a) list ->
-  ?alignement:'b list ->
+  ?alignement:'b alignement ->
   ?guard:'a ->
   ?new_goal:'a -> ?depth:int -> ?nargs:int -> unit -> ('a, 'b) chr
 

@@ -78,10 +78,12 @@ type clause = {
   body : term;
 }[@@deriving show]
 
+type 'func alignement =  'func list * [ `Spread | `Align ]
+[@@deriving show]
 type ('term,'func_t) chr = {
   to_match : ('term * 'term) list;
   to_remove : ('term * 'term) list;
-  alignement : 'func_t list;
+  alignement : 'func_t alignement [@default ([],`Align)];
   guard : 'term option;
   new_goal : 'term option;
   depth : int [@default 0];
