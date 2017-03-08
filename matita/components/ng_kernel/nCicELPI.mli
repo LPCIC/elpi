@@ -9,6 +9,10 @@
      \ /   This software is distributed as is, NO WARRANTY.     
       V_______________________________________________________________ *)
 
+type outcome = private Skip of string
+             |         Fail
+             |         OK
+
 (* use this kernel: valid values "NO" (default), "CSC", "FG0", "FG1" *)
 val set_kernel_from_string: string -> unit
 
@@ -24,14 +28,14 @@ val cache_on: unit -> unit
 (* actions to take at exit, if any *)
 val at_exit: unit -> unit
 
-(* is_type r u is false (?) if the type of u is a sort *)
-val is_type: NReference.reference -> NCic.term -> bool
+(* is_type r u is OK if the type of u is a sort *)
+val is_type: NReference.reference -> NCic.term -> outcome
 
-(* has_type r t u is false (?) if the type of t is u *)
-val has_type: NReference.reference -> NCic.term -> NCic.term -> bool
+(* has_type r t u is OK if the type of t is u *)
+val has_type: NReference.reference -> NCic.term -> NCic.term -> outcome
 
-(* approx c r t v w is false (?) if v of inferred type w refines t in context c *)
-val approx: NReference.reference -> NCic.context -> NCic.term -> NCic.term -> NCic.term -> bool
+(* approx s c r t v w is OK if v of inferred type w refines t in context c and subst s *)
+val approx: NReference.reference -> NCic.substitution -> NCic.context -> NCic.term -> NCic.term -> NCic.term -> outcome
 
-(* approx_cast r c t u v is false (?) if v refines t of expected type u in context c *)
-val approx_cast: NReference.reference -> NCic.context -> NCic.term -> NCic.term -> NCic.term -> bool
+(* approx_cast r s c t u v is OK if v refines t of expected type u in context c and subst s *)
+val approx_cast: NReference.reference -> NCic.substitution -> NCic.context -> NCic.term -> NCic.term -> NCic.term -> outcome

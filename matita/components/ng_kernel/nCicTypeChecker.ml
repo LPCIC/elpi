@@ -20,9 +20,10 @@ module E = NCicEnvironment
 (* FG: extension for ELPI *)
 module LP = NCicELPI
 
-let log b =
-   if b then HLog.error "ELPI validation failed!"
-   else HLog.message "ELPI validation OK!"
+let log = function
+   | LP.Fail   -> HLog.error "ELPI refinement failed!"
+   | LP.OK     -> HLog.message "ELPI refinement OK!"
+   | LP.Skip s -> HLog.message ("ELPI refinement skipped: " ^ s)
 
 let total_matita_time = ref 0.0
 let total_elpi_time = ref 0.0

@@ -21,7 +21,11 @@ module LPP = Elpi_parser
 module LPR = Elpi_runtime
 module LPC = Elpi_custom (* registers the custom predicates, if we need them *)
 
-exception NotImplemented of string
+exception Error of string
+
+type outcome = Skip of string
+             | Fail
+             | OK
 
 type kernel_t = NO | FG of int | CSC
 
@@ -51,7 +55,7 @@ let matita_dir = Filename.dirname (Sys.argv.(0))
 
 let kernel = ref NO
 
-let not_implemented s = raise (NotImplemented ("elpi: not implemented: " ^ s))
+let error s = raise (Error s)
 
 let get_program kernel =
    let paths, filenames = match kernel with
@@ -213,47 +217,52 @@ let mk_ldec n w = LPA.mkApp [LPA.mkCon "ldec"; LPA.mkCon n; w]
 let mk_ldef n w v = LPA.mkApp [LPA.mkCon "ldef"; LPA.mkCon n; w; v]
 
 (* matita to elpi *)
-let rec lp_term c = function
+let rec lp_term d c = function
    | C.Implicit `Closed 
    | C.Implicit `Type
    | C.Implicit `Term      -> mk_hole ()
    | C.Implicit `Vector    -> mk_vect ()
    | C.Implicit _          -> assert false (* are these cases meaningful? *) 
-   | C.Meta _              -> not_implemented "meta" (* for now we process just closed terms *)
+   | C.Meta (i, l)         -> 
+      begin try
+         let _, _, v, _ = List.assoc i d in
+         lp_term d c (NCicSubstitution.subst_meta status l v)
+      with Not_found -> error "meta here" (* for now we process just closed terms *)
+      end
    | C.Rel i               -> mk_lref c i
    | C.Const r             -> mk_gref r
    | C.Sort s              -> mk_sort s
-   | C.Prod (_, w, t)      -> mk_prod c (lp_term c w) (lp_term (succ c) t)
-   | C.Lambda (_, w, t)    -> mk_abst c (lp_term c w) (lp_term (succ c) t)
-   | C.LetIn (_, w, v, t)  -> mk_abbr c (lp_term c w) (lp_term c v) (lp_term (succ c) t)
+   | C.Prod (_, w, t)      -> mk_prod c (lp_term d c w) (lp_term d (succ c) t)
+   | C.Lambda (_, w, t)    -> mk_abst c (lp_term d c w) (lp_term d (succ c) t)
+   | C.LetIn (_, w, v, t)  -> mk_abbr c (lp_term d c w) (lp_term d c v) (lp_term d (succ c) t)
    | C.Appl []             -> assert false
-   | C.Appl [t]            -> lp_term c t
-   | C.Appl [t; v]         -> mk_appl (lp_term c t) (lp_term c v)
-   | C.Appl (t :: v :: vs) -> lp_term c (C.Appl (C.Appl [t; v] :: vs))
-   | C.Match (r, u, v, ts) -> mk_case (mk_gref r) (lp_term c v) (lp_term c u) (lp_terms c ts)
+   | C.Appl [t]            -> lp_term d c t
+   | C.Appl [t; v]         -> mk_appl (lp_term d c t) (lp_term d c v)
+   | C.Appl (t :: v :: vs) -> lp_term d c (C.Appl (C.Appl [t; v] :: vs))
+   | C.Match (r, u, v, ts) -> mk_case (mk_gref r) (lp_term d c v) (lp_term d c u) (lp_terms d c ts)
 
-and lp_terms c = function
+and lp_terms d c = function
    | []      -> mk_nil
-   | v :: vs -> mk_cons (lp_term c v) (lp_terms c vs)
+   | v :: vs -> mk_cons (lp_term d c v) (lp_terms d c vs)
 
-let lp_context query c =
+let lp_context query d c () =
    let rec aux i = function
       | []                     -> query i  
       | (_, C.Decl w) :: c     -> 
          let n = mk_name i in
-         let w = lp_term i w in
+         let w = lp_term d i w in
          mk_pi_impl n (mk_ldec n w) (aux (succ i) c)
       | (_, C.Def (v, w)) :: c -> 
          let n = mk_name i in
-         let w = lp_term i w in
-         let v = lp_term i v in
+         let w = lp_term d i w in
+         let v = lp_term d i v in
          mk_pi_impl n (mk_ldef n w v) (aux (succ i) c)
    in
    aux 0 (List.rev c)
 
 let split_type r =
    let aux () =
-      let _, u = rt_gref r in lp_term 0 u
+      let _, u = rt_gref r in lp_term [] 0 u
    in
    if !caching then match QH.find_all cache (QueryType, r) with
       | [GetType x] -> x
@@ -266,7 +275,7 @@ let split_type r =
 
 let split_expansion r =
    let aux () = match rt_gref r with
-      | Some (h, t), _ -> h, lp_term 0 t
+      | Some (h, t), _ -> h, lp_term [] 0 t
       | _              -> fail ()
    in
    if !caching then match QH.find_all cache (QueryExpansion, r) with
@@ -356,7 +365,7 @@ let get_fixpoint ~depth ~env:_ _ = function
 
 let on_object ~depth ~env:_ _ args = match args, !current with
    | [t1], Some t ->
-      let t = lp_term 0 t in
+      let t = lp_term [] 0 t in
       [mk_eq (mk_term ~depth t) t1]
    | _            -> fail ()
 
@@ -415,30 +424,28 @@ let execute r query =
    let str = R.string_of_reference r in
    if !verbose then Printf.printf "?? %s\n%!" str;
    current := Some (C.Const r);
-   let b = LPR.execute_once !program ~print_constraints:!verbose (LPR.query_of_ast !program query) in
-   let result = if b then "KO" else "OK" in
-   if !verbose then Printf.printf "%s %s\n%!" result str; b
+   let result, msg = try
+      let query = query () in
+      if LPR.execute_once !program ~print_constraints:!verbose (LPR.query_of_ast !program query) then
+         Fail, "KO"
+      else
+         OK, "OK"
+      with Error s -> Skip s, "OO"
+   in
+   if !verbose then Printf.printf "%s %s\n%!" msg str; result
 
 let is_type r u =
-try
-   let query = mk_is_type (lp_term 0 u) in
+   let query () = mk_is_type (lp_term [] 0 u) in
    execute r query
-with NotImplemented s -> HLog.error s; true
 
 let has_type r t u =
-try
-   let query = mk_has_type (lp_term 0 t) (lp_term 0 u) in
+   let query () = mk_has_type (lp_term [] 0 t) (lp_term [] 0 u) in
    execute r query
-with NotImplemented s -> HLog.error s; true
 
-let approx r c t v w =
-try
-   let query i = mk_approx (lp_term i t) (lp_term i v) (lp_term i w) in
-   execute r (lp_context query c)
-with NotImplemented s -> HLog.error s; true
+let approx r d c t v w =
+   let query i = mk_approx (lp_term d i t) (lp_term d i v) (lp_term d i w) in
+   execute r (lp_context query d c)
 
-let approx_cast r c t u v =
-try
-   let query i = mk_approx_cast (lp_term i t) (lp_term i u) (lp_term i v) in
-   execute r (lp_context query c)
-with NotImplemented s -> HLog.error s; true
+let approx_cast r d c t u v =
+   let query i = mk_approx_cast (lp_term d i t) (lp_term d i u) (lp_term d i v) in
+   execute r (lp_context query d c)

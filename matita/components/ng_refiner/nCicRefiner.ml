@@ -20,9 +20,10 @@ module Ref = NReference
 (* FG: extension for ELPI *)
 module LP = NCicELPI
 
-let log b =
-   if b then HLog.error "ELPI refinement failed!"
-   else HLog.message "ELPI refinement OK!"
+let log = function
+   | LP.Fail   -> HLog.error "ELPI refinement failed!"
+   | LP.OK     -> HLog.message "ELPI refinement OK!"
+   | LP.Skip s -> HLog.message ("ELPI refinement skipped: " ^ s)
 
 let current = 
   let uri = NUri.uri_of_string "cic:/matita/dummy/indty.ind" in 
@@ -1161,8 +1162,8 @@ let typeof status ?localise
   let res = typeof status ?localise metasenv subst context term expty in
   let _, _, refined_term, ty = res in
   begin match expty with
-     | `XTNone       -> log (LP.approx !current context term refined_term ty)
-     | `XTSome expty -> log (LP.approx_cast !current context term expty refined_term)
+     | `XTNone       -> log (LP.approx !current subst context term refined_term ty)
+     | `XTSome expty -> log (LP.approx_cast !current subst context term expty refined_term)
      | _             -> ()
   end;
   res 
