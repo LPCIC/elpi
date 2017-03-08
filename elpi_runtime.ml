@@ -1513,7 +1513,7 @@ let bind r gamma l a d delta b left t e =
               let r' = oref C.dummy in
               let v' = UVar(r',a+args,0) in
               r @:= mknLam args v';
-              Printf.eprintf "POSSIBILE PROBLEMA 2: manca trail";
+              if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
               r', a+args, (true, []), []
           | AppArg (i,orig_args) ->
               let is_llam, args = is_llam a orig_args a b (d+w) false e in
@@ -1662,8 +1662,6 @@ let rec unif matching depth adepth a bdepth b e =
    | UVar({ rest = [] },_,0), UVar ({ rest = _ :: _ },_,0) -> unif matching depth bdepth b adepth a e
    | AppUVar({ rest = [] },_,_), UVar ({ rest = _ :: _ },_,0) -> unif matching depth bdepth b adepth a e
    | _, UVar (r,origdepth,0) ->
-       if not !T.last_call then
-        T.trail := (T.Assignement r) :: !T.trail;
        begin try
          let t =
            if depth = 0 then
@@ -1673,13 +1671,11 @@ let rec unif matching depth adepth a bdepth b e =
              let a = hmove ~avoid:r ~from:adepth ~to_:bdepth a in
              (* Second step: we restrict the l.h.s. *)
              hmove ~from:(bdepth+depth) ~to_:origdepth a in
-         Printf.eprintf "POSSIBILE PROBLEMA 3: trail senza assegnamento";
          r @:= t;
+         if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
          [%spy "assign" (fun fmt tt -> Fmt.fprintf fmt "%a := %a" (ppterm depth [] bdepth empty_env) (UVar (r,origdepth,0)) (ppterm depth [] adepth empty_env) tt) t]; true
        with RestrictionFailure -> false end
    | UVar (r,origdepth,0), _ when not matching ->
-       if not !T.last_call then
-        T.trail := (T.Assignement r) :: !T.trail;
        begin try
          let t =
            if depth=0 then
@@ -1689,8 +1685,8 @@ let rec unif matching depth adepth a bdepth b e =
              let b = move ~avoid:r ~adepth ~from:bdepth ~to_:adepth e b in
              (* Second step: we restrict the r.h.s. *)
              hmove ~from:(adepth+depth) ~to_:origdepth b in
-         Printf.eprintf "POSSIBILE PROBLEMA 4: trail senza assegnamento";
          r @:= t;
+         if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
          [%spy "assign" (fun fmt tt -> Fmt.fprintf fmt "%a := %a" (ppterm depth [] adepth empty_env) (UVar (r,origdepth,0)) (ppterm depth [] adepth empty_env) tt) t]; true
        with RestrictionFailure -> false end
 
@@ -2683,9 +2679,7 @@ let thaw max_depth e m t =
          UVar(r,lvl,0)
         else
          let r' = oref C.dummy in
-         (*if not !T.last_call then
-          T.trail := (Assignement r) :: !T.trail; ????? *)
-         Printf.eprintf "POSSIBILE PROBLEMA 5";
+         if not !T.last_call then T.trail := (Assignement r) :: !T.trail;
          r @:= UVar(r',0,lvl);
          UVar (r', 0, 0)
       with Not_found -> orig)
