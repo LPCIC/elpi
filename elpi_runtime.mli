@@ -71,6 +71,7 @@ module Constants :
  sig
   val funct_of_ast : Func.t -> constant * term
   val show : constant -> string
+  val of_dbl : constant -> term
 
   val eqc : constant
   val orc : constant
@@ -115,6 +116,7 @@ val delay_goal : depth:int -> idx -> goal:term -> on:term_attributed_ref list ->
 val declare_constraint : depth:int -> idx -> goal:term -> on:term_attributed_ref list -> unit
 
 val lp_list_to_list : term -> term list
+val list_to_lp_list : term list -> term
 
 val query_of_ast_cmap :
   int ->

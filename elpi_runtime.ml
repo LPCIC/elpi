@@ -2565,10 +2565,11 @@ let ppmap fmt (g,l) =
 ;;
 
   (* Limited to bijections *)
-let align_frozen ({ arg2goal } as m) e alignement ngoals =
+let align_frozen ({ arg2goal } as m) e (alignement,mode) ngoals =
   if alignement = [] then () else begin
   [%spy "alignement-alignement" (fun fmt m ->
-    Fmt.fprintf fmt "%a%!" (pplist pp_int ";") m) alignement];
+    Fmt.fprintf fmt "%a (spread=%b)!"
+      (pplist pp_int ";") m (mode=`Spread)) alignement];
   [%spy "alignement-arg2goal" (fun fmt m ->
     Fmt.fprintf fmt "%a%!" (pplist (pp_pair pp_int pp_int) ";") m)
      (IM.bindings arg2goal)];
@@ -2581,19 +2582,19 @@ let align_frozen ({ arg2goal } as m) e alignement ngoals =
   let uniq_gs = uniq (List.sort compare gs) in
   if List.length gs <> List.length uniq_gs || List.length gs <> ngoals then
     error "Alignement invalid: 1 key per goal";
-  [%spy "alignement-xxxx1" (fun _ _ -> ()) ()];
   let (bkey, bgoal), todo = List.hd kg, List.tl kg in
   (* quick check for same key *)
   let same_k = ref None in
   let mkconstlist l =
-  [%spy "alignement-xxxxl" pp_term l];
     let k, l =
-      match l with
-      | App(c,arg,args) when is_frozen c m -> Constants.of_dbl c, arg::args
-      | Const c as x when is_frozen c m -> x, [] 
-        (* XXX In this case we should assert mode = `spread *)
-      | _ -> Constants.dummy, lp_list_to_list l in
-  [%spy "alignement-xxxxk" pp_term k];
+      match mode, l with
+      | `Align, App(c,arg,args) when is_frozen c m ->
+           Constants.of_dbl c, arg::args
+      | `Align, (Const c as x) when is_frozen c m -> x, [] 
+      | `Spread, (App (c,_,_) | Const c) when is_frozen c m ->
+           Constants.of_dbl c, []
+      | `Spread, _ -> Constants.dummy, []
+      | _ -> assert false in
     if !same_k == None then same_k := Some k;
     if option_get !same_k <> k then raise NoMatch;
     List.map (function
@@ -2601,14 +2602,11 @@ let align_frozen ({ arg2goal } as m) e alignement ngoals =
       | t -> error ("align on non var list: " ^
                     Format.asprintf "%a" (ppterm 0 [] 0 e) t)) l in
   let bkey = mkconstlist e.(bkey) in
-  [%spy "alignement-xxxx2" (fun _ _ -> ()) ()];
   let todo =
     List.map (fun (key, goal) -> goal, bkey, mkconstlist e.(key)) todo in
-  [%spy "alignement-xxxx2.5" (fun _ _ -> ()) ()];
   let mkmap base tgt =
     if List.length base <> List.length tgt then raise NoMatch else
     List.combine tgt base in
-  [%spy "alignement-xxxx3" (fun _ _ -> ()) ()];
   let maps = List.map (fun (g,base,tgt) -> g,mkmap base tgt) todo in
   [%spy "alignement" (fun fmt m ->
     Fmt.fprintf fmt "%a%!"
@@ -2856,25 +2854,26 @@ let propagate { CS.cstr; cstr_position } history =
        let constraints = List.map sequent_of_constr constraints in
 
        (* max depth of rule and constraints involved in the matching *)
-
-       let max_depth, constraints, alignement =
-         match alignement with
-         | l,`Align -> 
-
-             let max_depth,constraints =
-               let max_depth =
-                 List.fold_left (fun acc (d,_,_) -> max d acc)
-                   ruledepth constraints in
-               max_depth, List.map (fun (a,b,c) -> max_depth,a,b,c) constraints in
-               max_depth, constraints, l
-         | l,`Spread ->
-
-            let max_depth, constraints =
+       let max_depth, constraints =
+         let _, mode = alignement in
+         match mode with
+         | `Align -> 
+             (* We compute the maximum goal depth, and goals are all lifted
+              * to that depth before matching *)
+             let max_depth =
+                List.fold_left (fun acc (d,_,_) -> max d acc)
+                  ruledepth constraints in
+             let constraints =
+                List.map (fun (a,b,c) -> max_depth,a,b,c) constraints in
+             max_depth, constraints
+         | `Spread ->
+             (* Goals are lifted at different depths to avoid collisions *)
              let max_depth,constraints = 
-              List.fold_left (fun (acc,res) (d,x,y) -> acc+(d - ruledepth),(acc,d,x,y)::res)
+              List.fold_left (fun (acc,res) (d,x,y) ->
+                 acc+(d - ruledepth),(acc,d,x,y)::res)
                 (ruledepth,[]) constraints in
-             max_depth, List.rev constraints in
-            max_depth, constraints, l in
+             max_depth, List.rev constraints
+       in
 
        let constraints_contexts, constraints_goals =
          List.fold_right (fun (dto,d,p,g) (ctxs, gs) ->
@@ -3574,6 +3573,25 @@ let query_of_ast_cmap lcs ~cmap ~macro ~types t =
 let query_of_ast { query_depth = lcs } t =
   query_of_ast_cmap lcs ~cmap:F.Map.empty ~macro:F.Map.empty ~types:[] t
 ;;
+  
+(* We check no (?? X L) patter is there *)
+let assert_no_uvar_destructuring l =
+  let rec test = function (* TODO: use generic iterator *)
+    | App (c,_,_) when c == C.uvc -> true
+    | App (_,x,xs) -> test x || List.exists test xs
+    | Const _ -> false
+    | Lam t -> test t
+    | Arg _ -> false
+    | AppArg (_,l) -> List.exists test l
+    | UVar _ | AppUVar _ -> assert false
+    | Custom (_,l) -> List.exists test l
+    | CData _ -> false
+    | Nil -> false
+    | Cons (t1,t2) -> test t1 || test t2
+  in
+  if List.exists (fun (x,y) -> test x || test y) l then
+    error "Variable can only be introspected (eg ?? X L) in the guard"
+;;
 
 let chr_of_ast depth cmap macro r =
   let open Elpi_ast in
@@ -3594,6 +3612,7 @@ let chr_of_ast depth cmap macro r =
   let alignement =
     List.map (internArg amap) (fst r.alignement), snd r.alignement in
   let nargs = amap.max_arg in
+  assert_no_uvar_destructuring (to_match @ to_remove);
   { to_match; to_remove; guard; new_goal; alignement; depth; nargs }
 
 type temp = {
@@ -3867,6 +3886,7 @@ let query_of_ast = Compiler.query_of_ast
 let query_of_ast_cmap lvl cmap = Compiler.query_of_ast_cmap lvl ~cmap ~macro:F.Map.empty ~types:[]
 let term_of_ast = Compiler.term_of_ast
 let lp_list_to_list = Clausify.lp_list_to_list
+let list_to_lp_list = HO.list_to_lp_list
 let split_conj = Clausify.split_conj
 let llam_unify ad e bd a b = HO.unif ad e bd a b
 module CustomConstraints = CS.Custom

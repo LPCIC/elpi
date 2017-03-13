@@ -440,8 +440,10 @@ EXTEND
     [[ to_match = LIST0 sequent;
        to_remove = OPT [ BIND; l = LIST1 sequent -> l ];
        alignement = OPT [ a =
-         [ SYMBOL ">"; cl = LIST1 CONSTANT SEP SYMBOL "~" -> (cl,`Align)
-         | SYMBOL ">>"; cl = LIST1 CONSTANT SEP SYMBOL "=" -> (cl,`Spread) ] -> a ];
+         [ SYMBOL ">"; hd = CONSTANT; a =
+             [ SYMBOL "="; l = LIST1 CONSTANT SEP SYMBOL "=" -> (l,`Spread)
+             | SYMBOL "~"; l = LIST1 CONSTANT SEP SYMBOL "~" -> (l,`Align) ]
+          -> hd :: fst a, snd a ] -> a];
        guard = OPT [ PIPE; a = atom LEVEL "abstterm" -> a ];
        new_goal = OPT [ SYMBOL "<=>"; g = atom -> g ] ->
          let to_remove = match to_remove with None -> [] | Some l -> l in
