@@ -12,11 +12,11 @@ addons:
     - lua5.1
     - gnuplot
 install:
-- opam init -j 2 --compiler=4.02.3 -n -y
-- eval $(opam config env)
-- opam config var root
-- opam install -j 2 -y camlp5 ocamlfind ppx_tools ppx_deriving
-- opam list
+ - opam init -j 2 --compiler=4.02.3 -n -y
+ - eval $(opam config env)
+ - opam config var root
+ - opam install -j 2 -y camlp5 ocamlfind ppx_tools ppx_deriving
+ - opam list
 script:
  - make
  - make -C bench
