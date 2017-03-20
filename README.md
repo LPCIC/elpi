@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/LPCIC/elpi.svg?branch=master)](https://travis-ci.org/LPCIC/elpi)
 # ELPI
 
 ELPI implements a variant of λProlog enriched with Constraint Handling Rules.
