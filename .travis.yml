@@ -1,5 +1,5 @@
 dist: trusty
-sudo: false
+sudo: required
 language: c
 cache:
   apt: true
@@ -7,10 +7,13 @@ cache:
   - $HOME/.opam
 addons:
   apt:
+    sources:
+    - avsm
     packages:
     - opam
     - lua5.1
     - gnuplot
+    - gcc-multilib
 install:
  - opam init -j 2 --compiler=4.02.3 -n -y
  - eval $(opam config env)
