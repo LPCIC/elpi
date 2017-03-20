@@ -14,8 +14,8 @@ FLAGS=-I $(shell camlp5 -where)
 OCAMLOPTIONS= -g
 CMX=cmx
 CMXA=cmxa
-OC=OCAMLPATH=$(PWD) ocamlfind ocamlopt
-OD=OCAMLPATH=$(PWD) ocamlfind ocamldep -native
+OC=OCAMLPATH=$(shell pwd) ocamlfind ocamlopt
+OD=OCAMLPATH=$(shell pwd) ocamlfind ocamldep -native
 H=@
 pp = printf '$(1) %-25s %s\n' "$(3)" "$(2)"
 
@@ -106,7 +106,7 @@ include .depends .depends.parser
 elpi.cmx : elpi_custom.cmx
 elpi.cmo : elpi_custom.cmo
 
-META.%: LIBSPATH = $(PWD)
+META.%: LIBSPATH = $(shell pwd)
 META.%: meta.%.src
 	$(H)cp $< $@
 	$(H)(echo "directory=\"$(LIBSPATH)\"";\
