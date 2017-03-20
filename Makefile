@@ -17,9 +17,9 @@ CMXA=cmxa
 OC=OCAMLPATH=$(PWD) ocamlfind ocamlopt
 OD=OCAMLPATH=$(PWD) ocamlfind ocamldep -native
 H=@
+pp = printf '$(1) %-25s %s\n' "$(3)" "$(2)"
 
 all: check-ocaml-ver
-	$(H)$(MAKE) --no-print-directory clean
 	$(H)$(MAKE) --no-print-directory trace_ppx
 	$(H)$(MAKE) --no-print-directory elpi.$(CMXA)
 	$(H)$(MAKE) --no-print-directory META.elpi
@@ -32,6 +32,7 @@ trace: check-ocaml-ver
 	$(H)$(MAKE) --no-print-directory META.elpi
 	$(H)$(MAKE) --no-print-directory elpi
 	$(H)mv elpi elpi.trace
+	$(H)$(MAKE) --no-print-directory clean
 
 trace_ppx: trace_ppx.ml
 	$(H)$(OC) -package compiler-libs.common,ppx_tools.metaquot \
@@ -65,41 +66,41 @@ OC_OPTIONS = -linkpkg $(OCAMLOPTIONS) $(FLAGS)
 ELPI_DEPENDS = camlp5.$(CMXA) unix.$(CMXA) str.$(CMXA)
 
 ELPI_COMPONENTS = \
-  coqlib.$(CMX) univ.$(CMX) uGraph.$(CMX) \
   elpi_trace.$(CMX) \
   elpi_util.$(CMX) elpi_ast.$(CMX) elpi_parser.$(CMX) elpi_ptmap.$(CMX) \
   elpi_runtime.$(CMX) \
   elpi_latex_exporter.$(CMX) elpi_prolog_exporter.$(CMX) elpi_custom.$(CMX)
 
 elpi.$(CMXA): $(ELPI_COMPONENTS)
-	@echo OCAMLOPT -a $@
+	$(H)$(call pp,OCAMLOPT,-a,$@)
 	$(H)$(OC) $(OC_OPTIONS) -o $@ -a $(ELPI_COMPONENTS)
 
 elpi: elpi.$(CMX) META.elpi
-	@echo OCAMLOPT $@
+	$(H)$(call pp,OCAMLOPT,-package elpi -o,$@)
 	$(H)$(OC) $(OC_OPTIONS) -package elpi \
 		-o $@ elpi_custom.$(CMX) elpi.$(CMX)
 
 %.$(CMX): %.ml trace_ppx
-	@echo OCAMLOPT $@ $(if $(TRACE),TRACE=$(TRACE),)
-	$(H)$(OC) $(OCAMLOPTIONS) -package camlp5,ppx_deriving.std -ppx './trace_ppx'\
+	$(H)$(call pp,OCAMLOPT,-c -ppx trace_ppx $(if $(TRACE),TRACE=$(TRACE),),$@)
+	$(H)$(OC) $(OCAMLOPTIONS) \
+		-package camlp5,ppx_deriving.std -ppx './trace_ppx'\
 	       	-c $<
 %.cmi: %.mli
-	@echo OCAMLOPT $@
+	$(H)$(call pp,OCAMLOPT,-c,$@)
 	$(H)$(OC) $(OCAMLOPTIONS) -package camlp5 -c $<
 
 elpi_parser.$(CMX): elpi_parser.ml elpi_parser.cmi elpi_ast.$(CMX) elpi_ast.cmi
-	@echo OCAMLOPT $@
+	$(H)$(call pp,OCAMLOPT,-c -pp camlp5o,$@)
 	$(H)$(OC) $(OCAMLOPTIONS) -pp '$(PP) $(PARSE)' $(FLAGS) -o $@ -c $<
 
 # dependencies
 include .depends .depends.parser
 
 .depends: $(filter-out elpi_parser.ml, $(wildcard *.ml *.mli))
-	@echo OCAMLDEP $@
+	$(H)$(call pp,OCAMLDEP,,$@)
 	$(H)$(OD) $^ > $@
 .depends.parser: elpi_parser.ml
-	@echo OCAMLDEP $@
+	$(H)$(call pp,OCAMLDEP,,$@)
 	$(H)$(OD) -pp '$(PP) $(PARSE)' $< > $@
 # only registers hooks, not detected by ocamldep
 elpi.cmx : elpi_custom.cmx
@@ -107,8 +108,8 @@ elpi.cmo : elpi_custom.cmo
 
 META.%: LIBSPATH = $(PWD)
 META.%: meta.%.src
-	@cp $< $@
-	@(echo "directory=\"$(LIBSPATH)\"";\
+	$(H)cp $< $@
+	$(H)(echo "directory=\"$(LIBSPATH)\"";\
 	 echo "version=\"$(V)\"") >> $@
 
 # required OCaml package
