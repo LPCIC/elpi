@@ -1,5 +1,0 @@
-utf8Macro.cmi :
-utf8MacroTable.cmo :
-utf8MacroTable.cmx :
-utf8Macro.cmo : utf8MacroTable.cmx utf8Macro.cmi
-utf8Macro.cmx : utf8MacroTable.cmx utf8Macro.cmi

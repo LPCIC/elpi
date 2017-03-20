@@ -1,5 +1,0 @@
-requires="helm-getter"
-version="0.0.1"
-archive(byte)="library.cma"
-archive(native)="library.cmxa"
-linkopts=""

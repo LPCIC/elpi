@@ -1,4 +1,0 @@
-requires="helm-content"
-version="0.0.1"
-archive(byte)="disambiguation.cma"
-archive(native)="disambiguation.cmxa"

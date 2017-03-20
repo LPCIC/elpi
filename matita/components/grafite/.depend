@@ -1,5 +1,0 @@
-grafiteAstPp.cmi : grafiteAst.cmo
-grafiteAst.cmo :
-grafiteAst.cmx :
-grafiteAstPp.cmo : grafiteAst.cmo grafiteAstPp.cmi
-grafiteAstPp.cmx : grafiteAst.cmx grafiteAstPp.cmi

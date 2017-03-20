@@ -1,9 +1,0 @@
-librarian.cmi :
-libraryMisc.cmi :
-libraryClean.cmi :
-librarian.cmo : librarian.cmi
-librarian.cmx : librarian.cmi
-libraryMisc.cmo : libraryMisc.cmi
-libraryMisc.cmx : libraryMisc.cmi
-libraryClean.cmo : libraryClean.cmi
-libraryClean.cmx : libraryClean.cmi

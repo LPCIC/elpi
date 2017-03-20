@@ -1,5 +1,0 @@
-requires="zip expat helm-extlib"
-version="0.0.1"
-archive(byte)="xml.cma"
-archive(native)="xml.cmxa"
-linkopts=""

@@ -1,4 +1,0 @@
-requires="str netstring helm-xml"
-version="0.0.1"
-archive(byte)="registry.cma"
-archive(native)="registry.cmxa"

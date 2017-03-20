@@ -1,3 +1,0 @@
-#use "topfind";;
-#require "helm-getter";;
-Helm_registry.load_from "sample.conf.xml";;

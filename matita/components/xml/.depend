@@ -1,6 +1,0 @@
-xml.cmi :
-xmlPushParser.cmi :
-xml.cmo : xml.cmi
-xml.cmx : xml.cmi
-xmlPushParser.cmo : xmlPushParser.cmi
-xmlPushParser.cmx : xmlPushParser.cmi

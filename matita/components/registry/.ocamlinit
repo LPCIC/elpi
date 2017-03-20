@@ -1,4 +1,0 @@
-#use "topfind";;
-#require "helm-registry";;
-open Helm_registry;;
-load_from "tests/sample.xml";;
