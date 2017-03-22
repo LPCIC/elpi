@@ -15,7 +15,6 @@ let set_precedence,precedence_of =
 
 exception NotInProlog;;
 
-let parsed = ref [];;
 let cur_dirname = ref (Unix.getcwd ())
 let last_loc : Ploc.t ref = ref (Ploc.make_loc "dummy" 1 0 (0, 0) "")
 let set_fname fname = last_loc := (Ploc.make_loc fname 1 0 (0, 0) "")
@@ -56,7 +55,8 @@ end;;
 
 (*CSC: when parse_one opens a file for reading, open the .tex file
   for writing (and put the header) *)
-let rec parse_one e (origfilename as filename) =
+(* the parsed variable is a cache to avoid parsing the same file twice *)
+let rec parse_one e parsed (origfilename as filename) =
  let origprefixname = Filename.chop_extension origfilename in
  let prefixname,filename =
   let rec iter_tjpath dirnames =
@@ -99,7 +99,7 @@ let rec parse_one e (origfilename as filename) =
     let signame = prefixname ^ ".sig" in
     if Sys.file_exists signame then
      let origsigname = origprefixname ^ ".sig" in
-     parse_one e origsigname
+     parse_one e parsed origsigname
     else [] in
   Printf.eprintf "loading %s\n%!" origfilename;
   let ast = ref None in
@@ -136,7 +136,7 @@ let rec parse_one e (origfilename as filename) =
  end
 
 let parse e filenames =
-  List.concat (List.map (parse_one e) filenames)
+  List.concat (List.map (parse_one e (ref [])) filenames)
 
 let parse_string e s =
   try Grammar.Entry.parse e (Stream.of_string s)
