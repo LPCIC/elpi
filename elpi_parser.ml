@@ -607,36 +607,27 @@ END
 (* 120 is the first level after 110, which is that of , *)
 let list_element_prec = 120
 
-let my_program_only = ref [];;
+let parser_initialized = ref false
 
-let parse_program (*?(ontop=[])*) ~paths ~filenames : program =
-  (* let insertions = parse plp s in
-  let insert prog = function
-    | item, (`Here | `End) -> prog @ [item]
-    | item, `Begin -> item :: prog
-    | (_,_,_,name as item), `Before n ->
-        let newprog = List.fold_left (fun acc (_,_,_,cn as c) ->
-          if CN.equal n cn then acc @ [item;c]
-          else acc @ [c]) [] prog in
-        if List.length prog = List.length newprog then
-          raise (Stream.Error ("unable to insert clause "^CN.to_string name));
-        newprog
-    | (_,_,_,name as item), `After n ->
-        let newprog = List.fold_left (fun acc (_,_,_,cn as c) ->
-          if CN.equal n cn then acc @ [c;item]
-          else acc @ [c]) [] prog in
-        if List.length prog = List.length newprog then
-          raise (Stream.Error ("unable to insert clause "^CN.to_string name));
-        newprog in
-  List.fold_left insert ontop insertions*)
+let init ~paths =
+  assert(!parser_initialized = false);
   set_tjpath paths;
-  let pervasives = "pervasives.elpi" in
-  parse lp (pervasives::filenames)
+  assert(parse lp ["pervasives-syntax.elpi"] = []);
+  parser_initialized := true
 ;;
 
-let parse_goal s : goal = parse_string goal s
+let parse_program ?(no_pervasives=false) filenames : program =
+  assert(!parser_initialized = true);
+  let pervasives = if no_pervasives then [] else ["pervasives.elpi"] in
+  parse lp (pervasives @ filenames)
+;;
+
+let parse_goal s : goal =
+  assert(!parser_initialized = true);
+  parse_string goal s
 
 let parse_goal_from_stream strm =
+  assert(!parser_initialized = true);
   try Grammar.Entry.parse goal strm
   with
     Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) -> raise(Stream.Error msg)
