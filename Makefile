@@ -11,7 +11,7 @@ PP=camlp5o -I . -I +camlp5
 PARSE=pa_extend.cmo pa_lexer.cmo
 TRACESYNTAX=pa_extend.cmo q_MLast.cmo pa_macro.cmo
 FLAGS=-I $(shell camlp5 -where)
-OCAMLOPTIONS= -g
+OCAMLOPTIONS= -g -bin-annot
 CMX=cmx
 CMXA=cmxa
 OC=OCAMLPATH=$(shell pwd) ocamlfind ocamlopt

@@ -4,6 +4,8 @@
 *.cmi
 *.a
 *.cmxa
+*.cmt
+*.cmti
 
 .*~
 .*.swp
