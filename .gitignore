@@ -17,6 +17,7 @@ META.elpi
 elpi
 elpi.trace
 trace_ppx
+.merlin
 
 bench/data.csv
 bench/data.csv.dat

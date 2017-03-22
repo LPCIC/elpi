@@ -37,6 +37,8 @@ trace: check-ocaml-ver
 trace_ppx: trace_ppx.ml
 	$(H)$(OC) -package compiler-libs.common,ppx_tools.metaquot \
 		-linkpkg $< -o $@
+	cp .merlin.in .merlin
+	echo 'FLG -ppx $(shell pwd)/trace_ppx' >> .merlin
 
 git/%:
 	$(H)rm -rf "$$PWD/elpi-$*"
