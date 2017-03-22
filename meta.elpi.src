@@ -1,4 +1,4 @@
 archive(byte)="elpi.cma"
 archive(native)="elpi.cmxa"
-linkopts=""
+linkopts="-linkall"
 requires="ppx_deriving.runtime camlp5.gramlib unix str"

@@ -78,7 +78,7 @@ elpi.$(CMXA): $(ELPI_COMPONENTS)
 elpi: elpi.$(CMX) META.elpi
 	$(H)$(call pp,OCAMLOPT,-package elpi -o,$@)
 	$(H)$(OC) $(OC_OPTIONS) -package elpi \
-		-o $@ elpi_custom.$(CMX) elpi.$(CMX)
+		-o $@ elpi.$(CMX)
 
 %.$(CMX): %.ml trace_ppx
 	$(H)$(call pp,OCAMLOPT,-c -ppx trace_ppx $(if $(TRACE),TRACE=$(TRACE),),$@)
