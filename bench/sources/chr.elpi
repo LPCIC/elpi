@@ -17,10 +17,11 @@ term (?? as X) A :- $constraint (term X A) X.
 infixr ====> 126. % Implication where the l.h.s. is a list of propositions.
 
 constraint term {
-  rule (GX ?- term (?? X LX) TX)
-     \ (GY ?- term (?? Y LY) TY)
-     > X ~ Y
-     | (compatible GX LX GY LY CTXCONSTR)
+  rule (GX ?- term (?? as X) TX)
+     \ (GY ?- term (?? as Y) TY)
+     > X = Y
+     | ($match_frozen X _ XL, $match_frozen Y _ YL,
+        compatible GX LX GY LY CTXCONSTR)
    <=> (CTXCONSTR, TX = TY).
 }
 
