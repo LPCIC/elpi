@@ -38,6 +38,20 @@ let { CData.cin = in_loc; isc = is_loc; cout = out_loc } as cloc =
     data_hash = Hashtbl.hash;
   })
 
+module CD = struct
+  let is_int = is_int
+  let to_int = out_int
+  let of_int = in_int
+
+  let is_float = is_float
+  let to_float = out_float
+  let of_float = in_float
+
+  let is_string = is_string
+  let to_string x = F.show (out_string x)
+  let of_string x = in_string (F.from_string x)
+end
+
 (******************************************************************************
   Terms: data type definition and printing
  ******************************************************************************)

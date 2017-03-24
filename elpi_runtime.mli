@@ -5,6 +5,7 @@
 
 open Elpi_ast
 open Elpi_parser
+open Elpi_util
 
 type query
 type program
@@ -17,9 +18,24 @@ val execute_once : print_constraints:bool -> program -> query -> bool (* true me
 val execute_loop : program -> query -> unit
 
 (* Extension API *)
-val cint: int Elpi_util.CData.cdata
-val cfloat: float Elpi_util.CData.cdata
-val cstring:  Elpi_ast.Func.t Elpi_util.CData.cdata
+val cint: int CData.cdata
+val cfloat: float CData.cdata
+val cstring:  Elpi_ast.Func.t CData.cdata
+
+module CD : sig
+  val is_int : CData.t -> bool
+  val to_int : CData.t -> int
+  val of_int : int -> CData.t
+
+  val is_float : CData.t -> bool
+  val to_float : CData.t -> float
+  val of_float : float -> CData.t
+
+  val is_string : CData.t -> bool
+  val to_string : CData.t -> string
+  val of_string : string -> CData.t
+end
+
 type idx
 type constant = int (* De Brujin levels *)
 type term =
@@ -35,7 +51,7 @@ type term =
   | AppUVar of term_attributed_ref * (*depth:*)int * term list
   (* Misc: $custom predicates, ... *)
   | Custom of constant * term list
-  | CData of Elpi_util.CData.t
+  | CData of CData.t
   | Cons of term * term
   | Nil
 and term_attributed_ref = {
@@ -70,6 +86,10 @@ module Pp :
 module Constants :
  sig
   val funct_of_ast : Func.t -> constant * term
+
+  val from_string : string -> term
+  val from_stringc : string -> constant
+ 
   val show : constant -> string
   val of_dbl : constant -> term
 
