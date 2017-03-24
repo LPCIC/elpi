@@ -2194,7 +2194,7 @@ module Clausify : sig
   
   val modes : mode_decl C.Map.t Fork.local_ref
 
-  val lp_list_to_list : term -> term list
+  val lp_list_to_list : depth:int -> term -> term list
   val get_lambda_body : int -> term -> term
   val split_conj : term -> term list
 
@@ -2223,9 +2223,13 @@ let rec split_conj = function
   | _ as f -> [ f ]
 ;;
 
-let rec lp_list_to_list = function
-  | Cons(hd, tl) -> hd :: lp_list_to_list tl
+let rec lp_list_to_list ~depth = function
+  | Cons(hd, tl) -> hd :: lp_list_to_list ~depth tl
   | Nil -> []
+  | UVar ({ contents=g },from,args) when g != C.dummy ->
+    lp_list_to_list ~depth (deref_uv ~from ~to_:depth args g)
+  | AppUVar ({contents=g},from,args) when g != C.dummy -> 
+    lp_list_to_list ~depth (deref_appuv ~from ~to_:depth args g)
   | x -> error (Fmt.sprintf "%s is not a list" (show_term x))
 ;;
 

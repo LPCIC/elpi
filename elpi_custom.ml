@@ -236,7 +236,7 @@ let _ =
                | Some x -> x
                | None -> type_error
             "the second arg of $delay must be flexible or a list of flexibles")
-              (List.map is_flex (lp_list_to_list t2)) in
+              (List.map is_flex (lp_list_to_list ~depth t2)) in
             delay_goal ~depth p ~goal:t1 ~on:v2; [])
     | _ -> type_error "$delay takes 2 arguments"
     );
@@ -250,7 +250,7 @@ let _ =
                | Some x -> x
                | None -> type_error
             "the second arg of $constraint must be flexible or a list of flexibles")
-              (List.map is_flex (lp_list_to_list t2)) in
+              (List.map is_flex (lp_list_to_list ~depth t2)) in
             declare_constraint ~depth p ~goal:t1 ~on:v2; [])
     | _ -> type_error "$constraint takes 2 arguments"
     );

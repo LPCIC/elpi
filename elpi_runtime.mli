@@ -135,7 +135,7 @@ val print_delayed : unit -> unit
 val delay_goal : depth:int -> idx -> goal:term -> on:term_attributed_ref list -> unit
 val declare_constraint : depth:int -> idx -> goal:term -> on:term_attributed_ref list -> unit
 
-val lp_list_to_list : term -> term list
+val lp_list_to_list : depth:int -> term -> term list
 val list_to_lp_list : term list -> term
 
 val query_of_ast_cmap :
