@@ -22,20 +22,6 @@ val cint: int CData.cdata
 val cfloat: float CData.cdata
 val cstring:  Elpi_ast.Func.t CData.cdata
 
-module CD : sig
-  val is_int : CData.t -> bool
-  val to_int : CData.t -> int
-  val of_int : int -> CData.t
-
-  val is_float : CData.t -> bool
-  val to_float : CData.t -> float
-  val of_float : float -> CData.t
-
-  val is_string : CData.t -> bool
-  val to_string : CData.t -> string
-  val of_string : string -> CData.t
-end
-
 type idx
 type constant = int (* De Brujin levels *)
 type term =
@@ -70,6 +56,20 @@ val pp_term : Format.formatter -> term -> unit
 val show_term : term -> string
 
 exception No_clause
+
+module CD : sig
+  val is_int : CData.t -> bool
+  val to_int : CData.t -> int
+  val of_int : int -> term
+
+  val is_float : CData.t -> bool
+  val to_float : CData.t -> float
+  val of_float : float -> term
+
+  val is_string : CData.t -> bool
+  val to_string : CData.t -> string
+  val of_string : string -> term
+end
 
 module Pp :
  sig
