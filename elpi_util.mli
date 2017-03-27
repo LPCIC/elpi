@@ -22,7 +22,7 @@ val uniq : 'a list -> 'a list
 
 (******************** option ******************)
 
-val option_get : 'a option -> 'a
+val option_get : ?err:string -> 'a option -> 'a
 val option_map : ('a -> 'b) -> 'a option -> 'b option
 val pp_option :
   (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a option -> unit
@@ -132,3 +132,19 @@ module CData : sig
   val map : 'a cdata -> 'b cdata -> ('a -> 'b) -> t -> t
 end
 
+(* Object oriented state for quotations: each quotation can declare
+ * a component that is carried by all other quotations *)
+module ExtState : sig
+
+  type t
+
+  type 'a set = t -> 'a -> t
+  type 'a update = t -> ('a -> 'a) -> t
+  type 'a get = t -> 'a
+  type 'a init = unit -> 'a
+
+  val declare_extension : string -> 'a init -> ('a get * 'a set * 'a update)
+  
+  val init : unit -> t 
+
+end

@@ -136,6 +136,7 @@ let empty_env = [||]
    - we use special constants to represent !, pi, sigma *)
 module Constants : sig
 
+  exception UnknownGlobal of string
   val funct_of_ast : F.t -> constant * term
   val of_dbl : constant -> term
   val show : constant -> string
@@ -190,13 +191,15 @@ module Constants : sig
 
 end = struct (* {{{ *)
 
+ exception UnknownGlobal of string
+
 (* Hash re-consing :-( *)
 let funct_of_ast, of_dbl, show, fresh =
  let h = Hashtbl.create 37 in
  let h' = Hashtbl.create 37 in
  let h'' = Hashtbl.create 17 in
  let fresh = ref 0 in
- (function x ->
+ (fun  x ->
   try Hashtbl.find h x
   with Not_found ->
    decr fresh;
@@ -3302,86 +3305,25 @@ module Compiler : sig
   val query_of_ast : program -> Elpi_ast.term -> query
   val term_of_ast : depth:int -> Elpi_ast.term -> term
 
-  val query_of_ast_cmap :
-    int ->
-    cmap:term F.Map.t ->
-    macro:Elpi_ast.term F.Map.t ->
-    types:(term * int * term) list ->
-    Elpi_ast.term -> string list * int * term array * term
+  type quotation = depth:int -> ExtState.t -> string -> ExtState.t * term
+  val set_default_quotation : quotation -> unit
+  val register_named_quotation : string -> quotation -> unit
+
+  val lp : quotation
 
 end = struct (* {{{ *)
 
 module SM = Map.Make(String)
 
-(* To assign Arg (i.e. stack) slots to unif variables in clauses *)
-type argmap = {
-  lvl : int; (* cross call assertion: all args live in the same lvl *)
-  max_arg : int;
-  name2arg : (term * int) SM.t;       (* "X" -> Const "%Arg4", 4 *)
-  argc2name : (string * int) C.Map.t; (* "%Arg4" -> "X", 4 *)
-   (* constant used for symbolic pre-computation, real Arg number *)
-}
+module A = Elpi_ast
 
-let empty_amap lvl = { lvl; max_arg = 0; name2arg = SM.empty; argc2name = C.Map.empty }
+(* Function call spilling: from (g {f x}) to (sigma Y\ f x Y, g Y)
+ *
+ * Works on AST and needs to know the "types" of functors, i.e. their
+ * arity in order to know how many extra arguments needs to be used *)
+let spill types ast =
 
-let stack_arg_of_ast cur_lvl ({ lvl; max_arg = f; name2arg = l } as amap) n =
- assert(lvl = cur_lvl);
- try amap, fst (SM.find n l)
- with Not_found ->
-  let cname = Printf.(sprintf "%%Arg%d" f) in
-  let n' = C.(from_string cname) in
-  let nc = C.(from_stringc cname) in
-  { lvl; max_arg = f+1 ;
-    name2arg = SM.add n (n',f) l;
-    argc2name = C.Map.add nc (n,f) amap.argc2name }, n'
-;;
-
-let is_uvar_name f = 
-   let c = (F.show f).[0] in
-   ('A' <= c && c <= 'Z') || c = '_'
-;;
-
-let is_macro_name f = 
-   let c = (F.show f).[0] in
-   c = '@'
-;;
-
-let desugar inner s args =
-  let open Elpi_ast in
-  let open Func in
-  let varname = function Const x -> x | _ -> assert false in
-  let last_is_arrow l =
-    match List.rev l with
-    | App(Const f,[_]) :: _ -> equal f arrowf
-    | _ -> false in  
-  let chop_last_app l =
-    match List.rev l with
-    | App(_,[x]) :: xs -> x, List.rev xs
-    | _ -> assert false in
-  match args with
-  | [var;App(Const f,args)] when equal s letf -> f, (args @ [var]) 
-  | [var;Const f] when equal s letf -> f, [var] 
-  | [App(hd,args); hyps] when equal s rimplf && last_is_arrow args ->
-    let res, args = chop_last_app args in
-    let var = if inner then mkFreshName () else mkFreshUVar () in
-    let args = [App(hd, args @ [var]) ;
-                App(Const andf, [App(Const eqf, [var;res]); hyps])] in
-    if inner then pif, [Lam(varname var, App(Const s, args ))]
-    else s, args
-  | args when not (equal s rimplf) && last_is_arrow args ->
-    let res, args = chop_last_app args in
-    let var = if inner then mkFreshName () else mkFreshUVar () in
-    let args = [App(Const s, args @ [var]) ; App(Const eqf, [var;res])] in
-    if inner then pif, [Lam(varname var, App(Const rimplf, args))]
-    else rimplf, args
-  | _ -> s, args
-;;
-      
-let stack_term_of_ast lvl amap cmap macro types ast =
-  let module A = Elpi_ast in
-
-  (* This sucks: types and mode declarations should be merged XXX *)    
-  let arity t =
+  let arity_of types t =
     let (c,ct), args =
       match t with
       | A.App (A.Const f,args) -> C.funct_of_ast f, args
@@ -3391,6 +3333,7 @@ let stack_term_of_ast lvl amap cmap macro types ast =
       | _ -> error ("only applications can be spilled: " ^ A.show_term t) in
     let nargs = List.length args in
     let missing_args =
+      (* XXX This sucks: types and mode declarations should be merged XXX *)    
       try
         let _,_,ty = List.find (fun (t,_,_) -> t == ct) types in
         let rec napp = function App(_,_,[x]) -> 1 + napp x | _ -> 0 in
@@ -3415,157 +3358,284 @@ let stack_term_of_ast lvl amap cmap macro types ast =
       error ("cannot spill fully applied " ^ A.show_term t);
     missing_args in
 
-  let rec stack_macro_of_ast inner lvl amap cmap f =
-    try aux inner lvl amap cmap (F.Map.find f macro)
+  let spilled_name = ref 0 in
+  let rec mkSpilledNames n =
+    if n == 0 then []
+    else begin
+      incr spilled_name;
+      let name = F.from_string ("Spilled_" ^ string_of_int !spilled_name) in
+      name :: mkSpilledNames (n-1)
+    end in
+  let add_spilled sp t =
+    match sp with
+    | [] -> [], [t]
+    | _ ->
+        let to_spill = map_filter snd sp in
+        List.map (fun (x,_) -> x, None) sp,
+        [A.(App(Const F.andf, to_spill @ [t]))] in
+
+  let rec mapflat2 f l =
+    let l1, l2 = List.(split (map f l)) in
+    List.flatten l1, List.flatten l2 in
+
+  let rec spaux toplevel = function
+    | A.App(A.Const c,fcall :: rest) when F.(equal c spillf) ->
+       let ns = mkSpilledNames (arity_of types fcall) in
+       let fspills, fcall = spaux false fcall in
+       assert(List.length fcall = 1);
+       let fcall = List.hd fcall in
+       let spills, args = mapflat2 (spaux false) rest in
+       let args = List.map (fun x -> A.Const x) ns in
+       fspills @ spills @ [ns,Some (A.mkApp (fcall :: args))], args
+    | A.App(A.Const c, args)
+       when F.(List.exists (equal c) [andf;andf2;orf;rimplf]) ->
+       let spills, args = mapflat2 (spaux true) args in
+       assert(map_filter snd spills = []);
+       spills, [A.App(A.Const c, args)]
+    | A.App(A.Const c, [A.Lam (n,arg)])
+       when F.(List.exists (equal c) [pif;sigmaf]) ->
+       let spills, arg = spaux true arg in
+       assert(List.length arg = 1);
+       let arg = List.hd arg in
+       assert(map_filter snd spills = []);
+       let arg = List.fold_left (fun acc (ns,_) ->
+         List.fold_left (fun acc n ->
+          A.(App(Const F.sigmaf, [Lam (n, acc)]))) acc ns) arg spills in
+       [], [A.App(A.Const c, [A.Lam (n,arg)])]
+    | A.App(A.Const c, args)
+       when F.(List.exists (equal c) [implf;rimplf]) ->
+       let spills, args = mapflat2 (spaux true) args in
+       assert(map_filter snd spills = []);
+       spills, [A.App(A.Const c, args)]
+    | A.App(c,args) ->
+       let spills, args = mapflat2 (spaux false) args in
+       if toplevel then add_spilled spills (A.App(c, args))
+       else spills, [A.App(c,args)]
+    | (A.String _|A.Float _|A.Int _
+      |A.Const _|A.Custom _|A.Quoted _) as x -> [], [x]
+    | A.Lam(x,t) ->
+       let sp, t = spaux false t in
+       if sp <> [] then error "Not supported yet (spill lambda)";
+       assert(List.length t = 1);
+       let t = List.hd t in
+       [], [A.Lam (x,t)]
+  in
+    let sp, t = spaux true ast in
+    assert(List.length t = 1);
+    let t = List.hd t in
+    assert(map_filter snd sp = []);
+    t
+;;
+
+(* To assign Arg (i.e. stack) slots to unif variables in clauses *)
+type argmap = {
+  max_arg : int;
+  name2arg : (term * int) SM.t;       (* "X" -> Const "%Arg4", 4 *)
+  argc2name : (string * int) C.Map.t; (* "%Arg4" -> "X", 4 *)
+   (* constant used for symbolic pre-computation, real Arg number *)
+}
+
+let empty_amap = { max_arg = 0; name2arg = SM.empty; argc2name = C.Map.empty }
+
+type varmap = term F.Map.t 
+type quotation = depth:int -> ExtState.t -> string -> ExtState.t * term
+let named_quotations = ref SM.empty
+let default_quotation = ref None
+
+let set_default_quotation f = default_quotation := Some f
+let register_named_quotation n f =
+  named_quotations := SM.add n f !named_quotations
+ 
+let varmap = "elpi:varmap"
+let get_varmap, set_varmap, update_varmap =
+  ExtState.declare_extension varmap (fun () -> F.Map.empty)
+;;
+let argmap = "elpi:argmap"
+let get_argmap, set_argmap, update_argmap =
+  ExtState.declare_extension argmap (fun () -> empty_amap)
+;;
+let types = "elpi:types"
+let get_types, set_types, update_types  =
+  ExtState.declare_extension types (fun () -> [])
+;;
+let macros = "elpi:macros"
+let get_macros, set_macros, update_macros =
+  ExtState.declare_extension macros (fun () -> F.Map.empty)
+;;
+
+(* Steps:
+   1. from AST to AST: spilling {f x} -> sigma Y\ f x Y
+   2. from AST to TERM:
+      - @macro expansion (to enable substitution Args are coded as constants)
+      - {{quotations}}
+      - desugaring "f x -> y" and "X := f y"
+      - bound names -> DB levels
+   3. from TERM to TERM: (Const "%Arg4") -> (Arg 4)
+*)
+let stack_term_of_ast ~depth:arg_lvl state ast =
+  let macro = get_macros state in
+  let types = get_types state in
+
+  (* XXX desugaring: XXX does not seem to be very useful... XXX
+      - "f x -> y :- c" ---> "f x TMP :- TMP = y, c"
+      - "X := f y" ---> "f y X"
+      *)
+  let desugar inner s args =
+    let open Elpi_ast in
+    let open Func in
+    let varname = function Const x -> x | _ -> assert false in
+    let last_is_arrow l =
+      match List.rev l with
+      | App(Const f,[_]) :: _ -> equal f arrowf
+      | _ -> false in  
+    let chop_last_app l =
+      match List.rev l with
+      | App(_,[x]) :: xs -> x, List.rev xs
+      | _ -> assert false in
+    match args with
+    | [var;App(Const f,args)] when equal s letf -> f, (args @ [var]) 
+    | [var;Const f] when equal s letf -> f, [var] 
+    | [App(hd,args); hyps] when equal s rimplf && last_is_arrow args ->
+      let res, args = chop_last_app args in
+      let var = if inner then mkFreshName () else mkFreshUVar () in
+      let args = [App(hd, args @ [var]) ;
+                  App(Const andf, [App(Const eqf, [var;res]); hyps])] in
+      if inner then pif, [Lam(varname var, App(Const s, args ))]
+      else s, args
+    | args when not (equal s rimplf) && last_is_arrow args ->
+      let res, args = chop_last_app args in
+      let var = if inner then mkFreshName () else mkFreshUVar () in
+      let args = [App(Const s, args @ [var]) ; App(Const eqf, [var;res])] in
+      if inner then pif, [Lam(varname var, App(Const rimplf, args))]
+      else rimplf, args
+    | _ -> s, args in
+ 
+  let is_uvar_name f = 
+     let c = (F.show f).[0] in
+     ('A' <= c && c <= 'Z') || c = '_' in
+
+  let is_macro_name f = 
+     let c = (F.show f).[0] in
+     c = '@' in
+
+  let stack_arg_of_ast state n =
+    let { name2arg; max_arg } = get_argmap state in
+    try state, fst (SM.find n name2arg)
+    with Not_found ->
+     let cname = Printf.(sprintf "%%Arg%d" max_arg) in
+     let n' = C.(from_string cname) in
+     let nc = C.(from_stringc cname) in
+     update_argmap state (fun { name2arg; argc2name } ->
+       { max_arg = max_arg+1 ;
+         name2arg = SM.add n (n',max_arg) name2arg;
+         argc2name = C.Map.add nc (n,max_arg) argc2name }),
+       n' in
+
+  let rec stack_macro_of_ast inner lvl state f =
+    try aux inner lvl state (F.Map.find f macro)
     with Not_found -> error ("Undeclared macro " ^ F.show f) 
   
-  and stack_funct_of_ast inner curlvl amap cmap f =
-    try amap, F.Map.find f cmap
+  and stack_funct_of_ast inner curlvl state f =
+    try state, F.Map.find f (get_varmap state)
     with Not_found ->
      if is_uvar_name f then
-       stack_arg_of_ast lvl amap (F.show f)
+       stack_arg_of_ast state (F.show f)
      else if is_macro_name f then
-       stack_macro_of_ast inner curlvl amap cmap f
-     else amap, snd (C.funct_of_ast f)
+       stack_macro_of_ast inner curlvl state f
+     else state, snd (C.funct_of_ast f)
 
   and stack_custom_of_ast f =
     let cname = fst (C.funct_of_ast f) in
     if not (is_custom_declared cname) then error("No custom named "^F.show f);
     cname
   
-  and aux inner lvl amap cmap = function
-    | A.Const f when F.(equal f nilf) -> amap, Nil
-    | A.Const f -> stack_funct_of_ast inner lvl amap cmap f
+  and aux inner lvl state = function
+    | A.Const f when F.(equal f nilf) -> state, Nil
+    | A.Const f -> stack_funct_of_ast inner lvl state f
     | A.Custom f ->
        let cname = stack_custom_of_ast f in
-       amap, Custom (cname, [])
+       state, Custom (cname, [])
     | A.App(A.Const f, [hd;tl]) when F.(equal f consf) ->
-           let amap, hd = aux true lvl amap cmap hd in
-           let amap, tl = aux true lvl amap cmap tl in
-           amap, Cons(hd,tl)
+       let state, hd = aux true lvl state hd in
+       let state, tl = aux true lvl state tl in
+       state, Cons(hd,tl)
     | A.App(A.Const f, tl) ->
        let f, tl = desugar inner f tl in
-       let amap, rev_tl =
-         List.fold_left (fun (amap, tl) t ->
-           let amap, t = aux true lvl amap cmap t in
-           (amap, t::tl))
-          (amap, []) tl in
+       let state, rev_tl =
+         List.fold_left (fun (state, tl) t ->
+           let state, t = aux true lvl state t in
+           (state, t::tl))
+          (state, []) tl in
        let tl = List.rev rev_tl in
-       let amap, c = stack_funct_of_ast inner lvl amap cmap f in
+       let state, c = stack_funct_of_ast inner lvl state f in
        begin match c with
        | Const c -> begin match tl with
-          | hd2::tl -> amap, App(c,hd2,tl)
+          | hd2::tl -> state, App(c,hd2,tl)
           | _ -> anomaly "Application node with no arguments" end
        | Lam _ -> (* macro with args *)
-          amap, deref_appuv ~from:lvl ~to_:lvl tl c
+          state, deref_appuv ~from:lvl ~to_:lvl tl c
        | _ -> error "Clause shape unsupported" end
     | A.App (A.Custom f,tl) ->
        let cname = stack_custom_of_ast f in
-       let amap, rev_tl =
-         List.fold_left (fun (amap, tl) t ->
-            let amap, t = aux true lvl amap cmap t in
-            (amap, t::tl))
-          (amap, []) tl in
-       amap, Custom(cname, List.rev rev_tl)
+       let state, rev_tl =
+         List.fold_left (fun (state, tl) t ->
+            let state, t = aux true lvl state t in
+            (state, t::tl))
+          (state, []) tl in
+       state, Custom(cname, List.rev rev_tl)
     | A.Lam (x,t) when A.Func.(equal x dummyname)->
-       let amap, t' = aux true (lvl+1) amap cmap t in
-       amap, Lam t'
+       let state, t' = aux true (lvl+1) state t in
+       state, Lam t'
     | A.Lam (x,t) ->
-       let cmap' = F.Map.add x (C.of_dbl lvl) cmap in
-       let amap, t' = aux true (lvl+1) amap cmap' t in
-       amap, Lam t'
+       let orig_varmap = get_varmap state in
+       let state = update_varmap state (F.Map.add x (C.of_dbl lvl)) in
+       let state, t' = aux true (lvl+1) state t in
+       set_varmap state orig_varmap, Lam t'
     | A.App (A.App (f,l1),l2) ->
-       aux inner lvl amap cmap (A.App (f, l1@l2))
-    | A.String str -> amap, CData (in_string str)
-    | A.Int i -> amap, CData (in_int i)
-    | A.Float f -> amap, CData (in_float f)
+       aux inner lvl state (A.App (f, l1@l2))
+    | A.String str -> state, CData (in_string str)
+    | A.Int i -> state, CData (in_int i)
+    | A.Float f -> state, CData (in_float f)
     | A.App (A.Lam _,_) -> error "Beta-redexes not in our language"
     | A.App (A.String _,_) -> type_error "Applied string value"
     | A.App (A.Int _,_) -> type_error "Applied integer value"
     | A.App (A.Float _,_) -> type_error "Applied float value"
+    | A.Quoted { A.data; A.kind = None } ->
+         let unquote =
+           option_get ~err:"No default quotation" !default_quotation in
+         unquote ~depth:lvl state data 
+    | A.Quoted { A.data; A.kind = Some name } ->
+         let unquote = 
+           try SM.find name !named_quotations
+           with Not_found -> anomaly ("No '"^name^"' quotation") in
+         unquote ~depth:lvl state data 
+    | A.App (A.Quoted _,_) -> type_error "Applied quotation"
   in
-  let spill ast =
-    let spilled_name = ref 0 in
-    let rec mkSpilledNames n =
-      if n == 0 then []
-      else begin
-        incr spilled_name;
-        let name = F.from_string ("Spilled_" ^ string_of_int !spilled_name) in
-        name :: mkSpilledNames (n-1)
-      end in
-    let add_spilled sp t =
-      match sp with
-      | [] -> [], [t]
-      | _ ->
-          let to_spill = map_filter snd sp in
-          List.map (fun (x,_) -> x, None) sp,
-          [A.(App(Const F.andf, to_spill @ [t]))] in
-    let rec mapflat2 f l =
-      let l1, l2 = List.(split (map f l)) in
-      List.flatten l1, List.flatten l2 in
-    let rec aux toplevel = function
-      | A.App(A.Const c,fcall :: rest) when F.(equal c spillf) ->
-         let ns = mkSpilledNames (arity fcall) in
-         let fspills, fcall = aux false fcall in
-         assert(List.length fcall = 1);
-         let fcall = List.hd fcall in
-         let spills, args = mapflat2 (aux false) rest in
-         let args = List.map (fun x -> A.Const x) ns in
-         fspills @ spills @ [ns,Some (A.mkApp (fcall :: args))], args
-      | A.App(A.Const c, args)
-         when F.(List.exists (equal c) [andf;andf2;orf;rimplf]) ->
-         let spills, args = mapflat2 (aux true) args in
-         assert(map_filter snd spills = []);
-         spills, [A.App(A.Const c, args)]
-      | A.App(A.Const c, [A.Lam (n,arg)])
-         when F.(List.exists (equal c) [pif;sigmaf]) ->
-         let spills, arg = aux true arg in
-         assert(List.length arg = 1);
-         let arg = List.hd arg in
-         assert(map_filter snd spills = []);
-         let arg = List.fold_left (fun acc (ns,_) ->
-           List.fold_left (fun acc n ->
-            A.(App(Const F.sigmaf, [Lam (n, acc)]))) acc ns) arg spills in
-         [], [A.App(A.Const c, [A.Lam (n,arg)])]
-      | A.App(A.Const c, args)
-         when F.(List.exists (equal c) [implf;rimplf]) ->
-         let spills, args = mapflat2 (aux true) args in
-         assert(map_filter snd spills = []);
-         spills, [A.App(A.Const c, args)]
-      | A.App(c,args) ->
-         let spills, args = mapflat2 (aux false) args in
-         if toplevel then add_spilled spills (A.App(c, args))
-         else spills, [A.App(c,args)]
-      | (A.String _|A.Float _|A.Int _|A.Const _|A.Custom _) as x -> [], [x]
-      | A.Lam(x,t) ->
-         let sp, t = aux false t in
-         if sp <> [] then error "Not supported yet (spill lambda)";
-         assert(List.length t = 1);
-         let t = List.hd t in
-         [], [A.Lam (x,t)]
-    in
-      let sp, t = aux true ast in
-      assert(List.length t = 1);
-      let t = List.hd t in
-      assert(map_filter snd sp = []); t in
-  let arg_cst amap c args =
-    if C.Map.mem c amap then
-      let _, argno = C.Map.find c amap in
-      mkAppArg argno lvl args
-    else if args = [] then C.of_dbl c
-    else App(c,List.hd args,List.tl args) in
-  let rec argify amap = function
-    | Const c -> arg_cst amap c []
-    | App(c,x,xs) -> arg_cst amap c (List.map (argify amap) (x::xs))
-    | Lam t -> Lam(argify amap t)
-    | CData _ as x -> x
-    | Custom(c,xs) -> Custom(c,List.map (argify amap) xs)
-    | UVar _ | AppUVar _ | Arg _ | AppArg _ -> assert false
-    | Nil as x -> x
-    | Cons(x,xs) -> Cons(argify amap x,argify amap xs) in
-  let spilled_ast = spill ast in
-  let amap, term_no_args = aux false lvl amap cmap spilled_ast in
-  amap, argify amap.argc2name term_no_args
+
+  (* Real Arg nodes: from "Const '%Arg3'" to "Arg 3" *)
+  let argify { argc2name } t =
+    let arg_cst amap c args =
+      if C.Map.mem c amap then
+        let _, argno = C.Map.find c amap in
+        mkAppArg argno arg_lvl args
+      else if args = [] then C.of_dbl c
+      else App(c,List.hd args,List.tl args) in
+    let rec argify amap = function
+      | Const c -> arg_cst amap c []
+      | App(c,x,xs) -> arg_cst amap c (List.map (argify amap) (x::xs))
+      | Lam t -> Lam(argify amap t)
+      | CData _ as x -> x
+      | Custom(c,xs) -> Custom(c,List.map (argify amap) xs)
+      | UVar _ | AppUVar _ | Arg _ | AppArg _ -> assert false
+      | Nil as x -> x
+      | Cons(x,xs) -> Cons(argify amap x,argify amap xs) in
+    argify argc2name t
+  in
+
+  let spilled_ast = spill types ast in
+  (* arg_lvl is the number of local variables *)
+  let state, term_no_args = aux false arg_lvl state spilled_ast in
+  state, argify (get_argmap state) term_no_args
 ;;
 
 (* BUG: I pass the empty amap, that is plainly wrong.
@@ -3573,28 +3643,44 @@ let stack_term_of_ast lvl amap cmap macro types ast =
 let term_of_ast ~depth t =
  let argsdepth = depth in
  let freevars = C.mkinterval 0 depth 0 in
- let cmap =
-  List.fold_left (fun cmap i ->
-   F.Map.add (F.from_string (C.show (destConst i))) i cmap
-   ) F.Map.empty freevars in
- let { max_arg = max }, t =
-   stack_term_of_ast depth (empty_amap depth) cmap F.Map.empty [] t in
+ let state = ExtState.init () in
+ let state = update_varmap state (fun cmap ->
+    List.fold_left (fun cmap i ->
+     F.Map.add (F.from_string (C.show (destConst i))) i cmap
+     ) F.Map.empty freevars) in
+ let state, t = stack_term_of_ast ~depth state t in
+ let { max_arg = max } = get_argmap state in
  let env = Array.make max C.dummy in
  move ~adepth:argsdepth ~from:depth ~to_:depth env t
 ;;
 
-let query_of_ast_cmap lcs ~cmap ~macro ~types t =
-  let { max_arg = max; name2arg = l }, t =
-    stack_term_of_ast lcs (empty_amap lcs) cmap macro types t in
+let clause_of_ast lcs state t =
+  let state = set_argmap state empty_amap in
+  stack_term_of_ast ~depth:lcs state t 
+
+let names_of_args state =
+  let { name2arg = l } = get_argmap state in
   let l = SM.bindings l in
   let l = List.sort (fun (_,(_,x)) (_,(_,y)) -> compare x y) l in
-  List.map fst l, 0, Array.make max C.dummy, t
+  List.map fst l
+;;
+
+let env_of_args state =
+  let { max_arg = max } = get_argmap state in
+  Array.make max C.dummy
 ;;
 
 let query_of_ast { query_depth = lcs } t =
-  query_of_ast_cmap lcs ~cmap:F.Map.empty ~macro:F.Map.empty ~types:[] t
+  let state = ExtState.init () in
+  let state, clause = clause_of_ast lcs state t in
+  names_of_args state, 0, env_of_args state, clause
 ;;
-  
+ 
+let lp ~depth state s =
+  let ast = Elpi_parser.parse_goal_from_stream (Stream.of_string s) in
+  stack_term_of_ast ~depth state ast
+
+
 (* We check no (?? X L) patter is there *)
 let assert_no_uvar_destructuring l =
   let rec test = function (* TODO: use generic iterator *)
@@ -3614,27 +3700,27 @@ let assert_no_uvar_destructuring l =
     error "Variable can only be introspected (eg ?? X L) in the guard"
 ;;
 
-let chr_of_ast depth cmap macro r =
-  let open Elpi_ast in
-  let amap = empty_amap depth in
-  let intern amap t = stack_term_of_ast depth amap cmap macro [] t in
-  let intern2 amap (t1,t2) =
-    let amap, t1 = intern amap t1 in
-    let amap, t2 = intern amap t2 in
-    amap, (t1,t2) in
-  let internArg { name2arg } f =
+let chr_of_ast depth state r =
+  let state = set_argmap state empty_amap in
+  let intern state t = stack_term_of_ast ~depth state t in
+  let intern2 state (t1,t2) =
+    let state, t1 = intern state t1 in
+    let state, t2 = intern state t2 in
+    state, (t1,t2) in
+  let internArg state f =
+    let { name2arg } = get_argmap state in
     match SM.find (F.show f) name2arg with
     | (_, n) -> n
     | exception Not_found -> error "alignement on a non Arg" in
-  let amap, to_match = map_acc intern2 amap r.to_match in
-  let amap, to_remove = map_acc intern2 amap r.to_remove in
-  let amap, guard = option_mapacc intern amap r.guard in
-  let amap, new_goal = option_mapacc intern amap r.new_goal in
+  let state, to_match = map_acc intern2 state r.A.to_match in
+  let state, to_remove = map_acc intern2 state r.A.to_remove in
+  let state, guard = option_mapacc intern state r.A.guard in
+  let state, new_goal = option_mapacc intern state r.A.new_goal in
   let alignement =
-    List.map (internArg amap) (fst r.alignement), snd r.alignement in
-  let nargs = amap.max_arg in
+    List.map (internArg state) (fst r.A.alignement), snd r.A.alignement in
+  let nargs = (get_argmap state).max_arg in
   assert_no_uvar_destructuring (to_match @ to_remove);
-  { to_match; to_remove; guard; new_goal; alignement; depth; nargs }
+  { A.to_match; to_remove; guard; new_goal; alignement; depth; nargs }
 
 type temp = {
   block : (Elpi_ast.term F.Map.t * Elpi_ast.clause) list;
@@ -3672,20 +3758,43 @@ let sort_insertion l =
   aux [] l
 ;;
 
+let debug_print ?print state t =
+  if print = Some `Yes then
+    Fmt.eprintf "%a.@;"
+      (uppterm 0 (names_of_args state) 0 (env_of_args state)) t;
+  if print = Some `Raw then
+    Fmt.eprintf "%a.@;" pp_term t
+;;
+
 let program_of_ast ?print (p : Elpi_ast.decl list) : program =
+ let clause_of_ast lcs ~cmap ~macro ~types body =
+   let state = ExtState.init () in
+   let state = set_varmap state cmap in
+   let state = set_types state types in
+   let state = set_macros state macro in
+   let state, t = clause_of_ast lcs state body in
+   state, (get_argmap state).max_arg, t in
+ let chr_of_ast lcs ~cmap ~macro ~types r =
+   let state = ExtState.init () in
+   let state = set_varmap state cmap in
+   let state = set_types state types in
+   let state = set_macros state macro in
+   chr_of_ast lcs state r in
+
  let clausify_block program block lcs cmap types =
    let l = sort_insertion block in
    let clauses, lcs =
      List.fold_left (fun (clauses,lcs) (macro,{ Elpi_ast.body; loc }) ->
-      let names,_,env,t = query_of_ast_cmap lcs ~cmap ~macro ~types body in
-      if print = Some `Yes then Fmt.eprintf "%a.@;" (uppterm 0 names 0 env) t;
-      if print = Some `Raw then Fmt.eprintf "%a.@;" pp_term t;
-      let moreclauses, morelcs = clausify (Array.length env) lcs t in
+      let state, nargs, t = clause_of_ast lcs ~cmap ~macro ~types body in
+      debug_print ?print state t;
+      let moreclauses, morelcs = clausify nargs lcs t in
       let loc = in_loc loc in
-      clauses @ List.(map (fun x -> loc,names,x) (rev moreclauses)), lcs + morelcs
+      let names = names_of_args state in
+      clauses @ List.(map (fun x -> loc,names,x) (rev moreclauses)),
+      lcs + morelcs (* XXX why morelcs? *)
      ) ([],lcs) l in
-   program @ clauses, lcs
- in
+   program @ clauses, lcs in
+
  let clauses, lcs, chr, types =
    let rec aux ({ program; lcs; chr; clique; types;
                   tmp = ({ block; cmap; macro } as tmp); ctx } as cs) = function
@@ -3701,13 +3810,13 @@ let program_of_ast ?print (p : Elpi_ast.decl list) : program =
             match clique with
             | None -> error "CH rules allowed only in constraint block"
             | Some c -> c in
-          let rule = chr_of_ast lcs cmap macro r in
+          let rule = chr_of_ast lcs ~cmap ~macro ~types r in
           let chr = CHR.add_rule clique rule chr in
           aux { cs with chr } todo
       | Elpi_ast.Type(name,typ) ->  (* Check ARITY against MODE *)
           let _, name = C.funct_of_ast name in
-          let _,_,env,typ = query_of_ast_cmap lcs ~cmap ~macro ~types typ in
-          aux { cs with types = (name,Array.length env,typ) :: types } todo
+          let _,nargs,typ = clause_of_ast lcs ~cmap ~macro ~types typ in
+          aux { cs with types = (name,nargs,typ) :: types } todo
       | Elpi_ast.Clause c ->
           aux { cs with tmp = { tmp with block = (block @ [macro,c])} } todo
       | Elpi_ast.Begin ->
@@ -3914,12 +4023,12 @@ let register_custom = Mainloop.register_custom
 let make_runtime = Mainloop.make_runtime
 let program_of_ast = Compiler.program_of_ast
 let query_of_ast = Compiler.query_of_ast
-let query_of_ast_cmap lvl cmap = Compiler.query_of_ast_cmap lvl ~cmap ~macro:F.Map.empty ~types:[]
 let term_of_ast = Compiler.term_of_ast
 let lp_list_to_list = Clausify.lp_list_to_list
 let list_to_lp_list = HO.list_to_lp_list
 let split_conj = Clausify.split_conj
 let llam_unify ad e bd a b = HO.unif ad e bd a b
 module CustomConstraints = CS.Custom
+module Quotations = Compiler
 
 (* vim: set foldmethod=marker: *)

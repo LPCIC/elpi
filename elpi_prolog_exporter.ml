@@ -11,7 +11,7 @@ open Elpi_util
 open Constants
 
 (* pp for first-order prolog *) 
-let xppterm_prolog ~nice names env f t =
+let xppterm_prolog ~nice names f t =
   let pp_app f pphd pparg (hd,args) =
    if args = [] then pphd f hd
    else begin
@@ -21,12 +21,7 @@ let xppterm_prolog ~nice names env f t =
   let ppconstant f c = Fmt.fprintf f "%s" (show c) in
   let rec pp_arg f n =
    let name= try List.nth names n with Failure _ -> "A" ^ string_of_int n in
-   if env.(n) == dummy then Fmt.fprintf f "%s" name
-   (* TODO: (potential?) bug here, the argument is not lifted
-      from g_depth (currently not even passed to the function)
-      to depth (not passed as well) *)
-   else if nice then aux f env.(n)
-   else Fmt.fprintf f "≪%a≫ " aux env.(n)
+   Fmt.fprintf f "%s" name
   and aux f = function
       App (hd,x,xs) ->
         if hd==eqc then
@@ -87,15 +82,15 @@ let rec pp_FOprolog p =
     | Accumulated l -> pp_FOprolog l
     | Clause { Elpi_ast.body = t } ->
        (* BUG: ConstMap.empty because "local" declarations are ignored ATM *)
-       let names,_,env,t = query_of_ast_cmap 0 Func.Map.empty t in
+       let t = term_of_ast 0 t in
        match t with
        | App(_, Custom _, _) | App(_,_,(Custom _)::_) -> ()  
        | App(hd,a,[f]) when hd == rimplc -> 
          Fmt.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
-          (prologppterm names env) a
-          (pplist (prologppterm names env) ",") (split_conj f);
+          (prologppterm []) a
+          (pplist (prologppterm []) ",") (split_conj f);
        | _ -> 
-         Fmt.eprintf "@[<hov 1>%a.@]\n%!" (prologppterm names env) t 
+          Fmt.eprintf "@[<hov 1>%a.@]\n%!" (prologppterm []) t 
   ) p  
  ;;
 
