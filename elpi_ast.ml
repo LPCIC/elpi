@@ -55,11 +55,29 @@ type term =
  | String of Func.t
  | Int of int
  | Float of float
+ | Quoted of quote
+and quote = { data : string; kind : string option }
 [@@deriving show, eq, ord]
 
 let mkLam x t = Lam (Func.from_string x,t)
 let mkNil = Const Func.nilf
 let mkString str = String (Func.from_string str)
+let mkQuoted s =
+  let rec find_data i =
+    match s.[i] with
+    | ':' ->
+       let rec find_space i = match s.[i] with
+         | ' ' -> i 
+         | '\n' -> i 
+         | _ -> find_space (i+1) in
+       let space_after = find_space 0 - 1 in
+       let kind = String.sub s (i+1) space_after in
+       let data = String.sub s (i+space_after) (String.length s - i - i - space_after) in
+       { data; kind = Some kind }
+    | '{' -> find_data (i+1)
+    | _ -> { data = String.sub s i (String.length s - i - i); kind = None }
+  in
+    Quoted (find_data 0)
 let mkInt i = Int i
 let mkFloat f = Float f
 let mkSeq l =

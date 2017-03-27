@@ -136,12 +136,9 @@ open Data
 
 (* Interpreter API *)
 
-val query_of_ast : program -> Elpi_ast.term -> query
-val program_of_ast : ?print:[`Yes|`Raw] -> Elpi_ast.decl list -> program
 val execute_once : print_constraints:bool -> program -> query -> bool (* true means error *)
 val execute_loop : program -> query -> unit
 
-val term_of_ast : depth:int -> Elpi_ast.term -> term
 (* Custom predicates like $print. Must either raise No_clause or succeed
    with the list of new goals *)
 val register_custom :
@@ -160,14 +157,28 @@ val declare_constraint : depth:int -> idx -> goal:term -> on:term_attributed_ref
 val lp_list_to_list : depth:int -> term -> term list
 val list_to_lp_list : term list -> term
 
-val query_of_ast_cmap :
-  int ->
-  term Func.Map.t ->
-  Elpi_ast.term -> string list * int * term array * term
 val split_conj : term -> term list
 
-val enable_typechecking : unit -> unit
-
 val llam_unify : int -> term array -> int -> term -> term -> bool
+
 end
 
+
+module Compiler : sig
+open Elpi_util
+open Data
+
+val program_of_ast : ?print:[`Yes|`Raw] -> Elpi_ast.decl list -> program
+val query_of_ast : program -> Elpi_ast.term -> query
+val term_of_ast : depth:int -> Elpi_ast.term -> term
+
+type quotation = depth:int -> ExtState.t -> string -> ExtState.t * term
+val set_default_quotation : quotation -> unit
+val register_named_quotation : string -> quotation -> unit
+
+val lp : quotation
+
+val is_Arg : ExtState.t -> term -> bool
+
+val enable_typechecking : unit -> unit
+end

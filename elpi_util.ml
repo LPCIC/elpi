@@ -54,7 +54,12 @@ let anomaly s =
 let type_error = error
 
 
-let option_get = function Some x -> x | None -> assert false
+let option_get ?err = function
+  | Some x -> x
+  | None ->
+      match err with
+      | None -> assert false
+      | Some msg -> anomaly msg
 let option_map f = function Some x -> Some (f x) | None -> None
 let option_mapacc f acc = function
   | Some x -> let acc, y = f acc x in acc, Some y
@@ -284,3 +289,33 @@ let declare { data_eq; data_pp; data_hash; data_name } =
   let map { cout } { cin } f x = cin (f (cout x))
 end
   
+module ExtState = struct
+  module SM = Map.Make(String)
+
+  type t = Obj.t SM.t
+  type 'a set = t -> 'a -> t
+  type 'a update = t -> ('a -> 'a) -> t
+  type 'a get = t -> 'a
+  type 'a init = unit -> 'a
+
+  let get name t =
+    try Obj.obj (SM.find name t)
+    with Not_found -> assert false
+
+  let set name t v = SM.add name (Obj.repr v) t
+  let update name t f = SM.add name (Obj.repr (f (Obj.obj (SM.find name t)))) t
+
+  let extensions = ref []
+
+  let declare_extension name init =
+    if List.mem_assoc name !extensions then
+      anomaly ("Extension "^name^" already declared");
+    extensions := (name,fun () -> Obj.repr (init ())) :: !extensions;
+    get name, set name, update name
+
+  let init () =
+    List.fold_right
+      (fun (name,f) -> SM.add name (f ()))
+      !extensions SM.empty 
+
+end

@@ -177,7 +177,41 @@ let rec stringchar = lexer
     $add (mkOctal "4")*)
  | "\n" -> raise Stream.Failure
  | _ ]
+let string_of_chars chars = 
+  let buf = Buffer.create 10 in
+  List.iter (Buffer.add_char buf) chars;
+  Buffer.contents buf
+let spy ?(name="") f b s =
+  let l = Stream.npeek 10 s in
+  Printf.eprintf "%s> %s | %s\n"
+    name (Plexing.Lexbuf.get b) (string_of_chars l);
+  try let b = f b s in Printf.eprintf "ok\n"; b
+  with e ->
+    Printf.eprintf "nope\n";
+    raise e
+;;
 let rec string = lexer [ '"' / '"' string | '"' / | stringchar string ]
+let any = lexer [ _ ]
+let mk_terminator keep n b s =
+  let l = Stream.npeek n s in
+  if List.length l = n && List.for_all ((=) '}') l then begin
+   let b = ref b in
+   for i = 1 to n do
+     Stream.junk s;
+     if keep then b := Plexing.Lexbuf.add '}' !b;
+   done; !b
+  end else raise Stream.Failure
+let rec quoted_inner d = (*spy ~name:"quoted_inner"*) (lexer
+  [ d
+  | "{" (maybe_quoted_inner d)
+  | any (quoted_inner d) ])
+and maybe_quoted_inner d = (*spy ~name:"maybe"*) (lexer
+  [ d
+  | "{" (quoted true 2) (quoted_inner d)
+  | any (quoted_inner d) ])
+and  quoted keep n = (*spy ~name:"quoted"*) (lexer
+  [ "{" (quoted keep (n+1))
+  | (quoted_inner (mk_terminator keep n)) ])
 
 let notspace = lexer [ '!' - '~' ]
 let rec notspacestar = lexer [ notspace notspacestar | ]
@@ -214,6 +248,7 @@ let tok = lexer
   | ')' -> "RPAREN",$buf
   | '[' -> "LBRACKET",$buf
   | ']' -> "RBRACKET",$buf
+  | "{{" / (quoted false 2) -> "QUOTED", $buf
   | '{' -> "LCURLY",$buf
   | '}' -> "RCURLY",$buf
   | '|' -> "PIPE",$buf
@@ -584,6 +619,7 @@ EXTEND
           (match b with None -> mkFreshUVar () | Some b ->
            mkLam Func.(show dummyname)  b)
       | s = LITERAL -> mkString s
+      | s = QUOTED -> mkQuoted s
       | s = INTEGER -> mkInt (int_of_string s) 
       | s = FLOAT -> mkFloat (float_of_string s) 
       | bt = BUILTIN ; OPT [ COLON ; type_ ] -> mkCustom bt

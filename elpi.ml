@@ -14,14 +14,14 @@ let _ =
 *)
 
 let run_prog prog query =
- let prog = Elpi_API.Runtime.program_of_ast prog in
- let query = Elpi_API.Runtime.query_of_ast prog query in
+ let prog = Elpi_API.Compiler.program_of_ast prog in
+ let query = Elpi_API.Compiler.query_of_ast prog query in
  Elpi_API.Runtime.execute_loop prog query
 ;;
 
 let test_impl prog query =
- let prog = Elpi_API.Runtime.program_of_ast prog in
- let query = Elpi_API.Runtime.query_of_ast prog query in
+ let prog = Elpi_API.Compiler.program_of_ast prog in
+ let query = Elpi_API.Compiler.query_of_ast prog query in
  Gc.compact ();
  let time f p q =
    let t0 = Unix.gettimeofday () in
@@ -96,7 +96,7 @@ let _ =
   if !print_prolog then (pp_lambda_to_prolog p; exit 0);
   if !print_lprolog != None then begin
     Format.eprintf "@[<v>";
-    let _ = Elpi_API.Runtime.program_of_ast ?print:!print_lprolog p in
+    let _ = Elpi_API.Compiler.program_of_ast ?print:!print_lprolog p in
     Format.eprintf "@]%!";
     exit 0;
     end;
@@ -107,7 +107,7 @@ let _ =
     let strm = Stream.of_channel stdin in
     Elpi_parser.parse_goal_from_stream strm
    end in
-  if !typecheck then Elpi_API.Runtime.enable_typechecking ();
+  if !typecheck then Elpi_API.Compiler.enable_typechecking ();
   if !test then test_impl p g
   else run_prog p g
 ;;

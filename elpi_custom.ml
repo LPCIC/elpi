@@ -8,6 +8,7 @@ open Elpi_API.Data;;
 open Elpi_API.Data.Pp;;
 open Elpi_API.Data.Constants;;
 open Elpi_API.Runtime;;
+open Elpi_API.Compiler;;
 
 let register_eval, lookup_eval =
  let (evals : ('a, term list -> term) Hashtbl.t)

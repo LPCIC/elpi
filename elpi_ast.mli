@@ -43,6 +43,8 @@ type term =
  | String of Func.t
  | Int of int 
  | Float of float 
+ | Quoted of quote
+and quote = { data : string; kind : string option }
 
 val equal_term : term -> term -> bool
 val compare_term : term -> term -> int
@@ -113,6 +115,7 @@ val mkCustom : string -> term
 val mkFloat : float -> term
 val mkInt : int -> term
 val mkString : string -> term
+val mkQuoted : string -> term
 val mkFreshUVar : unit -> term
 val mkFreshName : unit -> term
 val mkLam : string -> term -> term

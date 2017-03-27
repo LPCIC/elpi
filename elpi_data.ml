@@ -635,6 +635,15 @@ module UnifBitsTypes = struct (* {{{ *)
 end (* }}} *)
 
 type idx = TwoMapIndexingTypes.idx
+type key = TwoMapIndexingTypes.key
+type clause = TwoMapIndexingTypes.clause = {
+  depth : int;
+  args : term list;
+  hyps : term list;
+  vars : int;
+  key : key;
+  mode : mode;
+}
 
 type mode_decl =
   | Mono of mode
@@ -662,45 +671,5 @@ let wrap_prolog_prog x = Index x
 let unwrap_prolog_prog = function Index x -> x | _ -> assert false
 
 exception No_clause
-
-module type Runtime = sig
-(* Interpreter API *)
-
-val query_of_ast : program -> Elpi_ast.term -> query
-val program_of_ast : ?print:[`Yes|`Raw] -> Elpi_ast.decl list -> program
-val execute_once : print_constraints:bool -> program -> query -> bool (* true means error *)
-val execute_loop : program -> query -> unit
-
-val term_of_ast : depth:int -> Elpi_ast.term -> term
-
-(* Custom predicates like $print. Must either raise No_clause or succeed
-   with the list of new goals *)
-val register_custom :
-  string ->
-  (depth:int -> env:term array -> idx -> term list -> term list) ->
-  unit
-
-(* Functions useful to implement custom predicates and evaluable functions *)
-val deref_uv : ?avoid:term_attributed_ref -> from:constant -> to_:constant -> int -> term -> term
-val deref_appuv : ?avoid:term_attributed_ref -> from:constant -> to_:constant -> term list -> term -> term
-val is_flex : term -> term_attributed_ref option
-val print_delayed : unit -> unit
-val delay_goal : depth:int -> idx -> goal:term -> on:term_attributed_ref list -> unit
-val declare_constraint : depth:int -> idx -> goal:term -> on:term_attributed_ref list -> unit
-
-val lp_list_to_list : depth:int -> term -> term list
-val list_to_lp_list : term list -> term
-
-val query_of_ast_cmap :
-  int ->
-  term F.Map.t ->
-  Elpi_ast.term -> string list * int * term array * term
-val split_conj : term -> term list
-
-val enable_typechecking : unit -> unit
-
-val llam_unify : int -> term array -> int -> term -> term -> bool
-end
-
 
 (* vim: set foldmethod=marker: *)

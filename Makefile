@@ -67,7 +67,7 @@ ELPI_COMPONENTS = \
   elpi_trace.$(CMX) \
   elpi_util.$(CMX) elpi_ast.$(CMX) $(ELPI_P5_COMPONENTS) elpi_ptmap.$(CMX) \
   elpi_data.$(CMX) \
-  $(ELPI_PACKED_COMPONENTS) elpi_API.$(CMX) \
+  $(ELPI_PACKED_COMPONENTS) elpi_compiler.$(CMX) elpi_API.$(CMX) \
   elpi_latex_exporter.$(CMX) elpi_prolog_exporter.$(CMX) elpi_custom.$(CMX)
 
 # Standard compilation
@@ -127,9 +127,10 @@ include .depends .depends.parser
 	$(H)$(OD) -pp '$(PP) $(PARSE)' $< > $@
 # Not detected by ocamldep
 elpi.$(CMX) : elpi_custom.$(CMX)
-elpi_runtime_trace_on.$(CMX) : elpi_util.$(CMX) elpi_data.$(CMX) elpi_ptmap.$(CMX) elpi_parser.$(CMX) elpi_ast.$(CMX) elpi_trace.$(CMX)
-elpi_runtime_trace_off.$(CMX) : elpi_util.$(CMX) elpi_data.$(CMX) elpi_ptmap.$(CMX) elpi_parser.$(CMX) elpi_ast.$(CMX) elpi_trace.$(CMX)
+elpi_runtime_trace_on.$(CMX) : elpi_util.$(CMX) elpi_data.$(CMX) elpi_ptmap.$(CMX) elpi_parser.$(CMX) elpi_ast.$(CMX) elpi_trace.$(CMX) elpi_runtime.cmi
+elpi_runtime_trace_off.$(CMX) : elpi_util.$(CMX) elpi_data.$(CMX) elpi_ptmap.$(CMX) elpi_parser.$(CMX) elpi_ast.$(CMX) elpi_trace.$(CMX) elpi_runtime.cmi
 elpi_API.$(CMX): elpi_runtime_trace_on.$(CMX) elpi_runtime_trace_off.$(CMX)
+elpi_compiler.$(CMX): elpi_runtime_trace_off.$(CMX)
 
 META.%: LIBSPATH = $(shell pwd)
 META.%: meta.%.src
