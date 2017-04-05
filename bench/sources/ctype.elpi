@@ -1,0 +1,4 @@
+type t (ctype "string").
+
+main :-
+  t = "x", "x" = "x", "x" = t.

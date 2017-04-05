@@ -171,6 +171,8 @@ module Constants : sig
   val letc : constant
   val arrowc : constant
 
+  val ctypec : constant
+
   val spillc : constant
   (* }}} *)
 
@@ -247,6 +249,7 @@ let asc = fst (funct_of_ast (F.from_string "as"))
 let letc = fst (funct_of_ast (F.from_string ":="))
 let spillc = fst (funct_of_ast (F.spillf))
 let arrowc = fst (funct_of_ast F.arrowf)
+let ctypec = fst (funct_of_ast F.ctypef)
 
 let dummy = App (-9999,cutc,[])
 
@@ -3793,11 +3796,17 @@ let mkQApp =
   let appc = C.from_stringc "elpi_app" in
   fun l -> App(appc,list_to_lp_list l,[])
 
-let quote_term ?(app=true) vars term =
+let quote_term ?(app=true) ?(on_type=false) vars term =
   let lamc = C.from_stringc "elpi_lam" in
   let cdatac = C.from_stringc "elpi_cdata" in
   let reloc n = if n < 0 then n else n + vars in
   let rec aux depth = function
+    | Const n when on_type && C.show n = "string" -> 
+        App(C.ctypec, CD.of_string "string",[])
+    | Const n when on_type && C.show n = "int" ->
+        App(C.ctypec, CD.of_string "int",[])
+    | Const n when on_type && C.show n = "float" ->
+        App(C.ctypec, CD.of_string "float",[])
     | Const n -> C.of_dbl (reloc n)
     | Lam x -> App(lamc,Lam (aux (depth+1) x),[])
     | App(c,Lam f,[]) when c == C.pic || c == C.sigmac ->
@@ -3805,6 +3814,7 @@ let quote_term ?(app=true) vars term =
     | App(c,f,[]) when c == C.pic || c == C.sigmac ->
         App(c,aux depth f, [])
     | App(c,s,[t]) when c == C.arrowc -> App(c,aux depth s,[aux depth t])
+    | App(c,CData s,[]) as x when on_type && c == C.ctypec && CD.is_string s ->x
     | App(hd,x,xs) when not app ->
         App(reloc hd, aux depth x, List.map (aux depth) xs)
     | App(hd,x,xs) ->
@@ -3820,6 +3830,7 @@ let quote_term ?(app=true) vars term =
     | Custom(c,[]) -> C.of_dbl c
     | Custom(c,args) ->
         mkQApp (C.of_dbl (reloc c) :: List.map (aux depth) args)
+    | CData _ as x when on_type -> x
     | CData _ as x -> App(cdatac,x,[])
     | Cons(hd,tl) -> mkQApp [C.cons; aux depth hd; aux depth tl]
     | Nil -> C.nil
@@ -3855,7 +3866,8 @@ let enable_typechecking () =
   typecheck := (fun clauses types ->
     let clist = list_to_lp_list (List.map quote_clause clauses) in
     let tlist = list_to_lp_list (List.map (fun (name,n,typ) ->
-        App(C.from_stringc "`:",name,[piclose (quote_term ~app:false 0 typ) n]))
+        App(C.from_stringc "`:",name,
+          [piclose (quote_term ~app:false ~on_type:true 0 typ) n]))
       types) in
     let query =
       let c = C.from_stringc "typecheck-program" in

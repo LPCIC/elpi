@@ -613,7 +613,7 @@ let _ =
     | [t1;t2] ->
        (match deref_head depth t1 with
        | CData n -> [ App(eqc, t2, [
-                snd (Elpi_runtime.Constants.funct_of_ast (F.from_string (CData.name n)))])]
+               Elpi_runtime.(App(Constants.ctypec,CD.of_string (CData.name n),[]))])]
        | _ -> raise No_clause)
     | _ -> type_error "$is_cdata") ;
 

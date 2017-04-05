@@ -35,6 +35,7 @@ module Func = struct
   let letf = from_string ":="
   let arrowf = from_string "->"
   let sequentf = from_string "?-"
+  let ctypef = from_string "ctype"
   
   let dummyname = from_string "%dummy"
   let spillf = from_string "%spill"

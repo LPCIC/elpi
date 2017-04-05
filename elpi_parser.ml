@@ -560,6 +560,7 @@ EXTEND
     ]];
   ctype:
     [[ c = CONSTANT -> mkCon c
+     | CONSTANT "ctype"; s = LITERAL -> mkApp [Const Func.ctypef; mkString s]
      | c = CONSTANT; l = LIST1 ctype -> mkApp (mkCon c :: l)
      | LPAREN; t = type_; RPAREN -> t
     ]];

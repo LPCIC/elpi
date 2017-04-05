@@ -98,6 +98,7 @@ module Constants :
   val andc : constant
   val andc2 : constant
   val rimplc : constant
+  val ctypec : constant
 
   (* Value for unassigned UVar/Arg *)
   val dummy : term

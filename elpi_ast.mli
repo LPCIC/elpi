@@ -25,6 +25,7 @@ module Func : sig
   val letf : t
   val arrowf : t
   val sequentf : t
+  val ctypef : t
 
   val dummyname : t
   val spillf : t
