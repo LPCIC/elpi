@@ -3311,6 +3311,8 @@ module Compiler : sig
 
   val lp : quotation
 
+  val is_Arg : ExtState.t -> term -> bool
+
 end = struct (* {{{ *)
 
 module SM = Map.Make(String)
@@ -3463,6 +3465,13 @@ let get_macros, set_macros, update_macros =
   ExtState.declare_extension macros (fun () -> F.Map.empty)
 ;;
 
+let is_Arg state x =
+  let { argc2name } = get_argmap state in
+  match x with
+  | Const c -> C.Map.mem c argc2name
+  | App(c,_,_) -> C.Map.mem c argc2name
+  | _ -> false
+
 (* Steps:
    1. from AST to AST: spilling {f x} -> sigma Y\ f x Y
    2. from AST to TERM:
@@ -3472,7 +3481,7 @@ let get_macros, set_macros, update_macros =
       - bound names -> DB levels
    3. from TERM to TERM: (Const "%Arg4") -> (Arg 4)
 *)
-let stack_term_of_ast ~depth:arg_lvl state ast =
+let stack_term_of_ast ?(inner_call=false) ~depth:arg_lvl state ast =
   let macro = get_macros state in
   let types = get_types state in
 
@@ -3635,7 +3644,12 @@ let stack_term_of_ast ~depth:arg_lvl state ast =
   let spilled_ast = spill types ast in
   (* arg_lvl is the number of local variables *)
   let state, term_no_args = aux false arg_lvl state spilled_ast in
-  state, argify (get_argmap state) term_no_args
+  let term =
+    (* we generate args only in the outermost call (i.e. inner
+     * quotations don't argify *)
+    if inner_call then term_no_args
+    else argify (get_argmap state) term_no_args in
+  state, term
 ;;
 
 (* BUG: I pass the empty amap, that is plainly wrong.
@@ -3678,7 +3692,7 @@ let query_of_ast { query_depth = lcs } t =
  
 let lp ~depth state s =
   let ast = Elpi_parser.parse_goal_from_stream (Stream.of_string s) in
-  stack_term_of_ast ~depth state ast
+  stack_term_of_ast ~inner_call:true ~depth state ast
 
 
 (* We check no (?? X L) patter is there *)

@@ -137,6 +137,10 @@ module Quotations : sig
   (* To process an anti-quotation, i.e. a LP term inside a quotation.
    * depth is the current number of (still open) binders *)
   val lp : quotation
+
+  (* Quotations work on terms where the nodes Arg and Uvar are not used,
+   * but they are represented as special constants as "%Arg2" *)
+  val is_Arg : ExtState.t -> term -> bool
 end
 
 (* Functions useful to implement custom predicates and evaluable functions *)
