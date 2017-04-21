@@ -14,14 +14,14 @@ let _ =
 *)
 
 let run_prog prog query =
- let prog = Elpi_runtime.program_of_ast prog in
- let query = Elpi_runtime.query_of_ast prog query in
- Elpi_runtime.execute_loop prog query
+ let prog = Elpi_API.Runtime.program_of_ast prog in
+ let query = Elpi_API.Runtime.query_of_ast prog query in
+ Elpi_API.Runtime.execute_loop prog query
 ;;
 
 let test_impl prog query =
- let prog = Elpi_runtime.program_of_ast prog in
- let query = Elpi_runtime.query_of_ast prog query in
+ let prog = Elpi_API.Runtime.program_of_ast prog in
+ let query = Elpi_API.Runtime.query_of_ast prog query in
  Gc.compact ();
  let time f p q =
    let t0 = Unix.gettimeofday () in
@@ -29,7 +29,7 @@ let test_impl prog query =
    let t1 = Unix.gettimeofday () in
    Printf.printf "TIME: %5.3f\n%!" (t1 -. t0);
    b in
- if time (Elpi_runtime.execute_once ~print_constraints:true) prog query then exit 1 else exit 0
+ if time (Elpi_API.Runtime.execute_once ~print_constraints:true) prog query then exit 1 else exit 0
 ;;
 
 
@@ -52,15 +52,15 @@ let set_terminal_width ?(max_w=
 
 
 let usage =
-  "\nusage: elpi [OPTION].. [FILE]..\n" ^ 
-  "\nmain options:\n" ^ 
+  "\nUsage: elpi [OPTION].. [FILE]..\n" ^ 
+  "\nMain options:\n" ^ 
   "\t-test runs the query \"main\"\n" ^ 
   "\t-print-prolog prints files to Prolog syntax if possible, then exit\n" ^ 
   "\t-print-latex prints files to LaTeX syntax, then exit\n" ^ 
   "\t-print prints files after desugar, then exit\n" ^ 
   "\t-print-raw prints files after desugar in ppx format, then exit\n" ^ 
   "\t-print-ast prints files as parsed, then exit\n" ^ 
-  Elpi_trace.usage
+  Elpi_API.usage
 ;;
 
 let _ =
@@ -83,10 +83,10 @@ let _ =
     | s :: _ when String.length s > 0 && s.[0] == '-' ->
         Printf.eprintf "Unrecognized option: %s\n%s" s usage; exit 1
     | x :: rest -> x :: aux rest in
-  let filenames = aux (List.tl (Array.to_list (Elpi_trace.parse_argv Sys.argv))) in
+  let argv = Elpi_API.init (Array.to_list Sys.argv) in
+  let filenames = aux (List.tl argv) in
   set_terminal_width ();
   if !print_latex then Elpi_latex_exporter.activate () ;
-  Elpi_parser.init [];
   let p = Elpi_parser.parse_program filenames in
   if !print_ast then begin
     Format.eprintf "%a" Elpi_ast.pp_program p;
@@ -96,7 +96,7 @@ let _ =
   if !print_prolog then (pp_lambda_to_prolog p; exit 0);
   if !print_lprolog != None then begin
     Format.eprintf "@[<v>";
-    let _ = Elpi_runtime.program_of_ast ?print:!print_lprolog p in
+    let _ = Elpi_API.Runtime.program_of_ast ?print:!print_lprolog p in
     Format.eprintf "@]%!";
     exit 0;
     end;
@@ -107,7 +107,7 @@ let _ =
     let strm = Stream.of_channel stdin in
     Elpi_parser.parse_goal_from_stream strm
    end in
-  if !typecheck then Elpi_runtime.enable_typechecking ();
+  if !typecheck then Elpi_API.Runtime.enable_typechecking ();
   if !test then test_impl p g
   else run_prog p g
 ;;

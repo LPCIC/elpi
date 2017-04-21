@@ -19,5 +19,5 @@ val dverbose : bool ref
 
 val get_cur_step : string -> int
 
-val parse_argv : string array -> string array
+val parse_argv : string list -> string list
 val usage: string

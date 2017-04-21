@@ -6,9 +6,10 @@ module F = Elpi_ast.Func
 module Fmt = Format
 
 open Elpi_ast
-open Elpi_runtime
 open Elpi_util
-open Constants
+open Elpi_API.Data
+open Elpi_API.Data.Constants
+open Elpi_API.Runtime
 
 (* pp for first-order prolog *) 
 let xppterm_prolog ~nice names env f t =

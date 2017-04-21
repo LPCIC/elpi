@@ -2,12 +2,12 @@
 (* license: GNU Lesser General Public License Version 2.1                    *)
 (* ------------------------------------------------------------------------- *)
 
-
-open Elpi_runtime;;
-open Elpi_util;;
-open Elpi_runtime.Pp;;
-open Elpi_runtime.Constants;;
 module F = Elpi_ast.Func;;
+open Elpi_util;;
+open Elpi_API.Data;;
+open Elpi_API.Data.Pp;;
+open Elpi_API.Data.Constants;;
+open Elpi_API.Runtime;;
 
 let register_eval, lookup_eval =
  let (evals : ('a, term list -> term) Hashtbl.t)

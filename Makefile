@@ -17,28 +17,16 @@ CMXA=cmxa
 OC=OCAMLPATH=$(shell pwd) ocamlfind ocamlopt
 OD=OCAMLPATH=$(shell pwd) ocamlfind ocamldep -native
 H=@
-pp = printf '$(1) %-25s %s\n' "$(3)" "$(2)"
+pp = printf '$(1) %-26s %s\n' "$(3)" "$(2)"
 
-all: check-ocaml-ver
-	$(H)$(MAKE) --no-print-directory trace_ppx
-	$(H)$(MAKE) --no-print-directory elpi.$(CMXA)
-	$(H)$(MAKE) --no-print-directory META.elpi
-	$(H)$(MAKE) --no-print-directory elpi
-
-trace: check-ocaml-ver
-	$(H)$(MAKE) --no-print-directory clean
-	$(H)$(MAKE) --no-print-directory trace_ppx
-	$(H)TRACE=1 $(MAKE) --no-print-directory elpi.$(CMXA)
-	$(H)$(MAKE) --no-print-directory META.elpi
-	$(H)$(MAKE) --no-print-directory elpi
-	$(H)mv elpi elpi.trace
-	$(H)$(MAKE) --no-print-directory clean
+all: check-ocaml-ver elpi
 
 trace_ppx: trace_ppx.ml
-	$(H)$(OC) -package compiler-libs.common,ppx_tools.metaquot \
+	$(H)$(call pp,OCAMLOPT,-o,$@)
+	$(H)$(OC) -package ppx_tools.metaquot \
 		-linkpkg $< -o $@
-	cp .merlin.in .merlin
-	echo 'FLG -ppx $(shell pwd)/trace_ppx' >> .merlin
+	$(H)cp .merlin.in .merlin
+	$(H)echo 'FLG -ppx $(shell pwd)/trace_ppx' >> .merlin
 
 git/%:
 	$(H)rm -rf "$$PWD/elpi-$*"
@@ -67,25 +55,58 @@ OC_OPTIONS = -linkpkg $(OCAMLOPTIONS) $(FLAGS)
 
 ELPI_DEPENDS = camlp5.$(CMXA) unix.$(CMXA) str.$(CMXA)
 
+# Compilation with trace_ppx and -pack
+ELPI_PACKED_COMPONENTS = \
+  elpi_runtime_trace_on.$(CMX) elpi_runtime_trace_off.$(CMX)
+
+# Compilation with camlp5 preprocessing
+ELPI_P5_COMPONENTS = elpi_parser.$(CMX)
+
+# All files linked in the .cma
 ELPI_COMPONENTS = \
   elpi_trace.$(CMX) \
-  elpi_util.$(CMX) elpi_ast.$(CMX) elpi_parser.$(CMX) elpi_ptmap.$(CMX) \
-  elpi_runtime.$(CMX) \
+  elpi_util.$(CMX) elpi_ast.$(CMX) $(ELPI_P5_COMPONENTS) elpi_ptmap.$(CMX) \
+  elpi_data.$(CMX) \
+  $(ELPI_PACKED_COMPONENTS) elpi_API.$(CMX) \
   elpi_latex_exporter.$(CMX) elpi_prolog_exporter.$(CMX) elpi_custom.$(CMX)
+
+# Standard compilation
+ELPI_EASY_COMPONENTS = \
+  $(filter-out $(ELPI_PACKED_COMPONENTS), \
+    $(filter-out $(ELPI_P5_COMPONENTS), $(ELPI_COMPONENTS)))
+
 
 elpi.$(CMXA): $(ELPI_COMPONENTS)
 	$(H)$(call pp,OCAMLOPT,-a,$@)
 	$(H)$(OC) $(OC_OPTIONS) -o $@ -a $(ELPI_COMPONENTS)
 
-elpi: elpi.$(CMX) META.elpi
+elpi: elpi.$(CMX) META.elpi elpi.$(CMXA)
 	$(H)$(call pp,OCAMLOPT,-package elpi -o,$@)
 	$(H)$(OC) $(OC_OPTIONS) -package elpi \
 		-o $@ elpi.$(CMX)
 
-%.$(CMX): %.ml trace_ppx
-	$(H)$(call pp,OCAMLOPT,-c -ppx trace_ppx $(if $(TRACE),TRACE=$(TRACE),),$@)
+elpi_runtime_trace_on.$(CMX) : elpi_runtime.ml elpi_runtime.cmi trace_ppx
+	$(H)$(call pp,OCAMLOPT,-c -ppx 'trace_ppx -on' -for-pack,$@)
 	$(H)$(OC) $(OCAMLOPTIONS) \
-		-package camlp5,ppx_deriving.std -ppx './trace_ppx'\
+		-package camlp5,ppx_deriving.std -ppx './trace_ppx -on' \
+		-for-pack Elpi_runtime_trace_on \
+	       	-c $<
+	$(H)$(OC) $(OCAMLOPTIONS) \
+		-pack elpi_runtime.$(CMX) -o $@
+
+elpi_runtime_trace_off.$(CMX) : elpi_runtime.ml elpi_runtime.cmi trace_ppx
+	$(H)$(call pp,OCAMLOPT,-c -ppx 'trace_ppx -off' -for-pack,$@)
+	$(H)$(OC) $(OCAMLOPTIONS) \
+		-package camlp5,ppx_deriving.std -ppx './trace_ppx -off' \
+		-for-pack Elpi_runtime_trace_off \
+	       	-c $<
+	$(H)$(OC) $(OCAMLOPTIONS) \
+		-pack elpi_runtime.$(CMX) -o $@
+
+$(ELPI_EASY_COMPONENTS) elpi.$(CMX) : %.$(CMX): %.ml
+	$(H)$(call pp,OCAMLOPT,-c,$@)
+	$(H)$(OC) $(OCAMLOPTIONS) \
+		-package camlp5,ppx_deriving.std \
 	       	-c $<
 %.cmi: %.mli
 	$(H)$(call pp,OCAMLOPT,-c,$@)
@@ -104,9 +125,11 @@ include .depends .depends.parser
 .depends.parser: elpi_parser.ml
 	$(H)$(call pp,OCAMLDEP,,$@)
 	$(H)$(OD) -pp '$(PP) $(PARSE)' $< > $@
-# only registers hooks, not detected by ocamldep
-elpi.cmx : elpi_custom.cmx
-elpi.cmo : elpi_custom.cmo
+# Not detected by ocamldep
+elpi.$(CMX) : elpi_custom.$(CMX)
+elpi_runtime_trace_on.$(CMX) : elpi_util.$(CMX) elpi_data.$(CMX) elpi_ptmap.$(CMX) elpi_parser.$(CMX) elpi_ast.$(CMX) elpi_trace.$(CMX)
+elpi_runtime_trace_off.$(CMX) : elpi_util.$(CMX) elpi_data.$(CMX) elpi_ptmap.$(CMX) elpi_parser.$(CMX) elpi_ast.$(CMX) elpi_trace.$(CMX)
+elpi_API.$(CMX): elpi_runtime_trace_on.$(CMX) elpi_runtime_trace_off.$(CMX)
 
 META.%: LIBSPATH = $(shell pwd)
 META.%: meta.%.src

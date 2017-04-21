@@ -102,7 +102,11 @@ let init ?(where="",0,max_int) ?(skip=[]) ?(only=[]) ?(verbose=false) b =
   dverbose := verbose;
   filter := List.map Str.regexp skip;
   fonly := List.map Str.regexp only;
-  where_loc := where
+  where_loc := where;
+  level := 0;
+  hot := false;
+  hot_level := 0
+;;
 
 let incr_cur_step k =
   let n = get_cur_step k in
@@ -173,7 +177,7 @@ let () =
     end)
 
 let usage =
-  "\ntracing facility options:\n" ^
+  "\nTracing facility options:\n" ^
   "\t-trace-v  verbose\n" ^
   "\t-trace-at FUNCNAME START STOP  print trace between call START\n" ^
   "\t\tand STOP of function FNAME\n" ^
@@ -211,8 +215,8 @@ let parse_argv argv =
     | "-perf-on" :: rest ->
          collect_perf := true; on := true; trace_noprint := true; aux rest
     | x :: rest -> x :: aux rest in
-  let rest = aux (Array.to_list argv) in
+  let rest = aux argv in
   init ~where:!where ~verbose:!verbose ~only:!only ~skip:!skip !on;
-  Array.of_list rest
+  rest
 ;;
 

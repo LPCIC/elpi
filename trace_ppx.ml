@@ -60,14 +60,20 @@ let tcall hd args =
     | f::a -> [%expr Obj.repr [%e mkapp f a]] in
   [%expr raise (Elpi_trace.TREC_CALL ([%e papp], Obj.repr [%e last]))]
 
-let enabled =
-  try ignore(Sys.getenv "TRACE"); true
-  with Not_found -> false
+let enabled = ref false
+
+let args_spec = [
+   "-on",Arg.Set enabled,"Enable trace" ;
+   "-off",Arg.Clear enabled,"Disable trace" ;
+  ]
 
 let err ~loc str =
   raise (Location.Error(Location.error ~loc str))
 
-let trace_mapper argv = { default_mapper with expr = fun mapper expr ->
+let trace_mapper argv =
+  let argv = Array.of_list ("trace_ppx" :: argv) in
+  Arg.parse_argv argv args_spec (fun _ -> ()) "Args: -on or -off";
+  { default_mapper with expr = fun mapper expr ->
   let aux = mapper.expr mapper in
   match expr with
   | { pexp_desc = Pexp_extension ({ txt = "trace"; loc }, pstr) } ->
@@ -80,7 +86,7 @@ let trace_mapper argv = { default_mapper with expr = fun mapper expr ->
              [%expr fun fmt -> [%e mkapp [%expr Format.fprintf fmt]
                 (hd :: List.map snd args)]]
           | _ -> pp in
-        if enabled then trace (aux name) (aux pp) (aux code)
+        if !enabled then trace (aux name) (aux pp) (aux code)
         else aux code
       | _ -> err ~loc "use: [%trace id pp code]"
       end
@@ -88,7 +94,7 @@ let trace_mapper argv = { default_mapper with expr = fun mapper expr ->
       begin match pstr with
       | PStr [ { pstr_desc = Pstr_eval(
               { pexp_desc = Pexp_apply(hd,args) } as e,_)} ] ->
-        if enabled then tcall (aux hd) (List.map (fun (_,e) -> aux e) args)
+        if !enabled then tcall (aux hd) (List.map (fun (_,e) -> aux e) args)
         else aux e
       | _ -> err ~loc "use: [%tcall f args]"
       end
@@ -96,7 +102,7 @@ let trace_mapper argv = { default_mapper with expr = fun mapper expr ->
       begin match pstr with
       | PStr [ { pstr_desc = Pstr_eval(
               { pexp_desc = Pexp_apply(name,[(_,pp);(_,code)]) },_)} ] ->
-        if enabled then spy (aux name) (aux pp) (aux code)
+        if !enabled then spy (aux name) (aux pp) (aux code)
         else [%expr ()]
       | _ -> err ~loc "use: [%spy id pp data]"
       end
@@ -104,7 +110,7 @@ let trace_mapper argv = { default_mapper with expr = fun mapper expr ->
       begin match pstr with
       | PStr [ { pstr_desc = Pstr_eval(
               { pexp_desc = Pexp_apply(name,[(_,key);(_,code)]) },_)} ] ->
-        if enabled then log (aux name) (aux key) (aux code)
+        if !enabled then log (aux name) (aux key) (aux code)
         else [%expr ()]
       | _ -> err ~loc "use: [%log id data]"
       end
