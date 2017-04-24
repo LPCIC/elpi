@@ -132,9 +132,9 @@ exception NotInProlog
 
 let mkApp = function
 (* FG: for convenience, we accept an empty list of arguments *)
-  | [(App _ | Custom _ | Const _) as c] -> c
+  | [(App _ | Custom _ | Const _ | Quoted _) as c] -> c
   | App(c,l1)::l2 -> App(c,l1@l2)
-  | (Custom _ | Const _) as c::l2 -> App(c,l2)
+  | (Custom _ | Const _ | Quoted _) as c::l2 -> App(c,l2)
   | _ -> raise NotInProlog
 
 let fresh_uv_names = ref (-1);;
