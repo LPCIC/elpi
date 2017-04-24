@@ -496,7 +496,7 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
     (* restriction/lifting of UVar *)
     | UVar (r,vardepth,argsno) ->
        occurr_check avoid r;
-       if delta <= 0 then
+       if delta <= 0 then (* to_ >= from *)
          if vardepth + argsno <= from then x
          else
            let r,vardepth,argsno =
@@ -507,10 +507,17 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
        else
          if vardepth + argsno <= to_ then x
          else begin
-           (* TODO/BUG: I believe this assert to be false; if it is, the
-              code below is wrong when the assert fails *)
-           assert (vardepth+argsno <= from);
-           let assignment,fresh = make_lambdas (to_-argsno) argsno in
+           let assignment,fresh =
+             (* We may prune the level of the uvar, the args or both.
+              * In all cases the uvar has to be assigned to a new one
+              * of level to_ *)
+             if argsno <= depth then (* no need to prune arguments *)
+               let args = C.mkinterval vardepth argsno 0 in
+               let args = List.map (maux e depth) args in
+               let r = oref C.dummy in
+               UVar(r,to_,0), mkAppUVar r to_ args
+             else (* prune arguments not visible by to_ + depth *)
+               make_lambdas to_ (max 0 (argsno - depth)) in
            if not !T.last_call then
             T.trail := (T.Assignement r) :: !T.trail;
            r @:= assignment;
