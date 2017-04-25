@@ -867,7 +867,7 @@ let bind r gamma l a d delta b left t e =
       (c,n)];
     n in
   let rec bind b delta w t =
-    [%trace "bind" ("%b %d + %a = t:%a a:%d delta:%d d:%d w:%d b:%d"
+    [%trace "bind" ("%b gamma:%d + %a = t:%a a:%d delta:%d d:%d w:%d b:%d"
         left gamma (pplist (fun fmt (x,n) -> Fmt.fprintf fmt "%a |-> %d"
         (ppterm a [] b e) (C.of_dbl x) n) "") l
         (ppterm a [] b empty_env) t a delta d w b) begin
@@ -890,9 +890,9 @@ let bind r gamma l a d delta b left t e =
     | AppUVar ({ contents = t }, from, args) when t != C.dummy ->
         bind b delta w (deref_appuv ~from ~to_:((if left then b else a)+d+w) args t)
     (* pruning *)
-    | (UVar _ | AppUVar _ | Arg _ | AppArg _) as _orig_ ->
+    | (UVar _ | AppUVar _ | Arg _ | AppArg _) as orig ->
         (* We deal with all flexible terms in a uniform way *)
-        let r, lvl, (is_llam, args), orig_args = match _orig_ with
+        let r, lvl, (is_llam, args), orig_args = match orig with
           | UVar(r,lvl,0) -> r, lvl, (true, []), []
           | UVar(r,lvl,args) ->
               let r' = oref C.dummy in
@@ -923,6 +923,13 @@ let bind r gamma l a d delta b left t e =
               e.(i) <- v;
               r, a, (is_llam, args), orig_args
           | _ -> assert false in
+        [%spy "bind-maybe-prune" (fun fmt () ->
+           Fmt.fprintf fmt "lvl:%d is_llam:%b args:%a orig_args:%a orig:%a"
+             lvl is_llam 
+             (pplist (fun fmt (x,n) ->
+                Fmt.fprintf fmt "%a->%d" (ppterm a [] b e) (C.of_dbl x) n) " ") args
+             (pplist (ppterm a [] b e) " ") orig_args
+             (ppterm a [] b e) orig) ()];
         if is_llam then begin
           let n_args = List.length args in
           if lvl > gamma then
