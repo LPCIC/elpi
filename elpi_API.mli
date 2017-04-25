@@ -17,6 +17,11 @@ val usage : string
  * register_custom *)
 val trace : string list -> unit
 
+(* Override default error functions (they call exit) *)
+val set_error : (string -> 'a) -> unit
+val set_anomaly : (string -> 'a) -> unit
+val set_type_error : (string -> 'a) -> unit
+
 module Data : sig
 
 (* Extension API *)

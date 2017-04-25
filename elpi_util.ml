@@ -45,14 +45,25 @@ let rec for_all2 p l1 l2 =
   | (_, _) -> false
 ;;
 
-let error s =
+let default_error s =
   Printf.eprintf "Fatal error: %s\n%!" s;
   exit 1
-let anomaly s =
+let default_anomaly s =
   Printf.eprintf "Anomaly: %s\n%!" s;
   exit 2
-let type_error = error
+let default_type_error s = default_error s
 
+let error_f      = ref (Obj.repr default_error)
+let anomaly_f    = ref (Obj.repr default_anomaly)
+let type_error_f = ref (Obj.repr default_type_error)
+
+let set_error f      = error_f      := (Obj.repr f)
+let set_anomaly f    = anomaly_f    := (Obj.repr f)
+let set_type_error f = type_error_f := (Obj.repr f)
+
+let error s      = Obj.obj !error_f s
+let anomaly s    = Obj.obj !anomaly_f s
+let type_error s = Obj.obj !type_error_f s
 
 let option_get ?err = function
   | Some x -> x

@@ -103,6 +103,11 @@ val anomaly : string -> 'a
 (* If we type check the program, then these are anomalies *)
 val type_error : string -> 'a
 
+
+val set_error : (string -> 'a) -> unit
+val set_anomaly : (string -> 'a) -> unit
+val set_type_error : (string -> 'a) -> unit
+
 (* ****************** external data *****************)
 
 module CData : sig

@@ -40,6 +40,10 @@ let usage =
   "\t-I PATH  search for accumulated files in PATH\n" ^
   Elpi_trace.usage 
 
+let set_error = Elpi_util.set_error
+let set_anomaly = Elpi_util.set_anomaly
+let set_type_error = Elpi_util.set_type_error
+
 module Runtime = struct
 
  let execute_once ~print_constraints p q =
