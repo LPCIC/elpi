@@ -2279,15 +2279,17 @@ let propagate { CS.cstr; cstr_position } history =
            patterns ([],[]) in
          
        let match_p i m (dto,dt,t) (dp,pat) =
-         [%spy "matching-lift-from" pp_int dt];
-         [%spy "matching-lift-to" pp_int dto];
-         [%spy "matching-lift-in" pp_term t];
+         [%spy "matching-goal-lift-from" pp_int ruledepth];
+         [%spy "matching-goal-lift-to" pp_int dto];
+         [%spy "matching-goal-lift-in" pp_term t];
          let t = hmove ~from:ruledepth ~to_:dto t in
-         [%spy "matching-lift-out" pp_term t];
+         [%spy "matching-goal-lift-out" pp_term t];
          let pat = lift_pat ~from:dp ~to_:dto pat in
          match_same_depth_and_freeze i e dto m t pat in
 
        let match_ctx i m (dto,lt) (dp,pctx) =
+         [%spy "matching-ctx-lift-from" pp_int ruledepth];
+         [%spy "matching-ctx-lift-to" pp_int dto];
          let lt = List.map (fun (d,t) -> hmove ~from:ruledepth ~to_:dto t) lt in
          let t = list_to_lp_list lt in
          let pctx = lift_pat ~from:dp ~to_:dto pctx in
@@ -2362,7 +2364,8 @@ let incr_generation { CS.cstr; cstr_position } =
 let resumption to_be_resumed =
   List.map (fun { depth = d; prog = p; goal = g } ->
     let idx = match p with Index p -> p | _ -> assert false in
-    [%spy "propagation-resume" (fun fmt _ -> ()) ()];
+    [%spy "run-scheduling-resume"
+      (fun fmt -> Fmt.fprintf fmt "%a" (uppterm d [] d empty_env)) g];
     d, idx, g)
   (List.rev to_be_resumed)
 
@@ -2441,15 +2444,16 @@ let make_runtime : ?print_constraints:bool -> program -> runtime =
   (* Input to be read as the orl (((p,g)::gs)::next)::alts
      depth >= 0 is the number of variables in the context. *)
   let rec run depth p g gs (next : frame) alts lvl =
-    [%trace "run" ("%a" (ppterm depth [] 0 empty_env) g)
- begin match resume_all () with
-  None ->
-begin Fmt.fprintf Fmt.std_formatter "Undo triggered by goal resumption\n%!";
-  [%tcall next_alt alts]
-end
+    [%trace "run" (fun _ -> ()) begin
+ match resume_all () with
+ | None ->
+     [%spy "run-resumed-fail" (fun _ _ -> ()) ()];
+     [%tcall next_alt alts]
  | Some ((ndepth,np,ng)::goals) ->
+    [%spy "run-resumed-goal" (fun fmt -> Fmt.fprintf fmt "%a" (ppterm ndepth [] 0 empty_env)) ng];
     [%tcall run ndepth np ng (goals@(depth,p,g)::gs) next alts lvl]
  | Some [] ->
+    [%spy "run-goal" (fun fmt -> Fmt.fprintf fmt "%a" (ppterm depth [] 0 empty_env)) g];
     match g with
     | c when c == C.cutc -> [%tcall cut p gs next alts lvl]
     | App(c, g, gs') when c == C.andc || c == C.andc2 ->
@@ -2581,10 +2585,10 @@ end;*)
      | { kind = Unification { adepth; bdepth; env; a; b } } as dg :: rest ->
          CS.remove_old dg;
          CS.to_resume := rest;
-         (*Fmt.fprintf Fmt.std_formatter
-          "Resuming @[<hov 2>^%d:%a@ == ^%d:%a@]\n%!"
-           ad (uppterm ad [] 0 empty_env) a
-           bd (uppterm ad [] ad e) b;*)
+         [%spy "run-resumed-unif" (fun fmt _ -> Fmt.fprintf fmt 
+           "@[<hov 2>^%d:%a@ == ^%d:%a@]\n%!"
+           adepth (uppterm adepth [] 0 empty_env) a
+           bdepth (uppterm bdepth [] adepth env) b) ()];
          ok := unif adepth env bdepth a b
      | { kind = Constraint dpg } as c :: rest ->
          CS.remove_old c;
