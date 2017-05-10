@@ -2259,7 +2259,7 @@ let propagate { CS.cstr; cstr_position } history =
              (* Goals are lifted at different depths to avoid collisions *)
              let max_depth,constraints = 
               List.fold_left (fun (acc,res) (d,x,y) ->
-                 acc+(d - ruledepth),(acc,d,x,y)::res)
+                 acc+(d - ruledepth),(acc+(d - ruledepth),d,x,y)::res)
                 (ruledepth,[]) constraints in
              max_depth, List.rev constraints
        in
