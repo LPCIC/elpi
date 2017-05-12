@@ -13,8 +13,6 @@ let set_precedence,precedence_of =
  (fun c -> ConstMap.find c !precs)
 ;;
 
-exception NotInProlog;;
-
 let cur_dirname = ref (Unix.getcwd ())
 let last_loc : Ploc.t ref = ref (Ploc.make_loc "dummy" 1 0 (0, 0) "")
 let set_fname fname = last_loc := (Ploc.make_loc fname 1 0 (0, 0) "")
