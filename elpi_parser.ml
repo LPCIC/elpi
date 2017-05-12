@@ -592,11 +592,11 @@ EXTEND
      | s = ctype; a = ARROW; t = type_ -> mkApp [mkCon a; s; t]
     ]];
   ctype:
-    [[ c = CONSTANT -> mkCon c
-     | CONSTANT "ctype"; s = LITERAL -> mkApp [Const Func.ctypef; mkString s]
-     | c = CONSTANT; l = LIST1 ctype -> mkApp (mkCon c :: l)
-     | LPAREN; t = type_; RPAREN -> t
-    ]];
+     [ "main" [ c = CONSTANT; l = LIST0 ctype LEVEL "arg" -> mkApp (mkCon c :: l)
+              | CONSTANT "ctype"; s = LITERAL -> mkApp [Const Func.ctypef; mkString s] ]
+     | "arg"  [ c = CONSTANT -> mkCon c
+              | LPAREN; t = type_; RPAREN -> t ]
+     ];
   abbrform:
     [[ CONSTANT -> ()
      | LPAREN; CONSTANT; LIST1 CONSTANT; RPAREN -> ()
