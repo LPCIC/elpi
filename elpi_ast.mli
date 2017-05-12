@@ -105,7 +105,7 @@ val pp_program : Format.formatter -> program -> unit
 val show_program : program -> string
 
 type goal = term
-exception NotInProlog
+exception NotInProlog of string
 
 val mkApp : term list -> term
 val mkCon : string -> term

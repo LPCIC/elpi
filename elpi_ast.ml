@@ -128,14 +128,15 @@ let mkLocal x = Local (Func.from_string x)
 type program = decl list [@@deriving show]
 type goal = term
 
-exception NotInProlog
+exception NotInProlog of string
 
 let mkApp = function
 (* FG: for convenience, we accept an empty list of arguments *)
   | [(App _ | Custom _ | Const _ | Quoted _) as c] -> c
   | App(c,l1)::l2 -> App(c,l1@l2)
   | (Custom _ | Const _ | Quoted _) as c::l2 -> App(c,l2)
-  | _ -> raise NotInProlog
+  | [] -> raise (NotInProlog "empty application")
+  | x::_ -> raise (NotInProlog ("application head: " ^ show_term x))
 
 let fresh_uv_names = ref (-1);;
 let mkFreshUVar () = incr fresh_uv_names; Const (Func.from_string ("_" ^ string_of_int !fresh_uv_names))

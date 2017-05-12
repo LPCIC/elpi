@@ -491,7 +491,7 @@ let _ =
               [App (eqc, t2, [t])]
              with
                 Stream.Error msg -> prerr_endline msg; raise No_clause
-              | Elpi_ast.NotInProlog -> prerr_endline "Beta redexes not allowed"; raise No_clause)
+              | Elpi_ast.NotInProlog _ -> prerr_endline "Beta redexes not allowed"; raise No_clause)
          | _ -> type_error "bad argument to string_to_term (or $string_to_term)")
     | _ -> type_error "string_to_term (or $string_to_term) takes 2 arguments");
   register_custom "$flush" (fun ~depth ~env:_ _ -> function
@@ -584,7 +584,7 @@ let _ =
              with 
                 Sys_error msg -> error msg
               | Stream.Error msg -> prerr_endline msg; raise No_clause
-              | Elpi_ast.NotInProlog -> prerr_endline "Beta redexes not allowed"; raise No_clause)
+              | Elpi_ast.NotInProlog _ -> prerr_endline "Beta redexes not allowed"; raise No_clause)
          | _ -> type_error "bad argument to readterm (or $readterm)")
     | _ -> type_error "readterm (or $readterm) takes 2 arguments") ;
   register_custom "$print_ast" (fun ~depth ~env:_ _ args -> 
