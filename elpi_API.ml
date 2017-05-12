@@ -20,7 +20,7 @@ let set_trace argv =
   set_runtime !Elpi_trace.debug;
   args
 
-let init argv =
+let init ?silent argv =
   let new_argv = set_trace argv in
   let new_argv, paths =
     let rec aux args paths = function
@@ -30,7 +30,7 @@ let init argv =
     in
       aux [] [] new_argv
   in
-  Elpi_parser.init paths;
+  Elpi_parser.init ?silent ~paths;
   new_argv
 
 let trace args = assert(set_trace args = [])

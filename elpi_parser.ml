@@ -54,6 +54,9 @@ end;;
 (*CSC: when parse_one opens a file for reading, open the .tex file
   for writing (and put the header) *)
 (* the parsed variable is a cache to avoid parsing the same file twice *)
+
+let parse_silent = ref true
+
 let rec parse_one e parsed (origfilename as filename) =
  let origprefixname = Filename.chop_extension origfilename in
  let prefixname,filename =
@@ -86,7 +89,7 @@ let rec parse_one e parsed (origfilename as filename) =
  in
  let inode = (Unix.stat filename).Unix.st_ino in
  if List.mem_assoc inode !parsed then begin
-  Printf.eprintf "already loaded %s\n%!" origfilename;
+  if not !parse_silent then Printf.eprintf "already loaded %s\n%!" origfilename;
   match !(List.assoc inode !parsed) with
   | None -> []
   | Some l -> l
@@ -99,7 +102,7 @@ let rec parse_one e parsed (origfilename as filename) =
      let origsigname = origprefixname ^ ".sig" in
      parse_one e parsed origsigname
     else [] in
-  Printf.eprintf "loading %s\n%!" origfilename;
+  if not !parse_silent then Printf.eprintf "loading %s\n%!" origfilename;
   let ast = ref None in
   parsed := (inode,ast) ::!parsed ;
   let ch = open_in filename in
@@ -649,8 +652,9 @@ let list_element_prec = 120
 
 let parser_initialized = ref false
 
-let init ~paths =
+let init ?(silent=true) ~paths =
   assert(!parser_initialized = false);
+  parse_silent := silent;
   set_tjpath paths;
   assert(parse lp ["pervasives-syntax.elpi"] = []);
   parser_initialized := true

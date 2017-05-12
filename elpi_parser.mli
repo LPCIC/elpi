@@ -14,8 +14,9 @@ val inf_precedence : int   (* greater than any used precedence *)
 val list_element_prec : int
 val precedence_of : Func.t -> fixity * int
 
-(* Loads the basic grammar and sets the paths *)
-val init : paths:string list -> unit
+(* Loads the basic grammar and sets the paths.
+ * ~silent=true (default) does not print accumulated files *)
+val init : ?silent:bool -> paths:string list -> unit
 
 (* BUG: extending the grammar is imperative, cannot be undone *)
 val parse_program : ?no_pervasives:bool -> string list -> decl list
