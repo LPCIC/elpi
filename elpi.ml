@@ -13,15 +13,17 @@ let _ =
 ;;
 *)
 
-let run_prog prog query =
+let run_prog typecheck prog query =
  let prog = Elpi_API.Compiler.program_of_ast prog in
  let query = Elpi_API.Compiler.query_of_ast prog query in
+ if typecheck then Elpi_API.Compiler.typecheck prog query;
  Elpi_API.Runtime.execute_loop prog query
 ;;
 
-let test_impl prog query =
+let test_impl typecheck prog query =
  let prog = Elpi_API.Compiler.program_of_ast prog in
  let query = Elpi_API.Compiler.query_of_ast prog query in
+ if typecheck then Elpi_API.Compiler.typecheck prog query;
  Gc.compact ();
  let time f p q =
    let t0 = Unix.gettimeofday () in
@@ -107,7 +109,6 @@ let _ =
     let strm = Stream.of_channel stdin in
     Elpi_parser.parse_goal_from_stream strm
    end in
-  if !typecheck then Elpi_API.Compiler.enable_typechecking ();
-  if !test then test_impl p g
-  else run_prog p g
+  if !test then test_impl !typecheck p g
+  else run_prog !typecheck p g
 ;;

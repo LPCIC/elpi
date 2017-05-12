@@ -74,4 +74,6 @@ infix  ?- 115.
 infixr ;  100.
 infixl :- 0.
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%%% Convenience symbols for associative lists %%%%%%%%%
+infix `-> 141.
+infix `: 141.

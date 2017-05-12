@@ -304,4 +304,16 @@ TODO:
   Note that `T` has to be ground and closed.  Safes are not effected by
   backtracking.  They can be used to log a computation / a list of failures.
 
+## Typechecking
 
+- Inference of polymorphic predicates is not performed.
+- `type foo list A -> prop` can be used to declare a polymorphic `foo`.
+- `any` means any type.
+- `variadic T1 T2` means an arbitrary number of `T1` to build a `T2` (for example `,` is of that type).
+- Type declarations can be repeated to obtain simple overloading:
+```
+type foo int -> prop.
+type foo string -> prop.
+main :- foo 1, foo "3". % typechecks
+```
+- `o` is written `prop`.

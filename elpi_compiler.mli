@@ -17,4 +17,4 @@ val lp : quotation
 
 val is_Arg : ExtState.t -> term -> bool
 
-val enable_typechecking : unit -> unit
+val typecheck : ?extra_checker:string list -> program -> query -> unit

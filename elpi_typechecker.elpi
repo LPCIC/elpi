@@ -1,186 +1,282 @@
-% vim: set ft=lprolog:
+/* elpi: embedded lambda prolog interpreter                                  */
+/* license: GNU Lesser General Public License Version 2.1                    */
+/* ------------------------------------------------------------------------- */
 
-macro @app :- elpi_app.
-macro @lam :- elpi_lam.
-macro @cdata :- elpi_cdata.
+% Simple type checker for lambda-Prolog programs
 
+% --------- HOAS or programs  ------------------------------------------------
+
+kind term type.
+type app list term -> term.
+type lam (term -> term) -> term.
+type const string -> term.
+type cdata ctype "cdata" -> term.
+
+kind typ type.
+type arrow typ -> typ -> typ.
+type ctype string -> typ.
+type forall (typ -> typ) -> typ.
+type tconst string -> typ.
+type tapp list typ -> typ.
+type prop typ.
+type any typ.
+type variadic typ -> typ -> typ.
+
+% --------- utils  ---------------------------------------------------------
 
 if B T _ :- B, !, T.
 if _ _ E :- E.
 
-infix `: 141.
-type $$?? A.
+iter _ [].
+iter F [X | XS] :- F X, iter F XS.
 
-spy P :- $print "----<<---- enter: " P, P, $print "---->>---- exit: " P, !.
-spy P :- $print "---->>---- fail: " P, fail.
+% --------- error reporting  ------------------------------------------------
+kind err type.
+type type-err term -> typ -> typ -> err.
+type wrong-arity term -> typ -> list term -> err.
+type unknown term -> err.
+type assert prop -> err -> prop.
 
-% --------- error reporting 
+type error list string -> prop.
+:name "default-typechecking-error"
+error Msg :- iter (x\ $print x) Msg.
+
+type warning string -> prop.
+:name "default-typechecking-warning"
+warning Msg :- $print Msg.
+
 assert P _ :- P, !.
-assert _ (type-err T Ty ETy) :- !, checking LOC,
-  $print LOC "Type error:" {pp T} "has type" Ty "but is used with type" ETy.
-assert _ (wrong-arity T Ty A) :- !, checking LOC,
-  $print LOC "Type error:" {pp T} "has type" Ty "but is applied to" {pp-list A}.
+assert _ (type-err T Ty ETy) :- !,
+  checking LOC, $term_to_string LOC SLOC,
+  MSG is SLOC ^ " Error: " ^ {pp T} ^ " has type " ^ {ppt Ty} ^
+         " but is used with type " ^ {ppt ETy},
+  error [MSG].
+assert _ (wrong-arity T Ty A) :- !,
+  checking LOC, $term_to_string LOC SLOC,
+  MSG is SLOC ^ " Error: " ^ {pp T} ^ " has type " ^ {ppt Ty} ^
+          " but is applied to " ^ {pp-list A},
+  error [MSG].
+assert _ (unknown T) :- !,
+  checking LOC, $term_to_string LOC SLOC,
+  MSG is SLOC ^ " Warning: " ^ {pp T} ^ " is undeclared",
+  warning MSG.
+
+mem X [ X | _ ] :- !.
+mem X [ _ | YS] :- mem X YS.
+
+stash-new E S :- $open_safe E L, ( mem S L ; $stash E S ), !.
+
+report-all-failures-if-no-success P :-
+  $new_safe E,
+  (((pi ML\ error ML :- !, iter (stash-new E) ML, fail) => P)
+   ;
+   (error {$open_safe E})),
+  !.
 
 mode (pp i o).
-type pp A -> B -> prop.
-pp (@app [HD|L]) T :- !,
-  if (pp HD PHD, not (HD = PHD))
-    (pp-list L PL, mk-app [c PHD|PL] T)
-    (pp-list [HD|L] PL, mk-app PL T).
-pp (@lam F) T :- !, pi x\ pp (F x) (T x).
-pp X X :- !.
-pp _ unprintable. % pp should never fail
+type pp term -> string -> prop.
+pp (app L) T1 :- !, pp-list L T, T1 is "(" ^ T ^ ")".
+pp (lam F) T :- !, pi x\ $term_to_string x XS, (pp x XS :- !) => pp (F x) T.
+pp (const S) S :- !.
+pp (cdata X) S :- !, $term_to_string X S.
+pp X XS :- $term_to_string X XS.
 
 mode (pp-list i o).
-pp-list [X|XS] [Y|L] :- pp-list XS L, pp X Y.
-pp-list [] [].
+pp-list [X] Y :- !, pp X Y.
+pp-list [X|XS] Y :- pp-list XS XSS, pp X XT, Y is XT ^ " " ^ XSS.
+pp-list [] "".
 
-mode (mk-app i o).
-unsafe-cast X X.
-type unsafe-cast A -> B -> prop.
-mk-app [X] X.
-mk-app [X, A|XS] T :- unsafe-cast X X', mk-app [X' A | XS] T.
+mode (ppt i o).
+ppt (ctype X) X :- !.
+ppt (tconst X) X :- !.
+ppt (tapp L) X :- !, ppt-list L T, X is "(" ^ T ^ ")".
+ppt any "*" :- !.
+ppt (variadic X Y) S :- !, ppt X XS, ppt Y YS, S is XS ^" ->> " ^ YS.
+ppt (arrow A B) S :- !, ppt A AS, ppt B BS, S is "(" ^ AS ^ " -> " ^ BS ^ ")".
+ppt X Y :- $term_to_string X Y.
 
-% --------- typing of terms
-mode (refresh-poly-ty i o).
-refresh-poly-ty (pi F) T :- !, refresh-poly-ty (F _FRESH) T.
-refresh-poly-ty X X.
+mode (ppt-list i o).
+ppt-list [X] Y :- !, ppt X Y.
+ppt-list [X|XS] Y :- ppt-list XS XSS, ppt X XT, Y is XT ^ " " ^ XSS.
+ppt-list [] "".
 
-mode (of i o i). % BUG: matching generates chains?
+% --------- typing  -------------------------------------------------------
 
-of (-> A B) _ E :- of A _ E, of B _ E.
+mode (unif i i).
 
-of (@cdata CData) Ty _ :-
-  $is_cdata CData CTy, !, assert (Ty = CTy) (type-err CData CTy Ty).
+unif (tconst "any") _ :- !.
+unif _ (tconst "any") :- !.
+unif (tapp []) (tapp []).
+unif (tapp [X|L1]) (tapp [Y|L2]) :- unif X Y, unif (tapp L1) (tapp L2).
+unif (tconst X) (tconst X).
+unif (ctype X) (ctype X).
+unif prop prop.
+unif (arrow A1 B1) (arrow A2 B2) :- unif A1 A2, unif B1 B2.
+unif (?? as X) Y :- X = Y.
+unif Y (?? as X) :- X = Y.
 
-of (@app [HD|ARGS]) TY E :- !,
-  of HD HDTY E, of-app HDTY ARGS TY HD (Done - Done) E.
-of (@lam F) Ty E :- !,
-  Ty = -> _A B,
-( (pi E\ of x T E),
-   (pi E A Tx\ of (x A) Tx E :- of A TA E, T = -> TA Tx),
-   (pi E A B Tx\ of (x A B) Tx E :- of A TA E, of B TB E, T = -> TA (-> TB Tx)))
- => of (F x) B E.
 
-of (pi F) Ty E :- !, Ty = prop, pi x\
- ( (pi E\ of x T E),
-   (pi E A Tx\ of (x A) Tx E :- of A TA E, T = -> TA Tx),
-   (pi E A B Tx\ of (x A B) Tx E :- of A TA E, of B TB E, T = -> TA (-> TB Tx)))
- => of (F x) prop E.
-of (sigma F) Ty E :- !, Ty = prop, pi x\
-   (pi E\ of x _FRESH E)
- => of (F x) prop E.
 
-of Id ETy (node Id PTy _ _) :- !,
-  refresh-poly-ty PTy Ty, assert (Ty = ETy) (type-err Id Ty ETy).
-of Id Ty (node Id1 _ L R) :- !, if ($lt Id Id1) (of Id Ty L) (of Id Ty R).
-of Id Ty (?? as TL) :- assert (TL = (node Id  Ty _FRESH1 _FRESH2)) (type-err Id Ty wtf).
 
-of Id Ty _ :- of Id ETy _, assert false (type-err Id Ty ETy).
+mode (of i o).
 
-of-app (-> T TS) [X|XS] TGT HD (B - BT) E :- !,
-  of X T E, BT = X :: TL, of-app TS XS TGT HD (B - TL) E.
-of-app Ty [] TGT HD (D - []) _ :- !,
-  assert (TGT = Ty) (type-err (@app [HD|D]) Ty TGT).
-of-app Ty Args _ HD (D - []) _ :- !,
-  assert false (wrong-arity (@app [HD|D]) Ty Args).
+of (cdata CData) Ty :-
+  $is_cdata CData CTy, !, assert (unif Ty CTy) (type-err (cdata CData) CTy Ty).
 
-% --------- typing of clauses
-%  we get names for Args
+of (app [HD|ARGS]) TY :- !, 
+  report-all-failures-if-no-success % HD may have multiple types
+   (of HD HDTY, of-app HDTY ARGS TY HD (Done - Done)).
+of (lam F) (arrow T B) :- !, pi x\
+  (of x T) => of (F x) B.
 
-typecheck [] _.
-typecheck [($$, Loc Names Clause)|Rest] E :-
-  % $print {$counter "run"} "type checking " Loc,
-  checking Loc => of-clause Names Clause E, !,
-  typecheck Rest E.
+of (const "pi") (arrow (arrow _A prop) prop) :- !.
+of (const "sigma") (arrow (arrow _A prop) prop) :- !.
 
-of-clause [N|NS] (pi C) E :- !, pi x\ 
- ( (pp x N :- !),
-   (pi E Tf\ of x Tf E :- !, assert (T = Tf) (type-err x T Tf)),
-   (pi E A Tx TA\ of (x A) Tx E :- !, of A TA E, assert (T = -> TA Tx) (type-err x T (-> TA Tx))),
-   (pi E A B Tx\ of (x A B) Tx E :- !, of A TA E, of B TB E, /*FIXME*/T = -> TA (-> TB Tx)))
-  => of-clause NS (C x) E.
-of-clause _ C E :- of C prop E.
+of (const S as T) _ :- not (known T), $rex_match "^\\$" S, !.
 
-l2t [] _.
-l2t [Id `: Ty | L] E :-
-  if (of Id Ty E) (l2t L E)
-     ($print "duplicate type declaration for" Id, l2t L E).
+of Id _ :- assert (known Id) (unknown Id), fail.
 
-typecheck-program P EL :-
-  l2t EL E,
-  $gettimeofday Begin,
-  typecheck P E,
-  $gettimeofday Mid,
-  Time is Mid - Begin,
-  $print "End type checking" Time,
+mode (of-app i i o o o).
+
+of-app (tapp [tconst "variadic", T, _] as V) [X|XS] TGT HD (B - BT) :- !,
+  of X TX, assert (unif T TX) (type-err X TX T), BT = X :: TL, of-app V XS TGT HD (B - TL).
+of-app (tapp [tconst "variadic", _, TS]) [] TGT HD (D - []) :- !,
+  assert (unif TGT TS) (type-err (app [HD|D]) TS TGT).
+of-app (arrow T TS) [X|XS] TGT HD (B - BT) :- !,
+  of X TX, assert (unif T TX) (type-err X TX T), BT = X :: TL, of-app TS XS TGT HD (B - TL).
+of-app (?? as ARR)  [X|XS] TGT HD (B - BT) :- !,
+  of X T, ARR = arrow T TS, BT = X :: TL, of-app TS XS TGT HD (B - TL).
+of-app Ty [] TGT HD (D - []) :- !,
+  assert (unif TGT Ty) (type-err (app [HD|D]) Ty TGT).
+of-app (?? as Ty)  [] TGT HD (D - []) :- !,
+  assert (unif TGT Ty) (type-err (app [HD|D]) Ty TGT).
+
+of-app Ty Args _ HD (D - []) :- !,
+  assert false (wrong-arity (app [HD|D]) Ty Args).
+
+of-clause [N|NS] (lam C) :- !, pi x\ 
+ (pp x N :- !) => (pi Tf\ of x Tf :- !, assert (unif T Tf) (type-err x T Tf)) =>
+ of-clause NS (C x).
+of-clause _ C :- of C TC, assert (unif TC prop) (type-err C TC prop).
+
+type checking (ctype "loc") -> prop.
+
+typecheck [] (Loc, Names, Query) :-
+  %$print {$counter "run"} "type checking " Loc Query,
+  checking Loc => of-clause Names Query.
+typecheck [ (Loc, Names, Clause) |Rest] Q :-
+  %$print {$counter "run"} "type checking " Loc Clause,
+  checking Loc => of-clause Names Clause, !,
+  typecheck Rest Q.
+
+mode (refresh i o).
+refresh (forall F) T :- !, refresh (F _FRESH) T.
+refresh (tconst "any") _FRESH :- !.
+refresh X X.
+
+kind entry type.
+type `: term -> typ -> entry.
+
+mem-assoc X [X `: _ | _] :- !.
+mem-assoc X [ _ | XS] :- mem X XS.
+
+safe-dest-app (app [X | A]) X A :- !.
+safe-dest-app X X [].
+
+macro @vdash :- ":-".
+
+collect-predicates-clause (lam F) Acc Res :- !,
+  pi x\ collect-predicates-clause (F x) Acc Res.
+collect-predicates-clause (app [const @vdash, HD | _]) Acc Res :- !,
+  safe-dest-app HD C _, if (mem-assoc C Acc) (Res = Acc) (Res = [C `: _ | Acc]).
+collect-predicates-clause HD Acc Res :-
+  safe-dest-app HD C _, if (mem-assoc C Acc) (Res = Acc) (Res = [C `: _ | Acc]).
+
+collect-predicates-program [ (_, _, C) | P ] Acc Res :-
+  collect-predicates-clause C Acc Acc1,
+  collect-predicates-program P Acc1 Res.
+collect-predicates-program [] X X.
+
+mode (under-env i i).
+
+type known term -> prop.
+
+under-env [] P :- P.
+under-env [ X `: PT | XS ] P :-
+  %$print "Assume" X PT,
+  (pi Ty\ of X Ty :- refresh PT Ty) => known X => under-env XS P.
+
+
+typecheck-program P Q DeclaredTypes :-
+  % $gettimeofday Begin,
+  collect-predicates-program P DeclaredTypes AllTypes, !,
+  under-env AllTypes (typecheck P Q), !,
+  % $gettimeofday Mid, Time is Mid - Begin, $print "End type checking" Time,
   warn-linear P,
-  WTime is {$gettimeofday} - Mid,
-  $print "End warning" WTime,
-  true.
-  % $print "given:" E,
-  % $print "inferred:" FRESH.
+  % WTime is {$gettimeofday} - Mid, $print "End warning" WTime,
+ true.
 
-type of X -> Y -> list Z -> prop.
-type $$-> X -> X -> prop.
-type wrong-arity A -> B -> list A -> err.
+% ---------- warnings ------------------------------------------------------
 
-main :- foo X, foo X Y.
+type `-> term -> int -> entry.
+type var term -> prop.
 
-% ---------- warnings
-
-mode (report i).
-report [].
-report [V `: 1 + ?? |NS] :- !,
+mode (report-linear i).
+report-linear [].
+report-linear [V `-> 1 + ?? |NS] :- !,
   pp V VN,
   if (not($rex_match "^_" VN))
-    (checking LOC,
-     MSG is "Warning: " ^ VN ^ " is linear, name it _" ^ VN ^ " please",
-     $print LOC MSG)
+    (checking LOC, $term_to_string LOC SLOC,
+     MSG is SLOC ^" Warning: "^ VN ^" is linear, name it _" ^ VN ^ " please",
+     warning MSG)
     true,
-  report NS.
-report [V `: ?? |NS] :-
-  checking LOC, $print LOC {pp V} "is unused", report NS.
-report [_ `: _ | NS] :- report NS.
+  report-linear NS.
+report-linear [V `-> ?? |NS] :-
+  checking LOC, $term_to_string LOC SLOC,
+  MSG is SLOC ^" Warning: "^ {pp V} ^" is unused",
+  warning MSG,
+  report-linear NS.
+report-linear [_ `-> _ | NS] :- report-linear NS.
 
 type count A -> list B -> prop.
-count (pi F) E :- pi x\
- ( (pi E A\ count (x A) E :- !, count x E, count A E),
-   (pi E A B\ count (x A B) E :- !, count x E, count A E, count B E)
- ) => count (F x) E.
-count (sigma F) E :- pi x\
- ( (pi E A\ count (x A) E :- !, count x E, count A E),
-   (pi E A B\ count (x A B) E :- !, count x E, count A E, count B E)
- ) => count (F x) E.
-count (@lam F) E :- pi x\
- ( (pi E A\ count (x A) E :- !, count x E, count A E),
-   (pi E A B\ count (x A B) E :- !, count x E, count A E, count B E)
- ) => count (F x) E.
-count (@app [X|XS]) E :- !, count X E, count (@app XS) E.
-count (@app []) _ :- !.
-count (-> A B) E :- !, count A E, count B E.
+count (lam F) E :- pi x\ count (F x) E.
+count (app [X|XS]) E :- !, count X E, count (app XS) E.
+count (app []) _ :- !.
 count X E :- var X, !, incr X E.
 count _ _.
 
 mode (incr i i).
-incr X [X `: K | _] :- add1 K.
+incr X [X `-> K | _] :- add1 K.
 incr X [_ | XS] :- incr X XS.
 
 mode (add1 i).
 add1 (?? as K) :- K = 1 + _FRESH.
 add1 (1 + K) :- add1 K.
 
-check-non-linear [N|NS] (pi C) L :- pi x\
-  ( (pp x N :- !),
-    (var x),
-    (pi E A\ count (x A) E :- !, count x E, count A E),
-    (pi E A B\ count (x A B) E :- !, count x E, count A E, count B E)
- ) => check-non-linear NS (C x) [x `: _FRESH | L].
+check-non-linear [N|NS] (lam C) L :- pi x\
+ (pp x N :- !) => (var x) => check-non-linear NS (C x) [x `-> _FRESH | L].
 check-non-linear _ C L :-
-  count C L, report L.
+  count C L, report-linear L.
 
 warn-linear [].
-warn-linear [($$, Loc Names Clause)|CS] :-
+warn-linear [ (Loc, Names, Clause) |CS] :-
   checking Loc =>  check-non-linear Names Clause [],
   warn-linear CS.
 
+% ---------- test ----------------------------------------------------------
+
+type foo int -> prop.
+type foo string -> prop.
+
+main :- test1, test2, test3, test4, test5, test6, test7,
+        warn1.
+test1 :- app lam.
+test2 :- lam app.
+test3 :- app "oops".
+test4 :-  app [] 2.
+test5 :- $print x 2 "3x".
+test6 :- foo "x", foo 1, foo app.
+test7 :- foo (foo app).
+warn1 :- LINEAR.
+
+% vim: set ft=lprolog:

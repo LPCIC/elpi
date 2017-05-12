@@ -11,8 +11,6 @@ open Elpi_runtime_trace_off.Elpi_runtime
   "Compiler" from AST to program
  ******************************************************************************)
 
-let typecheck = ref (fun clauses types -> ())
-  
 let modes = ref C.Map.empty
 
 module SM = Map.Make(String)
@@ -37,7 +35,7 @@ let spill types ast =
     let missing_args =
       (* XXX This sucks: types and mode declarations should be merged XXX *)    
       try
-        let _,_,ty = List.find (fun (t,_,_) -> t == ct) types in
+        let _,_,ty = List.find (fun (t,_,_) -> t == c) types in
         let rec napp = function App(_,_,[x]) -> 1 + napp x | _ -> 0 in
         napp ty - nargs 
       with Not_found ->
@@ -453,7 +451,7 @@ type comp_state = {
   ctx : temp list;
 
   (* metadata *)
-  types : (term * int * term) list;
+  types : (constant * int * term) list;
 }
 
 let sort_insertion l =
@@ -530,9 +528,9 @@ let program_of_ast ?print (p : Elpi_ast.decl list) : program =
           let chr = CHR.add_rule clique rule chr in
           aux { cs with chr } todo
       | Elpi_ast.Type(name,typ) ->  (* Check ARITY against MODE *)
-          let _, name = C.funct_of_ast name in
+          let namec, _ = C.funct_of_ast name in
           let _,nargs,typ = clause_of_ast lcs ~cmap ~macro ~types typ in
-          aux { cs with types = (name,nargs,typ) :: types } todo
+          aux { cs with types = (namec,nargs,typ) :: types } todo
       | Elpi_ast.Clause c ->
           aux { cs with tmp = { tmp with block = (block @ [macro,c])} } todo
       | Elpi_ast.Begin ->
@@ -595,8 +593,6 @@ let program_of_ast ?print (p : Elpi_ast.decl list) : program =
            ctx = []; types = [] }
          p
  in
- !typecheck clauses types;
- let clauses = List.map (fun (_,_,x) -> x) clauses in
  { query_depth = lcs;
    prolog_program =
      Elpi_data.wrap_prolog_prog (make_index (List.map (fun (_,_,x) -> x) clauses));
@@ -607,56 +603,68 @@ let program_of_ast ?print (p : Elpi_ast.decl list) : program =
    }
 ;;
 
+let constc = C.from_stringc "const"
+let tconstc = C.from_stringc "tconst"
+let appc = C.from_stringc "app"
+let tappc = C.from_stringc "tapp"
+let lamc = C.from_stringc "lam"
+let cdatac = C.from_stringc "cdata"
+let forallc = C.from_stringc "forall"
+let arrowc = C.from_stringc "arrow"
 
-let mkQApp =
-  let appc = C.from_stringc "elpi_app" in
-  fun l -> App(appc,list_to_lp_list l,[])
+let mkQApp ~on_type l =
+  let c = if on_type then tappc else appc in
+  App(c,list_to_lp_list l,[])
 
-let quote_term ?(app=true) ?(on_type=false) vars term =
-  let lamc = C.from_stringc "elpi_lam" in
-  let cdatac = C.from_stringc "elpi_cdata" in
-  let reloc n = if n < 0 then n else n + vars in
-  let rec aux depth = function
+let mkQCon ~on_type c vars =
+  let a = if on_type then tconstc else constc in
+  if c < 0 then App(a,CD.of_string (C.show c),[])
+  else C.of_dbl (c + vars)
+
+let quote_term ?(on_type=false) vars term =
+  let mkQApp = mkQApp ~on_type in
+  let mkQCon = mkQCon ~on_type in
+  let rec aux depth term = match term with
     | Const n when on_type && C.show n = "string" -> 
         App(C.ctypec, CD.of_string "string",[])
     | Const n when on_type && C.show n = "int" ->
         App(C.ctypec, CD.of_string "int",[])
     | Const n when on_type && C.show n = "float" ->
         App(C.ctypec, CD.of_string "float",[])
-    | Const n -> C.of_dbl (reloc n)
+    | App(c,CData s,[]) when on_type && c == C.ctypec && CD.is_string s -> term
+    | App(c,s,[t]) when on_type && c == C.arrowc ->
+        App(arrowc,aux depth s,[aux depth t])
+    | Const n when on_type && C.show n = "prop" -> term
+
+    | Const n -> mkQCon n vars
+    | Custom(c,[]) -> mkQCon c vars
     | Lam x -> App(lamc,Lam (aux (depth+1) x),[])
-    | App(c,Lam f,[]) when c == C.pic || c == C.sigmac ->
-        App(c,Lam (aux (depth+1) f), [])
-    | App(c,f,[]) when c == C.pic || c == C.sigmac ->
-        App(c,aux depth f, [])
-    | App(c,s,[t]) when c == C.arrowc -> App(c,aux depth s,[aux depth t])
-    | App(c,CData s,[]) as x when on_type && c == C.ctypec && CD.is_string s ->x
-    | App(hd,x,xs) when not app ->
-        App(reloc hd, aux depth x, List.map (aux depth) xs)
-    | App(hd,x,xs) ->
-        mkQApp (C.of_dbl (reloc hd) :: List.map (aux depth) (x::xs))
-    | Arg(id,0) -> C.of_dbl id
-    | Arg(id,argno) -> mkQApp (C.of_dbl id :: C.mkinterval vars argno 0)
-    | AppArg(id,xs) -> mkQApp (C.of_dbl id :: List.map (aux depth) xs)
+    | App(c,x,xs) ->
+        mkQApp (mkQCon c vars :: List.(map (aux depth) (x :: xs)))
+    | Custom(c,args) -> mkQApp (mkQCon c vars :: List.map (aux depth) args)
+
     | UVar ({ contents = g }, from, args) when g != C.dummy ->
        aux depth (deref_uv ~from ~to_:depth args g)
     | AppUVar ({contents = t}, from, args) when t != C.dummy ->
        aux depth (deref_appuv ~from ~to_:depth args t)
+
+    | Arg(id,0) -> C.of_dbl id
+    | Arg(id,argno) -> mkQApp (C.of_dbl id :: C.mkinterval vars argno 0)
+    | AppArg(id,xs) -> mkQApp (C.of_dbl id :: List.map (aux depth) xs)
+
     | UVar _ | AppUVar _ -> assert false
-    | Custom(c,[]) -> C.of_dbl c
-    | Custom(c,args) ->
-        mkQApp (C.of_dbl (reloc c) :: List.map (aux depth) args)
-    | CData _ as x when on_type -> x
+
     | CData _ as x -> App(cdatac,x,[])
-    | Cons(hd,tl) -> mkQApp [C.cons; aux depth hd; aux depth tl]
-    | Nil -> C.nil
+    | Cons(hd,tl) -> mkQApp [mkQCon C.consc vars; aux depth hd; aux depth tl]
+    | Nil -> mkQCon C.nilc vars
   in
     aux vars term
 
     (* FIXME : close_with_pis already exists but unused *)
-let rec piclose t = function
+let rec piclose ~on_type t = function
   | 0 -> t
-  | n -> App(C.pic,Lam (piclose t (n-1)),[])
+  | n when on_type -> App(forallc,Lam (piclose ~on_type t (n-1)),[])
+  | n -> App(lamc,Lam (piclose ~on_type t (n-1)),[])
 
 let quote_clause (loc, names, { key; args; hyps; vars }) =
   (* horrible hack *)
@@ -667,29 +675,33 @@ let quote_clause (loc, names, { key; args; hyps; vars }) =
   let t =
     if hyps = [] then quote_term vars head
     else
-      mkQApp [C.rimpl;
+      mkQApp ~on_type:false [mkQCon ~on_type:false C.rimplc vars;
               quote_term vars head;
-              mkQApp (C.andt :: List.map (quote_term vars) hyps)]
+              mkQApp ~on_type:false (mkQCon ~on_type:false C.andc vars:: List.map (quote_term vars) hyps)]
   in
   let names = List.map (fun x -> CData(in_string (F.from_string x))) names in
-  App(C.andc,CData loc,[list_to_lp_list names;piclose t vars])
+  App(C.andc,CData loc,[list_to_lp_list names;piclose ~on_type:false t vars])
 ;;
 
-let enable_typechecking () =
+let typecheck ?(extra_checker=[]) { clauses_w_info = clauses; declared_types = types } (qn,_,qe,qt) =
   let checker =
     (program_of_ast
-       (Elpi_parser.parse_program ["elpi_typechecker.elpi"])) in
-  typecheck := (fun clauses types ->
-    let clist = list_to_lp_list (List.map quote_clause clauses) in
-    let tlist = list_to_lp_list (List.map (fun (name,n,typ) ->
-        App(C.from_stringc "`:",name,
-          [piclose (quote_term ~app:false ~on_type:true 0 typ) n]))
-      types) in
-    let query =
-      let c = C.from_stringc "typecheck-program" in
-      [], 0, [||], App(c,clist,[tlist]) in
-    if execute_once ~print_constraints:true checker query then
-      Printf.eprintf "Anomaly: Type checking aborts\n%!";
-    )
+       (Elpi_parser.parse_program ("elpi_typechecker.elpi" :: extra_checker))) in
+  let clist = list_to_lp_list (List.map quote_clause clauses) in
+  let q =
+    let names = List.map (fun x -> CData(in_string (F.from_string x))) qn in
+    let vars = Array.length qe in
+    App(C.andc,CData (in_loc Ploc.(make_loc "query" 0 0 (0,0) "")), 
+      [list_to_lp_list names;
+       piclose ~on_type:false (quote_term ~on_type:false vars qt) vars]) in
+  let tlist = list_to_lp_list (List.map (fun (name,n,typ) ->
+      App(C.from_stringc "`:",mkQCon ~on_type:false name 0,
+        [piclose ~on_type:true (quote_term ~on_type:true 0 typ) n]))
+    types) in
+  let query =
+    let c = C.from_stringc "typecheck-program" in
+    [], 0, [||], App(c,clist,[q;tlist]) in
+  if execute_once ~print_constraints:true checker query then
+    Printf.eprintf "Anomaly: Type checking aborts\n%!"
 ;;
 

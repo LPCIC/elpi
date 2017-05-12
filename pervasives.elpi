@@ -80,12 +80,23 @@ type $$::  X -> list X -> list X.
 type $$[]  list X.
 type $$is  X -> X -> prop.
 type $$$term_to_string X -> string -> prop.
-type $$$print X -> Y.
+type $$$print variadic any prop.
 type $$:- prop -> prop -> prop.
-type $$, prop -> Y.
+type $$, variadic any any.
 type $$?? A.
 type $$as A -> A -> A.
 type $$$constraint A -> B -> prop.
 type $$$gettimeofday float -> prop.
 type $$$counter string -> int -> prop.
 type $$- A -> A -> A.
+type fail, !, halt  prop.
+type std_in, std_out  (ctype "file").
+type $$=> prop -> prop -> prop.
+type $$^ string -> string -> string.
+type $$+ int -> int -> int.
+type false prop.
+
+type $$$new_safe (ctype "safe") -> prop.
+type $$$open_safe (ctype "safe") -> list A -> prop.
+type $$$stash (ctype "safe") -> A -> prop.
+
