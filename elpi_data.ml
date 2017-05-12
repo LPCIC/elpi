@@ -35,7 +35,7 @@ let { CData.cin = in_loc; isc = is_loc; cout = out_loc } as cloc =
   CData.(declare {
     data_name = "loc";
     data_pp = (fun f x ->
-      Fmt.fprintf f "%s:%d:" (Ploc.file_name x) (Ploc.line_nb x));
+      Fmt.fprintf f "%s:%4d:" (Filename.basename (Ploc.file_name x)) (Ploc.line_nb x));
     data_eq = (==);
     data_hash = Hashtbl.hash;
   })
