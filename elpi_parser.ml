@@ -15,7 +15,7 @@ let set_precedence,precedence_of =
 
 let cur_dirname = ref (Unix.getcwd ())
 let last_loc : Ploc.t ref = ref (Ploc.make_loc "dummy" 1 0 (0, 0) "")
-let set_fname fname = last_loc := (Ploc.make_loc fname 1 0 (0, 0) "")
+let set_fname ?(line=1) fname = last_loc := (Ploc.make_loc fname line 0 (0, 0) "")
 
 let rec readsymlinks f =
   try
@@ -504,11 +504,13 @@ EXTEND
       | COLON; CONSTANT "after";
               name = [ c = CONSTANT -> c | l = LITERAL -> l] -> `After, name
     ]];
+  pragma : [[ CONSTANT "#line"; l = INTEGER; f = LITERAL -> set_fname ~line:(int_of_string l) f ]];
   clause :
     [[ id = OPT clname; insert = OPT clinsert; f = atom; FULLSTOP ->
        let c = { loc; id; insert; body = f } in
        (!PointerFunc.latex_export).PointerFunc.export c ;
        [Clause c]
+     | pragma -> []
      | LCURLY -> [Begin]
      | RCURLY -> [End]
      | MODE; m = LIST1 mode SEP SYMBOL ","; FULLSTOP -> [Mode m]
@@ -606,7 +608,7 @@ EXTEND
      | LPAREN; abbrform; RPAREN -> ()
     ]];
   goal:
-    [[ p = premise -> p ]];
+    [[ OPT pragma; p = premise -> loc, p ]];
   premise : [[ a = atom -> a ]];
   atom :
    [ "110"
