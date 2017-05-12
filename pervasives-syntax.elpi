@@ -70,7 +70,7 @@ infixr as 129.
 infixr => 129.
 infixr &  120.
 infix  ?- 115.
-infixr ,  110.
+% infixr ,  110.  This is now built-in to parse it as n-ary
 infixr ;  100.
 infixl :- 0.
 

@@ -424,10 +424,13 @@ let xppterm ~nice depth0 names argsdepth env f t =
          let lastarg = List.nth (x::xs) (List.length xs) in
          let hdlvl =
           if is_lambda depth lastarg then lam_prec
+          else if hd == C.andc then 110 
           else appl_prec in
          with_parens hdlvl (fun _ ->
-          pp_app f ppconstant (aux inf_prec depth)
-           ~pplastarg:(aux_last inf_prec depth) (hd,x::xs)))
+          if hd == C.andc then
+            pplist (aux inf_prec depth) ~pplastelem:(aux_last inf_prec depth) "," f (x::xs)
+          else pp_app f ppconstant (aux inf_prec depth)
+                 ~pplastarg:(aux_last inf_prec depth) (hd,x::xs)))
     | Custom (hd,xs) ->
        with_parens appl_prec (fun _ ->
         pp_app f ppconstant (aux inf_prec depth)

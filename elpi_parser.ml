@@ -407,7 +407,7 @@ let dummy_prod =
      failwith "internal error, lexer generated a dummy token") in
  [ [ Gramext.Stoken ("DUMMY", "") ], dummy_action ]
 
-let used_precedences = ref [];;
+let used_precedences = ref [110];;
 let is_used n =
  let rec aux visited acc =
   function
@@ -608,7 +608,12 @@ EXTEND
     [[ p = premise -> p ]];
   premise : [[ a = atom -> a ]];
   atom :
-   [ "term"
+   [ "110"
+      [ args = LIST1 atom LEVEL "120" SEP SYMBOL "," ->
+          if List.length args > 1 then mkApp (Const Func.andf :: args)
+          else List.hd args
+      ]
+   | "term"
       [ hd = atom; args = LIST1 atom LEVEL "abstterm" ->
          desugar_multi_binder (mkApp (hd :: args)) ]
    | "abstterm"
