@@ -668,7 +668,7 @@ type program = {
   declared_types : (constant * int * term) list; (* name, nARGS, type *)
   clauses_w_info : (CData.t * string list * clause) list; (* loc, args names, clause *)
 }
-type query = string list * int * env * term
+type query = Ploc.t * string list * int * env * term
 
 type prolog_prog += Index of idx
 let () = extend_printer pp_prolog_prog (fun fmt -> function

@@ -382,14 +382,14 @@ let env_of_args state =
   Array.make max C.dummy
 ;;
 
-let query_of_ast { query_depth = lcs } t =
+let query_of_ast { query_depth = lcs } (loc,t) =
   let state = ExtState.init () in
   let state, clause = clause_of_ast lcs state t in
-  names_of_args state, 0, env_of_args state, clause
+  loc, names_of_args state, 0, env_of_args state, clause
 ;;
  
 let lp ~depth state s =
-  let ast = Elpi_parser.parse_goal_from_stream (Stream.of_string s) in
+  let _loc, ast = Elpi_parser.parse_goal_from_stream (Stream.of_string s) in
   stack_term_of_ast ~inner_call:true ~depth state ast
 
 
@@ -683,7 +683,7 @@ let quote_clause (loc, names, { key; args; hyps; vars }) =
   App(C.andc,CData loc,[list_to_lp_list names;piclose ~on_type:false t vars])
 ;;
 
-let typecheck ?(extra_checker=[]) { clauses_w_info = clauses; declared_types = types } (qn,_,qe,qt) =
+let typecheck ?(extra_checker=[]) { clauses_w_info = clauses; declared_types = types } (qloc,qn,_,qe,qt) =
   let checker =
     (program_of_ast
        (Elpi_parser.parse_program ("elpi_typechecker.elpi" :: extra_checker))) in
@@ -691,7 +691,7 @@ let typecheck ?(extra_checker=[]) { clauses_w_info = clauses; declared_types = t
   let q =
     let names = List.map (fun x -> CData(in_string (F.from_string x))) qn in
     let vars = Array.length qe in
-    App(C.andc,CData (in_loc Ploc.(make_loc "query" 0 0 (0,0) "")), 
+    App(C.andc,CData (in_loc qloc), 
       [list_to_lp_list names;
        piclose ~on_type:false (quote_term ~on_type:false vars qt) vars]) in
   let tlist = list_to_lp_list (List.map (fun (name,n,typ) ->
@@ -700,7 +700,7 @@ let typecheck ?(extra_checker=[]) { clauses_w_info = clauses; declared_types = t
     types) in
   let query =
     let c = C.from_stringc "typecheck-program" in
-    [], 0, [||], App(c,clist,[q;tlist]) in
+    Ploc.dummy, [], 0, [||], App(c,clist,[q;tlist]) in
   if execute_once ~print_constraints:true checker query then
     Printf.eprintf "Anomaly: Type checking aborts\n%!"
 ;;

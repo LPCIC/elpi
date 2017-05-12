@@ -19,9 +19,9 @@ val precedence_of : Func.t -> fixity * int
 val init : ?silent:bool -> paths:string list -> unit
 
 (* BUG: extending the grammar is imperative, cannot be undone *)
-val parse_program : ?no_pervasives:bool -> string list -> decl list
-val parse_goal : string -> term
-val parse_goal_from_stream : char Stream.t -> term
+val parse_program : ?no_pervasives:bool -> string list -> program
+val parse_goal : string -> goal
+val parse_goal_from_stream : char Stream.t -> goal
 
 val get_literal : string -> string
 

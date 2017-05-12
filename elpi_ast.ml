@@ -126,7 +126,7 @@ type decl =
 let mkLocal x = Local (Func.from_string x)
 
 type program = decl list [@@deriving show]
-type goal = term
+type goal = Ploc.t * term
 
 exception NotInProlog of string
 

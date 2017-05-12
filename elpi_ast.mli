@@ -104,7 +104,7 @@ type program = decl list
 val pp_program : Format.formatter -> program -> unit
 val show_program : program -> string
 
-type goal = term
+type goal = Ploc.t * term
 exception NotInProlog of string
 
 val mkApp : term list -> term

@@ -85,7 +85,7 @@ let _ =
     | s :: _ when String.length s > 0 && s.[0] == '-' ->
         Printf.eprintf "Unrecognized option: %s\n%s" s usage; exit 1
     | x :: rest -> x :: aux rest in
-  let argv = Elpi_API.init (Array.to_list Sys.argv) in
+  let argv = Elpi_API.init ~silent:false (Array.to_list Sys.argv) in
   let filenames = aux (List.tl argv) in
   set_terminal_width ();
   if !print_latex then Elpi_latex_exporter.activate () ;

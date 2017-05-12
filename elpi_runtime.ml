@@ -2301,7 +2301,7 @@ let propagate { CS.cstr; cstr_position } history =
        let check = function
          | None -> ()
          | Some guard -> try
-             let _ = search ([],max_depth,e, guard) in
+             let _ = search (Ploc.dummy,[],max_depth,e, guard) in
              if get CS.Ugly.delayed <> [] then
                error "propagation rules must not $delay"
            with No_clause -> raise NoMatch in
@@ -2640,7 +2640,7 @@ end;*)
     CS.print Fmt.std_formatter;
     Fmt.fprintf Fmt.std_formatter "========================\n%!"; end
     in
-  let search = exec (fun (_,adepth,q_env,q) ->
+  let search = exec (fun (_,_,adepth,q_env,q) ->
      let q = move ~adepth ~depth:adepth ~from:adepth ~to_:adepth q_env q in
      [%spy "run-trail" (fun fmt _ -> T.print_trail fmt) ()];
      T.empty_trail := !T.trail;
@@ -2672,7 +2672,7 @@ let execute_once ~print_constraints program q =
 ;;
 
 
-let execute_loop program ((q_names,q_argsdepth,q_env,q) as qq) =
+let execute_loop program ((_,q_names,q_argsdepth,q_env,q) as qq) =
  let { search; next_solution } = make_runtime ~print_constraints:true program in
  let k = ref noalts in
  let do_with_infos f x =

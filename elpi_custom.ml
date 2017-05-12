@@ -65,7 +65,7 @@ let rec eval depth =
       try lookup_eval hd
       with Not_found -> anomaly (show hd ^ " not evaluable") in
      f []
-  | Nil | Cons _ -> assert false (* TODO? *)
+  | (Nil | Cons _ as x) -> type_error ("Lists cannot be evaluated: " ^ show_term x)
   | CData _ as x -> x
 ;;
 
@@ -486,7 +486,7 @@ let _ =
        (match eval depth t1 with
            CData s when cstring.isc s ->
             (try
-              let s = Elpi_parser.parse_goal (F.show (cstring.cout s)) in
+              let _, s = Elpi_parser.parse_goal (F.show (cstring.cout s)) in
               let t = term_of_ast ~depth s in
               [App (eqc, t2, [t])]
              with
@@ -578,7 +578,7 @@ let _ =
                match lookahead with
                   Some c -> Stream.icons c strm
                 | None -> strm in
-              let t3 = Elpi_parser.parse_goal_from_stream strm in
+              let _, t3 = Elpi_parser.parse_goal_from_stream strm in
               let t3 = term_of_ast ~depth t3 in
               [App (eqc, t2, [t3])]
              with 
