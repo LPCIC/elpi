@@ -293,7 +293,15 @@ in the l-lambda fragment.
 - `sigma X Y\ t` is expanded to `sigma X\ sigma Y\ t`.
 - `pi x y\ t` is expanded to `pi x\ pi y\ t`.
 
+TODO:
 - `constraint (foo X) on X` is expanded to
   `foo (?? as X) :- $constraint (foo X) X`
+
+## Non logical features
+
+- `!` (does not work on nested disjunctions)
+- via `$new_safe S`, `$stash S T`, `$open_safe S TL`.
+  Note that `T` has to be ground and closed.  Safes are not effected by
+  backtracking.  They can be used to log a computation / a list of failures.
 
 

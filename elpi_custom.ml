@@ -657,3 +657,71 @@ let _ =
      | _ -> type_error "$matc_frozen takes two args") ;
 ;;
 
+open CData
+
+let { cin = safe_in; isc = is_safe ; cout = safe_out } = declare {
+  data_name = "safe";
+  data_pp = (fun fmt (id,l,d) ->
+     Format.fprintf fmt "[safe %d: %a]_%d" id
+       (pplist (uppterm 0 [] 0 Elpi_data.empty_env) ";") !l d);
+  data_eq = (fun (id1, _,_) (id2,_,_) -> id1 == id2);
+  data_hash = (fun (id,_,_) -> id);
+}
+
+let fresh_copy t max_db depth =
+  let rec aux d = function
+    | Lam t -> aux (d+1) t
+    | Const c as x ->
+        if c < max_db then x
+        else assert false (* TODO *)
+    | App (c,x,xs) ->
+        let x = aux d x in
+        let xs = List.map (aux d) xs in
+        if c < max_db then App(c,x,xs)
+        else assert false (* TODO *)
+    | (Arg _ | AppArg _) ->
+        type_error "$stash takes only heap terms"
+    | (UVar (r,_,_) | AppUVar(r,_,_)) when r.contents == dummy ->
+        type_error "$stash takes only ground terms"
+    | UVar(r,vd,ano) ->
+        aux d (deref_uv ~from:vd ~to_:(depth+d) ano r.contents)
+    | AppUVar(r,vd,args) ->
+        aux d (deref_appuv ~from:vd ~to_:(depth+d) args r.contents)
+    | Custom (c,xs) -> Custom(c,List.map (aux d) xs)
+    | CData _ as x -> x
+    | Cons (hd,tl) -> Cons(aux d hd, aux d tl)
+    | Nil as x -> x
+  in
+    aux 0 t
+
+let () =
+   let safeno = ref 0 in
+
+   register_custom "$new_safe" (fun ~depth ~env:_ _ -> function
+     | [t] -> 
+         incr safeno;
+         [App (eqc, t, [CData (safe_in (!safeno,ref [],depth))]) ]
+     | _ -> type_error "$new_safe takes one arg");
+
+   register_custom "$stash" (fun ~depth ~env:_ _ -> function
+     | [t1;t2] ->
+          (match deref_head depth t1 with
+          | CData c when is_safe c ->
+              let _,l, ld = safe_out c in
+              l := fresh_copy t2 ld depth :: !l;
+              []
+          | _ -> type_error "$stash takes a safe")
+     | _ -> type_error "$stash takes two args");
+
+   register_custom "$open_safe" (fun ~depth ~env:_ _ -> function
+     | [t1;t2] ->
+          (match deref_head depth t1 with
+          | CData c when is_safe c ->
+              let _,l, ld = safe_out c in
+              [App (eqc, t2, [list_to_lp_list (List.rev !l)]) ]
+          | _ -> type_error "$stash takes a safe")
+     | _ -> type_error "$stash takes two args");
+
+
+;;
+
