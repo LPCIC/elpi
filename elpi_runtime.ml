@@ -2295,8 +2295,13 @@ let propagate { CS.cstr; cstr_position } history =
          let pctx = lift_pat ~from:dp ~to_:dto pctx in
          match_same_depth_and_freeze i e dto m t pctx in
 
-       let program = { (* runs deep enough to let one use all pi-vars *)
-         chr; prolog_program; modes; query_depth = max_depth;
+       let program = {
+         (* runs deep enough to let one use all pi-vars *)
+         query_depth = max_depth;
+         (* same program *)
+         chr; prolog_program; modes;
+         (* typing info set to dummy *)
+         declared_types = []; clauses_w_info = []
        } in
        let { search; get; exec; destroy } =
          !do_make_runtime  ~print_constraints:false program in

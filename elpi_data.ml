@@ -663,6 +663,10 @@ type program = {
   (* constraint handling rules *)
   chr : chr [@printer (pp_extensible pp_chr)];
   modes : mode_decl C.Map.t; 
+
+  (* extra stuff, for typing *)
+  declared_types : (constant * int * term) list; (* name, nARGS, type *)
+  clauses_w_info : (CData.t * string list * clause) list; (* loc, args names, clause *)
 }
 type query = string list * int * env * term
 

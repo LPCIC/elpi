@@ -598,9 +598,13 @@ let program_of_ast ?print (p : Elpi_ast.decl list) : program =
  !typecheck clauses types;
  let clauses = List.map (fun (_,_,x) -> x) clauses in
  { query_depth = lcs;
-   prolog_program = Elpi_data.wrap_prolog_prog (make_index clauses);
+   prolog_program =
+     Elpi_data.wrap_prolog_prog (make_index (List.map (fun (_,_,x) -> x) clauses));
    chr = CHR.wrap_chr chr;
-   modes = !modes}
+   modes = !modes;
+   declared_types = types;
+   clauses_w_info = clauses
+   }
 ;;
 
 
