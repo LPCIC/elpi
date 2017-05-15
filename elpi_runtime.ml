@@ -2644,7 +2644,7 @@ end;*)
     Fmt.fprintf Fmt.std_formatter "========================\n%!"; end
     in
   let search = exec (fun (_,_,adepth,q_env,q) ->
-     let q = move ~adepth ~depth:adepth ~from:adepth ~to_:adepth q_env q in
+     let q = move ~adepth ~from:adepth ~to_:adepth q_env q in
      [%spy "run-trail" (fun fmt _ -> T.print_trail fmt) ()];
      T.empty_trail := !T.trail;
      let alts = run !depth !orig_prolog_program q [] FNil noalts noalts in
