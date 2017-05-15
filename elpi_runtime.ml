@@ -1935,10 +1935,10 @@ let replace_const m t =
     | (CData _ | UVar _ | Nil) as x -> x
     | Arg _ | AppArg _ -> assert false
     | AppUVar(r,lvl,args) -> AppUVar(r,lvl,smart_map rcaux args) in
-  [%spy "alignement-replace-in" pp_term t];
-  let t' = rcaux t in
-  [%spy "alignement-replace-out" pp_term t'];
-  t'
+  [%spy "alignement-replace-in" (uppterm 0 [] 0 empty_env)  t];
+  let t = rcaux t in
+  [%spy "alignement-replace-out" (uppterm 0 [] 0 empty_env) t];
+  t
 ;;
 
 let ppmap fmt (g,l) =
@@ -2259,7 +2259,7 @@ let propagate { CS.cstr; cstr_position } history =
 
        let constraints_contexts, constraints_goals =
          List.fold_right (fun (dto,d,p,g) (ctxs, gs) ->
-           (dto,p) :: ctxs, (dto,d,g) :: gs)
+           (dto,d,p) :: ctxs, (dto,d,g) :: gs)
            constraints ([],[]) in
 
        let patterns = List.map (sequent_of_pat ruledepth) patterns in
@@ -2274,17 +2274,19 @@ let propagate { CS.cstr; cstr_position } history =
        let match_p i m (dto,dt,t) (dp,pat) =
          [%spy "matching-goal-lift-from" pp_int ruledepth];
          [%spy "matching-goal-lift-to" pp_int dto];
-         [%spy "matching-goal-lift-in" pp_term t];
-         let t = hmove ~from:ruledepth ~to_:dto t in
-         [%spy "matching-goal-lift-out" pp_term t];
+         [%spy "matching-goal-lift-in" (uppterm dt [] 0 empty_env) t];
+         let t = hmove ~from:ruledepth ~to_:dto (hmove ~from:dt ~to_:dt ~avoid:(oref C.dummy) t) in
+         [%spy "matching-goal-lift-out" (uppterm dto [] 0 empty_env) t];
          let pat = lift_pat ~from:dp ~to_:dto pat in
          match_same_depth_and_freeze i e dto m t pat in
 
-       let match_ctx i m (dto,lt) (dp,pctx) =
+       let match_ctx i m (dto,dlt,lt) (dp,pctx) =
          [%spy "matching-ctx-lift-from" pp_int ruledepth];
          [%spy "matching-ctx-lift-to" pp_int dto];
-         let lt = List.map (fun (d,t) -> hmove ~from:ruledepth ~to_:dto t) lt in
-         let t = list_to_lp_list lt in
+         let t = list_to_lp_list (List.map snd lt) in
+         [%spy "matching-ctx-lift-in" (uppterm dlt [] 0 empty_env) t];
+         let t = hmove ~from:ruledepth ~to_:dto (hmove ~from:dlt ~to_:dlt ~avoid:(oref C.dummy) t) in
+         [%spy "matching-ctx-lift-out" (uppterm dto [] 0 empty_env) t];
          let pctx = lift_pat ~from:dp ~to_:dto pctx in
          match_same_depth_and_freeze i e dto m t pctx in
 
@@ -2314,8 +2316,9 @@ let propagate { CS.cstr; cstr_position } history =
            [%spy "propagate-try-rule"
              (Elpi_ast.pp_chr pp_term C.pp) propagation_rule];
            [%spy "propagate-try-on"
-             (pplist (pp_pair pp_int pp_term) ";") 
-               (List.map (fun (_,a,b) -> a,b) constraints_goals)];
+             (pplist (fun f (dto,dt,t) ->
+                Format.fprintf f "%d -> %d : %a" dt dto pp_term t) ";") 
+                constraints_goals];
 
            let m = fold_left2i match_p m
              constraints_goals patterns_goals in
@@ -2328,7 +2331,7 @@ let propagate { CS.cstr; cstr_position } history =
            m) empty_freeze_map in
 
          [%spy "propagate-try-rule-guard" (fun fmt () -> Format.fprintf fmt 
-             "@[<hov 2>%a@]" (pp_option (uppterm 0 [] 0 e)) condition) ()];
+             "@[<hov 2>depth=%d@ %a@]" max_depth (pp_option (ppterm max_depth [] max_depth e)) condition) ()];
 
          (* guard *)
          check condition;
