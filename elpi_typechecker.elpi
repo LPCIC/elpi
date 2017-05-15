@@ -6,21 +6,22 @@
 
 % --------- HOAS or programs  ------------------------------------------------
 
-kind term type.
+kind term type. %%%%% terms %%%%%%%
+
 type app list term -> term.
 type lam (term -> term) -> term.
 type const string -> term.
 type cdata ctype "cdata" -> term.
+type arg (term -> term) -> term.    % only to bind the args of a clause
 
-kind typ type.
+kind typ type. %%%%% types %%%%%%
+
 type arrow typ -> typ -> typ.
-type ctype string -> typ.
-type forall (typ -> typ) -> typ.
 type tconst string -> typ.
 type tapp list typ -> typ.
 type prop typ.
-type any typ.
-type variadic typ -> typ -> typ.
+type forall (typ -> typ) -> typ. % polymorphic type declarations
+type ctype string -> typ.
 
 % --------- utils  ---------------------------------------------------------
 
@@ -90,8 +91,6 @@ mode (ppt i o).
 ppt (ctype X) X :- !.
 ppt (tconst X) X :- !.
 ppt (tapp L) X :- !, ppt-list L T, X is "(" ^ T ^ ")".
-ppt any "*" :- !.
-ppt (variadic X Y) S :- !, ppt X XS, ppt Y YS, S is XS ^" ->> " ^ YS.
 ppt (arrow A B) S :- !, ppt A AS, ppt B BS, S is "(" ^ AS ^ " -> " ^ BS ^ ")".
 ppt X Y :- $term_to_string X Y.
 
@@ -114,9 +113,6 @@ unif prop prop.
 unif (arrow A1 B1) (arrow A2 B2) :- unif A1 A2, unif B1 B2.
 unif (?? as X) Y :- X = Y.
 unif Y (?? as X) :- X = Y.
-
-
-
 
 mode (of i o).
 
@@ -154,7 +150,7 @@ of-app (?? as Ty)  [] TGT HD (D - []) :- !,
 of-app Ty Args _ HD (D - []) :- !,
   assert false (wrong-arity (app [HD|D]) Ty Args).
 
-of-clause [N|NS] (lam C) :- !, pi x\ 
+of-clause [N|NS] (arg C) :- !, pi x\ 
  (pp x N :- !) => (pi Tf\ of x Tf :- !, assert (unif T Tf) (type-err x T Tf)) =>
  of-clause NS (C x).
 of-clause _ C :- of C TC, assert (unif TC prop) (type-err C TC prop).
@@ -178,14 +174,14 @@ kind entry type.
 type `: term -> typ -> entry.
 
 mem-assoc X [X `: _ | _] :- !.
-mem-assoc X [ _ | XS] :- mem X XS.
+mem-assoc X [ _ | XS] :- mem-assoc X XS.
 
 safe-dest-app (app [X | A]) X A :- !.
 safe-dest-app X X [].
 
 macro @vdash :- ":-".
 
-collect-predicates-clause (lam F) Acc Res :- !,
+collect-predicates-clause (arg F) Acc Res :- !,
   pi x\ collect-predicates-clause (F x) Acc Res.
 collect-predicates-clause (app [const @vdash, HD | _]) Acc Res :- !,
   safe-dest-app HD C _, if (mem-assoc C Acc) (Res = Acc) (Res = [C `: _ | Acc]).

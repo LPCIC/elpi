@@ -440,7 +440,7 @@ type temp = {
   macro : Elpi_ast.term F.Map.t;
 }
 type comp_state = {
-  program : (CData.t(*loc*) * string list * clause) list;
+  program : clause_w_info list;
   lcs : int;
   chr : CHR.t;
 
@@ -498,13 +498,15 @@ let program_of_ast ?print (p : Elpi_ast.decl list) : program =
  let clausify_block program modes block lcs cmap types =
    let l = sort_insertion block in
    let clauses, lcs =
-     List.fold_left (fun (clauses,lcs) (macro,{ Elpi_ast.body; loc }) ->
+     List.fold_left (fun (clauses,lcs) (macro,{ Elpi_ast.body; id; loc }) ->
       let state, nargs, t = clause_of_ast lcs ~cmap ~macro ~types body in
       debug_print ?print state t;
       let moreclauses, morelcs = clausify modes nargs lcs t in
       let loc = in_loc loc in
       let names = names_of_args state in
-      clauses @ List.(map (fun x -> loc,names,x) (rev moreclauses)),
+      clauses @ List.(map (fun clbody -> 
+         { clname = id ; clloc = loc; clargsname = names; clbody})
+        (rev moreclauses)),
       lcs + morelcs (* XXX why morelcs? *)
      ) ([],lcs) l in
    program @ clauses, lcs in
@@ -595,7 +597,7 @@ let program_of_ast ?print (p : Elpi_ast.decl list) : program =
  in
  { query_depth = lcs;
    prolog_program =
-     Elpi_data.wrap_prolog_prog (make_index (List.map (fun (_,_,x) -> x) clauses));
+     Elpi_data.wrap_prolog_prog (make_index (List.map drop_clause_info clauses));
    chr = CHR.wrap_chr chr;
    modes = !modes;
    declared_types = types;
@@ -611,6 +613,7 @@ let lamc = C.from_stringc "lam"
 let cdatac = C.from_stringc "cdata"
 let forallc = C.from_stringc "forall"
 let arrowc = C.from_stringc "arrow"
+let argc = C.from_stringc "arg"
 
 let mkQApp ~on_type l =
   let c = if on_type then tappc else appc in
@@ -661,12 +664,11 @@ let quote_term ?(on_type=false) vars term =
     aux vars term
 
     (* FIXME : close_with_pis already exists but unused *)
-let rec piclose ~on_type t = function
+let rec close_w_binder binder t = function
   | 0 -> t
-  | n when on_type -> App(forallc,Lam (piclose ~on_type t (n-1)),[])
-  | n -> App(lamc,Lam (piclose ~on_type t (n-1)),[])
+  | n -> App(binder,Lam (close_w_binder binder t (n-1)),[])
 
-let quote_clause (loc, names, { key; args; hyps; vars }) =
+let quote_clause { clloc; clargsname; clbody = { key; args; hyps; vars }} =
   (* horrible hack *)
   let hdc, hd = C.funct_of_ast (F.from_string (pp_key key)) in
   let head = match args with
@@ -677,10 +679,13 @@ let quote_clause (loc, names, { key; args; hyps; vars }) =
     else
       mkQApp ~on_type:false [mkQCon ~on_type:false C.rimplc vars;
               quote_term vars head;
-              mkQApp ~on_type:false (mkQCon ~on_type:false C.andc vars:: List.map (quote_term vars) hyps)]
+              mkQApp ~on_type:false 
+               (mkQCon ~on_type:false C.andc vars ::
+                List.map (quote_term vars) hyps)]
   in
-  let names = List.map (fun x -> CData(in_string (F.from_string x))) names in
-  App(C.andc,CData loc,[list_to_lp_list names;piclose ~on_type:false t vars])
+  let qt = close_w_binder argc t vars in
+  let names = List.map CD.of_string clargsname in
+  App(C.andc,CData clloc,[list_to_lp_list names; qt])
 ;;
 
 let typecheck ?(extra_checker=[]) { clauses_w_info = clauses; declared_types = types } (qloc,qn,_,qe,qt) =
@@ -693,10 +698,10 @@ let typecheck ?(extra_checker=[]) { clauses_w_info = clauses; declared_types = t
     let vars = Array.length qe in
     App(C.andc,CData (in_loc qloc), 
       [list_to_lp_list names;
-       piclose ~on_type:false (quote_term ~on_type:false vars qt) vars]) in
+       close_w_binder argc (quote_term ~on_type:false vars qt) vars]) in
   let tlist = list_to_lp_list (List.map (fun (name,n,typ) ->
       App(C.from_stringc "`:",mkQCon ~on_type:false name 0,
-        [piclose ~on_type:true (quote_term ~on_type:true 0 typ) n]))
+        [close_w_binder forallc (quote_term ~on_type:true 0 typ) n]))
     types) in
   let query =
     let c = C.from_stringc "typecheck-program" in

@@ -655,6 +655,15 @@ type mode_decl =
 (* An elpi program, as parsed.  But for idx and query_depth that are threaded
    around in the main loop, chr and modes are globally stored in Constraints
    and Clausify. *)
+type clause_w_info = {
+  clname : string option;
+  clloc : CData.t;
+  clargsname : string list;
+  clbody : clause;
+}
+
+let drop_clause_info { clbody } = clbody
+
 type program = {
   (* n of sigma/local-introduced variables *)
   query_depth : int;
@@ -664,9 +673,9 @@ type program = {
   chr : chr [@printer (pp_extensible pp_chr)];
   modes : mode_decl C.Map.t; 
 
-  (* extra stuff, for typing *)
+  (* extra stuff, for typing & pretty printing *)
   declared_types : (constant * int * term) list; (* name, nARGS, type *)
-  clauses_w_info : (CData.t * string list * clause) list; (* loc, args names, clause *)
+  clauses_w_info : clause_w_info list
 }
 type query = Ploc.t * string list * int * env * term
 
