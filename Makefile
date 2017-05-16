@@ -140,6 +140,7 @@ META.%: meta.%.src
 
 # required OCaml package
 check-ocaml-ver:
+	$(H)ocamlfind query camlp5 > /dev/null
 	$(H)ocamlfind query ppx_tools > /dev/null
 	$(H)ocamlfind query ppx_deriving > /dev/null
 	$(H)test `ocamlc -version` = 4.02.3
