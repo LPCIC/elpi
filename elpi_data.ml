@@ -34,8 +34,12 @@ let { CData.cin = in_string; isc = is_string; cout = out_string } as cstring =
 let { CData.cin = in_loc; isc = is_loc; cout = out_loc } as cloc =
   CData.(declare {
     data_name = "loc";
-    data_pp = (fun f x ->
-      Fmt.fprintf f "%s:%4d:" (Filename.basename (Ploc.file_name x)) (Ploc.line_nb x));
+    data_pp = (fun f (x,name) ->
+      let bname = Filename.basename (Ploc.file_name x) in
+      let line_no = Ploc.line_nb x in
+      match name with
+      | None -> Fmt.fprintf f "%s:%4d:" bname line_no 
+      | Some name -> Fmt.fprintf f "%s:%4d:%s:" bname line_no name);
     data_eq = (==);
     data_hash = Hashtbl.hash;
   })
@@ -656,7 +660,6 @@ type mode_decl =
    around in the main loop, chr and modes are globally stored in Constraints
    and Clausify. *)
 type clause_w_info = {
-  clname : string option;
   clloc : CData.t;
   clargsname : string list;
   clbody : clause;

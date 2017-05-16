@@ -655,6 +655,23 @@ let _ =
                           App (eqc, t3, [list_to_lp_list []])]
        | _ -> type_error "not a frozen")
      | _ -> type_error "$matc_frozen takes two args") ;
+   
+   register_custom "$quote_syntax" (fun ~depth ~env:_ _ -> function
+       | [f;s;r1;r2] ->
+       (match deref_head depth f, deref_head depth s with
+       | CData file, CData query when CD.is_string file && CD.is_string query ->
+           let file, query = CD.to_string file, CD.to_string query in
+           let ap = Elpi_parser.parse_program ~no_pervasives:true [file] in
+           let aq = Elpi_parser.parse_goal query in
+           let p = program_of_ast ap in
+           let q = query_of_ast p aq in
+           let qp, qq = quote_syntax p q in
+           [ App (eqc, r1, [qp]); App (eqc, r2 , [qq]) ]
+       | _ -> type_error "$quote_syntax string string P Q")
+     | _ -> type_error "$matc_frozen takes 4 arguments") ;
+   
+
+
 ;;
 
 open CData
@@ -721,7 +738,6 @@ let () =
               [App (eqc, t2, [list_to_lp_list (List.rev !l)]) ]
           | _ -> type_error "$stash takes a safe")
      | _ -> type_error "$stash takes two args");
-
 
 ;;
 

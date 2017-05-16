@@ -502,10 +502,10 @@ let program_of_ast ?print (p : Elpi_ast.decl list) : program =
       let state, nargs, t = clause_of_ast lcs ~cmap ~macro ~types body in
       debug_print ?print state t;
       let moreclauses, morelcs = clausify modes nargs lcs t in
-      let loc = in_loc loc in
+      let loc = in_loc (loc, id) in
       let names = names_of_args state in
       clauses @ List.(map (fun clbody -> 
-         { clname = id ; clloc = loc; clargsname = names; clbody})
+         { clloc = loc; clargsname = names; clbody})
         (rev moreclauses)),
       lcs + morelcs (* XXX why morelcs? *)
      ) ([],lcs) l in
@@ -605,6 +605,8 @@ let program_of_ast ?print (p : Elpi_ast.decl list) : program =
    }
 ;;
 
+(* ---- Quotes the program and the query, see elpi_quoted_syntax.elpi ---- *)
+
 let constc = C.from_stringc "const"
 let tconstc = C.from_stringc "tconst"
 let appc = C.from_stringc "app"
@@ -688,24 +690,30 @@ let quote_clause { clloc; clargsname; clbody = { key; args; hyps; vars }} =
   App(C.andc,CData clloc,[list_to_lp_list names; qt])
 ;;
 
-let typecheck ?(extra_checker=[]) { clauses_w_info = clauses; declared_types = types } (qloc,qn,_,qe,qt) =
-  let checker =
-    (program_of_ast
-       (Elpi_parser.parse_program ("elpi_typechecker.elpi" :: extra_checker))) in
+let quote_syntax
+  { clauses_w_info = clauses; declared_types = types }
+  (qloc,qn,_,qe,qt)
+=
   let clist = list_to_lp_list (List.map quote_clause clauses) in
   let q =
     let names = List.map (fun x -> CData(in_string (F.from_string x))) qn in
     let vars = Array.length qe in
-    App(C.andc,CData (in_loc qloc), 
+    App(C.andc,CData (in_loc (qloc,Some "query")), 
       [list_to_lp_list names;
        close_w_binder argc (quote_term ~on_type:false vars qt) vars]) in
+  clist, q
+
+let typecheck ?(extra_checker=[]) ({ declared_types = types } as p) q =
+  let checker =
+    (program_of_ast
+       (Elpi_parser.parse_program ("elpi_typechecker.elpi" :: extra_checker))) in
+  let p,q = quote_syntax p q in
   let tlist = list_to_lp_list (List.map (fun (name,n,typ) ->
       App(C.from_stringc "`:",mkQCon ~on_type:false name 0,
         [close_w_binder forallc (quote_term ~on_type:true 0 typ) n]))
     types) in
-  let query =
-    let c = C.from_stringc "typecheck-program" in
-    Ploc.dummy, [], 0, [||], App(c,clist,[q;tlist]) in
+  let c = C.from_stringc "typecheck-program" in
+  let query = Ploc.dummy,[],0,[||],App(c,p,[q;tlist]) in
   if execute_once ~print_constraints:true checker query then
     Printf.eprintf "Anomaly: Type checking aborts\n%!"
 ;;

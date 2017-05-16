@@ -185,6 +185,9 @@ val lp : quotation
 
 val is_Arg : ExtState.t -> term -> bool
 
+(* See elpi_quoted_syntax.elpi *)
+val quote_syntax : program -> query -> term * term
+
 val typecheck : ?extra_checker:string list -> program -> query -> unit
 
 end
