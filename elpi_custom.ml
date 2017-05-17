@@ -661,7 +661,7 @@ let _ =
        (match deref_head depth f, deref_head depth s with
        | CData file, CData query when CD.is_string file && CD.is_string query ->
            let file, query = CD.to_string file, CD.to_string query in
-           let ap = Elpi_parser.parse_program ~no_pervasives:true [file] in
+           let ap = Elpi_parser.parse_program ~no_pervasives:false [file] in
            let aq = Elpi_parser.parse_goal query in
            let p = program_of_ast ap in
            let q = query_of_ast p aq in
