@@ -176,7 +176,6 @@ let rec stringchar = lexer
  (* CSC: I have no idea how to implement the \octal syntax & friend :-(
  | "\\" / [ -> buflen := String.length $buf ; $add "" ] octal / ->
     $add (mkOctal "4")*)
- | "\n" -> raise Stream.Failure
  | _ ]
 let string_of_chars chars = 
   let buf = Buffer.create 10 in
