@@ -54,9 +54,10 @@ let set_terminal_width ?(max_w=
 
 
 let usage =
-  "\nUsage: elpi [OPTION].. [FILE]..\n" ^ 
+  "\nUsage: elpi [OPTION].. [FILE].. [-- ARGS..] \n" ^ 
   "\nMain options:\n" ^ 
   "\t-test runs the query \"main\"\n" ^ 
+  "\t-exec pred  runs the query \"pred args\"\n" ^ 
   "\t-print-prolog prints files to Prolog syntax if possible, then exit\n" ^ 
   "\t-print-latex prints files to LaTeX syntax, then exit\n" ^ 
   "\t-print prints files after desugar, then exit\n" ^ 
@@ -67,14 +68,18 @@ let usage =
 
 let _ =
   let test = ref false in
+  let exec = ref "" in
+  let args = ref [] in
   let print_prolog = ref false in
   let print_latex = ref false in
   let print_lprolog = ref None in
   let print_ast = ref false in
   let typecheck = ref true in
+  let batch = ref false in
   let rec aux = function
     | [] -> []
-    | "-test" :: rest -> test := true; aux rest
+    | "-test" :: rest -> batch := true; test := true; aux rest
+    | "-exec" :: goal :: rest ->  batch := true; exec := goal; aux rest
     | "-print-prolog" :: rest -> print_prolog := true; aux rest
     | "-print-latex" :: rest -> print_latex := true; aux rest
     | "-print" :: rest -> print_lprolog := Some `Yes; aux rest
@@ -82,6 +87,7 @@ let _ =
     | "-print-ast" :: rest -> print_ast := true; aux rest
     | "-no-tc" :: rest -> typecheck := false; aux rest
     | ("-h" | "--help") :: _ -> Printf.eprintf "%s" usage; exit 0
+    | "--" :: rest -> args := rest; []
     | s :: _ when String.length s > 0 && s.[0] == '-' ->
         Printf.eprintf "Unrecognized option: %s\n%s" s usage; exit 1
     | x :: rest -> x :: aux rest in
@@ -104,11 +110,16 @@ let _ =
     end;
   let g =
    if !test then Elpi_parser.parse_goal "main."
+   else if !exec <> "" then
+     begin Elpi_parser.parse_goal
+       (Printf.sprintf "%s [%s]." !exec
+         String.(concat ", " (List.map (Printf.sprintf "\"%s\"") !args)))
+        end
    else begin
     Printf.printf "goal> %!";
     let strm = Stream.of_channel stdin in
     Elpi_parser.parse_goal_from_stream strm
    end in
-  if !test then test_impl !typecheck p g
+  if !batch then test_impl !typecheck p g
   else run_prog !typecheck p g
 ;;
