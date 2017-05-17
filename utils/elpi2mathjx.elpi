@@ -1,0 +1,221 @@
+/* elpi: embedded lambda prolog interpreter                                  */
+/* license: GNU Lesser General Public License Version 2.1                    */
+/* ------------------------------------------------------------------------- */
+
+accumulate elpi_quoted_syntax.
+
+macro @vdash :- ":-". % work around bug in Vim's syntax highlight
+
+if P T _ :- P, !, T.
+if _ _ E :- E. 
+
+iter _ [].
+iter P [X|XS] :- P X, iter P XS.
+
+iter-sep _ _ [].
+iter-sep S P [X] :- !, P X.
+iter-sep S P [X|XS] :- P X, write S, iter-sep S P XS.
+
+monad [] X X.
+monad [P|PS] X R :- P X X1, monad PS X1 R. 
+
+macro @log P :- (P :- $print P, fail).
+
+write S :- write-to OC, output OC S.
+
+mode (sanitize i o).
+sanitize X Y :-
+  monad [
+    $rex_replace "-" "\\!\\!-\\!\\!",
+    $rex_replace "+" "\\!\\!+\\!\\!",
+    $rex_replace "_" "\\_",
+    $rex_replace "\\$" "\\$",
+    $rex_replace "&" "\\&"]
+  X Y.
+
+var-to-string X Y :-
+  $term_to_string X S, $rex_replace "x\\([0-9]+\\)" "x_{\\1}" S Y.
+
+type nesting int -> prop.
+type get-nesting int -> prop.
+
+get-nesting X :- nesting Y, !, Y = X.
+
+w-par CL PL P :- PL1 is PL + 1, get-nesting N, N1 is N + 1, nesting N1 => if (CL =< PL) (P (pp PL1)) (write "(", /*write"^{", $write PL, write "}_{", $write CL,write "}",*/ P (pp PL1), write ")").
+
+kind option type -> type.
+type some A -> option A.
+type none option A.
+
+grab-list (const "[]") [] none.
+grab-list (app [ const "::", X, XS]) [ X | R ] T :- grab-list XS R T.
+grab-list X [] (some X).
+
+type pp int -> term -> prop.
+
+infx "<" 60 "\\lt " 60 60.
+infx "=>" 60 "\\to " 60 60.
+infx "=" 60 "=" 70 70.
+infx "^" 60 "\\hat{}" 60 60.
+infx "is" 60 "~{\\sf is}~" 60 60.
+infx ";" 60 "\\lor " 60 60.
+infx "as" 60 "~{\\sf as}~ " 60 60.
+
+pp L (app [ const OP, P, Q ]) :- infx OP LOP S PL PR, w-par L LOP (_\
+  pp PL P, write S, pp PR Q
+).
+pp L (app [ const @vdash , Hd , Hyps ]) :- w-par L 59 (pp\
+  get-polarity P, flip P Q,
+  if (Hyps = app [ const "," , const "!" | Rest])
+     (Hyps2 = app [ const "," | Rest], NeckCut = "{\\small {\\bf !}}", Thick = "2pt")
+     (Hyps2 = Hyps,NeckCut = "", Thick = "1pt"),
+  write NeckCut,
+  write "\\genfrac..{",write Thick,write "}{0}{\\begin{matrix}",
+  nesting 0 => polarity P => pp Hyps2,
+  write "\\end{matrix}}{",
+  polarity Q => pp Hd,
+  write "}"
+).
+pp L (app [ const "pi", lam F ]) :- w-par L 60 (_\
+  write "\\forall ", pi x\ var-to-string x X, write X, write ".", name x X => pp 10 (F x)
+).
+mode (len i o).
+len ?? 0.
+len [] 0.
+len [_|XS] N :- len XS M, N is M + 1.
+pp L (app [ const "," | Args ]) :- w-par L 60 (_\
+  if (get-nesting 1)
+     (len Args N, if (N < 5) (Sep = "& ") (Sep = "\\cr "), P = 0)
+     (Sep = ", ", P = 60),
+  iter-sep Sep (pp P) Args
+).
+pp L (app [ const "::", A, B ]) :- w-par L 71 (_\
+  grab-list B Args Tl,
+  write "[", iter-sep "," (pp 70)  [A|Args],
+             if (Tl = some X) (write "|", pp 70 X) (true), write "]"
+).
+pp L (app Args) :- w-par L 70 (pp\
+  iter-sep "\\; " pp Args
+).
+pp L (lam F) :- w-par L 70 (_\
+  write "\\lambda ", pi x\ $term_to_string x X, write X, write ".", pp 10 (F x)
+).
+pp _ (const "!") :- !, write "\\textbf{!}".
+pp _ (const X) :- write "{\\sf ",write {sanitize X}, write "}".
+pp _ X :- name X Y, !,
+  if ($rex_match "^_" Y)
+     (write "\\_")
+     ($rex_replace "^\\([A-Z]+\\)\\([0-9]+\\)$" "\\1_{\\2}" Y YS, write YS).
+pp _ (cdata S) :- $is_cdata S (ctype "string"), !, $term_to_string S Y,
+                  write "\\mathrm{", write {sanitize Y}, write "}".
+pp _ (cdata S) :- $is_cdata S (ctype "int"), !, $term_to_string S Y,
+                  write "\\mathrm{", write Y, write "}".
+pp _ X :- $term_to_string X Y, write Y.
+
+pp-ctx []
+
+isfo (app [const "pi"|X]) :- !, fail.
+isfo (app L) :- !, iter isfo L.
+isfo (lam F) :- !, pi x\ isfo (F x).
+isfo (arg F) :- !, pi x\ isfo (F x).
+isfo X.
+
+type polarity pol -> prop.
+kind pol type.
+type neg pol.
+type pos pol.
+
+flip pos neg.
+flip neg pos.
+
+get-polarity X :- polarity Y, !, X = Y.
+
+test W :- foo, bar, (f x), g [ x, (y,r) | z ], pi x\ (f x :- q) => W x.
+
+hd-symbol (app [ const @vdash, H, _ ]) :- hd-symbol H.
+hd-symbol (app [ const S | _ ]) :- write S.
+hd-symbol (const S) :- write S.
+
+type name term -> string -> prop.
+write-clause ( Loc , [A|Args], (arg Body) ) :-
+  pi x\ name x A => write-clause ( Loc, Args, Body x ).
+write-clause ( Loc , [], C ) :- !,
+  if (isfo C) (CTX = []) (CTX = ["\\Gamma"]),
+  write "<div class='clause' predicate='", hd-symbol C, write "'>",
+  $term_to_string Loc LocS, write LocS,
+  write "$$",
+  polarity neg => context CTX => nesting 0 => pp 0 C,
+  write "$$</div>\n".
+
+write-preamble F :-
+  write "<!DOCTYPE html>
+         <html>
+         <head>
+           <title>",
+  write F,
+  write "  </title>
+         <script type='text/javascript' 
+                 src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML'> </script>
+         <script type='text/javascript'>
+         MathJax.Hub.Config({
+           'HTML-CSS': { preferredFont: 'STIX' }
+         }); </script>
+         <style>
+           .clause{
+             display: inline-block;
+             padding: 1em;
+             margin: 5px;
+             border: 2px solid black;
+           }
+           .hidden { 
+             display: none;
+           }
+         </style>
+         </head>
+         <body>
+         <h1>",
+  write F,
+  write "</h1>
+         <script type='text/javascript'>
+         function filter() {
+           var f = document.getElementById('filter').value;
+           var cl = document.getElementsByClassName('clause');
+           for (i=0;i < cl.length; i++) {
+             if (cl[i].getAttribute('predicate') === f || f === '' ) {
+               cl[i].classList.remove('hidden')
+             } else {
+               cl[i].classList.add('hidden')
+             }
+           }
+         }
+         </script>
+         <p>Filter predicate: <input onkeyup='filter();' type='text' id='filter' name='filter'></p>
+".
+
+write-end :-
+  write "</body></html>".
+
+filter-out [] _ [].
+filter-out [X|XS] P R :-
+  if (P X) (R = [X | RS]) (R = RS),
+  filter-out XS P RS.
+
+write-mathjx F R :-
+  $quote_syntax F "main" P _,
+  filter-out P (c\
+    sigma Loc LocS _1 _2\ c = ( Loc, _1, _2), 
+    $term_to_string Loc LocS, not(R LocS)) PF,
+  write-preamble F,
+  iter write-clause PF,
+  write-end.
+
+exists P [X|XS] :- P X, !.
+exists P [_|XS] :- exists P XS.
+
+main [IN,OUT|FILTERS] :-
+  open_out OUT OC,
+  R = (x\exists (y\$rex_match y x) FILTERS),
+  write-to OC => write-mathjx IN R,
+  close_out OC.
+
+% vim: set ft=lprolog:
