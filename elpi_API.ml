@@ -6,6 +6,7 @@ module Data = Elpi_data
 module NormalRuntime = Elpi_runtime_trace_off.Elpi_runtime
 module TracedRuntime = Elpi_runtime_trace_on.Elpi_runtime
 module Compiler = Elpi_compiler
+module Parser = Elpi_parser
 
 module type Runtime = module type of Elpi_runtime_trace_off.Elpi_runtime
 

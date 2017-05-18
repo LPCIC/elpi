@@ -168,6 +168,10 @@ val llam_unify : int -> term array -> int -> term -> term -> bool
 
 end
 
+module Parser : sig
+  val parse_program : ?no_pervasives:bool -> string list -> Elpi_ast.program
+  val parse_goal : string -> Elpi_ast.goal
+end
 
 module Compiler : sig
 open Elpi_util
