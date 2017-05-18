@@ -981,9 +981,12 @@ let bind r gamma l a d delta b left t e =
           else raise RestrictionFailure
   end] in
   try
-    r @:= mknLam new_lams (bind b delta 0 t);
+    let v = mknLam new_lams (bind b delta 0 t) in
+    [%spy "assign(HO)" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
+        (uppterm gamma [] a e) (UVar(r,gamma,0))
+        (uppterm gamma [] a e) v) ()];
+    r @:= v;
     if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
-    [%spy "assign(HO)" (ppterm gamma [] a empty_env) (!!r)];
     true
   with RestrictionFailure -> [%spy "bind result" (fun fmt x -> Fmt.fprintf fmt "%b" x) false];false
 ;;
@@ -1066,8 +1069,11 @@ let rec unif matching depth adepth a bdepth b e =
    (* assign *)
    | _, Arg (i,0) ->
      begin try
-      e.(i) <- hmove ~from:(adepth+depth) ~to_:adepth a;
-      [%spy "assign" (ppterm adepth [] adepth empty_env) (e.(i))]; true
+      let v = hmove ~from:(adepth+depth) ~to_:adepth a in
+      [%spy "assign" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
+          (uppterm adepth [] adepth e) b (uppterm adepth [] adepth e) v) ()];
+      e.(i) <- v;
+      true
      with RestrictionFailure -> false end
    | UVar({ rest = [] },_,0), UVar ({ rest = _ :: _ },_,0) -> unif matching depth bdepth b adepth a e
    | AppUVar({ rest = [] },_,_), UVar ({ rest = _ :: _ },_,0) -> unif matching depth bdepth b adepth a e
@@ -1081,9 +1087,12 @@ let rec unif matching depth adepth a bdepth b e =
              let a = hmove ~avoid:r ~from:adepth ~to_:bdepth a in
              (* Second step: we restrict the l.h.s. *)
              hmove ~from:(bdepth+depth) ~to_:origdepth a in
+         [%spy "assign" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
+           (uppterm depth [] bdepth e) b
+           (uppterm depth [] bdepth e) t) ()];
          r @:= t;
          if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
-         [%spy "assign" (fun fmt tt -> Fmt.fprintf fmt "%a := %a" (ppterm depth [] bdepth empty_env) (UVar (r,origdepth,0)) (ppterm depth [] adepth empty_env) tt) t]; true
+         true
        with RestrictionFailure -> false end
    | UVar (r,origdepth,0), _ when not matching ->
        begin try
@@ -1095,9 +1104,12 @@ let rec unif matching depth adepth a bdepth b e =
              let b = move ~avoid:r ~adepth ~from:bdepth ~to_:adepth e b in
              (* Second step: we restrict the r.h.s. *)
              hmove ~from:(adepth+depth) ~to_:origdepth b in
+         [%spy "assign" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
+           (uppterm depth [] adepth e) a
+           (uppterm depth [] adepth e) t) ()];
          r @:= t;
          if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
-         [%spy "assign" (fun fmt tt -> Fmt.fprintf fmt "%a := %a" (ppterm depth [] adepth empty_env) (UVar (r,origdepth,0)) (ppterm depth [] adepth empty_env) tt) t]; true
+         true
        with RestrictionFailure -> false end
 
    (* simplify *)
@@ -1111,14 +1123,20 @@ let rec unif matching depth adepth a bdepth b e =
    | _, UVar (r,origdepth,args) when args > 0 ->
       if not !T.last_call then
        T.trail := (T.Assignement r) :: !T.trail;
-      r @:= fst (make_lambdas origdepth args);
-      [%spy "assign" (ppterm depth [] adepth empty_env) (!!r)];
+      let v = fst (make_lambdas origdepth args) in
+      [%spy "assign" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
+        (uppterm depth [] bdepth e) b
+        (uppterm depth [] bdepth e) v) ()];
+      r @:= v;
       unif matching depth adepth a bdepth b e
    | UVar (r,origdepth,args), _ when args > 0 ->
       if not !T.last_call then
        T.trail := (T.Assignement r) :: !T.trail;
-      r @:= fst (make_lambdas origdepth args);
-      [%spy "assign" (ppterm depth [] adepth empty_env) (!!r)];
+      let v = fst (make_lambdas origdepth args) in
+      [%spy "assign" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
+         (uppterm depth [] adepth e) a
+         (uppterm depth [] adepth e) v) ()];
+      r @:= v;
       unif matching depth adepth a bdepth b e
 
    (* HO *)
@@ -1250,8 +1268,8 @@ let pp_key (hd,v) = C.show hd
   
 let ppclause f { args = args; hyps = hyps; key = (hd,_) } =
   Fmt.fprintf f "@[<hov 1>%s %a :- %a.@]" (C.show hd)
-     (pplist (uppterm 0 [] 0 empty_env) "") args
-     (pplist (uppterm 0 [] 0 empty_env) ",") hyps
+     (pplist (uppterm ~min_prec:(Elpi_parser.appl_precedence+1) 0 [] 0 empty_env) "") args
+     (pplist (uppterm ~min_prec:(Elpi_parser.appl_precedence+1) 0 [] 0 empty_env) ",") hyps
 
 let key_of ~mode:_ ~depth =
  let rec skey_of = function
@@ -1409,8 +1427,8 @@ module UnifBits (*: Indexing*) = struct (* {{{ *)
 
   let ppclause f { args = args; hyps = hyps; key = hd } =
     Fmt.fprintf f "@[<hov 1>%s %a :- %a.@]" (pp_key hd)
-       (pplist (uppterm 0 [] 0 empty_env) "") args
-       (pplist (uppterm 0 [] 0 empty_env) ",") hyps
+       (pplist (uppterm ~min_prec:(Elpi_parser.appl_precedence+1) 0 [] 0 empty_env) "") args
+       (pplist (uppterm ~min_prec:(Elpi_parser.appl_precedence+1) 0 [] 0 empty_env) ",") hyps
 
   let dec_to_bin num =
     let rec aux x = 
@@ -2454,7 +2472,7 @@ let make_runtime : ?print_constraints:bool -> program -> runtime =
     [%spy "run-resumed-goal" (fun fmt -> Fmt.fprintf fmt "%a" (ppterm ndepth [] 0 empty_env)) ng];
     [%tcall run ndepth np ng (goals@(depth,p,g)::gs) next alts lvl]
  | Some [] ->
-    [%spy "run-goal" (fun fmt -> Fmt.fprintf fmt "%a" (ppterm depth [] 0 empty_env)) g];
+    [%spy "run-goal" (fun fmt -> Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env)) g];
     match g with
     | c when c == C.cutc -> [%tcall cut p gs next alts lvl]
     | App(c, g, gs') when c == C.andc || c == C.andc2 ->

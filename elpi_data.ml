@@ -291,12 +291,12 @@ type 'args deref_fun =
 module Pp : sig
  
   (* Low level printing *)
-  val ppterm :
+  val ppterm : ?min_prec:int ->
     (*depth:*)int -> (*names:*)string list -> (*argsdepth:*)int -> env ->
     Fmt.formatter -> term -> unit
 
   (* For user consumption *)
-  val uppterm :
+  val uppterm : ?min_prec:int ->
     (*depth:*)int -> (*names:*)string list -> (*argsdepth:*)int -> env ->
     Fmt.formatter -> term -> unit
 
@@ -316,7 +316,7 @@ let appl_prec = Elpi_parser.appl_precedence
 let lam_prec = Elpi_parser.lam_precedence
 let inf_prec = Elpi_parser.inf_precedence
 
-let xppterm ~nice depth0 names argsdepth env f t =
+let xppterm ~nice ?(min_prec=min_prec) depth0 names argsdepth env f t =
   let pp_app f pphd pparg ?pplastarg (hd,args) =
    if args = [] then pphd f hd
    else

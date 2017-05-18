@@ -81,11 +81,11 @@ end
 
 module Pp :
  sig
-  val ppterm :
+  val ppterm : ?min_prec:int ->
     constant -> string list ->
     constant -> term array ->
       Format.formatter -> term -> unit
-  val uppterm :
+  val uppterm : ?min_prec:int ->
     constant -> string list ->
     constant -> term array ->
       Format.formatter -> term -> unit
