@@ -1115,7 +1115,11 @@ let rec unif matching depth adepth a bdepth b e =
    (* simplify *)
    (* TODO: unif matching->deref_uv case. Rewrite the code to do the job directly? *)
    | _, Arg (i,args) ->
-      e.(i) <- fst (make_lambdas adepth args);
+      let v = fst (make_lambdas adepth args) in
+      [%spy "assign" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
+        (uppterm depth [] bdepth e) (Arg(i,0))
+        (uppterm depth [] bdepth e) v) ()];
+      e.(i) <- v;
       [%spy "assign" (ppterm depth [] adepth empty_env) (e.(i))];
       unif matching depth adepth a bdepth b e
    | UVar({ rest = [] },_,a1), UVar ({ rest = _ :: _ },_,a2) when a1 + a2 > 0 -> unif matching depth bdepth b adepth a e
@@ -1125,7 +1129,7 @@ let rec unif matching depth adepth a bdepth b e =
        T.trail := (T.Assignement r) :: !T.trail;
       let v = fst (make_lambdas origdepth args) in
       [%spy "assign" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
-        (uppterm depth [] bdepth e) b
+        (uppterm depth [] bdepth e) (UVar(r,origdepth,0))
         (uppterm depth [] bdepth e) v) ()];
       r @:= v;
       unif matching depth adepth a bdepth b e
@@ -1134,7 +1138,7 @@ let rec unif matching depth adepth a bdepth b e =
        T.trail := (T.Assignement r) :: !T.trail;
       let v = fst (make_lambdas origdepth args) in
       [%spy "assign" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
-         (uppterm depth [] adepth e) a
+         (uppterm depth [] adepth e) (UVar(r,origdepth,0))
          (uppterm depth [] adepth e) v) ()];
       r @:= v;
       unif matching depth adepth a bdepth b e
