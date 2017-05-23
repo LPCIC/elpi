@@ -14,17 +14,34 @@ FLAGS=-I $(shell camlp5 -where)
 OCAMLOPTIONS= -g -bin-annot
 CMX=cmx
 CMXA=cmxa
-OC=OCAMLPATH=$(shell pwd) ocamlfind ocamlopt
-OD=OCAMLPATH=$(shell pwd) ocamlfind ocamldep -native
+OCAMLPATH=$(shell pwd)
+export OCAMLPATH
+OC=ocamlfind ocamlopt
+OD=ocamlfind ocamldep -native
 H=@
 pp = printf '$(1) %-26s %s\n' "$(3)" "$(2)"
 
 all: check-ocaml-ver elpi
 
+byte:
+	rm -f .depends .depends.parser
+	$(MAKE) CMX=cmo CMXA=cma OC="ocamlfind ocamlc" OD="ocamlfind ocamldep" .depends .depends.parser
+	$(MAKE) CMX=cmo CMXA=cma OC="ocamlfind ocamlc" OD="ocamlfind ocamldep" all
+
 trace_ppx: trace_ppx.ml
 	$(H)$(call pp,OCAMLOPT,-o,$@)
-	$(H)$(OC) -package ppx_tools.metaquot \
-		-linkpkg $< -o $@
+	$(H)ocamlfind ocamlopt -package ppx_tools_versioned.metaquot_402 \
+		-package ocaml-migrate-parsetree.driver-main \
+		-open Ast_402 \
+		-c $< 
+	$(H)ocamlfind ocamlopt -package ppx_tools_versioned.metaquot_402 \
+		-package ocaml-migrate-parsetree \
+		-predicates custom_ppx,ppx_driver \
+		-linkpkg -linkall \
+		trace_ppx.cmx \
+		`ocamlfind query -predicates native \
+	       		ocaml-migrate-parsetree.driver-main -a-format` \
+		-o $@
 	$(H)cp .merlin.in .merlin
 	$(H)echo 'FLG -ppx $(shell pwd)/trace_ppx' >> .merlin
 
@@ -87,8 +104,8 @@ elpi: elpi.$(CMX) META.elpi elpi.$(CMXA)
 
 elpi_runtime_trace_on.$(CMX) : elpi_runtime.ml elpi_runtime.cmi trace_ppx
 	$(H)$(call pp,OCAMLOPT,-c -ppx 'trace_ppx -on' -for-pack,$@)
-	$(H)$(OC) $(OCAMLOPTIONS) \
-		-package camlp5,ppx_deriving.std -ppx './trace_ppx -on' \
+	$(H)TRACE=1 $(OC) $(OCAMLOPTIONS) \
+		-package camlp5,ppx_deriving.std -ppx './trace_ppx --as-ppx' \
 		-for-pack Elpi_runtime_trace_on \
 	       	-c $<
 	$(H)$(OC) $(OCAMLOPTIONS) \
@@ -96,8 +113,8 @@ elpi_runtime_trace_on.$(CMX) : elpi_runtime.ml elpi_runtime.cmi trace_ppx
 
 elpi_runtime_trace_off.$(CMX) : elpi_runtime.ml elpi_runtime.cmi trace_ppx
 	$(H)$(call pp,OCAMLOPT,-c -ppx 'trace_ppx -off' -for-pack,$@)
-	$(H)$(OC) $(OCAMLOPTIONS) \
-		-package camlp5,ppx_deriving.std -ppx './trace_ppx -off' \
+	$(H)TRACE=0 $(OC) $(OCAMLOPTIONS) \
+		-package camlp5,ppx_deriving.std -ppx './trace_ppx --as-ppx' \
 		-for-pack Elpi_runtime_trace_off \
 	       	-c $<
 	$(H)$(OC) $(OCAMLOPTIONS) \
@@ -141,6 +158,6 @@ META.%: meta.%.src
 # required OCaml package
 check-ocaml-ver:
 	$(H)ocamlfind query camlp5 > /dev/null
-	$(H)ocamlfind query ppx_tools > /dev/null
+	$(H)ocamlfind query ppx_tools_versioned > /dev/null
 	$(H)ocamlfind query ppx_deriving > /dev/null
-	$(H)test `ocamlc -version` = 4.02.3
+	$(H)ocamlfind query ocaml-migrate-parsetree.driver-main > /dev/null

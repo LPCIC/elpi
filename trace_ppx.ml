@@ -15,6 +15,7 @@
 
   requires:
 *)
+open Ppx_tools_402
 
 open Ast_mapper
 open Ast_helper
@@ -62,17 +63,17 @@ let tcall hd args =
 
 let enabled = ref false
 
-let args_spec = [
-   "-on",Arg.Set enabled,"Enable trace" ;
-   "-off",Arg.Clear enabled,"Disable trace" ;
+let args = [
+   "--on",Arg.Set enabled,"Enable trace" ;
+   "--off",Arg.Clear enabled,"Disable trace" ;
   ]
+let reset_args () =
+  enabled := false
 
 let err ~loc str =
   raise (Location.Error(Location.error ~loc str))
 
-let trace_mapper argv =
-  let argv = Array.of_list ("trace_ppx" :: argv) in
-  Arg.parse_argv argv args_spec (fun _ -> ()) "Args: -on or -off";
+let trace_mapper config cookies =
   { default_mapper with expr = fun mapper expr ->
   let aux = mapper.expr mapper in
   match expr with
@@ -117,5 +118,9 @@ let trace_mapper argv =
   | x -> default_mapper.expr mapper x;
 }
 
-let () = register "trace" trace_mapper
+open Migrate_parsetree
+let () =
+  Driver.register ~name:"trace" ~args ~reset_args
+    Versions.ocaml_402 trace_mapper
+;;
 
