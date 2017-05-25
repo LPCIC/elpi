@@ -212,6 +212,7 @@ module CS = ConstraintStoreAndTrail
 
 (* Assigning an UVar wakes up suspended goals/constraints *)
 let (@:=) r v =
+  if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
   if r.rest <> [] then
     begin
     [%spy "assign-to_resume" (fun fmt l ->
@@ -518,8 +519,6 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
                UVar(r,to_,0), mkAppUVar r to_ args
              else (* prune arguments not visible by to_ + depth *)
                make_lambdas to_ (max 0 (argsno - depth)) in
-           if not !T.last_call then
-            T.trail := (T.Assignement r) :: !T.trail;
            r @:= assignment;
           (* TODO: test if it is more efficient here to return fresh or
              the original, imperatively changed, term. The current solution
@@ -544,7 +543,6 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
            if vardepth <= to_ then r,vardepth
            else begin
              let newvar = UVar(oref C.dummy,to_,0) in
-             if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
              r @:= newvar;
              r,vardepth (*CSC: XXX why vardepth and not to_ ??? *)
            end in
@@ -598,8 +596,6 @@ and decrease_depth r ~from ~to_ argsno =
   let newr = oref C.dummy in
   let newargsno = argsno+from-to_ in
   let newvar = UVar(newr,to_,from-to_) in
-  if not !T.last_call then
-    T.trail := (T.Assignement r) :: !T.trail;
   r @:= newvar;
   newr,to_,newargsno
 
@@ -919,7 +915,6 @@ let bind r gamma l a d delta b left t e =
               let r' = oref C.dummy in
               let v = UVar(r',lvl+args,0) in
               r @:= mknLam args v;
-              if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
               r', (lvl+args),  (true,[]), []
           | AppUVar (r,lvl, orig_args) ->
               r, lvl, is_llam lvl orig_args a b (d+w) left e, orig_args
@@ -935,7 +930,6 @@ let bind r gamma l a d delta b left t e =
               let r' = oref C.dummy in
               let v' = UVar(r',a+args,0) in
               r @:= mknLam args v';
-              if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
               r', a+args, (true, []), []
           | AppArg (i,orig_args) ->
               let is_llam, args = is_llam a orig_args a b (d+w) false e in
@@ -969,7 +963,6 @@ let bind r gamma l a d delta b left t e =
               List.split (keep_cst_for_lvl (List.sort Pervasives.compare l)) in
             let r' = oref C.dummy in
             r @:= mknLam n_args (mkAppUVar r' gamma args_gamma_lvl_abs);
-            if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
             mkAppUVar r' gamma args_gamma_lvl_here
           else
             (* given that we need to make lambdas to prune some args,
@@ -994,7 +987,6 @@ let bind r gamma l a d delta b left t e =
               let r' = oref C.dummy in
               let v = mkAppUVar r' lvl args_lvl in
               r @:= mknLam n_args v;
-              if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
               (* This should be the beta reduct. One could also
                * return the non reduced but bound as in the other if branch *)
               mkAppUVar r' lvl args_here
@@ -1007,7 +999,6 @@ let bind r gamma l a d delta b left t e =
         (uppterm gamma [] a e) (UVar(r,gamma,0))
         (uppterm gamma [] a e) v) ()];
     r @:= v;
-    if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
     true
   with RestrictionFailure -> [%spy "bind result" (fun fmt x -> Fmt.fprintf fmt "%b" x) false];false
 ;;
@@ -1112,7 +1103,6 @@ let rec unif matching depth adepth a bdepth b e =
            (uppterm depth [] bdepth e) b
            (uppterm depth [] bdepth e) t) ()];
          r @:= t;
-         if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
          true
        with RestrictionFailure -> false end
    | UVar (r,origdepth,0), _ when not matching ->
@@ -1129,7 +1119,6 @@ let rec unif matching depth adepth a bdepth b e =
            (uppterm depth [] adepth e) a
            (uppterm depth [] adepth e) t) ()];
          r @:= t;
-         if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
          true
        with RestrictionFailure -> false end
 
@@ -1146,8 +1135,6 @@ let rec unif matching depth adepth a bdepth b e =
    | UVar({ rest = [] },_,a1), UVar ({ rest = _ :: _ },_,a2) when a1 + a2 > 0 -> unif matching depth bdepth b adepth a e
    | AppUVar({ rest = [] },_,_), UVar ({ rest = _ :: _ },_,a2) when  a2 > 0 -> unif matching depth bdepth b adepth a e
    | _, UVar (r,origdepth,args) when args > 0 ->
-      if not !T.last_call then
-       T.trail := (T.Assignement r) :: !T.trail;
       let v = fst (make_lambdas origdepth args) in
       [%spy "assign" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
         (uppterm depth [] bdepth e) (UVar(r,origdepth,0))
@@ -1155,8 +1142,6 @@ let rec unif matching depth adepth a bdepth b e =
       r @:= v;
       unif matching depth adepth a bdepth b e
    | UVar (r,origdepth,args), _ when args > 0 ->
-      if not !T.last_call then
-       T.trail := (T.Assignement r) :: !T.trail;
       let v = fst (make_lambdas origdepth args) in
       [%spy "assign" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
          (uppterm depth [] adepth e) (UVar(r,origdepth,0))
@@ -2082,7 +2067,6 @@ let thaw max_depth e m t =
          UVar(r,lvl,0)
         else
          let r' = oref C.dummy in
-         if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
          r @:= UVar(r',0,lvl);
          UVar (r', 0, 0)
       with Not_found -> orig)
