@@ -114,15 +114,17 @@ let trail_this i =
 
 let remove ({ blockers } as sg) =
  [%spy "remove" (fun fmt -> Fmt.fprintf fmt "%a" pp_stuck_goal) sg];
-(* Printf.eprintf "remove: %u\n%!" (get_auxsg sg !auxsg); *)
+ Printf.eprintf "remove: %u\n%!" (get_auxsg sg !auxsg); 
  delayed := remove_from_list sg !delayed;
+ (*let blockers = List.sort_uniq compare blockers in*)
  List.iter (fun r -> r.rest <- remove_from_list sg r.rest) blockers
 
 let add ({ blockers } as sg) =
  [%spy "add" (fun fmt -> Fmt.fprintf fmt "%a" pp_stuck_goal) sg];
-(* Printf.eprintf "add   : %u\n%!" (List.length !auxsg); *)
+ Printf.eprintf "add   : %u\n%!" (List.length !auxsg); 
  auxsg := sg :: !auxsg;
  delayed := sg :: !delayed;
+ (*let blockers = List.sort_uniq compare blockers in*)
  List.iter (fun r -> r.rest <- sg :: r.rest) blockers
 
 let new_delayed = Fork.new_local []
@@ -217,7 +219,10 @@ let (@:=) r v =
     begin
     [%spy "assign-to_resume" (fun fmt l ->
         Fmt.fprintf fmt "%d" (List.length l)) r.rest];
-     CS.to_resume := r.rest @ !CS.to_resume
+     CS.to_resume :=
+      List.fold_right
+       (fun x acc -> if List.memq x acc then acc else x::acc) r.rest
+        !CS.to_resume
     end;
  r.contents <- v
 ;;
