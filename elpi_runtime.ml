@@ -540,16 +540,35 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
        else if List.for_all (deterministic_restriction e ~args_safe:(argsdepth=to_)) args then
          (* TODO: this branch is to be reviewed/tested throughly, unless
             Enrico is now confident with it *)
-         let args =
-           try List.map (maux e depth) args
-           with RestrictionFailure ->
-             anomaly "TODO: implement deterministic restriction" in
-         if vardepth <= to_ then mkAppUVar r vardepth args
-         else
-           let newvar = UVar(oref C.dummy,to_,0) in
-           if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
-           r @:= newvar;
-           mkAppUVar r vardepth args
+          let r,vardepth =
+           if vardepth <= to_ then r,vardepth
+           else begin
+             let newvar = UVar(oref C.dummy,to_,0) in
+             if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
+             r @:= newvar;
+             r,vardepth (*CSC: XXX why vardepth and not to_ ??? *)
+           end in
+          (* Code for deterministic restriction *)
+          let args =
+           List.map (fun arg ->
+            try Some (maux e depth arg) with RestrictionFailure -> None) args in
+          let r,vardepth,args =
+           if List.exists ((=) None) args then begin
+            (* CSC: not optimized code, it does |args| intros even if one
+               could sometimes save some abstractions *)
+            let argslen = List.length args in
+            let filteredargs = map_filter (fun x -> x) args in
+            let r' = oref C.dummy in
+            let newvar = mkAppUVar r' to_ filteredargs in
+            let rec make_lambdas n =
+             if n = 0 then newvar else Lam (make_lambdas (n-1)) in
+            r @:= make_lambdas argslen;
+            r',to_,filteredargs
+           end else
+            let args =
+             List.map (function Some t -> t | None -> assert false) args in
+            r,vardepth,args in
+          mkAppUVar r vardepth args
        else begin
         Fmt.fprintf Fmt.str_formatter
          "Non deterministic pruning, delay to be implemented: t=%a, delta=%d%!"
