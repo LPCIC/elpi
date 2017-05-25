@@ -79,9 +79,9 @@ module Runtime = struct
    let module R = (val !r) in let open R in
    deref_appuv ?avoid ~from ~to_:constant args t
 
- let is_flex t =
+ let is_flex ~depth t =
    let module R = (val !r) in let open R in
-   is_flex t
+   is_flex ~depth t
 
  let print_delayed () =
    let module R = (val !r) in let open R in

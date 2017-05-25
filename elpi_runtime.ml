@@ -246,7 +246,7 @@ module HO : sig
 
   val mkAppUVar : term_attributed_ref -> int -> term list -> term
   val mkAppArg : int -> int -> term list -> term
-  val is_flex : term -> term_attributed_ref option
+  val is_flex : depth:int -> term -> term_attributed_ref option
   val list_to_lp_list : term list -> term
     
 end = struct 
@@ -779,11 +779,13 @@ let () = Pp.do_app_deref := deref_appuv;;
 (* {{{ ************** unification ******************************* *)
 
 (* is_flex is to be called only on heap terms *)
-let rec is_flex =
+let rec is_flex ~depth =
  function
   | Arg _ | AppArg _ -> anomaly "is_flex called on Args"
-  | UVar ({ contents = t }, _, _)
-  | AppUVar ({ contents = t }, _, _) when t != C.dummy -> is_flex t
+  | UVar ({ contents = t }, vardepth, args) when t != C.dummy ->
+     is_flex ~depth (deref_uv ~from:vardepth ~to_:depth args t)
+  | AppUVar ({ contents = t }, vardepth, args) when t != C.dummy -> 
+     is_flex ~depth (deref_appuv ~from:vardepth ~to_:depth args t)
   | UVar (r, _, _) | AppUVar (r, _, _) -> Some r
   | Const _ | Lam _ | App _ | Custom _ | CData _ | Cons _ | Nil -> None
 
@@ -1175,7 +1177,7 @@ let rec unif matching depth adepth a bdepth b e =
        e.(i) <- UVar(r,adepth,0);
        let kind = Unification {adepth = adepth+depth; env = e; bdepth = bdepth+depth; a; b} in
        let blockers =
-         match is_flex other with
+         match is_flex (adepth+depth) other with
          | None -> [r]
          | Some r' -> if r==r' then [r] else [r;r'] in
        CS.declare_new { kind; blockers };
@@ -1189,7 +1191,7 @@ let rec unif matching depth adepth a bdepth b e =
        else if !delay_hard_unif_problems then begin
        Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth empty_env) a (uppterm depth [] bdepth empty_env) b ;
        let kind = Unification {adepth = adepth+depth; env = e; bdepth = bdepth+depth; a; b} in
-       let blockers = match is_flex other with | None -> [r] | Some r' -> [r;r'] in
+       let blockers = match is_flex (bdepth+depth) other with | None -> [r] | Some r' -> [r;r'] in
        CS.declare_new { kind; blockers };
        true
        end else false
@@ -1201,7 +1203,7 @@ let rec unif matching depth adepth a bdepth b e =
        Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth empty_env) a (uppterm depth [] bdepth e) b ;
        let kind = Unification {adepth = adepth+depth; env = e; bdepth = bdepth+depth; a; b} in
        let blockers =
-         match is_flex other with
+         match is_flex (adepth+depth) other with
          | None -> [r]
          | Some r' -> if r==r' then [r] else [r;r'] in
        CS.declare_new { kind; blockers };

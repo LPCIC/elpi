@@ -19,7 +19,7 @@ val register_custom :
 (* Functions useful to implement custom predicates and evaluable functions *)
 val deref_uv : ?avoid:term_attributed_ref -> from:constant -> to_:constant -> int -> term -> term
 val deref_appuv : ?avoid:term_attributed_ref -> from:constant -> to_:constant -> term list -> term -> term
-val is_flex : term -> term_attributed_ref option
+val is_flex : depth:int -> term -> term_attributed_ref option
 val print_delayed : unit -> unit
 val delay_goal : depth:int -> idx -> goal:term -> on:term_attributed_ref list -> unit
 val declare_constraint : depth:int -> idx -> goal:term -> on:term_attributed_ref list -> unit
