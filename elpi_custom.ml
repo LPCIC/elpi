@@ -690,15 +690,17 @@ let { cin = safe_in; isc = is_safe ; cout = safe_out } = declare {
 
 let fresh_copy t max_db depth =
   let rec aux d = function
-    | Lam t -> aux (d+1) t
+    | Lam t -> Lam(aux (d+1) t)
     | Const c as x ->
         if c < max_db then x
-        else assert false (* TODO *)
+        else if c - depth <= d then of_dbl (max_db + c - depth)
+        else raise No_clause (* restriction *)
     | App (c,x,xs) ->
         let x = aux d x in
         let xs = List.map (aux d) xs in
         if c < max_db then App(c,x,xs)
-        else assert false (* TODO *)
+        else if c - depth <= d then App(max_db + c - depth,x,xs)
+        else raise No_clause (* restriction *)
     | (Arg _ | AppArg _) ->
         type_error "$stash takes only heap terms"
     | (UVar (r,_,_) | AppUVar(r,_,_)) when r.contents == dummy ->
