@@ -6,6 +6,7 @@
 *.cmxa
 *.cmt
 *.cmti
+*.cma
 
 .*~
 .*.swp
@@ -15,7 +16,7 @@
 
 META.elpi
 elpi
-elpi.trace
+elpi.byte
 trace_ppx
 .merlin
 
