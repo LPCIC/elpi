@@ -14,12 +14,20 @@ FLAGS=-I $(shell camlp5 -where)
 OCAMLOPTIONS= -g -bin-annot
 CMX=cmx
 CMXA=cmxa
-OC=OCAMLPATH=$(shell pwd) ocamlfind ocamlopt
-OD=OCAMLPATH=$(shell pwd) ocamlfind ocamldep -native
+EXE=elpi
+OC=ocamlfind ocamlopt
+OD=ocamlfind ocamldep -native
+OCAMLPATH=$(shell pwd)
+export OCAMLPATH
 H=@
 pp = printf '$(1) %-26s %s\n' "$(3)" "$(2)"
 
-all: check-ocaml-ver elpi
+all: check-ocaml-ver $(EXE)
+
+byte:
+	rm -f .depends .depends.parser
+	$(MAKE) CMX=cmo CMXA=cma EXE=elpi.byte OC="ocamlfind ocamlc" OD="ocamlfind ocamldep" .depends .depends.parser
+	$(MAKE) CMX=cmo CMXA=cma EXE=elpi.byte OC="ocamlfind ocamlc" OD="ocamlfind ocamldep" all
 
 trace_ppx: trace_ppx.ml
 	$(H)$(call pp,OCAMLOPT,-o,$@)
@@ -80,7 +88,7 @@ elpi.$(CMXA): $(ELPI_COMPONENTS)
 	$(H)$(call pp,OCAMLOPT,-a,$@)
 	$(H)$(OC) $(OC_OPTIONS) -o $@ -a $(ELPI_COMPONENTS)
 
-elpi: elpi.$(CMX) META.elpi elpi.$(CMXA)
+$(EXE): elpi.$(CMX) META.elpi elpi.$(CMXA)
 	$(H)$(call pp,OCAMLOPT,-package elpi -o,$@)
 	$(H)$(OC) $(OC_OPTIONS) -package elpi \
 		-o $@ elpi.$(CMX)
