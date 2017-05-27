@@ -264,7 +264,7 @@ let _ =
      (pplist (uppterm depth [] 0 env) " ") args ;
     []) ;
   register_custom "$deref" (fun ~depth ~env _ args ->
-    List.iter (fun x -> ignore (is_flex ~depth x));
+    List.iter (fun x -> ignore (is_flex ~depth x)) args;
     []) ;
   register_custom "$counter" (fun ~depth ~env:_ _ -> function
     | [t1; t2] ->
