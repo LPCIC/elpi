@@ -279,6 +279,8 @@ let stack_term_of_ast ?(inner_call=false) ~depth:arg_lvl state ast =
        | Const c -> begin match tl with
           | hd2::tl -> state, App(c,hd2,tl)
           | _ -> anomaly "Application node with no arguments" end
+       | App(c,hd1,tl1) -> (* FG: decurrying: is this the right place for it ?? *)
+          state, App(c,hd1,tl1@tl)
        | Lam _ -> (* macro with args *)
           state, deref_appuv ~from:lvl ~to_:lvl tl c
        | _ -> error "Clause shape unsupported" end
