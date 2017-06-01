@@ -1,0 +1,2 @@
+pi x \ sigma X \ pi y \ pi z \ pi w\ ($print "@@" (X z w = Y y w) "@@", X z w  = Y y w, $print "##" (X z w = Y y w) "##").
+pi x \ sigma X \ pi y \ pi z \ pi w\ ($print "@@" ((a \ X z w a) = Y y w) "@@", (a \ X z w a)  = Y y w, $print "##" ((a \ X z w a) = Y y w) "##").
