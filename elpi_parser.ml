@@ -35,7 +35,9 @@ let cur_tjpath = ref []
 let set_tjpath paths =
  let tjpath = try Sys.getenv "TJPATH" with Not_found -> "" in
  let tjpath = Str.split (Str.regexp ":") tjpath in
- let execname = Unix.readlink "/proc/self/exe" in
+ let execname =
+   try Unix.readlink "/proc/self/exe" (* no such a thing on osx *)
+   with Unix.Unix_error _ -> "./elpi" in
  let tjpath = paths @ tjpath @ [ Filename.dirname execname ] in
  let tjpath = List.map (fun f -> make_absolute (readsymlinks f)) tjpath in
  cur_tjpath := tjpath
