@@ -958,13 +958,26 @@ let bind r gamma l a d delta b left t e =
             let args_gamma_lvl_abs, args_gamma_lvl_here =
               let mk_arg i = C.of_dbl i, C.of_dbl (cst ~hmove:false i b delta) in
               let rec mk_interval d argsno n =
-                if n = argsno || n+d >= lvl; then []
+                if n = argsno then []
+                else if n+d >= lvl then
+                 let i = n+d in
+                 (* cut&paste from below *)
+                 (try
+                   let nn = List.assoc i args in
+                   (C.of_dbl (lvl+nn), C.of_dbl (gamma+List.length l+n)) :: mk_interval d argsno (n+1)
+                  with Not_found -> mk_interval d argsno (n+1))
                 else mk_arg (n+d)::mk_interval d argsno (n+1) in
               let rec keep_cst_for_lvl = function
-                | [] -> mk_interval (if left then a else b) (w-d) 0
-                | (i,_) :: rest ->
-                    if i > lvl then keep_cst_for_lvl rest
-                    else mk_arg i :: keep_cst_for_lvl rest in
+                | [] ->
+                   mk_interval (d + if left then a else b) w 0
+                | (i,mm) :: rest ->
+                    if i < lvl then (
+                     mk_arg i :: keep_cst_for_lvl rest
+                    ) else
+                     (try
+                       let nn = List.assoc i args in
+                       (C.of_dbl (lvl+nn), C.of_dbl mm) :: keep_cst_for_lvl rest
+                      with Not_found -> keep_cst_for_lvl rest) in
               List.split (keep_cst_for_lvl (List.sort Pervasives.compare l)) in
             let r' = oref C.dummy in
             r @:= mknLam n_args (mkAppUVar r' gamma args_gamma_lvl_abs);
@@ -979,7 +992,7 @@ let bind r gamma l a d delta b left t e =
                 try
                   let i =
                     if c < gamma then c
-                    else if c >= a + d then c + new_lams - (a+d - gamma)
+                    else if c >= (if left then b else a) + d then c + new_lams - (a+d - gamma)
                     else pos c + gamma in
                   C.of_dbl (c_p + lvl) :: a_lvl,
                   C.of_dbl i :: a_here
