@@ -962,7 +962,8 @@ let bind r gamma l a d delta b left t e =
              (ppterm a [] b e) orig;
         if is_llam then begin
           let n_args = List.length args in
-          if lvl > gamma then
+          if lvl > gamma then begin
+            Fmt.fprintf Fmt.std_formatter "** CASO lvl > gamma **\n%!";
             (* CSC: I don't understand the initial part of the
                comment below: "All orig args go away" and I am patching
                the code anyway *)
@@ -987,7 +988,7 @@ prerr_endline ("i = " ^ string_of_int i ^ " kaput");
               let rec keep_cst_for_lvl = function
                 | [] ->
 prerr_endline ("local ones: " ^ string_of_int w);
-                   mk_interval (d + if left then a else b) w(*CSC: ???(w-d)*) 0
+                   mk_interval (d + if left then a else b) w 0
                 | (i,mm) :: rest ->
                     if i < lvl then (
 prerr_endline ("i = " ^ string_of_int i ^ " kept");
@@ -1007,7 +1008,8 @@ prerr_endline ("i = " ^ string_of_int i ^ " kaput");
                 (uppterm lvl [] a e) (mknLam n_args (mkAppUVar r' gamma args_gamma_lvl_abs)) ;
             r @:= mknLam n_args (mkAppUVar r' gamma args_gamma_lvl_abs);
             mkAppUVar r' gamma args_gamma_lvl_here
-          else
+          end else begin
+            Fmt.fprintf Fmt.std_formatter "** CASO lvl <= gamma **\n%!";
             (* given that we need to make lambdas to prune some args,
              * we also permute to make the restricted meta eventually
              * fall inside the small fragment (sort the args) *)
@@ -1015,24 +1017,34 @@ prerr_endline ("i = " ^ string_of_int i ^ " kaput");
             let args_lvl, args_here =
               List.fold_right (fun (c, c_p) (a_lvl, a_here as acc) ->
                 try
+                  Fmt.fprintf Fmt.std_formatter "\n# NULLA SI CAPISCE PARTE I %d %d **\n%!" c c_p;
                   let i =
                     if c < gamma then c
-                    else if c >= a + d then c + new_lams - (a+d - gamma)
+                    else if c >= (if left then b else a) + d then c + new_lams - (a+d - gamma)
                     else pos c + gamma in
+                  Fmt.fprintf Fmt.std_formatter "\n# NULLA SI CAPISCE PARTE II %d %d (%d,%d)**\n%!" c c_p (c_p + lvl) i;
                   C.of_dbl (c_p + lvl) :: a_lvl,
                   C.of_dbl i :: a_here
-                with RestrictionFailure -> acc) args ([],[]) in
+                with RestrictionFailure ->
+                 Fmt.fprintf Fmt.std_formatter "\n# PRUNED\n%!"; acc) args ([],[]) in
             if n_args = List.length args_here then
               (* no pruning, just binding the args as a normal App *)
               mkAppUVar r lvl (List.map (bind b delta w) orig_args)
-            else
+            else begin
+              Fmt.fprintf Fmt.std_formatter "\nPRUNING\n%!";
               (* we need to project away some of the args *)
               let r' = oref C.dummy in
               let v = mkAppUVar r' lvl args_lvl in
+              Fmt.fprintf Fmt.std_formatter "\n%a := %a\n%!"
+                  (uppterm lvl [] a e) (UVar(r,lvl,0))
+                  (uppterm lvl [] a e) v ;
+              Fmt.fprintf Fmt.std_formatter "\nlvl = %d, |args| = %d\n%!" lvl (List.length args_here);
               r @:= mknLam n_args v;
               (* This should be the beta reduct. One could also
                * return the non reduced but bound as in the other if branch *)
               mkAppUVar r' lvl args_here
+            end
+         end
         end
           else raise RestrictionFailure
   end] in
@@ -1219,9 +1231,13 @@ let rec unif matching depth adepth a bdepth b e =
        let is_llam, args = is_llam lvl args adepth bdepth depth true e in
        if is_llam then
 begin
+Fmt.fprintf Fmt.std_formatter "\nUNIF_LLAM: @[<hov 2>^%d:%a@ =%d%s= ^%d:%a@]\n%!"
+       adepth (ppterm (adepth+depth) [] adepth empty_env) a
+       depth (if matching then "m" else "")
+       bdepth (ppterm (bdepth+depth) [] adepth e) b ;
 prerr_endline ("ELPI: LLAM case");
-Fmt.fprintf Fmt.std_formatter "LLAM(A): %a\n%!" (ppterm (adepth+depth) [] adepth empty_env) a;
-Fmt.fprintf Fmt.std_formatter "LLAM(B): %a\n%!" (ppterm (bdepth+depth) [] bdepth empty_env) b;
+Fmt.fprintf Fmt.std_formatter "LLAM(A)^%d+%d: %a\n%!" adepth depth (ppterm (adepth+depth) [] adepth empty_env) a;
+Fmt.fprintf Fmt.std_formatter "LLAM(B)^%d+%d: %a\n%!" bdepth depth (ppterm (bdepth+depth) [] bdepth empty_env) b;
 List.iter (fun (x,n) -> prerr_endline ("LLAM ARGS: " ^ string_of_int x ^ ":" ^ string_of_int n)) args;
          bind r lvl args adepth depth delta bdepth true other e
 end
