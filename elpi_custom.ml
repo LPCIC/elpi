@@ -5,9 +5,9 @@
 module F = Elpi_ast.Func;;
 open Elpi_util;;
 open Elpi_API.Data;;
-open Elpi_API.Data.Pp;;
 open Elpi_API.Data.Constants;;
 open Elpi_API.Runtime;;
+open Elpi_API.Pp;;
 open Elpi_API.Compiler;;
 
 let register_eval, lookup_eval =

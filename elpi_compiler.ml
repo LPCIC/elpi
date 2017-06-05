@@ -4,8 +4,8 @@
 
 open Elpi_util
 open Elpi_data
-open Pp
 open Elpi_runtime_trace_off.Elpi_runtime
+open Pp
 
 (******************************************************************************
   "Compiler" from AST to program

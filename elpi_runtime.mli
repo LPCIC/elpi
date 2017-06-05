@@ -4,6 +4,15 @@
 
 open Elpi_data
 
+module Pp : sig
+  val ppterm :
+    ?min_prec:int -> int -> string list -> int -> env ->
+       Format.formatter -> term -> unit
+  val uppterm :
+    ?min_prec:int -> int -> string list -> int -> env ->
+       Format.formatter -> term -> unit
+end
+
 (* Interpreter API *)
 
 val execute_once : print_constraints:bool -> program -> query -> bool (* true means error *)

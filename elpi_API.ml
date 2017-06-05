@@ -102,3 +102,14 @@ module Runtime = struct
    TracedRuntime.register_custom name (Obj.magic f)      
 
 end
+
+module Pp = struct
+
+  let ppterm ?min_prec a b c d e f =
+   let module R = (val !r) in let open R in
+   R.Pp.ppterm ?min_prec a b c d e f
+  let uppterm ?min_prec a b c d e f =
+   let module R = (val !r) in let open R in
+   R.Pp.uppterm ?min_prec a b c d e f
+
+end

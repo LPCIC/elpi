@@ -79,18 +79,6 @@ module CD : sig
   val of_string : string -> term
 end
 
-module Pp :
- sig
-  val ppterm : ?min_prec:int ->
-    constant -> string list ->
-    constant -> term array ->
-      Format.formatter -> term -> unit
-  val uppterm : ?min_prec:int ->
-    constant -> string list ->
-    constant -> term array ->
-      Format.formatter -> term -> unit
- end
-
 module Constants :
  sig
   val funct_of_ast : Func.t -> constant * term
@@ -135,6 +123,19 @@ end
 type idx
 
 end
+
+module Pp :
+ sig
+  open Data
+  val ppterm : ?min_prec:int ->
+    int -> string list ->
+    int -> term array ->
+      Format.formatter -> term -> unit
+  val uppterm : ?min_prec:int ->
+    int -> string list ->
+    int -> term array ->
+      Format.formatter -> term -> unit
+ end
 
 module Runtime : sig
 open Data
