@@ -6,6 +6,7 @@
 
 val smart_map : ('a -> 'a) -> 'a list -> 'a list
 (* tail rec when the two lists have len 1; raises no exception. *)
+val uniqq: 'a list -> 'a list
 val for_all2 : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool
 val for_all3b : ('a -> 'a -> bool -> bool) -> 'a list -> 'a list -> bool list -> bool -> bool
 (*uses physical equality and calls anomaly if the element is not in the list*)

@@ -27,6 +27,13 @@ let rec smart_map f =
      if hd==hd' && tl==tl' then l else hd'::tl'
 ;;
 
+let rec uniqq =
+ function
+    [] -> []
+  | x::xs when List.memq x xs -> uniqq xs
+  | x::xs -> x::uniqq xs
+;;
+
 let rec for_all3b p l1 l2 bl b =
   match (l1, l2, bl) with
   | ([], [], _) -> true

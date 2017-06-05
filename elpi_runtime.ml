@@ -323,14 +323,11 @@ let trail_this i =
 
 let remove ({ blockers } as sg) =
  [%spy "remove" (fun fmt -> Fmt.fprintf fmt "%a" pp_stuck_goal) sg];
- (*Printf.eprintf "remove: %u\n%!" (get_auxsg sg !auxsg); *)
  delayed := remove_from_list sg !delayed;
- (*let blockers = List.sort_uniq compare blockers in*)
  List.iter (fun r -> r.rest <- remove_from_list sg r.rest) blockers
 
 let add ({ blockers } as sg) =
  [%spy "add" (fun fmt -> Fmt.fprintf fmt "%a" pp_stuck_goal) sg];
- (*Printf.eprintf "add   : %u\n%!" (List.length !auxsg); *)
  auxsg := sg :: !auxsg;
  delayed := sg :: !delayed;
  List.iter (fun r -> r.rest <- sg :: r.rest) blockers
@@ -345,7 +342,7 @@ let print_trail fmt =
 
 let declare_new cstr =
   let cstr =
-    { cstr with blockers = List.sort_uniq compare cstr.blockers } in
+    { cstr with blockers = uniqq cstr.blockers } in
   add cstr ;
   begin match cstr.kind with
   | Unification _ -> ()
