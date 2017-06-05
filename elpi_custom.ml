@@ -281,16 +281,16 @@ let _ =
     print_delayed () ;
     []) ;
   register_custom "$is_flex" (fun ~depth ~env:_ _ args ->
-    let rec is_flex = function
-      | UVar ({contents=t},vardepth,args) when t != dummy ->
-         is_flex (deref_uv ~from:vardepth ~to_:depth args t)
-      | AppUVar ({contents=t},vardepth,args) when t != dummy ->
-         is_flex (deref_appuv ~from:vardepth ~to_:depth args t)
-      | UVar _ | AppUVar _ -> true
-      | _ -> false in
     match args with
-    | [t1] -> if is_flex t1 then [] else raise No_clause
+    | [t1] -> if is_flex ~depth t1 <> None then [] else raise No_clause
     | _ -> type_error "$is_flex takes 1 argument") ;
+  register_custom "$is_same_flex" (fun ~depth ~env:_ _ args ->
+    match args with
+    | [t1;t2] ->
+       (match is_flex ~depth t1, is_flex ~depth t2 with
+           Some p1, Some p2 when p1==p2 -> []
+         | _,_ -> raise No_clause)
+    | _ -> type_error "$is_same_flex takes 2 argument") ;
   register_custom "$is_name" (fun ~depth ~env:_ _ args ->
     let rec is_name = function
       | UVar ({contents=t},vardepth,args) when t != dummy ->
