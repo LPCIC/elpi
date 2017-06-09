@@ -18,7 +18,7 @@ install:
  - opam init -j 2 --compiler=4.02.3 -n -y
  - eval $(opam config env)
  - opam config var root
- - opam install -j 2 -y camlp5 ocamlfind ppx_tools ppx_deriving
+ - opam install -j 2 -y camlp5 ocamlfind ppx_tools_versioned ppx_deriving ocaml-migrate-parsetree
  - opam list
 script:
  - make
