@@ -253,7 +253,7 @@ let stack_term_of_ast ?(inner_call=false) ~depth:arg_lvl state ast =
 
   and stack_custom_of_ast f =
     let cname = fst (C.funct_of_ast f) in
-    if not (is_custom_declared cname) then error("No custom named "^F.show f);
+    if not (is_custom_declared cname) then warn("No custom named "^F.show f);
     cname
   
   and aux inner lvl state = function
