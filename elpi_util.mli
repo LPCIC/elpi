@@ -103,8 +103,11 @@ val error : string -> 'a
 val anomaly : string -> 'a
 (* If we type check the program, then these are anomalies *)
 val type_error : string -> 'a
+(* A non fatal warning *)
+val warn : string -> unit
 
 
+val set_warn : (string -> unit) -> unit
 val set_error : (string -> 'a) -> unit
 val set_anomaly : (string -> 'a) -> unit
 val set_type_error : (string -> 'a) -> unit
