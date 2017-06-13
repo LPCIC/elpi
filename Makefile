@@ -29,11 +29,6 @@ byte:
 	$(MAKE) CMX=cmo CMXA=cma EXE=elpi.byte OC="ocamlfind ocamlc" OD="ocamlfind ocamldep" .depends .depends.parser
 	$(MAKE) CMX=cmo CMXA=cma EXE=elpi.byte OC="ocamlfind ocamlc" OD="ocamlfind ocamldep" all
 
-byte:
-	rm -f .depends .depends.parser
-	$(MAKE) CMX=cmo CMXA=cma OC="ocamlfind ocamlc" OD="ocamlfind ocamldep" .depends .depends.parser
-	$(MAKE) CMX=cmo CMXA=cma OC="ocamlfind ocamlc" OD="ocamlfind ocamldep" all
-
 trace_ppx: trace_ppx.ml
 	$(H)$(call pp,OCAMLOPT,-o,$@)
 	$(H)ocamlfind ocamlopt -package ppx_tools_versioned.metaquot_402 \
