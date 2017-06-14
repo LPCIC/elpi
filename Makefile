@@ -44,7 +44,7 @@ trace_ppx: trace_ppx.ml
 	       		ocaml-migrate-parsetree.driver-main -a-format` \
 		-o $@
 	$(H)cp .merlin.in .merlin
-	$(H)echo 'FLG -ppx "$(shell pwd)/trace_ppx --as-ppx'" >> .merlin
+	$(H)echo "FLG -ppx '$(shell pwd)/trace_ppx --as-ppx'" >> .merlin
 
 git/%:
 	$(H)rm -rf "$$PWD/elpi-$*"
