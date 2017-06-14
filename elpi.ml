@@ -63,6 +63,7 @@ let usage =
   "\t-print prints files after desugar, then exit\n" ^ 
   "\t-print-raw prints files after desugar in ppx format, then exit\n" ^ 
   "\t-print-ast prints files as parsed, then exit\n" ^ 
+  "\t-I path searches files in path\n" ^ 
   Elpi_API.usage
 ;;
 
@@ -91,7 +92,16 @@ let _ =
     | s :: _ when String.length s > 0 && s.[0] == '-' ->
         Printf.eprintf "Unrecognized option: %s\n%s" s usage; exit 1
     | x :: rest -> x :: aux rest in
-  let argv = Elpi_API.init ~silent:false (Array.to_list Sys.argv) in
+  let cwd = Unix.getcwd () in
+  let tjpath =
+    let v = try Sys.getenv "TJPATH" with Not_found -> "" in
+    let tjpath = Str.split (Str.regexp ":") v in
+    List.flatten (List.map (fun x -> ["-I";x]) tjpath) in
+  let execpath =
+    try ["-I"; Filename.dirname (Unix.readlink "/proc/self/exe")]
+    with Unix.Unix_error _ -> [ "-I"; "." ] in
+  let opts = Array.to_list Sys.argv @ tjpath @ execpath in
+  let argv = Elpi_API.init ~silent:false opts cwd in
   let filenames = aux (List.tl argv) in
   set_terminal_width ();
   if !print_latex then Elpi_latex_exporter.activate () ;

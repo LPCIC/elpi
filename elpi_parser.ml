@@ -13,7 +13,7 @@ let set_precedence,precedence_of =
  (fun c -> ConstMap.find c !precs)
 ;;
 
-let cur_dirname = ref (Unix.getcwd ())
+let cur_dirname = ref "./"
 let last_loc : Ploc.t ref = ref (Ploc.make_loc "dummy" 1 0 (0, 0) "")
 let set_fname ?(line=1) fname = last_loc := (Ploc.make_loc fname line 0 (0, 0) "")
 
@@ -32,14 +32,9 @@ let make_absolute filename =
 
 let cur_tjpath = ref []
 
-let set_tjpath paths =
- let tjpath = try Sys.getenv "TJPATH" with Not_found -> "" in
- let tjpath = Str.split (Str.regexp ":") tjpath in
- let execname =
-   try Unix.readlink "/proc/self/exe" (* no such a thing on osx *)
-   with Unix.Unix_error _ -> "./elpi" in
- let tjpath = paths @ tjpath @ [ Filename.dirname execname ] in
- let tjpath = List.map (fun f -> make_absolute (readsymlinks f)) tjpath in
+let set_tjpath cwd paths =
+ cur_dirname := cwd;
+ let tjpath = List.map (fun f -> make_absolute (readsymlinks f)) paths in
  cur_tjpath := tjpath
 
 module PointerFunc = struct
@@ -89,7 +84,7 @@ let rec parse_one e parsed (origfilename as filename) =
   in
    iter_tjpath (!cur_dirname :: !cur_tjpath)
  in
- let inode = (Unix.stat filename).Unix.st_ino in
+ let inode = Digest.file filename in
  if List.mem_assoc inode !parsed then begin
   if not !parse_silent then Printf.eprintf "already loaded %s\n%!" origfilename;
   match !(List.assoc inode !parsed) with
@@ -655,10 +650,10 @@ let list_element_prec = 120
 
 let parser_initialized = ref false
 
-let init ?(silent=true) ~paths =
+let init ?(silent=true) ~paths ~cwd =
   assert(!parser_initialized = false);
   parse_silent := silent;
-  set_tjpath paths;
+  set_tjpath cwd paths;
   assert(parse lp ["pervasives-syntax.elpi"] = []);
   parser_initialized := true
 ;;

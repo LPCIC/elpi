@@ -10,7 +10,7 @@ open Elpi_ast
 open Elpi_util
 
 (* Initializes the parser and the tracing facility *)
-val init : ?silent:bool -> string list -> string list
+val init : ?silent:bool -> string list -> string -> string list
 val usage : string
 
 (* Can only be switched before calling any Runtime API but for
