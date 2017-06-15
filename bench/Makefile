@@ -6,7 +6,7 @@
 #   make ... TEE=-a # append results, do not override
 #   make plot # re-draw the results
 #   make plot ONLY=rev # re-draw the results selectively (default is ONLY=OK)
-SHELL=/bin/bash
+SHELL=/usr/bin/env bash
 export TOP=$(abspath ..)
 
 H=@
