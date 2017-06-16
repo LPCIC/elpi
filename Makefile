@@ -17,7 +17,7 @@ CMXA=cmxa
 EXE=elpi
 OC=ocamlfind ocamlopt
 OD=ocamlfind ocamldep -native
-OCAMLPATH=$(shell pwd)
+OCAMLPATH:=$(shell pwd):$(OCAMLPATH)
 export OCAMLPATH
 H=@
 pp = printf '$(1) %-26s %s\n' "$(3)" "$(2)"
