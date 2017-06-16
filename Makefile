@@ -12,11 +12,24 @@ PARSE=pa_extend.cmo pa_lexer.cmo
 TRACESYNTAX=pa_extend.cmo q_MLast.cmo pa_macro.cmo
 FLAGS=-I $(shell camlp5 -where)
 OCAMLOPTIONS= -g -bin-annot
+OD=ocamlfind ocamldep
+
+ifeq "$(BYTE)" ""
 CMX=cmx
 CMXA=cmxa
 EXE=elpi
 OC=ocamlfind ocamlopt
-OD=ocamlfind ocamldep -native
+DEPS=.depends .depends.parser
+OCNAME=OCAMLOPT
+else
+CMX=cmo
+CMXA=cma
+EXE=elpi.byte
+OC=ocamlfind ocamlc
+DEPS=.depends.byte .depends.parser.byte
+OCNAME=OCAMLC
+endif
+
 OCAMLPATH:=$(shell pwd):$(OCAMLPATH)
 export OCAMLPATH
 H=@
@@ -25,9 +38,7 @@ pp = printf '$(1) %-26s %s\n' "$(3)" "$(2)"
 all: check-ocaml-ver $(EXE)
 
 byte:
-	rm -f .depends .depends.parser
-	$(MAKE) CMX=cmo CMXA=cma EXE=elpi.byte OC="ocamlfind ocamlc" OD="ocamlfind ocamldep" .depends .depends.parser
-	$(MAKE) CMX=cmo CMXA=cma EXE=elpi.byte OC="ocamlfind ocamlc" OD="ocamlfind ocamldep" all
+	$(H)$(MAKE) BYTE=1 all
 
 trace_ppx: trace_ppx.ml
 	$(H)$(call pp,OCAMLOPT,-o,$@)
@@ -61,7 +72,8 @@ runners:
 
 clean:
 	$(H)rm -f *.cmo *.cma *.cmx *.cmxa *.cmi *.o *.tex *.aux *.log *.pdf
-	$(H)rm -f elpi.git.* .depends .depends.parser META.*
+	$(H)rm -f elpi.git.* META.*
+	$(H)rm -f .depends .depends.parser .depends.byte .depends.parser.byte
 
 dist:
 	$(H)git archive --format=tar --prefix=elpi-$(V)/ HEAD . \
@@ -95,16 +107,16 @@ ELPI_EASY_COMPONENTS = \
 
 
 elpi.$(CMXA): $(ELPI_COMPONENTS)
-	$(H)$(call pp,OCAMLOPT,-a,$@)
+	$(H)$(call pp,$(OCNAME),-a,$@)
 	$(H)$(OC) $(OC_OPTIONS) -o $@ -a $(ELPI_COMPONENTS)
 
 $(EXE): elpi.$(CMX) META.elpi elpi.$(CMXA)
-	$(H)$(call pp,OCAMLOPT,-package elpi -o,$@)
+	$(H)$(call pp,$(OCNAME),-package elpi -o,$@)
 	$(H)$(OC) $(OC_OPTIONS) -package elpi \
 		-o $@ elpi.$(CMX)
 
 elpi_runtime_trace_on.$(CMX) : elpi_runtime.ml elpi_runtime.cmi trace_ppx
-	$(H)$(call pp,OCAMLOPT,-c -ppx 'trace_ppx --on' -for-pack,$@)
+	$(H)$(call pp,$(OCNAME),-c -ppx 'trace_ppx --on' -for-pack,$@)
 	$(H)$(OC) $(OCAMLOPTIONS) \
 		-package camlp5,ppx_deriving.std \
 		-ppx './trace_ppx --as-ppx --on' \
@@ -114,7 +126,7 @@ elpi_runtime_trace_on.$(CMX) : elpi_runtime.ml elpi_runtime.cmi trace_ppx
 		-pack elpi_runtime.$(CMX) -o $@
 
 elpi_runtime_trace_off.$(CMX) : elpi_runtime.ml elpi_runtime.cmi trace_ppx
-	$(H)$(call pp,OCAMLOPT,-c -ppx 'trace_ppx --off' -for-pack,$@)
+	$(H)$(call pp,$(OCNAME),-c -ppx 'trace_ppx --off' -for-pack,$@)
 	$(H)$(OC) $(OCAMLOPTIONS) \
 		-package camlp5,ppx_deriving.std \
 		-ppx './trace_ppx --as-ppx --off' \
@@ -124,25 +136,31 @@ elpi_runtime_trace_off.$(CMX) : elpi_runtime.ml elpi_runtime.cmi trace_ppx
 		-pack elpi_runtime.$(CMX) -o $@
 
 $(ELPI_EASY_COMPONENTS) elpi.$(CMX) : %.$(CMX): %.ml
-	$(H)$(call pp,OCAMLOPT,-c,$@)
+	$(H)$(call pp,$(OCNAME),-c,$@)
 	$(H)$(OC) $(OCAMLOPTIONS) \
 		-package camlp5,ppx_deriving.std \
 	       	-c $<
 %.cmi: %.mli
-	$(H)$(call pp,OCAMLOPT,-c,$@)
+	$(H)$(call pp,$(OCNAME),-c,$@)
 	$(H)$(OC) $(OCAMLOPTIONS) -package camlp5 -c $<
 
 elpi_parser.$(CMX): elpi_parser.ml elpi_parser.cmi elpi_ast.$(CMX) elpi_ast.cmi
-	$(H)$(call pp,OCAMLOPT,-c -pp camlp5o,$@)
+	$(H)$(call pp,$(OCNAME),-c -pp camlp5o,$@)
 	$(H)$(OC) $(OCAMLOPTIONS) -pp '$(PP) $(PARSE)' $(FLAGS) -o $@ -c $<
 
 # dependencies
-include .depends .depends.parser
+include $(DEPS)
 
 .depends: $(filter-out elpi_parser.ml, $(wildcard *.ml *.mli))
+	$(H)$(call pp,OCAMLDEP,-native,$@)
+	$(H)$(OD) -native $^ > $@
+.depends.parser: elpi_parser.ml
+	$(H)$(call pp,OCAMLDEP,-native,$@)
+	$(H)$(OD) -native -pp '$(PP) $(PARSE)' $< > $@
+.depends.byte: $(filter-out elpi_parser.ml, $(wildcard *.ml *.mli))
 	$(H)$(call pp,OCAMLDEP,,$@)
 	$(H)$(OD) $^ > $@
-.depends.parser: elpi_parser.ml
+.depends.parser.byte: elpi_parser.ml
 	$(H)$(call pp,OCAMLDEP,,$@)
 	$(H)$(OD) -pp '$(PP) $(PARSE)' $< > $@
 # Not detected by ocamldep

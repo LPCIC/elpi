@@ -13,6 +13,8 @@
 
 .depends
 .depends.parser
+.depends.byte
+.depends.parser.byte
 
 META.elpi
 elpi
