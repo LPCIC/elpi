@@ -1251,7 +1251,8 @@ let rec unif matching depth adepth a bdepth b e =
 
 (* TODO: test if it is better to deref_uv first or not, i.e. the relative order
    of the clauses below *)
-   | UVar(r1,_,args1), UVar(r2,_,args2) when r1 == r2 -> args1 == args2
+   | UVar(r1,_,args1), UVar(r2,_,args2)
+     when r1 == r2 && !!r1 == C.dummy -> args1 == args2
    | AppUVar(r1,_,xs), AppUVar(r2,_,ys)
      when r1 == r2 && !!r1 == C.dummy-> 
        for_all2 (fun x y -> unif matching depth adepth x bdepth y e) xs ys
