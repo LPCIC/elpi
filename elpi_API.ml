@@ -48,9 +48,9 @@ let set_type_error = Elpi_util.set_type_error
 
 module Runtime = struct
 
- let execute_once ~print_constraints p q =
+ let execute_once ?max_steps ~print_constraints p q =
    let module R = (val !r) in let open R in
-   execute_once ~print_constraints p q     
+   execute_once ?max_steps ~print_constraints p q     
         
  let execute_loop p q =
    let module R = (val !r) in let open R in

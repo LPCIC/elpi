@@ -15,7 +15,7 @@ end
 
 (* Interpreter API *)
 
-val execute_once : print_constraints:bool -> program -> query -> bool (* true means error *)
+val execute_once : ?max_steps:int -> print_constraints:bool -> program -> query -> bool (* true means error *)
 val execute_loop : program -> query -> unit
 
 (* Custom predicates like $print. Must either raise No_clause or succeed

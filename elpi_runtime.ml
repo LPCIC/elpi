@@ -2041,8 +2041,8 @@ type runtime = {
 }
 
          
-let do_make_runtime : (?print_constraints:bool -> program -> runtime) ref =
- ref (fun ?print_constraints _ -> anomaly "do_make_runtime not initialized")
+let do_make_runtime : (?max_steps:int -> ?print_constraints:bool -> program -> runtime) ref =
+ ref (fun ?max_steps ?print_constraints _ -> anomaly "do_make_runtime not initialized")
 
 module Constraints : sig
     
@@ -2656,7 +2656,7 @@ end (* }}} *)
 
 module Mainloop : sig
 
-  val make_runtime : ?print_constraints:bool -> program -> runtime
+  val make_runtime : ?max_steps:int -> ?print_constraints:bool -> program -> runtime
 
   val register_custom : string ->
     (depth:int -> env:term array -> idx -> term list -> term list) ->
@@ -2691,14 +2691,22 @@ let is_custom_declared x =
   with Not_found -> false
 ;;
 
+let steps_bound = Fork.new_local None
+let steps_made = Fork.new_local 0
+
 (* The block of recursive functions spares the allocation of a Some/None
  * at each iteration in order to know if one needs to backtrack or continue *)
-let make_runtime : ?print_constraints:bool -> program -> runtime =
-
+let make_runtime : ?max_steps: int -> ?print_constraints:bool -> program -> runtime =
   (* Input to be read as the orl (((p,g)::gs)::next)::alts
      depth >= 0 is the number of variables in the context. *)
   let rec run depth p g gs (next : frame) alts lvl =
     [%trace "run" (fun _ -> ()) begin
+
+    begin match !steps_bound with
+    | Some bound -> incr steps_made; if !steps_made > bound then raise No_clause
+    | None -> ()
+    end;
+
  match resume_all () with
  | None ->
      [%spy "run-resumed-fail" (fun _ _ -> ()) ()];
@@ -2874,7 +2882,7 @@ end;*)
 
 
  (* Finally the runtime *)
- fun ?(print_constraints=true)
+ fun ?max_steps ?(print_constraints=true)
      { query_depth = d; prolog_program = prog; chr; modes = mds } ->
   let { Fork.exec = exec ; get = get ; set = set } = Fork.fork () in
   let depth = ref 0 in (* Initial depth, i.e. number of locals *)
@@ -2889,6 +2897,8 @@ end;*)
   set CS.new_delayed [];
   set CS.to_resume [];
   set CS.Ugly.delayed [];
+  set steps_bound max_steps;
+  set steps_made 0;
   depth := d;
   let pr_constraints () =
     if print_constraints && CS.contents () <> [] then begin
@@ -2920,9 +2930,9 @@ open Mainloop
   API
  ******************************************************************************)
 
-let execute_once ~print_constraints program q =
+let execute_once ?max_steps ~print_constraints program q =
  auxsg := [];
- let { search; destroy } = make_runtime ~print_constraints program in
+ let { search; destroy } = make_runtime ?max_steps ~print_constraints program in
  try ignore (search q) ; destroy (); false
  with No_clause (*| Non_linear*) -> destroy (); true
 ;;
