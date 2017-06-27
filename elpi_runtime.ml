@@ -2703,7 +2703,8 @@ let make_runtime : ?max_steps: int -> ?print_constraints:bool -> program -> runt
     [%trace "run" (fun _ -> ()) begin
 
     begin match !steps_bound with
-    | Some bound -> incr steps_made; if !steps_made > bound then raise No_clause
+    | Some bound ->
+        incr steps_made; if !steps_made > bound then raise No_more_steps
     | None -> ()
     end;
 
@@ -2930,15 +2931,39 @@ open Mainloop
   API
  ******************************************************************************)
 
-let execute_once ?max_steps ~print_constraints program q =
+let map f d = function
+  | ( Const _ | CData _ | Nil ) as x -> x
+  | ( Arg _ | AppArg _ ) -> assert false
+  | Lam t -> f (d+1) t
+  | App (c,x,xs) -> App(c,f d x, List.map (f d) xs)
+  | Custom (c,xs) -> Custom(c,List.map (f d) xs)
+  | Cons(x,y) -> Cons(f d x, f d y)
+  | UVar(r,_,_) as x when !!r == C.dummy -> f d x
+  | UVar(r,od,ano) -> f d (deref_uv ~from:od ~to_:d ano !!r)
+  | AppUVar(r,_,_) as x when !!r == C.dummy -> f d x
+  | AppUVar(r,od,args) -> f d (deref_appuv ~from:od ~to_:d args !!r)
+
+let rec full_deref d x = map full_deref d x
+
+let mk_solution names depth env =
+  let _, sol = 
+    List.fold_left (fun (i,m) n ->
+      let v = full_deref depth env.(i) in
+      i+1, SMap.add n v m
+        ) (0,SMap.empty) names in
+  sol
+
+let execute_once ?max_steps ~print_constraints program ((_,q_names,_,q_env,_) as q) =
  auxsg := [];
  let { search; destroy } = make_runtime ?max_steps ~print_constraints program in
- try ignore (search q) ; destroy (); false
- with No_clause (*| Non_linear*) -> destroy (); true
+ try ignore (search q) ; destroy (); `Success (lazy (mk_solution q_names program.query_depth q_env))
+ with
+ | No_clause (*| Non_linear*) -> destroy (); `Failure
+ | No_more_steps -> destroy (); `NoMoreSteps
 ;;
 
 
-let execute_loop program ((_,q_names,q_argsdepth,q_env,q) as qq) =
+let execute_loop program ((_,q_names,_,q_env,q) as qq) =
  let { search; next_solution } = make_runtime ~print_constraints:true program in
  let k = ref noalts in
  let do_with_infos f x =
@@ -2956,7 +2981,9 @@ let execute_loop program ((_,q_names,q_argsdepth,q_env,q) as qq) =
    (ppterm program.query_depth q_names 0 q_env) q_env.(i)) q_names;
   in
  begin try do_with_infos (fun x -> k := search x) qq;
- with No_clause -> prerr_endline "Fail"; end;
+ with
+ | No_more_steps -> prerr_endline "Fail (no more steps)"
+ | No_clause -> prerr_endline "Fail"; end;
  while !k != noalts do
    prerr_endline "More? (Y/n)";
    if read_line() = "n" then k := noalts else

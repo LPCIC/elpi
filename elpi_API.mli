@@ -65,6 +65,8 @@ val pp_term : Format.formatter -> term -> unit
 val show_term : term -> string
 
 exception No_clause
+module SMap : Map.S with type key = string
+type solution = term SMap.t Lazy.t
 
 module CD : sig
   val is_int : CData.t -> bool
@@ -143,7 +145,7 @@ open Data
 
 (* Interpreter API *)
 
-val execute_once : ?max_steps:int -> print_constraints:bool -> program -> query -> bool (* true means error *)
+val execute_once : ?max_steps:int -> print_constraints:bool -> program -> query -> [ `Success of solution | `Failure | `NoMoreSteps ]
 val execute_loop : program -> query -> unit
 
 (* Custom predicates like $print. Must either raise No_clause or succeed

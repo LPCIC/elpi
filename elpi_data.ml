@@ -479,5 +479,9 @@ let wrap_prolog_prog x = Index x
 let unwrap_prolog_prog = function Index x -> x | _ -> assert false
 
 exception No_clause
+exception No_more_steps
+
+module SMap = Map.Make(String)
+type solution = term SMap.t Lazy.t
 
 (* vim: set foldmethod=marker: *)
