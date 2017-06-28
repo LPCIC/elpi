@@ -51,7 +51,7 @@ level X Y :- $level X Y. % Y = level of constant X
                          % fails if X is not a constant
 
 occurs X Y :- $occurs X Y. % if X is a constant,
-                           % succeeds if X occurs in X
+                           % succeeds if X occurs in Y
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% PREDEFINED PREDICATES %%%%%%%%%%%%%%%%%%%%%%%
 

@@ -197,14 +197,14 @@ let really_input ic s ofs len =
   else unsafe_really_input 0 ic s ofs len
 
 (* constant x occurs in term t with level d? *)
-let rec occurs x d t =
+let occurs x d t =
    let rec aux = function
      | Const c                          -> c = x
-     | Lam t                            -> occurs x (succ d) t
+     | Lam t                            -> aux t
      | App (c, v, vs)                   -> c = x || aux v || auxs vs
-     | UVar ({contents = t}, dt, 0)     -> occurs x dt t
-     | UVar ({contents = t}, dt, n)     -> occurs x dt t || (dt <= x && x < dt+n)
-     | AppUVar ({contents = t}, dt, vs) -> occurs x dt t || auxs vs
+     | UVar ({contents = t}, dt, n)     -> if t == dummy then x < dt+n
+                                           else aux (deref_uv ~from:dt ~to_:d n t)
+     | AppUVar ({contents = t}, dt, vs) -> if t == dummy then auxs vs else x < dt && aux t
      | Arg _
      | AppArg _                         -> anomaly "Not a heap term"
      | Custom (_, vs)                   -> auxs vs
@@ -215,9 +215,7 @@ let rec occurs x d t =
      | []      -> false
      | t :: ts -> aux t || auxs ts
    in
-   if d <= x then false
-   else if t == dummy then true
-   else aux t
+   x < d && aux t
 
 type polyop = {
   p : 'a. 'a -> 'a -> bool;
