@@ -2938,9 +2938,9 @@ let map f d = function
   | App (c,x,xs) -> App(c,f d x, List.map (f d) xs)
   | Custom (c,xs) -> Custom(c,List.map (f d) xs)
   | Cons(x,y) -> Cons(f d x, f d y)
-  | UVar(r,_,_) as x when !!r == C.dummy -> f d x
+  | UVar(r,_,_) as x when !!r == C.dummy -> x
   | UVar(r,od,ano) -> f d (deref_uv ~from:od ~to_:d ano !!r)
-  | AppUVar(r,_,_) as x when !!r == C.dummy -> f d x
+  | AppUVar(r,od,args) when !!r == C.dummy -> AppUVar(r, od, List.map (f d) args)
   | AppUVar(r,od,args) -> f d (deref_appuv ~from:od ~to_:d args !!r)
 
 let rec full_deref d x = map full_deref d x
