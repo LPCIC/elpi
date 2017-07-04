@@ -203,7 +203,7 @@ let occurs x d t =
      | Lam t                            -> aux t
      | App (c, v, vs)                   -> c = x || aux v || auxs vs
      | UVar ({contents = t}, dt, n)     -> if t == dummy then x < dt+n else
-                                           (x < dt && aux t) || (dt <= x && x < dt+n) 
+                                           (x < dt && aux t) || (dt <= x && x < dt+n)
      | AppUVar ({contents = t}, dt, vs) -> if t == dummy then auxs vs else
                                            (x < dt && aux t) || auxs vs
      | Arg _
