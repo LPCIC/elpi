@@ -202,9 +202,10 @@ let occurs x d t =
      | Const c                          -> c = x
      | Lam t                            -> aux t
      | App (c, v, vs)                   -> c = x || aux v || auxs vs
-     | UVar ({contents = t}, dt, n)     -> if t == dummy then x < dt+n
-                                           else aux (deref_uv ~from:dt ~to_:d n t)
-     | AppUVar ({contents = t}, dt, vs) -> if t == dummy then auxs vs else x < dt && aux t
+     | UVar ({contents = t}, dt, n)     -> if t == dummy then x < dt+n else
+                                           (x < dt && aux t) || (dt <= x && x < dt+n) 
+     | AppUVar ({contents = t}, dt, vs) -> if t == dummy then auxs vs else
+                                           (x < dt && aux t) || auxs vs
      | Arg _
      | AppArg _                         -> anomaly "Not a heap term"
      | Custom (_, vs)                   -> auxs vs
