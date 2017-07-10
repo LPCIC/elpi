@@ -53,8 +53,9 @@ end;;
 (* the parsed variable is a cache to avoid parsing the same file twice *)
 
 let parse_silent = ref true
+let parsed = ref []
 
-let rec parse_one e parsed (origfilename as filename) =
+let rec parse_one e (origfilename as filename) =
  let origprefixname = Filename.chop_extension origfilename in
  let prefixname,filename =
   let rec iter_tjpath dirnames =
@@ -97,9 +98,10 @@ let rec parse_one e parsed (origfilename as filename) =
     let signame = prefixname ^ ".sig" in
     if Sys.file_exists signame then
      let origsigname = origprefixname ^ ".sig" in
-     parse_one e parsed origsigname
+     parse_one e origsigname
     else [] in
-  if not !parse_silent then Printf.eprintf "loading %s\n%!" origfilename;
+  if not !parse_silent then
+    Printf.eprintf "loading %s (%s)\n%!" origfilename (Digest.to_hex inode);
   let ast = ref None in
   parsed := (inode,ast) ::!parsed ;
   let ch = open_in filename in
@@ -132,9 +134,9 @@ let rec parse_one e parsed (origfilename as filename) =
     raise (Stream.Error(Printf.sprintf "%s\nnear: %s@%d" msg origfilename last))
   | Ploc.Exc(_,e) -> close_in ch; raise e
  end
-
+  
 let parse e filenames =
-  List.concat (List.map (parse_one e (ref [])) filenames)
+  List.concat (List.map (parse_one e) filenames)
 
 let parse_string e s =
   try Grammar.Entry.parse e (Stream.of_string s)
@@ -653,6 +655,7 @@ let parser_initialized = ref false
 let init ?(silent=true) ~paths ~cwd =
   assert(!parser_initialized = false);
   parse_silent := silent;
+  parsed := [];
   set_tjpath cwd paths;
   assert(parse lp ["pervasives-syntax.elpi"] = []);
   parser_initialized := true
