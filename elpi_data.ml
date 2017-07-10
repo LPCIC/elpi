@@ -354,7 +354,7 @@ module CustomConstraints : sig
     val declare_constraint :
       name:string ->
       pp:(Fmt.formatter -> 'a -> unit) ->
-      empty:'a ->
+      empty:(unit -> 'a) ->
         'a constraint_type
 
      
@@ -364,7 +364,7 @@ module CustomConstraints : sig
   end = struct
     type 'a constraint_type = int
     type state = Obj.t IM.t
-  let custom_constraints_declarations = ref IM.empty
+    let custom_constraints_declarations = ref IM.empty
 
     let cid = ref 0
     let declare_constraint ~name ~pp ~empty =
@@ -377,7 +377,7 @@ module CustomConstraints : sig
       try IM.find id !custom_constraints
       with Not_found ->
         let _, _, init = IM.find id !custom_constraints_declarations in
-        init
+        Obj.repr (Obj.obj init ())
 
     let update custom_constraints id f =
       custom_constraints :=

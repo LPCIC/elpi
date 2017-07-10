@@ -102,6 +102,19 @@ module Runtime = struct
    NormalRuntime.register_custom name (Obj.magic f);
    TracedRuntime.register_custom name (Obj.magic f)      
 
+ type 'a constraint_type = 'a Data.CustomConstraints.constraint_type
+
+ let declare_custom_constraint ~name ~pp ~empty =
+   Data.CustomConstraints.declare_constraint ~name ~pp ~empty
+
+ let update_custom_constraint ct f =
+   let module R = (val !r) in let open R in
+   R.update_custom_constraint ct f
+
+ let read_custom_constraint ct =
+   let module R = (val !r) in let open R in
+   R.read_custom_constraint ct
+
 end
 
 module Pp = struct

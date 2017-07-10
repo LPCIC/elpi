@@ -252,10 +252,12 @@ module ConstraintStoreAndTrail : sig
   val remove_old_constraint : constraint_def -> unit
 
   val contents : unit -> constraint_def list
-  val print : Fmt.formatter -> unit
+  val print : Fmt.formatter -> constraint_def list -> unit
 
   type custom_constraints
-  val custom_constraints : custom_constraints Fork.local_ref
+  val backup_custom_constraints : unit -> custom_constraints
+  val read_custom_constraint : 'a CustomConstraints.constraint_type -> 'a
+  val update_custom_constraint : 'a CustomConstraints.constraint_type -> ('a -> 'a) -> unit
 
   (* ---------------------------------------------------- *)
 
@@ -298,6 +300,13 @@ end = struct (* {{{ *)
 
   type custom_constraints = Obj.t IM.t
   let custom_constraints = Fork.new_local IM.empty
+  let backup_custom_constraints () = !custom_constraints
+  let read_custom_constraint ct =
+    CustomConstraints.read custom_constraints ct
+  let update_custom_constraint ct f =
+    CustomConstraints.update custom_constraints ct f
+
+
 type trail_item =
 | Assignement of term_attributed_ref
 | StuckGoalAddition of stuck_goal
@@ -395,7 +404,7 @@ let undo ~old_trail ?old_constraints () =
   | None -> ()
 ;;
 
-let print fmt =
+let print_delayed fmt =
  List.iter (function
    | { kind = Unification { adepth = ad; env = e; bdepth = bd; a; b } ; blockers = l } ->
       Fmt.fprintf fmt
@@ -412,8 +421,16 @@ let print fmt =
           (pplist (uppterm depth [] 0 empty_env) ",")
           (List.map (fun r -> UVar(r,0,0)) l)
        (* CSC: Bug here: print at the right precedence *)
-   ) !delayed
+   )
   ;;
+let print fmt =
+  List.iter (fun { depth; pdiff; goal = g } ->
+      Fmt.fprintf fmt
+        " @[<hov 2> %a@ ⊢ %a@]\n%!"
+          (pplist (fun fmt (depth,t) -> uppterm depth [] 0 empty_env fmt t) ",") pdiff
+          (uppterm depth [] 0 empty_env) g
+   )
+
 
 end (* }}} *)
 module T  = ConstraintStoreAndTrail
@@ -2791,7 +2808,8 @@ let make_runtime : ?max_steps: int -> ?print_constraints:bool -> program -> runt
            let oldalts = alts in
            let alts = if cs = [] then alts else
              { program = p; depth = depth; goal = g; goals = gs; stack = next;
-               trail = old_trail; custom_constraints = !CS.custom_constraints;
+               trail = old_trail;
+               custom_constraints = CS.backup_custom_constraints ();
                clauses = cs; lvl = lvl ; next = alts} in
            begin match c.hyps with
            | [] ->
@@ -2904,7 +2922,7 @@ end;*)
   let pr_constraints () =
     if print_constraints && CS.contents () <> [] then begin
     Fmt.fprintf Fmt.std_formatter "===== constraints ======\n%!";
-    CS.print Fmt.std_formatter;
+    CS.print Fmt.std_formatter (CS.contents ());
     Fmt.fprintf Fmt.std_formatter "========================\n%!"; end
     in
   let search = exec (fun (_,_,adepth,q_env,q) ->
@@ -2994,7 +3012,7 @@ let execute_loop program ((_,q_names,_,q_env,q) as qq) =
 
 let delay_goal = Constraints.delay_goal
 let declare_constraint = Constraints.declare_constraint
-let print_delayed () = CS.print Fmt.std_formatter
+let print_delayed () = CS.print Fmt.std_formatter (CS.contents ())
 let is_flex = HO.is_flex
 let deref_uv = HO.deref_uv
 let deref_appuv = HO.deref_appuv
@@ -3019,5 +3037,7 @@ let clausify modes i c t =
     Clausify.modes := old;
     raise e
 let pp_key = pp_key
+let read_custom_constraint = CS.read_custom_constraint
+let update_custom_constraint = CS.update_custom_constraint
 
 (* vim: set foldmethod=marker: *)

@@ -51,3 +51,6 @@ val make_index : clause list -> idx
 val clausify : mode_decl C.Map.t -> int -> constant -> term -> clause list * int
 val pp_key : key -> string
 
+val read_custom_constraint : 'a CustomConstraints.constraint_type -> 'a
+val update_custom_constraint : 'a CustomConstraints.constraint_type -> ('a -> 'a) -> unit
+

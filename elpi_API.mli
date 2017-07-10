@@ -106,22 +106,6 @@ end
 
 module IM : Map.S with type key = int
 
-module CustomConstraints : sig
-  type 'a constraint_type
-    type state = Obj.t IM.t
-
-  (* Must be purely functional *)
-  val declare_constraint :
-    name:string ->
-    pp:(Format.formatter -> 'a -> unit) ->
-    empty:'a ->
-      'a constraint_type
-
-  (* may raise No_clause *)
-  val update : state ref -> 'a constraint_type -> ('a -> 'a) -> unit
-  val read : state ref -> 'a constraint_type -> 'a
-end
-
 (* The indexing data structure *)
 type idx
 
@@ -169,6 +153,19 @@ val list_to_lp_list : term list -> term
 val split_conj : term -> term list
 
 val llam_unify : int -> term array -> int -> term -> term -> bool
+
+type 'a constraint_type
+
+(* Must be purely functional *)
+val declare_custom_constraint :
+  name:string ->
+  pp:(Format.formatter -> 'a -> unit) ->
+  empty:(unit -> 'a) ->
+    'a constraint_type
+
+(* may raise No_clause *)
+val update_custom_constraint : 'a constraint_type -> ('a -> 'a) -> unit
+val read_custom_constraint : 'a constraint_type -> 'a
 
 end
 
