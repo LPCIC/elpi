@@ -72,7 +72,7 @@ runners:
 
 clean:
 	$(H)rm -f *.cmo *.cma *.cmx *.cmxa *.cmi *.o *.tex *.aux *.log *.pdf
-	$(H)rm -f elpi.git.* META.*
+	$(H)rm -f elpi.git.* META.* trace_ppx
 	$(H)rm -f .depends .depends.parser .depends.byte .depends.parser.byte
 
 dist:
