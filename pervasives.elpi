@@ -73,6 +73,7 @@ read S :- flush std_out, input_line std_in X, string_to_term X S.
 
 stop :- halt.
 
+type time prop -> prop.
 time T :- $gettimeofday B, T, $gettimeofday A, D is A - B, $print "TIME" D T.
 
 type $$=   X -> X -> prop.
