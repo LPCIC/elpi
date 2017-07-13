@@ -31,7 +31,7 @@ let test_impl typecheck prog query =
    let t1 = Unix.gettimeofday () in
    Printf.printf "TIME: %5.3f\n%!" (t1 -. t0);
    match b with `Success _ -> true | _ -> false in
- if time (Elpi_API.Runtime.execute_once ~print_constraints:true) prog query then exit 1 else exit 0
+ if time (Elpi_API.Runtime.execute_once ~print_constraints:true) prog query then exit 0 else exit 1
 ;;
 
 
