@@ -321,7 +321,7 @@ let _ =
     | _ -> type_error "$occurs takes 2 arguments") ;
   register_custom "$llam_unif" (fun ~depth ~env _ args ->
     match args with
-    | [t1;t2] -> (try if llam_unify depth env depth t1 t2 then [] else raise No_clause with _ -> raise No_clause)
+    | [t1;t2] -> (if llam_unify depth env depth t1 t2 then [] else raise No_clause )
     | _ -> type_error "$llam_unif takes 2 argument") ;
   register_custom "$gettimeofday" (fun ~depth ~env:_ _ -> function
     | [t1] -> [ App (eqc, t1, [CData(cfloat.cin (Unix.gettimeofday ()))])]
