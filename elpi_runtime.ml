@@ -537,6 +537,8 @@ let rec make_lambdas destdepth args =
  if args = 0 then let x = UVar(oref C.dummy,destdepth,0) in x,x
  else let x,y = make_lambdas (destdepth+1) (args-1) in Lam x, y
 
+let rec mknLam n x = if n = 0 then x else Lam (mknLam (n-1) x)
+
 let mkAppUVar r lvl l =
   try UVar(r,lvl,in_fragment lvl l)
   with NotInTheFragment -> AppUVar(r,lvl,l)
@@ -736,24 +738,26 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
            mkAppUVar r vardepth args
        else
          if vardepth + argsno <= to_ then x
-         else begin
-           let assignment,fresh =
-             (* We may prune the level of the uvar, the args or both.
-              * In all cases the uvar has to be assigned to a new one
-              * of level to_ *)
-             if argsno <= depth then (* no need to prune arguments *)
-               let args = C.mkinterval vardepth argsno 0 in
-               let args = List.map (maux e depth) args in
-               let r = oref C.dummy in
-               UVar(r,to_,0), mkAppUVar r to_ args
-             else (* prune arguments not visible by to_ + depth *)
-               make_lambdas to_ (max 0 (argsno - depth)) in
-           r @:= assignment;
-          (* TODO: test if it is more efficient here to return fresh or
-             the original, imperatively changed, term. The current solution
-             avoids dereference chains, but puts more pressure on the GC. *)
-           fresh
-         end
+         else
+           let newt = 
+             if depth == 0 then (* We stay in the fragment *)
+               let newvardepth = min to_ vardepth in
+               let argsleft = to_ - newvardepth in
+               let newvar = UVar(oref C.dummy,newvardepth,argsleft) in
+               mknLam argsno newvar
+             else
+               let newvardepth = min to_ vardepth in
+               let argsleft =
+                 C.mkinterval vardepth (to_ - vardepth) 0 @
+                 C.mkinterval (vardepth + argsno - depth) depth 0 in
+               let newvar = AppUVar(oref C.dummy,newvardepth,argsleft) in
+               mknLam argsno newvar
+           in
+           [%spy "assign (restriction)" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
+              (uppterm (argsdepth+depth) [] argsdepth e) x
+              (uppterm (argsdepth+depth) [] argsdepth e) newt) ()];
+            r @:= newt;
+            maux e depth (deref_uv ~from:vardepth ~to_:(from+depth) argsno newt)
 
     | AppUVar (r,vardepth,args) ->
        occurr_check avoid r;
@@ -787,9 +791,7 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
             let filteredargs = map_filter (fun x -> x) args in
             let r' = oref C.dummy in
             let newvar = mkAppUVar r' to_ filteredargs in
-            let rec make_lambdas n =
-             if n = 0 then newvar else Lam (make_lambdas (n-1)) in
-            r @:= make_lambdas argslen;
+            r @:= mknLam argslen newvar;
             r',to_,filteredargs
            end else
             let args =
