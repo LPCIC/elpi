@@ -771,6 +771,8 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
           try List.map (maux e depth) (args0@args)
           with RestrictionFailure -> anomaly "impossible, delta < 0" in
          mkAppUVar r vardepth args
+       else if delta == 0 then
+         AppUVar (r,vardepth,List.map (maux e depth) args)
        else if List.for_all (deterministic_restriction e ~args_safe:(argsdepth=to_)) args then
          (* TODO: this branch is to be reviewed/tested throughly, unless
             Enrico is now confident with it *)
