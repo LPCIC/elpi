@@ -1311,11 +1311,18 @@ let rec unif matching depth adepth a bdepth b e =
    | AppUVar(r,vd,_), App(c,hd,[]) when c == C.uvc && matching ->
       unif matching depth adepth (UVar(r,vd,0)) bdepth hd e
    | UVar(r,vd,ano), App(c,hd,[arg]) when c == C.uvc && matching ->
-      unif matching depth adepth a bdepth hd e &&
-      unif matching depth adepth Nil bdepth arg e
+      let r_exp = oref C.dummy in
+      let exp = UVar(r_exp,0,0) in
+      r @:= UVar(r_exp,0,vd);
+      unif matching depth adepth exp bdepth hd e &&
+      let args = list_to_lp_list (C.mkinterval 0 (vd+ano) 0) in
+      unif matching depth adepth args bdepth arg e
    | AppUVar(r,vd,args), App(c,hd,[arg]) when c == C.uvc && matching ->
-      unif matching depth adepth (UVar(r,vd,0)) bdepth hd e &&
-      let args = list_to_lp_list args in
+      let r_exp = oref C.dummy in
+      let exp = UVar(r_exp,0,0) in
+      r @:= UVar(r_exp,0,vd);
+      unif matching depth adepth exp bdepth hd e &&
+      let args = list_to_lp_list (C.mkinterval 0 vd 0 @ args) in
       unif matching depth adepth args bdepth arg e
    | _, (Const c | App(c,_,_)) when c == C.uvc -> false
    (*
