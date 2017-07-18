@@ -1919,12 +1919,13 @@ let clausify vars depth t =
      let moreclauses,lts = claux vars depth hyps ts lts lcs g2 in
       clauses@moreclauses,lts
   | App(c, g, gs) when c == C.andc || c == C.andc2 ->
-     let res = claux vars depth hyps ts lts lcs g in
-     List.fold_right
-      (fun g (clauses,lts) ->
-        let moreclauses,lts = claux vars depth hyps ts lts lcs g in
-         clauses@moreclauses,lts
-      ) gs res
+     let moreclauses, lts = claux vars depth hyps ts lts lcs g in
+     let moreclauses_list, lts =
+       List.fold_right (fun g (clauses,lts) ->
+         let moreclauses, lts = claux vars depth hyps ts lts lcs g in
+         moreclauses :: clauses, lts
+       ) gs ([moreclauses],lts) in
+     List.flatten moreclauses_list, lts
   | App(c, g2, [g1]) when c == C.rimplc ->
      claux vars depth ((ts,g1)::hyps) ts lts lcs g2
   | App(c, _, _) when c == C.rimplc -> assert false
