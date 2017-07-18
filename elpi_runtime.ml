@@ -253,6 +253,8 @@ module ConstraintStoreAndTrail : sig
 
   val contents : unit -> constraint_def list
   val print : Fmt.formatter -> constraint_def list -> unit
+  (* all delayed goals, not just constrains *)
+  val print_delayed : Fmt.formatter -> unit
 
   type custom_constraints
   val backup_custom_constraints : unit -> custom_constraints
@@ -421,7 +423,7 @@ let print_delayed fmt =
           (pplist (uppterm depth [] 0 empty_env) ",")
           (List.map (fun r -> UVar(r,0,0)) l)
        (* CSC: Bug here: print at the right precedence *)
-   )
+   ) !delayed
   ;;
 let print fmt =
   List.iter (fun { depth; pdiff; goal = g } ->
@@ -3014,7 +3016,8 @@ let execute_loop program ((_,q_names,_,q_env,q) as qq) =
 
 let delay_goal = Constraints.delay_goal
 let declare_constraint = Constraints.declare_constraint
-let print_delayed () = CS.print Fmt.std_formatter (CS.contents ())
+let print_constraints () = CS.print Fmt.std_formatter (CS.contents ())
+let print_delayed () = CS.print_delayed Fmt.std_formatter
 let is_flex = HO.is_flex
 let deref_uv = HO.deref_uv
 let deref_appuv = HO.deref_appuv
