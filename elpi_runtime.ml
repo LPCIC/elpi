@@ -2686,38 +2686,7 @@ module Mainloop : sig
 
   val make_runtime : ?max_steps:int -> program -> runtime
 
-  val register_custom : string ->
-    (depth:int -> env:term array -> idx -> term list -> term list) ->
-      unit
-
-  val is_custom_declared : constant -> bool
-
 end = struct (* {{{ *)
-
-let register_custom, lookup_custom =
- let (customs :
-      (* Must either raise No_clause or succeed with the list of new goals *)
-      ('a, depth:int -> env:term array -> idx -> term list -> term list)
-      Hashtbl.t)
-   =
-     Hashtbl.create 17 in
- let check s = 
-    if s = "" || s.[0] <> '$' then
-      anomaly ("Custom predicate name " ^ s ^ " must begin with $");
-    let idx = C.from_stringc s in
-    if Hashtbl.mem customs idx then
-      anomaly ("Duplicate custom predicate name " ^ s);
-    idx in
- (fun s f ->
-    let idx = check s in
-    Hashtbl.add customs idx f),
- Hashtbl.find customs
-;;
-
-let is_custom_declared x =
-  try let _f = lookup_custom x in true
-  with Not_found -> false
-;;
 
 let steps_bound = Fork.new_local None
 let steps_made = Fork.new_local 0
@@ -3032,13 +3001,11 @@ let pp_stuck_goal_kind fmt s = CS.pp_stuck_goal_kind fmt s
 let is_flex = HO.is_flex
 let deref_uv = HO.deref_uv
 let deref_appuv = HO.deref_appuv
-let register_custom = Mainloop.register_custom
 let make_runtime = Mainloop.make_runtime
 let lp_list_to_list = Clausify.lp_list_to_list
 let list_to_lp_list = HO.list_to_lp_list
 let split_conj = Clausify.split_conj
 let llam_unify ad e bd a b = HO.unif ad e bd a b
-let is_custom_declared = Mainloop.is_custom_declared
 let mkAppArg = HO.mkAppArg
 let move = HO.move
 let make_index = make_index

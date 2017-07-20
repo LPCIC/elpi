@@ -493,4 +493,29 @@ type constraint_store = {
 }
 type solution = term SMap.t * constraint_store
 
+let register_custom, lookup_custom =
+ let (customs :
+      (* Must either raise No_clause or succeed with the list of new goals *)
+      ('a, depth:int -> env:term array -> idx -> term list -> term list)
+      Hashtbl.t)
+   =
+     Hashtbl.create 17 in
+ let check s = 
+    if s = "" || s.[0] <> '$' then
+      anomaly ("Custom predicate name " ^ s ^ " must begin with $");
+    let idx = C.from_stringc s in
+    if Hashtbl.mem customs idx then
+      anomaly ("Duplicate custom predicate name " ^ s);
+    idx in
+ (fun s f ->
+    let idx = check s in
+    Hashtbl.add customs idx f),
+ Hashtbl.find customs
+;;
+
+let is_custom_declared x =
+  try let _f = lookup_custom x in true
+  with Not_found -> false
+;;
+
 (* vim: set foldmethod=marker: *)

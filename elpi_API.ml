@@ -105,8 +105,7 @@ module Runtime = struct
    declare_constraint ~depth (Obj.magic idx) ~goal ~on:term_attributed_ref
 
  let register_custom name f =
-   NormalRuntime.register_custom name (Obj.magic f);
-   TracedRuntime.register_custom name (Obj.magic f)      
+   Data.register_custom name (Obj.magic f)
 
  type 'a constraint_type = 'a Data.CustomConstraints.constraint_type
 

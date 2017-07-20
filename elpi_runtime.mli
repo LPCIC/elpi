@@ -18,13 +18,6 @@ type outcome = [ `Success of solution | `Failure | `NoMoreSteps ]
 val execute_once : ?max_steps:int -> program -> query -> outcome
 val execute_loop : program -> query -> more:(unit -> bool) -> pp:(float -> outcome -> unit) -> unit
 
-(* Custom predicates like $print. Must either raise No_clause or succeed
-   with the list of new goals *)
-val register_custom :
-  string ->
-  (depth:int -> env:term array -> idx -> term list -> term list) ->
-  unit
-
 (* Functions useful to implement custom predicates and evaluable functions *)
 val deref_uv : ?avoid:term_attributed_ref -> from:constant -> to_:constant -> int -> term -> term
 val deref_appuv : ?avoid:term_attributed_ref -> from:constant -> to_:constant -> term list -> term -> term
@@ -42,7 +35,6 @@ val split_conj : term -> term list
 
 val llam_unify : int -> term array -> int -> term -> term -> bool
 
-val is_custom_declared : constant -> bool
 val mkAppArg : int -> int -> term list -> term
 val move : 
   adepth:int -> env ->
