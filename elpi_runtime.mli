@@ -14,9 +14,9 @@ module Pp : sig
 end
 
 (* Interpreter API *)
-
-val execute_once : ?max_steps:int -> print_constraints:bool -> program -> query -> [ `Success of solution | `Failure | `NoMoreSteps ]
-val execute_loop : program -> query -> unit
+type outcome = [ `Success of solution | `Failure | `NoMoreSteps ] 
+val execute_once : ?max_steps:int -> program -> query -> outcome
+val execute_loop : program -> query -> more:(unit -> bool) -> pp:(float -> outcome -> unit) -> unit
 
 (* Custom predicates like $print. Must either raise No_clause or succeed
    with the list of new goals *)
@@ -31,6 +31,7 @@ val deref_appuv : ?avoid:term_attributed_ref -> from:constant -> to_:constant ->
 val is_flex : depth:int -> term -> term_attributed_ref option
 val print_constraints : unit -> unit
 val print_delayed : unit -> unit
+val pp_stuck_goal_kind : Fmt.formatter -> stuck_goal_kind -> unit
 val delay_goal : depth:int -> idx -> goal:term -> on:term_attributed_ref list -> unit
 val declare_constraint : depth:int -> idx -> goal:term -> on:term_attributed_ref list -> unit
 
@@ -52,6 +53,6 @@ val make_index : clause list -> idx
 val clausify : mode_decl C.Map.t -> int -> constant -> term -> clause list * int
 val pp_key : key -> string
 
-val read_custom_constraint : 'a CustomConstraints.constraint_type -> 'a
-val update_custom_constraint : 'a CustomConstraints.constraint_type -> ('a -> 'a) -> unit
+val get_custom_constraints : unit -> custom_constraints
+val set_custom_constraints : custom_constraints -> unit
 

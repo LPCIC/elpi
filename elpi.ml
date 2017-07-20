@@ -13,11 +13,39 @@ let _ =
 ;;
 *)
 
+let pr_constraints cs =
+  if cs <> [] then begin
+  Format.eprintf "\nConstraints:\n%a\n%!"
+    (Elpi_util.pplist Elpi_API.Runtime.pp_stuck_goal_kind " " ~boxed:true)
+    cs
+end
+
+let print_solution time = function
+| `NoMoreSteps -> Format.eprintf "Interrupted (no more steps)\n%!"
+| `Failure -> Format.eprintf "Failure\n%!"
+| `Success (s,cs) ->
+  Format.eprintf "\nSuccess:\n%!" ;
+  Elpi_API.Data.SMap.iter (fun name t ->
+    Format.eprintf "  @[<hov 1>%s = %a@]\n%!" name
+      (Elpi_API.Pp.uppterm 0 [] 0 [||]) t) s;
+  Format.eprintf "\nTime: %5.3f\n%!" time;
+  pr_constraints cs.Elpi_API.Data.constraints;
+  Format.eprintf "\nRaw result: \n%!" ;
+  Elpi_API.Data.SMap.iter (fun name t ->
+    Format.eprintf "  @[<hov 1>%s = %a@]\n%!" name
+      (Elpi_API.Pp.ppterm 0 [] 0 [||]) t) s;
+;;
+  
+let more () =
+  prerr_endline "\nMore? (Y/n)";
+  read_line() <> "n"
+;;
+
 let run_prog typecheck prog query =
  let prog = Elpi_API.Compiler.program_of_ast prog in
  let query = Elpi_API.Compiler.query_of_ast prog query in
  if typecheck then Elpi_API.Compiler.typecheck prog query;
- Elpi_API.Runtime.execute_loop prog query
+ Elpi_API.Runtime.execute_loop prog query ~more ~pp:print_solution
 ;;
 
 let test_impl typecheck prog query =
@@ -29,9 +57,8 @@ let test_impl typecheck prog query =
    let t0 = Unix.gettimeofday () in
    let b = f p q in
    let t1 = Unix.gettimeofday () in
-   Printf.printf "TIME: %5.3f\n%!" (t1 -. t0);
-   match b with `Success _ -> true | _ -> false in
- if time (Elpi_API.Runtime.execute_once ~print_constraints:true) prog query then exit 0 else exit 1
+   match b with `Success _ -> print_solution (t1 -. t0) b; true | _ -> false in
+ if time Elpi_API.Runtime.execute_once prog query then exit 0 else exit 1
 ;;
 
 

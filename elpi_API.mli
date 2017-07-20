@@ -66,7 +66,12 @@ val show_term : term -> string
 
 exception No_clause
 module SMap : Map.S with type key = string
-type solution = term SMap.t Lazy.t
+type custom_constraints
+type constraint_store = {
+  constraints : stuck_goal_kind list;
+  custom_constraints : custom_constraints;
+}
+type solution = term SMap.t * constraint_store
 
 module CD : sig
   val is_int : CData.t -> bool
@@ -128,9 +133,9 @@ module Runtime : sig
 open Data
 
 (* Interpreter API *)
-
-val execute_once : ?max_steps:int -> print_constraints:bool -> program -> query -> [ `Success of solution | `Failure | `NoMoreSteps ]
-val execute_loop : program -> query -> unit
+type outcome = [ `Success of solution | `Failure | `NoMoreSteps ] 
+val execute_once : ?max_steps:int -> program -> query -> outcome
+val execute_loop : program -> query -> more:(unit -> bool) -> pp:(float -> outcome -> unit) -> unit
 
 (* Custom predicates like $print. Must either raise No_clause or succeed
    with the list of new goals *)
@@ -145,6 +150,7 @@ val deref_appuv : ?avoid:term_attributed_ref -> from:constant -> to_:constant ->
 val is_flex : depth:int -> term -> term_attributed_ref option
 val print_delayed : unit -> unit
 val print_constraints : unit -> unit
+val pp_stuck_goal_kind : Format.formatter -> stuck_goal_kind -> unit
 val delay_goal : depth:int -> idx -> goal:term -> on:term_attributed_ref list -> unit
 val declare_constraint : depth:int -> idx -> goal:term -> on:term_attributed_ref list -> unit
 
@@ -165,8 +171,11 @@ val declare_custom_constraint :
     'a constraint_type
 
 (* may raise No_clause *)
-val update_custom_constraint : 'a constraint_type -> ('a -> 'a) -> unit
-val read_custom_constraint : 'a constraint_type -> 'a
+val update_custom_constraint : custom_constraints -> 'a constraint_type -> ('a -> 'a) -> custom_constraints
+val read_custom_constraint : custom_constraints -> 'a constraint_type -> 'a
+
+val get_custom_constraints : unit -> custom_constraints
+val set_custom_constraints : custom_constraints -> unit
 
 end
 

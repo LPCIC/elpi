@@ -255,11 +255,9 @@ module ConstraintStoreAndTrail : sig
   val print : Fmt.formatter -> constraint_def list -> unit
   (* all delayed goals, not just constrains *)
   val print_delayed : Fmt.formatter -> unit
+  val pp_stuck_goal_kind : Fmt.formatter -> stuck_goal_kind -> unit
 
-  type custom_constraints
-  val backup_custom_constraints : unit -> custom_constraints
-  val read_custom_constraint : 'a CustomConstraints.constraint_type -> 'a
-  val update_custom_constraint : 'a CustomConstraints.constraint_type -> ('a -> 'a) -> unit
+  val custom_constraints : custom_constraints Fork.local_ref
 
   (* ---------------------------------------------------- *)
 
@@ -300,13 +298,11 @@ end = struct (* {{{ *)
     cstr_position : int;
  }
 
-  type custom_constraints = Obj.t IM.t
-  let custom_constraints = Fork.new_local IM.empty
-  let backup_custom_constraints () = !custom_constraints
+  let custom_constraints = Fork.new_local (CustomConstraints.empty ())
   let read_custom_constraint ct =
-    CustomConstraints.read custom_constraints ct
+    CustomConstraints.read !custom_constraints ct
   let update_custom_constraint ct f =
-    CustomConstraints.update custom_constraints ct f
+    custom_constraints := CustomConstraints.update !custom_constraints ct f
 
 
 type trail_item =
@@ -406,25 +402,30 @@ let undo ~old_trail ?old_constraints () =
   | None -> ()
 ;;
 
-let print_delayed fmt =
- List.iter (function
-   | { kind = Unification { adepth = ad; env = e; bdepth = bd; a; b } ; blockers = l } ->
+let pp_stuck_goal_kind fmt = function
+   | Unification { adepth = ad; env = e; bdepth = bd; a; b } ->
       Fmt.fprintf fmt
-       "delayed goal: @[<hov 2>^%d:%a@ == ^%d:%a on %a@]\n%!"
+       "delayed goal: @[<hov 2>^%d:%a@ == ^%d:%a@]"
         ad (uppterm ad [] 0 empty_env) a
         bd (uppterm ad [] ad e) b
-        (pplist (uppterm ad [] 0 empty_env) ",")
-        (List.map (fun r -> UVar(r,0,0)) l)
-   | { kind = Constraint { depth; pdiff; goal = g } ; blockers = l } ->
+   | Constraint { depth; pdiff; goal = g } ->
       Fmt.fprintf fmt
-        " @[<hov 2> %a@ ⊢ %a on %a@]\n%!"
-          (pplist (fun fmt (depth,t) -> uppterm depth [] 0 empty_env fmt t) ",") pdiff
+        " @[<hov 2> %a@ ⊢ %a@]"
+          (pplist (fun fmt (depth,t) ->
+             uppterm depth [] 0 empty_env fmt t) ",") pdiff
           (uppterm depth [] 0 empty_env) g
-          (pplist (uppterm depth [] 0 empty_env) ",")
-          (List.map (fun r -> UVar(r,0,0)) l)
        (* CSC: Bug here: print at the right precedence *)
-   ) !delayed
-  ;;
+
+let print_delayed fmt =
+  List.iter (fun { kind; blockers } ->
+      Fmt.fprintf fmt
+       "delayed goal: @[<h>%a on %a@]\n%!" 
+          pp_stuck_goal_kind kind
+          (pplist (uppterm 0 [] 0 empty_env) ",")
+            (List.map (fun r -> UVar(r,0,0)) blockers))
+   !delayed
+;;
+
 let print fmt =
   List.iter (fun { depth; pdiff; goal = g } ->
       Fmt.fprintf fmt
@@ -2037,7 +2038,7 @@ and alternative = {
   goals : goal list;
   stack : frame;
   trail : T.trail;
-  custom_constraints : T.custom_constraints;
+  custom_constraints : custom_constraints;
   clauses : clause list;
   next : alternative
 }
@@ -2058,7 +2059,6 @@ let noalts : alternative = Obj.magic 0
  *   exec          optional, many times
  *   search        mandatory, 1 time
  *   next          optional, repeat until No_clause is thrown
- *   destroy       optional, 1 time, useful in nested runtimes
  *)
 
 type runtime = {
@@ -2066,14 +2066,13 @@ type runtime = {
   next_solution : alternative -> alternative;
 
   (* low level part *)
-  destroy : unit -> unit;
   exec : 'a 'b. ('a -> 'b) -> 'a -> 'b;
   get : 'a. 'a Fork.local_ref -> 'a;
 }
 
          
-let do_make_runtime : (?max_steps:int -> ?print_constraints:bool -> program -> runtime) ref =
- ref (fun ?max_steps ?print_constraints _ -> anomaly "do_make_runtime not initialized")
+let do_make_runtime : (?max_steps:int -> program -> runtime) ref =
+ ref (fun ?max_steps _ -> anomaly "do_make_runtime not initialized")
 
 module Constraints : sig
     
@@ -2582,8 +2581,7 @@ let propagate { CS.cstr; cstr_position } history =
          (* typing info set to dummy *)
          declared_types = []; clauses_w_info = []
        } in
-       let { search; get; exec; destroy } =
-         !do_make_runtime  ~print_constraints:false program in
+       let { search; get; exec } = !do_make_runtime program in
        let check = function
          | None -> ()
          | Some guard -> try
@@ -2634,7 +2632,6 @@ let propagate { CS.cstr; cstr_position } history =
          [%spy "propagate-try-rule-fail" (fun _ _ -> ()) ()];
          None
        in
-       destroy ();
        result))
  in
  match result with
@@ -2687,7 +2684,7 @@ end (* }}} *)
 
 module Mainloop : sig
 
-  val make_runtime : ?max_steps:int -> ?print_constraints:bool -> program -> runtime
+  val make_runtime : ?max_steps:int -> program -> runtime
 
   val register_custom : string ->
     (depth:int -> env:term array -> idx -> term list -> term list) ->
@@ -2727,7 +2724,7 @@ let steps_made = Fork.new_local 0
 
 (* The block of recursive functions spares the allocation of a Some/None
  * at each iteration in order to know if one needs to backtrack or continue *)
-let make_runtime : ?max_steps: int -> ?print_constraints:bool -> program -> runtime =
+let make_runtime : ?max_steps: int -> program -> runtime =
   (* Input to be read as the orl (((p,g)::gs)::next)::alts
      depth >= 0 is the number of variables in the context. *)
   let rec run depth p g gs (next : frame) alts lvl =
@@ -2823,7 +2820,7 @@ let make_runtime : ?max_steps: int -> ?print_constraints:bool -> program -> runt
            let alts = if cs = [] then alts else
              { program = p; depth = depth; goal = g; goals = gs; stack = next;
                trail = old_trail;
-               custom_constraints = CS.backup_custom_constraints ();
+               custom_constraints = !CS.custom_constraints;
                clauses = cs; lvl = lvl ; next = alts} in
            begin match c.hyps with
            | [] ->
@@ -2915,8 +2912,7 @@ end;*)
 
 
  (* Finally the runtime *)
- fun ?max_steps ?(print_constraints=true)
-     { query_depth = d; prolog_program = prog; chr; modes = mds } ->
+ fun ?max_steps { query_depth = d; prolog_program = prog; chr; modes = mds } ->
   let { Fork.exec = exec ; get = get ; set = set } = Fork.fork () in
   let depth = ref 0 in (* Initial depth, i.e. number of locals *)
   let chr = CHR.unwrap_chr chr in
@@ -2930,28 +2926,17 @@ end;*)
   set CS.new_delayed [];
   set CS.to_resume [];
   set CS.Ugly.delayed [];
+  set CS.custom_constraints (CustomConstraints.empty ());
   set steps_bound max_steps;
   set steps_made 0;
   depth := d;
-  let pr_constraints () =
-    if print_constraints && CS.contents () <> [] then begin
-    Fmt.fprintf Fmt.std_formatter "===== constraints ======\n%!";
-    CS.print Fmt.std_formatter (CS.contents ());
-    Fmt.fprintf Fmt.std_formatter "========================\n%!"; end
-    in
   let search = exec (fun (_,_,adepth,q_env,q) ->
      let q = move ~adepth ~from:adepth ~to_:adepth q_env q in
      [%spy "run-trail" (fun fmt _ -> T.print_trail fmt) ()];
      T.empty_trail := !T.trail;
-     let alts = run !depth !orig_prolog_program q [] FNil noalts noalts in
-     pr_constraints ();
-     alts) in
-  let next_solution = exec (fun alts -> 
-     let alts = next_alt alts in
-     pr_constraints ();
-     alts) in
-  let destroy () = exec (fun () -> T.undo ~old_trail:[] ()) () in
-  { search; next_solution; exec; get; destroy }
+     run !depth !orig_prolog_program q [] FNil noalts noalts) in
+  let next_solution = exec next_alt in
+  { search; next_solution; exec; get }
 ;;
 
 do_make_runtime := make_runtime;;
@@ -2985,42 +2970,57 @@ let mk_solution names depth env =
         ) (0,SMap.empty) names in
   sol
 
-let execute_once ?max_steps ~print_constraints program ((_,q_names,_,q_env,_) as q) =
- auxsg := [];
- let { search; destroy } = make_runtime ?max_steps ~print_constraints program in
- try ignore (search q) ; destroy (); `Success (lazy (mk_solution q_names program.query_depth q_env))
+let deref_unif { adepth; env; bdepth; a; b } = {
+  adepth; bdepth; env = Array.map (full_deref adepth) env;
+  a = full_deref adepth a;
+  b = full_deref bdepth b;
+}
+
+let deref_cst { depth; prog; pdiff; goal } = {
+  depth; prog;
+  pdiff = List.map (fun (d,t) -> d,full_deref d t) pdiff;
+  goal = full_deref depth goal;
+}
+
+let mk_cs (all_delayed, custom) = {
+  constraints = List.map (function
+    | { kind = Unification x } -> Unification (deref_unif x)
+    | { kind = Constraint x } -> Constraint (deref_cst x)) all_delayed;
+  custom_constraints = custom;
+}
+
+type outcome = [ `Success of solution | `Failure | `NoMoreSteps ] 
+
+let mk_outcome search query get_cs q_names q_env d : outcome * alternative =
+ try
+   let alts = search query in
+   let solution = mk_solution q_names d q_env in
+   let cs = mk_cs (get_cs ()) in
+   `Success (solution, cs), alts
  with
- | No_clause (*| Non_linear*) -> destroy (); `Failure
- | No_more_steps -> destroy (); `NoMoreSteps
+ | No_clause (*| Non_linear*) -> `Failure, noalts
+ | No_more_steps -> `NoMoreSteps, noalts
+
+let execute_once ?max_steps program ((_,q_names,_,q_env,_) as q) =
+ auxsg := [];
+ let { search; get } = make_runtime ?max_steps program in
+ fst (mk_outcome search q (fun () -> get CS.Ugly.delayed, get CS.custom_constraints) q_names q_env program.query_depth)
 ;;
 
-
-let execute_loop program ((_,q_names,_,q_env,q) as qq) =
- let { search; next_solution } = make_runtime ~print_constraints:true program in
+let execute_loop program ((_,q_names,_,q_env,q) as qq) ~more ~pp =
+ let { search; next_solution; get } = make_runtime program in
  let k = ref noalts in
  let do_with_infos f x =
   let time0 = Unix.gettimeofday() in
-  f x ;
+  let o, alts = mk_outcome f x (fun () -> get CS.Ugly.delayed, get CS.custom_constraints) q_names q_env program.query_depth in
   let time1 = Unix.gettimeofday() in
-  prerr_endline ("Execution time: "^string_of_float(time1 -. time0));
- (* Fmt.eprintf "Raw Result: %a\n%!"
-    (ppterm depth q_names q_argsdepth q_env) q ;*)
-  Fmt.eprintf "Success\n%!" ;
-  List.iteri (fun i name -> Fmt.eprintf "@[<hov 1>%s=%a@]\n%!" name
-   (uppterm program.query_depth q_names 0 q_env) q_env.(i)) q_names;
-  Fmt.eprintf "Raw result: \n%!" ;
-  List.iteri (fun i name -> Fmt.eprintf "@[<hov 1>%s=%a@]\n%!" name
-   (ppterm program.query_depth q_names 0 q_env) q_env.(i)) q_names;
-  in
- begin try do_with_infos (fun x -> k := search x) qq;
- with
- | No_more_steps -> prerr_endline "Fail (no more steps)"
- | No_clause -> prerr_endline "Fail"; end;
+  k := alts;
+  pp (time1 -. time0) o in
+ do_with_infos search qq;
  while !k != noalts do
-   prerr_endline "More? (Y/n)";
-   if read_line() = "n" then k := noalts else
-    try do_with_infos (fun _ -> k := next_solution !k) ()
-    with No_clause -> prerr_endline "Fail"; k := noalts
+   if not(more()) then k := noalts else
+   try do_with_infos next_solution !k
+   with No_clause -> pp 0.0 `Failure; k := noalts
  done
 ;;
 
@@ -3028,6 +3028,7 @@ let delay_goal = Constraints.delay_goal
 let declare_constraint = Constraints.declare_constraint
 let print_constraints () = CS.print Fmt.std_formatter (CS.contents ())
 let print_delayed () = CS.print_delayed Fmt.std_formatter
+let pp_stuck_goal_kind fmt s = CS.pp_stuck_goal_kind fmt s
 let is_flex = HO.is_flex
 let deref_uv = HO.deref_uv
 let deref_appuv = HO.deref_appuv
@@ -3052,7 +3053,7 @@ let clausify modes i c t =
     Clausify.modes := old;
     raise e
 let pp_key = pp_key
-let read_custom_constraint = CS.read_custom_constraint
-let update_custom_constraint = CS.update_custom_constraint
+let get_custom_constraints () = !CS.custom_constraints
+let set_custom_constraints c = CS.custom_constraints := c
 
 (* vim: set foldmethod=marker: *)

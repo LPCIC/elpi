@@ -47,14 +47,14 @@ let set_anomaly = Elpi_util.set_anomaly
 let set_type_error = Elpi_util.set_type_error
 
 module Runtime = struct
-
- let execute_once ?max_steps ~print_constraints:f p q =
+ type outcome = [ `Success of Data.solution | `Failure | `NoMoreSteps ] 
+ let execute_once ?max_steps p q =
    let module R = (val !r) in let open R in
-   execute_once ?max_steps ~print_constraints:f p q     
+   execute_once ?max_steps p q     
         
- let execute_loop p q =
+ let execute_loop p q ~more ~pp =
    let module R = (val !r) in let open R in
-   execute_loop p q
+   execute_loop p q ~more ~pp
 
  let lp_list_to_list ~depth t =
    let module R = (val !r) in let open R in
@@ -90,6 +90,9 @@ module Runtime = struct
  let print_constraints () =
    let module R = (val !r) in let open R in
    print_constraints ()
+ let pp_stuck_goal_kind fmt gk =
+   let module R = (val !r) in let open R in
+   pp_stuck_goal_kind fmt gk
 
  type idx = Obj.t (* HACK *)
 
@@ -110,13 +113,16 @@ module Runtime = struct
  let declare_custom_constraint ~name ~pp ~empty =
    Data.CustomConstraints.declare_constraint ~name ~pp ~empty
 
- let update_custom_constraint ct f =
+ let update_custom_constraint = Data.CustomConstraints.update
+ let read_custom_constraint = Data.CustomConstraints.read
+ 
+ let get_custom_constraints () =
    let module R = (val !r) in let open R in
-   R.update_custom_constraint ct f
+   R.get_custom_constraints ()
 
- let read_custom_constraint ct =
+ let set_custom_constraints cs =
    let module R = (val !r) in let open R in
-   R.read_custom_constraint ct
+   R.set_custom_constraints cs
 
 end
 

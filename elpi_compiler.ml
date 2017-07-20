@@ -716,7 +716,7 @@ let typecheck ?(extra_checker=[]) ({ declared_types = types } as p) q =
     types) in
   let c = C.from_stringc "typecheck-program" in
   let query = Ploc.dummy,[],0,[||],App(c,p,[q;tlist]) in
-  if execute_once ~print_constraints:true checker query = `Failure then
+  if execute_once checker query = `Failure then
     Printf.eprintf "Anomaly: Type checking aborts\n%!"
 ;;
 

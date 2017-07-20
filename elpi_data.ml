@@ -356,33 +356,37 @@ module CustomConstraints : sig
       pp:(Fmt.formatter -> 'a -> unit) ->
       empty:(unit -> 'a) ->
         'a constraint_type
-
      
-    type state = Obj.t IM.t
-    val update : state ref -> 'a constraint_type -> ('a -> 'a) -> unit
-    val read : state ref -> 'a constraint_type -> 'a
+    type state
+    val update : state -> 'a constraint_type -> ('a -> 'a) -> state
+    val read : state -> 'a constraint_type -> 'a
+    val empty : unit -> state
   end = struct
     type 'a constraint_type = int
     type state = Obj.t IM.t
+    
     let custom_constraints_declarations = ref IM.empty
 
     let cid = ref 0
     let declare_constraint ~name ~pp ~empty =
       incr cid;
       custom_constraints_declarations :=
-        IM.add !cid (name,Obj.repr pp, Obj.repr empty) !custom_constraints_declarations;
+        IM.add !cid (name,Obj.repr pp, Obj.repr empty)
+          !custom_constraints_declarations;
       !cid
 
-    let find custom_constraints id =
-      try IM.find id !custom_constraints
-      with Not_found ->
-        let _, _, init = IM.find id !custom_constraints_declarations in
-        Obj.repr (Obj.obj init ())
+    let empty () =
+      IM.fold (fun id (_,_,init) m ->
+        IM.add id (Obj.repr (Obj.obj init ())) m)
+      !custom_constraints_declarations IM.empty
+            
+    let find cc id =
+      try IM.find id cc
+      with Not_found -> assert false
 
-    let update custom_constraints id f =
-      custom_constraints :=
-        IM.add id (Obj.repr (f (Obj.obj (find custom_constraints id)))) !custom_constraints
-    let read custom_constraints id = Obj.obj (find custom_constraints id)
+    let update cc id f =
+      IM.add id (Obj.repr (f (Obj.obj (find cc id)))) cc
+    let read cc id = Obj.obj (find cc id)
   end
 
 (* true=input, false=output *)
@@ -482,6 +486,11 @@ exception No_clause
 exception No_more_steps
 
 module SMap = Map.Make(String)
-type solution = term SMap.t Lazy.t
+type custom_constraints = CustomConstraints.state
+type constraint_store = {
+  constraints : stuck_goal_kind list;
+  custom_constraints : custom_constraints;
+}
+type solution = term SMap.t * constraint_store
 
 (* vim: set foldmethod=marker: *)

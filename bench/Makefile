@@ -15,7 +15,7 @@ RUNNERS=$(sort $(filter-out %ulimit,$(notdir $(wildcard runners/*) $(wildcard ..
 export MAX_TIME=59
 
 define time-log
-(if grep -q 'TIME' $(1); then grep 'TIME' $(1) | cut -d ' ' -f 2- | paste -sd+ | bc; else echo ?; fi;\
+(if grep -q 'Time' $(1); then grep 'Time' $(1) | cut -d ' ' -f 2- | paste -sd+ | bc; else echo ?; fi;\
  cat $(2)|cut -d ' ' -f 2-) | tr '\n' ' ' | sed 's/ /,/g'
 endef
 
