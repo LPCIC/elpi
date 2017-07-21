@@ -2081,13 +2081,7 @@ module Constraints : sig
 
   val chrules : CHR.t Fork.local_ref
 
-  val delay_goal :
-    depth:int -> idx -> goal:term -> on:term_attributed_ref list -> unit
-
-  (* Like delay_goal, but the context is trimmed according to the clique
-   * the constraint lives in *)
-  val declare_constraint :
-    depth:int -> idx -> goal:term -> on:term_attributed_ref list -> unit
+  val scheduler : depth:int -> idx -> Elpi_data.scheduler
 
 end = struct (* {{{ *)
 
@@ -2415,6 +2409,15 @@ let declare_constraint ~depth prog ~goal:g ~on:keys =
 let delay_goal ~depth prog ~goal:g ~on:keys =
   delay_goal ~depth prog ~goal:g ~on:keys
 
+let scheduler ~depth idx = {
+  delay = begin function
+    | `Goal -> delay_goal ~depth idx
+    | `Constraint -> declare_constraint ~depth idx end;
+  print = begin function
+    | `All -> CS.print_delayed
+    | `Constraints -> fun fmt -> CS.print fmt (CS.contents ())
+  end
+}
 
 (* all permutations of pivot+rest of length len where the
  * pivot is in pivot_position. pivot may be part of rest, it is automatically
@@ -2751,8 +2754,9 @@ let make_runtime : ?max_steps: int -> program -> runtime =
     | UVar _ | AppUVar _ -> error "Flexible predicate"
     | Custom(c, args) ->
        let f = try lookup_custom c with Not_found -> anomaly"no such custom" in
-       match f depth empty_env p args with
-       | gs' ->
+       match f depth empty_env (Constraints.scheduler ~depth p) !CS.custom_constraints args with
+       | gs', cc ->
+          CS.custom_constraints := cc;
           (match List.map (fun g -> depth,p,g) gs' @ gs with
            | [] -> [%tcall pop_andl alts next lvl]
            | (depth,p,g) :: gs -> run depth p g gs next alts lvl)
@@ -2932,12 +2936,7 @@ let map f d = function
 let rec full_deref d x = map full_deref d x
 
 let mk_solution names depth env =
-  let _, sol = 
-    List.fold_left (fun (i,m) n ->
-      let v = full_deref depth env.(i) in
-      i+1, SMap.add n v m
-        ) (0,SMap.empty) names in
-  sol
+  List.mapi (fun i n -> n, full_deref depth env.(i)) names
 
 let deref_unif { adepth; env; bdepth; a; b } = {
   adepth; bdepth; env = Array.map (full_deref adepth) env;
@@ -2958,17 +2957,16 @@ let mk_cs (all_delayed, custom) = {
   custom_constraints = custom;
 }
 
-type outcome = [ `Success of solution | `Failure | `NoMoreSteps ] 
 
 let mk_outcome search query get_cs q_names q_env d : outcome * alternative =
  try
    let alts = search query in
    let solution = mk_solution q_names d q_env in
    let cs = mk_cs (get_cs ()) in
-   `Success (solution, cs), alts
+   Success (solution, cs), alts
  with
- | No_clause (*| Non_linear*) -> `Failure, noalts
- | No_more_steps -> `NoMoreSteps, noalts
+ | No_clause (*| Non_linear*) -> Failure, noalts
+ | No_more_steps -> NoMoreSteps, noalts
 
 let execute_once ?max_steps program ((_,q_names,_,q_env,_) as q) =
  auxsg := [];
@@ -2989,12 +2987,10 @@ let execute_loop program ((_,q_names,_,q_env,q) as qq) ~more ~pp =
  while !k != noalts do
    if not(more()) then k := noalts else
    try do_with_infos next_solution !k
-   with No_clause -> pp 0.0 `Failure; k := noalts
+   with No_clause -> pp 0.0 Failure; k := noalts
  done
 ;;
 
-let delay_goal = Constraints.delay_goal
-let declare_constraint = Constraints.declare_constraint
 let print_constraints () = CS.print Fmt.std_formatter (CS.contents ())
 let print_delayed () = CS.print_delayed Fmt.std_formatter
 let pp_stuck_goal_kind fmt s = CS.pp_stuck_goal_kind fmt s

@@ -2,207 +2,324 @@
 (* license: GNU Lesser General Public License Version 2.1                    *)
 (* ------------------------------------------------------------------------- *)
 
-(* This file shall contain the only API an Elpi client needs *)
+(* ************************************************************************* *)
+(* *************************** Basic API *********************************** *)
+(* ************************************************************************* *)
 
-(* TODO : AST, Util, Parser *)
+module Setup : sig
+  (* Initializes the parser and the tracing facility *)
+  val init : ?silent:bool -> string list -> string -> string list
+  val usage : string
 
-open Elpi_ast
-open Elpi_util
+  (* Can only be switched before calling any Execute API *)
+  val trace : string list -> unit
 
-(* Initializes the parser and the tracing facility *)
-val init : ?silent:bool -> string list -> string -> string list
-val usage : string
+  (* Override default error functions (they call exit) *)
+  val set_warn : (string -> unit) -> unit
+  val set_error : (string -> 'a) -> unit
+  val set_anomaly : (string -> 'a) -> unit
+  val set_type_error : (string -> 'a) -> unit
+end
 
-(* Can only be switched before calling any Runtime API but for
- * register_custom *)
-val trace : string list -> unit
+module Ast : sig
+  type program
+  type query
+end
 
-(* Override default error functions (they call exit) *)
-val set_warn : (string -> unit) -> unit
-val set_error : (string -> 'a) -> unit
-val set_anomaly : (string -> 'a) -> unit
-val set_type_error : (string -> 'a) -> unit
+module Parse : sig
+  val program : ?no_pervasives:bool -> string list -> Ast.program
+  val goal : string -> Ast.query
+  val goal_from_stream : char Stream.t -> Ast.query
+end
 
 module Data : sig
+  type program
+  type query
+  type term
 
-(* Extension API *)
-val cint: int CData.cdata
-val cfloat: float CData.cdata
-val cstring:  Elpi_ast.Func.t CData.cdata
-
-type constant = int (* De Brujin levels *)
-type term =
-  (* Pure terms *)
-  | Const of constant
-  | Lam of term
-  | App of constant * term * term list
-  (* Clause terms: unif variables used in clauses *)
-  | Arg of (*id:*)int * (*argsno:*)int
-  | AppArg of (*id*)int * term list
-  (* Heap terms: unif variables in the query *)
-  | UVar of term_attributed_ref * (*depth:*)int * (*argsno:*)int
-  | AppUVar of term_attributed_ref * (*depth:*)int * term list
-  (* Misc: $custom predicates, ... *)
-  | Custom of constant * term list
-  | CData of CData.t
-  | Cons of term * term
-  | Nil
-and term_attributed_ref = {
-  mutable contents : term;
-  mutable rest : stuck_goal list;
-}
-and stuck_goal = {
-  mutable blockers : term_attributed_ref list;
-  kind : stuck_goal_kind;
-}
-and stuck_goal_kind
-
-type query
-type program
-
-val oref : term -> term_attributed_ref
-val pp_term : Format.formatter -> term -> unit
-val show_term : term -> string
-
-exception No_clause
-module SMap : Map.S with type key = string
-type custom_constraints
-type constraint_store = {
-  constraints : stuck_goal_kind list;
-  custom_constraints : custom_constraints;
-}
-type solution = term SMap.t * constraint_store
-
-module CD : sig
-  val is_int : CData.t -> bool
-  val to_int : CData.t -> int
-  val of_int : int -> term
-
-  val is_float : CData.t -> bool
-  val to_float : CData.t -> float
-  val of_float : float -> term
-
-  val is_string : CData.t -> bool
-  val to_string : CData.t -> string
-  val of_string : string -> term
+  type constraints
+  type custom_constraints
+  type constraint_store = {
+    constraints : constraints;
+    custom_constraints : custom_constraints;
+  }
+  type solution = (string * term) list * constraint_store
 end
 
-module Constants :
- sig
-  val funct_of_ast : Func.t -> constant * term
+module Compile : sig
 
-  val from_string : string -> term
-  val from_stringc : string -> constant
- 
-  val show : constant -> string
-  val of_dbl : constant -> term
+  val program : ?print:[`Yes|`Raw] -> Ast.program -> Data.program (* XXX *)
+  val query : Data.program -> Ast.query -> Data.query
 
-  val eqc : constant
-  val orc : constant
-  val andc : constant
-  val andc2 : constant
-  val rimplc : constant
-  val ctypec : constant
-
-  (* Value for unassigned UVar/Arg *)
-  val dummy : term
+  val static_check : ?extra_checker:string list -> Data.program -> Data.query -> unit
 
 end
 
-module IM : Map.S with type key = int
+module Execute : sig
+  type outcome = Success of Data.solution | Failure | NoMoreSteps
 
-(* The indexing data structure *)
-type idx
+  val once : ?max_steps:int -> Data.program -> Data.query -> outcome
+  val loop : Data.program -> Data.query -> more:(unit -> bool) -> pp:(float -> outcome -> unit) -> unit
+end
+
+module Pp : sig
+
+  val term : Format.formatter -> Data.term -> unit
+  val constraints : Format.formatter -> Data.constraints -> unit
+  val custom_constraints : Format.formatter -> Data.custom_constraints -> unit
+
+  module Ast : sig
+    val program : Format.formatter -> Ast.program -> unit
+  end
 
 end
 
-module Pp :
- sig
-  open Data
-  val ppterm : ?min_prec:int ->
-    int -> string list ->
-    int -> term array ->
-      Format.formatter -> term -> unit
-  val uppterm : ?min_prec:int ->
-    int -> string list ->
-    int -> term array ->
-      Format.formatter -> term -> unit
- end
+(* ************************************************************************* *)
+(* ************************* Extension API ********************************* *)
+(* ************************************************************************* *)
 
-module Runtime : sig
-open Data
+module Extend : sig
 
-(* Interpreter API *)
-type outcome = [ `Success of solution | `Failure | `NoMoreSteps ] 
-val execute_once : ?max_steps:int -> program -> query -> outcome
-val execute_loop : program -> query -> more:(unit -> bool) -> pp:(float -> outcome -> unit) -> unit
+  (* Data of the host program that is opaque to Elpi *)
+  module CData : sig
+    type t
 
-(* Custom predicates like $print. Must either raise No_clause or succeed
-   with the list of new goals *)
-val register_custom :
-  string ->
-  (depth:int -> env:term array -> idx -> term list -> term list) ->
-  unit
+    type 'a data_declaration = {
+      data_name : string;
+      data_pp : Format.formatter -> 'a -> unit;
+      data_eq : 'a -> 'a -> bool;
+      data_hash : 'a -> int;
+    }
+
+    type 'a cdata = { cin : 'a -> t; isc : t -> bool; cout: t -> 'a }
+
+    val declare : 'a data_declaration -> 'a cdata
+    val pp : Format.formatter -> t -> unit
+    val show : t -> string
+    val equal : t -> t -> bool
+    val hash : t -> int
+    val name : t -> string
+
+    val morph1 : 'a cdata -> ('a -> 'a) -> t -> t
+
+    val ty2 : 'a cdata -> t -> t -> bool
+    val morph2 : 'a cdata -> ('a -> 'a -> 'a) -> t -> t -> t
+    
+    val map : 'a cdata -> 'b cdata -> ('a -> 'b) -> t -> t
+  end
+
+  module Data : sig
+
+    type constant = int (* De Bruijn levels *)
+    type term =
+      (* Pure terms *)
+      | Const of constant
+      | Lam of term
+      | App of constant * term * term list
+      (* Clause terms: unif variables used in clauses *)
+      | Arg of (*id:*)int * (*argsno:*)int
+      | AppArg of (*id*)int * term list
+      (* Heap terms: unif variables in the query *)
+      | UVar of term_attributed_ref * (*depth:*)int * (*argsno:*)int
+      | AppUVar of term_attributed_ref * (*depth:*)int * term list
+      (* Misc: $custom predicates, ... *)
+      | Custom of constant * term list
+      | CData of CData.t
+      | Cons of term * term
+      | Nil
+    and term_attributed_ref = {
+      mutable contents : term;
+      mutable rest : stuck_goal list;
+    }
+    and stuck_goal = {
+      mutable blockers : term_attributed_ref list;
+      kind : stuck_goal_kind;
+    }
+    and stuck_goal_kind
+
+    val oref : term -> term_attributed_ref
+
+    type program = Data.program
+    type query = Data.query
+    type constraints
+    type custom_constraints
+    type idx
+
+    module C : sig
+      val int : int CData.cdata
+      val is_int : CData.t -> bool
+      val to_int : CData.t -> int
+      val of_int : int -> term
+    
+      val float : float CData.cdata
+      val is_float : CData.t -> bool
+      val to_float : CData.t -> float
+      val of_float : float -> term
+    
+      type hashconsed_string
+      val hashcons : string -> hashconsed_string
+
+      val string : hashconsed_string CData.cdata
+      val is_string : CData.t -> bool
+      val to_string : CData.t -> string
+      val of_string : string -> term
+    end
+
+    module Constants :
+     sig
+      val from_string : string -> term
+      val from_stringc : string -> constant
+     
+      val show : constant -> string
+      val of_dbl : constant -> term
+    
+      val eqc : constant
+      val orc : constant
+      val andc : constant
+      val andc2 : constant
+      val rimplc : constant
+      val ctypec : constant
+    
+      (* Value for unassigned UVar/Arg *)
+      val dummy : term
+    end
+    
+  end
+
+  module Compile : sig
+
+    (* One can extend the compiler state in order to implement quotations *)
+    module ExtState : sig
+      type t
+    
+      type 'a set = t -> 'a -> t
+      type 'a update = t -> ('a -> 'a) -> t
+      type 'a get = t -> 'a
+      type 'a init = unit -> 'a
+    
+      val declare_extension :
+        string -> 'a init -> ('a get * 'a set * 'a update)
+      
+    end
+
+    type quotation =
+      depth:int -> ExtState.t -> string -> ExtState.t * Data.term
+    val set_default_quotation : quotation -> unit
+    val register_named_quotation : string -> quotation -> unit
+
+    (* The anti-quotation to lambda Prolog *)
+    val lp : quotation
+
+    val is_Arg : ExtState.t -> Data.term -> bool
+
+    (* See elpi_quoted_syntax.elpi *)
+    val quote_syntax : Data.program -> Data.query -> Data.term * Data.term
+
+    val term_at : depth:int -> Ast.query -> Data.term
+
+  end
+
+
+  module CustomPredicate : sig
+
+    exception No_clause
+    (* Custom predicates like $print. Must either raise No_clause or succeed
+       with the list of new goals *)
+    val declare :
+    string ->
+    (depth:int -> env:Data.term array -> Data.term list -> Data.term list) ->
+    unit
+
+    type scheduler = {
+      delay :
+        [ `Goal | `Constraint ] ->
+          goal:Data.term -> on:Data.term_attributed_ref list -> unit;
+      print : [ `All | `Constraints ] -> Format.formatter -> unit;
+    }
+    (* Custom predicates like $constraint. Allowed to change the constraint
+     * store *)
+    val declare_full :
+      string ->
+      (depth:int -> env:Data.term array -> scheduler -> Data.custom_constraints -> Data.term list ->
+       Data.term list * Data.custom_constraints) ->
+    unit
+
+  end
+
+  module CustomConstraint : sig
+
+    type 'a constraint_type
+
+    (* 'a must be purely functional *)
+    val declare :
+      name:string ->
+      pp:(Format.formatter -> 'a -> unit) ->
+      empty:(unit -> 'a) ->
+        'a constraint_type
+
+    val read : Data.custom_constraints -> 'a constraint_type -> 'a
+    (* Allowed to raise No_clause *)
+    val update :
+      Data.custom_constraints -> 'a constraint_type -> ('a -> 'a) ->
+        Data.custom_constraints
+
+  end
+
+  module Utils : sig
+    val deref_uv :
+      from:int -> to_:int -> ano:int -> Data.term -> Data.term
+    val deref_appuv :
+      from:int -> to_:int -> args:Data.term list -> Data.term -> Data.term
+    val deref_head : depth:int -> Data.term -> Data.term
+    val is_flex : depth:int -> Data.term -> Data.term_attributed_ref option
+    val list_to_lp_list : Data.term list -> Data.term
+    val lp_list_to_list : depth:int -> Data.term -> Data.term list
+    (* A regular error *)
+    val error : string -> 'a
+    (* An invariant is broken, i.e. a bug *)
+    val anomaly : string -> 'a
+    (* If we type check the program, then these are anomalies *)
+    val type_error : string -> 'a
+    (* A non fatal warning *)
+    val warn : string -> unit
+
+  end
+        
+  module Pp : sig
+
+    val term : ?min_prec:int ->
+      int -> string list ->
+      int -> Data.term array ->
+        Format.formatter -> Data.term -> unit
+
+    val constraint_ : Format.formatter -> Data.stuck_goal_kind -> unit
+
+    val list : ?max:int -> ?boxed:bool ->
+     (Format.formatter -> 'a -> unit) ->
+     ?pplastelem:(Format.formatter -> 'a -> unit) -> string ->
+     Format.formatter -> 'a list -> unit
+
+    module Raw : sig
+      val term : ?min_prec:int ->
+        int -> string list ->
+        int -> Data.term array ->
+          Format.formatter -> Data.term -> unit
+      val show_term : Data.term -> string
+   end
+
+  end
+
+end (* Extend *)
+(*
 
 (* Functions useful to implement custom predicates and evaluable functions *)
-val deref_uv : ?avoid:term_attributed_ref -> from:constant -> to_:constant -> int -> term -> term
-val deref_appuv : ?avoid:term_attributed_ref -> from:constant -> to_:constant -> term list -> term -> term
-val is_flex : depth:int -> term -> term_attributed_ref option
 val print_delayed : unit -> unit
 val print_constraints : unit -> unit
-val pp_stuck_goal_kind : Format.formatter -> stuck_goal_kind -> unit
-val delay_goal : depth:int -> idx -> goal:term -> on:term_attributed_ref list -> unit
-val declare_constraint : depth:int -> idx -> goal:term -> on:term_attributed_ref list -> unit
 
-val lp_list_to_list : depth:int -> term -> term list
-val list_to_lp_list : term list -> term
+
 
 val split_conj : term -> term list
 
-val llam_unify : int -> term array -> int -> term -> term -> bool
-
-type 'a constraint_type
-
-(* Must be purely functional *)
-val declare_custom_constraint :
-  name:string ->
-  pp:(Format.formatter -> 'a -> unit) ->
-  empty:(unit -> 'a) ->
-    'a constraint_type
-
-(* may raise No_clause *)
-val update_custom_constraint : custom_constraints -> 'a constraint_type -> ('a -> 'a) -> custom_constraints
-val read_custom_constraint : custom_constraints -> 'a constraint_type -> 'a
-
-val get_custom_constraints : unit -> custom_constraints
-val set_custom_constraints : custom_constraints -> unit
-
+(* val llam_unify : int -> term array -> int -> term -> term -> bool *)
 end
-
-module Parser : sig
-  val parse_program : ?no_pervasives:bool -> string list -> Elpi_ast.program
-  val parse_goal : string -> Elpi_ast.goal
-end
-
-module Compiler : sig
-open Elpi_util
-open Data
-
-val program_of_ast : ?print:[`Yes|`Raw] -> Elpi_ast.program -> program
-val query_of_ast : program -> Elpi_ast.goal -> query
-val term_of_ast : depth:int -> Elpi_ast.term -> term
-
-type quotation = depth:int -> ExtState.t -> string -> ExtState.t * term
-val set_default_quotation : quotation -> unit
-val register_named_quotation : string -> quotation -> unit
-
-val lp : quotation
-
-val is_Arg : ExtState.t -> term -> bool
-
-(* See elpi_quoted_syntax.elpi *)
-val quote_syntax : program -> query -> term * term
-
-val typecheck : ?extra_checker:string list -> program -> query -> unit
-
-end
+*)

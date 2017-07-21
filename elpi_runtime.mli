@@ -14,7 +14,6 @@ module Pp : sig
 end
 
 (* Interpreter API *)
-type outcome = [ `Success of solution | `Failure | `NoMoreSteps ] 
 val execute_once : ?max_steps:int -> program -> query -> outcome
 val execute_loop : program -> query -> more:(unit -> bool) -> pp:(float -> outcome -> unit) -> unit
 
@@ -25,8 +24,6 @@ val is_flex : depth:int -> term -> term_attributed_ref option
 val print_constraints : unit -> unit
 val print_delayed : unit -> unit
 val pp_stuck_goal_kind : Fmt.formatter -> stuck_goal_kind -> unit
-val delay_goal : depth:int -> idx -> goal:term -> on:term_attributed_ref list -> unit
-val declare_constraint : depth:int -> idx -> goal:term -> on:term_attributed_ref list -> unit
 
 val lp_list_to_list : depth:int -> term -> term list
 val list_to_lp_list : term list -> term
@@ -42,7 +39,7 @@ val move :
   from:int -> to_:int -> term -> term
 
 val make_index : clause list -> idx
-val clausify : mode_decl C.Map.t -> int -> constant -> term -> clause list * int
+val clausify : mode_decl Constants.Map.t -> int -> constant -> term -> clause list * int
 val pp_key : key -> string
 
 val get_custom_constraints : unit -> custom_constraints

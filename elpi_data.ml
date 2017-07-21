@@ -112,15 +112,20 @@ and constraint_def = {
 }
 [@@deriving show, eq]
 
-module CD = struct
+module C = struct
+  let int = cint
   let is_int = is_int
   let to_int = out_int
   let of_int x = CData (in_int x)
 
+  let float = cfloat
   let is_float = is_float
   let to_float = out_float
   let of_float x = CData (in_float x)
 
+  type hashconsed_string = F.t
+  let hashcons = F.from_string
+  let string = cstring
   let is_string = is_string
   let to_string x = F.show (out_string x)
   let of_string x = CData (in_string (F.from_string x))
@@ -280,7 +285,6 @@ let rec mkinterval depth argsno n =
 ;;
 
 end (* }}} *)
-module C = Constants
 
 module CHR : sig
 
@@ -295,7 +299,7 @@ module CHR : sig
   val empty : t
 
   val new_clique : constant list -> t -> t * clique
-  val clique_of : constant -> t -> C.Set.t
+  val clique_of : constant -> t -> Constants.Set.t
   val add_rule : clique -> rule -> t -> t
   
   val rules_for : constant -> t -> rule list
@@ -307,8 +311,8 @@ module CHR : sig
 end = struct (* {{{ *)
 
   type rule = (term, int) Elpi_ast.chr
-  type t = { cliques : C.Set.t C.Map.t; rules : rule list C.Map.t }
-  type clique = C.Set.t
+  type t = { cliques : Constants.Set.t Constants.Map.t; rules : rule list Constants.Map.t }
+  type clique = Constants.Set.t
 
   type chr += Chr of t
   let () = extend_printer pp_chr (fun fmt -> function
@@ -317,32 +321,32 @@ end = struct (* {{{ *)
   let wrap_chr x = Chr x
   let unwrap_chr = function Chr x -> x | _ -> assert false
 
-  let empty = { cliques = C.Map.empty; rules = C.Map.empty }
+  let empty = { cliques = Constants.Map.empty; rules = Constants.Map.empty }
 
   let new_clique cl ({ cliques } as chr) =
     if cl = [] then error "empty clique";
-    let c = List.fold_right C.Set.add cl C.Set.empty in
-    if C.Map.exists (fun _ c' -> not (C.Set.is_empty (C.Set.inter c c'))) cliques then
+    let c = List.fold_right Constants.Set.add cl Constants.Set.empty in
+    if Constants.Map.exists (fun _ c' -> not (Constants.Set.is_empty (Constants.Set.inter c c'))) cliques then
             error "overlapping constraint cliques";
     let cliques =
-      List.fold_right (fun x cliques -> C.Map.add x c cliques) cl cliques in
+      List.fold_right (fun x cliques -> Constants.Map.add x c cliques) cl cliques in
     { chr with cliques }, c
 
   let clique_of c { cliques } =
-    try C.Map.find c cliques with Not_found -> C.Set.empty
+    try Constants.Map.find c cliques with Not_found -> Constants.Set.empty
 
   let add_rule cl r ({ rules } as chr) =
-    let rules = C.Set.fold (fun c rules ->
+    let rules = Constants.Set.fold (fun c rules ->
       try      
-        let rs = C.Map.find c rules in
-        C.Map.add c (rs @ [r]) rules
-      with Not_found -> C.Map.add c [r] rules)
+        let rs = Constants.Map.find c rules in
+        Constants.Map.add c (rs @ [r]) rules
+      with Not_found -> Constants.Map.add c [r] rules)
       cl rules in
     { chr with rules }
 
 
   let rules_for c { rules } =
-    try C.Map.find c rules
+    try Constants.Map.find c rules
     with Not_found -> []
 
 end (* }}} *)
@@ -361,6 +365,8 @@ module CustomConstraints : sig
     val update : state -> 'a constraint_type -> ('a -> 'a) -> state
     val read : state -> 'a constraint_type -> 'a
     val empty : unit -> state
+
+    val pp :Format.formatter -> state -> unit
   end = struct
     type 'a constraint_type = int
     type state = Obj.t IM.t
@@ -387,6 +393,14 @@ module CustomConstraints : sig
     let update cc id f =
       IM.add id (Obj.repr (f (Obj.obj (find cc id)))) cc
     let read cc id = Obj.obj (find cc id)
+
+    let pp f cc =
+      let l =
+        IM.fold (fun id (_,pp,_) l -> (pp,find cc id) :: l)
+          !custom_constraints_declarations [] in
+      Elpi_util.pplist ~boxed:true (fun fmt (pp,x) ->
+        Format.fprintf fmt "%a" (Obj.obj pp) (Obj.obj x)) " " f l
+
   end
 
 (* true=input, false=output *)
@@ -467,7 +481,7 @@ type program = {
   prolog_program : prolog_prog [@printer (pp_extensible pp_prolog_prog)];
   (* constraint handling rules *)
   chr : chr [@printer (pp_extensible pp_chr)];
-  modes : mode_decl C.Map.t; 
+  modes : mode_decl Constants.Map.t; 
 
   (* extra stuff, for typing & pretty printing *)
   declared_types : (constant * int * term) list; (* name, nARGS, type *)
@@ -485,31 +499,42 @@ let unwrap_prolog_prog = function Index x -> x | _ -> assert false
 exception No_clause
 exception No_more_steps
 
-module SMap = Map.Make(String)
 type custom_constraints = CustomConstraints.state
+type constraints = stuck_goal_kind list
 type constraint_store = {
-  constraints : stuck_goal_kind list;
+  constraints : constraints;
   custom_constraints : custom_constraints;
 }
-type solution = term SMap.t * constraint_store
+type solution = (string * term) list * constraint_store
+type outcome = Success of solution | Failure | NoMoreSteps
 
-let register_custom, lookup_custom =
+type scheduler = {
+  delay : [ `Goal | `Constraint ] ->
+          goal:term -> on:term_attributed_ref list -> unit;
+  print : [ `All | `Constraints ] -> Format.formatter -> unit;
+}
+
+let register_custom, register_custom_full, lookup_custom =
  let (customs :
       (* Must either raise No_clause or succeed with the list of new goals *)
-      ('a, depth:int -> env:term array -> idx -> term list -> term list)
+      ('a, depth:int -> env:term array -> scheduler -> custom_constraints -> term list -> term list * custom_constraints)
       Hashtbl.t)
    =
      Hashtbl.create 17 in
  let check s = 
     if s = "" || s.[0] <> '$' then
       anomaly ("Custom predicate name " ^ s ^ " must begin with $");
-    let idx = C.from_stringc s in
+    let idx = Constants.from_stringc s in
     if Hashtbl.mem customs idx then
       anomaly ("Duplicate custom predicate name " ^ s);
     idx in
  (fun s f ->
     let idx = check s in
+    Hashtbl.add customs idx (fun ~depth ~env _ c args -> f ~depth ~env args,c)),
+ (fun s f ->
+    let idx = check s in
     Hashtbl.add customs idx f),
+(*  (fun  -> assert false), *)
  Hashtbl.find customs
 ;;
 

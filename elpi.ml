@@ -13,27 +13,20 @@ let _ =
 ;;
 *)
 
-let pr_constraints cs =
-  if cs <> [] then begin
-  Format.eprintf "\nConstraints:\n%a\n%!"
-    (Elpi_util.pplist Elpi_API.Runtime.pp_stuck_goal_kind " " ~boxed:true)
-    cs
-end
-
 let print_solution time = function
-| `NoMoreSteps -> Format.eprintf "Interrupted (no more steps)\n%!"
-| `Failure -> Format.eprintf "Failure\n%!"
-| `Success (s,cs) ->
+| Elpi_API.Execute.NoMoreSteps ->
+   Format.eprintf "Interrupted (no more steps)\n%!"
+| Elpi_API.Execute.Failure -> Format.eprintf "Failure\n%!"
+| Elpi_API.Execute.Success (s,cs) ->
   Format.eprintf "\nSuccess:\n%!" ;
-  Elpi_API.Data.SMap.iter (fun name t ->
+  List.iter (fun (name, t) ->
     Format.eprintf "  @[<hov 1>%s = %a@]\n%!" name
-      (Elpi_API.Pp.uppterm 0 [] 0 [||]) t) s;
+      Elpi_API.Pp.term t) s;
   Format.eprintf "\nTime: %5.3f\n%!" time;
-  pr_constraints cs.Elpi_API.Data.constraints;
-  Format.eprintf "\nRaw result: \n%!" ;
-  Elpi_API.Data.SMap.iter (fun name t ->
-    Format.eprintf "  @[<hov 1>%s = %a@]\n%!" name
-      (Elpi_API.Pp.ppterm 0 [] 0 [||]) t) s;
+  Format.eprintf "\nConstraints:\n%a\n%!"
+    Elpi_API.Pp.constraints cs.Elpi_API.Data.constraints;
+  Format.eprintf "\nCustom constraints:\n%a\n%!"
+    Elpi_API.Pp.custom_constraints cs.Elpi_API.Data.custom_constraints;
 ;;
   
 let more () =
@@ -42,23 +35,25 @@ let more () =
 ;;
 
 let run_prog typecheck prog query =
- let prog = Elpi_API.Compiler.program_of_ast prog in
- let query = Elpi_API.Compiler.query_of_ast prog query in
- if typecheck then Elpi_API.Compiler.typecheck prog query;
- Elpi_API.Runtime.execute_loop prog query ~more ~pp:print_solution
+ let prog = Elpi_API.Compile.program prog in
+ let query = Elpi_API.Compile.query prog query in
+ if typecheck then Elpi_API.Compile.static_check prog query;
+ Elpi_API.Execute.loop prog query ~more ~pp:print_solution
 ;;
 
 let test_impl typecheck prog query =
- let prog = Elpi_API.Compiler.program_of_ast prog in
- let query = Elpi_API.Compiler.query_of_ast prog query in
- if typecheck then Elpi_API.Compiler.typecheck prog query;
+ let prog = Elpi_API.Compile.program prog in
+ let query = Elpi_API.Compile.query prog query in
+ if typecheck then Elpi_API.Compile.static_check prog query;
  Gc.compact ();
  let time f p q =
    let t0 = Unix.gettimeofday () in
    let b = f p q in
    let t1 = Unix.gettimeofday () in
-   match b with `Success _ -> print_solution (t1 -. t0) b; true | _ -> false in
- if time Elpi_API.Runtime.execute_once prog query then exit 0 else exit 1
+   match b with
+   | Elpi_API.Execute.Success _ -> print_solution (t1 -. t0) b; true
+   | _ -> false in
+ if time Elpi_API.Execute.once prog query then exit 0 else exit 1
 ;;
 
 
@@ -84,7 +79,7 @@ let usage =
   "\t-print-raw prints files after desugar in ppx format, then exit\n" ^ 
   "\t-print-ast prints files as parsed, then exit\n" ^ 
   "\t-I path searches files in path\n" ^ 
-  Elpi_API.usage
+  Elpi_API.Setup.usage
 ;;
 
 let _ =
@@ -117,32 +112,31 @@ let _ =
     try ["-I"; Filename.dirname (Unix.readlink "/proc/self/exe")]
     with Unix.Unix_error _ -> [ "-I"; "." ] in
   let opts = Array.to_list Sys.argv @ tjpath @ execpath in
-  let argv = Elpi_API.init ~silent:false opts cwd in
+  let argv = Elpi_API.Setup.init ~silent:false opts cwd in
   let filenames = aux (List.tl argv) in
   set_terminal_width ();
-  if !print_latex then Elpi_latex_exporter.activate () ;
-  let p = Elpi_parser.parse_program filenames in
+  let p = Elpi_API.Parse.program filenames in
   if !print_ast then begin
-    Format.eprintf "%a" Elpi_ast.pp_program p;
+    Format.eprintf "%a" Elpi_API.Pp.Ast.program p;
     exit 0;
   end;
   if !print_lprolog != None then begin
     Format.eprintf "@[<v>";
-    let _ = Elpi_API.Compiler.program_of_ast ?print:!print_lprolog p in
+    let _ = Elpi_API.Compile.program ?print:!print_lprolog p in
     Format.eprintf "@]%!";
     exit 0;
     end;
   let g =
-   if !test then Elpi_parser.parse_goal "main."
+   if !test then Elpi_API.Parse.goal "main."
    else if !exec <> "" then
-     begin Elpi_parser.parse_goal
+     begin Elpi_API.Parse.goal
        (Printf.sprintf "%s [%s]." !exec
          String.(concat ", " (List.map (Printf.sprintf "\"%s\"") !args)))
         end
    else begin
     Printf.printf "goal> %!";
     let strm = Stream.of_channel stdin in
-    Elpi_parser.parse_goal_from_stream strm
+    Elpi_API.Parse.goal_from_stream strm
    end in
   if !batch then test_impl !typecheck p g
   else run_prog !typecheck p g
