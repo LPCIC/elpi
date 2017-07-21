@@ -155,14 +155,18 @@ module Extend = struct
       let module R = (val !r) in let open R in
       deref_appuv ~from ~to_:constant args t
 
-    let rec deref_head ~depth = function
+    let rec deref_head on_arg ~depth = function
       | Data.UVar ({ Data.contents = t }, from, ano)
         when t != Data.Constants.dummy ->
-         deref_head ~depth (deref_uv ~from ~to_:depth ~ano t)
+         deref_head on_arg ~depth (deref_uv ~from ~to_:depth ~ano t)
       | Data.AppUVar ({Data.contents = t}, from, args)
         when t != Data.Constants.dummy ->
-         deref_head ~depth (deref_appuv ~from ~to_:depth ~args t)
+         deref_head on_arg ~depth (deref_appuv ~from ~to_:depth ~args t)
+      | Data.App(c,x,xs) when not on_arg ->
+         Data.App(c,deref_head true ~depth x,List.map (deref_head true ~depth) xs)
       | x -> x
+
+    let deref_head ~depth t = deref_head false ~depth t
    
     let is_flex ~depth t =
       let module R = (val !r) in let open R in
