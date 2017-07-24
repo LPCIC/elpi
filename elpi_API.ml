@@ -112,12 +112,18 @@ module Extend = struct
 
   module CData = Elpi_util.CData
 
+  module Ast = struct
+    include Elpi_ast
+    let query_of_term x = Ploc.dummy, x
+    let term_of_query (_,x) = x
+  end
+
   module Data = Elpi_data
 
   module Compile = struct
     module ExtState = Elpi_util.ExtState
     include Elpi_compiler
-    let term_at ~depth (_,t) = term_of_ast ~depth t
+    let term_at = term_of_ast
   end
 
   module CustomPredicate = struct

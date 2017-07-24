@@ -108,6 +108,28 @@ module Extend : sig
     val map : 'a cdata -> 'b cdata -> ('a -> 'b) -> t -> t
   end
 
+  module Ast : sig
+
+    type term
+
+    val mkApp : term list -> term
+    val mkCon : string -> term
+    val mkNil : term
+    val mkSeq : term list -> term
+    val mkCustom : string -> term
+    val mkFloat : float -> term
+    val mkInt : int -> term
+    val mkString : string -> term
+    val mkQuoted : string -> term
+    val mkFreshUVar : unit -> term
+    val mkFreshName : unit -> term
+    val mkLam : string -> term -> term
+
+    val query_of_term : term -> Ast.query
+    val term_of_query : Ast.query -> term
+
+  end
+
   module Data : sig
 
     type constant = int (* De Bruijn levels *)
@@ -136,6 +158,8 @@ module Extend : sig
       kind : stuck_goal_kind;
     }
     and stuck_goal_kind
+
+    val of_term : Data.term -> term
 
     val oref : term -> term_attributed_ref
 
@@ -215,7 +239,7 @@ module Extend : sig
     (* See elpi_quoted_syntax.elpi *)
     val quote_syntax : Data.program -> Data.query -> Data.term * Data.term
 
-    val term_at : depth:int -> Ast.query -> Data.term
+    val term_at : depth:int -> Ast.term -> Data.term
 
   end
 

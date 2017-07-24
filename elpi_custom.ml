@@ -462,7 +462,7 @@ let _ =
            CData s when C.is_string s ->
             (try
               let s = Parse.goal (C.to_string s) in
-              let t = Compile.term_at ~depth s in
+              let t = Compile.term_at ~depth (Ast.term_of_query s) in
               [App (eqc, t2, [t])]
              with
                 Stream.Error msg -> prerr_endline msg; raise No_clause
@@ -554,7 +554,7 @@ let _ =
                   Some c -> Stream.icons c strm
                 | None -> strm in
               let t3 = Parse.goal_from_stream strm in
-              let t3 = Compile.term_at ~depth t3 in
+              let t3 = Compile.term_at ~depth (Ast.term_of_query t3) in
               [App (eqc, t2, [t3])]
              with 
                 Sys_error msg -> error msg

@@ -543,4 +543,6 @@ let is_custom_declared x =
   with Not_found -> false
 ;;
 
+let of_term x = x
+
 (* vim: set foldmethod=marker: *)
