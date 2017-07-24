@@ -122,7 +122,7 @@ let _ =
   end;
   if !print_lprolog != None then begin
     Format.eprintf "@[<v>";
-    let _ = Elpi_API.Compile.program ?print:!print_lprolog p in
+    let _ = Elpi_API.Compile.program ?print:!print_lprolog [p] in
     Format.eprintf "@]%!";
     exit 0;
     end;
@@ -138,6 +138,6 @@ let _ =
     let strm = Stream.of_channel stdin in
     Elpi_API.Parse.goal_from_stream strm
    end in
-  if !batch then test_impl !typecheck p g
-  else run_prog !typecheck p g
+  if !batch then test_impl !typecheck [p] g
+  else run_prog !typecheck [p] g
 ;;

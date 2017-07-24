@@ -635,7 +635,7 @@ let _ =
            let file, query = C.to_string file, C.to_string query in
            let ap = Parse.program ~no_pervasives:false [file] in
            let aq = Parse.goal query in
-           let p = Elpi_API.Compile.program ap in
+           let p = Elpi_API.Compile.program [ap] in
            let q = Elpi_API.Compile.query p aq in
            let qp, qq = Compile.quote_syntax p q in
            [ App (eqc, r1, [qp]); App (eqc, r2 , [qq]) ]

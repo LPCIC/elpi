@@ -48,7 +48,7 @@ end
 
 module Compile : sig
 
-  val program : ?print:[`Yes|`Raw] -> Ast.program -> Data.program (* XXX *)
+  val program : ?print:[`Yes|`Raw] -> Ast.program list -> Data.program (* XXX *)
   val query : Data.program -> Ast.query -> Data.query
 
   val static_check : ?extra_checker:string list -> Data.program -> Data.query -> unit
@@ -141,8 +141,8 @@ module Extend : sig
 
     type program = Data.program
     type query = Data.query
-    type constraints
-    type custom_constraints
+    type constraints = Data.constraints
+    type custom_constraints = Data.custom_constraints
     type idx
 
     module C : sig

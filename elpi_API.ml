@@ -71,7 +71,7 @@ end
 
 module Compile = struct
 
-  let program = Elpi_compiler.program_of_ast
+  let program ?print l = Elpi_compiler.program_of_ast ?print (List.flatten l)
   let query = Elpi_compiler.query_of_ast
 
   let static_check = Elpi_compiler.typecheck
