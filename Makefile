@@ -38,7 +38,6 @@ H=@
 pp = printf '$(1) %-26s %s\n' "$(3)" "$(2)"
 
 all: check-ocaml-ver $(EXE)
-	echo $(MAKE_TARGETS)
 
 byte:
 	$(H)$(MAKE) BYTE=1 all
@@ -118,15 +117,11 @@ elpi.$(CMXA): $(ELPI_COMPONENTS)
 	$(H)$(call pp,$(OCNAME),-a,$@)
 	$(H)$(OC) $(OC_OPTIONS) -o $@ -a $(ELPI_COMPONENTS)
 
-$(EXE): findlib/elpi/META elpi.ml
-	$(H)rm -rf sandbox; mkdir sandbox; cp elpi.ml sandbox/
-	$(H)$(call pp,$(OCNAME),-package elpi -c,$@)
-	$(H)cd sandbox; $(OC) $(OCAMLOPTIONS) \
-		-package camlp5,ppx_deriving.std,elpi \
-	       	-c elpi.ml
-	$(H)$(call pp,$(OCNAME),-package elpi -o,$@)
+$(EXE): elpi_REPL.ml findlib/elpi/META
+	$(H)rm -rf sandbox; mkdir sandbox; cp $< sandbox/
+	$(H)$(call pp,$(OCNAME),-package elpi -o $@,$<)
 	$(H)cd sandbox; $(OC) $(OC_OPTIONS) -package elpi \
-		-o ../$@ elpi.$(CMX)
+		-o ../$@ $<
 	$(H)rm -rf sandbox
 
 elpi_runtime_trace_on.$(CMX) : elpi_runtime.ml elpi_runtime.cmi trace_ppx
@@ -193,10 +188,10 @@ elpi_compiler.$(CMX): elpi_runtime_trace_on.$(CMX) elpi_runtime_trace_off.$(CMX)
 # 	$(H)(echo "directory=\"$(LIBSPATH)\"";\
 # 	 echo "version=\"$(V)\"") >> $@
 # 
-findlib/elpi/META: elpi.$(CMXA) Makefile
+findlib/elpi/META: elpi.$(CMXA) elpi.cmi Makefile
 	$(H)rm -rf findlib/; mkdir findlib
 	$(H)ocamlfind install -destdir $(shell pwd)/findlib -patch-archives \
-		elpi META elpi_API.cmi -optional elpi.cma elpi.cmxa elpi.a elpi_API.cmti
+		elpi META elpi_API.cmi elpi.cmi -optional elpi.cma elpi.cmxa elpi.a elpi_API.cmti
 
 install:
 	$(H)ocamlfind install -patch-archives \
