@@ -2582,7 +2582,7 @@ let propagate { CS.cstr; cstr_position } history =
          (* same program *)
          chr; prolog_program; modes;
          (* typing info set to dummy *)
-         declared_types = []; clauses_w_info = []
+         declared_types = []; clauses_w_info = []; macros = F.Map.empty
        } in
        let { search; get; exec } = !do_make_runtime program in
        let check = function

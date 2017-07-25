@@ -384,8 +384,9 @@ let env_of_args state =
   Array.make max Constants.dummy
 ;;
 
-let query_of_ast { query_depth = lcs } (loc,t) =
+let query_of_ast { query_depth = lcs; macros } (loc,t) =
   let state = ExtState.init () in
+  let state = set_macros state macros in
   let state, clause = clause_of_ast lcs state t in
   loc, names_of_args state, 0, env_of_args state, clause
 ;;
@@ -439,7 +440,7 @@ let chr_of_ast depth state r =
 type temp = {
   block : (Elpi_ast.term F.Map.t * Elpi_ast.clause) list;
   cmap : term F.Map.t;
-  macro : Elpi_ast.term F.Map.t;
+  macro : macro_declaration;
 }
 type comp_state = {
   program : clause_w_info list;
@@ -513,13 +514,13 @@ let program_of_ast ?print (p : Elpi_ast.decl list) : program =
      ) ([],lcs) l in
    program @ clauses, lcs in
 
- let clauses, lcs, chr, types =
+ let clauses, lcs, chr, types, macros =
    let rec aux ({ program; lcs; chr; clique; types;
                   tmp = ({ block; cmap; macro } as tmp); ctx } as cs) = function
    | [] ->
        if ctx <> [] then error "Begin without an End";
        let program, lcs = clausify_block program !modes block lcs cmap types in
-       program, lcs, chr, cs.types
+       program, lcs, chr, cs.types, macro
 
    | d :: todo ->
       match d with
@@ -603,7 +604,8 @@ let program_of_ast ?print (p : Elpi_ast.decl list) : program =
    chr = CHR.wrap_chr chr;
    modes = !modes;
    declared_types = types;
-   clauses_w_info = clauses
+   clauses_w_info = clauses;
+   macros;
    }
 ;;
 

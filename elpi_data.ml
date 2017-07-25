@@ -480,6 +480,7 @@ type clause_w_info = {
 
 let drop_clause_info { clbody } = clbody
 
+type macro_declaration = Elpi_ast.term F.Map.t
 type program = {
   (* n of sigma/local-introduced variables *)
   query_depth : int;
@@ -491,7 +492,8 @@ type program = {
 
   (* extra stuff, for typing & pretty printing *)
   declared_types : (constant * int * term) list; (* name, nARGS, type *)
-  clauses_w_info : clause_w_info list
+  clauses_w_info : clause_w_info list;
+  macros : macro_declaration; (* macros available to compile the query *)
 }
 type query = Ploc.t * string list * int * env * term
 
