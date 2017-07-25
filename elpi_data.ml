@@ -364,6 +364,8 @@ module CustomConstraints : sig
     type state
     val update : state -> 'a constraint_type -> ('a -> 'a) -> state
     val read : state -> 'a constraint_type -> 'a
+    val update_return :
+      state -> 'a constraint_type -> ('a -> 'a * 'b) -> state * 'b 
     val empty : unit -> state
 
     val pp :Format.formatter -> state -> unit
@@ -393,6 +395,10 @@ module CustomConstraints : sig
     let update cc id f =
       IM.add id (Obj.repr (f (Obj.obj (find cc id)))) cc
     let read cc id = Obj.obj (find cc id)
+    let update_return cc id f =
+      let data = read cc id in
+      let data, x = f data in
+      update cc id (fun _ -> data), x
 
     let pp f cc =
       let l =

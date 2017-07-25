@@ -286,6 +286,9 @@ module Extend : sig
     val update :
       Data.custom_constraints -> 'a constraint_type -> ('a -> 'a) ->
         Data.custom_constraints
+    val update_return :
+      Data.custom_constraints -> 'a constraint_type ->
+        ('a -> 'a * 'b) -> Data.custom_constraints * 'b
 
   end
 

@@ -142,6 +142,7 @@ module Extend = struct
     let declare = Elpi_data.CustomConstraints.declare_constraint
     let read = Elpi_data.CustomConstraints.read
     let update = Elpi_data.CustomConstraints.update
+    let update_return = Elpi_data.CustomConstraints.update_return
   end
 
   module Utils = struct
