@@ -179,6 +179,24 @@ let is_Arg state x =
       - bound names -> DB levels
    3. from TERM to TERM: (Const "%Arg4") -> (Arg 4)
 *)
+
+let mk_Arg state n =
+  let { max_arg; name2arg } = get_argmap state in
+  let cname = Printf.(sprintf "%%Arg%d" max_arg) in
+  let n' = Constants.(from_string cname) in
+  let nc = Constants.(from_stringc cname) in
+  update_argmap state (fun { name2arg; argc2name } ->
+    { max_arg = max_arg+1 ;
+      name2arg = SM.add n (n',max_arg) name2arg;
+      argc2name = Constants.Map.add nc (n,max_arg) argc2name }),
+    n'
+
+let fresh_Arg =
+  let qargno = ref 0 in
+  fun state ~name_hint:name ->
+    incr qargno;
+    mk_Arg state (Printf.sprintf "_Quotation_%s_%d_" name !qargno)
+
 let stack_term_of_ast ?(inner_call=false) ~depth:arg_lvl state ast =
   let macro = get_macros state in
   let types = get_types state in
@@ -226,17 +244,9 @@ let stack_term_of_ast ?(inner_call=false) ~depth:arg_lvl state ast =
      c = '@' in
 
   let stack_arg_of_ast state n =
-    let { name2arg; max_arg } = get_argmap state in
+    let { name2arg } = get_argmap state in
     try state, fst (SM.find n name2arg)
-    with Not_found ->
-     let cname = Printf.(sprintf "%%Arg%d" max_arg) in
-     let n' = Constants.(from_string cname) in
-     let nc = Constants.(from_stringc cname) in
-     update_argmap state (fun { name2arg; argc2name } ->
-       { max_arg = max_arg+1 ;
-         name2arg = SM.add n (n',max_arg) name2arg;
-         argc2name = Constants.Map.add nc (n,max_arg) argc2name }),
-       n' in
+    with Not_found -> mk_Arg state n in
 
   let rec stack_macro_of_ast inner lvl state f =
     try aux inner lvl state (F.Map.find f macro)

@@ -235,6 +235,7 @@ module Extend : sig
     val lp : quotation
 
     val is_Arg : ExtState.t -> Data.term -> bool
+    val fresh_Arg : ExtState.t -> name_hint:string -> ExtState.t * Data.term
 
     (* See elpi_quoted_syntax.elpi *)
     val quote_syntax : Data.program -> Data.query -> Data.term * Data.term

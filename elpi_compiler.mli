@@ -16,6 +16,7 @@ val register_named_quotation : string -> quotation -> unit
 val lp : quotation
 
 val is_Arg : ExtState.t -> term -> bool
+val fresh_Arg : ExtState.t -> name_hint:string -> ExtState.t * term
 
 (* Quotes the program and the query, see elpi_quoted_syntax.elpi *)
 val quote_syntax : program -> query -> term * term
