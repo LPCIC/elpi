@@ -2924,7 +2924,7 @@ open Mainloop
 let map f d = function
   | ( Const _ | CData _ | Nil ) as x -> x
   | ( Arg _ | AppArg _ ) -> assert false
-  | Lam t -> f (d+1) t
+  | Lam t -> Lam (f (d+1) t)
   | App (c,x,xs) -> App(c,f d x, List.map (f d) xs)
   | Custom (c,xs) -> Custom(c,List.map (f d) xs)
   | Cons(x,y) -> Cons(f d x, f d y)
