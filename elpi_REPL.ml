@@ -119,9 +119,7 @@ let _ =
     let v = try Sys.getenv "TJPATH" with Not_found -> "" in
     let tjpath = Str.split (Str.regexp ":") v in
     List.flatten (List.map (fun x -> ["-I";x]) tjpath) in
-  let execpath =
-    try ["-I"; Filename.dirname (Unix.readlink "/proc/self/exe")]
-    with Unix.Unix_error _ -> [ "-I"; "." ] in
+  let execpath = ["-I"; Filename.dirname (Sys.executable_name)] in
   let opts = Array.to_list Sys.argv @ tjpath @ execpath in
   let argv = Elpi_API.Setup.init ~silent:false opts cwd in
   let filenames = aux (List.tl argv) in
