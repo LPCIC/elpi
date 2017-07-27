@@ -1,4 +1,4 @@
-#!/usr/bin/lua5.1
+#!/usr/bin/env lua5.1
 
 file = assert(io.open(arg[1]),"Argument missing: .csv file name")
 data = {}

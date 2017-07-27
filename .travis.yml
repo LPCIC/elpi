@@ -5,21 +5,34 @@ cache:
   apt: true
   directories:
   - $HOME/.opam
-addons:
-  apt:
-    sources:
-    - avsm
-    packages:
-    - opam
-    - lua5.1
-    - gnuplot
-    - gcc-multilib
+matrix:
+  include:
+
+  - os: linux
+    addons:
+      apt:
+        sources:
+        - avsm
+        packages:
+        - opam
+        - lua5.1
+        - gnuplot
+        - gcc-multilib
+
+  - os: osx
+    before_install:
+    - brew update
+    - brew install opam
+    - brew install gnu-time
+    - brew install lua51
+
 install:
  - opam init -j 2 --compiler=4.02.3 -n -y
  - eval $(opam config env)
  - opam config var root
  - opam install -j 2 -y camlp5 ocamlfind ppx_tools_versioned ppx_deriving ocaml-migrate-parsetree
  - opam list
+
 script:
  - make
  - make -C bench

@@ -15,8 +15,8 @@ RUNNERS=$(sort $(filter-out %ulimit,$(notdir $(wildcard runners/*) $(wildcard ..
 export MAX_TIME=59
 
 define time-log
-(if grep -q 'Time' $(1); then grep 'Time' $(1) | cut -d ' ' -f 2- | paste -sd+ | bc; else echo ?; fi;\
- cat $(2)|cut -d ' ' -f 2-) | tr '\n' ' ' | sed 's/ /,/g'
+(if grep -q 'Time' $(1); then grep 'Time' $(1) | cut -d ' ' -f 2- | paste -s -d+ - | bc; else echo ?; fi;\
+ grep -v 'Command exited with' $(2)|cut -d ' ' -f 2-) | tr '\n' ' ' | sed 's/ /,/g'
 endef
 
 OK="\e[32mOK\e[0m"
@@ -36,11 +36,11 @@ endef
 define run
 TMP=`mktemp`; LOG=`mktemp`;\
 (export VARIANT=$(subst elpi,,$(2));\
- export CRUFT="`head -c $$RANDOM /dev/urandom|base64 -w0`";\
+ export CRUFT="`head -c $$RANDOM /dev/urandom|base64|paste -s -d. -`";\
  runners/$(call name,$(2)) $(3) $$TMP >$$LOG 2>&1;\
  $(call check,$(1),$(3),$$TMP,$$LOG,$(2)));\
 if [ "$(H)" = "" ]; then cat $$TMP $$LOG; fi; \
-rm $$TMP $$LxOG;
+rm $$TMP $$LOG;
 endef
 
 define runk
@@ -57,7 +57,7 @@ only: prepare
 	   $(foreach j,\
 	      $(sort $(wildcard jobs/$(call name,$(r))/$(k)/*$(JOB)*)),\
 	    $(call runk,$(N),$(k),$(r),$(j)))))) | tee $(TEE) data.csv
-	$(H)$(MAKE) --no-print-directory plot
+	$(H)$(MAKE) --no-print-directory plot || true
 
 ONLY=OK
 plot:
