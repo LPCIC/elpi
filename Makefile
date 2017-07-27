@@ -100,8 +100,9 @@ ELPI_COMPONENTS = \
   elpi_trace.$(CMX) \
   elpi_util.$(CMX) elpi_ast.$(CMX) $(ELPI_P5_COMPONENTS) elpi_ptmap.$(CMX) \
   elpi_data.$(CMX) \
-  $(ELPI_PACKED_COMPONENTS) elpi_compiler.$(CMX) elpi_API.$(CMX) \
-  elpi_latex_exporter.$(CMX) elpi_prolog_exporter.$(CMX) elpi_custom.$(CMX)
+  $(ELPI_PACKED_COMPONENTS) elpi_compiler.$(CMX) \
+  elpi_latex_exporter.$(CMX) elpi_prolog_exporter.$(CMX) \
+  elpi_API.$(CMX) elpi_custom.$(CMX)
 
 ELPI_LIBS = \
   elpi_quoted_syntax.elpi  elpi_typechecker.elpi  \

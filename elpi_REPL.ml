@@ -60,7 +60,7 @@ let test_impl typecheck prog query =
 (* rewrites a lambda-prolog program to first-order prolog *)
 let pp_lambda_to_prolog prog =
  Printf.printf "\nRewriting λ-prolog to first-order prolog...\n\n%!";
- Elpi_prolog_exporter.pp_prolog prog
+ Elpi_API.Temporary.pp_prolog prog
 ;;
 
 let set_terminal_width ?(max_w=
@@ -126,6 +126,7 @@ let _ =
   let argv = Elpi_API.Setup.init ~silent:false opts cwd in
   let filenames = aux (List.tl argv) in
   set_terminal_width ();
+  if !print_latex then Elpi_API.Temporary.activate_latex_exporter () ;
   let p = Elpi_API.Parse.program filenames in
   if !print_ast then begin
     Format.eprintf "%a" Elpi_API.Pp.Ast.program p;

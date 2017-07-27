@@ -7,10 +7,9 @@ module Fmt = Format
 
 open Elpi_ast
 open Elpi_util
-open Elpi_API.Data
-open Elpi_API.Data.Constants
-open Elpi_API.Runtime
-open Elpi_API.Compiler
+open Elpi_data
+open Constants
+open Elpi_compiler
 
 (* pp for first-order prolog *) 
 let xppterm_prolog ~nice names f t =
@@ -63,12 +62,17 @@ let amap, a = stack_term_of_ast 0 amap cmap a in
   if f = truec then
    Fmt.eprintf "@[<hov 1>%a%a.@]\n%!"
      (pp_FOprolog names env) a
-     (pplist (pp_FOprolog names env) ",") (split_conj f)
+     (pplist (pp_FOprolog names env) ",") (Elpi_runtime_trace_off.split_conj f)
   else
    Fmt.eprintf "@[<hov 1>%a@ :-@ %a.@]\n%!"
      (pp_FOprolog names env) a
      (pplist (pp_FOprolog names env) ",") (split_conj f)) p*)
 ;;*)
+let rec split_conj = function
+  | App(c, hd, args) when c == andc || c == andc2 ->
+      split_conj hd @ List.(flatten (map split_conj args))
+  | f when f == truec -> []
+  | _ as f -> [ f ]
 
 let rec pp_FOprolog p = 
  List.iter

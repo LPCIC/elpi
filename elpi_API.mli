@@ -338,16 +338,9 @@ module Extend : sig
   end
 
 end (* Extend *)
-(*
 
-(* Functions useful to implement custom predicates and evaluable functions *)
-val print_delayed : unit -> unit
-val print_constraints : unit -> unit
-
-
-
-val split_conj : term -> term list
-
-(* val llam_unify : int -> term array -> int -> term -> term -> bool *)
+(* Stuff that should be ported to the API, but is not yet *)
+module Temporary : sig
+  val pp_prolog : Ast.program -> unit
+  val activate_latex_exporter : unit -> unit
 end
-*)

@@ -254,3 +254,10 @@ module Extend = struct
 *)
 
 end
+
+module Temporary = struct
+
+  let activate_latex_exporter = Elpi_latex_exporter.activate
+  let pp_prolog = Elpi_prolog_exporter.pp_prolog
+
+end
