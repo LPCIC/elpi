@@ -58,6 +58,11 @@ let test_impl typecheck prog query =
 
 
 (* rewrites a lambda-prolog program to first-order prolog *)
+let pp_lambda_to_prolog prog =
+ Printf.printf "\nRewriting λ-prolog to first-order prolog...\n\n%!";
+ Elpi_prolog_exporter.pp_prolog prog
+;;
+
 let set_terminal_width ?(max_w=
     let ic, _ as p = Unix.open_process "tput cols" in
     let w = int_of_string (input_line ic) in
@@ -75,6 +80,8 @@ let usage =
   "\nMain options:\n" ^ 
   "\t-test runs the query \"main\"\n" ^ 
   "\t-exec pred  runs the query \"pred args\"\n" ^ 
+  "\t-print-prolog prints files to Prolog syntax if possible, then exit\n" ^ 
+  "\t-print-latex prints files to LaTeX syntax, then exit\n" ^ 
   "\t-print prints files after desugar, then exit\n" ^ 
   "\t-print-raw prints files after desugar in ppx format, then exit\n" ^ 
   "\t-print-ast prints files as parsed, then exit\n" ^ 
@@ -86,6 +93,8 @@ let _ =
   let test = ref false in
   let exec = ref "" in
   let args = ref [] in
+  let print_prolog = ref false in
+  let print_latex = ref false in
   let print_lprolog = ref None in
   let print_ast = ref false in
   let typecheck = ref true in
@@ -94,6 +103,8 @@ let _ =
     | [] -> []
     | "-test" :: rest -> batch := true; test := true; aux rest
     | "-exec" :: goal :: rest ->  batch := true; exec := goal; aux rest
+    | "-print-prolog" :: rest -> print_prolog := true; aux rest
+    | "-print-latex" :: rest -> print_latex := true; aux rest
     | "-print" :: rest -> print_lprolog := Some `Yes; aux rest
     | "-print-raw" :: rest -> print_lprolog := Some `Raw; aux rest
     | "-print-ast" :: rest -> print_ast := true; aux rest
@@ -120,6 +131,8 @@ let _ =
     Format.eprintf "%a" Elpi_API.Pp.Ast.program p;
     exit 0;
   end;
+  if !print_latex then exit 0;
+  if !print_prolog then (pp_lambda_to_prolog p; exit 0);
   if !print_lprolog != None then begin
     Format.eprintf "@[<v>";
     let _ = Elpi_API.Compile.program ?print:!print_lprolog [p] in
