@@ -1,0 +1,28 @@
+opam-version: "1.2"
+name: "elpi"
+version: "dev"
+maintainer: "Enrico Tassi <enrico.tassi@inria.fr>"
+authors: [ "Claudio Sacerdoti Coen" "Enrico Tassi" ]
+license: "LGPL 2.1"
+homepage: "http://github.com/LPCIC/elpi"
+doc: "http://github.com/LPCIC/elpi"
+dev-repo: "http://github.com/LPCIC/elpi"
+
+build: [ make ]
+build-test: [ make "-C" "bench" ]
+install: [ 
+	[ make "install" ]
+	[ make "install-bin" "BIN=%{bin}%" ]
+]
+remove: [ 
+	[ make "uninstall" ]
+	[ make "uninstall-bin" "BIN=%{bin}%" ]
+]
+
+depends: [
+  "camlp5"
+  "ppx_tools_versioned"
+  "ppx_deriving"
+  "ocaml-migrate-parsetree.driver-main"
+  ]
+

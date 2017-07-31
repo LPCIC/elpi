@@ -198,9 +198,14 @@ install:
 	$(H)ocamlfind install -patch-archives \
 		elpi META elpi_API.cmi $(ELPI_LIBS) \
 		-optional elpi.cma elpi.cmxa elpi.a elpi_API.cmti elpi elpi.byte
+install-bin:
+	$(H)cp elpi $(BIN)
 
 uninstall:
 	$(H)ocamlfind remove elpi
+uninstall-bin:
+	$(H)rm -f elpi $(BIN)/elpi
+
 
 # required OCaml package
 check-ocaml-ver:
