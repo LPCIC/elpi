@@ -8,7 +8,7 @@ homepage: "http://github.com/LPCIC/elpi"
 doc: "http://github.com/LPCIC/elpi"
 dev-repo: "http://github.com/LPCIC/elpi"
 
-build: [ make ]
+build: [ [ make ] [ make "byte" ] ]
 build-test: [ make "-C" "bench" ]
 install: [ 
 	[ make "install" ]
