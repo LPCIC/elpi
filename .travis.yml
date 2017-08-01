@@ -1,14 +1,19 @@
 dist: trusty
 sudo: required
 language: c
-cache:
-  apt: true
-  directories:
-  - $HOME/.opam
+
+install:
+ - opam init -j 2 --compiler=4.02.3 -n -y
+ - eval $(opam config env)
+ - opam config var root
+ - opam install -j 2 -y camlp5 ocamlfind ppx_tools_versioned ppx_deriving ocaml-migrate-parsetree
+ - opam list
+
 matrix:
   include:
 
-  - os: linux
+  - env: TEST="linux build"
+    os: linux
     addons:
       apt:
         sources:
@@ -18,21 +23,45 @@ matrix:
         - lua5.1
         - gnuplot
         - gcc-multilib
+    cache:
+      apt: true
+      directories:
+      - $HOME/.opam
+    script:
+    - make
+    - make -C bench
 
-  - os: osx
+  - env: TEST="osx build"
+    os: osx
     before_install:
     - brew update
     - brew install opam
     - brew install gnu-time
     - brew install lua51
+    cache:
+      directories:
+      - $HOME/.opam
+    script:
+    - make
+    - make -C bench
 
-install:
- - opam init -j 2 --compiler=4.02.3 -n -y
- - eval $(opam config env)
- - opam config var root
- - opam install -j 2 -y camlp5 ocamlfind ppx_tools_versioned ppx_deriving ocaml-migrate-parsetree
- - opam list
-
-script:
- - make
- - make -C bench
+  - env: TEST="opam package installation"
+    os: linux
+    addons:
+      apt:
+        sources:
+        - avsm
+        packages:
+        - opam
+        - lua5.1
+        - gnuplot
+        - gcc-multilib
+    script:
+    - opam pin -y add elpi "https://github.com/${TRAVIS_REPO_SLUG}.git#${TRAVIS_COMMIT}"
+    - ocamlfind query elpi
+    - ls `ocamlfind printconf destdir`/elpi
+    - which elpi
+    - opam remove elpi
+    - opam pin -y remove elpi
+    - if ocamlfind query elpi; then false; else true; fi
+    - if which elpi; then false; else true; fi
