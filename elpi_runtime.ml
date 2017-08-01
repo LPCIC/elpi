@@ -743,22 +743,14 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
          if vardepth + argsno <= to_ then x
          else
            let newt = 
-             if depth == 0 then (* We stay in the fragment *)
                let newvardepth = min to_ vardepth in
-               let argsleft = to_ - newvardepth in
-               let newvar = UVar(oref C.dummy,newvardepth,argsleft) in
-               mknLam argsno newvar
-             else
-               let newvardepth = min to_ vardepth in
-               let argsleft =
-                 C.mkinterval vardepth (to_ - vardepth) 0 @
-                 C.mkinterval (vardepth + argsno - depth) depth 0 in
-               let newvar = AppUVar(oref C.dummy,newvardepth,argsleft) in
+               let argsleft = C.mkinterval vardepth (to_ - newvardepth) 0 in
+               let newvar = mkAppUVar (oref C.dummy) newvardepth argsleft in
                mknLam argsno newvar
            in
            [%spy "assign (restriction)" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
-              (uppterm (argsdepth+depth) [] argsdepth e) x
-              (uppterm (argsdepth+depth) [] argsdepth e) newt) ()];
+              (uppterm (from+depth) [] argsdepth e) x
+              (uppterm (from+depth) [] argsdepth e) newt) ()];
             r @:= newt;
             maux e depth (deref_uv ~from:vardepth ~to_:(from+depth) argsno newt)
 
