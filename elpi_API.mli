@@ -8,6 +8,10 @@
 
 module Setup : sig
   (* Initializes the parser and the tracing facility *)
+
+  (* init takes a list of paths (as passing -I to elpi),
+   *  and the current working directory (used to make paths absolute)
+   *  silent=true (default) to avoid printing files being loaded *)
   val init : ?silent:bool -> string list -> string -> string list
   val usage : string
 
