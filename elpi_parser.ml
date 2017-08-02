@@ -55,15 +55,17 @@ end;;
 let parse_silent = ref true
 let parsed = ref []
 
+exception File_not_found of string
+
 let rec parse_one e (origfilename as filename) =
  let origprefixname = Filename.chop_extension origfilename in
- let prefixname,filename =
+ let prefixname, filename =
   let rec iter_tjpath dirnames =
    let filename,dirnames,relative =
     if not (Filename.is_relative filename) then filename,[],false
     else
      match dirnames with
-        [] -> raise (Failure ("file not found in $TJPATH: " ^ filename))
+        [] -> raise (File_not_found filename)
       | dirname::dirnames->Filename.concat dirname filename,dirnames,true in
    let prefixname = Filename.chop_extension filename in
    let prefixname,filename =
@@ -80,10 +82,13 @@ let rec parse_one e (origfilename as filename) =
      let changed_filename = change_suffix filename in
      if Sys.file_exists changed_filename then prefixname,changed_filename
      else if relative then iter_tjpath dirnames
-     else raise (Failure ("file not found in $TJPATH: " ^ origfilename)) in
+     else raise (File_not_found origfilename) in
    prefixname,filename
   in
-   iter_tjpath (!cur_dirname :: !cur_tjpath)
+   let dirs = !cur_dirname :: !cur_tjpath in 
+   try iter_tjpath dirs
+   with File_not_found f ->
+     raise (Failure ("File "^f^" not found in: " ^ String.concat ", " dirs))
  in
  let inode = Digest.file filename in
  if List.mem_assoc inode !parsed then begin
