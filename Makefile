@@ -106,7 +106,8 @@ ELPI_COMPONENTS = \
 
 ELPI_LIBS = \
   elpi_quoted_syntax.elpi  elpi_typechecker.elpi  \
-  pervasives.elpi pervasives-syntax.elpi
+  pervasives.elpi pervasives-syntax.elpi \
+  utils/elpi2mathjx.elpi
 
 # Standard compilation
 ELPI_EASY_COMPONENTS = \
