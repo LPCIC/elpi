@@ -186,7 +186,7 @@ elpi_compiler.$(CMX): elpi_runtime_trace_on.$(CMX) elpi_runtime_trace_off.$(CMX)
 findlib/elpi/META: elpi.$(CMXA) elpi.cmi Makefile
 	$(H)rm -rf findlib/; mkdir findlib
 	$(H)ocamlfind install -destdir $(shell pwd)/findlib -patch-archives \
-		elpi META elpi_API.cmi elpi.cmi \
+		elpi META elpi_API.cmi elpi.cmi $(ELPI_LIBS) \
 		-optional elpi.cma elpi.cmxa elpi.a elpi_API.cmti
 
 install:
