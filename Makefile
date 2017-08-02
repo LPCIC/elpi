@@ -182,21 +182,16 @@ elpi_runtime_trace_on.$(CMX) : elpi_util.$(CMX) elpi_data.$(CMX) elpi_ptmap.$(CM
 elpi_runtime_trace_off.$(CMX) : elpi_util.$(CMX) elpi_data.$(CMX) elpi_ptmap.$(CMX) elpi_parser.$(CMX) elpi_ast.$(CMX) elpi_trace.$(CMX) elpi_runtime.cmi
 elpi_API.$(CMX): elpi_runtime_trace_on.$(CMX) elpi_runtime_trace_off.$(CMX)
 elpi_compiler.$(CMX): elpi_runtime_trace_on.$(CMX) elpi_runtime_trace_off.$(CMX)
-# 
-# META.%: LIBSPATH = $(shell pwd)
-# META.%: meta.%.src
-# 	$(H)cp $< $@
-# 	$(H)(echo "directory=\"$(LIBSPATH)\"";\
-# 	 echo "version=\"$(V)\"") >> $@
-# 
+
 findlib/elpi/META: elpi.$(CMXA) elpi.cmi Makefile
 	$(H)rm -rf findlib/; mkdir findlib
 	$(H)ocamlfind install -destdir $(shell pwd)/findlib -patch-archives \
-		elpi META elpi_API.cmi elpi.cmi -optional elpi.cma elpi.cmxa elpi.a elpi_API.cmti
+		elpi META elpi_API.cmi elpi.cmi \
+		-optional elpi.cma elpi.cmxa elpi.a elpi_API.cmti
 
 install:
 	$(H)ocamlfind install -patch-archives \
-		elpi META elpi_API.cmi $(ELPI_LIBS) \
+		elpi META elpi_API.cmi elpi.cmi $(ELPI_LIBS) \
 		-optional elpi.cma elpi.cmxa elpi.a elpi_API.cmti elpi elpi.byte
 install-bin:
 	$(H)cp elpi $(BIN)
