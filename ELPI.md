@@ -1,5 +1,7 @@
 # Extensions to λProlog implemented in ELPI
 
+- [Underscore](#underscore)
+
 - [Macros](#macros) are expanded at compilation time
 
 - [Spilling](#spilling)
@@ -30,8 +32,17 @@
 - [Advanced modes](#advanced-modes) can be used to declare the same code
   with different modes under different names.
   
-- [to be removed]
+- [To be removed](#to-be-removed) stuff that is going away
   
+## Underscore
+
+Underscore `_` is a valid variable name, but each occurrence denotes a different
+variable.
+```
+eq X X. % sensible definition of eq
+eq _ _. % always true, like writing eq X Y.
+```
+
 ## Macros
 
 A macro is declared with the following syntax
