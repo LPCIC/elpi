@@ -1,10 +1,39 @@
 # Extensions to λProlog implemented in ELPI
 
+- [Macros](#macros)
+
+- [Clause grafting](#clause-grafting) can inject a clause
+  in the middle of an existing program
+
 - [Constraints](#constraints)
 
-- [Quotations](#quoations) let you write terms in a custom syntax and
+- [Quotations](#quotations) let you write terms in a custom syntax and
    have ELPI translate them into λProlog terms.  This is only available
    via the OCaml API.
+
+## Macros
+
+## Clause grafting
+
+Take this code, in a file called `lp-lib.elpi` providing general purpose
+code, like a fatal error clase *named* "default-fatal-error" using the `:name`
+attribute.
+```
+:name "default-fatal-error" 
+fatal-error Msg :- $print Msg, halt.
+```
+One can, from any file accumulated after `lp-lib.elpi`, take over
+such clause using the `:before` attribute.
+```
+:name "my-fatal-error" :before "default-fatal-error"
+fatal-error Msg :- !, M is "elpi: " ^ Msg, coq-err M.
+```
+
+The `:after` attribute is also available.
+
+## Constraints
+
+
 
 ## Quotations
 
@@ -40,6 +69,9 @@ prod "x" t x\ prod _ (indt "...nat") y\
 ```
 Note the x is bound in elpi and used inside the quotation.
 
+
+--------------------------------------------------------------------------
+TODO:
 
 ## Lambda Prolog
 
