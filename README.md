@@ -11,11 +11,11 @@ as Coq or Matita.
 
 ELPI is free software released under LGPL vesion 2.1 or above.
 
-## Status
+### Status
 
 The software is in alpha.  It works but is has rough edges and surely bugs.
 
-## How to install ELPI
+### How to install ELPI
 
 ELPI is developed under Linux and is known to also work on MacOSX.
 The simplest way is to use [OPAM](http://opam.ocaml.org/) and type
@@ -28,7 +28,7 @@ This gives you the command line tool `elpi` as well as the findlib
 You can also clone this repository and type `make`.  The build requirements
 are listed at the end of the [Makefile](https://github.com/LPCIC/elpi/blob/master/Makefile)
 
-## How to embed ELPI in your software
+### How to embed ELPI in your software
 
 The easiest way of embedding ELPI is by linking it using findlib 
 as in `ocamlfind opt -package elpi mycode.ml -o myprogram`.
@@ -87,7 +87,7 @@ The programming language has the following features
 
 Most of these feature come with λProlog.  Constraints and propagation rules are novel in ELPI.
 
-### Documentation
+## Documentation
 
 The language is compatible with [λProlog](http://www.lix.polytechnique.fr/~dale/lProlog/) 
 and ELPI is known to be able to run most of the λProlog programs out there.
