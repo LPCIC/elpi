@@ -1,4 +1,45 @@
-# A reminder of what is coded in ELPI
+# Extensions to λProlog implemented in ELPI
+
+- [Constraints](#constraints)
+
+- [Quotations](#quoations) let you write terms in a custom syntax and
+   have ELPI translate them into λProlog terms.  This is only available
+   via the OCaml API.
+
+## Quotations
+
+Syntactic sugar to describe object terms is available via quotations
+and anti-quotations.  Quotations are delimited by balanced curly
+braces, at least two, as in `{{` and `}}` or `{{..{{` and `}}..}}`.
+The system support one unnamed quotations and many named ones with
+syntax `{{:name` .. `}}` where `name` is any non-space or `\n` character.
+
+Quotations are elaborated before run-time.
+
+The coq-elpi software embeds elpi in Coq and provides
+a quatation for its terms. For example
+```
+{{ nat -> bool }}
+```
+unfolds to
+```
+prod _ (indt "...nat") x\ indt "...bool"
+```
+Where `"...nat"` is the real name of the nat data type,
+and where `prod` or `indt` are term constructors.
+    
+Anti quotations are also possible, the syntax depends on
+the parser of the language in the quotation, `lp:` here.
+```
+prod "x" t x\ {{ nat -> lp:x * bool }}
+```
+unfolds to
+```
+prod "x" t x\ prod _ (indt "...nat") y\
+  app [indt "...prod", x, indt "...bool"]
+```
+Note the x is bound in elpi and used inside the quotation.
+
 
 ## Lambda Prolog
 
@@ -115,39 +156,7 @@ main :-
      bar {foo X} Z.
 %--> (sigma Y\ foo X Y, bar Y Z),
 ```
-## Quotations
 
-Syntactic sugar to describe object terms is available via quotations
-and anti-quotations.  Quotations are delimited by balanced curly
-braces, at least two, as in `{{` and `}}` or `{{..{{` and `}}..}}`.
-The system support one unnamed quotations and many named ones with
-syntax `{{:name` .. `}}` where `name` is any non-space or `\n` character.
-
-Quotations are elaborated before run-time.
-
-The coq-elpi software embeds elpi in Coq and provides
-a quatation for its terms. For example
-```
-{{ nat -> bool }}
-```
-unfolds to
-```
-prod _ (indt "...nat") x\ indt "...bool"
-```
-Where `"...nat"` is the real name of the nat data type,
-and where `prod` or `indt` are term constructors.
-    
-Anti quotations are also possible, the syntax depends on
-the parser of the language in the quotation, `lp:` here.
-```
-prod "x" t x\ {{ nat -> lp:x * bool }}
-```
-unfolds to
-```
-prod "x" t x\ prod _ (indt "...nat") y\
-  app [indt "...prod", x, indt "...bool"]
-```
-Note the x is bound in elpi and used inside the quotation.
 
 ## delay and constraint
 
