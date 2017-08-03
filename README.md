@@ -11,6 +11,33 @@ as Coq or Matita.
 
 ELPI is free software released under LGPL vesion 2.1 or above.
 
+## Status
+
+The software is in alpha.  It works but is has rough edges and surely bugs.
+
+## How to install ELPI
+
+ELPI is developed under Linux and is known to also work on MacOSX.
+The simplest way is to use [OPAM](http://opam.ocaml.org/) and type
+```
+opam pin add elpi https://github.com/LPCIC/elpi.git
+```
+This gives you the command line tool `elpi` as well as the findlib
+`-package elpi` switch.
+
+You can also clone this repository and type `make`.  The build requirements
+are listed at the end of the [Makefile](https://github.com/LPCIC/elpi/blob/master/Makefile)
+
+## How to embed ELPI in your software
+
+The easiest way of embedding ELPI is by linking it using findlib 
+as in `ocamlfind opt -package elpi mycode.ml -o myprogram`.
+The API the host application can use to drive ELPI is documented in the
+[elpi_API.mli](https://github.com/LPCIC/elpi/blob/master/elpi_API.mli) file.
+
+Examples of embedding are [coq-elpi](https://github.com/LPCIC/coq-elpi) and
+[matita-elpi](https://github.com/LPCIC/matita).
+
 ## What's an elaborator and what's so special about it?
 
 The elaborator of an interactive prover is the component in
@@ -59,3 +86,15 @@ The programming language has the following features
 - Native support for backtracking. To ease implementation of *search*.
 
 Most of these feature come with λProlog.  Constraints and propagation rules are novel in ELPI.
+
+### Documentation
+
+The language is compatible with [λProlog](http://www.lix.polytechnique.fr/~dale/lProlog/) 
+and ELPI is known to be able to run most of the λProlog programs out there.
+Reading "Programming with Higher-Order Logic" by Miller and Nadathur is highly recommended.
+
+The extensions to λProlog implemented in ELPI are described in the
+[ELPI.md](https://github.com/LPCIC/elpi/blob/master/ELPI.md) file.
+
+There is also a [paper](https://hal.inria.fr/hal-01176856/) describing the implementation
+of the interpreter, in particular how it deals with binder mobility.
