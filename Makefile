@@ -1,10 +1,31 @@
 # Commands:
-#  make       -- to compile elpi
+#  make                        -- to compile elpi
+#  make install                -- to install elpi using findlib
+#  make install-bin BIN=path   -- to install the elpi REPL in $BIN
+#  make uninstall              -- to remove elpi using findlib
+#  make uninstall-bin BIN=path -- to remove the elpi REPL in $BIN
+#  ... BYTE=yes                -- to compile/install/remove byte code
+#
 #  make git/V -- to compile elpi.git.V out of git's commit/branch/tag V
 #                such binary is then picked up automatically by the bench
 #                system as an elpi like runner
 #  make runners -- foreach git tag runner-V, do something like make git/V 
 
+# Overview of the build process:
+# - trace_ppx defines [%spy] and [%trace] used _only_ in elpi_runtime.ml
+# - elpi_runtime.ml is compiled twice
+#   - with -for-pack Elpi_runtime_trace_off and passing --off to trace_ppx,
+#     then it is immediately packed to elpi_runtime_trace_off.cm[x]o
+#   - with -for-pack Elpi_runtime_trace_on  and passing --on  to trace_ppx,
+#     then it is immediately packed to elpi_runtime_trace_on.cm[x]o
+#   - both runtimes are linked, and elpi_API.ml switches between the two
+#     using first class modules
+# - elpi_parser.ml uses camlp5 syntax extensions for describing extensible
+#   grammars and lexers
+# - elpi_REPL.ml is compiled using a local (in ./findlib/) installation of
+#   ELPI (as in ocamlfind ocamlc -package elpi elpi_REPL). To make it so that
+#   ocamlc does not see any other file, elpi_REPL.ml is copied in a sandbox/
+#   directory and the compiler is invoked from there.
 
 V=$(shell git describe --tags)
 PP=camlp5o -I . -I +camlp5
@@ -195,12 +216,12 @@ install:
 		elpi META elpi_API.cmi elpi_API.mli elpi.cmi $(ELPI_LIBS) \
 		-optional elpi.cma elpi.cmxa elpi.a elpi_API.cmti elpi elpi.byte
 install-bin:
-	$(H)cp elpi $(BIN)
+	$(H)cp $(EXE) $(BIN)
 
 uninstall:
 	$(H)ocamlfind remove elpi
 uninstall-bin:
-	$(H)rm -f elpi $(BIN)/elpi
+	$(H)rm -f $(BIN)/$(EXE)
 
 
 # required OCaml package
