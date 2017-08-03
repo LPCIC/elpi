@@ -38,7 +38,7 @@
 
 Underscore `_` is a valid variable name, but each occurrence denotes a different
 variable.
-```
+```prolog
 eq X X. % sensible definition of eq
 eq _ _. % always true, like writing eq X Y.
 ```
@@ -46,20 +46,20 @@ eq _ _. % always true, like writing eq X Y.
 ## Macros
 
 A macro is declared with the following syntax
-```
+```prolog
 macro @name Args :- Body.
 ```
 It is expanded everywhere (even in type declarations)
 at compilation time.
 
 #### Example: type shortcut.
-```
+```prolog
 macro @context :- list (pair string term).
 type typecheck @context -> term -> term -> prop.
 ```
 
 #### Example: logging.
-```
+```prolog
 macro @log P :- (P :- debug-print "goal=" P, fail).
 
 % @log (of _ _). % uncomment to trace of
@@ -68,14 +68,14 @@ of (app H A) :- ...
 ```
 
 #### Example: factor hypothetical clauses.
-```
+```prolog
 macro @of X N T :- (of X T, pp X N).
 of (lambda Name   F) (arr A B) :-         pi x\ @of x Name A =>            of (F x) B.
 of (let-in Name V F) R         :- of V T, pi x\ @of x Name T => val x V => of (F x) R.
 ```
 
 #### Example: optional cut.
-```
+```prolog
 $ cat neck-cut.elpi
 
 macro @neck-cut-if P Hd Hyps :- (
@@ -142,7 +142,7 @@ Notes about `elpi_typechecker.elpi`:
 A subterm can be given a name using an `as Name` annotation.
 The name must be a variable name, and such variable is assigned to
 that subterm.
-```
+```prolog
 lex-max (pair A B as L) (pair X Y     ) L :- A > X ; ( A = X, B >= Y).
 lex-max (pair A B)      (pair X Y as R) R :- A < X ; ( A = X, B <= Y).
 ```
@@ -154,7 +154,7 @@ Limitation: `as` cannot be applied to the entire clause head.
 Take this code, in a file called `lp-lib.elpi` providing general purpose
 code, like a fatal error clase *named* "default-fatal-error" using the `:name`
 attribute.
-```
+```prolog
 :name "default-fatal-error" 
 fatal-error Msg :- $print Msg, halt.
 ```
@@ -170,7 +170,7 @@ The `:after` attribute is also available.
 ## Modes
 
 Predicate arguments can be flagged as input as follows
-```
+```prolog
 $ cat pp.elpi
 mode (pp i o).
 
@@ -196,7 +196,7 @@ used in the rest of the clause by naming it with `as Name`
 ## Syntactic constraints
 
 A goal can be suspended on a list of variables with the `$delay` built in.
-```
+```prolog
 goal> $delay (even X) [X].
 Success:
 Constraints:
@@ -210,7 +210,7 @@ Failure
 ```
 
 Hypothetical clauses are kept:
-```
+```prolog
 goal> pi x\ sigma Y\ even x => $delay (even Y) [Y].
 Constraints:
   even x ⊢ even (W x)
@@ -220,7 +220,7 @@ Success:
 ```
 
 The `$delay` built is typically used in conjuction with `mode` as follows:
-```
+```prolog
 mode (even i).
 even (?? as X) :- !, $delay (even X) [X].
 even 0.
@@ -232,7 +232,7 @@ control on the hypothetical part of the program that is kept by the
 suspended goal and lets one express constraint handling rules.
 
 A "clique" of related predicates is declared with
-```
+```prolog
 constraint foo bar ... {
   rules ...
 }
@@ -244,7 +244,7 @@ Moreover, when two or more goals are suspended the rules
 between curly braces apply.
 
 #### Example
-```
+```prolog
 $ cat evenodd.elpi
 mode (odd i).
 mode (even i).
@@ -270,7 +270,7 @@ Failure
 ```
 ### Constraint Handling Rules
 
-```
+```prolog
 constraint c1..cn {
   rule (m1)..(mn) \ (r1)..(rm) > x1 ~ x2 .. ~ xn | guard <=> new.
   rule ...
@@ -309,7 +309,7 @@ We compute GCD.  The `gcd` predicate hold a second variable, so that
 we can compute GCDs of 2 sets of numbers: 99, 66 and 22 named X;
 14 and 77 called Y.
 
-```
+```prolog
 mode (gcd i i).
 
 gcd A (?? as B) :- $constraint (gcd A B) B.
@@ -335,7 +335,7 @@ set.  Constraints are resumed as regular delayed goals are.
 
 #### Example 1
 
-```
+```prolog
 constraint term {
   rule (GX ?- term (?? X LX) TX)
      \ (GY ?- term (?? Y LY) TY)
@@ -362,7 +362,7 @@ TBD.
 
 #### Example 2
 
-```
+```prolog
 constraint term {
   rule (GX ?- term (?? _ LX as KX) TX)
      \ (GY ?- term (?? _ LY as KY) TY)
@@ -398,11 +398,11 @@ Quotations are elaborated before run-time.
 
 The [coq-elpi](https://github.com/LPCIC/coq-elpi) software embeds elpi 
 in Coq and provides a quatation for its terms. For example
-```
+```prolog
 {{ nat -> bool }}
 ```
 unfolds to
-```
+```prolog
 prod _ (indt "...nat") x\ indt "...bool"
 ```
 Where `"...nat"` is the real name of the nat data type,
@@ -410,11 +410,11 @@ and where `prod` and `indt` are term constructors.
     
 Anti quotations are also possible, the syntax depends on
 the parser of the language in the quotation, `lp:` here.
-```
+```prolog
 prod "x" t x\ {{ nat -> lp:x * bool }}
 ```
 unfolds to
-```
+```prolog
 prod "x" t x\ prod _ (indt "...nat") y\
   app [indt "...prod", x, indt "...bool"]
 ```
@@ -422,7 +422,7 @@ Note the x is bound in elpi and used inside the quotation.
 
 ## Advanced modes
 
-```
+```prolog
 mode (pp o i) xas print,
      (pp i o) xas parse.
 
@@ -453,11 +453,10 @@ The mode directive has also the following effect on code generation:
 
 position | predicate | code generation
 ---------|-----------|----------------------------------------------------
- goal    | any       | just run as is
-
- hyp     | pp        | index as pp, index as print and replace all occs (rec calls) of pp with print, index as parse and replace all occs of pp with parse
- hyp     | print     | index as print
-         | parse     | index as parse
+ goal | any | just run as is
+ hyp | pp | index as pp, index as print and replace all occs (rec calls) of pp with print, index as parse and replace all occs of pp with parse
+ hyp | print | index as print
+ hyp | parse | index as parse
 
 Users of `pp` can avoid duplication this way:
 
@@ -470,7 +469,7 @@ pptac (tac T) (tac S) :- pp T S.
 
 In matching mode a syntax to introspect unification variables
 is provided:
-```
+```prolog
 pp1 ?? :-             $print "a variable"
 pp2 (?? K) :-         $print "with id " K.
 pp3 (?? _ L) :-       $print "with arguments " L.
@@ -481,7 +480,7 @@ Only `V` is a proper term, `K` and `L` are not.
 ## To be removed
 
 inefficient.
-```
+```prolog
      append [X|XS] L -> [X|R] :- append XS L R.
 %--> append [X|XS] L TMP :- TMP = [X|R], append XS L R.
      append [] L -> L.
@@ -489,7 +488,7 @@ inefficient.
 ```
 
 not very useful.
-```
+```prolog
 main :-
       Foo := bar X.
 %-->  bar X Foo.
