@@ -1,6 +1,6 @@
 # Extensions to λProlog implemented in ELPI
 
-- [Macros](#macros)
+- [Macros](#macros) are expanded at compilation time
 
 - [Clause grafting](#clause-grafting) can inject a clause
   in the middle of an existing program
@@ -12,6 +12,54 @@
    via the OCaml API.
 
 ## Macros
+
+A macro is declared with the following syntax
+```
+macro @name Args :- Body.
+```
+It is expanded everywhere (even in type declarations)
+at compilation time.
+
+#### Example: type shortcut.
+```
+macro @context :- list (pair string term).
+type typecheck @context -> term -> term -> prop.
+```
+
+#### Example: factor hypothetical clauses.
+```
+macro @of X N T :- (of X T, pp X N).
+of (lambda Name   F) (arr A B) :-         pi x\ @of x Name A =>            of (F x) B.
+of (let-in Name V F) R         :- of V T, pi x\ @of x Name T => val x V => of (F x) R.
+```
+
+#### Example: optional cut.
+```
+$ cat neck-cut.elpi
+
+macro @neck-cut-if P Hd Hyps :- (
+  (Hd :- P,      !, Hyps),
+  (Hd :- not P,     Hyps)
+).
+
+@neck-cut-if greedy 
+(f X)  (X = 1).
+ f X :- X = 2.
+
+$ ./elpi neck-cut.elpi
+goal> greedy => f X.
+Success:
+  X = 1
+
+$ ./elpi neck-cut.elpi
+goal> f X.
+Success:
+  X = 1
+More? (Y/n)
+Success:
+  X = 2
+  
+```
 
 ## Clause grafting
 
