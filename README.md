@@ -26,14 +26,14 @@ This gives you the command line tool `elpi` as well as the findlib
 `-package elpi` switch.
 
 You can also clone this repository and type `make`.  The build requirements
-are listed at the end of the [Makefile](https://github.com/LPCIC/elpi/blob/master/Makefile)
+are listed at the end of the [Makefile](Makefile)
 
 ### How to embed ELPI in your software
 
 The easiest way of embedding ELPI is by linking it using findlib 
 as in `ocamlfind opt -package elpi mycode.ml -o myprogram`.
 The API the host application can use to drive ELPI is documented in the
-[elpi_API.mli](https://github.com/LPCIC/elpi/blob/master/elpi_API.mli) file.
+[elpi_API.mli](elpi_API.mli) file.
 
 Examples of embedding are [coq-elpi](https://github.com/LPCIC/coq-elpi) and
 [matita-elpi](https://github.com/LPCIC/matita).
@@ -94,7 +94,7 @@ and ELPI is known to be able to run most of the λProlog programs out there.
 Reading "Programming with Higher-Order Logic" by Miller and Nadathur is highly recommended.
 
 The extensions to λProlog implemented in ELPI are described in the
-[ELPI.md](https://github.com/LPCIC/elpi/blob/master/ELPI.md) file.
+[ELPI.md](ELPI.md) file.
 
 There is also a [paper](https://hal.inria.fr/hal-01176856/) describing the implementation
 of the interpreter, in particular how it deals with binder mobility.
