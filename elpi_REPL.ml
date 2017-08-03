@@ -85,7 +85,6 @@ let usage =
   "\t-print prints files after desugar, then exit\n" ^ 
   "\t-print-raw prints files after desugar in ppx format, then exit\n" ^ 
   "\t-print-ast prints files as parsed, then exit\n" ^ 
-  "\t-I path searches files in path\n" ^ 
   Elpi_API.Setup.usage
 ;;
 

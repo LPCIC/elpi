@@ -30,7 +30,10 @@ let init ?silent argv cwd =
   Elpi_parser.init ?silent ~paths ~cwd;
   new_argv
 
-let trace args = assert(set_trace args = [])
+let trace args =
+  match set_trace args with
+  | [] -> ()
+  | l -> Elpi_util.error ("Elpi_API.trace got unknown arguments: " ^ (String.concat " " l))
 
 let usage =
   "\nParsing options:\n" ^

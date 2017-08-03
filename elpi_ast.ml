@@ -143,4 +143,7 @@ let mkFreshUVar () = incr fresh_uv_names; Const (Func.from_string ("_" ^ string_
 let fresh_names = ref (-1);;
 let mkFreshName () = incr fresh_names; Const (Func.from_string ("__" ^ string_of_int !fresh_names))
 let mkCon c = Const (Func.from_string c)
-let mkCustom c = Custom (Func.from_string c)
+let mkCustom c =
+  if String.length c > 0 && c.[0] = '$' then Custom (Func.from_string c)
+  else Elpi_util.anomaly ("Custom predicates start with $, "^c^" does not")
+

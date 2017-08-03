@@ -2,23 +2,46 @@
 (* license: GNU Lesser General Public License Version 2.1                    *)
 (* ------------------------------------------------------------------------- *)
 
+(** This module is the API for clients of the ELPI library.
+    
+    The modules {!module:Setup}, {!module:Parse}, {!module:Compile} and
+    {!module:Execute} let one run code, and {!module:Pp} print the result.
+    Modules {!module:Ast} and {!module:Data} mostly contain opaque data types
+    declarations.
+
+    The sub module {!module:Extend} groups the APIs to extend ELPI.
+    It provides richer {!module:Ast} and {!module:Data} submodules where the
+    data types are made transparent.
+    Module {!module:Extend.Compile} lets one register new \{\{quotations\}\}.
+    Modules {!module:Extend.CustomPredicate} and
+    {!module:Extend.CustomConstraint} let one register custom $predicates and
+    custom constraints. *)
+
 (* ************************************************************************* *)
 (* *************************** Basic API *********************************** *)
 (* ************************************************************************* *)
 
-module Setup : sig
-  (* Initializes the parser and the tracing facility *)
 
-  (* init takes a list of paths (as passing -I to elpi),
-   *  and the current working directory (used to make paths absolute)
-   *  silent=true (default) to avoid printing files being loaded *)
+module Setup : sig
+
+  (** Initialize ELPI.
+      [init ?silent argv basedir] must be called before invoking the parser.
+      [argv] is list of options, see the {!val:usage} string;
+      [basedir] current working directory (used to make paths absolute);
+      [silent] (default [true]) to avoid printing files being loaded.
+      It returns part of [argv] not relevant to ELPI. *)
   val init : ?silent:bool -> string list -> string -> string list
+
+  (** Usage string *)
   val usage : string
 
-  (* Can only be switched before calling any Execute API *)
+  (** Set tracing options.
+      [trace argv] can be called before {!module:Execute}.
+      [argv] is expected to only contain options relevant for
+      the tracing facility. *)
   val trace : string list -> unit
 
-  (* Override default error functions (they call exit) *)
+  (** Override default error functions (they call exit) *)
   val set_warn : (string -> unit) -> unit
   val set_error : (string -> 'a) -> unit
   val set_anomaly : (string -> 'a) -> unit
@@ -31,7 +54,9 @@ module Ast : sig
 end
 
 module Parse : sig
+  (** [program file_list] parses a list of files *)
   val program : ?no_pervasives:bool -> string list -> Ast.program
+  (** [goal file_list] parses the query *)
   val goal : string -> Ast.query
   val goal_from_stream : char Stream.t -> Ast.query
 end
@@ -47,6 +72,8 @@ module Data : sig
     constraints : constraints;
     custom_constraints : custom_constraints;
   }
+  (** The associative lists maps query variable names to
+      their solution. *)
   type solution = (string * term) list * constraint_store
 end
 
@@ -55,15 +82,25 @@ module Compile : sig
   val program : ?print:[`Yes|`Raw] -> Ast.program list -> Data.program (* XXX *)
   val query : Data.program -> Ast.query -> Data.query
 
+  (** Runs [elpi_typechecker.elpi]. Extra static checks can be added, see also
+      [elpi_quoted_syntax.elpi] *)
   val static_check : ?extra_checker:string list -> Data.program -> Data.query -> unit
 
 end
 
 module Execute : sig
+
   type outcome = Success of Data.solution | Failure | NoMoreSteps
 
+  (* Returns the first solution, if any, within the optional step bound *)
   val once : ?max_steps:int -> Data.program -> Data.query -> outcome
-  val loop : Data.program -> Data.query -> more:(unit -> bool) -> pp:(float -> outcome -> unit) -> unit
+
+  (** Prolog's REPL.
+   [pp] is called on all solutions.
+    [more] is called to know if another solution has to be searched. *)
+  val loop :
+    Data.program -> Data.query ->
+    more:(unit -> bool) -> pp:(float -> outcome -> unit) -> unit
 end
 
 module Pp : sig
@@ -84,7 +121,7 @@ end
 
 module Extend : sig
 
-  (* Data of the host program that is opaque to Elpi *)
+  (** Data of the host program that is opaque to Elpi *)
   module CData : sig
     type t
 
@@ -98,36 +135,46 @@ module Extend : sig
     type 'a cdata = { cin : 'a -> t; isc : t -> bool; cout: t -> 'a }
 
     val declare : 'a data_declaration -> 'a cdata
+
+
     val pp : Format.formatter -> t -> unit
     val show : t -> string
     val equal : t -> t -> bool
     val hash : t -> int
     val name : t -> string
 
-    val morph1 : 'a cdata -> ('a -> 'a) -> t -> t
-
+    (** tests if two cdata have the same given type *)
     val ty2 : 'a cdata -> t -> t -> bool
+    val morph1 : 'a cdata -> ('a -> 'a) -> t -> t
     val morph2 : 'a cdata -> ('a -> 'a -> 'a) -> t -> t -> t
-    
     val map : 'a cdata -> 'b cdata -> ('a -> 'b) -> t -> t
   end
 
   module Ast : sig
 
-    type term
+    type term (** name based *)
+
+    (** Follows Prolog's convention (capitals are variables) *)
+    val mkCon : string -> term
 
     val mkApp : term list -> term
-    val mkCon : string -> term
+    val mkLam : string -> term -> term
+
+    val mkFreshUVar : unit -> term
+
     val mkNil : term
     val mkSeq : term list -> term
+
+    (** $custom (must start with $) *)
     val mkCustom : string -> term
+
+    (** builtin data *)
     val mkFloat : float -> term
     val mkInt : int -> term
     val mkString : string -> term
+
+    (** quotation node *)
     val mkQuoted : string -> term
-    val mkFreshUVar : unit -> term
-    val mkFreshName : unit -> term
-    val mkLam : string -> term -> term
 
     val query_of_term : term -> Ast.query
     val term_of_query : Ast.query -> term
@@ -136,10 +183,10 @@ module Extend : sig
 
   module Data : sig
 
-    type constant = int (* De Bruijn levels *)
+    type constant = int (** De Bruijn levels *)
     type term =
       (* Pure terms *)
-      | Const of constant
+      | Const of constant (** hashconsed *)
       | Lam of term
       | App of constant * term * term list
       (* Clause terms: unif variables used in clauses *)
@@ -216,7 +263,7 @@ module Extend : sig
 
   module Compile : sig
 
-    (* One can extend the compiler state in order to implement quotations *)
+    (** One can extend the compiler state in order to implement quotations *)
     module ExtState : sig
       type t
     
@@ -232,7 +279,11 @@ module Extend : sig
 
     type quotation =
       depth:int -> ExtState.t -> string -> ExtState.t * Data.term
+
+    (** The default quotation [{{code}}] *)
     val set_default_quotation : quotation -> unit
+
+    (** Named quotation [{{name:code}}] *)
     val register_named_quotation : string -> quotation -> unit
 
     (* The anti-quotation to lambda Prolog *)
@@ -252,12 +303,13 @@ module Extend : sig
   module CustomPredicate : sig
 
     exception No_clause
-    (* Custom predicates like $print. Must either raise No_clause or succeed
-       with the list of new goals *)
+
+    (** Custom predicates like $print. Must either raise No_clause or succeed
+        with the list of new goals *)
     val declare :
-    string ->
-    (depth:int -> env:Data.term array -> Data.term list -> Data.term list) ->
-    unit
+      string ->
+      (depth:int -> env:Data.term array -> Data.term list -> Data.term list) ->
+      unit
 
     type scheduler = {
       delay :
@@ -265,21 +317,23 @@ module Extend : sig
           goal:Data.term -> on:Data.term_attributed_ref list -> unit;
       print : [ `All | `Constraints ] -> Format.formatter -> unit;
     }
-    (* Custom predicates like $constraint. Allowed to change the constraint
-     * store *)
+
+    (** Custom predicates like $constraint. Allowed to change the constraint
+        store *)
     val declare_full :
       string ->
-      (depth:int -> env:Data.term array -> scheduler -> Data.custom_constraints -> Data.term list ->
-       Data.term list * Data.custom_constraints) ->
-    unit
+      (depth:int -> env:Data.term array -> scheduler ->
+       Data.custom_constraints -> Data.term list ->
+         Data.term list * Data.custom_constraints) ->
+      unit
 
   end
 
   module CustomConstraint : sig
 
     type 'a constraint_type
+    (** 'a must be purely functional, i.e. backtracking is a no op *)
 
-    (* 'a must be purely functional *)
     val declare :
       name:string ->
       pp:(Format.formatter -> 'a -> unit) ->
@@ -287,10 +341,13 @@ module Extend : sig
         'a constraint_type
 
     val read : Data.custom_constraints -> 'a constraint_type -> 'a
-    (* Allowed to raise No_clause *)
+
+    (** Allowed to raise No_clause *)
     val update :
       Data.custom_constraints -> 'a constraint_type -> ('a -> 'a) ->
         Data.custom_constraints
+
+    (** Allowed to raise No_clause *)
     val update_return :
       Data.custom_constraints -> 'a constraint_type ->
         ('a -> 'a * 'b) -> Data.custom_constraints * 'b
@@ -298,21 +355,28 @@ module Extend : sig
   end
 
   module Utils : sig
+    (** Terms must be inspected after dereferencing (at least) their head *)
+    val deref_head : depth:int -> Data.term -> Data.term
+
+    (** If a [term_attributed_ref] points to != Constants.dummy then it
+        must be dereferenced *)
     val deref_uv :
       from:int -> to_:int -> ano:int -> Data.term -> Data.term
     val deref_appuv :
       from:int -> to_:int -> args:Data.term list -> Data.term -> Data.term
-    val deref_head : depth:int -> Data.term -> Data.term
+
     val is_flex : depth:int -> Data.term -> Data.term_attributed_ref option
+
     val list_to_lp_list : Data.term list -> Data.term
     val lp_list_to_list : depth:int -> Data.term -> Data.term list
-    (* A regular error *)
+
+    (** A regular error *)
     val error : string -> 'a
-    (* An invariant is broken, i.e. a bug *)
+    (** An invariant is broken, i.e. a bug *)
     val anomaly : string -> 'a
-    (* If we type check the program, then these are anomalies *)
+    (** A type error (in principle ruled out by [elpi_typechecker.elpi]) *)
     val type_error : string -> 'a
-    (* A non fatal warning *)
+    (** A non fatal warning *)
     val warn : string -> unit
 
   end
@@ -342,6 +406,8 @@ module Extend : sig
   end
 
 end (* Extend *)
+
+(**/**)
 
 (* Stuff that should be ported to the API, but is not yet *)
 module Temporary : sig
