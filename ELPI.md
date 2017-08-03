@@ -2,15 +2,36 @@
 
 - [Macros](#macros) are expanded at compilation time
 
+- [Spilling](#spilling)
+
+- [N-ary binders](#n-ary-binders)
+
+- [Non logical features](#non-logical-features)
+
+- [Typechecking](#typechecking)
+
+- [Subterm naming](#subterm-naming) can be performed
+  using an `as X` annotation
+
 - [Clause grafting](#clause-grafting) can inject a clause
   in the middle of an existing program
 
-- [Constraints](#constraints)
+- [Modes](#modes) can be declared in order to control the generative
+  semantics of Prolog
+
+- [Syntactic constraints](#syntactic-constraints) are goals suspended on
+  a set of variables that are resumed when any of them gets assigned and
+  that can be manipulated by CHR like rules
 
 - [Quotations](#quotations) let you write terms in a custom syntax and
    have ELPI translate them into λProlog terms.  This is only available
    via the OCaml API.
 
+- [Advanced modes](#advanced-modes) can be used to declare the same code
+  with different modes under different names.
+  
+- [to be removed]
+  
 ## Macros
 
 A macro is declared with the following syntax
@@ -24,6 +45,15 @@ at compilation time.
 ```
 macro @context :- list (pair string term).
 type typecheck @context -> term -> term -> prop.
+```
+
+#### Example: logging.
+```
+macro @log P :- (P :- debug-print "goal=" P, fail).
+
+% @log (of _ _). % uncomment to trace of
+of (lambda N F) :- ...
+of (app H A) :- ...
 ```
 
 #### Example: factor hypothetical clauses.
@@ -51,7 +81,7 @@ goal> greedy => f X.
 Success:
   X = 1
 
-$ ./elpi neck-cut.elpi
+$ elpi neck-cut.elpi
 goal> f X.
 Success:
   X = 1
@@ -60,6 +90,53 @@ Success:
   X = 2
   
 ```
+## Spilling
+
+## N-ary binders
+
+The `pi` and `sigma` binders are n-ary:
+- `sigma X Y\ t` is expanded to `sigma X\ sigma Y\ t`.
+- `pi x y\ t` is expanded to `pi x\ pi y\ t`.
+
+## Non logical features
+
+- The cut operator `!` is present, and does not work on nested disjunctions.
+
+- A built-in lets one collect data across search.  The primitives are
+  `$new_safe S`, `$stash S T`, `$open_safe S TL`.
+  Note that `T` has to be ground and closed.  Safes are not effected by
+  backtracking.  They can be used to log a computation / a list of failures.
+  They are used, for example, in `elpi_typechecker.elpi` to log errors.
+
+## Typechecking
+
+Typing plays *no role at runtime*.  This differs from standard λProlog.
+This also means that type annotations are totally optional.
+Still, they gratly help `elpi_typechecker.elpi` to give reasonable errors.
+Notes about `elpi_typechecker.elpi`:
+- Inference of polymorphic predicates is not performed.
+- `type foo list A -> prop` can be used to declare a polymorphic `foo`.
+- `any` means any type.
+- `variadic T1 T2` means an arbitrary number of `T1` to build a `T2` (for example `,` is of that type).
+- Type declarations can be repeated to obtain simple overloading:
+  ```
+  type foo int -> prop.
+  type foo string -> prop.
+  main :- foo 1, foo "3". % typechecks
+  ```
+- `o` is written `prop`, since `o` is already used to mean output in `mode` (and `i` to mean input).
+
+## Subterm naming
+
+A subterm can be given a name using an `as Name` annotation.
+The name must be a variable name, and such variable is assigned to
+that subterm.
+```
+lex-max (pair A B as L) (pair X Y     ) L :- A > X ; ( A = X, B >= Y).
+lex-max (pair A B)      (pair X Y as R) R :- A < X ; ( A = X, B <= Y).
+```
+
+Limitation: `as` cannot be applied to the entire clause head.
 
 ## Clause grafting
 
@@ -79,192 +156,111 @@ fatal-error Msg :- !, M is "elpi: " ^ Msg, coq-err M.
 
 The `:after` attribute is also available.
 
-## Constraints
+## Modes
 
-
-
-## Quotations
-
-Syntactic sugar to describe object terms is available via quotations
-and anti-quotations.  Quotations are delimited by balanced curly
-braces, at least two, as in `{{` and `}}` or `{{..{{` and `}}..}}`.
-The system support one unnamed quotations and many named ones with
-syntax `{{:name` .. `}}` where `name` is any non-space or `\n` character.
-
-Quotations are elaborated before run-time.
-
-The coq-elpi software embeds elpi in Coq and provides
-a quatation for its terms. For example
+Predicate arguments can be flagged as input as follows
 ```
-{{ nat -> bool }}
-```
-unfolds to
-```
-prod _ (indt "...nat") x\ indt "...bool"
-```
-Where `"...nat"` is the real name of the nat data type,
-and where `prod` or `indt` are term constructors.
-    
-Anti quotations are also possible, the syntax depends on
-the parser of the language in the quotation, `lp:` here.
-```
-prod "x" t x\ {{ nat -> lp:x * bool }}
-```
-unfolds to
-```
-prod "x" t x\ prod _ (indt "...nat") y\
-  app [indt "...prod", x, indt "...bool"]
-```
-Note the x is bound in elpi and used inside the quotation.
+$ cat pp.elpi
+mode (pp i o).
 
+pp (lambda Name F) S :- (pi x\ pp x Name => pp (F x) S1), S is "λ" ^ Name ^ "." ^ S1.
+pp (app H A) S :- pp H S1, pp A S2, S is "(" ^ S1 ^ " " ^ S2 ^ ")".
+pp ?? "_".
 
---------------------------------------------------------------------------
-TODO:
-
-## Lambda Prolog
-
+$ elpi pp.elpi
+goal> pp (lambda "x" y\ app y y) S.
+Success:
+  S = "λx.(x x)"
+goal> pp (lambda "x" y\ app W y) S.
+Success:
+  W = X0
+  S = "λx.(_ x)"
 ```
-mode (pp o i) xas print,
-     (pp i o) xas parse.
+Note that in the second example `W` is not instantiated.
+When an argument is flagged as `i` then its value is
+matched against the clauses' corresponding pattern.
+`??` is the pattern for flexible input. Such flexible term can be
+used in the rest of the clause by naming it with `as Name`
 
-infixl &&  128.
-infixl '   255.
+## Syntactic constraints
 
-pp (F2 && G2) (and ' F1 ' G1) :- !, pp F2 F1, pp G2 G1.
-pp A A.
-
-main :-
-   (pi x\ (pp "nice" x :- !) =>
-      parse ((V1 && true) && "nice") (P1 x)),
-   $print P1,
-   (pi x\ (pp "ugly" x :- !) =>
-      print (P2 x) (P1 x)),
-   $print P2.
-% P1 = x0 \ and ' (and ' V1 ' true) ' x0
-% P2 = x0 \ (V2 && true) && "ugly"
+A goal can be suspended on a list of variables with the `$delay` built in.
+```
+goal> $delay (even X) [X].
+Success:
+Constraints:
+   ⊢ (even X)
+```
+Suspended goals are resumed as soon as any of variables they are suspended on
+gets assigned.
+```
+goal> $delay (even X) [X], X = 1.
+Failure
 ```
 
-`mode` lets one reuse the same code in different modes.
-When an argument is in `input` no unification variable is
-instantiated, unless it comes from an output (e.g. non linear
-pattern, needed to make the `pp A A` line work).
-Unification of input arguments is  called matching.
-
-The mode directive has also the following effect on code generation:
-
-position | predicate | code generation
----------+-----------+----------------------------------------------------
- goal    | any       | just run as is
----------+-----------+----------------------------------------------------
- hyp     | pp        | index as pp, index as print and replace all
-         |           | occs (rec calls) of pp with print, index as parse
-         |           | and replace all occs of pp with parse
----------+-----------+----------------------------------------------------
- hyp     | print     | index as print
-         | parse     | index as parse
----------+-----------+----------------------------------------------------
-
-Users of `pp` can avoid duplication this way:
-
+Hypothetical clauses are kept:
 ```
-mode (pptac i o) xas printtac(pp -> print),
-     (pptac o i) xas parsetac(pp -> parse).
+goal> pi x\ sigma Y\ even x => $delay (even Y) [Y].
+Constraints:
+  even x ⊢ even (W x)
 
-pptac (tac T) (tac S) :- pp T S.
+goal> pi x\ sigma Y\ even x => ($delay (even Y) [Y], Y = x).
+Success:
 ```
 
-In matching mode a syntax to introspect unification variables
-is provided:
+The `$delay` built is typically used in conjuction with `mode` as follows:
 ```
-pp1 ?? :-             $print "a variable"
-pp2 (?? K) :-         $print "with id " K.
-pp3 (?? _ L) :-       $print "with arguments " L.
-pp4 (?? K L as V) :-  $print "a flexible term " V.
-```
-Only `V` is a proper term, `K` and `L` are not.
-
-The `as` clause is available everywhere, not just in matching mode,
-but not on the top level term: `foo X as G :- ..` is not supported (error NYI).
-
-Clauses parted of the initial program can be grafted before/after other
-(named) rules (extension points).  Contents of `a.elpi`
-```
-:name r1
-c X :- $print "1", fail.
-
-:name r2
-c X :- $print "2".
-
-```
-In file `b.elpi`
-```
-accumulate a.
-:name mid :before r2
-c X :- $print "1.5", fail.
-
-main :- c 1. % prints 1, 1.5, 2
-
+mode (even i).
+even (?? as X) :- !, $delay (even X) [X].
+even 0.
+even X :- X > 1, Y is X - 2, even Y.
 ```
 
-## Sugar
+The `$constraint` built in builds on top of `$delay` but gives
+control on the hypothetical part of the program that is kept by the
+suspended goal and lets one express constraint handling rules.
 
-bofh.
+A "clique" of related predicates is declared with
 ```
-macro @name :- value.
-main :- foo @name.  %--> foo value.
+constraint foo bar ... {
+  rules ...
+}
 ```
+The effect is that whenever a goal about `foo` or `bar`
+is suspended (via `$constraint`) only its hypothetical
+clauses about `foo` or `bar` are kept.
+Moreover, when two or more goals are suspended the rules
+between curly braces apply.
 
-
-inefficient.
+#### Example
 ```
-     append [X|XS] L -> [X|R] :- append XS L R.
-%--> append [X|XS] L TMP :- TMP = [X|R], append XS L R.
-     append [] L -> L.
-%--> append [] L TMP :- TMP = L.
+$ cat evenodd.elpi
+mode (odd i).
+mode (even i).
+
+even (?? as X) :- !, $constraint (even X) [X].
+odd  (?? as X) :- !, $constraint (odd X)  [X].
+even 0.
+odd 1.
+even X :- X > 1, Y is X - 1, odd  Y.
+odd  X :- X > 0, Y is X - 1, even Y.
+
+constraint even odd {
+  rule (even X) (even Y) > X ~ Y <=> false.
+}
+
+$ elpi evenodd.elpi
+goal> whatever => even X.
+Constraints:
+   ⊢ even X
+ 
+goal> even X, odd X.
+Failure
 ```
-
-not very useful.
-```
-main :-
-      Foo := bar X.
-%-->  bar X Foo.
-```
-
-limited to predicates, still untyped.
-```
-main :-
-     bar {foo X} Z.
-%--> (sigma Y\ foo X Y, bar Y Z),
-```
-
-
-## delay and constraint
-
-Goals can be delayed on a (list of) flexible terms.
-
-```
-mypred (?? as K) :- $delay (mypred K) K.
-another (?? as K) :- $constraint (another K) K.
-```
-
-Delayed goals are resumed as soon as (one of) the key(s) is instantiated,
-i.e. resumed goals are put in head position in the and-list and are processed
-at the next SLD step.
-
-Constraints do receive a special treatment: their proof context is
-filtered according to the clique they are declared in and they are
-manipulated by CHR rules (see CHR section).
-
-`ELpi_runtime.CustomConstraints` lets one declare custom constraint types
-and `Elpi_runtime.register_custom` lets one add predicates that update the
-constraint set.  Such constraint set must be functional since backtracking
-keeps a pointer to the old set in order to backjump.  Updating the constraint
-set may railse `No_clause` and trigger backtracking.
-
-### CHR
+### Constraint Handling Rules
 
 ```
-constrant c1..cn {
+constraint c1..cn {
   rule (m1)..(mn) \ (r1)..(rm) > x1 ~ x2 .. ~ xn | guard <=> new.
   rule ...
 }
@@ -296,7 +292,7 @@ the alignment and can thus mix variables coming from different goals.
 
 CHR application loops until
 
-### Example 0
+#### Example 0
 
 We compute GCD.  The `gcd` predicate hold a second variable, so that
 we can compute GCDs of 2 sets of numbers: 99, 66 and 22 named X;
@@ -326,7 +322,7 @@ The alignment condition is used to apply the rule to constraints in the same
 set.  Constraints are resumed as regular delayed goals are.
 
 
-### Example 1
+#### Example 1
 
 ```
 constraint term {
@@ -353,7 +349,7 @@ overlap between the ones of the goals, NYI).  No such variable has to appear in
 
 TBD.
 
-### Example 2
+#### Example 2
 
 ```
 constraint term {
@@ -377,32 +373,114 @@ to inject `TX = TY` in the main runtime.  This fails if something like
 `term (X (app f y)) T` gets suspended, since alignment only works
 in the l-lambda fragment.
 
-## Sugar
 
-- `sigma X Y\ t` is expanded to `sigma X\ sigma Y\ t`.
-- `pi x y\ t` is expanded to `pi x\ pi y\ t`.
 
-TODO:
-- `constraint (foo X) on X` is expanded to
-  `foo (?? as X) :- $constraint (foo X) X`
+## Quotations
 
-## Non logical features
+Syntactic sugar to describe object terms is available via quotations
+and anti-quotations.  Quotations are delimited by balanced curly
+braces, at least two, as in `{{` and `}}` or `{{..{{` and `}}..}}`.
+The system support one unnamed quotations and many named ones with
+syntax `{{:name` .. `}}` where `name` is any non-space or `\n` character.
 
-- `!` (does not work on nested disjunctions)
-- via `$new_safe S`, `$stash S T`, `$open_safe S TL`.
-  Note that `T` has to be ground and closed.  Safes are not effected by
-  backtracking.  They can be used to log a computation / a list of failures.
+Quotations are elaborated before run-time.
 
-## Typechecking
-
-- Inference of polymorphic predicates is not performed.
-- `type foo list A -> prop` can be used to declare a polymorphic `foo`.
-- `any` means any type.
-- `variadic T1 T2` means an arbitrary number of `T1` to build a `T2` (for example `,` is of that type).
-- Type declarations can be repeated to obtain simple overloading:
+The [coq-elpi](https://github.com/LPCIC/coq-elpi) software embeds elpi 
+in Coq and provides a quatation for its terms. For example
 ```
-type foo int -> prop.
-type foo string -> prop.
-main :- foo 1, foo "3". % typechecks
+{{ nat -> bool }}
 ```
-- `o` is written `prop`.
+unfolds to
+```
+prod _ (indt "...nat") x\ indt "...bool"
+```
+Where `"...nat"` is the real name of the nat data type,
+and where `prod` and `indt` are term constructors.
+    
+Anti quotations are also possible, the syntax depends on
+the parser of the language in the quotation, `lp:` here.
+```
+prod "x" t x\ {{ nat -> lp:x * bool }}
+```
+unfolds to
+```
+prod "x" t x\ prod _ (indt "...nat") y\
+  app [indt "...prod", x, indt "...bool"]
+```
+Note the x is bound in elpi and used inside the quotation.
+
+## Advanced modes
+
+```
+mode (pp o i) xas print,
+     (pp i o) xas parse.
+
+infixl &&  128.
+infixl '   255.
+
+pp (F2 && G2) (and ' F1 ' G1) :- !, pp F2 F1, pp G2 G1.
+pp A A.
+
+main :-
+   (pi x\ (pp "nice" x :- !) =>
+      parse ((V1 && true) && "nice") (P1 x)),
+   $print P1,
+   (pi x\ (pp "ugly" x :- !) =>
+      print (P2 x) (P1 x)),
+   $print P2.
+% P1 = x0 \ and ' (and ' V1 ' true) ' x0
+% P2 = x0 \ (V2 && true) && "ugly"
+```
+
+`mode` lets one reuse the same code in different modes.
+When an argument is in `input` no unification variable is
+instantiated, unless it comes from an output (e.g. non linear
+pattern, needed to make the `pp A A` line work).
+Unification of input arguments is  called matching.
+
+The mode directive has also the following effect on code generation:
+
+position | predicate | code generation
+---------|-----------|----------------------------------------------------
+ goal    | any       | just run as is
+
+ hyp     | pp        | index as pp, index as print and replace all occs (rec calls) of pp with print, index as parse and replace all occs of pp with parse
+ hyp     | print     | index as print
+         | parse     | index as parse
+
+Users of `pp` can avoid duplication this way:
+
+```
+mode (pptac i o) xas printtac(pp -> print),
+     (pptac o i) xas parsetac(pp -> parse).
+
+pptac (tac T) (tac S) :- pp T S.
+```
+
+In matching mode a syntax to introspect unification variables
+is provided:
+```
+pp1 ?? :-             $print "a variable"
+pp2 (?? K) :-         $print "with id " K.
+pp3 (?? _ L) :-       $print "with arguments " L.
+pp4 (?? K L as V) :-  $print "a flexible term " V.
+```
+Only `V` is a proper term, `K` and `L` are not.
+
+## To be removed
+
+inefficient.
+```
+     append [X|XS] L -> [X|R] :- append XS L R.
+%--> append [X|XS] L TMP :- TMP = [X|R], append XS L R.
+     append [] L -> L.
+%--> append [] L TMP :- TMP = L.
+```
+
+not very useful.
+```
+main :-
+      Foo := bar X.
+%-->  bar X Foo.
+```
+
