@@ -56,10 +56,8 @@ let test_impl typecheck prog query =
  if time Elpi_API.Execute.once prog query then exit 0 else exit 1
 ;;
 
-
-(* rewrites a lambda-prolog program to first-order prolog *)
 let pp_lambda_to_prolog prog =
- Printf.printf "\nRewriting λ-prolog to first-order prolog...\n\n%!";
+ Printf.printf "\nRewriting λProlog to first-order prolog...\n\n%!";
  Elpi_API.Temporary.pp_prolog prog
 ;;
 

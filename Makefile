@@ -11,54 +11,10 @@
 #                system as an elpi like runner
 #  make runners -- foreach git tag runner-V, do something like make git/V 
 
-# Overview of the build process:
-# - trace_ppx defines [%spy] and [%trace] used _only_ in elpi_runtime.ml
-# - elpi_runtime.ml is compiled twice
-#   - with -for-pack Elpi_runtime_trace_off and passing --off to trace_ppx,
-#     then it is immediately packed to elpi_runtime_trace_off.cm[x]o
-#   - with -for-pack Elpi_runtime_trace_on  and passing --on  to trace_ppx,
-#     then it is immediately packed to elpi_runtime_trace_on.cm[x]o
-#   - both runtimes are linked, and elpi_API.ml switches between the two
-#     using first class modules
-# - elpi_parser.ml uses camlp5 syntax extensions for describing extensible
-#   grammars and lexers
-# - elpi_REPL.ml is compiled using a local (in ./findlib/) installation of
-#   ELPI (as in ocamlfind ocamlc -package elpi elpi_REPL). To make it so that
-#   ocamlc does not see any other file, elpi_REPL.ml is copied in a sandbox/
-#   directory and the compiler is invoked from there.
+BASE=$(shell pwd)
+include Makefile.common
 
-V=$(shell git describe --tags)
-PP=camlp5o -I . -I +camlp5
-PARSE=pa_extend.cmo pa_lexer.cmo
-TRACESYNTAX=pa_extend.cmo q_MLast.cmo pa_macro.cmo
-FLAGS=-I $(shell camlp5 -where)
-OCAMLOPTIONS= -g -bin-annot
-OD=ocamlfind ocamldep
-
-ifeq "$(BYTE)" ""
-CMX=cmx
-CMXA=cmxa
-EXE=elpi
-OC=ocamlfind ocamlopt
-DEPS=.depends .depends.parser
-OCNAME=OCAMLOPT
-else
-CMX=cmo
-CMXA=cma
-EXE=elpi.byte
-OC=ocamlfind ocamlc
-DEPS=.depends.byte .depends.parser.byte
-OCNAME=OCAMLC
-endif
-
-ifeq "$(findstring install,$(MAKECMDGOALS))$(findstring uninstall,$(MAKECMDGOALS))" ""
-OCAMLPATH:=$(shell pwd)/findlib:$(OCAMLPATH)
-export OCAMLPATH
-endif
-H=@
-pp = printf '$(1) %-26s %s\n' "$(3)" "$(2)"
-
-all: check-ocaml-ver $(EXE)
+all: check-ocaml-ver elpi$(EXE)
 
 byte:
 	$(H)$(MAKE) BYTE=1 all
@@ -94,10 +50,10 @@ runners:
 		mv elpi.git.$(t) elpi.git.$(t:runner-%=%))
 
 clean:
-	$(H)rm -f *.cmo *.cma *.cmx *.cmxa *.cmi *.o *.a *.tex *.aux *.log *.pdf *.cmt *.cmti
+	$(H)rm -f src/*.cmo *.cma *.cmx *.cmxa *.cmi *.o *.a *.tex *.aux *.log *.pdf *.cmt *.cmti
 	$(H)rm -f elpi.git.* trace_ppx elpi elpi.byte
-	$(H)rm -f .depends .depends.parser .depends.byte .depends.parser.byte
-	$(H)rm -rf sanbox/ findlib/
+	$(H)rm -f src/.depends .depends.parser .depends.byte .depends.parser.byte
+	$(H)rm -rf findlib/
 
 dist:
 	$(H)git archive --format=tar --prefix=elpi-$(V)/ HEAD . \
@@ -107,121 +63,41 @@ dist:
 
 OC_OPTIONS = -linkpkg $(OCAMLOPTIONS) $(FLAGS)
 
-ELPI_DEPENDS = camlp5.$(CMXA) unix.$(CMXA) str.$(CMXA)
-
-# Compilation with trace_ppx and -pack
-ELPI_PACKED_COMPONENTS = \
-  elpi_runtime_trace_on.$(CMX) elpi_runtime_trace_off.$(CMX)
-
-# Compilation with camlp5 preprocessing
-ELPI_P5_COMPONENTS = elpi_parser.$(CMX)
-
-# All files linked in the .cma
-ELPI_COMPONENTS = \
-  elpi_trace.$(CMX) \
-  elpi_util.$(CMX) elpi_ast.$(CMX) $(ELPI_P5_COMPONENTS) elpi_ptmap.$(CMX) \
-  elpi_data.$(CMX) \
-  $(ELPI_PACKED_COMPONENTS) elpi_compiler.$(CMX) \
-  elpi_latex_exporter.$(CMX) elpi_prolog_exporter.$(CMX) \
-  elpi_API.$(CMX) elpi_custom.$(CMX)
-
 ELPI_LIBS = \
   elpi_quoted_syntax.elpi  elpi_typechecker.elpi  \
   pervasives.elpi pervasives-syntax.elpi \
   utils/elpi2mathjx.elpi
 
-# Standard compilation
-ELPI_EASY_COMPONENTS = \
-  $(filter-out $(ELPI_PACKED_COMPONENTS), \
-    $(filter-out $(ELPI_P5_COMPONENTS), $(ELPI_COMPONENTS)))
+ELPI_DIST = \
+  $(addprefix src/,elpi_API.cmi elpi_API.mli elpi.cmi)
 
+ELPI_DIST_OPT = \
+  $(addprefix src/,elpi.cma elpi.cmxa elpi.a elpi_API.cmti)
 
-elpi.$(CMXA): $(ELPI_COMPONENTS)
-	$(H)$(call pp,$(OCNAME),-a,$@)
-	$(H)$(OC) $(OC_OPTIONS) -o $@ -a $(ELPI_COMPONENTS)
-
-$(EXE): elpi_REPL.ml findlib/elpi/META
-	$(H)rm -rf sandbox; mkdir sandbox; cp $< sandbox/
+elpi$(EXE): elpi_REPL.ml findlib/elpi/META
 	$(H)$(call pp,$(OCNAME),-package elpi -o $@,$<)
-	$(H)cd sandbox; $(OC) $(OC_OPTIONS) -package elpi \
-		-o ../$@ $<
-	$(H)rm -rf sandbox
+	$(H)$(OC) $(OC_OPTIONS) -package elpi -o $@ $<
 
-elpi_runtime_trace_on.$(CMX) : elpi_runtime.ml elpi_runtime.cmi trace_ppx
-	$(H)$(call pp,$(OCNAME),-c -ppx 'trace_ppx --on' -for-pack,$@)
-	$(H)$(OC) $(OCAMLOPTIONS) \
-		-package camlp5,ppx_deriving.std \
-		-ppx './trace_ppx --as-ppx --on' \
-		-for-pack Elpi_runtime_trace_on \
-	       	-c $<
-	$(H)$(OC) $(OCAMLOPTIONS) \
-		-pack elpi_runtime.$(CMX) -o $@
+src/%: trace_ppx
+	$(H)$(MAKE) --no-print-directory -C src/ $*
 
-elpi_runtime_trace_off.$(CMX) : elpi_runtime.ml elpi_runtime.cmi trace_ppx
-	$(H)$(call pp,$(OCNAME),-c -ppx 'trace_ppx --off' -for-pack,$@)
-	$(H)$(OC) $(OCAMLOPTIONS) \
-		-package camlp5,ppx_deriving.std \
-		-ppx './trace_ppx --as-ppx --off' \
-		-for-pack Elpi_runtime_trace_off \
-	       	-c $<
-	$(H)$(OC) $(OCAMLOPTIONS) \
-		-pack elpi_runtime.$(CMX) -o $@
-
-$(ELPI_EASY_COMPONENTS) : %.$(CMX): %.ml
-	$(H)$(call pp,$(OCNAME),-c,$@)
-	$(H)$(OC) $(OCAMLOPTIONS) \
-		-package camlp5,ppx_deriving.std \
-	       	-c $<
-
-elpi_API.cmi: elpi_API.mli
-	$(H)$(call pp,$(OCNAME),-opaque -c,$@)
-	$(H)$(OC) $(OCAMLOPTIONS) -package camlp5 -opaque -c $<
-%.cmi: %.mli
-	$(H)$(call pp,$(OCNAME),-c,$@)
-	$(H)$(OC) $(OCAMLOPTIONS) -package camlp5 -c $<
-
-elpi_parser.$(CMX): elpi_parser.ml elpi_parser.cmi elpi_ast.$(CMX) elpi_ast.cmi
-	$(H)$(call pp,$(OCNAME),-c -pp camlp5o,$@)
-	$(H)$(OC) $(OCAMLOPTIONS) -pp '$(PP) $(PARSE)' $(FLAGS) -o $@ -c $<
-
-# dependencies
-include $(DEPS)
-
-.depends: $(filter-out elpi_parser.ml, $(wildcard *.ml *.mli))
-	$(H)$(call pp,OCAMLDEP,-native,$@)
-	$(H)$(OD) -native $^ > $@
-.depends.parser: elpi_parser.ml
-	$(H)$(call pp,OCAMLDEP,-native,$@)
-	$(H)$(OD) -native -pp '$(PP) $(PARSE)' $< > $@
-.depends.byte: $(filter-out elpi_parser.ml, $(wildcard *.ml *.mli))
-	$(H)$(call pp,OCAMLDEP,,$@)
-	$(H)$(OD) $^ > $@
-.depends.parser.byte: elpi_parser.ml
-	$(H)$(call pp,OCAMLDEP,,$@)
-	$(H)$(OD) -pp '$(PP) $(PARSE)' $< > $@
-# Not detected by ocamldep
-elpi_runtime_trace_on.$(CMX) : elpi_util.$(CMX) elpi_data.$(CMX) elpi_ptmap.$(CMX) elpi_parser.$(CMX) elpi_ast.$(CMX) elpi_trace.$(CMX) elpi_runtime.cmi
-elpi_runtime_trace_off.$(CMX) : elpi_util.$(CMX) elpi_data.$(CMX) elpi_ptmap.$(CMX) elpi_parser.$(CMX) elpi_ast.$(CMX) elpi_trace.$(CMX) elpi_runtime.cmi
-elpi_API.$(CMX): elpi_runtime_trace_on.$(CMX) elpi_runtime_trace_off.$(CMX)
-elpi_compiler.$(CMX): elpi_runtime_trace_on.$(CMX) elpi_runtime_trace_off.$(CMX)
-
-findlib/elpi/META: elpi.$(CMXA) elpi.cmi Makefile
+findlib/elpi/META: src/elpi.$(CMXA) src/elpi.cmi Makefile
 	$(H)rm -rf findlib/; mkdir findlib
-	$(H)ocamlfind install -destdir $(shell pwd)/findlib -patch-archives \
-		elpi META elpi_API.cmi elpi_API.mli elpi.cmi $(ELPI_LIBS) \
-		-optional elpi.cma elpi.cmxa elpi.a elpi_API.cmti
+	$(H)ocamlfind install -destdir $(BASE)/findlib -patch-archives \
+		elpi META $(ELPI_DIST) $(ELPI_LIBS) \
+		-optional $(ELPI_DIST_OPT)
 
 install:
 	$(H)ocamlfind install -patch-archives \
-		elpi META elpi_API.cmi elpi_API.mli elpi.cmi $(ELPI_LIBS) \
-		-optional elpi.cma elpi.cmxa elpi.a elpi_API.cmti elpi elpi.byte
+		elpi META $(ELPI_DIST) $(ELPI_LIBS) \
+		-optional $(ELPI_DIST_OPT) elpi elpi.byte
 install-bin:
-	$(H)cp $(EXE) $(BIN)
+	$(H)cp elpi$(EXE) $(BIN)
 
 uninstall:
 	$(H)ocamlfind remove elpi
 uninstall-bin:
-	$(H)rm -f $(BIN)/$(EXE)
+	$(H)rm -f $(BIN)/elpi$(EXE)
 
 
 # required OCaml package
