@@ -1,16 +1,17 @@
 # Extensions to λProlog implemented in ELPI
 
-- [Underscore](#underscore)
+- [Underscore](#underscore) is a real wildcard
 
 - [Macros](#macros) are expanded at compilation time
 
-- [Spilling](#spilling)
+- [Spilling](#spilling) turns `..{foo X}..` into `foo X Y,..Y..`
 
-- [N-ary binders](#n-ary-binders)
+- [N-ary binders](#n-ary-binders) let one write `pi x y z\ ...`
 
-- [Non logical features](#non-logical-features)
+- [Non logical features](#non-logical-features) like `!` or `$new_safe`
 
-- [Typechecking](#typechecking)
+- [Typechecking](#typechecking) is performed by `elpi_typechecker.elpi`
+  on the quoted syntax of the program and query
 
 - [Subterm naming](#subterm-naming) can be performed
   using an `as X` annotation
@@ -91,13 +92,10 @@ macro @neck-cut-if P Hd Hyps :- (
  f X :- X = 2.
 ```
 
-```shell
-$ elpi neck-cut.elpi
+```
 goal> greedy => f X.
 Success:
   X = 1
-
-$ elpi neck-cut.elpi
 goal> f X.
 Success:
   X = 1
@@ -106,12 +104,48 @@ Success:
   X = 2 
 ```
 ## Spilling
+The following boring code
+```prolog
+f X R :- foo X Y, bar Y R.
+```
+can be written as
+```prolog
+f X R :- bar {foo X} R.
+```
+since ELPI rewrites the latter program into 
+```prolog
+f X R :- foo X Spilled_1, bar Spilled_1 R.
+```
+
+For spilling to work, ELPI has to know the arity of the spilled predicate.
+Both a `type` or `mode` declaration suffice.
+```prolog
+type f int -> int -> int -> prop
+type g int -> int -> prop
+main :- g {f 3}.
+```
+
+Spilling under `pi` is supported
+```prolog
+foo :- pi x\ f {g x}
+```
+rewrites to
+```prolog
+foo :- pi x\ sigma Spilled_1\ g x Spilled_1, f Spilled_1.
+```
+so that `Spilled_1` sees `x` and can receive the "result" of `g`.
+
+Spilling under a lambda is not supported.
+The `elpi` tool accepts `-print` flag to print the program after spilling.
 
 ## N-ary binders
 
 The `pi` and `sigma` binders are n-ary:
 - `sigma X Y\ t` is expanded to `sigma X\ sigma Y\ t`.
 - `pi x y\ t` is expanded to `pi x\ pi y\ t`.
+
+At the time of writing type annotation on `pi` variables are ignored by both
+the interpreter and the `elpi_typechecker.elpi`.
 
 ## Non logical features
 
@@ -164,7 +198,7 @@ fatal-error Msg :- $print Msg, halt.
 ```
 One can, from any file accumulated after `lp-lib.elpi`, take over
 such clause using the `:before` attribute.
-```
+```prolog
 :name "my-fatal-error" :before "default-fatal-error"
 fatal-error Msg :- !, M is "elpi: " ^ Msg, coq-err M.
 ```
@@ -182,8 +216,7 @@ pp (app H A) S :- pp H S1, pp A S2, S is "(" ^ S1 ^ " " ^ S2 ^ ")".
 pp ?? "_".
 ```
 
-```shell
-$ elpi pp.elpi
+```
 goal> pp (lambda "x" y\ app y y) S.
 Success:
   S = "λx.(x x)"
@@ -215,8 +248,9 @@ Failure
 ```
 
 Hypothetical clauses are kept:
-```prolog
+```
 goal> pi x\ sigma Y\ even x => $delay (even Y) [Y].
+Success:
 Constraints:
   even x ⊢ even (W x)
 
@@ -265,12 +299,10 @@ constraint even odd {
 }
 ```
 
-```shell
-$ elpi evenodd.elpi
+```
 goal> whatever => even X.
 Constraints:
    ⊢ even X
- 
 goal> even X, odd X.
 Failure
 ```
@@ -288,7 +320,7 @@ where `m` and `r` are sequents as in `(goal)` or `(ctx ?- concl)`,
 name (head symbol).  The set of `c` defines a constraint clique.
 CHR rules belonging to the block do apply to the clique, and constraints
 in the clique have their context filtered to only contain stuff in the clique.
-Every component (m, r, x, guard, new) can me omitted.
+Every component (`m`, `r`, `x`, `guard`, `new`) can me omitted.
 
 semantics:
 - `m` is a sequent to be matched.
@@ -297,19 +329,28 @@ semantics:
   coming from the constraints are frozen (replaced by fresh constants) and
   where pi constants are eventually aligned (see below).
 - `new` is a new goal to be injected in the main runtime (not necessarily a
-  constraint) and lives in the initial context.
-- `x` is a variable.  If such variable denotes the arguments of a unification
-  variable, then this list must be only made of constants (disjoint) and is
-  used to align constraints.  If such variable denotes a unification variable
-  without its arguments, then it means no-alignement but check the variable
-  (key) is the same.
+  constraint) and lives in the initial program.
+- `x` is a unification variable. The alignment condition can be `~` or `=`.
+  - `~` means "check the variable is the same and align heigen variables".
+    This works only if the variables are in Lλ (applied to a duplicate free
+    list of names)
+  - `=` means "check the variable is the same and spread names apart".
+    This works even outside the Lλ fragment.  It is up to the programmer
+    to eventually relate the names in the goals, typically in the guard.
 
-`m` and `r` must use disjoint sets of variables, `guard` is executed after
-the alignment and can thus mix variables coming from different goals.
+`m` and `r` must use disjoint sets of variables.
+Once `m` and `r` are matched, the alignment is performed and all
+unification variables are frozen. Hence, when `guard` is executed,
+a unification variable `X a (f b)` is represented as `(uvar cX [a',f b'])`
+where `cX` is a fresh constant used in all occurrences of `X`, and 
+`a'` and `b'` are names (their actual value depends on the alignement).
 
-CHR application loops until
+Patterns in `m` and `r` can contain the `??` symbol (used for modes) but not
+the advanced syntax `?? X L` (see the [Advanced modes](#advanced-modes) section).
 
-#### Example 0
+The application of CHR rules follows the standard CHR policy.
+
+#### Example of first order rules
 
 We compute GCD.  The `gcd` predicate hold a second variable, so that
 we can compute GCDs of 2 sets of numbers: 99, 66 and 22 named X;
@@ -339,58 +380,30 @@ The alignment condition is used to apply the rule to constraints in the same
 set.  Constraints are resumed as regular delayed goals are.
 
 
-#### Example 1
+#### Example of higher order rules
 
 ```prolog
 constraint term {
-  rule (GX ?- term (?? X LX) TX)
-     \ (GY ?- term (?? Y LY) TY)
+  rule (GX ?- term (?? as X) TX)
+     \ (GY ?- term (?? as Y) TY)
      > X ~ Y
-     | (compatible GX LX GY LY CTXCONSTR)
+     | (X = uvar K LX, Y = uvar K LY, compatible GX LX GY LY CTXCONSTR)
    <=> (CTXCONSTR, TX = TY).
 }
 
 compatible _ [] _ [] true :- !.
 compatible GX [X|XS] GY [Y|YS] (TX = TY, K) :-
- (GX ====> term X TX),
- (GY ====> term Y TY),
+ (GX => term X TX),
+ (GY => term Y TY),
  !,
  compatible GX XS GY YS K.
 compatible _ _ _ _ false.
 ```
 
-Goals are not aligned, hence pi-variables are spread (made so that there is no
-overlap between the ones of the goals, NYI).  No such variable has to appear in
-`new` (NYI).  For this to work, `TX` and `TY` (in `compatible` hence in in
-`new`) have to be closed.
-
-TBD.
-
-#### Example 2
-
-```prolog
-constraint term {
-  rule (GX ?- term (?? _ LX as KX) TX)
-     \ (GY ?- term (?? _ LY as KY) TY)
-     > KX ~ KY
-     | (compatible GX LX GY LY CTXCONSTR)
-   <=> (CTXCONSTR, TX = TY).
-}
-compatible _ [] _ [] true :- !.
-compatible GX [X|XS] GY [Y|YS] (TX = TY, K) :-
- (GX ====> term X TX),
- (GY ====> term Y TY),
- !,
- compatible GX XS GY YS K.
-compatible _ _ _ _ false.
-```
-
-This time `LX` and `LY` are used to align the goals and it is now legit
+`LX` and `LY` are used to align the goals and it is legit
 to inject `TX = TY` in the main runtime.  This fails if something like
 `term (X (app f y)) T` gets suspended, since alignment only works
-in the l-lambda fragment.
-
-
+in the Lλ fragment.
 
 ## Quotations
 
