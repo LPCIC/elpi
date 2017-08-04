@@ -258,7 +258,7 @@ goal> pi x\ sigma Y\ even x => ($delay (even Y) [Y], Y = x).
 Success:
 ```
 
-The `$delay` built is typically used in conjuction with `mode` as follows:
+The `$delay` built in is typically used in conjuction with `mode` as follows:
 ```prolog
 mode (even i).
 even (?? as X) :- !, $delay (even X) [X].
@@ -273,7 +273,7 @@ suspended goal and lets one express constraint handling rules.
 A "clique" of related predicates is declared with
 ```prolog
 constraint foo bar ... {
-  rules ...
+  rule ...
 }
 ```
 The effect is that whenever a goal about `foo` or `bar`
@@ -295,7 +295,7 @@ even X :- X > 1, Y is X - 1, odd  Y.
 odd  X :- X > 0, Y is X - 1, even Y.
 
 constraint even odd {
-  rule (even X) (even Y) > X ~ Y <=> false.
+  rule (even X) (odd Y) > X ~ Y <=> false.
 }
 ```
 
