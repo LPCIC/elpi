@@ -613,21 +613,6 @@ let _ =
        | _ -> type_error "$rex_replace not 3 strings")
     | _ -> type_error "$rex_replace not 4 args") ;
 
-   declare "$match_frozen" (fun ~depth ~env:_ -> function
-     | [t1;t2] ->
-       (match deref_head depth t1 with (* TODO: c is_frozen *)
-       | App(_,x,xs) -> [App (eqc, t2, [list_to_lp_list (x :: xs)])]
-       | Const _ -> [App (eqc, t2, [list_to_lp_list []])]
-       | _ -> type_error "not a frozen")
-       | [t1;t2;t3] ->
-       (match deref_head depth t1 with (* TODO: c is_frozen *)
-       | App(c,x,xs) -> [App (eqc, t2, [of_dbl c]);
-                         App (eqc, t3, [list_to_lp_list (x :: xs)])]
-       | Const _ as c -> [App (eqc, t2, [c]);
-                          App (eqc, t3, [list_to_lp_list []])]
-       | _ -> type_error "not a frozen")
-     | _ -> type_error "$matc_frozen takes two args") ;
-   
    declare "$quote_syntax" (fun ~depth ~env:_ -> function
        | [f;s;r1;r2] ->
        (match deref_head depth f, deref_head depth s with

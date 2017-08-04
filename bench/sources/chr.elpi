@@ -20,7 +20,7 @@ constraint term {
   rule (GX ?- term (?? as X) TX)
      \ (GY ?- term (?? as Y) TY)
      > X = Y
-     | ($match_frozen X _ XL, $match_frozen Y _ YL,
+     | (X = uvar _ XL, Y = uvar _ YL,
         compatible GX LX GY LY CTXCONSTR)
    <=> (CTXCONSTR, TX = TY).
 }

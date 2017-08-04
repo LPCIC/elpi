@@ -181,6 +181,7 @@ module Constants : sig
   val asc : constant
   val letc : constant
   val arrowc : constant
+  val frozenc : constant
 
   val ctypec : constant
 
@@ -260,6 +261,7 @@ let asc = fst (funct_of_ast (F.from_string "as"))
 let letc = fst (funct_of_ast (F.from_string ":="))
 let spillc = fst (funct_of_ast (F.spillf))
 let arrowc = fst (funct_of_ast F.arrowf)
+let frozenc = fst (funct_of_ast (F.from_string "uvar"))
 let ctypec = fst (funct_of_ast F.ctypef)
 
 let dummy = App (-9999,cutc,[])

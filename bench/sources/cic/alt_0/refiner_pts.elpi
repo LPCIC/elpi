@@ -18,8 +18,9 @@ conv+whnf (?? as T1) L1 M T2 L2 :- !, $constraint (conv+whnf T1 L1 M T2 L2) T1.
 conv+whnf T1 L1 M (?? as T2) L2 :- !, $constraint (conv+whnf T1 L1 M T2 L2) T2.
 
 constraint t+step has+sort conv+whnf r+step {
-  rule (G1 ?- t+step (?? X1 L1) T1) \ (G2 ?- t+step (?? X2 L2) T2) > X1 ~ X2
-   | ($print "###" L1, is_canonical L1, $print "###OK", compat G1 L1 T1 G2 L2 T2 L3) <=> $print L3, L3.
+  rule (G1 ?- t+step (?? as X1) T1) \ (G2 ?- t+step (?? as X2) T2) > X1 ~ X2
+   | (X1 = uvar _ L1, X2 = uvar _ L2,
+      $print "###" L1, is_canonical L1, $print "###OK", compat G1 L1 T1 G2 L2 T2 L3) <=> $print L3, L3.
 }
 
 is_canonical [].

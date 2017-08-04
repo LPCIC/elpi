@@ -2121,23 +2121,16 @@ let freeze ad m t =
   let rec freeze ad orig = match orig with
     | UVar( { contents = t} , 0,0) when t != C.dummy -> freeze ad t
     | UVar( { contents = t} , vardepth, args) when t != C.dummy ->
-(*                     assert false; *)
         freeze ad (deref_uv ~from:vardepth ~to_:ad args t)
-      
-    | AppUVar ( { contents = t }, _, _) when t != C.dummy -> assert false
+    | AppUVar ( { contents = t }, vardepth, args) when t != C.dummy ->
+        freeze ad (deref_appuv ~from:vardepth ~to_:ad args t)
     | UVar( r, lvl, ano) ->
-       let n, c = freeze_uv r lvl in
-       (match C.mkinterval 0 (lvl+ano) 0 with
-       | [] -> c
-       | [x] -> App(n,x,[])
-       | x::xs -> App(n,x,xs))
+       let _, c = freeze_uv r lvl in
+       App(C.frozenc,c,C.mkinterval 0 (lvl+ano) 0)
     | AppUVar( r, lvl, args ) ->
-       let n, c = freeze_uv r lvl in
+       let _, c = freeze_uv r lvl in
        let args = freeze_list ad args args in
-       (match C.mkinterval 0 lvl 0 @ args with
-       | [] -> c
-       | [x] -> App(n,x,[])
-       | x::xs -> App(n,x,xs))
+       App(C.frozenc, c, C.mkinterval 0 lvl 0 @ args)
     | App(c,x,xs) ->
         let x' = freeze ad x in
         let xs' = freeze_list ad xs xs in
@@ -2240,11 +2233,10 @@ let align_frozen ({ arg2goal } as m) e (alignement,mode) ngoals =
   let mkconstlist l =
     let k, l =
       match mode, l with
-      | `Align, App(c,arg,args) when is_frozen c m ->
-           Constants.of_dbl c, arg::args
-      | `Align, (Const c as x) when is_frozen c m -> x, [] 
-      | `Spread, (App (c,_,_) | Const c) when is_frozen c m ->
-           Constants.of_dbl c, []
+      | `Align,  App(f,(Const c as x),args) when C.frozenc == f && is_frozen c m ->
+           x, args
+      | `Spread, App(f,(Const c as x),_)    when C.frozenc == f && is_frozen c m ->
+           x, []
       | `Spread, _ -> Constants.dummy, []
       | _ -> assert false in
     if !same_k == None then same_k := Some k;
@@ -2287,31 +2279,21 @@ let thaw max_depth e m t =
   | Arg(i,ano) -> e.(i) <- UVar(oref C.dummy,max_depth,ano); e.(i)
   | AppArg(i,args) ->
       e.(i) <- mkAppUVar (oref C.dummy) max_depth (List.map aux args); e.(i)
-  | App(c,x,xs) ->
-      (try
-        let r, lvl, _ = frozenc2uv c m in
-        if List.length xs + 1 >= lvl then
+  | App(c,Const x,xs) when C.frozenc == c ->
+      let r, lvl, _ = frozenc2uv x m in
+      (* terribly incomplete *)
+        if List.length xs >= lvl then
          let _, xs = partition_i (fun i t ->
            if i < lvl then begin
              if t <> Const i then assert false;
              true
            end
-             else false) (x::xs) in
+             else false) xs in
          mkAppUVar r lvl  (List.map (aux) xs)
         else
          assert false (* TODO *)
-      with Not_found -> 
-        App(c,aux x, List.map (aux) xs))
-  | Const x as orig ->
-     (try
-        let r, lvl, _ = frozenc2uv x m in
-        if lvl = 0 then
-         UVar(r,lvl,0)
-        else
-         let r' = oref C.dummy in
-         r @:= UVar(r',0,lvl);
-         UVar (r', 0, 0)
-      with Not_found -> orig)
+  | App(c,x,xs) -> App(c,aux x, List.map (aux) xs)
+  | Const _ as orig -> orig
   | Cons(hd,tl) -> Cons (aux hd, aux tl)
   | Nil as x -> x
   | CData _ as x -> x
