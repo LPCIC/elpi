@@ -348,7 +348,8 @@ where `cX` is a fresh constant used in all occurrences of `X`, and
 Patterns in `m` and `r` can contain the `??` symbol (used for modes) but not
 the advanced syntax `?? X L` (see the [Advanced modes](#advanced-modes) section).
 
-The application of CHR rules follows the standard CHR policy.
+The application of CHR rules follows the standard 
+[CHR](https://en.wikipedia.org/wiki/Constraint_Handling_Rules) policy.
 
 #### Example of first order rules
 
