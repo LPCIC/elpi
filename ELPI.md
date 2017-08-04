@@ -38,10 +38,15 @@
 
 Underscore `_` is a valid variable name, but each occurrence denotes a different
 variable.
+
 ```prolog
 eq X X. % sensible definition of eq
 eq _ _. % always true, like writing eq X Y.
 ```
+
+This is the natural semantics for a wildcard.
+Side note: `elpi_typechecker.elpi` (see below) reports warnings about linearly used
+variables with a name not starting with `_`.
 
 ## Macros
 
@@ -76,8 +81,6 @@ of (let-in Name V F) R         :- of V T, pi x\ @of x Name T => val x V => of (F
 
 #### Example: optional cut.
 ```prolog
-$ cat neck-cut.elpi
-
 macro @neck-cut-if P Hd Hyps :- (
   (Hd :- P,      !, Hyps),
   (Hd :- not P,     Hyps)
@@ -86,8 +89,10 @@ macro @neck-cut-if P Hd Hyps :- (
 @neck-cut-if greedy 
 (f X)  (X = 1).
  f X :- X = 2.
+```
 
-$ ./elpi neck-cut.elpi
+```shell
+$ elpi neck-cut.elpi
 goal> greedy => f X.
 Success:
   X = 1
@@ -98,8 +103,7 @@ Success:
   X = 1
 More? (Y/n)
 Success:
-  X = 2
-  
+  X = 2 
 ```
 ## Spilling
 
@@ -171,13 +175,14 @@ The `:after` attribute is also available.
 
 Predicate arguments can be flagged as input as follows
 ```prolog
-$ cat pp.elpi
 mode (pp i o).
 
 pp (lambda Name F) S :- (pi x\ pp x Name => pp (F x) S1), S is "λ" ^ Name ^ "." ^ S1.
 pp (app H A) S :- pp H S1, pp A S2, S is "(" ^ S1 ^ " " ^ S2 ^ ")".
 pp ?? "_".
+```
 
+```shell
 $ elpi pp.elpi
 goal> pp (lambda "x" y\ app y y) S.
 Success:
@@ -245,7 +250,6 @@ between curly braces apply.
 
 #### Example
 ```prolog
-$ cat evenodd.elpi
 mode (odd i).
 mode (even i).
 
@@ -259,7 +263,9 @@ odd  X :- X > 0, Y is X - 1, even Y.
 constraint even odd {
   rule (even X) (even Y) > X ~ Y <=> false.
 }
+```
 
+```shell
 $ elpi evenodd.elpi
 goal> whatever => even X.
 Constraints:
