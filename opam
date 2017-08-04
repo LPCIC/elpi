@@ -3,7 +3,7 @@ name: "elpi"
 version: "dev"
 maintainer: "Enrico Tassi <enrico.tassi@inria.fr>"
 authors: [ "Claudio Sacerdoti Coen" "Enrico Tassi" ]
-license: "LGPL 2.1"
+license: "LGPL 2.1+"
 homepage: "http://github.com/LPCIC/elpi"
 doc: "http://github.com/LPCIC/elpi"
 dev-repo: "http://github.com/LPCIC/elpi"

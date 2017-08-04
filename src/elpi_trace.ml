@@ -1,6 +1,6 @@
 (* elpi: embedded lambda prolog interpreter                                  *)
 (* copyright: 2014 - Enrico Tassi <enrico.tassi@inria.fr>                    *)
-(* license: GNU Lesser General Public License Version 2.1                    *)
+(* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
 module F = Format
