@@ -18,7 +18,7 @@ module Func = struct
 
   let pp fmt s = Format.fprintf fmt "%s" s
   let show x = x
-  let equal = (==)
+  let equal x y = x == y || x = y (* Resilient to unmarshaling *)
   let truef = from_string "true"
   let andf = from_string ","
   let andf2 = from_string "&"
