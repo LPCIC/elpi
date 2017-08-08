@@ -176,7 +176,7 @@ module Extend : sig
     (** quotation node *)
     val mkQuoted : string -> term
 
-    val query_of_term : term -> Ast.query
+    val query_of_term : ?loc:Ploc.t -> term -> Ast.query
     val term_of_query : Ast.query -> term
 
   end

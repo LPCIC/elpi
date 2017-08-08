@@ -117,7 +117,7 @@ module Extend = struct
 
   module Ast = struct
     include Elpi_ast
-    let query_of_term x = Ploc.dummy, x
+    let query_of_term ?(loc=Ploc.dummy) x = loc, x
     let term_of_query (_,x) = x
   end
 
