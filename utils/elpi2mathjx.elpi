@@ -107,9 +107,9 @@ pp _ X :- name X Y, !,
      (write "\\_")
      ($rex_replace "^\\([A-Z]+\\)\\([0-9]+\\)$" "\\1_{\\2}" Y YS, write YS).
 pp _ (cdata S) :- $is_cdata S (ctype "string"), !, $term_to_string S Y,
-                  write "\\mathrm{", write {sanitize Y}, write "}".
+                  write "\\mbox{", write {sanitize Y}, write "}".
 pp _ (cdata S) :- $is_cdata S (ctype "int"), !, $term_to_string S Y,
-                  write "\\mathrm{", write Y, write "}".
+                  write "\\mbox{", write Y, write "}".
 pp _ X :- $term_to_string X Y, write Y.
 
 pp-ctx []
