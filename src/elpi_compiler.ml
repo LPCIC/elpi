@@ -312,7 +312,7 @@ let stack_term_of_ast ?(inner_call=false) ~depth:arg_lvl state ast =
        set_varmap state orig_varmap, Lam t'
     | A.App (A.App (f,l1),l2) ->
        aux inner lvl state (A.App (f, l1@l2))
-    | A.String str -> state, CData (in_string str)
+    | A.String str -> state, CData (in_string (F.from_string (F.show str)))
     | A.Int i -> state, CData (in_int i)
     | A.Float f -> state, CData (in_float f)
     | A.App (A.Lam _,_) -> error "Beta-redexes not in our language"
