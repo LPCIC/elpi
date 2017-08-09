@@ -448,7 +448,7 @@ unfolds to
 prod "x" t x\ prod _ (indt "...nat") y\
   app [indt "...prod", x, indt "...bool"]
 ```
-Note the x is bound in elpi and used inside the quotation.
+Note: x is bound in ELPI and used inside the quotation.
 
 ## Advanced modes
 
@@ -500,7 +500,7 @@ pptac (tac T) (tac S) :- pp T S.
 In matching mode a syntax to introspect unification variables
 is provided:
 ```prolog
-pp1 ?? :-             $print "a variable"
+pp1 ?? :-             $print "a variable".
 pp2 (?? K) :-         $print "with id " K.
 pp3 (?? _ L) :-       $print "with arguments " L.
 pp4 (?? K L as V) :-  $print "a flexible term " V.
