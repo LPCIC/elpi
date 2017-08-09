@@ -8,11 +8,13 @@
          | K2(x,y) ->
             let z = f x in
             [%spy "z" (fun fmt -> .. z ..) z];
+            [%log "K2" "whatever" 37];
             z + f y
      end]
-
-  If env variable TRACE is undefined, no code is added.
-
+     
+  All syntactic extensions vanish if --off is passed
+  to the ppx rewriter
+     
   requires:
 *)
 open Ppx_tools_402
