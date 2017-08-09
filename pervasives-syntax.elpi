@@ -1,53 +1,9 @@
-%%%%%%%%%%%%%% PREDICATES NOT IMPLEMENTED/DOCUMENTED IN TEYJUS %%%%%%%%%%%%%%%%
+% elpi: embedded lambda prolog interpreter
+% license: GNU Lesser General Public License Version 2.1 or later
 
-%open_socket
-%time
-%solve
-
-%%%%%%%%%%%%%%%%%% DECLARATION OF CUSTOM PREDICATES %%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% nofixity !
-% nofixity sigma
-% nofixity pi
-% nofixity true
-% nofixity fail
-
-% nofixity nil
-
-% nofixity abs               nofixity iabs         nofixity rabs
-% nofixity int_to_real
-% nofixity sqrt
-% nofixity sin
-% nofixity cos
-% nofixity arctan
-% nofixity ln
-% nofixity floor
-% nofixity ceil
-% nofixity truncate
-% nofixity size
-% nofixity chr
-% nofixity string_to_int
-% nofixity substring
-% nofixity real_to_string
-% nofixity int_to_string
-% nofixity std_in
-% nofixity std_out
-% nofixity std_err
-
-% NOT IN TEYJUS
-% nofixity $print
-% nofixity $lt
-% nofixity is_flex
-% nofixity $print_delayed
-
-% nofixity propagate
-% nofixity $delay
-% nofixity nabla
-% nofixity $closed
-
-% nofixity $dprint
-
-% nofixity $gettimeofday
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% This file populates the grammar of ELPI and is always loaded first
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 prefix ~  256.       prefix i~  256.     prefix r~  256.
 infixl mod 160.
@@ -74,6 +30,6 @@ infix  ?- 115.
 infixr ;  100.
 infixl :- 0.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%% Convenience symbols for associative lists %%%%%%%%%
+% Convenience symbols for associative lists
 infix `-> 141.
 infix `: 141.
