@@ -162,6 +162,7 @@ module Extend : sig
 
     val mkFreshUVar : unit -> term
 
+    (** caveat: [a,b,c] -> mkSeq [a;b;c;mkNil] *)
     val mkNil : term
     val mkSeq : term list -> term
 
@@ -220,6 +221,7 @@ module Extend : sig
     type custom_constraints = Data.custom_constraints
     type idx
 
+    (** builtin data types *)
     module C : sig
       val int : int CData.cdata
       val is_int : CData.t -> bool
@@ -381,6 +383,7 @@ module Extend : sig
 
   end
         
+  (** TODO: too rough *)
   module Pp : sig
 
     val term : ?min_prec:int ->
