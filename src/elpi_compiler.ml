@@ -11,8 +11,6 @@ open Pp
   "Compiler" from AST to program
  ******************************************************************************)
 
-let modes = ref Constants.Map.empty
-
 module SM = Map.Make(String)
 
 module A = Elpi_ast
@@ -21,7 +19,7 @@ module A = Elpi_ast
  *
  * Works on AST and needs to know the "types" of functors, i.e. their
  * arity in order to know how many extra arguments needs to be used *)
-let spill types ast =
+let spill types modes ast =
 
   let arity_of types t =
     let (c,ct), args =
@@ -39,7 +37,7 @@ let spill types ast =
         let rec napp = function App(_,_,[x]) -> 1 + napp x | _ -> 0 in
         napp ty - nargs 
       with Not_found ->
-        match Constants.Map.find c !modes with
+        match Constants.Map.find c modes with
         | Mono l ->
             let arity = List.length l in
             let missing = arity - nargs in
@@ -162,6 +160,10 @@ let macros = "elpi:macros"
 let get_macros, set_macros, update_macros =
   ExtState.declare_extension macros (fun () -> F.Map.empty)
 ;;
+let modes = "elpi:modes"
+let get_modes, set_modes, update_modes =
+  ExtState.declare_extension modes (fun () -> Constants.Map.empty)
+;;
 
 let is_Arg state x =
   let { argc2name } = get_argmap state in
@@ -200,6 +202,7 @@ let fresh_Arg =
 let stack_term_of_ast ?(inner_call=false) ~depth:arg_lvl state ast =
   let macro = get_macros state in
   let types = get_types state in
+  let modes = get_modes state in
 
   (* XXX desugaring: XXX does not seem to be very useful... XXX
       - "f x -> y :- c" ---> "f x TMP :- TMP = y, c"
@@ -351,7 +354,7 @@ let stack_term_of_ast ?(inner_call=false) ~depth:arg_lvl state ast =
     argify argc2name t
   in
 
-  let spilled_ast = spill types ast in
+  let spilled_ast = spill types modes ast in
   (* arg_lvl is the number of local variables *)
   let state, term_no_args = aux false arg_lvl state spilled_ast in
   let term =
@@ -394,10 +397,12 @@ let env_of_args state =
   Array.make max Constants.dummy
 ;;
 
-let query_of_ast { query_depth = lcs; macros } (loc,t) =
+let query_of_ast { query_depth; macros; declared_types; modes } (loc,t) =
   let state = ExtState.init () in
   let state = set_macros state macros in
-  let state, clause = clause_of_ast lcs state t in
+  let state = set_types state declared_types in
+  let state = set_modes state modes in
+  let state, clause = clause_of_ast query_depth state t in
   loc, names_of_args state, 0, env_of_args state, clause
 ;;
  
@@ -465,6 +470,7 @@ type comp_state = {
 
   (* metadata *)
   types : (constant * int * term) list;
+  modes : mode_decl Constants.Map.t;
 }
 
 let sort_insertion l =
@@ -492,27 +498,28 @@ let debug_print ?print state t =
 ;;
 
 let program_of_ast ?print (p : Elpi_ast.decl list) : program =
-  modes := Constants.Map.empty;
 
- let clause_of_ast lcs ~cmap ~macro ~types body =
+ let clause_of_ast lcs ~cmap ~macro ~types ~modes body =
    let state = ExtState.init () in
    let state = set_varmap state cmap in
    let state = set_types state types in
    let state = set_macros state macro in
+   let state = set_modes state modes in
    let state, t = clause_of_ast lcs state body in
    state, (get_argmap state).max_arg, t in
- let chr_of_ast lcs ~cmap ~macro ~types r =
+ let chr_of_ast lcs ~cmap ~macro ~types ~modes r =
    let state = ExtState.init () in
    let state = set_varmap state cmap in
    let state = set_types state types in
    let state = set_macros state macro in
+   let state = set_modes state modes in
    chr_of_ast lcs state r in
 
  let clausify_block program modes block lcs cmap types =
    let l = sort_insertion block in
    let clauses, lcs =
      List.fold_left (fun (clauses,lcs) (macro,{ Elpi_ast.body; id; loc }) ->
-      let state, nargs, t = clause_of_ast lcs ~cmap ~macro ~types body in
+      let state,nargs,t = clause_of_ast lcs ~cmap ~macro ~types ~modes body in
       debug_print ?print state t;
       let moreclauses, morelcs = clausify modes nargs lcs t in
       let loc = in_loc (loc, id) in
@@ -524,13 +531,13 @@ let program_of_ast ?print (p : Elpi_ast.decl list) : program =
      ) ([],lcs) l in
    program @ clauses, lcs in
 
- let clauses, lcs, chr, types, macros =
-   let rec aux ({ program; lcs; chr; clique; types;
+ let clauses, lcs, chr, types, macros, modes =
+   let rec aux ({ program; lcs; chr; clique; types; modes;
                   tmp = ({ block; cmap; macro } as tmp); ctx } as cs) = function
    | [] ->
        if ctx <> [] then error "Begin without an End";
-       let program, lcs = clausify_block program !modes block lcs cmap types in
-       program, lcs, chr, cs.types, macro
+       let program, lcs = clausify_block program modes block lcs cmap types in
+       program, lcs, chr, cs.types, macro, modes
 
    | d :: todo ->
       match d with
@@ -539,12 +546,12 @@ let program_of_ast ?print (p : Elpi_ast.decl list) : program =
             match clique with
             | None -> error "CH rules allowed only in constraint block"
             | Some c -> c in
-          let rule = chr_of_ast lcs ~cmap ~macro ~types r in
+          let rule = chr_of_ast lcs ~cmap ~macro ~types ~modes r in
           let chr = CHR.add_rule clique rule chr in
           aux { cs with chr } todo
       | Elpi_ast.Type(name,typ) ->  (* Check ARITY against MODE *)
           let namec, _ = Constants.funct_of_ast name in
-          let _,nargs,typ = clause_of_ast lcs ~cmap ~macro ~types typ in
+          let _,nargs,typ = clause_of_ast lcs ~cmap ~macro ~types ~modes typ in
           aux { cs with types = (namec,nargs,typ) :: types } todo
       | Elpi_ast.Clause c ->
           aux { cs with tmp = { tmp with block = (block @ [macro,c])} } todo
@@ -554,7 +561,7 @@ let program_of_ast ?print (p : Elpi_ast.decl list) : program =
          aux cs (p @ todo)
       | Elpi_ast.End ->
          if ctx = [] then error "End without a Begin";
-         let program,lcs = clausify_block program !modes block lcs cmap types in
+         let program,lcs = clausify_block program modes block lcs cmap types in
          let tmp = List.hd ctx in
          let ctx = List.tl ctx in
          aux { cs with program; tmp; ctx; lcs; clique = None } todo
@@ -570,7 +577,7 @@ let program_of_ast ?print (p : Elpi_ast.decl list) : program =
                | Const x -> x 
                | _ -> assert false
              with Not_found -> fst (Constants.funct_of_ast c) in
-           List.iter (fun (c,l,alias) ->
+           let modes = List.fold_left (fun modes (c,l,alias) ->
             let key = funct_of_ast c in
             let mode = l in
             let alias = option_map (fun (x,s) ->
@@ -578,17 +585,17 @@ let program_of_ast ?print (p : Elpi_ast.decl list) : program =
               List.map (fun (x,y) -> funct_of_ast x, funct_of_ast y) s) alias
             in
             match alias with
-            | None -> modes := Constants.Map.add key (Mono mode) !modes
+            | None -> Constants.Map.add key (Mono mode) modes
             | Some (a,subst) ->
-                 modes := Constants.Map.add a (Mono mode) !modes;
-                 match Constants.Map.find key !modes with
+                 let modes = Constants.Map.add a (Mono mode) modes in
+                 match Constants.Map.find key modes with
                  | Mono _ -> assert false
                  | Multi l ->
-                     modes := Constants.Map.add key (Multi ((a,subst)::l)) !modes
+                     Constants.Map.add key (Multi ((a,subst)::l)) modes
                  | exception Not_found ->
-                     modes := Constants.Map.add key (Multi [a,subst]) !modes
-           ) m;
-           aux cs todo
+                     Constants.Map.add key (Multi [a,subst]) modes
+           ) modes m in
+           aux { cs with modes } todo
       | Elpi_ast.Constraint fl ->
            let funct_of_ast c =
              try
@@ -605,14 +612,14 @@ let program_of_ast ?print (p : Elpi_ast.decl list) : program =
    in
      aux { program = []; lcs = 0; chr = CHR.empty; clique = None;
            tmp = { block = []; cmap = F.Map.empty; macro = F.Map.empty };
-           ctx = []; types = [] }
+           ctx = []; types = []; modes = Constants.Map.empty; }
          p
  in
  { query_depth = lcs;
    prolog_program =
      Elpi_data.wrap_prolog_prog (make_index (List.map drop_clause_info clauses));
    chr = CHR.wrap_chr chr;
-   modes = !modes;
+   modes = modes;
    declared_types = types;
    clauses_w_info = clauses;
    macros;
