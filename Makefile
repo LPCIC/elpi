@@ -81,9 +81,10 @@ elpi$(EXE): elpi_REPL.ml findlib/elpi/META
 	$(H)$(call pp,$(OCNAME),-package elpi -o $@,$<)
 	$(H)$(OC) $(OC_OPTIONS) -package elpi -o $@ $<
 
-src/%: trace_ppx
+src/%: | trace_ppx
 	$(H)$(MAKE) --no-print-directory -C src/ $*
 
+src/elpi.$(CMXA): $(wildcard src/*.ml) $(wildcard src/*.mli)
 findlib/elpi/META: src/elpi.$(CMXA) src/elpi.cmi Makefile
 	$(H)rm -rf findlib/; mkdir findlib
 	$(H)ocamlfind install -destdir $(BASE)/findlib -patch-archives \
