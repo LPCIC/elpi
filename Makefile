@@ -50,9 +50,12 @@ runners:
 		mv elpi.git.$(t) elpi.git.$(t:runner-%=%))
 
 clean:
-	$(H)rm -f src/*.cmo *.cma *.cmx *.cmxa *.cmi *.o *.a *.tex *.aux *.log *.pdf *.cmt *.cmti
+	$(H)rm -f src/*.cmo src/*.cma src/*.cmx src/*.cmxa src/*.cmi
+	$(H)rm -f src/*.o src/*.a src/*.cmt src/*.cmti
+	$(H)rm -f trace_ppx.cmx
 	$(H)rm -f elpi.git.* trace_ppx elpi elpi.byte
-	$(H)rm -f src/.depends .depends.parser .depends.byte .depends.parser.byte
+	$(H)rm -f src/.depends src/.depends.parser 
+	$(H)rm -f src/.depends.byte src/.depends.parser.byte
 	$(H)rm -rf findlib/
 
 dist:
