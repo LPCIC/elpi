@@ -1,7 +1,9 @@
 (* elpi: embedded lambda prolog interpreter                                  *)
-(* copyright: 2014 - Enrico Tassi <enrico.tassi@inria.fr>                    *)
+(* copyright: 2014 - 2017 Enrico Tassi <enrico.tassi@inria.fr>               *)
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
+
+(* This is the runtime needed by trace_ppx *)
 
 exception TREC_CALL of Obj.t * Obj.t (* ('a -> 'b) * 'a *)
 
