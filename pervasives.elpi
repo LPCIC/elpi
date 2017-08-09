@@ -1,4 +1,9 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%% CUSTOM PREDICATES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% elpi: embedded lambda prolog interpreter
+% license: GNU Lesser General Public License Version 2.1 or later
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Custom predicates
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 X  < Y  :- $lt_ X Y.
 X i< Y  :- $lt_ X Y.
@@ -53,7 +58,9 @@ level X Y :- $level X Y. % Y = level of constant X
 occurs X Y :- $occurs X Y. % if X is a constant,
                            % succeeds if X occurs in Y
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PREDEFINED PREDICATES %%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Standard predicates
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 true.
 
@@ -73,8 +80,11 @@ read S :- flush std_out, input_line std_in X, string_to_term X S.
 
 stop :- halt.
 
-type time prop -> prop.
 time T :- $gettimeofday B, T, $gettimeofday A, D is A - B, $print "TIME" D T.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Type annotations
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 type $$=   X -> X -> prop.
 type $$::  X -> list X -> list X.
@@ -97,6 +107,7 @@ type $$=> prop -> prop -> prop.
 type $$^ string -> string -> string.
 type $$+ int -> int -> int.
 type false prop.
+type time prop -> prop.
 
 type $$$new_safe (ctype "safe") -> prop.
 type $$$open_safe (ctype "safe") -> list A -> prop.
