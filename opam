@@ -23,6 +23,6 @@ depends: [
   "camlp5"
   "ppx_tools_versioned"
   "ppx_deriving"
-  "ocaml-migrate-parsetree.driver-main"
+  "ocaml-migrate-parsetree"
   ]
 
