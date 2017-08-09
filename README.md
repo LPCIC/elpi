@@ -33,7 +33,7 @@ are listed at the end of the [Makefile](Makefile)
 The easiest way of embedding ELPI is by linking it using findlib 
 as in `ocamlfind opt -package elpi mycode.ml -o myprogram`.
 The API the host application can use to drive ELPI is documented in the
-[elpi_API.mli](elpi_API.mli) file.
+[elpi_API.mli](src/elpi_API.mli) file.
 
 Examples of embedding are [coq-elpi](https://github.com/LPCIC/coq-elpi) and
 [matita-elpi](https://github.com/LPCIC/matita).
