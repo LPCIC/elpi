@@ -8,6 +8,8 @@
 
 - [N-ary binders](#n-ary-binders) let one write `pi x y z\ ...`
 
+- [N-ary implication](#n-ary-implication) let one write `[p,q] => g`
+
 - [Non logical features](#non-logical-features) like `!` or `$new_safe`
 
 - [Typechecking](#typechecking) is performed by `elpi_typechecker.elpi`
@@ -146,6 +148,15 @@ The `pi` and `sigma` binders are n-ary:
 
 At the time of writing type annotation on `pi` variables are ignored by both
 the interpreter and the `elpi_typechecker.elpi`.
+
+## N-ary implication
+
+The `=>` connectives accepts, on its left, a list of predicates.
+For example `[p,q] => g` is equivalent to `(p, q) => g` that
+is also equivalent to `p => q => g`.
+
+This is particularly useful in writing [CHR rules](#syntactic-constraints)
+since the hypothetical program is a list of clauses.
 
 ## Non logical features
 
