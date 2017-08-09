@@ -22,7 +22,7 @@ let rec readsymlinks f =
     let link = Unix.readlink f in
     if not(Filename.is_relative link) then readsymlinks link
     else readsymlinks Filename.(concat (dirname f) link)
-  with Unix.Unix_error _ -> f
+  with Unix.Unix_error _ | Failure _ -> f
 
 let symlink_dirname f = Filename.dirname (readsymlinks f)
 
