@@ -4,7 +4,7 @@ infixr --> 126. % type arrow
 infixl '   255. % infix application
 infixl ''  255. % infix System-F application
 infixl &&  128. % and
-infixl $$  127. % or
+infixl `or  127. % or
 infixr ==> 126. % implication
 infixr <=> 125. % iff
 infix  #in 135. % membership
@@ -249,7 +249,7 @@ ppp (? TY F2) (exists '' TY ' lam TY F1) :- !, pi x \ ppp (F2 x) (F1 x).
 ppp (F2 <=> G2) (eq '' prop ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
 ppp (F2 = G2) (eq '' _ ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
 ppp (F2 && G2) (and ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
-ppp (F2 $$ G2) (or ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
+ppp (F2 `or G2) (or ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
 ppp (F2 ==> G2) (impl ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
 ppp (X2 #in S2) (in '' _ ' X1 ' S1) :- !, ppp X2 X1, ppp S2 S1.
 ppp (U2 <<= V2) (subseteq '' _ ' U1 ' V1) :- !, ppp U2 U1, ppp V2 V1.
@@ -1082,7 +1082,7 @@ the_library L :-
              (bind prop x14 \ then i (then i (thenl apply [andl, andr])))))])
   , theorem not_i ((! p \ (p ==> ff) ==> not ' p),
      [then forall_i (bind prop x2 \ then i (then (conv dd) h))])
-  , theorem orl ((! p \ ! q \ p ==> p $$ q),
+  , theorem orl ((! p \ ! q \ p ==> p `or q),
       [then forall_i
         (bind prop x12 \
           then forall_i
@@ -1090,7 +1090,7 @@ the_library L :-
              then i
               (then (conv dd)
                 (then forall_i (bind prop x14 \ then i (then i (then apply h)))))))])
-  , theorem orr ((! p \ ! q \ q ==> p $$ q),
+  , theorem orr ((! p \ ! q \ q ==> p `or q),
       [then forall_i
         (bind prop x12 \
           then forall_i
@@ -1098,7 +1098,7 @@ the_library L :-
              then i
               (then (conv dd)
                 (then forall_i (bind prop x14 \ then i (then i (then apply h)))))))])
-  , theorem or_e ((! p \ ! q \ ! c \ p $$ q ==> (p ==> c) ==> (q ==> c) ==> c),
+  , theorem or_e ((! p \ ! q \ ! c \ p `or q ==> (p ==> c) ==> (q ==> c) ==> c),
      [then forall_i
        (bind prop x12 \
          then forall_i
@@ -1162,15 +1162,15 @@ the_library L :-
    [ then forall_i (bind A x \ r) ]))
 
  /******************* Logic *****************/
- , theorem or_commutative ((! a \ ! b \ a $$ b <=> b $$ a),
+ , theorem or_commutative ((! a \ ! b \ a `or b <=> b `or a),
    [itaut 1])
- , theorem or_ff ((! a \ a $$ ff <=> a),
+ , theorem or_ff ((! a \ a `or ff <=> a),
    [itaut 1])
- , theorem or_tt ((! a \ a $$ tt <=> tt),
+ , theorem or_tt ((! a \ a `or tt <=> tt),
    [itaut 1])
- , theorem or_idempotent ((! a \ a $$ a <=> a),
+ , theorem or_idempotent ((! a \ a `or a <=> a),
    [itaut 1])
- , theorem or_associative ((! a \ ! b \ ! c \ a $$ (b $$ c) <=> (a $$ b) $$ c),
+ , theorem or_associative ((! a \ ! b \ ! c \ a `or (b `or c) <=> (a `or b) `or c),
    [itaut 1])
  , theorem and_commutative ((! a \ ! b \ a && b <=> b && a),
    [itaut 1])
@@ -1182,17 +1182,17 @@ the_library L :-
    [itaut 1])
  , theorem and_associative ((! a \ ! b \ ! c \ a && (b && c) <=> (a && b) && c),
    [itaut 1])
- , theorem and_or ((! a \ ! b \ ! c \ a && (b $$ c) <=> (a && b) $$ (a && c)),
+ , theorem and_or ((! a \ ! b \ ! c \ a && (b `or c) <=> (a && b) `or (a && c)),
    [itaut 1])
- , theorem or_and ((! a \ ! b \ ! c \ a $$ (b && c) <=> (a $$ b) && (a $$ c)),
+ , theorem or_and ((! a \ ! b \ ! c \ a `or (b && c) <=> (a `or b) && (a `or c)),
    [itaut 1])
- , theorem ads_or_and ((! a \ ! b \ (a && b) $$ b <=> b),
+ , theorem ads_or_and ((! a \ ! b \ (a && b) `or b <=> b),
    [itaut 1])
- , theorem ads_and_or ((! a \ ! b \ (a $$ b) && b <=> b),
+ , theorem ads_and_or ((! a \ ! b \ (a `or b) && b <=> b),
    [itaut 1])
- , theorem not_or ((! a \ ! b \ not ' a && not ' b <=> not ' (a $$ b)),
+ , theorem not_or ((! a \ ! b \ not ' a && not ' b <=> not ' (a `or b)),
    [itaut 2])
- , theorem not_and ((! a \ ! b \ not ' a $$ not ' b ==> not ' (a && b)),
+ , theorem not_and ((! a \ ! b \ not ' a `or not ' b ==> not ' (a && b)),
    [itaut 2])
  , theorem not_not_not ((! p \ not ' (not ' (not ' p)) <=> not ' p),
    [itaut 3])
@@ -1332,7 +1332,7 @@ the_library L :-
     (a1 ==> b1) ==> (a2 ==> b2) ==> a1 && a2 ==> b1 && b2),
     [itaut 2])
  , theorem or_monotone ((! a1 \ ! b1 \ ! a2 \ ! b2 \
-    (a1 ==> b1) ==> (a2 ==> b2) ==> a1 $$ a2 ==> b1 $$ b2),
+    (a1 ==> b1) ==> (a2 ==> b2) ==> a1 `or a2 ==> b1 `or b2),
     [itaut 2])
  , theorem impl_monotone ((! a1 \ ! b1 \ ! a2 \ ! b2 \
     (b1 ==> a1) ==> (a2 ==> b2) ==> (a1 ==> a2) ==> (b1 ==> b2)),
@@ -1449,11 +1449,11 @@ the_library L :-
     [then i (then i (then apply h))])
  , theorem test_itaut_1 (((? x \ g x) ==> ! x \ (! y \ g y ==> x) ==> x),
    [itaut 4])*/
- , theorem test_monotone1 (monotone '' _ ' (lam _ p \ lam _ x \ not ' (p ' x) ==> tt && p ' tt $$ p ' x),
+ , theorem test_monotone1 (monotone '' _ ' (lam _ p \ lam _ x \ not ' (p ' x) ==> tt && p ' tt `or p ' x),
    [ auto_monotone ])
- , theorem test_monotone2 (monotone '' _ ' (lam _ p \ lam _ x \ ? z \ not ' (p ' x) ==> tt && p ' tt $$ z),
+ , theorem test_monotone2 (monotone '' _ ' (lam _ p \ lam _ x \ ? z \ not ' (p ' x) ==> tt && p ' tt `or z),
    [ auto_monotone ])
- , theorem test_monotone3 (monotone '' _ ' (lam _ p \ lam _ x \ ! z \ ? y \ (not ' (p ' x) ==> z && p ' y $$ y)),
+ , theorem test_monotone3 (monotone '' _ ' (lam _ p \ lam _ x \ ! z \ ? y \ (not ' (p ' x) ==> z && p ' y `or y)),
    [ auto_monotone ])
  , inductive_def pnn pnnF pnnF_monotone pnn_i pnn_e0 pnn_e (pnn \
      [ (pnn_tt, pnn ' tt)
@@ -1479,7 +1479,7 @@ the_library L :-
                           then left (then (conv (depth_tac h)) (itaut 8)))]))),
               h]))))])
  , theorem pnn_has_two_values
-    ((! x13 \ pnn ' x13 ==> x13 = tt $$ x13 = ff) ,
+    ((! x13 \ pnn ' x13 ==> x13 = tt `or x13 = ff) ,
     % applying an elimination principle is hard: it should be automatized
     [then (cutth pnn_e)
       (then (lforall (lam prop x13 \ or ' (eq '' prop ' x13 ' tt) ' (eq '' prop ' x13 ' ff)))
@@ -1682,7 +1682,7 @@ the_library L :-
               (then (conv (depth_tac h))
                 (then (conv (depth_tac (dd [mytt]))) (thenl c [r, itaut 3])))))))])
  , theorem step1
-    ((! x18 \ x18 = mytt $$ x18 = mynot ' mytt) ,
+    ((! x18 \ x18 = mytt `or x18 = mynot ' mytt) ,
      [then forall_i
       (bind bool2 x18 \
        then (cutth mybool2_e)
