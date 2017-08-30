@@ -161,13 +161,15 @@ let hex = lexer [ '0'-'9' | 'A'-'F' | 'a'-'f' ]
 let schar2 =
  lexer [ '+'  | '*' | '/' | '^' | '<' | '>' | '`' | '\'' | '?' | '@' | '#'
        | '~' | '=' | '&' | '!' ]
-let schar = lexer [ schar2 | '-' | '$' | '_' | ':' ]
+let schar = lexer [ schar2 | '-' | '$' | '_' ]
 let lcase = lexer [ 'a'-'z' ]
 let ucase = lexer [ 'A'-'Z' ]
 let idchar = lexer [ lcase | ucase | digit | schar ]
 let rec idcharstar = lexer [ idchar idcharstar | ]
 let idcharplus = lexer [ idchar idcharstar ]
 let rec num = lexer [ digit | digit num ]
+let symbchar = lexer [ lcase | ucase | digit | schar | ':' ]
+let rec symbcharstar = lexer [ symbchar symbcharstar | ]
 
 let rec stringchar = lexer
  [ "\\\\" / -> $add "\\"
@@ -227,7 +229,7 @@ let tok = lexer
   [ ucase idcharstar -> constant,$buf 
   | lcase idcharstar -> constant,$buf
   | schar2 ?= [ 'A'-'Z' ] -> constant,$buf
-  | schar2 idcharstar -> constant,$buf
+  | schar2 symbcharstar -> constant,$buf
   | '$' lcase idcharstar -> "BUILTIN",$buf
   | '$' '$' notspaceplus -> "ESCAPE",  String.(sub $buf 2 (length $buf - 2))
   | '$' idcharstar -> constant,$buf
@@ -300,6 +302,7 @@ let rec lex loc c = parser bp
          | "accum_sig" -> "ACCUM_SIG", "accum_sig"
          | "use_sig" -> "USE_SIG", "use_sig"
          | "local" -> "LOCAL", "local"
+         | "pred" -> "PRED", "pred"
          | "mode" -> "MODE", "mode"
          | "macro" -> "MACRO", "macro"
          | "rule" -> "RULE", "rule"
@@ -463,9 +466,10 @@ EXTEND
   filename:
     [[ c = CONSTANT -> c
      | c = LITERAL -> c ]];
+  i_o : [[ CONSTANT "i" -> true | CONSTANT "o" -> false ]];
   mode :
     [[ LPAREN; c = CONSTANT;
-       l = LIST1 [ CONSTANT "i" -> true | CONSTANT "o" -> false ]; RPAREN;
+       l = LIST1 i_o; RPAREN;
        alias = OPT[ CONSTANT "xas"; c = CONSTANT;
                  subst = OPT [ LPAREN;
                                l = LIST1 [ c1 = CONSTANT; ARROW;
@@ -507,7 +511,15 @@ EXTEND
       | COLON; CONSTANT "after";
               name = [ c = CONSTANT -> c | l = LITERAL -> l] -> `After, name
     ]];
-  pragma : [[ CONSTANT "#line"; l = INTEGER; f = LITERAL -> set_fname ~line:(int_of_string l) f ]];
+  pragma : [[ CONSTANT "#line"; l = INTEGER; f = LITERAL ->
+    set_fname ~line:(int_of_string l) f ]];
+  pred_item : [[ m = i_o; COLON; t = ctype -> (m,t) ]];
+  pred : [[ c = CONSTANT; a = LIST1 pred_item SEP SYMBOL "," ->
+    let name = Func.from_string c in
+     [name, List.map fst a, None],
+     (name, List.fold_right (fun (_,t) ty ->
+        mkApp [mkCon "->";t;ty]) a (mkCon "prop"))
+  ]];
   clause :
     [[ id = OPT clname; insert = OPT clinsert; f = atom; FULLSTOP ->
        let c = { loc; id; insert; body = f } in
@@ -516,6 +528,7 @@ EXTEND
      | pragma -> []
      | LCURLY -> [Begin]
      | RCURLY -> [End]
+     | PRED; p = pred; FULLSTOP -> let m, (n,t) = p in [Type(n,t); Mode m]
      | MODE; m = LIST1 mode SEP SYMBOL ","; FULLSTOP -> [Mode m]
      | MACRO; b = atom; FULLSTOP ->
          let name, body = desugar_macro b in

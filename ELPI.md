@@ -242,6 +242,18 @@ matched against the clauses' corresponding pattern.
 `??` is the pattern for flexible input. Such flexible term can be
 used in the rest of the clause by naming it with `as Name`
 
+### Mode and type declaration
+
+The short form
+```prolog
+pred foo i:int, o:string.
+```
+is expanded to the following declarations
+```prolog
+type  foo int -> string -> prop.
+mode (foo i o).
+```
+
 ## Syntactic constraints
 
 A goal can be suspended on a list of variables with the `$delay` built in.
