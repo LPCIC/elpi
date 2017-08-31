@@ -16,7 +16,6 @@
 .depends.byte
 .depends.parser.byte
 
-META.elpi
 elpi
 elpi.byte
 trace_ppx
