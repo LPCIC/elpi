@@ -17,16 +17,17 @@ let print_solution time = function
 | Elpi_API.Execute.NoMoreSteps ->
    Format.eprintf "Interrupted (no more steps)\n%!"
 | Elpi_API.Execute.Failure -> Format.eprintf "Failure\n%!"
-| Elpi_API.Execute.Success (s,cs) ->
+| Elpi_API.Execute.Success {
+    Elpi_API.Data.assignments; arg_names; constraints; custom_constraints } ->
   Format.eprintf "\nSuccess:\n%!" ;
-  List.iter (fun (name, t) ->
+  Elpi_API.Data.StrMap.iter (fun name i ->
     Format.eprintf "  @[<hov 1>%s = %a@]\n%!" name
-      Elpi_API.Pp.term t) s;
+      Elpi_API.Pp.term assignments.(i)) arg_names;
   Format.eprintf "\nTime: %5.3f\n%!" time;
   Format.eprintf "\nConstraints:\n%a\n%!"
-    Elpi_API.Pp.constraints cs.Elpi_API.Data.constraints;
+    Elpi_API.Pp.constraints constraints;
   Format.eprintf "\nCustom constraints:\n%a\n%!"
-    Elpi_API.Pp.custom_constraints cs.Elpi_API.Data.custom_constraints;
+    Elpi_API.Pp.custom_constraints custom_constraints;
 ;;
   
 let more () =

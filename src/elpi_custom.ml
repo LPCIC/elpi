@@ -214,46 +214,18 @@ type polyop = {
 }
 
 let _ =
-  declare_full "$delay" (fun ~depth ~env s c -> function
-    | [t1; t2] ->
-      (match is_flex ~depth t2 with
-        | Some v2 -> s.delay `Goal ~goal:t1 ~on:[v2]; [], c 
-        | None ->
-            let v2 =
-              List.map (function
-               | Some x -> x
-               | None -> type_error
-            "the second arg of $delay must be flexible or a list of flexibles")
-              (List.map (is_flex ~depth) (lp_list_to_list ~depth t2)) in
-            s.delay `Goal ~goal:t1 ~on:v2; [], c)
-    | _ -> type_error "$delay takes 2 arguments"
-    );
-  declare_full "$constraint" (fun ~depth ~env s c -> function
-    | [t1; t2] ->
-      (match is_flex ~depth t2 with
-        | Some v2 -> s.delay `Constraint ~goal:t1 ~on:[v2]; [],c
-        | None ->
-            let v2 =
-              List.map (function
-               | Some x -> x
-               | None -> type_error
-            "the second arg of $constraint must be flexible or a list of flexibles")
-              (List.map (is_flex ~depth) (lp_list_to_list ~depth t2)) in
-            s.delay `Constraint ~goal:t1 ~on:v2; [],c)
-    | _ -> type_error "$constraint takes 2 arguments"
-    );
-  declare "$dprint" (fun ~depth ~env args ->
+  declare "$dprint" (fun ~depth args ->
     Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
-     (Pp.list (Pp.Raw.term depth [] 0 env) " ") args ;
+     (Pp.list (Pp.Raw.term depth [] 0 [||]) " ") args ;
     []) ;
-  declare "$print" (fun ~depth ~env args ->
+  declare "$print" (fun ~depth args ->
     Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
-     (Pp.list (Pp.term depth [] 0 env) " ") args ;
+     (Pp.list (Pp.term depth [] 0 [||]) " ") args ;
     []) ;
-  declare "$deref" (fun ~depth ~env args ->
+  declare "$deref" (fun ~depth args ->
     List.iter (fun x -> ignore (is_flex ~depth x)) args;
     []) ;
-  declare "$counter" (fun ~depth ~env:_ -> function
+  declare "$counter" (fun ~depth -> function
     | [t1; t2] ->
        let open CData in
        (match eval depth t1 with
@@ -264,38 +236,32 @@ let _ =
              with Not_found -> raise No_clause)
          | _ -> type_error "bad argument to $counter")
     | _ -> type_error "$counter takes 2 arguments") ;
-  declare_full "$print_constraints" (fun ~depth ~env s c _ ->
-    s.print `Constraints Format.err_formatter ;
-    [],c) ;
-  declare_full "$print_delayed" (fun ~depth ~env s c _ ->
-    s.print `All Format.err_formatter;
-    [],c) ;
-  declare "$is_flex" (fun ~depth ~env:_ args ->
+  declare "$is_flex" (fun ~depth args ->
     match args with
     | [t1] -> if is_flex ~depth t1 <> None then [] else raise No_clause
     | _ -> type_error "$is_flex takes 1 argument") ;
-  declare "$is_same_flex" (fun ~depth ~env:_ args ->
+  declare "$is_same_flex" (fun ~depth args ->
     match args with
     | [t1;t2] ->
        (match is_flex ~depth t1, is_flex ~depth t2 with
            Some p1, Some p2 when p1==p2 -> []
          | _,_ -> raise No_clause)
     | _ -> type_error "$is_same_flex takes 2 argument") ;
-  declare "$is_name" (fun ~depth ~env:_ args ->
+  declare "$is_name" (fun ~depth args ->
     let is_name x = match deref_head ~depth x with
       | Const n when n >= 0 -> true
       | _ -> false in
     match args with
     | [t1] -> if is_name t1 then [] else raise No_clause
     | _ -> type_error "$is_name takes 1 argument") ;
-  declare "$names" (fun ~depth ~env:_ args ->
+  declare "$names" (fun ~depth args ->
     let rec mk_local_vars a l =
       if l < 0 then a else mk_local_vars (Cons (Const l, a)) (pred l)
     in
     match args with
     | [t1] -> [App(eqc, t1, [mk_local_vars Nil (pred depth)])]
     | _    -> type_error "$names takes 1 argument") ;
-  declare "$occurs" (fun ~depth ~env:_ args ->
+  declare "$occurs" (fun ~depth args ->
     let occurs_in t2 t =
       match deref_head ~depth t with
       | Const n -> occurs n depth t2
@@ -303,13 +269,13 @@ let _ =
     match args with
     | [t1; t2] -> if occurs_in t2 t1 then [] else raise No_clause
     | _ -> type_error "$occurs takes 2 arguments") ;
-  declare "$gettimeofday" (fun ~depth ~env:_ -> function
+  declare "$gettimeofday" (fun ~depth -> function
     | [t1] -> [ App (eqc, t1, [C.of_float (Unix.gettimeofday ())])]
     | _ -> type_error "$gettimeofday takes 1 argument") ;
-  declare "$closed" (fun ~depth ~env:_ -> function
+  declare "$closed" (fun ~depth -> function
     | [t1] -> [ App (eqc, t1, [UVar(oref dummy,0,0)]) ]
     | _ -> type_error "$closed takes 1 argument") ;
-  declare "$lt" (fun ~depth ~env:_ args ->
+  declare "$lt" (fun ~depth args ->
     let get_constant x = match deref_head ~depth x with
       | Const c -> c
       | _ -> error "$lt takes constants as arguments" in
@@ -321,7 +287,7 @@ let _ =
         if not is_lt then raise No_clause else []
     | _ -> type_error "$lt takes 2 arguments") ;
 (* FG: this should replace $lt *)
-  declare "$level" (fun ~depth ~env:_ args ->
+  declare "$level" (fun ~depth args ->
           let get_constant x = match deref_head ~depth x with
       | Const c -> c
       | _ -> error "$level takes a constant as first argument" in
@@ -332,7 +298,7 @@ let _ =
     | _ -> type_error "$level takes 2 arguments") ;
 (* FG: end *)
   List.iter (fun { p; psym; pname } ->
-  declare pname (fun ~depth ~env:_ -> function
+  declare pname (fun ~depth -> function
     | [t1; t2] ->
         let open CData in
         let t1 = eval depth t1 in
@@ -354,7 +320,7 @@ let _ =
       { p = (>);  psym = ">";  pname = "$gt_" } ;
       { p = (<=); psym = "=<"; pname = "$le_" } ;
       { p = (>=); psym = ">="; pname = "$ge_" } ] ;
-  declare "$getenv" (fun ~depth ~env:_ -> function
+  declare "$getenv" (fun ~depth -> function
     | [t1; t2] ->
        (match eval depth t1 with
            CData s when C.is_string s ->
@@ -364,17 +330,17 @@ let _ =
              with Not_found -> raise No_clause)
          | _ -> type_error "bad argument to getenv (or $getenv)")
     | _ -> type_error "getenv (or $getenv) takes 2 arguments") ;
-  declare "$system" (fun ~depth ~env:_ -> function
+  declare "$system" (fun ~depth -> function
     | [t1; t2] ->
        (match eval depth t1 with
            CData s when C.is_string s ->
               [ App (eqc, t2, [C.(of_int (Sys.command (C.to_string s)))]) ]
          | _ -> type_error "bad argument to system (or $system)")
     | _ -> type_error "system (or $system) takes 2 arguments") ;
-  declare "$is" (fun ~depth ~env:_ -> function
+  declare "$is" (fun ~depth -> function
     | [t1; t2] -> [ App (eqc, t1, [eval depth t2]) ]
     | _ -> type_error "is (or $is) takes 2 arguments") ;
-  declare "$open_in" (fun ~depth ~env:_ -> function
+  declare "$open_in" (fun ~depth -> function
     | [t1; t2] ->
        (match eval depth t1 with
            CData s when C.is_string s ->
@@ -385,7 +351,7 @@ let _ =
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to open_in (or $open_in)")
     | _ -> type_error "open_in (or $open_in) takes 2 arguments") ;
-  declare "$open_out" (fun ~depth ~env:_ -> function
+  declare "$open_out" (fun ~depth -> function
     | [t1; t2] ->
        (match eval depth t1 with
            CData s when C.is_string s ->
@@ -396,7 +362,7 @@ let _ =
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to open_out (or $open_out)")
     | _ -> type_error "open_out (or $open_out) takes 2 arguments") ;
-  declare "$open_append" (fun ~depth ~env:_ -> function
+  declare "$open_append" (fun ~depth -> function
     | [t1; t2] ->
        (match eval depth t1 with
            CData s when C.is_string s ->
@@ -410,7 +376,7 @@ let _ =
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to open_append (or $open_append)")
     | _ -> type_error "open_append (or $open_append) takes 2 arguments") ;
-  declare "$open_string" (fun ~depth ~env:_ -> function
+  declare "$open_string" (fun ~depth -> function
     | [t1; t2] ->
        (match eval depth t1 with
            CData s when C.is_string s ->
@@ -425,7 +391,7 @@ let _ =
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to open_in (or $open_in)")
     | _ -> type_error "open_in (or $open_in) takes 2 arguments") ;
-  declare "$close_in" (fun ~depth ~env:_ -> function
+  declare "$close_in" (fun ~depth -> function
     | [t1] ->
        (match eval depth t1 with
            CData s when C.is_int s ->
@@ -433,7 +399,7 @@ let _ =
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to close_in (or $close_in)")
     | _ -> type_error "close_in (or $close_in) takes 1 argument") ;
-  declare "$close_out" (fun ~depth ~env:_ -> function
+  declare "$close_out" (fun ~depth -> function
     | [t1] ->
        (match eval depth t1 with
            CData s when C.is_int s ->
@@ -441,7 +407,7 @@ let _ =
              with Sys_error msg->error msg)
          | _ -> type_error "bad argument to close_out (or $close_out)")
     | _ -> type_error "close_out (or $close_out) takes 1 argument") ;
-  declare "$output" (fun ~depth ~env:_ -> function
+  declare "$output" (fun ~depth -> function
     | [t1; t2] ->
        (match eval depth t1, eval depth t2 with
            CData n, CData s when C.is_int n && C.is_string s ->
@@ -450,13 +416,13 @@ let _ =
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to output (or $output)")
     | _ -> type_error "output (or $output) takes 2 arguments") ;
-  declare "$term_to_string" (fun ~depth ~env -> function
+  declare "$term_to_string" (fun ~depth -> function
     | [t1; t2] ->
-       Format.fprintf Format.str_formatter "%a" (Pp.term depth [] 0 env) t1 ;
+       Format.fprintf Format.str_formatter "%a" (Pp.term depth [] 0 [||]) t1 ;
        let s = Format.flush_str_formatter () in
        [App(eqc,t2,[C.of_string s])]
     | _ -> type_error "term_to_string (or $term_to_string) takes 2 arguments");
-  declare "$string_to_term" (fun ~depth ~env -> function
+  declare "$string_to_term" (fun ~depth -> function
     | [t1; t2] ->
        (match eval depth t1 with
            CData s when C.is_string s ->
@@ -469,7 +435,7 @@ let _ =
               | Elpi_ast.NotInProlog _ -> prerr_endline "Beta redexes not allowed"; raise No_clause)
          | _ -> type_error "bad argument to string_to_term (or $string_to_term)")
     | _ -> type_error "string_to_term (or $string_to_term) takes 2 arguments");
-  declare "$flush" (fun ~depth ~env:_ -> function
+  declare "$flush" (fun ~depth -> function
     | [t1] ->
        (match eval depth t1 with
            CData n when C.is_int n ->
@@ -477,10 +443,10 @@ let _ =
              with Sys_error msg -> error msg)
          | _ -> type_error "bad argument to flush (or $flush)")
     | _ -> type_error "flush (or $flush) takes 2 arguments") ;
-  declare "$halt" (fun ~depth ~env:_ -> function
+  declare "$halt" (fun ~depth -> function
     | [] -> exit 0
     | _ -> type_error "halt (or $halt) takes 0 arguments") ;
-  declare "$input" (fun ~depth ~env:_ -> function
+  declare "$input" (fun ~depth -> function
     | [t1 ; t2 ; t3] ->
        (match eval depth t1, eval depth t2 with
            CData s, CData n when CData.ty2 C.int s n ->
@@ -501,7 +467,7 @@ let _ =
               Sys_error msg -> error msg)
          | _ -> type_error "bad argument to input (or $input)")
     | _ -> type_error "input (or $input) takes 3 arguments") ;
-  declare "$input_line" (fun ~depth ~env:_ -> function
+  declare "$input_line" (fun ~depth -> function
     | [t1 ; t2] ->
        (match eval depth t1 with
            CData n when C.is_int n ->
@@ -519,7 +485,7 @@ let _ =
               Sys_error msg -> error msg)
          | _ -> type_error "bad argument to input_line (or $input_line)")
     | _ -> type_error "input_line (or $input_line) takes 2 arguments") ;
-  declare "$lookahead" (fun ~depth ~env:_ -> function
+  declare "$lookahead" (fun ~depth -> function
     | [t1 ; t2] ->
        (match eval depth t1 with
            CData n when C.is_int n ->
@@ -541,7 +507,7 @@ let _ =
               Sys_error msg -> error msg)
          | _ -> type_error "bad argument to lookahead (or $lookahead)")
     | _ -> type_error "lookahead (or $lookahead) takes 2 arguments") ;
-  declare "$readterm" (fun ~depth ~env:_ -> function
+  declare "$readterm" (fun ~depth -> function
     | [t1 ; t2] ->
        (match eval depth t1 with
            CData n when C.is_int n ->
@@ -562,7 +528,7 @@ let _ =
               | Elpi_ast.NotInProlog _ -> prerr_endline "Beta redexes not allowed"; raise No_clause)
          | _ -> type_error "bad argument to readterm (or $readterm)")
     | _ -> type_error "readterm (or $readterm) takes 2 arguments") ;
-  declare "$eof" (fun ~depth ~env:_ -> function
+  declare "$eof" (fun ~depth -> function
     | [t1] ->
        (match eval depth t1 with
            CData n when C.is_int n ->
@@ -582,7 +548,7 @@ let _ =
          | _ -> type_error "bad argument to eof (or $eof)")
     | _ -> type_error "eof (or $eof) takes 1 argument") ;
 
-  declare "$is_cdata" (fun ~depth ~env:_ -> function
+  declare "$is_cdata" (fun ~depth -> function
     | [t1;t2] ->
        (match deref_head depth t1 with
        | CData n -> [ App(eqc, t2, [
@@ -591,7 +557,7 @@ let _ =
     | _ -> type_error "$is_cdata") ;
 
 
-  declare "$rex_match" (fun ~depth ~env:_ -> function
+  declare "$rex_match" (fun ~depth -> function
     | [t1;t2] ->
        (match deref_head depth t1, deref_head depth t2 with
        | CData rex, CData subj when C.is_string rex && C.is_string subj ->
@@ -602,7 +568,7 @@ let _ =
        | _ -> type_error "$rex_match")
     | _ -> type_error "$rex_match") ;
 
-  declare "$rex_replace" (fun ~depth ~env:_ -> function
+  declare "$rex_replace" (fun ~depth -> function
     | [t1;t2;t3;t4] ->
        (match deref_head depth t1, deref_head depth t2,  deref_head depth t3 with
        | CData rex, CData repl, CData subj when List.for_all C.is_string [rex; repl; subj] ->
@@ -613,7 +579,7 @@ let _ =
        | _ -> type_error "$rex_replace not 3 strings")
     | _ -> type_error "$rex_replace not 4 args") ;
 
-   declare "$quote_syntax" (fun ~depth ~env:_ -> function
+   declare "$quote_syntax" (fun ~depth -> function
        | [f;s;r1;r2] ->
        (match deref_head depth f, deref_head depth s with
        | CData file, CData query when C.is_string file && C.is_string query ->
@@ -671,13 +637,13 @@ let fresh_copy t max_db depth =
 let () =
    let safeno = ref 0 in
 
-   declare "$new_safe" (fun ~depth ~env:_ -> function
+   declare "$new_safe" (fun ~depth -> function
      | [t] -> 
          incr safeno;
          [App (eqc, t, [CData (safe_in (!safeno,ref [],depth))]) ]
      | _ -> type_error "$new_safe takes one arg");
 
-   declare "$stash" (fun ~depth ~env:_ -> function
+   declare "$stash" (fun ~depth -> function
      | [t1;t2] ->
           (match deref_head depth t1 with
           | CData c when is_safe c ->
@@ -687,7 +653,7 @@ let () =
           | _ -> type_error "$stash takes a safe")
      | _ -> type_error "$stash takes two args");
 
-   declare "$open_safe" (fun ~depth ~env:_ -> function
+   declare "$open_safe" (fun ~depth -> function
      | [t1;t2] ->
           (match deref_head depth t1 with
           | CData c when is_safe c ->

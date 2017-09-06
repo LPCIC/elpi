@@ -62,14 +62,15 @@ module Data = struct
   type program = Elpi_data.program
   type query = Elpi_data.query
   type term = Elpi_data.term
-
-  type constraints = Elpi_data.constraints
+  type syntactic_constraints = Elpi_data.syntactic_constraints
   type custom_constraints = Elpi_data.custom_constraints
-  type constraint_store = Elpi_data.constraint_store = {
-    constraints : constraints;
+  module StrMap = Elpi_util.StrMap
+  type solution = Elpi_data.solution = {
+    arg_names : int StrMap.t;
+    assignments : term array;
+    constraints : syntactic_constraints;
     custom_constraints : custom_constraints;
   }
-  type solution = (string * term) list * constraint_store
 end
 
 module Compile = struct
@@ -100,9 +101,9 @@ module Pp = struct
 
   let constraints f c =
     let module R = (val !r) in let open R in
-    Elpi_util.pplist ~boxed:true R.pp_stuck_goal_kind " " f c
+    Elpi_util.pplist ~boxed:true R.pp_stuck_goal " " f c
 
-  let custom_constraints = Elpi_data.CustomConstraints.pp
+  let custom_constraints = Elpi_data.CustomConstraint.pp
 
   module Ast = struct
     let program = Elpi_ast.pp_program
@@ -121,32 +122,32 @@ module Extend = struct
     let term_of_query (_,x) = x
   end
 
-  module Data = Elpi_data
+  module Data = struct
+    include Elpi_data
+    type suspended_goal = { 
+      context : (int * term) list;
+      goal : int * term
+    }
+    let constraints = Elpi_util.map_filter (function
+      | { kind = Constraint { depth; goal; pdiff } } ->
+          Some { context = pdiff ; goal = (depth, goal) }
+      | _ -> None)
+  end
 
   module Compile = struct
-    module ExtState = Elpi_util.ExtState
+    module State = Elpi_data.CompilerState
     include Elpi_compiler
     let term_at = term_of_ast
+    let query = query_of_term
   end
 
   module CustomPredicate = struct
     exception No_clause = Elpi_data.No_clause
-    type scheduler = Elpi_data.scheduler =  {
-      delay : [ `Goal | `Constraint ] ->
-              goal:Data.term -> on:Data.term_attributed_ref list -> unit;
-      print : [ `All | `Constraints ] -> Format.formatter -> unit;
-    }
     let declare = Elpi_data.register_custom
     let declare_full = Elpi_data.register_custom_full
   end
 
-  module CustomConstraint = struct
-    type 'a constraint_type = 'a Elpi_data.CustomConstraints.constraint_type
-    let declare = Elpi_data.CustomConstraints.declare_constraint
-    let read = Elpi_data.CustomConstraints.read
-    let update = Elpi_data.CustomConstraints.update
-    let update_return = Elpi_data.CustomConstraints.update_return
-  end
+  module CustomConstraint = Elpi_data.CustomConstraint
 
   module Utils = struct
     let lp_list_to_list ~depth t =

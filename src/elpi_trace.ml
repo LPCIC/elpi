@@ -3,13 +3,13 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
+open Elpi_util
 module F = Format
 
 let debug = ref false
 let dverbose = ref false
 let where_loc = ref ("",0,max_int)
-module M = Map.Make(String)
-let cur_step = ref M.empty
+let cur_step = ref StrMap.empty
 let level = ref 0
 let filter = ref []
 let fonly = ref []
@@ -21,25 +21,25 @@ let trace_noprint = ref false
 type perf_frame = {
   name : string;
   self : float;
-  progeny : perf_frame M.t;
+  progeny : perf_frame StrMap.t;
 }
 
-let perf_stack = ref [{name = "main"; self = 0.0; progeny = M.empty }]
+let perf_stack = ref [{name = "main"; self = 0.0; progeny = StrMap.empty }]
 
 let collect_perf_enter n =
   if !collect_perf then
   match !perf_stack with
-  | { progeny } :: _ when M.mem n progeny ->
-       perf_stack := M.find n progeny :: !perf_stack
+  | { progeny } :: _ when StrMap.mem n progeny ->
+       perf_stack := StrMap.find n progeny :: !perf_stack
   | _ ->
-       perf_stack := { name = n; self = 0.0; progeny = M.empty } :: !perf_stack
+       perf_stack := { name = n; self = 0.0; progeny = StrMap.empty } :: !perf_stack
 
 let rec merge m1 m2 =
-  M.fold (fun _ ({ name; self; progeny } as v) m ->
+  StrMap.fold (fun _ ({ name; self; progeny } as v) m ->
      try
-       let { self = t; progeny = p } = M.find name m in
-       M.add name { name; self = self +. t; progeny = merge progeny p } m
-     with Not_found -> M.add name v m) m1 m2
+       let { self = t; progeny = p } = StrMap.find name m in
+       StrMap.add name { name; self = self +. t; progeny = merge progeny p } m
+     with Not_found -> StrMap.add name v m) m1 m2
 
 let collect_perf_exit time =
   if !collect_perf then
@@ -50,21 +50,21 @@ let collect_perf_exit time =
                       progeny = merge top.progeny prev.progeny } :: rest
   | top :: ({ progeny } as prev) :: rest ->
       let top = { top with self = top.self +. time } in
-      perf_stack := { prev with progeny = M.add top.name top progeny } :: rest
+      perf_stack := { prev with progeny = StrMap.add top.name top progeny } :: rest
   | _ -> assert false
 
 let rec print_tree hot { name; self; progeny } indent =
   let tprogeny, (phot, thot) =
-    M.fold (fun n { self } (x,(_,m as top)) ->
+    StrMap.fold (fun n { self } (x,(_,m as top)) ->
               x +. self, (if self > m then (n,self) else top))
       progeny (0.0,("",0.0)) in
   let phot =
-    if thot *. 2.0 > tprogeny && M.cardinal progeny > 1 && indent < 6
+    if thot *. 2.0 > tprogeny && StrMap.cardinal progeny > 1 && indent < 6
     then phot else "" in
   Printf.eprintf "%s- %-20s %s %6.3f %6.3f %s\n"
     String.(make indent ' ' ) name String.(make (max 0 (20-indent)) ' ' )
     self (self -. tprogeny) (if name = hot then "!" else "");
-  M.iter (fun _ t -> print_tree phot t (indent + 2)) progeny
+  StrMap.iter (fun _ t -> print_tree phot t (indent + 2)) progeny
 
 let print_perf () =
   while List.length !perf_stack > 1 do collect_perf_exit 0.0; done;
@@ -73,12 +73,12 @@ let print_perf () =
         Printf.eprintf "  %-20s %s %6s %6s\n" "name"
           String.(make 20 ' ' ) "total" "self";
         Printf.eprintf "%s\n" (String.make 80 '-');
-        M.iter (fun _ t -> print_tree "run" t 0) progeny
+        StrMap.iter (fun _ t -> print_tree "run" t 0) progeny
   | _ -> assert false
 
 let () = at_exit (fun () -> if !collect_perf then print_perf ())
 
-let get_cur_step k = try M.find k !cur_step with Not_found -> 0
+let get_cur_step k = try StrMap.find k !cur_step with Not_found -> 0
 
 let condition k =
   (* -trace-on *)
@@ -97,7 +97,7 @@ let condition k =
     && not(List.exists (fun p -> Str.string_match p k 0) !filter)
 
 let init ?(where="",0,max_int) ?(skip=[]) ?(only=[]) ?(verbose=false) b =
-  cur_step := M.empty;
+  cur_step := StrMap.empty;
   debug := b;
   dverbose := verbose;
   filter := List.map Str.regexp skip;
@@ -110,7 +110,7 @@ let init ?(where="",0,max_int) ?(skip=[]) ?(only=[]) ?(verbose=false) b =
 
 let incr_cur_step k =
   let n = get_cur_step k in
-  cur_step := M.add k (n+1) !cur_step
+  cur_step := StrMap.add k (n+1) !cur_step
 
 let make_indent () =
   String.make (max 0 (!level - !hot_level)) ' '

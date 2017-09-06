@@ -53,8 +53,6 @@ let { CData.cin = in_loc; isc = is_loc; cout = out_loc } as cloc =
  * defined.  The same for chr with CHR.t *)
 type prolog_prog = ..
 let pp_prolog_prog = mk_extensible_printer ()
-type chr = ..
-let pp_chr = mk_extensible_printer ()
 
 (* Used by pretty printers, to be later instantiated in module Constants *)
 let pp_const = mk_extensible_printer ()
@@ -157,7 +155,7 @@ module Constants : sig
  
   (* To keep the type of terms small, we use special constants for !, =, pi.. *)
   (* {{{ *)
-  val cutc   : term
+  val cut   : term
   val truec  : term
   val andc   : constant
   val andt   : term
@@ -186,6 +184,9 @@ module Constants : sig
   val ctypec : constant
 
   val spillc : constant
+
+  val constraintc : constant
+  val print_constraintsc : constant
   (* }}} *)
 
   (* Value for unassigned UVar/Arg *)
@@ -241,7 +242,7 @@ let pp fmt c = Format.fprintf fmt "%s" (show c)
 let from_stringc s = fst (funct_of_ast F.(from_string s))
 let from_string s = snd (funct_of_ast F.(from_string s))
 
-let cutc = snd (funct_of_ast F.cutf)
+let cut = snd (funct_of_ast F.cutf)
 let truec = snd (funct_of_ast F.truef)
 let andc, andt = funct_of_ast F.andf
 let andc2 = fst (funct_of_ast F.andf2)
@@ -264,7 +265,10 @@ let arrowc = fst (funct_of_ast F.arrowf)
 let frozenc = fst (funct_of_ast (F.from_string "uvar"))
 let ctypec = fst (funct_of_ast F.ctypef)
 
-let dummy = App (-9999,cutc,[])
+let constraintc = from_stringc "$constraint"
+let print_constraintsc = from_stringc "$print_constraints"
+
+let dummy = App (-9999,cut,[])
 
 module Self = struct
   type t = constant
@@ -301,27 +305,16 @@ module CHR : sig
   val empty : t
 
   val new_clique : constant list -> t -> t * clique
-  val clique_of : constant -> t -> Constants.Set.t
+  val clique_of : constant -> t -> Constants.Set.t option
   val add_rule : clique -> rule -> t -> t
   
   val rules_for : constant -> t -> rule list
-
-  (* to store CHR.t in program *)
-  val wrap_chr : t -> chr
-  val unwrap_chr : chr -> t
 
 end = struct (* {{{ *)
 
   type rule = (term, int) Elpi_ast.chr
   type t = { cliques : Constants.Set.t Constants.Map.t; rules : rule list Constants.Map.t }
   type clique = Constants.Set.t
-
-  type chr += Chr of t
-  let () = extend_printer pp_chr (fun fmt -> function
-    | Chr c -> Fmt.fprintf fmt "<CHRs>";`Printed
-    | _ -> `Passed)
-  let wrap_chr x = Chr x
-  let unwrap_chr = function Chr x -> x | _ -> assert false
 
   let empty = { cliques = Constants.Map.empty; rules = Constants.Map.empty }
 
@@ -335,7 +328,8 @@ end = struct (* {{{ *)
     { chr with cliques }, c
 
   let clique_of c { cliques } =
-    try Constants.Map.find c cliques with Not_found -> Constants.Set.empty
+    try Some (Constants.Map.find c cliques)
+    with Not_found -> None
 
   let add_rule cl r ({ rules } as chr) =
     let rules = Constants.Set.fold (fun c rules ->
@@ -353,63 +347,45 @@ end = struct (* {{{ *)
 
 end (* }}} *)
 
-module CustomConstraints : sig
-    type 'a constraint_type
+module CompilerState = State(struct type t = unit end)
+
+module CustomConstraint : sig
+    type ('a,'b) source =
+      | CompilerState of 'b CompilerState.component * ('b -> 'a)
+      | Other of (unit -> 'a)
+    
+    type 'a component
 
     (* Must be purely functional *)
-    val declare_constraint :
+    val declare :
       name:string ->
       pp:(Fmt.formatter -> 'a -> unit) ->
-      empty:(unit -> 'a) ->
-        'a constraint_type
+      init:('a,'b) source ->
+        'a component
+
+    type t
+    val init : CompilerState.t -> t 
+    val get : 'a component -> t -> 'a
+    val set : 'a component -> t -> 'a -> t
+    val update : 'a component -> t -> ('a -> 'a) -> t
+    val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
+    val pp : Format.formatter -> t -> unit
      
-    type state
-    val update : state -> 'a constraint_type -> ('a -> 'a) -> state
-    val read : state -> 'a constraint_type -> 'a
-    val update_return :
-      state -> 'a constraint_type -> ('a -> 'a * 'b) -> state * 'b 
-    val empty : unit -> state
+  end = struct 
 
-    val pp :Format.formatter -> state -> unit
-  end = struct
-    type 'a constraint_type = int
-    type state = Obj.t IM.t
-    
-    let custom_constraints_declarations = ref IM.empty
+    type ('a,'b) source =
+      | CompilerState of 'b CompilerState.component * ('b -> 'a)
+      | Other of (unit -> 'a)
 
-    let cid = ref 0
-    let declare_constraint ~name ~pp ~empty =
-      incr cid;
-      custom_constraints_declarations :=
-        IM.add !cid (name,Obj.repr pp, Obj.repr empty)
-          !custom_constraints_declarations;
-      !cid
+    include State(CompilerState)
+      
+    let declare ~name ~pp ~init =
+      let init s = match init with
+        | Other f -> f ()
+        | CompilerState (c,f) -> f (CompilerState.get c s) in
+      declare ~name ~pp ~init
 
-    let empty () =
-      IM.fold (fun id (_,_,init) m ->
-        IM.add id (Obj.repr (Obj.obj init ())) m)
-      !custom_constraints_declarations IM.empty
-            
-    let find cc id =
-      try IM.find id cc
-      with Not_found -> assert false
-
-    let update cc id f =
-      IM.add id (Obj.repr (f (Obj.obj (find cc id)))) cc
-    let read cc id = Obj.obj (find cc id)
-    let update_return cc id f =
-      let data = read cc id in
-      let data, x = f data in
-      update cc id (fun _ -> data), x
-
-    let pp f cc =
-      let l =
-        IM.fold (fun id (_,pp,_) l -> (pp,find cc id) :: l)
-          !custom_constraints_declarations [] in
-      Elpi_util.pplist ~boxed:true (fun fmt (pp,x) ->
-        Format.fprintf fmt "%a" (Obj.obj pp) (Obj.obj x)) " " f l
-
-  end
+  end (* }}} *)
 
 (* true=input, false=output *)
 type mode = bool list [@@deriving show]
@@ -482,22 +458,48 @@ type clause_w_info = {
 
 let drop_clause_info { clbody } = clbody
 
-type macro_declaration = Elpi_ast.term F.Map.t
+type macro_declaration = (Elpi_ast.term * Ploc.t) F.Map.t
+type type_declaration = {
+  tname : constant;
+  tnargs : int;
+  ttype : term;
+}
+
+let todopp fmt _ = error "not implemented"
+
+let modes : mode_decl Constants.Map.t CompilerState.component =
+  CompilerState.declare ~pp:todopp ~name:"elpi:modes"
+    ~init:(fun () -> Constants.Map.empty)
+let chr : CHR.t CompilerState.component =
+  CompilerState.declare ~pp:todopp ~name:"elpi:chr"
+    ~init:(fun () -> CHR.empty)
+let declared_types : type_declaration list CompilerState.component =
+  CompilerState.declare ~pp:todopp ~name:"elpi:declared_types"
+    ~init:(fun () -> [])
+let clauses_w_info : clause_w_info list CompilerState.component =
+  CompilerState.declare ~pp:todopp ~name:"elpi:clauses_w_info"
+    ~init:(fun () -> [])
+let macros : macro_declaration CompilerState.component =
+  CompilerState.declare ~pp:todopp ~name:"elpi:macros"
+    ~init:(fun () -> F.Map.empty)
+
 type program = {
   (* n of sigma/local-introduced variables *)
   query_depth : int;
   (* the lambda-Prolog program: an indexed list of clauses *) 
-  prolog_program : prolog_prog [@printer (pp_extensible pp_prolog_prog)];
-  (* constraint handling rules *)
-  chr : chr [@printer (pp_extensible pp_chr)];
-  modes : mode_decl Constants.Map.t; 
+  compiled_program : prolog_prog [@printer (pp_extensible pp_prolog_prog)];
 
-  (* extra stuff, for typing & pretty printing *)
-  declared_types : (constant * int * term) list; (* name, nARGS, type *)
-  clauses_w_info : clause_w_info list;
-  macros : macro_declaration; (* macros available to compile the query *)
+  compiler_state : CompilerState.t;
 }
-type query = Ploc.t * string list * int * env * term
+
+type query = { 
+  qloc : Ploc.t;
+  qnames : int StrMap.t;
+  qdepth : int;
+  qenv : env;
+  qterm : term;
+  qconstraints : CustomConstraint.t;
+}
 
 type prolog_prog += Index of idx
 let () = extend_printer pp_prolog_prog (fun fmt -> function
@@ -509,25 +511,21 @@ let unwrap_prolog_prog = function Index x -> x | _ -> assert false
 exception No_clause
 exception No_more_steps
 
-type custom_constraints = CustomConstraints.state
-type constraints = stuck_goal_kind list
-type constraint_store = {
-  constraints : constraints;
+type custom_constraints = CustomConstraint.t
+type syntactic_constraints = stuck_goal list
+
+type solution = {
+  arg_names : int StrMap.t;
+  assignments : env;
+  constraints : syntactic_constraints;
   custom_constraints : custom_constraints;
 }
-type solution = (string * term) list * constraint_store
 type outcome = Success of solution | Failure | NoMoreSteps
-
-type scheduler = {
-  delay : [ `Goal | `Constraint ] ->
-          goal:term -> on:term_attributed_ref list -> unit;
-  print : [ `All | `Constraints ] -> Format.formatter -> unit;
-}
 
 let register_custom, register_custom_full, lookup_custom =
  let (customs :
       (* Must either raise No_clause or succeed with the list of new goals *)
-      ('a, depth:int -> env:term array -> scheduler -> custom_constraints -> term list -> term list * custom_constraints)
+      ('a, depth:int -> solution -> term list -> term list * custom_constraints)
       Hashtbl.t)
    =
      Hashtbl.create 17 in
@@ -540,7 +538,9 @@ let register_custom, register_custom_full, lookup_custom =
     idx in
  (fun s f ->
     let idx = check s in
-    Hashtbl.add customs idx (fun ~depth ~env _ c args -> f ~depth ~env args,c)),
+    Hashtbl.add customs idx
+      (fun ~depth { custom_constraints } args ->
+         f ~depth args, custom_constraints)),
  (fun s f ->
     let idx = check s in
     Hashtbl.add customs idx f),
@@ -549,8 +549,9 @@ let register_custom, register_custom_full, lookup_custom =
 ;;
 
 let is_custom_declared x =
-  try let _f = lookup_custom x in true
-  with Not_found -> false
+  (try let _f = lookup_custom x in true
+   with Not_found -> false)
+  || x == Constants.constraintc || x == Constants.print_constraintsc
 ;;
 
 let of_term x = x

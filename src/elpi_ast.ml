@@ -90,8 +90,14 @@ let mkSeq l =
   aux l
 let mkIs x f = App(Const Func.isf,[x;f])
 
+module Ploc = struct
+  include Ploc
+  let pp fmt loc = Format.fprintf fmt "%s:%d" (file_name loc) (line_nb loc)
+  let show loc = Format.sprintf "%s:%d" (file_name loc) (line_nb loc)
+end
+
 type clause = {
-  loc : Ploc.t [@printer fun _ _ -> ()];
+  loc : Ploc.t;
   id : string option;
   insert : ([ `Before | `After ] * string) option;
   body : term;
@@ -119,7 +125,7 @@ type decl =
  | Constraint of Func.t list
  | Chr of (term, Func.t) chr
  | Accumulated of decl list
- | Macro of Func.t * term
+ | Macro of Ploc.t * Func.t * term
  | Type of Func.t * term
 [@@deriving show]
 

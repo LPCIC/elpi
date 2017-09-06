@@ -30,6 +30,11 @@ val pp_option :
 val option_mapacc :
   ('acc -> 'a -> 'acc * 'b) -> 'acc -> 'a option -> 'acc * 'b option
 
+
+(******************** string ******************)
+
+module StrMap : Map.S with type key = string
+
 (***************** Unique ID ****************)
 
 module UUID : sig
@@ -141,19 +146,22 @@ module CData : sig
   val map : 'a cdata -> 'b cdata -> ('a -> 'b) -> t -> t
 end
 
-(* Object oriented state for quotations: each quotation can declare
- * a component that is carried by all other quotations *)
-module ExtState : sig
+(* Object oriented state, use both for quotations and custom constraints *)
+module State : functor (Init : sig type t end) -> sig
 
-  type t
-
-  type 'a set = t -> 'a -> t
-  type 'a update = t -> ('a -> 'a) -> t
-  type 'a get = t -> 'a
-  type 'a init = unit -> 'a
-
-  val declare_extension : string -> 'a init -> ('a get * 'a set * 'a update)
+  (* filled in with components *)
+  type 'a component
+  val declare :
+    name:string -> init:(Init.t -> 'a) -> pp:(Format.formatter -> 'a -> unit) ->
+     'a component
   
-  val init : unit -> t 
+  (* an instance of the state type *)
+  type t
+  val init : Init.t -> t 
+  val get : 'a component -> t -> 'a
+  val set : 'a component -> t -> 'a -> t
+  val update : 'a component -> t -> ('a -> 'a) -> t
+  val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
+  val pp : Format.formatter -> t -> unit
 
 end

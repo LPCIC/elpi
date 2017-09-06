@@ -22,8 +22,9 @@ ELPI_P5_COMPONENTS = elpi_parser.$(CMX)
 
 # All files linked in the .cma
 ELPI_COMPONENTS = \
+  elpi_util.$(CMX) \
   elpi_trace.$(CMX) \
-  elpi_util.$(CMX) elpi_ast.$(CMX) $(ELPI_P5_COMPONENTS) elpi_ptmap.$(CMX) \
+  elpi_ast.$(CMX) $(ELPI_P5_COMPONENTS) elpi_ptmap.$(CMX) \
   elpi_data.$(CMX) \
   $(ELPI_PACKED_COMPONENTS) elpi_compiler.$(CMX) \
   elpi_latex_exporter.$(CMX) elpi_prolog_exporter.$(CMX) \

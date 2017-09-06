@@ -1,11 +1,11 @@
 canon_of X T Z :- not (is_flex Z), !, of Z T X.
-canon_of X T Z :- is_flex X, !, $delay (canon_of X T Z) [X,Z].
+canon_of X T Z :- is_flex X, !, $constraint (canon_of X T Z) [X,Z].
 canon_of X T Z :- of X T X.
 
-of X Y X :- is_flex X, !, $delay (of X Y X) X.
+of X Y X :- is_flex X, !, $constraint (of X Y X) X.
 of X Y X' :- of_ X Y X'.
 
-of_ implicit T X :- $delay (canon_of X T Z) [X,Z].
+of_ implicit T X :- $constraint (canon_of X T Z) [X,Z].
 
 of_ (app F A) (T A) (app F' A') :- of A TA A', of F TF F', TF = prod TA T.
 of_ (lam F) (prod A T) (lam F') :- pi x\ of_ x A x => of (F x) (T x) (F' x).
@@ -26,7 +26,7 @@ of_ (A + B) nat (A' + B') :- of A nat A', of B nat B'.
 % main :-
 %  of (app (app X (0 + 1)) (vcons 0 vnil)) T,
 %  $print X T,
-%  $print_delayed,
+%  $print_constraints,
 %  $print "--------------",
 %  X = (lam n\lam v\ vcons n v),
 %  $print T.
@@ -37,7 +37,7 @@ main :-
    of (X 0 vnil) Ti R',
    % $print X Ti "->" R R',
    % X = a\b\a.
-   $delay (refine X (a\b\ a + implicit)) A,
+   $constraint (refine X (a\b\ a + implicit)) A,
    $print "AAA" (of (X (0 + 1) (vcons 0 vnil)) Ti R),
    $print "BBB" (of (X 0 vnil) Ti R').
 

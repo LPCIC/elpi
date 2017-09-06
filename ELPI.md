@@ -256,9 +256,9 @@ mode (foo i o).
 
 ## Syntactic constraints
 
-A goal can be suspended on a list of variables with the `$delay` built in.
+A goal can be suspended on a list of variables with the `$constraint` built in.
 ```prolog
-goal> $delay (even X) [X].
+goal> $constraint (even X) [X].
 Success:
 Constraints:
    ⊢ (even X)
@@ -266,32 +266,33 @@ Constraints:
 Suspended goals are resumed as soon as any of variables they are suspended on
 gets assigned.
 ```
-goal> $delay (even X) [X], X = 1.
+goal> $constraint (even X) [X], X = 1.
 Failure
 ```
 
 Hypothetical clauses are kept:
 ```
-goal> pi x\ sigma Y\ even x => $delay (even Y) [Y].
+goal> pi x\ sigma Y\ even x => $constraint (even Y) [Y].
 Success:
 Constraints:
   even x ⊢ even (W x)
 
-goal> pi x\ sigma Y\ even x => ($delay (even Y) [Y], Y = x).
+goal> pi x\ sigma Y\ even x => ($constraint (even Y) [Y], Y = x).
 Success:
 ```
 
-The `$delay` built in is typically used in conjuction with `mode` as follows:
+The `$constraint` built in is typically used in conjuction with `mode` as
+follows:
 ```prolog
 mode (even i).
-even (?? as X) :- !, $delay (even X) [X].
+even (?? as X) :- !, $constraint (even X) [X].
 even 0.
 even X :- X > 1, Y is X - 2, even Y.
 ```
 
-The `$constraint` built in builds on top of `$delay` but gives
-control on the hypothetical part of the program that is kept by the
-suspended goal and lets one express constraint handling rules.
+The `constraint` directive gives control on the hypothetical part of the
+program that is kept by the suspended goal and lets one express constraint
+handling rules.
 
 A "clique" of related predicates is declared with
 ```prolog

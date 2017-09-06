@@ -66,15 +66,15 @@ module Data : sig
   type query
   type term
 
-  type constraints
+  type syntactic_constraints
   type custom_constraints
-  type constraint_store = {
-    constraints : constraints;
+  module StrMap : Map.S with type key = string
+  type solution = {
+    arg_names : int StrMap.t;
+    assignments : term array;
+    constraints : syntactic_constraints;
     custom_constraints : custom_constraints;
   }
-  (** The associative lists maps query variable names to
-      their solution. *)
-  type solution = (string * term) list * constraint_store
 end
 
 module Compile : sig
@@ -106,7 +106,7 @@ end
 module Pp : sig
 
   val term : Format.formatter -> Data.term -> unit
-  val constraints : Format.formatter -> Data.constraints -> unit
+  val constraints : Format.formatter -> Data.syntactic_constraints -> unit
   val custom_constraints : Format.formatter -> Data.custom_constraints -> unit
 
   module Ast : sig
@@ -217,9 +217,15 @@ module Extend : sig
 
     type program = Data.program
     type query = Data.query
-    type constraints = Data.constraints
     type custom_constraints = Data.custom_constraints
+    type solution = Data.solution
     type idx
+
+    type suspended_goal = {
+      context : (int * term) list;
+      goal : int * term
+    }
+    val constraints : Data.syntactic_constraints -> suspended_goal list
 
     (** builtin data types *)
     module C : sig
@@ -256,6 +262,9 @@ module Extend : sig
       val andc2 : constant
       val rimplc : constant
       val ctypec : constant
+      val pic : constant
+      val implc : constant
+      val cut : term
     
       (* Value for unassigned UVar/Arg *)
       val dummy : term
@@ -266,21 +275,23 @@ module Extend : sig
   module Compile : sig
 
     (** One can extend the compiler state in order to implement quotations *)
-    module ExtState : sig
+    module State : sig
       type t
+      type 'a component
     
-      type 'a set = t -> 'a -> t
-      type 'a update = t -> ('a -> 'a) -> t
-      type 'a get = t -> 'a
-      type 'a init = unit -> 'a
-    
-      val declare_extension :
-        string -> 'a init -> ('a get * 'a set * 'a update)
+      val declare :
+        name:string -> init:(unit -> 'a) ->
+          pp:(Format.formatter -> 'a -> unit) -> 'a component
+
+      val get : 'a component -> t -> 'a
+      val set : 'a component -> t -> 'a -> t
+      val update : 'a component -> t -> ('a -> 'a) -> t
+      val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
       
     end
 
     type quotation =
-      depth:int -> ExtState.t -> string -> ExtState.t * Data.term
+      depth:int -> State.t -> string -> State.t * Data.term
 
     (** The default quotation [{{code}}] *)
     val set_default_quotation : quotation -> unit
@@ -291,13 +302,18 @@ module Extend : sig
     (* The anti-quotation to lambda Prolog *)
     val lp : quotation
 
-    val is_Arg : ExtState.t -> Data.term -> bool
-    val fresh_Arg : ExtState.t -> name_hint:string -> ExtState.t * Data.term
+    val is_Arg : State.t -> Data.term -> bool
+    val fresh_Arg :
+      State.t -> name_hint:string -> args:Data.term list -> State.t * string * Data.term
 
     (* See elpi_quoted_syntax.elpi *)
     val quote_syntax : Data.program -> Data.query -> Data.term * Data.term
 
     val term_at : depth:int -> Ast.term -> Data.term
+    
+    (* Generate a query starting from a compiled/hand-made term *)
+    val query :
+      Data.program -> (depth:int -> State.t -> State.t * Data.term) -> Data.query
 
   end
 
@@ -310,49 +326,43 @@ module Extend : sig
         with the list of new goals *)
     val declare :
       string ->
-      (depth:int -> env:Data.term array -> Data.term list -> Data.term list) ->
+      (depth:int -> Data.term list -> Data.term list) ->
       unit
-
-    type scheduler = {
-      delay :
-        [ `Goal | `Constraint ] ->
-          goal:Data.term -> on:Data.term_attributed_ref list -> unit;
-      print : [ `All | `Constraints ] -> Format.formatter -> unit;
-    }
 
     (** Custom predicates like $constraint. Allowed to change the constraint
         store *)
     val declare_full :
       string ->
-      (depth:int -> env:Data.term array -> scheduler ->
-       Data.custom_constraints -> Data.term list ->
+      (depth:int -> Data.solution -> Data.term list ->
          Data.term list * Data.custom_constraints) ->
       unit
 
   end
 
   module CustomConstraint : sig
-
-    type 'a constraint_type
     (** 'a must be purely functional, i.e. backtracking is a no op *)
+
+    type 'a component
+
+    (** The initial value of the constraint can be produced at compilation
+     *  time (e.g. by quotations) *)
+    type ('a,'b) source =
+      | CompilerState of 'b Compile.State.component * ('b -> 'a)
+      | Other of (unit -> 'a)
 
     val declare :
       name:string ->
       pp:(Format.formatter -> 'a -> unit) ->
-      empty:(unit -> 'a) ->
-        'a constraint_type
+      init:('a,'b) source ->
+        'a component
 
-    val read : Data.custom_constraints -> 'a constraint_type -> 'a
+    type t = Data.custom_constraints
 
+    val get : 'a component -> t -> 'a
     (** Allowed to raise No_clause *)
-    val update :
-      Data.custom_constraints -> 'a constraint_type -> ('a -> 'a) ->
-        Data.custom_constraints
-
-    (** Allowed to raise No_clause *)
-    val update_return :
-      Data.custom_constraints -> 'a constraint_type ->
-        ('a -> 'a * 'b) -> Data.custom_constraints * 'b
+    val set : 'a component -> t -> 'a -> t
+    val update : 'a component -> t -> ('a -> 'a) -> t
+    val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
 
   end
 

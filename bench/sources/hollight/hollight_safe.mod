@@ -67,7 +67,7 @@ proves T TY :- provable T TY.
 typ T :- !. % this line temporarily drops checking of well-formedness for types
             % to avoid too much slow down. It is ultimately due to re-typing
             % terms that should be recognized as already well typed.
-typ T :- $is_flex T, !, $delay (typ T) [ T ].
+typ T :- $is_flex T, !, $constraint (typ T) [ T ].
 typ T :- typ' T.
 typ' prop.
 typ' (univ '' A '' B) :- typ A, typ B.
@@ -227,7 +227,7 @@ check1nbt TYPE REP ABS REPABS ABSREP PREPH (P,TACTICS) HYPSUCHTHAT HYPS :-
 
 check WHAT :-
  next_object WHAT C CONT,
- (C = stop, !, K = true ; check1 C H , check_hyps [] H, $print_delayed, K = (H => check CONT)),
+ (C = stop, !, K = true ; check1 C H , check_hyps [] H, $print_constraints, K = (H => check CONT)),
  !, K.
 
 }
@@ -1977,7 +1977,7 @@ the_library L :-
     same for the witness for myprop
 
 0) definitions must not be recursive; typing should capture it
-   (but not if $delay is commented out...)
+   (but not if $constraint is commented out...)
 
 0.25) occurr check in bind case still missing :-(
 
@@ -1993,7 +1993,7 @@ the_library L :-
 3) once we let metavariables reach the goals, the current HOL-light 
  tactic implementation becomes too fragile. We should let the user 
  refer to hypotheses at least by number if not by name. But we better
- have a bidirectional successor/predecessor via $delay
+ have a bidirectional successor/predecessor via $constraint
 
 5) we could implement an automated theorem prover in lambdaProlog
  that works or is interfaced with the HOL-light code. There are

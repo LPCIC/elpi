@@ -2,6 +2,12 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
+module Ploc : sig
+  include module type of struct include Ploc end
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
+end
+
 (* Prolog functors *)
 module Func : sig
   type t
@@ -94,7 +100,7 @@ type decl =
  | Constraint of Func.t list
  | Chr of (term, Func.t) chr
  | Accumulated of decl list
- | Macro of Func.t * term
+ | Macro of Ploc.t * Func.t * term
  | Type of Func.t * term
 
 val mkLocal : string -> decl

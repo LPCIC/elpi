@@ -2,6 +2,7 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
+open Elpi_util
 open Elpi_ast
 
 type fixity = Infixl | Infixr | Infix | Prefix | Postfix
@@ -270,11 +271,10 @@ let literatebuf = Buffer.create 17;;
 
 (* %! <= \leq creates a map from "<=" to "\leq" *)
 let set_liter_map,get_literal,print_lit_map =
- let module LitMap = Map.Make(String) in
- let lit_map = ref LitMap.empty in
- (fun s1 s2 -> lit_map := LitMap.add s1 s2 !lit_map),
- (fun s -> LitMap.find s !lit_map),
- (fun () -> LitMap.iter (fun s1 s2 -> Format.printf "\n%s -> %s\n%!" s1 s2) !lit_map);;
+ let lit_map = ref StrMap.empty in
+ (fun s1 s2 -> lit_map := StrMap.add s1 s2 !lit_map),
+ (fun s -> StrMap.find s !lit_map),
+ (fun () -> StrMap.iter (fun s1 s2 -> Format.printf "\n%s -> %s\n%!" s1 s2) !lit_map);;
 
 let succ_line loc =
   Ploc.make_loc (Ploc.file_name loc) (Ploc.line_nb loc + 1) 0
@@ -532,7 +532,7 @@ EXTEND
      | MODE; m = LIST1 mode SEP SYMBOL ","; FULLSTOP -> [Mode m]
      | MACRO; b = atom; FULLSTOP ->
          let name, body = desugar_macro b in
-         [Macro(name, body)]
+         [Macro(loc,name, body)]
      | RULE; r = chrrule; FULLSTOP -> [Chr r]
      | CONSTRAINT; names=LIST0 CONSTANT; LCURLY ->
          [ Constraint (List.map Func.from_string names) ]

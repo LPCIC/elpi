@@ -2,6 +2,8 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
+module StrMap = Map.Make(String)
+
 module Fmt = Format
 
 let pplist ?(max=max_int) ?(boxed=false) ppelem ?(pplastelem=ppelem) sep f l =
@@ -312,33 +314,43 @@ let declare { data_eq; data_pp; data_hash; data_name } =
   let map { cout } { cin } f x = cin (f (cout x))
 end
   
-module ExtState = struct
-  module SM = Map.Make(String)
+module State = functor (Init : sig type t end) -> struct
 
-  type t = Obj.t SM.t
-  type 'a set = t -> 'a -> t
-  type 'a update = t -> ('a -> 'a) -> t
-  type 'a get = t -> 'a
-  type 'a init = unit -> 'a
+  type t = Obj.t StrMap.t
+  type 'a component = string
+  type extension = {
+    init : Init.t -> Obj.t;
+    pp   : Format.formatter -> Obj.t -> unit;
+  }
+  let extensions : extension StrMap.t ref = ref StrMap.empty
 
   let get name t =
-    try Obj.obj (SM.find name t)
+    try Obj.obj (StrMap.find name t)
     with Not_found -> assert false
 
-  let set name t v = SM.add name (Obj.repr v) t
-  let update name t f = SM.add name (Obj.repr (f (Obj.obj (SM.find name t)))) t
+  let set name t v = StrMap.add name (Obj.repr v) t
+  let update name t f =
+    StrMap.add name (Obj.repr (f (Obj.obj (StrMap.find name t)))) t
+  let update_return name t f =
+    let x = get name t in
+    let x, res = f x in
+    let t = set name t x in
+    t, res
 
-  let extensions = ref []
-
-  let declare_extension name init =
-    if List.mem_assoc name !extensions then
+  let declare ~name ~init ~pp =
+    if StrMap.mem name !extensions then
       anomaly ("Extension "^name^" already declared");
-    extensions := (name,fun () -> Obj.repr (init ())) :: !extensions;
-    get name, set name, update name
+    extensions := StrMap.add name {
+        init = (fun x -> Obj.repr (init x));
+        pp = (fun fmt x -> pp fmt (Obj.obj x)) }
+      !extensions;
+    name
 
-  let init () =
-    List.fold_right
-      (fun (name,f) -> SM.add name (f ()))
-      !extensions SM.empty 
+  let init data =
+    StrMap.fold (fun name { init } -> StrMap.add name (init data))
+      !extensions StrMap.empty 
+
+  let pp fmt t =
+    StrMap.iter (fun name { pp } -> pp fmt (StrMap.find name t)) !extensions
 
 end

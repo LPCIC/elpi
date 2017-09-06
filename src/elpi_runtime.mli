@@ -21,8 +21,7 @@ val execute_loop : program -> query -> more:(unit -> bool) -> pp:(float -> outco
 val deref_uv : ?avoid:term_attributed_ref -> from:constant -> to_:constant -> int -> term -> term
 val deref_appuv : ?avoid:term_attributed_ref -> from:constant -> to_:constant -> term list -> term -> term
 val is_flex : depth:int -> term -> term_attributed_ref option
-val print_constraints : unit -> unit
-val print_delayed : unit -> unit
+val pp_stuck_goal : Fmt.formatter -> stuck_goal -> unit
 val pp_stuck_goal_kind : Fmt.formatter -> stuck_goal_kind -> unit
 
 val lp_list_to_list : depth:int -> term -> term list
@@ -41,7 +40,4 @@ val move :
 val make_index : clause list -> idx
 val clausify : mode_decl Constants.Map.t -> int -> constant -> term -> clause list * int
 val pp_key : key -> string
-
-val get_custom_constraints : unit -> custom_constraints
-val set_custom_constraints : custom_constraints -> unit
 
