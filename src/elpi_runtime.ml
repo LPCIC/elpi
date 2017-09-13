@@ -2047,6 +2047,7 @@ let noalts : alternative = Obj.magic 0
  *   exec          optional, many times
  *   search        mandatory, 1 time
  *   next          optional, repeat until No_clause is thrown
+ *   destroy       optional, 1 time, useful in nested runtimes
  *)
 
 type runtime = {
@@ -2054,6 +2055,7 @@ type runtime = {
   next_solution : alternative -> alternative;
 
   (* low level part *)
+  destroy : unit -> unit;
   exec : 'a 'b. ('a -> 'b) -> 'a -> 'b;
   get : 'a. 'a Fork.local_ref -> 'a;
 }
@@ -2582,7 +2584,7 @@ let propagate { CS.cstr; cstr_position } history =
          compiler_state =
            CompilerState.set Elpi_data.modes (CompilerState.init ()) modes;
        } in
-       let { search; get; exec } = !do_make_runtime program in
+       let { search; get; exec; destroy } = !do_make_runtime program in
        let check = function
          | None -> ()
          | Some guard -> try
@@ -2641,6 +2643,7 @@ let propagate { CS.cstr; cstr_position } history =
          [%spy "propagate-try-rule-fail" (fun _ _ -> ()) ()];
          None
        in
+       destroy ();
        result))
  in
  match result with
@@ -2910,8 +2913,9 @@ end;*)
      Constraints.qenv := qenv;
      CS.custom_constraints := qconstraints;
      run d !orig_prolog_program q [] FNil noalts noalts) in
+  let destroy () = exec (fun () -> T.undo ~old_trail:[] ()) () in
   let next_solution = exec next_alt in
-  { search; next_solution; exec; get }
+  { search; next_solution; destroy; exec; get }
 ;;
 
 do_make_runtime := make_runtime;;
