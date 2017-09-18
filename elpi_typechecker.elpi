@@ -65,8 +65,7 @@ report-all-failures-if-no-success P :-
   $new_safe E,
   (((pi ML\ error ML :- !, iter (stash-new E) ML, fail) => P)
    ;
-   (error {$open_safe E})),
-  !.
+   (error {$open_safe E})).
 
 mode (pp i o).
 type pp term -> string -> prop.
