@@ -76,13 +76,13 @@ let spill types modes ast =
 
   let rec spaux toplevel = function
     | A.App(A.Const c,fcall :: rest) when F.(equal c spillf) ->
-       let ns = mkSpilledNames (arity_of types fcall) in
-       let fspills, fcall = spaux false fcall in
+       assert (rest = []);
+       let spills, fcall = spaux false fcall in
        assert(List.length fcall = 1);
        let fcall = List.hd fcall in
-       let spills, args = mapflat2 (spaux false) rest in
+       let ns = mkSpilledNames (arity_of types fcall) in
        let args = List.map (fun x -> A.Const x) ns in
-       fspills @ spills @ [ns,Some (A.mkApp (fcall :: args))], args
+       spills @ [ns,Some (A.mkApp (fcall :: rest @ args))], args
     | A.App(A.Const c, args)
        when F.(List.exists (equal c) [andf;andf2;orf;rimplf]) ->
        let spills, args = mapflat2 (spaux true) args in
