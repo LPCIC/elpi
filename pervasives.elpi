@@ -108,6 +108,11 @@ type $$^ string -> string -> string.
 type $$+ int -> int -> int.
 type false prop.
 type time prop -> prop.
+type std_in (ctype "file").
+type std_out (ctype "file").
+type output (ctype "file") -> string -> prop.
+type printterm (ctype "file") -> A -> prop.
+type print string -> prop.
 
 type $$$new_safe (ctype "safe") -> prop.
 type $$$open_safe (ctype "safe") -> list A -> prop.

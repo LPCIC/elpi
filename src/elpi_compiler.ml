@@ -19,21 +19,86 @@ module A = Elpi_ast
  * arity in order to know how many extra arguments needs to be used *)
 let spill types modes ast =
 
+  let spilled_name = ref 0 in
+  let rec mkSpilledNames n =
+    if n == 0 then []
+    else begin
+      incr spilled_name;
+      let name = F.from_string ("Spilled_" ^ string_of_int !spilled_name) in
+      name :: mkSpilledNames (n-1)
+    end in
+  let add_spilled sp ctx t =
+    match sp, ctx with
+    | [], _ -> t
+    | _, [] -> A.(App(Const F.andf, List.map snd sp @ [t]))
+    | _ ->
+       List.fold_left (fun acc ns ->
+           List.fold_left (fun acc n ->
+              A.(App(Const F.sigmaf, [Lam (n, acc)])))
+           acc ns)
+        (A.(App(Const F.andf, List.map snd sp @ [t])))
+        (List.map fst sp) in
+
+  let rec apply_to names variable = function
+    | A.Const f when List.exists (F.equal f) names ->
+        A.App(A.Const f,[variable])
+    | (A.Const _ | A.String _ | A.Int _ | A.Float _
+      | A.Quoted _ | A.Custom _) as x -> x
+    | A.Lam(x,t) -> A.Lam(x,apply_to names variable t)
+    | A.App(A.Const f,args) when List.exists (F.equal f) names ->
+        A.App(A.Const f,List.map (apply_to names variable) args @ [variable])
+    | A.App(hd,args) ->
+        A.App(apply_to names variable hd,
+              List.map (apply_to names variable) args) in
+
+  (* approximation of typing... *)
+  let _, prop = Constants.funct_of_ast (F.from_string "prop") in
+  let variadic,_ = Constants.funct_of_ast (F.from_string "variadic") in
+  let _, any = Constants.funct_of_ast (F.from_string "any") in
+  let arrow, _ = Constants.funct_of_ast F.arrowf in
+  let rec read_ty = function
+    | App(c,x,[y]) when c == variadic -> `Variadic (read_ty x, read_ty y)
+    | App(c,x,[y]) when c == arrow -> 
+        let x = read_ty x in
+        begin match read_ty y with
+        | `Arrow(l,c) -> `Arrow (x :: l, c)
+        | y -> `Arrow([x], y) end
+    | Const _ as x when x == prop -> `Prop
+    | Const _ as x when x == any -> `Any
+    | _ -> `Unknown in
+  let type_of = function
+    | (A.String _|A.Float _|A.Int _
+      |A.App _|A.Lam _|A.Quoted _) -> `Unknown
+    | A.Const c | A.Custom c ->
+       if F.(equal c andf || equal c andf2) then `Variadic(`Prop, `Prop)
+       else if F.(equal c orf) then `Arrow([`Prop],`Prop)
+       else 
+         let c, _ =  Constants.funct_of_ast c in
+         try
+           let { ttype = ty } =
+             List.find (fun { tname = t } -> t == c) types in
+           read_ty ty
+         with
+           Not_found -> `Unknown in
   let arity_of types t =
-    let (c,ct), args =
+    let (c,_), ty, args =
       match t with
-      | A.App (A.Const f,args) -> Constants.funct_of_ast f, args
-      | A.App (A.Custom f,args) -> Constants.funct_of_ast f, args
-      | A.Const c -> Constants.funct_of_ast c, []
-      | A.Custom c -> Constants.funct_of_ast c, []
+      | A.App (A.Const f as hd,args) ->
+           Constants.funct_of_ast f, type_of hd, args
+      | A.App (A.Custom f as hd,args) ->
+           Constants.funct_of_ast f, type_of hd, args
+      | A.Const c -> Constants.funct_of_ast c, type_of t, []
+      | A.Custom c -> Constants.funct_of_ast c, type_of t, []
       | _ -> error ("only applications can be spilled: " ^ A.show_term t) in
     let nargs = List.length args in
     let missing_args =
-      (* XXX This sucks: types and mode declarations should be merged XXX *)    
+      (* XXX This sucks: types and mode declarations should be merged XXX *)
       try
-        let { ttype = ty } = List.find (fun { tname = t } -> t == c) types in
-        let rec napp = function App(_,_,[x]) -> 1 + napp x | _ -> 0 in
-        napp ty - nargs 
+        let arity = match ty with
+          | `Arrow(l,_) -> List.length l
+          | _ -> raise Not_found
+        in
+        arity - nargs 
       with Not_found ->
         match Constants.Map.find c modes with
         | Mono l ->
@@ -54,72 +119,75 @@ let spill types modes ast =
       error ("cannot spill fully applied " ^ A.show_term t);
     missing_args in
 
-  let spilled_name = ref 0 in
-  let rec mkSpilledNames n =
-    if n == 0 then []
-    else begin
-      incr spilled_name;
-      let name = F.from_string ("Spilled_" ^ string_of_int !spilled_name) in
-      name :: mkSpilledNames (n-1)
-    end in
-  let add_spilled sp t =
-    match sp with
-    | [] -> [], [t]
-    | _ ->
-        let to_spill = map_filter snd sp in
-        List.map (fun (x,_) -> x, None) sp,
-        [A.(App(Const F.andf, to_spill @ [t]))] in
-
-  let rec mapflat2 f l =
-    let l1, l2 = List.(split (map f l)) in
-    List.flatten l1, List.flatten l2 in
-
-  let rec spaux toplevel = function
+  let rec spaux ctx = function
     | A.App(A.Const c,fcall :: rest) when F.(equal c spillf) ->
        assert (rest = []);
-       let spills, fcall = spaux false fcall in
-       assert(List.length fcall = 1);
-       let fcall = List.hd fcall in
+       let spills, fcall = spaux1 ctx fcall in
        let ns = mkSpilledNames (arity_of types fcall) in
        let args = List.map (fun x -> A.Const x) ns in
-       spills @ [ns,Some (A.mkApp (fcall :: rest @ args))], args
-    | A.App(A.Const c, args)
-       when F.(List.exists (equal c) [andf;andf2;orf;rimplf]) ->
-       let spills, args = mapflat2 (spaux true) args in
-       assert(map_filter snd spills = []);
-       spills, [A.App(A.Const c, args)]
+       spills @ [ns, A.mkApp (fcall :: rest @ args)], args
     | A.App(A.Const c, [A.Lam (n,arg)])
-       when F.(List.exists (equal c) [pif;sigmaf]) ->
-       let spills, arg = spaux true arg in
-       assert(List.length arg = 1);
-       let arg = List.hd arg in
-       assert(map_filter snd spills = []);
-       let arg = List.fold_left (fun acc (ns,_) ->
-         List.fold_left (fun acc n ->
-          A.(App(Const F.sigmaf, [Lam (n, acc)]))) acc ns) arg spills in
-       [], [A.App(A.Const c, [A.Lam (n,arg)])]
-    | A.App(A.Const c, args)
-       when F.(List.exists (equal c) [implf;rimplf]) ->
-       let spills, args = mapflat2 (spaux true) args in
-       assert(map_filter snd spills = []);
-       spills, [A.App(A.Const c, args)]
-    | A.App(c,args) ->
-       let spills, args = mapflat2 (spaux false) args in
-       if toplevel then add_spilled spills (A.App(c, args))
-       else spills, [A.App(c,args)]
+      when F.(List.exists (equal c) [pif;sigmaf]) ->
+       let spills, arg = spaux1 (n::ctx) arg in
+       [], [A.App(A.Const c, [A.Lam (n,add_spilled spills ctx arg)])]
+    | A.App(A.Const c, [hyp; concl]) when F.(equal c implf) ->
+       let spills_hyp, hyp1 = spaux1 ctx hyp in
+       let t = spaux1_prop ctx concl in
+       if (spills_hyp != []) then
+         error ("Cannot spill in the head of a clause: " ^ A.show_term hyp);
+       [], [A.App(A.Const c, hyp1 :: t)]
+    | A.App(A.Const c, [concl;hyp]) when F.(equal c rimplf) ->
+       let t = spaux1_prop ctx hyp in
+       let spills_concl, concl1 = spaux1 ctx concl in
+       if (spills_concl != []) then
+         error ("Cannot spill in the head of a clause: " ^ A.show_term concl);
+       [], [A.App(A.Const c, concl1 :: t)]
+    | A.App(hd,args) ->
+       let spills, args, is_prop =
+         let (@@@) (s1,a1) (s2,a2,b) = s1 @ s2, a1 @ a2, b in
+         let rec aux ty args = match ty, args with
+           | (`Variadic(_,`Prop) | `Arrow([],`Prop)), [] -> [],[],true
+           | _, [] -> [],[],false
+           | `Variadic(`Prop,_), a1 :: an ->
+                 ([],spaux1_prop ctx a1) @@@ aux ty an
+           | `Arrow(`Prop :: ty,c), a1 :: an ->
+                 ([],spaux1_prop ctx a1) @@@ aux (`Arrow(ty,c)) an
+           | `Arrow(_ :: ty,c), a1 :: an ->
+                 spaux ctx a1 @@@ aux (`Arrow(ty,c)) an
+           | _, a1 :: an -> spaux ctx a1 @@@ aux ty an
+         in
+           aux (type_of hd) args in
+       if is_prop then [], [add_spilled spills ctx (A.App(hd, args))]
+       else spills, [A.App(hd,args)]
     | (A.String _|A.Float _|A.Int _
       |A.Const _|A.Custom _|A.Quoted _) as x -> [], [x]
     | A.Lam(x,t) ->
-       let sp, t = spaux false t in
-       if sp <> [] then error "Not supported yet (spill lambda)";
-       assert(List.length t = 1);
-       let t = List.hd t in
-       [], [A.Lam (x,t)]
+       let sp, t = spaux1 (x::ctx) t in
+       let (t,_), sp = map_acc (fun (t,n) (names, call) ->
+             let all_names = names @ n in
+             let call = apply_to all_names (A.Const x) call in
+             let t = apply_to names (A.Const x) t in
+             (t,all_names), (names, A.App(A.Const F.pif,[A.Lam(x,call)]))
+         ) (t,[]) sp in
+       sp, [A.Lam (x,t)]
+
+  and spaux1 ctx t =
+    let spills, ts = spaux ctx t in
+    if (List.length ts != 1) then
+      error ("Spilling: expecting only one term at: " ^ Elpi_ast.show_term t);
+    spills, List.hd ts
+  
+  and spaux1_prop ctx t =
+    let spills, ts = spaux ctx t in
+    if (List.length ts != 1) then
+      error ("Spilling: expecting only one term at: " ^ Elpi_ast.show_term t);
+    [add_spilled spills ctx (List.hd ts)]
+
   in
-    let sp, t = spaux true ast in
+    let sp, t = spaux [] ast in
     assert(List.length t = 1);
     let t = List.hd t in
-    assert(map_filter snd sp = []);
+    assert(sp = []);
     t
 ;;
 

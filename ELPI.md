@@ -137,7 +137,40 @@ foo :- pi x\ sigma Spilled_1\ g x Spilled_1, f Spilled_1.
 ```
 so that `Spilled_1` sees `x` and can receive the "result" of `g`.
 
-Spilling under a lambda is not supported.
+Spilling under a lambda is supported.
+```prolog
+foo R :- R = lam x\ g {mk-app f [x,g x]}.
+```
+rewrites to
+```prolog
+foo R :- (pi x\ mk-app f [x,g x] (Spilled_1 x)), R = lam x\ g (Spilled_1 x).
+```
+
+### Caveat about spilling
+The spilled predicate invocation is inserted just before the closest
+predicate invocation.  Currently "what is a predicate" takes into account
+only monomorphic, first order, type declarations. E.g. of badly supported
+spilling
+```prolog
+foo L L1 :- map L (x\y\ f {g x} y) L1.
+```
+rewrite to (the probably unwanted)
+```prolog
+foo L L1 :- (pi x\ pi y\ g x (Spilled_1 x y)), map L (x\y\ f (Spilled_1 x y) y) L1.
+```
+whenever the type of `f` (applied to two arguments) is not known
+to be `prop` (i.e. no type is declared for `f`, even if the type of
+`map` is known and imposes `f _ _` to be of type `prop`). With a type
+declaration as
+```prolog
+type f term -> term -> prop.
+```
+the rewritten clause is the expected
+```prolog
+foo L L1 :- map L (x\y\ sigma Spilled_1\ g x Spilled_1, f Spilled_1 y) L1.
+```
+since the closes predicate before the spilling is, indeed, `f`.
+
 The `elpi` tool accepts `-print` flag to print the program after spilling.
 
 ## N-ary binders
@@ -172,7 +205,7 @@ since the hypothetical program is a list of clauses.
 
 Typing plays *no role at runtime*.  This differs from standard λProlog.
 This also means that type annotations are totally optional.
-Still, they gratly help `elpi_typechecker.elpi` to give reasonable errors.
+Still, they greatly help `elpi_typechecker.elpi` to give reasonable errors.
 Notes about `elpi_typechecker.elpi`:
 - Inference of polymorphic predicates is not performed.
 - `type foo list A -> prop` can be used to declare a polymorphic `foo`.
@@ -201,7 +234,7 @@ Limitation: `as` cannot be applied to the entire clause head.
 ## Clause grafting
 
 Take this code, in a file called `lp-lib.elpi` providing general purpose
-code, like a fatal error clase *named* "default-fatal-error" using the `:name`
+code, like a fatal error clause *named* "default-fatal-error" using the `:name`
 attribute.
 ```prolog
 :name "default-fatal-error" 
@@ -281,7 +314,7 @@ goal> pi x\ sigma Y\ even x => ($constraint (even Y) [Y], Y = x).
 Success:
 ```
 
-The `$constraint` built in is typically used in conjuction with `mode` as
+The `$constraint` built in is typically used in conjunction with `mode` as
 follows:
 ```prolog
 mode (even i).
