@@ -1,0 +1,330 @@
+/* elpi: embedded lambda prolog interpreter                                  */
+/* license: GNU Lesser General Public License Version 2.1 or later           */
+/* ------------------------------------------------------------------------- */
+
+accumulate elpi_quoted_syntax.
+
+macro @vdash :- ":-". % work around bug in Vim's syntax highlight
+
+if P T _ :- P, !, T.
+if _ _ E :- E. 
+
+iter _ [].
+iter P [X|XS] :- P X, iter P XS.
+
+pred iter-sep i:list string, i:string, i:(list string -> A -> list string -> prop), i:list A, i:list string.
+iter-sep _ _ _ [] _.
+iter-sep _ S P [X] A :- !, P [] X A.
+iter-sep B S P [X|XS] A :- P B X [], write S, iter-sep [] S P XS A.
+
+iter-sep2 _ _ _  _ [] _.
+iter-sep2 _ S _  P [X] A :- !, P [] X A.
+iter-sep2 B S S1 P [X|XS] A :- P B X [S1], write S, iter-sep2 [] S S1 P XS A.
+
+monad [] X X.
+monad [P|PS] X R :- P X X1, monad PS X1 R. 
+
+pred rev i:list A, o:list A.
+rev L RL  :- rev-aux L []  RL .
+rev-aux [X|XS] ACC R :- rev-aux XS [X|ACC] R.
+rev-aux [] L L.
+
+mode (len i o).
+len ?? 0.
+len [] 0.
+len [_|XS] N :- len XS M, N is M + 1.
+
+macro @log P :- (P :- $print P, fail).
+debug-print A B :- $print A B.
+spy P :- debug-print "----<<---- enter: " P,
+         P,
+         debug-print "---->>---- exit: " P, !.
+spy P :- debug-print "---->>---- fail: " P, fail.
+
+pred write-to o:ctype "file".
+
+write S :- write-to OC, output OC S.
+
+mode (sanitize i o).
+sanitize X Y :-
+  monad [
+    $rex_replace "&" "&amp;",
+    $rex_replace "<" "&lt;",
+    $rex_replace ">" "&gt;",
+    $rex_replace "\"" "&quot;",
+    $rex_replace "'" "&apos;" ]
+  X Y.
+var-to-string X Y :-
+  $term_to_string X S, $rex_replace "x\\([0-9]+\\)" "x<sub>\\1</sub>" S Y.
+uvar-to-string X Y :-
+  $term_to_string X S, $rex_replace "x\\([0-9]+\\)" "X<sub>\\1</sub>" S Y.
+name-to-string Y Ys :-
+  $rex_replace "^\\([A-Za-z]+\\)\\([0-9]+\\)$" "\\1<sub>\\2</sub>" Y Ys.
+
+pred concat i:list string, o:string.
+concat [] "".
+concat [X|XS] S :- concat XS Res, S is X ^ Res.
+
+par? CL PL Open Close Open1 Close1 :-
+  if (CL =< PL)
+     (Open1 = Open, Close1 = Close)
+     (Open1 = ["("|Open], Close1 = [")"|Close]).
+
+kind option type -> type.
+type some A -> option A.
+type none option A.
+
+grab-list (const "[]") [] none.
+grab-list (app [ const "::", X, XS]) [ X | R ] T :- grab-list XS R T.
+grab-list X [] (some X).
+
+%    pp Level  ParensBefore   Term    ParensAfter
+pred pp i:int, i:list string, i:term, i:list string.
+
+% TODO: fix precendences
+infx "<"  60 "&nbsp;&lt;&nbsp;"      60 60.
+infx "=>" 60 "&nbsp;<b>⇒</b>&nbsp;"  59 59.
+infx "="  60 "&nbsp;=&nbsp;"           70 70.
+infx "^"  60 "&nbsp;^&nbsp;"           60 60.
+infx "is" 60 "&nbsp;<b>is</b>&nbsp;" 60 60.
+infx ";"  60 "&nbsp;;&nbsp;"         60 60.
+infx "+"  60 "&nbsp;+&nbsp;"           60 60.
+infx "*"  60 "&nbsp;*&nbsp;"           60 60.
+infx "as"  0 "&nbsp;<b>as</b>&nbsp;" 60 60.
+
+@log (pp _ _ _ _).
+
+pp-compound P :- write "<div class='compound'>", P, write "</div>".
+
+pp L B (app [ const OP, Left, Right ]) A :- infx OP LOP S PL PR, !,
+  par? L LOP B A B1 A1, 
+  pp-compound (pp PL B1 Left  [S]),
+  pp-compound (pp PR [] Right A1).
+
+pp L B (app [ const @vdash , Hd , Hyps ]) A :-
+  par? L 60 B A B1 A1,
+  if (Hyps = app [ const "," , const "!" | Rest])
+     (Hyps2 = app [ const "," | Rest], NeckCut = " neckcut")
+     (Hyps2 = Hyps, NeckCut = ""),
+  write "<div class='hyps'>",
+  pp 59 B1 Hyps2 [],
+  write "</div>",
+  Concl is "<div class='concl" ^ NeckCut ^ "'><div class='compound'>",
+  write Concl,
+  pp 59 [] Hd A1,
+  write "</div></div>".
+
+pp L B (app [ const C, lam _ ] as T) A :- (C = "pi"; C = "sigma"), !,
+  par? L 60 B A B1 A1,
+  pp-quantifier-block B1 C T [] A1.
+
+pp-quantifier-block B C (app [ const C, lam F ]) Args A :- !,
+  pi x\ if (C = "pi") (var-to-string x X) (uvar-to-string x X),
+        name x X => pp-quantifier-block B C (F x) [X|Args] A.
+pp-quantifier-block B C T Args A :-
+  write "<div class='compound'>",
+  write-math-quantifier B C,
+  iter-sep [] " " (b\ x\ a\ write x) {rev Args} [],
+  write ". </div><div class='compound'>",
+  pp 60 [] T A,
+  write "</div>".
+
+write-math-quantifier B "pi"    :- write {concat B}, write "<b>∀</b>".
+write-math-quantifier B "sigma" :- write {concat B}, write "<b>∃</b>".
+
+pp L B (app [ const "," | Args ]) A :-
+  par? L 60 B A B1 A1,
+  write "<div class='hyp compound'>",
+  iter-sep2 B1 "</div><div class='hyp compound'>" "," (pp 59) Args A1,
+  write "</div>".
+
+pp L B (app [ const "::", HD, TL ]) A :-
+  par? L 99 B A B1 A1,
+  grab-list TL Args Last,
+  write "<div class='compound'><b>[</b>",
+  iter-sep B1 "<b>,</b> " (pp 60) [HD|Args] [],
+  if (Last = some X) (write " <b>|</b> ", pp 0 [] X []) (true),
+  write "<b>]</b></div>", write {concat A1}.
+
+pp L B (app Args) A :-
+  par? L 59 B A B1 A1,
+  iter-sep B1 " " (pp 60) Args A1.
+
+pp L B (lam F) A :-
+  par? L 70 B A B1 A1,
+  pi x\
+    write "<div class='compound'><b>λ</b>",
+    write {concat B1},
+    var-to-string x X, write X,
+    write ". </div><div class='compound'>",
+    name x X => pp 10 [] (F x) A1,
+    write "</div>".
+
+pp _ B (const "!") A :- !,
+  write {concat B},
+  write "<span class='cut'>!<span>",
+  write {concat A}.
+
+pp _ B (const X) A :-
+  write {concat B},
+  write {sanitize X},
+  write {concat A}.
+
+pp _ B X A :- name X Y, !,
+  write {concat B},
+  if ($rex_match "^_" Y)
+     (write "_")
+     (name-to-string Y YS, write YS),
+  write {concat A}.
+
+pp _ B (cdata S) A :- $is_cdata S _, !,
+  $term_to_string S Y,
+  write {concat B},
+  write Y,
+  write {concat A}.
+
+pp _ B X A :- write "ERROR".
+
+hd-symbol (app [ const @vdash, H, _ ]) :- hd-symbol H.
+hd-symbol (app [ const S | _ ]) :- write S.
+hd-symbol (const S) :- write S.
+
+type name term -> string -> prop.
+write-clause ( Loc , [A|Args], (arg Body) ) :-
+  pi x\ name x A => write-clause ( Loc, Args, Body x ).
+write-clause ( Loc , [], C ) :- !,
+  write "<div class='clause' predicate='", hd-symbol C, write "'>",
+  write "<div class='loc'>",
+    $term_to_string Loc LocS, write LocS,
+  write "</div>",
+  if (C = app [const @vdash|_])
+     (pp 0 [] C [])
+     (write "<div class='hyps'><div class='hyp'></div></div><div class='concl'>",
+       pp 0 [] C [],
+      write "</div>"),
+  write "</div>\n".
+
+write-preamble F :-
+  write "<!DOCTYPE html>
+         <html>
+         <head>
+           <meta charset='UTF-8'> 
+           <title>",
+  write F,
+  write "  </title>
+           <link rel='stylesheet'
+             href='https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css'>
+           <script src='https://code.jquery.com/jquery-1.12.4.js'></script>
+           <script src='https://code.jquery.com/ui/1.12.1/jquery-ui.js'></script>
+           <script>
+           $( function() {
+               $( '.clause' ).each(function() { $( this ).resizable({
+                    start: function( event, ui ) {
+                      //$( ui.element ).css('max-width','100%');
+                    }
+              }); });
+           } );
+$( function() {
+ $('.compound').each(function() {
+  $( this ).mouseover(function (e) {
+    e.stopPropagation();
+    $( this ).addClass('hover')
+  }).mouseout(function (e) {
+    $( this ).removeClass('hover')
+  })
+});
+           } );
+           </script>
+           <style>
+           .clause{
+             display: inline-block;
+             padding: 1em;
+             margin: 5px;
+             border: 2px solid black;
+             width: 30em;
+           }
+           .hidden { 
+             display: none;
+           }
+           .hyps {
+             display: block;
+           }
+           .hyp {
+             display: inline-block;
+             margin-right: 1em;
+             margin-top: 0.5em;
+           }
+           .compound {
+             display: inline-block;
+             vertical-align: top;
+             padding-left: 1em;
+             text-indent: -1em;
+             border: 1px solid transparent;
+           }
+           .hover {
+             border: 1px dotted grey;
+             transition: border 1s;
+           }
+           .concl {
+             display: block;
+             border-top: 1px solid black;
+           }
+           .neckcut {
+             border-top: 2px solid red;
+           }
+           .cut {
+             color: red;
+           }
+           .loc {
+             display: block;
+             background-color: #ecebeb;
+           }
+         </style>
+         </head>
+         <body>
+         <h1>",
+  write F,
+  write "</h1>
+         <script type='text/javascript'>
+         function filter() {
+           var f = document.getElementById('filter').value;
+           var cl = document.getElementsByClassName('clause');
+           for (i=0;i < cl.length; i++) {
+             if (cl[i].getAttribute('predicate') === f || f === '' ) {
+               cl[i].classList.remove('hidden')
+             } else {
+               cl[i].classList.add('hidden')
+             }
+           }
+         }
+         </script>
+         <p>Filter predicate: <input onkeyup='filter();' type='text' id='filter' name='filter'></p>
+".
+
+write-end :-
+  write "</body></html>".
+
+filter-out [] _ [].
+filter-out [X|XS] P R :-
+  if (P X) (R = [X | RS]) (R = RS),
+  filter-out XS P RS.
+
+write-mathjx F R :-
+  $quote_syntax F "main" P _,
+  filter-out P (c\
+    sigma Loc LocS _1 _2\ c = ( Loc, _1, _2), 
+    $term_to_string Loc LocS, not(R LocS)) PF,
+  write-preamble F,
+  iter write-clause PF,
+  write-end.
+
+exists P [X|XS] :- P X, !.
+exists P [_|XS] :- exists P XS.
+
+main [IN,OUT|FILTERS] :-
+  open_out OUT OC,
+  R = (x\exists (y\$rex_match y x) FILTERS),
+  write-to OC => write-mathjx IN R,
+  close_out OC.
+
+% vim: set ft=lprolog:

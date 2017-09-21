@@ -69,7 +69,7 @@ OC_OPTIONS = -linkpkg $(OCAMLOPTIONS) $(FLAGS)
 ELPI_LIBS = \
   elpi_quoted_syntax.elpi  elpi_typechecker.elpi  \
   pervasives.elpi pervasives-syntax.elpi \
-  utils/elpi2mathjx.elpi
+  utils/elpi2html.elpi
 
 ELPI_DIST = \
   $(addprefix src/,elpi_API.cmi elpi_API.mli elpi.cmi)
