@@ -8,6 +8,13 @@ ulimit -s 32768
 export RUNNER=teyjus
 export PATH=${BASE}:$PATH
 
+if which tjsim 2>/dev/null; then
+  :
+else
+  echo 2 0 0 0k > $2
+  exit 1
+fi
+
 cd $1
 if [ -e "Makefile" ]; then
 	make
