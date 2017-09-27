@@ -79,6 +79,7 @@ let usage =
   "\nMain options:\n" ^ 
   "\t-test runs the query \"main\"\n" ^ 
   "\t-exec pred  runs the query \"pred args\"\n" ^ 
+  "\t-where print system wide installation path then exit\n" ^ 
   "\t-print-prolog prints files to Prolog syntax if possible, then exit\n" ^ 
   "\t-print-latex prints files to LaTeX syntax, then exit\n" ^ 
   "\t-print prints files after desugar, then exit\n" ^ 
@@ -97,6 +98,8 @@ let _ =
   let print_ast = ref false in
   let typecheck = ref true in
   let batch = ref false in
+  if Array.mem "-where" Sys.argv then begin
+    Printf.printf "%s\n" Elpi_config.install_dir; exit 0 end;
   let rec aux = function
     | [] -> []
     | "-test" :: rest -> batch := true; test := true; aux rest
@@ -117,8 +120,9 @@ let _ =
     let v = try Sys.getenv "TJPATH" with Not_found -> "" in
     let tjpath = Str.split (Str.regexp ":") v in
     List.flatten (List.map (fun x -> ["-I";x]) tjpath) in
+  let installpath = [ "-I"; Elpi_config.install_dir ] in
   let execpath = ["-I"; Filename.dirname (Sys.executable_name)] in
-  let opts = Array.to_list Sys.argv @ tjpath @ execpath in
+  let opts = Array.to_list Sys.argv @ tjpath @ installpath @ execpath in
   let argv = Elpi_API.Setup.init ~silent:false opts cwd in
   let filenames = aux (List.tl argv) in
   set_terminal_width ();

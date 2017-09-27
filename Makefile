@@ -52,7 +52,7 @@ runners:
 clean:
 	$(H)rm -f src/*.cmo src/*.cma src/*.cmx src/*.cmxa src/*.cmi
 	$(H)rm -f src/*.o src/*.a src/*.cmt src/*.cmti
-	$(H)rm -f trace_ppx.cmx
+	$(H)rm -f trace_ppx.cmx elpi_config.ml
 	$(H)rm -f elpi.git.* trace_ppx elpi elpi.byte
 	$(H)rm -f src/.depends src/.depends.parser 
 	$(H)rm -f src/.depends.byte src/.depends.parser.byte
@@ -77,9 +77,16 @@ ELPI_DIST = \
 ELPI_DIST_OPT = \
   $(addprefix src/,elpi.cma elpi.cmxa elpi.a elpi_API.cmti)
 
-elpi$(EXE): elpi_REPL.ml findlib/elpi/META
-	$(H)$(call pp,$(OCNAME),-package elpi -o $@,$<)
-	$(H)$(OC) $(OC_OPTIONS) -package elpi -o $@ $<
+elpi$(EXE): elpi_REPL.ml elpi_config.$(CMX) findlib/elpi/META
+	$(H)$(call pp,$(OCNAME),-package elpi elpi_config.$(CMX) -o $@,$<)
+	$(H)$(OC) $(OC_OPTIONS) -package elpi elpi_config.$(CMX) -o $@ $<
+
+elpi_config.$(CMX): elpi_config.ml
+	$(H)$(call pp,$(OCNAME),-c, $<)
+	$(H)$(OC) $(OC_OPTIONS) -c $<
+
+elpi_config.ml:
+	$(H)echo 'let install_dir = "$(shell ocamlfind printconf destdir)/elpi"' > $@
 
 src/%: | trace_ppx
 	$(H)$(MAKE) --no-print-directory -C src/ $*

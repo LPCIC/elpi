@@ -20,6 +20,7 @@ elpi
 elpi.byte
 trace_ppx
 .merlin
+elpi_config.ml
 
 bench/data.csv
 bench/data.csv.dat
