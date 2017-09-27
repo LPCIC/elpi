@@ -98,7 +98,7 @@ let _ =
   let print_ast = ref false in
   let typecheck = ref true in
   let batch = ref false in
-  if Array.mem "-where" Sys.argv then begin
+  if List.mem "-where" (Array.to_list Sys.argv) then begin
     Printf.printf "%s\n" Elpi_config.install_dir; exit 0 end;
   let rec aux = function
     | [] -> []
