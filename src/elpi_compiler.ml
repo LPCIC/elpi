@@ -129,7 +129,7 @@ let spill types modes ast =
     | A.App(A.Const c, [A.Lam (n,arg)])
       when F.(List.exists (equal c) [pif;sigmaf]) ->
        let spills, arg = spaux1 (n::ctx) arg in
-       [], [A.App(A.Const c, [A.Lam (n,add_spilled spills ctx arg)])]
+       [], [A.App(A.Const c, [A.Lam (n,add_spilled spills (n::ctx) arg)])]
     | A.App(A.Const c, [hyp; concl]) when F.(equal c implf) ->
        let spills_hyp, hyp1 = spaux1 ctx hyp in
        let t = spaux1_prop ctx concl in
