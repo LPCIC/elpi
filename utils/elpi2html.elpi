@@ -92,7 +92,7 @@ infx "+"  60 "&nbsp;+&nbsp;"           60 60.
 infx "*"  60 "&nbsp;*&nbsp;"           60 60.
 infx "as"  0 "&nbsp;<b>as</b>&nbsp;" 60 60.
 
-@log (pp _ _ _ _).
+%@log (pp _ _ _ _).
 
 pp-compound P :- write "<div class='compound'>", P, write "</div>".
 
