@@ -664,3 +664,14 @@ let () =
 
 ;;
 
+let () =
+   let id = ref 0 in
+
+   declare "$new_int" (fun ~depth -> function
+     | [t] -> 
+         incr id;
+         [App (eqc, t, [C.of_int !id])]
+     | _ -> type_error "$new_int takes one arg");
+;;
+        
+

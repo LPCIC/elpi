@@ -54,12 +54,24 @@ sanitize X Y :-
     $rex_replace "\"" "&quot;",
     $rex_replace "'" "&apos;" ]
   X Y.
-var-to-string X Y :-
-  $term_to_string X S, $rex_replace "x\\([0-9]+\\)" "x<sub>\\1</sub>" S Y.
-uvar-to-string X Y :-
-  $term_to_string X S, $rex_replace "x\\([0-9]+\\)" "X<sub>\\1</sub>" S Y.
-name-to-string Y Ys :-
-  $rex_replace "^\\([A-Za-z]+\\)\\([0-9]+\\)$" "\\1<sub>\\2</sub>" Y Ys.
+
+mk-name S1 I Y :-
+  Y is "<span class='name' varname='" ^
+       {$term_to_string I} ^
+       "'>" ^ S1 ^ "</span>".
+
+incr-int P :- cur-int J, I is J + 1, (cur-int I :- !) => P.
+
+var-to-string X I Y :-
+  cur-int J, S1 is "x<sub>" ^ {$term_to_string J} ^ "</sub>",
+  mk-name S1 I Y.
+uvar-to-string X I Y :-
+  cur-int J, S1 is "X<sub>" ^ {$term_to_string J} ^ "</sub>",
+  mk-name S1 I Y.
+name-to-string X0 I Y :-
+  if ($rex_match "^_" X0) (X = "_") (X = X0),
+  $rex_replace "^\\([A-Za-z]+\\)_?\\([0-9]+\\)$" "\\1<sub>\\2</sub>" X S1,
+  mk-name S1 I Y.
 
 pred concat i:list string, o:string.
 concat [] "".
@@ -87,7 +99,7 @@ infx "=>" 60 "&nbsp;<b>⇒</b>&nbsp;"  59 59.
 infx "="  60 "&nbsp;=&nbsp;"           70 70.
 infx "^"  60 "&nbsp;^&nbsp;"           60 60.
 infx "is" 60 "&nbsp;<b>is</b>&nbsp;" 60 60.
-infx ";"  60 "&nbsp;;&nbsp;"         60 60.
+infx ";"  50 "&nbsp;;&nbsp;"         50 50.
 infx "+"  60 "&nbsp;+&nbsp;"           60 60.
 infx "*"  60 "&nbsp;*&nbsp;"           60 60.
 infx "as"  0 "&nbsp;<b>as</b>&nbsp;" 60 60.
@@ -118,9 +130,10 @@ pp L B (app [ const C, lam _ ] as T) A :- (C = "pi"; C = "sigma"), !,
   par? L 60 B A B1 A1,
   pp-quantifier-block B1 C T [] A1.
 
-pp-quantifier-block B C (app [ const C, lam F ]) Args A :- !,
-  pi x\ if (C = "pi") (var-to-string x X) (uvar-to-string x X),
-        name x X => pp-quantifier-block B C (F x) [X|Args] A.
+pp-quantifier-block B C (app [ const C, lam F ]) Args A :- !, incr-int (
+  $new_int I,
+  pi x\ if (C = "pi") (var-to-string x I X) (uvar-to-string x I X),
+        name x X => pp-quantifier-block B C (F x) [X|Args] A).
 pp-quantifier-block B C T Args A :-
   write "<div class='compound'>",
   write-math-quantifier B C,
@@ -134,31 +147,32 @@ write-math-quantifier B "sigma" :- write {concat B}, write "<b>∃</b>".
 
 pp L B (app [ const "," | Args ]) A :-
   par? L 60 B A B1 A1,
-  write "<div class='hyp compound'>",
+  write "<div class='hyp compound' level='60'>",
   iter-sep2 B1 "</div><div class='hyp compound'>" "," (pp 59) Args A1,
   write "</div>".
 
 pp L B (app [ const "::", HD, TL ]) A :-
   par? L 99 B A B1 A1,
   grab-list TL Args Last,
-  write "<div class='compound'><b>[</b>",
-  iter-sep B1 "<b>,</b> " (pp 60) [HD|Args] [],
+  write "<div class='compound' level='99'><b>[</b><div class='compound'>",
+  iter-sep2 B1 "</div><div class='compound'> " "<b>,</b>" (pp 61) [HD|Args] [],
   if (Last = some X) (write " <b>|</b> ", pp 0 [] X []) (true),
-  write "<b>]</b></div>", write {concat A1}.
+  write "</div><b>]</b></div>", write {concat A1}.
 
 pp L B (app Args) A :-
-  par? L 59 B A B1 A1,
-  iter-sep B1 " " (pp 60) Args A1.
+  par? L 65 B A B1 A1,
+  iter-sep B1 " " (pp 66) Args A1.
 
-pp L B (lam F) A :-
+pp L B (lam F) A :- incr-int (
   par? L 70 B A B1 A1,
+  $new_int I,
   pi x\
-    write "<div class='compound'><b>λ</b>",
+    write "<div class='compound' level='70'><b>λ</b>",
     write {concat B1},
-    var-to-string x X, write X,
+    var-to-string x I X, write X,
     write ". </div><div class='compound'>",
     name x X => pp 10 [] (F x) A1,
-    write "</div>".
+    write "</div>").
 
 pp _ B (const "!") A :- !,
   write {concat B},
@@ -171,11 +185,7 @@ pp _ B (const X) A :-
   write {concat A}.
 
 pp _ B X A :- name X Y, !,
-  write {concat B},
-  if ($rex_match "^_" Y)
-     (write "_")
-     (name-to-string Y YS, write YS),
-  write {concat A}.
+  write {concat B}, write Y, write {concat A}.
 
 pp _ B (cdata S) A :- $is_cdata S _, !,
   $term_to_string S Y,
@@ -191,12 +201,14 @@ hd-symbol (const S) :- write S.
 
 type name term -> string -> prop.
 write-clause ( Loc , [A|Args], (arg Body) ) :-
-  pi x\ name x A => write-clause ( Loc, Args, Body x ).
+  $new_int I, name-to-string A I A1,
+  pi x\ name x A1 => write-clause ( Loc, Args, Body x ).
 write-clause ( Loc , [], C ) :- !,
   write "<div class='clause' predicate='", hd-symbol C, write "'>",
   write "<div class='loc'>",
     $term_to_string Loc LocS, write LocS,
   write "</div>",
+  cur-int 0 =>
   if (C = app [const @vdash|_])
      (pp 0 [] C [])
      (write "<div class='hyps'><div class='hyp'></div></div><div class='concl'>",
@@ -224,16 +236,29 @@ write-preamble F :-
                     }
               }); });
            } );
+// Highlight the box around compound elements
 $( function() {
- $('.compound').each(function() {
-  $( this ).mouseover(function (e) {
-    e.stopPropagation();
-    $( this ).addClass('hover')
-  }).mouseout(function (e) {
-    $( this ).removeClass('hover')
-  })
+  $('.compound').each(function() {
+    $( this ).mouseover(function (e) {
+      e.stopPropagation();
+      $( this ).addClass('hover')
+    }).mouseout(function (e) {
+      $( this ).removeClass('hover')
+    })
+  });
 });
-           } );
+
+// Highlight all variables named the same
+$( function() {
+  $('.name').each(function() {
+    $( this ).mouseover(function (e) {
+      $( 'span[varname=' + $( this ).attr('varname') + ']' ).addClass('samevar')
+    }).mouseout(function (e) {
+      $( 'span[varname=' + $( this ).attr('varname') + ']' ).removeClass('samevar')
+    })
+  });
+});
+
            </script>
            <style>
            .clause{
@@ -242,6 +267,7 @@ $( function() {
              margin: 5px;
              border: 2px solid black;
              width: 30em;
+             cursor: default;
            }
            .hidden { 
              display: none;
@@ -261,9 +287,26 @@ $( function() {
              text-indent: -1em;
              border: 1px solid transparent;
            }
+/*
+           .hover:after {
+             content: attr(level);
+             position: fixed;
+             right: 0;
+             top: 0;
+           }
+*/
            .hover {
              border: 1px dotted grey;
-             transition: border 1s;
+             transition: border 0.5s;
+           }
+           .samevar {
+             color: #22aD22;
+             transition: color 0.5s;
+             border: 1px dotted #22aD22;
+             transition: border 0.5s;
+           }
+           .name {
+             border: 1px solid transparent;
            }
            .concl {
              display: block;
@@ -309,8 +352,8 @@ filter-out [X|XS] P R :-
   if (P X) (R = [X | RS]) (R = RS),
   filter-out XS P RS.
 
-write-mathjx F R :-
-  $quote_syntax F "main" P _,
+write-html IN F R :-
+  $quote_syntax IN "main" P _,
   filter-out P (c\
     sigma Loc LocS _1 _2\ c = ( Loc, _1, _2), 
     $term_to_string Loc LocS, not(R LocS)) PF,
@@ -324,7 +367,7 @@ exists P [_|XS] :- exists P XS.
 main [IN,OUT|FILTERS] :-
   open_out OUT OC,
   R = (x\exists (y\$rex_match y x) FILTERS),
-  write-to OC => write-mathjx IN R,
+  write-to OC => write-html IN OUT R,
   close_out OC.
 
 % vim: set ft=lprolog:
