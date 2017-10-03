@@ -106,6 +106,7 @@ type std_in, std_out  (ctype "file").
 type $$=> prop -> prop -> prop.
 type $$^ string -> string -> string.
 type $$+ int -> int -> int.
+type $$* int -> int -> int.
 type false prop.
 type time prop -> prop.
 type std_in (ctype "file").
