@@ -201,6 +201,7 @@ module Extend : sig
       | CData of CData.t
       | Cons of term * term
       | Nil
+      | Discard
     and term_attributed_ref = {
       mutable contents : term;
       mutable rest : stuck_goal list;

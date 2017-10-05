@@ -298,6 +298,7 @@ let argify state ~depth:arg_lvl t =
     | Custom(c,xs) -> Custom(c,List.map argify xs)
     | UVar _ | AppUVar _ | Arg _ | AppArg _ -> assert false
     | Nil as x -> x
+    | Discard as x -> x
     | Cons(x,xs) -> Cons(argify x,argify xs) in
   argify t
 ;;
@@ -343,7 +344,11 @@ let stack_term_of_ast ?(inner_call=false) ~depth:arg_lvl state ast =
  
   let is_uvar_name f = 
      let c = (F.show f).[0] in
-     ('A' <= c && c <= 'Z') || c = '_' in
+     ('A' <= c && c <= 'Z') in
+    
+  let is_discard f =
+     let c = (F.show f).[0] in
+     c = '_' in
 
   let is_macro_name f = 
      let c = (F.show f).[0] in
@@ -361,7 +366,9 @@ let stack_term_of_ast ?(inner_call=false) ~depth:arg_lvl state ast =
   and stack_funct_of_ast inner curlvl state f =
     try state, F.Map.find f (get_varmap state)
     with Not_found ->
-     if is_uvar_name f then
+     if is_discard f then
+       state, Discard
+     else if is_uvar_name f then
        stack_arg_of_ast state (F.show f)
      else if is_macro_name f then
        stack_macro_of_ast inner curlvl state f
@@ -399,6 +406,8 @@ let stack_term_of_ast ?(inner_call=false) ~depth:arg_lvl state ast =
           state, App(c,hd1,tl1@tl)
        | Lam _ -> (* macro with args *)
           state, deref_appuv ~from:lvl ~to_:lvl tl c
+       | Discard -> 
+          error "Clause shape unsupported: _ cannot be applied"
        | _ -> error "Clause shape unsupported" end
     | A.App (A.Custom f,tl) ->
        let cname = stack_custom_of_ast f in
@@ -516,6 +525,7 @@ let assert_no_uvar_destructuring l =
     | Custom (_,l) -> List.exists test l
     | CData _ -> false
     | Nil -> false
+    | Discard -> false
     | Cons (t1,t2) -> test t1 || test t2
   in
   if List.exists (fun (x,y) -> test x || test y) l then
@@ -712,6 +722,7 @@ let cdatac = Constants.from_stringc "cdata"
 let forallc = Constants.from_stringc "forall"
 let arrowc = Constants.from_stringc "arrow"
 let argc = Constants.from_stringc "arg"
+let discardc = Constants.from_stringc "discard"
 
 let mkQApp ~on_type l =
   let c = if on_type then tappc else appc in
@@ -758,6 +769,7 @@ let quote_term ?(on_type=false) vars term =
     | CData _ as x -> App(cdatac,x,[])
     | Cons(hd,tl) -> mkQApp [mkQCon Constants.consc vars; aux depth hd; aux depth tl]
     | Nil -> mkQCon Constants.nilc vars
+    | Discard -> mkQCon discardc vars
   in
     aux vars term
 

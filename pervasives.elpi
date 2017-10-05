@@ -119,3 +119,5 @@ type $$$new_safe (ctype "safe") -> prop.
 type $$$open_safe (ctype "safe") -> list A -> prop.
 type $$$stash (ctype "safe") -> A -> prop.
 
+type discard A.
+

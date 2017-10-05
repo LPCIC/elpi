@@ -39,17 +39,23 @@
   
 ## Underscore
 
-Underscore `_` is a valid variable name, but each occurrence denotes a different
-variable.
+Identifiers whose name start with `_` are wildcards, not variables.
 
 ```prolog
-eq X X. % sensible definition of eq
-eq _ _. % always true, like writing eq X Y.
+trivial-facts :-
+  _ = whatever,
+  you-name-it = _Whatever,
+  pi x\ _ = x.
+% pi x\ _ x = x. -- invalid syntax, _ is not a variable
 ```
 
-This is the natural semantics for a wildcard.
+Side note: no solution is computed for goals like `_ = something`.
+On the contrary a problem like `DummyNameUsedOnlyOnce = somthing` demands the
+computation of the solution (even if it is not used), and hence can *fail* if
+some variable occurring in something is out of scope for `DummyNameUsedOnlyOnce`.
+
 Side note: `elpi_typechecker.elpi` (see below) reports warnings about linearly used
-variables with a name not starting with `_`.
+variables, suggesting to start their name name not starting with `_`.
 
 ## Macros
 

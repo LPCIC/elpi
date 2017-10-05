@@ -36,7 +36,7 @@ let xppterm_prolog ~nice names f t =
           assert (List.length xs = 1);
           Fmt.fprintf f "@[<hov 1>(%a@ :-@ %a@])" aux x aux (List.hd xs)
         ) else pp_app f ppconstant aux (hd,x::xs) 
-    | Cons _ | Nil -> assert false (* TODO *)
+    | Cons _ | Nil | Discard -> assert false (* TODO *)
     | Custom (hd,xs) ->  assert false;
     | UVar _
     | AppUVar _ -> assert false

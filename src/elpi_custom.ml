@@ -65,6 +65,7 @@ let rec eval depth =
       with Not_found -> anomaly (show hd ^ " not evaluable") in
      f []
   | (Nil | Cons _ as x) -> type_error ("Lists cannot be evaluated: " ^ Pp.Raw.show_term x)
+  | Discard -> type_error "_ cannot be evaluated"
   | CData _ as x -> x
 ;;
 
@@ -200,6 +201,7 @@ let occurs x d t =
      | Custom (_, vs)                   -> auxs vs
      | Cons (v1, v2)                    -> aux v1 || aux v2
      | Nil
+     | Discard
      | CData _                          -> false
    and auxs = function
      | []      -> false
@@ -631,6 +633,7 @@ let fresh_copy t max_db depth =
     | CData _ as x -> x
     | Cons (hd,tl) -> Cons(aux d hd, aux d tl)
     | Nil as x -> x
+    | Discard as x -> x
   in
     aux 0 t
 

@@ -200,6 +200,7 @@ let xppterm ~nice ?(min_prec=min_prec) depth0 names argsdepth env f t =
         Fmt.fprintf f "%a \\@ %a" (aux inf_prec depth) c
          (aux min_prec (depth+1)) t)
     | CData d -> CData.pp f d
+    | Discard -> Fmt.fprintf f "_"
   in
     try aux min_prec depth0 f t with e -> Fmt.fprintf f "EXN PRINTING: %s" (Printexc.to_string e)
 ;;
@@ -520,6 +521,7 @@ let deterministic_restriction e ~args_safe t =
   | AppArg (i,l) -> aux e.(i) ; List.iter aux l
   | Const _
   | Nil
+  | Discard
   | CData _ -> ()
  in
   try aux t ; true
@@ -678,6 +680,7 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
        let tl' = maux e depth tl in
        if hd == hd' && tl == tl' then x else Cons(hd',tl')
     | Nil -> x
+    | Discard -> x
 
     (* fast path with no deref... *)
     | UVar _ when delta == 0 && avoid == None -> x
@@ -867,7 +870,8 @@ and subst fromdepth ts t =
        let hd' = aux depth hd in
        let tl' = aux depth tl in
        if hd == hd' && tl == tl' then orig else Cons(hd',tl')
-   | Nil -> Nil
+   | Nil -> tt
+   | Discard -> tt
    | UVar({contents=g},vardepth,argsno) when g != C.dummy ->
       [%tcall aux depth (deref_uv ~from:vardepth ~to_:depth argsno g)]
    | UVar(r,vardepth,argsno) as orig ->
@@ -919,6 +923,7 @@ and beta depth sub t args =
          | CData x -> type_error (Printf.sprintf "beta: '%s'" (CData.show x))
          | Nil -> type_error "beta: Nil"
          | Cons _ -> type_error "beta: Cons"
+         | Discard -> type_error "beta: Discard"
  end]
 
 (* eat_args n [n ; ... ; n+k] (Lam_0 ... (Lam_k t)...) = n+k+1,[],t
@@ -985,6 +990,7 @@ and deref_uv ?avoid ~from ~to_ args t =
         let args = args1 @ args2 in
         AppUVar (r,vardepth,args)
      | Cons _ | Nil -> type_error "deref_uv: applied list"
+     | Discard -> type_error "deref_uv: applied Discard"
      | CData _ -> t
      | Arg _ | AppArg _ -> assert false (* Uv gets assigned only heap term *)
   end]
@@ -1004,7 +1010,7 @@ let rec is_flex ~depth =
   | AppUVar ({ contents = t }, vardepth, args) when t != C.dummy -> 
      is_flex ~depth (deref_appuv ~from:vardepth ~to_:depth args t)
   | UVar (r, _, _) | AppUVar (r, _, _) -> Some r
-  | Const _ | Lam _ | App _ | Custom _ | CData _ | Cons _ | Nil -> None
+  | Const _ | Lam _ | App _ | Custom _ | CData _ | Cons _ | Nil | Discard -> None
 
 (* Invariants:                                          |
    adepth: depth of a (query, heap term)                - bdepth       b
@@ -1116,6 +1122,7 @@ let bind r gamma l a d delta b left t e =
     | App (c,t,ts) -> App (cst c b delta, bind b delta w t, List.map (bind b delta w) ts)
     | Cons(hd,tl) -> Cons(bind b delta w hd, bind b delta w tl)
     | Nil -> t
+    | Discard -> t
     | Custom (c, tl) -> Custom(c, List.map (bind b delta w) tl)
     | CData _ -> t
     (* deref_uv *)
@@ -1252,6 +1259,7 @@ let rec unif matching depth adepth a bdepth b e =
        bdepth (ppterm (bdepth+depth) [] adepth e) b)
    begin let delta = adepth - bdepth in
    (delta = 0 && a == b) || match a,b with
+    | (Discard, _ | _, Discard) -> true
   
    (* _ as X binding *)
    | _, App(c,arg,[(Arg _ | AppArg _) as as_this]) when c == C.asc ->
@@ -1541,7 +1549,7 @@ let key_of ~mode:_ ~depth =
   | App (k,_,_)
   | Custom (k,_) -> k
   | Lam _ -> abstractionk
-  | Arg _ | UVar _ | AppArg _ | AppUVar _ -> variablek
+  | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> variablek
   | CData d -> 
      let hash = -(CData.hash d) in
      if hash > abstractionk then hash
@@ -1556,7 +1564,7 @@ let key_of ~mode:_ ~depth =
  | App(k,arg,_) when k == C.asc -> key_of_depth arg
  | App (k,arg2,_) -> k, skey_of arg2
  | Custom _ -> assert false
- | Nil | Cons _ | Arg _ | AppArg _ | Lam _ | UVar _ | AppUVar _ | CData _->
+ | Nil | Cons _ | Arg _ | AppArg _ | Lam _ | UVar _ | AppUVar _ | CData _ | Discard ->
     raise (Failure "Not a predicate")
  in
   key_of_depth
@@ -1646,6 +1654,7 @@ let close_with_pis depth vars t =
        assert false (* TODO, essentialy almost copy the code from move delta < 0 *)
     | Cons(hd,tl) -> Cons(aux hd, aux tl)
     | Nil as x -> x
+    | Discard as x -> x
     | Lam t -> Lam (aux t)
     | CData _ as x -> x
   in
@@ -1740,7 +1749,7 @@ module UnifBits (*: Indexing*) = struct (* {{{ *)
          index lvl (deref_uv ~from:origdepth ~to_:depth args t) depth left right
       | Lam _ -> set_section abstractionk abstractionk left right
       | CData s -> set_section C.(from_stringc "CData") (CData.hash s) left right
-      | Arg _ | UVar _ | AppArg _ | AppUVar _ ->
+      | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard ->
          if mode = `Clause then set_section C.uvc fullones left right
          else set_section C.uvc fullzeros left right
       | App (k,arg,argl) -> 
@@ -1862,6 +1871,7 @@ let rec term_map m = function
   | Custom(c,xs) -> Custom(c,smart_map (term_map m) xs)
   | Cons(hd,tl) -> Cons(term_map m hd, term_map m tl)
   | Nil as x -> x
+  | Discard as x -> x
   | CData _ as x -> x
 let rec split_conj = function
   | App(c, hd, args) when c == C.andc || c == C.andc2 ->
@@ -1911,7 +1921,8 @@ let clausify vars depth t =
   [%trace "clausify" ("%a %d %d %d %d\n%!"
       (ppterm (depth+lts) [] 0 empty_env) t depth lts lcs (List.length ts)) begin
   match t with
-    Nil -> [],lts
+  | Nil -> [],lts
+  | Discard -> [],lts
   | Cons(g1,g2) ->
      let clauses,lts = claux vars depth hyps ts lts lcs g1 in
      let moreclauses,lts = claux vars depth hyps ts lts lcs g2 in
@@ -1963,7 +1974,7 @@ let clausify vars depth t =
        | Arg _ | AppArg _ -> assert false 
        | Lam _ | Custom _ | CData _ -> assert false
        | UVar _ | AppUVar _ -> assert false
-       | Cons _ | Nil -> assert false
+       | Cons _ | Nil | Discard -> assert false
      in
      let all_modes =
       let mode =
@@ -2143,6 +2154,7 @@ let freeze ad m t =
         let tl' = freeze ad tl in
         if hd == hd' && tl == tl' then orig else Cons(hd',tl')
     | Nil -> orig
+    | Discard -> orig
     | Arg _ | AppArg _ -> anomaly "freeze ad: not an heap term"
     | Lam t -> let t' = freeze (ad+1) t in if t == t' then orig else Lam t'
     | CData _ -> orig
@@ -2197,7 +2209,7 @@ let replace_const m t =
             rcaux x, smart_map rcaux xs)
     | Custom(c,xs) -> Custom(c,smart_map rcaux xs)
     | Cons(hd,tl) -> Cons(rcaux hd, rcaux tl)
-    | (CData _ | UVar _ | Nil) as x -> x
+    | (CData _ | UVar _ | Nil | Discard) as x -> x
     | Arg _ | AppArg _ -> assert false
     | AppUVar(r,lvl,args) -> AppUVar(r,lvl,smart_map rcaux args) in
   [%spy "alignement-replace-in" (uppterm 0 [] 0 empty_env)  t];
@@ -2298,6 +2310,7 @@ let thaw max_depth e m t =
   | Const _ as orig -> orig
   | Cons(hd,tl) -> Cons (aux hd, aux tl)
   | Nil as x -> x
+  | Discard as x -> x
   | CData _ as x -> x
   | Custom(c,ts) -> Custom(c,List.map (aux) ts)
   | Lam t -> Lam (aux t)
@@ -2340,6 +2353,7 @@ let lift_pat ~from ~to_ t =
       App((if n < from then n else n + delta), aux x, List.map aux xs)
   | Cons(hd,tl) -> Cons(aux hd, aux tl)
   | Nil as x -> x
+  | Discard as x -> x
   | Arg _ as x -> x
   | AppArg(i,xs) -> AppArg(i,List.map aux xs)
   | UVar _ as x ->
@@ -2760,7 +2774,7 @@ let make_runtime : ?max_steps: int -> program -> runtime =
        [%tcall backchain depth p g gs cp next alts lvl]
     | Arg _ | AppArg _ -> anomaly "Not a heap term"
     | Cons _ | Nil | Lam _ | CData _ -> type_error "Not a predicate"
-    | UVar _ | AppUVar _ -> error "Flexible predicate"
+    | UVar _ | AppUVar _ | Discard -> error "Flexible predicate"
     | Custom(c, args) ->
        match Constraints.exec_custom_predicate c ~depth p args with
        | gs' ->
@@ -2928,7 +2942,7 @@ open Mainloop
  ******************************************************************************)
 
 let map f d = function
-  | ( Const _ | CData _ | Nil ) as x -> x
+  | ( Const _ | CData _ | Nil | Discard ) as x -> x
   | ( Arg _ | AppArg _ ) -> assert false
   | Lam t -> Lam (f (d+1) t)
   | App (c,x,xs) -> App(c,f d x, List.map (f d) xs)

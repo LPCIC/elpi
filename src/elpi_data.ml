@@ -82,6 +82,7 @@ type term =
   (* Optimizations *)
   | Cons of term * term
   | Nil
+  | Discard
 and term_attributed_ref = {
   mutable contents : term [@printer (pp_extensible_any ~id:id_term pp_oref)];
   mutable rest : stuck_goal list [@printer fun _ _ -> ()]
