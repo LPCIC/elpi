@@ -82,10 +82,15 @@ stop :- halt.
 
 time T :- $gettimeofday B, T, $gettimeofday A, D is A - B, $print "TIME" D T.
 
+primitive? X S :- $is_cdata X (ctype S).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Type annotations
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+kind ctype type.
+type ctype string -> ctype.
+type $$$is_cdata A -> ctype -> prop. 
+pred primitive i:A, o:string.
 type $$=   X -> X -> prop.
 type $$::  X -> list X -> list X.
 type $$[]  list X.
