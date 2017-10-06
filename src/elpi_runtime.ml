@@ -2403,8 +2403,8 @@ let declare_constraint ~depth prog args =
               List.map (function
                | Some x -> x
                | None -> type_error
-                    ("the second argument of $constraint must be"^
-                     "flexible or a list of flexibles"))
+                    ("the second argument of $constraint must be "^
+                     "flexible or a list of flexible terms"))
               (List.map (is_flex ~depth) (lp_list_to_list ~depth t2)) in
             t1, v2)
     | _ -> type_error "$constraint takes 2 arguments"
