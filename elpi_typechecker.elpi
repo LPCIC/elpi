@@ -71,6 +71,7 @@ mode (pp i o).
 type pp term -> string -> prop.
 pp (app L) T1 :- !, pp-list L T, T1 is "(" ^ T ^ ")".
 pp (lam F) T :- !, pi x\ $term_to_string x XS, (pp x XS :- !) => pp (F x) T.
+pp (const "discard") "_" :- !.
 pp (const S) S :- !.
 pp (cdata X) S :- !, $term_to_string X S.
 pp X XS :- $term_to_string X XS.
