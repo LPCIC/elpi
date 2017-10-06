@@ -378,6 +378,9 @@ module Extend : sig
     val deref_appuv :
       from:int -> to_:int -> args:Data.term list -> Data.term -> Data.term
 
+    (** Lifting *)
+    val move : from:int -> to_:int -> Data.term -> Data.term
+
     val is_flex : depth:int -> Data.term -> Data.term_attributed_ref option
 
     val list_to_lp_list : Data.term list -> Data.term

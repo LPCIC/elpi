@@ -3031,6 +3031,7 @@ let split_conj = Clausify.split_conj
 let llam_unify ad e bd a b = HO.unif ad e bd a b
 let mkAppArg = HO.mkAppArg
 let move = HO.move
+let hmove = HO.hmove
 let make_index = make_index
 let clausify modes i c t =
   let old = !Clausify.modes in

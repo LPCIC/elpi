@@ -36,6 +36,9 @@ val move :
   adepth:int -> env ->
   ?avoid:term_attributed_ref -> ?depth:int ->
   from:int -> to_:int -> term -> term
+val hmove : 
+  ?avoid:term_attributed_ref ->
+  from:int -> to_:int -> term -> term
 
 val make_index : clause list -> idx
 val clausify : mode_decl Constants.Map.t -> int -> constant -> term -> clause list * int
