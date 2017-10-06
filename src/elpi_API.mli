@@ -264,6 +264,7 @@ module Extend : sig
       val rimplc : constant
       val ctypec : constant
       val pic : constant
+      val sigmac : constant
       val implc : constant
       val cut : term
     
