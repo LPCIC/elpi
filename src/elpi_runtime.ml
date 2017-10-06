@@ -1564,8 +1564,9 @@ let key_of ~mode:_ ~depth =
  | App(k,arg,_) when k == C.asc -> key_of_depth arg
  | App (k,arg2,_) -> k, skey_of arg2
  | Custom _ -> assert false
- | Nil | Cons _ | Arg _ | AppArg _ | Lam _ | UVar _ | AppUVar _ | CData _ | Discard ->
-    raise (Failure "Not a predicate")
+ | (Nil | Cons _ | Arg _ | AppArg _ | Lam _
+   | UVar _ | AppUVar _ | CData _ | Discard) as x ->
+   type_error ("The clause's head is not a predicate: " ^ show_term x)
  in
   key_of_depth
 ;;
@@ -2773,8 +2774,10 @@ let make_runtime : ?max_steps: int -> program -> runtime =
        let cp = get_clauses depth g p in
        [%tcall backchain depth p g gs cp next alts lvl]
     | Arg _ | AppArg _ -> anomaly "Not a heap term"
-    | Cons _ | Nil | Lam _ | CData _ -> type_error "Not a predicate"
-    | UVar _ | AppUVar _ | Discard -> error "Flexible predicate"
+    | Cons _ | Nil | Lam _ | CData _ ->
+        type_error ("The goal is not a predicate:" ^ (show_term g))
+    | UVar _ | AppUVar _ | Discard ->
+        error "The goal is a flexible term"
     | Custom(c, args) ->
        match Constraints.exec_custom_predicate c ~depth p args with
        | gs' ->
