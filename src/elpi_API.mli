@@ -221,6 +221,7 @@ module Extend : sig
     type custom_constraints = Data.custom_constraints
     type solution = Data.solution
     type idx
+    type hyps = (int * term) list
 
     type suspended_goal = {
       context : (int * term) list;
@@ -331,11 +332,11 @@ module Extend : sig
       (depth:int -> Data.term list -> Data.term list) ->
       unit
 
-    (** Custom predicates like $constraint. Allowed to change the constraint
+    (** Custom predicates allowed to change the constraint
         store *)
     val declare_full :
       string ->
-      (depth:int -> Data.solution -> Data.term list ->
+      (depth:int -> Data.hyps -> Data.solution -> Data.term list ->
          Data.term list * Data.custom_constraints) ->
       unit
 

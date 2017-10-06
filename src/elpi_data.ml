@@ -523,10 +523,12 @@ type solution = {
 }
 type outcome = Success of solution | Failure | NoMoreSteps
 
+type hyps = (int * term) list
+
 let register_custom, register_custom_full, lookup_custom =
  let (customs :
       (* Must either raise No_clause or succeed with the list of new goals *)
-      ('a, depth:int -> solution -> term list -> term list * custom_constraints)
+      ('a, depth:int -> hyps -> solution -> term list -> term list * custom_constraints)
       Hashtbl.t)
    =
      Hashtbl.create 17 in
@@ -540,7 +542,7 @@ let register_custom, register_custom_full, lookup_custom =
  (fun s f ->
     let idx = check s in
     Hashtbl.add customs idx
-      (fun ~depth { custom_constraints } args ->
+      (fun ~depth _ { custom_constraints } args ->
          f ~depth args, custom_constraints)),
  (fun s f ->
     let idx = check s in

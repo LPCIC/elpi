@@ -2431,7 +2431,7 @@ let exec_custom_predicate c ~depth idx args =
       assignments = !qenv;
       constraints = !CS.Ugly.delayed;
       custom_constraints = !CS.custom_constraints } in
-    let gs, cc = f ~depth solution args in
+    let gs, cc = f ~depth (local_prog idx) solution args in
     CS.custom_constraints := cc;
     gs
 
