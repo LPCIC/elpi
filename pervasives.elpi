@@ -109,6 +109,7 @@ type $$- A -> A -> A.
 type fail, !, halt  prop.
 type std_in, std_out  (ctype "file").
 type $$=> prop -> prop -> prop.
+type $$=> list prop -> prop -> prop.
 type $$^ string -> string -> string.
 type $$+ int -> int -> int.
 type $$* int -> int -> int.
