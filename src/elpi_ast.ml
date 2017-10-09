@@ -72,7 +72,7 @@ let mkQuoted s =
          | _ -> find_space (i+1) in
        let space_after = find_space 0 - 1 in
        let kind = String.sub s (i+1) space_after in
-       let data = String.sub s (i+space_after) (String.length s - i - i - space_after) in
+       let data = String.sub s (i+space_after+2) (String.length s - i - i - space_after-2) in
        { data; kind = Some kind }
     | '{' -> find_data (i+1)
     | _ -> { data = String.sub s i (String.length s - i - i); kind = None }
