@@ -14,7 +14,7 @@
     data types are made transparent.
     Module {!module:Extend.Compile} lets one register new \{\{quotations\}\}.
     Modules {!module:Extend.CustomPredicate} and
-    {!module:Extend.CustomConstraint} let one register custom $predicates and
+    {!module:Extend.CustomConstraint} let one register custom predicates and
     custom constraints. *)
 
 (* ************************************************************************* *)
@@ -79,7 +79,7 @@ end
 
 module Compile : sig
 
-  val program : ?print:[`Yes|`Raw] -> Ast.program list -> Data.program (* XXX *)
+  val program : ?allow_undeclared_custom_predicates:bool -> ?print:[`Yes|`Raw] -> Ast.program list -> Data.program (* XXX *)
   val query : Data.program -> Ast.query -> Data.query
 
   (** Runs [elpi_typechecker.elpi]. Extra static checks can be added, see also
@@ -166,9 +166,6 @@ module Extend : sig
     val mkNil : term
     val mkSeq : term list -> term
 
-    (** $custom (must start with $) *)
-    val mkCustom : string -> term
-
     (** builtin data *)
     val mkFloat : float -> term
     val mkInt : int -> term
@@ -196,7 +193,7 @@ module Extend : sig
       (* Heap terms: unif variables in the query *)
       | UVar of term_attributed_ref * (*depth:*)int * (*argsno:*)int
       | AppUVar of term_attributed_ref * (*depth:*)int * term list
-      (* Misc: $custom predicates, ... *)
+      (* Misc: custom predicates, ... *)
       | Custom of constant * term list
       | CData of CData.t
       | Cons of term * term
@@ -267,7 +264,7 @@ module Extend : sig
       val pic : constant
       val sigmac : constant
       val implc : constant
-      val cut : term
+      val cutc : constant
     
       (* Value for unassigned UVar/Arg *)
       val dummy : term
@@ -325,7 +322,7 @@ module Extend : sig
 
     exception No_clause
 
-    (** Custom predicates like $print. Must either raise No_clause or succeed
+    (** Custom predicates like print. Must either raise No_clause or succeed
         with the list of new goals *)
     val declare :
       string ->

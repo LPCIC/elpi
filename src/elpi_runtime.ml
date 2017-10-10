@@ -1616,7 +1616,7 @@ let add_clauses clauses s { map = p;  src } =
   { map = p; src = s :: src }
 
 let make_index p =
-  let idx = add_clauses (List.rev p) (0,C.cut) { map = Elpi_ptmap.empty; src = [] } in
+  let idx = add_clauses (List.rev p) (0,C.pi) { map = Elpi_ptmap.empty; src = [] } in
   { idx with src = [] } (* original program not in clauses *)
  
 (* flatten_snd = List.flatten o (List.map ~~snd~~) *)
@@ -1813,7 +1813,7 @@ module UnifBits (*: Indexing*) = struct (* {{{ *)
  
   let make_index p =
     timestamp := 1;
-    let m = add_clauses ~op:incr p (0,C.cut) { map = Elpi_ptmap.empty; src = [] } in
+    let m = add_clauses ~op:incr p (0,C.pi) { map = Elpi_ptmap.empty; src = [] } in
     timestamp := 0;
     { m with src = [] }
 
@@ -1982,7 +1982,6 @@ let clausify vars depth t =
         try C.Map.find hd !modes
         with Not_found -> Multi [] in
       match mode with
-      | Mono [] -> assert false
       | Mono m -> [g,args,hyps,m]
       | Multi l ->
            (g,args,hyps,[]) ::
@@ -2008,8 +2007,10 @@ let clausify vars depth t =
      claux vars depth hyps ts lts lcs
        (deref_appuv ~from ~to_:(depth+lts) args g)
   | Arg _ | AppArg _ -> anomaly "claux called on non-heap term"
-  | Lam _ | Custom _ | CData _ ->
-     error "Assuming a custom or string or int or float or function"
+  | Custom (c,_) ->
+     error ("Declaring a clause for built in predicate " ^ Constants.show c)
+  | (Lam _ | CData _ ) as x ->
+     error ("Assuming a string or int or float or function:" ^ show_term x)
   | UVar _ | AppUVar _ -> error "Flexible assumption"
   end] in
     claux vars depth [] [] 0 0 t
@@ -2403,11 +2404,11 @@ let declare_constraint ~depth prog args =
               List.map (function
                | Some x -> x
                | None -> type_error
-                    ("the second argument of $constraint must be "^
+                    ("the second argument of constraint must be "^
                      "flexible or a list of flexible terms"))
               (List.map (is_flex ~depth) (lp_list_to_list ~depth t2)) in
             t1, v2)
-    | _ -> type_error "$constraint takes 2 arguments"
+    | _ -> type_error "constraint takes 2 arguments"
   in 
   match CHR.clique_of (head_of g) !chrules with
   | Some clique -> (* real constraint *)
@@ -2420,7 +2421,7 @@ let qnames = Fork.new_local StrMap.empty
 let qenv = Fork.new_local empty_env
 
 let exec_custom_predicate c ~depth idx args =
-       if c == C.constraintc then begin
+       if c == C.declare_constraintc then begin
                declare_constraint ~depth idx args; [] end
   else if c == C.print_constraintsc then begin
                CS.print Format.err_formatter (CS.contents ()); [] end
@@ -2613,7 +2614,7 @@ let propagate { CS.cstr; cstr_position } history =
              }
              in
              if get CS.Ugly.delayed <> [] then
-               error "propagation rules must declare $constraint(s)"
+               error "propagation rules must declare constraint(s)"
            with No_clause -> raise NoMatch in
 
        let result = try
@@ -2742,7 +2743,7 @@ let make_runtime : ?max_steps: int -> program -> runtime =
  | Some [] ->
     [%spy "run-goal" (fun fmt -> Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env)) g];
     match g with
-    | c when c == C.cut -> [%tcall cut p gs next alts lvl]
+    | Custom(c,[]) when c == C.cutc -> [%tcall cut p gs next alts lvl]
     | App(c, g, gs') when c == C.andc || c == C.andc2 ->
        run depth p g (List.map(fun x -> depth,p,x) gs'@gs) next alts lvl
     | App(c, g2, [g1]) when c == C.rimplc ->

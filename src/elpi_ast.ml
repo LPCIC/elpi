@@ -49,7 +49,6 @@ end
 
 type term =
    Const of Func.t
- | Custom of Func.t
  | App of term * term list
  | Lam of Func.t * term
  | String of Func.t
@@ -126,7 +125,7 @@ type decl =
  | Chr of (term, Func.t) chr
  | Accumulated of decl list
  | Macro of Ploc.t * Func.t * term
- | Type of Func.t * term
+ | Type of bool * Func.t * term
 [@@deriving show]
 
 let mkLocal x = Local (Func.from_string x)
@@ -138,9 +137,9 @@ exception NotInProlog of string
 
 let mkApp = function
 (* FG: for convenience, we accept an empty list of arguments *)
-  | [(App _ | Custom _ | Const _ | Quoted _) as c] -> c
+  | [(App _ | Const _ | Quoted _) as c] -> c
   | App(c,l1)::l2 -> App(c,l1@l2)
-  | (Custom _ | Const _ | Quoted _) as c::l2 -> App(c,l2)
+  | (Const _ | Quoted _) as c::l2 -> App(c,l2)
   | [] -> raise (NotInProlog "empty application")
   | x::_ -> raise (NotInProlog ("application head: " ^ show_term x))
 
@@ -149,7 +148,4 @@ let mkFreshUVar () = incr fresh_uv_names; Const (Func.from_string ("_" ^ string_
 let fresh_names = ref (-1);;
 let mkFreshName () = incr fresh_names; Const (Func.from_string ("__" ^ string_of_int !fresh_names))
 let mkCon c = Const (Func.from_string c)
-let mkCustom c =
-  if String.length c > 0 && c.[0] = '$' then Custom (Func.from_string c)
-  else Elpi_util.anomaly ("Custom predicates start with $, "^c^" does not")
 

@@ -34,8 +34,8 @@ len ?? 0.
 len [] 0.
 len [_|XS] N :- len XS M, N is M + 1.
 
-macro @log P :- (P :- $print P, fail).
-debug-print A B :- $print A B.
+macro @log P :- (P :- print P, fail).
+debug-print A B :- print A B.
 spy P :- debug-print "----<<---- enter: " P,
          P,
          debug-print "---->>---- exit: " P, !.
@@ -48,29 +48,29 @@ write S :- write-to OC, output OC S.
 mode (sanitize i o).
 sanitize X Y :-
   monad [
-    $rex_replace "&" "&amp;",
-    $rex_replace "<" "&lt;",
-    $rex_replace ">" "&gt;",
-    $rex_replace "\"" "&quot;",
-    $rex_replace "'" "&apos;" ]
+    rex_replace "&" "&amp;",
+    rex_replace "<" "&lt;",
+    rex_replace ">" "&gt;",
+    rex_replace "\"" "&quot;",
+    rex_replace "'" "&apos;" ]
   X Y.
 
 mk-name S1 I Y :-
   Y is "<span class='name' varname='" ^
-       {$term_to_string I} ^
+       {term_to_string I} ^
        "'>" ^ S1 ^ "</span>".
 
 incr-int P :- cur-int J, I is J + 1, (cur-int I :- !) => P.
 
 var-to-string X I Y :-
-  cur-int J, S1 is "x<sub>" ^ {$term_to_string J} ^ "</sub>",
+  cur-int J, S1 is "x<sub>" ^ {term_to_string J} ^ "</sub>",
   mk-name S1 I Y.
 uvar-to-string X I Y :-
-  cur-int J, S1 is "X<sub>" ^ {$term_to_string J} ^ "</sub>",
+  cur-int J, S1 is "X<sub>" ^ {term_to_string J} ^ "</sub>",
   mk-name S1 I Y.
 name-to-string X0 I Y :-
-  if ($rex_match "^_" X0) (X = "_") (X = X0),
-  $rex_replace "^\\([A-Za-z]+\\)_?\\([0-9]+\\)$" "\\1<sub>\\2</sub>" X S1,
+  if (rex_match "^_" X0) (X = "_") (X = X0),
+  rex_replace "^\\([A-Za-z]+\\)_?\\([0-9]+\\)$" "\\1<sub>\\2</sub>" X S1,
   mk-name S1 I Y.
 
 pred concat i:list string, o:string.
@@ -131,7 +131,7 @@ pp L B (app [ const C, lam _ ] as T) A :- (C = "pi"; C = "sigma"), !,
   pp-quantifier-block B1 C T [] A1.
 
 pp-quantifier-block B C (app [ const C, lam F ]) Args A :- !, incr-int (
-  $new_int I,
+  new_int I,
   pi x\ if (C = "pi") (var-to-string x I X) (uvar-to-string x I X),
         name x X => pp-quantifier-block B C (F x) [X|Args] A).
 pp-quantifier-block B C T Args A :-
@@ -165,7 +165,7 @@ pp L B (app Args) A :-
 
 pp L B (lam F) A :- incr-int (
   par? L 70 B A B1 A1,
-  $new_int I,
+  new_int I,
   pi x\
     write "<div class='compound' level='70'><b>λ</b>",
     write {concat B1},
@@ -187,8 +187,8 @@ pp _ B (const X) A :-
 pp _ B X A :- name X Y, !,
   write {concat B}, write Y, write {concat A}.
 
-pp _ B (cdata S) A :- $is_cdata S _, !,
-  $term_to_string S Y,
+pp _ B (cdata S) A :- is_cdata S _, !,
+  term_to_string S Y,
   write {concat B},
   write Y,
   write {concat A}.
@@ -201,12 +201,12 @@ hd-symbol (const S) :- write S.
 
 type name term -> string -> prop.
 write-clause ( Loc , [A|Args], (arg Body) ) :-
-  $new_int I, name-to-string A I A1,
+  new_int I, name-to-string A I A1,
   pi x\ name x A1 => write-clause ( Loc, Args, Body x ).
 write-clause ( Loc , [], C ) :- !,
   write "<div class='clause' predicate='", hd-symbol C, write "'>",
   write "<div class='loc'>",
-    $term_to_string Loc LocS, write LocS,
+    term_to_string Loc LocS, write LocS,
   write "</div>",
   cur-int 0 =>
   if (C = app [const @vdash|_])
@@ -353,10 +353,10 @@ filter-out [X|XS] P R :-
   filter-out XS P RS.
 
 write-html IN F R :-
-  $quote_syntax IN "main" P _,
+  quote_syntax IN "main" P _,
   filter-out P (c\
     sigma Loc LocS _1 _2\ c = ( Loc, _1, _2), 
-    $term_to_string Loc LocS, not(R LocS)) PF,
+    term_to_string Loc LocS, not(R LocS)) PF,
   write-preamble F,
   iter write-clause PF,
   write-end.
@@ -366,7 +366,7 @@ exists P [_|XS] :- exists P XS.
 
 main [IN,OUT|FILTERS] :-
   open_out OUT OC,
-  R = (x\exists (y\$rex_match y x) FILTERS),
+  R = (x\exists (y\rex_match y x) FILTERS),
   write-to OC => write-html IN OUT R,
   close_out OC.
 

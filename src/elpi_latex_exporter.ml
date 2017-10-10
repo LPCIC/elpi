@@ -32,7 +32,6 @@ let rename_bound_var lambda =
     (List.hd l) ^ s in *)
   let rec subst t v newv = match t with
     | Elpi_ast.Const(v1) when v = v1 -> Elpi_ast.Const newv
-    | Elpi_ast.Custom(v1) when v = v1 -> Elpi_ast.Custom newv
     | Elpi_ast.App(t1,tl) ->
        let newtl = List.map (fun x -> subst x v newv) tl in
        Elpi_ast.App(t1,newtl)
@@ -72,8 +71,7 @@ let create_context pairsl =
    i.e. if main :- (pi x\ G x ), H x, after removing pi we have:
    main :- G y, H x. The "y" is fresh and y \not \in FV(H) *)
 let rec contains_var t v = match t with
- | Elpi_ast.Const f
- | Elpi_ast.Custom f ->
+ | Elpi_ast.Const f ->
     (match v with 
      | Elpi_ast.Const sym -> Elpi_ast.Func.show f = Elpi_ast.Func.show sym 
      | _ -> assert false (* v should be a term: Const of Func.t *))
@@ -86,14 +84,12 @@ let rec contains_var t v = match t with
 (* exports a f-la occurrence, i.e. q,a,b,c f-las from above *)
 let export_term tm = 
   let rec aux prec t = match t with
-    Elpi_ast.Const f 
-  | Elpi_ast.Custom f -> 
+    Elpi_ast.Const f ->
      let name = Elpi_ast.Func.show f in 
      (try "<<>>" ^ (Elpi_parser.get_literal name) ^ "<<>>" with Not_found ->
       "\\:" ^ name ^ "\\:")
         (* pp_app f ppconstant (aux max_int depth) (hd,xs) *)
-  | Elpi_ast.App (Elpi_ast.Const hd,x::xs)
-  | Elpi_ast.App (Elpi_ast.Custom hd,x::xs) ->
+  | Elpi_ast.App (Elpi_ast.Const hd,x::xs) ->
     (try
      let assoc,hdlvl = Elpi_parser.precedence_of hd in
      let lbracket,rbracket= if hdlvl < prec then ("\\:(",")\\:") else ("","") in
@@ -174,10 +170,8 @@ let export_pair = function
 (*hd :- a,b,c  is the cl_pair (hd,[a,b,c])*)
 let print_clause cl_pair =
  let rec print_fla f = match f with
-  | Elpi_ast.Const c
-  | Elpi_ast.Custom c -> Format.printf "%s%!" (Elpi_ast.Func.show c)
-  | Elpi_ast.App(Elpi_ast.Const hd,tl)
-  | Elpi_ast.App(Elpi_ast.Custom hd,tl) ->
+  | Elpi_ast.Const c -> Format.printf "%s%!" (Elpi_ast.Func.show c)
+  | Elpi_ast.App(Elpi_ast.Const hd,tl) ->
      Format.printf "(%s %!" (Elpi_ast.Func.show hd);
      List.iter (fun x -> print_fla x; Format.printf " %!") tl;
      Format.printf ")%!";
@@ -206,9 +200,6 @@ let export_identifiers pair =
   | Elpi_ast.Const c ->
      let name = Elpi_ast.Func.show c in
      Elpi_ast.Const(Elpi_ast.Func.from_string (replace name))
-  | Elpi_ast.Custom c ->
-     let name = Elpi_ast.Func.show c in
-     Elpi_ast.Custom(Elpi_ast.Func.from_string (replace name))
   | Elpi_ast.App(f,args) ->
      Elpi_ast.App(aux f, List.map (fun x -> aux x) args)
   | Elpi_ast.Lam(x,arg) -> Elpi_ast.Lam(x, aux arg)
@@ -229,9 +220,6 @@ let eta_expand_clause cl =
   | Elpi_ast.App(Elpi_ast.Const c, args) ->
      arity_map := FunctMap.add c (List.length args) !arity_map;
      List.iter (fun x -> get_arity x) args
-  | Elpi_ast.App(Elpi_ast.Custom c, args) ->
-     arity_map := FunctMap.add c (List.length args) !arity_map;
-     List.iter (fun x -> get_arity x) args;
   | Elpi_ast.Lam(c,t) -> get_arity t
   | _ -> () in
  (* eta-exand f to its arity*)
@@ -280,7 +268,7 @@ let print_label l =
  let upper_case c = c >= 'A' && c <= 'Z' in
 (* returns the meta-variables in term t *)
  let rec get_meta_vars t = match t with
-  | Elpi_ast.Const c | Elpi_ast.Custom c -> 
+  | Elpi_ast.Const c ->
    let name = Elpi_ast.Func.show c in
    if upper_case (name.[0]) then [name] else []
   | Elpi_ast.App(Elpi_ast.Const name,args) -> 

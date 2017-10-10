@@ -7,8 +7,8 @@
 
 %%%%module queens.
 
-%spy X :- $print start X, X, $print ok X.
-%spy X :- $print ko X, fail.
+%spy X :- print start X, X, print ok X.
+%spy X :- print ko X, fail.
 
 
 plus zero X X.
@@ -37,11 +37,11 @@ not_attack (xcons Y Ys) X N :- plus Y N S1, neq X S1,
                                N1 = (s N), 
                                not_attack Ys X N1.
 
-%select A B C :- $print first_clause (select A B C), fail.
+%select A B C :- print first_clause (select A B C), fail.
 select (xcons X Xs) Xs X.
-%select A B C :- $print backtrack (select A B C), fail.
+%select A B C :- print backtrack (select A B C), fail.
 select (xcons Y Ys) (xcons Y Zs) X :- select Ys Zs X.
-%select A B C :- $print no_more_chances (select A B C), fail.
+%select A B C :- print no_more_chances (select A B C), fail.
 
 range N N (xcons N xnil) :- !.
 range M N (xcons M Ns) :- less M N, M1 = (s M), range M1 N Ns.

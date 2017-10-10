@@ -56,6 +56,6 @@ member X (Dummy::Y) :- member X Y.
 
 print_houses (A::B) :- !,
 %	write(A), nl,
-%   $print A,
+%   print A,
 	print_houses B.
 print_houses nil.

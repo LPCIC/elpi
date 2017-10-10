@@ -11,7 +11,7 @@
 
 % check types program types
 % the functions must be listed in the same order in both
-%check A B C :- $print (check A B C), fail.
+%check A B C :- print (check A B C), fail.
 check [] [] _.
 check [fun F B | BTL] [fun F D C | TTL] ORIGTYS :-
  check_domain B D,
@@ -19,30 +19,30 @@ check [fun F B | BTL] [fun F D C | TTL] ORIGTYS :-
  check BTL TTL ORIGTYS.
 
 % check_domain body type
-%check_domain A B :- $print (check_domain A B), fail.
+%check_domain A B :- print (check_domain A B), fail.
 check_domain B T :- inputs B I, is_subset T I.
 
-%is_subset A B :- $print (is_subset A B), fail.
-is_subset A B :- is_flex A, !, $constraint (is_subset A B) A.
-is_subset A B :- is_flex B, !, $constraint (is_subset A B) B.
+%is_subset A B :- print (is_subset A B), fail.
+is_subset A B :- is_flex A, !, constraint (is_subset A B) A.
+is_subset A B :- is_flex B, !, constraint (is_subset A B) B.
 is_subset A B :- is_subset_ A B.
 is_subset_ [] _.
 is_subset_ [X|TL] TL1 :- mem TL1 X, is_subset TL TL1.
 
-mem A B :- is_flex A, !, $constraint (mem A B) A.
+mem A B :- is_flex A, !, constraint (mem A B) A.
 mem A B :- mem_ A B.
 mem_ [X|_] X :- !.
 mem_ [Y|TL] X :- mem TL X.
 
 %check_codomain body type types
-%check_codomain A B C :- $print (check_codomain A B C), fail.
+%check_codomain A B C :- print (check_codomain A B C), fail.
 check_codomain [] _ _.
 check_codomain [case _ T | TL] TYS ORIGTYS :-
   check_term T TYS ORIGTYS,
   check_codomain TL TYS ORIGTYS.
 
 %check_term term type
-%check_term A B C :- $print "CHECK" (check_term A B C), fail.
+%check_term A B C :- print "CHECK" (check_term A B C), fail.
 check_term (@ F T) TY ORIGTYS :-
  !,
  find ORIGTYS F D C,
@@ -54,7 +54,7 @@ check_term X TY _ :-
 find [fun F D C | _] F D C :- !.
 find [ _ | TL ] F D C :- find TL F D C.
 
-%inputs A B :- $print "INPUT" (inputs A B), fail.
+%inputs A B :- print "INPUT" (inputs A B), fail.
 inputs [] [].
 inputs [case A _ | TL] [A | TL'] :- inputs TL TL'.
 
@@ -109,22 +109,22 @@ main1 :-
      , fun g [a, b] [c, d, e]
      ],
  check P T T,
- $print "Type-checking ok",
+ print "Type-checking ok",
 
  I = [ fun f If Of
      , fun g Ig Og
      ],
  check P I I,
- $print "Type-inference ok",
- $print ":::" f ":" If "->" Of,
- $print ":::" g ":" Ig "->" Og,
- $print_constraints,
+ print "Type-inference ok",
+ print ":::" f ":" If "->" Of,
+ print ":::" g ":" Ig "->" Og,
+ print_constraints,
  
  Ig = [a],
- $print "Type specialization ok",
- $print ":::" f ":" If "->" Of,
- $print ":::" g ":" Ig "->" Og,
- $print_constraints.
+ print "Type specialization ok",
+ print ":::" f ":" If "->" Of,
+ print ":::" g ":" Ig "->" Og,
+ print_constraints.
 
 main2 :-
  P' = [ fun f [ case a a
@@ -144,12 +144,12 @@ main2 :-
       , fun h2 Ih2' Oh2'
       ],
  check P' I' I',
- $print "Type-inference ok",
- $print ":::" f ":" If' "->" Of',
- $print ":::" g ":" Ig' "->" Og',
- $print ":::" h1 ":" Ih1' "->" Oh1',
- $print ":::" h2 ":" Ih2' "->" Oh2'.
+ print "Type-inference ok",
+ print ":::" f ":" If' "->" Of',
+ print ":::" g ":" Ig' "->" Og',
+ print ":::" h1 ":" Ih1' "->" Oh1',
+ print ":::" h2 ":" Ih2' "->" Oh2'.
 
-main :- (main1, $print "xxx failing", fail) ; $print "xxx failed", main2.
+main :- (main1, print "xxx failing", fail) ; print "xxx failed", main2.
 
 % vim: set ft=lprolog:

@@ -2,7 +2,7 @@ mode (term i o).
 
 term (app X Y) B :- term X (arr A B), term Y A.
 term (lam A F) (arr A B) :- pi x\ term x A => term (F x) B.
-term (?? as X) A :- $constraint (term X A) X.
+term (?? as X) A :- declare_constraint (term X A) X.
 term true bool.
 term false bool.
 term zero nat.
@@ -32,12 +32,12 @@ compatible _ _ _ _ false.
     [] ====> T :- T.
 [X|XS] ====> T :- X => (XS ====> T).
 
-spy P :- $print "[" P, P, $print "]ok", !.
-spy P :- $print "]fail", fail.
+spy P :- print "[" P, P, print "]ok", !.
+spy P :- print "]fail", fail.
 
 mode (watch i).
-watch (?? as X) :- $constraint ($print "watch" X) X, !.
-watch X :- $print "watch" X.
+watch (?? as X) :- declare_constraint (print "watch" X) X, !.
+watch X :- print "watch" X.
 
 main :- 
   % this is tricky becasuse X sees w, so CHR has to deal with a dirty context
@@ -47,11 +47,11 @@ main :-
        T2 = (lam _ x \ lam _ y\ X y x),
        term T1 (arr A (arr B nat)),
        term T2 (arr A' (arr B' C)),
-       $print A A' B B' C "|" T1 "|" T2,
+       print A A' B B' C "|" T1 "|" T2,
        spy (X = x\y\ x),
-       $print A A' B B' C "|" T1 "|" T2,
+       print A A' B B' C "|" T1 "|" T2,
        spy (term (app T2 false) _),
-       $print A A' B B' C "|" T1 "|" T2)),
+       print A A' B B' C "|" T1 "|" T2)),
   true.
 
 % vim: set ft=lprolog:

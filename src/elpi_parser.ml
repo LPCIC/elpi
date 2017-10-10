@@ -59,7 +59,10 @@ let parsed = ref []
 exception File_not_found of string
 
 let rec parse_one e (origfilename as filename) =
- let origprefixname = Filename.chop_extension origfilename in
+ let origprefixname =
+   try Filename.chop_extension origfilename
+   with Invalid_argument _ ->
+     raise (Failure ("File "^origfilename^" has no extension")) in
  let prefixname, filename =
   let rec iter_tjpath dirnames =
    let filename,dirnames,relative =
@@ -188,11 +191,16 @@ let string_of_chars chars =
   let buf = Buffer.create 10 in
   List.iter (Buffer.add_char buf) chars;
   Buffer.contents buf
-let spy ?(name="") f b s =
+let spy ?(name="") ?pp f b s =
   let l = Stream.npeek 10 s in
-  Printf.eprintf "%s> %s | %s\n"
+  Printf.eprintf "%s< %s | %S...\n"
     name (Plexing.Lexbuf.get b) (string_of_chars l);
-  try let b = f b s in Printf.eprintf "ok\n"; b
+  try
+    let b = f b s in
+    begin match pp with
+    | None -> Printf.eprintf "%s> ok" name
+    | Some pp -> Printf.eprintf "%s> %s\n\n" name (pp b)
+    end; b
   with e ->
     Printf.eprintf "nope\n";
     raise e
@@ -220,20 +228,13 @@ and  quoted keep n = (*spy ~name:"quoted"*) (lexer
   [ "{" (quoted keep (n+1))
   | (quoted_inner (mk_terminator keep n)) ])
 
-let notspace = lexer [ '!' - '~' ]
-let rec notspacestar = lexer [ notspace notspacestar | ]
-let notspaceplus = lexer [ notspace notspacestar ]
-
 let constant = "CONSTANT" (* to use physical equality *)
 
-let tok = lexer
+let rec tok b s = (*spy ~name:"tok" ~pp:(fun (a,b) -> a ^ " " ^ b)*) (lexer
   [ ucase idcharstar -> constant,$buf 
   | lcase idcharstar -> constant,$buf
   | schar2 ?= [ 'A'-'Z' ] -> constant,$buf
   | schar2 symbcharstar -> constant,$buf
-  | '$' lcase idcharstar -> "BUILTIN",$buf
-  | '$' '$' notspaceplus -> "ESCAPE",  String.(sub $buf 2 (length $buf - 2))
-  | '$' idcharstar -> constant,$buf
   | num -> "INTEGER",$buf
   | num ?= [ '.' '0'-'9' ] '.' num -> "FLOAT",$buf
   | "->" -> "ARROW",$buf
@@ -251,7 +252,9 @@ let tok = lexer
   | '.' -> "FULLSTOP",$buf
   | '.' num -> "FLOAT",$buf
   | '\\' -> "BIND","\\"
-  | '(' -> "LPAREN",$buf
+  | '(' [ is_infix ->
+             "ESCAPE",  String.(sub $buf 0 (length $buf - 1))
+        | -> "LPAREN",$buf ]
   | ')' -> "RPAREN",$buf
   | '[' -> "LBRACKET",$buf
   | ']' -> "RBRACKET",$buf
@@ -260,7 +263,36 @@ let tok = lexer
   | '}' -> "RCURLY",$buf
   | '|' -> "PIPE",$buf
   | '"' / string -> "LITERAL", $buf
-]
+]) b s
+and is_infix_aux b s =
+  let k1, s1 = tok b s in
+  let k2, s2 = tok b s in 
+  if k1 == constant && k2 = "RPAREN" && not (is_capital s1.[0])
+  then string2lexbuf2 s1 s2
+  else if k1 = "LBRACKET" && k2 = "RBRACKET" then
+    let k3, s3 = tok b s in
+    if k3 = "RPAREN" then string2lexbuf3 s1 s2 s3
+    else raise Stream.Failure
+  else raise Stream.Failure
+and protect max_chars lex b s =
+  let l = Stream.npeek max_chars s in
+  let safe_s = Stream.of_list l in
+  let to_junk, res = lex Plexing.Lexbuf.empty safe_s in
+  for i = 0 to to_junk-1 do Stream.junk s; done;
+  res
+and is_infix b s = protect 6 is_infix_aux b s
+and string2lexbuf2 s1 s2 =
+  let b = ref Plexing.Lexbuf.empty in
+  String.iter (fun c -> b := Plexing.Lexbuf.add c !b) s1;
+  String.iter (fun c -> b := Plexing.Lexbuf.add c !b) s2;
+  String.(length s1 + length s2), !b
+and string2lexbuf3 s1 s2 s3 =
+  let b = ref Plexing.Lexbuf.empty in
+  String.iter (fun c -> b := Plexing.Lexbuf.add c !b) s1;
+  String.iter (fun c -> b := Plexing.Lexbuf.add c !b) s2;
+  String.iter (fun c -> b := Plexing.Lexbuf.add c !b) s3;
+  String.(length s1 + length s2 + length s3), !b
+and is_capital c = match c with 'A'..'Z' -> true | _ -> false
 
 let option_eq x y = match x, y with Some x, Some y -> x == y | _ -> x == y
 
@@ -313,6 +345,7 @@ let rec lex loc c = parser bp
          | "kind" -> "KIND", "kind"
          | "typeabbrev" -> "TYPEABBREV", "typeabbrev"
          | "type" -> "TYPE", "type"
+         | "external" -> "EXTERNAL", "external"
          | "closed" -> "CLOSED", "closed"
          | "end" -> "EOF", "end"
          | "accumulate" -> "ACCUMULATE", "accumulate"
@@ -514,7 +547,7 @@ EXTEND
   pragma : [[ CONSTANT "#line"; l = INTEGER; f = LITERAL ->
     set_fname ~line:(int_of_string l) f ]];
   pred_item : [[ m = i_o; COLON; t = ctype -> (m,t) ]];
-  pred : [[ c = CONSTANT; a = LIST1 pred_item SEP SYMBOL "," ->
+  pred : [[ c = const_sym; a = LIST0 pred_item SEP SYMBOL "," ->
     let name = Func.from_string c in
      [name, List.map fst a, None],
      (name, List.fold_right (fun (_,t) ty ->
@@ -528,7 +561,14 @@ EXTEND
      | pragma -> []
      | LCURLY -> [Begin]
      | RCURLY -> [End]
-     | PRED; p = pred; FULLSTOP -> let m, (n,t) = p in [Type(n,t); Mode m]
+     | PRED; p = pred; FULLSTOP ->
+         let m, (n,t) = p in [Type(false,n,t); Mode m]
+     | TYPE; names = LIST1 const_sym SEP SYMBOL ","; t = type_; FULLSTOP ->
+         List.map (fun n -> Type(false,Func.from_string n,t)) names
+     | EXTERNAL; TYPE; names = LIST1 const_sym SEP SYMBOL ","; t = type_; FULLSTOP ->
+         List.map (fun n -> Type(true,Func.from_string n,t)) names
+     | EXTERNAL; PRED; p = pred; FULLSTOP ->
+         let _, (n,t) = p in [Type(true,n,t)] (* No mode for ML code *)
      | MODE; m = LIST1 mode SEP SYMBOL ","; FULLSTOP -> [Mode m]
      | MACRO; b = atom; FULLSTOP ->
          let name, body = desugar_macro b in
@@ -558,10 +598,8 @@ EXTEND
      | USEONLY; LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP -> []
      | EXPORTDEF; LIST1 const_sym SEP SYMBOL ","; FULLSTOP -> []
      | EXPORTDEF; LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP -> []
-     | TYPE; names = LIST1 const_sym SEP SYMBOL ","; t = type_; FULLSTOP ->
-         List.map (fun n -> Type(Func.from_string n,t)) names
      | KIND; names = LIST1 const_sym SEP SYMBOL ","; t = kind; FULLSTOP ->
-         List.map (fun n -> Type(Func.from_string n,t)) names
+         List.map (fun n -> Type(false,Func.from_string n,t)) names
      | TYPEABBREV; abbrform; TYPE; FULLSTOP -> []
      | fix = FIXITY; syms = LIST1 const_sym SEP SYMBOL ","; prec = INTEGER; FULLSTOP ->
         let nprec = int_of_string prec in
@@ -646,7 +684,6 @@ EXTEND
       | s = QUOTED -> mkQuoted s
       | s = INTEGER -> mkInt (int_of_string s) 
       | s = FLOAT -> mkFloat (float_of_string s) 
-      | bt = BUILTIN ; OPT [ COLON ; type_ ] -> mkCustom bt
       | LPAREN; a = atom; RPAREN -> a
       | LCURLY; a = atom; RCURLY -> mkApp [Const Func.spillf;a]
         (* 120 is the first level after 110, which is that of ,

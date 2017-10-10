@@ -2,7 +2,7 @@ mode (term i).
 
 term (app X Y) :- term X, term Y.
 term (lam F) :- pi x\ term x => term (F x).
-term (?? as X) :- $print X, $constraint (term X) X.
+term (?? as X) :- print X, constraint (term X) X.
 
 infixl '   255. % infix application
 infixl &&  128. % and
@@ -29,9 +29,9 @@ pp_tac (tac T) (tac S) :- pp T S.
 
  main :-
    (term c => term (app (lam w\ X w) (app c Y))),
-   $is_flex X, $is_flex Y, $print_constraints,
-   (pi x\ pp "nice" x => parse ((V1 <=> true) && "nice") (P1 x)), $print P1,
-   (pi x\ pp "ugly" x => pprint (P2 x) (P1 x)), $print P2,
-   pprint Q1 (eq ' V2 ' V3), $print Q1.
+   is_flex X, is_flex Y, print_constraints,
+   (pi x\ pp "nice" x => parse ((V1 <=> true) && "nice") (P1 x)), print P1,
+   (pi x\ pp "ugly" x => pprint (P2 x) (P1 x)), print P2,
+   pprint Q1 (eq ' V2 ' V3), print Q1.
 
 

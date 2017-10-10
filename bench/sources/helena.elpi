@@ -62,7 +62,7 @@ m+pred m+y m+y.
 
 % EXTENDED REDUCTION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% rtm+0 T1 S1 M1 M2 S2 T2 :- before, $print begin-rtm1 T1 S1 M1, fail.
+% rtm+0 T1 S1 M1 M2 S2 T2 :- before, print begin-rtm1 T1 S1 M1, fail.
 
 rtm+0 (appr V T) S M M (scons S V) T.
 
@@ -70,7 +70,7 @@ rtm+0 (appx V T) S M M (scons S V) T.
 
 % beta, epsilon, updated for version 3
 rtm+0 (prod L W T) (scons S V) M M S (abbr (cast W V) T).
-% rtm+0 (prod L W T) (scons S V) M M S (abbr (cast W V) T) :- $print beta.
+% rtm+0 (prod L W T) (scons S V) M M S (abbr (cast W V) T) :- print beta.
 
 % e
 rtm+0 (cast U T) S m+1 m+0 S U :- !.
@@ -88,11 +88,11 @@ rtm+0 (abst L W T) S M M S (prod L W T).
 
 % EXTENDED CONVERSION PART 1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% conv+ T1 S1 M1 M2 S2 T2 :- before, $print begin-conv T1 S1 M1 T2 S2 M2, fail.
+% conv+ T1 S1 M1 M2 S2 T2 :- before, print begin-conv T1 S1 M1 T2 S2 M2, fail.
 
 % not in Helena M
 % conv+ T S M M S T :- !.
-% conv+ T S M M S T :- !, $print opt.
+% conv+ T S M M S T :- !, print opt.
 
 % upsilon, local l
 conv+ (prod L W T1) S1 M1 M2 S2 T2 :- l+zero L, !,
@@ -110,11 +110,11 @@ conv+ T1 S1 M1 M2 S2 T2 :- conv+r T2 S2 M2 M1 S1 T1.
 
 % EXTENDED CONVERSION PART 2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% conv+l T1 S1 M1 M2 S2 T2 :- before, $print begin-conv-l T1 S1 M1 T2 S2 M2, fail.
+% conv+l T1 S1 M1 M2 S2 T2 :- before, print begin-conv-l T1 S1 M1 T2 S2 M2, fail.
 
 % not in Helena M
 % conv+l T S M M S T :- !.
-% conv+l T S M M S T :- !, $print opt-l.
+% conv+l T S M M S T :- !, print opt-l.
 
 % upsilon, local l
 conv+l (prod L W T1) S1 M1 M2 S2 T2 :- l+zero L, !,
@@ -132,11 +132,11 @@ conv+l T1 S1 M1 M2 S2 T2 :- conv+0 T1 S1 M1 M2 S2 T2.
 
 % EXTENDED CONVERSION PART 3 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% conv+r T1 S1 M1 M2 S2 T2 :- before, $print begin-conv-r T1 S1 M1 T2 S2 M2, fail.
+% conv+r T1 S1 M1 M2 S2 T2 :- before, print begin-conv-r T1 S1 M1 T2 S2 M2, fail.
 
 % not in Helena M
 % conv+r T S M M S T :- !.
-% conv+r T S M M S T :- !, $print opt-r.
+% conv+r T S M M S T :- !, print opt-r.
 
 % upsilon, local l
 conv+r (prod L W T1) S1 M1 M2 S2 T2 :- l+zero L, !,
@@ -159,11 +159,11 @@ conv+s satom satom.
 conv+s (scons S1 V1) (scons S2 V2) :- conv+s S1 S2,
                                       conv+ V1 satom m+0 m+0 satom V2.
 
-% conv+0 T1 S1 M1 M2 S2 T2 :- before, $print begin-conv-0 T1 S1 M1 T2 S2 M2, fail.
+% conv+0 T1 S1 M1 M2 S2 T2 :- before, print begin-conv-0 T1 S1 M1 T2 S2 M2, fail.
 
 % not in Helena M
 % conv+0 T S M M S T :- !.
-% conv+0 T S M M S T :- !, $print opt-0.
+% conv+0 T S M M S T :- !, print opt-0.
 
 % local l, updated for version 2 and 3
 conv+0 (prod L W1 T1) satom M1 M2 satom (prod L W2 T2) :- !,
@@ -179,7 +179,7 @@ conv+0 T1 S1 M1 M2 S2 T2 :- r+exp T1 M1 e+sn M T, !, maybe+sn T1 S1 M1 T M M2 S2
 
 % forced right expansion
 conv+0 T1 S1 M1 M2 S2 T2 :- r+exp T2 M2 e+dx M T, conv+r T S2 M M1 S1 T1.
-% conv+0 T1 S1 M1 M2 S2 T2 :- r+exp T2 M2 e+dx M T, $print exp-r, conv+r T S2 M M1 S1 T1.
+% conv+0 T1 S1 M1 M2 S2 T2 :- r+exp T2 M2 e+dx M T, print exp-r, conv+r T S2 M M1 S1 T1.
 
 % preferred left expansion
 maybe+sn T1 S1 m+1 T m+0 M2 S2 T2 :- !, conv+l T S1 m+0 M2 S2 T2.
@@ -191,14 +191,14 @@ maybe+sn T1 S1 M1 T M M2 S2 T2 :- r+exp T2 M2 e+dx N U, !, age+check T1 S1 M1 T 
 maybe+sn T1 S1 M1 T M M2 S2 T2 :- conv+l T S1 M M2 S2 T2.
 
 % age-implied left expansion
-age+check T1 S1 M1 T M N U M2 S2 T2 :- $lt T2 T1, !, conv+l T S1 M M2 S2 T2.
+age+check T1 S1 M1 T M N U M2 S2 T2 :- lt T2 T1, !, conv+l T S1 M M2 S2 T2.
 
 % age-implied right expansion
 age+check T1 S1 M1 T M N U M2 S2 T2 :- conv+r U S2 N M1 S1 T1.
 
 % EXTENDED APPLICABILITY %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% appl+ T1 S M T2 :- before, $print begin-appl T1 S M, fail.
+% appl+ T1 S M T2 :- before, print begin-appl T1 S M, fail.
 
 % upsilon forbidden for applicability
 
@@ -208,17 +208,17 @@ appl+ (abbr V T1) S M T2 :- !,
                                   appl+ (T1 x) S M T2.
 
 appl+ (prod L W U) satom M V :- !, conv+ V satom m+1 m+0 satom W.
-% appl+ (prod L W U) satom M V :- !, $print converting application, conv+ V satom m+1 m+0 satom W.
+% appl+ (prod L W U) satom M V :- !, print converting application, conv+ V satom m+1 m+0 satom W.
 
 appl+ T1 S1 M1 T2 :- rtm+0 T1 S1 M1 M S T, !, appl+ T S M T2.
 
 % right expansion
 appl+ T1 S M1 T2 :- r+exp T1 M1 e+dx M2 T, !, appl+ T S M2 T2.
-% appl+ T1 S M1 T2 :- r+exp T1 M1 e+dx M2 T, !, $print exp-a, appl+ T S M2 T2.
+% appl+ T1 S M1 T2 :- r+exp T1 M1 e+dx M2 T, !, print exp-a, appl+ T S M2 T2.
 
 % VALIDITY FOR TERMS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% tv+ T :- before, $print begin-tv T, fail.
+% tv+ T :- before, print begin-tv T, fail.
 
 tv+ (sort N).
 
@@ -236,29 +236,29 @@ tv+ (abst L W T) :- tv+ W,
 
 % restricted applicability condition (version 1) updated for version 3
 tv+ (appr V T) :- tv+ V, tv+ T, appl+ T satom m+1 V.
-% tv+ (appr V T) :- tv+ V, tv+ T, $print checking applicability, appl+ T satom m+1 V.
+% tv+ (appr V T) :- tv+ V, tv+ T, print checking applicability, appl+ T satom m+1 V.
 
 %extended applicability condition (version 2) updated for version 3
 tv+ (appx V T) :- tv+ V, tv+ T, appl+ T satom m+y V.
 
 tv+ (cast U T) :- tv+ U, tv+ T, conv+ T satom m+1 m+0 satom U.
-% tv+ (cast U T) :- tv+ U, tv+ T, $print converting cast, conv+ T satom m+1 m+0 satom U.
+% tv+ (cast U T) :- tv+ U, tv+ T, print converting cast, conv+ T satom m+1 m+0 satom U.
 
 % VALIDITY FOR GLOBAL ENVIRONMENTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% gv+ G :- before, $print begin-gv G, fail.
+% gv+ G :- before, print begin-gv G, fail.
 
 gv+ gtop.
 
 % global delta updated for version 2
-gv+ (gdef+1 C V G) :- % $print constant C unknown,
+gv+ (gdef+1 C V G) :- % print constant C unknown,
                       tv+ V,
                       pi x\ tv+ x =>
                             (pi m\ pi e\ r+exp x m e m V) =>
                             gv+ (G x).
 
 % global l updated for version 2
-gv+ (gdec+1 C W G) :- % $print constant C unknown,
+gv+ (gdec+1 C W G) :- % print constant C unknown,
                       tv+ W,
                       pi x\ tv+ x =>
                             (pi m1\ pi m2\ pi e\ r+exp x m1 e m2 W :- m+pred m1 m2) =>
@@ -266,21 +266,21 @@ gv+ (gdec+1 C W G) :- % $print constant C unknown,
 
 % global delta updated for version 2
 gv+ (gdef+2 R G) :- g+line R C V,
-%                    $print constant C R,
+%                    print constant C R,
                     tv+ V,
 %                    tv+c C V,
-%                    $print vedo V,
+%                    print vedo V,
                     (tv+ R => (pi m\ pi e\ r+exp R m e m V) => gv+ G).
-% ($print aggiungo (pi m\ pi e\ r+exp R m e m V), gv+ G)).
+% (print aggiungo (pi m\ pi e\ r+exp R m e m V), gv+ G)).
 
 % global l updated for version 2
 gv+ (gdec+2 R G) :- g+line R C W,
-%                    $print constant C R,
+%                    print constant C R,
                     tv+ W,
 %                    tv+c C W,
-%                    $print vedo W,
+%                    print vedo W,
                     (tv+ R => (pi m1\ pi m2\ pi e\ r+exp R m1 e m2 W :- m+pred m1 m2) => gv+ G).
-% ($print aggiungo (pi m1\ pi m2\ pi e\ r+exp R m1 e m2 W :- m+pred m1 m2), gv+ G)).
+% (print aggiungo (pi m1\ pi m2\ pi e\ r+exp R m1 e m2 W :- m+pred m1 m2), gv+ G)).
 
 % Additions ------------------------------------------------------------------
 

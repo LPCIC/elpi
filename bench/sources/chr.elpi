@@ -12,7 +12,7 @@ mode (term i o).
 
 term (app X Y) B :- term X (arr A B), term Y A.
 term (lam F) (arr A B) :- pi x\ term x A => term (F x) B.
-term (?? as X) A :- $constraint (term X A) X.
+term (?? as X) A :-declare_constraint (term X A) X.
 
 infixr ====> 126. % Implication where the l.h.s. is a list of propositions.
 
@@ -25,7 +25,7 @@ constraint term {
    <=> (CTXCONSTR, TX = TY).
 }
 
-%compatible A B C D E :- $print "##" (compatible A B C D E), fail.
+%compatible A B C D E :- print "##" (compatible A B C D E), fail.
 compatible _ [] _ [] true :- !.
 compatible GX [X|XS] GY [Y|YS] (TX = TY, K) :-
  (GX ====> term X TX),
@@ -37,8 +37,8 @@ compatible _ _ _ _ false.
     [] ====> T :- T.
 [X|XS] ====> T :- X => (XS ====> T).
 
-spy P :- $print "[" P, P, $print "]ok", !.
-spy P :- $print "]fail", fail.
+spy P :- print "[" P, P, print "]ok", !.
+spy P :- print "]fail", fail.
 
 main :- 
   (sigma X\
@@ -55,7 +55,7 @@ main :-
       term T1 TY1, term T2 TY2,
       spy (not(X = x\x)),
       spy (X = x\ app b2n x),
-      $print T1 ":" TY1,
-      $print T2 ":" TY2)),
+      print T1 ":" TY1,
+      print T2 ":" TY2)),
 
   true.

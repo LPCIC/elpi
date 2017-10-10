@@ -5,7 +5,7 @@
 open Elpi_util
 open Elpi_data
 
-val program_of_ast : ?print:[`Yes|`Raw] -> Elpi_ast.decl list -> program
+val program_of_ast : ?print:[`Yes|`Raw] -> ?allow_undeclared_custom_predicates:bool -> Elpi_ast.decl list -> program
 val query_of_ast : program -> Elpi_ast.goal -> query
 
 val term_of_ast : depth:int -> Elpi_ast.term -> term

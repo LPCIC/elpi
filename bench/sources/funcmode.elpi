@@ -4,6 +4,6 @@ function {
   copy c -> c.
 }
 
-main :-  (copy X Y, $print "gen mode is wrong", !, false);
-         (copy (lam x\app (W x) c) R, $print "rec gen mode is wrong", !, false);
-         ($print "ok", copy (lam x\app x c) R, $print R).
+main :-  (copy X Y, print "gen mode is wrong", !, false);
+         (copy (lam x\app (W x) c) R, print "rec gen mode is wrong", !, false);
+         (print "ok", copy (lam x\app x c) R, print R).

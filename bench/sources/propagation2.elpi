@@ -2,7 +2,7 @@
 propagate [of X T] [of X S] (T = S, T = a\a).
 
 
-main :- $constraint (of X (z\z)) X,
-        pi x\ of x bool => $constraint (of X (w\w)) X. 
+main :- constraint (of X (z\z)) X,
+        pi x\ of x bool => constraint (of X (w\w)) X. 
 
 % vim: set ft=lprolog:

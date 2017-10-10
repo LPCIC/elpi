@@ -1,10 +1,10 @@
 mode (gcd i i).
 
-gcd A (?? as B) :- $constraint (gcd A B) B.
+gcd A (?? as B) :- declare_constraint (gcd A B) B.
 
 % assert result is OK
-gcd 11 group-1 :- $print "group 1 solved".
-gcd 7 group-2 :- $print "group 2 solved".
+gcd 11 group-1 :- print "group 1 solved".
+gcd 7 group-2 :- print "group 2 solved".
 
 main :- gcd 99 X, gcd 66 X, gcd 14 Y, gcd 22 X, gcd 77 Y,
         % we then force a resumption to check only GCDs are there

@@ -76,7 +76,7 @@ type term =
   (* Heap terms: unif variables in the query *)
   | UVar of term_attributed_ref * (*depth:*)int * (*argsno:*)int
   | AppUVar of term_attributed_ref * (*depth:*)int * term list
-  (* Misc: $custom predicates, ... *)
+  (* Misc: custom predicates, ... *)
   | Custom of constant * term list
   | CData of CData.t
   (* Optimizations *)
@@ -156,38 +156,38 @@ module Constants : sig
  
   (* To keep the type of terms small, we use special constants for !, =, pi.. *)
   (* {{{ *)
-  val cut   : term
-  val truec  : term
-  val andc   : constant
-  val andt   : term
-  val andc2  : constant
-  val orc    : constant
-  val implc  : constant
-  val rimplc  : constant
-  val rimpl  : term
-  val pic    : constant
-  val pi    : term
-  val sigmac : constant
-  val eqc    : constant
-  val rulec : constant
-  val cons : term
-  val consc : constant
-  val nil : term
-  val nilc : constant
+  val cutc     : constant
+  val truec    : term
+  val andc     : constant
+  val andt     : term
+  val andc2    : constant
+  val orc      : constant
+  val implc    : constant
+  val rimplc   : constant
+  val rimpl    : term
+  val pic      : constant
+  val pi       : term
+  val sigmac   : constant
+  val eqc      : constant
+  val rulec    : constant
+  val cons     : term
+  val consc    : constant
+  val nil      : term
+  val nilc     : constant
   val entailsc : constant
-  val nablac : constant
-  val uvc : constant
-  val asc : constant
-  val letc : constant
-  val arrowc : constant
-  val frozenc : constant
+  val nablac   : constant
+  val uvc      : constant
+  val asc      : constant
+  val letc     : constant
+  val arrowc   : constant
+  val frozenc  : constant
 
-  val ctypec : constant
+  val ctypec   : constant
 
-  val spillc : constant
+  val spillc   : constant
 
-  val constraintc : constant
-  val print_constraintsc : constant
+  val declare_constraintc : constant
+  val print_constraintsc  : constant
   (* }}} *)
 
   (* Value for unassigned UVar/Arg *)
@@ -243,7 +243,7 @@ let pp fmt c = Format.fprintf fmt "%s" (show c)
 let from_stringc s = fst (funct_of_ast F.(from_string s))
 let from_string s = snd (funct_of_ast F.(from_string s))
 
-let cut = snd (funct_of_ast F.cutf)
+let cutc, cut = funct_of_ast F.cutf
 let truec = snd (funct_of_ast F.truef)
 let andc, andt = funct_of_ast F.andf
 let andc2 = fst (funct_of_ast F.andf2)
@@ -266,8 +266,8 @@ let arrowc = fst (funct_of_ast F.arrowf)
 let frozenc = fst (funct_of_ast (F.from_string "uvar"))
 let ctypec = fst (funct_of_ast F.ctypef)
 
-let constraintc = from_stringc "$constraint"
-let print_constraintsc = from_stringc "$print_constraints"
+let declare_constraintc = from_stringc "declare_constraint"
+let print_constraintsc = from_stringc "print_constraints"
 
 let dummy = App (-9999,cut,[])
 
@@ -525,7 +525,7 @@ type outcome = Success of solution | Failure | NoMoreSteps
 
 type hyps = (int * term) list
 
-let register_custom, register_custom_full, lookup_custom =
+let register_custom, register_custom_full, lookup_custom, all_custom =
  let (customs :
       (* Must either raise No_clause or succeed with the list of new goals *)
       ('a, depth:int -> hyps -> solution -> term list -> term list * custom_constraints)
@@ -533,8 +533,8 @@ let register_custom, register_custom_full, lookup_custom =
    =
      Hashtbl.create 17 in
  let check s = 
-    if s = "" || s.[0] <> '$' then
-      anomaly ("Custom predicate name " ^ s ^ " must begin with $");
+    if s = "" then
+      anomaly ("Custom predicate name must be non empty");
     let idx = Constants.from_stringc s in
     if Hashtbl.mem customs idx then
       anomaly ("Duplicate custom predicate name " ^ s);
@@ -547,14 +547,16 @@ let register_custom, register_custom_full, lookup_custom =
  (fun s f ->
     let idx = check s in
     Hashtbl.add customs idx f),
-(*  (fun  -> assert false), *)
- Hashtbl.find customs
+ Hashtbl.find customs,
+ (fun () -> Hashtbl.fold (fun k _ acc -> k::acc) customs [])
 ;;
 
 let is_custom_declared x =
   (try let _f = lookup_custom x in true
    with Not_found -> false)
-  || x == Constants.constraintc || x == Constants.print_constraintsc
+  || x == Constants.declare_constraintc
+  || x == Constants.print_constraintsc
+  || x == Constants.cutc
 ;;
 
 let of_term x = x

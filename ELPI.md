@@ -10,7 +10,7 @@
 
 - [N-ary implication](#n-ary-implication) let one write `[p,q] => g`
 
-- [Non logical features](#non-logical-features) like `!` or `$new_safe`
+- [Non logical features](#non-logical-features) like `!` or `new_safe`
 
 - [Typechecking](#typechecking) is performed by `elpi_typechecker.elpi`
   on the quoted syntax of the program and query
@@ -202,7 +202,7 @@ since the hypothetical program is a list of clauses.
 - The cut operator `!` is present, and does not work on nested disjunctions.
 
 - A built-in lets one collect data across search.  The primitives are
-  `$new_safe S`, `$stash S T`, `$open_safe S TL`.
+  `new_safe S`, `stash S T`, `open_safe S TL`.
   Note that `T` has to be ground and closed.  Safes are not effected by
   backtracking.  They can be used to log a computation / a list of failures.
   They are used, for example, in `elpi_typechecker.elpi` to log errors.
@@ -244,7 +244,7 @@ code, like a fatal error clause *named* "default-fatal-error" using the `:name`
 attribute.
 ```prolog
 :name "default-fatal-error" 
-fatal-error Msg :- $print Msg, halt.
+fatal-error Msg :- print Msg, halt.
 ```
 One can, from any file accumulated after `lp-lib.elpi`, take over
 such clause using the `:before` attribute.
@@ -295,9 +295,9 @@ mode (foo i o).
 
 ## Syntactic constraints
 
-A goal can be suspended on a list of variables with the `$constraint` built in.
+A goal can be suspended on a list of variables with the `declare_constraint` built in.
 ```prolog
-goal> $constraint (even X) [X].
+goal> declare_constraint (even X) [X].
 Success:
 Constraints:
    ⊢ (even X)
@@ -305,26 +305,26 @@ Constraints:
 Suspended goals are resumed as soon as any of variables they are suspended on
 gets assigned.
 ```
-goal> $constraint (even X) [X], X = 1.
+goal> declare_constraint (even X) [X], X = 1.
 Failure
 ```
 
 Hypothetical clauses are kept:
 ```
-goal> pi x\ sigma Y\ even x => $constraint (even Y) [Y].
+goal> pi x\ sigma Y\ even x => declare_constraint (even Y) [Y].
 Success:
 Constraints:
   even x ⊢ even (W x)
 
-goal> pi x\ sigma Y\ even x => ($constraint (even Y) [Y], Y = x).
+goal> pi x\ sigma Y\ even x => (declare_constraint (even Y) [Y], Y = x).
 Success:
 ```
 
-The `$constraint` built in is typically used in conjunction with `mode` as
+The `declare_constraint` built in is typically used in conjunction with `mode` as
 follows:
 ```prolog
 mode (even i).
-even (?? as X) :- !, $constraint (even X) [X].
+even (?? as X) :- !, declare_constraint (even X) [X].
 even 0.
 even X :- X > 1, Y is X - 2, even Y.
 ```
@@ -340,7 +340,7 @@ constraint foo bar ... {
 }
 ```
 The effect is that whenever a goal about `foo` or `bar`
-is suspended (via `$constraint`) only its hypothetical
+is suspended (via `declare_constraint`) only its hypothetical
 clauses about `foo` or `bar` are kept.
 Moreover, when two or more goals are suspended the rules
 between curly braces apply.
@@ -350,8 +350,8 @@ between curly braces apply.
 mode (odd i).
 mode (even i).
 
-even (?? as X) :- !, $constraint (even X) [X].
-odd  (?? as X) :- !, $constraint (odd X)  [X].
+even (?? as X) :- !, declare_constraint (even X) [X].
+odd  (?? as X) :- !, declare_constraint (odd X)  [X].
 even 0.
 odd 1.
 even X :- X > 1, Y is X - 1, odd  Y.
@@ -422,11 +422,11 @@ we can compute GCDs of 2 sets of numbers: 99, 66 and 22 named X;
 ```prolog
 mode (gcd i i).
 
-gcd A (?? as B) :- $constraint (gcd A B) B.
+gcd A (?? as B) :- declare_constraint (gcd A B) B.
 
 % assert result is OK
-gcd 11 group-1 :- $print "group 1 solved".
-gcd 7 group-2 :- $print "group 2 solved".
+gcd 11 group-1 :- print "group 1 solved".
+gcd 7 group-2 :- print "group 2 solved".
 
 main :- gcd 99 X, gcd 66 X, gcd 14 Y, gcd 22 X, gcd 77 Y,
         % we then force a resumption to check only GCDs are there
@@ -517,10 +517,10 @@ pp A A.
 main :-
    (pi x\ (pp "nice" x :- !) =>
       parse ((V1 && true) && "nice") (P1 x)),
-   $print P1,
+   print P1,
    (pi x\ (pp "ugly" x :- !) =>
       print (P2 x) (P1 x)),
-   $print P2.
+   print P2.
 % P1 = x0 \ and ' (and ' V1 ' true) ' x0
 % P2 = x0 \ (V2 && true) && "ugly"
 ```
@@ -552,10 +552,10 @@ pptac (tac T) (tac S) :- pp T S.
 In matching mode a syntax to introspect unification variables
 is provided:
 ```prolog
-pp1 ?? :-             $print "a variable".
-pp2 (?? K) :-         $print "with id " K.
-pp3 (?? _ L) :-       $print "with arguments " L.
-pp4 (?? K L as V) :-  $print "a flexible term " V.
+pp1 ?? :-             print "a variable".
+pp2 (?? K) :-         print "with id " K.
+pp3 (?? _ L) :-       print "with arguments " L.
+pp4 (?? K L as V) :-  print "a flexible term " V.
 ```
 Only `V` is a proper term, `K` and `L` are not.
 

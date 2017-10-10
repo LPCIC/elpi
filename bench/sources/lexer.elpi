@@ -1,7 +1,7 @@
 =+- c.
-=>= :- d, $, $print /* comment /* nested comment */*/ /**/ foo, $==, A - y, ->-, A / B, //.
-$==.
-$.
+=>= :- d, , print /* comment /* nested comment */*/ /**/ foo, ==, A - y, ->-, A / B, //.
+==.
+.
 x - y.
 ->-.
 x / b.

@@ -43,7 +43,6 @@ end
 
 type term =
    Const of Func.t
- | Custom of Func.t
  | App of term * term list
  | Lam of Func.t * term
  | String of Func.t
@@ -101,7 +100,7 @@ type decl =
  | Chr of (term, Func.t) chr
  | Accumulated of decl list
  | Macro of Ploc.t * Func.t * term
- | Type of Func.t * term
+ | Type of bool(*external?*) * Func.t * term
 
 val mkLocal : string -> decl
 
@@ -117,7 +116,6 @@ val mkApp : term list -> term
 val mkCon : string -> term
 val mkNil : term
 val mkSeq : term list -> term
-val mkCustom : string -> term
 val mkFloat : float -> term
 val mkInt : int -> term
 val mkString : string -> term

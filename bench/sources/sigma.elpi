@@ -11,8 +11,8 @@ pi X\ sigma f\ pred X f.
 
 sigma a \ pi Y \ (
  (sigma c \ pi X \ sigma e \ quot c e X),
- (sigma u \ ttt u :- $print a u),
- (quot2 uuu a (f Y) :- $print (quot2 uuu a (f Y)))
+ (sigma u \ ttt u :- print a u),
+ (quot2 uuu a (f Y) :- print (quot2 uuu a (f Y)))
 ).
 
 /* Just for debugging

@@ -42,8 +42,7 @@ let spill types modes ast =
   let rec apply_to names variable = function
     | A.Const f when List.exists (F.equal f) names ->
         A.App(A.Const f,[variable])
-    | (A.Const _ | A.String _ | A.Int _ | A.Float _
-      | A.Quoted _ | A.Custom _) as x -> x
+    | (A.Const _ | A.String _ | A.Int _ | A.Float _ | A.Quoted _) as x -> x
     | A.Lam(x,t) -> A.Lam(x,apply_to names variable t)
     | A.App(A.Const f,args) when List.exists (F.equal f) names ->
         A.App(A.Const f,List.map (apply_to names variable) args @ [variable])
@@ -69,8 +68,9 @@ let spill types modes ast =
   let type_of = function
     | (A.String _|A.Float _|A.Int _
       |A.App _|A.Lam _|A.Quoted _) -> `Unknown
-    | A.Const c | A.Custom c ->
-       if F.(equal c andf || equal c andf2) then `Variadic(`Prop, `Prop)
+    | A.Const c ->
+       if F.(equal c andf || equal c andf2)
+       then `Variadic(`Prop, `Prop)
        else if F.(equal c orf) then `Arrow([`Prop],`Prop)
        else 
          let c, _ =  Constants.funct_of_ast c in
@@ -85,10 +85,7 @@ let spill types modes ast =
       match t with
       | A.App (A.Const f as hd,args) ->
            Constants.funct_of_ast f, type_of hd, args
-      | A.App (A.Custom f as hd,args) ->
-           Constants.funct_of_ast f, type_of hd, args
       | A.Const c -> Constants.funct_of_ast c, type_of t, []
-      | A.Custom c -> Constants.funct_of_ast c, type_of t, []
       | _ -> error ("only applications can be spilled: " ^ A.show_term t) in
     let nargs = List.length args in
     let missing_args =
@@ -159,8 +156,7 @@ let spill types modes ast =
            aux (type_of hd) args in
        if is_prop then [], [add_spilled spills ctx (A.App(hd, args))]
        else spills, [A.App(hd,args)]
-    | (A.String _|A.Float _|A.Int _
-      |A.Const _|A.Custom _|A.Quoted _) as x -> [], [x]
+    | (A.String _ | A.Float _ | A.Int _ | A.Const _ | A.Quoted _) as x -> [],[x]
     | A.Lam(x,t) ->
        let sp, t = spaux1 (x::ctx) t in
        let (t,_), sp = map_acc (fun (t,n) (names, call) ->
@@ -372,19 +368,14 @@ let stack_term_of_ast ?(inner_call=false) ~depth:arg_lvl state ast =
        stack_arg_of_ast state (F.show f)
      else if is_macro_name f then
        stack_macro_of_ast inner curlvl state f
+     else if is_custom_declared (fst (Constants.funct_of_ast f)) then
+       state, Custom(fst (Constants.funct_of_ast f),[])
      else state, snd (Constants.funct_of_ast f)
 
-  and stack_custom_of_ast f =
-    let cname = fst (Constants.funct_of_ast f) in
-    if not (is_custom_declared cname) then warn("No custom named "^F.show f);
-    cname
   
   and aux inner lvl state = function
     | A.Const f when F.(equal f nilf) -> state, Nil
     | A.Const f -> stack_funct_of_ast inner lvl state f
-    | A.Custom f ->
-       let cname = stack_custom_of_ast f in
-       state, Custom (cname, [])
     | A.App(A.Const f, [hd;tl]) when F.(equal f consf) ->
        let state, hd = aux true lvl state hd in
        let state, tl = aux true lvl state tl in
@@ -404,11 +395,13 @@ let stack_term_of_ast ?(inner_call=false) ~depth:arg_lvl state ast =
           | _ -> anomaly "Application node with no arguments" end
        | App(c,hd1,tl1) -> (* FG: decurrying: is this the right place for it ?? *)
           state, App(c,hd1,tl1@tl)
+       | Custom(c,tl1) -> state, Custom(c,tl1@tl)
        | Lam _ -> (* macro with args *)
           state, deref_appuv ~from:lvl ~to_:lvl tl c
        | Discard -> 
           error "Clause shape unsupported: _ cannot be applied"
        | _ -> error "Clause shape unsupported" end
+(*
     | A.App (A.Custom f,tl) ->
        let cname = stack_custom_of_ast f in
        let state, rev_tl =
@@ -417,6 +410,7 @@ let stack_term_of_ast ?(inner_call=false) ~depth:arg_lvl state ast =
             (state, t::tl))
           (state, []) tl in
        state, Custom(cname, List.rev rev_tl)
+*)
     | A.Lam (x,t) when A.Func.(equal x dummyname)->
        let state, t' = aux true (lvl+1) state t in
        state, Lam t'
@@ -582,7 +576,14 @@ let names_of_qnames names =
   |> List.sort (fun (_,x) (_,y) -> compare x y)
   |> List.map fst
 
-let program_of_ast ?print (p : Elpi_ast.decl list) : program =
+let check_all_custom_are_typed state =
+  let types = get_types state in
+  List.iter (fun c ->
+    if not (List.exists (fun { tname } -> tname == c) types) then
+      error("External without type declaration: " ^ Constants.show c))
+   (all_custom ())
+
+let program_of_ast ?print ?(allow_undeclared_custom_predicates=false) (p : Elpi_ast.decl list) : program =
 
  let clause_of_ast lcs body state =
    let state = set_argmap state empty_amap in
@@ -622,8 +623,12 @@ let program_of_ast ?print (p : Elpi_ast.decl list) : program =
           let rule = chr_of_ast lcs state r in
           let state = update_chr state (CHR.add_rule clique rule) in
           aux { cs with state } todo
-      | Elpi_ast.Type(name,typ) ->  (* Check ARITY against MODE *)
+      | Elpi_ast.Type(is_external,name,typ) ->  (* Check ARITY against MODE *)
           let tname, _ = Constants.funct_of_ast name in
+          if is_external && not (is_custom_declared tname) then
+            error ("External "^F.show name^" not declared");
+          if not(is_external) && is_custom_declared tname then
+            error (F.show name^" is external, declare its type as such");
           let _, tnargs, ttype = clause_of_ast lcs typ state in
           let state =
             update_types state (fun x -> { tname; tnargs; ttype} :: x) in
@@ -702,6 +707,8 @@ let program_of_ast ?print (p : Elpi_ast.decl list) : program =
      aux { lcs = 0; clique = None; ctx = []; cur_block = [];
            state = CompilerState.init () } p
  in
+ if not allow_undeclared_custom_predicates then
+   check_all_custom_are_typed state;
  let prolog_program =
    make_index (List.map drop_clause_info (get_clauses state)) in
  { 
@@ -811,7 +818,7 @@ let quote_syntax { compiler_state } { qloc; qnames; qenv; qterm } =
 
 let typecheck ?(extra_checker=[]) ({ compiler_state } as p) q =
   let checker =
-    (program_of_ast
+    (program_of_ast ~allow_undeclared_custom_predicates:true
        (Elpi_parser.parse_program ("elpi_typechecker.elpi"::extra_checker))) in
   let p,q = quote_syntax p q in
   let tlist = list_to_lp_list (List.map (fun {tname;tnargs;ttype} ->
