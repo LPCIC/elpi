@@ -366,6 +366,16 @@ module Extend : sig
 
   end
 
+  (* Custom compilation of `this` and 'that' *)
+  module CustomFunctor : sig
+
+    val declare_backtick : string ->
+      (Compile.State.t -> string -> Compile.State.t * Data.term) -> unit
+    val declare_singlequote : string ->
+      (Compile.State.t -> string -> Compile.State.t * Data.term) -> unit
+
+  end
+
   module Utils : sig
     (** Terms must be inspected after dereferencing (at least) their head *)
     val deref_head : depth:int -> Data.term -> Data.term

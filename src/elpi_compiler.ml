@@ -358,7 +358,8 @@ let stack_term_of_ast ?(inner_call=false) ~depth:arg_lvl state ast =
   let rec stack_macro_of_ast inner lvl state f =
     try aux inner lvl state (fst (F.Map.find f macro))
     with Not_found -> error ("Undeclared macro " ^ F.show f) 
-  
+
+  (* compilation of "functors" *) 
   and stack_funct_of_ast inner curlvl state f =
     try state, F.Map.find f (get_varmap state)
     with Not_found ->
@@ -370,6 +371,10 @@ let stack_term_of_ast ?(inner_call=false) ~depth:arg_lvl state ast =
        stack_macro_of_ast inner curlvl state f
      else if is_custom_declared (fst (Constants.funct_of_ast f)) then
        state, Custom(fst (Constants.funct_of_ast f),[])
+     else if CustomFunctorCompilation.is_backtick f then
+       CustomFunctorCompilation.compile_backtick state f
+     else if CustomFunctorCompilation.is_singlequote f then
+       CustomFunctorCompilation.compile_singlequote state f
      else state, snd (Constants.funct_of_ast f)
 
   

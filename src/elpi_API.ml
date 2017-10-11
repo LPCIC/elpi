@@ -149,6 +149,18 @@ module Extend = struct
 
   module CustomConstraint = Elpi_data.CustomConstraint
 
+  module CustomFunctor = struct
+  
+    let declare_backtick name f =
+      Elpi_data.CustomFunctorCompilation.declare_backtick_compilation name
+        (fun s x -> f s (Elpi_ast.Func.show x))
+
+    let declare_singlequote name f =
+      Elpi_data.CustomFunctorCompilation.declare_singlequote_compilation name
+        (fun s x -> f s (Elpi_ast.Func.show x))
+
+  end
+
   module Utils = struct
     let lp_list_to_list ~depth t =
       let module R = (val !r) in let open R in

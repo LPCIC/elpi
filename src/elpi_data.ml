@@ -388,6 +388,55 @@ module CustomConstraint : sig
 
   end (* }}} *)
 
+module CustomFunctorCompilation : sig
+  val declare_singlequote_compilation : string -> (CompilerState.t -> F.t -> CompilerState.t * term) -> unit
+  val declare_backtick_compilation : string -> (CompilerState.t -> F.t -> CompilerState.t * term) -> unit
+  
+  val compile_singlequote : CompilerState.t -> F.t -> CompilerState.t * term
+  val compile_backtick : CompilerState.t -> F.t -> CompilerState.t * term
+
+  val is_singlequote : F.t -> bool
+  val is_backtick : F.t -> bool
+
+end = struct
+
+  let is_singlequote x =
+    let s = F.show x in
+    let len = String.length s in
+    len > 2 && s.[0] == '\'' && s.[len-1] == '\''
+
+  let is_backtick x =
+    let s = F.show x in
+    let len = String.length s in
+    len > 2 && s.[0] == '`' && s.[len-1] == '`'
+
+  let singlequote = ref None
+  let backtick = ref None
+
+  let declare_singlequote_compilation name f =
+    match !singlequote with
+    | None -> singlequote := Some(name,f)
+    | Some(oldname,_) ->
+         error("Only one custom compilation of 'ident' is supported. Current: "
+           ^ oldname ^ ", new: " ^ name)
+  let declare_backtick_compilation name f =
+    match !backtick with
+    | None -> backtick := Some(name,f)
+    | Some(oldname,_) ->
+         error("Only one custom compilation of `ident` is supported. Current: "
+           ^ oldname ^ ", new: " ^ name)
+
+  let compile_singlequote state x =
+    match !singlequote with
+    | None -> state, snd (Constants.funct_of_ast x)
+    | Some(_,f) -> f state x
+  let compile_backtick state x =
+    match !backtick with
+    | None -> state, snd (Constants.funct_of_ast x)
+    | Some(_,f) -> f state x
+
+end
+
 (* true=input, false=output *)
 type mode = bool list [@@deriving show]
 
