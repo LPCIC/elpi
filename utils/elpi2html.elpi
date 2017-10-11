@@ -176,7 +176,7 @@ pp L B (lam F) A :- incr-int (
 
 pp _ B (const "!") A :- !,
   write {concat B},
-  write "<span class='cut'>!<span>",
+  write "<span class='cut'>!</span>",
   write {concat A}.
 
 pp _ B (const X) A :-
