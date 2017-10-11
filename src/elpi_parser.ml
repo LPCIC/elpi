@@ -233,7 +233,6 @@ let constant = "CONSTANT" (* to use physical equality *)
 let rec tok b s = (*spy ~name:"tok" ~pp:(fun (a,b) -> a ^ " " ^ b)*) (lexer
   [ ucase idcharstar -> constant,$buf 
   | lcase idcharstar -> constant,$buf
-  | schar2 ?= [ 'A'-'Z' ] -> constant,$buf
   | schar2 symbcharstar -> constant,$buf
   | num -> "INTEGER",$buf
   | num ?= [ '.' '0'-'9' ] '.' num -> "FLOAT",$buf
