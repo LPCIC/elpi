@@ -426,7 +426,7 @@ let pp_stuck_goal fmt { kind; blockers } =
 let print fmt =
   List.iter (fun { depth; pdiff; goal = g } ->
       Fmt.fprintf fmt
-        " @[<hov 2> %a@ ⊢ %a@]\n%!"
+        " @[<hov 2> %a@ ?- %a@]\n%!"
           (pplist (fun fmt (depth,t) -> uppterm depth [] 0 empty_env fmt t) ",") pdiff
           (uppterm depth [] 0 empty_env) g
    )
@@ -2424,8 +2424,13 @@ let exec_custom_predicate c ~depth idx args =
        if c == C.declare_constraintc then begin
                declare_constraint ~depth idx args; [] end
   else if c == C.print_constraintsc then begin
-               CS.print Format.err_formatter (CS.contents ()); [] end
-  else
+               let b = Buffer.create 1024 in
+               let fmt = Format.formatter_of_buffer b in
+               CS.print fmt (CS.contents ());
+               Format.fprintf fmt "%!";
+               printf "%s%!" (Buffer.contents b);
+               [] 
+  end else
     let f = try lookup_custom c with Not_found -> anomaly"no such custom" in
     let solution = {
       arg_names = !qnames;

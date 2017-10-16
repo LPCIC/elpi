@@ -61,7 +61,7 @@ let rec print_tree hot { name; self; progeny } indent =
   let phot =
     if thot *. 2.0 > tprogeny && StrMap.cardinal progeny > 1 && indent < 6
     then phot else "" in
-  Printf.eprintf "%s- %-20s %s %6.3f %6.3f %s\n"
+  eprintf "%s- %-20s %s %6.3f %6.3f %s\n"
     String.(make indent ' ' ) name String.(make (max 0 (20-indent)) ' ' )
     self (self -. tprogeny) (if name = hot then "!" else "");
   StrMap.iter (fun _ t -> print_tree phot t (indent + 2)) progeny
@@ -70,9 +70,9 @@ let print_perf () =
   while List.length !perf_stack > 1 do collect_perf_exit 0.0; done;
   match !perf_stack with
   | [ { progeny } ] ->
-        Printf.eprintf "  %-20s %s %6s %6s\n" "name"
+        eprintf "  %-20s %s %6s %6s\n" "name"
           String.(make 20 ' ' ) "total" "self";
-        Printf.eprintf "%s\n" (String.make 80 '-');
+        eprintf "%s\n" (String.make 80 '-');
         StrMap.iter (fun _ t -> print_tree "run" t 0) progeny
   | _ -> assert false
 
@@ -117,7 +117,7 @@ let make_indent () =
 
 let print_enter k msg = 
   if not !trace_noprint then
-    Format.eprintf "%s%s %d {{{@[<hov1> %a@]\n%!"
+    eprintf "%s%s %d {{{@[<hov1> %a@]\n%!"
       (make_indent ()) k (get_cur_step k) (fun fmt () -> msg fmt) ()
 
 let enter k msg =
@@ -130,7 +130,7 @@ let enter k msg =
 
 let print name f x = 
  if not !trace_noprint && condition name then
-    Format.eprintf "%s %s =@[<hov1> %a@]\n%!" (make_indent ()) name f x
+    eprintf "%s %s =@[<hov1> %a@]\n%!" (make_indent ()) name f x
 
 let printers = ref []
 
@@ -152,7 +152,7 @@ exception TREC_CALL of Obj.t * Obj.t (* ('a -> 'b) * 'a *)
 
 let print_exit k tailcall e time =
   if not !trace_noprint then
-    Format.eprintf "%s}}} %s  (%.3fs)\n%!"
+    eprintf "%s}}} %s  (%.3fs)\n%!"
       (make_indent ()) (if tailcall then "->" else pr_exc e) time
 
 let exit k tailcall ?(e=OK) time =
@@ -172,7 +172,7 @@ let () =
   at_exit (fun () ->
     if !logs != [] then begin
       List.iter (fun (name,key,step,value) ->
-        Printf.eprintf "stats@run %d: %s %s %d\n" step name key value)
+        eprintf "stats@run %d: %s %s %d\n" step name key value)
       !logs
     end)
 

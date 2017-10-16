@@ -63,21 +63,29 @@ let default_anomaly s =
   Printf.eprintf "Anomaly: %s\n%!" s;
   exit 2
 let default_type_error s = default_error s
+let default_printf = Printf.printf
+let default_eprintf = Printf.eprintf
 
 let warn_f       = ref (Obj.repr default_warn)
 let error_f      = ref (Obj.repr default_error)
 let anomaly_f    = ref (Obj.repr default_anomaly)
 let type_error_f = ref (Obj.repr default_type_error)
+let std_fmt      = ref Format.std_formatter
+let err_fmt      = ref Format.err_formatter
 
 let set_warn f       = warn_f       := (Obj.repr f)
 let set_error f      = error_f      := (Obj.repr f)
 let set_anomaly f    = anomaly_f    := (Obj.repr f)
 let set_type_error f = type_error_f := (Obj.repr f)
+let set_std_formatter f = std_fmt := f
+let set_err_formatter f = err_fmt := f
 
 let warn s       = Obj.obj !warn_f s
 let error s      = Obj.obj !error_f s
 let anomaly s    = Obj.obj !anomaly_f s
 let type_error s = Obj.obj !type_error_f s
+let printf x     = Format.fprintf !std_fmt x
+let eprintf x    = Format.fprintf !err_fmt x
 
 let option_get ?err = function
   | Some x -> x

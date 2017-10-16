@@ -44,6 +44,8 @@ let set_warn = Elpi_util.set_warn
 let set_error = Elpi_util.set_error
 let set_anomaly = Elpi_util.set_anomaly
 let set_type_error = Elpi_util.set_type_error
+let set_std_formatter = Elpi_util.set_std_formatter
+let set_err_formatter = Elpi_util.set_err_formatter
 
 end
 

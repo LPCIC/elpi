@@ -110,12 +110,16 @@ val anomaly : string -> 'a
 val type_error : string -> 'a
 (* A non fatal warning *)
 val warn : string -> unit
-
+(* Indirection for standard print functions *)
+val printf : ('a, Format.formatter, unit) format -> 'a
+val eprintf : ('a, Format.formatter, unit) format -> 'a
 
 val set_warn : (string -> unit) -> unit
 val set_error : (string -> 'a) -> unit
 val set_anomaly : (string -> 'a) -> unit
 val set_type_error : (string -> 'a) -> unit
+val set_std_formatter : Format.formatter -> unit
+val set_err_formatter : Format.formatter -> unit
 
 (* ****************** external data *****************)
 
