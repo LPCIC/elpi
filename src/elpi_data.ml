@@ -322,8 +322,12 @@ end = struct (* {{{ *)
   let new_clique cl ({ cliques } as chr) =
     if cl = [] then error "empty clique";
     let c = List.fold_right Constants.Set.add cl Constants.Set.empty in
-    if Constants.Map.exists (fun _ c' -> not (Constants.Set.is_empty (Constants.Set.inter c c'))) cliques then
-            error "overlapping constraint cliques";
+    Constants.(Map.iter (fun _ c' ->
+      if not (Set.is_empty (Set.inter c c')) && not (Set.equal c c') then
+        error ("overlapping constraint cliques: {" ^
+          String.concat "," (List.map Constants.show (Set.elements c))^"} {" ^
+          String.concat "," (List.map Constants.show (Set.elements c'))^ "}")
+    ) cliques);
     let cliques =
       List.fold_right (fun x cliques -> Constants.Map.add x c cliques) cl cliques in
     { chr with cliques }, c
