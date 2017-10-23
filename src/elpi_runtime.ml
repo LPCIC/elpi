@@ -1507,7 +1507,7 @@ module type Indexing = sig
 
   val key_of : mode:[`Query | `Clause] -> depth:int -> term -> key
   val hd_pred : clause -> constant
-  val add_clauses : clause list -> (int * term) -> idx -> idx
+  val add_clauses : clause list -> (int * term) list -> idx -> idx
   val get_clauses : depth:int -> term -> idx -> clause list
   val make_index : clause list -> idx
   val local_prog : idx -> ((*depth:*)int * term) list
@@ -1613,10 +1613,10 @@ let add_clauses clauses s { map = p;  src } =
        (l,[],Elpi_ptmap.add app [clause] Elpi_ptmap.empty) m
     ) p clauses
   in
-  { map = p; src = s :: src }
+  { map = p; src = List.rev s @ src }
 
 let make_index p =
-  let idx = add_clauses (List.rev p) (0,C.pi) { map = Elpi_ptmap.empty; src = [] } in
+  let idx = add_clauses (List.rev p) [] { map = Elpi_ptmap.empty; src = [] } in
   { idx with src = [] } (* original program not in clauses *)
  
 (* flatten_snd = List.flatten o (List.map ~~snd~~) *)
@@ -1809,11 +1809,11 @@ module UnifBits (*: Indexing*) = struct (* {{{ *)
       with Not_found -> 
         Elpi_ptmap.add ind [clause] m
     ) ptree clauses in
-    { map; src = s :: src }
+    { map; src = List.rev s @ src }
  
   let make_index p =
     timestamp := 1;
-    let m = add_clauses ~op:incr p (0,C.pi) { map = Elpi_ptmap.empty; src = [] } in
+    let m = add_clauses ~op:incr p [] { map = Elpi_ptmap.empty; src = [] } in
     timestamp := 0;
     { m with src = [] }
 
@@ -1847,7 +1847,8 @@ let orig_prolog_program = Fork.new_local (make_index [])
 
 module Clausify : sig
 
-  val clausify : int -> constant -> term -> clause list * int
+  val clausify :
+    int -> constant -> term -> clause list * (int * term) list * int
   
   val modes : mode_decl C.Map.t Fork.local_ref
 
@@ -1922,20 +1923,20 @@ let clausify vars depth t =
   [%trace "clausify" ("%a %d %d %d %d\n%!"
       (ppterm (depth+lts) [] 0 empty_env) t depth lts lcs (List.length ts)) begin
   match t with
-  | Nil -> [],lts
-  | Discard -> [],lts
+  | Nil -> [],[],lts
+  | Discard -> [],[],lts
   | Cons(g1,g2) ->
-     let clauses,lts = claux vars depth hyps ts lts lcs g1 in
-     let moreclauses,lts = claux vars depth hyps ts lts lcs g2 in
-      clauses@moreclauses,lts
+     let clauses,pd1,lts = claux vars depth hyps ts lts lcs g1 in
+     let moreclauses,pd2,lts = claux vars depth hyps ts lts lcs g2 in
+      moreclauses@clauses,pd1@pd2,lts
   | App(c, g, gs) when c == C.andc || c == C.andc2 ->
-     let moreclauses, lts = claux vars depth hyps ts lts lcs g in
-     let moreclauses_list, lts =
-       List.fold_right (fun g (clauses,lts) ->
-         let moreclauses, lts = claux vars depth hyps ts lts lcs g in
-         moreclauses :: clauses, lts
-       ) gs ([moreclauses],lts) in
-     List.flatten moreclauses_list, lts
+     let moreclauses, pdiff, lts = claux vars depth hyps ts lts lcs g in
+     let moreclauses_list, pdiff, lts =
+       List.fold_right (fun g (clauses,pdiff,lts) ->
+         let moreclauses,morepdiff,lts = claux vars depth hyps ts lts lcs g in
+         moreclauses :: clauses, pdiff @ morepdiff, lts
+       ) gs ([moreclauses],pdiff,lts) in
+     List.flatten moreclauses_list, pdiff, lts
   | App(c, g2, [g1]) when c == C.rimplc ->
      claux vars depth ((ts,g1)::hyps) ts lts lcs g2
   | App(c, _, _) when c == C.rimplc -> assert false
@@ -1999,7 +2000,7 @@ let clausify vars depth t =
               [%spy "extra" ppclause c];
               c
           )
-       all_modes, lcs
+      all_modes, [depth,g], lcs
   | UVar ({ contents=g },from,args) when g != C.dummy ->
      claux vars depth hyps ts lts lcs
        (deref_uv ~from ~to_:(depth+lts) args g)
@@ -2464,7 +2465,13 @@ let rec head_of = function
   | Custom(x,_) -> x
   | AppUVar(r,_,_)
   | UVar(r,_,_) when !!r != C.dummy -> head_of !!r
-  | x -> anomaly ("strange head: " ^ show_term x)
+  | CData _ -> type_error "A constraint cannot be a primitive data"
+  | Cons(x,_) -> head_of x
+  | Nil -> type_error "A constraint cannot be a list"
+  | (UVar _ | AppUVar _) -> type_error "A constraint cannot have flexible head"
+  | (Arg _ | AppArg _) -> anomaly "head_of on non-heap term"
+  | Discard -> type_error "A constraint cannot be _"
+  | Lam _ -> type_error "A constraint cannot be a function"
 
 let declare_constraint ~depth prog args =
   let g, keys =
@@ -2834,16 +2841,16 @@ let make_runtime : ?max_steps: int -> program -> runtime =
        run depth p g (List.map(fun x -> depth,p,x) gs'@gs) next alts lvl
     | App(c, g2, [g1]) when c == C.rimplc ->
        (*Fmt.eprintf "RUN: %a\n%!" (uppterm depth [] 0 empty_env) g ;*)
-       let clauses, lcs = clausify 0 depth g1 in
+       let clauses, pdiff, lcs = clausify 0 depth g1 in
        let g2 = hmove ~from:depth ~to_:(depth+lcs) g2 in
        (*Fmt.eprintf "TO: %a \n%!" (uppterm (depth+lcs) [] 0 empty_env) g2;*)
-       run (depth+lcs) (add_clauses clauses (depth,g1) p) g2 gs next alts lvl
+       run (depth+lcs) (add_clauses clauses pdiff p) g2 gs next alts lvl
     | App(c, g1, [g2]) when c == C.implc ->
        (*Fmt.eprintf "RUN: %a\n%!" (uppterm depth [] 0 empty_env) g ;*)
-       let clauses, lcs = clausify 0 depth g1 in
+       let clauses, pdiff, lcs = clausify 0 depth g1 in
        let g2 = hmove ~from:depth ~to_:(depth+lcs) g2 in
        (*Fmt.eprintf "TO: %a \n%!" (uppterm (depth+lcs) [] 0 empty_env) g2;*)
-       run (depth+lcs) (add_clauses clauses (depth,g1) p) g2 gs next alts lvl
+       run (depth+lcs) (add_clauses clauses pdiff p) g2 gs next alts lvl
 (*  This stays commented out because it slows down rev18 in a visible way!   *)
 (*  | App(c, _, _) when c == implc -> anomaly "Implication must have 2 args" *)
     | App(c, arg, []) when c == C.pic ->

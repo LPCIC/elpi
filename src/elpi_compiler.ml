@@ -602,7 +602,7 @@ let program_of_ast ?print ?(allow_undeclared_custom_predicates=false) (p : Elpi_
       let names, nargs, t = clause_of_ast lcs body state in
       let names = names_of_qnames names in
       debug_print ?print names t;
-      let moreclauses, morelcs = clausify (get_modes state) nargs lcs t in
+      let moreclauses, _, morelcs = clausify (get_modes state) nargs lcs t in
       let loc = in_loc (loc, id) in
       clauses @ List.(map (fun clbody -> 
          { clloc = loc; clargsname = names; clbody})

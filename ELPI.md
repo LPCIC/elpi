@@ -192,7 +192,7 @@ the interpreter and the `elpi_typechecker.elpi`.
 
 The `=>` connectives accepts, on its left, a list of predicates.
 For example `[p,q] => g` is equivalent to `(p, q) => g` that
-is also equivalent to `p => q => g`.
+is also equivalent to `q => p => g`.
 
 This is particularly useful in writing [CHR rules](#syntactic-constraints)
 since the hypothetical program is a list of clauses.
