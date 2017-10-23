@@ -2464,7 +2464,7 @@ let rec head_of = function
   | Custom(x,_) -> x
   | AppUVar(r,_,_)
   | UVar(r,_,_) when !!r != C.dummy -> head_of !!r
-  | _ -> anomaly "strange head"
+  | x -> anomaly ("strange head: " ^ show_term x)
 
 let declare_constraint ~depth prog args =
   let g, keys =
