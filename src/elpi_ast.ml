@@ -51,16 +51,14 @@ type term =
    Const of Func.t
  | App of term * term list
  | Lam of Func.t * term
- | String of Func.t
- | Int of int
- | Float of float
+ | CData of Elpi_util.CData.t
  | Quoted of quote
 and quote = { data : string; kind : string option }
-[@@deriving show, eq, ord]
+[@@deriving show, eq]
 
+let mkC x = CData x
 let mkLam x t = Lam (Func.from_string x,t)
 let mkNil = Const Func.nilf
-let mkString str = String (Func.from_string str)
 let mkQuoted s =
   let rec find_data i =
     match s.[i] with
@@ -77,8 +75,6 @@ let mkQuoted s =
     | _ -> { data = String.sub s i (String.length s - i - i); kind = None }
   in
     Quoted (find_data 0)
-let mkInt i = Int i
-let mkFloat f = Float f
 let mkSeq l =
  let rec aux =
   function
@@ -149,3 +145,43 @@ let fresh_names = ref (-1);;
 let mkFreshName () = incr fresh_names; Const (Func.from_string ("__" ^ string_of_int !fresh_names))
 let mkCon c = Const (Func.from_string c)
 
+open Elpi_util
+module Fmt = Format
+
+let { CData.cin = in_float; isc = is_float; cout = out_float } as cfloat =
+  CData.(declare {
+    data_name = "float";
+    data_pp = (fun f x -> Fmt.fprintf f "%f" x);
+    data_eq = (==);
+    data_hash = Hashtbl.hash;
+    data_hconsed = false;
+  })
+let { CData.cin = in_int; isc = is_int; cout = out_int } as cint =
+  CData.(declare {
+    data_name = "int";
+    data_pp = (fun f x -> Fmt.fprintf f "%d" x);
+    data_eq = (==);
+    data_hash = Hashtbl.hash;
+    data_hconsed = false;
+  })
+let { CData.cin = in_string; isc = is_string; cout = out_string } as cstring =
+  CData.(declare {
+    data_name = "string";
+    data_pp = (fun f x -> Fmt.fprintf f "\"%s\"" x);
+    data_eq = (=);
+    data_hash = Hashtbl.hash;
+    data_hconsed = true;
+  })
+let { CData.cin = in_loc; isc = is_loc; cout = out_loc } as cloc =
+  CData.(declare {
+    data_name = "loc";
+    data_pp = (fun f (x,name) ->
+      let bname = Filename.basename (Ploc.file_name x) in
+      let line_no = Ploc.line_nb x in
+      match name with
+      | None -> Fmt.fprintf f "%s:%4d:" bname line_no 
+      | Some name -> Fmt.fprintf f "%s:%4d:%s:" bname line_no name);
+    data_eq = (=);
+    data_hash = Hashtbl.hash;
+    data_hconsed = false;
+  })

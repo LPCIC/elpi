@@ -593,7 +593,7 @@ let _ =
            let qp, qq = Compile.quote_syntax p q in
            [ App (eqc, r1, [qp]); App (eqc, r2 , [qq]) ]
        | _ -> type_error "quote_syntax string string P Q")
-     | _ -> type_error "matc_frozen takes 4 arguments") ;
+     | _ -> type_error "quote_syntax takes 4 arguments") ;
    
 
 
@@ -606,6 +606,7 @@ let { CData.cin = safe_in; isc = is_safe ; cout = safe_out } = CData.declare {
        (Pp.list (Pp.term 0 [] 0 Elpi_data.empty_env) ";") !l d);
   data_eq = (fun (id1, _,_) (id2,_,_) -> id1 == id2);
   data_hash = (fun (id,_,_) -> id);
+  data_hconsed = false;
 }
 
 let fresh_copy t max_db depth =

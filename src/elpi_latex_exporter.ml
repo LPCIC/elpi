@@ -147,9 +147,7 @@ let export_term tm =
       (export_term f) ^ "(" ^ (List.fold_left (fun l x -> l^(export_term x)^",") "" tail) ^ (export_term last) ^ ")" )  *)
   | Elpi_ast.Lam (x,t1) ->
      " lambda"^ Elpi_ast.Func.show x^"." ^ (aux prec t1)
-  | Elpi_ast.String str -> "\\:" ^ Elpi_ast.Func.show str ^ "\\:"
-  | Elpi_ast.Int i -> "\\:" ^ (string_of_int i) ^ "\\:" 
-  | Elpi_ast.Float i -> "\\:" ^ (string_of_float i) ^ "\\:" 
+  | Elpi_ast.CData s -> "\\:" ^ Elpi_util.CData.show s ^ "\\:" 
   | _ -> assert false in
 (* let pats =
   [ Str.regexp "\$", "\\$" (* for the custom predicates which start with $*)

@@ -651,7 +651,7 @@ EXTEND
     ]];
   ctype:
      [ "main" [ c = CONSTANT; l = LIST0 ctype LEVEL "arg" -> mkApp (mkCon c :: l)
-              | CONSTANT "ctype"; s = LITERAL -> mkApp [Const Func.ctypef; mkString s] ]
+              | CONSTANT "ctype"; s = LITERAL -> mkApp [Const Func.ctypef; mkC CData.(cstring.cin s)] ]
      | "arg"  [ c = CONSTANT -> mkCon c
               | LPAREN; t = type_; RPAREN -> t ]
      ];
@@ -679,10 +679,10 @@ EXTEND
       | u=FRESHUV; OPT[COLON;type_]; b=OPT[BIND; a = atom LEVEL "0" -> a ] ->
           (match b with None -> mkFreshUVar () | Some b ->
            mkLam Func.(show dummyname)  b)
-      | s = LITERAL -> mkString s
+      | s = LITERAL -> mkC CData.(cstring.cin s)
       | s = QUOTED -> mkQuoted s
-      | s = INTEGER -> mkInt (int_of_string s) 
-      | s = FLOAT -> mkFloat (float_of_string s) 
+      | s = INTEGER -> mkC CData.(cint.cin (int_of_string s))
+      | s = FLOAT -> mkC CData.(cfloat.cin (float_of_string s))
       | LPAREN; a = atom; RPAREN -> a
       | LCURLY; a = atom; RCURLY -> mkApp [Const Func.spillf;a]
         (* 120 is the first level after 110, which is that of ,

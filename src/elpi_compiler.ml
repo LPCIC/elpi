@@ -42,7 +42,7 @@ let spill types modes ast =
   let rec apply_to names variable = function
     | A.Const f when List.exists (F.equal f) names ->
         A.App(A.Const f,[variable])
-    | (A.Const _ | A.String _ | A.Int _ | A.Float _ | A.Quoted _) as x -> x
+    | (A.Const _ | A.CData _ | A.Quoted _) as x -> x
     | A.Lam(x,t) -> A.Lam(x,apply_to names variable t)
     | A.App(A.Const f,args) when List.exists (F.equal f) names ->
         A.App(A.Const f,List.map (apply_to names variable) args @ [variable])
@@ -66,8 +66,7 @@ let spill types modes ast =
     | Const _ as x when x == any -> `Any
     | _ -> `Unknown in
   let type_of = function
-    | (A.String _|A.Float _|A.Int _
-      |A.App _|A.Lam _|A.Quoted _) -> `Unknown
+    | (A.CData _|A.App _|A.Lam _|A.Quoted _) -> `Unknown
     | A.Const c ->
        if F.(equal c andf || equal c andf2)
        then `Variadic(`Prop, `Prop)
@@ -156,7 +155,7 @@ let spill types modes ast =
            aux (type_of hd) args in
        if is_prop then [], [add_spilled spills ctx (A.App(hd, args))]
        else spills, [A.App(hd,args)]
-    | (A.String _ | A.Float _ | A.Int _ | A.Const _ | A.Quoted _) as x -> [],[x]
+    | (A.CData _ | A.Const _ | A.Quoted _) as x -> [],[x]
     | A.Lam(x,t) ->
        let sp, t = spaux1 (x::ctx) t in
        let (t,_), sp = map_acc (fun (t,n) (names, call) ->
@@ -426,13 +425,9 @@ let stack_term_of_ast ?(inner_call=false) ~depth:arg_lvl state ast =
        set_varmap state orig_varmap, Lam t'
     | A.App (A.App (f,l1),l2) ->
        aux inner lvl state (A.App (f, l1@l2))
-    | A.String str -> state, C.of_string (F.show str)
-    | A.Int i -> state, CData (in_int i)
-    | A.Float f -> state, CData (in_float f)
+    | A.CData c -> state, CData (CData.hcons c)
     | A.App (A.Lam _,_) -> error "Beta-redexes not in our language"
-    | A.App (A.String _,_) -> type_error "Applied string value"
-    | A.App (A.Int _,_) -> type_error "Applied integer value"
-    | A.App (A.Float _,_) -> type_error "Applied float value"
+    | A.App (A.CData _,_) -> type_error "Applied literal"
     | A.Quoted { A.data; A.kind = None } ->
          let unquote =
            option_get ~err:"No default quotation" !default_quotation in
@@ -603,7 +598,7 @@ let program_of_ast ?print ?(allow_undeclared_custom_predicates=false) (p : Elpi_
       let names = names_of_qnames names in
       debug_print ?print names t;
       let moreclauses, _, morelcs = clausify (get_modes state) nargs lcs t in
-      let loc = in_loc (loc, id) in
+      let loc = CData.(A.cloc.cin (loc, id)) in
       clauses @ List.(map (fun clbody -> 
          { clloc = loc; clargsname = names; clbody})
         (rev moreclauses)),
@@ -816,7 +811,7 @@ let quote_syntax { compiler_state } { qloc; qnames; qenv; qterm } =
   let clist = list_to_lp_list (List.map quote_clause clauses) in
   let q =
     let vars = Array.length qenv in
-    App(Constants.andc,CData (in_loc (qloc,Some "query")), 
+    App(Constants.andc,CData CData.(A.cloc.cin (qloc,Some "query")), 
       [list_to_lp_list names;
        close_w_binder argc (quote_term ~on_type:false vars qterm) vars]) in
   clist, q

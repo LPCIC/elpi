@@ -131,6 +131,7 @@ module CData : sig
     data_pp : Format.formatter -> 'a -> unit;
     data_eq : 'a -> 'a -> bool;
     data_hash : 'a -> int;
+    data_hconsed : bool;
   }
 
   type 'a cdata = { cin : 'a -> t; isc : t -> bool; cout: t -> 'a }
@@ -141,6 +142,7 @@ module CData : sig
   val equal : t -> t -> bool
   val hash : t -> int
   val name : t -> string
+  val hcons : t -> t
 
   val morph1 : 'a cdata -> ('a -> 'a) -> t -> t
 

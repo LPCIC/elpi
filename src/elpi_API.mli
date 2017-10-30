@@ -132,6 +132,7 @@ module Extend : sig
       data_pp : Format.formatter -> 'a -> unit;
       data_eq : 'a -> 'a -> bool;
       data_hash : 'a -> int;
+      data_hconsed : bool;
     }
 
     type 'a cdata = { cin : 'a -> t; isc : t -> bool; cout: t -> 'a }
@@ -144,6 +145,7 @@ module Extend : sig
     val equal : t -> t -> bool
     val hash : t -> int
     val name : t -> string
+    val hcons : t -> t
 
     (** tests if two cdata have the same given type *)
     val ty2 : 'a cdata -> t -> t -> bool
@@ -169,9 +171,7 @@ module Extend : sig
     val mkSeq : term list -> term
 
     (** builtin data *)
-    val mkFloat : float -> term
-    val mkInt : int -> term
-    val mkString : string -> term
+    val mkC : CData.t -> term
 
     (** quotation node *)
     val mkQuoted : string -> term
@@ -240,10 +240,7 @@ module Extend : sig
       val to_float : CData.t -> float
       val of_float : float -> term
     
-      type hashconsed_string
-      val hashcons : string -> hashconsed_string
-
-      val string : hashconsed_string CData.cdata
+      val string : string CData.cdata
       val is_string : CData.t -> bool
       val to_string : CData.t -> string
       val of_string : string -> term

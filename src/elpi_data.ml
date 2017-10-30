@@ -10,40 +10,6 @@ open Elpi_util
 
 module IM = Map.Make(struct type t = int let compare x y = x - y end)
 
-let { CData.cin = in_float; isc = is_float; cout = out_float } as cfloat =
-  CData.(declare {
-    data_name = "float";
-    data_pp = (fun f x -> Fmt.fprintf f "%f" x);
-    data_eq = (==);
-    data_hash = Hashtbl.hash;
-  })
-let { CData.cin = in_int; isc = is_int; cout = out_int } as cint =
-  CData.(declare {
-    data_name = "int";
-    data_pp = (fun f x -> Fmt.fprintf f "%d" x);
-    data_eq = (==);
-    data_hash = Hashtbl.hash;
-  })
-let { CData.cin = in_string; isc = is_string; cout = out_string } as cstring =
-  CData.(declare {
-    data_name = "string";
-    data_pp = (fun f x -> Fmt.fprintf f "\"%s\"" (F.show x));
-    data_eq = (==);
-    data_hash = Hashtbl.hash;
-  })
-let { CData.cin = in_loc; isc = is_loc; cout = out_loc } as cloc =
-  CData.(declare {
-    data_name = "loc";
-    data_pp = (fun f (x,name) ->
-      let bname = Filename.basename (Ploc.file_name x) in
-      let line_no = Ploc.line_nb x in
-      match name with
-      | None -> Fmt.fprintf f "%s:%4d:" bname line_no 
-      | Some name -> Fmt.fprintf f "%s:%4d:%s:" bname line_no name);
-    data_eq = (==);
-    data_hash = Hashtbl.hash;
-  })
-
 (******************************************************************************
   Terms: data type definition and printing
  ******************************************************************************)
@@ -112,22 +78,25 @@ and constraint_def = {
 [@@deriving show, eq]
 
 module C = struct
-  let int = cint
+
+  let { CData.cin = in_int; isc = is_int; cout = out_int } as int =
+    Elpi_ast.cint
   let is_int = is_int
   let to_int = out_int
   let of_int x = CData (in_int x)
 
-  let float = cfloat
+  let { CData.cin = in_float; isc = is_float; cout = out_float } as float =
+    Elpi_ast.cfloat
   let is_float = is_float
   let to_float = out_float
   let of_float x = CData (in_float x)
-
-  type hashconsed_string = F.t
-  let hashcons = F.from_string
-  let string = cstring
+  
+  let { CData.cin = in_string; isc = is_string; cout = out_string } as string =
+    Elpi_ast.cstring
   let is_string = is_string
-  let to_string x = F.show (out_string x)
-  let of_string x = CData (in_string (F.from_string x))
+  let to_string x = out_string x
+  let of_string x = CData (in_string x)
+
 end
 
 let destConst = function Const x -> x | _ -> assert false

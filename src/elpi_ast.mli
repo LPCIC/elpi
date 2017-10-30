@@ -45,14 +45,11 @@ type term =
    Const of Func.t
  | App of term * term list
  | Lam of Func.t * term
- | String of Func.t
- | Int of int 
- | Float of float 
+ | CData of Elpi_util.CData.t
  | Quoted of quote
 and quote = { data : string; kind : string option }
 
 val equal_term : term -> term -> bool
-val compare_term : term -> term -> int
 val pp_term : Format.formatter -> term -> unit
 val show_term : term -> string
 
@@ -116,10 +113,16 @@ val mkApp : term list -> term
 val mkCon : string -> term
 val mkNil : term
 val mkSeq : term list -> term
-val mkFloat : float -> term
-val mkInt : int -> term
-val mkString : string -> term
 val mkQuoted : string -> term
 val mkFreshUVar : unit -> term
 val mkFreshName : unit -> term
 val mkLam : string -> term -> term
+val mkC : Elpi_util.CData.t -> term
+
+open Elpi_util.CData
+
+val cfloat : float cdata
+val cint : int cdata
+val cstring : string cdata
+val cloc : (Ploc.t * string option) cdata
+
