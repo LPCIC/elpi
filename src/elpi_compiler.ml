@@ -537,7 +537,7 @@ let chr_of_ast depth state r =
     let { name2arg } = get_argmap state in
     match StrMap.find (F.show f) name2arg with
     | (_, n) -> n
-    | exception Not_found -> error "alignement on a non Arg" in
+    | exception Not_found -> error "alignment on a non Arg" in
   let state, to_match = map_acc intern2 state r.A.to_match in
   let state, to_remove = map_acc intern2 state r.A.to_remove in
   let state, guard = option_mapacc intern state r.A.guard in
