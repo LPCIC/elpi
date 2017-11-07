@@ -479,6 +479,8 @@ module HO : sig
   val mkAppArg : int -> int -> term list -> term
   val is_flex : depth:int -> term -> term_attributed_ref option
   val list_to_lp_list : term list -> term
+
+  val mknLam : int -> term -> term
     
 end = struct 
 (* {{{ *)
