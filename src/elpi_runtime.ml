@@ -59,8 +59,9 @@ let xppterm ~nice ?(min_prec=min_prec) depth0 names argsdepth env f t =
       m := (r,s)::!m;
       s
     in
-     Fmt.fprintf f "%s%s" s
+     Fmt.fprintf f "%s%s%s" s
       (if vardepth=0 then "" else "^" ^ string_of_int vardepth)
+      (if args=0 then "" else "+" ^ string_of_int args)
    end else if nice then begin
     aux prec depth f (!do_deref ~from:vardepth ~to_:depth args !!r)
    end else Fmt.fprintf f "<%a>_%d" (aux min_prec vardepth) !!r vardepth
