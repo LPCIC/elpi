@@ -120,6 +120,8 @@ val set_anomaly : (string -> 'a) -> unit
 val set_type_error : (string -> 'a) -> unit
 val set_std_formatter : Format.formatter -> unit
 val set_err_formatter : Format.formatter -> unit
+val set_formatters_maxcols : int -> unit
+val set_formatters_maxbox : int -> unit
 
 (* ****************** external data *****************)
 

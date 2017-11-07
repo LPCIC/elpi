@@ -73,6 +73,13 @@ let type_error_f = ref (Obj.repr default_type_error)
 let std_fmt      = ref Format.std_formatter
 let err_fmt      = ref Format.err_formatter
 
+let set_formatters_maxcols i =
+  Format.pp_set_margin !std_fmt i;
+  Format.pp_set_margin !err_fmt i
+let set_formatters_maxbox i =
+  Format.pp_set_max_boxes !std_fmt i;
+  Format.pp_set_max_boxes !err_fmt i
+
 let set_warn f       = warn_f       := (Obj.repr f)
 let set_error f      = error_f      := (Obj.repr f)
 let set_anomaly f    = anomaly_f    := (Obj.repr f)

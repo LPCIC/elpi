@@ -185,6 +185,7 @@ let usage =
   "\t-trace-skip REX  ignore trace items matching REX\n" ^
   "\t-trace-only REX  trace only items matching REX\n" ^
   "\t-trace-maxbox NUM  Format max_boxes set to NUM\n" ^
+  "\t-trace-maxcols NUM  Format margin set to NUM\n" ^
   "\t-stats-on  Collect statistics\n" ^
   "\t-perf-on  Disable trace output, but keep perf\n" 
 ;;
@@ -210,7 +211,10 @@ let parse_argv argv =
          only := expr :: !only;
          aux rest
     | "-trace-maxbox" :: num :: rest ->
-         Format.pp_set_max_boxes Format.err_formatter (int_of_string num);
+         set_formatters_maxbox (int_of_string num);
+         aux rest
+    | "-trace-maxcols" :: num :: rest ->
+         set_formatters_maxcols (int_of_string num);
          aux rest
     | "-perf-on" :: rest ->
          collect_perf := true; on := true; trace_noprint := true; aux rest
