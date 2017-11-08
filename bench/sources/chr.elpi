@@ -1,61 +1,36 @@
-% Examples that must succeed:
-% term (lam x \ X x) (arr A nat), term (lam x \ X x) (arr bool B).
-% term (lam x \ lam y \ X (app x y)) (arr (arr A Y) (arr A nat)), term (lam x \ X x) (arr bool B).
-
-% Examples that must fail:
-% term (lam x \ X x) (arr A nat), term (lam x \ X) (arr bool B).
-% term (lam x \ X x) (arr nat nat), term (lam x \ X x) (arr bool B).
-% term (lam x \ lam y \ X (app x y)) (arr X (arr A nat)), term (lam x \ X x) (arr bool B).
-% -- reason: (app x y) is not well typed when X and A are frozen
-
 mode (term i o).
+term (app HD ARG) TGT :- term HD (arr SRC TGT), term ARG SRC.
+term (lam F) (arr SRC TGT) :- pi x\ term x SRC => term (F x) TGT.
+term (?? as X) T :- declare_constraint (term X T) [X].
 
-term (app X Y) B :- term X (arr A B), term Y A.
-term (lam F) (arr A B) :- pi x\ term x A => term (F x) B.
-term (?? as X) A :-declare_constraint (term X A) X.
-
-infixr ====> 126. % Implication where the l.h.s. is a list of propositions.
+len [] 0.
+len [_|XS] N :- len XS M, N is M + 1.
 
 constraint term {
-  rule (GX ?- term (?? as X) TX)
-     \ (GY ?- term (?? as Y) TY)
-     > X = Y
-     | (X = uvar _ XL, Y = uvar _ YL,
-        compatible GX LX GY LY CTXCONSTR)
+  rule
+     \ (term (uvar K LX) _) (term (uvar _ LY) _)
+     | (len LX N, len LY M, not(N = M))
+   <=> (print "wrong arity" K, false).
+
+  rule (GX ?- term (uvar _ LX) TX)
+     \ (GY ?- term (uvar _ LY) TY)
+     > LX ~ LY
+     | (compatible GX LX GY LY CTXCONSTR)
    <=> (CTXCONSTR, TX = TY).
+
 }
 
-%compatible A B C D E :- print "##" (compatible A B C D E), fail.
 compatible _ [] _ [] true :- !.
 compatible GX [X|XS] GY [Y|YS] (TX = TY, K) :-
- (GX ====> term X TX),
- (GY ====> term Y TY),
+ (GX => term X TX),
+ (GY => term Y TY),
  !,
  compatible GX XS GY YS K.
 compatible _ _ _ _ false.
 
-    [] ====> T :- T.
-[X|XS] ====> T :- X => (XS ====> T).
+main :-
+  (term (lam x\ lam y\ app (app (F x y) x) y) T1, term (lam y\ lam x\ app (app (F x y) y) x) T2),
+  (term (lam x \ X x) (arr A nat), term (lam x \ X x) (arr bool B)),
+  not(term (lam x \ Y x) (arr C nat), term (lam x \ Y) (arr bool C)),
+  not(term (lam x \ Z x) (arr nat nat), term (lam x \ Z x) (arr bool D)).
 
-spy P :- print "[" P, P, print "]ok", !.
-spy P :- print "]fail", fail.
-
-main :- 
-  (sigma X\
-    term b2n (arr bool nat) =>
-      (term (lam x \ X x) (arr A nat),
-       term (lam x \ X x) (arr bool B),
-       spy (not(X = x\x)),
-       spy (X = x\ app b2n x))),
-
-  (sigma X\sigma T1\sigma T2\sigma TY1\sigma TY2\
-    term b2n (arr bool nat) =>
-     (T1 = (lam f \ lam y \ X (app f y)), TY1 = (arr (arr A Y) (arr A nat)),
-      T2 = (lam x \ X x), TY2 = (arr bool B),
-      term T1 TY1, term T2 TY2,
-      spy (not(X = x\x)),
-      spy (X = x\ app b2n x),
-      print T1 ":" TY1,
-      print T2 ":" TY2)),
-
-  true.

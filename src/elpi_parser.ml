@@ -488,6 +488,13 @@ let desugar_macro = function
   | _ -> raise (Stream.Error "Illformed macro")
 ;;
 
+let constant_colon strm =
+  match Stream.npeek 2 strm with
+  | [ ("CONSTANT",_); ("COLON",_) ] -> ()
+  | _ -> raise Stream.Failure
+let constant_colon =
+  Grammar.Entry.of_parser g "constant_colon" constant_colon
+
 EXTEND
   GLOBAL: lp goal;
   lp: [ [ cl = LIST0 clause; EOF -> List.concat cl ] ];
@@ -514,27 +521,29 @@ EXTEND
   chrrule :
     [[ to_match = LIST0 sequent;
        to_remove = OPT [ BIND; l = LIST1 sequent -> l ];
-       alignement = OPT [ a =
-         [ SYMBOL ">"; hd = CONSTANT; a =
-             [ SYMBOL "="; l = LIST1 CONSTANT SEP SYMBOL "=" -> (l,`Spread)
-             | SYMBOL "~"; l = LIST1 CONSTANT SEP SYMBOL "~" -> (l,`Align) ]
-          -> hd :: fst a, snd a ] -> a];
-       guard = OPT [ PIPE; a = atom LEVEL "abstterm" -> a ];
-       new_goal = OPT [ SYMBOL "<=>"; g = atom -> g ] ->
-         let to_remove = match to_remove with None -> [] | Some l -> l in
-         let alignement =
-           match alignement with
-           | None -> None
-           | Some (alignement,x) ->
-               Some (List.map Func.from_string alignement,x) in
-         create_chr ~to_match ~to_remove ?alignement ?guard ?new_goal ()
+       alignment = OPT [
+         SYMBOL ">"; hd = CONSTANT; SYMBOL "~"; l = LIST1 CONSTANT SEP SYMBOL "~" -> List.map Func.from_string (hd :: l) ];
+       guard = OPT [ PIPE; a = atom LEVEL "abstterm" -> Some a ];
+       new_goal = OPT [ SYMBOL "<=>"; gs = sequent -> Some gs ] ->
+         create_chr_rule ~to_match ?to_remove ?alignment ?guard ?new_goal ()
     ]];
+  sequent_core :
+    [ [ constant_colon; e = CONSTANT; COLON; t = atom -> Some e, (t : term) 
+      | t = atom -> None, (t : term) ]
+    ];
   sequent :
-    [[ LPAREN; t1 = atom; RPAREN ->
-         match t1 with
-         | App(Const x,[a;b]) when Func.equal x Func.sequentf -> a, b
-         | _ -> mkFreshUVar (), t1
-    ]];
+   [[ LPAREN; c = sequent_core; RPAREN ->
+         let e, t1 = (c : string option * term) in
+         let eigen =
+           match e with Some x -> mkCon x | None -> mkFreshUVar () in
+         let context, conclusion =
+           match t1 with
+           | App(Const x,[a;b]) when Func.equal x Func.sequentf -> a, b
+           | _ -> mkFreshUVar (), t1 in
+         { eigen; context; conclusion }
+    | c = atom LEVEL "abstterm" ->
+         { eigen = mkFreshUVar (); context = mkFreshUVar (); conclusion = c }
+   ]];
   clname : [[ COLON; CONSTANT "name";
               name = [ c = CONSTANT -> c | l = LITERAL -> l] -> name ]];
   clinsert :

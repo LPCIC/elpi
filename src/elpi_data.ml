@@ -8,7 +8,15 @@ module Fmt = Format
 module F = Elpi_ast.Func
 open Elpi_util
 
-module IM = Map.Make(struct type t = int let compare x y = x - y end)
+module IM = struct
+ include Map.Make(struct type t = int let compare x y = x - y end)
+ let pp f fmt m =
+   iter (fun k v -> Fmt.fprintf fmt "%d |-> %a" k f v) m
+ let show f m =
+   let b = Buffer.create 20 in
+   iter (fun k v -> Printf.bprintf b "%d |-> %s," k (f v)) m;
+   Buffer.contents b
+end
 
 (******************************************************************************
   Terms: data type definition and printing
@@ -69,11 +77,11 @@ and unification_def = {
   b : term;
 }
 and constraint_def = {
-  depth : int;
+  cdepth : int;
   prog : prolog_prog [@equal fun _ _ -> true]
                [@printer (pp_extensible pp_prolog_prog)];
-  pdiff : (int * term) list;
-  goal : term;
+  context : (int * term) list;
+  conclusion : term;
 }
 [@@deriving show, eq]
 
@@ -270,7 +278,21 @@ module CHR : sig
   (* a set of predicates contributing to represent a constraint *)
   type clique 
 
-  type rule = (term, int) Elpi_ast.chr
+  type sequent = { eigen : term; context : term; conclusion : term }
+  and alignment = { arg2sequent : int IM.t; keys : (string * int) list }
+  and rule = {
+    to_match : sequent list;
+    to_remove : sequent list;
+    alignment : alignment option;
+    guard : term option;
+    new_goal : sequent option;
+    nargs : int [@default 0];
+    pattern : Constants.t list;
+  }
+  val pp_sequent : Format.formatter -> sequent -> unit
+  val show_sequent : sequent -> string
+  val pp_rule : Format.formatter -> rule -> unit
+  val show_rule : rule -> string
 
   val empty : t
 
@@ -282,8 +304,22 @@ module CHR : sig
 
 end = struct (* {{{ *)
 
-  type rule = (term, int) Elpi_ast.chr
-  type t = { cliques : Constants.Set.t Constants.Map.t; rules : rule list Constants.Map.t }
+  type sequent = { eigen : term; context : term; conclusion : term }
+  and alignment = { arg2sequent : int IM.t; keys : (string * int) list }
+  and rule = {
+    to_match : sequent list;
+    to_remove : sequent list;
+    alignment : alignment option;
+    guard : term option;
+    new_goal : sequent option;
+    nargs : int [@default 0];
+    pattern : Constants.t list;
+  }
+  [@@ deriving show]
+  type t = {
+    cliques : Constants.Set.t Constants.Map.t;
+    rules : rule list Constants.Map.t
+  }
   type clique = Constants.Set.t
 
   let empty = { cliques = Constants.Map.empty; rules = Constants.Map.empty }

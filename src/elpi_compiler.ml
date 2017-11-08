@@ -192,9 +192,14 @@ type argmap = {
   name2arg : (term * int) StrMap.t;       (* "X" -> Const "%Arg4", 4 *)
   argc2name : (string * int) Constants.Map.t; (* "%Arg4" -> "X", 4 *)
    (* constant used for symbolic pre-computation, real Arg number *)
+  arg2name : string IM.t;
 }
 
-let empty_amap = { max_arg = 0; name2arg = StrMap.empty; argc2name = Constants.Map.empty }
+let empty_amap = {
+  max_arg = 0;
+  name2arg = StrMap.empty;
+  argc2name = Constants.Map.empty;
+  arg2name = IM.empty }
 
 type varmap = term F.Map.t 
 type quotation = depth:int -> CompilerState.t -> string -> CompilerState.t * term
@@ -256,14 +261,15 @@ let is_Arg state x =
 *)
 
 let mk_Arg state n =
-  let { max_arg; name2arg } = get_argmap state in
+  let { max_arg; name2arg; arg2name } = get_argmap state in
   let cname = Printf.(sprintf "%%Arg%d" max_arg) in
   let n' = Constants.(from_string cname) in
   let nc = Constants.(from_stringc cname) in
   update_argmap state (fun { name2arg; argc2name } ->
     { max_arg = max_arg+1 ;
       name2arg = StrMap.add n (n',max_arg) name2arg;
-      argc2name = Constants.Map.add nc (n,max_arg) argc2name }),
+      argc2name = Constants.Map.add nc (n,max_arg) argc2name;
+      arg2name = IM.add max_arg n arg2name }),
     n', nc
 
 let fresh_Arg =
@@ -505,48 +511,119 @@ let lp ~depth state s =
   let _loc, ast = Elpi_parser.parse_goal_from_stream (Stream.of_string s) in
   stack_term_of_ast ~inner_call:true ~depth state ast
 
-
-(* We check no (?? X L) patter is there *)
-let assert_no_uvar_destructuring l =
-  let rec test = function (* TODO: use generic iterator *)
-    | App (c,_,_) when c == Constants.uvc -> true
-    | App (_,x,xs) -> test x || List.exists test xs
-    | Const _ -> false
-    | Lam t -> test t
-    | Arg _ -> false
-    | AppArg (_,l) -> List.exists test l
-    | UVar _ | AppUVar _ -> assert false
-    | Custom (_,l) -> List.exists test l
-    | CData _ -> false
-    | Nil -> false
-    | Discard -> false
-    | Cons (t1,t2) -> test t1 || test t2
-  in
-  if List.exists (fun (x,y) -> test x || test y) l then
-    error "Variable can only be introspected (eg ?? X L) in the guard"
-;;
-
 let chr_of_ast depth state r =
+  if depth > 0 then error "CHR: rules and locals are not supported";
   let state = set_argmap state empty_amap in
   let intern state t = stack_term_of_ast ~depth state t in
-  let intern2 state (t1,t2) =
-    let state, t1 = intern state t1 in
-    let state, t2 = intern state t2 in
-    state, (t1,t2) in
   let internArg state f =
     let { name2arg } = get_argmap state in
     match StrMap.find (F.show f) name2arg with
-    | (_, n) -> n
-    | exception Not_found -> error "alignment on a non Arg" in
-  let state, to_match = map_acc intern2 state r.A.to_match in
-  let state, to_remove = map_acc intern2 state r.A.to_remove in
+    | (_, n) -> F.show f, n
+    | exception Not_found -> error ("CHR: variable expected, got "^ F.show f) in
+  let intern_sequent state { A.eigen; context; conclusion } =
+    let state, eigen = intern state eigen in
+    let state, context = intern state context in
+    let state, conclusion = intern state conclusion in
+    state, { CHR.eigen; context; conclusion } in
+  let key_of_sequent { CHR.conclusion } =
+    match conclusion with
+    | Const x -> x
+    | App(x,_,_) -> x
+    | _ -> assert false in
+  let arg_occurs argno t =
+    let rec arg_occurs = function
+      | (Const _ | UVar _ | Discard | CData _ | Nil) -> false
+      | Arg(i,_) -> i = argno
+      | AppArg(i,args) -> i = argno || List.exists arg_occurs args
+      | AppUVar(_,_,args) -> List.exists arg_occurs args
+      | App(_,x,xs) -> arg_occurs x || List.exists arg_occurs xs
+      | Custom(_,xs) -> List.exists arg_occurs xs
+      | Cons(x,y) -> arg_occurs x || arg_occurs y
+      | Lam x -> arg_occurs x
+    in
+      arg_occurs t
+  in
+  let assert_used_only_in patterns patno (name,argno) =
+    List.iteri (fun i { CHR.conclusion; context } ->
+      let occurs = arg_occurs argno context || arg_occurs argno conclusion in
+      if i <> patno &&occurs then
+        error (Printf.sprintf "CHR: Alignment variable %s is used in the %dth pattern instead of the %dth" name i patno);
+      if i = patno && not occurs then
+        error (Printf.sprintf "CHR: Alignment variable %s (%dth position) is not used in the %dth pattern" name patno patno)) patterns
+  in
+  let assert_1_key_per_goal kg ngoals =
+    let gs = List.map snd kg in
+    let uniq_gs = uniq (List.sort compare gs) in
+    if List.length gs <> List.length uniq_gs || List.length gs <> ngoals then
+      error "CHR: Alignment invalid: 1 and only 1 key per sequent"
+  in
+  let assert_no_uvar_destructuring l =
+    let rec test = function
+      | App (c,_,_) when c == Constants.uvc -> true
+      | Const c when c == Constants.uvc -> true
+      | App (_,x,xs) -> test x || List.exists test xs
+      | Lam t -> test t
+      | (Const _ | Arg _ | CData _ | Nil | Discard) -> false
+      | AppArg (_,l) -> List.exists test l
+      | Custom (_,l) -> List.exists test l
+      | Cons (t1,t2) -> test t1 || test t2
+      | UVar _ | AppUVar _ -> assert false
+    in
+  if List.exists (fun { CHR.context; conclusion } ->
+      test context || test conclusion) l then
+    error "CHR: unification variables are represented as (uvar Key Args), you can't use ?? to match them"
+  in
+  let mk_arg2sequent argsno sequents state =
+    let arg_occurs_seq arg { CHR.context; conclusion; eigen } =
+      arg_occurs arg context ||
+      arg_occurs arg conclusion ||
+      arg_occurs arg eigen in 
+    let m = ref IM.empty in
+    for i = 0 to argsno do
+      List.iteri (fun j s ->
+        let occ = arg_occurs_seq i s in
+        if IM.mem i !m && occ then begin
+          let n = IM.find i (get_argmap state).arg2name in
+          error (Printf.sprintf "CHR: sequent %d and %d share variable %s"
+            j (IM.find i !m) n)
+        end;
+        if occ then m := IM.add i j !m)
+        sequents;
+    done;
+    !m in
+  let state, to_match = map_acc intern_sequent state r.A.to_match in
+  let state, to_remove = map_acc intern_sequent state r.A.to_remove in
   let state, guard = option_mapacc intern state r.A.guard in
-  let state, new_goal = option_mapacc intern state r.A.new_goal in
-  let alignement =
-    List.map (internArg state) (fst r.A.alignement), snd r.A.alignement in
+  let state, new_goal = option_mapacc intern_sequent state r.A.new_goal in
   let nargs = (get_argmap state).max_arg in
-  assert_no_uvar_destructuring (to_match @ to_remove);
-  { A.to_match; to_remove; guard; new_goal; alignement; depth; nargs }
+  let all_sequents = to_match @ to_remove in
+  let nsequents = List.length all_sequents in
+  let pattern = List.map key_of_sequent all_sequents in
+  let alignment, new_goal =
+    if r.A.alignment = [] then begin
+      let new_goal = match new_goal with
+      | Some ({ CHR.eigen = Discard } as g) ->
+          Some { g with CHR.eigen = C.of_int 0 }
+      | _ -> new_goal in
+      None, new_goal
+    end else begin
+      begin match new_goal with
+      | Some { CHR.eigen } when eigen <> Discard ->
+          error"CHR: both alignment directive and explicit eigen variable given in new goal"
+      | _ -> ()
+      end;
+      if List.length r.A.alignment <>
+         List.length (uniq (List.sort compare r.A.alignment))
+         then error "CHR: alignement with duplicates";
+      let keys = List.map (internArg state) r.A.alignment in
+      assert_1_key_per_goal (List.mapi (fun i j -> j,i) keys) nsequents;
+      List.iteri (assert_used_only_in all_sequents) keys;
+      Some { CHR.keys; arg2sequent = mk_arg2sequent nargs all_sequents state },
+      new_goal
+    end in
+  assert_no_uvar_destructuring all_sequents;
+  { CHR.to_match; to_remove; guard; new_goal; alignment; nargs; pattern }
+;;
 
 let sort_insertion l =
   let rec insert loc name c = function

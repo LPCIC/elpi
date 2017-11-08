@@ -131,8 +131,8 @@ module Extend = struct
       goal : int * term
     }
     let constraints = Elpi_util.map_filter (function
-      | { kind = Constraint { depth; goal; pdiff } } ->
-          Some { context = pdiff ; goal = (depth, goal) }
+      | { kind = Constraint { cdepth; conclusion; context } } ->
+          Some { context ; goal = (cdepth, conclusion) }
       | _ -> None)
   end
 

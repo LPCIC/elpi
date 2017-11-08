@@ -295,15 +295,17 @@ mode (foo i o).
 
 ## Syntactic constraints
 
-A goal can be suspended on a list of variables with the `declare_constraint` built in.
+A goal can be suspended on a list of variables with the `declare_constraint` 
+built in.  In the following example the goal `even X` is suspended on the
+variable `X`.
 ```prolog
 goal> declare_constraint (even X) [X].
 Success:
 Constraints:
-   ⊢ (even X)
+  even X  /* suspended on X */
 ```
-Suspended goals are resumed as soon as any of variables they are suspended on
-gets assigned.
+Suspended goals are resumed as soon as any of the 
+variables they are suspended on gets assigned.
 ```
 goal> declare_constraint (even X) [X], X = 1.
 Failure
@@ -314,14 +316,14 @@ Hypothetical clauses are kept:
 goal> pi x\ sigma Y\ even x => declare_constraint (even Y) [Y].
 Success:
 Constraints:
-  even x ⊢ even (W x)
+ {x} : even x ?- even (W x)  /* suspended on W */
 
 goal> pi x\ sigma Y\ even x => (declare_constraint (even Y) [Y], Y = x).
 Success:
 ```
 
-The `declare_constraint` built in is typically used in conjunction with `mode` as
-follows:
+The `declare_constraint` built in is typically used in conjunction with `mode`
+as follows:
 ```prolog
 mode (even i).
 even (?? as X) :- !, declare_constraint (even X) [X].
@@ -342,8 +344,17 @@ constraint foo bar ... {
 The effect is that whenever a goal about `foo` or `bar`
 is suspended (via `declare_constraint`) only its hypothetical
 clauses about `foo` or `bar` are kept.
-Moreover, when two or more goals are suspended the rules
-between curly braces apply.
+
+The first variable on which a constraint is suspended is said to be its key.
+When one or more goals are suspended *on the same key*, 
+the rules between curly braces apply.
+In most cases it is useless to manipulate two goals 
+that don't share the key.  If it is not the case, one can
+pick a single key for all suspended goals. Eg.
+```
+master-key K => (even X, even Y).
+even (?? as X) :- !, master-key K, declare_constraint (even X) [K,X].
+```
 
 #### Example
 ```prolog
@@ -358,60 +369,37 @@ even X :- X > 1, Y is X - 1, odd  Y.
 odd  X :- X > 0, Y is X - 1, even Y.
 
 constraint even odd {
-  rule (even X) (odd Y) > X ~ Y <=> false.
+  rule (even X) (odd X) <=> false.
 }
 ```
 
 ```
 goal> whatever => even X.
 Constraints:
-   ⊢ even X
+  even X  /* suspended on X */
 goal> even X, odd X.
 Failure
 ```
 ### Constraint Handling Rules
 
-```prolog
-constraint c1..cn {
-  rule (m1)..(mn) \ (r1)..(rm) > x1 ~ x2 .. ~ xn | guard <=> new.
-  rule ...
-}
+#### Syntax
+Here `+` means one or more, `*` zero or more
 ```
-
-where `m` and `r` are sequents as in `(goal)` or `(ctx ?- concl)`,
-`guard` and `new` are goals and `x` is a variable name. `c` is a constraint
-name (head symbol).  The set of `c` defines a constraint clique.
-CHR rules belonging to the block do apply to the clique, and constraints
-in the clique have their context filtered to only contain stuff in the clique.
-Every component (`m`, `r`, `x`, `guard`, `new`) can me omitted.
-
-semantics:
-- `m` is a sequent to be matched.
-- `r` is a sequent to be matched and removed from the store.
-- `guard` is goal that is run in a special runtime where unification variables
-  coming from the constraints are frozen (replaced by fresh constants) and
-  where pi constants are eventually aligned (see below).
-- `new` is a new goal to be injected in the main runtime (not necessarily a
-  constraint) and lives in the initial program.
-- `x` is a unification variable. The alignment condition can be `~` or `=`.
-  - `~` means "check the variable is the same and align heigen variables".
-    This works only if the variables are in Lλ (applied to a duplicate free
-    list of names)
-  - `=` means "check the variable is the same and spread names apart".
-    This works even outside the Lλ fragment.  It is up to the programmer
-    to eventually relate the names in the goals, typically in the guard.
-
-`m` and `r` must use disjoint sets of variables.
-Once `m` and `r` are matched, the alignment is performed and all
-unification variables are frozen. Hence, when `guard` is executed,
-a unification variable `X a (f b)` is represented as `(uvar cX [a',f b'])`
-where `cX` is a fresh constant used in all occurrences of `X`, and 
-`a'` and `b'` are names (their actual value depends on the alignement).
-
-Patterns in `m` and `r` can contain the `??` symbol (used for modes) but not
-the advanced syntax `?? X L` (see the [Advanced modes](#advanced-modes) section).
-
-The application of CHR rules follows the [refined operation semantics](https://en.wikipedia.org/wiki/Constraint_Handling_Rules).
+CONSTRAINT ::= constraint CLIQUE { RULE* }
+CLIQUE ::= NAME+
+RULE ::= rule TO-MATCH TO-REMOVE ALIGN GUARD TO-ADD .
+TO-MATCH  ::= SEQUENT*
+ALIGN     ::= > VARIABLE ~ VARIABLE VARLIST
+TO-REMOVE ::= \   SEQUENT+
+TO-ADD    ::= <=> SEQUENT
+GUARD     ::= TERM
+VARLIST ::= ~ VARIABLE VARLIST |
+SEQUENT ::= TERM | ( VARIABLE : COMPOUND-TERM ?- COMPOUND-TERM )
+TERM ::= VARIABLE | NAME | ( COMPOUND-TERM )
+NAME ::= foo | bar ...
+VARIABLE ::= Foo | Bar ...
+COMPOUND-TERM ::= ...
+```
 
 #### Example of first order rules
 
@@ -422,7 +410,7 @@ we can compute GCDs of 2 sets of numbers: 99, 66 and 22 named X;
 ```prolog
 mode (gcd i i).
 
-gcd A (?? as B) :- declare_constraint (gcd A B) B.
+gcd A (?? as Group) :- declare_constraint (gcd A Group) Group.
 
 % assert result is OK
 gcd 11 group-1 :- print "group 1 solved".
@@ -433,24 +421,29 @@ main :- gcd 99 X, gcd 66 X, gcd 14 Y, gcd 22 X, gcd 77 Y,
         X = group-1, Y = group-2.
 
 constraint gcd {
-  rule (gcd A X) \ (gcd B Y) > X ~ Y | (A = B).
-  rule (gcd A X) \ (gcd B Y) > X ~ Y | (A < B) <=> (C is (B - A), gcd C X).
+  rule (gcd A _) \ (gcd B _) | (A = B).
+  rule (gcd A _) \ (gcd B X) | (A < B) <=> (C is (B - A), gcd C X).
 }
 
 ```
 
-The alignment condition is used to apply the rule to constraints in the same
-set.  Constraints are resumed as regular delayed goals are.
-
+Constraints are resumed as regular delayed goals are.
 
 #### Example of higher order rules
 
+##### Automatic alignment
+
 ```prolog
+mode (term i o).
+term (app HD ARG) TGT :- term HD (arrow SRC TGT), term ARG SRC.
+term (lam F) (arrow SRC TGT) :- pi x\ term x SRC => term (F x) TGT.
+term (?? as X) T :- declare_constraint (term X T) [X].
+
 constraint term {
-  rule (GX ?- term (?? as X) TX)
-     \ (GY ?- term (?? as Y) TY)
-     > X ~ Y
-     | (X = uvar K LX, Y = uvar K LY, compatible GX LX GY LY CTXCONSTR)
+  rule (EX : GX ?- term (uvar _ LX) TX)
+     \ (EY : GY ?- term (uvar _ LY) TY)
+     > LX ~ LY
+     | (compatible GX LX GY LY CTXCONSTR)
    <=> (CTXCONSTR, TX = TY).
 }
 
@@ -461,12 +454,95 @@ compatible GX [X|XS] GY [Y|YS] (TX = TY, K) :-
  !,
  compatible GX XS GY YS K.
 compatible _ _ _ _ false.
+
+main :-
+  (term (lam x\ lam y\ app (app (F x y) x) y) T1),
+  (term (lam y\ lam x\ app (app (F x y) y) x) T2).
 ```
 
-`LX` and `LY` are used to align the goals and it is legit
-to inject `TX = TY` in the main runtime.  This fails if something like
-`term (X (app f y)) T` gets suspended, since alignment only works
-in the Lλ fragment.
+Without the propagation rule the result to `main` would be
+```
+...
+Constraints:
+ {x0 x1} : term x1 X0, term x0 X1 ?- term (X2 x1 x0) (arr X1 (arr X0 X3))  /* suspended on X2 */ 
+ {x0 x1} : term x1 X4, term x0 X5 ?- term (X2 x0 x1) (arr X5 (arr X4 X6))  /* suspended on X2 */
+```
+
+The propagation rule aligns the two sequents by finding the permutation
+between `LX` and `LY` that must be duplicate free lists of names (i.e.
+the variables on which the constraints are suspended must be in
+the Lλ fragment.
+
+Such permutation is applied to the matched constraints, hence
+the guard and the new goal operate on terms all living in the
+same name context.  
+
+The result with the propagation rule enabled is
+```
+ {x0 x1} : term x1 X0, term x0 X0 ?- term (X1 x1 x0) (arr X0 (arr X0 X2))  /* suspended on X1 */
+```
+
+The variables used in the patterns must be disjoint and
+exactly one of them (binding a list of names) has to specified
+in the alignment directive.
+
+##### Manual alignment
+
+If the program goes outside Lλ, no automatic alignment is provided.
+In such case the alignment directive must be omitted. The pattern for
+the sequents can bind the set of eigen variables (an integer) and
+one of them can be used to specify in which name context the new goal will
+run.  Moreover, the guard is executed in the disjoint union of the named
+contexts, i.e. the matched sequents will hare no names.  It is up to the guard
+to gnerate terms that live in the named context chosen for the new goal.
+Patterns can share variables.
+
+Example of a rule that takes the canonical type of K and
+puts it in the CtxActual by replacing all variables (in L)
+by their actual values in V.
+
+```
+constraint of {
+  rule (ECanonical : CtxCanonical ?- of (uvar K L) TyCanonical)
+     \ (EActual    : CtxActual    ?- of (uvar K V) TyActual)
+     | (subst-list L V TyCanonical TyCanonicalV)
+   <=> (EActual : CtxActual ?- unify TyCanonicalV TyActual)
+}
+```
+
+The new goal replaces the (duplicate) typing constrain on K
+by a unification problem that checks that the canonical type
+of K once applied the explicit substitution V is compatible 
+with the actual type.
+
+#### Operational Semantics
+
+As soon as a new constraint C is declared:
+
+1. Each rule (for the clique to which C belongs) is considered,
+   in the order of declaration. Let's call it R.
+2. All constraints suspended *on the same main key* of C are considered
+   (in no specified order). Let's call them CS
+3. if R has n patterns, then all permutations of n-1 elements of CS and C are
+   generated. I.e. C is put in any possible position in a list of
+   other constraints taken from CS, let's call one of such lists S.
+4. The constraints in S are frozen, i.e. all flexible terms (X a1..an) 
+   are replaced by (uvar cx [b1,..,bn]) where cx is a new constant for
+   X and bi is the frozen term for ai. We now have SF.
+5. Each sequent in SF is matched against the corresponding pattern in R.
+   If matching fails, the rule is aborted and the next one is considered.
+6. Depending on the alignment directive all terms are either put in the
+   same name context (if the alignment is present), or spread in different
+   name contexts.
+7. The guard is run.  If it fails the rule is aborted and the next one
+   is considered. It if succeeds all subsequent rules are aborted (*committed 
+   choice*).
+8. The new goal is resumed immediately (before any other active goal).
+   If no alignment is given, then name context
+   has to be specified and the goal is checked to live in such context,
+   otherwise elpi gives an error.
+   
+The application of CHR rules follows the [refined operation semantics](https://en.wikipedia.org/wiki/Constraint_Handling_Rules).
 
 ## Quotations
 

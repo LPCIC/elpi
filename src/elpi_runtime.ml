@@ -244,6 +244,7 @@ module ConstraintStoreAndTrail : sig
   type propagation_item = {
      cstr : constraint_def;
      cstr_position : int;
+     cstr_main_key : term_attributed_ref; (* first key *)
   }
 
   val new_delayed      : propagation_item list ref
@@ -253,7 +254,8 @@ module ConstraintStoreAndTrail : sig
   val remove_old : stuck_goal -> unit
   val remove_old_constraint : constraint_def -> unit
 
-  val contents : unit -> constraint_def list
+  val contents :
+    ?cstr_main_key:term_attributed_ref -> unit -> constraint_def list
   val print : Fmt.formatter -> constraint_def list -> unit
   val pp_stuck_goal : Fmt.formatter -> stuck_goal -> unit
   val pp_stuck_goal_kind : Fmt.formatter -> stuck_goal_kind -> unit
@@ -297,6 +299,7 @@ end = struct (* {{{ *)
  type propagation_item = {
     cstr : constraint_def;
     cstr_position : int;
+    cstr_main_key : term_attributed_ref;
  }
 
   let custom_constraints =
@@ -322,8 +325,13 @@ let last_call = Fork.new_local false;;
 
 module Ugly = struct let delayed : stuck_goal list ref = Fork.new_local [] end
 open Ugly
-let contents () =
-  map_filter (function { kind = Constraint c } -> Some c | _ -> None) !delayed
+let contents ?cstr_main_key () =
+  let match_key = match cstr_main_key with
+    | None -> fun x -> true
+    | Some r -> fun x -> r == x in
+  map_filter (function
+    | { kind=Constraint c; blockers=main :: _ } when match_key main -> Some c
+    | _ -> None) !delayed
 
 let trail_this i = 
   [%spy "trail-this" (fun fmt i ->
@@ -350,13 +358,14 @@ let print_trail fmt =
     (List.length !to_resume) (List.length !new_delayed)
 
 let declare_new cstr =
-  let cstr =
-    { cstr with blockers = uniqq cstr.blockers } in
+  let blockers = uniqq cstr.blockers in
+  let cstr_main_key = List.hd blockers in
+  let cstr = { cstr with blockers } in
   add cstr ;
   begin match cstr.kind with
   | Unification _ -> ()
   | Constraint cstr ->
-      new_delayed := { cstr; cstr_position = 0} :: !new_delayed
+     new_delayed := { cstr; cstr_position = 0; cstr_main_key } :: !new_delayed
   end;
   trail_this (StuckGoalAddition cstr)
 
@@ -404,33 +413,34 @@ let undo ~old_trail ?old_constraints () =
   | None -> ()
 ;;
 
+let print fmt =
+  let pp_depth fmt d =
+    if d > 0 then
+      Fmt.fprintf fmt "{%a} : "
+        (pplist (uppterm d [] 0 empty_env) "") (C.mkinterval 0 d 0) in
+  let pp_ctx fmt ctx =
+    if ctx <> [] then
+    Fmt.fprintf fmt "%a ?- "
+      (pplist (fun fmt (d,t) -> uppterm d [] 0 empty_env fmt t) ",") ctx in
+  let pp_goal depth g = (uppterm depth [] 0 empty_env) g in
+  List.iter (fun { cdepth=depth; context=pdiff; conclusion = g } ->
+      Fmt.fprintf fmt
+        "@[<hov 2>%a%a%a@]" pp_depth depth pp_ctx pdiff (pp_goal depth) g)
+
 let pp_stuck_goal_kind fmt = function
    | Unification { adepth = ad; env = e; bdepth = bd; a; b } ->
       Fmt.fprintf fmt
-       "delayed goal: @[<hov 2>^%d:%a@ == ^%d:%a@]"
+       "@[<hov 2>^%d:%a@ == ^%d:%a@]"
         ad (uppterm ad [] 0 empty_env) a
         bd (uppterm ad [] ad e) b
-   | Constraint { depth; pdiff; goal = g } ->
-      Fmt.fprintf fmt
-        " @[<hov 2> %a@ ⊢ %a@]"
-          (pplist (fun fmt (depth,t) ->
-             uppterm depth [] 0 empty_env fmt t) ",") pdiff
-          (uppterm depth [] 0 empty_env) g
-       (* CSC: Bug here: print at the right precedence *)
+   | Constraint c -> print fmt [c]
 
 let pp_stuck_goal fmt { kind; blockers } =
       Fmt.fprintf fmt
-       "delayed goal: @[<h>%a on %a@]\n%!" 
+       " @[<h>%a  /* suspended on %a */@]%!" 
           pp_stuck_goal_kind kind
-          (pplist (uppterm 0 [] 0 empty_env) ",")
+          (pplist ~boxed:false (uppterm 0 [] 0 empty_env) ",")
             (List.map (fun r -> UVar(r,0,0)) blockers)
-let print fmt =
-  List.iter (fun { depth; pdiff; goal = g } ->
-      Fmt.fprintf fmt
-        " @[<hov 2> %a@ ?- %a@]\n%!"
-          (pplist (fun fmt (depth,t) -> uppterm depth [] 0 empty_env fmt t) ",") pdiff
-          (uppterm depth [] 0 empty_env) g
-   )
 
 
 end (* }}} *)
@@ -481,6 +491,18 @@ module HO : sig
   val list_to_lp_list : term list -> term
 
   val mknLam : int -> term -> term
+
+  val full_deref : adepth:int -> env -> depth:int -> term -> term
+
+  type assignment = term_attributed_ref * int * term
+  val expand_uv :
+    term_attributed_ref -> lvl:int -> ano:int -> term * assignment option
+  val expand_appuv :
+    term_attributed_ref -> lvl:int -> args:term list -> term * assignment option
+
+  (* only for fully derefd terms living at ~depth
+   * also asserts that no free vars are outside _to *)
+  val shift_bound_vars : depth:int -> to_:int -> term -> term
     
 end = struct 
 (* {{{ *)
@@ -584,7 +606,7 @@ let mkAppArg i fromdepth xxs' =
       p A.
       |- pi x \ p X
       The unification problem becomes X^0 1^=^0 A^1 that triggers the
-      assigment X^0 := to_heap ~from:1 ~to_:0 A^1
+      assignment X^0 := to_heap ~from:1 ~to_:0 A^1
     - On the other hand *I think* that it is not possible to have
       argsdepth < to_ in to_heap.
       It would mean that I am doing an assignment
@@ -1487,6 +1509,77 @@ let unif ?(matching=false) adepth e bdepth a b =
 
 (* }}} *)
 
+let full_deref ~adepth env ~depth t =
+  let rec deref d = function
+  | Const _ as x -> x
+  | Lam r -> Lam (deref (d+1) r)
+  | App (n,x,xs) -> App(n, deref d x, List.map (deref d) xs)
+  | Cons(hd,tl) -> Cons(deref d hd, deref d tl)
+  | Nil as x -> x
+  | Discard as x -> x
+  | Arg (i,ano) when env.(i) != C.dummy ->
+      deref d (deref_uv ~from:adepth ~to_:d ano env.(i))
+  | Arg _ as x -> x
+  | AppArg (i,args) when env.(i) != C.dummy ->
+      deref d (deref_appuv ~from:adepth ~to_:d args env.(i))
+  | AppArg (i,args) -> AppArg (i, List.map (deref d) args)
+  | UVar (r,lvl,ano) when !!r != C.dummy ->
+      deref d (deref_uv ~from:lvl ~to_:d ano !!r)
+  | UVar _ as x -> x
+  | AppUVar (r,lvl,args) when !!r != C.dummy ->
+      deref d (deref_appuv ~from:lvl ~to_:d args !!r)
+  | AppUVar (r,lvl,args) -> AppUVar (r,lvl,List.map (deref d) args)
+  | Custom(c,xs) -> Custom(c,List.map (deref d) xs)
+  | CData _ as x -> x
+  in
+    deref depth t
+type assignment = term_attributed_ref * int * term
+let expand_uv r ~lvl ~ano =
+  let args = C.mkinterval 0 (lvl+ano) 0 in
+  if lvl = 0 then AppUVar(r,lvl,args), None else
+  let r1 = oref C.dummy in
+  let t = AppUVar(r1,0,args) in
+  let assignment = t in
+  t, Some (r,lvl,assignment)
+
+let expand_appuv r ~lvl ~args =
+  if lvl = 0 then AppUVar(r,lvl,args), None else
+  let args_lvl = C.mkinterval 0 lvl 0 in
+  let r1 = oref C.dummy in
+  let t = AppUVar(r1,0,args_lvl @ args) in
+  let nargs = List.length args in
+  let assignment =
+    mknLam nargs (AppUVar(r1,0,args_lvl @ C.mkinterval lvl nargs 0)) in
+  t, Some (r,lvl,assignment)
+
+let shift_bound_vars ~depth ~to_ t =
+  let shift_db d n =
+    if n < 0 then n
+    else if n < depth then
+      if n < to_ then n
+      else error "The term cannot be put in the desired context"
+    else n + to_ - depth in
+  let rec shift d = function
+  | Const n as x -> let m = shift_db d n in if m = n then x else  C.of_dbl m
+  | Lam r -> Lam (shift (d+1) r)
+  | App (n,x,xs) ->
+      App(shift_db d n, shift d x, List.map (shift d) xs)
+  | Cons(hd,tl) -> Cons(shift d hd, shift d tl)
+  | Nil as x -> x
+  | Discard as x -> x
+  | Arg _ as x -> x
+  | AppArg (i,args) -> AppArg (i, List.map (shift d) args)
+  | (UVar (r,_,_) | AppUVar(r,_,_)) when !!r != C.dummy ->
+      anomaly "shift_bound_vars: non-derefd term"
+  | (UVar(_,lvl,_) | AppUVar(_,lvl,_)) when lvl > to_ ->
+      error "The term cannot be put in the desired context"
+  | UVar _ as x -> x
+  | AppUVar (r,lvl,args) -> AppUVar (r,lvl,List.map (shift d) args)
+  | Custom(c,xs) -> Custom(c,List.map (shift d) xs)
+  | CData _ as x -> x
+  in
+    if depth = to_ then t else shift depth t
+
 end
 (* }}} *)
 open HO
@@ -2098,195 +2191,138 @@ end = struct (* {{{ *)
 
 exception NoMatch
 
-module Freeze : sig
+module Ice : sig
+  
+  type freezer
 
-  type freeze_map
-  val empty_freeze_map : freeze_map
-  val freeze : int -> freeze_map -> term -> freeze_map * term
-  val thaw : int -> env -> freeze_map -> term -> term
+  val empty_freezer : freezer
 
-  val arg2goal : freeze_map -> int -> int
-  val arg_is_in_goal_and_is_freezed : arg:int -> goal:int -> freeze_map -> freeze_map
-  val is_arg_freezed : freeze_map -> int -> bool
-  val is_frozen : freeze_map -> constant -> bool
+  (* The input term lives in depth, the sequent lives in ground
+   * (the same as depth for the goal, while >= for ctx items)
+   *
+   * shift = relocate only bound variables
+   * relocate = increment all db indexes
+   *
+   * The input term is fully dereferenced, flexible terms are frozen,
+   * it is shifted to its ground, then relocated to new base, then
+   * shifted to the maxbase
+   *)
+  val freeze :
+    depth:int -> term -> ground:int -> newground:int -> maxground:int ->
+      freezer -> freezer * term
 
-  val alias : 
-    alias:term_attributed_ref -> orig:term_attributed_ref -> freeze_map -> freeze_map
+  val defrost :
+    maxd:int -> term -> env -> to_:int -> freezer -> term
 
-  val pp : Format.formatter -> freeze_map -> unit
+  val align_frozen :
+    freezer -> env -> depth:int -> alignment:(string * int) list ->
+      constraints:(int * constraint_def) list ->
+      arg2sequent:int IM.t -> unit
+
+  val assignments : freezer -> assignment list
 
 end = struct (* {{{ *)
 
-type freeze_map = {
-  c2uv : (term_attributed_ref * int * term) C.Map.t;
-  aliases : (term_attributed_ref * term_attributed_ref) list;
-  arg2goal : int IM.t;
-}
+  type freezer = {
+    c2uv : term_attributed_ref C.Map.t;
+    uv2c : (term_attributed_ref * term) list;
+    assignments : assignment list; (* assignment to lower the level to 0 *)
+  }
 
-exception Found of constant * term
+  let empty_freezer = { c2uv = C.Map.empty; uv2c = []; assignments = [] }
 
-(* This is linear, but a ref cannot be sorted nor hashed since it is moved
- * by the Gc *)
-let rec canon r aliases =
-  try canon (List.assq r aliases) aliases
-  with Not_found -> r
-let uv2c r { c2uv } =
-  try
-    C.Map.iter (fun c (r',_,t) -> if r == r' then raise (Found(c,t))) c2uv;
-    raise Not_found
-  with Found(c, t) -> c, t
+  let freeze ~depth t ~ground ~newground ~maxground f =
+    let f = ref f in
+    let log_assignment = function
+      | t, None -> t
+      | t, Some (r,_,nt as s) ->
+          f := { !f with assignments = s :: !f.assignments };
+          r @:= nt;
+          t in
+    let freeze_uv r =
+      try List.assq r !f.uv2c
+      with Not_found ->
+        let n, c = C.fresh () in
+        [%spy "freeze-add" (fun fmt tt ->
+          Fmt.fprintf fmt "%s == %a" (C.show n) (ppterm 0 [] 0 empty_env) tt)
+          (UVar (r,0,0))];
+        f := { !f with c2uv = C.Map.add n r !f.c2uv;
+                       uv2c = (r,c) :: !f.uv2c };
+        c in
+    let rec faux d = function
+      | (Const _ | CData _ | Nil | Discard) as x -> x
+      | Cons(hd,tl) -> Cons(faux d hd, faux d tl)
+      | App(c,x,xs) -> App(c,faux d x, List.map (faux d) xs)
+      | Custom(c,args) -> Custom(c,List.map (faux d) args)
+      | (Arg _ | AppArg _) -> error "only heap terms can be frozen"
+      | Lam t -> Lam (faux (d+1) t)
+      (* freeze *)
+      | AppUVar(r,0,args) when !!r == C.dummy ->
+          let args = List.map (faux d) args in
+          App(C.frozenc, freeze_uv r, [list_to_lp_list args])
+      (* expansion *)
+      | UVar(r,lvl,ano) when !!r == C.dummy ->
+          faux d (log_assignment(expand_uv r ~lvl ~ano))
+      | AppUVar(r,lvl,args) when !!r == C.dummy ->
+          faux d (log_assignment(expand_appuv r ~lvl ~args))
+      (* deref *)
+      | UVar(r,lvl,ano) -> faux d (deref_uv ~from:lvl ~to_:d ano !!r)
+      | AppUVar(r,lvl,args) -> faux d (deref_appuv ~from:lvl ~to_:d args !!r)
+    in
+    [%spy "freeze-in" (fun fmt t ->
+      Fmt.fprintf fmt "depth:%d ground:%d newground:%d maxground:%d %a"
+        depth ground newground maxground (uppterm depth [] 0 empty_env) t) t];
+    let t = faux depth t in
+    [%spy "freeze-after-faux" (fun fmt t ->
+      Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) t];
+    let t = shift_bound_vars ~depth ~to_:ground t in
+    [%spy "freeze-after-shift->ground" (fun fmt t ->
+      Fmt.fprintf fmt "%a" (uppterm ground [] 0 empty_env) t) t];
+    let t = shift_bound_vars ~depth:0 ~to_:(newground-ground) t in
+    [%spy "freeze-after-reloc->newground" (fun fmt t ->
+      Fmt.fprintf fmt "%a" (uppterm newground [] 0 empty_env) t) t];
+    let t = shift_bound_vars ~depth:ground ~to_:maxground t in
+    [%spy "freeze-after-shift->maxground" (fun fmt t ->
+      Fmt.fprintf fmt "%a" (uppterm maxground [] 0 empty_env) t) t];
+    !f, t
+       
+  let defrost ~maxd t env ~to_ f =
+  [%spy "defrost-in" (fun fmt t ->
+    Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
+      (uppterm maxd [] maxd env) t) t];
+    let t = full_deref ~adepth:maxd env ~depth:maxd t in
+  [%spy "defrost-fully-derefd" (fun fmt t ->
+    Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
+      (uppterm maxd [] 0 empty_env) t) t];
+    let t = shift_bound_vars ~depth:maxd ~to_ t in
+  [%spy "defrost-shifted" (fun fmt t ->
+    Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
+      (uppterm to_ [] 0 empty_env) t) t];
+    let rec daux d = function
+      | Const c when C.Map.mem c f.c2uv ->
+          UVar(C.Map.find c f.c2uv,0,0)
+      | (Const _ | CData _ | Nil | Discard) as x -> x
+      | Cons(hd,tl) -> Cons(daux d hd, daux d tl)
+      | App(c,Const x,[args]) when c == C.frozenc ->
+          let r = C.Map.find x f.c2uv in
+          let args = lp_list_to_list ~depth:d args in
+          mkAppUVar r 0 (List.map (daux d) args)
+      | App(c,x,xs) -> App(c,daux d x, List.map (daux d) xs)
+      | Custom(c,args) -> Custom(c,List.map (daux d) args)
+      | Arg(i,ano) when env.(i) != C.dummy ->
+          daux d (deref_uv ~from:to_ ~to_:d ano env.(i))
+      | AppArg (i,args) when env.(i) != C.dummy ->
+          daux d (deref_appuv ~from:to_ ~to_:d args env.(i))
+      | (Arg(i,_) | AppArg(i,_)) as x ->
+          env.(i) <- UVar(oref C.dummy, to_, 0);
+          daux d x
+      | Lam t -> Lam (daux (d+1) t)
+      | UVar _ as x -> x
+      | AppUVar(r,lvl,args) -> AppUVar(r,lvl,List.map (daux d) args)
+    in
+     daux to_ t
 
-let empty_freeze_map = { c2uv = C.Map.empty; arg2goal = IM.empty; aliases=[] }
-
-let arg2goal m i = IM.find i m.arg2goal
-let arg_is_in_goal_and_is_freezed ~arg ~goal m =
-  { m with arg2goal = IM.add arg goal m.arg2goal }
-let is_arg_freezed m i = IM.mem i m.arg2goal
-let pp fmt { arg2goal } =
-  pplist (pp_pair pp_int pp_int) ";" fmt (IM.bindings arg2goal)
-
-let freeze_uv r lvl ({ c2uv; aliases } as fm) =
-  let r = canon r aliases in
-  try fm, uv2c r fm
-  with Not_found ->
-    let n, x as nx = C.fresh () in
-    [%spy "freeze-add" (fun fmt tt ->
-       Fmt.fprintf fmt "%s == %a" (C.show n) (ppterm 0 [] 0 empty_env) tt)
-       (UVar (r,lvl,0))];
-    { fm with c2uv = C.Map.add n (r,lvl,x) c2uv }, nx
-
-let frozenc2uv p { c2uv } = C.Map.find p c2uv
-let frozenc2t p { c2uv } = let _, _, t = C.Map.find p c2uv in t
-
-let alias ~alias:r1 ~orig:r2 m = { m with aliases = (r1,r2) :: m.aliases }
-
-let is_frozen m c =
-   try let _t = frozenc2t c m in true
-   with Not_found -> false
-
-let freeze ad m t =
-  let m = ref m in
-  let freeze_uv r lvl =
-    let m', nc = freeze_uv r lvl !m in
-    m := m';
-    nc in
-  let rec freeze ad orig = match orig with
-    | UVar( { contents = t} , 0,0) when t != C.dummy -> freeze ad t
-    | UVar( { contents = t} , vardepth, args) when t != C.dummy ->
-        freeze ad (deref_uv ~from:vardepth ~to_:ad args t)
-    | AppUVar ( { contents = t }, vardepth, args) when t != C.dummy ->
-        freeze ad (deref_appuv ~from:vardepth ~to_:ad args t)
-    | UVar( r, lvl, ano) ->
-       let _, c = freeze_uv r lvl in
-       App(C.frozenc,c,[list_to_lp_list (C.mkinterval 0 (lvl+ano) 0)])
-    | AppUVar( r, lvl, args ) ->
-       let _, c = freeze_uv r lvl in
-       let args = freeze_list ad args args in
-       App(C.frozenc, c,[list_to_lp_list (C.mkinterval 0 lvl 0 @ args)])
-    | App(c,x,xs) ->
-        let x' = freeze ad x in
-        let xs' = freeze_list ad xs xs in
-        if x == x' && xs == xs' then orig else App(c,x',xs')
-    | Const _ -> orig
-    | Cons(hd,tl) ->
-        let hd' = freeze ad hd in
-        let tl' = freeze ad tl in
-        if hd == hd' && tl == tl' then orig else Cons(hd',tl')
-    | Nil -> orig
-    | Discard -> orig
-    | Arg _ | AppArg _ -> anomaly "freeze ad: not an heap term"
-    | Lam t -> let t' = freeze (ad+1) t in if t == t' then orig else Lam t'
-    | CData _ -> orig
-    | Custom(c,xs) ->
-        let xs' = freeze_list ad xs xs in
-        if xs == xs' then orig else Custom(c,xs')
-  and freeze_list ad l orig =
-    match l with
-    | [] -> l
-    | x :: xs ->
-       let xs' = freeze_list ad xs (List.tl orig) in
-       let x' = freeze ad x in
-       if x == x' && xs == xs' then orig
-       else x' :: xs'
-  in
-  let t = freeze ad t in
-  !m, t
-;;
-
-let freeze ad m t =
-  [%spy "freeze-in"  (ppterm 0 [] 0 empty_env) t];
-  let m, t' = freeze ad  m t in
-  [%spy "freeze-out"  (ppterm 0 [] 0 empty_env) t'];
-  m, t'
-
-let thaw max_depth e m t =
-  let rec aux = function
-  | UVar( { contents = t} , lvl, ano) when t != C.dummy ->
-      aux (deref_uv ~from:lvl ~to_:max_depth ano t)
-  | AppUVar( { contents = t} , lvl, args) when t != C.dummy ->
-      aux (deref_appuv ~from:lvl ~to_:max_depth args t)
-  | Arg(i, ano) when e.(i) != C.dummy ->
-      aux (deref_uv ~from:max_depth ~to_:max_depth ano e.(i))
-  | AppArg(i, args) when e.(i) != C.dummy ->
-      aux (deref_appuv ~from:max_depth ~to_:max_depth args e.(i))
-  | Arg(i,ano) -> e.(i) <- UVar(oref C.dummy,max_depth,ano); e.(i)
-  | AppArg(i,args) ->
-      e.(i) <- mkAppUVar (oref C.dummy) max_depth (List.map aux args); e.(i)
-  | App(c,Const x,[xs]) when C.frozenc == c ->
-      let r, lvl, _ = frozenc2uv x m in
-      let xs = lp_list_to_list ~depth:max_depth xs in
-      (* terribly incomplete *)
-        if List.length xs >= lvl then
-         let _, xs = partition_i (fun i t ->
-           if i < lvl then begin
-             if t <> Const i then assert false;
-             true
-           end
-             else false) xs in
-         mkAppUVar r lvl  (List.map (aux) xs)
-        else
-         assert false (* TODO *)
-  | App(c,x,xs) -> App(c,aux x, List.map (aux) xs)
-  | Const _ as orig -> orig
-  | Cons(hd,tl) -> Cons (aux hd, aux tl)
-  | Nil as x -> x
-  | Discard as x -> x
-  | CData _ as x -> x
-  | Custom(c,ts) -> Custom(c,List.map (aux) ts)
-  | Lam t -> Lam (aux t)
-  | AppUVar(r,lvl,args) -> mkAppUVar r lvl (List.map (aux) args)
-  | UVar _ as x -> x
-  in
-    aux t
-;;
-
-let thaw max_depth e m t =
-  [%spy "thaw-in"  (ppterm 0 [] 0 e) t];
-  let t' = thaw max_depth e m t in
-  [%spy "thaw-out"  (ppterm 0 [] 0 e) t'];
-  t'
-
-end (* }}} *)
-
-let freeze_matched_args goalno e argsdepth m =
-  let m, _ =
-    Array.fold_left (fun (m,i) ei ->
-      (if ei != C.dummy && not (Freeze.is_arg_freezed m i) then
-              (* XXX ugly, arg2goal also used to not-repeat twice the freeze *)
-        let m, ei = Freeze.freeze argsdepth m ei in
-        e.(i) <- ei;
-        Freeze.arg_is_in_goal_and_is_freezed ~arg:i ~goal:goalno m
-      else
-        m),i+1)
-     (m,0) e in
-  m
-
-let match_same_depth_and_freeze goalno e depth m a b =
-  [%trace "matching" ("@[<hov>%a ===@ %a@]" (ppterm depth [] 0 e) a (ppterm depth [] 0 e) b) begin
-  if unif ~matching:true depth e depth a b
-  then freeze_matched_args goalno e depth m
-  else raise NoMatch
-  end]
+  let assignments { assignments } = assignments 
 
 let replace_const m t =
   let rec rcaux = function
@@ -2300,72 +2336,74 @@ let replace_const m t =
     | (CData _ | UVar _ | Nil | Discard) as x -> x
     | Arg _ | AppArg _ -> assert false
     | AppUVar(r,lvl,args) -> AppUVar(r,lvl,smart_map rcaux args) in
-  [%spy "alignement-replace-in" (uppterm 0 [] 0 empty_env)  t];
+  [%spy "alignment-replace-in" (uppterm 0 [] 0 empty_env)  t];
   let t = rcaux t in
-  [%spy "alignement-replace-out" (uppterm 0 [] 0 empty_env) t];
+  [%spy "alignment-replace-out" (uppterm 0 [] 0 empty_env) t];
   t
 ;;
-
 let ppmap fmt (g,l) =
   let aux fmt (c1,c2) = Fmt.fprintf fmt "%s -> %s" (C.show c1) (C.show c2) in
   Fmt.fprintf fmt "%d = %a" g (pplist aux ",") l
 ;;
 
-  (* Limited to bijections *)
-let align_frozen m e (alignement,mode) ngoals =
-  if alignement = [] then () else begin
-  [%spy "alignement-alignement" (fun fmt m ->
-    Fmt.fprintf fmt "%a (spread=%b)!"
-      (pplist pp_int ";") m (mode=`Spread)) alignement];
-  [%spy "alignement-arg2goal" (fun fmt m ->
-     Fmt.fprintf fmt "%a%!" Freeze.pp m) m];
-  if List.length alignement <> List.length (uniq (List.sort compare alignement))
-    then error "Alignement with duplicates";
-  let kg = List.map (fun i -> i,Freeze.arg2goal m i) alignement in
-  let gs = List.map snd kg in
-  [%spy "alignement-gs" (fun fmt m ->
-    Fmt.fprintf fmt "%a%!" (pplist pp_int ";") m) gs];
-  let uniq_gs = uniq (List.sort compare gs) in
-  if List.length gs <> List.length uniq_gs || List.length gs <> ngoals then
-    error "Alignement invalid: 1 key per goal";
-  let (bkey, bgoal), todo = List.hd kg, List.tl kg in
-  (* quick check for same key *)
-  let same_k = ref None in
-  let mkconstlist l =
-    let k, l =
-      match mode, l with
-      | `Align,  App(f,(Const c as x),[args]) when C.frozenc == f && Freeze.is_frozen m c ->
-           x, lp_list_to_list ~depth:0 args (* XXX ?depth? *)
-      | `Spread, App(f,(Const c as x),_)    when C.frozenc == f && Freeze.is_frozen m c ->
-           x, []
-      | `Spread, _ -> Constants.dummy, []
-      | _ -> assert false in
-    if !same_k == None then same_k := Some k;
-    if option_get !same_k <> k then raise NoMatch;
-    List.map (function
-      | Const x -> x
-      | t -> error ("align on non var list: " ^
-                    Format.asprintf "%a" (ppterm 0 [] 0 e) t)) l in
-  let bkey = mkconstlist e.(bkey) in
-  let todo =
-    List.map (fun (key, goal) -> goal, bkey, mkconstlist e.(key)) todo in
-  let mkmap base tgt =
-    if List.length base <> List.length tgt then raise NoMatch else
-    List.combine tgt base in
-  let maps = List.map (fun (g,base,tgt) -> g,mkmap base tgt) todo in
-  [%spy "alignement" (fun fmt m ->
-    Fmt.fprintf fmt "%a%!"
-      (pplist ppmap ";") m) maps];
-  Array.iteri (fun i value ->
-    try
-      let goal = Freeze.arg2goal m i in
-      if goal <> bgoal then
-        let map = List.assoc goal maps in 
-        e.(i) <- replace_const map e.(i)
-    with Not_found -> ()
-  ) e
-  end
-;;
+
+  let align_frozen m e ~depth ~alignment ~constraints ~arg2sequent =
+    [%spy "alignment-alignment" (fun fmt m ->
+      Fmt.fprintf fmt "%a" (pplist (pp_pair pp_string pp_int) ";") m )
+      alignment];
+    let kg = List.mapi (fun i j -> j,i) alignment in
+    let ((_,bkey), bgoal), todo = List.hd kg, List.tl kg in
+    let mkconstlist l =
+      [%spy "alignment-alignment-k" pp_int l];
+      List.map (function
+          | Const i -> i
+          |  _ -> error "CHR: alignment only works in the Lλ fragment") 
+        (lp_list_to_list ~depth e.(l)) in
+    let bkey = mkconstlist bkey in
+    let todo =
+      List.map (fun ((_,key), goal) -> goal, bkey, mkconstlist key) todo in
+    let mkmap base tgt =
+      if List.length base <> List.length tgt then begin 
+         error "CHR: alignment on lists of different lengths, you may want to add a rule for this case and do something sensible"
+      end else
+        List.combine tgt base in
+    let maps = List.map (fun (g,base,tgt) -> g,mkmap base tgt) todo in
+    [%spy "alignment" (fun fmt m ->
+      Fmt.fprintf fmt "%a%!"
+        (pplist ppmap ";") m) maps];
+    Array.iteri (fun i value ->
+      try
+        let goal = IM.find i arg2sequent in
+        if goal <> bgoal then
+          let map = List.assoc goal maps in 
+          e.(i) <- replace_const map e.(i)
+      with Not_found -> ()
+    ) e
+
+end (* }}} *)
+
+let match_goal goalno maxground env freezer (newground,depth,t) pattern =
+  let freezer, t =
+    Ice.freeze ~depth t ~ground:depth ~newground ~maxground freezer in
+  [%trace "matching" ("@[<hov>%a ===@ %a@]"
+     (uppterm maxground [] maxground env) t
+     (uppterm 0 [] maxground env) pattern) begin
+  if unif ~matching:true maxground env 0 t pattern then freezer
+  else raise NoMatch
+  end]
+  
+let match_context goalno maxground env freezer (newground,ground,lt) pattern =
+  let freezer, lt =
+    map_acc (fun freezer (depth,t) ->
+      Ice.freeze ~depth t ~ground ~newground ~maxground freezer)
+    freezer lt in
+  let t = list_to_lp_list lt in
+  [%trace "matching" ("@[<hov>%a ===@ %a@]"
+     (uppterm maxground [] maxground env) t
+     (uppterm 0 [] maxground env) pattern) begin
+  if unif ~matching:true maxground env 0 t pattern then freezer
+  else raise NoMatch
+  end]
 
 (* To avoid matching the same propagation rule against the same ordered list
  * of constraints *)
@@ -2381,70 +2419,6 @@ module HISTORY = Hashtbl.Make(struct
         p == p' && for_all2 (==) lp lp'
 end)
 
-(* hmove a term possibly containing Args *)
-(* TODO: the function is almost identical to the aux of close_with_pis
-   but here we do not instantiate Args. The two codes must be unified *)
-let lift_pat ~from ~to_ t =
-  let delta = to_ - from in
-  let rec aux = function
-  | Const n as x ->
-     if n < from then x else C.of_dbl (n + delta)
-  | Lam r -> Lam (aux r)
-  | App (n,x,xs) ->
-      App((if n < from then n else n + delta), aux x, List.map aux xs)
-  | Cons(hd,tl) -> Cons(aux hd, aux tl)
-  | Nil as x -> x
-  | Discard as x -> x
-  | Arg _ as x -> x
-  | AppArg(i,xs) -> AppArg(i,List.map aux xs)
-  | UVar _ as x ->
-     (* TODO: quick hack here, but it does not work for AppUVar *)
-     hmove ~from ~to_ x
-  | AppUVar _ -> assert false
-  | Custom(c,xs) -> Custom(c,List.map aux xs)
-  | CData _ as x -> x
-  in
-    aux t
-;;
-
-let shift m ~from ~to_ t =
-  let shift = to_ - from in
-  assert(shift >= 0);
-  let m = ref m in
-  let rec aux = function
-  | Const n as x -> if n < 0 then x else C.of_dbl (n + shift)
-  | Lam r -> Lam (aux r)
-  | App (n,x,xs) ->
-      App((if n < 0 then n else n + shift), aux x, List.map aux xs)
-  | Cons(hd,tl) -> Cons(aux hd, aux tl)
-  | Nil as x -> x
-  | Discard as x -> x
-  | Arg _ as x -> x
-  | AppArg(i,xs) -> AppArg(i,List.map aux xs)
-  | UVar (r,_,_) when !!r != C.dummy ->
-      aux !!r (* this is correct only if !!r is as below *)
-  | UVar (r,l,ano) ->
-      let args = C.mkinterval 0 (l+ano) 0 in
-      let r1 = oref C.dummy in
-      let t = AppUVar (r1,0,args) in
-      r @:= t;
-      m := Freeze.alias ~orig:r ~alias:r1 !m;
-      aux t
-  | AppUVar (r,0,args) ->
-      assert (!!r == C.dummy);
-      AppUVar (r,0,List.map aux args)
-  | AppUVar (r,l,args) ->
-      let args = C.mkinterval 0 l 0 @ args in
-      let r1 = oref C.dummy in
-      let t = mkAppUVar r1 0 args in
-      r @:= t;
-      m := Freeze.alias ~orig:r ~alias:r1 !m;
-      aux t
-  | Custom(c,xs) -> Custom(c,List.map aux xs)
-  | CData _ as x -> x
-  in
-    if shift > 0 then let t = aux t in !m, t else !m, t
-
 let chrules = Fork.new_local CHR.empty
 
 let delay_goal ?(filter_ctx=fun _ -> true) ~depth prog ~goal:g ~on:keys =
@@ -2455,7 +2429,8 @@ let delay_goal ?(filter_ctx=fun _ -> true) ~depth prog ~goal:g ~on:keys =
     "@[<hov 2> ...@ ⊢^%d %a@]\n%!"
       (*(pplist (uppterm depth [] 0 empty_env) ",") pdiff*) depth
       (uppterm depth [] 0 empty_env) x) g];
-  let kind = Constraint { depth; prog = Index prog; pdiff; goal = g } in
+  let kind = Constraint {
+    cdepth = depth; prog = Index prog; context=pdiff; conclusion = g } in
   CS.declare_new { kind ; blockers = keys }
 ;;
 
@@ -2491,7 +2466,7 @@ let declare_constraint ~depth prog args =
                      "flexible or a list of flexible terms"))
               (List.map (is_flex ~depth) (lp_list_to_list ~depth t2)) in
             t1, v2)
-    | _ -> type_error "constraint takes 2 arguments"
+    | _ -> type_error "declare_constraint takes 2 arguments"
   in 
   match CHR.clique_of (head_of g) !chrules with
   | Some clique -> (* real constraint *)
@@ -2527,8 +2502,21 @@ let exec_custom_predicate c ~depth idx args =
 (* all permutations of pivot+rest of length len where the
  * pivot is in pivot_position. pivot may be part of rest, it is automatically
  * ignored  *)
-let mk_permutations len pivot pivot_position rest =
+let filter_match1 { Elpi_data.conclusion = x } p =
+  match x with
+  | Const x -> x == p
+  | App(x,_,_) -> x == p
+  | (UVar _ | AppUVar _) -> assert false (* TODO: deref *)
+  | _ -> false
+
+let mk_permutations quick_filter len pivot pivot_position rest =
   let open List in
+  let filter_before, filter_pivot_and_after =
+    partition_i (fun i _ -> i < pivot_position) quick_filter in
+  let filter_pivot, filter_after =
+    match filter_pivot_and_after with x :: xs -> x, xs | _ -> assert false in
+  if not (filter_match1 pivot filter_pivot) then []
+  else
   let rec insert x = function
     | [] -> [[x]]
     | (hd::tl) as l -> (x::l) :: map (fun y -> hd :: y) (insert x tl) in
@@ -2541,9 +2529,14 @@ let mk_permutations len pivot pivot_position rest =
 
   let permutations_no_pivot = aux (len - 1) rest in
   
-  permutations_no_pivot |> map begin fun l ->
+  permutations_no_pivot |> map_filter begin fun l ->
     let before, after = partition_i (fun i _ -> i < pivot_position) l in
-    before @ pivot :: after
+    (* Suboptimal: we could reorganize the code so that filtered-out
+     * permutations are not even generated TODO *)
+    if for_all2 filter_match1 before filter_before &&
+       for_all2 filter_match1 after filter_after then
+       Some (before @ pivot :: after)
+    else None
   end
 ;;
 
@@ -2552,8 +2545,7 @@ let mk_permutations len pivot pivot_position rest =
    cstr_position is its position, so far, wrt all other constraints
      when matched against chr rules;
    the two lists in output are the constraints to be removed and added *)
-let propagate { CS.cstr; cstr_position } history =
- let sequent_of_constr { depth; pdiff = p; goal = t } = depth, p, t in
+let propagate { CS.cstr; cstr_position; cstr_main_key } history =
 (*
  let rec find_entails nargs_ref max_depth n = function
    | Lam t -> find_entails nargs_ref max_depth (n+1) t
@@ -2571,19 +2563,14 @@ let propagate { CS.cstr; cstr_position } history =
        let min_depth, ctx, g = find_entails nargs_ref max_depth ruledepth x in
        (min_depth, ctx, g) in
 *)
-  let sequent_of_pat ruledepth (ctx,goal) = ruledepth,ctx,goal in
-
  (*Fmt.fprintf Fmt.std_formatter "PROPAGATION %d\n%!" cstr_position;*)
  (* CSC: INVARIANT: propagate clauses can never be assumed using
     implication. Otherwise ~depth:0 is wrong and I do not see any
     reasonable semantics (i.e. a semantics where the scoping is not
     violated). For the same reason I took the propagate clauses from
     the !orig_prolog_program. *)
- let rules =
-   let _,_,t = sequent_of_constr cstr in
-   let hd = head_of t in
-   CHR.rules_for hd !chrules in
 
+ let rules = CHR.rules_for (head_of cstr.conclusion) !chrules in
  let initial_program = Elpi_data.wrap_prolog_prog !orig_prolog_program in
  let modes = !modes in
 
@@ -2591,13 +2578,11 @@ let propagate { CS.cstr; cstr_position } history =
 
  let result =
     rules |> map_exists (fun ({
-        Elpi_ast.to_match = pats_to_match; to_remove = pats_to_remove;
-        new_goal; guard = condition; depth = ruledepth; nargs;
-        alignement }
+        CHR.to_match = pats_to_match; to_remove = pats_to_remove;
+        new_goal; guard; nargs;
+        alignment; pattern = quick_filter }
       as propagation_rule) ->
 
-    assert(ruledepth=0);
-              (* XXX To do in compilation phase *)
     let len_pats_to_match = List.length pats_to_match in
     let patsno = len_pats_to_match + List.length pats_to_remove in
     let patterns = pats_to_match @ pats_to_remove in
@@ -2608,79 +2593,66 @@ let propagate { CS.cstr; cstr_position } history =
       (* The active constraint is to be matched in a position that
        * requires a rule with more patterns *)
       None
-    else
+    else begin
+      no_such_j := false;
       (* We put the active constraint inside all permutations of the
        * others, in cstr_position to obtain candidates to be matched
        * with pats_to_match@pats_to_remove *)
       let candidates =
-        mk_permutations patsno cstr cstr_position (CS.contents ()) in
+        mk_permutations quick_filter patsno cstr cstr_position
+          (CS.contents ~cstr_main_key ()) in
 
      candidates |> map_exists (fun (constraints as orig_constraints) ->
       let hitem = HISTORY.({ propagation_rule; constraints }) in
-      no_such_j := false;
       if HISTORY.mem history hitem then begin
 (*         Fmt.fprintf Fmt.std_formatter "pruned\n%!" ; *)
         None
         end
       else
        let () = HISTORY.add history hitem () in
-       let constraints = List.map sequent_of_constr constraints in
 
        (* max depth of rule and constraints involved in the matching *)
        let max_depth, constraints =
-         let _, mode = alignement in
-         match mode with
-         | `Align -> 
+         match alignment with
+         | None -> (* Spread *)
+             (* Goals are lifted at different depths to avoid collisions *)
+             let max_depth,constraints = 
+              List.fold_left (fun (md,res) c ->
+                 let md = md + c.Elpi_data.cdepth in
+                 md, (md,c)::res)
+                (0,[]) constraints in
+             max_depth, List.rev constraints
+         | Some _ -> (* Alignment *)
              (* We compute the maximum goal depth, and goals are all lifted
               * to that depth before matching *)
              let max_depth =
-                List.fold_left (fun acc (d,_,_) -> max d acc)
-                  ruledepth constraints in
+                List.fold_left (fun acc c -> max c.Elpi_data.cdepth acc)
+                  0 constraints in
              let constraints =
-                List.map (fun (a,b,c) -> max_depth,a,b,c) constraints in
+                List.map (fun c -> max_depth,c) constraints in
              max_depth, constraints
-         | `Spread ->
-             (* Goals are lifted at different depths to avoid collisions *)
-             let max_depth,constraints = 
-              List.fold_left (fun (acc,res) (d,x,y) ->
-                 acc+(d - ruledepth),(acc+(d - ruledepth),d,x,y)::res)
-                (ruledepth,[]) constraints in
-             max_depth, List.rev constraints
        in
 
-       let constraints_contexts, constraints_goals =
-         List.fold_right (fun (dto,d,p,g) (ctxs, gs) ->
-           (dto,d,p) :: ctxs, (dto,d,g) :: gs)
-           constraints ([],[]) in
+       let constraints_depts, constraints_contexts, constraints_goals =
+         List.fold_right
+           (fun (dto,{Elpi_data.context = c; cdepth = d; conclusion = g}) 
+                (ds, ctxs, gs) ->
+             (dto,d,d) :: ds, (dto,d,c) :: ctxs, (dto,d,g) :: gs)
+           constraints ([],[],[]) in
 
-       let patterns = List.map (sequent_of_pat ruledepth) patterns in
+       let env = Array.make nargs C.dummy in
 
-       let e = Array.make nargs C.dummy in
-
-       let patterns_contexts, patterns_goals =
-         List.fold_right (fun (d,ctx,g) (ctxs, gs) ->
-           (d, ctx) :: ctxs, (d,g) :: gs)
-           patterns ([],[]) in
-         
-       let match_p i m (dto,dt,t) (dp,pat) =
-         [%spy "matching-goal-lift-lives-at" pp_int dt];
-         [%spy "matching-goal-lift-to" pp_int dto];
-         [%spy "matching-goal-lift-in" (uppterm dt [] 0 empty_env) t];
-         let m, t = shift m ~from:dt ~to_:dto (hmove ~from:dt ~to_:dt ~avoid:(oref C.dummy) t) in
-         [%spy "matching-goal-lift-out" (uppterm dto [] 0 empty_env) t];
-         let pat = lift_pat ~from:dp ~to_:dto pat in
-         match_same_depth_and_freeze i e dto m t pat in
-
-(* TODO: dp = ruledepth *)
-       let match_ctx i m (dto,dlt,lt) (dp,pctx) =
-         [%spy "matching-ctx-lift-lives-at" pp_int dlt];
-         [%spy "matching-ctx-lift-to" pp_int dto];
-         let t = list_to_lp_list (List.map snd lt) in
-         [%spy "matching-ctx-lift-in" (uppterm dlt [] 0 empty_env) t];
-         let m, t = shift m ~from:dlt ~to_:dto (hmove ~from:dlt ~to_:dlt ~avoid:(oref C.dummy) t) in
-         [%spy "matching-ctx-lift-out" (uppterm dto [] 0 empty_env) t];
-         let pctx = lift_pat ~from:dp ~to_:dto pctx in
-         match_same_depth_and_freeze i e dto m t pctx in
+       let patterns_eigens, patterns_contexts, patterns_goals =
+         List.fold_right (fun { CHR.eigen; context; conclusion } (es, cs, gs) ->
+           eigen :: es, context :: cs, conclusion :: gs)
+         patterns ([],[],[]) in
+       
+       let match_eigen i m (dto,d,eigen) pat =
+         match_goal i max_depth env m (dto,d,Elpi_data.C.of_int eigen) pat in
+       let match_conclusion i m g pat =
+         match_goal i max_depth env m g pat in
+       let match_context i m ctx pctx =
+         match_context i max_depth env m ctx pctx in
 
        let program = {
          (* runs deep enough to let one use all pi-vars *)
@@ -2693,13 +2665,15 @@ let propagate { CS.cstr; cstr_position } history =
        let { search; get; exec; destroy } = !do_make_runtime program in
        let check = function
          | None -> ()
-         | Some guard -> try
+         | Some goal -> 
+           let goal = shift_bound_vars ~depth:0 ~to_:max_depth goal in
+           try
              let _ = search {
                qloc = Ploc.dummy;
                qnames = StrMap.empty;
                qdepth = max_depth;
-               qenv = e;
-               qterm = guard;
+               qenv = env;
+               qterm = goal;
                qconstraints = CustomConstraint.init (CompilerState.init ());
              }
              in
@@ -2711,52 +2685,67 @@ let propagate { CS.cstr; cstr_position } history =
 
          (* matching *)
          let m = exec (fun m ->      
-           [%spy "propagate-trail" (fun fmt _ -> T.print_trail fmt) ()];
-(*
-           [%spy "propagate-try-rule"
-             (Elpi_ast.pp_chr pp_term C.pp) propagation_rule];
-*)
            [%spy "propagate-try-on"
              (pplist (fun f (dto,dt,t) ->
                 Format.fprintf f "(lives-at:%d, to-be-lifted-to:%d) %a"
                   dt dto (uppterm dt [] 0 empty_env) t) ";") 
                 constraints_goals];
 
-           let m = fold_left2i match_p m
+           let m = fold_left2i match_eigen m
+             constraints_depts patterns_eigens in
+           let m = fold_left2i match_conclusion m
              constraints_goals patterns_goals in
-           let m = fold_left2i match_ctx m
+           let m = fold_left2i match_context m
              constraints_contexts patterns_contexts in
-           [%spy "propagate-args"
-             (pplist (uppterm max_depth [] 0 empty_env) " ")
-             (Array.to_list e)];
-           align_frozen m e alignement patsno;
-           [%spy "propagate-trail" (fun fmt _ -> T.print_trail fmt) ()];
+
+           [%spy "propagate-matched-args"
+             (pplist (uppterm max_depth [] 0 empty_env) ~boxed:false ",")
+             (Array.to_list env)];
+
+           begin match alignment with
+           | None -> ()
+           | Some { CHR.keys; arg2sequent } ->
+             Ice.align_frozen m env 
+               ~depth:max_depth ~alignment:keys ~constraints ~arg2sequent;
+             [%spy "propagate-aligned-args"
+               (pplist (uppterm max_depth [] 0 empty_env) " ")
+               (Array.to_list env)];
+           end;
+
            T.to_resume := [];
            assert(!T.new_delayed = []);
-           m) Freeze.empty_freeze_map in
+           m) Ice.empty_freezer in
 
          [%spy "propagate-try-rule-guard" (fun fmt () -> Format.fprintf fmt 
-             "@[<hov 2>depth=%d@ %a@]" max_depth (pp_option (ppterm max_depth [] max_depth e)) condition) ()];
+             "@[<hov 2>depth=%d@ @]" max_depth) ()];
 
-         (* guard *)
-         check condition;
+         check guard;
 
          (* result *)
          let _, constraints_to_remove =
            partition_i (fun i _ -> i < len_pats_to_match) orig_constraints in
-         match new_goal with
-         | None -> Some(constraints_to_remove, [])
-         | Some new_goal ->
-             let goal = lift_pat ~from:ruledepth ~to_:max_depth new_goal in
-             let goal = Freeze.thaw max_depth e m goal in
-             let prog, pdiff, depth = initial_program, [], max_depth in
-             Some(constraints_to_remove, [ { depth; prog; pdiff; goal } ])
+         let new_goals =
+           match new_goal with
+           | None -> []
+           | Some { CHR.eigen; context; conclusion } ->
+           let eigen =
+             match full_deref ~adepth:max_depth env ~depth:max_depth eigen with
+             | CData x when Elpi_data.C.is_int x -> Elpi_data.C.to_int x
+             | Discard -> max_depth
+             | _ -> error "eigen not resolving to an integer" in
+           let conclusion =
+             Ice.defrost ~maxd:max_depth ~to_:eigen (App(C.implc,context,[conclusion])) env m in
+           (* TODO: check things make sense in heigen *)
+           let prog = initial_program in
+           [{ cdepth = eigen; prog; context = []; conclusion }] in
+         Some(constraints_to_remove, new_goals, Ice.assignments m)
        with NoMatch ->
          [%spy "propagate-try-rule-fail" (fun _ _ -> ()) ()];
          None
        in
        destroy ();
-       result))
+       result)
+      end)
  in
  match result with
  | Some x -> `Matched x
@@ -2764,11 +2753,11 @@ let propagate { CS.cstr; cstr_position } history =
  | _ -> `NoMatch
 ;;
 
-let incr_generation { CS.cstr; cstr_position } =
-  { CS.cstr; cstr_position = cstr_position + 1 }
+let incr_generation ({ CS.cstr_position } as c) =
+  { c with CS.cstr_position = cstr_position + 1 }
 
 let resumption to_be_resumed =
-  List.map (fun { depth = d; prog = p; goal = g } ->
+  List.map (fun { cdepth = d; prog = p; conclusion = g } ->
     let idx = match p with Index p -> p | _ -> assert false in
     [%spy "run-scheduling-resume"
       (fun fmt -> Fmt.fprintf fmt "%a" (uppterm d [] d empty_env)) g];
@@ -2784,7 +2773,7 @@ let propagation to_be_resumed =
       (match propagate propagatable history with
         | `NoSuchJ -> CS.new_delayed := rest
         | `NoMatch -> CS.new_delayed := incr_generation propagatable :: rest
-        | `Matched (to_be_removed,to_be_added) ->
+        | `Matched (to_be_removed,to_be_added,assignments) ->
            (*List.iter (function
               (Constraint ((depth,_,_,g)),_) ->
                 Fmt.fprintf Fmt.std_formatter
@@ -2796,6 +2785,14 @@ let propagation to_be_resumed =
                  "Additional goal: @[<hov 2> ... ⊢^%d %a@]\n%!" depth (uppterm depth [] 0 empty_env) g)
              to_be_added ;*)
            (*List.iter add_constraint to_be_added*)
+           List.iter (fun (r,lvl,t) -> 
+             [%spy "propagate-assignments-lowering-levels"
+                (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
+                     (uppterm lvl [] 0 empty_env)
+                     (UVar(r,lvl,0))
+                     (uppterm lvl [] 0 empty_env)
+                     t) ()];
+             r @:= t) assignments;
            to_be_resumed := to_be_added @ !to_be_resumed )
   done;
   resumption !to_be_resumed
@@ -3041,33 +3038,20 @@ open Mainloop
   API
  ******************************************************************************)
 
-let map f d = function
-  | ( Const _ | CData _ | Nil | Discard ) as x -> x
-  | ( Arg _ | AppArg _ ) -> assert false
-  | Lam t -> Lam (f (d+1) t)
-  | App (c,x,xs) -> App(c,f d x, List.map (f d) xs)
-  | Custom (c,xs) -> Custom(c,List.map (f d) xs)
-  | Cons(x,y) -> Cons(f d x, f d y)
-  | UVar(r,_,_) as x when !!r == C.dummy -> x
-  | UVar(r,od,ano) -> f d (deref_uv ~from:od ~to_:d ano !!r)
-  | AppUVar(r,od,args) when !!r == C.dummy -> AppUVar(r, od, List.map (f d) args)
-  | AppUVar(r,od,args) -> f d (deref_appuv ~from:od ~to_:d args !!r)
-
-let rec full_deref d x = map full_deref d x
-
 let mk_solution depth env =
-  Array.map (fun x -> full_deref depth x) env
+  Array.map (fun x -> full_deref ~adepth:depth env ~depth x) env
 
 let deref_unif { adepth; env; bdepth; a; b } = {
-  adepth; bdepth; env = Array.map (full_deref adepth) env;
-  a = full_deref adepth a;
-  b = full_deref bdepth b;
+  adepth; bdepth; env = Array.map (full_deref ~adepth env ~depth:adepth) env;
+  a = full_deref ~adepth env ~depth:adepth a;
+  b = full_deref ~adepth env ~depth:bdepth b;
 }
 
-let deref_cst { depth; prog; pdiff; goal } = {
-  depth; prog;
-  pdiff = List.map (fun (d,t) -> d,full_deref d t) pdiff;
-  goal = full_deref depth goal;
+let deref_cst { cdepth; prog; context; conclusion } = {
+  cdepth; prog;
+  context = List.map (fun (d,t) ->
+    d,full_deref ~adepth:0 empty_env ~depth:d t) context;
+  conclusion = full_deref ~depth:cdepth ~adepth:0 empty_env conclusion;
 }
 
 let deref_stuck_goal = function

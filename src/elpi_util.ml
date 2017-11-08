@@ -111,11 +111,15 @@ end
 module Int = struct
   type t = int [@@deriving show]
 end
+module String = struct
+  type t = string [@@deriving show]
+end
 module Pair = struct
   type ('a,'b) t = 'a * 'b [@@deriving show]
 end
 let pp_option = Option.pp
 let pp_int = Int.pp
+let pp_string = String.pp
 let pp_pair = Pair.pp
 
 let remove_from_list x =
