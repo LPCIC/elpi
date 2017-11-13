@@ -500,9 +500,9 @@ module HO : sig
   val expand_appuv :
     term_attributed_ref -> lvl:int -> args:term list -> term * assignment option
 
-  (* only for fully derefd terms living at ~depth
-   * also asserts that no free vars are outside _to *)
   val shift_bound_vars : depth:int -> to_:int -> term -> term
+
+  val subtract_to_consts : amount:int -> depth:int -> term -> term
     
 end = struct 
 (* {{{ *)
@@ -1554,10 +1554,7 @@ let expand_appuv r ~lvl ~args =
 
 let shift_bound_vars ~depth ~to_ t =
   let shift_db d n =
-    if n < 0 then n
-    else if n < depth then
-      if n < to_ then n
-      else error "The term cannot be put in the desired context"
+    if n < depth then n
     else n + to_ - depth in
   let rec shift d = function
   | Const n as x -> let m = shift_db d n in if m = n then x else  C.of_dbl m
@@ -1571,14 +1568,37 @@ let shift_bound_vars ~depth ~to_ t =
   | AppArg (i,args) -> AppArg (i, List.map (shift d) args)
   | (UVar (r,_,_) | AppUVar(r,_,_)) when !!r != C.dummy ->
       anomaly "shift_bound_vars: non-derefd term"
-  | (UVar(_,lvl,_) | AppUVar(_,lvl,_)) when lvl > to_ ->
-      error "The term cannot be put in the desired context"
   | UVar _ as x -> x
   | AppUVar (r,lvl,args) -> AppUVar (r,lvl,List.map (shift d) args)
   | Custom(c,xs) -> Custom(c,List.map (shift d) xs)
   | CData _ as x -> x
   in
     if depth = to_ then t else shift depth t
+
+let subtract_to_consts ~amount ~depth t =
+  let shift_db d n =
+    if n < 0 then n
+    else if n < amount then
+      error "The term cannot be put in the desired context"
+    else n - amount in
+  let rec shift d = function
+  | Const n as x -> let m = shift_db d n in if m = n then x else  C.of_dbl m
+  | Lam r -> Lam (shift (d+1) r)
+  | App (n,x,xs) ->
+      App(shift_db d n, shift d x, List.map (shift d) xs)
+  | Cons(hd,tl) -> Cons(shift d hd, shift d tl)
+  | Nil as x -> x
+  | Discard as x -> x
+  | Arg _ as x -> x
+  | AppArg (i,args) -> AppArg (i, List.map (shift d) args)
+  | (UVar (r,_,_) | AppUVar(r,_,_)) when !!r != C.dummy ->
+      anomaly "subtract_to_consts: non-derefd term"
+  | (UVar _ | AppUVar _) ->
+      error "The term cannot be put in the desired context (leftover uvar)"
+  | Custom(c,xs) -> Custom(c,List.map (shift d) xs)
+  | CData _ as x -> x
+  in
+    if amount = 0 then t else shift 0 t
 
 end
 (* }}} *)
@@ -2281,7 +2301,7 @@ end = struct (* {{{ *)
     let t = shift_bound_vars ~depth:0 ~to_:(newground-ground) t in
     [%spy "freeze-after-reloc->newground" (fun fmt t ->
       Fmt.fprintf fmt "%a" (uppterm newground [] 0 empty_env) t) t];
-    let t = shift_bound_vars ~depth:ground ~to_:maxground t in
+    let t = shift_bound_vars ~depth:newground ~to_:maxground t in
     [%spy "freeze-after-shift->maxground" (fun fmt t ->
       Fmt.fprintf fmt "%a" (uppterm maxground [] 0 empty_env) t) t];
     !f, t
@@ -2294,7 +2314,7 @@ end = struct (* {{{ *)
   [%spy "defrost-fully-derefd" (fun fmt t ->
     Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
       (uppterm maxd [] 0 empty_env) t) t];
-    let t = shift_bound_vars ~depth:maxd ~to_ t in
+    let t = subtract_to_consts ~amount:(maxd - to_) ~depth:maxd t in
   [%spy "defrost-shifted" (fun fmt t ->
     Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
       (uppterm to_ [] 0 empty_env) t) t];
