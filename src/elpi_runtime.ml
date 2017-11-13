@@ -416,16 +416,16 @@ let undo ~old_trail ?old_constraints () =
 let print fmt =
   let pp_depth fmt d =
     if d > 0 then
-      Fmt.fprintf fmt "{%a} : "
+      Fmt.fprintf fmt "{%a} :@ "
         (pplist (uppterm d [] 0 empty_env) "") (C.mkinterval 0 d 0) in
   let pp_ctx fmt ctx =
     if ctx <> [] then
-    Fmt.fprintf fmt "%a ?- "
+     Fmt.fprintf fmt "@[<hov 2>%a@]@ ?- "
       (pplist (fun fmt (d,t) -> uppterm d [] 0 empty_env fmt t) ",") ctx in
   let pp_goal depth g = (uppterm depth [] 0 empty_env) g in
   List.iter (fun { cdepth=depth; context=pdiff; conclusion = g } ->
       Fmt.fprintf fmt
-        "@[<hov 2>%a%a%a@]" pp_depth depth pp_ctx pdiff (pp_goal depth) g)
+        "@[<hov 2>%a%a%a@]@ " pp_depth depth pp_ctx pdiff (pp_goal depth) g)
 
 let pp_stuck_goal_kind fmt = function
    | Unification { adepth = ad; env = e; bdepth = bd; a; b } ->
@@ -2482,11 +2482,7 @@ let exec_custom_predicate c ~depth idx args =
        if c == C.declare_constraintc then begin
                declare_constraint ~depth idx args; [] end
   else if c == C.print_constraintsc then begin
-               let b = Buffer.create 1024 in
-               let fmt = Format.formatter_of_buffer b in
-               CS.print fmt (CS.contents ());
-               Format.fprintf fmt "%!";
-               printf "%s%!" (Buffer.contents b);
+               printf "@[<hov 0>%a@]%!" CS.print (CS.contents ());
                [] 
   end else
     let f = try lookup_custom c with Not_found -> anomaly"no such custom" in
