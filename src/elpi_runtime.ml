@@ -2562,29 +2562,6 @@ let mk_permutations quick_filter len pivot pivot_position rest =
      when matched against chr rules;
    the two lists in output are the constraints to be removed and added *)
 let propagate { CS.cstr; cstr_position; cstr_main_key } history =
-(*
- let rec find_entails nargs_ref max_depth n = function
-   | Lam t -> find_entails nargs_ref max_depth (n+1) t
-   | App(c,x,[g]) when c == C.entailsc -> n, x, g
-   | t ->
-      let i = !nargs_ref in
-      incr nargs_ref; 
-      n, Arg(i,0), t in
- let sequent_of_pat nargs_ref max_depth ruledepth = function
-   | App(c,x,[]) when c == C.nablac ->
-       let min_depth, ctx, g = find_entails nargs_ref max_depth ruledepth x in
-       (min_depth, ctx, g)
-   | Lam _ -> error "syntax error in propagate"
-   | x -> 
-       let min_depth, ctx, g = find_entails nargs_ref max_depth ruledepth x in
-       (min_depth, ctx, g) in
-*)
- (*Fmt.fprintf Fmt.std_formatter "PROPAGATION %d\n%!" cstr_position;*)
- (* CSC: INVARIANT: propagate clauses can never be assumed using
-    implication. Otherwise ~depth:0 is wrong and I do not see any
-    reasonable semantics (i.e. a semantics where the scoping is not
-    violated). For the same reason I took the propagate clauses from
-    the !orig_prolog_program. *)
 
  let rules = CHR.rules_for (head_of cstr.conclusion) !chrules in
  let initial_program = Elpi_data.wrap_prolog_prog !orig_prolog_program in
@@ -2621,7 +2598,6 @@ let propagate { CS.cstr; cstr_position; cstr_main_key } history =
      candidates |> map_exists (fun (constraints as orig_constraints) ->
       let hitem = HISTORY.({ propagation_rule; constraints }) in
       if HISTORY.mem history hitem then begin
-(*         Fmt.fprintf Fmt.std_formatter "pruned\n%!" ; *)
         None
         end
       else
