@@ -1256,8 +1256,9 @@ let bind r gamma l a d delta b left t e =
               (* This should be the beta reduct. One could also
                * return the non reduced but bound as in the other if branch *)
               mkAppUVar r' lvl args_here
+        end else begin
+          mkAppUVar r lvl (List.map (bind b delta w) orig_args)
         end
-          else raise RestrictionFailure
   end] in
   try
     let v = mknLam new_lams (bind b delta 0 t) in
