@@ -502,11 +502,21 @@ puts it in the CtxActual by replacing all variables (in L)
 by their actual values in V.
 
 ```
+% Uniqueness of typing
+utc [] T1 [] T2 (unify-eq T1V T2) :- !, copy T1 T1V.
+utc [N|NS] T1 [V|VS] T2 C :- !, copy N V => utc NS T1 VS T2 C.
+utc [] T1 VS T2 C :- !, utc [] {subst-prod VS T1} [] T2 C.
+utc [_|NS] (prod _ _ F) [] T2 C :- !,                      
+  assert (pi x\ F x = F1) "restriction bug", utc NS F1 [] T2 C.
+
+canonical? [].
+canonical? [N|NS] :- is_name N, not(mem NS N), canonical? NS.
+
 constraint of {
-  rule (ECanonical : CtxCanonical ?- of (uvar K L) TyCanonical)
-     \ (EActual    : CtxActual    ?- of (uvar K V) TyActual)
-     | (subst-list L V TyCanonical TyCanonicalV)
-   <=> (EActual : CtxActual ?- unify TyCanonicalV TyActual)
+ rule (E1 : G1 ?- of (uvar K L1) T1 _) % canonical
+    \ (E2 : G2 ?- of (uvar K L2) T2 _) % actual
+    | (canonical? L1, utc L1 T1 L2 T2 Condition)
+  <=> (E2: G2 ?- Condition).
 }
 ```
 
