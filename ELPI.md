@@ -501,7 +501,7 @@ Example of a rule that takes the canonical type of K and
 puts it in the CtxActual by replacing all variables (in L)
 by their actual values in V.
 
-```
+```prolog
 % Uniqueness of typing
 utc [] T1 [] T2 (unify-eq T1V T2) :- !, copy T1 T1V.
 utc [N|NS] T1 [V|VS] T2 C :- !, copy N V => utc NS T1 VS T2 C.
