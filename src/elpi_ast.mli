@@ -60,32 +60,26 @@ type clause = {
   insert : ([ `Before | `After ] * string) option;
   body : term;
 }
-type 'func alignement =  'func list * [ `Spread | `Align ]
-type ('term,'func_t) chr = {
-  to_match : ('term * 'term) list;
-  to_remove : ('term * 'term) list;
-  alignement : 'func_t alignement;
-  guard : 'term option;
-  new_goal : 'term option;
-  depth : int; (* not parsed *)
-  nargs : int; (* not parsed *)
+type sequent = { eigen : term; context : term; conclusion : term }
+and chr_rule = {
+  to_match : sequent list;
+  to_remove : sequent list;
+  alignment : Func.t list;
+  guard : term option;
+  new_goal : sequent option;
 }
+[@@deriving show, create]
 
-val create_chr :
-  ?to_match:('a * 'a) list ->
-  ?to_remove:('a * 'a) list ->
-  ?alignement:'b alignement ->
-  ?guard:'a ->
-  ?new_goal:'a -> ?depth:int -> ?nargs:int -> unit -> ('a, 'b) chr
+val create_chr_rule :
+  ?to_match: sequent list ->
+  ?to_remove: sequent list ->
+  ?alignment:Func.t list ->
+  ?guard:term option ->
+  ?new_goal: sequent option ->
+  unit -> chr_rule
 
-val pp_chr : 
-  (Format.formatter -> 'term -> unit) ->
-  (Format.formatter -> 'func_t -> unit) ->
-     Format.formatter -> ('term,'func_t) chr -> unit
-val show_chr :
-  (Format.formatter -> 'term -> unit) ->
-  (Format.formatter -> 'func_t -> unit) ->
-     ('term,'func_t) chr -> string
+val pp_chr_rule : Format.formatter -> chr_rule -> unit
+val show_chr_rule : chr_rule -> string
 
 type decl =
    Clause of clause
@@ -94,7 +88,7 @@ type decl =
  | End
  | Mode of (Func.t * bool list * (Func.t * (Func.t * Func.t) list) option) list
  | Constraint of Func.t list
- | Chr of (term, Func.t) chr
+ | Chr of chr_rule
  | Accumulated of decl list
  | Macro of Ploc.t * Func.t * term
  | Type of bool(*external?*) * Func.t * term

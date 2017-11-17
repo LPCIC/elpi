@@ -11,10 +11,10 @@ term succ (arr nat nat).
 infixr ====> 126. % Implication where the l.h.s. is a list of propositions.
 
 constraint term {
-  rule (GX ?- term (?? as KX) TX)
-     \ (GY ?- term (?? as KY) TY)
-     > KX ~ KY
-     | (KX = uvar _ LX, KY = uvar _ LY, compatible GX LX GY LY CTXCONSTR)
+  rule (GX ?- term (uvar _ LX) TX)
+     \ (GY ?- term (uvar _ LY) TY)
+     > LX ~ LY
+     | (compatible GX LX GY LY CTXCONSTR)
    <=> (CTXCONSTR, TX = TY).
 }
 

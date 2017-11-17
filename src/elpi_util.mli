@@ -59,6 +59,7 @@ val pplist : ?max:int -> ?boxed:bool ->
   ?pplastelem:(Format.formatter -> 'a -> unit) -> string ->
     Format.formatter -> 'a list -> unit
 val pp_int : Format.formatter -> int -> unit
+val pp_string : Format.formatter -> string -> unit
 val pp_pair :
   (Format.formatter -> 'a -> unit) ->
   (Format.formatter -> 'b -> unit) ->

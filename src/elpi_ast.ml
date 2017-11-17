@@ -98,16 +98,13 @@ type clause = {
   body : term;
 }[@@deriving show]
 
-type 'func alignement =  'func list * [ `Spread | `Align ]
-[@@deriving show]
-type ('term,'func_t) chr = {
-  to_match : ('term * 'term) list;
-  to_remove : ('term * 'term) list;
-  alignement : 'func_t alignement [@default ([],`Align)];
-  guard : 'term option;
-  new_goal : 'term option;
-  depth : int [@default 0];
-  nargs : int [@default 0];
+type sequent = { eigen : term; context : term; conclusion : term }
+and chr_rule = {
+  to_match : sequent list [@default []];
+  to_remove : sequent list [@default []];
+  alignment : Func.t list [@default []];
+  guard : term option [@default None];
+  new_goal : sequent option [@default None];
 }
 [@@deriving show, create]
 
@@ -118,7 +115,7 @@ type decl =
  | End
  | Mode of (Func.t * bool list * (Func.t * (Func.t * Func.t) list) option) list
  | Constraint of Func.t list
- | Chr of (term, Func.t) chr
+ | Chr of chr_rule
  | Accumulated of decl list
  | Macro of Ploc.t * Func.t * term
  | Type of bool * Func.t * term
