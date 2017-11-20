@@ -86,7 +86,7 @@ module Compile : sig
 
   (** Runs [elpi_typechecker.elpi]. Extra static checks can be added, see also
       [elpi_quoted_syntax.elpi] *)
-  val static_check : ?extra_checker:string list -> Data.program -> Data.query -> unit
+  val static_check : ?extra_checker:string list -> Data.program -> Data.query -> bool
 
 end
 

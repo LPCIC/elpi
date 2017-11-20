@@ -38,14 +38,18 @@ let more () =
 let run_prog typecheck prog query =
  let prog = Elpi_API.Compile.program prog in
  let query = Elpi_API.Compile.query prog query in
- if typecheck then Elpi_API.Compile.static_check prog query;
+ if typecheck then
+   if not (Elpi_API.Compile.static_check prog query) then
+      Format.eprintf "Type error\n";
  Elpi_API.Execute.loop prog query ~more ~pp:print_solution
 ;;
 
 let test_impl typecheck prog query =
  let prog = Elpi_API.Compile.program prog in
  let query = Elpi_API.Compile.query prog query in
- if typecheck then Elpi_API.Compile.static_check prog query;
+ if typecheck then
+   if not (Elpi_API.Compile.static_check prog query) then
+      Format.eprintf "Type error\n";
  Gc.compact ();
  let time f p q =
    let t0 = Unix.gettimeofday () in

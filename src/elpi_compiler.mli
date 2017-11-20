@@ -26,4 +26,5 @@ val query_of_term :
 (* Quotes the program and the query, see elpi_quoted_syntax.elpi *)
 val quote_syntax : program -> query -> term * term
 
-val typecheck : ?extra_checker:string list -> program -> query -> unit
+(* false means a type error was found *)
+val typecheck : ?extra_checker:string list -> program -> query -> bool

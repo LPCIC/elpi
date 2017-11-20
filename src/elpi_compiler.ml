@@ -911,7 +911,6 @@ let typecheck ?(extra_checker=[]) ({ compiler_state } as p) q =
     qterm = App(c,p,[q;tlist]);
     qconstraints = CustomConstraint.init compiler_state;
   } in
-  if execute_once checker query = Failure then
-    Printf.eprintf "Anomaly: Type checking aborts\n%!"
+  execute_once checker query <> Failure
 ;;
 
