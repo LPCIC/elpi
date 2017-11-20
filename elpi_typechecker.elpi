@@ -64,6 +64,11 @@ report-all-failures-if-no-success P :-
   (((pi ML\ error ML :- !, iter (stash-new E) ML, fail) => P)
    ;
    (error {open_safe E})).
+report-all-failures-and-fail-if-no-success P :-
+  new_safe E,
+  (((pi ML\ error ML :- !, iter (stash-new E) ML, fail) => P)
+   ;
+   (error {open_safe E}, fail)).
 
 mode (pp i o).
 type pp term -> string -> prop.
@@ -149,10 +154,12 @@ type checking (ctype "loc") -> prop.
 
 typecheck [] (Loc, Names, Query) :-
   %print {counter "run"} "type checking " Loc Query,
-  checking Loc => of-clause Names Query.
+  checking Loc =>
+    report-all-failures-and-fail-if-no-success (of-clause Names Query).
 typecheck [ (Loc, Names, Clause) |Rest] Q :-
   %print {counter "run"} "type checking " Loc Clause,
-  checking Loc => of-clause Names Clause, !,
+  checking Loc =>
+    report-all-failures-and-fail-if-no-success (of-clause Names Clause), !,
   typecheck Rest Q.
 
 mode (refresh i o).
