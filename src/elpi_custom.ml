@@ -446,7 +446,7 @@ let _ =
          | _ -> type_error "bad argument to flush (or flush)")
     | _ -> type_error "flush (or flush) takes 2 arguments") ;
   declare "halt" (fun ~depth -> function
-    | [] -> exit 0
+    | [] -> Elpi_util.error "halt"
     | _ -> type_error "halt (or halt) takes 0 arguments") ;
   declare "input" (fun ~depth -> function
     | [t1 ; t2 ; t3] ->
