@@ -54,19 +54,6 @@ autocmd FileType lprolog hi def link elpiMacro Special
 autocmd FileType lprolog hi def link elpiSpill Special
 ```
 
-### How to embed ELPI in your software
-
-The easiest way of embedding ELPI is by linking it using findlib 
-as in `ocamlfind opt -package elpi mycode.ml -o myprogram`.
-The API the host application can use to drive ELPI is documented in the
-[elpi_API.mli](src/elpi_API.mli) file.
-
-Examples of embedding are [coq-elpi](https://github.com/LPCIC/coq-elpi) and
-[matita-elpi](https://github.com/LPCIC/matita).
-
-The [command line](elpi_REPL.ml) interface to ELPI is a very simple
-example of a client using ELPI as a library.
-
 ## What's an elaborator and what's so special about it?
 
 The elaborator of an interactive prover is the component in
@@ -128,3 +115,17 @@ The extensions to λProlog implemented in ELPI are described in the
 
 There is also a [paper](https://hal.inria.fr/hal-01176856/) describing the implementation
 of the interpreter, in particular how it deals with binder mobility.
+
+#### How to embed ELPI in your software
+
+The easiest way of embedding ELPI is by linking it using findlib 
+as in `ocamlfind opt -package elpi mycode.ml -o myprogram`.
+The API the host application can use to drive ELPI is documented in the
+[elpi_API.mli](src/elpi_API.mli) file.
+
+The [command line](elpi_REPL.ml) interface to ELPI is a very simple
+example of a client using ELPI as a library.
+More complex examples of embeddings of ELPI are [coq-elpi](https://github.com/LPCIC/coq-elpi) and
+[matita-elpi](https://github.com/LPCIC/matita).
+
+
