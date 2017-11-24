@@ -6,7 +6,7 @@ ELPI implements a variant of λProlog enriched with Constraint Handling Rules.
 ELPI is a research project aimed at providing a programming platform
 for the so called *elaborator* component of an interactive theorem prover.
 ELPI stands for Embeddable Lambda Prolog Interpreter, and indeed it is
-designed to be easily embedded into larger softwares written in OCaml
+designed to be easily embedded into larger softwares 
 as Coq or Matita.
 
 ELPI is free software released under LGPL vesion 2.1 or above.
@@ -64,6 +64,9 @@ The API the host application can use to drive ELPI is documented in the
 Examples of embedding are [coq-elpi](https://github.com/LPCIC/coq-elpi) and
 [matita-elpi](https://github.com/LPCIC/matita).
 
+The [command line](elpi_REPL.ml) interface to ELPI is a very simple
+example of a client using ELPI as a library.
+
 ## What's an elaborator and what's so special about it?
 
 The elaborator of an interactive prover is the component in
@@ -91,7 +94,8 @@ The programming language has the following features
 - Native support for hypothetical context.  When moving under a
   binder one can attach to the bound variable extra information
   that is collected when the variable gets out of scope.
-  The programmer needs not to care about *typing context*.
+  For example when writing a type-checker the programmer needs 
+  not to care about managing the *typing context*.
 - Native support for higher order unification variables, again via HOAS.
   Unification variables of the meta-language (λProlog) can be reused to
   represent the unification variables of the object language.
@@ -107,7 +111,7 @@ The programming language has the following features
   The programmer can declare any set of *constraints that is automatically
   checked for satisfiability* whenever such set gets updates.
 - Clauses are graftable. The user is free to *extend an existing program* by
-  inserting/removign clauses, both at runtime (using implication) and at
+  inserting/removing clauses, both at runtime (using implication) and at
   "parse time" by accumulating files.
 - Native support for backtracking. To ease implementation of *search*.
 
