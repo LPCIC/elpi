@@ -148,6 +148,9 @@ of-app Ty Args _ HD (D - []) :- !,
 of-clause [N|NS] (arg C) :- !, pi x\ 
  (pp x N :- !) => (pi Tf\ of x Tf :- !, assert (unif T Tf) (type-err x T Tf)) =>
  of-clause NS (C x).
+of-clause [] (arg C) :- !, pi x\ 
+ (pi Tf\ of x Tf :- !, assert (unif T Tf) (type-err x T Tf)) =>
+ of-clause [] (C x).
 of-clause _ C :- of C TC, assert (unif TC prop) (type-err C TC prop).
 
 type checking (ctype "loc") -> prop.
