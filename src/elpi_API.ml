@@ -141,6 +141,7 @@ module Extend = struct
     include Elpi_compiler
     let term_at = term_of_ast
     let query = query_of_term
+    let quote_syntax l = quote_syntax (List.flatten l)
   end
 
   module CustomPredicate = struct
@@ -205,6 +206,47 @@ module Extend = struct
     let type_error = Elpi_util.type_error
     let anomaly = Elpi_util.anomaly
     let warn = Elpi_util.warn
+
+    let clause_of_term ~depth term =
+      let module R = (val !r) in let open R in
+      let rec aux d ctx t =
+        match deref_head ~depth:d t with       
+        | Data.Const i when i >= 0 && i < depth ->
+            error "program_of_term: the term is not closed"
+        | Data.Const i when i < 0 ->
+            Ast.mkCon (Data.Constants.show i)
+        | Data.Const i -> Elpi_util.IntMap.find i ctx
+        | Data.Lam t ->
+            let s = "x" ^ string_of_int d in
+            let ctx = Elpi_util.IntMap.add d (Ast.mkCon s) ctx in
+            Ast.mkLam s (aux (d+1) ctx t)
+        | Data.App(c,x,xs) ->
+            let c = aux d ctx (Data.Constants.of_dbl c) in
+            let x = aux d ctx x in
+            let xs = List.map (aux d ctx) xs in
+            Ast.mkApp (c :: x :: xs)
+        | (Data.Arg _ | Data.AppArg _) -> assert false
+        | Data.Cons(hd,tl) ->
+            let hd = aux d ctx hd in
+            let tl = aux d ctx tl in
+            Ast.mkSeq [hd;tl]
+        | Data.Nil -> Ast.mkNil
+        | Data.Custom(c,xs) ->
+            let c = aux d ctx (Data.Constants.of_dbl c) in
+            let xs = List.map (aux d ctx) xs in
+            Ast.mkApp (c :: xs)
+        | Data.CData x -> Ast.mkC x
+        | (Data.UVar _ | Data.AppUVar _) ->
+            error "program_of_term: the term contains uvars"
+        | Data.Discard -> Ast.mkCon "_"
+      in
+      [Ast.Clause {
+        Ast.loc = Ploc.dummy;
+        Ast.id = None;
+        Ast.insert = None;
+        Ast.body = aux depth Elpi_util.IntMap.empty term;
+      }]
+
   end
 
   module Pp = struct

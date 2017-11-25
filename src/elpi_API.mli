@@ -179,6 +179,8 @@ module Extend : sig
     val query_of_term : ?loc:Ploc.t -> term -> Ast.query
     val term_of_query : Ast.query -> term
 
+    type program = Ast.program
+
   end
 
   module Data : sig
@@ -385,6 +387,8 @@ module Extend : sig
       from:int -> to_:int -> ano:int -> Data.term -> Data.term
     val deref_appuv :
       from:int -> to_:int -> args:Data.term list -> Data.term -> Data.term
+
+    val clause_of_term : depth:int -> Data.term -> Ast.program
 
     (** Lifting *)
     val move : from:int -> to_:int -> Data.term -> Data.term
