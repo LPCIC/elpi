@@ -2,9 +2,20 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
+module Fmt = Format
+
+module IntMap = struct
+ include Map.Make(struct type t = int let compare x y = x - y end)
+ let pp f fmt m =
+   iter (fun k v -> Fmt.fprintf fmt "%d |-> %a" k f v) m
+ let show f m =
+   let b = Buffer.create 20 in
+   iter (fun k v -> Printf.bprintf b "%d |-> %s," k (f v)) m;
+   Buffer.contents b
+end
+
 module StrMap = Map.Make(String)
 
-module Fmt = Format
 
 let pplist ?(max=max_int) ?(boxed=false) ppelem ?(pplastelem=ppelem) sep f l =
  if l <> [] then begin

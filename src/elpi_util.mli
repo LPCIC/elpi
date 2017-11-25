@@ -35,6 +35,15 @@ val option_mapacc :
 
 module StrMap : Map.S with type key = string
 
+(******************** int ******************)
+
+module IntMap : sig
+  include Map.S
+  val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+  val show : ('a -> string) -> 'a t -> string
+end
+  with type key = int
+
 (***************** Unique ID ****************)
 
 module UUID : sig

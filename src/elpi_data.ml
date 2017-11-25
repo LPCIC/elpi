@@ -8,15 +8,7 @@ module Fmt = Format
 module F = Elpi_ast.Func
 open Elpi_util
 
-module IM = struct
- include Map.Make(struct type t = int let compare x y = x - y end)
- let pp f fmt m =
-   iter (fun k v -> Fmt.fprintf fmt "%d |-> %a" k f v) m
- let show f m =
-   let b = Buffer.create 20 in
-   iter (fun k v -> Printf.bprintf b "%d |-> %s," k (f v)) m;
-   Buffer.contents b
-end
+module IM = IntMap
 
 (******************************************************************************
   Terms: data type definition and printing
