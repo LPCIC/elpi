@@ -141,7 +141,6 @@ module Extend = struct
     include Elpi_compiler
     let term_at = term_of_ast
     let query = query_of_term
-    let quote_syntax l = quote_syntax (List.flatten l)
   end
 
   module CustomPredicate = struct
