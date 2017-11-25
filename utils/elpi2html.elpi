@@ -352,8 +352,7 @@ filter-out [X|XS] P R :-
   if (P X) (R = [X | RS]) (R = RS),
   filter-out XS P RS.
 
-write-html IN F R :-
-  quote_syntax IN "main" P _,
+write-html P F R :-
   filter-out P (c\
     sigma Loc LocS _1 _2\ c = ( Loc, _1, _2), 
     term_to_string Loc LocS, not(R LocS)) PF,
@@ -364,10 +363,18 @@ write-html IN F R :-
 exists P [X|XS] :- P X, !.
 exists P [_|XS] :- exists P XS.
 
-main [IN,OUT|FILTERS] :-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% entry point from a software having the program in compiled form
+main-quoted P OUT FILTERS :-
   open_out OUT OC,
   R = (x\exists (y\rex_match y x) FILTERS),
-  write-to OC => write-html IN OUT R,
+  write-to OC => write-html P OUT R,
   close_out OC.
+
+% entry point from the command line
+main [IN,OUT|FILTERS] :-
+  quote_syntax IN "main" P _,
+  main-quoted P OUT FILTERS.
 
 % vim: set ft=lprolog:
