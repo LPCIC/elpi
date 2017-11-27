@@ -388,7 +388,9 @@ module Extend : sig
     val deref_appuv :
       from:int -> to_:int -> args:Data.term list -> Data.term -> Data.term
 
-    val clause_of_term : depth:int -> Data.term -> Ast.program
+    val clause_of_term :
+      ?name:string -> ?graft:([`After | `Before] * string) ->
+      depth:int -> Data.term -> Ast.program
 
     (** Lifting *)
     val move : from:int -> to_:int -> Data.term -> Data.term

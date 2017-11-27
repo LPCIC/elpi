@@ -206,7 +206,7 @@ module Extend = struct
     let anomaly = Elpi_util.anomaly
     let warn = Elpi_util.warn
 
-    let clause_of_term ~depth term =
+    let clause_of_term ?name ?graft ~depth term =
       let module R = (val !r) in let open R in
       let rec aux d ctx t =
         match deref_head ~depth:d t with       
@@ -241,8 +241,8 @@ module Extend = struct
       in
       [Ast.Clause {
         Ast.loc = Ploc.dummy;
-        Ast.id = None;
-        Ast.insert = None;
+        Ast.id = name;
+        Ast.insert = graft;
         Ast.body = aux depth Elpi_util.IntMap.empty term;
       }]
 
