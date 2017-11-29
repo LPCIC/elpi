@@ -182,7 +182,7 @@ let really_input ic s ofs len =
       else unsafe_really_input (read+r) ic s (ofs + r) (len - r)
     end
   in
-  if ofs < 0 || len < 0 || ofs > String.length s - len
+  if ofs < 0 || len < 0 || ofs > Bytes.length s - len
   then invalid_arg "really_input"
   else unsafe_really_input 0 ic s ofs len
 
@@ -456,15 +456,15 @@ let _ =
               let n = C.to_int n in
               let s = C.to_int s in
               let ch,lookahead = get_in_stream s in
-              let buf = String.make n ' ' in
+              let buf = Bytes.make n ' ' in
               let start,n =
                match lookahead with
                   None -> 0,n
                 | Some c -> Bytes.set buf 0 c ; 1,n-1 in
               let read = really_input ch buf start n in
-              let str = String.sub buf 0 (read + start) in
+              let str = Bytes.sub buf 0 (read + start) in
               set_lookahead s None ;
-              [App (eqc, t3, [C.(of_string str)])]
+              [App (eqc, t3, [C.(of_string (Bytes.to_string str))])]
              with 
               Sys_error msg -> error msg)
          | _ -> type_error "bad argument to input (or input)")
