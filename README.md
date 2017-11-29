@@ -13,7 +13,7 @@ ELPI is free software released under LGPL vesion 2.1 or above.
 
 ### Status
 
-The software is in alpha.  It works but is has rough edges and surely bugs.
+The software is in beta.  It works but is has rough edges and surely bugs.
 
 ### How to install ELPI
 
