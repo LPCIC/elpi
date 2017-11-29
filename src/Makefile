@@ -28,7 +28,7 @@ ELPI_COMPONENTS = \
   elpi_data.$(CMX) \
   $(ELPI_PACKED_COMPONENTS) elpi_compiler.$(CMX) \
   elpi_latex_exporter.$(CMX) elpi_prolog_exporter.$(CMX) \
-  elpi_API.$(CMX) elpi_custom.$(CMX)
+  elpi_API.$(CMX) elpi_builtin.$(CMX)
 
 # Standard compilation
 ELPI_EASY_COMPONENTS = \
