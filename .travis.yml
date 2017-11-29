@@ -5,16 +5,18 @@ env:
  global:
  - OCAML_MIN=4.02.3
  - OCAML_MAX=4.06.0
+ - DEPS="camlp5 ocamlfind ppx_tools_versioned ppx_deriving ocaml-migrate-parsetree"
+ - JOBS=2
 
 install:
- - opam init -j 2 --compiler=$OCAML_MIN -n -y
+ - opam init -j $JOBS --compiler=$OCAML_MIN -n -y
  - eval $(opam config env)
  - opam config var root
- - opam install -j 2 -y camlp5 ocamlfind ppx_tools_versioned ppx_deriving ocaml-migrate-parsetree
+ - opam install -j $JOBS -y $DEPS
  - opam list
  - opam switch $OCAML_MAX -n -y
  - eval $(opam config env)
- - opam install -j 2 -y camlp5 ocamlfind ppx_tools_versioned ppx_deriving ocaml-migrate-parsetree
+ - opam install -j $JOBS -y $DEPS
  - opam list
 
 matrix:
