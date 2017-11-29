@@ -14,7 +14,7 @@ install:
  - opam config var root
  - opam install -j $JOBS -y $DEPS
  - opam list
- - opam switch $OCAML_MAX -n -y
+ - opam switch $OCAML_MAX -y
  - eval $(opam config env)
  - opam install -j $JOBS -y $DEPS
  - opam list
