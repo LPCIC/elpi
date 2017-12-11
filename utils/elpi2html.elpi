@@ -200,6 +200,11 @@ hd-symbol (app [ const S | _ ]) :- write S.
 hd-symbol (const S) :- write S.
 
 type name term -> string -> prop.
+write-clause ( Loc , [], (arg Body) ) :-
+  new_int I, 
+  (pi x\ X is "X" ^ {term_to_string I}),
+  name-to-string X I A1,
+  pi x\ name x A1 => write-clause ( Loc, [], Body x ).
 write-clause ( Loc , [A|Args], (arg Body) ) :-
   new_int I, name-to-string A I A1,
   pi x\ name x A1 => write-clause ( Loc, Args, Body x ).
