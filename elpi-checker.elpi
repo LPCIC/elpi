@@ -3,6 +3,7 @@
 /* ------------------------------------------------------------------------- */
 
 % Simple type checker for lambda-Prolog programs
+accumulate elpi_quoted_syntax.
 
 % --------- HOAS or programs  ------------------------------------------------
 
@@ -216,9 +217,9 @@ mode (report-linear i).
 report-linear [].
 report-linear [V `-> 1 + ?? |NS] :- !,
   pp V VN,
-  if (not(rex_match "^_" VN))
+  if (not(rex_match "^_" VN ; rex_match "_$" VN))
     (checking LOC, term_to_string LOC SLOC,
-     MSG is SLOC ^" Warning: "^ VN ^" is linear, name it _" ^ VN ^ " please",
+     MSG is SLOC ^" Warning: "^ VN ^" is linear, name it _" ^ VN ^ " (if it discards) or " ^ VN ^ "_ (if it is a fresh variable) please",
      warning MSG)
     true,
   report-linear NS.
@@ -234,20 +235,20 @@ count (lam F) E :- pi x\ count (F x) E.
 count (app [X|XS]) E :- !, count X E, count (app XS) E.
 count (app []) _ :- !.
 count X E :- var X, !, incr X E.
-count _ _.
+count A _.
 
 mode (incr i i).
 incr X [X `-> K | _] :- add1 K.
 incr X [_ | XS] :- incr X XS.
 
 mode (add1 i).
-add1 (?? as K) :- K = 1 + _FRESH.
+add1 (?? as K) :- K = 1 + FRESH_.
 add1 (1 + K) :- add1 K.
 
 check-non-linear [N|NS] (arg C) L :- pi x\
- (pp x N :- !) => (var x) => check-non-linear NS (C x) [x `-> _FRESH | L].
+ (pp x N :- !) => (var x) => check-non-linear NS (C x) [x `-> FRESH_ | L].
 check-non-linear [] (arg C) L :- pi x\
- (var x) => check-non-linear NS (C x) [x `-> _FRESH | L].
+ (var x) => check-non-linear NS (C x) [x `-> FRESH_ | L].
 check-non-linear _ C L :-
   count C L, report-linear L.
 
