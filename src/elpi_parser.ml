@@ -715,12 +715,12 @@ let list_element_prec = 120
 
 let parser_initialized = ref false
 
-let init ?(silent=true) ~paths ~cwd =
+let init ?(silent=true) ?(lp_syntax="lp-syntax.elpi") ~paths ~cwd () =
   assert(!parser_initialized = false);
   parse_silent := silent;
   parsed := [];
   set_tjpath cwd paths;
-  assert(parse lp ["pervasives-syntax.elpi"] = []);
+  assert(parse lp [lp_syntax] = []);
   parser_initialized := true
 ;;
 

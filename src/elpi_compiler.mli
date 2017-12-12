@@ -27,4 +27,4 @@ val query_of_term :
 val quote_syntax : program -> query -> term * term
 
 (* false means a type error was found *)
-val typecheck : ?extra_checker:string list -> program -> query -> bool
+val static_check : ?checker:Elpi_ast.decl list -> program -> query -> bool

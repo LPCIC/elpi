@@ -67,8 +67,8 @@ dist:
 OC_OPTIONS = -linkpkg $(OCAMLOPTIONS) $(FLAGS)
 
 ELPI_LIBS = \
-  elpi_quoted_syntax.elpi  elpi_typechecker.elpi  \
-  pervasives.elpi pervasives-syntax.elpi \
+  elpi_quoted_syntax.elpi  elpi-checker.elpi  \
+  pervasives.elpi lp-syntax.elpi \
   utils/elpi2html.elpi
 
 ELPI_DIST = \

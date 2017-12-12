@@ -29,8 +29,9 @@ module Setup : sig
       [argv] is list of options, see the {!val:usage} string;
       [basedir] current working directory (used to make paths absolute);
       [silent] (default [true]) to avoid printing files being loaded.
+      [lp_syntax] is a file containing grammar rules, defaults to lp-syntax.elpi
       It returns part of [argv] not relevant to ELPI. *)
-  val init : ?silent:bool -> string list -> string -> string list
+  val init : ?silent:bool -> ?lp_syntax:string -> string list -> string -> string list
 
   (** Usage string *)
   val usage : string
@@ -84,9 +85,8 @@ module Compile : sig
   val program : ?allow_undeclared_custom_predicates:bool -> ?print:[`Yes|`Raw] -> Ast.program list -> Data.program (* XXX *)
   val query : Data.program -> Ast.query -> Data.query
 
-  (** Runs [elpi_typechecker.elpi]. Extra static checks can be added, see also
-      [elpi_quoted_syntax.elpi] *)
-  val static_check : ?extra_checker:string list -> Data.program -> Data.query -> bool
+  (** Runs [elpi-checker.elpi] by default. *)
+  val static_check : ?checker:Ast.program list -> Data.program -> Data.query -> bool
 
 end
 

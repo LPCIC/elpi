@@ -17,7 +17,7 @@ let set_trace argv =
 
 module Setup = struct
 
-let init ?silent argv cwd =
+let init ?silent ?lp_syntax argv cwd =
   let new_argv = set_trace argv in
   let new_argv, paths =
     let rec aux args paths = function
@@ -27,7 +27,7 @@ let init ?silent argv cwd =
     in
       aux [] [] new_argv
   in
-  Elpi_parser.init ?silent ~paths ~cwd;
+  Elpi_parser.init ?silent ?lp_syntax ~paths ~cwd ();
   new_argv
 
 let trace args =
@@ -80,7 +80,9 @@ module Compile = struct
   let program ?allow_undeclared_custom_predicates ?print l = Elpi_compiler.program_of_ast ?allow_undeclared_custom_predicates ?print (List.flatten l)
   let query = Elpi_compiler.query_of_ast
 
-  let static_check = Elpi_compiler.typecheck
+  let static_check ?checker p g =
+    let checker = Elpi_util.option_map List.flatten checker in
+    Elpi_compiler.static_check ?checker p g
 
 end
 

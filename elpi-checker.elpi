@@ -204,13 +204,8 @@ under-env [ X `: PT | XS ] P :-
 
 
 typecheck-program P Q DeclaredTypes :-
-  % gettimeofday Begin,
   collect-predicates-program P DeclaredTypes AllTypes, !,
-  under-env AllTypes (typecheck P Q), !,
-  % gettimeofday Mid, Time is Mid - Begin, print "End type checking" Time,
-  warn-linear P,
-  % WTime is {gettimeofday} - Mid, print "End warning" WTime,
- true.
+  under-env AllTypes (typecheck P Q).
 
 % ---------- warnings ------------------------------------------------------
 
@@ -249,8 +244,10 @@ mode (add1 i).
 add1 (?? as K) :- K = 1 + _FRESH.
 add1 (1 + K) :- add1 K.
 
-check-non-linear [N|NS] (lam C) L :- pi x\
+check-non-linear [N|NS] (arg C) L :- pi x\
  (pp x N :- !) => (var x) => check-non-linear NS (C x) [x `-> _FRESH | L].
+check-non-linear [] (arg C) L :- pi x\
+ (var x) => check-non-linear NS (C x) [x `-> _FRESH | L].
 check-non-linear _ C L :-
   count C L, report-linear L.
 
@@ -274,5 +271,10 @@ test5 :- print x 2 "3x".
 test6 :- foo "x", foo 1, foo app.
 test7 :- foo (foo app).
 warn1 :- LINEAR.
+
+% ------- entry ---------------------------------------
+
+check P Q DeclaredTypes :-
+  typecheck-program P Q DeclaredTypes, !, warn-linear P.
 
 % vim: set ft=lprolog:

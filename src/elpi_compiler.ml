@@ -893,16 +893,16 @@ let quote_syntax { compiler_state } { qloc; qnames; qenv; qterm } =
        close_w_binder argc (quote_term ~on_type:false vars qterm) vars]) in
   clist, q
 
-let typecheck ?(extra_checker=[]) ({ compiler_state } as p) q =
-  let checker =
-    (program_of_ast ~allow_undeclared_custom_predicates:true
-       (Elpi_parser.parse_program ("elpi_typechecker.elpi"::extra_checker))) in
+let default_checker () = Elpi_parser.parse_program ["elpi-checker.elpi"]
+
+let static_check ?(checker=default_checker ()) ({ compiler_state } as p) q =
+  let checker = program_of_ast ~allow_undeclared_custom_predicates:true checker in
   let p,q = quote_syntax p q in
   let tlist = list_to_lp_list (List.map (fun {tname;tnargs;ttype} ->
       App(Constants.from_stringc "`:",mkQCon ~on_type:false tname 0,
         [close_w_binder forallc (quote_term ~on_type:true 0 ttype) tnargs]))
     (get_types compiler_state)) in
-  let c = Constants.from_stringc "typecheck-program" in
+  let c = Constants.from_stringc "check" in
   let query = {
     qloc = Ploc.dummy;
     qnames = StrMap.empty;
