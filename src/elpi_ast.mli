@@ -28,7 +28,6 @@ module Func : sig
   val isf : t
   val nilf : t
   val consf : t
-  val letf : t
   val arrowf : t
   val sequentf : t
   val ctypef : t

@@ -32,7 +32,6 @@ module Func = struct
   let isf = from_string "is"
   let consf = from_string "::"
   let nilf = from_string "[]"
-  let letf = from_string ":="
   let arrowf = from_string "->"
   let sequentf = from_string "?-"
   let ctypef = from_string "ctype"

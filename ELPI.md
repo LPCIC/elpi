@@ -35,8 +35,6 @@
 - [Advanced modes](#advanced-modes) can be used to declare the same code
   with different modes under different names.
   
-- [To be removed](#to-be-removed) stuff that is going away
-  
 ## Underscore
 
 Identifiers whose name start with `_` are wildcards, not variables.
@@ -644,21 +642,4 @@ pp3 (?? _ L) :-       print "with arguments " L.
 pp4 (?? K L as V) :-  print "a flexible term " V.
 ```
 Only `V` is a proper term, `K` and `L` are not.
-
-## To be removed
-
-inefficient.
-```prolog
-     append [X|XS] L -> [X|R] :- append XS L R.
-%--> append [X|XS] L TMP :- TMP = [X|R], append XS L R.
-     append [] L -> L.
-%--> append [] L TMP :- TMP = L.
-```
-
-not very useful.
-```prolog
-main :-
-      Foo := bar X.
-%-->  bar X Foo.
-```
 

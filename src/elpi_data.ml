@@ -148,7 +148,6 @@ module Constants : sig
   val nablac   : constant
   val uvc      : constant
   val asc      : constant
-  val letc     : constant
   val arrowc   : constant
   val frozenc  : constant
 
@@ -230,7 +229,6 @@ let nablac = fst (funct_of_ast (F.from_string "nabla"))
 let entailsc = fst (funct_of_ast (F.from_string "?-"))
 let uvc = fst (funct_of_ast (F.from_string "??"))
 let asc = fst (funct_of_ast (F.from_string "as"))
-let letc = fst (funct_of_ast (F.from_string ":="))
 let spillc = fst (funct_of_ast (F.spillf))
 let arrowc = fst (funct_of_ast F.arrowf)
 let frozenc = fst (funct_of_ast (F.from_string "uvar"))

@@ -255,7 +255,6 @@ let is_Arg state x =
    2. from AST to TERM:
       - @macro expansion (to enable substitution Args are coded as constants)
       - {{quotations}}
-      - desugaring "f x -> y" and "X := f y"
       - bound names -> DB levels
    3. from TERM to TERM: (Const "%Arg4") -> (Arg 4)
 *)
@@ -309,40 +308,6 @@ let stack_term_of_ast ?(inner_call=false) ~depth:arg_lvl state ast =
   let types = get_types state in
   let modes = get_modes state in
 
-  (* XXX desugaring: XXX does not seem to be very useful... XXX
-      - "f x -> y :- c" ---> "f x TMP :- TMP = y, c"
-      - "X := f y" ---> "f y X"
-      *)
-  let desugar inner s args =
-    let open Elpi_ast in
-    let open Func in
-    let varname = function Const x -> x | _ -> assert false in
-    let last_is_arrow l =
-      match List.rev l with
-      | App(Const f,[_]) :: _ -> equal f arrowf
-      | _ -> false in  
-    let chop_last_app l =
-      match List.rev l with
-      | App(_,[x]) :: xs -> x, List.rev xs
-      | _ -> assert false in
-    match args with
-    | [var;App(Const f,args)] when equal s letf -> f, (args @ [var]) 
-    | [var;Const f] when equal s letf -> f, [var] 
-    | [App(hd,args); hyps] when equal s rimplf && last_is_arrow args ->
-      let res, args = chop_last_app args in
-      let var = if inner then mkFreshName () else mkFreshUVar () in
-      let args = [App(hd, args @ [var]) ;
-                  App(Const andf, [App(Const eqf, [var;res]); hyps])] in
-      if inner then pif, [Lam(varname var, App(Const s, args ))]
-      else s, args
-    | args when not (equal s rimplf) && last_is_arrow args ->
-      let res, args = chop_last_app args in
-      let var = if inner then mkFreshName () else mkFreshUVar () in
-      let args = [App(Const s, args @ [var]) ; App(Const eqf, [var;res])] in
-      if inner then pif, [Lam(varname var, App(Const rimplf, args))]
-      else rimplf, args
-    | _ -> s, args in
- 
   let is_uvar_name f = 
      let c = (F.show f).[0] in
      ('A' <= c && c <= 'Z') in
@@ -391,7 +356,6 @@ let stack_term_of_ast ?(inner_call=false) ~depth:arg_lvl state ast =
        let state, tl = aux true lvl state tl in
        state, Cons(hd,tl)
     | A.App(A.Const f, tl) ->
-       let f, tl = desugar inner f tl in
        let state, rev_tl =
          List.fold_left (fun (state, tl) t ->
            let state, t = aux true lvl state t in

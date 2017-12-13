@@ -236,14 +236,11 @@ let rec tok b s = (*spy ~name:"tok" ~pp:(fun (a,b) -> a ^ " " ^ b)*) (lexer
   | schar2 symbcharstar -> constant,$buf
   | num -> "INTEGER",$buf
   | num ?= [ '.' '0'-'9' ] '.' num -> "FLOAT",$buf
-  | "->" -> "ARROW",$buf
-  | "->" idcharplus -> constant,$buf
   | '-' idcharstar -> constant,$buf
   | '_' -> "FRESHUV", "_"
   | '_' idcharplus -> constant,$buf
   | ":-"  -> constant,$buf
   | ":"  -> "COLON",$buf
-  | ":="  -> constant,$buf
   | "::"  -> constant,$buf
   | ',' -> constant,$buf
   | ';' -> constant,$buf
@@ -511,7 +508,7 @@ EXTEND
        l = LIST1 i_o; RPAREN;
        alias = OPT[ CONSTANT "xas"; c = CONSTANT;
                  subst = OPT [ LPAREN;
-                               l = LIST1 [ c1 = CONSTANT; ARROW;
+                               l = LIST1 [ c1 = CONSTANT; SYMBOL "->";
                                        c2 = CONSTANT ->
                                 (Func.from_string c1, Func.from_string c2) ]
                  SEP SYMBOL ","; RPAREN -> l ] ->
@@ -652,15 +649,17 @@ EXTEND
     ]];
   kind:
     [[ t = TYPE -> mkCon t
-     | t = TYPE; a = ARROW; k = kind -> mkApp [mkCon a; mkCon t; k]
+     | t = TYPE; a = SYMBOL "->"; k = kind -> mkApp [mkCon a; mkCon t; k]
     ]];
   type_:
     [[ c = ctype -> c
-     | s = ctype; a = ARROW; t = type_ -> mkApp [mkCon a; s; t]
+     | s = ctype; a = SYMBOL "->"; t = type_ -> mkApp [mkCon a; s; t]
     ]];
   ctype:
-     [ "main" [ c = CONSTANT; l = LIST0 ctype LEVEL "arg" -> mkApp (mkCon c :: l)
-              | CONSTANT "ctype"; s = LITERAL -> mkApp [Const Func.ctypef; mkC CData.(cstring.cin s)] ]
+     [ "main" [ c = CONSTANT; l = LIST0 ctype LEVEL "arg" -> 
+                  mkApp (mkCon c :: l)
+              | CONSTANT "ctype"; s = LITERAL ->
+                  mkApp [Const Func.ctypef; mkC CData.(cstring.cin s)] ]
      | "arg"  [ c = CONSTANT -> mkCon c
               | LPAREN; t = type_; RPAREN -> t ]
      ];
@@ -684,7 +683,6 @@ EXTEND
    | "abstterm"
       [ c=CONSTANT; OPT[COLON;type_]; b=OPT[BIND; a = atom LEVEL "0" -> a ] ->
           (match b with None -> mkCon c | Some b -> mkLam c b)
-      | c = ARROW; a = atom LEVEL "abstterm" -> mkApp [mkCon c; a]
       | u=FRESHUV; OPT[COLON;type_]; b=OPT[BIND; a = atom LEVEL "0" -> a ] ->
           (match b with None -> mkFreshUVar () | Some b ->
            mkLam Func.(show dummyname)  b)
