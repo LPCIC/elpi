@@ -51,7 +51,7 @@ unwind+stack [V1|P1] T1 T2 :- !, unwind+stack P1 (appl T1 V1) T2.
 
 % DELTA-EXPANSION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-r+unwind T1 _T2 T1 :- /* is_flex _T2, */ !.
+r+unwind T1 _T2 T1 :- /* var _T2, */ !.
 
 % r+unwind T1 T2 T2 :- !.
 
@@ -67,7 +67,7 @@ whd+basic (appl T V) P M T [V|P] :- !
                                     .
 % local delta.
 whd+basic T1 P M T2 P :- l+subst T1 X T2, !,
-                         if (is_flex T2) (unwind+whd+short X [] T2).
+                         if (var T2) (unwind+whd+short X [] T2).
 
 % RESTRICTED WEAK HEAD COMPUTATION FOR CONVERSION + UNWIND %%%%%%%%%%%%%%%%%%%
 

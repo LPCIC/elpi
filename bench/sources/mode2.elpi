@@ -29,7 +29,7 @@ pp_tac (tac T) (tac S) :- pp T S.
 
  main :-
    (term c => term (app (lam w\ X w) (app c Y))),
-   is_flex X, is_flex Y, print_constraints,
+   var X, var Y, print_constraints,
    (pi x\ pp "nice" x => parse ((V1 <=> true) && "nice") (P1 x)), print P1,
    (pi x\ pp "ugly" x => pprint (P2 x) (P1 x)), print P2,
    pprint Q1 (eq ' V2 ' V3), print Q1.

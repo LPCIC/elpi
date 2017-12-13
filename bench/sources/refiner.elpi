@@ -1,8 +1,8 @@
-canon_of X T Z :- not (is_flex Z), !, of Z T X.
-canon_of X T Z :- is_flex X, !, constraint (canon_of X T Z) [X,Z].
+canon_of X T Z :- not (var Z), !, of Z T X.
+canon_of X T Z :- var X, !, constraint (canon_of X T Z) [X,Z].
 canon_of X T Z :- of X T X.
 
-of X Y X :- is_flex X, !, constraint (of X Y X) X.
+of X Y X :- var X, !, constraint (of X Y X) X.
 of X Y X' :- of_ X Y X'.
 
 of_ implicit T X :- constraint (canon_of X T Z) [X,Z].

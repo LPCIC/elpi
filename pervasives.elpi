@@ -106,8 +106,8 @@ external pred counter i:string, o:int.
 external type is_cdata A -> ctype -> prop. 
 primitive? X S :- is_cdata X (ctype S).
 
-external pred is_flex i:A.
-external pred is_same_flex i:A, i:A.
+external pred var i:A.
+external pred same_var i:A, i:A.
 
 % succeeds iff the term is a pi-bound variable
 external pred is_name i:A.

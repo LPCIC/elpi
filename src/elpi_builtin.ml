@@ -238,17 +238,17 @@ let _ =
              with Not_found -> raise No_clause)
          | _ -> type_error "bad argument to counter")
     | _ -> type_error "counter takes 2 arguments") ;
-  declare "is_flex" (fun ~depth args ->
+  declare "var" (fun ~depth args ->
     match args with
     | [t1] -> if is_flex ~depth t1 <> None then [] else raise No_clause
-    | _ -> type_error "is_flex takes 1 argument") ;
-  declare "is_same_flex" (fun ~depth args ->
+    | _ -> type_error "var takes 1 argument") ;
+  declare "same_var" (fun ~depth args ->
     match args with
     | [t1;t2] ->
        (match is_flex ~depth t1, is_flex ~depth t2 with
            Some p1, Some p2 when p1==p2 -> []
          | _,_ -> raise No_clause)
-    | _ -> type_error "is_same_flex takes 2 argument") ;
+    | _ -> type_error "same_var takes 2 argument") ;
   declare "is_name" (fun ~depth args ->
     let is_name x = match deref_head ~depth x with
       | Const n when n >= 0 -> true

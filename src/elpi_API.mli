@@ -395,6 +395,7 @@ module Extend : sig
     (** Lifting *)
     val move : from:int -> to_:int -> Data.term -> Data.term
 
+    (** The "var" predicate *)
     val is_flex : depth:int -> Data.term -> Data.term_attributed_ref option
 
     val list_to_lp_list : Data.term list -> Data.term

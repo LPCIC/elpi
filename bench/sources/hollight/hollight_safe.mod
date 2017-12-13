@@ -67,7 +67,7 @@ proves T TY :- provable T TY.
 typ T :- !. % this line temporarily drops checking of well-formedness for types
             % to avoid too much slow down. It is ultimately due to re-typing
             % terms that should be recognized as already well typed.
-typ T :- $is_flex T, !, $constraint (typ T) [ T ].
+typ T :- var T, !, declare_constraint (typ T) [ T ].
 typ T :- typ' T.
 typ' prop.
 typ' (univ '' A '' B) :- typ A, typ B.
@@ -78,14 +78,14 @@ mode (term i o).
 term (lam A F) (A --> B) :- typ A, pi x\ term x A => term (F x) B.
 term (F ' T) B :- term F (A --> B), term T A.
 term (eq '' A) (A --> A --> prop) :- typ A.
-term (?? as T) TY :- $constraint (term T TY) T.
+term (?? as T) TY :- declare_constraint (term T TY) T.
 
 /* like term, but on terms that are already known to be well-typed */
 mode (reterm i o).
 reterm (lam A F) (A --> B) :- pi x\ reterm x A => reterm (F x) B.
 reterm (F ' T) B :- reterm F (A --> B).
 reterm (eq '' A) (A --> A --> prop).
-reterm (?? as T) TY :- $constraint (reterm T TY) T.
+reterm (?? as T) TY :- declare_constraint (reterm T TY) T.
 
 constraint term reterm { /* No propagation rules for now */}
 
@@ -235,9 +235,9 @@ check WHAT :-
 /************ parsing and pretty-printing ********/
 % ppterm/parseterm
 %ppterm X Y :- ppp X Y. parseterm X Y :- ppp X Y.
-%ppp X Y :- $is_flex X, $is_flex Y, !, X = Y.
-%ppp X (F ' G) :- $is_flex X, ($is_flex F ; $is_flex G), !, X = (F ' G).
-%ppp X (F ' G ' H) :- $is_flex X, ($is_flex F ; $is_flex G ; $is_flex H), !,
+%ppp X Y :- var X, var Y, !, X = Y.
+%ppp X (F ' G) :- var X, (var F ; var G), !, X = (F ' G).
+%ppp X (F ' G ' H) :- var X, (var F ; var G ; var H), !,
 % X = (F ' G ' H).
 
 mode (ppp o i) xas ppterm, (ppp i o) xas parseterm.
@@ -260,7 +260,7 @@ ppp A A.
 
 /* safe_list_map that unifies the two lists if they are both flexible
    probably only useful for parsing/pretty-printing */
-safe_list_map L1 _ L2 :- $is_flex L1, $is_flex L2, !, L1 = L2.
+safe_list_map L1 _ L2 :- var L1, var L2, !, L1 = L2.
 safe_list_map L1 F L2 :- list_map L1 F L2.
 
 % pptac(ppterm)/parsetac(parseterm)
@@ -823,7 +823,7 @@ deftac (g P) (seq _ F) TAC :-
 /**** apply, i.e. forall + impl ****/
 
 ppptac (apply X) (apply PX) :- ppp X PX.
-deftac (apply X) SEQ h :- $is_flex X, !.
+deftac (apply X) SEQ h :- var X, !.
 deftac (apply X) SEQ h.
 deftac (apply (impl ' P ' Q)) SEQ TAC :-
  TAC = thenl (lapply P Q) [ id, apply_last ].
@@ -932,7 +932,7 @@ deftac left (seq Gamma H) TAC :-
        (thenl lapply [ h, then (w (and ' F ' G)) (then apply_last (then i i))])))))).
 deftac left (seq Gamma H) TAC :-
  mem Gamma (eq '' TY ' F ' G),
- not ($is_flex TY), TY = prop,
+ not (var TY), TY = prop,
  TAC =
   (then (g (eq '' TY ' F ' G))
    (then (conv (land_tac (then (applyth eq_to_impl) h)))
@@ -1977,7 +1977,7 @@ the_library L :-
     same for the witness for myprop
 
 0) definitions must not be recursive; typing should capture it
-   (but not if $constraint is commented out...)
+   (but not if declare_constraint is commented out...)
 
 0.25) occurr check in bind case still missing :-(
 
@@ -1993,7 +1993,7 @@ the_library L :-
 3) once we let metavariables reach the goals, the current HOL-light 
  tactic implementation becomes too fragile. We should let the user 
  refer to hypotheses at least by number if not by name. But we better
- have a bidirectional successor/predecessor via $constraint
+ have a bidirectional successor/predecessor via declare_constraint
 
 5) we could implement an automated theorem prover in lambdaProlog
  that works or is interfaced with the HOL-light code. There are
