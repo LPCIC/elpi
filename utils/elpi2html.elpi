@@ -179,6 +179,11 @@ pp _ B (const "!") A :- !,
   write "<span class='cut'>!</span>",
   write {concat A}.
 
+pp _ B (const "discard") A :-
+  write {concat B},
+  write "_",
+  write {concat A}.
+
 pp _ B (const X) A :-
   write {concat B},
   write {sanitize X},
