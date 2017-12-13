@@ -211,7 +211,7 @@ typecheck-program P Q DeclaredTypes :-
 % ---------- warnings ------------------------------------------------------
 
 type `-> term -> int -> entry.
-type var term -> prop.
+type variable term -> prop.
 
 mode (report-linear i).
 report-linear [].
@@ -234,7 +234,7 @@ type count A -> list B -> prop.
 count (lam F) E :- pi x\ count (F x) E.
 count (app [X|XS]) E :- !, count X E, count (app XS) E.
 count (app []) _ :- !.
-count X E :- var X, !, incr X E.
+count X E :- variable X, !, incr X E.
 count A _.
 
 mode (incr i i).
@@ -246,9 +246,9 @@ add1 (?? as K) :- K = 1 + FRESH_.
 add1 (1 + K) :- add1 K.
 
 check-non-linear [N|NS] (arg C) L :- pi x\
- (pp x N :- !) => (var x) => check-non-linear NS (C x) [x `-> FRESH_ | L].
+ (pp x N :- !) => (variable x) => check-non-linear NS (C x) [x `-> FRESH_ | L].
 check-non-linear [] (arg C) L :- pi x\
- (var x) => check-non-linear NS (C x) [x `-> FRESH_ | L].
+ (variable x) => check-non-linear NS (C x) [x `-> FRESH_ | L].
 check-non-linear _ C L :-
   count C L, report-linear L.
 
