@@ -258,7 +258,7 @@ module Extend = struct
 
     let constraint_ f c = 
       let module R = (val !r) in let open R in
-      R.pp_stuck_goal_kind f c
+      R.pp_stuck_goal f c
 
     let list = Elpi_util.pplist
 

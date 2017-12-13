@@ -420,7 +420,7 @@ module Extend : sig
       int -> Data.term array ->
         Format.formatter -> Data.term -> unit
 
-    val constraint_ : Format.formatter -> Data.stuck_goal_kind -> unit
+    val constraint_ : Format.formatter -> Data.stuck_goal -> unit
 
     val list : ?max:int -> ?boxed:bool ->
      (Format.formatter -> 'a -> unit) ->

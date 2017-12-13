@@ -55,9 +55,10 @@ and term_attributed_ref = {
                                  [@equal fun _ _ -> true];
 }
 and stuck_goal = {
-  mutable blockers : term_attributed_ref list;
+  mutable blockers : blockers;
   kind : stuck_goal_kind;
 }
+and blockers = term_attributed_ref list
 and stuck_goal_kind =
  | Constraint of constraint_def (* inline record in 4.03 *)
  | Unification of unification_def 

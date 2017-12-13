@@ -22,7 +22,6 @@ val deref_uv : ?avoid:term_attributed_ref -> from:constant -> to_:constant -> in
 val deref_appuv : ?avoid:term_attributed_ref -> from:constant -> to_:constant -> term list -> term -> term
 val is_flex : depth:int -> term -> term_attributed_ref option
 val pp_stuck_goal : Fmt.formatter -> stuck_goal -> unit
-val pp_stuck_goal_kind : Fmt.formatter -> stuck_goal_kind -> unit
 
 val lp_list_to_list : depth:int -> term -> term list
 val list_to_lp_list : term list -> term

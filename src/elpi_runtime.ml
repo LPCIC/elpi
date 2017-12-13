@@ -255,10 +255,9 @@ module ConstraintStoreAndTrail : sig
   val remove_old_constraint : constraint_def -> unit
 
   val contents :
-    ?cstr_main_key:term_attributed_ref -> unit -> constraint_def list
-  val print : Fmt.formatter -> constraint_def list -> unit
+    ?cstr_main_key:term_attributed_ref -> unit -> (constraint_def * blockers) list
+  val print : Fmt.formatter -> (constraint_def * blockers) list -> unit
   val pp_stuck_goal : Fmt.formatter -> stuck_goal -> unit
-  val pp_stuck_goal_kind : Fmt.formatter -> stuck_goal_kind -> unit
 
   val custom_constraints : custom_constraints Fork.local_ref
 
@@ -330,7 +329,8 @@ let contents ?cstr_main_key () =
     | None -> fun x -> true
     | Some r -> fun x -> r == x in
   map_filter (function
-    | { kind=Constraint c; blockers=main :: _ } when match_key main -> Some c
+    | { kind = Constraint c; blockers = (main :: _ as b) }
+      when match_key main -> Some (c,b)
     | _ -> None) !delayed
 
 let trail_this i = 
@@ -423,25 +423,22 @@ let print fmt =
      Fmt.fprintf fmt "@[<hov 2>%a@]@ ?- "
       (pplist (fun fmt (d,t) -> uppterm d [] 0 empty_env fmt t) ",") ctx in
   let pp_goal depth g = (uppterm depth [] 0 empty_env) g in
-  List.iter (fun { cdepth=depth; context=pdiff; conclusion = g } ->
+  List.iter (fun ({ cdepth=depth; context=pdiff; conclusion=g }, blockers) ->
       Fmt.fprintf fmt
-        "@[<hov 2>%a%a%a@]@ " pp_depth depth pp_ctx pdiff (pp_goal depth) g)
+        " @[<h>@[<hov 2>%a%a%a@]@  /* suspended on %a */@]"
+          pp_depth depth pp_ctx pdiff (pp_goal depth) g
+          (pplist ~boxed:false (uppterm 0 [] 0 empty_env) ",")
+            (List.map (fun r -> UVar(r,0,0)) blockers))
 
-let pp_stuck_goal_kind fmt = function
+let pp_stuck_goal fmt { kind; blockers } = match kind with
    | Unification { adepth = ad; env = e; bdepth = bd; a; b } ->
       Fmt.fprintf fmt
-       "@[<hov 2>^%d:%a@ == ^%d:%a@]"
+       " @[<h>@[<hov 2>^%d:%a@ == ^%d:%a@] /* suspended on %a */@]"
         ad (uppterm ad [] 0 empty_env) a
         bd (uppterm ad [] ad e) b
-   | Constraint c -> print fmt [c]
-
-let pp_stuck_goal fmt { kind; blockers } =
-      Fmt.fprintf fmt
-       " @[<h>%a  /* suspended on %a */@]%!" 
-          pp_stuck_goal_kind kind
           (pplist ~boxed:false (uppterm 0 [] 0 empty_env) ",")
             (List.map (fun r -> UVar(r,0,0)) blockers)
-
+   | Constraint c -> print fmt [c,blockers]
 
 end (* }}} *)
 module T  = ConstraintStoreAndTrail
@@ -2594,7 +2591,7 @@ let propagate { CS.cstr; cstr_position; cstr_main_key } history =
        * with pats_to_match@pats_to_remove *)
       let candidates =
         mk_permutations quick_filter patsno cstr cstr_position
-          (CS.contents ~cstr_main_key ()) in
+          (List.map fst (CS.contents ~cstr_main_key ())) in
 
      candidates |> map_exists (fun (constraints as orig_constraints) ->
       let hitem = HISTORY.({ propagation_rule; constraints }) in
@@ -3094,7 +3091,6 @@ let execute_loop program ({ qnames; qenv; qterm } as qq) ~more ~pp =
 
 let print_constraints () = CS.print Fmt.std_formatter (CS.contents ())
 let pp_stuck_goal fmt s = CS.pp_stuck_goal fmt s
-let pp_stuck_goal_kind fmt s = CS.pp_stuck_goal_kind fmt s
 let is_flex = HO.is_flex
 let deref_uv = HO.deref_uv
 let deref_appuv = HO.deref_appuv
