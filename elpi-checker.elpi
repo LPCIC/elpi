@@ -219,7 +219,7 @@ report-linear [V `-> 1 + ?? |NS] :- !,
   pp V VN,
   if (not(rex_match "^_" VN ; rex_match "_$" VN))
     (checking LOC, term_to_string LOC SLOC,
-     MSG is SLOC ^" Warning: "^ VN ^" is linear, name it _" ^ VN ^ " (if it discards) or " ^ VN ^ "_ (if it is a fresh variable) please",
+     MSG is SLOC ^" Warning: "^ VN ^" is linear: name it _" ^ VN ^ " (discard) or " ^ VN ^ "_ (fresh variable)",
      warning MSG)
     true,
   report-linear NS.
