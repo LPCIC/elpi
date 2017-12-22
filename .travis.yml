@@ -61,6 +61,21 @@ matrix:
     - opam switch $OCAML_MAX
     - make
     - make -C bench
+    
+  - env: TEST="osx build $OCAML_MIN"
+    os: osx
+    before_install:
+    - brew update
+    - brew install opam
+    - brew install gnu-time
+    - brew install lua51
+    cache:
+      directories:
+      - $HOME/.opam
+    script:
+    - opam switch $OCAML_MIN
+    - make
+    - make -C bench
 
   - env: TEST="osx build $OCAML_MAX"
     os: osx
@@ -97,20 +112,6 @@ matrix:
     - opam pin -y remove elpi
     - if ocamlfind query elpi; then false; else true; fi
     - if which elpi; then false; else true; fi
-    
+  
   allow_failures:
   - env: TEST="osx build $OCAML_MIN"
-    os: osx
-    before_install:
-    - brew update
-    - brew install opam
-    - brew install gnu-time
-    - brew install lua51
-    cache:
-      directories:
-      - $HOME/.opam
-    script:
-    - opam switch $OCAML_MIN
-    - make
-    - make -C bench
-
