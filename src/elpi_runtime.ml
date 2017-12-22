@@ -244,7 +244,7 @@ module ConstraintStoreAndTrail : sig
   type propagation_item = {
      cstr : constraint_def;
      cstr_position : int;
-     cstr_main_key : term_attributed_ref; (* first key *)
+     cstr_blockers : term_attributed_ref list;
   }
 
   val new_delayed      : propagation_item list ref
@@ -255,7 +255,7 @@ module ConstraintStoreAndTrail : sig
   val remove_old_constraint : constraint_def -> unit
 
   val contents :
-    ?cstr_main_key:term_attributed_ref -> unit -> (constraint_def * blockers) list
+    ?overlapping:term_attributed_ref list -> unit -> (constraint_def * blockers) list
   val print : Fmt.formatter -> (constraint_def * blockers) list -> unit
   val pp_stuck_goal : Fmt.formatter -> stuck_goal -> unit
 
@@ -298,7 +298,7 @@ end = struct (* {{{ *)
  type propagation_item = {
     cstr : constraint_def;
     cstr_position : int;
-    cstr_main_key : term_attributed_ref;
+    cstr_blockers : term_attributed_ref list;
  }
 
   let custom_constraints =
@@ -324,13 +324,14 @@ let last_call = Fork.new_local false;;
 
 module Ugly = struct let delayed : stuck_goal list ref = Fork.new_local [] end
 open Ugly
-let contents ?cstr_main_key () =
-  let match_key = match cstr_main_key with
-    | None -> fun x -> true
-    | Some r -> fun x -> r == x in
+let contents ?overlapping () =
+  let overlap : term_attributed_ref list -> bool =
+    match overlapping with
+    | None -> fun _ -> true
+    | Some l -> List.exists (fun x -> List.memq x l) in
   map_filter (function
-    | { kind = Constraint c; blockers = (main :: _ as b) }
-      when match_key main -> Some (c,b)
+    | { kind = Constraint c; blockers }
+      when overlap blockers -> Some (c,blockers)
     | _ -> None) !delayed
 
 let trail_this i = 
@@ -357,17 +358,16 @@ let print_trail fmt =
   Fmt.fprintf fmt "to_resume:%d new_delayed:%d\n%!"
     (List.length !to_resume) (List.length !new_delayed)
 
-let declare_new cstr =
-  let blockers = uniqq cstr.blockers in
-  let cstr_main_key = List.hd blockers in
-  let cstr = { cstr with blockers } in
-  add cstr ;
-  begin match cstr.kind with
+let declare_new sg =
+  let blockers = uniqq sg.blockers in
+  let sg = { sg with blockers } in
+  add sg ;
+  begin match sg.kind with
   | Unification _ -> ()
   | Constraint cstr ->
-     new_delayed := { cstr; cstr_position = 0; cstr_main_key } :: !new_delayed
+      new_delayed := { cstr; cstr_position = 0; cstr_blockers = sg.blockers } :: !new_delayed
   end;
-  trail_this (StuckGoalAddition cstr)
+  trail_this (StuckGoalAddition sg)
 
 let remove_cstr_if_exists x l =
  let rec aux acc = function
@@ -2559,7 +2559,7 @@ let mk_permutations quick_filter len pivot pivot_position rest =
    cstr_position is its position, so far, wrt all other constraints
      when matched against chr rules;
    the two lists in output are the constraints to be removed and added *)
-let propagate { CS.cstr; cstr_position; cstr_main_key } history =
+let propagate { CS.cstr; cstr_position; cstr_blockers = overlapping } history =
 
  let rules = CHR.rules_for (head_of cstr.conclusion) !chrules in
  let initial_program = Elpi_data.wrap_prolog_prog !orig_prolog_program in
@@ -2591,7 +2591,7 @@ let propagate { CS.cstr; cstr_position; cstr_main_key } history =
        * with pats_to_match@pats_to_remove *)
       let candidates =
         mk_permutations quick_filter patsno cstr cstr_position
-          (List.map fst (CS.contents ~cstr_main_key ())) in
+          (List.map fst (CS.contents ~overlapping ())) in
 
      candidates |> map_exists (fun (constraints as orig_constraints) ->
       let hitem = HISTORY.({ propagation_rule; constraints }) in

@@ -344,12 +344,12 @@ The effect is that whenever a goal about `foo` or `bar`
 is suspended (via `declare_constraint`) only its hypothetical
 clauses about `foo` or `bar` are kept.
 
-The first variable on which a constraint is suspended is said to be its key.
-When one or more goals are suspended *on the same key*, 
+When one or more goals are suspended on lists of unification
+variables with a non-empty intersection, 
 the rules between curly braces apply.
 In most cases it is useless to manipulate two goals 
-that don't share the key.  If it is not the case, one can
-pick a single key for all suspended goals. Eg.
+that don't share any variable.  If it is not the case, one can
+artificially add the same variable to all suspended goals. Eg.
 ```
 master-key K => (even X, even Y).
 even (?? as X) :- !, master-key K, declare_constraint (even X) [K,X].
@@ -493,7 +493,7 @@ the sequents can bind the set of eigen variables (an integer) and
 one of them can be used to specify in which name context the new goal will
 run.  Moreover, the guard is executed in the disjoint union of the named
 contexts, i.e. the matched sequents will hare no names.  It is up to the guard
-to gnerate terms that live in the named context chosen for the new goal.
+to generate terms that live in the named context chosen for the new goal.
 Patterns can share variables.
 
 Example of a rule that takes the canonical type of K and
@@ -504,9 +504,6 @@ by their actual values in V.
 % Uniqueness of typing
 utc [] T1 [] T2 (unify-eq T1V T2) :- !, copy T1 T1V.
 utc [N|NS] T1 [V|VS] T2 C :- !, copy N V => utc NS T1 VS T2 C.
-utc [] T1 VS T2 C :- !, utc [] {subst-prod VS T1} [] T2 C.
-utc [_|NS] (prod _ _ F) [] T2 C :- !,                      
-  assert (pi x\ F x = F1) "restriction bug", utc NS F1 [] T2 C.
 
 canonical? [].
 canonical? [N|NS] :- is_name N, not(mem NS N), canonical? NS.
@@ -530,7 +527,7 @@ As soon as a new constraint C is declared:
 
 1. Each rule (for the clique to which C belongs) is considered,
    in the order of declaration. Let's call it R.
-2. All constraints suspended *on the same main key* of C are considered
+2. All constraints suspended on a list of variables with a non-empty intersection with the one on which C is suspended are considered
    (in no specified order). Let's call them CS
 3. if R has n patterns, then all permutations of n-1 elements of CS and C are
    generated. I.e. C is put in any possible position in a list of
