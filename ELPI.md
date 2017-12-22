@@ -12,7 +12,7 @@
 
 - [Non logical features](#non-logical-features) like `!` or `new_safe`
 
-- [Typechecking](#typechecking) is performed by `elpi_typechecker.elpi`
+- [Typechecking](#typechecking) is performed by `elpi-checker.elpi`
   on the quoted syntax of the program and query
 
 - [Subterm naming](#subterm-naming) can be performed
@@ -52,7 +52,7 @@ On the contrary a problem like `DummyNameUsedOnlyOnce = somthing` demands the
 computation of the solution (even if it is not used), and hence can *fail* if
 some variable occurring in something is out of scope for `DummyNameUsedOnlyOnce`.
 
-Side note: `elpi_typechecker.elpi` (see below) reports warnings about linearly used
+Side note: `elpi-checker.elpi` (see below) reports warnings about linearly used
 variables, suggesting to start their name name not starting with `_`.
 
 ## Macros
@@ -173,9 +173,10 @@ the rewritten clause is the expected
 ```prolog
 foo L L1 :- map L (x\y\ sigma Spilled_1\ g x Spilled_1, f Spilled_1 y) L1.
 ```
-since the closes predicate before the spilling is, indeed, `f`.
+since the closest predicate before the spilling is, indeed, `f`.
 
-The `elpi` tool accepts `-print` flag to print the program after spilling.
+The `-print` flag can be passed to the `elpi` command line tool in order
+to print the program after spilling.
 
 ## N-ary binders
 
@@ -184,7 +185,7 @@ The `pi` and `sigma` binders are n-ary:
 - `pi x y\ t` is expanded to `pi x\ pi y\ t`.
 
 At the time of writing type annotation on `pi` variables are ignored by both
-the interpreter and the `elpi_typechecker.elpi`.
+the interpreter and the `elpi-checker.elpi`.
 
 ## N-ary implication
 
@@ -197,20 +198,20 @@ since the hypothetical program is a list of clauses.
 
 ## Non logical features
 
-- The cut operator `!` is present, and does not work on nested disjunctions.
+- The cut operator `!` is present, and does not work on nested disjunctions (`;` is not primitive).
 
 - A built-in lets one collect data across search.  The primitives are
   `new_safe S`, `stash S T`, `open_safe S TL`.
   Note that `T` has to be ground and closed.  Safes are not effected by
   backtracking.  They can be used to log a computation / a list of failures.
-  They are used, for example, in `elpi_typechecker.elpi` to log errors.
+  They are used, for example, in `elpi-checker.elpi` to log errors.
 
 ## Typechecking
 
 Typing plays *no role at runtime*.  This differs from standard λProlog.
 This also means that type annotations are totally optional.
-Still, they greatly help `elpi_typechecker.elpi` to give reasonable errors.
-Notes about `elpi_typechecker.elpi`:
+Still, they greatly help `elpi-checker.elpi` to give reasonable errors.
+Notes about `elpi-checker.elpi`:
 - Inference of polymorphic predicates is not performed.
 - `type foo list A -> prop` can be used to declare a polymorphic `foo`.
 - `any` means any type.
