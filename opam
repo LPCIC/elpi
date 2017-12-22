@@ -7,6 +7,7 @@ license: "LGPL 2.1+"
 homepage: "http://github.com/LPCIC/elpi"
 doc: "http://github.com/LPCIC/elpi"
 dev-repo: "http://github.com/LPCIC/elpi"
+bug-reports: "http://github.com/LPCIC/elpi/issues"
 
 build: [ [ make ] [ make "byte" ] ]
 build-test: [ make "-C" "bench" ]
