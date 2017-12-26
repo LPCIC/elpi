@@ -26,7 +26,7 @@ val pp_stuck_goal : Fmt.formatter -> stuck_goal -> unit
 val lp_list_to_list : depth:int -> term -> term list
 val list_to_lp_list : term list -> term
 
-val split_conj : term -> term list
+val split_conj : depth:int -> term -> term list
 
 val llam_unify : int -> term array -> int -> term -> term -> bool
 
@@ -40,6 +40,6 @@ val hmove :
   from:int -> to_:int -> term -> term
 
 val make_index : clause list -> idx
-val clausify : mode_decl Constants.Map.t -> int -> constant -> term -> clause list * (int * term) list * int
+val clausify : mode_decl Constants.Map.t -> int -> constant -> term -> clause list * clause_src list * int
 val pp_key : key -> string
 

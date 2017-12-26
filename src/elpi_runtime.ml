@@ -1621,10 +1621,12 @@ module type Indexing = sig
 
   val key_of : mode:[`Query | `Clause] -> depth:int -> term -> key
   val hd_pred : clause -> constant
-  val add_clauses : clause list -> (int * term) list -> idx -> idx
+
   val get_clauses : depth:int -> term -> idx -> clause list
   val make_index : clause list -> idx
-  val local_prog : idx -> ((*depth:*)int * term) list
+
+  val local_prog : idx -> clause_src list
+  val add_clauses : clause list -> clause_src list -> idx -> idx
 end
 module TwoMapIndexing : Indexing = struct (* {{{ *)
 
@@ -1962,13 +1964,14 @@ let orig_prolog_program = Fork.new_local (make_index [])
 module Clausify : sig
 
   val clausify :
-    int -> constant -> term -> clause list * (int * term) list * int
+    int -> constant -> term -> clause list * clause_src list * int
   
   val modes : mode_decl C.Map.t Fork.local_ref
 
+  (* Utilities that deref on the fly *)
   val lp_list_to_list : depth:int -> term -> term list
-  val get_lambda_body : int -> term -> term
-  val split_conj : term -> term list
+  val get_lambda_body : depth:int -> term -> term
+  val split_conj      : depth:int -> term -> term list
 
 end = struct  (* {{{ *)
 let modes = Fork.new_local C.Map.empty
@@ -1989,10 +1992,15 @@ let rec term_map m = function
   | Nil as x -> x
   | Discard as x -> x
   | CData _ as x -> x
-let rec split_conj = function
+let rec split_conj ~depth = function
   | App(c, hd, args) when c == C.andc || c == C.andc2 ->
-      split_conj hd @ List.(flatten (map split_conj args))
-  | f when f == C.truec -> []
+      split_conj ~depth hd @ List.(flatten (map (split_conj ~depth) args))
+  | Nil -> []
+  | Cons(x,xs) -> split_conj ~depth x @ split_conj ~depth xs
+  | UVar ({ contents=g },from,args) when g != C.dummy ->
+    split_conj ~depth (deref_uv ~from ~to_:depth args g)
+  | AppUVar ({contents=g},from,args) when g != C.dummy -> 
+    split_conj ~depth (deref_appuv ~from ~to_:depth args g)
   | _ as f -> [ f ]
 ;;
 
@@ -2006,11 +2014,11 @@ let rec lp_list_to_list ~depth = function
   | x -> error (Fmt.sprintf "%s is not a list" (show_term x))
 ;;
 
-let rec get_lambda_body depth = function
+let rec get_lambda_body ~depth = function
  | UVar ({ contents=g },from,args) when g != C.dummy ->
-    get_lambda_body depth (deref_uv ~from ~to_:depth args g)
+    get_lambda_body ~depth (deref_uv ~from ~to_:depth args g)
  | AppUVar ({contents=g},from,args) when g != C.dummy -> 
-    get_lambda_body depth (deref_appuv ~from ~to_:depth args g)
+    get_lambda_body ~depth (deref_appuv ~from ~to_:depth args g)
  | Lam b -> b
  | _ -> error "pi/sigma applied to something that is not a Lam"
 ;;
@@ -2033,49 +2041,36 @@ r :- (pi X\ pi Y\ q X Y :- pi c\ pi d\ q (Z c d) (X c d) (Y c)) => ... *)
  *)
 
 let clausify vars depth t =
-  let rec claux vars depth hyps ts lts lcs t =
+  let rec claux1 vars depth hyps ts lts lcs t =
   [%trace "clausify" ("%a %d %d %d %d\n%!"
       (ppterm (depth+lts) [] 0 empty_env) t depth lts lcs (List.length ts)) begin
   match t with
-  | Nil -> [],[],lts
   | Discard -> [],[],lts
-  | Cons(g1,g2) ->
-     let clauses,pd1,lts = claux vars depth hyps ts lts lcs g1 in
-     let moreclauses,pd2,lts = claux vars depth hyps ts lts lcs g2 in
-      moreclauses@clauses,pd1@pd2,lts
-  | App(c, g, gs) when c == C.andc || c == C.andc2 ->
-     let moreclauses, pdiff, lts = claux vars depth hyps ts lts lcs g in
-     let moreclauses_list, pdiff, lts =
-       List.fold_right (fun g (clauses,pdiff,lts) ->
-         let moreclauses,morepdiff,lts = claux vars depth hyps ts lts lcs g in
-         moreclauses :: clauses, pdiff @ morepdiff, lts
-       ) gs ([moreclauses],pdiff,lts) in
-     List.flatten moreclauses_list, pdiff, lts
   | App(c, g2, [g1]) when c == C.rimplc ->
-     claux vars depth ((ts,g1)::hyps) ts lts lcs g2
-  | App(c, _, _) when c == C.rimplc -> assert false
+     claux1 vars depth ((ts,g1)::hyps) ts lts lcs g2
+  | App(c, _, _) when c == C.rimplc -> error "ill-formed hypothetical clause"
   | App(c, g1, [g2]) when c == C.implc ->
-     claux vars depth ((ts,g1)::hyps) ts lts lcs g2
-  | App(c, _, _) when c == C.implc -> assert false
+     claux1 vars depth ((ts,g1)::hyps) ts lts lcs g2
+  | App(c, _, _) when c == C.implc -> error "ill-formed hypothetical clause"
   | App(c, arg, []) when c == C.sigmac ->
-     let b = get_lambda_body (depth+lts) arg in
+     let b = get_lambda_body ~depth:(depth+lts) arg in
      let args =
       List.rev (List.filter (function (Arg _) -> true | _ -> false) ts) in
      let cst =
       match args with
          [] -> Const (depth+lcs)
        | hd::rest -> App (depth+lcs,hd,rest) in
-     claux vars depth hyps (cst::ts) (lts+1) (lcs+1) b
+     claux1 vars depth hyps (cst::ts) (lts+1) (lcs+1) b
   | App(c, arg, []) when c == C.pic ->
-     let b = get_lambda_body (depth+lts) arg in
-     claux (vars+1) depth hyps (Arg(vars,0)::ts) (lts+1) lcs b
+     let b = get_lambda_body ~depth:(depth+lts) arg in
+     claux1 (vars+1) depth hyps (Arg(vars,0)::ts) (lts+1) lcs b
   | Const _
   | App _ as g ->
      let hyps =
       List.(flatten (rev_map (fun (ts,g) ->
          let g = hmove ~from:(depth+lts) ~to_:(depth+lts+lcs) g in
          let g = subst depth ts g in
-          split_conj g
+          split_conj ~depth:(depth+lcs) g
         ) hyps)) in
      let g = hmove ~from:(depth+lts) ~to_:(depth+lts+lcs) g in
      let g = subst depth ts g in
@@ -2114,21 +2109,29 @@ let clausify vars depth t =
               [%spy "extra" ppclause c];
               c
           )
-      all_modes, [depth,g], lcs
+      all_modes, [{ hdepth = depth; hsrc = g }], lcs
   | UVar ({ contents=g },from,args) when g != C.dummy ->
-     claux vars depth hyps ts lts lcs
+     claux1 vars depth hyps ts lts lcs
        (deref_uv ~from ~to_:(depth+lts) args g)
   | AppUVar ({contents=g},from,args) when g != C.dummy -> 
-     claux vars depth hyps ts lts lcs
+     claux1 vars depth hyps ts lts lcs
        (deref_appuv ~from ~to_:(depth+lts) args g)
-  | Arg _ | AppArg _ -> anomaly "claux called on non-heap term"
+  | Arg _ | AppArg _ -> anomaly "claux1 called on non-heap term"
   | Custom (c,_) ->
      error ("Declaring a clause for built in predicate " ^ Constants.show c)
   | (Lam _ | CData _ ) as x ->
      error ("Assuming a string or int or float or function:" ^ show_term x)
-  | UVar _ | AppUVar _ -> error "Flexible assumption"
-  end] in
-    claux vars depth [] [] 0 0 t
+  | UVar _ | AppUVar _ -> error "Flexible hypothetical clause"
+  | Nil | Cons _ -> error "ill-formed hypothetical clause"
+  end]
+  in
+   
+  let l = split_conj ~depth t in
+  let clauses, program, lcs =
+    List.fold_left (fun (clauses,program,lcs) t ->       
+      let more_clauses, more_program, lcs = claux1 vars depth [] [] 0 lcs t in
+    more_clauses :: clauses, more_program :: program, lcs) ([],[],0) l in
+  List.flatten clauses, List.flatten program, lcs
 ;;
 end (* }}} *) 
 open Clausify
@@ -2412,7 +2415,7 @@ let match_goal goalno maxground env freezer (newground,depth,t) pattern =
   
 let match_context goalno maxground env freezer (newground,ground,lt) pattern =
   let freezer, lt =
-    map_acc (fun freezer (depth,t) ->
+    map_acc (fun freezer { hdepth = depth; hsrc = t } ->
       Ice.freeze ~depth t ~ground ~newground ~maxground freezer)
     freezer lt in
   let t = list_to_lp_list lt in
@@ -2489,7 +2492,7 @@ let declare_constraint ~depth prog args =
   match CHR.clique_of (head_of g) !chrules with
   | Some clique -> (* real constraint *)
      (* XXX head_of is weak because no clausify ??? XXX *)
-     delay_goal ~filter_ctx:(fun (_,x) -> C.Set.mem (head_of x) clique)
+     delay_goal ~filter_ctx:(fun { hsrc = x } -> C.Set.mem (head_of x) clique)
        ~depth prog ~goal:g ~on:keys
   | None -> delay_goal ~depth prog ~goal:g ~on:keys
 
@@ -2844,10 +2847,10 @@ let make_runtime : ?max_steps: int -> program -> runtime =
 (*  This stays commented out because it slows down rev18 in a visible way!   *)
 (*  | App(c, _, _) when c == implc -> anomaly "Implication must have 2 args" *)
     | App(c, arg, []) when c == C.pic ->
-       let f = get_lambda_body depth arg in
+       let f = get_lambda_body ~depth arg in
        run (depth+1) p f gs next alts lvl
     | App(c, arg, []) when c == C.sigmac ->
-       let f = get_lambda_body depth arg in
+       let f = get_lambda_body ~depth arg in
        let v = UVar(oref C.dummy, depth, 0) in
        run depth p (subst depth [v] f) gs next alts lvl
     | UVar ({ contents = g }, from, args) when g != C.dummy ->
@@ -3039,8 +3042,9 @@ let deref_unif { adepth; env; bdepth; a; b } = {
 
 let deref_cst { cdepth; prog; context; conclusion } = {
   cdepth; prog;
-  context = List.map (fun (d,t) ->
-    d,full_deref ~adepth:0 empty_env ~depth:d t) context;
+  context = List.map (fun { hdepth; hsrc } ->
+    { hdepth;
+      hsrc = full_deref ~adepth:0 empty_env ~depth:hdepth hsrc}) context;
   conclusion = full_deref ~depth:cdepth ~adepth:0 empty_env conclusion;
 }
 

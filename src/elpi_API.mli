@@ -212,6 +212,7 @@ module Extend : sig
       kind : stuck_goal_kind;
     }
     and stuck_goal_kind
+    and clause_src = { hdepth : int; hsrc : term }
 
     val of_term : Data.term -> term
 
@@ -222,10 +223,10 @@ module Extend : sig
     type custom_constraints = Data.custom_constraints
     type solution = Data.solution
     type idx
-    type hyps = (int * term) list
+    type hyps = clause_src list
 
     type suspended_goal = {
-      context : (int * term) list;
+      context : hyps;
       goal : int * term
     }
     val constraints : Data.syntactic_constraints -> suspended_goal list

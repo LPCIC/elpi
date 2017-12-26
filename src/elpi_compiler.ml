@@ -493,7 +493,8 @@ let chr_of_ast depth state r =
     match conclusion with
     | Const x -> x
     | App(x,_,_) -> x
-    | _ -> assert false in
+    | f -> 
+       error ("CHR: rule without head symbol, got: "^ show_term f) in
   let arg_occurs argno t =
     let rec arg_occurs = function
       | (Const _ | UVar _ | Discard | CData _ | Nil) -> false

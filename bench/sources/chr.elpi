@@ -1,3 +1,8 @@
+type app term -> term -> term.
+type lam (term -> term) -> term.
+type arr ty -> ty -> ty.
+type nat ty.
+type bool ty.
 mode (term i o).
 term (app HD ARG) TGT :- term HD (arr SRC TGT), term ARG SRC.
 term (lam F) (arr SRC TGT) :- pi x\ term x SRC => term (F x) TGT.
@@ -12,11 +17,12 @@ constraint term {
      | (len LX N, len LY M, not(N = M))
    <=> (print "wrong arity" K, false).
 
-  rule (GX ?- term (uvar _ LX) TX)
-     \ (GY ?- term (uvar _ LY) TY)
+  rule (GX ?- term (uvar K1 LX) TX)
+     \ (GY ?- term (uvar K2 LY) TY)
      > LX ~ LY
-     | (compatible GX LX GY LY CTXCONSTR)
-   <=> (CTXCONSTR, TX = TY).
+     | (K1 = K2, print "compat" GX "|-" K1 LX TX "," GY "|-" K2 LY TY, 
+        compatible GX LX GY LY CTXCONSTR)
+   <=> (print "NEW" CTXCONSTR TX "=" TY, CTXCONSTR, TX = TY).
 
 }
 
@@ -29,8 +35,12 @@ compatible GX [X|XS] GY [Y|YS] (TX = TY, K) :-
 compatible _ _ _ _ false.
 
 main :-
-  (term (lam x\ lam y\ app (app (F x y) x) y) T1, term (lam y\ lam x\ app (app (F x y) y) x) T2),
-  (term (lam x \ X x) (arr A nat), term (lam x \ X x) (arr bool B)),
-  not(term (lam x \ Y x) (arr C nat), term (lam x \ Y) (arr bool C)),
+  (term (lam x\ lam y\ app (app (F x y) x) y) T1, 
+   term (lam y\ lam x\ app (app (F x y) y) x) T2),
+  print "1",
+  (term (lam x \ X x) (arr A nat),
+   term (lam x \ X x) (arr bool B)),
+  print "2",
+  not(term (lam x \ Y x) (arr C nat), term (lam x \ Y x) (arr bool C)),
   not(term (lam x \ Z x) (arr nat nat), term (lam x \ Z x) (arr bool D)).
 

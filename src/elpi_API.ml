@@ -129,7 +129,7 @@ module Extend = struct
   module Data = struct
     include Elpi_data
     type suspended_goal = { 
-      context : (int * term) list;
+      context : hyps;
       goal : int * term
     }
     let constraints = Elpi_util.map_filter (function

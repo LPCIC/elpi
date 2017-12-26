@@ -73,9 +73,10 @@ and constraint_def = {
   cdepth : int;
   prog : prolog_prog [@equal fun _ _ -> true]
                [@printer (pp_extensible pp_prolog_prog)];
-  context : (int * term) list;
+  context : clause_src list;
   conclusion : term;
 }
+and clause_src = { hdepth : int; hsrc : term }
 [@@deriving show, eq]
 
 module C = struct
@@ -456,7 +457,7 @@ type clause = {
   }
 
 type idx = {
-  src : (int * term) list;
+  src : clause_src list;
   map : (clause list * clause list * clause list Elpi_ptmap.t) Elpi_ptmap.t
 }
 
@@ -476,7 +477,7 @@ module UnifBitsTypes = struct (* {{{ *)
   }
 
   type idx = {
-    src : (int * term) list;
+    src : clause_src list;
     map : (clause * int) list Elpi_ptmap.t  (* timestamp *)
   }
 
@@ -572,7 +573,7 @@ type solution = {
 }
 type outcome = Success of solution | Failure | NoMoreSteps
 
-type hyps = (int * term) list
+type hyps = clause_src list
 
 let register_custom, register_custom_full, lookup_custom, all_custom =
  let (customs :
