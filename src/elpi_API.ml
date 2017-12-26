@@ -105,7 +105,7 @@ module Pp = struct
 
   let constraints f c =
     let module R = (val !r) in let open R in
-    Elpi_util.pplist ~boxed:true R.pp_stuck_goal " " f c
+    Elpi_util.pplist ~boxed:true R.pp_stuck_goal "" f c
 
   let custom_constraints = Elpi_data.CustomConstraint.pp
 

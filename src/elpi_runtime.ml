@@ -413,7 +413,7 @@ let undo ~old_trail ?old_constraints () =
   | None -> ()
 ;;
 
-let print fmt =
+let print =
   let pp_depth fmt d =
     if d > 0 then
       Fmt.fprintf fmt "{%a} :@ "
@@ -421,19 +421,22 @@ let print fmt =
   let pp_ctx fmt ctx =
     if ctx <> [] then
      Fmt.fprintf fmt "@[<hov 2>%a@]@ ?- "
-      (pplist (fun fmt (d,t) -> uppterm d [] 0 empty_env fmt t) ",") ctx in
-  let pp_goal depth g = (uppterm depth [] 0 empty_env) g in
-  List.iter (fun ({ cdepth=depth; context=pdiff; conclusion=g }, blockers) ->
-      Fmt.fprintf fmt
-        " @[<h>@[<hov 2>%a%a%a@]@  /* suspended on %a */@]"
-          pp_depth depth pp_ctx pdiff (pp_goal depth) g
-          (pplist ~boxed:false (uppterm 0 [] 0 empty_env) ",")
-            (List.map (fun r -> UVar(r,0,0)) blockers))
+      (pplist (fun fmt { hdepth = d; hsrc = t } ->
+                 uppterm d [] 0 empty_env fmt t) ",") ctx in
+  let pp_goal depth = uppterm depth [] 0 empty_env in
+  pplist (fun fmt ({ cdepth=depth;context=pdiff; conclusion=g }, blockers) ->
+    Fmt.fprintf fmt " @[<h>@[<hov 2>%a%a%a@]@  /* suspended on %a */@]"
+      pp_depth depth
+      pp_ctx pdiff
+      (pp_goal depth) g
+      (pplist (uppterm 0 [] 0 empty_env) ",")
+        (List.map (fun r -> UVar(r,0,0)) blockers)
+  ) ""
 
 let pp_stuck_goal fmt { kind; blockers } = match kind with
    | Unification { adepth = ad; env = e; bdepth = bd; a; b } ->
       Fmt.fprintf fmt
-       " @[<h>@[<hov 2>^%d:%a@ == ^%d:%a@] /* suspended on %a */@]"
+       " @[<h>@[<hov 2>^%d:%a@ == ^%d:%a@]@  /* suspended on %a */@]"
         ad (uppterm ad [] 0 empty_env) a
         bd (uppterm ad [] ad e) b
           (pplist ~boxed:false (uppterm 0 [] 0 empty_env) ",")
