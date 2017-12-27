@@ -154,6 +154,9 @@ module Extend : sig
     val map : 'a cdata -> 'b cdata -> ('a -> 'b) -> t -> t
   end
 
+  (* This module should not be used, since writing AST is as tedious as
+   * writing terms directly. See Compile.query for the recommended way
+   * of generating queries. *)
   module Ast : sig
 
     type term (** name based *)
@@ -183,9 +186,17 @@ module Extend : sig
 
   end
 
+  (* This module exposes the low level representation of terms, and is very
+   * hard to use. Arg and AppArg are "stack terms" and should never be used.
+   * Note: The Utils module provides deref_head to dereference assigned 
+   * UVar or AppUVar nodes: always use "match deref_head ~depth t with ..".
+   * Note: The "Const" node is hashconsed, see Constants.of_dbl or
+   * Contants.from_string. *)
   module Data : sig
 
-    type constant = int (** De Bruijn levels *)
+    type constant = int (** De Bruijn levels (not indexes):
+                            the distance of the binder from the root.
+                            Starts at 0.  *)
     type term =
       (* Pure terms *)
       | Const of constant (** hashconsed *)
@@ -274,6 +285,10 @@ module Extend : sig
     
   end
 
+  (* This module lets one implement quotations. In order to do so one may
+   * need to carry some data into the compiler state that can indeed be
+   * extended. A piece of compiler state can also be kept and used at runtime,
+   * e.g. if it contains some custom constraints, see CustomConstraint *)
   module Compile : sig
 
     (** One can extend the compiler state in order to implement quotations *)
@@ -306,7 +321,8 @@ module Extend : sig
 
     val is_Arg : State.t -> Data.term -> bool
     val fresh_Arg :
-      State.t -> name_hint:string -> args:Data.term list -> State.t * string * Data.term
+      State.t -> name_hint:string -> args:Data.term list ->
+        State.t * string * Data.term
 
     (* See elpi_quoted_syntax.elpi *)
     val quote_syntax : Data.program -> Data.query -> Data.term * Data.term
@@ -315,7 +331,8 @@ module Extend : sig
     
     (* Generate a query starting from a compiled/hand-made term *)
     val query :
-      Data.program -> (depth:int -> State.t -> State.t * Data.term) -> Data.query
+      Data.program -> (depth:int -> State.t -> State.t * Data.term) ->
+        Data.query
 
   end
 
@@ -341,6 +358,12 @@ module Extend : sig
 
   end
 
+
+  (* Custom constraints are just a purely functional piece of data carried
+   * by the interpreter. Such data is kept in sync with the backtracking, i.e.
+   * changes made in a branch are lost if that branch fails.
+   * The initial value can be taken from the compiler state, e.g. a quotation
+   * may generate some constraints statically *)
   module CustomConstraint : sig
     (** 'a must be purely functional, i.e. backtracking is a no op *)
 
@@ -368,6 +391,7 @@ module Extend : sig
 
   end
 
+
   (* Custom compilation of `this` and 'that' *)
   module CustomFunctor : sig
 
@@ -377,6 +401,7 @@ module Extend : sig
       (Compile.State.t -> string -> Compile.State.t * Data.term) -> unit
 
   end
+
 
   module Utils : sig
     (** Terms must be inspected after dereferencing (at least) their head *)
