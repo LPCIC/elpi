@@ -34,6 +34,9 @@
 
 - [Advanced modes](#advanced-modes) can be used to declare the same code
   with different modes under different names.
+
+- [Accumulate with paths](#accumulate-with-paths) accepts `accumulate "path".`
+  so that one can use `.` in a file/path name.
   
 ## Underscore
 
@@ -640,4 +643,9 @@ pp3 (?? _ L) :-       print "with arguments " L.
 pp4 (?? K L as V) :-  print "a flexible term " V.
 ```
 Only `V` is a proper term, `K` and `L` are not.
+
+## Accumulate with paths
+
+Elpi accepts `accumulate "path".` (i.e. a string rather than an indent)
+so that one can use `.` in a file or path name.
 

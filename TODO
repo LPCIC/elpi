@@ -1,7 +1,6 @@
 This file is OUTDATED
 =====================
 
-
 Weird syntax of Teyjus:
 - no syntax for negative numbers: ~ 2 is the unary minus applied to 2,
   not the number -2.
@@ -32,20 +31,6 @@ Departures from Teyjus due to camlp5 idiosynchrasies:
   relative paths according to the path of the accumulating file first or,
   if it fails, according to the TJPATH
 
-CHR:
-- look for the assert false: they are unimplemented stuff
-- the alignment of rels at the moment makes sense only (???) for our
-  use case. Introduce a permutation map for the rel? Lift everything
-  in the sum (not the max like now) of the length of the contexts?
-- nabla are now parsed, but the code for them is only partial.
-  The same for contexts (matched up to no permutation)
-- we wrote code to implement the CHR "function call" semantics; but
-  it does not work that way because to add a new delayed goal we resume
-  it at the end and it suspends again
-- rethink all the hacks/primitives (e.g. app, @, imply, ...) that are
-  at the same time definable, but implementable more efficiently as
-  a pattern (and improving legibility, maybe?)
-
 MODULES:
 - backward compatibility with Teyjus with modules
 - document local/sigma in the manual
@@ -55,32 +40,8 @@ MODULES:
 - implement ==>? what should be the semantics and scope of fixity
   declarations? E.g. X = accumulate M, X ==> x+y
 
-TODO:
-- fix the copyright for ptmap.ml*
-- restriction is not implemented even in some of the simple cases.
-  E.g. "pi x \ X = Y x" is not solved!
-- how does getenv fails in Teyjus when the var is not defined?
-- when toes Teyjus parses the TJPATH? We do it statically, i.e. when
-  elpi is run, not when accumulate is faced
-- update (& commit again?) the DOC file
-- the pcf example whants to delay a goal that is in the pattern fragment
-  but not in our fragment. Let's implement the pattern fragment? :-(
-
-DELAYS:
-- BUG INTRODUCED BY ENRICO TO BE FIXED:
-  now that you no longer heapify when Delaying, you are no longer allowed
-  to call is_flex other in the case UVar on the left, because is_flex
-  now _can_ find an Arg. The only solution is to
-  1) pass e to is_flex so that it can dereference the Args
-  2) heapify e.(i) when e.(i) == dummy
-- delay pruning as well
-
 Documentation:
 - see "Departures from Teyjus"
-- accumulate and friends accept pathnames in quotes
-  (e.g. accumulate "../foo/x.mod"). Necessary to be able to write a path
-  that contains a dot.
-- remark that we handle constants that start with $ in a special way
 - integers are 31 bits (25 bits in Teyjus); floats are...
 - no beta-redexes in the source code
 - semantics of ; departed from Teyjus
@@ -102,40 +63,13 @@ Documentation:
   \x followed by other combinations should be an error
   \ followed by other combinations should be an error
   </NOT IMPLEMENTED YET>
-- X @ L is a definable operator:
-  app H G (c d e).  returns  H = c, G = [d,e]
-  where
-  app F [] F :- $is_frozen F, !.
-  app F [X|XS] (G X) :- app F XS G.
-
 
 Major Bugs:
-- put_binds A [] C [].
-  put_binds X [ YX | YSX ] A [ bind A Y | YYS ] :-
-   YX = Y X, put_binds X YSX A YYS.
-
-  push_binds (bind A L) RES :-
-   pi x \ (push_binds (L x) (L2 x), put_binds x (L2 x) A RES).
-  push_binds [] [].
-  push_binds [ X | XS ] [ X | XS ].
-
-  :- push_binds (bind a x \ bind b y \ [ f x y, g y, h x, d ]) RES.
-  Unification bug: (X2^3 x3)^4 =0= (<<f x2 x3>>^4 :: ...)^2
-  x2 and x3 becomes x4 and x5 (??)
-- more often then not using _ is wrong even if _ is not under explicit
-  pis. I suppose it is due to sigma/locals.
 - pi X\ (main A :- X = A, $print X).  Anomaly
-- occur check fails: see the note in propagation1 where a cyclic term
-  is formed. More info: A = impl A B fails, but impl A B = A creates a
-  cyclic term.
-- strings need to be quoted when pretty-printed
-- revise all the assert false/raise Failure
 - string_to_term is severely bugged:
   * we pass the empty amap when parsing/heapifying the string,
     because we do not have them available. Therefore the function works
     as expected only on meta-closed terms.
-- halt should halt nicely, still printing the TIME spent, etc.
-  Otherwise the automatic benchmarks fail.
 
 Minor Bugs (mostly forward compatibility with Teyjus):
 - the parser should verify the well-balancing of { }
@@ -157,15 +91,6 @@ Minor Bugs (mostly forward compatibility with Teyjus):
   the pretty-printer does not change the associativity of old symbols.
   Maybe re-use the map used for set_precedence/precedence_of
 - we do not check the first argument of "is" and other predicates
-- turn =, or, sigma, etc. into Custom predicates?
-   In particular, it should not be allowed to add more clauses to them
-   via implication.
-- turn = into a builtin (more efficient?)
-- thi call:
-dell@dell:~/lpcic/elpi/bench/sources/fun_trans$ ../../../elpi fun_trans.mod
-  works fine, but the same call outside of the fun_trans/ directory does not, i.e.:
-dell@dell:~/lpcic/elpi$ ./elpi bench/sources/fun_trans.elpi 
-  fails. The problem is in loading the input file.
 - LaTeX exporter:
   0) local ignored
   1) a Parser.term which contains LaTeX reserved symbols such 
@@ -179,25 +104,6 @@ Other:
 
 0. pretty-printing to LaTeX + transformation to standard presentation
    (with fresh variables, etc.)
-1. implement delay and experiment with it for:
-   a) unif outside the fragment
-   b) non trivial restrictions
-   c) avoid failure of the "is" predicate?
-   d) avoid the creation of Explicit Substitutions ??
-
-Benchmarks:
-
-0. modify lambda3 to use the bound variables (via a list, etc.)
-1. http://www.cs.hofstra.edu/~cscccl/lambda-examples/
-   vedi lpcic/elpi/doc/termrep.pdf
-2. the following benchmarks in bench/sources/ go outside the fragment:
-   - progs: in progs2 we have 2 delays, teyjus only shows 1 (who knows it it hides the second one)
-   - pcf: bug?
-   - hilbert OK
-   - hilbert2 OK
-   - fun_trans: no-clause in elpi (bug?)
-
-
 Possible optimizations:
 
 -4. TODO for flatten_snd: benchmark
@@ -220,8 +126,3 @@ Possible optimizations:
    TO BE TRIED (??)
 2. the to_heap could keep the highest non-bound variable to be cached in
    the UVar to make restriction linear
-
-CHECKED:
-- check if the ,/& and the =>/:- checks slow down a lot. In that case
-  we can parse both pairs as just one symbol :-(
-  Cvetan: no slow down
