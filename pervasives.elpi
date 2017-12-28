@@ -134,6 +134,7 @@ external pred stash i:ctype "safe", i:A.
 type (::) X -> list X -> list X.
 type ([]) list X.
 type (:-) prop -> prop -> prop.
+type (:-) prop -> list prop -> prop.
 type (,) variadic any any.
 type (??) A.
 type (as) A -> A -> A.
