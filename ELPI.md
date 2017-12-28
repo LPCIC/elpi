@@ -199,6 +199,9 @@ is also equivalent to `q => p => g`.
 This is particularly useful in writing [CHR rules](#syntactic-constraints)
 since the hypothetical program is a list of clauses.
 
+Note that this is also true for `:-`, i.e. its right hand side can
+be a list of predicates.
+
 ## Non logical features
 
 - The cut operator `!` is present, and does not work on nested disjunctions (`;` is not primitive).
