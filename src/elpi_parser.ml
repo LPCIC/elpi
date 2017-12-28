@@ -379,6 +379,7 @@ and comment2 loc lvl c = parser
   | [< ?= [ '*'; '/' ]; '( '*' ); '( '/'); s >] ->
       if lvl = 0 then lex loc c s else comment2 loc (lvl-1) c s
   | [< ?= [ '/'; '*' ]; '( '/' ); '( '*' ); s >] -> comment2 loc (lvl+1) c s
+  | [< '( '\n' ); s >] -> comment2 (succ_line loc) lvl c s
   | [< '_ ; s >] -> comment2 loc lvl c s
 
 
