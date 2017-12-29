@@ -2509,7 +2509,10 @@ let exec_custom_predicate c ~depth idx args =
                printf "@[<hov 0>%a@]%!" CS.print (CS.contents ());
                [] 
   end else
-    let f = try lookup_custom c with Not_found -> anomaly"no such custom" in
+    let f =
+      try lookup_custom c
+      with Not_found -> 
+        anomaly ("no custom predicated named " ^ C.show c) in
     let solution = {
       arg_names = !qnames;
       assignments = !qenv;
