@@ -772,6 +772,7 @@ let forallc = Constants.from_stringc "forall"
 let arrowc = Constants.from_stringc "arrow"
 let argc = Constants.from_stringc "arg"
 let discardc = Constants.from_stringc "discard"
+let clausec = Constants.from_stringc "clause"
 
 let mkQApp ~on_type l =
   let c = if on_type then tappc else appc in
@@ -844,7 +845,7 @@ let quote_clause { clloc; clargsname; clbody = { key; args; hyps; vars }} =
   in
   let qt = close_w_binder argc t vars in
   let names = List.map C.of_string clargsname in
-  App(Constants.andc,CData clloc,[list_to_lp_list names; qt])
+  App(clausec,CData clloc,[list_to_lp_list names; qt])
 ;;
 
 let quote_syntax { compiler_state } { qloc; qnames; qenv; qterm } =

@@ -135,7 +135,7 @@ type (::) X -> list X -> list X.
 type ([]) list X.
 type (:-) prop -> prop -> prop.
 type (:-) prop -> list prop -> prop.
-type (,) variadic any any.
+type (,) variadic prop prop.
 type (??) A.
 type (as) A -> A -> A.
 type (-) A -> A -> A.

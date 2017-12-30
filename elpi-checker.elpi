@@ -156,11 +156,11 @@ of-clause _ C :- of C TC, assert (unif TC prop) (type-err C TC prop).
 
 type checking (ctype "loc") -> prop.
 
-typecheck [] (Loc, Names, Query) :-
+typecheck [] (clause Loc Names Query) :-
   %print {counter "run"} "type checking " Loc Query,
   checking Loc =>
     report-all-failures-and-fail-if-no-success (of-clause Names Query).
-typecheck [ (Loc, Names, Clause) |Rest] Q :-
+typecheck [ (clause Loc Names Clause) |Rest] Q :-
   %print {counter "run"} "type checking " Loc Clause,
   checking Loc =>
     report-all-failures-and-fail-if-no-success (of-clause Names Clause), !,
@@ -189,7 +189,7 @@ collect-predicates-clause (app [const @vdash, HD | _]) Acc Res :- !,
 collect-predicates-clause HD Acc Res :-
   safe-dest-app HD C _, if (mem-assoc C Acc) (Res = Acc) (Res = [C `: _ | Acc]).
 
-collect-predicates-program [ (_, _, C) | P ] Acc Res :-
+collect-predicates-program [ (clause _ _ C) | P ] Acc Res :-
   collect-predicates-clause C Acc Acc1,
   collect-predicates-program P Acc1 Res.
 collect-predicates-program [] X X.
@@ -253,7 +253,7 @@ check-non-linear _ C L :-
   count C L, report-linear L.
 
 warn-linear [].
-warn-linear [ (Loc, Names, Clause) |CS] :-
+warn-linear [ (clause Loc Names Clause) |CS] :-
   checking Loc =>  check-non-linear Names Clause [],
   warn-linear CS.
 

@@ -14,7 +14,10 @@ type cdata ctype "cdata" -> term. % int, string, float.. see also $is_cdata
 
 type arg (term -> term) -> term.  % only to bind the args of a clause
 
-% a program is then a list of ( loc, list string, term ) while
+kind clause type.
+type clause (ctype "loc") -> list string -> term -> clause.
+
+% a program is then a list of clause while
 % the query is just one item of the same kind.
 
 % see elpi_typechecker.elpi for an example
