@@ -205,15 +205,15 @@ hd-symbol (app [ const S | _ ]) :- write S.
 hd-symbol (const S) :- write S.
 
 type name term -> string -> prop.
-write-clause ( Loc , [], (arg Body) ) :-
+write-clause (clause Loc [] (arg Body)) :-
   new_int I, 
   (pi x\ X is "X" ^ {term_to_string I}),
   name-to-string X I A1,
-  pi x\ name x A1 => write-clause ( Loc, [], Body x ).
-write-clause ( Loc , [A|Args], (arg Body) ) :-
+  pi x\ name x A1 => write-clause (clause Loc [] (Body x)).
+write-clause (clause Loc [A|Args] (arg Body)) :-
   new_int I, name-to-string A I A1,
-  pi x\ name x A1 => write-clause ( Loc, Args, Body x ).
-write-clause ( Loc , [], C ) :- !,
+  pi x\ name x A1 => write-clause (clause Loc Args (Body x)).
+write-clause (clause Loc [] C) :- !,
   write "<div class='clause' predicate='", hd-symbol C, write "'>",
   write "<div class='loc'>",
     term_to_string Loc LocS, write LocS,
@@ -364,7 +364,7 @@ filter-out [X|XS] P R :-
 
 write-html P F R :-
   filter-out P (c\
-    sigma Loc LocS _1 _2\ c = ( Loc, _1, _2), 
+    sigma Loc LocS _1 _2\ c = (clause Loc _1 _2), 
     term_to_string Loc LocS, not(R LocS)) PF,
   write-preamble F,
   iter write-clause PF,
