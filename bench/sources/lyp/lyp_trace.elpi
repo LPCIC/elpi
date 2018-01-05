@@ -1,0 +1,17 @@
+% The Formal System LYP: trace facility
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% proc_t P T :- print "\e[0m" (proc_t P T) "\e[0m", fail.
+
+% expand_t T1 T2 :- print "\e[36m" (expand_t T1 T2) "\e[0m", fail.
+
+% whd_t T S M U :- print "\e[32m" (whd_t T S M) "\e[0m", fail.
+
+% conv_t T1 S1 S2 T2 :- print "\e[34m" (conv_t T1 S1 S2 T2) "\e[0m", fail.
+
+% ac_t T S _ :- print "\e[33m" (ac_t T S) "\e[0m", fail.
+
+% sta_t T D _ :- print "\e[38;5;9m" (sta_t T D) "\e[0m", fail.
+
+% valid_k T :- print "\e[35m" (valid_k T) "\e[0m", fail.

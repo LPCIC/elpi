@@ -1,0 +1,14 @@
+% The Formal System LYP: engine
+
+% Components %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+accumulate lyp_trace.elpi.
+accumulate lyp_machine.elpi.
+accumulate lyp_global.elpi.
+accumulate grundlagen_2b_lyp.elpi.
+
+% Validation of the Grundlagen %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type main prop.
+
+main :- grundlagen.
