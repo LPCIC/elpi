@@ -1,0 +1,33 @@
+maelstrom Tue Jan 9 23:36:25 CET 2018
+
+     1	Time: 9.341
+     2	Time: 9.342
+     3	Time: 9.347
+     4	Time: 9.353
+     5	Time: 9.356
+     6	Time: 9.361
+     7	Time: 9.365
+     8	Time: 9.366
+     9	Time: 9.368
+    10	Time: 9.373
+    11	Time: 9.375
+    12	Time: 9.383
+    13	Time: 9.390
+    14	Time: 9.392
+    15	Time: 9.403
+    16	Time: 9.406 *
+    17	Time: 9.409
+    18	Time: 9.415
+    19	Time: 9.417
+    20	Time: 9.418
+    21	Time: 9.427
+    22	Time: 9.428
+    23	Time: 9.429
+    24	Time: 9.439
+    25	Time: 9.442
+    26	Time: 9.447
+    27	Time: 9.451
+    28	Time: 9.472
+    29	Time: 9.492
+    30	Time: 9.509
+    31	Time: 9.513
