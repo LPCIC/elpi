@@ -1,7 +1,7 @@
 H = @
 
-ELPI   = ~/git/elpi/elpi
-HELENA = $(HOME)/svn/helm_stable/software/helena
+ELPI       = ../../../elpi
+HELENA_DIR = helena
 
 TEMP = etc/temp.txt
 TEST = etc/test_31.txt
@@ -26,4 +26,6 @@ test-31:
 	$(H)grep "Time: " $(TEMP) | sort -n -k 2 | cat -n >> $(TEST)
 
 helena:
-	$(H)$(MAKE) --no-print-directory -C $(HELENA) export-lyp
+	$(H)$(MAKE) --no-print-directory -C $(HELENA_DIR) export-lyp
+
+.PHONY: helena

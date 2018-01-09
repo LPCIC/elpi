@@ -8,7 +8,7 @@
 *.cmti
 *.cma
 
-.*~
+*~
 .*.swp
 
 .depends
@@ -26,3 +26,6 @@ bench/data.csv
 bench/data.csv.dat
 bench/data.csv.plot
 bench/data.csv.svg
+
+bench/sources/lyp/helena
+bench/sources/lyp/etc
