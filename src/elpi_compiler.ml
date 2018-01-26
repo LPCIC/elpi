@@ -854,7 +854,7 @@ let quote_syntax { compiler_state } { qloc; qnames; qenv; qterm } =
   let clist = list_to_lp_list (List.map quote_clause clauses) in
   let q =
     let vars = Array.length qenv in
-    App(Constants.andc,CData CData.(A.cloc.cin (qloc,Some "query")), 
+    App(clausec,CData CData.(A.cloc.cin (qloc,Some "query")), 
       [list_to_lp_list names;
        close_w_binder argc (quote_term ~on_type:false vars qterm) vars]) in
   clist, q
