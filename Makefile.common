@@ -14,6 +14,7 @@ EXE=
 OC=ocamlfind ocamlopt
 DEPS=.depends .depends.parser
 OCNAME=OCAMLOPT
+OOPAQUE=-opaque
 else
 CMX=cmo
 CMXA=cma
@@ -21,6 +22,7 @@ EXE=.byte
 OC=ocamlfind ocamlc
 DEPS=.depends.byte .depends.parser.byte
 OCNAME=OCAMLC
+OOPAQUE=
 endif
 
 ifeq "$(findstring install,$(MAKECMDGOALS))$(findstring uninstall,$(MAKECMDGOALS))" ""
