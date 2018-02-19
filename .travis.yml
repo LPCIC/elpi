@@ -41,6 +41,7 @@ matrix:
     - opam switch $OCAML_MIN
     - make
     - make -C bench
+    - make byte
 
   - env: TEST="linux build $OCAML_MAX"
     os: linux
@@ -61,6 +62,7 @@ matrix:
     - opam switch $OCAML_MAX
     - make
     - make -C bench
+    - make byte
     
   - env: TEST="osx build $OCAML_MIN"
     os: osx
@@ -76,6 +78,7 @@ matrix:
     - opam switch $OCAML_MIN
     - make
     - make -C bench
+    - make byte
 
   - env: TEST="osx build $OCAML_MAX"
     os: osx
@@ -91,6 +94,7 @@ matrix:
     - opam switch $OCAML_MAX
     - make
     - make -C bench
+    - make byte
 
   - env: TEST="opam package installation"
     os: linux
