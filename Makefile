@@ -50,8 +50,8 @@ runners:
 		mv elpi.git.$(t) elpi.git.$(t:runner-%=%))
 
 clean:
-	$(H)rm -f src/*.cmo src/*.cma src/*.cmx src/*.cmxa src/*.cmi
-	$(H)rm -f src/*.o src/*.a src/*.cmt src/*.cmti
+	$(H)rm -f $(addprefix src/, $(TRASH))
+	$(H)rm -f $(TRASH)
 	$(H)rm -f trace_ppx.cmx elpi_config.ml
 	$(H)rm -f elpi.git.* trace_ppx elpi elpi.byte
 	$(H)rm -f src/.depends src/.depends.parser 

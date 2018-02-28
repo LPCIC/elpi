@@ -31,3 +31,4 @@ export OCAMLPATH
 endif
 H=@
 pp = printf '$(1) %-26s %s\n' "$(3)" "$(2)"
+TRASH=*.cmo *.cma *.cmx *.cmxa *.cmi *.o *.a *.cmt *.cmti
