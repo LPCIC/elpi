@@ -81,7 +81,11 @@ elpi$(EXE): elpi_REPL.ml elpi_config.$(CMX) findlib/elpi/META
 	$(H)$(call pp,$(OCNAME),-package elpi elpi_config.$(CMX) -o $@,$<)
 	$(H)$(OC) $(OC_OPTIONS) -package elpi elpi_config.$(CMX) -o $@ $<
 
-elpi_config.$(CMX): elpi_config.ml
+elpi_config.$(CMX): elpi_config.ml elpi_config.cmi
+	$(H)$(call pp,$(OCNAME),-c, $<)
+	$(H)$(OC) $(OC_OPTIONS) -c $<
+
+elpi_config.cmi: elpi_config.mli
 	$(H)$(call pp,$(OCNAME),-c, $<)
 	$(H)$(OC) $(OC_OPTIONS) -c $<
 
