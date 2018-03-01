@@ -96,8 +96,9 @@ src/%: | trace_ppx
 	$(H)$(MAKE) --no-print-directory -C src/ $*
 
 src/elpi.$(CMXA): $(wildcard src/*.ml) $(wildcard src/*.mli)
-findlib/elpi/META: src/elpi.$(CMXA) src/elpi.cmi Makefile
+findlib/elpi/META: src/elpi.$(CMXA) Makefile
 	$(H)rm -rf findlib/; mkdir findlib
+	$(H)$(MAKE) --no-print-directory -C src/ elpi.cmi # needed by ELPI_DIST
 	$(H)ocamlfind install -destdir $(BASE)/findlib -patch-archives \
 		elpi META $(ELPI_DIST) $(ELPI_LIBS) \
 		-optional $(ELPI_DIST_OPT)
