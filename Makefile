@@ -39,9 +39,9 @@ trace_ppx: trace_ppx.ml
 git/%:
 	$(H)rm -rf "$$PWD/elpi-$*"
 	$(H)mkdir "elpi-$*"
-	$(H)git clone -l .. "elpi-$*"
-	$(H)cd "elpi-$*" && git checkout "$*" && cd elpi && make
-	$(H)cp "elpi-$*/elpi/elpi" "elpi.git.$*"
+	$(H)git clone -l . "elpi-$*"
+	$(H)cd "elpi-$*" && git checkout "$*" && make
+	$(H)cp "elpi-$*/elpi" "elpi.git.$*"
 	$(H)rm -rf "$$PWD/elpi-$*"
 
 runners:
