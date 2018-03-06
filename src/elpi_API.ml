@@ -61,15 +61,13 @@ module Parse = struct
 end
 
 module Data = struct
-  type program = Elpi_data.program
-  type query = Elpi_data.query
   type term = Elpi_data.term
+  type executable = Elpi_data.executable
   type syntactic_constraints = Elpi_data.syntactic_constraints
   type custom_constraints = Elpi_data.custom_constraints
   module StrMap = Elpi_util.StrMap
   type solution = Elpi_data.solution = {
-    arg_names : int StrMap.t;
-    assignments : term array;
+    assignments : term StrMap.t;
     constraints : syntactic_constraints;
     custom_constraints : custom_constraints;
   }
@@ -77,24 +75,29 @@ end
 
 module Compile = struct
 
-  let program ?allow_undeclared_custom_predicates ?print l = Elpi_compiler.program_of_ast ?allow_undeclared_custom_predicates ?print (List.flatten l)
+  type program = Elpi_compiler.program
+  type query = Elpi_compiler.query
+
+  let program l = Elpi_compiler.program_of_ast (List.flatten l)
   let query = Elpi_compiler.query_of_ast
 
-  let static_check ?checker p g =
+  let static_check ?checker p =
     let checker = Elpi_util.option_map List.flatten checker in
-    Elpi_compiler.static_check ?checker p g
+    Elpi_compiler.static_check ?checker p
+
+  let link = Elpi_compiler.executable_of_query
 
 end
 
 module Execute = struct
   type outcome = Elpi_data.outcome =
     Success of Data.solution | Failure | NoMoreSteps
-  let once ?max_steps p q = 
+  let once ?max_steps p = 
     let module R = (val !r) in let open R in
-    execute_once ?max_steps p q     
-  let loop p q ~more ~pp =
+    execute_once ?max_steps p     
+  let loop p ~more ~pp =
     let module R = (val !r) in let open R in
-    execute_loop p q ~more ~pp
+    execute_loop p ~more ~pp
 
 end
 
@@ -108,6 +111,10 @@ module Pp = struct
     Elpi_util.pplist ~boxed:true R.pp_stuck_goal "" f c
 
   let custom_constraints = Elpi_data.CustomConstraint.pp
+
+  let query f c =
+    let module R = (val !r) in let open R in
+    Elpi_compiler.pp_query (fun ~depth -> R.Pp.uppterm depth [] 0 [||]) f c
 
   module Ast = struct
     let program = Elpi_ast.pp_program
@@ -323,6 +330,5 @@ end
 module Temporary = struct
 
   let activate_latex_exporter = Elpi_latex_exporter.activate
-  let pp_prolog = Elpi_prolog_exporter.pp_prolog
 
 end

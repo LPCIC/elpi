@@ -1969,7 +1969,7 @@ module Clausify : sig
   val clausify :
     int -> constant -> term -> clause list * clause_src list * int
   
-  val modes : mode_decl C.Map.t Fork.local_ref
+  val predicate_mode : mode_decl C.Map.t Fork.local_ref
 
   (* Utilities that deref on the fly *)
   val lp_list_to_list : depth:int -> term -> term list
@@ -1977,7 +1977,7 @@ module Clausify : sig
   val split_conj      : depth:int -> term -> term list
 
 end = struct  (* {{{ *)
-let modes = Fork.new_local C.Map.empty
+let predicate_mode = Fork.new_local C.Map.empty
 
 let rec term_map m = function
   | Const x when List.mem_assoc x m -> C.of_dbl (List.assoc x m)
@@ -2092,7 +2092,7 @@ let clausify vars depth t =
      in
      let all_modes =
       let mode =
-        try C.Map.find hd !modes
+        try C.Map.find hd !predicate_mode
         with Not_found -> Multi [] in
       match mode with
       | Mono m -> [g,args,hyps,m]
@@ -2100,7 +2100,7 @@ let clausify vars depth t =
            (g,args,hyps,[]) ::
            List.map (fun (k,subst) ->
              let map = term_map ((hd,k) :: subst) in
-             match C.Map.find k !modes with
+             match C.Map.find k !predicate_mode with
              | exception Not_found -> assert false
              | Multi _ -> assert false
              (* not smart *)
@@ -2185,7 +2185,7 @@ let noalts : alternative = Obj.magic 0
  *)
 
 type runtime = {
-  search : query -> alternative;
+  search : unit -> alternative;
   next_solution : alternative -> alternative;
 
   (* low level part *)
@@ -2195,7 +2195,7 @@ type runtime = {
 }
 
          
-let do_make_runtime : (?max_steps:int -> program -> runtime) ref =
+let do_make_runtime : (?max_steps:int -> executable -> runtime) ref =
  ref (fun ?max_steps _ -> anomaly "do_make_runtime not initialized")
 
 module Constraints : sig
@@ -2241,7 +2241,7 @@ module Ice : sig
   val align_frozen :
     freezer -> env -> depth:int -> alignment:(string * int) list ->
       constraints:(int * constraint_def) list ->
-      arg2sequent:int IM.t -> unit
+      arg2sequent:int IntMap.t -> unit
 
   val assignments : freezer -> assignment list
 
@@ -2397,7 +2397,7 @@ let ppmap fmt (g,l) =
         (pplist ppmap ";") m) maps];
     Array.iteri (fun i value ->
       try
-        let goal = IM.find i arg2sequent in
+        let goal = IntMap.find i arg2sequent in
         if goal <> bgoal then
           let map = List.assoc goal maps in 
           e.(i) <- replace_const map e.(i)
@@ -2514,8 +2514,7 @@ let exec_custom_predicate c ~depth idx args =
       with Not_found -> 
         anomaly ("no custom predicated named " ^ C.show c) in
     let solution = {
-      arg_names = !qnames;
-      assignments = !qenv;
+      assignments = StrMap.map (fun i -> !qenv.(i)) !qnames;
       constraints = !CS.Ugly.delayed;
       custom_constraints = !CS.custom_constraints } in
     let gs, cc = f ~depth (local_prog idx) solution args in
@@ -2572,7 +2571,7 @@ let propagate { CS.cstr; cstr_position; cstr_blockers = overlapping } history =
 
  let rules = CHR.rules_for (head_of cstr.conclusion) !chrules in
  let initial_program = Elpi_data.wrap_prolog_prog !orig_prolog_program in
- let modes = !modes in
+ let modes = !predicate_mode in
 
  let no_such_j = ref true in
 
@@ -2653,32 +2652,33 @@ let propagate { CS.cstr; cstr_position; cstr_blockers = overlapping } history =
        let match_context i m ctx pctx =
          match_context i max_depth env m ctx pctx in
 
-       let program = {
-         (* runs deep enough to let one use all pi-vars *)
-         query_depth = max_depth;
+       let guard =
+         match guard with
+         | Some g -> g
+         | None -> Constants.truec
+       in
+
+       let executable = {
          (* same program *)
          compiled_program = initial_program;
-         compiler_state =
-           CompilerState.set Elpi_data.modes (CompilerState.init ()) modes;
+         (* same modes *)
+         modes;
+         (* no meta meta level *)
+         chr = CHR.empty;
+         initial_goal = shift_bound_vars ~depth:0 ~to_:max_depth guard;
+         assignments_names = StrMap.empty;
+         initial_depth = max_depth;
+         query_env = env;
+         initial_constraints = CustomConstraint.init (CompilerState.init ());
        } in
-       let { search; get; exec; destroy } = !do_make_runtime program in
-       let check = function
-         | None -> ()
-         | Some goal -> 
-           let goal = shift_bound_vars ~depth:0 ~to_:max_depth goal in
-           try
-             let _ = search {
-               qloc = Ploc.dummy;
-               qnames = StrMap.empty;
-               qdepth = max_depth;
-               qenv = env;
-               qterm = goal;
-               qconstraints = CustomConstraint.init (CompilerState.init ());
-             }
-             in
-             if get CS.Ugly.delayed <> [] then
-               error "propagation rules must declare constraint(s)"
-           with No_clause -> raise NoMatch in
+       let { search; get; exec; destroy } = !do_make_runtime executable in
+
+       let check_guard () =
+         try
+           let _ = search () in
+           if get CS.Ugly.delayed <> [] then
+             error "propagation rules must declare constraint(s)"
+         with No_clause -> raise NoMatch in
 
        let result = try
 
@@ -2718,7 +2718,7 @@ let propagate { CS.cstr; cstr_position; cstr_blockers = overlapping } history =
          [%spy "propagate-try-rule-guard" (fun fmt () -> Format.fprintf fmt 
              "@[<hov 2>depth=%d@ @]" max_depth) ()];
 
-         check guard;
+         check_guard ();
 
          (* result *)
          let _, constraints_to_remove =
@@ -2804,7 +2804,7 @@ end (* }}} *)
 
 module Mainloop : sig
 
-  val make_runtime : ?max_steps:int -> program -> runtime
+  val make_runtime : ?max_steps:int -> executable -> runtime
 
 end = struct (* {{{ *)
 
@@ -2813,7 +2813,7 @@ let steps_made = Fork.new_local 0
 
 (* The block of recursive functions spares the allocation of a Some/None
  * at each iteration in order to know if one needs to backtrack or continue *)
-let make_runtime : ?max_steps: int -> program -> runtime =
+let make_runtime : ?max_steps: int -> executable -> runtime =
   (* Input to be read as the orl (((p,g)::gs)::next)::alts
      depth >= 0 is the number of variables in the context. *)
   let rec run depth p g gs (next : frame) alts lvl =
@@ -3002,11 +3002,20 @@ end;*)
 
 
  (* Finally the runtime *)
- fun ?max_steps { query_depth = d; compiled_program; compiler_state = cs } ->
+ fun ?max_steps {
+    compiled_program;
+    modes;
+    chr;
+    initial_depth;
+    query_env;
+    initial_goal;
+    initial_constraints;
+    assignments_names;
+  } ->
   let { Fork.exec = exec ; get = get ; set = set } = Fork.fork () in
   set orig_prolog_program (Elpi_data.unwrap_prolog_prog compiled_program);
-  set Constraints.chrules (CompilerState.get Elpi_data.chr cs);
-  set modes (CompilerState.get Elpi_data.modes cs);
+  set Constraints.chrules chr;
+  set predicate_mode modes;
   set T.empty_trail [];
   set T.trail !T.empty_trail;
   set T.last_call false;
@@ -3015,14 +3024,14 @@ end;*)
   set CS.Ugly.delayed [];
   set steps_bound max_steps;
   set steps_made 0;
-  let search = exec (fun { qdepth; qenv; qterm; qnames; qconstraints } ->
-     let q = move ~adepth:qdepth ~from:qdepth ~to_:qdepth qenv qterm in
+  set Constraints.qnames assignments_names;
+  set Constraints.qenv query_env;
+  set CS.custom_constraints initial_constraints;
+  let search = exec (fun () ->
+     let q = move ~adepth:initial_depth ~from:initial_depth ~to_:initial_depth query_env initial_goal in
      [%spy "run-trail" (fun fmt _ -> T.print_trail fmt) ()];
      T.empty_trail := !T.trail;
-     Constraints.qnames := qnames;
-     Constraints.qenv := qenv;
-     CS.custom_constraints := qconstraints;
-     run d !orig_prolog_program q [] FNil noalts noalts) in
+     run initial_depth !orig_prolog_program q [] FNil noalts noalts) in
   let destroy () = exec (fun () -> T.undo ~old_trail:[] ()) () in
   let next_solution = exec next_alt in
   { search; next_solution; destroy; exec; get }
@@ -3037,8 +3046,8 @@ open Mainloop
   API
  ******************************************************************************)
 
-let mk_solution depth env =
-  Array.map (fun x -> full_deref ~adepth:depth env ~depth x) env
+let mk_solution depth env sm =
+  StrMap.map (fun i -> full_deref ~adepth:depth env ~depth env.(i)) sm
 
 let deref_unif { adepth; env; bdepth; a; b } = {
   adepth; bdepth; env = Array.map (full_deref ~adepth env ~depth:adepth) env;
@@ -3060,14 +3069,13 @@ let deref_stuck_goal = function
   | { kind = Constraint x } as w ->
        { w with kind = Constraint (deref_cst x) }
 
-let mk_outcome search query get_cs qnames q_env d : outcome * alternative =
+let mk_outcome search get_cs { initial_depth; assignments_names; query_env } =
  try
-   let alts = search query in
-   let assignments = mk_solution d q_env in
+   let alts = search () in
+   let assignments = mk_solution initial_depth query_env assignments_names in
    let syn_csts, custom_constraints = get_cs () in
    let solution = {
      assignments;
-     arg_names = qnames;
      constraints = List.map deref_stuck_goal syn_csts;
      custom_constraints
    } in
@@ -3076,25 +3084,25 @@ let mk_outcome search query get_cs qnames q_env d : outcome * alternative =
  | No_clause (*| Non_linear*) -> Failure, noalts
  | No_more_steps -> NoMoreSteps, noalts
 
-let execute_once ?max_steps program ({ qnames; qenv } as q) =
+let execute_once ?max_steps exec =
  auxsg := [];
- let { search; get } = make_runtime ?max_steps program in
- fst (mk_outcome search q (fun () -> get CS.Ugly.delayed, get CS.custom_constraints) qnames qenv program.query_depth)
+ let { search; get } = make_runtime ?max_steps exec in
+ fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.custom_constraints) exec)
 ;;
 
-let execute_loop program ({ qnames; qenv; qterm } as qq) ~more ~pp =
- let { search; next_solution; get } = make_runtime program in
+let execute_loop exec ~more ~pp =
+ let { search; next_solution; get } = make_runtime exec in
  let k = ref noalts in
- let do_with_infos f x =
+ let do_with_infos f =
   let time0 = Unix.gettimeofday() in
-  let o, alts = mk_outcome f x (fun () -> get CS.Ugly.delayed, get CS.custom_constraints) qnames qenv program.query_depth in
+  let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, get CS.custom_constraints) exec in
   let time1 = Unix.gettimeofday() in
   k := alts;
   pp (time1 -. time0) o in
- do_with_infos search qq;
+ do_with_infos search;
  while !k != noalts do
    if not(more()) then k := noalts else
-   try do_with_infos next_solution !k
+   try do_with_infos (fun () -> next_solution !k)
    with No_clause -> pp 0.0 Failure; k := noalts
  done
 ;;
@@ -3114,14 +3122,14 @@ let move = HO.move
 let hmove = HO.hmove
 let make_index = make_index
 let clausify modes i c t =
-  let old = !Clausify.modes in
+  let old = !Clausify.predicate_mode in
   try
-    Clausify.modes := modes;
+    Clausify.predicate_mode := modes;
     let cl = Clausify.clausify i c t in
-    Clausify.modes := old;
+    Clausify.predicate_mode := old;
     cl
   with e ->
-    Clausify.modes := old;
+    Clausify.predicate_mode := old;
     raise e
 let pp_key = pp_key
 

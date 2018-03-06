@@ -18,11 +18,11 @@ let print_solution time = function
    Format.eprintf "Interrupted (no more steps)@\n%!"
 | Elpi_API.Execute.Failure -> Format.eprintf "Failure@\n%!"
 | Elpi_API.Execute.Success {
-    Elpi_API.Data.assignments; arg_names; constraints; custom_constraints } ->
+    Elpi_API.Data.assignments; constraints; custom_constraints } ->
   Format.eprintf "@\nSuccess:@\n%!" ;
-  Elpi_API.Data.StrMap.iter (fun name i ->
+  Elpi_API.Data.StrMap.iter (fun name v ->
     Format.eprintf "  @[<hov 1>%s = %a@]@\n%!" name
-      Elpi_API.Pp.term assignments.(i)) arg_names;
+      Elpi_API.Pp.term v) assignments;
   Format.eprintf "@\nTime: %5.3f@\n%!" time;
   Format.eprintf "@\nConstraints:@\n%a@\n%!"
     Elpi_API.Pp.constraints constraints;
@@ -33,37 +33,6 @@ let print_solution time = function
 let more () =
   prerr_endline "\nMore? (Y/n)";
   read_line() <> "n"
-;;
-
-let run_prog typecheck prog query =
- let prog = Elpi_API.Compile.program prog in
- let query = Elpi_API.Compile.query prog query in
- if typecheck then
-   if not (Elpi_API.Compile.static_check prog query) then
-      Format.eprintf "Type error\n";
- Elpi_API.Execute.loop prog query ~more ~pp:print_solution
-;;
-
-let test_impl typecheck prog query =
- let prog = Elpi_API.Compile.program prog in
- let query = Elpi_API.Compile.query prog query in
- if typecheck then
-   if not (Elpi_API.Compile.static_check prog query) then
-      Format.eprintf "Type error\n";
- Gc.compact ();
- let time f p q =
-   let t0 = Unix.gettimeofday () in
-   let b = f p q in
-   let t1 = Unix.gettimeofday () in
-   match b with
-   | Elpi_API.Execute.Success _ -> print_solution (t1 -. t0) b; true
-   | _ -> false in
- if time Elpi_API.Execute.once prog query then exit 0 else exit 1
-;;
-
-let pp_lambda_to_prolog prog =
- Printf.printf "\nRewriting λProlog to first-order prolog...\n\n%!";
- Elpi_API.Temporary.pp_prolog prog
 ;;
 
 let set_terminal_width ?(max_w=
@@ -77,17 +46,14 @@ let set_terminal_width ?(max_w=
   [ Format.err_formatter; Format.std_formatter ]
 ;;
 
-
 let usage =
   "\nUsage: elpi [OPTION].. [FILE].. [-- ARGS..] \n" ^ 
   "\nMain options:\n" ^ 
   "\t-test runs the query \"main\"\n" ^ 
   "\t-exec pred  runs the query \"pred args\"\n" ^ 
   "\t-where print system wide installation path then exit\n" ^ 
-  "\t-print-prolog prints files to Prolog syntax if possible, then exit\n" ^ 
   "\t-print-latex prints files to LaTeX syntax, then exit\n" ^ 
   "\t-print prints files after desugar, then exit\n" ^ 
-  "\t-print-raw prints files after desugar in ppx format, then exit\n" ^ 
   "\t-print-ast prints files as parsed, then exit\n" ^ 
   Elpi_API.Setup.usage
 ;;
@@ -98,7 +64,7 @@ let _ =
   let args = ref [] in
   let print_prolog = ref false in
   let print_latex = ref false in
-  let print_lprolog = ref None in
+  let print_lprolog = ref false in
   let print_ast = ref false in
   let typecheck = ref true in
   let batch = ref false in
@@ -110,8 +76,7 @@ let _ =
     | "-exec" :: goal :: rest ->  batch := true; exec := goal; aux rest
     | "-print-prolog" :: rest -> print_prolog := true; aux rest
     | "-print-latex" :: rest -> print_latex := true; aux rest
-    | "-print" :: rest -> print_lprolog := Some `Yes; aux rest
-    | "-print-raw" :: rest -> print_lprolog := Some `Raw; aux rest
+    | "-print" :: rest -> print_lprolog := true; aux rest
     | "-print-ast" :: rest -> print_ast := true; aux rest
     | "-no-tc" :: rest -> typecheck := false; aux rest
     | ("-h" | "--help") :: _ -> Printf.eprintf "%s" usage; exit 0
@@ -137,25 +102,41 @@ let _ =
     exit 0;
   end;
   if !print_latex then exit 0;
-  if !print_prolog then (pp_lambda_to_prolog p; exit 0);
-  if !print_lprolog != None then begin
-    Format.eprintf "@[<v>";
-    let _ = Elpi_API.Compile.program ?print:!print_lprolog [p] in
-    Format.eprintf "@]%!";
-    exit 0;
-    end;
   let g =
-   if !test then Elpi_API.Parse.goal "main."
-   else if !exec <> "" then
-     begin Elpi_API.Parse.goal
-       (Printf.sprintf "%s [%s]." !exec
-         String.(concat ", " (List.map (Printf.sprintf "\"%s\"") !args)))
-        end
-   else begin
-    Printf.printf "goal> %!";
-    let strm = Stream.of_channel stdin in
-    Elpi_API.Parse.goal_from_stream strm
-   end in
-  if !batch then test_impl !typecheck [p] g
-  else run_prog !typecheck [p] g
+    if !test then Elpi_API.Parse.goal "main."
+    else if !exec <> "" then
+      begin Elpi_API.Parse.goal
+        (Printf.sprintf "%s [%s]." !exec
+          String.(concat ", " (List.map (Printf.sprintf "\"%s\"") !args)))
+         end
+    else begin
+     Printf.printf "goal> %!";
+     let strm = Stream.of_channel stdin in
+     Elpi_API.Parse.goal_from_stream strm
+    end in
+  let prog = Elpi_API.Compile.program [p] in
+  let query = Elpi_API.Compile.query prog g in
+  if !typecheck then begin
+    if not (Elpi_API.Compile.static_check query) then
+       Format.eprintf "Type error\n";
+  end;
+  if !print_lprolog then begin
+    Elpi_API.Pp.query Format.std_formatter query;
+    exit 0;
+  end;
+  let exec = Elpi_API.Compile.link query in
+  if not !batch then 
+    Elpi_API.Execute.loop exec ~more ~pp:print_solution
+  else begin
+    Gc.compact ();
+    if
+      let t0 = Unix.gettimeofday () in
+      let b = Elpi_API.Execute.once exec in
+      let t1 = Unix.gettimeofday () in
+      match b with
+      | Elpi_API.Execute.Success _ -> print_solution (t1 -. t0) b; true
+      | (Elpi_API.Execute.Failure | Elpi_API.Execute.NoMoreSteps) -> false
+    then exit 0
+    else exit 1
+  end
 ;;

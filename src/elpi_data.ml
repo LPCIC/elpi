@@ -8,11 +8,32 @@ module Fmt = Format
 module F = Elpi_ast.Func
 open Elpi_util
 
-module IM = IntMap
-
 (******************************************************************************
   Terms: data type definition and printing
  ******************************************************************************)
+
+(* Heap and Stack
+ *
+ * We use the same data type (term) the following beasts:
+ *   preterm = Pure term <= Heap term <= Stack term
+ *
+ * - only Stack terms can contain Arg nodes
+ * - Heap terms can contain UVar nodes
+ * - Pure terms contain no Arg and no UVar nodes
+ * - a preterm is a Pure term that may contain "%Arg3" constants.  These
+ *   constants morally represent Arg nodes
+ *
+ * Preterms are only used during compilation.  Beta-reduction, needed for
+ * macro expansion for example, is only defined on Heap terms.  We hence
+ * separate the compilation of clauses into:
+ *   AST -> preterm -> term -> clause
+ *
+ * Heap and Stack terms are used during execution. The query if the
+ * root of Heap terms, clauses are Stack terms and are eventually copied
+ * to the Heap.
+ * Invariant: a Heap term never points to a Stack term.
+ *
+ *)
 
 (* To break circularity, we open the index type (index of clauses) here
  * and extend it with the Index constructor when such data type will be
@@ -29,7 +50,6 @@ type constant = int (* De Bruijn levels *)
 (* To be instantiated after the dummy term is defined *)
 let pp_oref = mk_extensible_printer ()
 
-(* Invariant: a Heap term never points to a Query term *)
 let id_term = UUID.make ()
 type term =
   (* Pure terms *)
@@ -153,6 +173,9 @@ module Constants : sig
   val frozenc  : constant
 
   val ctypec   : constant
+  val prop     : term
+  val variadic : constant
+  val any      : term
 
   val spillc   : constant
 
@@ -166,8 +189,8 @@ module Constants : sig
   type t = constant
   val compare : t -> t -> int
 
-  module Set : Set.S with type elt = t
   module Map : Map.S with type key = t
+  module Set : Set.S with type elt = t
 
   (* mkinterval d n 0 = [d; ...; d+n-1] *)
   val mkinterval : int -> int -> int -> term list
@@ -210,30 +233,37 @@ let funct_of_ast, of_dbl, show, fresh =
 
 let pp fmt c = Format.fprintf fmt "%s" (show c)
 
-let from_stringc s = fst (funct_of_ast F.(from_string s))
-let from_string s = snd (funct_of_ast F.(from_string s))
+let from_astc a = fst (funct_of_ast a)
+let from_ast a = snd (funct_of_ast a)
 
-let cutc, cut = funct_of_ast F.cutf
-let truec = snd (funct_of_ast F.truef)
+let from_stringc s = from_astc F.(from_string s)
+let from_string s = from_ast F.(from_string s)
+
+let andc2 = from_astc F.andf2
 let andc, andt = funct_of_ast F.andf
-let andc2 = fst (funct_of_ast F.andf2)
-let orc = fst (funct_of_ast F.orf)
-let implc = fst (funct_of_ast F.implf)
-let rimplc, rimpl = funct_of_ast F.rimplf
+let arrowc = from_astc F.arrowf
+let asc = from_stringc "as"
+let consc, cons = funct_of_ast F.consf
+let cutc, cut = funct_of_ast F.cutf
+let entailsc = from_stringc "?-"
+let eqc = from_astc F.eqf
+let frozenc = from_stringc "uvar"
+let implc = from_astc F.implf
+let nablac = from_stringc "nabla"
+let nilc, nil = funct_of_ast F.nilf
+let orc = from_astc F.orf
 let pic, pi = funct_of_ast F.pif
-let sigmac = fst (funct_of_ast F.sigmaf)
-let eqc = fst (funct_of_ast F.eqf)
-let rulec = fst (funct_of_ast (F.from_string "rule"))
-let nilc, nil = (funct_of_ast F.nilf)
-let consc, cons = (funct_of_ast F.consf)
-let nablac = fst (funct_of_ast (F.from_string "nabla"))
-let entailsc = fst (funct_of_ast (F.from_string "?-"))
-let uvc = fst (funct_of_ast (F.from_string "??"))
-let asc = fst (funct_of_ast (F.from_string "as"))
-let spillc = fst (funct_of_ast (F.spillf))
-let arrowc = fst (funct_of_ast F.arrowf)
-let frozenc = fst (funct_of_ast (F.from_string "uvar"))
+let rimplc, rimpl = funct_of_ast F.rimplf
+let rulec = from_stringc "rule"
+let sigmac = from_astc F.sigmaf
+let spillc = from_astc (F.spillf)
+let truec = from_ast F.truef
+let uvc = from_stringc "??"
+
 let ctypec = fst (funct_of_ast F.ctypef)
+let prop = from_string "prop"
+let variadic = from_stringc "variadic"
+let any = from_string "any"
 
 let declare_constraintc = from_stringc "declare_constraint"
 let print_constraintsc = from_stringc "print_constraints"
@@ -243,6 +273,8 @@ let dummy = App (-9999,cut,[])
 module Self = struct
   type t = constant
   let compare x y = x - y
+  let pp = pp
+  let show = show
 end
 
 module Map = Map.Make(Self)
@@ -271,7 +303,7 @@ module CHR : sig
   type clique 
 
   type sequent = { eigen : term; context : term; conclusion : term }
-  and alignment = { arg2sequent : int IM.t; keys : (string * int) list }
+  and alignment = { arg2sequent : int IntMap.t; keys : (string * int) list }
   and rule = {
     to_match : sequent list;
     to_remove : sequent list;
@@ -294,10 +326,13 @@ module CHR : sig
   
   val rules_for : constant -> t -> rule list
 
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
+
 end = struct (* {{{ *)
 
   type sequent = { eigen : term; context : term; conclusion : term }
-  and alignment = { arg2sequent : int IM.t; keys : (string * int) list }
+  and alignment = { arg2sequent : int IntMap.t; keys : (string * int) list }
   and rule = {
     to_match : sequent list;
     to_remove : sequent list;
@@ -312,6 +347,7 @@ end = struct (* {{{ *)
     cliques : Constants.Set.t Constants.Map.t;
     rules : rule list Constants.Map.t
   }
+  [@@ deriving show]
   type clique = Constants.Set.t
 
   let empty = { cliques = Constants.Map.empty; rules = Constants.Map.empty }
@@ -443,9 +479,12 @@ type mode = bool list [@@deriving show]
 
 module TwoMapIndexingTypes = struct (* {{{ *)
 
-type key1 = int
+type key1 = constant
 type key2 = int
 type key = key1 * key2
+
+let pp_key f (k,_) = Constants.pp f k
+let show_key (k,_) = Constants.show k
 
 type clause = {
     depth : int;
@@ -454,12 +493,14 @@ type clause = {
     vars : int;
     key : key;
     mode: mode;
-  }
+}
+[@@ deriving show]
 
 type idx = {
   src : clause_src list;
   map : (clause list * clause list * clause list Elpi_ptmap.t) Elpi_ptmap.t
 }
+[@@ deriving show]
 
 end (* }}} *)
 
@@ -484,7 +525,9 @@ module UnifBitsTypes = struct (* {{{ *)
 end (* }}} *)
 
 type idx = TwoMapIndexingTypes.idx
+[@@ deriving show]
 type key = TwoMapIndexingTypes.key
+[@@ deriving show]
 type clause = TwoMapIndexingTypes.clause = {
   depth : int;
   args : term list;
@@ -493,6 +536,7 @@ type clause = TwoMapIndexingTypes.clause = {
   key : key;
   mode : mode;
 }
+[@@ deriving show]
 
 type mode_decl =
   | Mono of mode
@@ -506,50 +550,84 @@ type clause_w_info = {
   clargsname : string list;
   clbody : clause;
 }
-
-let drop_clause_info { clbody } = clbody
+[@@ deriving show]
 
 type macro_declaration = (Elpi_ast.term * Ploc.t) F.Map.t
+[@@ deriving show]
+
+(* This is paired with a pre-stack term, i.e. a stack term where args are
+ * represented with constants as "%Arg3" *)
+type argmap = {
+  nargs : int;
+  c2i : int Constants.Map.t;
+  i2n : string IntMap.t;
+  n2t : term StrMap.t;
+  n2i : int StrMap.t;
+}
+[@@ deriving show]
+
+let empty_amap = {
+ nargs = 0;
+ c2i = Constants.Map.empty;
+ i2n = IntMap.empty;
+ n2t = StrMap.empty;
+ n2i = StrMap.empty;
+}
+
+let mk_Arg n { c2i; nargs; i2n; n2t; n2i } =
+  let cname = Printf.sprintf "%%Arg%d" nargs in
+  let n' = Constants.from_string cname in
+  let nc = Constants.from_stringc cname in
+  let i2n = IntMap.add nargs n i2n in
+  let c2i = Constants.Map.add nc nargs c2i in
+  let n2t = StrMap.add n n' n2t in
+  let n2i = StrMap.add n nargs n2i in
+  let nargs = nargs + 1 in
+  { c2i; nargs; i2n; n2t; n2i }, (n', nc)
+
+type preterm = {
+  term : term; (* Args are still constants *)
+  amap : argmap;
+}
+[@@ deriving show]
+
 type type_declaration = {
   tname : constant;
-  tnargs : int;
-  ttype : term;
+  ttype : preterm;
 }
+[@@ deriving show]
+
+type presequent = { peigen : term; pcontext : term; pconclusion : term }
+[@@ deriving show]
+type prechr_rule = {
+  pto_match : presequent list;
+  pto_remove : presequent list;
+  palignment : Constants.t list;
+  pguard : term option;
+  pnew_goal : presequent option;
+  pamap : argmap;
+}
+[@@ deriving show]
 
 let todopp fmt _ = error "not implemented"
 
-let modes : mode_decl Constants.Map.t CompilerState.component =
-  CompilerState.declare ~pp:todopp ~name:"elpi:modes"
-    ~init:(fun () -> Constants.Map.empty)
-let chr : CHR.t CompilerState.component =
-  CompilerState.declare ~pp:todopp ~name:"elpi:chr"
-    ~init:(fun () -> CHR.empty)
-let declared_types : type_declaration list CompilerState.component =
-  CompilerState.declare ~pp:todopp ~name:"elpi:declared_types"
-    ~init:(fun () -> [])
-let clauses_w_info : clause_w_info list CompilerState.component =
-  CompilerState.declare ~pp:todopp ~name:"elpi:clauses_w_info"
-    ~init:(fun () -> [])
-let macros : macro_declaration CompilerState.component =
-  CompilerState.declare ~pp:todopp ~name:"elpi:macros"
-    ~init:(fun () -> F.Map.empty)
-
-type program = {
-  (* n of sigma/local-introduced variables *)
-  query_depth : int;
+type executable = {
   (* the lambda-Prolog program: an indexed list of clauses *) 
   compiled_program : prolog_prog [@printer (pp_extensible pp_prolog_prog)];
-
-  compiler_state : CompilerState.t;
-}
-
-type query = { 
-  qloc : Ploc.t;
-  qnames : int StrMap.t;
-  qdepth : int;
-  qenv : env;
-  qterm : term;
-  qconstraints : CustomConstraint.t;
+  (* Execution modes (needed for hypothetical clauses *)
+  modes : mode_decl Constants.Map.t;
+  (* chr rules *)
+  chr : CHR.t;
+  (* initial depth (used for both local variables and CHR (#eigenvars) *)
+  initial_depth : int;
+  (* Heap for the query *)
+  query_env : env;
+  (* query *)
+  initial_goal: term;
+  (* constraints coming from compilation *)
+  initial_constraints : CustomConstraint.t;
+  (* solution *)
+  assignments_names : int StrMap.t;
 }
 
 type prolog_prog += Index of idx
@@ -566,8 +644,7 @@ type custom_constraints = CustomConstraint.t
 type syntactic_constraints = stuck_goal list
 
 type solution = {
-  arg_names : int StrMap.t;
-  assignments : env;
+  assignments : term StrMap.t;
   constraints : syntactic_constraints;
   custom_constraints : custom_constraints;
 }

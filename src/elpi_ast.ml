@@ -2,6 +2,8 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
+open Elpi_util
+
 module Func = struct
 
   module Self = struct
@@ -84,41 +86,53 @@ let mkSeq l =
   aux l
 let mkIs x f = App(Const Func.isf,[x;f])
 
-module Ploc = struct
-  include Ploc
-  let pp fmt loc = Format.fprintf fmt "%s:%d" (file_name loc) (line_nb loc)
-  let show loc = Format.sprintf "%s:%d" (file_name loc) (line_nb loc)
-end
+type insertion = ([ `Before | `After ] * string)
+[@@deriving show]
 
-type clause = {
+type 'term clause = {
   loc : Ploc.t;
   id : string option;
-  insert : ([ `Before | `After ] * string) option;
-  body : term;
+  insert : insertion option;
+  body : 'term;
 }[@@deriving show]
 
 type sequent = { eigen : term; context : term; conclusion : term }
 and chr_rule = {
-  to_match : sequent list [@default []];
-  to_remove : sequent list [@default []];
-  alignment : Func.t list [@default []];
-  guard : term option [@default None];
-  new_goal : sequent option [@default None];
+  to_match : sequent list;
+  to_remove : sequent list;
+  alignment : Func.t list;
+  guard : term option;
+  new_goal : sequent option;
 }
 [@@deriving show, create]
 
+type ('name,'term) macro = { mlocation : Ploc.t; mname : 'name; mbody : 'term }
+[@@deriving show]
+
+type tdecl = { textern : bool; tname : Func.t; tty : term }
+[@@deriving show]
+
+type 'name subst = { salias : 'name; smap : ('name * 'name) list }
+[@@deriving show]
+
+type 'name mode =
+  { mname : 'name; margs : bool list; msubst : 'name subst option }
+[@@deriving show]
+
 type decl =
-   Clause of clause
+   Clause of term clause
  | Local of Func.t
  | Begin
  | End
- | Mode of (Func.t * bool list * (Func.t * (Func.t * Func.t) list) option) list
+ | Mode of Func.t mode list
+ | Namespace of Func.t
  | Constraint of Func.t list
  | Chr of chr_rule
  | Accumulated of decl list
- | Macro of Ploc.t * Func.t * term
- | Type of bool * Func.t * term
+ | Macro of (Func.t, term) macro
+ | Type of tdecl
 [@@deriving show]
+
 
 let mkLocal x = Local (Func.from_string x)
 

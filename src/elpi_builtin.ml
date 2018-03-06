@@ -590,7 +590,7 @@ let _ =
            let aq = Parse.goal query in
            let p = Elpi_API.Compile.program [ap] in
            let q = Elpi_API.Compile.query p aq in
-           let qp, qq = Compile.quote_syntax p q in
+           let qp, qq = Compile.quote_syntax q in
            [ App (eqc, r1, [qp]); App (eqc, r2 , [qq]) ]
        | _ -> type_error "quote_syntax string string P Q")
      | _ -> type_error "quote_syntax takes 4 arguments") ;

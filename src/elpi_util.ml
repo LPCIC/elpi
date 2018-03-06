@@ -2,19 +2,97 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-module Fmt = Format
-
-module IntMap = struct
- include Map.Make(struct type t = int let compare x y = x - y end)
- let pp f fmt m =
-   iter (fun k v -> Fmt.fprintf fmt "%d |-> %a" k f v) m
- let show f m =
-   let b = Buffer.create 20 in
-   iter (fun k v -> Printf.bprintf b "%d |-> %s," k (f v)) m;
-   Buffer.contents b
+module type Show = sig
+  type t
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
 end
 
+module type Show1 = sig
+  type 'a t
+  val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+  val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
+end
+
+module Map = struct
+
+  module type S = sig
+    include Map.S
+    include Show1 with type 'a t := 'a t
+  end
+  
+  module type OrderedType = sig
+    include Map.OrderedType
+    include Show with type t := t
+  end
+
+  module Make (Ord : OrderedType) = struct
+    include Map.Make(Ord)
+    let pp f fmt m =
+      Format.fprintf fmt "{{ @[<hov 2>";
+      iter (fun k v -> Format.fprintf fmt "%a ->@ %a;@ " Ord.pp k f v) m;
+      Format.fprintf fmt "@] }}"
+    let show f m =
+      let b = Buffer.create 20 in
+      let fmt = Format.formatter_of_buffer b in
+      pp f fmt m;
+      Format.fprintf fmt "@?";
+      Buffer.contents b
+  end
+
+end
+
+module Set = struct
+
+  module type S = sig
+    include Set.S
+    include Show with type t := t
+  end
+  
+  module type OrderedType = sig
+    include Set.OrderedType
+    include Show with type t := t
+  end
+
+  module Make (Ord : OrderedType) = struct
+    include Set.Make(Ord)
+    let pp fmt m =
+      Format.fprintf fmt "{{ @[<hov 2>";
+      iter (fun x -> Format.fprintf fmt "%a;@ " Ord.pp x) m;
+      Format.fprintf fmt "@] }}"
+    let show m =
+      let b = Buffer.create 20 in
+      let fmt = Format.formatter_of_buffer b in
+      pp fmt m;
+      Format.fprintf fmt "@?";
+      Buffer.contents b
+  end
+
+end
+
+module Int = struct
+  type t = int [@@deriving show]
+  let compare x y = x - y
+end
+
+module String = struct
+  include String
+  let pp fmt s = Format.fprintf fmt "%s" s
+  let show x = x
+end
+
+module IntMap = Map.Make(Int)
 module StrMap = Map.Make(String)
+module IntSet = Set.Make(Int)
+module StrSet = Set.Make(String)
+
+module Ploc = struct
+  include Ploc
+  let pp fmt loc = Format.fprintf fmt "%s:%d" (file_name loc) (line_nb loc)
+  let show loc = Format.sprintf "%s:%d" (file_name loc) (line_nb loc)
+end
+
+module Fmt = Format
 
 
 let pplist ?(max=max_int) ?(boxed=false) ppelem ?(pplastelem=ppelem) sep f l =
@@ -118,12 +196,6 @@ let option_mapacc f acc = function
 
 module Option = struct
   type 'a t = 'a option = None | Some of 'a [@@deriving show]
-end
-module Int = struct
-  type t = int [@@deriving show]
-end
-module String = struct
-  type t = string [@@deriving show]
 end
 module Pair = struct
   type ('a,'b) t = 'a * 'b [@@deriving show]
@@ -319,15 +391,14 @@ module CData = struct
     cdata_canon : t -> t;
   }
 
-module M = Map.Make(struct type t = int let compare x y = x - y end)
-let m : cdata_declaration M.t ref = ref M.empty
+let m : cdata_declaration IntMap.t ref = ref IntMap.empty
 
 let cget x = Obj.obj x.t
-let pp f x = (M.find x.ty !m).cdata_pp f x
-let equal x y = x.ty = y.ty && (M.find x.ty !m).cdata_eq x y
-let hash x = (M.find x.ty !m).cdata_hash x
-let name x = (M.find x.ty !m).cdata_name
-let hcons x = (M.find x.ty !m).cdata_canon x
+let pp f x = (IntMap.find x.ty !m).cdata_pp f x
+let equal x y = x.ty = y.ty && (IntMap.find x.ty !m).cdata_eq x y
+let hash x = (IntMap.find x.ty !m).cdata_hash x
+let name x = (IntMap.find x.ty !m).cdata_name
+let hcons x = (IntMap.find x.ty !m).cdata_canon x
 let ty2 { isc } ({ ty = t1 } as x) { ty = t2 } = isc x && t1 = t2
 let show x =
   let b = Buffer.create 22 in
@@ -357,7 +428,7 @@ let declare { data_eq; data_pp; data_hash; data_name; data_hconsed } =
   let cdata_eq_hconsed =
     if data_hconsed then (fun x y -> cget x == cget y)
     else cdata_eq in
-  m := M.add tid { cdata_name = data_name;
+  m := IntMap.add tid { cdata_name = data_name;
                    cdata_pp = (fun f x -> data_pp f (cget x));
                    cdata_eq = cdata_eq_hconsed;
                    cdata_hash;

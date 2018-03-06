@@ -32,6 +32,10 @@
    have ELPI translate them into λProlog terms.  This is only available
    via the OCaml API.
 
+- [Namespaces](#namespaces) are to avoid name conflicts. This is a very
+  simple syntactic facility to add a prefix to all names declared in a
+  specific region.
+
 - [Advanced modes](#advanced-modes) can be used to declare the same code
   with different modes under different names.
 
@@ -589,6 +593,27 @@ prod "x" t x\ prod _ (indt "...nat") y\
   app [indt "...prod", x, indt "...bool"]
 ```
 Note: x is bound in ELPI and used inside the quotation.
+
+## Namespaces
+
+```prolog
+toto 1.
+namespace foo {
+bar X :- toto 2 => baz X.
+baz X :- toto X.
+}
+main :- foo.bar 2, foo.baz 1.
+```
+
+```prolog
+namespace rev {
+ pred aux i:list A, i:list A, o:list A.
+ aux [X|XS] ACC R :- aux XS [X|ACC] R.
+ aux [] L L.
+}
+pred rev i:list A, o:list A.
+rev L RL  :- rev.aux L []  RL.
+```
 
 ## Advanced modes
 

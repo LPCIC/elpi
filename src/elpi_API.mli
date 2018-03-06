@@ -65,16 +65,15 @@ module Parse : sig
 end
 
 module Data : sig
-  type program
-  type query
   type term
+  
+  type executable
 
   type syntactic_constraints
   type custom_constraints
   module StrMap : Map.S with type key = string
   type solution = {
-    arg_names : int StrMap.t;
-    assignments : term array;
+    assignments : term StrMap.t;
     constraints : syntactic_constraints;
     custom_constraints : custom_constraints;
   }
@@ -82,11 +81,16 @@ end
 
 module Compile : sig
 
-  val program : ?allow_undeclared_custom_predicates:bool -> ?print:[`Yes|`Raw] -> Ast.program list -> Data.program (* XXX *)
-  val query : Data.program -> Ast.query -> Data.query
+  type program
+  type query
+
+  val program : Ast.program list -> program
+  val query : program -> Ast.query -> query
 
   (** Runs [elpi-checker.elpi] by default. *)
-  val static_check : ?checker:Ast.program list -> Data.program -> Data.query -> bool
+  val static_check : ?checker:Ast.program list -> query -> bool
+
+  val link : query -> Data.executable
 
 end
 
@@ -95,13 +99,13 @@ module Execute : sig
   type outcome = Success of Data.solution | Failure | NoMoreSteps
 
   (* Returns the first solution, if any, within the optional step bound *)
-  val once : ?max_steps:int -> Data.program -> Data.query -> outcome
+  val once : ?max_steps:int -> Data.executable -> outcome
 
   (** Prolog's REPL.
    [pp] is called on all solutions.
     [more] is called to know if another solution has to be searched. *)
   val loop :
-    Data.program -> Data.query ->
+    Data.executable ->
     more:(unit -> bool) -> pp:(float -> outcome -> unit) -> unit
 end
 
@@ -110,6 +114,7 @@ module Pp : sig
   val term : Format.formatter -> Data.term -> unit
   val constraints : Format.formatter -> Data.syntactic_constraints -> unit
   val custom_constraints : Format.formatter -> Data.custom_constraints -> unit
+  val query : Format.formatter -> Compile.query -> unit
 
   module Ast : sig
     val program : Format.formatter -> Ast.program -> unit
@@ -229,8 +234,6 @@ module Extend : sig
 
     val oref : term -> term_attributed_ref
 
-    type program = Data.program
-    type query = Data.query
     type custom_constraints = Data.custom_constraints
     type solution = Data.solution
     type idx
@@ -325,14 +328,15 @@ module Extend : sig
         State.t * string * Data.term
 
     (* See elpi_quoted_syntax.elpi *)
-    val quote_syntax : Data.program -> Data.query -> Data.term * Data.term
+    val quote_syntax : Compile.query -> Data.term * Data.term
 
+    (* To implement the string_to_term builtin *)
     val term_at : depth:int -> Ast.term -> Data.term
     
     (* Generate a query starting from a compiled/hand-made term *)
     val query :
-      Data.program -> (depth:int -> State.t -> State.t * Data.term) ->
-        Data.query
+      Compile.program -> (depth:int -> State.t -> State.t * Data.term) ->
+        Compile.query
 
   end
 
@@ -469,6 +473,5 @@ end (* Extend *)
 
 (* Stuff that should be ported to the API, but is not yet *)
 module Temporary : sig
-  val pp_prolog : Ast.program -> unit
   val activate_latex_exporter : unit -> unit
 end

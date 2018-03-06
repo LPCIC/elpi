@@ -42,9 +42,9 @@ module PointerFunc = struct
  type latex_export =
   {process:
     'a 'b. path:string -> shortpath:string -> ('a -> 'b) -> 'a -> 'b
-   ; export: clause -> unit}
+   ; export: term clause -> unit}
  let latex_export =
-  ref { process = (fun ~path  ~shortpath f x -> f x);
+  ref { process = (fun ~path:_ ~shortpath:_ f x -> f x);
         export = (fun _ -> ()) }
  let set_latex_export f = latex_export := f
 end;;
@@ -159,39 +159,11 @@ let parse_string e s =
     raise (Stream.Error(Printf.sprintf "%s\nnear: %s" msg ctx))
   | Ploc.Exc(_,e) -> raise e
 
-let digit = lexer [ '0'-'9' ]
-let octal = lexer [ '0'-'7' ]
-let hex = lexer [ '0'-'9' | 'A'-'F' | 'a'-'f' ]
-let schar2 =
- lexer [ '+'  | '*' | '/' | '^' | '<' | '>' | '`' | '\'' | '?' | '@' | '#'
-       | '~' | '=' | '&' | '!' ]
-let schar = lexer [ schar2 | '-' | '$' | '_' ]
-let lcase = lexer [ 'a'-'z' ]
-let ucase = lexer [ 'A'-'Z' ]
-let idchar = lexer [ lcase | ucase | digit | schar ]
-let rec idcharstar = lexer [ idchar idcharstar | ]
-let idcharplus = lexer [ idchar idcharstar ]
-let rec num = lexer [ digit | digit num ]
-let symbchar = lexer [ lcase | ucase | digit | schar | ':' ]
-let rec symbcharstar = lexer [ symbchar symbcharstar | ]
-
-let rec stringchar = lexer
- [ "\\\\" / -> $add "\\"
- | "\\n" / -> $add "\n"
- | "\\b" / -> $add "\b"
- | "\\t" / -> $add "\t"
- | "\\r" / -> $add "\r"
- | "\\x" / -> $add "\x"
- | "\\\"" / -> $add "\""
- (* CSC: I have no idea how to implement the \octal syntax & friend :-(
- | "\\" / [ -> buflen := String.length $buf ; $add "" ] octal / ->
-    $add (mkOctal "4")*)
- | _ ]
 let string_of_chars chars = 
   let buf = Buffer.create 10 in
   List.iter (Buffer.add_char buf) chars;
   Buffer.contents buf
-let spy ?(name="") ?pp f b s =
+let _spy ?(name="") ?pp f b s =
   let l = Stream.npeek 10 s in
   Printf.eprintf "%s< %s | %S...\n"
     name (Plexing.Lexbuf.get b) (string_of_chars l);
@@ -205,13 +177,44 @@ let spy ?(name="") ?pp f b s =
     Printf.eprintf "nope\n";
     raise e
 ;;
+
+let digit = lexer [ '0'-'9' ]
+(* let octal = lexer [ '0'-'7' ] *)
+(* let hex = lexer [ '0'-'9' | 'A'-'F' | 'a'-'f' ] *)
+let schar2 =
+ lexer [ '+'  | '*' | '/' | '^' | '<' | '>' | '`' | '\'' | '?' | '@' | '#'
+       | '~' | '=' | '&' | '!' ]
+let schar = lexer [ schar2 | '-' | '$' | '_' ]
+let lcase = lexer [ 'a'-'z' ]
+let ucase = lexer [ 'A'-'Z' ]
+let idchar = lexer [ lcase | ucase | digit | schar ]
+let rec idcharstar = lexer [ idchar idcharstar | ]
+let rec idcharstarns = lexer [ idchar idcharstarns | ?= [ '.' 'a'-'z' ] '.' idchar idcharstarns | ]
+let idcharplus = lexer [ idchar idcharstar ]
+let rec num = lexer [ digit | digit num ]
+let symbchar = lexer [ lcase | ucase | digit | schar | ':' ]
+let rec symbcharstar = lexer [ symbchar symbcharstar | ]
+
+let stringchar = lexer
+ [ "\\\\" / -> $add "\\"
+ | "\\n" / -> $add "\n"
+ | "\\b" / -> $add "\b"
+ | "\\t" / -> $add "\t"
+ | "\\r" / -> $add "\r"
+ | "\\x" / -> $add "\x"
+ | "\\\"" / -> $add "\""
+ (* CSC: I have no idea how to implement the \octal syntax & friend :-(
+ | "\\" / [ -> buflen := String.length $buf ; $add "" ] octal / ->
+    $add (mkOctal "4")*)
+ | _ ]
+
 let rec string = lexer [ '"' / '"' string | '"' / | stringchar string ]
 let any = lexer [ _ ]
 let mk_terminator keep n b s =
   let l = Stream.npeek n s in
   if List.length l = n && List.for_all ((=) '}') l then begin
    let b = ref b in
-   for i = 1 to n do
+   for _i = 1 to n do
      Stream.junk s;
      if keep then b := Plexing.Lexbuf.add '}' !b;
    done; !b
@@ -232,7 +235,7 @@ let constant = "CONSTANT" (* to use physical equality *)
 
 let rec tok b s = (*spy ~name:"tok" ~pp:(fun (a,b) -> a ^ " " ^ b)*) (lexer
   [ ucase idcharstar -> constant,$buf 
-  | lcase idcharstar -> constant,$buf
+  | lcase idcharstarns -> constant,$buf
   | schar2 symbcharstar -> constant,$buf
   | num -> "INTEGER",$buf
   | num ?= [ '.' '0'-'9' ] '.' num -> "FLOAT",$buf
@@ -270,13 +273,13 @@ and is_infix_aux b s =
     if k3 = "RPAREN" then string2lexbuf3 s1 s2 s3
     else raise Stream.Failure
   else raise Stream.Failure
-and protect max_chars lex b s =
+and protect max_chars lex s =
   let l = Stream.npeek max_chars s in
   let safe_s = Stream.of_list l in
   let to_junk, res = lex Plexing.Lexbuf.empty safe_s in
-  for i = 0 to to_junk-1 do Stream.junk s; done;
+  for _i = 0 to to_junk-1 do Stream.junk s; done;
   res
-and is_infix b s = protect 6 is_infix_aux b s
+and is_infix _ s = protect 6 is_infix_aux s
 and string2lexbuf2 s1 s2 =
   let b = ref Plexing.Lexbuf.empty in
   String.iter (fun c -> b := Plexing.Lexbuf.add c !b) s1;
@@ -298,7 +301,7 @@ let symbols = ref StringSet.empty;;
 let literatebuf = Buffer.create 17;;
 
 (* %! <= \leq creates a map from "<=" to "\leq" *)
-let set_liter_map,get_literal,print_lit_map =
+let set_liter_map, get_literal, _print_lit_map =
  let lit_map = ref StrMap.empty in
  (fun s1 s2 -> lit_map := StrMap.add s1 s2 !lit_map),
  (fun s -> StrMap.find s !lit_map),
@@ -334,6 +337,7 @@ let rec lex loc c = parser bp
          | "mode" -> "MODE", "mode"
          | "macro" -> "MACRO", "macro"
          | "rule" -> "RULE", "rule"
+         | "namespace" -> "NAMESPACE", "namespace"
          | "constraint" -> "CONSTRAINT", "constraint"
          | "localkind" -> "LOCALKIND", "localkind"
          | "useonly" -> "USEONLY", "useonly"
@@ -356,9 +360,6 @@ let rec lex loc c = parser bp
          | x when StringSet.mem x !symbols -> "SYMBOL",x
         
          | _ -> res) else res), (set_loc_pos loc bp ep)
-and skip_to_dot loc c = parser
-  | [< '( '.' ); s >] -> lex loc c s
-  | [< '_ ; s >] -> skip_to_dot loc c s
 and literatecomment loc c = parser
   | [< '( '\n' ); s >] ->
       let loc = succ_line loc in
@@ -465,10 +466,11 @@ let desugar_multi_binder = function
       let last, rev_rest = let l = List.rev args in List.hd l, List.tl l in
       let names = List.map (function
         | Const x -> Func.show x
-        | _ -> Elpi_util.error "multi binder syntax") rev_rest in
+        | (App _ | Lam _ | CData _ | Quoted _) ->
+            Elpi_util.error "multi binder syntax") rev_rest in
       let body = mkApp [binder;last] in
       List.fold_left (fun bo name -> mkApp [binder;mkLam name bo]) body names
-  | t -> t
+  | (App _ | Const _ | Lam _ | CData _ | Quoted _) as t -> t
 ;;
 
 let desugar_macro = function
@@ -481,9 +483,11 @@ let desugar_macro = function
         raise (Stream.Error "Macro name must begin with @");
       let names = List.map (function
         | Const x -> Func.show x
-        | _ -> Elpi_util.error "macro binder syntax") args in
+        | (App _ | Lam _ | CData _ | Quoted _) ->
+             Elpi_util.error "macro binder syntax") args in
       name, List.fold_right mkLam names body
-  | _ -> raise (Stream.Error "Illformed macro")
+  | (App _ | Const _ | Lam _ | CData _ | Quoted _) ->
+        raise (Stream.Error "Illformed macro")
 ;;
 
 let constant_colon strm =
@@ -513,16 +517,16 @@ EXTEND
                                        c2 = CONSTANT ->
                                 (Func.from_string c1, Func.from_string c2) ]
                  SEP SYMBOL ","; RPAREN -> l ] ->
-                 Func.from_string c,
-                 match subst with None -> [] | Some l -> l ] ->
-      Func.from_string c,l,alias]];
+                 { salias = Func.from_string c;
+                   smap = match subst with None -> [] | Some l -> l } ] ->
+       { mname = Func.from_string c; margs = l; msubst = alias } ]];
   chrrule :
     [[ to_match = LIST0 sequent;
        to_remove = OPT [ BIND; l = LIST1 sequent -> l ];
        alignment = OPT [
          SYMBOL ">"; hd = CONSTANT; SYMBOL "~"; l = LIST1 CONSTANT SEP SYMBOL "~" -> List.map Func.from_string (hd :: l) ];
-       guard = OPT [ PIPE; a = atom LEVEL "abstterm" -> Some a ];
-       new_goal = OPT [ SYMBOL "<=>"; gs = sequent -> Some gs ] ->
+       guard = OPT [ PIPE; a = atom LEVEL "abstterm" -> a ];
+       new_goal = OPT [ SYMBOL "<=>"; gs = sequent -> gs ] ->
          create_chr_rule ~to_match ?to_remove ?alignment ?guard ?new_goal ()
     ]];
   sequent_core :
@@ -537,7 +541,8 @@ EXTEND
          let context, conclusion =
            match t1 with
            | App(Const x,[a;b]) when Func.equal x Func.sequentf -> a, b
-           | _ -> mkFreshUVar (), t1 in
+           | (App _ | Const _ | Lam _ | CData _ | Quoted _) ->
+                mkFreshUVar (), t1 in
          { eigen; context; conclusion }
     | c = atom LEVEL "abstterm" ->
          { eigen = mkFreshUVar (); context = mkFreshUVar (); conclusion = c }
@@ -555,7 +560,7 @@ EXTEND
   pred_item : [[ m = i_o; COLON; t = ctype -> (m,t) ]];
   pred : [[ c = const_sym; a = LIST0 pred_item SEP SYMBOL "," ->
     let name = Func.from_string c in
-     [name, List.map fst a, None],
+    [ { mname = name; margs = List.map fst a; msubst = None } ],
      (name, List.fold_right (fun (_,t) ty ->
         mkApp [mkCon "->";t;ty]) a (mkCon "prop"))
   ]];
@@ -568,18 +573,27 @@ EXTEND
      | LCURLY -> [Begin]
      | RCURLY -> [End]
      | PRED; p = pred; FULLSTOP ->
-         let m, (n,t) = p in [Type(false,n,t); Mode m]
+         let m, (n,t) = p in
+         [Type { textern = false; tname = n ; tty = t }; Mode m]
      | TYPE; names = LIST1 const_sym SEP SYMBOL ","; t = type_; FULLSTOP ->
-         List.map (fun n -> Type(false,Func.from_string n,t)) names
-     | EXTERNAL; TYPE; names = LIST1 const_sym SEP SYMBOL ","; t = type_; FULLSTOP ->
-         List.map (fun n -> Type(true,Func.from_string n,t)) names
+         List.map (fun n ->
+             Type { textern = false; tname = Func.from_string n; tty = t })
+           names
+     | EXTERNAL;
+       TYPE; names = LIST1 const_sym SEP SYMBOL ","; t = type_; FULLSTOP ->
+         List.map (fun n ->
+            Type { textern = true; tname = Func.from_string n; tty = t })
+         names
      | EXTERNAL; PRED; p = pred; FULLSTOP ->
-         let _, (n,t) = p in [Type(true,n,t)] (* No mode for ML code *)
+         let _, (n,t) = p in (* No mode for ML code *)
+         [Type { textern = true; tname = n; tty = t }]
      | MODE; m = LIST1 mode SEP SYMBOL ","; FULLSTOP -> [Mode m]
      | MACRO; b = atom; FULLSTOP ->
          let name, body = desugar_macro b in
-         [Macro(loc,name, body)]
+         [Macro { mlocation = loc; mname = name; mbody = body }]
      | RULE; r = chrrule; FULLSTOP -> [Chr r]
+     | NAMESPACE; ns = CONSTANT; LCURLY ->
+         [ Namespace (Func.from_string ns) ]
      | CONSTRAINT; names=LIST0 CONSTANT; LCURLY ->
          [ Constraint (List.map Func.from_string names) ]
      | MODULE; CONSTANT; FULLSTOP -> []
@@ -605,7 +619,9 @@ EXTEND
      | EXPORTDEF; LIST1 const_sym SEP SYMBOL ","; FULLSTOP -> []
      | EXPORTDEF; LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP -> []
      | KIND; names = LIST1 const_sym SEP SYMBOL ","; t = kind; FULLSTOP ->
-         List.map (fun n -> Type(false,Func.from_string n,t)) names
+         List.map (fun n ->
+           Type { textern = false; tname = Func.from_string n; tty = t })
+         names
      | TYPEABBREV; abbrform; TYPE; FULLSTOP -> []
      | fix = FIXITY; syms = LIST1 const_sym SEP SYMBOL ","; prec = INTEGER; FULLSTOP ->
         let nprec = int_of_string prec in

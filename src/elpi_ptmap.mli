@@ -72,3 +72,6 @@ val find_unifiables : functor_bits:int -> int -> 'a t -> 'a list
 val diff : ('a -> 'b -> 'a option) -> 'a t -> 'b t -> 'a t
 
 val to_list : 'a t -> (int * 'a) list
+
+val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+val show : (Format.formatter -> 'a -> unit) -> 'a t -> string

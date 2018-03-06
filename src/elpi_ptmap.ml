@@ -227,3 +227,14 @@ let to_list s =
   in
   List.sort (fun (k1,_) (k2,_) -> Pervasives.compare k1 k2)
    (elements_aux [] s)
+
+let pp f fmt m =
+  let l = to_list m in
+  Elpi_util.(pplist (pp_pair Int.pp f) " " fmt l)
+
+let show f m =
+  let b = Buffer.create 20 in
+  let fmt = Format.formatter_of_buffer b in
+  pp f fmt m;
+  Buffer.contents b
+  
