@@ -36,7 +36,7 @@ ELPI_EASY_COMPONENTS = \
     $(filter-out $(ELPI_P5_COMPONENTS), $(ELPI_COMPONENTS)))
 
 elpi.$(CMXA): $(ELPI_COMPONENTS)
-	$(H)$(call pp,$(OCNAME),-a,$@)
+	$(H)$(call pp,$(OCNAME),-a -o $@,*.$(CMX))
 	$(H)$(OC) $(OC_OPTIONS) -o $@ -a $(ELPI_COMPONENTS)
 
 elpi_runtime_trace_on.$(CMX) elpi_runtime_trace_off.$(CMX) : elpi_runtime.ml elpi_runtime.cmi ../trace_ppx
@@ -60,20 +60,20 @@ elpi_runtime_trace_on.$(CMX) elpi_runtime_trace_off.$(CMX) : elpi_runtime.ml elp
 	$(H)rm elpi_runtime.$(CMX)
 
 $(ELPI_EASY_COMPONENTS) : %.$(CMX): %.ml
-	$(H)$(call pp,$(OCNAME),-c,$@)
+	$(H)$(call pp,$(OCNAME),-c,$<)
 	$(H)$(OC) $(OCAMLOPTIONS) \
 		-package camlp5,ppx_deriving.std \
 	       	-c $<
 
 elpi_API.cmi: elpi_API.mli
-	$(H)$(call pp,$(OCNAME),$(OOPAQUE) -c,$@)
+	$(H)$(call pp,$(OCNAME),$(OOPAQUE) -c,$<)
 	$(H)$(OC) $(OCAMLOPTIONS) -package camlp5 $(OOPAQUE) -c $<
 %.cmi: %.mli
-	$(H)$(call pp,$(OCNAME),-c,$@)
+	$(H)$(call pp,$(OCNAME),-c,$<)
 	$(H)$(OC) $(OCAMLOPTIONS) -package camlp5 -c $<
 
 elpi_parser.$(CMX): elpi_parser.ml elpi_parser.cmi elpi_ast.$(CMX) elpi_ast.cmi
-	$(H)$(call pp,$(OCNAME),-c -pp camlp5o,$@)
+	$(H)$(call pp,$(OCNAME),-c -pp camlp5o,$<)
 	$(H)$(OC) $(OCAMLOPTIONS) -pp '$(PP) $(PARSE)' $(FLAGS) -o $@ -c $<
 
 # dependencies
