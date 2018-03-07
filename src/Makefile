@@ -39,25 +39,25 @@ elpi.$(CMXA): $(ELPI_COMPONENTS)
 	$(H)$(call pp,$(OCNAME),-a,$@)
 	$(H)$(OC) $(OC_OPTIONS) -o $@ -a $(ELPI_COMPONENTS)
 
-elpi_runtime_trace_on.$(CMX) : elpi_runtime.ml elpi_runtime.cmi ../trace_ppx
-	$(H)$(call pp,$(OCNAME),-c -ppx 'trace_ppx --on' -for-pack,$@)
+elpi_runtime_trace_on.$(CMX) elpi_runtime_trace_off.$(CMX) : elpi_runtime.ml elpi_runtime.cmi ../trace_ppx
+	$(H)$(call pp,$(OCNAME),-c -ppx 'trace_ppx --on' -for-pack,$<)
 	$(H)$(OC) $(OCAMLOPTIONS) \
 		-package camlp5,ppx_deriving.std \
 		-ppx '../trace_ppx --as-ppx --on' \
 		-for-pack Elpi_runtime_trace_on \
 	       	-c $<
 	$(H)$(OC) $(OCAMLOPTIONS) \
-		-pack elpi_runtime.$(CMX) -o $@
-
-elpi_runtime_trace_off.$(CMX) : elpi_runtime.ml elpi_runtime.cmi ../trace_ppx
-	$(H)$(call pp,$(OCNAME),-c -ppx 'trace_ppx --off' -for-pack,$@)
+		-pack elpi_runtime.$(CMX) -o elpi_runtime_trace_on.$(CMX)
+	$(H)rm elpi_runtime.$(CMX)
+	$(H)$(call pp,$(OCNAME),-c -ppx 'trace_ppx --off' -for-pack,$<)
 	$(H)$(OC) $(OCAMLOPTIONS) \
 		-package camlp5,ppx_deriving.std \
 		-ppx '../trace_ppx --as-ppx --off' \
 		-for-pack Elpi_runtime_trace_off \
 	       	-c $<
 	$(H)$(OC) $(OCAMLOPTIONS) \
-		-pack elpi_runtime.$(CMX) -o $@
+		-pack elpi_runtime.$(CMX) -o elpi_runtime_trace_off.$(CMX)
+	$(H)rm elpi_runtime.$(CMX)
 
 $(ELPI_EASY_COMPONENTS) : %.$(CMX): %.ml
 	$(H)$(call pp,$(OCNAME),-c,$@)
