@@ -76,3 +76,4 @@ prepare:
 	$(H)cd ..; make
 
 .PHONY: all prepare only plot
+.NOTPARALLEL:
