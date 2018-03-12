@@ -74,7 +74,7 @@ elpi_API.cmi: elpi_API.mli
 
 elpi_parser.$(CMX): elpi_parser.ml elpi_parser.cmi elpi_ast.$(CMX) elpi_ast.cmi
 	$(H)$(call pp,$(OCNAME),-c -pp camlp5o,$<)
-	$(H)$(OC) $(OCAMLOPTIONS) -pp '$(PP) $(PARSE)' $(FLAGS) -o $@ -c $<
+	$(H)$(OC) $(OCAMLOPTIONS) -pp '$(PP) $(PARSE)' $(FLAGS) -w -27 -o $@ -c $<
 
 # dependencies
 include $(DEPS)
