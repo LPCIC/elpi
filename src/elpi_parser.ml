@@ -439,11 +439,13 @@ let umax_precedence = 256 (* maximal user defined precedence *)
 let appl_precedence = umax_precedence + 1 (* precedence of application *)
 let inf_precedence = appl_precedence+1 (* greater than any used precedence*)
 
+(*
 let dummy_prod =
  let dummy_action =
    Gramext.action (fun _ ->
      failwith "internal error, lexer generated a dummy token") in
  [ [ Gramext.Stoken ("DUMMY", "") ], dummy_action ]
+*)
 
 let used_precedences = ref [110];;
 let is_used n =
@@ -509,17 +511,8 @@ EXTEND
      | c = LITERAL -> c ]];
   i_o : [[ CONSTANT "i" -> true | CONSTANT "o" -> false ]];
   mode :
-    [[ LPAREN; c = CONSTANT;
-       l = LIST1 i_o; RPAREN;
-       alias = OPT[ CONSTANT "xas"; c = CONSTANT;
-                 subst = OPT [ LPAREN;
-                               l = LIST1 [ c1 = CONSTANT; SYMBOL "->";
-                                       c2 = CONSTANT ->
-                                (Func.from_string c1, Func.from_string c2) ]
-                 SEP SYMBOL ","; RPAREN -> l ] ->
-                 { salias = Func.from_string c;
-                   smap = match subst with None -> [] | Some l -> l } ] ->
-       { mname = Func.from_string c; margs = l; msubst = alias } ]];
+    [[ LPAREN; c = CONSTANT; l = LIST1 i_o; RPAREN ->
+       { mname = Func.from_string c; margs = l } ]];
   chrrule :
     [[ to_match = LIST0 sequent;
        to_remove = OPT [ BIND; l = LIST1 sequent -> l ];
@@ -560,7 +553,7 @@ EXTEND
   pred_item : [[ m = i_o; COLON; t = ctype -> (m,t) ]];
   pred : [[ c = const_sym; a = LIST0 pred_item SEP SYMBOL "," ->
     let name = Func.from_string c in
-    [ { mname = name; margs = List.map fst a; msubst = None } ],
+    [ { mname = name; margs = List.map fst a } ],
      (name, List.fold_right (fun (_,t) ty ->
         mkApp [mkCon "->";t;ty]) a (mkCon "prop"))
   ]];
@@ -590,7 +583,7 @@ EXTEND
      | MODE; m = LIST1 mode SEP SYMBOL ","; FULLSTOP -> [Mode m]
      | MACRO; b = atom; FULLSTOP ->
          let name, body = desugar_macro b in
-         [Macro { mlocation = loc; mname = name; mbody = body }]
+         [Macro { mlocation = loc; maname = name; mbody = body }]
      | RULE; r = chrrule; FULLSTOP -> [Chr r]
      | NAMESPACE; ns = CONSTANT; LCURLY ->
          [ Namespace (Func.from_string ns) ]

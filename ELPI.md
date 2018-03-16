@@ -16,7 +16,7 @@
   on the quoted syntax of the program and query
 
 - [Subterm naming](#subterm-naming) can be performed
-  using an `as X` annotation
+  using an `as X` annotation in the head of a clause
 
 - [Clause grafting](#clause-grafting) can inject a clause
   in the middle of an existing program
@@ -35,9 +35,6 @@
 - [Namespaces](#namespaces) are to avoid name conflicts. This is a very
   simple syntactic facility to add a prefix to all names declared in a
   specific region.
-
-- [Advanced modes](#advanced-modes) can be used to declare the same code
-  with different modes under different names.
 
 - [Accumulate with paths](#accumulate-with-paths) accepts `accumulate "path".`
   so that one can use `.` in a file/path name.
@@ -614,63 +611,6 @@ namespace rev {
 pred rev i:list A, o:list A.
 rev L RL  :- rev.aux L []  RL.
 ```
-
-## Advanced modes
-
-```prolog
-mode (pp o i) xas print,
-     (pp i o) xas parse.
-
-infixl &&  128.
-infixl '   255.
-
-pp (F2 && G2) (and ' F1 ' G1) :- !, pp F2 F1, pp G2 G1.
-pp A A.
-
-main :-
-   (pi x\ (pp "nice" x :- !) =>
-      parse ((V1 && true) && "nice") (P1 x)),
-   print P1,
-   (pi x\ (pp "ugly" x :- !) =>
-      print (P2 x) (P1 x)),
-   print P2.
-% P1 = x0 \ and ' (and ' V1 ' true) ' x0
-% P2 = x0 \ (V2 && true) && "ugly"
-```
-
-`mode` lets one reuse the same code in different modes.
-When an argument is in `input` no unification variable is
-instantiated, unless it comes from an output (e.g. non linear
-pattern, needed to make the `pp A A` line work).
-Unification of input arguments is  called matching.
-
-The mode directive has also the following effect on code generation:
-
-position | predicate | code generation
----------|-----------|----------------------------------------------------
- goal | any | just run as is
- hyp | pp | index as pp, index as print and replace all occs (rec calls) of pp with print, index as parse and replace all occs of pp with parse
- hyp | print | index as print
- hyp | parse | index as parse
-
-Users of `pp` can avoid duplication this way:
-
-```
-mode (pptac i o) xas printtac(pp -> print),
-     (pptac o i) xas parsetac(pp -> parse).
-
-pptac (tac T) (tac S) :- pp T S.
-```
-
-In matching mode a syntax to introspect unification variables
-is provided:
-```prolog
-pp1 ?? :-             print "a variable".
-pp2 (?? K) :-         print "with id " K.
-pp3 (?? _ L) :-       print "with arguments " L.
-pp4 (?? K L as V) :-  print "a flexible term " V.
-```
-Only `V` is a proper term, `K` and `L` are not.
 
 ## Accumulate with paths
 

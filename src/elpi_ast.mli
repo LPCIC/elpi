@@ -90,7 +90,7 @@ val show_chr_rule : chr_rule -> string
 
 type ('name,'term) macro = {
    mlocation : Ploc.t;
-   mname : 'name;
+   maname : 'name;
    mbody : 'term
 }
 
@@ -110,17 +110,8 @@ val pp_tdecl :
 val show_tdecl :
      tdecl -> string
 
-type 'name subst = { salias : 'name; smap : ('name * 'name) list }
-
-val pp_subst :
-  (Format.formatter -> 'name -> unit) ->
-    Format.formatter -> 'name subst -> unit
-val show_subst :
-  (Format.formatter -> 'name -> unit) ->
-     'name subst -> string
-
 type 'name mode =
-  { mname : 'name; margs : bool list; msubst : 'name subst option }
+  { mname : 'name; margs : bool list }
 
 val pp_mode :
   (Format.formatter -> 'name -> unit) ->

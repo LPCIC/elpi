@@ -1702,8 +1702,7 @@ let get_clauses ~depth a { map = m } =
  [%log "get_clauses" (pp_key (ind,app)) (List.length rc)];
  rc
 
-let add_clauses clauses s { map = p;  src } =       
-  let p = List.fold_left (fun m clause ->
+let add1clause m clause =
     let matching = match clause.mode with [] -> false | x :: _ -> x in
     let ind,app = clause.key in
     try 
@@ -1730,8 +1729,9 @@ let add_clauses clauses s { map = p;  src } =
       let l = if matching then [] else [clause] in
       Elpi_ptmap.add ind
        (l,[],Elpi_ptmap.add app [clause] Elpi_ptmap.empty) m
-    ) p clauses
-  in
+
+let add_clauses clauses s { map = p;  src } =       
+  let p = List.fold_left add1clause p clauses in
   { map = p; src = List.rev s @ src }
 
 let make_index p =
@@ -1929,7 +1929,7 @@ module UnifBits (*: Indexing*) = struct (* {{{ *)
         Elpi_ptmap.add ind [clause] m
     ) ptree clauses in
     { map; src = List.rev s @ src }
- 
+
   let make_index p =
     timestamp := 1;
     let m = add_clauses ~op:incr p [] { map = Elpi_ptmap.empty; src = [] } in
@@ -1966,10 +1966,11 @@ let orig_prolog_program = Fork.new_local (make_index [])
 
 module Clausify : sig
 
-  val clausify :
-    int -> constant -> term -> clause list * clause_src list * int
+  val clausify : depth:int -> term -> clause list * clause_src list * int
+
+  val clausify1 : nargs:int -> depth:int -> term -> clause * clause_src * int
   
-  val predicate_mode : mode_decl C.Map.t Fork.local_ref
+  val predicate_mode : mode C.Map.t Fork.local_ref
 
   (* Utilities that deref on the fly *)
   val lp_list_to_list : depth:int -> term -> term list
@@ -1995,6 +1996,7 @@ let rec term_map m = function
   | Nil as x -> x
   | Discard as x -> x
   | CData _ as x -> x
+
 let rec split_conj ~depth = function
   | App(c, hd, args) when c == C.andc || c == C.andc2 ->
       split_conj ~depth hd @ List.(flatten (map (split_conj ~depth) args))
@@ -2004,6 +2006,7 @@ let rec split_conj ~depth = function
     split_conj ~depth (deref_uv ~from ~to_:depth args g)
   | AppUVar ({contents=g},from,args) when g != C.dummy -> 
     split_conj ~depth (deref_appuv ~from ~to_:depth args g)
+  | Discard -> []
   | _ as f -> [ f ]
 ;;
 
@@ -2043,12 +2046,11 @@ r :- (pi X\ pi Y\ q X Y :- pi c\ pi d\ q (Z c d) (X c d) (Y c)) => ... *)
  *  - the clause will live in (depth+lcs)
  *)
 
-let clausify vars depth t =
-  let rec claux1 vars depth hyps ts lts lcs t =
+let rec claux1 vars depth hyps ts lts lcs t =
   [%trace "clausify" ("%a %d %d %d %d\n%!"
       (ppterm (depth+lts) [] 0 empty_env) t depth lts lcs (List.length ts)) begin
   match t with
-  | Discard -> [],[],lts
+  | Discard -> error "ill-formed hypothetical clause: discard in head position"
   | App(c, g2, [g1]) when c == C.rimplc ->
      claux1 vars depth ((ts,g1)::hyps) ts lts lcs g2
   | App(c, _, _) when c == C.rimplc -> error "ill-formed hypothetical clause"
@@ -2090,29 +2092,13 @@ let clausify vars depth t =
        | UVar _ | AppUVar _ -> assert false
        | Cons _ | Nil | Discard -> assert false
      in
-     let all_modes =
-      let mode =
-        try C.Map.find hd !predicate_mode
-        with Not_found -> Multi [] in
-      match mode with
-      | Mono m -> [g,args,hyps,m]
-      | Multi l ->
-           (g,args,hyps,[]) ::
-           List.map (fun (k,subst) ->
-             let map = term_map ((hd,k) :: subst) in
-             match C.Map.find k !predicate_mode with
-             | exception Not_found -> assert false
-             | Multi _ -> assert false
-             (* not smart *)
-             | Mono m -> map g, List.map map args, List.map map hyps, m 
-         ) l in
-      List.map (fun (g,args,hyps,mode) ->
-              let c = { depth = depth+lcs ; args= args; hyps = hyps; mode;
-          vars = vars; key=key_of ~mode:`Clause ~depth:(depth+lcs) g} in
-              [%spy "extra" ppclause c];
-              c
-          )
-      all_modes, [{ hdepth = depth; hsrc = g }], lcs
+     let mode =
+       try C.Map.find hd !predicate_mode
+       with Not_found -> [] in
+     let c = { depth = depth+lcs ; args= args; hyps = hyps; mode;
+          vars = vars; key=key_of ~mode:`Clause ~depth:(depth+lcs) g } in
+     [%spy "extra" ppclause c];
+     c, { hdepth = depth; hsrc = g }, lcs
   | UVar ({ contents=g },from,args) when g != C.dummy ->
      claux1 vars depth hyps ts lts lcs
        (deref_uv ~from ~to_:(depth+lts) args g)
@@ -2127,15 +2113,18 @@ let clausify vars depth t =
   | UVar _ | AppUVar _ -> error "Flexible hypothetical clause"
   | Nil | Cons _ -> error "ill-formed hypothetical clause"
   end]
-  in
    
+let clausify ~depth t =
   let l = split_conj ~depth t in
   let clauses, program, lcs =
-    List.fold_left (fun (clauses,program,lcs) t ->       
-      let more_clauses, more_program, lcs = claux1 vars depth [] [] 0 lcs t in
-    more_clauses :: clauses, more_program :: program, lcs) ([],[],0) l in
-  List.flatten clauses, List.flatten program, lcs
+    List.fold_left (fun (clauses, programs, lcs) t ->       
+      let clause, program, lcs = claux1 0 depth [] [] 0 lcs t in
+    clause :: clauses, program :: programs, lcs) ([],[],0) l in
+  clauses, program, lcs
 ;;
+
+let clausify1 ~nargs ~depth t = claux1 nargs depth [] [] 0 0 t
+
 end (* }}} *) 
 open Clausify
 
@@ -2840,13 +2829,13 @@ let make_runtime : ?max_steps: int -> executable -> runtime =
        run depth p g (List.map(fun x -> depth,p,x) gs'@gs) next alts lvl
     | App(c, g2, [g1]) when c == C.rimplc ->
        (*Fmt.eprintf "RUN: %a\n%!" (uppterm depth [] 0 empty_env) g ;*)
-       let clauses, pdiff, lcs = clausify 0 depth g1 in
+       let clauses, pdiff, lcs = clausify ~depth g1 in
        let g2 = hmove ~from:depth ~to_:(depth+lcs) g2 in
        (*Fmt.eprintf "TO: %a \n%!" (uppterm (depth+lcs) [] 0 empty_env) g2;*)
        run (depth+lcs) (add_clauses clauses pdiff p) g2 gs next alts lvl
     | App(c, g1, [g2]) when c == C.implc ->
        (*Fmt.eprintf "RUN: %a\n%!" (uppterm depth [] 0 empty_env) g ;*)
-       let clauses, pdiff, lcs = clausify 0 depth g1 in
+       let clauses, pdiff, lcs = clausify ~depth g1 in
        let g2 = hmove ~from:depth ~to_:(depth+lcs) g2 in
        (*Fmt.eprintf "TO: %a \n%!" (uppterm (depth+lcs) [] 0 empty_env) g2;*)
        run (depth+lcs) (add_clauses clauses pdiff p) g2 gs next alts lvl
@@ -3121,11 +3110,11 @@ let mkAppArg = HO.mkAppArg
 let move = HO.move
 let hmove = HO.hmove
 let make_index = make_index
-let clausify modes i c t =
+let clausify1 modes ~nargs ~depth t =
   let old = !Clausify.predicate_mode in
   try
     Clausify.predicate_mode := modes;
-    let cl = Clausify.clausify i c t in
+    let cl = Clausify.clausify1 ~nargs ~depth t in
     Clausify.predicate_mode := old;
     cl
   with e ->

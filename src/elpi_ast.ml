@@ -106,17 +106,14 @@ and chr_rule = {
 }
 [@@deriving show, create]
 
-type ('name,'term) macro = { mlocation : Ploc.t; mname : 'name; mbody : 'term }
+type ('name,'term) macro = { mlocation : Ploc.t; maname : 'name; mbody : 'term }
 [@@deriving show]
 
 type tdecl = { textern : bool; tname : Func.t; tty : term }
 [@@deriving show]
 
-type 'name subst = { salias : 'name; smap : ('name * 'name) list }
-[@@deriving show]
-
 type 'name mode =
-  { mname : 'name; margs : bool list; msubst : 'name subst option }
+  { mname : 'name; margs : bool list }
 [@@deriving show]
 
 type decl =

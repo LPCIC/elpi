@@ -40,6 +40,6 @@ val hmove :
   from:int -> to_:int -> term -> term
 
 val make_index : clause list -> idx
-val clausify : mode_decl Constants.Map.t -> int -> constant -> term -> clause list * clause_src list * int
+val clausify1 : mode Constants.Map.t -> nargs:int -> depth:int -> term -> clause * clause_src * int
 val pp_key : key -> string
 

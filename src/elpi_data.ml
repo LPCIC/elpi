@@ -538,10 +538,6 @@ type clause = TwoMapIndexingTypes.clause = {
 }
 [@@ deriving show]
 
-type mode_decl =
-  | Mono of mode
-  | Multi of (constant * (constant * constant) list) list
-
 (* An elpi program, as parsed.  But for idx and query_depth that are threaded
    around in the main loop, chr and modes are globally stored in Constraints
    and Clausify. *)
@@ -615,7 +611,7 @@ type executable = {
   (* the lambda-Prolog program: an indexed list of clauses *) 
   compiled_program : prolog_prog [@printer (pp_extensible pp_prolog_prog)];
   (* Execution modes (needed for hypothetical clauses *)
-  modes : mode_decl Constants.Map.t;
+  modes : mode Constants.Map.t;
   (* chr rules *)
   chr : CHR.t;
   (* initial depth (used for both local variables and CHR (#eigenvars) *)

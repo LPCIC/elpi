@@ -106,7 +106,7 @@ type executable = Elpi_data.executable = {
   (* the lambda-Prolog program: an indexed list of clauses *) 
   compiled_program : prolog_prog [@printer (pp_extensible pp_prolog_prog)];
   (* Execution modes (needed for hypothetical clauses *)
-  modes : mode_decl C.Map.t;
+  modes : mode C.Map.t;
   (* chr rules *)
   chr : CHR.t;
   (* initial depth (used for both local variables and CHR (#eigenvars) *)
@@ -461,7 +461,7 @@ let preterm_of_ast ~depth:lcs macros state t =
 
   let check_no_overlap_macros _ _ = ()
  
-  let compile_macro m { A.mlocation = loc; A.mname = n; A.mbody } =
+  let compile_macro m { A.mlocation = loc; A.maname = n; A.mbody } =
     if A.Func.Map.mem n m then begin
       let _, old_loc = F.Map.find n m in
       error ("Macro "^Elpi_ast.Func.show n^" declared twice:\n"^
@@ -484,8 +484,7 @@ let preterm_of_ast ~depth:lcs macros state t =
        | _ -> assert false
      with Not_found -> fst (C.funct_of_ast c)
 
-  let compile_mode state modes { A.mname; A.margs; A.msubst = alias } =
-    assert (alias = None);
+  let compile_mode state modes { A.mname; A.margs } =
     let mname = funct_of_ast state  mname in
     if C.Map.mem mname modes then
       error ("Duplicate mode declaration for " ^ C.show mname);
@@ -1249,10 +1248,9 @@ let compile_clause modes initial_depth
   { A.body = ({ amap = { nargs }} as body) }
 =
   let body = stack_term_of_preterm ~depth:0 body in
-  let cl,_,morelcs = clausify modes nargs initial_depth body in
-  assert(morelcs=0);
-  assert(List.length cl = 1);
-  List.hd cl
+  let cl, _, morelcs = clausify1 modes ~nargs ~depth:initial_depth body in
+  if morelcs <> 0 then error "sigma in a toplevel clause is not supported";
+  cl
 
 let run
   {
@@ -1266,7 +1264,6 @@ let run
   }
 =
   check_all_custom_are_typed types;
-  let modes = C.Map.map (fun m -> Mono m) modes in
   (* Real Arg nodes: from "Const '%Arg3'" to "Arg 3" *)
   let chr =
     List.fold_left (fun chr (clique, rules) ->
