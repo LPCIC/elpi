@@ -1117,7 +1117,7 @@ module Compiler : sig
   (* Translates preterms in terms and AST clauses into clauses (with a key,
    * subgoals, etc *)
 
-  val run : query -> executable
+  val run : allow_untyped_custom:bool -> query -> executable
 
 end = struct (* {{{ *)
 
@@ -1252,7 +1252,7 @@ let compile_clause modes initial_depth
   if morelcs <> 0 then error "sigma in a toplevel clause is not supported";
   cl
 
-let run
+let run ~allow_untyped_custom
   {
     Query.types;
     modes;
@@ -1263,7 +1263,7 @@ let run
     initial_constraints;
   }
 =
-  check_all_custom_are_typed types;
+  if not allow_untyped_custom then check_all_custom_are_typed types;
   (* Real Arg nodes: from "Const '%Arg3'" to "Arg 3" *)
   let chr =
     List.fold_left (fun chr (clique, rules) ->
@@ -1286,7 +1286,7 @@ let run
 
 end (* }}} *)
 
-let executable_of_query = Compiler.run
+let executable_of_query = Compiler.run ~allow_untyped_custom:false
 
 let term_of_ast ~depth t =
  let argsdepth = depth in
@@ -1437,7 +1437,7 @@ let static_check ?(checker=default_checker ()) ({ Query.types } as q) =
       assert(depth=0);
       state, App(C.from_stringc "check",p,[q;tlist])) in
   let exec =
-    executable_of_query query in
+    Compiler.run ~allow_untyped_custom:true query in
   execute_once exec <> Failure
 ;;
 
