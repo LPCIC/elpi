@@ -241,9 +241,10 @@ module ToDBL : sig
   val preterm_of_ast :
     depth:int -> macro_declaration -> CompilerState.t ->
       A.term -> CompilerState.t * preterm
-  val with_empty_amap : depth:int ->
+  val preterm_of_function :
+    depth:int -> macro_declaration -> CompilerState.t -> 
     (CompilerState.t -> CompilerState.t * term) ->
-      CompilerState.t -> CompilerState.t * preterm
+      CompilerState.t * preterm
 
   (* Exported for quations *)    
   val lp : quotation
@@ -305,13 +306,6 @@ let fresh_Arg =
     | [] -> state, name, t
     | x::xs -> state, name, App(c,x,xs)
 
-let with_empty_amap ~depth f state =
-  let state = set_argmap state empty_amap in
-  let state, term = f state in
-  let amap = get_argmap state in
-  let state = set_argmap state empty_amap in
-  state, { amap; term }
-  
 let preterm_of_ast ~depth:arg_lvl macro state ast =
 
   let is_uvar_name f = 
@@ -423,8 +417,10 @@ let preterm_of_ast ~depth:arg_lvl macro state ast =
 
 let lp ~depth state s =
   let _loc, ast = Elpi_parser.parse_goal_from_stream (Stream.of_string s) in
-  let { macros } = option_get (get_mtm state) in
-  let state = set_mtm state None in
+  let macros =
+    match get_mtm state with
+    | None -> A.Func.Map.empty
+    | Some x -> x.macros in
   preterm_of_ast ~depth macros state ast
 
 let prechr_rule_of_ast depth macros state r =
@@ -449,11 +445,21 @@ let prechr_rule_of_ast depth macros state r =
   state, { pto_match; pto_remove; palignment; pguard; pnew_goal; pamap }
   
 (* exported *)
+let preterm_of_function ~depth macros state f =
+  let state = set_argmap state empty_amap in
+  let state = set_mtm state (Some { macros }) in
+  let state, term = f state in
+  let amap = get_argmap state in
+  let state = set_argmap state empty_amap in
+  let state = set_mtm state None in
+  state, { amap; term }
+  
 let preterm_of_ast ~depth:lcs macros state t =
   let state = set_argmap state empty_amap in
   let state, term = preterm_of_ast ~depth:lcs macros state t in
   let amap = get_argmap state in
   let state = set_argmap state empty_amap in
+  let state = set_mtm state None in
   state, { term; amap }
 ;;
 
@@ -1064,9 +1070,11 @@ let query_of_term { Program.assembled_program; compiler_state } f =
   let initial_depth = assembled_program.FlatProgram.local_names in
   let types = assembled_program.FlatProgram.types in
   let modes = assembled_program.FlatProgram.modes in
+  let active_macros = assembled_program.FlatProgram.toplevel_macros in
   let state, query =
-    ToDBL.with_empty_amap ~depth:initial_depth
-      (f ~depth:initial_depth) compiler_state in
+    ToDBL.preterm_of_function
+      ~depth:initial_depth active_macros compiler_state
+      (f ~depth:initial_depth) in
   {
     Query.types;
     modes;
