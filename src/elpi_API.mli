@@ -90,7 +90,7 @@ module Compile : sig
   (** Runs [elpi-checker.elpi] by default. *)
   val static_check : ?checker:Ast.program list -> query -> bool
 
-  val link : query -> Data.executable
+  val link : ?allow_untyped_custom:bool -> query -> Data.executable
 
 end
 

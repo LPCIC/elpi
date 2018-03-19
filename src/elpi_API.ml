@@ -85,7 +85,8 @@ module Compile = struct
     let checker = Elpi_util.option_map List.flatten checker in
     Elpi_compiler.static_check ?checker p
 
-  let link = Elpi_compiler.executable_of_query
+  let link ?(allow_untyped_custom=false) x =
+    Elpi_compiler.executable_of_query ~allow_untyped_custom x
 
 end
 

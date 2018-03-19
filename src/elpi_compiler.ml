@@ -1286,7 +1286,7 @@ let run ~allow_untyped_custom
 
 end (* }}} *)
 
-let executable_of_query = Compiler.run ~allow_untyped_custom:false
+let executable_of_query = Compiler.run
 
 let term_of_ast ~depth t =
  let argsdepth = depth in
@@ -1437,7 +1437,7 @@ let static_check ?(checker=default_checker ()) ({ Query.types } as q) =
       assert(depth=0);
       state, App(C.from_stringc "check",p,[q;tlist])) in
   let exec =
-    Compiler.run ~allow_untyped_custom:true query in
+    executable_of_query ~allow_untyped_custom:true query in
   execute_once exec <> Failure
 ;;
 
