@@ -975,13 +975,28 @@ end = struct (* {{{ *)
     assert(sp = []);
     !argmap, term
 
+  let spill_presequent modes types pamap ({ pconclusion } as s) =
+    let pamap, pconclusion = spill_term modes types pamap pconclusion in
+    pamap, { s with pconclusion }
+
+  let spill_rule modes types ({ pguard; pnew_goal; pamap } as r) =
+    let pamap, pguard = option_mapacc (spill_term modes types) pamap pguard in
+    let pamap, pnew_goal =
+      option_mapacc (spill_presequent modes types) pamap pnew_goal in
+    { r with pguard; pnew_goal; pamap }
+
+  let spill_chr modes types (clique, rules) =
+    let rules = List.map (spill_rule modes types) rules in
+    (clique, rules)
+
   let spill_clause modes types ({ A.body = { term; amap } } as x) =
     let amap, term = spill_term modes types amap term in
     { x with A.body = { term; amap } }
 
-  let run ({ FlatProgram.clauses; modes; types } as p) =
+  let run ({ FlatProgram.clauses; modes; types; chr } as p) =
     let clauses = List.map (spill_clause modes types) clauses in
-    { p with clauses }
+    let chr = List.map (spill_chr modes types) chr in
+    { p with clauses; chr }
 
   let spill_preterm types modes { term; amap } =
     let amap, term = spill_term modes types amap term in
