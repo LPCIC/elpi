@@ -36,12 +36,13 @@ We recommend to add the following lines to `~/.vimrc`
 "elpi
 autocmd BufRead,BufNewFile *.elpi set filetype=lprolog
 
-autocmd FileType lprolog syn region  lprologClause start="^\w\+" end=" \|:-\|\."
+autocmd FileType lprolog syn match   lprologIdentifier  "\<\l[-a-zA-Z\.+*/\\^<>=`'~?@#$&!_]*\>"
+autocmd FileType lprolog syn region  lprologClause start="^\<\l[-a-zA-Z\.+*/\\^<>=`'~?@#$&!_]*\>" end=" \|:-\|\."
 autocmd FileType lprolog syn match lprologClauseSymbols ":-"
 autocmd FileType lprolog syn match lprologClauseSymbols "\."
 autocmd FileType lprolog hi def link lprologClauseSymbols Type
 
-autocmd FileType lprolog syn keyword elpiKeyword mode macro type pred
+autocmd FileType lprolog syn keyword elpiKeyword mode macro type pred namespace rule constraint
 autocmd FileType lprolog syn match elpiKeyword ":before"
 autocmd FileType lprolog syn match elpiKeyword ":after"
 autocmd FileType lprolog syn match elpiKeyword ":name"
