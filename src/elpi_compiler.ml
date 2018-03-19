@@ -881,7 +881,7 @@ end = struct (* {{{ *)
       | App(f,x,xs) when List.exists (equal_term (Const f)) names ->
           mkAppC f (List.map (apply_to names variable) (x::xs) @ [variable])
       | App(hd,x,xs) -> mkAppC hd (List.map (apply_to names variable) (x::xs))
-      | Custom(hd,xs) -> mkAppC hd (List.map (apply_to names variable) xs)
+      | Custom(hd,xs) -> Custom(hd, List.map (apply_to names variable) xs)
       | (Arg _ | AppArg _ | UVar _ | AppUVar _) -> assert false in
 
     let add_spilled sp t =
