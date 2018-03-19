@@ -203,10 +203,15 @@ under-env [ X `: PT | XS ] P :-
   %print "Assume" X PT,
   (pi Ty\ of X Ty :- refresh PT Ty) => known X => under-env XS P.
 
+pred rev i:list A, o:list A.
+rev L RL  :- rev-aux L []  RL.
+pred rev-aux i:list A, i:list A, o:list A.
+rev-aux [X|XS] ACC R :- rev-aux XS [X|ACC] R.
+rev-aux [] L L.
 
 typecheck-program P Q DeclaredTypes :-
   collect-predicates-program P DeclaredTypes AllTypes, !,
-  under-env AllTypes (typecheck P Q).
+  under-env {rev AllTypes} (typecheck P Q).
 
 % ---------- warnings ------------------------------------------------------
 
