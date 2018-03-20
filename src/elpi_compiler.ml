@@ -1447,7 +1447,7 @@ let quote_syntax { Query.clauses; query_loc; query } =
 
 let default_checker () = Elpi_parser.parse_program ["elpi-checker.elpi"]
 
-let static_check ?(checker=default_checker ()) ({ Query.types } as q) =
+let static_check ?(exec=execute_once) ?(checker=default_checker ()) ({ Query.types } as q) =
   let p,q = quote_syntax q in
   let tlist = list_to_lp_list (List.map (fun (_,{ tname; ttype }) ->
     App(C.from_stringc "`:",mkQCon ~on_type:false tname,
@@ -1459,9 +1459,9 @@ let static_check ?(checker=default_checker ()) ({ Query.types } as q) =
     query_of_term checker (fun ~depth state ->
       assert(depth=0);
       state, App(C.from_stringc "check",p,[q;tlist])) in
-  let exec =
+  let executable =
     executable_of_query ~allow_untyped_custom:true query in
-  execute_once exec <> Failure
+  exec executable <> Failure
 ;;
 
 (* vim: set foldmethod=marker: *)

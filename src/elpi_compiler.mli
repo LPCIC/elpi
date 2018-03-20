@@ -34,4 +34,4 @@ val fresh_Arg :
 val quote_syntax : query -> term * term
 
 (* false means a type error was found *)
-val static_check : ?checker:Elpi_ast.decl list -> query -> bool
+val static_check : ?exec:(?max_steps:int -> executable -> outcome) -> ?checker:Elpi_ast.decl list -> query -> bool

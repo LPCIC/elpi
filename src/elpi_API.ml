@@ -82,8 +82,9 @@ module Compile = struct
   let query = Elpi_compiler.query_of_ast
 
   let static_check ?checker p =
+    let module R = (val !r) in let open R in
     let checker = Elpi_util.option_map List.flatten checker in
-    Elpi_compiler.static_check ?checker p
+    Elpi_compiler.static_check ~exec:execute_once ?checker p
 
   let link ?(allow_untyped_custom=false) x =
     Elpi_compiler.executable_of_query ~allow_untyped_custom x
