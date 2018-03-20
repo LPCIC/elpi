@@ -91,7 +91,7 @@ external pred declare_constraint i:A, i:B.
 external pred print_constraints.
 
 external pred rex_match i:string, i:string.
-external pred rex_replace i:string, i:string, o:string.
+external pred rex_replace i:string, i:string, i:string, o:string.
 
 external type print variadic any prop.
 external type dprint variadic any prop.
