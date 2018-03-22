@@ -546,16 +546,18 @@ let preterm_of_ast ~depth:lcs macros state t =
        | _ -> assert false
      with Not_found -> fst (C.funct_of_ast c)
 
+  let check_duplicate_mode name mode map =
+    if C.Map.mem name map && C.Map.find name map <> mode then
+      error ("Duplicate mode declaration for " ^ C.show name)
+
   let compile_mode state modes { A.mname; A.margs } =
-    let mname = funct_of_ast state  mname in
-    if C.Map.mem mname modes then
-      error ("Duplicate mode declaration for " ^ C.show mname);
+    let mname = funct_of_ast state mname in
+    check_duplicate_mode mname margs modes;
     C.Map.add mname margs modes
 
   let merge_modes m1 m2 =
     C.Map.fold (fun k v m ->
-      if C.Map.mem k m then
-        error ("Duplicate mode declaration for " ^ C.show k);
+      check_duplicate_mode k v m;
       C.Map.add k v m)
     m2 m1
 
