@@ -86,8 +86,15 @@ module Compile = struct
     let checker = Elpi_util.option_map List.flatten checker in
     Elpi_compiler.static_check ~exec:execute_once ?checker p
 
-  let link ?(allow_untyped_custom=false) x =
-    Elpi_compiler.executable_of_query ~allow_untyped_custom x
+  module StrSet = Elpi_util.StrSet
+
+  type flags = Elpi_compiler.flags = {
+    defined_variables : StrSet.t;
+    allow_untyped_custom_predicate : bool;
+  }
+  let default_flags = Elpi_compiler.default_flags
+  let link ?flags x =
+    Elpi_compiler.executable_of_query ?flags x
 
 end
 
@@ -250,10 +257,15 @@ module Extend = struct
             error "program_of_term: the term contains uvars"
         | Data.Discard -> Ast.mkCon "_"
       in
+      let attributes =
+        (match name with Some x -> [Ast.Name x] | None -> []) @
+        (match graft with
+         | Some (`After,x) -> [Ast.After x]
+         | Some (`Before,x) -> [Ast.Before x]
+         | None -> []) in
       [Ast.Clause {
         Ast.loc = Ploc.dummy;
-        Ast.id = name;
-        Ast.insert = graft;
+        Ast.attributes;
         Ast.body = aux depth Elpi_util.IntMap.empty term;
       }]
 

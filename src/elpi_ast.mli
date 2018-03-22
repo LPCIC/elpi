@@ -48,26 +48,28 @@ val equal_term : term -> term -> bool
 val pp_term : Format.formatter -> term -> unit
 val show_term : term -> string
 
-type insertion = ([ `Before | `After ] * string)
+type attribute =
+  Name of string | After of string | Before of string | If of string     
 
-val pp_insertion :
-    Format.formatter -> insertion -> unit
-val show_insertion :
-     insertion -> string
+val pp_attribute :
+    Format.formatter -> attribute -> unit
+val show_attribute :
+     attribute -> string
 
-type 'term clause = {
+type ('term,'attributes) clause = {
   loc : Ploc.t;
-  id : string option;
-  insert : insertion option;
+  attributes : 'attributes;
   body : 'term;
 }
 
 val pp_clause :
   (Format.formatter -> 'term -> unit) ->
-    Format.formatter -> 'term clause -> unit
+  (Format.formatter -> 'attribute -> unit) ->
+    Format.formatter -> ('term,'attribute) clause -> unit
 val show_clause :
   (Format.formatter -> 'term -> unit) ->
-     'term clause -> string
+  (Format.formatter -> 'attribute -> unit) ->
+     ('term,'attribute) clause -> string
 
 type sequent = { eigen : term; context : term; conclusion : term }
 and chr_rule = {
@@ -121,7 +123,7 @@ val show_mode :
      'name mode -> string
 
 type decl =
-   Clause of term clause
+   Clause of (term,attribute list) clause
  | Local of Func.t
  | Begin
  | End

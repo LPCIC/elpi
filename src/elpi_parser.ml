@@ -42,7 +42,7 @@ module PointerFunc = struct
  type latex_export =
   {process:
     'a 'b. path:string -> shortpath:string -> ('a -> 'b) -> 'a -> 'b
-   ; export: term clause -> unit}
+   ; export: (term,attribute list) clause -> unit}
  let latex_export =
   ref { process = (fun ~path:_ ~shortpath:_ f x -> f x);
         export = (fun _ -> ()) }
@@ -540,13 +540,13 @@ EXTEND
     | c = atom LEVEL "abstterm" ->
          { eigen = mkFreshUVar (); context = mkFreshUVar (); conclusion = c }
    ]];
-  clname : [[ COLON; CONSTANT "name";
-              name = [ c = CONSTANT -> c | l = LITERAL -> l] -> name ]];
-  clinsert :
-     [[ COLON; CONSTANT "before";
-              name = [ c = CONSTANT -> c | l = LITERAL -> l] -> `Before, name
-      | COLON; CONSTANT "after";
-              name = [ c = CONSTANT -> c | l = LITERAL -> l] -> `After, name
+  attribute_value :
+   [[ c = CONSTANT -> c | l = LITERAL -> l ]];
+  attribute :
+   [[ CONSTANT "name";   name = attribute_value -> Name name
+    | CONSTANT "before"; name = attribute_value -> Before name
+    | CONSTANT "after";  name = attribute_value -> After name
+    | CONSTANT "if";     expr = LITERAL -> If expr
     ]];
   pragma : [[ CONSTANT "#line"; l = INTEGER; f = LITERAL ->
     set_fname ~line:(int_of_string l) f ]];
@@ -557,9 +557,11 @@ EXTEND
      (name, List.fold_right (fun (_,t) ty ->
         mkApp [mkCon "->";t;ty]) a (mkCon "prop"))
   ]];
+  attributes : [[ COLON; l = LIST1 attribute SEP COLON-> l ]];
   clause :
-    [[ id = OPT clname; insert = OPT clinsert; f = atom; FULLSTOP ->
-       let c = { loc; id; insert; body = f } in
+    [[ attributes = OPT attributes; f = atom; FULLSTOP ->
+       let attributes = match attributes with None -> [] | Some x -> x in
+       let c = { loc; attributes; body = f } in
        (!PointerFunc.latex_export).PointerFunc.export c ;
        [Clause c]
      | pragma -> []

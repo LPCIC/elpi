@@ -86,13 +86,13 @@ let mkSeq l =
   aux l
 let mkIs x f = App(Const Func.isf,[x;f])
 
-type insertion = ([ `Before | `After ] * string)
+type attribute =
+  Name of string | After of string | Before of string | If of string     
 [@@deriving show]
 
-type 'term clause = {
+type ('term,'attributes) clause = {
   loc : Ploc.t;
-  id : string option;
-  insert : insertion option;
+  attributes : 'attributes;
   body : 'term;
 }[@@deriving show]
 
@@ -117,7 +117,7 @@ type 'name mode =
 [@@deriving show]
 
 type decl =
-   Clause of term clause
+   Clause of (term, attribute list) clause
  | Local of Func.t
  | Begin
  | End

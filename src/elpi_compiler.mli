@@ -5,6 +5,12 @@
 open Elpi_util
 open Elpi_data
 
+type flags = {
+  defined_variables : StrSet.t;
+  allow_untyped_custom_predicate : bool;
+}
+val default_flags : flags
+
 type program
 type query
 
@@ -15,7 +21,7 @@ val query_of_term :
 
 val pp_query : (depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> query -> unit
 
-val executable_of_query : allow_untyped_custom:bool -> query -> executable
+val executable_of_query : ?flags:flags -> query -> executable
 
 val term_of_ast : depth:int -> Elpi_ast.term -> term
 

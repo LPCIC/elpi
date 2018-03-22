@@ -11,6 +11,15 @@ module C = Constants
 module CS = CompilerState
 module A = Elpi_ast
 
+type flags = {
+  defined_variables : StrSet.t;
+  allow_untyped_custom_predicate : bool;
+}
+let default_flags = {
+  defined_variables = StrSet.empty;
+  allow_untyped_custom_predicate = false;
+}
+
 (****************************************************************************
   Intermediate data structures
  ****************************************************************************)
@@ -25,9 +34,15 @@ type program = {
 }
 and block =
   | Locals of A.Func.t list * program
-  | Clauses of A.term A.clause list
+  | Clauses of (A.term,attribute) A.clause list
   | Namespace of A.Func.t * program
   | Constraints of A.Func.t list * A.chr_rule list * program
+and attribute = {
+  insertion : insertion option;
+  id : string option;
+  ifexpr : string option;
+}
+and insertion = Before of string | After of string
 [@@deriving show]
 
 end
@@ -47,19 +62,19 @@ and pbody = {
   symbols : C.Set.t;
 }
 and block =
-  | Clauses of preterm A.clause list
+  | Clauses of (preterm,StructuredAST.attribute) A.clause list
   | Namespace of string * pbody
   | Constraints of constant list * prechr_rule list * pbody
 [@@deriving show]
 
 end
 
-module FlatProgram = struct
+module Flat = struct
 
 type program = {
   types : (bool * type_declaration) list; 
   modes : mode C.Map.t;
-  clauses : preterm A.clause list;
+  clauses : (preterm,StructuredAST.attribute) A.clause list;
   chr : (constant list * prechr_rule list) list;
   local_names : int;
 
@@ -69,11 +84,30 @@ type program = {
 
 end
 
+module Assembled = struct
+
+type program = {
+  types : (bool * type_declaration) list; 
+  modes : mode C.Map.t;
+  clauses : (preterm,attribute) A.clause list;
+  chr : (constant list * prechr_rule list) list;
+  local_names : int;
+
+  toplevel_macros : macro_declaration;
+}
+and attribute = {
+  id : string option;
+  ifexpr : string option;
+}
+[@@deriving show]
+
+end
+
 module Program = struct
 
 (* The entire program + stuff needed in order to run the query *)
 type program = {
-  assembled_program : FlatProgram.program;
+  assembled_program : Assembled.program;
   compiler_state : CompilerState.t;
 }
 [@@deriving show]
@@ -87,7 +121,7 @@ module Query = struct
 type query = {
   types : (bool * type_declaration) list; 
   modes : mode C.Map.t;
-  clauses : preterm A.clause list;
+  clauses : (preterm,Assembled.attribute) A.clause list;
   chr : (constant list * prechr_rule list) list;
   initial_depth : int;
   query : preterm;
@@ -141,6 +175,27 @@ end = struct (* {{{ *)
     | [] -> []
     | clauses -> [Clauses (List.rev clauses)]
 
+  let structure_attributes ({ A.attributes; A.loc } as c) =
+    let duplicate_err s =
+      error (Ploc.show loc ^ ": duplicate attribute " ^ s) in
+    let rec aux r = function
+      | [] -> r
+      | A.Name s :: rest ->
+         if r.id <> None then duplicate_err "name";
+         aux { r with id = Some s } rest
+      | A.After s :: rest ->
+         if r.insertion <> None then duplicate_err "insertion";
+         aux { r with insertion = Some (After s) } rest
+      | A.Before s :: rest ->
+         if r.insertion <> None then duplicate_err "insertion";
+         aux { r with insertion = Some (Before s) } rest
+      | A.If s :: rest ->
+         if r.ifexpr <> None then duplicate_err "if";
+         aux { r with ifexpr = Some s } rest
+    in
+    { c with attributes =
+        aux { insertion = None; id = None; ifexpr = None } attributes }
+
   let run dl =
     let rec aux blocks clauses macros types modes  locals chr = function
       | (A.End :: _ | []) as rest ->
@@ -158,6 +213,7 @@ end = struct (* {{{ *)
           aux (Locals(locals1,p) :: cl2b clauses @ blocks)
             [] macros types modes locals chr rest
       | A.Clause c :: rest ->
+          let c = structure_attributes c in
           aux blocks (c::clauses) macros types modes locals chr rest
       | A.Macro m :: rest ->
           aux blocks clauses (m::macros) types modes locals chr rest
@@ -509,12 +565,12 @@ let preterm_of_ast ~depth:lcs macros state t =
 
   let rec compile_clauses lcs state macros = function
     | [] -> lcs, state, []
-    | { A.body; id; loc; insert } :: rest ->
+    | { A.body; attributes; loc } :: rest ->
       let state, t = preterm_of_ast ~depth:lcs macros state body in
       (* TODO: may have spurious entries in the amap *)
       let moreclauses = toplevel_clausify lcs t.term in
       let cl = List.map (fun term ->
-              { A.id; loc; insert; body = { term; amap = t.amap }})
+              { A.loc; attributes; body = { term; amap = t.amap }})
         moreclauses in
       let lcs, state, rest = compile_clauses lcs state macros rest in
       lcs, state, cl :: rest
@@ -635,13 +691,13 @@ module Flatten : sig
 
   (* Eliminating the structure (name spaces) *)
 
-  val run : CS.t -> StructuredProgram.program -> FlatProgram.program
+  val run : CS.t -> StructuredProgram.program -> Flat.program
 
 end = struct (* {{{ *)
 
 
   open StructuredProgram
-  open FlatProgram
+  open Flat
 
   (* Customs are already translated inside terms,
    * may sill require translation inside type/modes declaration *)
@@ -771,7 +827,7 @@ end = struct (* {{{ *)
   =
     let types, modes, clauses, chr =
       compile_body local_names types modes [] [] None state body in
-    { FlatProgram.types;
+    { Flat.types;
       modes;
       clauses;
       chr = List.rev chr;
@@ -785,7 +841,7 @@ module Spill : sig
 
   (* Eliminate {func call} *)
 
-  val run : FlatProgram.program -> FlatProgram.program
+  val run : Flat.program -> Flat.program
 
   (* Exported to compile the query *)
   val spill_preterm :
@@ -993,7 +1049,7 @@ end = struct (* {{{ *)
     let amap, term = spill_term modes types amap term in
     { x with A.body = { term; amap } }
 
-  let run ({ FlatProgram.clauses; modes; types; chr } as p) =
+  let run ({ Flat.clauses; modes; types; chr } as p) =
     let clauses = List.map (spill_clause modes types) clauses in
     let chr = List.map (spill_chr modes types) chr in
     { p with clauses; chr }
@@ -1006,12 +1062,12 @@ end (* }}} *)
 
 module Assemble : sig
 
-  val run : FlatProgram.program list -> FlatProgram.program
+  val run : ?flags:flags -> Flat.program list -> Assembled.program
 
 end = struct (* {{{ *)
 
   let sort_insertion l =
-    let add s { A.id; loc } =
+    let add s { A.attributes = { Assembled.id }; loc } =
       match id with
       | None -> s
       | Some n ->
@@ -1020,28 +1076,41 @@ end = struct (* {{{ *)
                    " already exists at " ^ Ploc.show (StrMap.find n s))
           else
             StrMap.add n loc s in
-    let rec insert loc name c = function
-      | [] -> error (Ploc.show c.A.loc ^
-                     ": unable to graft this clause: no clause named " ^ name)
-      | { A.id = Some n } as x :: xs
-        when n = name ->
-           if loc = `After then c :: x :: xs
-           else x :: c :: xs
-      | x :: xs -> x :: insert loc name c xs in
+    let compile_clause ({ A.attributes = { StructuredAST.id; ifexpr }} as c) =
+      { c with attributes = { Assembled.id; ifexpr }}
+    in
+    let rec insert loc_name c l =
+      match l, loc_name with
+      | [],_ -> error (Ploc.show c.A.loc ^
+           ": unable to graft this clause: no clause named " ^
+             match loc_name with
+             | StructuredAST.After x -> x
+             | StructuredAST.Before x -> x)
+      | { A.attributes = { Assembled.id = Some n }} as x :: xs,
+        StructuredAST.After name when n = name ->
+           c :: x :: xs
+      | { A.attributes = { Assembled.id = Some n }} as x :: xs,
+        StructuredAST.Before name when n = name ->
+           x :: c :: xs
+      | x :: xs, _ -> x :: insert loc_name c xs in
     let rec aux seen acc = function
       | [] -> List.rev acc
-      | { A.insert = Some (l,n) } as x :: xs ->
-            aux (add seen x) (insert l n x acc) xs
-      | x :: xs -> aux (add seen x) (x :: acc) xs
+      | { A.attributes = { StructuredAST.insertion = Some i }} as x :: xs ->
+          let x = compile_clause x in
+          aux (add seen x) (insert i x acc) xs
+      | x :: xs ->
+          let x = compile_clause x in
+          aux (add seen x) (x :: acc) xs
     in
     aux StrMap.empty  [] l
 
-  let run pl =
+  let run ?flags pl =
     if List.length pl <> 1 then
       error "Only 1 program assembly is supported";
-    let { FlatProgram.clauses } as x = List.hd pl in
+    let { Flat.clauses; types; modes; chr; local_names; toplevel_macros } =
+      List.hd pl in
     let clauses = sort_insertion clauses in
-    { x with clauses }
+    { Assembled.clauses; types; modes; chr; local_names; toplevel_macros }
 
 end (* }}} *)
 
@@ -1063,18 +1132,18 @@ let program_of_ast p =
 
 let query_of_ast { Program.assembled_program; compiler_state } (loc,t)
 =
-  let initial_depth = assembled_program.FlatProgram.local_names in
-  let types = assembled_program.FlatProgram.types in
-  let modes = assembled_program.FlatProgram.modes in
-  let active_macros = assembled_program.FlatProgram.toplevel_macros in
+  let initial_depth = assembled_program.Assembled.local_names in
+  let types = assembled_program.Assembled.types in
+  let modes = assembled_program.Assembled.modes in
+  let active_macros = assembled_program.Assembled.toplevel_macros in
   let state, query =
     ToDBL.preterm_of_ast ~depth:initial_depth active_macros compiler_state t in
   let query = Spill.spill_preterm types modes query in
   {
     Query.types;
     modes;
-    clauses = assembled_program.FlatProgram.clauses;
-    chr = assembled_program.FlatProgram.chr;
+    clauses = assembled_program.Assembled.clauses;
+    chr = assembled_program.Assembled.chr;
     initial_depth;
     query;
     query_loc = loc;
@@ -1082,10 +1151,10 @@ let query_of_ast { Program.assembled_program; compiler_state } (loc,t)
   } 
 
 let query_of_term { Program.assembled_program; compiler_state } f =
-  let initial_depth = assembled_program.FlatProgram.local_names in
-  let types = assembled_program.FlatProgram.types in
-  let modes = assembled_program.FlatProgram.modes in
-  let active_macros = assembled_program.FlatProgram.toplevel_macros in
+  let initial_depth = assembled_program.Assembled.local_names in
+  let types = assembled_program.Assembled.types in
+  let modes = assembled_program.Assembled.modes in
+  let active_macros = assembled_program.Assembled.toplevel_macros in
   let state, query =
     ToDBL.preterm_of_function
       ~depth:initial_depth active_macros compiler_state
@@ -1093,8 +1162,8 @@ let query_of_term { Program.assembled_program; compiler_state } f =
   {
     Query.types;
     modes;
-    clauses = assembled_program.FlatProgram.clauses;
-    chr = assembled_program.FlatProgram.chr;
+    clauses = assembled_program.Assembled.clauses;
+    chr = assembled_program.Assembled.chr;
     initial_depth;
     query;
     query_loc = Ploc.dummy;
@@ -1140,7 +1209,7 @@ module Compiler : sig
   (* Translates preterms in terms and AST clauses into clauses (with a key,
    * subgoals, etc *)
 
-  val run : allow_untyped_custom:bool -> query -> executable
+  val run : ?flags:flags -> query -> executable
 
 end = struct (* {{{ *)
 
@@ -1275,7 +1344,15 @@ let compile_clause modes initial_depth
   if morelcs <> 0 then error "sigma in a toplevel clause is not supported";
   cl
 
-let run ~allow_untyped_custom
+let rec map_if defs f = function
+  | [] -> []
+  | ({ A.attributes = { Assembled.ifexpr } } as c) :: rest ->
+    match ifexpr with
+    | None -> f c :: map_if defs f rest 
+    | Some e when StrSet.mem e defs -> f c :: map_if defs f rest
+    | Some _ -> map_if defs f rest
+
+let run ?(flags = default_flags)
   {
     Query.types;
     modes;
@@ -1286,7 +1363,9 @@ let run ~allow_untyped_custom
     initial_constraints;
   }
 =
-  if not allow_untyped_custom then check_all_custom_are_typed types;
+
+  if not flags.allow_untyped_custom_predicate then
+    check_all_custom_are_typed types;
   (* Real Arg nodes: from "Const '%Arg3'" to "Arg 3" *)
   let chr =
     List.fold_left (fun chr (clique, rules) ->
@@ -1295,7 +1374,9 @@ let run ~allow_untyped_custom
       List.fold_left (fun x y -> CHR.add_rule clique y x) chr rules)
     CHR.empty chr in
   let prolog_program =
-    make_index (List.map (compile_clause modes initial_depth) clauses) in
+    make_index
+      (map_if flags.defined_variables (compile_clause modes initial_depth)
+        clauses) in
   {
     Elpi_data.compiled_program = wrap_prolog_prog prolog_program;
     modes;
@@ -1428,7 +1509,7 @@ let sorted_names_of_argmap argmap =
     List.map snd |>
     List.map Elpi_data.C.of_string
 
-let quote_clause { A.loc; id; body } =
+let quote_clause { A.loc; A.attributes = { Assembled.id }; body } =
   (* horrible hack *)
   let clloc = CData.(A.cloc.cin (loc, id)) in
   let qt = close_w_binder argc (quote_preterm body) body.amap in
@@ -1460,7 +1541,9 @@ let static_check ?(exec=execute_once) ?(checker=default_checker ()) ({ Query.typ
       assert(depth=0);
       state, App(C.from_stringc "check",p,[q;tlist])) in
   let executable =
-    executable_of_query ~allow_untyped_custom:true query in
+    executable_of_query
+      ~flags:{ default_flags with allow_untyped_custom_predicate = true }
+      query in
   exec executable <> Failure
 ;;
 

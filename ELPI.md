@@ -21,6 +21,9 @@
 - [Clause grafting](#clause-grafting) can inject a clause
   in the middle of an existing program
 
+- [Clause conditional compilation](#clause-conditional-compilation) can be used
+  to conditionally consider/discard clauses
+
 - [Modes](#modes) can be declared in order to control the generative
   semantics of Prolog
 
@@ -260,6 +263,31 @@ fatal-error Msg :- !, M is "elpi: " ^ Msg, coq-err M.
 ```
 
 The `:after` attribute is also available.
+
+## Clause conditional compilation
+
+The following λProlog idiom is quite useful to debug code:
+```prolog
+% pred X :- print "running pred on " X, fail. % uncomment for debugging
+pred X :- ...
+```
+By removing the comment sign in front of the first clause one gets some
+trace of what the program is doing.
+
+In Elpi this can be written using the `:if` clause attribute
+(reminiscent of the C `#ifdef` preprocessing directive).
+
+```prolog
+:if "DEBUG" pred X :- print "running pred on " X, fail.
+pred X :- ...
+```
+
+The debug clause is discarded *unless* the compilation variable `DEBUG`
+is defined.  The `elpi` command line interpreter understands `-D DEBUG`
+to define the `DEBUG` variable (and consequently keep the debugging code).
+
+Here `DEBUG` is just arbitrary string, and multiple `-D` flags can be passed
+to `elpi`.
 
 ## Modes
 

@@ -90,7 +90,14 @@ module Compile : sig
   (** Runs [elpi-checker.elpi] by default. *)
   val static_check : ?checker:Ast.program list -> query -> bool
 
-  val link : ?allow_untyped_custom:bool -> query -> Data.executable
+  module StrSet : Set.S with type elt = string
+  type flags = {
+    defined_variables : StrSet.t;
+    allow_untyped_custom_predicate : bool;
+  }
+  val default_flags : flags
+
+  val link : ?flags:flags -> query -> Data.executable
 
 end
 

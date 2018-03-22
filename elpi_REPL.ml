@@ -55,6 +55,7 @@ let usage =
   "\t-print-latex prints files to LaTeX syntax, then exit\n" ^ 
   "\t-print prints files after desugar, then exit\n" ^ 
   "\t-print-ast prints files as parsed, then exit\n" ^ 
+  "\t-D var  Define variable (conditional compilation)\n" ^ 
   Elpi_API.Setup.usage
 ;;
 
@@ -68,6 +69,8 @@ let _ =
   let print_ast = ref false in
   let typecheck = ref true in
   let batch = ref false in
+  let vars =
+    ref Elpi_API.Compile.(default_flags.defined_variables) in
   if List.mem "-where" (Array.to_list Sys.argv) then begin
     Printf.printf "%s\n" Elpi_config.install_dir; exit 0 end;
   let rec aux = function
@@ -79,6 +82,9 @@ let _ =
     | "-print" :: rest -> print_lprolog := true; aux rest
     | "-print-ast" :: rest -> print_ast := true; aux rest
     | "-no-tc" :: rest -> typecheck := false; aux rest
+    | "-D" :: var :: rest ->
+      vars := Elpi_API.Compile.StrSet.add var !vars;
+      aux rest
     | ("-h" | "--help") :: _ -> Printf.eprintf "%s" usage; exit 0
     | "--" :: rest -> args := rest; []
     | s :: _ when String.length s > 0 && s.[0] == '-' ->
@@ -114,6 +120,9 @@ let _ =
      let strm = Stream.of_channel stdin in
      Elpi_API.Parse.goal_from_stream strm
     end in
+  let flags = {
+    Elpi_API.Compile.default_flags
+      with Elpi_API.Compile.defined_variables = !vars } in
   let prog = Elpi_API.Compile.program [p] in
   let query = Elpi_API.Compile.query prog g in
   if !typecheck then begin
@@ -124,7 +133,7 @@ let _ =
     Elpi_API.Pp.query Format.std_formatter query;
     exit 0;
   end;
-  let exec = Elpi_API.Compile.link query in
+  let exec = Elpi_API.Compile.link ~flags query in
   if not !batch then 
     Elpi_API.Execute.loop exec ~more ~pp:print_solution
   else begin

@@ -344,10 +344,14 @@ let flag = ref false;;
 
 let activate () = flag := true;;
 
-let export_clause { Elpi_ast.body = cl ; id } =
+let export_clause { Elpi_ast.body = cl ; attributes } =
  if not !flag then ()
  else begin
-  let id = match id with Some x -> x | _ -> "" in
+  let id =
+    try
+      match List.find (function Elpi_ast.Name _ -> true | _ -> false) attributes
+      with Elpi_ast.Name x -> x | _ -> assert false
+    with Not_found -> "" in
   let clpair = eta_expand_clause cl in
   let create_pairs = create_context (fst clpair,snd clpair) in
   let fst_ = fst create_pairs in
