@@ -8,6 +8,7 @@
          | K2(x,y) ->
             let z = f x in
             [%spy "z" (fun fmt -> .. z ..) z];
+            [%spyif "z" b (fun fmt -> .. z ..) z];
             [%log "K2" "whatever" 37];
             z + f y
      end]
@@ -46,6 +47,9 @@ let trace name ppfun body = [%expr
 
 let spy name pp data =
   [%expr Elpi_trace.print [%e name] [%e pp] [%e data]]
+
+let spyif name cond pp data =
+  [%expr if [%e cond] then Elpi_trace.print [%e name] [%e pp] [%e data]]
 
 let log name key data =
   [%expr Elpi_trace.log [%e name] [%e key] [%e data]]
@@ -108,6 +112,14 @@ let trace_mapper config cookies =
         if !enabled then spy (aux name) (aux pp) (aux code)
         else [%expr ()]
       | _ -> err ~loc "use: [%spy id pp data]"
+      end
+  | { pexp_desc = Pexp_extension ({ txt = "spyif"; loc }, pstr) } ->
+      begin match pstr with
+      | PStr [ { pstr_desc = Pstr_eval(
+           { pexp_desc = Pexp_apply(name,[(_,cond);(_,pp);(_,code)]) },_)} ] ->
+        if !enabled then spyif (aux name) (aux cond) (aux pp) (aux code)
+        else [%expr ()]
+      | _ -> err ~loc "use: [%spyif id cond pp data]"
       end
   | { pexp_desc = Pexp_extension ({ txt = "log"; loc }, pstr) } ->
       begin match pstr with

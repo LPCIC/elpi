@@ -1502,6 +1502,11 @@ let rec unif matching depth adepth a bdepth b e =
 let unif ?(matching=false) adepth e bdepth a b =
  let res = unif matching 0 adepth a bdepth b e in
  [%spy "unif result" (fun fmt x -> Fmt.fprintf fmt "%b" x) res];
+ [%spyif "select" (not res) (fun fmt op ->
+     Fmt.fprintf fmt "@[<hov 2>fail to %s: %a@ with %a@]" op
+       (ppterm (adepth) [] adepth empty_env) a
+       (ppterm (bdepth) [] adepth e) b)
+     (if matching then "match" else "unify")];
  res
 ;;
 
