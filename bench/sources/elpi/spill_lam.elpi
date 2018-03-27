@@ -1,0 +1,2 @@
+pred pp i:int, o:string.
+main :- X = x\ print {pp x}.
