@@ -38,6 +38,7 @@ val move :
 val hmove : 
   ?avoid:term_attributed_ref ->
   from:int -> to_:int -> term -> term
+val subst: depth:int -> term list -> term -> term
 
 val make_index : clause list -> idx
 val clausify1 : mode Constants.Map.t -> nargs:int -> depth:int -> term -> clause * clause_src * int

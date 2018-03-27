@@ -3112,6 +3112,7 @@ let list_to_lp_list = HO.list_to_lp_list
 let split_conj = Clausify.split_conj
 let llam_unify ad e bd a b = HO.unif ad e bd a b
 let mkAppArg = HO.mkAppArg
+let subst ~depth = HO.subst depth
 let move = HO.move
 let hmove = HO.hmove
 let make_index = make_index

@@ -356,7 +356,7 @@ let fresh_Arg =
   let qargno = ref 0 in
   fun state ~name_hint:name ~args ->
     incr qargno;
-    let name = Printf.sprintf "_fresh_Arg_%s_%d_" name !qargno in
+    let name = Printf.sprintf "%s_%d_" name !qargno in
     let state, (t, c) = mk_Arg state name in
     match args with
     | [] -> state, name, t
@@ -510,9 +510,19 @@ let preterm_of_function ~depth macros state f =
   let state = set_mtm state None in
   state, { amap; term }
   
-let preterm_of_ast ~depth:lcs macros state t =
+let preterms_of_ast ~depth macros state f t =
   let state = set_argmap state empty_amap in
-  let state, term = preterm_of_ast ~depth:lcs macros state t in
+  let state, term = preterm_of_ast ~depth macros state t in
+  let state, terms = f ~depth state term in
+  let amap = get_argmap state in
+  let state = set_argmap state empty_amap in
+  let state = set_mtm state None in
+  (* TODO: may have spurious entries in the amap *)
+  state, List.map (fun term -> { term; amap }) terms
+;;
+let preterm_of_ast ~depth macros state t =
+  let state = set_argmap state empty_amap in
+  let state, term = preterm_of_ast ~depth macros state t in
   let amap = get_argmap state in
   let state = set_argmap state empty_amap in
   let state = set_mtm state None in
@@ -563,17 +573,23 @@ let preterm_of_ast ~depth:lcs macros state t =
 
   let merge_types t1 t2 = t1 @ t2
 
-  let toplevel_clausify lcs t : term list = split_conj ~depth:lcs t
+  let rec toplevel_clausify ~depth state t =
+    let state, cl = map_acc (pi2arg ~depth []) state (split_conj ~depth t) in
+    state, List.concat cl
+  and pi2arg ~depth acc state = function
+    | App(c,Lam t,[]) when c == C.pic ->
+        let state, _, arg = fresh_Arg state ~name_hint:"X" ~args:[] in
+        pi2arg ~depth (acc @ [arg]) state t
+    | t ->
+        if acc = [] then state, [t]
+        else toplevel_clausify state ~depth (subst ~depth acc t)
 
   let rec compile_clauses lcs state macros = function
     | [] -> lcs, state, []
     | { A.body; attributes; loc } :: rest ->
-      let state, t = preterm_of_ast ~depth:lcs macros state body in
-      (* TODO: may have spurious entries in the amap *)
-      let moreclauses = toplevel_clausify lcs t.term in
-      let cl = List.map (fun term ->
-              { A.loc; attributes; body = { term; amap = t.amap }})
-        moreclauses in
+      let state, ts =
+        preterms_of_ast ~depth:lcs macros state toplevel_clausify body in
+      let cl = List.map (fun body -> { A.loc; attributes; body}) ts in
       let lcs, state, rest = compile_clauses lcs state macros rest in
       lcs, state, cl :: rest
 
