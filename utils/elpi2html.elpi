@@ -70,7 +70,7 @@ uvar-to-string X I Y :-
   mk-name S1 I Y.
 name-to-string X0 I Y :-
   if (rex_match "^_" X0) (X = "_") (X = X0),
-  rex_replace "^\\([A-Za-z]+\\)_?\\([0-9]+\\)$" "\\1<sub>\\2</sub>" X S1,
+  rex_replace "^\\([A-Za-z]+\\)_?\\([0-9]+\\)_?$" "\\1<sub>\\2</sub>" X S1,
   mk-name S1 I Y.
 
 pred concat i:list string, o:string.
