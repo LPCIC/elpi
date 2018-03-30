@@ -565,8 +565,8 @@ EXTEND
        (!PointerFunc.latex_export).PointerFunc.export c ;
        [Clause c]
      | pragma -> []
-     | LCURLY -> [Begin]
-     | RCURLY -> [End]
+     | LCURLY -> [Begin loc]
+     | RCURLY -> [End loc]
      | PRED; p = pred; FULLSTOP ->
          let m, (n,t) = p in
          [Type { textern = false; tname = n ; tty = t }; Mode m]
@@ -588,9 +588,9 @@ EXTEND
          [Macro { mlocation = loc; maname = name; mbody = body }]
      | RULE; r = chrrule; FULLSTOP -> [Chr r]
      | NAMESPACE; ns = CONSTANT; LCURLY ->
-         [ Namespace (Func.from_string ns) ]
+         [ Namespace (loc, Func.from_string ns) ]
      | CONSTRAINT; names=LIST0 CONSTANT; LCURLY ->
-         [ Constraint (List.map Func.from_string names) ]
+         [ Constraint (loc, List.map Func.from_string names) ]
      | MODULE; CONSTANT; FULLSTOP -> []
      | SIG; CONSTANT; FULLSTOP -> []
      | ACCUMULATE; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->

@@ -198,20 +198,40 @@ end = struct (* {{{ *)
 
   let run dl =
     let rec aux blocks clauses macros types modes  locals chr = function
-      | (A.End :: _ | []) as rest ->
+      | (A.End _ :: _ | []) as rest ->
           { body = List.rev (cl2b clauses @ blocks);
             types = List.rev types;
             macros = List.rev macros;
             modes = List.rev modes },
           locals,
           List.rev chr,
-          (if rest = [] then [] else List.tl rest)
-      | A.Begin :: rest ->
+          rest
+      | A.Begin loc :: rest ->
           let p, locals1, chr1, rest = aux [] [] [] [] [] [] [] rest in
           if chr1 <> [] then
             error "CHR cannot be declared inside an anonymous block";
-          aux (Locals(locals1,p) :: cl2b clauses @ blocks)
+          aux_end_block loc (Locals(locals1,p) :: cl2b clauses @ blocks)
             [] macros types modes locals chr rest
+      | A.Constraint (loc, f) :: rest ->
+          if chr <> [] then
+            error "Constraint blocks cannot be nested";
+          let p, locals1, chr, rest = aux [] [] [] [] [] [] [] rest in
+          if locals1 <> [] then
+            error "locals cannot be declared inside a Constraint block";
+          aux_end_block loc (Constraints(f,chr,p) :: cl2b clauses @ blocks)
+            [] macros types modes locals [] rest
+      | A.Namespace (loc, n) :: rest ->
+          let p, locals1, chr1, rest = aux [] [] [] [] [] [] [] rest in
+          if chr1 <> [] then
+            error "CHR cannot be declared inside a namespace block";
+          if locals1 <> [] then
+            error "locals cannot be declared inside a namespace block";
+          aux_end_block loc (Namespace (n,p) :: cl2b clauses @ blocks)
+            [] macros types modes locals chr rest
+
+      | A.Accumulated a :: rest ->
+          aux blocks clauses macros types modes locals chr (a @ rest)
+
       | A.Clause c :: rest ->
           let c = structure_attributes c in
           aux blocks (c::clauses) macros types modes locals chr rest
@@ -225,24 +245,11 @@ end = struct (* {{{ *)
           aux blocks clauses macros types modes (l::locals) chr rest
       | A.Chr r :: rest ->
           aux blocks clauses macros types modes locals (r::chr) rest
-      | A.Accumulated a :: rest ->
-          aux blocks clauses macros types modes locals chr (a @ rest)
-      | A.Constraint f :: rest ->
-          if chr <> [] then
-            error "Constraint blocks cannot be nested";
-          let p, locals1, chr, rest = aux [] [] [] [] [] [] [] rest in
-          if locals1 <> [] then
-            error "locals cannot be declared inside a Constraint block";
-          aux (Constraints(f,chr,p) :: cl2b clauses @ blocks)
-            [] macros types modes locals [] rest
-      | A.Namespace n :: rest ->
-          let p, locals1, chr1, rest = aux [] [] [] [] [] [] [] rest in
-          if chr1 <> [] then
-            error "CHR cannot be declared inside a namespace block";
-          if locals1 <> [] then
-            error "locals cannot be declared inside a namespace block";
-          aux (Namespace (n,p) :: cl2b clauses @ blocks)
-            [] macros types modes locals chr rest
+
+    and aux_end_block loc blocks clauses macros types modes locals chr rest =
+      match rest with
+      | A.End _ :: rest -> aux blocks clauses macros types modes locals chr rest
+      | _ -> error (Ploc.show loc ^ ": matching } is missing")
 
     in
     let blocks, locals, chr, rest = aux [] [] [] [] [] [] [] dl in

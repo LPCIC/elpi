@@ -117,15 +117,19 @@ type 'name mode =
 [@@deriving show]
 
 type decl =
-   Clause of (term, attribute list) clause
- | Local of Func.t
- | Begin
- | End
- | Mode of Func.t mode list
- | Namespace of Func.t
- | Constraint of Func.t list
- | Chr of chr_rule
+ (* Blocks *)
+ | Begin of Ploc.t
+ | Namespace of Ploc.t * Func.t
+ | Constraint of Ploc.t * Func.t list
+ | End of Ploc.t
+
  | Accumulated of decl list
+
+ (* data *)
+ | Clause of (term, attribute list) clause
+ | Local of Func.t
+ | Mode of Func.t mode list
+ | Chr of chr_rule
  | Macro of (Func.t, term) macro
  | Type of tdecl
 [@@deriving show]
