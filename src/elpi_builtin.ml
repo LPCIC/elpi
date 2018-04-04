@@ -7,7 +7,7 @@ open Extend
 open Data
 open Constants
 open Utils
-open CustomPredicate
+open BuiltInPredicate
 
 let register_eval, lookup_eval =
  let (evals : ('a, term list -> term) Hashtbl.t)
@@ -44,7 +44,7 @@ let cstderr = add_out_stream stderr;;
 let rec eval depth =
  function
     Lam _
-  | Custom _ -> error "Evaluation of a lambda abstraction or custom predicate"
+  | Builtin _ -> error "Evaluation of a lambda abstraction or built-in predicate"
   | Arg _
   | AppArg _ -> anomaly "Not a heap term"
   | App (hd,arg,args) ->
@@ -198,7 +198,7 @@ let occurs x d t =
                                            (x < dt && aux t) || auxs vs
      | Arg _
      | AppArg _                         -> anomaly "Not a heap term"
-     | Custom (_, vs)                   -> auxs vs
+     | Builtin (_, vs)                   -> auxs vs
      | Cons (v1, v2)                    -> aux v1 || aux v2
      | Nil
      | Discard
@@ -630,7 +630,7 @@ let fresh_copy t max_db depth =
         aux d (deref_uv ~from:vd ~to_:(depth+d) ~ano r.contents)
     | AppUVar(r,vd,args) ->
         aux d (deref_appuv ~from:vd ~to_:(depth+d) ~args r.contents)
-    | Custom (c,xs) -> Custom(c,List.map (aux d) xs)
+    | Builtin (c,xs) -> Builtin(c,List.map (aux d) xs)
     | CData _ as x -> x
     | Cons (hd,tl) -> Cons(aux d hd, aux d tl)
     | Nil as x -> x

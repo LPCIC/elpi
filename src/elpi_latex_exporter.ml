@@ -150,7 +150,7 @@ let export_term tm =
   | Elpi_ast.CData s -> "\\:" ^ Elpi_util.CData.show s ^ "\\:" 
   | _ -> assert false in
 (* let pats =
-  [ Str.regexp "\$", "\\$" (* for the custom predicates which start with $*)
+  [ Str.regexp "\$", "\\$" (* for the built-in predicates which start with $*)
   ; Str.regexp "<<>>",  "$" (* for mathematical mode in LaTeX, it is hidden from the user *)
   ; Str.regexp "_",  "\\_" (*for the _,otherwise exports it as a subscript*)
   ; Str.regexp "lambda", "$\\lambda$" ] in
@@ -189,7 +189,7 @@ let print_clause cl_pair =
 let export_identifiers pair =
  let replace name =
   let paths =
-   [ Str.regexp "\\$", "\\$" (* for the custom predicates which start with $*)
+   [ Str.regexp "\\$", "\\$" (* for the built-in predicates which start with $*)
    ; Str.regexp "<<>>",  "$" (* for mathematical mode in LaTeX, it is hidden from the user *)
    ; Str.regexp "_",  "\\_" (*for the _,otherwise exports it as a subscript*)
    ; Str.regexp "lambda", "$\\lambda$" ] in

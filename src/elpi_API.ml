@@ -90,7 +90,7 @@ module Compile = struct
 
   type flags = Elpi_compiler.flags = {
     defined_variables : StrSet.t;
-    allow_untyped_custom_predicate : bool;
+    allow_untyped_builtin : bool;
   }
   let default_flags = Elpi_compiler.default_flags
   let link ?flags x =
@@ -161,10 +161,10 @@ module Extend = struct
     let query = query_of_term
   end
 
-  module CustomPredicate = struct
+  module BuiltInPredicate = struct
     exception No_clause = Elpi_data.No_clause
-    let declare = Elpi_data.register_custom
-    let declare_full = Elpi_data.register_custom_full
+    let declare = Elpi_data.register_builtin
+    let declare_full = Elpi_data.register_builtin_full
   end
 
   module CustomConstraint = Elpi_data.CustomConstraint
@@ -248,7 +248,7 @@ module Extend = struct
             let tl = aux d ctx tl in
             Ast.mkSeq [hd;tl]
         | Data.Nil -> Ast.mkNil
-        | Data.Custom(c,xs) ->
+        | Data.Builtin(c,xs) ->
             let c = aux d ctx (Data.Constants.of_dbl c) in
             let xs = List.map (aux d ctx) xs in
             Ast.mkApp (c :: xs)

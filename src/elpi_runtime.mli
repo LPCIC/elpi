@@ -17,7 +17,7 @@ end
 val execute_once : ?max_steps:int -> executable -> outcome
 val execute_loop : executable -> more:(unit -> bool) -> pp:(float -> outcome -> unit) -> unit
 
-(* Functions useful to implement custom predicates and evaluable functions *)
+(* Functions useful to implement built-in predicates and evaluable functions *)
 val deref_uv : ?avoid:term_attributed_ref -> from:constant -> to_:constant -> int -> term -> term
 val deref_appuv : ?avoid:term_attributed_ref -> from:constant -> to_:constant -> term list -> term -> term
 val is_flex : depth:int -> term -> term_attributed_ref option

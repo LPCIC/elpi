@@ -62,8 +62,8 @@ type term =
   (* Heap terms: unif variables in the query *)
   | UVar of term_attributed_ref * (*depth:*)int * (*argsno:*)int
   | AppUVar of term_attributed_ref * (*depth:*)int * term list
-  (* Misc: custom predicates, ... *)
-  | Custom of constant * term list
+  (* Misc: built-in predicates, ... *)
+  | Builtin of constant * term list
   | CData of CData.t
   (* Optimizations *)
   | Cons of term * term
@@ -648,8 +648,10 @@ type outcome = Success of solution | Failure | NoMoreSteps
 
 type hyps = clause_src list
 
-let register_custom, register_custom_full, lookup_custom, all_custom =
- let (customs :
+(* Built-in predicates and their FFI *************************************** *)
+
+let register_builtin, register_builtin_full, lookup_builtin, all_builtin =
+ let (builtins :
       (* Must either raise No_clause or succeed with the list of new goals *)
       ('a, depth:int -> hyps -> solution -> term list -> term list * custom_constraints)
       Hashtbl.t)
@@ -657,25 +659,25 @@ let register_custom, register_custom_full, lookup_custom, all_custom =
      Hashtbl.create 17 in
  let check s = 
     if s = "" then
-      anomaly ("Custom predicate name must be non empty");
+      anomaly ("Built-in predicate name must be non empty");
     let idx = Constants.from_stringc s in
-    if Hashtbl.mem customs idx then
-      anomaly ("Duplicate custom predicate name " ^ s);
+    if Hashtbl.mem builtins idx then
+      anomaly ("Duplicate built-in predicate name " ^ s);
     idx in
  (fun s f ->
     let idx = check s in
-    Hashtbl.add customs idx
+    Hashtbl.add builtins idx
       (fun ~depth _ { custom_constraints } args ->
          f ~depth args, custom_constraints)),
  (fun s f ->
     let idx = check s in
-    Hashtbl.add customs idx f),
- Hashtbl.find customs,
- (fun () -> Hashtbl.fold (fun k _ acc -> k::acc) customs [])
+    Hashtbl.add builtins idx f),
+ Hashtbl.find builtins,
+ (fun () -> Hashtbl.fold (fun k _ acc -> k::acc) builtins [])
 ;;
 
-let is_custom_declared x =
-  (try let _f = lookup_custom x in true
+let is_builtin_declared x =
+  (try let _f = lookup_builtin x in true
    with Not_found -> false)
   || x == Constants.declare_constraintc
   || x == Constants.print_constraintsc

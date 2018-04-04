@@ -13,8 +13,8 @@
     It provides richer {!module:Ast} and {!module:Data} submodules where the
     data types are made transparent.
     Module {!module:Extend.Compile} lets one register new \{\{quotations\}\}.
-    Modules {!module:Extend.CustomPredicate} and
-    {!module:Extend.CustomConstraint} let one register custom predicates and
+    Modules {!module:Extend.BuiltInPredicate} and
+    {!module:Extend.CustomConstraint} let one register built-in predicates and
     custom constraints. *)
 
 (* ************************************************************************* *)
@@ -93,7 +93,7 @@ module Compile : sig
   module StrSet : Set.S with type elt = string
   type flags = {
     defined_variables : StrSet.t;
-    allow_untyped_custom_predicate : bool;
+    allow_untyped_builtin : bool;
   }
   val default_flags : flags
 
@@ -220,8 +220,8 @@ module Extend : sig
       (* Heap terms: unif variables in the query *)
       | UVar of term_attributed_ref * (*depth:*)int * (*argsno:*)int
       | AppUVar of term_attributed_ref * (*depth:*)int * term list
-      (* Misc: custom predicates, ... *)
-      | Custom of constant * term list
+      (* Misc: built-in predicates, ... *)
+      | Builtin of constant * term list
       | CData of CData.t
       | Cons of term * term
       | Nil
@@ -348,18 +348,18 @@ module Extend : sig
   end
 
 
-  module CustomPredicate : sig
+  module BuiltInPredicate : sig
 
     exception No_clause
 
-    (** Custom predicates like print. Must either raise No_clause or succeed
+    (** Built-in predicates like print. Must either raise No_clause or succeed
         with the list of new goals *)
     val declare :
       string ->
       (depth:int -> Data.term list -> Data.term list) ->
       unit
 
-    (** Custom predicates allowed to change the constraint
+    (** Built-in predicates allowed to change the constraint
         store *)
     val declare_full :
       string ->

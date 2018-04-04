@@ -162,7 +162,7 @@ let xppterm ~nice ?(min_prec=min_prec) depth0 names argsdepth env f t =
             pplist (aux inf_prec depth) ~pplastelem:(aux_last inf_prec depth) "," f (x::xs)
           else pp_app f ppconstant (aux inf_prec depth)
                  ~pplastarg:(aux_last inf_prec depth) (hd,x::xs)))
-    | Custom (hd,xs) ->
+    | Builtin (hd,xs) ->
        with_parens appl_prec (fun _ ->
         pp_app f ppconstant (aux inf_prec depth)
          ~pplastarg:(aux_last inf_prec depth) (hd,xs))
@@ -535,7 +535,7 @@ let deterministic_restriction e ~args_safe t =
     Lam f -> aux f
   | App (_,t,l) -> aux t; List.iter aux l
   | Cons (x,xs) -> aux x; aux xs
-  | Custom (_,l) -> List.iter aux l
+  | Builtin (_,l) -> List.iter aux l
   | UVar (r,_,_) 
   | AppUVar (r,_,_) when !!r == C.dummy -> raise NonMetaClosed
   | UVar (r,_,_) -> aux !!r
@@ -696,9 +696,9 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
     | App (c,t,l) when c >= from ->
        App(c-delta, maux e depth t, smart_map (maux e depth) l)
     | App _ -> raise RestrictionFailure
-    | Custom (c,l) ->
+    | Builtin (c,l) ->
        let l' = smart_map (maux e depth) l in
-       if l == l' then x else Custom (c,l')
+       if l == l' then x else Builtin (c,l')
     | CData _ -> x
     | Cons(hd,tl) ->
        let hd' = maux e depth hd in
@@ -888,9 +888,9 @@ and subst fromdepth ts t =
       else if c < fromdepth then
         if x==x' && xs==xs' then orig else App(c,x',xs')
       else App(c-len,x',xs')
-   | Custom(c,xs) as orig ->
+   | Builtin(c,xs) as orig ->
       let xs' = List.map (aux depth) xs in
-      if xs==xs' then orig else Custom(c,xs')
+      if xs==xs' then orig else Builtin(c,xs')
    | Cons(hd,tl) as orig ->
        let hd' = aux depth hd in
        let tl' = aux depth tl in
@@ -937,7 +937,7 @@ and beta depth sub t args =
          | Arg _
          | AppArg _ -> anomaly "beta takes only heap terms"
          | App (c,arg,args1) -> App (c,arg,args1@args)
-         | Custom (c,args1) -> Custom (c,args1@args)
+         | Builtin (c,args1) -> Builtin (c,args1@args)
          | UVar (r,n,m) -> begin
             try UVar(r,n,m + in_fragment (n+m) args)
             with NotInTheFragment ->
@@ -998,9 +998,9 @@ and deref_uv ?avoid ~from ~to_ args t =
      | App (c,arg,args2) ->
         let args = C.mkinterval from args' 0 in
         App (c,arg,args2 @ args)
-     | Custom (c,args2) ->
+     | Builtin (c,args2) ->
         let args = C.mkinterval from args' 0 in
-        Custom (c,args2 @ args)
+        Builtin (c,args2 @ args)
      (* TODO: when the UVar/Arg is not C.dummy, we call deref_uv that
         will call move that will call_deref_uv again. Optimize the
         path *)
@@ -1035,7 +1035,7 @@ let rec is_flex ~depth =
   | AppUVar ({ contents = t }, vardepth, args) when t != C.dummy -> 
      is_flex ~depth (deref_appuv ~from:vardepth ~to_:depth args t)
   | UVar (r, _, _) | AppUVar (r, _, _) -> Some r
-  | Const _ | Lam _ | App _ | Custom _ | CData _ | Cons _ | Nil | Discard -> None
+  | Const _ | Lam _ | App _ | Builtin _ | CData _ | Cons _ | Nil | Discard -> None
 
 (* Invariants:                                          |
    adepth: depth of a (query, heap term)                - bdepth       b
@@ -1148,7 +1148,7 @@ let bind r gamma l a d delta b left t e =
     | Cons(hd,tl) -> Cons(bind b delta w hd, bind b delta w tl)
     | Nil -> t
     | Discard -> t
-    | Custom (c, tl) -> Custom(c, List.map (bind b delta w) tl)
+    | Builtin (c, tl) -> Builtin(c, List.map (bind b delta w) tl)
     | CData _ -> t
     (* deref_uv *)
     | Arg (i,args) when e.(i) != C.dummy ->
@@ -1480,7 +1480,7 @@ let rec unif matching depth adepth a bdepth b e =
        &&
        (delta=0 && x2 == y2 || unif matching depth adepth x2 bdepth y2 e) &&
        for_all2 (fun x y -> unif matching depth adepth x bdepth y e) xs ys
-   | Custom (c1,xs), Custom (c2,ys) ->
+   | Builtin (c1,xs), Builtin (c2,ys) ->
        (* Inefficient comparison *)
        c1 = c2 && for_all2 (fun x y -> unif matching depth adepth x bdepth y e) xs ys
    | Lam t1, Lam t2 -> unif matching (depth+1) adepth t1 bdepth t2 e
@@ -1535,7 +1535,7 @@ let full_deref ~adepth env ~depth t =
   | AppUVar (r,lvl,args) when !!r != C.dummy ->
       deref d (deref_appuv ~from:lvl ~to_:d args !!r)
   | AppUVar (r,lvl,args) -> AppUVar (r,lvl,List.map (deref d) args)
-  | Custom(c,xs) -> Custom(c,List.map (deref d) xs)
+  | Builtin(c,xs) -> Builtin(c,List.map (deref d) xs)
   | CData _ as x -> x
   in
     deref depth t
@@ -1576,7 +1576,7 @@ let shift_bound_vars ~depth ~to_ t =
       anomaly "shift_bound_vars: non-derefd term"
   | UVar _ as x -> x
   | AppUVar (r,lvl,args) -> AppUVar (r,lvl,List.map (shift d) args)
-  | Custom(c,xs) -> Custom(c,List.map (shift d) xs)
+  | Builtin(c,xs) -> Builtin(c,List.map (shift d) xs)
   | CData _ as x -> x
   in
     if depth = to_ then t else shift depth t
@@ -1601,7 +1601,7 @@ let subtract_to_consts ~amount ~depth t =
       anomaly "subtract_to_consts: non-derefd term"
   | (UVar _ | AppUVar _) ->
       error "The term cannot be put in the desired context (leftover uvar)"
-  | Custom(c,xs) -> Custom(c,List.map (shift d) xs)
+  | Builtin(c,xs) -> Builtin(c,List.map (shift d) xs)
   | CData _ as x -> x
   in
     if amount = 0 then t else shift 0 t
@@ -1671,7 +1671,7 @@ let key_of ~mode:_ ~depth =
   | App (k,_,_) when k = C.uvc -> mustbevariablek
   | App (k,a,_) when k = C.asc -> skey_of a
   | App (k,_,_)
-  | Custom (k,_) -> k
+  | Builtin (k,_) -> k
   | Lam _ -> abstractionk
   | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> variablek
   | CData d -> 
@@ -1687,7 +1687,7 @@ let key_of ~mode:_ ~depth =
     key_of_depth (deref_appuv ~from:origdepth ~to_:depth args t)
  | App(k,arg,_) when k == C.asc -> key_of_depth arg
  | App (k,arg2,_) -> k, skey_of arg2
- | Custom _ -> assert false
+ | Builtin _ -> assert false
  | (Nil | Cons _ | Arg _ | AppArg _ | Lam _
    | UVar _ | AppUVar _ | CData _ | Discard) as x ->
    type_error ("The clause's head is not a predicate: " ^ show_term x)
@@ -1771,7 +1771,7 @@ let close_with_pis depth vars t =
         | [x] -> App(i+depth,x,[])
         | x::xs -> App(i+depth,x,xs))
     | App(c,x,xs) -> App(fix_const c,aux x,List.map aux xs)
-    | Custom(c,xs) -> Custom(c,List.map aux xs)
+    | Builtin(c,xs) -> Builtin(c,List.map aux xs)
     | UVar(_,_,_) as orig ->
        (* TODO: quick hack here, but it does not work for AppUVar *)
        hmove ~from:depth ~to_:(depth+vars) orig
@@ -1864,7 +1864,7 @@ module UnifBits (*: Indexing*) = struct (* {{{ *)
          index lvl arg depth left right
       | (App (k,_,_) | Const k) when k == C.uvc -> 
          set_section k weird left right
-      | Const k | Custom (k,_) ->
+      | Const k | Builtin (k,_) ->
           set_section k (if lvl=0 then k else hash k) left right 
       | Nil ->
           set_section C.nilc (if lvl=0 then C.nilc else hash C.nilc) left right 
@@ -1996,7 +1996,7 @@ let rec term_map m = function
   | AppUVar(r,lvl,xs) -> AppUVar(r,lvl,smart_map (term_map m) xs)
   | Arg _ as x -> x
   | AppArg(i,xs) -> AppArg(i,smart_map (term_map m) xs)
-  | Custom(c,xs) -> Custom(c,smart_map (term_map m) xs)
+  | Builtin(c,xs) -> Builtin(c,smart_map (term_map m) xs)
   | Cons(hd,tl) -> Cons(term_map m hd, term_map m tl)
   | Nil as x -> x
   | Discard as x -> x
@@ -2093,7 +2093,7 @@ let rec claux1 vars depth hyps ts lts lcs t =
          Const h -> h, []
        | App(h,x,xs) -> h, x::xs
        | Arg _ | AppArg _ -> assert false 
-       | Lam _ | Custom _ | CData _ -> assert false
+       | Lam _ | Builtin _ | CData _ -> assert false
        | UVar _ | AppUVar _ -> assert false
        | Cons _ | Nil | Discard -> assert false
      in
@@ -2111,7 +2111,7 @@ let rec claux1 vars depth hyps ts lts lcs t =
      claux1 vars depth hyps ts lts lcs
        (deref_appuv ~from ~to_:(depth+lts) args g)
   | Arg _ | AppArg _ -> anomaly "claux1 called on non-heap term"
-  | Custom (c,_) ->
+  | Builtin (c,_) ->
      error ("Declaring a clause for built in predicate " ^ Constants.show c)
   | (Lam _ | CData _ ) as x ->
      error ("Assuming a string or int or float or function:" ^ show_term x)
@@ -2202,7 +2202,7 @@ module Constraints : sig
   (* out of place *)
   val qnames : int StrMap.t Fork.local_ref
   val qenv : term array Fork.local_ref
-  val exec_custom_predicate :
+  val exect_builtin_predicate :
     constant -> depth:int -> idx -> term list -> term list
 
 end = struct (* {{{ *)
@@ -2271,7 +2271,7 @@ end = struct (* {{{ *)
       | (Const _ | CData _ | Nil | Discard) as x -> x
       | Cons(hd,tl) -> Cons(faux d hd, faux d tl)
       | App(c,x,xs) -> App(c,faux d x, List.map (faux d) xs)
-      | Custom(c,args) -> Custom(c,List.map (faux d) args)
+      | Builtin(c,args) -> Builtin(c,List.map (faux d) args)
       | (Arg _ | AppArg _) -> error "only heap terms can be frozen"
       | Lam t -> Lam (faux (d+1) t)
       (* freeze *)
@@ -2326,7 +2326,7 @@ end = struct (* {{{ *)
           let args = lp_list_to_list ~depth:d args in
           mkAppUVar r 0 (List.map (daux d) args)
       | App(c,x,xs) -> App(c,daux d x, List.map (daux d) xs)
-      | Custom(c,args) -> Custom(c,List.map (daux d) args)
+      | Builtin(c,args) -> Builtin(c,List.map (daux d) args)
       | Arg(i,ano) when env.(i) != C.dummy ->
           daux d (deref_uv ~from:to_ ~to_:d ano env.(i))
       | AppArg (i,args) when env.(i) != C.dummy ->
@@ -2349,7 +2349,7 @@ let replace_const m t =
     | App(c,x,xs) ->
         App((try List.assoc c m with Not_found -> c),
             rcaux x, smart_map rcaux xs)
-    | Custom(c,xs) -> Custom(c,smart_map rcaux xs)
+    | Builtin(c,xs) -> Builtin(c,smart_map rcaux xs)
     | Cons(hd,tl) -> Cons(rcaux hd, rcaux tl)
     | (CData _ | UVar _ | Nil | Discard) as x -> x
     | Arg _ | AppArg _ -> assert false
@@ -2458,7 +2458,7 @@ let rec head_of = function
   | App(x,hd,_) when C.(x == rimplc) -> head_of hd
   | App(x,hd,_) when C.(x == andc) -> head_of hd (* FIXME *)
   | App(x,_,_) -> x
-  | Custom(x,_) -> x
+  | Builtin(x,_) -> x
   | AppUVar(r,_,_)
   | UVar(r,_,_) when !!r != C.dummy -> head_of !!r
   | CData _ -> type_error "A constraint cannot be a primitive data"
@@ -2496,7 +2496,7 @@ let declare_constraint ~depth prog args =
 let qnames = Fork.new_local StrMap.empty
 let qenv = Fork.new_local empty_env
 
-let exec_custom_predicate c ~depth idx args =
+let exect_builtin_predicate c ~depth idx args =
        if c == C.declare_constraintc then begin
                declare_constraint ~depth idx args; [] end
   else if c == C.print_constraintsc then begin
@@ -2504,9 +2504,9 @@ let exec_custom_predicate c ~depth idx args =
                [] 
   end else
     let f =
-      try lookup_custom c
+      try lookup_builtin c
       with Not_found -> 
-        anomaly ("no custom predicated named " ^ C.show c) in
+        anomaly ("no built-in predicated named " ^ C.show c) in
     let solution = {
       assignments = StrMap.map (fun i -> !qenv.(i)) !qnames;
       constraints = !CS.Ugly.delayed;
@@ -2829,7 +2829,7 @@ let make_runtime : ?max_steps: int -> executable -> runtime =
  | Some [] ->
     [%spy "run-goal" (fun fmt -> Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env)) g];
     match g with
-    | Custom(c,[]) when c == C.cutc -> [%tcall cut p gs next alts lvl]
+    | Builtin(c,[]) when c == C.cutc -> [%tcall cut p gs next alts lvl]
     | App(c, g, gs') when c == C.andc || c == C.andc2 ->
        run depth p g (List.map(fun x -> depth,p,x) gs'@gs) next alts lvl
     | App(c, g2, [g1]) when c == C.rimplc ->
@@ -2865,8 +2865,8 @@ let make_runtime : ?max_steps: int -> executable -> runtime =
         type_error ("The goal is not a predicate:" ^ (show_term g))
     | UVar _ | AppUVar _ | Discard ->
         error "The goal is a flexible term"
-    | Custom(c, args) ->
-       match Constraints.exec_custom_predicate c ~depth p args with
+    | Builtin(c, args) ->
+       match Constraints.exect_builtin_predicate c ~depth p args with
        | gs' ->
           (match List.map (fun g -> depth,p,g) gs' @ gs with
            | [] -> [%tcall pop_andl alts next lvl]

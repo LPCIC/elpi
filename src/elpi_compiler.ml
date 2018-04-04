@@ -13,11 +13,11 @@ module A = Elpi_ast
 
 type flags = {
   defined_variables : StrSet.t;
-  allow_untyped_custom_predicate : bool;
+  allow_untyped_builtin : bool;
 }
 let default_flags = {
   defined_variables = StrSet.empty;
-  allow_untyped_custom_predicate = false;
+  allow_untyped_builtin = false;
 }
 
 (****************************************************************************
@@ -402,8 +402,8 @@ let preterm_of_ast ~depth:arg_lvl macro state ast =
        stack_arg_of_ast state (F.show f)
      else if is_macro_name f then
        stack_macro_of_ast inner curlvl state f
-     else if is_custom_declared (fst (C.funct_of_ast f)) then
-       state, Custom(fst (C.funct_of_ast f),[])
+     else if is_builtin_declared (fst (C.funct_of_ast f)) then
+       state, Builtin(fst (C.funct_of_ast f),[])
      else if CustomFunctorCompilation.is_backtick f then
        CustomFunctorCompilation.compile_backtick state f
      else if CustomFunctorCompilation.is_singlequote f then
@@ -431,21 +431,21 @@ let preterm_of_ast ~depth:arg_lvl macro state ast =
           | _ -> anomaly "Application node with no arguments" end
        | App(c,hd1,tl1) -> (* FG:decurrying: is this the right place for it? *)
           state, App(c,hd1,tl1@tl)
-       | Custom(c,tl1) -> state, Custom(c,tl1@tl)
+       | Builtin(c,tl1) -> state, Builtin(c,tl1@tl)
        | Lam _ -> (* macro with args *)
           state, deref_appuv ~from:lvl ~to_:lvl tl c
        | Discard -> 
           error "Clause shape unsupported: _ cannot be applied"
        | _ -> error "Clause shape unsupported" end
 (*
-    | A.App (A.Custom f,tl) ->
+    | A.App (A.Builtin f,tl) ->
        let cname = stack_custom_of_ast f in
        let state, rev_tl =
          List.fold_left (fun (state, tl) t ->
             let state, t = aux true lvl state t in
             (state, t::tl))
           (state, []) tl in
-       state, Custom(cname, List.rev rev_tl)
+       state, Builtin(cname, List.rev rev_tl)
 *)
     | A.Lam (x,t) when A.Func.(equal x dummyname)->
        let state, t' = aux true (lvl+1) state t in
@@ -621,7 +621,7 @@ let preterm_of_ast ~depth macros state t =
       | App(ri,(Const c | App(c,_,_)), _) when ri == C.rimplc && c < 0 ->  
            C.Set.add c s
       | (Const _ | App _) -> s
-      | Custom(c,_) -> C.Set.add c s
+      | Builtin(c,_) -> C.Set.add c s
       | _ -> assert false)
       C.Set.empty cl
 
@@ -742,10 +742,10 @@ end = struct (* {{{ *)
           assert(!!r == C.dummy);
           let ts1 = smart_map aux ts in
           if ts == ts1 then x else AppUVar(r,lvl,ts1)
-      | Custom(c,ts) as x ->
+      | Builtin(c,ts) as x ->
           assert(f c == c);
           let ts1 = smart_map aux ts in
-          if ts == ts1 then x else Custom(c,ts1)
+          if ts == ts1 then x else Builtin(c,ts1)
       | App(c,t,ts) as x ->
           let c1 = f c in
           let t1 = aux t in
@@ -896,7 +896,7 @@ end = struct (* {{{ *)
       match t with
       | App (c,x,xs) -> c, x :: xs
       | Const c -> c, []
-      | Custom(c,args) -> c, args
+      | Builtin(c,args) -> c, args
       | _ -> error ("only applications can be spilled: " ^ show_term t) in
     let ty = type_of_const types c in
     let ty_mode, mode =
@@ -938,7 +938,7 @@ end = struct (* {{{ *)
       match hd with
       | App(c,x,xs) -> App(c,x,xs @ args)
       | Const c -> mkAppC c args
-      | Custom(c,xs) -> Custom(c,xs @ args)
+      | Builtin(c,xs) -> Builtin(c,xs @ args)
       | _ -> assert false in
 
     let mkSpilled =
@@ -962,7 +962,7 @@ end = struct (* {{{ *)
       | App(f,x,xs) when List.exists (equal_term (Const f)) names ->
           mkAppC f (List.map (apply_to names variable) (x::xs) @ [variable])
       | App(hd,x,xs) -> mkAppC hd (List.map (apply_to names variable) (x::xs))
-      | Custom(hd,xs) -> Custom(hd, List.map (apply_to names variable) xs)
+      | Builtin(hd,xs) -> Builtin(hd, List.map (apply_to names variable) xs)
       | (Arg _ | AppArg _ | UVar _ | AppUVar _) -> assert false in
 
     let add_spilled ~under_lam sp t =
@@ -1022,11 +1022,11 @@ end = struct (* {{{ *)
          (* FIXME: it could be in prop *)
          assert(List.length hd = 1 && List.length tl = 1);
          sp1 @ sp2, [Cons(List.hd hd, List.hd tl)]
-      | Custom(c,args) ->
+      | Builtin(c,args) ->
          let spills, args = map_acc (fun sp x ->
            let sp1, x = spaux ctx x in
            sp @ sp1, x) [] args in
-         [], [add_spilled ~under_lam spills (Custom(c,List.concat args))]
+         [], [add_spilled ~under_lam spills (Builtin(c,List.concat args))]
       | Lam t ->
          let sp, t = spaux1 (depth+1, C.of_dbl depth :: vars, true) t in
          let (t,_), sp = map_acc (fun (t,n) (names, call) ->
@@ -1198,7 +1198,7 @@ let query_of_term { Program.assembled_program; compiler_state } f =
   }
   
 let check_all_custom_are_typed types =
-  let all_custom = all_custom () in
+  let all_custom = all_builtin () in
   List.iter (fun c ->
     if not (List.exists (fun (b,{ tname }) -> b && tname == c) types) then
       error("External without type declaration: " ^ C.show c))
@@ -1223,7 +1223,7 @@ let stack_term_of_preterm ~depth:arg_lvl { term = t; amap = { c2i } } =
     | App(c,x,xs) -> arg_cst  c (List.map stack_term_of_preterm (x::xs))
     | Lam t -> Lam(stack_term_of_preterm  t)
     | CData _ as x -> x
-    | Custom(c,xs) -> Custom(c,List.map stack_term_of_preterm xs)
+    | Builtin(c,xs) -> Builtin(c,List.map stack_term_of_preterm xs)
     | UVar _ | AppUVar _ | Arg _ | AppArg _ -> assert false
     | Nil as x -> x
     | Discard as x -> x
@@ -1256,7 +1256,7 @@ let compile_chr depth
       | ( Discard | CData _ | Nil) -> false
       | (Arg _ | AppArg _ | UVar _ | AppUVar _) -> assert false
       | App(f,x,xs) -> f == c || arg_occurs x || List.exists arg_occurs xs
-      | Custom(_,xs) -> List.exists arg_occurs xs
+      | Builtin(_,xs) -> List.exists arg_occurs xs
       | Cons(x,y) -> arg_occurs x || arg_occurs y
       | Lam x -> arg_occurs x
     in
@@ -1289,7 +1289,7 @@ let compile_chr depth
       | Lam t -> test t
       | (Const _ | Arg _ | CData _ | Nil | Discard) -> false
       | AppArg (_,l) -> List.exists test l
-      | Custom (_,l) -> List.exists test l
+      | Builtin (_,l) -> List.exists test l
       | Cons (t1,t2) -> test t1 || test t2
       | UVar _ | AppUVar _ -> assert false
     in
@@ -1391,7 +1391,7 @@ let run ?(flags = default_flags)
   }
 =
 
-  if not flags.allow_untyped_custom_predicate then
+  if not flags.allow_untyped_builtin then
     check_all_custom_are_typed types;
   (* Real Arg nodes: from "Const '%Arg3'" to "Arg 3" *)
   let chr =
@@ -1496,11 +1496,11 @@ let quote_preterm ?(on_type=false) { term; amap } =
     | Const n when on_type && C.show n = "prop" -> term
 
     | Const n -> mkQCon n
-    | Custom(c,[]) -> mkQCon c
+    | Builtin(c,[]) -> mkQCon c
     | Lam x -> App(lamc,Lam (aux (depth+1) x),[])
     | App(c,x,xs) ->
         mkQApp (mkQCon c :: List.(map (aux depth) (x :: xs)))
-    | Custom(c,args) -> mkQApp (mkQCon c :: List.map (aux depth) args)
+    | Builtin(c,args) -> mkQApp (mkQCon c :: List.map (aux depth) args)
 
 (*
     | Arg(id,0) -> C.of_dbl id
@@ -1569,7 +1569,7 @@ let static_check ?(exec=execute_once) ?(checker=default_checker ()) ({ Query.typ
       state, App(C.from_stringc "check",p,[q;tlist])) in
   let executable =
     executable_of_query
-      ~flags:{ default_flags with allow_untyped_custom_predicate = true }
+      ~flags:{ default_flags with allow_untyped_builtin = true }
       query in
   exec executable <> Failure
 ;;

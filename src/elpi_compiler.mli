@@ -7,7 +7,7 @@ open Elpi_data
 
 type flags = {
   defined_variables : StrSet.t;
-  allow_untyped_custom_predicate : bool;
+  allow_untyped_builtin : bool;
 }
 val default_flags : flags
 
