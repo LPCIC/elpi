@@ -14,7 +14,7 @@
 BASE=$(shell pwd)
 include Makefile.common
 
-all: check-ocaml-ver elpi$(EXE)
+all: check-ocaml-ver elpi$(EXE) builtins.elpi
 
 byte:
 	$(H)$(MAKE) BYTE=1 all
@@ -68,14 +68,14 @@ OC_OPTIONS = -linkpkg $(OCAMLOPTIONS) $(FLAGS)
 
 ELPI_LIBS = \
   elpi_quoted_syntax.elpi  elpi-checker.elpi  \
-  pervasives.elpi lp-syntax.elpi \
+  builtins.elpi pervasives.elpi lp-syntax.elpi \
   utils/elpi2html.elpi
 
 ELPI_DIST = \
-  $(addprefix src/,elpi_API.cmi elpi_API.mli elpi.cmi)
+  $(addprefix src/,elpi_API.cmi elpi_API.mli elpi_builtin.cmi elpi_builtin.mli elpi.cmi)
 
 ELPI_DIST_OPT = \
-  $(addprefix src/,elpi.cma elpi.cmxa elpi.a elpi_API.cmti)
+  $(addprefix src/,elpi.cma elpi.cmxa elpi.a elpi_builtin.cmti elpi_API.cmti)
 
 elpi$(EXE): elpi_REPL.ml elpi_config.$(CMX) findlib/elpi/META
 	$(H)$(call pp,$(OCNAME),-package elpi elpi_config.$(CMX) -o $@,$<)
@@ -88,6 +88,9 @@ elpi_config.$(CMX): elpi_config.ml elpi_config.cmi
 elpi_config.cmi: elpi_config.mli
 	$(H)$(call pp,$(OCNAME),-c, $<)
 	$(H)$(OC) $(OC_OPTIONS) -c $<
+
+builtins.elpi: elpi$(EXE)
+	$(H)./elpi -document-builtins > $@
 
 elpi_config.ml:
 	$(H)echo 'let install_dir = "$(shell ocamlfind printconf destdir)/elpi"' > $@

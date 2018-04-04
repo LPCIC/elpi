@@ -37,7 +37,7 @@ val fresh_Arg :
     CompilerState.t * string * term
 
 (* Quotes the program and the query, see elpi_quoted_syntax.elpi *)
-val quote_syntax : query -> term * term
+val quote_syntax : query -> term list * term
 
 (* false means a type error was found *)
 val static_check : ?exec:(?max_steps:int -> executable -> outcome) -> ?checker:Elpi_ast.decl list -> query -> bool

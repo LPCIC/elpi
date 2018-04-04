@@ -140,7 +140,7 @@ module Constants : sig
   val funct_of_ast : F.t -> constant * term
   val of_dbl : constant -> term
   val show : constant -> string
-  val pp : Format.formatter -> constant -> unit
+  val pp : Fmt.formatter -> constant -> unit
   val fresh : unit -> constant * term
   val from_string : string -> term
   val from_stringc : string -> constant
@@ -231,7 +231,7 @@ let funct_of_ast, of_dbl, show, fresh =
    n,xx)
 ;;
 
-let pp fmt c = Format.fprintf fmt "%s" (show c)
+let pp fmt c = Fmt.fprintf fmt "%s" (show c)
 
 let from_astc a = fst (funct_of_ast a)
 let from_ast a = snd (funct_of_ast a)
@@ -313,9 +313,9 @@ module CHR : sig
     nargs : int [@default 0];
     pattern : Constants.t list;
   }
-  val pp_sequent : Format.formatter -> sequent -> unit
+  val pp_sequent : Fmt.formatter -> sequent -> unit
   val show_sequent : sequent -> string
-  val pp_rule : Format.formatter -> rule -> unit
+  val pp_rule : Fmt.formatter -> rule -> unit
   val show_rule : rule -> string
 
   val empty : t
@@ -326,7 +326,7 @@ module CHR : sig
   
   val rules_for : constant -> t -> rule list
 
-  val pp : Format.formatter -> t -> unit
+  val pp : Fmt.formatter -> t -> unit
   val show : t -> string
 
 end = struct (* {{{ *)
@@ -407,7 +407,7 @@ module CustomConstraint : sig
     val set : 'a component -> t -> 'a -> t
     val update : 'a component -> t -> ('a -> 'a) -> t
     val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
-    val pp : Format.formatter -> t -> unit
+    val pp : Fmt.formatter -> t -> unit
      
   end = struct 
 
@@ -650,39 +650,161 @@ type hyps = clause_src list
 
 (* Built-in predicates and their FFI *************************************** *)
 
-let register_builtin, register_builtin_full, lookup_builtin, all_builtin =
- let (builtins :
-      (* Must either raise No_clause or succeed with the list of new goals *)
-      ('a, depth:int -> hyps -> solution -> term list -> term list * custom_constraints)
-      Hashtbl.t)
-   =
-     Hashtbl.create 17 in
- let check s = 
+ (* (depth:int -> hyps -> solution -> term list -> term list * custom_constraints) *)
+
+module Builtin = struct
+
+type name = string
+type doc = string
+
+type 'a arg = Data of 'a | Flex of term | Discard
+exception TypeErr of term
+
+type 'a data = {
+  to_term : 'a -> term;
+  of_term : depth:int -> term -> 'a arg;
+  ty : string;
+}
+
+type ('function_type, 'inernal_outtype_in) ffi =
+  | In   : 't data * doc * ('i, 'o) ffi -> ('t -> 'i,'o) ffi
+  | Out  : 't data * doc * ('i, 'o * 't option) ffi -> ('t arg -> 'i,'o) ffi
+  | Easy : doc -> (depth:int -> 'o, 'o) ffi
+  | Full : doc -> (depth:int -> hyps -> solution -> custom_constraints * 'o, 'o) ffi
+  | VariadicIn : 't data * doc -> ('t list -> depth:int -> hyps -> solution -> custom_constraints * 'o, 'o) ffi
+  | VariadicOut : 't data * doc -> ('t arg list -> depth:int -> hyps -> solution -> custom_constraints * ('o * 't option list option), 'o) ffi
+
+type t = Pred : name * ('a,unit) ffi * 'a -> t
+
+type doc_spec = DocAbove | DocNext
+
+type declaration =
+  | MLCode of t * doc_spec
+  | LPDoc  of string
+  | LPCode of string
+
+let register, lookup, all =
+ (* Must either raise No_clause or succeed with the list of new goals *)
+ let builtins : (int, t) Hashtbl.t = Hashtbl.create 17 in
+ let check (Pred(s,_,_)) = 
     if s = "" then
       anomaly ("Built-in predicate name must be non empty");
     let idx = Constants.from_stringc s in
     if Hashtbl.mem builtins idx then
       anomaly ("Duplicate built-in predicate name " ^ s);
     idx in
- (fun s f ->
-    let idx = check s in
-    Hashtbl.add builtins idx
-      (fun ~depth _ { custom_constraints } args ->
-         f ~depth args, custom_constraints)),
- (fun s f ->
-    let idx = check s in
-    Hashtbl.add builtins idx f),
+ (fun b ->
+    let idx = check b in
+    Hashtbl.add builtins idx b),
  Hashtbl.find builtins,
  (fun () -> Hashtbl.fold (fun k _ acc -> k::acc) builtins [])
 ;;
 
-let is_builtin_declared x =
-  (try let _f = lookup_builtin x in true
+let is_declared x =
+  (try let _f = lookup x in true
    with Not_found -> false)
   || x == Constants.declare_constraintc
   || x == Constants.print_constraintsc
   || x == Constants.cutc
 ;;
+
+let pp_comment fmt doc =
+  Fmt.fprintf fmt "@?";
+  let orig_out = Fmt.pp_get_formatter_out_functions fmt () in
+  Fmt.pp_set_formatter_out_functions fmt
+    { orig_out with
+      Fmt.out_newline = fun () -> orig_out.out_string "\n% " 0 3 };
+  Fmt.fprintf fmt "@[<hov>";
+  Fmt.pp_print_text fmt doc;
+  Fmt.fprintf fmt "@]@?";
+  Fmt.pp_set_formatter_out_functions fmt orig_out
+;;
+
+let pp_tab_arg i sep fmt (dir,ty,doc) =
+  let dir = if dir then "i" else "o" in
+  if i = 0 then Fmt.pp_set_tab fmt () else ();
+  Fmt.fprintf fmt "%s:%s%s" dir ty sep;
+  if i = 0 then Fmt.pp_set_tab fmt () else Fmt.pp_print_tab fmt ();
+  if doc <> "" then begin Fmt.fprintf fmt " %% %s" doc end;
+  Fmt.pp_print_tab fmt ()
+;;
+
+let pp_tab_args fmt l =
+  let n = List.length l - 1 in
+  Fmt.pp_open_tbox fmt ();
+  List.iteri (fun i x ->
+    let sep = if i = n then "." else "," in
+    pp_tab_arg i sep fmt x) l;
+  Fmt.pp_close_tbox fmt ()
+;;
+
+let pp_arg sep fmt (dir,ty,doc) =
+  let dir = if dir then "i" else "o" in
+  Fmt.fprintf fmt "%s:%s%s" dir ty sep
+;;
+
+let pp_args = pplist (pp_arg "") "," ~pplastelem:(pp_arg "")
+
+let pp_pred fmt docspec name doc_pred args =
+  let args = List.rev args in
+  match docspec with
+  | DocNext ->
+     Fmt.fprintf fmt "@[<v 2>external pred %s %% %s@;%a@]@."
+       name doc_pred pp_tab_args args
+  | DocAbove ->
+    let doc =
+       "[" ^ String.concat " " (name :: List.map (fun (_,_,x) -> x) args) ^
+       "] " ^ doc_pred in
+     Fmt.fprintf fmt "@[<v>%% %a@.external pred %s @[<hov>%a.@]@]@.@."
+       pp_comment doc name pp_args args
+;;
+
+let pp_ty sep fmt (_,s,_) = Fmt.fprintf fmt " %s%s" s sep
+let pp_ty_args = pplist (pp_ty "") "->" ~pplastelem:(pp_ty "")
+
+let pp_type fmt name doc_pred ty args =
+  let parens s = if String.contains s ' ' then "("^s^")" else s in
+  let args = List.rev ((false,"variadic " ^ parens ty ^ " prop","") :: args) in
+  let doc =
+    "[" ^ String.concat " " (name :: List.map (fun (_,_,x) -> x) args) ^
+    "...] " ^ doc_pred in
+  Fmt.fprintf fmt "@[<v>%% %a@.external type %s@[<hov>%a.@]@]@.@."
+        pp_comment doc name pp_ty_args args
+;;
+
+let document_pred fmt docspec name ffi =
+  let rec doc
+  : type i o. (bool * string * string) list -> (i,o) ffi -> unit
+  = fun args -> function
+    | In( { ty }, s, ffi) -> doc ((true,ty,s) :: args) ffi
+    | Out( { ty }, s, ffi) -> doc ((false,ty,s) :: args) ffi
+    | Easy s -> pp_pred fmt docspec name s args
+    | Full s -> pp_pred fmt docspec name s args
+    | VariadicIn( { ty }, s) -> pp_type fmt name s ty args
+    | VariadicOut( { ty }, s) -> pp_type fmt name s ty args
+  in
+    doc [] ffi
+;;
+
+let document fmt l =
+  let omargin = Fmt.pp_get_margin fmt () in
+  Fmt.pp_set_margin fmt 75;
+  Fmt.fprintf fmt "@[<v>";
+  pp_comment fmt
+    "%%%%%%%%%%%%%%% Begin of automatically generated code %%%%%%%%%%%%%%%%%";
+  Fmt.fprintf fmt "@\n@\n";
+  List.iter (function
+    | MLCode(Pred(name,ffi,_), docspec) -> document_pred fmt docspec name ffi
+    | LPCode s -> Fmt.fprintf fmt "%s" s; Fmt.fprintf fmt "@\n@\n"
+    | LPDoc s -> pp_comment fmt ("% " ^ s); Fmt.fprintf fmt "@\n@\n") l;
+  pp_comment fmt
+    "%%%%%%%%%%%%%%% End of automatically generated code %%%%%%%%%%%%%%%%%%%";
+  Fmt.fprintf fmt "@\n@\n";
+  Fmt.fprintf fmt "@]@.";
+  Fmt.pp_set_margin fmt omargin
+;;
+
+end
 
 let of_term x = x
 

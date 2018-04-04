@@ -20,6 +20,7 @@ val execute_loop : executable -> more:(unit -> bool) -> pp:(float -> outcome -> 
 (* Functions useful to implement built-in predicates and evaluable functions *)
 val deref_uv : ?avoid:term_attributed_ref -> from:constant -> to_:constant -> int -> term -> term
 val deref_appuv : ?avoid:term_attributed_ref -> from:constant -> to_:constant -> term list -> term -> term
+val deref_head : depth:int -> term -> term
 val is_flex : depth:int -> term -> term_attributed_ref option
 val pp_stuck_goal : Fmt.formatter -> stuck_goal -> unit
 

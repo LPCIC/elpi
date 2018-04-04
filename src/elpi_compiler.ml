@@ -402,7 +402,7 @@ let preterm_of_ast ~depth:arg_lvl macro state ast =
        stack_arg_of_ast state (F.show f)
      else if is_macro_name f then
        stack_macro_of_ast inner curlvl state f
-     else if is_builtin_declared (fst (C.funct_of_ast f)) then
+     else if Builtin.is_declared (fst (C.funct_of_ast f)) then
        state, Builtin(fst (C.funct_of_ast f),[])
      else if CustomFunctorCompilation.is_backtick f then
        CustomFunctorCompilation.compile_backtick state f
@@ -1197,19 +1197,19 @@ let query_of_term { Program.assembled_program; compiler_state } f =
     initial_constraints = CustomConstraint.init state;
   }
   
-let check_all_custom_are_typed types =
-  let all_custom = all_builtin () in
+let check_all_builtin_are_typed types =
+  let all_builtin = Builtin.all () in
   List.iter (fun c ->
     if not (List.exists (fun (b,{ tname }) -> b && tname == c) types) then
-      error("External without type declaration: " ^ C.show c))
-   all_custom;
+      error("Built-in without external type declaration: " ^ C.show c))
+   all_builtin;
  let elpi_builtins = [C.cutc;C.declare_constraintc;C.print_constraintsc] in
  List.iter (fun (b,{ tname }) ->
    if b && not (List.memq tname elpi_builtins) then
-     if not (List.exists ((==) tname) all_custom) then
-       error("External type declaration without external: " ^ C.show tname)
+     if not (List.exists ((==) tname) all_builtin) then
+       error("External type declaration without Built-in: " ^ C.show tname)
  ) types
-  ;;
+;;
 
 let stack_term_of_preterm ~depth:arg_lvl { term = t; amap = { c2i } } =
   let arg_cst c args =
@@ -1392,7 +1392,7 @@ let run ?(flags = default_flags)
 =
 
   if not flags.allow_untyped_builtin then
-    check_all_custom_are_typed types;
+    check_all_builtin_are_typed types;
   (* Real Arg nodes: from "Const '%Arg3'" to "Arg 3" *)
   let chr =
     List.fold_left (fun chr (clique, rules) ->
@@ -1546,7 +1546,7 @@ let quote_clause { A.loc; A.attributes = { Assembled.id }; body } =
 
 let quote_syntax { Query.clauses; query_loc; query } =
   let names = sorted_names_of_argmap query.amap in
-  let clist = list_to_lp_list (List.map quote_clause clauses) in
+  let clist = List.map quote_clause clauses in
   let q =
     App(clausec,CData CData.(A.cloc.cin (query_loc,Some "query")), 
       [list_to_lp_list names;
@@ -1566,7 +1566,7 @@ let static_check ?(exec=execute_once) ?(checker=default_checker ()) ({ Query.typ
   let query =
     query_of_term checker (fun ~depth state ->
       assert(depth=0);
-      state, App(C.from_stringc "check",p,[q;tlist])) in
+      state, App(C.from_stringc "check",list_to_lp_list p,[q;tlist])) in
   let executable =
     executable_of_query
       ~flags:{ default_flags with allow_untyped_builtin = true }

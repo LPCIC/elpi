@@ -56,6 +56,7 @@ let usage =
   "\t-print prints files after desugar, then exit\n" ^ 
   "\t-print-ast prints files as parsed, then exit\n" ^ 
   "\t-D var  Define variable (conditional compilation)\n" ^ 
+  "\t-document-builtins Print external declaration for pervasives.elpi\n" ^
   Elpi_API.Setup.usage
 ;;
 
@@ -69,6 +70,7 @@ let _ =
   let print_ast = ref false in
   let typecheck = ref true in
   let batch = ref false in
+  let doc_builtins = ref false in
   let vars =
     ref Elpi_API.Compile.(default_flags.defined_variables) in
   if List.mem "-where" (Array.to_list Sys.argv) then begin
@@ -82,6 +84,7 @@ let _ =
     | "-print" :: rest -> print_lprolog := true; aux rest
     | "-print-ast" :: rest -> print_ast := true; aux rest
     | "-no-tc" :: rest -> typecheck := false; aux rest
+    | "-document-builtins" :: rest -> doc_builtins := true; aux rest
     | "-D" :: var :: rest ->
       vars := Elpi_API.Compile.StrSet.add var !vars;
       aux rest
@@ -98,9 +101,18 @@ let _ =
   let installpath = [ "-I"; Elpi_config.install_dir ] in
   let execpath = ["-I"; Filename.dirname (Sys.executable_name)] in
   let opts = Array.to_list Sys.argv @ tjpath @ installpath @ execpath in
-  let argv = Elpi_API.Setup.init ~silent:false opts cwd in
+  let argv = Elpi_API.Setup.init ~silent:false ~builtins:Elpi_builtin.std_builtins opts ~basedir:cwd in
   let filenames = aux (List.tl argv) in
   set_terminal_width ();
+  if !doc_builtins then begin
+    Elpi_API.Extend.BuiltInPredicate.document Format.std_formatter
+      Elpi_builtin.lp_builtins;
+    Elpi_API.Extend.BuiltInPredicate.document Format.std_formatter
+      Elpi_builtin.elpi_builtins;
+    Elpi_API.Extend.BuiltInPredicate.document Format.std_formatter
+      Elpi_builtin.elpi_nonlogical_builtins;
+    exit 0;
+  end;
   if !print_latex then Elpi_API.Temporary.activate_latex_exporter () ;
   let p = Elpi_API.Parse.program filenames in
   if !print_ast then begin

@@ -191,7 +191,7 @@ maybe+sn T1 S1 M1 T M M2 S2 T2 :- r+exp T2 M2 e+dx N U, !, age+check T1 S1 M1 T 
 maybe+sn T1 S1 M1 T M M2 S2 T2 :- conv+l T S1 M M2 S2 T2.
 
 % age-implied left expansion
-age+check T1 S1 M1 T M N U M2 S2 T2 :- lt T2 T1, !, conv+l T S1 M M2 S2 T2.
+age+check T1 S1 M1 T M N U M2 S2 T2 :- T2 < T1, !, conv+l T S1 M M2 S2 T2.
 
 % age-implied right expansion
 age+check T1 S1 M1 T M N U M2 S2 T2 :- conv+r U S2 N M1 S1 T1.

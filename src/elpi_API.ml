@@ -17,7 +17,9 @@ let set_trace argv =
 
 module Setup = struct
 
-let init ?silent ?lp_syntax argv cwd =
+type builtins = Elpi_data.Builtin.declaration list
+
+let init ?silent ?lp_syntax ~builtins ~basedir:cwd argv =
   let new_argv = set_trace argv in
   let new_argv, paths =
     let rec aux args paths = function
@@ -28,6 +30,10 @@ let init ?silent ?lp_syntax argv cwd =
       aux [] [] new_argv
   in
   Elpi_parser.init ?silent ?lp_syntax ~paths ~cwd ();
+  List.iter (function
+    | Elpi_data.Builtin.MLCode (p,_) -> Elpi_data.Builtin.register p
+    | Elpi_data.Builtin.LPCode _ -> ()
+    | Elpi_data.Builtin.LPDoc _ -> ()) builtins;
   new_argv
 
 let trace args =
@@ -163,8 +169,54 @@ module Extend = struct
 
   module BuiltInPredicate = struct
     exception No_clause = Elpi_data.No_clause
-    let declare = Elpi_data.register_builtin
-    let declare_full = Elpi_data.register_builtin_full
+    include Elpi_data.Builtin
+
+    let data_of_cdata ~name:ty ?(constants=Data.Constants.Map.empty)
+      { CData.cin; isc; cout }
+    =
+      let to_term x = Data.CData (cin x) in
+      let of_term ~depth t =
+        let module R = (val !r) in let open R in
+        match R.deref_head ~depth t with
+        | Data.CData c when isc c -> Data (cout c)
+        | (Data.UVar _ | Data.AppUVar _) as x -> Flex x
+        | Data.Discard -> Discard
+        | Data.Const i as t when i < 0 ->
+            begin try Data (Data.Constants.Map.find i constants)
+            with Not_found -> raise (TypeErr t) end
+        | t -> raise (TypeErr t) in
+      { to_term; of_term; ty }
+
+    let int    = data_of_cdata ~name:"int" Elpi_data.C.int
+    let float  = data_of_cdata ~name:"float" Elpi_data.C.float
+    let string = data_of_cdata ~name:"string" Elpi_data.C.string
+    let poly ty =
+      let to_term x = x in
+      let of_term ~depth t =
+        let module R = (val !r) in let open R in
+        match R.deref_head ~depth t with
+        | Data.Discard -> Discard
+        | x -> Data x in
+      { to_term; of_term; ty }
+    let any = poly "any"
+    let list d =
+      let to_term l =
+        let module R = (val !r) in let open R in
+        list_to_lp_list (List.map d.to_term l) in
+      let of_term ~depth t =
+        let module R = (val !r) in let open R in
+        match R.deref_head ~depth t with
+        | Data.Discard -> Discard
+        | (Data.UVar _ | Data.AppUVar _) as x -> Flex x
+        | _ ->
+            Data (List.fold_right (fun t l ->
+              match d.of_term ~depth t with
+              | Data x -> x :: l
+              | _ -> raise (TypeErr t))
+                (lp_list_to_list ~depth t) []) in
+      { to_term; of_term; ty = "list " ^ d.ty }
+
+    let builtin_of_declaration x = x
   end
 
   module CustomConstraint = Elpi_data.CustomConstraint

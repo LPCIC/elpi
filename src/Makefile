@@ -68,6 +68,9 @@ $(ELPI_EASY_COMPONENTS) : %.$(CMX): %.ml
 elpi_API.cmi: elpi_API.mli
 	$(H)$(call pp,$(OCNAME),$(OOPAQUE) -c,$<)
 	$(H)$(OC) $(OCAMLOPTIONS) -package camlp5 $(OOPAQUE) -c $<
+elpi_builtin.cmi: elpi_builtin.mli
+	$(H)$(call pp,$(OCNAME),$(OOPAQUE) -c,$<)
+	$(H)$(OC) $(OCAMLOPTIONS) -package camlp5 $(OOPAQUE) -c $<
 %.cmi: %.mli
 	$(H)$(call pp,$(OCNAME),-c,$<)
 	$(H)$(OC) $(OCAMLOPTIONS) -package camlp5 -c $<

@@ -24,14 +24,23 @@
 
 module Setup : sig
 
+  (* Built-in predicates, see {!module:Extend.BuiltInPredicate} *)
+  type builtins
+
   (** Initialize ELPI.
-      [init ?silent argv basedir] must be called before invoking the parser.
-      [argv] is list of options, see the {!val:usage} string;
-      [basedir] current working directory (used to make paths absolute);
+      [init] must be called before invoking the parser.
       [silent] (default [true]) to avoid printing files being loaded.
       [lp_syntax] is a file containing grammar rules, defaults to lp-syntax.elpi
+      [builtins] the set of built-in predicates, eg [Elpi_builtin.std_builtins] 
+      [basedir] current working directory (used to make paths absolute);
+      [argv] is list of options, see the {!val:usage} string;
       It returns part of [argv] not relevant to ELPI. *)
-  val init : ?silent:bool -> ?lp_syntax:string -> string list -> string -> string list
+  val init :
+    ?silent:bool ->
+    ?lp_syntax:string ->
+    builtins:builtins ->
+    basedir:string ->
+    string list -> string list
 
   (** Usage string *)
   val usage : string
@@ -291,6 +300,9 @@ module Extend : sig
     
       (* Value for unassigned UVar/Arg *)
       val dummy : term
+
+      module Map : Map.S with type key = constant
+      module Set : Set.S with type elt = constant
     end
     
   end
@@ -335,7 +347,7 @@ module Extend : sig
         State.t * string * Data.term
 
     (* See elpi_quoted_syntax.elpi *)
-    val quote_syntax : Compile.query -> Data.term * Data.term
+    val quote_syntax : Compile.query -> Data.term list * Data.term
 
     (* To implement the string_to_term builtin *)
     val term_at : depth:int -> Ast.term -> Data.term
@@ -344,28 +356,6 @@ module Extend : sig
     val query :
       Compile.program -> (depth:int -> State.t -> State.t * Data.term) ->
         Compile.query
-
-  end
-
-
-  module BuiltInPredicate : sig
-
-    exception No_clause
-
-    (** Built-in predicates like print. Must either raise No_clause or succeed
-        with the list of new goals *)
-    val declare :
-      string ->
-      (depth:int -> Data.term list -> Data.term list) ->
-      unit
-
-    (** Built-in predicates allowed to change the constraint
-        store *)
-    val declare_full :
-      string ->
-      (depth:int -> Data.hyps -> Data.solution -> Data.term list ->
-         Data.term list * Data.custom_constraints) ->
-      unit
 
   end
 
@@ -402,6 +392,64 @@ module Extend : sig
 
   end
 
+  (* Built-in predicates *)
+  module BuiltInPredicate : sig
+
+    exception No_clause
+
+    type name = string
+    type doc = string
+    
+    type 'a arg = Data of 'a | Flex of Data.term | Discard
+    exception TypeErr of Data.term
+    
+    type 'a data = {
+      to_term : 'a -> Data.term;
+      of_term : depth:int -> Data.term -> 'a arg;
+      ty : string
+    }
+    
+    type ('function_type, 'inernal_outtype_in) ffi =
+      | In   : 't data * doc * ('i, 'o) ffi -> ('t -> 'i,'o) ffi
+      | Out  : 't data * doc * ('i, 'o * 't option) ffi -> ('t arg -> 'i,'o) ffi
+      | Easy : doc -> (depth:int -> 'o, 'o) ffi
+      | Full : doc -> (depth:int -> Data.hyps -> Data.solution -> Data.custom_constraints * 'o, 'o) ffi
+      | VariadicIn : 't data * doc -> ('t list -> depth:int -> Data.hyps -> Data.solution -> Data.custom_constraints * 'o, 'o) ffi
+      | VariadicOut : 't data * doc -> ('t arg list -> depth:int -> Data.hyps -> Data.solution -> Data.custom_constraints * ('o * 't option list option), 'o) ffi
+    type t = Pred : name * ('a,unit) ffi * 'a -> t
+
+    type doc_spec = DocAbove | DocNext
+
+    type declaration =
+    (* Real OCaml code *)
+    | MLCode of t * doc_spec
+    (* Extra doc *)
+    | LPDoc  of string
+    (* Sometimes you wrap OCaml code in regular predicates or similar in order
+     * to implement the desired builtin, maybe just temporarily because writing
+     * LP code is simpler *)
+    | LPCode of string
+
+    val int    : int data
+    val float  : float data
+    val string : string data
+    val list   : 'a data -> 'a list data
+
+    val poly   : string -> Data.term data
+    val any    : Data.term data
+
+    val data_of_cdata :
+      (* name used for type declarations, eg "int" or "@in_stream" *)
+      name:string ->
+      (* global constants of that type, eg "std_in" *)
+      ?constants:'a Data.Constants.Map.t ->
+      'a CData.cdata -> 'a data
+
+    (* Prints in LP syntax the "external" declarations *)
+    val document : Format.formatter -> declaration list -> unit
+
+    val builtin_of_declaration : declaration list -> Setup.builtins
+  end
 
   (* Custom compilation of `this` and 'that' *)
   module CustomFunctor : sig

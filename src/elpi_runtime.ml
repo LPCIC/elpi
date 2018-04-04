@@ -494,6 +494,9 @@ module HO : sig
 
   val full_deref : adepth:int -> env -> depth:int -> term -> term
 
+  (* Head of an heap term *)
+  val deref_head : depth:int -> term -> term
+
   type assignment = term_attributed_ref * int * term
   val expand_uv :
     term_attributed_ref -> lvl:int -> ano:int -> term * assignment option
@@ -1515,6 +1518,15 @@ let unif ?(matching=false) adepth e bdepth a b =
 
 (* }}} *)
 
+let rec deref_head ~depth = function
+  | UVar ({ contents = t }, from, ano)
+    when t != C.dummy ->
+      deref_head ~depth (deref_uv ~from ~to_:depth ano t)
+  | AppUVar ({contents = t}, from, args)
+    when t != C.dummy ->
+      deref_head ~depth (deref_appuv ~from ~to_:depth args t)
+  | x -> x
+
 let full_deref ~adepth env ~depth t =
   let rec deref d = function
   | Const _ as x -> x
@@ -2496,6 +2508,73 @@ let declare_constraint ~depth prog args =
 let qnames = Fork.new_local StrMap.empty
 let qenv = Fork.new_local empty_env
 
+let type_err bname n ty t =
+  type_error ("builtin " ^ bname ^ ": " ^ string_of_int n ^ "th argument: expected " ^ ty ^ ": got " ^
+    match t with
+    | None -> "variable"
+    | Some t -> show_term t)
+
+let out_of_term ~depth { Builtin.of_term; ty } n bname t =
+  try of_term ~depth t
+  with Builtin.TypeErr t -> type_err bname n ty (Some t)
+
+let in_of_term ~depth { Builtin.of_term; ty } n bname t =
+  match of_term ~depth t with
+  | Builtin.Data x -> x
+  | Builtin.Flex t -> type_err bname n ty (Some t)
+  | Builtin.Discard -> type_err bname n ty None
+  | exception Builtin.TypeErr t -> type_err bname n ty (Some t)
+
+let mk_assign { Builtin.to_term } bname input output =
+  match output, input with
+  | None, Builtin.Discard -> []
+  | Some _, Builtin.Discard -> [] (* We could warn that such output was generated without being required *)
+  | Some t, Builtin.Data v -> [App(C.eqc, to_term v, [to_term t])]
+  | Some t, Builtin.Flex v -> [App(C.eqc, v, [to_term t])]
+  | None, (Builtin.Data _ |  Builtin.Flex _) ->
+      anomaly ("ffi: " ^ bname ^ ": some output was requested but not produced")
+
+let call (Builtin.Pred(bname,ffi,compute)) ~depth hyps solution data =
+  let rec aux : type i o.
+    (i,o) Builtin.ffi -> compute:i -> reduce:(custom_constraints -> o -> custom_constraints * term list) ->
+       term list -> int -> custom_constraints * term list =
+  fun ffi ~compute ~reduce data n ->
+    match ffi, data with
+    | Builtin.Easy _, [] ->
+       let reult = compute ~depth in
+       let cc, l = reduce solution.Elpi_data.custom_constraints reult in
+       cc, List.rev l
+    | Builtin.Full _, [] ->
+       let cc, reult = compute ~depth hyps solution in
+       let cc, l = reduce cc reult in
+       cc, List.rev l
+    | Builtin.VariadicIn(d, _), data ->
+       let i = List.map (in_of_term ~depth d n bname) data in
+       let cc, rest = compute i ~depth hyps solution in
+       let cc, l = reduce cc rest in
+       cc, List.rev l
+    | Builtin.VariadicOut(d, _), data ->
+       let i = List.map (out_of_term ~depth d n bname) data in
+       let cc, (rest, out) = compute i ~depth hyps solution in
+       let cc, l = reduce cc rest in
+       cc, begin match out with
+         | Some out -> List.(rev (concat (map2 (mk_assign d bname) i out)) @ l) (* XXX fixme map2 *)
+         | None -> List.rev l end
+    | Builtin.In(d, _, ffi), t :: rest ->
+        let i = in_of_term ~depth d n bname t in
+        aux ffi ~compute:(compute i) ~reduce rest (n + 1)
+    | Builtin.Out(d, _, ffi), t :: rest ->
+        let i = out_of_term ~depth d n bname t in
+        let reduce cc (rest, out) =
+          let cc, l = reduce cc rest in
+          cc, mk_assign d bname i out @ l in
+        aux ffi ~compute:(compute i) ~reduce rest (n + 1)
+    | _ -> (* XXX decent errors *) assert false
+  in
+    let reduce cc _ = cc, [] in
+    aux ffi ~compute ~reduce data 1
+;;
+
 let exect_builtin_predicate c ~depth idx args =
        if c == C.declare_constraintc then begin
                declare_constraint ~depth idx args; [] end
@@ -2503,15 +2582,15 @@ let exect_builtin_predicate c ~depth idx args =
                printf "@[<hov 0>%a@]%!" CS.print (CS.contents ());
                [] 
   end else
-    let f =
-      try lookup_builtin c
+    let b =
+      try Builtin.lookup c
       with Not_found -> 
         anomaly ("no built-in predicated named " ^ C.show c) in
     let solution = {
       assignments = StrMap.map (fun i -> !qenv.(i)) !qnames;
       constraints = !CS.Ugly.delayed;
       custom_constraints = !CS.custom_constraints } in
-    let gs, cc = f ~depth (local_prog idx) solution args in
+    let cc, gs = call b ~depth (local_prog idx) solution args in
     CS.custom_constraints := cc;
     gs
 
@@ -3106,6 +3185,7 @@ let pp_stuck_goal fmt s = CS.pp_stuck_goal fmt s
 let is_flex = HO.is_flex
 let deref_uv = HO.deref_uv
 let deref_appuv = HO.deref_appuv
+let deref_head = HO.deref_head
 let make_runtime = Mainloop.make_runtime
 let lp_list_to_list = Clausify.lp_list_to_list
 let list_to_lp_list = HO.list_to_lp_list
