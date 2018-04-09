@@ -96,9 +96,6 @@ module Compile : sig
   val program : Ast.program list -> program
   val query : program -> Ast.query -> query
 
-  (** Runs [elpi-checker.elpi] by default. *)
-  val static_check : ?checker:Ast.program list -> query -> bool
-
   module StrSet : Set.S with type elt = string
   type flags = {
     defined_variables : StrSet.t;
@@ -107,6 +104,9 @@ module Compile : sig
   val default_flags : flags
 
   val link : ?flags:flags -> query -> Data.executable
+
+  (** Runs [elpi-checker.elpi] by default. *)
+  val static_check : ?checker:Ast.program list -> ?flags:flags -> query -> bool
 
 end
 

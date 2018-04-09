@@ -1537,7 +1537,10 @@ let quote_syntax { Query.clauses; query_loc; query } =
 
 let default_checker () = Elpi_parser.parse_program ["elpi-checker.elpi"]
 
-let static_check ?(exec=execute_once) ?(checker=default_checker ()) ({ Query.types } as q) =
+let static_check
+  ?(exec=execute_once) ?(checker=default_checker ()) ?(flags=default_flags)
+  ({ Query.types } as q)
+=
   let p,q = quote_syntax q in
   let tlist = list_to_lp_list (List.map (fun (_,{ tname; ttype }) ->
     App(C.from_stringc "`:",mkQCon ~on_type:false tname,
@@ -1551,7 +1554,7 @@ let static_check ?(exec=execute_once) ?(checker=default_checker ()) ({ Query.typ
       state, App(C.from_stringc "check",list_to_lp_list p,[q;tlist])) in
   let executable =
     executable_of_query
-      ~flags:{ default_flags with allow_untyped_builtin = true }
+      ~flags:{ flags with allow_untyped_builtin = true }
       query in
   exec executable <> Failure
 ;;

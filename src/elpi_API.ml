@@ -87,10 +87,10 @@ module Compile = struct
   let program l = Elpi_compiler.program_of_ast (List.flatten l)
   let query = Elpi_compiler.query_of_ast
 
-  let static_check ?checker p =
+  let static_check ?checker ?flags p =
     let module R = (val !r) in let open R in
     let checker = Elpi_util.option_map List.flatten checker in
-    Elpi_compiler.static_check ~exec:execute_once ?checker p
+    Elpi_compiler.static_check ~exec:execute_once ?checker ?flags p
 
   module StrSet = Elpi_util.StrSet
 
