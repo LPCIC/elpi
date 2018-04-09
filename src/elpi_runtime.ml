@@ -467,7 +467,7 @@ let (@:=) r v =
 
 module HO : sig
 
-  val unif : ?matching:bool -> int -> env -> int -> term -> term -> bool
+  val unif : matching:bool -> int -> env -> int -> term -> term -> bool
 
   (* lift/restriction/heapification with occur_check *)
   val move : 
@@ -1439,7 +1439,7 @@ let rec unif matching depth adepth a bdepth b e =
        Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth empty_env) a (uppterm depth [] bdepth e) b ;
        let r = oref C.dummy in
        e.(i) <- UVar(r,adepth,0);
-       let kind = Unification {adepth = adepth+depth; env = e; bdepth = bdepth+depth; a; b} in
+       let kind = Unification {adepth = adepth+depth; env = e; bdepth = bdepth+depth; a; b; matching} in
        let blockers =
          match is_flex (adepth+depth) other with
          | None -> [r]
@@ -1454,7 +1454,7 @@ let rec unif matching depth adepth a bdepth b e =
          bind r lvl args adepth depth delta bdepth true other e
        else if !delay_hard_unif_problems then begin
        Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth empty_env) a (uppterm depth [] bdepth empty_env) b ;
-       let kind = Unification {adepth = adepth+depth; env = e; bdepth = bdepth+depth; a; b} in
+       let kind = Unification {adepth = adepth+depth; env = e; bdepth = bdepth+depth; a; b; matching} in
        let blockers = match is_flex (bdepth+depth) other with | None -> [r] | Some r' -> [r;r'] in
        CS.declare_new { kind; blockers };
        true
@@ -1465,7 +1465,7 @@ let rec unif matching depth adepth a bdepth b e =
          bind r lvl args adepth depth delta bdepth false other e
        else if !delay_hard_unif_problems then begin
        Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth empty_env) a (uppterm depth [] bdepth e) b ;
-       let kind = Unification {adepth = adepth+depth; env = e; bdepth = bdepth+depth; a; b} in
+       let kind = Unification {adepth = adepth+depth; env = e; bdepth = bdepth+depth; a; b; matching} in
        let blockers =
          match is_flex (adepth+depth) other with
          | None -> [r]
@@ -1502,7 +1502,7 @@ let rec unif matching depth adepth a bdepth b e =
 
 (* FISSA PRECEDENZA PER AS e FISSA INDEXING per AS e fai coso generale in unif *)
 
-let unif ?(matching=false) adepth e bdepth a b =
+let unif ~matching adepth e bdepth a b =
  let res = unif matching 0 adepth a bdepth b e in
  [%spy "unif result" (fun fmt x -> Fmt.fprintf fmt "%b" x) res];
  [%spyif "select" (not res) (fun fmt op ->
@@ -2418,7 +2418,7 @@ let match_goal goalno maxground env freezer (newground,depth,t) pattern =
   [%trace "matching" ("@[<hov>%a ===@ %a@]"
      (uppterm maxground [] maxground env) t
      (uppterm 0 [] maxground env) pattern) begin
-  if unif ~matching:true maxground env 0 t pattern then freezer
+  if unif ~matching:false maxground env 0 t pattern then freezer
   else raise NoMatch
   end]
   
@@ -2431,7 +2431,7 @@ let match_context goalno maxground env freezer (newground,ground,lt) pattern =
   [%trace "matching" ("@[<hov>%a ===@ %a@]"
      (uppterm maxground [] maxground env) t
      (uppterm 0 [] maxground env) pattern) begin
-  if unif ~matching:true maxground env 0 t pattern then freezer
+  if unif ~matching:false maxground env 0 t pattern then freezer
   else raise NoMatch
   end]
 
@@ -3122,10 +3122,11 @@ open Mainloop
 let mk_solution depth env sm =
   StrMap.map (fun i -> full_deref ~adepth:depth env ~depth env.(i)) sm
 
-let deref_unif { adepth; env; bdepth; a; b } = {
+let deref_unif { adepth; env; bdepth; a; b; matching } = {
   adepth; bdepth; env = Array.map (full_deref ~adepth env ~depth:adepth) env;
   a = full_deref ~adepth env ~depth:adepth a;
   b = full_deref ~adepth env ~depth:bdepth b;
+  matching
 }
 
 let deref_cst { cdepth; prog; context; conclusion } = {
@@ -3190,7 +3191,6 @@ let make_runtime = Mainloop.make_runtime
 let lp_list_to_list = Clausify.lp_list_to_list
 let list_to_lp_list = HO.list_to_lp_list
 let split_conj = Clausify.split_conj
-let llam_unify ad e bd a b = HO.unif ad e bd a b
 let mkAppArg = HO.mkAppArg
 let subst ~depth = HO.subst depth
 let move = HO.move

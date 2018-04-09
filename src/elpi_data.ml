@@ -88,6 +88,7 @@ and unification_def = {
   bdepth : int;
   a : term;
   b : term;
+  matching: bool;
 }
 and constraint_def = {
   cdepth : int;

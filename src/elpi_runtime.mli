@@ -29,8 +29,6 @@ val list_to_lp_list : term list -> term
 
 val split_conj : depth:int -> term -> term list
 
-val llam_unify : int -> term array -> int -> term -> term -> bool
-
 val mkAppArg : int -> int -> term list -> term
 val move : 
   adepth:int -> env ->
