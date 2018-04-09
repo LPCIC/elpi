@@ -168,10 +168,9 @@ module Constants : sig
   val nilc     : constant
   val entailsc : constant
   val nablac   : constant
-  val uvc      : constant
   val asc      : constant
   val arrowc   : constant
-  val frozenc  : constant
+  val uvarc    : constant
 
   val ctypec   : constant
   val prop     : term
@@ -248,7 +247,7 @@ let consc, cons = funct_of_ast F.consf
 let cutc, cut = funct_of_ast F.cutf
 let entailsc = from_stringc "?-"
 let eqc = from_astc F.eqf
-let frozenc = from_stringc "uvar"
+let uvarc = from_stringc "uvar"
 let implc = from_astc F.implf
 let nablac = from_stringc "nabla"
 let nilc, nil = funct_of_ast F.nilf
@@ -259,7 +258,6 @@ let rulec = from_stringc "rule"
 let sigmac = from_astc F.sigmaf
 let spillc = from_astc (F.spillf)
 let truec = from_ast F.truef
-let uvc = from_stringc "??"
 
 let ctypec = fst (funct_of_ast F.ctypef)
 let prop = from_string "prop"

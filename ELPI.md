@@ -297,7 +297,7 @@ mode (pp i o).
 
 pp (lambda Name F) S :- (pi x\ pp x Name => pp (F x) S1), S is "λ" ^ Name ^ "." ^ S1.
 pp (app H A) S :- pp H S1, pp A S2, S is "(" ^ S1 ^ " " ^ S2 ^ ")".
-pp ?? "_".
+pp uvar "_".
 ```
 
 ```
@@ -312,7 +312,7 @@ Success:
 Note that in the second example `W` is not instantiated.
 When an argument is flagged as `i` then its value is
 matched against the clauses' corresponding pattern.
-`??` is the pattern for flexible input. Such flexible term can be
+`uvar is the pattern for flexible input. Such flexible term can be
 used in the rest of the clause by naming it with `as Name`
 
 ### Mode and type declaration
@@ -360,7 +360,7 @@ The `declare_constraint` built in is typically used in conjunction with `mode`
 as follows:
 ```prolog
 mode (even i).
-even (?? as X) :- !, declare_constraint (even X) [X].
+even (uvar as X) :- !, declare_constraint (even X) [X].
 even 0.
 even X :- X > 1, Y is X - 2, even Y.
 ```
@@ -387,7 +387,7 @@ that don't share any variable.  If it is not the case, one can
 artificially add the same variable to all suspended goals. Eg.
 ```
 master-key K => (even X, even Y).
-even (?? as X) :- !, master-key K, declare_constraint (even X) [K,X].
+even (uvar as X) :- !, master-key K, declare_constraint (even X) [K,X].
 ```
 
 #### Example
@@ -395,8 +395,8 @@ even (?? as X) :- !, master-key K, declare_constraint (even X) [K,X].
 mode (odd i).
 mode (even i).
 
-even (?? as X) :- !, declare_constraint (even X) [X].
-odd  (?? as X) :- !, declare_constraint (odd X)  [X].
+even (uvar as X) :- !, declare_constraint (even X) [X].
+odd  (uvar as X) :- !, declare_constraint (odd X)  [X].
 even 0.
 odd 1.
 even X :- X > 1, Y is X - 1, odd  Y.
@@ -444,7 +444,7 @@ we can compute GCDs of 2 sets of numbers: 99, 66 and 22 named X;
 ```prolog
 mode (gcd i i).
 
-gcd A (?? as Group) :- declare_constraint (gcd A Group) Group.
+gcd A (uvar as Group) :- declare_constraint (gcd A Group) Group.
 
 % assert result is OK
 gcd 11 group-1 :- print "group 1 solved".
@@ -471,7 +471,7 @@ Constraints are resumed as regular delayed goals are.
 mode (term i o).
 term (app HD ARG) TGT :- term HD (arrow SRC TGT), term ARG SRC.
 term (lam F) (arrow SRC TGT) :- pi x\ term x SRC => term (F x) TGT.
-term (?? as X) T :- declare_constraint (term X T) [X].
+term (uvar as X) T :- declare_constraint (term X T) [X].
 
 constraint term {
   rule (EX : GX ?- term (uvar _ LX) TX)

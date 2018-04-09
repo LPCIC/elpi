@@ -520,7 +520,7 @@ let rec in_fragment expected =
  function
    [] -> 0
  | Const c::tl when c = expected -> 1 + in_fragment (expected+1) tl
- | UVar ({ contents = t} ,_,_)::tl -> (* ??? XXX *)
+ | UVar ({ contents = t} ,_,_)::tl -> (* XXX *)
     in_fragment expected (t :: tl)
 (* Invariant not true anymore, since we may not deref aggressively
    to avoid occur-check
@@ -801,7 +801,7 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
            else begin
              let newvar = UVar(oref C.dummy,to_,0) in
              r @:= newvar;
-             r,vardepth (*CSC: XXX why vardepth and not to_ ??? *)
+             r,vardepth (*CSC: XXX why vardepth and not to_ ? *)
            end in
           (* Code for deterministic restriction *)
           let args =
@@ -1053,7 +1053,7 @@ let rec is_flex ~depth =
 
    Names:
    delta = adepth - bdepth i.e. size of forbidden region
-   heap = ???
+   heap = ?
 
    Note about dereferencing UVar(r,origdepth,args):
    - args live *here* (a/bdepth + depth)
@@ -1332,27 +1332,27 @@ let rec unif matching depth adepth a bdepth b e =
       unif matching depth adepth a adepth
         (deref_appuv ~from:adepth ~to_:(adepth+depth) args e.(i)) empty_env
 
-   (* UVar introspection *)
-   | (UVar _ | AppUVar _), Const c when c == C.uvc && matching -> true
-   | UVar(r,vd,ano), App(c,hd,[]) when c == C.uvc && matching ->
+   (* UVar introspection (matching) *)
+   | (UVar _ | AppUVar _), Const c when c == C.uvarc && matching -> true
+   | UVar(r,vd,ano), App(c,hd,[]) when c == C.uvarc && matching ->
       unif matching depth adepth (UVar(r,vd,ano)) bdepth hd e
-   | AppUVar(r,vd,_), App(c,hd,[]) when c == C.uvc && matching ->
+   | AppUVar(r,vd,_), App(c,hd,[]) when c == C.uvarc && matching ->
       unif matching depth adepth (UVar(r,vd,0)) bdepth hd e
-   | UVar(r,vd,ano), App(c,hd,[arg]) when c == C.uvc && matching ->
+   | UVar(r,vd,ano), App(c,hd,[arg]) when c == C.uvarc && matching ->
       let r_exp = oref C.dummy in
       let exp = UVar(r_exp,0,0) in
       r @:= UVar(r_exp,0,vd);
       unif matching depth adepth exp bdepth hd e &&
       let args = list_to_lp_list (C.mkinterval 0 (vd+ano) 0) in
       unif matching depth adepth args bdepth arg e
-   | AppUVar(r,vd,args), App(c,hd,[arg]) when c == C.uvc && matching ->
+   | AppUVar(r,vd,args), App(c,hd,[arg]) when c == C.uvarc && matching ->
       let r_exp = oref C.dummy in
       let exp = UVar(r_exp,0,0) in
       r @:= UVar(r_exp,0,vd);
       unif matching depth adepth exp bdepth hd e &&
       let args = list_to_lp_list (C.mkinterval 0 vd 0 @ args) in
       unif matching depth adepth args bdepth arg e
-   | _, (Const c | App(c,_,_)) when c == C.uvc -> false
+   | _, (Const c | App(c,_,_)) when c == C.uvarc && matching -> false
    (*
       error (show uvc ^ " can be used only in matching and takes 0, 1 or 2 args " ^ show_term a)
 
@@ -1660,7 +1660,7 @@ include TwoMapIndexingTypes
 let hd_pred { key = (hd,_) } = hd
 
 let variablek =       -99999999 (* a flexible term like X t *)
-let mustbevariablek = -99999998 (* ?? or ?? t or ?? l t *)
+let mustbevariablek = -99999998 (* uvar or uvar t or uvar l t *)
 let abstractionk =    -99999997
 
 let pp_key (hd,v) = C.show hd
@@ -1672,7 +1672,7 @@ let ppclause f { args = args; hyps = hyps; key = (hd,_) } =
 
 let key_of ~mode:_ ~depth =
  let rec skey_of = function
-    Const k when k = C.uvc -> mustbevariablek
+    Const k when k = C.uvarc -> mustbevariablek
   | Const k -> k
   | Nil -> C.nilc
   | Cons _ -> C.consc
@@ -1680,7 +1680,7 @@ let key_of ~mode:_ ~depth =
      skey_of (deref_uv ~from:origdepth ~to_:depth args t)
   | AppUVar ({contents=t},origdepth,args) when t != C.dummy ->
      skey_of (deref_appuv ~from:origdepth ~to_:depth args t)
-  | App (k,_,_) when k = C.uvc -> mustbevariablek
+  | App (k,_,_) when k = C.uvarc -> mustbevariablek
   | App (k,a,_) when k = C.asc -> skey_of a
   | App (k,_,_)
   | Builtin (k,_) -> k
@@ -1689,7 +1689,7 @@ let key_of ~mode:_ ~depth =
   | CData d -> 
      let hash = -(CData.hash d) in
      if hash > abstractionk then hash
-     else hash+2 (* ?? *) in           
+     else hash+2 (* ? *) in
  let rec key_of_depth = function
    Const k -> k, variablek
  | UVar ({contents=t},origdepth,args) when t != C.dummy ->
@@ -1727,7 +1727,7 @@ let add1clause m clause =
       (* X matches both rigid and flexible terms *)
       if app == variablek then begin
         Elpi_ptmap.add ind (clause :: l, clause :: flexs, Elpi_ptmap.map (fun l_rev -> clause::l_rev) h) m
-      (* ?? matches only flexible terms *)
+      (* ? matches only flexible terms *)
       end else if app == mustbevariablek then begin
         Elpi_ptmap.add ind (clause :: l, flexs, h) m
       (* a rigid term matches flexible terms only in unification mode *)
@@ -1874,7 +1874,7 @@ module UnifBits (*: Indexing*) = struct (* {{{ *)
       begin match tm with
       | App (k,arg,_) when k == C.asc -> 
          index lvl arg depth left right
-      | (App (k,_,_) | Const k) when k == C.uvc -> 
+      | (App (k,_,_) | Const k) when k == C.uvarc -> 
          set_section k weird left right
       | Const k | Builtin (k,_) ->
           set_section k (if lvl=0 then k else hash k) left right 
@@ -1887,8 +1887,8 @@ module UnifBits (*: Indexing*) = struct (* {{{ *)
       | Lam _ -> set_section abstractionk abstractionk left right
       | CData s -> set_section C.(from_stringc "CData") (CData.hash s) left right
       | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard ->
-         if mode = `Clause then set_section C.uvc fullones left right
-         else set_section C.uvc fullzeros left right
+         if mode = `Clause then set_section C.uvarc fullones left right
+         else set_section C.uvarc fullzeros left right
       | App (k,arg,argl) -> 
          let slot = left - right in
          if lvl >= max_depth || slot < min_slot
@@ -2289,7 +2289,7 @@ end = struct (* {{{ *)
       (* freeze *)
       | AppUVar(r,0,args) when !!r == C.dummy ->
           let args = List.map (faux d) args in
-          App(C.frozenc, freeze_uv r, [list_to_lp_list args])
+          App(C.uvarc, freeze_uv r, [list_to_lp_list args])
       (* expansion *)
       | UVar(r,lvl,ano) when !!r == C.dummy ->
           faux d (log_assignment(expand_uv r ~lvl ~ano))
@@ -2333,7 +2333,7 @@ end = struct (* {{{ *)
           UVar(C.Map.find c f.c2uv,0,0)
       | (Const _ | CData _ | Nil | Discard) as x -> x
       | Cons(hd,tl) -> Cons(daux d hd, daux d tl)
-      | App(c,Const x,[args]) when c == C.frozenc ->
+      | App(c,Const x,[args]) when c == C.uvarc ->
           let r = C.Map.find x f.c2uv in
           let args = lp_list_to_list ~depth:d args in
           mkAppUVar r 0 (List.map (daux d) args)
@@ -2500,7 +2500,7 @@ let declare_constraint ~depth prog args =
   in 
   match CHR.clique_of (head_of g) !chrules with
   | Some clique -> (* real constraint *)
-     (* XXX head_of is weak because no clausify ??? XXX *)
+     (* XXX head_of is weak because no clausify ? XXX *)
      delay_goal ~filter_ctx:(fun { hsrc = x } -> C.Set.mem (head_of x) clique)
        ~depth prog ~goal:g ~on:keys
   | None -> delay_goal ~depth prog ~goal:g ~on:keys
@@ -2511,7 +2511,7 @@ let qenv = Fork.new_local empty_env
 let type_err bname n ty t =
   type_error ("builtin " ^ bname ^ ": " ^ string_of_int n ^ "th argument: expected " ^ ty ^ ": got " ^
     match t with
-    | None -> "variable"
+    | None -> "discard"
     | Some t -> show_term t)
 
 let out_of_term ~depth { Builtin.of_term; ty } n bname t =
@@ -3037,14 +3037,14 @@ end;*)
    (* Phase 1: we analyze the goals to be resumed *)
    while !ok && !CS.to_resume <> [] do
      match !CS.to_resume with
-     | { kind = Unification { adepth; bdepth; env; a; b } } as dg :: rest ->
+     | { kind = Unification { adepth; bdepth; env; a; b; matching } } as dg :: rest ->
          CS.remove_old dg;
          CS.to_resume := rest;
          [%spy "run-resumed-unif" (fun fmt _ -> Fmt.fprintf fmt 
            "@[<hov 2>^%d:%a@ == ^%d:%a@]\n%!"
            adepth (uppterm adepth [] 0 empty_env) a
            bdepth (uppterm bdepth [] adepth env) b) ()];
-         ok := unif adepth env bdepth a b
+         ok := unif ~matching adepth env bdepth a b
      | { kind = Constraint dpg } as c :: rest ->
          CS.remove_old c;
          CS.to_resume := rest;

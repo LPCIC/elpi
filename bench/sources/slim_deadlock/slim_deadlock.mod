@@ -16,14 +16,13 @@ infix  <-  155.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Syntax of contracts
 
-% R ::= primitive | ???? | OBJECTNAME | requires OBJECTNAME R
+% R ::= primitive | ? | OBJECTNAME | requires OBJECTNAME R
 % C ::= 0 | dget OBJECTNAME OBJECTNAME | dawait OBJECTNAME OBJECTNAME
 %     | dcall METHODNAME R R OBJECTNAME | C - C | C + C
 % X ::= R | FUTURENAME
 % Z ::= async R | sync R
-% MC ::= method_contract receiver\ argument\ C R   ???receiver,argument=R???
+% MC ::= method_contract receiver\ argument\ C R   ?receiver,argument=R?
 
-% ???????????????
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Contract inference
 
@@ -47,11 +46,11 @@ of _ Gamma E R 0 Gamma :- of2 Gamma E R.
 % T-Get
 of O Gamma (get E) X (dget O O') [ofi F (sync R) | Gamma'] :-
  unbind F Gamma Gamma', % remove the binding of F from Gamma
- of2 Gamma E F, of2 Gamma F (async R), $constraint (R = requires O' X) Z /*???*/.
+ of2 Gamma E F, of2 Gamma F (async R), $constraint (R = requires O' X) Z /*?*/.
 
 % T-Get-Tick
 of O Gamma (get E) X 0 Gamma :-
- of2 Gamma E F, of2 Gamma F (sync R), $constraint (R = requires O' X) Z /*???*/.
+ of2 Gamma E F, of2 Gamma F (sync R), $constraint (R = requires O' X) Z /*?*/.
 
 % T-New
 of O Gamma new O 0 Gamma.

@@ -53,7 +53,7 @@ context_planner _ (active_agenda nil) _AP PlanOut DepthLimit:-
 	pprint_string "reached empty agenda\n".
 %% LD. Commented out - causes heap overflow with big benchmarks
 %% maybe we should instigate some sort of flag so it isn't called in specific
-%% cases but is called as a default???
+%% cases but is called as a default?
 % 	build_plan nil PlanOut.
 
 context_planner Action (active_agenda (H::T)) AgendaPredicate PlanOut DepthLimit:-

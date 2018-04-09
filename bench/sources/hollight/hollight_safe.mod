@@ -78,14 +78,14 @@ mode (term i o).
 term (lam A F) (A --> B) :- typ A, pi x\ term x A => term (F x) B.
 term (F ' T) B :- term F (A --> B), term T A.
 term (eq '' A) (A --> A --> prop) :- typ A.
-term (?? as T) TY :- declare_constraint (term T TY) T.
+term (uvar as T) TY :- declare_constraint (term T TY) T.
 
 /* like term, but on terms that are already known to be well-typed */
 mode (reterm i o).
 reterm (lam A F) (A --> B) :- pi x\ reterm x A => reterm (F x) B.
 reterm (F ' T) B :- reterm F (A --> B).
 reterm (eq '' A) (A --> A --> prop).
-reterm (?? as T) TY :- declare_constraint (reterm T TY) T.
+reterm (uvar as T) TY :- declare_constraint (reterm T TY) T.
 
 constraint term reterm { /* No propagation rules for now */}
 
@@ -542,7 +542,7 @@ prove_intro_thms L PRED PRED_I INTROTHMS :-
 
 mk_intro_thm PRED_I (NAME,ST)
  (theorem NAME (ST,
-   [ daemon /*(then inv (bind* (then (applyth PRED_I) (then (conv dd) (itauteq 6)))))*/ /* TOO MANY GOALS DELAYED ON typ (???): USE daemon INSTEAD */ ])).
+   [ daemon /*(then inv (bind* (then (applyth PRED_I) (then (conv dd) (itauteq 6)))))*/ /* TOO MANY GOALS DELAYED ON typ (?): USE daemon INSTEAD */ ])).
 
 inductive_def_pkg PRED PREDF PREDF_MONOTONE PRED_I PRED_E0 PRED_E L OUT :-
  parse_inductive_def_spec L PL,

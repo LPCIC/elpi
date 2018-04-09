@@ -15,7 +15,7 @@ reduce_goal (X ** trueGoal) Y :- reduce_goal X Y, !.
 reduce_goal (X ** Y) Z :- reduce_goal X XX, reduce_goal Y YY, 
                           reduce_goal (XX ** YY) Z.
 reduce_goal (_X vv trueGoal) trueGoal.   % backtracking?
-reduce_goal (trueGoal vv _Y) trueGoal.   % also ??
+reduce_goal (trueGoal vv _Y) trueGoal.   % also uvar?
 reduce_goal (allGoal _ G) H :-
    pi i\ (reduce_goal (G i) H).
 reduce_goal (existsGoal _ G) H :-

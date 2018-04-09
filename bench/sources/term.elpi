@@ -2,10 +2,10 @@ mode (term i).
 
 term (app X Y) :- term X, term Y.
 term (lam F) :- pi x\ term (y\y) => term x => term (F x).
-term (?? as X) :- constraint (term X) X.
+term (uvar as X) :- constraint (term X) X.
 
 constraint term {
-  rule (G1 ?- term (?? as X)) \ (G2 ?- term (?? as Y)) > X ~ Y | (G1 = G2).
+  rule (G1 ?- term (uvar as X)) \ (G2 ?- term (uvar as Y)) > X ~ Y | (G1 = G2).
      % <=> true.
 }
 

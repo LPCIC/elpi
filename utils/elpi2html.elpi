@@ -30,7 +30,7 @@ rev-aux [X|XS] ACC R :- rev-aux XS [X|ACC] R.
 rev-aux [] L L.
 
 mode (len i o).
-len ?? 0.
+len uvar 0.
 len [] 0.
 len [_|XS] N :- len XS M, N is M + 1.
 

@@ -4,21 +4,21 @@
 mode (t+step i o).
 mode (has+sort i o).
 mode (conv+whnf i i i i i).
-t+step (?? as K) T :- !, $constraint (t+step K T) K.
-has+sort (?? as S) T :- !, $constraint (has+sort S T) S.
+t+step (uvar as K) T :- !, $constraint (t+step K T) K.
+has+sort (uvar as S) T :- !, $constraint (has+sort S T) S.
 
 conv+whnf A B C D E :- $print "##" (conv+whnf A B C D E), fail.
 
 % Bug1: ci possono essere let-in sulle var in Ti
 % Bug2: potrebbe servire un <= se il secondo è una sorta
-%conv+whnf (?? as T1) [] _M T2 L2 :- !, $llam_unif T1 {zip T2 L2}.
-conv+whnf T1 L1 _M (?? as V) L2 :- !, bind-list L2 {zip T1 L1} V.
+%conv+whnf (uvar as T1) [] _M T2 L2 :- !, $llam_unif T1 {zip T2 L2}.
+conv+whnf T1 L1 _M (uvar as V) L2 :- !, bind-list L2 {zip T1 L1} V.
 
-conv+whnf (?? as T1) L1 M T2 L2 :- !, $constraint (conv+whnf T1 L1 M T2 L2) T1.
-conv+whnf T1 L1 M (?? as T2) L2 :- !, $constraint (conv+whnf T1 L1 M T2 L2) T2.
+conv+whnf (uvar as T1) L1 M T2 L2 :- !, $constraint (conv+whnf T1 L1 M T2 L2) T1.
+conv+whnf T1 L1 M (uvar as T2) L2 :- !, $constraint (conv+whnf T1 L1 M T2 L2) T2.
 
 constraint t+step has+sort conv+whnf r+step {
-  rule (G1 ?- t+step (?? as X1) T1) \ (G2 ?- t+step (?? as X2) T2) > X1 ~ X2
+  rule (G1 ?- t+step (uvar as X1) T1) \ (G2 ?- t+step (uvar as X2) T2) > X1 ~ X2
    | (X1 = uvar _ L1, X2 = uvar _ L2,
       $print "###" L1, is_canonical L1, $print "###OK", compat G1 L1 T1 G2 L2 T2 L3) <=> $print L3, L3.
 }
@@ -54,7 +54,7 @@ is_rigid C :- $is_name C. % ; C = const _ ; C = indt _ ; C = indc _
 
 mode (bind-list i i o).
 bind-list [] T T' :- copy T T'.
-bind-list [ ?? |VS] T R :- !, pi x\ bind-list VS T (R x).
+bind-list [ uvar |VS] T R :- !, pi x\ bind-list VS T (R x).
 bind-list [appl C AS | VS] T R :- is_rigid C, !,
   pi x\ (pi L\ copy (app[C|L]) x :- conv+args L AS) => bind-list VS T (R x).
 bind-list [C|VS] T R :- is_rigid C, !,
@@ -62,7 +62,7 @@ bind-list [C|VS] T R :- is_rigid C, !,
 
 mode (copy i o).
 copy A B :- $print "AA" (copy A B), fail.
-copy X Y :- r+step X Y _. % Bang or not???
+copy X Y :- r+step X Y _. % Bang or not?
 copy X Y :- $is_name X, X = Y, !.
 copy X Y :- $is_name X, r+step X T _, !, copy T Y.
 copy (sort _ as C) C :- !.

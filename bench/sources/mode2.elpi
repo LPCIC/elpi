@@ -2,7 +2,7 @@ mode (term i).
 
 term (app X Y) :- term X, term Y.
 term (lam F) :- pi x\ term x => term (F x).
-term (?? as X) :- print X, constraint (term X) X.
+term (uvar as X) :- print X, constraint (term X) X.
 
 infixl '   255. % infix application
 infixl &&  128. % and

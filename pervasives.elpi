@@ -33,7 +33,7 @@ type ([]) list X.
 type (:-) prop -> prop -> prop.
 type (:-) prop -> list prop -> prop.
 type (,) variadic prop prop.
-type (??) A.
+type uvar A.
 type (as) A -> A -> A.
 type (-) A -> A -> A.
 type (=>) prop -> prop -> prop.
@@ -43,7 +43,6 @@ type (+) int -> int -> int.
 type (*) int -> int -> int.
 type std_in @in_stream.
 type std_out @out_stream.
-type discard A.
 
 % vim: set ft=lprolog:
 

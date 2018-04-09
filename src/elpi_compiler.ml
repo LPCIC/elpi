@@ -1281,23 +1281,6 @@ let compile_chr depth
     if List.length gs <> List.length uniq_gs || List.length gs <> ngoals then
       error "CHR: Alignment invalid: 1 and only 1 key per sequent"
   in
-  let assert_no_uvar_destructuring l =
-    let rec test = function
-      | App (c,_,_) when c == C.uvc -> true
-      | Const c when c == C.uvc -> true
-      | App (_,x,xs) -> test x || List.exists test xs
-      | Lam t -> test t
-      | (Const _ | Arg _ | CData _ | Nil | Discard) -> false
-      | AppArg (_,l) -> List.exists test l
-      | Builtin (_,l) -> List.exists test l
-      | Cons (t1,t2) -> test t1 || test t2
-      | UVar _ | AppUVar _ -> assert false
-    in
-    if List.exists (fun { pcontext; pconclusion } ->
-      test pcontext || test pconclusion) l then
-      error ("CHR: unification variables are represented "^
-             "as (uvar Key Args), you can't use ?? to match them")
-  in
   let { nargs; c2i; i2n } = pamap in
   let mk_arg2sequent sequents keys =
     let arg_occurs_seq arg { pcontext; pconclusion; peigen } =
@@ -1352,7 +1335,6 @@ let compile_chr depth
                  arg2sequent = mk_arg2sequent all_sequents keys },
       pnew_goal
     end in
-  assert_no_uvar_destructuring all_sequents;
   { CHR.to_match = List.map stack_sequent_of_presequent pto_match;
         to_remove = List.map stack_sequent_of_presequent pto_remove;
         guard = option_map stack_term_of_preterm pguard;

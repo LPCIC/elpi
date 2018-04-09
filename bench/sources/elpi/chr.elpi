@@ -6,7 +6,7 @@ type bool ty.
 mode (term i o).
 term (app HD ARG) TGT :- term HD (arr SRC TGT), term ARG SRC.
 term (lam F) (arr SRC TGT) :- pi x\ term x SRC => term (F x) TGT.
-term (?? as X) T :- declare_constraint (term X T) [X].
+term (uvar as X) T :- declare_constraint (term X T) [X].
 
 len [] 0.
 len [_|XS] N :- len XS M, N is M + 1.
@@ -35,12 +35,12 @@ compatible GX [X|XS] GY [Y|YS] (TX = TY, K) :-
 compatible _ _ _ _ false.
 
 main :-
-  (term (lam x\ lam y\ app (app (F x y) x) y) T1, 
-   term (lam y\ lam x\ app (app (F x y) y) x) T2),
+  (term (lam x\ lam y\ app (app (F x y) x) y) T1_, 
+   term (lam y\ lam x\ app (app (F x y) y) x) T2_),
   print "1",
-  (term (lam x \ X x) (arr A nat),
-   term (lam x \ X x) (arr bool B)),
+  (term (lam x \ X x) (arr A_ nat),
+   term (lam x \ X x) (arr bool B_)),
   print "2",
   not(term (lam x \ Y x) (arr C nat), term (lam x \ Y x) (arr bool C)),
-  not(term (lam x \ Z x) (arr nat nat), term (lam x \ Z x) (arr bool D)).
+  not(term (lam x \ Z x) (arr nat nat), term (lam x \ Z x) (arr bool D_)).
 

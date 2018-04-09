@@ -164,7 +164,7 @@ ripple_analysis SL H G Hyps F U D:-
 	(not (subterm_of (app forall (tuple [T, (abs x\ (G1 x))])) Var _)),
 	ripple_analysis SL (app forall (tuple [T, (abs H1)])) (app forall (tuple [T, (abs G1)])) Rest F U D.
 /*
-ripple_analysis P Q ?? H G Hyps
+ripple_analysis P Q uvar H G Hyps
           ((S @@ (Antecedent @@ Consequent))::Ss) F U D:- 
         P < Q,                                  % too many?
         not (G = (app forall _)),
