@@ -142,12 +142,6 @@ module Extend = struct
 
   module CData = Elpi_util.CData
 
-  module Ast = struct
-    include Elpi_ast
-    let query_of_term ?(loc=Ploc.dummy) x = loc, x
-    let term_of_query (_,x) = x
-  end
-
   module Data = struct
     include Elpi_data
     type suspended_goal = { 
@@ -163,7 +157,7 @@ module Extend = struct
   module Compile = struct
     module State = Elpi_data.CompilerState
     include Elpi_compiler
-    let term_at = term_of_ast
+    let term_at ~depth (_,x) = term_of_ast ~depth x
     let query = query_of_term
   end
 
@@ -277,6 +271,7 @@ module Extend = struct
     let warn = Elpi_util.warn
 
     let clause_of_term ?name ?graft ~depth term =
+      let module Ast = Elpi_ast in
       let module R = (val !r) in let open R in
       let rec aux d ctx t =
         match deref_head ~depth:d t with       
@@ -342,55 +337,6 @@ module Extend = struct
       let show_term = Elpi_data.show_term
     end
   end
-(*
-
- let split_conj t =
-   let module R = (val !r) in let open R in
-   split_conj t
-
- let llam_unify da e db a b =
-   let module R = (val !r) in let open R in
-   llam_unify da e db a b
- let print_delayed () =
-   let module R = (val !r) in let open R in
-   print_delayed ()
- let print_constraints () =
-   let module R = (val !r) in let open R in
-   print_constraints ()
- let pp_stuck_goal_kind fmt gk =
-   let module R = (val !r) in let open R in
-   pp_stuck_goal_kind fmt gk
-
- type idx = Obj.t (* HACK *)
-
- let delay_goal ~depth idx ~goal ~on =
-   let module R = (val !r) in let open R in
-   delay_goal ~depth (Obj.magic idx) ~goal ~on
-
- let declare_constraint ~depth idx ~goal ~on:term_attributed_ref =
-   let module R = (val !r) in let open R in
-   declare_constraint ~depth (Obj.magic idx) ~goal ~on:term_attributed_ref
-
- let register_custom name f =
-   Elpi_Data.register_custom name (Obj.magic f)
-
- type 'a constraint_type = 'a Data.CustomConstraints.constraint_type
-
- let declare_custom_constraint ~name ~pp ~empty =
-   Data.CustomConstraints.declare_constraint ~name ~pp ~empty
-
- let update_custom_constraint = Data.CustomConstraints.update
- let read_custom_constraint = Data.CustomConstraints.read
- 
- let get_custom_constraints () =
-   let module R = (val !r) in let open R in
-   R.get_custom_constraints ()
-
- let set_custom_constraints cs =
-   let module R = (val !r) in let open R in
-   R.set_custom_constraints cs
-*)
-
 end
 
 module Temporary = struct

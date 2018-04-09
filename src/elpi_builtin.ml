@@ -473,7 +473,7 @@ let lp_builtins = [
   (fun s _ ~depth ->
      try
        let t = Parse.goal s in
-       let t = Compile.term_at ~depth (Ast.term_of_query t) in
+       let t = Compile.term_at ~depth t in
        (), Some t
      with
      | Stream.Error _ -> raise No_clause
@@ -488,7 +488,7 @@ let lp_builtins = [
      try
        let strm = Stream.of_channel i in
        let t = Parse.goal_from_stream strm in
-       let t = Compile.term_at ~depth (Ast.term_of_query t) in
+       let t = Compile.term_at ~depth t in
        (), Some t
      with 
      | Sys_error msg -> error msg

@@ -175,38 +175,6 @@ module Extend : sig
     val map : 'a cdata -> 'b cdata -> ('a -> 'b) -> t -> t
   end
 
-  (* This module should not be used, since writing AST is as tedious as
-   * writing terms directly. See Compile.query for the recommended way
-   * of generating queries. *)
-  module Ast : sig
-
-    type term (** name based *)
-
-    (** Follows Prolog's convention (capitals are variables) *)
-    val mkCon : string -> term
-
-    val mkApp : term list -> term
-    val mkLam : string -> term -> term
-
-    val mkFreshUVar : unit -> term
-
-    (** caveat: [a,b,c] -> mkSeq [a;b;c;mkNil] *)
-    val mkNil : term
-    val mkSeq : term list -> term
-
-    (** builtin data *)
-    val mkC : CData.t -> term
-
-    (** quotation node *)
-    val mkQuoted : string -> term
-
-    val query_of_term : ?loc:Ploc.t -> term -> Ast.query
-    val term_of_query : Ast.query -> term
-
-    type program = Ast.program
-
-  end
-
   (* This module exposes the low level representation of terms, and is very
    * hard to use. Arg and AppArg are "stack terms" and should never be used.
    * Note: The Utils module provides deref_head to dereference assigned 
@@ -350,7 +318,7 @@ module Extend : sig
     val quote_syntax : Compile.query -> Data.term list * Data.term
 
     (* To implement the string_to_term builtin *)
-    val term_at : depth:int -> Ast.term -> Data.term
+    val term_at : depth:int -> Ast.query -> Data.term
     
     (* Generate a query starting from a compiled/hand-made term *)
     val query :
@@ -473,6 +441,7 @@ module Extend : sig
     val deref_appuv :
       from:int -> to_:int -> args:Data.term list -> Data.term -> Data.term
 
+    (** Hackish, in particular the output should be a compiled program *)
     val clause_of_term :
       ?name:string -> ?graft:([`After | `Before] * string) ->
       depth:int -> Data.term -> Ast.program
