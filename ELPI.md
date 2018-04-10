@@ -69,21 +69,24 @@ A macro is declared with the following syntax
 macro @name Args :- Body.
 ```
 It is expanded everywhere (even in type declarations)
-at compilation time.
+at compilation time. 
+
+### Caveat
+Currently macros are not truly "hygienic",
+that is the body of the macro is not lexically analyzed before
+expansion and its free names (of constants) may be captured.
+
+```prolog
+macro @m A :- x = A.
+main :- pi x\ @m x. % works, but should not!
+```
+
+Use with care.
 
 #### Example: type shortcut.
 ```prolog
 macro @context :- list (pair string term).
 type typecheck @context -> term -> term -> prop.
-```
-
-#### Example: logging.
-```prolog
-macro @log P :- (P :- debug-print "goal=" P, fail).
-
-% @log (of _ _). % uncomment to trace of
-of (lambda N F) :- ...
-of (app H A) :- ...
 ```
 
 #### Example: factor hypothetical clauses.
@@ -312,7 +315,7 @@ Success:
 Note that in the second example `W` is not instantiated.
 When an argument is flagged as `i` then its value is
 matched against the clauses' corresponding pattern.
-`uvar is the pattern for flexible input. Such flexible term can be
+`uvar` is the pattern for flexible input. Such flexible term can be
 used in the rest of the clause by naming it with `as Name`
 
 ### Mode and type declaration
