@@ -27,7 +27,6 @@ ELPI_COMPONENTS = \
   elpi_ast.$(CMX) $(ELPI_P5_COMPONENTS) elpi_ptmap.$(CMX) \
   elpi_data.$(CMX) \
   $(ELPI_PACKED_COMPONENTS) elpi_compiler.$(CMX) \
-  elpi_latex_exporter.$(CMX) \
   elpi_API.$(CMX) elpi_builtin.$(CMX)
 
 # Standard compilation

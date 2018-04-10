@@ -38,17 +38,6 @@ let set_tjpath cwd paths =
  let tjpath = List.map (fun f -> make_absolute (readsymlinks f)) paths in
  cur_tjpath := tjpath
 
-module PointerFunc = struct
- type latex_export =
-  {process:
-    'a 'b. path:string -> shortpath:string -> ('a -> 'b) -> 'a -> 'b
-   ; export: (term,attribute list) clause -> unit}
- let latex_export =
-  ref { process = (fun ~path:_ ~shortpath:_ f x -> f x);
-        export = (fun _ -> ()) }
- let set_latex_export f = latex_export := f
-end;;
-
 (*CSC: when parse_one opens a file for reading, open the .tex file
   for writing (and put the header) *)
 (* the parsed variable is a cache to avoid parsing the same file twice *)
@@ -120,8 +109,7 @@ let rec parse_one e (origfilename as filename) =
   try
    let loc = !last_loc in
    set_fname filename;
-   let res = (!PointerFunc.latex_export).PointerFunc.process ~path:filename
-    ~shortpath:origfilename (Grammar.Entry.parse e) (Stream.of_channel ch)in
+   let res = Grammar.Entry.parse e (Stream.of_channel ch)in
    last_loc := loc;
    ast := Some res;
    close_in ch;
@@ -562,7 +550,6 @@ EXTEND
     [[ attributes = OPT attributes; f = atom; FULLSTOP ->
        let attributes = match attributes with None -> [] | Some x -> x in
        let c = { loc; attributes; body = f } in
-       (!PointerFunc.latex_export).PointerFunc.export c ;
        [Clause c]
      | pragma -> []
      | LCURLY -> [Begin loc]

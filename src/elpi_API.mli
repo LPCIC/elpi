@@ -505,8 +505,3 @@ module Extend : sig
 end (* Extend *)
 
 (**/**)
-
-(* Stuff that should be ported to the API, but is not yet *)
-module Temporary : sig
-  val activate_latex_exporter : unit -> unit
-end

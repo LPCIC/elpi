@@ -52,7 +52,6 @@ let usage =
   "\t-test runs the query \"main\"\n" ^ 
   "\t-exec pred  runs the query \"pred args\"\n" ^ 
   "\t-where print system wide installation path then exit\n" ^ 
-  "\t-print-latex prints files to LaTeX syntax, then exit\n" ^ 
   "\t-print prints files after desugar, then exit\n" ^ 
   "\t-print-ast prints files as parsed, then exit\n" ^ 
   "\t-D var  Define variable (conditional compilation)\n" ^ 
@@ -64,8 +63,6 @@ let _ =
   let test = ref false in
   let exec = ref "" in
   let args = ref [] in
-  let print_prolog = ref false in
-  let print_latex = ref false in
   let print_lprolog = ref false in
   let print_ast = ref false in
   let typecheck = ref true in
@@ -79,8 +76,6 @@ let _ =
     | [] -> []
     | "-test" :: rest -> batch := true; test := true; aux rest
     | "-exec" :: goal :: rest ->  batch := true; exec := goal; aux rest
-    | "-print-prolog" :: rest -> print_prolog := true; aux rest
-    | "-print-latex" :: rest -> print_latex := true; aux rest
     | "-print" :: rest -> print_lprolog := true; aux rest
     | "-print-ast" :: rest -> print_ast := true; aux rest
     | "-no-tc" :: rest -> typecheck := false; aux rest
@@ -115,13 +110,11 @@ let _ =
       Elpi_builtin.elpi_nonlogical_builtins;
     exit 0;
   end;
-  if !print_latex then Elpi_API.Temporary.activate_latex_exporter () ;
   let p = Elpi_API.Parse.program filenames in
   if !print_ast then begin
     Format.eprintf "%a" Elpi_API.Pp.Ast.program p;
     exit 0;
   end;
-  if !print_latex then exit 0;
   let g =
     if !test then Elpi_API.Parse.goal "main."
     else if !exec <> "" then

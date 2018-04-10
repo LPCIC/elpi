@@ -348,8 +348,3 @@ module Extend = struct
   end
 end
 
-module Temporary = struct
-
-  let activate_latex_exporter = Elpi_latex_exporter.activate
-
-end
