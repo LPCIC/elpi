@@ -106,6 +106,8 @@ let _ =
   set_terminal_width ();
   if !doc_builtins then begin
     Elpi_API.Extend.BuiltInPredicate.document Format.std_formatter
+      Elpi_builtin.core_builtins;
+    Elpi_API.Extend.BuiltInPredicate.document Format.std_formatter
       Elpi_builtin.lp_builtins;
     Elpi_API.Extend.BuiltInPredicate.document Format.std_formatter
       Elpi_builtin.elpi_builtins;

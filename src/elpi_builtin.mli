@@ -7,6 +7,8 @@
 
 open Elpi_API.Extend.BuiltInPredicate
 
+(* Builtins that are part of the language, like "is" or "!" *)
+val core_builtins : declaration list
 (* Builtins to be backward compatible with Teyjus, eg i/o predicates *)
 val lp_builtins : declaration list
 (* Elpi predicates like print *)

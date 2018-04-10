@@ -417,6 +417,17 @@ module Extend : sig
     val document : Format.formatter -> declaration list -> unit
 
     val builtin_of_declaration : declaration list -> Setup.builtins
+
+    module Notation : sig
+
+      val (?:)    : 'a -> unit * 'a option
+      val (?::)   : 'a -> 'b -> (unit * 'a option) * 'b option
+      val (?:::)  : 'a -> 'b -> 'c ->
+                      ((unit * 'a option) * 'b option) * 'c option
+      val (?::::) : 'a -> 'b -> 'c -> 'd ->
+                      (((unit * 'a option) * 'b option) * 'c option) * 'd option
+
+    end
   end
 
   (* Custom compilation of `this` and 'that' *)

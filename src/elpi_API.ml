@@ -211,6 +211,15 @@ module Extend = struct
       { to_term; of_term; ty = "list " ^ d.ty }
 
     let builtin_of_declaration x = x
+
+    module Notation = struct
+
+      let (?:) a = (), Some a
+      let (?::) a b = ((), Some a), Some b
+      let (?:::) a b c = (((), Some a), Some b), Some c
+      let (?::::) a b c d = ((((), Some a), Some b), Some c), Some d
+
+    end
   end
 
   module CustomConstraint = Elpi_data.CustomConstraint
