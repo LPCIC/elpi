@@ -72,6 +72,7 @@ end
 
 module Parse = struct
   let program = Elpi_parser.parse_program
+  let program_from_stream = Elpi_parser.parse_program_from_stream
   let goal = Elpi_parser.parse_goal
   let goal_from_stream = Elpi_parser.parse_goal_from_stream
 end

@@ -67,6 +67,7 @@ end
 module Parse : sig
   (** [program file_list] parses a list of files *)
   val program : string list -> Ast.program
+  val program_from_stream : char Stream.t -> Ast.program
   (** [goal file_list] parses the query *)
   val goal : string -> Ast.query
   val goal_from_stream : char Stream.t -> Ast.query
