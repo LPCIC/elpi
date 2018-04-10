@@ -219,7 +219,7 @@ type polyop = {
 
 let core_builtins = [
 
-  LPDoc "Core builtins";
+  LPDoc " == Core builtins =====================================";
 
   LPDoc " -- Logic --";
 
@@ -275,7 +275,7 @@ let core_builtins = [
     Out(poly "A", "Out",
     In(poly "A",  "Expr",
     Easy          "unifies Out with the value of Expr")),
-  (fun _ t ~depth -> ?:(eval depth t))),
+  (fun _ t ~depth -> !:(eval depth t))),
   DocAbove);
 
   LPCode "pred (is) o:A, i:A.";
@@ -347,11 +347,11 @@ let core_builtins = [
   ]
 ;;
 
-(** Standard lambda Prolog built-in ************************************** *)
+(** Standard lambda Prolog I/O built-in *********************************** *)
 
-let lp_builtins = [
+let io_builtins = [
 
-  LPDoc "Lambda Prolog builtins";
+  LPDoc " == I/O builtins =====================================";
 
   LPDoc " -- I/O --";
 
@@ -366,7 +366,7 @@ let lp_builtins = [
     Out(in_stream, "InStream",
     Easy           "opens FileName for input")),
   (fun s _ ~depth ->
-     try ?:(open_in s,s)
+     try !:(open_in s,s)
      with Sys_error msg -> error msg)),
   DocAbove);
 
@@ -375,7 +375,7 @@ let lp_builtins = [
     Out(out_stream, "OutStream",
     Easy            "opens FileName for output")),
   (fun s _ ~depth ->
-     try ?:(open_out s,s)
+     try !:(open_out s,s)
      with Sys_error msg -> error msg)),
   DocAbove);
 
@@ -385,22 +385,7 @@ let lp_builtins = [
     Easy            "opens FileName for output in append mode")),
   (fun s _ ~depth ->
      let flags = [Open_wronly; Open_append; Open_creat; Open_text] in
-     try ?:(open_out_gen flags 0x664 s,s)
-     with Sys_error msg -> error msg)),
-  DocAbove);
-
-  MLCode(Pred("open_string",
-    In(string,     "DataIn",
-    Out(in_stream, "InStream",
-    Easy           "opens DataIn as an input stream")),
-  (fun data _ ~depth ->
-     try
-       let filename, outch = Filename.open_temp_file "elpi" "tmp" in
-       output_string outch data;
-       close_out outch ;
-       let v = open_in filename in
-       Sys.remove filename ;
-       ?:(v,"<string>")
+     try !:(open_out_gen flags 0x664 s,s)
      with Sys_error msg -> error msg)),
   DocAbove);
 
@@ -447,7 +432,7 @@ let lp_builtins = [
      try
        let read = really_input i buf 0 n in
        let str = Bytes.sub buf 0 read in
-       ?:(Bytes.to_string str)
+       !:(Bytes.to_string str)
      with Sys_error msg -> error msg)),
   DocAbove);
 
@@ -456,24 +441,9 @@ let lp_builtins = [
     Out(string,   "Line",
     Easy          "reads a full line from InStream")),
   (fun (i,_) _ ~depth ->
-     try ?:(input_line i)
+     try !:(input_line i)
      with
-     | End_of_file -> ?:""
-     | Sys_error msg -> error msg)),
-  DocAbove);
-
-  MLCode(Pred("lookahead",
-    In(in_stream, "InStream",
-    Out(string,   "NextChar",
-    Easy          "peeks one byte from InStream")),
-  (fun (i,_) _ ~depth ->
-     try
-       let pos = pos_in i in
-       let c = input_char i in
-       Pervasives.seek_in i pos;
-       ?:(String.make 1 c)
-     with
-     | End_of_file -> ?:""
+     | End_of_file -> !:""
      | Sys_error msg -> error msg)),
   DocAbove);
 
@@ -496,7 +466,7 @@ let lp_builtins = [
   MLCode(Pred("gettimeofday",
     Out(float, "T",
     Easy       "sets T to the number of seconds elapsed since 1/1/1970"),
-  (fun _ ~depth -> ?:(Unix.gettimeofday ()))),
+  (fun _ ~depth -> !:(Unix.gettimeofday ()))),
   DocAbove);
 
   MLCode(Pred("getenv",
@@ -505,7 +475,7 @@ let lp_builtins = [
     Easy      ("unifies Out with the value of VarName in the process' "^
                "environment. Fails if no such environment variable exists"))),
   (fun s _ ~depth ->
-     try ?:(Sys.getenv s)
+     try !:(Sys.getenv s)
      with Not_found -> raise No_clause)),
   DocAbove);
 
@@ -513,10 +483,10 @@ let lp_builtins = [
     In(string, "Command",
     Out(int,   "RetVal",
     Easy       "executes Command and sets RetVal to the exit code")),
-  (fun s _ ~depth -> ?:(Sys.command s))),
+  (fun s _ ~depth -> !:(Sys.command s))),
   DocAbove);
 
-  LPDoc " -- Hacks --";
+  LPDoc " -- Debugging --";
 
   MLCode(Pred("term_to_string",
     In(any,     "T",
@@ -524,8 +494,51 @@ let lp_builtins = [
     Easy        "prints T to S")),
   (fun t _ ~depth ->
        Format.fprintf Format.str_formatter "%a" (Pp.term depth [] 0 [||]) t ;
-       ?:(Format.flush_str_formatter ()))),
+       !:(Format.flush_str_formatter ()))),
   DocAbove);
+
+  ]
+;;
+
+(** Standard lambda Prolog built-in ************************************** *)
+
+let lp_builtins = [
+
+  LPDoc "== Lambda Prolog builtins =====================================";
+
+  LPDoc " -- Extra I/O --";
+
+  MLCode(Pred("open_string",
+    In(string,     "DataIn",
+    Out(in_stream, "InStream",
+    Easy           "opens DataIn as an input stream")),
+  (fun data _ ~depth ->
+     try
+       let filename, outch = Filename.open_temp_file "elpi" "tmp" in
+       output_string outch data;
+       close_out outch ;
+       let v = open_in filename in
+       Sys.remove filename ;
+       !:(v,"<string>")
+     with Sys_error msg -> error msg)),
+  DocAbove);
+
+  MLCode(Pred("lookahead",
+    In(in_stream, "InStream",
+    Out(string,   "NextChar",
+    Easy          "peeks one byte from InStream")),
+  (fun (i,_) _ ~depth ->
+     try
+       let pos = pos_in i in
+       let c = input_char i in
+       Pervasives.seek_in i pos;
+       !:(String.make 1 c)
+     with
+     | End_of_file -> !:""
+     | Sys_error msg -> error msg)),
+  DocAbove);
+
+  LPDoc " -- Hacks --";
 
   MLCode(Pred("string_to_term",
     In(string, "S",
@@ -535,7 +548,7 @@ let lp_builtins = [
      try
        let t = Parse.goal s in
        let t = Compile.term_at ~depth t in
-       ?:t
+       !:t
      with
      | Stream.Error _ -> raise No_clause
      | Elpi_ast.NotInProlog _ -> raise No_clause)),
@@ -550,7 +563,7 @@ let lp_builtins = [
        let strm = Stream.of_channel i in
        let t = Parse.goal_from_stream strm in
        let t = Compile.term_at ~depth t in
-       ?:t
+       !:t
      with 
      | Sys_error msg -> error msg
      | Stream.Error _ -> raise No_clause
@@ -567,7 +580,7 @@ let lp_builtins = [
 
 let elpi_builtins = [
 
-  LPDoc "Elpi builtins";
+  LPDoc "== Elpi builtins =====================================";
 
   MLCode(Pred("dprint",
     VariadicIn(any, "prints raw terms (debugging)"),
@@ -589,7 +602,7 @@ let elpi_builtins = [
     In (string,"Name",
     Out(int,   "Value",
     Easy       "reads the Value of a trace point Name")),
-  (fun s _ ~depth:_ -> ?:(Elpi_trace.get_cur_step s))),
+  (fun s _ ~depth:_ -> !:(Elpi_trace.get_cur_step s))),
   DocAbove);
 
 
@@ -612,7 +625,7 @@ let elpi_builtins = [
             "Replacement in Subject. See also OCaml's Str.global_replace"))))),
   (fun rex repl subj _ ~depth ->
      let rex = Str.regexp rex in
-     ?:(Str.global_replace rex repl subj))),
+     !:(Str.global_replace rex repl subj))),
   DocAbove);
 
    MLCode(Pred("quote_syntax",
@@ -623,12 +636,12 @@ let elpi_builtins = [
      Easy    ("quotes the program from FileName and the QueryText. "^
               "See elpi_quoted_syntax.elpi for the syntax tree"))))),
    (fun f s _ _ ~depth ->
-      let ap = Parse.program ~no_pervasives:false [f] in
+      let ap = Parse.program [f] in
       let aq = Parse.goal s in
-      let p = Elpi_API.Compile.program [ap] in
+      let p = Elpi_API.Compile.(program dummy_header [ap]) in
       let q = Elpi_API.Compile.query p aq in
       let qp, qq = Compile.quote_syntax q in
-      ?:: qp qq)),
+      !: qp +! qq)),
   DocAbove);
 
   ]
@@ -698,7 +711,7 @@ let fresh_int = ref 0
 
 let elpi_nonlogical_builtins = [ 
 
-  LPDoc "Elpi nonlogical builtins";
+  LPDoc "== Elpi nonlogical builtins =====================================";
 
   LPCode "kind ctype type.";
   LPCode "type ctype string -> ctype.";
@@ -732,7 +745,7 @@ let elpi_nonlogical_builtins = [
   MLCode(Pred("names",
     Out(list any, "list of eigenvariables in order of age (young first)",
     Easy           "generates the list of eigenvariable"),
-  (fun _ ~depth -> ?:(List.init depth of_dbl))),
+  (fun _ ~depth -> !:(List.init depth of_dbl))),
   DocNext);
 
   MLCode(Pred("occurs",
@@ -750,7 +763,7 @@ let elpi_nonlogical_builtins = [
   MLCode(Pred("closed_term",
     Out(any, "T",
     Easy      "unify T with a variable that has no eigenvariables in scope"),
-  (fun _ ~depth -> ?:(UVar(oref dummy,0,0)))),
+  (fun _ ~depth -> !:(UVar(oref dummy,0,0)))),
   DocAbove);
 
   MLCode(Pred("is_cdata",
@@ -759,7 +772,7 @@ let elpi_nonlogical_builtins = [
     Easy        "checks if T is primitive of type Ctype, eg (ctype \"int\")")),
   (fun t _ ~depth ->
      match deref_head depth t with
-     | CData n -> ?:(CData.name n)
+     | CData n -> !:(CData.name n)
      | _ -> raise No_clause)),
   DocAbove);
 
@@ -770,13 +783,13 @@ let elpi_nonlogical_builtins = [
      Easy     "unifies N with a different int every time it is called"),
    (fun _ ~depth ->
       incr fresh_int;
-      ?: !fresh_int)),
+      !: !fresh_int)),
   DocAbove);
 
    MLCode(Pred("new_safe",
      Out(safe, "Safe",
      Easy      "creates a safe: a store that persists across backtracking"),
-   (fun _ ~depth -> incr safeno; ?:(!safeno,ref [],depth))),
+   (fun _ ~depth -> incr safeno; !:(!safeno,ref [],depth))),
   DocAbove);
 
    MLCode(Pred("stash_in_safe",
@@ -790,13 +803,15 @@ let elpi_nonlogical_builtins = [
      In(safe, "Safe",
      Out(list any, "Data",
      Easy          "retrieves the Data stored in Safe")),
-   (fun (_,l,ld) _ ~depth -> ?:(List.rev !l))),
+   (fun (_,l,ld) _ ~depth -> !:(List.rev !l))),
   DocAbove);
 
 ]
 ;;
 
+let std_declarations =
+  core_builtins @ io_builtins @ lp_builtins @ elpi_builtins @ elpi_nonlogical_builtins
+
 let std_builtins =
-  builtin_of_declaration
-    (core_builtins @ lp_builtins @ elpi_builtins @ elpi_nonlogical_builtins)
+  builtin_of_declaration std_declarations
 

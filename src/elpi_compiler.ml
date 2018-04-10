@@ -1537,7 +1537,7 @@ let quote_syntax { Query.clauses; query_loc; query } =
 
 let default_checker () = Elpi_parser.parse_program ["elpi-checker.elpi"]
 
-let static_check
+let static_check header
   ?(exec=execute_once) ?(checker=default_checker ()) ?(flags=default_flags)
   ({ Query.types } as q)
 =
@@ -1547,7 +1547,7 @@ let static_check
       [close_w_binder forallc (quote_preterm ~on_type:true ttype) ttype.amap]))
     types) in
   let checker =
-    program_of_ast checker in
+    program_of_ast (header @ checker) in
   let query =
     query_of_term checker (fun ~depth state ->
       assert(depth=0);

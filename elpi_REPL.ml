@@ -55,7 +55,8 @@ let usage =
   "\t-print prints files after desugar, then exit\n" ^ 
   "\t-print-ast prints files as parsed, then exit\n" ^ 
   "\t-D var  Define variable (conditional compilation)\n" ^ 
-  "\t-document-builtins Print external declaration for pervasives.elpi\n" ^
+  "\t-q quiet, don't print loaded files\n" ^ 
+  "\t-document-builtins Print documentation for built-in predicates\n" ^
   Elpi_API.Setup.usage
 ;;
 
@@ -68,12 +69,14 @@ let _ =
   let typecheck = ref true in
   let batch = ref false in
   let doc_builtins = ref false in
+  let silent = ref false in
   let vars =
     ref Elpi_API.Compile.(default_flags.defined_variables) in
   if List.mem "-where" (Array.to_list Sys.argv) then begin
     Printf.printf "%s\n" Elpi_config.install_dir; exit 0 end;
   let rec aux = function
     | [] -> []
+    | "-q" :: rest -> silent := true; aux rest
     | "-test" :: rest -> batch := true; test := true; aux rest
     | "-exec" :: goal :: rest ->  batch := true; exec := goal; aux rest
     | "-print" :: rest -> print_lprolog := true; aux rest
@@ -96,18 +99,12 @@ let _ =
   let installpath = [ "-I"; Elpi_config.install_dir ] in
   let execpath = ["-I"; Filename.dirname (Sys.executable_name)] in
   let opts = Array.to_list Sys.argv @ tjpath @ installpath @ execpath in
-  let argv = Elpi_API.Setup.init ~silent:false ~builtins:Elpi_builtin.std_builtins opts ~basedir:cwd in
+  let pheader, argv = Elpi_API.Setup.init ~silent:!silent ~builtins:Elpi_builtin.std_builtins opts ~basedir:cwd in
   let filenames = aux (List.tl argv) in
   set_terminal_width ();
   if !doc_builtins then begin
     Elpi_API.Extend.BuiltInPredicate.document Format.std_formatter
-      Elpi_builtin.core_builtins;
-    Elpi_API.Extend.BuiltInPredicate.document Format.std_formatter
-      Elpi_builtin.lp_builtins;
-    Elpi_API.Extend.BuiltInPredicate.document Format.std_formatter
-      Elpi_builtin.elpi_builtins;
-    Elpi_API.Extend.BuiltInPredicate.document Format.std_formatter
-      Elpi_builtin.elpi_nonlogical_builtins;
+      Elpi_builtin.std_declarations;
     exit 0;
   end;
   let p = Elpi_API.Parse.program filenames in
@@ -130,10 +127,10 @@ let _ =
   let flags = {
     Elpi_API.Compile.default_flags
       with Elpi_API.Compile.defined_variables = !vars } in
-  let prog = Elpi_API.Compile.program [p] in
+  let prog = Elpi_API.Compile.program pheader [p] in
   let query = Elpi_API.Compile.query prog g in
   if !typecheck then begin
-    if not (Elpi_API.Compile.static_check ~flags query) then
+    if not (Elpi_API.Compile.static_check pheader ~flags query) then
        Format.eprintf "Type error\n";
   end;
   if !print_lprolog then begin

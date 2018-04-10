@@ -789,15 +789,11 @@ let document fmt l =
   let omargin = Fmt.pp_get_margin fmt () in
   Fmt.pp_set_margin fmt 75;
   Fmt.fprintf fmt "@[<v>";
-  pp_comment fmt
-    "%%%%%%%%%%%%%%% Begin of automatically generated code %%%%%%%%%%%%%%%%%";
   Fmt.fprintf fmt "@\n@\n";
   List.iter (function
     | MLCode(Pred(name,ffi,_), docspec) -> document_pred fmt docspec name ffi
     | LPCode s -> Fmt.fprintf fmt "%s" s; Fmt.fprintf fmt "@\n@\n"
     | LPDoc s -> pp_comment fmt ("% " ^ s); Fmt.fprintf fmt "@\n@\n") l;
-  pp_comment fmt
-    "%%%%%%%%%%%%%%% End of automatically generated code %%%%%%%%%%%%%%%%%%%";
   Fmt.fprintf fmt "@\n@\n";
   Fmt.fprintf fmt "@]@.";
   Fmt.pp_set_margin fmt omargin

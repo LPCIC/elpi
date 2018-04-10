@@ -109,13 +109,16 @@ Most of these feature come with λProlog.  Constraints and propagation rules are
 
 The language is compatible with [λProlog](http://www.lix.polytechnique.fr/~dale/lProlog/) 
 and ELPI is known to be able to run most of the λProlog programs out there.
-Reading "Programming with Higher-Order Logic" by Miller and Nadathur is highly recommended.
+Reading "Programming with Higher-Order Logic" by Miller and Nadathur is
+highly recommended.
 
 The extensions to λProlog implemented in ELPI are described in the
-[ELPI.md](ELPI.md) file.
+[ELPI.md](ELPI.md) file, built-in predicates are documented in
+[builtin.elpi](builtin.elpi).
 
-There is also a [paper](https://hal.inria.fr/hal-01176856/) describing the implementation
-of the interpreter, in particular how it deals with binder mobility.
+There is also a [paper](https://hal.inria.fr/hal-01176856/) describing
+the implementation of the interpreter, in particular how it deals with
+binder mobility.
 
 #### How to embed ELPI in your software
 

@@ -18,6 +18,7 @@ let set_trace argv =
 module Setup = struct
 
 type builtins = Elpi_data.Builtin.declaration list
+type program_header = Elpi_ast.program
 
 let init ?silent ~builtins ~basedir:cwd argv =
   let new_argv = set_trace argv in
@@ -30,11 +31,20 @@ let init ?silent ~builtins ~basedir:cwd argv =
       aux [] [] new_argv
   in
   Elpi_parser.init ?silent ~lp_syntax:Elpi_parser.lp_gramext ~paths ~cwd ();
+  (* This is a bit ugly, since builtins are global but could be made
+   * program specific *)
   List.iter (function
     | Elpi_data.Builtin.MLCode (p,_) -> Elpi_data.Builtin.register p
     | Elpi_data.Builtin.LPCode _ -> ()
     | Elpi_data.Builtin.LPDoc _ -> ()) builtins;
-  new_argv
+  (* This is a bit ugly, since we print and then parse... *)
+  let b = Buffer.create 1024 in
+  let fmt = Format.formatter_of_buffer b in
+  Elpi_data.Builtin.document fmt builtins;
+  Format.pp_print_flush fmt ();
+  let strm = Stream.of_string (Buffer.contents b) in
+  let header = Elpi_parser.parse_program_from_stream strm in
+  header, new_argv
 
 let trace args =
   match set_trace args with
@@ -84,13 +94,13 @@ module Compile = struct
   type program = Elpi_compiler.program
   type query = Elpi_compiler.query
 
-  let program l = Elpi_compiler.program_of_ast (List.flatten l)
+  let program header l = Elpi_compiler.program_of_ast (header @ List.flatten l)
   let query = Elpi_compiler.query_of_ast
 
-  let static_check ?checker ?flags p =
+  let static_check header ?checker ?flags p =
     let module R = (val !r) in let open R in
     let checker = Elpi_util.option_map List.flatten checker in
-    Elpi_compiler.static_check ~exec:execute_once ?checker ?flags p
+    Elpi_compiler.static_check header ~exec:execute_once ?checker ?flags p
 
   module StrSet = Elpi_util.StrSet
 
@@ -102,6 +112,7 @@ module Compile = struct
   let link ?flags x =
     Elpi_compiler.executable_of_query ?flags x
 
+  let dummy_header = []
 end
 
 module Execute = struct
@@ -213,11 +224,11 @@ module Extend = struct
     let builtin_of_declaration x = x
 
     module Notation = struct
-
-      let (?:) a = (), Some a
-      let (?::) a b = ((), Some a), Some b
-      let (?:::) a b c = (((), Some a), Some b), Some c
-      let (?::::) a b c d = ((((), Some a), Some b), Some c), Some d
+ 
+      let (!:) x = (), Some x
+      let (+!) a b = a, Some b
+      let (?:) x = (), x
+      let (+?) a b = a, b
 
     end
   end

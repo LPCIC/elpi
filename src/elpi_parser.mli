@@ -21,7 +21,8 @@ type gramext = { fix : fixity; sym : string; prec : int }
 val init : ?silent:bool -> lp_syntax:gramext list -> paths:string list -> cwd:string -> unit -> unit
 
 (* BUG: extending the grammar is imperative, cannot be undone *)
-val parse_program : ?no_pervasives:bool -> string list -> program
+val parse_program : string list -> program
+val parse_program_from_stream : char Stream.t -> program
 val parse_goal : string -> goal
 val parse_goal_from_stream : char Stream.t -> goal
 

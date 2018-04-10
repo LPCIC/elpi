@@ -740,10 +740,17 @@ let init ?(silent=true) ~lp_syntax ~paths ~cwd () =
   parser_initialized := true
 ;;
 
-let parse_program ?(no_pervasives=false) filenames : program =
+let parse_program filenames : program =
   assert(!parser_initialized = true);
-  let pervasives = if no_pervasives then [] else ["pervasives.elpi"] in
-  parse lp (pervasives @ filenames)
+  parse lp filenames
+;;
+
+let parse_program_from_stream strm : program =
+  assert(!parser_initialized = true);
+  try Grammar.Entry.parse lp strm
+  with
+    Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) -> raise(Stream.Error msg)
+  | Ploc.Exc(_,e) -> raise e
 ;;
 
 let parse_goal s : goal =
