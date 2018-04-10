@@ -30,14 +30,12 @@ module Setup : sig
   (** Initialize ELPI.
       [init] must be called before invoking the parser.
       [silent] (default [true]) to avoid printing files being loaded.
-      [lp_syntax] is a file containing grammar rules, defaults to lp-syntax.elpi
       [builtins] the set of built-in predicates, eg [Elpi_builtin.std_builtins] 
       [basedir] current working directory (used to make paths absolute);
       [argv] is list of options, see the {!val:usage} string;
       It returns part of [argv] not relevant to ELPI. *)
   val init :
     ?silent:bool ->
-    ?lp_syntax:string ->
     builtins:builtins ->
     basedir:string ->
     string list -> string list

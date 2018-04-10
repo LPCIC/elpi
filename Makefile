@@ -68,7 +68,7 @@ OC_OPTIONS = -linkpkg $(OCAMLOPTIONS) $(FLAGS)
 
 ELPI_LIBS = \
   elpi_quoted_syntax.elpi  elpi-checker.elpi  \
-  builtins.elpi pervasives.elpi lp-syntax.elpi \
+  builtins.elpi pervasives.elpi \
   utils/elpi2html.elpi
 
 ELPI_DIST = \

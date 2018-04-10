@@ -19,7 +19,7 @@ module Setup = struct
 
 type builtins = Elpi_data.Builtin.declaration list
 
-let init ?silent ?lp_syntax ~builtins ~basedir:cwd argv =
+let init ?silent ~builtins ~basedir:cwd argv =
   let new_argv = set_trace argv in
   let new_argv, paths =
     let rec aux args paths = function
@@ -29,7 +29,7 @@ let init ?silent ?lp_syntax ~builtins ~basedir:cwd argv =
     in
       aux [] [] new_argv
   in
-  Elpi_parser.init ?silent ?lp_syntax ~paths ~cwd ();
+  Elpi_parser.init ?silent ~lp_syntax:Elpi_parser.lp_gramext ~paths ~cwd ();
   List.iter (function
     | Elpi_data.Builtin.MLCode (p,_) -> Elpi_data.Builtin.register p
     | Elpi_data.Builtin.LPCode _ -> ()

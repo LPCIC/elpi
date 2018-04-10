@@ -5,9 +5,19 @@
 open Elpi_util
 open Elpi_ast
 
-type fixity = Infixl | Infixr | Infix | Prefix | Postfix
+type fixity = Infixl | Infixr | Infix | Prefix | Prefixr | Postfix | Postfixl
 
-let set_precedence,precedence_of =
+let fixity_of_string = function
+  | "infixl" -> Infixl 
+  | "infixr" -> Infixr 
+  | "infix" -> Infix 
+  | "prefix" -> Prefix 
+  | "prefixr" -> Prefixr 
+  | "postfix" -> Postfix 
+  | "postfixl" -> Postfixl
+  | s -> raise (Stream.Error ("invalid fixity: " ^ s))
+
+let set_precedence, precedence_of =
  let module ConstMap = Map.Make(Func) in 
  let precs = ref ConstMap.empty in
  (fun c p -> precs := ConstMap.add c p !precs),
@@ -419,6 +429,7 @@ let lex = {
 let g = Grammar.gcreate lex
 let lp = Grammar.Entry.create g "lp"
 let goal = Grammar.Entry.create g "goal"
+let atom = Grammar.Entry.create g "atom"
 
 let min_precedence = -1  (* minimal precedence in use *)
 let lam_precedence = -1  (* precedence of lambda abstraction *)
@@ -487,8 +498,48 @@ let constant_colon strm =
 let constant_colon =
   Grammar.Entry.of_parser g "constant_colon" constant_colon
 
+type gramext = { fix : fixity; sym : string; prec : int }
+
+let gram_extend { fix; sym = cst; prec = nprec } =
+  if nprec < umin_precedence || nprec > umax_precedence then
+    raise (Stream.Error (Printf.sprintf "precedence muse be inside [%d,%d]" umin_precedence umax_precedence))
+  else
+    let binrule =
+     [ Gramext.Sself ; Gramext.Stoken ("SYMBOL",cst); Gramext.Sself ],
+     Gramext.action (fun t2 cst t1 _ ->mkApp [mkCon cst;t1;t2]) in
+    let prerule =
+     [ Gramext.Stoken ("SYMBOL",cst); Gramext.Sself ],
+     Gramext.action (fun t cst _ -> mkApp [mkCon cst;t]) in
+    let postrule =
+     [ Gramext.Sself ; Gramext.Stoken ("SYMBOL",cst) ],
+     Gramext.action (fun cst t _ -> mkApp [mkCon cst;t]) in
+    let ppinfo = fix, nprec in
+    let fixity,rule =
+     (* NOTE: we do not distinguish between infix and infixl,
+        prefix and prefix, postfix and postfixl *)
+     match fix with
+       Infix    -> Gramext.NonA,   binrule
+     | Infixl   -> Gramext.LeftA,  binrule
+     | Infixr   -> Gramext.RightA, binrule
+     | Prefix   -> Gramext.NonA,   prerule
+     | Prefixr  -> Gramext.RightA, prerule
+     | Postfix  -> Gramext.NonA,   postrule
+     | Postfixl -> Gramext.LeftA,  postrule in
+    set_precedence (Func.from_string cst) ppinfo ;
+    let where,name = is_used nprec in
+     Grammar.extend
+      [Grammar.Entry.obj atom, Some where, [name, Some fixity, [rule]]];
+;;
+          (* Debugging code
+          prerr_endline "###########################################";
+          Grammar.iter_entry (
+            Grammar.print_entry Format.err_formatter
+          ) (Grammar.Entry.obj atom);
+          prerr_endline ""; *)
+
+
 EXTEND
-  GLOBAL: lp goal;
+  GLOBAL: lp goal atom;
   lp: [ [ cl = LIST0 clause; EOF -> List.concat cl ] ];
   const_sym:
     [[ c = CONSTANT -> c
@@ -606,45 +657,13 @@ EXTEND
          names
      | TYPEABBREV; abbrform; TYPE; FULLSTOP -> []
      | fix = FIXITY; syms = LIST1 const_sym SEP SYMBOL ","; prec = INTEGER; FULLSTOP ->
-        let nprec = int_of_string prec in
-        if nprec < umin_precedence || nprec > umax_precedence then
-         assert false (* wrong precedence *)
-        else
-         let extend_one cst =
-          let binrule =
-           [ Gramext.Sself ; Gramext.Stoken ("SYMBOL",cst); Gramext.Sself ],
-           Gramext.action (fun t2 cst t1 _ ->mkApp [mkCon cst;t1;t2]) in
-          let prerule =
-           [ Gramext.Stoken ("SYMBOL",cst); Gramext.Sself ],
-           Gramext.action (fun t cst _ -> mkApp [mkCon cst;t]) in
-          let postrule =
-           [ Gramext.Sself ; Gramext.Stoken ("SYMBOL",cst) ],
-           Gramext.action (fun cst t _ -> mkApp [mkCon cst;t]) in
-          let fixity,rule,ppinfo =
-           (* NOTE: we do not distinguish between infix and infixl,
-              prefix and prefix, postfix and postfixl *)
-           match fix with
-             "infix"    -> Gramext.NonA,   binrule,  (Infix,nprec)
-           | "infixl"   -> Gramext.LeftA,  binrule,  (Infixl,nprec)
-           | "infixr"   -> Gramext.RightA, binrule,  (Infixr,nprec)
-           | "prefix"   -> Gramext.NonA,   prerule,  (Prefix,nprec)
-           | "prefixr"  -> Gramext.RightA, prerule,  (Prefix,nprec)
-           | "postfix"  -> Gramext.NonA,   postrule, (Postfix,nprec)
-           | "postfixl" -> Gramext.LeftA,  postrule, (Postfix,nprec)
-           | _ -> assert false in
-          set_precedence (Func.from_string cst) ppinfo ;
-          let where,name = is_used nprec in
-           Grammar.extend
-            [Grammar.Entry.obj atom, Some where, [name, Some fixity, [rule]]];
-         in
-          List.iter extend_one syms ; 
-          (* Debugging code
-          prerr_endline "###########################################";
-          Grammar.iter_entry (
-            Grammar.print_entry Format.err_formatter
-          ) (Grammar.Entry.obj atom);
-          prerr_endline ""; *)
-          []
+         List.iter (fun sym ->
+           gram_extend {
+             fix = fixity_of_string fix;
+             sym;
+             prec = int_of_string prec
+           }) syms;
+         []
     ]];
   kind:
     [[ t = TYPE -> mkCon t
@@ -712,12 +731,12 @@ let list_element_prec = 120
 
 let parser_initialized = ref false
 
-let init ?(silent=true) ?(lp_syntax="lp-syntax.elpi") ~paths ~cwd () =
+let init ?(silent=true) ~lp_syntax ~paths ~cwd () =
   assert(!parser_initialized = false);
   parse_silent := silent;
   parsed := [];
   set_tjpath cwd paths;
-  assert(parse lp [lp_syntax] = []);
+  List.iter gram_extend lp_syntax;
   parser_initialized := true
 ;;
 
@@ -738,4 +757,50 @@ let parse_goal_from_stream strm =
     Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) -> raise(Stream.Error msg)
   | Ploc.Exc(_,e) -> raise e
 
-
+let lp_gramext = [
+  { fix = Infixl;	sym = ":-";	prec = 0; };
+  { fix = Infixr;	sym = ";";	prec = 100; };
+  { fix = Infix;	sym = "?-";	prec = 115; };
+  { fix = Infixr;	sym = "->";	prec = 116; };
+  { fix = Infixr;	sym = "&";	prec = 120; };
+  { fix = Infixr;	sym = "=>";	prec = 129; };
+  { fix = Infixr;	sym = "as";	prec = 129; };
+  { fix = Infix;	sym = "<";	prec = 130; };
+  { fix = Infix;	sym = "=<";	prec = 130; };
+  { fix = Infix;	sym = "=";	prec = 130; };
+  { fix = Infix;	sym = ">=";	prec = 130; };
+  { fix = Infix;	sym = ">";	prec = 130; };
+  { fix = Infix;	sym = "i<";	prec = 130; };
+  { fix = Infix;	sym = "i=<";	prec = 130; };
+  { fix = Infix;	sym = "i>=";	prec = 130; };
+  { fix = Infix;	sym = "i>";	prec = 130; };
+  { fix = Infix;	sym = "is";	prec = 130; };
+  { fix = Infix;	sym = "r<";	prec = 130; };
+  { fix = Infix;	sym = "r=<";	prec = 130; };
+  { fix = Infix;	sym = "r>=";	prec = 130; };
+  { fix = Infix;	sym = "r>";	prec = 130; };
+  { fix = Infix;	sym = "s<";	prec = 130; };
+  { fix = Infix;	sym = "s=<";	prec = 130; };
+  { fix = Infix;	sym = "s>=";	prec = 130; };
+  { fix = Infix;	sym = "s>";	prec = 130; };
+  { fix = Infix;	sym = "@";	prec = 135; };
+  { fix = Infixr;	sym = "::";	prec = 140; };
+  { fix = Infix;	sym = "`->";	prec = 141; };
+  { fix = Infix;	sym = "`:";	prec = 141; };
+  { fix = Infixl;	sym = "^";	prec = 150; };
+  { fix = Infixl;	sym = "-";	prec = 150; };
+  { fix = Infixl;	sym = "+";	prec = 150; };
+  { fix = Infixl;	sym = "i-";	prec = 150; };
+  { fix = Infixl;	sym = "i+";	prec = 150; };
+  { fix = Infixl;	sym = "r-";	prec = 150; };
+  { fix = Infixl;	sym = "r+";	prec = 150; };
+  { fix = Infixl;	sym = "/";	prec = 160; };
+  { fix = Infixl;	sym = "*";	prec = 160; };
+  { fix = Infixl;	sym = "div";	prec = 160; };
+  { fix = Infixl;	sym = "i*";	prec = 160; };
+  { fix = Infixl;	sym = "mod";	prec = 160; };
+  { fix = Infixl;	sym = "r*";	prec = 160; };
+  { fix = Prefix;	sym = "~";	prec = 256; };
+  { fix = Prefix;	sym = "i~";	prec = 256; };
+  { fix = Prefix;	sym = "r~";	prec = 256; };
+]
