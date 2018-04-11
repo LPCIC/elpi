@@ -741,12 +741,13 @@ let init ?(silent=true) ~lp_syntax ~paths ~cwd () =
 ;;
 
 let parse_program filenames : program =
-  assert(!parser_initialized = true);
-  parse lp filenames
+ if !parser_initialized = false then anomaly "parsing before calling init";
+ parse lp filenames
 ;;
 
 let parse_program_from_stream strm : program =
   assert(!parser_initialized = true);
+  if !parser_initialized = false then anomaly "parsing before calling init";
   try Grammar.Entry.parse lp strm
   with
     Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) -> raise(Stream.Error msg)
@@ -754,11 +755,11 @@ let parse_program_from_stream strm : program =
 ;;
 
 let parse_goal s : goal =
-  assert(!parser_initialized = true);
+  if !parser_initialized = false then anomaly "parsing before calling init";
   parse_string goal s
 
 let parse_goal_from_stream strm =
-  assert(!parser_initialized = true);
+  if !parser_initialized = false then anomaly "parsing before calling init";
   try Grammar.Entry.parse goal strm
   with
     Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) -> raise(Stream.Error msg)
