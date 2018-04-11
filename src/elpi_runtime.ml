@@ -1352,11 +1352,11 @@ let rec unif matching depth adepth a bdepth b e =
       unif matching depth adepth exp bdepth hd e &&
       let args = list_to_lp_list (C.mkinterval 0 vd 0 @ args) in
       unif matching depth adepth args bdepth arg e
-   | _, (Const c | App(c,_,_)) when c == C.uvarc && matching -> false
-   (*
-      error (show uvc ^ " can be used only in matching and takes 0, 1 or 2 args " ^ show_term a)
+   | _, (Const c | App(c,_,[])) when c == C.uvarc && matching -> false
+   (* On purpose we let the fully applied uvarc pass, so that at the
+    * meta level one can unify fronzen constants. One can use the var builtin
+    * to discriminate the two cases, as in "p (uvar F L as X) :- var X, .." *)
 
-*)
    (* assign *)
    | _, Arg (i,0) ->
      begin try
@@ -1727,9 +1727,10 @@ let add1clause m clause =
       (* X matches both rigid and flexible terms *)
       if app == variablek then begin
         Elpi_ptmap.add ind (clause :: l, clause :: flexs, Elpi_ptmap.map (fun l_rev -> clause::l_rev) h) m
-      (* ? matches only flexible terms *)
+      (* uvar matches only flexible terms (or itself at the meta level) *)
       end else if app == mustbevariablek then begin
-        Elpi_ptmap.add ind (clause :: l, flexs, h) m
+        let l_rev = try Elpi_ptmap.find app h with Not_found -> flexs in
+        Elpi_ptmap.add ind (clause :: l, flexs, Elpi_ptmap.add app (clause::l_rev) h) m
       (* a rigid term matches flexible terms only in unification mode *)
       end else begin
         let l_rev = try Elpi_ptmap.find app h with Not_found -> flexs in
@@ -1741,7 +1742,7 @@ let add1clause m clause =
      if app=variablek then
       Elpi_ptmap.add ind ([clause],[clause],Elpi_ptmap.empty) m
      else if app=mustbevariablek then
-      Elpi_ptmap.add ind ([clause],[],Elpi_ptmap.empty) m
+      Elpi_ptmap.add ind ([clause],[],Elpi_ptmap.add app [clause] Elpi_ptmap.empty) m
      else
       let l = if matching then [] else [clause] in
       Elpi_ptmap.add ind
