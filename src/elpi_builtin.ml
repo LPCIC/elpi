@@ -493,8 +493,11 @@ let io_builtins = [
     Out(string, "S",
     Easy        "prints T to S")),
   (fun t _ ~depth ->
-       Format.fprintf Format.str_formatter "%a" (Pp.term depth [] 0 [||]) t ;
-       !:(Format.flush_str_formatter ()))),
+     let b = Buffer.create 1024 in
+     let fmt = Format.formatter_of_buffer b in
+     Format.fprintf fmt "%a" (Pp.term depth [] 0 [||]) t ;
+     Format.pp_print_flush fmt ();
+       !:(Buffer.contents b))),
   DocAbove);
 
   ]
