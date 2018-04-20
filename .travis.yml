@@ -68,7 +68,7 @@ matrix:
     os: osx
     before_install:
     - brew update
-    - brew install opam
+    - brew install --ignore-dependencies opam
     - brew install gnu-time
     - brew install lua51
     cache:
@@ -84,7 +84,7 @@ matrix:
     os: osx
     before_install:
     - brew update
-    - brew install opam
+    - brew install --ignore-dependencies opam
     - brew install gnu-time
     - brew install lua51
     cache:
