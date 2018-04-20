@@ -2,3 +2,4 @@ S src/
 B src/
 PKG ppx_deriving.std ppx_deriving.runtime
 PKG camlp5
+PKG re
