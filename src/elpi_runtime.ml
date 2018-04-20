@@ -2245,11 +2245,6 @@ module Ice : sig
   val defrost :
     maxd:int -> term -> env -> to_:int -> freezer -> term
 
-  val align_frozen :
-    freezer -> env -> depth:int -> alignment:(string * int) list ->
-      constraints:(int * constraint_def) list ->
-      arg2sequent:int IntMap.t -> unit
-
   val assignments : freezer -> assignment list
 
 end = struct (* {{{ *)
@@ -2377,39 +2372,6 @@ let ppmap fmt (g,l) =
   Fmt.fprintf fmt "%d = %a" g (pplist aux ",") l
 ;;
 
-
-  let align_frozen m e ~depth ~alignment ~constraints ~arg2sequent =
-    [%spy "alignment-alignment" (fun fmt m ->
-      Fmt.fprintf fmt "%a" (pplist (pp_pair pp_string pp_int) ";") m )
-      alignment];
-    let kg = List.mapi (fun i j -> j,i) alignment in
-    let ((_,bkey), bgoal), todo = List.hd kg, List.tl kg in
-    let mkconstlist l =
-      [%spy "alignment-alignment-k" pp_int l];
-      List.map (function
-          | Const i -> i
-          |  _ -> error "CHR: alignment only works in the Lλ fragment") 
-        (lp_list_to_list ~depth e.(l)) in
-    let bkey = mkconstlist bkey in
-    let todo =
-      List.map (fun ((_,key), goal) -> goal, bkey, mkconstlist key) todo in
-    let mkmap base tgt =
-      if List.length base <> List.length tgt then begin 
-         error "CHR: alignment on lists of different lengths, you may want to add a rule for this case and do something sensible"
-      end else
-        List.combine tgt base in
-    let maps = List.map (fun (g,base,tgt) -> g,mkmap base tgt) todo in
-    [%spy "alignment" (fun fmt m ->
-      Fmt.fprintf fmt "%a%!"
-        (pplist ppmap ";") m) maps];
-    Array.iteri (fun i value ->
-      try
-        let goal = IntMap.find i arg2sequent in
-        if goal <> bgoal then
-          let map = List.assoc goal maps in 
-          e.(i) <- replace_const map e.(i)
-      with Not_found -> ()
-    ) e
 
 end (* }}} *)
 
@@ -2653,7 +2615,7 @@ let propagate { CS.cstr; cstr_position; cstr_blockers = overlapping } history =
     rules |> map_exists (fun ({
         CHR.to_match = pats_to_match; to_remove = pats_to_remove;
         new_goal; guard; nargs;
-        alignment; pattern = quick_filter }
+        pattern = quick_filter }
       as propagation_rule) ->
 
     let len_pats_to_match = List.length pats_to_match in
@@ -2685,24 +2647,13 @@ let propagate { CS.cstr; cstr_position; cstr_blockers = overlapping } history =
 
        (* max depth of rule and constraints involved in the matching *)
        let max_depth, constraints =
-         match alignment with
-         | None -> (* Spread *)
-             (* Goals are lifted at different depths to avoid collisions *)
-             let max_depth,constraints = 
-              List.fold_left (fun (md,res) c ->
-                 let md = md + c.Elpi_data.cdepth in
-                 md, (md,c)::res)
-                (0,[]) constraints in
-             max_depth, List.rev constraints
-         | Some _ -> (* Alignment *)
-             (* We compute the maximum goal depth, and goals are all lifted
-              * to that depth before matching *)
-             let max_depth =
-                List.fold_left (fun acc c -> max c.Elpi_data.cdepth acc)
-                  0 constraints in
-             let constraints =
-                List.map (fun c -> max_depth,c) constraints in
-             max_depth, constraints
+         (* Goals are lifted at different depths to avoid collisions *)
+         let max_depth,constraints = 
+          List.fold_left (fun (md,res) c ->
+             let md = md + c.Elpi_data.cdepth in
+             md, (md,c)::res)
+            (0,[]) constraints in
+         max_depth, List.rev constraints
        in
 
        let constraints_depts, constraints_contexts, constraints_goals =
@@ -2774,16 +2725,6 @@ let propagate { CS.cstr; cstr_position; cstr_blockers = overlapping } history =
            [%spy "propagate-matched-args"
              (pplist (uppterm max_depth [] 0 empty_env) ~boxed:false ",")
              (Array.to_list env)];
-
-           begin match alignment with
-           | None -> ()
-           | Some { CHR.keys; arg2sequent } ->
-             Ice.align_frozen m env 
-               ~depth:max_depth ~alignment:keys ~constraints ~arg2sequent;
-             [%spy "propagate-aligned-args"
-               (pplist (uppterm max_depth [] 0 empty_env) " ")
-               (Array.to_list env)];
-           end;
 
            T.to_resume := [];
            assert(!T.new_delayed = []);
@@ -2912,6 +2853,12 @@ let make_runtime : ?max_steps: int -> executable -> runtime =
     | Builtin(c,[]) when c == C.cutc -> [%tcall cut p gs next alts lvl]
     | App(c, g, gs') when c == C.andc || c == C.andc2 ->
        run depth p g (List.map(fun x -> depth,p,x) gs'@gs) next alts lvl
+    | Cons (g,gs') ->
+       run depth p g ((depth,p,gs') :: gs) next alts lvl
+    | Nil -> 
+      begin match gs with
+      | [] -> pop_andl alts next lvl
+      | (depth, p, g) :: gs -> run depth p g gs next alts lvl end
     | App(c, g2, [g1]) when c == C.rimplc ->
        (*Fmt.eprintf "RUN: %a\n%!" (uppterm depth [] 0 empty_env) g ;*)
        let clauses, pdiff, lcs = clausify ~depth g1 in
@@ -2941,7 +2888,7 @@ let make_runtime : ?max_steps: int -> executable -> runtime =
        let cp = get_clauses depth g p in
        [%tcall backchain depth p g gs cp next alts lvl]
     | Arg _ | AppArg _ -> anomaly "Not a heap term"
-    | Cons _ | Nil | Lam _ | CData _ ->
+    | Lam _ | CData _ ->
         type_error ("The goal is not a predicate:" ^ (show_term g))
     | UVar _ | AppUVar _ | Discard ->
         error "The goal is a flexible term"

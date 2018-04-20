@@ -555,11 +555,9 @@ EXTEND
   chrrule :
     [[ to_match = LIST0 sequent;
        to_remove = OPT [ BIND; l = LIST1 sequent -> l ];
-       alignment = OPT [
-         SYMBOL ">"; hd = CONSTANT; SYMBOL "~"; l = LIST1 CONSTANT SEP SYMBOL "~" -> List.map Func.from_string (hd :: l) ];
        guard = OPT [ PIPE; a = atom LEVEL "abstterm" -> a ];
        new_goal = OPT [ SYMBOL "<=>"; gs = sequent -> gs ] ->
-         create_chr_rule ~to_match ?to_remove ?alignment ?guard ?new_goal ()
+         create_chr_rule ~to_match ?to_remove ?guard ?new_goal ()
     ]];
   sequent_core :
     [ [ constant_colon; e = CONSTANT; COLON; t = atom -> Some e, (t : term) 

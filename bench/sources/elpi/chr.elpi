@@ -13,26 +13,25 @@ len [_|XS] N :- len XS M, N is M + 1.
 
 constraint term {
   rule
-     \ (term (uvar K LX) _) (term (uvar _ LY) _)
+     \ (term (uvar K LX) _) (term (uvar K LY) _)
      | (len LX N, len LY M, not(N = M))
    <=> (print "wrong arity" K, false).
 
-  rule (GX ?- term (uvar K1 LX) TX)
-     \ (GY ?- term (uvar K2 LY) TY)
-     > LX ~ LY
-     | (K1 = K2, print "compat" GX "|-" K1 LX TX "," GY "|-" K2 LY TY, 
+  rule (GX ?- term (uvar K LX) TX)
+     \ (GY ?- term (uvar K LY) TY)
+     | (print "compat" GX "|-" K LX TX "," GY "|-" K LY TY, 
         compatible GX LX GY LY CTXCONSTR)
    <=> (print "NEW" CTXCONSTR TX "=" TY, CTXCONSTR, TX = TY).
 
 }
 
-compatible _ [] _ [] true :- !.
-compatible GX [X|XS] GY [Y|YS] (TX = TY, K) :-
+compatible _ [] _ [] [] :- !.
+compatible GX [X|XS] GY [Y|YS] [TX = TY | K] :-
  (GX => term X TX),
  (GY => term Y TY),
  !,
  compatible GX XS GY YS K.
-compatible _ _ _ _ false.
+compatible _ _ _ _ [false].
 
 main :-
   (term (lam x\ lam y\ app (app (F x y) x) y) T1_, 

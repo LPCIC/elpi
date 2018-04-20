@@ -489,10 +489,6 @@ let lp ~depth state s =
 let prechr_rule_of_ast depth macros state r =
   let state = set_argmap state empty_amap in
   let intern state t = preterm_of_ast ~depth macros state t in
-  let internArg state f =
-    match intern state (A.Const f) with
-    | _, Const c when C.Map.mem c (get_argmap state).c2i -> c
-    | _ -> error ("CHR: variable expected, got "^ F.show f) in
   let intern_sequent state { A.eigen; context; conclusion } =
     let state, peigen = intern state eigen in
     let state, pcontext = intern state context in
@@ -502,10 +498,9 @@ let prechr_rule_of_ast depth macros state r =
   let state, pto_remove = map_acc intern_sequent state r.A.to_remove in
   let state, pguard = option_mapacc intern state r.A.guard in
   let state, pnew_goal = option_mapacc intern_sequent state r.A.new_goal in
-  let palignment = List.map (internArg state) r.A.alignment in
   let pamap = get_argmap state in
   let state = set_argmap state empty_amap in
-  state, { pto_match; pto_remove; palignment; pguard; pnew_goal; pamap }
+  state, { pto_match; pto_remove; pguard; pnew_goal; pamap }
   
 (* exported *)
 let preterm_of_function ~depth macros state f =
@@ -777,12 +772,11 @@ end = struct (* {{{ *)
     }
 
   let map_chr f
-    { pto_match; pto_remove; palignment; pguard; pnew_goal; pamap }
+    { pto_match; pto_remove; pguard; pnew_goal; pamap }
   =
     {
       pto_match = smart_map (map_sequent f) pto_match;
       pto_remove = smart_map (map_sequent f) pto_remove;
-      palignment;
       pguard = option_map (smart_map_term f) pguard;
       pnew_goal = option_map (map_sequent f) pnew_goal;
       pamap;
@@ -1241,7 +1235,7 @@ module Compiler : sig
 end = struct (* {{{ *)
 
 let compile_chr depth
-  { pto_match; pto_remove; palignment; pguard; pnew_goal; pamap }
+  { pto_match; pto_remove; pguard; pnew_goal; pamap }
 =
   if depth > 0 then error "CHR: rules and locals are not supported";
   let key_of_sequent { pconclusion } =
@@ -1250,55 +1244,6 @@ let compile_chr depth
     | App(x,_,_) -> x
     | f -> 
        error ("CHR: rule without head symbol, got: "^ show_term f) in
-  let arg_occurs c t =
-    let rec arg_occurs = function
-      | Const f -> f == c
-      | ( Discard | CData _ | Nil) -> false
-      | (Arg _ | AppArg _ | UVar _ | AppUVar _) -> assert false
-      | App(f,x,xs) -> f == c || arg_occurs x || List.exists arg_occurs xs
-      | Builtin(_,xs) -> List.exists arg_occurs xs
-      | Cons(x,y) -> arg_occurs x || arg_occurs y
-      | Lam x -> arg_occurs x
-    in
-      arg_occurs t
-  in
-  let assert_used_only_in patterns patno (c,name,_) =
-    List.iteri (fun i { pconclusion; pcontext } ->
-      let occurs = arg_occurs c pcontext || arg_occurs c pconclusion in
-      if i <> patno && occurs then
-        error (Printf.sprintf
-                 "%s %s is used in the %dth pattern instead of the %dth"
-                 "CHR: Alignment variable" name i patno);
-      if i = patno && not occurs then
-        error (Printf.sprintf
-                "%s %s (%dth position) is not used in the %dth pattern"
-                "CHR: Alignment variable" name patno patno))
-    patterns
-  in
-  let assert_1_key_per_goal kg ngoals =
-    let gs = List.map (fun (_,_,i) -> i) kg in
-    let uniq_gs = uniq (List.sort compare gs) in
-    if List.length gs <> List.length uniq_gs || List.length gs <> ngoals then
-      error "CHR: Alignment invalid: 1 and only 1 key per sequent"
-  in
-  let { nargs; c2i; i2n } = pamap in
-  let mk_arg2sequent sequents keys =
-    let arg_occurs_seq arg { pcontext; pconclusion; peigen } =
-      arg_occurs arg pcontext ||
-      arg_occurs arg pconclusion ||
-      arg_occurs arg peigen in 
-    let m = ref IntMap.empty in
-    List.iter (fun (c,n,i) -> 
-      List.iteri (fun j s ->
-        let occ = arg_occurs_seq c s in
-        if IntMap.mem i !m && occ then begin
-          error (Printf.sprintf "CHR: sequent %d and %d share variable %s"
-            j (IntMap.find i !m) n)
-        end;
-        if occ then m := IntMap.add i j !m)
-        sequents;
-    ) keys;
-    !m in
   let stack_term_of_preterm term =
     stack_term_of_preterm ~depth:0 { term; amap = pamap } in
   let stack_sequent_of_presequent { pcontext; pconclusion; peigen } =
@@ -1307,39 +1252,11 @@ let compile_chr depth
     let eigen = stack_term_of_preterm peigen in
     { CHR.context; conclusion; eigen } in
   let all_sequents = pto_match @ pto_remove in
-  let nsequents = List.length all_sequents in
   let pattern = List.map key_of_sequent all_sequents in
-  let alignment, new_goal =
-    if palignment = [] then begin
-      let new_goal = match pnew_goal with
-      | Some ({ peigen = Discard } as g) ->
-          Some { g with peigen = Elpi_data.C.of_int 0 }
-      | _ -> pnew_goal in
-      None, new_goal
-    end else begin
-      begin match pnew_goal with
-      | Some { peigen } when peigen <> Discard ->
-          error ("CHR: both alignment directive and "^
-                 "explicit eigen variable given in new goal")
-      | _ -> ()
-      end;
-      if List.length palignment <>
-         List.length (uniq (List.sort compare palignment))
-         then error "CHR: alignement with duplicates";
-      let keys =
-        List.map (fun c ->
-          let i = C.Map.find c c2i in c, IntMap.find i i2n, i) palignment in
-      assert_1_key_per_goal keys nsequents;
-      List.iteri (assert_used_only_in all_sequents) keys;
-      Some { CHR.keys = List.map (fun (_,n,i) -> n,i) keys;
-                 arg2sequent = mk_arg2sequent all_sequents keys },
-      pnew_goal
-    end in
   { CHR.to_match = List.map stack_sequent_of_presequent pto_match;
         to_remove = List.map stack_sequent_of_presequent pto_remove;
         guard = option_map stack_term_of_preterm pguard;
-        new_goal = option_map stack_sequent_of_presequent new_goal;
-        alignment;
+        new_goal = option_map stack_sequent_of_presequent pnew_goal;
         nargs = pamap.nargs;
         pattern;
       }

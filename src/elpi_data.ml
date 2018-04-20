@@ -302,11 +302,9 @@ module CHR : sig
   type clique 
 
   type sequent = { eigen : term; context : term; conclusion : term }
-  and alignment = { arg2sequent : int IntMap.t; keys : (string * int) list }
   and rule = {
     to_match : sequent list;
     to_remove : sequent list;
-    alignment : alignment option;
     guard : term option;
     new_goal : sequent option;
     nargs : int [@default 0];
@@ -331,11 +329,9 @@ module CHR : sig
 end = struct (* {{{ *)
 
   type sequent = { eigen : term; context : term; conclusion : term }
-  and alignment = { arg2sequent : int IntMap.t; keys : (string * int) list }
   and rule = {
     to_match : sequent list;
     to_remove : sequent list;
-    alignment : alignment option;
     guard : term option;
     new_goal : sequent option;
     nargs : int [@default 0];
@@ -597,7 +593,6 @@ type presequent = { peigen : term; pcontext : term; pconclusion : term }
 type prechr_rule = {
   pto_match : presequent list;
   pto_remove : presequent list;
-  palignment : Constants.t list;
   pguard : term option;
   pnew_goal : presequent option;
   pamap : argmap;

@@ -100,7 +100,6 @@ type sequent = { eigen : term; context : term; conclusion : term }
 and chr_rule = {
   to_match : sequent list;
   to_remove : sequent list;
-  alignment : Func.t list;
   guard : term option;
   new_goal : sequent option;
 }

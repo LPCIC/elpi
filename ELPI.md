@@ -424,13 +424,11 @@ Here `+` means one or more, `*` zero or more
 ```
 CONSTRAINT ::= constraint CLIQUE { RULE* }
 CLIQUE ::= NAME+
-RULE ::= rule TO-MATCH TO-REMOVE ALIGN GUARD TO-ADD .
+RULE ::= rule TO-MATCH TO-REMOVE GUARD TO-ADD .
 TO-MATCH  ::= SEQUENT*
-ALIGN     ::= > VARIABLE ~ VARIABLE VARLIST
 TO-REMOVE ::= \   SEQUENT+
 TO-ADD    ::= <=> SEQUENT
 GUARD     ::= TERM
-VARLIST ::= ~ VARIABLE VARLIST |
 SEQUENT ::= TERM | ( VARIABLE : COMPOUND-TERM ?- COMPOUND-TERM )
 TERM ::= VARIABLE | NAME | ( COMPOUND-TERM )
 NAME ::= foo | bar ...
@@ -468,8 +466,6 @@ Constraints are resumed as regular delayed goals are.
 
 #### Example of higher order rules
 
-##### Automatic alignment
-
 ```prolog
 mode (term i o).
 term (app HD ARG) TGT :- term HD (arrow SRC TGT), term ARG SRC.
@@ -477,27 +473,26 @@ term (lam F) (arrow SRC TGT) :- pi x\ term x SRC => term (F x) TGT.
 term (uvar as X) T :- declare_constraint (term X T) [X].
 
 constraint term {
-  rule (EX : GX ?- term (uvar _ LX) TX)
-     \ (EY : GY ?- term (uvar _ LY) TY)
-     > LX ~ LY
-     | (compatible GX LX GY LY CTXCONSTR)
-   <=> (CTXCONSTR, TX = TY).
+  rule (GX ?- term (uvar K LX) TX)
+     \ (GY ?- term (uvar K LY) TY)
+     | (compatible GX LX GY LY CTXEQS)
+   <=> [TX = TY | CTXEQS].
 }
 
-compatible _ [] _ [] true :- !.
-compatible GX [X|XS] GY [Y|YS] (TX = TY, K) :-
+compatible _ [] _ [] [] :- !.
+compatible GX [X|XS] GY [Y|YS] [TX = TY | K] :-
  (GX => term X TX),
  (GY => term Y TY),
  !,
  compatible GX XS GY YS K.
-compatible _ _ _ _ false.
+compatible _ _ _ _ [].
 
 main :-
   (term (lam x\ lam y\ app (app (F x y) x) y) T1),
   (term (lam y\ lam x\ app (app (F x y) y) x) T2).
 ```
 
-Without the propagation rule the result to `main` would be
+*Without* the propagation rule the result to `main` would be:
 ```
 ...
 Constraints:
@@ -505,59 +500,10 @@ Constraints:
  {x0 x1} : term x1 X4, term x0 X5 ?- term (X2 x0 x1) (arr X5 (arr X4 X6))  /* suspended on X2 */
 ```
 
-The propagation rule aligns the two sequents by finding the permutation
-between `LX` and `LY` that must be duplicate free lists of names (i.e.
-the variables on which the constraints are suspended must be in
-the Lλ fragment.
-
-Such permutation is applied to the matched constraints, hence
-the guard and the new goal operate on terms all living in the
-same name context.  
-
-The result with the propagation rule enabled is
+The result *with* the propagation rule enabled is:
 ```
  {x0 x1} : term x1 X0, term x0 X0 ?- term (X1 x1 x0) (arr X0 (arr X0 X2))  /* suspended on X1 */
 ```
-
-The variables used in the patterns must be disjoint and
-exactly one of them (binding a list of names) has to specified
-in the alignment directive.
-
-##### Manual alignment
-
-If the program goes outside Lλ, no automatic alignment is provided.
-In such case the alignment directive must be omitted. The pattern for
-the sequents can bind the set of eigen variables (an integer) and
-one of them can be used to specify in which name context the new goal will
-run.  Moreover, the guard is executed in the disjoint union of the named
-contexts, i.e. the matched sequents will hare no names.  It is up to the guard
-to generate terms that live in the named context chosen for the new goal.
-Patterns can share variables.
-
-Example of a rule that takes the canonical type of K and
-puts it in the CtxActual by replacing all variables (in L)
-by their actual values in V.
-
-```prolog
-% Uniqueness of typing
-utc [] T1 [] T2 (unify-eq T1V T2) :- !, copy T1 T1V.
-utc [N|NS] T1 [V|VS] T2 C :- !, copy N V => utc NS T1 VS T2 C.
-
-canonical? [].
-canonical? [N|NS] :- is_name N, not(mem NS N), canonical? NS.
-
-constraint of {
- rule (E1 : G1 ?- of (uvar K L1) T1 _) % canonical
-    \ (E2 : G2 ?- of (uvar K L2) T2 _) % actual
-    | (canonical? L1, utc L1 T1 L2 T2 Condition)
-  <=> (E2: G2 ?- Condition).
-}
-```
-
-The new goal replaces the (duplicate) typing constrain on K
-by a unification problem that checks that the canonical type
-of K once applied the explicit substitution V is compatible 
-with the actual type.
 
 #### Operational Semantics
 
@@ -575,16 +521,16 @@ As soon as a new constraint C is declared:
    X and bi is the frozen term for ai. We now have SF.
 5. Each sequent in SF is matched against the corresponding pattern in R.
    If matching fails, the rule is aborted and the next one is considered.
-6. Depending on the alignment directive all terms are either put in the
-   same name context (if the alignment is present), or spread in different
-   name contexts.
+6. All terms are spread in different name contexts, and now live in the
+   disjoint union of all name contexts.
 7. The guard is run.  If it fails the rule is aborted and the next one
    is considered. It if succeeds all subsequent rules are aborted (*committed 
    choice*).
 8. The new goal is resumed immediately (before any other active goal).
-   If no alignment is given, then name context
-   has to be specified and the goal is checked to live in such context,
-   otherwise elpi gives an error.
+   If the name context for the new goal is given, then the new goal
+   is checked to live in such context before resuming.  If the name
+   context is not specified the resumed goals lives in the disjoint union
+   of all name contexts.
    
 The application of CHR rules follows the [refined operation semantics](https://en.wikipedia.org/wiki/Constraint_Handling_Rules).
 
@@ -624,6 +570,9 @@ Note: x is bound in ELPI and used inside the quotation.
 
 ## Namespaces
 
+Everything defined inside a namespace block gets prefixed by the
+name of the namespace. For example
+
 ```prolog
 toto 1.
 namespace foo {
@@ -633,14 +582,36 @@ baz X :- toto X.
 main :- foo.bar 2, foo.baz 1.
 ```
 
+is equivalent to
+
 ```prolog
-namespace rev {
- pred aux i:list A, i:list A, o:list A.
- aux [X|XS] ACC R :- aux XS [X|ACC] R.
- aux [] L L.
+toto 1.
+foo.bar X :- toto 2 => foo.baz X.
+foo.baz X :- toto X.
+main :- foo.bar 2, foo.baz 1.
+```
+
+Note that  if a clause for `toto` was defined inside the namespace,
+then the symbol would have been considered as part of the namespace.
+
+```prolog
+toto 1.
+namespace foo {
+toto 3.
+bar X :- toto 2 => baz X.
+baz X :- toto X.
 }
-pred rev i:list A, o:list A.
-rev L RL  :- rev.aux L []  RL.
+main :- foo.bar 2, foo.baz 1.
+```
+
+is equivalent to
+
+```prolog
+toto 1. % this one is not more in the game
+foo.toto 3.
+foo.bar X :- foo.toto 2 => foo.baz X.
+foo.baz X :- foo.toto X.
+main :- foo.bar 2, foo.baz 1.
 ```
 
 ## Accumulate with paths
