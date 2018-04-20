@@ -7,7 +7,6 @@ This file tries to summarise known incompatibilities between Elpi and Teyjus.
 
 - `;` is not a built-in and behaves differently wrt `!`
 - integers are 31 bits (25 bits in Teyjus); etc for floats ...
-- `nil` is not `[]`, `cons` is not `::`
 
 # Syntax
 

@@ -8,6 +8,8 @@
 *.cmti
 *.cma
 
+findlib
+
 *~
 .*.swp
 
@@ -16,8 +18,8 @@
 .depends.byte
 .depends.parser.byte
 
-elpi
-elpi.byte
+./elpi
+./elpi.*
 trace_ppx
 .merlin
 elpi_config.ml

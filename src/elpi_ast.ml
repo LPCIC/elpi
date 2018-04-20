@@ -14,9 +14,14 @@ module Func = struct
   (* Hash consing *)
   let from_string =
    let h = Hashtbl.create 37 in
-   function x ->
-    try Hashtbl.find h x
-    with Not_found -> Hashtbl.add h x x ; x
+   let rec aux = function
+    | "nil" -> aux "[]"
+    | "cons" -> aux "::"
+    | x ->
+       try Hashtbl.find h x
+       with Not_found -> Hashtbl.add h x x ; x
+   in
+     aux
 
   let pp fmt s = Format.fprintf fmt "%s" s
   let show x = x
