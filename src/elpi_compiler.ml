@@ -270,7 +270,7 @@ module Quotation = struct
   let default_quotation = ref None
   
   let set_default_quotation f = default_quotation := Some f
-  let register_named_quotation n f =
+  let register_named_quotation ~name:n f =
     named_quotations := StrMap.add n f !named_quotations
 
 end

@@ -47,8 +47,8 @@ let register_eval, lookup_eval =
 ;;
 
 (* Traverses the expression evaluating all custom evaluable functions *)
-let rec eval depth =
- function
+let rec eval depth t =
+  match deref_head ~depth t with
   | Lam _ -> type_error "Evaluation of a lambda abstraction"
   | Builtin _ -> type_error "Evaluation of built-in predicate"
   | Arg _
@@ -62,10 +62,6 @@ let rec eval depth =
         | x::xs -> App(hd,x,xs) in
      let args = List.map (eval depth) (arg::args) in
      f args
-  | UVar ({ contents = g }, from, ano) when g != dummy ->
-     eval depth (deref_uv ~from ~to_:depth ~ano g)
-  | AppUVar ({contents = t}, from, args) when t != dummy ->
-     eval depth (deref_appuv ~from ~to_:depth ~args t)
   | UVar _
   | AppUVar _ -> error "Evaluation of a non closed term (maybe delay)"
   | Const hd as x ->
@@ -193,10 +189,16 @@ let occurs x d t =
      | Const c                          -> c = x
      | Lam t                            -> aux t
      | App (c, v, vs)                   -> c = x || aux v || auxs vs
-     | UVar ({contents = t}, dt, n)     -> if t == dummy then x < dt+n else
-                                           (x < dt && aux t) || (dt <= x && x < dt+n)
-     | AppUVar ({contents = t}, dt, vs) -> if t == dummy then auxs vs else
-                                           (x < dt && aux t) || auxs vs
+     | UVar (t, dt, n)     ->
+         begin match get_assignment t with
+         | None -> x < dt+n
+         | Some t -> (x < dt && aux t) || (dt <= x && x < dt+n)
+         end
+     | AppUVar (t, dt, vs) ->
+         begin match get_assignment t with
+         | None -> auxs vs
+         | Some t -> (x < dt && aux t) || auxs vs
+         end
      | Arg _
      | AppArg _                         -> anomaly "Not a heap term"
      | Builtin (_, vs)                   -> auxs vs
@@ -682,7 +684,8 @@ let { CData.cin = safe_in; isc = is_safe ; cout = safe_out } as safe = CData.dec
 let safe = data_of_cdata "@safe" safe
 
 let fresh_copy t max_db depth =
-  let rec aux d = function
+  let rec aux d t =
+    match deref_head ~depth:(depth + d) t with
     | Lam t -> Lam(aux (d+1) t)
     | Const c as x ->
         if c < max_db then x
@@ -696,12 +699,8 @@ let fresh_copy t max_db depth =
         else raise No_clause (* restriction *)
     | (Arg _ | AppArg _) ->
         type_error "stash takes only heap terms"
-    | (UVar (r,_,_) | AppUVar(r,_,_)) when r.contents == dummy ->
+    | (UVar (r,_,_) | AppUVar(r,_,_)) ->
         type_error "stash takes only ground terms"
-    | UVar(r,vd,ano) ->
-        aux d (deref_uv ~from:vd ~to_:(depth+d) ~ano r.contents)
-    | AppUVar(r,vd,args) ->
-        aux d (deref_appuv ~from:vd ~to_:(depth+d) ~args r.contents)
     | Builtin (c,xs) -> Builtin(c,List.map (aux d) xs)
     | CData _ as x -> x
     | Cons (hd,tl) -> Cons(aux d hd, aux d tl)
@@ -725,7 +724,10 @@ let elpi_nonlogical_builtins = [
   MLCode(Pred("var",
     In(any,   "any term",
     Easy       "checks if the term is a variable"),
-  (fun t1 ~depth -> if is_flex ~depth t1 <> None then () else raise No_clause)),
+  (fun t1 ~depth ->
+     match deref_head ~depth t1 with
+     | UVar _ | AppUVar _ -> ()
+     | _ -> raise No_clause)),
   DocAbove);
 
   MLCode(Pred("same_var",
@@ -733,8 +735,9 @@ let elpi_nonlogical_builtins = [
     In(poly "A",   "second term",
     Easy       "checks if the two terms are the same variable")),
   (fun t1 t2 ~depth ->
-     match is_flex ~depth t1, is_flex ~depth t2 with
-     | Some p1, Some p2 when p1 == p2 -> ()
+     match deref_head ~depth t1, deref_head ~depth t2 with
+     | (UVar(p1,_,_) | AppUVar(p1,_,_)),
+       (UVar(p2,_,_) | AppUVar(p2,_,_)) when p1 == p2 -> ()
      | _,_ -> raise No_clause)),
   DocAbove);
 
@@ -768,7 +771,7 @@ let elpi_nonlogical_builtins = [
   MLCode(Pred("closed_term",
     Out(any, "T",
     Easy      "unify T with a variable that has no eigenvariables in scope"),
-  (fun _ ~depth -> !:(UVar(oref dummy,0,0)))),
+  (fun _ ~depth -> !:(UVar(fresh_uvar_body (),0,0)))),
   DocAbove);
 
   MLCode(Pred("is_cdata",

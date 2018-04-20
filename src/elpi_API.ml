@@ -79,7 +79,6 @@ end
 
 module Data = struct
   type term = Elpi_data.term
-  type executable = Elpi_data.executable
   type syntactic_constraints = Elpi_data.syntactic_constraints
   type custom_constraints = Elpi_data.custom_constraints
   module StrMap = Elpi_util.StrMap
@@ -94,6 +93,7 @@ module Compile = struct
 
   type program = Elpi_compiler.program
   type query = Elpi_compiler.query
+  type executable = Elpi_data.executable
 
   let program header l = Elpi_compiler.program_of_ast (header @ List.flatten l)
   let query = Elpi_compiler.query_of_ast
@@ -155,6 +155,7 @@ module Extend = struct
   module CData = Elpi_util.CData
 
   module Data = struct
+    type uvar_body = Elpi_data.term_attributed_ref
     include Elpi_data
     type suspended_goal = { 
       context : hyps;
@@ -164,6 +165,7 @@ module Extend = struct
       | { kind = Constraint { cdepth; conclusion; context } } ->
           Some { context ; goal = (cdepth, conclusion) }
       | _ -> None)
+    let fresh_uvar_body () = oref Constants.dummy
   end
 
   module Compile = struct
@@ -238,11 +240,11 @@ module Extend = struct
 
   module CustomFunctor = struct
   
-    let declare_backtick name f =
+    let declare_backtick ~name f =
       Elpi_data.CustomFunctorCompilation.declare_backtick_compilation name
         (fun s x -> f s (Elpi_ast.Func.show x))
 
-    let declare_singlequote name f =
+    let declare_singlequote ~name f =
       Elpi_data.CustomFunctorCompilation.declare_singlequote_compilation name
         (fun s x -> f s (Elpi_ast.Func.show x))
 
@@ -257,35 +259,18 @@ module Extend = struct
       let module R = (val !r) in let open R in
       list_to_lp_list tl
    
-    let deref_uv ~from ~to_ ~ano:nargs t =
+    let deref_head ~depth t =
       let module R = (val !r) in let open R in
-      deref_uv ~from ~to_ nargs t
+      R.deref_head ~depth t
 
-    let deref_appuv ~from ~to_:constant ~args t =
-      let module R = (val !r) in let open R in
-      deref_appuv ~from ~to_:constant args t
-
-    let rec deref_head on_arg ~depth = function
-      | Data.UVar ({ Data.contents = t }, from, ano)
-        when t != Data.Constants.dummy ->
-         deref_head on_arg ~depth (deref_uv ~from ~to_:depth ~ano t)
-      | Data.AppUVar ({Data.contents = t}, from, args)
-        when t != Data.Constants.dummy ->
-         deref_head on_arg ~depth (deref_appuv ~from ~to_:depth ~args t)
-      | Data.App(c,x,xs) when not on_arg ->
-         Data.App(c,deref_head true ~depth x,List.map (deref_head true ~depth) xs)
-      | x -> x
-
-    let deref_head ~depth t = deref_head false ~depth t
+    let get_assignment { Elpi_data.contents = r } =
+      if r == Elpi_data.Constants.dummy then None
+      else Some r
 
     let move ~from ~to_ t =
       let module R = (val !r) in let open R in
       R.hmove ~from ~to_ ?avoid:None t
    
-    let is_flex ~depth t =
-      let module R = (val !r) in let open R in
-      is_flex ~depth t
-
     let error = Elpi_util.error
     let type_error = Elpi_util.type_error
     let anomaly = Elpi_util.anomaly
@@ -295,7 +280,7 @@ module Extend = struct
       let module Ast = Elpi_ast in
       let module R = (val !r) in let open R in
       let rec aux d ctx t =
-        match deref_head ~depth:d t with       
+        match R.deref_head ~depth:d t with       
         | Data.Const i when i >= 0 && i < depth ->
             error "program_of_term: the term is not closed"
         | Data.Const i when i < 0 ->

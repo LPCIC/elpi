@@ -27,7 +27,7 @@ val term_of_ast : depth:int -> Elpi_ast.term -> term
 
 type quotation = depth:int -> CompilerState.t -> string -> CompilerState.t * term
 val set_default_quotation : quotation -> unit
-val register_named_quotation : string -> quotation -> unit
+val register_named_quotation : name:string -> quotation -> unit
 
 val lp : quotation
 
