@@ -125,5 +125,6 @@ check-ocaml-ver:
 	$(H)ocamlfind query ppx_tools_versioned > /dev/null
 	$(H)ocamlfind query ppx_deriving > /dev/null
 	$(H)ocamlfind query ocaml-migrate-parsetree.driver-main > /dev/null
+	$(H)ocamlfind query re.str > /dev/null
 
 .NOTPARALLEL:

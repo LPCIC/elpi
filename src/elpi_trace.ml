@@ -6,6 +6,8 @@
 open Elpi_util
 module F = Format
 
+module Str = Re_str
+
 let debug = ref false
 let dverbose = ref false
 let where_loc = ref ("",0,max_int)

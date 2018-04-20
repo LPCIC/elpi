@@ -5,6 +5,8 @@
 open Elpi_util
 open Elpi_ast
 
+module Str = Re_str
+
 type fixity = Infixl | Infixr | Infix | Prefix | Prefixr | Postfix | Postfixl
 
 let fixity_of_string = function

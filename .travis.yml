@@ -5,7 +5,7 @@ env:
  global:
  - OCAML_MIN=4.02.3
  - OCAML_MAX=4.06.0
- - DEPS="camlp5 ocamlfind ppx_tools_versioned ppx_deriving ocaml-migrate-parsetree"
+ - DEPS="camlp5 ocamlfind ppx_tools_versioned ppx_deriving ocaml-migrate-parsetree re"
  - JOBS=2
 
 install:

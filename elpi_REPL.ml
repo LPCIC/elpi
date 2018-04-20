@@ -13,6 +13,8 @@ let _ =
 ;;
 *)
 
+module Str = Re_str
+
 let print_solution time = function
 | Elpi_API.Execute.NoMoreSteps ->
    Format.eprintf "Interrupted (no more steps)@\n%!"

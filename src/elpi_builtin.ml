@@ -10,6 +10,8 @@ open Utils
 open BuiltInPredicate
 open Notation
 
+module Str = Re_str
+
 let { CData.cin = istream_in; isc = is_istream ; cout = istream_out } as in_stream = CData.declare {
   CData.data_name = "in_stream";
   data_pp = (fun fmt (_,d) -> Format.fprintf fmt "<in_stream:%s>" d);
