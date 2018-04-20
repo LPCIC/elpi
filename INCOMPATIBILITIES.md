@@ -27,7 +27,6 @@ This file tries to summarise known incompatibilities between Elpi and Teyjus.
   (in place of returning an error). The same happens if the query is not `.`
   terminated.
 - No beta-redexes in the source code.
-- `o` is written `prop` (`o` is used to denote `output` in mode declarations).
 
 # Modules
 

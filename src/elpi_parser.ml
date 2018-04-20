@@ -675,7 +675,8 @@ EXTEND
     ]];
   ctype:
      [ "main" [ c = CONSTANT; l = LIST0 ctype LEVEL "arg" -> 
-                  mkApp (mkCon c :: l)
+                  if c = "o" && l = [] then mkCon "prop"
+                  else mkApp (mkCon c :: l)
               | CONSTANT "ctype"; s = LITERAL ->
                   mkApp [Const Func.ctypef; mkC CData.(cstring.cin s)] ]
      | "arg"  [ c = CONSTANT -> mkCon c
