@@ -736,7 +736,7 @@ let elpi_nonlogical_builtins = [
      | _,_ -> raise No_clause)),
   DocAbove);
 
-  MLCode(Pred("is_name",
+  MLCode(Pred("name",
     In(any, "T",
     Easy     "checks if T is a eigenvariable"),
   (fun x ~depth ->
