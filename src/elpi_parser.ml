@@ -110,7 +110,7 @@ let rec parse_one e (origfilename as filename) =
      parse_one e origsigname
     else [] in
   if not !parse_silent then
-    Printf.eprintf "loading %s (%s)\n%!" origfilename (Digest.to_hex inode);
+    Printf.printf "loading %s (%s)\n%!" origfilename (Digest.to_hex inode);
   let ast = ref None in
   parsed := (inode,ast) ::!parsed ;
   let ch = open_in filename in
