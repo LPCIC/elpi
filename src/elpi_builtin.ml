@@ -499,7 +499,7 @@ let io_builtins = [
   (fun t _ ~depth ->
      let b = Buffer.create 1024 in
      let fmt = Format.formatter_of_buffer b in
-     Format.fprintf fmt "%a" (Pp.term depth [] 0 [||]) t ;
+     Format.fprintf fmt "%a" (Pp.term depth) t ;
      Format.pp_print_flush fmt ();
        !:(Buffer.contents b))),
   DocAbove);
@@ -593,7 +593,7 @@ let elpi_builtins = [
     VariadicIn(any, "prints raw terms (debugging)"),
   (fun args ~depth _ { custom_constraints = cc } ->
      Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
-       (Pp.list (Pp.Raw.term depth [] 0 [||]) " ") args ;
+       (Pp.list (Pp.Raw.term depth) " ") args ;
      cc, ())),
   DocAbove);
 
@@ -601,7 +601,7 @@ let elpi_builtins = [
     VariadicIn(any,"prints terms"),
   (fun args ~depth _ { custom_constraints = cc } ->
      Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
-       (Pp.list (Pp.term depth [] 0 [||]) " ") args ;
+       (Pp.list (Pp.term depth) " ") args ;
      cc, ())),
   DocAbove);
 
@@ -676,7 +676,7 @@ let { CData.cin = safe_in; isc = is_safe ; cout = safe_out } as safe = CData.dec
   CData.data_name = "safe";
   data_pp = (fun fmt (id,l,d) ->
      Format.fprintf fmt "[safe %d: %a]_%d" id
-       (Pp.list (Pp.term 0 [] 0 Elpi_data.empty_env) ";") !l d);
+       (Pp.list (Pp.term 0) ";") !l d);
   data_eq = (fun (id1, _,_) (id2,_,_) -> id1 == id2);
   data_hash = (fun (id,_,_) -> id);
   data_hconsed = false;

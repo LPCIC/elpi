@@ -155,7 +155,16 @@ module Extend = struct
   module CData = Elpi_util.CData
 
   module Data = struct
+    type builtin = int
     include Elpi_data
+    let mkBuiltinName s args = mkBuiltin (Builtin.from_builtin_name s) args
+   
+    let look ~depth t =
+      let module R = (val !r) in let open R in
+      R.deref_head ~depth t
+
+    let kool x = x [@@ inline]
+
     type suspended_goal = { 
       context : hyps;
       goal : int * term
@@ -257,14 +266,6 @@ module Extend = struct
     let list_to_lp_list tl =
       let module R = (val !r) in let open R in
       list_to_lp_list tl
-   
-    let look ~depth t =
-      let module R = (val !r) in let open R in
-      R.deref_head ~depth t
-
-    let kool = function
-      | Data.Const n -> Data.mkConst n
-      | x -> x
 
     let unsafe_look x = x
 
@@ -331,9 +332,9 @@ module Extend = struct
 
   module Pp = struct
 
-    let term ?min_prec a b c d e f =
+    let term depth fmt t =
       let module R = (val !r) in let open R in
-      R.Pp.uppterm ?min_prec a b c d e f
+      R.Pp.uppterm depth [] 0 Elpi_data.empty_env fmt t
 
     let constraint_ f c = 
       let module R = (val !r) in let open R in
@@ -342,9 +343,9 @@ module Extend = struct
     let list = Elpi_util.pplist
 
     module Raw = struct
-      let term ?min_prec a b c d e f =
+      let term depth fmt t =
         let module R = (val !r) in let open R in
-        R.Pp.ppterm ?min_prec a b c d e f
+        R.Pp.ppterm depth [] 0 Elpi_data.empty_env fmt t
       let show_term = Elpi_data.show_term
     end
   end

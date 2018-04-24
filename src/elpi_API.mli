@@ -200,23 +200,24 @@ module Extend : sig
     val map : 'a cdata -> 'b cdata -> ('a -> 'b) -> t -> t
   end
 
-  (* This module exposes the low level representation of terms, and is very
-   * hard to use. Arg and AppArg are "stack terms" and should never be used.
-   * Note: The Utils module provides deref_head to dereference assigned 
-   * UVar or AppUVar nodes: always use "match look ~depth t with ..".
-   * Note: The "Const" node is hashconsed, see Constants.of_dbl or
-   * Contants.from_string, never build it by hand. *)
+  (* This module exposes the low level representation of terms.
+   *
+   * The data type [term] is opaque and can only be accessed by using the
+   * [look] API that exposes a term [view]. The [look] view automatically
+   * substitutes assigned unification variables by their value. The [UVar]
+   * and [AppUVar] node hence stand for unassigned unification variables. *)
   module Data : sig
 
     type constant = int (** De Bruijn levels (not indexes):
                             the distance of the binder from the root.
                             Starts at 0 and grows for bound variables;
-                            Starts at -1 and decreases for global names.  *)
+                            global constants have negative values. *)
+    type builtin
     type uvar_body (* unification variable (missing) body *)
     type term
     type view = private
       (* Pure subterms *)
-      | Const of constant (** hashconsed *)
+      | Const of constant
       | Lam of term
       | App of constant * term * term list
       (* Optimizations *)
@@ -224,14 +225,15 @@ module Extend : sig
       | Nil
       | Discard
       (* FFI *)
-      | Builtin of constant * term list
+      | Builtin of builtin * term list
       | CData of CData.t
-      (* Heap terms: unif variables in the query *)
+      (* Unification variables *)
       | UVar of uvar_body * (*depth:*)int * (*argsno:*)int
       | AppUVar of uvar_body * (*depth:*)int * term list
+
       (* Don't use. If we had subtyping these two should not be exposed *)
-      | Arg of int * int
-      | AppArg of int * term list
+                                                    | Arg of int * int
+                                                    | AppArg of int * term list
 
     val mkConst : constant -> term
     val mkLam : term -> term
@@ -239,10 +241,19 @@ module Extend : sig
     val mkCons : term -> term -> term
     val mkNil : term
     val mkDiscard : term
-    val mkBuiltin : constant -> term list -> term
+    val mkBuiltin : builtin -> term list -> term
+    val mkBuiltinName : string -> term list -> term
     val mkCData : CData.t -> term
     val mkUVar : uvar_body -> int -> int -> term
     val mkAppUVar : uvar_body -> int -> term list -> term
+
+    (** Terms must be inspected after dereferencing their head.
+        If the resulting term is UVar then its uvar_body is such that
+        get_assignment uvar_body = None *)
+    val look : depth:int -> term -> view
+
+    (** to reuse a term that was looked at *)
+    val kool : view -> term
 
     type clause_src = { hdepth : int; hsrc : term }
 
@@ -286,9 +297,6 @@ module Extend : sig
      
       val show : constant -> string
 
-      (* Hashconses the term "Const i" *)
-      val mkConst : constant -> term
-    
       val eqc    : constant (* = *)
       val orc    : constant (* ; *)
       val andc   : constant (* , *)
@@ -542,14 +550,6 @@ module Extend : sig
 
   module Utils : sig
 
-    (** Terms must be inspected after dereferencing their head.
-        If the resulting term is UVar then its uvar_body is such that
-        get_assignment uvar_body = None *)
-    val look : depth:int -> Data.term -> Data.view
-
-    (** to reuse a term that was looked at *)
-    val kool : Data.view -> Data.term
-
     (* Does not substitute the bodies of unification variables *)
     val unsafe_look : Data.term -> Data.view
 
@@ -580,13 +580,9 @@ module Extend : sig
 
   end
         
-  (** TODO: too rough *)
   module Pp : sig
 
-    val term : ?min_prec:int ->
-      int -> string list ->
-      int -> Data.term array ->
-        Format.formatter -> Data.term -> unit
+    val term : (*depth*)int -> Format.formatter -> Data.term -> unit
 
     val list : ?max:int -> ?boxed:bool ->
      (Format.formatter -> 'a -> unit) ->
@@ -594,10 +590,7 @@ module Extend : sig
      Format.formatter -> 'a list -> unit
 
     module Raw : sig
-      val term : ?min_prec:int ->
-        int -> string list ->
-        int -> Data.term array ->
-          Format.formatter -> Data.term -> unit
+      val term : (*depth*)int -> Format.formatter -> Data.term -> unit
       val show_term : Data.term -> string
    end
 

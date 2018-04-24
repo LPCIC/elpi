@@ -725,6 +725,11 @@ let is_declared x =
   || x == Constants.cutc
 ;;
 
+let from_builtin_name x =
+  let c = Constants.from_stringc x in
+  if not (is_declared c) then error ("No builtin called " ^ x);
+  c
+
 let pp_comment fmt doc =
   Fmt.fprintf fmt "@?";
   let orig_out = Fmt.pp_get_formatter_out_functions fmt () in
