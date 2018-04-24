@@ -197,39 +197,46 @@ module Constants : sig
 
 end = struct (* {{{ *)
 
-(* Hash re-consing :-( *)
-let funct_of_ast, of_dbl, show, fresh =
- let h = Hashtbl.create 37 in
- let h' = Hashtbl.create 37 in
- let h'' = Hashtbl.create 17 in
- let fresh = ref 0 in
- (function x ->
-  try Hashtbl.find h x
+(* Ast (functor name) -> negative int n (constant) * hashconsed (Const n) *)
+let ast2ct : (F.t, constant * term) Hashtbl.t = Hashtbl.create 37
+(* constant -> string *)
+let c2s : (constant, string) Hashtbl.t = Hashtbl.create 37
+(* constant n -> hashconsed (Const n) *)
+let c2t : (constant, term) Hashtbl.t = Hashtbl.create 17
+
+let fresh = ref 0
+
+let funct_of_ast x =
+  try Hashtbl.find ast2ct x
   with Not_found ->
+    decr fresh;
+    let n = !fresh in
+    let xx = Const n in
+    let p = n,xx in
+    Hashtbl.add c2s n (F.show x);
+    Hashtbl.add c2t n xx;
+    Hashtbl.add ast2ct x p;
+    p
+
+let of_dbl x =
+  try Hashtbl.find c2t x
+  with Not_found ->
+    let xx = Const x in
+    Hashtbl.add c2s x ("x" ^ string_of_int x);
+    Hashtbl.add c2t x xx;
+    xx
+
+let show n =
+   try Hashtbl.find c2s n
+   with Not_found -> string_of_int n
+
+let fresh () =
    decr fresh;
    let n = !fresh in
    let xx = Const n in
-   let p = n,xx in
-   Hashtbl.add h' n (F.show x);
-   Hashtbl.add h'' n xx;
-   Hashtbl.add h x p; p),
- (function x ->
-  try Hashtbl.find h'' x
-  with Not_found ->
-   let xx = Const x in
-   Hashtbl.add h' x ("x" ^ string_of_int x);
-   Hashtbl.add h'' x xx; xx),
- (function n ->
-   try Hashtbl.find h' n
-   with Not_found -> string_of_int n),
- (fun () ->
-   decr fresh;
-   let n = !fresh in
-   let xx = Const n in
-   Hashtbl.add h' n ("frozen-"^string_of_int n);
-   Hashtbl.add h'' n xx;
-   n,xx)
-;;
+   Hashtbl.add c2s n ("frozen-" ^ string_of_int n);
+   Hashtbl.add c2t n xx;
+   n, xx
 
 let pp fmt c = Fmt.fprintf fmt "%s" (show c)
 
