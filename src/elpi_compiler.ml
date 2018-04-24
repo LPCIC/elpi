@@ -452,7 +452,7 @@ let preterm_of_ast ~depth:arg_lvl macro state ast =
        state, Lam t'
     | A.Lam (x,t) ->
        let orig_varmap = get_varmap state in
-       let state = update_varmap state (F.Map.add x (C.of_dbl lvl)) in
+       let state = update_varmap state (F.Map.add x (mkConst lvl)) in
        let state, t' = aux true (lvl+1) state t in
        set_varmap state orig_varmap, Lam t'
     | A.App (A.App (f,l1),l2) ->
@@ -656,7 +656,7 @@ let preterm_of_ast ~depth macros state t =
           let orig_varmap = get_varmap state in
           let lcs, state =
             List.fold_left (fun (lcs,state) name ->
-              let rel = C.of_dbl lcs in
+              let rel = mkConst lcs in
               lcs+1, update_varmap state (F.Map.add name rel))
             (lcs,state) nlist in
           let state, lcs, _,
@@ -726,7 +726,7 @@ end = struct (* {{{ *)
     let rec aux = function
       | Const c as x ->
           let c1 = f c in
-          if c == c1 then x else C.of_dbl c1
+          if c == c1 then x else mkConst c1
       | Lam t as x ->
           let t1 = aux t in
           if t == t1 then x else Lam t1
@@ -925,7 +925,7 @@ end = struct (* {{{ *)
       x in
 
     let mkAppC c = function
-      | [] -> C.of_dbl c
+      | [] -> mkConst c
       | x::xs -> App(c,x,xs) in
 
     let mkApp hd args =
@@ -972,7 +972,7 @@ end = struct (* {{{ *)
             mkSpilled (List.rev vars) (missing_args_of modes types fcall) in
          spills @ [args, mkApp fcall args], args
       | App(c, Lam arg, []) when c == C.pic ->
-         let ctx = depth+1, C.of_dbl depth :: vars, under_lam in
+         let ctx = depth+1, mkConst depth :: vars, under_lam in
          let spills, arg = spaux1 ctx arg in
          [], [mkAppC c [Lam (add_spilled ~under_lam spills arg)]]
       | App(c, Lam arg, []) when c == C.sigmac ->
@@ -1022,11 +1022,11 @@ end = struct (* {{{ *)
            sp @ sp1, x) [] args in
          [], [add_spilled ~under_lam spills (Builtin(c,List.concat args))]
       | Lam t ->
-         let sp, t = spaux1 (depth+1, C.of_dbl depth :: vars, true) t in
+         let sp, t = spaux1 (depth+1, mkConst depth :: vars, true) t in
          let (t,_), sp = map_acc (fun (t,n) (names, call) ->
                let all_names = names @ n in
-               let call = apply_to all_names (C.of_dbl depth) call in
-               let t = apply_to names (C.of_dbl depth) t in
+               let call = apply_to all_names (mkConst depth) call in
+               let t = apply_to names (mkConst depth) t in
                (t,all_names), (names, mkAppC C.pic [Lam call])
            ) (t,[]) sp in
          sp, [Lam t]
@@ -1210,7 +1210,7 @@ let stack_term_of_preterm ~depth:arg_lvl { term = t; amap = { c2i } } =
     if C.Map.mem c c2i then
       let argno = C.Map.find c c2i in
       mkAppArg argno arg_lvl args
-    else if args = [] then C.of_dbl c
+    else if args = [] then mkConst c
     else App(c,List.hd args,List.tl args) in
   let rec stack_term_of_preterm = function
     | Const c -> arg_cst  c []
@@ -1372,11 +1372,11 @@ let mkQApp ~on_type l =
   App(c,list_to_lp_list l,[])
 
 let mkQCon ~on_type ?(amap=empty_amap) c =
-  try C.of_dbl (C.Map.find c amap.c2i)
+  try mkConst (C.Map.find c amap.c2i)
   with Not_found ->
     let a = if on_type then tconstc else constc in
     if c < 0 then App(a,Elpi_data.C.of_string (C.show c),[])
-    else C.of_dbl (c + amap.nargs)
+    else mkConst (c + amap.nargs)
 
 let quote_preterm ?(on_type=false) { term; amap } =
   let mkQApp = mkQApp ~on_type in
@@ -1402,9 +1402,9 @@ let quote_preterm ?(on_type=false) { term; amap } =
     | Builtin(c,args) -> mkQApp (mkQCon c :: List.map (aux depth) args)
 
 (*
-    | Arg(id,0) -> C.of_dbl id
-    | Arg(id,argno) -> mkQApp (C.of_dbl id :: C.mkinterval vars argno 0)
-    | AppArg(id,xs) -> mkQApp (C.of_dbl id :: List.map (aux depth) xs)
+    | Arg(id,0) -> mkConst id
+    | Arg(id,argno) -> mkQApp (mkConst id :: C.mkinterval vars argno 0)
+    | AppArg(id,xs) -> mkQApp (mkConst id :: List.map (aux depth) xs)
 *)
     | Arg _ | AppArg _ -> assert false
 

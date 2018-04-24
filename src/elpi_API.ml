@@ -155,7 +155,6 @@ module Extend = struct
   module CData = Elpi_util.CData
 
   module Data = struct
-    type uvar_body = Elpi_data.term_attributed_ref
     include Elpi_data
     type suspended_goal = { 
       context : hyps;
@@ -259,9 +258,15 @@ module Extend = struct
       let module R = (val !r) in let open R in
       list_to_lp_list tl
    
-    let deref_head ~depth t =
+    let look ~depth t =
       let module R = (val !r) in let open R in
       R.deref_head ~depth t
+
+    let kool = function
+      | Data.Const n -> Data.mkConst n
+      | x -> x
+
+    let unsafe_look x = x
 
     let get_assignment { Elpi_data.contents = r } =
       if r == Elpi_data.Constants.dummy then None
@@ -291,7 +296,7 @@ module Extend = struct
             let ctx = Elpi_util.IntMap.add d (Ast.mkCon s) ctx in
             Ast.mkLam s (aux (d+1) ctx t)
         | Data.App(c,x,xs) ->
-            let c = aux d ctx (Data.Constants.of_dbl c) in
+            let c = aux d ctx (Data.Constants.mkConst c) in
             let x = aux d ctx x in
             let xs = List.map (aux d ctx) xs in
             Ast.mkApp (c :: x :: xs)
@@ -302,7 +307,7 @@ module Extend = struct
             Ast.mkSeq [hd;tl]
         | Data.Nil -> Ast.mkNil
         | Data.Builtin(c,xs) ->
-            let c = aux d ctx (Data.Constants.of_dbl c) in
+            let c = aux d ctx (Data.Constants.mkConst c) in
             let xs = List.map (aux d ctx) xs in
             Ast.mkApp (c :: xs)
         | Data.CData x -> Ast.mkC x

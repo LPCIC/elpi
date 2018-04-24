@@ -39,7 +39,7 @@ let out_stream =
   data_of_cdata ~name:"@out_stream" ~constants out_stream
 
 let register_eval, lookup_eval =
- let (evals : ('a, term list -> term) Hashtbl.t)
+ let (evals : ('a, view list -> term) Hashtbl.t)
    =
      Hashtbl.create 17 in
  (fun s -> Hashtbl.add evals (from_stringc s)),
@@ -48,7 +48,7 @@ let register_eval, lookup_eval =
 
 (* Traverses the expression evaluating all custom evaluable functions *)
 let rec eval depth t =
-  match deref_head ~depth t with
+  match look ~depth t with
   | Lam _ -> type_error "Evaluation of a lambda abstraction"
   | Builtin _ -> type_error "Evaluation of built-in predicate"
   | Arg _
@@ -59,20 +59,20 @@ let rec eval depth t =
       with Not_found ->
         function
         | [] -> assert false
-        | x::xs -> App(hd,x,xs) in
-     let args = List.map (eval depth) (arg::args) in
+        | x::xs -> mkApp hd (kool x) (List.map kool xs)  in
+     let args = List.map (fun x -> look ~depth (eval depth x)) (arg::args) in
      f args
   | UVar _
   | AppUVar _ -> error "Evaluation of a non closed term (maybe delay)"
   | Const hd as x ->
      let f =
       try lookup_eval hd
-      with Not_found -> fun _ -> x in
+      with Not_found -> fun _ -> kool x in
      f []
   | (Nil | Cons _ as x) ->
-      type_error ("Lists cannot be evaluated: " ^ Pp.Raw.show_term x)
+      type_error ("Lists cannot be evaluated: " ^ Pp.Raw.show_term (kool x))
   | Discard -> type_error "_ cannot be evaluated"
-  | CData _ as x -> x
+  | CData _ as x -> kool x
 ;;
 
 let register_evals l f = List.iter (fun i -> register_eval i f) l;;
@@ -80,66 +80,66 @@ let register_evals l f = List.iter (fun i -> register_eval i f) l;;
 let _ =
   let open CData in
   register_evals [ "-" ; "i-" ; "r-" ] (function
-   | [ CData x; CData y ] when ty2 C.int x y -> CData(morph2 C.int (-) x y)
-   | [ CData x; CData y ] when ty2 C.float x y -> CData(morph2 C.float (-.) x y)
+   | [ CData x; CData y ] when ty2 C.int x y -> mkCData(morph2 C.int (-) x y)
+   | [ CData x; CData y ] when ty2 C.float x y -> mkCData(morph2 C.float (-.) x y)
    | _ -> type_error "Wrong arguments to -/i-/r-") ;
   register_evals [ "+" ; "i+" ; "r+" ] (function
-   | [ CData x; CData y ] when ty2 C.int x y -> CData(morph2 C.int (+) x y)
-   | [ CData x; CData y ] when ty2 C.float x y -> CData(morph2 C.float (+.) x y)
+   | [ CData x; CData y ] when ty2 C.int x y -> mkCData(morph2 C.int (+) x y)
+   | [ CData x; CData y ] when ty2 C.float x y -> mkCData(morph2 C.float (+.) x y)
    | _ -> type_error "Wrong arguments to +/i+/r+") ;
   register_eval "*" (function
-   | [ CData x; CData y ] when ty2 C.int x y -> CData(morph2 C.int ( * ) x y)
-   | [ CData x; CData y] when ty2 C.float x y -> CData(morph2 C.float ( *.) x y)
+   | [ CData x; CData y ] when ty2 C.int x y -> mkCData(morph2 C.int ( * ) x y)
+   | [ CData x; CData y] when ty2 C.float x y -> mkCData(morph2 C.float ( *.) x y)
    | _ -> type_error "Wrong arguments to *") ;
   register_eval "/" (function
-   | [ CData x; CData y] when ty2 C.float x y -> CData(morph2 C.float ( /.) x y)
+   | [ CData x; CData y] when ty2 C.float x y -> mkCData(morph2 C.float ( /.) x y)
    | _ -> type_error "Wrong arguments to /") ;
   register_eval "mod" (function
-   | [ CData x; CData y ] when ty2 C.int x y -> CData(morph2 C.int (mod) x y)
+   | [ CData x; CData y ] when ty2 C.int x y -> mkCData(morph2 C.int (mod) x y)
    | _ -> type_error "Wrong arguments to mod") ;
   register_eval "div" (function
-   | [ CData x; CData y ] when ty2 C.int x y -> CData(morph2 C.int (/) x y)
+   | [ CData x; CData y ] when ty2 C.int x y -> mkCData(morph2 C.int (/) x y)
    | _ -> type_error "Wrong arguments to div") ;
   register_eval "^" (function
    | [ CData x; CData y ] when ty2 C.string x y ->
          C.of_string (C.to_string x ^ C.to_string y)
    | _ -> type_error "Wrong arguments to ^") ;
   register_evals [ "~" ; "i~" ; "r~" ] (function
-   | [ CData x ] when C.is_int x -> CData(morph1 C.int (~-) x)
-   | [ CData x ] when C.is_float x -> CData(morph1 C.float (~-.) x)
+   | [ CData x ] when C.is_int x -> mkCData(morph1 C.int (~-) x)
+   | [ CData x ] when C.is_float x -> mkCData(morph1 C.float (~-.) x)
    | _ -> type_error "Wrong arguments to ~/i~/r~") ;
   register_evals [ "abs" ; "iabs" ; "rabs" ] (function
-   | [ CData x ] when C.is_int x -> CData(map C.int C.int abs x)
-   | [ CData x ] when C.is_float x -> CData(map C.float C.float abs_float x)
+   | [ CData x ] when C.is_int x -> mkCData(map C.int C.int abs x)
+   | [ CData x ] when C.is_float x -> mkCData(map C.float C.float abs_float x)
    | _ -> type_error "Wrong arguments to abs/iabs/rabs") ;
   register_eval "int_to_real" (function
-   | [ CData x ] when C.is_int x -> CData(map C.int C.float float_of_int x)
+   | [ CData x ] when C.is_int x -> mkCData(map C.int C.float float_of_int x)
    | _ -> type_error "Wrong arguments to int_to_real") ;
   register_eval "sqrt" (function
-   | [ CData x ] when C.is_float x -> CData(map C.float C.float sqrt x)
+   | [ CData x ] when C.is_float x -> mkCData(map C.float C.float sqrt x)
    | _ -> type_error "Wrong arguments to sqrt") ;
   register_eval "sin" (function
-   | [ CData x ] when C.is_float x -> CData(map C.float C.float sqrt x)
+   | [ CData x ] when C.is_float x -> mkCData(map C.float C.float sqrt x)
    | _ -> type_error "Wrong arguments to sin") ;
   register_eval "cos" (function
-   | [ CData x ] when C.is_float x -> CData(map C.float C.float cos x)
+   | [ CData x ] when C.is_float x -> mkCData(map C.float C.float cos x)
    | _ -> type_error "Wrong arguments to cosin") ;
   register_eval "arctan" (function
-   | [ CData x ] when C.is_float x -> CData(map C.float C.float atan x)
+   | [ CData x ] when C.is_float x -> mkCData(map C.float C.float atan x)
    | _ -> type_error "Wrong arguments to arctan") ;
   register_eval "ln" (function
-   | [ CData x ] when C.is_float x -> CData(map C.float C.float log x)
+   | [ CData x ] when C.is_float x -> mkCData(map C.float C.float log x)
    | _ -> type_error "Wrong arguments to ln") ;
   register_eval "floor" (function
    | [ CData x ] when C.is_float x ->
-         CData(map C.float C.int (fun x -> int_of_float (floor x)) x)
+         mkCData(map C.float C.int (fun x -> int_of_float (floor x)) x)
    | _ -> type_error "Wrong arguments to floor") ;
   register_eval "ceil" (function
    | [ CData x ] when C.is_float x ->
-         CData(map C.float C.int (fun x -> int_of_float (ceil x)) x)
+         mkCData(map C.float C.int (fun x -> int_of_float (ceil x)) x)
    | _ -> type_error "Wrong arguments to ceil") ;
   register_eval "truncate" (function
-   | [ CData x ] when C.is_float x -> CData(map C.float C.int truncate x)
+   | [ CData x ] when C.is_float x -> mkCData(map C.float C.int truncate x)
    | _ -> type_error "Wrong arguments to truncate") ;
   register_eval "size" (function
    | [ CData x ] when C.is_string x ->
@@ -185,7 +185,7 @@ let really_input ic s ofs len =
 
 (* constant x occurs in term t with level d? *)
 let occurs x d t =
-   let rec aux = function
+   let rec aux t = match unsafe_look t with
      | Const c                          -> c = x
      | Lam t                            -> aux t
      | App (c, v, vs)                   -> c = x || aux v || auxs vs
@@ -305,9 +305,9 @@ let core_builtins = [
     Easy     ("checks if X " ^ psym ^ " Y. Works for string, int and float"))),
   (fun t1 t2 ~depth ->
      let open CData in
-     let t1 = eval depth t1 in
-     let t2 = eval depth t2 in
-     match t1,t2 with
+     let t1 = look ~depth (eval depth t1) in
+     let t2 = look ~depth (eval depth t2) in
+     match t1, t2 with
      | CData x, CData y ->
           if ty2 C.int x y then let out = C.to_int in
             if p (out x) (out y) then () else raise No_clause
@@ -657,11 +657,11 @@ let elpi_builtins = [
 (** ELPI specific NON-LOGICAL built-in *********************************** *)
 
 let ctype : string data = {
-  to_term = (fun s -> App(Constants.ctypec,C.of_string s,[]));
+  to_term = (fun s -> mkApp Constants.ctypec (C.of_string s) []);
   of_term = (fun ~depth t ->
-     match deref_head ~depth t with
+     match look ~depth t with
      | App(c,s,[]) when c == Constants.ctypec ->
-         begin match deref_head ~depth s with
+         begin match look ~depth s with
          | CData c when C.is_string c -> Data (C.to_string c)
          | (UVar _ | AppUVar _) -> Flex t
          | Discard -> Discard
@@ -685,27 +685,27 @@ let safe = data_of_cdata "@safe" safe
 
 let fresh_copy t max_db depth =
   let rec aux d t =
-    match deref_head ~depth:(depth + d) t with
-    | Lam t -> Lam(aux (d+1) t)
+    match look ~depth:(depth + d) t with
+    | Lam t -> mkLam (aux (d+1) t)
     | Const c as x ->
-        if c < max_db then x
-        else if c - depth <= d then of_dbl (max_db + c - depth)
+        if c < max_db then kool x
+        else if c - depth <= d then mkConst (max_db + c - depth)
         else raise No_clause (* restriction *)
     | App (c,x,xs) ->
         let x = aux d x in
         let xs = List.map (aux d) xs in
-        if c < max_db then App(c,x,xs)
-        else if c - depth <= d then App(max_db + c - depth,x,xs)
+        if c < max_db then mkApp c x xs
+        else if c - depth <= d then mkApp (max_db + c - depth) x xs
         else raise No_clause (* restriction *)
     | (Arg _ | AppArg _) ->
         type_error "stash takes only heap terms"
     | (UVar (r,_,_) | AppUVar(r,_,_)) ->
         type_error "stash takes only ground terms"
-    | Builtin (c,xs) -> Builtin(c,List.map (aux d) xs)
-    | CData _ as x -> x
-    | Cons (hd,tl) -> Cons(aux d hd, aux d tl)
-    | Nil as x -> x
-    | Discard as x -> x
+    | Builtin (c,xs) -> mkBuiltin c (List.map (aux d) xs)
+    | CData _ as x -> kool x
+    | Cons (hd,tl) -> mkCons (aux d hd) (aux d tl)
+    | Nil as x -> kool x
+    | Discard as x -> kool x
   in
     aux 0 t
 
@@ -725,7 +725,7 @@ let elpi_nonlogical_builtins = [
     In(any,   "any term",
     Easy       "checks if the term is a variable"),
   (fun t1 ~depth ->
-     match deref_head ~depth t1 with
+     match look ~depth t1 with
      | UVar _ | AppUVar _ -> ()
      | _ -> raise No_clause)),
   DocAbove);
@@ -735,7 +735,7 @@ let elpi_nonlogical_builtins = [
     In(poly "A",   "second term",
     Easy       "checks if the two terms are the same variable")),
   (fun t1 t2 ~depth ->
-     match deref_head ~depth t1, deref_head ~depth t2 with
+     match look ~depth t1, look ~depth t2 with
      | (UVar(p1,_,_) | AppUVar(p1,_,_)),
        (UVar(p2,_,_) | AppUVar(p2,_,_)) when p1 == p2 -> ()
      | _,_ -> raise No_clause)),
@@ -745,7 +745,7 @@ let elpi_nonlogical_builtins = [
     In(any, "T",
     Easy     "checks if T is a eigenvariable"),
   (fun x ~depth ->
-    match deref_head ~depth x with
+    match look ~depth x with
     | Const n when n >= 0 -> ()
     | _ -> raise No_clause)),
   DocAbove);
@@ -753,7 +753,7 @@ let elpi_nonlogical_builtins = [
   MLCode(Pred("names",
     Out(list any, "list of eigenvariables in order of age (young first)",
     Easy           "generates the list of eigenvariable"),
-  (fun _ ~depth -> !:(List.init depth of_dbl))),
+  (fun _ ~depth -> !:(List.init depth mkConst))),
   DocNext);
 
   MLCode(Pred("occurs",
@@ -762,7 +762,7 @@ let elpi_nonlogical_builtins = [
     Easy     "checks if the constant occurs in the term")),
   (fun t1 t2 ~depth ->
      let occurs_in t2 t =
-       match deref_head ~depth t with
+       match look ~depth t with
        | Const n -> occurs n depth t2
        | _ -> error "The second argument of occurs must be a constant" in
      if occurs_in t2 t1 then () else raise No_clause)),
@@ -771,7 +771,7 @@ let elpi_nonlogical_builtins = [
   MLCode(Pred("closed_term",
     Out(any, "T",
     Easy      "unify T with a variable that has no eigenvariables in scope"),
-  (fun _ ~depth -> !:(UVar(fresh_uvar_body (),0,0)))),
+  (fun _ ~depth -> !:(mkUVar (fresh_uvar_body ()) 0 0))),
   DocAbove);
 
   MLCode(Pred("is_cdata",
@@ -779,7 +779,7 @@ let elpi_nonlogical_builtins = [
     Out(ctype,  "Ctype",
     Easy        "checks if T is primitive of type Ctype, eg (ctype \"int\")")),
   (fun t _ ~depth ->
-     match deref_head depth t with
+     match look ~depth t with
      | CData n -> !:(CData.name n)
      | _ -> raise No_clause)),
   DocAbove);

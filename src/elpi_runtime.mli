@@ -18,10 +18,10 @@ val execute_once : ?max_steps:int -> executable -> outcome
 val execute_loop : executable -> more:(unit -> bool) -> pp:(float -> outcome -> unit) -> unit
 
 (* Functions useful to implement built-in predicates and evaluable functions *)
-val deref_uv : ?avoid:term_attributed_ref -> from:constant -> to_:constant -> int -> term -> term
-val deref_appuv : ?avoid:term_attributed_ref -> from:constant -> to_:constant -> term list -> term -> term
+val deref_uv : ?avoid:uvar_body -> from:constant -> to_:constant -> int -> term -> term
+val deref_appuv : ?avoid:uvar_body -> from:constant -> to_:constant -> term list -> term -> term
 val deref_head : depth:int -> term -> term
-val is_flex : depth:int -> term -> term_attributed_ref option
+val is_flex : depth:int -> term -> uvar_body option
 val pp_stuck_goal : Fmt.formatter -> stuck_goal -> unit
 
 val lp_list_to_list : depth:int -> term -> term list
@@ -32,10 +32,10 @@ val split_conj : depth:int -> term -> term list
 val mkAppArg : int -> int -> term list -> term
 val move : 
   adepth:int -> env ->
-  ?avoid:term_attributed_ref -> ?depth:int ->
+  ?avoid:uvar_body -> ?depth:int ->
   from:int -> to_:int -> term -> term
 val hmove : 
-  ?avoid:term_attributed_ref ->
+  ?avoid:uvar_body ->
   from:int -> to_:int -> term -> term
 val subst: depth:int -> term list -> term -> term
 

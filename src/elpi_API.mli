@@ -203,32 +203,46 @@ module Extend : sig
   (* This module exposes the low level representation of terms, and is very
    * hard to use. Arg and AppArg are "stack terms" and should never be used.
    * Note: The Utils module provides deref_head to dereference assigned 
-   * UVar or AppUVar nodes: always use "match deref_head ~depth t with ..".
+   * UVar or AppUVar nodes: always use "match look ~depth t with ..".
    * Note: The "Const" node is hashconsed, see Constants.of_dbl or
    * Contants.from_string, never build it by hand. *)
   module Data : sig
 
     type constant = int (** De Bruijn levels (not indexes):
                             the distance of the binder from the root.
-                            Starts at 0.  *)
-    type uvar_body
-    type term =
-      (* Pure terms *)
+                            Starts at 0 and grows for bound variables;
+                            Starts at -1 and decreases for global names.  *)
+    type uvar_body (* unification variable (missing) body *)
+    type term
+    type view = private
+      (* Pure subterms *)
       | Const of constant (** hashconsed *)
       | Lam of term
       | App of constant * term * term list
-      (* Clause terms: unif variables used in clauses *)
-      | Arg of (*id:*)int * (*argsno:*)int
-      | AppArg of (*id*)int * term list
-      (* Heap terms: unif variables in the query *)
-      | UVar of uvar_body * (*depth:*)int * (*argsno:*)int
-      | AppUVar of uvar_body * (*depth:*)int * term list
-      (* Misc: built-in predicates, ... *)
-      | Builtin of constant * term list
-      | CData of CData.t
+      (* Optimizations *)
       | Cons of term * term
       | Nil
       | Discard
+      (* FFI *)
+      | Builtin of constant * term list
+      | CData of CData.t
+      (* Heap terms: unif variables in the query *)
+      | UVar of uvar_body * (*depth:*)int * (*argsno:*)int
+      | AppUVar of uvar_body * (*depth:*)int * term list
+      (* Don't use. If we had subtyping these two should not be exposed *)
+      | Arg of int * int
+      | AppArg of int * term list
+
+    val mkConst : constant -> term
+    val mkLam : term -> term
+    val mkApp : constant -> term -> term list -> term
+    val mkCons : term -> term -> term
+    val mkNil : term
+    val mkDiscard : term
+    val mkBuiltin : constant -> term list -> term
+    val mkCData : CData.t -> term
+    val mkUVar : uvar_body -> int -> int -> term
+    val mkAppUVar : uvar_body -> int -> term list -> term
 
     type clause_src = { hdepth : int; hsrc : term }
 
@@ -273,7 +287,7 @@ module Extend : sig
       val show : constant -> string
 
       (* Hashconses the term "Const i" *)
-      val of_dbl : constant -> term
+      val mkConst : constant -> term
     
       val eqc    : constant (* = *)
       val orc    : constant (* ; *)
@@ -531,7 +545,13 @@ module Extend : sig
     (** Terms must be inspected after dereferencing their head.
         If the resulting term is UVar then its uvar_body is such that
         get_assignment uvar_body = None *)
-    val deref_head : depth:int -> Data.term -> Data.term
+    val look : depth:int -> Data.term -> Data.view
+
+    (** to reuse a term that was looked at *)
+    val kool : Data.view -> Data.term
+
+    (* Does not substitute the bodies of unification variables *)
+    val unsafe_look : Data.term -> Data.view
 
     (** LOW LEVEL: the body of an assignment, if any variable is assigned.
         Use deref_head and forget about this API since the term you get

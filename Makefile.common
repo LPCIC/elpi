@@ -14,7 +14,7 @@ EXE=
 OC=ocamlfind ocamlopt
 DEPS=.depends .depends.parser
 OCNAME=OCAMLOPT
-OOPAQUE=-opaque
+OOPAQUE=
 else
 CMX=cmo
 CMXA=cma

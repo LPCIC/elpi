@@ -51,25 +51,26 @@ type constant = int (* De Bruijn levels *)
 let pp_oref = mk_extensible_printer ()
 
 let id_term = UUID.make ()
-type term =
+type view =
   (* Pure terms *)
   | Const of constant
   | Lam of term
   | App of constant * term * term list
-  (* Clause terms: unif variables used in clauses *)
-  | Arg of (*id:*)int * (*argsno:*)int
-  | AppArg of (*id*)int * term list
-  (* Heap terms: unif variables in the query *)
-  | UVar of term_attributed_ref * (*depth:*)int * (*argsno:*)int
-  | AppUVar of term_attributed_ref * (*depth:*)int * term list
-  (* Misc: built-in predicates, ... *)
-  | Builtin of constant * term list
-  | CData of CData.t
   (* Optimizations *)
   | Cons of term * term
   | Nil
   | Discard
-and term_attributed_ref = {
+  (* FFI *)
+  | Builtin of constant * term list
+  | CData of CData.t
+  (* Heap terms: unif variables in the query *)
+  | UVar of uvar_body * (*depth:*)int * (*argsno:*)int
+  | AppUVar of uvar_body * (*depth:*)int * term list
+  (* Clause terms: unif variables used in clauses *)
+  | Arg of (*id:*)int * (*argsno:*)int
+  | AppArg of (*id*)int * term list
+and term = view (* needed at the user-level API *)
+and uvar_body = {
   mutable contents : term [@printer (pp_extensible_any ~id:id_term pp_oref)];
   mutable rest : stuck_goal list [@printer fun _ _ -> ()]
                                  [@equal fun _ _ -> true];
@@ -78,7 +79,7 @@ and stuck_goal = {
   mutable blockers : blockers;
   kind : stuck_goal_kind;
 }
-and blockers = term_attributed_ref list
+and blockers = uvar_body list
 and stuck_goal_kind =
  | Constraint of constraint_def (* inline record in 4.03 *)
  | Unification of unification_def 
@@ -99,6 +100,18 @@ and constraint_def = {
 }
 and clause_src = { hdepth : int; hsrc : term }
 [@@deriving show, eq]
+
+let mkLam x = Lam x [@@inline]
+let mkApp c x xs = App(c,x,xs) [@@inline]
+let mkCons hd tl = Cons(hd,tl) [@@inline]
+let mkNil = Nil
+let mkDiscard = Discard
+let mkBuiltin c args = Builtin(c,args) [@@inline]
+let mkCData c = CData c [@@inline]
+let mkUVar r d ano = UVar(r,d,ano) [@@inline]
+let mkAppUVar r d args = AppUVar(r,d,args) [@@inline]
+let mkArg i ano = Arg(i,ano) [@@inline]
+let mkAppArg i args = AppArg(i,args) [@@inline]
 
 module C = struct
 
@@ -139,7 +152,7 @@ let empty_env = [||]
 module Constants : sig
 
   val funct_of_ast : F.t -> constant * term
-  val of_dbl : constant -> term
+  val mkConst : constant -> term
   val show : constant -> string
   val pp : Fmt.formatter -> constant -> unit
   val fresh : unit -> constant * term
@@ -218,13 +231,14 @@ let funct_of_ast x =
     Hashtbl.add ast2ct x p;
     p
 
-let of_dbl x =
+let mkConst x =
   try Hashtbl.find c2t x
   with Not_found ->
     let xx = Const x in
     Hashtbl.add c2s x ("x" ^ string_of_int x);
     Hashtbl.add c2t x xx;
     xx
+  [@@inline]
 
 let show n =
    try Hashtbl.find c2s n
@@ -295,10 +309,12 @@ let () = extend_printer pp_const (fun fmt i ->
 (* mkinterval d n 0 = [d; ...; d+n-1] *)
 let rec mkinterval depth argsno n =
  if n = argsno then []
- else of_dbl (n+depth)::mkinterval depth argsno (n+1)
+ else mkConst (n+depth)::mkinterval depth argsno (n+1)
 ;;
 
 end (* }}} *)
+
+let mkConst x = Constants.mkConst x [@@inline]
 
 module CHR : sig
 

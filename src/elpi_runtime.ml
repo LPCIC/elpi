@@ -12,7 +12,7 @@ module C = Elpi_data.Constants
    of this kind.  The pretty printer needs one but will only be defined
    later, since we need, for example, beta reduction to implement it *)
 type 'args deref_fun =
-  ?avoid:term_attributed_ref -> from:int -> to_:int -> 'args -> term -> term
+  ?avoid:uvar_body -> from:int -> to_:int -> 'args -> term -> term
 
 module Pp : sig
  
@@ -197,7 +197,7 @@ let xppterm ~nice ?(min_prec=min_prec) depth0 names argsdepth env f t =
          ~pplastarg:(aux_last inf_prec depth) (v,terms))
     | Lam t ->
        with_parens lam_prec (fun _ ->
-        let c = C.of_dbl depth in
+        let c = mkConst depth in
         Fmt.fprintf f "%a \\@ %a" (aux inf_prec depth) c
          (aux min_prec (depth+1)) t)
     | CData d -> CData.pp f d
@@ -244,7 +244,7 @@ module ConstraintStoreAndTrail : sig
   type propagation_item = {
      cstr : constraint_def;
      cstr_position : int;
-     cstr_blockers : term_attributed_ref list;
+     cstr_blockers : uvar_body list;
   }
 
   val new_delayed      : propagation_item list ref
@@ -255,7 +255,7 @@ module ConstraintStoreAndTrail : sig
   val remove_old_constraint : constraint_def -> unit
 
   val contents :
-    ?overlapping:term_attributed_ref list -> unit -> (constraint_def * blockers) list
+    ?overlapping:uvar_body list -> unit -> (constraint_def * blockers) list
   val print : Fmt.formatter -> (constraint_def * blockers) list -> unit
   val pp_stuck_goal : Fmt.formatter -> stuck_goal -> unit
 
@@ -264,7 +264,7 @@ module ConstraintStoreAndTrail : sig
   (* ---------------------------------------------------- *)
 
   type trail_item =
-  | Assignement of term_attributed_ref
+  | Assignement of uvar_body
   | StuckGoalAddition of stuck_goal
   | StuckGoalRemoval of stuck_goal
   type trail = trail_item list
@@ -298,7 +298,7 @@ end = struct (* {{{ *)
  type propagation_item = {
     cstr : constraint_def;
     cstr_position : int;
-    cstr_blockers : term_attributed_ref list;
+    cstr_blockers : uvar_body list;
  }
 
   let custom_constraints =
@@ -310,7 +310,7 @@ end = struct (* {{{ *)
 
 
 type trail_item =
-| Assignement of term_attributed_ref
+| Assignement of uvar_body
 | StuckGoalAddition of stuck_goal
 | StuckGoalRemoval of stuck_goal
 [@@deriving show]
@@ -325,7 +325,7 @@ let last_call = Fork.new_local false;;
 module Ugly = struct let delayed : stuck_goal list ref = Fork.new_local [] end
 open Ugly
 let contents ?overlapping () =
-  let overlap : term_attributed_ref list -> bool =
+  let overlap : uvar_body list -> bool =
     match overlapping with
     | None -> fun _ -> true
     | Some l -> List.exists (fun x -> List.memq x l) in
@@ -471,12 +471,12 @@ module HO : sig
 
   (* lift/restriction/heapification with occur_check *)
   val move : 
-    adepth:int -> env -> ?avoid:term_attributed_ref -> ?depth:int ->
+    adepth:int -> env -> ?avoid:uvar_body -> ?depth:int ->
     from:int -> to_:int -> term -> term
   
   (* like move but for heap terms (no heapification) *)
   val hmove :
-    ?avoid:term_attributed_ref ->
+    ?avoid:uvar_body ->
     from:int -> to_:int -> term -> term
 
   (* simultaneous substitution *)
@@ -485,9 +485,9 @@ module HO : sig
   val deref_uv : int deref_fun
   val deref_appuv : term list deref_fun
 
-  val mkAppUVar : term_attributed_ref -> int -> term list -> term
+  val mkAppUVar : uvar_body -> int -> term list -> term
   val mkAppArg : int -> int -> term list -> term
-  val is_flex : depth:int -> term -> term_attributed_ref option
+  val is_flex : depth:int -> term -> uvar_body option
   val list_to_lp_list : term list -> term
 
   val mknLam : int -> term -> term
@@ -497,11 +497,11 @@ module HO : sig
   (* Head of an heap term *)
   val deref_head : depth:int -> term -> term
 
-  type assignment = term_attributed_ref * int * term
+  type assignment = uvar_body * int * term
   val expand_uv :
-    term_attributed_ref -> lvl:int -> ano:int -> term * assignment option
+    uvar_body -> lvl:int -> ano:int -> term * assignment option
   val expand_appuv :
-    term_attributed_ref -> lvl:int -> args:term list -> term * assignment option
+    uvar_body -> lvl:int -> args:term list -> term * assignment option
 
   val shift_bound_vars : depth:int -> to_:int -> term -> term
 
@@ -686,7 +686,7 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
     match x with
     | Const c ->
        if delta == 0 then x else                          (* optimization  *)
-       if c >= from then C.of_dbl (c - delta) else (* locally bound *)
+       if c >= from then mkConst (c - delta) else (* locally bound *)
        if c < to_ then x else                             (* constant      *)
        raise RestrictionFailure
     | Lam f ->
@@ -876,7 +876,7 @@ and subst fromdepth ts t =
         | Arg(i,0) as t -> t 
         | t -> hmove ~from:fromdepth ~to_:(depth-len) t
       else if c < fromdepth then x
-      else C.of_dbl (c-len) (* NOT LIFTED *)
+      else mkConst (c-len) (* NOT LIFTED *)
    | Arg _ | AppArg _ -> anomaly "subst takes a heap term"
    | App(c,x,xs) as orig ->
       let x' = aux depth x in
@@ -997,7 +997,7 @@ and deref_uv ?avoid ~from ~to_ args t =
      | Lam _ -> anomaly "eat_args went crazy"
      | Const c ->
         let args = C.mkinterval (from+1) (args'-1) 0 in
-        App (c,C.of_dbl from, args)
+        App (c,mkConst from, args)
      | App (c,arg,args2) ->
         let args = C.mkinterval from args' 0 in
         App (c,arg,args2 @ args)
@@ -1141,11 +1141,11 @@ let bind r gamma l a d delta b left t e =
   let rec bind b delta w t =
     [%trace "bind" ("%b gamma:%d + %a = t:%a a:%d delta:%d d:%d w:%d b:%d"
         left gamma (pplist (fun fmt (x,n) -> Fmt.fprintf fmt "%a |-> %d"
-        (ppterm a [] b e) (C.of_dbl x) n) "") l
+        (ppterm a [] b e) (mkConst x) n) "") l
         (ppterm a [] b empty_env) t a delta d w b) begin
     match t with
     | UVar (r1,_,_) | AppUVar (r1,_,_) when r == r1 -> raise RestrictionFailure
-    | Const c -> let n = cst c b delta in if n < 0 then C.of_dbl n else Const n
+    | Const c -> let n = cst c b delta in if n < 0 then mkConst n else Const n
     | Lam t -> Lam (bind b delta (w+1) t)
     | App (c,t,ts) -> App (cst c b delta, bind b delta w t, List.map (bind b delta w) ts)
     | Cons(hd,tl) -> Cons(bind b delta w hd, bind b delta w tl)
@@ -1198,7 +1198,7 @@ let bind r gamma l a d delta b left t e =
            Fmt.fprintf fmt "lvl:%d is_llam:%b args:%a orig_args:%a orig:%a"
              lvl is_llam 
              (pplist (fun fmt (x,n) ->
-                Fmt.fprintf fmt "%a->%d" (ppterm a [] b e) (C.of_dbl x) n) " ") args
+                Fmt.fprintf fmt "%a->%d" (ppterm a [] b e) (mkConst x) n) " ") args
              (pplist (ppterm a [] b e) " ") orig_args
              (ppterm a [] b e) orig) ()];
         if is_llam then begin
@@ -1207,7 +1207,7 @@ let bind r gamma l a d delta b left t e =
             (* All orig args go away, but some between gamma and lvl can stay
              * if they are in l or locally bound [d,w] *)
             let args_gamma_lvl_abs, args_gamma_lvl_here =
-              let mk_arg i = C.of_dbl i, C.of_dbl (cst ~hmove:false i b delta) in
+              let mk_arg i = mkConst i, mkConst (cst ~hmove:false i b delta) in
               let rec mk_interval d argsno n =
                 if n = argsno then []
                 else if n+d >= lvl then
@@ -1215,7 +1215,7 @@ let bind r gamma l a d delta b left t e =
                  (* cut&paste from below *)
                  (try
                    let nn = List.assoc i args in
-                   (C.of_dbl (lvl+nn), C.of_dbl (gamma+List.length l+n)) :: mk_interval d argsno (n+1)
+                   (mkConst (lvl+nn), mkConst (gamma+List.length l+n)) :: mk_interval d argsno (n+1)
                   with Not_found -> mk_interval d argsno (n+1))
                 else mk_arg (n+d)::mk_interval d argsno (n+1) in
               let rec keep_cst_for_lvl = function
@@ -1227,7 +1227,7 @@ let bind r gamma l a d delta b left t e =
                     ) else
                      (try
                        let nn = List.assoc i args in
-                       (C.of_dbl (lvl+nn), C.of_dbl mm) :: keep_cst_for_lvl rest
+                       (mkConst (lvl+nn), mkConst mm) :: keep_cst_for_lvl rest
                       with Not_found -> keep_cst_for_lvl rest) in
               List.split (keep_cst_for_lvl (List.sort Pervasives.compare l)) in
             let r' = oref C.dummy in
@@ -1245,8 +1245,8 @@ let bind r gamma l a d delta b left t e =
                     if c < gamma then c
                     else if c >= (if left then b else a) + d then c + new_lams - (a+d - gamma)
                     else pos c + gamma in
-                  C.of_dbl (c_p + lvl) :: a_lvl,
-                  C.of_dbl i :: a_here
+                  mkConst (c_p + lvl) :: a_lvl,
+                  mkConst i :: a_here
                 with RestrictionFailure -> acc) args ([],[]) in
             if n_args = List.length args_here then
               (* no pruning, just binding the args as a normal App *)
@@ -1551,7 +1551,7 @@ let full_deref ~adepth env ~depth t =
   | CData _ as x -> x
   in
     deref depth t
-type assignment = term_attributed_ref * int * term
+type assignment = uvar_body * int * term
 let expand_uv r ~lvl ~ano =
   let args = C.mkinterval 0 (lvl+ano) 0 in
   if lvl = 0 then AppUVar(r,lvl,args), None else
@@ -1575,7 +1575,7 @@ let shift_bound_vars ~depth ~to_ t =
     if n < depth then n
     else n + to_ - depth in
   let rec shift d = function
-  | Const n as x -> let m = shift_db d n in if m = n then x else  C.of_dbl m
+  | Const n as x -> let m = shift_db d n in if m = n then x else  mkConst m
   | Lam r -> Lam (shift (d+1) r)
   | App (n,x,xs) ->
       App(shift_db d n, shift d x, List.map (shift d) xs)
@@ -1600,7 +1600,7 @@ let subtract_to_consts ~amount ~depth t =
       error "The term cannot be put in the desired context"
     else n - amount in
   let rec shift d = function
-  | Const n as x -> let m = shift_db d n in if m = n then x else  C.of_dbl m
+  | Const n as x -> let m = shift_db d n in if m = n then x else  mkConst m
   | Lam r -> Lam (shift (d+1) r)
   | App (n,x,xs) ->
       App(shift_db d n, shift d x, List.map (shift d) xs)
@@ -1772,7 +1772,7 @@ let close_with_pis depth vars t =
      instantiation of Args. The two codes should be unified *)
   let rec aux =
    function
-    | Const c -> C.of_dbl (fix_const c)
+    | Const c -> mkConst (fix_const c)
     | Arg (i,argsno) ->
        (match C.mkinterval (depth+vars) argsno 0 with
         | [] -> Const(i+depth)
@@ -1999,7 +1999,7 @@ end = struct  (* {{{ *)
 let predicate_mode = Fork.new_local C.Map.empty
 
 let rec term_map m = function
-  | Const x when List.mem_assoc x m -> C.of_dbl (List.assoc x m)
+  | Const x when List.mem_assoc x m -> mkConst (List.assoc x m)
   | Const _ as x -> x
   | App(c,x,xs) when List.mem_assoc c m ->
       App(List.assoc c m,term_map m x, smart_map (term_map m) xs)
@@ -2250,8 +2250,8 @@ module Ice : sig
 end = struct (* {{{ *)
 
   type freezer = {
-    c2uv : term_attributed_ref C.Map.t;
-    uv2c : (term_attributed_ref * term) list;
+    c2uv : uvar_body C.Map.t;
+    uv2c : (uvar_body * term) list;
     assignments : assignment list; (* assignment to lower the level to 0 *)
   }
 
@@ -2352,7 +2352,7 @@ end = struct (* {{{ *)
 
 let replace_const m t =
   let rec rcaux = function
-    | Const c as x -> (try C.of_dbl (List.assoc c m) with Not_found -> x)
+    | Const c as x -> (try mkConst (List.assoc c m) with Not_found -> x)
     | Lam t -> Lam (rcaux t)
     | App(c,x,xs) ->
         App((try List.assoc c m with Not_found -> c),

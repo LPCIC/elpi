@@ -74,7 +74,7 @@ ELPI_DIST = \
   $(addprefix src/,elpi_API.cmi elpi_API.mli elpi_builtin.cmi elpi_builtin.mli elpi.cmi)
 
 ELPI_DIST_OPT = \
-  $(addprefix src/,elpi.cma elpi.cmxa elpi.a elpi_builtin.cmti elpi_API.cmti)
+  $(addprefix src/,elpi.cma elpi.cmxa elpi.a elpi_builtin.cmti elpi_API.cmti elpi_API.cmx elpi_API.cmo elpi_builtin.cmo elpi_builtin.cmx)
 
 elpi$(EXE): elpi_REPL.ml elpi_config.$(CMX) findlib/elpi/META
 	$(H)$(call pp,$(OCNAME),-package elpi elpi_config.$(CMX) -o $@,$<)
