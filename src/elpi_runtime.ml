@@ -3068,8 +3068,9 @@ open Mainloop
  ******************************************************************************)
 
 let mk_solution depth env sm =
-  StrMap.map (fun i -> full_deref ~adepth:depth env ~depth env.(i)) sm
+  StrMap.map (fun i -> (*full_deref ~adepth:depth env ~depth*) env.(i)) sm
 
+(*
 let deref_unif { adepth; env; bdepth; a; b; matching } = {
   adepth; bdepth; env = Array.map (full_deref ~adepth env ~depth:adepth) env;
   a = full_deref ~adepth env ~depth:adepth a;
@@ -3090,6 +3091,7 @@ let deref_stuck_goal = function
        { w with kind = Unification (deref_unif x) }
   | { kind = Constraint x } as w ->
        { w with kind = Constraint (deref_cst x) }
+*)
 
 let mk_outcome search get_cs { initial_depth; assignments_names; query_env } =
  try
@@ -3098,7 +3100,7 @@ let mk_outcome search get_cs { initial_depth; assignments_names; query_env } =
    let syn_csts, custom_constraints = get_cs () in
    let solution = {
      assignments;
-     constraints = List.map deref_stuck_goal syn_csts;
+     constraints = syn_csts; (*List.map deref_stuck_goal syn_csts;*)
      custom_constraints
    } in
    Success solution, alts
