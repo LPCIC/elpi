@@ -11,20 +11,21 @@ as Coq or Matita.
 
 ELPI is free software released under LGPL vesion 2.1 or above.
 
-### Status
-
-The software is in beta.  It works but is has rough edges and surely bugs.
-
 ### How to install ELPI
 
 ELPI is developed under Linux and is known to also work on MacOSX.
 The simplest way is to use [OPAM](http://opam.ocaml.org/) and type
 ```
-opam pin add elpi https://github.com/LPCIC/elpi.git
+opam install elpi
 ```
-This gives you the command line tool `elpi` as well as the findlib
+This command gives you the command line tool `elpi` as well as the findlib
 `-package elpi` switch.
 
+To install the development version of elpi directly from github
+you can type
+```
+opam pin add elpi https://github.com/LPCIC/elpi.git
+```
 You can also clone this repository and type `make`.  The build requirements
 are listed at the end of the [Makefile](Makefile)
 
@@ -54,6 +55,11 @@ autocmd FileType lprolog hi def link elpiKeyword Keyword
 autocmd FileType lprolog hi def link elpiMacro Special
 autocmd FileType lprolog hi def link elpiSpill Special
 ```
+
+#### Syntax highlight in $EDITOR
+
+We are happy to merge PRs! (Really, we use vim but we are happy to support
+any other editor).
 
 ## What's an elaborator and what's so special about it?
 
@@ -107,12 +113,13 @@ Most of these feature come with λProlog.  Constraints and propagation rules are
 
 ## Documentation
 
-The language is compatible with 
+The language is quite compatible with standard
 [λProlog](http://www.lix.polytechnique.fr/~dale/lProlog/) 
 and ELPI is known to be able to run most of the λProlog programs out there
-(see [INCOMPATIBILITIES](INCOMPATIBILITIES.md)).
+(see [INCOMPATIBILITIES](INCOMPATIBILITIES.md) for the known
+incompatibilities with the Teyjus system).
 Reading "Programming with Higher-Order Logic" by Miller and Nadathur is
-highly recommended.
+highly recommended and covers standard λProlog.
 
 The extensions to λProlog implemented in ELPI are described in the
 [ELPI](ELPI.md) file, built-in predicates are documented in
@@ -124,14 +131,18 @@ binder mobility.
 
 #### How to embed ELPI in your software
 
-The easiest way of embedding ELPI is by linking it using findlib 
+The easiest way of embedding ELPI is by linking it using
+[findlib](http://projects.camlcity.org/projects/findlib.html)
 as in `ocamlfind opt -package elpi mycode.ml -o myprogram`.
 The API the host application can use to drive ELPI is documented in the
-[elpi_API.mli](src/elpi_API.mli) file.
+[elpi_API.mli](src/elpi_API.mli) file. The 
+[elpi_builtin.ml](src/elpi_builtin.ml) file contains example of
+(basic) built-in predicates declaration via ELPI's FFI.
 
 The [command line](elpi_REPL.ml) interface to ELPI is a very simple
 example of a client using ELPI as a library.
-More complex examples of embeddings of ELPI are [coq-elpi](https://github.com/LPCIC/coq-elpi) and
+More complex examples of embeddings of ELPI are
+[coq-elpi](https://github.com/LPCIC/coq-elpi) and
 [matita-elpi](https://github.com/LPCIC/matita).
 
 
