@@ -117,5 +117,3 @@ matrix:
     - if ocamlfind query elpi; then false; else true; fi
     - if which elpi; then false; else true; fi
   
-  allow_failures:
-  - env: TEST="osx build $OCAML_MIN"
