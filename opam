@@ -25,5 +25,6 @@ depends: [
   "ppx_tools_versioned"
   "ppx_deriving"
   "ocaml-migrate-parsetree"
+  "re"
   ]
 
