@@ -174,6 +174,13 @@ module Extend : sig
   module CData : sig
     type t
 
+    (** The [eq] function is used by unification. Limitation: unification of
+     * two cdata cannot alter the constraint store. This can be lifted in the
+     * future if there is user request.
+     *
+     * If the data_hconsed is true, then the [cin] function below will
+     * automatically hashcons the data using the [eq] and [hash] functions.
+     *)
     type 'a data_declaration = {
       data_name : string;
       data_pp : Format.formatter -> 'a -> unit;
@@ -193,14 +200,15 @@ module Extend : sig
     val name : t -> string
     val hcons : t -> t
 
-    (** tests if two cdata have the same given type *)
+    (* tests if two cdata have the same given type *)
     val ty2 : 'a cdata -> t -> t -> bool
     val morph1 : 'a cdata -> ('a -> 'a) -> t -> t
     val morph2 : 'a cdata -> ('a -> 'a -> 'a) -> t -> t -> t
     val map : 'a cdata -> 'b cdata -> ('a -> 'b) -> t -> t
   end
 
-  (* This module exposes the low level representation of terms.
+
+  (** This module exposes the low level representation of terms.
    *
    * The data type [term] is opaque and can only be accessed by using the
    * [look] API that exposes a term [view]. The [look] view automatically
@@ -213,28 +221,30 @@ module Extend : sig
                             Starts at 0 and grows for bound variables;
                             global constants have negative values. *)
     type builtin
-    type uvar_body (* unification variable (missing) body *)
+    type uvar_body (* unification variable (missing) body, use == only *)
     type term
     type view = private
       (* Pure subterms *)
-      | Const of constant
-      | Lam of term
-      | App of constant * term * term list
+      | Const of constant                   (* global constant or a bound var *)
+      | Lam of term                         (* lambda abstraction, i.e. x\ *)
+      | App of constant * term * term list  (* application (at least 1 arg) *)
       (* Optimizations *)
-      | Cons of term * term
-      | Nil
-      | Discard
+      | Cons of term * term                 (* :: *)
+      | Nil                                 (* [] *)
+      | Discard                             (* _  *)
       (* FFI *)
-      | Builtin of builtin * term list
-      | CData of CData.t
-      (* Unification variables *)
+      | Builtin of builtin * term list      (* call to a built-in predicate *)
+      | CData of CData.t                    (* external data *)
+      (* Unassigned unification variables *)
       | UVar of uvar_body * (*depth:*)int * (*argsno:*)int
       | AppUVar of uvar_body * (*depth:*)int * term list
 
-      (* Don't use. If we had subtyping these two should not be exposed *)
-                                                    | Arg of int * int
-                                                    | AppArg of int * term list
+                                        (* Don't use. If we had subtyping these
+                                         * two would not be exposed *)
+                                        | Arg of int * int
+                                        | AppArg of int * term list
 
+    (** Smart constructors *)
     val mkConst : constant -> term
     val mkLam : term -> term
     val mkApp : constant -> term -> term list -> term
@@ -252,7 +262,7 @@ module Extend : sig
         get_assignment uvar_body = None *)
     val look : depth:int -> term -> view
 
-    (** to reuse a term that was looked at *)
+    (* to reuse a term that was looked at *)
     val kool : view -> term
 
     type clause_src = { hdepth : int; hsrc : term }
@@ -272,7 +282,7 @@ module Extend : sig
     }
     val constraints : Data.syntactic_constraints -> suspended_goal list
 
-    (** builtin data types *)
+    (** LambdaProlog built-in data types *)
     module C : sig
       val int : int CData.cdata
       val is_int : CData.t -> bool
@@ -290,6 +300,7 @@ module Extend : sig
       val of_string : string -> term
     end
 
+    (** LambdaProlog built-in global constants *)
     module Constants :
      sig
       val from_string : string -> term
@@ -302,11 +313,15 @@ module Extend : sig
       val andc   : constant (* , *)
       val andc2  : constant (* & *)
       val rimplc : constant (* :- *)
-      val ctypec : constant (* ctype *)
       val pic    : constant (* pi *)
       val sigmac : constant (* sigma *)
       val implc  : constant (* => *)
       val cutc   : constant (* ! *)
+
+      (* LambdaProlog built-in data types are just instances of CData.
+       * Still the parser translated the type [int], [float] and [string]
+       * to [ctype "int"], [ctype "float"] and [ctype "string"]. *)
+      val ctypec : constant (* ctype *)
     
       module Map : Map.S with type key = constant
       module Set : Set.S with type elt = constant
@@ -314,14 +329,16 @@ module Extend : sig
     
   end
 
-  (* This module lets one implement quotations. In order to do so one may
-   * need to carry some data into the compiler state that can indeed be
-   * extended. A piece of compiler state can also be kept and used at runtime,
-   * e.g. if it contains some custom constraints, see CustomConstraint *)
+
+  (** This module lets one extend the compiler by:
+   * - "compiling" the query by hand
+   * - providing quotations *)
   module Compile : sig
 
-    (** One can extend the compiler state in order to pass data between
-     *  quotations and anti quotations, eg the context of declared variables *)
+    (** In order to implement quotations one may
+     * need to stick some data into the compiler state that can indeed be
+     * extended. A piece of compiler state can also be kept and used at runtime,
+     * e.g. if it contains some custom constraints, see CustomConstraint *)
     module State : sig
       type t
       type 'a component
@@ -337,7 +354,19 @@ module Extend : sig
       
     end
 
-    (* From an unparsed string to a term *)
+    (** Generate a query starting from a compiled/hand-made term *)
+    val query :
+      Compile.program -> (depth:int -> State.t -> State.t * Data.term) ->
+        Compile.query
+
+    (* Args are parameters of the query (e.g. capital letters) *)
+    val is_Arg : State.t -> Data.term -> bool
+    val fresh_Arg :
+      State.t -> name_hint:string -> args:Data.term list ->
+        State.t * string * Data.term
+
+
+    (** From an unparsed string to a term *)
     type quotation =
       depth:int -> State.t -> string -> State.t * Data.term
 
@@ -347,26 +376,17 @@ module Extend : sig
     (** Named quotation [{{name:code}}] *)
     val register_named_quotation : name:string -> quotation -> unit
 
-    (* The anti-quotation to lambda Prolog *)
+    (** The anti-quotation to lambda Prolog *)
     val lp : quotation
 
-    (* Args are clause parameters (capital letters) *)
-    val is_Arg : State.t -> Data.term -> bool
-    val fresh_Arg :
-      State.t -> name_hint:string -> args:Data.term list ->
-        State.t * string * Data.term
 
-    (* See elpi_quoted_syntax.elpi *)
+    (** See elpi_quoted_syntax.elpi (EXPERIMENTAL, used by elpi-checker) *)
     val quote_syntax : Compile.query -> Data.term list * Data.term
 
-    (* To implement the string_to_term builtin. AVOID *)
+    (** To implement the string_to_term built-in (AVOID, makes little sense
+     * if depth is non zero, since bound variables have no name!) *)
     val term_at : depth:int -> Ast.query -> Data.term
     
-    (* Generate a query starting from a compiled/hand-made term *)
-    val query :
-      Compile.program -> (depth:int -> State.t -> State.t * Data.term) ->
-        Compile.query
-
   end
 
 
@@ -376,12 +396,14 @@ module Extend : sig
    * The initial value can be taken from the compiler state, e.g. a quotation
    * may generate some constraints statically *)
   module CustomConstraint : sig
-    (** 'a must be purely functional, i.e. backtracking is a no op *)
 
+    (** 'a MUST be purely functional, i.e. backtracking is implemented by using
+     * an old binding for 'a.
+     * This limitation can be lifted if there is user request. *)
     type 'a component
 
     (** The initial value of the constraint can be produced at compilation
-     *  time (e.g. by quotations) *)
+     *  time (e.g. by quotations) or by reading a global value. *)
     type ('a,'b) source =
       | CompilerState of 'b Compile.State.component * ('b -> 'a)
       | Other of (unit -> 'a)
@@ -395,6 +417,7 @@ module Extend : sig
     type t = Data.custom_constraints
 
     val get : 'a component -> t -> 'a
+
     (** Allowed to raise BuiltInPredicate.No_clause *)
     val set : 'a component -> t -> 'a -> t
     val update : 'a component -> t -> ('a -> 'a) -> t
@@ -402,10 +425,11 @@ module Extend : sig
 
   end
 
+
   (* Built-in predicates are implemented in ML using the following FFI.
    *
    * The ffi data type uses GADTs to let one describe the type of an OCaml
-   * function. Terms passed to the built-in predicate are the checked against
+   * function. Terms passed to the built-in predicate are then checked against
    * and converted to their types before being passed to the OCaml code.
    * The ffi data type is also used to generate the documentation of the
    * built-in (Elpi code with comments).
@@ -415,11 +439,11 @@ module Extend : sig
    *
    *   Pred("div",
    *        In(int, "N", In(int, "M", Out(int, "D", Out(int, "R",
-   *          Easy "division of N by M givens D with reminder R")))),
+   *          Easy "division of N by M gives D with reminder R")))),
    *        (fun n m _ _ -> !: (n div m) +! (n mod n)))
    *
    *   In( type, documentation, ... ) declares an input of a given type.
-   *     in the example above both "n" and "m" are declare as input, and
+   *     In the example above both "n" and "m" are declare as input, and
    *     as expected the OCaml code receives two inputs (n and m) of type
    *     int
    *   Out( type, documentation, ...) declares an input/output argument.
@@ -440,7 +464,7 @@ module Extend : sig
    *     Data of 'a | Flex of term | Discard
    *   For arguments that are described as In in the ffi, only the first
    *   constructor is allowed (i.e. if the user passes a term that is ejected
-   *   as Flex or Discard a (fatal) type error is raised.
+   *   as Flex or Discard a (fatal, run-time) type error is raised).
    *   For arguments described as Out all 3 cases are valid.
    *
    *   Now let's go back to the two arguments the OCaml code discards.
@@ -484,6 +508,17 @@ module Extend : sig
       | VariadicOut : 't data * doc -> ('t arg list -> depth:int -> Data.hyps -> Data.solution -> Data.custom_constraints * ('o * 't option list option), 'o) ffi
     type t = Pred : name * ('a,unit) ffi * 'a -> t
 
+    (** Where to print the documentation. For the running example DocAbove
+     * generates
+     *   % [div N M D R] division of N by M gives D with reminder R
+     *   pred div i:int, i:int, o:int, o:int.
+     * while DocNext generates
+     *   pred div % division of N by M gives D with reminder R
+     *    i:int, % N
+     *    i:int, % M
+     *    o:int, % D
+     *    o:int. % R
+     * The latter format it is useful to give longer doc for each argument. *)
     type doc_spec = DocAbove | DocNext
 
     type declaration =
@@ -493,17 +528,23 @@ module Extend : sig
     | LPDoc  of string
     (* Sometimes you wrap OCaml code in regular predicates or similar in order
      * to implement the desired builtin, maybe just temporarily because writing
-     * LP code is simpler *)
+     * LP code is simpler.
+     * Note: will be complemented in the future by an LPType/LPPred/LPMode nodes
+     * for the specific statements. *)
     | LPCode of string
 
+    (** Type descriptors *)
     val int    : int data
     val float  : float data
     val string : string data
     val list   : 'a data -> 'a list data
 
+    (* poly "A" is what one would use for, say, [type eq A -> A -> prop] *)
     val poly   : string -> Data.term data
+    (* any is like poly "X" for X fresh *)
     val any    : Data.term data
 
+    (* commodity type description of a CData *)
     val data_of_cdata :
       (* name used for type declarations, eg "int" or "@in_stream" *)
       name:string ->
@@ -511,9 +552,10 @@ module Extend : sig
       ?constants:'a Data.Constants.Map.t ->
       'a CData.cdata -> 'a data
 
-    (* Prints in LP syntax the "external" declarations *)
+    (** Prints in LP syntax the "external" declarations *)
     val document : Format.formatter -> declaration list -> unit
 
+    (** What is passed to [Setup.init] *)
     val builtin_of_declaration : declaration list -> Setup.builtins
 
     module Notation : sig
@@ -536,7 +578,11 @@ module Extend : sig
     end
   end
 
-  (* Like quotations but for `this` and 'that' *)
+
+  (** Like quotations but for identifiers that begin and end with
+   * "`" or "'", e.g. `this` and 'that'. Useful if the object language
+   * needs something that looks like a string but with a custom compilation
+   * (e.g. CD.string like but with a case insensitive comparison) *)
   module CustomFunctor : sig
 
     val declare_backtick : name:string ->
@@ -550,26 +596,7 @@ module Extend : sig
 
   module Utils : sig
 
-    (* Does not substitute the bodies of unification variables *)
-    val unsafe_look : Data.term -> Data.view
-
-    (** LOW LEVEL: the body of an assignment, if any variable is assigned.
-        Use deref_head and forget about this API since the term you get
-        needs to be moved and/or reduced, and you have no API for this. *)
-    val get_assignment : Data.uvar_body -> Data.term option
-
-    (** Hackish, in particular the output should be a compiled program *)
-    val clause_of_term :
-      ?name:string -> ?graft:([`After | `Before] * string) ->
-      depth:int -> Data.term -> Ast.program
-
-    (** Lifting/restriction *)
-    val move : from:int -> to_:int -> Data.term -> Data.term
-
-    val list_to_lp_list : Data.term list -> Data.term
-    val lp_list_to_list : depth:int -> Data.term -> Data.term list
-
-    (** A regular error *)
+    (** A regular error (fatal) *)
     val error : string -> 'a
     (** An invariant is broken, i.e. a bug *)
     val anomaly : string -> 'a
@@ -578,16 +605,44 @@ module Extend : sig
     (** A non fatal warning *)
     val warn : string -> unit
 
+    (** link between OCaml and LP lists. Note that [1,2|X] is not a valid
+     * OCaml list! *)
+    val list_to_lp_list : Data.term list -> Data.term
+    val lp_list_to_list : depth:int -> Data.term -> Data.term list
+
+    (* Like [look] but does not substitute the bodies of assigned unification
+     * variables (UNSAFE) *)
+    val unsafe_look : Data.term -> Data.view
+
+    (** The body of an assignment, if any (LOW LEVEL). 
+     * Use [look] and forget about this API since the term you get
+     * needs to be moved and/or reduced, and you have no API for this. *)
+    val get_assignment : Data.uvar_body -> Data.term option
+
+    (** Hackish, in particular the output should be a compiled program *)
+    val clause_of_term :
+      ?name:string -> ?graft:([`After | `Before] * string) ->
+      depth:int -> Data.term -> Ast.program
+
+    (** Lifting/restriction (LOW LEVEL, don't use) *)
+    val move : from:int -> to_:int -> Data.term -> Data.term
+
   end
         
+
   module Pp : sig
 
+    (** If the term is under [depth] binders this is the function that has to be
+     * called in order to print the term correct. WARNING: as of today printing
+     * an open term (i.e. containing unification variables) in the *wrong* depth
+     * can cause the pruning of the unification variable.
+     * This behavior shall be cleaned up in the future *)
     val term : (*depth*)int -> Format.formatter -> Data.term -> unit
 
     val list : ?max:int -> ?boxed:bool ->
-     (Format.formatter -> 'a -> unit) ->
-     ?pplastelem:(Format.formatter -> 'a -> unit) -> string ->
-     Format.formatter -> 'a list -> unit
+      (Format.formatter -> 'a -> unit) ->
+      ?pplastelem:(Format.formatter -> 'a -> unit) -> string ->
+        Format.formatter -> 'a list -> unit
 
     module Raw : sig
       val term : (*depth*)int -> Format.formatter -> Data.term -> unit
