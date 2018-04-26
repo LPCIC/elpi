@@ -39,6 +39,7 @@ matrix:
       - $HOME/.opam
     script:
     - opam switch $OCAML_MIN
+    - eval $(opam config env)
     - make
     - make -C bench
     - make byte
@@ -60,6 +61,7 @@ matrix:
       - $HOME/.opam
     script:
     - opam switch $OCAML_MAX
+    - eval $(opam config env)
     - make
     - make -C bench
     - make byte
@@ -76,6 +78,7 @@ matrix:
       - $HOME/.opam
     script:
     - opam switch $OCAML_MIN
+    - eval $(opam config env)
     - make
     - make -C bench
     - make byte
@@ -92,6 +95,7 @@ matrix:
       - $HOME/.opam
     script:
     - opam switch $OCAML_MAX
+    - eval $(opam config env)
     - make
     - make -C bench
     - make byte
