@@ -735,7 +735,7 @@ let pp_comment fmt doc =
   let orig_out = Fmt.pp_get_formatter_out_functions fmt () in
   Fmt.pp_set_formatter_out_functions fmt
     { orig_out with
-      Fmt.out_newline = fun () -> orig_out.out_string "\n% " 0 3 };
+      Fmt.out_newline = fun () -> orig_out.Fmt.out_string "\n% " 0 3 };
   Fmt.fprintf fmt "@[<hov>";
   Fmt.pp_print_text fmt doc;
   Fmt.fprintf fmt "@]@?";

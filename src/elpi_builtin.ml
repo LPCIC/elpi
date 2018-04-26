@@ -591,7 +591,7 @@ let elpi_builtins = [
 
   MLCode(Pred("dprint",
     VariadicIn(any, "prints raw terms (debugging)"),
-  (fun args ~depth _ { custom_constraints = cc } ->
+  (fun args ~depth _ { Elpi_API.Data.custom_constraints = cc } ->
      Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
        (Pp.list (Pp.Raw.term depth) " ") args ;
      cc, ())),
@@ -599,7 +599,7 @@ let elpi_builtins = [
 
   MLCode(Pred("print",
     VariadicIn(any,"prints terms"),
-  (fun args ~depth _ { custom_constraints = cc } ->
+  (fun args ~depth _ { Elpi_API.Data.custom_constraints = cc } ->
      Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
        (Pp.list (Pp.term depth) " ") args ;
      cc, ())),
@@ -753,7 +753,12 @@ let elpi_nonlogical_builtins = [
   MLCode(Pred("names",
     Out(list any, "list of eigenvariables in order of age (young first)",
     Easy           "generates the list of eigenvariable"),
-  (fun _ ~depth -> !:(List.init depth mkConst))),
+  (* XXX 4.06: (fun _ ~depth -> !:(List.init depth mkConst))), *)
+  (fun _ ~depth ->
+     let rec list_init i n f =
+       if i >= n then [] else
+       f i :: list_init (i+1) n f in
+     !:(list_init 0 depth mkConst))),
   DocNext);
 
   MLCode(Pred("occurs",

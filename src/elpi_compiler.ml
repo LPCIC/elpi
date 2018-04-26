@@ -193,7 +193,7 @@ end = struct (* {{{ *)
          if r.ifexpr <> None then duplicate_err "if";
          aux { r with ifexpr = Some s } rest
     in
-    { c with attributes =
+    { c with A.attributes =
         aux { insertion = None; id = None; ifexpr = None } attributes }
 
   let run dl =
@@ -630,7 +630,12 @@ let preterm_of_ast ~depth macros state t =
     (* Printf.eprintf "%s -> %s\n" (C.show c) (C.show c'); *)
     c'
 
-  let prepend p s = C.Set.map (prefix_const [p]) s
+  let prepend p s =
+    (* XXX OCaml 4.04: C.Set.map (prefix_const [p]) s *)
+    let res = ref C.Set.empty in
+    C.Set.iter (fun x -> res := C.Set.add (prefix_const [p] x) !res) s;
+    !res
+
 
   let run state p =
  (* FIXME: otypes omodes - NO, rewrite spilling on data.term *)
@@ -684,7 +689,8 @@ let preterm_of_ast ~depth macros state t =
           let state, lcs, _, p = compile_program macros lcs state p in
           let lcs, state, types, modes, defs, compiled_rest =
             compile_body macros types modes lcs defs state rest in
-          lcs, state, types, modes,C.Set.union defs (prepend prefix p.symbols),
+          lcs, state, types, modes,
+          C.Set.union defs (prepend prefix p.StructuredProgram.symbols),
           StructuredProgram.Namespace(prefix, p) :: compiled_rest
       | Constraints (clique, rules, p) :: rest ->
           (* XXX missing check for nested constraints *)
@@ -694,7 +700,8 @@ let preterm_of_ast ~depth macros state t =
           let state, lcs, _, p = compile_program macros lcs state p in
           let lcs, state, types, modes, defs, compiled_rest =
             compile_body macros types modes lcs defs state rest in
-          lcs, state, types, modes, C.Set.union defs p.symbols,
+          lcs, state, types, modes,
+          C.Set.union defs p.StructuredProgram.symbols,
           StructuredProgram.Constraints(clique, rules,p) :: compiled_rest
     in
     let state, local_names, toplevel_macros, pbody =
@@ -1073,7 +1080,7 @@ end = struct (* {{{ *)
   let run ({ Flat.clauses; modes; types; chr } as p) =
     let clauses = List.map (spill_clause modes types) clauses in
     let chr = List.map (spill_chr modes types) chr in
-    { p with clauses; chr }
+    { p with Flat.clauses; chr }
 
   let spill_preterm types modes { term; amap } =
     let amap, term = spill_term modes types amap term in
@@ -1098,7 +1105,7 @@ end = struct (* {{{ *)
           else
             StrMap.add n loc s in
     let compile_clause ({ A.attributes = { StructuredAST.id; ifexpr }} as c) =
-      { c with attributes = { Assembled.id; ifexpr }}
+      { c with A.attributes = { Assembled.id; ifexpr }}
     in
     let rec insert loc_name c l =
       match l, loc_name with
