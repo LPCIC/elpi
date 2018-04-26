@@ -2,7 +2,7 @@
 % polymorphic variants
 %
 % Syntax:    f ::= (<case> constant term)^*    unary functions
-%         term ::= constant | <@> funname term
+%         term ::= constant | <app> funname term
 %      program ::= (<fun> funname f)^*
 %        types ::= (<fun> funname type type)^*
 %         type ::= constant^*
@@ -23,13 +23,13 @@ check [fun F B | BTL] [fun F D C | TTL] ORIGTYS :-
 check_domain B T :- inputs B I, is_subset T I.
 
 %is_subset A B :- print (is_subset A B), fail.
-is_subset A B :- var A, !, constraint (is_subset A B) A.
-is_subset A B :- var B, !, constraint (is_subset A B) B.
+is_subset A B :- var A, !, declare_constraint (is_subset A B) A.
+is_subset A B :- var B, !, declare_constraint (is_subset A B) B.
 is_subset A B :- is_subset_ A B.
 is_subset_ [] _.
 is_subset_ [X|TL] TL1 :- mem TL1 X, is_subset TL TL1.
 
-mem A B :- var A, !, constraint (mem A B) A.
+mem A B :- var A, !, declare_constraint (mem A B) A.
 mem A B :- mem_ A B.
 mem_ [X|_] X :- !.
 mem_ [Y|TL] X :- mem TL X.
@@ -43,7 +43,7 @@ check_codomain [case _ T | TL] TYS ORIGTYS :-
 
 %check_term term type
 %check_term A B C :- print "CHECK" (check_term A B C), fail.
-check_term (@ F T) TY ORIGTYS :-
+check_term (app F T) TY ORIGTYS :-
  !,
  find ORIGTYS F D C,
  check_term T D ORIGTYS,
@@ -101,7 +101,7 @@ propagate [] [is_subset A X, is_subset B X] (is_subset C X) :-
 
 main1 :-
  P = [ fun f [ case a a
-             , case b (@ g a) ]
+             , case b (app g a) ]
      , fun g [ case a c
              , case b d ]
      ],
@@ -128,8 +128,8 @@ main1 :-
 
 main2 :-
  P' = [ fun f [ case a a
-              , case b (@ h1 (@ g a))
-              , case c (@ h2 (@ g a)) ]
+              , case b (app h1 (app g a))
+              , case c (app h2 (app g a)) ]
       , fun g  [ case a a ]
       , fun h1 [ case a a
                , case b b

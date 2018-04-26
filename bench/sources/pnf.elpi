@@ -10,6 +10,11 @@
 
 %type  merge  (form -> form -> o).
 
+type perp, tru formula.
+type and, or, imp formula -> formula -> formula.
+type adj, path term -> term -> formula.
+type all, some (term -> formula) -> formula.
+
 quant_free perp.
 quant_free tru.
 quant_free A :- atom A.
@@ -19,6 +24,9 @@ quant_free (imp B C) :- quant_free B, quant_free C.
 
 atom (path X Y) :- termp X, termp Y.
 atom (adj X Y) :- termp X, termp Y.
+
+type a, b, c term.
+type f term -> term.
 
 termp a.
 termp b.
@@ -71,6 +79,9 @@ top-level symbol */
        (pi x\ ((termp x) => (merge (imp B (C x)) (D x)))).
 
 (merge B B) :- (quant_free B).
+
+type one, two, three, four term.
+type formula term -> formula -> prop.
 
 formula one  (imp (all (x \ (path a x))) tru).
 formula two  (imp (some (x \ (path a x))) tru).
