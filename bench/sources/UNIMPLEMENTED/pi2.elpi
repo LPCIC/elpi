@@ -1,4 +1,0 @@
-% q Y yields Y = ok
-
-r a.
-q Y :- (pi X\ p X ok :- r X) =>  p a Y.

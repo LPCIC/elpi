@@ -1,6 +1,0 @@
-main :-
- X 1 = 1,
- c X.
-
-c (x\ x) :- print "fail", fail.
-c X :- true.

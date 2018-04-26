@@ -1,9 +1,0 @@
-/*
-
-Cvetan
-*/
-
-module pairs.
-
-
-end
