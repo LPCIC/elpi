@@ -38,9 +38,11 @@ let more () =
 ;;
 
 let set_terminal_width ?(max_w=
+   try
     let ic, _ as p = Unix.open_process "tput cols" in
     let w = int_of_string (input_line ic) in
-    let _ = Unix.close_process p in w) () =
+    let _ = Unix.close_process p in w
+   with _ -> 80) () =
   List.iter (fun fmt ->
     Format.pp_set_margin fmt max_w;
     Format.pp_set_ellipsis_text fmt "...";
