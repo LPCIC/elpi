@@ -5,9 +5,21 @@
 open Elpi_util
 open Elpi_ast
 
-type fixity = Infixl | Infixr | Infix | Prefix | Postfix
+module Str = Re_str
 
-let set_precedence,precedence_of =
+type fixity = Infixl | Infixr | Infix | Prefix | Prefixr | Postfix | Postfixl
+
+let fixity_of_string = function
+  | "infixl" -> Infixl 
+  | "infixr" -> Infixr 
+  | "infix" -> Infix 
+  | "prefix" -> Prefix 
+  | "prefixr" -> Prefixr 
+  | "postfix" -> Postfix 
+  | "postfixl" -> Postfixl
+  | s -> raise (Stream.Error ("invalid fixity: " ^ s))
+
+let set_precedence, precedence_of =
  let module ConstMap = Map.Make(Func) in 
  let precs = ref ConstMap.empty in
  (fun c p -> precs := ConstMap.add c p !precs),
@@ -37,17 +49,6 @@ let set_tjpath cwd paths =
  cur_dirname := cwd;
  let tjpath = List.map (fun f -> make_absolute (readsymlinks f)) paths in
  cur_tjpath := tjpath
-
-module PointerFunc = struct
- type latex_export =
-  {process:
-    'a 'b. path:string -> shortpath:string -> ('a -> 'b) -> 'a -> 'b
-   ; export: clause -> unit}
- let latex_export =
-  ref { process = (fun ~path  ~shortpath f x -> f x);
-        export = (fun _ -> ()) }
- let set_latex_export f = latex_export := f
-end;;
 
 (*CSC: when parse_one opens a file for reading, open the .tex file
   for writing (and put the header) *)
@@ -120,8 +121,7 @@ let rec parse_one e (origfilename as filename) =
   try
    let loc = !last_loc in
    set_fname filename;
-   let res = (!PointerFunc.latex_export).PointerFunc.process ~path:filename
-    ~shortpath:origfilename (Grammar.Entry.parse e) (Stream.of_channel ch)in
+   let res = Grammar.Entry.parse e (Stream.of_channel ch)in
    last_loc := loc;
    ast := Some res;
    close_in ch;
@@ -159,39 +159,11 @@ let parse_string e s =
     raise (Stream.Error(Printf.sprintf "%s\nnear: %s" msg ctx))
   | Ploc.Exc(_,e) -> raise e
 
-let digit = lexer [ '0'-'9' ]
-let octal = lexer [ '0'-'7' ]
-let hex = lexer [ '0'-'9' | 'A'-'F' | 'a'-'f' ]
-let schar2 =
- lexer [ '+'  | '*' | '/' | '^' | '<' | '>' | '`' | '\'' | '?' | '@' | '#'
-       | '~' | '=' | '&' | '!' ]
-let schar = lexer [ schar2 | '-' | '$' | '_' ]
-let lcase = lexer [ 'a'-'z' ]
-let ucase = lexer [ 'A'-'Z' ]
-let idchar = lexer [ lcase | ucase | digit | schar ]
-let rec idcharstar = lexer [ idchar idcharstar | ]
-let idcharplus = lexer [ idchar idcharstar ]
-let rec num = lexer [ digit | digit num ]
-let symbchar = lexer [ lcase | ucase | digit | schar | ':' ]
-let rec symbcharstar = lexer [ symbchar symbcharstar | ]
-
-let rec stringchar = lexer
- [ "\\\\" / -> $add "\\"
- | "\\n" / -> $add "\n"
- | "\\b" / -> $add "\b"
- | "\\t" / -> $add "\t"
- | "\\r" / -> $add "\r"
- | "\\x" / -> $add "\x"
- | "\\\"" / -> $add "\""
- (* CSC: I have no idea how to implement the \octal syntax & friend :-(
- | "\\" / [ -> buflen := String.length $buf ; $add "" ] octal / ->
-    $add (mkOctal "4")*)
- | _ ]
 let string_of_chars chars = 
   let buf = Buffer.create 10 in
   List.iter (Buffer.add_char buf) chars;
   Buffer.contents buf
-let spy ?(name="") ?pp f b s =
+let _spy ?(name="") ?pp f b s =
   let l = Stream.npeek 10 s in
   Printf.eprintf "%s< %s | %S...\n"
     name (Plexing.Lexbuf.get b) (string_of_chars l);
@@ -205,13 +177,44 @@ let spy ?(name="") ?pp f b s =
     Printf.eprintf "nope\n";
     raise e
 ;;
+
+let digit = lexer [ '0'-'9' ]
+(* let octal = lexer [ '0'-'7' ] *)
+(* let hex = lexer [ '0'-'9' | 'A'-'F' | 'a'-'f' ] *)
+let schar2 =
+ lexer [ '+'  | '*' | '/' | '^' | '<' | '>' | '`' | '\'' | '?' | '@' | '#'
+       | '~' | '=' | '&' | '!' ]
+let schar = lexer [ schar2 | '-' | '$' | '_' ]
+let lcase = lexer [ 'a'-'z' ]
+let ucase = lexer [ 'A'-'Z' ]
+let idchar = lexer [ lcase | ucase | digit | schar ]
+let rec idcharstar = lexer [ idchar idcharstar | ]
+let rec idcharstarns = lexer [ idchar idcharstarns | ?= [ '.' 'a'-'z' | '.' 'A'-'Z' ] '.' idchar idcharstarns | ]
+let idcharplus = lexer [ idchar idcharstar ]
+let rec num = lexer [ digit | digit num ]
+let symbchar = lexer [ lcase | ucase | digit | schar | ':' ]
+let rec symbcharstar = lexer [ symbchar symbcharstar | ]
+
+let stringchar = lexer
+ [ "\\\\" / -> $add "\\"
+ | "\\n" / -> $add "\n"
+ | "\\b" / -> $add "\b"
+ | "\\t" / -> $add "\t"
+ | "\\r" / -> $add "\r"
+ | "\\x" / -> $add "\x"
+ | "\\\"" / -> $add "\""
+ (* CSC: I have no idea how to implement the \octal syntax & friend :-(
+ | "\\" / [ -> buflen := String.length $buf ; $add "" ] octal / ->
+    $add (mkOctal "4")*)
+ | _ ]
+
 let rec string = lexer [ '"' / '"' string | '"' / | stringchar string ]
 let any = lexer [ _ ]
 let mk_terminator keep n b s =
   let l = Stream.npeek n s in
   if List.length l = n && List.for_all ((=) '}') l then begin
    let b = ref b in
-   for i = 1 to n do
+   for _i = 1 to n do
      Stream.junk s;
      if keep then b := Plexing.Lexbuf.add '}' !b;
    done; !b
@@ -232,7 +235,7 @@ let constant = "CONSTANT" (* to use physical equality *)
 
 let rec tok b s = (*spy ~name:"tok" ~pp:(fun (a,b) -> a ^ " " ^ b)*) (lexer
   [ ucase idcharstar -> constant,$buf 
-  | lcase idcharstar -> constant,$buf
+  | lcase idcharstarns -> constant,$buf
   | schar2 symbcharstar -> constant,$buf
   | num -> "INTEGER",$buf
   | num ?= [ '.' '0'-'9' ] '.' num -> "FLOAT",$buf
@@ -270,13 +273,13 @@ and is_infix_aux b s =
     if k3 = "RPAREN" then string2lexbuf3 s1 s2 s3
     else raise Stream.Failure
   else raise Stream.Failure
-and protect max_chars lex b s =
+and protect max_chars lex s =
   let l = Stream.npeek max_chars s in
   let safe_s = Stream.of_list l in
   let to_junk, res = lex Plexing.Lexbuf.empty safe_s in
-  for i = 0 to to_junk-1 do Stream.junk s; done;
+  for _i = 0 to to_junk-1 do Stream.junk s; done;
   res
-and is_infix b s = protect 6 is_infix_aux b s
+and is_infix _ s = protect 6 is_infix_aux s
 and string2lexbuf2 s1 s2 =
   let b = ref Plexing.Lexbuf.empty in
   String.iter (fun c -> b := Plexing.Lexbuf.add c !b) s1;
@@ -298,7 +301,7 @@ let symbols = ref StringSet.empty;;
 let literatebuf = Buffer.create 17;;
 
 (* %! <= \leq creates a map from "<=" to "\leq" *)
-let set_liter_map,get_literal,print_lit_map =
+let set_liter_map, get_literal, _print_lit_map =
  let lit_map = ref StrMap.empty in
  (fun s1 s2 -> lit_map := StrMap.add s1 s2 !lit_map),
  (fun s -> StrMap.find s !lit_map),
@@ -334,6 +337,7 @@ let rec lex loc c = parser bp
          | "mode" -> "MODE", "mode"
          | "macro" -> "MACRO", "macro"
          | "rule" -> "RULE", "rule"
+         | "namespace" -> "NAMESPACE", "namespace"
          | "constraint" -> "CONSTRAINT", "constraint"
          | "localkind" -> "LOCALKIND", "localkind"
          | "useonly" -> "USEONLY", "useonly"
@@ -356,9 +360,6 @@ let rec lex loc c = parser bp
          | x when StringSet.mem x !symbols -> "SYMBOL",x
         
          | _ -> res) else res), (set_loc_pos loc bp ep)
-and skip_to_dot loc c = parser
-  | [< '( '.' ); s >] -> lex loc c s
-  | [< '_ ; s >] -> skip_to_dot loc c s
 and literatecomment loc c = parser
   | [< '( '\n' ); s >] ->
       let loc = succ_line loc in
@@ -430,6 +431,7 @@ let lex = {
 let g = Grammar.gcreate lex
 let lp = Grammar.Entry.create g "lp"
 let goal = Grammar.Entry.create g "goal"
+let atom = Grammar.Entry.create g "atom"
 
 let min_precedence = -1  (* minimal precedence in use *)
 let lam_precedence = -1  (* precedence of lambda abstraction *)
@@ -438,11 +440,13 @@ let umax_precedence = 256 (* maximal user defined precedence *)
 let appl_precedence = umax_precedence + 1 (* precedence of application *)
 let inf_precedence = appl_precedence+1 (* greater than any used precedence*)
 
+(*
 let dummy_prod =
  let dummy_action =
    Gramext.action (fun _ ->
      failwith "internal error, lexer generated a dummy token") in
  [ [ Gramext.Stoken ("DUMMY", "") ], dummy_action ]
+*)
 
 let used_precedences = ref [110];;
 let is_used n =
@@ -465,10 +469,11 @@ let desugar_multi_binder = function
       let last, rev_rest = let l = List.rev args in List.hd l, List.tl l in
       let names = List.map (function
         | Const x -> Func.show x
-        | _ -> Elpi_util.error "multi binder syntax") rev_rest in
+        | (App _ | Lam _ | CData _ | Quoted _) ->
+            Elpi_util.error "multi binder syntax") rev_rest in
       let body = mkApp [binder;last] in
       List.fold_left (fun bo name -> mkApp [binder;mkLam name bo]) body names
-  | t -> t
+  | (App _ | Const _ | Lam _ | CData _ | Quoted _) as t -> t
 ;;
 
 let desugar_macro = function
@@ -481,9 +486,11 @@ let desugar_macro = function
         raise (Stream.Error "Macro name must begin with @");
       let names = List.map (function
         | Const x -> Func.show x
-        | _ -> Elpi_util.error "macro binder syntax") args in
+        | (App _ | Lam _ | CData _ | Quoted _) ->
+             Elpi_util.error "macro binder syntax") args in
       name, List.fold_right mkLam names body
-  | _ -> raise (Stream.Error "Illformed macro")
+  | (App _ | Const _ | Lam _ | CData _ | Quoted _) ->
+        raise (Stream.Error "Illformed macro")
 ;;
 
 let constant_colon strm =
@@ -493,8 +500,48 @@ let constant_colon strm =
 let constant_colon =
   Grammar.Entry.of_parser g "constant_colon" constant_colon
 
+type gramext = { fix : fixity; sym : string; prec : int }
+
+let gram_extend { fix; sym = cst; prec = nprec } =
+  if nprec < umin_precedence || nprec > umax_precedence then
+    raise (Stream.Error (Printf.sprintf "precedence muse be inside [%d,%d]" umin_precedence umax_precedence))
+  else
+    let binrule =
+     [ Gramext.Sself ; Gramext.Stoken ("SYMBOL",cst); Gramext.Sself ],
+     Gramext.action (fun t2 cst t1 _ ->mkApp [mkCon cst;t1;t2]) in
+    let prerule =
+     [ Gramext.Stoken ("SYMBOL",cst); Gramext.Sself ],
+     Gramext.action (fun t cst _ -> mkApp [mkCon cst;t]) in
+    let postrule =
+     [ Gramext.Sself ; Gramext.Stoken ("SYMBOL",cst) ],
+     Gramext.action (fun cst t _ -> mkApp [mkCon cst;t]) in
+    let ppinfo = fix, nprec in
+    let fixity,rule =
+     (* NOTE: we do not distinguish between infix and infixl,
+        prefix and prefix, postfix and postfixl *)
+     match fix with
+       Infix    -> Gramext.NonA,   binrule
+     | Infixl   -> Gramext.LeftA,  binrule
+     | Infixr   -> Gramext.RightA, binrule
+     | Prefix   -> Gramext.NonA,   prerule
+     | Prefixr  -> Gramext.RightA, prerule
+     | Postfix  -> Gramext.NonA,   postrule
+     | Postfixl -> Gramext.LeftA,  postrule in
+    set_precedence (Func.from_string cst) ppinfo ;
+    let where,name = is_used nprec in
+     Grammar.extend
+      [Grammar.Entry.obj atom, Some where, [name, Some fixity, [rule]]];
+;;
+          (* Debugging code
+          prerr_endline "###########################################";
+          Grammar.iter_entry (
+            Grammar.print_entry Format.err_formatter
+          ) (Grammar.Entry.obj atom);
+          prerr_endline ""; *)
+
+
 EXTEND
-  GLOBAL: lp goal;
+  GLOBAL: lp goal atom;
   lp: [ [ cl = LIST0 clause; EOF -> List.concat cl ] ];
   const_sym:
     [[ c = CONSTANT -> c
@@ -505,25 +552,14 @@ EXTEND
      | c = LITERAL -> c ]];
   i_o : [[ CONSTANT "i" -> true | CONSTANT "o" -> false ]];
   mode :
-    [[ LPAREN; c = CONSTANT;
-       l = LIST1 i_o; RPAREN;
-       alias = OPT[ CONSTANT "xas"; c = CONSTANT;
-                 subst = OPT [ LPAREN;
-                               l = LIST1 [ c1 = CONSTANT; SYMBOL "->";
-                                       c2 = CONSTANT ->
-                                (Func.from_string c1, Func.from_string c2) ]
-                 SEP SYMBOL ","; RPAREN -> l ] ->
-                 Func.from_string c,
-                 match subst with None -> [] | Some l -> l ] ->
-      Func.from_string c,l,alias]];
+    [[ LPAREN; c = CONSTANT; l = LIST1 i_o; RPAREN ->
+       { mname = Func.from_string c; margs = l } ]];
   chrrule :
     [[ to_match = LIST0 sequent;
        to_remove = OPT [ BIND; l = LIST1 sequent -> l ];
-       alignment = OPT [
-         SYMBOL ">"; hd = CONSTANT; SYMBOL "~"; l = LIST1 CONSTANT SEP SYMBOL "~" -> List.map Func.from_string (hd :: l) ];
-       guard = OPT [ PIPE; a = atom LEVEL "abstterm" -> Some a ];
-       new_goal = OPT [ SYMBOL "<=>"; gs = sequent -> Some gs ] ->
-         create_chr_rule ~to_match ?to_remove ?alignment ?guard ?new_goal ()
+       guard = OPT [ PIPE; a = atom LEVEL "abstterm" -> a ];
+       new_goal = OPT [ SYMBOL "<=>"; gs = sequent -> gs ] ->
+         create_chr_rule ~to_match ?to_remove ?guard ?new_goal ()
     ]];
   sequent_core :
     [ [ constant_colon; e = CONSTANT; COLON; t = atom -> Some e, (t : term) 
@@ -537,51 +573,62 @@ EXTEND
          let context, conclusion =
            match t1 with
            | App(Const x,[a;b]) when Func.equal x Func.sequentf -> a, b
-           | _ -> mkFreshUVar (), t1 in
+           | (App _ | Const _ | Lam _ | CData _ | Quoted _) ->
+                mkFreshUVar (), t1 in
          { eigen; context; conclusion }
     | c = atom LEVEL "abstterm" ->
          { eigen = mkFreshUVar (); context = mkFreshUVar (); conclusion = c }
    ]];
-  clname : [[ COLON; CONSTANT "name";
-              name = [ c = CONSTANT -> c | l = LITERAL -> l] -> name ]];
-  clinsert :
-     [[ COLON; CONSTANT "before";
-              name = [ c = CONSTANT -> c | l = LITERAL -> l] -> `Before, name
-      | COLON; CONSTANT "after";
-              name = [ c = CONSTANT -> c | l = LITERAL -> l] -> `After, name
+  attribute_value :
+   [[ c = CONSTANT -> c | l = LITERAL -> l ]];
+  attribute :
+   [[ CONSTANT "name";   name = attribute_value -> Name name
+    | CONSTANT "before"; name = attribute_value -> Before name
+    | CONSTANT "after";  name = attribute_value -> After name
+    | CONSTANT "if";     expr = LITERAL -> If expr
     ]];
   pragma : [[ CONSTANT "#line"; l = INTEGER; f = LITERAL ->
     set_fname ~line:(int_of_string l) f ]];
   pred_item : [[ m = i_o; COLON; t = ctype -> (m,t) ]];
   pred : [[ c = const_sym; a = LIST0 pred_item SEP SYMBOL "," ->
     let name = Func.from_string c in
-     [name, List.map fst a, None],
+    [ { mname = name; margs = List.map fst a } ],
      (name, List.fold_right (fun (_,t) ty ->
         mkApp [mkCon "->";t;ty]) a (mkCon "prop"))
   ]];
+  attributes : [[ COLON; l = LIST1 attribute SEP COLON-> l ]];
   clause :
-    [[ id = OPT clname; insert = OPT clinsert; f = atom; FULLSTOP ->
-       let c = { loc; id; insert; body = f } in
-       (!PointerFunc.latex_export).PointerFunc.export c ;
+    [[ attributes = OPT attributes; f = atom; FULLSTOP ->
+       let attributes = match attributes with None -> [] | Some x -> x in
+       let c = { loc; attributes; body = f } in
        [Clause c]
      | pragma -> []
-     | LCURLY -> [Begin]
-     | RCURLY -> [End]
+     | LCURLY -> [Begin loc]
+     | RCURLY -> [End loc]
      | PRED; p = pred; FULLSTOP ->
-         let m, (n,t) = p in [Type(false,n,t); Mode m]
+         let m, (n,t) = p in
+         [Type { textern = false; tname = n ; tty = t }; Mode m]
      | TYPE; names = LIST1 const_sym SEP SYMBOL ","; t = type_; FULLSTOP ->
-         List.map (fun n -> Type(false,Func.from_string n,t)) names
-     | EXTERNAL; TYPE; names = LIST1 const_sym SEP SYMBOL ","; t = type_; FULLSTOP ->
-         List.map (fun n -> Type(true,Func.from_string n,t)) names
+         List.map (fun n ->
+             Type { textern = false; tname = Func.from_string n; tty = t })
+           names
+     | EXTERNAL;
+       TYPE; names = LIST1 const_sym SEP SYMBOL ","; t = type_; FULLSTOP ->
+         List.map (fun n ->
+            Type { textern = true; tname = Func.from_string n; tty = t })
+         names
      | EXTERNAL; PRED; p = pred; FULLSTOP ->
-         let _, (n,t) = p in [Type(true,n,t)] (* No mode for ML code *)
+         let _, (n,t) = p in (* No mode for ML code *)
+         [Type { textern = true; tname = n; tty = t }]
      | MODE; m = LIST1 mode SEP SYMBOL ","; FULLSTOP -> [Mode m]
      | MACRO; b = atom; FULLSTOP ->
          let name, body = desugar_macro b in
-         [Macro(loc,name, body)]
+         [Macro { mlocation = loc; maname = name; mbody = body }]
      | RULE; r = chrrule; FULLSTOP -> [Chr r]
+     | NAMESPACE; ns = CONSTANT; LCURLY ->
+         [ Namespace (loc, Func.from_string ns) ]
      | CONSTRAINT; names=LIST0 CONSTANT; LCURLY ->
-         [ Constraint (List.map Func.from_string names) ]
+         [ Constraint (loc, List.map Func.from_string names) ]
      | MODULE; CONSTANT; FULLSTOP -> []
      | SIG; CONSTANT; FULLSTOP -> []
      | ACCUMULATE; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
@@ -605,48 +652,18 @@ EXTEND
      | EXPORTDEF; LIST1 const_sym SEP SYMBOL ","; FULLSTOP -> []
      | EXPORTDEF; LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP -> []
      | KIND; names = LIST1 const_sym SEP SYMBOL ","; t = kind; FULLSTOP ->
-         List.map (fun n -> Type(false,Func.from_string n,t)) names
+         List.map (fun n ->
+           Type { textern = false; tname = Func.from_string n; tty = t })
+         names
      | TYPEABBREV; abbrform; TYPE; FULLSTOP -> []
      | fix = FIXITY; syms = LIST1 const_sym SEP SYMBOL ","; prec = INTEGER; FULLSTOP ->
-        let nprec = int_of_string prec in
-        if nprec < umin_precedence || nprec > umax_precedence then
-         assert false (* wrong precedence *)
-        else
-         let extend_one cst =
-          let binrule =
-           [ Gramext.Sself ; Gramext.Stoken ("SYMBOL",cst); Gramext.Sself ],
-           Gramext.action (fun t2 cst t1 _ ->mkApp [mkCon cst;t1;t2]) in
-          let prerule =
-           [ Gramext.Stoken ("SYMBOL",cst); Gramext.Sself ],
-           Gramext.action (fun t cst _ -> mkApp [mkCon cst;t]) in
-          let postrule =
-           [ Gramext.Sself ; Gramext.Stoken ("SYMBOL",cst) ],
-           Gramext.action (fun cst t _ -> mkApp [mkCon cst;t]) in
-          let fixity,rule,ppinfo =
-           (* NOTE: we do not distinguish between infix and infixl,
-              prefix and prefix, postfix and postfixl *)
-           match fix with
-             "infix"    -> Gramext.NonA,   binrule,  (Infix,nprec)
-           | "infixl"   -> Gramext.LeftA,  binrule,  (Infixl,nprec)
-           | "infixr"   -> Gramext.RightA, binrule,  (Infixr,nprec)
-           | "prefix"   -> Gramext.NonA,   prerule,  (Prefix,nprec)
-           | "prefixr"  -> Gramext.RightA, prerule,  (Prefix,nprec)
-           | "postfix"  -> Gramext.NonA,   postrule, (Postfix,nprec)
-           | "postfixl" -> Gramext.LeftA,  postrule, (Postfix,nprec)
-           | _ -> assert false in
-          set_precedence (Func.from_string cst) ppinfo ;
-          let where,name = is_used nprec in
-           Grammar.extend
-            [Grammar.Entry.obj atom, Some where, [name, Some fixity, [rule]]];
-         in
-          List.iter extend_one syms ; 
-          (* Debugging code
-          prerr_endline "###########################################";
-          Grammar.iter_entry (
-            Grammar.print_entry Format.err_formatter
-          ) (Grammar.Entry.obj atom);
-          prerr_endline ""; *)
-          []
+         List.iter (fun sym ->
+           gram_extend {
+             fix = fixity_of_string fix;
+             sym;
+             prec = int_of_string prec
+           }) syms;
+         []
     ]];
   kind:
     [[ t = TYPE -> mkCon t
@@ -658,7 +675,8 @@ EXTEND
     ]];
   ctype:
      [ "main" [ c = CONSTANT; l = LIST0 ctype LEVEL "arg" -> 
-                  mkApp (mkCon c :: l)
+                  if c = "o" && l = [] then mkCon "prop"
+                  else mkApp (mkCon c :: l)
               | CONSTANT "ctype"; s = LITERAL ->
                   mkApp [Const Func.ctypef; mkC CData.(cstring.cin s)] ]
      | "arg"  [ c = CONSTANT -> mkCon c
@@ -714,30 +732,84 @@ let list_element_prec = 120
 
 let parser_initialized = ref false
 
-let init ?(silent=true) ?(lp_syntax="lp-syntax.elpi") ~paths ~cwd () =
+let init ?(silent=true) ~lp_syntax ~paths ~cwd () =
   assert(!parser_initialized = false);
   parse_silent := silent;
   parsed := [];
   set_tjpath cwd paths;
-  assert(parse lp [lp_syntax] = []);
+  List.iter gram_extend lp_syntax;
   parser_initialized := true
 ;;
 
-let parse_program ?(no_pervasives=false) filenames : program =
+let parse_program filenames : program =
+ if !parser_initialized = false then anomaly "parsing before calling init";
+ parse lp filenames
+;;
+
+let parse_program_from_stream strm : program =
   assert(!parser_initialized = true);
-  let pervasives = if no_pervasives then [] else ["pervasives.elpi"] in
-  parse lp (pervasives @ filenames)
+  if !parser_initialized = false then anomaly "parsing before calling init";
+  try Grammar.Entry.parse lp strm
+  with
+    Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) -> raise(Stream.Error msg)
+  | Ploc.Exc(_,e) -> raise e
 ;;
 
 let parse_goal s : goal =
-  assert(!parser_initialized = true);
+  if !parser_initialized = false then anomaly "parsing before calling init";
   parse_string goal s
 
 let parse_goal_from_stream strm =
-  assert(!parser_initialized = true);
+  if !parser_initialized = false then anomaly "parsing before calling init";
   try Grammar.Entry.parse goal strm
   with
     Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) -> raise(Stream.Error msg)
   | Ploc.Exc(_,e) -> raise e
 
-
+let lp_gramext = [
+  { fix = Infixl;	sym = ":-";	prec = 0; };
+  { fix = Infixr;	sym = ";";	prec = 100; };
+  { fix = Infix;	sym = "?-";	prec = 115; };
+  { fix = Infixr;	sym = "->";	prec = 116; };
+  { fix = Infixr;	sym = "&";	prec = 120; };
+  { fix = Infixr;	sym = "=>";	prec = 129; };
+  { fix = Infixr;	sym = "as";	prec = 129; };
+  { fix = Infix;	sym = "<";	prec = 130; };
+  { fix = Infix;	sym = "=<";	prec = 130; };
+  { fix = Infix;	sym = "=";	prec = 130; };
+  { fix = Infix;	sym = ">=";	prec = 130; };
+  { fix = Infix;	sym = ">";	prec = 130; };
+  { fix = Infix;	sym = "i<";	prec = 130; };
+  { fix = Infix;	sym = "i=<";	prec = 130; };
+  { fix = Infix;	sym = "i>=";	prec = 130; };
+  { fix = Infix;	sym = "i>";	prec = 130; };
+  { fix = Infix;	sym = "is";	prec = 130; };
+  { fix = Infix;	sym = "r<";	prec = 130; };
+  { fix = Infix;	sym = "r=<";	prec = 130; };
+  { fix = Infix;	sym = "r>=";	prec = 130; };
+  { fix = Infix;	sym = "r>";	prec = 130; };
+  { fix = Infix;	sym = "s<";	prec = 130; };
+  { fix = Infix;	sym = "s=<";	prec = 130; };
+  { fix = Infix;	sym = "s>=";	prec = 130; };
+  { fix = Infix;	sym = "s>";	prec = 130; };
+  { fix = Infix;	sym = "@";	prec = 135; };
+  { fix = Infixr;	sym = "::";	prec = 140; };
+  { fix = Infix;	sym = "`->";	prec = 141; };
+  { fix = Infix;	sym = "`:";	prec = 141; };
+  { fix = Infixl;	sym = "^";	prec = 150; };
+  { fix = Infixl;	sym = "-";	prec = 150; };
+  { fix = Infixl;	sym = "+";	prec = 150; };
+  { fix = Infixl;	sym = "i-";	prec = 150; };
+  { fix = Infixl;	sym = "i+";	prec = 150; };
+  { fix = Infixl;	sym = "r-";	prec = 150; };
+  { fix = Infixl;	sym = "r+";	prec = 150; };
+  { fix = Infixl;	sym = "/";	prec = 160; };
+  { fix = Infixl;	sym = "*";	prec = 160; };
+  { fix = Infixl;	sym = "div";	prec = 160; };
+  { fix = Infixl;	sym = "i*";	prec = 160; };
+  { fix = Infixl;	sym = "mod";	prec = 160; };
+  { fix = Infixl;	sym = "r*";	prec = 160; };
+  { fix = Prefix;	sym = "~";	prec = 256; };
+  { fix = Prefix;	sym = "i~";	prec = 256; };
+  { fix = Prefix;	sym = "r~";	prec = 256; };
+]

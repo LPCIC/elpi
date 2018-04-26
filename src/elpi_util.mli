@@ -2,6 +2,72 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
+module type Show = sig
+  type t
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
+end
+
+module type Show1 = sig
+  type 'a t
+  val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+  val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
+end
+
+module Map : sig
+
+  module type S = sig
+    include Map.S
+    include Show1 with type 'a t := 'a t
+  end
+  
+  module type OrderedType = sig
+    include Map.OrderedType
+    include Show with type t := t
+  end
+
+  module Make (Ord : OrderedType) : S with type key = Ord.t
+
+end
+
+module Set : sig
+
+  module type S = sig
+    include Set.S
+    include Show with type t := t
+  end
+  
+  module type OrderedType = sig
+    include Set.OrderedType
+    include Show with type t := t
+  end
+
+  module Make (Ord : OrderedType) : S with type elt = Ord.t
+
+end
+
+module Int : sig
+  type t = int
+  val compare : t -> t -> int
+  include Show with type t := int
+end
+
+module String : sig
+  include module type of String
+  include Show with type t := string
+end
+
+module StrMap : Map.S with type key = string
+module IntMap : Map.S with type key = int
+module StrSet : Set.S with type elt = string
+module IntSet : Set.S with type elt = int
+
+module Ploc : sig
+  include module type of struct include Ploc end
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
+end
+
 (******************** list ******************)
 
 val smart_map : ('a -> 'a) -> 'a list -> 'a list
@@ -29,20 +95,6 @@ val pp_option :
   (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a option -> unit
 val option_mapacc :
   ('acc -> 'a -> 'acc * 'b) -> 'acc -> 'a option -> 'acc * 'b option
-
-
-(******************** string ******************)
-
-module StrMap : Map.S with type key = string
-
-(******************** int ******************)
-
-module IntMap : sig
-  include Map.S
-  val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
-  val show : ('a -> string) -> 'a t -> string
-end
-  with type key = int
 
 (***************** Unique ID ****************)
 

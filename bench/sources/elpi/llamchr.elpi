@@ -2,41 +2,35 @@ mode (term i o).
 
 term (app X Y) B :- term X (arr A B), term Y A.
 term (lam A F) (arr A B) :- pi x\ term x A => term (F x) B.
-term (?? as X) A :- declare_constraint (term X A) X.
+term (uvar as X) A :- declare_constraint (term X A) X.
 term true bool.
 term false bool.
 term zero nat.
 term succ (arr nat nat).
 
-infixr ====> 126. % Implication where the l.h.s. is a list of propositions.
-
 constraint term {
-  rule (GX ?- term (uvar _ LX) TX)
-     \ (GY ?- term (uvar _ LY) TY)
-     > LX ~ LY
+  rule (GX ?- term (uvar K LX) TX)
+     \ (GY ?- term (uvar K LY) TY)
      | (compatible GX LX GY LY CTXCONSTR)
-   <=> (CTXCONSTR, TX = TY).
+   <=> [ TX = TY , CTXCONSTR ].
 }
 
 % resilient to dummy ctx variables
 both_or_none P Q :- P, !, Q.
 both_or_none P Q :- not P, not Q.
 
-compatible _ [] _ [] true :- !.
-compatible GX [X|XS] GY [Y|YS] (TX = TY, K) :-
- both_or_none (GX ====> term X TX) (GY ====> term Y TY),
+compatible _ [] _ [] [] :- !.
+compatible GX [X|XS] GY [Y|YS] [TX = TY | K] :-
+ both_or_none (GX => term X TX) (GY => term Y TY),
  !,
  compatible GX XS GY YS K.
-compatible _ _ _ _ false.
-
-    [] ====> T :- T.
-[X|XS] ====> T :- X => (XS ====> T).
+compatible _ _ _ _ [false].
 
 spy P :- print "[" P, P, print "]ok", !.
 spy P :- print "]fail", fail.
 
 mode (watch i).
-watch (?? as X) :- declare_constraint (print "watch" X) X, !.
+watch (uvar as X) :- declare_constraint (print "watch" X) X, !.
 watch X :- print "watch" X.
 
 main :- 

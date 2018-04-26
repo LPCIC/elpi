@@ -20,7 +20,7 @@ type clause (ctype "loc") -> list string -> term -> clause.
 % a program is then a list of clause while
 % the query is just one item of the same kind.
 
-% see elpi_typechecker.elpi for an example
+% see elpi-checker.elpi for an example
 
 % vim: set ft=lprolog:
 

@@ -27,7 +27,6 @@ ELPI_COMPONENTS = \
   elpi_ast.$(CMX) $(ELPI_P5_COMPONENTS) elpi_ptmap.$(CMX) \
   elpi_data.$(CMX) \
   $(ELPI_PACKED_COMPONENTS) elpi_compiler.$(CMX) \
-  elpi_latex_exporter.$(CMX) elpi_prolog_exporter.$(CMX) \
   elpi_API.$(CMX) elpi_builtin.$(CMX)
 
 # Standard compilation
@@ -62,10 +61,13 @@ elpi_runtime_trace_on.$(CMX) elpi_runtime_trace_off.$(CMX) : elpi_runtime.ml elp
 $(ELPI_EASY_COMPONENTS) : %.$(CMX): %.ml
 	$(H)$(call pp,$(OCNAME),-c,$<)
 	$(H)$(OC) $(OCAMLOPTIONS) \
-		-package camlp5,ppx_deriving.std \
+		-package camlp5,ppx_deriving.std,re.str \
 	       	-c $<
 
 elpi_API.cmi: elpi_API.mli
+	$(H)$(call pp,$(OCNAME),$(OOPAQUE) -c,$<)
+	$(H)$(OC) $(OCAMLOPTIONS) -package camlp5 $(OOPAQUE) -c $<
+elpi_builtin.cmi: elpi_builtin.mli
 	$(H)$(call pp,$(OCNAME),$(OOPAQUE) -c,$<)
 	$(H)$(OC) $(OCAMLOPTIONS) -package camlp5 $(OOPAQUE) -c $<
 %.cmi: %.mli
@@ -74,7 +76,7 @@ elpi_API.cmi: elpi_API.mli
 
 elpi_parser.$(CMX): elpi_parser.ml elpi_parser.cmi elpi_ast.$(CMX) elpi_ast.cmi
 	$(H)$(call pp,$(OCNAME),-c -pp camlp5o,$<)
-	$(H)$(OC) $(OCAMLOPTIONS) -pp '$(PP) $(PARSE)' $(FLAGS) -w -27 -o $@ -c $<
+	$(H)$(OC) $(OCAMLOPTIONS) -pp '$(PP) $(PARSE)' -package re.str $(FLAGS) -w -27 -o $@ -c $<
 
 # dependencies
 include $(DEPS)

@@ -3,7 +3,7 @@ kind group type.
 type group-1 group.
 type group-2 group.
 
-gcd A (?? as B) :- !, declare_constraint (gcd A B) B.
+gcd A (uvar as B) :- !, declare_constraint (gcd A B) B.
 
 % assert result is OK
 gcd 11 group-1 :- print "group 1 solved".

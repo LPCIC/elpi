@@ -7,142 +7,139 @@ open Extend
 open Data
 open Constants
 open Utils
-open CustomPredicate
+open BuiltInPredicate
+open Notation
+
+module Str = Re_str
+
+let { CData.cin = istream_in; isc = is_istream ; cout = istream_out } as in_stream = CData.declare {
+  CData.data_name = "in_stream";
+  data_pp = (fun fmt (_,d) -> Format.fprintf fmt "<in_stream:%s>" d);
+  data_eq = (fun (x,_) (y,_) -> x = y);
+  data_hash = (fun (x,_) -> Hashtbl.hash x);
+  data_hconsed = false;
+}
+let in_stream =
+  let constants =
+    Map.empty |> Map.add (from_stringc "std_in") (stdin,"stdin") in
+  data_of_cdata ~name:"@in_stream" ~constants in_stream
+
+let { CData.cin = ostream_in; isc = is_ostream ; cout = ostream_out } as out_stream = CData.declare {
+  CData.data_name = "out_stream";
+  data_pp = (fun fmt (_,d) -> Format.fprintf fmt "<out_stream:%s>" d);
+  data_eq = (fun (x,_) (y,_) -> x = y);
+  data_hash = (fun (x,_) -> Hashtbl.hash x);
+  data_hconsed = false;
+}
+let out_stream =
+  let constants =
+    Map.empty
+    |> Map.add (from_stringc "std_out") (stdout,"stdout")
+    |> Map.add (from_stringc "std_err") (stderr,"stderr") in
+  data_of_cdata ~name:"@out_stream" ~constants out_stream
 
 let register_eval, lookup_eval =
- let (evals : ('a, term list -> term) Hashtbl.t)
+ let (evals : ('a, view list -> term) Hashtbl.t)
    =
      Hashtbl.create 17 in
  (fun s -> Hashtbl.add evals (from_stringc s)),
  Hashtbl.find evals
 ;;
 
-(* To avoid adding another primitive constant to the type term, we
-   introduce bijective maps between {in,out}_streams and integers *)
-
-(* The map stores pairs in_stream * char option, which is the lookahead *)
-let add_in_stream,get_in_stream,set_lookahead =
- let fresh = ref (-1) in
- let streams = ref Elpi_ptmap.empty in
- (fun s -> incr fresh ; streams := Elpi_ptmap.add !fresh (s,None) !streams; !fresh),
- (fun i -> Elpi_ptmap.find i !streams),
- (fun i c ->
-   try streams := Elpi_ptmap.add i (fst (Elpi_ptmap.find i !streams),c) !streams
-   with Not_found -> anomaly "setting the lookahead for an unknown channel")
-
-let add_out_stream,get_out_stream =
- let fresh = ref (-1) in
- let streams = ref Elpi_ptmap.empty in
- (fun s -> incr fresh ; streams := Elpi_ptmap.add !fresh s !streams ; !fresh),
- (fun i -> Elpi_ptmap.find i !streams)
-
-let cstdin = add_in_stream stdin;;
-let cstdout= add_out_stream stdout;;
-let cstderr = add_out_stream stderr;;
-
 (* Traverses the expression evaluating all custom evaluable functions *)
-let rec eval depth =
- function
-    Lam _
-  | Custom _ -> error "Evaluation of a lambda abstraction or custom predicate"
+let rec eval depth t =
+  match look ~depth t with
+  | Lam _ -> type_error "Evaluation of a lambda abstraction"
+  | Builtin _ -> type_error "Evaluation of built-in predicate"
   | Arg _
   | AppArg _ -> anomaly "Not a heap term"
   | App (hd,arg,args) ->
      let f =
       try lookup_eval hd
-      with Not_found -> anomaly (show hd ^ " not evaluable") in
-     let args = List.map (eval depth) (arg::args) in
+      with Not_found ->
+        function
+        | [] -> assert false
+        | x::xs -> mkApp hd (kool x) (List.map kool xs)  in
+     let args = List.map (fun x -> look ~depth (eval depth x)) (arg::args) in
      f args
-  | UVar ({ contents = g }, from, ano) when g != dummy ->
-     eval depth (deref_uv ~from ~to_:depth ~ano g)
-  | AppUVar ({contents = t}, from, args) when t != dummy ->
-     eval depth (deref_appuv ~from ~to_:depth ~args t)
   | UVar _
   | AppUVar _ -> error "Evaluation of a non closed term (maybe delay)"
-  | Const hd ->
+  | Const hd as x ->
      let f =
       try lookup_eval hd
-      with Not_found -> anomaly (show hd ^ " not evaluable") in
+      with Not_found -> fun _ -> kool x in
      f []
-  | (Nil | Cons _ as x) -> type_error ("Lists cannot be evaluated: " ^ Pp.Raw.show_term x)
+  | (Nil | Cons _ as x) ->
+      type_error ("Lists cannot be evaluated: " ^ Pp.Raw.show_term (kool x))
   | Discard -> type_error "_ cannot be evaluated"
-  | CData _ as x -> x
+  | CData _ as x -> kool x
 ;;
 
 let register_evals l f = List.iter (fun i -> register_eval i f) l;;
 
 let _ =
   let open CData in
-  register_eval "std_in" (function
-   | [] -> C.(of_int cstdin)
-   | _ -> type_error "Wrong arguments to stin") ;
-  register_eval "std_out" (function
-   | [] -> C.(of_int cstdout)
-   | _ -> type_error "Wrong arguments to stout") ;
-  register_eval "std_err" (function
-   | [] -> C.(of_int cstderr)
-   | _ -> type_error "Wrong arguments to sterr") ;
   register_evals [ "-" ; "i-" ; "r-" ] (function
-   | [ CData x ; CData y ] when ty2 C.int x y -> CData(morph2 C.int (-) x y)
-   | [ CData x ; CData y ] when ty2 C.float x y -> CData(morph2 C.float (-.) x y)
+   | [ CData x; CData y ] when ty2 C.int x y -> mkCData(morph2 C.int (-) x y)
+   | [ CData x; CData y ] when ty2 C.float x y -> mkCData(morph2 C.float (-.) x y)
    | _ -> type_error "Wrong arguments to -/i-/r-") ;
   register_evals [ "+" ; "i+" ; "r+" ] (function
-   | [ CData x ; CData y ] when ty2 C.int x y -> CData(morph2 C.int (+) x y)
-   | [ CData x ; CData y ] when ty2 C.float x y -> CData(morph2 C.float (+.) x y)
+   | [ CData x; CData y ] when ty2 C.int x y -> mkCData(morph2 C.int (+) x y)
+   | [ CData x; CData y ] when ty2 C.float x y -> mkCData(morph2 C.float (+.) x y)
    | _ -> type_error "Wrong arguments to +/i+/r+") ;
   register_eval "*" (function
-   | [ CData x ; CData y ] when ty2 C.int x y -> CData(morph2 C.int ( * ) x y)
-   | [ CData x ; CData y ] when ty2 C.float x y -> CData(morph2 C.float ( *.) x y)
+   | [ CData x; CData y ] when ty2 C.int x y -> mkCData(morph2 C.int ( * ) x y)
+   | [ CData x; CData y] when ty2 C.float x y -> mkCData(morph2 C.float ( *.) x y)
    | _ -> type_error "Wrong arguments to *") ;
   register_eval "/" (function
-   | [ CData x ; CData y ] when ty2 C.float x y -> CData(morph2 C.float ( /.) x y)
+   | [ CData x; CData y] when ty2 C.float x y -> mkCData(morph2 C.float ( /.) x y)
    | _ -> type_error "Wrong arguments to /") ;
   register_eval "mod" (function
-   | [ CData x ; CData y ] when ty2 C.int x y -> CData(morph2 C.int (mod) x y)
+   | [ CData x; CData y ] when ty2 C.int x y -> mkCData(morph2 C.int (mod) x y)
    | _ -> type_error "Wrong arguments to mod") ;
   register_eval "div" (function
-   | [ CData x ; CData y ] when ty2 C.int x y -> CData(morph2 C.int (/) x y)
+   | [ CData x; CData y ] when ty2 C.int x y -> mkCData(morph2 C.int (/) x y)
    | _ -> type_error "Wrong arguments to div") ;
   register_eval "^" (function
-   | [ CData x ; CData y ] when ty2 C.string x y ->
+   | [ CData x; CData y ] when ty2 C.string x y ->
          C.of_string (C.to_string x ^ C.to_string y)
    | _ -> type_error "Wrong arguments to ^") ;
   register_evals [ "~" ; "i~" ; "r~" ] (function
-   | [ CData x ] when C.is_int x -> CData(morph1 C.int (~-) x)
-   | [ CData x ] when C.is_float x -> CData(morph1 C.float (~-.) x)
+   | [ CData x ] when C.is_int x -> mkCData(morph1 C.int (~-) x)
+   | [ CData x ] when C.is_float x -> mkCData(morph1 C.float (~-.) x)
    | _ -> type_error "Wrong arguments to ~/i~/r~") ;
   register_evals [ "abs" ; "iabs" ; "rabs" ] (function
-   | [ CData x ] when C.is_int x -> CData(map C.int C.int abs x)
-   | [ CData x ] when C.is_float x -> CData(map C.float C.float abs_float x)
+   | [ CData x ] when C.is_int x -> mkCData(map C.int C.int abs x)
+   | [ CData x ] when C.is_float x -> mkCData(map C.float C.float abs_float x)
    | _ -> type_error "Wrong arguments to abs/iabs/rabs") ;
   register_eval "int_to_real" (function
-   | [ CData x ] when C.is_int x -> CData(map C.int C.float float_of_int x)
+   | [ CData x ] when C.is_int x -> mkCData(map C.int C.float float_of_int x)
    | _ -> type_error "Wrong arguments to int_to_real") ;
   register_eval "sqrt" (function
-   | [ CData x ] when C.is_float x -> CData(map C.float C.float sqrt x)
+   | [ CData x ] when C.is_float x -> mkCData(map C.float C.float sqrt x)
    | _ -> type_error "Wrong arguments to sqrt") ;
   register_eval "sin" (function
-   | [ CData x ] when C.is_float x -> CData(map C.float C.float sqrt x)
+   | [ CData x ] when C.is_float x -> mkCData(map C.float C.float sqrt x)
    | _ -> type_error "Wrong arguments to sin") ;
   register_eval "cos" (function
-   | [ CData x ] when C.is_float x -> CData(map C.float C.float cos x)
+   | [ CData x ] when C.is_float x -> mkCData(map C.float C.float cos x)
    | _ -> type_error "Wrong arguments to cosin") ;
   register_eval "arctan" (function
-   | [ CData x ] when C.is_float x -> CData(map C.float C.float atan x)
+   | [ CData x ] when C.is_float x -> mkCData(map C.float C.float atan x)
    | _ -> type_error "Wrong arguments to arctan") ;
   register_eval "ln" (function
-   | [ CData x ] when C.is_float x -> CData(map C.float C.float log x)
+   | [ CData x ] when C.is_float x -> mkCData(map C.float C.float log x)
    | _ -> type_error "Wrong arguments to ln") ;
   register_eval "floor" (function
    | [ CData x ] when C.is_float x ->
-         CData(map C.float C.int (fun x -> int_of_float (floor x)) x)
+         mkCData(map C.float C.int (fun x -> int_of_float (floor x)) x)
    | _ -> type_error "Wrong arguments to floor") ;
   register_eval "ceil" (function
    | [ CData x ] when C.is_float x ->
-         CData(map C.float C.int (fun x -> int_of_float (ceil x)) x)
+         mkCData(map C.float C.int (fun x -> int_of_float (ceil x)) x)
    | _ -> type_error "Wrong arguments to ceil") ;
   register_eval "truncate" (function
-   | [ CData x ] when C.is_float x -> CData(map C.float C.int truncate x)
+   | [ CData x ] when C.is_float x -> mkCData(map C.float C.int truncate x)
    | _ -> type_error "Wrong arguments to truncate") ;
   register_eval "size" (function
    | [ CData x ] when C.is_string x ->
@@ -188,17 +185,23 @@ let really_input ic s ofs len =
 
 (* constant x occurs in term t with level d? *)
 let occurs x d t =
-   let rec aux = function
+   let rec aux t = match unsafe_look t with
      | Const c                          -> c = x
      | Lam t                            -> aux t
      | App (c, v, vs)                   -> c = x || aux v || auxs vs
-     | UVar ({contents = t}, dt, n)     -> if t == dummy then x < dt+n else
-                                           (x < dt && aux t) || (dt <= x && x < dt+n)
-     | AppUVar ({contents = t}, dt, vs) -> if t == dummy then auxs vs else
-                                           (x < dt && aux t) || auxs vs
+     | UVar (t, dt, n)     ->
+         begin match get_assignment t with
+         | None -> x < dt+n
+         | Some t -> (x < dt && aux t) || (dt <= x && x < dt+n)
+         end
+     | AppUVar (t, dt, vs) ->
+         begin match get_assignment t with
+         | None -> auxs vs
+         | Some t -> (x < dt && aux t) || auxs vs
+         end
      | Arg _
      | AppArg _                         -> anomaly "Not a heap term"
-     | Custom (_, vs)                   -> auxs vs
+     | Builtin (_, vs)                   -> auxs vs
      | Cons (v1, v2)                    -> aux v1 || aux v2
      | Nil
      | Discard
@@ -215,467 +218,608 @@ type polyop = {
   pname : string;
 }
 
-let _ =
-  declare "dprint" (fun ~depth args ->
-    Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
-     (Pp.list (Pp.Raw.term depth [] 0 [||]) " ") args ;
-    []) ;
-  declare "print" (fun ~depth args ->
-    Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
-     (Pp.list (Pp.term depth [] 0 [||]) " ") args ;
-    []) ;
-  declare "deref" (fun ~depth args ->
-    List.iter (fun x -> ignore (is_flex ~depth x)) args;
-    []) ;
-  declare "counter" (fun ~depth -> function
-    | [t1; t2] ->
-       let open CData in
-       (match eval depth t1 with
-           CData s when C.is_string s ->
-            (try
-              let v = Elpi_trace.get_cur_step (C.to_string s) in
-               [ App(eqc, t2, [C.(of_int v)]) ]
-             with Not_found -> raise No_clause)
-         | _ -> type_error "bad argument to counter")
-    | _ -> type_error "counter takes 2 arguments") ;
-  declare "var" (fun ~depth args ->
-    match args with
-    | [t1] -> if is_flex ~depth t1 <> None then [] else raise No_clause
-    | _ -> type_error "var takes 1 argument") ;
-  declare "same_var" (fun ~depth args ->
-    match args with
-    | [t1;t2] ->
-       (match is_flex ~depth t1, is_flex ~depth t2 with
-           Some p1, Some p2 when p1==p2 -> []
-         | _,_ -> raise No_clause)
-    | _ -> type_error "same_var takes 2 argument") ;
-  declare "is_name" (fun ~depth args ->
-    let is_name x = match deref_head ~depth x with
-      | Const n when n >= 0 -> true
-      | _ -> false in
-    match args with
-    | [t1] -> if is_name t1 then [] else raise No_clause
-    | _ -> type_error "is_name takes 1 argument") ;
-  declare "names" (fun ~depth args ->
-    let rec mk_local_vars a l =
-      if l < 0 then a else mk_local_vars (Cons (Const l, a)) (pred l)
-    in
-    match args with
-    | [t1] -> [App(eqc, t1, [mk_local_vars Nil (pred depth)])]
-    | _    -> type_error "names takes 1 argument") ;
-  declare "occurs" (fun ~depth args ->
-    let occurs_in t2 t =
-      match deref_head ~depth t with
-      | Const n -> occurs n depth t2
-      | _       -> false in
-    match args with
-    | [t1; t2] -> if occurs_in t2 t1 then [] else raise No_clause
-    | _ -> type_error "occurs takes 2 arguments") ;
-  declare "gettimeofday" (fun ~depth -> function
-    | [t1] -> [ App (eqc, t1, [C.of_float (Unix.gettimeofday ())])]
-    | _ -> type_error "gettimeofday takes 1 argument") ;
-  declare "closed_term" (fun ~depth -> function
-    | [t1] -> [ App (eqc, t1, [UVar(oref dummy,0,0)]) ]
-    | _ -> type_error "closed takes 1 argument") ;
-  declare "lt" (fun ~depth args ->
-    let get_constant x = match deref_head ~depth x with
-      | Const c -> c
-      | _ -> error "lt takes constants as arguments" in
-    match args with
-    | [t1; t2] ->
-        let t1 = get_constant t1 in
-        let t2 = get_constant t2 in
-        let is_lt = if t1 < 0 && t2 < 0 then t2 < t1 else t1 < t2 in
-        if not is_lt then raise No_clause else []
-    | _ -> type_error "lt takes 2 arguments") ;
-(* FG: this should replace lt *)
-  declare "level" (fun ~depth args ->
-          let get_constant x = match deref_head ~depth x with
-      | Const c -> c
-      | _ -> error "level takes a constant as first argument" in
-    match args with
-    | [t1; t2] ->
-        let l1 = get_constant t1 in
-        [ App (eqc, t2, [C.(of_int l1)])]
-    | _ -> type_error "level takes 2 arguments") ;
-(* FG: end *)
-  List.iter (fun { p; psym; pname } ->
-  declare pname (fun ~depth -> function
-    | [t1; t2] ->
-        let open CData in
-        let t1 = eval depth t1 in
-        let t2 = eval depth t2 in
-        (match t1,t2 with
-         | CData x, CData y ->
-             if ty2 C.int x y then let out = C.to_int in
-               if p (out x) (out y) then [] else raise No_clause
-             else if ty2 C.float x y then let out = C.to_float in
-               if p (out x) (out y) then [] else raise No_clause
-             else if ty2 C.string x y then let out = C.to_string in
-               if p (out x) (out y) then [] else raise No_clause
-             else 
-           type_error ("Wrong arguments to " ^ psym ^ " (or to " ^ pname^ ")")
-         | _ ->
-           type_error ("Wrong arguments to " ^ psym ^ " (or to " ^ pname^ ")"))
-    | _ -> type_error (psym ^ " (or " ^ pname ^ ") takes 2 arguments"))
-  ) [ { p = (<);  psym = "<";  pname = "lt_" } ;
+
+(** Core built-in ********************************************************* *)
+
+let core_builtins = [
+
+  LPDoc " == Core builtins =====================================";
+
+  LPDoc " -- Logic --";
+
+  LPCode "pred true.";
+  LPCode "true.";
+
+  LPCode "pred fail.";
+  LPCode "pred false.";
+
+  LPCode "pred (=) o:A, o:A.";
+  LPCode "X = X.";
+
+  LPCode "(A ; _) :- A.";
+  LPCode "(_ ; B) :- B.";
+
+  LPCode "kind list type -> type.";
+  LPCode "type (::) X -> list X -> list X.";
+  LPCode "type ([]) list X.";
+  LPCode "type (:-) prop -> prop -> prop.";
+  LPCode "type (:-) prop -> list prop -> prop.";
+  LPCode "type (,) variadic prop prop.";
+  LPCode "type uvar A.";
+  LPCode "type (as) A -> A -> A.";
+  LPCode "type (=>) prop -> prop -> prop.";
+  LPCode "type (=>) list prop -> prop -> prop.";
+
+  LPDoc " -- Control --";
+
+  (* This is not implemented here, since the API had no access to the
+   * choice points *)
+  LPCode "external pred !. % The cut operator";
+
+  LPCode "pred not i:prop.";
+  LPCode "not X :- X, !, fail.";
+  LPCode "not _.";
+
+  (* These are not implemented here since the API has no access to the
+   * store of syntactic constraints *)
+  LPCode ("% [declare_constraint C Key] declares C with Key (a variable or\n" ^
+          "% a list of variables).\n"^
+          "external pred declare_constraint i:any, i:any.");
+  LPCode "external pred print_constraints. % prints all constraints";
+
+  MLCode(Pred("halt", Easy "halts the program",
+  (fun ~depth -> error "halt")),
+  DocAbove);
+
+  LPCode "stop :- halt.";
+
+  LPDoc " -- Evaluation --";
+
+  MLCode(Pred("is_",
+    Out(poly "A", "Out",
+    In(poly "A",  "Expr",
+    Easy          "unifies Out with the value of Expr")),
+  (fun _ t ~depth -> !:(eval depth t))),
+  DocAbove);
+
+  LPCode "pred (is) o:A, i:A.";
+  LPCode "X is Y :- is_ X Y.";
+
+  LPCode "type (-) A -> A -> A.";
+
+  LPCode "type (^) string -> string -> string.";
+
+  LPCode "type (+) int -> int -> int.";
+  LPCode "type (+) float -> float -> float.";
+
+  LPCode "type (*) int -> int -> int.";
+  LPCode "type (*) float -> float -> float.";
+    
+  LPDoc " -- Arithmetic tests --";
+
+  ] @ List.map (fun { p; psym; pname } ->
+
+  MLCode(Pred(pname,
+    In(poly "A","X",
+    In(poly "A","Y",
+    Easy     ("checks if X " ^ psym ^ " Y. Works for string, int and float"))),
+  (fun t1 t2 ~depth ->
+     let open CData in
+     let t1 = look ~depth (eval depth t1) in
+     let t2 = look ~depth (eval depth t2) in
+     match t1, t2 with
+     | CData x, CData y ->
+          if ty2 C.int x y then let out = C.to_int in
+            if p (out x) (out y) then () else raise No_clause
+          else if ty2 C.float x y then let out = C.to_float in
+            if p (out x) (out y) then () else raise No_clause
+          else if ty2 C.string x y then let out = C.to_string in
+            if p (out x) (out y) then () else raise No_clause
+          else 
+        type_error ("Wrong arguments to " ^ psym ^ " (or to " ^ pname^ ")")
+     (* HACK: grundlagen.elpi uses the "age" of constants *)
+     | Const t1, Const t2 ->
+        let is_lt = if t1 < 0 && t2 < 0 then p t2 t1 else p t1 t2 in
+        if not is_lt then raise No_clause else ()
+     | _ -> type_error ("Wrong arguments to " ^psym^ " (or to " ^pname^ ")"))),
+  DocAbove))
+
+    [ { p = (<);  psym = "<";  pname = "lt_" } ;
       { p = (>);  psym = ">";  pname = "gt_" } ;
       { p = (<=); psym = "=<"; pname = "le_" } ;
-      { p = (>=); psym = ">="; pname = "ge_" } ] ;
-  declare "getenv" (fun ~depth -> function
-    | [t1; t2] ->
-       (match eval depth t1 with
-           CData s when C.is_string s ->
-            (try
-              let v = Sys.getenv (C.to_string s) in
-               [ App(eqc, t2, [C.of_string v]) ]
-             with Not_found -> raise No_clause)
-         | _ -> type_error "bad argument to getenv (or getenv)")
-    | _ -> type_error "getenv (or getenv) takes 2 arguments") ;
-  declare "system" (fun ~depth -> function
-    | [t1; t2] ->
-       (match eval depth t1 with
-           CData s when C.is_string s ->
-              [ App (eqc, t2, [C.(of_int (Sys.command (C.to_string s)))]) ]
-         | _ -> type_error "bad argument to system (or system)")
-    | _ -> type_error "system (or system) takes 2 arguments") ;
-  declare "is_" (fun ~depth -> function
-    | [t1; t2] -> [ App (eqc, t1, [eval depth t2]) ]
-    | _ -> type_error "is (or is) takes 2 arguments") ;
-  declare "open_in" (fun ~depth -> function
-    | [t1; t2] ->
-       (match eval depth t1 with
-           CData s when C.is_string s ->
-            (try
-              let v = open_in (C.to_string s) in
-              let vv = add_in_stream v in
-               [ App(eqc, t2, [C.(of_int vv)]) ]
-             with Sys_error msg -> error msg)
-         | _ -> type_error "bad argument to open_in (or open_in)")
-    | _ -> type_error "open_in (or open_in) takes 2 arguments") ;
-  declare "open_out" (fun ~depth -> function
-    | [t1; t2] ->
-       (match eval depth t1 with
-           CData s when C.is_string s ->
-            (try
-              let v = open_out (C.to_string s) in
-              let vv = add_out_stream v in
-               [ App(eqc, t2, [C.(of_int vv)]) ]
-             with Sys_error msg -> error msg)
-         | _ -> type_error "bad argument to open_out (or open_out)")
-    | _ -> type_error "open_out (or open_out) takes 2 arguments") ;
-  declare "open_append" (fun ~depth -> function
-    | [t1; t2] ->
-       (match eval depth t1 with
-           CData s when C.is_string s ->
-            (try
-              let v =
-               open_out_gen
-                [Open_wronly; Open_append; Open_creat; Open_text] 0x664
-                (C.to_string s) in
-              let vv = add_out_stream v in
-               [ App(eqc, t2, [C.(of_int vv)]) ]
-             with Sys_error msg -> error msg)
-         | _ -> type_error "bad argument to open_append (or open_append)")
-    | _ -> type_error "open_append (or open_append) takes 2 arguments") ;
-  declare "open_string" (fun ~depth -> function
-    | [t1; t2] ->
-       (match eval depth t1 with
-           CData s when C.is_string s ->
-            (try
-             let filename,outch = Filename.open_temp_file "elpi" "tmp" in
-             output_string outch (C.to_string s) ;
-             close_out outch ;
-             let v = open_in filename in
-             Sys.remove filename ;
-             let vv = add_in_stream v in
-              [ App(eqc, t2, [C.of_int vv]) ]
-             with Sys_error msg -> error msg)
-         | _ -> type_error "bad argument to open_in (or open_string)")
-    | _ -> type_error "open_string (or open_in) takes 2 arguments") ;
-  declare "close_in" (fun ~depth -> function
-    | [t1] ->
-       (match eval depth t1 with
-           CData s when C.is_int s ->
-            (try close_in (fst (get_in_stream (C.to_int s))); []
-             with Sys_error msg -> error msg)
-         | _ -> type_error "bad argument to close_in (or close_in)")
-    | _ -> type_error "close_in (or close_in) takes 1 argument") ;
-  declare "close_out" (fun ~depth -> function
-    | [t1] ->
-       (match eval depth t1 with
-           CData s when C.is_int s ->
-            (try close_out(get_out_stream (C.to_int s)); []
-             with Sys_error msg->error msg)
-         | _ -> type_error "bad argument to close_out (or close_out)")
-    | _ -> type_error "close_out (or close_out) takes 1 argument") ;
-  declare "output" (fun ~depth -> function
-    | [t1; t2] ->
-       (match eval depth t1, eval depth t2 with
-           CData n, CData s when C.is_int n && C.is_string s ->
-            (try output_string (get_out_stream (C.to_int n))
-              (C.to_string s) ; []
-             with Sys_error msg -> error msg)
-         | _ -> type_error "bad argument to output (or output)")
-    | _ -> type_error "output (or output) takes 2 arguments") ;
-  declare "term_to_string" (fun ~depth -> function
-    | [t1; t2] ->
-       Format.fprintf Format.str_formatter "%a" (Pp.term depth [] 0 [||]) t1 ;
-       let s = Format.flush_str_formatter () in
-       [App(eqc,t2,[C.of_string s])]
-    | _ -> type_error "term_to_string (or term_to_string) takes 2 arguments");
-  declare "string_to_term" (fun ~depth -> function
-    | [t1; t2] ->
-       (match eval depth t1 with
-           CData s when C.is_string s ->
-            (try
-              let s = Parse.goal (C.to_string s) in
-              let t = Compile.term_at ~depth (Ast.term_of_query s) in
-              [App (eqc, t2, [t])]
-             with
-                Stream.Error msg -> prerr_endline msg; raise No_clause
-              | Elpi_ast.NotInProlog _ -> prerr_endline "Beta redexes not allowed"; raise No_clause)
-         | _ -> type_error "bad argument to string_to_term (or string_to_term)")
-    | _ -> type_error "string_to_term (or string_to_term) takes 2 arguments");
-  declare "flush" (fun ~depth -> function
-    | [t1] ->
-       (match eval depth t1 with
-           CData n when C.is_int n ->
-            (try flush (get_out_stream (C.to_int n)) ; []
-             with Sys_error msg -> error msg)
-         | _ -> type_error "bad argument to flush (or flush)")
-    | _ -> type_error "flush (or flush) takes 2 arguments") ;
-  declare "halt" (fun ~depth -> function
-    | [] -> Elpi_util.error "halt"
-    | _ -> type_error "halt (or halt) takes 0 arguments") ;
-  declare "input" (fun ~depth -> function
-    | [t1 ; t2 ; t3] ->
-       (match eval depth t1, eval depth t2 with
-           CData s, CData n when CData.ty2 C.int s n ->
-            (try
-              let n = C.to_int n in
-              let s = C.to_int s in
-              let ch,lookahead = get_in_stream s in
-              let buf = Bytes.make n ' ' in
-              let start,n =
-               match lookahead with
-                  None -> 0,n
-                | Some c -> Bytes.set buf 0 c ; 1,n-1 in
-              let read = really_input ch buf start n in
-              let str = Bytes.sub buf 0 (read + start) in
-              set_lookahead s None ;
-              [App (eqc, t3, [C.(of_string (Bytes.to_string str))])]
-             with 
-              Sys_error msg -> error msg)
-         | _ -> type_error "bad argument to input (or input)")
-    | _ -> type_error "input (or input) takes 3 arguments") ;
-  declare "input_line" (fun ~depth -> function
-    | [t1 ; t2] ->
-       (match eval depth t1 with
-           CData n when C.is_int n ->
-            (try
-              let s = C.to_int n in
-              let ch,lookahead = get_in_stream s in
-              let str = try input_line ch with End_of_file -> "" in
-              set_lookahead s None ;
-              let str =
-               match lookahead with
-                  None -> str
-                | Some c -> String.make 1 c ^ str in
-              [App (eqc, t2, [C.of_string str])]
-             with 
-              Sys_error msg -> error msg)
-         | _ -> type_error "bad argument to input_line (or input_line)")
-    | _ -> type_error "input_line (or input_line) takes 2 arguments") ;
-  declare "lookahead" (fun ~depth -> function
-    | [t1 ; t2] ->
-       (match eval depth t1 with
-           CData n when C.is_int n ->
-            (try
-              let s = C.to_int n in
-              let ch,lookahead = get_in_stream s in
-              let c =
-               match lookahead with
-                  Some c -> String.make 1 c
-                | None ->
-                   (try
-                     let c = input_char ch in
-                     set_lookahead s (Some c) ;
-                     String.make 1 c
-                    with End_of_file -> "")
-              in
-              [App (eqc, t2, [C.of_string c])]
-             with 
-              Sys_error msg -> error msg)
-         | _ -> type_error "bad argument to lookahead (or lookahead)")
-    | _ -> type_error "lookahead (or lookahead) takes 2 arguments") ;
-  declare "readterm" (fun ~depth -> function
-    | [t1 ; t2] ->
-       (match eval depth t1 with
-           CData n when C.is_int n ->
-            (try
-              let s = C.to_int n in
-              let ch,lookahead = get_in_stream s in
-              let strm = Stream.of_channel ch in
-              let strm =
-               match lookahead with
-                  Some c -> Stream.icons c strm
-                | None -> strm in
-              let t3 = Parse.goal_from_stream strm in
-              let t3 = Compile.term_at ~depth (Ast.term_of_query t3) in
-              [App (eqc, t2, [t3])]
-             with 
-                Sys_error msg -> error msg
-              | Stream.Error msg -> prerr_endline msg; raise No_clause
-              | Elpi_ast.NotInProlog _ -> prerr_endline "Beta redexes not allowed"; raise No_clause)
-         | _ -> type_error "bad argument to readterm (or readterm)")
-    | _ -> type_error "readterm (or readterm) takes 2 arguments") ;
-  declare "eof" (fun ~depth -> function
-    | [t1] ->
-       (match eval depth t1 with
-           CData n when C.is_int n ->
-            (try
-              let s = C.to_int n in
-              let ch,lookahead = get_in_stream s in
-              match lookahead with
-                 Some c -> raise No_clause
-               | None ->
-                  (try
-                    let c = input_char ch in
-                    set_lookahead s (Some c) ;
-                    raise No_clause
-                   with End_of_file -> [])
-             with 
-              Sys_error msg -> error msg)
-         | _ -> type_error "bad argument to eof (or eof)")
-    | _ -> type_error "eof (or eof) takes 1 argument") ;
+      { p = (>=); psym = ">="; pname = "ge_" } ]
 
-  declare "is_cdata" (fun ~depth -> function
-    | [t1;t2] ->
-       (match deref_head depth t1 with
-       | CData n -> [ App(eqc, t2, [
-               Elpi_runtime.(App(Constants.ctypec,C.of_string (CData.name n),[]))])]
-       | _ -> raise No_clause)
-    | _ -> type_error "is_cdata") ;
+  @ [
 
+  LPCode "X  < Y  :- lt_ X Y.";
+  LPCode "X i< Y  :- lt_ X Y.";
+  LPCode "X r< Y  :- lt_ X Y.";
+  LPCode "X s< Y  :- lt_ X Y.";
+  LPCode "X  > Y  :- gt_ X Y.";
+  LPCode "X i> Y  :- gt_ X Y.";
+  LPCode "X r> Y  :- gt_ X Y.";
+  LPCode "X s> Y  :- gt_ X Y.";
+  LPCode "X  =< Y :- le_ X Y.";
+  LPCode "X i=< Y :- le_ X Y.";
+  LPCode "X r=< Y :- le_ X Y.";
+  LPCode "X s=< Y :- le_ X Y.";
+  LPCode "X  >= Y :- ge_ X Y.";
+  LPCode "X i>= Y :- ge_ X Y.";
+  LPCode "X r>= Y :- ge_ X Y.";
+  LPCode "X s>= Y :- ge_ X Y.";
 
-  declare "rex_match" (fun ~depth -> function
-    | [t1;t2] ->
-       (match deref_head depth t1, deref_head depth t2 with
-       | CData rex, CData subj when C.is_string rex && C.is_string subj ->
-           let rex = Str.regexp (C.to_string rex) in
-           let subj = C.to_string subj in
-           if Str.string_match rex subj 0 then []
-           else raise No_clause
-       | _ -> type_error "rex_match")
-    | _ -> type_error "rex_match") ;
-
-  declare "rex_replace" (fun ~depth -> function
-    | [t1;t2;t3;t4] ->
-       (match deref_head depth t1, deref_head depth t2,  deref_head depth t3 with
-       | CData rex, CData repl, CData subj when List.for_all C.is_string [rex; repl; subj] ->
-           let rex = Str.regexp (C.to_string rex) in
-           let repl = C.to_string repl in
-           let subj = C.to_string subj in
-           [ App(eqc, C.of_string (Str.global_replace rex repl subj), [t4]) ]
-       | _ -> type_error "rex_replace not 3 strings")
-    | _ -> type_error "rex_replace not 4 args") ;
-
-   declare "quote_syntax" (fun ~depth -> function
-       | [f;s;r1;r2] ->
-       (match deref_head depth f, deref_head depth s with
-       | CData file, CData query when C.is_string file && C.is_string query ->
-           let file, query = C.to_string file, C.to_string query in
-           let ap = Parse.program ~no_pervasives:false [file] in
-           let aq = Parse.goal query in
-           let p = Elpi_API.Compile.program [ap] in
-           let q = Elpi_API.Compile.query p aq in
-           let qp, qq = Compile.quote_syntax p q in
-           [ App (eqc, r1, [qp]); App (eqc, r2 , [qq]) ]
-       | _ -> type_error "quote_syntax string string P Q")
-     | _ -> type_error "quote_syntax takes 4 arguments") ;
-   
-
-
+  ]
 ;;
 
-let { CData.cin = safe_in; isc = is_safe ; cout = safe_out } = CData.declare {
+(** Standard lambda Prolog I/O built-in *********************************** *)
+
+let io_builtins = [
+
+  LPDoc " == I/O builtins =====================================";
+
+  LPDoc " -- I/O --";
+
+  LPCode "macro @in_stream :- ctype \"in_stream\".";
+  LPCode "macro @out_stream :- ctype \"out_stream\".";
+  LPCode "type std_in @in_stream.";
+  LPCode "type std_out @out_stream.";
+  LPCode "type std_err @out_stream.";
+     
+  MLCode(Pred("open_in",
+    In(string,     "FileName",
+    Out(in_stream, "InStream",
+    Easy           "opens FileName for input")),
+  (fun s _ ~depth ->
+     try !:(open_in s,s)
+     with Sys_error msg -> error msg)),
+  DocAbove);
+
+  MLCode(Pred("open_out",
+    In(string,      "FileName",
+    Out(out_stream, "OutStream",
+    Easy            "opens FileName for output")),
+  (fun s _ ~depth ->
+     try !:(open_out s,s)
+     with Sys_error msg -> error msg)),
+  DocAbove);
+
+  MLCode(Pred("open_append",
+    In(string,      "FileName",
+    Out(out_stream, "OutStream",
+    Easy            "opens FileName for output in append mode")),
+  (fun s _ ~depth ->
+     let flags = [Open_wronly; Open_append; Open_creat; Open_text] in
+     try !:(open_out_gen flags 0x664 s,s)
+     with Sys_error msg -> error msg)),
+  DocAbove);
+
+  MLCode(Pred("close_in",
+    In(in_stream, "InStream",
+    Easy          "closes input stream InStream"),
+  (fun (i,_) ~depth ->
+     try close_in i
+     with Sys_error msg -> error msg)),
+  DocAbove);
+
+  MLCode(Pred("close_out",
+    In(out_stream, "OutStream",
+    Easy           "closes output stream OutStream"),
+  (fun (o,_) ~depth ->
+     try close_out o
+     with Sys_error msg -> error msg)),
+  DocAbove);
+
+  MLCode(Pred("output",
+    In(out_stream, "OutStream",
+    In(string,     "Data",
+    Easy           "writes Data to OutStream")),
+  (fun (o,_) s ~depth ->
+     try output_string o s
+     with Sys_error msg -> error msg)),
+  DocAbove);
+
+  MLCode(Pred("flush",
+    In(out_stream, "OutStream",
+    Easy           "flush all output not yet finalized to OutStream"),
+  (fun (o,_) ~depth ->
+     try flush o
+     with Sys_error msg -> error msg)),
+  DocAbove);
+
+  MLCode(Pred("input",
+    In(in_stream, "InStream",
+    In(int,       "Bytes",
+    Out(string,   "Data",
+    Easy          "reads Bytes from InStream"))),
+  (fun (i,_) n _ ~depth ->
+     let buf = Bytes.make n ' ' in
+     try
+       let read = really_input i buf 0 n in
+       let str = Bytes.sub buf 0 read in
+       !:(Bytes.to_string str)
+     with Sys_error msg -> error msg)),
+  DocAbove);
+
+  MLCode(Pred("input_line",
+    In(in_stream, "InStream",
+    Out(string,   "Line",
+    Easy          "reads a full line from InStream")),
+  (fun (i,_) _ ~depth ->
+     try !:(input_line i)
+     with
+     | End_of_file -> !:""
+     | Sys_error msg -> error msg)),
+  DocAbove);
+
+  MLCode(Pred("eof",
+    In(in_stream, "InStream",
+    Easy          "checks if no more data can be read from InStream"),
+  (fun (i,_) ~depth ->
+     try
+       let pos = pos_in i in
+       let _ = input_char i in
+       Pervasives.seek_in i pos;
+       raise No_clause
+     with
+     | End_of_file -> ()
+     | Sys_error msg -> error msg)),
+  DocAbove);
+
+  LPDoc " -- System --";
+
+  MLCode(Pred("gettimeofday",
+    Out(float, "T",
+    Easy       "sets T to the number of seconds elapsed since 1/1/1970"),
+  (fun _ ~depth -> !:(Unix.gettimeofday ()))),
+  DocAbove);
+
+  MLCode(Pred("getenv",
+    In(string,  "VarName",
+    Out(string, "Out",
+    Easy      ("unifies Out with the value of VarName in the process' "^
+               "environment. Fails if no such environment variable exists"))),
+  (fun s _ ~depth ->
+     try !:(Sys.getenv s)
+     with Not_found -> raise No_clause)),
+  DocAbove);
+
+  MLCode(Pred("system",
+    In(string, "Command",
+    Out(int,   "RetVal",
+    Easy       "executes Command and sets RetVal to the exit code")),
+  (fun s _ ~depth -> !:(Sys.command s))),
+  DocAbove);
+
+  LPDoc " -- Debugging --";
+
+  MLCode(Pred("term_to_string",
+    In(any,     "T",
+    Out(string, "S",
+    Easy        "prints T to S")),
+  (fun t _ ~depth ->
+     let b = Buffer.create 1024 in
+     let fmt = Format.formatter_of_buffer b in
+     Format.fprintf fmt "%a" (Pp.term depth) t ;
+     Format.pp_print_flush fmt ();
+       !:(Buffer.contents b))),
+  DocAbove);
+
+  ]
+;;
+
+(** Standard lambda Prolog built-in ************************************** *)
+
+let lp_builtins = [
+
+  LPDoc "== Lambda Prolog builtins =====================================";
+
+  LPDoc " -- Extra I/O --";
+
+  MLCode(Pred("open_string",
+    In(string,     "DataIn",
+    Out(in_stream, "InStream",
+    Easy           "opens DataIn as an input stream")),
+  (fun data _ ~depth ->
+     try
+       let filename, outch = Filename.open_temp_file "elpi" "tmp" in
+       output_string outch data;
+       close_out outch ;
+       let v = open_in filename in
+       Sys.remove filename ;
+       !:(v,"<string>")
+     with Sys_error msg -> error msg)),
+  DocAbove);
+
+  MLCode(Pred("lookahead",
+    In(in_stream, "InStream",
+    Out(string,   "NextChar",
+    Easy          "peeks one byte from InStream")),
+  (fun (i,_) _ ~depth ->
+     try
+       let pos = pos_in i in
+       let c = input_char i in
+       Pervasives.seek_in i pos;
+       !:(String.make 1 c)
+     with
+     | End_of_file -> !:""
+     | Sys_error msg -> error msg)),
+  DocAbove);
+
+  LPDoc " -- Hacks --";
+
+  MLCode(Pred("string_to_term",
+    In(string, "S",
+    Out(any,   "T",
+    Easy       "parses a term T from S")),
+  (fun s _ ~depth ->
+     try
+       let t = Parse.goal s in
+       let t = Compile.term_at ~depth t in
+       !:t
+     with
+     | Stream.Error _ -> raise No_clause
+     | Elpi_ast.NotInProlog _ -> raise No_clause)),
+  DocAbove);
+
+  MLCode(Pred("readterm",
+    In(in_stream, "InStream",
+    Out(any,      "T",
+    Easy          "reads T from InStream")),
+  (fun (i,_) _ ~depth ->
+     try
+       let strm = Stream.of_channel i in
+       let t = Parse.goal_from_stream strm in
+       let t = Compile.term_at ~depth t in
+       !:t
+     with 
+     | Sys_error msg -> error msg
+     | Stream.Error _ -> raise No_clause
+     | Elpi_ast.NotInProlog _ -> raise No_clause)),
+  DocAbove);
+
+  LPCode "printterm S T :- term_to_string T T1, output S T1.";
+  LPCode "read S :- flush std_out, input_line std_in X, string_to_term X S.";
+
+  ]
+;;
+
+(** ELPI specific built-in ************************************************ *)
+
+let elpi_builtins = [
+
+  LPDoc "== Elpi builtins =====================================";
+
+  MLCode(Pred("dprint",
+    VariadicIn(any, "prints raw terms (debugging)"),
+  (fun args ~depth _ { custom_constraints = cc } ->
+     Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
+       (Pp.list (Pp.Raw.term depth) " ") args ;
+     cc, ())),
+  DocAbove);
+
+  MLCode(Pred("print",
+    VariadicIn(any,"prints terms"),
+  (fun args ~depth _ { custom_constraints = cc } ->
+     Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
+       (Pp.list (Pp.term depth) " ") args ;
+     cc, ())),
+  DocAbove);
+
+  MLCode(Pred("counter",
+    In (string,"Name",
+    Out(int,   "Value",
+    Easy       "reads the Value of a trace point Name")),
+  (fun s _ ~depth:_ -> !:(Elpi_trace.get_cur_step s))),
+  DocAbove);
+
+
+  MLCode(Pred("rex_match",
+    In(string, "Rex",
+    In(string, "Subject",
+    Easy      ("checks if Subject matches Rex. "^
+               "Matching is based on OCaml's Str library"))),
+  (fun rex subj ~depth ->
+     let rex = Str.regexp rex in
+     if Str.string_match rex subj 0 then () else raise No_clause)),
+  DocAbove);
+
+  MLCode(Pred("rex_replace",
+    In(string,  "Rex",
+    In(string,  "Replacement",
+    In(string,  "Subject",
+    Out(string, "Out",
+    Easy   ("Out is obtained by replacing all occurrences of Rex with "^
+            "Replacement in Subject. See also OCaml's Str.global_replace"))))),
+  (fun rex repl subj _ ~depth ->
+     let rex = Str.regexp rex in
+     !:(Str.global_replace rex repl subj))),
+  DocAbove);
+
+   MLCode(Pred("quote_syntax",
+     In(string, "FileName",
+     In(string, "QueryText",
+     Out(list (poly "A"), "QuotedProgram",
+     Out(poly "A",        "QuotedQuery",
+     Easy    ("quotes the program from FileName and the QueryText. "^
+              "See elpi_quoted_syntax.elpi for the syntax tree"))))),
+   (fun f s _ _ ~depth ->
+      let ap = Parse.program [f] in
+      let aq = Parse.goal s in
+      let p = Elpi_API.Compile.(program dummy_header [ap]) in
+      let q = Elpi_API.Compile.query p aq in
+      let qp, qq = Compile.quote_syntax q in
+      !: qp +! qq)),
+  DocAbove);
+
+  ]
+;;
+
+(** ELPI specific NON-LOGICAL built-in *********************************** *)
+
+let ctype : string data = {
+  to_term = (fun s -> mkApp Constants.ctypec (C.of_string s) []);
+  of_term = (fun ~depth t ->
+     match look ~depth t with
+     | App(c,s,[]) when c == Constants.ctypec ->
+         begin match look ~depth s with
+         | CData c when C.is_string c -> Data (C.to_string c)
+         | (UVar _ | AppUVar _) -> Flex t
+         | Discard -> Discard
+         | _ -> raise (TypeErr t) end
+     | (UVar _ | AppUVar _) -> Flex t
+     | Discard -> Discard
+     | _ -> raise (TypeErr t));
+   ty = "ctype"
+}
+   
+let { CData.cin = safe_in; isc = is_safe ; cout = safe_out } as safe = CData.declare {
   CData.data_name = "safe";
   data_pp = (fun fmt (id,l,d) ->
      Format.fprintf fmt "[safe %d: %a]_%d" id
-       (Pp.list (Pp.term 0 [] 0 Elpi_data.empty_env) ";") !l d);
+       (Pp.list (Pp.term 0) ";") !l d);
   data_eq = (fun (id1, _,_) (id2,_,_) -> id1 == id2);
   data_hash = (fun (id,_,_) -> id);
   data_hconsed = false;
 }
+let safe = data_of_cdata "@safe" safe
 
 let fresh_copy t max_db depth =
-  let rec aux d = function
-    | Lam t -> Lam(aux (d+1) t)
+  let rec aux d t =
+    match look ~depth:(depth + d) t with
+    | Lam t -> mkLam (aux (d+1) t)
     | Const c as x ->
-        if c < max_db then x
-        else if c - depth <= d then of_dbl (max_db + c - depth)
+        if c < max_db then kool x
+        else if c - depth <= d then mkConst (max_db + c - depth)
         else raise No_clause (* restriction *)
     | App (c,x,xs) ->
         let x = aux d x in
         let xs = List.map (aux d) xs in
-        if c < max_db then App(c,x,xs)
-        else if c - depth <= d then App(max_db + c - depth,x,xs)
+        if c < max_db then mkApp c x xs
+        else if c - depth <= d then mkApp (max_db + c - depth) x xs
         else raise No_clause (* restriction *)
     | (Arg _ | AppArg _) ->
         type_error "stash takes only heap terms"
-    | (UVar (r,_,_) | AppUVar(r,_,_)) when r.contents == dummy ->
+    | (UVar (r,_,_) | AppUVar(r,_,_)) ->
         type_error "stash takes only ground terms"
-    | UVar(r,vd,ano) ->
-        aux d (deref_uv ~from:vd ~to_:(depth+d) ~ano r.contents)
-    | AppUVar(r,vd,args) ->
-        aux d (deref_appuv ~from:vd ~to_:(depth+d) ~args r.contents)
-    | Custom (c,xs) -> Custom(c,List.map (aux d) xs)
-    | CData _ as x -> x
-    | Cons (hd,tl) -> Cons(aux d hd, aux d tl)
-    | Nil as x -> x
-    | Discard as x -> x
+    | Builtin (c,xs) -> mkBuiltin c (List.map (aux d) xs)
+    | CData _ as x -> kool x
+    | Cons (hd,tl) -> mkCons (aux d hd) (aux d tl)
+    | Nil as x -> kool x
+    | Discard as x -> kool x
   in
     aux 0 t
 
-let () =
-   let safeno = ref 0 in
+let safeno = ref 0
 
-   declare "new_safe" (fun ~depth -> function
-     | [t] -> 
-         incr safeno;
-         [App (eqc, t, [CData (safe_in (!safeno,ref [],depth))]) ]
-     | _ -> type_error "new_safe takes one arg");
+let fresh_int = ref 0
 
-   declare "stash" (fun ~depth -> function
-     | [t1;t2] ->
-          (match deref_head depth t1 with
-          | CData c when is_safe c ->
-              let _,l, ld = safe_out c in
-              l := fresh_copy t2 ld depth :: !l;
-              []
-          | _ -> type_error "stash takes a safe")
-     | _ -> type_error "stash takes two args");
+let elpi_nonlogical_builtins = [ 
 
-   declare "open_safe" (fun ~depth -> function
-     | [t1;t2] ->
-          (match deref_head depth t1 with
-          | CData c when is_safe c ->
-              let _,l, ld = safe_out c in
-              [App (eqc, t2, [list_to_lp_list (List.rev !l)]) ]
-          | _ -> type_error "stash takes a safe")
-     | _ -> type_error "stash takes two args");
+  LPDoc "== Elpi nonlogical builtins =====================================";
 
+  LPCode "kind ctype type.";
+  LPCode "type ctype string -> ctype.";
+  LPCode "macro @safe :- ctype \"safe\".";
+
+  MLCode(Pred("var",
+    In(any,   "any term",
+    Easy       "checks if the term is a variable"),
+  (fun t1 ~depth ->
+     match look ~depth t1 with
+     | UVar _ | AppUVar _ -> ()
+     | _ -> raise No_clause)),
+  DocAbove);
+
+  MLCode(Pred("same_var",
+    In(poly "A",   "first term",
+    In(poly "A",   "second term",
+    Easy       "checks if the two terms are the same variable")),
+  (fun t1 t2 ~depth ->
+     match look ~depth t1, look ~depth t2 with
+     | (UVar(p1,_,_) | AppUVar(p1,_,_)),
+       (UVar(p2,_,_) | AppUVar(p2,_,_)) when p1 == p2 -> ()
+     | _,_ -> raise No_clause)),
+  DocAbove);
+
+  MLCode(Pred("name",
+    In(any, "T",
+    Easy     "checks if T is a eigenvariable"),
+  (fun x ~depth ->
+    match look ~depth x with
+    | Const n when n >= 0 -> ()
+    | _ -> raise No_clause)),
+  DocAbove);
+
+  MLCode(Pred("names",
+    Out(list any, "list of eigenvariables in order of age (young first)",
+    Easy           "generates the list of eigenvariable"),
+  (fun _ ~depth -> !:(List.init depth mkConst))),
+  DocNext);
+
+  MLCode(Pred("occurs",
+    In(poly "A", "a constant (global or eigenvariable)",
+    In(poly "A", "a term", 
+    Easy     "checks if the constant occurs in the term")),
+  (fun t1 t2 ~depth ->
+     let occurs_in t2 t =
+       match look ~depth t with
+       | Const n -> occurs n depth t2
+       | _ -> error "The second argument of occurs must be a constant" in
+     if occurs_in t2 t1 then () else raise No_clause)),
+  DocNext);
+
+  MLCode(Pred("closed_term",
+    Out(any, "T",
+    Easy      "unify T with a variable that has no eigenvariables in scope"),
+  (fun _ ~depth -> !:(mkUVar (fresh_uvar_body ()) 0 0))),
+  DocAbove);
+
+  MLCode(Pred("is_cdata",
+    In(any,     "T",
+    Out(ctype,  "Ctype",
+    Easy        "checks if T is primitive of type Ctype, eg (ctype \"int\")")),
+  (fun t _ ~depth ->
+     match look ~depth t with
+     | CData n -> !:(CData.name n)
+     | _ -> raise No_clause)),
+  DocAbove);
+
+  LPCode "primitive? X S :- is_cdata X (ctype S).";
+
+  MLCode(Pred("new_int",
+     Out(int, "N",
+     Easy     "unifies N with a different int every time it is called"),
+   (fun _ ~depth ->
+      incr fresh_int;
+      !: !fresh_int)),
+  DocAbove);
+
+   MLCode(Pred("new_safe",
+     Out(safe, "Safe",
+     Easy      "creates a safe: a store that persists across backtracking"),
+   (fun _ ~depth -> incr safeno; !:(!safeno,ref [],depth))),
+  DocAbove);
+
+   MLCode(Pred("stash_in_safe",
+     In(safe,  "Safe",
+     In(any,   "Data",
+     Easy      "stores Data in the Safe")),
+   (fun (_,l,ld) t ~depth -> l := fresh_copy t ld depth :: !l)),
+  DocAbove);
+
+   MLCode(Pred("open_safe",
+     In(safe, "Safe",
+     Out(list any, "Data",
+     Easy          "retrieves the Data stored in Safe")),
+   (fun (_,l,ld) _ ~depth -> !:(List.rev !l))),
+  DocAbove);
+
+]
 ;;
 
-let () =
-   let id = ref 0 in
+let std_declarations =
+  core_builtins @ io_builtins @ lp_builtins @ elpi_builtins @ elpi_nonlogical_builtins
 
-   declare "new_int" (fun ~depth -> function
-     | [t] -> 
-         incr id;
-         [App (eqc, t, [C.of_int !id])]
-     | _ -> type_error "new_int takes one arg");
-;;
-        
+let std_builtins =
+  builtin_of_declaration std_declarations
 

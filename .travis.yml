@@ -5,7 +5,7 @@ env:
  global:
  - OCAML_MIN=4.02.3
  - OCAML_MAX=4.06.0
- - DEPS="camlp5 ocamlfind ppx_tools_versioned ppx_deriving ocaml-migrate-parsetree"
+ - DEPS="camlp5 ocamlfind ppx_tools_versioned ppx_deriving ocaml-migrate-parsetree re"
  - JOBS=2
 
 install:
@@ -68,7 +68,7 @@ matrix:
     os: osx
     before_install:
     - brew update
-    - brew install opam
+    - brew install --ignore-dependencies opam
     - brew install gnu-time
     - brew install lua51
     cache:
@@ -84,7 +84,7 @@ matrix:
     os: osx
     before_install:
     - brew update
-    - brew install opam
+    - brew install --ignore-dependencies opam
     - brew install gnu-time
     - brew install lua51
     cache:
@@ -117,5 +117,3 @@ matrix:
     - if ocamlfind query elpi; then false; else true; fi
     - if which elpi; then false; else true; fi
   
-  allow_failures:
-  - env: TEST="osx build $OCAML_MIN"

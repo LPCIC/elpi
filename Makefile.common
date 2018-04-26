@@ -3,7 +3,7 @@
 V=$(shell git describe --tags)
 PP=camlp5o -I . -I +camlp5
 PARSE=pa_extend.cmo pa_lexer.cmo
-FLAGS=-I $(shell camlp5 -where)
+FLAGS=-I $(shell camlp5 -where) -w +a
 OCAMLOPTIONS= -g -bin-annot
 OD=ocamlfind ocamldep
 
@@ -14,7 +14,7 @@ EXE=
 OC=ocamlfind ocamlopt
 DEPS=.depends .depends.parser
 OCNAME=OCAMLOPT
-OOPAQUE=-opaque
+OOPAQUE=
 else
 CMX=cmo
 CMXA=cma

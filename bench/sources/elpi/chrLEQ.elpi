@@ -1,12 +1,12 @@
 mode (leq i i).
-leq (?? as A) (?? as B) :- !,  declare_constraint (leq A B) [A,B].
-leq A         (?? as B) :- !,  declare_constraint (leq A B) [B].
-leq (?? as A) B         :- !,  declare_constraint (leq A B) [A].
+leq (uvar as A) (uvar as B) :- !,  declare_constraint (leq A B) [A,B].
+leq A         (uvar as B) :- !,  declare_constraint (leq A B) [B].
+leq (uvar as A) B         :- !,  declare_constraint (leq A B) [A].
 
 mode (ltn i i).
-ltn (?? as A) (?? as B) :- !,  declare_constraint (ltn A B) [A,B].
-ltn A         (?? as B) :- !,  declare_constraint (ltn A B) [B].
-ltn (?? as A) B         :- !,  declare_constraint (ltn A B) [A].
+ltn (uvar as A) (uvar as B) :- !,  declare_constraint (ltn A B) [A,B].
+ltn A         (uvar as B) :- !,  declare_constraint (ltn A B) [B].
+ltn (uvar as A) B         :- !,  declare_constraint (ltn A B) [A].
 
 main :-
   leq A B, leq B C, not (ltn C A), ltn A B, not(A = C).

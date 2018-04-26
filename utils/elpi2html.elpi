@@ -30,7 +30,7 @@ rev-aux [X|XS] ACC R :- rev-aux XS [X|ACC] R.
 rev-aux [] L L.
 
 mode (len i o).
-len ?? 0.
+len uvar 0.
 len [] 0.
 len [_|XS] N :- len XS M, N is M + 1.
 
@@ -70,7 +70,7 @@ uvar-to-string X I Y :-
   mk-name S1 I Y.
 name-to-string X0 I Y :-
   if (rex_match "^_" X0) (X = "_") (X = X0),
-  rex_replace "^\\([A-Za-z]+\\)_?\\([0-9]+\\)$" "\\1<sub>\\2</sub>" X S1,
+  rex_replace "^\\([A-Za-z]+\\)_?\\([0-9]+\\)_?$" "\\1<sub>\\2</sub>" X S1,
   mk-name S1 I Y.
 
 pred concat i:list string, o:string.
@@ -133,7 +133,7 @@ pp L B (app [ const C, lam _ ] as T) A :- (C = "pi"; C = "sigma"), !,
 pp-quantifier-block B C (app [ const C, lam F ]) Args A :- !, incr-int (
   new_int I,
   pi x\ if (C = "pi") (var-to-string x I X) (uvar-to-string x I X),
-        name x X => pp-quantifier-block B C (F x) [X|Args] A).
+        is-name x X => pp-quantifier-block B C (F x) [X|Args] A).
 pp-quantifier-block B C T Args A :-
   write "<div class='compound'>",
   write-math-quantifier B C,
@@ -171,7 +171,7 @@ pp L B (lam F) A :- incr-int (
     write {concat B1},
     var-to-string x I X, write X,
     write ". </div><div class='compound'>",
-    name x X => pp 10 [] (F x) A1,
+    is-name x X => pp 10 [] (F x) A1,
     write "</div>").
 
 pp _ B (const "!") A :- !,
@@ -189,7 +189,7 @@ pp _ B (const X) A :-
   write {sanitize X},
   write {concat A}.
 
-pp _ B X A :- name X Y, !,
+pp _ B X A :- is-name X Y, !,
   write {concat B}, write Y, write {concat A}.
 
 pp _ B (cdata S) A :- is_cdata S _, !,
@@ -204,15 +204,15 @@ hd-symbol (app [ const @vdash, H, _ ]) :- hd-symbol H.
 hd-symbol (app [ const S | _ ]) :- write S.
 hd-symbol (const S) :- write S.
 
-type name term -> string -> prop.
+type is-name term -> string -> prop.
 write-clause (clause Loc [] (arg Body)) :-
   new_int I, 
   (pi x\ X is "X" ^ {term_to_string I}),
   name-to-string X I A1,
-  pi x\ name x A1 => write-clause (clause Loc [] (Body x)).
+  pi x\ is-name x A1 => write-clause (clause Loc [] (Body x)).
 write-clause (clause Loc [A|Args] (arg Body)) :-
   new_int I, name-to-string A I A1,
-  pi x\ name x A1 => write-clause (clause Loc Args (Body x)).
+  pi x\ is-name x A1 => write-clause (clause Loc Args (Body x)).
 write-clause (clause Loc [] C) :- !,
   write "<div class='clause' predicate='", hd-symbol C, write "'>",
   write "<div class='loc'>",
@@ -383,8 +383,11 @@ main-quoted P OUT FILTERS :-
   close_out OC.
 
 % entry point from the command line
-main [IN,OUT|FILTERS] :-
+main [IN,OUT|FILTERS] :- !,
   quote_syntax IN "main" P _,
   main-quoted P OUT FILTERS.
+
+main _ :-
+  print "usage: elpi elpi2html.elpi -exec main -- in out [filter]".
 
 % vim: set ft=lprolog:

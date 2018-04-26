@@ -2,6 +2,8 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
+open Elpi_util
+
 module Func = struct
 
   module Self = struct
@@ -12,9 +14,14 @@ module Func = struct
   (* Hash consing *)
   let from_string =
    let h = Hashtbl.create 37 in
-   function x ->
-    try Hashtbl.find h x
-    with Not_found -> Hashtbl.add h x x ; x
+   let rec aux = function
+    | "nil" -> aux "[]"
+    | "cons" -> aux "::"
+    | x ->
+       try Hashtbl.find h x
+       with Not_found -> Hashtbl.add h x x ; x
+   in
+     aux
 
   let pp fmt s = Format.fprintf fmt "%s" s
   let show x = x
@@ -84,41 +91,53 @@ let mkSeq l =
   aux l
 let mkIs x f = App(Const Func.isf,[x;f])
 
-module Ploc = struct
-  include Ploc
-  let pp fmt loc = Format.fprintf fmt "%s:%d" (file_name loc) (line_nb loc)
-  let show loc = Format.sprintf "%s:%d" (file_name loc) (line_nb loc)
-end
+type attribute =
+  Name of string | After of string | Before of string | If of string     
+[@@deriving show]
 
-type clause = {
+type ('term,'attributes) clause = {
   loc : Ploc.t;
-  id : string option;
-  insert : ([ `Before | `After ] * string) option;
-  body : term;
+  attributes : 'attributes;
+  body : 'term;
 }[@@deriving show]
 
 type sequent = { eigen : term; context : term; conclusion : term }
 and chr_rule = {
-  to_match : sequent list [@default []];
-  to_remove : sequent list [@default []];
-  alignment : Func.t list [@default []];
-  guard : term option [@default None];
-  new_goal : sequent option [@default None];
+  to_match : sequent list;
+  to_remove : sequent list;
+  guard : term option;
+  new_goal : sequent option;
 }
 [@@deriving show, create]
 
-type decl =
-   Clause of clause
- | Local of Func.t
- | Begin
- | End
- | Mode of (Func.t * bool list * (Func.t * (Func.t * Func.t) list) option) list
- | Constraint of Func.t list
- | Chr of chr_rule
- | Accumulated of decl list
- | Macro of Ploc.t * Func.t * term
- | Type of bool * Func.t * term
+type ('name,'term) macro = { mlocation : Ploc.t; maname : 'name; mbody : 'term }
 [@@deriving show]
+
+type tdecl = { textern : bool; tname : Func.t; tty : term }
+[@@deriving show]
+
+type 'name mode =
+  { mname : 'name; margs : bool list }
+[@@deriving show]
+
+type decl =
+ (* Blocks *)
+ | Begin of Ploc.t
+ | Namespace of Ploc.t * Func.t
+ | Constraint of Ploc.t * Func.t list
+ | End of Ploc.t
+
+ | Accumulated of decl list
+
+ (* data *)
+ | Clause of (term, attribute list) clause
+ | Local of Func.t
+ | Mode of Func.t mode list
+ | Chr of chr_rule
+ | Macro of (Func.t, term) macro
+ | Type of tdecl
+[@@deriving show]
+
 
 let mkLocal x = Local (Func.from_string x)
 

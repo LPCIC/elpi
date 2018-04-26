@@ -1,0 +1,6 @@
+namespace x {
+  namespace acc { accumulate namespaces00. }
+  foo :- rev.aux [] [] []. % does not exists, since it is inside acc
+}
+
+main :- x.acc.rev [1,2,3] [3,2,1], x.acc.rev.aux [] [] [], not(x.foo).

@@ -2,11 +2,7 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-module Ploc : sig
-  include module type of struct include Ploc end
-  val pp : Format.formatter -> t -> unit
-  val show : t -> string
-end
+open Elpi_util
 
 (* Prolog functors *)
 module Func : sig
@@ -52,45 +48,94 @@ val equal_term : term -> term -> bool
 val pp_term : Format.formatter -> term -> unit
 val show_term : term -> string
 
+type attribute =
+  Name of string | After of string | Before of string | If of string     
 
-type clause = {
+val pp_attribute :
+    Format.formatter -> attribute -> unit
+val show_attribute :
+     attribute -> string
+
+type ('term,'attributes) clause = {
   loc : Ploc.t;
-  id : string option;
-  insert : ([ `Before | `After ] * string) option;
-  body : term;
+  attributes : 'attributes;
+  body : 'term;
 }
+
+val pp_clause :
+  (Format.formatter -> 'term -> unit) ->
+  (Format.formatter -> 'attribute -> unit) ->
+    Format.formatter -> ('term,'attribute) clause -> unit
+val show_clause :
+  (Format.formatter -> 'term -> unit) ->
+  (Format.formatter -> 'attribute -> unit) ->
+     ('term,'attribute) clause -> string
+
 type sequent = { eigen : term; context : term; conclusion : term }
 and chr_rule = {
   to_match : sequent list;
   to_remove : sequent list;
-  alignment : Func.t list;
   guard : term option;
   new_goal : sequent option;
 }
-[@@deriving show, create]
 
 val create_chr_rule :
   ?to_match: sequent list ->
   ?to_remove: sequent list ->
-  ?alignment:Func.t list ->
-  ?guard:term option ->
-  ?new_goal: sequent option ->
+  ?guard: term ->
+  ?new_goal: sequent ->
   unit -> chr_rule
-
 val pp_chr_rule : Format.formatter -> chr_rule -> unit
 val show_chr_rule : chr_rule -> string
 
+type ('name,'term) macro = {
+   mlocation : Ploc.t;
+   maname : 'name;
+   mbody : 'term
+}
+
+val pp_macro :
+  (Format.formatter -> 'name -> unit) ->
+  (Format.formatter -> 'term -> unit) ->
+    Format.formatter -> ('name,'term) macro -> unit
+val show_macro :
+  (Format.formatter -> 'name -> unit) ->
+  (Format.formatter -> 'term -> unit) ->
+     ('name,'term) macro -> string
+
+type tdecl = { textern : bool; tname : Func.t; tty : term }
+
+val pp_tdecl :
+    Format.formatter -> tdecl -> unit
+val show_tdecl :
+     tdecl -> string
+
+type 'name mode =
+  { mname : 'name; margs : bool list }
+
+val pp_mode :
+  (Format.formatter -> 'name -> unit) ->
+    Format.formatter -> 'name mode -> unit
+val show_mode :
+  (Format.formatter -> 'name -> unit) ->
+     'name mode -> string
+
 type decl =
-   Clause of clause
- | Local of Func.t
- | Begin
- | End
- | Mode of (Func.t * bool list * (Func.t * (Func.t * Func.t) list) option) list
- | Constraint of Func.t list
- | Chr of chr_rule
+ (* Blocks *)
+ | Begin of Ploc.t
+ | Namespace of Ploc.t * Func.t
+ | Constraint of Ploc.t * Func.t list
+ | End of Ploc.t
+
  | Accumulated of decl list
- | Macro of Ploc.t * Func.t * term
- | Type of bool(*external?*) * Func.t * term
+
+ (* data *)
+ | Clause of (term, attribute list) clause
+ | Local of Func.t
+ | Mode of Func.t mode list
+ | Chr of chr_rule
+ | Macro of (Func.t, term) macro
+ | Type of tdecl
 
 val mkLocal : string -> decl
 

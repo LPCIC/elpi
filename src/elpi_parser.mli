@@ -4,7 +4,7 @@
 
 open Elpi_ast
 
-type fixity = Infixl | Infixr | Infix | Prefix | Postfix
+type fixity = Infixl | Infixr | Infix | Prefix | Prefixr | Postfix | Postfixl
 
 (* raises Not_found is the constant has no declared fixity *)
 val min_precedence : int   (* minimal precedence in use *)
@@ -14,23 +14,19 @@ val inf_precedence : int   (* greater than any used precedence *)
 val list_element_prec : int
 val precedence_of : Func.t -> fixity * int
 
+type gramext = { fix : fixity; sym : string; prec : int }
+
 (* Loads the basic grammar and sets the paths.
  * ~silent=true (default) does not print accumulated files *)
-val init : ?silent:bool -> ?lp_syntax:string -> paths:string list -> cwd:string -> unit -> unit
+val init : ?silent:bool -> lp_syntax:gramext list -> paths:string list -> cwd:string -> unit -> unit
 
 (* BUG: extending the grammar is imperative, cannot be undone *)
-val parse_program : ?no_pervasives:bool -> string list -> program
+val parse_program : string list -> program
+val parse_program_from_stream : char Stream.t -> program
 val parse_goal : string -> goal
 val parse_goal_from_stream : char Stream.t -> goal
 
 val get_literal : string -> string
 
-module PointerFunc : sig
- type latex_export =
-  {process:
-    'a 'b. path:string -> shortpath:string -> ('a -> 'b) -> 'a -> 'b
-   ; export: clause -> unit}
-(* to avoid a cycle in the Makefile, we introduce a pointer 
-   function which points to a function in the latex_exporter.ml *)
- val set_latex_export : latex_export -> unit
-end
+(* Standard lambda prolog syntax *)
+val lp_gramext : gramext list

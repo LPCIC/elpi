@@ -58,7 +58,7 @@ assert _ (unknown T) :- !,
 mem X [ X | _ ] :- !.
 mem X [ _ | YS] :- mem X YS.
 
-stash-new E S :- open_safe E L, ( mem S L ; stash E S ), !.
+stash-new E S :- open_safe E L, ( mem S L ; stash_in_safe E S ), !.
 
 report-all-failures-if-no-success P :-
   new_safe E,
@@ -109,8 +109,8 @@ unif (tconst X) (tconst X).
 unif (ctype X) (ctype X).
 unif prop prop.
 unif (arrow A1 B1) (arrow A2 B2) :- unif A1 A2, unif B1 B2.
-unif (?? as X) Y :- X = Y.
-unif Y (?? as X) :- X = Y.
+unif (uvar as X) Y :- X = Y.
+unif Y (uvar as X) :- X = Y.
 
 mode (of i o).
 
@@ -123,12 +123,17 @@ of (app [HD|ARGS]) TY :- !,
 of (lam F) (arrow T B) :- !, pi x\
   (of x T :- !) => of (F x) B.
 
-of (const "pi") (arrow (arrow _A prop) prop) :- !.
-of (const "sigma") (arrow (arrow _A prop) prop) :- !.
+of (const "pi") (arrow (arrow A_ prop) prop) :- !.
+of (const "sigma") (arrow (arrow A_ prop) prop) :- !.
+of (const "discard") A_ :- !.
 
 of Id _ :- assert (known Id) (unknown Id), fail.
 
 mode (of-app i i o o o).
+
+:if "DEBUG:CHECKER"
+of-app Ty Args Tgt Hd _ :-
+  print {counter "run"} "of-app" {pp Hd} ":" {pp Ty} "@" {pp-list Args} "=" {pp Tgt}, fail.
 
 of-app (tapp [tconst "variadic", T, _] as V) [X|XS] TGT HD (B - BT) :- !,
   of X TX, assert (unif T TX) (type-err X TX T), BT = X :: TL, of-app V XS TGT HD (B - TL).
@@ -136,11 +141,11 @@ of-app (tapp [tconst "variadic", _, TS]) [] TGT HD (D - []) :- !,
   assert (unif TGT TS) (type-err (app [HD|D]) TS TGT).
 of-app (arrow T TS) [X|XS] TGT HD (B - BT) :- !,
   of X TX, assert (unif T TX) (type-err X TX T), BT = X :: TL, of-app TS XS TGT HD (B - TL).
-of-app (?? as ARR)  [X|XS] TGT HD (B - BT) :- !,
+of-app (uvar as ARR)  [X|XS] TGT HD (B - BT) :- !,
   of X T, ARR = arrow T TS, BT = X :: TL, of-app TS XS TGT HD (B - TL).
 of-app Ty [] TGT HD (D - []) :- !,
   assert (unif TGT Ty) (type-err (app [HD|D]) Ty TGT).
-of-app (?? as Ty)  [] TGT HD (D - []) :- !,
+of-app (uvar as Ty)  [] TGT HD (D - []) :- !,
   assert (unif TGT Ty) (type-err (app [HD|D]) Ty TGT).
 
 of-app Ty Args _ HD (D - []) :- !,
@@ -156,19 +161,23 @@ of-clause _ C :- of C TC, assert (unif TC prop) (type-err C TC prop).
 
 type checking (ctype "loc") -> prop.
 
+:if "DEBUG:CHECKER"
+log-tc-clause Loc Query :- !, print {counter "run"} "typecheck" Loc Query.
+log-tc-clause _ _.
+
 typecheck [] (clause Loc Names Query) :-
-  %print {counter "run"} "type checking " Loc Query,
+  log-tc-clause Loc Query,
   checking Loc =>
     report-all-failures-and-fail-if-no-success (of-clause Names Query).
 typecheck [ (clause Loc Names Clause) |Rest] Q :-
-  %print {counter "run"} "type checking " Loc Clause,
+  log-tc-clause Loc Clause,
   checking Loc =>
     report-all-failures-and-fail-if-no-success (of-clause Names Clause), !,
   typecheck Rest Q.
 
 mode (refresh i o).
-refresh (forall F) T :- !, refresh (F _FRESH) T.
-refresh (tconst "any") _FRESH :- !.
+refresh (forall F) T :- !, refresh (F FRESH_) T.
+refresh (tconst "any") FRESH_ :- !.
 refresh X X.
 
 kind entry type.
@@ -203,10 +212,15 @@ under-env [ X `: PT | XS ] P :-
   %print "Assume" X PT,
   (pi Ty\ of X Ty :- refresh PT Ty) => known X => under-env XS P.
 
+pred rev i:list A, o:list A.
+rev L RL  :- rev-aux L []  RL.
+pred rev-aux i:list A, i:list A, o:list A.
+rev-aux [X|XS] ACC R :- rev-aux XS [X|ACC] R.
+rev-aux [] L L.
 
 typecheck-program P Q DeclaredTypes :-
   collect-predicates-program P DeclaredTypes AllTypes, !,
-  under-env AllTypes (typecheck P Q).
+  under-env {rev AllTypes} (typecheck P Q).
 
 % ---------- warnings ------------------------------------------------------
 
@@ -215,7 +229,7 @@ type variable term -> prop.
 
 mode (report-linear i).
 report-linear [].
-report-linear [V `-> 1 + ?? |NS] :- !,
+report-linear [V `-> 1 + uvar |NS] :- !,
   pp V VN,
   if (not(rex_match "_" VN), not(rex_match ".*_" VN))
     (checking LOC, term_to_string LOC SLOC,
@@ -223,7 +237,7 @@ report-linear [V `-> 1 + ?? |NS] :- !,
      warning MSG)
     true,
   report-linear NS.
-report-linear [V `-> ?? |NS] :-
+report-linear [V `-> uvar |NS] :-
   checking LOC, term_to_string LOC SLOC,
   MSG is SLOC ^" Warning: "^ {pp V} ^" is unused",
   warning MSG,
@@ -242,7 +256,7 @@ incr X [X `-> K | _] :- add1 K.
 incr X [_ | XS] :- incr X XS.
 
 mode (add1 i).
-add1 (?? as K) :- K = 1 + FRESH_.
+add1 (uvar as K) :- K = 1 + FRESH_.
 add1 (1 + K) :- add1 K.
 
 check-non-linear [N|NS] (arg C) L :- pi x\

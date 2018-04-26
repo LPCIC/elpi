@@ -3,14 +3,14 @@ pts+triple S1 S2 S3 :- leq S1 S3, leq S2 S3.
 pts+pair S1 S2      :- ltn S1 S2.
 
 mode (leq i i).
-leq (?? as A) (?? as B) :- !,  $constraint (leq A B) [A,B].
-leq A         (?? as B) :- !,  $constraint (leq A B) [B].
-leq (?? as A) B         :- !,  $constraint (leq A B) [A].
+leq (uvar as A) (uvar as B) :- !,  $constraint (leq A B) [A,B].
+leq A         (uvar as B) :- !,  $constraint (leq A B) [B].
+leq (uvar as A) B         :- !,  $constraint (leq A B) [A].
 
 mode (ltn i i).
-ltn (?? as A) (?? as B) :- !,  $constraint (ltn A B) [A,B].
-ltn A         (?? as B) :- !,  $constraint (ltn A B) [B].
-ltn (?? as A) B         :- !,  $constraint (ltn A B) [A].
+ltn (uvar as A) (uvar as B) :- !,  $constraint (ltn A B) [A,B].
+ltn A         (uvar as B) :- !,  $constraint (ltn A B) [B].
+ltn (uvar as A) B         :- !,  $constraint (ltn A B) [A].
 
 constraint leq ltn {
   % incompat (FIRST!!)

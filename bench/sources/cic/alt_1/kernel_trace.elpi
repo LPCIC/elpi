@@ -19,7 +19,7 @@
 % 168 cic:/matita/basics/vectors/pmap_vec_cons#def:9
 % 329 cic:/matita/basics/vectors/vec_expand#def:5
 % 371 cic:/matita/basics/vectors/change_vec_cons_tail#def:6
-% ??? cic:/matita/basics/vectors/pmap_change#def:10
+% ? cic:/matita/basics/vectors/pmap_change#def:10
 
 % on_focus :- on_object cic:/matita/arithmetics/factorial/le_fact_10#def:11.
 
