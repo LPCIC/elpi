@@ -214,7 +214,7 @@ be a list of predicates.
 - The cut operator `!` is present, and does not work on nested disjunctions (`;` is not primitive).
 
 - A built-in lets one collect data across search.  The primitives are
-  `new_safe S`, `stash S T`, `open_safe S TL`.
+  `new_safe S`, `stash_in_safe S T`, `open_safe S TL`.
   Note that `T` has to be ground and closed.  Safes are not effected by
   backtracking.  They can be used to log a computation / a list of failures.
   They are used, for example, in `elpi-checker.elpi` to log errors.
