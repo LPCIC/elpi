@@ -236,6 +236,7 @@ Notes about `elpi-checker.elpi`:
   main :- foo 1, foo "3". % typechecks
   ```
 - `o` is written `prop`, since `o` is already used to mean output in `mode` (and `i` to mean input).
+  Anyway `o` is accepted in type declarations and is traslated on the fly to `prop`.
 
 ## Subterm naming
 
