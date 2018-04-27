@@ -60,7 +60,7 @@ computation of the solution (even if it is not used), and hence can *fail* if
 some variable occurring in something is out of scope for `DummyNameUsedOnlyOnce`.
 
 Side note: `elpi-checker.elpi` (see below) reports warnings about linearly used
-variables, suggesting to start their name name not starting with `_`.
+variables, suggesting to start their name with `_` (`_Name` is just sugar for `_`).
 
 ## Macros
 
