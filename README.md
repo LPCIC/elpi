@@ -10,7 +10,7 @@ for the so called *elaborator* component of an interactive theorem prover.
 ELPI is designed to be embedded into larger applications written in OCaml as
 an extension language. It comes with an API to drive the interpreter and 
 with an FFI for defining built-in predicates and data types, as well as
-quotations and similar goodies that are handy to adapt the language to the host
+quotations and similar goodies that come in handy to adapt the language to the host
 application.
 
 ELPI is free software released under LGPL vesion 2.1 or above.
