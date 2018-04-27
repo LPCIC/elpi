@@ -117,12 +117,12 @@ Most of these feature come with λProlog.  Constraints and propagation rules are
 ## Documentation
 
 The language is quite compatible with standard
-[λProlog](http://www.lix.polytechnique.fr/~dale/lProlog/) 
+[λProlog](http://www.lix.polytechnique.fr/Labo/Dale.Miller/lProlog/)
 and ELPI is known to be able to run most of the λProlog programs out there
-(see [INCOMPATIBILITIES](INCOMPATIBILITIES.md) for the known
-incompatibilities with the Teyjus system).
-Reading "Programming with Higher-Order Logic" by Miller and Nadathur is
-highly recommended and covers standard λProlog.
+(see the list of [known incompatibilities](INCOMPATIBILITIES.md) 
+with the [Teyjus](https://github.com/teyjus/teyjus) system).
+Reading [Programming with Higher-Order Logic](https://sites.google.com/site/proghol/)
+by Miller and Nadathur is highly recommended and covers standard λProlog.
 
 The extensions to λProlog implemented in ELPI are described in the
 [ELPI](ELPI.md) file, built-in predicates are documented in
