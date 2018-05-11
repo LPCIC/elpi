@@ -1281,6 +1281,11 @@ let rec list_to_lp_list = function
 ;;
 
 let delay_hard_unif_problems = Fork.new_local false
+let error_msg_hard_unif =
+  "Unification problem outside the pattern fragment. "^
+  "Pass -delay-problems-outside-pattern-fragment (elpi command line utility) "^
+  "or set delay_outside_fragment to true (Elpi_API) in order to delay "^
+  "(deprecated, for Teyjus compatibility)."
 
 let rec unif matching depth adepth a bdepth b e =
    [%trace "unif" ("@[<hov 2>^%d:%a@ =%d%s= ^%d:%a@]%!"
@@ -1447,7 +1452,7 @@ let rec unif matching depth adepth a bdepth b e =
          | Some r' -> if r==r' then [r] else [r;r'] in
        CS.declare_new { kind; blockers };
        true
-       end else error "Unification problem outside the pattern fragment. Use -delay-problems-outside-pattern-fragment."
+       end else error error_msg_hard_unif
    | AppUVar({ rest = _ :: _ },_,_), (AppUVar ({ rest = [] },_,_) | UVar ({ rest = [] },_,_)) -> unif matching depth bdepth b adepth a e
    | AppUVar (r, lvl,args), other when not matching ->
        let is_llam, args = is_llam lvl args adepth bdepth depth true e in
@@ -1459,7 +1464,7 @@ let rec unif matching depth adepth a bdepth b e =
        let blockers = match is_flex (bdepth+depth) other with | None -> [r] | Some r' -> [r;r'] in
        CS.declare_new { kind; blockers };
        true
-       end else error "Unification problem outside the pattern fragment. Use -delay-problems-outside-pattern-fragment."
+       end else error error_msg_hard_unif
    | other, AppUVar (r, lvl,args) ->
        let is_llam, args = is_llam lvl args adepth bdepth depth false e in
        if is_llam then
@@ -1473,7 +1478,7 @@ let rec unif matching depth adepth a bdepth b e =
          | Some r' -> if r==r' then [r] else [r;r'] in
        CS.declare_new { kind; blockers };
        true
-       end else error "Unification problem outside the pattern fragment. Use -delay-problems-outside-pattern-fragment."
+       end else error error_msg_hard_unif
   
    (* recursion *)
    | App (c1,x2,xs), App (c2,y2,ys) ->

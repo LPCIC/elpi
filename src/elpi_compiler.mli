@@ -41,7 +41,7 @@ val quote_syntax : query -> term list * term
 
 (* false means a type error was found *)
 val static_check : Elpi_ast.decl list -> (* header *)
-  ?exec:(?max_steps:int -> ?delay_outside_fragment:bool -> executable -> outcome) ->
+  ?exec:(?max_steps:int -> executable -> outcome) ->
   ?checker:Elpi_ast.decl list ->
   ?flags:flags ->
   query -> bool

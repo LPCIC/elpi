@@ -1462,7 +1462,7 @@ let quote_syntax { Query.clauses; query_loc; query } =
 let default_checker () = Elpi_parser.parse_program ["elpi-checker.elpi"]
 
 let static_check header
-  ?(exec=execute_once) ?(checker=default_checker ()) ?(flags=default_flags)
+  ?(exec=execute_once ~delay_outside_fragment:false) ?(checker=default_checker ()) ?(flags=default_flags)
   ({ Query.types } as q)
 =
   let p,q = quote_syntax q in

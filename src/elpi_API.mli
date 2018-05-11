@@ -140,8 +140,12 @@ module Execute : sig
 
   type outcome = Success of Data.solution | Failure | NoMoreSteps
 
-  (* Returns the first solution, if any, within the optional steps bound *)
-  val once : ?max_steps:int -> ?delay_outside_fragment:bool -> Compile.executable -> outcome
+  (* Returns the first solution, if any, within the optional steps bound.
+   * Setting delay_outside_fragment (false by default) results in unification
+   * outside the pattern fragment to be delayed (behavior of Teyjus), rather
+   * than abort the execution (default behavior) *)
+  val once : ?max_steps:int -> ?delay_outside_fragment:bool ->
+    Compile.executable -> outcome
 
   (** Prolog's REPL.
     [pp] is called on all solutions.
