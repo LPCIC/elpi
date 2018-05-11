@@ -1376,7 +1376,7 @@ let rec unif matching depth adepth a bdepth b e =
              hmove ~avoid:r ~from:adepth ~to_:origdepth a
            else
              (* First step: we lift the l.h.s. to the r.h.s. level *)
-             let a = hmove ~avoid:r ~from:adepth ~to_:bdepth a in
+             let a = hmove ~avoid:r ~from:(adepth+depth) ~to_:(bdepth+depth) a in
              (* Second step: we restrict the l.h.s. *)
              hmove ~from:(bdepth+depth) ~to_:origdepth a in
          [%spy "assign" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
@@ -1392,7 +1392,7 @@ let rec unif matching depth adepth a bdepth b e =
              move ~avoid:r ~adepth ~from:bdepth ~to_:origdepth e b
            else
              (* First step: we lift the r.h.s. to the l.h.s. level *)
-             let b = move ~avoid:r ~adepth ~from:bdepth ~to_:adepth e b in
+             let b = move ~avoid:r ~adepth ~from:(bdepth+depth) ~to_:(adepth+depth) e b in
              (* Second step: we restrict the r.h.s. *)
              hmove ~from:(adepth+depth) ~to_:origdepth b in
          [%spy "assign" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
