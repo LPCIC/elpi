@@ -119,12 +119,12 @@ end
 module Execute = struct
   type outcome = Elpi_data.outcome =
     Success of Data.solution | Failure | NoMoreSteps
-  let once ?max_steps p = 
+  let once ?max_steps ?delay_outside_fragment p = 
     let module R = (val !r) in let open R in
-    execute_once ?max_steps p     
-  let loop p ~more ~pp =
+    execute_once ?max_steps ?delay_outside_fragment p     
+  let loop ?delay_outside_fragment p ~more ~pp =
     let module R = (val !r) in let open R in
-    execute_loop p ~more ~pp
+    execute_loop ?delay_outside_fragment p ~more ~pp
 
 end
 

@@ -141,12 +141,13 @@ module Execute : sig
   type outcome = Success of Data.solution | Failure | NoMoreSteps
 
   (* Returns the first solution, if any, within the optional steps bound *)
-  val once : ?max_steps:int -> Compile.executable -> outcome
+  val once : ?max_steps:int -> ?delay_outside_fragment:bool -> Compile.executable -> outcome
 
   (** Prolog's REPL.
     [pp] is called on all solutions.
     [more] is called to know if another solution has to be searched for. *)
   val loop :
+    ?delay_outside_fragment:bool -> 
     Compile.executable ->
     more:(unit -> bool) -> pp:(float -> outcome -> unit) -> unit
 end

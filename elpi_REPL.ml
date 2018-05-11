@@ -53,6 +53,7 @@ let set_terminal_width ?(max_w=
 let usage =
   "\nUsage: elpi [OPTION].. [FILE].. [-- ARGS..] \n" ^ 
   "\nMain options:\n" ^ 
+  "\t-delay-problems-outside-pattern-fragment (deprecated, for Teyjus compatibility)\n" ^
   "\t-test runs the query \"main\"\n" ^ 
   "\t-exec pred  runs the query \"pred args\"\n" ^ 
   "\t-where print system wide installation path then exit\n" ^ 
@@ -74,6 +75,7 @@ let _ =
   let batch = ref false in
   let doc_builtins = ref false in
   let silent = ref false in
+  let delay_outside_fragment = ref false in 
   let vars =
     ref Elpi_API.Compile.(default_flags.defined_variables) in
   if List.mem "-where" (Array.to_list Sys.argv) then begin
@@ -81,6 +83,7 @@ let _ =
   let rec aux = function
     | [] -> []
     | "-q" :: rest -> silent := true; aux rest
+    | "-delay-problems-outside-pattern-fragment" :: rest -> delay_outside_fragment := true; aux rest
     | "-test" :: rest -> batch := true; test := true; aux rest
     | "-exec" :: goal :: rest ->  batch := true; exec := goal; aux rest
     | "-print" :: rest -> print_lprolog := true; aux rest
@@ -143,12 +146,12 @@ let _ =
   end;
   let exec = Elpi_API.Compile.link ~flags query in
   if not !batch then 
-    Elpi_API.Execute.loop exec ~more ~pp:print_solution
+    Elpi_API.Execute.loop ~delay_outside_fragment:!delay_outside_fragment exec ~more ~pp:print_solution
   else begin
     Gc.compact ();
     if
       let t0 = Unix.gettimeofday () in
-      let b = Elpi_API.Execute.once exec in
+      let b = Elpi_API.Execute.once ~delay_outside_fragment:!delay_outside_fragment exec in
       let t1 = Unix.gettimeofday () in
       match b with
       | Elpi_API.Execute.Success _ -> print_solution (t1 -. t0) b; true

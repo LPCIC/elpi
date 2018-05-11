@@ -14,8 +14,8 @@ module Pp : sig
 end
 
 (* Interpreter API *)
-val execute_once : ?max_steps:int -> executable -> outcome
-val execute_loop : executable -> more:(unit -> bool) -> pp:(float -> outcome -> unit) -> unit
+val execute_once : ?max_steps:int -> ?delay_outside_fragment:bool -> executable -> outcome
+val execute_loop : ?delay_outside_fragment:bool -> executable -> more:(unit -> bool) -> pp:(float -> outcome -> unit) -> unit
 
 (* Functions useful to implement built-in predicates and evaluable functions *)
 val deref_uv : ?avoid:uvar_body -> from:constant -> to_:constant -> int -> term -> term

@@ -506,6 +506,8 @@ module HO : sig
   val shift_bound_vars : depth:int -> to_:int -> term -> term
 
   val subtract_to_consts : amount:int -> depth:int -> term -> term
+
+  val delay_hard_unif_problems : bool Fork.local_ref
     
 end = struct 
 (* {{{ *)
@@ -1446,7 +1448,7 @@ let rec unif matching depth adepth a bdepth b e =
          | Some r' -> if r==r' then [r] else [r;r'] in
        CS.declare_new { kind; blockers };
        true
-       end else false
+       end else error "Unification problem outside the pattern fragment. Use -delay-problems-outside-pattern-fragment."
    | AppUVar({ rest = _ :: _ },_,_), (AppUVar ({ rest = [] },_,_) | UVar ({ rest = [] },_,_)) -> unif matching depth bdepth b adepth a e
    | AppUVar (r, lvl,args), other when not matching ->
        let is_llam, args = is_llam lvl args adepth bdepth depth true e in
@@ -1458,7 +1460,7 @@ let rec unif matching depth adepth a bdepth b e =
        let blockers = match is_flex (bdepth+depth) other with | None -> [r] | Some r' -> [r;r'] in
        CS.declare_new { kind; blockers };
        true
-       end else false
+       end else error "Unification problem outside the pattern fragment. Use -delay-problems-outside-pattern-fragment."
    | other, AppUVar (r, lvl,args) ->
        let is_llam, args = is_llam lvl args adepth bdepth depth false e in
        if is_llam then
@@ -1472,7 +1474,7 @@ let rec unif matching depth adepth a bdepth b e =
          | Some r' -> if r==r' then [r] else [r;r'] in
        CS.declare_new { kind; blockers };
        true
-       end else false
+       end else error "Unification problem outside the pattern fragment. Use -delay-problems-outside-pattern-fragment."
   
    (* recursion *)
    | App (c1,x2,xs), App (c2,y2,ys) ->
@@ -2202,8 +2204,8 @@ type runtime = {
 }
 
          
-let do_make_runtime : (?max_steps:int -> executable -> runtime) ref =
- ref (fun ?max_steps _ -> anomaly "do_make_runtime not initialized")
+let do_make_runtime : (?max_steps:int -> ?delay_outside_fragment:bool -> executable -> runtime) ref =
+ ref (fun ?max_steps ?delay_outside_fragment _ -> anomaly "do_make_runtime not initialized")
 
 module Constraints : sig
     
@@ -2819,7 +2821,7 @@ end (* }}} *)
 
 module Mainloop : sig
 
-  val make_runtime : ?max_steps:int -> executable -> runtime
+  val make_runtime : ?max_steps:int -> ?delay_outside_fragment:bool -> executable -> runtime
 
 end = struct (* {{{ *)
 
@@ -2828,7 +2830,7 @@ let steps_made = Fork.new_local 0
 
 (* The block of recursive functions spares the allocation of a Some/None
  * at each iteration in order to know if one needs to backtrack or continue *)
-let make_runtime : ?max_steps: int -> executable -> runtime =
+let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executable -> runtime =
   (* Input to be read as the orl (((p,g)::gs)::next)::alts
      depth >= 0 is the number of variables in the context. *)
   let rec run depth p g gs (next : frame) alts lvl =
@@ -3023,7 +3025,7 @@ end;*)
 
 
  (* Finally the runtime *)
- fun ?max_steps {
+ fun ?max_steps ?(delay_outside_fragment = false) {
     compiled_program;
     modes;
     chr;
@@ -3044,6 +3046,7 @@ end;*)
   set CS.to_resume [];
   set CS.Ugly.delayed [];
   set steps_bound max_steps;
+  set delay_hard_unif_problems delay_outside_fragment;
   set steps_made 0;
   set Constraints.qnames assignments_names;
   set Constraints.qenv query_env;
@@ -3108,14 +3111,14 @@ let mk_outcome search get_cs { initial_depth; assignments_names; query_env } =
  | No_clause (*| Non_linear*) -> Failure, noalts
  | No_more_steps -> NoMoreSteps, noalts
 
-let execute_once ?max_steps exec =
+let execute_once ?max_steps ?delay_outside_fragment exec =
  auxsg := [];
- let { search; get } = make_runtime ?max_steps exec in
+ let { search; get } = make_runtime ?max_steps ?delay_outside_fragment exec in
  fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.custom_constraints) exec)
 ;;
 
-let execute_loop exec ~more ~pp =
- let { search; next_solution; get } = make_runtime exec in
+let execute_loop ?delay_outside_fragment exec ~more ~pp =
+ let { search; next_solution; get } = make_runtime ?delay_outside_fragment exec in
  let k = ref noalts in
  let do_with_infos f =
   let time0 = Unix.gettimeofday() in
