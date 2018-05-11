@@ -6,6 +6,8 @@ This file tries to summarise known incompatibilities between Elpi and Teyjus.
 # Semantics
 
 - `;` is not a built-in and behaves differently wrt `!`
+- unification problems outside the pattern fragment are *not* delayed unless one passes the (deprecated) 
+  `-delay-problems-outside-pattern-fragment` flag to `elpi`
 - integers are 31 bits (25 bits in Teyjus); etc for floats ...
 
 # Syntax
