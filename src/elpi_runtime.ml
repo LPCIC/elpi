@@ -733,7 +733,7 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
 
     (* heapification/restriction of Arg and AppArg *)
     | Arg (i, args) ->
-       if argsdepth < to_ then anomaly "move: invalid Arg heapification";
+       let to_ = min argsdepth to_ in
        let r = oref C.dummy in
        let v = UVar(r,to_,0) in
        e.(i) <- v;
@@ -741,8 +741,7 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
     | AppArg(i, args) when
       List.for_all (deterministic_restriction e ~args_safe:(argsdepth=to_)) args
       ->
-       (* assign to UVar whose depth is greater than the current goal depth *)
-       if argsdepth < to_ then anomaly "move: invalid AppArg heapification";
+       let to_ = min argsdepth to_ in
        let args =
         try List.map (maux e depth) args
         with RestrictionFailure ->
