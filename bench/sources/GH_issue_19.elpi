@@ -1,0 +1,13 @@
+transl (y \ _\ M y) :- % strip the hole
+ P = (w \ p w),
+ transl (z \ M (P z)).
+
+transl (x \ pp (X x)).
+
+% with a hole
+test1 :- transl (x0 \ _ \ pp (p x0)).
+
+% with no hole
+test2 :- transl (x0 \     pp (p x0)).
+
+main :- test1, test2.
