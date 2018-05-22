@@ -608,7 +608,7 @@ main :- foo.bar 2, foo.baz 1.
 is equivalent to
 
 ```prolog
-toto 1. % this one is not more in the game
+toto 1. % this one is no more in the game
 foo.toto 3.
 foo.bar X :- foo.toto 2 => foo.baz X.
 foo.baz X :- foo.toto X.
