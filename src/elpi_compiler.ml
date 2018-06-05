@@ -745,7 +745,8 @@ end = struct (* {{{ *)
           let ts1 = smart_map aux ts in
           if ts == ts1 then x else AppUVar(r,lvl,ts1)
       | Builtin(c,ts) as x ->
-          assert(f c == c);
+          if f c != c then
+            error ("declaring a clause for builtin: " ^ Constants.show c);
           let ts1 = smart_map aux ts in
           if ts == ts1 then x else Builtin(c,ts1)
       | App(c,t,ts) as x ->
