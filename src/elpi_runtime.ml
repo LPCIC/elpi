@@ -2832,12 +2832,20 @@ end = struct (* {{{ *)
 let steps_bound = Fork.new_local None
 let steps_made = Fork.new_local 0
 
+let pred_of g =
+  match g with
+  | App(c,_,_) -> Some(C.show c)
+  | Const c -> Some(C.show c)
+  | Builtin(c,_) -> Some(C.show c)
+  | _ -> None
+
 (* The block of recursive functions spares the allocation of a Some/None
  * at each iteration in order to know if one needs to backtrack or continue *)
 let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executable -> runtime =
   (* Input to be read as the orl (((p,g)::gs)::next)::alts
      depth >= 0 is the number of variables in the context. *)
   let rec run depth p g gs (next : frame) alts lvl =
+    [%cur_pred (pred_of g)];
     [%trace "run" (fun _ -> ()) begin
 
     begin match !steps_bound with

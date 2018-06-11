@@ -15,10 +15,12 @@ let cur_step = ref StrMap.empty
 let level = ref 0
 let filter = ref []
 let fonly = ref []
+let ponly = ref []
 let hot = ref false
 let hot_level = ref 0
 let collect_perf = ref false
 let trace_noprint = ref false
+let cur_pred = ref None
 
 type perf_frame = {
   name : string;
@@ -93,17 +95,24 @@ let condition k =
        hot := cur_step >= first_step && cur_step <= last_step;
        if !hot && !hot_level = 0 then hot_level := !level;
        !hot))
-    (* -trace-skip *)
-    && (!fonly = [] || List.exists (fun p -> Str.string_match p k 0) !fonly)
     (* -trace-only *)
+    && (!fonly = [] || List.exists (fun p -> Str.string_match p k 0) !fonly)
+    (* -trace-skip *)
     && not(List.exists (fun p -> Str.string_match p k 0) !filter)
+    (* -trace-only-pred *)
+    && (match !cur_pred with
+        | None -> true
+        | Some pred ->
+            !ponly = [] ||
+            List.exists (fun p -> Str.string_match p pred 0) !ponly)
 
-let init ?(where="",0,max_int) ?(skip=[]) ?(only=[]) ?(verbose=false) b =
+let init ?(where="",0,max_int) ?(skip=[]) ?(only=[]) ?(only_pred=[]) ?(verbose=false) b =
   cur_step := StrMap.empty;
   debug := b;
   dverbose := verbose;
   filter := List.map Str.regexp skip;
   fonly := List.map Str.regexp only;
+  ponly := List.map Str.regexp only_pred;
   where_loc := where;
   level := 0;
   hot := false;
@@ -135,6 +144,8 @@ let print name f x =
     eprintf "%s %s =@[<hov1> %a@]\n%!" (make_indent ()) name f x
 
 let printers = ref []
+
+let cur_pred p = cur_pred := p
 
 exception Unknown
 exception OK
@@ -186,6 +197,7 @@ let usage =
   "\t-trace-on  enable trace printing\n" ^
   "\t-trace-skip REX  ignore trace items matching REX\n" ^
   "\t-trace-only REX  trace only items matching REX\n" ^
+  "\t-trace-only-pred REX  trace only when the current predicate matches REX\n" ^
   "\t-trace-maxbox NUM  Format max_boxes set to NUM\n" ^
   "\t-trace-maxcols NUM  Format margin set to NUM\n" ^
   "\t-stats-on  Collect statistics\n" ^
@@ -198,6 +210,7 @@ let parse_argv argv =
   let verbose = ref false in
   let skip = ref [] in
   let only = ref [] in
+  let only_pred = ref [] in
   let rec aux = function
     | [] -> []
     | "-trace-v" :: rest -> verbose := true; aux rest
@@ -212,6 +225,9 @@ let parse_argv argv =
     | "-trace-only" :: expr :: rest ->
          only := expr :: !only;
          aux rest
+    | "-trace-only-pred" :: pname :: rest ->
+         only_pred := pname :: !only_pred;
+         aux rest;
     | "-trace-maxbox" :: num :: rest ->
          set_formatters_maxbox (int_of_string num);
          aux rest
@@ -222,7 +238,8 @@ let parse_argv argv =
          collect_perf := true; on := true; trace_noprint := true; aux rest
     | x :: rest -> x :: aux rest in
   let rest = aux argv in
-  init ~where:!where ~verbose:!verbose ~only:!only ~skip:!skip !on;
+  init ~where:!where ~verbose:!verbose ~only:!only
+       ~only_pred:!only_pred ~skip:!skip !on;
   rest
 ;;
 

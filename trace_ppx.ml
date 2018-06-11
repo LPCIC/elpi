@@ -54,6 +54,9 @@ let spyif name cond pp data =
 let log name key data =
   [%expr Elpi_trace.log [%e name] [%e key] [%e data]]
 
+let cur_pred name =
+  [%expr Elpi_trace.cur_pred [%e name]]
+
 let rec mkapp f = function
   | [] -> f
   | x :: xs -> mkapp [%expr [%e f] [%e x]] xs
@@ -131,6 +134,13 @@ let trace_mapper config cookies =
         if !enabled then log (aux name) (aux key) (aux code)
         else [%expr ()]
       | _ -> err ~loc "use: [%log id data]"
+      end
+  | { pexp_desc = Pexp_extension ({ txt = "cur_pred"; loc }, pstr) } ->
+      begin match pstr with
+      | PStr [ { pstr_desc = Pstr_eval(name, _)} ] ->
+        if !enabled then cur_pred (aux name)
+        else [%expr ()]
+      | _ -> err ~loc "use: [%cur_pred id]"
       end
   | x -> default_mapper.expr mapper x;
 }
