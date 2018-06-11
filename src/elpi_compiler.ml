@@ -919,7 +919,8 @@ end = struct (* {{{ *)
               "cannot spill %s: only %d out of %d missing arguments are output"
               (show_term t) output_suffix missing);
           missing
-      | _ -> error ("cannot spill, unknown arity of " ^ C.show c) in
+      | _ -> error ("cannot spill " ^ show_term t ^
+                    ": unknown arity of " ^ C.show c) in
     if missing_args <= 0 then
       error ("cannot spill fully applied " ^ show_term t);
     missing_args
