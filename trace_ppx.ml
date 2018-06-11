@@ -84,6 +84,7 @@ let trace_mapper config cookies =
   let aux = mapper.expr mapper in
   match expr with
   | { pexp_desc = Pexp_extension ({ txt = "trace"; loc }, pstr) } ->
+      let err () = err ~loc "use: [%trace id ?pred pp code]" in
       begin match pstr with
       | PStr [ { pstr_desc = Pstr_eval(
               { pexp_desc = Pexp_apply(name,[(_,pp);(_,code)]) },_)} ] ->
@@ -95,7 +96,7 @@ let trace_mapper config cookies =
           | _ -> pp in
         if !enabled then trace (aux name) (aux pp) (aux code)
         else aux code
-      | _ -> err ~loc "use: [%trace id pp code]"
+      | _ -> err ()
       end
   | { pexp_desc = Pexp_extension ({ txt = "tcall"; loc }, pstr) } ->
       begin match pstr with
@@ -106,20 +107,22 @@ let trace_mapper config cookies =
       | _ -> err ~loc "use: [%tcall f args]"
       end
   | { pexp_desc = Pexp_extension ({ txt = "spy"; loc }, pstr) } ->
+      let err () = err ~loc "use: [%spy id ?pred pp data]" in
       begin match pstr with
       | PStr [ { pstr_desc = Pstr_eval(
               { pexp_desc = Pexp_apply(name,[(_,pp);(_,code)]) },_)} ] ->
         if !enabled then spy (aux name) (aux pp) (aux code)
         else [%expr ()]
-      | _ -> err ~loc "use: [%spy id pp data]"
+      | _ -> err ()
       end
   | { pexp_desc = Pexp_extension ({ txt = "spyif"; loc }, pstr) } ->
+      let err () = err ~loc "use: [%spyif id ?pred cond pp data]" in
       begin match pstr with
       | PStr [ { pstr_desc = Pstr_eval(
-           { pexp_desc = Pexp_apply(name,[(_,cond);(_,pp);(_,code)]) },_)} ] ->
+              { pexp_desc = Pexp_apply(name,[(_,cond);(_,pp);(_,code)]) },_)} ] ->
         if !enabled then spyif (aux name) (aux cond) (aux pp) (aux code)
         else [%expr ()]
-      | _ -> err ~loc "use: [%spyif id cond pp data]"
+      | _ -> err ()
       end
   | { pexp_desc = Pexp_extension ({ txt = "log"; loc }, pstr) } ->
       begin match pstr with
