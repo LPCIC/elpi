@@ -41,7 +41,9 @@
 
 - [Accumulate with paths](#accumulate-with-paths) accepts `accumulate "path".`
   so that one can use `.` in a file/path name.
-  
+
+- [Tracing facility](#tracing-facility) to debug your programs.
+ 
 ## Underscore
 
 Identifiers whose name start with `_` are wildcards, not variables.
@@ -620,3 +622,106 @@ main :- foo.bar 2, foo.baz 1.
 Elpi accepts `accumulate "path".` (i.e. a string rather than an indent)
 so that one can use `.` in a file or path name.
 
+## Tracing facility
+
+Elpi comes with a tracing facility.  The feature was designed to debug
+the interpreter itself, but can be used to debug user programs as well.
+
+First of all the command line option `-trace-on` turns tracing on. This
+impacts performances but enables trace points and their counters. Trace
+points relevant for user programs are named `run`, `select` and `assign`.
+Counters holding the number of times a trace point is reached can be
+accessed using the `counter` builtin: one can print the value of these
+counters in a program, but if `-trace-on` is not passed the value is `0`.
+
+Once traces are on, one can control when tracing information is print.
+
+The option `-trace-only` takes (a regular expression matching) the name
+of of the trace point for which trace printing is enabled.
+Eg `-trace-only '\(run\|assign\|select\)'`. The option can be repeated.
+
+The option `-trace-only-pred` takes (a regular expression matching) the name
+of a λProlog predicate: trace printing is enabled only when the current goal
+predicate is matched. The option can be repeated.
+
+The option `-trace-at` can be used to trace only a portion of the execution.
+It takes a trace point name and two integers. Eg `-trace-at run 37 42` enables
+traces between the 37th time and the 42nd time the `run` trace point is reached.
+The option must be given in order to enable prints. If it is not given counters
+are still updated, but nothing extra is print.
+
+The `-no-tc` option has nothing to do with traces but disables the execution
+of `elpi-checker` that being a λProlog program would be traced too resulting in a confusing trace.
+
+Example program:
+```prolog
+a X :-d, b X, d.
+
+b 0.
+b N :- M is N - 1, d, b M.
+
+d.
+
+main :- a 2.
+```
+
+Example trace:
+```shell
+$ ./elpi a.elpi -test -trace-on -trace-at run 1 99 -trace-only '\(run\|assign\|select\)' -trace-only-pred b -no-tc
+loading a.elpi (56a477507a974c95bd4cc9262b64bf84)
+run 4 {{{ 
+ run-goal = b 2
+}}} ->  (0.000s)
+select 4 {{{ b A0 :- (A1 is A0 - 1), d, (b A1).
+  assign = A0 := 2
+}}} ->  (0.000s)
+ run 9 {{{ 
+  run-goal = b 1
+ }}} ->  (0.000s)
+ select 8 {{{ b A0 :- (A1 is A0 - 1), d, (b A1).
+    assign = A0 := 1
+ }}} ->  (0.000s)
+  run 14 {{{ 
+   run-goal = b 0
+  }}} ->  (0.000s)
+  select 12 {{{ b 0 :- .| b A0 :- (A1 is A0 - 1), d, (b A1).
+  }}} ->  (0.000s)
+
+Success:
+...
+```
+
+Note that `a`, `d`, and `main` are not part of the trace, that is instead
+focused on the predicate `b`. Also note that `select` prints the list of
+clauses that will be tried (separated by `|`).
+Finally `assign` prints the terms assigned to variables.
+
+Each trace point name is followed by the value of the corresponding counter.
+One can use these numbers to refine the tracing options.
+
+Example of the trace between steps 9 and 14 also including predicate `d`.
+
+```shell
+$ ./elpi a.elpi -test -trace-on -trace-at run 9 14 -trace-only '\(run\|assign\|select\)' -trace-only-pred '\(b\|d\)' -no-tc
+loading a.elpi (56a477507a974c95bd4cc9262b64bf84)
+run 9 {{{ 
+ run-goal = b 1
+}}} ->  (0.000s)
+select 8 {{{ b A0 :- (A1 is A0 - 1), d, (b A1).
+   assign = A0 := 1
+}}} ->  (0.000s)
+ run 13 {{{ 
+  run-goal = d
+ }}} ->  (0.000s)
+ select 11 {{{ d  :- .
+ }}} ->  (0.000s)
+ run 14 {{{ 
+  run-goal = b 0
+ }}} ->  (0.000s)
+ select 12 {{{ b 0 :- .| b A0 :- (A1 is A0 - 1), d, (b A1).
+ }}} ->  (0.000s)
+
+Success:
+```
+
+The command `elpi -help` prints all trace related options.
