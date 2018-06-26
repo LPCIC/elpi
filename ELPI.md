@@ -264,14 +264,19 @@ is equivalent to `P`:
   ones used in the term `E`, this makes the feature non-logical).
 
 A `raise` outside a `catch` context is fatal, it stops the execution as
-`stop`. For this reason we make `stop` (optionally) accept a string argument.
+`stop` or `halt`.
+Elpi makes `stop` (optionally) accept a string argument.
 Programs can abort by calling `stop "message"`.
-
-One can embed a program that calls `stop` into larger one and avoid
-the abortion by overriding `stop` as follows:
 ```prolog
-(stop X :- !, raise X) => catch Program E, if E (print "ok") (print "ko").
+pred stop.
+pred stop i:string.
+pred fail-str i:string.
+stop :- raise fail.
+stop Msg :- raise (fail-str Msg).
 ```
+The `halt` builtin really aborts the execution, while `stop` signals that
+a program cannot handle a case. It can be called by a larger program by
+protectig the call via `catch`.
 
 #### Try-with
 
