@@ -10,7 +10,7 @@
 
 - [N-ary implication](#n-ary-implication) let one write `[p,q] => g`
 
-- [Non logical features](#non-logical-features) like `!` or `new_safe`
+- [Non logical features](#non-logical-features) like `!`, `new_safe` or `catch`/`raise`
 
 - [Typechecking](#typechecking) is performed by `elpi-checker.elpi`
   on the quoted syntax of the program and query
