@@ -293,12 +293,24 @@ main :-
   try (io.open_in "file" In, io.input_line In S, S = "foobar")
       (print "Found it!", RC=0)
   [ exn (io.fail Error) (print "I/O error:" Error, RC=1)
-  | enx fail            (print "File does not contain the line foobar",RC=2) ],
+  | exn fail            (print "File does not contain the line foobar",RC=2) ],
   print "goodbye",
   os.exit RC.
 ```
 Where `io.open_in` is a variant of `open_in` that fails with an exception
 carrying an error message (eg `raise (io.fail "file not found")`).
+
+#### Bound variables
+
+To be understood
+
+```prolog
+err :- pi x\ bla x => raise (fail-term (app[x,x])). % halts? pi-close?
+main :- catch err _.
+```
+pi-close is more sound, but makes the inspection of the exception
+hard since the number of pi is arbitrary, you would like to write
+`catch err (pi ...\ fail-term _)` at least.
 
 ## Typechecking
 
