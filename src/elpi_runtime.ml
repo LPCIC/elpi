@@ -2513,6 +2513,10 @@ let call (Builtin.Pred(bname,ffi,compute)) ~depth hyps solution data =
        let reult = compute ~depth in
        let cc, l = reduce solution.Elpi_data.custom_constraints reult in
        cc, List.rev l
+    | Builtin.Read _, [] ->
+       let reult = compute ~depth hyps solution in
+       let cc, l = reduce solution.Elpi_data.custom_constraints reult in
+       cc, List.rev l
     | Builtin.Full _, [] ->
        let cc, reult = compute ~depth hyps solution in
        let cc, l = reduce cc reult in

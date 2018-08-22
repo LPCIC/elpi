@@ -687,6 +687,7 @@ type ('function_type, 'inernal_outtype_in) ffi =
   | In   : 't data * doc * ('i, 'o) ffi -> ('t -> 'i,'o) ffi
   | Out  : 't data * doc * ('i, 'o * 't option) ffi -> ('t arg -> 'i,'o) ffi
   | Easy : doc -> (depth:int -> 'o, 'o) ffi
+  | Read : doc -> (depth:int -> hyps -> solution -> 'o, 'o) ffi
   | Full : doc -> (depth:int -> hyps -> solution -> custom_constraints * 'o, 'o) ffi
   | VariadicIn : 't data * doc -> ('t list -> depth:int -> hyps -> solution -> custom_constraints * 'o, 'o) ffi
   | VariadicOut : 't data * doc -> ('t arg list -> depth:int -> hyps -> solution -> custom_constraints * ('o * 't option list option), 'o) ffi
@@ -800,6 +801,7 @@ let document_pred fmt docspec name ffi =
   = fun args -> function
     | In( { ty }, s, ffi) -> doc ((true,ty,s) :: args) ffi
     | Out( { ty }, s, ffi) -> doc ((false,ty,s) :: args) ffi
+    | Read s -> pp_pred fmt docspec name s args
     | Easy s -> pp_pred fmt docspec name s args
     | Full s -> pp_pred fmt docspec name s args
     | VariadicIn( { ty }, s) -> pp_type fmt name s ty args

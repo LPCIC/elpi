@@ -508,6 +508,7 @@ module Extend : sig
       | In   : 't data * doc * ('i, 'o) ffi -> ('t -> 'i,'o) ffi
       | Out  : 't data * doc * ('i, 'o * 't option) ffi -> ('t arg -> 'i,'o) ffi
       | Easy : doc -> (depth:int -> 'o, 'o) ffi
+      | Read : doc -> (depth:int -> Data.hyps -> Data.solution -> 'o, 'o) ffi
       | Full : doc -> (depth:int -> Data.hyps -> Data.solution -> Data.custom_constraints * 'o, 'o) ffi
       | VariadicIn : 't data * doc -> ('t list -> depth:int -> Data.hyps -> Data.solution -> Data.custom_constraints * 'o, 'o) ffi
       | VariadicOut : 't data * doc -> ('t arg list -> depth:int -> Data.hyps -> Data.solution -> Data.custom_constraints * ('o * 't option list option), 'o) ffi
