@@ -21,11 +21,15 @@ byte:
 
 trace_ppx: trace_ppx.ml
 	$(H)$(call pp,OCAMLOPT,-o,$@)
-	$(H)ocamlfind ocamlopt -package ppx_tools_versioned.metaquot_402 \
+	$(H)ocamlfind ocamlopt \
+		-package ppx_tools_versioned \
+		-package ppx_tools_versioned.metaquot_402 \
 		-package ocaml-migrate-parsetree.driver-main \
 		-open Ast_402 \
 		-c $< 
-	$(H)ocamlfind ocamlopt -package ppx_tools_versioned.metaquot_402 \
+	$(H)ocamlfind ocamlopt \
+		-package ppx_tools_versioned \
+		-package ppx_tools_versioned.metaquot_402 \
 		-package ocaml-migrate-parsetree \
 		-predicates custom_ppx,ppx_driver \
 		-linkpkg -linkall \
