@@ -328,7 +328,7 @@ let contents ?overlapping () =
   let overlap : uvar_body list -> bool =
     match overlapping with
     | None -> fun _ -> true
-    | Some l -> List.exists (fun x -> List.memq x l) in
+    | Some l -> fun b -> List.exists (fun x -> List.memq x l) b in
   map_filter (function
     | { kind = Constraint c; blockers }
       when overlap blockers -> Some (c,blockers)
@@ -2450,21 +2450,22 @@ let rec head_of = function
   | Discard -> type_error "A constraint cannot be _"
   | Lam _ -> type_error "A constraint cannot be a function"
 
+let dummy_uvar_body = { contents = C.dummy; rest = [] }
+
 let declare_constraint ~depth prog args =
   let g, keys =
     match args with
     | [t1; t2] ->
-      (match is_flex ~depth t2 with
-        | Some v2 -> t1, [v2]
-        | None ->
-            let v2 =
-              List.map (function
-               | Some x -> x
-               | None -> type_error
-                    ("the second argument of constraint must be "^
-                     "flexible or a list of flexible terms"))
-              (List.map (is_flex ~depth) (lp_list_to_list ~depth t2)) in
-            t1, v2)
+      let rec collect_keys t = match deref_head ~depth t with
+        | UVar (r, _, _) | AppUVar (r, _, _) -> [r]
+        | Discard -> [dummy_uvar_body]
+        | Nil -> []
+        | Cons(hd,tl) -> collect_keys hd @ collect_keys tl
+        | _ -> type_error
+                 ("the second argument of constraint must be "^
+                  "flexible or a list of flexible terms")
+      in
+        t1, collect_keys t2
     | _ -> type_error "declare_constraint takes 2 arguments"
   in 
   match CHR.clique_of (head_of g) !chrules with

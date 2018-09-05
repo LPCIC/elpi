@@ -396,6 +396,10 @@ master-key K => (even X, even Y).
 even (uvar as X) :- !, master-key K, declare_constraint (even X) [K,X].
 ```
 
+If constraints are not required to be resumed one can simply use `_`
+for the key. All constraints keyed on `_` (or equivalently `[]`) are
+considered to have a non empty intersection of keys.
+
 #### Example
 ```prolog
 mode (odd i).
