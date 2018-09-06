@@ -79,7 +79,11 @@ end
 
 module Data : sig
   
-  module StrMap : Map.S with type key = string
+  module StrMap : sig
+   include Map.S with type key = string
+   val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
+   val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+  end
 
   (* what is assigned to the query variables *)
   type term
@@ -102,7 +106,12 @@ end
 
 module Compile : sig
 
-  module StrSet : Set.S with type elt = string
+  module StrSet : sig
+   include Set.S with type elt = string
+   val show : t -> string
+   val pp : Format.formatter -> t -> unit
+  end
+
   type flags = {
     (* variables used in conditional compilation, that is :if clauses *)
     defined_variables : StrSet.t;
