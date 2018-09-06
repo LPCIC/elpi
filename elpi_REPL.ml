@@ -20,7 +20,7 @@ let print_solution time = function
    Format.eprintf "Interrupted (no more steps)@\n%!"
 | Elpi_API.Execute.Failure -> Format.eprintf "Failure@\n%!"
 | Elpi_API.Execute.Success {
-    Elpi_API.Data.assignments; constraints; custom_constraints } ->
+    Elpi_API.Data.assignments; constraints; state; _ } ->
   Format.eprintf "@\nSuccess:@\n%!" ;
   Elpi_API.Data.StrMap.iter (fun name v ->
     Format.eprintf "  @[<hov 1>%s = %a@]@\n%!" name
@@ -28,8 +28,8 @@ let print_solution time = function
   Format.eprintf "@\nTime: %5.3f@\n%!" time;
   Format.eprintf "@\nConstraints:@\n%a@\n%!"
     Elpi_API.Pp.constraints constraints;
-  Format.eprintf "@\nCustom constraints:@\n%a@\n%!"
-    Elpi_API.Pp.custom_constraints custom_constraints;
+  Format.eprintf "@\nState:@\n%a@\n%!"
+    Elpi_API.Pp.custom_state state;
 ;;
   
 let more () =

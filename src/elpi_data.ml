@@ -653,13 +653,13 @@ let unwrap_prolog_prog = function Index x -> x | _ -> assert false
 exception No_clause
 exception No_more_steps
 
-type custom_constraints = CustomConstraint.t
+type custom_state = CustomConstraint.t
 type syntactic_constraints = stuck_goal list
 
 type solution = {
   assignments : term StrMap.t;
   constraints : syntactic_constraints;
-  custom_constraints : custom_constraints;
+  state : custom_state;
 }
 type outcome = Success of solution | Failure | NoMoreSteps
 
@@ -667,7 +667,7 @@ type hyps = clause_src list
 
 (* Built-in predicates and their FFI *************************************** *)
 
- (* (depth:int -> hyps -> solution -> term list -> term list * custom_constraints) *)
+(* (depth:int -> hyps -> solution -> term list -> term list * custom_state) *)
 
 module Builtin = struct
 
@@ -688,9 +688,9 @@ type ('function_type, 'inernal_outtype_in) ffi =
   | Out  : 't data * doc * ('i, 'o * 't option) ffi -> ('t arg -> 'i,'o) ffi
   | Easy : doc -> (depth:int -> 'o, 'o) ffi
   | Read : doc -> (depth:int -> hyps -> solution -> 'o, 'o) ffi
-  | Full : doc -> (depth:int -> hyps -> solution -> custom_constraints * 'o, 'o) ffi
-  | VariadicIn : 't data * doc -> ('t list -> depth:int -> hyps -> solution -> custom_constraints * 'o, 'o) ffi
-  | VariadicOut : 't data * doc -> ('t arg list -> depth:int -> hyps -> solution -> custom_constraints * ('o * 't option list option), 'o) ffi
+  | Full : doc -> (depth:int -> hyps -> solution -> custom_state * 'o, 'o) ffi
+  | VariadicIn : 't data * doc -> ('t list -> depth:int -> hyps -> solution -> custom_state * 'o, 'o) ffi
+  | VariadicOut : 't data * doc -> ('t arg list -> depth:int -> hyps -> solution -> custom_state * ('o * 't option list option), 'o) ffi
 
 type t = Pred : name * ('a,unit) ffi * 'a -> t
 

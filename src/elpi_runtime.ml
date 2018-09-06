@@ -259,7 +259,7 @@ module ConstraintStoreAndTrail : sig
   val print : Fmt.formatter -> (constraint_def * blockers) list -> unit
   val pp_stuck_goal : Fmt.formatter -> stuck_goal -> unit
 
-  val custom_constraints : custom_constraints Fork.local_ref
+  val custom_state : custom_state Fork.local_ref
 
   (* ---------------------------------------------------- *)
 
@@ -283,7 +283,7 @@ module ConstraintStoreAndTrail : sig
 
   (* backtrack *)
   val undo :
-    old_trail:trail -> ?old_constraints:custom_constraints -> unit -> unit
+    old_trail:trail -> ?old_constraints:custom_state -> unit -> unit
 
   val print_trail : Fmt.formatter -> unit
 
@@ -301,12 +301,12 @@ end = struct (* {{{ *)
     cstr_blockers : uvar_body list;
  }
 
-  let custom_constraints =
+  let custom_state =
     Fork.new_local (CustomConstraint.init (CompilerState.init ()))
   let read_custom_constraint ct =
-    CustomConstraint.get ct !custom_constraints
+    CustomConstraint.get ct !custom_state
   let update_custom_constraint ct f =
-    custom_constraints := CustomConstraint.update ct !custom_constraints f
+    custom_state := CustomConstraint.update ct !custom_state f
 
 
 type trail_item =
@@ -409,7 +409,7 @@ let undo ~old_trail ?old_constraints () =
     | [] -> anomaly "undo to unknown trail"
   done;
   match old_constraints with
-  | Some old_constraints -> custom_constraints := old_constraints
+  | Some old_constraints -> custom_state := old_constraints
   | None -> ()
 ;;
 
@@ -2173,7 +2173,7 @@ and alternative = {
   goals : goal list;
   stack : frame;
   trail : T.trail;
-  custom_constraints : custom_constraints;
+  custom_state : custom_state;
   clauses : clause list;
   next : alternative
 }
@@ -2506,17 +2506,17 @@ let mk_assign { Builtin.to_term } bname input output =
 
 let call (Builtin.Pred(bname,ffi,compute)) ~depth hyps solution data =
   let rec aux : type i o.
-    (i,o) Builtin.ffi -> compute:i -> reduce:(custom_constraints -> o -> custom_constraints * term list) ->
-       term list -> int -> custom_constraints * term list =
+    (i,o) Builtin.ffi -> compute:i -> reduce:(custom_state -> o -> custom_state * term list) ->
+       term list -> int -> custom_state * term list =
   fun ffi ~compute ~reduce data n ->
     match ffi, data with
     | Builtin.Easy _, [] ->
        let reult = compute ~depth in
-       let cc, l = reduce solution.Elpi_data.custom_constraints reult in
+       let cc, l = reduce solution.Elpi_data.state reult in
        cc, List.rev l
     | Builtin.Read _, [] ->
        let reult = compute ~depth hyps solution in
-       let cc, l = reduce solution.Elpi_data.custom_constraints reult in
+       let cc, l = reduce solution.Elpi_data.state reult in
        cc, List.rev l
     | Builtin.Full _, [] ->
        let cc, reult = compute ~depth hyps solution in
@@ -2563,9 +2563,9 @@ let exect_builtin_predicate c ~depth idx args =
     let solution = {
       assignments = StrMap.map (fun i -> !qenv.(i)) !qnames;
       constraints = !CS.Ugly.delayed;
-      custom_constraints = !CS.custom_constraints } in
+      state = !CS.custom_state } in
     let cc, gs = call b ~depth (local_prog idx) solution args in
-    CS.custom_constraints := cc;
+    CS.custom_state := cc;
     gs
 
 (* all permutations of pivot+rest of length len where the
@@ -2950,7 +2950,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
            let alts = if cs = [] then alts else
              { program = p; depth = depth; goal = g; goals = gs; stack = next;
                trail = old_trail;
-               custom_constraints = !CS.custom_constraints;
+               custom_state = !CS.custom_state;
                clauses = cs; lvl = lvl ; next = alts} in
            begin match c.hyps with
            | [] ->
@@ -3034,7 +3034,7 @@ end;*)
    if alts == noalts then raise No_clause
    else
     let { program = p; clauses = clauses; goal = g; goals = gs; stack = next;
-          trail = old_trail; custom_constraints = old_constraints;
+          trail = old_trail; custom_state = old_constraints;
           depth = depth; lvl = lvl; next = alts} = alts in
     T.undo ~old_trail ~old_constraints ();
     backchain depth p g gs clauses next alts lvl (* XXX *)
@@ -3067,7 +3067,7 @@ end;*)
   set steps_made 0;
   set Constraints.qnames assignments_names;
   set Constraints.qenv query_env;
-  set CS.custom_constraints initial_constraints;
+  set CS.custom_state initial_constraints;
   let search = exec (fun () ->
      let q = move ~adepth:initial_depth ~from:initial_depth ~to_:initial_depth query_env initial_goal in
      [%spy "run-trail" (fun fmt _ -> T.print_trail fmt) ()];
@@ -3117,11 +3117,11 @@ let mk_outcome search get_cs { initial_depth; assignments_names; query_env } =
  try
    let alts = search () in
    let assignments = mk_solution initial_depth query_env assignments_names in
-   let syn_csts, custom_constraints = get_cs () in
+   let syn_csts, custom_state = get_cs () in
    let solution = {
      assignments;
      constraints = syn_csts; (*List.map deref_stuck_goal syn_csts;*)
-     custom_constraints
+     state = custom_state
    } in
    Success solution, alts
  with
@@ -3131,7 +3131,7 @@ let mk_outcome search get_cs { initial_depth; assignments_names; query_env } =
 let execute_once ?max_steps ?delay_outside_fragment exec =
  auxsg := [];
  let { search; get } = make_runtime ?max_steps ?delay_outside_fragment exec in
- fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.custom_constraints) exec)
+ fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.custom_state) exec)
 ;;
 
 let execute_loop ?delay_outside_fragment exec ~more ~pp =
@@ -3139,7 +3139,7 @@ let execute_loop ?delay_outside_fragment exec ~more ~pp =
  let k = ref noalts in
  let do_with_infos f =
   let time0 = Unix.gettimeofday() in
-  let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, get CS.custom_constraints) exec in
+  let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, get CS.custom_state) exec in
   let time1 = Unix.gettimeofday() in
   k := alts;
   pp (time1 -. time0) o in

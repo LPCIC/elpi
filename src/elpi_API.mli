@@ -14,8 +14,8 @@
     data types are made transparent.
     Module {!module:Extend.Compile} lets one register new \{\{quotations\}\}.
     Modules {!module:Extend.BuiltInPredicate} and
-    {!module:Extend.CustomConstraint} let one register built-in predicates and
-    custom constraints. *)
+    {!module:Extend.CustomState} let one register built-in predicates and
+    custom state. *)
 
 (* ************************************************************************* *)
 (* *************************** Basic API *********************************** *)
@@ -87,16 +87,17 @@ module Data : sig
   (* goals suspended via the declare_constraint built-in *)
   type syntactic_constraints
 
-  (* user defined constraints (not goals, eg arithmetic constraints) *)
-  type custom_constraints
+  (* user defined state (not goals) *)
+  type custom_state
 
   (* a solution is an assignment map from query variables (name) to terms,
    * plus the goals that were suspended and the user defined constraints *)
   type solution = {
     assignments : term StrMap.t;
     constraints : syntactic_constraints;
-    custom_constraints : custom_constraints;
+    state : custom_state;
   }
+
 end
 
 module Compile : sig
@@ -160,7 +161,7 @@ module Pp : sig
 
   val term : Format.formatter -> Data.term -> unit
   val constraints : Format.formatter -> Data.syntactic_constraints -> unit
-  val custom_constraints : Format.formatter -> Data.custom_constraints -> unit
+  val custom_state : Format.formatter -> Data.custom_state -> unit
   val query : Format.formatter -> Compile.query -> unit
 
   module Ast : sig
@@ -276,7 +277,7 @@ module Extend : sig
 
     val fresh_uvar_body : unit -> uvar_body
 
-    type custom_constraints = Data.custom_constraints
+    type custom_state = Data.custom_state
     type solution = Data.solution
     type idx
     type hyps = clause_src list
@@ -343,7 +344,7 @@ module Extend : sig
     (** In order to implement quotations one may
      * need to stick some data into the compiler state that can indeed be
      * extended. A piece of compiler state can also be kept and used at runtime,
-     * e.g. if it contains some custom constraints, see CustomConstraint *)
+     * e.g. if it contains some custom constraints, see CustomState *)
     module State : sig
       type t
       type 'a component
@@ -395,12 +396,15 @@ module Extend : sig
   end
 
 
-  (* Custom constraints are just a purely functional piece of data carried
+  (* Custom State is a collection of purely functional piece of data carried
    * by the interpreter. Such data is kept in sync with the backtracking, i.e.
    * changes made in a branch are lost if that branch fails.
+   * It can be used to both store custom constraints to be manipulated by
+   * custom solvers, or any other piece of data the host application may
+   * need to use.
    * The initial value can be taken from the compiler state, e.g. a quotation
    * may generate some constraints statically *)
-  module CustomConstraint : sig
+  module CustomState : sig
 
     (** 'a MUST be purely functional, i.e. backtracking is implemented by using
      * an old binding for 'a.
@@ -419,7 +423,7 @@ module Extend : sig
       init:('a,'b) source ->
         'a component
 
-    type t = Data.custom_constraints
+    type t = Data.custom_state
 
     val get : 'a component -> t -> 'a
 
@@ -429,6 +433,7 @@ module Extend : sig
     val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
 
   end
+  module CustomConstraint = CustomState [@@deprecated "use CustomState"]
 
 
   (* Built-in predicates are implemented in ML using the following FFI.
@@ -509,9 +514,9 @@ module Extend : sig
       | Out  : 't data * doc * ('i, 'o * 't option) ffi -> ('t arg -> 'i,'o) ffi
       | Easy : doc -> (depth:int -> 'o, 'o) ffi
       | Read : doc -> (depth:int -> Data.hyps -> Data.solution -> 'o, 'o) ffi
-      | Full : doc -> (depth:int -> Data.hyps -> Data.solution -> Data.custom_constraints * 'o, 'o) ffi
-      | VariadicIn : 't data * doc -> ('t list -> depth:int -> Data.hyps -> Data.solution -> Data.custom_constraints * 'o, 'o) ffi
-      | VariadicOut : 't data * doc -> ('t arg list -> depth:int -> Data.hyps -> Data.solution -> Data.custom_constraints * ('o * 't option list option), 'o) ffi
+      | Full : doc -> (depth:int -> Data.hyps -> Data.solution -> Data.custom_state * 'o, 'o) ffi
+      | VariadicIn : 't data * doc -> ('t list -> depth:int -> Data.hyps -> Data.solution -> Data.custom_state * 'o, 'o) ffi
+      | VariadicOut : 't data * doc -> ('t arg list -> depth:int -> Data.hyps -> Data.solution -> Data.custom_state * ('o * 't option list option), 'o) ffi
     type t = Pred : name * ('a,unit) ffi * 'a -> t
 
     (** Where to print the documentation. For the running example DocAbove

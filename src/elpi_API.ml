@@ -80,12 +80,12 @@ end
 module Data = struct
   type term = Elpi_data.term
   type syntactic_constraints = Elpi_data.syntactic_constraints
-  type custom_constraints = Elpi_data.custom_constraints
+  type custom_state = Elpi_data.custom_state
   module StrMap = Elpi_util.StrMap
   type solution = Elpi_data.solution = {
     assignments : term StrMap.t;
     constraints : syntactic_constraints;
-    custom_constraints : custom_constraints;
+    state : custom_state;
   }
 end
 
@@ -137,7 +137,7 @@ module Pp = struct
     let module R = (val !r) in let open R in
     Elpi_util.pplist ~boxed:true R.pp_stuck_goal "" f c
 
-  let custom_constraints = Elpi_data.CustomConstraint.pp
+  let custom_state = Elpi_data.CustomConstraint.pp
 
   let query f c =
     let module R = (val !r) in let open R in
@@ -244,7 +244,8 @@ module Extend = struct
     end
   end
 
-  module CustomConstraint = Elpi_data.CustomConstraint
+  module CustomState = Elpi_data.CustomConstraint
+  module CustomConstraint = CustomState
 
   module CustomFunctor = struct
   

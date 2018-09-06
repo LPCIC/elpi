@@ -591,7 +591,7 @@ let elpi_builtins = [
 
   MLCode(Pred("dprint",
     VariadicIn(any, "prints raw terms (debugging)"),
-  (fun args ~depth _ { Elpi_API.Data.custom_constraints = cc } ->
+  (fun args ~depth _ { Elpi_API.Data.state = cc } ->
      Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
        (Pp.list (Pp.Raw.term depth) " ") args ;
      cc, ())),
@@ -599,7 +599,7 @@ let elpi_builtins = [
 
   MLCode(Pred("print",
     VariadicIn(any,"prints terms"),
-  (fun args ~depth _ { Elpi_API.Data.custom_constraints = cc } ->
+  (fun args ~depth _ { Elpi_API.Data.state = cc } ->
      Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
        (Pp.list (Pp.term depth) " ") args ;
      cc, ())),
