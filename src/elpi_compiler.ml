@@ -1215,22 +1215,33 @@ let check_all_builtin_are_typed types =
 ;;
 
 let stack_term_of_preterm ~depth:arg_lvl { term = t; amap = { c2i } } =
-  let arg_cst c args =
-    if C.Map.mem c c2i then
-      let argno = C.Map.find c c2i in
-      mkAppArg argno arg_lvl args
-    else if args = [] then mkConst c
-    else App(c,List.hd args,List.tl args) in
   let rec stack_term_of_preterm = function
-    | Const c -> arg_cst  c []
-    | App(c,x,xs) -> arg_cst  c (List.map stack_term_of_preterm (x::xs))
-    | Lam t -> Lam(stack_term_of_preterm  t)
+    | Const c when C.Map.mem c c2i -> 
+        let argno = C.Map.find c c2i in
+        mkAppArg argno arg_lvl []
+    | Const c -> mkConst c
+    | App(c, x, xs) when C.Map.mem c c2i ->
+        let argno = C.Map.find c c2i in
+        mkAppArg argno arg_lvl (List.map stack_term_of_preterm (x::xs))
+    | App(c, x, xs) as app ->
+        let x1 = stack_term_of_preterm x in
+        let xs1 = smart_map stack_term_of_preterm xs in
+        if x1 == x && xs1 == xs then app else App(c, x1, xs1)
+    | Lam t as x ->
+        let t1 = stack_term_of_preterm  t in
+        if t1 == t then x else Lam t1
     | CData _ as x -> x
-    | Builtin(c,xs) -> Builtin(c,List.map stack_term_of_preterm xs)
+    | Builtin(c, args) as x ->
+        let args1 = smart_map stack_term_of_preterm args in
+        if args1 == args then x else Builtin(c, args1)
     | UVar _ | AppUVar _ | Arg _ | AppArg _ -> assert false
     | Nil as x -> x
     | Discard as x -> x
-    | Cons(x,xs) -> Cons(stack_term_of_preterm x,stack_term_of_preterm xs) in
+    | Cons(hd, tl) as x ->
+        let hd1 = stack_term_of_preterm hd in
+        let tl1 = stack_term_of_preterm tl in
+        if hd == hd1 && tl == tl1 then x else Cons(hd1,tl1)
+  in
   stack_term_of_preterm t
 ;;
 
