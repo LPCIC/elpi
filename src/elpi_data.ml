@@ -235,7 +235,7 @@ let mkConst x =
   try Hashtbl.find c2t x
   with Not_found ->
     let xx = Const x in
-    Hashtbl.add c2s x ("x" ^ string_of_int x);
+    Hashtbl.add c2s x ("c" ^ string_of_int x);
     Hashtbl.add c2t x xx;
     xx
   [@@inline]
