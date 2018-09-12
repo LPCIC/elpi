@@ -103,6 +103,8 @@ mode (unif i i).
 
 unif (tconst "any") _ :- !.
 unif _ (tconst "any") :- !.
+unif (tapp [tconst "variadic",_,X]) Y :- unif X Y.
+unif Y (tapp [tconst "variadic",_,X]) :- unif Y X.
 unif (tapp []) (tapp []).
 unif (tapp [X|L1]) (tapp [Y|L2]) :- unif X Y, unif (tapp L1) (tapp L2).
 unif (tconst X) (tconst X).
