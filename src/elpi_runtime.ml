@@ -2484,6 +2484,12 @@ let type_err bname n ty t =
     | None -> "discard"
     | Some t -> show_term t)
 
+let arity_err bname n t =
+  type_error ("builtin " ^ bname ^ ": " ^ 
+    match t with
+    | None -> string_of_int n ^ "th argument is missing"
+    | Some t -> "too many arguments at: " ^ show_term t)
+
 let out_of_term ~depth { Builtin.of_term; ty } n bname t =
   try of_term ~depth t
   with Builtin.TypeErr t -> type_err bname n ty (Some t)
@@ -2543,7 +2549,9 @@ let call (Builtin.Pred(bname,ffi,compute)) ~depth hyps solution data =
           let cc, l = reduce cc rest in
           cc, mk_assign d bname i out @ l in
         aux ffi ~compute:(compute i) ~reduce rest (n + 1)
-    | _ -> (* XXX decent errors *) assert false
+    | _, t :: _ -> arity_err bname n (Some t)
+    | _, [] -> arity_err bname n None
+
   in
     let reduce cc _ = cc, [] in
     aux ffi ~compute ~reduce data 1
