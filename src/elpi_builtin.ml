@@ -267,8 +267,9 @@ let core_builtins = [
           "external pred declare_constraint i:any, i:any.");
   LPCode "external pred print_constraints. % prints all constraints";
 
-  MLCode(Pred("halt", Easy "halts the program",
-  (fun ~depth -> error "halt")),
+  MLCode(Pred("halt", VariadicIn(string, "halts the program"),
+  (fun args ~depth _ _ ->
+     if args = [] then error "halt" else error (String.concat " " args))),
   DocAbove);
 
   LPCode "stop :- halt.";
