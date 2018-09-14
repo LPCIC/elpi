@@ -287,7 +287,14 @@ module Extend : sig
     val fresh_uvar_body : unit -> uvar_body
 
     type custom_state = Data.custom_state
-    type solution = Data.solution
+    module StrMap = Data.StrMap
+    type solution = {
+      assignments : term StrMap.t;
+      constraints : Data.syntactic_constraints;
+      state : custom_state;
+    }
+    val of_solution : Data.solution -> solution
+
     type idx
     type hyps = clause_src list
 

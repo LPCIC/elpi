@@ -155,6 +155,7 @@ module Extend = struct
   module CData = Elpi_util.CData
 
   module Data = struct
+    module StrMap = Data.StrMap
     type builtin = int
     include Elpi_data
     let mkBuiltinName s args = mkBuiltin (Builtin.from_builtin_name s) args
@@ -174,6 +175,7 @@ module Extend = struct
           Some { context ; goal = (cdepth, conclusion) }
       | _ -> None)
     let fresh_uvar_body () = oref Constants.dummy
+    let of_solution x = x
   end
 
   module Compile = struct
