@@ -6,7 +6,7 @@
 open Elpi_util
 module F = Format
 
-module Str = Re_str
+module Str = Re.Str
 
 let debug = ref false
 let dverbose = ref false

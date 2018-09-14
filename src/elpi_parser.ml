@@ -5,7 +5,7 @@
 open Elpi_util
 open Elpi_ast
 
-module Str = Re_str
+module Str = Re.Str
 
 type fixity = Infixl | Infixr | Infix | Prefix | Prefixr | Postfix | Postfixl
 

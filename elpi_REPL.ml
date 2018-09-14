@@ -13,7 +13,7 @@ let _ =
 ;;
 *)
 
-module Str = Re_str
+module Str = Re.Str
 
 let print_solution time = function
 | Elpi_API.Execute.NoMoreSteps ->

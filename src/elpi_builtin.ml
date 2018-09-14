@@ -10,7 +10,7 @@ open Utils
 open BuiltInPredicate
 open Notation
 
-module Str = Re_str
+module Str = Re.Str
 
 let { CData.cin = istream_in; isc = is_istream ; cout = istream_out } as in_stream = CData.declare {
   CData.data_name = "in_stream";
