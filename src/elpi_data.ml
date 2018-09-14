@@ -328,10 +328,12 @@ module CHR : sig
   and rule = {
     to_match : sequent list;
     to_remove : sequent list;
+    patsno : int;
     guard : term option;
     new_goal : sequent option;
     nargs : int [@default 0];
     pattern : Constants.t list;
+    rule_name : string
   }
   val pp_sequent : Fmt.formatter -> sequent -> unit
   val show_sequent : sequent -> string
@@ -355,10 +357,12 @@ end = struct (* {{{ *)
   and rule = {
     to_match : sequent list;
     to_remove : sequent list;
+    patsno : int;
     guard : term option;
     new_goal : sequent option;
     nargs : int [@default 0];
     pattern : Constants.t list;
+    rule_name : string;
   }
   [@@ deriving show]
   type t = {
@@ -619,6 +623,8 @@ type prechr_rule = {
   pguard : term option;
   pnew_goal : presequent option;
   pamap : argmap;
+  pname : string;
+  pifexpr : string option;
 }
 [@@ deriving show]
 

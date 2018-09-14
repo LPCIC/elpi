@@ -51,7 +51,7 @@ w (lam F) (mono (A ==> R)) :-
 
 w (let F FP B) (mono TC) :-
   w F (mono FT),
-  declare_constraint (overbar (mono FT) FP) W_,
+  declare_constraint (overbar (mono FT) FP) [],
   pi x\ w x FP => w (B x) (mono TC).
 
 w X (mono T) :- w X (all Poly), specialize (all Poly) T.

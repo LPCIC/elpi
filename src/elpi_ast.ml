@@ -102,11 +102,13 @@ type ('term,'attributes) clause = {
 }[@@deriving show]
 
 type sequent = { eigen : term; context : term; conclusion : term }
-and chr_rule = {
+and 'attribute chr_rule = {
   to_match : sequent list;
   to_remove : sequent list;
   guard : term option;
   new_goal : sequent option;
+  cattributes : 'attribute;
+  clocation : Ploc.t;
 }
 [@@deriving show, create]
 
@@ -133,7 +135,7 @@ type decl =
  | Clause of (term, attribute list) clause
  | Local of Func.t
  | Mode of Func.t mode list
- | Chr of chr_rule
+ | Chr of attribute list chr_rule
  | Macro of (Func.t, term) macro
  | Type of tdecl
 [@@deriving show]

@@ -36,13 +36,17 @@ and block =
   | Locals of A.Func.t list * program
   | Clauses of (A.term,attribute) A.clause list
   | Namespace of A.Func.t * program
-  | Constraints of A.Func.t list * A.chr_rule list * program
+  | Constraints of A.Func.t list * cattribute A.chr_rule list * program
 and attribute = {
   insertion : insertion option;
   id : string option;
   ifexpr : string option;
 }
 and insertion = Before of string | After of string
+and cattribute = {
+  cid : string;
+  cifexpr : string option
+}
 [@@deriving show]
 
 end
@@ -196,6 +200,24 @@ end = struct (* {{{ *)
     { c with A.attributes =
         aux { insertion = None; id = None; ifexpr = None } attributes }
 
+  let structure_cattributes ({ A.cattributes; A.clocation = loc } as c) =
+    let duplicate_err s =
+      error (Ploc.show loc ^ ": duplicate attribute " ^ s) in
+    let unsupported_err s =
+      error (Ploc.show loc ^ ": unsupported attribute " ^ s) in
+    let rec aux r = function
+      | [] -> r
+      | A.Name s :: rest ->
+         aux { r with cid = s } rest
+      | A.After _ :: _ -> unsupported_err "after"
+      | A.Before _ :: _ -> unsupported_err "before"
+      | A.If s :: rest ->
+         if r.cifexpr <> None then duplicate_err "if";
+         aux { r with cifexpr = Some s } rest
+    in
+    let cid = Ploc.show loc in 
+    { c with A.cattributes = aux { cid; cifexpr = None } cattributes }
+
   let run dl =
     let rec aux blocks clauses macros types modes  locals chr = function
       | (A.End _ :: _ | []) as rest ->
@@ -244,6 +266,7 @@ end = struct (* {{{ *)
       | A.Local l :: rest ->
           aux blocks clauses macros types modes (l::locals) chr rest
       | A.Chr r :: rest ->
+          let r = structure_cattributes r in
           aux blocks clauses macros types modes locals (r::chr) rest
 
     and aux_end_block loc blocks clauses macros types modes locals chr rest =
@@ -500,7 +523,9 @@ let prechr_rule_of_ast depth macros state r =
   let state, pnew_goal = option_mapacc intern_sequent state r.A.new_goal in
   let pamap = get_argmap state in
   let state = set_argmap state empty_amap in
-  state, { pto_match; pto_remove; pguard; pnew_goal; pamap }
+  let pname = r.cattributes.StructuredAST.cid in
+  let pifexpr = r.cattributes.StructuredAST.cifexpr in
+  state, { pto_match; pto_remove; pguard; pnew_goal; pamap; pname; pifexpr }
   
 (* exported *)
 let preterm_of_function ~depth macros state f =
@@ -780,14 +805,14 @@ end = struct (* {{{ *)
     }
 
   let map_chr f
-    { pto_match; pto_remove; pguard; pnew_goal; pamap }
+    { pto_match; pto_remove; pguard; pnew_goal; pamap; pifexpr; pname }
   =
     {
       pto_match = smart_map (map_sequent f) pto_match;
       pto_remove = smart_map (map_sequent f) pto_remove;
       pguard = option_map (smart_map_term f) pguard;
       pnew_goal = option_map (map_sequent f) pnew_goal;
-      pamap;
+      pamap; pifexpr; pname
     }
 
   let map_clause f ({ A.body = { term; amap } } as x) =
@@ -1255,7 +1280,7 @@ module Compiler : sig
 end = struct (* {{{ *)
 
 let compile_chr depth
-  { pto_match; pto_remove; pguard; pnew_goal; pamap }
+  { pto_match; pto_remove; pguard; pnew_goal; pamap; pname }
 =
   if depth > 0 then error "CHR: rules and locals are not supported";
   let key_of_sequent { pconclusion } =
@@ -1275,10 +1300,12 @@ let compile_chr depth
   let pattern = List.map key_of_sequent all_sequents in
   { CHR.to_match = List.map stack_sequent_of_presequent pto_match;
         to_remove = List.map stack_sequent_of_presequent pto_remove;
+        patsno = List.(length pto_match + length pto_remove);
         guard = option_map stack_term_of_preterm pguard;
         new_goal = option_map stack_sequent_of_presequent pnew_goal;
         nargs = pamap.nargs;
         pattern;
+        rule_name = pname;
       }
 ;;
   
@@ -1290,13 +1317,13 @@ let compile_clause modes initial_depth
   if morelcs <> 0 then error "sigma in a toplevel clause is not supported";
   cl
 
-let rec map_if defs f = function
+let rec filter_if defs proj = function
   | [] -> []
-  | ({ A.attributes = { Assembled.ifexpr } } as c) :: rest ->
-    match ifexpr with
-    | None -> f c :: map_if defs f rest 
-    | Some e when StrSet.mem e defs -> f c :: map_if defs f rest
-    | Some _ -> map_if defs f rest
+  | c :: rest ->
+    match proj c with
+    | None -> c :: filter_if defs proj rest 
+    | Some e when StrSet.mem e defs -> c :: filter_if defs proj rest
+    | Some _ -> filter_if defs proj rest
 
 let run ?(flags = default_flags)
   {
@@ -1313,16 +1340,19 @@ let run ?(flags = default_flags)
   if not flags.allow_untyped_builtin then
     check_all_builtin_are_typed types;
   (* Real Arg nodes: from "Const '%Arg3'" to "Arg 3" *)
+  let pifexpr { pifexpr } = pifexpr in
   let chr =
     List.fold_left (fun chr (clique, rules) ->
       let chr, clique = CHR.new_clique clique chr in
+      let rules = filter_if flags.defined_variables pifexpr rules in 
       let rules = List.map (compile_chr initial_depth) rules in
       List.fold_left (fun x y -> CHR.add_rule clique y x) chr rules)
     CHR.empty chr in
+  let ifexpr { A.attributes = { Assembled.ifexpr } } = ifexpr in
   let prolog_program =
     make_index
-      (map_if flags.defined_variables (compile_clause modes initial_depth)
-        clauses) in
+      (List.map (compile_clause modes initial_depth)
+        (filter_if flags.defined_variables ifexpr clauses)) in
   {
     Elpi_data.compiled_program = wrap_prolog_prog prolog_program;
     modes;

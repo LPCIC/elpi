@@ -559,7 +559,7 @@ EXTEND
        to_remove = OPT [ BIND; l = LIST1 sequent -> l ];
        guard = OPT [ PIPE; a = atom LEVEL "abstterm" -> a ];
        new_goal = OPT [ SYMBOL "<=>"; gs = sequent -> gs ] ->
-         create_chr_rule ~to_match ?to_remove ?guard ?new_goal ()
+         create_chr_rule ~to_match ?to_remove ?guard ?new_goal ~cattributes:[] ~clocation:loc ()
     ]];
   sequent_core :
     [ [ constant_colon; e = CONSTANT; COLON; t = atom -> Some e, (t : term) 
@@ -602,6 +602,9 @@ EXTEND
        let attributes = match attributes with None -> [] | Some x -> x in
        let c = { loc; attributes; body = f } in
        [Clause c]
+     | cattributes = OPT attributes; RULE; r = chrrule; FULLSTOP ->
+       let cattributes = match cattributes with None -> [] | Some x -> x in
+       [Chr { r with cattributes } ]
      | pragma -> []
      | LCURLY -> [Begin loc]
      | RCURLY -> [End loc]
@@ -624,7 +627,6 @@ EXTEND
      | MACRO; b = atom; FULLSTOP ->
          let name, body = desugar_macro b in
          [Macro { mlocation = loc; maname = name; mbody = body }]
-     | RULE; r = chrrule; FULLSTOP -> [Chr r]
      | NAMESPACE; ns = CONSTANT; LCURLY ->
          [ Namespace (loc, Func.from_string ns) ]
      | CONSTRAINT; names=LIST0 CONSTANT; LCURLY ->

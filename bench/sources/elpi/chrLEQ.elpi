@@ -13,25 +13,25 @@ main :-
 
 constraint leq ltn {
   % incompat (FIRST!!)
-  rule (leq X Y) (ltn Y1 X1) | (X = X1, Y = Y1) <=> false.
-  rule (ltn X Y) (ltn Y1 X1) | (X = X1, Y = Y1) <=> false.
-  rule (ltn X Y) | (X = Y) <=> false.
+  rule (leq X Y) (ltn Y X) <=> false.
+  rule (ltn X Y) (ltn Y X) <=> false.
+  rule (ltn X X) <=> false.
   
   % refl
-  rule \ (leq X Y) | (X = Y).
+  rule \ (leq X X).
 
   % atisym
-  rule (leq X Y) \ (leq Y1 X1) | (X = X1, Y = Y1) <=> (Y = X).
+  rule (leq X Y) \ (leq Y X) <=> (Y = X).
 
   % trans
-  rule (leq X Y) (leq Y1 Z) | (Y = Y1) <=> (leq X Z).
-  rule (leq X Y) (ltn Y1 Z) | (Y = Y1) <=> (ltn X Z).
-  rule (ltn X Y) (leq Y1 Z) | (Y = Y1) <=> (ltn X Z).
-  rule (ltn X Y) (ltn Y1 Z) | (Y = Y1) <=> (ltn X Z).
+  rule (leq X Y) (leq Y Z) <=> (leq X Z).
+  rule (leq X Y) (ltn Y Z) <=> (ltn X Z).
+  rule (ltn X Y) (leq Y Z) <=> (ltn X Z).
+  rule (ltn X Y) (ltn Y Z) <=> (ltn X Z).
 
   % idempotence
-  rule (leq X Y) \ (leq X1 Y1) | (X = X1, Y = Y1).
-  rule (ltn X Y) \ (ltn X1 Y1) | (X = X1, Y = Y1).
+  rule (leq X Y) \ (leq X Y).
+  rule (ltn X Y) \ (ltn X Y).
 
 }
 

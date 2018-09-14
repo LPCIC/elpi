@@ -21,8 +21,8 @@
 - [Clause grafting](#clause-grafting) can inject a clause
   in the middle of an existing program
 
-- [Clause conditional compilation](#clause-conditional-compilation) can be used
-  to conditionally consider/discard clauses
+- [Conditional compilation](#conditional-compilation) can be used
+  to conditionally consider/discard clauses or CHR rules
 
 - [Modes](#modes) can be declared in order to control the generative
   semantics of Prolog
@@ -270,7 +270,7 @@ fatal-error Msg :- !, M is "elpi: " ^ Msg, coq-err M.
 
 The `:after` attribute is also available.
 
-## Clause conditional compilation
+## Conditional compilation
 
 The following λProlog idiom is quite useful to debug code:
 ```prolog
@@ -294,6 +294,8 @@ to define the `DEBUG` variable (and consequently keep the debugging code).
 
 Here `DEBUG` is just arbitrary string, and multiple `-D` flags can be passed
 to `elpi`.
+
+The attribute `:if` can also be used on CHR rules.
 
 ## Modes
 
@@ -389,16 +391,19 @@ When one or more goals are suspended on lists of unification
 variables with a non-empty intersection, 
 the rules between curly braces apply.
 In most cases it is useless to manipulate two goals 
-that don't share any variable.  If it is not the case, one can
-artificially add the same variable to all suspended goals. Eg.
+that don't share any variable.  If it is not the case, that is, one
+wants an artificial key common to all goals, one can
+put `_` as one of the keys.
 ```
-master-key K => (even X, even Y).
-even (uvar as X) :- !, master-key K, declare_constraint (even X) [K,X].
+even (uvar as X) :- !, declare_constraint (even X) [_,X].
 ```
+Constraints keyed on `[_]` are never resumed.
 
-If constraints are not required to be resumed one can simply use `_`
-for the key. All constraints keyed on `_` (or equivalently `[]`) are
-considered to have a non empty intersection of keys.
+Constraints keyed on `[]` are never combined with other
+constraints.
+
+Rules can be given a name using the `:name` attribute.
+It is used only in debug output.
 
 #### Example
 ```prolog
@@ -413,6 +418,7 @@ even X :- X > 1, Y is X - 1, odd  Y.
 odd  X :- X > 0, Y is X - 1, even Y.
 
 constraint even odd {
+  :name "even is not odd"
   rule (even X) (odd X) <=> false.
 }
 ```

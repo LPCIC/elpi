@@ -262,9 +262,8 @@ let core_builtins = [
 
   (* These are not implemented here since the API has no access to the
    * store of syntactic constraints *)
-  LPCode ("% [declare_constraint C Key] declares C with Key (a variable or\n" ^
-          "% a list of variables).\n"^
-          "external pred declare_constraint i:any, i:any.");
+  LPCode ("% [declare_constraint C Keys] declares C with Keys (a list of variables).\n"^
+          "external pred declare_constraint i:any, i:list any.");
   LPCode "external pred print_constraints. % prints all constraints";
 
   MLCode(Pred("halt", VariadicIn(string, "halts the program"),

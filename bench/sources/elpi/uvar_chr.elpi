@@ -22,9 +22,9 @@ copy-list [X|XS] [Y|YS] :- copy X Y, copy-list XS YS.
 
 pred meta-copy i:term, o:term.
 constraint meta-copy {
-  rule (meta-copy I O) | (copy I X, print X) <=> (O = X).
+  rule (meta-copy I O) | (copy I X) <=> (O = X).
 }
 
 main :- In = (lam x\ F x),
   copy In T, print T,
-  declare_constraint (meta-copy In S) FRESH_, print S, not(var S).
+  declare_constraint (meta-copy In S) [], print S, not(var S).

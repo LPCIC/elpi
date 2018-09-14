@@ -243,7 +243,6 @@ module ConstraintStoreAndTrail : sig
 
   type propagation_item = {
      cstr : constraint_def;
-     cstr_position : int;
      cstr_blockers : uvar_body list;
   }
 
@@ -297,7 +296,6 @@ end = struct (* {{{ *)
 
  type propagation_item = {
     cstr : constraint_def;
-    cstr_position : int;
     cstr_blockers : uvar_body list;
  }
 
@@ -365,7 +363,7 @@ let declare_new sg =
   begin match sg.kind with
   | Unification _ -> ()
   | Constraint cstr ->
-      new_delayed := { cstr; cstr_position = 0; cstr_blockers = sg.blockers } :: !new_delayed
+      new_delayed := { cstr; cstr_blockers = sg.blockers } :: !new_delayed
   end;
   trail_this (StuckGoalAddition sg)
 
@@ -2213,7 +2211,7 @@ let do_make_runtime : (?max_steps:int -> ?delay_outside_fragment:bool -> executa
 
 module Constraints : sig
     
-  val propagation : constraint_def list ref -> (int * idx * term) list
+  val propagation : unit -> constraint_def list
   val resumption : constraint_def list -> (int * idx * term) list
 
   val chrules : CHR.t Fork.local_ref
@@ -2456,16 +2454,19 @@ let declare_constraint ~depth prog args =
   let g, keys =
     match args with
     | [t1; t2] ->
+      let err =
+        "the second argument of declare_constraint must be a list of variables"
+      in
       let rec collect_keys t = match deref_head ~depth t with
         | UVar (r, _, _) | AppUVar (r, _, _) -> [r]
         | Discard -> [dummy_uvar_body]
+        | _ -> type_error err
+      and collect_keys_list t = match deref_head ~depth t with
         | Nil -> []
-        | Cons(hd,tl) -> collect_keys hd @ collect_keys tl
-        | _ -> type_error
-                 ("the second argument of constraint must be "^
-                  "flexible or a list of flexible terms")
+        | Cons(hd,tl) -> collect_keys hd @ collect_keys_list tl
+        | _ -> type_error err
       in
-        t1, collect_keys t2
+        t1, collect_keys_list t2
     | _ -> type_error "declare_constraint takes 2 arguments"
   in 
   match CHR.clique_of (head_of g) !chrules with
@@ -2575,25 +2576,165 @@ let exect_builtin_predicate c ~depth idx args =
     let cc, gs = call b ~depth (local_prog idx) solution args in
     CS.custom_state := cc;
     gs
+;;
+
+let match_head { Elpi_data.conclusion = x; cdepth } p =
+  match deref_head ~depth:cdepth x with
+  | Const x -> x == p
+  | App(x,_,_) -> x == p
+  | _ -> false
+;;
+
+let try_fire_rule rule (constraints as orig_constraints) =
+
+  let { CHR.
+    to_match = pats_to_match;
+    to_remove = pats_to_remove;
+    patsno;
+    new_goal; guard; nargs;
+    pattern = quick_filter;
+    rule_name } = rule in
+
+  if patsno < 1 then
+    error "CHR propagation must mention at least one constraint";
+
+  (* Quick filtering using just the head symbol *)
+  if not(List.for_all2 match_head constraints quick_filter) then None else
+
+    (* max depth of rule and constraints involved in the matching *)
+  let max_depth, constraints =
+    (* Goals are lifted at different depths to avoid collisions *)
+    let max_depth,constraints = 
+     List.fold_left (fun (md,res) c ->
+        let md = md + c.Elpi_data.cdepth in
+        md, (md,c)::res)
+       (0,[]) constraints in
+    max_depth, List.rev constraints
+  in
+ 
+  let constraints_depts, constraints_contexts, constraints_goals =
+    List.fold_right
+      (fun (dto,{Elpi_data.context = c; cdepth = d; conclusion = g}) 
+           (ds, ctxs, gs) ->
+        (dto,d,d) :: ds, (dto,d,c) :: ctxs, (dto,d,g) :: gs)
+      constraints ([],[],[]) in
+ 
+  let env = Array.make nargs C.dummy in
+ 
+  let patterns_eigens, patterns_contexts, patterns_goals =
+    List.fold_right (fun { CHR.eigen; context; conclusion } (es, cs, gs) ->
+      eigen :: es, context :: cs, conclusion :: gs)
+    (pats_to_match @ pats_to_remove) ([],[],[]) in
+  
+  let match_eigen i m (dto,d,eigen) pat =
+    match_goal i max_depth env m (dto,d,Elpi_data.C.of_int eigen) pat in
+  let match_conclusion i m g pat =
+    match_goal i max_depth env m g pat in
+  let match_context i m ctx pctx =
+    match_context i max_depth env m ctx pctx in
+ 
+  let guard =
+    match guard with
+    | Some g -> g
+    | None -> Constants.truec
+  in
+ 
+  let initial_program = Elpi_data.wrap_prolog_prog !orig_prolog_program in
+ 
+  let executable = {
+    (* same program *)
+    compiled_program = initial_program; 
+    (* same modes *)
+    modes = !predicate_mode;
+    (* no meta meta level *)
+    chr = CHR.empty;
+    initial_goal = shift_bound_vars ~depth:0 ~to_:max_depth guard;
+    assignments_names = StrMap.empty;
+    initial_depth = max_depth;
+    query_env = env;
+    initial_constraints = CustomConstraint.init (CompilerState.init ());
+  } in
+  let { search; get; exec; destroy } = !do_make_runtime executable in
+ 
+  let check_guard () =
+    try
+      let _ = search () in
+      if get CS.Ugly.delayed <> [] then
+        error "propagation rules must declare constraint(s)"
+    with No_clause -> raise NoMatch in
+ 
+  let result = try
+
+    (* matching *)
+    let m = exec (fun m ->      
+      [%spy "propagate-try-on"
+        (pplist (fun f (dto,dt,t) ->
+           Format.fprintf f "(lives-at:%d, to-be-lifted-to:%d) %a"
+             dt dto (uppterm dt [] 0 empty_env) t) ";") 
+           constraints_goals];
+
+      let m = fold_left2i match_eigen m
+        constraints_depts patterns_eigens in
+      let m = fold_left2i match_conclusion m
+        constraints_goals patterns_goals in
+      let m = fold_left2i match_context m
+        constraints_contexts patterns_contexts in
+
+      [%spy "propagate-matched-args"
+        (pplist (uppterm max_depth [] 0 empty_env) ~boxed:false ",")
+        (Array.to_list env)];
+
+      T.to_resume := [];
+      assert(!T.new_delayed = []);
+      m) Ice.empty_freezer in
+
+    [%spy "propagate-try-rule-guard" (fun fmt () -> Format.fprintf fmt 
+        "@[<hov 2>depth=%d@ @]" max_depth) ()];
+
+    check_guard ();
+
+    (* result *)
+    let _, constraints_to_remove =
+      let len_pats_to_match = List.length pats_to_match in
+      partition_i (fun i _ -> i < len_pats_to_match) orig_constraints in
+    let new_goals =
+      match new_goal with
+      | None -> []
+      | Some { CHR.eigen; context; conclusion } ->
+      let eigen =
+        match full_deref ~adepth:max_depth env ~depth:max_depth eigen with
+        | CData x when Elpi_data.C.is_int x -> Elpi_data.C.to_int x
+        | Discard -> max_depth
+        | _ -> error "eigen not resolving to an integer" in
+      let conclusion =
+        Ice.defrost ~maxd:max_depth ~to_:eigen
+          (App(C.implc,context,[conclusion])) env m in
+      (* TODO: check things make sense in heigen *)
+      let prog = initial_program in
+      [{ cdepth = eigen; prog; context = []; conclusion }] in
+    [%spy "propagate-delivery" Fmt.pp_print_string "delivered"];
+    Some(rule_name, constraints_to_remove, new_goals, Ice.assignments m)
+  with NoMatch ->
+    [%spy "propagate-try-rule-fail" (fun _ _ -> ()) ()];
+    None
+  in
+  destroy ();
+  result
+;;
+
+let resumption to_be_resumed_rev =
+  List.map (fun { cdepth = d; prog = p; conclusion = g } ->
+    let idx = match p with Index p -> p | _ -> assert false in
+    [%spy "run-scheduling-resume"
+      (fun fmt -> Fmt.fprintf fmt "%a" (uppterm d [] d empty_env)) g];
+    d, idx, g)
+  (List.rev to_be_resumed_rev)
 
 (* all permutations of pivot+rest of length len where the
  * pivot is in pivot_position. pivot may be part of rest, it is automatically
  * ignored  *)
-let filter_match1 { Elpi_data.conclusion = x } p =
-  match x with
-  | Const x -> x == p
-  | App(x,_,_) -> x == p
-  | (UVar _ | AppUVar _) -> assert false (* TODO: deref *)
-  | _ -> false
-
-let mk_permutations quick_filter len pivot pivot_position rest =
+let mk_permutations len pivot pivot_position rest =
   let open List in
-  let filter_before, filter_pivot_and_after =
-    partition_i (fun i _ -> i < pivot_position) quick_filter in
-  let filter_pivot, filter_after =
-    match filter_pivot_and_after with x :: xs -> x, xs | _ -> assert false in
-  if not (filter_match1 pivot filter_pivot) then []
-  else
   let rec insert x = function
     | [] -> [[x]]
     | (hd::tl) as l -> (x::l) :: map (fun y -> hd :: y) (insert x tl) in
@@ -2606,229 +2747,56 @@ let mk_permutations quick_filter len pivot pivot_position rest =
 
   let permutations_no_pivot = aux (len - 1) rest in
   
-  permutations_no_pivot |> map_filter begin fun l ->
+  permutations_no_pivot |> map begin fun l ->
     let before, after = partition_i (fun i _ -> i < pivot_position) l in
-    (* Suboptimal: we could reorganize the code so that filtered-out
-     * permutations are not even generated TODO *)
-    if for_all2 filter_match1 before filter_before &&
-       for_all2 filter_match1 after filter_after then
-       Some (before @ pivot :: after)
-    else None
+    before @ pivot :: after
   end
 ;;
 
-
-(* cstr is a new_delayed constraint, the active one;
-   cstr_position is its position, so far, wrt all other constraints
-     when matched against chr rules;
-   the two lists in output are the constraints to be removed and added *)
-let propagate { CS.cstr; cstr_position; cstr_blockers = overlapping } history =
-
- let rules = CHR.rules_for (head_of cstr.conclusion) !chrules in
- let initial_program = Elpi_data.wrap_prolog_prog !orig_prolog_program in
- let modes = !predicate_mode in
-
- let no_such_j = ref true in
-
- let result =
-    rules |> map_exists (fun ({
-        CHR.to_match = pats_to_match; to_remove = pats_to_remove;
-        new_goal; guard; nargs;
-        pattern = quick_filter }
-      as propagation_rule) ->
-
-    let len_pats_to_match = List.length pats_to_match in
-    let patsno = len_pats_to_match + List.length pats_to_remove in
-    let patterns = pats_to_match @ pats_to_remove in
-    if patsno < 1 then
-      error "CHR propagation must mention at least one constraint";
-
-    if cstr_position >= patsno then
-      (* The active constraint is to be matched in a position that
-       * requires a rule with more patterns *)
-      None
-    else begin
-      no_such_j := false;
-      (* We put the active constraint inside all permutations of the
-       * others, in cstr_position to obtain candidates to be matched
-       * with pats_to_match@pats_to_remove *)
-      let candidates =
-        mk_permutations quick_filter patsno cstr cstr_position
-          (List.map fst (CS.contents ~overlapping ())) in
-
-     candidates |> map_exists (fun (constraints as orig_constraints) ->
-      let hitem = HISTORY.({ propagation_rule; constraints }) in
-      if HISTORY.mem history hitem then begin
-        None
-        end
-      else
-       let () = HISTORY.add history hitem () in
-
-       (* max depth of rule and constraints involved in the matching *)
-       let max_depth, constraints =
-         (* Goals are lifted at different depths to avoid collisions *)
-         let max_depth,constraints = 
-          List.fold_left (fun (md,res) c ->
-             let md = md + c.Elpi_data.cdepth in
-             md, (md,c)::res)
-            (0,[]) constraints in
-         max_depth, List.rev constraints
-       in
-
-       let constraints_depts, constraints_contexts, constraints_goals =
-         List.fold_right
-           (fun (dto,{Elpi_data.context = c; cdepth = d; conclusion = g}) 
-                (ds, ctxs, gs) ->
-             (dto,d,d) :: ds, (dto,d,c) :: ctxs, (dto,d,g) :: gs)
-           constraints ([],[],[]) in
-
-       let env = Array.make nargs C.dummy in
-
-       let patterns_eigens, patterns_contexts, patterns_goals =
-         List.fold_right (fun { CHR.eigen; context; conclusion } (es, cs, gs) ->
-           eigen :: es, context :: cs, conclusion :: gs)
-         patterns ([],[],[]) in
-       
-       let match_eigen i m (dto,d,eigen) pat =
-         match_goal i max_depth env m (dto,d,Elpi_data.C.of_int eigen) pat in
-       let match_conclusion i m g pat =
-         match_goal i max_depth env m g pat in
-       let match_context i m ctx pctx =
-         match_context i max_depth env m ctx pctx in
-
-       let guard =
-         match guard with
-         | Some g -> g
-         | None -> Constants.truec
-       in
-
-       let executable = {
-         (* same program *)
-         compiled_program = initial_program;
-         (* same modes *)
-         modes;
-         (* no meta meta level *)
-         chr = CHR.empty;
-         initial_goal = shift_bound_vars ~depth:0 ~to_:max_depth guard;
-         assignments_names = StrMap.empty;
-         initial_depth = max_depth;
-         query_env = env;
-         initial_constraints = CustomConstraint.init (CompilerState.init ());
-       } in
-       let { search; get; exec; destroy } = !do_make_runtime executable in
-
-       let check_guard () =
-         try
-           let _ = search () in
-           if get CS.Ugly.delayed <> [] then
-             error "propagation rules must declare constraint(s)"
-         with No_clause -> raise NoMatch in
-
-       let result = try
-
-         (* matching *)
-         let m = exec (fun m ->      
-           [%spy "propagate-try-on"
-             (pplist (fun f (dto,dt,t) ->
-                Format.fprintf f "(lives-at:%d, to-be-lifted-to:%d) %a"
-                  dt dto (uppterm dt [] 0 empty_env) t) ";") 
-                constraints_goals];
-
-           let m = fold_left2i match_eigen m
-             constraints_depts patterns_eigens in
-           let m = fold_left2i match_conclusion m
-             constraints_goals patterns_goals in
-           let m = fold_left2i match_context m
-             constraints_contexts patterns_contexts in
-
-           [%spy "propagate-matched-args"
-             (pplist (uppterm max_depth [] 0 empty_env) ~boxed:false ",")
-             (Array.to_list env)];
-
-           T.to_resume := [];
-           assert(!T.new_delayed = []);
-           m) Ice.empty_freezer in
-
-         [%spy "propagate-try-rule-guard" (fun fmt () -> Format.fprintf fmt 
-             "@[<hov 2>depth=%d@ @]" max_depth) ()];
-
-         check_guard ();
-
-         (* result *)
-         let _, constraints_to_remove =
-           partition_i (fun i _ -> i < len_pats_to_match) orig_constraints in
-         let new_goals =
-           match new_goal with
-           | None -> []
-           | Some { CHR.eigen; context; conclusion } ->
-           let eigen =
-             match full_deref ~adepth:max_depth env ~depth:max_depth eigen with
-             | CData x when Elpi_data.C.is_int x -> Elpi_data.C.to_int x
-             | Discard -> max_depth
-             | _ -> error "eigen not resolving to an integer" in
-           let conclusion =
-             Ice.defrost ~maxd:max_depth ~to_:eigen (App(C.implc,context,[conclusion])) env m in
-           (* TODO: check things make sense in heigen *)
-           let prog = initial_program in
-           [{ cdepth = eigen; prog; context = []; conclusion }] in
-         Some(constraints_to_remove, new_goals, Ice.assignments m)
-       with NoMatch ->
-         [%spy "propagate-try-rule-fail" (fun _ _ -> ()) ()];
-         None
-       in
-       destroy ();
-       result)
-      end)
- in
- match result with
- | Some x -> `Matched x
- | None when !no_such_j -> `NoSuchJ
- | _ -> `NoMatch
-;;
-
-let incr_generation ({ CS.cstr_position } as c) =
-  { c with CS.cstr_position = cstr_position + 1 }
-
-let resumption to_be_resumed =
-  List.map (fun { cdepth = d; prog = p; conclusion = g } ->
-    let idx = match p with Index p -> p | _ -> assert false in
-    [%spy "run-scheduling-resume"
-      (fun fmt -> Fmt.fprintf fmt "%a" (uppterm d [] d empty_env)) g];
-    d, idx, g)
-  (List.rev to_be_resumed)
-
-let propagation to_be_resumed =
-  let history = HISTORY.create 17 in
+let propagation () =
+  let to_be_resumed_rev = ref [] in
+  let removed = ref [] in
+  let outdated cs = List.exists (fun x -> List.memq x !removed) cs in
   while !CS.new_delayed <> [] do
     match !CS.new_delayed with
     | [] -> anomaly "Empty list"
-    | propagatable :: rest ->
-      (match propagate propagatable history with
-        | `NoSuchJ -> CS.new_delayed := rest
-        | `NoMatch -> CS.new_delayed := incr_generation propagatable :: rest
-        | `Matched (to_be_removed,to_be_added,assignments) ->
-           (*List.iter (function
-              (Constraint ((depth,_,_,g)),_) ->
-                Fmt.fprintf Fmt.std_formatter
-                 "Killing goal: @[<hov 2> ... ⊢^%d %a@]\n%!" depth (uppterm depth [] 0 empty_env) g
-            | _ -> ()) to_be_removed ;*)
-           List.iter CS.remove_old_constraint to_be_removed ;
-           (*List.iter (fun (depth,_,_,g) ->
-                Fmt.fprintf Fmt.std_formatter
-                 "Additional goal: @[<hov 2> ... ⊢^%d %a@]\n%!" depth (uppterm depth [] 0 empty_env) g)
-             to_be_added ;*)
-           (*List.iter add_constraint to_be_added*)
-           List.iter (fun (r,lvl,t) -> 
-             [%spy "propagate-assignments-lowering-levels"
-                (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
-                     (uppterm lvl [] 0 empty_env)
-                     (UVar(r,lvl,0))
-                     (uppterm lvl [] 0 empty_env)
-                     t) ()];
-             r @:= t) assignments;
-           to_be_resumed := to_be_added @ !to_be_resumed )
+    | { CS.cstr = active; cstr_blockers = overlapping } :: rest ->
+
+       (* new_delayed may be changed by, CS.remove_old_constraint *)
+       CS.new_delayed := rest;
+
+       let rules = CHR.rules_for (head_of active.conclusion) !chrules in
+
+       rules |> List.iter (fun rule ->
+
+         for position = 0 to rule.CHR.patsno - 1 do
+
+           (* don't generate perms if the pivot is already out of place *)
+           if not (match_head active (List.nth rule.CHR.pattern position))
+           then ()
+           else
+
+           let permutations = 
+             mk_permutations rule.CHR.patsno active position
+               (List.map fst (CS.contents ~overlapping ())) in
+
+           permutations |> List.iter (fun constraints ->
+
+             (* a constraint just removed may occur in a permutation (that
+              * was generated before the removal *)
+             if outdated constraints then ()
+             else
+               match try_fire_rule rule constraints with
+               | None -> ()
+               | Some (rule_name, to_be_removed, to_be_added, assignments) ->
+                   [%spy "run-CHR-rule-fired" Fmt.pp_print_string rule_name];
+                   removed := to_be_removed @ !removed;
+                   List.iter CS.remove_old_constraint to_be_removed;
+                   List.iter (fun (r,_lvl,t) -> r @:= t) assignments;
+                   to_be_resumed_rev := to_be_added @ !to_be_resumed_rev)
+         done);
   done;
-  resumption !to_be_resumed
+  !to_be_resumed_rev
 
 end (* }}} *)
 
@@ -3034,7 +3002,7 @@ end;*)
    (* Phase 2: we propagate the constraints *)
    if !ok then
      (* Optimization: check here new_delayed *)
-     if !CS.new_delayed <> [] then Some (Constraints.propagation to_be_resumed)
+     if !CS.new_delayed <> [] then Some (Constraints.resumption (Constraints.propagation () @ !to_be_resumed))
      else Some (Constraints.resumption !to_be_resumed)
    else None
 

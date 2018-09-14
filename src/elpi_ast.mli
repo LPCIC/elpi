@@ -72,11 +72,13 @@ val show_clause :
      ('term,'attribute) clause -> string
 
 type sequent = { eigen : term; context : term; conclusion : term }
-and chr_rule = {
+and 'attribute chr_rule = {
   to_match : sequent list;
   to_remove : sequent list;
   guard : term option;
   new_goal : sequent option;
+  cattributes : 'attribute;
+  clocation : Ploc.t;
 }
 
 val create_chr_rule :
@@ -84,9 +86,15 @@ val create_chr_rule :
   ?to_remove: sequent list ->
   ?guard: term ->
   ?new_goal: sequent ->
-  unit -> chr_rule
-val pp_chr_rule : Format.formatter -> chr_rule -> unit
-val show_chr_rule : chr_rule -> string
+  cattributes: 'attribute ->
+  clocation:Ploc.t ->
+  unit -> 'attribute chr_rule
+val pp_chr_rule : 
+  (Format.formatter -> 'attribute -> unit) ->
+     Format.formatter -> 'attribute chr_rule -> unit
+val show_chr_rule : 
+  (Format.formatter -> 'attribute -> unit) ->
+     'attribute chr_rule -> string
 
 type ('name,'term) macro = {
    mlocation : Ploc.t;
@@ -133,7 +141,7 @@ type decl =
  | Clause of (term, attribute list) clause
  | Local of Func.t
  | Mode of Func.t mode list
- | Chr of chr_rule
+ | Chr of attribute list chr_rule
  | Macro of (Func.t, term) macro
  | Type of tdecl
 

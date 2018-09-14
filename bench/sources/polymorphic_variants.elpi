@@ -23,13 +23,13 @@ check [fun F B | BTL] [fun F D C | TTL] ORIGTYS :-
 check_domain B T :- inputs B I, is_subset T I.
 
 %is_subset A B :- print (is_subset A B), fail.
-is_subset A B :- var A, !, declare_constraint (is_subset A B) A.
-is_subset A B :- var B, !, declare_constraint (is_subset A B) B.
+is_subset A B :- var A, !, declare_constraint (is_subset A B) [A].
+is_subset A B :- var B, !, declare_constraint (is_subset A B) [B].
 is_subset A B :- is_subset_ A B.
 is_subset_ [] _.
 is_subset_ [X|TL] TL1 :- mem TL1 X, is_subset TL TL1.
 
-mem A B :- var A, !, declare_constraint (mem A B) A.
+mem A B :- var A, !, declare_constraint (mem A B) [A].
 mem A B :- mem_ A B.
 mem_ [X|_] X :- !.
 mem_ [Y|TL] X :- mem TL X.

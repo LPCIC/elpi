@@ -51,9 +51,8 @@ not X :- X, !, fail.
 
 not _.
 
-% [declare_constraint C Key] declares C with Key (a variable or
-% a list of variables).
-external pred declare_constraint i:any, i:any.
+% [declare_constraint C Keys] declares C with Keys (a list of variables).
+external pred declare_constraint i:any, i:list any.
 
 external pred print_constraints. % prints all constraints
 
