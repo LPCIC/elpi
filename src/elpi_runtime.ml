@@ -300,11 +300,11 @@ end = struct (* {{{ *)
  }
 
   let custom_state =
-    Fork.new_local (CustomConstraint.init (CompilerState.init ()))
+    Fork.new_local (CustomState.init (CompilerState.init ()))
   let read_custom_constraint ct =
-    CustomConstraint.get ct !custom_state
+    CustomState.get ct !custom_state
   let update_custom_constraint ct f =
-    custom_state := CustomConstraint.update ct !custom_state f
+    custom_state := CustomState.update ct !custom_state f
 
 
 type trail_item =
@@ -2652,7 +2652,7 @@ let try_fire_rule rule (constraints as orig_constraints) =
     assignments_names = StrMap.empty;
     initial_depth = max_depth;
     query_env = env;
-    initial_constraints = CustomConstraint.init (CompilerState.init ());
+    initial_state = CustomState.init (CompilerState.init ());
   } in
   let { search; get; exec; destroy } = !do_make_runtime executable in
  
@@ -3025,7 +3025,7 @@ end;*)
     initial_depth;
     query_env;
     initial_goal;
-    initial_constraints;
+    initial_state;
     assignments_names;
   } ->
   let { Fork.exec = exec ; get = get ; set = set } = Fork.fork () in
@@ -3043,7 +3043,7 @@ end;*)
   set steps_made 0;
   set Constraints.qnames assignments_names;
   set Constraints.qenv query_env;
-  set CS.custom_state initial_constraints;
+  set CS.custom_state initial_state;
   let search = exec (fun () ->
      let q = move ~adepth:initial_depth ~from:initial_depth ~to_:initial_depth query_env initial_goal in
      [%spy "run-trail" (fun fmt _ -> T.print_trail fmt) ()];

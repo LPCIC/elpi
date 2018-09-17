@@ -137,7 +137,7 @@ module Pp = struct
     let module R = (val !r) in let open R in
     Elpi_util.pplist ~boxed:true R.pp_stuck_goal "" f c
 
-  let custom_state = Elpi_data.CustomConstraint.pp
+  let custom_state = Elpi_data.CustomState.pp
 
   let query f c =
     let module R = (val !r) in let open R in
@@ -246,8 +246,7 @@ module Extend = struct
     end
   end
 
-  module CustomState = Elpi_data.CustomConstraint
-  module CustomConstraint = CustomState
+  module CustomState = Elpi_data.CustomState
 
   module CustomFunctor = struct
   

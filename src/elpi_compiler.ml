@@ -130,7 +130,7 @@ type query = {
   initial_depth : int;
   query : preterm;
   query_loc : Ploc.t;
-  initial_constraints : CustomConstraint.t;
+  initial_state : CustomState.t;
 }
 [@@deriving show]
 
@@ -154,7 +154,7 @@ type executable = Elpi_data.executable = {
   (* query *)
   initial_goal: term;
   (* constraints coming from compilation *)
-  initial_constraints : CustomConstraint.t;
+  initial_state : CustomState.t;
   (* solution *)
   assignments_names : int StrMap.t;
 }
@@ -307,7 +307,7 @@ module ToDBL : sig
      - Locals: become the initial set of pi-quantified vars (local_names)
      - @macros
      - {{quatations}} (may add to the compiler state, later to be turned into
-                       initial_constraints)
+                       initial_state)
 
      Translates AST to preterm (terms where Arg(2) is represented with
      Const "%Arg2")
@@ -1202,7 +1202,7 @@ let query_of_ast { Program.assembled_program; compiler_state } (loc,t)
     initial_depth;
     query;
     query_loc = loc;
-    initial_constraints = CustomConstraint.init state;
+    initial_state = CustomState.init state;
   } 
 
 let query_of_term { Program.assembled_program; compiler_state } f =
@@ -1222,7 +1222,7 @@ let query_of_term { Program.assembled_program; compiler_state } f =
     initial_depth;
     query;
     query_loc = Ploc.dummy;
-    initial_constraints = CustomConstraint.init state;
+    initial_state = CustomState.init state;
   }
   
 let check_all_builtin_are_typed types =
@@ -1333,7 +1333,7 @@ let run ?(flags = default_flags)
     chr;
     initial_depth;
     query = ({ amap = { nargs; n2i } } as query);
-    initial_constraints;
+    initial_state;
   }
 =
 
@@ -1360,7 +1360,7 @@ let run ?(flags = default_flags)
     initial_depth;
     query_env = Array.make nargs C.dummy;
     initial_goal = stack_term_of_preterm ~depth:initial_depth query;
-    initial_constraints;
+    initial_state;
     assignments_names = n2i;
   }
 

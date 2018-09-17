@@ -409,7 +409,7 @@ end (* }}} *)
 
 module CompilerState = State(struct type t = unit end)
 
-module CustomConstraint : sig
+module CustomState : sig
     type ('a,'b) source =
       | CompilerState of 'b CompilerState.component * ('b -> 'a)
       | Other of (unit -> 'a)
@@ -644,7 +644,7 @@ type executable = {
   (* query *)
   initial_goal: term;
   (* constraints coming from compilation *)
-  initial_constraints : CustomConstraint.t;
+  initial_state : CustomState.t;
   (* solution *)
   assignments_names : int StrMap.t;
 }
@@ -659,7 +659,7 @@ let unwrap_prolog_prog = function Index x -> x | _ -> assert false
 exception No_clause
 exception No_more_steps
 
-type custom_state = CustomConstraint.t
+type custom_state = CustomState.t
 type constraints = stuck_goal list
 
 type solution = {

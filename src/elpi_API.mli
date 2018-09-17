@@ -449,8 +449,6 @@ module Extend : sig
     val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
 
   end
-  module CustomConstraint = CustomState [@@deprecated "use CustomState"]
-
 
   (* Built-in predicates are implemented in ML using the following FFI.
    *
