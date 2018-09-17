@@ -5,6 +5,7 @@ env:
  global:
  - OCAML_MIN=4.02.3
  - OCAML_MAX=4.07.0
+ - PREDEPS="ocamlfind"
  - DEPS="camlp5 ocamlfind ppx_tools_versioned ppx_deriving ocaml-migrate-parsetree re"
  - JOBS=2
 
@@ -12,10 +13,12 @@ install:
  - opam init -j $JOBS --compiler=$OCAML_MIN -n -y
  - eval $(opam config env)
  - opam config var root
+ - opam install -j $JOBS -y $PREDEPS
  - opam install -j $JOBS -y $DEPS
  - opam list
  - opam switch $OCAML_MAX -y
  - eval $(opam config env)
+ - opam install -j $JOBS -y $PREDEPS
  - opam install -j $JOBS -y $DEPS
  - opam list
 
@@ -111,6 +114,9 @@ matrix:
         - lua5.1
         - gnuplot
         - gcc-multilib
+    cache:
+      directories:
+      - $HOME/.opam
     script:
     - opam switch $OCAML_MAX
     - eval $(opam config env)
