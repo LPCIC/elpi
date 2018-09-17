@@ -89,7 +89,7 @@ module Data : sig
   type term
 
   (* goals suspended via the declare_constraint built-in *)
-  type syntactic_constraints
+  type constraints
 
   (* user defined state (not goals) *)
   type custom_state
@@ -98,7 +98,7 @@ module Data : sig
    * plus the goals that were suspended and the user defined constraints *)
   type solution = {
     assignments : term StrMap.t;
-    constraints : syntactic_constraints;
+    constraints : constraints;
     state : custom_state;
   }
 
@@ -169,7 +169,7 @@ end
 module Pp : sig
 
   val term : Format.formatter -> Data.term -> unit
-  val constraints : Format.formatter -> Data.syntactic_constraints -> unit
+  val constraints : Format.formatter -> Data.constraints -> unit
   val custom_state : Format.formatter -> Data.custom_state -> unit
   val query : Format.formatter -> Compile.query -> unit
 
@@ -290,7 +290,7 @@ module Extend : sig
     module StrMap = Data.StrMap
     type solution = {
       assignments : term StrMap.t;
-      constraints : Data.syntactic_constraints;
+      constraints : Data.constraints;
       state : custom_state;
     }
     val of_solution : Data.solution -> solution
@@ -302,7 +302,7 @@ module Extend : sig
       context : hyps;
       goal : int * term
     }
-    val constraints : Data.syntactic_constraints -> suspended_goal list
+    val constraints : Data.constraints -> suspended_goal list
 
     (** LambdaProlog built-in data types *)
     module C : sig

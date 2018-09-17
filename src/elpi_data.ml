@@ -660,11 +660,11 @@ exception No_clause
 exception No_more_steps
 
 type custom_state = CustomConstraint.t
-type syntactic_constraints = stuck_goal list
+type constraints = stuck_goal list
 
 type solution = {
   assignments : term StrMap.t;
-  constraints : syntactic_constraints;
+  constraints : constraints;
   state : custom_state;
 }
 type outcome = Success of solution | Failure | NoMoreSteps

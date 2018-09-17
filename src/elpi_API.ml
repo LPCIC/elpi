@@ -79,12 +79,12 @@ end
 
 module Data = struct
   type term = Elpi_data.term
-  type syntactic_constraints = Elpi_data.syntactic_constraints
+  type constraints = Elpi_data.constraints
   type custom_state = Elpi_data.custom_state
   module StrMap = Elpi_util.StrMap
   type solution = Elpi_data.solution = {
     assignments : term StrMap.t;
-    constraints : syntactic_constraints;
+    constraints : constraints;
     state : custom_state;
   }
 end
