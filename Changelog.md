@@ -21,8 +21,8 @@ Language:
      that share no other variable and that have to be combined together.
      The master key will never be assigned, hence it does not count for
      resumption
-   + `KEYS` = `[]` is accepted with the following meaning: constraints with no key
-     are never resumed automatically and are never combined with other
+   + `KEYS` = `[]` is accepted with the following meaning: constraints with
+     no key are never resumed automatically and are never combined with other
      constraints
 
 Builtin:
