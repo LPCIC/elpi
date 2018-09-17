@@ -4,7 +4,7 @@ language: c
 env:
  global:
  - OCAML_MIN=4.02.3
- - OCAML_MAX=4.06.0
+ - OCAML_MAX=4.07.0
  - DEPS="camlp5 ocamlfind ppx_tools_versioned ppx_deriving ocaml-migrate-parsetree re"
  - JOBS=2
 
@@ -112,6 +112,8 @@ matrix:
         - gnuplot
         - gcc-multilib
     script:
+    - opam switch $OCAML_MAX
+    - eval $(opam config env)
     - opam pin -y add elpi "https://github.com/${TRAVIS_REPO_SLUG}.git#${TRAVIS_COMMIT}"
     - ocamlfind query elpi
     - ls `ocamlfind printconf destdir`/elpi
