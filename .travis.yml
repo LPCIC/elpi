@@ -10,14 +10,18 @@ env:
  - JOBS=2
 
 install:
- - opam init -j $JOBS --compiler=$OCAML_MIN -n -y
- - eval $(opam env 2> /dev/null || opam config env)
+ - rm -rf ~/.opam
+ - curl -sL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh > install.sh
+ - echo | sudo sh install.sh
+ - opam init --disable-sandboxing -j $JOBS --bare -n -y
+ - opam switch create min $OCAML_MIN -y
+ - eval $(opam env)
  - opam config var root
  - opam install -j $JOBS -y $PREDEPS
  - opam install -j $JOBS -y $DEPS
  - opam list
- - opam switch $OCAML_MAX -y
- - eval $(opam env 2> /dev/null || opam config env)
+ - opam switch create max $OCAML_MAX -y
+ - eval $(opam env)
  - opam install -j $JOBS -y $PREDEPS
  - opam install -j $JOBS -y $DEPS
  - opam list
@@ -32,7 +36,6 @@ matrix:
         sources:
         - avsm
         packages:
-        - opam
         - lua5.1
         - gnuplot
         - gcc-multilib
@@ -41,8 +44,8 @@ matrix:
       directories:
       - $HOME/.opam
     script:
-    - opam switch $OCAML_MIN
-    - eval $(opam env 2> /dev/null || opam config env)
+    - opam switch min
+    - eval $(opam env)
     - make
     - make -C bench
     - make byte
@@ -54,7 +57,6 @@ matrix:
         sources:
         - avsm
         packages:
-        - opam
         - lua5.1
         - gnuplot
         - gcc-multilib
@@ -63,8 +65,8 @@ matrix:
       directories:
       - $HOME/.opam
     script:
-    - opam switch $OCAML_MAX
-    - eval $(opam env 2> /dev/null || opam config env)
+    - opam switch max
+    - eval $(opam env)
     - make
     - make -C bench
     - make byte
@@ -80,8 +82,8 @@ matrix:
       directories:
       - $HOME/.opam
     script:
-    - opam switch $OCAML_MIN
-    - eval $(opam env 2> /dev/null || opam config env)
+    - opam switch min
+    - eval $(opam env)
     - make
     - make -C bench
     - make byte
@@ -97,8 +99,8 @@ matrix:
       directories:
       - $HOME/.opam
     script:
-    - opam switch $OCAML_MAX
-    - eval $(opam env 2> /dev/null || opam config env)
+    - opam switch max
+    - eval $(opam env)
     - make
     - make -C bench
     - make byte
@@ -110,7 +112,6 @@ matrix:
         sources:
         - avsm
         packages:
-        - opam
         - lua5.1
         - gnuplot
         - gcc-multilib
@@ -118,8 +119,8 @@ matrix:
       directories:
       - $HOME/.opam
     script:
-    - opam switch $OCAML_MAX
-    - eval $(opam env 2> /dev/null || opam config env)
+    - opam switch max
+    - eval $(opam env)
     - opam pin -y add elpi "https://github.com/${TRAVIS_REPO_SLUG}.git#${TRAVIS_COMMIT}"
     - ocamlfind query elpi
     - ls `ocamlfind printconf destdir`/elpi
