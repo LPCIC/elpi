@@ -11,13 +11,13 @@ env:
 
 install:
  - opam init -j $JOBS --compiler=$OCAML_MIN -n -y
- - eval $(opam config env)
+ - eval $(opam env 2> /dev/null || opam config env)
  - opam config var root
  - opam install -j $JOBS -y $PREDEPS
  - opam install -j $JOBS -y $DEPS
  - opam list
  - opam switch $OCAML_MAX -y
- - eval $(opam config env)
+ - eval $(opam env 2> /dev/null || opam config env)
  - opam install -j $JOBS -y $PREDEPS
  - opam install -j $JOBS -y $DEPS
  - opam list
@@ -42,7 +42,7 @@ matrix:
       - $HOME/.opam
     script:
     - opam switch $OCAML_MIN
-    - eval $(opam config env)
+    - eval $(opam env 2> /dev/null || opam config env)
     - make
     - make -C bench
     - make byte
@@ -64,7 +64,7 @@ matrix:
       - $HOME/.opam
     script:
     - opam switch $OCAML_MAX
-    - eval $(opam config env)
+    - eval $(opam env 2> /dev/null || opam config env)
     - make
     - make -C bench
     - make byte
@@ -81,7 +81,7 @@ matrix:
       - $HOME/.opam
     script:
     - opam switch $OCAML_MIN
-    - eval $(opam config env)
+    - eval $(opam env 2> /dev/null || opam config env)
     - make
     - make -C bench
     - make byte
@@ -98,7 +98,7 @@ matrix:
       - $HOME/.opam
     script:
     - opam switch $OCAML_MAX
-    - eval $(opam config env)
+    - eval $(opam env 2> /dev/null || opam config env)
     - make
     - make -C bench
     - make byte
@@ -119,7 +119,7 @@ matrix:
       - $HOME/.opam
     script:
     - opam switch $OCAML_MAX
-    - eval $(opam config env)
+    - eval $(opam env 2> /dev/null || opam config env)
     - opam pin -y add elpi "https://github.com/${TRAVIS_REPO_SLUG}.git#${TRAVIS_COMMIT}"
     - ocamlfind query elpi
     - ls `ocamlfind printconf destdir`/elpi
