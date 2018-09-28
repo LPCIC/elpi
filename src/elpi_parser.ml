@@ -2,7 +2,7 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-open Elpi_util
+module U = Elpi_util
 open Elpi_ast
 
 module Str = Re.Str
@@ -302,10 +302,10 @@ let literatebuf = Buffer.create 17;;
 
 (* %! <= \leq creates a map from "<=" to "\leq" *)
 let set_liter_map, get_literal, _print_lit_map =
- let lit_map = ref StrMap.empty in
- (fun s1 s2 -> lit_map := StrMap.add s1 s2 !lit_map),
- (fun s -> StrMap.find s !lit_map),
- (fun () -> StrMap.iter (fun s1 s2 -> Format.printf "\n%s -> %s\n%!" s1 s2) !lit_map);;
+ let lit_map = ref U.StrMap.empty in
+ (fun s1 s2 -> lit_map := U.StrMap.add s1 s2 !lit_map),
+ (fun s -> U.StrMap.find s !lit_map),
+ (fun () -> U.StrMap.iter (fun s1 s2 -> Format.printf "\n%s -> %s\n%!" s1 s2) !lit_map);;
 
 let succ_line loc =
   Ploc.make_loc (Ploc.file_name loc) (Ploc.line_nb loc + 1) 0
@@ -680,7 +680,7 @@ EXTEND
                   if c = "o" && l = [] then mkCon "prop"
                   else mkApp (mkCon c :: l)
               | CONSTANT "ctype"; s = LITERAL ->
-                  mkApp [Const Func.ctypef; mkC CData.(cstring.cin s)] ]
+                  mkApp [Const Func.ctypef; mkC (cstring.U.CData.cin s)] ]
      | "arg"  [ c = CONSTANT -> mkCon c
               | LPAREN; t = type_; RPAREN -> t ]
      ];
@@ -707,10 +707,10 @@ EXTEND
       | u=FRESHUV; OPT[COLON;type_]; b=OPT[BIND; a = atom LEVEL "0" -> a ] ->
           (match b with None -> mkFreshUVar () | Some b ->
            mkLam Func.(show dummyname)  b)
-      | s = LITERAL -> mkC CData.(cstring.cin s)
+      | s = LITERAL -> mkC (cstring.U.CData.cin s)
       | s = QUOTED -> mkQuoted s
-      | s = INTEGER -> mkC CData.(cint.cin (int_of_string s))
-      | s = FLOAT -> mkC CData.(cfloat.cin (float_of_string s))
+      | s = INTEGER -> mkC (cint.U.CData.cin (int_of_string s))
+      | s = FLOAT -> mkC (cfloat.U.CData.cin (float_of_string s))
       | LPAREN; a = atom; RPAREN -> a
       | LCURLY; a = atom; RCURLY -> mkApp [Const Func.spillf;a]
         (* 120 is the first level after 110, which is that of ,
@@ -744,13 +744,13 @@ let init ?(silent=true) ~lp_syntax ~paths ~cwd () =
 ;;
 
 let parse_program filenames : program =
- if !parser_initialized = false then anomaly "parsing before calling init";
+ if !parser_initialized = false then U.anomaly "parsing before calling init";
  parse lp filenames
 ;;
 
 let parse_program_from_stream strm : program =
   assert(!parser_initialized = true);
-  if !parser_initialized = false then anomaly "parsing before calling init";
+  if !parser_initialized = false then U.anomaly "parsing before calling init";
   try Grammar.Entry.parse lp strm
   with
     Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) -> raise(Stream.Error msg)
@@ -758,11 +758,11 @@ let parse_program_from_stream strm : program =
 ;;
 
 let parse_goal s : goal =
-  if !parser_initialized = false then anomaly "parsing before calling init";
+  if !parser_initialized = false then U.anomaly "parsing before calling init";
   parse_string goal s
 
 let parse_goal_from_stream strm =
-  if !parser_initialized = false then anomaly "parsing before calling init";
+  if !parser_initialized = false then U.anomaly "parsing before calling init";
   try Grammar.Entry.parse goal strm
   with
     Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) -> raise(Stream.Error msg)
