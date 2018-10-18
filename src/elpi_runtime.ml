@@ -925,9 +925,16 @@ and subst fromdepth ts t =
 
 and beta depth sub t args =
  [%trace "beta" ("@[<hov 2>subst@ t: %a@ args: %a@]"
-     (uppterm depth [] 0 empty_env) t (pplist (uppterm depth [] 0 empty_env) ",") args)
- begin match t,args with
- | Lam t',hd::tl -> [%tcall beta depth (hd::sub) t' tl]
+     (uppterm (depth+List.length sub) [] 0 empty_env) t
+     (pplist (uppterm depth [] 0 empty_env) ",") args)
+ begin match t, args with
+ | UVar ({contents=g},vardepth,argsno), _ when g != C.dummy ->
+    [%tcall beta depth sub
+        (deref_uv ~from:vardepth ~to_:(depth+List.length sub) argsno g) args]
+ | AppUVar({ contents=g },vardepth,uargs), _ when g != C.dummy ->
+    [%tcall beta depth sub
+         (deref_appuv ~from:vardepth ~to_:(depth+List.length sub) uargs g) args]
+ | Lam t', hd::tl -> [%tcall beta depth (hd::sub) t' tl]
  | _ ->
     let t' = subst depth sub t in
     [%spy "subst-result" (ppterm depth [] 0 empty_env) t'];
