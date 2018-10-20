@@ -658,7 +658,7 @@ let elpi_builtins = [
 (** ELPI specific NON-LOGICAL built-in *********************************** *)
 
 let ctype : string data = {
-  to_term = (fun s -> mkApp Constants.ctypec (C.of_string s) []);
+  to_term = (fun ~depth:_ s -> mkApp Constants.ctypec (C.of_string s) []);
   of_term = (fun ~depth t ->
      match look ~depth t with
      | App(c,s,[]) when c == Constants.ctypec ->

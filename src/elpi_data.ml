@@ -684,7 +684,7 @@ type 'a arg = Data of 'a | Flex of term | Discard
 exception TypeErr of term
 
 type 'a data = {
-  to_term : 'a -> term;
+  to_term : depth:int -> 'a -> term;
   of_term : depth:int -> term -> 'a arg;
   ty : string;
 }

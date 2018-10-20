@@ -518,9 +518,9 @@ module Extend : sig
     exception TypeErr of Data.term
     
     type 'a data = {
-      to_term : 'a -> Data.term;
+      to_term : depth:int -> 'a -> Data.term;
       of_term : depth:int -> Data.term -> 'a arg;
-      ty : string
+      ty : string (* CAVEAT: must be a valid LP type expression *) 
     }
     
     type ('function_type, 'inernal_outtype_in) ffi =

@@ -2565,12 +2565,14 @@ let in_of_term ~depth { Builtin.of_term; ty } n bname t =
   | Builtin.Discard -> type_err bname n ty None
   | exception Builtin.TypeErr t -> type_err bname n ty (Some t)
 
-let mk_assign { Builtin.to_term } bname input output =
+let mk_assign ~depth { Builtin.to_term } bname input output =
   match output, input with
   | None, Builtin.Discard -> []
   | Some _, Builtin.Discard -> [] (* We could warn that such output was generated without being required *)
-  | Some t, Builtin.Data v -> [App(C.eqc, to_term v, [to_term t])]
-  | Some t, Builtin.Flex v -> [App(C.eqc, v, [to_term t])]
+  | Some t, Builtin.Data v ->
+     (* TODO: avoid of_term \o to_term for the first argument *)
+     [App(C.eqc, to_term ~depth v, [to_term ~depth t])]
+  | Some t, Builtin.Flex v -> [App(C.eqc, v, [to_term ~depth t])]
   | None, (Builtin.Data _ |  Builtin.Flex _) ->
       anomaly ("ffi: " ^ bname ^ ": some output was requested but not produced")
 
@@ -2602,7 +2604,7 @@ let call (Builtin.Pred(bname,ffi,compute)) ~depth hyps solution data =
        let cc, (rest, out) = compute i ~depth hyps solution in
        let cc, l = reduce cc rest in
        cc, begin match out with
-         | Some out -> List.(rev (concat (map2 (mk_assign d bname) i out)) @ l) (* XXX fixme map2 *)
+         | Some out -> List.(rev (concat (map2 (mk_assign ~depth d bname) i out)) @ l) (* XXX fixme map2 *)
          | None -> List.rev l end
     | Builtin.In(d, _, ffi), t :: rest ->
         let i = in_of_term ~depth d n bname t in
@@ -2611,7 +2613,7 @@ let call (Builtin.Pred(bname,ffi,compute)) ~depth hyps solution data =
         let i = out_of_term ~depth d n bname t in
         let reduce cc (rest, out) =
           let cc, l = reduce cc rest in
-          cc, mk_assign d bname i out @ l in
+          cc, mk_assign ~depth d bname i out @ l in
         aux ffi ~compute:(compute i) ~reduce rest (n + 1)
     | _, t :: _ -> arity_err bname n (Some t)
     | _, [] -> arity_err bname n None

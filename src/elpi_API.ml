@@ -192,7 +192,7 @@ module Extend = struct
     let data_of_cdata ~name:ty ?(constants=Data.Constants.Map.empty)
       { CData.cin; isc; cout }
     =
-      let to_term x = Data.CData (cin x) in
+      let to_term ~depth:_ x = Data.CData (cin x) in
       let of_term ~depth t =
         let module R = (val !r) in let open R in
         match R.deref_head ~depth t with
@@ -209,7 +209,7 @@ module Extend = struct
     let float  = data_of_cdata ~name:"float" Elpi_data.C.float
     let string = data_of_cdata ~name:"string" Elpi_data.C.string
     let poly ty =
-      let to_term x = x in
+      let to_term ~depth:_ x = x in
       let of_term ~depth t =
         let module R = (val !r) in let open R in
         match R.deref_head ~depth t with
@@ -218,9 +218,9 @@ module Extend = struct
       { to_term; of_term; ty }
     let any = poly "any"
     let list d =
-      let to_term l =
+      let to_term ~depth l =
         let module R = (val !r) in let open R in
-        list_to_lp_list (List.map d.to_term l) in
+        list_to_lp_list (List.map (d.to_term ~depth) l) in
       let of_term ~depth t =
         let module R = (val !r) in let open R in
         match R.deref_head ~depth t with
