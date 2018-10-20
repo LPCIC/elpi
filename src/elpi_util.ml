@@ -456,7 +456,8 @@ module State = functor (Init : sig type t end) -> struct
 
   let get name t =
     try Obj.obj (StrMap.find name t)
-    with Not_found -> assert false
+    with Not_found ->
+       anomaly ("State.get: component " ^ name ^ " not found")
 
   let set name t v = StrMap.add name (Obj.repr v) t
   let update name t f =
