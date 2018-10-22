@@ -231,6 +231,12 @@ let map_acc f acc l =
       (acc, []) l in
   a, List.rev l
 
+let map_acc2 f acc l1 l2 =
+  let a, l =
+    List.fold_left2 (fun (a,xs) x y -> let a, x = f a x y in a, x :: xs)
+      (acc, []) l1 l2 in
+  a, List.rev l
+
 let partition_i f l =
   let rec aux n a1 a2 = function
     | [] -> List.rev a1, List.rev a2

@@ -82,6 +82,7 @@ val remove_from_list : 'a -> 'a list -> 'a list
 val map_exists : ('a -> 'b option) -> 'a list -> 'b option
 val map_filter : ('a -> 'b option) -> 'a list -> 'b list
 val map_acc : ('acc -> 'a -> 'acc * 'b) -> 'acc -> 'a list -> 'acc * 'b list
+val map_acc2 : ('acc -> 'a -> 'b -> 'acc * 'c) -> 'acc -> 'a list -> 'b list -> 'acc * 'c list
 val partition_i : (int -> 'a -> bool) -> 'a list -> 'a list * 'a list
 val fold_left2i :
   (int -> 'acc -> 'x -> 'y -> 'acc) -> 'acc -> 'x list -> 'y list -> 'acc
