@@ -658,19 +658,20 @@ let elpi_builtins = [
 (** ELPI specific NON-LOGICAL built-in *********************************** *)
 
 let ctype : string data = {
-  to_term = (fun ~depth:_ s -> mkApp Constants.ctypec (C.of_string s) []);
-  of_term = (fun ~depth t ->
+  to_term = (fun ~depth:_ _ _ state x ->
+    state, mkApp Constants.ctypec (C.of_string x) []);
+  of_term = (fun ~mode:_ ~depth _ _ state t ->
      match look ~depth t with
      | App(c,s,[]) when c == Constants.ctypec ->
          begin match look ~depth s with
-         | CData c when C.is_string c -> Data (C.to_string c)
-         | (UVar _ | AppUVar _) -> Flex t
-         | Discard -> Discard
+         | CData c when C.is_string c -> state, Data (C.to_string c)
+         | (UVar _ | AppUVar _) -> state, Flex t
+         | Discard -> state, Discard
          | _ -> raise (TypeErr t) end
-     | (UVar _ | AppUVar _) -> Flex t
-     | Discard -> Discard
+     | (UVar _ | AppUVar _) -> state, Flex t
+     | Discard -> state, Discard
      | _ -> raise (TypeErr t));
-   ty = "ctype"
+   ty = TyName "ctype"
 }
    
 let { CData.cin = safe_in; isc = is_safe ; cout = safe_out } as safe = CData.declare {

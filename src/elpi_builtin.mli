@@ -21,3 +21,5 @@ val elpi_nonlogical_builtins : declaration list
 val std_declarations : declaration list
 val std_builtins : Elpi_API.Setup.builtins
 
+val in_stream  : (in_channel * string) data
+val out_stream : (out_channel * string) data

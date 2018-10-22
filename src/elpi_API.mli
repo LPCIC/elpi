@@ -287,10 +287,11 @@ module Extend : sig
     val fresh_uvar_body : unit -> uvar_body
 
     type custom_state = Data.custom_state
+    type constraints = Data.constraints
     module StrMap = Data.StrMap
     type solution = {
       assignments : term StrMap.t;
-      constraints : Data.constraints;
+      constraints : constraints;
       state : custom_state;
     }
     val of_solution : Data.solution -> solution
@@ -514,14 +515,31 @@ module Extend : sig
     type name = string
     type doc = string
     
-    type 'a arg = Data of 'a | Flex of Data.term | Discard
-    exception TypeErr of Data.term
+    (* Classification of input or output data coming from LP *)
+    type 'a arg =
+      | Data of 'a
+      | Flex of Data.term (* the argument is the UVar or AppUVar *)
+      | Discard
+      | OpaqueData of Data.term (* a term we don't need/want to translate *)
+
+    type ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
+
+    (* The mode for the argument being translated. For example some large
+     * data in In mode should be translated but if the mode is Out it may be
+     * useful to just know it is not Discard. In this way one avoids to
+     * move the data from LP to ML and back just for fun. *)
+    type mode = In | Out
+
+    type ('src,'tgt) stateful_data_conversion =
+       depth:int -> Data.hyps -> Data.constraints -> Data.custom_state ->
+         'src -> Data.custom_state * 'tgt
     
     type 'a data = {
-      to_term : depth:int -> 'a -> Data.term;
-      of_term : depth:int -> Data.term -> 'a arg;
-      ty : string (* CAVEAT: must be a valid LP type expression *) 
+      to_term : ('a,Data.term) stateful_data_conversion;
+      of_term : mode:mode -> (Data.term, 'a arg) stateful_data_conversion;
+      ty : ty_ast
     }
+    exception TypeErr of Data.term (* a type error at data conversion time *)
     
     type ('function_type, 'inernal_outtype_in) ffi =
       | In   : 't data * doc * ('i, 'o) ffi -> ('t -> 'i,'o) ffi
@@ -558,7 +576,7 @@ module Extend : sig
      * for the specific statements. *)
     | LPCode of string
 
-    (** Type descriptors *)
+    (** Type descriptors (see also Elpi_builtin) *)
     val int    : int data
     val float  : float data
     val string : string data
