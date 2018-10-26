@@ -158,7 +158,16 @@ module Extend = struct
     module StrMap = Data.StrMap
     type builtin = int
     include Elpi_data
-    let mkBuiltinName s args = mkBuiltin (Builtin.from_builtin_name s) args
+    let mkAppS s x args = mkApp (Constants.from_stringc s) x args
+    let mkGlobalS s = Constants.from_string s
+    let mkBuiltinS s args = mkBuiltin (Builtin.from_builtin_name s) args
+
+    let mkGlobal i =
+      if i >= 0 then Elpi_util.anomaly "mkGlobal: got a bound variable";
+      mkConst i
+    let mkBound i =
+      if i < 0 then Elpi_util.anomaly "mkBound: got a global constant";
+      mkConst i
    
     let look ~depth t =
       let module R = (val !r) in let open R in

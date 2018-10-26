@@ -260,17 +260,23 @@ module Extend : sig
                                         | AppArg of int * term list
 
     (** Smart constructors *)
-    val mkConst : constant -> term
+    val mkGlobalS : string -> term  (* global constant, i.e. < 0 *)
+    val mkBound : constant -> term  (* bound variable, i.e. >= 0 *)
     val mkLam : term -> term
-    val mkApp : constant -> term -> term list -> term
+    val mkAppS : string -> term -> term list -> term
     val mkCons : term -> term -> term
     val mkNil : term
     val mkDiscard : term
-    val mkBuiltin : builtin -> term list -> term
-    val mkBuiltinName : string -> term list -> term
+    val mkBuiltinS : string -> term list -> term
     val mkCData : CData.t -> term
+
+    (** Lower level smart constructors *)
+    val mkGlobal : constant -> term (* global constant, i.e. < 0 *)
+    val mkApp : constant -> term -> term list -> term
+    val mkBuiltin : builtin -> term list -> term
     val mkUVar : uvar_body -> int -> int -> term
     val mkAppUVar : uvar_body -> int -> term list -> term
+    val mkConst : constant -> term (* no check, works for globals and bound *)
 
     (** Terms must be inspected after dereferencing their head.
         If the resulting term is UVar then its uvar_body is such that
