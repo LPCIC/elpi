@@ -8,12 +8,16 @@ open Elpi_API.Extend.BuiltInPredicate
 
 (* Builtins that are part of the language, like "is" or "!" *)
 val core_builtins : declaration list
+
 (* Basic I/O facilities *)
 val io_builtins : declaration list
+
 (* Builtins to be backward compatible with Teyjus, eg extra i/o predicates *)
 val lp_builtins : declaration list
+
 (* Elpi predicates like print *)
 val elpi_builtins : declaration list
+
 (* Elpi non-logical predicates like var, new_int ... *)
 val elpi_nonlogical_builtins : declaration list
 
@@ -26,5 +30,6 @@ val pair : 'a data -> 'b data -> ('a * 'b) data
 val option : 'a data -> 'a option data
 val bool : bool data
 
+(* The string is the "file name" *)
 val in_stream  : (in_channel * string) data
 val out_stream : (out_channel * string) data
