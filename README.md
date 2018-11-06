@@ -128,9 +128,21 @@ The extensions to λProlog implemented in ELPI are described in the
 [ELPI](ELPI.md) file, built-in predicates are documented in
 [builtin](builtin.elpi).
 
-There is also a [paper](https://hal.inria.fr/hal-01176856/) describing
+There is a [short paper](https://hal.inria.fr/hal-01176856/) describing
 the implementation of the interpreter, in particular how it deals with
 binder mobility.
+
+A [longer paper](https://hal.inria.fr/hal-01410567v2) describes, among other
+things, the part of the language
+for declaring and manipulating constraints.
+
+For a lightweight introduction to Elpi one can look at the
+[slides](https://github.com/gares/mlws18/blob/master/slides.pdf) of 
+the talk given at the ML Family workshop 2018 titled "Elpi: an extension 
+language with binders and unification variables". The companion
+code of [toyml](https://github.com/gares/mlws18/tree/master/toyml)
+that implements W (ML type inference) in Elpi is also available.
+
 
 #### How to embed ELPI in your software
 
