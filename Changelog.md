@@ -26,7 +26,7 @@ Language:
      constraints
 
 Builtin:
- - `halt` is now types as `variadic string prop` and the strings passed
+ - `halt` is now typed as `variadic string prop` and the strings passed
    are printed when the interpreter halts
 
 Aesthetic:
