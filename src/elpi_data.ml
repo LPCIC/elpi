@@ -789,9 +789,9 @@ let pp_pred fmt docspec name doc_pred args =
 ;;
 
 let pp_ty sep fmt (_,s,_) = Fmt.fprintf fmt " %s%s" s sep
-let pp_ty_args = pplist (pp_ty "") "->" ~pplastelem:(pp_ty "")
+let pp_ty_args = pplist (pp_ty "") " ->" ~pplastelem:(pp_ty "")
 
-let pp_type fmt name doc_pred ty args =
+let pp_variadictype fmt name doc_pred ty args =
   let parens s = if String.contains s ' ' then "("^s^")" else s in
   let args = List.rev ((false,"variadic " ^ parens ty ^ " prop","") :: args) in
   let doc =
@@ -810,8 +810,8 @@ let document_pred fmt docspec name ffi =
     | Read s -> pp_pred fmt docspec name s args
     | Easy s -> pp_pred fmt docspec name s args
     | Full s -> pp_pred fmt docspec name s args
-    | VariadicIn( { ty }, s) -> pp_type fmt name s ty args
-    | VariadicOut( { ty }, s) -> pp_type fmt name s ty args
+    | VariadicIn( { ty }, s) -> pp_variadictype fmt name s ty args
+    | VariadicOut( { ty }, s) -> pp_variadictype fmt name s ty args
   in
     doc [] ffi
 ;;

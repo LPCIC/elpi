@@ -251,8 +251,9 @@ external pred var i:any.
 % variable
 external pred same_var i:A, i:A.
 
-% [name T] checks if T is a eigenvariable
-external pred name i:any.
+% [name T ...] checks if T is a eigenvariable. It also decomposes it in the
+% head and arguments (as a list) when two extra arguments are passed to it.
+external type name any ->  variadic any prop.
 
 external pred names % generates the list of eigenvariable
   o:list any. % list of eigenvariables in order of age (young first)

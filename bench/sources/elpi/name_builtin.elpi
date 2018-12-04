@@ -1,0 +1,4 @@
+main :-
+  (pi f x y\
+    name (f x y) f [x, y]),
+  (pi x\ name x x []).

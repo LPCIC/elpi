@@ -1,3 +1,13 @@
+## Version 1.1.2 (December 2018)
+
+Builtin:
+ - `name` is now typed as `any -> variadic any prop` to support the following
+   two use cases:
+   + `name T` succeeds if `T` is an eigenvariable (even if it is applied)
+   + `name T HD ARGS` succeeds if `T` is an eigenvariable an decomposes it
+     to its head symbol and its arguments as a list:
+     `pi f x y\ name (f x y) f [x,y]`
+
 ## Version 1.1 (September 2018)
 
 Language:

@@ -743,10 +743,15 @@ let elpi_nonlogical_builtins = [
 
   MLCode(Pred("name",
     In(any, "T",
-    Easy     "checks if T is a eigenvariable"),
-  (fun x ~depth ->
+    VariadicOut(any,"checks if T is a eigenvariable. It also decomposes it in the head and arguments (as a list) when two extra arguments are passed to it.")),
+  (fun x out ~depth _ { state } ->
     match look ~depth x with
-    | Const n when n >= 0 -> ()
+    | Const n as x when n >= 0 ->
+        if out = [Discard;Discard] then state, ?:None
+        else state, !:[Some (kool x); Some mkNil]
+    | App(n,x,xs) when n >= 0 ->
+        if out = [Discard;Discard] then state, ?:None
+        else state, !:[Some (mkConst n); Some (list_to_lp_list (x::xs))]
     | _ -> raise No_clause)),
   DocAbove);
 
