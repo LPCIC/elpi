@@ -1510,6 +1510,31 @@ let rec unif matching depth adepth a bdepth b e =
    | Cons(hd1,tl1), Cons(hd2,tl2) -> 
        unif matching depth adepth hd1 bdepth hd2 e && unif matching depth adepth tl1 bdepth tl2 e
    | Nil, Nil -> true
+
+   (* eta *)
+   | Lam t, Const c ->
+       let extra = mkConst (bdepth+depth) in
+       let eta = App(c,extra,[]) in
+       unif matching (depth+1) adepth t bdepth eta e
+   | Const c, Lam t ->
+       let extra = mkConst (adepth+depth) in
+       let eta = App(c,extra,[]) in
+       unif matching (depth+1) adepth eta bdepth t e
+   | Lam t, App (c,x,xs) ->
+       let extra = mkConst (bdepth+depth) in
+       let motion = move ~adepth ~from:(bdepth+depth) ~to_:(bdepth+depth+1) e in
+       let x = motion x in
+       let xs = List.map motion xs @ [extra] in
+       let eta = App(c,x,xs) in
+       unif matching (depth+1) adepth t bdepth eta e
+   | App (c,x,xs), Lam t ->
+       let extra = mkConst (adepth+depth) in
+       let motion = hmove ~from:(bdepth+depth) ~to_:(bdepth+depth+1) in
+       let x = motion x in
+       let xs = List.map motion xs @ [extra] in
+       let eta = App(c,x,xs) in
+       unif matching (depth+1) adepth eta bdepth t e
+
    | _ -> false
    end]
 ;;
@@ -1704,7 +1729,6 @@ let hd_pred { key = (hd,_) } = hd
 
 let variablek =       -99999999 (* a flexible term like X t *)
 let mustbevariablek = -99999998 (* uvar or uvar t or uvar l t *)
-let abstractionk =    -99999997
 
 let pp_key (hd,v) = C.show hd
   
@@ -1727,11 +1751,11 @@ let key_of ~mode:_ ~depth =
   | App (k,a,_) when k = C.asc -> skey_of a
   | App (k,_,_)
   | Builtin (k,_) -> k
-  | Lam _ -> abstractionk
+  | Lam _ -> variablek (* loose indexing to enable eta *)
   | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> variablek
   | CData d -> 
      let hash = -(CData.hash d) in
-     if hash > abstractionk then hash
+     if hash > mustbevariablek then hash
      else hash+2 (* ? *) in
  let rec key_of_depth = function
    Const k -> k, variablek
