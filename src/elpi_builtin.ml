@@ -747,10 +747,10 @@ let elpi_nonlogical_builtins = [
   (fun x out ~depth _ { state } ->
     match look ~depth x with
     | Const n as x when n >= 0 ->
-        if out = [Discard;Discard] then state, ?:None
+        if out = [] then state, ?:None
         else state, !:[Some (kool x); Some mkNil]
     | App(n,x,xs) when n >= 0 ->
-        if out = [Discard;Discard] then state, ?:None
+        if out = [] then state, ?:None
         else state, !:[Some (mkConst n); Some (list_to_lp_list (x::xs))]
     | _ -> raise No_clause)),
   DocAbove);
