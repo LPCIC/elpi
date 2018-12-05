@@ -255,6 +255,11 @@ external pred same_var i:A, i:A.
 % head and arguments (as a list) when two extra arguments are passed to it.
 external type name any ->  variadic any prop.
 
+% [const T ...] checks if T is a (global) constant. It also decomposes it in
+% the head and arguments (as a list) when two extra arguments are passed to
+% it.
+external type const any ->  variadic any prop.
+
 external pred names % generates the list of eigenvariable
   o:list any. % list of eigenvariables in order of age (young first)
   

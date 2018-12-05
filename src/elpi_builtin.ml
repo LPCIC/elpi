@@ -755,6 +755,20 @@ let elpi_nonlogical_builtins = [
     | _ -> raise No_clause)),
   DocAbove);
 
+  MLCode(Pred("const",
+    In(any, "T",
+    VariadicOut(any,"checks if T is a (global) constant. It also decomposes it in the head and arguments (as a list) when two extra arguments are passed to it.")),
+  (fun x out ~depth _ { state } ->
+    match look ~depth x with
+    | Const n as x when n < 0 ->
+        if out = [] then state, ?:None
+        else state, !:[Some (kool x); Some mkNil]
+    | App(n,x,xs) when n < 0 ->
+        if out = [] then state, ?:None
+        else state, !:[Some (mkConst n); Some (list_to_lp_list (x::xs))]
+    | _ -> raise No_clause)),
+  DocAbove);
+
   MLCode(Pred("names",
     Out(list any, "list of eigenvariables in order of age (young first)",
     Easy           "generates the list of eigenvariable"),
