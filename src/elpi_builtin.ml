@@ -236,6 +236,7 @@ let core_builtins = [
   LPCode "pred (=) o:A, o:A.";
   LPCode "X = X.";
 
+  LPCode "pred (;) o:prop, o:prop.";
   LPCode "(A ; _) :- A.";
   LPCode "(_ ; B) :- B.";
 
@@ -713,6 +714,38 @@ let safeno = ref 0
 
 let fresh_int = ref 0
 
+(* factor the code of name and constant *)
+let name_or_constant name condition = (); fun x out ~depth _ { state } ->
+  let len = List.length out in
+  if len != 0 && len != 2 then
+    type_error (name^" only supports 1 or 3 arguments");
+  match x with
+  | Discard -> raise No_clause (* not a name *)
+  | Flex _ -> assert false (* any has no Flex case *)
+  | Data x ->
+    match look ~depth x with
+    | Const n when condition n ->
+        if out = [] then state, !: x +? None
+        else state, !: x +! [Some x; Some mkNil]
+    | App(n,y,ys) when condition n ->
+        if out = [] then state, !: x +? None
+        else state, !: x +! [Some (mkConst n); Some (list_to_lp_list (y::ys))]
+    | UVar _ | AppUVar _ ->
+        (* We build the application *)
+        begin match out with
+        | [] -> raise No_clause
+        | [Data hd; Data args] ->
+            begin match look ~depth hd, lp_list_to_list ~depth args with
+            | Const n, [] when condition n ->
+                state, !: (mkConst n) +! [Some hd; Some args]
+            | Const n, x :: xs when condition n ->
+                state, !: (mkApp n x xs) +! [Some hd; Some args]
+            | _ -> raise No_clause end
+        | _ -> raise No_clause
+        end
+    | _ -> raise No_clause
+;;
+
 let elpi_nonlogical_builtins = [ 
 
   LPDoc "== Elpi nonlogical builtins =====================================";
@@ -742,34 +775,15 @@ let elpi_nonlogical_builtins = [
   DocAbove);
 
   MLCode(Pred("name",
-    In(any, "T",
-    VariadicOut(any,"checks if T is a eigenvariable. It also decomposes it in the head and arguments (as a list) when two extra arguments are passed to it.")),
-  (fun x out ~depth _ { state } ->
-    let len = List.length out in
-    if len != 0 && len != 2 then
-      type_error "name only supports 1 or 3 arguments";
-    match look ~depth x with
-    | Const n as x when n >= 0 ->
-        if out = [] then state, ?:None
-        else state, !:[Some (kool x); Some mkNil]
-    | App(n,x,xs) when n >= 0 ->
-        if out = [] then state, ?:None
-        else state, !:[Some (mkConst n); Some (list_to_lp_list (x::xs))]
-    | _ -> raise No_clause)),
+    Out(any, "T",
+    VariadicOut(any,"checks if T is a eigenvariable. When used with tree arguments it relates an applied name with its head and argument list.")),
+  (name_or_constant "name" (fun x -> x >= 0))),
   DocAbove);
 
-  MLCode(Pred("const",
-    In(any, "T",
-    VariadicOut(any,"checks if T is a (global) constant. It also decomposes it in the head and arguments (as a list) when two extra arguments are passed to it.")),
-  (fun x out ~depth _ { state } ->
-    match look ~depth x with
-    | Const n as x when n < 0 ->
-        if out = [] then state, ?:None
-        else state, !:[Some (kool x); Some mkNil]
-    | App(n,x,xs) when n < 0 ->
-        if out = [] then state, ?:None
-        else state, !:[Some (mkConst n); Some (list_to_lp_list (x::xs))]
-    | _ -> raise No_clause)),
+  MLCode(Pred("constant",
+    Out(any, "T",
+    VariadicOut(any,"checks if T is a (global) constant.  When used with tree arguments it relates an applied constant with its head and argument list.")),
+  (name_or_constant "constant" (fun x -> x < 0))),
   DocAbove);
 
   MLCode(Pred("names",
