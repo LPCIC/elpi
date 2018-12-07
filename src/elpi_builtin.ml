@@ -745,6 +745,9 @@ let elpi_nonlogical_builtins = [
     In(any, "T",
     VariadicOut(any,"checks if T is a eigenvariable. It also decomposes it in the head and arguments (as a list) when two extra arguments are passed to it.")),
   (fun x out ~depth _ { state } ->
+    let len = List.length out in
+    if len != 0 && len != 2 then
+      type_error "name only supports 1 or 3 arguments";
     match look ~depth x with
     | Const n as x when n >= 0 ->
         if out = [] then state, ?:None
