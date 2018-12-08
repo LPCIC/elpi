@@ -115,7 +115,7 @@ and 'attribute chr_rule = {
 type ('name,'term) macro = { mlocation : Ploc.t; maname : 'name; mbody : 'term }
 [@@deriving show]
 
-type tdecl = { textern : bool; tname : Func.t; tty : term }
+type tdecl = { tloc : Ploc.t; textern : bool; tname : Func.t; tty : term }
 [@@deriving show]
 
 type 'name mode =

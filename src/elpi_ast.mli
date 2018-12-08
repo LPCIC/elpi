@@ -111,7 +111,7 @@ val show_macro :
   (Format.formatter -> 'term -> unit) ->
      ('name,'term) macro -> string
 
-type tdecl = { textern : bool; tname : Func.t; tty : term }
+type tdecl = { tloc : Ploc.t; textern : bool; tname : Func.t; tty : term }
 
 val pp_tdecl :
     Format.formatter -> tdecl -> unit

@@ -59,7 +59,7 @@ type program = {
   toplevel_macros : macro_declaration;
 }
 and pbody = {
-  types : (bool * type_declaration) list; (* bool = extern *)
+  types : typ list;
   modes : mode C.Map.t;
   body : block list;
   (* defined (global) symbols (including in sub blocks) *)
@@ -69,6 +69,11 @@ and block =
   | Clauses of (preterm,StructuredAST.attribute) A.clause list
   | Namespace of string * pbody
   | Constraints of constant list * prechr_rule list * pbody
+and typ = {
+  extern : bool;
+  loc : Ploc.t;
+  decl : type_declaration
+}
 [@@deriving show]
 
 end
@@ -76,7 +81,7 @@ end
 module Flat = struct
 
 type program = {
-  types : (bool * type_declaration) list; 
+  types : StructuredProgram.typ list; 
   modes : mode C.Map.t;
   clauses : (preterm,StructuredAST.attribute) A.clause list;
   chr : (constant list * prechr_rule list) list;
@@ -91,7 +96,7 @@ end
 module Assembled = struct
 
 type program = {
-  types : (bool * type_declaration) list; 
+  types : StructuredProgram.typ list; 
   modes : mode C.Map.t;
   clauses : (preterm,attribute) A.clause list;
   chr : (constant list * prechr_rule list) list;
@@ -123,7 +128,7 @@ module Query = struct
 
 (* The entire program + query, but still in "printable" format *)
 type query = {
-  types : (bool * type_declaration) list; 
+  types : StructuredProgram.typ list; 
   modes : mode C.Map.t;
   clauses : (preterm,Assembled.attribute) A.clause list;
   chr : (constant list * prechr_rule list) list;
@@ -319,9 +324,9 @@ module ToDBL : sig
   val prefix_const : string list -> C.t -> C.t
   val merge_modes : mode Map.t -> mode Map.t -> mode Map.t
   val merge_types :
-          (bool * type_declaration) list ->
-          (bool * type_declaration) list ->
-          (bool * type_declaration) list
+        StructuredProgram.typ list ->
+        StructuredProgram.typ list ->
+        StructuredProgram.typ list
 
   (* Exported to compile the query *)
   val preterm_of_ast :
@@ -570,11 +575,11 @@ let preterm_of_ast ~depth macros state t =
     A.Func.Map.add n (mbody,loc) m
 
   let compile_type lcs macros state
-    { A.textern = is_external; A.tname = name; A.tty = typ }
+    { A.textern = extern; A.tloc = loc; A.tname = name; A.tty = typ }
   =
     let tname, _ = C.funct_of_ast name in
     let state, ttype = preterm_of_ast ~depth:lcs macros state typ in
-    state, (is_external, { tname; ttype })
+    state, { StructuredProgram.extern; loc; decl = { tname; ttype } }
 
    let funct_of_ast state c =
      try
@@ -631,7 +636,9 @@ let preterm_of_ast ~depth macros state t =
     C.Map.fold (fun k _ -> C.Set.add k) modes C.Set.empty
   
   let defs_of_types types =
-    List.fold_left (fun s (_,{ tname }) -> C.Set.add tname s) C.Set.empty types
+    List.fold_left (fun s { StructuredProgram.decl = { tname } } ->
+        C.Set.add tname s)
+      C.Set.empty types
 
   let global_hd_symbols_of_clauses cl =
     List.fold_left (fun s { A.body = { term } } ->
@@ -790,11 +797,11 @@ end = struct (* {{{ *)
     in
       aux t
 
-  let smart_map_type f (b, { tname; ttype } as tdecl) =
+  let smart_map_type f ({ StructuredProgram.loc; extern; decl = { tname; ttype }} as tdecl) =
     let tname1 = f tname in
     let ttype1 = smart_map_term f ttype.term in
     if tname1 == tname && ttype1 == ttype.term then tdecl
-    else b, { tname = tname1; ttype = { term = ttype1; amap = ttype.amap } }
+    else { StructuredProgram.loc; extern; decl = { tname = tname1; ttype = { term = ttype1; amap = ttype.amap } } }
 
 
   let map_sequent f { peigen; pcontext; pconclusion } =
@@ -897,7 +904,7 @@ module Spill : sig
 
   (* Exported to compile the query *)
   val spill_preterm :
-    (bool * type_declaration) list -> mode C.Map.t -> preterm -> preterm
+    StructuredProgram.typ list -> mode C.Map.t -> preterm -> preterm
 
 end = struct (* {{{ *)
 
@@ -913,7 +920,8 @@ end = struct (* {{{ *)
 
   let type_of_const types c =
     try
-      let _, { ttype } = List.find (fun (_,{ tname }) -> tname == c) types in
+      let { StructuredProgram.decl = { ttype } } =
+        List.find (fun { StructuredProgram.decl = { tname } } -> tname == c) types in
       read_ty ttype.term
     with
       Not_found -> `Unknown
@@ -1224,20 +1232,32 @@ let query_of_term { Program.assembled_program; compiler_state } f =
     query_loc = Ploc.dummy;
     initial_state = CustomState.init state;
   }
+
+let is_builtin tname =
+  let all_builtin = Builtin.all () in
+  let elpi_builtins = [C.cutc;C.declare_constraintc;C.print_constraintsc] in
+  List.memq tname elpi_builtins || List.exists ((==) tname) all_builtin
   
 let check_all_builtin_are_typed types =
-  let all_builtin = Builtin.all () in
-  List.iter (fun c ->
-    if not (List.exists (fun (b,{ tname }) -> b && tname == c) types) then
-      error("Built-in without external type declaration: " ^ C.show c))
-   all_builtin;
- let elpi_builtins = [C.cutc;C.declare_constraintc;C.print_constraintsc] in
- List.iter (fun (b,{ tname }) ->
-   if b && not (List.memq tname elpi_builtins) then
-     if not (List.exists ((==) tname) all_builtin) then
-       error("External type declaration without Built-in: " ^ C.show tname)
- ) types
+   List.iter (fun c ->
+     if not (List.exists
+       (fun { StructuredProgram.extern = b; decl = { tname }} ->
+            b && tname == c) types) then
+       error("Built-in without external type declaration: " ^ C.show c))
+   (Builtin.all ());
+  List.iter (fun { StructuredProgram.extern = b; loc; decl = { tname }} ->
+    if b && not (is_builtin tname) then
+      error(Ploc.show loc ^ ": External type declaration without Built-in: " ^
+            C.show tname))
+  types
 ;;
+
+let check_no_regular_types_for_builtins types =
+  List.iter (fun {StructuredProgram.extern = b; loc; decl = { tname } } ->
+    if not b && is_builtin tname then
+      error(Ploc.show loc ^ ": Type declaration for Built-in " ^
+            C.show tname ^ " must be flagged as external");
+ ) types
 
 let stack_term_of_preterm ~depth:arg_lvl { term = t; amap = { c2i } } =
   let rec stack_term_of_preterm = function
@@ -1339,6 +1359,7 @@ let run ?(flags = default_flags)
 
   if not flags.allow_untyped_builtin then
     check_all_builtin_are_typed types;
+  check_no_regular_types_for_builtins types;
   (* Real Arg nodes: from "Const '%Arg3'" to "Arg 3" *)
   let pifexpr { pifexpr } = pifexpr in
   let chr =
@@ -1509,9 +1530,11 @@ let static_check header
   ({ Query.types } as q)
 =
   let p,q = quote_syntax q in
-  let tlist = list_to_lp_list (List.map (fun (_,{ tname; ttype }) ->
-    App(C.from_stringc "`:",mkQCon ~on_type:false tname,
-      [close_w_binder forallc (quote_preterm ~on_type:true ttype) ttype.amap]))
+  let tlist = list_to_lp_list (List.map
+    (fun { StructuredProgram.decl = { tname; ttype } } ->
+      App(C.from_stringc "`:",mkQCon ~on_type:false tname,
+        [close_w_binder forallc (quote_preterm ~on_type:true ttype)
+          ttype.amap]))
     types) in
   let checker =
     program_of_ast (header @ checker) in

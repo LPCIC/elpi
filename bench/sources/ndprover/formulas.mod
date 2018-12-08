@@ -6,7 +6,7 @@ module formulas.
 
 accum_sig  logic, nonlogical.
 
-kind	name		type.
+% kind	name		type.
 
 type	formula		name -> bool -> o.
 

@@ -610,19 +610,19 @@ EXTEND
      | RCURLY -> [End loc]
      | PRED; p = pred; FULLSTOP ->
          let m, (n,t) = p in
-         [Type { textern = false; tname = n ; tty = t }; Mode m]
+         [Type { tloc=loc; textern = false; tname = n ; tty = t }; Mode m]
      | TYPE; names = LIST1 const_sym SEP SYMBOL ","; t = type_; FULLSTOP ->
          List.map (fun n ->
-             Type { textern = false; tname = Func.from_string n; tty = t })
+           Type { tloc=loc; textern=false; tname=Func.from_string n; tty=t })
            names
      | EXTERNAL;
        TYPE; names = LIST1 const_sym SEP SYMBOL ","; t = type_; FULLSTOP ->
          List.map (fun n ->
-            Type { textern = true; tname = Func.from_string n; tty = t })
+           Type { tloc=loc; textern=true; tname=Func.from_string n; tty=t })
          names
      | EXTERNAL; PRED; p = pred; FULLSTOP ->
          let _, (n,t) = p in (* No mode for ML code *)
-         [Type { textern = true; tname = n; tty = t }]
+         [Type { tloc = loc; textern = true; tname = n; tty = t }]
      | MODE; m = LIST1 mode SEP SYMBOL ","; FULLSTOP -> [Mode m]
      | MACRO; b = atom; FULLSTOP ->
          let name, body = desugar_macro b in
@@ -655,7 +655,7 @@ EXTEND
      | EXPORTDEF; LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP -> []
      | KIND; names = LIST1 const_sym SEP SYMBOL ","; t = kind; FULLSTOP ->
          List.map (fun n ->
-           Type { textern = false; tname = Func.from_string n; tty = t })
+           Type { tloc=loc; textern=false; tname=Func.from_string n; tty=t })
          names
      | TYPEABBREV; abbrform; TYPE; FULLSTOP -> []
      | fix = FIXITY; syms = LIST1 const_sym SEP SYMBOL ","; prec = INTEGER; FULLSTOP ->
