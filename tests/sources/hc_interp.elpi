@@ -1,0 +1,81 @@
+/*
+ * An interpreter for the logic of Horn clauses. This code illustrates 
+ * the usefulness of beta reduction in realizing substitution. Also note
+ * the use of the logic variable in the third clause for try_clause.
+ */
+
+%module  hc_interp.
+
+%accumulate lists.
+
+%type   backchain   (list form) -> form -> o.
+%type   try_clause  (list form) -> form -> form -> o.
+
+%type   a      term.
+%type   b      term.
+%type   c      term.
+%type   f      term -> term.
+
+/* The predicate symbols */
+%type   path   term -> term -> form.
+%type   adj    term -> term -> form.
+
+
+%reduce (app (lam F) T) R :- pi x\ copy x T => copy (F x) (R' x), R = R' x.
+
+copy (and B1 C1) (and B2 C2) :- copy B1 B2, copy C1 C2.
+copy (or B1 C1) (or B2 C2) :- copy B1 B2, copy C1 C2.
+copy (some F1) (some F2) :- pi x\ copy x x => copy (F1 x) (F2 x).
+copy a a.
+copy b b.
+copy c c.
+copy (f X) (f Y) :- copy X Y.
+copy tru tru.
+copy perp perp.
+
+% a[t/b] = a
+
+% b[t/b] = t
+
+subst B T B1 :- pi x\ copy x T => (copy (B x) (B2 x), B2 x = B1).
+ 
+% perp is a fail.
+% hc_interp Cs G means Cs |- G
+%hc_interp _ tru.
+
+%hc_interp Cs (some B) :- !, hc_interp Cs (B T).
+hc_interp Cs (some B)  :- !, subst B T B1, hc_interp Cs B1.
+hc_interp Cs (and B C) :- !, hc_interp Cs B , hc_interp Cs C.
+hc_interp Cs (or B C) :- !, (hc_interp Cs B ; hc_interp Cs C).
+hc_interp Cs A  :-  backchain Cs A.
+% why there is no rule in teyjus: hc_interp Cs (all B) :- .... ?
+
+backchain Cs A :- memb D Cs, try_clause Cs D A.
+
+memb X (xcons X _).
+memb X (xcons Y L) :- memb X L.
+
+
+% try_clause Cs A B means Cs, A |- B
+try_clause Cs (and D1 D2) A :- 
+     !, (try_clause Cs D1 A ; try_clause Cs D2 A).
+% try_clause Cs (all D) A :- !, try_clause Cs (D T) A.
+try_clause Cs (all D) A :- !, subst D T D1, try_clause Cs D1 A.
+try_clause Cs A A.
+try_clause Cs (imp G A) A :- hc_interp Cs G.
+
+%prog (xcons (adj a b) (xcons (adj b c) (xcons (adj c (f c))
+%      (xcons (all X\ (all Y\ (imp (adj X Y) (path X Y))))
+%      (xcons (all X\ (all Y\ (all Z\ (imp (and (adj X Y) (path Y Z)) 
+%                                           (path X Z))))) xnil))))).
+
+%pathfroma X :- prog Cs, hc_interp Cs (path a X).
+
+test1 :- %Cs = (xcons a (xcons b (xcons c xnil))),
+        %try_clause Cs (and a (or b c)) (or (and a b) (and a c)).
+        hc_interp (xcons a (xcons (imp b c) (xcons (imp a b) xnil))) c.
+
+test2 :- Cs = xcons (f a) xnil, 
+        hc_interp Cs (some f).
+
+main :- test1, test2.

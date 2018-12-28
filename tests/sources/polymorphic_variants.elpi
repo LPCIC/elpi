@@ -1,0 +1,155 @@
+% Type inference for a super-constrainted functional langage with
+% polymorphic variants
+%
+% Syntax:    f ::= (<case> constant term)^*    unary functions
+%         term ::= constant | <app> funname term
+%      program ::= (<fun> funname f)^*
+%        types ::= (<fun> funname type type)^*
+%         type ::= constant^*
+%
+%      constant and funnames are distinct lambda-prolog names
+
+% check types program types
+% the functions must be listed in the same order in both
+%check A B C :- print (check A B C), fail.
+check [] [] _.
+check [fun F B | BTL] [fun F D C | TTL] ORIGTYS :-
+ check_domain B D,
+ check_codomain B C ORIGTYS,
+ check BTL TTL ORIGTYS.
+
+% check_domain body type
+%check_domain A B :- print (check_domain A B), fail.
+check_domain B T :- inputs B I, is_subset T I.
+
+%is_subset A B :- print (is_subset A B), fail.
+is_subset A B :- var A, !, declare_constraint (is_subset A B) [A].
+is_subset A B :- var B, !, declare_constraint (is_subset A B) [B].
+is_subset A B :- is_subset_ A B.
+is_subset_ [] _.
+is_subset_ [X|TL] TL1 :- mem TL1 X, is_subset TL TL1.
+
+mem A B :- var A, !, declare_constraint (mem A B) [A].
+mem A B :- mem_ A B.
+mem_ [X|_] X :- !.
+mem_ [Y|TL] X :- mem TL X.
+
+%check_codomain body type types
+%check_codomain A B C :- print (check_codomain A B C), fail.
+check_codomain [] _ _.
+check_codomain [case _ T | TL] TYS ORIGTYS :-
+  check_term T TYS ORIGTYS,
+  check_codomain TL TYS ORIGTYS.
+
+%check_term term type
+%check_term A B C :- print "CHECK" (check_term A B C), fail.
+check_term (app F T) TY ORIGTYS :-
+ !,
+ find ORIGTYS F D C,
+ check_term T D ORIGTYS,
+ is_subset C TY.
+check_term X TY _ :-
+ mem TY X.
+
+find [fun F D C | _] F D C :- !.
+find [ _ | TL ] F D C :- find TL F D C.
+
+%inputs A B :- print "INPUT" (inputs A B), fail.
+inputs [] [].
+inputs [case A _ | TL] [A | TL'] :- inputs TL TL'.
+
+/* Expected output, according to OCaml
+Note: I use ref to kill Hindley-Milner polymorphism
+# let g = ref (function `A -> `C | `B -> `D);;
+# let f = function `A -> `A | `B -> !g `A;;
+# f,!g;;
+- : (_[< `A | `B ] -> (_[> `A | `C | `D ] as 'a)) *
+    (_[< `A | `B > `A ] -> 'a) */
+
+% This is an interesting propagation rule we would like to add:
+% a (non empty) subset of a singleton is a singleton.
+% We cannot add the propagation rule now because:
+%  1. we match up to unification
+%     => the rule turns constraints of the form (is_subset X a::Y) into
+%        (is_subset X [a])
+%  2. already unifying the first argument of the rule triggers resumption
+%     but there is confusion between the two runtimes and a mess happens
+propagate [] [is_subset X [Y]] (X = [Y]).
+propagate [is_subset X Y,is_subset Y Z] [] (is_subset X Z).
+
+inter [X | A] L [X | B] :- mem L X, !, inter A L B.
+inter [X | A] L B :- inter A L B.
+inter [] _ [].
+ 
+union [X | XS] L L1  :- mem L X, !, union XS L L1.
+union [X | XS] L [X | L1]  :- union XS L L1.
+union [] L L .
+
+is_ground [].
+is_ground (_ :: L) :- is_ground L.
+ 
+propagate [] [is_subset X YS, is_subset X XS] (is_subset X INTER) :-
+  is_ground YS, is_ground XS, inter YS XS INTER.
+
+propagate [X] [X] true.
+
+propagate [mem X A,is_subset X Y] [] (mem Y A).
+
+propagate [] [mem X A] (is_subset [A] X).
+propagate [] [is_subset A X, is_subset B X] (is_subset C X) :-
+  is_ground A, is_ground B, union A B C.
+
+main1 :-
+ P = [ fun f [ case a a
+             , case b (app g a) ]
+     , fun g [ case a c
+             , case b d ]
+     ],
+ T = [ fun f [b] [a, c, d, e ]
+     , fun g [a, b] [c, d, e]
+     ],
+ check P T T,
+ print "Type-checking ok",
+
+ I = [ fun f If Of
+     , fun g Ig Og
+     ],
+ check P I I,
+ print "Type-inference ok",
+ print ":::" f ":" If "->" Of,
+ print ":::" g ":" Ig "->" Og,
+ print_constraints,
+ 
+ Ig = [a],
+ print "Type specialization ok",
+ print ":::" f ":" If "->" Of,
+ print ":::" g ":" Ig "->" Og,
+ print_constraints.
+
+main2 :-
+ P' = [ fun f [ case a a
+              , case b (app h1 (app g a))
+              , case c (app h2 (app g a)) ]
+      , fun g  [ case a a ]
+      , fun h1 [ case a a
+               , case b b
+               , case d d ]
+      , fun h2 [ case a a
+               , case b b
+               , case c c ]
+      ],
+ I' = [ fun f If' Of'
+      , fun g Ig' Og'
+      , fun h1 Ih1' Oh1'
+      , fun h2 Ih2' Oh2'
+      ],
+ check P' I' I',
+ print "Type-inference ok",
+ print ":::" f ":" If' "->" Of',
+ print ":::" g ":" Ig' "->" Og',
+ print ":::" h1 ":" Ih1' "->" Oh1',
+ print ":::" h2 ":" Ih2' "->" Oh2'.
+
+main :- (main1, print "xxx failing", fail) ; print "xxx failed", main2.
+
+% vim: set ft=lprolog:

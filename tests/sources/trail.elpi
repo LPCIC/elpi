@@ -1,0 +1,10 @@
+% Query: p X Z.
+% Expected outcome: X=ok, Z=ok.
+
+p X Z :- foo Y X, r Y Z.
+foo Y X :- A = ok, q Y, X = A.
+q a.
+q b.
+r b ok.
+
+main :- p X Z, X = ok, Z = ok.

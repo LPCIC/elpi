@@ -1,0 +1,70 @@
+ *****************************************************************************
+ *                                                                           *
+ * The code in this directory implements an interactive theorem prover       *
+ * based on a natural deduction calculus. The important ideas underlying the *
+ * code were explored by Amy Felty as part of her doctoral dissertation. A   *
+ * shorter description of the relevant ideas may be found in the paper       *
+ *                                                                           *
+ *     Specifying Theorem Provers in a Higher-Order Logic Programming        *
+ *     Language, by Amy Felty and Dale Miller, Springer Verlag LNCS 310,     *
+ *     pp 61 - 88, 1988.                                                     *
+ *                                                                           *
+ * To our knowledge, the present code dates back to a demonstration of a     *
+ * Lambda Prolog interpreter at a pre-conference workshop at CADE 9 by       *
+ * Amy Felty, Dale Miller and Gopalan Nadathur.                              *
+ *                                                                           *
+ * The adaptation to Teyjus code is due to Gopalan Nadathur.                 *
+ *                                                                           *
+ *****************************************************************************
+
+The code in this directory demonstrates many of the good features of Lambda 
+Prolog: lambda terms as a means for capturing the higher-order abstract 
+syntax of formulas and proofs, beta conversion as a means for realizing 
+substitution correctly, benefits of higher-order programming and the 
+support for search in logic programming as a natural basis for realizing 
+tactics and tacticals.
+
+The contents of particular files are as follows:
+
+listmanip.sig,   Some list manipulation utilities needed in the 
+listmanip.mod    implementation of tactics
+
+logic.sig        Defines kinds for expression categories and constants for 
+                 encoding the logical vocabulary of a first-order logic
+
+nonlogical.sig   Encodings for the nonlogical vocabulary of a first-order
+                 logic
+
+formulas.sig,    Illustrations of formula encodings; these encodings are 
+formulas.mod     also useful in theorem proving demonstrations
+
+ndproofs.sig     Encodings of proofs in the natural deduction calculus
+
+goaltypes.sig    Encodings for goals in a tactic and tactical style 
+                 theorem prover
+
+ndtac.sig,       Implementation of primitive tactics for a fragment of 
+ndtac.mod        first-order logic
+
+goalred.sig,     Code for simplifying goals based on the recognition of
+goalred.mod      trivially solved subparts
+
+tacticals.sig,   Implementation of some tacticals, i.e. methods for 
+tacticals.mod    combining atomic proof rules (realized through tactics)
+                 into larger (derived) rules
+
+inter.sig,       An interactive theorem prover based on the use of tactics 
+inter.mod        and tacticals. This is the main program in this directory
+
+script           Exhibition of a run of the system
+
+Running the code
+----------------
+
+The main file to compile and load is inter. The file script contains an 
+example session consisting of compiling, loading and executing the code 
+in inter. The file printfile contains a bottom-up listing of the files 
+in this directory and may be used in understanding the code. 
+
+Last edited on June 26, 1999 by Gopalan Nadathur
+

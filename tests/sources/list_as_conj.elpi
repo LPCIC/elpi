@@ -1,0 +1,7 @@
+type a,b prop.
+f :- [print a, print b, a].
+a :- (b :- [print "done"]) => b.
+
+main :- f.
+
+

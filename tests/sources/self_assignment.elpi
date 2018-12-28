@@ -1,0 +1,5 @@
+% main should succeed
+
+q X X A.
+
+main :- (pi c\ q X A Y, q Y A X, q X Y A), X = d.

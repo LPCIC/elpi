@@ -1,0 +1,10 @@
+main :- declare_constraint a [_],
+        declare_constraint b [_],
+        declare_constraint b [_],
+        declare_constraint d [_].
+
+constraint a b c d {
+ rule a (d) \ b b <=> (print c, declare_constraint c [_]).
+ rule c c <=> fail.
+
+}

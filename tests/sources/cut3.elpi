@@ -1,0 +1,13 @@
+% Test with q X; should yield X=ok
+
+q X :- a X, b, c X.
+
+a ko.
+a ok.
+
+b :- !.
+b.
+
+c ok.
+
+main :- q X, X = ok.

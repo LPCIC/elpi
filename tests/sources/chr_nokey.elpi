@@ -1,0 +1,12 @@
+type test int -> prop.
+
+main :- declare_constraint (test 1) [_], declare_constraint (test 2) [_].
+
+constraint test {
+
+ :name "fst"
+ rule (test 1) \ (test 2).
+
+ rule (test 2) <=> fail.
+
+}

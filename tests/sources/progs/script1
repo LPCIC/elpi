@@ -1,0 +1,160 @@
+ *****************************************************************************
+ *                                                                           *
+ *           ILLUSTRATION OF PROGRAM MANIPULATION USING TEYJUS               *
+ *                                                                           *
+ *  The script that follows shows the execution of the code that implements  *
+ *  an interpreter for a simple functional programming language. There are   *
+ *  annotations in the script that draw attention to particular aspects.     *
+ *  These annotations are in the form of Lambda Prolog style comments.       *
+ *                                                                           *
+ *****************************************************************************
+
+/* Setting up steps */
+% make eval
+../../../source/tjdepend *.mod > depend
+../../../source/tjcc eval_examples
+../../../source/tjcc eval
+../../../source/tjcc terms
+../../../source/tjcc eval_basic
+../../../source/tjlink eval_examples
+% alias tjsim ../../../source/tjsim
+
+/* trying out the eval predicate with example programs */
+
+% tjsim eval_examples
+Welcome to Teyjus
+Copyright (C) 2008 A. Gacek, S. Holte, G. Nadathur, X. Qi, Z. Snow
+Teyjus comes with ABSOLUTELY NO WARRANTY
+This is free software, and you are welcome to redistribute it
+under certain conditions. Please view the accompanying file
+COPYING for more information
+[eval_examples] ?- eval (app (abs f\ (abs x\ (abs y\ (app (app f x) y)))) (abs u\ (abs v\ u))) R.
+
+The answer substitution:
+R = abs (W1\ abs (W2\ app (app (abs (W3\ abs (W4\ W3))) W1) W2))
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[eval_examples] ?- eval (app (abs f\ (app (app f (abs x\ x)) (abs x\ (abs y\ y)))) (abs u\ (abs v\ u))) R.
+
+The answer substitution:
+R = abs (W1\ W1)
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[eval_examples] ?- eval (app (abs f\ (app (app f (abs x\ x)) (abs x\ (abs y\ y)))) (abs u\ (abs v\ v))) R.
+
+The answer substitution:
+R = abs (W1\ abs (W2\ W2))
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[eval_examples] ?- eval (eq (c 5) (c 0)) R.
+
+The answer substitution:
+R = false
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[eval_examples] ?- 
+
+/* The next set of queries provide simple illustrations of the evaluation
+rules for some of the programming language primitives */
+
+[eval_examples] ?- eval (eq (c 5) (c 0)) R.
+
+The answer substitution:
+R = false
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[eval_examples] ?- eval (eq (c 5) (c 5)) R.
+
+The answer substitution:
+R = truth
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[eval_examples] ?- eval (lss (c 5) (c 3)) R.
+
+The answer substitution:
+R = false
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[eval_examples] ?- eval (lss (c 3) (c 5)) R.
+
+The answer substitution:
+R = truth
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[eval_examples] ?-
+
+/* The remaining queries illustrate the evaluation of programs constructed
+using the vocabulary of the functional programming language */
+
+
+[eval_examples] ?- test 1 F.
+
+The answer substitution:
+F = c 120
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[eval_examples] ?- test 2 F.
+
+The answer substitution:
+F = c 1
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[eval_examples] ?- test 3 F.
+
+The answer substitution:
+F = c 5
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[eval_examples] ?- test 4 F.
+
+The answer substitution:
+F = c 3
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[eval_examples] ?- test 5 F.
+
+The answer substitution:
+F = cons (c 1) (cons (c 2) (cons (c 3) (cons (c 4) null)))
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[eval_examples] ?- halt.
+% 

@@ -1,0 +1,38 @@
+mode (leq i i).
+leq (uvar as A) (uvar as B) :- !,  declare_constraint (leq A B) [A,B].
+leq A         (uvar as B) :- !,  declare_constraint (leq A B) [B].
+leq (uvar as A) B         :- !,  declare_constraint (leq A B) [A].
+
+mode (ltn i i).
+ltn (uvar as A) (uvar as B) :- !,  declare_constraint (ltn A B) [A,B].
+ltn A         (uvar as B) :- !,  declare_constraint (ltn A B) [B].
+ltn (uvar as A) B         :- !,  declare_constraint (ltn A B) [A].
+
+main :-
+  leq A B, leq B C, not (ltn C A), ltn A B, not(A = C).
+
+constraint leq ltn {
+  % incompat (FIRST!!)
+  rule (leq X Y) (ltn Y X) <=> false.
+  rule (ltn X Y) (ltn Y X) <=> false.
+  rule (ltn X X) <=> false.
+  
+  % refl
+  rule \ (leq X X).
+
+  % atisym
+  rule (leq X Y) \ (leq Y X) <=> (Y = X).
+
+  % trans
+  rule (leq X Y) (leq Y Z) <=> (leq X Z).
+  rule (leq X Y) (ltn Y Z) <=> (ltn X Z).
+  rule (ltn X Y) (leq Y Z) <=> (ltn X Z).
+  rule (ltn X Y) (ltn Y Z) <=> (ltn X Z).
+
+  % idempotence
+  rule (leq X Y) \ (leq X Y).
+  rule (ltn X Y) \ (ltn X Y).
+
+}
+
+% vim:set ft=lprolog:

@@ -1,0 +1,9 @@
+toto 1.
+
+% We test toto is not put inside the namespace
+namespace foo {
+  bar X :- toto 2 => baz X.
+  baz X :- toto X.
+}
+main :- foo.bar 2, foo.baz 1.
+

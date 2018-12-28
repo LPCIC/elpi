@@ -1,0 +1,5 @@
+% q X yields X=ok
+
+q X :- (a, (b :- a), (a => c)) => (b,c => r ok) => r X.
+
+main :- q X, X = ok.

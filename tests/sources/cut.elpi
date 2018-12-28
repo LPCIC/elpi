@@ -1,0 +1,13 @@
+/* To test: query q X. The only answer should be X = ok. */
+q X :- a X.
+q ok.
+
+a ko :- b Y, !, c Y.
+a two.
+
+b three.
+b four.
+
+c four.
+
+main :- q X, X = ok.

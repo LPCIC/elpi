@@ -7,6 +7,8 @@
 *.cmt
 *.cmti
 *.cma
+*.lp
+*.lpo
 
 findlib
 
@@ -24,12 +26,15 @@ trace_ppx
 .merlin
 elpi_config.ml
 
-bench/data.csv
-bench/data.csv.dat
-bench/data.csv.plot
-bench/data.csv.svg
+data.csv
+data.csv.dat
+data.csv.plot
+data.csv.svg
 
 bench/sources/lyp/helena
 bench/sources/lyp/etc
 bench/sources/helena_elpi/helena
 bench/sources/helena_elpi/etc
+
+_build
+_log

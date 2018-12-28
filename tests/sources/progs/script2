@@ -1,0 +1,50 @@
+ *****************************************************************************
+ *                                                                           *
+ *           ILLUSTRATION OF PROGRAM MANIPULATION USING TEYJUS               *
+ *                                                                           *
+ *  The script that follows shows the execution of code that implements      *
+ *  the `currying' transform. The example essentially transforms a           *
+ *  tail recursive version of the factorial function that takes a pair as    *
+ *  argument into an equivalent function that takes two arguments.           *
+ *  This script/code demonstrates the power/usefulness of higher-order       *
+ *  unification.                                                             *
+ *                                                                           *
+ *  The module curry_test is assumed to be precompiled in this script.       *
+ *                                                                           *
+ *****************************************************************************
+
+/* Setting up steps */
+
+% make curry
+../../../source/tjdepend *.mod > depend
+../../../source/tjcc curry_test
+../../../source/tjcc terms
+../../../source/tjcc curry_transform
+../../../source/tjlink curry_test
+% alias tjsim ../../../source/tjsim
+
+/* example of the currying transformation; this is an example where a 
+   final attempt to solve the final non-pattern flex-rigid pair may 
+   be useful since the solution is unitary */
+
+% tjsim curry_test
+Welcome to Teyjus
+Copyright (C) 2008 A. Gacek, S. Holte, G. Nadathur, X. Qi, Z. Snow
+Teyjus comes with ABSOLUTELY NO WARRANTY
+This is free software, and you are welcome to redistribute it
+under certain conditions. Please view the accompanying file
+COPYING for more information
+[curry_test] ?- test 1 F.
+
+The answer substitution:
+F = fix (W1\ abs (W2\ abs (W3\ _T1 W2 W3 truth (W4\ W5\ app (app W1 W4) W5))))
+
+The remaining disagreement pairs list:
+<_T1 (fst #1) (snd #1) (prp #1) (W1\ W2\ app #2 (pr W1 W2)), cond (&& (prp #1) (eq (fst #1) (c 0))) (snd #1) (cond (prp #1) (app #2 (pr (minus (fst #1) (c 1)) (times (fst #1) (snd #1)))) err)>
+
+More solutions (y/n)? y
+
+no (more) solutions
+
+[curry_test] ?- 
+

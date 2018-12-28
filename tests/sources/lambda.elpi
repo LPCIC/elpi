@@ -1,0 +1,12 @@
+% test Z yields Z=impl(impl A B) (impl A B)
+
+% Type inference for simply typed lambda terms
+% Syntax: t ::= appl t t | abs F    where F is a function t -> t
+% Syntax: ty ::= impl ty ty
+
+of (appl T1 T2) B :- of T1 (impl A B), of T2 A.
+of (lam F) (impl A B) :- pi x\ of x A => of (F x) B.
+
+test Z :- of (lam f\ lam a\ appl f a) Z.
+
+main :- test Z, Z = impl (impl a b) (impl a b).

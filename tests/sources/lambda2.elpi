@@ -1,0 +1,8 @@
+% q X yields X=ok
+
+q X :- r X (x\ p x).
+
+r ko (x\ g x).
+r ok (y\ p y).
+
+main :- q X, X = ok.

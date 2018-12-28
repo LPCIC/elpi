@@ -1,0 +1,6 @@
+(library
+  (name test_suite)
+  (libraries str unix)
+  (library_flags -linkall)
+)
+

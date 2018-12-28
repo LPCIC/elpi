@@ -1,0 +1,24 @@
+kind nat type.
+type zero nat.
+type succ nat -> nat.
+
+pred odd i:nat.
+pred even i:nat.
+pred double i:nat, o:nat.
+
+even zero.
+odd (succ X) :- even X.
+even (succ X) :- odd X.
+even X :- var X, declare_constraint (even X) [X].
+odd X :- var X, declare_constraint (odd X) [X].
+
+double zero zero.
+double (succ X) (succ (succ Y)) :- double X Y.
+double X Y :- var X, declare_constraint (double X Y) [X].
+
+main :- odd X, not(X = zero), not(double Z X).
+
+constraint even odd double {
+  rule (even X) (odd X) <=> fail.
+  rule (double _ Y) <=> (even Y).
+}

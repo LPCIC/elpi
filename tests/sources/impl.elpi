@@ -1,0 +1,11 @@
+% q X Y shoud yield X=ok Y=ok
+
+q X Y :- (r a => p X), f X Y.
+
+f ok ko :- r a.
+f ok ok.
+
+p ko :- r a.
+p ok :- r a.
+
+main :- q X Y, X = ok, Y = ok.

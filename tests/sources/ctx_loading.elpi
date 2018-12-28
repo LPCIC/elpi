@@ -1,0 +1,23 @@
+constraint a b c d1 d2 d3 d11 d22 d33 {
+  rule (C ?- d1 X) | (print C) <=> (C ?- declare_constraint (d11 X) [X]).
+  rule (C ?- d2 X) | (print C) <=> (C ?- declare_constraint (d22 X) [X]).
+  rule (C ?- d3 X) | (print C) <=> (C ?- declare_constraint (d33 X) [X]).
+  rule \ (C ?- d1 X) (C ?- d11 X).
+  rule \ (C ?- d2 X) (C ?- d22 X).
+  rule \ (C ?- d3 X) (C ?- d33 X).
+}
+type p prop -> prop.
+type a prop.
+type b prop.
+type c prop.
+type d1, d2, d3, d11, d22, d33 foo -> prop.
+
+main :-
+  p b => p a => p W, !, W = a,
+  [p a, p b] => p Y, !, Y = a, 
+  (p a, p b) => p Z, !, Z = a,
+  [a, b, c] =>   declare_constraint (d1 X) [X],
+  c => b => a => declare_constraint (d2 X) [X],
+  (a, b, c) =>   declare_constraint (d3 X) [X],
+  X = a.
+	

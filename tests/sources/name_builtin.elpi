@@ -1,0 +1,7 @@
+main :-
+  (pi f x y\
+    name (f x y) f [x, y]),
+  (pi x\ name x x []),
+  (pi f x y\
+    name (A f x y) f [x,y], print "A=" A, A f x y = (f x y)),
+  (pi x\ name (B x) x [], print "B=" B, B x = x).

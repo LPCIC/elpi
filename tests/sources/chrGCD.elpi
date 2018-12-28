@@ -1,0 +1,20 @@
+mode (gcd i i).
+kind group type.
+type group-1 group.
+type group-2 group.
+
+gcd A (uvar as B) :- !, declare_constraint (gcd A B) [B].
+
+% assert result is OK
+gcd 11 group-1 :- print "group 1 solved".
+gcd 7 group-2 :- print "group 2 solved".
+
+main :- gcd 99 X, gcd 66 X, gcd 14 Y, gcd 22 X, gcd 77 Y,
+        % we then force a resumption to check only GCDs are there
+        X = group-1, Y = group-2.
+
+constraint gcd {
+  rule (gcd A _) \ (gcd B _) | (A = B).
+  rule (gcd A _) \ (gcd B X) | (A < B) <=> (C is (B - A), gcd C X).
+}
+

@@ -1,0 +1,7 @@
+% q(a): OK; q(b): FAIL; q(X): exception; q(a,a): OK; q(true): OK.
+
+q(X) :- X.
+
+a.
+
+main :- q a, q (a,a), q true.

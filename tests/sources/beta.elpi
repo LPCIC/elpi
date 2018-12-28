@@ -1,0 +1,1 @@
+main :- X = (x\ y\ f x y), X a b = f a b.

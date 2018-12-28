@@ -1,0 +1,73 @@
+ *****************************************************************************
+ *                                                                           *
+ * The code in this directory is based on material in the paper              *
+ *                                                                           *
+ *     G. Nadathur and D. Miller, Higher-Order Logic Programming, in         *
+ *     Handbook of Logic in Artificial Intelligence and Logic                *
+ *     Programming, D. M. Gabbay, C. J. Hogger and J. A. Robinson (eds.),    *
+ *     Oxford University Press, January 1998, pages 499--590.                *
+ *                                                                           *
+ * The adaptation to Teyjus code is due to Gopalan Nadathur.                 *
+ *                                                                           *
+ *****************************************************************************
+	
+The important conceptual content of the code in this directory is in
+the use of higher-order abstract syntax in representing programs (in a
+simple functional programming language) and of beta reduction,
+higher-order unification and the scoping primitives in probing this
+structure.
+
+The relevant files are the following:
+
+fp_types.sig           Defines the kinds and constants needed in encoding 
+                       the pure lambda calculus
+
+fp_vocab.sig           Defines the (additional) constants needed in encoding
+                       a simple functional programming language
+
+terms.sig              Encodings of some simple programs; these encodings 
+terms.mod              are also used in illustrating program manipulation
+
+refl_syntax.sig        A recognizer of the valid program terms in the 
+refl_syntax.mod        functional programming language considered
+
+eval_basic.sig         A call-by-value evaluator for the pure lambda calculus;
+eval_basic.mod         this illustrates the usefulness of beta reduction
+                       in realizing substitution correctly
+
+eval.sig               A call-by-value evaluator for the functional 
+eval.mod               programming language; further illustration of the
+                       benefits of beta reduction
+
+eval_examples.sig      A testing harness for the interpreter for the 
+eval_examples.mod      functional programming language under consideration
+
+curry_transform.sig    A transformer from uncurried to curried form for 
+curry_transform.mod    two argument functions. This is an illustration of 
+                       the power of higher-order unification
+
+curry_test.sig         A harness for testing the `currying' transform
+curry_test.mod
+
+tr_recognizer.sig      A recognizer for tail recursive functions of two
+tr_recognizer.mod      arguments
+
+tr1_test.sig           Code for testing the tail recursion recognizer 
+tr1_test.mod           defined in tr_recognizer.mod
+
+general_tr.sig         A recognizer for tail recursive functions of 
+general_tr.mod         arbitrary arity. This code illustrates the usefulness
+                       of the scoping primitives in realizing recursion 
+                       over binding structure
+
+tr2_test.sig           Code for testing the tail recursion recognizer 
+tr2_test.mod           defined in general_tr.mod
+
+
+
+script1                Scripts depicting the interpreter, currying 
+script2                transformer, the tail recursion recognizer for
+script3                functions of two arguments and the general tail 
+script4                recursion recognizer at work.
+                       
+

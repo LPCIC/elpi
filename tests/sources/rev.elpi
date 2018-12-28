@@ -1,0 +1,67 @@
+% X10:
+%   yap                                     0.027s
+%   elpi                                    3.771s
+%   one level index hashtbl                 0.528s
+%   two level inefficient index             0.681s
+%   one level index hashtbl + automatic GC  0.899s
+%   one lvl hashtbl + flat + automatic GC   0.763s
+%   one lvl hashtbl + flat                  0.629s
+
+
+% X13:
+%   yap                          0.083s
+%   elpi                        10.068s
+%   one level index hashtbl      3.90s
+%   two level inefficient index  4.48s
+
+% X14:
+%   ocamlopt                     0.014s
+%   ocamlc                       0.024s
+%   yap                          0.033s
+%   teyjus                       0.257s
+%   elpi                         4.72s (setting ulimit -s 81920)
+%                                newlazy  lazy   eager   with formula       with terms
+%   no index                     2.90s  3.85s  4.74s   4.49s              4.28s
+%   one level index hashtbl      2.51s  2.37s  2.35s   2.29s              2.28s
+%   two level inefficient index  1.78s  2.19s  3.00s   2.30s              2.34s
+%   one level hashtbl + auto GC  3.78s  3.97s  4.67s   3.39s              3.88s
+%   one lvl hash+flat+ auto GC   3.10s  3.22s  3.40s   3.38s              3.14s
+%   one lvl hashtbl + flat              2.42s  2.43s   2.64s              2.27s
+%   one lvl hash+ flat + man GC         2.99s  2.80s   2.83s              2.37s
+%   one lvl index map main       2.61s  2.44s  2.60s   2.40s              2.18s
+%I  one lvl hashtbl              0.72s  0.61s  -----   0.63s              0.57s
+%I  two lvl efficient index      0.36s  0.55s  0.62s
+%II two lvl inefficient index    0.70s
+%I  desperate two lvl effici     0.19s
+%I  desperate.ml                 0.11s  0.14s
+%I  desperate2.ml                0.11s
+%I  desperate3.ml                0.12s
+
+rev L RL  :- aux L xnil  RL .
+aux (xcons X XS)  ACC  R :- aux XS (xcons X ACC) R . 
+aux xnil  L  L .
+
+append (xcons X XS) L (xcons X L1)  :- append XS L L1 .
+append xnil L L .
+
+main :-
+    X1 =  (xcons x1 (xcons x2 (xcons x3 (xcons x4 (xcons x5 (xcons x6 (xcons x7 (xcons x8 (xcons x9 (xcons x10 xnil)))))))))),
+   append X1 X1 X2  ,
+   append X2 X2 X3  ,
+   append X3 X3 X4  ,
+   append X4 X4 X5  ,
+   append X5 X5 X6  ,
+   append X6 X6 X7  ,
+   append X7 X7 X8  ,
+   append X8 X8 X9  ,
+   append X9 X9 X10  ,
+   append X10 X10 X11  ,
+   append X11 X11 X12  ,
+   append X12 X12 X13  ,
+   append X13 X13 X14  ,
+   % append X14 X14 X15  ,
+   % append X15 X15 X16  ,
+   % append X16 X16 X17  ,
+   % append X17 X17 X18  ,
+   X = X14 ,
+   rev X  Y,   rev Y Z,  X = Z.

@@ -1,0 +1,24 @@
+type  if prop -> prop -> prop -> prop.
+mode (if i i i).
+if B T _ :- B, !, T.
+if _ _ E :- E.
+
+type debug-print string -> A -> prop.
+debug-print A B :- print A B.
+
+pred spy i:prop.
+spy P :- counter "run" NR, if (not(NR = 0)) (debug-print "run=" NR) true,
+         debug-print "----<<---- enter: " P,
+         P, !,
+         debug-print "---->>---- exit: " P.
+spy P :- debug-print "---->>---- fail: " P, fail.
+
+type lam (term -> term) -> term.
+
+foo A B :-
+  spy(A = lam i\ lam j\ X_ i j),
+  spy(B = lam i\ lam j\ Y_ i j),
+  spy(A = lam i\ lam j\ i),
+  spy(B = lam i\ lam j\ i).
+
+main :- pi x\ foo (A_ x) B_.

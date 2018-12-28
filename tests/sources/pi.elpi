@@ -1,0 +1,8 @@
+% q X yields X=ok
+
+q X :- pi x\ p x => pi y\ r y => z x y X.
+
+z A B ko :- r A, p B.
+z A B ok :- p A, r B.
+
+main :- q X, X = ok.
