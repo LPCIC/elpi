@@ -1,3 +1,0 @@
-% Test: main. Should not fail.
-
-main :- !.

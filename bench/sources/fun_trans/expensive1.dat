@@ -1,1 +1,0 @@
-lam (x\ app (lam (p\ snd p)) (pair u (case x (l\l) (r\r)))).
