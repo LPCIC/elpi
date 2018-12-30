@@ -3,7 +3,7 @@ sudo: required
 language: c
 env:
  global:
- - OCAML_MIN=4.02.3
+ - OCAML_MIN=4.03.0
  - OCAML_MAX=4.07.0
  - PREDEPS="ocamlfind"
  - DEPS="camlp5 ocamlfind ppx_tools_versioned ppx_deriving ocaml-migrate-parsetree re"

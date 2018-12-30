@@ -176,7 +176,7 @@ let wait pid timeout timelog =
         stop := true;
         rc := Timeout;
         Unix.kill (- pid) 9;
-      end else Unix.sleep 1
+      end else Unix.sleepf 0.01
     done;
     !rc
 
