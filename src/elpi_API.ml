@@ -2,13 +2,13 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-module type Runtime = module type of Elpi_runtime_trace_off.Elpi_runtime
+module type Runtime = module type of Elpi_runtime_trace_off
 
-let r = ref (module Elpi_runtime_trace_off.Elpi_runtime : Runtime)
+let r = ref (module Elpi_runtime_trace_off : Runtime)
 
 let set_runtime = function
-  | true  -> r := (module Elpi_runtime_trace_on.Elpi_runtime  : Runtime)
-  | false -> r := (module Elpi_runtime_trace_off.Elpi_runtime : Runtime)
+  | true  -> r := (module Elpi_runtime_trace_on  : Runtime)
+  | false -> r := (module Elpi_runtime_trace_off : Runtime)
 
 let set_trace argv =
   let args = Elpi_trace.parse_argv argv in

@@ -1,0 +1,18 @@
+(library 
+  (name trace_ppx)
+  ; (public_name trace_ppx)
+  (libraries ppx_tools_versioned ocaml-migrate-parsetree)
+  (preprocess (pps ppx_tools_versioned.metaquot_404))
+  (flags -open Ast_404)
+  (kind ppx_rewriter)
+  (ppx_runtime_libraries elpi.elpi_trace)
+  (modules trace_ppx)
+)
+
+(library 
+  (name elpi_trace)
+  (public_name elpi.elpi_trace)
+  ; (public_name trace_ppx.runtime)
+  (libraries re)
+  (modules elpi_trace)
+)

@@ -63,7 +63,7 @@ type 'a output =
 type job = {
   executable : string;
   test : Test.t;
-  run : timeout:float -> env:string array -> result output;
+  run : timeout:float -> env:string array -> sources:string -> result output;
 }
 
 val jobs : timetool:string -> executables:string list -> Test.t -> job list

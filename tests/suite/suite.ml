@@ -86,7 +86,7 @@ type 'a output =
   | Done of 'a
 
 type run =
-  executable:string -> timetool:string -> timeout:float -> env:string array ->
+  executable:string -> timetool:string -> timeout:float -> env:string array -> sources:string ->
     Test.t -> result output
 
 (* Some tests are only for teyjus/elpi *)
@@ -104,7 +104,7 @@ let declare ~applicable ~run =
 type job = {
   executable : string;
   test : Test.t;
-  run : timeout:float -> env:string array -> result output;
+  run : timeout:float -> env:string array -> sources:string -> result output;
 }
 
 let (||>) l f = List.(concat (map f l))
@@ -247,18 +247,18 @@ let () = Runner.declare
     if is_elpi executable && source_elpi <> None then Runner.Can_run_it
     else Runner.Not_for_me
   end
-  ~run:begin fun ~executable ~timetool ~timeout ~env test ->
+  ~run:begin fun ~executable ~timetool ~timeout ~env ~sources test ->
   let source =
     match test.Test.source_elpi with Some x -> x | _ -> assert false in
   if not (Sys.file_exists executable) then Runner.Skipped
-  else if not (Sys.file_exists ("sources/"^source)) then Runner.Skipped
+  else if not (Sys.file_exists (sources^source)) then Runner.Skipped
   else
     let log = Util.open_log ~executable test in
     Util.write log (Printf.sprintf "executable: %s\n" executable);
 
     let { Test.expectation; input; outside_llam ; _ } = test in
-    let input = Util.option_map (fun x -> "sources/"^x) input in
-    let args = ["-test";"-no-tc";"-I";"sources";source] in
+    let input = Util.option_map (fun x -> sources^x) input in
+    let args = ["-test";"-no-tc";"-I";sources;source] in
     let args =
       if outside_llam then "-delay-problems-outside-pattern-fragment"::args
       else args in
@@ -301,16 +301,16 @@ let is_tjsim =
     if is_tjsim executable && source_teyjus <> None then Runner.Can_run_it
     else Runner.Not_for_me
   end
-  ~run:begin fun ~executable ~timetool ~timeout ~env test ->
+  ~run:begin fun ~executable ~timetool ~timeout ~env ~sources test ->
   let source =
-    match test.Test.source_teyjus with Some x -> "sources/"^x | _ -> assert false in
+    match test.Test.source_teyjus with Some x -> sources^x | _ -> assert false in
   if not (Sys.file_exists executable) then Runner.Skipped
   else if not (Sys.file_exists source) then Runner.Skipped
   else
     let log = Util.open_log ~executable test in
 
     let { Test.expectation; input; _ } = test in
-    let input = Util.option_map (fun x -> "sources/"^x) input in
+    let input = Util.option_map (fun x -> sources^x) input in
 
     let tjcc = Filename.dirname executable ^ "/tjcc" in
     let tjlink = Filename.dirname executable ^ "/tjlink" in
@@ -328,7 +328,7 @@ let is_tjsim =
       Unix.chdir old;
       dir, modname in
 
-    List.iter (fun x -> ignore (do1 tjcc ("sources/"^x)))
+    List.iter (fun x -> ignore (do1 tjcc (sources^x)))
       test.Test.deps_teyjus;
     let _ = do1 tjcc source in
 

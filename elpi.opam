@@ -8,11 +8,13 @@ doc: "https://github.com/LPCIC/elpi"
 dev-repo: "git+https://github.com/LPCIC/elpi.git"
 bug-reports: "https://github.com/LPCIC/elpi/issues"
 
-build: [ [ make ] [ make "byte" ] ]
-run-test: [ make "-C" "tests" "run" "RUNNERS=../elpi" ]
+build: [
+  [ "dune" "subst" {pinned} ]
+  [ "dune" "build" "-p" name "-j" jobs ]
+]
+run-test: [ make "tests" ]
 install: [ 
-	[ make "install" ]
-	[ make "install-bin" "BIN=%{bin}%" ]
+	[ "dune" "install" "-p" name ]
 ]
 
 depends: [
@@ -25,7 +27,7 @@ depends: [
   "re" {>= "1.7.2"}
   "ANSITerminal" {with-test}
   "cmdliner" {with-test}
-  "dune" {with-test}
+  "dune" {build}
   "conf-time" {with-test}
 ]
 synopsis: "ELPI - Embeddable λProlog Interpreter"

@@ -1,0 +1,7 @@
+(executable
+  (name elpi_REPL)
+  (public_name elpi)
+  (libraries elpi)
+  (modules elpi_REPL)
+)
+

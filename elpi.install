@@ -1,0 +1,96 @@
+lib: [
+  "_build/install/default/lib/elpi/.private/elpi__Elpi_ast.cmi" {".private/elpi__Elpi_ast.cmi"}
+  "_build/install/default/lib/elpi/.private/elpi__Elpi_compiler.cmi" {".private/elpi__Elpi_compiler.cmi"}
+  "_build/install/default/lib/elpi/.private/elpi__Elpi_data.cmi" {".private/elpi__Elpi_data.cmi"}
+  "_build/install/default/lib/elpi/.private/elpi__Elpi_parser.cmi" {".private/elpi__Elpi_parser.cmi"}
+  "_build/install/default/lib/elpi/.private/elpi__Elpi_ptmap.cmi" {".private/elpi__Elpi_ptmap.cmi"}
+  "_build/install/default/lib/elpi/.private/elpi__Elpi_runtime_trace_off.cmi" {".private/elpi__Elpi_runtime_trace_off.cmi"}
+  "_build/install/default/lib/elpi/.private/elpi__Elpi_runtime_trace_on.cmi" {".private/elpi__Elpi_runtime_trace_on.cmi"}
+  "_build/install/default/lib/elpi/.private/elpi__Elpi_util.cmi" {".private/elpi__Elpi_util.cmi"}
+  "_build/install/default/lib/elpi/META" {"META"}
+  "_build/install/default/lib/elpi/builtin.elpi"
+  "_build/install/default/lib/elpi/dune-package" {"dune-package"}
+  "_build/install/default/lib/elpi/elpi-checker.elpi"
+  "_build/install/default/lib/elpi/elpi.a" {"elpi.a"}
+  "_build/install/default/lib/elpi/elpi.cma" {"elpi.cma"}
+  "_build/install/default/lib/elpi/elpi.cmi" {"elpi.cmi"}
+  "_build/install/default/lib/elpi/elpi.cmt" {"elpi.cmt"}
+  "_build/install/default/lib/elpi/elpi.cmx" {"elpi.cmx"}
+  "_build/install/default/lib/elpi/elpi.cmxa" {"elpi.cmxa"}
+  "_build/install/default/lib/elpi/elpi.cmxs" {"elpi.cmxs"}
+  "_build/install/default/lib/elpi/elpi.ml" {"elpi.ml"}
+  "_build/install/default/lib/elpi/elpi2html.elpi"
+  "_build/install/default/lib/elpi/elpi_API.ml" {"elpi_API.ml"}
+  "_build/install/default/lib/elpi/elpi_API.mli" {"elpi_API.mli"}
+  "_build/install/default/lib/elpi/elpi__.cmi" {"elpi__.cmi"}
+  "_build/install/default/lib/elpi/elpi__.cmt" {"elpi__.cmt"}
+  "_build/install/default/lib/elpi/elpi__.cmx" {"elpi__.cmx"}
+  "_build/install/default/lib/elpi/elpi__.ml" {"elpi__.ml"}
+  "_build/install/default/lib/elpi/elpi__Elpi_API.cmi" {"elpi__Elpi_API.cmi"}
+  "_build/install/default/lib/elpi/elpi__Elpi_API.cmt" {"elpi__Elpi_API.cmt"}
+  "_build/install/default/lib/elpi/elpi__Elpi_API.cmti" {"elpi__Elpi_API.cmti"}
+  "_build/install/default/lib/elpi/elpi__Elpi_API.cmx" {"elpi__Elpi_API.cmx"}
+  "_build/install/default/lib/elpi/elpi__Elpi_ast.cmt" {"elpi__Elpi_ast.cmt"}
+  "_build/install/default/lib/elpi/elpi__Elpi_ast.cmti" {"elpi__Elpi_ast.cmti"}
+  "_build/install/default/lib/elpi/elpi__Elpi_ast.cmx" {"elpi__Elpi_ast.cmx"}
+  "_build/install/default/lib/elpi/elpi__Elpi_builtin.cmi" {"elpi__Elpi_builtin.cmi"}
+  "_build/install/default/lib/elpi/elpi__Elpi_builtin.cmt" {"elpi__Elpi_builtin.cmt"}
+  "_build/install/default/lib/elpi/elpi__Elpi_builtin.cmti" {"elpi__Elpi_builtin.cmti"}
+  "_build/install/default/lib/elpi/elpi__Elpi_builtin.cmx" {"elpi__Elpi_builtin.cmx"}
+  "_build/install/default/lib/elpi/elpi__Elpi_compiler.cmt" {"elpi__Elpi_compiler.cmt"}
+  "_build/install/default/lib/elpi/elpi__Elpi_compiler.cmti" {"elpi__Elpi_compiler.cmti"}
+  "_build/install/default/lib/elpi/elpi__Elpi_compiler.cmx" {"elpi__Elpi_compiler.cmx"}
+  "_build/install/default/lib/elpi/elpi__Elpi_data.cmt" {"elpi__Elpi_data.cmt"}
+  "_build/install/default/lib/elpi/elpi__Elpi_data.cmx" {"elpi__Elpi_data.cmx"}
+  "_build/install/default/lib/elpi/elpi__Elpi_parser.cmt" {"elpi__Elpi_parser.cmt"}
+  "_build/install/default/lib/elpi/elpi__Elpi_parser.cmti" {"elpi__Elpi_parser.cmti"}
+  "_build/install/default/lib/elpi/elpi__Elpi_parser.cmx" {"elpi__Elpi_parser.cmx"}
+  "_build/install/default/lib/elpi/elpi__Elpi_ptmap.cmt" {"elpi__Elpi_ptmap.cmt"}
+  "_build/install/default/lib/elpi/elpi__Elpi_ptmap.cmti" {"elpi__Elpi_ptmap.cmti"}
+  "_build/install/default/lib/elpi/elpi__Elpi_ptmap.cmx" {"elpi__Elpi_ptmap.cmx"}
+  "_build/install/default/lib/elpi/elpi__Elpi_runtime_trace_off.cmt" {"elpi__Elpi_runtime_trace_off.cmt"}
+  "_build/install/default/lib/elpi/elpi__Elpi_runtime_trace_off.cmti" {"elpi__Elpi_runtime_trace_off.cmti"}
+  "_build/install/default/lib/elpi/elpi__Elpi_runtime_trace_off.cmx" {"elpi__Elpi_runtime_trace_off.cmx"}
+  "_build/install/default/lib/elpi/elpi__Elpi_runtime_trace_on.cmt" {"elpi__Elpi_runtime_trace_on.cmt"}
+  "_build/install/default/lib/elpi/elpi__Elpi_runtime_trace_on.cmti" {"elpi__Elpi_runtime_trace_on.cmti"}
+  "_build/install/default/lib/elpi/elpi__Elpi_runtime_trace_on.cmx" {"elpi__Elpi_runtime_trace_on.cmx"}
+  "_build/install/default/lib/elpi/elpi__Elpi_util.cmt" {"elpi__Elpi_util.cmt"}
+  "_build/install/default/lib/elpi/elpi__Elpi_util.cmti" {"elpi__Elpi_util.cmti"}
+  "_build/install/default/lib/elpi/elpi__Elpi_util.cmx" {"elpi__Elpi_util.cmx"}
+  "_build/install/default/lib/elpi/elpi_ast.ml" {"elpi_ast.ml"}
+  "_build/install/default/lib/elpi/elpi_ast.mli" {"elpi_ast.mli"}
+  "_build/install/default/lib/elpi/elpi_builtin.ml" {"elpi_builtin.ml"}
+  "_build/install/default/lib/elpi/elpi_builtin.mli" {"elpi_builtin.mli"}
+  "_build/install/default/lib/elpi/elpi_compiler.ml" {"elpi_compiler.ml"}
+  "_build/install/default/lib/elpi/elpi_compiler.mli" {"elpi_compiler.mli"}
+  "_build/install/default/lib/elpi/elpi_data.ml" {"elpi_data.ml"}
+  "_build/install/default/lib/elpi/elpi_parser.ml" {"elpi_parser.ml"}
+  "_build/install/default/lib/elpi/elpi_parser.mli" {"elpi_parser.mli"}
+  "_build/install/default/lib/elpi/elpi_ptmap.ml" {"elpi_ptmap.ml"}
+  "_build/install/default/lib/elpi/elpi_ptmap.mli" {"elpi_ptmap.mli"}
+  "_build/install/default/lib/elpi/elpi_quoted_syntax.elpi"
+  "_build/install/default/lib/elpi/elpi_runtime_trace_off.ml" {"elpi_runtime_trace_off.ml"}
+  "_build/install/default/lib/elpi/elpi_runtime_trace_off.mli" {"elpi_runtime_trace_off.mli"}
+  "_build/install/default/lib/elpi/elpi_runtime_trace_on.ml" {"elpi_runtime_trace_on.ml"}
+  "_build/install/default/lib/elpi/elpi_runtime_trace_on.mli" {"elpi_runtime_trace_on.mli"}
+  "_build/install/default/lib/elpi/elpi_trace/elpi_trace.a" {"elpi_trace/elpi_trace.a"}
+  "_build/install/default/lib/elpi/elpi_trace/elpi_trace.cma" {"elpi_trace/elpi_trace.cma"}
+  "_build/install/default/lib/elpi/elpi_trace/elpi_trace.cmi" {"elpi_trace/elpi_trace.cmi"}
+  "_build/install/default/lib/elpi/elpi_trace/elpi_trace.cmt" {"elpi_trace/elpi_trace.cmt"}
+  "_build/install/default/lib/elpi/elpi_trace/elpi_trace.cmti" {"elpi_trace/elpi_trace.cmti"}
+  "_build/install/default/lib/elpi/elpi_trace/elpi_trace.cmx" {"elpi_trace/elpi_trace.cmx"}
+  "_build/install/default/lib/elpi/elpi_trace/elpi_trace.cmxa" {"elpi_trace/elpi_trace.cmxa"}
+  "_build/install/default/lib/elpi/elpi_trace/elpi_trace.cmxs" {"elpi_trace/elpi_trace.cmxs"}
+  "_build/install/default/lib/elpi/elpi_trace/elpi_trace.ml" {"elpi_trace/elpi_trace.ml"}
+  "_build/install/default/lib/elpi/elpi_trace/elpi_trace.mli" {"elpi_trace/elpi_trace.mli"}
+  "_build/install/default/lib/elpi/elpi_util.ml" {"elpi_util.ml"}
+  "_build/install/default/lib/elpi/elpi_util.mli" {"elpi_util.mli"}
+  "_build/install/default/lib/elpi/opam" {"opam"}
+]
+bin: [
+  "_build/install/default/bin/elpi" {"elpi"}
+]
+doc: [
+  "_build/install/default/doc/elpi/LICENSE"
+  "_build/install/default/doc/elpi/README.md"
+]
