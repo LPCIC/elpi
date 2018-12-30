@@ -51,7 +51,7 @@ let print_summary ~total ~ok ~ko ~skipped =
 
 end
 
-let run timeout _seed env { Runner.run; test; executable }  =
+let run timeout _seed sources env { Runner.run; test; executable }  =
 
   let { Test.name; description; _ } = test in
   let print = Printer.print ~executable:(Filename.basename executable) ~name ~description in
@@ -59,7 +59,7 @@ let run timeout _seed env { Runner.run; test; executable }  =
   print 0.0 0.0 0 `RUNNING;
   ANSITerminal.move_bol ();
 
-  let rc = match run ~timeout ~env with
+  let rc = match run ~timeout ~env ~sources with
     | Runner.Skipped -> print 0.0 0.0 0 `SKIPPED; None
     | Runner.Done ({ Runner.rc; _ } as x) ->
       begin match rc with
@@ -75,7 +75,7 @@ let run timeout _seed env { Runner.run; test; executable }  =
   ANSITerminal.printf [] "\n%!";
   rc
 
-let print_csv results =
+let print_csv plot results =
   let oc = open_out "data.csv" in
   results |> List.iter
     (function 
@@ -89,12 +89,12 @@ let print_csv results =
           end
       | None -> ());
   close_out oc;
-  ignore(Sys.command "./plot data.csv");
+  ignore(Sys.command (plot ^ " data.csv"));
   ignore(Sys.command "gnuplot data.csv.plot")
 ;;
 
 
-let main timeout executables namef timetool seed =
+let main sources plot timeout executables namef timetool seed =
   Random.init seed;
   let filter_name =
     let rex = Str.regexp (".*"^namef) in
@@ -107,7 +107,7 @@ let main timeout executables namef timetool seed =
     tests |> List.map (Suite.Runner.jobs ~timetool ~executables)
           |> List.concat in
   let results =
-    List.map (run timeout seed env) jobs in
+    List.map (run timeout seed sources env) jobs in
   let total, ok, ko, skipped =
     let skip, rest =
       List.partition (function None -> true | _ -> false) results in
@@ -117,7 +117,7 @@ let main timeout executables namef timetool seed =
         | _ -> false) rest in
     List.(length jobs, length ok, length ko, length skip) in
   Printer.print_summary ~total ~ok ~ko ~skipped;
-  if List.length executables > 1 then print_csv results;
+  if List.length executables > 1 then print_csv plot results;
   if ko = 0 then exit 0 else exit 1
 
 open Cmdliner
@@ -138,6 +138,14 @@ let timeout =
   let doc = "Uses $(docv) as the timeout (in seconds)." in
   Arg.(value & opt float 30.0 & info ["timeout"] ~docv:"FLOAT" ~doc)
 
+let src =
+  let doc = "Looks for the sources in $(docv)." in
+  Arg.(value & opt dir "sources/" & info ["sources"] ~docv:"DIR" ~doc)
+
+let plot =
+  let doc = "Path for the plot utility is $(docv)." in
+  Arg.(value & opt non_dir_file "./plot" & info ["plot"] ~docv:"PATH" ~doc)
+
 let mem =
   let doc = "Uses $(docv) as the tool to measure memory." in
   Arg.(value & opt non_dir_file "/usr/bin/time" & info ["time"] ~docv:"PATH" ~doc)
@@ -152,4 +160,4 @@ let info =
 ;;
 
 let () =
-  Term.exit @@ Term.eval (Term.(const main $ timeout $ runners $ namef $ mem $ seed), info)
+  Term.exit @@ Term.eval (Term.(const main $ src $ plot $ timeout $ runners $ namef $ mem $ seed), info)

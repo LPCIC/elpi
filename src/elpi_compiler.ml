@@ -6,7 +6,7 @@ open Elpi_util
 module Ast = Elpi_ast
 module F = Ast.Func
 
-module R = Elpi_runtime_trace_off.Elpi_runtime
+module R = Elpi_runtime_trace_off
 
 type flags = {
   defined_variables : StrSet.t;

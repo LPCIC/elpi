@@ -25,3 +25,6 @@ val get_cur_step : string -> int
 
 val parse_argv : string list -> string list
 val usage: string
+
+(* prints here *)
+val set_formatter : Format.formatter -> unit

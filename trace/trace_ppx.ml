@@ -74,8 +74,8 @@ let tcall hd args =
 let enabled = ref false
 
 let args = [
-   "--on",Arg.Set enabled,"Enable trace" ;
-   "--off",Arg.Clear enabled,"Disable trace" ;
+   "--trace_ppx-on",Arg.Set enabled,"Enable trace_ppx" ;
+   "--trace_ppx-off",Arg.Clear enabled,"Disable trace_ppx" ;
   ]
 let reset_args () =
   enabled := false

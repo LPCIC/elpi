@@ -27,8 +27,7 @@ you can type
 ```
 opam pin add elpi https://github.com/LPCIC/elpi.git
 ```
-You can also clone this repository and type `make`.  The build requirements
-are listed at the end of the [Makefile](Makefile)
+You can also clone this repository and type `dune build`.
 
 ### Syntax highlight in Visual studio code
 
@@ -79,7 +78,7 @@ by Miller and Nadathur is highly recommended and covers standard λProlog.
 
 The extensions to λProlog implemented in ELPI are described in the
 [ELPI](ELPI.md) file, built-in predicates are documented in
-[builtin](builtin.elpi).
+[builtin](src/builtin.elpi).
 
 There is a [short paper](https://hal.inria.fr/hal-01176856/) describing
 the implementation of the interpreter, in particular how it deals with
@@ -165,5 +164,6 @@ The programming language has the following features
   "compilation" time by accumulating files.
 
 Most of these feature come with λProlog.  Constraints and propagation rules are novel in ELPI.
+
 
 

@@ -1,133 +1,65 @@
-# Commands:
-#  make                        -- to compile elpi
-#  make install                -- to install elpi using findlib
-#  make install-bin BIN=path   -- to install the elpi REPL in $BIN
-#  make uninstall              -- to remove elpi using findlib
-#  make uninstall-bin BIN=path -- to remove the elpi REPL in $BIN
-#  ... BYTE=yes                -- to compile/install/remove byte code
-#
-#  make git/V -- to compile elpi.git.V out of git's commit/branch/tag V
-#                such binary is then picked up automatically by the bench
-#                system as an elpi like runner
-#  make runners -- foreach git tag runner-V, do something like make git/V 
+help:
+	@echo 'Known targets:'
+	@echo
+	@echo '  build            builds elpi'
+	@echo '  .merlin          builds a .merlin'
+	@echo
+	@echo '  tests            runs the entire test suite'
+	@echo '  tests ONLY=rex   runs only tests matching rex'
+	@echo
+	@echo '  git/treeish      checkout treeish and build elpi.git.treeish'
+	@echo
 
-BASE=$(shell pwd)
-include Makefile.common
+INSTALL=_build/install/default
+BUILD=_build/default
+SHELL:=/bin/bash
+TIMEOUT=60.0
+RUNNERS=\
+  $(shell pwd)/$(INSTALL)/bin/elpi \
+  $(addprefix $(shell pwd)/,$(wildcard elpi.git.*)) \
+  $(shell if type tjsim >/dev/null 2>&1; then type -P tjsim; else echo; fi)
+TIME=--time $(shell if type -P gtime >/dev/null 2>&1; then type -P gtime; else echo /usr/bin/time; fi)
+STACK=32768
 
-all: check-ocaml-ver elpi$(EXE) builtin.elpi
+# this is to work around https://github.com/ocaml/dune/issues/1212
+.merlin:
+	@dune build .merlin
+	@for ppx in `ls $$PWD/_build/default/.ppx/*/ppx.exe`; do\
+		if $$ppx --print-transformations | grep trace; then\
+	      echo PKG ppx_deriving.std ppx_deriving.runtime >> .merlin;\
+	      echo FLG -ppx \"$$ppx --as-ppx\" >> .merlin;\
+	      echo PKG ppx_deriving.std ppx_deriving.runtime >> src/.merlin;\
+	      echo FLG -ppx \"$$ppx --as-ppx\" >> src/.merlin;\
+		fi;\
+	done
 
-byte:
-	$(H)$(MAKE) BYTE=1 all
+build:
+	dune build @install
+	$(MAKE) .merlin
 
-trace_ppx: trace_ppx.ml
-	$(H)$(call pp,OCAMLOPT,-o,$@)
-	$(H)ocamlfind ocamlopt \
-		-package ppx_tools_versioned \
-		-package ppx_tools_versioned.metaquot_404 \
-		-package ocaml-migrate-parsetree.driver-main \
-		-c $< 
-	$(H)ocamlfind ocamlopt \
-		-package ppx_tools_versioned \
-		-package ppx_tools_versioned.metaquot_404 \
-		-package ocaml-migrate-parsetree \
-		-predicates custom_ppx,ppx_driver \
-		-linkpkg -linkall \
-		trace_ppx.cmx \
-		`ocamlfind query -predicates native \
-	       		ocaml-migrate-parsetree.driver-main -a-format` \
-		-o $@
-	$(H)cp .merlin.in .merlin
-	$(H)echo "FLG -ppx '$(shell pwd)/trace_ppx --as-ppx'" >> .merlin
+
+tests:
+	dune build $(INSTALL)/bin/elpi
+	dune build $(BUILD)/tests/test.exe
+	ulimit -s $(STACK); \
+		$(BUILD)/tests/test.exe \
+		--seed $$RANDOM \
+		--timeout $(TIMEOUT) \
+		$(TIME) \
+		--sources=$$PWD/tests/sources/ \
+		--plot=$$PWD/tests/plot \
+		$(addprefix --name-match ,$(ONLY)) \
+		$(addprefix --runner , $(RUNNERS))
 
 git/%:
-	$(H)rm -rf "$$PWD/elpi-$*"
-	$(H)mkdir "elpi-$*"
-	$(H)git clone -l . "elpi-$*"
-	$(H)cd "elpi-$*" && git checkout "$*" && make
-	$(H)cp "elpi-$*/elpi" "elpi.git.$*"
-	$(H)rm -rf "$$PWD/elpi-$*"
+	rm -rf "$$PWD/elpi-$*"
+	mkdir "elpi-$*"
+	git clone -l . "elpi-$*"
+	cd "elpi-$*" && git checkout "$*"
+	cd "elpi-$*" && \
+	  if [ -f dune ]; then dune build --root . @install; else make; fi
+	cp "elpi-$*/elpi" "elpi.git.$*" || \
+		cp "elpi-$*/$(INSTALL)/bin/elpi" "elpi.git.$*"
+	rm -rf "$$PWD/elpi-$*"
 
-runners:
-	$(H)true $(foreach t,$(shell git branch --list 'runner*' | cut -c 3-),\
-		&& $(MAKE) git/$(t) && \
-		mv elpi.git.$(t) elpi.git.$(t:runner-%=%))
-
-clean:
-	$(H)rm -f $(addprefix src/, $(TRASH))
-	$(H)rm -f $(TRASH)
-	$(H)rm -f trace_ppx.cmx elpi_REPL_config.ml
-	$(H)rm -f elpi.git.* trace_ppx elpi elpi.byte
-	$(H)rm -f src/.depends src/.depends.parser 
-	$(H)rm -f src/.depends.byte src/.depends.parser.byte
-	$(H)rm -rf findlib/
-
-dist:
-	$(H)git archive --format=tar --prefix=elpi-$(V)/ HEAD . \
-		| gzip > ../elpi-$(V).tgz
-
-# compilation of elpi
-
-OC_OPTIONS = -linkpkg $(OCAMLOPTIONS) $(FLAGS)
-
-ELPI_LIBS = \
-  elpi_quoted_syntax.elpi  elpi-checker.elpi  \
-  utils/elpi2html.elpi
-
-ELPI_DIST = \
-  $(addprefix src/,elpi_API.cmi elpi_API.mli elpi_builtin.cmi elpi_builtin.mli elpi.cmi)
-
-ELPI_DIST_OPT = \
-  $(addprefix src/,elpi.cma elpi.cmxa elpi.a elpi_builtin.cmti elpi_API.cmti elpi_API.cmx elpi_API.cmo elpi_builtin.cmo elpi_builtin.cmx)
-
-elpi$(EXE): elpi_REPL.ml elpi_REPL_config.$(CMX) findlib/elpi/META
-	$(H)$(call pp,$(OCNAME),-package elpi elpi_REPL_config.$(CMX) -o $@,$<)
-	$(H)$(OC) $(OC_OPTIONS) -package elpi elpi_REPL_config.$(CMX) -o $@ $<
-
-elpi_REPL_config.$(CMX): elpi_REPL_config.ml elpi_REPL_config.cmi
-	$(H)$(call pp,$(OCNAME),-c, $<)
-	$(H)$(OC) $(OC_OPTIONS) -c $<
-
-elpi_REPL_config.cmi: elpi_REPL_config.mli
-	$(H)$(call pp,$(OCNAME),-c, $<)
-	$(H)$(OC) $(OC_OPTIONS) -c $<
-
-builtin.elpi: elpi$(EXE)
-	$(H)echo '%% File generated by elpi -document-builtins, do not edit' > $@
-	$(H)./elpi -document-builtins >> $@
-
-elpi_REPL_config.ml:
-	$(H)echo 'let install_dir = "$(shell ocamlfind printconf destdir)/elpi"' > $@
-
-src/%: | trace_ppx
-	$(H)$(MAKE) --no-print-directory -C src/ $*
-
-src/elpi.$(CMXA): $(wildcard src/*.ml) $(wildcard src/*.mli)
-findlib/elpi/META: src/elpi.$(CMXA) Makefile
-	$(H)rm -rf findlib/; mkdir findlib
-	$(H)$(MAKE) --no-print-directory -C src/ elpi.cmi # needed by ELPI_DIST
-	$(H)ocamlfind install -destdir $(BASE)/findlib -patch-archives \
-		elpi META $(ELPI_DIST) $(ELPI_LIBS) \
-		-optional $(ELPI_DIST_OPT)
-
-install:
-	$(H)ocamlfind install -patch-archives \
-		elpi META $(ELPI_DIST) $(ELPI_LIBS) \
-		-optional $(ELPI_DIST_OPT) elpi elpi.byte
-install-bin:
-	$(H)cp elpi$(EXE) $(BIN)
-
-uninstall:
-	$(H)ocamlfind remove elpi
-uninstall-bin:
-	$(H)rm -f $(BIN)/elpi$(EXE)
-
-
-# required OCaml package
-check-ocaml-ver:
-	$(H)ocamlfind query camlp5 > /dev/null
-	$(H)ocamlfind query ppx_tools_versioned > /dev/null
-	$(H)ocamlfind query ppx_deriving > /dev/null
-	$(H)ocamlfind query ocaml-migrate-parsetree.driver-main > /dev/null
-	$(H)ocamlfind query re.str > /dev/null
-
-.NOTPARALLEL:
+.PHONY: tests help .merlin
