@@ -61,7 +61,11 @@ unify ((A == A) :: Eqs) In Out :- !, unify Eqs In Out.
 unify ((A --> Ax == B --> Bx) :: Eqs) In Out :-
   unify ((A == B) :: (Ax == Bx) :: Eqs) In Out.
 unify ((lst A == lst B) :: Eqs) In Out :- unify ((A == B) :: Eqs) In Out.
-unify ((A == B) :: Eqs) In Out &
+unify ((A == B) :: Eqs) In Out :-
+  tvar A, !, not (free_occ A B),
+  subst_eqs A B Eqs Eqsx,
+  subst_ty    A B In  Mid,
+  unify Eqsx Mid Out.
 unify ((B == A) :: Eqs) In Out :- 
   tvar A, !, not (free_occ A B),
   subst_eqs A B Eqs Eqsx,
