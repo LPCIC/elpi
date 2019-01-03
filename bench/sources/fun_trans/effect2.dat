@@ -1,1 +1,0 @@
-lam (f\ case (inl (app f u)) (l\l) (r\r)).

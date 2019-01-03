@@ -2,29 +2,24 @@ dist: trusty
 sudo: required
 language: c
 env:
- global:
- - OCAML_MIN=4.02.3
- - OCAML_MAX=4.07.0
- - PREDEPS="ocamlfind"
- - DEPS="camlp5 ocamlfind ppx_tools_versioned ppx_deriving ocaml-migrate-parsetree re"
- - JOBS=2
+  global:
+    - OCAML_MIN=4.03.0
+    - OCAML_MAX=4.07.0
+    - PREDEPS="ocamlfind"
+    - DEPS="camlp5 ocamlfind ppx_tools_versioned ppx_deriving ocaml-migrate-parsetree re dune cmdliner ANSITerminal"
+    - JOBS=2
 
 install:
- - rm -rf ~/.opam
- - curl -sL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh > install.sh
- - echo | sudo sh install.sh
- - opam init --disable-sandboxing -j $JOBS --bare -n -y
- - opam switch create min $OCAML_MIN -y
- - eval $(opam env)
- - opam config var root
- - opam install -j $JOBS -y $PREDEPS
- - opam install -j $JOBS -y $DEPS
- - opam list
- - opam switch create max $OCAML_MAX -y
- - eval $(opam env)
- - opam install -j $JOBS -y $PREDEPS
- - opam install -j $JOBS -y $DEPS
- - opam list
+  - curl -sL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh > install.sh
+  - echo | sudo sh install.sh
+  - test -d $HOME/opam-cache/.opam || echo "building cache"
+  - test -d $HOME/opam-cache/.opam || opam init --disable-sandboxing -j $JOBS --bare -n -y
+  - test -d $HOME/opam-cache/.opam || opam switch create min $OCAML_MIN -y
+  - test -d $HOME/opam-cache/.opam || opam switch create max $OCAML_MAX -y
+  - test -d $HOME/opam-cache/.opam || cp -r $HOME/.opam $HOME/opam-cache
+  - rm -rf $HOME/.opam
+  - echo "installing cache"
+  - cp -r $HOME/opam-cache/.opam $HOME/.opam
 
 matrix:
   include:
@@ -42,12 +37,14 @@ matrix:
     cache:
       apt: true
       directories:
-      - $HOME/.opam
+      - $HOME/opam-cache
     script:
     - opam switch min
     - eval $(opam env)
+    - opam install -j $JOBS -y $PREDEPS
+    - opam install -j $JOBS -y $DEPS
     - make
-    - make -C bench
+    - make -C tests run
     - make byte
 
   - env: TEST="linux build $OCAML_MAX"
@@ -63,14 +60,16 @@ matrix:
     cache:
       apt: true
       directories:
-      - $HOME/.opam
+      - $HOME/opam-cache
     script:
     - opam switch max
     - eval $(opam env)
+    - opam install -j $JOBS -y $PREDEPS
+    - opam install -j $JOBS -y $DEPS
     - make
-    - make -C bench
+    - make -C tests run
     - make byte
-    
+
   - env: TEST="osx build $OCAML_MIN"
     os: osx
     before_install:
@@ -80,12 +79,14 @@ matrix:
     - brew install lua51
     cache:
       directories:
-      - $HOME/.opam
+      - $HOME/opam-cache
     script:
     - opam switch min
     - eval $(opam env)
+    - opam install -j $JOBS -y $PREDEPS
+    - opam install -j $JOBS -y $DEPS
     - make
-    - make -C bench
+    - make -C tests run
     - make byte
 
   - env: TEST="osx build $OCAML_MAX"
@@ -97,12 +98,14 @@ matrix:
     - brew install lua51
     cache:
       directories:
-      - $HOME/.opam
+      - $HOME/opam-cache
     script:
     - opam switch max
     - eval $(opam env)
+    - opam install -j $JOBS -y $PREDEPS
+    - opam install -j $JOBS -y $DEPS
     - make
-    - make -C bench
+    - make -C tests run
     - make byte
 
   - env: TEST="opam package installation"
@@ -117,7 +120,7 @@ matrix:
         - gcc-multilib
     cache:
       directories:
-      - $HOME/.opam
+      - $HOME/opam-cache
     script:
     - opam switch max
     - eval $(opam env)
@@ -129,4 +132,3 @@ matrix:
     - opam pin -y remove elpi
     - if ocamlfind query elpi; then false; else true; fi
     - if which elpi; then false; else true; fi
-  

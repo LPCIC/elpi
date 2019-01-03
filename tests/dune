@@ -1,0 +1,5 @@
+(executable
+  (name test)
+  (modules test)
+  (libraries test_suite ANSITerminal cmdliner str unix) 
+)
