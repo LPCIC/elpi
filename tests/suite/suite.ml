@@ -1,3 +1,6 @@
+(* elpi: embedded lambda prolog interpreter                                  *)
+(* license: GNU Lesser General Public License Version 2.1 or later           *)
+(* ------------------------------------------------------------------------- *)
 module Test = struct
 
 type fname = string
