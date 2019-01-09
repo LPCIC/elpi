@@ -745,7 +745,7 @@ let init ?(silent=true) ~lp_syntax ~paths ~cwd () =
 
 let parse_program filenames : program =
  if !parser_initialized = false then U.anomaly "parsing before calling init";
- parse lp filenames
+ try parse lp filenames with NotInProlog s -> raise (Stream.Error ("NotInProlog: " ^ s))
 ;;
 
 let parse_program_from_stream strm : program =
@@ -753,20 +753,22 @@ let parse_program_from_stream strm : program =
   if !parser_initialized = false then U.anomaly "parsing before calling init";
   try Grammar.Entry.parse lp strm
   with
-    Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) -> raise(Stream.Error msg)
+  | Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) -> raise(Stream.Error msg)
   | Ploc.Exc(_,e) -> raise e
+  | NotInProlog s -> raise (Stream.Error ("NotInProlog: " ^ s))
 ;;
 
 let parse_goal s : goal =
   if !parser_initialized = false then U.anomaly "parsing before calling init";
-  parse_string goal s
+  try parse_string goal s with NotInProlog s -> raise (Stream.Error ("NotInProlog: " ^ s))
 
 let parse_goal_from_stream strm =
   if !parser_initialized = false then U.anomaly "parsing before calling init";
   try Grammar.Entry.parse goal strm
   with
-    Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) -> raise(Stream.Error msg)
+  | Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) -> raise(Stream.Error msg)
   | Ploc.Exc(_,e) -> raise e
+  | NotInProlog s -> raise (Stream.Error ("NotInProlog: " ^ s))
 
 let lp_gramext = [
   { fix = Infixl;	sym = ":-";	prec = 0; };
