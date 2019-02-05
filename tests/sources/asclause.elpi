@@ -1,0 +1,8 @@
+
+hard (lam x\ _ as P) :- print P.
+
+
+simple (1 as P) :- print P.
+
+main :-
+  simple 1, hard (lam x\ x).

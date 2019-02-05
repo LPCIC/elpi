@@ -129,3 +129,8 @@ let () = declare "hollight"
   ~expectation:Test.Failure (* needs advanced modes *)
   ()
 
+let () = declare "asclause"
+  ~source_elpi:"asclause.elpi"
+  ~description:"parsing of the .. as X clause"
+  ~expectation:Test.Success
+  ()

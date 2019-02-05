@@ -433,8 +433,6 @@ let lp = Grammar.Entry.create g "lp"
 let goal = Grammar.Entry.create g "goal"
 let atom = Grammar.Entry.create g "atom"
 
-let min_precedence = -1  (* minimal precedence in use *)
-let lam_precedence = -1  (* precedence of lambda abstraction *)
 let umin_precedence = 0   (* minimal user defined precedence *)
 let umax_precedence = 256 (* maximal user defined precedence *)
 let appl_precedence = umax_precedence + 1 (* precedence of application *)
@@ -693,7 +691,8 @@ EXTEND
     [[ OPT pragma; p = premise -> loc, p ]];
   premise : [[ a = atom -> a ]];
   atom :
-   [ "110"
+   [ "1" [ ]
+   | "110"
       [ args = LIST1 atom LEVEL "120" SEP SYMBOL "," ->
           if List.length args > 1 then mkApp (Const Func.andf :: args)
           else List.hd args
@@ -702,9 +701,9 @@ EXTEND
       [ hd = atom; args = LIST1 atom LEVEL "abstterm" ->
          desugar_multi_binder (mkApp (hd :: args)) ]
    | "abstterm"
-      [ c=CONSTANT; OPT[COLON;type_]; b=OPT[BIND; a = atom LEVEL "0" -> a ] ->
+      [ c=CONSTANT; OPT[COLON;type_]; b=OPT[BIND; a = atom LEVEL "1" -> a ] ->
           (match b with None -> mkCon c | Some b -> mkLam c b)
-      | u=FRESHUV; OPT[COLON;type_]; b=OPT[BIND; a = atom LEVEL "0" -> a ] ->
+      | u=FRESHUV; OPT[COLON;type_]; b=OPT[BIND; a = atom LEVEL "1" -> a ] ->
           (match b with None -> mkFreshUVar () | Some b ->
            mkLam Func.(show dummyname)  b)
       | s = LITERAL -> mkC (cstring.U.CData.cin s)
@@ -718,7 +717,7 @@ EXTEND
            the list_element_prec below :-(
         *)
       | LBRACKET; xs = LIST0 atom LEVEL "120" SEP SYMBOL ",";
-          tl = OPT [ PIPE; x = atom LEVEL "0" -> x ]; RBRACKET ->
+          tl = OPT [ PIPE; x = atom LEVEL "1" -> x ]; RBRACKET ->
           let tl = match tl with None -> mkNil | Some x -> x in
           if List.length xs = 0 && tl <> mkNil then 
             raise (Token.Error ("List with no elements cannot have a tail"));
@@ -771,13 +770,13 @@ let parse_goal_from_stream strm =
   | NotInProlog s -> raise (Stream.Error ("NotInProlog: " ^ s))
 
 let lp_gramext = [
-  { fix = Infixl;	sym = ":-";	prec = 0; };
+  { fix = Infixl;	sym = ":-";	prec = 1; };
   { fix = Infixr;	sym = ";";	prec = 100; };
   { fix = Infix;	sym = "?-";	prec = 115; };
   { fix = Infixr;	sym = "->";	prec = 116; };
   { fix = Infixr;	sym = "&";	prec = 120; };
   { fix = Infixr;	sym = "=>";	prec = 129; };
-  { fix = Infixr;	sym = "as";	prec = 129; };
+  { fix = Infixl;	sym = "as";	prec = 0; };
   { fix = Infix;	sym = "<";	prec = 130; };
   { fix = Infix;	sym = "=<";	prec = 130; };
   { fix = Infix;	sym = "=";	prec = 130; };
