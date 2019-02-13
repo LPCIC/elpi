@@ -433,6 +433,8 @@ let lp = Grammar.Entry.create g "lp"
 let goal = Grammar.Entry.create g "goal"
 let atom = Grammar.Entry.create g "atom"
 
+let min_precedence = -1  (* minimal precedence in use *)
+let lam_precedence = -1  (* precedence of lambda abstraction *)
 let umin_precedence = 0   (* minimal user defined precedence *)
 let umax_precedence = 256 (* maximal user defined precedence *)
 let appl_precedence = umax_precedence + 1 (* precedence of application *)
