@@ -1705,7 +1705,7 @@ module type Indexing = sig
    * and its arguments.  This is because the unification/matching of the head
    * symbol is made by the indexing machinery.  We don't support unification
    * variables in head position *)
-  val ppclause : Fmt.formatter -> clause -> unit
+  val ppclause : Fmt.formatter -> depth:int -> clause -> unit
 
   val key_of : mode:[`Query | `Clause] -> depth:int -> term -> key
   val hd_pred : clause -> constant
@@ -1732,10 +1732,10 @@ let mustbevariablek = -99999998 (* uvar or uvar t or uvar l t *)
 
 let pp_key (hd,v) = C.show hd
   
-let ppclause f { args = args; hyps = hyps; key = (hd,_) } =
+let ppclause f ~depth { args = args; hyps = hyps; key = (hd,_) } =
   Fmt.fprintf f "@[<hov 1>%s %a :- %a.@]" (C.show hd)
-     (pplist (uppterm ~min_prec:(Elpi_parser.appl_precedence+1) 0 [] 0 empty_env) "") args
-     (pplist (uppterm ~min_prec:(Elpi_parser.appl_precedence+1) 0 [] 0 empty_env) ",") hyps
+     (pplist (uppterm ~min_prec:(Elpi_parser.appl_precedence+1) depth [] 0 empty_env) "") args
+     (pplist (uppterm ~min_prec:(Elpi_parser.appl_precedence+1) depth [] 0 empty_env) ",") hyps
 
 let key_of ~mode:_ ~depth =
  let rec skey_of = function
@@ -1894,7 +1894,7 @@ module UnifBits (*: Indexing*) = struct (* {{{ *)
   let hd_pred { key } = (- (key land (1 lsl functor_bits - 1)))
   let pp_key hd = C.show (- (hd land (1 lsl functor_bits - 1)))
 
-  let ppclause f { args = args; hyps = hyps; key = hd } =
+  let ppclause f ~depth { args = args; hyps = hyps; key = hd } =
     Fmt.fprintf f "@[<hov 1>%s %a :- %a.@]" (pp_key hd)
        (pplist (uppterm ~min_prec:(Elpi_parser.appl_precedence+1) 0 [] 0 empty_env) "") args
        (pplist (uppterm ~min_prec:(Elpi_parser.appl_precedence+1) 0 [] 0 empty_env) ",") hyps
@@ -2182,7 +2182,7 @@ let rec claux1 vars depth hyps ts lts lcs t =
        with Not_found -> [] in
      let c = { depth = depth+lcs ; args= args; hyps = hyps; mode;
           vars = vars; key=key_of ~mode:`Clause ~depth:(depth+lcs) g } in
-     [%spy "extra" ppclause c];
+     [%spy "extra" (fun fmt -> ppclause fmt ~depth:(depth+lcs)) c];
      c, { hdepth = depth; hsrc = g }, lcs
   | UVar ({ contents=g },from,args) when g != C.dummy ->
      claux1 vars depth hyps ts lts lcs
@@ -2972,7 +2972,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
     let k, args_of_g = args_of g in
     let rec select l =
       [%trace "select" (fun fmt ->
-          pplist ~max:1 ~boxed:true ppclause "|" fmt l)
+          pplist ~max:1 ~boxed:true (fun fmt -> ppclause fmt ~depth) "|" fmt l)
       begin match l with
       | [] -> [%tcall next_alt alts]
       | c :: cs ->
