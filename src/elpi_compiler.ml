@@ -928,11 +928,14 @@ end = struct (* {{{ *)
 
   let missing_args_of modes types t =
     let c, args =
-      match t with
-      | App (c,x,xs) -> c, x :: xs
-      | Const c -> c, []
-      | Builtin(c,args) -> c, args
-      | _ -> error ("only applications can be spilled: " ^ show_term t) in
+      let rec aux = function
+        | App (c,_,[x]) when c == C.implc -> aux x
+        | App (c,x,xs) -> c, x :: xs
+        | Const c -> c, []
+        | Builtin(c,args) -> c, args
+        | _ -> error ("only applications can be spilled: " ^ show_term t) 
+      in
+        aux t in
     let ty = type_of_const types c in
     let ty_mode, mode =
       match C.Map.find c modes with
@@ -988,6 +991,14 @@ end = struct (* {{{ *)
         end in
       fun vars n -> List.rev (aux vars n) in
 
+    let mkAppSpilled fcall args =
+      let rec aux = function
+        | App(c,x,[y]) when c == C.implc ->
+            mkAppC c [x;aux y]
+        | t -> mkApp t args
+      in
+        aux fcall in
+
     let rec apply_to names variable = function
       | Const f as x when List.exists (equal_term x) names ->
           mkAppC f [variable]
@@ -1003,7 +1014,8 @@ end = struct (* {{{ *)
 
     let add_spilled ~under_lam sp t =
       if sp = [] then t else
-      if under_lam then error "spilling under anonymous clause is not supported"
+      if under_lam then
+        error ("spilling inside an anonymous clause is not supported: " ^ show_term t)
       else mkAppC C.andc (List.map snd sp @ [t]) in
 
     let rec spaux (depth,vars,under_lam as ctx) = function
@@ -1012,7 +1024,7 @@ end = struct (* {{{ *)
          let spills, fcall = spaux1 ctx fcall in
          let args =
             mkSpilled (List.rev vars) (missing_args_of modes types fcall) in
-         spills @ [args, mkApp fcall args], args
+         spills @ [args, mkAppSpilled fcall args], args
       | App(c, Lam arg, []) when c == C.pic ->
          let ctx = depth+1, mkConst depth :: vars, under_lam in
          let spills, arg = spaux1 ctx arg in
