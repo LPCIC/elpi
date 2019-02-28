@@ -170,7 +170,7 @@ end
   Compiler
  ****************************************************************************)
 
-module Preprocessing : sig
+module RecoverStructure : sig
 
   (* Reconstructs the structure of the AST (i.e. matches { with }) *)
 
@@ -1194,8 +1194,10 @@ end (* }}} *)
   API
  ****************************************************************************)
 
+(* Compiler passes *)
 let program_of_ast p =
- let p = Preprocessing.run p in
+
+ let p = RecoverStructure.run p in
  let s, p = ToDBL.run (CS.init()) p in
  let p = Flatten.run s p in
  let p = Spill.run p in
