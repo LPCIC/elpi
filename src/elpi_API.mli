@@ -344,6 +344,9 @@ module Extend : sig
        * Still the parser translated the type [int], [float] and [string]
        * to [ctype "int"], [ctype "float"] and [ctype "string"]. *)
       val ctypec : constant (* ctype *)
+
+      (* Marker for spilling function calls, as in [{ rev L }] *)
+      val spillc : constant
     
       module Map : Map.S with type key = constant
       module Set : Set.S with type elt = constant
