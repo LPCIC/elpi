@@ -108,7 +108,6 @@ let () = declare "list_as_conj"
 let () = declare "spilling_lam"
   ~source_elpi:"spill_lam.elpi"
   ~description:"spilling inside anonymous clause"
-  ~expectation:Test.Failure
   ()
 
 let () = declare "spilling_impl"

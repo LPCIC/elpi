@@ -1021,13 +1021,11 @@ end = struct (* {{{ *)
       | Builtin(hd,xs) -> Builtin(hd, List.map (apply_to names variable) xs)
       | (Arg _ | AppArg _ | UVar _ | AppUVar _) -> assert false in
 
-    let add_spilled ~under_lam sp t =
+    let add_spilled sp t =
       if sp = [] then t else
-      if under_lam then
-        error ("spilling inside an anonymous clause or anonymous function is not supported: " ^ show_term t)
-      else mkAppC C.andc (List.map snd sp @ [t]) in
+      mkAppC C.andc (List.map snd sp @ [t]) in
 
-    let rec spaux (depth,vars,under_lam as ctx) = function
+    let rec spaux (depth,vars as ctx) = function
       | App(c, fcall, rest) when c == C.spillc ->
          assert (rest = []);
          let spills, fcall = spaux1 ctx fcall in
@@ -1035,13 +1033,13 @@ end = struct (* {{{ *)
             mkSpilled (List.rev vars) (missing_args_of modes types fcall) in
          spills @ [args, mkAppSpilled fcall args], args
       | App(c, Lam arg, []) when c == C.pic ->
-         let ctx = depth+1, mkConst depth :: vars, under_lam in
+         let ctx = depth+1, mkConst depth :: vars in
          let spills, arg = spaux1 ctx arg in
-         [], [mkAppC c [Lam (add_spilled ~under_lam spills arg)]]
+         [], [mkAppC c [Lam (add_spilled spills arg)]]
       | App(c, Lam arg, []) when c == C.sigmac ->
-         let ctx = depth+1, vars, under_lam in
+         let ctx = depth+1, vars in
          let spills, arg = spaux1 ctx arg in
-         [], [mkAppC c [Lam (add_spilled ~under_lam spills arg)]]
+         [], [mkAppC c [Lam (add_spilled spills arg)]]
       | App(c, hyp, [concl]) when c == C.implc ->
          let spills_hyp, hyp1 = spaux1 ctx hyp in
          let t = spaux1_prop ctx concl in
@@ -1070,7 +1068,7 @@ end = struct (* {{{ *)
              | _, a1 :: an -> spaux ctx a1 @@@ aux ty an
            in
              aux (type_of_const types hd) args in
-         if is_prop then [], [add_spilled ~under_lam spills (mkAppC hd args)]
+         if is_prop then [], [add_spilled spills (mkAppC hd args)]
          else spills, [mkAppC hd args]
       | (CData _ | Const _ | Discard | Nil) as x -> [],[x]
       | Cons(hd,tl) ->
@@ -1083,9 +1081,9 @@ end = struct (* {{{ *)
          let spills, args = map_acc (fun sp x ->
            let sp1, x = spaux ctx x in
            sp @ sp1, x) [] args in
-         [], [add_spilled ~under_lam spills (Builtin(c,List.concat args))]
+         [], [add_spilled spills (Builtin(c,List.concat args))]
       | Lam t ->
-         let sp, t = spaux1 (depth+1, mkConst depth :: vars, true) t in
+         let sp, t = spaux1 (depth+1, mkConst depth :: vars) t in
          let (t,_), sp = map_acc (fun (t,n) (names, call) ->
                let all_names = names @ n in
                let call = apply_to all_names (mkConst depth) call in
@@ -1101,15 +1099,15 @@ end = struct (* {{{ *)
         error ("Spilling: expecting only one term at: " ^ show_term t);
       spills, List.hd ts
     
-    and spaux1_prop (_, _, under_lam as ctx) t =
+    and spaux1_prop (_, _ as ctx) t =
       let spills, ts = spaux ctx t in
       if (List.length ts != 1) then
         error ("Spilling: expecting only one term at: " ^ show_term t);
-      [add_spilled ~under_lam spills (List.hd ts)]
+      [add_spilled spills (List.hd ts)]
 
     in
 
-    let sp, term = spaux (0,[],false) term in
+    let sp, term = spaux (0,[]) term in
     assert(List.length term = 1);
     let term = List.hd term in
     assert(sp = []);
