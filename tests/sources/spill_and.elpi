@@ -1,0 +1,14 @@
+kind term type.
+type app term -> term -> term.
+type lam (term -> term) -> term.
+type t term.
+
+pred copy i:term, o:term.
+copy (app A B) (app A1 B1) :- copy A A1, copy B B1.
+copy (lam F) (lam F1) :- pi x\ copy (F x) (F1 x).
+% we omit (copy x x) on purpose
+
+main :-
+  T = (lam x\ {copy x t => ((A x) = x, copy (app (A x) x))}),
+  print T,
+  T = (lam _\ app t t). 

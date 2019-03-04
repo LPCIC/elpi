@@ -930,6 +930,8 @@ end = struct (* {{{ *)
     let c, args =
       let rec aux = function
         | App (c,_,[x]) when c == C.implc -> aux x
+        | App (c,x,xs) when c == C.andc || c == C.andc2 ->
+            aux List.(hd (rev (x :: xs)))
         | App (c,x,xs) -> c, x :: xs
         | Const c -> c, []
         | Builtin(c,args) -> c, args
@@ -992,9 +994,16 @@ end = struct (* {{{ *)
       fun vars n -> List.rev (aux vars n) in
 
     let mkAppSpilled fcall args =
+      let rec on_last f = function
+        | [] -> assert false
+        | [x] -> [f x]
+        | x::xs -> x :: on_last f xs
+      in
       let rec aux = function
         | App(c,x,[y]) when c == C.implc ->
             mkAppC c [x;aux y]
+        | App (c,x,xs) when c == C.andc || c == C.andc2 ->
+            mkAppC c (on_last aux (x::xs))
         | t -> mkApp t args
       in
         aux fcall in
@@ -1015,7 +1024,7 @@ end = struct (* {{{ *)
     let add_spilled ~under_lam sp t =
       if sp = [] then t else
       if under_lam then
-        error ("spilling inside an anonymous clause is not supported: " ^ show_term t)
+        error ("spilling inside an anonymous clause or anonymous function is not supported: " ^ show_term t)
       else mkAppC C.andc (List.map snd sp @ [t]) in
 
     let rec spaux (depth,vars,under_lam as ctx) = function

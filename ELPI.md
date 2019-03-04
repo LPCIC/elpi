@@ -171,6 +171,14 @@ rewrites to
 foo R :- (pi x\ foo x => mk-app f [x,g x] (Spilled_1 x)), R = lam x\ g (Spilled_1 x).
 ```
 
+Spilling a conjunction has the effect of spilling the last conjunct.
+```prolog
+foo R :- R = lam x\ g {h x, mk-app f [x,g x]}.
+```
+rewrites to
+```prolog
+foo R :- (pi x\ h x, mk-app f [x,g x] (Spilled_1 x)), R = lam x\ g (Spilled_1 x).
+```
 
 ### Caveat about spilling
 The spilled predicate invocation is inserted just before the closest

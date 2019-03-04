@@ -116,6 +116,11 @@ let () = declare "spilling_impl"
   ~description:"spilling implication"
   ()
 
+let () = declare "spilling_and"
+  ~source_elpi:"spill_and.elpi"
+  ~description:"spilling anonymous compound goal"
+  ()
+
 let () = declare "block"
   ~source_elpi:"block.elpi"
   ~description:"blocks are closed"
