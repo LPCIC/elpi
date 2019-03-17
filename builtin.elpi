@@ -23,12 +23,6 @@ pred (;) o:prop, o:prop.
 
 (_ ; B) :- B.
 
-kind list type -> type.
-
-type (::) X -> list X -> list X.
-
-type ([]) list X.
-
 type (:-) prop -> prop -> prop.
 
 type (:-) prop -> list prop -> prop.
@@ -129,6 +123,30 @@ X i>= Y :- ge_ X Y.
 X r>= Y :- ge_ X Y.
 
 X s>= Y :- ge_ X Y.
+
+%  -- Standard data types (supported in the FFI) --
+
+kind list type -> type.
+
+type (::) X -> list X -> list X.
+
+type ([]) list X.
+
+kind pair type -> type -> type.
+
+type pr   A -> B -> pair A B.
+
+kind bool type.
+
+type tt bool.
+
+type ff bool.
+
+kind option type -> type.
+
+type some A -> option A.
+
+type none option A.
 
 %  == I/O builtins =====================================
 

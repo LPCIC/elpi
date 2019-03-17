@@ -218,6 +218,69 @@ type polyop = {
   pname : string;
 }
 
+let none = Constants.from_string "none"
+let somec = Constants.from_stringc "some"
+
+let option = fun a -> {
+  to_term = (fun ~depth h c s o ->
+    match o with
+    | None -> s, none
+    | Some x ->
+        let s, x = a.to_term ~depth h c s x in
+        s, mkApp somec x []
+     );
+  of_term = (fun ~mode ~depth h c s t ->
+    match look ~depth t with
+    | Const _ as x when kool x == none -> s, Data None
+    | App(k,x,[]) when k == somec ->
+        begin match a.of_term ~mode ~depth h c s x with
+        | s, Data x -> s, Data (Some x)
+        | s, _ -> s, OpaqueData t
+        end
+    | Discard -> s, BuiltInPredicate.Discard
+    | (UVar _ | AppUVar _) -> s, Flex t
+    | _ -> raise (TypeErr t));
+  ty = TyApp("option",a.ty,[]);
+}
+
+let tt = Constants.from_string "tt"
+let ff = Constants.from_string "ff"
+
+let bool = {
+  to_term = (fun ~depth h c s b ->
+    if b then s, tt else s, ff);
+  of_term = (fun ~mode ~depth h c s t ->
+    match look ~depth t with
+    | Const _ as x when kool x == tt -> s, Data true 
+    | Const _ as x when kool x == ff -> s, Data false
+    | Discard -> s, BuiltInPredicate.Discard 
+    | (UVar _ | AppUVar _) -> s, Flex t
+    | _ -> raise (TypeErr t));
+  ty = TyName "bool";
+}
+
+let prc = Constants.from_stringc "pr"
+
+let pair = fun a b -> {
+  to_term = (fun ~depth h c s (x,y) ->
+    let s, x = a.to_term ~depth h c s x in
+    let s, y = b.to_term ~depth h c s y in
+    s, mkApp prc x [y]);
+  of_term = (fun ~mode ~depth h c s t ->
+    match look ~depth t with
+    | App(k,x,[y]) when k == prc ->
+        let s, x = a.of_term ~mode ~depth h c s x in
+        let s, y = b.of_term ~mode ~depth h c s y in
+        begin match x, y with
+        | Data x, Data y -> s, Data (x,y)
+        | _ -> s, OpaqueData t
+        end
+    | Discard -> s, Discard
+    | (UVar _ | AppUVar _) -> s, Flex t
+    | _ -> raise (TypeErr t));
+  ty = TyApp ("pair",a.ty,[b.ty]);
+}
+
 
 (** Core built-in ********************************************************* *)
 
@@ -240,9 +303,6 @@ let core_builtins = [
   LPCode "(A ; _) :- A.";
   LPCode "(_ ; B) :- B.";
 
-  LPCode "kind list type -> type.";
-  LPCode "type (::) X -> list X -> list X.";
-  LPCode "type ([]) list X.";
   LPCode "type (:-) prop -> prop -> prop.";
   LPCode "type (:-) prop -> list prop -> prop.";
   LPCode "type (,) variadic prop prop.";
@@ -348,6 +408,23 @@ let core_builtins = [
   LPCode "X i>= Y :- ge_ X Y.";
   LPCode "X r>= Y :- ge_ X Y.";
   LPCode "X s>= Y :- ge_ X Y.";
+
+  LPDoc " -- Standard data types (supported in the FFI) --";
+
+  LPCode "kind list type -> type.";
+  LPCode "type (::) X -> list X -> list X.";
+  LPCode "type ([]) list X.";
+
+  LPCode "kind pair type -> type -> type.";
+  LPCode "type pr   A -> B -> pair A B.";
+
+  LPCode "kind bool type.";
+  LPCode "type tt bool.";
+  LPCode "type ff bool.";
+
+  LPCode "kind option type -> type.";
+  LPCode "type some A -> option A.";
+  LPCode "type none option A.";
 
   ]
 ;;
@@ -658,19 +735,20 @@ let elpi_builtins = [
 (** ELPI specific NON-LOGICAL built-in *********************************** *)
 
 let ctype : string data = {
-  to_term = (fun s -> mkApp Constants.ctypec (C.of_string s) []);
-  of_term = (fun ~depth t ->
+  to_term = (fun ~depth:_ _ _ state x ->
+    state, mkApp Constants.ctypec (C.of_string x) []);
+  of_term = (fun ~mode:_ ~depth _ _ state t ->
      match look ~depth t with
      | App(c,s,[]) when c == Constants.ctypec ->
          begin match look ~depth s with
-         | CData c when C.is_string c -> Data (C.to_string c)
-         | (UVar _ | AppUVar _) -> Flex t
-         | Discard -> Discard
+         | CData c when C.is_string c -> state, Data (C.to_string c)
+         | (UVar _ | AppUVar _) -> state, Flex t
+         | Discard -> state, Discard
          | _ -> raise (TypeErr t) end
-     | (UVar _ | AppUVar _) -> Flex t
-     | Discard -> Discard
+     | (UVar _ | AppUVar _) -> state, Flex t
+     | Discard -> state, Discard
      | _ -> raise (TypeErr t));
-   ty = "ctype"
+   ty = TyName "ctype"
 }
    
 let { CData.cin = safe_in; isc = is_safe ; cout = safe_out } as safe = CData.declare {

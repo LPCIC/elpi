@@ -680,13 +680,30 @@ module Builtin = struct
 type name = string
 type doc = string
 
-type 'a arg = Data of 'a | Flex of term | Discard
+type 'a arg =
+  Data of 'a | Flex of term | Discard | OpaqueData of term
+
 exception TypeErr of term
 
+type ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
+
+let rec show_ty_ast ?(outer=true) = function
+  | TyName s -> s
+  | TyApp (s,x,xs) ->
+      let t = String.concat " " (s :: List.map (show_ty_ast ~outer:false) (x::xs)) in
+      if outer then t else "("^t^")"
+
+
+type mode = In | Out
+
+type ('src,'tgt) stateful_data_conversion =
+  depth:int -> hyps -> constraints -> custom_state ->
+    'src -> custom_state * 'tgt
+
 type 'a data = {
-  to_term : 'a -> term;
-  of_term : depth:int -> term -> 'a arg;
-  ty : string;
+  to_term : ('a,term) stateful_data_conversion;
+  of_term : mode:mode -> (term, 'a arg) stateful_data_conversion;
+  ty : ty_ast
 }
 
 type ('function_type, 'inernal_outtype_in) ffi =
@@ -805,13 +822,13 @@ let document_pred fmt docspec name ffi =
   let rec doc
   : type i o. (bool * string * string) list -> (i,o) ffi -> unit
   = fun args -> function
-    | In( { ty }, s, ffi) -> doc ((true,ty,s) :: args) ffi
-    | Out( { ty }, s, ffi) -> doc ((false,ty,s) :: args) ffi
+    | In( { ty }, s, ffi) -> doc ((true,show_ty_ast ty,s) :: args) ffi
+    | Out( { ty }, s, ffi) -> doc ((false,show_ty_ast ty,s) :: args) ffi
     | Read s -> pp_pred fmt docspec name s args
     | Easy s -> pp_pred fmt docspec name s args
     | Full s -> pp_pred fmt docspec name s args
-    | VariadicIn( { ty }, s) -> pp_variadictype fmt name s ty args
-    | VariadicOut( { ty }, s) -> pp_variadictype fmt name s ty args
+    | VariadicIn( { ty }, s) -> pp_variadictype fmt name s (show_ty_ast ty) args
+    | VariadicOut( { ty }, s) -> pp_variadictype fmt name s (show_ty_ast ty) args
   in
     doc [] ffi
 ;;
