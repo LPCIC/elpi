@@ -21,6 +21,9 @@ val elpi_builtins : declaration list
 (* Elpi non-logical predicates like var, new_int ... *)
 val elpi_nonlogical_builtins : declaration list
 
+(* Elpi stdlib *)
+val elpi_stdlib : declaration list
+
 (* All the above, to be used as a sane default in Setup.init *)
 val std_declarations : declaration list
 val std_builtins : Elpi_API.Setup.builtins
