@@ -1,4 +1,17 @@
-## Version 1.1.2 (December 2018)
+## Version 1.2 (... 2019)
+
+Language:
+ - syntax of `.. as X` to bind subterms in the head of a clause changed
+   precedence. In particular `lam x\ B as X` binds `lam x\ B` to `X`
+   (instead of just `B`)
+ - spilling understands implication and conjunction, e.g. `g { h => (a, f) }`
+   becomes `(h => (a, f X)), g X`
+   
+Library:
+ - predefined types:
+   + `bool` with `tt` and `ff`
+   + `option A` with `none` and `some A`
+   + `pair A B` with `pr A B`
 
 Builtin:
  - `name` is now typed as `any -> variadic any prop` to support the following
@@ -8,6 +21,46 @@ Builtin:
      and arguments (as a list):
      `pi f x y\ name (f x y) f [x,y]`
  - new builtin `constant` working as `name` but for non-eigenvariables
+
+API:
+ - new data type of locations in the source file
+ - exception ParseError(location, message) systematically used in the
+   parsing API (no more leak of exceptions or data types from the internal
+   parsing engine, still camlp5 for now)
+ - type of quotations handlers changed: they now receive in input the location
+   of the quoted text in order to be able to locate their own parsing error
+   messages
+ - simplified term constructors:
+   + `mkConst` split into `mkGlobal` and `mkBound`
+   + variants with trailing `S` taking a `string` rather than
+     a global constant, e.g. `mkAppS`, `mkGlobalS`, `mkBuiltinS`.
+     `mkBuiltinName` got removed
+ - FFI:
+   + `to_term` and `of_term` are now stateful conversion functions, that is they
+     see the state, hypothetical context and constraint store (as `Full` ffi builtins
+     do) and can return an updated state
+   + ffi arguments can now be `Data | Flex | Discard | OpaqueData`, the latter
+     avoiding converion when the builtin is not bi-directional (e.g. cannot use
+     an argument marked as output, he just imposes an equality on it)
+   + `ty` is no more a string but an AST
+
+Compilation:
+ - handling of locations for quotations
+
+Fix:
+ - `expand_*` in charge of putting unification variables in canonical form
+   was sometimes omitting some lambdas in one of its outputs
+ - equality up-to eta on rigid terms (used to work only on flexible terms)
+
+Test Suite:
+ - rewritten using more OCaml & Dune and less bash & make. Requires
+   `dune`, `cmdliner` and `ANSITerminal` in order to build
+
+## Version 1.1.1 (October 2018)
+
+Fix:
+ - `beta` was not calling `deref_*` in all cases, possibly terminating reduction
+   too early (and raising an anomaly)
 
 ## Version 1.1 (September 2018)
 
