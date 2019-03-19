@@ -342,15 +342,15 @@ let core_builtins = [
 
   LPDoc " -- Evaluation --";
 
-  MLCode(Pred("is_",
-    Out(poly "A", "Out",
+  MLCode(Pred("calc",
     In(poly "A",  "Expr",
-    Easy          "unifies Out with the value of Expr")),
-  (fun _ t ~depth -> !:(eval depth t))),
+    Out(poly "A", "Out",
+    Easy          "unifies Out with the value of Expr. It can be used in tandem with spilling, eg [f {calc (N + 1)}]")),
+  (fun t _ ~depth -> !:(eval depth t))),
   DocAbove);
 
   LPCode "pred (is) o:A, i:A.";
-  LPCode "X is Y :- is_ X Y.";
+  LPCode "X is Y :- calc Y X.";
 
   LPCode "type (-) A -> A -> A.";
 

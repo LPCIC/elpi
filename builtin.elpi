@@ -61,12 +61,13 @@ stop :- halt.
 
 %  -- Evaluation --
 
-% [is_ Out Expr] unifies Out with the value of Expr
-external pred is_ o:A, i:A.
+% [calc Expr Out] unifies Out with the value of Expr. It can be used in
+% tandem with spilling, eg [f {calc (N + 1)}]
+external pred calc i:A, o:A.
 
 pred (is) o:A, i:A.
 
-X is Y :- is_ X Y.
+X is Y :- calc Y X.
 
 type (-) A -> A -> A.
 
