@@ -52,8 +52,10 @@ external pred declare_constraint i:any, i:list any.
 
 external pred print_constraints. % prints all constraints
 
-% [halt ...] halts the program
-external type halt variadic string prop.
+% [halt ...] halts the program and print the terms
+external type halt variadic any prop.
+
+type stop variadic any prop.
 
 stop :- halt.
 

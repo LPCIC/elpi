@@ -327,11 +327,17 @@ let core_builtins = [
           "external pred declare_constraint i:any, i:list any.");
   LPCode "external pred print_constraints. % prints all constraints";
 
-  MLCode(Pred("halt", VariadicIn(string, "halts the program"),
+  MLCode(Pred("halt", VariadicIn(any, "halts the program and print the terms"),
   (fun args ~depth _ _ ->
-     if args = [] then error "halt" else error (String.concat " " args))),
+     if args = [] then error "halt"
+     else
+       let b = Buffer.create 80 in
+       let fmt = Format.formatter_of_buffer b in
+       Format.fprintf fmt "%a%!" (Pp.list (Pp.term depth) " ") args;
+       error (Buffer.contents b))),
   DocAbove);
 
+  LPCode "type stop variadic any prop.";
   LPCode "stop :- halt.";
 
   LPDoc " -- Evaluation --";

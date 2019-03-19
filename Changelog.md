@@ -21,6 +21,7 @@ Builtin:
      and arguments (as a list):
      `pi f x y\ name (f x y) f [x,y]`
  - new builtin `constant` working as `name` but for non-eigenvariables
+ - `halt` now accepts any term, not just strings
 
 API:
  - new data type of locations in the source file
