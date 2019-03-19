@@ -62,12 +62,6 @@ module IntMap : Map.S with type key = int
 module StrSet : Set.S with type elt = string
 module IntSet : Set.S with type elt = int
 
-module Ploc : sig
-  include module type of struct include Ploc end
-  val pp : Format.formatter -> t -> unit
-  val show : t -> string
-end
-
 (******************** list ******************)
 
 val smart_map : ('a -> 'a) -> 'a list -> 'a list

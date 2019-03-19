@@ -4,6 +4,38 @@
 
 open Elpi_util
 
+module Loc = struct
+  type t = {
+    source_name : string;
+    source_start: int;
+    source_stop: int;
+    line: int;
+    line_starts_at: int;
+  }
+  [@@deriving eq]
+
+  let to_string {
+    source_name;
+    source_start;
+    source_stop;
+    line;
+    line_starts_at; }
+  =
+    let source =
+     if source_name = "" then ""
+     else source_name ^ ", " in
+    let chars = Printf.sprintf "characters %d-%d" source_start source_stop in
+    let pos =
+      if line = -1 then chars
+      else Printf.sprintf "%s, line %d, column %d"
+             chars line (source_stop - line_starts_at) in
+    source ^ pos
+
+  let pp fmt l = Format.fprintf fmt "%s" (to_string l)
+  let show l = to_string l
+
+end
+
 module Func = struct
 
   module Self = struct
@@ -59,15 +91,21 @@ type term =
  | Lam of Func.t * term
  | CData of Elpi_util.CData.t
  | Quoted of quote
-and quote = { data : string; kind : string option }
+and quote = { data : string; loc : Loc.t; kind : string option }
 [@@deriving show, eq]
 
 let mkC x = CData x
 let mkLam x t = Lam (Func.from_string x,t)
 let mkNil = Const Func.nilf
-let mkQuoted s =
+let mkQuoted loc s =
+  let strip n m loc = { loc with Loc.source_start = loc.Loc.source_start + n;
+                                 source_stop = loc.Loc.source_stop - m;
+                                 line_starts_at = loc.Loc.line_starts_at - m; } in
+  (* {{...}} stripped by the parser *)
+  let loc = strip 2 2 loc in
   let rec find_data i =
     match s.[i] with
+    | '{' -> find_data (i+1)
     | ':' ->
        let rec find_space i = match s.[i] with
          | ' ' -> i 
@@ -76,9 +114,8 @@ let mkQuoted s =
        let space_after = find_space 0 - 1 in
        let kind = String.sub s (i+1) space_after in
        let data = String.sub s (i+space_after+2) (String.length s - i - i - space_after-2) in
-       { data; kind = Some kind }
-    | '{' -> find_data (i+1)
-    | _ -> { data = String.sub s i (String.length s - i - i); kind = None }
+       { loc = strip (i+space_after+2) i loc; data; kind = Some kind }
+    | _ -> { loc = strip i i loc; data = String.sub s i (String.length s - i - i); kind = None }
   in
     Quoted (find_data 0)
 let mkSeq l =
@@ -96,7 +133,7 @@ type attribute =
 [@@deriving show]
 
 type ('term,'attributes) clause = {
-  loc : Ploc.t;
+  loc : Loc.t;
   attributes : 'attributes;
   body : 'term;
 }[@@deriving show]
@@ -108,14 +145,14 @@ and 'attribute chr_rule = {
   guard : term option;
   new_goal : sequent option;
   cattributes : 'attribute;
-  clocation : Ploc.t;
+  clocation : Loc.t;
 }
 [@@deriving show, create]
 
-type ('name,'term) macro = { mlocation : Ploc.t; maname : 'name; mbody : 'term }
+type ('name,'term) macro = { mlocation : Loc.t; maname : 'name; mbody : 'term }
 [@@deriving show]
 
-type tdecl = { tloc : Ploc.t; textern : bool; tname : Func.t; tty : term }
+type tdecl = { tloc : Loc.t; textern : bool; tname : Func.t; tty : term }
 [@@deriving show]
 
 type 'name mode =
@@ -124,10 +161,10 @@ type 'name mode =
 
 type decl =
  (* Blocks *)
- | Begin of Ploc.t
- | Namespace of Ploc.t * Func.t
- | Constraint of Ploc.t * Func.t list
- | End of Ploc.t
+ | Begin of Loc.t
+ | Namespace of Loc.t * Func.t
+ | Constraint of Loc.t * Func.t list
+ | End of Loc.t
 
  | Accumulated of decl list
 
@@ -144,17 +181,17 @@ type decl =
 let mkLocal x = Local (Func.from_string x)
 
 type program = decl list [@@deriving show]
-type goal = Ploc.t * term
+type goal = Loc.t * term
 
-exception NotInProlog of string
+exception NotInProlog of Loc.t * string
 
-let mkApp = function
+let mkApp loc = function
 (* FG: for convenience, we accept an empty list of arguments *)
   | [(App _ | Const _ | Quoted _) as c] -> c
   | App(c,l1)::l2 -> App(c,l1@l2)
   | (Const _ | Quoted _) as c::l2 -> App(c,l2)
-  | [] -> raise (NotInProlog "empty application")
-  | x::_ -> raise (NotInProlog ("application head: " ^ show_term x))
+  | [] -> raise (NotInProlog(loc,"empty application"))
+  | x::_ -> raise (NotInProlog(loc,"application head: " ^ show_term x))
 
 let fresh_uv_names = ref (-1);;
 let mkFreshUVar () = incr fresh_uv_names; Const (Func.from_string ("_" ^ string_of_int !fresh_uv_names))
@@ -193,8 +230,8 @@ let { CData.cin = in_loc; isc = is_loc; cout = out_loc } as cloc =
   CData.(declare {
     data_name = "loc";
     data_pp = (fun f (x,name) ->
-      let bname = Filename.basename (Ploc.file_name x) in
-      let line_no = Ploc.line_nb x in
+      let bname = Filename.basename x.Loc.source_name in
+      let line_no = x.Loc.line in
       match name with
       | None -> Fmt.fprintf f "%s:%4d:" bname line_no 
       | Some name -> Fmt.fprintf f "%s:%4d:%s:" bname line_no name);

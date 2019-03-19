@@ -570,7 +570,7 @@ type clause_w_info = {
 }
 [@@ deriving show]
 
-type macro_declaration = (Elpi_ast.term * Ploc.t) F.Map.t
+type macro_declaration = (Elpi_ast.term * Elpi_ast.Loc.t) F.Map.t
 [@@ deriving show]
 
 (* This is paired with a pre-stack term, i.e. a stack term where args are

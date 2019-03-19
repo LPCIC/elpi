@@ -86,12 +86,6 @@ module StrMap = Map.Make(String)
 module IntSet = Set.Make(Int)
 module StrSet = Set.Make(String)
 
-module Ploc = struct
-  include Ploc
-  let pp fmt loc = Format.fprintf fmt "%s:%d" (file_name loc) (line_nb loc)
-  let show loc = Format.sprintf "%s:%d" (file_name loc) (line_nb loc)
-end
-
 module Fmt = Format
 
 

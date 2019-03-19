@@ -63,6 +63,19 @@ end
 module Ast : sig
   type program
   type query
+
+  module Loc : sig
+    type t = {
+      source_name : string;
+      source_start: int;
+      source_stop: int;
+      line: int;
+      line_starts_at: int;
+    }
+    val pp : Format.formatter -> t -> unit
+    val show : t -> string
+    val equal : t -> t -> bool
+  end
 end
 
 module Parse : sig
@@ -75,6 +88,7 @@ module Parse : sig
   val goal : string -> Ast.query
   val goal_from_stream : char Stream.t -> Ast.query
 
+  exception ParseError of Ast.Loc.t * string
 end
 
 module Data : sig
@@ -400,7 +414,7 @@ module Extend : sig
 
     (** From an unparsed string to a term *)
     type quotation =
-      depth:int -> State.t -> string -> State.t * Data.term
+      depth:int -> State.t -> Ast.Loc.t -> string -> State.t * Data.term
 
     (** The default quotation [{{code}}] *)
     val set_default_quotation : quotation -> unit
@@ -674,7 +688,7 @@ module Extend : sig
     (** Hackish, in particular the output should be a compiled program *)
     val clause_of_term :
       ?name:string -> ?graft:([`After | `Before] * string) ->
-      depth:int -> Data.term -> Ast.program
+      depth:int -> Ast.Loc.t -> Data.term -> Ast.program
 
     (** Lifting/restriction (LOW LEVEL, don't use) *)
     val move : from:int -> to_:int -> Data.term -> Data.term

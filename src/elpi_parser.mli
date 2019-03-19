@@ -23,8 +23,10 @@ val init : ?silent:bool -> lp_syntax:gramext list -> paths:string list -> cwd:st
 (* BUG: extending the grammar is imperative, cannot be undone *)
 val parse_program : string list -> program
 val parse_program_from_stream : char Stream.t -> program
-val parse_goal : string -> goal
-val parse_goal_from_stream : char Stream.t -> goal
+val parse_goal : ?loc:Loc.t -> string -> goal
+val parse_goal_from_stream : ?loc:Loc.t -> char Stream.t -> goal
+
+exception ParseError of Loc.t * string
 
 val get_literal : string -> string
 

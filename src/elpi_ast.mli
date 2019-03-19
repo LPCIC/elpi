@@ -4,6 +4,20 @@
 
 open Elpi_util
 
+
+module Loc : sig
+  type t = {
+    source_name : string;
+    source_start: int;
+    source_stop: int;
+    line: int;
+    line_starts_at: int;
+  }
+  val show : t -> string
+  val pp : Format.formatter -> t -> unit
+  val equal : t -> t -> bool
+end
+
 (* Prolog functors *)
 module Func : sig
   type t
@@ -42,7 +56,7 @@ type term =
  | Lam of Func.t * term
  | CData of Elpi_util.CData.t
  | Quoted of quote
-and quote = { data : string; kind : string option }
+and quote = { data : string; loc : Loc.t; kind : string option }
 
 val equal_term : term -> term -> bool
 val pp_term : Format.formatter -> term -> unit
@@ -57,7 +71,7 @@ val show_attribute :
      attribute -> string
 
 type ('term,'attributes) clause = {
-  loc : Ploc.t;
+  loc : Loc.t;
   attributes : 'attributes;
   body : 'term;
 }
@@ -78,7 +92,7 @@ and 'attribute chr_rule = {
   guard : term option;
   new_goal : sequent option;
   cattributes : 'attribute;
-  clocation : Ploc.t;
+  clocation : Loc.t;
 }
 
 val create_chr_rule :
@@ -87,7 +101,7 @@ val create_chr_rule :
   ?guard: term ->
   ?new_goal: sequent ->
   cattributes: 'attribute ->
-  clocation:Ploc.t ->
+  clocation:Loc.t ->
   unit -> 'attribute chr_rule
 val pp_chr_rule : 
   (Format.formatter -> 'attribute -> unit) ->
@@ -97,7 +111,7 @@ val show_chr_rule :
      'attribute chr_rule -> string
 
 type ('name,'term) macro = {
-   mlocation : Ploc.t;
+   mlocation : Loc.t;
    maname : 'name;
    mbody : 'term
 }
@@ -111,7 +125,7 @@ val show_macro :
   (Format.formatter -> 'term -> unit) ->
      ('name,'term) macro -> string
 
-type tdecl = { tloc : Ploc.t; textern : bool; tname : Func.t; tty : term }
+type tdecl = { tloc : Loc.t; textern : bool; tname : Func.t; tty : term }
 
 val pp_tdecl :
     Format.formatter -> tdecl -> unit
@@ -130,10 +144,10 @@ val show_mode :
 
 type decl =
  (* Blocks *)
- | Begin of Ploc.t
- | Namespace of Ploc.t * Func.t
- | Constraint of Ploc.t * Func.t list
- | End of Ploc.t
+ | Begin of Loc.t
+ | Namespace of Loc.t * Func.t
+ | Constraint of Loc.t * Func.t list
+ | End of Loc.t
 
  | Accumulated of decl list
 
@@ -152,14 +166,16 @@ type program = decl list
 val pp_program : Format.formatter -> program -> unit
 val show_program : program -> string
 
-type goal = Ploc.t * term
-exception NotInProlog of string
+type goal = Loc.t * term
+exception NotInProlog of Loc.t * string
 
-val mkApp : term list -> term
+(* Can raise NotInProlog *)
+val mkApp : Loc.t -> term list -> term
+
 val mkCon : string -> term
 val mkNil : term
 val mkSeq : term list -> term
-val mkQuoted : string -> term
+val mkQuoted : Loc.t -> string -> term
 val mkFreshUVar : unit -> term
 val mkFreshName : unit -> term
 val mkLam : string -> term -> term
@@ -170,5 +186,5 @@ open Elpi_util.CData
 val cfloat : float cdata
 val cint : int cdata
 val cstring : string cdata
-val cloc : (Ploc.t * string option) cdata
+val cloc : (Loc.t * string option) cdata
 

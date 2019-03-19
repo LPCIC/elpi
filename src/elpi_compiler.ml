@@ -71,7 +71,7 @@ and block =
   | Constraints of constant list * prechr_rule list * pbody
 and typ = {
   extern : bool;
-  loc : Ploc.t;
+  loc : A.Loc.t;
   decl : type_declaration
 }
 [@@deriving show]
@@ -134,7 +134,7 @@ type query = {
   chr : (constant list * prechr_rule list) list;
   initial_depth : int;
   query : preterm;
-  query_loc : Ploc.t;
+  query_loc : A.Loc.t option;
   initial_state : CustomState.t;
 }
 [@@deriving show]
@@ -186,7 +186,7 @@ end = struct (* {{{ *)
 
   let structure_attributes ({ A.attributes; A.loc } as c) =
     let duplicate_err s =
-      error (Ploc.show loc ^ ": duplicate attribute " ^ s) in
+      error (A.Loc.show loc ^ ": duplicate attribute " ^ s) in
     let rec aux r = function
       | [] -> r
       | A.Name s :: rest ->
@@ -207,9 +207,9 @@ end = struct (* {{{ *)
 
   let structure_cattributes ({ A.cattributes; A.clocation = loc } as c) =
     let duplicate_err s =
-      error (Ploc.show loc ^ ": duplicate attribute " ^ s) in
+      error (A.Loc.show loc ^ ": duplicate attribute " ^ s) in
     let unsupported_err s =
-      error (Ploc.show loc ^ ": unsupported attribute " ^ s) in
+      error (A.Loc.show loc ^ ": unsupported attribute " ^ s) in
     let rec aux r = function
       | [] -> r
       | A.Name s :: rest ->
@@ -220,7 +220,7 @@ end = struct (* {{{ *)
          if r.cifexpr <> None then duplicate_err "if";
          aux { r with cifexpr = Some s } rest
     in
-    let cid = Ploc.show loc in 
+    let cid = A.Loc.show loc in 
     { c with A.cattributes = aux { cid; cifexpr = None } cattributes }
 
   let run dl =
@@ -277,7 +277,7 @@ end = struct (* {{{ *)
     and aux_end_block loc blocks clauses macros types modes locals chr rest =
       match rest with
       | A.End _ :: rest -> aux blocks clauses macros types modes locals chr rest
-      | _ -> error (Ploc.show loc ^ ": matching } is missing")
+      | _ -> error (A.Loc.show loc ^ ": matching } is missing")
 
     in
     let blocks, locals, chr, rest = aux [] [] [] [] [] [] [] dl in
@@ -293,7 +293,7 @@ end (* }}} *)
 
 module Quotation = struct
 
-  type quotation = depth:int -> CS.t -> string -> CS.t * term
+  type quotation = depth:int -> CS.t -> A.Loc.t -> string -> CS.t * term
   let named_quotations = ref StrMap.empty
   let default_quotation = ref None
   
@@ -488,17 +488,21 @@ let preterm_of_ast ~depth:arg_lvl macro state ast =
     | A.CData c -> state, CData (CData.hcons c)
     | A.App (A.Lam _,_) -> error "Beta-redexes not in our language"
     | A.App (A.CData _,_) -> type_error "Applied literal"
-    | A.Quoted { A.data; A.kind = None } ->
+    | A.Quoted { A.data; A.kind = None; A.loc } ->
          let unquote =
            option_get ~err:"No default quotation" !default_quotation in
          let state = set_mtm state (Some { macros = macro}) in
-         unquote ~depth:lvl state data 
-    | A.Quoted { A.data; A.kind = Some name } ->
+         begin try unquote ~depth:lvl state loc data 
+         with Elpi_parser.ParseError(loc,msg) ->
+           error (A.Loc.show loc ^ ": " ^ msg) end
+    | A.Quoted { A.data; A.kind = Some name; A.loc } ->
          let unquote = 
            try StrMap.find name !named_quotations
            with Not_found -> anomaly ("No '"^name^"' quotation") in
          let state = set_mtm state (Some { macros = macro}) in
-         unquote ~depth:lvl state data 
+         begin try unquote ~depth:lvl state loc data
+         with Elpi_parser.ParseError(loc,msg) ->
+           error (A.Loc.show loc ^ ": " ^ msg) end
     | A.App (A.Quoted _,_) -> type_error "Applied quotation"
   in
 
@@ -506,8 +510,8 @@ let preterm_of_ast ~depth:arg_lvl macro state ast =
   aux false arg_lvl state ast
 ;;
 
-let lp ~depth state s =
-  let _loc, ast = Elpi_parser.parse_goal_from_stream (Stream.of_string s) in
+let lp ~depth state loc s =
+  let _loc, ast = Elpi_parser.parse_goal ~loc s in
   let macros =
     match get_mtm state with
     | None -> A.Func.Map.empty
@@ -569,8 +573,8 @@ let preterm_of_ast ~depth macros state t =
     if A.Func.Map.mem n m then begin
       let _, old_loc = F.Map.find n m in
       error ("Macro "^Elpi_ast.Func.show n^" declared twice:\n"^
-             "first declaration: " ^ Ploc.show old_loc ^"\n"^
-             "second declaration: " ^ Ploc.show loc)
+             "first declaration: " ^ A.Loc.show old_loc ^"\n"^
+             "second declaration: " ^ A.Loc.show loc)
     end;
     A.Func.Map.add n (mbody,loc) m
 
@@ -1154,8 +1158,8 @@ end = struct (* {{{ *)
       | None -> s
       | Some n ->
           if StrMap.mem n s then
-            error (Ploc.show loc ^ ": a clause named " ^ n ^
-                   " already exists at " ^ Ploc.show (StrMap.find n s))
+            error (A.Loc.show loc ^ ": a clause named " ^ n ^
+                   " already exists at " ^ A.Loc.show (StrMap.find n s))
           else
             StrMap.add n loc s in
     let compile_clause ({ A.attributes = { StructuredAST.id; ifexpr }} as c) =
@@ -1163,7 +1167,7 @@ end = struct (* {{{ *)
     in
     let rec insert loc_name c l =
       match l, loc_name with
-      | [],_ -> error (Ploc.show c.A.loc ^
+      | [],_ -> error (A.Loc.show c.A.loc ^
            ": unable to graft this clause: no clause named " ^
              match loc_name with
              | StructuredAST.After x -> x
@@ -1230,7 +1234,7 @@ let query_of_ast { Program.assembled_program; compiler_state } (loc,t)
     chr = assembled_program.Assembled.chr;
     initial_depth;
     query;
-    query_loc = loc;
+    query_loc = Some loc;
     initial_state = CustomState.init state;
   } 
 
@@ -1250,7 +1254,7 @@ let query_of_term { Program.assembled_program; compiler_state } f =
     chr = assembled_program.Assembled.chr;
     initial_depth;
     query;
-    query_loc = Ploc.dummy;
+    query_loc = None;
     initial_state = CustomState.init state;
   }
 
@@ -1268,7 +1272,7 @@ let check_all_builtin_are_typed types =
    (Builtin.all ());
   List.iter (fun { StructuredProgram.extern = b; loc; decl = { tname }} ->
     if b && not (is_builtin tname) then
-      error(Ploc.show loc ^ ": External type declaration without Built-in: " ^
+      error(A.Loc.show loc ^ ": External type declaration without Built-in: " ^
             C.show tname))
   types
 ;;
@@ -1276,7 +1280,7 @@ let check_all_builtin_are_typed types =
 let check_no_regular_types_for_builtins types =
   List.iter (fun {StructuredProgram.extern = b; loc; decl = { tname } } ->
     if not b && is_builtin tname then
-      error(Ploc.show loc ^ ": Type declaration for Built-in " ^
+      error(A.Loc.show loc ^ ": Type declaration for Built-in " ^
             C.show tname ^ " must be flagged as external");
  ) types
 
@@ -1536,10 +1540,13 @@ let quote_clause { A.loc; A.attributes = { Assembled.id }; body } =
 ;;
 
 let quote_syntax { Query.clauses; query_loc; query } =
+  let loc = match query_loc with
+    | Some loc -> loc
+    | None -> { A.Loc.source_name = ""; source_start = 0; source_stop = 0; line = -1; line_starts_at = 0 } in
   let names = sorted_names_of_argmap query.amap in
   let clist = List.map quote_clause clauses in
   let q =
-    App(clausec,CData CData.(A.cloc.cin (query_loc,Some "query")), 
+    App(clausec,CData CData.(A.cloc.cin (loc,Some "query")), 
       [list_to_lp_list names;
        close_w_binder argc (quote_preterm ~on_type:false query) query.amap]) in
   clist, q

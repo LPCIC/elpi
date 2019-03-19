@@ -68,13 +68,15 @@ end
 module Ast = struct
   type program = Elpi_ast.program
   type query = Elpi_ast.goal
+  module Loc = Elpi_ast.Loc
 end
 
 module Parse = struct
   let program = Elpi_parser.parse_program
   let program_from_stream = Elpi_parser.parse_program_from_stream
-  let goal = Elpi_parser.parse_goal
-  let goal_from_stream = Elpi_parser.parse_goal_from_stream
+  let goal s = Elpi_parser.parse_goal s
+  let goal_from_stream s = Elpi_parser.parse_goal_from_stream s
+  exception ParseError = Elpi_parser.ParseError
 end
 
 module Data = struct
@@ -303,7 +305,7 @@ module Extend = struct
     let anomaly = Elpi_util.anomaly
     let warn = Elpi_util.warn
 
-    let clause_of_term ?name ?graft ~depth term =
+    let clause_of_term ?name ?graft ~depth loc term =
       let module Ast = Elpi_ast in
       let module R = (val !r) in let open R in
       let rec aux d ctx t =
@@ -321,7 +323,7 @@ module Extend = struct
             let c = aux d ctx (Data.Constants.mkConst c) in
             let x = aux d ctx x in
             let xs = List.map (aux d ctx) xs in
-            Ast.mkApp (c :: x :: xs)
+            Ast.mkApp loc (c :: x :: xs)
         | (Data.Arg _ | Data.AppArg _) -> assert false
         | Data.Cons(hd,tl) ->
             let hd = aux d ctx hd in
@@ -331,7 +333,7 @@ module Extend = struct
         | Data.Builtin(c,xs) ->
             let c = aux d ctx (Data.Constants.mkConst c) in
             let xs = List.map (aux d ctx) xs in
-            Ast.mkApp (c :: xs)
+            Ast.mkApp loc (c :: xs)
         | Data.CData x -> Ast.mkC x
         | (Data.UVar _ | Data.AppUVar _) ->
             error "program_of_term: the term contains uvars"
@@ -344,7 +346,7 @@ module Extend = struct
          | Some (`Before,x) -> [Ast.Before x]
          | None -> []) in
       [Ast.Clause {
-        Ast.loc = Ploc.dummy;
+        Ast.loc = loc;
         Ast.attributes;
         Ast.body = aux depth Elpi_util.IntMap.empty term;
       }]

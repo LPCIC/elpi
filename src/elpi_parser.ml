@@ -7,6 +7,24 @@ open Elpi_ast
 
 module Str = Re.Str
 
+let of_ploc l = {
+  Loc.source_name = Ploc.file_name l;
+  source_start = Ploc.first_pos l;
+  source_stop = Ploc.last_pos l;
+  line = Ploc.line_nb l;
+  line_starts_at = Ploc.bol_pos l;
+}
+let to_ploc {
+    Loc.source_name = source_name;
+    line = line;
+    line_starts_at = line_starts_at;
+    source_start = source_start;
+    source_stop = source_stop;
+  } =
+  Ploc.make_loc source_name line line_starts_at (source_start, source_stop) ""
+
+exception ParseError of Loc.t * string
+
 type fixity = Infixl | Infixr | Infix | Prefix | Prefixr | Postfix | Postfixl
 
 let fixity_of_string = function
@@ -129,35 +147,14 @@ let rec parse_one e (origfilename as filename) =
    res
   with Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) ->
     close_in ch;
-    let last = Ploc.last_pos l in
-    (*let ctx_len = 70 in CSC: TO BE FIXED AND RESTORED
-    let ctx = "…"
-      let start = max 0 (last - ctx_len) in
-      let s = String.make 101 '\007' in
-      let ch = open_in filename in
-      (try really_input ch s 0 100 with End_of_file -> ());
-      close_in ch;
-      let last = String.index s '\007' in
-      "…" ^ String.sub s start last ^ "…" in
-    raise (Stream.Error(Printf.sprintf "%s\nnear: %s" msg ctx))*)
-    raise (Stream.Error(Printf.sprintf "%s\nnear: %s@%d" msg origfilename last))
+    let loc = of_ploc l in
+    let loc = { loc with Loc.source_name = origfilename } in
+    raise (ParseError(loc,msg))
   | Ploc.Exc(_,e) -> close_in ch; raise e
  end
   
 let parse e filenames =
   List.concat (List.map (parse_one e) filenames)
-
-let parse_string e s =
-  try Grammar.Entry.parse e (Stream.of_string s)
-  with Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) ->
-    let last = Ploc.last_pos l in
-    let ctx_len = 70 in
-    let ctx =
-      let start = max 0 (last - ctx_len) in
-      let len = min 100 (min (String.length s - start) last) in
-      "…" ^ String.sub s start len ^ "…" in
-    raise (Stream.Error(Printf.sprintf "%s\nnear: %s" msg ctx))
-  | Ploc.Exc(_,e) -> raise e
 
 let string_of_chars chars = 
   let buf = Buffer.create 10 in
@@ -307,24 +304,25 @@ let set_liter_map, get_literal, _print_lit_map =
  (fun s -> U.StrMap.find s !lit_map),
  (fun () -> U.StrMap.iter (fun s1 s2 -> Format.printf "\n%s -> %s\n%!" s1 s2) !lit_map);;
 
-let succ_line loc =
-  Ploc.make_loc (Ploc.file_name loc) (Ploc.line_nb loc + 1) 0
+let succ_line loc ep =
+  Ploc.make_loc (Ploc.file_name loc) (Ploc.line_nb loc + 1) ep
                 (Ploc.last_pos loc, Ploc.last_pos loc) (Ploc.comment loc)
 
-let set_loc_pos loc bp ep =
-  Ploc.sub loc (bp - Ploc.first_pos loc) (ep - bp)
+let set_loc_pos loc init bp ep =
+  Ploc.sub loc (bp - init) (ep - bp)
 
-let rec lex loc c = parser bp
-  | [< '( ' ' | '\t' | '\r' ); s >] -> lex loc c s
-  | [< '( '\n' ) ; s >] -> lex (succ_line loc) c s
-  | [< '( '%' ); '( '!'); s >] -> literatecomment loc c s
-  | [< '( '%' ); s >] -> comment loc c s
-  | [< ?= [ '/'; '*' ]; '( '/' ); '( '*' ); s >] -> comment2 loc 0 c s
-  | [< s >] ep ->
+let rec lex loc c init = parser bp
+  | [< '( ' ' | '\t' | '\r' ); s >] -> lex loc c init s
+  | [< '( '\n' ) ; s >] ep -> lex (succ_line loc ep) c init s
+  | [< '( '%' ); '( '!'); s >] -> literatecomment loc c init s
+  | [< '( '%' ); s >] -> comment loc c init s
+  | [< ?= [ '/'; '*' ]; '( '/' ); '( '*' ); s >] -> comment2 loc 0 c init s
+  | [< s >] ->
        if option_eq (Stream.peek s) None
-       then ("EOF",""), (set_loc_pos loc bp ep)
+       then ("EOF",""), (set_loc_pos loc init bp bp)
        else
         let (x,y) as res = tok c s in
+        let ep = Stream.count s in
         (if x == constant then
          (match y with
          | "module" -> "MODULE", "module"
@@ -359,10 +357,10 @@ let rec lex loc c = parser bp
         
          | x when StringSet.mem x !symbols -> "SYMBOL",x
         
-         | _ -> res) else res), (set_loc_pos loc bp ep)
-and literatecomment loc c = parser
-  | [< '( '\n' ); s >] ->
-      let loc = succ_line loc in
+         | _ -> res) else res), (set_loc_pos loc init bp ep)
+and literatecomment loc c init = parser
+  | [< '( '\n' ); s >] ep ->
+      let loc = succ_line loc ep in
       let buf = Buffer.contents literatebuf in
       Buffer.reset literatebuf;
       let list_str = Str.split (Str.regexp " +") buf in
@@ -371,17 +369,17 @@ and literatecomment loc c = parser
        | _ -> prerr_endline ("Wrong syntax: literate comment: " ^ buf); exit 1);
   (*   print_lit_map (); *)
   (*   prerr_endline buf; (*register imperatively*) *)
-      lex loc c s
-  | [< '_ as x ; s >] -> Buffer.add_char literatebuf x; literatecomment loc c s
-and comment loc c = parser
-  | [< '( '\n' ); s >] -> lex (succ_line loc) c s
-  | [< '_ ; s >] -> comment loc c s
-and comment2 loc lvl c = parser
+      lex loc c init s
+  | [< '_ as x ; s >] -> Buffer.add_char literatebuf x; literatecomment loc c init s
+and comment loc c init = parser
+  | [< '( '\n' ); s >] ep -> lex (succ_line loc ep) c init s
+  | [< '_ ; s >] -> comment loc c init s
+and comment2 loc lvl c init = parser
   | [< ?= [ '*'; '/' ]; '( '*' ); '( '/'); s >] ->
-      if lvl = 0 then lex loc c s else comment2 loc (lvl-1) c s
-  | [< ?= [ '/'; '*' ]; '( '/' ); '( '*' ); s >] -> comment2 loc (lvl+1) c s
-  | [< '( '\n' ); s >] -> comment2 (succ_line loc) lvl c s
-  | [< '_ ; s >] -> comment2 loc lvl c s
+      if lvl = 0 then lex loc c init s else comment2 loc (lvl-1) c init s
+  | [< ?= [ '/'; '*' ]; '( '/' ); '( '*' ); s >] -> comment2 loc (lvl+1) c init s
+  | [< '( '\n' ); s >] ep -> comment2 (succ_line loc ep) lvl c init s
+  | [< '_ ; s >] -> comment2 loc lvl c init s
 
 
 open Plexing
@@ -397,7 +395,8 @@ let after loc =
 let lex_fun s =
   let tab = Hashtbl.create 207 in
   (Stream.from (fun id ->
-     let tok, loc = lex !last_loc Lexbuf.empty s in
+     let tok, loc = lex !last_loc Lexbuf.empty (Stream.count s) s in
+(*      Printf.eprintf "tok: %s, %s, %s\n" (Loc.show (of_ploc loc)) (fst tok) (snd tok); *)
      last_loc := after loc;
      Hashtbl.add tab id loc;
      Some tok)),
@@ -463,7 +462,7 @@ let is_used n =
   res
 ;;
 
-let desugar_multi_binder = function
+let desugar_multi_binder loc = function
   | App(Const hd as binder,args)
     when Func.(equal hd pif || equal hd sigmaf) && List.length args > 1 ->
       let last, rev_rest = let l = List.rev args in List.hd l, List.tl l in
@@ -471,8 +470,8 @@ let desugar_multi_binder = function
         | Const x -> Func.show x
         | (App _ | Lam _ | CData _ | Quoted _) ->
             Elpi_util.error "multi binder syntax") rev_rest in
-      let body = mkApp [binder;last] in
-      List.fold_left (fun bo name -> mkApp [binder;mkLam name bo]) body names
+      let body = mkApp (of_ploc loc) [binder;last] in
+      List.fold_left (fun bo name -> mkApp (of_ploc loc) [binder;mkLam name bo]) body names
   | (App _ | Const _ | Lam _ | CData _ | Quoted _) as t -> t
 ;;
 
@@ -502,19 +501,19 @@ let constant_colon =
 
 type gramext = { fix : fixity; sym : string; prec : int }
 
-let gram_extend { fix; sym = cst; prec = nprec } =
+let gram_extend loc { fix; sym = cst; prec = nprec } =
   if nprec < umin_precedence || nprec > umax_precedence then
-    raise (Stream.Error (Printf.sprintf "precedence muse be inside [%d,%d]" umin_precedence umax_precedence))
+    raise (ParseError(loc,Printf.sprintf "precedence muse be inside [%d,%d]" umin_precedence umax_precedence))
   else
     let binrule =
      [ Gramext.Sself ; Gramext.Stoken ("SYMBOL",cst); Gramext.Sself ],
-     Gramext.action (fun t2 cst t1 _ ->mkApp [mkCon cst;t1;t2]) in
+     Gramext.action (fun t2 cst t1 loc -> mkApp (of_ploc loc) [mkCon cst;t1;t2]) in
     let prerule =
      [ Gramext.Stoken ("SYMBOL",cst); Gramext.Sself ],
-     Gramext.action (fun t cst _ -> mkApp [mkCon cst;t]) in
+     Gramext.action (fun t cst loc -> mkApp (of_ploc loc) [mkCon cst;t]) in
     let postrule =
      [ Gramext.Sself ; Gramext.Stoken ("SYMBOL",cst) ],
-     Gramext.action (fun cst t _ -> mkApp [mkCon cst;t]) in
+     Gramext.action (fun cst t loc -> mkApp (of_ploc loc) [mkCon cst;t]) in
     let ppinfo = fix, nprec in
     let fixity,rule =
      (* NOTE: we do not distinguish between infix and infixl,
@@ -559,7 +558,7 @@ EXTEND
        to_remove = OPT [ BIND; l = LIST1 sequent -> l ];
        guard = OPT [ PIPE; a = atom LEVEL "abstterm" -> a ];
        new_goal = OPT [ SYMBOL "<=>"; gs = sequent -> gs ] ->
-         create_chr_rule ~to_match ?to_remove ?guard ?new_goal ~cattributes:[] ~clocation:loc ()
+         create_chr_rule ~to_match ?to_remove ?guard ?new_goal ~cattributes:[] ~clocation:(of_ploc loc) ()
     ]];
   sequent_core :
     [ [ constant_colon; e = CONSTANT; COLON; t = atom -> Some e, (t : term) 
@@ -594,43 +593,43 @@ EXTEND
     let name = Func.from_string c in
     [ { mname = name; margs = List.map fst a } ],
      (name, List.fold_right (fun (_,t) ty ->
-        mkApp [mkCon "->";t;ty]) a (mkCon "prop"))
+        mkApp (of_ploc loc) [mkCon "->";t;ty]) a (mkCon "prop"))
   ]];
   attributes : [[ COLON; l = LIST1 attribute SEP COLON-> l ]];
   clause :
     [[ attributes = OPT attributes; f = atom; FULLSTOP ->
        let attributes = match attributes with None -> [] | Some x -> x in
-       let c = { loc; attributes; body = f } in
+       let c = { loc = of_ploc loc; attributes; body = f } in
        [Clause c]
      | cattributes = OPT attributes; RULE; r = chrrule; FULLSTOP ->
        let cattributes = match cattributes with None -> [] | Some x -> x in
        [Chr { r with cattributes } ]
      | pragma -> []
-     | LCURLY -> [Begin loc]
-     | RCURLY -> [End loc]
+     | LCURLY -> [Begin (of_ploc loc)]
+     | RCURLY -> [End (of_ploc loc)]
      | PRED; p = pred; FULLSTOP ->
          let m, (n,t) = p in
-         [Type { tloc=loc; textern = false; tname = n ; tty = t }; Mode m]
+         [Type { tloc=of_ploc loc; textern = false; tname = n ; tty = t }; Mode m]
      | TYPE; names = LIST1 const_sym SEP SYMBOL ","; t = type_; FULLSTOP ->
          List.map (fun n ->
-           Type { tloc=loc; textern=false; tname=Func.from_string n; tty=t })
+           Type { tloc=of_ploc loc; textern=false; tname=Func.from_string n; tty=t })
            names
      | EXTERNAL;
        TYPE; names = LIST1 const_sym SEP SYMBOL ","; t = type_; FULLSTOP ->
          List.map (fun n ->
-           Type { tloc=loc; textern=true; tname=Func.from_string n; tty=t })
+           Type { tloc=of_ploc loc; textern=true; tname=Func.from_string n; tty=t })
          names
      | EXTERNAL; PRED; p = pred; FULLSTOP ->
          let _, (n,t) = p in (* No mode for ML code *)
-         [Type { tloc = loc; textern = true; tname = n; tty = t }]
+         [Type { tloc = of_ploc loc; textern = true; tname = n; tty = t }]
      | MODE; m = LIST1 mode SEP SYMBOL ","; FULLSTOP -> [Mode m]
      | MACRO; b = atom; FULLSTOP ->
          let name, body = desugar_macro b in
-         [Macro { mlocation = loc; maname = name; mbody = body }]
+         [Macro { mlocation =of_ploc loc; maname = name; mbody = body }]
      | NAMESPACE; ns = CONSTANT; LCURLY ->
-         [ Namespace (loc, Func.from_string ns) ]
+         [ Namespace (of_ploc loc, Func.from_string ns) ]
      | CONSTRAINT; names=LIST0 CONSTANT; LCURLY ->
-         [ Constraint (loc, List.map Func.from_string names) ]
+         [ Constraint (of_ploc loc, List.map Func.from_string names) ]
      | MODULE; CONSTANT; FULLSTOP -> []
      | SIG; CONSTANT; FULLSTOP -> []
      | ACCUMULATE; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
@@ -655,12 +654,12 @@ EXTEND
      | EXPORTDEF; LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP -> []
      | KIND; names = LIST1 const_sym SEP SYMBOL ","; t = kind; FULLSTOP ->
          List.map (fun n ->
-           Type { tloc=loc; textern=false; tname=Func.from_string n; tty=t })
+           Type { tloc=of_ploc loc; textern=false; tname=Func.from_string n; tty=t })
          names
      | TYPEABBREV; abbrform; TYPE; FULLSTOP -> []
      | fix = FIXITY; syms = LIST1 const_sym SEP SYMBOL ","; prec = INTEGER; FULLSTOP ->
          List.iter (fun sym ->
-           gram_extend {
+           gram_extend (of_ploc loc) {
              fix = fixity_of_string fix;
              sym;
              prec = int_of_string prec
@@ -669,18 +668,18 @@ EXTEND
     ]];
   kind:
     [[ t = TYPE -> mkCon t
-     | t = TYPE; a = SYMBOL "->"; k = kind -> mkApp [mkCon a; mkCon t; k]
+     | t = TYPE; a = SYMBOL "->"; k = kind -> mkApp (of_ploc loc) [mkCon a; mkCon t; k]
     ]];
   type_:
     [[ c = ctype -> c
-     | s = ctype; a = SYMBOL "->"; t = type_ -> mkApp [mkCon a; s; t]
+     | s = ctype; a = SYMBOL "->"; t = type_ -> mkApp (of_ploc loc) [mkCon a; s; t]
     ]];
   ctype:
      [ "main" [ c = CONSTANT; l = LIST0 ctype LEVEL "arg" -> 
                   if c = "o" && l = [] then mkCon "prop"
-                  else mkApp (mkCon c :: l)
+                  else mkApp (of_ploc loc) (mkCon c :: l)
               | CONSTANT "ctype"; s = LITERAL ->
-                  mkApp [Const Func.ctypef; mkC (cstring.U.CData.cin s)] ]
+                  mkApp (of_ploc loc) [Const Func.ctypef; mkC (cstring.U.CData.cin s)] ]
      | "arg"  [ c = CONSTANT -> mkCon c
               | LPAREN; t = type_; RPAREN -> t ]
      ];
@@ -690,18 +689,18 @@ EXTEND
      | LPAREN; abbrform; RPAREN -> ()
     ]];
   goal:
-    [[ OPT pragma; p = premise -> loc, p ]];
+    [[ OPT pragma; p = premise -> of_ploc loc, p ]];
   premise : [[ a = atom -> a ]];
   atom :
    [ "1" [ ]
    | "110"
       [ args = LIST1 atom LEVEL "120" SEP SYMBOL "," ->
-          if List.length args > 1 then mkApp (Const Func.andf :: args)
+          if List.length args > 1 then mkApp (of_ploc loc) (Const Func.andf :: args)
           else List.hd args
       ]
    | "term"
       [ hd = atom; args = LIST1 atom LEVEL "abstterm" ->
-         desugar_multi_binder (mkApp (hd :: args)) ]
+         desugar_multi_binder loc (mkApp (of_ploc loc) (hd :: args)) ]
    | "abstterm"
       [ c=CONSTANT; OPT[COLON;type_]; b=OPT[BIND; a = atom LEVEL "1" -> a ] ->
           (match b with None -> mkCon c | Some b -> mkLam c b)
@@ -709,11 +708,11 @@ EXTEND
           (match b with None -> mkFreshUVar () | Some b ->
            mkLam Func.(show dummyname)  b)
       | s = LITERAL -> mkC (cstring.U.CData.cin s)
-      | s = QUOTED -> mkQuoted s
+      | s = QUOTED -> mkQuoted (of_ploc loc) s
       | s = INTEGER -> mkC (cint.U.CData.cin (int_of_string s))
       | s = FLOAT -> mkC (cfloat.U.CData.cin (float_of_string s))
       | LPAREN; a = atom; RPAREN -> a
-      | LCURLY; a = atom; RCURLY -> mkApp [Const Func.spillf;a]
+      | LCURLY; a = atom; RCURLY -> mkApp (of_ploc loc) [Const Func.spillf;a]
         (* 120 is the first level after 110, which is that of ,
            Warning: keep the hard-coded constant in sync with
            the list_element_prec below :-(
@@ -735,41 +734,50 @@ let list_element_prec = 120
 
 let parser_initialized = ref false
 
+let init_loc = {
+  Loc.source_name = "";
+  source_start = 0;
+  source_stop = 0;
+  line = -1;
+  line_starts_at = 0;
+}
+
 let init ?(silent=true) ~lp_syntax ~paths ~cwd () =
   assert(!parser_initialized = false);
   parse_silent := silent;
   parsed := [];
   set_tjpath cwd paths;
-  List.iter gram_extend lp_syntax;
+  List.iter (gram_extend init_loc) lp_syntax;
   parser_initialized := true
 ;;
 
-let parse_program filenames : program =
- if !parser_initialized = false then U.anomaly "parsing before calling init";
- try parse lp filenames with NotInProlog s -> raise (Stream.Error ("NotInProlog: " ^ s))
+let run_parser f x =
+  if !parser_initialized = false then U.anomaly "parsing before calling init";
+  try f x with
+  | Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) ->
+      let loc = of_ploc l in
+      raise(ParseError(loc,msg))
+  | Ploc.Exc(l,e) ->
+      let loc = of_ploc l in
+      raise(ParseError(loc,"Unexpected exception: " ^ Printexc.to_string e))
+  | NotInProlog(loc,s) -> raise (ParseError(loc, "NotInProlog: " ^ s))
 ;;
 
-let parse_program_from_stream strm : program =
-  assert(!parser_initialized = true);
-  if !parser_initialized = false then U.anomaly "parsing before calling init";
-  try Grammar.Entry.parse lp strm
-  with
-  | Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) -> raise(Stream.Error msg)
-  | Ploc.Exc(_,e) -> raise e
-  | NotInProlog s -> raise (Stream.Error ("NotInProlog: " ^ s))
-;;
+let parse_program filenames : program = run_parser (parse lp) filenames
 
-let parse_goal s : goal =
-  if !parser_initialized = false then U.anomaly "parsing before calling init";
-  try parse_string goal s with NotInProlog s -> raise (Stream.Error ("NotInProlog: " ^ s))
+let parse_program_from_stream strm : program = run_parser (Grammar.Entry.parse lp) strm
 
-let parse_goal_from_stream strm =
-  if !parser_initialized = false then U.anomaly "parsing before calling init";
-  try Grammar.Entry.parse goal strm
-  with
-  | Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) -> raise(Stream.Error msg)
-  | Ploc.Exc(_,e) -> raise e
-  | NotInProlog s -> raise (Stream.Error ("NotInProlog: " ^ s))
+let set_last_loc = function
+  | None -> ()
+  | Some loc -> last_loc := to_ploc { loc with Loc.source_stop = loc.Loc.source_start }
+
+let parse_goal ?loc s : goal =
+  set_last_loc loc;
+  run_parser (Grammar.Entry.parse goal) (Stream.of_string s)
+
+let parse_goal_from_stream ?loc strm =
+  set_last_loc loc;
+  run_parser (Grammar.Entry.parse goal) strm
 
 let lp_gramext = [
   { fix = Infixl;	sym = ":-";	prec = 1; };

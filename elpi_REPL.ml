@@ -65,6 +65,11 @@ let usage =
   Elpi_API.Setup.usage
 ;;
 
+(* For testing purposes we declare an identity quotation *)
+let _ =
+  Elpi_API.Extend.Compile.register_named_quotation ~name:"elpi"
+    Elpi_API.Extend.Compile.lp
+
 let _ =
   let test = ref false in
   let exec = ref "" in
@@ -114,7 +119,12 @@ let _ =
       Elpi_builtin.std_declarations;
     exit 0;
   end;
-  let p = Elpi_API.Parse.program filenames in
+  let p =
+    try Elpi_API.Parse.program filenames
+    with Elpi_API.Parse.ParseError(loc,err) ->
+      Printf.eprintf "%s: %s\n" (Elpi_API.Ast.Loc.show loc) err;
+      exit 1;
+  in
   if !print_ast then begin
     Format.eprintf "%a" Elpi_API.Pp.Ast.program p;
     exit 0;
@@ -129,7 +139,10 @@ let _ =
     else begin
      Printf.printf "goal> %!";
      let strm = Stream.of_channel stdin in
-     Elpi_API.Parse.goal_from_stream strm
+     try Elpi_API.Parse.goal_from_stream strm
+     with Elpi_API.Parse.ParseError(loc,err) ->
+        Printf.eprintf "%s: %s\n" (Elpi_API.Ast.Loc.show loc) err;
+        exit 1;
     end in
   let flags = {
     Elpi_API.Compile.default_flags
