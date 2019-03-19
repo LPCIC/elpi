@@ -62,6 +62,7 @@ let usage =
   "\t-D var  Define variable (conditional compilation)\n" ^ 
   "\t-q quiet, don't print loaded files\n" ^ 
   "\t-document-builtins Print documentation for built-in predicates\n" ^
+  "\t-no-tc don't typecheck the program\n" ^ 
   Elpi_API.Setup.usage
 ;;
 
