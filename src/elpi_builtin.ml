@@ -799,7 +799,7 @@ let name_or_constant name condition = (); fun x out ~depth _ { state } ->
     type_error (name^" only supports 1 or 3 arguments");
   match x with
   | Discard -> raise No_clause (* not a name *)
-  | Flex _ -> assert false (* any has no Flex case *)
+  | Flex _ | OpaqueData _ -> assert false (* any has no Flex/OpaqueData case *)
   | Data x ->
     match look ~depth x with
     | Const n when condition n ->
