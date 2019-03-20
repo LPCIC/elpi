@@ -37,7 +37,8 @@
 
 - [Namespaces](#namespaces) are to avoid name conflicts. This is a very
   simple syntactic facility to add a prefix to all names declared in a
-  specific region.
+  specific region. It is complemented by the shorten directive that lets
+  one use a short name for a symbol in a namespace.
 
 - [Accumulate with paths](#accumulate-with-paths) accepts `accumulate "path".`
   so that one can use `.` in a file/path name.
@@ -643,6 +644,35 @@ foo.toto 3.
 foo.bar X :- foo.toto 2 => foo.baz X.
 foo.baz X :- foo.toto X.
 main :- foo.bar 2, foo.baz 1.
+```
+
+### shortening names from a namespace
+
+Names from a namespace can be shortened by using
+the `shorten` directive as follows.
+
+```prolog
+namespace list {
+  append A B C :- ...
+  rev L RL :- ...
+}
+
+shorten list.append.
+
+main :- append L1 L2 R. 
+
+```
+
+The scope of the `shorten` directive ends with the current file or
+with the end of the enclosing code block.
+
+```prolog
+namespace stuff {
+  shorten list.rev.
+  code :- ...
+} % end of shorten list.rev.
+
+main :- stuff.code, list.rev L1 L2 R. % only long name is accessible
 ```
 
 ## Accumulate with paths

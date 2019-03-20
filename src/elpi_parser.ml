@@ -328,6 +328,7 @@ let rec lex loc c init = parser bp
          | "module" -> "MODULE", "module"
          | "sig" -> "SIG", "SIG"
          | "import" -> "IMPORT", "accumulate"
+         | "shorten" -> "SHORTEN", "shorten"
          | "accum_sig" -> "ACCUM_SIG", "accum_sig"
          | "use_sig" -> "USE_SIG", "use_sig"
          | "local" -> "LOCAL", "local"
@@ -640,6 +641,8 @@ EXTEND
         [Accumulated(parse lp (List.map (fun fn -> fn ^ ".sig") filenames))]
      | USE_SIG; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
         [Accumulated(parse lp (List.map (fun fn -> fn ^ ".sig") filenames))]
+     | SHORTEN; name = CONSTANT; FULLSTOP ->
+        [ Shorten(of_ploc loc, Func.from_string name) ]
      | LOCAL; vars = LIST1 const_sym SEP SYMBOL ","; FULLSTOP ->
         List.map (fun x -> mkLocal x) vars
      | LOCAL; vars = LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP ->

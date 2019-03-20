@@ -22,6 +22,11 @@ let () = declare "namespace03"
   ~description:"namespacing of predicates and constants"
   ()
 
+let () = declare "shorten"
+  ~source_elpi:"shorten.elpi"
+  ~description:"shortening names of a namespace"
+  ()
+
 let () = declare "named_clauses00"
   ~source_elpi:"named_clauses00.elpi"
   ~description:"clause grafting using names"

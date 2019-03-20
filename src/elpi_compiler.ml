@@ -36,6 +36,7 @@ and block =
   | Locals of A.Func.t list * program
   | Clauses of (A.term,attribute) A.clause list
   | Namespace of A.Func.t * program
+  | Shorten of A.Func.t shorthand list * program
   | Constraints of A.Func.t list * cattribute A.chr_rule list * program
 and attribute = {
   insertion : insertion option;
@@ -46,6 +47,11 @@ and insertion = Before of string | After of string
 and cattribute = {
   cid : string;
   cifexpr : string option
+}
+and 'a shorthand = {
+  iloc : A.Loc.t;
+  full_name : 'a;
+  short_name : 'a;
 }
 [@@deriving show]
 
@@ -68,6 +74,7 @@ and pbody = {
 and block =
   | Clauses of (preterm,StructuredAST.attribute) A.clause list
   | Namespace of string * pbody
+  | Shorten of C.t StructuredAST.shorthand list * pbody
   | Constraints of constant list * prechr_rule list * pbody
 and typ = {
   extern : bool;
@@ -254,6 +261,23 @@ end = struct (* {{{ *)
           if locals1 <> [] then
             error "locals cannot be declared inside a namespace block";
           aux_end_block loc (Namespace (n,p) :: cl2b clauses @ blocks)
+            [] macros types modes locals chr rest
+      | A.Shorten (loc,full_name) :: rest ->
+          let name = A.Func.show full_name in
+          let short_name =
+            try
+              let n = String.rindex name '.' in
+              A.Func.from_string
+                 (String.sub name (n+1) (String.length name - n - 1))
+            with Not_found ->
+              error ~loc ("shorthand "^name^" has no namespace") in
+          let shorthand = { iloc = loc; full_name; short_name } in  
+          let p, locals1, chr1, rest = aux [] [] [] [] [] [] [] rest in
+          if locals1 <> [] then
+            error "locals cannot be declared after a shorthand";
+          if chr1 <> [] then
+            error "CHR cannot be declared after a shorthand";
+          aux ((Shorten([shorthand],p) :: cl2b clauses @ blocks))
             [] macros types modes locals chr rest
 
       | A.Accumulated a :: rest ->
@@ -629,6 +653,11 @@ let preterm_of_ast ~depth macros state t =
       let lcs, state, rest = compile_clauses lcs state macros rest in
       lcs, state, cl :: rest
 
+  let compile_shorthand state { StructuredAST.full_name; short_name; iloc } = 
+    let full_name = funct_of_ast state full_name in
+    let short_name = funct_of_ast state short_name in
+  { StructuredAST.full_name; short_name; iloc }
+
   let rec append_body b1 b2 =
     match b1, b2 with
     | [], _ -> b2
@@ -728,6 +757,16 @@ let preterm_of_ast ~depth macros state t =
           lcs, state, types, modes,
           C.Set.union defs (prepend prefix p.StructuredProgram.symbols),
           StructuredProgram.Namespace(prefix, p) :: compiled_rest
+      | Shorten(shorthands,p) :: rest ->
+          let shorthands = List.map (compile_shorthand state) shorthands in
+          let shorts = List.fold_left (fun s { short_name } ->
+            C.Set.add short_name s) C.Set.empty shorthands in
+          let state, lcs, _, p = compile_program macros lcs state p in
+          let lcs, state, types, modes, defs, compiled_rest =
+            compile_body macros types modes lcs defs state rest in
+          lcs, state, types, modes,
+          C.Set.union defs (C.Set.diff p.StructuredProgram.symbols shorts),
+          StructuredProgram.Shorten(shorthands, p) :: compiled_rest
       | Constraints (clique, rules, p) :: rest ->
           (* XXX missing check for nested constraints *)
           let clique = List.map (funct_of_ast state) clique in
@@ -829,11 +868,10 @@ end = struct (* {{{ *)
   let map_clause f ({ A.body = { term; amap } } as x) =
     { x with A.body = { term = smart_map_term f term; amap } }
 
-  type subst = (string * C.t -> C.t) option
+  type subst = (string list * (C.t -> C.t))
 
-  let apply_subst f = function
-    | None -> fun x -> x
-    | Some (_,s) -> fun x -> f s x
+  let apply_subst (f : (C.t -> C.t) -> 'a -> 'a) (s : subst) : 'a -> 'a =
+    fun x -> f (snd s) x
 
   let apply_subst_list f = apply_subst (fun x -> smart_map (f x))
 
@@ -849,18 +887,30 @@ end = struct (* {{{ *)
 
   let apply_subst_clauses = apply_subst_list map_clause
     
-  let push_subst extra_prefix symbols_affected subst =
-    let oldprefix, oldsubst =
-      match subst with Some (p,x) -> p, x | None -> [],fun x -> x in
+  let push_subst extra_prefix symbols_affected (oldprefix, oldsubst) =
     let newprefix = oldprefix @ [extra_prefix] in
     let newsubst c =
       if C.Set.mem c symbols_affected then ToDBL.prefix_const newprefix c
       else oldsubst c in
-    Some(newprefix, newsubst)
+    (newprefix, newsubst)
+
+  let push_subst_shorthands shorthands _symbols_defined (oldprefix, oldsubst) =
+    let push1 subst { StructuredAST.short_name; full_name } c =
+      if c == short_name then subst full_name
+      else subst c
+    in
+    oldprefix, List.fold_left push1 oldsubst shorthands
 
   let rec compile_body lcs types modes clauses chr subst state bl =
     match bl with
     | [] -> types, modes, clauses, chr
+    | Shorten(shorthands, { types = t; modes = m; body; symbols }) :: rest ->
+        let insubst = push_subst_shorthands shorthands symbols subst in
+        let types = ToDBL.merge_types (apply_subst_types insubst t) types in
+        let modes = ToDBL.merge_modes (apply_subst_modes insubst m) modes in
+        let types, modes, clauses, chr =
+          compile_body lcs types modes clauses chr insubst state body in
+        compile_body lcs types modes clauses chr subst state rest
     | Namespace (extra, { types = t; modes = m; body; symbols }) :: rest ->
         let insubst = push_subst extra symbols subst in
         let types = ToDBL.merge_types (apply_subst_types insubst t) types in
@@ -889,7 +939,7 @@ end = struct (* {{{ *)
     }
   =
     let types, modes, clauses, chr =
-      compile_body local_names types modes [] [] None state body in
+      compile_body local_names types modes [] [] ([],fun x -> x) state body in
     { Flat.types;
       modes;
       clauses;

@@ -1,0 +1,35 @@
+
+namespace b {
+
+foo :- true.
+baz :- fail.
+
+  namespace bar {
+  
+  baz :- foo.
+
+  }
+
+
+shorten bar.baz.
+
+}
+
+namespace a {
+
+  shorten b.foo.
+  shorten b.bar.baz.
+  
+  main :- foo, b.foo, baz, bar.baz, b.bar.baz.
+
+  bar.baz :- true.
+
+  shorten b.baz.
+  
+  baz :- true.
+  bar.baz :- baz.
+
+}
+
+main :- a.main. 
+       
