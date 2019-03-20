@@ -5,6 +5,9 @@
 % Simple type checker for lambda-Prolog programs
 accumulate elpi_quoted_syntax.
 
+shorten std.mem.
+shorten std.rev.
+
 % --------- HOAS or programs  ------------------------------------------------
 
 kind typ type. %%%%% types %%%%%%
@@ -17,9 +20,6 @@ type forall (typ -> typ) -> typ. % polymorphic type declarations
 type ctype string -> typ.
 
 % --------- utils  ---------------------------------------------------------
-
-if B T _ :- B, !, T.
-if _ _ E :- E.
 
 iter _ [].
 iter F [X | XS] :- F X, iter F XS.
@@ -54,9 +54,6 @@ assert _ (unknown T) :- !,
   checking LOC, term_to_string LOC SLOC,
   MSG is SLOC ^ " Warning: " ^ {pp T} ^ " is undeclared",
   warning MSG.
-
-mem X [ X | _ ] :- !.
-mem X [ _ | YS] :- mem X YS.
 
 stash-new E S :- open_safe E L, ( mem S L ; stash_in_safe E S ), !.
 
@@ -213,12 +210,6 @@ under-env [] P :- P.
 under-env [ X `: PT | XS ] P :-
   %print "Assume" X PT,
   (pi Ty\ of X Ty :- refresh PT Ty) => known X => under-env XS P.
-
-pred rev i:list A, o:list A.
-rev L RL  :- rev-aux L []  RL.
-pred rev-aux i:list A, i:list A, o:list A.
-rev-aux [X|XS] ACC R :- rev-aux XS [X|ACC] R.
-rev-aux [] L L.
 
 typecheck-program P Q DeclaredTypes :-
   collect-predicates-program P DeclaredTypes AllTypes, !,

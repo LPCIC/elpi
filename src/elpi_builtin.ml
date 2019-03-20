@@ -940,6 +940,13 @@ let elpi_nonlogical_builtins = [
    (fun (_,l,ld) _ ~depth -> !:(List.rev !l))),
   DocAbove);
 
+  LPCode {|
+% [if C T E] picks the first success of C then runs T (never E).
+% if C has no success it runs E.
+pred  if i:prop, i:prop, i:prop.
+if B T _ :- B, !, T.
+if _ _ E :- E.  |}
+
 ]
 ;;
 
@@ -960,6 +967,8 @@ let elpi_stdlib = [
 % - all debug prints by this library end up calling debug-print, override it
 %   in order to handle them differently
 
+namespace std {
+
 pred fatal-error i:string.
 :name "default-fatal-error"
 fatal-error Msg :- stop Msg.
@@ -972,7 +981,7 @@ pred debug-print i:string, i:A.
 :name "default-debug-print"
 debug-print Msg Data :- print Msg Data.
 
-%  == Errors, Debugging, Hacks
+%  -- Errors, Debugging, Hacks --
 
 pred fatal-error-w-data i:A, i:string.
 fatal-error-w-data Data Msg :-
@@ -1010,15 +1019,7 @@ macro @log P :- (P :- debug-print "goal=" P, fail).
 pred unsafe-cast o:A, o:B.
 unsafe-cast X X.
 
-% == Control structures
-
-% [if C T E] picks the first success of C then runs T (never E).
-% if C has no success it runs E.
-pred  if i:prop, i:prop, i:prop.
-if B T _ :- B, !, T.
-if _ _ E :- E.
-
-% == List processing
+% -- List processing --
 
 pred length i:list A, o:int.
 length [_|L] N :- length L N1, N is N1 + 1.
@@ -1162,7 +1163,7 @@ iota-aux X X [] :- !.
 iota-aux N X [N|R] :- M is N + 1, iota-aux M X R.
 iota N L :- iota-aux 0 N L.
 
-%  == Misc
+%  -- Misc --
 
 pred flip i:(A -> B -> prop), i:B, i:A.
 flip P X Y :- P Y X.
@@ -1180,7 +1181,7 @@ spy-do! L :- map L (x\y\y = spy x) L1, do! L1.
 pred any->string i:A, o:string.
 any->string X Y :- term_to_string X Y.
 
-  |}
+} % namespace std |}
 ]
 ;;
 
