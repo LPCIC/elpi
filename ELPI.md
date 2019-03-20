@@ -660,7 +660,6 @@ namespace list {
 shorten list.append.
 
 main :- append L1 L2 R. 
-
 ```
 
 The scope of the `shorten` directive ends with the current file or

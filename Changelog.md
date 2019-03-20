@@ -6,12 +6,16 @@ Language:
    (instead of just `B`)
  - spilling understands implication and conjunction, e.g. `g { h => (a, f) }`
    becomes `(h => (a, f X)), g X`
+ - `shorten` directive to give short names to symbols that live in namespaces
    
 Library:
  - predefined types:
    + `bool` with `tt` and `ff`
    + `option A` with `none` and `some A`
    + `pair A B` with `pr A B`
+ - predefined control structure:
+   + `if C T E`
+ - utility predicates, mostly about lists, in the `std` namespace
 
 Builtin:
  - `name` is now typed as `any -> variadic any prop` to support the following
