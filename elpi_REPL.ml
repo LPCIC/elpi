@@ -53,17 +53,20 @@ let set_terminal_width ?(max_w=
 let usage =
   "\nUsage: elpi [OPTION].. [FILE].. [-- ARGS..] \n" ^ 
   "\nMain options:\n" ^ 
-  "\t-delay-problems-outside-pattern-fragment (deprecated, for Teyjus compatibility)\n" ^
   "\t-test runs the query \"main\"\n" ^ 
   "\t-exec pred  runs the query \"pred args\"\n" ^ 
   "\t-where print system wide installation path then exit\n" ^ 
-  "\t-print prints files after desugar, then exit\n" ^ 
-  "\t-print-ast prints files as parsed, then exit\n" ^ 
   "\t-D var  Define variable (conditional compilation)\n" ^ 
-  "\t-q quiet, don't print loaded files\n" ^ 
   "\t-document-builtins Print documentation for built-in predicates\n" ^
   "\t-no-tc don't typecheck the program\n" ^ 
-  Elpi_API.Setup.usage
+  "\t-delay-problems-outside-pattern-fragment (deprecated, for Teyjus\n" ^
+  "\t                                          compatibility)\n" ^
+  Elpi_API.Setup.usage ^
+  "\nDebug options (for debugging Elpi, not your program):\n" ^ 
+  "\t-print-accumulated-files prints files loaded via accumulate\n" ^ 
+  "\t-print-ast prints files as parsed, then exit\n" ^ 
+  "\t-print prints files after most compilation passes, then exit\n" ^ 
+  "\t-print-passes prints intermediate data during compilation, then exit\n"
 ;;
 
 (* For testing purposes we declare an identity quotation *)
@@ -80,20 +83,23 @@ let _ =
   let typecheck = ref true in
   let batch = ref false in
   let doc_builtins = ref false in
-  let silent = ref false in
   let delay_outside_fragment = ref false in 
+  let print_passes = ref false in
+  let print_accumulated_files = ref false in
   let vars =
     ref Elpi_API.Compile.(default_flags.defined_variables) in
   if List.mem "-where" (Array.to_list Sys.argv) then begin
     Printf.printf "%s\n" Elpi_config.install_dir; exit 0 end;
   let rec aux = function
     | [] -> []
-    | "-q" :: rest -> silent := true; aux rest
     | "-delay-problems-outside-pattern-fragment" :: rest -> delay_outside_fragment := true; aux rest
     | "-test" :: rest -> batch := true; test := true; aux rest
     | "-exec" :: goal :: rest ->  batch := true; exec := goal; aux rest
     | "-print" :: rest -> print_lprolog := true; aux rest
     | "-print-ast" :: rest -> print_ast := true; aux rest
+    | "-print-passes" :: rest -> print_passes := true; aux rest
+    | "-print-accumulated-files" :: rest ->
+      print_accumulated_files := true; aux rest
     | "-no-tc" :: rest -> typecheck := false; aux rest
     | "-document-builtins" :: rest -> doc_builtins := true; aux rest
     | "-D" :: var :: rest ->
@@ -112,7 +118,7 @@ let _ =
   let installpath = [ "-I"; Elpi_config.install_dir ] in
   let execpath = ["-I"; Filename.dirname (Sys.executable_name)] in
   let opts = Array.to_list Sys.argv @ tjpath @ installpath @ execpath in
-  let pheader, argv = Elpi_API.Setup.init ~silent:!silent ~builtins:Elpi_builtin.std_builtins opts ~basedir:cwd in
+  let pheader, argv = Elpi_API.Setup.init ~builtins:Elpi_builtin.std_builtins opts ~basedir:cwd in
   let filenames = aux (List.tl argv) in
   set_terminal_width ();
   if !doc_builtins then begin
@@ -121,7 +127,8 @@ let _ =
     exit 0;
   end;
   let p =
-    try Elpi_API.Parse.program filenames
+    try Elpi_API.Parse.program
+          ~print_accumulated_files:!print_accumulated_files filenames
     with Elpi_API.Parse.ParseError(loc,err) ->
       Printf.eprintf "%s: %s\n" (Elpi_API.Ast.Loc.show loc) err;
       exit 1;
@@ -146,26 +153,34 @@ let _ =
         exit 1;
     end in
   let flags = {
-    Elpi_API.Compile.default_flags
-      with Elpi_API.Compile.defined_variables = !vars } in
-  let prog = Elpi_API.Compile.program pheader [p] in
+    Elpi_API.Compile.default_flags with
+      Elpi_API.Compile.defined_variables = !vars;
+      Elpi_API.Compile.print_passes = !print_passes;
+  } in
+  let prog = Elpi_API.Compile.program ~flags pheader [p] in
   let query = Elpi_API.Compile.query prog g in
   if !typecheck then begin
-    if not (Elpi_API.Compile.static_check pheader ~flags query) then
+    if not (Elpi_API.Compile.static_check pheader query) then
        Format.eprintf "Type error\n";
   end;
   if !print_lprolog then begin
     Elpi_API.Pp.query Format.std_formatter query;
     exit 0;
   end;
-  let exec = Elpi_API.Compile.link ~flags query in
+  let exec = Elpi_API.Compile.link query in
+  if !print_passes then begin
+    exit 0;
+  end;
   if not !batch then 
-    Elpi_API.Execute.loop ~delay_outside_fragment:!delay_outside_fragment exec ~more ~pp:print_solution
+    Elpi_API.Execute.loop
+      ~delay_outside_fragment:!delay_outside_fragment ~more ~pp:print_solution
+      exec
   else begin
     Gc.compact ();
     if
       let t0 = Unix.gettimeofday () in
-      let b = Elpi_API.Execute.once ~delay_outside_fragment:!delay_outside_fragment exec in
+      let b = Elpi_API.Execute.once
+          ~delay_outside_fragment:!delay_outside_fragment exec in
       let t1 = Unix.gettimeofday () in
       match b with
       | Elpi_API.Execute.Success _ -> print_solution (t1 -. t0) b; true

@@ -30,14 +30,12 @@ module Setup : sig
 
   (** Initialize ELPI.
       [init] must be called before invoking the parser.
-      [silent] (default [true]) to avoid printing files being loaded.
       [builtins] the set of built-in predicates, eg [Elpi_builtin.std_builtins] 
       [basedir] current working directory (used to make paths absolute);
       [argv] is list of options, see the {!val:usage} string;
       It returns part of [argv] not relevant to ELPI and a [program_header]
       that contains the declaration of builtins. *)
   val init :
-    ?silent:bool ->
     builtins:builtins ->
     basedir:string ->
     string list -> program_header * string list
@@ -81,8 +79,10 @@ end
 module Parse : sig
 
   (** [program file_list] parses a list of files *)
-  val program : string list -> Ast.program
-  val program_from_stream : char Stream.t -> Ast.program
+  val program : ?print_accumulated_files:bool ->
+    string list -> Ast.program
+  val program_from_stream : ?print_accumulated_files:bool ->
+    char Stream.t -> Ast.program
 
   (** [goal file_list] parses the query *)
   val goal : string -> Ast.query
@@ -131,6 +131,8 @@ module Compile : sig
     defined_variables : StrSet.t;
     (* disable check that all built-in must come with a type declaration *)
     allow_untyped_builtin : bool;
+    (* debug: print intermediate data during the compilation phase *)
+    print_passes : bool;
   }
   val default_flags : flags
 
@@ -142,18 +144,18 @@ module Compile : sig
    * Ast.program, esp the [link] one *)
 
   (* compile all program files *)
-  val program : Setup.program_header -> Ast.program list -> program
+  val program : flags:flags ->
+    Setup.program_header -> Ast.program list -> program
 
   (* then compile the query *)
   val query : program -> Ast.query -> query
 
   (* finally obtain the executable *)
-  val link : ?flags:flags -> query -> executable
+  val link : query -> executable
 
   (** Runs [elpi-checker.elpi] by default. *)
   val static_check :
-    Setup.program_header -> ?checker:Ast.program list -> ?flags:flags ->
-      query -> bool
+    Setup.program_header -> ?checker:Ast.program list -> query -> bool
 
   (** HACK: don't use *)
   val dummy_header : Setup.program_header

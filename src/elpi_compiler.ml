@@ -14,11 +14,20 @@ module A = Elpi_ast
 type flags = {
   defined_variables : StrSet.t;
   allow_untyped_builtin : bool;
+  print_passes : bool;
 }
+[@@deriving show]
+
 let default_flags = {
   defined_variables = StrSet.empty;
   allow_untyped_builtin = false;
+  print_passes = false;
 }
+
+let error ?loc msg =
+  match loc with
+  | None -> error msg
+  | Some loc -> error (A.Loc.show loc ^ ": " ^ msg)
 
 (****************************************************************************
   Intermediate data structures
@@ -30,7 +39,7 @@ type program = {
   macros : (A.Func.t, A.term) A.macro list;   
   types : A.tdecl list;
   modes : A.Func.t A.mode list;
-  body : block list
+  body : block list;
 }
 and block =
   | Locals of A.Func.t list * program
@@ -125,6 +134,7 @@ module Program = struct
 type program = {
   assembled_program : Assembled.program;
   compiler_state : CompilerState.t;
+  compiler_flags : flags;
 }
 [@@deriving show]
   
@@ -143,6 +153,7 @@ type query = {
   query : preterm;
   query_loc : A.Loc.t option;
   initial_state : CustomState.t;
+  compiler_flags : flags;
 }
 [@@deriving show]
 
@@ -181,7 +192,7 @@ module RecoverStructure : sig
 
   (* Reconstructs the structure of the AST (i.e. matches { with }) *)
 
-  val run : A.program -> StructuredAST.program
+  val run : flags:flags -> A.program -> StructuredAST.program
 
 end = struct (* {{{ *)
   
@@ -193,7 +204,7 @@ end = struct (* {{{ *)
 
   let structure_attributes ({ A.attributes; A.loc } as c) =
     let duplicate_err s =
-      error (A.Loc.show loc ^ ": duplicate attribute " ^ s) in
+      error ~loc ("duplicate attribute " ^ s) in
     let rec aux r = function
       | [] -> r
       | A.Name s :: rest ->
@@ -214,9 +225,9 @@ end = struct (* {{{ *)
 
   let structure_cattributes ({ A.cattributes; A.clocation = loc } as c) =
     let duplicate_err s =
-      error (A.Loc.show loc ^ ": duplicate attribute " ^ s) in
+      error ~loc ("duplicate attribute " ^ s) in
     let unsupported_err s =
-      error (A.Loc.show loc ^ ": unsupported attribute " ^ s) in
+      error ~loc ("unsupported attribute " ^ s) in
     let rec aux r = function
       | [] -> r
       | A.Name s :: rest ->
@@ -230,7 +241,7 @@ end = struct (* {{{ *)
     let cid = A.Loc.show loc in 
     { c with A.cattributes = aux { cid; cifexpr = None } cattributes }
 
-  let run dl =
+  let run ~flags:_ dl =
     let rec aux blocks clauses macros types modes  locals chr = function
       | (A.End _ :: _ | []) as rest ->
           { body = List.rev (cl2b clauses @ blocks);
@@ -301,7 +312,7 @@ end = struct (* {{{ *)
     and aux_end_block loc blocks clauses macros types modes locals chr rest =
       match rest with
       | A.End _ :: rest -> aux blocks clauses macros types modes locals chr rest
-      | _ -> error (A.Loc.show loc ^ ": matching } is missing")
+      | _ -> error ~loc "matching } is missing"
 
     in
     let blocks, locals, chr, rest = aux [] [] [] [] [] [] [] dl in
@@ -342,7 +353,7 @@ module ToDBL : sig
      Const "%Arg2")
   *)
 
-  val run : CS.t -> StructuredAST.program -> CS.t * StructuredProgram.program
+  val run : flags:flags -> CS.t -> StructuredAST.program -> CS.t * StructuredProgram.program
 
   (* Exported since also used to flatten (here we "flatten" locals) *)
   val prefix_const : string list -> C.t -> C.t
@@ -517,16 +528,14 @@ let preterm_of_ast ~depth:arg_lvl macro state ast =
            option_get ~err:"No default quotation" !default_quotation in
          let state = set_mtm state (Some { macros = macro}) in
          begin try unquote ~depth:lvl state loc data 
-         with Elpi_parser.ParseError(loc,msg) ->
-           error (A.Loc.show loc ^ ": " ^ msg) end
+         with Elpi_parser.ParseError(loc,msg) -> error ~loc msg end
     | A.Quoted { A.data; A.kind = Some name; A.loc } ->
          let unquote = 
            try StrMap.find name !named_quotations
            with Not_found -> anomaly ("No '"^name^"' quotation") in
          let state = set_mtm state (Some { macros = macro}) in
          begin try unquote ~depth:lvl state loc data
-         with Elpi_parser.ParseError(loc,msg) ->
-           error (A.Loc.show loc ^ ": " ^ msg) end
+         with Elpi_parser.ParseError(loc,msg) -> error ~loc msg end
     | A.App (A.Quoted _,_) -> type_error "Applied quotation"
   in
 
@@ -702,7 +711,7 @@ let preterm_of_ast ~depth macros state t =
     !res
 
 
-  let run state p =
+  let run ~flags:_ state p =
  (* FIXME: otypes omodes - NO, rewrite spilling on data.term *)
     let rec compile_program omacros lcs state { macros; types; modes; body } =
       check_no_overlap_macros omacros macros;
@@ -793,7 +802,7 @@ module Flatten : sig
 
   (* Eliminating the structure (name spaces) *)
 
-  val run : CS.t -> StructuredProgram.program -> Flat.program
+  val run : flags:flags -> CS.t -> StructuredProgram.program -> Flat.program
 
 end = struct (* {{{ *)
 
@@ -932,7 +941,7 @@ end = struct (* {{{ *)
           compile_body lcs types modes clauses chr subst state body in
         compile_body lcs types modes clauses chr subst state rest
 
-  let run state
+  let run ~flags:_ state
     { StructuredProgram.local_names;
       pbody = { types; modes; body; symbols = _ };
       toplevel_macros;
@@ -954,7 +963,7 @@ module Spill : sig
 
   (* Eliminate {func call} *)
 
-  val run : Flat.program -> Flat.program
+  val run : flags:flags -> Flat.program -> Flat.program
 
   (* Exported to compile the query *)
   val spill_preterm :
@@ -1185,7 +1194,7 @@ end = struct (* {{{ *)
     let amap, term = spill_term modes types amap term in
     { x with A.body = { term; amap } }
 
-  let run ({ Flat.clauses; modes; types; chr } as p) =
+  let run ~flags:_ ({ Flat.clauses; modes; types; chr } as p) =
     let clauses = List.map (spill_clause modes types) clauses in
     let chr = List.map (spill_chr modes types) chr in
     { p with Flat.clauses; chr }
@@ -1198,7 +1207,7 @@ end (* }}} *)
 
 module Assemble : sig
 
-  val run : ?flags:flags -> Flat.program list -> Assembled.program
+  val run : flags:flags -> Flat.program list -> Assembled.program
 
 end = struct (* {{{ *)
 
@@ -1208,7 +1217,7 @@ end = struct (* {{{ *)
       | None -> s
       | Some n ->
           if StrMap.mem n s then
-            error (A.Loc.show loc ^ ": a clause named " ^ n ^
+            error ~loc ("a clause named " ^ n ^
                    " already exists at " ^ A.Loc.show (StrMap.find n s))
           else
             StrMap.add n loc s in
@@ -1217,8 +1226,7 @@ end = struct (* {{{ *)
     in
     let rec insert loc_name c l =
       match l, loc_name with
-      | [],_ -> error (A.Loc.show c.A.loc ^
-           ": unable to graft this clause: no clause named " ^
+      | [],_ -> error ~loc:c.A.loc ("unable to graft this clause: no clause named " ^
              match loc_name with
              | StructuredAST.After x -> x
              | StructuredAST.Before x -> x)
@@ -1240,7 +1248,7 @@ end = struct (* {{{ *)
     in
     aux StrMap.empty  [] l
 
-  let run ?flags pl =
+  let run ~flags:_ pl =
     if List.length pl <> 1 then
       error "Only 1 program assembly is supported";
     let { Flat.clauses; types; modes; chr; local_names; toplevel_macros } =
@@ -1256,19 +1264,50 @@ end (* }}} *)
  ****************************************************************************)
 
 (* Compiler passes *)
-let program_of_ast p =
+let program_of_ast ~flags:({ print_passes } as flags) p =
 
- let p = RecoverStructure.run p in
- let s, p = ToDBL.run (CS.init()) p in
- let p = Flatten.run s p in
- let p = Spill.run p in
- let p = Assemble.run [ p ] in
- {
-   Program.assembled_program = p;
-   compiler_state = s;
- }
+  if print_passes then
+    Format.eprintf "== AST ================@\n@[<v 0>%a@]@\n"
+      Elpi_ast.pp_program p;
+ 
+  let p = RecoverStructure.run ~flags p in
+ 
+  if print_passes then
+    Format.eprintf "== StructuredAST ================@\n@[<v 0>%a@]@\n"
+      StructuredAST.pp_program p;
+ 
+  let s, p = ToDBL.run ~flags (CS.init()) p in
+ 
+  if print_passes then
+    Format.eprintf "== StructuredProgram ================@\n@[<v 0>%a@]@\n"
+      StructuredProgram.pp_program p;
+ 
+  let p = Flatten.run ~flags s p in
+ 
+  if print_passes then
+    Format.eprintf "== Flat ================@\n@[<v 0>%a@]@\n"
+      Flat.pp_program p;
+ 
+  let p = Spill.run ~flags p in
+ 
+  if print_passes then
+    Format.eprintf "== Spilled ================@\n@[<v 0>%a@]@\n"
+      Flat.pp_program p;
+ 
+  let p = Assemble.run ~flags [ p ] in
+ 
+  if print_passes then
+    Format.eprintf "== Assembled ================@\n@[<v 0>%a@]@\n"
+      Assembled.pp_program p;
+ 
+  {
+    Program.assembled_program = p;
+    compiler_state = s;
+    compiler_flags = flags;
+  }
+;;
 
-let query_of_ast { Program.assembled_program; compiler_state } (loc,t)
+let query_of_ast { Program.assembled_program; compiler_state; compiler_flags } (loc,t)
 =
   let initial_depth = assembled_program.Assembled.local_names in
   let types = assembled_program.Assembled.types in
@@ -1286,9 +1325,10 @@ let query_of_ast { Program.assembled_program; compiler_state } (loc,t)
     query;
     query_loc = Some loc;
     initial_state = CustomState.init state;
+    compiler_flags;
   } 
 
-let query_of_term { Program.assembled_program; compiler_state } f =
+let query_of_term { Program.assembled_program; compiler_state; compiler_flags } f =
   let initial_depth = assembled_program.Assembled.local_names in
   let types = assembled_program.Assembled.types in
   let modes = assembled_program.Assembled.modes in
@@ -1306,6 +1346,7 @@ let query_of_term { Program.assembled_program; compiler_state } f =
     query;
     query_loc = None;
     initial_state = CustomState.init state;
+    compiler_flags;
   }
 
 let is_builtin tname =
@@ -1322,7 +1363,7 @@ let check_all_builtin_are_typed types =
    (Builtin.all ());
   List.iter (fun { StructuredProgram.extern = b; loc; decl = { tname }} ->
     if b && not (is_builtin tname) then
-      error(A.Loc.show loc ^ ": External type declaration without Built-in: " ^
+      error ~loc ("external type declaration without Built-in: " ^
             C.show tname))
   types
 ;;
@@ -1330,7 +1371,7 @@ let check_all_builtin_are_typed types =
 let check_no_regular_types_for_builtins types =
   List.iter (fun {StructuredProgram.extern = b; loc; decl = { tname } } ->
     if not b && is_builtin tname then
-      error(A.Loc.show loc ^ ": Type declaration for Built-in " ^
+      error ~loc ("type declaration for Built-in " ^
             C.show tname ^ " must be flagged as external");
  ) types
 
@@ -1370,7 +1411,7 @@ module Compiler : sig
   (* Translates preterms in terms and AST clauses into clauses (with a key,
    * subgoals, etc *)
 
-  val run : ?flags:flags -> query -> executable
+  val run : query -> executable
 
 end = struct (* {{{ *)
 
@@ -1420,7 +1461,7 @@ let rec filter_if defs proj = function
     | Some e when StrSet.mem e defs -> c :: filter_if defs proj rest
     | Some _ -> filter_if defs proj rest
 
-let run ?(flags = default_flags)
+let run
   {
     Query.types;
     modes;
@@ -1429,6 +1470,7 @@ let run ?(flags = default_flags)
     initial_depth;
     query = ({ amap = { nargs; n2i } } as query);
     initial_state;
+    compiler_flags = flags;
   }
 =
 
@@ -1601,7 +1643,8 @@ let quote_syntax { Query.clauses; query_loc; query } =
        close_w_binder argc (quote_preterm ~on_type:false query) query.amap]) in
   clist, q
 
-let default_checker () = Elpi_parser.parse_program ["elpi-checker.elpi"]
+let default_checker () =
+  Elpi_parser.parse_program ~print_accumulated_files:false ["elpi-checker.elpi"]
 
 let static_check header
   ?(exec=execute_once ~delay_outside_fragment:false) ?(checker=default_checker ()) ?(flags=default_flags)
@@ -1615,15 +1658,14 @@ let static_check header
           ttype.amap]))
     types) in
   let checker =
-    program_of_ast (header @ checker) in
+    program_of_ast
+      ~flags:{ default_flags with allow_untyped_builtin = true }
+      (header @ checker) in
   let query =
     query_of_term checker (fun ~depth state ->
       assert(depth=0);
       state, App(C.from_stringc "check",list_to_lp_list p,[q;tlist])) in
-  let executable =
-    executable_of_query
-      ~flags:{ flags with allow_untyped_builtin = true }
-      query in
+  let executable = executable_of_query query in
   exec executable <> Failure
 ;;
 

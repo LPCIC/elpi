@@ -20,7 +20,7 @@ module Setup = struct
 type builtins = Elpi_data.Builtin.declaration list
 type program_header = Elpi_ast.program
 
-let init ?silent ~builtins ~basedir:cwd argv =
+let init ~builtins ~basedir:cwd argv =
   let new_argv = set_trace argv in
   let new_argv, paths =
     let rec aux args paths = function
@@ -30,7 +30,7 @@ let init ?silent ~builtins ~basedir:cwd argv =
     in
       aux [] [] new_argv
   in
-  Elpi_parser.init ?silent ~lp_syntax:Elpi_parser.lp_gramext ~paths ~cwd ();
+  Elpi_parser.init ~lp_syntax:Elpi_parser.lp_gramext ~paths ~cwd ();
   (* This is a bit ugly, since builtins are global but could be made
    * program specific *)
   List.iter (function
@@ -43,7 +43,8 @@ let init ?silent ~builtins ~basedir:cwd argv =
   Elpi_data.Builtin.document fmt builtins;
   Format.pp_print_flush fmt ();
   let strm = Stream.of_string (Buffer.contents b) in
-  let header = Elpi_parser.parse_program_from_stream strm in
+  let header =
+    Elpi_parser.parse_program_from_stream ~print_accumulated_files:false strm in
   header, new_argv
 
 let trace args =
@@ -72,8 +73,10 @@ module Ast = struct
 end
 
 module Parse = struct
-  let program = Elpi_parser.parse_program
-  let program_from_stream = Elpi_parser.parse_program_from_stream
+  let program ?(print_accumulated_files=false) =
+    Elpi_parser.parse_program ~print_accumulated_files
+  let program_from_stream ?(print_accumulated_files=false) =
+    Elpi_parser.parse_program_from_stream ~print_accumulated_files
   let goal s = Elpi_parser.parse_goal s
   let goal_from_stream s = Elpi_parser.parse_goal_from_stream s
   exception ParseError = Elpi_parser.ParseError
@@ -97,23 +100,24 @@ module Compile = struct
   type query = Elpi_compiler.query
   type executable = Elpi_data.executable
 
-  let program header l = Elpi_compiler.program_of_ast (header @ List.flatten l)
+  let program ~flags header l =
+    Elpi_compiler.program_of_ast ~flags (header @ List.flatten l)
   let query = Elpi_compiler.query_of_ast
 
-  let static_check header ?checker ?flags p =
+  let static_check header ?checker p =
     let module R = (val !r) in let open R in
     let checker = Elpi_util.option_map List.flatten checker in
-    Elpi_compiler.static_check header ~exec:(execute_once ~delay_outside_fragment:false) ?checker ?flags p
+    Elpi_compiler.static_check header ~exec:(execute_once ~delay_outside_fragment:false) ?checker p
 
   module StrSet = Elpi_util.StrSet
 
   type flags = Elpi_compiler.flags = {
     defined_variables : StrSet.t;
     allow_untyped_builtin : bool;
+    print_passes : bool;
   }
   let default_flags = Elpi_compiler.default_flags
-  let link ?flags x =
-    Elpi_compiler.executable_of_query ?flags x
+  let link x = Elpi_compiler.executable_of_query x
 
   let dummy_header = []
 end

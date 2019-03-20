@@ -729,7 +729,8 @@ let elpi_builtins = [
    (fun f s _ _ ~depth ->
       let ap = Parse.program [f] in
       let aq = Parse.goal s in
-      let p = Elpi_API.Compile.(program dummy_header [ap]) in
+      let p =
+        Elpi_API.Compile.(program ~flags:default_flags dummy_header [ap]) in
       let q = Elpi_API.Compile.query p aq in
       let qp, qq = Compile.quote_syntax q in
       !: qp +! qq)),

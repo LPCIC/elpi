@@ -745,9 +745,8 @@ let init_loc = {
   line_starts_at = 0;
 }
 
-let init ?(silent=true) ~lp_syntax ~paths ~cwd () =
+let init ~lp_syntax ~paths ~cwd () =
   assert(!parser_initialized = false);
-  parse_silent := silent;
   parsed := [];
   set_tjpath cwd paths;
   List.iter (gram_extend init_loc) lp_syntax;
@@ -766,9 +765,13 @@ let run_parser f x =
   | NotInProlog(loc,s) -> raise (ParseError(loc, "NotInProlog: " ^ s))
 ;;
 
-let parse_program filenames : program = run_parser (parse lp) filenames
+let parse_program ~print_accumulated_files filenames : program =
+  parse_silent := print_accumulated_files;
+  run_parser (parse lp) filenames
 
-let parse_program_from_stream strm : program = run_parser (Grammar.Entry.parse lp) strm
+let parse_program_from_stream ~print_accumulated_files strm : program =
+  parse_silent := print_accumulated_files;
+  run_parser (Grammar.Entry.parse lp) strm
 
 let set_last_loc = function
   | None -> ()

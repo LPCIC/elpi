@@ -8,20 +8,22 @@ open Elpi_data
 type flags = {
   defined_variables : StrSet.t;
   allow_untyped_builtin : bool;
+  print_passes : bool; (* debug *)
 }
 val default_flags : flags
 
 type program
 type query
 
-val program_of_ast : Elpi_ast.program -> program
+(* Flags are threaded *)
+val program_of_ast : flags:flags -> Elpi_ast.program -> program
 val query_of_ast : program -> Elpi_ast.goal -> query
 val query_of_term :
   program -> (depth:int -> CompilerState.t -> CompilerState.t * term) -> query
 
 val pp_query : (depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> query -> unit
 
-val executable_of_query : ?flags:flags -> query -> executable
+val executable_of_query : query -> executable
 
 val term_of_ast : depth:int -> Elpi_ast.term -> term
 

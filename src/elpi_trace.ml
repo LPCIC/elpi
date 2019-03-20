@@ -190,7 +190,11 @@ let () =
     end)
 
 let usage =
-  "\nTracing facility options:\n" ^
+  "\nTracing options can be used to debug your programs and Elpi as well.\n" ^
+  "A sensible set of options to debug your programs is\n" ^
+  "  -trace-on -trace-at run 1 9999\n" ^
+  "  -trace-only run -trace-only select -trace-only assign\n" ^
+  "Tracing options:\n" ^
   "\t-trace-v  verbose\n" ^
   "\t-trace-at FUNCNAME START STOP  print trace between call START\n" ^
   "\t\tand STOP of function FNAME\n" ^
