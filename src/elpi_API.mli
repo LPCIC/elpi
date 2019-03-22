@@ -552,7 +552,20 @@ module Extend : sig
     (* The mode for the argument being translated. For example some large
      * data in In mode should be translated but if the mode is Out it may be
      * useful to just know it is not Discard. In this way one avoids to
-     * move the data from LP to ML and back just for fun. *)
+     * move the data from LP to ML and back just for fun. The point is that
+     * Out data may or may not be used (as in read) by the built in predicate.
+     * If it is not read, but just assigned as a result, then translation is
+     * useless. For example we want to be able to write a get builtin that
+     * is equally efficient in both scenarios:
+     *
+     *   pred get i:string, o:whatever.
+     *   main :- get "x" foo,
+     *           get "x" T, T = foo.
+     *
+     * In the first call to get the user is passing foo just to assert that get
+     * returns it for "x". Converting foo back and forth is useless if get is
+     * just a getter (that is, it ignores the output argument).
+     *)
     type mode = In | Out
 
     type ('src,'tgt) stateful_data_conversion =
@@ -560,7 +573,7 @@ module Extend : sig
          'src -> Data.custom_state * 'tgt
     
     type 'a data = {
-      to_term : ('a,Data.term) stateful_data_conversion;
+      to_term : ('a, Data.term) stateful_data_conversion;
       of_term : mode:mode -> (Data.term, 'a arg) stateful_data_conversion;
       ty : ty_ast
     }
