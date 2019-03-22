@@ -1,5 +1,10 @@
 # Extensions to λProlog implemented in ELPI
 
+ELPI is still a young language and the features below are not specified very
+formally. Please refrain from relying on behaviors that are not explicitly
+described (but happen to work for you). Help in improving this very brief doc
+is very welcome. Questions or feature requests are welcome as well.
+
 - [Underscore](#underscore) is a real wildcard
 
 - [Macros](#macros) are expanded at compilation time
