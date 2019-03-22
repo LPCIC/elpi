@@ -674,6 +674,16 @@ namespace stuff {
 main :- stuff.code, list.rev L1 L2 R. % only long name is accessible
 ```
 
+The `shorten` directive accepts a "trie" of qualified names
+with the following syntax.
+```prolog
+shorten std.{list.map string.{concat escape}}.
+
+main :- map F [], concat "a" "b" AB, escape "x y" E.
+```
+Here `main` calls `std.list.map`, `std.string.concat` and finally
+`std.string.escape`.
+
 ## Accumulate with paths
 
 Elpi accepts `accumulate "path".` (i.e. a string rather than an indent)

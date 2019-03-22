@@ -26,6 +26,10 @@ let () = declare "shorten"
   ~source_elpi:"shorten.elpi"
   ~description:"shortening names of a namespace"
   ()
+let () = declare "shorten_trie"
+  ~source_elpi:"shorten_trie.elpi"
+  ~description:"shortening a trie of names"
+  ()
 
 let () = declare "named_clauses00"
   ~source_elpi:"named_clauses00.elpi"

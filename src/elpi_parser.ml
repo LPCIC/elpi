@@ -15,13 +15,12 @@ let of_ploc l = {
   line_starts_at = Ploc.bol_pos l;
 }
 let to_ploc {
-    Loc.source_name = source_name;
-    line = line;
-    line_starts_at = line_starts_at;
-    source_start = source_start;
-    source_stop = source_stop;
-  } =
-  Ploc.make_loc source_name line line_starts_at (source_start, source_stop) ""
+  Loc.source_name = source_name;
+  line = line;
+  line_starts_at = line_starts_at;
+  source_start = source_start;
+  source_stop = source_stop;
+} = Ploc.make_loc source_name line line_starts_at (source_start, source_stop) ""
 
 exception ParseError of Loc.t * string
 
@@ -597,6 +596,12 @@ EXTEND
         mkApp (of_ploc loc) [mkCon "->";t;ty]) a (mkCon "prop"))
   ]];
   attributes : [[ COLON; l = LIST1 attribute SEP COLON-> l ]];
+  string_trie :
+    [ [ name = CONSTANT -> [name]
+      | prefix = CONSTANT; FULLSTOP;
+          LCURLY; hd = string_trie; tl = LIST1 string_trie; RCURLY ->
+        List.map (fun x -> prefix ^ "." ^ x) (hd @ List.flatten tl)
+  ]];
   clause :
     [[ attributes = OPT attributes; f = atom; FULLSTOP ->
        let attributes = match attributes with None -> [] | Some x -> x in
@@ -641,8 +646,8 @@ EXTEND
         [Accumulated(parse lp (List.map (fun fn -> fn ^ ".sig") filenames))]
      | USE_SIG; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
         [Accumulated(parse lp (List.map (fun fn -> fn ^ ".sig") filenames))]
-     | SHORTEN; name = CONSTANT; FULLSTOP ->
-        [ Shorten(of_ploc loc, Func.from_string name) ]
+     | SHORTEN; names = string_trie; FULLSTOP ->
+        List.map (fun name -> Shorten(of_ploc loc, Func.from_string name)) names
      | LOCAL; vars = LIST1 const_sym SEP SYMBOL ","; FULLSTOP ->
         List.map (fun x -> mkLocal x) vars
      | LOCAL; vars = LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP ->
