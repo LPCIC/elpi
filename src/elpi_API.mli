@@ -555,16 +555,17 @@ module Extend : sig
      * move the data from LP to ML and back just for fun. The point is that
      * Out data may or may not be used (as in read) by the built in predicate.
      * If it is not read, but just assigned as a result, then translation is
-     * useless. For example we want to be able to write a get builtin that
+     * useless. For example we want to be able to write a getenv builtin that
      * is equally efficient in both scenarios:
      *
-     *   pred get i:string, o:whatever.
-     *   main :- get "x" foo,
-     *           get "x" T, T = foo.
+     *   pred getenv i:string, o:"LONG VALUE".
+     *   main :- getenv "x" "LONG VALUE",
+     *           getenv "x" T, T = "LONG VALUE".
      *
-     * In the first call to get the user is passing foo just to assert that get
-     * returns it for "x". Converting foo back and forth is useless if get is
-     * just a getter (that is, it ignores the output argument).
+     * In the first call to getenv the user is passing "LONG VALUE" just to
+     * assert that getenv associates it to "x". Converting "LONG VALUE" back
+     * and forth is useless if getenv is just a getter (that is, it ignores the
+     * output argument).
      *)
     type mode = In | Out
 
