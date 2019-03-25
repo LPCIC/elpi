@@ -538,6 +538,8 @@ let gram_extend loc { fix; sym = cst; prec = nprec } =
           ) (Grammar.Entry.obj atom);
           prerr_endline ""; *)
 
+let accumulate loc extension modnames =
+  List.map (fun file -> Accumulated(of_ploc loc, parse_one lp (file ^ extension))) modnames
 
 EXTEND
   GLOBAL: lp goal atom;
@@ -639,13 +641,13 @@ EXTEND
      | MODULE; CONSTANT; FULLSTOP -> []
      | SIG; CONSTANT; FULLSTOP -> []
      | ACCUMULATE; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
-        [Accumulated(parse lp (List.map (fun fn -> fn ^ ".mod") filenames))]
+         accumulate loc ".mod" filenames
      | IMPORT; filenames=LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP ->
-        [Accumulated(parse lp (List.map (fun fn -> fn ^ ".mod") filenames))]
+         accumulate loc ".mod" filenames
      | ACCUM_SIG; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
-        [Accumulated(parse lp (List.map (fun fn -> fn ^ ".sig") filenames))]
+         accumulate loc ".sig" filenames
      | USE_SIG; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
-        [Accumulated(parse lp (List.map (fun fn -> fn ^ ".sig") filenames))]
+         accumulate loc ".sig" filenames
      | SHORTEN; names = string_trie; FULLSTOP ->
         List.map (fun name -> Shorten(of_ploc loc, Func.from_string name)) names
      | LOCAL; vars = LIST1 const_sym SEP SYMBOL ","; FULLSTOP ->

@@ -26,6 +26,10 @@ let () = declare "shorten"
   ~source_elpi:"shorten.elpi"
   ~description:"shortening names of a namespace"
   ()
+let () = declare "shorten-EOF"
+  ~source_elpi:"shorten2.elpi"
+  ~description:"shortening names ends with the file"
+  ()
 let () = declare "shorten_trie"
   ~source_elpi:"shorten_trie.elpi"
   ~description:"shortening a trie of names"

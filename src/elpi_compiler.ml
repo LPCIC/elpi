@@ -291,8 +291,9 @@ end = struct (* {{{ *)
           aux ((Shorten([shorthand],p) :: cl2b clauses @ blocks))
             [] macros types modes locals chr rest
 
-      | A.Accumulated a :: rest ->
-          aux blocks clauses macros types modes locals chr (a @ rest)
+      | A.Accumulated (loc,a) :: rest ->
+          aux blocks clauses macros types modes locals chr
+            (A.Begin loc :: a @ A.End loc :: rest)
 
       | A.Clause c :: rest ->
           let c = structure_attributes c in

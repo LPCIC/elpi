@@ -1,0 +1,6 @@
+accumulate shorten_aux, shorten_aux2.
+
+foo :- true.
+
+main :-
+  foo, bar.
