@@ -983,10 +983,6 @@ debug-print Msg Data :- print Msg Data.
 
 %  -- Errors, Debugging, Hacks --
 
-pred fatal-error-w-data i:A, i:string.
-fatal-error-w-data Data Msg :-
-  term_to_string Data S, M is Msg ^ ": " ^ S, fatal-error M.
-
 pred ignore-failure! i:prop.
 ignore-failure! P :- P, !.
 ignore-failure! _.
