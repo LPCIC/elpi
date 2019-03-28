@@ -231,6 +231,16 @@ let map_acc2 f acc l1 l2 =
       (acc, []) l1 l2 in
   a, List.rev l
 
+let map_acc3 f acc l1 l2 l3 =
+  let rec aux a l l1 l2 l3 = match l1, l2, l3 with
+    | [], [], [] -> a, List.rev l
+    | x::xs, y::ys, z::zs ->
+        let a, v = f a x y z in
+        aux a (v::l) xs ys zs
+    | _ -> invalid_arg "map_acc3"
+  in
+    aux acc [] l1 l2 l3
+
 let partition_i f l =
   let rec aux n a1 a2 = function
     | [] -> List.rev a1, List.rev a2
