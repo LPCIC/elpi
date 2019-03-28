@@ -54,7 +54,7 @@ let usage =
   "\nUsage: elpi [OPTION].. [FILE].. [-- ARGS..] \n" ^ 
   "\nMain options:\n" ^ 
   "\t-test runs the query \"main\"\n" ^ 
-  "\t-exec pred  runs the query \"pred args\"\n" ^ 
+  "\t-exec pred  runs the query \"pred ARGS\"\n" ^ 
   "\t-where print system wide installation path then exit\n" ^ 
   "\t-D var  Define variable (conditional compilation)\n" ^ 
   "\t-document-builtins Print documentation for built-in predicates\n" ^
