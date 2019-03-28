@@ -51,6 +51,11 @@ API:
 
 Compilation:
  - handling of locations for quotations
+ - better error reporting, in particular spilling errors come with a location
+
+REPL:
+ - more structure in the output `--help` including hints for the tracing options
+ - new option `-print-passes` to debug the compiler
 
 Fix:
  - `expand_*` in charge of putting unification variables in canonical form
