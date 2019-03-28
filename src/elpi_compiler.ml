@@ -1660,7 +1660,7 @@ let static_check header
     types) in
   let checker =
     program_of_ast
-      ~flags:{ default_flags with allow_untyped_builtin = true }
+      ~flags:{ flags with allow_untyped_builtin = true }
       (header @ checker) in
   let query =
     query_of_term checker (fun ~depth state ->

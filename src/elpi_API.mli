@@ -155,7 +155,7 @@ module Compile : sig
 
   (** Runs [elpi-checker.elpi] by default. *)
   val static_check :
-    Setup.program_header -> ?checker:Ast.program list -> query -> bool
+    Setup.program_header -> ?checker:Ast.program list -> ?flags:flags -> query -> bool
 
   (** HACK: don't use *)
   val dummy_header : Setup.program_header

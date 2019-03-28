@@ -104,10 +104,10 @@ module Compile = struct
     Elpi_compiler.program_of_ast ~flags (header @ List.flatten l)
   let query = Elpi_compiler.query_of_ast
 
-  let static_check header ?checker p =
+  let static_check header ?checker ?flags p =
     let module R = (val !r) in let open R in
     let checker = Elpi_util.option_map List.flatten checker in
-    Elpi_compiler.static_check header ~exec:(execute_once ~delay_outside_fragment:false) ?checker p
+    Elpi_compiler.static_check header ~exec:(execute_once ~delay_outside_fragment:false) ?checker ?flags p
 
   module StrSet = Elpi_util.StrSet
 

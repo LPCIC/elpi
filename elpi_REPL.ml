@@ -160,7 +160,7 @@ let _ =
   let prog = Elpi_API.Compile.program ~flags pheader [p] in
   let query = Elpi_API.Compile.query prog g in
   if !typecheck then begin
-    if not (Elpi_API.Compile.static_check pheader query) then
+    if not (Elpi_API.Compile.static_check ~flags pheader query) then
        Format.eprintf "Type error\n";
   end;
   if !print_lprolog then begin
