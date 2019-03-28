@@ -4,10 +4,9 @@
 
 accumulate elpi_quoted_syntax.
 
-macro @vdash :- ":-". % work around bug in Vim's syntax highlight
+shorten std.{spy rev exists}.
 
-if P T _ :- P, !, T.
-if _ _ E :- E. 
+macro @vdash :- ":-". % work around bug in Vim's syntax highlight
 
 iter _ [].
 iter P [X|XS] :- P X, iter P XS.
@@ -24,22 +23,11 @@ iter-sep2 B S S1 P [X|XS] A :- P B X [S1], write S, iter-sep2 [] S S1 P XS A.
 monad [] X X.
 monad [P|PS] X R :- P X X1, monad PS X1 R. 
 
-pred rev i:list A, o:list A.
-rev L RL  :- rev-aux L []  RL .
-rev-aux [X|XS] ACC R :- rev-aux XS [X|ACC] R.
-rev-aux [] L L.
-
 mode (len i o).
 len uvar 0.
 len [] 0.
 len [_|XS] N :- len XS M, N is M + 1.
 
-macro @log P :- (P :- print P, fail).
-debug-print A B :- print A B.
-spy P :- debug-print "----<<---- enter: " P,
-         P,
-         debug-print "---->>---- exit: " P, !.
-spy P :- debug-print "---->>---- fail: " P, fail.
 
 pred write-to o:ctype "file".
 
@@ -369,9 +357,6 @@ write-html P F R :-
   write-preamble F,
   iter write-clause PF,
   write-end.
-
-exists P [X|XS] :- P X, !.
-exists P [_|XS] :- exists P XS.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

@@ -5,9 +5,6 @@
 % Simple type checker for lambda-Prolog programs
 accumulate elpi_quoted_syntax.
 
-shorten std.mem.
-shorten std.rev.
-
 % --------- HOAS or programs  ------------------------------------------------
 
 kind typ type. %%%%% types %%%%%%
@@ -20,7 +17,26 @@ type forall (typ -> typ) -> typ. % polymorphic type declarations
 type ctype string -> typ.
 
 % --------- utils  ---------------------------------------------------------
+% CAVEAT: this runs without any std library
 
+pred if i:prop, i:prop, i:prop.
+if B T _ :- B, !, T.
+if _ _ E :- E.
+
+pred mem i:list A, i:A.
+mem [X|_] X :- !.
+mem [_|L] X :- mem L X.
+
+pred mem-assoc i:list entry, i:term.
+mem-assoc [X `: _ | _] X :- !.
+mem-assoc [ _ | XS] X :- mem-assoc XS X.
+
+pred rev i:list A, o:list A.
+rev L RL  :- rev.aux L []  RL.
+rev.aux [X|XS] ACC R :- rev.aux XS [X|ACC] R.
+rev.aux [] L L.
+
+pred iter i:(A -> prop), i:list A.
 iter _ [].
 iter F [X | XS] :- F X, iter F XS.
 
@@ -50,12 +66,8 @@ assert _ (wrong-arity T Ty A) :- !,
   MSG is SLOC ^ " Error: " ^ {pp T} ^ " has type " ^ {ppt Ty} ^
           " but is applied to " ^ {pp-list A},
   error [MSG].
-assert _ (unknown T) :- !,
-  checking LOC, term_to_string LOC SLOC,
-  MSG is SLOC ^ " Warning: " ^ {pp T} ^ " is undeclared",
-  warning MSG.
 
-stash-new E S :- open_safe E L, ( mem S L ; stash_in_safe E S ), !.
+stash-new E S :- open_safe E L, ( mem L S ; stash_in_safe E S ), !.
 
 report-all-failures-if-no-success P :-
   new_safe E,
@@ -122,12 +134,6 @@ of (app [HD|ARGS]) TY :- !,
 of (lam F) (arrow T B) :- !, pi x\
   (of x T :- !) => of (F x) B.
 
-of (const "pi") (arrow (arrow A_ prop) prop) :- !.
-of (const "sigma") (arrow (arrow A_ prop) prop) :- !.
-of (const "discard") A_ :- !.
-
-of Id _ :- assert (known Id) (unknown Id), fail.
-
 mode (of-app i i o o o).
 
 :if "DEBUG:CHECKER"
@@ -167,11 +173,11 @@ log-tc-clause _ _.
 typecheck [] (clause Loc Names Query) :-
   log-tc-clause Loc Query,
   checking Loc =>
-    report-all-failures-and-fail-if-no-success (of-clause Names Query).
+    report-all-failures-if-no-success (of-clause Names Query).
 typecheck [ (clause Loc Names Clause) |Rest] Q :-
   log-tc-clause Loc Clause,
   checking Loc =>
-    report-all-failures-and-fail-if-no-success (of-clause Names Clause), !,
+    report-all-failures-if-no-success (of-clause Names Clause), !,
   typecheck Rest Q.
 
 mode (refresh i o).
@@ -179,41 +185,77 @@ refresh (forall F) T :- !, refresh (F FRESH_) T.
 refresh (tconst "any") FRESH_ :- !.
 refresh X X.
 
-kind entry type.
-type `: term -> typ -> entry.
-
-mem-assoc X [X `: _ | _] :- !.
-mem-assoc X [ _ | XS] :- mem-assoc X XS.
-
 safe-dest-app (app [X | A]) X A :- !.
 safe-dest-app X X [].
 
 macro @vdash :- ":-".
 
-collect-predicates-clause (arg F) Acc Res :- !,
-  pi x\ collect-predicates-clause (F x) Acc Res.
-collect-predicates-clause (app [const @vdash, HD | _]) Acc Res :- !,
-  safe-dest-app HD C _, if (mem-assoc C Acc) (Res = Acc) (Res = [C `: _ | Acc]).
-collect-predicates-clause HD Acc Res :-
-  safe-dest-app HD C _, if (mem-assoc C Acc) (Res = Acc) (Res = [C `: _ | Acc]).
+collect-symbols-term N _ X X :- name N, !.
+collect-symbols-term (cdata _) _ X X :- !.
+collect-symbols-term (app []) _ X X :- !.
+collect-symbols-term (app [HD|L]) Known Acc Res :- !,
+  collect-symbols-term HD Known Acc Acc1,
+  collect-symbols-term (app L) Known Acc1 Res.
+collect-symbols-term (lam F) Known Acc Res :- !,
+  pi x\ collect-symbols-term (F x) Known Acc Res.
+collect-symbols-term (arg F) Known Acc Res :- !,
+  pi x\ collect-symbols-term (F x) Known Acc Res.
+collect-symbols-term (const _ as C) Known Acc Res :- !,
+  if (mem-assoc Known C; mem-assoc Acc C) (Res = Acc) (checking Loc, Res = [C `: Loc | Acc]).
 
-collect-predicates-program [ (clause _ _ C) | P ] Acc Res :-
-  collect-predicates-clause C Acc Acc1,
-  collect-predicates-program P Acc1 Res.
-collect-predicates-program [] X X.
+collect-symbols-clause (clause Loc _ C) Known Acc Res :-
+  checking Loc => collect-symbols-term C Known Acc Res.
+
+collect-symbols-program [ C | P ] Known Acc Res :-
+  collect-symbols-clause C Known Acc Acc1,
+  collect-symbols-program P Known Acc1 Res.
+collect-symbols-program [] _ X X.
 
 mode (under-env i i).
 
 type known term -> prop.
 
-under-env [] P :- P.
-under-env [ X `: PT | XS ] P :-
+similar S1 S2 :-
+  R is ".*\\." ^ S2,
+  rex_match R S1.
+
+filter-similar [] _ [].
+filter-similar [const K `: _ |KS] S [K|R] :- similar K S, !, filter-similar KS S R.
+filter-similar [_|KS] S R :- filter-similar KS S R.
+
+pred str_concat i:list string, o:string.
+str_concat [] "".
+str_concat [S|SS] R :- str_concat SS RR, R is S ^ " " ^ RR.
+
+warn-undeclared Known ((const "main") `: _) :- !.
+warn-undeclared Known ((const S) `: _) :- rex_match ".*\\.aux" S, !.
+warn-undeclared Known ((const S) `: LOC) :-
+  filter-similar Known S Hints,
+  if (Hints = []) (H = "") (H is " Did you mean " ^ {str_concat Hints} ^ "?"),
+  term_to_string LOC SLOC,
+  MSG is SLOC ^ " Warning: constant " ^ S ^ " has no declared type." ^ H,
+  warning MSG.
+
+under-decl-env [] P :- P.
+under-decl-env [ X `: PT | XS ] P :-
   %print "Assume" X PT,
-  (pi Ty\ of X Ty :- refresh PT Ty) => known X => under-env XS P.
+  (pi Ty\ of X Ty :- refresh PT Ty) => known X => under-decl-env XS P.
+
+under-undecl-env [] P :- P.
+under-undecl-env [ X `: _ | XS ] P :-
+  %print "Assume" X PT,
+  (of X Ty_ :- !) => under-undecl-env XS P.
 
 typecheck-program P Q DeclaredTypes :-
-  collect-predicates-program P DeclaredTypes AllTypes, !,
-  under-env {rev AllTypes} (typecheck P Q).
+  KnownTypes = [
+    ((const "pi") `: forall x\ (arrow (arrow x prop) prop)),
+    ((const "sigma") `: forall x\ (arrow (arrow x prop) prop)),
+    ((const "discard") `: forall x\ x)|DeclaredTypes],
+  collect-symbols-program P KnownTypes [] TMP,
+  collect-symbols-clause Q KnownTypes TMP Undeclared,
+  iter (warn-undeclared KnownTypes) Undeclared,
+  under-decl-env {rev KnownTypes}
+      (under-undecl-env Undeclared (typecheck P Q)).
 
 % ---------- warnings ------------------------------------------------------
 
@@ -231,9 +273,12 @@ report-linear [V `-> 1 + uvar |NS] :- !,
     true,
   report-linear NS.
 report-linear [V `-> uvar |NS] :-
-  checking LOC, term_to_string LOC SLOC,
-  MSG is SLOC ^" Warning: "^ {pp V} ^" is unused",
-  warning MSG,
+  pp V VN,
+  if (not(rex_match "_" VN), not(rex_match ".*_" VN))
+    (checking LOC, term_to_string LOC SLOC,
+     MSG is SLOC ^" Warning: "^ VN ^" is unused",
+     warning MSG)
+    true,
   report-linear NS.
 report-linear [_ `-> _ | NS] :- report-linear NS.
 

@@ -262,7 +262,9 @@ Notes about `elpi-checker.elpi`:
   main :- foo 1, foo "3". % typechecks
   ```
 - `o` is written `prop`, since `o` is already used to mean output in `mode` (and `i` to mean input).
-  Anyway `o` is accepted in type declarations and is traslated on the fly to `prop`.
+  Anyway `o` is accepted in type declarations and is translated on the fly to `prop`.
+- constants with no associated type generate a warning
+  - unless the name of the constant is `main` or ends in `.aux`
 
 ## Subterm naming
 

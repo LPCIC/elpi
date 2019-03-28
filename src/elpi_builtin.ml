@@ -398,21 +398,28 @@ let core_builtins = [
 
   @ [
 
-  LPCode "X  < Y  :- lt_ X Y.";
-  LPCode "X i< Y  :- lt_ X Y.";
-  LPCode "X r< Y  :- lt_ X Y.";
-  LPCode "X s< Y  :- lt_ X Y.";
+  LPCode "type (<), (>), (=<), (>=) A -> A -> prop.";
   LPCode "X  > Y  :- gt_ X Y.";
-  LPCode "X i> Y  :- gt_ X Y.";
-  LPCode "X r> Y  :- gt_ X Y.";
-  LPCode "X s> Y  :- gt_ X Y.";
+  LPCode "X  < Y  :- lt_ X Y.";
   LPCode "X  =< Y :- le_ X Y.";
-  LPCode "X i=< Y :- le_ X Y.";
-  LPCode "X r=< Y :- le_ X Y.";
-  LPCode "X s=< Y :- le_ X Y.";
   LPCode "X  >= Y :- ge_ X Y.";
+
+  LPCode "type (i<), (i>), (i=<), (i>=) int -> int -> prop.";
+  LPCode "X i< Y  :- lt_ X Y.";
+  LPCode "X i> Y  :- gt_ X Y.";
+  LPCode "X i=< Y :- le_ X Y.";
   LPCode "X i>= Y :- ge_ X Y.";
+
+  LPCode "type (r<), (r>), (r=<), (r>=) float -> float -> prop.";
+  LPCode "X r< Y  :- lt_ X Y.";
+  LPCode "X r> Y  :- gt_ X Y.";
+  LPCode "X r=< Y :- le_ X Y.";
   LPCode "X r>= Y :- ge_ X Y.";
+
+  LPCode "type (s<), (s>), (s=<), (s>=) string -> string -> prop.";
+  LPCode "X s< Y  :- lt_ X Y.";
+  LPCode "X s> Y  :- gt_ X Y.";
+  LPCode "X s=< Y :- le_ X Y.";
   LPCode "X s>= Y :- ge_ X Y.";
 
   LPDoc " -- Standard data types (supported in the FFI) --";
@@ -423,6 +430,10 @@ let core_builtins = [
 
   LPCode "kind pair type -> type -> type.";
   LPCode "type pr   A -> B -> pair A B.";
+  LPCode "pred fst  i:pair A B, o:A.";
+  LPCode "fst (pr A _) A.";
+  LPCode "pred snd  i:pair A B, o:B.";
+  LPCode "snd (pr _ B) B.";
 
   LPCode "kind bool type.";
   LPCode "type tt bool.";
@@ -661,7 +672,10 @@ let lp_builtins = [
      | Elpi_ast.NotInProlog _ -> raise No_clause)),
   DocAbove);
 
+  LPCode "pred printterm i:@out_stream, i:A.";
   LPCode "printterm S T :- term_to_string T T1, output S T1.";
+
+  LPCode "pred read o:A.";
   LPCode "read S :- flush std_out, input_line std_in X, string_to_term X S.";
 
   ]
@@ -910,6 +924,7 @@ let elpi_nonlogical_builtins = [
      | _ -> raise No_clause)),
   DocAbove);
 
+  LPCode "pred primitive? i:A, i:string.";
   LPCode "primitive? X S :- is_cdata X (ctype S).";
 
   MLCode(Pred("new_int",
@@ -943,7 +958,7 @@ let elpi_nonlogical_builtins = [
   LPCode {|
 % [if C T E] picks the first success of C then runs T (never E).
 % if C has no success it runs E.
-pred  if i:prop, i:prop, i:prop.
+pred if i:prop, i:prop, i:prop.
 if B T _ :- B, !, T.
 if _ _ E :- E.  |}
 
@@ -989,7 +1004,7 @@ ignore-failure! _.
 
 % [assert! C M] takes the first success of C or fails with message M 
 pred assert! i:prop, i:string.
-assert! Cond Msg :- (Cond ; fatal-error-w-data Cond Msg), !.
+assert! Cond Msg :- (Cond ; fatal-error-w-data Msg Cond), !.
 
 % [spy P] traces the call to P, printing all success and the final failure
 pred spy i:prop.
@@ -1007,10 +1022,6 @@ spy! P :- counter "run" NR, if (not(NR = 0)) (debug-print "run=" NR) true,
          debug-print "---->>---- exit: " P, !.
 spy! P :- debug-print "---->>---- fail: " P, fail.
 
-% By writing [@log (pred A B C)] one inserts a clause printing the goal
-% and failing (that is backtracking to the next clause for pred)
-macro @log P :- (P :- debug-print "goal=" P, fail).
-
 % to silence the type checker
 pred unsafe-cast o:A, o:B.
 unsafe-cast X X.
@@ -1022,10 +1033,9 @@ length [_|L] N :- length L N1, N is N1 + 1.
 length []    0.
 
 pred rev i:list A, o:list A.
-rev L RL  :- rev-aux L []  RL.
-pred rev-aux i:list A, i:list A, o:list A.
-rev-aux [X|XS] ACC R :- rev-aux XS [X|ACC] R.
-rev-aux [] L L.
+rev L RL  :- rev.aux L []  RL.
+rev.aux [X|XS] ACC R :- rev.aux XS [X|ACC] R.
+rev.aux [] L L.
 
 pred last i:list A, o:A.
 last [] _ :- fatal-error "last on empty list".
@@ -1074,10 +1084,9 @@ map [] _ [].
 map [X|XS] F [Y|YS] :- F X Y, map XS F YS.
 
 pred map-i i:list A, i:(int -> A -> B -> prop), o:list B.
-map-i L F R :- map-i-aux L 0 F R.
-pred map-i-aux i:list A, i:int, i:(int -> A -> B -> prop), o:list B.
-map-i-aux [] _ _ [].
-map-i-aux [X|XS] N F [Y|YS] :- F N X Y, M is N + 1, map-i-aux XS M F YS.
+map-i L F R :- map-i.aux L 0 F R.
+map-i.aux [] _ _ [].
+map-i.aux [X|XS] N F [Y|YS] :- F N X Y, M is N + 1, map-i.aux XS M F YS.
 
 pred map2 i:list A, i:list B, i:(A -> B -> C -> prop), o:list C.
 map2 [] [_|_] _ _ :- fatal-error "map2 on lists of different length".
@@ -1155,9 +1164,9 @@ pred null i:list A.
 null [].
 
 pred iota i:int, o:list int.
-iota-aux X X [] :- !.
-iota-aux N X [N|R] :- M is N + 1, iota-aux M X R.
-iota N L :- iota-aux 0 N L.
+iota N L :- iota.aux 0 N L.
+iota.aux X X [] :- !.
+iota.aux N X [N|R] :- M is N + 1, iota.aux M X R.
 
 %  -- Misc --
 
