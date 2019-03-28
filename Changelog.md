@@ -12,7 +12,7 @@ Library:
  - predefined types:
    + `bool` with `tt` and `ff`
    + `option A` with `none` and `some A`
-   + `pair A B` with `pr A B`
+   + `pair A B` with `pr A B`, `fst` and `snd`
  - predefined control structure:
    + `if C T E`
  - utility predicates, mostly about lists, in the `std` namespace
