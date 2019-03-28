@@ -773,11 +773,12 @@ let run_parser f x =
 ;;
 
 let parse_program ~print_accumulated_files filenames : program =
-  parse_silent := print_accumulated_files;
+  parse_silent := not print_accumulated_files;
   run_parser (parse lp) filenames
 
-let parse_program_from_stream ~print_accumulated_files strm : program =
-  parse_silent := print_accumulated_files;
+let parse_program_from_stream ~print_accumulated_files loc strm : program =
+  parse_silent := not print_accumulated_files;
+  last_loc := to_ploc loc;
   run_parser (Grammar.Entry.parse lp) strm
 
 let set_last_loc = function

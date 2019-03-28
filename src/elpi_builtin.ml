@@ -1195,5 +1195,5 @@ let std_declarations =
   core_builtins @ io_builtins @ lp_builtins @ elpi_builtins @ elpi_nonlogical_builtins @ elpi_stdlib
 
 let std_builtins =
-  builtin_of_declaration std_declarations
+  builtin_of_declaration ~file_name:"builtin.elpi" std_declarations
 

@@ -28,6 +28,11 @@ let error ?loc msg =
   match loc with
   | None -> error msg
   | Some loc -> error (A.Loc.show loc ^ ": " ^ msg)
+let type_error ?loc msg =
+  match loc with
+  | None -> type_error msg
+  | Some loc -> type_error (A.Loc.show loc ^ ": " ^ msg)
+
 
 (****************************************************************************
   Intermediate data structures
@@ -151,7 +156,6 @@ type query = {
   chr : (constant list * prechr_rule list) list;
   initial_depth : int;
   query : preterm;
-  query_loc : A.Loc.t option;
   initial_state : CustomState.t;
   compiler_flags : flags;
 }
@@ -367,10 +371,10 @@ module ToDBL : sig
   (* Exported to compile the query *)
   val preterm_of_ast :
     depth:int -> macro_declaration -> CompilerState.t ->
-      A.term -> CompilerState.t * preterm
+      A.Loc.t * A.term -> CompilerState.t * preterm
   val preterm_of_function :
     depth:int -> macro_declaration -> CompilerState.t -> 
-    (CompilerState.t -> CompilerState.t * term) ->
+    (CompilerState.t -> CompilerState.t * (A.Loc.t * term)) ->
       CompilerState.t * preterm
 
   (* Exported for quations *)    
@@ -433,7 +437,7 @@ let fresh_Arg =
     | [] -> state, name, t
     | x::xs -> state, name, App(c,x,xs)
 
-let preterm_of_ast ~depth:arg_lvl macro state ast =
+let preterm_of_ast loc ~depth:arg_lvl macro state ast =
 
   let is_uvar_name f = 
      let c = (F.show f).[0] in
@@ -454,7 +458,7 @@ let preterm_of_ast ~depth:arg_lvl macro state ast =
 
   let rec stack_macro_of_ast inner lvl state f =
     try aux inner lvl state (fst (F.Map.find f macro))
-    with Not_found -> error ("Undeclared macro " ^ F.show f) 
+    with Not_found -> error ~loc ("Undeclared macro " ^ F.show f) 
 
   (* compilation of "functors" *) 
   and stack_funct_of_ast inner curlvl state f =
@@ -499,8 +503,8 @@ let preterm_of_ast ~depth:arg_lvl macro state ast =
        | Lam _ -> (* macro with args *)
           state, deref_appuv ~from:lvl ~to_:lvl tl c
        | Discard -> 
-          error "Clause shape unsupported: _ cannot be applied"
-       | _ -> error "Clause shape unsupported" end
+          error ~loc "Clause shape unsupported: _ cannot be applied"
+       | _ -> error ~loc "Clause shape unsupported" end
 (*
     | A.App (A.Builtin f,tl) ->
        let cname = stack_custom_of_ast f in
@@ -522,8 +526,8 @@ let preterm_of_ast ~depth:arg_lvl macro state ast =
     | A.App (A.App (f,l1),l2) ->
        aux inner lvl state (A.App (f, l1@l2))
     | A.CData c -> state, CData (CData.hcons c)
-    | A.App (A.Lam _,_) -> error "Beta-redexes not in our language"
-    | A.App (A.CData _,_) -> type_error "Applied literal"
+    | A.App (A.Lam _,_) -> error ~loc "Beta-redexes not in our language"
+    | A.App (A.CData _,_) -> type_error ~loc "Applied literal"
     | A.Quoted { A.data; A.kind = None; A.loc } ->
          let unquote =
            option_get ~err:"No default quotation" !default_quotation in
@@ -537,7 +541,7 @@ let preterm_of_ast ~depth:arg_lvl macro state ast =
          let state = set_mtm state (Some { macros = macro}) in
          begin try unquote ~depth:lvl state loc data
          with Elpi_parser.ParseError(loc,msg) -> error ~loc msg end
-    | A.App (A.Quoted _,_) -> type_error "Applied quotation"
+    | A.App (A.Quoted _,_) -> type_error ~loc "Applied quotation"
   in
 
   (* arg_lvl is the number of local variables *)
@@ -545,16 +549,17 @@ let preterm_of_ast ~depth:arg_lvl macro state ast =
 ;;
 
 let lp ~depth state loc s =
-  let _loc, ast = Elpi_parser.parse_goal ~loc s in
+  let loc, ast = Elpi_parser.parse_goal ~loc s in
   let macros =
     match get_mtm state with
     | None -> A.Func.Map.empty
     | Some x -> x.macros in
-  preterm_of_ast ~depth macros state ast
+  preterm_of_ast loc ~depth macros state ast
 
 let prechr_rule_of_ast depth macros state r =
+  let pcloc = r.A.clocation in
   let state = set_argmap state empty_amap in
-  let intern state t = preterm_of_ast ~depth macros state t in
+  let intern state t = preterm_of_ast pcloc ~depth macros state t in
   let intern_sequent state { A.eigen; context; conclusion } =
     let state, peigen = intern state eigen in
     let state, pcontext = intern state context in
@@ -568,35 +573,36 @@ let prechr_rule_of_ast depth macros state r =
   let state = set_argmap state empty_amap in
   let pname = r.cattributes.StructuredAST.cid in
   let pifexpr = r.cattributes.StructuredAST.cifexpr in
-  state, { pto_match; pto_remove; pguard; pnew_goal; pamap; pname; pifexpr }
+  state,
+  { pto_match; pto_remove; pguard; pnew_goal; pamap; pname; pifexpr; pcloc }
   
 (* exported *)
 let preterm_of_function ~depth macros state f =
   let state = set_argmap state empty_amap in
   let state = set_mtm state (Some { macros }) in
-  let state, term = f state in
+  let state, (loc, term) = f state in
   let amap = get_argmap state in
   let state = set_argmap state empty_amap in
   let state = set_mtm state None in
-  state, { amap; term }
+  state, { amap; term; loc }
   
-let preterms_of_ast ~depth macros state f t =
+let preterms_of_ast loc ~depth macros state f t =
   let state = set_argmap state empty_amap in
-  let state, term = preterm_of_ast ~depth macros state t in
+  let state, term = preterm_of_ast loc ~depth macros state t in
   let state, terms = f ~depth state term in
   let amap = get_argmap state in
   let state = set_argmap state empty_amap in
   let state = set_mtm state None in
   (* TODO: may have spurious entries in the amap *)
-  state, List.map (fun term -> { term; amap }) terms
+  state, List.map (fun (loc,term) -> { term; amap; loc }) terms
 ;;
-let preterm_of_ast ~depth macros state t =
+let preterm_of_ast ~depth macros state (loc, t) =
   let state = set_argmap state empty_amap in
-  let state, term = preterm_of_ast ~depth macros state t in
+  let state, term = preterm_of_ast loc ~depth macros state t in
   let amap = get_argmap state in
   let state = set_argmap state empty_amap in
   let state = set_mtm state None in
-  state, { term; amap }
+  state, { term; amap; loc }
 ;;
 
   open StructuredAST
@@ -616,7 +622,7 @@ let preterm_of_ast ~depth macros state t =
     { A.textern = extern; A.tloc = loc; A.tname = name; A.tty = typ }
   =
     let tname, _ = C.funct_of_ast name in
-    let state, ttype = preterm_of_ast ~depth:lcs macros state typ in
+    let state, ttype = preterm_of_ast ~depth:lcs macros state (loc, typ) in
     state, { StructuredProgram.extern; loc; decl = { tname; ttype } }
 
    let funct_of_ast state c =
@@ -643,22 +649,22 @@ let preterm_of_ast ~depth macros state t =
 
   let merge_types t1 t2 = t1 @ t2
 
-  let rec toplevel_clausify ~depth state t =
-    let state, cl = map_acc (pi2arg ~depth []) state (split_conj ~depth t) in
+  let rec toplevel_clausify loc ~depth state t =
+    let state, cl = map_acc (pi2arg loc ~depth []) state (split_conj ~depth t) in
     state, List.concat cl
-  and pi2arg ~depth acc state = function
+  and pi2arg loc ~depth acc state = function
     | App(c,Lam t,[]) when c == C.pic ->
         let state, _, arg = fresh_Arg state ~name_hint:"X" ~args:[] in
-        pi2arg ~depth (acc @ [arg]) state t
+        pi2arg loc ~depth (acc @ [arg]) state t
     | t ->
-        if acc = [] then state, [t]
-        else toplevel_clausify state ~depth (subst ~depth acc t)
+        if acc = [] then state, [loc, t]
+        else toplevel_clausify loc state ~depth (subst ~depth acc t)
 
   let rec compile_clauses lcs state macros = function
     | [] -> lcs, state, []
     | { A.body; attributes; loc } :: rest ->
       let state, ts =
-        preterms_of_ast ~depth:lcs macros state toplevel_clausify body in
+        preterms_of_ast loc ~depth:lcs macros state (toplevel_clausify loc) body in
       let cl = List.map (fun body -> { A.loc; attributes; body}) ts in
       let lcs, state, rest = compile_clauses lcs state macros rest in
       lcs, state, cl :: rest
@@ -854,7 +860,7 @@ end = struct (* {{{ *)
     let tname1 = f tname in
     let ttype1 = smart_map_term f ttype.term in
     if tname1 == tname && ttype1 == ttype.term then tdecl
-    else { StructuredProgram.loc; extern; decl = { tname = tname1; ttype = { term = ttype1; amap = ttype.amap } } }
+    else { StructuredProgram.loc; extern; decl = { tname = tname1; ttype = { term = ttype1; amap = ttype.amap; loc = ttype.loc } } }
 
 
   let map_sequent f { peigen; pcontext; pconclusion } =
@@ -865,18 +871,18 @@ end = struct (* {{{ *)
     }
 
   let map_chr f
-    { pto_match; pto_remove; pguard; pnew_goal; pamap; pifexpr; pname }
+    { pto_match; pto_remove; pguard; pnew_goal; pamap; pifexpr; pname; pcloc }
   =
     {
       pto_match = smart_map (map_sequent f) pto_match;
       pto_remove = smart_map (map_sequent f) pto_remove;
       pguard = option_map (smart_map_term f) pguard;
       pnew_goal = option_map (map_sequent f) pnew_goal;
-      pamap; pifexpr; pname
+      pamap; pifexpr; pname; pcloc;
     }
 
-  let map_clause f ({ A.body = { term; amap } } as x) =
-    { x with A.body = { term = smart_map_term f term; amap } }
+  let map_clause f ({ A.body = { term; amap; loc } } as x) =
+    { x with A.body = { term = smart_map_term f term; amap; loc } }
 
   type subst = (string list * (C.t -> C.t))
 
@@ -990,7 +996,7 @@ end = struct (* {{{ *)
     with
       Not_found -> `Unknown
 
-  let missing_args_of modes types t =
+  let missing_args_of loc modes types t =
     let c, args =
       let rec aux = function
         | App (c,_,[x]) when c == C.implc -> aux x
@@ -999,7 +1005,7 @@ end = struct (* {{{ *)
         | App (c,x,xs) -> c, x :: xs
         | Const c -> c, []
         | Builtin(c,args) -> c, args
-        | _ -> error ("only applications can be spilled: " ^ show_term t) 
+        | _ -> error ~loc "Only applications can be spilled" 
       in
         aux t in
     let ty = type_of_const types c in
@@ -1017,17 +1023,16 @@ end = struct (* {{{ *)
             let rec aux = function false :: l -> 1 + aux l | _ -> 0 in
             aux (List.rev mode) in
           if missing > output_suffix then
-            error Printf.(sprintf
-              "cannot spill %s: only %d out of %d missing arguments are output"
-              (show_term t) output_suffix missing);
+            error ~loc Printf.(sprintf
+              "Cannot spill %s: only %d out of %d missing arguments are output"
+              (C.show c) output_suffix missing);
           missing
-      | _ -> error ("cannot spill " ^ show_term t ^
-                    ": unknown arity of " ^ C.show c) in
+      | _ -> error ~loc ("Cannot spill: unknown arity of " ^ C.show c) in
     if missing_args <= 0 then
-      error ("cannot spill fully applied " ^ show_term t);
+      error ~loc ("Cannot spill: " ^ C.show c ^ " is fully applied");
     missing_args
 
-  let spill_term modes types argmap term =
+  let spill_term loc modes types argmap term =
 
     let argmap = ref argmap in
     let mk_Arg n =
@@ -1094,7 +1099,7 @@ end = struct (* {{{ *)
          assert (rest = []);
          let spills, fcall = spaux1 ctx fcall in
          let args =
-            mkSpilled (List.rev vars) (missing_args_of modes types fcall) in
+            mkSpilled (List.rev vars) (missing_args_of loc modes types fcall) in
          spills @ [args, mkAppSpilled fcall args], args
       | App(c, Lam arg, []) when c == C.pic ->
          let ctx = depth+1, mkConst depth :: vars in
@@ -1108,13 +1113,13 @@ end = struct (* {{{ *)
          let spills_hyp, hyp1 = spaux1 ctx hyp in
          let t = spaux1_prop ctx concl in
          if (spills_hyp != []) then
-           error ("Cannot spill in the head of a clause: " ^ show_term hyp);
+           error ~loc "Cannot spill in the head of a clause";
          [], [mkAppC c (hyp1 :: t)]
       | App(c, concl, [hyp]) when c == C.rimplc ->
          let t = spaux1_prop ctx hyp in
          let spills_concl, concl1 = spaux1 ctx concl in
          if (spills_concl != []) then
-           error ("Cannot spill in the head of a clause: " ^ show_term concl);
+           error ~loc "Cannot spill in the head of a clause";
          [], [mkAppC c (concl1 :: t)]
       | App(hd,x,xs) ->
          let args = x :: xs in
@@ -1160,13 +1165,13 @@ end = struct (* {{{ *)
     and spaux1 ctx t =
       let spills, ts = spaux ctx t in
       if (List.length ts != 1) then
-        error ("Spilling: expecting only one term at: " ^ show_term t);
+        error ~loc ("Spilling: expecting only one term at: " ^ show_term t);
       spills, List.hd ts
     
     and spaux1_prop (_, _ as ctx) t =
       let spills, ts = spaux ctx t in
       if (List.length ts != 1) then
-        error ("Spilling: expecting only one term at: " ^ show_term t);
+        error ~loc ("Spilling: expecting only one term at: " ^ show_term t);
       [add_spilled spills (List.hd ts)]
 
     in
@@ -1177,32 +1182,32 @@ end = struct (* {{{ *)
     assert(sp = []);
     !argmap, term
 
-  let spill_presequent modes types pamap ({ pconclusion } as s) =
-    let pamap, pconclusion = spill_term modes types pamap pconclusion in
+  let spill_presequent modes types loc pamap ({ pconclusion } as s) =
+    let pamap, pconclusion = spill_term loc modes types pamap pconclusion in
     pamap, { s with pconclusion }
 
-  let spill_rule modes types ({ pguard; pnew_goal; pamap } as r) =
-    let pamap, pguard = option_mapacc (spill_term modes types) pamap pguard in
+  let spill_rule modes types ({ pguard; pnew_goal; pamap; pcloc } as r) =
+    let pamap, pguard = option_mapacc (spill_term pcloc modes types) pamap pguard in
     let pamap, pnew_goal =
-      option_mapacc (spill_presequent modes types) pamap pnew_goal in
+      option_mapacc (spill_presequent modes types pcloc) pamap pnew_goal in
     { r with pguard; pnew_goal; pamap }
 
   let spill_chr modes types (clique, rules) =
     let rules = List.map (spill_rule modes types) rules in
     (clique, rules)
 
-  let spill_clause modes types ({ A.body = { term; amap } } as x) =
-    let amap, term = spill_term modes types amap term in
-    { x with A.body = { term; amap } }
+  let spill_clause modes types ({ A.body = { term; amap; loc } } as x) =
+    let amap, term = spill_term loc modes types amap term in
+    { x with A.body = { term; amap; loc } }
 
   let run ~flags:_ ({ Flat.clauses; modes; types; chr } as p) =
     let clauses = List.map (spill_clause modes types) clauses in
     let chr = List.map (spill_chr modes types) chr in
     { p with Flat.clauses; chr }
 
-  let spill_preterm types modes { term; amap } =
-    let amap, term = spill_term modes types amap term in
-    { amap; term }
+  let spill_preterm types modes { term; amap; loc } =
+    let amap, term = spill_term loc modes types amap term in
+    { amap; term; loc }
 
 end (* }}} *)
 
@@ -1308,7 +1313,7 @@ let program_of_ast ~flags:({ print_passes } as flags) p =
   }
 ;;
 
-let query_of_ast { Program.assembled_program; compiler_state; compiler_flags } (loc,t)
+let query_of_ast { Program.assembled_program; compiler_state; compiler_flags } t
 =
   let initial_depth = assembled_program.Assembled.local_names in
   let types = assembled_program.Assembled.types in
@@ -1324,7 +1329,6 @@ let query_of_ast { Program.assembled_program; compiler_state; compiler_flags } (
     chr = assembled_program.Assembled.chr;
     initial_depth;
     query;
-    query_loc = Some loc;
     initial_state = CustomState.init state;
     compiler_flags;
   } 
@@ -1345,7 +1349,6 @@ let query_of_term { Program.assembled_program; compiler_state; compiler_flags } 
     chr = assembled_program.Assembled.chr;
     initial_depth;
     query;
-    query_loc = None;
     initial_state = CustomState.init state;
     compiler_flags;
   }
@@ -1417,17 +1420,16 @@ module Compiler : sig
 end = struct (* {{{ *)
 
 let compile_chr depth
-  { pto_match; pto_remove; pguard; pnew_goal; pamap; pname }
+    { pto_match; pto_remove; pguard; pnew_goal; pamap; pname; pcloc = loc }
 =
   if depth > 0 then error "CHR: rules and locals are not supported";
   let key_of_sequent { pconclusion } =
     match pconclusion with
     | Const x -> x
     | App(x,_,_) -> x
-    | f -> 
-       error ("CHR: rule without head symbol, got: "^ show_term f) in
+    | f -> error ~loc "CHR: rule without head symbol" in
   let stack_term_of_preterm term =
-    stack_term_of_preterm ~depth:0 { term; amap = pamap } in
+    stack_term_of_preterm ~depth:0 { term; amap = pamap; loc } in
   let stack_sequent_of_presequent { pcontext; pconclusion; peigen } =
     let context = stack_term_of_preterm pcontext in
     let conclusion = stack_term_of_preterm pconclusion in
@@ -1632,20 +1634,19 @@ let quote_clause { A.loc; A.attributes = { Assembled.id }; body } =
   App(clausec,CData clloc,[list_to_lp_list names; qt])
 ;;
 
-let quote_syntax { Query.clauses; query_loc; query } =
-  let loc = match query_loc with
-    | Some loc -> loc
-    | None -> { A.Loc.source_name = ""; source_start = 0; source_stop = 0; line = -1; line_starts_at = 0 } in
+let quote_syntax { Query.clauses; query } =
   let names = sorted_names_of_argmap query.amap in
   let clist = List.map quote_clause clauses in
   let q =
-    App(clausec,CData CData.(A.cloc.cin (loc,Some "query")), 
+    App(clausec,CData CData.(A.cloc.cin (query.loc,Some "query")), 
       [list_to_lp_list names;
        close_w_binder argc (quote_preterm ~on_type:false query) query.amap]) in
   clist, q
 
 let default_checker () =
-  Elpi_parser.parse_program ~print_accumulated_files:false ["elpi-checker.elpi"]
+  try Elpi_parser.parse_program
+         ~print_accumulated_files:false ["elpi-checker.elpi"]
+  with Elpi_parser.ParseError(loc,err) -> error ~loc err
 
 let static_check header
   ?(exec=execute_once ~delay_outside_fragment:false) ?(checker=default_checker ()) ?(flags=default_flags)
@@ -1662,10 +1663,13 @@ let static_check header
     program_of_ast
       ~flags:{ flags with allow_untyped_builtin = true }
       (header @ checker) in
+  let loc = { A.Loc.source_name = "(static_check)";
+              source_start = 0; source_stop = 0;
+              line = 1; line_starts_at = 0 } in
   let query =
     query_of_term checker (fun ~depth state ->
       assert(depth=0);
-      state, App(C.from_stringc "check",list_to_lp_list p,[q;tlist])) in
+      state, (loc,App(C.from_stringc "check",list_to_lp_list p,[q;tlist]))) in
   let executable = executable_of_query query in
   exec executable <> Failure
 ;;

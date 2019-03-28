@@ -606,6 +606,7 @@ let mk_Arg n { c2i; nargs; i2n; n2t; n2i } =
 type preterm = {
   term : term; (* Args are still constants *)
   amap : argmap;
+  loc : Elpi_ast.Loc.t
 }
 [@@ deriving show]
 
@@ -615,7 +616,11 @@ type type_declaration = {
 }
 [@@ deriving show]
 
-type presequent = { peigen : term; pcontext : term; pconclusion : term }
+type presequent = {
+  peigen : term;
+  pcontext : term;
+  pconclusion : term;
+}
 [@@ deriving show]
 type prechr_rule = {
   pto_match : presequent list;
@@ -625,6 +630,7 @@ type prechr_rule = {
   pamap : argmap;
   pname : string;
   pifexpr : string option;
+  pcloc : Elpi_ast.Loc.t;
 }
 [@@ deriving show]
 

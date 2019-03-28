@@ -82,7 +82,7 @@ module Parse : sig
   val program : ?print_accumulated_files:bool ->
     string list -> Ast.program
   val program_from_stream : ?print_accumulated_files:bool ->
-    char Stream.t -> Ast.program
+    Ast.Loc.t -> char Stream.t -> Ast.program
 
   (** [goal file_list] parses the query *)
   val goal : string -> Ast.query
@@ -404,7 +404,7 @@ module Extend : sig
 
     (** Generate a query starting from a compiled/hand-made term *)
     val query :
-      Compile.program -> (depth:int -> State.t -> State.t * Data.term) ->
+      Compile.program -> (depth:int -> State.t -> State.t * (Ast.Loc.t * Data.term)) ->
         Compile.query
 
     (* Args are parameters of the query (e.g. capital letters) *)
@@ -638,7 +638,8 @@ module Extend : sig
     val document : Format.formatter -> declaration list -> unit
 
     (** What is passed to [Setup.init] *)
-    val builtin_of_declaration : declaration list -> Setup.builtins
+    val builtin_of_declaration :
+      file_name:string -> declaration list -> Setup.builtins
 
     module Notation : sig
 

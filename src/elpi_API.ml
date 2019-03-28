@@ -17,10 +17,10 @@ let set_trace argv =
 
 module Setup = struct
 
-type builtins = Elpi_data.Builtin.declaration list
+type builtins = string * Elpi_data.Builtin.declaration list
 type program_header = Elpi_ast.program
 
-let init ~builtins ~basedir:cwd argv =
+let init ~builtins:(fname,decls) ~basedir:cwd argv =
   let new_argv = set_trace argv in
   let new_argv, paths =
     let rec aux args paths = function
@@ -36,15 +36,19 @@ let init ~builtins ~basedir:cwd argv =
   List.iter (function
     | Elpi_data.Builtin.MLCode (p,_) -> Elpi_data.Builtin.register p
     | Elpi_data.Builtin.LPCode _ -> ()
-    | Elpi_data.Builtin.LPDoc _ -> ()) builtins;
+    | Elpi_data.Builtin.LPDoc _ -> ()) decls;
   (* This is a bit ugly, since we print and then parse... *)
   let b = Buffer.create 1024 in
   let fmt = Format.formatter_of_buffer b in
-  Elpi_data.Builtin.document fmt builtins;
+  Elpi_data.Builtin.document fmt decls;
   Format.pp_print_flush fmt ();
   let strm = Stream.of_string (Buffer.contents b) in
+  let loc = { Elpi_ast.Loc.
+    source_name = fname;
+    source_start = 0; source_stop = 0; line = 1; line_starts_at = 0; } in
   let header =
-    Elpi_parser.parse_program_from_stream ~print_accumulated_files:false strm in
+    Elpi_parser.parse_program_from_stream
+      ~print_accumulated_files:false loc strm in
   header, new_argv
 
 let trace args =
@@ -196,7 +200,7 @@ module Extend = struct
   module Compile = struct
     module State = Elpi_data.CompilerState
     include Elpi_compiler
-    let term_at ~depth (_,x) = term_of_ast ~depth x
+    let term_at ~depth x = term_of_ast ~depth x
     let query = query_of_term
   end
 
@@ -259,7 +263,7 @@ module Extend = struct
       in
       { to_term; of_term; ty = TyApp ("list",d.ty,[]) }
 
-    let builtin_of_declaration x = x
+    let builtin_of_declaration ~file_name x = file_name, x
 
     module Notation = struct
  
