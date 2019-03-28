@@ -253,7 +253,7 @@ module Extend = struct
                   s (lp_list_to_list ~depth t) in
               s, Data l
             with Failure _ ->
-              s, OpaqueData t
+              s, OpaqueData
             end
          | _ -> raise (TypeErr t)
       in

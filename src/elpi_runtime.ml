@@ -2564,25 +2564,24 @@ let in_of_term ~depth { Builtin.of_term; ty } n bname hyps constraints state t =
   match of_term ~mode:Builtin.In ~depth hyps constraints state t with
   | state, Builtin.Data x -> state, x
   | _, Builtin.Flex t -> type_err bname n Builtin.(show_ty_ast ty) (Some t)
-  | _, Builtin.OpaqueData t ->
+  | _, Builtin.OpaqueData ->
       type_err bname n Builtin.(show_ty_ast ty) (Some t)
   | _, Builtin.Discard -> type_err bname n Builtin.(show_ty_ast ty) None
   | exception Builtin.TypeErr t ->
       type_err bname n Builtin.(show_ty_ast ty) (Some t)
 
-let mk_assign ~depth { Builtin.to_term } bname hyps constraints state input output =
+let mk_assign ~depth { Builtin.to_term } bname hyps constraints state input v  output =
   match output, input with
   | None, Builtin.Discard -> state, []
   | Some _, Builtin.Discard -> state, [] (* We could warn that such output was generated without being required *)
-  | Some t, Builtin.Data v ->
+  | Some t, Builtin.Data _ ->
      (* TODO: avoid of_term \o to_term for the first argument *)
-     let state, v = to_term ~depth hyps constraints state v in
      let state, t = to_term ~depth hyps constraints state t in
      state, [App(C.eqc, v, [t])]
-  | Some t, (Builtin.Flex v | Builtin.OpaqueData v) -> 
+  | Some t, (Builtin.Flex _ | Builtin.OpaqueData) -> 
      let state, t = to_term ~depth hyps constraints state t in
      state, [App(C.eqc, v, [t])]
-  | None, (Builtin.Data _ |  Builtin.Flex _ | Builtin.OpaqueData _) ->
+  | None, (Builtin.Data _ |  Builtin.Flex _ | Builtin.OpaqueData) ->
       anomaly ("ffi: " ^ bname ^ ": some output was requested but not produced")
 
 let call (Builtin.Pred(bname,ffi,compute)) ~depth hyps constraints assignments state data =
@@ -2617,7 +2616,7 @@ let call (Builtin.Pred(bname,ffi,compute)) ~depth hyps constraints assignments s
        begin match out with
          | Some out ->
              let state, ass =
-               map_acc2 (mk_assign ~depth d bname hyps constraints) state i out in 
+               map_acc3 (mk_assign ~depth d bname hyps constraints) state i data out in 
              state, List.(rev (concat ass @ l))
          | None -> state, List.rev l
        end
@@ -2628,7 +2627,7 @@ let call (Builtin.Pred(bname,ffi,compute)) ~depth hyps constraints assignments s
         let state, i = out_of_term ~depth d n bname hyps constraints state t in
         let reduce state (rest, out) =
           let state, l = reduce state rest in
-          let state, ass = mk_assign ~depth d bname hyps constraints state i out in
+          let state, ass = mk_assign ~depth d bname hyps constraints state i t out in
           state, ass @ l in
         aux ffi ~compute:(compute i) ~reduce rest (n + 1) state
     | _, t :: _ -> arity_err bname n (Some t)

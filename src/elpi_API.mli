@@ -545,7 +545,7 @@ module Extend : sig
       | Data of 'a
       | Flex of Data.term (* the argument is the UVar or AppUVar *)
       | Discard
-      | OpaqueData of Data.term (* a term we don't need/want to translate *)
+      | OpaqueData (* a term we don't need/want to translate *)
 
     type ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
 

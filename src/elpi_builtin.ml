@@ -235,7 +235,7 @@ let option = fun a -> {
     | App(k,x,[]) when k == somec ->
         begin match a.of_term ~mode ~depth h c s x with
         | s, Data x -> s, Data (Some x)
-        | s, _ -> s, OpaqueData t
+        | s, _ -> s, OpaqueData
         end
     | Discard -> s, BuiltInPredicate.Discard
     | (UVar _ | AppUVar _) -> s, Flex t
@@ -273,7 +273,7 @@ let pair = fun a b -> {
         let s, y = b.of_term ~mode ~depth h c s y in
         begin match x, y with
         | Data x, Data y -> s, Data (x,y)
-        | _ -> s, OpaqueData t
+        | _ -> s, OpaqueData
         end
     | Discard -> s, Discard
     | (UVar _ | AppUVar _) -> s, Flex t
@@ -820,7 +820,7 @@ let name_or_constant name condition = (); fun x out ~depth _ { state } ->
     type_error (name^" only supports 1 or 3 arguments");
   match x with
   | Discard -> raise No_clause (* not a name *)
-  | Flex _ | OpaqueData _ -> assert false (* any has no Flex/OpaqueData case *)
+  | Flex _ | OpaqueData -> assert false (* any has no Flex/OpaqueData case *)
   | Data x ->
     match look ~depth x with
     | Const n when condition n ->

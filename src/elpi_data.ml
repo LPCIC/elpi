@@ -681,7 +681,7 @@ type name = string
 type doc = string
 
 type 'a arg =
-  Data of 'a | Flex of term | Discard | OpaqueData of term
+  Data of 'a | Flex of term | Discard | OpaqueData
 
 exception TypeErr of term
 
