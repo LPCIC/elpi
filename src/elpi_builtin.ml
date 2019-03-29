@@ -222,23 +222,17 @@ let none = Constants.from_string "none"
 let somec = Constants.from_stringc "some"
 
 let option = fun a -> {
-  to_term = (fun ~depth h c s o ->
-    match o with
-    | None -> s, none
+  embed = (fun ~depth h s -> function
+    | None -> s.state, none, []
     | Some x ->
-        let s, x = a.to_term ~depth h c s x in
-        s, mkApp somec x []
-     );
-  of_term = (fun ~mode ~depth h c s t ->
+        let s, x, e = a.embed ~depth h s x in
+        s, mkApp somec x [], e);
+  readback = (fun ~depth h s t ->
     match look ~depth t with
-    | Const _ as x when kool x == none -> s, Data None
+    | Const _ as x when kool x == none -> s.state, None
     | App(k,x,[]) when k == somec ->
-        begin match a.of_term ~mode ~depth h c s x with
-        | s, Data x -> s, Data (Some x)
-        | s, _ -> s, OpaqueData
-        end
-    | Discard -> s, BuiltInPredicate.Discard
-    | (UVar _ | AppUVar _) -> s, Flex t
+      let s, x = a.readback  ~depth h s x in
+      s, (Some x)
     | _ -> raise (TypeErr t));
   ty = TyApp("option",a.ty,[]);
 }
@@ -247,36 +241,29 @@ let tt = Constants.from_string "tt"
 let ff = Constants.from_string "ff"
 
 let bool = {
-  to_term = (fun ~depth h c s b ->
-    if b then s, tt else s, ff);
-  of_term = (fun ~mode ~depth h c s t ->
+  embed = (fun ~depth h { state } b ->
+      if b then state, tt, [] else state, ff, []);
+  readback = (fun ~depth h { state } t ->
     match look ~depth t with
-    | Const _ as x when kool x == tt -> s, Data true 
-    | Const _ as x when kool x == ff -> s, Data false
-    | Discard -> s, BuiltInPredicate.Discard 
-    | (UVar _ | AppUVar _) -> s, Flex t
+    | Const _ as x when kool x == tt -> state, true
+    | Const _ as x when kool x == ff -> state, false
     | _ -> raise (TypeErr t));
   ty = TyName "bool";
 }
 
 let prc = Constants.from_stringc "pr"
 
-let pair = fun a b -> {
-  to_term = (fun ~depth h c s (x,y) ->
-    let s, x = a.to_term ~depth h c s x in
-    let s, y = b.to_term ~depth h c s y in
-    s, mkApp prc x [y]);
-  of_term = (fun ~mode ~depth h c s t ->
+let pair a b = {
+  embed = (fun ~depth h s (x,y) ->
+    let state, x, g1 = a.embed ~depth h s x in
+    let state, y, g2 = b.embed ~depth h { s with state } y in
+    state, mkApp prc x [y], g1 @ g2);
+  readback = (fun ~depth h s t ->
     match look ~depth t with
     | App(k,x,[y]) when k == prc ->
-        let s, x = a.of_term ~mode ~depth h c s x in
-        let s, y = b.of_term ~mode ~depth h c s y in
-        begin match x, y with
-        | Data x, Data y -> s, Data (x,y)
-        | _ -> s, OpaqueData
-        end
-    | Discard -> s, Discard
-    | (UVar _ | AppUVar _) -> s, Flex t
+        let state, x = a.readback ~depth h s x in
+        let state, y = b.readback ~depth h { s with state } y in
+        state, (x,y)
     | _ -> raise (TypeErr t));
   ty = TyApp ("pair",a.ty,[b.ty]);
 }
@@ -756,18 +743,14 @@ let elpi_builtins = [
 (** ELPI specific NON-LOGICAL built-in *********************************** *)
 
 let ctype : string data = {
-  to_term = (fun ~depth:_ _ _ state x ->
-    state, mkApp Constants.ctypec (C.of_string x) []);
-  of_term = (fun ~mode:_ ~depth _ _ state t ->
+  embed = (fun ~depth:_ _ { state } x ->
+    state, mkApp Constants.ctypec (C.of_string x) [], []);
+  readback = (fun ~depth _ { state } t ->
      match look ~depth t with
      | App(c,s,[]) when c == Constants.ctypec ->
          begin match look ~depth s with
-         | CData c when C.is_string c -> state, Data (C.to_string c)
-         | (UVar _ | AppUVar _) -> state, Flex t
-         | Discard -> state, Discard
+         | CData c when C.is_string c -> state, C.to_string c
          | _ -> raise (TypeErr t) end
-     | (UVar _ | AppUVar _) -> state, Flex t
-     | Discard -> state, Discard
      | _ -> raise (TypeErr t));
    ty = TyName "ctype"
 }
@@ -818,31 +801,32 @@ let name_or_constant name condition = (); fun x out ~depth _ { state } ->
   let len = List.length out in
   if len != 0 && len != 2 then
     type_error (name^" only supports 1 or 3 arguments");
+  state,
   match x with
-  | Discard -> raise No_clause (* not a name *)
-  | Flex _ | OpaqueData -> assert false (* any has no Flex/OpaqueData case *)
+  | NoData -> raise No_clause
   | Data x ->
-    match look ~depth x with
-    | Const n when condition n ->
-        if out = [] then state, !: x +? None
-        else state, !: x +! [Some x; Some mkNil]
-    | App(n,y,ys) when condition n ->
-        if out = [] then state, !: x +? None
-        else state, !: x +! [Some (mkConst n); Some (list_to_lp_list (y::ys))]
-    | UVar _ | AppUVar _ ->
-        (* We build the application *)
-        begin match out with
-        | [] -> raise No_clause
-        | [Data hd; Data args] ->
-            begin match look ~depth hd, lp_list_to_list ~depth args with
-            | Const n, [] when condition n ->
-                state, !: (mkConst n) +! [Some hd; Some args]
-            | Const n, x :: xs when condition n ->
-                state, !: (mkApp n x xs) +! [Some hd; Some args]
-            | _ -> raise No_clause end
-        | _ -> raise No_clause
-        end
-    | _ -> raise No_clause
+      match look ~depth x with
+      | Discard -> assert false
+      | Const n when condition n ->
+          if out = [] then !: x +? None
+          else !: x +! [Some x; Some mkNil]
+      | App(n,y,ys) when condition n ->
+          if out = [] then !: x +? None
+          else !: x +! [Some (mkConst n); Some (list_to_lp_list (y::ys))]
+      | UVar _ | AppUVar _ ->
+          (* We build the application *)
+          begin match out with
+          | [] -> raise No_clause
+          | [Data hd; Data args] ->
+              begin match look ~depth hd, lp_list_to_list ~depth args with
+              | Const n, [] when condition n ->
+                  !: (mkConst n) +! [Some hd; Some args]
+              | Const n, x :: xs when condition n ->
+                  !: (mkApp n x xs) +! [Some hd; Some args]
+              | _ -> raise No_clause end
+          | _ -> raise No_clause
+          end
+      | _ -> raise No_clause
 ;;
 
 let elpi_nonlogical_builtins = [ 
@@ -874,14 +858,14 @@ let elpi_nonlogical_builtins = [
   DocAbove);
 
   MLCode(Pred("name",
-    Out(any, "T",
-    VariadicOut(any,"checks if T is a eigenvariable. When used with tree arguments it relates an applied name with its head and argument list.")),
+    InOut(any, "T",
+    VariadicInOut(any,"checks if T is a eigenvariable. When used with tree arguments it relates an applied name with its head and argument list.")),
   (name_or_constant "name" (fun x -> x >= 0))),
   DocAbove);
 
   MLCode(Pred("constant",
-    Out(any, "T",
-    VariadicOut(any,"checks if T is a (global) constant.  When used with tree arguments it relates an applied constant with its head and argument list.")),
+    InOut(any, "T",
+    VariadicInOut(any,"checks if T is a (global) constant.  When used with tree arguments it relates an applied constant with its head and argument list.")),
   (name_or_constant "constant" (fun x -> x < 0))),
   DocAbove);
 

@@ -41,12 +41,16 @@ API:
      a global constant, e.g. `mkAppS`, `mkGlobalS`, `mkBuiltinS`.
      `mkBuiltinName` got removed
  - FFI:
-   + `to_term` and `of_term` are now stateful conversion functions, that is they
-     see the state, hypothetical context and constraint store (as `Full` ffi builtins
-     do) and can return an updated state
-   + ffi arguments can now be `Data | Flex | Discard | OpaqueData`, the latter
-     avoiding converion when the builtin is not bi-directional (e.g. cannot use
-     an argument marked as output, he just imposes an equality on it)
+   + `to_term` and `of_term` renamed to `embed` and `readback` and made stateful.
+     That is they see the state, hypothetical context and constraint store (as
+     `Full` ffi builtins do) and can return an updated state
+   + Arguments to builtin predicates now distinguish between
+     - In: ML code must receive the data, type error is the data cannot
+       be represented in ML
+     - Out: ML code received Keep or Discard (and not data) so that it can
+       avoid generating data the caller is not binding back
+     - InOut: ML code receives (Data of 'a) or NoData. The latter case is
+       when the caller passed _
    + `ty` is no more a string but an AST
 
 Compilation:

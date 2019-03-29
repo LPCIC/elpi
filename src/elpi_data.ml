@@ -686,11 +686,6 @@ module Builtin = struct
 type name = string
 type doc = string
 
-type 'a arg =
-  Data of 'a | Flex of term | Discard | OpaqueData
-
-exception TypeErr of term
-
 type ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
 
 let rec show_ty_ast ?(outer=true) = function
@@ -699,27 +694,34 @@ let rec show_ty_ast ?(outer=true) = function
       let t = String.concat " " (s :: List.map (show_ty_ast ~outer:false) (x::xs)) in
       if outer then t else "("^t^")"
 
+type 'a oarg = Keep | Discard
+type 'a ioarg = Data of 'a | NoData
 
-type mode = In | Out
+exception TypeErr of term
 
-type ('src,'tgt) stateful_data_conversion =
-  depth:int -> hyps -> constraints -> custom_state ->
-    'src -> custom_state * 'tgt
+type extra_goals = term list
+
+type 'a embedding =
+  depth:int -> hyps -> solution -> 'a -> custom_state * term * extra_goals
+type 'a readback =
+  depth:int -> hyps -> solution -> term -> custom_state * 'a
 
 type 'a data = {
-  to_term : ('a,term) stateful_data_conversion;
-  of_term : mode:mode -> (term, 'a arg) stateful_data_conversion;
+  embed : 'a embedding;   (* 'a -> term *)
+  readback : 'a readback; (* term -> 'a *)
   ty : ty_ast
 }
 
 type ('function_type, 'inernal_outtype_in) ffi =
   | In   : 't data * doc * ('i, 'o) ffi -> ('t -> 'i,'o) ffi
-  | Out  : 't data * doc * ('i, 'o * 't option) ffi -> ('t arg -> 'i,'o) ffi
+  | Out  : 't data * doc * ('i, 'o * 't option) ffi -> ('t oarg -> 'i,'o) ffi
+  | InOut  : 't data * doc * ('i, 'o * 't option) ffi -> ('t ioarg -> 'i,'o) ffi
   | Easy : doc -> (depth:int -> 'o, 'o) ffi
   | Read : doc -> (depth:int -> hyps -> solution -> 'o, 'o) ffi
   | Full : doc -> (depth:int -> hyps -> solution -> custom_state * 'o, 'o) ffi
   | VariadicIn : 't data * doc -> ('t list -> depth:int -> hyps -> solution -> custom_state * 'o, 'o) ffi
-  | VariadicOut : 't data * doc -> ('t arg list -> depth:int -> hyps -> solution -> custom_state * ('o * 't option list option), 'o) ffi
+  | VariadicOut : 't data * doc -> ('t oarg list -> depth:int -> hyps -> solution -> custom_state * ('o * 't option list option), 'o) ffi
+  | VariadicInOut : 't data * doc -> ('t ioarg list -> depth:int -> hyps -> solution -> custom_state * ('o * 't option list option), 'o) ffi
 
 type t = Pred : name * ('a,unit) ffi * 'a -> t
 
@@ -830,11 +832,13 @@ let document_pred fmt docspec name ffi =
   = fun args -> function
     | In( { ty }, s, ffi) -> doc ((true,show_ty_ast ty,s) :: args) ffi
     | Out( { ty }, s, ffi) -> doc ((false,show_ty_ast ty,s) :: args) ffi
+    | InOut( { ty }, s, ffi) -> doc ((false,show_ty_ast ty,s) :: args) ffi
     | Read s -> pp_pred fmt docspec name s args
     | Easy s -> pp_pred fmt docspec name s args
     | Full s -> pp_pred fmt docspec name s args
     | VariadicIn( { ty }, s) -> pp_variadictype fmt name s (show_ty_ast ty) args
     | VariadicOut( { ty }, s) -> pp_variadictype fmt name s (show_ty_ast ty) args
+    | VariadicInOut( { ty }, s) -> pp_variadictype fmt name s (show_ty_ast ty) args
   in
     doc [] ffi
 ;;

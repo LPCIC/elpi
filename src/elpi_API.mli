@@ -540,54 +540,37 @@ module Extend : sig
     type name = string
     type doc = string
     
-    (* Classification of input or output data coming from LP *)
-    type 'a arg =
-      | Data of 'a
-      | Flex of Data.term (* the argument is the UVar or AppUVar *)
-      | Discard
-      | OpaqueData (* a term we don't need/want to translate *)
-
     type ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
 
-    (* The mode for the argument being translated. For example some large
-     * data in In mode should be translated but if the mode is Out it may be
-     * useful to just know it is not Discard. In this way one avoids to
-     * move the data from LP to ML and back just for fun. The point is that
-     * Out data may or may not be used (as in read) by the built in predicate.
-     * If it is not read, but just assigned as a result, then translation is
-     * useless. For example we want to be able to write a getenv builtin that
-     * is equally efficient in both scenarios:
-     *
-     *   pred getenv i:string, o:"LONG VALUE".
-     *   main :- getenv "x" "LONG VALUE",
-     *           getenv "x" T, T = "LONG VALUE".
-     *
-     * In the first call to getenv the user is passing "LONG VALUE" just to
-     * assert that getenv associates it to "x". Converting "LONG VALUE" back
-     * and forth is useless if getenv is just a getter (that is, it ignores the
-     * output argument).
-     *)
-    type mode = In | Out
+    type 'a oarg = Keep | Discard
+    type 'a ioarg = Data of 'a | NoData
 
-    type ('src,'tgt) stateful_data_conversion =
-       depth:int -> Data.hyps -> Data.constraints -> Data.custom_state ->
-         'src -> Data.custom_state * 'tgt
-    
+    type extra_goals = Data.term list
+
+    type 'a embedding =
+      depth:int -> Data.hyps -> Data.solution -> 'a -> Data.custom_state * Data.term * extra_goals
+    type 'a readback =
+      depth:int -> Data.hyps -> Data.solution -> Data.term -> Data.custom_state * 'a
+
     type 'a data = {
-      to_term : ('a, Data.term) stateful_data_conversion;
-      of_term : mode:mode -> (Data.term, 'a arg) stateful_data_conversion;
+      embed : 'a embedding;   (* 'a -> term *)
+      readback : 'a readback; (* term -> 'a *)
       ty : ty_ast
     }
+
     exception TypeErr of Data.term (* a type error at data conversion time *)
     
     type ('function_type, 'inernal_outtype_in) ffi =
       | In   : 't data * doc * ('i, 'o) ffi -> ('t -> 'i,'o) ffi
-      | Out  : 't data * doc * ('i, 'o * 't option) ffi -> ('t arg -> 'i,'o) ffi
+      | Out  : 't data * doc * ('i, 'o * 't option) ffi -> ('t oarg -> 'i,'o) ffi
+      | InOut  : 't data * doc * ('i, 'o * 't option) ffi -> ('t ioarg -> 'i,'o) ffi
       | Easy : doc -> (depth:int -> 'o, 'o) ffi
       | Read : doc -> (depth:int -> Data.hyps -> Data.solution -> 'o, 'o) ffi
       | Full : doc -> (depth:int -> Data.hyps -> Data.solution -> Data.custom_state * 'o, 'o) ffi
       | VariadicIn : 't data * doc -> ('t list -> depth:int -> Data.hyps -> Data.solution -> Data.custom_state * 'o, 'o) ffi
-      | VariadicOut : 't data * doc -> ('t arg list -> depth:int -> Data.hyps -> Data.solution -> Data.custom_state * ('o * 't option list option), 'o) ffi
+      | VariadicOut : 't data * doc -> ('t oarg list -> depth:int -> Data.hyps -> Data.solution -> Data.custom_state * ('o * 't option list option), 'o) ffi
+      | VariadicInOut : 't data * doc -> ('t ioarg list -> depth:int -> Data.hyps -> Data.solution -> Data.custom_state * ('o * 't option list option), 'o) ffi
+
     type t = Pred : name * ('a,unit) ffi * 'a -> t
 
     (** Where to print the documentation. For the running example DocAbove
@@ -633,6 +616,14 @@ module Extend : sig
       (* global constants of that type, eg "std_in" *)
       ?constants:'a Data.Constants.Map.t ->
       'a CData.cdata -> 'a data
+
+    (* commodity iterator for lists *)
+    val map_acc_embed :
+      (Data.solution -> 'a -> Data.custom_state * 'b * extra_goals) ->
+      Data.solution -> 'a list -> Data.custom_state * 'b list * extra_goals
+    val map_acc_readback :
+      (Data.solution -> 'a -> Data.custom_state * 'b) ->
+      Data.solution -> 'a list -> Data.custom_state * 'b list
 
     (** Prints in LP syntax the "external" declarations *)
     val document : Format.formatter -> declaration list -> unit

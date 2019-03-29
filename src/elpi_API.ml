@@ -211,57 +211,55 @@ module Extend = struct
     let data_of_cdata ~name:ty ?(constants=Data.Constants.Map.empty)
       { CData.cin; isc; cout }
     =
-      let to_term ~depth:_ _ _ state x =
-        state, Data.CData (cin x) in
-      let of_term ~mode:_ ~depth _ _ state t =
+      let embed ~depth:_ _ { Data.state } x =
+        state, Data.CData (cin x), [] in
+      let readback ~depth _ { Data.state } t =
         let module R = (val !r) in let open R in
         match R.deref_head ~depth t with
-        | Data.CData c when isc c -> state, Data (cout c)
-        | (Data.UVar _ | Data.AppUVar _) as x -> state, Flex x
-        | Data.Discard -> state, Discard
+        | Data.CData c when isc c -> state, cout c
         | Data.Const i as t when i < 0 ->
-            begin try state, Data (Data.Constants.Map.find i constants)
+            begin try state, Data.Constants.Map.find i constants
             with Not_found -> raise (TypeErr t) end
         | t -> raise (TypeErr t) in
-      { to_term; of_term; ty = TyName ty }
+      { embed; readback; ty = TyName ty }
 
     let int    = data_of_cdata ~name:"int" Elpi_data.C.int
     let float  = data_of_cdata ~name:"float" Elpi_data.C.float
     let string = data_of_cdata ~name:"string" Elpi_data.C.string
     let poly ty =
-      let to_term ~depth:_ _ _ state x = state, x in
-      let of_term ~mode:_ ~depth _  _ state t =
-        let module R = (val !r) in let open R in
-        match R.deref_head ~depth t with
-        | Data.Discard -> state, Discard
-        | x -> state, Data x in
-      { to_term; of_term; ty = TyName ty }
+      let embed ~depth:_ _ { Data.state } x = state, x, [] in
+      let readback ~depth _ { Data.state } t = state, t in
+      { embed; readback; ty = TyName ty }
     let any = poly "any"
-    let list d =
-      let to_term ~depth h c s l =
-        let module R = (val !r) in let open R in
-        let s, l = Elpi_util.map_acc (d.to_term ~depth h c) s l in
-        s, list_to_lp_list l in
-      let of_term ~mode ~depth h c s t =
-        let module R = (val !r) in let open R in
-        match R.deref_head ~depth t with
-        | Data.Discard -> s, Discard
-        | (Data.UVar _ | Data.AppUVar _) as x -> s, Flex x
-        | (Nil | Cons _) ->
-            begin try
-              let s, l =
-                Elpi_util.map_acc (fun s t ->
-                   match d.of_term ~mode ~depth h c s t with
-                   | s, Data x -> s, x
-                   | _ -> raise (Failure "Some non Data"))
-                  s (lp_list_to_list ~depth t) in
-              s, Data l
-            with Failure _ ->
-              s, OpaqueData
-            end
-         | _ -> raise (TypeErr t)
+
+    let map_acc_embed f s l =
+      let rec aux acc accg s = function
+      | [] -> s.Data.state, List.rev acc, List.rev accg
+      | x :: xs ->
+          let state, x, eg = f s x in
+          aux (x :: acc) (eg @ accg) { s with Data.state } xs
       in
-      { to_term; of_term; ty = TyApp ("list",d.ty,[]) }
+        aux [] [] s l
+      
+    let map_acc_readback f s l =
+      let rec aux acc s = function
+      | [] -> s.Data.state, List.rev acc
+      | x :: xs ->
+          let state, x = f s x in
+          aux (x :: acc) { s with Data.state } xs
+      in
+        aux [] s l
+
+    let list d =
+      let embed ~depth h s l =
+        let module R = (val !r) in let open R in
+        let s, l, eg = map_acc_embed (d.embed ~depth h) s l in
+        s, list_to_lp_list l, eg in
+      let readback ~depth h ({ Data.state } as solution) t =
+        let module R = (val !r) in let open R in
+        map_acc_readback (d.readback ~depth h) solution (lp_list_to_list ~depth t)
+      in
+      { embed; readback; ty = TyApp ("list",d.ty,[]) }
 
     let builtin_of_declaration ~file_name x = file_name, x
 
