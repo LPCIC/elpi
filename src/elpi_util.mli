@@ -62,6 +62,19 @@ module IntMap : Map.S with type key = int
 module StrSet : Set.S with type elt = string
 module IntSet : Set.S with type elt = int
 
+module Loc : sig
+  type t = {
+    source_name : string;
+    source_start: int;
+    source_stop: int;
+    line: int;
+    line_starts_at: int;
+  }
+  val show : t -> string
+  val pp : Format.formatter -> t -> unit
+  val equal : t -> t -> bool
+end
+
 (******************** list ******************)
 
 val smart_map : ('a -> 'a) -> 'a list -> 'a list
@@ -162,21 +175,21 @@ end
 (******************** errors ******************)
 
 (* A regular error *)
-val error : string -> 'a
+val error : ?loc:Loc.t -> string -> 'a
 (* An invariant is broken, i.e. a bug *)
-val anomaly : string -> 'a
+val anomaly : ?loc:Loc.t -> string -> 'a
 (* If we type check the program, then these are anomalies *)
-val type_error : string -> 'a
+val type_error : ?loc:Loc.t -> string -> 'a
 (* A non fatal warning *)
-val warn : string -> unit
+val warn : ?loc:Loc.t -> string -> unit
 (* Indirection for standard print functions *)
 val printf : ('a, Format.formatter, unit) format -> 'a
 val eprintf : ('a, Format.formatter, unit) format -> 'a
 
-val set_warn : (string -> unit) -> unit
-val set_error : (string -> 'a) -> unit
-val set_anomaly : (string -> 'a) -> unit
-val set_type_error : (string -> 'a) -> unit
+val set_warn : (?loc:Loc.t -> string -> unit) -> unit
+val set_error : (?loc:Loc.t -> string -> 'a) -> unit
+val set_anomaly : (?loc:Loc.t -> string -> 'a) -> unit
+val set_type_error : (?loc:Loc.t -> string -> 'a) -> unit
 val set_std_formatter : Format.formatter -> unit
 val set_err_formatter : Format.formatter -> unit
 val set_formatters_maxcols : int -> unit

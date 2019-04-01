@@ -85,9 +85,39 @@ module IntMap = Map.Make(Int)
 module StrMap = Map.Make(String)
 module IntSet = Set.Make(Int)
 module StrSet = Set.Make(String)
-
 module Fmt = Format
 
+module Loc = struct
+  type t = {
+    source_name : string;
+    source_start: int;
+    source_stop: int;
+    line: int;
+    line_starts_at: int;
+  }
+  [@@deriving eq]
+
+  let to_string {
+    source_name;
+    source_start;
+    source_stop;
+    line;
+    line_starts_at; }
+  =
+    let source =
+     if source_name = "" then ""
+     else source_name ^ ", " in
+    let chars = Printf.sprintf "characters %d-%d" source_start source_stop in
+    let pos =
+      if line = -1 then chars
+      else Printf.sprintf "%s, line %d, column %d"
+             chars line (source_stop - line_starts_at) in
+    source ^ pos
+
+  let pp fmt l = Fmt.fprintf fmt "%s" (to_string l)
+  let show l = to_string l
+
+end
 
 let pplist ?(max=max_int) ?(boxed=false) ppelem ?(pplastelem=ppelem) sep f l =
  if l <> [] then begin
@@ -97,7 +127,7 @@ let pplist ?(max=max_int) ?(boxed=false) ppelem ?(pplastelem=ppelem) sep f l =
   | head::tail -> List.rev tail,head in
   List.iteri (fun i x -> if i = max + 1 then Fmt.fprintf f "..."
                          else if i > max then ()
-                         else Fmt.fprintf f "%a%s@ " ppelem x sep) args;
+                         else Fmt.fprintf f "%a%s@," ppelem x sep) args;
   Fmt.fprintf f "%a" pplastelem last;
   if boxed then Fmt.fprintf f "@]"
  end
@@ -137,15 +167,18 @@ let rec for_all2 p l1 l2 =
   | (_, _) -> false
 ;;
 
-let default_warn s =
-  Printf.eprintf "Warning: %s\n%!" s
-let default_error s =
-  Printf.eprintf "Fatal error: %s\n%!" s;
+let pp_loc_opt = function
+  | None -> ""
+  | Some loc -> Loc.show loc ^ ": "
+let default_warn ?loc s =
+  Printf.eprintf "Warning: %s%s\n%!" (pp_loc_opt loc) s
+let default_error ?loc s =
+  Printf.eprintf "Fatal error: %s%s\n%!" (pp_loc_opt loc) s;
   exit 1
-let default_anomaly s =
-  Printf.eprintf "Anomaly: %s\n%!" s;
+let default_anomaly ?loc s =
+  Printf.eprintf "Anomaly: %s%s\n%!" (pp_loc_opt loc) s;
   exit 2
-let default_type_error s = default_error s
+let default_type_error ?loc s = default_error ?loc s
 let default_printf = Printf.printf
 let default_eprintf = Printf.eprintf
 
@@ -170,10 +203,10 @@ let set_type_error f = type_error_f := (Obj.repr f)
 let set_std_formatter f = std_fmt := f
 let set_err_formatter f = err_fmt := f
 
-let warn s       = Obj.obj !warn_f s
-let error s      = Obj.obj !error_f s
-let anomaly s    = Obj.obj !anomaly_f s
-let type_error s = Obj.obj !type_error_f s
+let warn ?loc s       = Obj.obj !warn_f ?loc s
+let error ?loc s      = Obj.obj !error_f ?loc s
+let anomaly ?loc s    = Obj.obj !anomaly_f ?loc s
+let type_error ?loc s = Obj.obj !type_error_f ?loc s
 let printf x     = Format.fprintf !std_fmt x
 let eprintf x    = Format.fprintf !err_fmt x
 

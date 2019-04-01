@@ -4,20 +4,6 @@
 
 open Elpi_util
 
-
-module Loc : sig
-  type t = {
-    source_name : string;
-    source_start: int;
-    source_stop: int;
-    line: int;
-    line_starts_at: int;
-  }
-  val show : t -> string
-  val pp : Format.formatter -> t -> unit
-  val equal : t -> t -> bool
-end
-
 (* Prolog functors *)
 module Func : sig
   type t
@@ -187,5 +173,5 @@ open Elpi_util.CData
 val cfloat : float cdata
 val cint : int cdata
 val cstring : string cdata
-val cloc : (Loc.t * string option) cdata
+val cloc : Loc.t cdata
 

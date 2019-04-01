@@ -19,15 +19,15 @@ type query
 val program_of_ast : flags:flags -> Elpi_ast.program -> program
 val query_of_ast : program -> Elpi_ast.goal -> query
 val query_of_term :
-  program -> (depth:int -> CompilerState.t -> CompilerState.t * (Elpi_ast.Loc.t * term)) -> query
+  program -> (depth:int -> CompilerState.t -> CompilerState.t * (Loc.t * term)) -> query
 
 val pp_query : (depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> query -> unit
 
 val executable_of_query : query -> executable
 
-val term_of_ast : depth:int -> Elpi_ast.Loc.t * Elpi_ast.term -> term
+val term_of_ast : depth:int -> Loc.t * Elpi_ast.term -> term
 
-type quotation = depth:int -> CompilerState.t -> Elpi_ast.Loc.t -> string -> CompilerState.t * term
+type quotation = depth:int -> CompilerState.t -> Loc.t -> string -> CompilerState.t * term
 val set_default_quotation : quotation -> unit
 val register_named_quotation : name:string -> quotation -> unit
 

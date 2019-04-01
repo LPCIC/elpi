@@ -133,6 +133,11 @@ module C = struct
   let to_string x = out_string x
   let of_string x = CData (in_string x)
 
+  let loc = Elpi_ast.cloc
+  let is_loc = loc.CData.isc
+  let to_loc = loc.CData.cout
+  let of_loc x = CData (loc.CData.cin x)
+
 end
 
 let destConst = function Const x -> x | _ -> assert false
@@ -570,7 +575,7 @@ type clause_w_info = {
 }
 [@@ deriving show]
 
-type macro_declaration = (Elpi_ast.term * Elpi_ast.Loc.t) F.Map.t
+type macro_declaration = (Elpi_ast.term * Loc.t) F.Map.t
 [@@ deriving show]
 
 (* This is paired with a pre-stack term, i.e. a stack term where args are
@@ -606,7 +611,7 @@ let mk_Arg n { c2i; nargs; i2n; n2t; n2i } =
 type preterm = {
   term : term; (* Args are still constants *)
   amap : argmap;
-  loc : Elpi_ast.Loc.t
+  loc : Loc.t
 }
 [@@ deriving show]
 
@@ -630,7 +635,7 @@ type prechr_rule = {
   pamap : argmap;
   pname : string;
   pifexpr : string option;
-  pcloc : Elpi_ast.Loc.t;
+  pcloc : Loc.t;
 }
 [@@ deriving show]
 
@@ -797,7 +802,7 @@ let pp_arg sep fmt (dir,ty,doc) =
   Fmt.fprintf fmt "%s:%s%s" dir ty sep
 ;;
 
-let pp_args = pplist (pp_arg "") "," ~pplastelem:(pp_arg "")
+let pp_args = pplist (pp_arg "") ", " ~pplastelem:(pp_arg "")
 
 let pp_pred fmt docspec name doc_pred args =
   let args = List.rev args in

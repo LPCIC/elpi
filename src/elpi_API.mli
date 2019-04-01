@@ -21,6 +21,23 @@
 (* *************************** Basic API *********************************** *)
 (* ************************************************************************* *)
 
+module Ast : sig
+  type program
+  type query
+
+  module Loc : sig
+    type t = {
+      source_name : string;
+      source_start: int;
+      source_stop: int;
+      line: int;
+      line_starts_at: int;
+    }
+    val pp : Format.formatter -> t -> unit
+    val show : t -> string
+    val equal : t -> t -> bool
+  end
+end
 
 module Setup : sig
 
@@ -50,30 +67,12 @@ module Setup : sig
   val trace : string list -> unit
 
   (** Override default error functions (they call exit) *)
-  val set_warn : (string -> unit) -> unit
-  val set_error : (string -> 'a) -> unit
-  val set_anomaly : (string -> 'a) -> unit
-  val set_type_error : (string -> 'a) -> unit
+  val set_warn : (?loc:Ast.Loc.t -> string -> unit) -> unit
+  val set_error : (?loc:Ast.Loc.t -> string -> 'a) -> unit
+  val set_anomaly : (?loc:Ast.Loc.t -> string -> 'a) -> unit
+  val set_type_error : (?loc:Ast.Loc.t -> string -> 'a) -> unit
   val set_std_formatter : Format.formatter -> unit
   val set_err_formatter : Format.formatter -> unit
-end
-
-module Ast : sig
-  type program
-  type query
-
-  module Loc : sig
-    type t = {
-      source_name : string;
-      source_start: int;
-      source_stop: int;
-      line: int;
-      line_starts_at: int;
-    }
-    val pp : Format.formatter -> t -> unit
-    val show : t -> string
-    val equal : t -> t -> bool
-  end
 end
 
 module Parse : sig
@@ -343,6 +342,12 @@ module Extend : sig
       val is_string : CData.t -> bool
       val to_string : CData.t -> string
       val of_string : string -> term
+
+      (* This is elpi specific *)
+      val loc : Ast.Loc.t CData.cdata
+      val is_loc : CData.t -> bool
+      val to_loc : CData.t -> Ast.Loc.t
+      val of_loc : Ast.Loc.t -> term
     end
 
     (** LambdaProlog built-in global constants *)
@@ -603,6 +608,7 @@ module Extend : sig
     val float  : float data
     val string : string data
     val list   : 'a data -> 'a list data
+    val loc    : Ast.Loc.t data
 
     (* poly "A" is what one would use for, say, [type eq A -> A -> prop] *)
     val poly   : string -> Data.term data
@@ -671,13 +677,13 @@ module Extend : sig
   module Utils : sig
 
     (** A regular error (fatal) *)
-    val error : string -> 'a
+    val error : ?loc:Ast.Loc.t ->string -> 'a
     (** An invariant is broken, i.e. a bug *)
-    val anomaly : string -> 'a
+    val anomaly : ?loc:Ast.Loc.t ->string -> 'a
     (** A type error (in principle ruled out by [elpi-checker.elpi]) *)
-    val type_error : string -> 'a
+    val type_error : ?loc:Ast.Loc.t ->string -> 'a
     (** A non fatal warning *)
-    val warn : string -> unit
+    val warn : ?loc:Ast.Loc.t ->string -> unit
 
     (** link between OCaml and LP lists. Note that [1,2|X] is not a valid
      * OCaml list! *)

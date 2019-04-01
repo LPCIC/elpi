@@ -24,16 +24,6 @@ let default_flags = {
   print_passes = false;
 }
 
-let error ?loc msg =
-  match loc with
-  | None -> error msg
-  | Some loc -> error (A.Loc.show loc ^ ": " ^ msg)
-let type_error ?loc msg =
-  match loc with
-  | None -> type_error msg
-  | Some loc -> type_error (A.Loc.show loc ^ ": " ^ msg)
-
-
 (****************************************************************************
   Intermediate data structures
  ****************************************************************************)
@@ -63,7 +53,7 @@ and cattribute = {
   cifexpr : string option
 }
 and 'a shorthand = {
-  iloc : A.Loc.t;
+  iloc : Loc.t;
   full_name : 'a;
   short_name : 'a;
 }
@@ -92,7 +82,7 @@ and block =
   | Constraints of constant list * prechr_rule list * pbody
 and typ = {
   extern : bool;
-  loc : A.Loc.t;
+  loc : Loc.t;
   decl : type_declaration
 }
 [@@deriving show]
@@ -242,7 +232,7 @@ end = struct (* {{{ *)
          if r.cifexpr <> None then duplicate_err "if";
          aux { r with cifexpr = Some s } rest
     in
-    let cid = A.Loc.show loc in 
+    let cid = Loc.show loc in 
     { c with A.cattributes = aux { cid; cifexpr = None } cattributes }
 
   let run ~flags:_ dl =
@@ -308,7 +298,7 @@ end = struct (* {{{ *)
           aux blocks clauses macros (t::types) modes locals chr rest
       | A.Mode ms :: rest ->
           aux blocks clauses macros types (ms @ modes) locals chr rest
-      | A.Local l :: rest ->
+      | Local l :: rest ->
           aux blocks clauses macros types modes (l::locals) chr rest
       | A.Chr r :: rest ->
           let r = structure_cattributes r in
@@ -333,7 +323,7 @@ end (* }}} *)
 
 module Quotation = struct
 
-  type quotation = depth:int -> CS.t -> A.Loc.t -> string -> CS.t * term
+  type quotation = depth:int -> CS.t -> Loc.t -> string -> CS.t * term
   let named_quotations = ref StrMap.empty
   let default_quotation = ref None
   
@@ -371,10 +361,10 @@ module ToDBL : sig
   (* Exported to compile the query *)
   val preterm_of_ast :
     depth:int -> macro_declaration -> CompilerState.t ->
-      A.Loc.t * A.term -> CompilerState.t * preterm
+      Loc.t * A.term -> CompilerState.t * preterm
   val preterm_of_function :
     depth:int -> macro_declaration -> CompilerState.t -> 
-    (CompilerState.t -> CompilerState.t * (A.Loc.t * term)) ->
+    (CompilerState.t -> CompilerState.t * (Loc.t * term)) ->
       CompilerState.t * preterm
 
   (* Exported for quations *)    
@@ -612,9 +602,9 @@ let preterm_of_ast ~depth macros state (loc, t) =
   let compile_macro m { A.mlocation = loc; A.maname = n; A.mbody } =
     if A.Func.Map.mem n m then begin
       let _, old_loc = F.Map.find n m in
-      error ("Macro "^Elpi_ast.Func.show n^" declared twice:\n"^
-             "first declaration: " ^ A.Loc.show old_loc ^"\n"^
-             "second declaration: " ^ A.Loc.show loc)
+      error ~loc ("Macro "^Elpi_ast.Func.show n^" declared twice:\n"^
+             "first declaration: " ^ Loc.show old_loc ^"\n"^
+             "second declaration: " ^ Loc.show loc)
     end;
     A.Func.Map.add n (mbody,loc) m
 
@@ -1224,7 +1214,7 @@ end = struct (* {{{ *)
       | Some n ->
           if StrMap.mem n s then
             error ~loc ("a clause named " ^ n ^
-                   " already exists at " ^ A.Loc.show (StrMap.find n s))
+                   " already exists at " ^ Loc.show (StrMap.find n s))
           else
             StrMap.add n loc s in
     let compile_clause ({ A.attributes = { StructuredAST.id; ifexpr }} as c) =
@@ -1361,9 +1351,9 @@ let is_builtin tname =
 let check_all_builtin_are_typed types =
    List.iter (fun c ->
      if not (List.exists
-       (fun { StructuredProgram.extern = b; decl = { tname }} ->
+        (fun { StructuredProgram.extern = b; loc; decl = { tname }} ->
             b && tname == c) types) then
-       error("Built-in without external type declaration: " ^ C.show c))
+       error ("Built-in without external type declaration: " ^ C.show c))
    (Builtin.all ());
   List.iter (fun { StructuredProgram.extern = b; loc; decl = { tname }} ->
     if b && not (is_builtin tname) then
@@ -1422,7 +1412,7 @@ end = struct (* {{{ *)
 let compile_chr depth
     { pto_match; pto_remove; pguard; pnew_goal; pamap; pname; pcloc = loc }
 =
-  if depth > 0 then error "CHR: rules and locals are not supported";
+  if depth > 0 then error ~loc "CHR: rules and locals are not supported";
   let key_of_sequent { pconclusion } =
     match pconclusion with
     | Const x -> x
@@ -1449,11 +1439,11 @@ let compile_chr depth
 ;;
   
 let compile_clause modes initial_depth
-  { A.body = ({ amap = { nargs }} as body) }
+    { A.body = ({ amap = { nargs }} as body); loc }
 =
   let body = stack_term_of_preterm ~depth:0 body in
   let cl, _, morelcs = clausify1 modes ~nargs ~depth:initial_depth body in
-  if morelcs <> 0 then error "sigma in a toplevel clause is not supported";
+  if morelcs <> 0 then error ~loc "sigma in a toplevel clause is not supported";
   cl
 
 let rec filter_if defs proj = function
@@ -1626,9 +1616,15 @@ let sorted_names_of_argmap argmap =
     List.map snd |>
     List.map Elpi_data.C.of_string
 
+let quote_loc ?id loc =
+  let source_name =
+    match id with
+    | Some x -> loc.Loc.source_name ^ x ^ ":"
+    | None -> loc.Loc.source_name in
+  CData.(A.cloc.cin { loc with Loc.source_name })
+
 let quote_clause { A.loc; A.attributes = { Assembled.id }; body } =
-  (* horrible hack *)
-  let clloc = CData.(A.cloc.cin (loc, id)) in
+  let clloc = quote_loc ?id loc in
   let qt = close_w_binder argc (quote_preterm body) body.amap in
   let names = sorted_names_of_argmap body.amap in
   App(clausec,CData clloc,[list_to_lp_list names; qt])
@@ -1638,7 +1634,7 @@ let quote_syntax { Query.clauses; query } =
   let names = sorted_names_of_argmap query.amap in
   let clist = List.map quote_clause clauses in
   let q =
-    App(clausec,CData CData.(A.cloc.cin (query.loc,Some "query")), 
+    App(clausec,CData (quote_loc ~id:"query" query.loc),
       [list_to_lp_list names;
        close_w_binder argc (quote_preterm ~on_type:false query) query.amap]) in
   clist, q
@@ -1663,7 +1659,7 @@ let static_check header
     program_of_ast
       ~flags:{ flags with allow_untyped_builtin = true }
       (header @ checker) in
-  let loc = { A.Loc.source_name = "(static_check)";
+  let loc = { Loc.source_name = "(static_check)";
               source_start = 0; source_stop = 0;
               line = 1; line_starts_at = 0 } in
   let query =

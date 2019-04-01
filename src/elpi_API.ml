@@ -43,7 +43,7 @@ let init ~builtins:(fname,decls) ~basedir:cwd argv =
   Elpi_data.Builtin.document fmt decls;
   Format.pp_print_flush fmt ();
   let strm = Stream.of_string (Buffer.contents b) in
-  let loc = { Elpi_ast.Loc.
+  let loc = { Elpi_util.Loc.
     source_name = fname;
     source_start = 0; source_stop = 0; line = 1; line_starts_at = 0; } in
   let header =
@@ -73,7 +73,7 @@ end
 module Ast = struct
   type program = Elpi_ast.program
   type query = Elpi_ast.goal
-  module Loc = Elpi_ast.Loc
+  module Loc = Elpi_util.Loc
 end
 
 module Parse = struct
@@ -260,6 +260,8 @@ module Extend = struct
         map_acc_readback (d.readback ~depth h) solution (lp_list_to_list ~depth t)
       in
       { embed; readback; ty = TyApp ("list",d.ty,[]) }
+
+    let loc = data_of_cdata ~name:"Loc.t" Elpi_data.C.loc
 
     let builtin_of_declaration ~file_name x = file_name, x
 

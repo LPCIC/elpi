@@ -3,6 +3,7 @@
 (* ------------------------------------------------------------------------- *)
 
 module U = Elpi_util
+module Loc = U.Loc
 open Elpi_ast
 
 module Str = Re.Str

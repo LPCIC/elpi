@@ -4,38 +4,6 @@
 
 open Elpi_util
 
-module Loc = struct
-  type t = {
-    source_name : string;
-    source_start: int;
-    source_stop: int;
-    line: int;
-    line_starts_at: int;
-  }
-  [@@deriving eq]
-
-  let to_string {
-    source_name;
-    source_start;
-    source_stop;
-    line;
-    line_starts_at; }
-  =
-    let source =
-     if source_name = "" then ""
-     else source_name ^ ", " in
-    let chars = Printf.sprintf "characters %d-%d" source_start source_stop in
-    let pos =
-      if line = -1 then chars
-      else Printf.sprintf "%s, line %d, column %d"
-             chars line (source_stop - line_starts_at) in
-    source ^ pos
-
-  let pp fmt l = Format.fprintf fmt "%s" (to_string l)
-  let show l = to_string l
-
-end
-
 module Func = struct
 
   module Self = struct
@@ -222,20 +190,18 @@ let { CData.cin = in_int; isc = is_int; cout = out_int } as cint =
 let { CData.cin = in_string; isc = is_string; cout = out_string } as cstring =
   CData.(declare {
     data_name = "string";
-    data_pp = (fun f x -> Fmt.fprintf f "\"%s\"" x);
+    data_pp = (fun f x -> Fmt.fprintf f "%s" x);
     data_eq = (=);
     data_hash = Hashtbl.hash;
     data_hconsed = true;
   })
 let { CData.cin = in_loc; isc = is_loc; cout = out_loc } as cloc =
   CData.(declare {
-    data_name = "loc";
-    data_pp = (fun f (x,name) ->
+    data_name = "Loc.t";
+    data_pp = (fun f x ->
       let bname = Filename.basename x.Loc.source_name in
       let line_no = x.Loc.line in
-      match name with
-      | None -> Fmt.fprintf f "%s:%4d:" bname line_no 
-      | Some name -> Fmt.fprintf f "%s:%4d:%s:" bname line_no name);
+      Fmt.fprintf f "%s:%4d:" bname line_no); 
     data_eq = (=);
     data_hash = Hashtbl.hash;
     data_hconsed = false;
