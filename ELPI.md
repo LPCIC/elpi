@@ -264,7 +264,8 @@ Notes about `elpi-checker.elpi`:
 - `o` is written `prop`, since `o` is already used to mean output in `mode` (and `i` to mean input).
   Anyway `o` is accepted in type declarations and is translated on the fly to `prop`.
 - constants with no associated type generate a warning
-  - unless the name of the constant is `main` or ends in `.aux`
+  - unless the name of the full name of the constant (after namespace
+    elimination) is `main` or ends in `.aux` or contains `.aux.`
 
 ## Subterm naming
 

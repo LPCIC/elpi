@@ -238,6 +238,7 @@ str_concat [S|SS] R :- str_concat SS RR, R is S ^ " " ^ RR.
 
 warn-undeclared Known ((const "main") `: _) :- !.
 warn-undeclared Known ((const S) `: _) :- rex_match ".*\\.aux" S, !.
+warn-undeclared Known ((const S) `: _) :- rex_match ".*\\.aux\\." S, !.
 warn-undeclared Known ((const S) `: LOC) :-
   filter-similar Known S Hints,
   if (Hints = []) (H = "") (H is " Did you mean " ^ {str_concat Hints} ^ "?"),
