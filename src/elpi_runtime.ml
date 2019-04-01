@@ -47,7 +47,7 @@ let xppterm ~nice ?(min_prec=min_prec) depth0 names argsdepth env f t =
    if args = [] then pphd f hd
    else
     Fmt.fprintf f "@[<hov 1>%a@ %a@]" pphd hd
-     (pplist pparg ?pplastelem:pplastarg "") args in
+     (pplist pparg ?pplastelem:pplastarg " ") args in
   let ppconstant f c = Fmt.fprintf f "%s" (C.show c) in
   let rec pp_uvar prec depth vardepth args f r =
    if !!r == C.dummy then begin
@@ -117,7 +117,7 @@ let xppterm ~nice ?(min_prec=min_prec) depth0 names argsdepth env f t =
    | (Cons _ | Nil) ->
       let prefix,last = flat_cons_to_list depth [] t in
       Fmt.fprintf f "[" ;
-      pplist ~boxed:true (aux Elpi_parser.list_element_prec depth) "," f prefix ;
+      pplist ~boxed:true (aux Elpi_parser.list_element_prec depth) ", " f prefix ;
       if last != Nil then begin
        Fmt.fprintf f " | " ;
        aux prec 1 f last
@@ -159,7 +159,7 @@ let xppterm ~nice ?(min_prec=min_prec) depth0 names argsdepth env f t =
           else appl_prec in
          with_parens hdlvl (fun _ ->
           if hd == C.andc then
-            pplist (aux inf_prec depth) ~pplastelem:(aux_last inf_prec depth) "," f (x::xs)
+            pplist (aux inf_prec depth) ~pplastelem:(aux_last inf_prec depth) ", " f (x::xs)
           else pp_app f ppconstant (aux inf_prec depth)
                  ~pplastarg:(aux_last inf_prec depth) (hd,x::xs)))
     | Builtin (hd,xs) ->
@@ -415,21 +415,21 @@ let print =
   let pp_depth fmt d =
     if d > 0 then
       Fmt.fprintf fmt "{%a} :@ "
-        (pplist (uppterm d [] 0 empty_env) "") (C.mkinterval 0 d 0) in
+        (pplist (uppterm d [] 0 empty_env) " ") (C.mkinterval 0 d 0) in
   let pp_ctx fmt ctx =
     if ctx <> [] then
      Fmt.fprintf fmt "@[<hov 2>%a@]@ ?- "
       (pplist (fun fmt { hdepth = d; hsrc = t } ->
-                 uppterm d [] 0 empty_env fmt t) ",") ctx in
+                 uppterm d [] 0 empty_env fmt t) ", ") ctx in
   let pp_goal depth = uppterm depth [] 0 empty_env in
   pplist (fun fmt ({ cdepth=depth;context=pdiff; conclusion=g }, blockers) ->
     Fmt.fprintf fmt " @[<h>@[<hov 2>%a%a%a@]@  /* suspended on %a */@]"
       pp_depth depth
       pp_ctx pdiff
       (pp_goal depth) g
-      (pplist (uppterm 0 [] 0 empty_env) ",")
+      (pplist (uppterm 0 [] 0 empty_env) ", ")
         (List.map (fun r -> UVar(r,0,0)) blockers)
-  ) ""
+  ) " "
 
 let pp_stuck_goal fmt { kind; blockers } = match kind with
    | Unification { adepth = ad; env = e; bdepth = bd; a; b } ->
@@ -437,7 +437,7 @@ let pp_stuck_goal fmt { kind; blockers } = match kind with
        " @[<h>@[<hov 2>^%d:%a@ == ^%d:%a@]@  /* suspended on %a */@]"
         ad (uppterm ad [] 0 empty_env) a
         bd (uppterm ad [] ad e) b
-          (pplist ~boxed:false (uppterm 0 [] 0 empty_env) ",")
+          (pplist ~boxed:false (uppterm 0 [] 0 empty_env) ", ")
             (List.map (fun r -> UVar(r,0,0)) blockers)
    | Constraint c -> print fmt [c,blockers]
 
@@ -863,7 +863,7 @@ and decrease_depth r ~from ~to_ argsno =
    the ts are lifted as usual *)
 and subst fromdepth ts t =
  [%trace "subst" ("@[<hov 2>fromdepth:%d t: %a@ ts: %a@]" fromdepth
-   (uppterm (fromdepth) [] 0 empty_env) t (pplist (uppterm fromdepth [] 0 empty_env) ",") ts)
+   (uppterm (fromdepth) [] 0 empty_env) t (pplist (uppterm fromdepth [] 0 empty_env) ", ") ts)
  begin
  if ts == [] then t
  else
@@ -929,7 +929,7 @@ and subst fromdepth ts t =
 and beta depth sub t args =
  [%trace "beta" ("@[<hov 2>subst@ t: %a@ args: %a@]"
      (uppterm (depth+List.length sub) [] 0 empty_env) t
-     (pplist (uppterm depth [] 0 empty_env) ",") args)
+     (pplist (uppterm depth [] 0 empty_env) ", ") args)
  begin match t, args with
  | UVar ({contents=g},vardepth,argsno), _ when g != C.dummy ->
     [%tcall beta depth sub
@@ -1105,8 +1105,8 @@ let is_llam lvl args adepth bdepth depth left e =
 let is_llam lvl args adepth bdepth depth left e =
   let res = is_llam lvl args adepth bdepth depth left e in
   [%spy "is_llam" (fun fmt (b,map) -> Fmt.fprintf fmt "%d + %a = %b, %a"
-    lvl (pplist (ppterm adepth [] bdepth e) "") args b
-    (pplist (fun fmt (x,n) -> Fmt.fprintf fmt "%d |-> %d" x n) "") map) res];
+    lvl (pplist (ppterm adepth [] bdepth e) " ") args b
+    (pplist (fun fmt (x,n) -> Fmt.fprintf fmt "%d |-> %d" x n) " ") map) res];
   res
 
 let rec mknLam n t = if n = 0 then t else mknLam (n-1) (Lam t)
@@ -1150,7 +1150,7 @@ let bind r gamma l a d delta b left t e =
   let rec bind b delta w t =
     [%trace "bind" ("%b gamma:%d + %a = t:%a a:%d delta:%d d:%d w:%d b:%d"
         left gamma (pplist (fun fmt (x,n) -> Fmt.fprintf fmt "%a |-> %d"
-        (ppterm a [] b e) (mkConst x) n) "") l
+        (ppterm a [] b e) (mkConst x) n) " ") l
         (ppterm a [] b empty_env) t a delta d w b) begin
     match t with
     | UVar (r1,_,_) | AppUVar (r1,_,_) when r == r1 -> raise RestrictionFailure
