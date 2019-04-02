@@ -635,7 +635,8 @@ let lp_builtins = [
     Easy       "parses a term T from S")),
   (fun s _ ~depth ->
      try
-       let t = Parse.goal s in
+       let loc = Ast.Loc.initial "(string_of_term)" in
+       let t = Parse.goal loc s in
        let t = Compile.term_at ~depth t in
        !:t
      with
@@ -647,10 +648,11 @@ let lp_builtins = [
     In(in_stream, "InStream",
     Out(any,      "T",
     Easy          "reads T from InStream")),
-  (fun (i,_) _ ~depth ->
+  (fun (i,source_name) _ ~depth ->
      try
+       let loc = Ast.Loc.initial source_name in
        let strm = Stream.of_channel i in
-       let t = Parse.goal_from_stream strm in
+       let t = Parse.goal_from_stream loc strm in
        let t = Compile.term_at ~depth t in
        !:t
      with 
@@ -729,7 +731,8 @@ let elpi_builtins = [
               "See elpi_quoted_syntax.elpi for the syntax tree"))))),
    (fun f s _ _ ~depth ->
       let ap = Parse.program [f] in
-      let aq = Parse.goal s in
+      let loc = Ast.Loc.initial "(quote_syntax)" in
+      let aq = Parse.goal loc s in
       let p =
         Elpi_API.Compile.(program ~flags:default_flags dummy_header [ap]) in
       let q = Elpi_API.Compile.query p aq in

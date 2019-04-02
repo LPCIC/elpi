@@ -36,6 +36,8 @@ module Ast : sig
     val pp : Format.formatter -> t -> unit
     val show : t -> string
     val equal : t -> t -> bool
+
+    val initial : string -> t
   end
 end
 
@@ -84,8 +86,8 @@ module Parse : sig
     Ast.Loc.t -> char Stream.t -> Ast.program
 
   (** [goal file_list] parses the query *)
-  val goal : string -> Ast.query
-  val goal_from_stream : char Stream.t -> Ast.query
+  val goal : Ast.Loc.t -> string -> Ast.query
+  val goal_from_stream : Ast.Loc.t -> char Stream.t -> Ast.query
 
   exception ParseError of Ast.Loc.t * string
 end

@@ -138,16 +138,17 @@ let _ =
     exit 0;
   end;
   let g =
-    if !test then Elpi_API.Parse.goal "main."
+    if !test then Elpi_API.Parse.goal (Elpi_API.Ast.Loc.initial "(-test)") "main."
     else if !exec <> "" then
       begin Elpi_API.Parse.goal
+        (Elpi_API.Ast.Loc.initial "(-exec)")
         (Printf.sprintf "%s [%s]." !exec
           String.(concat ", " (List.map (Printf.sprintf "\"%s\"") !args)))
          end
     else begin
      Printf.printf "goal> %!";
      let strm = Stream.of_channel stdin in
-     try Elpi_API.Parse.goal_from_stream strm
+     try Elpi_API.Parse.goal_from_stream (Elpi_API.Ast.Loc.initial "(stdin)") strm
      with Elpi_API.Parse.ParseError(loc,err) ->
         Printf.eprintf "%s: %s\n" (Elpi_API.Ast.Loc.show loc) err;
         exit 1;

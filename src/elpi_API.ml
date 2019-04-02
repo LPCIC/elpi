@@ -43,9 +43,7 @@ let init ~builtins:(fname,decls) ~basedir:cwd argv =
   Elpi_data.Builtin.document fmt decls;
   Format.pp_print_flush fmt ();
   let strm = Stream.of_string (Buffer.contents b) in
-  let loc = { Elpi_util.Loc.
-    source_name = fname;
-    source_start = 0; source_stop = 0; line = 1; line_starts_at = 0; } in
+  let loc = Elpi_util.Loc.initial fname in
   let header =
     Elpi_parser.parse_program_from_stream
       ~print_accumulated_files:false loc strm in
@@ -81,8 +79,8 @@ module Parse = struct
     Elpi_parser.parse_program ~print_accumulated_files
   let program_from_stream ?(print_accumulated_files=false) =
     Elpi_parser.parse_program_from_stream ~print_accumulated_files
-  let goal s = Elpi_parser.parse_goal s
-  let goal_from_stream s = Elpi_parser.parse_goal_from_stream s
+  let goal loc s = Elpi_parser.parse_goal ~loc s
+  let goal_from_stream loc s = Elpi_parser.parse_goal_from_stream ~loc s
   exception ParseError = Elpi_parser.ParseError
 end
 

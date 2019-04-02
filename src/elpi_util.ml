@@ -117,6 +117,14 @@ module Loc = struct
   let pp fmt l = Fmt.fprintf fmt "%s" (to_string l)
   let show l = to_string l
 
+  let initial source_name = {
+    source_name;
+    source_start = 0;
+    source_stop = 0;
+    line = 1;
+    line_starts_at = 0;
+  }
+
 end
 
 let pplist ?(max=max_int) ?(boxed=false) ppelem ?(pplastelem=ppelem) sep f l =

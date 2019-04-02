@@ -1659,9 +1659,7 @@ let static_check header
     program_of_ast
       ~flags:{ flags with allow_untyped_builtin = true }
       (header @ checker) in
-  let loc = { Loc.source_name = "(static_check)";
-              source_start = 0; source_stop = 0;
-              line = 1; line_starts_at = 0 } in
+  let loc = Elpi_util.Loc.initial "(static_check)" in
   let query =
     query_of_term checker (fun ~depth state ->
       assert(depth=0);

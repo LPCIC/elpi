@@ -73,6 +73,7 @@ module Loc : sig
   val show : t -> string
   val pp : Format.formatter -> t -> unit
   val equal : t -> t -> bool
+  val initial : string -> t
 end
 
 (******************** list ******************)
