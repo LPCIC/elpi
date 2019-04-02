@@ -47,7 +47,7 @@ autocmd FileType lprolog syn match lprologClauseSymbols ":-"
 autocmd FileType lprolog syn match lprologClauseSymbols "\."
 autocmd FileType lprolog hi def link lprologClauseSymbols Type
 
-autocmd FileType lprolog syn keyword elpiKeyword mode macro type pred namespace rule constraint uvar
+autocmd FileType lprolog syn keyword elpiKeyword mode macro type pred namespace rule constraint uvar shorten
 autocmd FileType lprolog syn match elpiKeyword ":before"
 autocmd FileType lprolog syn match elpiKeyword ":after"
 autocmd FileType lprolog syn match elpiKeyword ":name"
