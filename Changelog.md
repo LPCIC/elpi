@@ -1,12 +1,18 @@
-## Version 1.2 (... 2019)
+## Version 1.2 (April 2019)
+
+Fix:
+ - equality up-to eta on rigid terms (used to work only on flexible terms)
+ - `expand_*` in charge of putting unification variables in canonical form
+   was sometimes omitting some lambdas in one of its outputs
 
 Language:
+ - `shorten` directive to give short names to symbols that live in namespaces, e.g.
+   `shorten std.rev` lets one write `rev` instead of `std.rev`
+ - spilling understands implication and conjunction, e.g. `g { h => (a, f) }`
+   becomes `(h => (a, f X)), g X`
  - syntax of `.. as X` to bind subterms in the head of a clause changed
    precedence. In particular `lam x\ B as X` binds `lam x\ B` to `X`
    (instead of just `B`)
- - spilling understands implication and conjunction, e.g. `g { h => (a, f) }`
-   becomes `(h => (a, f X)), g X`
- - `shorten` directive to give short names to symbols that live in namespaces
    
 Library:
  - predefined types:
@@ -15,7 +21,23 @@ Library:
    + `pair A B` with `pr A B`, `fst` and `snd`
  - predefined control structure:
    + `if C T E`
- - utility predicates, mostly about lists, in the `std` namespace
+ - standard library (taken from coq-elpi) in the `std` namespace.
+ 
+   Conventions:
+   + all errors are signalled using one of the following two symbols
+     that can be overridden by grafting clauses to hide them
+     - `:name "default-fatal-error" fatal-error M :- stop M.`
+     - `:name "default-fatal-error-w-data" fatal-error-w-data M D :- stop M ":" D.`
+   + the `!` suffix is for (variants) of predicates that generate only the
+     first solution
+   + all predicates have mode declarations that follow their functional interpretation;
+     variants keeping the relational interpretation are named using the `R` suffix
+     
+   Symbols: `debug-print`, `ignore-failure!`, `assert!`, `spy`, `spy!`, `unsafe-cast`,
+   `length`, `rev`, `last`, `append`, `appendR`, `take`, `drop`, `drop-last`, `split-at`,
+   `fold`, `fold2`, `map`, `map-i`, `map2`, `map2_filter`, `nth`, `lookup`, `lookup!`,
+   `mem`, `exists`, `exists2`, `forall`, `forall2`, `filter`, `zip`, `unzip`, `flatten`,
+   `null`, `iota`, `flip`, `time`, `do!`, `spy-do!`, `any->string`
 
 Builtin:
  - `name` is now typed as `any -> variadic any prop` to support the following
@@ -28,43 +50,45 @@ Builtin:
  - `halt` now accepts any term, not just strings
 
 API:
- - new data type of locations in the source file
- - exception ParseError(location, message) systematically used in the
+ - new data type of locations in the source file: `Ast.Loc.t`
+ - exception `ParseError(loc, message)` systematically used in the
    parsing API (no more leak of exceptions or data types from the internal
-   parsing engine, still camlp5 for now)
+   parsing engine, eg no more `NotInProlog` or `Stream.Error` exceptions)
  - type of quotations handlers changed: they now receive in input the location
-   of the quoted text in order to be able to locate their own parsing error
-   messages
+   of the quoted text in order to be able to locate their own parsing errors
  - simplified term constructors:
    + `mkConst` split into `mkGlobal` and `mkBound`
    + variants with trailing `S` taking a `string` rather than
-     a global constant, e.g. `mkAppS`, `mkGlobalS`, `mkBuiltinS`.
-     `mkBuiltinName` got removed
+     a global constant, e.g. `mkAppS`, `mkGlobalS`, `mkBuiltinS`
+   + `mkBuiltinName` removed (replace by `mkBuiltinS`)
+   + constant `spillc` exported: one can not build a term such as `f {g a}`
+     by writing `mkAppS "f" (mkApp spillc (mkAppS "g" (mkGlobalS "a") []) []`
  - FFI:
    + `to_term` and `of_term` renamed to `embed` and `readback` and made stateful.
-     That is they see the state, hypothetical context and constraint store (as
-     `Full` ffi builtins do) and can return an updated state
+     They can access the state, the hypothetical context and the constraint store
+     (exactly as `Full` ffi builtins do) and can return an updated state. Moreover
+     `embed` can generate new goals (eg declaration of constraints) so that data that
+     requires companion constraints fits the capabilities of the FFI (no need to
+     simulate that by using a `Full` predicate with arguments of type `any`, as coq-elpi
+     was doing)
    + Arguments to builtin predicates now distinguish between
-     - In: ML code must receive the data, type error is the data cannot
+     - `In` ML code must receive the data, type error is the data cannot
        be represented in ML
-     - Out: ML code received Keep or Discard (and not data) so that it can
+     - `Out` ML code received `Keep` or `Discard` so that it can
        avoid generating data the caller is not binding back
-     - InOut: ML code receives (Data of 'a) or NoData. The latter case is
-       when the caller passed _
-   + `ty` is no more a string but an AST
+     - `InOut` ML code receives `Data of 'a` or `NoData`. The latter case is
+       when the caller passed `_`, while the former contains the actual data
+   + In the declaration of a data type for the FFI, the `ty` field is no more a
+     string but an AST, so that containers (eg `val list : 'a data -> 'a list data`)
+     can more easily generate the composite type
 
-Compilation:
+Compiler:
  - handling of locations for quotations
- - better error reporting, in particular spilling errors come with a location
+ - better error reporting: many errors now come with a location
 
 REPL:
  - more structure in the output `--help` including hints for the tracing options
  - new option `-print-passes` to debug the compiler
-
-Fix:
- - `expand_*` in charge of putting unification variables in canonical form
-   was sometimes omitting some lambdas in one of its outputs
- - equality up-to eta on rigid terms (used to work only on flexible terms)
 
 Test Suite:
  - rewritten using more OCaml & Dune and less bash & make. Requires
