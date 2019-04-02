@@ -326,6 +326,9 @@ let core_builtins = [
 
   LPCode "type stop variadic any prop.";
   LPCode "stop :- halt.";
+  LPCode "stop A :- halt A.";
+  LPCode "stop A B :- halt A B.";
+  LPCode "stop A B C :- halt A B C.";
 
   LPDoc " -- Evaluation --";
 

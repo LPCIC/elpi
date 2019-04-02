@@ -59,6 +59,12 @@ type stop variadic any prop.
 
 stop :- halt.
 
+stop A :- halt A.
+
+stop A B :- halt A B.
+
+stop A B C :- halt A B C.
+
 %  -- Evaluation --
 
 % [calc Expr Out] unifies Out with the value of Expr. It can be used in
