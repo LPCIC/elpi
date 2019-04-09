@@ -133,7 +133,7 @@ type decl =
  | Begin of Loc.t
  | Namespace of Loc.t * Func.t
  | Constraint of Loc.t * Func.t list
- | Shorten of Loc.t * Func.t
+ | Shorten of Loc.t * Func.t * Func.t (* prefix suffix *)
  | End of Loc.t
 
  | Accumulated of Loc.t * decl list

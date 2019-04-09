@@ -4,7 +4,7 @@
 
 accumulate elpi_quoted_syntax.
 
-shorten std.{spy rev exists}.
+shorten std.{spy, rev, exists}.
 
 macro @vdash :- ":-". % work around bug in Vim's syntax highlight
 

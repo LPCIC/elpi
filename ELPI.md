@@ -665,17 +665,30 @@ namespace list {
   rev L RL :- ...
 }
 
-shorten list.append.
+shorten list.{ append }.
 
 main :- append L1 L2 R. 
 ```
+
+The part of the namespace before `{` is elided, what is inside is kept.
+For example:
+
+```prolog
+shorten my.{ long.name }.
+shorten my.long.{ othername }.
+
+main :- long.name, othername. 
+```
+the body of `main` is equivalent to
+```prolog
+main :- my.long.name, my.long.othername. 
 
 The scope of the `shorten` directive ends with the current file or
 with the end of the enclosing code block.
 
 ```prolog
 namespace stuff {
-  shorten list.rev.
+  shorten list.{ rev }.
   code :- ...
 } % end of shorten list.rev.
 
@@ -685,9 +698,9 @@ main :- stuff.code, list.rev L1 L2 R. % only long name is accessible
 The `shorten` directive accepts a "trie" of qualified names
 with the following syntax.
 ```prolog
-shorten std.{list.map string.{concat escape}}.
+shorten std.{ list.map, string.{ concat, escape }}.
 
-main :- map F [], concat "a" "b" AB, escape "x y" E.
+main :- list.map F [], concat "a" "b" AB, escape "x y" E.
 ```
 Here `main` calls `std.list.map`, `std.string.concat` and finally
 `std.string.escape`.

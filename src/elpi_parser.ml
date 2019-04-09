@@ -599,11 +599,16 @@ EXTEND
         mkApp (of_ploc loc) [mkCon "->";t;ty]) a (mkCon "prop"))
   ]];
   attributes : [[ COLON; l = LIST1 attribute SEP COLON-> l ]];
-  string_trie :
-    [ [ name = CONSTANT -> [name]
+  string_trie_aux :
+    [ [ name = CONSTANT -> [name,name]
       | prefix = CONSTANT; FULLSTOP;
-          LCURLY; hd = string_trie; tl = LIST1 string_trie; RCURLY ->
-        List.map (fun x -> prefix ^ "." ^ x) (hd @ List.flatten tl)
+          LCURLY; l = LIST1 SELF SEP SYMBOL ","; RCURLY ->
+        List.map (fun (p,x) -> prefix ^ "." ^ p, x) (List.flatten l)
+  ]];
+  string_trie :
+    [ [ prefix = CONSTANT; FULLSTOP;
+          LCURLY; l = LIST1 string_trie_aux SEP SYMBOL ","; RCURLY ->
+        List.map (fun (p,x) -> prefix ^ "." ^ p, x) (List.flatten l)
   ]];
   clause :
     [[ attributes = OPT attributes; f = atom; FULLSTOP ->
@@ -650,7 +655,9 @@ EXTEND
      | USE_SIG; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
          accumulate loc ".sig" filenames
      | SHORTEN; names = string_trie; FULLSTOP ->
-        List.map (fun name -> Shorten(of_ploc loc, Func.from_string name)) names
+        List.map (fun (prefix, name) ->
+          Shorten(of_ploc loc, Func.from_string prefix, Func.from_string name))
+          names
      | LOCAL; vars = LIST1 const_sym SEP SYMBOL ","; FULLSTOP ->
         List.map (fun x -> mkLocal x) vars
      | LOCAL; vars = LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP ->

@@ -267,15 +267,7 @@ end = struct (* {{{ *)
             error "locals cannot be declared inside a namespace block";
           aux_end_block loc (Namespace (n,p) :: cl2b clauses @ blocks)
             [] macros types modes locals chr rest
-      | A.Shorten (loc,full_name) :: rest ->
-          let name = A.Func.show full_name in
-          let short_name =
-            try
-              let n = String.rindex name '.' in
-              A.Func.from_string
-                 (String.sub name (n+1) (String.length name - n - 1))
-            with Not_found ->
-              error ~loc ("shorthand "^name^" has no namespace") in
+      | A.Shorten (loc,full_name,short_name) :: rest ->
           let shorthand = { iloc = loc; full_name; short_name } in  
           let p, locals1, chr1, rest = aux [] [] [] [] [] [] [] rest in
           if locals1 <> [] then

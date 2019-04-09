@@ -11,20 +11,20 @@ baz :- fail.
   }
 
 
-shorten bar.baz.
+shorten bar.{ baz }.
 
 }
 
 namespace a {
 
-  shorten b.foo.
-  shorten b.bar.baz.
+  shorten b.{ foo }.
+  shorten b.bar.{ baz }.
   
   main :- foo, b.foo, baz, bar.baz, b.bar.baz.
 
   bar.baz :- true.
 
-  shorten b.baz.
+  shorten b.{ baz }.
   
   baz :- true.
   bar.baz :- baz.
