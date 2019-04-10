@@ -647,9 +647,9 @@ EXTEND
      | MODULE; CONSTANT; FULLSTOP -> []
      | SIG; CONSTANT; FULLSTOP -> []
      | ACCUMULATE; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
-         accumulate loc ".mod" filenames
+         accumulate loc ".elpi" filenames
      | IMPORT; filenames=LIST1 CONSTANT SEP SYMBOL ","; FULLSTOP ->
-         accumulate loc ".mod" filenames
+         accumulate loc ".elpi" filenames
      | ACCUM_SIG; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
          accumulate loc ".sig" filenames
      | USE_SIG; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
