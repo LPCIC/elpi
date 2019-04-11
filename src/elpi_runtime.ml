@@ -2545,35 +2545,36 @@ let declare_constraint ~depth prog args =
 let qnames = Fork.new_local StrMap.empty
 let qenv = Fork.new_local empty_env
 
-let type_err bname n ty t =
+let type_err ~depth bname n ty t =
   type_error ("builtin " ^ bname ^ ": " ^ string_of_int n ^ "th argument: expected " ^ ty ^ ": got " ^
-    match t with
-    | None -> "discard"
-    | Some t -> show_term t)
+  match t with
+  | None -> "_"
+  | Some t -> Format.asprintf "%a" (uppterm depth [] 0 empty_env) t)
 
-let arity_err bname n t =
+let arity_err ~depth bname n t =
   type_error ("builtin " ^ bname ^ ": " ^ 
     match t with
     | None -> string_of_int n ^ "th argument is missing"
-    | Some t -> "too many arguments at: " ^ show_term t)
+    | Some t -> "too many arguments at: " ^
+                  Format.asprintf "%a" (uppterm depth [] 0 empty_env) t)
 
 let out_of_term ~depth { Builtin.readback; ty } n bname hyps constraints assignments state t =
   match deref_head ~depth t with
   | Discard -> Builtin.Discard
   | _ -> Builtin.Keep
 
-let in_of_term ~depth { Builtin.readback; ty } n bname hyps constraints assignments state t =
+let in_of_term ~depth { Builtin.readback } n bname hyps constraints assignments state t =
   try readback ~depth hyps { constraints; assignments; state } t
-  with Builtin.TypeErr t -> type_err bname n (Builtin.show_ty_ast ty) (Some t)
+  with Builtin.TypeErr(ty,t) -> type_err ~depth bname n (Builtin.show_ty_ast ty) (Some t)
 
-let inout_of_term ~depth { Builtin.readback; ty } n bname hyps constraints assignments state t =
+let inout_of_term ~depth { Builtin.readback } n bname hyps constraints assignments state t =
   match deref_head ~depth t with
   | Discard -> state, Builtin.NoData
   | _ ->
      try
        let state, t = readback ~depth hyps { constraints; assignments; state } t in
        state, Builtin.Data t
-     with Builtin.TypeErr t -> type_err bname n (Builtin.show_ty_ast ty) (Some t)
+     with Builtin.TypeErr(ty,t) -> type_err ~depth bname n (Builtin.show_ty_ast ty) (Some t)
 
 let mk_out_assign ~depth { Builtin.embed } bname hyps constraints assignments state input v  output =
   match output, input with
@@ -2660,8 +2661,8 @@ let call (Builtin.Pred(bname,ffi,compute)) ~depth hyps constraints assignments s
           state, ass @ l in
         aux ffi ~compute:(compute i) ~reduce rest (n + 1) state
 
-    | _, t :: _ -> arity_err bname n (Some t)
-    | _, [] -> arity_err bname n None
+    | _, t :: _ -> arity_err ~depth bname n (Some t)
+    | _, [] -> arity_err ~depth bname n None
 
   in
     let reduce state _ = state, [] in
