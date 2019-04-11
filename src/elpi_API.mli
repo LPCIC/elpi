@@ -583,10 +583,22 @@ module Extend : sig
 
     (** Commodity API for representing simple ADT (no binders)
      *
-     *  Example
+     *  Example for elpi_builtin:
+     * let option_adt a = {
+     *   adt_ty = TyApp("option",a.ty,[]);
+     *   adt_doc = "The option type (aka Maybe)";
+     *   constructors = [
+     *     K("none",N,
+     *       None,
+     *       (fun ~ok ~ko -> function None -> ok | _ -> ko ())); 
+     *     K("some",A(a,N),
+     *       (fun x -> Some x),
+     *       (fun ~ok ~ko -> function Some x -> ok x | _ -> ko ())); 
+     *   ]
+     * }
+     * let option a = adt (option_adt a)
      *
-     *
-     * *)
+     *)
 
     type ('matched, 't) match_t =
       (* continuation to call passing subterms *)

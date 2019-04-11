@@ -81,6 +81,7 @@ API:
    + In the declaration of a data type for the FFI, the `ty` field is no more a
      string but an AST, so that containers (eg `val list : 'a data -> 'a list data`)
      can more easily generate the composite type
+   + New GADT to describe simple ADTs (with no binders)
 
 Compiler:
  - handling of locations for quotations
