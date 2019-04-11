@@ -35,6 +35,7 @@ let init ~builtins:(fname,decls) ~basedir:cwd argv =
    * program specific *)
   List.iter (function
     | Elpi_data.Builtin.MLCode (p,_) -> Elpi_data.Builtin.register p
+    | Elpi_data.Builtin.MLADT _ -> ()
     | Elpi_data.Builtin.LPCode _ -> ()
     | Elpi_data.Builtin.LPDoc _ -> ()) decls;
   (* This is a bit ugly, since we print and then parse... *)
@@ -42,11 +43,22 @@ let init ~builtins:(fname,decls) ~basedir:cwd argv =
   let fmt = Format.formatter_of_buffer b in
   Elpi_data.Builtin.document fmt decls;
   Format.pp_print_flush fmt ();
-  let strm = Stream.of_string (Buffer.contents b) in
+  let text = Buffer.contents b in
+  let strm = Stream.of_string text in
   let loc = Elpi_util.Loc.initial fname in
   let header =
-    Elpi_parser.parse_program_from_stream
-      ~print_accumulated_files:false loc strm in
+    try
+      Elpi_parser.parse_program_from_stream
+        ~print_accumulated_files:false loc strm 
+    with Elpi_parser.ParseError(loc,msg) ->
+      List.iteri (fun i s ->
+        Printf.eprintf "%4d: %s\n" (i+1) s)
+        (String.split_on_char '\n' text);
+      Printf.eprintf "Excerpt of %s:\n%s\n" fname
+       (String.sub text loc.Elpi_util.Loc.line_starts_at
+         Elpi_util.Loc.(loc.source_stop-loc.line_starts_at));
+      Elpi_util.anomaly ~loc msg
+  in
   header, new_argv
 
 let trace args =
@@ -206,9 +218,17 @@ module Extend = struct
     exception No_clause = Elpi_data.No_clause
     include Elpi_data.Builtin
 
+    let adt { adt_ty; constructors } = 
+      let constructors = compile_constructors constructors in {
+      ty = adt_ty;
+      readback = (ADT.readback ~look:Data.look adt_ty constructors);
+      embed = (ADT.embed adt_ty constructors);
+    }
+
     let data_of_cdata ~name:ty ?(constants=Data.Constants.Map.empty)
       { CData.cin; isc; cout }
     =
+      let ty = TyName ty in
       let embed ~depth:_ _ { Data.state } x =
         state, Data.CData (cin x), [] in
       let readback ~depth _ { Data.state } t =
@@ -217,9 +237,9 @@ module Extend = struct
         | Data.CData c when isc c -> state, cout c
         | Data.Const i as t when i < 0 ->
             begin try state, Data.Constants.Map.find i constants
-            with Not_found -> raise (TypeErr t) end
-        | t -> raise (TypeErr t) in
-      { embed; readback; ty = TyName ty }
+            with Not_found -> raise (TypeErr(ty,t)) end
+        | t -> raise (TypeErr(ty,t)) in
+      { embed; readback; ty }
 
     let int    = data_of_cdata ~name:"int" Elpi_data.C.int
     let float  = data_of_cdata ~name:"float" Elpi_data.C.float

@@ -702,7 +702,7 @@ let rec show_ty_ast ?(outer=true) = function
 type 'a oarg = Keep | Discard
 type 'a ioarg = Data of 'a | NoData
 
-exception TypeErr of term
+exception TypeErr of ty_ast * term
 
 type extra_goals = term list
 
@@ -732,8 +732,32 @@ type t = Pred : name * ('a,unit) ffi * 'a -> t
 
 type doc_spec = DocAbove | DocNext
 
+(* ADT *)
+type ('matched, 't) match_t =
+  ok:'matched ->
+  ko:(unit -> custom_state * term * extra_goals) ->
+  't -> custom_state * term * extra_goals
+
+type ('b,'m,'t) constructor_arguments =
+  | N : ('t,custom_state * term * extra_goals, 't) constructor_arguments
+  | A : 'a data * ('b,'m,'t) constructor_arguments -> ('a -> 'b, 'a -> 'm, 't) constructor_arguments
+  | S : ('b,'m,'t) constructor_arguments -> ('t -> 'b, 't -> 'm, 't) constructor_arguments
+    
+type 't constructor =
+  K : string *
+      ('build_t,'matched_t,'t) constructor_arguments *
+      'build_t * ('matched_t,'t) match_t
+    -> 't constructor
+
+type 't adt = {
+  adt_doc : doc;
+  adt_ty : ty_ast;
+  constructors : 't constructor list;
+}
+
 type declaration =
   | MLCode of t * doc_spec
+  | MLADT : 'a adt -> declaration
   | LPDoc  of string
   | LPCode of string
 
@@ -767,6 +791,101 @@ let from_builtin_name x =
   if not (is_declared c) then error ("No builtin called " ^ x);
   c
 
+module ADT = struct
+
+  type 't constructor =
+      K : ('build_t,'matched_t,'t) constructor_arguments *
+      'build_t * ('matched_t,'t) match_t
+    -> 't constructor
+  
+  type 't adt = ('t constructor) Constants.Map.t
+
+  let rec readback_args : type a m t.
+    look:(depth:int -> term -> term) ->
+    ty_ast -> t adt -> depth:int -> hyps -> solution -> term ->
+    (a,m,t) constructor_arguments -> a -> term list ->
+      custom_state * t
+  = fun ~look ty adt ~depth hyps solution origin args convert l ->
+      match args, l with
+      | N, [] -> solution.state, convert
+      | N, _ -> raise (TypeErr(ty,origin))
+      | A _, [] -> assert false
+      | S _, [] -> assert false
+      | A(d,rest), x::xs ->
+        let state, x = d.readback ~depth hyps solution x in
+        readback_args ~look ty adt ~depth hyps { solution with state } origin
+          rest (convert x) xs
+      | S rest, x::xs ->
+        let state, x = readback ~look ty adt ~depth hyps solution x in
+        readback_args ~look ty adt ~depth hyps { solution with state } origin
+          rest (convert x) xs
+  
+  and readback : type t.
+    look:(depth:int -> term -> term) ->
+    ty_ast -> t adt -> depth:int -> hyps -> solution -> term ->
+      custom_state * t
+  = fun ~look ty adt ~depth hyps sol t ->
+    try match look ~depth t with
+    | Const c ->
+        let K(args,read,_) = Constants.Map.find c adt in
+        readback_args ~look ty adt ~depth hyps sol t args read []
+    | App(c,x,xs) ->
+        let K(args,read,_) = Constants.Map.find c adt in
+        readback_args ~look ty adt ~depth hyps sol t args read (x::xs)
+    | _ -> raise (TypeErr(ty,t))
+    with Not_found -> raise (TypeErr(ty,t))
+  
+  ;;
+
+  let build kname = function
+  | [] -> mkConst kname
+  | x :: xs -> mkApp kname x xs
+
+  let rec adt_embed_args : type m a t.
+    ty_ast -> t adt -> constant ->
+    depth:int -> hyps -> solution ->
+    (a,m,t) constructor_arguments ->
+    term list -> extra_goals list ->
+      m
+  = fun ty adt kname ~depth hyps sol args acc gls ->
+      match args with
+      | N -> sol.state, build kname (List.rev acc), List.(flatten (rev gls))
+      | A(d,args) ->
+          fun x ->
+            let state, t, goals = d.embed ~depth hyps sol x in
+            adt_embed_args ty adt kname ~depth hyps { sol with state }
+              args (t :: acc) (goals :: gls)
+      | S args ->
+          fun x ->
+            let state, t, goals = embed ty adt ~depth hyps sol x in
+            adt_embed_args ty adt kname ~depth hyps { sol with state }
+              args (t :: acc) (goals :: gls)
+  
+  and embed : type a.
+    ty_ast -> a adt ->
+    depth:int -> hyps -> solution ->
+      a -> custom_state * term * extra_goals
+  = fun ty adt ->
+    let bindings = Constants.Map.bindings adt in
+    fun ~depth hyps sol t ->
+      let rec aux l () =
+        match l with
+        | [] -> Elpi_util.type_error
+                    ("Pattern matching failure embedding: " ^ show_ty_ast ty)
+        | (kname, K(args,_,matcher)) :: rest ->
+          let ok = adt_embed_args ty adt kname ~depth hyps sol args [] [] in
+          matcher ~ok ~ko:(aux rest) t in
+       aux bindings ()
+  ;;
+
+end
+
+let compile_constructors l =
+  List.fold_left (fun acc (K(name,a,b,m)) ->
+    Constants.(Map.add (from_stringc name) (ADT.K(a,b,m)) acc))
+      Constants.Map.empty l
+
+(* doc *)
 let pp_comment fmt doc =
   Fmt.fprintf fmt "@?";
   let orig_out = Fmt.pp_get_formatter_out_functions fmt () in
@@ -848,6 +967,28 @@ let document_pred fmt docspec name ffi =
     doc [] ffi
 ;;
 
+let rec tyargs_of_args : type a b c. string -> (a,b,c) constructor_arguments -> (bool * string * string) list =
+  fun self -> function
+  | N -> [false,self,""]
+  | A ({ ty },rest) -> (false,show_ty_ast ty,"") :: tyargs_of_args self rest
+  | S rest -> (false,self,"") :: tyargs_of_args self rest
+
+let document_constructor fmt self (K(name,args,_,_)) =
+  let args = tyargs_of_args self args in
+  Fmt.fprintf fmt "@[<hov2>type %s@[<hov>%a.@]@]@\n" name pp_ty_args args
+
+let document_kind fmt = function
+  | TyApp(s,_,l) ->
+      let n = List.length l + 2 in
+      let l = List.init n (fun _ -> "type") in
+      Fmt.fprintf fmt "@[<hov 2>kind %s %s.@]@\n"
+        s (String.concat " -> " l)
+  | TyName s -> Fmt.fprintf fmt "@[<hov 2>kind %s type.@]@\n" s
+
+let document_adt fmt ty ks =
+  document_kind fmt ty;
+  List.iter (document_constructor fmt (show_ty_ast ty)) ks
+
 let document fmt l =
   let omargin = Fmt.pp_get_margin fmt () in
   Fmt.pp_set_margin fmt 75;
@@ -855,6 +996,9 @@ let document fmt l =
   Fmt.fprintf fmt "@\n@\n";
   List.iter (function
     | MLCode(Pred(name,ffi,_), docspec) -> document_pred fmt docspec name ffi
+    | MLADT { adt_doc; adt_ty; constructors } ->
+        pp_comment fmt ("% " ^ adt_doc); Fmt.fprintf fmt "@\n";
+        document_adt fmt adt_ty constructors; Fmt.fprintf fmt "@\n"
     | LPCode s -> Fmt.fprintf fmt "%s" s; Fmt.fprintf fmt "@\n@\n"
     | LPDoc s -> pp_comment fmt ("% " ^ s); Fmt.fprintf fmt "@\n@\n") l;
   Fmt.fprintf fmt "@\n@\n";

@@ -218,10 +218,12 @@ type polyop = {
   pname : string;
 }
 
+(*
 let none = Constants.from_string "none"
 let somec = Constants.from_stringc "some"
 
-let option = fun a -> {
+let option = fun a -> 
+  let ty = TyApp("option",a.ty,[]) in {
   embed = (fun ~depth h s -> function
     | None -> s.state, none, []
     | Some x ->
@@ -233,27 +235,69 @@ let option = fun a -> {
     | App(k,x,[]) when k == somec ->
       let s, x = a.readback  ~depth h s x in
       s, (Some x)
-    | _ -> raise (TypeErr t));
-  ty = TyApp("option",a.ty,[]);
+    | _ -> raise (TypeErr(ty,t)));
+  ty;
 }
+*)
 
+let bool_adt = {
+  adt_ty = TyName "bool";
+  adt_doc = "Boolean values: tt and ff since true and false are predicates";
+  constructors = [
+    K("tt",N,
+      true,
+      (fun ~ok ~ko -> function true ->  ok | _ -> ko ()));
+    K("ff",N,
+      false,
+      (fun ~ok ~ko -> function false -> ok | _ -> ko ()));
+  ]
+}
+let bool = adt bool_adt
+
+let pair_adt a b = {
+  adt_ty = TyApp ("pair",a.ty,[b.ty]);
+  adt_doc = "Pair: the constructor is pr, since ',' is for conjunction";
+  constructors = [
+    K("pr",A(a,A(b,N)),
+      (fun a b -> (a,b)),
+      (fun ~ok ~ko:_ -> function (a,b) -> ok a b));
+  ]
+}
+let pair a b = adt (pair_adt a b)
+
+let option_adt a = {
+  adt_ty = TyApp("option",a.ty,[]);
+  adt_doc = "The option type (aka Maybe)";
+  constructors = [
+    K("none",N,
+      None,
+      (fun ~ok ~ko -> function None -> ok | _ -> ko ())); 
+    K("some",A(a,N),
+      (fun x -> Some x),
+      (fun ~ok ~ko -> function Some x -> ok x | _ -> ko ())); 
+  ]
+}
+let option a = adt (option_adt a)
+
+(*
 let tt = Constants.from_string "tt"
 let ff = Constants.from_string "ff"
 
-let bool = {
+let bool = let ty  = TyName "bool" in {
   embed = (fun ~depth h { state } b ->
       if b then state, tt, [] else state, ff, []);
   readback = (fun ~depth h { state } t ->
     match look ~depth t with
     | Const _ as x when kool x == tt -> state, true
     | Const _ as x when kool x == ff -> state, false
-    | _ -> raise (TypeErr t));
-  ty = TyName "bool";
+    | _ -> raise (TypeErr(ty,t)));
+  ty;
 }
 
 let prc = Constants.from_stringc "pr"
 
-let pair a b = {
+let pair a b =
+  let ty = TyApp ("pair",a.ty,[b.ty]) in {
   embed = (fun ~depth h s (x,y) ->
     let state, x, g1 = a.embed ~depth h s x in
     let state, y, g2 = b.embed ~depth h { s with state } y in
@@ -264,9 +308,10 @@ let pair a b = {
         let state, x = a.readback ~depth h s x in
         let state, y = b.readback ~depth h { s with state } y in
         state, (x,y)
-    | _ -> raise (TypeErr t));
-  ty = TyApp ("pair",a.ty,[b.ty]);
+    | _ -> raise (TypeErr(ty,t)));
+  ty;
 }
+*)
 
 
 (** Core built-in ********************************************************* *)
@@ -418,20 +463,27 @@ let core_builtins = [
   LPCode "type (::) X -> list X -> list X.";
   LPCode "type ([]) list X.";
 
-  LPCode "kind pair type -> type -> type.";
-  LPCode "type pr   A -> B -> pair A B.";
+  MLADT bool_adt;
+
+  MLADT (pair_adt (poly "A") (poly "B"));
+
   LPCode "pred fst  i:pair A B, o:A.";
   LPCode "fst (pr A _) A.";
   LPCode "pred snd  i:pair A B, o:B.";
   LPCode "snd (pr _ B) B.";
 
+  MLADT (option_adt (poly "A"));
+
+(*
+  LPCode "kind pair type -> type -> type.";
+  LPCode "type pr   A -> B -> pair A B.";
   LPCode "kind bool type.";
   LPCode "type tt bool.";
   LPCode "type ff bool.";
-
   LPCode "kind option type -> type.";
   LPCode "type some A -> option A.";
   LPCode "type none option A.";
+*)
 
   ]
 ;;
@@ -748,7 +800,8 @@ let elpi_builtins = [
 
 (** ELPI specific NON-LOGICAL built-in *********************************** *)
 
-let ctype : string data = {
+let ctype : string data =
+  let ty = TyName "ctype" in {
   embed = (fun ~depth:_ _ { state } x ->
     state, mkApp Constants.ctypec (C.of_string x) [], []);
   readback = (fun ~depth _ { state } t ->
@@ -756,9 +809,9 @@ let ctype : string data = {
      | App(c,s,[]) when c == Constants.ctypec ->
          begin match look ~depth s with
          | CData c when C.is_string c -> state, C.to_string c
-         | _ -> raise (TypeErr t) end
-     | _ -> raise (TypeErr t));
-   ty = TyName "ctype"
+         | _ -> raise (TypeErr(ty,t)) end
+     | _ -> raise (TypeErr(ty,t)));
+  ty;
 }
    
 let { CData.cin = safe_in; isc = is_safe ; cout = safe_out } as safe = CData.declare {

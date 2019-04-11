@@ -565,7 +565,7 @@ module Extend : sig
       ty : ty_ast
     }
 
-    exception TypeErr of Data.term (* a type error at data conversion time *)
+    exception TypeErr of ty_ast * Data.term (* a type error at data conversion time *)
     
     type ('function_type, 'inernal_outtype_in) ffi =
       | In   : 't data * doc * ('i, 'o) ffi -> ('t -> 'i,'o) ffi
@@ -579,6 +579,39 @@ module Extend : sig
       | VariadicInOut : 't data * doc -> ('t ioarg list -> depth:int -> Data.hyps -> Data.solution -> Data.custom_state * ('o * 't option list option), 'o) ffi
 
     type t = Pred : name * ('a,unit) ffi * 'a -> t
+
+
+    (** Commodity API for representing simple ADT (no binders)
+     *
+     *  Example
+     *
+     *
+     * *)
+
+    type ('matched, 't) match_t =
+      (* continuation to call passing subterms *)
+      ok:'matched ->
+      (* continuation to call to signal pattern matching failure *)
+      ko:(unit -> Data.custom_state * Data.term * extra_goals) ->
+
+      't -> Data.custom_state * Data.term * extra_goals
+
+    type ('b,'m,'t) constructor_arguments =
+      | N : ('t,Data.custom_state * Data.term * extra_goals, 't) constructor_arguments
+      | A : 'a data * ('b,'m,'t) constructor_arguments -> ('a -> 'b, 'a -> 'm, 't) constructor_arguments
+      | S : ('b,'m,'t) constructor_arguments -> ('t -> 'b, 't -> 'm, 't) constructor_arguments
+        
+    type 't constructor =
+      K : string *                                           (* name *)
+          ('build_t,'matched_t,'t) constructor_arguments *   (* args ty *)
+          'build_t * ('matched_t,'t) match_t                   (* build/match *)
+        -> 't constructor
+
+    type 't adt = {
+      adt_doc : doc;
+      adt_ty : ty_ast;
+      constructors : 't constructor list;
+    }
 
     (** Where to print the documentation. For the running example DocAbove
      * generates
@@ -596,6 +629,8 @@ module Extend : sig
     type declaration =
     (* Real OCaml code *)
     | MLCode of t * doc_spec
+    (* Declaration of an OCaml ADT *)
+    | MLADT : 'a adt -> declaration
     (* Extra doc *)
     | LPDoc  of string
     (* Sometimes you wrap OCaml code in regular predicates or similar in order
@@ -624,6 +659,9 @@ module Extend : sig
       (* global constants of that type, eg "std_in" *)
       ?constants:'a Data.Constants.Map.t ->
       'a CData.cdata -> 'a data
+
+    (* commodity type description of ADT *)
+    val adt : 'a adt -> 'a data
 
     (* commodity iterator for lists *)
     val map_acc_embed :
