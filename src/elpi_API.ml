@@ -218,12 +218,13 @@ module Extend = struct
     exception No_clause = Elpi_data.No_clause
     include Elpi_data.Builtin
 
-    let adt { adt_ty; constructors } = 
-      let constructors = compile_constructors constructors in {
-      ty = adt_ty;
-      readback = (ADT.readback ~look:Data.look adt_ty constructors);
-      embed = (ADT.embed adt_ty constructors);
-    }
+    let adt { ADT.ty; constructors } = 
+      let constructors = ADT.compile_constructors constructors in
+      {
+        ty = ty;
+        readback = (ADT.readback ~look:Data.look ty constructors);
+        embed = (ADT.embed ty constructors);
+      }
 
     let data_of_cdata ~name:ty ?(constants=Data.Constants.Map.empty)
       { CData.cin; isc; cout }

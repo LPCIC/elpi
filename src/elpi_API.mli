@@ -581,49 +581,54 @@ module Extend : sig
     type t = Pred : name * ('a,unit) ffi * 'a -> t
 
 
-    (** Commodity API for representing simple ADT (no binders)
+    (** Commodity API for representing simple ADT: no binders!
      *
      *  Example for elpi_builtin:
+     *  
      * let option_adt a = {
      *   adt_ty = TyApp("option",a.ty,[]);
      *   adt_doc = "The option type (aka Maybe)";
      *   constructors = [
-     *     K("none",N,
+     *     K("none","nothing in this case",N,
      *       None,
-     *       (fun ~ok ~ko -> function None -> ok | _ -> ko ())); 
-     *     K("some",A(a,N),
+     *       (fun ~ok ~ko -> function None -> ok | _ -> ko)); 
+     *     K("some","something in this case",A(a,N),
      *       (fun x -> Some x),
-     *       (fun ~ok ~ko -> function Some x -> ok x | _ -> ko ())); 
+     *       (fun ~ok ~ko -> function Some x -> ok x | _ -> ko)); 
      *   ]
      * }
      * let option a = adt (option_adt a)
      *
      *)
 
+    module ADT : sig
+
     type ('matched, 't) match_t =
       (* continuation to call passing subterms *)
       ok:'matched ->
       (* continuation to call to signal pattern matching failure *)
-      ko:(unit -> Data.custom_state * Data.term * extra_goals) ->
+      ko:(Data.solution -> Data.custom_state * Data.term * extra_goals) ->
 
-      't -> Data.custom_state * Data.term * extra_goals
+      't -> Data.solution -> Data.custom_state * Data.term * extra_goals
 
     type ('b,'m,'t) constructor_arguments =
-      | N : ('t,Data.custom_state * Data.term * extra_goals, 't) constructor_arguments
+      | N : ('t,Data.solution -> Data.custom_state * Data.term * extra_goals, 't) constructor_arguments
       | A : 'a data * ('b,'m,'t) constructor_arguments -> ('a -> 'b, 'a -> 'm, 't) constructor_arguments
       | S : ('b,'m,'t) constructor_arguments -> ('t -> 'b, 't -> 'm, 't) constructor_arguments
         
     type 't constructor =
-      K : string *                                           (* name *)
+      K : string * doc *                                     (* name *)
           ('build_t,'matched_t,'t) constructor_arguments *   (* args ty *)
-          'build_t * ('matched_t,'t) match_t                   (* build/match *)
+          'build_t * ('matched_t,'t) match_t                 (* build/match *)
         -> 't constructor
 
     type 't adt = {
-      adt_doc : doc;
-      adt_ty : ty_ast;
+      ty : ty_ast;
+      doc : doc;
       constructors : 't constructor list;
     }
+
+    end (* ADT *)
 
     (** Where to print the documentation. For the running example DocAbove
      * generates
@@ -642,7 +647,7 @@ module Extend : sig
     (* Real OCaml code *)
     | MLCode of t * doc_spec
     (* Declaration of an OCaml ADT *)
-    | MLADT : 'a adt -> declaration
+    | MLADT : 'a ADT.adt -> declaration
     (* Extra doc *)
     | LPDoc  of string
     (* Sometimes you wrap OCaml code in regular predicates or similar in order
@@ -673,7 +678,7 @@ module Extend : sig
       'a CData.cdata -> 'a data
 
     (* commodity type description of ADT *)
-    val adt : 'a adt -> 'a data
+    val adt : 'a ADT.adt -> 'a data
 
     (* commodity iterator for lists *)
     val map_acc_embed :

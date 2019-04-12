@@ -241,24 +241,24 @@ let option = fun a ->
 *)
 
 let bool_adt = {
-  adt_ty = TyName "bool";
-  adt_doc = "Boolean values: tt and ff since true and false are predicates";
+  ADT.ty = TyName "bool";
+  doc = "Boolean values: tt and ff since true and false are predicates";
   constructors = [
-    K("tt",N,
+    K("tt","",N,
       true,
-      (fun ~ok ~ko -> function true ->  ok | _ -> ko ()));
-    K("ff",N,
+      (fun ~ok ~ko -> function true ->  ok | _ -> ko));
+    K("ff","",N,
       false,
-      (fun ~ok ~ko -> function false -> ok | _ -> ko ()));
+      (fun ~ok ~ko -> function false -> ok | _ -> ko));
   ]
 }
 let bool = adt bool_adt
 
 let pair_adt a b = {
-  adt_ty = TyApp ("pair",a.ty,[b.ty]);
-  adt_doc = "Pair: the constructor is pr, since ',' is for conjunction";
+  ADT.ty = TyApp ("pair",a.ty,[b.ty]);
+  doc = "Pair: the constructor is pr, since ',' is for conjunction";
   constructors = [
-    K("pr",A(a,A(b,N)),
+    K("pr","",A(a,A(b,N)),
       (fun a b -> (a,b)),
       (fun ~ok ~ko:_ -> function (a,b) -> ok a b));
   ]
@@ -266,53 +266,18 @@ let pair_adt a b = {
 let pair a b = adt (pair_adt a b)
 
 let option_adt a = {
-  adt_ty = TyApp("option",a.ty,[]);
-  adt_doc = "The option type (aka Maybe)";
+  ADT.ty = TyApp("option",a.ty,[]);
+  doc = "The option type (aka Maybe)";
   constructors = [
-    K("none",N,
+    K("none","",N,
       None,
-      (fun ~ok ~ko -> function None -> ok | _ -> ko ())); 
-    K("some",A(a,N),
+      (fun ~ok ~ko -> function None -> ok | _ -> ko)); 
+    K("some","",A(a,N),
       (fun x -> Some x),
-      (fun ~ok ~ko -> function Some x -> ok x | _ -> ko ())); 
+      (fun ~ok ~ko -> function Some x -> ok x | _ -> ko)); 
   ]
 }
 let option a = adt (option_adt a)
-
-(*
-let tt = Constants.from_string "tt"
-let ff = Constants.from_string "ff"
-
-let bool = let ty  = TyName "bool" in {
-  embed = (fun ~depth h { state } b ->
-      if b then state, tt, [] else state, ff, []);
-  readback = (fun ~depth h { state } t ->
-    match look ~depth t with
-    | Const _ as x when kool x == tt -> state, true
-    | Const _ as x when kool x == ff -> state, false
-    | _ -> raise (TypeErr(ty,t)));
-  ty;
-}
-
-let prc = Constants.from_stringc "pr"
-
-let pair a b =
-  let ty = TyApp ("pair",a.ty,[b.ty]) in {
-  embed = (fun ~depth h s (x,y) ->
-    let state, x, g1 = a.embed ~depth h s x in
-    let state, y, g2 = b.embed ~depth h { s with state } y in
-    state, mkApp prc x [y], g1 @ g2);
-  readback = (fun ~depth h s t ->
-    match look ~depth t with
-    | App(k,x,[y]) when k == prc ->
-        let state, x = a.readback ~depth h s x in
-        let state, y = b.readback ~depth h { s with state } y in
-        state, (x,y)
-    | _ -> raise (TypeErr(ty,t)));
-  ty;
-}
-*)
-
 
 (** Core built-in ********************************************************* *)
 
