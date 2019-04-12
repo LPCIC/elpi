@@ -36,6 +36,7 @@ let init ~builtins:(fname,decls) ~basedir:cwd argv =
   List.iter (function
     | Elpi_data.Builtin.MLCode (p,_) -> Elpi_data.Builtin.register p
     | Elpi_data.Builtin.MLADT _ -> ()
+    | Elpi_data.Builtin.MLCData _ -> ()
     | Elpi_data.Builtin.LPCode _ -> ()
     | Elpi_data.Builtin.LPDoc _ -> ()) decls;
   (* This is a bit ugly, since we print and then parse... *)
@@ -218,15 +219,16 @@ module Extend = struct
     exception No_clause = Elpi_data.No_clause
     include Elpi_data.Builtin
 
-    let adt { ADT.ty; constructors } = 
+    let adt { ADT.ty; constructors; doc } = 
       let constructors = ADT.compile_constructors ty constructors in
       {
-        ty = ty;
+        ty;
+        doc;
         readback = (ADT.readback ~look:Data.look ty constructors);
         embed = (ADT.embed ty constructors);
       }
 
-    let data_of_cdata ~name:ty ?(constants=Data.Constants.Map.empty)
+    let cdata ~name:ty ?(doc="") ?(constants=Data.Constants.Map.empty)
       { CData.cin; isc; cout }
     =
       let ty = TyName ty in
@@ -240,15 +242,21 @@ module Extend = struct
             begin try state, Data.Constants.Map.find i constants
             with Not_found -> raise (TypeErr(ty,t)) end
         | t -> raise (TypeErr(ty,t)) in
-      { embed; readback; ty }
+      { embed; readback; ty; doc }
 
-    let int    = data_of_cdata ~name:"int" Elpi_data.C.int
-    let float  = data_of_cdata ~name:"float" Elpi_data.C.float
-    let string = data_of_cdata ~name:"string" Elpi_data.C.string
+    let int    = cdata ~name:"int" Elpi_data.C.int
+    let float  = cdata ~name:"float" Elpi_data.C.float
+    let string = cdata ~name:"string" Elpi_data.C.string
+    let loc    = cdata ~name:"loc" Elpi_data.C.loc
+
+    (* TODO: use typeabbrv instead of macro *)
+    let cdata ~name ?doc ?constants cd =
+      cdata ~name:("@"^name) ?doc ?constants cd
+
     let poly ty =
       let embed ~depth:_ _ { Data.state } x = state, x, [] in
       let readback ~depth _ { Data.state } t = state, t in
-      { embed; readback; ty = TyName ty }
+      { embed; readback; ty = TyName ty; doc = "" }
     let any = poly "any"
 
     let map_acc_embed f s l =
@@ -278,9 +286,8 @@ module Extend = struct
         let module R = (val !r) in let open R in
         map_acc_readback (d.readback ~depth h) solution (lp_list_to_list ~depth t)
       in
-      { embed; readback; ty = TyApp ("list",d.ty,[]) }
+      { embed; readback; ty = TyApp ("list",d.ty,[]); doc = "" }
 
-    let loc = data_of_cdata ~name:"Loc.t" Elpi_data.C.loc
 
     let builtin_of_declaration ~file_name x = file_name, x
 

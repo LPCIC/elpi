@@ -221,7 +221,12 @@ module Extend : sig
       data_hconsed : bool;
     }
 
-    type 'a cdata = { cin : 'a -> t; isc : t -> bool; cout: t -> 'a }
+    type 'a cdata = private {
+      cin : 'a -> t;
+      isc : t -> bool;
+      cout: t -> 'a;
+      name : string;
+    }
 
     val declare : 'a data_declaration -> 'a cdata
 
@@ -560,9 +565,10 @@ module Extend : sig
       depth:int -> Data.hyps -> Data.solution -> Data.term -> Data.custom_state * 'a
 
     type 'a data = {
+      ty : ty_ast;
+      doc : doc;
       embed : 'a embedding;   (* 'a -> term *)
       readback : 'a readback; (* term -> 'a *)
-      ty : ty_ast
     }
 
     exception TypeErr of ty_ast * Data.term (* a type error at data conversion time *)
@@ -648,6 +654,8 @@ module Extend : sig
     | MLCode of t * doc_spec
     (* Declaration of an OCaml ADT *)
     | MLADT : 'a ADT.adt -> declaration
+    (* Declaration of an OCaml opaque data *)
+    | MLCData : 'a data * 'a CData.cdata -> declaration
     (* Extra doc *)
     | LPDoc  of string
     (* Sometimes you wrap OCaml code in regular predicates or similar in order
@@ -670,9 +678,11 @@ module Extend : sig
     val any    : Data.term data
 
     (* commodity type description of a CData *)
-    val data_of_cdata :
+    val cdata :
       (* name used for type declarations, eg "int" or "@in_stream" *)
       name:string ->
+      (* To document *)
+      ?doc:doc ->
       (* global constants of that type, eg "std_in" *)
       ?constants:'a Data.Constants.Map.t ->
       'a CData.cdata -> 'a data

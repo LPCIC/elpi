@@ -712,9 +712,10 @@ type 'a readback =
   depth:int -> hyps -> solution -> term -> custom_state * 'a
 
 type 'a data = {
+  ty : ty_ast;
+  doc : doc;
   embed : 'a embedding;   (* 'a -> term *)
   readback : 'a readback; (* term -> 'a *)
-  ty : ty_ast
 }
 
 type ('function_type, 'inernal_outtype_in) ffi =
@@ -860,6 +861,7 @@ end
 type declaration =
   | MLCode of t * doc_spec
   | MLADT : 'a ADT.adt -> declaration
+  | MLCData : 'a data * 'a CData.cdata -> declaration
   | LPDoc  of string
   | LPCode of string
 
@@ -1005,6 +1007,14 @@ let document fmt l =
   Fmt.fprintf fmt "@\n@\n";
   List.iter (function
     | MLCode(Pred(name,ffi,_), docspec) -> document_pred fmt docspec name ffi
+    | MLCData ({ ty = TyName name; doc }, { name = c }) when name.[0] = '@' ->
+        if doc <> "" then begin
+          pp_comment fmt ("% " ^ doc); Fmt.fprintf fmt "@\n";
+        end;
+        (* TODO: use typeabbrv *)
+        Fmt.fprintf fmt "@[<hov 2>macro %s :- (ctype \"%s\").@]@\n@\n" name c;
+    | MLCData ({ ty }, { name }) ->
+        anomaly ("Cannot document " ^ show_ty_ast ty ^ " as a CData");
     | MLADT { ADT.doc; ty; constructors } ->
         if doc <> "" then begin
           pp_comment fmt ("% " ^ doc); Fmt.fprintf fmt "@\n";

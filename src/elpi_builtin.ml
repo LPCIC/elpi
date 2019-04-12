@@ -12,7 +12,7 @@ open Notation
 
 module Str = Re.Str
 
-let { CData.cin = istream_in; isc = is_istream ; cout = istream_out } as in_stream = CData.declare {
+let { CData.cin = istream_in; isc = is_istream ; cout = istream_out } as in_streamc = CData.declare {
   CData.data_name = "in_stream";
   data_pp = (fun fmt (_,d) -> Format.fprintf fmt "<in_stream:%s>" d);
   data_eq = (fun (x,_) (y,_) -> x = y);
@@ -22,9 +22,9 @@ let { CData.cin = istream_in; isc = is_istream ; cout = istream_out } as in_stre
 let in_stream =
   let constants =
     Map.empty |> Map.add (from_stringc "std_in") (stdin,"stdin") in
-  data_of_cdata ~name:"@in_stream" ~constants in_stream
+  cdata ~name:"in_stream" ~constants in_streamc
 
-let { CData.cin = ostream_in; isc = is_ostream ; cout = ostream_out } as out_stream = CData.declare {
+let { CData.cin = ostream_in; isc = is_ostream ; cout = ostream_out } as out_streamc = CData.declare {
   CData.data_name = "out_stream";
   data_pp = (fun fmt (_,d) -> Format.fprintf fmt "<out_stream:%s>" d);
   data_eq = (fun (x,_) (y,_) -> x = y);
@@ -36,7 +36,7 @@ let out_stream =
     Map.empty
     |> Map.add (from_stringc "std_out") (stdout,"stdout")
     |> Map.add (from_stringc "std_err") (stderr,"stderr") in
-  data_of_cdata ~name:"@out_stream" ~constants out_stream
+  cdata ~name:"out_stream" ~constants out_streamc
 
 let register_eval, lookup_eval =
  let (evals : ('a, view list -> term) Hashtbl.t)
@@ -217,28 +217,6 @@ type polyop = {
   psym : string;
   pname : string;
 }
-
-(*
-let none = Constants.from_string "none"
-let somec = Constants.from_stringc "some"
-
-let option = fun a -> 
-  let ty = TyApp("option",a.ty,[]) in {
-  embed = (fun ~depth h s -> function
-    | None -> s.state, none, []
-    | Some x ->
-        let s, x, e = a.embed ~depth h s x in
-        s, mkApp somec x [], e);
-  readback = (fun ~depth h s t ->
-    match look ~depth t with
-    | Const _ as x when kool x == none -> s.state, None
-    | App(k,x,[]) when k == somec ->
-      let s, x = a.readback  ~depth h s x in
-      s, (Some x)
-    | _ -> raise (TypeErr(ty,t)));
-  ty;
-}
-*)
 
 let bool_adt = {
   ADT.ty = TyName "bool";
@@ -461,9 +439,12 @@ let io_builtins = [
 
   LPDoc " -- I/O --";
 
-  LPCode "macro @in_stream :- ctype \"in_stream\".";
-  LPCode "macro @out_stream :- ctype \"out_stream\".";
+  MLCData (in_stream,in_streamc);
+
   LPCode "type std_in @in_stream.";
+
+  MLCData (out_stream,out_streamc);
+
   LPCode "type std_out @out_stream.";
   LPCode "type std_err @out_stream.";
      
@@ -765,21 +746,16 @@ let elpi_builtins = [
 
 (** ELPI specific NON-LOGICAL built-in *********************************** *)
 
-let ctype : string data =
-  let ty = TyName "ctype" in {
-  embed = (fun ~depth:_ _ { state } x ->
-    state, mkApp Constants.ctypec (C.of_string x) [], []);
-  readback = (fun ~depth _ { state } t ->
-     match look ~depth t with
-     | App(c,s,[]) when c == Constants.ctypec ->
-         begin match look ~depth s with
-         | CData c when C.is_string c -> state, C.to_string c
-         | _ -> raise (TypeErr(ty,t)) end
-     | _ -> raise (TypeErr(ty,t)));
-  ty;
+let ctype_adt = {
+  ADT.ty = TyName "ctype";
+  doc = "Opaque ML data types";
+  constructors = [
+    K("ctype","",A(string,N),(fun x -> x),(fun ~ok ~ko x -> ok x))  
+  ]
 }
+let ctype = adt ctype_adt
    
-let { CData.cin = safe_in; isc = is_safe ; cout = safe_out } as safe = CData.declare {
+let { CData.cin = safe_in; isc = is_safe ; cout = safe_out } as safec = CData.declare {
   CData.data_name = "safe";
   data_pp = (fun fmt (id,l,d) ->
      Format.fprintf fmt "[safe %d: %a]_%d" id
@@ -788,7 +764,7 @@ let { CData.cin = safe_in; isc = is_safe ; cout = safe_out } as safe = CData.dec
   data_hash = (fun (id,_,_) -> id);
   data_hconsed = false;
 }
-let safe = data_of_cdata "@safe" safe
+let safe = cdata ~name:"safe" ~doc:"Holds data across bracktracking" safec
 
 let fresh_copy t max_db depth =
   let rec aux d t =
@@ -857,9 +833,7 @@ let elpi_nonlogical_builtins = [
 
   LPDoc "== Elpi nonlogical builtins =====================================";
 
-  LPCode "kind ctype type.";
-  LPCode "type ctype string -> ctype.";
-  LPCode "macro @safe :- ctype \"safe\".";
+  MLADT ctype_adt;
 
   MLCode(Pred("var",
     In(any,   "any term",
@@ -942,6 +916,8 @@ let elpi_nonlogical_builtins = [
       incr fresh_int;
       !: !fresh_int)),
   DocAbove);
+
+  MLCData (safe,safec);
 
    MLCode(Pred("new_safe",
      Out(safe, "Safe",

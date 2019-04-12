@@ -432,7 +432,7 @@ module CData = struct
     data_hconsed : bool;
   }
 
-  type 'a cdata = { cin : 'a -> t; isc : t -> bool; cout: t -> 'a }
+  type 'a cdata = { cin : 'a -> t; isc : t -> bool; cout: t -> 'a; name : string }
   
   type cdata_declaration = {
     cdata_name : string;
@@ -485,9 +485,12 @@ let declare { data_eq; data_pp; data_hash; data_name; data_hconsed } =
                    cdata_hash;
                    cdata_canon;
        } !m;
-  { cin = (fun v -> cdata_canon { t = Obj.repr v; ty = tid });
+  {
+    cin = (fun v -> cdata_canon { t = Obj.repr v; ty = tid });
     isc = (fun c -> c.ty = tid);
-    cout = (fun c -> assert(c.ty = tid); cget c) }
+    cout = (fun c -> assert(c.ty = tid); cget c);
+    name = data_name;
+  }
 
   let morph1 { cin; cout } f x = cin (f (cout x))
   let morph2 { cin; cout } f x y = cin (f (cout x) (cout y))

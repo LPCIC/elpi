@@ -209,7 +209,12 @@ module CData : sig
     data_hconsed : bool;
   }
 
-  type 'a cdata = { cin : 'a -> t; isc : t -> bool; cout: t -> 'a }
+  type 'a cdata = private {
+    cin : 'a -> t;
+    isc : t -> bool;
+    cout: t -> 'a;
+    name : string;
+  }
 
   val declare : 'a data_declaration -> 'a cdata
   val pp : Format.formatter -> t -> unit
