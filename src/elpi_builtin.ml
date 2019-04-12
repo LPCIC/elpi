@@ -312,11 +312,8 @@ let core_builtins = [
        error (Buffer.contents b))),
   DocAbove);
 
-  LPCode "type stop variadic any prop.";
+  LPCode "pred stop.";
   LPCode "stop :- halt.";
-  LPCode "stop A :- halt A.";
-  LPCode "stop A B :- halt A B.";
-  LPCode "stop A B C :- halt A B C.";
 
   LPDoc " -- Evaluation --";
 
@@ -547,12 +544,11 @@ let io_builtins = [
 
   MLCode(Pred("getenv",
     In(string,  "VarName",
-    Out(string, "Out",
-    Easy      ("unifies Out with the value of VarName in the process' "^
-               "environment. Fails if no such environment variable exists"))),
+    Out(option string, "Value",
+    Easy      ("Like Sys.getenv"))),
   (fun s _ ~depth ->
-     try !:(Sys.getenv s)
-     with Not_found -> raise No_clause)),
+     try !:(Some (Sys.getenv s))
+     with Not_found -> !: None)),
   DocAbove);
 
   MLCode(Pred("system",
@@ -959,11 +955,11 @@ namespace std {
 
 pred fatal-error i:string.
 :name "default-fatal-error"
-fatal-error Msg :- stop Msg.
+fatal-error Msg :- halt Msg.
 
 pred fatal-error-w-data i:string, i:A.
 :name "default-fatal-error-w-data"
-fatal-error-w-data Msg Data :- stop Msg ":" Data.
+fatal-error-w-data Msg Data :- halt Msg ":" Data.
 
 pred debug-print i:string, i:A.
 :name "default-debug-print"

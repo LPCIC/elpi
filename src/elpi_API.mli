@@ -500,7 +500,10 @@ module Extend : sig
    * remainder.
    *
    *   Pred("div",
-   *        In(int, "N", In(int, "M", Out(int, "D", Out(int, "R",
+   *        In(int, "N",
+   *        In(int, "M",
+   *        Out(int, "D",
+   *        Out(int, "R",
    *          Easy "division of N by M gives D with reminder R")))),
    *        (fun n m _ _ -> !: (n div m) +! (n mod n)))
    *
@@ -543,7 +546,6 @@ module Extend : sig
    *   The FFI unifies the outputs produces by the OCaml code with the
    *   terms provided by the user. It is always correct to produce all
    *   outputs (and ignore the corresponding arguments in OCaml).
-   *
    * *)
   module BuiltInPredicate : sig
 
@@ -589,7 +591,7 @@ module Extend : sig
 
     (** Commodity API for representing simple ADT: no binders!
      *
-     *  Example for elpi_builtin:
+     *  Example of: pred getenv i:string, o:option string.
      *  
      * let option_adt a = {
      *   adt_ty = TyApp("option",a.ty,[]);
@@ -604,9 +606,15 @@ module Extend : sig
      *   ]
      * }
      * let option a = adt (option_adt a)
-     *
-     *)
-
+     * let getenv =
+     *   Pred("getenv",
+     *     In(string,"VarName",
+     *     Out(option string,"Value",
+     *     Easy "Like Sys.getenv")),
+     *     (fun name _ ~depth ->
+     *        try !: (Some (Sys.getenv name))
+     *        with Not_found -> !: None))
+     * *)
     module ADT : sig
 
     type ('matched, 't) match_t =
@@ -623,7 +631,7 @@ module Extend : sig
       | S : ('b,'m,'t) constructor_arguments -> ('t -> 'b, 't -> 'm, 't) constructor_arguments
         
     type 't constructor =
-      K : string * doc *                                     (* name *)
+      K : name * doc *
           ('build_t,'matched_t,'t) constructor_arguments *   (* args ty *)
           'build_t * ('matched_t,'t) match_t                 (* build/match *)
         -> 't constructor
@@ -679,7 +687,7 @@ module Extend : sig
 
     (* commodity type description of a CData *)
     val cdata :
-      (* name used for type declarations, eg "int" or "@in_stream" *)
+      (* name used for type declarations, eg "int" or "in_stream" *)
       name:string ->
       (* To document *)
       ?doc:doc ->
