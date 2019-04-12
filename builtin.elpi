@@ -214,9 +214,8 @@ external pred eof i:@in_stream.
 % [gettimeofday T] sets T to the number of seconds elapsed since 1/1/1970
 external pred gettimeofday o:float.
 
-% [getenv VarName Out] unifies Out with the value of VarName in the process'
-% environment. Fails if no such environment variable exists
-external pred getenv i:string, o:string.
+% [getenv VarName Value] Like Sys.getenv
+external pred getenv i:string, o:option string.
 
 % [system Command RetVal] executes Command and sets RetVal to the exit code
 external pred system i:string, o:int.
