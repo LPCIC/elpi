@@ -417,17 +417,6 @@ let core_builtins = [
 
   MLADT (option_adt (poly "A"));
 
-(*
-  LPCode "kind pair type -> type -> type.";
-  LPCode "type pr   A -> B -> pair A B.";
-  LPCode "kind bool type.";
-  LPCode "type tt bool.";
-  LPCode "type ff bool.";
-  LPCode "kind option type -> type.";
-  LPCode "type some A -> option A.";
-  LPCode "type none option A.";
-*)
-
   ]
 ;;
 
