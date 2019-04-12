@@ -593,20 +593,28 @@ module Extend : sig
      *
      *  Example of: pred getenv i:string, o:option string.
      *  
+     * (* define the ADT for "option a" *)
      * let option_adt a = {
      *   ty = TyApp("option",a.ty,[]);
      *   doc = "The option type (aka Maybe)";
      *   constructors = [
-     *     K("none","nothing in this case",N,
-     *       None,
-     *       (fun ~ok ~ko -> function None -> ok | _ -> ko)); 
-     *     K("some","something in this case",A(a,N),
-     *       (fun x -> Some x),
-     *       (fun ~ok ~ko -> function Some x -> ok x | _ -> ko)); 
+     *
+     *     K("none","nothing in this case",
+     *       N,                                               (* no arguments *)
+     *       None,                                            (* builder *)
+     *       (fun ~ok ~ko -> function None -> ok | _ -> ko)); (* matcher *)
+
+     *     K("some","something in this case",
+     *       A(a,N),                               (* one argument of type a *)
+     *       (fun x -> Some x),                                   (* builder *)
+     *       (fun ~ok ~ko -> function Some x -> ok x | _ -> ko)); (* matcher *)
      *   ]
      * }
-     * let option a = adt (option_adt a)
-     * let getenv =
+     * (* compile the ADT to data types to be used in predicate signatures *)
+     * let option a : a data = adt (option_adt a)
+     *
+     * (* define a predicate using "option" *)
+     * let getenv : t =
      *   Pred("getenv",
      *     In(string,         "VarName",
      *     Out(option string, "Value",
