@@ -55,15 +55,9 @@ external pred print_constraints. % prints all constraints
 % [halt ...] halts the program and print the terms
 external type halt variadic any prop.
 
-type stop variadic any prop.
+pred stop.
 
 stop :- halt.
-
-stop A :- halt A.
-
-stop A B :- halt A B.
-
-stop A B C :- halt A B C.
 
 %  -- Evaluation --
 
@@ -364,11 +358,11 @@ namespace std {
 
 pred fatal-error i:string.
 :name "default-fatal-error"
-fatal-error Msg :- stop Msg.
+fatal-error Msg :- halt Msg.
 
 pred fatal-error-w-data i:string, i:A.
 :name "default-fatal-error-w-data"
-fatal-error-w-data Msg Data :- stop Msg ":" Data.
+fatal-error-w-data Msg Data :- halt Msg ":" Data.
 
 pred debug-print i:string, i:A.
 :name "default-debug-print"
