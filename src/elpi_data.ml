@@ -845,8 +845,12 @@ and embed : type a.
      aux bindings sol
 ;;
 
-
-let compile_constructors l =
+let compile_constructors ty l =
+  let open Elpi_util in
+  let names =
+    List.fold_right (fun (K(name,_,_,_,_)) -> StrSet.add name) l StrSet.empty in
+  if StrSet.cardinal names <> List.length l then
+    anomaly ("Duplicate constructors name in ADT: " ^ show_ty_ast ty);
   List.fold_left (fun acc (K(name,_,a,b,m)) ->
     Constants.(Map.add (from_stringc name) (CK(a,b,m)) acc))
       Constants.Map.empty l
@@ -1002,7 +1006,9 @@ let document fmt l =
   List.iter (function
     | MLCode(Pred(name,ffi,_), docspec) -> document_pred fmt docspec name ffi
     | MLADT { ADT.doc; ty; constructors } ->
-        pp_comment fmt ("% " ^ doc); Fmt.fprintf fmt "@\n";
+        if doc <> "" then begin
+          pp_comment fmt ("% " ^ doc); Fmt.fprintf fmt "@\n";
+        end;
         document_adt fmt ty constructors; Fmt.fprintf fmt "@\n"
     | LPCode s -> Fmt.fprintf fmt "%s" s; Fmt.fprintf fmt "@\n@\n"
     | LPDoc s -> pp_comment fmt ("% " ^ s); Fmt.fprintf fmt "@\n@\n") l;

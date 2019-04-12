@@ -219,7 +219,7 @@ module Extend = struct
     include Elpi_data.Builtin
 
     let adt { ADT.ty; constructors } = 
-      let constructors = ADT.compile_constructors constructors in
+      let constructors = ADT.compile_constructors ty constructors in
       {
         ty = ty;
         readback = (ADT.readback ~look:Data.look ty constructors);
