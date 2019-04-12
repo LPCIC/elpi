@@ -594,8 +594,8 @@ module Extend : sig
      *  Example of: pred getenv i:string, o:option string.
      *  
      * let option_adt a = {
-     *   adt_ty = TyApp("option",a.ty,[]);
-     *   adt_doc = "The option type (aka Maybe)";
+     *   ty = TyApp("option",a.ty,[]);
+     *   doc = "The option type (aka Maybe)";
      *   constructors = [
      *     K("none","nothing in this case",N,
      *       None,
