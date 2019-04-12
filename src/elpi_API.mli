@@ -608,8 +608,8 @@ module Extend : sig
      * let option a = adt (option_adt a)
      * let getenv =
      *   Pred("getenv",
-     *     In(string,"VarName",
-     *     Out(option string,"Value",
+     *     In(string,         "VarName",
+     *     Out(option string, "Value",
      *     Easy "Like Sys.getenv")),
      *     (fun name _ ~depth ->
      *        try !: (Some (Sys.getenv name))
@@ -622,13 +622,16 @@ module Extend : sig
       ok:'matched ->
       (* continuation to call to signal pattern matching failure *)
       ko:(Data.solution -> Data.custom_state * Data.term * extra_goals) ->
-
+      (* match 't and pass its subterms to ~ok or just call ~ko *)
       't -> Data.solution -> Data.custom_state * Data.term * extra_goals
 
-    type ('b,'m,'t) constructor_arguments =
-      | N : ('t,Data.solution -> Data.custom_state * Data.term * extra_goals, 't) constructor_arguments
-      | A : 'a data * ('b,'m,'t) constructor_arguments -> ('a -> 'b, 'a -> 'm, 't) constructor_arguments
-      | S : ('b,'m,'t) constructor_arguments -> ('t -> 'b, 't -> 'm, 't) constructor_arguments
+    type ('builder, 'matcher,  'self) constructor_arguments =
+      (* No arguments *)
+      | N : ('self, Data.solution -> Data.custom_state * Data.term * extra_goals, 'self) constructor_arguments
+      (* An argument of type 'a *)
+      | A : 'a data * ('b, 'm, 'self) constructor_arguments -> ('a -> 'b, 'a -> 'm, 'self) constructor_arguments
+      (* An argument of type 'self *)
+      | S : ('b, 'm, 'self) constructor_arguments -> ('self -> 'b, 'self -> 'm, 'self) constructor_arguments
         
     type 't constructor =
       K : name * doc *
