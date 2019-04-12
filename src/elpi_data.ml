@@ -1012,7 +1012,7 @@ let document fmt l =
           pp_comment fmt ("% " ^ doc); Fmt.fprintf fmt "@\n";
         end;
         (* TODO: use typeabbrv *)
-        Fmt.fprintf fmt "@[<hov 2>macro %s :- (ctype \"%s\").@]@\n@\n" name c;
+        Fmt.fprintf fmt "@[<hov 2>macro %s :- ctype \"%s\".@]@\n@\n" name c;
     | MLCData ({ ty }, { name }) ->
         anomaly ("Cannot document " ^ show_ty_ast ty ^ " as a CData");
     | MLADT { ADT.doc; ty; constructors } ->

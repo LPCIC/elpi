@@ -175,11 +175,11 @@ type some A -> option A.
 
 %  -- I/O --
 
-macro @in_stream :- (ctype "in_stream").
+macro @in_stream :- ctype "in_stream".
 
 type std_in @in_stream.
 
-macro @out_stream :- (ctype "out_stream").
+macro @out_stream :- ctype "out_stream".
 
 type std_out @out_stream.
 
@@ -327,7 +327,7 @@ primitive? X S :- is_cdata X (ctype S).
 external pred new_int o:int.
 
 % Holds data across bracktracking
-macro @safe :- (ctype "safe").
+macro @safe :- ctype "safe".
 
 % [new_safe Safe] creates a safe: a store that persists across backtracking
 external pred new_safe o:@safe.
