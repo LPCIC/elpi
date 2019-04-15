@@ -389,105 +389,6 @@ module Extend : sig
     
   end
 
-
-  (** This module lets one extend the compiler by:
-   * - "compiling" the query by hand
-   * - providing quotations *)
-  module Compile : sig
-
-    (** In order to implement quotations one may
-     * need to stick some data into the compiler state that can indeed be
-     * extended. A piece of compiler state can also be kept and used at runtime,
-     * e.g. if it contains some custom constraints, see CustomState *)
-    module State : sig
-      type t
-      type 'a component
-    
-      val declare :
-        name:string -> init:(unit -> 'a) ->
-          pp:(Format.formatter -> 'a -> unit) -> 'a component
-
-      val get : 'a component -> t -> 'a
-      val set : 'a component -> t -> 'a -> t
-      val update : 'a component -> t -> ('a -> 'a) -> t
-      val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
-      
-    end
-
-    (** Generate a query starting from a compiled/hand-made term *)
-    val query :
-      Compile.program -> (depth:int -> State.t -> State.t * (Ast.Loc.t * Data.term)) ->
-        Compile.query
-
-    (* Args are parameters of the query (e.g. capital letters) *)
-    val is_Arg : State.t -> Data.term -> bool
-    val fresh_Arg :
-      State.t -> name_hint:string -> args:Data.term list ->
-        State.t * string * Data.term
-
-
-    (** From an unparsed string to a term *)
-    type quotation =
-      depth:int -> State.t -> Ast.Loc.t -> string -> State.t * Data.term
-
-    (** The default quotation [{{code}}] *)
-    val set_default_quotation : quotation -> unit
-
-    (** Named quotation [{{name:code}}] *)
-    val register_named_quotation : name:string -> quotation -> unit
-
-    (** The anti-quotation to lambda Prolog *)
-    val lp : quotation
-
-
-    (** See elpi_quoted_syntax.elpi (EXPERIMENTAL, used by elpi-checker) *)
-    val quote_syntax : Compile.query -> Data.term list * Data.term
-
-    (** To implement the string_to_term built-in (AVOID, makes little sense
-     * if depth is non zero, since bound variables have no name!) *)
-    val term_at : depth:int -> Ast.query -> Data.term
-    
-  end
-
-
-  (* Custom State is a collection of purely functional piece of data carried
-   * by the interpreter. Such data is kept in sync with the backtracking, i.e.
-   * changes made in a branch are lost if that branch fails.
-   * It can be used to both store custom constraints to be manipulated by
-   * custom solvers, or any other piece of data the host application may
-   * need to use.
-   * The initial value can be taken from the compiler state, e.g. a quotation
-   * may generate some constraints statically *)
-  module CustomState : sig
-
-    (** 'a MUST be purely functional, i.e. backtracking is implemented by using
-     * an old binding for 'a.
-     * This limitation can be lifted if there is user request. *)
-    type 'a component
-
-    (** The initial value of the constraint can be produced at compilation
-     *  time (e.g. by quotations) or by reading a global value. *)
-    type ('a,'b) source =
-      | CompilerState of 'b Compile.State.component * ('b -> 'a)
-      | Other of (unit -> 'a)
-
-    val declare :
-      name:string ->
-      pp:(Format.formatter -> 'a -> unit) ->
-      init:('a,'b) source ->
-        'a component
-
-    type t = Data.custom_state
-
-    val get : 'a component -> t -> 'a
-
-    (** Allowed to raise BuiltInPredicate.No_clause *)
-    val set : 'a component -> t -> 'a -> t
-    val update : 'a component -> t -> ('a -> 'a) -> t
-    val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
-
-  end
-
   (* Built-in predicates are implemented in ML using the following FFI.
    *
    * The ffi data type uses GADTs to let one describe the type of an OCaml
@@ -749,6 +650,103 @@ module Extend : sig
     end
   end
 
+  (** This module lets one extend the compiler by:
+   * - "compiling" the query by hand
+   * - providing quotations *)
+  module Compile : sig
+
+    (** In order to implement quotations one may
+     * need to stick some data into the compiler state that can indeed be
+     * extended. A piece of compiler state can also be kept and used at runtime,
+     * e.g. if it contains some custom constraints, see CustomState *)
+    module State : sig
+      type t
+      type 'a component
+    
+      val declare :
+        name:string -> init:(unit -> 'a) ->
+          pp:(Format.formatter -> 'a -> unit) -> 'a component
+
+      val get : 'a component -> t -> 'a
+      val set : 'a component -> t -> 'a -> t
+      val update : 'a component -> t -> ('a -> 'a) -> t
+      val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
+      
+    end
+
+    (** Generate a query starting from a compiled/hand-made term *)
+    val query :
+      Compile.program -> (depth:int -> State.t -> State.t * (Ast.Loc.t * Data.term)) ->
+        Compile.query
+
+    (* Args are parameters of the query (e.g. capital letters) *)
+    val is_Arg : State.t -> Data.term -> bool
+    val fresh_Arg :
+      State.t -> name_hint:string -> args:Data.term list ->
+        State.t * string * Data.term
+
+
+    (** From an unparsed string to a term *)
+    type quotation =
+      depth:int -> State.t -> Ast.Loc.t -> string -> State.t * Data.term
+
+    (** The default quotation [{{code}}] *)
+    val set_default_quotation : quotation -> unit
+
+    (** Named quotation [{{name:code}}] *)
+    val register_named_quotation : name:string -> quotation -> unit
+
+    (** The anti-quotation to lambda Prolog *)
+    val lp : quotation
+
+
+    (** See elpi_quoted_syntax.elpi (EXPERIMENTAL, used by elpi-checker) *)
+    val quote_syntax : Compile.query -> Data.term list * Data.term
+
+    (** To implement the string_to_term built-in (AVOID, makes little sense
+     * if depth is non zero, since bound variables have no name!) *)
+    val term_at : depth:int -> Ast.query -> Data.term
+    
+  end
+
+
+  (* Custom State is a collection of purely functional piece of data carried
+   * by the interpreter. Such data is kept in sync with the backtracking, i.e.
+   * changes made in a branch are lost if that branch fails.
+   * It can be used to both store custom constraints to be manipulated by
+   * custom solvers, or any other piece of data the host application may
+   * need to use.
+   * The initial value can be taken from the compiler state, e.g. a quotation
+   * may generate some constraints statically *)
+  module CustomState : sig
+
+    (** 'a MUST be purely functional, i.e. backtracking is implemented by using
+     * an old binding for 'a.
+     * This limitation can be lifted if there is user request. *)
+    type 'a component
+
+    (** The initial value of the constraint can be produced at compilation
+     *  time (e.g. by quotations) or by reading a global value. *)
+    type ('a,'b) source =
+      | CompilerState of 'b Compile.State.component * ('b -> 'a)
+      | Other of (unit -> 'a)
+
+    val declare :
+      name:string ->
+      pp:(Format.formatter -> 'a -> unit) ->
+      init:('a,'b) source ->
+        'a component
+
+    type t = Data.custom_state
+
+    val get : 'a component -> t -> 'a
+
+    (** Allowed to raise BuiltInPredicate.No_clause *)
+    val set : 'a component -> t -> 'a -> t
+    val update : 'a component -> t -> ('a -> 'a) -> t
+    val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
+
+  end
 
   (** Like quotations but for identifiers that begin and end with
    * "`" or "'", e.g. `this` and 'that'. Useful if the object language
