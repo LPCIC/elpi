@@ -54,10 +54,10 @@ let init ~builtins:(fname,decls) ~basedir:cwd argv =
     with Elpi_parser.ParseError(loc,msg) ->
       List.iteri (fun i s ->
         Printf.eprintf "%4d: %s\n" (i+1) s)
-        (String.split_on_char '\n' text);
+        (Re.Str.(split_delim (regexp_string "\n") text));
       Printf.eprintf "Excerpt of %s:\n%s\n" fname
        (String.sub text loc.Elpi_util.Loc.line_starts_at
-         Elpi_util.Loc.(loc.source_stop-loc.line_starts_at));
+         Elpi_util.Loc.(loc.source_stop - loc.line_starts_at));
       Elpi_util.anomaly ~loc msg
   in
   header, new_argv
