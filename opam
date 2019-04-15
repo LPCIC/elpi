@@ -9,14 +9,10 @@ dev-repo: "git+https://github.com/LPCIC/elpi.git"
 bug-reports: "https://github.com/LPCIC/elpi/issues"
 
 build: [ [ make ] [ make "byte" ] ]
-run-test: [ make "-C" "bench" ]
+run-test: [ make "-C" "tests" "run" ]
 install: [ 
 	[ make "install" ]
 	[ make "install-bin" "BIN=%{bin}%" ]
-]
-remove: [ 
-	[ make "uninstall" ]
-	[ make "uninstall-bin" "BIN=%{bin}%" ]
 ]
 
 depends: [
