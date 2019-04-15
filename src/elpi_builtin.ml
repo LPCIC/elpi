@@ -929,7 +929,25 @@ let elpi_nonlogical_builtins = [
 % if C has no success it runs E.
 pred if i:prop, i:prop, i:prop.
 if B T _ :- B, !, T.
-if _ _ E :- E.  |}
+if _ _ E :- E.  |};
+
+  MLCode(Pred("random.init",
+     In(int, "Seed",
+     Easy     "Initialize OCaml's PRNG with the given Seed"),
+   (fun seed ~depth:_ -> Random.init seed)),
+  DocAbove);
+
+  MLCode(Pred("random.self_init",
+     Easy     "Initialize OCaml's PRNG with some seed",
+   (fun ~depth:_ -> Random.self_init ())),
+  DocAbove);
+
+  MLCode(Pred("random.int",
+     In(int, "Bound",
+     Out(int, "N",
+     Easy     "unifies N with a random int between 0 and Bound (excluded)")),
+   (fun bound _ ~depth -> !: (Random.int bound))),
+  DocAbove);
 
 ]
 ;;

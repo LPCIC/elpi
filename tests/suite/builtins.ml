@@ -14,3 +14,9 @@ let () = declare "nil_cons"
   ~source_elpi:"nil_cons.elpi"
   ~description:"nil = []"
   ()
+
+let () = declare "random"
+  ~source_elpi:"random.elpi"
+  ~description:"random numbers"
+  ()
+

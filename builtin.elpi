@@ -338,6 +338,16 @@ pred if i:prop, i:prop, i:prop.
 if B T _ :- B, !, T.
 if _ _ E :- E.  
 
+% [random.init Seed] Initialize OCaml's PRNG with the given Seed
+external pred random.init i:int.
+
+% [random.self_init] Initialize OCaml's PRNG with some seed
+external pred random.self_init .
+
+% [random.int Bound N] unifies N with a random int between 0 and Bound
+% (excluded)
+external pred random.int i:int, o:int.
+
 
 
 % == stdlib =======================================================

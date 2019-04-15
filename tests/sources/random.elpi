@@ -1,0 +1,6 @@
+main :-
+  random.self_init,
+  random.int 10 R,
+  print R,
+  R >= 0,
+  R < 10.

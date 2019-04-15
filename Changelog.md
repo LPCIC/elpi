@@ -39,7 +39,8 @@ Library:
    `drop-last`, `split-at`, `fold`, `fold2`, `map`, `map-i`, `map2`,
    `map2_filter`, `nth`, `lookup`, `lookup!`, `mem`, `exists`, `exists2`,
    `forall`, `forall2`, `filter`, `zip`, `unzip`, `flatten`, `null`, `iota`,
-   `flip`, `time`, `do!`, `spy-do!`, `any->string`
+   `flip`, `time`, `do!`, `spy-do!`, `any->string`, `random.init`,
+   `random.self_init`, `random.int`
 
    While the predicates in the library are reasonably tested, their names and
    name spaces may change in the future, e.g. a specific name space for
