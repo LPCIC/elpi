@@ -54,6 +54,8 @@ Builtin:
      `pi f x y\ name (f x y) f [x,y]`
  - new builtin `constant` working as `name` but for non-eigenvariables
  - `halt` now accepts any term, not just strings
+ - `getenv` is now typed as `string -> option string` and never fails.
+   The old semantics can be obtained by just writing `getenv Name (some Value)`
 
 API:
  - new data type of locations in the source file: `Ast.Loc.t`
