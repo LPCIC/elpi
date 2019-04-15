@@ -979,9 +979,9 @@ let document_pred fmt docspec name ffi =
 
 let rec tyargs_of_args : type a b c. string -> (a,b,c) ADT.constructor_arguments -> (bool * string * string) list =
   fun self -> function
-  | N -> [false,self,""]
-  | A ({ ty },rest) -> (false,show_ty_ast ty,"") :: tyargs_of_args self rest
-  | S rest -> (false,self,"") :: tyargs_of_args self rest
+  | ADT.N -> [false,self,""]
+  | ADT.A ({ ty },rest) -> (false,show_ty_ast ty,"") :: tyargs_of_args self rest
+  | ADT.S rest -> (false,self,"") :: tyargs_of_args self rest
 
 let document_constructor fmt self (ADT.K(name,doc,args,_,_)) =
   let args = tyargs_of_args self args in
@@ -991,9 +991,9 @@ let document_constructor fmt self (ADT.K(name,doc,args,_,_)) =
 let document_kind fmt = function
   | TyApp(s,_,l) ->
       let n = List.length l + 2 in
-      let l = List.init n (fun _ -> "type") in
+      let l = Array.init n (fun _ -> "type") in
       Fmt.fprintf fmt "@[<hov 2>kind %s %s.@]@\n"
-        s (String.concat " -> " l)
+        s (String.concat " -> " (Array.to_list l))
   | TyName s -> Fmt.fprintf fmt "@[<hov 2>kind %s type.@]@\n" s
 
 let document_adt fmt ty ks =
