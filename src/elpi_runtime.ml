@@ -1700,132 +1700,220 @@ let _ = do_app_deref := deref_appuv;;
   Indexing
  ******************************************************************************)
 
-module type Indexing = sig
-
-  val pp_key : key -> string
+module Indexing : sig
 
   (* a clause is: "key args :- hyps." the head is split into its main symbol
    * and its arguments.  This is because the unification/matching of the head
    * symbol is made by the indexing machinery.  We don't support unification
    * variables in head position *)
-  val ppclause : Fmt.formatter -> depth:int -> clause -> unit
+  val ppclause : Fmt.formatter -> depth:int -> constant -> clause -> unit
 
-  val key_of : mode:[`Query | `Clause] -> depth:int -> term -> key
-  val hd_pred : clause -> constant
+  val get_clauses : depth:int -> term -> prolog_prog -> clause list
+  val make_index : depth:int -> indexing:(mode * int list) Constants.Map.t -> (constant*clause) list -> prolog_prog
 
-  val get_clauses : depth:int -> term -> idx -> clause list
-  val make_index : clause list -> idx
+  val local_prog : prolog_prog -> clause_src list
+  val add_clauses : depth:int -> (constant*clause) list -> clause_src list -> prolog_prog -> prolog_prog
+end= struct (* {{{ *)
 
-  val local_prog : idx -> clause_src list
-  val add_clauses : clause list -> clause_src list -> idx -> idx
-end
-module TwoMapIndexing : Indexing = struct (* {{{ *)
+let mustbevariablec = min_int (* uvar or uvar t or uvar l t *)
 
-(* all clauses: used when the query is flexible
-   all flexible clauses: used when the query is rigid and the map
-                        for that atom is empty
-   map: used when the query is rigid before trying the all flexible clauses *)
-
-include TwoMapIndexingTypes
-
-let hd_pred { key = (hd,_) } = hd
-
-let variablek =       -99999999 (* a flexible term like X t *)
-let mustbevariablek = -99999998 (* uvar or uvar t or uvar l t *)
-
-let pp_key (hd,v) = C.show hd
-  
-let ppclause f ~depth { args = args; hyps = hyps; key = (hd,_) } =
+let ppclause f ~depth hd { args = args; hyps = hyps; } =
   Fmt.fprintf f "@[<hov 1>%s %a :- %a.@]" (C.show hd)
-     (pplist (uppterm ~min_prec:(Elpi_parser.appl_precedence+1) depth [] 0 empty_env) "") args
-     (pplist (uppterm ~min_prec:(Elpi_parser.appl_precedence+1) depth [] 0 empty_env) ",") hyps
+     (pplist (uppterm ~min_prec:(Elpi_parser.appl_precedence+1) depth [] 0 empty_env) " ") args
+     (pplist (uppterm ~min_prec:(Elpi_parser.appl_precedence+1) depth [] 0 empty_env) ", ") hyps
 
-let key_of ~mode:_ ~depth =
- let rec skey_of = function
-    Const k when k = C.uvarc -> mustbevariablek
-  | Const k -> k
-  | Nil -> C.nilc
-  | Cons _ -> C.consc
-  | UVar ({contents=t},origdepth,args) when t != C.dummy ->
-     skey_of (deref_uv ~from:origdepth ~to_:depth args t)
-  | AppUVar ({contents=t},origdepth,args) when t != C.dummy ->
-     skey_of (deref_appuv ~from:origdepth ~to_:depth args t)
-  | App (k,_,_) when k = C.uvarc -> mustbevariablek
-  | App (k,a,_) when k = C.asc -> skey_of a
-  | App (k,_,_)
-  | Builtin (k,_) -> k
-  | Lam _ -> variablek (* loose indexing to enable eta *)
-  | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> variablek
+let tail_opt = function
+  | [] -> []
+  | _ :: xs -> xs
+
+let hd_opt = function
+  | b :: _ -> b
+  | _ -> false
+
+type clause_arg_classification =
+  | Variable
+  | MustBeVariable
+  | Rigid of constant * bool (* matching *)
+
+let rec classify_clause_arg ~depth matching t =
+  match deref_head ~depth t with
+  | Const k when k == C.uvarc -> MustBeVariable
+  | Const k -> Rigid(k,matching)
+  | Nil -> Rigid (C.nilc,matching)
+  | Cons _ -> Rigid (C.consc,matching)
+  | App (k,_,_) when k == C.uvarc -> MustBeVariable
+  | App (k,a,_) when k == C.asc -> classify_clause_arg ~depth matching a
+  | (App (k,_,_) | Builtin (k,_)) -> Rigid (k,matching)
+  | Lam _ -> Variable (* loose indexing to enable eta *)
+  | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> Variable
   | CData d -> 
      let hash = -(CData.hash d) in
-     if hash > mustbevariablek then hash
-     else hash+2 (* ? *) in
- let rec key_of_depth = function
-   Const k -> k, variablek
- | UVar ({contents=t},origdepth,args) when t != C.dummy ->
-    (* TODO: optimization: avoid dereferencing *)
-    key_of_depth (deref_uv ~from:origdepth ~to_:depth args t)
- | AppUVar ({contents=t},origdepth,args) when t != C.dummy -> 
-    key_of_depth (deref_appuv ~from:origdepth ~to_:depth args t)
- | App(k,arg,_) when k == C.asc -> key_of_depth arg
- | App (k,arg2,_) -> k, skey_of arg2
- | Builtin _ -> assert false
- | (Nil | Cons _ | Arg _ | AppArg _ | Lam _
-   | UVar _ | AppUVar _ | CData _ | Discard) as x ->
-   type_error ("The clause's head is not a predicate: " ^ show_term x)
- in
-  key_of_depth
-;;
+     if hash > mustbevariablec then Rigid (hash,matching)
+     else Rigid (hash+1,matching)
 
-let get_clauses ~depth a { map = m } =
- let ind,app = key_of ~mode:`Query ~depth a in
+let rec classify_clause_argno ~depth argno mode = function
+  | [] -> Variable
+  | x :: _ when argno == 0 -> classify_clause_arg ~depth (hd_opt mode) x
+  | _ :: xs -> classify_clause_argno ~depth (argno-1) (tail_opt mode) xs
+
+let add1clause ~depth m (predicate,clause) =
+    try 
+      let TwoLevelIndex { all_clauses; argno; mode; flex_arg_clauses; arg_idx } = Elpi_ptmap.find predicate m in
+      (* X matches both rigid and flexible terms *)
+      match classify_clause_argno ~depth argno mode clause.args with
+      | Variable ->
+        Elpi_ptmap.add predicate (TwoLevelIndex {
+          argno; mode;
+          all_clauses = clause :: all_clauses;
+          flex_arg_clauses = clause :: flex_arg_clauses;
+          arg_idx = Elpi_ptmap.map (fun l_rev -> clause :: l_rev) arg_idx;
+        }) m
+      | MustBeVariable ->
+      (* uvar matches only flexible terms (or itself at the meta level) *)
+        let l_rev =
+          try Elpi_ptmap.find mustbevariablec arg_idx
+          with Not_found -> flex_arg_clauses in
+        Elpi_ptmap.add predicate (TwoLevelIndex {
+            argno; mode;
+          all_clauses = clause :: all_clauses;
+          flex_arg_clauses;
+          arg_idx = Elpi_ptmap.add mustbevariablec (clause::l_rev) arg_idx;
+        }) m
+      | Rigid (arg_hd,matching) ->
+      (* a rigid term matches flexible terms only in unification mode *)
+        let l_rev =
+          try Elpi_ptmap.find arg_hd arg_idx
+          with Not_found -> flex_arg_clauses in
+        let all_clauses =
+          if matching then all_clauses else clause :: all_clauses in
+        Elpi_ptmap.add predicate (TwoLevelIndex {
+            argno; mode;
+          all_clauses;
+          flex_arg_clauses;
+          arg_idx = Elpi_ptmap.add arg_hd (clause::l_rev) arg_idx;
+        }) m
+    with
+    | Not_found ->
+      match classify_clause_argno ~depth 0 [] clause.args with
+      | Variable ->
+      Elpi_ptmap.add predicate (TwoLevelIndex {
+        argno = 0; mode = [];
+        all_clauses = [clause];
+        flex_arg_clauses = [clause];
+        arg_idx =Elpi_ptmap.empty;
+      }) m
+      | MustBeVariable ->
+      Elpi_ptmap.add predicate (TwoLevelIndex {
+        argno = 0;mode = [];
+        all_clauses = [clause];
+        flex_arg_clauses = [];
+        arg_idx = Elpi_ptmap.add mustbevariablec [clause] Elpi_ptmap.empty;
+      }) m
+      | Rigid (arg_hd,matching) ->
+      let all_clauses = if matching then [] else [clause] in
+      Elpi_ptmap.add predicate (TwoLevelIndex {
+        argno = 0;mode = [];
+        all_clauses;
+        flex_arg_clauses = [];
+        arg_idx = Elpi_ptmap.add arg_hd [clause] Elpi_ptmap.empty;
+      }) m
+
+let add_clauses ~depth clauses p =       
+  let p = List.fold_left (add1clause ~depth) p clauses in
+  p
+
+type indexing =
+  | MapOn of int
+  | Hash of int list
+
+let chose_indexing predicate l =
+  let rec all_zero = function
+    | [] -> true
+    | 0 :: l -> all_zero l
+    | _ -> false in
+  let rec aux n = function
+    | [] -> type_error ("Wrong indexing for " ^ C.show predicate)
+    | 0 :: l -> aux (n+1) l
+    | 1 :: l when all_zero l -> MapOn n
+    | _ -> Hash l
+  in
+    aux 0 l
+
+let make_index ~depth ~indexing p =
+  let m = Constants.Map.fold (fun predicate (mode, index) m ->
+    match chose_indexing predicate index with
+    | Hash _ -> type_error ("Hash indexing for " ^ C.show predicate)
+    | MapOn argno ->
+      Elpi_ptmap.add predicate (TwoLevelIndex {
+        argno;
+        mode;
+        all_clauses = [];
+        flex_arg_clauses = [];
+        arg_idx = Elpi_ptmap.empty;
+      }) m) indexing Elpi_ptmap.empty in
+  let p = List.rev p in
+  { index = add_clauses ~depth p m; src = [] }
+
+let add_clauses ~depth clauses clauses_src { index; src } =
+  { index = add_clauses ~depth clauses index; src = List.rev clauses_src @ src }
+
+ 
+let predicate_of_goal ~depth t =
+  match deref_head ~depth t with
+  | Const k as x -> k, x
+  | App (k,_,_) as x -> k, x
+  | Builtin _ -> assert false
+  | (Nil | Cons _ | Arg _ | AppArg _ | Lam _
+    | UVar _ | AppUVar _ | CData _ | Discard) as x ->
+    type_error ("The goal's head is not a predicate: " ^ show_term x)
+
+type goal_arg_classification =
+  | Variable
+  | Rigid of constant
+
+let rec classify_goal_arg ~depth t =
+  match deref_head ~depth t with
+  | Const k when k == C.uvarc -> Rigid mustbevariablec
+  | Const k -> Rigid(k)
+  | Nil -> Rigid (C.nilc)
+  | Cons _ -> Rigid (C.consc)
+  | App (k,_,_) when k == C.uvarc -> Rigid mustbevariablec
+  | App (k,a,_) when k == C.asc -> classify_goal_arg ~depth a
+  | (App (k,_,_) | Builtin (k,_)) -> Rigid (k)
+  | Lam _ -> Variable (* loose indexing to enable eta *)
+  | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> Variable
+  | CData d -> 
+     let hash = -(CData.hash d) in
+     if hash > mustbevariablec then Rigid (hash)
+     else Rigid (hash+1)
+
+let classify_goal_argno ~depth argno = function
+  | Const _ -> Variable
+  | App(_,x,_) when argno == 0 -> classify_goal_arg ~depth x
+  | App(_,_,xs) ->
+      let x =
+        try List.nth xs (argno-1)
+        with Invalid_argument _ ->
+          type_error ("The goal is not applied enough")
+      in
+      classify_goal_arg ~depth x
+  | _ -> assert false
+
+let get_clauses ~depth goal { index = m } =
+ let predicate, goal = predicate_of_goal ~depth goal in
  let rc =
    try
-    let l,flexs,h = Elpi_ptmap.find ind m in
-    if app=variablek then l
-    else (try Elpi_ptmap.find app h with Not_found -> flexs)
+     let TwoLevelIndex { all_clauses; argno; mode; flex_arg_clauses; arg_idx } = Elpi_ptmap.find predicate m in
+     match classify_goal_argno ~depth argno goal with
+     | Variable -> all_clauses
+     | Rigid arg_hd ->
+        try Elpi_ptmap.find arg_hd arg_idx
+        with Not_found -> flex_arg_clauses
    with Not_found -> []
  in
- [%log "get_clauses" (pp_key (ind,app)) (List.length rc)];
+ [%log "get_clauses" (Constants.show predicate) (List.length rc)];
  rc
 
-let add1clause m clause =
-    let matching = match clause.mode with [] -> false | x :: _ -> x in
-    let ind,app = clause.key in
-    try 
-      let l,flexs,h = Elpi_ptmap.find ind m in
-      (* X matches both rigid and flexible terms *)
-      if app == variablek then begin
-        Elpi_ptmap.add ind (clause :: l, clause :: flexs, Elpi_ptmap.map (fun l_rev -> clause::l_rev) h) m
-      (* uvar matches only flexible terms (or itself at the meta level) *)
-      end else if app == mustbevariablek then begin
-        let l_rev = try Elpi_ptmap.find app h with Not_found -> flexs in
-        Elpi_ptmap.add ind (clause :: l, flexs, Elpi_ptmap.add app (clause::l_rev) h) m
-      (* a rigid term matches flexible terms only in unification mode *)
-      end else begin
-        let l_rev = try Elpi_ptmap.find app h with Not_found -> flexs in
-        let l = if matching then l else clause :: l in
-        Elpi_ptmap.add ind (l, flexs, Elpi_ptmap.add app (clause::l_rev) h) m
-      end
-    with
-    | Not_found -> 
-     if app=variablek then
-      Elpi_ptmap.add ind ([clause],[clause],Elpi_ptmap.empty) m
-     else if app=mustbevariablek then
-      Elpi_ptmap.add ind ([clause],[],Elpi_ptmap.add app [clause] Elpi_ptmap.empty) m
-     else
-      let l = if matching then [] else [clause] in
-      Elpi_ptmap.add ind
-       (l,[],Elpi_ptmap.add app [clause] Elpi_ptmap.empty) m
-
-let add_clauses clauses s { map = p;  src } =       
-  let p = List.fold_left add1clause p clauses in
-  { map = p; src = List.rev s @ src }
-
-let make_index p =
-  let idx = add_clauses (List.rev p) [] { map = Elpi_ptmap.empty; src = [] } in
-  { idx with src = [] } (* original program not in clauses *)
- 
 (* flatten_snd = List.flatten o (List.map ~~snd~~) *)
 (* TODO: is this optimization necessary or useless? *)
 let rec flatten_snd =
@@ -1874,8 +1962,7 @@ let local_prog { src } =  src
 
 end (* }}} *)
 module UnifBits (*: Indexing*) = struct (* {{{ *)
-
-  include UnifBitsTypes
+(*
 
   let key_bits =
     let n = ref 0 in
@@ -2033,20 +2120,15 @@ module UnifBits (*: Indexing*) = struct (* {{{ *)
      [] -> []
    | (_,l)::tl -> (List.map (fun (cl,_) -> cl) l) @ flatten_ tl
 
-let local_prog { src } = src 
+let local_prog (Index { src }) = src 
+*)
 
 end (* }}} *)
 
-(*
-open UnifBits
-type idx = UnifBits.idx
-*)
-
-(* open UnifBits *)
-open TwoMapIndexing
+open Indexing
 
 (* Used to pass the program to the CHR runtime *)
-let orig_prolog_program = Fork.new_local (make_index [])
+let orig_prolog_program = Fork.new_local (make_index ~depth:0 ~indexing:Constants.Map.empty [])
 
 (******************************************************************************
   Dynamic Prolog program
@@ -2054,19 +2136,16 @@ let orig_prolog_program = Fork.new_local (make_index [])
 
 module Clausify : sig
 
-  val clausify : depth:int -> term -> clause list * clause_src list * int
+  val clausify : prolog_prog -> depth:int -> term -> (constant*clause) list * clause_src list * int
 
-  val clausify1 : nargs:int -> depth:int -> term -> clause * clause_src * int
+  val clausify1 : mode C.Map.t -> nargs:int -> depth:int -> term -> (constant*clause) * clause_src * int
   
-  val predicate_mode : mode C.Map.t Fork.local_ref
-
   (* Utilities that deref on the fly *)
   val lp_list_to_list : depth:int -> term -> term list
   val get_lambda_body : depth:int -> term -> term
   val split_conj      : depth:int -> term -> term list
 
 end = struct  (* {{{ *)
-let predicate_mode = Fork.new_local C.Map.empty
 
 let rec term_map m = function
   | Const x when List.mem_assoc x m -> mkConst (List.assoc x m)
@@ -2134,16 +2213,16 @@ r :- (pi X\ pi Y\ q X Y :- pi c\ pi d\ q (Z c d) (X c d) (Y c)) => ... *)
  *  - the clause will live in (depth+lcs)
  *)
 
-let rec claux1 vars depth hyps ts lts lcs t =
+let rec claux1 get_mode vars depth hyps ts lts lcs t =
   [%trace "clausify" ("%a %d %d %d %d\n%!"
       (ppterm (depth+lts) [] 0 empty_env) t depth lts lcs (List.length ts)) begin
   match t with
   | Discard -> error "ill-formed hypothetical clause: discard in head position"
   | App(c, g2, [g1]) when c == C.rimplc ->
-     claux1 vars depth ((ts,g1)::hyps) ts lts lcs g2
+     claux1 get_mode vars depth ((ts,g1)::hyps) ts lts lcs g2
   | App(c, _, _) when c == C.rimplc -> error "ill-formed hypothetical clause"
   | App(c, g1, [g2]) when c == C.implc ->
-     claux1 vars depth ((ts,g1)::hyps) ts lts lcs g2
+     claux1 get_mode vars depth ((ts,g1)::hyps) ts lts lcs g2
   | App(c, _, _) when c == C.implc -> error "ill-formed hypothetical clause"
   | App(c, arg, []) when c == C.sigmac ->
      let b = get_lambda_body ~depth:(depth+lts) arg in
@@ -2153,10 +2232,10 @@ let rec claux1 vars depth hyps ts lts lcs t =
       match args with
          [] -> Const (depth+lcs)
        | hd::rest -> App (depth+lcs,hd,rest) in
-     claux1 vars depth hyps (cst::ts) (lts+1) (lcs+1) b
+     claux1 get_mode vars depth hyps (cst::ts) (lts+1) (lcs+1) b
   | App(c, arg, []) when c == C.pic ->
      let b = get_lambda_body ~depth:(depth+lts) arg in
-     claux1 (vars+1) depth hyps (Arg(vars,0)::ts) (lts+1) lcs b
+     claux1 get_mode (vars+1) depth hyps (Arg(vars,0)::ts) (lts+1) lcs b
   | Const _
   | App _ as g ->
      let hyps =
@@ -2180,18 +2259,16 @@ let rec claux1 vars depth hyps ts lts lcs t =
        | UVar _ | AppUVar _ -> assert false
        | Cons _ | Nil | Discard -> assert false
      in
-     let mode =
-       try C.Map.find hd !predicate_mode
-       with Not_found -> [] in
+     let mode = try get_mode hd with Not_found -> [] in
      let c = { depth = depth+lcs ; args= args; hyps = hyps; mode;
-          vars = vars; key=key_of ~mode:`Clause ~depth:(depth+lcs) g } in
+          vars = vars; (*key=key_of ~mode:`Clause ~depth:(depth+lcs) g*) } in
      [%spy "extra" (fun fmt -> ppclause fmt ~depth:(depth+lcs)) c];
-     c, { hdepth = depth; hsrc = g }, lcs
+     (hd,c), { hdepth = depth; hsrc = g }, lcs
   | UVar ({ contents=g },from,args) when g != C.dummy ->
-     claux1 vars depth hyps ts lts lcs
+     claux1 get_mode vars depth hyps ts lts lcs
        (deref_uv ~from ~to_:(depth+lts) args g)
   | AppUVar ({contents=g},from,args) when g != C.dummy -> 
-     claux1 vars depth hyps ts lts lcs
+     claux1 get_mode vars depth hyps ts lts lcs
        (deref_appuv ~from ~to_:(depth+lts) args g)
   | Arg _ | AppArg _ -> anomaly "claux1 called on non-heap term"
   | Builtin (c,_) ->
@@ -2202,16 +2279,19 @@ let rec claux1 vars depth hyps ts lts lcs t =
   | Nil | Cons _ -> error "ill-formed hypothetical clause"
   end]
    
-let clausify ~depth t =
+let clausify { index } ~depth t =
   let l = split_conj ~depth t in
+  let get_mode x =
+    let TwoLevelIndex { mode } = Elpi_ptmap.find x index in mode
+  in
   let clauses, program, lcs =
     List.fold_left (fun (clauses, programs, lcs) t ->       
-      let clause, program, lcs = claux1 0 depth [] [] 0 lcs t in
+      let clause, program, lcs = claux1 get_mode 0 depth [] [] 0 lcs t in
     clause :: clauses, program :: programs, lcs) ([],[],0) l in
   clauses, program, lcs
 ;;
 
-let clausify1 ~nargs ~depth t = claux1 nargs depth [] [] 0 0 t
+let clausify1 m ~nargs ~depth t = claux1 (fun x -> C.Map.find x m) nargs depth [] [] 0 0 t
 
 end (* }}} *) 
 open Clausify
@@ -2220,8 +2300,7 @@ open Clausify
   Choice stack
  ******************************************************************************)
 
-(* This has to stay here, we want no Index wrap around idx *)
-type goal = (*depth:*)int * idx * term
+type goal = (*depth:*)int * prolog_prog * term
 
 (* The activation frames points to the choice point that
    cut should backtrack to, i.e. the first one not to be
@@ -2231,7 +2310,7 @@ type frame =
  | FCons of (*lvl:*)alternative * goal list * frame
 and alternative = {
   lvl : alternative;
-  program : idx;
+  program : prolog_prog;
   depth : int;
   goal : term;
   goals : goal list;
@@ -2278,7 +2357,7 @@ let do_make_runtime : (?max_steps:int -> ?delay_outside_fragment:bool -> executa
 module Constraints : sig
     
   val propagation : unit -> constraint_def list
-  val resumption : constraint_def list -> (int * idx * term) list
+  val resumption : constraint_def list -> (int * prolog_prog * term) list
 
   val chrules : CHR.t Fork.local_ref
 
@@ -2286,7 +2365,7 @@ module Constraints : sig
   val qnames : int StrMap.t Fork.local_ref
   val qenv : term array Fork.local_ref
   val exect_builtin_predicate :
-    constant -> depth:int -> idx -> term list -> term list
+    constant -> depth:int -> prolog_prog -> term list -> term list
 
 end = struct (* {{{ *)
 
@@ -2493,7 +2572,7 @@ let delay_goal ?(filter_ctx=fun _ -> true) ~depth prog ~goal:g ~on:keys =
       (*(pplist (uppterm depth [] 0 empty_env) ",") pdiff*) depth
       (uppterm depth [] 0 empty_env) x) g];
   let kind = Constraint {
-    cdepth = depth; prog = Index prog; context=pdiff; conclusion = g } in
+    cdepth = depth; prog = prog; context=pdiff; conclusion = g } in
   CS.declare_new { kind ; blockers = keys }
 ;;
 
@@ -2749,13 +2828,11 @@ let try_fire_rule rule (constraints as orig_constraints) =
     | None -> Constants.truec
   in
  
-  let initial_program = Elpi_data.wrap_prolog_prog !orig_prolog_program in
+  let initial_program = !orig_prolog_program in
  
   let executable = {
     (* same program *)
     compiled_program = initial_program; 
-    (* same modes *)
-    modes = !predicate_mode;
     (* no meta meta level *)
     chr = CHR.empty;
     initial_goal = shift_bound_vars ~depth:0 ~to_:max_depth guard;
@@ -2833,11 +2910,10 @@ let try_fire_rule rule (constraints as orig_constraints) =
 ;;
 
 let resumption to_be_resumed_rev =
-  List.map (fun { cdepth = d; prog = p; conclusion = g } ->
-    let idx = match p with Index p -> p | _ -> assert false in
+  List.map (fun { cdepth = d; prog; conclusion = g } ->
     [%spy "run-scheduling-resume"
       (fun fmt -> Fmt.fprintf fmt "%a" (uppterm d [] d empty_env)) g];
-    d, idx, g)
+    d, prog, g)
   (List.rev to_be_resumed_rev)
 
 (* all permutations of pivot+rest of length len where the
@@ -2966,16 +3042,16 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
       | (depth, p, g) :: gs -> run depth p g gs next alts lvl end
     | App(c, g2, [g1]) when c == C.rimplc ->
        (*Fmt.eprintf "RUN: %a\n%!" (uppterm depth [] 0 empty_env) g ;*)
-       let clauses, pdiff, lcs = clausify ~depth g1 in
+       let clauses, pdiff, lcs = clausify p ~depth g1 in
        let g2 = hmove ~from:depth ~to_:(depth+lcs) g2 in
        (*Fmt.eprintf "TO: %a \n%!" (uppterm (depth+lcs) [] 0 empty_env) g2;*)
-       run (depth+lcs) (add_clauses clauses pdiff p) g2 gs next alts lvl
+       run (depth+lcs) (add_clauses ~depth clauses pdiff p) g2 gs next alts lvl
     | App(c, g1, [g2]) when c == C.implc ->
        (*Fmt.eprintf "RUN: %a\n%!" (uppterm depth [] 0 empty_env) g ;*)
-       let clauses, pdiff, lcs = clausify ~depth g1 in
+       let clauses, pdiff, lcs = clausify p ~depth g1 in
        let g2 = hmove ~from:depth ~to_:(depth+lcs) g2 in
        (*Fmt.eprintf "TO: %a \n%!" (uppterm (depth+lcs) [] 0 empty_env) g2;*)
-       run (depth+lcs) (add_clauses clauses pdiff p) g2 gs next alts lvl
+       run (depth+lcs) (add_clauses ~depth clauses pdiff p) g2 gs next alts lvl
 (*  This stays commented out because it slows down rev18 in a visible way!   *)
 (*  | App(c, _, _) when c == implc -> anomaly "Implication must have 2 args" *)
     | App(c, arg, []) when c == C.pic ->
@@ -3019,7 +3095,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
     let k, args_of_g = args_of g in
     let rec select l =
       [%trace "select" (fun fmt ->
-          pplist ~max:1 ~boxed:true (fun fmt -> ppclause fmt ~depth) "|" fmt l)
+          pplist ~max:1 ~boxed:true (fun fmt -> ppclause fmt ~depth k) "|" fmt l)
       begin match l with
       | [] -> [%tcall next_alt alts]
       | c :: cs ->
@@ -3027,7 +3103,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
         T.last_call := maybe_last_call && cs = [];
         let env = Array.make c.vars C.dummy in
         match
-         for_all3b (fun x y b -> unif ~matching:b depth env c.depth x y)
+         for_all3b (fun x y matching -> unif ~matching depth env c.depth x y)
            args_of_g c.args c.mode false
         with
         | false -> T.undo old_trail (); [%tcall select cs]
@@ -3119,7 +3195,7 @@ end;*)
   and next_alt alts =
    if alts == noalts then raise No_clause
    else
-    let { program = p; clauses = clauses; goal = g; goals = gs; stack = next;
+     let { program = p; clauses; goal = g; goals = gs; stack = next;
           trail = old_trail; custom_state = old_constraints;
           depth = depth; lvl = lvl; next = alts} = alts in
     T.undo ~old_trail ~old_constraints ();
@@ -3130,7 +3206,6 @@ end;*)
  (* Finally the runtime *)
  fun ?max_steps ?(delay_outside_fragment = false) {
     compiled_program;
-    modes;
     chr;
     initial_depth;
     query_env;
@@ -3139,9 +3214,8 @@ end;*)
     assignments_names;
   } ->
   let { Fork.exec = exec ; get = get ; set = set } = Fork.fork () in
-  set orig_prolog_program (Elpi_data.unwrap_prolog_prog compiled_program);
+  set orig_prolog_program compiled_program;
   set Constraints.chrules chr;
-  set predicate_mode modes;
   set T.empty_trail [];
   set T.trail !T.empty_trail;
   set T.last_call false;
@@ -3252,16 +3326,7 @@ let subst ~depth = HO.subst depth
 let move = HO.move
 let hmove = HO.hmove
 let make_index = make_index
-let clausify1 modes ~nargs ~depth t =
-  let old = !Clausify.predicate_mode in
-  try
-    Clausify.predicate_mode := modes;
-    let cl = Clausify.clausify1 ~nargs ~depth t in
-    Clausify.predicate_mode := old;
-    cl
-  with e ->
-    Clausify.predicate_mode := old;
-    raise e
+let clausify1 = Clausify.clausify1
 let pp_key = pp_key
 
 (* vim: set foldmethod=marker: *)

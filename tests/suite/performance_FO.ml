@@ -51,3 +51,8 @@ let () = declare "ackermann"
   ~source_elpi:"ackermann.elpi"
   ~description:"ackermann"
   ()
+
+let () = declare "index2"
+  ~source_elpi:"index2.elpi"
+  ~description:"indexing the second argument"
+  ()

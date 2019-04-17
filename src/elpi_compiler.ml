@@ -163,8 +163,6 @@ module Executable = struct
 type executable = Elpi_data.executable = {
   (* the lambda-Prolog program: an indexed list of clauses *) 
   compiled_program : prolog_prog;
-  (* Execution modes (needed for hypothetical clauses *)
-  modes : mode C.Map.t; (* XXX TODO: put them inside prolog_program *)
   (* chr rules *)
   chr : CHR.t;
   (* initial depth (used for both local variables and CHR (#eigenvars) *)
@@ -1497,13 +1495,31 @@ let run
       List.fold_left (fun x y -> CHR.add_rule clique y x) chr rules)
     CHR.empty chr in
   let ifexpr { Clause.attributes = { Assembled.ifexpr } } = ifexpr in
+  let indexing =
+    let known =
+      let ty = List.map (fun { Structured.decl = { tname }} -> tname) types in
+      let mo = C.Map.bindings modes |> List.map fst in
+      List.fold_right C.Set.add (mo @ ty) C.Set.empty in
+    C.Set.fold (fun name m ->
+      let mode = try C.Map.find name modes with Not_found -> [] in
+      let index =
+        let indexes =
+          map_filter (fun { Structured.decl = { tname }; tindex } ->
+              match tindex with
+              | Indexed l when tname == name -> Some l
+              | _ -> None) types |> uniq in
+        match indexes with
+        | [] -> [1]
+        | [x] -> x
+        | _ -> error ("multiple and inconsistent indexing attributes for " ^
+                      C.show name) in
+      C.Map.add name (mode,index) m) known C.Map.empty in
   let prolog_program =
-    make_index
+    make_index ~depth:initial_depth ~indexing
       (List.map (compile_clause modes initial_depth)
         (filter_if flags.defined_variables ifexpr clauses)) in
   {
-    Elpi_data.compiled_program = (*wrap_prolog_prog*) prolog_program;
-    modes;
+    Elpi_data.compiled_program = prolog_program;
     chr;
     initial_depth;
     query_env = Array.make nargs C.dummy;

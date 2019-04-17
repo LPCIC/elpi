@@ -29,6 +29,9 @@ is very welcome. Questions or feature requests are welcome as well.
 - [Conditional compilation](#conditional-compilation) can be used
   to conditionally consider/discard clauses or CHR rules
 
+- [Configurable argument indexing](#configurable-argument-indexing) can be used
+  to write code in a more natural way and still get good performances
+
 - [Modes](#modes) can be declared in order to control the generative
   semantics of Prolog
 
@@ -323,6 +326,23 @@ Here `DEBUG` is just arbitrary string, and multiple `-D` flags can be passed
 to `elpi`.
 
 The attribute `:if` can also be used on CHR rules.
+
+## Configurable argument indexing
+
+By default the clauses for a predicate are indexed by looking
+at their first argument at depth 1. The `:index` attribute lets
+one specify a different argument.
+
+```prolog
+:index(_ 1)
+pred mymap i:(A -> B), i:list A, o:list B.
+mymap F [] [].
+mymap F [X|XS] [Y|YS] :- Y = F X, mymap XS YS.
+```
+Here `(_ 1)` is a shorthand for `(0 1)` that means index at depth 0 the first
+argument, and at depth 1 the second argument (and at depth 0 all the remaining
+ones). At the time of writing only one argument can be indexed at depth equal
+to one, all the others must be indexed at depth zero.
 
 ## Modes
 

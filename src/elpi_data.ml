@@ -35,12 +35,6 @@ open Elpi_util
  *
  *)
 
-(* To break circularity, we open the index type (index of clauses) here
- * and extend it with the Index constructor when such data type will be
- * defined.  The same for chr with CHR.t *)
-type prolog_prog = ..
-let pp_prolog_prog = mk_extensible_printer ()
-
 (* Used by pretty printers, to be later instantiated in module Constants *)
 let pp_const = mk_extensible_printer ()
 type constant = int (* De Bruijn levels *)
@@ -94,11 +88,33 @@ and unification_def = {
 and constraint_def = {
   cdepth : int;
   prog : prolog_prog [@equal fun _ _ -> true]
-               [@printer (pp_extensible pp_prolog_prog)];
+               [@printer (fun fmt _ -> Fmt.fprintf fmt "<prolog_prog>")];
   context : clause_src list;
   conclusion : term;
 }
 and clause_src = { hdepth : int; hsrc : term }
+and prolog_prog = {
+  src : clause_src list; (* hypothetical context in original form, for CHR *)
+  index : index;
+}
+and index = second_lvl_idx Elpi_ptmap.t
+and second_lvl_idx =
+| TwoLevelIndex of {
+    argno : int;
+    mode : mode;
+    all_clauses : clause list; (* when the query is flexible *)
+    flex_arg_clauses : clause list; (* when the query is rigid *)
+    arg_idx : clause list Elpi_ptmap.t;
+  }
+(* | BitHash of unit *)
+and clause = {
+    depth : int;
+    args : term list;
+    hyps : term list;
+    vars : int;
+    mode : mode; (* CACHE to avoid allocation in get_clause *)
+}
+and mode = bool list (* true=input, false=output *)
 [@@deriving show, eq]
 
 let mkLam x = Lam x [@@inline]
@@ -501,70 +517,6 @@ end = struct
 
 end
 
-(* true=input, false=output *)
-type mode = bool list [@@deriving show]
-
-module TwoMapIndexingTypes = struct (* {{{ *)
-
-type key1 = constant
-type key2 = int
-type key = key1 * key2
-
-let pp_key f (k,_) = Constants.pp f k
-let show_key (k,_) = Constants.show k
-
-type clause = {
-    depth : int;
-    args : term list;
-    hyps : term list;
-    vars : int;
-    key : key;
-    mode: mode;
-}
-[@@ deriving show]
-
-type idx = {
-  src : clause_src list;
-  map : (clause list * clause list * clause list Elpi_ptmap.t) Elpi_ptmap.t
-}
-[@@ deriving show]
-
-end (* }}} *)
-
-module UnifBitsTypes = struct (* {{{ *)
-
-  type key = int
-
-  type clause = {
-    depth : int;
-    args : term list;
-    hyps : term list;
-    vars : int;
-    key : key;
-    mode: mode;
-  }
-
-  type idx = {
-    src : clause_src list;
-    map : (clause * int) list Elpi_ptmap.t  (* timestamp *)
-  }
-
-end (* }}} *)
-
-type idx = TwoMapIndexingTypes.idx
-[@@ deriving show]
-type key = TwoMapIndexingTypes.key
-[@@ deriving show]
-type clause = TwoMapIndexingTypes.clause = {
-  depth : int;
-  args : term list;
-  hyps : term list;
-  vars : int;
-  key : key;
-  mode : mode;
-}
-[@@ deriving show]
-
 (* An elpi program, as parsed.  But for idx and query_depth that are threaded
    around in the main loop, chr and modes are globally stored in Constraints
    and Clausify. *)
@@ -643,9 +595,7 @@ let todopp fmt _ = error "not implemented"
 
 type executable = {
   (* the lambda-Prolog program: an indexed list of clauses *) 
-  compiled_program : prolog_prog [@printer (pp_extensible pp_prolog_prog)];
-  (* Execution modes (needed for hypothetical clauses *)
-  modes : mode Constants.Map.t;
+  compiled_program : prolog_prog;
   (* chr rules *)
   chr : CHR.t;
   (* initial depth (used for both local variables and CHR (#eigenvars) *)
@@ -659,13 +609,6 @@ type executable = {
   (* solution *)
   assignments_names : int StrMap.t;
 }
-
-type prolog_prog += Index of idx
-let () = extend_printer pp_prolog_prog (fun fmt -> function
-  | Index _ -> Fmt.fprintf fmt "<prolog_prog>";`Printed
-  | _ -> `Passed)
-let wrap_prolog_prog x = Index x
-let unwrap_prolog_prog = function Index x -> x | _ -> assert false
 
 exception No_clause
 exception No_more_steps

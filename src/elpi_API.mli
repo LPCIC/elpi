@@ -324,7 +324,6 @@ module Extend : sig
     }
     val of_solution : Data.solution -> solution
 
-    type idx
     type hyps = clause_src list
 
     type suspended_goal = {
