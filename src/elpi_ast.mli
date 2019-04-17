@@ -36,137 +36,196 @@ module Func : sig
   module Map : Map.S with type key = t
 end
 
-type term =
-   Const of Func.t
- | App of term * term list
- | Lam of Func.t * term
- | CData of Elpi_util.CData.t
- | Quoted of quote
-and quote = { data : string; loc : Loc.t; kind : string option }
+module Term : sig
 
-val equal_term : term -> term -> bool
-val pp_term : Format.formatter -> term -> unit
-val show_term : term -> string
+  type t =
+   | Const of Func.t
+   | App of t * t list
+   | Lam of Func.t * t
+   | CData of Elpi_util.CData.t
+   | Quoted of quote
+  and quote = { data : string; loc : Loc.t; kind : string option }
+  
+  val equal : t -> t -> bool
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
 
-type attribute =
-  Name of string | After of string | Before of string | If of string     
+  exception NotInProlog of Loc.t * string
+  
+  (* Can raise NotInProlog *)
+  val mkApp : Loc.t -> t list -> t
+  
+  val mkCon : string -> t
+  val mkNil : t
+  val mkSeq : t list -> t
+  val mkQuoted : Loc.t -> string -> t
+  val mkFreshUVar : unit -> t
+  val mkFreshName : unit -> t
+  val mkLam : string -> t -> t
+  val mkC : Elpi_util.CData.t -> t
+end
 
-val pp_attribute :
-    Format.formatter -> attribute -> unit
-val show_attribute :
-     attribute -> string
+module Clause : sig
+  type attribute =
+    | Name of string
+    | After of string
+    | Before of string
+    | If of string
+  
+  val pp_attribute : Format.formatter -> attribute -> unit
+  val show_attribute : attribute -> string
 
-type ('term,'attributes) clause = {
-  loc : Loc.t;
-  attributes : 'attributes;
-  body : 'term;
-}
+  type ('term,'attributes) t = {
+    loc : Loc.t;
+    attributes : 'attributes;
+    body : 'term;
+  }
 
-val pp_clause :
-  (Format.formatter -> 'term -> unit) ->
-  (Format.formatter -> 'attribute -> unit) ->
-    Format.formatter -> ('term,'attribute) clause -> unit
-val show_clause :
-  (Format.formatter -> 'term -> unit) ->
-  (Format.formatter -> 'attribute -> unit) ->
-     ('term,'attribute) clause -> string
+  val pp :
+    (Format.formatter -> 'term -> unit) ->
+    (Format.formatter -> 'attribute -> unit) ->
+      Format.formatter -> ('term,'attribute) t -> unit
+  val show :
+    (Format.formatter -> 'term -> unit) ->
+    (Format.formatter -> 'attribute -> unit) ->
+       ('term,'attribute) t -> string
+end
 
-type sequent = { eigen : term; context : term; conclusion : term }
-and 'attribute chr_rule = {
-  to_match : sequent list;
-  to_remove : sequent list;
-  guard : term option;
-  new_goal : sequent option;
-  cattributes : 'attribute;
-  clocation : Loc.t;
-}
+module Chr : sig
+  type attribute =
+    | Name of string
+    | If of string
+  
+  val pp_attribute : Format.formatter -> attribute -> unit
+  val show_attribute : attribute -> string
 
-val create_chr_rule :
-  ?to_match: sequent list ->
-  ?to_remove: sequent list ->
-  ?guard: term ->
-  ?new_goal: sequent ->
-  cattributes: 'attribute ->
-  clocation:Loc.t ->
-  unit -> 'attribute chr_rule
-val pp_chr_rule : 
-  (Format.formatter -> 'attribute -> unit) ->
-     Format.formatter -> 'attribute chr_rule -> unit
-val show_chr_rule : 
-  (Format.formatter -> 'attribute -> unit) ->
-     'attribute chr_rule -> string
+  type sequent = { eigen : Term.t; context : Term.t; conclusion : Term.t }
+  and 'attribute t = {
+    to_match : sequent list;
+    to_remove : sequent list;
+    guard : Term.t option;
+    new_goal : sequent option;
+    attributes : 'attribute;
+    loc : Loc.t;
+  }
+  
+  val create :
+    ?to_match: sequent list ->
+    ?to_remove: sequent list ->
+    ?guard: Term.t ->
+    ?new_goal: sequent ->
+    attributes: 'attribute ->
+    loc:Loc.t ->
+    unit -> 'attribute t
+  val pp : 
+    (Format.formatter -> 'attribute -> unit) ->
+       Format.formatter -> 'attribute t -> unit
+  val show : 
+    (Format.formatter -> 'attribute -> unit) ->
+       'attribute t -> string
+  
+end
 
-type ('name,'term) macro = {
-   mlocation : Loc.t;
-   maname : 'name;
-   mbody : 'term
-}
+module Macro : sig
+  type ('name,'term) t = {
+     loc : Loc.t;
+     name : 'name;
+     body : 'term
+  }
+  
+  val pp :
+    (Format.formatter -> 'name -> unit) ->
+    (Format.formatter -> 'term -> unit) ->
+      Format.formatter -> ('name,'term) t -> unit
+  val show :
+    (Format.formatter -> 'name -> unit) ->
+    (Format.formatter -> 'term -> unit) ->
+       ('name,'term) t -> string
 
-val pp_macro :
-  (Format.formatter -> 'name -> unit) ->
-  (Format.formatter -> 'term -> unit) ->
-    Format.formatter -> ('name,'term) macro -> unit
-val show_macro :
-  (Format.formatter -> 'name -> unit) ->
-  (Format.formatter -> 'term -> unit) ->
-     ('name,'term) macro -> string
+end
 
-type tdecl = { tloc : Loc.t; textern : bool; tname : Func.t; tty : term }
+module Type : sig
 
-val pp_tdecl :
-    Format.formatter -> tdecl -> unit
-val show_tdecl :
-     tdecl -> string
 
-type 'name mode =
-  { mname : 'name; margs : bool list }
+  type attribute =
+    | External
+    | Index of int list (* depth *)
+  
+  val pp_attribute : Format.formatter -> attribute -> unit
+  val show_attribute : attribute -> string
 
-val pp_mode :
-  (Format.formatter -> 'name -> unit) ->
-    Format.formatter -> 'name mode -> unit
-val show_mode :
-  (Format.formatter -> 'name -> unit) ->
-     'name mode -> string
+  type 'attribute t = {
+    loc : Loc.t;
+    attributes : 'attribute;
+    name : Func.t;
+    ty : Term.t;
+  }
+  
+  val pp :
+    (Format.formatter -> 'attribute -> unit) ->
+      Format.formatter -> 'attribute t -> unit
+  val show :
+    (Format.formatter -> 'attribute -> unit) ->
+       'attribute t -> string
 
-type decl =
- (* Blocks *)
- | Begin of Loc.t
- | Namespace of Loc.t * Func.t
- | Constraint of Loc.t * Func.t list
- | Shorten of Loc.t * Func.t * Func.t (* prefix suffix *)
- | End of Loc.t
+end
 
- | Accumulated of Loc.t * decl list
+module Mode : sig
 
- (* data *)
- | Clause of (term, attribute list) clause
- | Local of Func.t
- | Mode of Func.t mode list
- | Chr of attribute list chr_rule
- | Macro of (Func.t, term) macro
- | Type of tdecl
+  type 'name t =
+    { name : 'name; args : bool list }
+  
+  val pp :
+    (Format.formatter -> 'name -> unit) ->
+      Format.formatter -> 'name t -> unit
+  val show :
+    (Format.formatter -> 'name -> unit) ->
+       'name t -> string
 
-val mkLocal : string -> decl
+end
 
-type program = decl list
+module Program : sig
 
-val pp_program : Format.formatter -> program -> unit
-val show_program : program -> string
+  type decl =
+    (* Blocks *)
+    | Begin of Loc.t
+    | Namespace of Loc.t * Func.t
+    | Constraint of Loc.t * Func.t list
+    | Shorten of Loc.t * Func.t * Func.t (* prefix suffix *)
+    | End of Loc.t
+  
+    | Accumulated of Loc.t * decl list
+  
+    (* data *)
+    | Clause of (Term.t, Clause.attribute list) Clause.t
+    | Local of Func.t
+    | Mode of Func.t Mode.t list
+    | Chr of Chr.attribute list Chr.t
+    | Macro of (Func.t, Term.t) Macro.t
+    | Type of Type.attribute list Type.t
 
-type goal = Loc.t * term
-exception NotInProlog of Loc.t * string
+  val pp_decl : Format.formatter -> decl -> unit
+  val show_decl : decl -> string
+  
+  val mkLocal : string -> decl
+  
+  type t = decl list
+  
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
 
-(* Can raise NotInProlog *)
-val mkApp : Loc.t -> term list -> term
+end
 
-val mkCon : string -> term
-val mkNil : term
-val mkSeq : term list -> term
-val mkQuoted : Loc.t -> string -> term
-val mkFreshUVar : unit -> term
-val mkFreshName : unit -> term
-val mkLam : string -> term -> term
-val mkC : Elpi_util.CData.t -> term
+module Goal : sig
+
+  type t = Loc.t * Term.t
+
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
+
+end
+
+(* These are declared here for convenience *)
 
 open Elpi_util.CData
 

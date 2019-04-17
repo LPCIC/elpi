@@ -53,14 +53,16 @@ module Func = struct
 
 end
 
-type term =
-   Const of Func.t
- | App of term * term list
- | Lam of Func.t * term
- | CData of Elpi_util.CData.t
- | Quoted of quote
-and quote = { data : string; loc : Loc.t; kind : string option }
-[@@deriving show, eq]
+module Term = struct
+
+  type t =
+   | Const of Func.t
+   | App of t * t list
+   | Lam of Func.t * t
+   | CData of Elpi_util.CData.t
+   | Quoted of quote
+  and quote = { data : string; loc : Loc.t; kind : string option }
+  [@@deriving show, eq]
 
 let mkC x = CData x
 let mkLam x t = Lam (Func.from_string x,t)
@@ -96,62 +98,6 @@ let mkSeq l =
   aux l
 let mkIs x f = App(Const Func.isf,[x;f])
 
-type attribute =
-  Name of string | After of string | Before of string | If of string     
-[@@deriving show]
-
-type ('term,'attributes) clause = {
-  loc : Loc.t;
-  attributes : 'attributes;
-  body : 'term;
-}[@@deriving show]
-
-type sequent = { eigen : term; context : term; conclusion : term }
-and 'attribute chr_rule = {
-  to_match : sequent list;
-  to_remove : sequent list;
-  guard : term option;
-  new_goal : sequent option;
-  cattributes : 'attribute;
-  clocation : Loc.t;
-}
-[@@deriving show, create]
-
-type ('name,'term) macro = { mlocation : Loc.t; maname : 'name; mbody : 'term }
-[@@deriving show]
-
-type tdecl = { tloc : Loc.t; textern : bool; tname : Func.t; tty : term }
-[@@deriving show]
-
-type 'name mode =
-  { mname : 'name; margs : bool list }
-[@@deriving show]
-
-type decl =
- (* Blocks *)
- | Begin of Loc.t
- | Namespace of Loc.t * Func.t
- | Constraint of Loc.t * Func.t list
- | Shorten of Loc.t * Func.t * Func.t
- | End of Loc.t
-
- | Accumulated of Loc.t * decl list
-
- (* data *)
- | Clause of (term, attribute list) clause
- | Local of Func.t
- | Mode of Func.t mode list
- | Chr of attribute list chr_rule
- | Macro of (Func.t, term) macro
- | Type of tdecl
-[@@deriving show]
-
-
-let mkLocal x = Local (Func.from_string x)
-
-type program = decl list [@@deriving show]
-type goal = Loc.t * term
-
 exception NotInProlog of Loc.t * string
 
 let mkApp loc = function
@@ -160,13 +106,125 @@ let mkApp loc = function
   | App(c,l1)::l2 -> App(c,l1@l2)
   | (Const _ | Quoted _) as c::l2 -> App(c,l2)
   | [] -> raise (NotInProlog(loc,"empty application"))
-  | x::_ -> raise (NotInProlog(loc,"application head: " ^ show_term x))
+  | x::_ -> raise (NotInProlog(loc,"application head: " ^ show x))
 
 let fresh_uv_names = ref (-1);;
 let mkFreshUVar () = incr fresh_uv_names; Const (Func.from_string ("_" ^ string_of_int !fresh_uv_names))
 let fresh_names = ref (-1);;
 let mkFreshName () = incr fresh_names; Const (Func.from_string ("__" ^ string_of_int !fresh_names))
 let mkCon c = Const (Func.from_string c)
+
+end
+
+
+module Clause = struct
+
+  type attribute =
+    | Name of string
+    | After of string
+    | Before of string
+    | If of string
+  [@@deriving show]
+  
+  type ('term,'attributes) t = {
+    loc : Loc.t;
+    attributes : 'attributes;
+    body : 'term;
+  }
+  [@@deriving show]
+
+end
+
+module Chr = struct
+
+  type attribute =
+    | Name of string
+    | If of string
+  [@@deriving show]
+  
+  type sequent = { eigen : Term.t; context : Term.t; conclusion : Term.t }
+  and 'attribute t = {
+    to_match : sequent list;
+    to_remove : sequent list;
+    guard : Term.t option;
+    new_goal : sequent option;
+    attributes : 'attribute;
+    loc: Loc.t;
+  }
+  [@@deriving show, create]
+
+end
+
+module Macro = struct
+
+  type ('name,'term) t = {
+     loc : Loc.t;
+     name : 'name;
+     body : 'term
+  }
+  [@@deriving show]
+
+end
+
+module Type = struct
+
+  type attribute =
+    | External
+    | Index of int list (* depth *)
+  [@@deriving show]
+  
+
+  type 'attribute t = {
+    loc : Loc.t;
+    attributes : 'attribute;
+    name : Func.t;
+    ty : Term.t;
+  }
+  [@@deriving show]
+
+end
+
+module Mode = struct
+
+  type 'name t =
+    { name : 'name; args : bool list }
+  [@@deriving show]
+
+end
+
+module Program = struct
+
+  type decl =
+    (* Blocks *)
+    | Begin of Loc.t
+    | Namespace of Loc.t * Func.t
+    | Constraint of Loc.t * Func.t list
+    | Shorten of Loc.t * Func.t * Func.t (* prefix suffix *)
+    | End of Loc.t
+  
+    | Accumulated of Loc.t * decl list
+  
+    (* data *)
+    | Clause of (Term.t, Clause.attribute list) Clause.t
+    | Local of Func.t
+    | Mode of Func.t Mode.t list
+    | Chr of Chr.attribute list Chr.t
+    | Macro of (Func.t, Term.t) Macro.t
+    | Type of Type.attribute list Type.t
+  [@@deriving show]
+
+
+let mkLocal x = Local (Func.from_string x)
+
+type t = decl list [@@deriving show]
+
+end
+
+module Goal = struct
+
+  type t = Loc.t * Term.t [@@deriving show]
+
+end
 
 open Elpi_util
 module Fmt = Format

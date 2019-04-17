@@ -18,7 +18,7 @@ let set_trace argv =
 module Setup = struct
 
 type builtins = string * Elpi_data.Builtin.declaration list
-type program_header = Elpi_ast.program
+type program_header = Elpi_ast.Program.t
 
 let init ~builtins:(fname,decls) ~basedir:cwd argv =
   let new_argv = set_trace argv in
@@ -82,8 +82,8 @@ let set_err_formatter = Elpi_util.set_err_formatter
 end
 
 module Ast = struct
-  type program = Elpi_ast.program
-  type query = Elpi_ast.goal
+  type program = Elpi_ast.Program.t
+  type query = Elpi_ast.Goal.t
   module Loc = Elpi_util.Loc
 end
 
@@ -165,7 +165,7 @@ module Pp = struct
     Elpi_compiler.pp_query (fun ~depth -> R.Pp.uppterm depth [] 0 [||]) f c
 
   module Ast = struct
-    let program = Elpi_ast.pp_program
+    let program = Elpi_ast.Program.pp
   end
 end
 
@@ -340,49 +340,49 @@ module Extend = struct
     let warn = Elpi_util.warn
 
     let clause_of_term ?name ?graft ~depth loc term =
-      let module Ast = Elpi_ast in
+      let open Elpi_ast in
       let module R = (val !r) in let open R in
       let rec aux d ctx t =
         match R.deref_head ~depth:d t with       
         | Data.Const i when i >= 0 && i < depth ->
             error "program_of_term: the term is not closed"
         | Data.Const i when i < 0 ->
-            Ast.mkCon (Data.Constants.show i)
+            Term.mkCon (Data.Constants.show i)
         | Data.Const i -> Elpi_util.IntMap.find i ctx
         | Data.Lam t ->
             let s = "x" ^ string_of_int d in
-            let ctx = Elpi_util.IntMap.add d (Ast.mkCon s) ctx in
-            Ast.mkLam s (aux (d+1) ctx t)
+            let ctx = Elpi_util.IntMap.add d (Term.mkCon s) ctx in
+            Term.mkLam s (aux (d+1) ctx t)
         | Data.App(c,x,xs) ->
             let c = aux d ctx (Data.Constants.mkConst c) in
             let x = aux d ctx x in
             let xs = List.map (aux d ctx) xs in
-            Ast.mkApp loc (c :: x :: xs)
+            Term.mkApp loc (c :: x :: xs)
         | (Data.Arg _ | Data.AppArg _) -> assert false
         | Data.Cons(hd,tl) ->
             let hd = aux d ctx hd in
             let tl = aux d ctx tl in
-            Ast.mkSeq [hd;tl]
-        | Data.Nil -> Ast.mkNil
+            Term.mkSeq [hd;tl]
+        | Data.Nil -> Term.mkNil
         | Data.Builtin(c,xs) ->
             let c = aux d ctx (Data.Constants.mkConst c) in
             let xs = List.map (aux d ctx) xs in
-            Ast.mkApp loc (c :: xs)
-        | Data.CData x -> Ast.mkC x
+            Term.mkApp loc (c :: xs)
+        | Data.CData x -> Term.mkC x
         | (Data.UVar _ | Data.AppUVar _) ->
             error "program_of_term: the term contains uvars"
-        | Data.Discard -> Ast.mkCon "_"
+        | Data.Discard -> Term.mkCon "_"
       in
       let attributes =
-        (match name with Some x -> [Ast.Name x] | None -> []) @
+        (match name with Some x -> [Clause.Name x] | None -> []) @
         (match graft with
-         | Some (`After,x) -> [Ast.After x]
-         | Some (`Before,x) -> [Ast.Before x]
+         | Some (`After,x) -> [Clause.After x]
+         | Some (`Before,x) -> [Clause.Before x]
          | None -> []) in
-      [Ast.Clause {
-        Ast.loc = loc;
-        Ast.attributes;
-        Ast.body = aux depth Elpi_util.IntMap.empty term;
+      [Program.Clause {
+        Clause.loc = loc;
+        attributes;
+        body = aux depth Elpi_util.IntMap.empty term;
       }]
 
   end

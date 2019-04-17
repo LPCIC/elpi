@@ -5,6 +5,7 @@
 module U = Elpi_util
 module Loc = U.Loc
 open Elpi_ast
+open Term
 
 module Str = Re.Str
 
@@ -465,7 +466,7 @@ let is_used n =
 
 let desugar_multi_binder loc = function
   | App(Const hd as binder,args)
-    when Func.(equal hd pif || equal hd sigmaf) && List.length args > 1 ->
+    when Func.equal hd Func.pif || Func.equal hd Func.sigmaf && List.length args > 1 ->
       let last, rev_rest = let l = List.rev args in List.hd l, List.tl l in
       let names = List.map (function
         | Const x -> Func.show x
@@ -477,11 +478,11 @@ let desugar_multi_binder loc = function
 ;;
 
 let desugar_macro = function
-  | App(Const hd,[Const name; body]) when Func.(equal hd rimplf) ->
+  | App(Const hd,[Const name; body]) when Func.equal hd Func.rimplf ->
       if ((Func.show name).[0] != '@') then
         raise (Stream.Error "Macro name must begin with @");
       name, body
-  | App(Const hd,[App(Const name,args); body]) when Func.(equal hd rimplf) ->
+  | App(Const hd,[App(Const name,args); body]) when Func.equal hd Func.rimplf ->
       if ((Func.show name).[0] != '@') then
         raise (Stream.Error "Macro name must begin with @");
       let names = List.map (function
@@ -540,11 +541,11 @@ let gram_extend loc { fix; sym = cst; prec = nprec } =
           prerr_endline ""; *)
 
 let accumulate loc extension modnames =
-  List.map (fun file -> Accumulated(of_ploc loc, parse_one lp (file ^ extension))) modnames
+  List.map (fun file -> Program.Accumulated(of_ploc loc, parse_one lp (file ^ extension))) modnames
 
 EXTEND
   GLOBAL: lp goal atom;
-  lp: [ [ cl = LIST0 clause; EOF -> List.concat cl ] ];
+  lp: [ [ cl = LIST0 decl; EOF -> List.concat cl ] ];
   const_sym:
     [[ c = CONSTANT -> c
      | s = SYMBOL -> s
@@ -555,21 +556,21 @@ EXTEND
   i_o : [[ CONSTANT "i" -> true | CONSTANT "o" -> false ]];
   mode :
     [[ LPAREN; c = CONSTANT; l = LIST1 i_o; RPAREN ->
-       { mname = Func.from_string c; margs = l } ]];
+       { Mode.name = Func.from_string c; args = l } ]];
   chrrule :
     [[ to_match = LIST0 sequent;
        to_remove = OPT [ BIND; l = LIST1 sequent -> l ];
        guard = OPT [ PIPE; a = atom LEVEL "abstterm" -> a ];
        new_goal = OPT [ SYMBOL "<=>"; gs = sequent -> gs ] ->
-         create_chr_rule ~to_match ?to_remove ?guard ?new_goal ~cattributes:[] ~clocation:(of_ploc loc) ()
+         Chr.create ~to_match ?to_remove ?guard ?new_goal ~attributes:[] ~loc:(of_ploc loc) ()
     ]];
   sequent_core :
-    [ [ constant_colon; e = CONSTANT; COLON; t = atom -> Some e, (t : term) 
-      | t = atom -> None, (t : term) ]
+    [ [ constant_colon; e = CONSTANT; COLON; t = atom -> Some e, (t : Term.t) 
+      | t = atom -> None, (t : Term.t) ]
     ];
   sequent :
    [[ LPAREN; c = sequent_core; RPAREN ->
-         let e, t1 = (c : string option * term) in
+         let e, t1 = (c : string option * Term.t) in
          let eigen =
            match e with Some x -> mkCon x | None -> mkFreshUVar () in
          let context, conclusion =
@@ -577,28 +578,42 @@ EXTEND
            | App(Const x,[a;b]) when Func.equal x Func.sequentf -> a, b
            | (App _ | Const _ | Lam _ | CData _ | Quoted _) ->
                 mkFreshUVar (), t1 in
-         { eigen; context; conclusion }
+         { Chr.eigen = eigen; context; conclusion }
     | c = atom LEVEL "abstterm" ->
-         { eigen = mkFreshUVar (); context = mkFreshUVar (); conclusion = c }
+         { Chr.eigen = mkFreshUVar (); context = mkFreshUVar (); conclusion = c }
    ]];
-  attribute_value :
-   [[ c = CONSTANT -> c | l = LITERAL -> l ]];
-  attribute :
-   [[ CONSTANT "name";   name = attribute_value -> Name name
-    | CONSTANT "before"; name = attribute_value -> Before name
-    | CONSTANT "after";  name = attribute_value -> After name
-    | CONSTANT "if";     expr = LITERAL -> If expr
+  indexing_arg_spec :
+  [[ d = INTEGER -> int_of_string d
+   | FRESHUV -> 0
+   ]];
+  indexing_expr :
+    [[ LPAREN; l = LIST1 indexing_arg_spec; RPAREN -> l ]];
+  clause_attribute :
+   [[ CONSTANT "name";   name = LITERAL -> Clause.Name name
+    | CONSTANT "before"; name = LITERAL -> Clause.Before name
+    | CONSTANT "after";  name = LITERAL -> Clause.After name
+    | CONSTANT "if";     expr = LITERAL -> Clause.If expr
     ]];
+  type_attribute :
+   [[ CONSTANT "index";  expr = indexing_expr -> Type.Index expr
+    | EXTERNAL;          expr = LITERAL       -> Type.External
+    ]];
+  chr_attribute :
+   [[ CONSTANT "name";   name = LITERAL -> Chr.Name name
+    | CONSTANT "if";     expr = LITERAL -> Chr.If expr
+    ]];
+  clause_attributes : [[ l = LIST1 clause_attribute SEP COLON-> l ]];
+  type_attributes : [[ l = LIST1 type_attribute SEP COLON-> l ]];
+  chr_attributes : [[ l = LIST1 chr_attribute SEP COLON-> l ]];
   pragma : [[ CONSTANT "#line"; l = INTEGER; f = LITERAL ->
     set_fname ~line:(int_of_string l) f ]];
   pred_item : [[ m = i_o; COLON; t = ctype -> (m,t) ]];
   pred : [[ c = const_sym; a = LIST0 pred_item SEP SYMBOL "," ->
     let name = Func.from_string c in
-    [ { mname = name; margs = List.map fst a } ],
+    [ { Mode.name = name; args = List.map fst a } ],
      (name, List.fold_right (fun (_,t) ty ->
         mkApp (of_ploc loc) [mkCon "->";t;ty]) a (mkCon "prop"))
   ]];
-  attributes : [[ COLON; l = LIST1 attribute SEP COLON-> l ]];
   string_trie_aux :
     [ [ name = CONSTANT -> [name,name]
       | prefix = CONSTANT; FULLSTOP;
@@ -610,40 +625,61 @@ EXTEND
           LCURLY; l = LIST1 string_trie_aux SEP SYMBOL ","; RCURLY ->
         List.map (fun (p,x) -> prefix ^ "." ^ p, x) (List.flatten l)
   ]];
-  clause :
-    [[ attributes = OPT attributes; f = atom; FULLSTOP ->
-       let attributes = match attributes with None -> [] | Some x -> x in
-       let c = { loc = of_ploc loc; attributes; body = f } in
-       [Clause c]
-     | cattributes = OPT attributes; RULE; r = chrrule; FULLSTOP ->
-       let cattributes = match cattributes with None -> [] | Some x -> x in
-       [Chr { r with cattributes } ]
-     | pragma -> []
-     | LCURLY -> [Begin (of_ploc loc)]
-     | RCURLY -> [End (of_ploc loc)]
+  decl :
+    [[ COLON; cattributes = clause_attributes; RULE; r = chrrule; FULLSTOP ->
+       let cattributes = cattributes |> List.map (function
+          | Clause.Name s -> Chr.Name s
+          | Clause.If c -> Chr.If c
+          | x -> raise (ParseError(of_ploc loc,"unsupported attribute " ^ Clause.show_attribute x))) in
+       [Program.Chr { r with Chr.attributes = cattributes } ]
+     | RULE; r = chrrule; FULLSTOP ->
+       [Program.Chr { r with Chr.attributes = [] } ]
+     | COLON; attributes = type_attributes; PRED; p = pred; FULLSTOP ->
+         let m, (n,t) = p in
+         [Program.Type { Type.loc=of_ploc loc; attributes; name = n ; ty = t }; Program.Mode m]
      | PRED; p = pred; FULLSTOP ->
          let m, (n,t) = p in
-         [Type { tloc=of_ploc loc; textern = false; tname = n ; tty = t }; Mode m]
+         [Program.Type { Type.loc=of_ploc loc; attributes = []; name = n ; ty = t }; Program.Mode m]
+     | COLON; attributes = type_attributes; TYPE;
+       names = LIST1 const_sym SEP SYMBOL ","; t = type_; FULLSTOP ->
+         List.map (fun n ->
+           Program.Type { Type.loc=of_ploc loc; attributes; name=Func.from_string n; ty=t })
+           names
      | TYPE; names = LIST1 const_sym SEP SYMBOL ","; t = type_; FULLSTOP ->
          List.map (fun n ->
-           Type { tloc=of_ploc loc; textern=false; tname=Func.from_string n; tty=t })
+           Program.Type { Type.loc=of_ploc loc; attributes = []; name=Func.from_string n; ty=t })
            names
+     | COLON; attributes = clause_attributes; f = atom; FULLSTOP ->
+       let c = { Clause.loc = of_ploc loc; attributes; body = f } in
+       [Program.Clause c]
+     | f = atom; FULLSTOP ->
+       let c = { Clause.loc = of_ploc loc; attributes = []; body = f } in
+       [Program.Clause c]
      | EXTERNAL;
        TYPE; names = LIST1 const_sym SEP SYMBOL ","; t = type_; FULLSTOP ->
          List.map (fun n ->
-           Type { tloc=of_ploc loc; textern=true; tname=Func.from_string n; tty=t })
+           Program.Type { Type.loc = of_ploc loc;
+                  attributes=[Type.External];
+                  name=Func.from_string n;
+                  ty=t })
          names
      | EXTERNAL; PRED; p = pred; FULLSTOP ->
          let _, (n,t) = p in (* No mode for ML code *)
-         [Type { tloc = of_ploc loc; textern = true; tname = n; tty = t }]
-     | MODE; m = LIST1 mode SEP SYMBOL ","; FULLSTOP -> [Mode m]
+         [Program.Type { Type.loc = of_ploc loc;
+                 attributes = [Type.External];
+                 name = n;
+                 ty = t }]
+     | pragma -> []
+     | LCURLY -> [Program.Begin (of_ploc loc)]
+     | RCURLY -> [Program.End (of_ploc loc)]
+     | MODE; m = LIST1 mode SEP SYMBOL ","; FULLSTOP -> [Program.Mode m]
      | MACRO; b = atom; FULLSTOP ->
          let name, body = desugar_macro b in
-         [Macro { mlocation =of_ploc loc; maname = name; mbody = body }]
+         [Program.Macro { Macro.loc = of_ploc loc; name = name; body = body }]
      | NAMESPACE; ns = CONSTANT; LCURLY ->
-         [ Namespace (of_ploc loc, Func.from_string ns) ]
+         [ Program.Namespace (of_ploc loc, Func.from_string ns) ]
      | CONSTRAINT; names=LIST0 CONSTANT; LCURLY ->
-         [ Constraint (of_ploc loc, List.map Func.from_string names) ]
+         [ Program.Constraint (of_ploc loc, List.map Func.from_string names) ]
      | MODULE; CONSTANT; FULLSTOP -> []
      | SIG; CONSTANT; FULLSTOP -> []
      | ACCUMULATE; filenames=LIST1 filename SEP SYMBOL ","; FULLSTOP ->
@@ -656,12 +692,12 @@ EXTEND
          accumulate loc ".sig" filenames
      | SHORTEN; names = string_trie; FULLSTOP ->
         List.map (fun (prefix, name) ->
-          Shorten(of_ploc loc, Func.from_string prefix, Func.from_string name))
+          Program.Shorten(of_ploc loc, Func.from_string prefix, Func.from_string name))
           names
      | LOCAL; vars = LIST1 const_sym SEP SYMBOL ","; FULLSTOP ->
-        List.map (fun x -> mkLocal x) vars
+        List.map (fun x -> Program.mkLocal x) vars
      | LOCAL; vars = LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP ->
-        List.map (fun x -> mkLocal x) vars
+        List.map (fun x -> Program.mkLocal x) vars
      | LOCALKIND; LIST1 const_sym SEP SYMBOL ","; FULLSTOP -> []
      | LOCALKIND; LIST1 const_sym SEP SYMBOL ","; kind; FULLSTOP -> []
      | CLOSED; LIST1 const_sym SEP SYMBOL ","; FULLSTOP -> []
@@ -672,7 +708,7 @@ EXTEND
      | EXPORTDEF; LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP -> []
      | KIND; names = LIST1 const_sym SEP SYMBOL ","; t = kind; FULLSTOP ->
          List.map (fun n ->
-           Type { tloc=of_ploc loc; textern=false; tname=Func.from_string n; tty=t })
+           Program.Type { Type.loc=of_ploc loc; attributes=[]; name=Func.from_string n; ty=t })
          names
      | TYPEABBREV; abbrform; TYPE; FULLSTOP -> []
      | fix = FIXITY; syms = LIST1 const_sym SEP SYMBOL ","; prec = INTEGER; FULLSTOP ->
@@ -724,7 +760,7 @@ EXTEND
           (match b with None -> mkCon c | Some b -> mkLam c b)
       | u=FRESHUV; OPT[COLON;type_]; b=OPT[BIND; a = atom LEVEL "1" -> a ] ->
           (match b with None -> mkFreshUVar () | Some b ->
-           mkLam Func.(show dummyname)  b)
+           mkLam (Func.show Func.dummyname)  b)
       | s = LITERAL -> mkC (cstring.U.CData.cin s)
       | s = QUOTED -> mkQuoted (of_ploc loc) s
       | s = INTEGER -> mkC (cint.U.CData.cin (int_of_string s))
@@ -780,11 +816,11 @@ let run_parser f x =
   | NotInProlog(loc,s) -> raise (ParseError(loc, "NotInProlog: " ^ s))
 ;;
 
-let parse_program ~print_accumulated_files filenames : program =
+let parse_program ~print_accumulated_files filenames : Program.t =
   parse_silent := not print_accumulated_files;
   run_parser (parse lp) filenames
 
-let parse_program_from_stream ~print_accumulated_files loc strm : program =
+let parse_program_from_stream ~print_accumulated_files loc strm : Program.t =
   parse_silent := not print_accumulated_files;
   last_loc := to_ploc loc;
   run_parser (Grammar.Entry.parse lp) strm
@@ -793,7 +829,7 @@ let set_last_loc = function
   | None -> ()
   | Some loc -> last_loc := to_ploc { loc with Loc.source_stop = loc.Loc.source_start }
 
-let parse_goal ?loc s : goal =
+let parse_goal ?loc s : Goal.t =
   set_last_loc loc;
   run_parser (Grammar.Entry.parse goal) (Stream.of_string s)
 

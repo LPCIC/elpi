@@ -626,8 +626,7 @@ let lp_builtins = [
        let t = Compile.term_at ~depth t in
        !:t
      with
-     | Stream.Error _ -> raise No_clause
-     | Elpi_ast.NotInProlog _ -> raise No_clause)),
+     | Parse.ParseError _ -> raise No_clause)),
   DocAbove);
 
   MLCode(Pred("readterm",
@@ -643,8 +642,7 @@ let lp_builtins = [
        !:t
      with 
      | Sys_error msg -> error msg
-     | Stream.Error _ -> raise No_clause
-     | Elpi_ast.NotInProlog _ -> raise No_clause)),
+     | Parse.ParseError _ -> raise No_clause)),
   DocAbove);
 
   LPCode "pred printterm i:@out_stream, i:A.";
@@ -1075,6 +1073,7 @@ map-i L F R :- map-i.aux L 0 F R.
 map-i.aux [] _ _ [].
 map-i.aux [X|XS] N F [Y|YS] :- F N X Y, M is N + 1, map-i.aux XS M F YS.
 
+:index(1 1)
 pred map2 i:list A, i:list B, i:(A -> B -> C -> prop), o:list C.
 map2 [] [_|_] _ _ :- fatal-error "map2 on lists of different length".
 map2 [_|_] [] _ _ :- fatal-error "map2 on lists of different length".

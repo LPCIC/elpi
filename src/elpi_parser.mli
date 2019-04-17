@@ -23,10 +23,10 @@ val init : lp_syntax:gramext list -> paths:string list -> cwd:string ->
   unit -> unit
 
 (* BUG: extending the grammar is imperative, cannot be undone *)
-val parse_program : print_accumulated_files:bool -> string list -> program
-val parse_program_from_stream : print_accumulated_files:bool -> Loc.t -> char Stream.t -> program
-val parse_goal : ?loc:Loc.t -> string -> goal
-val parse_goal_from_stream : ?loc:Loc.t -> char Stream.t -> goal
+val parse_program : print_accumulated_files:bool -> string list -> Program.t
+val parse_program_from_stream : print_accumulated_files:bool -> Loc.t -> char Stream.t -> Program.t
+val parse_goal : ?loc:Loc.t -> string -> Goal.t
+val parse_goal_from_stream : ?loc:Loc.t -> char Stream.t -> Goal.t
 
 exception ParseError of Loc.t * string
 

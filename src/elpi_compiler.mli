@@ -3,7 +3,6 @@
 (* ------------------------------------------------------------------------- *)
 
 open Elpi_util
-open Elpi_data
 
 type flags = {
   defined_variables : StrSet.t;
@@ -16,34 +15,34 @@ type program
 type query
 
 (* Flags are threaded *)
-val program_of_ast : flags:flags -> Elpi_ast.program -> program
-val query_of_ast : program -> Elpi_ast.goal -> query
+val program_of_ast : flags:flags -> Elpi_ast.Program.t -> program
+val query_of_ast : program -> Elpi_ast.Goal.t -> query
 val query_of_term :
-  program -> (depth:int -> CompilerState.t -> CompilerState.t * (Loc.t * term)) -> query
+  program -> (depth:int -> Elpi_data.CompilerState.t -> Elpi_data.CompilerState.t * (Loc.t * Elpi_data.term)) -> query
 
-val pp_query : (depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> query -> unit
+val pp_query : (depth:int -> Format.formatter -> Elpi_data.term -> unit) -> Format.formatter -> query -> unit
 
-val executable_of_query : query -> executable
+val executable_of_query : query -> Elpi_data.executable
 
-val term_of_ast : depth:int -> Loc.t * Elpi_ast.term -> term
+val term_of_ast : depth:int -> Loc.t * Elpi_ast.Term.t -> Elpi_data.term
 
-type quotation = depth:int -> CompilerState.t -> Loc.t -> string -> CompilerState.t * term
+type quotation = depth:int -> Elpi_data.CompilerState.t -> Loc.t -> string -> Elpi_data.CompilerState.t * Elpi_data.term
 val set_default_quotation : quotation -> unit
 val register_named_quotation : name:string -> quotation -> unit
 
 val lp : quotation
 
-val is_Arg : CompilerState.t -> term -> bool
+val is_Arg : Elpi_data.CompilerState.t -> Elpi_data.term -> bool
 val fresh_Arg : 
-  CompilerState.t -> name_hint:string -> args:term list ->
-    CompilerState.t * string * term
+  Elpi_data.CompilerState.t -> name_hint:string -> args:Elpi_data.term list ->
+    Elpi_data.CompilerState.t * string * Elpi_data.term
 
 (* Quotes the program and the query, see elpi_quoted_syntax.elpi *)
-val quote_syntax : query -> term list * term
+val quote_syntax : query -> Elpi_data.term list * Elpi_data.term
 
 (* false means a type error was found *)
-val static_check : Elpi_ast.decl list -> (* header *)
-  ?exec:(?max_steps:int -> executable -> outcome) ->
-  ?checker:Elpi_ast.decl list ->
+val static_check : Elpi_ast.Program.t -> (* header *)
+  ?exec:(?max_steps:int -> Elpi_data.executable -> Elpi_data.outcome) ->
+  ?checker:Elpi_ast.Program.t ->
   ?flags:flags ->
   query -> bool
