@@ -95,7 +95,7 @@ module Loc = struct
     line: int;
     line_starts_at: int;
   }
-  [@@deriving eq]
+  [@@deriving eq, ord]
 
   let to_string {
     source_name;
