@@ -348,7 +348,7 @@ If only one argument is indexed, and it is indexed at depth one, Elpi uses
 a standard indexing technique based on a perfect tree (at depth 1).
 
 If more than one argument is indexed, or if some argument is indexed at depth
-greater than 1, then Elpi uses a *unification hashes* (as in golog).
+greater than 1, then Elpi uses a [unification hashes](http://blog.ndrix.com/2013/03/prolog-unification-hashes.htmlas).
 
 ```prolog
 :index(2)
