@@ -9,7 +9,7 @@ dev-repo: "git+https://github.com/LPCIC/elpi.git"
 bug-reports: "https://github.com/LPCIC/elpi/issues"
 
 build: [ [ make ] [ make "byte" ] ]
-run-test: [ make "-C" "tests" "run" ]
+run-test: [ make "-C" "tests" "run" "RUNNERS=../elpi" ]
 install: [ 
 	[ make "install" ]
 	[ make "install-bin" "BIN=%{bin}%" ]
@@ -22,6 +22,9 @@ depends: [
   "ppx_deriving"
   "ocaml-migrate-parsetree"
   "re" {>= "1.7.2"}
+  "ANSITerminal" {with-test}
+  "cmdliner" {with-test}
+  "dune" {with-test}
 ]
 synopsis: "ELPI - Embeddable λProlog Interpreter"
 description: """
