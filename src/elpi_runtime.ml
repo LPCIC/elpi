@@ -3158,7 +3158,7 @@ end;*)
   set orig_prolog_program compiled_program;
   set Constraints.chrules chr;
   set T.initial_trail T.empty;
-  set T.trail !T.empty_trail;
+  set T.trail T.empty;
   set T.last_call false;
   set CS.new_delayed [];
   set CS.to_resume [];
