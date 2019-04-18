@@ -340,15 +340,16 @@ mymap F [] [].
 mymap F [X|XS] [Y|YS] :- Y = F X, mymap XS YS.
 ```
 Here `(_ 1)` is a shorthand for `(0 1)` that means index at depth 0 the first
-argument, and at depth 1 the second argument (and at depth 0 all the remaining
-ones). At the time of writing only one argument can be indexed at depth equal
-to one, all the others must be indexed at depth zero.
+argument (that means don't index it), at depth 1 the second argument and at depth
+0 all the remaining ones.
 
-If only one argument is indexed, and it is indexed at depth one, Elpi uses
-a standard indexing technique based on a perfect tree (at depth 1).
+If only one argument is indexed, and it is indexed at depth one, then Elpi uses
+a standard indexing technique based on a perfect (for depth 1) search tree. This
+means that no false positives are returned by the index.
 
 If more than one argument is indexed, or if some argument is indexed at depth
-greater than 1, then Elpi uses a [unification hashes](http://blog.ndrix.com/2013/03/prolog-unification-hashes.htmlas).
+greater than 1, then Elpi uses an index based on the idea of
+[unification hashes](http://blog.ndrix.com/2013/03/prolog-unification-hashes.htmlas).
 
 ```prolog
 :index(2)
@@ -360,12 +361,21 @@ mult (s A) B C :- mult A B R, plus B R C.
 
 The hash value, a list of bits, is generated hierarchically and up to the
 specified depth. Unification variables in a clause head are mapped to a
-sequence of 1, while they are mapped to a sequence of 0 when they are part of
-the query (1 means "I provide" while 0 means "I demand"). Constants are mapped
-to a hash value, a sequence of both 1 and 0. If the bit wise conjunction of the
+sequence of `1`, while they are mapped to a sequence of `0` when they are part of
+the query. Constants are mapped
+to a hash value, a sequence of both `1` and `0`. If the bit wise conjunction `&` of the
 hash of the query and the hash of the head of a clause is equal to the hash of
 the query, then the clause is selected.
 
+Intuitively:
+- in a clause `1` means "I provide this piece of info"
+- in the query `1` means "I demand this piece of info"
+
+A flexible query is made of `0`s, hence it demands nothing, since `0 & x = 0`
+(`x` is a bit of the clause). Conversely a flexible clause is made of `1`s,
+hence it provides anything, since `x & 1 = x` (`x` is a bit of the query).
+
+Example:
 ```
 hash o = 1001 1011
 hash s = 1011 0010
