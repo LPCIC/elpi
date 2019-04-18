@@ -598,13 +598,8 @@ EXTEND
    [[ CONSTANT "index";  expr = indexing_expr -> Type.Index expr
     | EXTERNAL;          expr = LITERAL       -> Type.External
     ]];
-  chr_attribute :
-   [[ CONSTANT "name";   name = LITERAL -> Chr.Name name
-    | CONSTANT "if";     expr = LITERAL -> Chr.If expr
-    ]];
   clause_attributes : [[ l = LIST1 clause_attribute SEP COLON-> l ]];
   type_attributes : [[ l = LIST1 type_attribute SEP COLON-> l ]];
-  chr_attributes : [[ l = LIST1 chr_attribute SEP COLON-> l ]];
   pragma : [[ CONSTANT "#line"; l = INTEGER; f = LITERAL ->
     set_fname ~line:(int_of_string l) f ]];
   pred_item : [[ m = i_o; COLON; t = ctype -> (m,t) ]];
@@ -630,7 +625,8 @@ EXTEND
        let cattributes = cattributes |> List.map (function
           | Clause.Name s -> Chr.Name s
           | Clause.If c -> Chr.If c
-          | x -> raise (ParseError(of_ploc loc,"unsupported attribute " ^ Clause.show_attribute x))) in
+          | (Clause.Before _ | Clause.After _) as x->
+            raise (ParseError(of_ploc loc,"unsupported attribute " ^ Clause.show_attribute x))) in
        [Program.Chr { r with Chr.attributes = cattributes } ]
      | RULE; r = chrrule; FULLSTOP ->
        [Program.Chr { r with Chr.attributes = [] } ]
