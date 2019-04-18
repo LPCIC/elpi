@@ -75,7 +75,7 @@ and stuck_goal = {
 }
 and blockers = uvar_body list
 and stuck_goal_kind =
- | Constraint of constraint_def (* inline record in 4.03 *)
+ | Constraint of constraint_def
  | Unification of unification_def 
 and unification_def = {
   adepth : int;
