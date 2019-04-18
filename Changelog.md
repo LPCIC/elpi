@@ -15,7 +15,7 @@ Language:
    (instead of just `B`, as it was the case in previous versions)
  - `:index(...)` attribute to select which argument(s) should be
    indexed and at which depth. Multi-argument indexing and deep-indexing is
-   based on unification hashes, see ELPI.md for the details
+   based on unification hashes, see [ELPI](ELPI.md) for the details
    
 Library:
  - predefined types:
