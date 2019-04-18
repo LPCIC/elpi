@@ -2035,7 +2035,7 @@ let close_with_pis depth vars t =
        (* TODO: quick hack here, but it does not work for AppUVar *)
        hmove ~from:depth ~to_:(depth+vars) orig
     | AppUVar(r,vardepth,args) ->
-       assert false (* TODO, essentialy almost copy the code from move delta < 0 *)
+       assert false (* TODO, essentially almost copy the code from move delta < 0 *)
     | Cons(hd,tl) -> Cons(aux hd, aux tl)
     | Nil as x -> x
     | Discard as x -> x
