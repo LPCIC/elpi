@@ -13,6 +13,9 @@ Language:
  - syntax of `.. as X` to bind subterms in the head of a clause changed
    precedence. In particular `lam x\ B as X` binds `lam x\ B` to `X`
    (instead of just `B`, as it was the case in previous versions)
+ - `:index(...)` attribute to select which argument(s) should be
+   indexed and at which depth. Multi-argument indexing and deep-indexing is
+   based on unification hashes, see ELPI.md for the details
    
 Library:
  - predefined types:
