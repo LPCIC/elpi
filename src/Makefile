@@ -39,19 +39,19 @@ elpi.$(CMXA): $(ELPI_COMPONENTS)
 	$(H)$(OC) $(OC_OPTIONS) -o $@ -a $(ELPI_COMPONENTS)
 
 elpi_runtime_trace_on.$(CMX) elpi_runtime_trace_off.$(CMX) : elpi_runtime.ml elpi_runtime.cmi ../trace_ppx
-	$(H)$(call pp,$(OCNAME),-c -ppx 'trace_ppx --on' -for-pack,$<)
+	$(H)$(call pp,$(OCNAME),-c -ppx 'trace_ppx --on'  -for-pack -w -55,$<)
 	$(H)$(OC) $(OCAMLOPTIONS) \
 		-package camlp5,ppx_deriving.std \
-		-ppx '../trace_ppx --as-ppx --on' \
+		-ppx '../trace_ppx --as-ppx --on' -w -55 \
 		-for-pack Elpi_runtime_trace_on \
 	       	-c $<
 	$(H)$(OC) $(OCAMLOPTIONS) \
 		-pack elpi_runtime.$(CMX) -o elpi_runtime_trace_on.$(CMX)
 	$(H)rm elpi_runtime.$(CMX)
-	$(H)$(call pp,$(OCNAME),-c -ppx 'trace_ppx --off' -for-pack,$<)
+	$(H)$(call pp,$(OCNAME),-c -ppx 'trace_ppx --off' -for-pack -w +55,$<)
 	$(H)$(OC) $(OCAMLOPTIONS) \
 		-package camlp5,ppx_deriving.std \
-		-ppx '../trace_ppx --as-ppx --off' \
+		-ppx '../trace_ppx --as-ppx --off' -w +55 -warn-error +55 \
 		-for-pack Elpi_runtime_trace_off \
 	       	-c $<
 	$(H)$(OC) $(OCAMLOPTIONS) \
