@@ -24,7 +24,7 @@ findlib
 ./elpi.*
 trace_ppx
 .merlin
-elpi_config.ml
+elpi_REPL_config.ml
 
 data.csv
 data.csv.dat
