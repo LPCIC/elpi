@@ -262,23 +262,22 @@ module ConstraintStoreAndTrail : sig
 
   (* ---------------------------------------------------- *)
 
-  type trail_item =
-  | Assignement of uvar_body
-  | StuckGoalAddition of stuck_goal
-  | StuckGoalRemoval of stuck_goal
-  type trail = trail_item list
-  val pp_trail_item : Fmt.formatter -> trail_item -> unit
+  type trail
+ 
+  val empty : trail
 
-  (* Exposed to save a copy, not to modify  XXX 4.03 [@inline] get_trail *)
+  val initial_trail : trail Fork.local_ref
   val trail : trail Fork.local_ref
-  val empty_trail : trail Fork.local_ref
+  val cut_trail : unit -> unit [@@inline]
 
   (* If true, no need to trail an imperative action.  Not part of trial_this
    * because you can save allocations and a function call by testing locally *)
   val last_call : bool ref
 
-  (* add an item to the trail  XXX 4.03 [@inline] *)
-  val trail_this : trail_item -> unit
+  (* add an item to the trail *)
+  val trail_assignment : uvar_body -> unit           [@@inline]
+  val trail_stuck_goal_addition : stuck_goal -> unit [@@inline]
+  val trail_stuck_goal_removal : stuck_goal -> unit  [@@inline]
 
   (* backtrack *)
   val undo :
@@ -315,10 +314,13 @@ type trail_item =
 
 type trail = trail_item list
 [@@deriving show]
+let empty = []
 
 let trail = Fork.new_local []
-let empty_trail = Fork.new_local []
+let initial_trail = Fork.new_local []
 let last_call = Fork.new_local false;;
+
+let cut_trail () = trail := !initial_trail [@@inlined];;
 
 module Ugly = struct let delayed : stuck_goal list ref = Fork.new_local [] end
 open Ugly
@@ -332,10 +334,24 @@ let contents ?overlapping () =
       when overlap blockers -> Some (c,blockers)
     | _ -> None) !delayed
 
-let trail_this i = 
+let trail_assignment x = 
   [%spy "trail-this" (fun fmt i ->
-     Fmt.fprintf fmt "last_call:%b item:%a" !last_call pp_trail_item i) i];
-  if not !last_call then trail := i :: !trail ;;
+     Fmt.fprintf fmt "last_call:%b item:%a" !last_call pp_trail_item (Assignement i)) x];
+  if not !last_call then trail := Assignement x :: !trail
+[@@inline]
+;;
+let trail_stuck_goal_addition x = 
+  [%spy "trail-this" (fun fmt i ->
+     Fmt.fprintf fmt "last_call:%b item:%a" !last_call pp_trail_item (StuckGoalAddition i)) x];
+  if not !last_call then trail := StuckGoalAddition x :: !trail
+[@@inline]
+;;
+let trail_stuck_goal_removal x = 
+  [%spy "trail-this" (fun fmt i ->
+     Fmt.fprintf fmt "last_call:%b item:%a" !last_call pp_trail_item (StuckGoalRemoval i)) x];
+  if not !last_call then trail := StuckGoalRemoval x :: !trail
+[@@inline]
+;;
 
 let remove ({ blockers } as sg) =
  [%spy "remove" (fun fmt -> Fmt.fprintf fmt "%a" pp_stuck_goal) sg];
@@ -365,7 +381,7 @@ let declare_new sg =
   | Constraint cstr ->
       new_delayed := { cstr; cstr_blockers = sg.blockers } :: !new_delayed
   end;
-  trail_this (StuckGoalAddition sg)
+  (trail_stuck_goal_addition[@inlined]) sg
 
 let remove_cstr_if_exists x l =
  let rec aux acc = function
@@ -381,7 +397,7 @@ let remove_old cstr =
   | Unification _ -> ()
   | Constraint c -> new_delayed := remove_cstr_if_exists c !new_delayed
   end;
-  trail_this (StuckGoalRemoval cstr)
+  (trail_stuck_goal_removal[@inlined]) cstr
 ;;
 
 let remove_old_constraint cd =
@@ -447,7 +463,7 @@ module CS = ConstraintStoreAndTrail
 
 (* Assigning an UVar wakes up suspended goals/constraints *)
 let (@:=) r v =
-  if not !T.last_call then T.trail := (T.Assignement r) :: !T.trail;
+  (T.trail_assignment[@inlined]) r;
   if r.rest <> [] then
     begin
     [%spy "assign-to_resume" (fun fmt l ->
@@ -3060,7 +3076,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
     let rec prune alts = if alts == lvl then alts else prune alts.next in
     let alts = prune alts in
     (* XXX what about custom constraints *)
-    if alts == noalts then T.trail := !T.empty_trail;
+    if alts == noalts then T.cut_trail ();
     match gs with
     | [] -> pop_andl alts next lvl
     | (depth, p, g) :: gs -> run depth p g gs next alts lvl
@@ -3141,7 +3157,7 @@ end;*)
   let { Fork.exec = exec ; get = get ; set = set } = Fork.fork () in
   set orig_prolog_program compiled_program;
   set Constraints.chrules chr;
-  set T.empty_trail [];
+  set T.initial_trail T.empty;
   set T.trail !T.empty_trail;
   set T.last_call false;
   set CS.new_delayed [];
@@ -3156,9 +3172,9 @@ end;*)
   let search = exec (fun () ->
      let q = move ~adepth:initial_depth ~from:initial_depth ~to_:initial_depth query_env initial_goal in
      [%spy "run-trail" (fun fmt _ -> T.print_trail fmt) ()];
-     T.empty_trail := !T.trail;
+     T.initial_trail := !T.trail;
      run initial_depth !orig_prolog_program q [] FNil noalts noalts) in
-  let destroy () = exec (fun () -> T.undo ~old_trail:[] ()) () in
+  let destroy () = exec (fun () -> T.undo ~old_trail:T.empty ()) () in
   let next_solution = exec next_alt in
   { search; next_solution; destroy; exec; get }
 ;;
