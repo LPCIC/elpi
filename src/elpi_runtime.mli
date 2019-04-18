@@ -41,12 +41,11 @@ val subst: depth:int -> term list -> term -> term
 
 val make_index :
   depth:int ->
-  indexing:(mode * int list) Constants.Map.t ->
+  indexing:(mode * indexing) Constants.Map.t ->
   (constant * clause) list ->
     prolog_prog
 
 val clausify1 :
   mode Constants.Map.t -> (* for caching it in the clause *)
   nargs:int -> depth:int -> term -> (constant * clause) * clause_src * int
-val pp_key : key -> string
 

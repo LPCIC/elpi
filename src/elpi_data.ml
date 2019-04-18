@@ -100,13 +100,18 @@ and prolog_prog = {
 and index = second_lvl_idx Elpi_ptmap.t
 and second_lvl_idx =
 | TwoLevelIndex of {
-    argno : int;
     mode : mode;
-    all_clauses : clause list; (* when the query is flexible *)
-    flex_arg_clauses : clause list; (* when the query is rigid *)
-    arg_idx : clause list Elpi_ptmap.t;
+    argno : int; 
+    all_clauses : clause list;         (* when the query is flexible *)
+    flex_arg_clauses : clause list;       (* when the query is rigid but arg_id ha nothing *)
+    arg_idx : clause list Elpi_ptmap.t;   (* when the query is rigid (includes in each binding flex_arg_clauses) *)
   }
-(* | BitHash of unit *)
+| BitHash of {
+    mode : mode;
+    args : int list;
+    time : int; (* time is used to recover the total order *)
+    args_idx : (clause * int) list Elpi_ptmap.t; (* clause, insertion time *)
+  }
 and clause = {
     depth : int;
     args : term list;
@@ -116,6 +121,11 @@ and clause = {
 }
 and mode = bool list (* true=input, false=output *)
 [@@deriving show, eq]
+
+type indexing =
+  | MapOn of int
+  | Hash of int list
+[@@deriving show]
 
 let mkLam x = Lam x [@@inline]
 let mkApp c x xs = App(c,x,xs) [@@inline]

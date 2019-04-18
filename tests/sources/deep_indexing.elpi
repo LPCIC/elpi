@@ -1,0 +1,17 @@
+% select should only find 2 clauses (the last 2) since indexing at level 3 drops the others
+% ./elpi -test tests/sources/deep_indexing.elpi -no-tc -trace-on -trace-at run 1 300 -trace-only select
+
+kind term type.
+type f term -> term.
+type g term.
+
+:index(3)
+pred find i:term.
+find g.
+find (f g).
+find (f (f g)).
+find (f (f (f g))).
+find (f (f (f (f g)))).
+
+
+main :- find (f (f (f g))).

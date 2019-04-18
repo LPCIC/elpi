@@ -1700,20 +1700,7 @@ let _ = do_app_deref := deref_appuv;;
   Indexing
  ******************************************************************************)
 
-module Indexing : sig
-
-  (* a clause is: "key args :- hyps." the head is split into its main symbol
-   * and its arguments.  This is because the unification/matching of the head
-   * symbol is made by the indexing machinery.  We don't support unification
-   * variables in head position *)
-  val ppclause : Fmt.formatter -> depth:int -> constant -> clause -> unit
-
-  val get_clauses : depth:int -> term -> prolog_prog -> clause list
-  val make_index : depth:int -> indexing:(mode * int list) Constants.Map.t -> (constant*clause) list -> prolog_prog
-
-  val local_prog : prolog_prog -> clause_src list
-  val add_clauses : depth:int -> (constant*clause) list -> clause_src list -> prolog_prog -> prolog_prog
-end= struct (* {{{ *)
+module Indexing = struct (* {{{ *)
 
 let mustbevariablec = min_int (* uvar or uvar t or uvar l t *)
 
@@ -1756,11 +1743,101 @@ let rec classify_clause_argno ~depth argno mode = function
   | x :: _ when argno == 0 -> classify_clause_arg ~depth (hd_opt mode) x
   | _ :: xs -> classify_clause_argno ~depth (argno-1) (tail_opt mode) xs
 
+let dec_to_bin2 num =
+  let rec aux x = 
+    if x==1 then ["1"] else
+    if x==0 then ["0"] else 
+    if x mod 2 == 1 then "1" :: aux (x/2)
+    else "0" :: aux (x/2)
+  in
+    String.concat "" (List.rev (aux num))
+
+let hash_bits = Sys.int_size - 1 (* the sign *)
+
+let hash_arg_list goal hd ~depth args mode spec =
+  let nargs = List.(length (filter (fun x -> x > 0) spec)) in
+  (* we partition equally, that may not be smart, but is simple ;-) *)
+  let arg_size = hash_bits / nargs in
+  let hash size k =
+    let modulus = 1 lsl size in
+    let kabs = Hashtbl.hash k in
+    let h = kabs mod modulus in
+    [%spy "subhash-const" (fun fmt () ->
+       Fmt.fprintf fmt "%s: %s" (C.show k)
+         (dec_to_bin2 h)) ()];
+    h in
+  let all_1 size = max_int lsr (hash_bits - size) in
+  let all_0 size = 0 in
+  let shift slot_size position x = x lsl (slot_size * position) in
+  let rec aux off acc args mode spec =
+    match args, spec with
+    | _, [] -> acc
+    | [], _ -> acc
+    | x::xs, n::spec ->
+         let h = aux_arg arg_size (hd_opt mode) n x in
+         aux (off + arg_size) (acc lor (h lsl off)) xs (tail_opt mode) spec
+  and aux_arg size matching deep arg =
+    let h =
+      match deref_head ~depth arg with
+      | App (k,a,_) when k == C.asc -> aux_arg size matching deep a
+      | Const k when k == C.uvarc ->
+          hash size mustbevariablec
+      | App(k,_,_) when k == C.uvarc && deep = 1 ->
+          hash size mustbevariablec
+      | Const k -> hash size k
+      | App(k,_,_) when deep = 1 -> hash size k
+      | App(k,x,xs) ->
+          let size = size / (List.length xs + 2) in
+          let self = aux_arg size matching (deep-1) in
+          let shift = shift size in
+          (hash size k) lor
+          (shift 1 (self x)) lor
+          List.(fold_left (lor) 0 (mapi (fun i x -> shift (i+2) (self x)) xs))
+      | (UVar _ | AppUVar _) when matching && goal -> hash size mustbevariablec
+      | (UVar _ | AppUVar _) when matching -> all_1 size
+      | (UVar _ | AppUVar _) -> if goal then all_0 size else all_1 size
+      | (Arg _ | AppArg _) -> all_1 size
+      | Nil -> hash size C.nilc
+      | Cons (x,xs) ->
+          let size = size / 2 in
+          let self = aux_arg size matching (deep-1) in
+          let shift = shift size in
+          (hash size C.consc) lor (shift 1 (self x))
+      | CData s -> hash size (CData.hash s)
+      | Lam _ -> all_1 size
+      | Discard -> all_1 size
+      | Builtin(k,xs) ->
+          let size = size / (List.length xs + 1) in
+          let self = aux_arg size matching (deep-1) in
+          let shift = shift size in
+          (hash size k) lor
+          List.(fold_left (lor) 0 (mapi (fun i x -> shift (i+1) (self x)) xs))
+    in
+    [%spy "subhash" (fun fmt ->
+       Fmt.fprintf fmt "%s: %d: %s: %a"
+         (if goal then "goal" else "clause")
+         size
+         (dec_to_bin2 h)
+         (uppterm depth [] 0 empty_env)) arg];
+    h
+  in
+  let h = aux 0 0 args mode spec in
+  [%spy "hash" (fun fmt ->
+     Fmt.fprintf fmt "%s: %s: %a"
+       (if goal then "goal" else "clause")
+       (dec_to_bin2 h)
+       (pplist ~boxed:true (uppterm depth [] 0 empty_env) " "))
+      (Const hd :: args)];
+  h
+
+let hash_clause_arg_list = hash_arg_list false
+let hash_goal_arg_list = hash_arg_list true
+
 let add1clause ~depth m (predicate,clause) =
-    try 
-      let TwoLevelIndex { all_clauses; argno; mode; flex_arg_clauses; arg_idx } = Elpi_ptmap.find predicate m in
+  match Elpi_ptmap.find predicate m with
+  | TwoLevelIndex { all_clauses; argno; mode; flex_arg_clauses; arg_idx } ->
       (* X matches both rigid and flexible terms *)
-      match classify_clause_argno ~depth argno mode clause.args with
+      begin match classify_clause_argno ~depth argno mode clause.args with
       | Variable ->
         Elpi_ptmap.add predicate (TwoLevelIndex {
           argno; mode;
@@ -1792,8 +1869,18 @@ let add1clause ~depth m (predicate,clause) =
           flex_arg_clauses;
           arg_idx = Elpi_ptmap.add arg_hd (clause::l_rev) arg_idx;
         }) m
-    with
-    | Not_found ->
+      end
+  | BitHash { mode; args; time; args_idx } ->
+      let hash = hash_clause_arg_list predicate ~depth clause.args mode args in
+      let clauses =
+        try Elpi_ptmap.find hash args_idx
+        with Not_found -> [] in
+      Elpi_ptmap.add predicate (BitHash {
+         mode; args;
+         time = time + 1;
+         args_idx = Elpi_ptmap.add hash ((clause,time) :: clauses) args_idx
+       }) m
+  | exception Not_found ->
       match classify_clause_argno ~depth 0 [] clause.args with
       | Variable ->
       Elpi_ptmap.add predicate (TwoLevelIndex {
@@ -1822,27 +1909,16 @@ let add_clauses ~depth clauses p =
   let p = List.fold_left (add1clause ~depth) p clauses in
   p
 
-type indexing =
-  | MapOn of int
-  | Hash of int list
-
-let chose_indexing predicate l =
-  let rec all_zero = function
-    | [] -> true
-    | 0 :: l -> all_zero l
-    | _ -> false in
-  let rec aux n = function
-    | [] -> type_error ("Wrong indexing for " ^ C.show predicate)
-    | 0 :: l -> aux (n+1) l
-    | 1 :: l when all_zero l -> MapOn n
-    | _ -> Hash l
-  in
-    aux 0 l
-
 let make_index ~depth ~indexing p =
-  let m = Constants.Map.fold (fun predicate (mode, index) m ->
-    match chose_indexing predicate index with
-    | Hash _ -> type_error ("Hash indexing for " ^ C.show predicate)
+  let m = Constants.Map.fold (fun predicate (mode, indexing) m ->
+    match indexing with
+    | Hash args ->
+      Elpi_ptmap.add predicate (BitHash {
+        args;
+        mode;
+        time = min_int;
+        args_idx = Elpi_ptmap.empty;
+      }) m
     | MapOn argno ->
       Elpi_ptmap.add predicate (TwoLevelIndex {
         argno;
@@ -1899,16 +1975,28 @@ let classify_goal_argno ~depth argno = function
       classify_goal_arg ~depth x
   | _ -> assert false
 
+let hash_goal_args ~depth mode args goal =
+  match goal with
+  | Const _ -> 0
+  | App(k,x,xs) -> hash_goal_arg_list k ~depth (x::xs) mode args
+  | _ -> assert false
+
 let get_clauses ~depth goal { index = m } =
  let predicate, goal = predicate_of_goal ~depth goal in
  let rc =
    try
-     let TwoLevelIndex { all_clauses; argno; mode; flex_arg_clauses; arg_idx } = Elpi_ptmap.find predicate m in
-     match classify_goal_argno ~depth argno goal with
-     | Variable -> all_clauses
-     | Rigid arg_hd ->
-        try Elpi_ptmap.find arg_hd arg_idx
-        with Not_found -> flex_arg_clauses
+     match Elpi_ptmap.find predicate m with
+     | TwoLevelIndex { all_clauses; argno; mode; flex_arg_clauses; arg_idx } ->
+       begin match classify_goal_argno ~depth argno goal with
+       | Variable -> all_clauses
+       | Rigid arg_hd ->
+          try Elpi_ptmap.find arg_hd arg_idx
+          with Not_found -> flex_arg_clauses
+       end
+     | BitHash { args; mode; args_idx } ->
+       let hash = hash_goal_args ~depth mode args goal in
+       let cl = List.flatten (Elpi_ptmap.find_unifiables hash args_idx) in
+       List.(map fst (sort (fun (_,cl1) (_,cl2) -> cl2 - cl1) cl))
    with Not_found -> []
  in
  [%log "get_clauses" (Constants.show predicate) (List.length rc)];
@@ -1959,169 +2047,6 @@ let close_with_pis depth vars t =
   add_pis vars (aux t)
 
 let local_prog { src } =  src
-
-end (* }}} *)
-module UnifBits (*: Indexing*) = struct (* {{{ *)
-(*
-
-  let key_bits =
-    let n = ref 0 in
-    let m = ref max_int in
-    while !m <> 0 do incr n; m := !m lsr 1; done;
-    !n
-
-  let hash x = Hashtbl.hash x * 62653
-  let fullones = 1 lsl key_bits -1
-  let fullzeros = 0
-  let weird = hash min_int
-  let abstractionk = 1022   (* TODO *)
-  let functor_bits = 9
-  let fst_arg_bits = 15
-  let max_depth = 1
-  let min_slot = 5
-
-
-  let hd_pred { key } = (- (key land (1 lsl functor_bits - 1)))
-  let pp_key hd = C.show (- (hd land (1 lsl functor_bits - 1)))
-
-  let ppclause f ~depth { args = args; hyps = hyps; key = hd } =
-    Fmt.fprintf f "@[<hov 1>%s %a :- %a.@]" (pp_key hd)
-       (pplist (uppterm ~min_prec:(Elpi_parser.appl_precedence+1) 0 [] 0 empty_env) "") args
-       (pplist (uppterm ~min_prec:(Elpi_parser.appl_precedence+1) 0 [] 0 empty_env) ",") hyps
-
-  let dec_to_bin num =
-    let rec aux x = 
-     if x==1 then "1" else
-     if x==0 then "0" else 
-     if x mod 2 == 1 then (aux (x/2))^"1"
-     else (aux (x/2))^"0"
-    in
-    let addzero str =
-     let s = ref "" in
-     for i=1 to (key_bits - (String.length str)) do
-      s := "0"^(!s)
-     done; 
-     !s ^ str
-    in
-     addzero (aux num)
-
-  let dec_to_bin2 num =
-    let rec aux x = 
-     if x==1 then "1" else
-     if x==0 then "0" else 
-     if x mod 2 == 1 then (aux (x/2))^"1"
-     else (aux (x/2))^"0"
-    in
-     aux num
-
-  let key_of ~mode ~depth term =
-    let buf = ref 0 in 
-    let set_section c k left right =
-      let k = abs k in
-      let new_bits = (k lsl right) land (fullones lsr (key_bits - left)) in
-(*
-      Printf.eprintf "%s%s%s %s\n%!" (String.make (key_bits - left) ' ')
-                                  (dec_to_bin2 (new_bits lsr right))
-                                  (String.make right ' ')
-                                  (C.show c);
-*)
-      (buf := new_bits lor !buf) in
-    let rec index lvl tm depth left right =
-      [%trace "index" ("@[<hv 0>%a@]"
-        (uppterm depth [] 0 empty_env) tm)
-      begin match tm with
-      | App (k,arg,_) when k == C.asc -> 
-         index lvl arg depth left right
-      | (App (k,_,_) | Const k) when k == C.uvarc -> 
-         set_section k weird left right
-      | Const k | Builtin (k,_) ->
-          set_section k (if lvl=0 then k else hash k) left right 
-      | Nil ->
-          set_section C.nilc (if lvl=0 then C.nilc else hash C.nilc) left right 
-      | Cons _ ->
-          set_section C.consc (if lvl=0 then C.consc else hash C.consc) left right 
-      | UVar ({contents=t},origdepth,args) when t != C.dummy ->
-         index lvl (deref_uv ~from:origdepth ~to_:depth args t) depth left right
-      | Lam _ -> set_section abstractionk abstractionk left right
-      | CData s -> set_section C.(from_stringc "CData") (CData.hash s) left right
-      | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard ->
-         if mode = `Clause then set_section C.uvarc fullones left right
-         else set_section C.uvarc fullzeros left right
-      | App (k,arg,argl) -> 
-         let slot = left - right in
-         if lvl >= max_depth || slot < min_slot
-         then set_section k (if lvl=0 then k else hash k) left right
-         else
-           let nk, hd, fst_arg, sub_arg =
-             if lvl = 0 then
-               let sub_slots = List.length argl in
-               if sub_slots = 0 then
-                 k,functor_bits,slot-functor_bits,0
-               else
-                 let args_bits = slot - functor_bits - fst_arg_bits in
-                 let sub_arg = args_bits / sub_slots in
-                 k,functor_bits,fst_arg_bits + args_bits mod sub_slots, sub_arg
-             else
-               let sub_slots = List.length argl + 2 in
-               let sub_arg = slot / sub_slots in
-               hash k, sub_arg, sub_arg + slot mod sub_slots, sub_arg  in
-           let right_hd = right + hd in
-           set_section k nk right_hd right;
-           let j = right + hd + fst_arg in
-           index (lvl+1) arg depth j right_hd;
-           if sub_arg > 0 && j + sub_arg <= left
-           then subindex lvl depth j left sub_arg argl
-      end]
-     and subindex lvl depth j left step = function
-       | [] -> ()
-       | x::xs ->
-          let j2 = j + step in
-          index (lvl+1) x depth j2 j;
-          if j2 + step <= left then subindex lvl depth j2 left step xs
-    in
-      index 0 term depth key_bits 0;
-(*       Format.eprintf "%s %a\n\n%!" (dec_to_bin !buf) (uppterm 0 [] 0 empty_env) term; *)
-      !buf
-
-  let get_clauses ~depth a { map = m } =
-    let ind = key_of ~mode:`Query ~depth a in
-    let cl_list = List.flatten (Elpi_ptmap.find_unifiables ~functor_bits ind m) in
-    [%log "get_clauses" (pp_key ind) (List.length cl_list)];
-    List.map fst
-      (List.fast_sort (fun (_,cl1) (_,cl2) -> compare cl1 cl2) cl_list)
-      
-  let timestamp = ref 0
-
-  let add_clauses ?(op=decr) clauses s { map = ptree; src } =
-    let map = List.fold_left (fun m clause -> 
-      let ind = clause.key in
-      let clause = clause, !timestamp in
-      op timestamp;
-      try 
-        let cl_list = Elpi_ptmap.find ind m in
-        Elpi_ptmap.add ind (clause::cl_list) m
-      with Not_found -> 
-        Elpi_ptmap.add ind [clause] m
-    ) ptree clauses in
-    { map; src = List.rev s @ src }
-
-  let make_index p =
-    timestamp := 1;
-    let m = add_clauses ~op:incr p [] { map = Elpi_ptmap.empty; src = [] } in
-    timestamp := 0;
-    { m with src = [] }
-
-  (* Get rid of optional arg *)
-  let add_clauses cl p pt = add_clauses cl p pt
-
-  (* from (key, (key clause * int) list) list  
-    creates  key clause list *)
-  let rec flatten_ = function
-     [] -> []
-   | (_,l)::tl -> (List.map (fun (cl,_) -> cl) l) @ flatten_ tl
-
-let local_prog (Index { src }) = src 
-*)
 
 end (* }}} *)
 
@@ -2259,10 +2184,8 @@ let rec claux1 get_mode vars depth hyps ts lts lcs t =
        | UVar _ | AppUVar _ -> assert false
        | Cons _ | Nil | Discard -> assert false
      in
-     let mode = try get_mode hd with Not_found -> [] in
-     let c = { depth = depth+lcs ; args= args; hyps = hyps; mode;
-          vars = vars; (*key=key_of ~mode:`Clause ~depth:(depth+lcs) g*) } in
-     [%spy "extra" (fun fmt -> ppclause fmt ~depth:(depth+lcs)) c];
+     let c = { depth = depth+lcs; args; hyps; mode = get_mode hd; vars } in
+     [%spy "extra" (fun fmt -> ppclause fmt ~depth:(depth+lcs) hd) c];
      (hd,c), { hdepth = depth; hsrc = g }, lcs
   | UVar ({ contents=g },from,args) when g != C.dummy ->
      claux1 get_mode vars depth hyps ts lts lcs
@@ -2280,10 +2203,12 @@ let rec claux1 get_mode vars depth hyps ts lts lcs t =
   end]
    
 let clausify { index } ~depth t =
-  let l = split_conj ~depth t in
   let get_mode x =
-    let TwoLevelIndex { mode } = Elpi_ptmap.find x index in mode
-  in
+    match Elpi_ptmap.find x index with
+    | TwoLevelIndex { mode } -> mode
+    | BitHash { mode } -> mode
+    | exception Not_found -> [] in
+  let l = split_conj ~depth t in
   let clauses, program, lcs =
     List.fold_left (fun (clauses, programs, lcs) t ->       
       let clause, program, lcs = claux1 get_mode 0 depth [] [] 0 lcs t in
@@ -2291,7 +2216,7 @@ let clausify { index } ~depth t =
   clauses, program, lcs
 ;;
 
-let clausify1 m ~nargs ~depth t = claux1 (fun x -> C.Map.find x m) nargs depth [] [] 0 0 t
+let clausify1 m ~nargs ~depth t = claux1 (fun x -> try C.Map.find x m with Not_found -> []) nargs depth [] [] 0 0 t
 
 end (* }}} *) 
 open Clausify
@@ -3327,6 +3252,5 @@ let move = HO.move
 let hmove = HO.hmove
 let make_index = make_index
 let clausify1 = Clausify.clausify1
-let pp_key = pp_key
 
 (* vim: set foldmethod=marker: *)

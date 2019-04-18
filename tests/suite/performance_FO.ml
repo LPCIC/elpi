@@ -56,3 +56,8 @@ let () = declare "index2"
   ~source_elpi:"index2.elpi"
   ~description:"indexing the second argument"
   ()
+
+let () = declare "deep_index"
+  ~source_elpi:"deep_indexing.elpi"
+  ~description:"indexing deeper rules out"
+  ()

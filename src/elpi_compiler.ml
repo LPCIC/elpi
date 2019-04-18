@@ -1469,6 +1469,20 @@ let rec filter_if defs proj = function
     | Some e when StrSet.mem e defs -> c :: filter_if defs proj rest
     | Some _ -> filter_if defs proj rest
 
+
+let chose_indexing predicate l =
+  let rec all_zero = function
+    | [] -> true
+    | 0 :: l -> all_zero l
+    | _ -> false in
+  let rec aux n = function
+    | [] -> error ("Wrong indexing for " ^ C.show predicate)
+    | 0 :: l -> aux (n+1) l
+    | 1 :: l when all_zero l -> MapOn n
+    | _ -> Hash l
+  in
+    aux 0 l
+
 let run
   {
     WithMain.types;
@@ -1513,7 +1527,7 @@ let run
         | [x] -> x
         | _ -> error ("multiple and inconsistent indexing attributes for " ^
                       C.show name) in
-      C.Map.add name (mode,index) m) known C.Map.empty in
+      C.Map.add name (mode,chose_indexing name index) m) known C.Map.empty in
   let prolog_program =
     make_index ~depth:initial_depth ~indexing
       (List.map (compile_clause modes initial_depth)

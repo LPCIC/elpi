@@ -469,6 +469,7 @@ map-i L F R :- map-i.aux L 0 F R.
 map-i.aux [] _ _ [].
 map-i.aux [X|XS] N F [Y|YS] :- F N X Y, M is N + 1, map-i.aux XS M F YS.
 
+:index(1 1)
 pred map2 i:list A, i:list B, i:(A -> B -> C -> prop), o:list C.
 map2 [] [_|_] _ _ :- fatal-error "map2 on lists of different length".
 map2 [_|_] [] _ _ :- fatal-error "map2 on lists of different length".

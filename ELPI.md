@@ -344,6 +344,48 @@ argument, and at depth 1 the second argument (and at depth 0 all the remaining
 ones). At the time of writing only one argument can be indexed at depth equal
 to one, all the others must be indexed at depth zero.
 
+If only one argument is indexed, and it is indexed at depth one, Elpi uses
+a standard indexing technique based on a perfect tree (at depth 1).
+
+If more than one argument is indexed, or if some argument is indexed at depth
+greater than 1, then Elpi uses a *unification hashes* (as in golog).
+
+```prolog
+:index(2)
+pred mult o:nat, o:nat, o:nat.
+mult o X o.
+mult (s (s o)) X C :- plus X X C.
+mult (s A) B C :- mult A B R, plus B R C.
+```
+
+The hash value, a list of bits, is generated hierarchically and up to the
+specified depth. Unification variables in a clause head are mapped to a
+sequence of 1, while they are mapped to a sequence of 0 when they are part of
+the query (1 means "I provide" while 0 means "I demand"). Constants are mapped
+to a hash value, a sequence of both 1 and 0. If the bit wise conjunction of the
+hash of the query and the hash of the head of a clause is equal to the hash of
+the query, then the clause is selected.
+
+```
+hash o = 1001 1011
+hash s = 1011 0010
+
+clauses: hashes are left trimmed to fit word size, here 8
+  
+  1: mult o         = 1001 1011
+  2: mult (s (s o)) = 0010 0010
+  3: mult (s A)     = 0010 1111
+
+goal: if hgoal & hclause = hgoal then it is a match
+     mult (s o)     = 0010 1011 % only 3 matches
+     mult (s X)     = 0010 0000 % 2 and 3 match
+     mult X         = 0000 0000 % 1, 2 and 4 match
+```
+
+In our (limited) testing unification hashes are on-par with the standard
+indexing technique, but they provide grater flexibility. The only downside is
+that hard to predict collisions can happen (the entire hash must fit one word).
+
 ## Modes
 
 Predicate arguments can be flagged as input as follows

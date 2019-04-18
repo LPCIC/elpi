@@ -49,21 +49,17 @@ val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
 
 (* Specific to a scenario where the key is computed starting from a term
      functor(args)
-   and reserves the lower functor_bits for the functor.
 
    If the key of items in the map was computed such that
-     key = | bits for the args | bits for the functor |
-   where flexible args are made of 1 (read provides)
+   flexible args are made of 1 (read provides)
    and the query is computed such that
-     query = | bits for the args | bits for the functor |
-   where flexible args are made of 0 (read requires)
-   and the bits for the main functor are functor_bits many,
+   flexible args are made of 0 (read requires)
    then find_unifiables returns all elements with a key
-   that matches verbatim the functor part and such that
+   such that
      query_args land key_args == query_args
    i.e. all items that could unify with the query.
    The result is in no precise order. *)
-val find_unifiables : functor_bits:int -> int -> 'a t -> 'a list
+val find_unifiables : int -> 'a t -> 'a list
 
 (* diff f m1 m2 is the map whose domain is (Dom(m1) \ Dom(m2)) \cup m3
    where m3 = { x | x \in m1 \cap m2 && f (m1 x) (m2 x) != None } and
