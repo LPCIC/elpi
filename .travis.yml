@@ -108,7 +108,7 @@ matrix:
     - make -C tests run
     - make byte
 
-  - env: TEST="opam package installation"
+  - env: TEST="linux opam package installation"
     os: linux
     addons:
       apt:
@@ -132,3 +132,26 @@ matrix:
     - opam pin -y remove elpi
     - if ocamlfind query elpi; then false; else true; fi
     - if which elpi; then false; else true; fi
+
+  - env: TEST="osx opam package installation"
+    os: osx
+    before_install:
+    - brew update
+    - brew install --ignore-dependencies opam
+    - brew install gnu-time
+    - brew install lua51
+    cache:
+      directories:
+      - $HOME/opam-cache
+    script:
+    - opam switch max
+    - eval $(opam env)
+    - opam pin -y -t add elpi "https://github.com/${TRAVIS_REPO_SLUG}.git#${TRAVIS_COMMIT}" 
+    - ocamlfind query elpi
+    - ls `ocamlfind printconf destdir`/elpi
+    - which elpi
+    - opam remove elpi
+    - opam pin -y remove elpi
+    - if ocamlfind query elpi; then false; else true; fi
+    - if which elpi; then false; else true; fi
+
