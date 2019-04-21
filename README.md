@@ -33,6 +33,11 @@ opam pin add elpi https://github.com/LPCIC/elpi.git
 You can also clone this repository and type `make`.  The build requirements
 are listed at the end of the [Makefile](Makefile)
 
+#### Syntax highlight in Visual studio code
+
+The [extension for vscode](https://github.com/LPCIC/elpi-lang) is available in the
+market place, just look for Elpi.
+
 #### Syntax highlight in vim
 
 We recommend to add the following lines to `~/.vimrc`
@@ -59,11 +64,6 @@ autocmd FileType lprolog hi def link elpiKeyword Keyword
 autocmd FileType lprolog hi def link elpiMacro Special
 autocmd FileType lprolog hi def link elpiSpill Special
 ```
-
-#### Syntax highlight in $EDITOR
-
-We are happy to merge PRs! (Really, we use vim but we are happy to support
-any other editor).
 
 ## What's an elaborator and what's so special about it?
 
