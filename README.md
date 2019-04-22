@@ -41,7 +41,9 @@ market place, just look for Elpi.
 #### Syntax highlight in vim
 
 We recommend to add the following lines to `~/.vimrc`
-
+<details><summary>(click to expand)</summary>
+<p>
+  
 ```vim
 "elpi
 autocmd BufRead,BufNewFile *.elpi set filetype=lprolog
@@ -64,6 +66,9 @@ autocmd FileType lprolog hi def link elpiKeyword Keyword
 autocmd FileType lprolog hi def link elpiMacro Special
 autocmd FileType lprolog hi def link elpiSpill Special
 ```
+
+</p>
+</details>
 
 ## What's an elaborator and what's so special about it?
 
