@@ -1428,8 +1428,8 @@ let rec unif matching depth adepth a bdepth b e =
              (* Second step: we restrict the r.h.s. *)
              hmove ~from:(adepth+depth) ~to_:origdepth b in
          [%spy "assign" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
-           (uppterm depth [] adepth e) a
-           (uppterm depth [] adepth e) t) ()];
+           (uppterm origdepth [] 0 empty_env) a
+           (uppterm origdepth [] 0 empty_env) t) ()];
          r @:= t;
          true
        with RestrictionFailure -> false end
@@ -1722,8 +1722,8 @@ let mustbevariablec = min_int (* uvar or uvar t or uvar l t *)
 
 let ppclause f ~depth hd { args = args; hyps = hyps; } =
   Fmt.fprintf f "@[<hov 1>%s %a :- %a.@]" (C.show hd)
-     (pplist (uppterm ~min_prec:(Elpi_parser.appl_precedence+1) depth [] 0 empty_env) " ") args
-     (pplist (uppterm ~min_prec:(Elpi_parser.appl_precedence+1) depth [] 0 empty_env) ", ") hyps
+     (pplist (uppterm ~min_prec:(Elpi_parser.appl_precedence+1) depth [] depth empty_env) " ") args
+     (pplist (uppterm ~min_prec:(Elpi_parser.appl_precedence+1) depth [] depth empty_env) ", ") hyps
 
 let tail_opt = function
   | [] -> []
