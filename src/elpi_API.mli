@@ -287,6 +287,7 @@ module Extend : sig
     val mkBound : constant -> term  (* bound variable, i.e. >= 0 *)
     val mkLam : term -> term
     val mkAppS : string -> term -> term list -> term
+    val mkAppSL : string -> term list -> term
     val mkCons : term -> term -> term
     val mkNil : term
     val mkDiscard : term
@@ -296,6 +297,7 @@ module Extend : sig
     (** Lower level smart constructors *)
     val mkGlobal : constant -> term (* global constant, i.e. < 0 *)
     val mkApp : constant -> term -> term list -> term
+    val mkAppL : constant -> term list -> term
     val mkBuiltin : builtin -> term list -> term
     val mkUVar : uvar_body -> int -> int -> term
     val mkAppUVar : uvar_body -> int -> term list -> term

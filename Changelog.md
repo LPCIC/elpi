@@ -1,3 +1,8 @@
+## [UNRELEASED]
+
+- API:
+  - mkAppL and mkAppSL handy constructors
+
 ## Version 1.2 (April 2019)
 
 Fix:

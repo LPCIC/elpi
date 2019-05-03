@@ -179,7 +179,11 @@ module Extend = struct
     module StrMap = Data.StrMap
     type builtin = int
     include Elpi_data
+    let mkAppL c = function
+      | [] -> mkConst c
+      | x::xs -> mkApp c x xs
     let mkAppS s x args = mkApp (Constants.from_stringc s) x args
+    let mkAppSL s args = mkAppL (Constants.from_stringc s) args
     let mkGlobalS s = Constants.from_string s
     let mkBuiltinS s args = mkBuiltin (Builtin.from_builtin_name s) args
 
