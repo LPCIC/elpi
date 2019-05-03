@@ -7,8 +7,6 @@ is very welcome. Questions or feature requests are welcome as well.
 
 - [Underscore](#underscore) is a real wildcard
 
-- [Macros](#macros) are expanded at compilation time
-
 - [Spilling](#spilling) turns `..{foo X}..` into `foo X Y,..Y..`
 
 - [N-ary binders](#n-ary-binders) let one write `pi x y z\ ...`
@@ -53,6 +51,8 @@ is very welcome. Questions or feature requests are welcome as well.
 
 - [Tracing facility](#tracing-facility) to debug your programs.
  
+- [Macros](#macros) are expanded at compilation time
+ 
 ## Underscore
 
 Identifiers whose name start with `_` are wildcards, not variables.
@@ -72,27 +72,6 @@ some variable occurring in something is out of scope for `DummyNameUsedOnlyOnce`
 
 Side note: `elpi-checker.elpi` (see below) reports warnings about linearly used
 variables, suggesting to start their name with `_` (`_Name` is just sugar for `_`).
-
-## Macros
-
-A macro is declared with the following syntax
-```prolog
-macro @name Args :- Body.
-```
-It is expanded everywhere (even in type declarations)
-at compilation time. 
-
-### Caveat
-Currently macros are not truly "hygienic",
-that is the body of the macro is not lexically analyzed before
-expansion and its free names (of constants) may be captured.
-
-```prolog
-macro @m A :- x = A.
-main :- pi x\ @m x. % works, but should not!
-```
-
-Use with care.
 
 #### Example: type shortcut.
 ```prolog
@@ -885,3 +864,24 @@ Success:
 ```
 
 The command `elpi -help` prints all trace related options.
+
+## Macros
+
+A macro is declared with the following syntax
+```prolog
+macro @name Args :- Body.
+```
+It is expanded everywhere (even in type declarations)
+at compilation time. 
+
+### Caveat
+Currently macros are not truly "hygienic",
+that is the body of the macro is not lexically analyzed before
+expansion and its free names (of constants) may be captured.
+
+```prolog
+macro @m A :- x = A.
+main :- pi x\ @m x. % works, but should not!
+```
+
+Use with care.
