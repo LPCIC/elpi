@@ -2303,8 +2303,7 @@ module Constraints : sig
   val chrules : CHR.t Fork.local_ref
 
   (* out of place *)
-  val qnames : int StrMap.t Fork.local_ref
-  val qenv : term array Fork.local_ref
+  val assignments : term StrMap.t Fork.local_ref
   val exect_builtin_predicate :
     constant -> depth:int -> prolog_prog -> term list -> term list
 
@@ -2562,8 +2561,7 @@ let declare_constraint ~depth prog args =
        ~depth prog ~goal:g ~on:keys
   | None -> delay_goal ~depth prog ~goal:g ~on:keys
 
-let qnames = Fork.new_local StrMap.empty
-let qenv = Fork.new_local empty_env
+let assignments = Fork.new_local StrMap.empty
 
 let type_err ~depth bname n ty t =
   type_error ("builtin " ^ bname ^ ": " ^ string_of_int n ^ "th argument: expected " ^ ty ^ ": got " ^
@@ -2700,10 +2698,9 @@ let exect_builtin_predicate c ~depth idx args =
       try Builtin.lookup c
       with Not_found -> 
         anomaly ("no built-in predicated named " ^ C.show c) in
-    let assignments = StrMap.map (fun i -> !qenv.(i)) !qnames in
     let constraints = !CS.Ugly.delayed in
     let state = !CS.custom_state  in
-    let state, gs = call b ~depth (local_prog idx) constraints assignments state args in
+    let state, gs = call b ~depth (local_prog idx) constraints !assignments state args in
     CS.custom_state := state;
     gs
 ;;
@@ -2776,10 +2773,11 @@ let try_fire_rule rule (constraints as orig_constraints) =
     compiled_program = initial_program; 
     (* no meta meta level *)
     chr = CHR.empty;
-    initial_goal = shift_bound_vars ~depth:0 ~to_:max_depth guard;
-    assignments_names = StrMap.empty;
+    initial_goal =
+      move ~adepth:max_depth ~from:max_depth ~to_:max_depth env
+        (shift_bound_vars ~depth:0 ~to_:max_depth guard);
+    assignments = StrMap.empty;
     initial_depth = max_depth;
-    query_env = env;
     initial_state = CustomState.init (CompilerState.init ());
   } in
   let { search; get; exec; destroy } = !do_make_runtime executable in
@@ -3149,10 +3147,9 @@ end;*)
     compiled_program;
     chr;
     initial_depth;
-    query_env;
     initial_goal;
     initial_state;
-    assignments_names;
+    assignments;
   } ->
   let { Fork.exec = exec ; get = get ; set = set } = Fork.fork () in
   set orig_prolog_program compiled_program;
@@ -3166,14 +3163,12 @@ end;*)
   set steps_bound max_steps;
   set delay_hard_unif_problems delay_outside_fragment;
   set steps_made 0;
-  set Constraints.qnames assignments_names;
-  set Constraints.qenv query_env;
+  set Constraints.assignments assignments;
   set CS.custom_state initial_state;
   let search = exec (fun () ->
-     let q = move ~adepth:initial_depth ~from:initial_depth ~to_:initial_depth query_env initial_goal in
      [%spy "run-trail" (fun fmt _ -> T.print_trail fmt) ()];
      T.initial_trail := !T.trail;
-     run initial_depth !orig_prolog_program q [] FNil noalts noalts) in
+     run initial_depth !orig_prolog_program initial_goal [] FNil noalts noalts) in
   let destroy () = exec (fun () -> T.undo ~old_trail:T.empty ()) () in
   let next_solution = exec next_alt in
   { search; next_solution; destroy; exec; get }
@@ -3188,40 +3183,13 @@ open Mainloop
   API
  ******************************************************************************)
 
-let mk_solution depth env sm =
-  StrMap.map (fun i -> (*full_deref ~adepth:depth env ~depth*) env.(i)) sm
-
-(*
-let deref_unif { adepth; env; bdepth; a; b; matching } = {
-  adepth; bdepth; env = Array.map (full_deref ~adepth env ~depth:adepth) env;
-  a = full_deref ~adepth env ~depth:adepth a;
-  b = full_deref ~adepth env ~depth:bdepth b;
-  matching
-}
-
-let deref_cst { cdepth; prog; context; conclusion } = {
-  cdepth; prog;
-  context = List.map (fun { hdepth; hsrc } ->
-    { hdepth;
-      hsrc = full_deref ~adepth:0 empty_env ~depth:hdepth hsrc}) context;
-  conclusion = full_deref ~depth:cdepth ~adepth:0 empty_env conclusion;
-}
-
-let deref_stuck_goal = function
-  | { kind = Unification x } as w ->
-       { w with kind = Unification (deref_unif x) }
-  | { kind = Constraint x } as w ->
-       { w with kind = Constraint (deref_cst x) }
-*)
-
-let mk_outcome search get_cs { initial_depth; assignments_names; query_env } =
+let mk_outcome search get_cs assignments =
  try
    let alts = search () in
-   let assignments = mk_solution initial_depth query_env assignments_names in
    let syn_csts, custom_state = get_cs () in
    let solution = {
      assignments;
-     constraints = syn_csts; (*List.map deref_stuck_goal syn_csts;*)
+     constraints = syn_csts;
      state = custom_state
    } in
    Success solution, alts
@@ -3232,7 +3200,7 @@ let mk_outcome search get_cs { initial_depth; assignments_names; query_env } =
 let execute_once ?max_steps ?delay_outside_fragment exec =
  auxsg := [];
  let { search; get } = make_runtime ?max_steps ?delay_outside_fragment exec in
- fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.custom_state) exec)
+ fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.custom_state) exec.Elpi_data.assignments)
 ;;
 
 let execute_loop ?delay_outside_fragment exec ~more ~pp =
@@ -3240,7 +3208,7 @@ let execute_loop ?delay_outside_fragment exec ~more ~pp =
  let k = ref noalts in
  let do_with_infos f =
   let time0 = Unix.gettimeofday() in
-  let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, get CS.custom_state) exec in
+  let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, get CS.custom_state) exec.Elpi_data.assignments in
   let time1 = Unix.gettimeofday() in
   k := alts;
   pp (time1 -. time0) o in

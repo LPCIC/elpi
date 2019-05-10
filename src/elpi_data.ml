@@ -610,14 +610,12 @@ type executable = {
   chr : CHR.t;
   (* initial depth (used for both local variables and CHR (#eigenvars) *)
   initial_depth : int;
-  (* Heap for the query *)
-  query_env : env;
   (* query *)
   initial_goal: term;
   (* constraints coming from compilation *)
   initial_state : CustomState.t;
   (* solution *)
-  assignments_names : int StrMap.t;
+  assignments : term StrMap.t;
 }
 
 exception No_clause

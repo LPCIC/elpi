@@ -676,10 +676,11 @@ module Extend : sig
       
     end
 
-    (** Generate a query starting from a compiled/hand-made term *)
+    (** Generate a query starting from a compiled/hand-made term. The StrMap
+        maps names of args (see fresh_Arg below) *)
     val query :
       Compile.program -> (depth:int -> State.t -> State.t * (Ast.Loc.t * Data.term)) ->
-        Compile.query
+        Compile.query * Data.term Data.StrMap.t
 
     (* Args are parameters of the query (e.g. capital letters) *)
     val is_Arg : State.t -> Data.term -> bool

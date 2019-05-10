@@ -149,6 +149,8 @@ type query = {
   chr : (constant list * prechr_rule list) list;
   initial_depth : int;
   query : preterm;
+  (* We pre-compile the query to ease the API *)
+  initial_goal : term; assignments : term StrMap.t;
   initial_state : CustomState.t;
   compiler_flags : flags;
 }
@@ -167,14 +169,12 @@ type executable = Elpi_data.executable = {
   chr : CHR.t;
   (* initial depth (used for both local variables and CHR (#eigenvars) *)
   initial_depth : int;
-  (* Heap for the query *)
-  query_env : env;
   (* query *)
   initial_goal: term;
   (* constraints coming from compilation *)
   initial_state : CustomState.t;
   (* solution *)
-  assignments_names : int StrMap.t;
+  assignments : term StrMap.t;
 }
 
 end
@@ -1318,46 +1318,6 @@ let program_of_ast ~flags:({ print_passes } as flags) p =
   }
 ;;
 
-let query_of_ast { Compiled.assembled_program; compiler_state; compiler_flags } t
-=
-  let initial_depth = assembled_program.Assembled.local_names in
-  let types = assembled_program.Assembled.types in
-  let modes = assembled_program.Assembled.modes in
-  let active_macros = assembled_program.Assembled.toplevel_macros in
-  let state, query =
-    ToDBL.preterm_of_ast ~depth:initial_depth active_macros compiler_state t in
-  let query = Spill.spill_preterm types modes query in
-  {
-    WithMain.types;
-    modes;
-    clauses = assembled_program.Assembled.clauses;
-    chr = assembled_program.Assembled.chr;
-    initial_depth;
-    query;
-    initial_state = CustomState.init state;
-    compiler_flags;
-  } 
-
-let query_of_term { Compiled.assembled_program; compiler_state; compiler_flags } f =
-  let initial_depth = assembled_program.Assembled.local_names in
-  let types = assembled_program.Assembled.types in
-  let modes = assembled_program.Assembled.modes in
-  let active_macros = assembled_program.Assembled.toplevel_macros in
-  let state, query =
-    ToDBL.preterm_of_function
-      ~depth:initial_depth active_macros compiler_state
-      (f ~depth:initial_depth) in
-  {
-    WithMain.types;
-    modes;
-    clauses = assembled_program.Assembled.clauses;
-    chr = assembled_program.Assembled.chr;
-    initial_depth;
-    query;
-    initial_state = CustomState.init state;
-    compiler_flags;
-  }
-
 let is_builtin tname =
   let all_builtin = Builtin.all () in
   let elpi_builtins = [C.cutc;C.declare_constraintc;C.print_constraintsc] in
@@ -1414,6 +1374,62 @@ let stack_term_of_preterm ~depth:arg_lvl { term = t; amap = { c2i } } =
   in
   stack_term_of_preterm t
 ;;
+
+let query_of_ast { Compiled.assembled_program; compiler_state; compiler_flags } t
+=
+  let initial_depth = assembled_program.Assembled.local_names in
+  let types = assembled_program.Assembled.types in
+  let modes = assembled_program.Assembled.modes in
+  let active_macros = assembled_program.Assembled.toplevel_macros in
+  let state, query =
+    ToDBL.preterm_of_ast ~depth:initial_depth active_macros compiler_state t in
+  let query = Spill.spill_preterm types modes query in
+  let query_env = Array.make query.amap.nargs C.dummy in
+  let initial_goal =
+    move ~adepth:initial_depth ~from:initial_depth ~to_:initial_depth query_env
+      (stack_term_of_preterm ~depth:initial_depth query) in
+  let assignments = StrMap.map (fun i -> query_env.(i)) query.amap.n2i in
+  {
+    WithMain.types;
+    modes;
+    clauses = assembled_program.Assembled.clauses;
+    chr = assembled_program.Assembled.chr;
+    initial_depth;
+    query;
+    initial_goal;
+    assignments;
+    initial_state = CustomState.init state;
+    compiler_flags;
+  }
+
+let query_of_term { Compiled.assembled_program; compiler_state; compiler_flags } f =
+  let initial_depth = assembled_program.Assembled.local_names in
+  let types = assembled_program.Assembled.types in
+  let modes = assembled_program.Assembled.modes in
+  let active_macros = assembled_program.Assembled.toplevel_macros in
+  let state, query =
+    ToDBL.preterm_of_function
+      ~depth:initial_depth active_macros compiler_state
+      (f ~depth:initial_depth) in
+  let query_env = Array.make query.amap.nargs C.dummy in
+  let initial_goal =
+    move ~adepth:initial_depth ~from:initial_depth ~to_:initial_depth query_env
+      (stack_term_of_preterm ~depth:initial_depth query) in
+  let assignments = StrMap.map (fun i -> query_env.(i)) query.amap.n2i in
+ {
+    WithMain.types;
+    modes;
+    clauses = assembled_program.Assembled.clauses;
+    chr = assembled_program.Assembled.chr;
+    initial_depth;
+    query;
+    initial_goal;
+    assignments;
+    initial_state = CustomState.init state;
+    compiler_flags;
+  }, assignments
+
+
 
 module Compiler : sig
 
@@ -1490,7 +1506,8 @@ let run
     clauses;
     chr;
     initial_depth;
-    query = ({ amap = { nargs; n2i } } as query);
+    initial_goal;
+    assignments;
     initial_state;
     compiler_flags = flags;
   }
@@ -1536,10 +1553,9 @@ let run
     Elpi_data.compiled_program = prolog_program;
     chr;
     initial_depth;
-    query_env = Array.make nargs C.dummy;
-    initial_goal = stack_term_of_preterm ~depth:initial_depth query;
+    initial_goal;
     initial_state;
-    assignments_names = n2i;
+    assignments;
   }
 
 end (* }}} *)
@@ -1707,7 +1723,7 @@ let static_check header
       ~flags:{ flags with allow_untyped_builtin = true }
       (header @ checker) in
   let loc = Elpi_util.Loc.initial "(static_check)" in
-  let query =
+  let query, _ =
     query_of_term checker (fun ~depth state ->
       assert(depth=0);
       state, (loc,App(C.from_stringc "check",list_to_lp_list p,[q;tlist]))) in

@@ -18,7 +18,7 @@ type query
 val program_of_ast : flags:flags -> Elpi_ast.Program.t -> program
 val query_of_ast : program -> Elpi_ast.Goal.t -> query
 val query_of_term :
-  program -> (depth:int -> Elpi_data.CompilerState.t -> Elpi_data.CompilerState.t * (Loc.t * Elpi_data.term)) -> query
+  program -> (depth:int -> Elpi_data.CompilerState.t -> Elpi_data.CompilerState.t * (Loc.t * Elpi_data.term)) -> query * Elpi_data.term StrMap.t
 
 val pp_query : (depth:int -> Format.formatter -> Elpi_data.term -> unit) -> Format.formatter -> query -> unit
 
