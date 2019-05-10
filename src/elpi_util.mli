@@ -233,18 +233,21 @@ module CData : sig
   val map : 'a cdata -> 'b cdata -> ('a -> 'b) -> t -> t
 end
 
-(* Object oriented state, use both for quotations and custom constraints *)
-module State : functor (Init : sig type t end) -> sig
+(* Object oriented state: borns at compilation time and survives as run time *)
+module State : sig
 
   (* filled in with components *)
   type 'a component
   val declare :
-    name:string -> init:(Init.t -> 'a) -> pp:(Format.formatter -> 'a -> unit) ->
+    name:string -> pp:(Format.formatter -> 'a -> unit) ->
+    init:(unit -> 'a) -> 
+    compilation_is_over:('a -> 'a option) ->
      'a component
   
   (* an instance of the state type *)
   type t
-  val init : Init.t -> t 
+  val init : unit -> t
+  val end_compilation : t -> t
   val get : 'a component -> t -> 'a
   val set : 'a component -> t -> 'a -> t
   val update : 'a component -> t -> ('a -> 'a) -> t

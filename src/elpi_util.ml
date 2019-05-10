@@ -498,12 +498,13 @@ let declare { data_eq; data_pp; data_hash; data_name; data_hconsed } =
   let map { cout } { cin } f x = cin (f (cout x))
 end
   
-module State = functor (Init : sig type t end) -> struct
+module State = struct
 
   type t = Obj.t StrMap.t
   type 'a component = string
   type extension = {
-    init : Init.t -> Obj.t;
+    init : unit -> Obj.t;
+    end_comp : Obj.t -> Obj.t option;
     pp   : Format.formatter -> Obj.t -> unit;
   }
   let extensions : extension StrMap.t ref = ref StrMap.empty
@@ -522,20 +523,30 @@ module State = functor (Init : sig type t end) -> struct
     let t = set name t x in
     t, res
 
-  let declare ~name ~init ~pp =
+  let declare ~name ~pp ~init ~compilation_is_over =
     if StrMap.mem name !extensions then
       anomaly ("Extension "^name^" already declared");
     extensions := StrMap.add name {
         init = (fun x -> Obj.repr (init x));
-        pp = (fun fmt x -> pp fmt (Obj.obj x)) }
+        pp = (fun fmt x -> pp fmt (Obj.obj x));
+        end_comp = (fun x -> option_map Obj.repr (compilation_is_over (Obj.obj x))) }
       !extensions;
     name
 
-  let init data =
-    StrMap.fold (fun name { init } -> StrMap.add name (init data))
+  let init () =
+    StrMap.fold (fun name { init } -> StrMap.add name (init ()))
       !extensions StrMap.empty 
 
+  let end_compilation m =
+    StrMap.fold (fun name obj acc -> 
+      match (StrMap.find name !extensions).end_comp obj with
+      | None -> acc
+      | Some o -> StrMap.add name o acc) m StrMap.empty
+
   let pp fmt t =
-    StrMap.iter (fun name { pp } -> pp fmt (StrMap.find name t)) !extensions
+    StrMap.iter (fun name { pp } ->
+      try pp fmt (StrMap.find name t)
+      with Not_found -> ())
+    !extensions
 
 end

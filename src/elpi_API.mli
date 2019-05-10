@@ -657,41 +657,22 @@ module Extend : sig
    * - providing quotations *)
   module Compile : sig
 
-    (** In order to implement quotations one may
-     * need to stick some data into the compiler state that can indeed be
-     * extended. A piece of compiler state can also be kept and used at runtime,
-     * e.g. if it contains some custom constraints, see CustomState *)
-    module State : sig
-      type t
-      type 'a component
-    
-      val declare :
-        name:string -> init:(unit -> 'a) ->
-          pp:(Format.formatter -> 'a -> unit) -> 'a component
-
-      val get : 'a component -> t -> 'a
-      val set : 'a component -> t -> 'a -> t
-      val update : 'a component -> t -> ('a -> 'a) -> t
-      val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
-      
-    end
-
     (** Generate a query starting from a compiled/hand-made term. The StrMap
         maps names of args (see fresh_Arg below) *)
     val query :
-      Compile.program -> (depth:int -> State.t -> State.t * (Ast.Loc.t * Data.term)) ->
+      Compile.program -> (depth:int -> Data.custom_state -> Data.custom_state * (Ast.Loc.t * Data.term)) ->
         Compile.query * Data.term Data.StrMap.t
 
     (* Args are parameters of the query (e.g. capital letters) *)
-    val is_Arg : State.t -> Data.term -> bool
+    val is_Arg : Data.custom_state -> Data.term -> bool
     val fresh_Arg :
-      State.t -> name_hint:string -> args:Data.term list ->
-        State.t * string * Data.term
+      Data.custom_state -> name_hint:string -> args:Data.term list ->
+        Data.custom_state * string * Data.term
 
 
     (** From an unparsed string to a term *)
     type quotation =
-      depth:int -> State.t -> Ast.Loc.t -> string -> State.t * Data.term
+      depth:int -> Data.custom_state -> Ast.Loc.t -> string -> Data.custom_state * Data.term
 
     (** The default quotation [{{code}}] *)
     val set_default_quotation : quotation -> unit
@@ -713,7 +694,7 @@ module Extend : sig
   end
 
 
-  (* Custom State is a collection of purely functional piece of data carried
+  (* State is a collection of purely functional piece of data carried
    * by the interpreter. Such data is kept in sync with the backtracking, i.e.
    * changes made in a branch are lost if that branch fails.
    * It can be used to both store custom constraints to be manipulated by
@@ -721,31 +702,27 @@ module Extend : sig
    * need to use.
    * The initial value can be taken from the compiler state, e.g. a quotation
    * may generate some constraints statically *)
-  module CustomState : sig
+  module State : sig
 
     (** 'a MUST be purely functional, i.e. backtracking is implemented by using
      * an old binding for 'a.
      * This limitation can be lifted if there is user request. *)
     type 'a component
 
-    (** The initial value of the constraint can be produced at compilation
-     *  time (e.g. by quotations) or by reading a global value. *)
-    type ('a,'b) source =
-      | CompilerState of 'b Compile.State.component * ('b -> 'a)
-      | Other of (unit -> 'a)
-
+    (** The compilation_is_over callback is called when the compilation
+        phase is over, after that the state is threaded at run time *)
     val declare :
       name:string ->
       pp:(Format.formatter -> 'a -> unit) ->
-      init:('a,'b) source ->
+      init:(unit -> 'a) ->
         'a component
 
     type t = Data.custom_state
 
     val get : 'a component -> t -> 'a
+    val set : 'a component -> t -> 'a -> t
 
     (** Allowed to raise BuiltInPredicate.No_clause *)
-    val set : 'a component -> t -> 'a -> t
     val update : 'a component -> t -> ('a -> 'a) -> t
     val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
 
@@ -758,10 +735,10 @@ module Extend : sig
   module CustomFunctor : sig
 
     val declare_backtick : name:string ->
-      (Compile.State.t -> string -> Compile.State.t * Data.term) -> unit
+      (Data.custom_state -> string -> Data.custom_state * Data.term) -> unit
 
     val declare_singlequote : name:string ->
-      (Compile.State.t -> string -> Compile.State.t * Data.term) -> unit
+      (Data.custom_state -> string -> Data.custom_state * Data.term) -> unit
 
   end
 

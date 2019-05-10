@@ -158,7 +158,7 @@ module Pp = struct
     let module R = (val !r) in let open R in
     Elpi_util.pplist ~boxed:true R.pp_stuck_goal "" f c
 
-  let custom_state = Elpi_data.CustomState.pp
+  let custom_state = Elpi_util.State.pp
 
   let query f c =
     let module R = (val !r) in let open R in
@@ -213,7 +213,7 @@ module Extend = struct
   end
 
   module Compile = struct
-    module State = Elpi_data.CompilerState
+    module State = Elpi_util.State
     include Elpi_compiler
     let term_at ~depth x = term_of_ast ~depth x
     let query = query_of_term
@@ -305,7 +305,11 @@ module Extend = struct
     end
   end
 
-  module CustomState = Elpi_data.CustomState
+  module State = struct
+    include Elpi_util.State
+    let declare ~name ~pp ~init =
+      declare ~name ~pp ~init ~compilation_is_over:(fun x -> Some x)
+  end
 
   module CustomFunctor = struct
   

@@ -438,52 +438,12 @@ end = struct (* {{{ *)
 
 end (* }}} *)
 
-module CompilerState = State(struct type t = unit end)
-
-module CustomState : sig
-    type ('a,'b) source =
-      | CompilerState of 'b CompilerState.component * ('b -> 'a)
-      | Other of (unit -> 'a)
-    
-    type 'a component
-
-    (* Must be purely functional *)
-    val declare :
-      name:string ->
-      pp:(Fmt.formatter -> 'a -> unit) ->
-      init:('a,'b) source ->
-        'a component
-
-    type t
-    val init : CompilerState.t -> t 
-    val get : 'a component -> t -> 'a
-    val set : 'a component -> t -> 'a -> t
-    val update : 'a component -> t -> ('a -> 'a) -> t
-    val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
-    val pp : Fmt.formatter -> t -> unit
-     
-  end = struct 
-
-    type ('a,'b) source =
-      | CompilerState of 'b CompilerState.component * ('b -> 'a)
-      | Other of (unit -> 'a)
-
-    include State(CompilerState)
-      
-    let declare ~name ~pp ~init =
-      let init s = match init with
-        | Other f -> f ()
-        | CompilerState (c,f) -> f (CompilerState.get c s) in
-      declare ~name ~pp ~init
-
-  end (* }}} *)
-
 module CustomFunctorCompilation : sig
-  val declare_singlequote_compilation : string -> (CompilerState.t -> F.t -> CompilerState.t * term) -> unit
-  val declare_backtick_compilation : string -> (CompilerState.t -> F.t -> CompilerState.t * term) -> unit
+  val declare_singlequote_compilation : string -> (State.t -> F.t -> State.t * term) -> unit
+  val declare_backtick_compilation : string -> (State.t -> F.t -> State.t * term) -> unit
   
-  val compile_singlequote : CompilerState.t -> F.t -> CompilerState.t * term
-  val compile_backtick : CompilerState.t -> F.t -> CompilerState.t * term
+  val compile_singlequote : State.t -> F.t -> State.t * term
+  val compile_backtick : State.t -> F.t -> State.t * term
 
   val is_singlequote : F.t -> bool
   val is_backtick : F.t -> bool
@@ -613,7 +573,7 @@ type executable = {
   (* query *)
   initial_goal: term;
   (* constraints coming from compilation *)
-  initial_state : CustomState.t;
+  initial_state : State.t;
   (* solution *)
   assignments : term StrMap.t;
 }
@@ -621,7 +581,7 @@ type executable = {
 exception No_clause
 exception No_more_steps
 
-type custom_state = CustomState.t
+type custom_state = State.t
 type constraints = stuck_goal list
 
 type solution = {

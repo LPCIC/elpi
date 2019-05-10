@@ -18,7 +18,7 @@ type query
 val program_of_ast : flags:flags -> Elpi_ast.Program.t -> program
 val query_of_ast : program -> Elpi_ast.Goal.t -> query
 val query_of_term :
-  program -> (depth:int -> Elpi_data.CompilerState.t -> Elpi_data.CompilerState.t * (Loc.t * Elpi_data.term)) -> query * Elpi_data.term StrMap.t
+  program -> (depth:int -> State.t -> State.t * (Loc.t * Elpi_data.term)) -> query * Elpi_data.term StrMap.t
 
 val pp_query : (depth:int -> Format.formatter -> Elpi_data.term -> unit) -> Format.formatter -> query -> unit
 
@@ -26,16 +26,16 @@ val executable_of_query : query -> Elpi_data.executable
 
 val term_of_ast : depth:int -> Loc.t * Elpi_ast.Term.t -> Elpi_data.term
 
-type quotation = depth:int -> Elpi_data.CompilerState.t -> Loc.t -> string -> Elpi_data.CompilerState.t * Elpi_data.term
+type quotation = depth:int -> State.t -> Loc.t -> string -> State.t * Elpi_data.term
 val set_default_quotation : quotation -> unit
 val register_named_quotation : name:string -> quotation -> unit
 
 val lp : quotation
 
-val is_Arg : Elpi_data.CompilerState.t -> Elpi_data.term -> bool
+val is_Arg : State.t -> Elpi_data.term -> bool
 val fresh_Arg : 
-  Elpi_data.CompilerState.t -> name_hint:string -> args:Elpi_data.term list ->
-    Elpi_data.CompilerState.t * string * Elpi_data.term
+  State.t -> name_hint:string -> args:Elpi_data.term list ->
+    State.t * string * Elpi_data.term
 
 (* Quotes the program and the query, see elpi_quoted_syntax.elpi *)
 val quote_syntax : query -> Elpi_data.term list * Elpi_data.term

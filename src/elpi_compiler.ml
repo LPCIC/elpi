@@ -9,7 +9,7 @@ open Elpi_runtime_trace_off.Elpi_runtime
 open Pp
 
 module C = Constants
-module CS = CompilerState
+module CS = State
 
 type flags = {
   defined_variables : StrSet.t;
@@ -131,7 +131,7 @@ module Compiled = struct
 (* The entire program + stuff needed in order to run the query *)
 type program = {
   assembled_program : Assembled.program;
-  compiler_state : CompilerState.t;
+  compiler_state : State.t;
   compiler_flags : flags;
 }
 [@@deriving show]
@@ -151,7 +151,7 @@ type query = {
   query : preterm;
   (* We pre-compile the query to ease the API *)
   initial_goal : term; assignments : term StrMap.t;
-  initial_state : CustomState.t;
+  initial_state : State.t;
   compiler_flags : flags;
 }
 [@@deriving show]
@@ -172,7 +172,7 @@ type executable = Elpi_data.executable = {
   (* query *)
   initial_goal: term;
   (* constraints coming from compilation *)
-  initial_state : CustomState.t;
+  initial_state : State.t;
   (* solution *)
   assignments : term StrMap.t;
 }
@@ -377,19 +377,19 @@ module ToDBL : sig
 
   (* Exported to compile the query *)
   val preterm_of_ast :
-    depth:int -> macro_declaration -> CompilerState.t ->
-      Loc.t * Term.t -> CompilerState.t * preterm
+    depth:int -> macro_declaration -> State.t ->
+      Loc.t * Term.t -> State.t * preterm
   val preterm_of_function :
-    depth:int -> macro_declaration -> CompilerState.t -> 
-    (CompilerState.t -> CompilerState.t * (Loc.t * term)) ->
-      CompilerState.t * preterm
+    depth:int -> macro_declaration -> State.t -> 
+    (State.t -> State.t * (Loc.t * term)) ->
+      State.t * preterm
 
   (* Exported for quations *)    
   val lp : quotation
-  val is_Arg : CompilerState.t -> term -> bool
+  val is_Arg : State.t -> term -> bool
   val fresh_Arg : 
-    CompilerState.t -> name_hint:string -> args:term list ->
-      CompilerState.t * string * term
+    State.t -> name_hint:string -> args:term list ->
+      State.t * string * term
 
 end = struct (* {{{ *)
 
@@ -399,7 +399,8 @@ end = struct (* {{{ *)
 let get_argmap, set_argmap, update_argmap =
   let argmap =
     CS.declare ~name:"elpi:argmap" ~pp:todopp
-      ~init:(fun () -> empty_amap) in
+      ~compilation_is_over:(fun _ -> None)
+     ~init:(fun () -> empty_amap) in
   CS.(get argmap, set argmap, update_return argmap)
 
 (* For bound variables *)
@@ -408,6 +409,7 @@ type varmap = term F.Map.t
 let get_varmap, set_varmap, update_varmap =
   let varmap =
     CS.declare ~name:"elpi:varmap" ~pp:todopp
+      ~compilation_is_over:(fun _ -> None)
       ~init:(fun () -> F.Map.empty) in
   CS.(get varmap, set varmap, update varmap)
 
@@ -420,6 +422,7 @@ type mtm = {
 let get_mtm, set_mtm =
   let mtm =
     CS.declare ~name:"elpi:mtm" ~pp:todopp
+      ~compilation_is_over:(fun _ -> None)
       ~init:(fun () -> None) in
   CS.(get mtm, set mtm)
 
@@ -1398,7 +1401,7 @@ let query_of_ast { Compiled.assembled_program; compiler_state; compiler_flags } 
     query;
     initial_goal;
     assignments;
-    initial_state = CustomState.init state;
+    initial_state = State.end_compilation state;
     compiler_flags;
   }
 
@@ -1425,7 +1428,7 @@ let query_of_term { Compiled.assembled_program; compiler_state; compiler_flags }
     query;
     initial_goal;
     assignments;
-    initial_state = CustomState.init state;
+    initial_state = State.end_compilation state;
     compiler_flags;
   }, assignments
 

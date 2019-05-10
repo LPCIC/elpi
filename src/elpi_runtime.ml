@@ -299,11 +299,11 @@ end = struct (* {{{ *)
  }
 
   let custom_state =
-    Fork.new_local (CustomState.init (CompilerState.init ()))
+    Fork.new_local (State.init ())
   let read_custom_constraint ct =
-    CustomState.get ct !custom_state
+    State.get ct !custom_state
   let update_custom_constraint ct f =
-    custom_state := CustomState.update ct !custom_state f
+    custom_state := State.update ct !custom_state f
 
 
 type trail_item =
@@ -2778,7 +2778,7 @@ let try_fire_rule rule (constraints as orig_constraints) =
         (shift_bound_vars ~depth:0 ~to_:max_depth guard);
     assignments = StrMap.empty;
     initial_depth = max_depth;
-    initial_state = CustomState.init (CompilerState.init ());
+    initial_state = State.(init () |> end_compilation);
   } in
   let { search; get; exec; destroy } = !do_make_runtime executable in
  
