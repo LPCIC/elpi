@@ -108,14 +108,14 @@ module Data : sig
   type constraints
 
   (* user defined state (not goals) *)
-  type custom_state
+  type state
 
   (* a solution is an assignment map from query variables (name) to terms,
    * plus the goals that were suspended and the user defined constraints *)
   type solution = {
     assignments : term StrMap.t;
     constraints : constraints;
-    state : custom_state;
+    state : state;
   }
 
 end
@@ -188,7 +188,7 @@ module Pp : sig
 
   val term : Format.formatter -> Data.term -> unit
   val constraints : Format.formatter -> Data.constraints -> unit
-  val custom_state : Format.formatter -> Data.custom_state -> unit
+  val state : Format.formatter -> Data.state -> unit
   val query : Format.formatter -> Compile.query -> unit
 
   module Ast : sig
@@ -317,13 +317,13 @@ module Extend : sig
 
     val fresh_uvar_body : unit -> uvar_body
 
-    type custom_state = Data.custom_state
+    type state = Data.state
     type constraints = Data.constraints
     module StrMap = Data.StrMap
     type solution = {
       assignments : term StrMap.t;
       constraints : constraints;
-      state : custom_state;
+      state : state;
     }
     val of_solution : Data.solution -> solution
 
@@ -465,9 +465,11 @@ module Extend : sig
     type extra_goals = Data.term list
 
     type 'a embedding =
-      depth:int -> Data.hyps -> Data.solution -> 'a -> Data.custom_state * Data.term * extra_goals
+      depth:int -> Data.hyps -> Data.constraints ->
+      Data.state -> 'a -> Data.state * Data.term * extra_goals
     type 'a readback =
-      depth:int -> Data.hyps -> Data.solution -> Data.term -> Data.custom_state * 'a
+      depth:int -> Data.hyps -> Data.constraints ->
+      Data.state -> Data.term -> Data.state * 'a
 
     type 'a data = {
       ty : ty_ast;
@@ -483,11 +485,11 @@ module Extend : sig
       | Out  : 't data * doc * ('i, 'o * 't option) ffi -> ('t oarg -> 'i,'o) ffi
       | InOut  : 't data * doc * ('i, 'o * 't option) ffi -> ('t ioarg -> 'i,'o) ffi
       | Easy : doc -> (depth:int -> 'o, 'o) ffi
-      | Read : doc -> (depth:int -> Data.hyps -> Data.solution -> 'o, 'o) ffi
-      | Full : doc -> (depth:int -> Data.hyps -> Data.solution -> Data.custom_state * 'o, 'o) ffi
-      | VariadicIn : 't data * doc -> ('t list -> depth:int -> Data.hyps -> Data.solution -> Data.custom_state * 'o, 'o) ffi
-      | VariadicOut : 't data * doc -> ('t oarg list -> depth:int -> Data.hyps -> Data.solution -> Data.custom_state * ('o * 't option list option), 'o) ffi
-      | VariadicInOut : 't data * doc -> ('t ioarg list -> depth:int -> Data.hyps -> Data.solution -> Data.custom_state * ('o * 't option list option), 'o) ffi
+      | Read : doc -> (depth:int -> Data.hyps -> Data.constraints -> Data.state -> 'o, 'o) ffi
+      | Full : doc -> (depth:int -> Data.hyps -> Data.constraints -> Data.state -> Data.state * 'o, 'o) ffi
+      | VariadicIn : 't data * doc -> ('t list -> depth:int -> Data.hyps -> Data.constraints -> Data.state -> Data.state * 'o, 'o) ffi
+      | VariadicOut : 't data * doc -> ('t oarg list -> depth:int -> Data.hyps -> Data.constraints -> Data.state -> Data.state * ('o * 't option list option), 'o) ffi
+      | VariadicInOut : 't data * doc -> ('t ioarg list -> depth:int -> Data.hyps -> Data.constraints -> Data.state -> Data.state * ('o * 't option list option), 'o) ffi
 
     type t = Pred : name * ('a,unit) ffi * 'a -> t
 
@@ -532,13 +534,13 @@ module Extend : sig
       (* continuation to call passing subterms *)
       ok:'matched ->
       (* continuation to call to signal pattern matching failure *)
-      ko:(Data.solution -> Data.custom_state * Data.term * extra_goals) ->
+      ko:(Data.state -> Data.state * Data.term * extra_goals) ->
       (* match 't and pass its subterms to ~ok or just call ~ko *)
-      't -> Data.solution -> Data.custom_state * Data.term * extra_goals
+      't -> Data.state -> Data.state * Data.term * extra_goals
 
     type ('builder, 'matcher,  'self) constructor_arguments =
       (* No arguments *)
-      | N : ('self, Data.solution -> Data.custom_state * Data.term * extra_goals, 'self) constructor_arguments
+      | N : ('self, Data.state -> Data.state * Data.term * extra_goals, 'self) constructor_arguments
       (* An argument of type 'a *)
       | A : 'a data * ('b, 'm, 'self) constructor_arguments -> ('a -> 'b, 'a -> 'm, 'self) constructor_arguments
       (* An argument of type 'self *)
@@ -615,13 +617,14 @@ module Extend : sig
     (* commodity type description of ADT *)
     val adt : 'a ADT.adt -> 'a data
 
-    (* commodity iterator for lists *)
     val map_acc_embed :
-      (Data.solution -> 'a -> Data.custom_state * 'b * extra_goals) ->
-      Data.solution -> 'a list -> Data.custom_state * 'b list * extra_goals
+      (Data.state -> 'a -> Data.state * Data.term * extra_goals) ->
+      Data.state -> 'a list -> Data.state * Data.term list * extra_goals
+
     val map_acc_readback :
-      (Data.solution -> 'a -> Data.custom_state * 'b) ->
-      Data.solution -> 'a list -> Data.custom_state * 'b list
+      (Data.state -> Data.term -> Data.state * 'a) ->
+      Data.state -> Data.term list -> Data.state * 'a list
+
 
     (** Prints in LP syntax the "external" declarations.
      * The file builtin.elpi is generated by calling this API on the
@@ -660,19 +663,23 @@ module Extend : sig
     (** Generate a query starting from a compiled/hand-made term. The StrMap
         maps names of args (see fresh_Arg below) *)
     val query :
-      Compile.program -> (depth:int -> Data.custom_state -> Data.custom_state * (Ast.Loc.t * Data.term)) ->
+      Compile.program -> (depth:int -> Data.state -> Data.state * (Ast.Loc.t * Data.term)) ->
         Compile.query * Data.term Data.StrMap.t
 
-    (* Args are parameters of the query (e.g. capital letters) *)
-    val is_Arg : Data.custom_state -> Data.term -> bool
+    (* Args are parameters of the query (e.g. capital letters). *)
+    val is_Arg : Data.state -> Data.term -> bool
+
+    (* The output term is to be used to build the query but is *not* the handle
+       to the eventual solution, that is instead part of the map returned by the
+       [query] API above. *)
     val fresh_Arg :
-      Data.custom_state -> name_hint:string -> args:Data.term list ->
-        Data.custom_state * string * Data.term
+      Data.state -> name_hint:string -> args:Data.term list ->
+        Data.state * string * Data.term
 
 
     (** From an unparsed string to a term *)
     type quotation =
-      depth:int -> Data.custom_state -> Ast.Loc.t -> string -> Data.custom_state * Data.term
+      depth:int -> Data.state -> Ast.Loc.t -> string -> Data.state * Data.term
 
     (** The default quotation [{{code}}] *)
     val set_default_quotation : quotation -> unit
@@ -717,7 +724,7 @@ module Extend : sig
       init:(unit -> 'a) ->
         'a component
 
-    type t = Data.custom_state
+    type t = Data.state
 
     val get : 'a component -> t -> 'a
     val set : 'a component -> t -> 'a -> t
@@ -735,10 +742,10 @@ module Extend : sig
   module CustomFunctor : sig
 
     val declare_backtick : name:string ->
-      (Data.custom_state -> string -> Data.custom_state * Data.term) -> unit
+      (Data.state -> string -> Data.state * Data.term) -> unit
 
     val declare_singlequote : name:string ->
-      (Data.custom_state -> string -> Data.custom_state * Data.term) -> unit
+      (Data.state -> string -> Data.state * Data.term) -> unit
 
   end
 

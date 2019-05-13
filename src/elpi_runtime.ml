@@ -258,7 +258,7 @@ module ConstraintStoreAndTrail : sig
   val print : Fmt.formatter -> (constraint_def * blockers) list -> unit
   val pp_stuck_goal : Fmt.formatter -> stuck_goal -> unit
 
-  val custom_state : custom_state Fork.local_ref
+  val state : state Fork.local_ref
 
   (* ---------------------------------------------------- *)
 
@@ -281,7 +281,7 @@ module ConstraintStoreAndTrail : sig
 
   (* backtrack *)
   val undo :
-    old_trail:trail -> ?old_constraints:custom_state -> unit -> unit
+    old_trail:trail -> ?old_state:state -> unit -> unit
 
   val print_trail : Fmt.formatter -> unit
 
@@ -298,12 +298,12 @@ end = struct (* {{{ *)
     cstr_blockers : uvar_body list;
  }
 
-  let custom_state =
+  let state =
     Fork.new_local (State.init ())
   let read_custom_constraint ct =
-    State.get ct !custom_state
+    State.get ct !state
   let update_custom_constraint ct f =
-    custom_state := State.update ct !custom_state f
+    state := State.update ct !state f
 
 
 type trail_item =
@@ -405,7 +405,7 @@ let remove_old_constraint cd =
     (function { kind = Constraint x } -> x == cd | _ -> false) !delayed in
   remove_old c
 
-let undo ~old_trail ?old_constraints () =
+let undo ~old_trail ?old_state () =
 (* Invariant: to_resume and new_delayed are always empty when a choice
    point is created. This invariant is likely to break in the future,
    when we allow more interesting constraints and constraint propagation
@@ -422,8 +422,8 @@ let undo ~old_trail ?old_constraints () =
     | StuckGoalRemoval sg :: rest -> add sg; trail := rest
     | [] -> anomaly "undo to unknown trail"
   done;
-  match old_constraints with
-  | Some old_constraints -> custom_state := old_constraints
+  match old_state with
+  | Some old_state -> state := old_state
   | None -> ()
 ;;
 
@@ -2257,7 +2257,7 @@ and alternative = {
   goals : goal list;
   stack : frame;
   trail : T.trail;
-  custom_state : custom_state;
+  state : state;
   clauses : clause list;
   next : alternative
 }
@@ -2303,7 +2303,6 @@ module Constraints : sig
   val chrules : CHR.t Fork.local_ref
 
   (* out of place *)
-  val assignments : term StrMap.t Fork.local_ref
   val exect_builtin_predicate :
     constant -> depth:int -> prolog_prog -> term list -> term list
 
@@ -2561,8 +2560,6 @@ let declare_constraint ~depth prog args =
        ~depth prog ~goal:g ~on:keys
   | None -> delay_goal ~depth prog ~goal:g ~on:keys
 
-let assignments = Fork.new_local StrMap.empty
-
 let type_err ~depth bname n ty t =
   type_error ("builtin " ^ bname ^ ": " ^ string_of_int n ^ "th argument: expected " ^ ty ^ ": got " ^
   match t with
@@ -2576,48 +2573,48 @@ let arity_err ~depth bname n t =
     | Some t -> "too many arguments at: " ^
                   Format.asprintf "%a" (uppterm depth [] 0 empty_env) t)
 
-let out_of_term ~depth { Builtin.readback; ty } n bname hyps constraints assignments state t =
+let out_of_term ~depth { Builtin.readback; ty } n bname hyps constraints state t =
   match deref_head ~depth t with
   | Discard -> Builtin.Discard
   | _ -> Builtin.Keep
 
-let in_of_term ~depth { Builtin.readback } n bname hyps constraints assignments state t =
-  try readback ~depth hyps { constraints; assignments; state } t
+let in_of_term ~depth { Builtin.readback } n bname hyps constraints state t =
+  try readback ~depth hyps constraints state t
   with Builtin.TypeErr(ty,t) -> type_err ~depth bname n (Builtin.show_ty_ast ty) (Some t)
 
-let inout_of_term ~depth { Builtin.readback } n bname hyps constraints assignments state t =
+let inout_of_term ~depth { Builtin.readback } n bname hyps constraints state t =
   match deref_head ~depth t with
   | Discard -> state, Builtin.NoData
   | _ ->
      try
-       let state, t = readback ~depth hyps { constraints; assignments; state } t in
+       let state, t = readback ~depth hyps constraints state t in
        state, Builtin.Data t
      with Builtin.TypeErr(ty,t) -> type_err ~depth bname n (Builtin.show_ty_ast ty) (Some t)
 
-let mk_out_assign ~depth { Builtin.embed } bname hyps constraints assignments state input v  output =
+let mk_out_assign ~depth { Builtin.embed } bname hyps constraints state input v  output =
   match output, input with
   | None, Builtin.Discard -> state, []
   | Some _, Builtin.Discard -> state, [] (* We could warn that such output was generated without being required *)
   | Some t, Builtin.Keep ->
-     let state, t, extra = embed ~depth hyps { constraints; assignments; state } t in
+     let state, t, extra = embed ~depth hyps constraints state t in
      state, extra @ [App(C.eqc, v, [t])]
   | None, Builtin.Keep ->
       anomaly ("ffi: " ^ bname ^ ": some output was requested but not produced")
 
-let mk_inout_assign ~depth { Builtin.embed } bname hyps constraints assignments state input v  output =
+let mk_inout_assign ~depth { Builtin.embed } bname hyps constraints state input v  output =
   match output, input with
   | None, Builtin.NoData -> state, []
   | Some _, Builtin.NoData -> state, [] (* We could warn that such output was generated without being required *)
   | Some t, Builtin.Data _ ->
-     let state, t, extra = embed ~depth hyps { constraints; assignments; state } t in
+     let state, t, extra = embed ~depth hyps constraints state t in
      state, extra @ [App(C.eqc, v, [t])]
   | None, Builtin.Data _ ->
       anomaly ("ffi: " ^ bname ^ ": some output was requested but not produced")
 
-let call (Builtin.Pred(bname,ffi,compute)) ~depth hyps constraints assignments state data =
+let call (Builtin.Pred(bname,ffi,compute)) ~depth hyps constraints state data =
   let rec aux : type i o.
-    (i,o) Builtin.ffi -> compute:i -> reduce:(custom_state -> o -> custom_state * term list) ->
-       term list -> int -> custom_state -> custom_state * term list =
+    (i,o) Builtin.ffi -> compute:i -> reduce:(state -> o -> state * term list) ->
+       term list -> int -> state -> state * term list =
   fun ffi ~compute ~reduce data n state ->
     match ffi, data with
     | Builtin.Easy _, [] ->
@@ -2625,57 +2622,57 @@ let call (Builtin.Pred(bname,ffi,compute)) ~depth hyps constraints assignments s
        let state, l = reduce state result in
        state, List.rev l
     | Builtin.Read _, [] ->
-       let result = compute ~depth hyps { constraints; assignments; state } in
+       let result = compute ~depth hyps constraints state in
        let state, l = reduce state result in
        state, List.rev l
     | Builtin.Full _, [] ->
-       let state, result = compute ~depth hyps { constraints; assignments; state } in
+       let state, result = compute ~depth hyps constraints state in
        let state, l = reduce state result in
        state, List.rev l
     | Builtin.VariadicIn(d, _), data ->
        let state, i =
-         map_acc (in_of_term ~depth d n bname hyps constraints assignments) state data in
-       let state, rest = compute i ~depth hyps { constraints; assignments; state } in
+         map_acc (in_of_term ~depth d n bname hyps constraints) state data in
+       let state, rest = compute i ~depth hyps constraints state in
        let state, l = reduce state rest in
        state, List.rev l
     | Builtin.VariadicOut(d, _), data ->
-       let i = List.map (out_of_term ~depth d n bname hyps constraints assignments state) data in
-       let state, (rest, out) = compute i ~depth hyps { constraints; assignments; state } in
+       let i = List.map (out_of_term ~depth d n bname hyps constraints state) data in
+       let state, (rest, out) = compute i ~depth hyps constraints state in
        let state, l = reduce state rest in
        begin match out with
          | Some out ->
              let state, ass =
-               map_acc3 (mk_out_assign ~depth d bname hyps constraints assignments) state i data out in 
+               map_acc3 (mk_out_assign ~depth d bname hyps constraints) state i data out in 
              state, List.(rev (concat ass @ l))
          | None -> state, List.rev l
        end
     | Builtin.VariadicInOut(d, _), data ->
        let state, i =
-         map_acc (inout_of_term ~depth d n bname hyps constraints assignments) state data in
-       let state, (rest, out) = compute i ~depth hyps { constraints; assignments; state } in
+         map_acc (inout_of_term ~depth d n bname hyps constraints) state data in
+       let state, (rest, out) = compute i ~depth hyps constraints state in
        let state, l = reduce state rest in
        begin match out with
          | Some out ->
              let state, ass =
-               map_acc3 (mk_inout_assign ~depth d bname hyps constraints assignments) state i data out in 
+               map_acc3 (mk_inout_assign ~depth d bname hyps constraints) state i data out in 
              state, List.(rev (concat ass @ l))
          | None -> state, List.rev l
        end
     | Builtin.In(d, _, ffi), t :: rest ->
-        let state, i = in_of_term ~depth d n bname hyps constraints assignments state t in
+        let state, i = in_of_term ~depth d n bname hyps constraints state t in
         aux ffi ~compute:(compute i) ~reduce rest (n + 1) state
     | Builtin.Out(d, _, ffi), t :: rest ->
-        let i = out_of_term ~depth d n bname hyps constraints assignments state t in
+        let i = out_of_term ~depth d n bname hyps constraints state t in
         let reduce state (rest, out) =
           let state, l = reduce state rest in
-          let state, ass = mk_out_assign ~depth d bname hyps constraints assignments state i t out in
+          let state, ass = mk_out_assign ~depth d bname hyps constraints state i t out in
           state, ass @ l in
         aux ffi ~compute:(compute i) ~reduce rest (n + 1) state
     | Builtin.InOut(d, _, ffi), t :: rest ->
-        let state, i = inout_of_term ~depth d n bname hyps constraints assignments state t in
+        let state, i = inout_of_term ~depth d n bname hyps constraints state t in
         let reduce state (rest, out) =
           let state, l = reduce state rest in
-          let state, ass = mk_inout_assign ~depth d bname hyps constraints assignments state i t out in
+          let state, ass = mk_inout_assign ~depth d bname hyps constraints state i t out in
           state, ass @ l in
         aux ffi ~compute:(compute i) ~reduce rest (n + 1) state
 
@@ -2699,9 +2696,9 @@ let exect_builtin_predicate c ~depth idx args =
       with Not_found -> 
         anomaly ("no built-in predicated named " ^ C.show c) in
     let constraints = !CS.Ugly.delayed in
-    let state = !CS.custom_state  in
-    let state, gs = call b ~depth (local_prog idx) constraints !assignments state args in
-    CS.custom_state := state;
+    let state = !CS.state  in
+    let state, gs = call b ~depth (local_prog idx) constraints state args in
+    CS.state := state;
     gs
 ;;
 
@@ -3051,7 +3048,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executabl
            let alts = if cs = [] then alts else
              { program = p; depth = depth; goal = g; goals = gs; stack = next;
                trail = old_trail;
-               custom_state = !CS.custom_state;
+               state = !CS.state;
                clauses = cs; lvl = lvl ; next = alts} in
            begin match c.hyps with
            | [] ->
@@ -3135,9 +3132,9 @@ end;*)
    if alts == noalts then raise No_clause
    else
      let { program = p; clauses; goal = g; goals = gs; stack = next;
-          trail = old_trail; custom_state = old_constraints;
+          trail = old_trail; state = old_state;
           depth = depth; lvl = lvl; next = alts} = alts in
-    T.undo ~old_trail ~old_constraints ();
+    T.undo ~old_trail ~old_state ();
     backchain depth p g gs clauses next alts lvl (* XXX *)
   in
 
@@ -3163,8 +3160,7 @@ end;*)
   set steps_bound max_steps;
   set delay_hard_unif_problems delay_outside_fragment;
   set steps_made 0;
-  set Constraints.assignments assignments;
-  set CS.custom_state initial_state;
+  set CS.state initial_state;
   let search = exec (fun () ->
      [%spy "run-trail" (fun fmt _ -> T.print_trail fmt) ()];
      T.initial_trail := !T.trail;
@@ -3186,11 +3182,11 @@ open Mainloop
 let mk_outcome search get_cs assignments =
  try
    let alts = search () in
-   let syn_csts, custom_state = get_cs () in
+   let syn_csts, state = get_cs () in
    let solution = {
      assignments;
      constraints = syn_csts;
-     state = custom_state
+     state;
    } in
    Success solution, alts
  with
@@ -3200,7 +3196,7 @@ let mk_outcome search get_cs assignments =
 let execute_once ?max_steps ?delay_outside_fragment exec =
  auxsg := [];
  let { search; get } = make_runtime ?max_steps ?delay_outside_fragment exec in
- fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.custom_state) exec.Elpi_data.assignments)
+ fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.state) exec.Elpi_data.assignments)
 ;;
 
 let execute_loop ?delay_outside_fragment exec ~more ~pp =
@@ -3208,7 +3204,7 @@ let execute_loop ?delay_outside_fragment exec ~more ~pp =
  let k = ref noalts in
  let do_with_infos f =
   let time0 = Unix.gettimeofday() in
-  let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, get CS.custom_state) exec.Elpi_data.assignments in
+  let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, get CS.state) exec.Elpi_data.assignments in
   let time1 = Unix.gettimeofday() in
   k := alts;
   pp (time1 -. time0) o in

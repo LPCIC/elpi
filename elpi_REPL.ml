@@ -29,7 +29,7 @@ let print_solution time = function
   Format.eprintf "@\nConstraints:@\n%a@\n%!"
     Elpi_API.Pp.constraints constraints;
   Format.eprintf "@\nState:@\n%a@\n%!"
-    Elpi_API.Pp.custom_state state;
+    Elpi_API.Pp.state state;
 ;;
   
 let more () =

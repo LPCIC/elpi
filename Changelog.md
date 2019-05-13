@@ -1,7 +1,13 @@
 ## [UNRELEASED]
 
-- API:
-  - mkAppL and mkAppSL handy constructors
+- FFI:
+  - `mkAppL` and `mkAppSL` handy constructors
+  - `custom_state` renamed `state`
+  - No more `solution` in the type of builtin predicates but rather
+    `cosntrinats` and `state` explicitly
+  - `Extend.Compile.query` returns the assignments maps with heap terms already.
+    This makes it more easy to keep in the state a mapping between UVars and
+    hos application data
 
 ## Version 1.2 (April 2019)
 

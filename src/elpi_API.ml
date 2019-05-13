@@ -100,12 +100,12 @@ end
 module Data = struct
   type term = Elpi_data.term
   type constraints = Elpi_data.constraints
-  type custom_state = Elpi_data.custom_state
+  type state = Elpi_data.state
   module StrMap = Elpi_util.StrMap
   type solution = Elpi_data.solution = {
     assignments : term StrMap.t;
     constraints : constraints;
-    state : custom_state;
+    state : state;
   }
 end
 
@@ -158,7 +158,7 @@ module Pp = struct
     let module R = (val !r) in let open R in
     Elpi_util.pplist ~boxed:true R.pp_stuck_goal "" f c
 
-  let custom_state = Elpi_util.State.pp
+  let state = Elpi_util.State.pp
 
   let query f c =
     let module R = (val !r) in let open R in
@@ -236,9 +236,9 @@ module Extend = struct
       { CData.cin; isc; cout }
     =
       let ty = TyName ty in
-      let embed ~depth:_ _ { Data.state } x =
+      let embed ~depth:_ _ _ state x =
         state, Data.CData (cin x), [] in
-      let readback ~depth _ { Data.state } t =
+      let readback ~depth _ _ state t =
         let module R = (val !r) in let open R in
         match R.deref_head ~depth t with
         | Data.CData c when isc c -> state, cout c
@@ -258,37 +258,37 @@ module Extend = struct
       cdata ~name:("@"^name) ?doc ?constants cd
 
     let poly ty =
-      let embed ~depth:_ _ { Data.state } x = state, x, [] in
-      let readback ~depth _ { Data.state } t = state, t in
+      let embed ~depth:_ _ _ state x = state, x, [] in
+      let readback ~depth _ _ state t = state, t in
       { embed; readback; ty = TyName ty; doc = "" }
     let any = poly "any"
 
     let map_acc_embed f s l =
       let rec aux acc accg s = function
-      | [] -> s.Data.state, List.rev acc, List.rev accg
+      | [] -> s, List.rev acc, List.rev accg
       | x :: xs ->
-          let state, x, eg = f s x in
-          aux (x :: acc) (eg @ accg) { s with Data.state } xs
+          let s, x, eg = f s x in
+          aux (x :: acc) (eg @ accg) s xs
       in
         aux [] [] s l
       
     let map_acc_readback f s l =
       let rec aux acc s = function
-      | [] -> s.Data.state, List.rev acc
+      | [] -> s, List.rev acc
       | x :: xs ->
-          let state, x = f s x in
-          aux (x :: acc) { s with Data.state } xs
+          let s, x = f s x in
+          aux (x :: acc) s xs
       in
         aux [] s l
 
     let list d =
-      let embed ~depth h s l =
+      let embed ~depth h c s l =
         let module R = (val !r) in let open R in
-        let s, l, eg = map_acc_embed (d.embed ~depth h) s l in
+        let s, l, eg = map_acc_embed (d.embed ~depth h c) s l in
         s, list_to_lp_list l, eg in
-      let readback ~depth h ({ Data.state } as solution) t =
+      let readback ~depth h c s t =
         let module R = (val !r) in let open R in
-        map_acc_readback (d.readback ~depth h) solution (lp_list_to_list ~depth t)
+        map_acc_readback (d.readback ~depth h c) s (lp_list_to_list ~depth t)
       in
       { embed; readback; ty = TyApp ("list",d.ty,[]); doc = "" }
 

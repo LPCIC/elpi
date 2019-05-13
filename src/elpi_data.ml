@@ -581,21 +581,19 @@ type executable = {
 exception No_clause
 exception No_more_steps
 
-type custom_state = State.t
+type state = State.t
 type constraints = stuck_goal list
 
 type solution = {
   assignments : term StrMap.t;
   constraints : constraints;
-  state : custom_state;
+  state : state;
 }
 type outcome = Success of solution | Failure | NoMoreSteps
 
 type hyps = clause_src list
 
 (* Built-in predicates and their FFI *************************************** *)
-
-(* (depth:int -> hyps -> solution -> term list -> term list * custom_state) *)
 
 module Builtin = struct
 
@@ -618,9 +616,9 @@ exception TypeErr of ty_ast * term
 type extra_goals = term list
 
 type 'a embedding =
-  depth:int -> hyps -> solution -> 'a -> custom_state * term * extra_goals
+  depth:int -> hyps -> constraints -> state -> 'a -> state * term * extra_goals
 type 'a readback =
-  depth:int -> hyps -> solution -> term -> custom_state * 'a
+  depth:int -> hyps -> constraints -> state -> term -> state * 'a
 
 type 'a data = {
   ty : ty_ast;
@@ -634,11 +632,11 @@ type ('function_type, 'inernal_outtype_in) ffi =
   | Out  : 't data * doc * ('i, 'o * 't option) ffi -> ('t oarg -> 'i,'o) ffi
   | InOut  : 't data * doc * ('i, 'o * 't option) ffi -> ('t ioarg -> 'i,'o) ffi
   | Easy : doc -> (depth:int -> 'o, 'o) ffi
-  | Read : doc -> (depth:int -> hyps -> solution -> 'o, 'o) ffi
-  | Full : doc -> (depth:int -> hyps -> solution -> custom_state * 'o, 'o) ffi
-  | VariadicIn : 't data * doc -> ('t list -> depth:int -> hyps -> solution -> custom_state * 'o, 'o) ffi
-  | VariadicOut : 't data * doc -> ('t oarg list -> depth:int -> hyps -> solution -> custom_state * ('o * 't option list option), 'o) ffi
-  | VariadicInOut : 't data * doc -> ('t ioarg list -> depth:int -> hyps -> solution -> custom_state * ('o * 't option list option), 'o) ffi
+  | Read : doc -> (depth:int -> hyps -> constraints -> state -> 'o, 'o) ffi
+  | Full : doc -> (depth:int -> hyps -> constraints -> state -> state * 'o, 'o) ffi
+  | VariadicIn : 't data * doc -> ('t list -> depth:int -> hyps -> constraints -> state -> state * 'o, 'o) ffi
+  | VariadicOut : 't data * doc -> ('t oarg list -> depth:int -> hyps -> constraints -> state -> state * ('o * 't option list option), 'o) ffi
+  | VariadicInOut : 't data * doc -> ('t ioarg list -> depth:int -> hyps -> constraints -> state -> state * ('o * 't option list option), 'o) ffi
 
 type t = Pred : name * ('a,unit) ffi * 'a -> t
 
@@ -648,11 +646,11 @@ module ADT = struct
 
 type ('matched, 't) match_t =
   ok:'matched ->
-  ko:(solution -> custom_state * term * extra_goals) ->
-  't -> solution -> custom_state * term * extra_goals
+  ko:(state -> state * term * extra_goals) ->
+  't -> state -> state * term * extra_goals
 
 type ('b,'m,'t) constructor_arguments =
-  | N : ('t,solution -> custom_state * term * extra_goals, 't) constructor_arguments
+  | N : ('t,state -> state * term * extra_goals, 't) constructor_arguments
   | A : 'a data * ('b,'m,'t) constructor_arguments -> ('a -> 'b, 'a -> 'm, 't) constructor_arguments
   | S : ('b,'m,'t) constructor_arguments -> ('t -> 'b, 't -> 'm, 't) constructor_arguments
     
@@ -677,36 +675,36 @@ type 't compiled_adt = ('t compiled_constructor) Constants.Map.t
 
 let rec readback_args : type a m t.
   look:(depth:int -> term -> term) ->
-  ty_ast -> t compiled_adt -> depth:int -> hyps -> solution -> term ->
+  ty_ast -> t compiled_adt -> depth:int -> hyps -> constraints -> state -> term ->
   (a,m,t) constructor_arguments -> a -> term list ->
-    custom_state * t
-= fun ~look ty adt ~depth hyps solution origin args convert l ->
+    state * t
+= fun ~look ty adt ~depth hyps constraints state origin args convert l ->
     match args, l with
-    | N, [] -> solution.state, convert
+    | N, [] -> state, convert
     | N, _ -> raise (TypeErr(ty,origin))
     | A _, [] -> assert false
     | S _, [] -> assert false
     | A(d,rest), x::xs ->
-      let state, x = d.readback ~depth hyps solution x in
-      readback_args ~look ty adt ~depth hyps { solution with state } origin
+      let state, x = d.readback ~depth hyps constraints state x in
+      readback_args ~look ty adt ~depth hyps constraints state origin
         rest (convert x) xs
     | S rest, x::xs ->
-      let state, x = readback ~look ty adt ~depth hyps solution x in
-      readback_args ~look ty adt ~depth hyps { solution with state } origin
+      let state, x = readback ~look ty adt ~depth hyps constraints state x in
+      readback_args ~look ty adt ~depth hyps constraints state origin
         rest (convert x) xs
 
 and readback : type t.
   look:(depth:int -> term -> term) ->
-  ty_ast -> t compiled_adt -> depth:int -> hyps -> solution -> term ->
-    custom_state * t
-= fun ~look ty adt ~depth hyps sol t ->
+  ty_ast -> t compiled_adt -> depth:int -> hyps -> constraints -> state -> term ->
+    state * t
+= fun ~look ty adt ~depth hyps constraints state t ->
   try match look ~depth t with
   | Const c ->
       let CK(args,read,_) = Constants.Map.find c adt in
-      readback_args ~look ty adt ~depth hyps sol t args read []
+      readback_args ~look ty adt ~depth hyps constraints state t args read []
   | App(c,x,xs) ->
       let CK(args,read,_) = Constants.Map.find c adt in
-      readback_args ~look ty adt ~depth hyps sol t args read (x::xs)
+      readback_args ~look ty adt ~depth hyps constraints state t args read (x::xs)
   | _ -> raise (TypeErr(ty,t))
   with Not_found -> raise (TypeErr(ty,t))
 
@@ -718,43 +716,43 @@ let build kname = function
 
 let rec adt_embed_args : type m a t.
   ty_ast -> t compiled_adt -> constant ->
-  depth:int -> hyps ->
+  depth:int -> hyps -> constraints ->
   (a,m,t) constructor_arguments ->
-  (solution -> custom_state * term * extra_goals) list ->
+  (state -> state * term * extra_goals) list ->
     m
-= fun ty adt kname ~depth hyps args acc ->
+= fun ty adt kname ~depth hyps constraints args acc ->
     match args with
-    | N -> fun sol ->
-        let sol, ts, gls =
-          List.fold_left (fun (sol,acc,gls) f ->
-            let state, t, goals = f sol in
-            { sol with state }, t :: acc, goals :: gls)
-            (sol,[],[]) acc in
-        sol.state, build kname ts, List.(flatten gls)
+    | N -> fun state ->
+        let state, ts, gls =
+          List.fold_left (fun (state,acc,gls) f ->
+            let state, t, goals = f state in
+            state, t :: acc, goals :: gls)
+            (state,[],[]) acc in
+        state, build kname ts, List.(flatten gls)
     | A(d,args) ->
         fun x ->
-          adt_embed_args ty adt kname ~depth hyps
-            args ((fun sol -> d.embed ~depth hyps sol x) :: acc)
+          adt_embed_args ty adt kname ~depth hyps constraints
+            args ((fun state -> d.embed ~depth hyps constraints state x) :: acc)
     | S args ->
         fun x ->
-          adt_embed_args ty adt kname ~depth hyps
-            args ((fun sol -> embed ty adt ~depth hyps sol x) :: acc)
+          adt_embed_args ty adt kname ~depth hyps constraints
+            args ((fun state -> embed ty adt ~depth hyps constraints state x) :: acc)
 
 and embed : type a.
   ty_ast -> a compiled_adt ->
-  depth:int -> hyps -> solution ->
-    a -> custom_state * term * extra_goals
+  depth:int -> hyps -> constraints -> state ->
+    a -> state * term * extra_goals
 = fun ty adt ->
   let bindings = Constants.Map.bindings adt in
-  fun ~depth hyps sol t ->
-    let rec aux l sol =
+  fun ~depth hyps constraints state t ->
+    let rec aux l state =
       match l with
       | [] -> Elpi_util.type_error
                   ("Pattern matching failure embedding: " ^ show_ty_ast ty)
       | (kname, CK(args,_,matcher)) :: rest ->
-        let ok = adt_embed_args ty adt kname ~depth hyps args [] in
-        matcher ~ok ~ko:(aux rest) t sol in
-     aux bindings sol
+        let ok = adt_embed_args ty adt kname ~depth hyps constraints args [] in
+        matcher ~ok ~ko:(aux rest) t state in
+     aux bindings state
 ;;
 
 let compile_constructors ty l =

@@ -662,18 +662,18 @@ let elpi_builtins = [
 
   MLCode(Pred("dprint",
     VariadicIn(any, "prints raw terms (debugging)"),
-  (fun args ~depth _ { state = cc } ->
+  (fun args ~depth _ _ state ->
      Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
        (Pp.list (Pp.Raw.term depth) " ") args ;
-     cc, ())),
+     state, ())),
   DocAbove);
 
   MLCode(Pred("print",
     VariadicIn(any,"prints terms"),
-  (fun args ~depth _ { state = cc } ->
+  (fun args ~depth _ _ state ->
      Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
        (Pp.list (Pp.term depth) " ") args ;
-     cc, ())),
+     state, ())),
   DocAbove);
 
   MLCode(Pred("counter",
@@ -780,7 +780,7 @@ let safeno = ref 0
 let fresh_int = ref 0
 
 (* factor the code of name and constant *)
-let name_or_constant name condition = (); fun x out ~depth _ { state } ->
+let name_or_constant name condition = (); fun x out ~depth _ _ state ->
   let len = List.length out in
   if len != 0 && len != 2 then
     type_error (name^" only supports 1 or 3 arguments");
