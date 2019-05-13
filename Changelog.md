@@ -5,9 +5,8 @@
   - `custom_state` renamed `state`
   - No more `solution` in the type of builtin predicates but rather
     `cosntrinats` and `state` explicitly
-  - `Extend.Compile.query` returns the assignments maps with heap terms already.
-    This makes it more easy to keep in the state a mapping between UVars and
-    hos application data
+  - Only one type of extensible state to that the same code can be used to
+    generate the query at compile time and convert data at run time
 
 ## Version 1.2 (April 2019)
 

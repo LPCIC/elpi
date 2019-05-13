@@ -347,6 +347,82 @@ end (* }}} *)
 
 let mkConst x = Constants.mkConst x [@@inline]
 
+(* Object oriented state: borns at compilation time and survives as run time *)
+module State : sig
+
+  (* filled in with components *)
+  type 'a component
+  val declare :
+    name:string -> pp:(Format.formatter -> 'a -> unit) ->
+    init:(unit -> 'a) -> 
+    compilation_is_over:(args:term StrMap.t -> 'a -> 'a option) ->
+     'a component
+  
+  (* an instance of the state type *)
+  type t
+
+  val init : unit -> t
+  val end_compilation : term StrMap.t -> t -> t
+  val get : 'a component -> t -> 'a
+  val set : 'a component -> t -> 'a -> t
+  val update : 'a component -> t -> ('a -> 'a) -> t
+  val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
+  val pp : Format.formatter -> t -> unit
+
+end = struct
+
+  type t = Obj.t StrMap.t
+
+  type 'a component = string
+  type extension = {
+    init : unit -> Obj.t;
+    end_comp : args:term StrMap.t -> Obj.t -> Obj.t option;
+    pp   : Format.formatter -> Obj.t -> unit;
+  }
+  let extensions : extension StrMap.t ref = ref StrMap.empty
+
+  let get name t =
+    try Obj.obj (StrMap.find name t)
+    with Not_found ->
+       anomaly ("State.get: component " ^ name ^ " not found")
+
+  let set name t v = StrMap.add name (Obj.repr v) t
+  let update name t f =
+    StrMap.add name (Obj.repr (f (Obj.obj (StrMap.find name t)))) t
+  let update_return name t f =
+    let x = get name t in
+    let x, res = f x in
+    let t = set name t x in
+    t, res
+
+  let declare ~name ~pp ~init ~compilation_is_over =
+    if StrMap.mem name !extensions then
+      anomaly ("Extension "^name^" already declared");
+    extensions := StrMap.add name {
+        init = (fun x -> Obj.repr (init x));
+        pp = (fun fmt x -> pp fmt (Obj.obj x));
+        end_comp = (fun ~args x -> option_map Obj.repr (compilation_is_over ~args (Obj.obj x))) }
+      !extensions;
+    name
+
+  let init () =
+    StrMap.fold (fun name { init } -> StrMap.add name (init ()))
+      !extensions StrMap.empty 
+
+  let end_compilation args m =
+    StrMap.fold (fun name obj acc -> 
+      match (StrMap.find name !extensions).end_comp ~args obj with
+      | None -> acc
+      | Some o -> StrMap.add name o acc) m StrMap.empty
+
+  let pp fmt t =
+    StrMap.iter (fun name { pp } ->
+      try pp fmt (StrMap.find name t)
+      with Not_found -> ())
+    !extensions
+
+end
+
 module CHR : sig
 
   (* a set of rules *)
@@ -506,7 +582,7 @@ type argmap = {
   nargs : int;
   c2i : int Constants.Map.t;
   i2n : string IntMap.t;
-  n2t : term StrMap.t;
+  n2t : (term * Constants.t) StrMap.t;
   n2i : int StrMap.t;
 }
 [@@ deriving show]
@@ -525,7 +601,7 @@ let mk_Arg n { c2i; nargs; i2n; n2t; n2i } =
   let nc = Constants.from_stringc cname in
   let i2n = IntMap.add nargs n i2n in
   let c2i = Constants.Map.add nc nargs c2i in
-  let n2t = StrMap.add n n' n2t in
+  let n2t = StrMap.add n (n',nc) n2t in
   let n2i = StrMap.add n nargs n2i in
   let nargs = nargs + 1 in
   { c2i; nargs; i2n; n2t; n2i }, (n', nc)
@@ -561,7 +637,7 @@ type prechr_rule = {
 }
 [@@ deriving show]
 
-let todopp fmt _ = error "not implemented"
+let todopp name fmt _ = error ("pp not implemented for field: "^name)
 
 type executable = {
   (* the lambda-Prolog program: an indexed list of clauses *) 
@@ -939,5 +1015,6 @@ let document fmt l =
 end
 
 let of_term x = x
+
 
 (* vim: set foldmethod=marker: *)

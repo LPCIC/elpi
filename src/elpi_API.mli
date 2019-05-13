@@ -319,14 +319,9 @@ module Extend : sig
 
     type state = Data.state
     type constraints = Data.constraints
+    
     module StrMap = Data.StrMap
-    type solution = {
-      assignments : term StrMap.t;
-      constraints : constraints;
-      state : state;
-    }
-    val of_solution : Data.solution -> solution
-
+   
     type hyps = clause_src list
 
     type suspended_goal = {
@@ -334,6 +329,7 @@ module Extend : sig
       goal : int * term
     }
     val constraints : Data.constraints -> suspended_goal list
+    val no_constraints : constraints
 
     (** LambdaProlog built-in data types *)
     module C : sig
@@ -655,51 +651,6 @@ module Extend : sig
     end
   end
 
-  (** This module lets one extend the compiler by:
-   * - "compiling" the query by hand
-   * - providing quotations *)
-  module Compile : sig
-
-    (** Generate a query starting from a compiled/hand-made term. The StrMap
-        maps names of args (see fresh_Arg below) *)
-    val query :
-      Compile.program -> (depth:int -> Data.state -> Data.state * (Ast.Loc.t * Data.term)) ->
-        Compile.query * Data.term Data.StrMap.t
-
-    (* Args are parameters of the query (e.g. capital letters). *)
-    val is_Arg : Data.state -> Data.term -> bool
-
-    (* The output term is to be used to build the query but is *not* the handle
-       to the eventual solution, that is instead part of the map returned by the
-       [query] API above. *)
-    val fresh_Arg :
-      Data.state -> name_hint:string -> args:Data.term list ->
-        Data.state * string * Data.term
-
-
-    (** From an unparsed string to a term *)
-    type quotation =
-      depth:int -> Data.state -> Ast.Loc.t -> string -> Data.state * Data.term
-
-    (** The default quotation [{{code}}] *)
-    val set_default_quotation : quotation -> unit
-
-    (** Named quotation [{{name:code}}] *)
-    val register_named_quotation : name:string -> quotation -> unit
-
-    (** The anti-quotation to lambda Prolog *)
-    val lp : quotation
-
-
-    (** See elpi_quoted_syntax.elpi (EXPERIMENTAL, used by elpi-checker) *)
-    val quote_syntax : Compile.query -> Data.term list * Data.term
-
-    (** To implement the string_to_term built-in (AVOID, makes little sense
-     * if depth is non zero, since bound variables have no name!) *)
-    val term_at : depth:int -> Ast.query -> Data.term
-    
-  end
-
 
   (* State is a collection of purely functional piece of data carried
    * by the interpreter. Such data is kept in sync with the backtracking, i.e.
@@ -722,6 +673,7 @@ module Extend : sig
       name:string ->
       pp:(Format.formatter -> 'a -> unit) ->
       init:(unit -> 'a) ->
+      compilation_is_over:(args:Data.term Data.StrMap.t -> 'a -> 'a option) ->
         'a component
 
     type t = Data.state
@@ -733,6 +685,53 @@ module Extend : sig
     val update : 'a component -> t -> ('a -> 'a) -> t
     val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
 
+  end
+
+  (** This module lets one extend the compiler by:
+   * - "compiling" the query by hand
+   * - providing quotations *)
+  module Compile : sig
+
+    (** Generate a query starting from a compiled/hand-made term. The StrMap
+        maps names of args (see fresh_Arg below) *)
+    val query :
+      Compile.program -> (depth:int -> Data.state -> Data.state * (Ast.Loc.t * Data.term)) ->
+        Compile.query
+
+    (* Args are parameters of the query (e.g. capital letters). *)
+    val is_Arg : Data.state -> Data.term -> bool
+
+    (* The output term is to be used to build the query but is *not* the handle
+       to the eventual solution. The compiler transforms it, later on, into
+       a UVar. The mapping is passed to the compilation_is_over callback of
+       each State.component. *)
+    val mk_Arg :
+      Data.state -> name:string -> args:Data.term list ->
+        Data.state * Data.term
+
+    val while_compiling : bool State.component
+
+    (** From an unparsed string to a term *)
+    type quotation =
+      depth:int -> Data.state -> Ast.Loc.t -> string -> Data.state * Data.term
+
+    (** The default quotation [{{code}}] *)
+    val set_default_quotation : quotation -> unit
+
+    (** Named quotation [{{name:code}}] *)
+    val register_named_quotation : name:string -> quotation -> unit
+
+    (** The anti-quotation to lambda Prolog *)
+    val lp : quotation
+
+
+    (** See elpi_quoted_syntax.elpi (EXPERIMENTAL, used by elpi-checker) *)
+    val quote_syntax : Compile.query -> Data.term list * Data.term
+
+    (** To implement the string_to_term built-in (AVOID, makes little sense
+     * if depth is non zero, since bound variables have no name!) *)
+    val term_at : depth:int -> Ast.query -> Data.term
+    
   end
 
   (** Like quotations but for identifiers that begin and end with

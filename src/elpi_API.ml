@@ -100,7 +100,7 @@ end
 module Data = struct
   type term = Elpi_data.term
   type constraints = Elpi_data.constraints
-  type state = Elpi_data.state
+  type state = Elpi_data.State.t
   module StrMap = Elpi_util.StrMap
   type solution = Elpi_data.solution = {
     assignments : term StrMap.t;
@@ -158,7 +158,7 @@ module Pp = struct
     let module R = (val !r) in let open R in
     Elpi_util.pplist ~boxed:true R.pp_stuck_goal "" f c
 
-  let state = Elpi_util.State.pp
+  let state = Elpi_data.State.pp
 
   let query f c =
     let module R = (val !r) in let open R in
@@ -209,11 +209,10 @@ module Extend = struct
           Some { context ; goal = (cdepth, conclusion) }
       | _ -> None)
     let fresh_uvar_body () = oref Constants.dummy
-    let of_solution x = x
+    let no_constraints = []
   end
 
   module Compile = struct
-    module State = Elpi_util.State
     include Elpi_compiler
     let term_at ~depth x = term_of_ast ~depth x
     let query = query_of_term
@@ -305,11 +304,7 @@ module Extend = struct
     end
   end
 
-  module State = struct
-    include Elpi_util.State
-    let declare ~name ~pp ~init =
-      declare ~name ~pp ~init ~compilation_is_over:(fun x -> Some x)
-  end
+  module State = Elpi_data.State
 
   module CustomFunctor = struct
   

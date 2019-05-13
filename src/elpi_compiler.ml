@@ -9,7 +9,6 @@ open Elpi_runtime_trace_off.Elpi_runtime
 open Pp
 
 module C = Constants
-module CS = State
 
 type flags = {
   defined_variables : StrSet.t;
@@ -340,7 +339,7 @@ end (* }}} *)
 
 module Quotation = struct
 
-  type quotation = depth:int -> CS.t -> Loc.t -> string -> CS.t * term
+  type quotation = depth:int -> State.t -> Loc.t -> string -> State.t * term
   let named_quotations = ref StrMap.empty
   let default_quotation = ref None
   
@@ -351,6 +350,11 @@ module Quotation = struct
 end
 
 include Quotation
+
+let while_compiling = State.declare ~name:"elpi:compiling"
+  ~pp:(fun fmt _ -> ())
+  ~compilation_is_over:(fun ~args:_ _ -> Some false)
+  ~init:(fun () -> true)
 
 module ToDBL : sig
   open C
@@ -365,7 +369,7 @@ module ToDBL : sig
      Const "%Arg2")
   *)
 
-  val run : flags:flags -> CS.t -> StructuredAST.program -> CS.t * Structured.program
+  val run : flags:flags -> State.t -> StructuredAST.program -> State.t * Structured.program
 
   (* Exported since also used to flatten (here we "flatten" locals) *)
   val prefix_const : string list -> C.t -> C.t
@@ -389,7 +393,9 @@ module ToDBL : sig
   val is_Arg : State.t -> term -> bool
   val fresh_Arg : 
     State.t -> name_hint:string -> args:term list ->
-      State.t * string * term
+      State.t * term
+  val mk_Arg : State.t -> name:string -> args:term list -> State.t * term
+  val get_Args : State.t -> term StrMap.t
 
 end = struct (* {{{ *)
 
@@ -398,20 +404,20 @@ end = struct (* {{{ *)
 
 let get_argmap, set_argmap, update_argmap =
   let argmap =
-    CS.declare ~name:"elpi:argmap" ~pp:todopp
-      ~compilation_is_over:(fun _ -> None)
+    State.declare ~name:"elpi:argmap" ~pp:(todopp "elpi:argmap")
+      ~compilation_is_over:(fun ~args:_ _ -> None)
      ~init:(fun () -> empty_amap) in
-  CS.(get argmap, set argmap, update_return argmap)
+  State.(get argmap, set argmap, update_return argmap)
 
 (* For bound variables *)
 type varmap = term F.Map.t 
 
 let get_varmap, set_varmap, update_varmap =
   let varmap =
-    CS.declare ~name:"elpi:varmap" ~pp:todopp
-      ~compilation_is_over:(fun _ -> None)
+    State.declare ~name:"elpi:varmap" ~pp:(todopp "elpi:varmap")
+      ~compilation_is_over:(fun ~args:_ _ -> None)
       ~init:(fun () -> F.Map.empty) in
-  CS.(get varmap, set varmap, update varmap)
+  State.(get varmap, set varmap, update varmap)
 
 (* Embed in the state everything, to cross quotations *)
 
@@ -421,10 +427,10 @@ type mtm = {
 
 let get_mtm, set_mtm =
   let mtm =
-    CS.declare ~name:"elpi:mtm" ~pp:todopp
-      ~compilation_is_over:(fun _ -> None)
+    State.declare ~name:"elpi:mtm" ~pp:(todopp "elpi:mtm")
+      ~compilation_is_over:(fun ~args:_ _ -> None)
       ~init:(fun () -> None) in
-  CS.(get mtm, set mtm)
+  State.(get mtm, set mtm)
 
 (**** utils ******************)
 
@@ -435,17 +441,23 @@ let is_Arg state x =
   | App(c,_,_) -> C.Map.mem c c2i
   | _ -> false
 
-let mk_Arg state n = update_argmap state (mk_Arg n)
+let mk_Arg state ~name ~args =
+  let { n2t } = get_argmap state in
+  let state, (t, c) =
+    try state, StrMap.find name n2t
+    with Not_found -> update_argmap state (mk_Arg name) in
+  match args with
+  | [] -> state, t
+  | x::xs -> state, App(c,x,xs)
 
 let fresh_Arg =
   let qargno = ref 0 in
   fun state ~name_hint:name ~args ->
     incr qargno;
     let name = Printf.sprintf "%s_%d_" name !qargno in
-    let state, (t, c) = mk_Arg state name in
-    match args with
-    | [] -> state, name, t
-    | x::xs -> state, name, App(c,x,xs)
+    mk_Arg state ~name ~args
+
+let get_Args s = StrMap.map fst (get_argmap s).n2t
 
 let preterm_of_ast loc ~depth:arg_lvl macro state ast =
 
@@ -461,10 +473,6 @@ let preterm_of_ast loc ~depth:arg_lvl macro state ast =
      let c = (F.show f).[0] in
      c = '@' in
 
-  let stack_arg_of_ast state n =
-    let { n2t } = get_argmap state in
-    try state, StrMap.find n n2t
-    with Not_found -> let state, (t, _) = mk_Arg state n in state, t in
 
   let rec stack_macro_of_ast inner lvl state f =
     try aux inner lvl state (fst (F.Map.find f macro))
@@ -477,7 +485,7 @@ let preterm_of_ast loc ~depth:arg_lvl macro state ast =
      if is_discard f then
        state, Discard
      else if is_uvar_name f then
-       stack_arg_of_ast state (F.show f)
+       mk_Arg state ~name:(F.show f) ~args:[]
      else if is_macro_name f then
        stack_macro_of_ast inner curlvl state f
      else if Builtin.is_declared (fst (C.funct_of_ast f)) then
@@ -662,7 +670,7 @@ let preterm_of_ast ~depth macros state (loc, t) =
     state, List.concat cl
   and pi2arg loc ~depth acc state = function
     | App(c,Lam t,[]) when c == C.pic ->
-        let state, _, arg = fresh_Arg state ~name_hint:"X" ~args:[] in
+        let state, arg = fresh_Arg state ~name_hint:"X" ~args:[] in
         pi2arg loc ~depth (acc @ [arg]) state t
     | t ->
         if acc = [] then state, [loc, t]
@@ -812,12 +820,13 @@ end (* }}} *)
 let lp = ToDBL.lp
 let is_Arg = ToDBL.is_Arg
 let fresh_Arg = ToDBL.fresh_Arg
-
+let mk_Arg = ToDBL.mk_Arg
+let get_Args = ToDBL.get_Args
 module Flatten : sig
 
   (* Eliminating the structure (name spaces) *)
 
-  val run : flags:flags -> CS.t -> Structured.program -> Flat.program
+  val run : flags:flags -> State.t -> Structured.program -> Flat.program
 
 end = struct (* {{{ *)
 
@@ -1044,7 +1053,7 @@ end = struct (* {{{ *)
 
     let argmap = ref argmap in
     let mk_Arg n =
-      let m, (x,_) = mk_Arg n !argmap in
+      let m, (x,_) = Elpi_data.mk_Arg n !argmap in
       argmap := m;
       x in
 
@@ -1290,7 +1299,7 @@ let program_of_ast ~flags:({ print_passes } as flags) p =
     Format.eprintf "== StructuredAST ================@\n@[<v 0>%a@]@\n"
       StructuredAST.pp_program p;
  
-  let s, p = ToDBL.run ~flags (CS.init()) p in
+  let s, p = ToDBL.run ~flags (State.init()) p in
  
   if print_passes then
     Format.eprintf "== Structured ================@\n@[<v 0>%a@]@\n"
@@ -1401,7 +1410,7 @@ let query_of_ast { Compiled.assembled_program; compiler_state; compiler_flags } 
     query;
     initial_goal;
     assignments;
-    initial_state = State.end_compilation state;
+    initial_state = State.end_compilation assignments state;
     compiler_flags;
   }
 
@@ -1428,9 +1437,9 @@ let query_of_term { Compiled.assembled_program; compiler_state; compiler_flags }
     query;
     initial_goal;
     assignments;
-    initial_state = State.end_compilation state;
+    initial_state = State.end_compilation assignments state;
     compiler_flags;
-  }, assignments
+  }
 
 
 
@@ -1567,7 +1576,7 @@ let executable_of_query = Compiler.run
 
 let term_of_ast ~depth t =
  let argsdepth = depth in
- let state = CS.init () in
+ let state = State.init () in
 (*
  let freevars = C.mkinterval 0 depth 0 in
  let state = update_varmap state (fun cmap ->
@@ -1726,7 +1735,7 @@ let static_check header
       ~flags:{ flags with allow_untyped_builtin = true }
       (header @ checker) in
   let loc = Elpi_util.Loc.initial "(static_check)" in
-  let query, _ =
+  let query =
     query_of_term checker (fun ~depth state ->
       assert(depth=0);
       state, (loc,App(C.from_stringc "check",list_to_lp_list p,[q;tlist]))) in

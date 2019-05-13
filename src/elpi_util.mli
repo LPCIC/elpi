@@ -233,25 +233,3 @@ module CData : sig
   val map : 'a cdata -> 'b cdata -> ('a -> 'b) -> t -> t
 end
 
-(* Object oriented state: borns at compilation time and survives as run time *)
-module State : sig
-
-  (* filled in with components *)
-  type 'a component
-  val declare :
-    name:string -> pp:(Format.formatter -> 'a -> unit) ->
-    init:(unit -> 'a) -> 
-    compilation_is_over:('a -> 'a option) ->
-     'a component
-  
-  (* an instance of the state type *)
-  type t
-  val init : unit -> t
-  val end_compilation : t -> t
-  val get : 'a component -> t -> 'a
-  val set : 'a component -> t -> 'a -> t
-  val update : 'a component -> t -> ('a -> 'a) -> t
-  val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
-  val pp : Format.formatter -> t -> unit
-
-end
