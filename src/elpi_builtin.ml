@@ -875,8 +875,8 @@ let elpi_nonlogical_builtins = [
 
   MLCode(Pred("closed_term",
     Out(any, "T",
-    Easy      "unify T with a variable that has no eigenvariables in scope"),
-  (fun _ ~depth -> !:(mkUVar (fresh_uvar_body ()) 0 0))),
+    Read     "unify T with a variable that has no eigenvariables in scope"),
+  (fun _ ~depth _ _ state -> !:(mkUVar (fresh_uvar_body state) 0 0))),
   DocAbove);
 
   MLCode(Pred("is_cdata",

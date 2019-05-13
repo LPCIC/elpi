@@ -315,7 +315,6 @@ module Extend : sig
 
     val of_term : Data.term -> term
 
-    val fresh_uvar_body : unit -> uvar_body
 
     type state = Data.state
     type constraints = Data.constraints
@@ -323,6 +322,8 @@ module Extend : sig
     module StrMap = Data.StrMap
    
     type hyps = clause_src list
+
+    val fresh_uvar_body : state -> uvar_body
 
     type suspended_goal = {
       context : hyps;

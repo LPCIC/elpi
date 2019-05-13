@@ -208,7 +208,11 @@ module Extend = struct
       | { kind = Constraint { cdepth; conclusion; context } } ->
           Some { context ; goal = (cdepth, conclusion) }
       | _ -> None)
-    let fresh_uvar_body () = oref Constants.dummy
+    let fresh_uvar_body state =
+      if Elpi_data.State.get Elpi_compiler.while_compiling state then
+        Elpi_util.error "fresh_uvar_body called during compilation"
+      else
+        oref Constants.dummy
     let no_constraints = []
   end
 

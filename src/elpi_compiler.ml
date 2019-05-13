@@ -1177,7 +1177,8 @@ end = struct (* {{{ *)
                (t,all_names), (names, mkAppC C.pic [Lam call])
            ) (t,[]) sp in
          sp, [Lam t]
-      | (UVar _ | AppUVar _ | Arg _ | AppArg _) -> assert false
+      | (UVar _ | AppUVar _) -> error ~loc "Stack term contains UVar"
+      | (Arg _ | AppArg _) -> assert false
 
     and spaux1 ctx t =
       let spills, ts = spaux ctx t in
