@@ -35,6 +35,8 @@ open Elpi_util
  *
  *)
 
+module Term = struct
+
 (* Used by pretty printers, to be later instantiated in module Constants *)
 let pp_const = mk_extensible_printer ()
 type constant = int (* De Bruijn levels *)
@@ -45,7 +47,7 @@ type constant = int (* De Bruijn levels *)
 let pp_oref = mk_extensible_printer ()
 
 let id_term = UUID.make ()
-type view =
+type term =
   (* Pure terms *)
   | Const of constant
   | Lam of term
@@ -63,7 +65,6 @@ type view =
   (* Clause terms: unif variables used in clauses *)
   | Arg of (*id:*)int * (*argsno:*)int
   | AppArg of (*id*)int * term list
-and term = view (* needed at the user-level API *)
 and uvar_body = {
   mutable contents : term [@printer (pp_extensible_any ~id:id_term pp_oref)];
   mutable rest : stuck_goal list [@printer fun _ _ -> ()]
@@ -346,6 +347,9 @@ let rec mkinterval depth argsno n =
 end (* }}} *)
 
 let mkConst x = Constants.mkConst x [@@inline]
+
+end
+include Term
 
 (* Object oriented state: borns at compilation time and survives as run time *)
 module State : sig

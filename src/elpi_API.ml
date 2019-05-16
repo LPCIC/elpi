@@ -174,17 +174,211 @@ module Extend = struct
 
   module CData = Elpi_util.CData
 
+  module State = struct
+    include Elpi_data.State
+
+
+    module UVKey = struct
+    type uvarHandle = Arg of string | Ref of Elpi_data.uvar_body
+    [@@deriving show]
+
+    type t = {
+      handle : uvarHandle;
+      lvl : int;
+    }
+    [@@deriving show]
+
+    let equal { handle = h1; lvl = l1 } { handle = h2; lvl = l2 } =
+      l1 == l2 &&
+        match h1, h2 with
+        | Ref p1, Ref p2 -> p1 == p2
+        | Arg s1, Arg s2 -> String.equal s1 s2
+        | _ -> false
+
+    let compilation_is_over ~args k =
+      match k.handle with
+      | Ref _ -> assert false
+      | Arg s -> { k with handle = Ref (Elpi_util.StrMap.find s args) }
+
+    (* This is to hide to the client the fact that Args change representation
+       after compilation *)
+    let uvk = declare ~name:"elpi:uvk" ~pp:(Elpi_util.StrMap.pp pp)
+      ~compilation_is_over:(fun ~args x ->
+         Some (Elpi_util.StrMap.map (compilation_is_over ~args) x))
+      ~init:(fun () -> Elpi_util.StrMap.empty)
+  
+    let fresh_name =
+      let i = ref 0 in
+      fun () -> incr i; Printf.sprintf "_uvk_%d_" !i
+   
+    let alloc_UVKey name lvl state =            
+      if get Elpi_compiler.while_compiling state then
+        let state, _arg = Elpi_compiler.mk_Arg ~name ~args:[] state in
+        state, { lvl; handle = Arg name }
+      else
+        state, { lvl; handle = Ref (Elpi_data.oref Elpi_data.Constants.dummy) }
+
+    let make ?name ~lvl state =
+      match name with
+      | None -> alloc_UVKey (fresh_name ()) lvl state
+      | Some name ->
+          try state, Elpi_util.StrMap.find name (get uvk state) 
+          with Not_found ->
+            let state, k = alloc_UVKey name lvl state in
+            update uvk state (Elpi_util.StrMap.add name k), k
+
+    let get ~name state =
+      try Some (Elpi_util.StrMap.find name (get uvk state))
+      with Not_found -> None
+
+    end
+
+    module type HostUVar = sig
+      type t
+      val compare : t -> t -> int
+      val pp : Format.formatter -> t -> unit
+      val show : t -> string
+    end
+
+    (* Bijective map between elpi UVar and host equivalent *)
+    module UVMap = functor(T : HostUVar) -> struct
+      open Elpi_util
+
+      module H2E = Map.Make(T)
+
+      type t = {
+         h2e : UVKey.t H2E.t;
+         e2h_compile : T.t StrMap.t;
+         e2h_run : T.t PtrMap.t
+      }
+
+      let empty = {
+        h2e = H2E.empty;
+        e2h_compile = StrMap.empty;
+        e2h_run = PtrMap.empty ()
+      }
+
+      let add ({ UVKey.lvl; handle } as uv) v { h2e; e2h_compile; e2h_run } =
+        let h2e = H2E.add v uv h2e in
+        match handle with
+        | UVKey.Ref ub ->
+            { h2e; e2h_compile; e2h_run = PtrMap.add ub v e2h_run }
+        | Arg s ->
+            { h2e; e2h_run; e2h_compile = StrMap.add s v e2h_compile }
+
+      let elpi v { h2e } = H2E.find v h2e
+      let host { UVKey.handle } { e2h_compile; e2h_run } =
+        match handle with
+        | UVKey.Ref ub -> PtrMap.find ub e2h_run
+        | Arg s -> StrMap.find s e2h_compile
+
+      let remove_both handle v { h2e; e2h_compile; e2h_run } = 
+        let h2e = H2E.remove v h2e in
+        match handle with
+        | UVKey.Ref ub ->
+            { h2e; e2h_compile; e2h_run = PtrMap.remove ub e2h_run }
+        | Arg s ->
+            { h2e; e2h_run; e2h_compile = StrMap.remove s e2h_compile }
+
+      let remove_elpi ({ UVKey.handle } as k) m =
+        let v = host k m in
+        remove_both handle v m
+
+      let remove_host v m =
+        let { UVKey.handle } = elpi v m in
+        remove_both handle v m
+
+      let filter f { h2e; e2h_compile; e2h_run } =
+        let e2h_compile = StrMap.filter (fun n v -> f v (H2E.find v h2e)) e2h_compile in
+        let e2h_run = PtrMap.filter (fun ub v -> f v (H2E.find v h2e)) e2h_run in
+        let h2e = H2E.filter f h2e in
+        { h2e; e2h_compile; e2h_run }
+        
+      let fold f { h2e } acc =
+        let module R = (val !r) in let open R in
+        let get_val {UVKey.lvl; handle} =
+          match handle with
+          | UVKey.Ref { Elpi_data.Term.contents = ub }
+            when ub != Elpi_data.Term.Constants.dummy ->
+              Some (lvl, R.deref_head ~depth:lvl ub)
+          | UVKey.Ref _ -> None
+          | UVKey.Arg _ -> None in
+        H2E.fold (fun k ({UVKey.lvl; handle} as uk) acc -> f k uk (get_val uk) acc) h2e acc
+
+      let pp fmt (m : t) = Format.fprintf fmt "<uvm>"
+      let show m = Format.asprintf "%a" pp m
+
+      let uvmap = declare ~name:"elpi:uvm" ~pp
+        ~compilation_is_over:(fun ~args { h2e; e2h_compile; e2h_run } ->
+          let h2e = H2E.map (UVKey.compilation_is_over ~args) h2e in
+          let e2h_run =
+            StrMap.fold (fun k v m ->
+              PtrMap.add (StrMap.find k args) v m) e2h_compile (PtrMap.empty ()) in
+          Some { h2e; e2h_compile = StrMap.empty; e2h_run })
+        ~init:(fun () -> empty)
+
+    end
+
+    (* From now on, we pretend there is no difference between terms at
+       compilation time and terms at execution time (in the API) *)
+    let declare ~name ~pp ~init =
+      declare ~name ~pp ~init
+        ~compilation_is_over:(fun ~args:_ x -> Some x)
+
+  end
+
   module Data = struct
     module StrMap = Data.StrMap
-    type builtin = int
-    include Elpi_data
+
+    type constant = Elpi_data.Term.constant
+    type builtin = Elpi_data.Term.constant
+    type uvar_body = Elpi_data.Term.uvar_body
+    type term = Elpi_data.Term.term
+    type view =
+      (* Pure subterms *)
+      | Const of constant                   (* global constant or a bound var *)
+      | Lam of term                         (* lambda abstraction, i.e. x\ *)
+      | App of constant * term * term list  (* application (at least 1 arg) *)
+      (* Optimizations *)
+      | Cons of term * term                 (* :: *)
+      | Nil                                 (* [] *)
+      | Discard                             (* _  *)
+      (* FFI *)
+      | Builtin of builtin * term list      (* call to a built-in predicate *)
+      | CData of CData.t                    (* external data *)
+      (* Unassigned unification variables *)
+      | UnifVar of State.UVKey.t * term list
+
+    let look ~depth t =
+      let module R = (val !r) in let open R in
+      match R.deref_head ~depth t with
+      | Elpi_data.Term.Arg _ | Elpi_data.Term.AppArg _ -> assert false
+      | Elpi_data.Term.UVar(ub,lvl,nargs) -> UnifVar ({ lvl; handle = Ref ub},Elpi_data.Term.Constants.mkinterval depth nargs 0)
+      | Elpi_data.Term.AppUVar(ub,lvl,args) -> UnifVar ({ lvl; handle = Ref ub},args)
+      | x -> Obj.magic x (* HACK: view is a "subtype" of Term.term *)
+
+    let kool = function
+      | UnifVar({ lvl; handle = Ref ub},args) -> Elpi_data.Term.AppUVar(ub,lvl,args)
+      | UnifVar({ lvl; handle = Arg _},_) -> assert false
+      | x -> Obj.magic x
+    [@@ inline]
+
+    let mkConst = Elpi_data.Term.mkConst
+    let mkLam = Elpi_data.Term.mkLam
+    let mkApp = Elpi_data.Term.mkApp
+    let mkCons = Elpi_data.Term.mkCons
+    let mkNil = Elpi_data.Term.mkNil
+    let mkDiscard = Elpi_data.Term.mkDiscard
+    let mkBuiltin = Elpi_data.Term.mkBuiltin
+    let mkCData = Elpi_data.Term.mkCData
+
     let mkAppL c = function
       | [] -> mkConst c
       | x::xs -> mkApp c x xs
-    let mkAppS s x args = mkApp (Constants.from_stringc s) x args
-    let mkAppSL s args = mkAppL (Constants.from_stringc s) args
-    let mkGlobalS s = Constants.from_string s
-    let mkBuiltinS s args = mkBuiltin (Builtin.from_builtin_name s) args
+    let mkAppS s x args = mkApp (Elpi_data.Term.Constants.from_stringc s) x args
+    let mkAppSL s args = mkAppL (Elpi_data.Term.Constants.from_stringc s) args
+    let mkGlobalS s = Elpi_data.Term.Constants.from_string s
+    let mkBuiltinS s args = mkBuiltin (Elpi_data.Builtin.from_builtin_name s) args
 
     let mkGlobal i =
       if i >= 0 then Elpi_util.anomaly "mkGlobal: got a bound variable";
@@ -193,32 +387,29 @@ module Extend = struct
       if i < 0 then Elpi_util.anomaly "mkBound: got a global constant";
       mkConst i
    
-    let look ~depth t =
-      let module R = (val !r) in let open R in
-      R.deref_head ~depth t
+    let mkUnifVar { State.UVKey.handle; lvl } ~args state =
+      match handle with
+      | State.UVKey.Ref ub -> Elpi_data.Term.mkAppUVar ub lvl args
+      | State.UVKey.Arg name -> Elpi_compiler.get_Arg state ~name ~args
 
-    let kool x = x [@@ inline]
+    let of_term = Elpi_data.of_term
+
+    module C = Elpi_data.Term.C
+    module Constants = Elpi_data.Term.Constants
+
+    type constraints = Elpi_data.constraints
+    type hyps = Elpi_data.hyps
+    type clause_src = Elpi_data.clause_src = { hdepth : int; hsrc : term }
 
     type suspended_goal = { 
       context : hyps;
       goal : int * term
     }
     let constraints = Elpi_util.map_filter (function
-      | { kind = Constraint { cdepth; conclusion; context } } ->
+      | { Elpi_data.kind = Constraint { cdepth; conclusion; context } } ->
           Some { context ; goal = (cdepth, conclusion) }
       | _ -> None)
-    let fresh_uvar_body state =
-      if Elpi_data.State.get Elpi_compiler.while_compiling state then
-        Elpi_util.error "fresh_uvar_body called during compilation"
-      else
-        oref Constants.dummy
     let no_constraints = []
-  end
-
-  module Compile = struct
-    include Elpi_compiler
-    let term_at ~depth x = term_of_ast ~depth x
-    let query = query_of_term
   end
 
   module BuiltInPredicate = struct

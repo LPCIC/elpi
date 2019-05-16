@@ -246,6 +246,82 @@ module Extend : sig
     val map : 'a cdata -> 'b cdata -> ('a -> 'b) -> t -> t
   end
 
+  (* State is a collection of purely functional piece of data carried
+   * by the interpreter. Such data is kept in sync with the backtracking, i.e.
+   * changes made in a branch are lost if that branch fails.
+   * It can be used to both store custom constraints to be manipulated by
+   * custom solvers, or any other piece of data the host application may
+   * need to use.
+   * The initial value can be taken from the compiler state, e.g. a quotation
+   * may generate some constraints statically *)
+  module State : sig
+
+    (** 'a MUST be purely functional, i.e. backtracking is implemented by using
+     * an old binding for 'a.
+     * This limitation can be lifted if there is user request. *)
+    type 'a component
+
+    (** The compilation_is_over callback is called when the compilation
+        phase is over, after that the state is threaded at run time *)
+    val declare :
+      name:string ->
+      pp:(Format.formatter -> 'a -> unit) ->
+      init:(unit -> 'a) ->
+        'a component
+
+    type t = Data.state
+
+    val get : 'a component -> t -> 'a
+    val set : 'a component -> t -> 'a -> t
+
+    (** Allowed to raise BuiltInPredicate.No_clause *)
+    val update : 'a component -> t -> ('a -> 'a) -> t
+    val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
+
+    (* to map uvars from/to the host application *)
+
+    module UVKey : sig
+      type t
+      val make : ?name:string -> lvl:int -> Data.state -> Data.state * t
+      val get : name:string -> Data.state -> t option
+      val pp :  Format.formatter -> t -> unit
+      val show :  t -> string
+      val equal : t -> t -> bool
+    end
+
+    module type HostUVar = sig
+      type t
+      val compare : t -> t -> int
+      val pp : Format.formatter -> t -> unit
+      val show : t -> string
+    end
+
+    (* Bijective map between elpi UVar and host equivalent *)
+    module UVMap : functor(T : HostUVar) -> sig
+      type t
+
+      val empty : t
+      val add : UVKey.t -> T.t -> t -> t
+
+      val remove_elpi : UVKey.t -> t -> t
+      val remove_host : T.t -> t -> t
+
+      val filter : (T.t -> UVKey.t -> bool) -> t -> t
+
+      (* The eventual body at its depth *)
+      val fold : (T.t -> UVKey.t -> (int * Data.term) option -> 'a -> 'a) -> t -> 'a -> 'a
+
+      val elpi   : T.t -> t -> UVKey.t
+      val host : UVKey.t -> t -> T.t
+
+      val uvmap : t component
+
+      val pp : Format.formatter -> t -> unit
+      val show : t -> string
+    end
+
+  end
+
 
   (** This module exposes the low level representation of terms.
    *
@@ -275,13 +351,7 @@ module Extend : sig
       | Builtin of builtin * term list      (* call to a built-in predicate *)
       | CData of CData.t                    (* external data *)
       (* Unassigned unification variables *)
-      | UVar of uvar_body * (*depth:*)int * (*argsno:*)int
-      | AppUVar of uvar_body * (*depth:*)int * term list
-
-                                        (* Don't use. If we had subtyping these
-                                         * two would not be exposed *)
-                                        | Arg of int * int
-                                        | AppArg of int * term list
+      | UnifVar of State.UVKey.t * term list
 
     (** Smart constructors *)
     val mkGlobalS : string -> term  (* global constant, i.e. < 0 *)
@@ -294,14 +364,13 @@ module Extend : sig
     val mkDiscard : term
     val mkBuiltinS : string -> term list -> term
     val mkCData : CData.t -> term
+    val mkUnifVar : State.UVKey.t -> args:term list -> State.t -> term
 
     (** Lower level smart constructors *)
     val mkGlobal : constant -> term (* global constant, i.e. < 0 *)
     val mkApp : constant -> term -> term list -> term
     val mkAppL : constant -> term list -> term
     val mkBuiltin : builtin -> term list -> term
-    val mkUVar : uvar_body -> int -> int -> term
-    val mkAppUVar : uvar_body -> int -> term list -> term
     val mkConst : constant -> term (* no check, works for globals and bound *)
 
     (** Terms must be inspected after dereferencing their head.
@@ -312,24 +381,20 @@ module Extend : sig
     (* to reuse a term that was looked at *)
     val kool : view -> term
 
-    type clause_src = { hdepth : int; hsrc : term }
-
-    val of_term : Data.term -> term
-
-
-    type state = Data.state
-    type constraints = Data.constraints
-    
-    module StrMap = Data.StrMap
-   
+    type clause_src = {
+      hdepth : int;
+      hsrc : term
+    }
     type hyps = clause_src list
-
-    val fresh_uvar_body : state -> uvar_body
-
     type suspended_goal = {
       context : hyps;
       goal : int * term
     }
+
+    (* Alias/cast from Data *)
+    val of_term : Data.term -> term
+    type constraints = Data.constraints
+    module StrMap = Data.StrMap
     val constraints : Data.constraints -> suspended_goal list
     val no_constraints : constraints
 
@@ -464,10 +529,11 @@ module Extend : sig
 
     type 'a embedding =
       depth:int -> Data.hyps -> Data.constraints ->
-      Data.state -> 'a -> Data.state * Data.term * extra_goals
+      State.t -> 'a -> State.t * Data.term * extra_goals (* XXX depth!!! *)
+      
     type 'a readback =
       depth:int -> Data.hyps -> Data.constraints ->
-      Data.state -> Data.term -> Data.state * 'a
+      State.t -> Data.term -> State.t * 'a
 
     type 'a data = {
       ty : ty_ast;
@@ -655,41 +721,6 @@ module Extend : sig
   end
 
 
-  (* State is a collection of purely functional piece of data carried
-   * by the interpreter. Such data is kept in sync with the backtracking, i.e.
-   * changes made in a branch are lost if that branch fails.
-   * It can be used to both store custom constraints to be manipulated by
-   * custom solvers, or any other piece of data the host application may
-   * need to use.
-   * The initial value can be taken from the compiler state, e.g. a quotation
-   * may generate some constraints statically *)
-  module State : sig
-
-    (** 'a MUST be purely functional, i.e. backtracking is implemented by using
-     * an old binding for 'a.
-     * This limitation can be lifted if there is user request. *)
-    type 'a component
-
-    (** The compilation_is_over callback is called when the compilation
-        phase is over, after that the state is threaded at run time *)
-    val declare :
-      name:string ->
-      pp:(Format.formatter -> 'a -> unit) ->
-      init:(unit -> 'a) ->
-      compilation_is_over:(args:Data.term Data.StrMap.t -> 'a -> 'a option) ->
-        'a component
-
-    type t = Data.state
-
-    val get : 'a component -> t -> 'a
-    val set : 'a component -> t -> 'a -> t
-
-    (** Allowed to raise BuiltInPredicate.No_clause *)
-    val update : 'a component -> t -> ('a -> 'a) -> t
-    val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
-
-  end
-
   (** This module lets one extend the compiler by:
    * - "compiling" the query by hand
    * - providing quotations *)
@@ -767,10 +798,6 @@ module Extend : sig
      * OCaml list! *)
     val list_to_lp_list : Data.term list -> Data.term
     val lp_list_to_list : depth:int -> Data.term -> Data.term list
-
-    (* Like [look] but does not substitute the bodies of assigned unification
-     * variables (UNSAFE) *)
-    val unsafe_look : Data.term -> Data.view
 
     (** The body of an assignment, if any (LOW LEVEL). 
      * Use [look] and forget about this API since the term you get

@@ -51,8 +51,6 @@ let rec eval depth t =
   match look ~depth t with
   | Lam _ -> type_error "Evaluation of a lambda abstraction"
   | Builtin _ -> type_error "Evaluation of built-in predicate"
-  | Arg _
-  | AppArg _ -> anomaly "Not a heap term"
   | App (hd,arg,args) ->
      let f =
       try lookup_eval hd
@@ -62,8 +60,7 @@ let rec eval depth t =
         | x::xs -> mkApp hd (kool x) (List.map kool xs)  in
      let args = List.map (fun x -> look ~depth (eval depth x)) (arg::args) in
      f args
-  | UVar _
-  | AppUVar _ -> error "Evaluation of a non closed term (maybe delay)"
+  | UnifVar _ -> error "Evaluation of a non closed term (maybe delay)"
   | Const hd as x ->
      let f =
       try lookup_eval hd
@@ -185,23 +182,12 @@ let really_input ic s ofs len =
 
 (* constant x occurs in term t with level d? *)
 let occurs x d t =
-   let rec aux t = match unsafe_look t with
+   let rec aux t = match look ~depth:d t with
      | Const c                          -> c = x
      | Lam t                            -> aux t
      | App (c, v, vs)                   -> c = x || aux v || auxs vs
-     | UVar (t, dt, n)     ->
-         begin match get_assignment t with
-         | None -> x < dt+n
-         | Some t -> (x < dt && aux t) || (dt <= x && x < dt+n)
-         end
-     | AppUVar (t, dt, vs) ->
-         begin match get_assignment t with
-         | None -> auxs vs
-         | Some t -> (x < dt && aux t) || auxs vs
-         end
-     | Arg _
-     | AppArg _                         -> anomaly "Not a heap term"
-     | Builtin (_, vs)                   -> auxs vs
+     | UnifVar (_, l)                   -> auxs l
+     | Builtin (_, vs)                  -> auxs vs
      | Cons (v1, v2)                    -> aux v1 || aux v2
      | Nil
      | Discard
@@ -758,9 +744,7 @@ let fresh_copy t max_db depth =
         if c < max_db then mkApp c x xs
         else if c - depth <= d then mkApp (max_db + c - depth) x xs
         else raise No_clause (* restriction *)
-    | (Arg _ | AppArg _) ->
-        type_error "stash takes only heap terms"
-    | (UVar (r,_,_) | AppUVar(r,_,_)) ->
+    | UnifVar _ ->
         type_error "stash takes only ground terms"
     | Builtin (c,xs) -> mkBuiltin c (List.map (aux d) xs)
     | CData _ as x -> kool x
@@ -791,7 +775,7 @@ let name_or_constant name condition = (); fun x out ~depth _ _ state ->
       | App(n,y,ys) when condition n ->
           if out = [] then !: x +? None
           else !: x +! [Some (mkConst n); Some (list_to_lp_list (y::ys))]
-      | UVar _ | AppUVar _ ->
+      | UnifVar _ ->
           (* We build the application *)
           begin match out with
           | [] -> raise No_clause
@@ -818,7 +802,7 @@ let elpi_nonlogical_builtins = [
     Easy       "checks if the term is a variable"),
   (fun t1 ~depth ->
      match look ~depth t1 with
-     | UVar _ | AppUVar _ -> ()
+     | UnifVar _ -> ()
      | _ -> raise No_clause)),
   DocAbove);
 
@@ -828,8 +812,7 @@ let elpi_nonlogical_builtins = [
     Easy       "checks if the two terms are the same variable")),
   (fun t1 t2 ~depth ->
      match look ~depth t1, look ~depth t2 with
-     | (UVar(p1,_,_) | AppUVar(p1,_,_)),
-       (UVar(p2,_,_) | AppUVar(p2,_,_)) when p1 == p2 -> ()
+     | UnifVar(p1,_), UnifVar (p2,_) when State.UVKey.equal p1 p2 -> ()
      | _,_ -> raise No_clause)),
   DocAbove);
 
