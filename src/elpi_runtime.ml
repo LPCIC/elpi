@@ -2079,7 +2079,7 @@ module Clausify : sig
 
   val clausify : prolog_prog -> depth:int -> term -> (constant*clause) list * clause_src list * int
 
-  val clausify1 : mode C.Map.t -> nargs:int -> depth:int -> term -> (constant*clause) * clause_src * int
+  val clausify1 : loc:Loc.t -> mode C.Map.t -> nargs:int -> depth:int -> term -> (constant*clause) * clause_src * int
   
   (* Utilities that deref on the fly *)
   val lp_list_to_list : depth:int -> term -> term list
@@ -2154,17 +2154,17 @@ r :- (pi X\ pi Y\ q X Y :- pi c\ pi d\ q (Z c d) (X c d) (Y c)) => ... *)
  *  - the clause will live in (depth+lcs)
  *)
 
-let rec claux1 get_mode vars depth hyps ts lts lcs t =
+let rec claux1 ?loc get_mode vars depth hyps ts lts lcs t =
   [%trace "clausify" ("%a %d %d %d %d\n%!"
       (ppterm (depth+lts) [] 0 empty_env) t depth lts lcs (List.length ts)) begin
   match t with
-  | Discard -> error "ill-formed hypothetical clause: discard in head position"
+  | Discard -> error ?loc "ill-formed hypothetical clause: discard in head position"
   | App(c, g2, [g1]) when c == C.rimplc ->
-     claux1 get_mode vars depth ((ts,g1)::hyps) ts lts lcs g2
-  | App(c, _, _) when c == C.rimplc -> error "ill-formed hypothetical clause"
+     claux1 ?loc get_mode vars depth ((ts,g1)::hyps) ts lts lcs g2
+  | App(c, _, _) when c == C.rimplc -> error ?loc "ill-formed hypothetical clause"
   | App(c, g1, [g2]) when c == C.implc ->
-     claux1 get_mode vars depth ((ts,g1)::hyps) ts lts lcs g2
-  | App(c, _, _) when c == C.implc -> error "ill-formed hypothetical clause"
+     claux1 ?loc get_mode vars depth ((ts,g1)::hyps) ts lts lcs g2
+  | App(c, _, _) when c == C.implc -> error ?loc "ill-formed hypothetical clause"
   | App(c, arg, []) when c == C.sigmac ->
      let b = get_lambda_body ~depth:(depth+lts) arg in
      let args =
@@ -2173,10 +2173,10 @@ let rec claux1 get_mode vars depth hyps ts lts lcs t =
       match args with
          [] -> Const (depth+lcs)
        | hd::rest -> App (depth+lcs,hd,rest) in
-     claux1 get_mode vars depth hyps (cst::ts) (lts+1) (lcs+1) b
+     claux1 ?loc get_mode vars depth hyps (cst::ts) (lts+1) (lcs+1) b
   | App(c, arg, []) when c == C.pic ->
      let b = get_lambda_body ~depth:(depth+lts) arg in
-     claux1 get_mode (vars+1) depth hyps (Arg(vars,0)::ts) (lts+1) lcs b
+     claux1 ?loc get_mode (vars+1) depth hyps (Arg(vars,0)::ts) (lts+1) lcs b
   | Const _
   | App _ as g ->
      let hyps =
@@ -2204,18 +2204,18 @@ let rec claux1 get_mode vars depth hyps ts lts lcs t =
      [%spy "extra" (fun fmt -> ppclause fmt ~depth:(depth+lcs) hd) c];
      (hd,c), { hdepth = depth; hsrc = g }, lcs
   | UVar ({ contents=g },from,args) when g != C.dummy ->
-     claux1 get_mode vars depth hyps ts lts lcs
+     claux1 ?loc get_mode vars depth hyps ts lts lcs
        (deref_uv ~from ~to_:(depth+lts) args g)
   | AppUVar ({contents=g},from,args) when g != C.dummy -> 
-     claux1 get_mode vars depth hyps ts lts lcs
+     claux1 ?loc get_mode vars depth hyps ts lts lcs
        (deref_appuv ~from ~to_:(depth+lts) args g)
   | Arg _ | AppArg _ -> anomaly "claux1 called on non-heap term"
   | Builtin (c,_) ->
-     error ("Declaring a clause for built in predicate " ^ Constants.show c)
+     error ?loc ("Declaring a clause for built in predicate " ^ Constants.show c)
   | (Lam _ | CData _ ) as x ->
-     error ("Assuming a string or int or float or function:" ^ show_term x)
-  | UVar _ | AppUVar _ -> error "Flexible hypothetical clause"
-  | Nil | Cons _ -> error "ill-formed hypothetical clause"
+     error ?loc ("Assuming a string or int or float or function:" ^ show_term x)
+  | UVar _ | AppUVar _ -> error ?loc "Flexible hypothetical clause"
+  | Nil | Cons _ -> error ?loc "ill-formed hypothetical clause"
   end]
    
 let clausify { index } ~depth t =
@@ -2232,7 +2232,9 @@ let clausify { index } ~depth t =
   clauses, program, lcs
 ;;
 
-let clausify1 m ~nargs ~depth t = claux1 (fun x -> try C.Map.find x m with Not_found -> []) nargs depth [] [] 0 0 t
+let clausify1 ~loc m ~nargs ~depth t =
+  claux1 ~loc (fun x -> try C.Map.find x m with Not_found -> [])
+    nargs depth [] [] 0 0 t
 
 end (* }}} *) 
 open Clausify

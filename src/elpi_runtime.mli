@@ -45,7 +45,9 @@ val make_index :
   (constant * clause) list ->
     prolog_prog
 
+(* used by the compiler *)
 val clausify1 :
+  loc:Elpi_util.Loc.t ->
   mode Constants.Map.t -> (* for caching it in the clause *)
   nargs:int -> depth:int -> term -> (constant * clause) * clause_src * int
 

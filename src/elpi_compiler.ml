@@ -1486,7 +1486,7 @@ let compile_clause modes initial_depth
     { Clause.body = ({ amap = { nargs }} as body); loc }
 =
   let body = stack_term_of_preterm ~depth:0 body in
-  let cl, _, morelcs = clausify1 modes ~nargs ~depth:initial_depth body in
+  let cl, _, morelcs = clausify1 ~loc modes ~nargs ~depth:initial_depth body in
   if morelcs <> 0 then error ~loc "sigma in a toplevel clause is not supported";
   cl
 
