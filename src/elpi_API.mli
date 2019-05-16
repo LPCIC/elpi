@@ -155,7 +155,8 @@ module Compile : sig
   (* finally obtain the executable *)
   val link : query -> executable
 
-  (** Runs [elpi-checker.elpi] by default. *)
+  (** Runs [elpi-checker.elpi] by default.
+      Returns true if no errors were found *)
   val static_check :
     Setup.program_header -> ?checker:Ast.program list -> ?flags:flags -> query -> bool
 
