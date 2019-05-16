@@ -2177,6 +2177,8 @@ let rec claux1 ?loc get_mode vars depth hyps ts lts lcs t =
   | App(c, arg, []) when c == C.pic ->
      let b = get_lambda_body ~depth:(depth+lts) arg in
      claux1 ?loc get_mode (vars+1) depth hyps (Arg(vars,0)::ts) (lts+1) lcs b
+  | App(c, _, _) when c == C.andc || c == C.andc2 ->
+     error ?loc "Conjunction in the head of a clause is not supported"
   | Const _
   | App _ as g ->
      let hyps =
