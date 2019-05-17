@@ -7,6 +7,13 @@
     `cosntrinats` and `state` explicitly
   - Only one type of extensible state to that the same code can be used to
     generate the query at compile time and convert data at run time
+  - Unify MLCData and MLADT into MLData
+  - ADT.adt -> ADT.t
+  - ADT.t supports C for containers, so that one can model
+      type t = A | B of list t
+    as
+      K("a", N, ..
+      K("b",(C (fun x -> list x,N)), ..
 
 - Library:
   - replace `mode (std.mem i i)` with `(std.mem i o)`: member can be assigned

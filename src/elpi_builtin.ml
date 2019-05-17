@@ -403,16 +403,16 @@ let core_builtins = [
   LPCode "type (::) X -> list X -> list X.";
   LPCode "type ([]) list X.";
 
-  MLADT bool_adt;
+  MLData bool;
 
-  MLADT (pair_adt (poly "A") (poly "B"));
+  MLData (pair (poly "A") (poly "B"));
 
   LPCode "pred fst  i:pair A B, o:A.";
   LPCode "fst (pr A _) A.";
   LPCode "pred snd  i:pair A B, o:B.";
   LPCode "snd (pr _ B) B.";
 
-  MLADT (option_adt (poly "A"));
+  MLData (option (poly "A"));
 
   ]
 ;;
@@ -425,14 +425,9 @@ let io_builtins = [
 
   LPDoc " -- I/O --";
 
-  MLCData (in_stream,in_streamc);
+  MLData (in_stream);
 
-  LPCode "type std_in @in_stream.";
-
-  MLCData (out_stream,out_streamc);
-
-  LPCode "type std_out @out_stream.";
-  LPCode "type std_err @out_stream.";
+  MLData (out_stream);
      
   MLCode(Pred("open_in",
     In(string,     "FileName",
@@ -816,7 +811,7 @@ let elpi_nonlogical_builtins = [
 
   LPDoc "== Elpi nonlogical builtins =====================================";
 
-  MLADT ctype_adt;
+  MLData ctype;
 
   MLCode(Pred("var",
     In(any,   "any term",
@@ -900,7 +895,7 @@ let elpi_nonlogical_builtins = [
       !: !fresh_int)),
   DocAbove);
 
-  MLCData (safe,safec);
+  MLData safe;
 
    MLCode(Pred("new_safe",
      Out(safe, "Safe",

@@ -698,7 +698,7 @@ type 'a readback =
 
 type 'a data = {
   ty : ty_ast;
-  doc : doc;
+  pp_doc : Format.formatter -> unit -> unit;
   embed : 'a embedding;   (* 'a -> term *)
   readback : 'a readback; (* term -> 'a *)
 }
@@ -729,44 +729,48 @@ type ('b,'m,'t) constructor_arguments =
   | N : ('t,state -> state * term * extra_goals, 't) constructor_arguments
   | A : 'a data * ('b,'m,'t) constructor_arguments -> ('a -> 'b, 'a -> 'm, 't) constructor_arguments
   | S : ('b,'m,'t) constructor_arguments -> ('t -> 'b, 't -> 'm, 't) constructor_arguments
-    
+  | C : ('t data -> 'a data) * ('b,'m,'t) constructor_arguments -> ('a -> 'b, 'a -> 'm, 't) constructor_arguments
+
 type 't constructor =
   K : string * doc *
       ('build_t,'matched_t,'t) constructor_arguments *
       'build_t * ('matched_t,'t) match_t
     -> 't constructor
 
-type 't adt = {
+type 't t = {
   ty : ty_ast;
   doc : doc;
   constructors : 't constructor list;
 }
 
+type ('b,'m,'t) compiled_constructor_arguments =
+  | CN : ('t,state -> state * term * extra_goals, 't) compiled_constructor_arguments
+  | CA : 'a data * ('b,'m,'t) compiled_constructor_arguments -> ('a -> 'b, 'a -> 'm, 't) compiled_constructor_arguments
+  
 type 't compiled_constructor =
-    CK : ('build_t,'matched_t,'t) constructor_arguments *
+    CK : ('build_t,'matched_t,'t) compiled_constructor_arguments *
     'build_t * ('matched_t,'t) match_t
   -> 't compiled_constructor
 
 type 't compiled_adt = ('t compiled_constructor) Constants.Map.t
 
+let build kname = function
+| [] -> mkConst kname
+| x :: xs -> mkApp kname x xs
+
 let rec readback_args : type a m t.
   look:(depth:int -> term -> term) ->
-  ty_ast -> t compiled_adt -> depth:int -> hyps -> constraints -> state -> term ->
-  (a,m,t) constructor_arguments -> a -> term list ->
+  ty_ast -> depth:int -> hyps -> constraints -> state -> term ->
+  (a,m,t) compiled_constructor_arguments -> a -> term list ->
     state * t
-= fun ~look ty adt ~depth hyps constraints state origin args convert l ->
+= fun ~look ty ~depth hyps constraints state origin args convert l ->
     match args, l with
-    | N, [] -> state, convert
-    | N, _ -> raise (TypeErr(ty,origin))
-    | A _, [] -> assert false
-    | S _, [] -> assert false
-    | A(d,rest), x::xs ->
+    | CN, [] -> state, convert
+    | CN, _ -> raise (TypeErr(ty,origin))
+    | CA _, [] -> assert false
+    | CA(d,rest), x::xs ->
       let state, x = d.readback ~depth hyps constraints state x in
-      readback_args ~look ty adt ~depth hyps constraints state origin
-        rest (convert x) xs
-    | S rest, x::xs ->
-      let state, x = readback ~look ty adt ~depth hyps constraints state x in
-      readback_args ~look ty adt ~depth hyps constraints state origin
+      readback_args ~look ty ~depth hyps constraints state origin
         rest (convert x) xs
 
 and readback : type t.
@@ -777,42 +781,32 @@ and readback : type t.
   try match look ~depth t with
   | Const c ->
       let CK(args,read,_) = Constants.Map.find c adt in
-      readback_args ~look ty adt ~depth hyps constraints state t args read []
+      readback_args ~look ty ~depth hyps constraints state t args read []
   | App(c,x,xs) ->
       let CK(args,read,_) = Constants.Map.find c adt in
-      readback_args ~look ty adt ~depth hyps constraints state t args read (x::xs)
+      readback_args ~look ty ~depth hyps constraints state t args read (x::xs)
   | _ -> raise (TypeErr(ty,t))
   with Not_found -> raise (TypeErr(ty,t))
 
-;;
-
-let build kname = function
-| [] -> mkConst kname
-| x :: xs -> mkApp kname x xs
-
-let rec adt_embed_args : type m a t.
+and adt_embed_args : type m a t.
   ty_ast -> t compiled_adt -> constant ->
   depth:int -> hyps -> constraints ->
-  (a,m,t) constructor_arguments ->
+  (a,m,t) compiled_constructor_arguments ->
   (state -> state * term * extra_goals) list ->
     m
 = fun ty adt kname ~depth hyps constraints args acc ->
     match args with
-    | N -> fun state ->
+    | CN -> fun state ->
         let state, ts, gls =
           List.fold_left (fun (state,acc,gls) f ->
             let state, t, goals = f state in
             state, t :: acc, goals :: gls)
             (state,[],[]) acc in
         state, build kname ts, List.(flatten gls)
-    | A(d,args) ->
+    | CA(d,args) ->
         fun x ->
           adt_embed_args ty adt kname ~depth hyps constraints
             args ((fun state -> d.embed ~depth hyps constraints state x) :: acc)
-    | S args ->
-        fun x ->
-          adt_embed_args ty adt kname ~depth hyps constraints
-            args ((fun state -> embed ty adt ~depth hyps constraints state x) :: acc)
 
 and embed : type a.
   ty_ast -> a compiled_adt ->
@@ -829,24 +823,115 @@ and embed : type a.
         let ok = adt_embed_args ty adt kname ~depth hyps constraints args [] in
         matcher ~ok ~ko:(aux rest) t state in
      aux bindings state
-;;
 
-let compile_constructors ty l =
+let rec compile_arguments : type b m t.
+  (b,m,t) constructor_arguments -> t data -> (b,m,t) compiled_constructor_arguments =
+fun arg self ->
+  match arg with
+  | N -> CN
+  | A(d,rest) -> CA(d,compile_arguments rest self)
+  | S rest -> CA(self,compile_arguments rest self)
+  | C(fs, rest) -> CA(fs self, compile_arguments rest self)
+
+let compile_constructors ty self l =
   let open Elpi_util in
   let names =
     List.fold_right (fun (K(name,_,_,_,_)) -> StrSet.add name) l StrSet.empty in
   if StrSet.cardinal names <> List.length l then
     anomaly ("Duplicate constructors name in ADT: " ^ show_ty_ast ty);
   List.fold_left (fun acc (K(name,_,a,b,m)) ->
-    Constants.(Map.add (from_stringc name) (CK(a,b,m)) acc))
+    Constants.(Map.add (from_stringc name) (CK(compile_arguments a self,b,m)) acc))
       Constants.Map.empty l
-
 end
+
+let pp_ty sep fmt (_,s,_) = Fmt.fprintf fmt " %s%s" s sep
+let pp_ty_args = pplist (pp_ty "") " ->" ~pplastelem:(pp_ty "")
+
+let rec tyargs_of_args : type a b c. string -> (a,b,c) ADT.compiled_constructor_arguments -> (bool * string * string) list =
+  fun self -> function
+  | ADT.CN -> [false,self,""]
+  | ADT.CA ({ ty },rest) -> (false,show_ty_ast ty,"") :: tyargs_of_args self rest
+
+let document_constructor fmt self name doc args =
+  let args = tyargs_of_args self args in
+  Fmt.fprintf fmt "@[<hov2>type %s@[<hov>%a.%s@]@]@\n"
+    name pp_ty_args args (if doc = "" then "" else " % " ^ doc)
+
+let document_kind fmt = function
+  | TyApp(s,_,l) ->
+      let n = List.length l + 2 in
+      let l = Array.init n (fun _ -> "type") in
+      Fmt.fprintf fmt "@[<hov 2>kind %s %s.@]@\n"
+        s (String.concat " -> " (Array.to_list l))
+  | TyName s -> Fmt.fprintf fmt "@[<hov 2>kind %s type.@]@\n" s
+
+let pp_comment fmt doc =
+  Fmt.fprintf fmt "@?";
+  let orig_out = Fmt.pp_get_formatter_out_functions fmt () in
+  Fmt.pp_set_formatter_out_functions fmt
+    { orig_out with
+      Fmt.out_newline = fun () -> orig_out.Fmt.out_string "\n% " 0 3 };
+  Fmt.fprintf fmt "@[<hov>";
+  Fmt.pp_print_text fmt doc;
+  Fmt.fprintf fmt "@]@?";
+  Fmt.pp_set_formatter_out_functions fmt orig_out
+;;
+
+let document_adt doc ty ks cks fmt () =
+  if doc <> "" then
+    begin pp_comment fmt ("% " ^ doc); Fmt.fprintf fmt "@\n" end;
+  document_kind fmt ty;
+  List.iter (fun (ADT.K(name,doc,_,_,_)) ->
+    let ADT.CK(args,_,_) = Constants.Map.find (Constants.from_stringc name) cks in 
+    document_constructor fmt (show_ty_ast ty) name doc args) ks
+
+let adt ~look { ADT.ty; constructors; doc } =
+  let readback_ref = ref (fun ~depth -> assert false) in
+  let embed_ref = ref (fun ~depth -> assert false) in
+  let cconstructors_ref = ref Constants.Map.empty in
+  let self = {
+    ty;
+    pp_doc = (fun fmt () ->
+      document_adt doc ty constructors !cconstructors_ref fmt ());
+    readback = (fun ~depth hyps constraints state term ->
+      !readback_ref ~depth hyps constraints state term);
+    embed = (fun ~depth hyps constraints state term ->
+      !embed_ref ~depth hyps constraints state term);
+  } in
+  let cconstructors = ADT.compile_constructors ty self constructors in
+  cconstructors_ref := cconstructors;
+  readback_ref := ADT.readback ~look ty cconstructors;
+  embed_ref := ADT.embed ty cconstructors;
+  self
+
+let cdata ~look ~name ?(doc="") ?(constants=Constants.Map.empty)
+      { CData.cin; isc; cout; name=c }
+=
+  let ty = TyName name in
+  let embed ~depth:_ _ _ state x =
+    state, CData (cin x), [] in
+  let readback ~depth _ _ state t =
+    match look ~depth t with
+    | CData c when isc c -> state, cout c
+    | Const i as t when i < 0 ->
+        begin try state, Constants.Map.find i constants
+        with Not_found -> raise (TypeErr(ty,t)) end
+    | t -> raise (TypeErr(ty,t)) in
+  let pp_doc fmt () =
+    if doc <> "" then begin
+      pp_comment fmt ("% " ^ doc); Fmt.fprintf fmt "@\n";
+    end;
+    (* TODO: use typeabbrv *)
+    Fmt.fprintf fmt "@[<hov 2>macro %s :- ctype \"%s\".@]@\n@\n" name c;
+    Constants.Map.iter (fun c _ ->
+      Fmt.fprintf fmt "@[<hov 2>type %a %s.@]@\n" Constants.pp c name)
+      constants
+    in
+  { embed; readback; ty; pp_doc }
 
 type declaration =
   | MLCode of t * doc_spec
-  | MLADT : 'a ADT.adt -> declaration
-  | MLCData : 'a data * 'a CData.cdata -> declaration
+  | MLData : 'a data -> declaration
   | LPDoc  of string
   | LPCode of string
 
@@ -881,18 +966,6 @@ let from_builtin_name x =
   c
 
 (* doc *)
-let pp_comment fmt doc =
-  Fmt.fprintf fmt "@?";
-  let orig_out = Fmt.pp_get_formatter_out_functions fmt () in
-  Fmt.pp_set_formatter_out_functions fmt
-    { orig_out with
-      Fmt.out_newline = fun () -> orig_out.Fmt.out_string "\n% " 0 3 };
-  Fmt.fprintf fmt "@[<hov>";
-  Fmt.pp_print_text fmt doc;
-  Fmt.fprintf fmt "@]@?";
-  Fmt.pp_set_formatter_out_functions fmt orig_out
-;;
-
 let pp_tab_arg i sep fmt (dir,ty,doc) =
   let dir = if dir then "i" else "o" in
   if i = 0 then Fmt.pp_set_tab fmt () else ();
@@ -932,9 +1005,6 @@ let pp_pred fmt docspec name doc_pred args =
        pp_comment doc name pp_args args
 ;;
 
-let pp_ty sep fmt (_,s,_) = Fmt.fprintf fmt " %s%s" s sep
-let pp_ty_args = pplist (pp_ty "") " ->" ~pplastelem:(pp_ty "")
-
 let pp_variadictype fmt name doc_pred ty args =
   let parens s = if String.contains s ' ' then "("^s^")" else s in
   let args = List.rev ((false,"variadic " ^ parens ty ^ " prop","") :: args) in
@@ -962,29 +1032,6 @@ let document_pred fmt docspec name ffi =
     doc [] ffi
 ;;
 
-let rec tyargs_of_args : type a b c. string -> (a,b,c) ADT.constructor_arguments -> (bool * string * string) list =
-  fun self -> function
-  | ADT.N -> [false,self,""]
-  | ADT.A ({ ty },rest) -> (false,show_ty_ast ty,"") :: tyargs_of_args self rest
-  | ADT.S rest -> (false,self,"") :: tyargs_of_args self rest
-
-let document_constructor fmt self (ADT.K(name,doc,args,_,_)) =
-  let args = tyargs_of_args self args in
-  Fmt.fprintf fmt "@[<hov2>type %s@[<hov>%a.%s@]@]@\n"
-    name pp_ty_args args (if doc = "" then "" else " % " ^ doc)
-
-let document_kind fmt = function
-  | TyApp(s,_,l) ->
-      let n = List.length l + 2 in
-      let l = Array.init n (fun _ -> "type") in
-      Fmt.fprintf fmt "@[<hov 2>kind %s %s.@]@\n"
-        s (String.concat " -> " (Array.to_list l))
-  | TyName s -> Fmt.fprintf fmt "@[<hov 2>kind %s type.@]@\n" s
-
-let document_adt fmt ty ks =
-  document_kind fmt ty;
-  List.iter (document_constructor fmt (show_ty_ast ty)) ks
-
 let document fmt l =
   let omargin = Fmt.pp_get_margin fmt () in
   Fmt.pp_set_margin fmt 75;
@@ -992,19 +1039,7 @@ let document fmt l =
   Fmt.fprintf fmt "@\n@\n";
   List.iter (function
     | MLCode(Pred(name,ffi,_), docspec) -> document_pred fmt docspec name ffi
-    | MLCData ({ ty = TyName name; doc }, { name = c }) when name.[0] = '@' ->
-        if doc <> "" then begin
-          pp_comment fmt ("% " ^ doc); Fmt.fprintf fmt "@\n";
-        end;
-        (* TODO: use typeabbrv *)
-        Fmt.fprintf fmt "@[<hov 2>macro %s :- ctype \"%s\".@]@\n@\n" name c;
-    | MLCData ({ ty }, { name }) ->
-        anomaly ("Cannot document " ^ show_ty_ast ty ^ " as a CData");
-    | MLADT { ADT.doc; ty; constructors } ->
-        if doc <> "" then begin
-          pp_comment fmt ("% " ^ doc); Fmt.fprintf fmt "@\n";
-        end;
-        document_adt fmt ty constructors; Fmt.fprintf fmt "@\n"
+    | MLData { pp_doc } -> Fmt.fprintf fmt "%a@\n" pp_doc ()
     | LPCode s -> Fmt.fprintf fmt "%s" s; Fmt.fprintf fmt "@\n@\n"
     | LPDoc s -> pp_comment fmt ("% " ^ s); Fmt.fprintf fmt "@\n@\n") l;
   Fmt.fprintf fmt "@\n@\n";

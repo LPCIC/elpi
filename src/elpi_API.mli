@@ -471,7 +471,7 @@ module Extend : sig
 
     type 'a data = {
       ty : ty_ast;
-      doc : doc;
+      pp_doc : Format.formatter -> unit -> unit;
       embed : 'a embedding;   (* 'a -> term *)
       readback : 'a readback; (* term -> 'a *)
     }
@@ -543,14 +543,17 @@ module Extend : sig
       | A : 'a data * ('b, 'm, 'self) constructor_arguments -> ('a -> 'b, 'a -> 'm, 'self) constructor_arguments
       (* An argument of type 'self *)
       | S : ('b, 'm, 'self) constructor_arguments -> ('self -> 'b, 'self -> 'm, 'self) constructor_arguments
-        
+      (* An argument of type `T 'self` for a constainer `T`, like a `list 'self`.
+         `S args` above is a shortcut for `C(fun x -> x, args)` *)
+      | C : ('self data -> 'a data) * ('b,'m,'self) constructor_arguments -> ('a -> 'b, 'a -> 'm, 'self) constructor_arguments
+    
     type 't constructor =
       K : name * doc *
           ('build_t,'matched_t,'t) constructor_arguments *   (* args ty *)
           'build_t * ('matched_t,'t) match_t                 (* build/match *)
         -> 't constructor
 
-    type 't adt = {
+    type 't t = {
       ty : ty_ast;
       doc : doc;
       constructors : 't constructor list;
@@ -577,10 +580,8 @@ module Extend : sig
     type declaration =
     (* Real OCaml code *)
     | MLCode of t * doc_spec
-    (* Declaration of an OCaml ADT *)
-    | MLADT : 'a ADT.adt -> declaration
-    (* Declaration of an OCaml opaque data *)
-    | MLCData : 'a data * 'a CData.cdata -> declaration
+    (* Declaration of an OCaml data *)
+    | MLData : 'a data -> declaration
     (* Extra doc *)
     | LPDoc  of string
     (* Sometimes you wrap OCaml code in regular predicates or similar in order
@@ -613,7 +614,7 @@ module Extend : sig
       'a CData.cdata -> 'a data
 
     (* commodity type description of ADT *)
-    val adt : 'a ADT.adt -> 'a data
+    val adt : 'a ADT.t -> 'a data
 
     val map_acc_embed :
       (Data.state -> 'a -> Data.state * Data.term * extra_goals) ->

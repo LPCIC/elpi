@@ -175,9 +175,8 @@ type std_in @in_stream.
 
 macro @out_stream :- ctype "out_stream".
 
-type std_out @out_stream.
-
 type std_err @out_stream.
+type std_out @out_stream.
 
 % [open_in FileName InStream] opens FileName for input
 external pred open_in i:string, o:@in_stream.
@@ -321,6 +320,7 @@ external pred new_int o:int.
 
 % Holds data across bracktracking
 macro @safe :- ctype "safe".
+
 
 % [new_safe Safe] creates a safe: a store that persists across backtracking
 external pred new_safe o:@safe.
