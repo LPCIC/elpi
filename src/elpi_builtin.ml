@@ -1103,10 +1103,16 @@ pred lookup! i:list (pair A B), i:A, o:B.
 lookup! [pr X Y|_] X Y :- !.
 lookup! [_|LS]       X Y :- lookup! LS X Y.
 
-% [mem L X] succeeds once if X occurs inside L 
-pred mem i:list A, i:A.
-mem [X|_] X :- !.
+% [mem! L X] succeeds once if X occurs inside L 
+pred mem! i:list A, o:A.
+mem! [X|_] X :- !.
+mem! [_|L] X :- mem! L X.
+
+% [mem L X] succeeds every time if X occurs inside L 
+pred mem i:list A, o:A.
+mem [X|_] X.
 mem [_|L] X :- mem L X.
+
 
 pred exists i:list A, i:(A -> prop).
 exists [X|_] P :- P X.

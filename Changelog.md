@@ -8,6 +8,10 @@
   - Only one type of extensible state to that the same code can be used to
     generate the query at compile time and convert data at run time
 
+- Library:
+  - replace `mode (std.mem i i)` with `(std.mem i o)`: member can be assigned
+  - separate `std.mem!` and `std.mem`
+
 ## Version 1.2 (April 2019)
 
 Fix:
