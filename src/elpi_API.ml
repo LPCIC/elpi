@@ -416,14 +416,33 @@ module Extend = struct
     exception No_clause = Elpi_data.No_clause
     include Elpi_data.Builtin
 
-    let adt x = adt ~look:Data.look x
+    let look ~depth t =
+      let module R = (val !r) in let open R in
+      R.deref_head ~depth t
+
+    let adt x = adt ~look ~alloc:State.UVKey.make ~mkUnifVar:Data.mkUnifVar x
+    
     (* TODO: use typeabbrv instead of macro *)
     let cdata ~name ?doc ?constants cd =
       let prefix =
         if name = "int" || name = "float" || name = "string" then ""
         else "@" in
-      cdata ~look:Data.look ~name:(prefix^name) ?doc ?constants cd
+      cdata ~look ~name:(prefix^name) ?doc ?constants cd
 
+    let uvar : (State.UVKey.t * Data.term list) data = {
+      ty = TyName "uvar";
+      pp_doc = (fun fmt () -> Format.fprintf fmt "Unification variable, as the uvar keyword");
+      pp = (fun fmt (k,_) -> Format.fprintf fmt "%a" State.UVKey.pp k);
+      embed = (fun ~depth _ _ s (k,args) -> s, Data.mkUnifVar k ~args s, []);
+      readback = (fun ~depth _ _ state t ->
+        match Data.look ~depth t with
+        | Data.Discard ->
+            let state, k = State.UVKey.make ~lvl:depth state in
+            state, (k,[])
+        | Data.UnifVar(k,args) ->
+            state, (k,args)
+        | _ -> raise (TypeErr (TyName "uvar",t)));
+    }
 
     let int    = cdata ~name:"int" Elpi_data.C.int
     let float  = cdata ~name:"float" Elpi_data.C.float
@@ -433,7 +452,7 @@ module Extend = struct
     let poly ty =
       let embed ~depth:_ _ _ state x = state, x, [] in
       let readback ~depth _ _ state t = state, t in
-      { embed; readback; ty = TyName ty; pp_doc = (fun fmt () -> ()) }
+      { embed; readback; ty = TyName ty; pp = (fun fmt _ -> Format.fprintf fmt "<poly>"); pp_doc = (fun fmt () -> ()) }
     let any = poly "any"
 
     let map_acc_embed f s l =
@@ -463,7 +482,9 @@ module Extend = struct
         let module R = (val !r) in let open R in
         map_acc_readback (d.readback ~depth h c) s (lp_list_to_list ~depth t)
       in
-      { embed; readback; ty = TyApp ("list",d.ty,[]); pp_doc = (fun fmt () -> ()) }
+      let pp fmt l =
+        Format.fprintf fmt "[%a]" (Elpi_util.pplist d.pp ~boxed:true "; ") l in
+      { embed; readback; ty = TyApp ("list",d.ty,[]); pp; pp_doc = (fun fmt () -> ()) }
 
 
     let builtin_of_declaration ~file_name x = file_name, x
@@ -477,8 +498,44 @@ module Extend = struct
 
     end
   end
+  module Compile = struct
+    let term_at ~depth x = Elpi_compiler.term_of_ast ~depth x
+    let query = Elpi_compiler.query_of_term
 
-  module State = Elpi_data.State
+    type 'a query = Q of string | A of 'a
+
+    let q d = { d with
+      BuiltInPredicate.embed = (fun ~depth hyps constraints st -> function
+        | Q name ->
+            if not (State.get Elpi_compiler.while_compiling st) then
+              Elpi_util.error "Compile.q data used at run time to embed";
+            let st, x = Elpi_compiler.mk_Arg ~name ~args:[] st in
+            st, x, []
+        | A data ->
+            d.BuiltInPredicate.embed ~depth hyps constraints st data);
+      readback = (fun ~depth hyps constraints st t ->
+        if State.get Elpi_compiler.while_compiling st then
+          Elpi_util.error "Compile.q data used at compile time to readback";
+        let st, data = d.BuiltInPredicate.readback ~depth hyps constraints st t in
+        st, A data);
+      pp = (fun fmt _ ->  Format.fprintf fmt "<query>")
+    }
+
+    let query_data program loc t t_desc =
+      query program (fun ~depth st ->
+        let st, t, gl = t_desc.BuiltInPredicate.embed ~depth [] Data.no_constraints st t in
+        st, (loc,Data.mkAppL Data.Constants.andc (t::gl)))
+
+    let quote_syntax = Elpi_compiler.quote_syntax
+    let lp = Elpi_compiler.lp
+    let is_Arg = Elpi_compiler.is_Arg
+    let mk_Arg = Elpi_compiler.mk_Arg
+    type quotation = Elpi_compiler.quotation
+    let register_named_quotation = Elpi_compiler.register_named_quotation
+    let set_default_quotation = Elpi_compiler.set_default_quotation
+  end
+
+
 
   module CustomFunctor = struct
   
@@ -501,8 +558,6 @@ module Extend = struct
       let module R = (val !r) in let open R in
       list_to_lp_list tl
 
-    let unsafe_look x = x
-
     let get_assignment { Elpi_data.contents = r } =
       if r == Elpi_data.Constants.dummy then None
       else Some r
@@ -518,6 +573,7 @@ module Extend = struct
 
     let clause_of_term ?name ?graft ~depth loc term =
       let open Elpi_ast in
+      let module Data = Elpi_data.Term in
       let module R = (val !r) in let open R in
       let rec aux d ctx t =
         match R.deref_head ~depth:d t with       

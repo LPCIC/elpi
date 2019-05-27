@@ -538,6 +538,7 @@ module Extend : sig
     type 'a data = {
       ty : ty_ast;
       pp_doc : Format.formatter -> unit -> unit;
+      pp : Format.formatter -> 'a -> unit;
       embed : 'a embedding;   (* 'a -> term *)
       readback : 'a readback; (* term -> 'a *)
     }
@@ -549,11 +550,11 @@ module Extend : sig
       | Out  : 't data * doc * ('i, 'o * 't option) ffi -> ('t oarg -> 'i,'o) ffi
       | InOut  : 't data * doc * ('i, 'o * 't option) ffi -> ('t ioarg -> 'i,'o) ffi
       | Easy : doc -> (depth:int -> 'o, 'o) ffi
-      | Read : doc -> (depth:int -> Data.hyps -> Data.constraints -> Data.state -> 'o, 'o) ffi
-      | Full : doc -> (depth:int -> Data.hyps -> Data.constraints -> Data.state -> Data.state * 'o, 'o) ffi
-      | VariadicIn : 't data * doc -> ('t list -> depth:int -> Data.hyps -> Data.constraints -> Data.state -> Data.state * 'o, 'o) ffi
-      | VariadicOut : 't data * doc -> ('t oarg list -> depth:int -> Data.hyps -> Data.constraints -> Data.state -> Data.state * ('o * 't option list option), 'o) ffi
-      | VariadicInOut : 't data * doc -> ('t ioarg list -> depth:int -> Data.hyps -> Data.constraints -> Data.state -> Data.state * ('o * 't option list option), 'o) ffi
+      | Read : doc -> (depth:int -> Data.hyps -> Data.constraints -> State.t -> 'o, 'o) ffi
+      | Full : doc -> (depth:int -> Data.hyps -> Data.constraints -> State.t -> State.t * 'o, 'o) ffi
+      | VariadicIn : 't data * doc -> ('t list -> depth:int -> Data.hyps -> Data.constraints -> State.t -> State.t * 'o, 'o) ffi
+      | VariadicOut : 't data * doc -> ('t oarg list -> depth:int -> Data.hyps -> Data.constraints -> State.t -> State.t * ('o * 't option list option), 'o) ffi
+      | VariadicInOut : 't data * doc -> ('t ioarg list -> depth:int -> Data.hyps -> Data.constraints -> State.t -> State.t * ('o * 't option list option), 'o) ffi
 
     type t = Pred : name * ('a,unit) ffi * 'a -> t
 
@@ -568,15 +569,14 @@ module Extend : sig
      *   doc = "The option type (aka Maybe)";
      *   constructors = [
      *
-     *     K("none","nothing in this case",
-     *       N,                                               (* no arguments *)
-     *       None,                                            (* builder *)
-     *       (fun ~ok ~ko -> function None -> ok | _ -> ko)); (* matcher *)
-
-     *     K("some","something in this case",
-     *       A(a,N),                               (* one argument of type a *)
-     *       (fun x -> Some x),                                   (* builder *)
-     *       (fun ~ok ~ko -> function Some x -> ok x | _ -> ko)); (* matcher *)
+     *    K("none","nothing in this case",
+     *      N,                                                (* no arguments *)
+     *      B None,                                                (* builder *)
+     *      M (fun ~ok ~ko -> function None -> ok | _ -> ko));     (* matcher *)
+     *    K("some","something in this case",
+     *      A (a,N),                                (* one argument of type a *)
+     *      B (fun x -> Some x),                                   (* builder *)
+     *      M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko)); (* matcher *)
      *   ]
      * }
      * (* compile the ADT to data types to be used in predicate signatures *)
@@ -594,38 +594,55 @@ module Extend : sig
      * *)
     module ADT : sig
 
-    type ('matched, 't) match_t =
-      (* continuation to call passing subterms *)
-      ok:'matched ->
-      (* continuation to call to signal pattern matching failure *)
-      ko:(Data.state -> Data.state * Data.term * extra_goals) ->
-      (* match 't and pass its subterms to ~ok or just call ~ko *)
-      't -> Data.state -> Data.state * Data.term * extra_goals
+    type ('match_stateful_t,'match_t, 't) match_t =
+      | M of (
+            (* continuation to call passing subterms *)
+            ok:'match_t ->
+            (* continuation to call to signal pattern matching failure *)
+            ko:(unit -> Data.term) ->
+            (* match 't and pass its subterms to ~ok or just call ~ko *)
+            't -> Data.term)
+      | MS of (
+            (* continuation to call passing subterms *)
+            ok:'match_stateful_t ->
+            (* continuation to call to signal pattern matching failure *)
+            ko:(State.t -> State.t * Data.term * extra_goals) ->
+            (* match 't and pass its subterms to ~ok or just call ~ko *)
+            't -> State.t -> State.t * Data.term * extra_goals)
 
-    type ('builder, 'matcher,  'self) constructor_arguments =
+    type ('build_stateful_t,'build_t) build_t =
+      | B of 'build_t
+      | BS of 'build_stateful_t
+
+    type ('stateful_builder,'builder, 'stateful_matcher, 'matcher,  'self) constructor_arguments =
       (* No arguments *)
-      | N : ('self, Data.state -> Data.state * Data.term * extra_goals, 'self) constructor_arguments
+      | N : (State.t -> State.t * 'self, 'self, State.t -> State.t * Data.term * extra_goals, Data.term, 'self) constructor_arguments
       (* An argument of type 'a *)
-      | A : 'a data * ('b, 'm, 'self) constructor_arguments -> ('a -> 'b, 'a -> 'm, 'self) constructor_arguments
+      | A : 'a data * ('bs,'b, 'ms,'m, 'self) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms, 'a -> 'm, 'self) constructor_arguments
       (* An argument of type 'self *)
-      | S : ('b, 'm, 'self) constructor_arguments -> ('self -> 'b, 'self -> 'm, 'self) constructor_arguments
+      | S : ('bs,'b, 'ms, 'm, 'self) constructor_arguments -> ('self -> 'bs, 'self -> 'b, 'self -> 'ms, 'self -> 'm, 'self) constructor_arguments
       (* An argument of type `T 'self` for a constainer `T`, like a `list 'self`.
          `S args` above is a shortcut for `C(fun x -> x, args)` *)
-      | C : ('self data -> 'a data) * ('b,'m,'self) constructor_arguments -> ('a -> 'b, 'a -> 'm, 'self) constructor_arguments
+      | C : ('self data -> 'a data) * ('bs,'b,'ms,'m,'self) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms,'a -> 'm, 'self) constructor_arguments
     
     type 't constructor =
       K : name * doc *
-          ('build_t,'matched_t,'t) constructor_arguments *   (* args ty *)
-          'build_t * ('matched_t,'t) match_t                 (* build/match *)
+          ('build_stateful_t,'build_t,'match_stateful_t,'match_t,'t) constructor_arguments *   (* args ty *)
+          ('build_stateful_t,'build_t) build_t *
+          ('match_stateful_t,'match_t,'t) match_t
         -> 't constructor
-
+        
     type 't t = {
       ty : ty_ast;
       doc : doc;
+      pp : Format.formatter -> 't -> unit;
       constructors : 't constructor list;
     }
 
+    val build : 'a -> State.t -> State.t * 'a
+
     end (* ADT *)
+    val uvar : (State.UVKey.t * Data.term list) data
 
     (** Where to print the documentation. For the running example DocAbove
      * generates
@@ -683,12 +700,12 @@ module Extend : sig
     val adt : 'a ADT.t -> 'a data
 
     val map_acc_embed :
-      (Data.state -> 'a -> Data.state * Data.term * extra_goals) ->
-      Data.state -> 'a list -> Data.state * Data.term list * extra_goals
+      (State.t -> 'a -> State.t * Data.term * extra_goals) ->
+      State.t -> 'a list -> State.t * Data.term list * extra_goals
 
     val map_acc_readback :
-      (Data.state -> Data.term -> Data.state * 'a) ->
-      Data.state -> Data.term list -> Data.state * 'a list
+      (State.t -> Data.term -> State.t * 'a) ->
+      State.t -> Data.term list -> State.t * 'a list
 
 
     (** Prints in LP syntax the "external" declarations.
@@ -726,28 +743,31 @@ module Extend : sig
    * - providing quotations *)
   module Compile : sig
 
-    (** Generate a query starting from a compiled/hand-made term. The StrMap
-        maps names of args (see fresh_Arg below) *)
-    val query :
-      Compile.program -> (depth:int -> Data.state -> Data.state * (Ast.Loc.t * Data.term)) ->
-        Compile.query
+    type 'a query = Q of string | A of 'a
+
+    val q : 'a BuiltInPredicate.data -> 'a query BuiltInPredicate.data
+
+    val query_data :
+      Compile.program -> Ast.Loc.t -> 'a -> 'a BuiltInPredicate.data -> Compile.query
 
     (* Args are parameters of the query (e.g. capital letters). *)
-    val is_Arg : Data.state -> Data.term -> bool
+    val is_Arg : State.t -> Data.term -> bool
+    
+    (** Generate a query starting from a compiled/hand-made term. *)
+    val query :
+      Compile.program -> (depth:int -> State.t -> State.t * (Ast.Loc.t * Data.term)) ->
+        Compile.query
 
     (* The output term is to be used to build the query but is *not* the handle
        to the eventual solution. The compiler transforms it, later on, into
-       a UVar. The mapping is passed to the compilation_is_over callback of
-       each State.component. *)
+       a UnifVar. Use the name to fetch the solution. *)
     val mk_Arg :
-      Data.state -> name:string -> args:Data.term list ->
-        Data.state * Data.term
-
-    val while_compiling : bool State.component
+      State.t -> name:string -> args:Data.term list ->
+        State.t * Data.term
 
     (** From an unparsed string to a term *)
     type quotation =
-      depth:int -> Data.state -> Ast.Loc.t -> string -> Data.state * Data.term
+      depth:int -> State.t -> Ast.Loc.t -> string -> State.t * Data.term
 
     (** The default quotation [{{code}}] *)
     val set_default_quotation : quotation -> unit
@@ -775,10 +795,10 @@ module Extend : sig
   module CustomFunctor : sig
 
     val declare_backtick : name:string ->
-      (Data.state -> string -> Data.state * Data.term) -> unit
+      (State.t -> string -> State.t * Data.term) -> unit
 
     val declare_singlequote : name:string ->
-      (Data.state -> string -> Data.state * Data.term) -> unit
+      (State.t -> string -> State.t * Data.term) -> unit
 
   end
 

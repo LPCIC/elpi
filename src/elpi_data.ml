@@ -359,14 +359,14 @@ module State : sig
   val declare :
     name:string -> pp:(Format.formatter -> 'a -> unit) ->
     init:(unit -> 'a) -> 
-    compilation_is_over:(args:term StrMap.t -> 'a -> 'a option) ->
+    compilation_is_over:(args:uvar_body StrMap.t -> 'a -> 'a option) ->
      'a component
   
   (* an instance of the state type *)
   type t
 
   val init : unit -> t
-  val end_compilation : term StrMap.t -> t -> t
+  val end_compilation : uvar_body StrMap.t -> t -> t
   val get : 'a component -> t -> 'a
   val set : 'a component -> t -> 'a -> t
   val update : 'a component -> t -> ('a -> 'a) -> t
@@ -380,7 +380,7 @@ end = struct
   type 'a component = string
   type extension = {
     init : unit -> Obj.t;
-    end_comp : args:term StrMap.t -> Obj.t -> Obj.t option;
+    end_comp : args:uvar_body StrMap.t -> Obj.t -> Obj.t option;
     pp   : Format.formatter -> Obj.t -> unit;
   }
   let extensions : extension StrMap.t ref = ref StrMap.empty
@@ -703,6 +703,7 @@ type 'a readback =
 type 'a data = {
   ty : ty_ast;
   pp_doc : Format.formatter -> unit -> unit;
+  pp : Format.formatter -> 'a -> unit;
   embed : 'a embedding;   (* 'a -> term *)
   readback : 'a readback; (* term -> 'a *)
 }
@@ -724,41 +725,72 @@ type doc_spec = DocAbove | DocNext
 
 module ADT = struct
 
-type ('matched, 't) match_t =
-  ok:'matched ->
-  ko:(state -> state * term * extra_goals) ->
-  't -> state -> state * term * extra_goals
-
-type ('b,'m,'t) constructor_arguments =
-  | N : ('t,state -> state * term * extra_goals, 't) constructor_arguments
-  | A : 'a data * ('b,'m,'t) constructor_arguments -> ('a -> 'b, 'a -> 'm, 't) constructor_arguments
-  | S : ('b,'m,'t) constructor_arguments -> ('t -> 'b, 't -> 'm, 't) constructor_arguments
-  | C : ('t data -> 'a data) * ('b,'m,'t) constructor_arguments -> ('a -> 'b, 'a -> 'm, 't) constructor_arguments
+type ('match_stateful_t,'match_t, 't) match_t =
+  | M of (
+        (* continuation to call passing subterms *)
+        ok:'match_t ->
+        (* continuation to call to signal pattern matching failure *)
+        ko:(unit -> term) ->
+        (* match 't and pass its subterms to ~ok or just call ~ko *)
+        't -> term)
+  | MS of (
+        (* continuation to call passing subterms *)
+        ok:'match_stateful_t ->
+        (* continuation to call to signal pattern matching failure *)
+        ko:(State.t -> State.t * term * extra_goals) ->
+        (* match 't and pass its subterms to ~ok or just call ~ko *)
+        't -> State.t -> State.t * term * extra_goals)
+type ('build_stateful_t,'build_t) build_t =
+  | B of 'build_t
+  | BS of 'build_stateful_t
+type ('stateful_builder,'builder, 'stateful_matcher, 'matcher,  'self) constructor_arguments =
+  (* No arguments *)
+  | N : (State.t -> State.t * 'self, 'self, State.t -> State.t * term * extra_goals, term, 'self) constructor_arguments
+  (* An argument of type 'a *)
+  | A : 'a data * ('bs,'b, 'ms,'m, 'self) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms, 'a -> 'm, 'self) constructor_arguments
+  (* An argument of type 'self *)
+  | S : ('bs,'b, 'ms, 'm, 'self) constructor_arguments -> ('self -> 'bs, 'self -> 'b, 'self -> 'ms, 'self -> 'm, 'self) constructor_arguments
+  (* An argument of type `T 'self` for a constainer `T`, like a `list 'self`.
+     `S args` above is a shortcut for `C(fun x -> x, args)` *)
+  | C : ('self data -> 'a data) * ('bs,'b,'ms,'m,'self) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms,'a -> 'm, 'self) constructor_arguments
 
 type 't constructor =
-  K : string * doc *
-      ('build_t,'matched_t,'t) constructor_arguments *
-      'build_t * ('matched_t,'t) match_t
+  K : name * doc *
+      ('build_stateful_t,'build_t,'match_stateful_t,'match_t,'t) constructor_arguments *   (* args ty *)
+      ('build_stateful_t,'build_t) build_t *
+      ('match_stateful_t,'match_t,'t) match_t
     -> 't constructor
-
+        
 type 't t = {
   ty : ty_ast;
   doc : doc;
+  pp : Format.formatter -> 't -> unit;
   constructors : 't constructor list;
 }
 
+let build x s = s, x
+
 type ('b,'m,'t) compiled_constructor_arguments =
-  | CN : ('t,state -> state * term * extra_goals, 't) compiled_constructor_arguments
+  | CN : (state -> state * 't,state -> state * term * extra_goals, 't) compiled_constructor_arguments
   | CA : 'a data * ('b,'m,'t) compiled_constructor_arguments -> ('a -> 'b, 'a -> 'm, 't) compiled_constructor_arguments
   
+type ('match_t, 't) compiled_match_t =
+  (* continuation to call passing subterms *)
+  ok:'match_t ->
+  (* continuation to call to signal pattern matching failure *)
+  ko:(State.t -> State.t * term * extra_goals) ->
+  (* match 't and pass its subterms to ~ok or just call ~ko *)
+  't -> State.t -> State.t * term * extra_goals
+
 type 't compiled_constructor =
     CK : ('build_t,'matched_t,'t) compiled_constructor_arguments *
-    'build_t * ('matched_t,'t) match_t
+    'build_t * ('matched_t,'t) compiled_match_t
   -> 't compiled_constructor
+
 
 type 't compiled_adt = ('t compiled_constructor) Constants.Map.t
 
-let build kname = function
+let buildk kname = function
 | [] -> mkConst kname
 | x :: xs -> mkApp kname x xs
 
@@ -769,7 +801,7 @@ let rec readback_args : type a m t.
     state * t
 = fun ~look ty ~depth hyps constraints state origin args convert l ->
     match args, l with
-    | CN, [] -> state, convert
+    | CN, [] -> convert state
     | CN, _ -> raise (TypeErr(ty,origin))
     | CA _, [] -> assert false
     | CA(d,rest), x::xs ->
@@ -779,9 +811,11 @@ let rec readback_args : type a m t.
 
 and readback : type t.
   look:(depth:int -> term -> term) ->
+  alloc:(?name:string -> lvl:int -> state -> state * 'uk) ->
+  mkUnifVar:('uk -> args:term list -> state -> term) ->
   ty_ast -> t compiled_adt -> depth:int -> hyps -> constraints -> state -> term ->
     state * t
-= fun ~look ty adt ~depth hyps constraints state t ->
+= fun ~look ~alloc ~mkUnifVar ty adt ~depth hyps constraints state t ->
   try match look ~depth t with
   | Const c ->
       let CK(args,read,_) = Constants.Map.find c adt in
@@ -789,6 +823,13 @@ and readback : type t.
   | App(c,x,xs) ->
       let CK(args,read,_) = Constants.Map.find c adt in
       readback_args ~look ty ~depth hyps constraints state t args read (x::xs)
+  | (UVar _ | AppUVar _) ->
+      let CK(args,read,_) = Constants.Map.find (Constants.from_stringc "uvar") adt in
+      readback_args ~look ty ~depth hyps constraints state t args read [t]
+  | Discard ->
+      let CK(args,read,_) = Constants.Map.find (Constants.from_stringc "uvar") adt in
+      let state, k = alloc ~lvl:depth state in
+      readback_args ~look ty ~depth hyps constraints state t args read [mkUnifVar k ~args:[] state]
   | _ -> raise (TypeErr(ty,t))
   with Not_found -> raise (TypeErr(ty,t))
 
@@ -806,36 +847,70 @@ and adt_embed_args : type m a t.
             let state, t, goals = f state in
             state, t :: acc, goals :: gls)
             (state,[],[]) acc in
-        state, build kname ts, List.(flatten gls)
+        state, buildk kname ts, List.(flatten gls)
     | CA(d,args) ->
         fun x ->
           adt_embed_args ty adt kname ~depth hyps constraints
             args ((fun state -> d.embed ~depth hyps constraints state x) :: acc)
 
 and embed : type a.
-  ty_ast -> a compiled_adt ->
+  ty_ast -> (Format.formatter -> a -> unit) ->
+  a compiled_adt ->
   depth:int -> hyps -> constraints -> state ->
     a -> state * term * extra_goals
-= fun ty adt ->
+= fun ty pp adt ->
   let bindings = Constants.Map.bindings adt in
   fun ~depth hyps constraints state t ->
     let rec aux l state =
       match l with
       | [] -> Elpi_util.type_error
-                  ("Pattern matching failure embedding: " ^ show_ty_ast ty)
+                  ("Pattern matching failure embedding: " ^ show_ty_ast ty ^ Format.asprintf ": %a" pp t)
       | (kname, CK(args,_,matcher)) :: rest ->
         let ok = adt_embed_args ty adt kname ~depth hyps constraints args [] in
         matcher ~ok ~ko:(aux rest) t state in
      aux bindings state
 
-let rec compile_arguments : type b m t.
-  (b,m,t) constructor_arguments -> t data -> (b,m,t) compiled_constructor_arguments =
+let rec compile_arguments : type b bs m ms t.
+  (bs,b,ms,m,t) constructor_arguments -> t data -> (bs,ms,t) compiled_constructor_arguments =
 fun arg self ->
   match arg with
   | N -> CN
   | A(d,rest) -> CA(d,compile_arguments rest self)
   | S rest -> CA(self,compile_arguments rest self)
   | C(fs, rest) -> CA(fs self, compile_arguments rest self)
+
+let rec compile_builder_aux : type bs b m ms t. (bs,b,ms,m,t) constructor_arguments -> b -> bs
+  = fun args f ->
+    match args with
+    | N -> fun state -> state, f
+    | A(_,rest) -> fun a -> compile_builder_aux rest (f a)
+    | S rest -> fun a -> compile_builder_aux rest (f a)
+    | C(_,rest) -> fun a -> compile_builder_aux rest (f a)
+
+let compile_builder : type bs b m ms t. (bs,b,ms,m,t) constructor_arguments -> (bs,b) build_t -> bs
+  = fun a -> function
+    | B f -> compile_builder_aux a f
+    | BS f -> f
+
+let rec compile_matcher_ok : type bs b m ms t.
+  (bs,b,ms,m,t) constructor_arguments -> ms -> state -> m
+  = fun args f s ->
+    match args with
+    | N -> let s', t, gls = f s in assert (gls = [] && s' == s); t
+    | A(_,rest) -> fun a -> compile_matcher_ok rest (f a) s
+    | S rest -> fun a -> compile_matcher_ok rest (f a) s
+    | C(_,rest) -> fun a -> compile_matcher_ok rest (f a) s
+
+let compile_matcher_ko f s () =
+  let s', t, gls = f s in assert (gls = [] && s' == s); t
+
+let compile_matcher : type bs b m ms t. (bs,b,ms,m,t) constructor_arguments -> (ms,m,t) match_t -> (ms,t) compiled_match_t
+  = fun a -> function
+    | M f ->
+        fun ~ok ~ko t state ->
+          state, f ~ok:(compile_matcher_ok a ok state)
+                   ~ko:(compile_matcher_ko ko state) t, []
+    | MS f -> f
 
 let compile_constructors ty self l =
   let open Elpi_util in
@@ -844,7 +919,7 @@ let compile_constructors ty self l =
   if StrSet.cardinal names <> List.length l then
     anomaly ("Duplicate constructors name in ADT: " ^ show_ty_ast ty);
   List.fold_left (fun acc (K(name,_,a,b,m)) ->
-    Constants.(Map.add (from_stringc name) (CK(compile_arguments a self,b,m)) acc))
+    Constants.(Map.add (from_stringc name) (CK(compile_arguments a self,compile_builder a b,compile_matcher a m)) acc))
       Constants.Map.empty l
 end
 
@@ -886,15 +961,17 @@ let document_adt doc ty ks cks fmt () =
     begin pp_comment fmt ("% " ^ doc); Fmt.fprintf fmt "@\n" end;
   document_kind fmt ty;
   List.iter (fun (ADT.K(name,doc,_,_,_)) ->
-    let ADT.CK(args,_,_) = Constants.Map.find (Constants.from_stringc name) cks in 
-    document_constructor fmt (show_ty_ast ty) name doc args) ks
+    if name <> "uvar" then
+      let ADT.CK(args,_,_) = Constants.Map.find (Constants.from_stringc name) cks in 
+      document_constructor fmt (show_ty_ast ty) name doc args) ks
 
-let adt ~look { ADT.ty; constructors; doc } =
+let adt ~look ~alloc ~mkUnifVar { ADT.ty; constructors; doc; pp } =
   let readback_ref = ref (fun ~depth -> assert false) in
   let embed_ref = ref (fun ~depth -> assert false) in
   let cconstructors_ref = ref Constants.Map.empty in
   let self = {
     ty;
+    pp;
     pp_doc = (fun fmt () ->
       document_adt doc ty constructors !cconstructors_ref fmt ());
     readback = (fun ~depth hyps constraints state term ->
@@ -904,8 +981,8 @@ let adt ~look { ADT.ty; constructors; doc } =
   } in
   let cconstructors = ADT.compile_constructors ty self constructors in
   cconstructors_ref := cconstructors;
-  readback_ref := ADT.readback ~look ty cconstructors;
-  embed_ref := ADT.embed ty cconstructors;
+  readback_ref := ADT.readback ~look ~alloc ~mkUnifVar ty cconstructors;
+  embed_ref := ADT.embed ty pp cconstructors;
   self
 
 let cdata ~look ~name ?(doc="") ?(constants=Constants.Map.empty)
@@ -931,7 +1008,7 @@ let cdata ~look ~name ?(doc="") ?(constants=Constants.Map.empty)
       Fmt.fprintf fmt "@[<hov 2>type %a %s.@]@\n" Constants.pp c name)
       constants
     in
-  { embed; readback; ty; pp_doc }
+  { embed; readback; ty; pp_doc; pp = (fun fmt x -> CData.pp fmt (cin x)) }
 
 type declaration =
   | MLCode of t * doc_spec

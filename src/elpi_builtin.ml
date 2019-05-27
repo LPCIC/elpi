@@ -207,13 +207,14 @@ type polyop = {
 let bool_adt = {
   ADT.ty = TyName "bool";
   doc = "Boolean values: tt and ff since true and false are predicates";
+  pp = (fun fmt b -> Format.fprintf fmt "%b" b);
   constructors = [
     K("tt","",N,
-      true,
-      (fun ~ok ~ko -> function true ->  ok | _ -> ko));
+      B true,
+      M (fun ~ok ~ko -> function true ->  ok | _ -> ko ()));
     K("ff","",N,
-      false,
-      (fun ~ok ~ko -> function false -> ok | _ -> ko));
+      B false,
+      M (fun ~ok ~ko -> function false -> ok | _ -> ko ()));
   ]
 }
 let bool = adt bool_adt
@@ -221,10 +222,11 @@ let bool = adt bool_adt
 let pair_adt a b = {
   ADT.ty = TyApp ("pair",a.ty,[b.ty]);
   doc = "Pair: the constructor is pr, since ',' is for conjunction";
+  pp = (fun fmt o -> Format.fprintf fmt "%a" (Elpi_util.pp_pair a.pp b.pp) o);
   constructors = [
     K("pr","",A(a,A(b,N)),
-      (fun a b -> (a,b)),
-      (fun ~ok ~ko:_ -> function (a,b) -> ok a b));
+      B (fun a b -> (a,b)),
+      M (fun ~ok ~ko:_ -> function (a,b) -> ok a b));
   ]
 }
 let pair a b = adt (pair_adt a b)
@@ -232,13 +234,14 @@ let pair a b = adt (pair_adt a b)
 let option_adt a = {
   ADT.ty = TyApp("option",a.ty,[]);
   doc = "The option type (aka Maybe)";
+  pp = (fun fmt o -> Format.fprintf fmt "%a" (Elpi_util.pp_option a.pp) o);
   constructors = [
     K("none","",N,
-      None,
-      (fun ~ok ~ko -> function None -> ok | _ -> ko)); 
+      B None,
+      M (fun ~ok ~ko -> function None -> ok | _ -> ko ())); 
     K("some","",A(a,N),
-      (fun x -> Some x),
-      (fun ~ok ~ko -> function Some x -> ok x | _ -> ko)); 
+      B (fun x -> Some x),
+      M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko ())); 
   ]
 }
 let option a = adt (option_adt a)
@@ -713,8 +716,9 @@ let elpi_builtins = [
 let ctype_adt = {
   ADT.ty = TyName "ctype";
   doc = "Opaque ML data types";
+  pp = (fun fmt cty -> Format.fprintf fmt "%s" cty);
   constructors = [
-    K("ctype","",A(string,N),(fun x -> x),(fun ~ok ~ko x -> ok x))  
+    K("ctype","",A(string,N),B (fun x -> x), M (fun ~ok ~ko x -> ok x))  
   ]
 }
 let ctype = adt ctype_adt
@@ -853,8 +857,10 @@ let elpi_nonlogical_builtins = [
 
   MLCode(Pred("closed_term",
     Out(any, "T",
-    Read     "unify T with a variable that has no eigenvariables in scope"),
-  (fun _ ~depth _ _ state -> !:(mkUVar (fresh_uvar_body state) 0 0))),
+    Full "unify T with a variable that has no eigenvariables in scope"),
+  (fun _ ~depth _ _ state ->
+      let state, k = State.UVKey.make ~lvl:0 state in
+      state, !:(mkUnifVar k ~args:[] state))),
   DocAbove);
 
   MLCode(Pred("is_cdata",

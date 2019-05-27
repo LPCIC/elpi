@@ -38,6 +38,7 @@ val get_Args : State.t -> term StrMap.t
 val mk_Arg : 
   State.t -> name:string -> args:term list ->
     State.t * term
+val get_Arg : State.t -> name:string -> args:term list -> term
 
 (* Quotes the program and the query, see elpi_quoted_syntax.elpi *)
 val quote_syntax : query -> term list * term
