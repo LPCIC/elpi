@@ -560,55 +560,52 @@ module Extend : sig
 
 
     (** Commodity API for representing simple ADT: no binders!
-     *
-     *  Example of: pred getenv i:string, o:option string.
-     *  
-     * (* define the ADT for "option a" *)
-     * let option_adt a = {
-     *   ty = TyApp("option",a.ty,[]);
-     *   doc = "The option type (aka Maybe)";
-     *   constructors = [
-     *
-     *    K("none","nothing in this case",
-     *      N,                                                (* no arguments *)
-     *      B None,                                                (* builder *)
-     *      M (fun ~ok ~ko -> function None -> ok | _ -> ko));     (* matcher *)
-     *    K("some","something in this case",
-     *      A (a,N),                                (* one argument of type a *)
-     *      B (fun x -> Some x),                                   (* builder *)
-     *      M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko)); (* matcher *)
-     *   ]
-     * }
-     * (* compile the ADT to data types to be used in predicate signatures *)
-     * let option a : a data = adt (option_adt a)
-     *
-     * (* define a predicate using "option" *)
-     * let getenv : t =
-     *   Pred("getenv",
-     *     In(string,         "VarName",
-     *     Out(option string, "Value",
-     *     Easy "Like Sys.getenv")),
-     *     (fun name _ ~depth ->
-     *        try !: (Some (Sys.getenv name))
-     *        with Not_found -> !: None))
-     * *)
+
+           Example of: pred getenv i:string, o:option string.
+      
+     (* define the ADT for "option a" *)
+     let option_adt a = {
+       ty = TyApp("option",a.ty,[]);
+       doc = "The option type (aka Maybe)";
+       pp = (fun fmt -> function
+               | None -> Format.fprintf fmt "None"
+               | Some x -> Format.fprintf fmt "Some %a" a.pp x);
+       constructors = [
+        K("none","nothing in this case",
+          N,                                                (* no arguments *)
+          B None,                                                (* builder *)
+          M (fun ~ok ~ko -> function None -> ok | _ -> ko));     (* matcher *)
+        K("some","something in this case",
+          A (a,N),                                (* one argument of type a *)
+          B (fun x -> Some x),                                   (* builder *)
+          M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko)); (* matcher *)
+       ]
+     }
+           K stands for "constructor", B for "build", M for "match". Variants BS
+      and MS give access to the state.
+          (* compile the ADT to data types to be used in predicate signatures *)
+     let option a : a data = adt (option_adt a)
+          (* define a predicate using "option" *)
+     let getenv : t =
+       Pred("getenv",
+         In(string,         "VarName",
+         Out(option string, "Value",
+         Easy "Like Sys.getenv")),
+         (fun name _ ~depth ->
+            try !: (Some (Sys.getenv name))
+            with Not_found -> !: None))
+     *)
     module ADT : sig
 
     type ('match_stateful_t,'match_t, 't) match_t =
       | M of (
-            (* continuation to call passing subterms *)
-            ok:'match_t ->
-            (* continuation to call to signal pattern matching failure *)
-            ko:(unit -> Data.term) ->
-            (* match 't and pass its subterms to ~ok or just call ~ko *)
-            't -> Data.term)
+          ok:'match_t ->                   (* cont. to call passing subterms *)
+          ko:(unit -> Data.term) ->     (* cont. to move to next constructor *)
+          't -> Data.term) (* match 't, pass its subterms to ~ok or call ~ko *)
       | MS of (
-            (* continuation to call passing subterms *)
-            ok:'match_stateful_t ->
-            (* continuation to call to signal pattern matching failure *)
-            ko:(State.t -> State.t * Data.term * extra_goals) ->
-            (* match 't and pass its subterms to ~ok or just call ~ko *)
-            't -> State.t -> State.t * Data.term * extra_goals)
+          ok:'match_stateful_t ->
+          ko:(State.t -> State.t * Data.term * extra_goals) ->
+          't -> State.t -> State.t * Data.term * extra_goals)
 
     type ('build_stateful_t,'build_t) build_t =
       | B of 'build_t
@@ -639,40 +636,46 @@ module Extend : sig
       constructors : 't constructor list;
     }
 
-    val build : 'a -> State.t -> State.t * 'a
-
     end (* ADT *)
+
+    (** When the host application can represent flexible terms one way want to
+        read them back as such a keep a link between elpi unification variables
+        and flexible terms. 
+        
+        Example (from hol+elpi):
+
+     (* A byjection between Hol's (Stv j) and Elpi's (UnifVar k) *)
+     module UV2STV = State.UVMap(struct
+        type t = int
+        let compare x y = x - y
+        let pp fmt i = Format.fprintf fmt "%d" i
+        let show = string_of_int
+      end)
+  
+      let stv = ref 0
+      let incr_get r = incr r; !r
+  
+      let record k state =
+        State.update_return UV2STV.uvmap state (fun m ->
+          try m, Stv (UV2STV.host k m)
+          with Not_found ->
+            let j = incr_get stv in
+            UV2STV.add k j m, Stv j)
+  
+      let t = adt {
+        ty = TyName "pretype";
+        doc = "The algebraic data type of pretypes";
+        pp = (fun fmt t -> ...);
+        constructors = [
+          ...
+          K("uvar","",A(uvar,N),
+             BS (fun (k,_) state -> record k state),         
+             M (fun ~ok ~ko _ -> ko ()))
+        ]
+      }
+    
+    *)
     val uvar : (State.UVKey.t * Data.term list) data
-
-    (** Where to print the documentation. For the running example DocAbove
-     * generates
-     *   % [div N M D R] division of N by M gives D with reminder R
-     *   pred div i:int, i:int, o:int, o:int.
-     * while DocNext generates
-     *   pred div % division of N by M gives D with reminder R
-     *    i:int, % N
-     *    i:int, % M
-     *    o:int, % D
-     *    o:int. % R
-     * The latter format it is useful to give longer doc for each argument. *)
-    type doc_spec = DocAbove | DocNext
-
-    (* When an elpi interpreter is set up one can pass a list of
-     * declarations that constitute the base environment in which
-     * programs run *)
-    type declaration =
-    (* Real OCaml code *)
-    | MLCode of t * doc_spec
-    (* Declaration of an OCaml data *)
-    | MLData : 'a data -> declaration
-    (* Extra doc *)
-    | LPDoc  of string
-    (* Sometimes you wrap OCaml code in regular predicates or similar in order
-     * to implement the desired builtin, maybe just temporarily because writing
-     * LP code is simpler.
-     * Note: will be complemented in the future by an LPType/LPPred/LPMode nodes
-     * for the specific statements. *)
-    | LPCode of string
 
     (** Type descriptors (see also Elpi_builtin) *)
     val int    : int data
@@ -707,6 +710,37 @@ module Extend : sig
       (State.t -> Data.term -> State.t * 'a) ->
       State.t -> Data.term list -> State.t * 'a list
 
+    (** Setup.init takes a list of declarations of data types and predicates  *)
+
+    (** Where to print the documentation. For the running example DocAbove
+     * generates
+     *   % [div N M D R] division of N by M gives D with reminder R
+     *   pred div i:int, i:int, o:int, o:int.
+     * while DocNext generates
+     *   pred div % division of N by M gives D with reminder R
+     *    i:int, % N
+     *    i:int, % M
+     *    o:int, % D
+     *    o:int. % R
+     * The latter format it is useful to give longer doc for each argument. *)
+    type doc_spec = DocAbove | DocNext
+
+    (* When an elpi interpreter is set up one can pass a list of
+     * declarations that constitute the base environment in which
+     * programs run *)
+    type declaration =
+    (* Real OCaml code *)
+    | MLCode of t * doc_spec
+    (* Declaration of an OCaml data *)
+    | MLData : 'a data -> declaration
+    (* Extra doc *)
+    | LPDoc  of string
+    (* Sometimes you wrap OCaml code in regular predicates or similar in order
+     * to implement the desired builtin, maybe just temporarily because writing
+     * LP code is simpler.
+     * Note: will be complemented in the future by an LPType/LPPred/LPMode nodes
+     * for the specific statements. *)
+    | LPCode of string
 
     (** Prints in LP syntax the "external" declarations.
      * The file builtin.elpi is generated by calling this API on the
