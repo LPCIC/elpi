@@ -62,6 +62,19 @@ module IntMap : Map.S with type key = int
 module StrSet : Set.S with type elt = string
 module IntSet : Set.S with type elt = int
 
+module PtrMap : sig
+  
+  type 'a t
+
+  val empty : unit -> 'a t
+  val find : 'block -> 'a t -> 'a
+  val add : 'block -> 'a -> 'a t -> 'a t
+  val remove : 'block -> 'a t -> 'a t
+  val filter : ('block -> 'a -> bool) -> 'a t -> 'a t
+  include Show1 with type 'a t := 'a t
+
+end
+
 module Loc : sig
   type t = {
     source_name : string;
