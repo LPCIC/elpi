@@ -19,6 +19,8 @@
     data.
   - `Data.term` contains no more `UVar`, `AppUVar`, `Arg` and `AppArg` but only
     `UnifVar of UVKey.t * term list`.
+  - Simple GADT for describing a query and extracting the response out of the
+    solution data structure
 
 - Library:
   - replace `mode (std.mem i i)` with `(std.mem i o)`: member can be assigned
