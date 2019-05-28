@@ -774,9 +774,33 @@ module Extend : sig
 
 
   (** This module lets one extend the compiler by:
-   * - "compiling" the query by hand
+   * - "compiling" the query by hand or using a query_description
    * - providing quotations *)
   module Compile : sig
+
+    (* Example from hol-light: 
+
+      let run_predicate ?max_steps program loc query =
+        let q = Compile.query_data program loc query in
+        let exe = Compile.link q in
+        match Execute.once exe with
+        | Execute.Success s -> Compile.query_solution query s
+        | _ -> failwith "elpi finds no solution"
+
+      let elaborate (p : preterm) : preterm =
+        let elab_p, _ = run_predicate (hol ()) (Ast.Loc.initial "(elab)")
+          (Compile.Query {
+            predicate = "elab";
+            args = D(Hol_preterm.t,p,
+                   Q(Hol_preterm.t,"Elab_p",
+                   N)) })
+        in
+        elab_p
+    
+      Calling elaborate t is like runing the Elpi query (elab t Elab_p)
+      where (t : preterm) and (Hol_preterm.t : preterm BuiltInPredicate.data).
+    
+    *)
 
     type 'x query_description =
       | Query of { predicate : string; args : 'x query_args }
