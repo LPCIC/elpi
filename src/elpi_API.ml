@@ -101,7 +101,7 @@ module Data = struct
   type constraints = Elpi_data.constraints
   type state = Elpi_data.State.t
   module StrMap = Elpi_util.StrMap
-  type solution = Elpi_data.solution = {
+  type 'a solution = 'a Elpi_data.solution = {
     assignments : term StrMap.t;
     constraints : constraints;
     state : state;
@@ -111,8 +111,8 @@ end
 module Compile = struct
 
   type program = Elpi_compiler.program
-  type query = Elpi_compiler.query
-  type executable = Elpi_data.executable
+  type 'a query = 'a Elpi_compiler.query
+  type 'a executable = 'a Elpi_data.executable
 
   let program ~flags header l =
     Elpi_compiler.program_of_ast ~flags (header @ List.flatten l)
@@ -137,8 +137,8 @@ module Compile = struct
 end
 
 module Execute = struct
-  type outcome = Elpi_data.outcome =
-    Success of Data.solution | Failure | NoMoreSteps
+  type 'a outcome = 'a Elpi_data.outcome =
+    Success of 'a Data.solution | Failure | NoMoreSteps
   let once ?max_steps ?delay_outside_fragment p = 
     let module R = (val !r) in let open R in
     execute_once ?max_steps ?delay_outside_fragment p     
@@ -371,12 +371,10 @@ module Extend = struct
     let mkDiscard = Elpi_data.Term.mkDiscard
     let mkBuiltin = Elpi_data.Term.mkBuiltin
     let mkCData = Elpi_data.Term.mkCData
-
-    let mkAppL c = function
-      | [] -> mkConst c
-      | x::xs -> mkApp c x xs
-    let mkAppS s x args = mkApp (Elpi_data.Term.Constants.from_stringc s) x args
-    let mkAppSL s args = mkAppL (Elpi_data.Term.Constants.from_stringc s) args
+    let mkAppL = Elpi_data.Term.mkAppL
+    let mkAppS = Elpi_data.Term.mkAppS
+    let mkAppSL = Elpi_data.Term.mkAppSL
+    
     let mkGlobalS s = Elpi_data.Term.Constants.from_string s
     let mkBuiltinS s args = mkBuiltin (Elpi_data.Builtin.from_builtin_name s) args
 
@@ -400,7 +398,8 @@ module Extend = struct
     type constraints = Elpi_data.constraints
     type hyps = Elpi_data.hyps
     type clause_src = Elpi_data.clause_src = { hdepth : int; hsrc : term }
-
+    type 'a solution = 'a Elpi_data.solution
+   
     type suspended_goal = { 
       context : hyps;
       goal : int * term
@@ -499,40 +498,11 @@ module Extend = struct
     end
   end
   module Compile = struct
+    include Elpi_compiler
     let term_at ~depth x = Elpi_compiler.term_of_ast ~depth x
     let query = Elpi_compiler.query_of_term
-
-    type 'a query = Q of string | A of 'a
-
-    let q d = { d with
-      BuiltInPredicate.embed = (fun ~depth hyps constraints st -> function
-        | Q name ->
-            if not (State.get Elpi_compiler.while_compiling st) then
-              Elpi_util.error "Compile.q data used at run time to embed";
-            let st, x = Elpi_compiler.mk_Arg ~name ~args:[] st in
-            st, x, []
-        | A data ->
-            d.BuiltInPredicate.embed ~depth hyps constraints st data);
-      readback = (fun ~depth hyps constraints st t ->
-        if State.get Elpi_compiler.while_compiling st then
-          Elpi_util.error "Compile.q data used at compile time to readback";
-        let st, data = d.BuiltInPredicate.readback ~depth hyps constraints st t in
-        st, A data);
-      pp = (fun fmt _ ->  Format.fprintf fmt "<query>")
-    }
-
-    let query_data program loc t t_desc =
-      query program (fun ~depth st ->
-        let st, t, gl = t_desc.BuiltInPredicate.embed ~depth [] Data.no_constraints st t in
-        st, (loc,Data.mkAppL Data.Constants.andc (t::gl)))
-
+    let query_data = Elpi_compiler.query_of_data
     let quote_syntax = Elpi_compiler.quote_syntax
-    let lp = Elpi_compiler.lp
-    let is_Arg = Elpi_compiler.is_Arg
-    let mk_Arg = Elpi_compiler.mk_Arg
-    type quotation = Elpi_compiler.quotation
-    let register_named_quotation = Elpi_compiler.register_named_quotation
-    let set_default_quotation = Elpi_compiler.set_default_quotation
   end
 
 

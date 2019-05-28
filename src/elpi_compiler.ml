@@ -144,7 +144,7 @@ type program = Compiled.program
 module WithMain = struct
 
 (* The entire program + query, but still in "printable" format *)
-type query = {
+type 'a query = {
   types : Structured.typ list; 
   modes : mode C.Map.t;
   clauses : (preterm,Assembled.attribute) Ast.Clause.t list;
@@ -159,12 +159,12 @@ type query = {
 [@@deriving show]
 
 end
-type query = WithMain.query
+type 'a query = 'a WithMain.query
 
 module Executable = struct
 
 (* All that is needed in order to execute, and nothing more *)
-type executable = Elpi_data.executable = {
+type 'a executable = 'a Elpi_data.executable = {
   (* the lambda-Prolog program: an indexed list of clauses *) 
   compiled_program : prolog_prog;
   (* chr rules *)
@@ -1463,15 +1463,58 @@ let query_of_term { Compiled.assembled_program; compiler_state; compiler_flags }
     initial_state = state |> (uvbodies_of_assignments assignments);
     compiler_flags;
   }
+type 'x query_description =
+  | Query of { predicate : string; args : 'x query_args }
+and _ query_args =
+  | N : unit query_args
+  | D : 'a Elpi_data.Builtin.data * 'a *    'x query_args -> 'x query_args
+  | Q : 'a Elpi_data.Builtin.data * string * 'x query_args -> ('a * 'x) query_args
 
+let rec embed_query_aux : type a. depth:int -> string -> term list -> term list -> state -> a query_args -> state * term
+  = fun ~depth predicate gls args state descr ->
+    match descr with
+    | D(d,x,rest) ->
+        let state, x, glsx = d.Elpi_data.Builtin.embed ~depth [] [] state x in
+        embed_query_aux  ~depth predicate (gls @ glsx) (x :: args) state rest
+    | Q(d,name,rest) ->
+        let state, x = mk_Arg state ~name ~args:[] in
+        embed_query_aux ~depth predicate gls (x :: args) state rest
+    | N ->
+        let args = List.rev args in
+        state,
+        match gls with
+        | [] -> Elpi_data.Term.mkAppL (Constants.from_stringc predicate) args
+        | gls -> Elpi_data.Term.mkAppL Constants.andc (gls @ [mkAppL (Constants.from_stringc predicate) args])
+;;
 
+let embed_query ~depth state (Query { predicate; args }) =
+    embed_query_aux  ~depth predicate [] [] state args
 
+let rec query_solution_aux : type a. a query_args -> term StrMap.t -> state -> constraints -> a
+ = fun args assignments state constraints ->
+     match args with
+     | N -> ()
+     | D(_,_,args) -> query_solution_aux args assignments state constraints
+     | Q(d,name,args) ->
+         let x = StrMap.find name assignments in
+         let state, x = d.Elpi_data.Builtin.readback ~depth:0 [] constraints state x in
+         x, query_solution_aux args assignments state constraints
+
+let query_solution (Query { args }) { Elpi_data.assignments; state; constraints } =
+  query_solution_aux args assignments state constraints
+  
+
+let query_of_data p loc descr =
+  query_of_term p (fun ~depth state ->
+    let state, term = embed_query ~depth state descr in
+    state, (loc, term))
+  
 module Compiler : sig
 
   (* Translates preterms in terms and AST clauses into clauses (with a key,
    * subgoals, etc *)
 
-  val run : query -> executable
+  val run : 'a query -> 'a executable
 
 end = struct (* {{{ *)
 

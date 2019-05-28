@@ -2285,7 +2285,7 @@ let noalts : alternative = Obj.magic 0
  *   destroy       optional, 1 time, useful in nested runtimes
  *)
 
-type runtime = {
+type 'x runtime = {
   search : unit -> alternative;
   next_solution : alternative -> alternative;
 
@@ -2296,7 +2296,7 @@ type runtime = {
 }
 
          
-let do_make_runtime : (?max_steps:int -> ?delay_outside_fragment:bool -> executable -> runtime) ref =
+let do_make_runtime : (?max_steps:int -> ?delay_outside_fragment:bool -> 'x executable -> 'x runtime) ref =
  ref (fun ?max_steps ?delay_outside_fragment _ -> anomaly "do_make_runtime not initialized")
 
 module Constraints : sig
@@ -2932,7 +2932,7 @@ end (* }}} *)
 
 module Mainloop : sig
 
-  val make_runtime : ?max_steps:int -> ?delay_outside_fragment:bool -> executable -> runtime
+  val make_runtime : ?max_steps:int -> ?delay_outside_fragment:bool -> 'x executable -> 'x runtime
 
 end = struct (* {{{ *)
 
@@ -2948,7 +2948,7 @@ let pred_of g =
 
 (* The block of recursive functions spares the allocation of a Some/None
  * at each iteration in order to know if one needs to backtrack or continue *)
-let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> executable -> runtime =
+let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x executable -> 'x runtime =
   (* Input to be read as the orl (((p,g)::gs)::next)::alts
      depth >= 0 is the number of variables in the context. *)
   let rec run depth p g gs (next : frame) alts lvl =

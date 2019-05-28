@@ -13,17 +13,29 @@ type flags = {
 val default_flags : flags
 
 type program
-type query
+type 'a query
 
 (* Flags are threaded *)
 val program_of_ast : flags:flags -> Elpi_ast.Program.t -> program
-val query_of_ast : program -> Elpi_ast.Goal.t -> query
+val query_of_ast : program -> Elpi_ast.Goal.t -> unit query
 val query_of_term :
-  program -> (depth:int -> State.t -> State.t * (Loc.t * term)) -> query
+  program -> (depth:int -> State.t -> State.t * (Loc.t * term)) -> unit query
 
-val pp_query : (depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> query -> unit
+type 'x query_description =
+  | Query of { predicate : string; args : 'x query_args }
+and _ query_args =
+  | N : unit query_args
+  | D : 'a Elpi_data.Builtin.data * 'a *    'x query_args -> 'x query_args
+  | Q : 'a Elpi_data.Builtin.data * string * 'x query_args -> ('a * 'x) query_args
 
-val executable_of_query : query -> Elpi_data.executable
+val query_of_data :
+  program -> Loc.t -> 'a query_description -> 'a query
+
+val query_solution : 'a query_description -> 'a solution -> 'a
+
+val pp_query : (depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> 'a query -> unit
+
+val executable_of_query : 'a query -> 'a Elpi_data.executable
 
 val term_of_ast : depth:int -> Loc.t * Elpi_ast.Term.t -> term
 
@@ -41,13 +53,13 @@ val mk_Arg :
 val get_Arg : State.t -> name:string -> args:term list -> term
 
 (* Quotes the program and the query, see elpi_quoted_syntax.elpi *)
-val quote_syntax : query -> term list * term
+val quote_syntax : 'a query -> term list * term
 
 (* false means a type error was found *)
 val static_check : Elpi_ast.Program.t -> (* header *)
-  ?exec:(?max_steps:int -> Elpi_data.executable -> Elpi_data.outcome) ->
+  ?exec:(?max_steps:int -> 'a Elpi_data.executable -> 'a Elpi_data.outcome) ->
   ?checker:Elpi_ast.Program.t ->
   ?flags:flags ->
-  query -> bool
+  'a query -> bool
 
 val while_compiling : bool State.component

@@ -347,6 +347,11 @@ let rec mkinterval depth argsno n =
 end (* }}} *)
 
 let mkConst x = Constants.mkConst x [@@inline]
+let mkAppL c = function
+  | [] -> mkConst c
+  | x::xs -> mkApp c x xs [@@inline]
+let mkAppS s x args = mkApp (Constants.from_stringc s) x args [@@inline]
+let mkAppSL s args = mkAppL (Constants.from_stringc s) args [@@inline]
 
 end
 include Term
@@ -643,7 +648,7 @@ type prechr_rule = {
 
 let todopp name fmt _ = error ("pp not implemented for field: "^name)
 
-type executable = {
+type 'a executable = {
   (* the lambda-Prolog program: an indexed list of clauses *) 
   compiled_program : prolog_prog;
   (* chr rules *)
@@ -664,12 +669,12 @@ exception No_more_steps
 type state = State.t
 type constraints = stuck_goal list
 
-type solution = {
+type 'a solution = {
   assignments : term StrMap.t;
   constraints : constraints;
   state : state;
 }
-type outcome = Success of solution | Failure | NoMoreSteps
+type 'a outcome = Success of 'a solution | Failure | NoMoreSteps
 
 type hyps = clause_src list
 
@@ -767,8 +772,6 @@ type 't t = {
   pp : Format.formatter -> 't -> unit;
   constructors : 't constructor list;
 }
-
-let build x s = s, x
 
 type ('b,'m,'t) compiled_constructor_arguments =
   | CN : (state -> state * 't,state -> state * term * extra_goals, 't) compiled_constructor_arguments
