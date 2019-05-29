@@ -188,6 +188,8 @@ module Extend = struct
     }
     [@@deriving show]
 
+    let lvl { lvl } = lvl 
+
     let equal { handle = h1; lvl = l1 } { handle = h2; lvl = l2 } =
       l1 == l2 &&
         match h1, h2 with
@@ -353,8 +355,11 @@ module Extend = struct
       let module R = (val !r) in let open R in
       match R.deref_head ~depth t with
       | Elpi_data.Term.Arg _ | Elpi_data.Term.AppArg _ -> assert false
-      | Elpi_data.Term.UVar(ub,lvl,nargs) -> UnifVar ({ lvl; handle = Ref ub},Elpi_data.Term.Constants.mkinterval depth nargs 0)
-      | Elpi_data.Term.AppUVar(ub,lvl,args) -> UnifVar ({ lvl; handle = Ref ub},args)
+      | Elpi_data.Term.UVar(ub,lvl,nargs) ->
+          let args = Elpi_data.Term.Constants.mkinterval 0 nargs 0 in
+          UnifVar ({ lvl; handle = Ref ub},args)
+      | Elpi_data.Term.AppUVar(ub,lvl,args) ->
+          UnifVar ({ lvl; handle = Ref ub},args)
       | x -> Obj.magic x (* HACK: view is a "subtype" of Term.term *)
 
     let kool = function

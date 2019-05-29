@@ -287,6 +287,7 @@ module Extend : sig
       val pp :  Format.formatter -> t -> unit
       val show :  t -> string
       val equal : t -> t -> bool
+      val lvl : t -> int
     end
 
     module type HostUVar = sig
