@@ -175,8 +175,8 @@ type std_in @in_stream.
 
 macro @out_stream :- ctype "out_stream".
 
-type std_err @out_stream.
 type std_out @out_stream.
+type std_err @out_stream.
 
 % [open_in FileName InStream] opens FileName for input
 external pred open_in i:string, o:@in_stream.

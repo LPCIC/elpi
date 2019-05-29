@@ -680,49 +680,56 @@ type hyps = clause_src list
 
 (* Built-in predicates and their FFI *************************************** *)
 
-module Builtin = struct
+type extra_goals = term list
 
-type name = string
-type doc = string
+module Conversion = struct
 
-type ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
+  type ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
 
+  type 'a embedding =
+    depth:int -> hyps -> constraints ->
+    state -> 'a -> state * term * extra_goals
+    
+  type 'a readback =
+    depth:int -> hyps -> constraints ->
+    state -> term -> state * 'a
+
+  type 'a t = {
+    ty : ty_ast;
+    pp_doc : Format.formatter -> unit -> unit;
+    pp : Format.formatter -> 'a -> unit;
+    embed : 'a embedding;   (* 'a -> term *)
+    readback : 'a readback; (* term -> 'a *)
+  }
+
+  exception TypeErr of ty_ast * term (* a type error at data conversion time *)
+    
 let rec show_ty_ast ?(outer=true) = function
   | TyName s -> s
   | TyApp (s,x,xs) ->
       let t = String.concat " " (s :: List.map (show_ty_ast ~outer:false) (x::xs)) in
       if outer then t else "("^t^")"
 
+
+end
+module BuiltInPredicate = struct
+
+type name = string
+type doc = string
+
 type 'a oarg = Keep | Discard
 type 'a ioarg = Data of 'a | NoData
 
-exception TypeErr of ty_ast * term
-
-type extra_goals = term list
-
-type 'a embedding =
-  depth:int -> hyps -> constraints -> state -> 'a -> state * term * extra_goals
-type 'a readback =
-  depth:int -> hyps -> constraints -> state -> term -> state * 'a
-
-type 'a data = {
-  ty : ty_ast;
-  pp_doc : Format.formatter -> unit -> unit;
-  pp : Format.formatter -> 'a -> unit;
-  embed : 'a embedding;   (* 'a -> term *)
-  readback : 'a readback; (* term -> 'a *)
-}
-
 type ('function_type, 'inernal_outtype_in) ffi =
-  | In   : 't data * doc * ('i, 'o) ffi -> ('t -> 'i,'o) ffi
-  | Out  : 't data * doc * ('i, 'o * 't option) ffi -> ('t oarg -> 'i,'o) ffi
-  | InOut  : 't data * doc * ('i, 'o * 't option) ffi -> ('t ioarg -> 'i,'o) ffi
+  | In   : 't Conversion.t * doc * ('i, 'o) ffi -> ('t -> 'i,'o) ffi
+  | Out  : 't Conversion.t * doc * ('i, 'o * 't option) ffi -> ('t oarg -> 'i,'o) ffi
+  | InOut  : 't Conversion.t * doc * ('i, 'o * 't option) ffi -> ('t ioarg -> 'i,'o) ffi
   | Easy : doc -> (depth:int -> 'o, 'o) ffi
   | Read : doc -> (depth:int -> hyps -> constraints -> state -> 'o, 'o) ffi
   | Full : doc -> (depth:int -> hyps -> constraints -> state -> state * 'o, 'o) ffi
-  | VariadicIn : 't data * doc -> ('t list -> depth:int -> hyps -> constraints -> state -> state * 'o, 'o) ffi
-  | VariadicOut : 't data * doc -> ('t oarg list -> depth:int -> hyps -> constraints -> state -> state * ('o * 't option list option), 'o) ffi
-  | VariadicInOut : 't data * doc -> ('t ioarg list -> depth:int -> hyps -> constraints -> state -> state * ('o * 't option list option), 'o) ffi
+  | VariadicIn : 't Conversion.t * doc -> ('t list -> depth:int -> hyps -> constraints -> state -> state * 'o, 'o) ffi
+  | VariadicOut : 't Conversion.t * doc -> ('t oarg list -> depth:int -> hyps -> constraints -> state -> state * ('o * 't option list option), 'o) ffi
+  | VariadicInOut : 't Conversion.t * doc -> ('t ioarg list -> depth:int -> hyps -> constraints -> state -> state * ('o * 't option list option), 'o) ffi
 
 type t = Pred : name * ('a,unit) ffi * 'a -> t
 
@@ -752,12 +759,12 @@ type ('stateful_builder,'builder, 'stateful_matcher, 'matcher,  'self) construct
   (* No arguments *)
   | N : (State.t -> State.t * 'self, 'self, State.t -> State.t * term * extra_goals, term, 'self) constructor_arguments
   (* An argument of type 'a *)
-  | A : 'a data * ('bs,'b, 'ms,'m, 'self) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms, 'a -> 'm, 'self) constructor_arguments
+  | A : 'a Conversion.t * ('bs,'b, 'ms,'m, 'self) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms, 'a -> 'm, 'self) constructor_arguments
   (* An argument of type 'self *)
   | S : ('bs,'b, 'ms, 'm, 'self) constructor_arguments -> ('self -> 'bs, 'self -> 'b, 'self -> 'ms, 'self -> 'm, 'self) constructor_arguments
   (* An argument of type `T 'self` for a constainer `T`, like a `list 'self`.
      `S args` above is a shortcut for `C(fun x -> x, args)` *)
-  | C : ('self data -> 'a data) * ('bs,'b,'ms,'m,'self) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms,'a -> 'm, 'self) constructor_arguments
+  | C : ('self Conversion.t -> 'a Conversion.t) * ('bs,'b,'ms,'m,'self) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms,'a -> 'm, 'self) constructor_arguments
 
 type 't constructor =
   K : name * doc *
@@ -766,8 +773,8 @@ type 't constructor =
       ('match_stateful_t,'match_t,'t) match_t
     -> 't constructor
         
-type 't t = {
-  ty : ty_ast;
+type 't declaration = {
+  ty : Conversion.ty_ast;
   doc : doc;
   pp : Format.formatter -> 't -> unit;
   constructors : 't constructor list;
@@ -775,7 +782,7 @@ type 't t = {
 
 type ('b,'m,'t) compiled_constructor_arguments =
   | CN : (state -> state * 't,state -> state * term * extra_goals, 't) compiled_constructor_arguments
-  | CA : 'a data * ('b,'m,'t) compiled_constructor_arguments -> ('a -> 'b, 'a -> 'm, 't) compiled_constructor_arguments
+  | CA : 'a Conversion.t * ('b,'m,'t) compiled_constructor_arguments -> ('a -> 'b, 'a -> 'm, 't) compiled_constructor_arguments
   
 type ('match_t, 't) compiled_match_t =
   (* continuation to call passing subterms *)
@@ -799,13 +806,13 @@ let buildk kname = function
 
 let rec readback_args : type a m t.
   look:(depth:int -> term -> term) ->
-  ty_ast -> depth:int -> hyps -> constraints -> state -> term ->
+  Conversion.ty_ast -> depth:int -> hyps -> constraints -> state -> term ->
   (a,m,t) compiled_constructor_arguments -> a -> term list ->
     state * t
 = fun ~look ty ~depth hyps constraints state origin args convert l ->
     match args, l with
     | CN, [] -> convert state
-    | CN, _ -> raise (TypeErr(ty,origin))
+    | CN, _ -> raise (Conversion.TypeErr(ty,origin))
     | CA _, [] -> assert false
     | CA(d,rest), x::xs ->
       let state, x = d.readback ~depth hyps constraints state x in
@@ -816,7 +823,7 @@ and readback : type t.
   look:(depth:int -> term -> term) ->
   alloc:(?name:string -> lvl:int -> state -> state * 'uk) ->
   mkUnifVar:('uk -> args:term list -> state -> term) ->
-  ty_ast -> t compiled_adt -> depth:int -> hyps -> constraints -> state -> term ->
+  Conversion.ty_ast -> t compiled_adt -> depth:int -> hyps -> constraints -> state -> term ->
     state * t
 = fun ~look ~alloc ~mkUnifVar ty adt ~depth hyps constraints state t ->
   try match look ~depth t with
@@ -833,11 +840,11 @@ and readback : type t.
       let CK(args,read,_) = Constants.Map.find (Constants.from_stringc "uvar") adt in
       let state, k = alloc ~lvl:depth state in
       readback_args ~look ty ~depth hyps constraints state t args read [mkUnifVar k ~args:[] state]
-  | _ -> raise (TypeErr(ty,t))
-  with Not_found -> raise (TypeErr(ty,t))
+  | _ -> raise (Conversion.TypeErr(ty,t))
+  with Not_found -> raise (Conversion.TypeErr(ty,t))
 
 and adt_embed_args : type m a t.
-  ty_ast -> t compiled_adt -> constant ->
+  Conversion.ty_ast -> t compiled_adt -> constant ->
   depth:int -> hyps -> constraints ->
   (a,m,t) compiled_constructor_arguments ->
   (state -> state * term * extra_goals) list ->
@@ -857,7 +864,7 @@ and adt_embed_args : type m a t.
             args ((fun state -> d.embed ~depth hyps constraints state x) :: acc)
 
 and embed : type a.
-  ty_ast -> (Format.formatter -> a -> unit) ->
+  Conversion.ty_ast -> (Format.formatter -> a -> unit) ->
   a compiled_adt ->
   depth:int -> hyps -> constraints -> state ->
     a -> state * term * extra_goals
@@ -867,14 +874,14 @@ and embed : type a.
     let rec aux l state =
       match l with
       | [] -> Elpi_util.type_error
-                  ("Pattern matching failure embedding: " ^ show_ty_ast ty ^ Format.asprintf ": %a" pp t)
+                  ("Pattern matching failure embedding: " ^ Conversion.show_ty_ast ty ^ Format.asprintf ": %a" pp t)
       | (kname, CK(args,_,matcher)) :: rest ->
         let ok = adt_embed_args ty adt kname ~depth hyps constraints args [] in
         matcher ~ok ~ko:(aux rest) t state in
      aux bindings state
 
 let rec compile_arguments : type b bs m ms t.
-  (bs,b,ms,m,t) constructor_arguments -> t data -> (bs,ms,t) compiled_constructor_arguments =
+  (bs,b,ms,m,t) constructor_arguments -> t Conversion.t -> (bs,ms,t) compiled_constructor_arguments =
 fun arg self ->
   match arg with
   | N -> CN
@@ -920,7 +927,7 @@ let compile_constructors ty self l =
   let names =
     List.fold_right (fun (K(name,_,_,_,_)) -> StrSet.add name) l StrSet.empty in
   if StrSet.cardinal names <> List.length l then
-    anomaly ("Duplicate constructors name in ADT: " ^ show_ty_ast ty);
+    anomaly ("Duplicate constructors name in ADT: " ^ Conversion.show_ty_ast ty);
   List.fold_left (fun acc (K(name,_,a,b,m)) ->
     Constants.(Map.add (from_stringc name) (CK(compile_arguments a self,compile_builder a b,compile_matcher a m)) acc))
       Constants.Map.empty l
@@ -932,7 +939,7 @@ let pp_ty_args = pplist (pp_ty "") " ->" ~pplastelem:(pp_ty "")
 let rec tyargs_of_args : type a b c. string -> (a,b,c) ADT.compiled_constructor_arguments -> (bool * string * string) list =
   fun self -> function
   | ADT.CN -> [false,self,""]
-  | ADT.CA ({ ty },rest) -> (false,show_ty_ast ty,"") :: tyargs_of_args self rest
+  | ADT.CA ({ ty },rest) -> (false,Conversion.show_ty_ast ty,"") :: tyargs_of_args self rest
 
 let document_constructor fmt self name doc args =
   let args = tyargs_of_args self args in
@@ -940,12 +947,12 @@ let document_constructor fmt self name doc args =
     name pp_ty_args args (if doc = "" then "" else " % " ^ doc)
 
 let document_kind fmt = function
-  | TyApp(s,_,l) ->
+  | Conversion.TyApp(s,_,l) ->
       let n = List.length l + 2 in
       let l = Array.init n (fun _ -> "type") in
       Fmt.fprintf fmt "@[<hov 2>kind %s %s.@]@\n"
         s (String.concat " -> " (Array.to_list l))
-  | TyName s -> Fmt.fprintf fmt "@[<hov 2>kind %s type.@]@\n" s
+  | Conversion.TyName s -> Fmt.fprintf fmt "@[<hov 2>kind %s type.@]@\n" s
 
 let pp_comment fmt doc =
   Fmt.fprintf fmt "@?";
@@ -966,14 +973,14 @@ let document_adt doc ty ks cks fmt () =
   List.iter (fun (ADT.K(name,doc,_,_,_)) ->
     if name <> "uvar" then
       let ADT.CK(args,_,_) = Constants.Map.find (Constants.from_stringc name) cks in 
-      document_constructor fmt (show_ty_ast ty) name doc args) ks
+      document_constructor fmt (Conversion.show_ty_ast ty) name doc args) ks
 
 let adt ~look ~alloc ~mkUnifVar { ADT.ty; constructors; doc; pp } =
   let readback_ref = ref (fun ~depth -> assert false) in
   let embed_ref = ref (fun ~depth -> assert false) in
   let cconstructors_ref = ref Constants.Map.empty in
   let self = {
-    ty;
+    Conversion.ty;
     pp;
     pp_doc = (fun fmt () ->
       document_adt doc ty constructors !cconstructors_ref fmt ());
@@ -988,34 +995,9 @@ let adt ~look ~alloc ~mkUnifVar { ADT.ty; constructors; doc; pp } =
   embed_ref := ADT.embed ty pp cconstructors;
   self
 
-let cdata ~look ~name ?(doc="") ?(constants=Constants.Map.empty)
-      { CData.cin; isc; cout; name=c }
-=
-  let ty = TyName name in
-  let embed ~depth:_ _ _ state x =
-    state, CData (cin x), [] in
-  let readback ~depth _ _ state t =
-    match look ~depth t with
-    | CData c when isc c -> state, cout c
-    | Const i as t when i < 0 ->
-        begin try state, Constants.Map.find i constants
-        with Not_found -> raise (TypeErr(ty,t)) end
-    | t -> raise (TypeErr(ty,t)) in
-  let pp_doc fmt () =
-    if doc <> "" then begin
-      pp_comment fmt ("% " ^ doc); Fmt.fprintf fmt "@\n";
-    end;
-    (* TODO: use typeabbrv *)
-    Fmt.fprintf fmt "@[<hov 2>macro %s :- ctype \"%s\".@]@\n@\n" name c;
-    Constants.Map.iter (fun c _ ->
-      Fmt.fprintf fmt "@[<hov 2>type %a %s.@]@\n" Constants.pp c name)
-      constants
-    in
-  { embed; readback; ty; pp_doc; pp = (fun fmt x -> CData.pp fmt (cin x)) }
-
 type declaration =
   | MLCode of t * doc_spec
-  | MLData : 'a data -> declaration
+  | MLData : 'a Conversion.t -> declaration
   | LPDoc  of string
   | LPCode of string
 
@@ -1103,15 +1085,15 @@ let document_pred fmt docspec name ffi =
   let rec doc
   : type i o. (bool * string * string) list -> (i,o) ffi -> unit
   = fun args -> function
-    | In( { ty }, s, ffi) -> doc ((true,show_ty_ast ty,s) :: args) ffi
-    | Out( { ty }, s, ffi) -> doc ((false,show_ty_ast ty,s) :: args) ffi
-    | InOut( { ty }, s, ffi) -> doc ((false,show_ty_ast ty,s) :: args) ffi
+    | In( { ty }, s, ffi) -> doc ((true,Conversion.show_ty_ast ty,s) :: args) ffi
+    | Out( { ty }, s, ffi) -> doc ((false,Conversion.show_ty_ast ty,s) :: args) ffi
+    | InOut( { ty }, s, ffi) -> doc ((false,Conversion.show_ty_ast ty,s) :: args) ffi
     | Read s -> pp_pred fmt docspec name s args
     | Easy s -> pp_pred fmt docspec name s args
     | Full s -> pp_pred fmt docspec name s args
-    | VariadicIn( { ty }, s) -> pp_variadictype fmt name s (show_ty_ast ty) args
-    | VariadicOut( { ty }, s) -> pp_variadictype fmt name s (show_ty_ast ty) args
-    | VariadicInOut( { ty }, s) -> pp_variadictype fmt name s (show_ty_ast ty) args
+    | VariadicIn( { ty }, s) -> pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
+    | VariadicOut( { ty }, s) -> pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
+    | VariadicInOut( { ty }, s) -> pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
   in
     doc [] ffi
 ;;

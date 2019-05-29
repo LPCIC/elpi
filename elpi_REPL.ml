@@ -71,8 +71,8 @@ let usage =
 
 (* For testing purposes we declare an identity quotation *)
 let _ =
-  Elpi_API.Extend.Compile.register_named_quotation ~name:"elpi"
-    Elpi_API.Extend.Compile.lp
+  Elpi_API.Quotation.register_named_quotation ~name:"elpi"
+    Elpi_API.Quotation.lp
 
 let _ =
   let test = ref false in
@@ -122,7 +122,7 @@ let _ =
   let filenames = aux (List.tl argv) in
   set_terminal_width ();
   if !doc_builtins then begin
-    Elpi_API.Extend.BuiltInPredicate.document Format.std_formatter
+    Elpi_API.BuiltIn.document Format.std_formatter
       Elpi_builtin.std_declarations;
     exit 0;
   end;

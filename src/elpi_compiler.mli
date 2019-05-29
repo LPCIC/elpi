@@ -21,17 +21,17 @@ val query_of_ast : program -> Elpi_ast.Goal.t -> unit query
 val query_of_term :
   program -> (depth:int -> State.t -> State.t * (Loc.t * term)) -> unit query
 
-type 'x query_description =
-  | Query of { predicate : string; args : 'x query_args }
-and _ query_args =
+type _ query_args =
   | N : unit query_args
-  | D : 'a Elpi_data.Builtin.data * 'a *    'x query_args -> 'x query_args
-  | Q : 'a Elpi_data.Builtin.data * string * 'x query_args -> ('a * 'x) query_args
+  | D : 'a Conversion.t * 'a *    'x query_args -> 'x query_args
+  | Q : 'a Conversion.t * string * 'x query_args -> ('a * 'x) query_args
+type 'x t =
+  | Query of { predicate : string; arguments : 'x query_args }
 
 val query_of_data :
-  program -> Loc.t -> 'a query_description -> 'a query
+  program -> Loc.t -> 'a t -> 'a query
 
-val query_solution : 'a query_description -> 'a solution -> 'a
+val query_solution : 'a t -> 'a solution -> 'a
 
 val pp_query : (depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> 'a query -> unit
 

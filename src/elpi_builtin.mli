@@ -4,7 +4,7 @@
 
 (* This module provides all the built-in predicates and evaluable constants. *)
 
-open Elpi_API.Extend.BuiltInPredicate
+open Elpi_API.BuiltIn
 
 (* Builtins that are part of the language, like "is" or "!" *)
 val core_builtins : declaration list
@@ -29,10 +29,10 @@ val std_declarations : declaration list
 val std_builtins : Elpi_API.Setup.builtins
 
 (* Type descriptors for built-in predicates *)
-val pair : 'a data -> 'b data -> ('a * 'b) data
-val option : 'a data -> 'a option data
-val bool : bool data
+val pair : 'a Elpi_API.Conversion.t -> 'b Elpi_API.Conversion.t -> ('a * 'b) Elpi_API.Conversion.t
+val option : 'a Elpi_API.Conversion.t -> 'a option Elpi_API.Conversion.t
+val bool : bool Elpi_API.Conversion.t
 
 (* The string is the "file name" *)
-val in_stream  : (in_channel * string) data
-val out_stream : (out_channel * string) data
+val in_stream  : (in_channel * string) Elpi_API.Conversion.t
+val out_stream : (out_channel * string) Elpi_API.Conversion.t

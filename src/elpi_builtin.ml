@@ -3,8 +3,7 @@
 (* ------------------------------------------------------------------------- *)
 
 open Elpi_API
-open Extend
-open Data
+open RawData
 open Constants
 open Utils
 open BuiltInPredicate
@@ -12,31 +11,25 @@ open Notation
 
 module Str = Re.Str
 
-let { CData.cin = istream_in; isc = is_istream ; cout = istream_out } as in_streamc = CData.declare {
-  CData.data_name = "in_stream";
-  data_pp = (fun fmt (_,d) -> Format.fprintf fmt "<in_stream:%s>" d);
-  data_eq = (fun (x,_) (y,_) -> x = y);
-  data_hash = (fun (x,_) -> Hashtbl.hash x);
-  data_hconsed = false;
+let in_stream = OpaqueData.declare {
+  OpaqueData.name = "in_stream";
+  pp = (fun fmt (_,d) -> Format.fprintf fmt "<in_stream:%s>" d);
+  eq = (fun (x,_) (y,_) -> x = y);
+  hash = (fun (x,_) -> Hashtbl.hash x);
+  hconsed = false;
+  constants = ["std_in",(stdin,"stdin")];
+  doc = "";
 }
-let in_stream =
-  let constants =
-    Map.empty |> Map.add (from_stringc "std_in") (stdin,"stdin") in
-  cdata ~name:"in_stream" ~constants in_streamc
 
-let { CData.cin = ostream_in; isc = is_ostream ; cout = ostream_out } as out_streamc = CData.declare {
-  CData.data_name = "out_stream";
-  data_pp = (fun fmt (_,d) -> Format.fprintf fmt "<out_stream:%s>" d);
-  data_eq = (fun (x,_) (y,_) -> x = y);
-  data_hash = (fun (x,_) -> Hashtbl.hash x);
-  data_hconsed = false;
+let out_stream = OpaqueData.declare {
+  OpaqueData.name = "out_stream";
+  pp = (fun fmt (_,d) -> Format.fprintf fmt "<out_stream:%s>" d);
+  eq = (fun (x,_) (y,_) -> x = y);
+  hash = (fun (x,_) -> Hashtbl.hash x);
+  hconsed = false;
+  doc = "";
+  constants = ["std_out",(stdout,"stdout");"std_err",(stderr,"stderr")];
 }
-let out_stream =
-  let constants =
-    Map.empty
-    |> Map.add (from_stringc "std_out") (stdout,"stdout")
-    |> Map.add (from_stringc "std_err") (stderr,"stderr") in
-  cdata ~name:"out_stream" ~constants out_streamc
 
 let register_eval, lookup_eval =
  let (evals : ('a, view list -> term) Hashtbl.t)
@@ -67,7 +60,7 @@ let rec eval depth t =
       with Not_found -> fun _ -> kool x in
      f []
   | (Nil | Cons _ as x) ->
-      type_error ("Lists cannot be evaluated: " ^ Pp.Raw.show_term (kool x))
+      type_error ("Lists cannot be evaluated: " ^ RawPp.Debug.show_term (kool x))
   | Discard -> type_error "_ cannot be evaluated"
   | CData _ as x -> kool x
 ;;
@@ -75,95 +68,95 @@ let rec eval depth t =
 let register_evals l f = List.iter (fun i -> register_eval i f) l;;
 
 let _ =
-  let open CData in
+  let open RawOpaqueData in
   register_evals [ "-" ; "i-" ; "r-" ] (function
-   | [ CData x; CData y ] when ty2 C.int x y -> mkCData(morph2 C.int (-) x y)
-   | [ CData x; CData y ] when ty2 C.float x y -> mkCData(morph2 C.float (-.) x y)
+   | [ CData x; CData y ] when ty2 int x y -> mkCData(morph2 int (-) x y)
+   | [ CData x; CData y ] when ty2 float x y -> mkCData(morph2 float (-.) x y)
    | _ -> type_error "Wrong arguments to -/i-/r-") ;
   register_evals [ "+" ; "i+" ; "r+" ] (function
-   | [ CData x; CData y ] when ty2 C.int x y -> mkCData(morph2 C.int (+) x y)
-   | [ CData x; CData y ] when ty2 C.float x y -> mkCData(morph2 C.float (+.) x y)
+   | [ CData x; CData y ] when ty2 int x y -> mkCData(morph2 int (+) x y)
+   | [ CData x; CData y ] when ty2 float x y -> mkCData(morph2 float (+.) x y)
    | _ -> type_error "Wrong arguments to +/i+/r+") ;
   register_eval "*" (function
-   | [ CData x; CData y ] when ty2 C.int x y -> mkCData(morph2 C.int ( * ) x y)
-   | [ CData x; CData y] when ty2 C.float x y -> mkCData(morph2 C.float ( *.) x y)
+   | [ CData x; CData y ] when ty2 int x y -> mkCData(morph2 int ( * ) x y)
+   | [ CData x; CData y] when ty2 float x y -> mkCData(morph2 float ( *.) x y)
    | _ -> type_error "Wrong arguments to *") ;
   register_eval "/" (function
-   | [ CData x; CData y] when ty2 C.float x y -> mkCData(morph2 C.float ( /.) x y)
+   | [ CData x; CData y] when ty2 float x y -> mkCData(morph2 float ( /.) x y)
    | _ -> type_error "Wrong arguments to /") ;
   register_eval "mod" (function
-   | [ CData x; CData y ] when ty2 C.int x y -> mkCData(morph2 C.int (mod) x y)
+   | [ CData x; CData y ] when ty2 int x y -> mkCData(morph2 int (mod) x y)
    | _ -> type_error "Wrong arguments to mod") ;
   register_eval "div" (function
-   | [ CData x; CData y ] when ty2 C.int x y -> mkCData(morph2 C.int (/) x y)
+   | [ CData x; CData y ] when ty2 int x y -> mkCData(morph2 int (/) x y)
    | _ -> type_error "Wrong arguments to div") ;
   register_eval "^" (function
-   | [ CData x; CData y ] when ty2 C.string x y ->
-         C.of_string (C.to_string x ^ C.to_string y)
+   | [ CData x; CData y ] when ty2 string x y ->
+         of_string (to_string x ^ to_string y)
    | _ -> type_error "Wrong arguments to ^") ;
   register_evals [ "~" ; "i~" ; "r~" ] (function
-   | [ CData x ] when C.is_int x -> mkCData(morph1 C.int (~-) x)
-   | [ CData x ] when C.is_float x -> mkCData(morph1 C.float (~-.) x)
+   | [ CData x ] when is_int x -> mkCData(morph1 int (~-) x)
+   | [ CData x ] when is_float x -> mkCData(morph1 float (~-.) x)
    | _ -> type_error "Wrong arguments to ~/i~/r~") ;
   register_evals [ "abs" ; "iabs" ; "rabs" ] (function
-   | [ CData x ] when C.is_int x -> mkCData(map C.int C.int abs x)
-   | [ CData x ] when C.is_float x -> mkCData(map C.float C.float abs_float x)
+   | [ CData x ] when is_int x -> mkCData(map int int abs x)
+   | [ CData x ] when is_float x -> mkCData(map float float abs_float x)
    | _ -> type_error "Wrong arguments to abs/iabs/rabs") ;
   register_eval "int_to_real" (function
-   | [ CData x ] when C.is_int x -> mkCData(map C.int C.float float_of_int x)
+   | [ CData x ] when is_int x -> mkCData(map int float float_of_int x)
    | _ -> type_error "Wrong arguments to int_to_real") ;
   register_eval "sqrt" (function
-   | [ CData x ] when C.is_float x -> mkCData(map C.float C.float sqrt x)
+   | [ CData x ] when is_float x -> mkCData(map float float sqrt x)
    | _ -> type_error "Wrong arguments to sqrt") ;
   register_eval "sin" (function
-   | [ CData x ] when C.is_float x -> mkCData(map C.float C.float sqrt x)
+   | [ CData x ] when is_float x -> mkCData(map float float sqrt x)
    | _ -> type_error "Wrong arguments to sin") ;
   register_eval "cos" (function
-   | [ CData x ] when C.is_float x -> mkCData(map C.float C.float cos x)
+   | [ CData x ] when is_float x -> mkCData(map float float cos x)
    | _ -> type_error "Wrong arguments to cosin") ;
   register_eval "arctan" (function
-   | [ CData x ] when C.is_float x -> mkCData(map C.float C.float atan x)
+   | [ CData x ] when is_float x -> mkCData(map float float atan x)
    | _ -> type_error "Wrong arguments to arctan") ;
   register_eval "ln" (function
-   | [ CData x ] when C.is_float x -> mkCData(map C.float C.float log x)
+   | [ CData x ] when is_float x -> mkCData(map float float log x)
    | _ -> type_error "Wrong arguments to ln") ;
   register_eval "floor" (function
-   | [ CData x ] when C.is_float x ->
-         mkCData(map C.float C.int (fun x -> int_of_float (floor x)) x)
+   | [ CData x ] when is_float x ->
+         mkCData(map float int (fun x -> int_of_float (floor x)) x)
    | _ -> type_error "Wrong arguments to floor") ;
   register_eval "ceil" (function
-   | [ CData x ] when C.is_float x ->
-         mkCData(map C.float C.int (fun x -> int_of_float (ceil x)) x)
+   | [ CData x ] when is_float x ->
+         mkCData(map float int (fun x -> int_of_float (ceil x)) x)
    | _ -> type_error "Wrong arguments to ceil") ;
   register_eval "truncate" (function
-   | [ CData x ] when C.is_float x -> mkCData(map C.float C.int truncate x)
+   | [ CData x ] when is_float x -> mkCData(map float int truncate x)
    | _ -> type_error "Wrong arguments to truncate") ;
   register_eval "size" (function
-   | [ CData x ] when C.is_string x ->
-         C.of_int (String.length (C.to_string x))
+   | [ CData x ] when is_string x ->
+         of_int (String.length (to_string x))
    | _ -> type_error "Wrong arguments to size") ;
   register_eval "chr" (function
-   | [ CData x ] when C.is_int x ->
-         C.of_string (String.make 1 (char_of_int (C.to_int x)))
+   | [ CData x ] when is_int x ->
+         of_string (String.make 1 (char_of_int (to_int x)))
    | _ -> type_error "Wrong arguments to chr") ;
   register_eval "string_to_int" (function
-   | [ CData x ] when C.is_string x && String.length (C.to_string x) = 1 ->
-       C.of_int (int_of_char (C.to_string x).[0])
+   | [ CData x ] when is_string x && String.length (to_string x) = 1 ->
+       of_int (int_of_char (to_string x).[0])
    | _ -> type_error "Wrong arguments to string_to_int") ;
   register_eval "substring" (function
-   | [ CData x ; CData i ; CData j ] when C.is_string x && ty2 C.int i j ->
-       let x = C.to_string x and i = C.to_int i and j = C.to_int j in
+   | [ CData x ; CData i ; CData j ] when is_string x && ty2 int i j ->
+       let x = to_string x and i = to_int i and j = to_int j in
        if i >= 0 && j >= 0 && String.length x >= i+j then
-         C.of_string (String.sub x i j)
+         of_string (String.sub x i j)
        else type_error "Wrong arguments to substring"
    | _ -> type_error "Wrong argument type to substring") ;
   register_eval "int_to_string" (function
-   | [ CData x ] when C.is_int x ->
-         C.of_string (string_of_int (C.to_int x))
+   | [ CData x ] when is_int x ->
+         of_string (string_of_int (to_int x))
    | _ -> type_error "Wrong arguments to int_to_string") ;
   register_eval "real_to_string" (function
-   | [ CData x ] when C.is_float x ->
-         C.of_string (string_of_float (C.to_float x))
+   | [ CData x ] when is_float x ->
+         of_string (string_of_float (to_float x))
    | _ -> type_error "Wrong arguments to real_to_string")
 ;;
 
@@ -204,8 +197,8 @@ type polyop = {
   pname : string;
 }
 
-let bool_adt = {
-  ADT.ty = TyName "bool";
+let bool = AlgebraicData.declare {
+  AlgebraicData.ty = TyName "bool";
   doc = "Boolean values: tt and ff since true and false are predicates";
   pp = (fun fmt b -> Format.fprintf fmt "%b" b);
   constructors = [
@@ -217,24 +210,22 @@ let bool_adt = {
       M (fun ~ok ~ko -> function false -> ok | _ -> ko ()));
   ]
 }
-let bool = adt bool_adt
 
-let pair_adt a b = {
-  ADT.ty = TyApp ("pair",a.ty,[b.ty]);
+let pair a b = let open AlgebraicData in declare {
+  ty = TyApp ("pair",a.Conversion.ty,[b.Conversion.ty]);
   doc = "Pair: the constructor is pr, since ',' is for conjunction";
-  pp = (fun fmt o -> Format.fprintf fmt "%a" (Elpi_util.pp_pair a.pp b.pp) o);
+  pp = (fun fmt o -> Format.fprintf fmt "%a" (Elpi_util.pp_pair a.Conversion.pp b.Conversion.pp) o);
   constructors = [
     K("pr","",A(a,A(b,N)),
       B (fun a b -> (a,b)),
       M (fun ~ok ~ko:_ -> function (a,b) -> ok a b));
   ]
 }
-let pair a b = adt (pair_adt a b)
 
-let option_adt a = {
-  ADT.ty = TyApp("option",a.ty,[]);
+let option a = let open AlgebraicData in declare {
+  ty = TyApp("option",a.Conversion.ty,[]);
   doc = "The option type (aka Maybe)";
-  pp = (fun fmt o -> Format.fprintf fmt "%a" (Elpi_util.pp_option a.pp) o);
+  pp = (fun fmt o -> Format.fprintf fmt "%a" (Elpi_util.pp_option a.Conversion.pp) o);
   constructors = [
     K("none","",N,
       B None,
@@ -244,11 +235,10 @@ let option_adt a = {
       M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko ())); 
   ]
 }
-let option a = adt (option_adt a)
 
 (** Core built-in ********************************************************* *)
 
-let core_builtins = [
+let core_builtins = let open BuiltIn in [
 
   LPDoc " == Core builtins =====================================";
 
@@ -291,13 +281,13 @@ let core_builtins = [
           "external pred declare_constraint i:any, i:list any.");
   LPCode "external pred print_constraints. % prints all constraints";
 
-  MLCode(Pred("halt", VariadicIn(any, "halts the program and print the terms"),
+  MLCode(Pred("halt", VariadicIn(BuiltInData.any, "halts the program and print the terms"),
   (fun args ~depth _ _ ->
      if args = [] then error "halt"
      else
        let b = Buffer.create 80 in
        let fmt = Format.formatter_of_buffer b in
-       Format.fprintf fmt "%a%!" (Pp.list (Pp.term depth) " ") args;
+       Format.fprintf fmt "%a%!" (RawPp.list (RawPp.term depth) " ") args;
        error (Buffer.contents b))),
   DocAbove);
 
@@ -307,8 +297,8 @@ let core_builtins = [
   LPDoc " -- Evaluation --";
 
   MLCode(Pred("calc",
-    In(poly "A",  "Expr",
-    Out(poly "A", "Out",
+    In(BuiltInData.poly "A",  "Expr",
+    Out(BuiltInData.poly "A", "Out",
     Easy          "unifies Out with the value of Expr. It can be used in tandem with spilling, eg [f {calc (N + 1)}]")),
   (fun t _ ~depth -> !:(eval depth t))),
   DocAbove);
@@ -331,20 +321,20 @@ let core_builtins = [
   ] @ List.map (fun { p; psym; pname } ->
 
   MLCode(Pred(pname,
-    In(poly "A","X",
-    In(poly "A","Y",
+    In(BuiltInData.poly "A","X",
+    In(BuiltInData.poly "A","Y",
     Easy     ("checks if X " ^ psym ^ " Y. Works for string, int and float"))),
   (fun t1 t2 ~depth ->
-     let open CData in
+     let open RawOpaqueData in
      let t1 = look ~depth (eval depth t1) in
      let t2 = look ~depth (eval depth t2) in
      match t1, t2 with
      | CData x, CData y ->
-          if ty2 C.int x y then let out = C.to_int in
+          if ty2 int x y then let out = to_int in
             if p (out x) (out y) then () else raise No_clause
-          else if ty2 C.float x y then let out = C.to_float in
+          else if ty2 float x y then let out = to_float in
             if p (out x) (out y) then () else raise No_clause
-          else if ty2 C.string x y then let out = C.to_string in
+          else if ty2 string x y then let out = to_string in
             if p (out x) (out y) then () else raise No_clause
           else 
         type_error ("Wrong arguments to " ^ psym ^ " (or to " ^ pname^ ")")
@@ -394,21 +384,21 @@ let core_builtins = [
 
   MLData bool;
 
-  MLData (pair (poly "A") (poly "B"));
+  MLData (pair (BuiltInData.poly "A") (BuiltInData.poly "B"));
 
   LPCode "pred fst  i:pair A B, o:A.";
   LPCode "fst (pr A _) A.";
   LPCode "pred snd  i:pair A B, o:B.";
   LPCode "snd (pr _ B) B.";
 
-  MLData (option (poly "A"));
+  MLData (option (BuiltInData.poly "A"));
 
   ]
 ;;
 
 (** Standard lambda Prolog I/O built-in *********************************** *)
 
-let io_builtins = [
+let io_builtins = let open BuiltIn in let open BuiltInData in [
 
   LPDoc " == I/O builtins =====================================";
 
@@ -551,7 +541,7 @@ let io_builtins = [
   (fun t _ ~depth ->
      let b = Buffer.create 1024 in
      let fmt = Format.formatter_of_buffer b in
-     Format.fprintf fmt "%a" (Pp.term depth) t ;
+     Format.fprintf fmt "%a" (RawPp.term depth) t ;
      Format.pp_print_flush fmt ();
        !:(Buffer.contents b))),
   DocAbove);
@@ -561,7 +551,7 @@ let io_builtins = [
 
 (** Standard lambda Prolog built-in ************************************** *)
 
-let lp_builtins = [
+let lp_builtins = let open BuiltIn in let open BuiltInData in [
 
   LPDoc "== Lambda Prolog builtins =====================================";
 
@@ -607,7 +597,7 @@ let lp_builtins = [
      try
        let loc = Ast.Loc.initial "(string_of_term)" in
        let t = Parse.goal loc s in
-       let t = Compile.term_at ~depth t in
+       let t = Quotation.term_at ~depth t in
        !:t
      with
      | Parse.ParseError _ -> raise No_clause)),
@@ -622,7 +612,7 @@ let lp_builtins = [
        let loc = Ast.Loc.initial source_name in
        let strm = Stream.of_channel i in
        let t = Parse.goal_from_stream loc strm in
-       let t = Compile.term_at ~depth t in
+       let t = Quotation.term_at ~depth t in
        !:t
      with 
      | Sys_error msg -> error msg
@@ -640,7 +630,7 @@ let lp_builtins = [
 
 (** ELPI specific built-in ************************************************ *)
 
-let elpi_builtins = [
+let elpi_builtins = let open BuiltIn in let open BuiltInData in [
 
   LPDoc "== Elpi builtins =====================================";
 
@@ -648,7 +638,7 @@ let elpi_builtins = [
     VariadicIn(any, "prints raw terms (debugging)"),
   (fun args ~depth _ _ state ->
      Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
-       (Pp.list (Pp.Raw.term depth) " ") args ;
+       (RawPp.list (RawPp.Debug.term depth) " ") args ;
      state, ())),
   DocAbove);
 
@@ -656,7 +646,7 @@ let elpi_builtins = [
     VariadicIn(any,"prints terms"),
   (fun args ~depth _ _ state ->
      Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
-       (Pp.list (Pp.term depth) " ") args ;
+       (RawPp.list (RawPp.term depth) " ") args ;
      state, ())),
   DocAbove);
 
@@ -704,7 +694,7 @@ let elpi_builtins = [
       let p =
         Elpi_API.Compile.(program ~flags:default_flags dummy_header [ap]) in
       let q = Elpi_API.Compile.query p aq in
-      let qp, qq = Compile.quote_syntax q in
+      let qp, qq = Quotation.quote_syntax q in
       !: qp +! qq)),
   DocAbove);
 
@@ -713,26 +703,26 @@ let elpi_builtins = [
 
 (** ELPI specific NON-LOGICAL built-in *********************************** *)
 
-let ctype_adt = {
-  ADT.ty = TyName "ctype";
+let ctype = AlgebraicData.declare {
+  AlgebraicData.ty = TyName "ctype";
   doc = "Opaque ML data types";
   pp = (fun fmt cty -> Format.fprintf fmt "%s" cty);
   constructors = [
-    K("ctype","",A(string,N),B (fun x -> x), M (fun ~ok ~ko x -> ok x))  
+    K("ctype","",A(BuiltInData.string,N),B (fun x -> x), M (fun ~ok ~ko x -> ok x))  
   ]
 }
-let ctype = adt ctype_adt
    
-let { CData.cin = safe_in; isc = is_safe ; cout = safe_out } as safec = CData.declare {
-  CData.data_name = "safe";
-  data_pp = (fun fmt (id,l,d) ->
+let safe = OpaqueData.declare {
+  OpaqueData.name = "safe";
+  pp = (fun fmt (id,l,d) ->
      Format.fprintf fmt "[safe %d: %a]_%d" id
-       (Pp.list (Pp.term 0) ";") !l d);
-  data_eq = (fun (id1, _,_) (id2,_,_) -> id1 == id2);
-  data_hash = (fun (id,_,_) -> id);
-  data_hconsed = false;
+       (RawPp.list (RawPp.term 0) ";") !l d);
+  eq = (fun (id1, _,_) (id2,_,_) -> id1 == id2);
+  hash = (fun (id,_,_) -> id);
+  hconsed = false;
+  doc = "Holds data across bracktracking";
+  constants = [];
 }
-let safe = cdata ~name:"safe" ~doc:"Holds data across bracktracking" safec
 
 let fresh_copy t max_db depth =
   let rec aux d t =
@@ -795,7 +785,7 @@ let name_or_constant name condition = (); fun x out ~depth _ _ state ->
       | _ -> raise No_clause
 ;;
 
-let elpi_nonlogical_builtins = [ 
+let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in [ 
 
   LPDoc "== Elpi nonlogical builtins =====================================";
 
@@ -816,7 +806,7 @@ let elpi_nonlogical_builtins = [
     Easy       "checks if the two terms are the same variable")),
   (fun t1 t2 ~depth ->
      match look ~depth t1, look ~depth t2 with
-     | UnifVar(p1,_), UnifVar (p2,_) when State.UVKey.equal p1 p2 -> ()
+     | UnifVar(p1,_), UnifVar (p2,_) when FlexibleData.Elpi.equal p1 p2 -> ()
      | _,_ -> raise No_clause)),
   DocAbove);
 
@@ -859,7 +849,7 @@ let elpi_nonlogical_builtins = [
     Out(any, "T",
     Full "unify T with a variable that has no eigenvariables in scope"),
   (fun _ ~depth _ _ state ->
-      let state, k = State.UVKey.make ~lvl:0 state in
+      let state, k = FlexibleData.Elpi.make ~lvl:0 state in
       state, !:(mkUnifVar k ~args:[] state))),
   DocAbove);
 
@@ -869,7 +859,7 @@ let elpi_nonlogical_builtins = [
     Easy        "checks if T is primitive of type Ctype, eg (ctype \"int\")")),
   (fun t _ ~depth ->
      match look ~depth t with
-     | CData n -> !:(CData.name n)
+     | CData n -> !:(RawOpaqueData.name n)
      | _ -> raise No_clause)),
   DocAbove);
 
@@ -934,7 +924,7 @@ if _ _ E :- E.  |};
 ]
 ;;
 
-let elpi_stdlib = [ 
+let elpi_stdlib = let open BuiltIn in [ 
 
   LPCode {|
 
@@ -1171,5 +1161,5 @@ let std_declarations =
   core_builtins @ io_builtins @ lp_builtins @ elpi_builtins @ elpi_nonlogical_builtins @ elpi_stdlib
 
 let std_builtins =
-  builtin_of_declaration ~file_name:"builtin.elpi" std_declarations
+  BuiltIn.declare ~file_name:"builtin.elpi" std_declarations
 

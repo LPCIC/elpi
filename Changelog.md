@@ -1,24 +1,24 @@
 ## [UNRELEASED]
 
 - FFI:
-  - `mkAppL` and `mkAppSL` handy constructors
+  - Deep reorganization of the Extend module to improve consistency
+  - `RawData.mkAppL` and `RawData.mkAppSL` handy constructors
   - `custom_state` renamed `state`
   - No more `solution` in the type of builtin predicates but rather
-    `cosntrinats` and `state` explicitly
+    `constraints` and `state` explicitly
   - Only one type of extensible state to that the same code can be used to
     generate the query at compile time and convert data at run time
   - Unify `MLCData` and `MLADT` into `MLData`
-  - `ADT.adt` -> `ADT.t`
-  - `ADT.t` supports `C` for containers, so that one can model
+  - `AlgebraicData.t` supports `C` for containers, so that one can model
       `type t = A | B of list t`
     as
       `K("a", N, ..`
       `K("b",(C (fun x -> list x,N)), ..`
-  - new `State.UVKey` and `State.UVMap` to represent Elpi's unification
-    variables and keep a bijective map between them and any host application
-    data.
-  - `Data.term` contains no more `UVar`, `AppUVar`, `Arg` and `AppArg` but only
-    `UnifVar of UVKey.t * term list`.
+  - new `FlexibleTerm.Elpi.t` and `FlexibleTerm.Map` to represent Elpi's 
+    unification variables and keep a bijective map between them and any host
+    application data.
+  - `RawData.term` contains no more `UVar`, `AppUVar`, `Arg` and `AppArg` but only
+    `UnifVar of FlexibleTerm.Elpi.t * term list`.
   - Simple GADT for describing a query and extracting the response out of the
     solution data structure
 

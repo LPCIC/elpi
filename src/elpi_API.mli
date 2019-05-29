@@ -2,20 +2,7 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-(** This module is the API for clients of the ELPI library.
-    
-    The modules {!module:Setup}, {!module:Parse}, {!module:Compile} and
-    {!module:Execute} let one run code, and {!module:Pp} print the result.
-    Modules {!module:Ast} and {!module:Data} mostly contain opaque data types
-    declarations.
-
-    The sub module {!module:Extend} groups the APIs to extend ELPI.
-    It provides richer {!module:Ast} and {!module:Data} submodules where the
-    data types are made transparent.
-    Module {!module:Extend.Compile} lets one register new \{\{quotations\}\}.
-    Modules {!module:Extend.BuiltInPredicate} and
-    {!module:Extend.CustomState} let one register built-in predicates and
-    custom state. *)
+(** This module is the API for clients of the Elpi library. *)
 
 (* ************************************************************************* *)
 (* *************************** Basic API *********************************** *)
@@ -44,7 +31,7 @@ end
 
 module Setup : sig
 
-  (* Built-in predicates, see {!module:Extend.BuiltInPredicate} *)
+  (* Built-in predicates, see {!module:BuiltIn} *)
   type builtins
   type program_header
 
@@ -117,6 +104,10 @@ module Data : sig
     constraints : constraints;
     state : state;
   }
+
+  (* Hypothetical context *)
+  type hyp
+  type hyps = hyp list
 
 end
 
@@ -202,261 +193,158 @@ end
 (* ************************* Extension API ********************************* *)
 (* ************************************************************************* *)
 
-module Extend : sig
+(** This module defines what embedding and readback functions are *)
+module Conversion : sig
 
-  (** Data of the host program that is opaque to Elpi. *)
-  module CData : sig
-    type t
+  type ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
 
-    (** The [eq] function is used by unification. Limitation: unification of
-     * two cdata cannot alter the constraint store. This can be lifted in the
-     * future if there is user request.
-     *
-     * If the data_hconsed is true, then the [cin] function below will
-     * automatically hashcons the data using the [eq] and [hash] functions.
-     *)
-    type 'a data_declaration = {
-      data_name : string;
-      data_pp : Format.formatter -> 'a -> unit;
-      data_eq : 'a -> 'a -> bool;
-      data_hash : 'a -> int;
-      data_hconsed : bool;
-    }
+  type extra_goals = Data.term list
 
-    type 'a cdata = private {
-      cin : 'a -> t;
-      isc : t -> bool;
-      cout: t -> 'a;
-      name : string;
-    }
+  type 'a embedding =
+    depth:int -> Data.hyps -> Data.constraints ->
+    Data.state -> 'a -> Data.state * Data.term * extra_goals
+    
+  type 'a readback =
+    depth:int -> Data.hyps -> Data.constraints ->
+    Data.state -> Data.term -> Data.state * 'a
 
-    val declare : 'a data_declaration -> 'a cdata
+  type 'a t = {
+    ty : ty_ast;
+    pp_doc : Format.formatter -> unit -> unit;
+    pp : Format.formatter -> 'a -> unit;
+    embed : 'a embedding;   (* 'a -> term *)
+    readback : 'a readback; (* term -> 'a *)
+  }
 
-    val pp : Format.formatter -> t -> unit
-    val show : t -> string
-    val equal : t -> t -> bool
-    val hash : t -> int
-    val name : t -> string
-    val hcons : t -> t
+  exception TypeErr of ty_ast * Data.term (* a type error at data conversion time *)
+    
+end
 
-    (* tests if two cdata have the same given type *)
-    val ty2 : 'a cdata -> t -> t -> bool
-    val morph1 : 'a cdata -> ('a -> 'a) -> t -> t
-    val morph2 : 'a cdata -> ('a -> 'a -> 'a) -> t -> t -> t
-    val map : 'a cdata -> 'b cdata -> ('a -> 'b) -> t -> t
-  end
+(** Conversion for Elpi's built-in data types *)
+module BuiltInData : sig
 
-  (* State is a collection of purely functional piece of data carried
-   * by the interpreter. Such data is kept in sync with the backtracking, i.e.
-   * changes made in a branch are lost if that branch fails.
-   * It can be used to both store custom constraints to be manipulated by
-   * custom solvers, or any other piece of data the host application may
-   * need to use.
-   * The initial value can be taken from the compiler state, e.g. a quotation
-   * may generate some constraints statically *)
-  module State : sig
+  (** See Elpi_builtin for a few more *)
+  val int    : int Conversion.t
+  val float  : float Conversion.t
+  val string : string Conversion.t
+  val list   : 'a Conversion.t -> 'a list Conversion.t
+  val loc    : Ast.Loc.t Conversion.t
 
-    (** 'a MUST be purely functional, i.e. backtracking is implemented by using
-     * an old binding for 'a.
-     * This limitation can be lifted if there is user request. *)
-    type 'a component
+  (* poly "A" is what one would use for, say, [type eq A -> A -> prop] *)
+  val poly   : string -> Data.term Conversion.t
 
-    (** The compilation_is_over callback is called when the compilation
-        phase is over, after that the state is threaded at run time *)
-    val declare :
-      name:string ->
-      pp:(Format.formatter -> 'a -> unit) ->
-      init:(unit -> 'a) ->
-        'a component
+  (* any is like poly "X" for X fresh *)
+  val any    : Data.term Conversion.t
 
-    type t = Data.state
+end
 
-    val get : 'a component -> t -> 'a
-    val set : 'a component -> t -> 'a -> t
+(** Declare data from the host application that is opaque (no syntax), like
+    int but not like list or pair *)
+module OpaqueData : sig
 
-    (** Allowed to raise BuiltInPredicate.No_clause *)
-    val update : 'a component -> t -> ('a -> 'a) -> t
-    val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
+  type doc = string
+  type name = string
 
-    (* to map uvars from/to the host application *)
-
-    module UVKey : sig
-      type t
-      val make : ?name:string -> lvl:int -> Data.state -> Data.state * t
-      val get : name:string -> Data.state -> t option
-      val pp :  Format.formatter -> t -> unit
-      val show :  t -> string
-      val equal : t -> t -> bool
-      val lvl : t -> int
-    end
-
-    module type HostUVar = sig
-      type t
-      val compare : t -> t -> int
-      val pp : Format.formatter -> t -> unit
-      val show : t -> string
-    end
-
-    (* Bijective map between elpi UVar and host equivalent *)
-    module UVMap : functor(T : HostUVar) -> sig
-      type t
-
-      val empty : t
-      val add : UVKey.t -> T.t -> t -> t
-
-      val remove_elpi : UVKey.t -> t -> t
-      val remove_host : T.t -> t -> t
-
-      val filter : (T.t -> UVKey.t -> bool) -> t -> t
-
-      (* The eventual body at its depth *)
-      val fold : (T.t -> UVKey.t -> (int * Data.term) option -> 'a -> 'a) -> t -> 'a -> 'a
-
-      val elpi   : T.t -> t -> UVKey.t
-      val host : UVKey.t -> t -> T.t
-
-      val uvmap : t component
-
-      val pp : Format.formatter -> t -> unit
-      val show : t -> string
-    end
-
-  end
-
-
-  (** This module exposes the low level representation of terms.
+  (** The [eq] function is used by unification. Limitation: unification of
+   * two cdata cannot alter the constraint store. This can be lifted in the
+   * future if there is user request.
    *
-   * The data type [term] is opaque and can only be accessed by using the
-   * [look] API that exposes a term [view]. The [look] view automatically
-   * substitutes assigned unification variables by their value. The [UVar]
-   * and [AppUVar] node hence stand for unassigned unification variables. *)
-  module Data : sig
+   * If the hconsed is true, then the [readback] function is
+   * automatically hashcons the data using the [eq] and [hash] functions.
+   *)
+  type 'a declaration = {
+    name : name;
+    doc : doc;
+    pp : Format.formatter -> 'a -> unit;
+    eq : 'a -> 'a -> bool;
+    hash : 'a -> int;
+    hconsed : bool;
+    constants : (name * 'a) list; (* global constants of that type, eg "std_in" *)
+  }
+   
+  val declare : 'a declaration -> 'a Conversion.t
 
-    type constant = int (** De Bruijn levels (not indexes):
-                            the distance of the binder from the root.
-                            Starts at 0 and grows for bound variables;
-                            global constants have negative values. *)
-    type builtin
-    type uvar_body (* unification variable (missing) body, use == only *)
-    type term
-    type view = private
-      (* Pure subterms *)
-      | Const of constant                   (* global constant or a bound var *)
-      | Lam of term                         (* lambda abstraction, i.e. x\ *)
-      | App of constant * term * term list  (* application (at least 1 arg) *)
-      (* Optimizations *)
-      | Cons of term * term                 (* :: *)
-      | Nil                                 (* [] *)
-      | Discard                             (* _  *)
-      (* FFI *)
-      | Builtin of builtin * term list      (* call to a built-in predicate *)
-      | CData of CData.t                    (* external data *)
-      (* Unassigned unification variables *)
-      | UnifVar of State.UVKey.t * term list
+end
 
-    (** Smart constructors *)
-    val mkGlobalS : string -> term  (* global constant, i.e. < 0 *)
-    val mkBound : constant -> term  (* bound variable, i.e. >= 0 *)
-    val mkLam : term -> term
-    val mkAppS : string -> term -> term list -> term
-    val mkAppSL : string -> term list -> term
-    val mkCons : term -> term -> term
-    val mkNil : term
-    val mkDiscard : term
-    val mkBuiltinS : string -> term list -> term
-    val mkCData : CData.t -> term
-    val mkUnifVar : State.UVKey.t -> args:term list -> State.t -> term
+(** Declare data from the host application that has syntax, like
+    list or pair but not like int. So far there is no support for
+    data with binder using this API *)
+module AlgebraicData : sig
+   
+   (* Example: define the ADT for "option a"
+   let option_declaration a = {
+     ty = TyApp("option",a.ty,[]);
+     doc = "The option type (aka Maybe)";
+     pp = (fun fmt -> function
+             | None -> Format.fprintf fmt "None"
+             | Some x -> Format.fprintf fmt "Some %a" a.pp x);
+     constructors = [
+      K("none","nothing in this case",
+        N,                                                (* no arguments *)
+        B None,                                                (* builder *)
+        M (fun ~ok ~ko -> function None -> ok | _ -> ko));     (* matcher *)
+      K("some","something in this case",
+        A (a,N),                                (* one argument of type a *)
+        B (fun x -> Some x),                                   (* builder *)
+        M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko)); (* matcher *)
+     ]
+   }
+         K stands for "constructor", B for "build", M for "match". Variants BS
+    and MS give access to the state. *)
 
-    (** Lower level smart constructors *)
-    val mkGlobal : constant -> term (* global constant, i.e. < 0 *)
-    val mkApp : constant -> term -> term list -> term
-    val mkAppL : constant -> term list -> term
-    val mkBuiltin : builtin -> term list -> term
-    val mkConst : constant -> term (* no check, works for globals and bound *)
+  type name = string
+  type doc = string
 
-    (** Terms must be inspected after dereferencing their head.
-        If the resulting term is UVar then its uvar_body is such that
-        get_assignment uvar_body = None *)
-    val look : depth:int -> term -> view
+  type ('match_stateful_t,'match_t, 't) match_t =
+    | M of (
+        ok:'match_t ->                   (* cont. to call passing subterms *)
+        ko:(unit -> Data.term) ->     (* cont. to move to next constructor *)
+        't -> Data.term) (* match 't, pass its subterms to ~ok or call ~ko *)
+    | MS of (
+        ok:'match_stateful_t ->
+        ko:(Data.state -> Data.state * Data.term * Conversion.extra_goals) ->
+        't -> Data.state -> Data.state * Data.term * Conversion.extra_goals)
 
-    (* to reuse a term that was looked at *)
-    val kool : view -> term
+  type ('build_stateful_t,'build_t) build_t =
+    | B of 'build_t
+    | BS of 'build_stateful_t
 
-    type clause_src = {
-      hdepth : int;
-      hsrc : term
-    }
-    type hyps = clause_src list
-    type suspended_goal = {
-      context : hyps;
-      goal : int * term
-    }
 
-    (* Alias/cast from Data *)
-    val of_term : Data.term -> term
-    type constraints = Data.constraints
-    module StrMap = Data.StrMap
-    val constraints : Data.constraints -> suspended_goal list
-    val no_constraints : constraints
-    type 'a solution = 'a Data.solution
+  (** GADT for describing the type of the constructor:
+      - N is the terminator
+      - A(a,...) is an argument of type a (a is a Conversion.t)
+      - 
+  *)
+  type ('stateful_builder,'builder, 'stateful_matcher, 'matcher,  'self) constructor_arguments =
+    (* No arguments *)
+    | N : (Data.state -> Data.state * 'self, 'self, Data.state -> Data.state * Data.term * Conversion.extra_goals, Data.term, 'self) constructor_arguments
+    (* An argument of type 'a *)
+    | A : 'a Conversion.t * ('bs,'b, 'ms,'m, 'self) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms, 'a -> 'm, 'self) constructor_arguments
+    (* An argument of type 'self *)
+    | S : ('bs,'b, 'ms, 'm, 'self) constructor_arguments -> ('self -> 'bs, 'self -> 'b, 'self -> 'ms, 'self -> 'm, 'self) constructor_arguments
+    (* An argument of type `T 'self` for a constainer `T`, like a `list 'self`.
+       `S args` above is a shortcut for `C(fun x -> x, args)` *)
+    | C : ('self Conversion.t -> 'a Conversion.t) * ('bs,'b,'ms,'m,'self) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms,'a -> 'm, 'self) constructor_arguments
+  
+  type 't constructor =
+    K : name * doc *
+        ('build_stateful_t,'build_t,'match_stateful_t,'match_t,'t) constructor_arguments *   (* args ty *)
+        ('build_stateful_t,'build_t) build_t *
+        ('match_stateful_t,'match_t,'t) match_t
+      -> 't constructor
+      
+  type 't declaration = {
+    ty : Conversion.ty_ast;
+    doc : doc;
+    pp : Format.formatter -> 't -> unit;
+    constructors : 't constructor list;
+  }
 
-    (** LambdaProlog built-in data types *)
-    module C : sig
-      val int : int CData.cdata
-      val is_int : CData.t -> bool
-      val to_int : CData.t -> int
-      val of_int : int -> term
-    
-      val float : float CData.cdata
-      val is_float : CData.t -> bool
-      val to_float : CData.t -> float
-      val of_float : float -> term
-    
-      val string : string CData.cdata
-      val is_string : CData.t -> bool
-      val to_string : CData.t -> string
-      val of_string : string -> term
+  val declare : 'a declaration -> 'a Conversion.t
 
-      (* This is elpi specific *)
-      val loc : Ast.Loc.t CData.cdata
-      val is_loc : CData.t -> bool
-      val to_loc : CData.t -> Ast.Loc.t
-      val of_loc : Ast.Loc.t -> term
-    end
+end
 
-    (** LambdaProlog built-in global constants *)
-    module Constants :
-     sig
-      val from_string : string -> term
-      val from_stringc : string -> constant
-     
-      val show : constant -> string
-
-      val eqc    : constant (* = *)
-      val orc    : constant (* ; *)
-      val andc   : constant (* , *)
-      val andc2  : constant (* & *)
-      val rimplc : constant (* :- *)
-      val pic    : constant (* pi *)
-      val sigmac : constant (* sigma *)
-      val implc  : constant (* => *)
-      val cutc   : constant (* ! *)
-
-      (* LambdaProlog built-in data types are just instances of CData.
-       * Still the parser translated the type [int], [float] and [string]
-       * to [ctype "int"], [ctype "float"] and [ctype "string"]. *)
-      val ctypec : constant (* ctype *)
-
-      (* Marker for spilling function calls, as in [{ rev L }] *)
-      val spillc : constant
-    
-      module Map : Map.S with type key = constant
-      module Set : Set.S with type elt = constant
-    end
-    
-  end
-
-  (* Built-in predicates are implemented in ML using the following FFI.
+(* Built-in predicates are implemented in ML using the following FFI.
    *
    * The ffi data type uses GADTs to let one describe the type of an OCaml
    * function. Terms passed to the built-in predicate are then checked against
@@ -515,139 +403,215 @@ module Extend : sig
    *   terms provided by the user. It is always correct to produce all
    *   outputs (and ignore the corresponding arguments in OCaml).
    * *)
-  module BuiltInPredicate : sig
+module BuiltInPredicate : sig
 
-    exception No_clause (* signals logical Failure, i.e. demands backtrack *)
+  exception No_clause (* signals logical Failure, i.e. demands backtrack *)
 
-    type name = string
-    type doc = string
+  type name = string
+  type doc = string
+
+  type 'a oarg = Keep | Discard
+  type 'a ioarg = Data of 'a | NoData
+
+  type ('function_type, 'inernal_outtype_in) ffi =
+    | In   : 't Conversion.t * doc * ('i, 'o) ffi -> ('t -> 'i,'o) ffi
+    | Out  : 't Conversion.t * doc * ('i, 'o * 't option) ffi -> ('t oarg -> 'i,'o) ffi
+    | InOut  : 't Conversion.t * doc * ('i, 'o * 't option) ffi -> ('t ioarg -> 'i,'o) ffi
+    | Easy : doc -> (depth:int -> 'o, 'o) ffi
+    | Read : doc -> (depth:int -> Data.hyps -> Data.constraints -> Data.state -> 'o, 'o) ffi
+    | Full : doc -> (depth:int -> Data.hyps -> Data.constraints -> Data.state -> Data.state * 'o, 'o) ffi
+    | VariadicIn : 't Conversion.t * doc -> ('t list -> depth:int -> Data.hyps -> Data.constraints -> Data.state -> Data.state * 'o, 'o) ffi
+    | VariadicOut : 't Conversion.t * doc -> ('t oarg list -> depth:int -> Data.hyps -> Data.constraints -> Data.state -> Data.state * ('o * 't option list option), 'o) ffi
+    | VariadicInOut : 't Conversion.t * doc -> ('t ioarg list -> depth:int -> Data.hyps -> Data.constraints -> Data.state -> Data.state * ('o * 't option list option), 'o) ffi
+
+  type t = Pred : name * ('a,unit) ffi * 'a -> t
+  module Notation : sig
+
+    (* Handy notation to construct the value generated by built-in predicates.
+      *
+      * "!" means the output is there, while "?" that it may not be.
+      *
+      * "?:" and "!:" begin the sequence of outputs, while "+?" and "+!"
+      * continue.
+      *
+      * Eg  !: 3 +! 4 +? None +? (Some 5)           -->
+      *     ((((), Some 3), Some 4), None), Some 5
+      *)
+    val (?:) : 'a -> unit * 'a
+    val (!:) : 'a -> unit * 'a option
+    val (+?) : 'a -> 'b -> 'a * 'b
+    val (+!) : 'a -> 'b -> 'a * 'b option
+
+  end
+
+end
+
+(** Setup.init takes a list of declarations of data types and predicates,
+    plus some doc and eventually some Elpi code. All this constitutes the
+    "prelude", that is what is avaiable to an Elpi program *)
+module BuiltIn : sig
+
+  (** Where to print the documentation. For the running example DocAbove
+    * generates
+    *   % [div N M D R] division of N by M gives D with reminder R
+    *   pred div i:int, i:int, o:int, o:int.
+    * while DocNext generates
+    *   pred div % division of N by M gives D with reminder R
+    *    i:int, % N
+    *    i:int, % M
+    *    o:int, % D
+    *    o:int. % R
+    * The latter format it is useful to give longer doc for each argument. *)
+  type doc_spec = DocAbove | DocNext
+
+  (* When an elpi interpreter is set up one can pass a list of
+    * declarations that constitute the base environment in which
+    * programs run *)
+  type declaration =
+    (* Real OCaml code *)
+    | MLCode of BuiltInPredicate.t * doc_spec
+    (* Declaration of an OCaml data *)
+    | MLData : 'a Conversion.t -> declaration
+    (* Extra doc *)
+    | LPDoc  of string
+    (* Sometimes you wrap OCaml code in regular predicates in order
+      * to implement the desired builtin *)
+    | LPCode of string
+
+  (** Prints in LP syntax the "external" declarations.
+    * The file builtin.elpi is generated by calling this API on the
+    * declaration list from elpi_builtin.ml *)
+  val document : Format.formatter -> declaration list -> unit
+
+  (** What is passed to [Setup.init] *)
+  val declare :
+    file_name:string -> declaration list -> Setup.builtins
+
+end
+
+(** Commodity module to build a simple query
+    and extract the output from the solution found by Elpi.
     
-    type ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
+    Example: "foo data Output" where data has type t (a is t Conversion.t)
+    and Output has type v (b is a v Conversion.t) can be described as:
 
-    type 'a oarg = Keep | Discard
-    type 'a ioarg = Data of 'a | NoData
+      let q : (v * unit) t = Query {
+        predicate = "foo";
+        arguments = D(a, data,
+                    Q(b, "Output",
+                    N))
+      }
 
-    type extra_goals = Data.term list
+   Then [compile q] can be used to obtain the compiled query and
+   [extract q solution] to extract a value of type (v * unit) from
+   the solution. Example:
+   
+     Query.compile q |> Compile.link |> Execute.once |> function
+       | Execute.Success solution -> Query.result q solution
+       | _ -> ...
+   
+*)
+module Query : sig
 
-    type 'a embedding =
-      depth:int -> Data.hyps -> Data.constraints ->
-      State.t -> 'a -> State.t * Data.term * extra_goals (* XXX depth!!! *)
-      
-    type 'a readback =
-      depth:int -> Data.hyps -> Data.constraints ->
-      State.t -> Data.term -> State.t * 'a
+  type name = string
+  type _ query_args =
+    | N : unit query_args
+    | D : 'a Conversion.t * 'a *    'x query_args -> 'x query_args
+    | Q : 'a Conversion.t * name * 'x query_args -> ('a * 'x) query_args
 
-    type 'a data = {
-      ty : ty_ast;
-      pp_doc : Format.formatter -> unit -> unit;
-      pp : Format.formatter -> 'a -> unit;
-      embed : 'a embedding;   (* 'a -> term *)
-      readback : 'a readback; (* term -> 'a *)
-    }
+  type 'x t = Query of { predicate : name; arguments : 'x query_args }
 
-    exception TypeErr of ty_ast * Data.term (* a type error at data conversion time *)
-    
-    type ('function_type, 'inernal_outtype_in) ffi =
-      | In   : 't data * doc * ('i, 'o) ffi -> ('t -> 'i,'o) ffi
-      | Out  : 't data * doc * ('i, 'o * 't option) ffi -> ('t oarg -> 'i,'o) ffi
-      | InOut  : 't data * doc * ('i, 'o * 't option) ffi -> ('t ioarg -> 'i,'o) ffi
-      | Easy : doc -> (depth:int -> 'o, 'o) ffi
-      | Read : doc -> (depth:int -> Data.hyps -> Data.constraints -> State.t -> 'o, 'o) ffi
-      | Full : doc -> (depth:int -> Data.hyps -> Data.constraints -> State.t -> State.t * 'o, 'o) ffi
-      | VariadicIn : 't data * doc -> ('t list -> depth:int -> Data.hyps -> Data.constraints -> State.t -> State.t * 'o, 'o) ffi
-      | VariadicOut : 't data * doc -> ('t oarg list -> depth:int -> Data.hyps -> Data.constraints -> State.t -> State.t * ('o * 't option list option), 'o) ffi
-      | VariadicInOut : 't data * doc -> ('t ioarg list -> depth:int -> Data.hyps -> Data.constraints -> State.t -> State.t * ('o * 't option list option), 'o) ffi
+  val compile : Compile.program -> Ast.Loc.t -> 'a t -> 'a Compile.query
 
-    type t = Pred : name * ('a,unit) ffi * 'a -> t
+  val result : 'a t -> 'a Data.solution -> 'a
 
+end
 
-    (** Commodity API for representing simple ADT: no binders!
+(* ************************************************************************* *)
+(* ********************* Advanced Extension API **************************** *)
+(* ************************************************************************* *)
 
-           Example of: pred getenv i:string, o:option string.
-      
-     (* define the ADT for "option a" *)
-     let option_adt a = {
-       ty = TyApp("option",a.ty,[]);
-       doc = "The option type (aka Maybe)";
-       pp = (fun fmt -> function
-               | None -> Format.fprintf fmt "None"
-               | Some x -> Format.fprintf fmt "Some %a" a.pp x);
-       constructors = [
-        K("none","nothing in this case",
-          N,                                                (* no arguments *)
-          B None,                                                (* builder *)
-          M (fun ~ok ~ko -> function None -> ok | _ -> ko));     (* matcher *)
-        K("some","something in this case",
-          A (a,N),                                (* one argument of type a *)
-          B (fun x -> Some x),                                   (* builder *)
-          M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko)); (* matcher *)
-       ]
-     }
-           K stands for "constructor", B for "build", M for "match". Variants BS
-      and MS give access to the state.
-          (* compile the ADT to data types to be used in predicate signatures *)
-     let option a : a data = adt (option_adt a)
-          (* define a predicate using "option" *)
-     let getenv : t =
-       Pred("getenv",
-         In(string,         "VarName",
-         Out(option string, "Value",
-         Easy "Like Sys.getenv")),
-         (fun name _ ~depth ->
-            try !: (Some (Sys.getenv name))
-            with Not_found -> !: None))
-     *)
-    module ADT : sig
+(* State is a collection of purely functional piece of data carried
+   by the interpreter. Such data is kept in sync with the backtracking, i.e.
+   changes made in a branch are lost if that branch fails.
+   It can be used to both store custom constraints to be manipulated by
+   custom solvers, or any other piece of data the host application may
+   need to use. *)
+module State : sig
 
-    type ('match_stateful_t,'match_t, 't) match_t =
-      | M of (
-          ok:'match_t ->                   (* cont. to call passing subterms *)
-          ko:(unit -> Data.term) ->     (* cont. to move to next constructor *)
-          't -> Data.term) (* match 't, pass its subterms to ~ok or call ~ko *)
-      | MS of (
-          ok:'match_stateful_t ->
-          ko:(State.t -> State.t * Data.term * extra_goals) ->
-          't -> State.t -> State.t * Data.term * extra_goals)
+  (** 'a MUST be purely functional, i.e. backtracking is implemented by using
+   * an old binding for 'a.
+   * This limitation can be lifted if there is user request. *)
+  type 'a component
 
-    type ('build_stateful_t,'build_t) build_t =
-      | B of 'build_t
-      | BS of 'build_stateful_t
+ (** The compilation_is_over callback is called when the compilation
+      phase is over, after that the state is threaded at run time *)
+  val declare :
+    name:string ->
+    pp:(Format.formatter -> 'a -> unit) ->
+    init:(unit -> 'a) ->
+      'a component
 
-    type ('stateful_builder,'builder, 'stateful_matcher, 'matcher,  'self) constructor_arguments =
-      (* No arguments *)
-      | N : (State.t -> State.t * 'self, 'self, State.t -> State.t * Data.term * extra_goals, Data.term, 'self) constructor_arguments
-      (* An argument of type 'a *)
-      | A : 'a data * ('bs,'b, 'ms,'m, 'self) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms, 'a -> 'm, 'self) constructor_arguments
-      (* An argument of type 'self *)
-      | S : ('bs,'b, 'ms, 'm, 'self) constructor_arguments -> ('self -> 'bs, 'self -> 'b, 'self -> 'ms, 'self -> 'm, 'self) constructor_arguments
-      (* An argument of type `T 'self` for a constainer `T`, like a `list 'self`.
-         `S args` above is a shortcut for `C(fun x -> x, args)` *)
-      | C : ('self data -> 'a data) * ('bs,'b,'ms,'m,'self) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms,'a -> 'm, 'self) constructor_arguments
-    
-    type 't constructor =
-      K : name * doc *
-          ('build_stateful_t,'build_t,'match_stateful_t,'match_t,'t) constructor_arguments *   (* args ty *)
-          ('build_stateful_t,'build_t) build_t *
-          ('match_stateful_t,'match_t,'t) match_t
-        -> 't constructor
-        
-    type 't t = {
-      ty : ty_ast;
-      doc : doc;
-      pp : Format.formatter -> 't -> unit;
-      constructors : 't constructor list;
-    }
+  type t = Data.state
 
-    end (* ADT *)
+  val get : 'a component -> t -> 'a
+  val set : 'a component -> t -> 'a -> t
 
-    (** When the host application can represent flexible terms one way want to
-        read them back as such a keep a link between elpi unification variables
-        and flexible terms. 
-        
-        Example (from hol+elpi):
+  (** Allowed to raise BuiltInPredicate.No_clause *)
+  val update : 'a component -> t -> ('a -> 'a) -> t
+  val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
 
-     (* A byjection between Hol's (Stv j) and Elpi's (UnifVar k) *)
-     module UV2STV = State.UVMap(struct
+end
+
+(** Flexible data is for unification variables. One can use Elpi's unification
+    variables to represent the host equivalent, here the API the keep a link
+    between the two. *)
+module FlexibleData : sig
+  
+  (** key for Elpi's flexible data *)
+  module Elpi : sig
+    type t
+    val make : ?name:string -> lvl:int -> Data.state -> Data.state * t
+    val get : name:string -> Data.state -> t option
+    val pp :  Format.formatter -> t -> unit
+    val show :  t -> string
+    val equal : t -> t -> bool
+    val lvl : t -> int
+  end
+
+  module type Host = sig
+    type t
+    val compare : t -> t -> int
+    val pp : Format.formatter -> t -> unit
+    val show : t -> string
+  end
+
+  module Map : functor(Host : Host) -> sig
+    type t
+
+    val empty : t
+    val add : Elpi.t -> Host.t -> t -> t
+
+    val remove_elpi : Elpi.t -> t -> t
+    val remove_host : Host.t -> t -> t
+
+    val filter : (Host.t -> Elpi.t -> bool) -> t -> t
+
+    (* The eventual body at its depth *)
+    val fold : (Host.t -> Elpi.t -> (int * Data.term) option -> 'a -> 'a) -> t -> 'a -> 'a
+
+    val elpi   : Host.t -> t -> Elpi.t
+    val host : Elpi.t -> t -> Host.t
+
+    val uvmap : t State.component
+
+    val pp : Format.formatter -> t -> unit
+    val show : t -> string
+  end
+
+   (** Example from Hol-light + elpi:
+
+     module UV2STV = FlexibleData.Map(struct
         type t = int
         let compare x y = x - y
         let pp fmt i = Format.fprintf fmt "%d" i
@@ -664,7 +628,10 @@ module Extend : sig
             let j = incr_get stv in
             UV2STV.add k j m, Stv j)
   
-      let t = adt {
+      (* The constructor name "uvar" is special and has to be used with the
+         following Conversion.t *)
+
+      let hol_pretype = AlgebraicData.declare {
         ty = TyName "pretype";
         doc = "The algebraic data type of pretypes";
         pp = (fun fmt t -> ...);
@@ -675,252 +642,293 @@ module Extend : sig
              M (fun ~ok ~ko _ -> ko ()))
         ]
       }
-    
-    *)
-    val uvar : (State.UVKey.t * Data.term list) data
 
-    (** Type descriptors (see also Elpi_builtin) *)
-    val int    : int data
-    val float  : float data
-    val string : string data
-    val list   : 'a data -> 'a list data
-    val loc    : Ast.Loc.t data
-
-    (* poly "A" is what one would use for, say, [type eq A -> A -> prop] *)
-    val poly   : string -> Data.term data
-    (* any is like poly "X" for X fresh *)
-    val any    : Data.term data
-
-    (* commodity type description of a CData *)
-    val cdata :
-      (* name used for type declarations, eg "int" or "in_stream" *)
-      name:string ->
-      (* To document *)
-      ?doc:doc ->
-      (* global constants of that type, eg "std_in" *)
-      ?constants:'a Data.Constants.Map.t ->
-      'a CData.cdata -> 'a data
-
-    (* commodity type description of ADT *)
-    val adt : 'a ADT.t -> 'a data
-
-    val map_acc_embed :
-      (State.t -> 'a -> State.t * Data.term * extra_goals) ->
-      State.t -> 'a list -> State.t * Data.term list * extra_goals
-
-    val map_acc_readback :
-      (State.t -> Data.term -> State.t * 'a) ->
-      State.t -> Data.term list -> State.t * 'a list
-
-    (** Setup.init takes a list of declarations of data types and predicates  *)
-
-    (** Where to print the documentation. For the running example DocAbove
-     * generates
-     *   % [div N M D R] division of N by M gives D with reminder R
-     *   pred div i:int, i:int, o:int, o:int.
-     * while DocNext generates
-     *   pred div % division of N by M gives D with reminder R
-     *    i:int, % N
-     *    i:int, % M
-     *    o:int, % D
-     *    o:int. % R
-     * The latter format it is useful to give longer doc for each argument. *)
-    type doc_spec = DocAbove | DocNext
-
-    (* When an elpi interpreter is set up one can pass a list of
-     * declarations that constitute the base environment in which
-     * programs run *)
-    type declaration =
-    (* Real OCaml code *)
-    | MLCode of t * doc_spec
-    (* Declaration of an OCaml data *)
-    | MLData : 'a data -> declaration
-    (* Extra doc *)
-    | LPDoc  of string
-    (* Sometimes you wrap OCaml code in regular predicates or similar in order
-     * to implement the desired builtin, maybe just temporarily because writing
-     * LP code is simpler.
-     * Note: will be complemented in the future by an LPType/LPPred/LPMode nodes
-     * for the specific statements. *)
-    | LPCode of string
-
-    (** Prints in LP syntax the "external" declarations.
-     * The file builtin.elpi is generated by calling this API on the
-     * declaration list from elpi_builtin.ml *)
-    val document : Format.formatter -> declaration list -> unit
-
-    (** What is passed to [Setup.init] *)
-    val builtin_of_declaration :
-      file_name:string -> declaration list -> Setup.builtins
-
-    module Notation : sig
-
-      (* Handy notation to construct the value generated by built-in predicates.
-       *
-       * "!" means the output is there, while "?" that it may not be.
-       *
-       * "?:" and "!:" begin the sequence of outputs, while "+?" and "+!"
-       * continue.
-       *
-       * Eg  !: 3 +! 4 +? None +? (Some 5)           -->
-       *     ((((), Some 3), Some 4), None), Some 5
-       *)
-      val (?:) : 'a -> unit * 'a
-      val (!:) : 'a -> unit * 'a option
-      val (+?) : 'a -> 'b -> 'a * 'b
-      val (+!) : 'a -> 'b -> 'a * 'b option
-
-    end
-  end
-
-
-  (** This module lets one extend the compiler by:
-   * - "compiling" the query by hand or using a query_description
-   * - providing quotations *)
-  module Compile : sig
-
-    (* Example from hol-light: 
-
-      let run_predicate ?max_steps program loc query =
-        let q = Compile.query_data program loc query in
-        let exe = Compile.link q in
-        match Execute.once exe with
-        | Execute.Success s -> Compile.query_solution query s
-        | _ -> failwith "elpi finds no solution"
-
-      let elaborate (p : preterm) : preterm =
-        let elab_p, _ = run_predicate (hol ()) (Ast.Loc.initial "(elab)")
-          (Compile.Query {
-            predicate = "elab";
-            args = D(Hol_preterm.t,p,
-                   Q(Hol_preterm.t,"Elab_p",
-                   N)) })
-        in
-        elab_p
-    
-      Calling elaborate t is like runing the Elpi query (elab t Elab_p)
-      where (t : preterm) and (Hol_preterm.t : preterm BuiltInPredicate.data).
+      In this way an Elpi term containig a variable X twice gets read back
+      using (Stv i) for the same i.
     
     *)
 
-    type 'x query_description =
-      | Query of { predicate : string; args : 'x query_args }
-    and _ query_args =
-      | N : unit query_args
-      | D : 'a BuiltInPredicate.data * 'a *    'x query_args -> 'x query_args
-      | Q : 'a BuiltInPredicate.data * string * 'x query_args -> ('a * 'x) query_args
+  val uvar : (Elpi.t * Data.term list) Conversion.t
+end
 
-    val query_data :
-      Compile.program -> Ast.Loc.t -> 'a query_description -> 'a Compile.query
+(** Low level module *)
+module RawOpaqueData : sig
 
-    val query_solution : 'a query_description -> 'a Data.solution -> 'a
+  type name = string
+  type doc = string
 
-    (* Args are parameters of the query (e.g. capital letters). *)
-    val is_Arg : State.t -> Data.term -> bool
+  type t
+
+ (** If the data_hconsed is true, then the [cin] function below will
+     automatically hashcons the data using the [eq] and [hash] functions. *)
+  type 'a declaration = 'a OpaqueData.declaration = {
+    name : name;
+    doc : doc;
+    pp : Format.formatter -> 'a -> unit;
+    eq : 'a -> 'a -> bool;
+    hash : 'a -> int;
+    hconsed : bool;
+    constants : (name * 'a) list; (* global constants of that type, eg "std_in" *)
+  }
+
+  type 'a cdata = private {
+    cin : 'a -> t;
+    isc : t -> bool;
+    cout: t -> 'a;
+    name : string;
+  }
+
+  val declare : 'a declaration -> 'a cdata * 'a Conversion.t
+
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
+  val equal : t -> t -> bool
+  val hash : t -> int
+  val name : t -> string
+  val hcons : t -> t
+
+  (* tests if two cdata have the same given type *)
+  val ty2 : 'a cdata -> t -> t -> bool
+  val morph1 : 'a cdata -> ('a -> 'a) -> t -> t
+  val morph2 : 'a cdata -> ('a -> 'a -> 'a) -> t -> t -> t
+  val map : 'a cdata -> 'b cdata -> ('a -> 'b) -> t -> t
+
+  (* Raw builtin *)
+  val int : int cdata
+  val is_int : t -> bool
+  val to_int : t -> int
+  val of_int : int -> Data.term
+
+  val float : float cdata
+  val is_float : t -> bool
+  val to_float : t -> float
+  val of_float : float -> Data.term
+
+  val string : string cdata
+  val is_string : t -> bool
+  val to_string : t -> string
+  val of_string : string -> Data.term
+
+  val loc : Ast.Loc.t cdata
+  val is_loc : t -> bool
+  val to_loc : t -> Ast.Loc.t
+  val of_loc : Ast.Loc.t -> Data.term
+
+end
+
+  (** This module exposes the low level representation of terms.
+   *
+   * The data type [term] is opaque and can only be accessed by using the
+   * [look] API that exposes a term [view]. The [look] view automatically
+   * substitutes assigned unification variables by their value. *)
+module RawData : sig
+
+  type constant = int (** De Bruijn levels (not indexes):
+                          the distance of the binder from the root.
+                          Starts at 0 and grows for bound variables;
+                          global constants have negative values. *)
+  type builtin
+  type term = Data.term
+  type view = private
+    (* Pure subterms *)
+    | Const of constant                   (* global constant or a bound var *)
+    | Lam of term                         (* lambda abstraction, i.e. x\ *)
+    | App of constant * term * term list  (* application (at least 1 arg) *)
+    (* Optimizations *)
+    | Cons of term * term                 (* :: *)
+    | Nil                                 (* [] *)
+    | Discard                             (* _  *)
+    (* FFI *)
+    | Builtin of builtin * term list      (* call to a built-in predicate *)
+    | CData of RawOpaqueData.t            (* opaque data *)
+    (* Unassigned unification variables *)
+    | UnifVar of FlexibleData.Elpi.t * term list
+
+  (** Terms must be inspected after dereferencing their head.
+      If the resulting term is UVar then its uvar_body is such that
+      get_assignment uvar_body = None *)
+  val look : depth:int -> term -> view
+
+  (* to reuse a term that was looked at *)
+  val kool : view -> term
+
+  (** Smart constructors *)
+  val mkGlobalS : string -> term  (* global constant, i.e. < 0 *)
+  val mkBound : constant -> term  (* bound variable, i.e. >= 0 *)
+  val mkLam : term -> term
+  val mkAppS : string -> term -> term list -> term
+  val mkAppSL : string -> term list -> term
+  val mkCons : term -> term -> term
+  val mkNil : term
+  val mkDiscard : term
+  val mkBuiltinS : string -> term list -> term
+  val mkCData : RawOpaqueData.t -> term
+  val mkUnifVar : FlexibleData.Elpi.t -> args:term list -> State.t -> term
+
+  (** Lower level smart constructors *)
+  val mkGlobal : constant -> term (* global constant, i.e. < 0 *)
+  val mkApp : constant -> term -> term list -> term
+  val mkAppL : constant -> term list -> term
+  val mkBuiltin : builtin -> term list -> term
+  val mkConst : constant -> term (* no check, works for globals and bound *)
+
+  type hyp = {
+    hdepth : int;
+    hsrc : term
+  }
+  val of_hyp : Data.hyp -> hyp
+  type hyps = hyp list
+
+  type suspended_goal = {
+    context : hyps;
+    goal : int * term
+  }
+  val constraints : Data.constraints -> suspended_goal list
+  val no_constraints : Data.constraints
+
+  module Constants : sig
+
+    val from_string : string -> term
+    val from_stringc : string -> constant
     
-    (** Generate a query starting from a compiled/hand-made term. *)
-    val query :
-      Compile.program -> (depth:int -> State.t -> State.t * (Ast.Loc.t * Data.term)) ->
-        unit Compile.query
+    val show : constant -> string
 
-    (* The output term is to be used to build the query but is *not* the handle
-       to the eventual solution. The compiler transforms it, later on, into
-       a UnifVar. Use the name to fetch the solution. *)
-    val mk_Arg :
-      State.t -> name:string -> args:Data.term list ->
-        State.t * Data.term
+    val eqc    : constant (* = *)
+    val orc    : constant (* ; *)
+    val andc   : constant (* , *)
+    val andc2  : constant (* & *)
+    val rimplc : constant (* :- *)
+    val pic    : constant (* pi *)
+    val sigmac : constant (* sigma *)
+    val implc  : constant (* => *)
+    val cutc   : constant (* ! *)
 
-    (** From an unparsed string to a term *)
-    type quotation =
-      depth:int -> State.t -> Ast.Loc.t -> string -> State.t * Data.term
+    (* LambdaProlog built-in data types are just instances of CData.
+      * Still the parser translated the type [int], [float] and [string]
+      * to [ctype "int"], [ctype "float"] and [ctype "string"]. *)
+    val ctypec : constant (* ctype *)
 
-    (** The default quotation [{{code}}] *)
-    val set_default_quotation : quotation -> unit
-
-    (** Named quotation [{{name:code}}] *)
-    val register_named_quotation : name:string -> quotation -> unit
-
-    (** The anti-quotation to lambda Prolog *)
-    val lp : quotation
-
-
-    (** See elpi_quoted_syntax.elpi (EXPERIMENTAL, used by elpi-checker) *)
-    val quote_syntax : 'a Compile.query -> Data.term list * Data.term
-
-    (** To implement the string_to_term built-in (AVOID, makes little sense
-     * if depth is non zero, since bound variables have no name!) *)
-    val term_at : depth:int -> Ast.query -> Data.term
+    (* Marker for spilling function calls, as in [{ rev L }] *)
+    val spillc : constant
+  
+    module Map : Map.S with type key = constant
+    module Set : Set.S with type elt = constant
     
   end
+
+end
+module RawQuery : sig
+
+  (* The output term is to be used to build the query but is *not* the handle
+     to the eventual solution. The compiler transforms it, later on, into
+     a UnifVar. Use the name to fetch the solution. *)
+  val mk_Arg :
+    State.t -> name:string -> args:Data.term list ->
+      State.t * Data.term
+
+  (* Args are parameters of the query (e.g. capital letters). *)
+  val is_Arg : State.t -> Data.term -> bool
+
+  val compile :
+    Compile.program -> (depth:int -> State.t -> State.t * (Ast.Loc.t * Data.term)) ->
+      unit Compile.query
+
+end
+
+module Quotation : sig
+
+  type quotation =
+    depth:int -> State.t -> Ast.Loc.t -> string -> State.t * Data.term
+
+  (** The default quotation [{{code}}] *)
+  val set_default_quotation : quotation -> unit
+
+  (** Named quotation [{{name:code}}] *)
+  val register_named_quotation : name:string -> quotation -> unit
+
+  (** The anti-quotation to lambda Prolog *)
+  val lp : quotation
+
+  (** See elpi_quoted_syntax.elpi (EXPERIMENTAL, used by elpi-checker) *)
+  val quote_syntax : 'a Compile.query -> Data.term list * Data.term
+
+  (** To implement the string_to_term built-in (AVOID, makes little sense
+   * if depth is non zero, since bound variables have no name!) *)
+  val term_at : depth:int -> Ast.query -> Data.term
 
   (** Like quotations but for identifiers that begin and end with
    * "`" or "'", e.g. `this` and 'that'. Useful if the object language
    * needs something that looks like a string but with a custom compilation
    * (e.g. CD.string like but with a case insensitive comparison) *)
-  module CustomFunctor : sig
 
-    val declare_backtick : name:string ->
-      (State.t -> string -> State.t * Data.term) -> unit
+  val declare_backtick : name:string ->
+    (State.t -> string -> State.t * Data.term) -> unit
 
-    val declare_singlequote : name:string ->
-      (State.t -> string -> State.t * Data.term) -> unit
+  val declare_singlequote : name:string ->
+    (State.t -> string -> State.t * Data.term) -> unit
 
-  end
+end
 
+module Utils : sig
 
-  module Utils : sig
+  (** A regular error (fatal) *)
+  val error : ?loc:Ast.Loc.t ->string -> 'a
 
-    (** A regular error (fatal) *)
-    val error : ?loc:Ast.Loc.t ->string -> 'a
-    (** An invariant is broken, i.e. a bug *)
-    val anomaly : ?loc:Ast.Loc.t ->string -> 'a
-    (** A type error (in principle ruled out by [elpi-checker.elpi]) *)
-    val type_error : ?loc:Ast.Loc.t ->string -> 'a
-    (** A non fatal warning *)
-    val warn : ?loc:Ast.Loc.t ->string -> unit
+  (** An invariant is broken, i.e. a bug *)
+  val anomaly : ?loc:Ast.Loc.t ->string -> 'a
 
-    (** link between OCaml and LP lists. Note that [1,2|X] is not a valid
-     * OCaml list! *)
-    val list_to_lp_list : Data.term list -> Data.term
-    val lp_list_to_list : depth:int -> Data.term -> Data.term list
+  (** A type error (in principle ruled out by [elpi-checker.elpi]) *)
+  val type_error : ?loc:Ast.Loc.t ->string -> 'a
 
-    (** The body of an assignment, if any (LOW LEVEL). 
-     * Use [look] and forget about this API since the term you get
-     * needs to be moved and/or reduced, and you have no API for this. *)
-    val get_assignment : Data.uvar_body -> Data.term option
+  (** A non fatal warning *)
+  val warn : ?loc:Ast.Loc.t ->string -> unit
 
-    (** Hackish, in particular the output should be a compiled program *)
-    val clause_of_term :
-      ?name:string -> ?graft:([`After | `Before] * string) ->
-      depth:int -> Ast.Loc.t -> Data.term -> Ast.program
+  (** link between OCaml and LP lists. Note that [1,2|X] is not a valid
+   * OCaml list! *)
+  val list_to_lp_list : Data.term list -> Data.term
+  val lp_list_to_list : depth:int -> Data.term -> Data.term list
 
-    (** Lifting/restriction (LOW LEVEL, don't use) *)
-    val move : from:int -> to_:int -> Data.term -> Data.term
+  (** The body of an assignment, if any (LOW LEVEL). 
+   * Use [look] and forget about this API since the term you get
+   * needs to be moved and/or reduced, and you have no API for this. *)
+  val get_assignment : FlexibleData.Elpi.t -> Data.term option
 
-  end
+  (** Hackish, in particular the output should be a compiled program *)
+  val clause_of_term :
+    ?name:string -> ?graft:([`After | `Before] * string) ->
+    depth:int -> Ast.Loc.t -> Data.term -> Ast.program
+
+  (** Lifting/restriction (LOW LEVEL, don't use) *)
+  val move : from:int -> to_:int -> Data.term -> Data.term
+
+  val map_acc_embed :
+    (State.t -> 'a -> State.t * Data.term * Conversion.extra_goals) ->
+    State.t -> 'a list -> State.t * Data.term list * Conversion.extra_goals
+
+  val map_acc_readback :
+    (State.t -> Data.term -> State.t * 'a) ->
+    State.t -> Data.term list -> State.t * 'a list
+
+end
         
+module RawPp : sig
+  (** If the term is under [depth] binders this is the function that has to be
+   * called in order to print the term correct. WARNING: as of today printing
+   * an open term (i.e. containing unification variables) in the *wrong* depth
+   * can cause the pruning of the unification variable.
+   * This behavior shall be cleaned up in the future *)
+  val term : (*depth*)int -> Format.formatter -> Data.term -> unit
 
-  module Pp : sig
+  val list : ?max:int -> ?boxed:bool ->
+    (Format.formatter -> 'a -> unit) ->
+    ?pplastelem:(Format.formatter -> 'a -> unit) -> string ->
+      Format.formatter -> 'a list -> unit
 
-    (** If the term is under [depth] binders this is the function that has to be
-     * called in order to print the term correct. WARNING: as of today printing
-     * an open term (i.e. containing unification variables) in the *wrong* depth
-     * can cause the pruning of the unification variable.
-     * This behavior shall be cleaned up in the future *)
+  module Debug : sig
     val term : (*depth*)int -> Format.formatter -> Data.term -> unit
+    val show_term : Data.term -> string
+ end
 
-    val list : ?max:int -> ?boxed:bool ->
-      (Format.formatter -> 'a -> unit) ->
-      ?pplastelem:(Format.formatter -> 'a -> unit) -> string ->
-        Format.formatter -> 'a list -> unit
-
-    module Raw : sig
-      val term : (*depth*)int -> Format.formatter -> Data.term -> unit
-      val show_term : Data.term -> string
-   end
-
-  end
-
-end (* Extend *)
+end
 
 (**/**)

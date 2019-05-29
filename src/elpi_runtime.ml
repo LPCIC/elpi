@@ -2577,69 +2577,69 @@ let arity_err ~depth bname n t =
     | Some t -> "too many arguments at: " ^
                   Format.asprintf "%a" (uppterm depth [] 0 empty_env) t)
 
-let out_of_term ~depth { Builtin.readback; ty } n bname hyps constraints state t =
+let out_of_term ~depth { Conversion.readback; ty } n bname hyps constraints state t =
   match deref_head ~depth t with
-  | Discard -> Builtin.Discard
-  | _ -> Builtin.Keep
+  | Discard -> BuiltInPredicate.Discard
+  | _ -> BuiltInPredicate.Keep
 
-let in_of_term ~depth { Builtin.readback } n bname hyps constraints state t =
+let in_of_term ~depth { Conversion.readback } n bname hyps constraints state t =
   try readback ~depth hyps constraints state t
-  with Builtin.TypeErr(ty,t) -> type_err ~depth bname n (Builtin.show_ty_ast ty) (Some t)
+  with Conversion.TypeErr(ty,t) -> type_err ~depth bname n (Conversion.show_ty_ast ty) (Some t)
 
-let inout_of_term ~depth { Builtin.readback } n bname hyps constraints state t =
+let inout_of_term ~depth { Conversion.readback } n bname hyps constraints state t =
   match deref_head ~depth t with
-  | Discard -> state, Builtin.NoData
+  | Discard -> state, BuiltInPredicate.NoData
   | _ ->
      try
        let state, t = readback ~depth hyps constraints state t in
-       state, Builtin.Data t
-     with Builtin.TypeErr(ty,t) -> type_err ~depth bname n (Builtin.show_ty_ast ty) (Some t)
+       state, BuiltInPredicate.Data t
+     with Conversion.TypeErr(ty,t) -> type_err ~depth bname n (Conversion.show_ty_ast ty) (Some t)
 
-let mk_out_assign ~depth { Builtin.embed } bname hyps constraints state input v  output =
+let mk_out_assign ~depth { Conversion.embed } bname hyps constraints state input v  output =
   match output, input with
-  | None, Builtin.Discard -> state, []
-  | Some _, Builtin.Discard -> state, [] (* We could warn that such output was generated without being required *)
-  | Some t, Builtin.Keep ->
+  | None, BuiltInPredicate.Discard -> state, []
+  | Some _, BuiltInPredicate.Discard -> state, [] (* We could warn that such output was generated without being required *)
+  | Some t, BuiltInPredicate.Keep ->
      let state, t, extra = embed ~depth hyps constraints state t in
      state, extra @ [App(C.eqc, v, [t])]
-  | None, Builtin.Keep ->
+  | None, BuiltInPredicate.Keep ->
       anomaly ("ffi: " ^ bname ^ ": some output was requested but not produced")
 
-let mk_inout_assign ~depth { Builtin.embed } bname hyps constraints state input v  output =
+let mk_inout_assign ~depth { Conversion.embed } bname hyps constraints state input v  output =
   match output, input with
-  | None, Builtin.NoData -> state, []
-  | Some _, Builtin.NoData -> state, [] (* We could warn that such output was generated without being required *)
-  | Some t, Builtin.Data _ ->
+  | None, BuiltInPredicate.NoData -> state, []
+  | Some _, BuiltInPredicate.NoData -> state, [] (* We could warn that such output was generated without being required *)
+  | Some t, BuiltInPredicate.Data _ ->
      let state, t, extra = embed ~depth hyps constraints state t in
      state, extra @ [App(C.eqc, v, [t])]
-  | None, Builtin.Data _ ->
+  | None, BuiltInPredicate.Data _ ->
       anomaly ("ffi: " ^ bname ^ ": some output was requested but not produced")
 
-let call (Builtin.Pred(bname,ffi,compute)) ~depth hyps constraints state data =
+let call (BuiltInPredicate.Pred(bname,ffi,compute)) ~depth hyps constraints state data =
   let rec aux : type i o.
-    (i,o) Builtin.ffi -> compute:i -> reduce:(state -> o -> state * term list) ->
+    (i,o) BuiltInPredicate.ffi -> compute:i -> reduce:(state -> o -> state * term list) ->
        term list -> int -> state -> state * term list =
   fun ffi ~compute ~reduce data n state ->
     match ffi, data with
-    | Builtin.Easy _, [] ->
+    | BuiltInPredicate.Easy _, [] ->
        let result = compute ~depth in
        let state, l = reduce state result in
        state, List.rev l
-    | Builtin.Read _, [] ->
+    | BuiltInPredicate.Read _, [] ->
        let result = compute ~depth hyps constraints state in
        let state, l = reduce state result in
        state, List.rev l
-    | Builtin.Full _, [] ->
+    | BuiltInPredicate.Full _, [] ->
        let state, result = compute ~depth hyps constraints state in
        let state, l = reduce state result in
        state, List.rev l
-    | Builtin.VariadicIn(d, _), data ->
+    | BuiltInPredicate.VariadicIn(d, _), data ->
        let state, i =
          map_acc (in_of_term ~depth d n bname hyps constraints) state data in
        let state, rest = compute i ~depth hyps constraints state in
        let state, l = reduce state rest in
        state, List.rev l
-    | Builtin.VariadicOut(d, _), data ->
+    | BuiltInPredicate.VariadicOut(d, _), data ->
        let i = List.map (out_of_term ~depth d n bname hyps constraints state) data in
        let state, (rest, out) = compute i ~depth hyps constraints state in
        let state, l = reduce state rest in
@@ -2650,7 +2650,7 @@ let call (Builtin.Pred(bname,ffi,compute)) ~depth hyps constraints state data =
              state, List.(rev (concat ass @ l))
          | None -> state, List.rev l
        end
-    | Builtin.VariadicInOut(d, _), data ->
+    | BuiltInPredicate.VariadicInOut(d, _), data ->
        let state, i =
          map_acc (inout_of_term ~depth d n bname hyps constraints) state data in
        let state, (rest, out) = compute i ~depth hyps constraints state in
@@ -2662,17 +2662,17 @@ let call (Builtin.Pred(bname,ffi,compute)) ~depth hyps constraints state data =
              state, List.(rev (concat ass @ l))
          | None -> state, List.rev l
        end
-    | Builtin.In(d, _, ffi), t :: rest ->
+    | BuiltInPredicate.In(d, _, ffi), t :: rest ->
         let state, i = in_of_term ~depth d n bname hyps constraints state t in
         aux ffi ~compute:(compute i) ~reduce rest (n + 1) state
-    | Builtin.Out(d, _, ffi), t :: rest ->
+    | BuiltInPredicate.Out(d, _, ffi), t :: rest ->
         let i = out_of_term ~depth d n bname hyps constraints state t in
         let reduce state (rest, out) =
           let state, l = reduce state rest in
           let state, ass = mk_out_assign ~depth d bname hyps constraints state i t out in
           state, ass @ l in
         aux ffi ~compute:(compute i) ~reduce rest (n + 1) state
-    | Builtin.InOut(d, _, ffi), t :: rest ->
+    | BuiltInPredicate.InOut(d, _, ffi), t :: rest ->
         let state, i = inout_of_term ~depth d n bname hyps constraints state t in
         let reduce state (rest, out) =
           let state, l = reduce state rest in
@@ -2696,7 +2696,7 @@ let exect_builtin_predicate c ~depth idx args =
                [] 
   end else
     let b =
-      try Builtin.lookup c
+      try BuiltInPredicate.lookup c
       with Not_found -> 
         anomaly ("no built-in predicated named " ^ C.show c) in
     let constraints = !CS.Ugly.delayed in

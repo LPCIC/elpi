@@ -502,7 +502,7 @@ let preterm_of_ast loc ~depth:arg_lvl macro state ast =
        mk_Arg state ~name:(F.show f) ~args:[]
      else if is_macro_name f then
        stack_macro_of_ast inner curlvl state f
-     else if Builtin.is_declared (fst (C.funct_of_ast f)) then
+     else if BuiltInPredicate.is_declared (fst (C.funct_of_ast f)) then
        state, Builtin(fst (C.funct_of_ast f),[])
      else if CustomFunctorCompilation.is_backtick f then
        CustomFunctorCompilation.compile_backtick state f
@@ -1349,7 +1349,7 @@ let program_of_ast ~flags:({ print_passes } as flags) p =
 ;;
 
 let is_builtin tname =
-  let all_builtin = Builtin.all () in
+  let all_builtin = BuiltInPredicate.all () in
   let elpi_builtins = [C.cutc;C.declare_constraintc;C.print_constraintsc] in
   List.memq tname elpi_builtins || List.exists ((==) tname) all_builtin
   
@@ -1359,7 +1359,7 @@ let check_all_builtin_are_typed types =
         (fun { Structured.tindex; loc; decl = { tname }} ->
             tindex = StructuredAST.External && tname == c) types) then
        error ("Built-in without external type declaration: " ^ C.show c))
-   (Builtin.all ());
+   (BuiltInPredicate.all ());
   List.iter (fun { Structured.tindex; loc; decl = { tname }} ->
     if tindex = StructuredAST.External && not (is_builtin tname) then
       error ~loc ("external type declaration without Built-in: " ^
@@ -1463,18 +1463,18 @@ let query_of_term { Compiled.assembled_program; compiler_state; compiler_flags }
     initial_state = state |> (uvbodies_of_assignments assignments);
     compiler_flags;
   }
-type 'x query_description =
-  | Query of { predicate : string; args : 'x query_args }
-and _ query_args =
+type _ query_args =
   | N : unit query_args
-  | D : 'a Elpi_data.Builtin.data * 'a *    'x query_args -> 'x query_args
-  | Q : 'a Elpi_data.Builtin.data * string * 'x query_args -> ('a * 'x) query_args
+  | D : 'a Conversion.t * 'a *    'x query_args -> 'x query_args
+  | Q : 'a Conversion.t * string * 'x query_args -> ('a * 'x) query_args
+type 'x t =
+  | Query of { predicate : string; arguments : 'x query_args }
 
 let rec embed_query_aux : type a. depth:int -> string -> term list -> term list -> state -> a query_args -> state * term
   = fun ~depth predicate gls args state descr ->
     match descr with
     | D(d,x,rest) ->
-        let state, x, glsx = d.Elpi_data.Builtin.embed ~depth [] [] state x in
+        let state, x, glsx = d.Conversion.embed ~depth [] [] state x in
         embed_query_aux  ~depth predicate (gls @ glsx) (x :: args) state rest
     | Q(d,name,rest) ->
         let state, x = mk_Arg state ~name ~args:[] in
@@ -1487,8 +1487,8 @@ let rec embed_query_aux : type a. depth:int -> string -> term list -> term list 
         | gls -> Elpi_data.Term.mkAppL Constants.andc (gls @ [mkAppL (Constants.from_stringc predicate) args])
 ;;
 
-let embed_query ~depth state (Query { predicate; args }) =
-    embed_query_aux  ~depth predicate [] [] state args
+let embed_query ~depth state (Query { predicate; arguments }) =
+    embed_query_aux  ~depth predicate [] [] state arguments
 
 let rec query_solution_aux : type a. a query_args -> term StrMap.t -> state -> constraints -> a
  = fun args assignments state constraints ->
@@ -1497,11 +1497,11 @@ let rec query_solution_aux : type a. a query_args -> term StrMap.t -> state -> c
      | D(_,_,args) -> query_solution_aux args assignments state constraints
      | Q(d,name,args) ->
          let x = StrMap.find name assignments in
-         let state, x = d.Elpi_data.Builtin.readback ~depth:0 [] constraints state x in
+         let state, x = d.Conversion.readback ~depth:0 [] constraints state x in
          x, query_solution_aux args assignments state constraints
 
-let query_solution (Query { args }) { Elpi_data.assignments; state; constraints } =
-  query_solution_aux args assignments state constraints
+let query_solution (Query { arguments }) { Elpi_data.assignments; state; constraints } =
+  query_solution_aux arguments assignments state constraints
   
 
 let query_of_data p loc descr =
