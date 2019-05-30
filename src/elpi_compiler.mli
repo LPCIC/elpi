@@ -20,18 +20,8 @@ val program_of_ast : flags:flags -> Elpi_ast.Program.t -> program
 val query_of_ast : program -> Elpi_ast.Goal.t -> unit query
 val query_of_term :
   program -> (depth:int -> State.t -> State.t * (Loc.t * term)) -> unit query
-
-type _ query_args =
-  | N : unit query_args
-  | D : 'a Conversion.t * 'a *    'x query_args -> 'x query_args
-  | Q : 'a Conversion.t * string * 'x query_args -> ('a * 'x) query_args
-type 'x t =
-  | Query of { predicate : string; arguments : 'x query_args }
-
 val query_of_data :
-  program -> Loc.t -> 'a t -> 'a query
-
-val query_solution : 'a t -> 'a solution -> 'a
+  program -> Loc.t -> 'a Query.t -> 'a query
 
 val pp_query : (depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> 'a query -> unit
 
@@ -57,7 +47,7 @@ val quote_syntax : 'a query -> term list * term
 
 (* false means a type error was found *)
 val static_check : Elpi_ast.Program.t -> (* header *)
-  ?exec:(?max_steps:int -> 'a Elpi_data.executable -> 'a Elpi_data.outcome) ->
+  ?exec:(?max_steps:int -> unit Elpi_data.executable -> unit Elpi_data.outcome) ->
   ?checker:Elpi_ast.Program.t ->
   ?flags:flags ->
   'a query -> bool

@@ -648,33 +648,9 @@ type prechr_rule = {
 
 let todopp name fmt _ = error ("pp not implemented for field: "^name)
 
-type 'a executable = {
-  (* the lambda-Prolog program: an indexed list of clauses *) 
-  compiled_program : prolog_prog;
-  (* chr rules *)
-  chr : CHR.t;
-  (* initial depth (used for both local variables and CHR (#eigenvars) *)
-  initial_depth : int;
-  (* query *)
-  initial_goal: term;
-  (* constraints coming from compilation *)
-  initial_state : State.t;
-  (* solution *)
-  assignments : term StrMap.t;
-}
-
-exception No_clause
-exception No_more_steps
-
 type state = State.t
 type constraints = stuck_goal list
 
-type 'a solution = {
-  assignments : term StrMap.t;
-  constraints : constraints;
-  state : state;
-}
-type 'a outcome = Success of 'a solution | Failure | NoMoreSteps
 
 type hyps = clause_src list
 
@@ -685,6 +661,7 @@ type extra_goals = term list
 module Conversion = struct
 
   type ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
+  [@@deriving show]
 
   type 'a embedding =
     depth:int -> hyps -> constraints ->
@@ -696,11 +673,12 @@ module Conversion = struct
 
   type 'a t = {
     ty : ty_ast;
-    pp_doc : Format.formatter -> unit -> unit;
-    pp : Format.formatter -> 'a -> unit;
-    embed : 'a embedding;   (* 'a -> term *)
-    readback : 'a readback; (* term -> 'a *)
+    pp_doc : Format.formatter -> unit -> unit [@opaque];
+    pp : Format.formatter -> 'a -> unit [@opaque];
+    embed : 'a embedding [@opaque];   (* 'a -> term *)
+    readback : 'a readback [@opaque]; (* term -> 'a *)
   }
+  [@@deriving show]
 
   exception TypeErr of ty_ast * term (* a type error at data conversion time *)
     
@@ -1116,6 +1094,80 @@ let document fmt l =
 end
 
 let of_term x = x
+
+module Query = struct
+
+type name = string
+type _ arguments =
+  | N : unit arguments
+  | D : 'a Conversion.t * 'a *    'x arguments -> 'x arguments
+  | Q : 'a Conversion.t * name * 'x arguments -> ('a * 'x) arguments
+  
+type 'x t =
+  | Query of { predicate : name; arguments : 'x arguments }
+
+let rec embed_query_aux : type a. mk_Arg:(state -> name:string -> args:term list -> state * term) -> depth:int -> string -> term list -> term list -> state -> a arguments -> state * term
+  = fun ~mk_Arg ~depth predicate gls args state descr ->
+    match descr with
+    | D(d,x,rest) ->
+        let state, x, glsx = d.Conversion.embed ~depth [] [] state x in
+        embed_query_aux ~mk_Arg ~depth predicate (gls @ glsx) (x :: args) state rest
+    | Q(d,name,rest) ->
+        let state, x = mk_Arg state ~name ~args:[] in
+        embed_query_aux ~mk_Arg ~depth predicate gls (x :: args) state rest
+    | N ->
+        let args = List.rev args in
+        state,
+        match gls with
+        | [] -> Term.mkAppL (Constants.from_stringc predicate) args
+        | gls -> Term.mkAppL Constants.andc (gls @ [mkAppL (Constants.from_stringc predicate) args])
+;;
+
+let embed_query ~mk_Arg ~depth state (Query { predicate; arguments }) =
+    embed_query_aux  ~mk_Arg ~depth predicate [] [] state arguments
+
+let rec query_solution_aux : type a. a arguments -> term StrMap.t -> state -> constraints -> a
+ = fun args assignments state constraints ->
+     match args with
+     | N -> ()
+     | D(_,_,args) -> query_solution_aux args assignments state constraints
+     | Q(d,name,args) ->
+         let x = StrMap.find name assignments in
+         let state, x = d.Conversion.readback ~depth:0 [] constraints state x in
+         x, query_solution_aux args assignments state constraints
+
+let output arguments assignments state constraints =
+  query_solution_aux arguments assignments state constraints
+  
+end
+
+type 'a executable = {
+  (* the lambda-Prolog program: an indexed list of clauses *) 
+  compiled_program : prolog_prog;
+  (* chr rules *)
+  chr : CHR.t;
+  (* initial depth (used for both local variables and CHR (#eigenvars) *)
+  initial_depth : int;
+  (* query *)
+  initial_goal: term;
+  (* constraints coming from compilation *)
+  initial_state : State.t;
+  (* solution *)
+  assignments : term StrMap.t;
+  (* type of the query, reified *)
+  query_arguments: 'a Query.arguments;
+}
+
+exception No_clause
+exception No_more_steps
+type 'a solution = {
+  assignments : term StrMap.t;
+  constraints : constraints;
+  state : state;
+  output : 'a;
+}
+type 'a outcome = Success of 'a solution | Failure | NoMoreSteps
+
 
 
 (* vim: set foldmethod=marker: *)

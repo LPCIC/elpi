@@ -151,6 +151,7 @@ type 'a query = {
   chr : (constant list * prechr_rule list) list;
   initial_depth : int;
   query : preterm;
+  query_arguments : 'a Query.arguments [@opaque];
   (* We pre-compile the query to ease the API *)
   initial_goal : term; assignments : term StrMap.t;
   initial_state : State.t;
@@ -177,6 +178,8 @@ type 'a executable = 'a Elpi_data.executable = {
   initial_state : State.t;
   (* solution *)
   assignments : term StrMap.t;
+  (* reified type of the query *)
+  query_arguments : 'a Query.arguments;
 }
 
 end
@@ -1431,6 +1434,7 @@ let query_of_ast { Compiled.assembled_program; compiler_state; compiler_flags } 
     chr = assembled_program.Assembled.chr;
     initial_depth;
     query;
+    query_arguments = Query.N;
     initial_goal;
     assignments;
     initial_state = state |> (uvbodies_of_assignments assignments);
@@ -1458,56 +1462,19 @@ let query_of_term { Compiled.assembled_program; compiler_state; compiler_flags }
     chr = assembled_program.Assembled.chr;
     initial_depth;
     query;
+    query_arguments = Query.N;
     initial_goal;
     assignments;
     initial_state = state |> (uvbodies_of_assignments assignments);
     compiler_flags;
   }
-type _ query_args =
-  | N : unit query_args
-  | D : 'a Conversion.t * 'a *    'x query_args -> 'x query_args
-  | Q : 'a Conversion.t * string * 'x query_args -> ('a * 'x) query_args
-type 'x t =
-  | Query of { predicate : string; arguments : 'x query_args }
 
-let rec embed_query_aux : type a. depth:int -> string -> term list -> term list -> state -> a query_args -> state * term
-  = fun ~depth predicate gls args state descr ->
-    match descr with
-    | D(d,x,rest) ->
-        let state, x, glsx = d.Conversion.embed ~depth [] [] state x in
-        embed_query_aux  ~depth predicate (gls @ glsx) (x :: args) state rest
-    | Q(d,name,rest) ->
-        let state, x = mk_Arg state ~name ~args:[] in
-        embed_query_aux ~depth predicate gls (x :: args) state rest
-    | N ->
-        let args = List.rev args in
-        state,
-        match gls with
-        | [] -> Elpi_data.Term.mkAppL (Constants.from_stringc predicate) args
-        | gls -> Elpi_data.Term.mkAppL Constants.andc (gls @ [mkAppL (Constants.from_stringc predicate) args])
-;;
 
-let embed_query ~depth state (Query { predicate; arguments }) =
-    embed_query_aux  ~depth predicate [] [] state arguments
-
-let rec query_solution_aux : type a. a query_args -> term StrMap.t -> state -> constraints -> a
- = fun args assignments state constraints ->
-     match args with
-     | N -> ()
-     | D(_,_,args) -> query_solution_aux args assignments state constraints
-     | Q(d,name,args) ->
-         let x = StrMap.find name assignments in
-         let state, x = d.Conversion.readback ~depth:0 [] constraints state x in
-         x, query_solution_aux args assignments state constraints
-
-let query_solution (Query { arguments }) { Elpi_data.assignments; state; constraints } =
-  query_solution_aux arguments assignments state constraints
-  
-
-let query_of_data p loc descr =
-  query_of_term p (fun ~depth state ->
-    let state, term = embed_query ~depth state descr in
-    state, (loc, term))
+let query_of_data p loc (Query.Query { arguments } as descr) =
+  let query = query_of_term p (fun ~depth state ->
+    let state, term = Query.embed_query ~mk_Arg ~depth state descr in
+    state, (loc, term)) in
+  { query with query_arguments = arguments }
   
 module Compiler : sig
 
@@ -1588,6 +1555,7 @@ let run
     assignments;
     initial_state;
     compiler_flags = flags;
+    query_arguments;
   }
 =
 
@@ -1634,6 +1602,7 @@ let run
     initial_goal;
     initial_state;
     assignments;
+    query_arguments;
   }
 
 end (* }}} *)

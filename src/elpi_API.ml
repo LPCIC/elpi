@@ -105,6 +105,7 @@ module Data = struct
     assignments : term StrMap.t;
     constraints : constraints;
     state : state;
+    output : 'a;
   }
   type hyp = Elpi_data.clause_src = {
     hdepth : int;
@@ -610,10 +611,8 @@ module BuiltIn = struct
 end
 
 module Query = struct
-  type name = string
-  include Elpi_compiler
-  let compile = query_of_data
-  let result = query_solution
+  include Elpi_data.Query
+  let compile = Elpi_compiler.query_of_data
 end
 
 module State = struct

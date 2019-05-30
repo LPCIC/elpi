@@ -2780,6 +2780,7 @@ let try_fire_rule rule (constraints as orig_constraints) =
     assignments = StrMap.empty;
     initial_depth = max_depth;
     initial_state = State.(init () |> end_compilation StrMap.empty);
+    query_arguments = Query.N;
   } in
   let { search; get; exec; destroy } = !do_make_runtime executable in
  
@@ -3186,11 +3187,12 @@ open Mainloop
 let mk_outcome search get_cs assignments =
  try
    let alts = search () in
-   let syn_csts, state = get_cs () in
+   let syn_csts, state, qargs = get_cs () in
    let solution = {
      assignments;
      constraints = syn_csts;
      state;
+     output = Query.output qargs assignments state syn_csts;
    } in
    Success solution, alts
  with
@@ -3200,7 +3202,7 @@ let mk_outcome search get_cs assignments =
 let execute_once ?max_steps ?delay_outside_fragment exec =
  auxsg := [];
  let { search; get } = make_runtime ?max_steps ?delay_outside_fragment exec in
- fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.state) exec.Elpi_data.assignments)
+ fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.state, exec.query_arguments) exec.Elpi_data.assignments)
 ;;
 
 let execute_loop ?delay_outside_fragment exec ~more ~pp =
@@ -3208,7 +3210,7 @@ let execute_loop ?delay_outside_fragment exec ~more ~pp =
  let k = ref noalts in
  let do_with_infos f =
   let time0 = Unix.gettimeofday() in
-  let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, get CS.state) exec.Elpi_data.assignments in
+  let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, get CS.state, exec.query_arguments) exec.Elpi_data.assignments in
   let time1 = Unix.gettimeofday() in
   k := alts;
   pp (time1 -. time0) o in

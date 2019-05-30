@@ -103,6 +103,7 @@ module Data : sig
     assignments : term StrMap.t;
     constraints : constraints;
     state : state;
+    output : 'a;
   }
 
   (* Hypothetical context *)
@@ -492,8 +493,8 @@ end
 (** Commodity module to build a simple query
     and extract the output from the solution found by Elpi.
     
-    Example: "foo data Output" where data has type t (a is t Conversion.t)
-    and Output has type v (b is a v Conversion.t) can be described as:
+    Example: "foo data Output" where [data] has type [t] ([a] is [t Conversion.t])
+    and [Output] has type [v] ([b] is a [v Conversion.t]) can be described as: {|
 
       let q : (v * unit) t = Query {
         predicate = "foo";
@@ -502,28 +503,28 @@ end
                     N))
       }
 
+   |}
+
    Then [compile q] can be used to obtain the compiled query and
    [extract q solution] to extract a value of type (v * unit) from
-   the solution. Example:
+   the solution. Example: {|
    
      Query.compile q |> Compile.link |> Execute.once |> function
        | Execute.Success solution -> Query.result q solution
        | _ -> ...
    
-*)
+   |} *)
 module Query : sig
 
   type name = string
-  type _ query_args =
-    | N : unit query_args
-    | D : 'a Conversion.t * 'a *    'x query_args -> 'x query_args
-    | Q : 'a Conversion.t * name * 'x query_args -> ('a * 'x) query_args
+  type _ arguments =
+    | N : unit arguments
+    | D : 'a Conversion.t * 'a *    'x arguments -> 'x arguments
+    | Q : 'a Conversion.t * name * 'x arguments -> ('a * 'x) arguments
 
-  type 'x t = Query of { predicate : name; arguments : 'x query_args }
+  type 'x t = Query of { predicate : name; arguments : 'x arguments }
 
   val compile : Compile.program -> Ast.Loc.t -> 'a t -> 'a Compile.query
-
-  val result : 'a t -> 'a Data.solution -> 'a
 
 end
 
