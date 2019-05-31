@@ -18,7 +18,7 @@
      
   requires:
 *)
-open Ppx_tools_403
+open Ppx_tools_404
 
 open Ast_mapper
 open Ast_helper
@@ -148,6 +148,6 @@ let trace_mapper config cookies =
 open Migrate_parsetree
 let () =
   Driver.register ~name:"trace" ~args ~reset_args
-    Versions.ocaml_403 trace_mapper
+    Versions.ocaml_404 trace_mapper
 ;;
 

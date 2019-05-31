@@ -23,13 +23,13 @@ trace_ppx: trace_ppx.ml
 	$(H)$(call pp,OCAMLOPT,-o,$@)
 	$(H)ocamlfind ocamlopt \
 		-package ppx_tools_versioned \
-		-package ppx_tools_versioned.metaquot_403 \
+		-package ppx_tools_versioned.metaquot_404 \
 		-package ocaml-migrate-parsetree.driver-main \
-		-open Migrate_parsetree.Ast_403 \
+		-open Migrate_parsetree.Ast_404 \
 		-c $< 
 	$(H)ocamlfind ocamlopt \
 		-package ppx_tools_versioned \
-		-package ppx_tools_versioned.metaquot_403 \
+		-package ppx_tools_versioned.metaquot_404 \
 		-package ocaml-migrate-parsetree \
 		-predicates custom_ppx,ppx_driver \
 		-linkpkg -linkall \
