@@ -8,6 +8,9 @@
 (* *************************** Basic API *********************************** *)
 (* ************************************************************************* *)
 
+(** These APIs are sufficient to parse programs and queries from text, run
+    the interpreter and finally print the result *)
+
 module Ast : sig
   type program
   type query
@@ -194,6 +197,11 @@ end
 (* ************************* Extension API ********************************* *)
 (* ************************************************************************* *)
 
+(** This API lets one exchange with the host application opaque (primitive)
+    data such as integers or strings as well as algebraic data such OCaml's
+    ADS. No support for binders or unification variables at thil point. *)
+
+
 (** This module defines what embedding and readback functions are *)
 module Conversion : sig
 
@@ -269,10 +277,10 @@ end
 
 (** Declare data from the host application that has syntax, like
     list or pair but not like int. So far there is no support for
-    data with binder using this API *)
-module AlgebraicData : sig
-   
-   (* Example: define the ADT for "option a"
+    data with binder using this API. The type of each constructor is
+    described using a GADT so that the code to build or match the data
+    can be given the right type. Example: define the ADT for "option a" {|
+
    let option_declaration a = {
      ty = TyApp("option",a.ty,[]);
      doc = "The option type (aka Maybe)";
@@ -281,17 +289,23 @@ module AlgebraicData : sig
              | Some x -> Format.fprintf fmt "Some %a" a.pp x);
      constructors = [
       K("none","nothing in this case",
-        N,                                                (* no arguments *)
-        B None,                                                (* builder *)
-        M (fun ~ok ~ko -> function None -> ok | _ -> ko));     (* matcher *)
+        N,                                                   (* no arguments *)
+        B None,                                                   (* builder *)
+        M (fun ~ok ~ko -> function None -> ok | _ -> ko ()));     (* matcher *)
       K("some","something in this case",
-        A (a,N),                                (* one argument of type a *)
-        B (fun x -> Some x),                                   (* builder *)
-        M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko)); (* matcher *)
+        A (a,N),                                   (* one argument of type a *)
+        B (fun x -> Some x),                                      (* builder *)
+        M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko ())); (* matcher *)
      ]
    }
-         K stands for "constructor", B for "build", M for "match". Variants BS
-    and MS give access to the state. *)
+
+   |}
+        
+    [K] stands for "constructor", [B] for "build", [M] for "match".
+    Variants [BS] and [MS] give read/write access to the state. 
+    
+*)
+module AlgebraicData : sig
 
   type name = string
   type doc = string
@@ -354,7 +368,7 @@ end
    * built-in (Elpi code with comments).
    *
    * Example: built-in "div" taking two int and returning their division and
-   * remainder.
+   * remainder. {|
    *
    *   Pred("div",
    *        In(int, "N",
@@ -363,6 +377,7 @@ end
    *        Out(int, "R",
    *          Easy "division of N by M gives D with reminder R")))),
    *        (fun n m _ _ -> !: (n div m) +! (n mod n)))
+   *  |}
    *
    *   In( type, documentation, ... ) declares an input of a given type.
    *     In the example above both "n" and "m" are declare as input, and
@@ -505,12 +520,11 @@ end
 
    |}
 
-   Then [compile q] can be used to obtain the compiled query and
-   [extract q solution] to extract a value of type (v * unit) from
-   the solution. Example: {|
+   Then [compile q] can be used to obtain the compiled query such that the
+   resulting solution has a fied output of type [(v * unit)]. Example: {|
    
      Query.compile q |> Compile.link |> Execute.once |> function
-       | Execute.Success solution -> Query.result q solution
+       | Execute.Success { output } -> output
        | _ -> ...
    
    |} *)
@@ -532,7 +546,12 @@ end
 (* ********************* Advanced Extension API **************************** *)
 (* ************************************************************************* *)
 
-(* State is a collection of purely functional piece of data carried
+(** This API lets one access the low lever representation of terms in order
+    to exchange data with binders and unification variables with the host
+    application. It also lets one define quotations and extend the state
+    theraded by Elpi with custom data. *)
+
+(** State is a collection of purely functional piece of data carried
    by the interpreter. Such data is kept in sync with the backtracking, i.e.
    changes made in a branch are lost if that branch fails.
    It can be used to both store custom constraints to be manipulated by
@@ -610,7 +629,7 @@ module FlexibleData : sig
     val show : t -> string
   end
 
-   (** Example from Hol-light + elpi:
+   (** Example from Hol-light + elpi: {|
 
      module UV2STV = FlexibleData.Map(struct
         type t = int
@@ -644,15 +663,17 @@ module FlexibleData : sig
         ]
       }
 
-      In this way an Elpi term containig a variable X twice gets read back
-      using (Stv i) for the same i.
+    |}
+
+    In this way an Elpi term containig a variable [X] twice gets read back
+    using [Stv i] for the same [i].
     
-    *)
+  *)
 
   val uvar : (Elpi.t * Data.term list) Conversion.t
 end
 
-(** Low level module *)
+(** Low level module for OpaqueData *)
 module RawOpaqueData : sig
 
   type name = string
@@ -818,6 +839,8 @@ module RawData : sig
   end
 
 end
+
+(** This module lets one generate a query by providing a RawData.term directly *)
 module RawQuery : sig
 
   (* The output term is to be used to build the query but is *not* the handle
