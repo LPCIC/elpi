@@ -1,5 +1,7 @@
 ## [UNRELEASED]
 
+Elpi 1.3 requires OCaml 4.04 or newer
+
 - FFI:
   - Deep reorganization of the Extend module to improve consistency
   - `RawData.mkAppL` and `RawData.mkAppSL` handy constructors
