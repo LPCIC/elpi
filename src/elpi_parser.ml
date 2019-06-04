@@ -477,7 +477,7 @@ let desugar_multi_binder loc = function
   | (App _ | Const _ | Lam _ | CData _ | Quoted _) as t -> t
 ;;
 
-let desugar_macro = function
+let desugar_macro loc = function
   | App(Const hd,[Const name; body]) when Func.equal hd Func.rimplf ->
       if ((Func.show name).[0] != '@') then
         raise (Stream.Error "Macro name must begin with @");
@@ -488,10 +488,10 @@ let desugar_macro = function
       let names = List.map (function
         | Const x -> Func.show x
         | (App _ | Lam _ | CData _ | Quoted _) ->
-             Elpi_util.error "macro binder syntax") args in
+             Elpi_util.error ~loc "macro binder syntax") args in
       name, List.fold_right mkLam names body
-  | (App _ | Const _ | Lam _ | CData _ | Quoted _) ->
-        raise (Stream.Error "Illformed macro")
+  | (App _ | Const _ | Lam _ | CData _ | Quoted _) as x ->
+        raise (Stream.Error ("Illformed macro:" ^ show x))
 ;;
 
 let constant_colon strm =
@@ -670,7 +670,7 @@ EXTEND
      | RCURLY -> [Program.End (of_ploc loc)]
      | MODE; m = LIST1 mode SEP SYMBOL ","; FULLSTOP -> [Program.Mode m]
      | MACRO; b = atom; FULLSTOP ->
-         let name, body = desugar_macro b in
+         let name, body = desugar_macro (of_ploc loc) b in
          [Program.Macro { Macro.loc = of_ploc loc; name = name; body = body }]
      | NAMESPACE; ns = CONSTANT; LCURLY ->
          [ Program.Namespace (of_ploc loc, Func.from_string ns) ]
