@@ -1,7 +1,7 @@
 SHELL:=/bin/bash
 TIMEOUT=60.0
 RUNNERS=$(shell type -P ../elpi $(wildcard ../elpi.*)) $(shell if type tjsim >/dev/null 2>&1; then type -P tjsim; else echo; fi)
-TIME=$(shell if type -P gtime >/dev/null 2>&1; then type -P gtime; else echo /usr/bin/time; fi)
+TIME=--time $(shell if type -P gtime >/dev/null 2>&1; then type -P gtime; else echo /usr/bin/time; fi)
 BUILD=_build/default/
 STACK=32768
 
@@ -31,7 +31,7 @@ run: build
 	ulimit -s $(STACK); $(BUILD)test.exe \
 		--seed $$RANDOM \
 		--timeout $(TIMEOUT) \
-		--time=$(TIME) \
+		$(TIME) \
 		$(addprefix --name-match ,$(ONLY)) \
 		$(addprefix --runner , $(RUNNERS))
 
