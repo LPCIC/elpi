@@ -23,7 +23,7 @@ Elpi 1.3 requires OCaml 4.04 or newer
     as
       ```ocaml
       K("a", N, ..
-      K("b",(C (fun x -> list x,N)), ..
+      K("b",(C ((fun x -> list x),N)), ..
       ```
   - new `FlexibleTerm.Elpi.t` and `FlexibleTerm.Map` to represent Elpi's 
     unification variables and keep a bijective map between them and any host
