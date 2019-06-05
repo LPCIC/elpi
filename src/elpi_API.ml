@@ -441,7 +441,7 @@ module RawData = struct
 
   let of_term = Elpi_data.of_term
 
-  let of_hyp x = x
+  let of_hyps x = x
 
   type hyp = Data.hyp = {
     hdepth : int;

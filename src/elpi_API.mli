@@ -798,8 +798,8 @@ module RawData : sig
     hdepth : int;
     hsrc : term
   }
-  val of_hyp : Data.hyp -> hyp
   type hyps = hyp list
+  val of_hyps : Data.hyp list -> hyps
 
   type suspended_goal = {
     context : hyps;
