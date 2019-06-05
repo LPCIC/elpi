@@ -1,9 +1,13 @@
-## [UNRELEASED]
+## Version 1.3 (June 2019)
 
 Elpi 1.3 requires OCaml 4.04 or newer
 
+- API:
+  Major reorganization: The Extend module has gone; the module structure is flat
+  and ordered by complexity. Most modules are named after the kind of data they
+  let one represent.
+
 - FFI:
-  - Deep reorganization of the Extend module to improve consistency
   - `RawData.mkAppL` and `RawData.mkAppSL` handy constructors
   - `custom_state` renamed `state`
   - No more `solution` in the type of builtin predicates but rather
@@ -19,10 +23,11 @@ Elpi 1.3 requires OCaml 4.04 or newer
   - new `FlexibleTerm.Elpi.t` and `FlexibleTerm.Map` to represent Elpi's 
     unification variables and keep a bijective map between them and any host
     application data.
-  - `RawData.term` contains no more `UVar`, `AppUVar`, `Arg` and `AppArg` but only
-    `UnifVar of FlexibleTerm.Elpi.t * term list`.
-  - Simple GADT for describing a query and extracting the response out of the
-    solution data structure
+  - `RawData.term` contains no more `UVar`, `AppUVar`, `Arg` and `AppArg` but
+    only `UnifVar of FlexibleTerm.Elpi.t * term list`.
+  - Simple GADT for describing a query. When a query is built that way, the
+    `solution` contains an output field holding data of the type described by
+    the query.
 
 - Library:
   - replace `mode (std.mem i i)` with `(std.mem i o)`: member can be assigned
