@@ -5,7 +5,8 @@ Elpi 1.3 requires OCaml 4.04 or newer
 - API:
   Major reorganization: The Extend module has gone; the module structure is flat
   and ordered by complexity. Most modules are named after the kind of data they
-  let one represent.
+  let one represent. Eg `AlgebraicData`, `OpaqueData`, `FlexibleData` or for low
+  level access `RawOpaqueData` or `RawData` for naked terms.
 
 - FFI:
   - `RawData.mkAppL` and `RawData.mkAppSL` handy constructors
@@ -16,10 +17,14 @@ Elpi 1.3 requires OCaml 4.04 or newer
     generate the query at compile time and convert data at run time
   - Unify `MLCData` and `MLADT` into `MLData`
   - `AlgebraicData.t` supports `C` for containers, so that one can model
-      `type t = A | B of list t`
+      ```ocaml
+      type t = A | B of list t
+      ```
     as
-      `K("a", N, ..`
-      `K("b",(C (fun x -> list x,N)), ..`
+      ```ocaml
+      K("a", N, ..
+      K("b",(C (fun x -> list x,N)), ..
+      ```
   - new `FlexibleTerm.Elpi.t` and `FlexibleTerm.Map` to represent Elpi's 
     unification variables and keep a bijective map between them and any host
     application data.
