@@ -25,7 +25,6 @@ trace_ppx: trace_ppx.ml
 		-package ppx_tools_versioned \
 		-package ppx_tools_versioned.metaquot_404 \
 		-package ocaml-migrate-parsetree.driver-main \
-		-open Migrate_parsetree.Ast_404 \
 		-c $< 
 	$(H)ocamlfind ocamlopt \
 		-package ppx_tools_versioned \

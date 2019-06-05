@@ -18,6 +18,7 @@
      
   requires:
 *)
+open Migrate_parsetree.Ast_404
 open Ppx_tools_404
 
 open Ast_mapper
