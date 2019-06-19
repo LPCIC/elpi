@@ -225,8 +225,7 @@ module Conversion : sig
     readback : 'a readback; (* term -> 'a *)
   }
 
-  exception TypeErr of ty_ast * Data.term (* a type error at data conversion time *)
-    
+  exception TypeErr of ty_ast * int (*depth*) * Data.term (* a type error at data conversion time *)
 end
 
 (** Conversion for Elpi's built-in data types *)

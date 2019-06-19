@@ -2565,10 +2565,18 @@ let declare_constraint ~depth prog args =
   | None -> delay_goal ~depth prog ~goal:g ~on:keys
 
 let type_err ~depth bname n ty t =
-  type_error ("builtin " ^ bname ^ ": " ^ string_of_int n ^ "th argument: expected " ^ ty ^ ": got " ^
-  match t with
-  | None -> "_"
-  | Some t -> Format.asprintf "%a" (uppterm depth [] 0 empty_env) t)
+  type_error begin
+    "builtin " ^ bname ^ ": " ^
+    (if n = 0 then "" else string_of_int n ^ "th argument: ") ^
+    "expected " ^ ty ^ ": got " ^
+    match t with
+    | None -> "_"
+    | Some t -> Format.asprintf "%a" (uppterm depth [] 0 empty_env) t
+  end
+
+let wrap_type_err bname n f x =
+  try f x
+  with Conversion.TypeErr(ty,depth,t) -> type_err ~depth bname n (Conversion.show_ty_ast ty) (Some t)
 
 let arity_err ~depth bname n t =
   type_error ("builtin " ^ bname ^ ": " ^ 
@@ -2583,17 +2591,15 @@ let out_of_term ~depth { Conversion.readback; ty } n bname hyps constraints stat
   | _ -> BuiltInPredicate.Keep
 
 let in_of_term ~depth { Conversion.readback } n bname hyps constraints state t =
-  try readback ~depth hyps constraints state t
-  with Conversion.TypeErr(ty,t) -> type_err ~depth bname n (Conversion.show_ty_ast ty) (Some t)
+  wrap_type_err bname n (readback ~depth hyps constraints state) t
 
 let inout_of_term ~depth { Conversion.readback } n bname hyps constraints state t =
   match deref_head ~depth t with
   | Discard -> state, BuiltInPredicate.NoData
   | _ ->
-     try
+     wrap_type_err bname n (fun () ->
        let state, t = readback ~depth hyps constraints state t in
-       state, BuiltInPredicate.Data t
-     with Conversion.TypeErr(ty,t) -> type_err ~depth bname n (Conversion.show_ty_ast ty) (Some t)
+       state, BuiltInPredicate.Data t) ()
 
 let mk_out_assign ~depth { Conversion.embed } bname hyps constraints state input v  output =
   match output, input with
@@ -2622,26 +2628,26 @@ let call (BuiltInPredicate.Pred(bname,ffi,compute)) ~depth hyps constraints stat
   fun ffi ~compute ~reduce data n state ->
     match ffi, data with
     | BuiltInPredicate.Easy _, [] ->
-       let result = compute ~depth in
+       let result = wrap_type_err bname 0 (fun () -> compute ~depth) () in
        let state, l = reduce state result in
        state, List.rev l
     | BuiltInPredicate.Read _, [] ->
-       let result = compute ~depth hyps constraints state in
+       let result = wrap_type_err bname 0 (compute ~depth hyps constraints) state in
        let state, l = reduce state result in
        state, List.rev l
     | BuiltInPredicate.Full _, [] ->
-       let state, result = compute ~depth hyps constraints state in
+       let state, result, gls = wrap_type_err bname 0 (compute ~depth hyps constraints) state in
        let state, l = reduce state result in
-       state, List.rev l
+       state, gls @ List.rev l
     | BuiltInPredicate.VariadicIn(d, _), data ->
        let state, i =
          map_acc (in_of_term ~depth d n bname hyps constraints) state data in
-       let state, rest = compute i ~depth hyps constraints state in
+       let state, rest = wrap_type_err bname 0 (compute i ~depth hyps constraints) state in
        let state, l = reduce state rest in
        state, List.rev l
     | BuiltInPredicate.VariadicOut(d, _), data ->
        let i = List.map (out_of_term ~depth d n bname hyps constraints state) data in
-       let state, (rest, out) = compute i ~depth hyps constraints state in
+       let state, (rest, out) = wrap_type_err bname 0 (compute i ~depth hyps constraints) state in
        let state, l = reduce state rest in
        begin match out with
          | Some out ->
@@ -2653,7 +2659,7 @@ let call (BuiltInPredicate.Pred(bname,ffi,compute)) ~depth hyps constraints stat
     | BuiltInPredicate.VariadicInOut(d, _), data ->
        let state, i =
          map_acc (inout_of_term ~depth d n bname hyps constraints) state data in
-       let state, (rest, out) = compute i ~depth hyps constraints state in
+       let state, (rest, out) = wrap_type_err bname 0 (compute i ~depth hyps constraints) state in
        let state, l = reduce state rest in
        begin match out with
          | Some out ->

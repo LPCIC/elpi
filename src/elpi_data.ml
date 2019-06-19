@@ -680,7 +680,7 @@ module Conversion = struct
   }
   [@@deriving show]
 
-  exception TypeErr of ty_ast * term (* a type error at data conversion time *)
+  exception TypeErr of ty_ast * int * term (* a type error at data conversion time *)
     
 let rec show_ty_ast ?(outer=true) = function
   | TyName s -> s
@@ -790,7 +790,7 @@ let rec readback_args : type a m t.
 = fun ~look ty ~depth hyps constraints state origin args convert l ->
     match args, l with
     | CN, [] -> convert state
-    | CN, _ -> raise (Conversion.TypeErr(ty,origin))
+    | CN, _ -> raise (Conversion.TypeErr(ty,depth,origin))
     | CA _, [] -> assert false
     | CA(d,rest), x::xs ->
       let state, x = d.readback ~depth hyps constraints state x in
@@ -818,8 +818,8 @@ and readback : type t.
       let CK(args,read,_) = Constants.Map.find (Constants.from_stringc "uvar") adt in
       let state, k = alloc ~lvl:depth state in
       readback_args ~look ty ~depth hyps constraints state t args read [mkUnifVar k ~args:[] state]
-  | _ -> raise (Conversion.TypeErr(ty,t))
-  with Not_found -> raise (Conversion.TypeErr(ty,t))
+  | _ -> raise (Conversion.TypeErr(ty,depth,t))
+  with Not_found -> raise (Conversion.TypeErr(ty,depth,t))
 
 and adt_embed_args : type m a t.
   Conversion.ty_ast -> t compiled_adt -> constant ->

@@ -210,8 +210,8 @@ module RawOpaqueData = struct
     | Elpi_data.Term.CData c when isc c -> state, cout c
     | Elpi_data.Term.Const i as t when i < 0 ->
         begin try state, Elpi_data.Constants.Map.find i constants
-        with Not_found -> raise (Conversion.TypeErr(ty,t)) end
-    | t -> raise (Conversion.TypeErr(ty,t)) in
+        with Not_found -> raise (Conversion.TypeErr(ty,depth,t)) end
+    | t -> raise (Conversion.TypeErr(ty,depth,t)) in
   let pp_doc fmt () =
     if doc <> "" then begin
       Elpi_data.BuiltInPredicate.pp_comment fmt ("% " ^ doc);
@@ -572,7 +572,7 @@ module FlexibleData = struct
           state, (k,[])
       | RawData.UnifVar(k,args) ->
           state, (k,args)
-      | _ -> raise (Conversion.TypeErr (TyName "uvar",t)));
+      | _ -> raise (Conversion.TypeErr (TyName "uvar",depth,t)));
   }
 
 end
