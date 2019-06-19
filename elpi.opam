@@ -26,6 +26,7 @@ depends: [
   "ANSITerminal" {with-test}
   "cmdliner" {with-test}
   "dune" {with-test}
+  "conf-time" {with-test}
 ]
 synopsis: "ELPI - Embeddable λProlog Interpreter"
 description: """
