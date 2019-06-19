@@ -13,27 +13,10 @@
   (private_modules elpi_util elpi_parser elpi_ast elpi_compiler elpi_data elpi_ptmap elpi_runtime_trace_on elpi_runtime_trace_off)
 )
 
-(rule
-  (targets elpi_runtime_trace_on.ml)
-  (deps elpi_runtime.ml)
-  (action (copy# %{deps} %{targets}))
-)
-(rule
-  (targets elpi_runtime_trace_on.mli)
-  (deps elpi_runtime.mli)
-  (action (copy# %{deps} %{targets}))
-)
-
-(rule
-  (targets elpi_runtime_trace_off.ml)
-  (deps elpi_runtime.ml)
-  (action (copy# %{deps} %{targets}))
-)
-(rule
-  (targets elpi_runtime_trace_off.mli)
-  (deps elpi_runtime.mli)
-  (action (copy# %{deps} %{targets}))
-)
+(rule (copy# elpi_runtime.ml elpi_runtime_trace_on.ml))
+(rule (copy# elpi_runtime.ml elpi_runtime_trace_off.ml))
+(rule (copy# elpi_runtime.mli elpi_runtime_trace_on.mli))
+(rule (copy# elpi_runtime.mli elpi_runtime_trace_off.mli))
 
 (install
   (section lib)
