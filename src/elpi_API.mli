@@ -434,7 +434,7 @@ module BuiltInPredicate : sig
     | InOut  : 't Conversion.t * doc * ('i, 'o * 't option) ffi -> ('t ioarg -> 'i,'o) ffi
     | Easy : doc -> (depth:int -> 'o, 'o) ffi
     | Read : doc -> (depth:int -> Data.hyps -> Data.constraints -> Data.state -> 'o, 'o) ffi
-    | Full : doc -> (depth:int -> Data.hyps -> Data.constraints -> Data.state -> Data.state * 'o, 'o) ffi
+    | Full : doc -> (depth:int -> Data.hyps -> Data.constraints -> Data.state -> Data.state * 'o * Conversion.extra_goals, 'o) ffi
     | VariadicIn : 't Conversion.t * doc -> ('t list -> depth:int -> Data.hyps -> Data.constraints -> Data.state -> Data.state * 'o, 'o) ffi
     | VariadicOut : 't Conversion.t * doc -> ('t oarg list -> depth:int -> Data.hyps -> Data.constraints -> Data.state -> Data.state * ('o * 't option list option), 'o) ffi
     | VariadicInOut : 't Conversion.t * doc -> ('t ioarg list -> depth:int -> Data.hyps -> Data.constraints -> Data.state -> Data.state * ('o * 't option list option), 'o) ffi

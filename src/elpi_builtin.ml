@@ -850,7 +850,7 @@ let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in [
     Full "unify T with a variable that has no eigenvariables in scope"),
   (fun _ ~depth _ _ state ->
       let state, k = FlexibleData.Elpi.make ~lvl:0 state in
-      state, !:(mkUnifVar k ~args:[] state))),
+      state, !:(mkUnifVar k ~args:[] state), [])),
   DocAbove);
 
   MLCode(Pred("is_cdata",

@@ -704,7 +704,7 @@ type ('function_type, 'inernal_outtype_in) ffi =
   | InOut  : 't Conversion.t * doc * ('i, 'o * 't option) ffi -> ('t ioarg -> 'i,'o) ffi
   | Easy : doc -> (depth:int -> 'o, 'o) ffi
   | Read : doc -> (depth:int -> hyps -> constraints -> state -> 'o, 'o) ffi
-  | Full : doc -> (depth:int -> hyps -> constraints -> state -> state * 'o, 'o) ffi
+  | Full : doc -> (depth:int -> hyps -> constraints -> state -> state * 'o * extra_goals, 'o) ffi
   | VariadicIn : 't Conversion.t * doc -> ('t list -> depth:int -> hyps -> constraints -> state -> state * 'o, 'o) ffi
   | VariadicOut : 't Conversion.t * doc -> ('t oarg list -> depth:int -> hyps -> constraints -> state -> state * ('o * 't option list option), 'o) ffi
   | VariadicInOut : 't Conversion.t * doc -> ('t ioarg list -> depth:int -> hyps -> constraints -> state -> state * ('o * 't option list option), 'o) ffi
