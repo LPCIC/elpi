@@ -654,7 +654,7 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in [
     In (string,"Name",
     Out(int,   "Value",
     Easy       "reads the Value of a trace point Name")),
-  (fun s _ ~depth:_ -> !:(Elpi_trace.get_cur_step s))),
+  (fun s _ ~depth:_ -> !:(Trace.Runtime.get_cur_step s))),
   DocAbove);
 
 

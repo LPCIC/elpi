@@ -29,34 +29,34 @@ open Longident
 
 let trace name ppfun body = [%expr
   let wall_clock = Unix.gettimeofday () in
-  Elpi_trace.enter [%e name] [%e ppfun];
+  Trace.Runtime.enter [%e name] [%e ppfun];
   try
     let rc = [%e body] in
     let elapsed = Unix.gettimeofday () -. wall_clock in
-    Elpi_trace.exit [%e name] false elapsed;
+    Trace.Runtime.exit [%e name] false elapsed;
     rc
   with
-  | Elpi_trace.TREC_CALL(f,x) ->
+  | Trace.Runtime.TREC_CALL(f,x) ->
       let elapsed = Unix.gettimeofday () -. wall_clock in
-      Elpi_trace.exit [%e name] true elapsed;
+      Trace.Runtime.exit [%e name] true elapsed;
       Obj.obj f (Obj.obj x)
   | e ->
       let elapsed = Unix.gettimeofday () -. wall_clock in
-      Elpi_trace.exit [%e name] false elapsed;
+      Trace.Runtime.exit [%e name] false elapsed;
       raise e
 ]
 
 let spy name pp data =
-  [%expr Elpi_trace.print [%e name] [%e pp] [%e data]]
+  [%expr Trace.Runtime.print [%e name] [%e pp] [%e data]]
 
 let spyif name cond pp data =
-  [%expr if [%e cond] then Elpi_trace.print [%e name] [%e pp] [%e data]]
+  [%expr if [%e cond] then Trace.Runtime.print [%e name] [%e pp] [%e data]]
 
 let log name key data =
-  [%expr Elpi_trace.log [%e name] [%e key] [%e data]]
+  [%expr Trace.Runtime.log [%e name] [%e key] [%e data]]
 
 let cur_pred name =
-  [%expr Elpi_trace.cur_pred [%e name]]
+  [%expr Trace.Runtime.cur_pred [%e name]]
 
 let rec mkapp f = function
   | [] -> f
@@ -69,7 +69,7 @@ let tcall hd args =
     match List.rev rest with
     | [] -> assert false
     | f::a -> [%expr Obj.repr [%e mkapp f a]] in
-  [%expr raise (Elpi_trace.TREC_CALL ([%e papp], Obj.repr [%e last]))]
+  [%expr raise (Trace.Runtime.TREC_CALL ([%e papp], Obj.repr [%e last]))]
 
 let enabled = ref false
 
