@@ -12,7 +12,7 @@ build: [
   [ "dune" "subst" {pinned} ]
   [ "dune" "build" "-p" name "-j" jobs ]
 ]
-run-test: [ make "tests" ]
+run-test: [ make "tests" "TIME=" {os = "macos"} ]
 install: [ make "install" ]
 
 depends: [
