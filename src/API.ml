@@ -11,8 +11,8 @@ let set_runtime = function
   | false -> r := (module Runtime_trace_off : Runtime)
 
 let set_trace argv =
-  let args = Elpi_trace.parse_argv argv in
-  set_runtime !Elpi_trace.debug;
+  let args = Trace.Runtime.parse_argv argv in
+  set_runtime !Trace.Runtime.debug;
   args
 
 module Setup = struct
@@ -69,7 +69,7 @@ let trace args =
 let usage =
   "\nParsing options:\n" ^
   "\t-I PATH  search for accumulated files in PATH\n" ^
-  Elpi_trace.usage 
+  Trace.Runtime.usage 
 
 let set_warn = Util.set_warn
 let set_error = Util.set_error
