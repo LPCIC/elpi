@@ -872,7 +872,7 @@ module Quotation : sig
   (** The anti-quotation to lambda Prolog *)
   val lp : quotation
 
-  (** See elpi_quoted_syntax.elpi (EXPERIMENTAL, used by elpi-checker) *)
+  (** See elpi-quoted_syntax.elpi (EXPERIMENTAL, used by elpi-checker) *)
   val quote_syntax : 'a Compile.query -> Data.term list * Data.term
 
   (** To implement the string_to_term built-in (AVOID, makes little sense

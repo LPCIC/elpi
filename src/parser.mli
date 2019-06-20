@@ -2,8 +2,8 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-open Elpi_util
-open Elpi_ast
+open Util
+open Ast
 
 type fixity = Infixl | Infixr | Infix | Prefix | Prefixr | Postfix | Postfixl
 

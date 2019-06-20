@@ -2,9 +2,9 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-module U = Elpi_util
+module U = Util
 module Loc = U.Loc
-open Elpi_ast
+open Ast
 open Term
 
 module Str = Re.Str
@@ -471,7 +471,7 @@ let desugar_multi_binder loc = function
       let names = List.map (function
         | Const x -> Func.show x
         | (App _ | Lam _ | CData _ | Quoted _) ->
-            Elpi_util.error "multi binder syntax") rev_rest in
+            U.error "multi binder syntax") rev_rest in
       let body = mkApp (of_ploc loc) [binder;last] in
       List.fold_left (fun bo name -> mkApp (of_ploc loc) [binder;mkLam name bo]) body names
   | (App _ | Const _ | Lam _ | CData _ | Quoted _) as t -> t
@@ -488,7 +488,7 @@ let desugar_macro loc = function
       let names = List.map (function
         | Const x -> Func.show x
         | (App _ | Lam _ | CData _ | Quoted _) ->
-             Elpi_util.error ~loc "macro binder syntax") args in
+             U.error ~loc "macro binder syntax") args in
       name, List.fold_right mkLam names body
   | (App _ | Const _ | Lam _ | CData _ | Quoted _) as x ->
         raise (Stream.Error ("Illformed macro:" ^ show x))

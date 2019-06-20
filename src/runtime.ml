@@ -3,10 +3,10 @@
 (* ------------------------------------------------------------------------- *)
 
 module Fmt = Format
-module F = Elpi_ast.Func
-open Elpi_util
-open Elpi_data
-module C = Elpi_data.Constants
+module F = Ast.Func
+open Util
+open Data
+module C = Constants
 
 (* Dereferencing an UVar(r,args) when !!r != dummy requires a function
    of this kind.  The pretty printer needs one but will only be defined
@@ -37,10 +37,10 @@ let do_app_deref = ref (fun ?avoid ~from ~to_ _ _ -> assert false);;
 let m = ref [];;
 let n = ref 0;;
 
-let min_prec = Elpi_parser.min_precedence
-let appl_prec = Elpi_parser.appl_precedence
-let lam_prec = Elpi_parser.lam_precedence
-let inf_prec = Elpi_parser.inf_precedence
+let min_prec = Parser.min_precedence
+let appl_prec = Parser.appl_precedence
+let lam_prec = Parser.lam_precedence
+let inf_prec = Parser.inf_precedence
 
 let xppterm ~nice ?(min_prec=min_prec) depth0 names argsdepth env f t =
   let pp_app f pphd pparg ?pplastarg (hd,args) =
@@ -117,7 +117,7 @@ let xppterm ~nice ?(min_prec=min_prec) depth0 names argsdepth env f t =
    | (Cons _ | Nil) ->
       let prefix,last = flat_cons_to_list depth [] t in
       Fmt.fprintf f "[" ;
-      pplist ~boxed:true (aux Elpi_parser.list_element_prec depth) ", " f prefix ;
+      pplist ~boxed:true (aux Parser.list_element_prec depth) ", " f prefix ;
       if last != Nil then begin
        Fmt.fprintf f " | " ;
        aux prec 1 f last
@@ -127,25 +127,25 @@ let xppterm ~nice ?(min_prec=min_prec) depth0 names argsdepth env f t =
     | App (hd,x,xs) ->
        (try
          let assoc,hdlvl =
-          Elpi_parser.precedence_of (F.from_string (C.show hd)) in
+          Parser.precedence_of (F.from_string (C.show hd)) in
          with_parens hdlvl
          (fun _ -> match assoc with
-            Elpi_parser.Infix when List.length xs = 1 ->
+            Parser.Infix when List.length xs = 1 ->
              Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
               (aux (hdlvl+1) depth) x ppconstant hd
               (aux (hdlvl+1) depth) (List.hd xs)
-          | Elpi_parser.Infixl when List.length xs = 1 ->
+          | Parser.Infixl when List.length xs = 1 ->
              Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
               (aux hdlvl depth) x ppconstant hd
               (aux (hdlvl+1) depth) (List.hd xs)
-          | Elpi_parser.Infixr when List.length xs = 1 ->
+          | Parser.Infixr when List.length xs = 1 ->
              Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
               (aux (hdlvl+1) depth) x ppconstant hd
               (aux hdlvl depth) (List.hd xs)
-          | Elpi_parser.Prefix when xs = [] ->
+          | Parser.Prefix when xs = [] ->
              Fmt.fprintf f "@[<hov 1>%a@ %a@]" ppconstant hd
               (aux hdlvl depth) x
-          | Elpi_parser.Postfix when xs = [] ->
+          | Parser.Postfix when xs = [] ->
              Fmt.fprintf f "@[<hov 1>%a@ %a@]" (aux hdlvl depth) x
               ppconstant hd 
           | _ ->
@@ -1722,8 +1722,8 @@ let mustbevariablec = min_int (* uvar or uvar t or uvar l t *)
 
 let ppclause f ~depth hd { args = args; hyps = hyps; } =
   Fmt.fprintf f "@[<hov 1>%s %a :- %a.@]" (C.show hd)
-     (pplist (uppterm ~min_prec:(Elpi_parser.appl_precedence+1) depth [] depth empty_env) " ") args
-     (pplist (uppterm ~min_prec:(Elpi_parser.appl_precedence+1) depth [] depth empty_env) ", ") hyps
+     (pplist (uppterm ~min_prec:(Parser.appl_precedence+1) depth [] depth empty_env) " ") args
+     (pplist (uppterm ~min_prec:(Parser.appl_precedence+1) depth [] depth empty_env) ", ") hyps
 
 let tail_opt = function
   | [] -> []
@@ -1850,75 +1850,75 @@ let hash_clause_arg_list = hash_arg_list false
 let hash_goal_arg_list = hash_arg_list true
 
 let add1clause ~depth m (predicate,clause) =
-  match Elpi_ptmap.find predicate m with
+  match Ptmap.find predicate m with
   | TwoLevelIndex { all_clauses; argno; mode; flex_arg_clauses; arg_idx } ->
       (* X matches both rigid and flexible terms *)
       begin match classify_clause_argno ~depth argno mode clause.args with
       | Variable ->
-        Elpi_ptmap.add predicate (TwoLevelIndex {
+        Ptmap.add predicate (TwoLevelIndex {
           argno; mode;
           all_clauses = clause :: all_clauses;
           flex_arg_clauses = clause :: flex_arg_clauses;
-          arg_idx = Elpi_ptmap.map (fun l_rev -> clause :: l_rev) arg_idx;
+          arg_idx = Ptmap.map (fun l_rev -> clause :: l_rev) arg_idx;
         }) m
       | MustBeVariable ->
       (* uvar matches only flexible terms (or itself at the meta level) *)
         let l_rev =
-          try Elpi_ptmap.find mustbevariablec arg_idx
+          try Ptmap.find mustbevariablec arg_idx
           with Not_found -> flex_arg_clauses in
-        Elpi_ptmap.add predicate (TwoLevelIndex {
+        Ptmap.add predicate (TwoLevelIndex {
             argno; mode;
           all_clauses = clause :: all_clauses;
           flex_arg_clauses;
-          arg_idx = Elpi_ptmap.add mustbevariablec (clause::l_rev) arg_idx;
+          arg_idx = Ptmap.add mustbevariablec (clause::l_rev) arg_idx;
         }) m
       | Rigid (arg_hd,matching) ->
       (* a rigid term matches flexible terms only in unification mode *)
         let l_rev =
-          try Elpi_ptmap.find arg_hd arg_idx
+          try Ptmap.find arg_hd arg_idx
           with Not_found -> flex_arg_clauses in
         let all_clauses =
           if matching then all_clauses else clause :: all_clauses in
-        Elpi_ptmap.add predicate (TwoLevelIndex {
+        Ptmap.add predicate (TwoLevelIndex {
             argno; mode;
           all_clauses;
           flex_arg_clauses;
-          arg_idx = Elpi_ptmap.add arg_hd (clause::l_rev) arg_idx;
+          arg_idx = Ptmap.add arg_hd (clause::l_rev) arg_idx;
         }) m
       end
   | BitHash { mode; args; time; args_idx } ->
       let hash = hash_clause_arg_list predicate ~depth clause.args mode args in
       let clauses =
-        try Elpi_ptmap.find hash args_idx
+        try Ptmap.find hash args_idx
         with Not_found -> [] in
-      Elpi_ptmap.add predicate (BitHash {
+      Ptmap.add predicate (BitHash {
          mode; args;
          time = time + 1;
-         args_idx = Elpi_ptmap.add hash ((clause,time) :: clauses) args_idx
+         args_idx = Ptmap.add hash ((clause,time) :: clauses) args_idx
        }) m
   | exception Not_found ->
       match classify_clause_argno ~depth 0 [] clause.args with
       | Variable ->
-      Elpi_ptmap.add predicate (TwoLevelIndex {
+      Ptmap.add predicate (TwoLevelIndex {
         argno = 0; mode = [];
         all_clauses = [clause];
         flex_arg_clauses = [clause];
-        arg_idx =Elpi_ptmap.empty;
+        arg_idx =Ptmap.empty;
       }) m
       | MustBeVariable ->
-      Elpi_ptmap.add predicate (TwoLevelIndex {
+      Ptmap.add predicate (TwoLevelIndex {
         argno = 0;mode = [];
         all_clauses = [clause];
         flex_arg_clauses = [];
-        arg_idx = Elpi_ptmap.add mustbevariablec [clause] Elpi_ptmap.empty;
+        arg_idx = Ptmap.add mustbevariablec [clause] Ptmap.empty;
       }) m
       | Rigid (arg_hd,matching) ->
       let all_clauses = if matching then [] else [clause] in
-      Elpi_ptmap.add predicate (TwoLevelIndex {
+      Ptmap.add predicate (TwoLevelIndex {
         argno = 0;mode = [];
         all_clauses;
         flex_arg_clauses = [];
-        arg_idx = Elpi_ptmap.add arg_hd [clause] Elpi_ptmap.empty;
+        arg_idx = Ptmap.add arg_hd [clause] Ptmap.empty;
       }) m
 
 let add_clauses ~depth clauses p =       
@@ -1929,20 +1929,20 @@ let make_index ~depth ~indexing p =
   let m = Constants.Map.fold (fun predicate (mode, indexing) m ->
     match indexing with
     | Hash args ->
-      Elpi_ptmap.add predicate (BitHash {
+      Ptmap.add predicate (BitHash {
         args;
         mode;
         time = min_int;
-        args_idx = Elpi_ptmap.empty;
+        args_idx = Ptmap.empty;
       }) m
     | MapOn argno ->
-      Elpi_ptmap.add predicate (TwoLevelIndex {
+      Ptmap.add predicate (TwoLevelIndex {
         argno;
         mode;
         all_clauses = [];
         flex_arg_clauses = [];
-        arg_idx = Elpi_ptmap.empty;
-      }) m) indexing Elpi_ptmap.empty in
+        arg_idx = Ptmap.empty;
+      }) m) indexing Ptmap.empty in
   let p = List.rev p in
   { index = add_clauses ~depth p m; src = [] }
 
@@ -2001,17 +2001,17 @@ let get_clauses ~depth goal { index = m } =
  let predicate, goal = predicate_of_goal ~depth goal in
  let rc =
    try
-     match Elpi_ptmap.find predicate m with
+     match Ptmap.find predicate m with
      | TwoLevelIndex { all_clauses; argno; mode; flex_arg_clauses; arg_idx } ->
        begin match classify_goal_argno ~depth argno goal with
        | Variable -> all_clauses
        | Rigid arg_hd ->
-          try Elpi_ptmap.find arg_hd arg_idx
+          try Ptmap.find arg_hd arg_idx
           with Not_found -> flex_arg_clauses
        end
      | BitHash { args; mode; args_idx } ->
        let hash = hash_goal_args ~depth mode args goal in
-       let cl = List.flatten (Elpi_ptmap.find_unifiables hash args_idx) in
+       let cl = List.flatten (Ptmap.find_unifiables hash args_idx) in
        List.(map fst (sort (fun (_,cl1) (_,cl2) -> cl2 - cl1) cl))
    with Not_found -> []
  in
@@ -2222,7 +2222,7 @@ let rec claux1 ?loc get_mode vars depth hyps ts lts lcs t =
    
 let clausify { index } ~depth t =
   let get_mode x =
-    match Elpi_ptmap.find x index with
+    match Ptmap.find x index with
     | TwoLevelIndex { mode } -> mode
     | BitHash { mode } -> mode
     | exception Not_found -> [] in
@@ -2712,7 +2712,7 @@ let exect_builtin_predicate c ~depth idx args =
     gs
 ;;
 
-let match_head { Elpi_data.conclusion = x; cdepth } p =
+let match_head { conclusion = x; cdepth } p =
   match deref_head ~depth:cdepth x with
   | Const x -> x == p
   | App(x,_,_) -> x == p
@@ -2740,7 +2740,7 @@ let try_fire_rule rule (constraints as orig_constraints) =
     (* Goals are lifted at different depths to avoid collisions *)
     let max_depth,constraints = 
      List.fold_left (fun (md,res) c ->
-        let md = md + c.Elpi_data.cdepth in
+        let md = md + c.cdepth in
         md, (md,c)::res)
        (0,[]) constraints in
     max_depth, List.rev constraints
@@ -2748,7 +2748,7 @@ let try_fire_rule rule (constraints as orig_constraints) =
  
   let constraints_depts, constraints_contexts, constraints_goals =
     List.fold_right
-      (fun (dto,{Elpi_data.context = c; cdepth = d; conclusion = g}) 
+      (fun (dto,{context = c; cdepth = d; conclusion = g}) 
            (ds, ctxs, gs) ->
         (dto,d,d) :: ds, (dto,d,c) :: ctxs, (dto,d,g) :: gs)
       constraints ([],[],[]) in
@@ -2761,7 +2761,7 @@ let try_fire_rule rule (constraints as orig_constraints) =
     (pats_to_match @ pats_to_remove) ([],[],[]) in
   
   let match_eigen i m (dto,d,eigen) pat =
-    match_goal i max_depth env m (dto,d,Elpi_data.C.of_int eigen) pat in
+    match_goal i max_depth env m (dto,d,Data.C.of_int eigen) pat in
   let match_conclusion i m g pat =
     match_goal i max_depth env m g pat in
   let match_context i m ctx pctx =
@@ -2837,7 +2837,7 @@ let try_fire_rule rule (constraints as orig_constraints) =
       | Some { CHR.eigen; context; conclusion } ->
       let eigen =
         match full_deref ~adepth:max_depth env ~depth:max_depth eigen with
-        | CData x when Elpi_data.C.is_int x -> Elpi_data.C.to_int x
+        | CData x when Data.C.is_int x -> Data.C.to_int x
         | Discard -> max_depth
         | _ -> error "eigen not resolving to an integer" in
       let conclusion =
@@ -3208,7 +3208,7 @@ let mk_outcome search get_cs assignments =
 let execute_once ?max_steps ?delay_outside_fragment exec =
  auxsg := [];
  let { search; get } = make_runtime ?max_steps ?delay_outside_fragment exec in
- fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.state, exec.query_arguments) exec.Elpi_data.assignments)
+ fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.state, exec.query_arguments) exec.assignments)
 ;;
 
 let execute_loop ?delay_outside_fragment exec ~more ~pp =
@@ -3216,7 +3216,7 @@ let execute_loop ?delay_outside_fragment exec ~more ~pp =
  let k = ref noalts in
  let do_with_infos f =
   let time0 = Unix.gettimeofday() in
-  let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, get CS.state, exec.query_arguments) exec.Elpi_data.assignments in
+  let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, get CS.state, exec.query_arguments) exec.assignments in
   let time1 = Unix.gettimeofday() in
   k := alts;
   pp (time1 -. time0) o in

@@ -2,13 +2,13 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-module type Runtime = module type of Elpi_runtime_trace_off
+module type Runtime = module type of Runtime_trace_off
 
-let r = ref (module Elpi_runtime_trace_off : Runtime)
+let r = ref (module Runtime_trace_off : Runtime)
 
 let set_runtime = function
-  | true  -> r := (module Elpi_runtime_trace_on  : Runtime)
-  | false -> r := (module Elpi_runtime_trace_off : Runtime)
+  | true  -> r := (module Runtime_trace_on  : Runtime)
+  | false -> r := (module Runtime_trace_off : Runtime)
 
 let set_trace argv =
   let args = Elpi_trace.parse_argv argv in
@@ -17,8 +17,8 @@ let set_trace argv =
 
 module Setup = struct
 
-type builtins = string * Elpi_data.BuiltInPredicate.declaration list
-type program_header = Elpi_ast.Program.t
+type builtins = string * Data.BuiltInPredicate.declaration list
+type program_header = Ast.Program.t
 
 let init ~builtins:(fname,decls) ~basedir:cwd argv =
   let new_argv = set_trace argv in
@@ -30,84 +30,88 @@ let init ~builtins:(fname,decls) ~basedir:cwd argv =
     in
       aux [] [] new_argv
   in
-  Elpi_parser.init ~lp_syntax:Elpi_parser.lp_gramext ~paths ~cwd ();
+  Parser.init ~lp_syntax:Parser.lp_gramext ~paths ~cwd ();
   (* This is a bit ugly, since builtins are global but could be made
    * program specific *)
   List.iter (function
-    | Elpi_data.BuiltInPredicate.MLCode (p,_) -> Elpi_data.BuiltInPredicate.register p
-    | Elpi_data.BuiltInPredicate.MLData _ -> ()
-    | Elpi_data.BuiltInPredicate.LPCode _ -> ()
-    | Elpi_data.BuiltInPredicate.LPDoc _ -> ()) decls;
+    | Data.BuiltInPredicate.MLCode (p,_) -> Data.BuiltInPredicate.register p
+    | Data.BuiltInPredicate.MLData _ -> ()
+    | Data.BuiltInPredicate.LPCode _ -> ()
+    | Data.BuiltInPredicate.LPDoc _ -> ()) decls;
   (* This is a bit ugly, since we print and then parse... *)
   let b = Buffer.create 1024 in
   let fmt = Format.formatter_of_buffer b in
-  Elpi_data.BuiltInPredicate.document fmt decls;
+  Data.BuiltInPredicate.document fmt decls;
   Format.pp_print_flush fmt ();
   let text = Buffer.contents b in
   let strm = Stream.of_string text in
-  let loc = Elpi_util.Loc.initial fname in
+  let loc = Util.Loc.initial fname in
   let header =
     try
-      Elpi_parser.parse_program_from_stream
+      Parser.parse_program_from_stream
         ~print_accumulated_files:false loc strm 
-    with Elpi_parser.ParseError(loc,msg) ->
+    with Parser.ParseError(loc,msg) ->
       List.iteri (fun i s ->
         Printf.eprintf "%4d: %s\n" (i+1) s)
         (Re.Str.(split_delim (regexp_string "\n") text));
       Printf.eprintf "Excerpt of %s:\n%s\n" fname
-       (String.sub text loc.Elpi_util.Loc.line_starts_at
-         Elpi_util.Loc.(loc.source_stop - loc.line_starts_at));
-      Elpi_util.anomaly ~loc msg
+       (String.sub text loc.Util.Loc.line_starts_at
+         Util.Loc.(loc.source_stop - loc.line_starts_at));
+      Util.anomaly ~loc msg
   in
   header, new_argv
 
 let trace args =
   match set_trace args with
   | [] -> ()
-  | l -> Elpi_util.error ("Elpi_API.trace got unknown arguments: " ^ (String.concat " " l))
+  | l -> Util.error ("Elpi_API.trace got unknown arguments: " ^ (String.concat " " l))
 
 let usage =
   "\nParsing options:\n" ^
   "\t-I PATH  search for accumulated files in PATH\n" ^
   Elpi_trace.usage 
 
-let set_warn = Elpi_util.set_warn
-let set_error = Elpi_util.set_error
-let set_anomaly = Elpi_util.set_anomaly
-let set_type_error = Elpi_util.set_type_error
-let set_std_formatter = Elpi_util.set_std_formatter
-let set_err_formatter = Elpi_util.set_err_formatter
+let set_warn = Util.set_warn
+let set_error = Util.set_error
+let set_anomaly = Util.set_anomaly
+let set_type_error = Util.set_type_error
+let set_std_formatter = Util.set_std_formatter
+let set_err_formatter = Util.set_err_formatter
 
 end
 
+module EA = Ast
+
 module Ast = struct
-  type program = Elpi_ast.Program.t
-  type query = Elpi_ast.Goal.t
-  module Loc = Elpi_util.Loc
+  type program = Ast.Program.t
+  type query = Ast.Goal.t
+  module Loc = Util.Loc
 end
 
 module Parse = struct
   let program ?(print_accumulated_files=false) =
-    Elpi_parser.parse_program ~print_accumulated_files
+    Parser.parse_program ~print_accumulated_files
   let program_from_stream ?(print_accumulated_files=false) =
-    Elpi_parser.parse_program_from_stream ~print_accumulated_files
-  let goal loc s = Elpi_parser.parse_goal ~loc s
-  let goal_from_stream loc s = Elpi_parser.parse_goal_from_stream ~loc s
-  exception ParseError = Elpi_parser.ParseError
+    Parser.parse_program_from_stream ~print_accumulated_files
+  let goal loc s = Parser.parse_goal ~loc s
+  let goal_from_stream loc s = Parser.parse_goal_from_stream ~loc s
+  exception ParseError = Parser.ParseError
 end
 
+module ED = Data
+
 module Data = struct
-  type term = Elpi_data.term
-  type constraints = Elpi_data.constraints
-  type state = Elpi_data.State.t
-  module StrMap = Elpi_util.StrMap
-  type 'a solution = 'a Elpi_data.solution = {
+  type term = Data.term
+  type constraints = Data.constraints
+  type state = Data.State.t
+  module StrMap = Util.StrMap
+  type 'a solution = 'a Data.solution = {
     assignments : term StrMap.t;
     constraints : constraints;
     state : state;
     output : 'a;
   }
-  type hyp = Elpi_data.clause_src = {
+  type hyp = Data.clause_src = {
     hdepth : int;
     hsrc : term
   }
@@ -116,34 +120,34 @@ end
 
 module Compile = struct
 
-  type program = Elpi_compiler.program
-  type 'a query = 'a Elpi_compiler.query
-  type 'a executable = 'a Elpi_data.executable
+  type program = Compiler.program
+  type 'a query = 'a Compiler.query
+  type 'a executable = 'a ED.executable
 
   let program ~flags header l =
-    Elpi_compiler.program_of_ast ~flags (header @ List.flatten l)
-  let query = Elpi_compiler.query_of_ast
+    Compiler.program_of_ast ~flags (header @ List.flatten l)
+  let query = Compiler.query_of_ast
 
   let static_check header ?checker ?flags p =
     let module R = (val !r) in let open R in
-    let checker = Elpi_util.option_map List.flatten checker in
-    Elpi_compiler.static_check header ~exec:(execute_once ~delay_outside_fragment:false) ?checker ?flags p
+    let checker = Util.option_map List.flatten checker in
+    Compiler.static_check header ~exec:(execute_once ~delay_outside_fragment:false) ?checker ?flags p
 
-  module StrSet = Elpi_util.StrSet
+  module StrSet = Util.StrSet
 
-  type flags = Elpi_compiler.flags = {
+  type flags = Compiler.flags = {
     defined_variables : StrSet.t;
     allow_untyped_builtin : bool;
     print_passes : bool;
   }
-  let default_flags = Elpi_compiler.default_flags
-  let link x = Elpi_compiler.executable_of_query x
+  let default_flags = Compiler.default_flags
+  let link x = Compiler.executable_of_query x
 
   let dummy_header = []
 end
 
 module Execute = struct
-  type 'a outcome = 'a Elpi_data.outcome =
+  type 'a outcome = 'a ED.outcome =
     Success of 'a Data.solution | Failure | NoMoreSteps
   let once ?max_steps ?delay_outside_fragment p = 
     let module R = (val !r) in let open R in
@@ -161,29 +165,29 @@ module Pp = struct
 
   let constraints f c =
     let module R = (val !r) in let open R in
-    Elpi_util.pplist ~boxed:true R.pp_stuck_goal "" f c
+    Util.pplist ~boxed:true R.pp_stuck_goal "" f c
 
-  let state = Elpi_data.State.pp
+  let state = ED.State.pp
 
   let query f c =
     let module R = (val !r) in let open R in
-    Elpi_compiler.pp_query (fun ~depth -> R.Pp.uppterm depth [] 0 [||]) f c
+    Compiler.pp_query (fun ~depth -> R.Pp.uppterm depth [] 0 [||]) f c
 
   module Ast = struct
-    let program = Elpi_ast.Program.pp
+    let program = EA.Program.pp
   end
 end
 
 (****************************************************************************)
 
 module Conversion = struct
-  type extra_goals = Elpi_data.extra_goals
-  include Elpi_data.Conversion
+  type extra_goals = ED.extra_goals
+  include ED.Conversion
 end
 
 module RawOpaqueData = struct
-  include Elpi_util.CData
-  include Elpi_data.C
+  include Util.CData
+  include ED.C
 
   type name = string
   type doc = string
@@ -203,24 +207,24 @@ module RawOpaqueData = struct
   =
   let ty = Conversion.TyName name in
   let embed ~depth:_ _ _ state x =
-    state, Elpi_data.Term.CData (cin x), [] in
+    state, ED.Term.CData (cin x), [] in
   let readback ~depth _ _ state t =
     let module R = (val !r) in let open R in
     match R.deref_head ~depth t with
-    | Elpi_data.Term.CData c when isc c -> state, cout c
-    | Elpi_data.Term.Const i as t when i < 0 ->
-        begin try state, Elpi_data.Constants.Map.find i constants
+    | ED.Term.CData c when isc c -> state, cout c
+    | ED.Term.Const i as t when i < 0 ->
+        begin try state, ED.Constants.Map.find i constants
         with Not_found -> raise (Conversion.TypeErr(ty,depth,t)) end
     | t -> raise (Conversion.TypeErr(ty,depth,t)) in
   let pp_doc fmt () =
     if doc <> "" then begin
-      Elpi_data.BuiltInPredicate.pp_comment fmt ("% " ^ doc);
+      ED.BuiltInPredicate.pp_comment fmt ("% " ^ doc);
       Format.fprintf fmt "@\n";
     end;
     (* TODO: use typeabbrv *)
     Format.fprintf fmt "@[<hov 2>macro %s :- ctype \"%s\".@]@\n@\n" name c;
-    Elpi_data.Constants.Map.iter (fun c _ ->
-      Format.fprintf fmt "@[<hov 2>type %a %s.@]@\n" Elpi_data.Constants.pp c name)
+    ED.Constants.Map.iter (fun c _ ->
+      Format.fprintf fmt "@[<hov 2>type %a %s.@]@\n" ED.Constants.pp c name)
       constants
     in
   { Conversion.embed; readback; ty; pp_doc; pp = (fun fmt x -> pp fmt (cin x)) }
@@ -231,8 +235,8 @@ module RawOpaqueData = struct
       else "@" in
     let constants =
       List.fold_right (fun (n,v) ->
-        Elpi_data.Constants.Map.add (Elpi_data.Constants.from_stringc n) v)
-        constants Elpi_data.Constants.Map.empty in
+        ED.Constants.Map.add (ED.Constants.from_stringc n) v)
+        constants ED.Constants.Map.empty in
     conversion_of_cdata ~name:(prefix^name) ?doc ~constants cd
 
   let declare { name; doc; pp; eq; hash; hconsed; constants; } =
@@ -269,10 +273,10 @@ end
 
 module BuiltInData = struct
 
-  let int    = RawOpaqueData.conversion_of_cdata ~name:"int"    Elpi_data.C.int
-  let float  = RawOpaqueData.conversion_of_cdata ~name:"float"  Elpi_data.C.float
-  let string = RawOpaqueData.conversion_of_cdata ~name:"string" Elpi_data.C.string
-  let loc    = RawOpaqueData.conversion_of_cdata ~name:"loc"    Elpi_data.C.loc
+  let int    = RawOpaqueData.conversion_of_cdata ~name:"int"    ED.C.int
+  let float  = RawOpaqueData.conversion_of_cdata ~name:"float"  ED.C.float
+  let string = RawOpaqueData.conversion_of_cdata ~name:"string" ED.C.string
+  let loc    = RawOpaqueData.conversion_of_cdata ~name:"loc"    ED.C.loc
   let poly ty =
     let embed ~depth:_ _ _ state x = state, x, [] in
     let readback ~depth _ _ state t = state, t in
@@ -311,7 +315,7 @@ module BuiltInData = struct
         (lp_list_to_list ~depth t)
     in
     let pp fmt l =
-      Format.fprintf fmt "[%a]" (Elpi_util.pplist d.pp ~boxed:true "; ") l in
+      Format.fprintf fmt "[%a]" (Util.pplist d.pp ~boxed:true "; ") l in
     { Conversion.embed; readback;
       ty = TyApp ("list",d.ty,[]);
       pp;
@@ -321,7 +325,7 @@ module BuiltInData = struct
 end
 
 module Elpi = struct
-  type uvarHandle = Arg of string | Ref of Elpi_data.uvar_body
+  type uvarHandle = Arg of string | Ref of ED.uvar_body
   [@@deriving show]
 
   type t = {
@@ -342,47 +346,47 @@ module Elpi = struct
   let compilation_is_over ~args k =
     match k.handle with
     | Ref _ -> assert false
-    | Arg s -> { k with handle = Ref (Elpi_util.StrMap.find s args) }
+    | Arg s -> { k with handle = Ref (Util.StrMap.find s args) }
 
   (* This is to hide to the client the fact that Args change representation
       after compilation *)
-  let uvk = Elpi_data.State.declare ~name:"elpi:uvk" ~pp:(Elpi_util.StrMap.pp pp)
+  let uvk = ED.State.declare ~name:"elpi:uvk" ~pp:(Util.StrMap.pp pp)
     ~compilation_is_over:(fun ~args x ->
-        Some (Elpi_util.StrMap.map (compilation_is_over ~args) x))
-    ~init:(fun () -> Elpi_util.StrMap.empty)
+        Some (Util.StrMap.map (compilation_is_over ~args) x))
+    ~init:(fun () -> Util.StrMap.empty)
 
   let fresh_name =
     let i = ref 0 in
     fun () -> incr i; Printf.sprintf "_uvk_%d_" !i
   
   let alloc_Elpi name lvl state =            
-    if Elpi_data.State.get Elpi_compiler.while_compiling state then
-      let state, _arg = Elpi_compiler.mk_Arg ~name ~args:[] state in
+    if ED.State.get Compiler.while_compiling state then
+      let state, _arg = Compiler.mk_Arg ~name ~args:[] state in
       state, { lvl; handle = Arg name }
     else
-      state, { lvl; handle = Ref (Elpi_data.oref Elpi_data.Constants.dummy) }
+      state, { lvl; handle = Ref (ED.oref ED.Constants.dummy) }
 
   let make ?name ~lvl state =
     match name with
     | None -> alloc_Elpi (fresh_name ()) lvl state
     | Some name ->
-        try state, Elpi_util.StrMap.find name (Elpi_data.State.get uvk state) 
+        try state, Util.StrMap.find name (ED.State.get uvk state) 
         with Not_found ->
           let state, k = alloc_Elpi name lvl state in
-          Elpi_data.State.update uvk state (Elpi_util.StrMap.add name k), k
+          ED.State.update uvk state (Util.StrMap.add name k), k
 
   let get ~name state =
-    try Some (Elpi_util.StrMap.find name (Elpi_data.State.get uvk state))
+    try Some (Util.StrMap.find name (ED.State.get uvk state))
     with Not_found -> None
 
 end
 
 module RawData = struct
 
-  type constant = Elpi_data.Term.constant
-  type builtin = Elpi_data.Term.constant
-  type uvar_body = Elpi_data.Term.uvar_body
-  type term = Elpi_data.Term.term
+  type constant = ED.Term.constant
+  type builtin = ED.Term.constant
+  type uvar_body = ED.Term.uvar_body
+  type term = ED.Term.term
   type view =
     (* Pure subterms *)
     | Const of constant                   (* global constant or a bound var *)
@@ -401,45 +405,45 @@ module RawData = struct
   let look ~depth t =
     let module R = (val !r) in let open R in
     match R.deref_head ~depth t with
-    | Elpi_data.Term.Arg _ | Elpi_data.Term.AppArg _ -> assert false
-    | Elpi_data.Term.UVar(ub,lvl,nargs) ->
-        let args = Elpi_data.Term.Constants.mkinterval 0 nargs 0 in
+    | ED.Term.Arg _ | ED.Term.AppArg _ -> assert false
+    | ED.Term.UVar(ub,lvl,nargs) ->
+        let args = ED.Term.Constants.mkinterval 0 nargs 0 in
         UnifVar ({ lvl; handle = Ref ub},args)
-    | Elpi_data.Term.AppUVar(ub,lvl,args) ->
+    | ED.Term.AppUVar(ub,lvl,args) ->
         UnifVar ({ lvl; handle = Ref ub},args)
     | x -> Obj.magic x (* HACK: view is a "subtype" of Term.term *)
 
   let kool = function
-    | UnifVar({ lvl; handle = Ref ub},args) -> Elpi_data.Term.AppUVar(ub,lvl,args)
+    | UnifVar({ lvl; handle = Ref ub},args) -> ED.Term.AppUVar(ub,lvl,args)
     | UnifVar({ lvl; handle = Arg _},_) -> assert false
     | x -> Obj.magic x
   [@@ inline]
 
-  let mkConst = Elpi_data.Term.mkConst
-  let mkLam = Elpi_data.Term.mkLam
-  let mkApp = Elpi_data.Term.mkApp
-  let mkCons = Elpi_data.Term.mkCons
-  let mkNil = Elpi_data.Term.mkNil
-  let mkDiscard = Elpi_data.Term.mkDiscard
-  let mkBuiltin = Elpi_data.Term.mkBuiltin
-  let mkCData = Elpi_data.Term.mkCData
-  let mkAppL = Elpi_data.Term.mkAppL
-  let mkAppS = Elpi_data.Term.mkAppS
-  let mkAppSL = Elpi_data.Term.mkAppSL
+  let mkConst = ED.Term.mkConst
+  let mkLam = ED.Term.mkLam
+  let mkApp = ED.Term.mkApp
+  let mkCons = ED.Term.mkCons
+  let mkNil = ED.Term.mkNil
+  let mkDiscard = ED.Term.mkDiscard
+  let mkBuiltin = ED.Term.mkBuiltin
+  let mkCData = ED.Term.mkCData
+  let mkAppL = ED.Term.mkAppL
+  let mkAppS = ED.Term.mkAppS
+  let mkAppSL = ED.Term.mkAppSL
   
-  let mkGlobalS s = Elpi_data.Term.Constants.from_string s
-  let mkBuiltinS s args = mkBuiltin (Elpi_data.BuiltInPredicate.from_builtin_name s) args
+  let mkGlobalS s = ED.Term.Constants.from_string s
+  let mkBuiltinS s args = mkBuiltin (ED.BuiltInPredicate.from_builtin_name s) args
 
   let mkGlobal i =
-    if i >= 0 then Elpi_util.anomaly "mkGlobal: got a bound variable";
+    if i >= 0 then Util.anomaly "mkGlobal: got a bound variable";
     mkConst i
   let mkBound i =
-    if i < 0 then Elpi_util.anomaly "mkBound: got a global constant";
+    if i < 0 then Util.anomaly "mkBound: got a global constant";
     mkConst i
 
-  module Constants = Elpi_data.Term.Constants
+  module Constants = ED.Term.Constants
 
-  let of_term = Elpi_data.of_term
+  let of_term = ED.of_term
 
   let of_hyps x = x
 
@@ -454,18 +458,18 @@ module RawData = struct
     goal : int * term
   }
 
-  type constraints = Elpi_data.constraints
+  type constraints = Data.constraints
   
-  let constraints = Elpi_util.map_filter (function
-    | { Elpi_data.kind = Constraint { cdepth; conclusion; context } } ->
+  let constraints = Util.map_filter (function
+    | { ED.kind = Constraint { cdepth; conclusion; context } } ->
         Some { context ; goal = (cdepth, conclusion) }
     | _ -> None)
   let no_constraints = []
 
   let mkUnifVar { Elpi.handle; lvl } ~args state =
   match handle with
-  | Elpi.Ref ub -> Elpi_data.Term.mkAppUVar ub lvl args
-  | Elpi.Arg name -> Elpi_compiler.get_Arg state ~name ~args
+  | Elpi.Ref ub -> ED.Term.mkAppUVar ub lvl args
+  | Elpi.Arg name -> Compiler.get_Arg state ~name ~args
 
 end
 
@@ -483,7 +487,7 @@ module FlexibleData = struct
 
     (* Bijective map between elpi UVar and host equivalent *)
   module Map = functor(T : Host) -> struct
-    open Elpi_util
+    open Util
 
     module H2E = Map.Make(T)
 
@@ -539,8 +543,8 @@ module FlexibleData = struct
       let module R = (val !r) in let open R in
       let get_val {Elpi.lvl; handle} =
         match handle with
-        | Elpi.Ref { Elpi_data.Term.contents = ub }
-          when ub != Elpi_data.Term.Constants.dummy ->
+        | Elpi.Ref { ED.Term.contents = ub }
+          when ub != ED.Term.Constants.dummy ->
             Some (lvl, R.deref_head ~depth:lvl ub)
         | Elpi.Ref _ -> None
         | Elpi.Arg _ -> None in
@@ -549,7 +553,7 @@ module FlexibleData = struct
     let pp fmt (m : t) = Format.fprintf fmt "<uvm>"
     let show m = Format.asprintf "%a" pp m
 
-    let uvmap = Elpi_data.State.declare ~name:"elpi:uvm" ~pp
+    let uvmap = ED.State.declare ~name:"elpi:uvm" ~pp
       ~compilation_is_over:(fun ~args { h2e; e2h_compile; e2h_run } ->
         let h2e = H2E.map (Elpi.compilation_is_over ~args) h2e in
         let e2h_run =
@@ -581,18 +585,18 @@ module AlgebraicData = struct
   type name = string
   type doc = string
 
-  include Elpi_data.BuiltInPredicate.ADT
+  include ED.BuiltInPredicate.ADT
   let declare x = 
     let look ~depth t =
       let module R = (val !r) in
       R.deref_head ~depth t in
-    Elpi_data.BuiltInPredicate.adt
+    ED.BuiltInPredicate.adt
       ~look ~alloc:FlexibleData.Elpi.make ~mkUnifVar:RawData.mkUnifVar x
 end
 
 module BuiltInPredicate = struct
-  include Elpi_data.BuiltInPredicate
-  exception No_clause = Elpi_data.No_clause
+  include ED.BuiltInPredicate
+  exception No_clause = ED.No_clause
 
   module Notation = struct
 
@@ -606,17 +610,17 @@ module BuiltInPredicate = struct
 end
 
 module BuiltIn = struct
-  include Elpi_data.BuiltInPredicate
+  include ED.BuiltInPredicate
   let declare ~file_name l = file_name, l
 end
 
 module Query = struct
-  include Elpi_data.Query
-  let compile = Elpi_compiler.query_of_data
+  include ED.Query
+  let compile = Compiler.query_of_data
 end
 
 module State = struct
-  include Elpi_data.State
+  include ED.State
   (* From now on, we pretend there is no difference between terms at
      compilation time and terms at execution time (in the API) *)
   let declare ~name ~pp ~init =
@@ -626,22 +630,22 @@ end
 
 
 module RawQuery = struct
-  let mk_Arg = Elpi_compiler.mk_Arg
-  let is_Arg = Elpi_compiler.is_Arg
-  let compile = Elpi_compiler.query_of_term
+  let mk_Arg = Compiler.mk_Arg
+  let is_Arg = Compiler.is_Arg
+  let compile = Compiler.query_of_term
 end
 
 module Quotation = struct
-  include Elpi_compiler
+  include Compiler
   let declare_backtick ~name f =
-    Elpi_data.CustomFunctorCompilation.declare_backtick_compilation name
-      (fun s x -> f s (Elpi_ast.Func.show x))
+    ED.CustomFunctorCompilation.declare_backtick_compilation name
+      (fun s x -> f s (EA.Func.show x))
 
   let declare_singlequote ~name f =
-    Elpi_data.CustomFunctorCompilation.declare_singlequote_compilation name
-      (fun s x -> f s (Elpi_ast.Func.show x))
+    ED.CustomFunctorCompilation.declare_singlequote_compilation name
+      (fun s x -> f s (EA.Func.show x))
 
-  let term_at ~depth x = Elpi_compiler.term_of_ast ~depth x
+  let term_at ~depth x = Compiler.term_of_ast ~depth x
 
 end
 
@@ -657,22 +661,22 @@ module Utils = struct
   let get_assignment { Elpi.handle } =
     match handle with
     | Elpi.Arg _ -> assert false
-    | Elpi.Ref { Elpi_data.contents = r } ->
-        if r == Elpi_data.Constants.dummy then None
+    | Elpi.Ref { ED.contents = r } ->
+        if r == ED.Constants.dummy then None
         else Some r
 
   let move ~from ~to_ t =
     let module R = (val !r) in let open R in
     R.hmove ~from ~to_ ?avoid:None t
   
-  let error = Elpi_util.error
-  let type_error = Elpi_util.type_error
-  let anomaly = Elpi_util.anomaly
-  let warn = Elpi_util.warn
+  let error = Util.error
+  let type_error = Util.type_error
+  let anomaly = Util.anomaly
+  let warn = Util.warn
 
   let clause_of_term ?name ?graft ~depth loc term =
-    let open Elpi_ast in
-    let module Data = Elpi_data.Term in
+    let open EA in
+    let module Data = ED.Term in
     let module R = (val !r) in let open R in
     let rec aux d ctx t =
       match R.deref_head ~depth:d t with       
@@ -680,10 +684,10 @@ module Utils = struct
           error "program_of_term: the term is not closed"
       | Data.Const i when i < 0 ->
           Term.mkCon (Data.Constants.show i)
-      | Data.Const i -> Elpi_util.IntMap.find i ctx
+      | Data.Const i -> Util.IntMap.find i ctx
       | Data.Lam t ->
           let s = "x" ^ string_of_int d in
-          let ctx = Elpi_util.IntMap.add d (Term.mkCon s) ctx in
+          let ctx = Util.IntMap.add d (Term.mkCon s) ctx in
           Term.mkLam s (aux (d+1) ctx t)
       | Data.App(c,x,xs) ->
           let c = aux d ctx (Data.Constants.mkConst c) in
@@ -714,7 +718,7 @@ module Utils = struct
     [Program.Clause {
       Clause.loc = loc;
       attributes;
-      body = aux depth Elpi_util.IntMap.empty term;
+      body = aux depth Util.IntMap.empty term;
     }]
 
   let map_acc_embed = BuiltInData.map_acc_embed
@@ -725,18 +729,18 @@ end
 module RawPp = struct
   let term depth fmt t =
     let module R = (val !r) in let open R in
-    R.Pp.uppterm depth [] 0 Elpi_data.empty_env fmt t
+    R.Pp.uppterm depth [] 0 ED.empty_env fmt t
 
   let constraint_ f c = 
     let module R = (val !r) in let open R in
     R.pp_stuck_goal f c
 
-  let list = Elpi_util.pplist
+  let list = Util.pplist
 
   module Debug = struct
     let term depth fmt t =
       let module R = (val !r) in let open R in
-      R.Pp.ppterm depth [] 0 Elpi_data.empty_env fmt t
-    let show_term = Elpi_data.show_term
+      R.Pp.ppterm depth [] 0 ED.empty_env fmt t
+    let show_term = ED.show_term
   end
 end

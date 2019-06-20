@@ -2,7 +2,7 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-open Elpi_data
+open Data
 
 module Pp : sig
   val ppterm :
@@ -47,7 +47,7 @@ val make_index :
 
 (* used by the compiler *)
 val clausify1 :
-  loc:Elpi_util.Loc.t ->
+  loc:Util.Loc.t ->
   mode Constants.Map.t -> (* for caching it in the clause *)
   nargs:int -> depth:int -> term -> (constant * clause) * clause_src * int
 

@@ -2,7 +2,7 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-open Elpi_util
+open Util
 
 module Func = struct
 
@@ -59,7 +59,7 @@ module Term = struct
    | Const of Func.t
    | App of t * t list
    | Lam of Func.t * t
-   | CData of Elpi_util.CData.t
+   | CData of CData.t
    | Quoted of quote
   and quote = { data : string; loc : Loc.t; kind : string option }
   [@@deriving show, eq]
@@ -225,8 +225,7 @@ module Goal = struct
   type t = Loc.t * Term.t [@@deriving show]
 
 end
-
-open Elpi_util
+ 
 module Fmt = Format
 
 let { CData.cin = in_float; isc = is_float; cout = out_float } as cfloat =

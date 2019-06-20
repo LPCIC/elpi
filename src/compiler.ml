@@ -2,11 +2,9 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-open Elpi_util
-module Ast = Elpi_ast
+open Util
 module F = Ast.Func
-
-module R = Elpi_runtime_trace_off
+module R = Runtime_trace_off
 
 type flags = {
   defined_variables : StrSet.t;
@@ -63,7 +61,7 @@ and 'a shorthand = {
 
 end
 
-open Elpi_data
+open Data
 module C = Constants
 
 module Structured = struct
@@ -165,7 +163,7 @@ type 'a query = 'a WithMain.query
 module Executable = struct
 
 (* All that is needed in order to execute, and nothing more *)
-type 'a executable = 'a Elpi_data.executable = {
+type 'a executable = 'a Data.executable = {
   (* the lambda-Prolog program: an indexed list of clauses *) 
   compiled_program : prolog_prog;
   (* chr rules *)
@@ -389,7 +387,7 @@ module ToDBL : sig
   (* Exported to compile the query *)
   val preterm_of_ast :
     depth:int -> macro_declaration -> State.t ->
-      Loc.t * Elpi_ast.Term.t -> State.t * preterm
+      Loc.t * Ast.Term.t -> State.t * preterm
   val preterm_of_function :
     depth:int -> macro_declaration -> State.t -> 
     (State.t -> State.t * (Loc.t * term)) ->
@@ -568,14 +566,14 @@ let preterm_of_ast loc ~depth:arg_lvl macro state ast =
            option_get ~err:"No default quotation" !default_quotation in
          let state = set_mtm state (Some { macros = macro}) in
          begin try unquote ~depth:lvl state loc data 
-         with Elpi_parser.ParseError(loc,msg) -> error ~loc msg end
+         with Parser.ParseError(loc,msg) -> error ~loc msg end
     | Ast.Term.Quoted { Ast.Term.data; kind = Some name; loc } ->
          let unquote = 
            try StrMap.find name !named_quotations
            with Not_found -> anomaly ("No '"^name^"' quotation") in
          let state = set_mtm state (Some { macros = macro}) in
          begin try unquote ~depth:lvl state loc data
-         with Elpi_parser.ParseError(loc,msg) -> error ~loc msg end
+         with Parser.ParseError(loc,msg) -> error ~loc msg end
     | Ast.Term.App (Ast.Term.Quoted _,_) -> type_error ~loc "Applied quotation"
   in
 
@@ -584,7 +582,7 @@ let preterm_of_ast loc ~depth:arg_lvl macro state ast =
 ;;
 
 let lp ~depth state loc s =
-  let loc, ast = Elpi_parser.parse_goal ~loc s in
+  let loc, ast = Parser.parse_goal ~loc s in
   let macros =
     match get_mtm state with
     | None -> F.Map.empty
@@ -1073,7 +1071,7 @@ end = struct (* {{{ *)
 
     let argmap = ref argmap in
     let mk_Arg n =
-      let m, (x,_) = Elpi_data.mk_Arg n !argmap in
+      let m, (x,_) = Data.mk_Arg n !argmap in
       argmap := m;
       x in
 
@@ -1312,7 +1310,7 @@ let program_of_ast ~flags:({ print_passes } as flags) p =
 
   if print_passes then
     Format.eprintf "== AST ================@\n@[<v 0>%a@]@\n"
-      Elpi_ast.Program.pp p;
+      Ast.Program.pp p;
  
   let p = RecoverStructure.run ~flags p in
  
@@ -1596,7 +1594,7 @@ let run
       (List.map (compile_clause modes initial_depth)
         (filter_if flags.defined_variables ifexpr clauses)) in
   {
-    Elpi_data.compiled_program = prolog_program;
+    Data.compiled_program = prolog_program;
     chr;
     initial_depth;
     initial_goal;
@@ -1643,7 +1641,7 @@ let pp_query pp fmt {
 ;;
 
 (****************************************************************************
-  Quotation (for static checkers, see elpi_quoted_syntax.elpi)
+  Quotation (for static checkers, see elpi-quoted_syntax.elpi)
  ****************************************************************************)
 
 let constc = C.from_stringc "const"
@@ -1666,7 +1664,7 @@ let mkQCon ~on_type ?(amap=empty_amap) c =
   try mkConst (C.Map.find c amap.c2i)
   with Not_found ->
     let a = if on_type then tconstc else constc in
-    if c < 0 then App(a,Elpi_data.C.of_string (C.show c),[])
+    if c < 0 then App(a,Data.C.of_string (C.show c),[])
     else mkConst (c + amap.nargs)
 
 let quote_preterm ?(on_type=false) { term; amap } =
@@ -1674,13 +1672,13 @@ let quote_preterm ?(on_type=false) { term; amap } =
   let mkQCon = mkQCon ~on_type ~amap in
   let rec aux depth term = match term with
     | Const n when on_type && C.show n = "string" -> 
-        App(C.ctypec, Elpi_data.C.of_string "string",[])
+        App(C.ctypec, Data.C.of_string "string",[])
     | Const n when on_type && C.show n = "int" ->
-        App(C.ctypec, Elpi_data.C.of_string "int",[])
+        App(C.ctypec, Data.C.of_string "int",[])
     | Const n when on_type && C.show n = "float" ->
-        App(C.ctypec, Elpi_data.C.of_string "float",[])
+        App(C.ctypec, Data.C.of_string "float",[])
     | App(c,CData s,[])
-      when on_type && c == C.ctypec && Elpi_data.C.is_string s -> term
+      when on_type && c == C.ctypec && Data.C.is_string s -> term
     | App(c,s,[t]) when on_type && c == C.arrowc ->
         App(arrowc,aux depth s,[aux depth t])
     | Const n when on_type && C.show n = "prop" -> term
@@ -1724,7 +1722,7 @@ let close_w_binder binder t { nargs } =
 let sorted_names_of_argmap argmap =
     IntMap.bindings argmap.i2n |>
     List.map snd |>
-    List.map Elpi_data.C.of_string
+    List.map Data.C.of_string
 
 let quote_loc ?id loc =
   let source_name =
@@ -1750,9 +1748,9 @@ let quote_syntax { WithMain.clauses; query } =
   clist, q
 
 let default_checker () =
-  try Elpi_parser.parse_program
+  try Parser.parse_program
          ~print_accumulated_files:false ["elpi-checker.elpi"]
-  with Elpi_parser.ParseError(loc,err) -> error ~loc err
+  with Parser.ParseError(loc,err) -> error ~loc err
 
 let static_check header
   ?(exec=R.execute_once ~delay_outside_fragment:false) ?(checker=default_checker ()) ?(flags=default_flags)
@@ -1769,7 +1767,7 @@ let static_check header
     program_of_ast
       ~flags:{ flags with allow_untyped_builtin = true }
       (header @ checker) in
-  let loc = Elpi_util.Loc.initial "(static_check)" in
+  let loc = Loc.initial "(static_check)" in
   let query =
     query_of_term checker (fun ~depth state ->
       assert(depth=0);

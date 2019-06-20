@@ -2,7 +2,7 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-open Elpi_API
+open API
 open RawData
 open Constants
 open Utils
@@ -214,7 +214,7 @@ let bool = AlgebraicData.declare {
 let pair a b = let open AlgebraicData in declare {
   ty = TyApp ("pair",a.Conversion.ty,[b.Conversion.ty]);
   doc = "Pair: the constructor is pr, since ',' is for conjunction";
-  pp = (fun fmt o -> Format.fprintf fmt "%a" (Elpi_util.pp_pair a.Conversion.pp b.Conversion.pp) o);
+  pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_pair a.Conversion.pp b.Conversion.pp) o);
   constructors = [
     K("pr","",A(a,A(b,N)),
       B (fun a b -> (a,b)),
@@ -225,7 +225,7 @@ let pair a b = let open AlgebraicData in declare {
 let option a = let open AlgebraicData in declare {
   ty = TyApp("option",a.Conversion.ty,[]);
   doc = "The option type (aka Maybe)";
-  pp = (fun fmt o -> Format.fprintf fmt "%a" (Elpi_util.pp_option a.Conversion.pp) o);
+  pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_option a.Conversion.pp) o);
   constructors = [
     K("none","",N,
       B None,
@@ -686,14 +686,14 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in [
      Out(list (poly "A"), "QuotedProgram",
      Out(poly "A",        "QuotedQuery",
      Easy    ("quotes the program from FileName and the QueryText. "^
-              "See elpi_quoted_syntax.elpi for the syntax tree"))))),
+              "See elpi-quoted_syntax.elpi for the syntax tree"))))),
    (fun f s _ _ ~depth ->
       let ap = Parse.program [f] in
       let loc = Ast.Loc.initial "(quote_syntax)" in
       let aq = Parse.goal loc s in
       let p =
-        Elpi_API.Compile.(program ~flags:default_flags dummy_header [ap]) in
-      let q = Elpi_API.Compile.query p aq in
+        API.Compile.(program ~flags:default_flags dummy_header [ap]) in
+      let q = API.Compile.query p aq in
       let qp, qq = Quotation.quote_syntax q in
       !: qp +! qq)),
   DocAbove);
