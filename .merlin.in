@@ -1,7 +1,0 @@
-S src/
-B src/
-PKG ppx_deriving.std ppx_deriving.runtime
-PKG camlp5
-PKG re
-PKG ocaml-migrate-parsetree
-PKG ppx_tools_versioned.metaquot_403 
