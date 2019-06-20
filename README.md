@@ -101,8 +101,8 @@ The easiest way of embedding ELPI is by linking it using
 [findlib](http://projects.camlcity.org/projects/findlib.html)
 as in `ocamlfind opt -package elpi mycode.ml -o myprogram`.
 The API the host application can use to drive ELPI is documented in the
-[elpi_API.mli](src/elpi_API.mli) file. The 
-[elpi_builtin.ml](src/elpi_builtin.ml) file contains example of
+[API.mli](src/API.mli) file. The 
+[Builtin.ml](src/builtin.ml) file contains example of
 (basic) built-in predicates declaration via ELPI's FFI.
 
 The [command line](elpi_REPL.ml) interface to ELPI is a very simple
