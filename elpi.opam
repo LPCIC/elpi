@@ -13,9 +13,7 @@ build: [
   [ "dune" "build" "-p" name "-j" jobs ]
 ]
 run-test: [ make "tests" ]
-install: [ 
-	[ "dune" "install" "-p" name ]
-]
+install: [ make "install" ]
 
 depends: [
   "ocaml" {>= "4.04.0"}

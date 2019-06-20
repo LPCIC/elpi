@@ -2,7 +2,7 @@
 /* license: GNU Lesser General Public License Version 2.1 or later           */
 /* ------------------------------------------------------------------------- */
 
-accumulate elpi_quoted_syntax.
+accumulate elpi-quoted_syntax.
 
 shorten std.{spy, rev, exists}.
 

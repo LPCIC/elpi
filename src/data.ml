@@ -5,8 +5,8 @@
 (* Internal term representation *)
 
 module Fmt = Format
-module F = Elpi_ast.Func
-open Elpi_util
+module F = Ast.Func
+open Util
 
 (******************************************************************************
   Terms: data type definition and printing
@@ -98,20 +98,20 @@ and prolog_prog = {
   src : clause_src list; (* hypothetical context in original form, for CHR *)
   index : index;
 }
-and index = second_lvl_idx Elpi_ptmap.t
+and index = second_lvl_idx Ptmap.t
 and second_lvl_idx =
 | TwoLevelIndex of {
     mode : mode;
     argno : int; 
     all_clauses : clause list;         (* when the query is flexible *)
     flex_arg_clauses : clause list;       (* when the query is rigid but arg_id ha nothing *)
-    arg_idx : clause list Elpi_ptmap.t;   (* when the query is rigid (includes in each binding flex_arg_clauses) *)
+    arg_idx : clause list Ptmap.t;   (* when the query is rigid (includes in each binding flex_arg_clauses) *)
   }
 | BitHash of {
     mode : mode;
     args : int list;
     time : int; (* time is used to recover the total order *)
-    args_idx : (clause * int) list Elpi_ptmap.t; (* clause, insertion time *)
+    args_idx : (clause * int) list Ptmap.t; (* clause, insertion time *)
   }
 and clause = {
     depth : int;
@@ -143,24 +143,24 @@ let mkAppArg i args = AppArg(i,args) [@@inline]
 module C = struct
 
   let { CData.cin = in_int; isc = is_int; cout = out_int } as int =
-    Elpi_ast.cint
+    Ast.cint
   let is_int = is_int
   let to_int = out_int
   let of_int x = CData (in_int x)
 
   let { CData.cin = in_float; isc = is_float; cout = out_float } as float =
-    Elpi_ast.cfloat
+    Ast.cfloat
   let is_float = is_float
   let to_float = out_float
   let of_float x = CData (in_float x)
   
   let { CData.cin = in_string; isc = is_string; cout = out_string } as string =
-    Elpi_ast.cstring
+    Ast.cstring
   let is_string = is_string
   let to_string x = out_string x
   let of_string x = CData (in_string x)
 
-  let loc = Elpi_ast.cloc
+  let loc = Ast.cloc
   let is_loc = loc.CData.isc
   let to_loc = loc.CData.cout
   let of_loc x = CData (loc.CData.cin x)
@@ -582,7 +582,7 @@ type clause_w_info = {
 }
 [@@ deriving show]
 
-type macro_declaration = (Elpi_ast.Term.t * Loc.t) F.Map.t
+type macro_declaration = (Ast.Term.t * Loc.t) F.Map.t
 [@@ deriving show]
 
 (* This is paired with a pre-stack term, i.e. a stack term where args are
@@ -851,7 +851,7 @@ and embed : type a.
   fun ~depth hyps constraints state t ->
     let rec aux l state =
       match l with
-      | [] -> Elpi_util.type_error
+      | [] -> type_error
                   ("Pattern matching failure embedding: " ^ Conversion.show_ty_ast ty ^ Format.asprintf ": %a" pp t)
       | (kname, CK(args,_,matcher)) :: rest ->
         let ok = adt_embed_args ty adt kname ~depth hyps constraints args [] in
@@ -901,7 +901,6 @@ let compile_matcher : type bs b m ms t. (bs,b,ms,m,t) constructor_arguments -> (
     | MS f -> f
 
 let compile_constructors ty self l =
-  let open Elpi_util in
   let names =
     List.fold_right (fun (K(name,_,_,_,_)) -> StrSet.add name) l StrSet.empty in
   if StrSet.cardinal names <> List.length l then

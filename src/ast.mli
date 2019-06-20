@@ -2,7 +2,7 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-open Elpi_util
+open Util
 
 (* Prolog functors *)
 module Func : sig
@@ -42,7 +42,7 @@ module Term : sig
    | Const of Func.t
    | App of t * t list
    | Lam of Func.t * t
-   | CData of Elpi_util.CData.t
+   | CData of CData.t
    | Quoted of quote
   and quote = { data : string; loc : Loc.t; kind : string option }
   
@@ -62,7 +62,7 @@ module Term : sig
   val mkFreshUVar : unit -> t
   val mkFreshName : unit -> t
   val mkLam : string -> t -> t
-  val mkC : Elpi_util.CData.t -> t
+  val mkC : CData.t -> t
 end
 
 module Clause : sig
@@ -227,7 +227,7 @@ end
 
 (* These are declared here for convenience *)
 
-open Elpi_util.CData
+open CData
 
 val cfloat : float cdata
 val cint : int cdata

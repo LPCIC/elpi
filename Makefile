@@ -2,7 +2,10 @@ help:
 	@echo 'Known targets:'
 	@echo
 	@echo '  build            builds elpi'
-	@echo '  .merlin          builds a .merlin'
+	@echo '  install          install elpi'
+	@echo '  clean            remove build artifacts'
+	@echo
+	@echo '  .merlin          builds a .merlin file'
 	@echo
 	@echo '  tests            runs the entire test suite'
 	@echo '  tests ONLY=rex   runs only tests matching rex'
@@ -25,7 +28,7 @@ STACK=32768
 .merlin:
 	@dune build .merlin
 	@for ppx in `ls $$PWD/_build/default/.ppx/*/ppx.exe`; do\
-		if $$ppx --print-transformations | grep trace; then\
+		if $$ppx --print-transformations | grep -q trace; then\
 	      echo PKG ppx_deriving.std ppx_deriving.runtime >> .merlin;\
 	      echo FLG -ppx \"$$ppx --as-ppx\" >> .merlin;\
 	      echo PKG ppx_deriving.std ppx_deriving.runtime >> src/.merlin;\
@@ -34,9 +37,15 @@ STACK=32768
 	done
 
 build:
+	@$(MAKE) --no-print-directory .merlin
 	dune build @install
-	$(MAKE) .merlin
+	@$(MAKE) --no-print-directory .merlin
 
+install:
+	dune install
+
+clean:
+	rm -rf _build
 
 tests:
 	dune build $(INSTALL)/bin/elpi
@@ -62,4 +71,4 @@ git/%:
 		cp "elpi-$*/$(INSTALL)/bin/elpi" "elpi.git.$*"
 	rm -rf "$$PWD/elpi-$*"
 
-.PHONY: tests help .merlin
+.PHONY: tests help .merlin install build clean

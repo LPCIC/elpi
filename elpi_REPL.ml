@@ -17,20 +17,20 @@ open Elpi
 module Str = Re.Str
 
 let print_solution time = function
-| Elpi_API.Execute.NoMoreSteps ->
+| API.Execute.NoMoreSteps ->
    Format.eprintf "Interrupted (no more steps)@\n%!"
-| Elpi_API.Execute.Failure -> Format.eprintf "Failure@\n%!"
-| Elpi_API.Execute.Success {
-    Elpi_API.Data.assignments; constraints; state; _ } ->
+| API.Execute.Failure -> Format.eprintf "Failure@\n%!"
+| API.Execute.Success {
+    API.Data.assignments; constraints; state; _ } ->
   Format.eprintf "@\nSuccess:@\n%!" ;
-  Elpi_API.Data.StrMap.iter (fun name v ->
+  API.Data.StrMap.iter (fun name v ->
     Format.eprintf "  @[<hov 1>%s = %a@]@\n%!" name
-      Elpi_API.Pp.term v) assignments;
+      API.Pp.term v) assignments;
   Format.eprintf "@\nTime: %5.3f@\n%!" time;
   Format.eprintf "@\nConstraints:@\n%a@\n%!"
-    Elpi_API.Pp.constraints constraints;
+    API.Pp.constraints constraints;
   Format.eprintf "@\nState:@\n%a@\n%!"
-    Elpi_API.Pp.state state;
+    API.Pp.state state;
 ;;
   
 let more () =
@@ -61,7 +61,7 @@ let usage =
   "\t-no-tc don't typecheck the program\n" ^ 
   "\t-delay-problems-outside-pattern-fragment (deprecated, for Teyjus\n" ^
   "\t                                          compatibility)\n" ^
-  Elpi_API.Setup.usage ^
+  API.Setup.usage ^
   "\nDebug options (for debugging Elpi, not your program):\n" ^ 
   "\t-print-accumulated-files prints files loaded via accumulate\n" ^ 
   "\t-print-ast prints files as parsed, then exit\n" ^ 
@@ -71,8 +71,8 @@ let usage =
 
 (* For testing purposes we declare an identity quotation *)
 let _ =
-  Elpi_API.Quotation.register_named_quotation ~name:"elpi"
-    Elpi_API.Quotation.lp
+  API.Quotation.register_named_quotation ~name:"elpi"
+    API.Quotation.lp
 
 let _ =
   let test = ref false in
@@ -87,7 +87,7 @@ let _ =
   let print_passes = ref false in
   let print_accumulated_files = ref false in
   let vars =
-    ref Elpi_API.Compile.(default_flags.defined_variables) in
+    ref API.Compile.(default_flags.defined_variables) in
   let rec aux = function
     | [] -> []
     | "-delay-problems-outside-pattern-fragment" :: rest -> delay_outside_fragment := true; aux rest
@@ -101,7 +101,7 @@ let _ =
     | "-no-tc" :: rest -> typecheck := false; aux rest
     | "-document-builtins" :: rest -> doc_builtins := true; aux rest
     | "-D" :: var :: rest ->
-      vars := Elpi_API.Compile.StrSet.add var !vars;
+      vars := API.Compile.StrSet.add var !vars;
       aux rest
     | ("-h" | "--help") :: _ -> Printf.eprintf "%s" usage; exit 0
     | "--" :: rest -> args := rest; []
@@ -121,74 +121,74 @@ let _ =
     List.flatten (List.map (fun x -> ["-I";x^"/elpi/"]) ocamlpath) in
   let execpath = ["-I"; Filename.dirname (Sys.executable_name)] in
   let opts = Array.to_list Sys.argv @ tjpath @ installpath @ execpath in
-  let pheader, argv = Elpi_API.Setup.init ~builtins:Elpi_builtin.std_builtins opts ~basedir:cwd in
+  let pheader, argv = API.Setup.init ~builtins:Builtin.std_builtins opts ~basedir:cwd in
   let filenames = aux (List.tl argv) in
   set_terminal_width ();
   if !doc_builtins then begin
-    Elpi_API.BuiltIn.document Format.std_formatter
-      Elpi_builtin.std_declarations;
+    API.BuiltIn.document Format.std_formatter
+      Builtin.std_declarations;
     exit 0;
   end;
   let p =
-    try Elpi_API.Parse.program
+    try API.Parse.program
           ~print_accumulated_files:!print_accumulated_files filenames
-    with Elpi_API.Parse.ParseError(loc,err) ->
-      Printf.eprintf "%s: %s\n" (Elpi_API.Ast.Loc.show loc) err;
+    with API.Parse.ParseError(loc,err) ->
+      Printf.eprintf "%s: %s\n" (API.Ast.Loc.show loc) err;
       exit 1;
   in
   if !print_ast then begin
-    Format.eprintf "%a" Elpi_API.Pp.Ast.program p;
+    Format.eprintf "%a" API.Pp.Ast.program p;
     exit 0;
   end;
   let g =
-    if !test then Elpi_API.Parse.goal (Elpi_API.Ast.Loc.initial "(-test)") "main."
+    if !test then API.Parse.goal (API.Ast.Loc.initial "(-test)") "main."
     else if !exec <> "" then
-      begin Elpi_API.Parse.goal
-        (Elpi_API.Ast.Loc.initial "(-exec)")
+      begin API.Parse.goal
+        (API.Ast.Loc.initial "(-exec)")
         (Printf.sprintf "%s [%s]." !exec
           String.(concat ", " (List.map (Printf.sprintf "\"%s\"") !args)))
          end
     else begin
      Printf.printf "goal> %!";
      let strm = Stream.of_channel stdin in
-     try Elpi_API.Parse.goal_from_stream (Elpi_API.Ast.Loc.initial "(stdin)") strm
-     with Elpi_API.Parse.ParseError(loc,err) ->
-        Printf.eprintf "%s: %s\n" (Elpi_API.Ast.Loc.show loc) err;
+     try API.Parse.goal_from_stream (API.Ast.Loc.initial "(stdin)") strm
+     with API.Parse.ParseError(loc,err) ->
+        Printf.eprintf "%s: %s\n" (API.Ast.Loc.show loc) err;
         exit 1;
     end in
   let flags = {
-    Elpi_API.Compile.default_flags with
-      Elpi_API.Compile.defined_variables = !vars;
-      Elpi_API.Compile.print_passes = !print_passes;
+    API.Compile.default_flags with
+      API.Compile.defined_variables = !vars;
+      API.Compile.print_passes = !print_passes;
   } in
-  let prog = Elpi_API.Compile.program ~flags pheader [p] in
-  let query = Elpi_API.Compile.query prog g in
+  let prog = API.Compile.program ~flags pheader [p] in
+  let query = API.Compile.query prog g in
   if !typecheck then begin
-    if not (Elpi_API.Compile.static_check ~flags pheader query) then
+    if not (API.Compile.static_check ~flags pheader query) then
        Format.eprintf "Type error\n";
   end;
   if !print_lprolog then begin
-    Elpi_API.Pp.query Format.std_formatter query;
+    API.Pp.query Format.std_formatter query;
     exit 0;
   end;
-  let exec = Elpi_API.Compile.link query in
+  let exec = API.Compile.link query in
   if !print_passes then begin
     exit 0;
   end;
   if not !batch then 
-    Elpi_API.Execute.loop
+    API.Execute.loop
       ~delay_outside_fragment:!delay_outside_fragment ~more ~pp:print_solution
       exec
   else begin
     Gc.compact ();
     if
       let t0 = Unix.gettimeofday () in
-      let b = Elpi_API.Execute.once
+      let b = API.Execute.once
           ~delay_outside_fragment:!delay_outside_fragment exec in
       let t1 = Unix.gettimeofday () in
       match b with
-      | Elpi_API.Execute.Success _ -> print_solution (t1 -. t0) b; true
-      | (Elpi_API.Execute.Failure | Elpi_API.Execute.NoMoreSteps) -> false
+      | API.Execute.Success _ -> print_solution (t1 -. t0) b; true
+      | (API.Execute.Failure | API.Execute.NoMoreSteps) -> false
     then exit 0
     else exit 1
   end

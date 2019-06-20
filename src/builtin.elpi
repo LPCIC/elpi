@@ -270,7 +270,7 @@ external pred rex_match i:string, i:string.
 external pred rex_replace i:string, i:string, i:string, o:string.
 
 % [quote_syntax FileName QueryText QuotedProgram QuotedQuery] quotes the
-% program from FileName and the QueryText. See elpi_quoted_syntax.elpi for
+% program from FileName and the QueryText. See elpi-quoted_syntax.elpi for
 % the syntax tree
 external pred quote_syntax i:string, i:string, o:list A, o:A.
 
