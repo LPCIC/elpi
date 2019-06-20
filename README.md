@@ -27,7 +27,7 @@ you can type
 ```
 opam pin add elpi https://github.com/LPCIC/elpi.git
 ```
-You can also clone this repository and type `dune build`.
+You can also clone this repository and type `make build`.
 
 ### Syntax highlight in Visual studio code
 
