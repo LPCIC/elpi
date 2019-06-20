@@ -1,3 +1,20 @@
+## Version 1.4 (June 2019)
+
+Elpi 1.4 requires OCaml 4.04 or newer
+
+- Sources and build: Switch to dune, with a little make base wrapper.
+  As a result of dune wrapping the library all sources are renamed from
+  `elpi_x.ml` to `x.ml`, and each module `Elpi_X` is now available as `Elpi.X`.
+  In particular clients must now use `Elpi.API` and `Elpi.Builtin`.
+
+- FFI:
+  - `Conversion.TypeErr` now carries the depth at which the error is found, so
+    that the term payload can be correctly printed.
+  - Built in predicates are allowed to raise TypeErr in their body
+  - `BuiltInPredicate.Full` now returns a list of `extra_goals`, exactly as
+    `Conversion.embed` does making conversion code easy to call in the body
+    of a predicate.
+
 ## Version 1.3 (June 2019)
 
 Elpi 1.3 requires OCaml 4.04 or newer
