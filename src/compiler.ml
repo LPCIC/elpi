@@ -1727,7 +1727,7 @@ let sorted_names_of_argmap argmap =
 let quote_loc ?id loc =
   let source_name =
     match id with
-    | Some x -> loc.Loc.source_name ^ x ^ ":"
+    | Some x -> loc.Loc.source_name ^ ": " ^ x
     | None -> loc.Loc.source_name in
   Ast.cloc.CData.cin { loc with Loc.source_name }
 
