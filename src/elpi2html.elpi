@@ -6,8 +6,7 @@ accumulate elpi-quoted_syntax.
 
 shorten std.{spy, rev, exists}.
 
-macro @vdash :- ":-". % work around bug in Vim's syntax highlight
-
+pred iter i:(A -> prop), o:list A.
 iter _ [].
 iter P [X|XS] :- P X, iter P XS.
 
@@ -16,24 +15,25 @@ iter-sep _ _ _ [] _.
 iter-sep _ S P [X] A :- !, P [] X A.
 iter-sep B S P [X|XS] A :- P B X [], write S, iter-sep [] S P XS A.
 
+pred iter-sep2 i:list string, i:string, i:string, i:(list string -> A -> list string -> prop), i:list A, i:list string.
 iter-sep2 _ _ _  _ [] _.
 iter-sep2 _ S _  P [X] A :- !, P [] X A.
 iter-sep2 B S S1 P [X|XS] A :- P B X [S1], write S, iter-sep2 [] S S1 P XS A.
 
+pred monad i:list (S -> S -> prop), i:S, o:S.
 monad [] X X.
 monad [P|PS] X R :- P X X1, monad PS X1 R. 
 
-mode (len i o).
+pred len i:list A, o:int.
 len uvar 0.
 len [] 0.
 len [_|XS] N :- len XS M, N is M + 1.
 
-
-pred write-to o:ctype "file".
-
+pred write-to o:ctype "out_stream".
+pred write i:string.
 write S :- write-to OC, output OC S.
 
-mode (sanitize i o).
+pred sanitize i:string, o:string.
 sanitize X Y :-
   monad [
     rex_replace "&" "&amp;",
@@ -43,19 +43,25 @@ sanitize X Y :-
     rex_replace "'" "&apos;" ]
   X Y.
 
+pred mk-name i:string, i:A, o:string.
 mk-name S1 I Y :-
   Y is "<span class='name' varname='" ^
        {term_to_string I} ^
        "'>" ^ S1 ^ "</span>".
 
+pred cur-int o:int.
+pred incr-int i:prop.
 incr-int P :- cur-int J, I is J + 1, (cur-int I :- !) => P.
 
+pred var-to-string i:A, i:B, o:string.
 var-to-string X I Y :-
   cur-int J, S1 is "x<sub>" ^ {term_to_string J} ^ "</sub>",
   mk-name S1 I Y.
+pred uvar-to-string i:A, i:B, o:string.
 uvar-to-string X I Y :-
   cur-int J, S1 is "X<sub>" ^ {term_to_string J} ^ "</sub>",
   mk-name S1 I Y.
+pred name-to-string i:string, i:B, o:string.
 name-to-string X0 I Y :-
   if (rex_match "^_" X0) (X = "_") (X = X0),
   rex_replace "^\\([A-Za-z]+\\)_?\\([0-9]+\\)_?$" "\\1<sub>\\2</sub>" X S1,
@@ -65,6 +71,7 @@ pred concat i:list string, o:string.
 concat [] "".
 concat [X|XS] S :- concat XS Res, S is X ^ Res.
 
+pred par? i:int, i:int, i:list string, i:list string, o:list string, o:list string.
 par? CL PL Open Close Open1 Close1 :-
   if (CL =< PL)
      (Open1 = Open, Close1 = Close)
@@ -74,13 +81,13 @@ kind option type -> type.
 type some A -> option A.
 type none option A.
 
+pred grab-list i:term, o:list term, o:option term.
 grab-list (const "[]") [] none.
 grab-list (app [ const "::", X, XS]) [ X | R ] T :- grab-list XS R T.
 grab-list X [] (some X).
 
-%    pp Level  ParensBefore   Term    ParensAfter
-pred pp i:int, i:list string, i:term, i:list string.
 
+pred infx i:string, o:int, o:string, o:int, o:int.
 % TODO: fix precendences
 infx "<"  60 "&nbsp;&lt;&nbsp;"      60 60.
 infx "=>" 60 "&nbsp;<b>⇒</b>&nbsp;"  59 59.
@@ -94,14 +101,17 @@ infx "as"  0 "&nbsp;<b>as</b>&nbsp;" 60 60.
 
 %@log (pp _ _ _ _).
 
+pred pp-compound i:prop.
 pp-compound P :- write "<div class='compound'>", P, write "</div>".
 
+%    pp Level  ParensBefore   Term    ParensAfter
+pred pp i:int, i:list string, i:term, i:list string.
 pp L B (app [ const OP, Left, Right ]) A :- infx OP LOP S PL PR, !,
   par? L LOP B A B1 A1, 
   pp-compound (pp PL B1 Left  [S]),
   pp-compound (pp PR [] Right A1).
 
-pp L B (app [ const @vdash , Hd , Hyps ]) A :-
+pp L B (app [ const ":-" , Hd , Hyps ]) A :-
   par? L 60 B A B1 A1,
   if (Hyps = app [ const "," , const "!" | Rest])
      (Hyps2 = app [ const "," | Rest], NeckCut = " neckcut")
@@ -118,6 +128,7 @@ pp L B (app [ const C, lam _ ] as T) A :- (C = "pi"; C = "sigma"), !,
   par? L 60 B A B1 A1,
   pp-quantifier-block B1 C T [] A1.
 
+pred pp-quantifier-block i:list string, i:string, i:term, i:list string, i:list string.
 pp-quantifier-block B C (app [ const C, lam F ]) Args A :- !, incr-int (
   new_int I,
   pi x\ if (C = "pi") (var-to-string x I X) (uvar-to-string x I X),
@@ -130,6 +141,7 @@ pp-quantifier-block B C T Args A :-
   pp 60 [] T A,
   write "</div>".
 
+pred write-math-quantifier i:list string, i:string.
 write-math-quantifier B "pi"    :- write {concat B}, write "<b>∀</b>".
 write-math-quantifier B "sigma" :- write {concat B}, write "<b>∃</b>".
 
@@ -188,11 +200,13 @@ pp _ B (cdata S) A :- is_cdata S _, !,
 
 pp _ B X A :- write "ERROR".
 
-hd-symbol (app [ const @vdash, H, _ ]) :- hd-symbol H.
+pred hd-symbol i:term.
+hd-symbol (app [ const ":-", H, _ ]) :- hd-symbol H.
 hd-symbol (app [ const S | _ ]) :- write S.
 hd-symbol (const S) :- write S.
 
 type is-name term -> string -> prop.
+pred write-clause i:clause.
 write-clause (clause Loc [] (arg Body)) :-
   new_int I, 
   (pi x\ X is "X" ^ {term_to_string I}),
@@ -207,13 +221,14 @@ write-clause (clause Loc [] C) :- !,
     term_to_string Loc LocS, write LocS,
   write "</div>",
   cur-int 0 =>
-  if (C = app [const @vdash|_])
+  if (C = app [const ":-"|_])
      (pp 0 [] C [])
      (write "<div class='hyps'><div class='hyp'></div></div><div class='concl'>",
        pp 0 [] C [],
       write "</div>"),
   write "</div>\n".
 
+pred write-preamble i:string.
 write-preamble F :-
   write "<!DOCTYPE html>
          <html>
@@ -342,17 +357,20 @@ $( function() {
          <p>Filter predicate: <input onkeyup='filter();' type='text' id='filter' name='filter'></p>
 ".
 
+pred write-end.
 write-end :-
   write "</body></html>".
 
+pred filter-out i:list A, i:(A -> prop), o:list A.
 filter-out [] _ [].
 filter-out [X|XS] P R :-
   if (P X) (R = [X | RS]) (R = RS),
   filter-out XS P RS.
 
+pred write-html i:list clause, i:string, i:(string -> prop).
 write-html P F R :-
   filter-out P (c\
-    sigma Loc LocS _1 _2\ c = (clause Loc _1 _2), 
+    sigma Loc LocS \ c = (clause Loc _ _), 
     term_to_string Loc LocS, not(R LocS)) PF,
   write-preamble F,
   iter write-clause PF,
@@ -360,12 +378,16 @@ write-html P F R :-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+pred main-quoted i:list clause, i:string, i:list string.
+
 % entry point from a software having the program in compiled form
 main-quoted P OUT FILTERS :-
   open_out OUT OC,
-  R = (x\exists (y\rex_match y x) FILTERS),
+  R = (x\exists FILTERS (y\ rex_match y x)),
   write-to OC => write-html P OUT R,
   close_out OC.
+
+pred main i:list string.
 
 % entry point from the command line
 main [IN,OUT|FILTERS] :- !,
