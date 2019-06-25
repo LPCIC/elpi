@@ -193,7 +193,11 @@ let rec num = lexer [ digit | digit num ]
 let symbchar = lexer [ lcase | ucase | digit | schar | ':' ]
 let rec symbcharstar = lexer [ symbchar symbcharstar | ]
 
-let stringchar = lexer
+let succ_line ?(eol_num=1) loc ep =
+  Ploc.make_loc (Ploc.file_name loc) (Ploc.line_nb loc + eol_num) ep
+                (Ploc.last_pos loc, Ploc.last_pos loc) (Ploc.comment loc)
+
+let stringchar eol_found = lexer
  [ "\\\\" / -> $add "\\"
  | "\\n" / -> $add "\n"
  | "\\b" / -> $add "\b"
@@ -204,9 +208,10 @@ let stringchar = lexer
  (* CSC: I have no idea how to implement the \octal syntax & friend :-(
  | "\\" / [ -> buflen := String.length $buf ; $add "" ] octal / ->
     $add (mkOctal "4")*)
+ | "\n" / -> incr eol_found ; $add "\n"
  | _ ]
 
-let rec string = lexer [ '"' / '"' string | '"' / | stringchar string ]
+let rec string eol_found = lexer [ '"' / '"' (string eol_found) | '"' / | (stringchar eol_found) (string  eol_found)]
 let any = lexer [ _ ]
 let mk_terminator keep n b s =
   let l = Stream.npeek n s in
@@ -231,43 +236,43 @@ and  quoted keep n = (*spy ~name:"quoted"*) (lexer
 
 let constant = "CONSTANT" (* to use physical equality *)
 
-let rec tok b s = (*spy ~name:"tok" ~pp:(fun (a,b) -> a ^ " " ^ b)*) (lexer
-  [ ucase idcharstar -> constant,$buf 
-  | lcase idcharstarns -> constant,$buf
-  | schar2 symbcharstar -> constant,$buf
-  | num -> "INTEGER",$buf
-  | num ?= [ '.' '0'-'9' ] '.' num -> "FLOAT",$buf
-  | '-' idcharstar -> constant,$buf
-  | '_' -> "FRESHUV", "_"
-  | '_' idcharplus -> constant,$buf
-  | ":-"  -> constant,$buf
-  | ":"  -> "COLON",$buf
-  | "::"  -> constant,$buf
-  | ',' -> constant,$buf
-  | ';' -> constant,$buf
-  | '?' -> constant,$buf
-  | '.' -> "FULLSTOP",$buf
-  | '.' num -> "FLOAT",$buf
-  | '\\' -> "BIND","\\"
+let rec tok b s = let eol_found = ref 0 in (*spy ~name:"tok" ~pp:(fun (a,b) -> a ^ " " ^ b)*) (lexer
+  [ ucase idcharstar -> constant,$buf,!eol_found
+  | lcase idcharstarns -> constant,$buf,!eol_found
+  | schar2 symbcharstar -> constant,$buf,!eol_found
+  | num -> "INTEGER",$buf,!eol_found
+  | num ?= [ '.' '0'-'9' ] '.' num -> "FLOAT",$buf,!eol_found
+  | '-' idcharstar -> constant,$buf,!eol_found
+  | '_' -> "FRESHUV", "_",!eol_found
+  | '_' idcharplus -> constant,$buf,!eol_found
+  | ":-"  -> constant,$buf,!eol_found
+  | ":"  -> "COLON",$buf,!eol_found
+  | "::"  -> constant,$buf,!eol_found
+  | ',' -> constant,$buf,!eol_found
+  | ';' -> constant,$buf,!eol_found
+  | '?' -> constant,$buf,!eol_found
+  | '.' -> "FULLSTOP",$buf,!eol_found
+  | '.' num -> "FLOAT",$buf,!eol_found
+  | '\\' -> "BIND","\\",!eol_found
   | '(' [ is_infix ->
-             "ESCAPE",  String.(sub $buf 0 (length $buf - 1))
-        | -> "LPAREN",$buf ]
-  | ')' -> "RPAREN",$buf
-  | '[' -> "LBRACKET",$buf
-  | ']' -> "RBRACKET",$buf
-  | "{{" / (quoted false 2) -> "QUOTED", $buf
-  | '{' -> "LCURLY",$buf
-  | '}' -> "RCURLY",$buf
-  | '|' -> "PIPE",$buf
-  | '"' / string -> "LITERAL", $buf
+             "ESCAPE",  String.(sub $buf 0 (length $buf - 1)),!eol_found
+        | -> "LPAREN",$buf,!eol_found ]
+  | ')' -> "RPAREN",$buf,!eol_found
+  | '[' -> "LBRACKET",$buf,!eol_found
+  | ']' -> "RBRACKET",$buf,!eol_found
+  | "{{" / (quoted false 2) -> "QUOTED", $buf,!eol_found
+  | '{' -> "LCURLY",$buf,!eol_found
+  | '}' -> "RCURLY",$buf,!eol_found
+  | '|' -> "PIPE",$buf,!eol_found
+  | '"' / (string eol_found) -> "LITERAL", $buf, !eol_found
 ]) b s
 and is_infix_aux b s =
-  let k1, s1 = tok b s in
-  let k2, s2 = tok b s in 
+  let k1, s1, _ = tok b s in
+  let k2, s2, _ = tok b s in 
   if k1 == constant && k2 = "RPAREN" && not (is_capital s1.[0])
   then string2lexbuf2 s1 s2
   else if k1 = "LBRACKET" && k2 = "RBRACKET" then
-    let k3, s3 = tok b s in
+    let k3, s3, _ = tok b s in
     if k3 = "RPAREN" then string2lexbuf3 s1 s2 s3
     else raise Stream.Failure
   else raise Stream.Failure
@@ -305,9 +310,6 @@ let set_liter_map, get_literal, _print_lit_map =
  (fun s -> U.StrMap.find s !lit_map),
  (fun () -> U.StrMap.iter (fun s1 s2 -> Format.printf "\n%s -> %s\n%!" s1 s2) !lit_map);;
 
-let succ_line loc ep =
-  Ploc.make_loc (Ploc.file_name loc) (Ploc.line_nb loc + 1) ep
-                (Ploc.last_pos loc, Ploc.last_pos loc) (Ploc.comment loc)
 
 let set_loc_pos loc init bp ep =
   Ploc.sub loc (bp - init) (ep - bp)
@@ -322,8 +324,10 @@ let rec lex loc c init = parser bp
        if option_eq (Stream.peek s) None
        then ("EOF",""), (set_loc_pos loc init bp bp)
        else
-        let (x,y) as res = tok c s in
+        let x,y, eol_num = tok c s in
+        let res = x, y in
         let ep = Stream.count s in
+        let loc = succ_line ~eol_num loc ep in
         (if x == constant then
          (match y with
          | "module" -> "MODULE", "module"
