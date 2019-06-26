@@ -164,8 +164,10 @@ let _ =
   let prog = API.Compile.program ~flags pheader [p] in
   let query = API.Compile.query prog g in
   if !typecheck then begin
-    if not (API.Compile.static_check ~flags pheader query) then
-       Format.eprintf "Type error\n";
+    if not (API.Compile.static_check ~flags pheader query) then begin
+       Format.eprintf "Type error. To ignore it, pass -no-tc.\n";
+       exit 1
+    end
   end;
   if !print_lprolog then begin
     API.Pp.query Format.std_formatter query;
