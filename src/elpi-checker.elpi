@@ -55,10 +55,10 @@ type wrong-arity term -> typ -> list term -> err.
 type unknown term -> err.
 type assert prop -> err -> prop.
 
-type error list (pair (ctype "Loc.t") string) -> prop.
-:name "default-typechecking-error"
+type error list (pair (ctype "Loc.t") string) -> bool -> prop.
 
-error Msg :- iter (x\ sigma L M\ fst x L, snd x M, print L "Error:" M) Msg.
+:name "default-typechecking-error"
+error Msg tt :- iter (x\ sigma L M\ fst x L, snd x M, print L "Error:" M) Msg.
 
 type warning (ctype "Loc.t") -> string -> prop.
 :name "default-typechecking-warning"
@@ -69,25 +69,25 @@ assert _ (type-err T Ty ETy) :- !,
   checking LOC,
   MSG is {pp T} ^ " has type " ^ {ppt Ty} ^
          " but is used with type " ^ {ppt ETy},
-  error [pr LOC MSG].
+  error [pr LOC MSG] _.
 assert _ (wrong-arity T Ty A) :- !,
   checking LOC,
   MSG is {pp T} ^ " has type " ^ {ppt Ty} ^
           " but is applied to " ^ {pp-list A},
-  error [pr LOC MSG].
+  error [pr LOC MSG] _.
 
 stash-new E S :- open_safe E L, ( mem L S ; stash_in_safe E S ), !.
 
-report-all-failures-if-no-success P :-
+report-all-failures-if-no-success P RC :-
   new_safe E,
-  (((pi ML\ error ML :- !, iter (stash-new E) ML, fail) => P)
+  (((pi ML\ error ML _ :- !, iter (stash-new E) ML, fail) => P)
    ;
-   (error {open_safe E})).
-report-all-failures-and-fail-if-no-success P :-
+   (error {open_safe E} RC)).
+report-all-failures-and-fail-if-no-success P RC :-
   new_safe E,
-  (((pi ML\ error ML :- !, iter (stash-new E) ML, fail) => P)
+  (((pi ML\ error ML _ :- !, iter (stash-new E) ML, fail) => P)
    ;
-   (error {open_safe E}, fail)).
+   (error {open_safe E} RC, fail)).
 
 mode (pp i o).
 type pp term -> string -> prop.
@@ -135,11 +135,12 @@ unif Y (uvar as X) :- X = Y.
 mode (of i o).
 
 of (cdata CData) Ty :-
-  is_cdata CData CTy, !, assert (unif Ty CTy) (type-err (cdata CData) CTy Ty).
+  is_cdata CData (ctype CTy), !,
+  assert (unif Ty (ctype CTy)) (type-err (cdata CData) (ctype CTy) Ty).
 
 of (app [HD|ARGS]) TY :- !, 
   report-all-failures-if-no-success % HD may have multiple types
-   (of HD HDTY, of-app HDTY ARGS TY HD (Done - Done)).
+   (of HD HDTY, of-app HDTY ARGS TY HD (Done - Done)) _.
 of (lam F) (arrow T B) :- !, pi x\
   (of x T :- !) => of (F x) B.
 
@@ -147,7 +148,7 @@ mode (of-app i i o o o).
 
 :if "DEBUG:CHECKER"
 of-app Ty Args Tgt Hd _ :-
-  print {counter "run"} "of-app" {pp Hd} ":" {pp Ty} "@" {pp-list Args} "=" {pp Tgt}, fail.
+  print {counter "run"} "of-app" {pp Hd} ":" {ppt Ty} "@" {pp-list Args} "=" {ppt Tgt}, fail.
 
 of-app (tapp [tconst "variadic", T, _] as V) [X|XS] TGT HD (B - BT) :- !,
   of X TX, assert (unif T TX) (type-err X TX T), BT = X :: TL, of-app V XS TGT HD (B - TL).
@@ -179,15 +180,15 @@ type checking (ctype "Loc.t") -> prop.
 log-tc-clause Loc Query :- !, print {counter "run"} "typecheck" Loc Query.
 log-tc-clause _ _.
 
-typecheck [] (clause Loc Names Query) :-
+typecheck [] (clause Loc Names Query) RC :-
   log-tc-clause Loc Query,
   checking Loc =>
-    report-all-failures-if-no-success (of-clause Names Query).
-typecheck [ (clause Loc Names Clause) |Rest] Q :-
+    report-all-failures-if-no-success (of-clause Names Query) RC.
+typecheck [ (clause Loc Names Clause) |Rest] Q RC :-
   log-tc-clause Loc Clause,
   checking Loc =>
-    report-all-failures-if-no-success (of-clause Names Clause), !,
-  typecheck Rest Q.
+    report-all-failures-if-no-success (of-clause Names Clause) RC, !,
+  typecheck Rest Q RC.
 
 mode (refresh i o).
 refresh (forall F) T :- !, refresh (F FRESH_) T.
@@ -196,8 +197,6 @@ refresh X X.
 
 safe-dest-app (app [X | A]) X A :- !.
 safe-dest-app X X [].
-
-macro @vdash :- ":-".
 
 collect-symbols-term N _ X X :- name N, !.
 collect-symbols-term (cdata _) _ X X :- !.
@@ -245,6 +244,9 @@ warn-undeclared Known ((const S) `: LOC) :-
   MSG is "constant " ^ S ^ " has no declared type." ^ H,
   warning LOC MSG.
 
+type (`:) term -> typ -> entry.
+type (`:) term -> ctype "Loc.t" -> entry.
+
 under-decl-env [] P :- P.
 under-decl-env [ X `: PT | XS ] P :-
   %print "Assume" X PT,
@@ -255,7 +257,7 @@ under-undecl-env [ X `: _ | XS ] P :-
   %print "Assume" X PT,
   (of X Ty_ :- !) => under-undecl-env XS P.
 
-typecheck-program P Q DeclaredTypes :-
+typecheck-program P Q DeclaredTypes RC :-
   KnownTypes = [
     ((const "pi") `: forall x\ (arrow (arrow x prop) prop)),
     ((const "sigma") `: forall x\ (arrow (arrow x prop) prop)),
@@ -264,7 +266,7 @@ typecheck-program P Q DeclaredTypes :-
   collect-symbols-clause Q KnownTypes TMP Undeclared,
   iter (warn-undeclared KnownTypes) {rev Undeclared},
   under-decl-env {rev KnownTypes}
-      (under-undecl-env Undeclared (typecheck P Q)).
+      (under-undecl-env Undeclared (typecheck P Q RC)).
 
 % ---------- warnings ------------------------------------------------------
 
@@ -319,23 +321,13 @@ warn-linear [ (clause Loc Names Clause) |CS] :-
 
 % ---------- test ----------------------------------------------------------
 
-type foo int -> prop.
-type foo string -> prop.
-
-main :- test1, test2, test3, test4, test5, test6, test7,
-        warn1.
-test1 :- app lam.
-test2 :- lam app.
-test3 :- app "oops".
-test4 :-  app [] 2.
-test5 :- print x 2 "3x".
-test6 :- foo "x", foo 1, foo app.
-test7 :- foo (foo app).
-warn1 :- LINEAR.
+main.
 
 % ------- entry ---------------------------------------
 
 check P Q DeclaredTypes :-
-  typecheck-program P Q DeclaredTypes, !, warn-linear P.
+  typecheck-program P Q DeclaredTypes RC, !,
+  warn-linear P, !,
+  if (var RC) (true) (fail).
 
 % vim: set ft=lprolog:

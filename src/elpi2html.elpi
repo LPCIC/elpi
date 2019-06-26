@@ -388,13 +388,17 @@ main-quoted P OUT FILTERS :-
   close_out OC.
 
 pred main i:list string.
+type main prop.
 
 % entry point from the command line
 main [IN,OUT|FILTERS] :- !,
   quote_syntax IN "main" P _,
   main-quoted P OUT FILTERS.
 
-main _ :-
-  print "usage: elpi elpi2html.elpi -exec main -- in out [filter]".
+main _ :- usage.
+main.
+
+usage :-
+  halt "usage: elpi elpi2html.elpi -exec main -- in out [filter]".
 
 % vim: set ft=lprolog:

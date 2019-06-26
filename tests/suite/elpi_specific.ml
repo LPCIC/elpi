@@ -156,3 +156,17 @@ let () = declare "asclause"
   ~description:"parsing of the .. as X clause"
   ~expectation:Test.Success
   ()
+
+let () = declare "elpi-checker"
+  ~source_elpi:"elpi-checker.elpi"
+  ~description:"type checking the type checker"
+  ~typecheck:true
+  ~expectation:Test.Success
+  ()
+
+let () = declare "elpi2html"
+  ~source_elpi:"elpi2html.elpi"
+  ~description:"type checking elpi2html"
+  ~typecheck:true
+  ~expectation:Test.Success
+  ()
