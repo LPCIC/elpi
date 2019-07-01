@@ -18,14 +18,12 @@
      
   requires:
 *)
-open Migrate_parsetree.Ast_404
-open Ppx_tools_404
+module Ast_404 = Migrate_parsetree.Ast_404
+open Ast_404
 
 open Ast_mapper
-open Ast_helper
 open Asttypes
 open Parsetree
-open Longident
 
 let trace name ppfun body = [%expr
   let wall_clock = Unix.gettimeofday () in
@@ -83,18 +81,18 @@ let reset_args () =
 let err ~loc str =
   raise (Location.Error(Location.error ~loc str))
 
-let trace_mapper config cookies =
+let trace_mapper _config _cookies =
   { default_mapper with expr = fun mapper expr ->
   let aux = mapper.expr mapper in
   match expr with
-  | { pexp_desc = Pexp_extension ({ txt = "trace"; loc }, pstr) } ->
+  | { pexp_desc = Pexp_extension ({ txt = "trace"; loc; _ }, pstr); _ } ->
       let err () = err ~loc "use: [%trace id ?pred pp code]" in
       begin match pstr with
       | PStr [ { pstr_desc = Pstr_eval(
-              { pexp_desc = Pexp_apply(name,[(_,pp);(_,code)]) },_)} ] ->
+              { pexp_desc = Pexp_apply(name,[(_,pp);(_,code)]); _ },_); _} ] ->
         let pp =
           match pp with
-          | { pexp_desc = Pexp_apply(hd,args) } ->
+          | { pexp_desc = Pexp_apply(hd,args); _ } ->
              [%expr fun fmt -> [%e mkapp [%expr Format.fprintf fmt]
                 (hd :: List.map snd args)]]
           | _ -> pp in
@@ -102,43 +100,43 @@ let trace_mapper config cookies =
         else aux code
       | _ -> err ()
       end
-  | { pexp_desc = Pexp_extension ({ txt = "tcall"; loc }, pstr) } ->
+  | { pexp_desc = Pexp_extension ({ txt = "tcall"; loc }, pstr); _ } ->
       begin match pstr with
       | PStr [ { pstr_desc = Pstr_eval(
-              { pexp_desc = Pexp_apply(hd,args) } as e,_)} ] ->
+              { pexp_desc = Pexp_apply(hd,args); _ } as e,_); _} ] ->
         if !enabled then tcall (aux hd) (List.map (fun (_,e) -> aux e) args)
         else aux e
       | _ -> err ~loc "use: [%tcall f args]"
       end
-  | { pexp_desc = Pexp_extension ({ txt = "spy"; loc }, pstr) } ->
+  | { pexp_desc = Pexp_extension ({ txt = "spy"; loc; _ }, pstr); _ } ->
       let err () = err ~loc "use: [%spy id ?pred pp data]" in
       begin match pstr with
       | PStr [ { pstr_desc = Pstr_eval(
-              { pexp_desc = Pexp_apply(name,[(_,pp);(_,code)]) },_)} ] ->
+              { pexp_desc = Pexp_apply(name,[(_,pp);(_,code)]); _ },_); _} ] ->
         if !enabled then spy (aux name) (aux pp) (aux code)
         else [%expr ()]
       | _ -> err ()
       end
-  | { pexp_desc = Pexp_extension ({ txt = "spyif"; loc }, pstr) } ->
+  | { pexp_desc = Pexp_extension ({ txt = "spyif"; loc; _ }, pstr); _ } ->
       let err () = err ~loc "use: [%spyif id ?pred cond pp data]" in
       begin match pstr with
       | PStr [ { pstr_desc = Pstr_eval(
-              { pexp_desc = Pexp_apply(name,[(_,cond);(_,pp);(_,code)]) },_)} ] ->
+              { pexp_desc = Pexp_apply(name,[(_,cond);(_,pp);(_,code)]); _ },_); _} ] ->
         if !enabled then spyif (aux name) (aux cond) (aux pp) (aux code)
         else [%expr ()]
       | _ -> err ()
       end
-  | { pexp_desc = Pexp_extension ({ txt = "log"; loc }, pstr) } ->
+  | { pexp_desc = Pexp_extension ({ txt = "log"; loc; _ }, pstr); _ } ->
       begin match pstr with
       | PStr [ { pstr_desc = Pstr_eval(
-              { pexp_desc = Pexp_apply(name,[(_,key);(_,code)]) },_)} ] ->
+              { pexp_desc = Pexp_apply(name,[(_,key);(_,code)]); _ },_); _} ] ->
         if !enabled then log (aux name) (aux key) (aux code)
         else [%expr ()]
       | _ -> err ~loc "use: [%log id data]"
       end
-  | { pexp_desc = Pexp_extension ({ txt = "cur_pred"; loc }, pstr) } ->
+  | { pexp_desc = Pexp_extension ({ txt = "cur_pred"; loc; _ }, pstr); _ } ->
       begin match pstr with
-      | PStr [ { pstr_desc = Pstr_eval(name, _)} ] ->
+      | PStr [ { pstr_desc = Pstr_eval(name, _); _} ] ->
         if !enabled then cur_pred (aux name)
         else [%expr ()]
       | _ -> err ~loc "use: [%cur_pred id]"
