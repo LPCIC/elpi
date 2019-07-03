@@ -487,6 +487,7 @@ module FlexibleData = struct
 
 
     (* Bijective map between elpi UVar and host equivalent *)
+  let uvmap_no = ref 0
   module Map = functor(T : Host) -> struct
     open Util
 
@@ -551,10 +552,12 @@ module FlexibleData = struct
         | Elpi.Arg _ -> None in
       H2E.fold (fun k ({Elpi.lvl; handle} as uk) acc -> f k uk (get_val uk) acc) h2e acc
 
-    let pp fmt (m : t) = Format.fprintf fmt "<uvm>"
+    let uvn = incr uvmap_no; !uvmap_no
+
+    let pp fmt (m : t) = Format.fprintf fmt "<uvm:%d>" uvn
     let show m = Format.asprintf "%a" pp m
 
-    let uvmap = ED.State.declare ~name:"elpi:uvm" ~pp
+    let uvmap = ED.State.declare ~name:(Printf.sprintf "elpi:uvm:%d" uvn) ~pp
       ~compilation_is_over:(fun ~args { h2e; e2h_compile; e2h_run } ->
         let h2e = H2E.map (Elpi.compilation_is_over ~args) h2e in
         let e2h_run =
