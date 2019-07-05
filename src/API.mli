@@ -278,8 +278,8 @@ end
     list or pair but not like int. So far there is no support for
     data with binder using this API. The type of each constructor is
     described using a GADT so that the code to build or match the data
-    can be given the right type. Example: define the ADT for "option a" {|
-
+    can be given the right type. Example: define the ADT for "option a"
+{[
    let option_declaration a = {
      ty = TyApp("option",a.ty,[]);
      doc = "The option type (aka Maybe)";
@@ -298,7 +298,7 @@ end
      ]
    }
 
-   |}
+   ]}
         
     [K] stands for "constructor", [B] for "build", [M] for "match".
     Variants [BS] and [MS] give read/write access to the state. 
@@ -327,7 +327,8 @@ module AlgebraicData : sig
   (** GADT for describing the type of the constructor:
       - N is the terminator
       - A(a,...) is an argument of type a (a is a Conversion.t)
-      - 
+      - S stands for self
+      - C stands for container
   *)
   type ('stateful_builder,'builder, 'stateful_matcher, 'matcher,  'self) constructor_arguments =
     (* No arguments *)
@@ -367,7 +368,7 @@ end
    * built-in (Elpi code with comments).
    *
    * Example: built-in "div" taking two int and returning their division and
-   * remainder. {|
+   * remainder. {[
    *
    *   Pred("div",
    *        In(int, "N",
@@ -376,7 +377,7 @@ end
    *        Out(int, "R",
    *          Easy "division of N by M gives D with reminder R")))),
    *        (fun n m _ _ -> !: (n div m) +! (n mod n)))
-   *  |}
+   *  ]}
    *
    *   In( type, documentation, ... ) declares an input of a given type.
    *     In the example above both "n" and "m" are declare as input, and
@@ -508,7 +509,8 @@ end
     and extract the output from the solution found by Elpi.
     
     Example: "foo data Output" where [data] has type [t] ([a] is [t Conversion.t])
-    and [Output] has type [v] ([b] is a [v Conversion.t]) can be described as: {|
+    and [Output] has type [v] ([b] is a [v Conversion.t]) can be described as:
+{[
 
       let q : (v * unit) t = Query {
         predicate = "foo";
@@ -517,16 +519,17 @@ end
                     N))
       }
 
-   |}
+   ]}
 
    Then [compile q] can be used to obtain the compiled query such that the
-   resulting solution has a fied output of type [(v * unit)]. Example: {|
+   resulting solution has a fied output of type [(v * unit)]. Example:
+{[
    
      Query.compile q |> Compile.link |> Execute.once |> function
        | Execute.Success { output } -> output
        | _ -> ...
    
-   |} *)
+   ]} *)
 module Query : sig
 
   type name = string
@@ -628,7 +631,8 @@ module FlexibleData : sig
     val show : t -> string
   end
 
-   (** Example from Hol-light + elpi: {|
+   (** Example from Hol-light + elpi:
+{[
 
      module UV2STV = FlexibleData.Map(struct
         type t = int
@@ -662,7 +666,7 @@ module FlexibleData : sig
         ]
       }
 
-    |}
+    ]}
 
     In this way an Elpi term containig a variable [X] twice gets read back
     using [Stv i] for the same [i].

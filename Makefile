@@ -43,6 +43,9 @@ build:
 install:
 	dune install
 
+doc:
+	dune build @doc
+
 clean:
 	rm -rf _build
 
