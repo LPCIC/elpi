@@ -1,3 +1,20 @@
+## Version 1.5 (July 2019)
+
+Elpi 1.5 requires OCaml 4.04 or newer
+
+- REPL:
+  - type errors are considered fatal, pass -no-tc to skip type checking.
+  - use dune subst in order to implement -version flag to the command line
+    utility.
+
+- Runtime:
+  - reset unification variables names map at each execution. This makes
+    the names to be printed in a reproducible way across executions.
+
+- FFI:
+  - readback is now as powerful as embed and can generate extra goals. The
+    two types are now dual.
+
 ## Version 1.4 (June 2019)
 
 Elpi 1.4 requires OCaml 4.04 or newer
