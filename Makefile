@@ -38,8 +38,7 @@ STACK=32768
 
 build:
 	@$(MAKE) --no-print-directory .merlin
-	dune build @install
-	@$(MAKE) --no-print-directory .merlin
+	dune build @install; RC=$?; $(MAKE) --no-print-directory .merlin; exit $$RC
 
 install:
 	dune install
