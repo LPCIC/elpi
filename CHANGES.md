@@ -1,21 +1,21 @@
-## Version 1.5 (July 2019)
+## v1.5.0 (July 2019)
 
 Elpi 1.5 requires OCaml 4.04 or newer
 
 - REPL:
-  - type errors are considered fatal, pass -no-tc to skip type checking.
-  - use dune subst in order to implement -version flag to the command line
+  - type errors are considered fatal, pass `-no-tc` to skip type checking.
+  - use dune subst in order to implement `-version` flag to the command line
     utility.
 
 - Runtime:
   - reset unification variables names map at each execution. This makes
-    the names to be printed in a reproducible way across executions.
+    the names of variable printed in a reproducible way across executions.
 
 - FFI:
-  - readback is now as powerful as embed and can generate extra goals. The
+  - `readback` is now as powerful as `embed` and can generate extra goals. The
     two types are now dual.
 
-## Version 1.4 (June 2019)
+## v1.4 (June 2019)
 
 Elpi 1.4 requires OCaml 4.04 or newer
 
@@ -32,7 +32,7 @@ Elpi 1.4 requires OCaml 4.04 or newer
     `Conversion.embed` does making conversion code easy to call in the body
     of a predicate.
 
-## Version 1.3 (June 2019)
+## v1.3 (June 2019)
 
 Elpi 1.3 requires OCaml 4.04 or newer
 
@@ -72,7 +72,7 @@ Elpi 1.3 requires OCaml 4.04 or newer
   - replace `mode (std.mem i i)` with `(std.mem i o)`: member can be assigned
   - separate `std.mem!` and `std.mem`
 
-## Version 1.2 (April 2019)
+## v1.2 (April 2019)
 
 Fix:
  - equality up-to eta on rigid terms (used to work only on flexible terms)
@@ -182,13 +182,13 @@ Test Suite:
  - rewritten using more OCaml & Dune and less bash & make. Requires
    `dune`, `cmdliner` and `ANSITerminal` in order to build
 
-## Version 1.1.1 (October 2018)
+## v1.1.1 (October 2018)
 
 Fix:
  - `beta` was not calling `deref_*` in all cases, possibly terminating reduction
    too early (and raising an anomaly)
 
-## Version 1.1 (September 2018)
+## v1.1 (September 2018)
 
 Language:
  - CHR semantics conformed to the "revised operational semantics", that is
@@ -239,7 +239,7 @@ Compilation:
 Misc:
  - improved some error messages, minor fixes to elpi-checker
 
-## Version 1.0 (April 2018)
+## v1.0 (April 2018)
 Second public release, developed in tandem with coq-elpi and matita-elpi.
 
 The programming language features syntactic constraints (suspended goals) and
