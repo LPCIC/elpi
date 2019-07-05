@@ -79,6 +79,7 @@ type result = {
   executable : string;
   rc : rc;
   test: Test.t;
+  log: string;
 }
 
 type 'a output =
@@ -284,7 +285,7 @@ let () = Runner.declare
       | Test.Output _, _ -> assert false
 
     in
-    Runner.(Done { Runner.rc; executable; test })
+    Runner.(Done { Runner.rc; executable; test; log = snd log })
   end
 
 end
@@ -358,7 +359,7 @@ let is_tjsim =
       | Test.Output _, _ -> assert false
 
     in
-    Runner.Done { Runner.rc; executable; test }
+    Runner.Done { Runner.rc; executable; test; log = snd log }
   end
 
 

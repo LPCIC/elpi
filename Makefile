@@ -57,8 +57,8 @@ tests:
 		--seed $$RANDOM \
 		--timeout $(TIMEOUT) \
 		$(TIME) \
-		--sources=$$PWD/tests/sources/ \
-		--plot=$$PWD/tests/plot \
+		--sources=$(shell pwd)/tests/sources/ \
+		--plot=$(shell pwd)/tests/plot \
 		$(addprefix --name-match ,$(ONLY)) \
 		$(addprefix --runner , $(RUNNERS))
 

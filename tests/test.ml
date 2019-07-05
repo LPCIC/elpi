@@ -16,6 +16,9 @@ module Printer : sig
   val print_summary :
     total:int -> ok:int -> ko:int -> skipped:int -> unit
 
+  val print_log :
+    fname:string -> unit
+
 end = struct
 open ANSITerminal
 
@@ -49,6 +52,24 @@ let print_summary ~total ~ok ~ko ~skipped =
   printf [blue] "Skipped: "; printf [] "%d\n" skipped;
 ;;
 
+let print_file fname =
+  try
+    let ic = open_in fname in
+    while true do
+      let s = input_line ic in
+      printf [] "%s\n" s
+    done
+  with
+  | End_of_file -> ()
+  | e -> printf [red] "Error reading %s: %s\n" fname (Printexc.to_string e)
+
+let print_log ~fname =
+  printf [red] "-----------------------------------------------------------\n";
+  printf [blue] "Log of the first failure: "; printf [] "%s\n" fname;
+  printf [red] "-----------------------------------------------------------\n";
+  print_file fname;
+  printf [red] "-----------------------------------------------------------\n";
+
 end
 
 let run timeout _seed sources env { Runner.run; test; executable }  =
@@ -79,7 +100,7 @@ let print_csv plot results =
   let oc = open_out "data.csv" in
   results |> List.iter
     (function 
-      | Some { Runner.rc; executable; test = { Test.name; _ } } ->
+      | Some { Runner.rc; executable; test = { Test.name; _ }; _ } ->
           begin match rc with
           | Runner.Timeout _ -> ()
           | Runner.Failure _ -> ()
@@ -93,6 +114,12 @@ let print_csv plot results =
   ignore(Sys.command "gnuplot data.csv.plot")
 ;;
 
+let rec find_map f = function
+  | [] -> raise Not_found
+  | x :: xs ->
+      match f x with
+      | Some y -> y
+      | None -> find_map f xs
 
 let main sources plot timeout executables namef timetool seed =
   Random.init seed;
@@ -117,6 +144,14 @@ let main sources plot timeout executables namef timetool seed =
         | _ -> false) rest in
     List.(length jobs, length ok, length ko, length skip) in
   Printer.print_summary ~total ~ok ~ko ~skipped;
+  begin try
+    let log_first_failure =
+      results |> find_map (function
+        | Some { Runner.rc = Runner.Failure _; log; _ } -> Some log
+        | _ -> None) in
+    Printer.print_log ~fname:log_first_failure
+  with Not_found -> ()
+  end;
   if List.length executables > 1 then print_csv plot results;
   if ko = 0 then exit 0 else exit 1
 

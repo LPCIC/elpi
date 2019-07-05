@@ -1,3 +1,8 @@
+## v1.5.1 (July 2019)
+
+- Test suite: print the log of the first failure to ease debugging on third
+  party CI.
+
 ## v1.5.0 (July 2019)
 
 Elpi 1.5 requires OCaml 4.04 or newer

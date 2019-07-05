@@ -53,6 +53,7 @@ type result = {
   executable : string;
   rc : rc;
   test: Test.t;
+  log: string;
 }
 
 (* The runner may not be installed *)
