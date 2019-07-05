@@ -669,7 +669,7 @@ module Conversion = struct
     
   type 'a readback =
     depth:int -> hyps -> constraints ->
-    state -> term -> state * 'a
+    state -> term -> state * 'a * extra_goals
 
   type 'a t = {
     ty : ty_ast;
@@ -784,17 +784,19 @@ let buildk kname = function
 
 let rec readback_args : type a m t.
   look:(depth:int -> term -> term) ->
-  Conversion.ty_ast -> depth:int -> hyps -> constraints -> state -> term ->
+  Conversion.ty_ast -> depth:int -> hyps -> constraints -> state -> extra_goals list -> term ->
   (a,m,t) compiled_constructor_arguments -> a -> term list ->
-    state * t
-= fun ~look ty ~depth hyps constraints state origin args convert l ->
+    state * t * extra_goals
+= fun ~look ty ~depth hyps constraints state extra origin args convert l ->
     match args, l with
-    | CN, [] -> convert state
+    | CN, [] ->
+        let state, x = convert state in
+        state, x, List.(concat (rev extra))
     | CN, _ -> raise (Conversion.TypeErr(ty,depth,origin))
     | CA _, [] -> assert false
     | CA(d,rest), x::xs ->
-      let state, x = d.readback ~depth hyps constraints state x in
-      readback_args ~look ty ~depth hyps constraints state origin
+      let state, x, gls = d.readback ~depth hyps constraints state x in
+      readback_args ~look ty ~depth hyps constraints state (gls :: extra) origin
         rest (convert x) xs
 
 and readback : type t.
@@ -802,22 +804,22 @@ and readback : type t.
   alloc:(?name:string -> lvl:int -> state -> state * 'uk) ->
   mkUnifVar:('uk -> args:term list -> state -> term) ->
   Conversion.ty_ast -> t compiled_adt -> depth:int -> hyps -> constraints -> state -> term ->
-    state * t
+    state * t * extra_goals
 = fun ~look ~alloc ~mkUnifVar ty adt ~depth hyps constraints state t ->
   try match look ~depth t with
   | Const c ->
       let CK(args,read,_) = Constants.Map.find c adt in
-      readback_args ~look ty ~depth hyps constraints state t args read []
+      readback_args ~look ty ~depth hyps constraints state [] t args read []
   | App(c,x,xs) ->
       let CK(args,read,_) = Constants.Map.find c adt in
-      readback_args ~look ty ~depth hyps constraints state t args read (x::xs)
+      readback_args ~look ty ~depth hyps constraints state [] t args read (x::xs)
   | (UVar _ | AppUVar _) ->
       let CK(args,read,_) = Constants.Map.find (Constants.from_stringc "uvar") adt in
-      readback_args ~look ty ~depth hyps constraints state t args read [t]
+      readback_args ~look ty ~depth hyps constraints state [] t args read [t]
   | Discard ->
       let CK(args,read,_) = Constants.Map.find (Constants.from_stringc "uvar") adt in
       let state, k = alloc ~lvl:depth state in
-      readback_args ~look ty ~depth hyps constraints state t args read [mkUnifVar k ~args:[] state]
+      readback_args ~look ty ~depth hyps constraints state [] t args read [mkUnifVar k ~args:[] state]
   | _ -> raise (Conversion.TypeErr(ty,depth,t))
   with Not_found -> raise (Conversion.TypeErr(ty,depth,t))
 
@@ -1132,7 +1134,7 @@ let rec query_solution_aux : type a. a arguments -> term StrMap.t -> state -> co
      | D(_,_,args) -> query_solution_aux args assignments state constraints
      | Q(d,name,args) ->
          let x = StrMap.find name assignments in
-         let state, x = d.Conversion.readback ~depth:0 [] constraints state x in
+         let state, x, _gls = d.Conversion.readback ~depth:0 [] constraints state x in
          x, query_solution_aux args assignments state constraints
 
 let output arguments assignments state constraints =

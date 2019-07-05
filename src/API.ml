@@ -212,9 +212,9 @@ module RawOpaqueData = struct
   let readback ~depth _ _ state t =
     let module R = (val !r) in let open R in
     match R.deref_head ~depth t with
-    | ED.Term.CData c when isc c -> state, cout c
+    | ED.Term.CData c when isc c -> state, cout c, []
     | ED.Term.Const i as t when i < 0 ->
-        begin try state, ED.Constants.Map.find i constants
+        begin try state, ED.Constants.Map.find i constants, []
         with Not_found -> raise (Conversion.TypeErr(ty,depth,t)) end
     | t -> raise (Conversion.TypeErr(ty,depth,t)) in
   let pp_doc fmt () =
@@ -280,39 +280,30 @@ module BuiltInData = struct
   let loc    = RawOpaqueData.conversion_of_cdata ~name:"loc"    ED.C.loc
   let poly ty =
     let embed ~depth:_ _ _ state x = state, x, [] in
-    let readback ~depth _ _ state t = state, t in
+    let readback ~depth _ _ state t = state, t, [] in
     { Conversion.embed; readback; ty = Conversion.TyName ty;
       pp = (fun fmt _ -> Format.fprintf fmt "<poly>");
       pp_doc = (fun fmt () -> ()) }
   
   let any = poly "any"
-
-  let map_acc_embed f s l =
-    let rec aux acc accg s = function
-    | [] -> s, List.rev acc, List.rev accg
+    
+  let map_acc f s l =
+    let rec aux acc extra s = function
+    | [] -> s, List.rev acc, List.(concat (rev extra))
     | x :: xs ->
-        let s, x, eg = f s x in
-        aux (x :: acc) (eg @ accg) s xs
+        let s, x, gls = f s x in
+        aux (x :: acc) (gls :: extra) s xs
     in
       aux [] [] s l
-    
-  let map_acc_readback f s l =
-    let rec aux acc s = function
-    | [] -> s, List.rev acc
-    | x :: xs ->
-        let s, x = f s x in
-        aux (x :: acc) s xs
-    in
-      aux [] s l
 
   let list d =
     let embed ~depth h c s l =
       let module R = (val !r) in let open R in
-      let s, l, eg = map_acc_embed (d.Conversion.embed ~depth h c) s l in
+      let s, l, eg = map_acc (d.Conversion.embed ~depth h c) s l in
       s, list_to_lp_list l, eg in
     let readback ~depth h c s t =
       let module R = (val !r) in let open R in
-      map_acc_readback (d.Conversion.readback ~depth h c) s
+      map_acc (d.Conversion.readback ~depth h c) s
         (lp_list_to_list ~depth t)
     in
     let pp fmt l =
@@ -333,7 +324,15 @@ module Elpi = struct
     handle : uvarHandle;
     lvl : int;
   }
-  [@@deriving show]
+
+  let pp fmt { handle; lvl } =
+    match handle with
+    | Arg str ->
+        Format.fprintf fmt "%s" str
+    | Ref ub ->
+        Pp.term fmt (ED.mkUVar ub lvl 0)
+
+  let show m = Format.asprintf "%a" pp m
 
   let lvl { lvl } = lvl 
 
@@ -554,7 +553,15 @@ module FlexibleData = struct
 
     let uvn = incr uvmap_no; !uvmap_no
 
-    let pp fmt (m : t) = Format.fprintf fmt "<uvm:%d>" uvn
+    let pp fmt (m : t) =
+      let pp k uv _ () =
+           Format.fprintf fmt "@[<h>%a@ <-> %a@]" T.pp k Elpi.pp uv
+        in
+      Format.fprintf fmt "@[<v>";
+      fold pp m ();
+      Format.fprintf fmt "@]"
+    ;;
+    
     let show m = Format.asprintf "%a" pp m
 
     let uvmap = ED.State.declare ~name:(Printf.sprintf "elpi:uvm:%d" uvn) ~pp
@@ -577,9 +584,9 @@ module FlexibleData = struct
       match RawData.look ~depth t with
       | RawData.Discard ->
           let state, k = Elpi.make ~lvl:depth state in
-          state, (k,[])
+          state, (k,[]), []
       | RawData.UnifVar(k,args) ->
-          state, (k,args)
+          state, (k,args), []
       | _ -> raise (Conversion.TypeErr (TyName "uvar",depth,t)));
   }
 
@@ -725,8 +732,7 @@ module Utils = struct
       body = aux depth Util.IntMap.empty term;
     }]
 
-  let map_acc_embed = BuiltInData.map_acc_embed
-  let map_acc_readback = BuiltInData.map_acc_readback
+  let map_acc = BuiltInData.map_acc
 
 end
 

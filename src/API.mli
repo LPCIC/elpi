@@ -215,7 +215,7 @@ module Conversion : sig
     
   type 'a readback =
     depth:int -> Data.hyps -> Data.constraints ->
-    Data.state -> Data.term -> Data.state * 'a
+    Data.state -> Data.term -> Data.state * 'a * extra_goals
 
   type 'a t = {
     ty : ty_ast;
@@ -924,13 +924,10 @@ module Utils : sig
   (** Lifting/restriction (LOW LEVEL, don't use) *)
   val move : from:int -> to_:int -> Data.term -> Data.term
 
-  val map_acc_embed :
-    (State.t -> 'a -> State.t * Data.term * Conversion.extra_goals) ->
-    State.t -> 'a list -> State.t * Data.term list * Conversion.extra_goals
-
-  val map_acc_readback :
-    (State.t -> Data.term -> State.t * 'a) ->
-    State.t -> Data.term list -> State.t * 'a list
+  (** readback/embed on lists *)
+  val map_acc :
+    (State.t -> 't -> State.t * 'a * Conversion.extra_goals) ->
+    State.t -> 't list -> State.t * 'a list * Conversion.extra_goals
 
 end
         

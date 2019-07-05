@@ -2595,11 +2595,11 @@ let in_of_term ~depth { Conversion.readback } n bname hyps constraints state t =
 
 let inout_of_term ~depth { Conversion.readback } n bname hyps constraints state t =
   match deref_head ~depth t with
-  | Discard -> state, BuiltInPredicate.NoData
+  | Discard -> state, BuiltInPredicate.NoData, []
   | _ ->
      wrap_type_err bname n (fun () ->
-       let state, t = readback ~depth hyps constraints state t in
-       state, BuiltInPredicate.Data t) ()
+       let state, t, gls = readback ~depth hyps constraints state t in
+       state, BuiltInPredicate.Data t, gls) ()
 
 let mk_out_assign ~depth { Conversion.embed } bname hyps constraints state input v  output =
   match output, input with
@@ -2621,30 +2621,39 @@ let mk_inout_assign ~depth { Conversion.embed } bname hyps constraints state inp
   | None, BuiltInPredicate.Data _ ->
       anomaly ("ffi: " ^ bname ^ ": some output was requested but not produced")
 
+let map_acc f s l =
+   let rec aux acc extra s = function
+   | [] -> s, List.rev acc, List.(concat (rev extra))
+   | x :: xs ->
+       let s, x, gls = f s x in
+       aux (x :: acc) (gls :: extra) s xs
+   in
+     aux [] [] s l
+
 let call (BuiltInPredicate.Pred(bname,ffi,compute)) ~depth hyps constraints state data =
   let rec aux : type i o.
-    (i,o) BuiltInPredicate.ffi -> compute:i -> reduce:(state -> o -> state * term list) ->
-       term list -> int -> state -> state * term list =
-  fun ffi ~compute ~reduce data n state ->
+    (i,o) BuiltInPredicate.ffi -> compute:i -> reduce:(state -> o -> state * extra_goals) ->
+       term list -> int -> state -> extra_goals list -> state * extra_goals =
+  fun ffi ~compute ~reduce data n state extra ->
     match ffi, data with
     | BuiltInPredicate.Easy _, [] ->
        let result = wrap_type_err bname 0 (fun () -> compute ~depth) () in
        let state, l = reduce state result in
-       state, List.rev l
+       state, List.(concat (rev extra) @ rev l)
     | BuiltInPredicate.Read _, [] ->
        let result = wrap_type_err bname 0 (compute ~depth hyps constraints) state in
        let state, l = reduce state result in
-       state, List.rev l
+       state, List.(concat (rev extra) @ rev l)
     | BuiltInPredicate.Full _, [] ->
        let state, result, gls = wrap_type_err bname 0 (compute ~depth hyps constraints) state in
        let state, l = reduce state result in
-       state, gls @ List.rev l
+       state, List.(concat (rev extra)) @ gls @ List.rev l
     | BuiltInPredicate.VariadicIn(d, _), data ->
-       let state, i =
+       let state, i, gls =
          map_acc (in_of_term ~depth d n bname hyps constraints) state data in
        let state, rest = wrap_type_err bname 0 (compute i ~depth hyps constraints) state in
        let state, l = reduce state rest in
-       state, List.rev l
+       state, List.(gls @ concat (rev extra) @ rev l)
     | BuiltInPredicate.VariadicOut(d, _), data ->
        let i = List.map (out_of_term ~depth d n bname hyps constraints state) data in
        let state, (rest, out) = wrap_type_err bname 0 (compute i ~depth hyps constraints) state in
@@ -2653,11 +2662,11 @@ let call (BuiltInPredicate.Pred(bname,ffi,compute)) ~depth hyps constraints stat
          | Some out ->
              let state, ass =
                map_acc3 (mk_out_assign ~depth d bname hyps constraints) state i data out in 
-             state, List.(rev (concat ass @ l))
-         | None -> state, List.rev l
+             state, List.(concat (rev extra) @ rev (concat ass) @ l)
+         | None -> state, List.(concat (rev extra) @ rev l)
        end
     | BuiltInPredicate.VariadicInOut(d, _), data ->
-       let state, i =
+       let state, i, gls =
          map_acc (inout_of_term ~depth d n bname hyps constraints) state data in
        let state, (rest, out) = wrap_type_err bname 0 (compute i ~depth hyps constraints) state in
        let state, l = reduce state rest in
@@ -2665,33 +2674,33 @@ let call (BuiltInPredicate.Pred(bname,ffi,compute)) ~depth hyps constraints stat
          | Some out ->
              let state, ass =
                map_acc3 (mk_inout_assign ~depth d bname hyps constraints) state i data out in 
-             state, List.(rev (concat ass @ l))
-         | None -> state, List.rev l
+             state, List.(gls @ concat (rev extra) @ rev (concat ass) @ l)
+         | None -> state, List.(gls @ concat (rev extra) @ rev l)
        end
     | BuiltInPredicate.In(d, _, ffi), t :: rest ->
-        let state, i = in_of_term ~depth d n bname hyps constraints state t in
-        aux ffi ~compute:(compute i) ~reduce rest (n + 1) state
+        let state, i, gls = in_of_term ~depth d n bname hyps constraints state t in
+        aux ffi ~compute:(compute i) ~reduce rest (n + 1) state (gls :: extra)
     | BuiltInPredicate.Out(d, _, ffi), t :: rest ->
         let i = out_of_term ~depth d n bname hyps constraints state t in
         let reduce state (rest, out) =
           let state, l = reduce state rest in
           let state, ass = mk_out_assign ~depth d bname hyps constraints state i t out in
           state, ass @ l in
-        aux ffi ~compute:(compute i) ~reduce rest (n + 1) state
+        aux ffi ~compute:(compute i) ~reduce rest (n + 1) state extra
     | BuiltInPredicate.InOut(d, _, ffi), t :: rest ->
-        let state, i = inout_of_term ~depth d n bname hyps constraints state t in
+        let state, i, gls = inout_of_term ~depth d n bname hyps constraints state t in
         let reduce state (rest, out) =
           let state, l = reduce state rest in
           let state, ass = mk_inout_assign ~depth d bname hyps constraints state i t out in
           state, ass @ l in
-        aux ffi ~compute:(compute i) ~reduce rest (n + 1) state
+        aux ffi ~compute:(compute i) ~reduce rest (n + 1) state (gls :: extra)
 
     | _, t :: _ -> arity_err ~depth bname n (Some t)
     | _, [] -> arity_err ~depth bname n None
 
   in
     let reduce state _ = state, [] in
-    aux ffi ~compute ~reduce data 1 state
+    aux ffi ~compute ~reduce data 1 state []
 ;;
 
 let exect_builtin_predicate c ~depth idx args =
