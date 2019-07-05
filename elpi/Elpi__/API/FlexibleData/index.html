@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>FlexibleData (elpi.Elpi__.API.FlexibleData)</title><link rel="stylesheet" href="../../../../odoc.css"/><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><script src="../../../../highlight.pack.js"></script><script>hljs.initHighlightingOnLoad();</script></head><body><div class="content"><header><nav><a href="../index.html">Up</a> – <a href="../../../index.html">elpi</a> &#x00BB; <a href="../../index.html">Elpi__</a> &#x00BB; <a href="../index.html">API</a> &#x00BB; FlexibleData</nav><h1>Module <code>API.FlexibleData</code></h1><p>Flexible data is for unification variables. One can use Elpi's unification variables to represent the host equivalent, here the API the keep a link between the two.</p></header><dl><dt class="spec module" id="module-Elpi"><a href="#module-Elpi" class="anchor"></a><code><span class="keyword">module</span> <a href="Elpi/index.html">Elpi</a> : <span class="keyword">sig</span> ... <span class="keyword">end</span></code></dt><dd><p>key for Elpi's flexible data</p></dd></dl><div class="spec module-type" id="module-type-Host"><a href="#module-type-Host" class="anchor"></a><code><span class="keyword">module</span> <span class="keyword">type</span> <a href="module-type-Host/index.html">Host</a> = <span class="keyword">sig</span> ... <span class="keyword">end</span></code></div><div class="spec module" id="module-Map"><a href="#module-Map" class="anchor"></a><code><span class="keyword">module</span> <a href="Map/index.html">Map</a> : <span class="keyword">functor</span> (<a href="Map/argument-1-Host/index.html">Host</a> : <a href="index.html#module-type-Host">Host</a>) <span>&#45;&gt;</span> <span class="keyword">sig</span> ... <span class="keyword">end</span></code></div><aside><p>Example from Hol-light + elpi:</p><pre><code class="ml">module UV2STV = FlexibleData.Map(struct
+   type t = int
+   let compare x y = x - y
+   let pp fmt i = Format.fprintf fmt &quot;%d&quot; i
+   let show = string_of_int
+ end)
+  
+ let stv = ref 0
+ let incr_get r = incr r; !r
+  
+ let record k state =
+   State.update_return UV2STV.uvmap state (fun m -&gt;
+     try m, Stv (UV2STV.host k m)
+     with Not_found -&gt;
+       let j = incr_get stv in
+       UV2STV.add k j m, Stv j)
+  
+ (* The constructor name &quot;uvar&quot; is special and has to be used with the
+    following Conversion.t *)
+
+ let hol_pretype = AlgebraicData.declare {
+   ty = TyName &quot;pretype&quot;;
+   doc = &quot;The algebraic data type of pretypes&quot;;
+   pp = (fun fmt t -&gt; ...);
+   constructors = [
+     ...
+     K(&quot;uvar&quot;,&quot;&quot;,A(uvar,N),
+        BS (fun (k,_) state -&gt; record k state),         
+        M (fun ~ok ~ko _ -&gt; ko ()))
+   ]
+ }</code></pre><p>In this way an Elpi term containig a variable <code>X</code> twice gets read back using <code>Stv i</code> for the same <code>i</code>.</p></aside><dl><dt class="spec value" id="val-uvar"><a href="#val-uvar" class="anchor"></a><code><span class="keyword">val</span> uvar : <span><span>(<a href="Elpi/index.html#type-t">Elpi.t</a> * <span><a href="../Data/index.html#type-term">Data.term</a> list</span>)</span> <a href="../Conversion/index.html#type-t">Conversion.t</a></span></code></dt></dl></div></body></html>
