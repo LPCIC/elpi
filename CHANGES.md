@@ -1,3 +1,7 @@
+## v1.5.2 (July 2019)
+
+- Test suite: ship elpi-quoted_syntax.elpi
+
 ## v1.5.1 (July 2019)
 
 - Test suite: print the log of the first failure to ease debugging on third
