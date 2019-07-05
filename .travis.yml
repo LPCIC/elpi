@@ -4,7 +4,7 @@ language: c
 env:
   global:
     - OCAML_MIN=4.04.0
-    - OCAML_MAX=4.08.0
+    - OCAML_MAX=4.07.1
     - PREDEPS="ocamlfind"
     - DEPS="camlp5 ocamlfind ppx_tools_versioned ppx_deriving ocaml-migrate-parsetree re dune cmdliner ANSITerminal"
     - JOBS=2
@@ -128,26 +128,3 @@ matrix:
     - opam pin -y remove elpi
     - if ocamlfind query elpi; then false; else true; fi
     - if which elpi; then false; else true; fi
-
-  - env: TEST="osx opam package installation"
-    os: osx
-    before_install:
-    - brew update
-    - brew install --ignore-dependencies opam
-    - brew install gnu-time
-    - brew install lua51
-    cache:
-      directories:
-      - $HOME/opam-cache
-    script:
-    - opam switch max
-    - eval $(opam env)
-    - opam pin -y -t -v add elpi "https://github.com/${TRAVIS_REPO_SLUG}.git#${TRAVIS_COMMIT}" 
-    - ocamlfind query elpi
-    - ls `ocamlfind printconf destdir`/elpi
-    - which elpi
-    - opam remove elpi
-    - opam pin -y remove elpi
-    - if ocamlfind query elpi; then false; else true; fi
-    - if which elpi; then false; else true; fi
-
