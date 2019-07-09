@@ -140,7 +140,7 @@ of (cdata CData) Ty :-
 
 of (app [HD|ARGS]) TY :- !, 
   report-all-failures-if-no-success % HD may have multiple types
-   (of HD HDTY, of-app HDTY ARGS TY HD (Done - Done)) _.
+   (of HD HDTY, of-app HDTY ARGS TY HD (Done - Done), !) _.
 of (lam F) (arrow T B) :- !, pi x\
   (of x T :- !) => of (F x) B.
 
