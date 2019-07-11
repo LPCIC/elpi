@@ -883,23 +883,31 @@ let compile_builder : type bs b m ms t. (bs,b,ms,m,t) constructor_arguments -> (
     | BS f -> f
 
 let rec compile_matcher_ok : type bs b m ms t.
-  (bs,b,ms,m,t) constructor_arguments -> ms -> state -> m
-  = fun args f s ->
+  (bs,b,ms,m,t) constructor_arguments -> ms -> extra_goals ref -> state ref -> m
+  = fun args f gls state ->
     match args with
-    | N -> let s', t, gls = f s in assert (gls = [] && s' == s); t
-    | A(_,rest) -> fun a -> compile_matcher_ok rest (f a) s
-    | S rest -> fun a -> compile_matcher_ok rest (f a) s
-    | C(_,rest) -> fun a -> compile_matcher_ok rest (f a) s
+    | N -> let state', t, gls' = f !state in
+           state := state';
+           gls := gls';
+           t
+    | A(_,rest) -> fun a -> compile_matcher_ok rest (f a) gls state
+    | S rest -> fun a -> compile_matcher_ok rest (f a) gls state
+    | C(_,rest) -> fun a -> compile_matcher_ok rest (f a) gls state
 
-let compile_matcher_ko f s () =
-  let s', t, gls = f s in assert (gls = [] && s' == s); t
+let compile_matcher_ko f gls state () =
+  let state', t, gls' = f !state in
+  state := state';
+  gls := gls';
+  t
 
 let compile_matcher : type bs b m ms t. (bs,b,ms,m,t) constructor_arguments -> (ms,m,t) match_t -> (ms,t) compiled_match_t
   = fun a -> function
     | M f ->
         fun ~ok ~ko t state ->
-          state, f ~ok:(compile_matcher_ok a ok state)
-                   ~ko:(compile_matcher_ko ko state) t, []
+          let state = ref state in
+          let gls = ref [] in
+          !state, f ~ok:(compile_matcher_ok a ok gls state)
+                   ~ko:(compile_matcher_ko ko gls state) t, !gls
     | MS f -> f
 
 let compile_constructors ty self l =
