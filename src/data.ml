@@ -363,15 +363,17 @@ module State : sig
   type 'a component
   val declare :
     name:string -> pp:(Format.formatter -> 'a -> unit) ->
-    init:(unit -> 'a) -> 
-    compilation_is_over:(args:uvar_body StrMap.t -> 'a -> 'a option) ->
+    init:(unit -> 'a) ->
+    clause_compilation_is_over:('a -> 'a) ->
+    goal_compilation_is_over:(args:uvar_body StrMap.t -> 'a -> 'a option) ->
      'a component
   
   (* an instance of the state type *)
   type t
 
   val init : unit -> t
-  val end_compilation : uvar_body StrMap.t -> t -> t
+  val end_clause_compilation : t -> t
+  val end_goal_compilation : uvar_body StrMap.t -> t -> t
   val get : 'a component -> t -> 'a
   val set : 'a component -> t -> 'a -> t
   val update : 'a component -> t -> ('a -> 'a) -> t
@@ -385,6 +387,7 @@ end = struct
   type 'a component = string
   type extension = {
     init : unit -> Obj.t;
+    end_clause : Obj.t -> Obj.t;
     end_comp : args:uvar_body StrMap.t -> Obj.t -> Obj.t option;
     pp   : Format.formatter -> Obj.t -> unit;
   }
@@ -404,13 +407,15 @@ end = struct
     let t = set name t x in
     t, res
 
-  let declare ~name ~pp ~init ~compilation_is_over =
+  let declare ~name ~pp ~init ~clause_compilation_is_over ~goal_compilation_is_over =
     if StrMap.mem name !extensions then
       anomaly ("Extension "^name^" already declared");
     extensions := StrMap.add name {
         init = (fun x -> Obj.repr (init x));
         pp = (fun fmt x -> pp fmt (Obj.obj x));
-        end_comp = (fun ~args x -> option_map Obj.repr (compilation_is_over ~args (Obj.obj x))) }
+        end_comp = (fun ~args x -> option_map Obj.repr (goal_compilation_is_over ~args (Obj.obj x)));
+        end_clause = (fun x -> Obj.repr (clause_compilation_is_over (Obj.obj x)));
+         }
       !extensions;
     name
 
@@ -418,7 +423,12 @@ end = struct
     StrMap.fold (fun name { init } -> StrMap.add name (init ()))
       !extensions StrMap.empty 
 
-  let end_compilation args m =
+  let end_clause_compilation m =
+    StrMap.fold (fun name obj acc -> 
+      let o = (StrMap.find name !extensions).end_clause obj in
+      StrMap.add name o acc) m StrMap.empty
+
+  let end_goal_compilation args m =
     StrMap.fold (fun name obj acc -> 
       match (StrMap.find name !extensions).end_comp ~args obj with
       | None -> acc
@@ -603,6 +613,12 @@ let empty_amap = {
  n2t = StrMap.empty;
  n2i = StrMap.empty;
 }
+
+let is_empty_amap { c2i; nargs; i2n; n2t; n2i } =
+  nargs = 0 &&
+  IntMap.is_empty i2n &&
+  StrMap.is_empty n2t &&
+  StrMap.is_empty n2i
 
 let mk_Arg n { c2i; nargs; i2n; n2t; n2i } =
   let cname = Printf.sprintf "%%Arg%d" nargs in

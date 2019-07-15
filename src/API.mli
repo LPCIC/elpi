@@ -566,8 +566,6 @@ module State : sig
    * This limitation can be lifted if there is user request. *)
   type 'a component
 
- (** The compilation_is_over callback is called when the compilation
-      phase is over, after that the state is threaded at run time *)
   val declare :
     name:string ->
     pp:(Format.formatter -> 'a -> unit) ->

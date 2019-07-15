@@ -351,7 +351,8 @@ module Elpi = struct
   (* This is to hide to the client the fact that Args change representation
       after compilation *)
   let uvk = ED.State.declare ~name:"elpi:uvk" ~pp:(Util.StrMap.pp pp)
-    ~compilation_is_over:(fun ~args x ->
+    ~clause_compilation_is_over:(fun x -> Util.StrMap.empty)
+    ~goal_compilation_is_over:(fun ~args x ->
         Some (Util.StrMap.map (compilation_is_over ~args) x))
     ~init:(fun () -> Util.StrMap.empty)
 
@@ -565,7 +566,8 @@ module FlexibleData = struct
     let show m = Format.asprintf "%a" pp m
 
     let uvmap = ED.State.declare ~name:(Printf.sprintf "elpi:uvm:%d" uvn) ~pp
-      ~compilation_is_over:(fun ~args { h2e; e2h_compile; e2h_run } ->
+      ~clause_compilation_is_over:(fun x -> empty)
+      ~goal_compilation_is_over:(fun ~args { h2e; e2h_compile; e2h_run } ->
         let h2e = H2E.map (Elpi.compilation_is_over ~args) h2e in
         let e2h_run =
           StrMap.fold (fun k v m ->
@@ -636,7 +638,8 @@ module State = struct
      compilation time and terms at execution time (in the API) *)
   let declare ~name ~pp ~init =
     declare ~name ~pp ~init
-      ~compilation_is_over:(fun ~args:_ x -> Some x)
+      ~clause_compilation_is_over:(fun x -> x)
+      ~goal_compilation_is_over:(fun ~args:_ x -> Some x)
 end
 
 

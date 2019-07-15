@@ -302,7 +302,7 @@ end = struct (* {{{ *)
  }
 
   let state =
-    Fork.new_local (State.init () |> State.end_compilation StrMap.empty)
+    Fork.new_local (State.init () |> State.end_goal_compilation StrMap.empty)
   let read_custom_constraint ct =
     State.get ct !state
   let update_custom_constraint ct f =
@@ -2797,7 +2797,7 @@ let try_fire_rule rule (constraints as orig_constraints) =
         (shift_bound_vars ~depth:0 ~to_:max_depth guard);
     assignments = StrMap.empty;
     initial_depth = max_depth;
-    initial_state = State.(init () |> end_compilation StrMap.empty);
+    initial_state = State.(init () |> end_goal_compilation StrMap.empty);
     query_arguments = Query.N;
   } in
   let { search; get; exec; destroy } = !do_make_runtime executable in

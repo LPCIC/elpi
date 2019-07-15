@@ -358,7 +358,8 @@ include Quotation
 
 let while_compiling = State.declare ~name:"elpi:compiling"
   ~pp:(fun fmt _ -> ())
-  ~compilation_is_over:(fun ~args:_ _ -> Some false)
+  ~clause_compilation_is_over:(fun b -> assert(b); b)
+  ~goal_compilation_is_over:(fun ~args:_ _ -> Some false)
   ~init:(fun () -> true)
 
 module ToDBL : sig
@@ -385,10 +386,10 @@ module ToDBL : sig
         Structured.typ list
 
   (* Exported to compile the query *)
-  val preterm_of_ast :
+  val query_preterm_of_ast :
     depth:int -> macro_declaration -> State.t ->
       Loc.t * Ast.Term.t -> State.t * preterm
-  val preterm_of_function :
+  val query_preterm_of_function :
     depth:int -> macro_declaration -> State.t -> 
     (State.t -> State.t * (Loc.t * term)) ->
       State.t * preterm
@@ -411,7 +412,8 @@ end = struct (* {{{ *)
 let get_argmap, set_argmap, update_argmap =
   let argmap =
     State.declare ~name:"elpi:argmap" ~pp:(todopp "elpi:argmap")
-      ~compilation_is_over:(fun ~args:_ _ -> None)
+      ~clause_compilation_is_over:(fun _ -> empty_amap)
+      ~goal_compilation_is_over:(fun ~args:_ _ -> None)
      ~init:(fun () -> empty_amap) in
   State.(get argmap, set argmap, update_return argmap)
 
@@ -421,7 +423,8 @@ type varmap = term F.Map.t
 let get_varmap, set_varmap, update_varmap =
   let varmap =
     State.declare ~name:"elpi:varmap" ~pp:(todopp "elpi:varmap")
-      ~compilation_is_over:(fun ~args:_ _ -> None)
+      ~clause_compilation_is_over:(fun x -> assert(F.Map.is_empty x); x)
+      ~goal_compilation_is_over:(fun ~args:_ _ -> None)
       ~init:(fun () -> F.Map.empty) in
   State.(get varmap, set varmap, update varmap)
 
@@ -434,7 +437,8 @@ type mtm = {
 let get_mtm, set_mtm =
   let mtm =
     State.declare ~name:"elpi:mtm" ~pp:(todopp "elpi:mtm")
-      ~compilation_is_over:(fun ~args:_ _ -> None)
+     ~clause_compilation_is_over:(fun _ -> None)
+     ~goal_compilation_is_over:(fun ~args:_ _ -> None)
       ~init:(fun () -> None) in
   State.(get mtm, set mtm)
 
@@ -591,7 +595,7 @@ let lp ~depth state loc s =
 
 let prechr_rule_of_ast depth macros state r =
   let pcloc = r.Ast.Chr.loc in
-  let state = set_argmap state empty_amap in
+  assert(is_empty_amap (get_argmap state));
   let intern state t = preterm_of_ast pcloc ~depth macros state t in
   let intern_sequent state { Ast.Chr.eigen; context; conclusion } =
     let state, peigen = intern state eigen in
@@ -603,38 +607,35 @@ let prechr_rule_of_ast depth macros state r =
   let state, pguard = option_mapacc intern state r.Ast.Chr.guard in
   let state, pnew_goal = option_mapacc intern_sequent state r.Ast.Chr.new_goal in
   let pamap = get_argmap state in
-  let state = set_argmap state empty_amap in
+  let state = State.end_clause_compilation state in
   let pname = r.Ast.Chr.attributes.StructuredAST.cid in
   let pifexpr = r.Ast.Chr.attributes.StructuredAST.cifexpr in
   state,
   { pto_match; pto_remove; pguard; pnew_goal; pamap; pname; pifexpr; pcloc }
   
-(* exported *)
-let preterm_of_function ~depth macros state f =
-  let state = set_argmap state empty_amap in
-  let state = set_mtm state (Some { macros }) in
-  let state, (loc, term) = f state in
-  let amap = get_argmap state in
-  let state = set_argmap state empty_amap in
-  let state = set_mtm state None in
-  state, { amap; term; loc }
-  
+(* used below *)
 let preterms_of_ast loc ~depth macros state f t =
-  let state = set_argmap state empty_amap in
+  assert(is_empty_amap (get_argmap state));
   let state, term = preterm_of_ast loc ~depth macros state t in
   let state, terms = f ~depth state term in
   let amap = get_argmap state in
-  let state = set_argmap state empty_amap in
-  let state = set_mtm state None in
+  let state = State.end_clause_compilation state in
   (* TODO: may have spurious entries in the amap *)
   state, List.map (fun (loc,term) -> { term; amap; loc }) terms
 ;;
-let preterm_of_ast ~depth macros state (loc, t) =
-  let state = set_argmap state empty_amap in
+
+(* exported *)
+let query_preterm_of_function ~depth macros state f =
+  assert(is_empty_amap (get_argmap state));
+  let state = set_mtm state (Some { macros }) in
+  let state, (loc, term) = f state in
+  let amap = get_argmap state in
+  state, { amap; term; loc }
+
+let query_preterm_of_ast ~depth macros state (loc, t) =
+  assert(is_empty_amap (get_argmap state));
   let state, term = preterm_of_ast loc ~depth macros state t in
   let amap = get_argmap state in
-  let state = set_argmap state empty_amap in
-  let state = set_mtm state None in
   state, { term; amap; loc }
 ;;
 
@@ -653,7 +654,8 @@ let preterm_of_ast ~depth macros state (loc, t) =
 
   let compile_type lcs macros state { Ast.Type.attributes; loc; name; ty } =
     let tname, _ = C.funct_of_ast name in
-    let state, ttype = preterm_of_ast ~depth:lcs macros state (loc, ty) in
+    let state, ttype = preterms_of_ast loc ~depth:lcs macros state (fun ~depth state x -> state, [loc,x]) ty in
+    let ttype = assert(List.length ttype = 1); List.hd ttype in
     state, { Structured.tindex = attributes; loc; decl = { tname; ttype } }
 
    let funct_of_ast state c =
@@ -1410,7 +1412,7 @@ let stack_term_of_preterm ~depth:arg_lvl { term = t; amap = { c2i } } =
 ;;
 
 let uvbodies_of_assignments assignments =
-   State.end_compilation (StrMap.map (function
+   State.end_goal_compilation (StrMap.map (function
      | UVar(b,_,_) | AppUVar(b,_,_) -> b
      | _ -> assert false) assignments)
 
@@ -1421,7 +1423,7 @@ let query_of_ast { Compiled.assembled_program; compiler_state; compiler_flags } 
   let modes = assembled_program.Assembled.modes in
   let active_macros = assembled_program.Assembled.toplevel_macros in
   let state, query =
-    ToDBL.preterm_of_ast ~depth:initial_depth active_macros compiler_state t in
+    ToDBL.query_preterm_of_ast ~depth:initial_depth active_macros compiler_state t in
   let query = Spill.spill_preterm types (fun c -> C.Map.find c modes) query in
   let query_env = Array.make query.amap.nargs C.dummy in
   let initial_goal =
@@ -1448,7 +1450,7 @@ let query_of_term { Compiled.assembled_program; compiler_state; compiler_flags }
   let modes = assembled_program.Assembled.modes in
   let active_macros = assembled_program.Assembled.toplevel_macros in
   let state, query =
-    ToDBL.preterm_of_function
+    ToDBL.query_preterm_of_function
       ~depth:initial_depth active_macros compiler_state
       (f ~depth:initial_depth) in
   let query_env = Array.make query.amap.nargs C.dummy in
@@ -1620,7 +1622,7 @@ let term_of_ast ~depth t =
      F.Map.add (F.from_string (C.show (destConst i))) i cmap
      ) F.Map.empty freevars) in
 *)
- let _, pt = ToDBL.preterm_of_ast ~depth F.Map.empty state t in
+ let _, pt = ToDBL.query_preterm_of_ast ~depth F.Map.empty state t in
  let t = stack_term_of_preterm ~depth pt in
  let env = Array.make pt.amap.nargs C.dummy in
  R.move ~adepth:argsdepth ~from:depth ~to_:depth env t
