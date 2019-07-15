@@ -657,7 +657,6 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in [
   (fun s _ ~depth:_ -> !:(Trace.Runtime.get_cur_step s))),
   DocAbove);
 
-
   MLCode(Pred("rex_match",
     In(string, "Rex",
     In(string, "Subject",
@@ -698,13 +697,14 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in [
       !: qp +! qq)),
   DocAbove);
 
-  ]
+  MLData loc;
+]
 ;;
 
 (** ELPI specific NON-LOGICAL built-in *********************************** *)
 
 let ctype = AlgebraicData.declare {
-  AlgebraicData.ty = TyName "ctype";
+  AlgebraicData.ty = TyName "ctyp";
   doc = "Opaque ML data types";
   pp = (fun fmt cty -> Format.fprintf fmt "%s" cty);
   constructors = [
@@ -714,39 +714,15 @@ let ctype = AlgebraicData.declare {
    
 let safe = OpaqueData.declare {
   OpaqueData.name = "safe";
-  pp = (fun fmt (id,l,d) ->
-     Format.fprintf fmt "[safe %d: %a]_%d" id
-       (RawPp.list (RawPp.term 0) ";") !l d);
-  eq = (fun (id1, _,_) (id2,_,_) -> id1 == id2);
-  hash = (fun (id,_,_) -> id);
+  pp = (fun fmt (id,l) ->
+     Format.fprintf fmt "[safe %d: %a]" id
+       (RawPp.list (fun fmt (t,d) -> RawPp.term d fmt t) ";") !l);
+  eq = (fun (id1, _) (id2,_) -> id1 == id2);
+  hash = (fun (id,_) -> id);
   hconsed = false;
-  doc = "Holds data across bracktracking";
+  doc = "Holds data across bracktracking; can only contain closed terms";
   constants = [];
 }
-
-let fresh_copy t max_db depth =
-  let rec aux d t =
-    match look ~depth:(depth + d) t with
-    | Lam t -> mkLam (aux (d+1) t)
-    | Const c as x ->
-        if c < max_db then kool x
-        else if c - depth <= d then mkConst (max_db + c - depth)
-        else raise No_clause (* restriction *)
-    | App (c,x,xs) ->
-        let x = aux d x in
-        let xs = List.map (aux d) xs in
-        if c < max_db then mkApp c x xs
-        else if c - depth <= d then mkApp (max_db + c - depth) x xs
-        else raise No_clause (* restriction *)
-    | UnifVar _ ->
-        type_error "stash takes only ground terms"
-    | Builtin (c,xs) -> mkBuiltin c (List.map (aux d) xs)
-    | CData _ as x -> kool x
-    | Cons (hd,tl) -> mkCons (aux d hd) (aux d tl)
-    | Nil as x -> kool x
-    | Discard as x -> kool x
-  in
-    aux 0 t
 
 let safeno = ref 0
 
@@ -912,21 +888,21 @@ X == Y :- same_term X Y.
    MLCode(Pred("new_safe",
      Out(safe, "Safe",
      Easy      "creates a safe: a store that persists across backtracking"),
-   (fun _ ~depth -> incr safeno; !:(!safeno,ref [],depth))),
+   (fun _ ~depth -> incr safeno; !:(!safeno,ref []))),
   DocAbove);
 
    MLCode(Pred("stash_in_safe",
      In(safe,  "Safe",
-     In(any,   "Data",
+     In(closed "A",   "Data",
      Easy      "stores Data in the Safe")),
-   (fun (_,l,ld) t ~depth -> l := fresh_copy t ld depth :: !l)),
+   (fun (_,l) t ~depth -> l := t :: !l)),
   DocAbove);
 
    MLCode(Pred("open_safe",
      In(safe, "Safe",
-     Out(list any, "Data",
+     Out(list (closed "A"), "Data",
      Easy          "retrieves the Data stored in Safe")),
-   (fun (_,l,ld) _ ~depth -> !:(List.rev !l))),
+   (fun (_,l) _ ~depth -> !:(List.rev !l))),
   DocAbove);
 
   LPCode {|
@@ -957,7 +933,7 @@ if _ _ E :- E.  |};
 ]
 ;;
 
-let elpi_stdlib = let open BuiltIn in [ 
+let elpi_stdlib_src = let open BuiltIn in let open BuiltInData in [ 
 
   LPCode {|
 
@@ -1185,10 +1161,155 @@ spy-do! L :- map L (x\y\y = spy x) L1, do! L1.
 pred any->string i:A, o:string.
 any->string X Y :- term_to_string X Y.
 
-} % namespace std |}
+} % namespace std |};
 ]
+
+let export_set name (type a)
+   (alpha : a Conversion.t) (module Set : Util.Set.S with type elt = a) =
+ 
+let set = OpaqueData.declare {
+  OpaqueData.name;
+  doc = "";
+  pp = (fun fmt m -> Format.fprintf fmt "%a" Set.pp m );
+  eq = (fun m1 m2 -> Set.equal m1 m2);
+  hash = Hashtbl.hash;
+  hconsed = false;
+  constants = [];
+} in
+
+let set = { set with Conversion.ty = Conversion.(TyName name) } in
+
+let open BuiltIn in let open BuiltInData in 
+
+[
+  LPCode ("kind "^name^" type.");
+
+  MLCode(Pred(name^".empty",
+    Out(set,"M",
+    Easy "The empty set"),
+    (fun _ ~depth -> !: Set.empty)),
+  DocAbove);
+
+  MLCode(Pred(name^".mem",
+    In(alpha,"S",
+    In(set,"M",
+    Easy "Checks if S is in M")),
+    (fun s m ~depth ->
+      if Set.mem s m then () else raise No_clause)),
+  DocAbove);
+
+  MLCode(Pred(name^".add",
+    In(alpha,"S",
+    In(set,"M",
+    Out(set,"M1",
+    Easy "M1 is M + V"))),
+    (fun s m _ ~depth -> !: (Set.add s m))),
+  DocAbove);
+
+  MLCode(Pred(name^".remove",
+    In(alpha,"S",
+    In(set,"M",
+    Out(set,"M1",
+    Easy "M1 is M - V"))),
+    (fun s m _ ~depth -> !: (Set.remove s m))),
+  DocAbove);
+
+  MLCode(Pred(name^".elements",
+    In(set,"M",
+    Out(list alpha,"L",
+    Easy "L is M transformed into list")),
+    (fun m _ ~depth -> !: (Set.elements m))),
+  DocAbove);
+
+  MLCode(Pred(name^".cardinal",
+    In(set,"M",
+    Out(int,"N",
+    Easy "N is the number of elements of M")),
+    (fun m _ ~depth -> !: (Set.cardinal m))),
+  DocAbove);
+] 
 ;;
 
+let export_map name (type a)
+   (alpha : a Conversion.t) (module Map : Util.Map.S with type key = a) =
+ 
+let closed_A = BuiltInData.closed "A" in
+
+let map = OpaqueData.declare {
+  OpaqueData.name;
+  doc = "";
+  pp = (fun fmt m -> Format.fprintf fmt "%a" (Map.pp closed_A.pp) m );
+  eq = (fun m1 m2 -> Map.equal (=) m1 m2);
+  hash = Hashtbl.hash;
+  hconsed = false;
+  constants = [];
+} in
+
+let map a = { map with
+  Conversion.ty = Conversion.(TyApp(name,TyName a,[])) } in
+
+let open BuiltIn in let open BuiltInData in 
+
+[
+  LPDoc ("CAVEAT: the type parameter of "^name^" must be a closed term");
+  LPCode ("kind "^name^" type -> type.");
+
+  MLCode(Pred(name^".empty",
+    Out(map "A","M",
+    Easy "The empty map"),
+    (fun _ ~depth -> !: Map.empty)),
+  DocAbove);
+
+  MLCode(Pred(name^".mem",
+    In(alpha,"S",
+    In(map "A","M",
+    Easy "Checks if S is bound in M")),
+    (fun s m ~depth ->
+      if Map.mem s m then () else raise No_clause)),
+  DocAbove);
+
+  MLCode(Pred(name^".add",
+    In(alpha,"S",
+    In(closed_A,"V",
+    In(map "A","M",
+    Out(map "A","M1",
+    Easy "M1 is M where V is bound to S")))),
+    (fun s l m _ ~depth -> !: (Map.add s l m))),
+  DocAbove);
+
+  MLCode(Pred(name^".find",
+    In(alpha,"S",
+    In(map "A","M",
+    Out(closed_A,"V",
+    Easy "V is the binding of S in M"))),
+    (fun s m _ ~depth ->
+       try !: (Map.find s m)
+       with Not_found -> raise No_clause)),
+  DocAbove);
+
+  MLCode(Pred(name^".bindings",
+    In(map "A","M",
+    Out(list (pair alpha (closed_A)),"L",
+    Easy "L is M transformed into an associative list")),
+    (fun m _ ~depth -> !: (Map.bindings m))),
+  DocAbove);
+
+] 
+;;
+
+module LocMap : Util.Map.S with type key = Ast.Loc.t = Util.Map.Make(Ast.Loc)
+module LocSet : Util.Set.S with type elt = Ast.Loc.t = Util.Set.Make(Ast.Loc)
+
+let elpi_stdlib =
+  elpi_stdlib_src @
+  export_map "std.string.map" BuiltInData.string (module Util.StrMap) @ 
+  export_map "std.int.map" BuiltInData.int (module Util.IntMap) @ 
+  export_map "std.loc.map" BuiltInData.loc (module LocMap) @ 
+  export_set "std.string.set" BuiltInData.string (module Util.StrSet) @ 
+  export_set "std.int.set" BuiltInData.int (module Util.IntSet) @ 
+  export_set "std.loc.set" BuiltInData.loc (module LocSet) @ 
+  []
+;;
 
 let std_declarations =
   core_builtins @ io_builtins @ lp_builtins @ elpi_builtins @ elpi_nonlogical_builtins @ elpi_stdlib

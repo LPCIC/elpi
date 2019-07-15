@@ -274,11 +274,14 @@ external pred rex_replace i:string, i:string, i:string, o:string.
 % the syntax tree
 external pred quote_syntax i:string, i:string, o:list A, o:A.
 
+macro @loc :- ctype "Loc.t".
+
+
 % == Elpi nonlogical builtins =====================================
 
 % Opaque ML data types
-kind ctype type.
-type ctype string -> ctype.
+kind ctyp type.
+type ctype string -> ctyp.
 
 % [var V] checks if the term V is a variable
 external pred var i:any.
@@ -319,7 +322,7 @@ external pred closed_term o:any.
 
 % [is_cdata T Ctype] checks if T is primitive of type Ctype, eg (ctype
 % "int")
-external pred is_cdata i:any, o:ctype.
+external pred is_cdata i:any, o:ctyp.
 
 pred primitive? i:A, i:string.
 
@@ -336,10 +339,10 @@ macro @safe :- ctype "safe".
 external pred new_safe o:@safe.
 
 % [stash_in_safe Safe Data] stores Data in the Safe
-external pred stash_in_safe i:@safe, i:any.
+external pred stash_in_safe i:@safe, i:A.
 
 % [open_safe Safe Data] retrieves the Data stored in Safe
-external pred open_safe i:@safe, o:list any.
+external pred open_safe i:@safe, o:list A.
 
 
 % [if C T E] picks the first success of C then runs T (never E).
@@ -585,6 +588,129 @@ pred any->string i:A, o:string.
 any->string X Y :- term_to_string X Y.
 
 } % namespace std 
+
+% CAVEAT: the type parameter of std.string.map must be a closed term
+
+kind std.string.map type -> type.
+
+% [std.string.map.empty M] The empty map
+external pred std.string.map.empty o:std.string.map A.
+
+% [std.string.map.mem S M] Checks if S is bound in M
+external pred std.string.map.mem i:string, i:std.string.map A.
+
+% [std.string.map.add S V M M1] M1 is M where V is bound to S
+external pred std.string.map.add i:string, i:A, i:std.string.map A, 
+                                 o:std.string.map A.
+
+% [std.string.map.find S M V] V is the binding of S in M
+external pred std.string.map.find i:string, i:std.string.map A, o:A.
+
+% [std.string.map.bindings M L] L is M transformed into an associative list
+external pred std.string.map.bindings i:std.string.map A, 
+                                      o:list (pair string A).
+
+% CAVEAT: the type parameter of std.int.map must be a closed term
+
+kind std.int.map type -> type.
+
+% [std.int.map.empty M] The empty map
+external pred std.int.map.empty o:std.int.map A.
+
+% [std.int.map.mem S M] Checks if S is bound in M
+external pred std.int.map.mem i:int, i:std.int.map A.
+
+% [std.int.map.add S V M M1] M1 is M where V is bound to S
+external pred std.int.map.add i:int, i:A, i:std.int.map A, 
+                              o:std.int.map A.
+
+% [std.int.map.find S M V] V is the binding of S in M
+external pred std.int.map.find i:int, i:std.int.map A, o:A.
+
+% [std.int.map.bindings M L] L is M transformed into an associative list
+external pred std.int.map.bindings i:std.int.map A, o:list (pair int A).
+
+% CAVEAT: the type parameter of std.loc.map must be a closed term
+
+kind std.loc.map type -> type.
+
+% [std.loc.map.empty M] The empty map
+external pred std.loc.map.empty o:std.loc.map A.
+
+% [std.loc.map.mem S M] Checks if S is bound in M
+external pred std.loc.map.mem i:@loc, i:std.loc.map A.
+
+% [std.loc.map.add S V M M1] M1 is M where V is bound to S
+external pred std.loc.map.add i:@loc, i:A, i:std.loc.map A, 
+                              o:std.loc.map A.
+
+% [std.loc.map.find S M V] V is the binding of S in M
+external pred std.loc.map.find i:@loc, i:std.loc.map A, o:A.
+
+% [std.loc.map.bindings M L] L is M transformed into an associative list
+external pred std.loc.map.bindings i:std.loc.map A, o:list (pair @loc A).
+
+kind std.string.set type.
+
+% [std.string.set.empty M] The empty set
+external pred std.string.set.empty o:std.string.set.
+
+% [std.string.set.mem S M] Checks if S is in M
+external pred std.string.set.mem i:string, i:std.string.set.
+
+% [std.string.set.add S M M1] M1 is M + V
+external pred std.string.set.add i:string, i:std.string.set, 
+                                 o:std.string.set.
+
+% [std.string.set.remove S M M1] M1 is M - V
+external pred std.string.set.remove i:string, i:std.string.set, 
+                                    o:std.string.set.
+
+% [std.string.set.elements M L] L is M transformed into list
+external pred std.string.set.elements i:std.string.set, o:list string.
+
+% [std.string.set.cardinal M N] N is the number of elements of M
+external pred std.string.set.cardinal i:std.string.set, o:int.
+
+kind std.int.set type.
+
+% [std.int.set.empty M] The empty set
+external pred std.int.set.empty o:std.int.set.
+
+% [std.int.set.mem S M] Checks if S is in M
+external pred std.int.set.mem i:int, i:std.int.set.
+
+% [std.int.set.add S M M1] M1 is M + V
+external pred std.int.set.add i:int, i:std.int.set, o:std.int.set.
+
+% [std.int.set.remove S M M1] M1 is M - V
+external pred std.int.set.remove i:int, i:std.int.set, o:std.int.set.
+
+% [std.int.set.elements M L] L is M transformed into list
+external pred std.int.set.elements i:std.int.set, o:list int.
+
+% [std.int.set.cardinal M N] N is the number of elements of M
+external pred std.int.set.cardinal i:std.int.set, o:int.
+
+kind std.loc.set type.
+
+% [std.loc.set.empty M] The empty set
+external pred std.loc.set.empty o:std.loc.set.
+
+% [std.loc.set.mem S M] Checks if S is in M
+external pred std.loc.set.mem i:@loc, i:std.loc.set.
+
+% [std.loc.set.add S M M1] M1 is M + V
+external pred std.loc.set.add i:@loc, i:std.loc.set, o:std.loc.set.
+
+% [std.loc.set.remove S M M1] M1 is M - V
+external pred std.loc.set.remove i:@loc, i:std.loc.set, o:std.loc.set.
+
+% [std.loc.set.elements M L] L is M transformed into list
+external pred std.loc.set.elements i:std.loc.set, o:list @loc.
+
+% [std.loc.set.cardinal M N] N is the number of elements of M
+external pred std.loc.set.cardinal i:std.loc.set, o:int.
 
 
 

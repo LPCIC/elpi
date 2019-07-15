@@ -1,0 +1,6 @@
+main :-
+   std.string.set.empty S,
+   std.string.set.add "xx" S S1,
+   std.string.set.mem "xx" S1,
+   not(std.string.set.mem "yy" S1),
+   print S S1.
