@@ -173,7 +173,7 @@ end
 module Mode : sig
 
   type 'name t =
-    { name : 'name; args : bool list }
+    { name : 'name; args : bool list; loc : Loc.t }
   
   val pp :
     (Format.formatter -> 'name -> unit) ->

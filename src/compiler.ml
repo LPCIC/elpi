@@ -73,7 +73,7 @@ type program = {
 }
 and pbody = {
   types : typ list;
-  modes : mode C.Map.t;
+  modes : (mode * Loc.t) C.Map.t;
   body : block list;
   (* defined (global) symbols (including in sub blocks) *)
   symbols : C.Set.t;
@@ -96,7 +96,7 @@ module Flat = struct
 
 type program = {
   types : Structured.typ list; 
-  modes : mode C.Map.t;
+  modes : (mode * Loc.t) C.Map.t;
   clauses : (preterm,StructuredAST.attribute) Ast.Clause.t list;
   chr : (constant list * prechr_rule list) list;
   local_names : int;
@@ -378,7 +378,7 @@ module ToDBL : sig
 
   (* Exported since also used to flatten (here we "flatten" locals) *)
   val prefix_const : string list -> C.t -> C.t
-  val merge_modes : mode Map.t -> mode Map.t -> mode Map.t
+  val merge_modes : (mode * Loc.t) Map.t -> (mode * Loc.t) Map.t -> (mode * Loc.t) Map.t
   val merge_types :
         Structured.typ list ->
         Structured.typ list ->
@@ -663,14 +663,16 @@ let preterm_of_ast ~depth macros state (loc, t) =
        | _ -> assert false
      with Not_found -> fst (C.funct_of_ast c)
 
-  let check_duplicate_mode name mode map =
-    if C.Map.mem name map && C.Map.find name map <> mode then
-      error ("Duplicate mode declaration for " ^ C.show name)
+  let check_duplicate_mode name (mode, loc) map =
+    if C.Map.mem name map && fst (C.Map.find name map) <> mode then
+      error ~loc
+       ("Duplicate mode declaration for " ^ C.show name ^ " (also at "^
+         Loc.show (snd (C.Map.find name map)) ^ ")")
 
-  let compile_mode state modes { Ast.Mode.name; args } =
+  let compile_mode state modes { Ast.Mode.name; args; loc } =
     let mname = funct_of_ast state name in
-    check_duplicate_mode mname args modes;
-    C.Map.add mname args modes
+    check_duplicate_mode mname (args,loc) modes;
+    C.Map.add mname (args,loc) modes
 
   let merge_modes m1 m2 =
     C.Map.fold (fun k v m ->
@@ -1009,7 +1011,7 @@ module Spill : sig
 
   (* Exported to compile the query *)
   val spill_preterm :
-    Structured.typ list -> mode C.Map.t -> preterm -> preterm
+    Structured.typ list -> (C.t -> mode) -> preterm -> preterm
 
 end = struct (* {{{ *)
 
@@ -1045,7 +1047,7 @@ end = struct (* {{{ *)
         aux t in
     let ty = type_of_const types c in
     let ty_mode, mode =
-      match C.Map.find c modes with
+      match modes c with
       | l -> `Arrow(List.length l,`Prop), l
       | exception Not_found -> `Unknown, [] in
     let nargs = List.length args in
@@ -1237,8 +1239,8 @@ end = struct (* {{{ *)
     { x with Ast.Clause.body = { term; amap; loc } }
 
   let run ~flags:_ ({ Flat.clauses; modes; types; chr } as p) =
-    let clauses = List.map (spill_clause modes types) clauses in
-    let chr = List.map (spill_chr modes types) chr in
+    let clauses = List.map (spill_clause (fun c -> fst @@ C.Map.find c modes) types) clauses in
+    let chr = List.map (spill_chr (fun c -> fst @@ C.Map.find c modes) types) chr in
     { p with Flat.clauses; chr }
 
   let spill_preterm types modes { term; amap; loc } =
@@ -1296,6 +1298,7 @@ end = struct (* {{{ *)
     let { Flat.clauses; types; modes; chr; local_names; toplevel_macros } =
       List.hd pl in
     let clauses = sort_insertion clauses in
+    let modes = C.Map.map fst modes in
     { Assembled.clauses; types; modes; chr; local_names; toplevel_macros }
 
 end (* }}} *)
@@ -1419,7 +1422,7 @@ let query_of_ast { Compiled.assembled_program; compiler_state; compiler_flags } 
   let active_macros = assembled_program.Assembled.toplevel_macros in
   let state, query =
     ToDBL.preterm_of_ast ~depth:initial_depth active_macros compiler_state t in
-  let query = Spill.spill_preterm types modes query in
+  let query = Spill.spill_preterm types (fun c -> C.Map.find c modes) query in
   let query_env = Array.make query.amap.nargs C.dummy in
   let initial_goal =
     R.move ~adepth:initial_depth ~from:initial_depth ~to_:initial_depth query_env

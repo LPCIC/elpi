@@ -560,7 +560,7 @@ EXTEND
   i_o : [[ CONSTANT "i" -> true | CONSTANT "o" -> false ]];
   mode :
     [[ LPAREN; c = CONSTANT; l = LIST1 i_o; RPAREN ->
-       { Mode.name = Func.from_string c; args = l } ]];
+       { Mode.name = Func.from_string c; args = l; loc = of_ploc loc} ]];
   chrrule :
     [[ to_match = LIST0 sequent;
        to_remove = OPT [ BIND; l = LIST1 sequent -> l ];
@@ -609,7 +609,7 @@ EXTEND
   pred_item : [[ m = i_o; COLON; t = ctype -> (m,t) ]];
   pred : [[ c = const_sym; a = LIST0 pred_item SEP SYMBOL "," ->
     let name = Func.from_string c in
-    [ { Mode.name = name; args = List.map fst a } ],
+    [ { Mode.name = name; args = List.map fst a; loc = (of_ploc loc)} ],
      (name, List.fold_right (fun (_,t) ty ->
         mkApp (of_ploc loc) [mkCon "->";t;ty]) a (mkCon "prop"))
   ]];

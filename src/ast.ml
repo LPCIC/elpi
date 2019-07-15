@@ -187,7 +187,7 @@ end
 module Mode = struct
 
   type 'name t =
-    { name : 'name; args : bool list }
+    { name : 'name; args : bool list; loc : Loc.t }
   [@@deriving show]
 
 end
