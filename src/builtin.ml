@@ -785,6 +785,25 @@ let name_or_constant name condition = (); fun x out ~depth _ _ state ->
       | _ -> raise No_clause
 ;;
 
+let rec same_term ~depth t1 t2 =
+  match look ~depth t1, look ~depth t2 with
+  | Discard, UnifVar _ -> true
+  | UnifVar _, Discard -> true
+  | UnifVar(b1,xs), UnifVar(b2,ys) -> FlexibleData.Elpi.equal b1 b2 && same_term_list ~depth xs ys
+  | App(c1,x,xs), App(c2,y,ys) -> c1 == c2 && same_term ~depth x y && same_term_list ~depth xs ys
+  | Const c1, Const c2 -> c1 == c2
+  | Cons(x,xs), Cons(y,ys) -> same_term ~depth x y && same_term ~depth xs ys
+  | Nil, Nil -> true
+  | Lam x, Lam y -> same_term ~depth:(depth+1) x y
+  | Builtin(c1,xs),Builtin(c2,ys) -> c1 == c2 && same_term_list ~depth xs ys
+  | CData d1, CData d2 -> RawOpaqueData.equal d1 d2
+  | _ -> false
+and same_term_list ~depth xs ys =
+  match xs, ys with
+  | [], [] -> true
+  | x::xs, y::ys -> same_term ~depth x y && same_term_list ~depth xs ys
+  | _ -> false
+
 let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in [ 
 
   LPDoc "== Elpi nonlogical builtins =====================================";
@@ -792,8 +811,8 @@ let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in [
   MLData ctype;
 
   MLCode(Pred("var",
-    In(any,   "any term",
-    Easy       "checks if the term is a variable"),
+    In(any,   "V",
+    Easy       "checks if the term V is a variable"),
   (fun t1 ~depth ->
      match look ~depth t1 with
      | UnifVar _ -> ()
@@ -801,14 +820,28 @@ let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in [
   DocAbove);
 
   MLCode(Pred("same_var",
-    In(poly "A",   "first term",
-    In(poly "A",   "second term",
-    Easy       "checks if the two terms are the same variable")),
+    In(poly "A",   "V1",
+    In(poly "A",   "V2",
+    Easy       "checks if the two terms V1 and V2 are the same variable, ignoring the arguments of the variables")),
   (fun t1 t2 ~depth ->
      match look ~depth t1, look ~depth t2 with
      | UnifVar(p1,_), UnifVar (p2,_) when FlexibleData.Elpi.equal p1 p2 -> ()
      | _,_ -> raise No_clause)),
   DocAbove);
+
+  MLCode(Pred("same_term",
+    In(poly "A",   "T1",
+    In(poly "A",   "T2",
+    Easy {|checks if the two terms T1 and T2 are syntactically equal (no unification). It behaves differently than same_var since it recursively compares the arguments of the variables|})),
+  (fun t1 t2 ~depth ->
+     if same_term ~depth t1 t2 then () else raise No_clause)),
+  DocAbove);
+
+  LPCode {|
+% Infix notation for same_term
+pred (==) i:A, i:A.
+X == Y :- same_term X Y.
+|};
 
   MLCode(Pred("name",
     InOut(any, "T",

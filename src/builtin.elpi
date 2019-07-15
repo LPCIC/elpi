@@ -280,12 +280,23 @@ external pred quote_syntax i:string, i:string, o:list A, o:A.
 kind ctype type.
 type ctype string -> ctype.
 
-% [var any term] checks if the term is a variable
+% [var V] checks if the term V is a variable
 external pred var i:any.
 
-% [same_var first term second term] checks if the two terms are the same
-% variable
+% [same_var V1 V2] checks if the two terms V1 and V2 are the same variable,
+% ignoring the arguments of the variables
 external pred same_var i:A, i:A.
+
+% [same_term T1 T2] checks if the two terms T1 and T2 are syntactically
+% equal (no unification). It behaves differently than same_var since it
+% recursively compares the arguments of the variables
+external pred same_term i:A, i:A.
+
+
+% Infix notation for same_term
+pred (==) i:A, i:A.
+X == Y :- same_term X Y.
+
 
 % [name T ...] checks if T is a eigenvariable. When used with tree arguments
 % it relates an applied name with its head and argument list.

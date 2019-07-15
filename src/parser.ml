@@ -848,6 +848,7 @@ let lp_gramext = [
   { fix = Infix;	sym = "<";	prec = 130; };
   { fix = Infix;	sym = "=<";	prec = 130; };
   { fix = Infix;	sym = "=";	prec = 130; };
+  { fix = Infix;	sym = "==";	prec = 130; };
   { fix = Infix;	sym = ">=";	prec = 130; };
   { fix = Infix;	sym = ">";	prec = 130; };
   { fix = Infix;	sym = "i<";	prec = 130; };

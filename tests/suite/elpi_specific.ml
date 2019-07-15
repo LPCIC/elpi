@@ -170,3 +170,10 @@ let () = declare "elpi2html"
   ~typecheck:true
   ~expectation:Test.Success
   ()
+
+let () = declare "same_term"
+  ~source_elpi:"same_term.elpi"
+  ~description:"the == operator"
+  ~typecheck:true
+  ~expectation:Test.Success
+  ()
