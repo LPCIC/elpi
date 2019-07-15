@@ -71,11 +71,11 @@ typeof (pr (M `@ N) A ::S) Eqs (all P) :- !,
 
 typeof (pr (fn M) A :: S) Eqs  (all d\ all e\ P d e) :- !,
   pi d\ tvar d => pi e\ tvar e => pi x\ tybind x d => 
-   typeof (pr (M x) e :: S) ((A == d --> e) :: Eqs) (P d e).
+   typeof (pr (M x) e :: S) ((A === d --> e) :: Eqs) (P d e).
 
 typeof (pr (fixpt M) A :: S) Eqs  (all P) :- !,
   pi d\ tvar d => pi x\ tybind x d => 
-   typeof (pr (M x) d :: S) ((A == d) :: Eqs) (P d).
+   typeof (pr (M x) d :: S) ((A === d) :: Eqs) (P d).
 
 typeof (pr (cond Cond Then Else) A :: S) Eqs P :- !, 
   typeof (pr Cond bool :: pr Then A :: pr Else A :: S) Eqs P.
@@ -84,11 +84,11 @@ typeof (pr C B :: S) Eqs Poly :-
   prim_poly C Ty, !, poly_inst Ty B S Eqs Poly.
 
 typeof (pr X B :: S) Eqs Poly :-
-  tybind X A, typeof S ((A == B) :: Eqs) Poly.
+  tybind X A, typeof S ((A === B) :: Eqs) Poly.
 
 typeof nil Eqs (c Ty) :-  unify Eqs topvar Ty.
 
-poly_inst (c Ty)    B S Eqs Poly :- typeof S ((Ty == B) :: Eqs) Poly.
+poly_inst (c Ty)    B S Eqs Poly :- typeof S ((Ty === B) :: Eqs) Poly.
 poly_inst (all Ty) B S Eqs (all Poly) :- 
     pi x\ tvar x => poly_inst (Ty x) B S Eqs (Poly x).
 

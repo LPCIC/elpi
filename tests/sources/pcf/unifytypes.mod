@@ -15,8 +15,8 @@ type  tvar  ty -> o.
 
 % Representation of disagreement pairs
 kind  eq       type.             
-type  ==       ty -> ty -> eq.
-infix ==       4.
+type  ===       ty -> ty -> eq.
+infix ===       4.
 
 
 % subst_ty is a predicate such that (subst_ty V T Ty1 Ty2) is true if
@@ -34,7 +34,7 @@ subst_ty V T (A --> B) (Ax --> Bx) :- subst_ty V T A Ax,  subst_ty V T B Bx.
 % Transforming an equation through a substitution
 type subst_eq   ty -> ty ->      eq ->      eq -> o.
 
-subst_eq  V T (A == B) (Ax == Bx) :- subst_ty V T A Ax, subst_ty V T B Bx.
+subst_eq  V T (A === B) (Ax === Bx) :- subst_ty V T A Ax, subst_ty V T B Bx.
 
 % Transforming a set of equations through a substitution
 type subst_eqs  ty -> ty -> list eq -> list eq -> o.
@@ -57,16 +57,16 @@ free_occ V (lst A)   :- free_occ V A.
 type  unify       list eq -> ty -> ty -> o.
 
 unify nil In In.
-unify ((A == A) :: Eqs) In Out :- !, unify Eqs In Out.
-unify ((A --> Ax == B --> Bx) :: Eqs) In Out :-
-  unify ((A == B) :: (Ax == Bx) :: Eqs) In Out.
-unify ((lst A == lst B) :: Eqs) In Out :- unify ((A == B) :: Eqs) In Out.
-unify ((A == B) :: Eqs) In Out :-
+unify ((A === A) :: Eqs) In Out :- !, unify Eqs In Out.
+unify ((A --> Ax === B --> Bx) :: Eqs) In Out :-
+  unify ((A === B) :: (Ax === Bx) :: Eqs) In Out.
+unify ((lst A === lst B) :: Eqs) In Out :- unify ((A === B) :: Eqs) In Out.
+unify ((A === B) :: Eqs) In Out :-
   tvar A, !, not (free_occ A B),
   subst_eqs A B Eqs Eqsx,
   subst_ty    A B In  Mid,
   unify Eqsx Mid Out.
-unify ((B == A) :: Eqs) In Out :- 
+unify ((B === A) :: Eqs) In Out :- 
   tvar A, !, not (free_occ A B),
   subst_eqs A B Eqs Eqsx,
   subst_ty    A B In  Mid,
