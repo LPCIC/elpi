@@ -241,6 +241,10 @@ module BuiltInData : sig
   (* poly "A" is what one would use for, say, [type eq A -> A -> prop] *)
   val poly   : string -> Data.term Conversion.t
 
+  (* like poly "A" but "A" must be a closed term, e.g. no unification variables
+     and no variables bound by the program (context) *)
+  val closed : string -> (Data.term * int) Conversion.t
+
   (* any is like poly "X" for X fresh *)
   val any    : Data.term Conversion.t
 

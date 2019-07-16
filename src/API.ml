@@ -284,9 +284,45 @@ module BuiltInData = struct
     { Conversion.embed; readback; ty = Conversion.TyName ty;
       pp = (fun fmt _ -> Format.fprintf fmt "<poly>");
       pp_doc = (fun fmt () -> ()) }
-  
+
   let any = poly "any"
-    
+
+  let fresh_copy t depth =
+    let module R = (val !r) in let open R in
+    let open ED in
+    let rec aux d t =
+      match deref_head ~depth:(depth + d) t with
+      | Lam t -> mkLam (aux (d+1) t)
+      | Const c as x ->
+          if c < 0 || c >= depth then x
+          else raise Conversion.(TypeErr(TyName"closed term",depth+d,x))
+      | App (c,x,xs) ->
+          if c < 0 || c >= depth then mkApp c (aux d x) (List.map (aux d) xs)
+          else raise Conversion.(TypeErr(TyName"closed term",depth+d,x))
+      | (UVar _ | AppUVar _) as x ->
+          raise Conversion.(TypeErr(TyName"closed term",depth+d,x))
+      | Arg _ | AppArg _ -> assert false
+      | Builtin (c,xs) -> mkBuiltin c (List.map (aux d) xs)
+      | CData _ as x -> x
+      | Cons (hd,tl) -> mkCons (aux d hd) (aux d tl)
+      | Nil as x -> x
+      | Discard as x -> x
+    in
+      (aux 0 t, depth)
+
+  let closed ty =
+    let ty = Conversion.(TyName ty) in
+    let embed ~depth _ _ state (x,from) =
+      let module R = (val !r) in let open R in
+      state, R.hmove ~from ~to_:depth ?avoid:None x, [] in
+    let readback ~depth _ _ state t =
+      state, fresh_copy t depth, [] in
+    { Conversion.embed; readback; ty;
+      pp = (fun fmt (t,d) ->
+        let module R = (val !r) in let open R in
+        R.Pp.uppterm d [] d ED.empty_env fmt t);
+      pp_doc = (fun fmt () -> ()) }
+   
   let map_acc f s l =
     let rec aux acc extra s = function
     | [] -> s, List.rev acc, List.(concat (rev extra))
