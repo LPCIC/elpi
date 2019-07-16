@@ -17,36 +17,10 @@ type forall (typ -> typ) -> typ. % polymorphic type declarations
 type ctype string -> typ.
 
 % --------- utils  ---------------------------------------------------------
-% CAVEAT: this runs without any std library
-
-pred if i:prop, i:prop, i:prop.
-if B T _ :- B, !, T.
-if _ _ E :- E.
-
-pred mem i:list A, i:A.
-mem [X|_] X :- !.
-mem [_|L] X :- mem L X.
 
 pred mem-assoc i:list entry, i:term.
 mem-assoc [X `: _ | _] X :- !.
 mem-assoc [ _ | XS] X :- mem-assoc XS X.
-
-pred rev i:list A, o:list A.
-rev L RL  :- rev.aux L []  RL.
-rev.aux [X|XS] ACC R :- rev.aux XS [X|ACC] R.
-rev.aux [] L L.
-
-pred iter i:(A -> prop), i:list A.
-iter _ [].
-iter F [X | XS] :- F X, iter F XS.
-
-kind pair type -> type -> type.
-type pr   A -> B -> pair A B.
-pred fst  i:pair A B, o:A.
-fst (pr A _) A.
-
-pred snd  i:pair A B, o:B.
-snd (pr _ B) B.
 
 % --------- error reporting  ------------------------------------------------
 kind err type.
@@ -58,7 +32,7 @@ type assert prop -> err -> prop.
 type error list (pair (ctype "Loc.t") string) -> bool -> prop.
 
 :name "default-typechecking-error"
-error Msg tt :- iter (x\ sigma L M\ fst x L, snd x M, print L "Error:" M) Msg.
+error Msg tt :- std.forall Msg (x\ sigma L M\ fst x L, snd x M, print L "Error:" M).
 
 type warning (ctype "Loc.t") -> string -> prop.
 :name "default-typechecking-warning"
@@ -76,16 +50,16 @@ assert _ (wrong-arity T Ty A) :- !,
           " but is applied to " ^ {pp-list A},
   error [pr LOC MSG] _.
 
-stash-new E S :- open_safe E L, ( mem L S ; stash_in_safe E S ), !.
+stash-new E S :- open_safe E L, ( std.mem! L S ; stash_in_safe E S ), !.
 
 report-all-failures-if-no-success P RC :-
   new_safe E,
-  (((pi ML\ error ML _ :- !, iter (stash-new E) ML, fail) => P)
+  (((pi ML\ error ML _ :- !, std.forall ML (stash-new E), fail) => P)
    ;
    (error {open_safe E} RC)).
 report-all-failures-and-fail-if-no-success P RC :-
   new_safe E,
-  (((pi ML\ error ML _ :- !, iter (stash-new E) ML, fail) => P)
+  (((pi ML\ error ML _ :- !, std.forall ML (stash-new E), fail) => P)
    ;
    (error {open_safe E} RC, fail)).
 
@@ -117,22 +91,23 @@ ppt-list [] "".
 
 % --------- typing  -------------------------------------------------------
 
-mode (unif i i).
+pred unif i:typ, i:typ.
+unif A B :- (A = B ; rm-any-variadic A A1, rm-any-variadic B B1, A1 = B1), !.
 
-unif (tconst "any") _ :- !.
-unif _ (tconst "any") :- !.
-unif (tapp [tconst "variadic",_,X]) Y :- unif X Y.
-unif Y (tapp [tconst "variadic",_,X]) :- unif Y X.
-unif (tapp []) (tapp []).
-unif (tapp [X|L1]) (tapp [Y|L2]) :- unif X Y, unif (tapp L1) (tapp L2).
-unif (tconst X) (tconst X).
-unif (ctype X) (ctype X).
-unif prop prop.
-unif (arrow A1 B1) (arrow A2 B2) :- unif A1 A2, unif B1 B2.
-unif (uvar as X) Y :- X = Y.
-unif Y (uvar as X) :- X = Y.
+pred rm-any-variadic i:typ, o:typ.
+rm-any-variadic (tconst S as C) X :- !, if (S = "any") (X = FRESH_) (X = C).
+rm-any-variadic (tapp [tconst "variadic",_,X]) X1 :- !, rm-any-variadic X X1.
+rm-any-variadic (tapp L) (tapp L1) :- !, rm-any-variadic-list L L1.
+rm-any-variadic (ctype _ as X) X.
+rm-any-variadic prop prop.
+rm-any-variadic (arrow A1 B1) (arrow A2 B2) :- rm-any-variadic A1 A2, rm-any-variadic B1 B2.
+rm-any-variadic (uvar as X) X.
 
-mode (of i o).
+rm-any-variadic-list [] [].
+rm-any-variadic-list [X|XS] [Y|YS] :- rm-any-variadic X Y, rm-any-variadic-list XS YS.
+
+:index(2)
+pred of i:term, o:typ.
 
 of (cdata CData) Ty :-
   is_cdata CData (ctype CTy), !,
@@ -180,15 +155,19 @@ type checking (ctype "Loc.t") -> prop.
 log-tc-clause Loc Query :- !, print {counter "run"} "typecheck" Loc Query.
 log-tc-clause _ _.
 
-typecheck [] (clause Loc Names Query) RC :-
+
+typecheck P _ T0 NP RC :- D is {gettimeofday} - T0, D > 10.0, !,
+  print "[skipping" {std.length P} "clauses out of" NP "due to time limit]".
+
+typecheck [] (clause Loc Names Query) T0 _ RC :-
   log-tc-clause Loc Query,
   checking Loc =>
     report-all-failures-if-no-success (of-clause Names Query) RC.
-typecheck [ (clause Loc Names Clause) |Rest] Q RC :-
+typecheck [ (clause Loc Names Clause) | Rest] Q T0 NP RC :-
   log-tc-clause Loc Clause,
   checking Loc =>
     report-all-failures-if-no-success (of-clause Names Clause) RC, !,
-  typecheck Rest Q RC.
+  typecheck Rest Q T0 NP RC.
 
 mode (refresh i o).
 refresh (forall F) T :- !, refresh (F FRESH_) T.
@@ -208,8 +187,9 @@ collect-symbols-term (lam F) Known Acc Res :- !,
   pi x\ collect-symbols-term (F x) Known Acc Res.
 collect-symbols-term (arg F) Known Acc Res :- !,
   pi x\ collect-symbols-term (F x) Known Acc Res.
-collect-symbols-term (const _ as C) Known Acc Res :- !,
-  if (mem-assoc Known C; mem-assoc Acc C) (Res = Acc) (checking Loc, Res = [C `: Loc | Acc]).
+collect-symbols-term (const S) Known Acc Res :- !,
+  if (std.string.set.mem S Known ; std.string.map.mem S Acc) (Res = Acc)
+     (checking Loc, std.string.map.add S Loc Acc Res).
 
 collect-symbols-clause (clause Loc _ C) Known Acc Res :-
   checking Loc => collect-symbols-term C Known Acc Res.
@@ -235,17 +215,21 @@ pred str_concat i:list string, o:string.
 str_concat [] "".
 str_concat [S|SS] R :- str_concat SS RR, R is S ^ " " ^ RR.
 
-warn-undeclared Known ((const "main") `: _) :- !.
-warn-undeclared Known ((const S) `: _) :- rex_match ".*\\.aux" S, !.
-warn-undeclared Known ((const S) `: _) :- rex_match ".*\\.aux\\." S, !.
-warn-undeclared Known ((const S) `: LOC) :-
+warn-undeclared Known (pr ( "main") _) :- !.
+warn-undeclared Known (pr ( S) _) :- rex_match ".*\\.aux" S, !.
+warn-undeclared Known (pr ( S) _) :- rex_match ".*\\.aux\\." S, !.
+warn-undeclared Known (pr ( S) LOC) :-
   filter-similar Known S Hints,
   if (Hints = []) (H = "") (H is " Did you mean " ^ {str_concat Hints} ^ "?"),
   MSG is "constant " ^ S ^ " has no declared type." ^ H,
   warning LOC MSG.
 
 type (`:) term -> typ -> entry.
-type (`:) term -> ctype "Loc.t" -> entry.
+forall_uto10 [] _ _ :- !.
+forall_uto10 [X|XS] N P :- N < 10, !,
+  M is N + 1, P X, !, forall_uto10 XS M P.
+forall_uto10 L _ _  :- print "[suppressing" {std.length L} "warnings]".
+  
 
 under-decl-env [] P :- P.
 under-decl-env [ X `: PT | XS ] P :-
@@ -253,20 +237,30 @@ under-decl-env [ X `: PT | XS ] P :-
   (pi Ty\ of X Ty :- refresh PT Ty) => known X => under-decl-env XS P.
 
 under-undecl-env [] P :- P.
-under-undecl-env [ X `: _ | XS ] P :-
+under-undecl-env [ pr X _ | XS ] P :-
   %print "Assume" X PT,
-  (of X Ty_ :- !) => under-undecl-env XS P.
+  (of (const X) Ty_ :- !) => under-undecl-env XS P.
+
+add-known (const N `: _) S S1 :- std.string.set.add N S S1.
+
+:if "TIME:CHECKER"
+timing S P :- !, std.time P Time, print S Time.
+timing _ P :- P.
 
 typecheck-program P Q DeclaredTypes RC :-
   KnownTypes = [
     ((const "pi") `: forall x\ (arrow (arrow x prop) prop)),
     ((const "sigma") `: forall x\ (arrow (arrow x prop) prop)),
     ((const "discard") `: forall x\ x)|DeclaredTypes],
-  collect-symbols-program P KnownTypes [] TMP,
-  collect-symbols-clause Q KnownTypes TMP Undeclared,
-  iter (warn-undeclared KnownTypes) {rev Undeclared},
-  under-decl-env {rev KnownTypes}
-      (under-undecl-env Undeclared (typecheck P Q RC)).
+  timing "known set" (std.fold KnownTypes {std.string.set.empty} add-known Known),
+  timing "collect prog" (collect-symbols-program P Known {std.string.map.empty} TMP),
+  collect-symbols-clause Q Known TMP TMP1,
+  std.string.map.bindings TMP1 Undeclared,
+  forall_uto10 {std.rev Undeclared} 0 (warn-undeclared KnownTypes), !,
+  timing "typecheck "
+         (under-decl-env {std.rev KnownTypes}
+           (under-undecl-env Undeclared
+             (typecheck P Q {gettimeofday} {std.length P} RC))).
 
 % ---------- warnings ------------------------------------------------------
 
