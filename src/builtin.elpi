@@ -331,7 +331,7 @@ primitive? X S :- is_cdata X (ctype S).
 % [new_int N] unifies N with a different int every time it is called
 external pred new_int o:int.
 
-% Holds data across bracktracking
+% Holds data across bracktracking; can only contain closed terms
 macro @safe :- ctype "safe".
 
 
