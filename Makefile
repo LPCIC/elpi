@@ -16,7 +16,7 @@ help:
 INSTALL=_build/install/default
 BUILD=_build/default
 SHELL:=/bin/bash
-TIMEOUT=60.0
+TIMEOUT=90.0
 RUNNERS=\
   $(shell pwd)/$(INSTALL)/bin/elpi \
   $(addprefix $(shell pwd)/,$(wildcard elpi.git.*)) \
