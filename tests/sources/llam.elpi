@@ -1,6 +1,7 @@
 spy X :-  counter "run" N, print N "test " X, 
   not(not(X)).
 
+type test ((A -> A -> prop) -> B -> prop) -> B -> prop.
 test P T :-
   spy(P (x\y\x = y) F, F = T),
   spy(P (x\y\y = x) F, F = T),
@@ -13,6 +14,7 @@ clause (x\y\F y x) :- F = a\b\b.
 clause1 (x\y\x).
 clause2 (x\y\X x, F y (X x)) :- F = a\b\b.
 
+type r A -> B.
 prune_arg (r F).
 prune_arg2 (r (x\F x)).
 prune_arg3 (r (x\y\F y x)).

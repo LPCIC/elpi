@@ -1,3 +1,5 @@
+type transl A -> prop.
+
 transl (y \ _\ M y) :- % strip the hole
  P = (w \ p w),
  transl (z \ M (P z)).

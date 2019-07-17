@@ -43,7 +43,8 @@ end
 module Runner : sig
 
 type time = {
-  time : float;
+  execution : float;
+  typechecking : float;
   walltime : float;
   mem : int;
 }

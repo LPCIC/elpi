@@ -17,4 +17,10 @@ x x* y x+ z x* w.
 a x+ b x+ c x+ d x+ e.
 a x++ b x++ c x++ d x++ e.
 
+type a A.
+type d A.
+type (x+) A -> B -> C.
+type (y+) A -> B -> C.
+
 main :- print (a a x+ [b] y+ d), cd x+ d.
+

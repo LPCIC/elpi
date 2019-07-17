@@ -27,7 +27,7 @@ let tests = ref []
 
 let declare
     name ~description ?source_elpi ?source_teyjus ?(deps_teyjus=[])
-    ?(typecheck=false) ?input ?(expectation=Success)
+    ?(typecheck=true) ?input ?(expectation=Success)
     ?(outside_llam=false)
     ~category
     ()
@@ -69,7 +69,8 @@ end
 module Runner = struct
 
 type time = {
-  time : float;
+  execution : float;
+  typechecking : float;
   walltime : float;
   mem : int;
 }
@@ -243,6 +244,16 @@ let read_time input_line =
   done; !time
   with End_of_file -> !time
 
+let read_tctime input_line =
+  let time = ref 0.0 in
+  try while true do
+    let l = input_line () in
+    if Str.(string_match (regexp "^Typechecking time:") l 0) then
+      try time := float_of_string (String.sub l 18 (String.length l - 18))
+      with _ -> ()
+  done; !time
+  with End_of_file -> !time
+
 let () = Runner.declare
   ~applicable:begin fun ~executable { Test.source_elpi; _ } ->
     if is_elpi executable && source_elpi <> None then Runner.Can_run_it
@@ -271,13 +282,13 @@ let () = Runner.declare
     let rc =
       match expectation, Util.exec ~timeout ~timetool ?input ~executable ~env ~log ~args () with
       | Test.Success, Util.Exit(0,walltime,mem) ->
-        Runner.Success { walltime; time = Util.with_log log read_time; mem }
+        Runner.Success { walltime; typechecking = Util.with_log log read_tctime; execution = Util.with_log log read_time; mem }
       | Test.Failure, Util.Exit(0,walltime,mem) ->
-        Runner.Failure { walltime; time = Util.with_log log read_time; mem }
+        Runner.Failure { walltime; typechecking = Util.with_log log read_tctime; execution = Util.with_log log read_time; mem }
       | Test.Success, Util.Exit(_,walltime,mem) ->
-        Runner.Failure { walltime; time = walltime; mem }
+        Runner.Failure { walltime; typechecking = Util.with_log log read_tctime; execution = walltime; mem }
       | Test.Failure, Util.Exit(_,walltime,mem) ->
-        Runner.Success { walltime; time = Util.with_log log read_time; mem }
+        Runner.Success { walltime; typechecking = Util.with_log log read_tctime; execution = Util.with_log log read_time; mem }
       | Test.Success, Util.Timeout ->
         Runner.Timeout timeout
       | Test.Failure, Util.Timeout ->
@@ -345,13 +356,13 @@ let is_tjsim =
     let rc =
       match expectation, rc with
       | Test.Success, Util.Exit(0,walltime,mem) ->
-        Runner.Success { walltime; time = walltime; mem }
+        Runner.Success { walltime; typechecking = 0.0; execution = walltime; mem }
       | Test.Failure, Util.Exit(0,walltime,mem) ->
-        Runner.Failure { walltime; time = walltime; mem }
+        Runner.Failure { walltime; typechecking = 0.0; execution = walltime; mem }
       | Test.Success, Util.Exit(_,walltime,mem) ->
-        Runner.Failure { walltime; time = walltime; mem }
+        Runner.Failure { walltime; typechecking = 0.0; execution = walltime; mem }
       | Test.Failure, Util.Exit(_,walltime,mem) ->
-        Runner.Success { walltime; time = walltime; mem }
+        Runner.Success { walltime; typechecking = 0.0; execution = walltime; mem }
       | Test.Success, Util.Timeout ->
         Runner.Timeout timeout
       | Test.Failure, Util.Timeout ->

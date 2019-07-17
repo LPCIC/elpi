@@ -10,7 +10,7 @@ type p prop -> prop.
 type a prop.
 type b prop.
 type c prop.
-type d1, d2, d3, d11, d22, d33 foo -> prop.
+type d1, d2, d3, d11, d22, d33 prop -> prop.
 
 main :-
   p b => p a => p W, !, W = a,

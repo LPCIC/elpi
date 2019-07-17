@@ -168,10 +168,13 @@ let _ =
   let prog = API.Compile.program ~flags pheader [p] in
   let query = API.Compile.query prog g in
   if !typecheck then begin
-    if not (API.Compile.static_check ~flags pheader query) then begin
+    let t0 = Unix.gettimeofday () in
+    let b = API.Compile.static_check ~flags pheader query in
+    Format.eprintf "@\nTypechecking time: %5.3f@\n%!" (Unix.gettimeofday () -. t0);
+    if not b then begin
        Format.eprintf "Type error. To ignore it, pass -no-tc.\n";
        exit 1
-    end
+    end;
   end;
   if !print_lprolog then begin
     API.Pp.query Format.std_formatter query;

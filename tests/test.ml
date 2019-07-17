@@ -8,7 +8,7 @@ module Printer : sig
 
   type status = [ `OK | `KO | `SKIPPED | `TIMEOUT | `RUNNING ]
   val print :
-    executable:string -> name:string -> description:string -> float -> float -> int -> status -> unit
+    executable:string -> name:string -> description:string -> float -> float -> float -> int -> status -> unit
 
   val print_header :
     executables:string list -> seed:int -> timeout:float -> unit
@@ -24,28 +24,28 @@ open ANSITerminal
 
 type status = [ `OK | `KO | `SKIPPED | `TIMEOUT | `RUNNING ]
 let print_state col s = printf [col] "%-9s%!" s
-let print_timing name t1 t2 mem ex = printf [] "%-20s %6.2f %6.2f %6.1fM  %s%!" name t1 t2 (float_of_int mem /. 1024.0) ex
+let print_timing name t0 t1 t2 mem ex = printf [] "%-20s %6.2f %6.2f %6.2f %6.1fM  %s%!" name t0 t1 t2 (float_of_int mem /. 1024.0) ex
 let print_info name descr ex = printf [] "%-43s %s" (name ^" ("^descr^")") ex
 
-let print ~executable ~name ~description:descr t1 t2 mem = function
-  | `OK -> print_state green "OK"; print_timing name t1 t2 mem executable
+let print ~executable ~name ~description:descr t0 t1 t2 mem = function
+  | `OK -> print_state green "OK"; print_timing name t0 t1 t2 mem executable
   | `TIMEOUT -> print_state red "TIMEOUT"; print_info name descr executable
   | `KO -> print_state red "KO"; print_info name descr executable
   | `RUNNING -> print_state blue "RUNNING"; print_info name descr executable
   | `SKIPPED -> print_state yellow "SKIPPED"; print_info name descr executable
 
 let print_header ~executables ~seed ~timeout =
-  printf [blue] "-----------------------------------------------------------\n";
+  printf [blue] "------------------------------------------------------------------\n";
   printf [blue] "Runners:"; printf [] " %s\n" (String.concat " " executables);
   printf [blue] "Random seed:"; printf [] " %d\n" seed;
   printf [blue] "Timeout:"; printf [] " %.2f seconds\n" timeout;
   printf [blue] "\n";
-  printf [blue] "status   test                  time   wall   mem     runner\n";
-  printf [blue] "-----------------------------------------------------------\n";
+  printf [blue] "status   test                  time   typchk wall   mem     runner\n";
+  printf [blue] "------------------------------------------------------------------\n";
 ;;
 
 let print_summary ~total ~ok ~ko ~skipped =
-  printf [blue] "-----------------------------------------------------------\n";
+  printf [blue] "------------------------------------------------------------------\n";
   printf [blue] "Tests: "; printf [] "%d\n" total;
   printf [blue] "Passed: "; printf [] "%d\n" ok;
   printf [blue] "Failed: "; printf [] "%d\n" ko;
@@ -64,11 +64,11 @@ let print_file fname =
   | e -> printf [red] "Error reading %s: %s\n" fname (Printexc.to_string e)
 
 let print_log ~fname =
-  printf [red] "-----------------------------------------------------------\n";
+  printf [red] "------------------------------------------------------------------\n";
   printf [blue] "Log of the first failure: "; printf [] "%s\n" fname;
-  printf [red] "-----------------------------------------------------------\n";
+  printf [red] "------------------------------------------------------------------\n";
   print_file fname;
-  printf [red] "-----------------------------------------------------------\n";
+  printf [red] "------------------------------------------------------------------\n";
 
 end
 
@@ -77,18 +77,18 @@ let run timeout _seed sources env { Runner.run; test; executable }  =
   let { Test.name; description; _ } = test in
   let print = Printer.print ~executable:(Filename.basename executable) ~name ~description in
 
-  print 0.0 0.0 0 `RUNNING;
+  print 0.0 0.0 0.0 0 `RUNNING;
   ANSITerminal.move_bol ();
 
   let rc = match run ~timeout ~env ~sources with
-    | Runner.Skipped -> print 0.0 0.0 0 `SKIPPED; None
+    | Runner.Skipped -> print 0.0 0.0 0.0 0 `SKIPPED; None
     | Runner.Done ({ Runner.rc; _ } as x) ->
       begin match rc with
-        | Runner.Timeout timeout -> print timeout timeout 0 `TIMEOUT
-        | Runner.Failure { Runner.time; walltime; mem } ->
-            print time walltime mem `KO
-        | Runner.Success { Runner.time; walltime; mem } ->
-            print time walltime mem `OK
+        | Runner.Timeout timeout -> print timeout timeout timeout 0 `TIMEOUT
+        | Runner.Failure { Runner.execution; typechecking; walltime; mem } ->
+            print execution typechecking walltime mem `KO
+        | Runner.Success { Runner.execution; typechecking; walltime; mem } ->
+            print execution typechecking walltime mem `OK
       end;
       Some x
   in
@@ -104,9 +104,9 @@ let print_csv plot results =
           begin match rc with
           | Runner.Timeout _ -> ()
           | Runner.Failure _ -> ()
-          | Runner.Success { Runner.time; walltime; mem } ->
+          | Runner.Success { Runner.execution; walltime; mem; _ } -> (* TODO: print typechecking time *)
               Printf.fprintf oc "%s,%s,%f,%f,%d\n"
-                executable name time walltime mem
+                executable name execution walltime mem
           end
       | None -> ());
   close_out oc;
