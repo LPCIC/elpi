@@ -1,3 +1,23 @@
+## v1.6.0 (July 2019)
+
+- Builtin:
+  - `same_term` (infix `==`) for Prolog's non-logical comparison (without
+    instantiation).
+  - `set` and `map A` (`A` only allowed to be a closed term) on
+    `string`, `int` and `loc` keys.
+
+- Compiler:
+  - provide line number on error about duplicate mode declaration
+  - elpi-checker is faster and bails out after 10 seconds
+
+- FFI:
+  - allow `AlgebraicData` declarations to mix `M` and `MS` constructors
+  - `Conversion.t` for closed terms (no unification variable and no variables
+    bound by the program)
+
+- Tests:
+  - typecheck all tests and measure type checking time
+
 ## v1.5.2 (July 2019)
 
 - Test suite: ship elpi-quoted_syntax.elpi
