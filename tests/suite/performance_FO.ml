@@ -7,7 +7,7 @@ let declare = Test.declare
     ~category:(Filename.(chop_extension (basename __FILE__)))
 
 let () = declare "crypt"
-  ~source_elpi:"crypt.elpi"
+  ~source_elpi:"crypt.mod"
   ~source_teyjus:"crypt.mod"
   ~description:"standard Prolog benchmark"
   ()
@@ -25,7 +25,7 @@ let () = declare "rev14"
   ()
 
 let () = declare "mu"
-  ~source_elpi:"mu.elpi"
+  ~source_elpi:"mu.mod"
   ~source_teyjus:"mu.mod"
   ~description:"standard Prolog benchmark"
   () 
@@ -37,7 +37,7 @@ let () = declare "zebra"
   () 
 
 let () = declare "fast_mu"
-  ~source_elpi:"fast_mu.elpi"
+  ~source_elpi:"fast_mu.mod"
   ~source_teyjus:"fast_mu.mod"
   ~description:"standard Prolog benchmark"
   () 
