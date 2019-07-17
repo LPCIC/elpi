@@ -84,7 +84,6 @@ matrix:
     - opam install -j $JOBS -y $PREDEPS
     - opam install -j $JOBS -y $DEPS
     - dune build
-    - make tests
 
   - env: TEST="osx build $OCAML_MAX"
     os: osx
@@ -102,7 +101,6 @@ matrix:
     - opam install -j $JOBS -y $PREDEPS
     - opam install -j $JOBS -y $DEPS
     - dune build
-    - make tests
 
   - env: TEST="linux opam package installation"
     os: linux
