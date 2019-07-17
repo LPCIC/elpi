@@ -204,7 +204,7 @@ mode (under-env i i).
 type known term -> prop.
 
 similar S1 S2 :-
-  R is ".*\\." ^ S2,
+  R is ".*\\." ^ {rex_replace "[\\+\\*]" "." S2},
   rex_match R S1.
 
 filter-similar [] _ [].
