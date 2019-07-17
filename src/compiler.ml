@@ -315,7 +315,9 @@ end = struct (* {{{ *)
           aux blocks clauses (m::macros) types modes locals chr rest
       | Program.Type t :: rest ->
           let t = structure_type_attributes t in
-          aux blocks clauses macros (t::types) modes locals chr rest
+          let types =
+            if List.mem t types then types else t :: types in
+          aux blocks clauses macros types modes locals chr rest
       | Program.Mode ms :: rest ->
           aux blocks clauses macros types (ms @ modes) locals chr rest
       | Program.Local l :: rest ->
@@ -682,7 +684,8 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
       C.Map.add k v m)
     m2 m1
 
-  let merge_types t1 t2 = t1 @ t2
+  let merge_types t1 t2 =
+    t1 @ (List.filter (fun x -> not @@ List.mem x t1) t2)
 
   let rec toplevel_clausify loc ~depth state t =
     let state, cl = map_acc (pi2arg loc ~depth []) state (R.split_conj ~depth t) in
