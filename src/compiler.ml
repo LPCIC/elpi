@@ -1222,7 +1222,8 @@ end = struct (* {{{ *)
     let sp, term = spaux (0,[]) term in
     assert(List.length term = 1);
     let term = List.hd term in
-    assert(sp = []);
+    if (sp != []) then
+      error ~loc ("Spilling: could not place " ^ show_term (snd (List.hd sp)));
     !argmap, term
 
   let spill_presequent modes types loc pamap ({ pconclusion } as s) =
