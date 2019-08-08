@@ -773,6 +773,11 @@ module Utils = struct
 
   let map_acc = BuiltInData.map_acc
 
+  module type Show = Util.Show
+  module type Show1 = Util.Show1
+  module Map = Util.Map
+  module Set = Util.Set
+
 end
 
 module RawPp = struct

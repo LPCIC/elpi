@@ -1164,7 +1164,7 @@ any->string X Y :- term_to_string X Y.
 } % namespace std |};
 ]
 
-let export_set name (type a)
+let ocaml_set ~name (type a)
    (alpha : a Conversion.t) (module Set : Util.Set.S with type elt = a) =
  
 let set = OpaqueData.declare {
@@ -1230,7 +1230,7 @@ let open BuiltIn in let open BuiltInData in
 ] 
 ;;
 
-let export_map name (type a)
+let ocaml_map ~name (type a)
    (alpha : a Conversion.t) (module Map : Util.Map.S with type key = a) =
  
 let closed_A = BuiltInData.closed "A" in
@@ -1302,12 +1302,12 @@ module LocSet : Util.Set.S with type elt = Ast.Loc.t = Util.Set.Make(Ast.Loc)
 
 let elpi_stdlib =
   elpi_stdlib_src @
-  export_map "std.string.map" BuiltInData.string (module Util.StrMap) @ 
-  export_map "std.int.map" BuiltInData.int (module Util.IntMap) @ 
-  export_map "std.loc.map" BuiltInData.loc (module LocMap) @ 
-  export_set "std.string.set" BuiltInData.string (module Util.StrSet) @ 
-  export_set "std.int.set" BuiltInData.int (module Util.IntSet) @ 
-  export_set "std.loc.set" BuiltInData.loc (module LocSet) @ 
+  ocaml_map ~name:"std.string.map" BuiltInData.string (module Util.StrMap) @ 
+  ocaml_map ~name:"std.int.map"    BuiltInData.int    (module Util.IntMap) @ 
+  ocaml_map ~name:"std.loc.map"    BuiltInData.loc    (module LocMap) @ 
+  ocaml_set ~name:"std.string.set" BuiltInData.string (module Util.StrSet) @ 
+  ocaml_set ~name:"std.int.set"    BuiltInData.int    (module Util.IntSet) @ 
+  ocaml_set ~name:"std.loc.set"    BuiltInData.loc    (module LocSet) @ 
   []
 ;;
 
