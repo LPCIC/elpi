@@ -1185,33 +1185,71 @@ let open BuiltIn in let open BuiltInData in
   LPCode ("kind "^name^" type.");
 
   MLCode(Pred(name^".empty",
-    Out(set,"M",
+    Out(set,"A",
     Easy "The empty set"),
     (fun _ ~depth -> !: Set.empty)),
   DocAbove);
 
   MLCode(Pred(name^".mem",
-    In(alpha,"S",
-    In(set,"M",
-    Easy "Checks if S is in M")),
+    In(alpha,"Elem",
+    In(set,"A",
+    Easy "Checks if Elem is in a")),
     (fun s m ~depth ->
       if Set.mem s m then () else raise No_clause)),
   DocAbove);
 
   MLCode(Pred(name^".add",
-    In(alpha,"S",
-    In(set,"M",
-    Out(set,"M1",
-    Easy "M1 is M + V"))),
+    In(alpha,"Elem",
+    In(set,"A",
+    Out(set,"B",
+    Easy "B is A union {Elem}"))),
     (fun s m _ ~depth -> !: (Set.add s m))),
   DocAbove);
 
   MLCode(Pred(name^".remove",
-    In(alpha,"S",
-    In(set,"M",
-    Out(set,"M1",
-    Easy "M1 is M - V"))),
+    In(alpha,"Elem",
+    In(set,"A",
+    Out(set,"B",
+    Easy "B is A \ {Elem}"))),
     (fun s m _ ~depth -> !: (Set.remove s m))),
+  DocAbove);
+
+    MLCode(Pred(name^".union",
+    In(set,"A",
+    In(set,"B",
+    Out(set,"X",
+    Easy "X is A union B"))),
+    (fun a b _ ~depth -> !: (Set.union a b))),
+    DocAbove);
+
+   MLCode(Pred(name^".inter",
+    In(set,"A",
+    In(set,"B",
+    Out(set,"X",
+    Easy "X is A intersection B"))),
+    (fun a b _ ~depth -> !: (Set.inter a b))),
+  DocAbove);
+
+  MLCode(Pred(name^".diff",
+    In(set,"A",
+    In(set,"B",
+    Out(set,"X",
+    Easy "X is A \ B"))),
+    (fun a b _ ~depth -> !: (Set.diff a b))),
+  DocAbove);
+
+  MLCode(Pred(name^".equal",
+    In(set,"A",
+    In(set,"B",
+    Easy "tests A and B for equality")),
+    (fun a b ~depth -> if Set.equal a b then () else raise No_clause)),
+  DocAbove);
+
+  MLCode(Pred(name^".subset",
+    In(set,"A",
+    In(set,"B",
+    Easy "tests if A is a subset of B")),
+    (fun a b ~depth -> if Set.subset a b then () else raise No_clause)),
   DocAbove);
 
   MLCode(Pred(name^".elements",
