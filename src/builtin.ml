@@ -1281,7 +1281,7 @@ let open BuiltIn in let open BuiltInData in
     In(alpha,"S",
     In(map "A","M",
     Out(map "A","M1",
-    Easy "M1 is M where V is unbound"))),
+    Easy "M1 is M where S is unbound"))),
     (fun s m _ ~depth -> !: (Map.remove s m))),
   DocAbove);
 
