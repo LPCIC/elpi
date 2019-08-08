@@ -1277,6 +1277,14 @@ let open BuiltIn in let open BuiltInData in
     (fun s l m _ ~depth -> !: (Map.add s l m))),
   DocAbove);
 
+  MLCode(Pred(name^".remove",
+    In(alpha,"S",
+    In(map "A","M",
+    Out(map "A","M1",
+    Easy "M1 is M where V is unbound"))),
+    (fun s m _ ~depth -> !: (Map.remove s m))),
+  DocAbove);
+
   MLCode(Pred(name^".find",
     In(alpha,"S",
     In(map "A","M",
