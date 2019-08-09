@@ -21,3 +21,7 @@ let () = declare "random"
   ~description:"random numbers"
   ()
 
+let () = declare "findall"
+  ~source_elpi:"findall.elpi"
+  ~description:"stash across backtrack"
+  ()
