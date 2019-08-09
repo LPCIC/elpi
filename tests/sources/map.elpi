@@ -1,103 +1,29 @@
-% Take from OCaml's map.ml
-namespace map {
 
-kind t type -> type -> type.
-type map aux.map K V -> (K -> K -> prop) -> t K V.
-
-pred make i:(K -> K -> prop), o:t K V.
-make R (map aux.empty R).
-
-pred find i:t K V, i:K, o:V.
-find (map M R) K V :-
-  (pi x y\ aux.ltn x y :- !, R x y) => aux.find M K V.
-
-pred add i:t K V, i:K, i:V, o:t K V.
-add (map M R) K V (map M1 R) :-
-  (pi x y\ aux.ltn x y :- !, R x y) => aux.add M K V M1.
-
-pred height i:t K M, o:int.
-height (map M _) H :- aux.height M H.
-
-namespace aux {
-
-kind map type -> type -> type.
-type empty map K V.
-type node map K V -> K -> V -> map K V -> int -> map K V.
-
-pred ltn i:K, i:K.
-
-pred height i:map K V, o:int.
-height empty 0.
-height (node _ _ _ _ H) H.
-
-pred max i:int, i:int, o:int.
-max N M N :- N >= M, !.
-max _ M M.
-
-pred create i:map K V, i:K, i:V, i:map K V, o:map K V.
-create L K V R (node L K V R H) :- H is {max {height L} {height R}} + 1.
-
-pred bal i:map K V, i:K, i:V, i:map K V, o:map K V.
-bal L K V R T :-
-  height L HL,
-  height R HR,
-  HL2 is HL + 2,
-  HR2 is HR + 2,
-  bal.aux HL HR HL2 HR2 L K V R T.
-
-bal.aux HL _ _ HR2 (node LL LV LD LR _) X D R T :-
-  HL > HR2, {height LL} >= {height LR}, !,
-  create LL LV LD {create LR X D R} T.
-bal.aux HL _ _ HR2 (node LL LV LD (node LRL LRV LRD LRR _) _) X D R T :-
-  HL > HR2, !,
-  create {create LL LV LD LRL} LRV LRD {create LRR X D R} T.
-bal.aux _ HR HL2 _ L X D (node RL RV RD RR _) T :-
-  HR > HL2, {height RR} >= {height RL}, !,
-  create {create L X D RL} RV RD RR T.
-bal.aux _ HR HL2 _ L X D (node (node RLL RLV RLD RLR _) RV RD RR _) T :-
-  HR > HL2, !,
-  create {create L X D RLL} RLV RLD {create RLR RV RD RR} T.
-bal.aux _ _ _ _ L K V R T :- create L K V R T.
-
-pred add i:map K V, i:K, i:V, o:map K V.
-add empty K V T :- create empty K V empty T.
-add (node L X _ R H) X XD (node L X XD R H) :- !.
-add (node L V D R _) X XD T :- ltn X V, !,
-  bal {add L X XD} V D R T.
-add (node L V D R _) X XD T :-
-  bal L V D {add R X XD} T.
-
-pred find i:map K V, i:K, o:V.
-find (node _ K V _ _) K V :- !.
-find (node L K1 _ _ _) K V :- ltn K K1, !, find L K V.
-find (node _ _ _ R _) K V :- find R K V.
-
-}
-}
-
+pred build i:int, i:int, i:std.map int int, o:std.map int int.
 build N N X X :- !.
 build N M X X1 :-
   N1 is N + 1,
-  map.add X N N XR,
+  std.map.add N N X XR,
   build N1 M XR X1.
 
-pred test i:int, i:int, i:(A -> B -> B -> prop), i:A.
+pred test i:int, i:int, i:(B -> A -> B -> prop), i:A.
 test N N _ _ :- !.
 test N M F X :-
   N1 is N + 1,
-  std.assert! (F X N N) "not found",
+  std.assert! (F N X N) "not found",
   test N1 M F X.
 
-find-list [X|_] X X :- !.
-find-list [_|L] X R :- find-list L X R.
+pred test2 i:int, i:int, i:(B -> A -> A -> prop), i:A.
+test2 N N _ _ :- !.
+test2 N M F X :-
+  N1 is N + 1,
+  std.assert! (F N X X1) "not found",
+  test2 N1 M F X1.
 
-macro @iters :- 8196.
-macro @log_iters :- 16.
+macro @iters :- 4096.
 
 main :-
-  std.time (build 0 @iters {map.make (<)} T) Time0, !,
-  map.height T H, std.assert! (H < @log_iters) "not balanced", !,
-  std.time (test 0 @iters map.find T) Time1, !,
-  % std.time (std.iota @iters L) Time2,
-  % std.time (test 0 @iters find-list L) Time3, !,
-  print Time0 "+" Time1 "<" Time2 "+" Time3.
+  std.time (build 0 @iters {std.map.make (=) (<)} T) Time0, !,
+  std.time (test 0 @iters std.map.find T) Time1, !,
+  std.time (test2 0 @iters std.map.remove T) Time2, !,
+  print Time0 "+" Time1 "+" Time2.
