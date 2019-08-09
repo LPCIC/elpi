@@ -24,7 +24,11 @@ val elpi_nonlogical_builtins : declaration list
 (* Elpi stdlib *)
 val elpi_stdlib : declaration list
 
-(** Easy export of OCaml's Map/Set modules, use as
+(* Elpi datastructures *)
+val elpi_map : declaration list
+val elpi_set : declaration list
+
+(** Easy export of OCaml's Map/Set modules, use as follows:
    module StrMap = API.Utils.Map.Make(String)
    ocaml_map ~name:"strmap" BuiltInData.string (module StrMap) *)
 val ocaml_map :

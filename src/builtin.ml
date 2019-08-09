@@ -935,233 +935,8 @@ if _ _ E :- E.  |};
 
 let elpi_stdlib_src = let open BuiltIn in let open BuiltInData in [ 
 
-  LPCode {|
+  LPCode Builtin_stdlib.code
 
-% == stdlib =======================================================
-
-% Conventions:
-% - all predicates declare a mode with some input arguments, unless...
-% - predicates whose name ends with R are relations (work in any direction,
-%   that is all arguments are in ouput mode)
-% - predicates whose name ends with ! do contain a cut and generate only the
-%   first result
-% - all errors given by this library end up calling fatal-error[-w-data],
-%   override it in order to handle them differently
-% - all debug prints by this library end up calling debug-print, override it
-%   in order to handle them differently
-
-namespace std {
-
-pred fatal-error i:string.
-:name "default-fatal-error"
-fatal-error Msg :- halt Msg.
-
-pred fatal-error-w-data i:string, i:A.
-:name "default-fatal-error-w-data"
-fatal-error-w-data Msg Data :- halt Msg ":" Data.
-
-pred debug-print i:string, i:A.
-:name "default-debug-print"
-debug-print Msg Data :- print Msg Data.
-
-%  -- Errors, Debugging, Hacks --
-
-pred ignore-failure! i:prop.
-ignore-failure! P :- P, !.
-ignore-failure! _.
-
-% [assert! C M] takes the first success of C or fails with message M 
-pred assert! i:prop, i:string.
-assert! Cond Msg :- (Cond ; fatal-error-w-data Msg Cond), !.
-
-% [spy P] traces the call to P, printing all success and the final failure
-pred spy i:prop.
-spy P :- counter "run" NR, if (not(NR = 0)) (debug-print "run=" NR) true,
-         debug-print "----<<---- enter: " P,
-         P,
-         debug-print "---->>---- exit: " P.
-spy P :- debug-print "---->>---- fail: " P, fail.
-
-% [spy! P] traces the first call to P without leaving a choice point
-pred spy! i:prop.
-spy! P :- counter "run" NR, if (not(NR = 0)) (debug-print "run=" NR) true,
-         debug-print "----<<---- enter: " P,
-         P,
-         debug-print "---->>---- exit: " P, !.
-spy! P :- debug-print "---->>---- fail: " P, fail.
-
-% to silence the type checker
-pred unsafe-cast o:A, o:B.
-unsafe-cast X X.
-
-% -- List processing --
-
-pred length i:list A, o:int.
-length [_|L] N :- length L N1, N is N1 + 1.
-length []    0.
-
-pred rev i:list A, o:list A.
-rev L RL  :- rev.aux L []  RL.
-rev.aux [X|XS] ACC R :- rev.aux XS [X|ACC] R.
-rev.aux [] L L.
-
-pred last i:list A, o:A.
-last [] _ :- fatal-error "last on empty list".
-last [X] X :- !.
-last [_|XS] R :- last XS R.
-
-pred append i:list A, i:list A, o:list A.
-append [X|XS] L [X|L1] :- append XS L L1 .
-append [] L L .
-
-pred appendR o:list A, o:list A, o:list A.
-appendR [X|XS] L [X|L1] :- appendR XS L L1 .
-appendR [] L L .
-
-pred take i:int, i:list A, o:list A.
-take 0 _ [] :- !.
-take N [X|XS] [X|L] :- !, N1 is N - 1, take N1 XS L.
-take _ _ _ :- fatal-error "take run out of list items".
-
-pred drop i:int, i:list A, o:list A.
-drop 0 L L :- !.
-drop N [_|XS] L :- !, N1 is N - 1, drop N1 XS L.
-drop _ _ _ :- fatal-error "drop run out of list items".
-
-pred drop-last i:int, i:list A, o:list A.
-drop-last N L R :-
-  length L M, I is M - N, take I L R.
-
-pred split-at i:int, i:list A, o:list A, o:list A.
-split-at 0 L [] L :- !.
-split-at N [X|XS] [X|LN] LM :- !, N1 is N - 1, split-at N1 XS LN LM.
-split-at _ _ _ _ :- fatal-error "split-at run out of list items".
-
-pred fold i:list B, i:A, i:(B -> A -> A -> prop), o:A.
-fold [] A _ A.
-fold [X|XS] A F R :- F X A A1, fold XS A1 F R.
-
-pred fold2 i:list C, i:list B, i:A, i:(C -> B -> A -> A -> prop), o:A.
-fold2 [] [_|_] _ _ _ :- fatal-error "fold2 on lists of different length".
-fold2 [_|_] [] _ _ _ :- fatal-error "fold2 on lists of different length".
-fold2 [] [] A _ A.
-fold2 [X|XS] [Y|YS] A F R :- F X Y A A1, fold2 XS YS A1 F R.
-
-pred map i:list A, i:(A -> B -> prop), o:list B.
-map [] _ [].
-map [X|XS] F [Y|YS] :- F X Y, map XS F YS.
-
-pred map-i i:list A, i:(int -> A -> B -> prop), o:list B.
-map-i L F R :- map-i.aux L 0 F R.
-map-i.aux [] _ _ [].
-map-i.aux [X|XS] N F [Y|YS] :- F N X Y, M is N + 1, map-i.aux XS M F YS.
-
-:index(1 1)
-pred map2 i:list A, i:list B, i:(A -> B -> C -> prop), o:list C.
-map2 [] [_|_] _ _ :- fatal-error "map2 on lists of different length".
-map2 [_|_] [] _ _ :- fatal-error "map2 on lists of different length".
-map2 [] [] _ [].
-map2 [X|XS] [Y|YS] F [Z|ZS] :- F X Y Z, map2 XS YS F ZS.
-
-pred map2_filter i:list A, i:list B, i:(A -> B -> C -> prop), o:list C.
-map2_filter [] [_|_] _ _ :- fatal-error "map2_filter on lists of different length".
-map2_filter [_|_] [] _ _ :- fatal-error "map2_filter on lists of different length".
-map2_filter [] [] _ [].
-map2_filter [X|XS] [Y|YS] F [Z|ZS] :- F X Y Z, !, map2_filter XS YS F ZS.
-map2_filter [_|XS] [_|YS] F ZS :- map2_filter XS YS F ZS.
-
-% [nth N L X] picks in X the N-th element of L (L must be of length > N)
-pred nth i:int, i:list A, o:A.
-nth 0 [X|_] X :- !.
-nth N [_|XS] R :- !, N1 is N - 1, nth N1 XS R.
-nth _ _ _ :- fatal-error "nth run out of list items".
-
-% [lookup L K V] sees L as a map from K to V
-pred lookup i:list (pair A B), i:A, o:B.
-lookup [pr X Y|_] X Y.
-lookup [_|LS]       X Y :- lookup LS X Y.
-
-% [lookup! L K V] sees L as a map from K to V, stops at the first binding
-pred lookup! i:list (pair A B), i:A, o:B.
-lookup! [pr X Y|_] X Y :- !.
-lookup! [_|LS]       X Y :- lookup! LS X Y.
-
-% [mem! L X] succeeds once if X occurs inside L 
-pred mem! i:list A, o:A.
-mem! [X|_] X :- !.
-mem! [_|L] X :- mem! L X.
-
-% [mem L X] succeeds every time if X occurs inside L 
-pred mem i:list A, o:A.
-mem [X|_] X.
-mem [_|L] X :- mem L X.
-
-
-pred exists i:list A, i:(A -> prop).
-exists [X|_] P :- P X.
-exists [_|L] P :- exists L P.
-
-pred exists2 i:list A, i:list B, i:(A -> B -> prop).
-exists2 [] [_|_] _ :- fatal-error "exists2 on lists of different length".
-exists2 [_|_] [] _ :- fatal-error "exists2 on lists of different length".
-exists2 [X|_] [Y|_] P :- P X Y.
-exists2 [_|L] [_|M] P :- exists2 L M P.
-
-pred forall i:list A, i:(A -> prop).
-forall [] _.
-forall [X|L] P :- P X, forall L P.
-
-pred forall2 i:list A, i:list B, i:(A -> B -> prop).
-forall2 [] [_|_] _ :- fatal-error "forall2 on lists of different length".
-forall2 [_|_] [] _ :- fatal-error "forall2 on lists of different length".
-forall2 [X|XS] [Y|YS] P :- P X Y, forall2 XS YS P.
-forall2 [] [] _.
-
-pred filter i:list A, i:(A -> prop), o:list A.
-filter []    _ [].
-filter [X|L] P R :- if (P X) (R = X :: L1) (R = L1), filter L P L1.
-
-pred zip i:list A, i:list B, o:list (pair A B).
-zip [_|_] [] _ :- fatal-error "zip on lists of different length".
-zip [] [_|_] _ :- fatal-error "zip on lists of different length".
-zip [X|LX] [Y|LY] [pr X Y|LR] :- zip LX LY LR.
-zip [] [] [].
-
-pred unzip i:list (pair A B), o:list A, o:list B.
-unzip [] [] [].
-unzip [pr X Y|L] [X|LX] [Y|LY] :- unzip L LX LY.
-
-pred flatten i:list (list A), o:list A.
-flatten [X|LS] R :- flatten LS LS', append X LS' R.
-flatten []     [].
-
-pred null i:list A.
-null [].
-
-pred iota i:int, o:list int.
-iota N L :- iota.aux 0 N L.
-iota.aux X X [] :- !.
-iota.aux N X [N|R] :- M is N + 1, iota.aux M X R.
-
-%  -- Misc --
-
-pred flip i:(A -> B -> prop), i:B, i:A.
-flip P X Y :- P Y X.
-
-pred time i:prop, o:float.
-time P T :- gettimeofday Before, P, gettimeofday After, T is After - Before.
-
-pred do! i:list prop.
-do! [].
-do! [P|PS] :- P, !, do! PS.
-
-pred spy-do! i:list prop.
-spy-do! L :- map L (x\y\y = spy x) L1, do! L1.
-
-pred any->string i:A, o:string.
-any->string X Y :- term_to_string X Y.
-
-} % namespace std |};
 ]
 
 let ocaml_set ~name (type a)
@@ -1185,33 +960,71 @@ let open BuiltIn in let open BuiltInData in
   LPCode ("kind "^name^" type.");
 
   MLCode(Pred(name^".empty",
-    Out(set,"M",
+    Out(set,"A",
     Easy "The empty set"),
     (fun _ ~depth -> !: Set.empty)),
   DocAbove);
 
   MLCode(Pred(name^".mem",
-    In(alpha,"S",
-    In(set,"M",
-    Easy "Checks if S is in M")),
+    In(alpha,"Elem",
+    In(set,"A",
+    Easy "Checks if Elem is in a")),
     (fun s m ~depth ->
       if Set.mem s m then () else raise No_clause)),
   DocAbove);
 
   MLCode(Pred(name^".add",
-    In(alpha,"S",
-    In(set,"M",
-    Out(set,"M1",
-    Easy "M1 is M + V"))),
+    In(alpha,"Elem",
+    In(set,"A",
+    Out(set,"B",
+    Easy "B is A union {Elem}"))),
     (fun s m _ ~depth -> !: (Set.add s m))),
   DocAbove);
 
   MLCode(Pred(name^".remove",
-    In(alpha,"S",
-    In(set,"M",
-    Out(set,"M1",
-    Easy "M1 is M - V"))),
+    In(alpha,"Elem",
+    In(set,"A",
+    Out(set,"B",
+    Easy "B is A \ {Elem}"))),
     (fun s m _ ~depth -> !: (Set.remove s m))),
+  DocAbove);
+
+    MLCode(Pred(name^".union",
+    In(set,"A",
+    In(set,"B",
+    Out(set,"X",
+    Easy "X is A union B"))),
+    (fun a b _ ~depth -> !: (Set.union a b))),
+    DocAbove);
+
+   MLCode(Pred(name^".inter",
+    In(set,"A",
+    In(set,"B",
+    Out(set,"X",
+    Easy "X is A intersection B"))),
+    (fun a b _ ~depth -> !: (Set.inter a b))),
+  DocAbove);
+
+  MLCode(Pred(name^".diff",
+    In(set,"A",
+    In(set,"B",
+    Out(set,"X",
+    Easy "X is A \ B"))),
+    (fun a b _ ~depth -> !: (Set.diff a b))),
+  DocAbove);
+
+  MLCode(Pred(name^".equal",
+    In(set,"A",
+    In(set,"B",
+    Easy "tests A and B for equality")),
+    (fun a b ~depth -> if Set.equal a b then () else raise No_clause)),
+  DocAbove);
+
+  MLCode(Pred(name^".subset",
+    In(set,"A",
+    In(set,"B",
+    Easy "tests if A is a subset of B")),
+    (fun a b ~depth -> if Set.subset a b then () else raise No_clause)),
   DocAbove);
 
   MLCode(Pred(name^".elements",
@@ -1308,6 +1121,19 @@ let open BuiltIn in let open BuiltInData in
 module LocMap : Util.Map.S with type key = Ast.Loc.t = Util.Map.Make(Ast.Loc)
 module LocSet : Util.Set.S with type elt = Ast.Loc.t = Util.Set.Make(Ast.Loc)
 
+let elpi_map =  let open BuiltIn in let open BuiltInData in [
+  
+    LPCode Builtin_map.code
+    
+]
+
+let elpi_set =  let open BuiltIn in let open BuiltInData in [
+  
+    LPCode Builtin_set.code
+    
+]
+
+
 let elpi_stdlib =
   elpi_stdlib_src @
   ocaml_map ~name:"std.string.map" BuiltInData.string (module Util.StrMap) @ 
@@ -1315,12 +1141,12 @@ let elpi_stdlib =
   ocaml_map ~name:"std.loc.map"    BuiltInData.loc    (module LocMap) @ 
   ocaml_set ~name:"std.string.set" BuiltInData.string (module Util.StrSet) @ 
   ocaml_set ~name:"std.int.set"    BuiltInData.int    (module Util.IntSet) @ 
-  ocaml_set ~name:"std.loc.set"    BuiltInData.loc    (module LocSet) @ 
+  ocaml_set ~name:"std.loc.set"    BuiltInData.loc    (module LocSet) @
   []
 ;;
 
 let std_declarations =
-  core_builtins @ io_builtins @ lp_builtins @ elpi_builtins @ elpi_nonlogical_builtins @ elpi_stdlib
+  core_builtins @ io_builtins @ lp_builtins @ elpi_builtins @ elpi_nonlogical_builtins @ elpi_stdlib @ elpi_map @ elpi_set
 
 let std_builtins =
   BuiltIn.declare ~file_name:"builtin.elpi" std_declarations

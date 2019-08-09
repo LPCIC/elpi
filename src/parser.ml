@@ -625,7 +625,8 @@ EXTEND
         List.map (fun (p,x) -> prefix ^ "." ^ p, x) (List.flatten l)
   ]];
   decl :
-    [[ COLON; cattributes = clause_attributes; RULE; r = chrrule; FULLSTOP ->
+    [[ pragma -> []
+     | COLON; cattributes = clause_attributes; RULE; r = chrrule; FULLSTOP ->
        let cattributes = cattributes |> List.map (function
           | Clause.Name s -> Chr.Name s
           | Clause.If c -> Chr.If c
@@ -669,7 +670,6 @@ EXTEND
                  attributes = [Type.External];
                  name = n;
                  ty = t }]
-     | pragma -> []
      | LCURLY -> [Program.Begin (of_ploc loc)]
      | RCURLY -> [Program.End (of_ploc loc)]
      | MODE; m = LIST1 mode SEP SYMBOL ","; FULLSTOP -> [Program.Mode m]

@@ -1,0 +1,114 @@
+kind std.set type -> type.
+type std.set std.set.private.set E -> (E -> E -> prop) -> (E -> E -> prop) -> std.set E.
+
+namespace std.set {
+
+% [make Eq Ltn M] builds an empty set M where keys are compared using Eq and Ltn
+pred make i:(E -> E -> prop), i:(E -> E -> prop), o:std.set E.
+make Req Rltn (std.set private.empty Req Rltn).
+
+% [mem E M] looks if E is in M
+pred mem i:E, i:std.set E.
+mem E (std.set M Req Rltn):-
+  (pi x y\ private.eq x y :- !, Req x y) =>
+  (pi x y\ private.ltn x y :- !, Rltn x y) =>
+  private.mem M E.
+
+% [add E M M1] M1 is M + {E}
+pred add i:E, i:std.set E, o:std.set E.
+add E (std.set M Req Rltn) (std.set M1 Req Rltn) :-
+  (pi x y\ private.eq x y :- !, Req x y) =>
+  (pi x y\ private.ltn x y :- !, Rltn x y) =>
+  private.add M E M1.
+
+% [remove E M M1] M1 is M - {E}
+pred remove i:E, i:std.set E, o:std.set E.
+remove E (std.set M Req Rltn) (std.set M1 Req Rltn) :-
+  (pi x y\ private.eq x y :- !, Req x y) =>
+  (pi x y\ private.ltn x y :- !, Rltn x y) =>
+  private.remove M E M1.
+
+% [cardinal S N] N is the number of elements of S
+pred cardinal i:std.set E, o:int.
+cardinal (std.set M _ _) N :- private.cardinal M N.
+
+namespace private {
+
+% These are provided by the constructor
+pred ltn i:E, i:E.
+pred eq i:E, i:E.
+
+% Taken from OCaml's set.ml
+kind set type -> type.
+type empty set E.
+type node set E -> E -> set E -> int -> set E.
+
+pred height i:set E, o:int.
+height empty 0.
+height (node _ _ _ H) H.
+
+pred create i:set E, i:E, i:set E, o:set E.
+create L E R (node L E R H) :- H is {std.max {height L} {height R}} + 1.
+
+pred bal i:set E, i:E, i:set E, o:set E.
+bal L E R T :-
+  height L HL,
+  height R HR,
+  HL2 is HL + 2,
+  HR2 is HR + 2,
+  bal.aux HL HR HL2 HR2 L E R T.
+
+bal.aux HL _ _ HR2 (node LL LV LR _) X R T :-
+  HL > HR2, {height LL} >= {height LR}, !,
+  create LL LV {create LR X R} T.
+bal.aux HL _ _ HR2 (node LL LV (node LRL LRV LRR _) _) X R T :-
+  HL > HR2, !,
+  create {create LL LV LRL} LRV {create LRR X R} T.
+bal.aux _ HR HL2 _ L X (node RL RV RR _) T :-
+  HR > HL2, {height RR} >= {height RL}, !,
+  create {create L X RL} RV RR T.
+bal.aux _ HR HL2 _ L X (node (node RLL RLV RLR _) RV RR _) T :-
+  HR > HL2, !,
+  create {create L X RLL} RLV {create RLR RV RR} T.
+bal.aux _ _ _ _ L E R T :- create L E R T.
+
+pred add i:set E, i:E, o:set E.
+add empty E T :- create empty E empty T.
+add (node L X R H) X1 (node L X1 R H) :- eq X X1, !.
+add (node L E R _) X T :- ltn X E, !,
+  bal {add L X} E R T.
+add (node L E R _) X T :-
+  bal L E {add R X} T.
+
+pred mem i:set E, i:E.
+mem (node _ K _ _) E :- eq K E, !.
+mem (node L K _ _) E :- ltn E K, !, mem L E.
+mem (node _ _ R _) E :- mem R E.
+
+pred remove-min-binding i:set E, o:set E.
+remove-min-binding (node empty _ R _) R :- !.
+remove-min-binding (node L E R _) X :- bal {remove-min-binding L} E R X.
+
+pred min-binding i:set E, o:E.
+min-binding (node empty E _ _) E :- !.
+min-binding (node L _ _ _) E :- min-binding L E.
+
+pred merge i:set E, i:set E, o:set E.
+merge empty X X :- !.
+merge X empty X :- !.
+merge M1 M2 R :-
+  min-binding M2 X,
+  bal M1 X {remove-min-binding M2} R.
+
+pred remove i:set E, i:E, o:set E.
+remove empty _ empty :- !.
+remove (node L E R _) X M :- eq E X, !, merge L R M.
+remove (node L E R _) X M :- ltn X E, !, bal {remove L X} E R M.
+remove (node L E R _) X M :- bal L E {remove R X} M.
+
+pred cardinal i:set E, o:int.
+cardinal empty 0.
+cardinal (node L _ R _) N :- N is {cardinal L} + 1 + {cardinal R}.
+
+} % std.set.private
+} % std.set

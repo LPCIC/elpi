@@ -64,5 +64,10 @@ let () = declare "deep_index"
 
 let () = declare "map"
   ~source_elpi:"map.elpi"
-  ~description:"balanced tree"
+  ~description:"stdlib map"
+  ()
+  
+let () = declare "set"
+  ~source_elpi:"set.elpi"
+  ~description:"stdlib set"
   ()
