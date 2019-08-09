@@ -590,7 +590,7 @@ max N M N :- N >= M, !.
 max _ M M.
 
 % [findall P L] L is the list [P1,P2,P3..] where each Pi is a solution to P.
-% Solutions must be ground (no unification variables).
+% Solutions must be closed (no unification variables nor eigenvariables).
 pred findall i:prop, o:list prop.
 findall P L :- new_safe F, findall.aux P F, open_safe F L.
 findall.aux P F :- P, stash_in_safe F P, fail.
