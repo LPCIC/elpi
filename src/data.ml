@@ -35,7 +35,205 @@ open Util
  *
  *)
 
-module Term = struct
+module Term : sig
+
+type constant = int
+[@@deriving show, eq]
+
+val id_term : UUID.t
+type term =
+  (* Pure terms *)
+  | Const of constant
+  | Lam of term
+  | App of constant * term * term list
+  (* Optimizations *)
+  | Cons of term * term
+  | Nil
+  | Discard
+  (* FFI *)
+  | Builtin of constant * term list
+  | CData of CData.t
+  (* Heap terms: unif variables in the query *)
+  | UVar of uvar_body * (*depth:*)int * (*argsno:*)int
+  | AppUVar of uvar_body * (*depth:*)int * term list
+  (* Clause terms: unif variables used in clauses *)
+  | Arg of (*id:*)int * (*argsno:*)int
+  | AppArg of (*id*)int * term list
+and uvar_body = {
+  mutable contents : term;
+  mutable rest : stuck_goal list;
+}
+and stuck_goal = {
+  mutable blockers : blockers;
+  kind : stuck_goal_kind;
+}
+and blockers = uvar_body list
+and stuck_goal_kind =
+ | Constraint of constraint_def
+ | Unification of unification_def 
+and unification_def = {
+  adepth : int;
+  env : term array;
+  bdepth : int;
+  a : term;
+  b : term;
+  matching: bool;
+}
+and constraint_def = {
+  cdepth : int;
+  prog : prolog_prog [@equal fun _ _ -> true]
+               [@printer (fun fmt _ -> Fmt.fprintf fmt "<prolog_prog>")];
+  context : clause_src list;
+  conclusion : term;
+}
+and clause_src = { hdepth : int; hsrc : term }
+and prolog_prog = {
+  src : clause_src list; (* hypothetical context in original form, for CHR *)
+  index : index;
+}
+and index = second_lvl_idx Ptmap.t
+and second_lvl_idx =
+| TwoLevelIndex of {
+    mode : mode;
+    argno : int; 
+    all_clauses : clause list;         (* when the query is flexible *)
+    flex_arg_clauses : clause list;       (* when the query is rigid but arg_id ha nothing *)
+    arg_idx : clause list Ptmap.t;   (* when the query is rigid (includes in each binding flex_arg_clauses) *)
+  }
+| BitHash of {
+    mode : mode;
+    args : int list;
+    time : int; (* time is used to recover the total order *)
+    args_idx : (clause * int) list Ptmap.t; (* clause, insertion time *)
+  }
+and clause = {
+    depth : int;
+    args : term list;
+    hyps : term list;
+    vars : int;
+    mode : mode; (* CACHE to avoid allocation in get_clause *)
+}
+and mode = bool list (* true=input, false=output *)
+[@@deriving show, eq]
+
+val mkLam : term -> term [@@inline]
+val mkApp : constant -> term -> term list -> term [@@inline]
+val mkCons : term -> term -> term [@@inline]
+val mkNil : term [@@inline]
+val mkDiscard : term [@@inline]
+val mkBuiltin : constant -> term list -> term [@@inline]
+val mkCData : CData.t -> term [@@inline]
+val mkUVar : uvar_body -> int -> int -> term [@@inline]
+val mkAppUVar : uvar_body -> int -> term list -> term [@@inline]
+val mkArg : int -> int -> term [@@inline]
+val mkAppArg : int -> term list -> term [@@inline]
+val mkConst : constant -> term [@@inline]
+
+val mkAppL : constant -> term list -> term [@@inline]
+val mkAppS : string -> term -> term list -> term [@@inline]
+val mkAppSL : string -> term list -> term [@@inline]
+
+module C : sig
+
+  val int : int CData.cdata
+  val is_int : CData.t -> bool
+  val to_int : CData.t -> int
+  val of_int : int -> term
+
+  val float : float CData.cdata
+  val is_float : CData.t -> bool
+  val to_float : CData.t -> float
+  val of_float : float -> term
+  
+  val string : string CData.cdata
+  val is_string : CData.t -> bool
+  val to_string : CData.t -> string
+  val of_string : string -> term
+
+  val loc : Util.Loc.t CData.cdata
+  val is_loc : CData.t -> bool
+  val to_loc : CData.t -> Util.Loc.t
+  val of_loc : Util.Loc.t -> term
+
+end
+
+val destConst : term -> constant
+
+(* Our ref data type: creation and dereference.  Assignment is defined
+   After the constraint store, since assigning may wake up some constraints *)
+val oref : term -> uvar_body
+val (!!) : uvar_body -> term
+val pp_oref : (UUID.t * Obj.t) Util.extensible_printer
+
+(* Arg/AppArg point to environments, here the empty one *)
+type env = term array
+val empty_env : env
+
+(* - negative constants are global names
+   - constants are hashconsed (terms)
+   - we use special constants to represent !, pi, sigma *)
+module Constants : sig
+
+  val funct_of_ast : F.t -> constant * term
+  val mkConst : constant -> term
+  val show : constant -> string
+  val pp : Fmt.formatter -> constant -> unit
+  val fresh : unit -> constant * term
+  val from_string : string -> term
+  val from_stringc : string -> constant
+ 
+  (* To keep the type of terms small, we use special constants for !, =, pi.. *)
+  (* {{{ *)
+  val cutc     : constant
+  val truec    : term
+  val andc     : constant
+  val andt     : term
+  val andc2    : constant
+  val orc      : constant
+  val implc    : constant
+  val rimplc   : constant
+  val rimpl    : term
+  val pic      : constant
+  val pi       : term
+  val sigmac   : constant
+  val eqc      : constant
+  val rulec    : constant
+  val cons     : term
+  val consc    : constant
+  val nil      : term
+  val nilc     : constant
+  val entailsc : constant
+  val nablac   : constant
+  val asc      : constant
+  val arrowc   : constant
+  val uvarc    : constant
+
+  val ctypec   : constant
+  val prop     : term
+  val variadic : constant
+  val any      : term
+
+  val spillc   : constant
+
+  val declare_constraintc : constant
+  val print_constraintsc  : constant
+  (* }}} *)
+
+  (* Value for unassigned UVar/Arg *)
+  val dummy  : term
+
+  type t = constant
+  val compare : t -> t -> int
+
+  module Map : Map.S with type key = t
+  module Set : Set.S with type elt = t
+
+  (* mkinterval d n 0 = [d; ...; d+n-1] *)
+  val mkinterval : int -> int -> int -> term list
+
+end
+
+end = struct
 
 (* Used by pretty printers, to be later instantiated in module Constants *)
 let pp_const = mk_extensible_printer ()
@@ -122,11 +320,6 @@ and clause = {
 }
 and mode = bool list (* true=input, false=output *)
 [@@deriving show, eq]
-
-type indexing =
-  | MapOn of int
-  | Hash of int list
-[@@deriving show]
 
 let mkLam x = Lam x [@@inline]
 let mkApp c x xs = App(c,x,xs) [@@inline]
@@ -355,6 +548,11 @@ let mkAppSL s args = mkAppL (Constants.from_stringc s) args [@@inline]
 
 end
 include Term
+
+type indexing =
+  | MapOn of int
+  | Hash of int list
+[@@deriving show]
 
 (* Object oriented state: borns at compilation time and survives as run time *)
 module State : sig
