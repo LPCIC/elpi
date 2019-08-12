@@ -361,8 +361,7 @@ external pred random.self_init .
 % (excluded)
 external pred random.int i:int, o:int.
 
-
-
+#line 0 "builtin_stdlib.elpi"
 % == stdlib =======================================================
 
 % Conventions:
@@ -522,7 +521,6 @@ pred mem i:list A, o:A.
 mem [X|_] X.
 mem [_|L] X :- mem L X.
 
-
 pred exists i:list A, i:(A -> prop).
 exists [X|_] P :- P X.
 exists [_|L] P :- exists L P.
@@ -587,7 +585,18 @@ spy-do! L :- map L (x\y\y = spy x) L1, do! L1.
 pred any->string i:A, o:string.
 any->string X Y :- term_to_string X Y.
 
-} % namespace std 
+pred max i:A, i:A, o:A.
+max N M N :- N >= M, !.
+max _ M M.
+
+% [findall P L] L is the list [P1,P2,P3..] where each Pi is a solution to P.
+% Solutions must be closed (no unification variables nor eigenvariables).
+pred findall i:prop, o:list prop.
+findall P L :- new_safe F, findall.aux P F, open_safe F L.
+findall.aux P F :- P, stash_in_safe F P, fail.
+findall.aux _ _.
+
+}
 
 % CAVEAT: the type parameter of std.string.map must be a closed term
 
@@ -602,6 +611,10 @@ external pred std.string.map.mem i:string, i:std.string.map A.
 % [std.string.map.add S V M M1] M1 is M where V is bound to S
 external pred std.string.map.add i:string, i:A, i:std.string.map A, 
                                  o:std.string.map A.
+
+% [std.string.map.remove S M M1] M1 is M where S is unbound
+external pred std.string.map.remove i:string, i:std.string.map A, 
+                                    o:std.string.map A.
 
 % [std.string.map.find S M V] V is the binding of S in M
 external pred std.string.map.find i:string, i:std.string.map A, o:A.
@@ -624,6 +637,9 @@ external pred std.int.map.mem i:int, i:std.int.map A.
 external pred std.int.map.add i:int, i:A, i:std.int.map A, 
                               o:std.int.map A.
 
+% [std.int.map.remove S M M1] M1 is M where S is unbound
+external pred std.int.map.remove i:int, i:std.int.map A, o:std.int.map A.
+
 % [std.int.map.find S M V] V is the binding of S in M
 external pred std.int.map.find i:int, i:std.int.map A, o:A.
 
@@ -644,6 +660,9 @@ external pred std.loc.map.mem i:@loc, i:std.loc.map A.
 external pred std.loc.map.add i:@loc, i:A, i:std.loc.map A, 
                               o:std.loc.map A.
 
+% [std.loc.map.remove S M M1] M1 is M where S is unbound
+external pred std.loc.map.remove i:@loc, i:std.loc.map A, o:std.loc.map A.
+
 % [std.loc.map.find S M V] V is the binding of S in M
 external pred std.loc.map.find i:@loc, i:std.loc.map A, o:A.
 
@@ -652,19 +671,37 @@ external pred std.loc.map.bindings i:std.loc.map A, o:list (pair @loc A).
 
 kind std.string.set type.
 
-% [std.string.set.empty M] The empty set
+% [std.string.set.empty A] The empty set
 external pred std.string.set.empty o:std.string.set.
 
-% [std.string.set.mem S M] Checks if S is in M
+% [std.string.set.mem Elem A] Checks if Elem is in a
 external pred std.string.set.mem i:string, i:std.string.set.
 
-% [std.string.set.add S M M1] M1 is M + V
+% [std.string.set.add Elem A B] B is A union {Elem}
 external pred std.string.set.add i:string, i:std.string.set, 
                                  o:std.string.set.
 
-% [std.string.set.remove S M M1] M1 is M - V
+% [std.string.set.remove Elem A B] B is A  {Elem}
 external pred std.string.set.remove i:string, i:std.string.set, 
                                     o:std.string.set.
+
+% [std.string.set.union A B X] X is A union B
+external pred std.string.set.union i:std.string.set, i:std.string.set, 
+                                   o:std.string.set.
+
+% [std.string.set.inter A B X] X is A intersection B
+external pred std.string.set.inter i:std.string.set, i:std.string.set, 
+                                   o:std.string.set.
+
+% [std.string.set.diff A B X] X is A  B
+external pred std.string.set.diff i:std.string.set, i:std.string.set, 
+                                  o:std.string.set.
+
+% [std.string.set.equal A B] tests A and B for equality
+external pred std.string.set.equal i:std.string.set, i:std.string.set.
+
+% [std.string.set.subset A B] tests if A is a subset of B
+external pred std.string.set.subset i:std.string.set, i:std.string.set.
 
 % [std.string.set.elements M L] L is M transformed into list
 external pred std.string.set.elements i:std.string.set, o:list string.
@@ -674,17 +711,35 @@ external pred std.string.set.cardinal i:std.string.set, o:int.
 
 kind std.int.set type.
 
-% [std.int.set.empty M] The empty set
+% [std.int.set.empty A] The empty set
 external pred std.int.set.empty o:std.int.set.
 
-% [std.int.set.mem S M] Checks if S is in M
+% [std.int.set.mem Elem A] Checks if Elem is in a
 external pred std.int.set.mem i:int, i:std.int.set.
 
-% [std.int.set.add S M M1] M1 is M + V
+% [std.int.set.add Elem A B] B is A union {Elem}
 external pred std.int.set.add i:int, i:std.int.set, o:std.int.set.
 
-% [std.int.set.remove S M M1] M1 is M - V
+% [std.int.set.remove Elem A B] B is A  {Elem}
 external pred std.int.set.remove i:int, i:std.int.set, o:std.int.set.
+
+% [std.int.set.union A B X] X is A union B
+external pred std.int.set.union i:std.int.set, i:std.int.set, 
+                                o:std.int.set.
+
+% [std.int.set.inter A B X] X is A intersection B
+external pred std.int.set.inter i:std.int.set, i:std.int.set, 
+                                o:std.int.set.
+
+% [std.int.set.diff A B X] X is A  B
+external pred std.int.set.diff i:std.int.set, i:std.int.set, 
+                               o:std.int.set.
+
+% [std.int.set.equal A B] tests A and B for equality
+external pred std.int.set.equal i:std.int.set, i:std.int.set.
+
+% [std.int.set.subset A B] tests if A is a subset of B
+external pred std.int.set.subset i:std.int.set, i:std.int.set.
 
 % [std.int.set.elements M L] L is M transformed into list
 external pred std.int.set.elements i:std.int.set, o:list int.
@@ -694,23 +749,267 @@ external pred std.int.set.cardinal i:std.int.set, o:int.
 
 kind std.loc.set type.
 
-% [std.loc.set.empty M] The empty set
+% [std.loc.set.empty A] The empty set
 external pred std.loc.set.empty o:std.loc.set.
 
-% [std.loc.set.mem S M] Checks if S is in M
+% [std.loc.set.mem Elem A] Checks if Elem is in a
 external pred std.loc.set.mem i:@loc, i:std.loc.set.
 
-% [std.loc.set.add S M M1] M1 is M + V
+% [std.loc.set.add Elem A B] B is A union {Elem}
 external pred std.loc.set.add i:@loc, i:std.loc.set, o:std.loc.set.
 
-% [std.loc.set.remove S M M1] M1 is M - V
+% [std.loc.set.remove Elem A B] B is A  {Elem}
 external pred std.loc.set.remove i:@loc, i:std.loc.set, o:std.loc.set.
+
+% [std.loc.set.union A B X] X is A union B
+external pred std.loc.set.union i:std.loc.set, i:std.loc.set, 
+                                o:std.loc.set.
+
+% [std.loc.set.inter A B X] X is A intersection B
+external pred std.loc.set.inter i:std.loc.set, i:std.loc.set, 
+                                o:std.loc.set.
+
+% [std.loc.set.diff A B X] X is A  B
+external pred std.loc.set.diff i:std.loc.set, i:std.loc.set, 
+                               o:std.loc.set.
+
+% [std.loc.set.equal A B] tests A and B for equality
+external pred std.loc.set.equal i:std.loc.set, i:std.loc.set.
+
+% [std.loc.set.subset A B] tests if A is a subset of B
+external pred std.loc.set.subset i:std.loc.set, i:std.loc.set.
 
 % [std.loc.set.elements M L] L is M transformed into list
 external pred std.loc.set.elements i:std.loc.set, o:list @loc.
 
 % [std.loc.set.cardinal M N] N is the number of elements of M
 external pred std.loc.set.cardinal i:std.loc.set, o:int.
+
+#line 0 "builtin_map.elpi"
+kind std.map type -> type -> type.
+type std.map std.map.private.map K V -> (K -> K -> prop) -> (K -> K -> prop) -> std.map K V.
+
+namespace std.map {
+
+% [make Eq Ltn M] builds an empty map M where keys are compared using Eq and Ltn
+pred make i:(K -> K -> prop), i:(K -> K -> prop), o:std.map K V.
+make Req Rltn (std.map private.empty Req Rltn).
+
+% [find K M V] looks in M for the value V associated to K
+pred find i:K, i:std.map K V, o:V.
+find K (std.map M Req Rltn) V :-
+  (pi x y\ private.eq x y :- !, Req x y) =>
+  (pi x y\ private.ltn x y :- !, Rltn x y) =>
+  private.find M K V.
+
+% [add K V M M1] M1 is M where K is bound to V
+pred add i:K, i:V, i:std.map K V, o:std.map K V.
+add K V (std.map M Req Rltn) (std.map M1 Req Rltn) :-
+  (pi x y\ private.eq x y :- !, Req x y) =>
+  (pi x y\ private.ltn x y :- !, Rltn x y) =>
+  private.add M K V M1.
+
+% [remove K M M1] M1 is M where K is unbound
+pred remove i:K, i:std.map K V, o:std.map K V.
+remove K (std.map M Req Rltn) (std.map M1 Req Rltn) :-
+  (pi x y\ private.eq x y :- !, Req x y) =>
+  (pi x y\ private.ltn x y :- !, Rltn x y) =>
+  private.remove M K M1.
+
+namespace private {
+
+% These are provided by the constructor
+pred ltn i:K, i:K.
+pred eq i:K, i:K.
+
+% Taken from OCaml's map.ml
+kind map type -> type -> type.
+type empty map K V.
+type node map K V -> K -> V -> map K V -> int -> map K V.
+
+pred height i:map K V, o:int.
+height empty 0.
+height (node _ _ _ _ H) H.
+
+pred create i:map K V, i:K, i:V, i:map K V, o:map K V.
+create L K V R (node L K V R H) :- H is {std.max {height L} {height R}} + 1.
+
+pred bal i:map K V, i:K, i:V, i:map K V, o:map K V.
+bal L K V R T :-
+  height L HL,
+  height R HR,
+  HL2 is HL + 2,
+  HR2 is HR + 2,
+  bal.aux HL HR HL2 HR2 L K V R T.
+
+bal.aux HL _ _ HR2 (node LL LV LD LR _) X D R T :-
+  HL > HR2, {height LL} >= {height LR}, !,
+  create LL LV LD {create LR X D R} T.
+bal.aux HL _ _ HR2 (node LL LV LD (node LRL LRV LRD LRR _) _) X D R T :-
+  HL > HR2, !,
+  create {create LL LV LD LRL} LRV LRD {create LRR X D R} T.
+bal.aux _ HR HL2 _ L X D (node RL RV RD RR _) T :-
+  HR > HL2, {height RR} >= {height RL}, !,
+  create {create L X D RL} RV RD RR T.
+bal.aux _ HR HL2 _ L X D (node (node RLL RLV RLD RLR _) RV RD RR _) T :-
+  HR > HL2, !,
+  create {create L X D RLL} RLV RLD {create RLR RV RD RR} T.
+bal.aux _ _ _ _ L K V R T :- create L K V R T.
+
+pred add i:map K V, i:K, i:V, o:map K V.
+add empty K V T :- create empty K V empty T.
+add (node L X _ R H) X1 XD (node L X1 XD R H) :- eq X X1, !.
+add (node L V D R _) X XD T :- ltn X V, !,
+  bal {add L X XD} V D R T.
+add (node L V D R _) X XD T :-
+  bal L V D {add R X XD} T.
+
+pred find i:map K V, i:K, o:V.
+find (node _ K1 V _ _) K V :- eq K1 K, !.
+find (node L K1 _ _ _) K V :- ltn K K1, !, find L K V.
+find (node _ _ _ R _) K V :- find R K V.
+
+pred remove-min-binding i:map K V, o:map K V.
+remove-min-binding (node empty _ _ R _) R :- !.
+remove-min-binding (node L V D R _) X :- bal {remove-min-binding L} V D R X.
+
+pred min-binding i:map K V, o:K, o:V.
+min-binding (node empty V D _ _) V D :- !.
+min-binding (node L _ _ _ _) V D :- min-binding L V D.
+
+pred merge i:map K V, i:map K V, o:map K V.
+merge empty X X :- !.
+merge X empty X :- !.
+merge M1 M2 R :-
+  min-binding M2 X D,
+  bal M1 X D {remove-min-binding M2} R.
+
+pred remove i:map K V, i:K, o:map K V.
+remove empty _ empty :- !.
+remove (node L V _ R _) X M :- eq V X, !, merge L R M.
+remove (node L V D R _) X M :- ltn X V, !, bal {remove L X} V D R M.
+remove (node L V D R _) X M :- bal L V D {remove R X} M.
+
+} % std.map.private
+} % std.map
+
+
+#line 0 "builtin_set.elpi"
+kind std.set type -> type.
+type std.set std.set.private.set E -> (E -> E -> prop) -> (E -> E -> prop) -> std.set E.
+
+namespace std.set {
+
+% [make Eq Ltn M] builds an empty set M where keys are compared using Eq and Ltn
+pred make i:(E -> E -> prop), i:(E -> E -> prop), o:std.set E.
+make Req Rltn (std.set private.empty Req Rltn).
+
+% [mem E M] looks if E is in M
+pred mem i:E, i:std.set E.
+mem E (std.set M Req Rltn):-
+  (pi x y\ private.eq x y :- !, Req x y) =>
+  (pi x y\ private.ltn x y :- !, Rltn x y) =>
+  private.mem M E.
+
+% [add E M M1] M1 is M + {E}
+pred add i:E, i:std.set E, o:std.set E.
+add E (std.set M Req Rltn) (std.set M1 Req Rltn) :-
+  (pi x y\ private.eq x y :- !, Req x y) =>
+  (pi x y\ private.ltn x y :- !, Rltn x y) =>
+  private.add M E M1.
+
+% [remove E M M1] M1 is M - {E}
+pred remove i:E, i:std.set E, o:std.set E.
+remove E (std.set M Req Rltn) (std.set M1 Req Rltn) :-
+  (pi x y\ private.eq x y :- !, Req x y) =>
+  (pi x y\ private.ltn x y :- !, Rltn x y) =>
+  private.remove M E M1.
+
+% [cardinal S N] N is the number of elements of S
+pred cardinal i:std.set E, o:int.
+cardinal (std.set M _ _) N :- private.cardinal M N.
+
+namespace private {
+
+% These are provided by the constructor
+pred ltn i:E, i:E.
+pred eq i:E, i:E.
+
+% Taken from OCaml's set.ml
+kind set type -> type.
+type empty set E.
+type node set E -> E -> set E -> int -> set E.
+
+pred height i:set E, o:int.
+height empty 0.
+height (node _ _ _ H) H.
+
+pred create i:set E, i:E, i:set E, o:set E.
+create L E R (node L E R H) :- H is {std.max {height L} {height R}} + 1.
+
+pred bal i:set E, i:E, i:set E, o:set E.
+bal L E R T :-
+  height L HL,
+  height R HR,
+  HL2 is HL + 2,
+  HR2 is HR + 2,
+  bal.aux HL HR HL2 HR2 L E R T.
+
+bal.aux HL _ _ HR2 (node LL LV LR _) X R T :-
+  HL > HR2, {height LL} >= {height LR}, !,
+  create LL LV {create LR X R} T.
+bal.aux HL _ _ HR2 (node LL LV (node LRL LRV LRR _) _) X R T :-
+  HL > HR2, !,
+  create {create LL LV LRL} LRV {create LRR X R} T.
+bal.aux _ HR HL2 _ L X (node RL RV RR _) T :-
+  HR > HL2, {height RR} >= {height RL}, !,
+  create {create L X RL} RV RR T.
+bal.aux _ HR HL2 _ L X (node (node RLL RLV RLR _) RV RR _) T :-
+  HR > HL2, !,
+  create {create L X RLL} RLV {create RLR RV RR} T.
+bal.aux _ _ _ _ L E R T :- create L E R T.
+
+pred add i:set E, i:E, o:set E.
+add empty E T :- create empty E empty T.
+add (node L X R H) X1 (node L X1 R H) :- eq X X1, !.
+add (node L E R _) X T :- ltn X E, !,
+  bal {add L X} E R T.
+add (node L E R _) X T :-
+  bal L E {add R X} T.
+
+pred mem i:set E, i:E.
+mem (node _ K _ _) E :- eq K E, !.
+mem (node L K _ _) E :- ltn E K, !, mem L E.
+mem (node _ _ R _) E :- mem R E.
+
+pred remove-min-binding i:set E, o:set E.
+remove-min-binding (node empty _ R _) R :- !.
+remove-min-binding (node L E R _) X :- bal {remove-min-binding L} E R X.
+
+pred min-binding i:set E, o:E.
+min-binding (node empty E _ _) E :- !.
+min-binding (node L _ _ _) E :- min-binding L E.
+
+pred merge i:set E, i:set E, o:set E.
+merge empty X X :- !.
+merge X empty X :- !.
+merge M1 M2 R :-
+  min-binding M2 X,
+  bal M1 X {remove-min-binding M2} R.
+
+pred remove i:set E, i:E, o:set E.
+remove empty _ empty :- !.
+remove (node L E R _) X M :- eq E X, !, merge L R M.
+remove (node L E R _) X M :- ltn X E, !, bal {remove L X} E R M.
+remove (node L E R _) X M :- bal L E {remove R X} M.
+
+pred cardinal i:set E, o:int.
+cardinal empty 0.
+cardinal (node L _ R _) N :- N is {cardinal L} + 1 + {cardinal R}.
+
+} % std.set.private
+} % std.set
+
 
 
 

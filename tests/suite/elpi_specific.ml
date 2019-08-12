@@ -177,3 +177,10 @@ let () = declare "same_term"
   ~typecheck:true
   ~expectation:Test.Success
   ()
+
+let () = declare "list_comma"
+  ~source_elpi:"list_comma.elpi"
+  ~description:"lists with spurious , in there"
+  ~typecheck:true
+  ~expectation:Test.Success
+  ()

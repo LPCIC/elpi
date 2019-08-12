@@ -625,7 +625,8 @@ EXTEND
         List.map (fun (p,x) -> prefix ^ "." ^ p, x) (List.flatten l)
   ]];
   decl :
-    [[ COLON; cattributes = clause_attributes; RULE; r = chrrule; FULLSTOP ->
+    [[ pragma -> []
+     | COLON; cattributes = clause_attributes; RULE; r = chrrule; FULLSTOP ->
        let cattributes = cattributes |> List.map (function
           | Clause.Name s -> Chr.Name s
           | Clause.If c -> Chr.If c
@@ -669,7 +670,6 @@ EXTEND
                  attributes = [Type.External];
                  name = n;
                  ty = t }]
-     | pragma -> []
      | LCURLY -> [Program.Begin (of_ploc loc)]
      | RCURLY -> [Program.End (of_ploc loc)]
      | MODE; m = LIST1 mode SEP SYMBOL ","; FULLSTOP -> [Program.Mode m]
@@ -771,9 +771,15 @@ EXTEND
            Warning: keep the hard-coded constant in sync with
            the list_element_prec below :-(
         *)
-      | LBRACKET; xs = LIST0 atom LEVEL "120" SEP SYMBOL ",";
+      | LBRACKET; xs_holes = LIST0 [ a = atom LEVEL "120" -> Some a | -> None ] SEP SYMBOL ",";
           tl = OPT [ PIPE; x = atom LEVEL "1" -> x ]; RBRACKET ->
           let tl = match tl with None -> mkNil | Some x -> x in
+          let xs = Util.map_filter (fun x -> x) xs_holes in
+          if List.length xs_holes > List.length xs + 1 then
+            raise (Token.Error ("List with more , than elements"));
+          if List.length xs_holes = List.length xs + 1 &&
+             List.hd (List.rev xs_holes) <> None then
+            raise (Token.Error ("List with ,, (no element between commas)"));
           if List.length xs = 0 && tl <> mkNil then 
             raise (Token.Error ("List with no elements cannot have a tail"));
           if List.length xs = 0 then mkNil

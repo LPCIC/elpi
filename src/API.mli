@@ -935,6 +935,49 @@ module Utils : sig
     (State.t -> 't -> State.t * 'a * Conversion.extra_goals) ->
     State.t -> 't list -> State.t * 'a list * Conversion.extra_goals
 
+  module type Show = sig
+    type t
+    val pp : Format.formatter -> t -> unit
+    val show : t -> string
+  end
+
+  module type Show1 = sig
+    type 'a t
+    val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+    val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
+  end
+
+  module Map : sig
+    module type S = sig
+      include Map.S
+      include Show1 with type 'a t := 'a t
+    end
+    
+    module type OrderedType = sig
+      include Map.OrderedType
+      include Show with type t := t
+    end
+
+    module Make (Ord : OrderedType) : S with type key = Ord.t
+
+  end
+
+  module Set : sig
+
+    module type S = sig
+      include Set.S
+      include Show with type t := t
+    end
+    
+    module type OrderedType = sig
+      include Set.OrderedType
+      include Show with type t := t
+    end
+
+    module Make (Ord : OrderedType) : S with type elt = Ord.t
+
+  end
+
 end
         
 module RawPp : sig

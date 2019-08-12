@@ -1,0 +1,4 @@
+main :-
+  L1 = [1,2,3,],
+  L2 = [1,2,3],
+  std.length L1 = std.length L2.

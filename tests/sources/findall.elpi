@@ -1,0 +1,6 @@
+pred p o:int, o:int.
+p 1 1.
+p 1 2.
+p 2 2.
+
+main :- std.findall (p A B) [p 1 1, p 1 2, p 2 2].

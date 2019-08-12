@@ -1,0 +1,29 @@
+
+pred build i:int, i:int, i:std.map int int, o:std.map int int.
+build N N X X :- !.
+build N M X X1 :-
+  N1 is N + 1,
+  std.map.add N N X XR,
+  build N1 M XR X1.
+
+pred test i:int, i:int, i:(B -> A -> B -> prop), i:A.
+test N N _ _ :- !.
+test N M F X :-
+  N1 is N + 1,
+  std.assert! (F N X N) "not found",
+  test N1 M F X.
+
+pred test2 i:int, i:int, i:(B -> A -> A -> prop), i:A.
+test2 N N _ _ :- !.
+test2 N M F X :-
+  N1 is N + 1,
+  std.assert! (F N X X1) "not found",
+  test2 N1 M F X1.
+
+macro @iters :- 4096.
+
+main :-
+  std.time (build 0 @iters {std.map.make (=) (<)} T) Time0, !,
+  std.time (test 0 @iters std.map.find T) Time1, !,
+  std.time (test2 0 @iters std.map.remove T) Time2, !,
+  print Time0 "+" Time1 "+" Time2.

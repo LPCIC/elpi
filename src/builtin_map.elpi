@@ -1,0 +1,106 @@
+kind std.map type -> type -> type.
+type std.map std.map.private.map K V -> (K -> K -> prop) -> (K -> K -> prop) -> std.map K V.
+
+namespace std.map {
+
+% [make Eq Ltn M] builds an empty map M where keys are compared using Eq and Ltn
+pred make i:(K -> K -> prop), i:(K -> K -> prop), o:std.map K V.
+make Req Rltn (std.map private.empty Req Rltn).
+
+% [find K M V] looks in M for the value V associated to K
+pred find i:K, i:std.map K V, o:V.
+find K (std.map M Req Rltn) V :-
+  (pi x y\ private.eq x y :- !, Req x y) =>
+  (pi x y\ private.ltn x y :- !, Rltn x y) =>
+  private.find M K V.
+
+% [add K V M M1] M1 is M where K is bound to V
+pred add i:K, i:V, i:std.map K V, o:std.map K V.
+add K V (std.map M Req Rltn) (std.map M1 Req Rltn) :-
+  (pi x y\ private.eq x y :- !, Req x y) =>
+  (pi x y\ private.ltn x y :- !, Rltn x y) =>
+  private.add M K V M1.
+
+% [remove K M M1] M1 is M where K is unbound
+pred remove i:K, i:std.map K V, o:std.map K V.
+remove K (std.map M Req Rltn) (std.map M1 Req Rltn) :-
+  (pi x y\ private.eq x y :- !, Req x y) =>
+  (pi x y\ private.ltn x y :- !, Rltn x y) =>
+  private.remove M K M1.
+
+namespace private {
+
+% These are provided by the constructor
+pred ltn i:K, i:K.
+pred eq i:K, i:K.
+
+% Taken from OCaml's map.ml
+kind map type -> type -> type.
+type empty map K V.
+type node map K V -> K -> V -> map K V -> int -> map K V.
+
+pred height i:map K V, o:int.
+height empty 0.
+height (node _ _ _ _ H) H.
+
+pred create i:map K V, i:K, i:V, i:map K V, o:map K V.
+create L K V R (node L K V R H) :- H is {std.max {height L} {height R}} + 1.
+
+pred bal i:map K V, i:K, i:V, i:map K V, o:map K V.
+bal L K V R T :-
+  height L HL,
+  height R HR,
+  HL2 is HL + 2,
+  HR2 is HR + 2,
+  bal.aux HL HR HL2 HR2 L K V R T.
+
+bal.aux HL _ _ HR2 (node LL LV LD LR _) X D R T :-
+  HL > HR2, {height LL} >= {height LR}, !,
+  create LL LV LD {create LR X D R} T.
+bal.aux HL _ _ HR2 (node LL LV LD (node LRL LRV LRD LRR _) _) X D R T :-
+  HL > HR2, !,
+  create {create LL LV LD LRL} LRV LRD {create LRR X D R} T.
+bal.aux _ HR HL2 _ L X D (node RL RV RD RR _) T :-
+  HR > HL2, {height RR} >= {height RL}, !,
+  create {create L X D RL} RV RD RR T.
+bal.aux _ HR HL2 _ L X D (node (node RLL RLV RLD RLR _) RV RD RR _) T :-
+  HR > HL2, !,
+  create {create L X D RLL} RLV RLD {create RLR RV RD RR} T.
+bal.aux _ _ _ _ L K V R T :- create L K V R T.
+
+pred add i:map K V, i:K, i:V, o:map K V.
+add empty K V T :- create empty K V empty T.
+add (node L X _ R H) X1 XD (node L X1 XD R H) :- eq X X1, !.
+add (node L V D R _) X XD T :- ltn X V, !,
+  bal {add L X XD} V D R T.
+add (node L V D R _) X XD T :-
+  bal L V D {add R X XD} T.
+
+pred find i:map K V, i:K, o:V.
+find (node _ K1 V _ _) K V :- eq K1 K, !.
+find (node L K1 _ _ _) K V :- ltn K K1, !, find L K V.
+find (node _ _ _ R _) K V :- find R K V.
+
+pred remove-min-binding i:map K V, o:map K V.
+remove-min-binding (node empty _ _ R _) R :- !.
+remove-min-binding (node L V D R _) X :- bal {remove-min-binding L} V D R X.
+
+pred min-binding i:map K V, o:K, o:V.
+min-binding (node empty V D _ _) V D :- !.
+min-binding (node L _ _ _ _) V D :- min-binding L V D.
+
+pred merge i:map K V, i:map K V, o:map K V.
+merge empty X X :- !.
+merge X empty X :- !.
+merge M1 M2 R :-
+  min-binding M2 X D,
+  bal M1 X D {remove-min-binding M2} R.
+
+pred remove i:map K V, i:K, o:map K V.
+remove empty _ empty :- !.
+remove (node L V _ R _) X M :- eq V X, !, merge L R M.
+remove (node L V D R _) X M :- ltn X V, !, bal {remove L X} V D R M.
+remove (node L V D R _) X M :- bal L V D {remove R X} M.
+
+} % std.map.private
+} % std.map

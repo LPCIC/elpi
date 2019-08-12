@@ -9,14 +9,30 @@
     ))
   (libraries re.str camlp5.gramlib unix)
   (flags -linkall)
-  (modules elpi util parser ast compiler data ptmap builtin API runtime_trace_on runtime_trace_off)
-  (private_modules util parser ast compiler data ptmap runtime_trace_on runtime_trace_off)
+  (modules elpi util parser ast compiler data ptmap builtin builtin_stdlib builtin_map builtin_set API runtime_trace_on runtime_trace_off)
+  (private_modules util parser ast compiler data ptmap builtin_stdlib builtin_map builtin_set runtime_trace_on runtime_trace_off )
 )
 
 (rule (copy# runtime.ml runtime_trace_on.ml))
 (rule (copy# runtime.ml runtime_trace_off.ml))
 (rule (copy# runtime.mli runtime_trace_on.mli))
 (rule (copy# runtime.mli runtime_trace_off.mli))
+(rule (with-stdout-to builtin_stdlib.ml (progn
+  (echo "let code = {code|#line 0 \"builtin_stdlib.elpi\"\n")
+  (cat builtin_stdlib.elpi)
+  (echo "|code};;")
+)))
+(rule (with-stdout-to builtin_map.ml (progn
+  (echo "let code = {code|#line 0 \"builtin_map.elpi\"\n")
+  (cat builtin_map.elpi)
+  (echo "|code};;")
+)))
+(rule (with-stdout-to builtin_set.ml (progn
+  (echo "let code = {code|#line 0 \"builtin_set.elpi\"\n")
+  (cat builtin_set.elpi)
+  (echo "|code};;")
+)))
+
 
 (install
   (section lib)
