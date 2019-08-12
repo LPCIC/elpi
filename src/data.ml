@@ -41,7 +41,7 @@ type constant = int
 [@@deriving show, eq]
 
 val id_term : UUID.t
-type term =
+type term = private
   (* Pure terms *)
   | Const of constant
   | Lam of term
@@ -161,8 +161,8 @@ val destConst : term -> constant
 
 (* Our ref data type: creation and dereference.  Assignment is defined
    After the constraint store, since assigning may wake up some constraints *)
-val oref : term -> uvar_body
-val (!!) : uvar_body -> term
+val oref : term -> uvar_body [@@inline]
+val (!!) : uvar_body -> term [@@inline]
 val pp_oref : (UUID.t * Obj.t) Util.extensible_printer
 
 (* Arg/AppArg point to environments, here the empty one *)
@@ -364,8 +364,8 @@ let destConst = function Const x -> x | _ -> assert false
 
 (* Our ref data type: creation and dereference.  Assignment is defined
    After the constraint store, since assigning may wake up some constraints *)
-let oref x = { contents = x; rest = [] }
-let (!!) { contents = x } = x
+let oref x = { contents = x; rest = [] } [@@inline]
+let (!!) { contents = x } = x [@@inline]
 
 (* Arg/AppArg point to environments, here the empty one *)
 type env = term array

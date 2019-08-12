@@ -208,7 +208,7 @@ module RawOpaqueData = struct
   =
   let ty = Conversion.TyName name in
   let embed ~depth:_ _ _ state x =
-    state, ED.Term.CData (cin x), [] in
+    state, ED.Term.mkCData (cin x), [] in
   let readback ~depth _ _ state t =
     let module R = (val !r) in let open R in
     match R.deref_head ~depth t with
@@ -451,7 +451,7 @@ module RawData = struct
     | x -> Obj.magic x (* HACK: view is a "subtype" of Term.term *)
 
   let kool = function
-    | UnifVar({ lvl; handle = Ref ub},args) -> ED.Term.AppUVar(ub,lvl,args)
+    | UnifVar({ lvl; handle = Ref ub},args) -> ED.Term.mkAppUVar ub lvl args
     | UnifVar({ lvl; handle = Arg _},_) -> assert false
     | x -> Obj.magic x
   [@@ inline]

@@ -121,7 +121,7 @@ let xppterm ~nice ?(min_prec=min_prec) depth0 names argsdepth env f t =
       let prefix,last = flat_cons_to_list depth [] t in
       Fmt.fprintf f "[" ;
       pplist ~boxed:true (aux Parser.list_element_prec depth) ", " f prefix ;
-      if last != Nil then begin
+      if last != mkNil then begin
        Fmt.fprintf f " | " ;
        aux prec 1 f last
       end;   
@@ -447,7 +447,7 @@ let print =
       pp_ctx pdiff
       (pp_goal depth) g
       (pplist (uppterm 0 [] 0 empty_env) ", ")
-        (List.map (fun r -> UVar(r,0,0)) blockers)
+        (List.map (fun r -> mkUVar r 0 0) blockers)
   ) " "
 
 let pp_stuck_goal fmt { kind; blockers } = match kind with
@@ -457,7 +457,7 @@ let pp_stuck_goal fmt { kind; blockers } = match kind with
         ad (uppterm ad [] 0 empty_env) a
         bd (uppterm ad [] ad e) b
           (pplist ~boxed:false (uppterm 0 [] 0 empty_env) ", ")
-            (List.map (fun r -> UVar(r,0,0)) blockers)
+            (List.map (fun r -> mkUVar r 0 0) blockers)
    | Constraint c -> print fmt [c,blockers]
 
 end (* }}} *)
@@ -585,18 +585,18 @@ let occurr_check r1 r2 =
   | Some r1 -> if r1 == r2 then raise RestrictionFailure
 
 let rec make_lambdas destdepth args =
- if args = 0 then let x = UVar(oref C.dummy,destdepth,0) in x,x
- else let x,y = make_lambdas (destdepth+1) (args-1) in Lam x, y
+ if args = 0 then let x = mkUVar (oref C.dummy) destdepth 0 in x,x
+ else let x,y = make_lambdas (destdepth+1) (args-1) in mkLam x, y
 
-let rec mknLam n x = if n = 0 then x else Lam (mknLam (n-1) x)
+let rec mknLam n x = if n = 0 then x else mkLam (mknLam (n-1) x)
 
 let mkAppUVar r lvl l =
-  try UVar(r,lvl,in_fragment lvl l)
-  with NotInTheFragment -> AppUVar(r,lvl,l)
+  try mkUVar r lvl (in_fragment lvl l)
+  with NotInTheFragment -> mkAppUVar r lvl l
 
 let mkAppArg i fromdepth xxs' =
-  try Arg(i,in_fragment fromdepth xxs')
-  with NotInTheFragment -> AppArg (i,xxs')
+  try mkArg i (in_fragment fromdepth xxs')
+  with NotInTheFragment -> mkAppArg i xxs'
 
 (* move performs at once:
    1) refreshing of the arguments into variables (heapifycation)
@@ -713,22 +713,22 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
        raise RestrictionFailure
     | Lam f ->
        let f' = maux e (depth+1) f in
-       if f == f' then x else Lam f'
+       if f == f' then x else mkLam f'
     | App (c,t,l) when delta == 0 || c < from && c < to_ ->
        let t' = maux e depth t in
        let l' = smart_map (maux e depth) l in
-       if t == t' && l == l' then x else App (c,t',l')
+       if t == t' && l == l' then x else mkApp c t' l'
     | App (c,t,l) when c >= from ->
-       App(c-delta, maux e depth t, smart_map (maux e depth) l)
+       mkApp (c-delta) (maux e depth t) (smart_map (maux e depth) l)
     | App _ -> raise RestrictionFailure
     | Builtin (c,l) ->
        let l' = smart_map (maux e depth) l in
-       if l == l' then x else Builtin (c,l')
+       if l == l' then x else mkBuiltin c l'
     | CData _ -> x
     | Cons(hd,tl) ->
        let hd' = maux e depth hd in
        let tl' = maux e depth tl in
-       if hd == hd' && tl == tl' then x else Cons(hd',tl')
+       if hd == hd' && tl == tl' then x else mkCons hd' tl'
     | Nil -> x
     | Discard -> x
 
@@ -755,9 +755,9 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
     | Arg (i, args) ->
        let to_ = min argsdepth to_ in
        let r = oref C.dummy in
-       let v = UVar(r,to_,0) in
+       let v = mkUVar r to_ 0 in
        e.(i) <- v;
-       if args == 0 then v else UVar(r,to_,args)
+       if args == 0 then v else mkUVar r to_ args
     | AppArg(i, args) when
       List.for_all (deterministic_restriction e ~args_safe:(argsdepth=to_)) args
       ->
@@ -767,7 +767,7 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
         with RestrictionFailure ->
          anomaly "TODO: implement deterministic restriction" in
        let r = oref C.dummy in
-       let v = UVar(r,to_,0) in
+       let v = mkUVar r to_ 0 in
        e.(i) <- v;
        mkAppUVar r to_ args
     | AppArg _ ->
@@ -813,14 +813,14 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
           with RestrictionFailure -> anomaly "impossible, delta < 0" in
          mkAppUVar r vardepth args
        else if delta == 0 then
-         AppUVar (r,vardepth,List.map (maux e depth) args)
+         mkAppUVar r vardepth (List.map (maux e depth) args)
        else if List.for_all (deterministic_restriction e ~args_safe:(argsdepth=to_)) args then
          (* TODO: this branch is to be reviewed/tested throughly, unless
             Enrico is now confident with it *)
           let r,vardepth =
            if vardepth <= to_ then r,vardepth
            else begin
-             let newvar = UVar(oref C.dummy,to_,0) in
+             let newvar = mkUVar (oref C.dummy) to_ 0 in
              r @:= newvar;
              r,vardepth (*CSC: XXX why vardepth and not to_ ? *)
            end in
@@ -871,7 +871,7 @@ and decrease_depth r ~from ~to_ argsno =
  else
   let newr = oref C.dummy in
   let newargsno = argsno+from-to_ in
-  let newvar = UVar(newr,to_,from-to_) in
+  let newvar = mkUVar newr to_ (from - to_) in
   r @:= newvar;
   newr,to_,newargsno
 
@@ -910,15 +910,15 @@ and subst fromdepth ts t =
            let t = hmove ~from:fromdepth ~to_:(depth-len) t in
            beta (depth-len) [] t xxs'
       else if c < fromdepth then
-        if x==x' && xs==xs' then orig else App(c,x',xs')
-      else App(c-len,x',xs')
+        if x==x' && xs==xs' then orig else mkApp c x' xs'
+      else mkApp (c - len) x' xs'
    | Builtin(c,xs) as orig ->
       let xs' = List.map (aux depth) xs in
-      if xs==xs' then orig else Builtin(c,xs')
+      if xs==xs' then orig else mkBuiltin c xs'
    | Cons(hd,tl) as orig ->
        let hd' = aux depth hd in
        let tl' = aux depth tl in
-       if hd == hd' && tl == tl' then orig else Cons(hd',tl')
+       if hd == hd' && tl == tl' then orig else mkCons hd' tl'
    | Nil -> tt
    | Discard -> tt
    | UVar({contents=g},vardepth,argsno) when g != C.dummy ->
@@ -939,7 +939,7 @@ and subst fromdepth ts t =
       let args0 = C.mkinterval vardepth argsno 0 in
       let args = List.map (aux depth) (args0@args) in
       mkAppUVar r vardepth args
-   | Lam t -> Lam (aux (depth+1) t)
+   | Lam t -> mkLam (aux (depth+1) t)
    | CData _ as x -> x
    end] in
      aux fromdepthlen t
@@ -964,17 +964,17 @@ and beta depth sub t args =
     | [] -> t'
     | ahd::atl ->
          match t' with
-         | Const c -> App (c,ahd,atl)
+         | Const c -> mkApp c ahd atl
          | Arg _
          | AppArg _ -> anomaly "beta takes only heap terms"
-         | App (c,arg,args1) -> App (c,arg,args1@args)
-         | Builtin (c,args1) -> Builtin (c,args1@args)
+         | App (c,arg,args1) -> mkApp c arg (args1@args)
+         | Builtin (c,args1) -> mkBuiltin c (args1@args)
          | UVar (r,n,m) -> begin
-            try UVar(r,n,m + in_fragment (n+m) args)
+            try mkUVar r n (m + in_fragment (n+m) args)
             with NotInTheFragment ->
               let args1 = C.mkinterval n m 0 in
-              AppUVar (r,n,args1@args) end
-         | AppUVar (r,depth,args1) -> AppUVar (r,depth,args1@args)
+              Term.mkAppUVar r n (args1@args) end
+         | AppUVar (r,depth,args1) -> mkAppUVar r depth (args1@args)
          | Lam _ -> anomaly "beta: some args and some lambdas"
          | CData x -> type_error (Printf.sprintf "beta: '%s'" (CData.show x))
          | Nil -> type_error "beta: Nil"
@@ -1025,26 +1025,26 @@ and deref_uv ?avoid ~from ~to_ args t =
      | Lam _ -> anomaly "eat_args went crazy"
      | Const c ->
         let args = C.mkinterval (from+1) (args'-1) 0 in
-        App (c,mkConst from, args)
+        mkApp c (mkConst from) args
      | App (c,arg,args2) ->
         let args = C.mkinterval from args' 0 in
-        App (c,arg,args2 @ args)
+        mkApp c arg (args2 @ args)
      | Builtin (c,args2) ->
         let args = C.mkinterval from args' 0 in
-        Builtin (c,args2 @ args)
+        mkBuiltin c (args2 @ args)
      (* TODO: when the UVar/Arg is not C.dummy, we call deref_uv that
         will call move that will call_deref_uv again. Optimize the
         path *)
      | UVar(t,depth,args2) when from = depth+args2 ->
-        UVar(t,depth,args2+args')
+        mkUVar t depth (args2+args')
      | AppUVar (r,depth,args2) ->
         let args = C.mkinterval from args' 0 in
-        AppUVar (r,depth,args2 @ args)
+        mkAppUVar r depth (args2 @ args)
      | UVar (r,vardepth,argsno) ->
         let args1 = C.mkinterval vardepth argsno 0 in
         let args2 = C.mkinterval from args' 0 in
         let args = args1 @ args2 in
-        AppUVar (r,vardepth,args)
+        mkAppUVar r vardepth args
      | Cons _ | Nil -> type_error "deref_uv: applied list"
      | Discard -> type_error "deref_uv: applied Discard"
      | CData _ -> t
@@ -1128,7 +1128,7 @@ let is_llam lvl args adepth bdepth depth left e =
     (pplist (fun fmt (x,n) -> Fmt.fprintf fmt "%d |-> %d" x n) " ") map) res];
   res
 
-let rec mknLam n t = if n = 0 then t else mknLam (n-1) (Lam t)
+let rec mknLam n t = if n = 0 then t else mknLam (n-1) (mkLam t)
 
 (* [bind r args ... t] generates a term \args.t' to be assigned to r.
  * r is the variable being assigned
@@ -1173,13 +1173,13 @@ let bind r gamma l a d delta b left t e =
         (ppterm a [] b empty_env) t a delta d w b) begin
     match t with
     | UVar (r1,_,_) | AppUVar (r1,_,_) when r == r1 -> raise RestrictionFailure
-    | Const c -> let n = cst c b delta in if n < 0 then mkConst n else Const n
-    | Lam t -> Lam (bind b delta (w+1) t)
-    | App (c,t,ts) -> App (cst c b delta, bind b delta w t, List.map (bind b delta w) ts)
-    | Cons(hd,tl) -> Cons(bind b delta w hd, bind b delta w tl)
+    | Const c -> let n = cst c b delta in (*if n < 0 then*) mkConst n (*else Const n*)
+    | Lam t -> mkLam (bind b delta (w+1) t)
+    | App (c,t,ts) -> mkApp (cst c b delta) (bind b delta w t) (List.map (bind b delta w) ts)
+    | Cons(hd,tl) -> mkCons (bind b delta w hd) (bind b delta w tl)
     | Nil -> t
     | Discard -> t
-    | Builtin (c, tl) -> Builtin(c, List.map (bind b delta w) tl)
+    | Builtin (c, tl) -> mkBuiltin c (List.map (bind b delta w) tl)
     | CData _ -> t
     (* deref_uv *)
     | Arg (i,args) when e.(i) != C.dummy ->
@@ -1197,28 +1197,28 @@ let bind r gamma l a d delta b left t e =
           | UVar(r,lvl,0) -> r, lvl, (true, []), []
           | UVar(r,lvl,args) ->
               let r' = oref C.dummy in
-              let v = UVar(r',lvl+args,0) in
+              let v = mkUVar r' (lvl+args) 0 in
               r @:= mknLam args v;
               r', (lvl+args),  (true,[]), []
           | AppUVar (r,lvl, orig_args) ->
               r, lvl, is_llam lvl orig_args a b (d+w) left e, orig_args
           | Arg (i,0) ->
               let r = oref C.dummy in
-              let v = UVar(r,a,0) in
+              let v = mkUVar r a 0 in
               e.(i) <- v;
               r, a, (true,[]), []
           | Arg (i,args) ->
               let r = oref C.dummy in
-              let v = UVar(r,a,0) in
+              let v = mkUVar r a 0 in
               e.(i) <- v;
               let r' = oref C.dummy in
-              let v' = UVar(r',a+args,0) in
+              let v' = mkUVar r' (a+args) 0 in
               r @:= mknLam args v';
               r', a+args, (true, []), []
           | AppArg (i,orig_args) ->
               let is_llam, args = is_llam a orig_args a b (d+w) false e in
               let r = oref C.dummy in
-              let v = UVar(r,a,0) in
+              let v = mkUVar r a 0 in
               e.(i) <- v;
               r, a, (is_llam, args), orig_args
           | _ -> assert false in
@@ -1294,7 +1294,7 @@ let bind r gamma l a d delta b left t e =
   try
     let v = mknLam new_lams (bind b delta 0 t) in
     [%spy "assign(HO)" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
-        (uppterm gamma [] a e) (UVar(r,gamma,0))
+        (uppterm gamma [] a e) (mkUVar r gamma 0)
         (uppterm gamma [] a e) v) ()];
     r @:= v;
     true
@@ -1303,8 +1303,8 @@ let bind r gamma l a d delta b left t e =
 (* exception Non_linear *)
 
 let rec list_to_lp_list = function
-  | [] -> Nil
-  | x::xs -> Cons(x,list_to_lp_list xs)
+  | [] -> mkNil
+  | x::xs -> mkCons x (list_to_lp_list xs)
 ;;
 
 let delay_hard_unif_problems = Fork.new_local false
@@ -1371,20 +1371,20 @@ let rec unif matching depth adepth a bdepth b e =
    (* UVar introspection (matching) *)
    | (UVar _ | AppUVar _), Const c when c == C.uvarc && matching -> true
    | UVar(r,vd,ano), App(c,hd,[]) when c == C.uvarc && matching ->
-      unif matching depth adepth (UVar(r,vd,ano)) bdepth hd e
+      unif matching depth adepth a bdepth hd e
    | AppUVar(r,vd,_), App(c,hd,[]) when c == C.uvarc && matching ->
-      unif matching depth adepth (UVar(r,vd,0)) bdepth hd e
+      unif matching depth adepth (mkUVar r vd 0) bdepth hd e
    | UVar(r,vd,ano), App(c,hd,[arg]) when c == C.uvarc && matching ->
       let r_exp = oref C.dummy in
-      let exp = UVar(r_exp,0,0) in
-      r @:= UVar(r_exp,0,vd);
+      let exp = mkUVar r_exp 0 0 in
+      r @:= mkUVar r_exp 0 vd;
       unif matching depth adepth exp bdepth hd e &&
       let args = list_to_lp_list (C.mkinterval 0 (vd+ano) 0) in
       unif matching depth adepth args bdepth arg e
    | AppUVar(r,vd,args), App(c,hd,[arg]) when c == C.uvarc && matching ->
       let r_exp = oref C.dummy in
-      let exp = UVar(r_exp,0,0) in
-      r @:= UVar(r_exp,0,vd);
+      let exp = mkUVar r_exp 0 0 in
+      r @:= mkUVar r_exp 0 vd;
       unif matching depth adepth exp bdepth hd e &&
       let args = list_to_lp_list (C.mkinterval 0 vd 0 @ args) in
       unif matching depth adepth args bdepth arg e
@@ -1442,7 +1442,7 @@ let rec unif matching depth adepth a bdepth b e =
    | _, Arg (i,args) ->
       let v = fst (make_lambdas adepth args) in
       [%spy "assign" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
-        (uppterm depth [] bdepth e) (Arg(i,0))
+        (uppterm depth [] bdepth e) (mkArg i 0)
         (uppterm depth [] bdepth e) v) ()];
       e.(i) <- v;
       [%spy "assign" (ppterm depth [] adepth empty_env) (e.(i))];
@@ -1452,14 +1452,14 @@ let rec unif matching depth adepth a bdepth b e =
    | _, UVar (r,origdepth,args) when args > 0 ->
       let v = fst (make_lambdas origdepth args) in
       [%spy "assign" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
-        (uppterm depth [] bdepth e) (UVar(r,origdepth,0))
+        (uppterm depth [] bdepth e) (mkUVar r origdepth 0)
         (uppterm depth [] bdepth e) v) ()];
       r @:= v;
       unif matching depth adepth a bdepth b e
    | UVar (r,origdepth,args), _ when args > 0 ->
       let v = fst (make_lambdas origdepth args) in
       [%spy "assign" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
-         (uppterm depth [] adepth e) (UVar(r,origdepth,0))
+         (uppterm depth [] adepth e) (mkUVar r origdepth 0)
          (uppterm depth [] adepth e) v) ()];
       r @:= v;
       unif matching depth adepth a bdepth b e
@@ -1469,12 +1469,12 @@ let rec unif matching depth adepth a bdepth b e =
        let is_llam, args = is_llam adepth args adepth bdepth depth false e in
        if is_llam then
          let r = oref C.dummy in
-         e.(i) <- UVar(r,adepth,0);
+         e.(i) <- mkUVar r adepth 0;
          bind r adepth args adepth depth delta bdepth false other e
        else if !delay_hard_unif_problems then begin
        Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth empty_env) a (uppterm depth [] bdepth e) b ;
        let r = oref C.dummy in
-       e.(i) <- UVar(r,adepth,0);
+       e.(i) <- mkUVar r adepth 0;
        let kind = Unification {adepth = adepth+depth; env = e; bdepth = bdepth+depth; a; b; matching} in
        let blockers =
          match is_flex (adepth+depth) other with
@@ -1536,25 +1536,25 @@ let rec unif matching depth adepth a bdepth b e =
    (* eta *)
    | Lam t, Const c ->
        let extra = mkConst (bdepth+depth) in
-       let eta = App(c,extra,[]) in
+       let eta = mkApp c extra [] in
        unif matching (depth+1) adepth t bdepth eta e
    | Const c, Lam t ->
        let extra = mkConst (adepth+depth) in
-       let eta = App(c,extra,[]) in
+       let eta = mkApp c extra [] in
        unif matching (depth+1) adepth eta bdepth t e
    | Lam t, App (c,x,xs) ->
        let extra = mkConst (bdepth+depth) in
        let motion = move ~adepth ~from:(bdepth+depth) ~to_:(bdepth+depth+1) e in
        let x = motion x in
        let xs = List.map motion xs @ [extra] in
-       let eta = App(c,x,xs) in
+       let eta = mkApp c x xs in
        unif matching (depth+1) adepth t bdepth eta e
    | App (c,x,xs), Lam t ->
        let extra = mkConst (adepth+depth) in
        let motion = hmove ~from:(bdepth+depth) ~to_:(bdepth+depth+1) in
        let x = motion x in
        let xs = List.map motion xs @ [extra] in
-       let eta = App(c,x,xs) in
+       let eta = mkApp c x xs in
        unif matching (depth+1) adepth eta bdepth t e
 
    | _ -> false
@@ -1591,9 +1591,9 @@ let rec deref_head ~depth = function
 let full_deref ~adepth env ~depth t =
   let rec deref d = function
   | Const _ as x -> x
-  | Lam r -> Lam (deref (d+1) r)
-  | App (n,x,xs) -> App(n, deref d x, List.map (deref d) xs)
-  | Cons(hd,tl) -> Cons(deref d hd, deref d tl)
+  | Lam r -> mkLam (deref (d+1) r)
+  | App (n,x,xs) -> mkApp n (deref d x) (List.map (deref d) xs)
+  | Cons(hd,tl) -> mkCons (deref d hd) (deref d tl)
   | Nil as x -> x
   | Discard as x -> x
   | Arg (i,ano) when env.(i) != C.dummy ->
@@ -1601,14 +1601,14 @@ let full_deref ~adepth env ~depth t =
   | Arg _ as x -> x
   | AppArg (i,args) when env.(i) != C.dummy ->
       deref d (deref_appuv ~from:adepth ~to_:d args env.(i))
-  | AppArg (i,args) -> AppArg (i, List.map (deref d) args)
+  | AppArg (i,args) -> Term.mkAppArg i (List.map (deref d) args)
   | UVar (r,lvl,ano) when !!r != C.dummy ->
       deref d (deref_uv ~from:lvl ~to_:d ano !!r)
   | UVar _ as x -> x
   | AppUVar (r,lvl,args) when !!r != C.dummy ->
       deref d (deref_appuv ~from:lvl ~to_:d args !!r)
-  | AppUVar (r,lvl,args) -> AppUVar (r,lvl,List.map (deref d) args)
-  | Builtin(c,xs) -> Builtin(c,List.map (deref d) xs)
+  | AppUVar (r,lvl,args) -> mkAppUVar r lvl (List.map (deref d) args)
+  | Builtin(c,xs) -> mkBuiltin c (List.map (deref d) xs)
   | CData _ as x -> x
   in
     deref depth t
@@ -1617,14 +1617,14 @@ type assignment = uvar_body * int * term
 
 let expand_uv r ~lvl ~ano =
   let args = C.mkinterval 0 (lvl+ano) 0 in
-  if lvl = 0 then AppUVar(r,lvl,args), None else
+  if lvl = 0 then Term.mkAppUVar r lvl args, None else
   let r1 = oref C.dummy in
-  let t = AppUVar(r1,0,args) in
+  let t = Term.mkAppUVar r1 0 args in
   let assignment = mknLam ano t in
   t, Some (r,lvl,assignment)
 let expand_uv ~depth r ~lvl ~ano =
   [%spy "expand-uv-in" (fun fmt t ->
-    Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) (UVar(r,lvl,ano))];
+    Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) (mkUVar r lvl ano)];
   let t, ass as rc = expand_uv r ~lvl ~ano in
   [%spy "expand-uv-out" (fun fmt t ->
     Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) t];
@@ -1632,22 +1632,22 @@ let expand_uv ~depth r ~lvl ~ano =
     | None -> Fmt.fprintf fmt "no assignment"
     | Some (_,_,t) ->
         Fmt.fprintf fmt "%a := %a"
-          (uppterm depth [] 0 empty_env) (UVar(r,lvl,ano))
+          (uppterm depth [] 0 empty_env) (mkUVar r lvl ano)
           (uppterm lvl [] 0 empty_env) t) ass];
   rc
 
 let expand_appuv r ~lvl ~args =
-  if lvl = 0 then AppUVar(r,lvl,args), None else
+  if lvl = 0 then Term.mkAppUVar r lvl args, None else
   let args_lvl = C.mkinterval 0 lvl 0 in
   let r1 = oref C.dummy in
-  let t = AppUVar(r1,0,args_lvl @ args) in
+  let t = Term.mkAppUVar r1 0 (args_lvl @ args) in
   let nargs = List.length args in
   let assignment =
-    mknLam nargs (AppUVar(r1,0,args_lvl @ C.mkinterval lvl nargs 0)) in
+    mknLam nargs (Term.mkAppUVar r1 0 (args_lvl @ C.mkinterval lvl nargs 0)) in
   t, Some (r,lvl,assignment)
 let expand_appuv ~depth r ~lvl ~args =
   [%spy "expand-appuv-in" (fun fmt t ->
-    Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) (AppUVar(r,lvl,args))];
+    Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) (Term.mkAppUVar r lvl args)];
   let t, ass as rc = expand_appuv r ~lvl ~args in
   [%spy "expand-appuv-out" (fun fmt t ->
     Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) t];
@@ -1655,7 +1655,7 @@ let expand_appuv ~depth r ~lvl ~args =
     | None -> Fmt.fprintf fmt "no assignment"
     | Some (_,_,t) ->
         Fmt.fprintf fmt "%a := %a"
-          (uppterm depth [] 0 empty_env) (AppUVar(r,lvl,args))
+          (uppterm depth [] 0 empty_env) (Term.mkAppUVar r lvl args)
           (uppterm lvl [] 0 empty_env) t) ass];
   rc
 
@@ -1666,19 +1666,19 @@ let shift_bound_vars ~depth ~to_ t =
     else n + to_ - depth in
   let rec shift d = function
   | Const n as x -> let m = shift_db d n in if m = n then x else  mkConst m
-  | Lam r -> Lam (shift (d+1) r)
+  | Lam r -> mkLam (shift (d+1) r)
   | App (n,x,xs) ->
-      App(shift_db d n, shift d x, List.map (shift d) xs)
-  | Cons(hd,tl) -> Cons(shift d hd, shift d tl)
+      mkApp (shift_db d n) (shift d x) (List.map (shift d) xs)
+  | Cons(hd,tl) -> mkCons (shift d hd) (shift d tl)
   | Nil as x -> x
   | Discard as x -> x
   | Arg _ as x -> x
-  | AppArg (i,args) -> AppArg (i, List.map (shift d) args)
+  | AppArg (i,args) -> Term.mkAppArg i (List.map (shift d) args)
   | (UVar (r,_,_) | AppUVar(r,_,_)) when !!r != C.dummy ->
       anomaly "shift_bound_vars: non-derefd term"
   | UVar _ as x -> x
-  | AppUVar (r,lvl,args) -> AppUVar (r,lvl,List.map (shift d) args)
-  | Builtin(c,xs) -> Builtin(c,List.map (shift d) xs)
+  | AppUVar (r,lvl,args) -> mkAppUVar r lvl (List.map (shift d) args)
+  | Builtin(c,xs) -> mkBuiltin c (List.map (shift d) xs)
   | CData _ as x -> x
   in
     if depth = to_ then t else shift depth t
@@ -1691,19 +1691,19 @@ let subtract_to_consts ~amount ~depth t =
     else n - amount in
   let rec shift d = function
   | Const n as x -> let m = shift_db d n in if m = n then x else  mkConst m
-  | Lam r -> Lam (shift (d+1) r)
+  | Lam r -> mkLam (shift (d+1) r)
   | App (n,x,xs) ->
-      App(shift_db d n, shift d x, List.map (shift d) xs)
-  | Cons(hd,tl) -> Cons(shift d hd, shift d tl)
+      mkApp (shift_db d n) (shift d x) (List.map (shift d) xs)
+  | Cons(hd,tl) -> mkCons (shift d hd) (shift d tl)
   | Nil as x -> x
   | Discard as x -> x
   | Arg _ as x -> x
-  | AppArg (i,args) -> AppArg (i, List.map (shift d) args)
+  | AppArg (i,args) -> Term.mkAppArg i (List.map (shift d) args)
   | (UVar (r,_,_) | AppUVar(r,_,_)) when !!r != C.dummy ->
       anomaly "subtract_to_consts: non-derefd term"
   | (UVar _ | AppUVar _) ->
       error "The term cannot be put in the desired context (leftover uvar)"
-  | Builtin(c,xs) -> Builtin(c,List.map (shift d) xs)
+  | Builtin(c,xs) -> mkBuiltin c (List.map (shift d) xs)
   | CData _ as x -> x
   in
     if amount = 0 then t else shift 0 t
@@ -1846,7 +1846,7 @@ let hash_arg_list goal hd ~depth args mode spec =
        (if goal then "goal" else "clause")
        (dec_to_bin2 h)
        (pplist ~boxed:true (uppterm depth [] 0 empty_env) " "))
-      (Const hd :: args)];
+      (mkConst hd :: args)];
   h
 
 let hash_clause_arg_list = hash_arg_list false
@@ -2040,29 +2040,27 @@ let close_with_pis depth vars t =
     | Const c -> mkConst (fix_const c)
     | Arg (i,argsno) ->
        (match C.mkinterval (depth+vars) argsno 0 with
-        | [] -> Const(i+depth)
-        | [x] -> App(i+depth,x,[])
-        | x::xs -> App(i+depth,x,xs))
+        | [] -> mkConst (i+depth)
+        | x::xs -> mkApp (i+depth) x xs)
     | AppArg (i,args) ->
        (match List.map aux args with
         | [] -> anomaly "AppArg to 0 args"
-        | [x] -> App(i+depth,x,[])
-        | x::xs -> App(i+depth,x,xs))
-    | App(c,x,xs) -> App(fix_const c,aux x,List.map aux xs)
-    | Builtin(c,xs) -> Builtin(c,List.map aux xs)
+        | x::xs -> mkApp (i+depth) x xs)
+    | App(c,x,xs) -> mkApp (fix_const c) (aux x) (List.map aux xs)
+    | Builtin(c,xs) -> mkBuiltin c (List.map aux xs)
     | UVar(_,_,_) as orig ->
        (* TODO: quick hack here, but it does not work for AppUVar *)
        hmove ~from:depth ~to_:(depth+vars) orig
     | AppUVar(r,vardepth,args) ->
        assert false (* TODO, essentially almost copy the code from move delta < 0 *)
-    | Cons(hd,tl) -> Cons(aux hd, aux tl)
+    | Cons(hd,tl) -> mkCons (aux hd) (aux tl)
     | Nil as x -> x
     | Discard as x -> x
-    | Lam t -> Lam (aux t)
+    | Lam t -> mkLam (aux t)
     | CData _ as x -> x
   in
   let rec add_pis n t =
-   if n = 0 then t else App(C.pic,Lam (add_pis (n-1) t),[]) in
+   if n = 0 then t else mkApp C.pic (mkLam (add_pis (n-1) t)) [] in
   add_pis vars (aux t)
 
 let local_prog { src } =  src
@@ -2095,15 +2093,15 @@ let rec term_map m = function
   | Const x when List.mem_assoc x m -> mkConst (List.assoc x m)
   | Const _ as x -> x
   | App(c,x,xs) when List.mem_assoc c m ->
-      App(List.assoc c m,term_map m x, smart_map (term_map m) xs)
-  | App(c,x,xs) -> App(c,term_map m x, smart_map (term_map m ) xs)
-  | Lam x -> Lam (term_map m x)
+      mkApp (List.assoc c m) (term_map m x) (smart_map (term_map m) xs)
+  | App(c,x,xs) -> mkApp c (term_map m x) (smart_map (term_map m ) xs)
+  | Lam x -> mkLam (term_map m x)
   | UVar _ as x -> x
-  | AppUVar(r,lvl,xs) -> AppUVar(r,lvl,smart_map (term_map m) xs)
+  | AppUVar(r,lvl,xs) -> mkAppUVar r lvl (smart_map (term_map m) xs)
   | Arg _ as x -> x
-  | AppArg(i,xs) -> AppArg(i,smart_map (term_map m) xs)
-  | Builtin(c,xs) -> Builtin(c,smart_map (term_map m) xs)
-  | Cons(hd,tl) -> Cons(term_map m hd, term_map m tl)
+  | AppArg(i,xs) -> Term.mkAppArg i (smart_map (term_map m) xs)
+  | Builtin(c,xs) -> mkBuiltin c (smart_map (term_map m) xs)
+  | Cons(hd,tl) -> mkCons (term_map m hd) (term_map m tl)
   | Nil as x -> x
   | Discard as x -> x
   | CData _ as x -> x
@@ -2174,12 +2172,12 @@ let rec claux1 ?loc get_mode vars depth hyps ts lts lcs t =
       List.rev (List.filter (function (Arg _) -> true | _ -> false) ts) in
      let cst =
       match args with
-         [] -> Const (depth+lcs)
-       | hd::rest -> App (depth+lcs,hd,rest) in
+         [] -> mkConst (depth+lcs)
+       | hd::rest -> mkApp (depth+lcs) hd rest in
      claux1 ?loc get_mode vars depth hyps (cst::ts) (lts+1) (lcs+1) b
   | App(c, arg, []) when c == C.pic ->
      let b = get_lambda_body ~depth:(depth+lts) arg in
-     claux1 ?loc get_mode (vars+1) depth hyps (Arg(vars,0)::ts) (lts+1) lcs b
+     claux1 ?loc get_mode (vars+1) depth hyps (mkArg vars 0::ts) (lts+1) lcs b
   | App(c, _, _) when c == C.andc || c == C.andc2 ->
      error ?loc "Conjunction in the head of a clause is not supported"
   | Const _
@@ -2366,21 +2364,21 @@ end = struct (* {{{ *)
         let n, c = C.fresh () in
         [%spy "freeze-add" (fun fmt tt ->
           Fmt.fprintf fmt "%s == %a" (C.show n) (ppterm 0 [] 0 empty_env) tt)
-          (UVar (r,0,0))];
+          (mkUVar r 0 0)];
         f := { !f with c2uv = C.Map.add n r !f.c2uv;
                        uv2c = (r,c) :: !f.uv2c };
         c in
     let rec faux d = function
       | (Const _ | CData _ | Nil | Discard) as x -> x
-      | Cons(hd,tl) -> Cons(faux d hd, faux d tl)
-      | App(c,x,xs) -> App(c,faux d x, List.map (faux d) xs)
-      | Builtin(c,args) -> Builtin(c,List.map (faux d) args)
+      | Cons(hd,tl) -> mkCons (faux d hd) (faux d tl)
+      | App(c,x,xs) -> mkApp c (faux d x) (List.map (faux d) xs)
+      | Builtin(c,args) -> mkBuiltin c (List.map (faux d) args)
       | (Arg _ | AppArg _) -> error "only heap terms can be frozen"
-      | Lam t -> Lam (faux (d+1) t)
+      | Lam t -> mkLam (faux (d+1) t)
       (* freeze *)
       | AppUVar(r,0,args) when !!r == C.dummy ->
           let args = List.map (faux d) args in
-          App(C.uvarc, freeze_uv r, [list_to_lp_list args])
+          mkApp C.uvarc (freeze_uv r) [list_to_lp_list args]
       (* expansion *)
       | UVar(r,lvl,ano) when !!r == C.dummy ->
           faux d (log_assignment(expand_uv ~depth:d r ~lvl ~ano))
@@ -2421,25 +2419,25 @@ end = struct (* {{{ *)
       (uppterm to_ [] 0 empty_env) t) t];
     let rec daux d = function
       | Const c when C.Map.mem c f.c2uv ->
-          UVar(C.Map.find c f.c2uv,0,0)
+          mkUVar (C.Map.find c f.c2uv) 0 0
       | (Const _ | CData _ | Nil | Discard) as x -> x
-      | Cons(hd,tl) -> Cons(daux d hd, daux d tl)
+      | Cons(hd,tl) -> mkCons (daux d hd) (daux d tl)
       | App(c,Const x,[args]) when c == C.uvarc ->
           let r = C.Map.find x f.c2uv in
           let args = lp_list_to_list ~depth:d args in
           mkAppUVar r 0 (List.map (daux d) args)
-      | App(c,x,xs) -> App(c,daux d x, List.map (daux d) xs)
-      | Builtin(c,args) -> Builtin(c,List.map (daux d) args)
+      | App(c,x,xs) -> mkApp c (daux d x) (List.map (daux d) xs)
+      | Builtin(c,args) -> mkBuiltin c (List.map (daux d) args)
       | Arg(i,ano) when env.(i) != C.dummy ->
           daux d (deref_uv ~from:to_ ~to_:d ano env.(i))
       | AppArg (i,args) when env.(i) != C.dummy ->
           daux d (deref_appuv ~from:to_ ~to_:d args env.(i))
       | (Arg(i,_) | AppArg(i,_)) as x ->
-          env.(i) <- UVar(oref C.dummy, to_, 0);
+          env.(i) <- mkUVar (oref C.dummy) to_ 0;
           daux d x
-      | Lam t -> Lam (daux (d+1) t)
+      | Lam t -> mkLam (daux (d+1) t)
       | UVar _ as x -> x
-      | AppUVar(r,lvl,args) -> AppUVar(r,lvl,List.map (daux d) args)
+      | AppUVar(r,lvl,args) -> mkAppUVar r lvl (List.map (daux d) args)
     in
      daux to_ t
 
@@ -2448,15 +2446,17 @@ end = struct (* {{{ *)
 let replace_const m t =
   let rec rcaux = function
     | Const c as x -> (try mkConst (List.assoc c m) with Not_found -> x)
-    | Lam t -> Lam (rcaux t)
+    | Lam t -> mkLam (rcaux t)
     | App(c,x,xs) ->
-        App((try List.assoc c m with Not_found -> c),
-            rcaux x, smart_map rcaux xs)
-    | Builtin(c,xs) -> Builtin(c,smart_map rcaux xs)
-    | Cons(hd,tl) -> Cons(rcaux hd, rcaux tl)
+        mkApp
+          (try List.assoc c m with Not_found -> c)
+          (rcaux x)
+          (smart_map rcaux xs)
+    | Builtin(c,xs) -> mkBuiltin c (smart_map rcaux xs)
+    | Cons(hd,tl) -> mkCons (rcaux hd) (rcaux tl)
     | (CData _ | UVar _ | Nil | Discard) as x -> x
     | Arg _ | AppArg _ -> assert false
-    | AppUVar(r,lvl,args) -> AppUVar(r,lvl,smart_map rcaux args) in
+    | AppUVar(r,lvl,args) -> mkAppUVar r lvl (smart_map rcaux args) in
   [%spy "alignment-replace-in" (uppterm 0 [] 0 empty_env)  t];
   let t = rcaux t in
   [%spy "alignment-replace-out" (uppterm 0 [] 0 empty_env) t];
@@ -2610,7 +2610,7 @@ let mk_out_assign ~depth { Conversion.embed } bname hyps constraints state input
   | Some _, BuiltInPredicate.Discard -> state, [] (* We could warn that such output was generated without being required *)
   | Some t, BuiltInPredicate.Keep ->
      let state, t, extra = embed ~depth hyps constraints state t in
-     state, extra @ [App(C.eqc, v, [t])]
+     state, extra @ [mkApp C.eqc v [t]]
   | None, BuiltInPredicate.Keep ->
       anomaly ("ffi: " ^ bname ^ ": some output was requested but not produced")
 
@@ -2620,7 +2620,7 @@ let mk_inout_assign ~depth { Conversion.embed } bname hyps constraints state inp
   | Some _, BuiltInPredicate.NoData -> state, [] (* We could warn that such output was generated without being required *)
   | Some t, BuiltInPredicate.Data _ ->
      let state, t, extra = embed ~depth hyps constraints state t in
-     state, extra @ [App(C.eqc, v, [t])]
+     state, extra @ [mkApp C.eqc v [t]]
   | None, BuiltInPredicate.Data _ ->
       anomaly ("ffi: " ^ bname ^ ": some output was requested but not produced")
 
@@ -2854,7 +2854,7 @@ let try_fire_rule rule (constraints as orig_constraints) =
         | _ -> error "eigen not resolving to an integer" in
       let conclusion =
         Ice.defrost ~maxd:max_depth ~to_:eigen
-          (App(C.implc,context,[conclusion])) env m in
+          (mkApp C.implc context [conclusion]) env m in
       (* TODO: check things make sense in heigen *)
       let prog = initial_program in
       [{ cdepth = eigen; prog; context = []; conclusion }] in
@@ -3018,7 +3018,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
        run (depth+1) p f gs next alts lvl
     | App(c, arg, []) when c == C.sigmac ->
        let f = get_lambda_body ~depth arg in
-       let v = UVar(oref C.dummy, depth, 0) in
+       let v = mkUVar (oref C.dummy) depth 0 in
        run depth p (subst depth [v] f) gs next alts lvl
     | UVar ({ contents = g }, from, args) when g != C.dummy ->
        run depth p (deref_uv ~from ~to_:depth args g) gs next alts lvl

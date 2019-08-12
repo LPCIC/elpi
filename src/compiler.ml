@@ -460,7 +460,7 @@ let mk_Arg state ~name ~args =
     with Not_found -> update_argmap state (mk_Arg name) in
   match args with
   | [] -> state, t
-  | x::xs -> state, App(c,x,xs)
+  | x::xs -> state, mkApp c x xs
 
 let get_Arg state ~name ~args =
   let { n2t } = get_argmap state in
@@ -469,7 +469,7 @@ let get_Arg state ~name ~args =
     with Not_found -> error "get_Arg" in
   match args with
   | [] -> t
-  | x::xs -> App(c,x,xs)
+  | x::xs -> mkApp c x xs
 
 let fresh_Arg =
   let qargno = ref 0 in
@@ -504,13 +504,13 @@ let preterm_of_ast loc ~depth:arg_lvl macro state ast =
     try state, F.Map.find f (get_varmap state)
     with Not_found ->
      if is_discard f then
-       state, Discard
+       state, mkDiscard
      else if is_uvar_name f then
        mk_Arg state ~name:(F.show f) ~args:[]
      else if is_macro_name f then
        stack_macro_of_ast inner curlvl state f
      else if BuiltInPredicate.is_declared (fst (C.funct_of_ast f)) then
-       state, Builtin(fst (C.funct_of_ast f),[])
+       state, mkBuiltin (fst (C.funct_of_ast f)) []
      else if CustomFunctorCompilation.is_backtick f then
        CustomFunctorCompilation.compile_backtick state f
      else if CustomFunctorCompilation.is_singlequote f then
@@ -518,12 +518,12 @@ let preterm_of_ast loc ~depth:arg_lvl macro state ast =
      else state, snd (C.funct_of_ast f)
   
   and aux inner lvl state = function
-    | Ast.Term.Const f when F.(equal f nilf) -> state, Term.Nil
+    | Ast.Term.Const f when F.(equal f nilf) -> state, Term.mkNil
     | Ast.Term.Const f -> stack_funct_of_ast inner lvl state f
     | Ast.Term.App(Ast.Term.Const f, [hd;tl]) when F.(equal f consf) ->
        let state, hd = aux true lvl state hd in
        let state, tl = aux true lvl state tl in
-       state, Term.Cons(hd,tl)
+       state, Term.mkCons hd tl
     | Ast.Term.App(Ast.Term.Const f, tl) ->
        let state, rev_tl =
          List.fold_left (fun (state, tl) t ->
@@ -534,11 +534,11 @@ let preterm_of_ast loc ~depth:arg_lvl macro state ast =
        let state, c = stack_funct_of_ast inner lvl state f in
        begin match c with
        | Const c -> begin match tl with
-          | hd2::tl -> state, Term.App(c,hd2,tl)
+          | hd2::tl -> state, Term.mkApp c hd2 tl
           | _ -> anomaly "Application node with no arguments" end
        | App(c,hd1,tl1) -> (* FG:decurrying: is this the right place for it? *)
-          state, Term.App(c,hd1,tl1@tl)
-       | Builtin(c,tl1) -> state, Term.Builtin(c,tl1@tl)
+          state, Term.mkApp c hd1 (tl1@tl)
+       | Builtin(c,tl1) -> state, Term.mkBuiltin c (tl1@tl)
        | Lam _ -> (* macro with args *)
           state, R.deref_appuv ~from:lvl ~to_:lvl tl c
        | Discard -> 
@@ -556,15 +556,15 @@ let preterm_of_ast loc ~depth:arg_lvl macro state ast =
 *)
     | Ast.Term.Lam (x,t) when F.(equal x dummyname)->
        let state, t' = aux true (lvl+1) state t in
-       state, Term.Lam t'
+       state, Term.mkLam t'
     | Ast.Term.Lam (x,t) ->
        let orig_varmap = get_varmap state in
        let state = update_varmap state (F.Map.add x (mkConst lvl)) in
        let state, t' = aux true (lvl+1) state t in
-       set_varmap state orig_varmap, Term.Lam t'
+       set_varmap state orig_varmap, Term.mkLam t'
     | Ast.Term.App (Ast.Term.App (f,l1),l2) ->
        aux inner lvl state (Ast.Term.App (f, l1@l2))
-    | Ast.Term.CData c -> state, Term.CData (CData.hcons c)
+    | Ast.Term.CData c -> state, Term.mkCData (CData.hcons c)
     | Ast.Term.App (Ast.Term.Lam _,_) -> error ~loc "Beta-redexes not in our language"
     | Ast.Term.App (Ast.Term.CData _,_) -> type_error ~loc "Applied literal"
     | Ast.Term.Quoted { Ast.Term.data; kind = None; loc } ->
@@ -869,28 +869,28 @@ end = struct (* {{{ *)
           if c == c1 then x else mkConst c1
       | Lam t as x ->
           let t1 = aux t in
-          if t == t1 then x else Lam t1
+          if t == t1 then x else mkLam t1
       | AppArg(i,ts) as x ->
           let ts1 = smart_map aux ts in
-          if ts == ts1 then x else AppArg(i,ts1)
+          if ts == ts1 then x else mkAppArg i ts1
       | AppUVar(r,lvl,ts) as x ->
           assert(!!r == C.dummy);
           let ts1 = smart_map aux ts in
-          if ts == ts1 then x else AppUVar(r,lvl,ts1)
+          if ts == ts1 then x else mkAppUVar r lvl ts1
       | Builtin(c,ts) as x ->
           if f c != c then
             error ("declaring a clause for builtin: " ^ Constants.show c);
           let ts1 = smart_map aux ts in
-          if ts == ts1 then x else Builtin(c,ts1)
+          if ts == ts1 then x else mkBuiltin c ts1
       | App(c,t,ts) as x ->
           let c1 = f c in
           let t1 = aux t in
           let ts1 = smart_map aux ts in
-          if c == c1 && t == t1 && ts == ts1 then x else App(c1,t1,ts1)
+          if c == c1 && t == t1 && ts == ts1 then x else mkApp c1 t1 ts1
       | Cons(hd,tl) as x ->
           let hd1 = aux hd in
           let tl1 = aux tl in
-          if hd == hd1 && tl == tl1 then x else Cons(hd1,tl1)
+          if hd == hd1 && tl == tl1 then x else mkCons hd1 tl1
       | UVar(r,_,_) as x ->
           assert(!!r == C.dummy);
           x
@@ -1084,13 +1084,13 @@ end = struct (* {{{ *)
 
     let mkAppC c = function
       | [] -> mkConst c
-      | x::xs -> App(c,x,xs) in
+      | x::xs -> mkApp c x xs in
 
     let mkApp hd args =
       match hd with
-      | App(c,x,xs) -> App(c,x,xs @ args)
+      | App(c,x,xs) -> mkApp c x (xs @ args)
       | Const c -> mkAppC c args
-      | Builtin(c,xs) -> Builtin(c,xs @ args)
+      | Builtin(c,xs) -> mkBuiltin c (xs @ args)
       | _ -> assert false in
 
     let mkSpilled =
@@ -1124,12 +1124,12 @@ end = struct (* {{{ *)
           mkAppC f [variable]
       | (Const _ | CData _ | Nil | Discard) as x -> x
       | Cons(hd,tl) ->
-          Cons(apply_to names variable hd,apply_to names variable tl)
-      | Lam t -> Lam (apply_to names variable t)
-      | App(f,x,xs) when List.exists (equal_term (Const f)) names ->
+          mkCons (apply_to names variable hd) (apply_to names variable tl)
+      | Lam t -> mkLam (apply_to names variable t)
+      | App(f,x,xs) when List.exists (equal_term (mkConst f)) names ->
           mkAppC f (List.map (apply_to names variable) (x::xs) @ [variable])
       | App(hd,x,xs) -> mkAppC hd (List.map (apply_to names variable) (x::xs))
-      | Builtin(hd,xs) -> Builtin(hd, List.map (apply_to names variable) xs)
+      | Builtin(hd,xs) -> mkBuiltin hd (List.map (apply_to names variable) xs)
       | (Arg _ | AppArg _ | UVar _ | AppUVar _) -> assert false in
 
     let add_spilled sp t =
@@ -1146,11 +1146,11 @@ end = struct (* {{{ *)
       | App(c, Lam arg, []) when c == C.pic ->
          let ctx = depth+1, mkConst depth :: vars in
          let spills, arg = spaux1 ctx arg in
-         [], [mkAppC c [Lam (add_spilled spills arg)]]
+         [], [mkAppC c [mkLam (add_spilled spills arg)]]
       | App(c, Lam arg, []) when c == C.sigmac ->
          let ctx = depth+1, vars in
          let spills, arg = spaux1 ctx arg in
-         [], [mkAppC c [Lam (add_spilled spills arg)]]
+         [], [mkAppC c [mkLam (add_spilled spills arg)]]
       | App(c, hyp, [concl]) when c == C.implc ->
          let spills_hyp, hyp1 = spaux1 ctx hyp in
          let t = spaux1_prop ctx concl in
@@ -1187,21 +1187,21 @@ end = struct (* {{{ *)
          let sp2, tl = spaux ctx tl in
          (* FIXME: it could be in prop *)
          assert(List.length hd = 1 && List.length tl = 1);
-         sp1 @ sp2, [Cons(List.hd hd, List.hd tl)]
+         sp1 @ sp2, [mkCons (List.hd hd) (List.hd tl)]
       | Builtin(c,args) ->
          let spills, args = map_acc (fun sp x ->
            let sp1, x = spaux ctx x in
            sp @ sp1, x) [] args in
-         [], [add_spilled spills (Builtin(c,List.concat args))]
+         [], [add_spilled spills (mkBuiltin c (List.concat args))]
       | Lam t ->
          let sp, t = spaux1 (depth+1, mkConst depth :: vars) t in
          let (t,_), sp = map_acc (fun (t,n) (names, call) ->
                let all_names = names @ n in
                let call = apply_to all_names (mkConst depth) call in
                let t = apply_to names (mkConst depth) t in
-               (t,all_names), (names, mkAppC C.pic [Lam call])
+               (t,all_names), (names, mkAppC C.pic [mkLam call])
            ) (t,[]) sp in
-         sp, [Lam t]
+         sp, [mkLam t]
       | (UVar _ | AppUVar _) -> error ~loc "Stack term contains UVar"
       | (Arg _ | AppArg _) -> assert false
 
@@ -1396,21 +1396,21 @@ let stack_term_of_preterm ~depth:arg_lvl { term = t; amap = { c2i } } =
     | App(c, x, xs) as app ->
         let x1 = stack_term_of_preterm x in
         let xs1 = smart_map stack_term_of_preterm xs in
-        if x1 == x && xs1 == xs then app else App(c, x1, xs1)
+        if x1 == x && xs1 == xs then app else mkApp c x1 xs1
     | Lam t as x ->
         let t1 = stack_term_of_preterm  t in
-        if t1 == t then x else Lam t1
+        if t1 == t then x else mkLam t1
     | CData _ as x -> x
     | Builtin(c, args) as x ->
         let args1 = smart_map stack_term_of_preterm args in
-        if args1 == args then x else Builtin(c, args1)
+        if args1 == args then x else mkBuiltin c args1
     | UVar _ | AppUVar _ | Arg _ | AppArg _ -> assert false
     | Nil as x -> x
     | Discard as x -> x
     | Cons(hd, tl) as x ->
         let hd1 = stack_term_of_preterm hd in
         let tl1 = stack_term_of_preterm tl in
-        if hd == hd1 && tl == tl1 then x else Cons(hd1,tl1)
+        if hd == hd1 && tl == tl1 then x else mkCons hd1 tl1
   in
   stack_term_of_preterm t
 ;;
@@ -1667,13 +1667,13 @@ let clausec = C.from_stringc "clause"
 
 let mkQApp ~on_type l =
   let c = if on_type then tappc else appc in
-  App(c,R.list_to_lp_list l,[])
+  mkApp c (R.list_to_lp_list l) []
 
 let mkQCon ~on_type ?(amap=empty_amap) c =
   try mkConst (C.Map.find c amap.c2i)
   with Not_found ->
     let a = if on_type then tconstc else constc in
-    if c < 0 then App(a,Data.C.of_string (C.show c),[])
+    if c < 0 then mkApp a (Data.C.of_string (C.show c)) []
     else mkConst (c + amap.nargs)
 
 let quote_preterm ?(on_type=false) { term; amap } =
@@ -1681,20 +1681,20 @@ let quote_preterm ?(on_type=false) { term; amap } =
   let mkQCon = mkQCon ~on_type ~amap in
   let rec aux depth term = match term with
     | Const n when on_type && C.show n = "string" -> 
-        App(C.ctypec, Data.C.of_string "string",[])
+        mkApp C.ctypec (Data.C.of_string "string") []
     | Const n when on_type && C.show n = "int" ->
-        App(C.ctypec, Data.C.of_string "int",[])
+        mkApp C.ctypec (Data.C.of_string "int") []
     | Const n when on_type && C.show n = "float" ->
-        App(C.ctypec, Data.C.of_string "float",[])
+        mkApp C.ctypec (Data.C.of_string "float") []
     | App(c,CData s,[])
       when on_type && c == C.ctypec && Data.C.is_string s -> term
     | App(c,s,[t]) when on_type && c == C.arrowc ->
-        App(arrowc,aux depth s,[aux depth t])
+        mkApp arrowc (aux depth s) [aux depth t]
     | Const n when on_type && C.show n = "prop" -> term
 
     | Const n -> mkQCon n
     | Builtin(c,[]) -> mkQCon c
-    | Lam x -> App(lamc,Lam (aux (depth+1) x),[])
+    | Lam x -> mkApp lamc (mkLam (aux (depth+1) x)) []
     | App(c,x,xs) ->
         mkQApp (mkQCon c :: List.(map (aux depth) (x :: xs)))
     | Builtin(c,args) -> mkQApp (mkQCon c :: List.map (aux depth) args)
@@ -1714,7 +1714,7 @@ let quote_preterm ?(on_type=false) { term; amap } =
 *)
     | UVar _ | AppUVar _ -> assert false
 
-    | CData _ as x -> App(cdatac,x,[])
+    | CData _ as x -> mkApp cdatac x []
     | Cons(hd,tl) -> mkQApp [mkQCon C.consc; aux depth hd; aux depth tl]
     | Nil -> mkQCon C.nilc
     | Discard -> mkQCon discardc
@@ -1725,7 +1725,7 @@ let quote_preterm ?(on_type=false) { term; amap } =
 let close_w_binder binder t { nargs } =
   let rec close = function
     | 0 -> t
-    | n -> App(binder,Lam (close (n-1)),[]) in
+    | n -> mkApp binder (mkLam (close (n-1))) [] in
   close nargs
 
 let sorted_names_of_argmap argmap =
@@ -1744,16 +1744,17 @@ let quote_clause { Ast.Clause.loc; attributes = { Assembled.id }; body } =
   let clloc = quote_loc ?id loc in
   let qt = close_w_binder argc (quote_preterm body) body.amap in
   let names = sorted_names_of_argmap body.amap in
-  App(clausec,CData clloc,[R.list_to_lp_list names; qt])
+  mkApp clausec (mkCData clloc) [R.list_to_lp_list names; qt]
 ;;
 
 let quote_syntax { WithMain.clauses; query } =
   let names = sorted_names_of_argmap query.amap in
   let clist = List.map quote_clause clauses in
   let q =
-    App(clausec,CData (quote_loc ~id:"query" query.loc),
+    mkApp clausec 
+    (mkCData (quote_loc ~id:"query" query.loc))
       [R.list_to_lp_list names;
-       close_w_binder argc (quote_preterm ~on_type:false query) query.amap]) in
+       close_w_binder argc (quote_preterm ~on_type:false query) query.amap] in
   clist, q
 
 let default_checker () =
@@ -1768,9 +1769,9 @@ let static_check header
   let p,q = quote_syntax q in
   let tlist = R.list_to_lp_list (List.map
     (fun { Structured.decl = { tname; ttype } } ->
-      App(C.from_stringc "`:",mkQCon ~on_type:false tname,
+      mkApp (C.from_stringc "`:") (mkQCon ~on_type:false tname)
         [close_w_binder forallc (quote_preterm ~on_type:true ttype)
-          ttype.amap]))
+          ttype.amap])
     types) in
   let checker =
     program_of_ast
@@ -1780,7 +1781,7 @@ let static_check header
   let query =
     query_of_term checker (fun ~depth state ->
       assert(depth=0);
-      state, (loc,App(C.from_stringc "check",R.list_to_lp_list p,[q;tlist]))) in
+      state, (loc,mkApp(C.from_stringc "check") (R.list_to_lp_list p) [q;tlist])) in
   let executable = executable_of_query query in
   exec executable <> Failure
 ;;
