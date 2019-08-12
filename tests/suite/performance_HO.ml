@@ -12,6 +12,11 @@ let () = declare "grundlagen"
   ~description:"type checker for λδ"
   ()
 
+let () = declare "lyp"
+  ~source_elpi:"lyp/lyp_engine.elpi"
+  ~description:"type checker for λΥP"
+  ()
+
 let () = declare "cbv"
   ~source_elpi:"reduce_cbv.elpi"
   ~source_teyjus:"reduce_cbv.mod"

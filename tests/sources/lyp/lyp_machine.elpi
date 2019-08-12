@@ -1,0 +1,339 @@
+% The Formal System λΥP (preprint AMS Acta 5754)
+
+% Syntax %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% fragment: F
+kind frag type.
+
+% (star, star) fragment
+type f_ss frag.
+
+% (star, box) fragment
+type f_sb frag.
+
+% (box, box) fragment
+type f_bb frag.
+
+% (box, star) fragment
+type f_bs frag.
+
+% (box, star) fragment and (box, box) fragment
+type f_ho frag.
+
+% general term: T, U, V, W
+kind term type.
+
+% sort 
+type sort term.
+
+% application 
+type appl frag -> term -> term -> term.
+
+% functional abstraction
+type abst frag -> term -> (term -> term) -> term.
+
+% full quantification
+type prod frag -> term -> (term -> term) -> term.
+
+% restricted quantification
+type rest frag -> term -> (term -> term) -> term.
+
+% identifier
+macro @id :- term.
+
+% application stack: S
+macro @stack :- list term.
+
+% degree: D
+kind deg type.
+
+% degree of families
+type d_1 deg.
+
+% degree of objects
+type d_2 deg.
+
+% local assumption
+type dec_l @id -> deg -> term -> prop.
+
+% local definition for substitution
+type def_l @id -> term -> prop.
+
+% deferred whd mode: M
+kind whd_mode type.
+
+% full mode (sort, rest)
+type m_full whd_mode.
+
+% restricted mode (sort only)
+type m_sort whd_mode.
+
+% deferred actions: P
+kind prog type.
+
+% deferred delta expansion
+type p_expand term -> prog.
+
+% deferred whd to kind
+type p_whd whd_mode -> term -> prog.
+
+% deferred conversion
+type p_conv term -> prog.
+
+% deferred application
+type p_appl frag -> term -> prog -> prog.
+
+% deferred static typing
+type p_type deg -> prog -> prog.
+
+% Processor %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type proc_t prog -> term -> prop.
+
+proc_t (p_expand T2) T1 :- expand_t T1 T2.
+
+proc_t (p_whd M U) T :- whd_t T [] M U.
+
+proc_t (p_conv T2) T1 :- conv_t T1 [] [] T2.
+
+proc_t (p_appl F V P) T :- ac_t T [] (p_appl F V P).
+
+proc_t (p_type D P) T :- sta_t T D P.
+
+% contextual static typing
+macro @STATIC_T D T U :- proc_t (p_type D (p_expand U)) T.
+
+% kind check
+macro @KIND_T M T U :- proc_t (p_type d_1 (p_whd M U)) T.
+
+% dynamic typing (static typing + conversion)
+macro @TYPE_T D T U :- proc_t (p_type D (p_conv U)) T.
+
+% applicability condition
+macro @AC_T D F V T P :- proc_t (p_type D (p_appl F V P)) T.
+
+% Delta expansion %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type expand_t term -> term -> prop.
+
+% reflexivity 
+expand_t T T :- !.
+
+% delta
+expand_t X T2 :- def_l X T1, !, % print "d",
+  expand_t T1 T2.
+
+% contextual closure
+expand_t (appl F V1 T1) (appl F V2 T2) :-
+  expand_t V1 V2, expand_t T1 T2.
+
+% contextual closure
+expand_t (abst F W1 T1) (abst F W2 T2) :-
+  expand_t W1 W2,
+  pi x\ expand_t (T1 x) (T2 x).
+
+% contextual closure
+expand_t (prod F W1 T1) (prod F W2 T2) :-
+  expand_t W1 W2,
+  pi x\ expand_t (T1 x) (T2 x).
+
+% contextual closure
+expand_t (rest F W1 T1) (rest F W2 T2) :-
+  expand_t W1 W2,
+  pi x\ expand_t (T1 x) (T2 x).
+
+% Weak normal form to kind %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type whd_t term -> @stack -> whd_mode -> term -> prop.
+
+whd_t (sort) [] _ T :- (sort) = T.
+
+whd_t (rest f_bb W T1) [] m_full T2 :-
+  expand_t (rest f_bb W T1) T2.
+
+% delta
+whd_t X S M T2 :- def_l X T1, !, % print "d",
+  whd_t T1 S M T2.
+
+% contextual closure
+whd_t (appl _ V T1) S M T2 :- whd_t T1 [V|S] M T2.
+
+% full beta
+whd_t (abst _ _ T1) [V|S] M T2 :- % print "bf",
+  pi x\ def_l x V => whd_t (T1 x) S M T2.
+
+% restricted beta
+whd_t (rest _ _ T1) [V|S] M T2 :- % print "br",
+  pi x\ def_l x V => whd_t (T1 x) S M T2.
+
+% Stack Conversion %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type conv_s @stack -> @stack -> prop.
+
+conv_s [] [].
+
+conv_s [V1|S1] [V2|S2] :- conv_t V1 [] [] V2, conv_s S1 S2.
+
+% Term Conversion %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type conv_t term -> @stack -> @stack -> term -> prop.
+
+% reflexivity 
+conv_t T S1 S2 T :- conv_s S1 S2, !. %, print "r".
+
+conv_t (abst F W1 T1) [] [] (abst F W2 T2) :- !,
+  conv_t W1 [] [] W2,
+  pi x\ conv_t (T1 x) [] [] (T2 x).
+
+conv_t (prod F W1 T1) [] [] (prod F W2 T2) :- !,
+  conv_t W1 [] [] W2,
+  pi x\ conv_t (T1 x) [] [] (T2 x).
+
+conv_t (rest F W1 T1) [] [] (rest F W2 T2) :- !,
+  conv_t W1 [] [] W2,
+  pi x\ conv_t (T1 x) [] [] (T2 x).
+
+% left contextual closure
+conv_t (appl _ V1 T1) S1 S2 T2 :- !,
+  conv_t T1 [V1|S1] S2 T2.
+
+% right contextual closure
+conv_t T1 S1 S2 (appl _ V2 T2) :- !,
+  conv_t T1 S1 [V2|S2] T2.
+
+% left full beta
+conv_t (abst _ _ T1) [V1|S1] S2 T2 :- !, % print "bf",
+  pi x\ def_l x V1 => conv_t (T1 x) S1 S2 T2.
+
+% left restricted beta
+conv_t (rest _ _ T1) [V1|S1] S2 T2 :- !, % print "br",
+  pi x\ def_l x V1 => conv_t (T1 x) S1 S2 T2.
+
+% right full beta
+conv_t T1 S1 [V2|S2] (abst _ _ T2) :- !, % print "bf",
+  pi x\ def_l x V2 => conv_t T1 S1 S2 (T2 x).
+
+% right restricted beta
+conv_t T1 S1 [V2|S2] (rest _ _ T2) :- !, % print "br",
+  pi x\ def_l x V2 => conv_t T1 S1 S2 (T2 x).
+
+% parallel delta
+conv_t X S1 S2 X :- def_l X T, !, % print "dd",
+  conv_t T S1 S2 T.
+
+% implied delta 
+conv_t X1 S1 S2 X2 :- def_l X1 T1, def_l X2 T2, !, % print "d",
+  conv_i X1 T1 S1 S2 T2 X2.
+
+% forced left delta
+conv_t X1 S1 S2 T2 :- def_l X1 T1, !, % print "d",
+  conv_t T1 S1 S2 T2.
+
+% forced right delta
+conv_t T1 S1 S2 X2 :- def_l X2 T2, !, % print "d",
+  conv_t T1 S1 S2 T2.
+
+% Implied conversion %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type conv_i @id -> term -> @stack -> @stack -> term -> @id -> prop.
+
+conv_i X1 _ S1 S2 T2 X2 :- X1 < X2, !, conv_t X1 S1 S2 T2.
+
+conv_i _ T1 S1 S2 _ X2 :- conv_t T1 S1 S2 X2.
+
+% Applicability condition %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type ac_t term -> @stack -> prog -> prop.
+
+ac_t (prod f_sb W U) [] (p_appl f_sb V P) :- !,
+  @TYPE_T d_2 V W,
+  pi x\ def_l x V => proc_t P (U x).
+
+ac_t (prod f_ss W U) [] (p_appl f_ss V P) :- !,
+  @TYPE_T d_2 V W,
+  pi x\ def_l x V => proc_t P (U x).
+
+ac_t (rest f_bb W U) [] (p_appl f_bb V P) :- !,
+  @TYPE_T d_1 V W,
+  pi x\ def_l x V => proc_t P (U x).
+
+ac_t (rest f_ho W U) [] (p_appl f_bs V P) :- !,
+  @TYPE_T d_1 V W,
+  pi x\ def_l x V => proc_t P (U x).
+
+% delta
+ac_t X S P :- def_l X T, !, % print "d",
+  ac_t T S P.
+
+% contextual closure
+ac_t (appl _ V T) S P :- ac_t T [V|S] P.
+
+% full beta
+ac_t (abst _ _ T) [V|S] P :- % print "bf",
+  pi x\ def_l x V => ac_t (T x) S P.
+
+% restricted beta
+ac_t (rest _ _ T) [V|S] P :- % print "br",
+  pi x\ def_l x V => ac_t (T x) S P.
+
+% Static type assignment %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type sta_t term -> deg -> prog -> prop.
+
+sta_t X D P :- dec_l X D U, !, proc_t P U.
+
+sta_t (prod f_ss W T) d_1 P :-
+  @KIND_T m_sort W _,
+  pi x\ dec_l x d_2 W => @KIND_T m_full (T x) U,
+  proc_t P U.
+
+sta_t (abst f_sb W T) d_1 P :-
+  @KIND_T m_sort W _,
+  pi x\ dec_l x d_2 W => @STATIC_T d_1 (T x) (U x),
+  proc_t P (prod f_sb W U).
+
+sta_t (rest f_ho W T) d_1 P :-
+  valid_k W,
+  pi x\ dec_l x d_1 W => @STATIC_T d_1 (T x) (U x),
+  proc_t P (rest f_bb W U).
+
+sta_t (abst f_ss W T) d_2 P :-
+  @KIND_T m_sort W _,
+  pi x\ dec_l x d_2 W => @STATIC_T d_2 (T x) (U x),
+  proc_t P (prod f_ss W U).
+
+sta_t (rest f_bs W T) d_2 P :-
+  valid_k W,
+  pi x\ dec_l x d_1 W => @STATIC_T d_2 (T x) (U x),
+  proc_t P (rest f_ho W U).
+
+sta_t (appl F V T) D P :-
+  @AC_T D F V T P.
+
+% Kind Validity %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type valid_k term -> prop.
+
+valid_k (sort).
+
+valid_k (prod f_sb W T) :-
+  @KIND_T m_sort W _,
+  pi x\ dec_l x d_2 W => valid_k (T x).
+
+valid_k (rest f_bb W T) :-
+  valid_k W,
+  pi x\ dec_l x d_1 W => valid_k (T x).
+
+% Declaration %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type dec_t deg -> term -> prop.
+
+dec_t d_1 U :- valid_k U.
+
+dec_t d_2 U :- @KIND_T m_full U _.
+
+% Definition %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type def_t deg -> term -> term -> prop.
+
+def_t D U T :- dec_t D U, @TYPE_T D T U.

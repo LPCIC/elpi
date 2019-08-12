@@ -1,0 +1,17 @@
+% The Formal System λΥP: trace facility
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% proc_t P T :- print (proc_t P T), fail.
+
+% expand_t T1 _ :- print (expand_t T1), fail.
+
+% whd_t T S M _ :- print (whd_t T S M), fail.
+
+% conv_t T1 S1 S2 T2 :- print (conv_t T1 S1 S2 T2), fail.
+
+% ac_t T S _ :- print (ac_t T S), fail.
+
+% sta_t T D _ :- print (sta_t T D), fail.
+
+% valid_k T :- print (valid_k T), fail.

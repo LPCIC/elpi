@@ -1,0 +1,7 @@
+  33894 full beta
+   4167 restricted beta  
+  38061 total beta
+ 509906 delta
+     10 parallel delta
+ 547967 total
+1034313 conversion by alpha

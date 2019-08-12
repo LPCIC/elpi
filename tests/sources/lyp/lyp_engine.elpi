@@ -1,0 +1,14 @@
+% The Formal System λΥP: engine
+
+% Components %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+accumulate lyp_trace.
+accumulate lyp_machine.
+accumulate lyp_global.
+accumulate grundlagen_2b_lyp.
+
+% Validation of the Grundlagen %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type main prop.
+
+main :- grundlagen.

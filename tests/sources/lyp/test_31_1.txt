@@ -1,0 +1,33 @@
+monica 2017 Dec 20 23:58
+
+     1  Time: 9.295
+     2  Time: 9.310
+     3  Time: 9.312
+     4  Time: 9.319
+     5  Time: 9.323
+     6  Time: 9.325
+     7  Time: 9.328
+     8  Time: 9.329
+     9  Time: 9.330
+    10  Time: 9.331
+    11  Time: 9.333
+    12  Time: 9.334
+    13  Time: 9.335
+    14  Time: 9.349
+    15  Time: 9.354
+    16  Time: 9.356 *
+    17  Time: 9.360
+    18  Time: 9.363
+    19  Time: 9.365
+    20  Time: 9.366
+    21  Time: 9.370
+    22  Time: 9.371
+    23  Time: 9.378
+    24  Time: 9.381
+    25  Time: 9.386
+    26  Time: 9.390
+    27  Time: 9.391
+    28  Time: 9.394
+    29  Time: 9.403
+    30  Time: 9.404
+    31  Time: 9.411

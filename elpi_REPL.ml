@@ -120,7 +120,7 @@ let _ =
   let installpath = 
     let v = try Sys.getenv "OCAMLPATH" with Not_found -> "" in
     let ocamlpath =
-      (Filename.dirname Sys.executable_name ^ "/../lib") ::
+      (Filename.dirname Sys.executable_name ^ "/../lib/ocaml") ::
       Str.split (Str.regexp ":") v in
     List.flatten (List.map (fun x -> ["-I";x^"/elpi/"]) ocamlpath) in
   let execpath = ["-I"; Filename.dirname (Sys.executable_name)] in
