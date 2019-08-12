@@ -534,23 +534,44 @@ end = struct
 
 (* {{{ ************** move/hmove/deref_* ******************** *)
 
-exception NotInTheFragment
 (* in_fragment n [n;...;n+m-1] = m
    it must be called either on heap terms or on stack terms whose Args are
    non instantiated *)
-let rec in_fragment expected =
- function
-   [] -> 0
- | Const c::tl when c = expected -> 1 + in_fragment (expected+1) tl
+let rec uvar_in_fragment r lvl ol expected l cur =
+ match l with
+ | [] -> Term.mkUVar r lvl cur
+ | Const c::tl when c = expected -> uvar_in_fragment r lvl ol (expected+1) tl (succ cur)
  | UVar ({ contents = t} ,_,_)::tl -> (* XXX *)
-    in_fragment expected (t :: tl)
+    uvar_in_fragment r lvl ol expected (t :: tl) cur
+ | _ -> Term.mkAppUVar r lvl ol
+[@@inlined]
+
+let rec uvar_in_fragment_beta r lvl ano ol expected l cur =
+ match l with
+ | [] -> Term.mkUVar r lvl (ano+cur)
+ | Const c::tl when c = expected -> uvar_in_fragment_beta r lvl ano ol (expected+1) tl (succ cur)
+ | UVar ({ contents = t} ,_,_)::tl -> (* XXX *)
+    uvar_in_fragment_beta r lvl ano ol expected (t :: tl) cur
+ | _ ->
+    let nl = C.mkinterval lvl ano 0 in
+    Term.mkAppUVar r lvl (nl@ol)
+[@@inlined]
+
+let rec arg_in_fragment r ol expected l cur =
+ match l with
+ | [] -> Term.mkArg r cur
+ | Const c::tl when c = expected -> arg_in_fragment r ol (expected+1) tl (succ cur)
+ | UVar ({ contents = t} ,_,_)::tl -> (* XXX *)
+    arg_in_fragment r ol expected (t :: tl) cur
 (* Invariant not true anymore, since we may not deref aggressively
    to avoid occur-check
  | UVar (r,_,_)::_
  | AppUVar (r,_,_)::_ when !!r != C.dummy ->
      anomaly "non dereferenced terms in in_fragment"
 *)
- | _ -> raise NotInTheFragment
+ | _ -> Term.mkAppArg r ol
+[@@inlined]
+
 
 exception NonMetaClosed
 
@@ -590,13 +611,11 @@ let rec make_lambdas destdepth args =
 
 let rec mknLam n x = if n = 0 then x else mkLam (mknLam (n-1) x)
 
-let mkAppUVar r lvl l =
-  try mkUVar r lvl (in_fragment lvl l)
-  with NotInTheFragment -> mkAppUVar r lvl l
+let mkAppUVar r lvl l = uvar_in_fragment r lvl l lvl l 0
+[@@inlined]
 
-let mkAppArg i fromdepth xxs' =
-  try mkArg i (in_fragment fromdepth xxs')
-  with NotInTheFragment -> mkAppArg i xxs'
+let mkAppArg i fromdepth xxs' = arg_in_fragment i xxs' fromdepth xxs' 0
+[@@inlined]
 
 (* move performs at once:
    1) refreshing of the arguments into variables (heapifycation)
@@ -969,11 +988,7 @@ and beta depth sub t args =
          | AppArg _ -> anomaly "beta takes only heap terms"
          | App (c,arg,args1) -> mkApp c arg (args1@args)
          | Builtin (c,args1) -> mkBuiltin c (args1@args)
-         | UVar (r,n,m) -> begin
-            try mkUVar r n (m + in_fragment (n+m) args)
-            with NotInTheFragment ->
-              let args1 = C.mkinterval n m 0 in
-              Term.mkAppUVar r n (args1@args) end
+         | UVar (r,n,m) -> uvar_in_fragment_beta r n m args  (n+m) args 0
          | AppUVar (r,depth,args1) -> mkAppUVar r depth (args1@args)
          | Lam _ -> anomaly "beta: some args and some lambdas"
          | CData x -> type_error (Printf.sprintf "beta: '%s'" (CData.show x))

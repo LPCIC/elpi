@@ -321,17 +321,17 @@ and clause = {
 and mode = bool list (* true=input, false=output *)
 [@@deriving show, eq]
 
-let mkLam x = Lam x [@@inline]
-let mkApp c x xs = App(c,x,xs) [@@inline]
-let mkCons hd tl = Cons(hd,tl) [@@inline]
+let mkLam x = Lam x [@@inlined]
+let mkApp c x xs = App(c,x,xs) [@@inlined]
+let mkCons hd tl = Cons(hd,tl) [@@inlined]
 let mkNil = Nil
 let mkDiscard = Discard
-let mkBuiltin c args = Builtin(c,args) [@@inline]
-let mkCData c = CData c [@@inline]
-let mkUVar r d ano = UVar(r,d,ano) [@@inline]
-let mkAppUVar r d args = AppUVar(r,d,args) [@@inline]
-let mkArg i ano = Arg(i,ano) [@@inline]
-let mkAppArg i args = AppArg(i,args) [@@inline]
+let mkBuiltin c args = Builtin(c,args) [@@inlined]
+let mkCData c = CData c [@@inlined]
+let mkUVar r d ano = UVar(r,d,ano) [@@inlined]
+let mkAppUVar r d args = AppUVar(r,d,args) [@@inlined]
+let mkArg i ano = Arg(i,ano) [@@inlined]
+let mkAppArg i args = AppArg(i,args) [@@inlined]
 
 module C = struct
 
@@ -463,7 +463,7 @@ let mkConst x =
     Hashtbl.add c2s x ("c" ^ string_of_int x);
     Hashtbl.add c2t x xx;
     xx
-  [@@inline]
+  [@@inlined]
 
 let show n =
    try Hashtbl.find c2s n
