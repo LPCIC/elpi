@@ -757,17 +757,15 @@ module RawData : sig
   type builtin
   type term = Data.term
   type view = private
-    (* Pure subterms *)
     | Const of constant                   (* global constant or a bound var *)
+    | CData of RawOpaqueData.t                    (* external data *)
+    | Nil                                 (* [] *)
     | Lam of term                         (* lambda abstraction, i.e. x\ *)
     | App of constant * term * term list  (* application (at least 1 arg) *)
-    (* Optimizations *)
-    | Cons of term * term                 (* :: *)
-    | Nil                                 (* [] *)
-    | Discard                             (* _  *)
     (* FFI *)
     | Builtin of builtin * term list      (* call to a built-in predicate *)
-    | CData of RawOpaqueData.t            (* opaque data *)
+    (* Optimizations *)
+    | Cons of term * term                 (* :: *)
     (* Unassigned unification variables *)
     | UnifVar of FlexibleData.Elpi.t * term list
 
@@ -787,7 +785,6 @@ module RawData : sig
   val mkAppSL : string -> term list -> term
   val mkCons : term -> term -> term
   val mkNil : term
-  val mkDiscard : term
   val mkBuiltinS : string -> term list -> term
   val mkCData : RawOpaqueData.t -> term
   val mkUnifVar : FlexibleData.Elpi.t -> args:term list -> State.t -> term

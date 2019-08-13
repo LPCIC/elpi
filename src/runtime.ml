@@ -90,11 +90,11 @@ let xppterm ~nice ?(min_prec=min_prec) depth0 names argsdepth env f t =
     | AppUVar (r,vardepth,terms) when !!r != C.dummy -> 
        flat_cons_to_list depth acc
         (!do_app_deref ~from:vardepth ~to_:depth terms !!r)
-    | Cons (x,y) -> flat_cons_to_list depth (x::acc) y
+    | Cons (x,y) | XCons (x,y) -> flat_cons_to_list depth (x::acc) y
     | _ -> List.rev acc, t
   and is_lambda depth =
    function
-      Lam _ -> true
+    | Lam _ | XLam _ -> true
     | UVar (r,vardepth,terms) when !!r != C.dummy ->
        is_lambda depth (!do_deref ~from:vardepth ~to_:depth terms !!r)
     | AppUVar (r,vardepth,terms) when !!r != C.dummy -> 
@@ -103,7 +103,7 @@ let xppterm ~nice ?(min_prec=min_prec) depth0 names argsdepth env f t =
   and aux_last prec depth f t =
    if nice then begin
    match t with
-     Lam _ -> aux min_prec depth f t
+     Lam _ | XLam _ -> aux min_prec depth f t
    | UVar (r,vardepth,terms) when !!r != C.dummy -> 
       aux_last prec depth f (!do_deref ~from:vardepth ~to_:depth terms !!r)
    | AppUVar (r,vardepth,terms) when !!r != C.dummy -> 
@@ -117,17 +117,17 @@ let xppterm ~nice ?(min_prec=min_prec) depth0 names argsdepth env f t =
      (Fmt.fprintf f "(" ; h () ; Fmt.fprintf f ")")
     else h () in
    match t with
-   | (Cons _ | Nil) ->
+   | (Cons _ | Nil) | XCons _ ->
       let prefix,last = flat_cons_to_list depth [] t in
       Fmt.fprintf f "[" ;
       pplist ~boxed:true (aux Parser.list_element_prec depth) ", " f prefix ;
-      if last != mkNil then begin
+      if last != Pure.mkNil then begin
        Fmt.fprintf f " | " ;
        aux prec 1 f last
       end;   
       Fmt.fprintf f "]"
     | Const s -> ppconstant f s 
-    | App (hd,x,xs) ->
+    | App (hd,x,xs) | XApp (hd,x,xs) ->
        (try
          let assoc,hdlvl =
           Parser.precedence_of (F.from_string (C.show hd)) in
@@ -165,7 +165,7 @@ let xppterm ~nice ?(min_prec=min_prec) depth0 names argsdepth env f t =
             pplist (aux inf_prec depth) ~pplastelem:(aux_last inf_prec depth) ", " f (x::xs)
           else pp_app f ppconstant (aux inf_prec depth)
                  ~pplastarg:(aux_last inf_prec depth) (hd,x::xs)))
-    | Builtin (hd,xs) ->
+    | Builtin (hd,xs) | XBuiltin(hd,xs) ->
        with_parens appl_prec (fun _ ->
         pp_app f ppconstant (aux inf_prec depth)
          ~pplastarg:(aux_last inf_prec depth) (hd,xs))
@@ -190,21 +190,21 @@ let xppterm ~nice ?(min_prec=min_prec) depth0 names argsdepth env f t =
        with_parens appl_prec (fun _ ->
         pp_app f (pp_uvar inf_prec depth vardepth 0) (aux inf_prec depth)
          ~pplastarg:(aux_last inf_prec depth) (r,terms))
-    | Arg (n,argsno) ->
+    | XArg (n,argsno) ->
        let args = List.map destConst (C.mkinterval argsdepth argsno 0) in
        with_parens ~test:(args <> []) appl_prec (fun _ ->
         pp_app f (pp_arg prec depth) ppconstant (n,args))
-    | AppArg (v,terms) ->
+    | XAppArg (v,terms) ->
        with_parens appl_prec (fun _ ->
         pp_app f (pp_arg inf_prec depth) (aux inf_prec depth)
          ~pplastarg:(aux_last inf_prec depth) (v,terms))
-    | Lam t ->
+    | Lam t | XLam t ->
        with_parens lam_prec (fun _ ->
-        let c = mkConst depth in
+        let c = Constants.mkConst depth in
         Fmt.fprintf f "%a \\@ %a" (aux inf_prec depth) c
          (aux min_prec (depth+1)) t)
     | CData d -> CData.pp f d
-    | Discard -> Fmt.fprintf f "_"
+    | XDiscard () -> Fmt.fprintf f "_"
   in
     try aux min_prec depth0 f t with e -> Fmt.fprintf f "EXN PRINTING: %s" (Printexc.to_string e)
 ;;
@@ -447,7 +447,7 @@ let print =
       pp_ctx pdiff
       (pp_goal depth) g
       (pplist (uppterm 0 [] 0 empty_env) ", ")
-        (List.map (fun r -> mkUVar r 0 0) blockers)
+        (List.map (fun r -> Heap.mkUVar r 0 0) blockers)
   ) " "
 
 let pp_stuck_goal fmt { kind; blockers } = match kind with
@@ -457,7 +457,7 @@ let pp_stuck_goal fmt { kind; blockers } = match kind with
         ad (uppterm ad [] 0 empty_env) a
         bd (uppterm ad [] ad e) b
           (pplist ~boxed:false (uppterm 0 [] 0 empty_env) ", ")
-            (List.map (fun r -> mkUVar r 0 0) blockers)
+            (List.map (fun r -> Heap.mkUVar r 0 0) blockers)
    | Constraint c -> print fmt [c,blockers]
 
 end (* }}} *)
@@ -539,37 +539,31 @@ end = struct
    non instantiated *)
 let rec uvar_in_fragment r lvl ol expected l cur =
  match l with
- | [] -> Term.mkUVar r lvl cur
+ | [] -> Heap.mkUVar r lvl cur
  | Const c::tl when c = expected -> uvar_in_fragment r lvl ol (expected+1) tl (succ cur)
- | UVar ({ contents = t} ,_,_)::tl -> (* XXX *)
+ | UVar ({ contents = t} ,_,_)::tl -> (* Approx, we don't deref if we are avoid OC *)
     uvar_in_fragment r lvl ol expected (t :: tl) cur
- | _ -> Term.mkAppUVar r lvl ol
+ | _ -> Heap.mkAppUVar r lvl ol
 [@@inlined]
 
 let rec uvar_in_fragment_beta r lvl ano ol expected l cur =
  match l with
- | [] -> Term.mkUVar r lvl (ano+cur)
+ | [] -> Heap.mkUVar r lvl (ano+cur)
  | Const c::tl when c = expected -> uvar_in_fragment_beta r lvl ano ol (expected+1) tl (succ cur)
- | UVar ({ contents = t} ,_,_)::tl -> (* XXX *)
+ | UVar ({ contents = t} ,_,_)::tl -> (* Approx, we don't deref if we are avoid OC *)
     uvar_in_fragment_beta r lvl ano ol expected (t :: tl) cur
  | _ ->
     let nl = C.mkinterval lvl ano 0 in
-    Term.mkAppUVar r lvl (nl@ol)
+    Heap.mkAppUVar r lvl (nl@ol)
 [@@inlined]
 
 let rec arg_in_fragment r ol expected l cur =
  match l with
- | [] -> Term.mkArg r cur
+ | [] -> Stack.mkArg r cur
  | Const c::tl when c = expected -> arg_in_fragment r ol (expected+1) tl (succ cur)
- | UVar ({ contents = t} ,_,_)::tl -> (* XXX *)
+ | UVar ({ contents = t} ,_,_)::tl -> (* Approx, we don't deref if we are avoid OC *)
     arg_in_fragment r ol expected (t :: tl) cur
-(* Invariant not true anymore, since we may not deref aggressively
-   to avoid occur-check
- | UVar (r,_,_)::_
- | AppUVar (r,_,_)::_ when !!r != C.dummy ->
-     anomaly "non dereferenced terms in in_fragment"
-*)
- | _ -> Term.mkAppArg r ol
+ | _ -> Stack.mkAppArg r ol
 [@@inlined]
 
 
@@ -578,21 +572,21 @@ exception NonMetaClosed
 let deterministic_restriction e ~args_safe t =
  let rec aux =
   function
-    Lam f -> aux f
-  | App (_,t,l) -> aux t; List.iter aux l
-  | Cons (x,xs) -> aux x; aux xs
-  | Builtin (_,l) -> List.iter aux l
+  | Lam f | XLam f -> aux f
+  | App (_,t,l) | XApp (_,t,l) -> aux t; List.iter aux l
+  | Cons (x,xs) | XCons (x,xs) -> aux x; aux xs
+  | Builtin (_,l) | XBuiltin (_,l) -> List.iter aux l
   | UVar (r,_,_) 
   | AppUVar (r,_,_) when !!r == C.dummy -> raise NonMetaClosed
   | UVar (r,_,_) -> aux !!r
   | AppUVar (r,_,l) -> aux !!r ; List.iter aux l
-  | Arg (i,_) when e.(i) == C.dummy && not args_safe -> raise NonMetaClosed
-  | AppArg (i,_) when e.(i) == C.dummy -> raise NonMetaClosed
-  | Arg (i,_) -> if e.(i) != C.dummy then aux e.(i)
-  | AppArg (i,l) -> aux e.(i) ; List.iter aux l
+  | XArg (i,_) when e.(i) == C.dummy && not args_safe -> raise NonMetaClosed
+  | XAppArg (i,_) when e.(i) == C.dummy -> raise NonMetaClosed
+  | XArg (i,_) -> if e.(i) != C.dummy then aux e.(i)
+  | XAppArg (i,l) -> aux e.(i) ; List.iter aux l
   | Const _
   | Nil
-  | Discard
+  | XDiscard ()
   | CData _ -> ()
  in
   try aux t ; true
@@ -606,10 +600,10 @@ let occurr_check r1 r2 =
   | Some r1 -> if r1 == r2 then raise RestrictionFailure
 
 let rec make_lambdas destdepth args =
- if args = 0 then let x = mkUVar (oref C.dummy) destdepth 0 in x,x
- else let x,y = make_lambdas (destdepth+1) (args-1) in mkLam x, y
+ if args = 0 then let x = Heap.mkUVar (oref C.dummy) destdepth 0 in x,x
+ else let x,y = make_lambdas (destdepth+1) (args-1) in Heap.mkLam x, y
 
-let rec mknLam n x = if n = 0 then x else mkLam (mknLam (n-1) x)
+let rec mknLam n x = if n = 0 then x else Heap.mkLam (mknLam (n-1) x)
 
 let mkAppUVar r lvl l = uvar_in_fragment r lvl l lvl l 0
 [@@inlined]
@@ -727,7 +721,7 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
     match x with
     | Const c ->
        if delta == 0 then x else                          (* optimization  *)
-       if c >= from then mkConst (c - delta) else (* locally bound *)
+       if c >= from then Constants.mkConst (c - delta) else (* locally bound *)
        if c < to_ then x else                             (* constant      *)
        raise RestrictionFailure
     | Lam f ->
@@ -749,7 +743,7 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
        let tl' = maux e depth tl in
        if hd == hd' && tl == tl' then x else mkCons hd' tl'
     | Nil -> x
-    | Discard -> x
+    | XDiscard () -> x
 
     (* fast path with no deref... *)
     | UVar _ when delta == 0 && avoid == None -> x
