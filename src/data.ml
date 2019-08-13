@@ -35,7 +35,230 @@ open Util
  *
  *)
 
-module Term = struct
+module Term : sig
+
+type constant = int
+[@@deriving show, eq]
+
+val id_term : UUID.t
+type term = private
+
+  (* Pure terms, can live both on the heap and on the stack *)
+  | Const of constant
+  | CData of CData.t
+  | Nil
+
+  (* Heap *)
+  | Lam of term
+  | App of constant * term * term list
+  | Builtin of constant * term list
+  | Cons of term * term
+  | UVar of uvar_body * (*depth:*)int * (*argsno:*)int
+  | AppUVar of uvar_body * (*depth:*)int * term list
+
+  (* Stack: these constructors are later hidden via an Obj.magic *)
+  | XLam of term
+  | XApp of constant * term * term list
+  | XArg of (*id:*)int * (*argsno:*)int
+  | XAppArg of (*id*)int * term list
+  | XCons of term * term
+  | XBuiltin of constant * term list
+  | XDiscard of unit (* we need an argument, or this constructor goes up *)
+and uvar_body = {
+  mutable contents : term;
+  mutable rest : stuck_goal list;
+}
+and stuck_goal = {
+  mutable blockers : blockers;
+  kind : stuck_goal_kind;
+}
+and blockers = uvar_body list
+and stuck_goal_kind =
+ | Constraint of constraint_def
+ | Unification of unification_def 
+and unification_def = {
+  adepth : int;
+  env : term array;
+  bdepth : int;
+  a : term;
+  b : term;
+  matching: bool;
+}
+and constraint_def = {
+  cdepth : int;
+  prog : prolog_prog [@equal fun _ _ -> true]
+               [@printer (fun fmt _ -> Fmt.fprintf fmt "<prolog_prog>")];
+  context : clause_src list;
+  conclusion : term;
+}
+and clause_src = { hdepth : int; hsrc : term }
+and prolog_prog = {
+  src : clause_src list; (* hypothetical context in original form, for CHR *)
+  index : index;
+}
+and index = second_lvl_idx Ptmap.t
+and second_lvl_idx =
+| TwoLevelIndex of {
+    mode : mode;
+    argno : int; 
+    all_clauses : clause list;         (* when the query is flexible *)
+    flex_arg_clauses : clause list;       (* when the query is rigid but arg_id ha nothing *)
+    arg_idx : clause list Ptmap.t;   (* when the query is rigid (includes in each binding flex_arg_clauses) *)
+  }
+| BitHash of {
+    mode : mode;
+    args : int list;
+    time : int; (* time is used to recover the total order *)
+    args_idx : (clause * int) list Ptmap.t; (* clause, insertion time *)
+  }
+and clause = {
+    depth : int;
+    args : term list;
+    hyps : term list;
+    vars : int;
+    mode : mode; (* CACHE to avoid allocation in get_clause *)
+}
+and mode = bool list (* true=input, false=output *)
+[@@deriving show, eq]
+
+module Pure : sig
+
+val mkNil : term [@@inline]
+val mkCData : CData.t -> term [@@inline]
+val mkConst : constant -> term [@@inline]
+
+end
+
+module Heap : sig
+
+val mkLam : term -> term [@@inline]
+val mkApp : constant -> term -> term list -> term [@@inline]
+val mkCons : term -> term -> term [@@inline]
+val mkBuiltin : constant -> term list -> term [@@inline]
+val mkUVar : uvar_body -> int -> int -> term [@@inline]
+val mkAppUVar : uvar_body -> int -> term list -> term [@@inline]
+
+end
+
+module Stack : sig
+
+val mkLam : term -> term [@@inline]
+val mkApp : constant -> term -> term list -> term [@@inline]
+val mkCons : term -> term -> term [@@inline]
+val mkDiscard : unit -> term [@@inline]
+val mkBuiltin : constant -> term list -> term [@@inline]
+val mkArg : int -> int -> term [@@inline]
+val mkAppArg : int -> term list -> term [@@inline]
+
+end
+
+val mkAppL : constant -> term list -> term [@@inline]
+val mkAppS : string -> term -> term list -> term [@@inline]
+val mkAppSL : string -> term list -> term [@@inline]
+
+val smart_map : (constant -> constant) -> term -> term
+
+module C : sig
+
+  val int : int CData.cdata
+  val is_int : CData.t -> bool
+  val to_int : CData.t -> int
+  val of_int : int -> term
+
+  val float : float CData.cdata
+  val is_float : CData.t -> bool
+  val to_float : CData.t -> float
+  val of_float : float -> term
+  
+  val string : string CData.cdata
+  val is_string : CData.t -> bool
+  val to_string : CData.t -> string
+  val of_string : string -> term
+
+  val loc : Util.Loc.t CData.cdata
+  val is_loc : CData.t -> bool
+  val to_loc : CData.t -> Util.Loc.t
+  val of_loc : Util.Loc.t -> term
+
+end
+
+val destConst : term -> constant
+
+(* Our ref data type: creation and dereference.  Assignment is defined
+   After the constraint store, since assigning may wake up some constraints *)
+val oref : term -> uvar_body [@@inline]
+val (!!) : uvar_body -> term [@@inline]
+val pp_oref : (UUID.t * Obj.t) Util.extensible_printer
+
+(* Arg/AppArg point to environments, here the empty one *)
+type env = term array
+val empty_env : env
+
+(* - negative constants are global names
+   - constants are hashconsed (terms)
+   - we use special constants to represent !, pi, sigma *)
+module Constants : sig
+
+  val funct_of_ast : F.t -> constant * term
+  val mkConst : constant -> term
+  val show : constant -> string
+  val pp : Fmt.formatter -> constant -> unit
+  val fresh : unit -> constant * term
+  val from_string : string -> term
+  val from_stringc : string -> constant
+ 
+  (* To keep the type of terms small, we use special constants for !, =, pi.. *)
+  (* {{{ *)
+  val cutc     : constant
+  val truec    : term
+  val andc     : constant
+  val andt     : term
+  val andc2    : constant
+  val orc      : constant
+  val implc    : constant
+  val rimplc   : constant
+  val rimpl    : term
+  val pic      : constant
+  val pi       : term
+  val sigmac   : constant
+  val eqc      : constant
+  val rulec    : constant
+  val cons     : term
+  val consc    : constant
+  val nil      : term
+  val nilc     : constant
+  val entailsc : constant
+  val nablac   : constant
+  val asc      : constant
+  val arrowc   : constant
+  val uvarc    : constant
+
+  val ctypec   : constant
+  val prop     : term
+  val variadic : constant
+  val any      : term
+
+  val spillc   : constant
+
+  val declare_constraintc : constant
+  val print_constraintsc  : constant
+  (* }}} *)
+
+  (* Value for unassigned UVar/Arg *)
+  val dummy  : term
+
+  type t = constant
+  val compare : t -> t -> int
+
+  module Map : Map.S with type key = t
+  module Set : Set.S with type elt = t
+
+  (* mkinterval d n 0 = [d; ...; d+n-1] *)
+  val mkinterval : int -> int -> int -> term list
+
+end
+
+end = struct
 
 (* Used by pretty printers, to be later instantiated in module Constants *)
 let pp_const = mk_extensible_printer ()
@@ -48,23 +271,28 @@ let pp_oref = mk_extensible_printer ()
 
 let id_term = UUID.make ()
 type term =
-  (* Pure terms *)
+
+  (* Pure terms, can live both on the heap and on the stack *)
   | Const of constant
+  | CData of CData.t
+  | Nil
+
+  (* Heap *)
   | Lam of term
   | App of constant * term * term list
-  (* Optimizations *)
-  | Cons of term * term
-  | Nil
-  | Discard
-  (* FFI *)
   | Builtin of constant * term list
-  | CData of CData.t
-  (* Heap terms: unif variables in the query *)
+  | Cons of term * term
   | UVar of uvar_body * (*depth:*)int * (*argsno:*)int
   | AppUVar of uvar_body * (*depth:*)int * term list
-  (* Clause terms: unif variables used in clauses *)
-  | Arg of (*id:*)int * (*argsno:*)int
-  | AppArg of (*id*)int * term list
+
+  (* Stack: these constructors are later hidden via an Obj.magic *)
+  | XLam of term
+  | XApp of constant * term * term list
+  | XArg of (*id:*)int * (*argsno:*)int
+  | XAppArg of (*id*)int * term list
+  | XCons of term * term
+  | XBuiltin of constant * term list
+  | XDiscard of unit (* we need an argument, or this constructor goes up *)
 and uvar_body = {
   mutable contents : term [@printer (pp_extensible_any ~id:id_term pp_oref)];
   mutable rest : stuck_goal list [@printer fun _ _ -> ()]
@@ -123,22 +351,13 @@ and clause = {
 and mode = bool list (* true=input, false=output *)
 [@@deriving show, eq]
 
-type indexing =
-  | MapOn of int
-  | Hash of int list
-[@@deriving show]
+module Pure = struct
 
-let mkLam x = Lam x [@@inline]
-let mkApp c x xs = App(c,x,xs) [@@inline]
-let mkCons hd tl = Cons(hd,tl) [@@inline]
-let mkNil = Nil
-let mkDiscard = Discard
-let mkBuiltin c args = Builtin(c,args) [@@inline]
-let mkCData c = CData c [@@inline]
-let mkUVar r d ano = UVar(r,d,ano) [@@inline]
-let mkAppUVar r d args = AppUVar(r,d,args) [@@inline]
-let mkArg i ano = Arg(i,ano) [@@inline]
-let mkAppArg i args = AppArg(i,args) [@@inline]
+let mkNil = Nil [@@inlined]
+let mkCData c = CData c [@@inlined]
+let mkConst x = Const x [@@inlined]
+
+end
 
 module C = struct
 
@@ -171,8 +390,8 @@ let destConst = function Const x -> x | _ -> assert false
 
 (* Our ref data type: creation and dereference.  Assignment is defined
    After the constraint store, since assigning may wake up some constraints *)
-let oref x = { contents = x; rest = [] }
-let (!!) { contents = x } = x
+let oref x = { contents = x; rest = [] } [@@inline]
+let (!!) { contents = x } = x [@@inline]
 
 (* Arg/AppArg point to environments, here the empty one *)
 type env = term array
@@ -270,7 +489,7 @@ let mkConst x =
     Hashtbl.add c2s x ("c" ^ string_of_int x);
     Hashtbl.add c2t x xx;
     xx
-  [@@inline]
+  [@@inlined]
 
 let show n =
    try Hashtbl.find c2s n
@@ -346,15 +565,92 @@ let rec mkinterval depth argsno n =
 
 end (* }}} *)
 
-let mkConst x = Constants.mkConst x [@@inline]
+
+module Heap = struct
+
+let mkLam x = Lam x [@@inlined]
+let mkApp c x xs = App(c,x,xs) [@@inlined]
+let mkCons hd tl = Cons(hd,tl) [@@inlined]
+let mkBuiltin c args = Builtin(c,args) [@@inlined]
+let mkUVar r d ano = UVar(r,d,ano) [@@inlined]
+let mkAppUVar r d args = AppUVar(r,d,args) [@@inlined]
+
+end
+
+module Stack = struct
+
+let mkLam x = XLam x [@@inlined]
+let mkApp c x xs = XApp(c,x,xs) [@@inlined]
+let mkCons hd tl = XCons(hd,tl) [@@inlined]
+let mkDiscard () = XDiscard ()
+let mkBuiltin c args = XBuiltin(c,args) [@@inlined]
+let mkArg i ano = XArg(i,ano) [@@inlined]
+let mkAppArg i args = XAppArg(i,args) [@@inlined]
+
+end
+
 let mkAppL c = function
-  | [] -> mkConst c
-  | x::xs -> mkApp c x xs [@@inline]
-let mkAppS s x args = mkApp (Constants.from_stringc s) x args [@@inline]
+  | [] -> Constants.mkConst c
+  | x::xs -> Heap.mkApp c x xs [@@inline]
+let mkAppS s x args = Heap.mkApp (Constants.from_stringc s) x args [@@inline]
 let mkAppSL s args = mkAppL (Constants.from_stringc s) args [@@inline]
+
+let smart_map f t =
+  let rec aux = function
+    | Const c as x ->
+        let c1 = f c in
+        if c == c1 then x else Constants.mkConst c1
+    | Lam t as x ->
+        let t1 = aux t in
+        if t == t1 then x else Heap.mkLam t1
+    | XLam t as x ->
+        let t1 = aux t in
+        if t == t1 then x else Stack.mkLam t1
+    | XAppArg(i,ts) as x ->
+        let ts1 = smart_map aux ts in
+        if ts == ts1 then x else Stack.mkAppArg i ts1
+    | AppUVar(r,lvl,ts) as x ->
+        assert(!!r == Constants.dummy);
+        let ts1 = smart_map aux ts in
+        if ts == ts1 then x else Heap.mkAppUVar r lvl ts1
+    | Builtin(c,ts) as x ->
+        let ts1 = smart_map aux ts in
+        if ts == ts1 then x else Heap.mkBuiltin (f c) ts1
+    | XBuiltin(c,ts) as x ->
+        let ts1 = smart_map aux ts in
+        if ts == ts1 then x else Stack.mkBuiltin (f c) ts1
+    | App(c,t,ts) as x ->
+        let c1 = f c in
+        let t1 = aux t in
+        let ts1 = smart_map aux ts in
+        if c == c1 && t == t1 && ts == ts1 then x else Heap.mkApp c1 t1 ts1
+    | XApp(c,t,ts) as x ->
+        let c1 = f c in
+        let t1 = aux t in
+        let ts1 = smart_map aux ts in
+        if c == c1 && t == t1 && ts == ts1 then x else Stack.mkApp c1 t1 ts1
+    | Cons(hd,tl) as x ->
+        let hd1 = aux hd in
+        let tl1 = aux tl in
+        if hd == hd1 && tl == tl1 then x else Heap.mkCons hd1 tl1
+    | XCons(hd,tl) as x ->
+        let hd1 = aux hd in
+        let tl1 = aux tl in
+        if hd == hd1 && tl == tl1 then x else Stack.mkCons hd1 tl1
+    | UVar(r,_,_) as x ->
+        assert(!!r == Constants.dummy);
+        x
+    | (XArg _ | CData _ | Nil | XDiscard _) as x -> x
+  in
+    aux t
 
 end
 include Term
+
+type indexing =
+  | MapOn of int
+  | Hash of int list
+[@@deriving show]
 
 (* Object oriented state: borns at compilation time and survives as run time *)
 module State : sig
@@ -795,8 +1091,8 @@ type 't compiled_constructor =
 type 't compiled_adt = ('t compiled_constructor) Constants.Map.t
 
 let buildk kname = function
-| [] -> mkConst kname
-| x :: xs -> mkApp kname x xs
+| [] -> Constants.mkConst kname
+| x :: xs -> Heap.mkApp kname x xs
 
 let rec readback_args : type a m t.
   look:(depth:int -> term -> term) ->
@@ -832,10 +1128,6 @@ and readback : type t.
   | (UVar _ | AppUVar _) ->
       let CK(args,read,_) = Constants.Map.find (Constants.from_stringc "uvar") adt in
       readback_args ~look ty ~depth hyps constraints state [] t args read [t]
-  | Discard ->
-      let CK(args,read,_) = Constants.Map.find (Constants.from_stringc "uvar") adt in
-      let state, k = alloc ~lvl:depth state in
-      readback_args ~look ty ~depth hyps constraints state [] t args read [mkUnifVar k ~args:[] state]
   | _ -> raise (Conversion.TypeErr(ty,depth,t))
   with Not_found -> raise (Conversion.TypeErr(ty,depth,t))
 

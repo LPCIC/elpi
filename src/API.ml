@@ -208,7 +208,7 @@ module RawOpaqueData = struct
   =
   let ty = Conversion.TyName name in
   let embed ~depth:_ _ _ state x =
-    state, ED.Term.CData (cin x), [] in
+    state, ED.Term.Pure.mkCData (cin x), [] in
   let readback ~depth _ _ state t =
     let module R = (val !r) in let open R in
     match R.deref_head ~depth t with
@@ -292,21 +292,21 @@ module BuiltInData = struct
     let open ED in
     let rec aux d t =
       match deref_head ~depth:(depth + d) t with
-      | Lam t -> mkLam (aux (d+1) t)
+      | Lam t -> Heap.mkLam (aux (d+1) t)
       | Const c as x ->
           if c < 0 || c >= depth then x
           else raise Conversion.(TypeErr(TyName"closed term",depth+d,x))
       | App (c,x,xs) ->
-          if c < 0 || c >= depth then mkApp c (aux d x) (List.map (aux d) xs)
+          if c < 0 || c >= depth then Heap.mkApp c (aux d x) (List.map (aux d) xs)
           else raise Conversion.(TypeErr(TyName"closed term",depth+d,x))
       | (UVar _ | AppUVar _) as x ->
           raise Conversion.(TypeErr(TyName"closed term",depth+d,x))
-      | Arg _ | AppArg _ -> assert false
-      | Builtin (c,xs) -> mkBuiltin c (List.map (aux d) xs)
+      | Builtin (c,xs) -> Heap.mkBuiltin c (List.map (aux d) xs)
       | CData _ as x -> x
-      | Cons (hd,tl) -> mkCons (aux d hd) (aux d tl)
+      | Cons (hd,tl) -> Heap.mkCons (aux d hd) (aux d tl)
       | Nil as x -> x
-      | Discard as x -> x
+      | XArg _ | XAppArg _ -> assert false
+      | (XDiscard _ | XApp _ | XCons _ | XBuiltin _ | XLam _) -> assert false
     in
       (aux 0 t, depth)
 
@@ -366,7 +366,7 @@ module Elpi = struct
     | Arg str ->
         Format.fprintf fmt "%s" str
     | Ref ub ->
-        Pp.term fmt (ED.mkUVar ub lvl 0)
+        Pp.term fmt (ED.Heap.mkUVar ub lvl 0)
 
   let show m = Format.asprintf "%a" pp m
 
@@ -427,22 +427,23 @@ module RawData = struct
   type view =
     (* Pure subterms *)
     | Const of constant                   (* global constant or a bound var *)
+    | CData of RawOpaqueData.t                    (* external data *)
+    | Nil                                 (* [] *)
+
     | Lam of term                         (* lambda abstraction, i.e. x\ *)
     | App of constant * term * term list  (* application (at least 1 arg) *)
-    (* Optimizations *)
-    | Cons of term * term                 (* :: *)
-    | Nil                                 (* [] *)
-    | Discard                             (* _  *)
     (* FFI *)
     | Builtin of builtin * term list      (* call to a built-in predicate *)
-    | CData of RawOpaqueData.t                    (* external data *)
+    (* Optimizations *)
+    | Cons of term * term                 (* :: *)
     (* Unassigned unification variables *)
     | UnifVar of Elpi.t * term list
 
   let look ~depth t =
     let module R = (val !r) in let open R in
     match R.deref_head ~depth t with
-    | ED.Term.Arg _ | ED.Term.AppArg _ -> assert false
+    | ED.Term.XArg _ | ED.Term.XAppArg _ -> assert false
+    | ED.Term.XLam _ | ED.Term.XApp _ | ED.Term.XCons _ | ED.Term.XBuiltin _ -> assert false
     | ED.Term.UVar(ub,lvl,nargs) ->
         let args = ED.Term.Constants.mkinterval 0 nargs 0 in
         UnifVar ({ lvl; handle = Ref ub},args)
@@ -451,19 +452,20 @@ module RawData = struct
     | x -> Obj.magic x (* HACK: view is a "subtype" of Term.term *)
 
   let kool = function
-    | UnifVar({ lvl; handle = Ref ub},args) -> ED.Term.AppUVar(ub,lvl,args)
+    | UnifVar({ lvl; handle = Ref ub},args) -> 
+        (* TODO: Use the runtime one *)
+        ED.Term.Heap.mkAppUVar ub lvl args
     | UnifVar({ lvl; handle = Arg _},_) -> assert false
     | x -> Obj.magic x
   [@@ inline]
 
-  let mkConst = ED.Term.mkConst
-  let mkLam = ED.Term.mkLam
-  let mkApp = ED.Term.mkApp
-  let mkCons = ED.Term.mkCons
-  let mkNil = ED.Term.mkNil
-  let mkDiscard = ED.Term.mkDiscard
-  let mkBuiltin = ED.Term.mkBuiltin
-  let mkCData = ED.Term.mkCData
+  let mkConst = ED.Term.Constants.mkConst
+  let mkLam = ED.Term.Heap.mkLam
+  let mkApp = ED.Term.Heap.mkApp
+  let mkCons = ED.Term.Heap.mkCons
+  let mkNil = ED.Term.Pure.mkNil
+  let mkBuiltin = ED.Term.Heap.mkBuiltin
+  let mkCData = ED.Term.Pure.mkCData
   let mkAppL = ED.Term.mkAppL
   let mkAppS = ED.Term.mkAppS
   let mkAppSL = ED.Term.mkAppSL
@@ -505,7 +507,7 @@ module RawData = struct
 
   let mkUnifVar { Elpi.handle; lvl } ~args state =
   match handle with
-  | Elpi.Ref ub -> ED.Term.mkAppUVar ub lvl args
+  | Elpi.Ref ub -> ED.Term.Heap.mkAppUVar ub lvl args
   | Elpi.Arg name -> Compiler.get_Arg state ~name ~args
 
 end
@@ -620,9 +622,6 @@ module FlexibleData = struct
     embed = (fun ~depth _ _ s (k,args) -> s, RawData.mkUnifVar k ~args s, []);
     readback = (fun ~depth _ _ state t ->
       match RawData.look ~depth t with
-      | RawData.Discard ->
-          let state, k = Elpi.make ~lvl:depth state in
-          state, (k,[]), []
       | RawData.UnifVar(k,args) ->
           state, (k,args), []
       | _ -> raise (Conversion.TypeErr (TyName "uvar",depth,t)));
@@ -726,38 +725,34 @@ module Utils = struct
 
   let clause_of_term ?name ?graft ~depth loc term =
     let open EA in
-    let module Data = ED.Term in
-    let module R = (val !r) in let open R in
     let rec aux d ctx t =
-      match R.deref_head ~depth:d t with       
-      | Data.Const i when i >= 0 && i < depth ->
+      match RawData.look ~depth:d t with      
+      | RawData.Const i when i >= 0 && i < depth ->
           error "program_of_term: the term is not closed"
-      | Data.Const i when i < 0 ->
-          Term.mkCon (Data.Constants.show i)
-      | Data.Const i -> Util.IntMap.find i ctx
-      | Data.Lam t ->
+      | RawData.Const i when i < 0 ->
+          Term.mkCon (ED.Constants.show i)
+      | RawData.Const i -> Util.IntMap.find i ctx
+      | RawData.Lam t ->
           let s = "x" ^ string_of_int d in
           let ctx = Util.IntMap.add d (Term.mkCon s) ctx in
           Term.mkLam s (aux (d+1) ctx t)
-      | Data.App(c,x,xs) ->
-          let c = aux d ctx (Data.Constants.mkConst c) in
+      | RawData.App(c,x,xs) ->
+          let c = aux d ctx (ED.Constants.mkConst c) in
           let x = aux d ctx x in
           let xs = List.map (aux d ctx) xs in
           Term.mkApp loc (c :: x :: xs)
-      | (Data.Arg _ | Data.AppArg _) -> assert false
-      | Data.Cons(hd,tl) ->
+      | RawData.Cons(hd,tl) ->
           let hd = aux d ctx hd in
           let tl = aux d ctx tl in
           Term.mkSeq [hd;tl]
-      | Data.Nil -> Term.mkNil
-      | Data.Builtin(c,xs) ->
-          let c = aux d ctx (Data.Constants.mkConst c) in
+      | RawData.Nil -> Term.mkNil
+      | RawData.Builtin(c,xs) ->
+          let c = aux d ctx (ED.Constants.mkConst c) in
           let xs = List.map (aux d ctx) xs in
           Term.mkApp loc (c :: xs)
-      | Data.CData x -> Term.mkC x
-      | (Data.UVar _ | Data.AppUVar _) ->
+      | RawData.CData x -> Term.mkC x
+      | RawData.UnifVar _ ->
           error "program_of_term: the term contains uvars"
-      | Data.Discard -> Term.mkCon "_"
     in
     let attributes =
       (match name with Some x -> [Clause.Name x] | None -> []) @
