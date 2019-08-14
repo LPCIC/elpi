@@ -2711,7 +2711,7 @@ let exect_builtin_predicate c ~depth idx args =
        if c == C.declare_constraintc then begin
                declare_constraint ~depth idx args; [] end
   else if c == C.print_constraintsc then begin
-               printf "@[<hov 0>%a@]%!" CS.print (CS.contents ());
+               printf "@[<hov 0>%a@]\n%!" CS.print (CS.contents ());
                [] 
   end else
     let b =
