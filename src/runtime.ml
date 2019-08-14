@@ -30,15 +30,14 @@ module Pp : sig
   val do_deref : int deref_fun ref
   val do_app_deref : term list deref_fun ref
 
-  val reset_uv_names : unit -> unit
+  val uv_names : (string PtrMap.t * int) Fork.local_ref
 
 end = struct (* {{{ *)
 
 let do_deref = ref (fun ?avoid ~from ~to_ _ _ -> assert false);;
 let do_app_deref = ref (fun ?avoid ~from ~to_ _ _ -> assert false);;
-let m = ref (PtrMap.empty ());;
-let n = ref 0;;
-let reset_uv_names () = m := PtrMap.empty (); n := 0
+
+let uv_names = Fork.new_local (PtrMap.empty (), 0)
 
 let min_prec = Parser.min_precedence
 let appl_prec = Parser.appl_precedence
@@ -55,11 +54,13 @@ let xppterm ~nice ?(min_prec=min_prec) depth0 names argsdepth env f t =
   let rec pp_uvar prec depth vardepth args f r =
    if !!r == C.dummy then begin
     let s =
-     try PtrMap.find r !m
+     try PtrMap.find r (fst !uv_names)
      with Not_found ->
-      let s = "X" ^ string_of_int !n in
-      incr n;
-      m := PtrMap.add r s !m;
+      let m, n = !uv_names in
+      let s = "X" ^ string_of_int n in
+      let n = n + 1 in
+      let m = PtrMap.add r s m in
+      uv_names := (m,n);
       s
     in
      Fmt.fprintf f "%s%s%s" s
@@ -3187,7 +3188,6 @@ end;*)
   let search = exec (fun () ->
      [%spy "run-trail" (fun fmt _ -> T.print_trail fmt) ()];
      T.initial_trail := !T.trail;
-     Pp.reset_uv_names ();
      run initial_depth !orig_prolog_program initial_goal [] FNil noalts noalts) in
   let destroy () = exec (fun () -> T.undo ~old_trail:T.empty ()) () in
   let next_solution = exec next_alt in
