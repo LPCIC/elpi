@@ -444,7 +444,7 @@ module RawData = struct
     match R.deref_head ~depth t with
     | ED.Term.Arg _ | ED.Term.AppArg _ -> assert false
     | ED.Term.UVar(ub,lvl,nargs) ->
-        let args = ED.Term.Constants.mkinterval 0 nargs 0 in
+        let args = ED.Term.Constants.mkinterval lvl nargs 0 in
         UnifVar ({ lvl; handle = Ref ub},args)
     | ED.Term.AppUVar(ub,lvl,args) ->
         UnifVar ({ lvl; handle = Ref ub},args)
