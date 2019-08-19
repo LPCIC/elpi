@@ -775,7 +775,10 @@ let rec move ~adepth:argsdepth e ?avoid ~from ~to_ t =
        let tl' = maux e depth tl in
        if hd == hd' && tl == tl' then x else Cons(hd',tl')
     | Nil -> x
-    | Discard -> x
+    | Discard when avoid = None -> x
+    | Discard ->
+       let r = oref C.dummy in
+       UVar(r,to_,0)
 
     (* fast path with no deref... *)
     | UVar _ when delta == 0 && avoid == None -> x
@@ -1222,7 +1225,6 @@ let bind r gamma l a d delta b left t e =
     | App (c,t,ts) -> App (cst c b delta, bind b delta w t, List.map (bind b delta w) ts)
     | Cons(hd,tl) -> Cons(bind b delta w hd, bind b delta w tl)
     | Nil -> t
-    | Discard -> t
     | Builtin (c, tl) -> Builtin(c, List.map (bind b delta w) tl)
     | CData _ -> t
     (* deref_uv *)
@@ -1235,7 +1237,7 @@ let bind r gamma l a d delta b left t e =
     | AppUVar ({ contents = t }, from, args) when t != C.dummy ->
         bind b delta w (deref_appuv ~from ~to_:((if left then b else a)+d+w) args t)
     (* pruning *)
-    | (UVar _ | AppUVar _ | Arg _ | AppArg _) as orig ->
+    | (UVar _ | AppUVar _ | Arg _ | AppArg _ | Discard) as orig ->
         (* We deal with all flexible terms in a uniform way *)
         let r, lvl, (is_llam, args), orig_args = match orig with
           | UVar(r,lvl,0) -> r, lvl, (true, []), []
@@ -1246,6 +1248,9 @@ let bind r gamma l a d delta b left t e =
               r', (lvl+args),  (true,[]), []
           | AppUVar (r,lvl, orig_args) ->
               r, lvl, is_llam lvl orig_args a b (d+w) left e, orig_args
+          | Discard ->
+              let r = oref C.dummy in
+              r, a+d+w, (true,[]), []
           | Arg (i,0) ->
               let r = oref C.dummy in
               let v = UVar(r,a,0) in

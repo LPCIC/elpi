@@ -764,7 +764,6 @@ module RawData : sig
     (* Optimizations *)
     | Cons of term * term                 (* :: *)
     | Nil                                 (* [] *)
-    | Discard                             (* _  *)
     (* FFI *)
     | Builtin of builtin * term list      (* call to a built-in predicate *)
     | CData of RawOpaqueData.t            (* opaque data *)

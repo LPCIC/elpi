@@ -184,3 +184,10 @@ let () = declare "list_comma"
   ~typecheck:true
   ~expectation:Test.Success
   ()
+
+let () = declare "heap_discard"
+  ~source_elpi:"heap_discard.elpi"
+  ~description:"heapification of _"
+  ~typecheck:true
+  ~expectation:Test.Success
+  ()

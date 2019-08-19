@@ -61,7 +61,6 @@ let rec eval depth t =
      f []
   | (Nil | Cons _ as x) ->
       type_error ("Lists cannot be evaluated: " ^ RawPp.Debug.show_term (kool x))
-  | Discard -> type_error "_ cannot be evaluated"
   | CData _ as x -> kool x
 ;;
 
@@ -183,7 +182,6 @@ let occurs x d t =
      | Builtin (_, vs)                  -> auxs vs
      | Cons (v1, v2)                    -> aux v1 || aux v2
      | Nil
-     | Discard
      | CData _                          -> false
    and auxs = function
      | []      -> false
@@ -738,7 +736,6 @@ let name_or_constant name condition = (); fun x out ~depth _ _ state ->
   | NoData -> raise No_clause
   | Data x ->
       match look ~depth x with
-      | Discard -> assert false
       | Const n when condition n ->
           if out = [] then !: x +? None
           else !: x +! [Some x; Some mkNil]
@@ -763,8 +760,6 @@ let name_or_constant name condition = (); fun x out ~depth _ _ state ->
 
 let rec same_term ~depth t1 t2 =
   match look ~depth t1, look ~depth t2 with
-  | Discard, UnifVar _ -> true
-  | UnifVar _, Discard -> true
   | UnifVar(b1,xs), UnifVar(b2,ys) -> FlexibleData.Elpi.equal b1 b2 && same_term_list ~depth xs ys
   | App(c1,x,xs), App(c2,y,ys) -> c1 == c2 && same_term ~depth x y && same_term_list ~depth xs ys
   | Const c1, Const c2 -> c1 == c2

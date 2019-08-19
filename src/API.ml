@@ -432,7 +432,6 @@ module RawData = struct
     (* Optimizations *)
     | Cons of term * term                 (* :: *)
     | Nil                                 (* [] *)
-    | Discard                             (* _  *)
     (* FFI *)
     | Builtin of builtin * term list      (* call to a built-in predicate *)
     | CData of RawOpaqueData.t                    (* external data *)
@@ -448,6 +447,9 @@ module RawData = struct
         UnifVar ({ lvl; handle = Ref ub},args)
     | ED.Term.AppUVar(ub,lvl,args) ->
         UnifVar ({ lvl; handle = Ref ub},args)
+    | ED.Term.Discard ->
+        let ub = ED.oref ED.Term.Constants.dummy in
+        UnifVar ({ lvl = 0; handle = Ref ub},ED.Term.Constants.mkinterval 0 depth 0)
     | x -> Obj.magic x (* HACK: view is a "subtype" of Term.term *)
 
   let kool = function
@@ -620,9 +622,6 @@ module FlexibleData = struct
     embed = (fun ~depth _ _ s (k,args) -> s, RawData.mkUnifVar k ~args s, []);
     readback = (fun ~depth _ _ state t ->
       match RawData.look ~depth t with
-      | RawData.Discard ->
-          let state, k = Elpi.make ~lvl:depth state in
-          state, (k,[]), []
       | RawData.UnifVar(k,args) ->
           state, (k,args), []
       | _ -> raise (Conversion.TypeErr (TyName "uvar",depth,t)));
