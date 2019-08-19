@@ -489,7 +489,7 @@ module HO : sig
 
   (* lift/restriction/heapification with occur_check *)
   val move : 
-    adepth:int -> env -> ?avoid:uvar_body -> ?depth:int ->
+    adepth:int -> env -> ?avoid:uvar_body ->
     from:int -> to_:int -> term -> term
   
   (* like move but for heap terms (no heapification) *)
@@ -696,7 +696,7 @@ let mkAppArg i fromdepth xxs' =
    
 *)
 
-let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
+let rec move ~adepth:argsdepth e ?avoid ~from ~to_ t =
 (* TODO: to disable occur_check add something like: let avoid = None in *)
  let delta = from - to_ in
  let rc =
@@ -852,7 +852,7 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
        end
   end]
   in
-   maux e depth t
+   maux e 0 t
   end
  in
   [%spy "move-output" (ppterm to_ [] argsdepth e) rc];

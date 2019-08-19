@@ -32,7 +32,7 @@ val split_conj : depth:int -> term -> term list
 val mkAppArg : int -> int -> term list -> term
 val move : 
   adepth:int -> env ->
-  ?avoid:uvar_body -> ?depth:int ->
+  ?avoid:uvar_body ->
   from:int -> to_:int -> term -> term
 val hmove : 
   ?avoid:uvar_body ->
