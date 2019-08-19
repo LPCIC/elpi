@@ -835,17 +835,13 @@ let rec move ~adepth:argsdepth e ?avoid ~from ~to_ t =
        else
          if vardepth + argsno <= to_ then x
          else
-           let newt =
-             let args = C.mkinterval vardepth (min argsno depth) 0 in
-             let newvardepth = min to_ vardepth in
-             let newvar = mkAppUVar (oref C.dummy) newvardepth args in
-             mknLam argsno newvar
-           in
-           [%spy "assign (restriction)" (fun fmt _ -> Fmt.fprintf fmt "%d %a := %a" vardepth
-              (uppterm (from+depth) [] argsdepth e) x
-              (uppterm (vardepth) [] argsdepth e) newt) ()];
-            r @:= newt;
-            maux e depth (deref_uv ~from:vardepth ~to_:(from+depth) argsno newt)
+           let t, assignment = expand_uv ~depth:(from+depth) r ~lvl:vardepth ~ano:argsno in
+           option_iter (fun (r,_,assignment) ->
+              [%spy "assign (restriction:expand)" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
+               (uppterm (from+depth) [] argsdepth e) x
+               (uppterm vardepth [] argsdepth e) assignment) ()];
+              r @:= assignment) assignment;
+           maux e depth t
 
     | AppUVar (r,vardepth,args) ->
        occurr_check avoid r;
@@ -860,34 +856,37 @@ let rec move ~adepth:argsdepth e ?avoid ~from ~to_ t =
        else if delta == 0 then
          AppUVar (r,vardepth,List.map (maux e depth) args)
        else if List.for_all (deterministic_restriction e ~args_safe:(argsdepth=to_)) args then
-         (* TODO: this branch is to be reviewed/tested throughly, unless
-            Enrico is now confident with it *)
-          let r,vardepth =
-           if vardepth <= to_ then r,vardepth
-           else begin
-             let newvar = UVar(oref C.dummy,to_,0) in
-             r @:= newvar;
-             r,vardepth (*CSC: XXX why vardepth and not to_ ? *)
-           end in
           (* Code for deterministic restriction *)
-          let args =
-           List.map (fun arg ->
-            try Some (maux e depth arg) with RestrictionFailure -> None) args in
-          let r,vardepth,args =
-           if List.exists ((=) None) args then begin
-            (* CSC: not optimized code, it does |args| intros even if one
-               could sometimes save some abstractions *)
-            let argslen = List.length args in
-            let filteredargs = map_filter (fun x -> x) args in
+          
+          let pruned = ref (vardepth > to_) in
+          let orig_argsno = List.length args in
+          let filteredargs_vardepth = ref [] in
+          let filteredargs_to =
+            let rec filter i acc = function
+              | [] -> filteredargs_vardepth := List.rev acc; []
+              | arg :: args ->
+                  try
+                    let arg = maux e depth arg in
+                    arg :: filter (succ i) (mkConst (vardepth + i) :: acc) args
+                  with RestrictionFailure ->
+                    pruned := true;
+                    filter (succ i) acc args
+            in
+              filter 0 [] args in
+
+          if !pruned then begin
+            let vardepth' = min vardepth to_ in
             let r' = oref C.dummy in
-            let newvar = mkAppUVar r' to_ filteredargs in
-            r @:= mknLam argslen newvar;
-            r',to_,filteredargs
-           end else
-            let args =
-             List.map (function Some t -> t | None -> assert false) args in
-            r,vardepth,args in
-          mkAppUVar r vardepth args
+            let newvar = mkAppUVar r' vardepth' !filteredargs_vardepth in
+            let assignment = mknLam orig_argsno newvar in
+            [%spy "assign (restriction:AppUVar)" (fun fmt _ -> Fmt.fprintf fmt "%d %a := %a" vardepth
+               (ppterm (from+depth) [] argsdepth e) x
+               (ppterm (vardepth) [] argsdepth e) assignment) ()];
+            r @:= assignment;
+            mkAppUVar r' vardepth' filteredargs_to
+          end else
+            mkAppUVar r vardepth filteredargs_to
+   
        else begin
         Fmt.fprintf Fmt.str_formatter
          "Non deterministic pruning, delay to be implemented: t=%a, delta=%d%!"

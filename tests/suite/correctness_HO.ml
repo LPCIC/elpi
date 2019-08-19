@@ -94,8 +94,16 @@ let () = declare "restriction3"
   ~source_elpi:"restriction3.elpi"
   ~description:"HO unification scope checking"
   ()
+let () = declare "restriction4"
+  ~source_elpi:"restriction4.elpi"
+  ~description:"HO unification scope checking"
+  ()
 let () = declare "restriction5"
   ~source_elpi:"restriction5.elpi"
+  ~description:"HO unification scope checking"
+  ()
+let () = declare "restriction6"
+  ~source_elpi:"restriction6.elpi"
   ~description:"HO unification scope checking"
   ()
 let () = declare "restriction"
