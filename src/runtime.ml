@@ -1383,9 +1383,25 @@ let rec unif matching depth adepth a bdepth b e =
    of the clauses below *)
    | UVar(r1,_,args1), UVar(r2,_,args2)
      when r1 == r2 && !!r1 == C.dummy -> args1 == args2
-   | AppUVar(r1,_,xs), AppUVar(r2,_,ys)
-     when r1 == r2 && !!r1 == C.dummy-> 
-       for_all2 (fun x y -> unif matching depth adepth x bdepth y e) xs ys
+     (* XXX this would be a type error *)
+   | UVar(r1,vd,xs), AppUVar(r2,_,ys)
+     when r1 == r2 && !!r1 == C.dummy -> unif matching depth adepth (AppUVar(r1,vd,List.init xs (fun i -> mkConst (vd+i)))) bdepth b e
+   | AppUVar(r1,vd,xs), UVar(r2,_,ys)
+     when r1 == r2 && !!r1 == C.dummy -> unif matching depth adepth a bdepth (AppUVar(r1,vd,List.init ys (fun i -> mkConst (vd+i)))) e
+   | AppUVar(r1,vd,xs), AppUVar(r2,_,ys)
+     when r1 == r2 && !!r1 == C.dummy ->
+       let pruned = ref false in
+       let filtered_args_rev = fold_left2i (fun i args x y ->
+         let b = unif matching depth adepth x bdepth y e in
+         if not b then (pruned := true; args)
+         else x :: args
+         ) [] xs ys in
+       if !pruned then begin
+         let len = List.length xs in
+         let r = oref C.dummy in
+         r1 @:= mknLam len (mkAppUVar r vd (List.rev filtered_args_rev));
+       end;
+       true
 
    (* deref_uv *)
    | UVar ({ contents = t }, from, args), _ when t != C.dummy ->
