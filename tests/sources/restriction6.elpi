@@ -1,0 +1,3 @@
+main :-
+  pi x\ sigma Y\ pi y\ sigma Z\
+      std.spy(X x = f (Y y) l\e\ (Z e)).

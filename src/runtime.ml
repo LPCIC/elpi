@@ -489,7 +489,7 @@ module HO : sig
 
   (* lift/restriction/heapification with occur_check *)
   val move : 
-    adepth:int -> env -> ?avoid:uvar_body -> ?depth:int ->
+    adepth:int -> env -> ?avoid:uvar_body ->
     from:int -> to_:int -> term -> term
   
   (* like move but for heap terms (no heapification) *)
@@ -599,6 +599,50 @@ let mkAppArg i fromdepth xxs' =
   try Arg(i,in_fragment fromdepth xxs')
   with NotInTheFragment -> AppArg (i,xxs')
 
+let expand_uv r ~lvl ~ano =
+  let args = C.mkinterval 0 (lvl+ano) 0 in
+  if lvl = 0 then AppUVar(r,lvl,args), None else
+  let r1 = oref C.dummy in
+  let t = AppUVar(r1,0,args) in
+  let assignment = mknLam ano t in
+  t, Some (r,lvl,assignment)
+let expand_uv ~depth r ~lvl ~ano =
+  [%spy "expand-uv-in" (fun fmt t ->
+    Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) (UVar(r,lvl,ano))];
+  let t, ass as rc = expand_uv r ~lvl ~ano in
+  [%spy "expand-uv-out" (fun fmt t ->
+    Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) t];
+  [%spy "expand-uv-out" (fun fmt -> function
+    | None -> Fmt.fprintf fmt "no assignment"
+    | Some (_,_,t) ->
+        Fmt.fprintf fmt "%a := %a"
+          (uppterm depth [] 0 empty_env) (UVar(r,lvl,ano))
+          (uppterm lvl [] 0 empty_env) t) ass];
+  rc
+
+let expand_appuv r ~lvl ~args =
+  if lvl = 0 then AppUVar(r,lvl,args), None else
+  let args_lvl = C.mkinterval 0 lvl 0 in
+  let r1 = oref C.dummy in
+  let t = AppUVar(r1,0,args_lvl @ args) in
+  let nargs = List.length args in
+  let assignment =
+    mknLam nargs (AppUVar(r1,0,args_lvl @ C.mkinterval lvl nargs 0)) in
+  t, Some (r,lvl,assignment)
+let expand_appuv ~depth r ~lvl ~args =
+  [%spy "expand-appuv-in" (fun fmt t ->
+    Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) (AppUVar(r,lvl,args))];
+  let t, ass as rc = expand_appuv r ~lvl ~args in
+  [%spy "expand-appuv-out" (fun fmt t ->
+    Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) t];
+  [%spy "expand-uv-out" (fun fmt -> function
+    | None -> Fmt.fprintf fmt "no assignment"
+    | Some (_,_,t) ->
+        Fmt.fprintf fmt "%a := %a"
+          (uppterm depth [] 0 empty_env) (AppUVar(r,lvl,args))
+          (uppterm lvl [] 0 empty_env) t) ass];
+  rc
+
 (* move performs at once:
    1) refreshing of the arguments into variables (heapifycation)
    2) restriction/occur-check
@@ -696,7 +740,7 @@ let mkAppArg i fromdepth xxs' =
    
 *)
 
-let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
+let rec move ~adepth:argsdepth e ?avoid ~from ~to_ t =
 (* TODO: to disable occur_check add something like: let avoid = None in *)
  let delta = from - to_ in
  let rc =
@@ -791,17 +835,13 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
        else
          if vardepth + argsno <= to_ then x
          else
-           let newt =
-             let args = C.mkinterval vardepth (min argsno depth) 0 in
-             let newvardepth = min to_ vardepth in
-             let newvar = mkAppUVar (oref C.dummy) newvardepth args in
-             mknLam argsno newvar
-           in
-           [%spy "assign (restriction)" (fun fmt _ -> Fmt.fprintf fmt "%d %a := %a" vardepth
-              (uppterm (from+depth) [] argsdepth e) x
-              (uppterm (vardepth) [] argsdepth e) newt) ()];
-            r @:= newt;
-            maux e depth (deref_uv ~from:vardepth ~to_:(from+depth) argsno newt)
+           let t, assignment = expand_uv ~depth:(from+depth) r ~lvl:vardepth ~ano:argsno in
+           option_iter (fun (r,_,assignment) ->
+              [%spy "assign (restriction:expand)" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
+               (uppterm (from+depth) [] argsdepth e) x
+               (uppterm vardepth [] argsdepth e) assignment) ()];
+              r @:= assignment) assignment;
+           maux e depth t
 
     | AppUVar (r,vardepth,args) ->
        occurr_check avoid r;
@@ -816,34 +856,37 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
        else if delta == 0 then
          AppUVar (r,vardepth,List.map (maux e depth) args)
        else if List.for_all (deterministic_restriction e ~args_safe:(argsdepth=to_)) args then
-         (* TODO: this branch is to be reviewed/tested throughly, unless
-            Enrico is now confident with it *)
-          let r,vardepth =
-           if vardepth <= to_ then r,vardepth
-           else begin
-             let newvar = UVar(oref C.dummy,to_,0) in
-             r @:= newvar;
-             r,vardepth (*CSC: XXX why vardepth and not to_ ? *)
-           end in
           (* Code for deterministic restriction *)
-          let args =
-           List.map (fun arg ->
-            try Some (maux e depth arg) with RestrictionFailure -> None) args in
-          let r,vardepth,args =
-           if List.exists ((=) None) args then begin
-            (* CSC: not optimized code, it does |args| intros even if one
-               could sometimes save some abstractions *)
-            let argslen = List.length args in
-            let filteredargs = map_filter (fun x -> x) args in
+          
+          let pruned = ref (vardepth > to_) in
+          let orig_argsno = List.length args in
+          let filteredargs_vardepth = ref [] in
+          let filteredargs_to =
+            let rec filter i acc = function
+              | [] -> filteredargs_vardepth := List.rev acc; []
+              | arg :: args ->
+                  try
+                    let arg = maux e depth arg in
+                    arg :: filter (succ i) (mkConst (vardepth + i) :: acc) args
+                  with RestrictionFailure ->
+                    pruned := true;
+                    filter (succ i) acc args
+            in
+              filter 0 [] args in
+
+          if !pruned then begin
+            let vardepth' = min vardepth to_ in
             let r' = oref C.dummy in
-            let newvar = mkAppUVar r' to_ filteredargs in
-            r @:= mknLam argslen newvar;
-            r',to_,filteredargs
-           end else
-            let args =
-             List.map (function Some t -> t | None -> assert false) args in
-            r,vardepth,args in
-          mkAppUVar r vardepth args
+            let newvar = mkAppUVar r' vardepth' !filteredargs_vardepth in
+            let assignment = mknLam orig_argsno newvar in
+            [%spy "assign (restriction:AppUVar)" (fun fmt _ -> Fmt.fprintf fmt "%d %a := %a" vardepth
+               (ppterm (from+depth) [] argsdepth e) x
+               (ppterm (vardepth) [] argsdepth e) assignment) ()];
+            r @:= assignment;
+            mkAppUVar r' vardepth' filteredargs_to
+          end else
+            mkAppUVar r vardepth filteredargs_to
+   
        else begin
         Fmt.fprintf Fmt.str_formatter
          "Non deterministic pruning, delay to be implemented: t=%a, delta=%d%!"
@@ -852,7 +895,7 @@ let rec move ~adepth:argsdepth e ?avoid ?(depth=0) ~from ~to_ t =
        end
   end]
   in
-   maux e depth t
+   maux e 0 t
   end
  in
   [%spy "move-output" (ppterm to_ [] argsdepth e) rc];
@@ -1339,9 +1382,25 @@ let rec unif matching depth adepth a bdepth b e =
    of the clauses below *)
    | UVar(r1,_,args1), UVar(r2,_,args2)
      when r1 == r2 && !!r1 == C.dummy -> args1 == args2
-   | AppUVar(r1,_,xs), AppUVar(r2,_,ys)
-     when r1 == r2 && !!r1 == C.dummy-> 
-       for_all2 (fun x y -> unif matching depth adepth x bdepth y e) xs ys
+     (* XXX this would be a type error *)
+   | UVar(r1,vd,xs), AppUVar(r2,_,ys)
+     when r1 == r2 && !!r1 == C.dummy -> unif matching depth adepth (AppUVar(r1,vd,C.mkinterval vd xs 0)) bdepth b e
+   | AppUVar(r1,vd,xs), UVar(r2,_,ys)
+     when r1 == r2 && !!r1 == C.dummy -> unif matching depth adepth a bdepth (AppUVar(r1,vd,C.mkinterval vd ys 0)) e
+   | AppUVar(r1,vd,xs), AppUVar(r2,_,ys)
+     when r1 == r2 && !!r1 == C.dummy ->
+       let pruned = ref false in
+       let filtered_args_rev = fold_left2i (fun i args x y ->
+         let b = unif matching depth adepth x bdepth y e in
+         if not b then (pruned := true; args)
+         else x :: args
+         ) [] xs ys in
+       if !pruned then begin
+         let len = List.length xs in
+         let r = oref C.dummy in
+         r1 @:= mknLam len (mkAppUVar r vd (List.rev filtered_args_rev));
+       end;
+       true
 
    (* deref_uv *)
    | UVar ({ contents = t }, from, args), _ when t != C.dummy ->
@@ -1450,16 +1509,17 @@ let rec unif matching depth adepth a bdepth b e =
       unif matching depth adepth a bdepth b e
    | UVar({ rest = [] },_,a1), UVar ({ rest = _ :: _ },_,a2) when a1 + a2 > 0 -> unif matching depth bdepth b adepth a e
    | AppUVar({ rest = [] },_,_), UVar ({ rest = _ :: _ },_,a2) when  a2 > 0 -> unif matching depth bdepth b adepth a e
-   | _, UVar (r,origdepth,args) when args > 0 ->
+
+   | _, UVar (r,origdepth,args) when args > 0 && match a with UVar(r1,_,_) | AppUVar(r1,_,_) -> r != r1 | _ -> true ->
       let v = fst (make_lambdas origdepth args) in
-      [%spy "assign" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
+      [%spy "assign (simplify)" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
         (uppterm depth [] bdepth e) (UVar(r,origdepth,0))
         (uppterm depth [] bdepth e) v) ()];
       r @:= v;
       unif matching depth adepth a bdepth b e
-   | UVar (r,origdepth,args), _ when args > 0 ->
+   | UVar (r,origdepth,args), _ when args > 0 && match b with UVar(r1,_,_) | AppUVar(r1,_,_) -> r != r1 | _ -> true ->
       let v = fst (make_lambdas origdepth args) in
-      [%spy "assign" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
+      [%spy "assign (simplify)" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
          (uppterm depth [] adepth e) (UVar(r,origdepth,0))
          (uppterm depth [] adepth e) v) ()];
       r @:= v;
@@ -1615,51 +1675,6 @@ let full_deref ~adepth env ~depth t =
     deref depth t
 
 type assignment = uvar_body * int * term
-
-let expand_uv r ~lvl ~ano =
-  let args = C.mkinterval 0 (lvl+ano) 0 in
-  if lvl = 0 then AppUVar(r,lvl,args), None else
-  let r1 = oref C.dummy in
-  let t = AppUVar(r1,0,args) in
-  let assignment = mknLam ano t in
-  t, Some (r,lvl,assignment)
-let expand_uv ~depth r ~lvl ~ano =
-  [%spy "expand-uv-in" (fun fmt t ->
-    Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) (UVar(r,lvl,ano))];
-  let t, ass as rc = expand_uv r ~lvl ~ano in
-  [%spy "expand-uv-out" (fun fmt t ->
-    Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) t];
-  [%spy "expand-uv-out" (fun fmt -> function
-    | None -> Fmt.fprintf fmt "no assignment"
-    | Some (_,_,t) ->
-        Fmt.fprintf fmt "%a := %a"
-          (uppterm depth [] 0 empty_env) (UVar(r,lvl,ano))
-          (uppterm lvl [] 0 empty_env) t) ass];
-  rc
-
-let expand_appuv r ~lvl ~args =
-  if lvl = 0 then AppUVar(r,lvl,args), None else
-  let args_lvl = C.mkinterval 0 lvl 0 in
-  let r1 = oref C.dummy in
-  let t = AppUVar(r1,0,args_lvl @ args) in
-  let nargs = List.length args in
-  let assignment =
-    mknLam nargs (AppUVar(r1,0,args_lvl @ C.mkinterval lvl nargs 0)) in
-  t, Some (r,lvl,assignment)
-let expand_appuv ~depth r ~lvl ~args =
-  [%spy "expand-appuv-in" (fun fmt t ->
-    Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) (AppUVar(r,lvl,args))];
-  let t, ass as rc = expand_appuv r ~lvl ~args in
-  [%spy "expand-appuv-out" (fun fmt t ->
-    Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) t];
-  [%spy "expand-uv-out" (fun fmt -> function
-    | None -> Fmt.fprintf fmt "no assignment"
-    | Some (_,_,t) ->
-        Fmt.fprintf fmt "%a := %a"
-          (uppterm depth [] 0 empty_env) (AppUVar(r,lvl,args))
-          (uppterm lvl [] 0 empty_env) t) ass];
-  rc
-
 
 let shift_bound_vars ~depth ~to_ t =
   let shift_db d n =

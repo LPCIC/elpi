@@ -228,6 +228,7 @@ let option_map f = function Some x -> Some (f x) | None -> None
 let option_mapacc f acc = function
   | Some x -> let acc, y = f acc x in acc, Some y
   | None -> acc, None
+let option_iter f = function None -> () | Some x -> f x
 
 module Option = struct
   type 'a t = 'a option = None | Some of 'a [@@deriving show]

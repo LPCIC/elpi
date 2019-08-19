@@ -120,6 +120,7 @@ val pp_option :
   (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a option -> unit
 val option_mapacc :
   ('acc -> 'a -> 'acc * 'b) -> 'acc -> 'a option -> 'acc * 'b option
+val option_iter : ('a -> unit) -> 'a option -> unit
 
 (***************** Unique ID ****************)
 
