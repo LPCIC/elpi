@@ -599,6 +599,50 @@ let mkAppArg i fromdepth xxs' =
   try Arg(i,in_fragment fromdepth xxs')
   with NotInTheFragment -> AppArg (i,xxs')
 
+let expand_uv r ~lvl ~ano =
+  let args = C.mkinterval 0 (lvl+ano) 0 in
+  if lvl = 0 then AppUVar(r,lvl,args), None else
+  let r1 = oref C.dummy in
+  let t = AppUVar(r1,0,args) in
+  let assignment = mknLam ano t in
+  t, Some (r,lvl,assignment)
+let expand_uv ~depth r ~lvl ~ano =
+  [%spy "expand-uv-in" (fun fmt t ->
+    Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) (UVar(r,lvl,ano))];
+  let t, ass as rc = expand_uv r ~lvl ~ano in
+  [%spy "expand-uv-out" (fun fmt t ->
+    Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) t];
+  [%spy "expand-uv-out" (fun fmt -> function
+    | None -> Fmt.fprintf fmt "no assignment"
+    | Some (_,_,t) ->
+        Fmt.fprintf fmt "%a := %a"
+          (uppterm depth [] 0 empty_env) (UVar(r,lvl,ano))
+          (uppterm lvl [] 0 empty_env) t) ass];
+  rc
+
+let expand_appuv r ~lvl ~args =
+  if lvl = 0 then AppUVar(r,lvl,args), None else
+  let args_lvl = C.mkinterval 0 lvl 0 in
+  let r1 = oref C.dummy in
+  let t = AppUVar(r1,0,args_lvl @ args) in
+  let nargs = List.length args in
+  let assignment =
+    mknLam nargs (AppUVar(r1,0,args_lvl @ C.mkinterval lvl nargs 0)) in
+  t, Some (r,lvl,assignment)
+let expand_appuv ~depth r ~lvl ~args =
+  [%spy "expand-appuv-in" (fun fmt t ->
+    Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) (AppUVar(r,lvl,args))];
+  let t, ass as rc = expand_appuv r ~lvl ~args in
+  [%spy "expand-appuv-out" (fun fmt t ->
+    Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) t];
+  [%spy "expand-uv-out" (fun fmt -> function
+    | None -> Fmt.fprintf fmt "no assignment"
+    | Some (_,_,t) ->
+        Fmt.fprintf fmt "%a := %a"
+          (uppterm depth [] 0 empty_env) (AppUVar(r,lvl,args))
+          (uppterm lvl [] 0 empty_env) t) ass];
+  rc
+
 (* move performs at once:
    1) refreshing of the arguments into variables (heapifycation)
    2) restriction/occur-check
@@ -1615,51 +1659,6 @@ let full_deref ~adepth env ~depth t =
     deref depth t
 
 type assignment = uvar_body * int * term
-
-let expand_uv r ~lvl ~ano =
-  let args = C.mkinterval 0 (lvl+ano) 0 in
-  if lvl = 0 then AppUVar(r,lvl,args), None else
-  let r1 = oref C.dummy in
-  let t = AppUVar(r1,0,args) in
-  let assignment = mknLam ano t in
-  t, Some (r,lvl,assignment)
-let expand_uv ~depth r ~lvl ~ano =
-  [%spy "expand-uv-in" (fun fmt t ->
-    Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) (UVar(r,lvl,ano))];
-  let t, ass as rc = expand_uv r ~lvl ~ano in
-  [%spy "expand-uv-out" (fun fmt t ->
-    Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) t];
-  [%spy "expand-uv-out" (fun fmt -> function
-    | None -> Fmt.fprintf fmt "no assignment"
-    | Some (_,_,t) ->
-        Fmt.fprintf fmt "%a := %a"
-          (uppterm depth [] 0 empty_env) (UVar(r,lvl,ano))
-          (uppterm lvl [] 0 empty_env) t) ass];
-  rc
-
-let expand_appuv r ~lvl ~args =
-  if lvl = 0 then AppUVar(r,lvl,args), None else
-  let args_lvl = C.mkinterval 0 lvl 0 in
-  let r1 = oref C.dummy in
-  let t = AppUVar(r1,0,args_lvl @ args) in
-  let nargs = List.length args in
-  let assignment =
-    mknLam nargs (AppUVar(r1,0,args_lvl @ C.mkinterval lvl nargs 0)) in
-  t, Some (r,lvl,assignment)
-let expand_appuv ~depth r ~lvl ~args =
-  [%spy "expand-appuv-in" (fun fmt t ->
-    Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) (AppUVar(r,lvl,args))];
-  let t, ass as rc = expand_appuv r ~lvl ~args in
-  [%spy "expand-appuv-out" (fun fmt t ->
-    Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) t];
-  [%spy "expand-uv-out" (fun fmt -> function
-    | None -> Fmt.fprintf fmt "no assignment"
-    | Some (_,_,t) ->
-        Fmt.fprintf fmt "%a := %a"
-          (uppterm depth [] 0 empty_env) (AppUVar(r,lvl,args))
-          (uppterm lvl [] 0 empty_env) t) ass];
-  rc
-
 
 let shift_bound_vars ~depth ~to_ t =
   let shift_db d n =
