@@ -1384,9 +1384,9 @@ let rec unif matching depth adepth a bdepth b e =
      when r1 == r2 && !!r1 == C.dummy -> args1 == args2
      (* XXX this would be a type error *)
    | UVar(r1,vd,xs), AppUVar(r2,_,ys)
-     when r1 == r2 && !!r1 == C.dummy -> unif matching depth adepth (AppUVar(r1,vd,List.init xs (fun i -> mkConst (vd+i)))) bdepth b e
+     when r1 == r2 && !!r1 == C.dummy -> unif matching depth adepth (AppUVar(r1,vd,C.mkinterval vd xs 0)) bdepth b e
    | AppUVar(r1,vd,xs), UVar(r2,_,ys)
-     when r1 == r2 && !!r1 == C.dummy -> unif matching depth adepth a bdepth (AppUVar(r1,vd,List.init ys (fun i -> mkConst (vd+i)))) e
+     when r1 == r2 && !!r1 == C.dummy -> unif matching depth adepth a bdepth (AppUVar(r1,vd,C.mkinterval vd ys 0)) e
    | AppUVar(r1,vd,xs), AppUVar(r2,_,ys)
      when r1 == r2 && !!r1 == C.dummy ->
        let pruned = ref false in
