@@ -1494,16 +1494,17 @@ let rec unif matching depth adepth a bdepth b e =
       unif matching depth adepth a bdepth b e
    | UVar({ rest = [] },_,a1), UVar ({ rest = _ :: _ },_,a2) when a1 + a2 > 0 -> unif matching depth bdepth b adepth a e
    | AppUVar({ rest = [] },_,_), UVar ({ rest = _ :: _ },_,a2) when  a2 > 0 -> unif matching depth bdepth b adepth a e
-   | _, UVar (r,origdepth,args) when args > 0 ->
+
+   | _, UVar (r,origdepth,args) when args > 0 && match a with UVar(r1,_,_) | AppUVar(r1,_,_) -> r != r1 | _ -> true ->
       let v = fst (make_lambdas origdepth args) in
-      [%spy "assign" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
+      [%spy "assign (simplify)" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
         (uppterm depth [] bdepth e) (UVar(r,origdepth,0))
         (uppterm depth [] bdepth e) v) ()];
       r @:= v;
       unif matching depth adepth a bdepth b e
-   | UVar (r,origdepth,args), _ when args > 0 ->
+   | UVar (r,origdepth,args), _ when args > 0 && match b with UVar(r1,_,_) | AppUVar(r1,_,_) -> r != r1 | _ -> true ->
       let v = fst (make_lambdas origdepth args) in
-      [%spy "assign" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
+      [%spy "assign (simplify)" (fun fmt _ -> Fmt.fprintf fmt "%a := %a"
          (uppterm depth [] adepth e) (UVar(r,origdepth,0))
          (uppterm depth [] adepth e) v) ()];
       r @:= v;
