@@ -743,7 +743,7 @@ EXTEND
      | LPAREN; abbrform; RPAREN -> ()
     ]];
   goal:
-    [[ OPT pragma; p = premise -> of_ploc loc, p ]];
+    [[ OPT pragma; p = premise; OPT FULLSTOP -> of_ploc loc, p ]];
   premise : [[ a = atom -> a ]];
   atom :
    [ "1" [ ]
@@ -837,7 +837,14 @@ let set_last_loc = function
 
 let parse_goal ?loc s : Goal.t =
   set_last_loc loc;
-  run_parser (Grammar.Entry.parse goal) (Stream.of_string s)
+  let stream = Stream.of_string s in
+  let ast = run_parser (Grammar.Entry.parse goal) stream in
+  let next, _ = lex_fun stream in
+  try begin match Stream.peek next with
+  | None -> ast
+  | Some ("EOF",_) -> ast
+  | Some (_,x) -> raise (ParseError(of_ploc !last_loc,"trailing text after goal: " ^ x))
+  end with Stream.Error _ -> ast
 
 let parse_goal_from_stream ?loc strm =
   set_last_loc loc;
