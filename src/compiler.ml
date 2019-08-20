@@ -1042,7 +1042,7 @@ end = struct (* {{{ *)
     let c, args =
       let rec aux = function
         | App (c,_,[x]) when c == C.implc -> aux x
-        | App (c,x,xs) when c == C.andc || c == C.andc2 ->
+        | App (c,x,xs) when c == C.andc ->
             aux List.(hd (rev (x :: xs)))
         | App (c,x,xs) -> c, x :: xs
         | Const c -> c, []
@@ -1113,7 +1113,7 @@ end = struct (* {{{ *)
       let rec aux = function
         | App(c,x,[y]) when c == C.implc ->
             mkAppC c [x;aux y]
-        | App (c,x,xs) when c == C.andc || c == C.andc2 ->
+        | App (c,x,xs) when c == C.andc ->
             mkAppC c (on_last aux (x::xs))
         | t -> mkApp t args
       in

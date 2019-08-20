@@ -822,7 +822,6 @@ module RawData : sig
     val eqc    : constant (* = *)
     val orc    : constant (* ; *)
     val andc   : constant (* , *)
-    val andc2  : constant (* & *)
     val rimplc : constant (* :- *)
     val pic    : constant (* pi *)
     val sigmac : constant (* sigma *)

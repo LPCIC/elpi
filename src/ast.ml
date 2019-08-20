@@ -17,6 +17,7 @@ module Func = struct
    let rec aux = function
     | "nil" -> aux "[]"
     | "cons" -> aux "::"
+    | "&" -> aux ","
     | x ->
        try Hashtbl.find h x
        with Not_found -> Hashtbl.add h x x ; x
@@ -28,7 +29,6 @@ module Func = struct
   let equal x y = x == y || x = y (* Resilient to unmarshaling *)
   let truef = from_string "true"
   let andf = from_string ","
-  let andf2 = from_string "&"
   let orf = from_string ";"
   let implf = from_string "=>"
   let rimplf = from_string ":-"
