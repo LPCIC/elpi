@@ -2130,7 +2130,7 @@ let rec term_map m = function
   | CData _ as x -> x
 
 let rec split_conj ~depth = function
-  | App(c, hd, args) when c == C.andc || c == C.andc2 ->
+  | App(c, hd, args) when c == C.andc ->
       split_conj ~depth hd @ List.(flatten (map (split_conj ~depth) args))
   | Nil -> []
   | Cons(x,xs) -> split_conj ~depth x @ split_conj ~depth xs
@@ -2201,7 +2201,7 @@ let rec claux1 ?loc get_mode vars depth hyps ts lts lcs t =
   | App(c, arg, []) when c == C.pic ->
      let b = get_lambda_body ~depth:(depth+lts) arg in
      claux1 ?loc get_mode (vars+1) depth hyps (Arg(vars,0)::ts) (lts+1) lcs b
-  | App(c, _, _) when c == C.andc || c == C.andc2 ->
+  | App(c, _, _) when c == C.andc ->
      error ?loc "Conjunction in the head of a clause is not supported"
   | Const _
   | App _ as g ->
@@ -3012,7 +3012,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
     [%spy "run-goal" (fun fmt -> Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env)) g];
     match g with
     | Builtin(c,[]) when c == C.cutc -> [%tcall cut p gs next alts lvl]
-    | App(c, g, gs') when c == C.andc || c == C.andc2 ->
+    | App(c, g, gs') when c == C.andc ->
        run depth p g (List.map(fun x -> depth,p,x) gs'@gs) next alts lvl
     | Cons (g,gs') ->
        run depth p g ((depth,p,gs') :: gs) next alts lvl

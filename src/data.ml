@@ -197,7 +197,6 @@ module Constants : sig
   val truec    : term
   val andc     : constant
   val andt     : term
-  val andc2    : constant
   val orc      : constant
   val implc    : constant
   val rimplc   : constant
@@ -292,7 +291,6 @@ let from_ast a = snd (funct_of_ast a)
 let from_stringc s = from_astc F.(from_string s)
 let from_string s = from_ast F.(from_string s)
 
-let andc2 = from_astc F.andf2
 let andc, andt = funct_of_ast F.andf
 let arrowc = from_astc F.arrowf
 let asc = from_stringc "as"
