@@ -853,7 +853,7 @@ X == Y :- same_term X Y.
     Out(any, "T",
     Full "unify T with a variable that has no eigenvariables in scope"),
   (fun _ ~depth _ _ state ->
-      let state, k = FlexibleData.Elpi.make ~lvl:0 state in
+      let state, k = FlexibleData.Elpi.make state in
       state, !:(mkUnifVar k ~args:[] state), [])),
   DocAbove);
 

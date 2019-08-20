@@ -817,7 +817,7 @@ let rec readback_args : type a m t.
 
 and readback : type t.
   look:(depth:int -> term -> term) ->
-  alloc:(?name:string -> lvl:int -> state -> state * 'uk) ->
+  alloc:(?name:string -> state -> state * 'uk) ->
   mkUnifVar:('uk -> args:term list -> state -> term) ->
   Conversion.ty_ast -> t compiled_adt -> depth:int -> hyps -> constraints -> state -> term ->
     state * t * extra_goals
@@ -834,8 +834,9 @@ and readback : type t.
       readback_args ~look ty ~depth hyps constraints state [] t args read [t]
   | Discard ->
       let CK(args,read,_) = Constants.Map.find (Constants.from_stringc "uvar") adt in
-      let state, k = alloc ~lvl:depth state in
-      readback_args ~look ty ~depth hyps constraints state [] t args read [mkUnifVar k ~args:[] state]
+      let state, k = alloc state in
+      readback_args ~look ty ~depth hyps constraints state [] t args read
+        [mkUnifVar k ~args:(Constants.mkinterval 0 depth 0) state]
   | _ -> raise (Conversion.TypeErr(ty,depth,t))
   with Not_found -> raise (Conversion.TypeErr(ty,depth,t))
 

@@ -353,36 +353,28 @@ module BuiltInData = struct
 end
 
 module Elpi = struct
-  type uvarHandle = Arg of string | Ref of ED.uvar_body
-  [@@deriving show]
 
-  type t = {
-    handle : uvarHandle;
-    lvl : int;
-  }
+  type t = Arg of string | Ref of ED.uvar_body
 
-  let pp fmt { handle; lvl } =
+  let pp fmt handle =
     match handle with
     | Arg str ->
         Format.fprintf fmt "%s" str
     | Ref ub ->
-        Pp.term fmt (ED.mkUVar ub lvl 0)
+        Pp.term fmt (ED.mkUVar ub 0 0)
 
   let show m = Format.asprintf "%a" pp m
 
-  let lvl { lvl } = lvl 
-
-  let equal { handle = h1; lvl = l1 } { handle = h2; lvl = l2 } =
-    l1 == l2 &&
+  let equal h1 h2  =
       match h1, h2 with
       | Ref p1, Ref p2 -> p1 == p2
       | Arg s1, Arg s2 -> String.equal s1 s2
       | _ -> false
 
   let compilation_is_over ~args k =
-    match k.handle with
+    match k with
     | Ref _ -> assert false
-    | Arg s -> { k with handle = Ref (Util.StrMap.find s args) }
+    | Arg s -> Ref (Util.StrMap.find s args)
 
   (* This is to hide to the client the fact that Args change representation
       after compilation *)
@@ -396,20 +388,20 @@ module Elpi = struct
     let i = ref 0 in
     fun () -> incr i; Printf.sprintf "_uvk_%d_" !i
   
-  let alloc_Elpi name lvl state =            
+  let alloc_Elpi name state =            
     if ED.State.get Compiler.while_compiling state then
       let state, _arg = Compiler.mk_Arg ~name ~args:[] state in
-      state, { lvl; handle = Arg name }
+      state, Arg name
     else
-      state, { lvl; handle = Ref (ED.oref ED.Constants.dummy) }
+      state, Ref (ED.oref ED.Constants.dummy)
 
-  let make ?name ~lvl state =
+  let make ?name state =
     match name with
-    | None -> alloc_Elpi (fresh_name ()) lvl state
+    | None -> alloc_Elpi (fresh_name ()) state
     | Some name ->
         try state, Util.StrMap.find name (ED.State.get uvk state) 
         with Not_found ->
-          let state, k = alloc_Elpi name lvl state in
+          let state, k = alloc_Elpi name state in
           ED.State.update uvk state (Util.StrMap.add name k), k
 
   let get ~name state =
@@ -438,23 +430,21 @@ module RawData = struct
     (* Unassigned unification variables *)
     | UnifVar of Elpi.t * term list
 
-  let look ~depth t =
+  let rec look ~depth t =
     let module R = (val !r) in let open R in
     match R.deref_head ~depth t with
     | ED.Term.Arg _ | ED.Term.AppArg _ -> assert false
-    | ED.Term.UVar(ub,lvl,nargs) ->
-        let args = ED.Term.Constants.mkinterval lvl nargs 0 in
-        UnifVar ({ lvl; handle = Ref ub},args)
-    | ED.Term.AppUVar(ub,lvl,args) ->
-        UnifVar ({ lvl; handle = Ref ub},args)
+    | ED.Term.AppUVar(ub,0,args) -> UnifVar (Ref ub,args)
+    | ED.Term.AppUVar(ub,lvl,args) -> look ~depth (R.expand_appuv ub ~depth ~lvl ~args)
+    | ED.Term.UVar(ub,lvl,ano) -> look ~depth (R.expand_uv ub ~depth ~lvl ~ano)
     | ED.Term.Discard ->
         let ub = ED.oref ED.Term.Constants.dummy in
-        UnifVar ({ lvl = 0; handle = Ref ub},ED.Term.Constants.mkinterval 0 depth 0)
+        UnifVar (Ref ub,ED.Term.Constants.mkinterval 0 depth 0)
     | x -> Obj.magic x (* HACK: view is a "subtype" of Term.term *)
 
   let kool = function
-    | UnifVar({ lvl; handle = Ref ub},args) -> ED.Term.AppUVar(ub,lvl,args)
-    | UnifVar({ lvl; handle = Arg _},_) -> assert false
+    | UnifVar(Ref ub,args) -> ED.Term.AppUVar(ub,0,args)
+    | UnifVar(Arg _,_) -> assert false
     | x -> Obj.magic x
   [@@ inline]
 
@@ -505,9 +495,9 @@ module RawData = struct
     | _ -> None)
   let no_constraints = []
 
-  let mkUnifVar { Elpi.handle; lvl } ~args state =
+  let mkUnifVar handle ~args state =
   match handle with
-  | Elpi.Ref ub -> ED.Term.mkAppUVar ub lvl args
+  | Elpi.Ref ub -> ED.Term.mkAppUVar ub 0 args
   | Elpi.Arg name -> Compiler.get_Arg state ~name ~args
 
 end
@@ -543,16 +533,16 @@ module FlexibleData = struct
       e2h_run = PtrMap.empty ()
     }
 
-    let add ({ Elpi.lvl; handle } as uv) v { h2e; e2h_compile; e2h_run } =
+    let add uv v { h2e; e2h_compile; e2h_run } =
       let h2e = H2E.add v uv h2e in
-      match handle with
+      match uv with
       | Elpi.Ref ub ->
           { h2e; e2h_compile; e2h_run = PtrMap.add ub v e2h_run }
       | Arg s ->
           { h2e; e2h_run; e2h_compile = StrMap.add s v e2h_compile }
 
     let elpi v { h2e } = H2E.find v h2e
-    let host { Elpi.handle } { e2h_compile; e2h_run } =
+    let host handle { e2h_compile; e2h_run } =
       match handle with
       | Elpi.Ref ub -> PtrMap.find ub e2h_run
       | Arg s -> StrMap.find s e2h_compile
@@ -565,12 +555,12 @@ module FlexibleData = struct
       | Arg s ->
           { h2e; e2h_run; e2h_compile = StrMap.remove s e2h_compile }
 
-    let remove_elpi ({ Elpi.handle } as k) m =
+    let remove_elpi k m =
       let v = host k m in
-      remove_both handle v m
+      remove_both k v m
 
     let remove_host v m =
-      let { Elpi.handle } = elpi v m in
+      let handle = elpi v m in
       remove_both handle v m
 
     let filter f { h2e; e2h_compile; e2h_run } =
@@ -581,14 +571,13 @@ module FlexibleData = struct
       
     let fold f { h2e } acc =
       let module R = (val !r) in let open R in
-      let get_val {Elpi.lvl; handle} =
-        match handle with
+      let get_val = function
         | Elpi.Ref { ED.Term.contents = ub }
           when ub != ED.Term.Constants.dummy ->
-            Some (lvl, R.deref_head ~depth:lvl ub)
+            Some (R.deref_head ~depth:0 ub)
         | Elpi.Ref _ -> None
         | Elpi.Arg _ -> None in
-      H2E.fold (fun k ({Elpi.lvl; handle} as uk) acc -> f k uk (get_val uk) acc) h2e acc
+      H2E.fold (fun k uk acc -> f k uk (get_val uk) acc) h2e acc
 
     let uvn = incr uvmap_no; !uvmap_no
 
@@ -707,8 +696,7 @@ module Utils = struct
     let module R = (val !r) in let open R in
     list_to_lp_list tl
 
-  let get_assignment { Elpi.handle } =
-    match handle with
+  let get_assignment = function
     | Elpi.Arg _ -> assert false
     | Elpi.Ref { ED.contents = r } ->
         if r == ED.Constants.dummy then None
