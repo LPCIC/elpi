@@ -678,11 +678,11 @@ module Conversion = struct
   [@@deriving show]
 
   type 'a embedding =
-    depth:int -> hyps -> constraints ->
+    depth:int ->
     state -> 'a -> state * term * extra_goals
     
   type 'a readback =
-    depth:int -> hyps -> constraints ->
+    depth:int ->
     state -> term -> state * 'a * extra_goals
 
   type 'a t = {
@@ -704,6 +704,49 @@ let rec show_ty_ast ?(outer=true) = function
 
 
 end
+
+module ContextualConversion = struct
+
+  type ty_ast = Conversion.ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
+  [@@deriving show]
+
+  type ('a,'hyps,'constraints) embedding =
+    depth:int -> 'hyps -> 'constraints ->
+    state -> 'a -> state * term * extra_goals
+    
+  type ('a,'hyps,'constraints) readback =
+    depth:int -> 'hyps -> 'constraints ->
+    state -> term -> state * 'a * extra_goals
+
+  type ('a,'hyps,'constraints) t = {
+    ty : ty_ast;
+    pp_doc : Format.formatter -> unit -> unit [@opaque];
+    pp : Format.formatter -> 'a -> unit [@opaque];
+    embed : ('a,'hyps,'constraints) embedding [@opaque];   (* 'a -> term *)
+    readback : ('a,'hyps,'constraints) readback [@opaque]; (* term -> 'a *)
+  }
+  [@@deriving show]
+
+  type ('hyps,'constraints) ctx_readback =
+    depth:int -> hyps -> constraints -> state -> state * 'hyps * 'constraints * extra_goals
+
+  let unit_ctx : (unit,unit) ctx_readback = fun ~depth:_ _ _ s -> s, (), (), []
+
+  let (!>) { Conversion.ty; pp_doc; pp; embed; readback; } = {
+    ty; pp; pp_doc;
+    embed = (fun ~depth _ _ s t -> embed ~depth s t);
+    readback = (fun ~depth _ _ s t -> readback ~depth s t);
+  }
+
+  let (!<) { ty; pp_doc; pp; embed; readback; } = {
+    Conversion.ty; pp; pp_doc;
+    embed = (fun ~depth s t -> embed ~depth () () s t);
+    readback = (fun ~depth s t -> readback ~depth () () s t);
+  }
+
+  end
+
+
 module BuiltInPredicate = struct
 
 type name = string
@@ -712,18 +755,23 @@ type doc = string
 type 'a oarg = Keep | Discard
 type 'a ioarg = Data of 'a | NoData
 
-type ('function_type, 'inernal_outtype_in) ffi =
-  | In   : 't Conversion.t * doc * ('i, 'o) ffi -> ('t -> 'i,'o) ffi
-  | Out  : 't Conversion.t * doc * ('i, 'o * 't option) ffi -> ('t oarg -> 'i,'o) ffi
-  | InOut  : 't Conversion.t * doc * ('i, 'o * 't option) ffi -> ('t ioarg -> 'i,'o) ffi
-  | Easy : doc -> (depth:int -> 'o, 'o) ffi
-  | Read : doc -> (depth:int -> hyps -> constraints -> state -> 'o, 'o) ffi
-  | Full : doc -> (depth:int -> hyps -> constraints -> state -> state * 'o * extra_goals, 'o) ffi
-  | VariadicIn : 't Conversion.t * doc -> ('t list -> depth:int -> hyps -> constraints -> state -> state * 'o, 'o) ffi
-  | VariadicOut : 't Conversion.t * doc -> ('t oarg list -> depth:int -> hyps -> constraints -> state -> state * ('o * 't option list option), 'o) ffi
-  | VariadicInOut : 't Conversion.t * doc -> ('t ioarg list -> depth:int -> hyps -> constraints -> state -> state * ('o * 't option list option), 'o) ffi
+type ('function_type, 'inernal_outtype_in, 'internal_hyps, 'internal_constraints) ffi =
+  | In    : 't Conversion.t * doc * ('i, 'o,'h,'c) ffi -> ('t -> 'i,'o,'h,'c) ffi
+  | Out   : 't Conversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t oarg -> 'i,'o,'h,'c) ffi
+  | InOut : 't Conversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t ioarg -> 'i,'o,'h,'c) ffi
 
-type t = Pred : name * ('a,unit) ffi * 'a -> t
+  | CIn    : ('t,'h,'c) ContextualConversion.t * doc * ('i, 'o,'h,'c) ffi -> ('t -> 'i,'o,'h,'c) ffi
+  | COut   : ('t,'h,'c) ContextualConversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t oarg -> 'i,'o,'h,'c) ffi
+  | CInOut : ('t,'h,'c) ContextualConversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t ioarg -> 'i,'o,'h,'c) ffi
+
+  | Easy : doc -> (depth:int -> 'o, 'o,unit,unit) ffi
+  | Read : ('h,'c) ContextualConversion.ctx_readback * doc -> (depth:int -> 'h -> 'c -> state -> 'o, 'o,'h,'c) ffi
+  | Full : ('h,'c) ContextualConversion.ctx_readback * doc -> (depth:int -> 'h -> 'c -> state -> state * 'o * extra_goals, 'o,'h,'c) ffi
+  | VariadicIn    : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t list -> depth:int -> 'h -> 'c -> state -> state * 'o, 'o,'h,'c) ffi
+  | VariadicOut   : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t oarg list -> depth:int -> 'h -> 'c -> state -> state * ('o * 't option list option), 'o,'h,'c) ffi
+  | VariadicInOut : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t ioarg list -> depth:int -> 'h -> 'c -> state -> state * ('o * 't option list option), 'o,'h,'c) ffi
+
+type t = Pred : name * ('a,unit,'h,'c) ffi * 'a -> t
 
 type doc_spec = DocAbove | DocNext
 
@@ -747,34 +795,37 @@ type ('match_stateful_t,'match_t, 't) match_t =
 type ('build_stateful_t,'build_t) build_t =
   | B of 'build_t
   | BS of 'build_stateful_t
-type ('stateful_builder,'builder, 'stateful_matcher, 'matcher,  'self) constructor_arguments =
+
+type ('stateful_builder,'builder, 'stateful_matcher, 'matcher,  'self, 'hyps,'constraints) constructor_arguments =
   (* No arguments *)
-  | N : (State.t -> State.t * 'self, 'self, State.t -> State.t * term * extra_goals, term, 'self) constructor_arguments
+  | N : (State.t -> State.t * 'self, 'self, State.t -> State.t * term * extra_goals, term, 'self, 'hyps,'constraints) constructor_arguments
   (* An argument of type 'a *)
-  | A : 'a Conversion.t * ('bs,'b, 'ms,'m, 'self) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms, 'a -> 'm, 'self) constructor_arguments
+  | A : 'a Conversion.t * ('bs,'b, 'ms,'m, 'self, 'hyps,'constraints) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms, 'a -> 'm, 'self, 'hyps,'constraints) constructor_arguments
+  (* An argument of type 'a in context 'hyps,'constraints *)
+  | CA : ('a,'hyps,'constraints) ContextualConversion.t * ('bs,'b, 'ms,'m, 'self, 'hyps,'constraints) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms, 'a -> 'm, 'self, 'hyps,'constraints) constructor_arguments
   (* An argument of type 'self *)
-  | S : ('bs,'b, 'ms, 'm, 'self) constructor_arguments -> ('self -> 'bs, 'self -> 'b, 'self -> 'ms, 'self -> 'm, 'self) constructor_arguments
+  | S : ('bs,'b, 'ms, 'm, 'self, 'hyps,'constraints) constructor_arguments -> ('self -> 'bs, 'self -> 'b, 'self -> 'ms, 'self -> 'm, 'self, 'hyps,'constraints) constructor_arguments
   (* An argument of type `T 'self` for a constainer `T`, like a `list 'self`.
      `S args` above is a shortcut for `C(fun x -> x, args)` *)
-  | C : ('self Conversion.t -> 'a Conversion.t) * ('bs,'b,'ms,'m,'self) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms,'a -> 'm, 'self) constructor_arguments
+  | C : (('self,'hyps,'constraints) ContextualConversion.t -> ('a,'hyps,'constraints) ContextualConversion.t) * ('bs,'b,'ms,'m,'self, 'hyps,'constraints) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms,'a -> 'm, 'self, 'hyps,'constraints) constructor_arguments
 
-type 't constructor =
+type ('t,'h,'c) constructor =
   K : name * doc *
-      ('build_stateful_t,'build_t,'match_stateful_t,'match_t,'t) constructor_arguments *   (* args ty *)
+      ('build_stateful_t,'build_t,'match_stateful_t,'match_t,'t,'h,'c) constructor_arguments *   (* args ty *)
       ('build_stateful_t,'build_t) build_t *
       ('match_stateful_t,'match_t,'t) match_t
-    -> 't constructor
+    -> ('t,'h,'c) constructor
         
-type 't declaration = {
+type ('t,'h,'c) declaration = {
   ty : Conversion.ty_ast;
   doc : doc;
   pp : Format.formatter -> 't -> unit;
-  constructors : 't constructor list;
+  constructors : ('t,'h,'c) constructor list;
 }
 
-type ('b,'m,'t) compiled_constructor_arguments =
-  | CN : (state -> state * 't,state -> state * term * extra_goals, 't) compiled_constructor_arguments
-  | CA : 'a Conversion.t * ('b,'m,'t) compiled_constructor_arguments -> ('a -> 'b, 'a -> 'm, 't) compiled_constructor_arguments
+type ('b,'m,'t,'h,'c) compiled_constructor_arguments =
+  | XN : (state -> state * 't,state -> state * term * extra_goals, 't,'h,'c) compiled_constructor_arguments
+  | XA : ('a,'h,'c) ContextualConversion.t * ('b,'m,'t,'h,'c) compiled_constructor_arguments -> ('a -> 'b, 'a -> 'm, 't,'h,'c) compiled_constructor_arguments
   
 type ('match_t, 't) compiled_match_t =
   (* continuation to call passing subterms *)
@@ -784,84 +835,84 @@ type ('match_t, 't) compiled_match_t =
   (* match 't and pass its subterms to ~ok or just call ~ko *)
   't -> State.t -> State.t * term * extra_goals
 
-type 't compiled_constructor =
-    CK : ('build_t,'matched_t,'t) compiled_constructor_arguments *
+type ('t,'h,'c) compiled_constructor =
+    XK : ('build_t,'matched_t,'t,'h,'c) compiled_constructor_arguments *
     'build_t * ('matched_t,'t) compiled_match_t
-  -> 't compiled_constructor
+  -> ('t,'h,'c) compiled_constructor
 
 
-type 't compiled_adt = ('t compiled_constructor) Constants.Map.t
+type ('t,'h,'c) compiled_adt = (('t,'h,'c) compiled_constructor) Constants.Map.t
 
 let buildk kname = function
 | [] -> mkConst kname
 | x :: xs -> mkApp kname x xs
 
-let rec readback_args : type a m t.
+let rec readback_args : type a m t h c.
   look:(depth:int -> term -> term) ->
-  Conversion.ty_ast -> depth:int -> hyps -> constraints -> state -> extra_goals list -> term ->
-  (a,m,t) compiled_constructor_arguments -> a -> term list ->
+  Conversion.ty_ast -> depth:int -> h -> c -> state -> extra_goals list -> term ->
+  (a,m,t,h,c) compiled_constructor_arguments -> a -> term list ->
     state * t * extra_goals
 = fun ~look ty ~depth hyps constraints state extra origin args convert l ->
     match args, l with
-    | CN, [] ->
+    | XN, [] ->
         let state, x = convert state in
         state, x, List.(concat (rev extra))
-    | CN, _ -> raise (Conversion.TypeErr(ty,depth,origin))
-    | CA _, [] -> assert false
-    | CA(d,rest), x::xs ->
+    | XN, _ -> raise (Conversion.TypeErr(ty,depth,origin))
+    | XA _, [] -> assert false
+    | XA(d,rest), x::xs ->
       let state, x, gls = d.readback ~depth hyps constraints state x in
       readback_args ~look ty ~depth hyps constraints state (gls :: extra) origin
         rest (convert x) xs
 
-and readback : type t.
+and readback : type t h c.
   look:(depth:int -> term -> term) ->
   alloc:(?name:string -> state -> state * 'uk) ->
   mkUnifVar:('uk -> args:term list -> state -> term) ->
-  Conversion.ty_ast -> t compiled_adt -> depth:int -> hyps -> constraints -> state -> term ->
+  Conversion.ty_ast -> (t,h,c) compiled_adt -> depth:int -> h -> c -> state -> term ->
     state * t * extra_goals
 = fun ~look ~alloc ~mkUnifVar ty adt ~depth hyps constraints state t ->
   try match look ~depth t with
   | Const c ->
-      let CK(args,read,_) = Constants.Map.find c adt in
+      let XK(args,read,_) = Constants.Map.find c adt in
       readback_args ~look ty ~depth hyps constraints state [] t args read []
   | App(c,x,xs) ->
-      let CK(args,read,_) = Constants.Map.find c adt in
+      let XK(args,read,_) = Constants.Map.find c adt in
       readback_args ~look ty ~depth hyps constraints state [] t args read (x::xs)
   | (UVar _ | AppUVar _) ->
-      let CK(args,read,_) = Constants.Map.find (Constants.from_stringc "uvar") adt in
+      let XK(args,read,_) = Constants.Map.find (Constants.from_stringc "uvar") adt in
       readback_args ~look ty ~depth hyps constraints state [] t args read [t]
   | Discard ->
-      let CK(args,read,_) = Constants.Map.find (Constants.from_stringc "uvar") adt in
+      let XK(args,read,_) = Constants.Map.find (Constants.from_stringc "uvar") adt in
       let state, k = alloc state in
       readback_args ~look ty ~depth hyps constraints state [] t args read
         [mkUnifVar k ~args:(Constants.mkinterval 0 depth 0) state]
   | _ -> raise (Conversion.TypeErr(ty,depth,t))
   with Not_found -> raise (Conversion.TypeErr(ty,depth,t))
 
-and adt_embed_args : type m a t.
-  Conversion.ty_ast -> t compiled_adt -> constant ->
-  depth:int -> hyps -> constraints ->
-  (a,m,t) compiled_constructor_arguments ->
+and adt_embed_args : type m a t h c.
+  Conversion.ty_ast -> (t,h,c) compiled_adt -> constant ->
+  depth:int -> h -> c ->
+  (a,m,t,h,c) compiled_constructor_arguments ->
   (state -> state * term * extra_goals) list ->
     m
 = fun ty adt kname ~depth hyps constraints args acc ->
     match args with
-    | CN -> fun state ->
+    | XN -> fun state ->
         let state, ts, gls =
           List.fold_left (fun (state,acc,gls) f ->
             let state, t, goals = f state in
             state, t :: acc, goals :: gls)
             (state,[],[]) acc in
         state, buildk kname ts, List.(flatten gls)
-    | CA(d,args) ->
+    | XA(d,args) ->
         fun x ->
           adt_embed_args ty adt kname ~depth hyps constraints
             args ((fun state -> d.embed ~depth hyps constraints state x) :: acc)
 
-and embed : type a.
+and embed : type a h c.
   Conversion.ty_ast -> (Format.formatter -> a -> unit) ->
-  a compiled_adt ->
-  depth:int -> hyps -> constraints -> state ->
+  (a,h,c) compiled_adt ->
+  depth:int -> h -> c -> state ->
     a -> state * term * extra_goals
 = fun ty pp adt ->
   let bindings = Constants.Map.bindings adt in
@@ -870,35 +921,37 @@ and embed : type a.
       match l with
       | [] -> type_error
                   ("Pattern matching failure embedding: " ^ Conversion.show_ty_ast ty ^ Format.asprintf ": %a" pp t)
-      | (kname, CK(args,_,matcher)) :: rest ->
+      | (kname, XK(args,_,matcher)) :: rest ->
         let ok = adt_embed_args ty adt kname ~depth hyps constraints args [] in
         matcher ~ok ~ko:(aux rest) t state in
      aux bindings state
 
-let rec compile_arguments : type b bs m ms t.
-  (bs,b,ms,m,t) constructor_arguments -> t Conversion.t -> (bs,ms,t) compiled_constructor_arguments =
+let rec compile_arguments : type b bs m ms t h c.
+  (bs,b,ms,m,t,h,c) constructor_arguments -> (t,h,c) ContextualConversion.t -> (bs,ms,t,h,c) compiled_constructor_arguments =
 fun arg self ->
   match arg with
-  | N -> CN
-  | A(d,rest) -> CA(d,compile_arguments rest self)
-  | S rest -> CA(self,compile_arguments rest self)
-  | C(fs, rest) -> CA(fs self, compile_arguments rest self)
+  | N -> XN
+  | A(d,rest) -> XA(ContextualConversion.(!>) d,compile_arguments rest self)
+  | CA(d,rest) -> XA(d,compile_arguments rest self)
+  | S rest -> XA(self,compile_arguments rest self)
+  | C(fs, rest) -> XA(fs self, compile_arguments rest self)
 
-let rec compile_builder_aux : type bs b m ms t. (bs,b,ms,m,t) constructor_arguments -> b -> bs
+let rec compile_builder_aux : type bs b m ms t h c. (bs,b,ms,m,t,h,c) constructor_arguments -> b -> bs
   = fun args f ->
     match args with
     | N -> fun state -> state, f
     | A(_,rest) -> fun a -> compile_builder_aux rest (f a)
+    | CA(_,rest) -> fun a -> compile_builder_aux rest (f a)
     | S rest -> fun a -> compile_builder_aux rest (f a)
     | C(_,rest) -> fun a -> compile_builder_aux rest (f a)
 
-let compile_builder : type bs b m ms t. (bs,b,ms,m,t) constructor_arguments -> (bs,b) build_t -> bs
+let compile_builder : type bs b m ms t h c. (bs,b,ms,m,t,h,c) constructor_arguments -> (bs,b) build_t -> bs
   = fun a -> function
     | B f -> compile_builder_aux a f
     | BS f -> f
 
-let rec compile_matcher_ok : type bs b m ms t.
-  (bs,b,ms,m,t) constructor_arguments -> ms -> extra_goals ref -> state ref -> m
+let rec compile_matcher_ok : type bs b m ms t h c.
+  (bs,b,ms,m,t,h,c) constructor_arguments -> ms -> extra_goals ref -> state ref -> m
   = fun args f gls state ->
     match args with
     | N -> let state', t, gls' = f !state in
@@ -906,6 +959,7 @@ let rec compile_matcher_ok : type bs b m ms t.
            gls := gls';
            t
     | A(_,rest) -> fun a -> compile_matcher_ok rest (f a) gls state
+    | CA(_,rest) -> fun a -> compile_matcher_ok rest (f a) gls state
     | S rest -> fun a -> compile_matcher_ok rest (f a) gls state
     | C(_,rest) -> fun a -> compile_matcher_ok rest (f a) gls state
 
@@ -915,7 +969,7 @@ let compile_matcher_ko f gls state () =
   gls := gls';
   t
 
-let compile_matcher : type bs b m ms t. (bs,b,ms,m,t) constructor_arguments -> (ms,m,t) match_t -> (ms,t) compiled_match_t
+let compile_matcher : type bs b m ms t h c. (bs,b,ms,m,t,h,c) constructor_arguments -> (ms,m,t) match_t -> (ms,t) compiled_match_t
   = fun a -> function
     | M f ->
         fun ~ok ~ko t state ->
@@ -931,17 +985,17 @@ let compile_constructors ty self l =
   if StrSet.cardinal names <> List.length l then
     anomaly ("Duplicate constructors name in ADT: " ^ Conversion.show_ty_ast ty);
   List.fold_left (fun acc (K(name,_,a,b,m)) ->
-    Constants.(Map.add (from_stringc name) (CK(compile_arguments a self,compile_builder a b,compile_matcher a m)) acc))
+    Constants.(Map.add (from_stringc name) (XK(compile_arguments a self,compile_builder a b,compile_matcher a m)) acc))
       Constants.Map.empty l
 end
 
 let pp_ty sep fmt (_,s,_) = Fmt.fprintf fmt " %s%s" s sep
 let pp_ty_args = pplist (pp_ty "") " ->" ~pplastelem:(pp_ty "")
 
-let rec tyargs_of_args : type a b c. string -> (a,b,c) ADT.compiled_constructor_arguments -> (bool * string * string) list =
+let rec tyargs_of_args : type a b c d e. string -> (a,b,c,d,e) ADT.compiled_constructor_arguments -> (bool * string * string) list =
   fun self -> function
-  | ADT.CN -> [false,self,""]
-  | ADT.CA ({ ty },rest) -> (false,Conversion.show_ty_ast ty,"") :: tyargs_of_args self rest
+  | ADT.XN -> [false,self,""]
+  | ADT.XA ({ ty },rest) -> (false,Conversion.show_ty_ast ty,"") :: tyargs_of_args self rest
 
 let document_constructor fmt self name doc args =
   let args = tyargs_of_args self args in
@@ -974,15 +1028,15 @@ let document_adt doc ty ks cks fmt () =
   document_kind fmt ty;
   List.iter (fun (ADT.K(name,doc,_,_,_)) ->
     if name <> "uvar" then
-      let ADT.CK(args,_,_) = Constants.Map.find (Constants.from_stringc name) cks in 
+      let ADT.XK(args,_,_) = Constants.Map.find (Constants.from_stringc name) cks in 
       document_constructor fmt (Conversion.show_ty_ast ty) name doc args) ks
 
 let adt ~look ~alloc ~mkUnifVar { ADT.ty; constructors; doc; pp } =
-  let readback_ref = ref (fun ~depth -> assert false) in
-  let embed_ref = ref (fun ~depth -> assert false) in
+  let readback_ref = ref (fun ~depth _ _ _ _ -> assert false) in
+  let embed_ref = ref (fun ~depth _ _ _ _ -> assert false) in
   let cconstructors_ref = ref Constants.Map.empty in
   let self = {
-    Conversion.ty;
+    ContextualConversion.ty;
     pp;
     pp_doc = (fun fmt () ->
       document_adt doc ty constructors !cconstructors_ref fmt ());
@@ -1000,6 +1054,7 @@ let adt ~look ~alloc ~mkUnifVar { ADT.ty; constructors; doc; pp } =
 type declaration =
   | MLCode of t * doc_spec
   | MLData : 'a Conversion.t -> declaration
+  | MLDataC : ('a,'h,'c) ContextualConversion.t -> declaration
   | LPDoc  of string
   | LPCode of string
 
@@ -1085,17 +1140,20 @@ let pp_variadictype fmt name doc_pred ty args =
 
 let document_pred fmt docspec name ffi =
   let rec doc
-  : type i o. (bool * string * string) list -> (i,o) ffi -> unit
+  : type i o h c. (bool * string * string) list -> (i,o,h,c) ffi -> unit
   = fun args -> function
-    | In( { ty }, s, ffi) -> doc ((true,Conversion.show_ty_ast ty,s) :: args) ffi
-    | Out( { ty }, s, ffi) -> doc ((false,Conversion.show_ty_ast ty,s) :: args) ffi
-    | InOut( { ty }, s, ffi) -> doc ((false,Conversion.show_ty_ast ty,s) :: args) ffi
-    | Read s -> pp_pred fmt docspec name s args
+    | In( { Conversion.ty }, s, ffi) -> doc ((true,Conversion.show_ty_ast ty,s) :: args) ffi
+    | Out( { Conversion.ty }, s, ffi) -> doc ((false,Conversion.show_ty_ast ty,s) :: args) ffi
+    | InOut( { Conversion.ty }, s, ffi) -> doc ((false,Conversion.show_ty_ast ty,s) :: args) ffi
+    | CIn( { ContextualConversion.ty }, s, ffi) -> doc ((true,Conversion.show_ty_ast ty,s) :: args) ffi
+    | COut( { ContextualConversion.ty }, s, ffi) -> doc ((false,Conversion.show_ty_ast ty,s) :: args) ffi
+    | CInOut( { ContextualConversion.ty }, s, ffi) -> doc ((false,Conversion.show_ty_ast ty,s) :: args) ffi
+    | Read (_,s) -> pp_pred fmt docspec name s args
     | Easy s -> pp_pred fmt docspec name s args
-    | Full s -> pp_pred fmt docspec name s args
-    | VariadicIn( { ty }, s) -> pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
-    | VariadicOut( { ty }, s) -> pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
-    | VariadicInOut( { ty }, s) -> pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
+    | Full (_,s) -> pp_pred fmt docspec name s args
+    | VariadicIn( _,{ ContextualConversion.ty }, s) -> pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
+    | VariadicOut( _,{ ContextualConversion.ty }, s) -> pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
+    | VariadicInOut( _,{ ContextualConversion.ty }, s) -> pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
   in
     doc [] ffi
 ;;
@@ -1108,6 +1166,7 @@ let document fmt l =
   List.iter (function
     | MLCode(Pred(name,ffi,_), docspec) -> document_pred fmt docspec name ffi
     | MLData { pp_doc } -> Fmt.fprintf fmt "%a@\n" pp_doc ()
+    | MLDataC { pp_doc } -> Fmt.fprintf fmt "%a@\n" pp_doc ()
     | LPCode s -> Fmt.fprintf fmt "%s" s; Fmt.fprintf fmt "@\n@\n"
     | LPDoc s -> pp_comment fmt ("% " ^ s); Fmt.fprintf fmt "@\n@\n") l;
   Fmt.fprintf fmt "@\n@\n";
@@ -1134,7 +1193,7 @@ let rec embed_query_aux : type a. mk_Arg:(state -> name:string -> args:term list
   = fun ~mk_Arg ~depth predicate gls args state descr ->
     match descr with
     | D(d,x,rest) ->
-        let state, x, glsx = d.Conversion.embed ~depth [] [] state x in
+        let state, x, glsx = d.Conversion.embed ~depth state x in
         embed_query_aux ~mk_Arg ~depth predicate (gls @ glsx) (x :: args) state rest
     | Q(d,name,rest) ->
         let state, x = mk_Arg state ~name ~args:[] in
@@ -1150,18 +1209,18 @@ let rec embed_query_aux : type a. mk_Arg:(state -> name:string -> args:term list
 let embed_query ~mk_Arg ~depth state (Query { predicate; arguments }) =
     embed_query_aux  ~mk_Arg ~depth predicate [] [] state arguments
 
-let rec query_solution_aux : type a. a arguments -> term StrMap.t -> state -> constraints -> a
- = fun args assignments state constraints ->
+let rec query_solution_aux : type a. a arguments -> term StrMap.t -> state -> a
+ = fun args assignments state ->
      match args with
      | N -> ()
-     | D(_,_,args) -> query_solution_aux args assignments state constraints
+     | D(_,_,args) -> query_solution_aux args assignments state
      | Q(d,name,args) ->
          let x = StrMap.find name assignments in
-         let state, x, _gls = d.Conversion.readback ~depth:0 [] constraints state x in
-         x, query_solution_aux args assignments state constraints
+         let state, x, _gls = d.Conversion.readback ~depth:0 state x in
+         x, query_solution_aux args assignments state
 
-let output arguments assignments state constraints =
-  query_solution_aux arguments assignments state constraints
+let output arguments assignments state =
+  query_solution_aux arguments assignments state
   
 end
 
