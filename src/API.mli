@@ -595,12 +595,11 @@ module FlexibleData : sig
   (** key for Elpi's flexible data *)
   module Elpi : sig
     type t
-    val make : ?name:string -> lvl:int -> Data.state -> Data.state * t
+    val make : ?name:string -> Data.state -> Data.state * t
     val get : name:string -> Data.state -> t option
     val pp :  Format.formatter -> t -> unit
     val show :  t -> string
     val equal : t -> t -> bool
-    val lvl : t -> int
   end
 
   module type Host = sig
@@ -622,7 +621,7 @@ module FlexibleData : sig
     val filter : (Host.t -> Elpi.t -> bool) -> t -> t
 
     (* The eventual body at its depth *)
-    val fold : (Host.t -> Elpi.t -> (int * Data.term) option -> 'a -> 'a) -> t -> 'a -> 'a
+    val fold : (Host.t -> Elpi.t -> Data.term option -> 'a -> 'a) -> t -> 'a -> 'a
 
     val elpi   : Host.t -> t -> Elpi.t
     val host : Elpi.t -> t -> Host.t

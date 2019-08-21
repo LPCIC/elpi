@@ -24,6 +24,9 @@ val deref_head : depth:int -> term -> term
 val is_flex : depth:int -> term -> uvar_body option
 val pp_stuck_goal : Fmt.formatter -> stuck_goal -> unit
 
+val expand_uv : depth:int -> uvar_body -> lvl:int -> ano:int -> term
+val expand_appuv : depth:int -> uvar_body -> lvl:int -> args:term list -> term
+
 val lp_list_to_list : depth:int -> term -> term list
 val list_to_lp_list : term list -> term
 

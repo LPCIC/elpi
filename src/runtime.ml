@@ -3278,4 +3278,14 @@ let hmove = HO.hmove
 let make_index = make_index
 let clausify1 = Clausify.clausify1
 
+let expand_uv ~depth r ~lvl ~ano =
+  let t, assignment = HO.expand_uv ~depth r ~lvl ~ano in
+  option_iter (fun (r,_,assignment) -> r @:= assignment) assignment;
+  t
+let expand_appuv ~depth r ~lvl ~args =
+  let t, assignment = HO.expand_appuv ~depth r ~lvl ~args in
+  option_iter (fun (r,_,assignment) -> r @:= assignment) assignment;
+  t
+
+
 (* vim: set foldmethod=marker: *)
