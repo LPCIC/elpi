@@ -1,3 +1,34 @@
+## [UNRELEASED]
+
+- Parser:
+  - tolerate trailing `,` in lists, eg `[1,2,3,]` is now parsed as `[1,2,3]`.
+  - error if the input of `Parse.goal_from_string` contains extra tokens
+  - binary conjunction `&` is now turned on the fly into the nary one `,`.
+
+- Bugfix:
+  - Nasty bug in pruning dusing higher order unification, see #36.
+  - `Discard` is now considered a stack term, and is turned into an
+    unification variable on heapification.
+  - `API.RawData.look` now expands `UVar` correctly
+
+- Stdlib:
+  - `set` and `map` for arbitrary terms equipped with an order relation.
+    Based on the code of OCaml's `Map` and `Set` library.
+  
+- API:
+  - commodity functions in `Elpi.Builtin` to export as built-in
+    OCaml's `Set.S` and `Map.S` interfaces (the output of `Set.Make`
+    and `Map.Make`). All data is limited to be a closed term.
+  - `Constants.andc2` was removed
+  - `FlexibleData.Elpi.make` takes no `~lvl` argument (it is always `0`)
+  - `RawData.view` no more contains `Discard` since it is not an heap term
+
+- Misc:
+  - pretty printer for unification variable made re-entrant w.r.t. calls to the CHR engine (used to lose the
+    mapping between heap cells and names)
+  - default paths for finding `.elpi` files fixed after the switch to dune
+  - a few more tests regarding unification, data strctures and performance
+
 ## v1.6.0 (July 2019)
 
 - Builtin:
