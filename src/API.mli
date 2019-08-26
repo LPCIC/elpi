@@ -257,10 +257,15 @@ module ContextualConversion : sig
     Data.state -> Data.state * 'hyps * 'constraints * Conversion.extra_goals
 
   val unit_ctx : (unit,unit) ctx_readback
+  val raw_ctx : (Data.hyps,Data.constraints) ctx_readback
 
-  (* casts *)
-  val (!>) : 'a Conversion.t -> ('a,'hyps,'constraints) t
+  (* cast *)
   val (!<) : ('a,unit,unit) t -> 'a Conversion.t
+
+  (* morphisms *)
+  val (!>)   : 'a Conversion.t -> ('a,'hyps,'constraints) t
+  val (!>>)  : ('a Conversion.t -> 'b Conversion.t) -> ('a,'hyps,'constraints) t -> ('b,'hyps,'constraints) t
+  val (!>>>) : ('a Conversion.t -> 'b Conversion.t -> 'c Conversion.t) -> ('a,'hyps,'constraints) t -> ('b,'hyps,'constraints) t -> ('c,'hyps,'constraints) t
 
 end
 
@@ -274,8 +279,6 @@ module BuiltInData : sig
   val string : string Conversion.t
   val list   : 'a Conversion.t -> 'a list Conversion.t
   val loc    : Ast.Loc.t Conversion.t
-
-  val listC   : ('a,'h,'c) ContextualConversion.t -> ('a list,'h,'c) ContextualConversion.t
 
   (* poly "A" is what one would use for, say, [type eq A -> A -> prop] *)
   val poly   : string -> Data.term Conversion.t

@@ -731,6 +731,14 @@ module ContextualConversion = struct
     depth:int -> hyps -> constraints -> state -> state * 'hyps * 'constraints * extra_goals
 
   let unit_ctx : (unit,unit) ctx_readback = fun ~depth:_ _ _ s -> s, (), (), []
+  let raw_ctx : (hyps,constraints) ctx_readback = fun ~depth:_ h c s -> s, h, c, []
+
+
+  let (!<) { ty; pp_doc; pp; embed; readback; } = {
+    Conversion.ty; pp; pp_doc;
+    embed = (fun ~depth s t -> embed ~depth () () s t);
+    readback = (fun ~depth s t -> readback ~depth () () s t);
+  }
 
   let (!>) { Conversion.ty; pp_doc; pp; embed; readback; } = {
     ty; pp; pp_doc;
@@ -738,10 +746,44 @@ module ContextualConversion = struct
     readback = (fun ~depth _ _ s t -> readback ~depth s t);
   }
 
-  let (!<) { ty; pp_doc; pp; embed; readback; } = {
+  let (!>>) (f : 'a Conversion.t -> 'b Conversion.t) cc = 
+  let mk h c { ty; pp_doc; pp; embed; readback; } = {
     Conversion.ty; pp; pp_doc;
-    embed = (fun ~depth s t -> embed ~depth () () s t);
-    readback = (fun ~depth s t -> readback ~depth () () s t);
+    embed = (fun ~depth s t -> embed ~depth h c s t);
+    readback = (fun ~depth s t -> readback ~depth h c s t);
+  } in
+  let mk_pp { ty; pp_doc; pp; } = {
+    Conversion.ty; pp; pp_doc;
+    embed = (fun ~depth s t -> assert false);
+    readback = (fun ~depth s t -> assert false);
+  } in
+  let { Conversion.ty; pp; pp_doc } = f (mk_pp cc) in
+  {
+    ty;
+    pp;
+    pp_doc;
+    embed = (fun ~depth h c s t -> (f (mk h c cc)).embed ~depth s t);
+    readback = (fun ~depth h c s t -> (f (mk h c cc)).readback ~depth s t);
+  }
+  
+  let (!>>>) (f : 'a Conversion.t -> 'b Conversion.t -> 'c Conversion.t) cc dd = 
+  let mk h c { ty; pp_doc; pp; embed; readback; } = {
+    Conversion.ty; pp; pp_doc;
+    embed = (fun ~depth s t -> embed ~depth h c s t);
+    readback = (fun ~depth s t -> readback ~depth h c s t);
+  } in
+  let mk_pp { ty; pp_doc; pp; } = {
+    Conversion.ty; pp; pp_doc;
+    embed = (fun ~depth s t -> assert false);
+    readback = (fun ~depth s t -> assert false);
+  } in
+  let { Conversion.ty; pp; pp_doc } = f (mk_pp cc)  (mk_pp dd) in
+  {
+    ty;
+    pp;
+    pp_doc;
+    embed = (fun ~depth h c s t -> (f (mk h c cc) (mk h c dd)).embed ~depth s t);
+    readback = (fun ~depth h c s t -> (f (mk h c cc) (mk h c dd)).readback ~depth s t);
   }
 
   end

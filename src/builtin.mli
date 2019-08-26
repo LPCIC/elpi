@@ -49,10 +49,6 @@ val pair : 'a API.Conversion.t -> 'b API.Conversion.t -> ('a * 'b) API.Conversio
 val option : 'a API.Conversion.t -> 'a option API.Conversion.t
 val bool : bool API.Conversion.t
 
-val pairC : ('a,'h,'c) API.ContextualConversion.t -> ('b,'h,'c) API.ContextualConversion.t -> ('a * 'b,'h,'c) API.ContextualConversion.t
-val optionC : ('a,'h,'c) API.ContextualConversion.t -> ('a option,'h,'c) API.ContextualConversion.t
-
-
 (* The string is the "file name" *)
 val in_stream  : (in_channel * string) API.Conversion.t
 val out_stream : (out_channel * string) API.Conversion.t

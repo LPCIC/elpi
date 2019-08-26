@@ -219,16 +219,6 @@ let pair a b = let open AlgebraicData in declare {
       M (fun ~ok ~ko:_ -> function (a,b) -> ok a b));
   ]
 } |> ContextualConversion.(!<)
-let pairC a b = let open AlgebraicData in declare {
-  ty = TyApp ("pair",a.ContextualConversion.ty,[b.ContextualConversion.ty]);
-  doc = "Pair: the constructor is pr, since ',' is for conjunction";
-  pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_pair a.ContextualConversion.pp b.ContextualConversion.pp) o);
-  constructors = [
-    K("pr","",CA(a,CA(b,N)),
-      B (fun a b -> (a,b)),
-      M (fun ~ok ~ko:_ -> function (a,b) -> ok a b));
-  ]
-}
 
 let option a = let open AlgebraicData in declare {
   ty = TyApp("option",a.Conversion.ty,[]);
@@ -243,19 +233,6 @@ let option a = let open AlgebraicData in declare {
       M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko ())); 
   ]
 } |> ContextualConversion.(!<)
-let optionC a = let open AlgebraicData in declare {
-  ty = TyApp("option",a.ContextualConversion.ty,[]);
-  doc = "The option type (aka Maybe)";
-  pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_option a.ContextualConversion.pp) o);
-  constructors = [
-    K("none","",N,
-      B None,
-      M (fun ~ok ~ko -> function None -> ok | _ -> ko ())); 
-    K("some","",CA(a,N),
-      B (fun x -> Some x),
-      M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko ())); 
-  ]
-}
 
 (** Core built-in ********************************************************* *)
 
