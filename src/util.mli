@@ -67,6 +67,7 @@ module PtrMap : sig
   type 'a t
 
   val empty : unit -> 'a t
+  val is_empty : 'a t -> bool
   val find : 'block -> 'a t -> 'a
   val add : 'block -> 'a -> 'a t -> 'a t
   val remove : 'block -> 'a t -> 'a t

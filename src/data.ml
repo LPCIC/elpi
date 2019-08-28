@@ -1290,6 +1290,7 @@ type 'a solution = {
   constraints : constraints;
   state : state;
   output : 'a;
+  pp_ctx : (string PtrMap.t * int) ref;
 }
 type 'a outcome = Success of 'a solution | Failure | NoMoreSteps
 

@@ -6,12 +6,13 @@ open Data
 
 module Pp : sig
   val ppterm :
-    ?min_prec:int -> int -> string list -> int -> env ->
+    ?pp_ctx:(string Util.PtrMap.t * int) ref -> ?min_prec:int -> int -> string list -> int -> env ->
        Format.formatter -> term -> unit
   val uppterm :
-    ?min_prec:int -> int -> string list -> int -> env ->
+    ?pp_ctx:(string Util.PtrMap.t * int) ref -> ?min_prec:int -> int -> string list -> int -> env ->
        Format.formatter -> term -> unit
 end
+val pp_stuck_goal : ?pp_ctx:(string Util.PtrMap.t * int) ref -> Fmt.formatter -> stuck_goal -> unit
 
 (* Interpreter API *)
 val execute_once : ?max_steps:int -> ?delay_outside_fragment:bool -> 'a executable -> 'a outcome
@@ -22,7 +23,6 @@ val deref_uv : ?avoid:uvar_body -> from:constant -> to_:constant -> int -> term 
 val deref_appuv : ?avoid:uvar_body -> from:constant -> to_:constant -> term list -> term -> term
 val deref_head : depth:int -> term -> term
 val is_flex : depth:int -> term -> uvar_body option
-val pp_stuck_goal : Fmt.formatter -> stuck_goal -> unit
 
 val expand_uv : depth:int -> uvar_body -> lvl:int -> ano:int -> term
 val expand_appuv : depth:int -> uvar_body -> lvl:int -> args:term list -> term

@@ -17,12 +17,12 @@ type 'args deref_fun =
 module Pp : sig
  
   (* Low level printing *)
-  val ppterm : ?min_prec:int ->
+  val ppterm : ?pp_ctx:(string Util.PtrMap.t * int) ref -> ?min_prec:int ->
     (*depth:*)int -> (*names:*)string list -> (*argsdepth:*)int -> env ->
     Fmt.formatter -> term -> unit
 
   (* For user consumption *)
-  val uppterm : ?min_prec:int ->
+  val uppterm : ?pp_ctx:(string Util.PtrMap.t * int) ref -> ?min_prec:int ->
     (*depth:*)int -> (*names:*)string list -> (*argsdepth:*)int -> env ->
     Fmt.formatter -> term -> unit
 
@@ -30,6 +30,7 @@ module Pp : sig
   val do_deref : int deref_fun ref
   val do_app_deref : term list deref_fun ref
 
+  (* To put it in the solution *)
   val uv_names : (string PtrMap.t * int) Fork.local_ref
 
 end = struct (* {{{ *)
@@ -44,7 +45,7 @@ let appl_prec = Parser.appl_precedence
 let lam_prec = Parser.lam_precedence
 let inf_prec = Parser.inf_precedence
 
-let xppterm ~nice ?(min_prec=min_prec) depth0 names argsdepth env f t =
+let xppterm ~nice ?(pp_ctx=uv_names) ?(min_prec=min_prec) depth0 names argsdepth env f t =
   let pp_app f pphd pparg ?pplastarg (hd,args) =
    if args = [] then pphd f hd
    else
@@ -54,13 +55,13 @@ let xppterm ~nice ?(min_prec=min_prec) depth0 names argsdepth env f t =
   let rec pp_uvar prec depth vardepth args f r =
    if !!r == C.dummy then begin
     let s =
-     try PtrMap.find r (fst !uv_names)
+     try PtrMap.find r (fst !pp_ctx)
      with Not_found ->
-      let m, n = !uv_names in
+      let m, n = !pp_ctx in
       let s = "X" ^ string_of_int n in
       let n = n + 1 in
       let m = PtrMap.add r s m in
-      uv_names := (m,n);
+      pp_ctx := (m,n);
       s
     in
      Fmt.fprintf f "%s%s%s" s
@@ -259,8 +260,8 @@ module ConstraintStoreAndTrail : sig
 
   val contents :
     ?overlapping:uvar_body list -> unit -> (constraint_def * blockers) list
-  val print : Fmt.formatter -> (constraint_def * blockers) list -> unit
-  val pp_stuck_goal : Fmt.formatter -> stuck_goal -> unit
+  val print : ?pp_ctx:(string Util.PtrMap.t * int) ref -> Fmt.formatter -> (constraint_def * blockers) list -> unit
+  val pp_stuck_goal : ?pp_ctx:(string Util.PtrMap.t * int) ref -> Fmt.formatter -> stuck_goal -> unit
 
   val state : state Fork.local_ref
 
@@ -431,35 +432,35 @@ let undo ~old_trail ?old_state () =
   | None -> ()
 ;;
 
-let print =
+let print ?pp_ctx fmt x =
   let pp_depth fmt d =
     if d > 0 then
       Fmt.fprintf fmt "{%a} :@ "
-        (pplist (uppterm d [] 0 empty_env) " ") (C.mkinterval 0 d 0) in
-  let pp_ctx fmt ctx =
+        (pplist (uppterm ?pp_ctx d [] 0 empty_env) " ") (C.mkinterval 0 d 0) in
+  let pp_hyps fmt ctx =
     if ctx <> [] then
      Fmt.fprintf fmt "@[<hov 2>%a@]@ ?- "
       (pplist (fun fmt { hdepth = d; hsrc = t } ->
-                 uppterm d [] 0 empty_env fmt t) ", ") ctx in
-  let pp_goal depth = uppterm depth [] 0 empty_env in
+                 uppterm ?pp_ctx d [] 0 empty_env fmt t) ", ") ctx in
+  let pp_goal depth = uppterm ?pp_ctx depth [] 0 empty_env in
   pplist (fun fmt ({ cdepth=depth;context=pdiff; conclusion=g }, blockers) ->
     Fmt.fprintf fmt " @[<h>@[<hov 2>%a%a%a@]@  /* suspended on %a */@]"
       pp_depth depth
-      pp_ctx pdiff
+      pp_hyps pdiff
       (pp_goal depth) g
-      (pplist (uppterm 0 [] 0 empty_env) ", ")
+      (pplist (uppterm ?pp_ctx 0 [] 0 empty_env) ", ")
         (List.map (fun r -> UVar(r,0,0)) blockers)
-  ) " "
+  ) " " fmt x
 
-let pp_stuck_goal fmt { kind; blockers } = match kind with
+let pp_stuck_goal ?pp_ctx fmt { kind; blockers } = match kind with
    | Unification { adepth = ad; env = e; bdepth = bd; a; b } ->
       Fmt.fprintf fmt
        " @[<h>@[<hov 2>^%d:%a@ == ^%d:%a@]@  /* suspended on %a */@]"
-        ad (uppterm ad [] 0 empty_env) a
-        bd (uppterm ad [] ad e) b
-          (pplist ~boxed:false (uppterm 0 [] 0 empty_env) ", ")
+        ad (uppterm ?pp_ctx ad [] 0 empty_env) a
+        bd (uppterm ?pp_ctx ad [] ad e) b
+          (pplist ~boxed:false (uppterm ?pp_ctx 0 [] 0 empty_env) ", ")
             (List.map (fun r -> UVar(r,0,0)) blockers)
-   | Constraint c -> print fmt [c,blockers]
+   | Constraint c -> print ?pp_ctx fmt [c,blockers]
 
 end (* }}} *)
 module T  = ConstraintStoreAndTrail
@@ -2795,7 +2796,7 @@ let exect_builtin_predicate c ~depth idx args =
        if c == C.declare_constraintc then begin
                declare_constraint ~depth idx args; [] end
   else if c == C.print_constraintsc then begin
-               printf "@[<hov 0>%a@]\n%!" CS.print (CS.contents ());
+               printf "@[<hov 0>%a@]\n%!" (CS.print ?pp_ctx:None) (CS.contents ());
                [] 
   end else
     let b =
@@ -3290,12 +3291,13 @@ open Mainloop
 let mk_outcome search get_cs assignments =
  try
    let alts = search () in
-   let syn_csts, state, qargs = get_cs () in
+   let syn_csts, state, qargs, pp_ctx = get_cs () in
    let solution = {
      assignments;
      constraints = syn_csts;
      state;
      output = Query.output qargs assignments state;
+     pp_ctx = ref pp_ctx;
    } in
    Success solution, alts
  with
@@ -3305,7 +3307,7 @@ let mk_outcome search get_cs assignments =
 let execute_once ?max_steps ?delay_outside_fragment exec =
  auxsg := [];
  let { search; get } = make_runtime ?max_steps ?delay_outside_fragment exec in
- fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.state, exec.query_arguments) exec.assignments)
+ fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.state, exec.query_arguments, get uv_names) exec.assignments)
 ;;
 
 let execute_loop ?delay_outside_fragment exec ~more ~pp =
@@ -3313,7 +3315,7 @@ let execute_loop ?delay_outside_fragment exec ~more ~pp =
  let k = ref noalts in
  let do_with_infos f =
   let time0 = Unix.gettimeofday() in
-  let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, get CS.state, exec.query_arguments) exec.assignments in
+  let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, get CS.state, exec.query_arguments, get uv_names) exec.assignments in
   let time1 = Unix.gettimeofday() in
   k := alts;
   pp (time1 -. time0) o in
@@ -3326,7 +3328,7 @@ let execute_loop ?delay_outside_fragment exec ~more ~pp =
 ;;
 
 let print_constraints () = CS.print Fmt.std_formatter (CS.contents ())
-let pp_stuck_goal fmt s = CS.pp_stuck_goal fmt s
+let pp_stuck_goal ?pp_ctx fmt s = CS.pp_stuck_goal ?pp_ctx fmt s
 let is_flex = HO.is_flex
 let deref_uv = HO.deref_uv
 let deref_appuv = HO.deref_appuv

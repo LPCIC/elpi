@@ -100,6 +100,9 @@ module Data : sig
   (* user defined state (not goals) *)
   type state
 
+  (* Pass it to function in the Pp module *)
+  type pretty_printer_context
+
   (* a solution is an assignment map from query variables (name) to terms,
    * plus the goals that were suspended and the user defined constraints *)
   type 'a solution = {
@@ -107,6 +110,7 @@ module Data : sig
     constraints : constraints;
     state : state;
     output : 'a;
+    pp_ctx : pretty_printer_context;
   }
 
   (* Hypothetical context *)
@@ -182,9 +186,10 @@ end
 
 module Pp : sig
 
-  val term : Format.formatter -> Data.term -> unit
-  val constraints : Format.formatter -> Data.constraints -> unit
+  val term : Data.pretty_printer_context -> Format.formatter -> Data.term -> unit
+  val constraints : Data.pretty_printer_context -> Format.formatter -> Data.constraints -> unit
   val state : Format.formatter -> Data.state -> unit
+
   val query : Format.formatter -> 'a Compile.query -> unit
 
   module Ast : sig
@@ -1044,6 +1049,8 @@ module RawPp : sig
    * can cause the pruning of the unification variable.
    * This behavior shall be cleaned up in the future *)
   val term : (*depth*)int -> Format.formatter -> Data.term -> unit
+
+  val constraints : Format.formatter -> Data.constraints -> unit
 
   val list : ?max:int -> ?boxed:bool ->
     (Format.formatter -> 'a -> unit) ->
