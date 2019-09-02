@@ -207,7 +207,7 @@ let bool = AlgebraicData.declare {
       B false,
       M (fun ~ok ~ko -> function false -> ok | _ -> ko ()));
   ]
-}
+}|> ContextualConversion.(!<)
 
 let pair a b = let open AlgebraicData in declare {
   ty = TyApp ("pair",a.Conversion.ty,[b.Conversion.ty]);
@@ -218,7 +218,7 @@ let pair a b = let open AlgebraicData in declare {
       B (fun a b -> (a,b)),
       M (fun ~ok ~ko:_ -> function (a,b) -> ok a b));
   ]
-}
+} |> ContextualConversion.(!<)
 
 let option a = let open AlgebraicData in declare {
   ty = TyApp("option",a.Conversion.ty,[]);
@@ -232,11 +232,11 @@ let option a = let open AlgebraicData in declare {
       B (fun x -> Some x),
       M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko ())); 
   ]
-}
+} |> ContextualConversion.(!<)
 
 (** Core built-in ********************************************************* *)
 
-let core_builtins = let open BuiltIn in [
+let core_builtins = let open BuiltIn in let open ContextualConversion in [
 
   LPDoc " == Core builtins =====================================";
 
@@ -279,7 +279,7 @@ let core_builtins = let open BuiltIn in [
           "external pred declare_constraint i:any, i:list any.");
   LPCode "external pred print_constraints. % prints all constraints";
 
-  MLCode(Pred("halt", VariadicIn(BuiltInData.any, "halts the program and print the terms"),
+  MLCode(Pred("halt", VariadicIn(unit_ctx, !> BuiltInData.any, "halts the program and print the terms"),
   (fun args ~depth _ _ ->
      if args = [] then error "halt"
      else
@@ -628,12 +628,12 @@ let lp_builtins = let open BuiltIn in let open BuiltInData in [
 
 (** ELPI specific built-in ************************************************ *)
 
-let elpi_builtins = let open BuiltIn in let open BuiltInData in [
+let elpi_builtins = let open BuiltIn in let open BuiltInData in let open ContextualConversion in [
 
   LPDoc "== Elpi builtins =====================================";
 
   MLCode(Pred("dprint",
-    VariadicIn(any, "prints raw terms (debugging)"),
+    VariadicIn(unit_ctx, !> any, "prints raw terms (debugging)"),
   (fun args ~depth _ _ state ->
      Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
        (RawPp.list (RawPp.Debug.term depth) " ") args ;
@@ -641,7 +641,7 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in [
   DocAbove);
 
   MLCode(Pred("print",
-    VariadicIn(any,"prints terms"),
+    VariadicIn(unit_ctx, !> any,"prints terms"),
   (fun args ~depth _ _ state ->
      Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
        (RawPp.list (RawPp.term depth) " ") args ;
@@ -708,7 +708,7 @@ let ctype = AlgebraicData.declare {
   constructors = [
     K("ctype","",A(BuiltInData.string,N),B (fun x -> x), M (fun ~ok ~ko x -> ok x))  
   ]
-}
+} |> ContextualConversion.(!<)
    
 let safe = OpaqueData.declare {
   OpaqueData.name = "safe";
@@ -775,7 +775,7 @@ and same_term_list ~depth xs ys =
   | x::xs, y::ys -> same_term ~depth x y && same_term_list ~depth xs ys
   | _ -> false
 
-let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in [ 
+let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in let open ContextualConversion in [ 
 
   LPDoc "== Elpi nonlogical builtins =====================================";
 
@@ -816,13 +816,13 @@ X == Y :- same_term X Y.
 
   MLCode(Pred("name",
     InOut(any, "T",
-    VariadicInOut(any,"checks if T is a eigenvariable. When used with tree arguments it relates an applied name with its head and argument list.")),
+    VariadicInOut(unit_ctx, !> any,"checks if T is a eigenvariable. When used with tree arguments it relates an applied name with its head and argument list.")),
   (name_or_constant "name" (fun x -> x >= 0))),
   DocAbove);
 
   MLCode(Pred("constant",
     InOut(any, "T",
-    VariadicInOut(any,"checks if T is a (global) constant.  When used with tree arguments it relates an applied constant with its head and argument list.")),
+    VariadicInOut(unit_ctx, !> any,"checks if T is a (global) constant.  When used with tree arguments it relates an applied constant with its head and argument list.")),
   (name_or_constant "constant" (fun x -> x < 0))),
   DocAbove);
 
@@ -851,7 +851,7 @@ X == Y :- same_term X Y.
 
   MLCode(Pred("closed_term",
     Out(any, "T",
-    Full "unify T with a variable that has no eigenvariables in scope"),
+    Full (unit_ctx, "unify T with a variable that has no eigenvariables in scope")),
   (fun _ ~depth _ _ state ->
       let state, k = FlexibleData.Elpi.make state in
       state, !:(mkUnifVar k ~args:[] state), [])),

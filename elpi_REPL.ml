@@ -21,14 +21,14 @@ let print_solution time = function
    Format.eprintf "Interrupted (no more steps)@\n%!"
 | API.Execute.Failure -> Format.eprintf "Failure@\n%!"
 | API.Execute.Success {
-    API.Data.assignments; constraints; state; _ } ->
+    API.Data.assignments; constraints; state; pp_ctx; _ } ->
   Format.eprintf "@\nSuccess:@\n%!" ;
   API.Data.StrMap.iter (fun name v ->
     Format.eprintf "  @[<hov 1>%s = %a@]@\n%!" name
-      API.Pp.term v) assignments;
+      (API.Pp.term pp_ctx) v) assignments;
   Format.eprintf "@\nTime: %5.3f@\n%!" time;
   Format.eprintf "@\nConstraints:@\n%a@\n%!"
-    API.Pp.constraints constraints;
+    (API.Pp.constraints pp_ctx) constraints;
   Format.eprintf "@\nState:@\n%a@\n%!"
     API.Pp.state state;
 ;;

@@ -100,6 +100,9 @@ module Data : sig
   (* user defined state (not goals) *)
   type state
 
+  (* Pass it to function in the Pp module *)
+  type pretty_printer_context
+
   (* a solution is an assignment map from query variables (name) to terms,
    * plus the goals that were suspended and the user defined constraints *)
   type 'a solution = {
@@ -107,6 +110,7 @@ module Data : sig
     constraints : constraints;
     state : state;
     output : 'a;
+    pp_ctx : pretty_printer_context;
   }
 
   (* Hypothetical context *)
@@ -182,9 +186,10 @@ end
 
 module Pp : sig
 
-  val term : Format.formatter -> Data.term -> unit
-  val constraints : Format.formatter -> Data.constraints -> unit
+  val term : Data.pretty_printer_context -> Format.formatter -> Data.term -> unit
+  val constraints : Data.pretty_printer_context -> Format.formatter -> Data.constraints -> unit
   val state : Format.formatter -> Data.state -> unit
+
   val query : Format.formatter -> 'a Compile.query -> unit
 
   module Ast : sig
@@ -210,11 +215,11 @@ module Conversion : sig
   type extra_goals = Data.term list
 
   type 'a embedding =
-    depth:int -> Data.hyps -> Data.constraints ->
+    depth:int ->
     Data.state -> 'a -> Data.state * Data.term * extra_goals
     
   type 'a readback =
-    depth:int -> Data.hyps -> Data.constraints ->
+    depth:int ->
     Data.state -> Data.term -> Data.state * 'a * extra_goals
 
   type 'a t = {
@@ -227,6 +232,48 @@ module Conversion : sig
 
   exception TypeErr of ty_ast * int (*depth*) * Data.term (* a type error at data conversion time *)
 end
+
+(** This module defines what embedding and readback functions are
+    for datatypes that need the context of the program (hypothetical clauses and
+    constraints) *)
+module ContextualConversion : sig
+
+  type ty_ast = Conversion.ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
+
+
+  type ('a,'hyps,'constraints) embedding =
+    depth:int -> 'hyps -> 'constraints ->
+    Data.state -> 'a -> Data.state * Data.term * Conversion.extra_goals
+    
+  type ('a,'hyps,'constraints) readback =
+    depth:int -> 'hyps -> 'constraints ->
+    Data.state -> Data.term -> Data.state * 'a * Conversion.extra_goals
+
+  type ('a,'h,'c) t = {
+    ty : ty_ast;
+    pp_doc : Format.formatter -> unit -> unit;
+    pp : Format.formatter -> 'a -> unit;
+    embed : ('a,'h,'c) embedding;   (* 'a -> term *)
+    readback : ('a,'h,'c) readback; (* term -> 'a *)
+  }
+
+  type ('hyps,'constraints) ctx_readback =
+    depth:int -> Data.hyps -> Data.constraints ->
+    Data.state -> Data.state * 'hyps * 'constraints * Conversion.extra_goals
+
+  val unit_ctx : (unit,unit) ctx_readback
+  val raw_ctx : (Data.hyps,Data.constraints) ctx_readback
+
+  (* cast *)
+  val (!<) : ('a,unit,unit) t -> 'a Conversion.t
+
+  (* morphisms *)
+  val (!>)   : 'a Conversion.t -> ('a,'hyps,'constraints) t
+  val (!>>)  : ('a Conversion.t -> 'b Conversion.t) -> ('a,'hyps,'constraints) t -> ('b,'hyps,'constraints) t
+  val (!>>>) : ('a Conversion.t -> 'b Conversion.t -> 'c Conversion.t) -> ('a,'hyps,'constraints) t -> ('b,'hyps,'constraints) t -> ('c,'hyps,'constraints) t
+
+end
+
 
 (** Conversion for Elpi's built-in data types *)
 module BuiltInData : sig
@@ -334,32 +381,36 @@ module AlgebraicData : sig
       - S stands for self
       - C stands for container
   *)
-  type ('stateful_builder,'builder, 'stateful_matcher, 'matcher,  'self) constructor_arguments =
+  type ('stateful_builder,'builder, 'stateful_matcher, 'matcher,  'self, 'hyps,'constraints) constructor_arguments =
     (* No arguments *)
-    | N : (Data.state -> Data.state * 'self, 'self, Data.state -> Data.state * Data.term * Conversion.extra_goals, Data.term, 'self) constructor_arguments
+    | N : (Data.state -> Data.state * 'self, 'self, Data.state -> Data.state * Data.term * Conversion.extra_goals, Data.term, 'self, 'hyps,'constraints) constructor_arguments
     (* An argument of type 'a *)
-    | A : 'a Conversion.t * ('bs,'b, 'ms,'m, 'self) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms, 'a -> 'm, 'self) constructor_arguments
+    | A : 'a Conversion.t * ('bs,'b, 'ms,'m, 'self, 'hyps,'constraints) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms, 'a -> 'm, 'self, 'hyps,'constraints) constructor_arguments
+    (* An argument of type 'a in context 'hyps,'constraints *)
+    | CA : ('a,'hyps,'constraints) ContextualConversion.t * ('bs,'b, 'ms,'m, 'self, 'hyps,'constraints) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms, 'a -> 'm, 'self, 'hyps,'constraints) constructor_arguments
     (* An argument of type 'self *)
-    | S : ('bs,'b, 'ms, 'm, 'self) constructor_arguments -> ('self -> 'bs, 'self -> 'b, 'self -> 'ms, 'self -> 'm, 'self) constructor_arguments
+    | S : ('bs,'b, 'ms, 'm, 'self, 'hyps,'constraints) constructor_arguments -> ('self -> 'bs, 'self -> 'b, 'self -> 'ms, 'self -> 'm, 'self, 'hyps,'constraints) constructor_arguments
     (* An argument of type `T 'self` for a constainer `T`, like a `list 'self`.
-       `S args` above is a shortcut for `C(fun x -> x, args)` *)
-    | C : ('self Conversion.t -> 'a Conversion.t) * ('bs,'b,'ms,'m,'self) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms,'a -> 'm, 'self) constructor_arguments
-  
-  type 't constructor =
+      `S args` above is a shortcut for `C(fun x -> x, args)` *)
+    | C : (('self,'hyps,'constraints) ContextualConversion.t -> ('a,'hyps,'constraints) ContextualConversion.t) * ('bs,'b,'ms,'m,'self, 'hyps,'constraints) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms,'a -> 'm, 'self, 'hyps,'constraints) constructor_arguments
+
+
+
+  type ('t,'h,'c) constructor =
     K : name * doc *
-        ('build_stateful_t,'build_t,'match_stateful_t,'match_t,'t) constructor_arguments *   (* args ty *)
+        ('build_stateful_t,'build_t,'match_stateful_t,'match_t,'t,'h,'c) constructor_arguments *   (* args ty *)
         ('build_stateful_t,'build_t) build_t *
         ('match_stateful_t,'match_t,'t) match_t
-      -> 't constructor
+      -> ('t,'h,'c) constructor
       
-  type 't declaration = {
+  type ('t,'h,'c) declaration = {
     ty : Conversion.ty_ast;
     doc : doc;
     pp : Format.formatter -> 't -> unit;
-    constructors : 't constructor list;
+    constructors : ('t,'h,'c) constructor list;
   }
 
-  val declare : 'a declaration -> 'a Conversion.t
+  val declare : ('t,'h,'c) declaration -> ('t,'h,'c) ContextualConversion.t
 
 end
 
@@ -433,18 +484,31 @@ module BuiltInPredicate : sig
   type 'a oarg = Keep | Discard
   type 'a ioarg = Data of 'a | NoData
 
-  type ('function_type, 'inernal_outtype_in) ffi =
-    | In   : 't Conversion.t * doc * ('i, 'o) ffi -> ('t -> 'i,'o) ffi
-    | Out  : 't Conversion.t * doc * ('i, 'o * 't option) ffi -> ('t oarg -> 'i,'o) ffi
-    | InOut  : 't Conversion.t * doc * ('i, 'o * 't option) ffi -> ('t ioarg -> 'i,'o) ffi
-    | Easy : doc -> (depth:int -> 'o, 'o) ffi
-    | Read : doc -> (depth:int -> Data.hyps -> Data.constraints -> Data.state -> 'o, 'o) ffi
-    | Full : doc -> (depth:int -> Data.hyps -> Data.constraints -> Data.state -> Data.state * 'o * Conversion.extra_goals, 'o) ffi
-    | VariadicIn : 't Conversion.t * doc -> ('t list -> depth:int -> Data.hyps -> Data.constraints -> Data.state -> Data.state * 'o, 'o) ffi
-    | VariadicOut : 't Conversion.t * doc -> ('t oarg list -> depth:int -> Data.hyps -> Data.constraints -> Data.state -> Data.state * ('o * 't option list option), 'o) ffi
-    | VariadicInOut : 't Conversion.t * doc -> ('t ioarg list -> depth:int -> Data.hyps -> Data.constraints -> Data.state -> Data.state * ('o * 't option list option), 'o) ffi
+  type ('function_type, 'inernal_outtype_in, 'internal_hyps, 'internal_constraints) ffi =
+    (* Arguemnts that are translated independently of the program context *)
+    | In    : 't Conversion.t * doc * ('i, 'o,'h,'c) ffi -> ('t -> 'i,'o,'h,'c) ffi
+    | Out   : 't Conversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t oarg -> 'i,'o,'h,'c) ffi
+    | InOut : 't Conversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t ioarg -> 'i,'o,'h,'c) ffi
 
-  type t = Pred : name * ('a,unit) ffi * 'a -> t
+    (* Arguemnts that are translated looking at the program context *)
+    | CIn    : ('t,'h,'c) ContextualConversion.t * doc * ('i, 'o,'h,'c) ffi -> ('t -> 'i,'o,'h,'c) ffi
+    | COut   : ('t,'h,'c) ContextualConversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t oarg -> 'i,'o,'h,'c) ffi
+    | CInOut : ('t,'h,'c) ContextualConversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t ioarg -> 'i,'o,'h,'c) ffi
+
+    (* The easy case: all arguments are context independent *)
+    | Easy : doc -> (depth:int -> 'o, 'o, unit, unit) ffi
+
+    (* The advanced case: arguments are context dependent, here we provide the
+      context readback function *)
+    | Read : ('h,'c) ContextualConversion.ctx_readback * doc -> (depth:int -> 'h -> 'c -> Data.state -> 'o, 'o,'h,'c) ffi
+    | Full : ('h,'c) ContextualConversion.ctx_readback * doc -> (depth:int -> 'h -> 'c -> Data.state -> Data.state * 'o * Conversion.extra_goals, 'o,'h,'c) ffi
+    | VariadicIn    : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * 'o, 'o,'h,'c) ffi
+    | VariadicOut   : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t oarg list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * ('o * 't option list option), 'o,'h,'c) ffi
+    | VariadicInOut : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t ioarg list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * ('o * 't option list option), 'o,'h,'c) ffi
+
+  type t = Pred : name * ('a,unit,'h,'c) ffi * 'a -> t
+
+
   module Notation : sig
 
     (* Handy notation to construct the value generated by built-in predicates.
@@ -492,6 +556,7 @@ module BuiltIn : sig
     | MLCode of BuiltInPredicate.t * doc_spec
     (* Declaration of an OCaml data *)
     | MLData : 'a Conversion.t -> declaration
+    | MLDataC : ('a,'h,'c) ContextualConversion.t -> declaration
     (* Extra doc *)
     | LPDoc  of string
     (* Sometimes you wrap OCaml code in regular predicates in order
@@ -984,6 +1049,8 @@ module RawPp : sig
    * can cause the pruning of the unification variable.
    * This behavior shall be cleaned up in the future *)
   val term : (*depth*)int -> Format.formatter -> Data.term -> unit
+
+  val constraints : Format.formatter -> Data.constraints -> unit
 
   val list : ?max:int -> ?boxed:bool ->
     (Format.formatter -> 'a -> unit) ->

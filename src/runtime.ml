@@ -17,12 +17,12 @@ type 'args deref_fun =
 module Pp : sig
  
   (* Low level printing *)
-  val ppterm : ?min_prec:int ->
+  val ppterm : ?pp_ctx:(string Util.PtrMap.t * int) ref -> ?min_prec:int ->
     (*depth:*)int -> (*names:*)string list -> (*argsdepth:*)int -> env ->
     Fmt.formatter -> term -> unit
 
   (* For user consumption *)
-  val uppterm : ?min_prec:int ->
+  val uppterm : ?pp_ctx:(string Util.PtrMap.t * int) ref -> ?min_prec:int ->
     (*depth:*)int -> (*names:*)string list -> (*argsdepth:*)int -> env ->
     Fmt.formatter -> term -> unit
 
@@ -30,6 +30,7 @@ module Pp : sig
   val do_deref : int deref_fun ref
   val do_app_deref : term list deref_fun ref
 
+  (* To put it in the solution *)
   val uv_names : (string PtrMap.t * int) Fork.local_ref
 
 end = struct (* {{{ *)
@@ -44,7 +45,7 @@ let appl_prec = Parser.appl_precedence
 let lam_prec = Parser.lam_precedence
 let inf_prec = Parser.inf_precedence
 
-let xppterm ~nice ?(min_prec=min_prec) depth0 names argsdepth env f t =
+let xppterm ~nice ?(pp_ctx=uv_names) ?(min_prec=min_prec) depth0 names argsdepth env f t =
   let pp_app f pphd pparg ?pplastarg (hd,args) =
    if args = [] then pphd f hd
    else
@@ -54,13 +55,13 @@ let xppterm ~nice ?(min_prec=min_prec) depth0 names argsdepth env f t =
   let rec pp_uvar prec depth vardepth args f r =
    if !!r == C.dummy then begin
     let s =
-     try PtrMap.find r (fst !uv_names)
+     try PtrMap.find r (fst !pp_ctx)
      with Not_found ->
-      let m, n = !uv_names in
+      let m, n = !pp_ctx in
       let s = "X" ^ string_of_int n in
       let n = n + 1 in
       let m = PtrMap.add r s m in
-      uv_names := (m,n);
+      pp_ctx := (m,n);
       s
     in
      Fmt.fprintf f "%s%s%s" s
@@ -259,8 +260,8 @@ module ConstraintStoreAndTrail : sig
 
   val contents :
     ?overlapping:uvar_body list -> unit -> (constraint_def * blockers) list
-  val print : Fmt.formatter -> (constraint_def * blockers) list -> unit
-  val pp_stuck_goal : Fmt.formatter -> stuck_goal -> unit
+  val print : ?pp_ctx:(string Util.PtrMap.t * int) ref -> Fmt.formatter -> (constraint_def * blockers) list -> unit
+  val pp_stuck_goal : ?pp_ctx:(string Util.PtrMap.t * int) ref -> Fmt.formatter -> stuck_goal -> unit
 
   val state : state Fork.local_ref
 
@@ -431,35 +432,35 @@ let undo ~old_trail ?old_state () =
   | None -> ()
 ;;
 
-let print =
+let print ?pp_ctx fmt x =
   let pp_depth fmt d =
     if d > 0 then
       Fmt.fprintf fmt "{%a} :@ "
-        (pplist (uppterm d [] 0 empty_env) " ") (C.mkinterval 0 d 0) in
-  let pp_ctx fmt ctx =
+        (pplist (uppterm ?pp_ctx d [] 0 empty_env) " ") (C.mkinterval 0 d 0) in
+  let pp_hyps fmt ctx =
     if ctx <> [] then
      Fmt.fprintf fmt "@[<hov 2>%a@]@ ?- "
       (pplist (fun fmt { hdepth = d; hsrc = t } ->
-                 uppterm d [] 0 empty_env fmt t) ", ") ctx in
-  let pp_goal depth = uppterm depth [] 0 empty_env in
+                 uppterm ?pp_ctx d [] 0 empty_env fmt t) ", ") ctx in
+  let pp_goal depth = uppterm ?pp_ctx depth [] 0 empty_env in
   pplist (fun fmt ({ cdepth=depth;context=pdiff; conclusion=g }, blockers) ->
     Fmt.fprintf fmt " @[<h>@[<hov 2>%a%a%a@]@  /* suspended on %a */@]"
       pp_depth depth
-      pp_ctx pdiff
+      pp_hyps pdiff
       (pp_goal depth) g
-      (pplist (uppterm 0 [] 0 empty_env) ", ")
+      (pplist (uppterm ?pp_ctx 0 [] 0 empty_env) ", ")
         (List.map (fun r -> UVar(r,0,0)) blockers)
-  ) " "
+  ) " " fmt x
 
-let pp_stuck_goal fmt { kind; blockers } = match kind with
+let pp_stuck_goal ?pp_ctx fmt { kind; blockers } = match kind with
    | Unification { adepth = ad; env = e; bdepth = bd; a; b } ->
       Fmt.fprintf fmt
        " @[<h>@[<hov 2>^%d:%a@ == ^%d:%a@]@  /* suspended on %a */@]"
-        ad (uppterm ad [] 0 empty_env) a
-        bd (uppterm ad [] ad e) b
-          (pplist ~boxed:false (uppterm 0 [] 0 empty_env) ", ")
+        ad (uppterm ?pp_ctx ad [] 0 empty_env) a
+        bd (uppterm ?pp_ctx ad [] ad e) b
+          (pplist ~boxed:false (uppterm ?pp_ctx 0 [] 0 empty_env) ", ")
             (List.map (fun r -> UVar(r,0,0)) blockers)
-   | Constraint c -> print fmt [c,blockers]
+   | Constraint c -> print ?pp_ctx fmt [c,blockers]
 
 end (* }}} *)
 module T  = ConstraintStoreAndTrail
@@ -2609,15 +2610,46 @@ let arity_err ~depth bname n t =
     | Some t -> "too many arguments at: " ^
                   Format.asprintf "%a" (uppterm depth [] 0 empty_env) t)
 
-let out_of_term ~depth { Conversion.readback; ty } n bname hyps constraints state t =
+let out_of_term ~depth readback n bname state t =
   match deref_head ~depth t with
   | Discard -> BuiltInPredicate.Discard
   | _ -> BuiltInPredicate.Keep
 
-let in_of_term ~depth { Conversion.readback } n bname hyps constraints state t =
+let in_of_term ~depth readback n bname state t =
+  wrap_type_err bname n (readback ~depth state) t
+
+let inout_of_term ~depth readback n bname state t =
+  match deref_head ~depth t with
+  | Discard -> state, BuiltInPredicate.NoData, []
+  | _ ->
+     wrap_type_err bname n (fun () ->
+       let state, t, gls = readback ~depth state t in
+       state, BuiltInPredicate.Data t, gls) ()
+
+let mk_out_assign ~depth embed bname state input v  output =
+  match output, input with
+  | None, BuiltInPredicate.Discard -> state, []
+  | Some _, BuiltInPredicate.Discard -> state, [] (* We could warn that such output was generated without being required *)
+  | Some t, BuiltInPredicate.Keep ->
+     let state, t, extra = embed ~depth state t in
+     state, extra @ [App(C.eqc, v, [t])]
+  | None, BuiltInPredicate.Keep ->
+      anomaly ("ffi: " ^ bname ^ ": some output was requested but not produced")
+
+let mk_inout_assign ~depth embed bname state input v  output =
+  match output, input with
+  | None, BuiltInPredicate.NoData -> state, []
+  | Some _, BuiltInPredicate.NoData -> state, [] (* We could warn that such output was generated without being required *)
+  | Some t, BuiltInPredicate.Data _ ->
+     let state, t, extra = embed ~depth state t in
+     state, extra @ [App(C.eqc, v, [t])]
+  | None, BuiltInPredicate.Data _ ->
+      anomaly ("ffi: " ^ bname ^ ": some output was requested but not produced")
+
+let in_of_termC ~depth readback n bname hyps constraints state t =
   wrap_type_err bname n (readback ~depth hyps constraints state) t
 
-let inout_of_term ~depth { Conversion.readback } n bname hyps constraints state t =
+let inout_of_termC ~depth readback n bname hyps constraints state t =
   match deref_head ~depth t with
   | Discard -> state, BuiltInPredicate.NoData, []
   | _ ->
@@ -2625,7 +2657,7 @@ let inout_of_term ~depth { Conversion.readback } n bname hyps constraints state 
        let state, t, gls = readback ~depth hyps constraints state t in
        state, BuiltInPredicate.Data t, gls) ()
 
-let mk_out_assign ~depth { Conversion.embed } bname hyps constraints state input v  output =
+let mk_out_assignC ~depth embed bname hyps constraints state input v  output =
   match output, input with
   | None, BuiltInPredicate.Discard -> state, []
   | Some _, BuiltInPredicate.Discard -> state, [] (* We could warn that such output was generated without being required *)
@@ -2635,7 +2667,7 @@ let mk_out_assign ~depth { Conversion.embed } bname hyps constraints state input
   | None, BuiltInPredicate.Keep ->
       anomaly ("ffi: " ^ bname ^ ": some output was requested but not produced")
 
-let mk_inout_assign ~depth { Conversion.embed } bname hyps constraints state input v  output =
+let mk_inout_assignC ~depth embed bname hyps constraints state input v  output =
   match output, input with
   | None, BuiltInPredicate.NoData -> state, []
   | Some _, BuiltInPredicate.NoData -> state, [] (* We could warn that such output was generated without being required *)
@@ -2655,83 +2687,116 @@ let map_acc f s l =
      aux [] [] s l
 
 let call (BuiltInPredicate.Pred(bname,ffi,compute)) ~depth hyps constraints state data =
-  let rec aux : type i o.
-    (i,o) BuiltInPredicate.ffi -> compute:i -> reduce:(state -> o -> state * extra_goals) ->
+  let rec aux : type i o h c.
+    (i,o,h,c) BuiltInPredicate.ffi -> h -> c -> compute:i -> reduce:(state -> o -> state * extra_goals) ->
        term list -> int -> state -> extra_goals list -> state * extra_goals =
-  fun ffi ~compute ~reduce data n state extra ->
+  fun ffi ctx constraints ~compute ~reduce data n state extra ->
     match ffi, data with
     | BuiltInPredicate.Easy _, [] ->
        let result = wrap_type_err bname 0 (fun () -> compute ~depth) () in
        let state, l = reduce state result in
        state, List.(concat (rev extra) @ rev l)
     | BuiltInPredicate.Read _, [] ->
-       let result = wrap_type_err bname 0 (compute ~depth hyps constraints) state in
+       let result = wrap_type_err bname 0 (compute ~depth ctx constraints) state in
        let state, l = reduce state result in
        state, List.(concat (rev extra) @ rev l)
     | BuiltInPredicate.Full _, [] ->
-       let state, result, gls = wrap_type_err bname 0 (compute ~depth hyps constraints) state in
+       let state, result, gls = wrap_type_err bname 0 (compute ~depth ctx constraints) state in
        let state, l = reduce state result in
        state, List.(concat (rev extra)) @ gls @ List.rev l
-    | BuiltInPredicate.VariadicIn(d, _), data ->
+    | BuiltInPredicate.VariadicIn(_,{ ContextualConversion.readback }, _), data ->
        let state, i, gls =
-         map_acc (in_of_term ~depth d n bname hyps constraints) state data in
-       let state, rest = wrap_type_err bname 0 (compute i ~depth hyps constraints) state in
+         map_acc (in_of_termC ~depth readback n bname ctx constraints) state data in
+       let state, rest = wrap_type_err bname 0 (compute i ~depth ctx constraints) state in
        let state, l = reduce state rest in
        state, List.(gls @ concat (rev extra) @ rev l)
-    | BuiltInPredicate.VariadicOut(d, _), data ->
-       let i = List.map (out_of_term ~depth d n bname hyps constraints state) data in
-       let state, (rest, out) = wrap_type_err bname 0 (compute i ~depth hyps constraints) state in
+    | BuiltInPredicate.VariadicOut(_,{ ContextualConversion.embed; readback }, _), data ->
+       let i = List.map (out_of_term ~depth readback n bname state) data in
+       let state, (rest, out) = wrap_type_err bname 0 (compute i ~depth ctx constraints) state in
        let state, l = reduce state rest in
        begin match out with
          | Some out ->
              let state, ass =
-               map_acc3 (mk_out_assign ~depth d bname hyps constraints) state i data out in 
+               map_acc3 (mk_out_assignC ~depth embed bname ctx constraints) state i data out in 
              state, List.(concat (rev extra) @ rev (concat ass) @ l)
          | None -> state, List.(concat (rev extra) @ rev l)
        end
-    | BuiltInPredicate.VariadicInOut(d, _), data ->
+    | BuiltInPredicate.VariadicInOut(_,{ ContextualConversion.embed; readback }, _), data ->
        let state, i, gls =
-         map_acc (inout_of_term ~depth d n bname hyps constraints) state data in
-       let state, (rest, out) = wrap_type_err bname 0 (compute i ~depth hyps constraints) state in
+         map_acc (inout_of_termC ~depth readback n bname ctx constraints) state data in
+       let state, (rest, out) = wrap_type_err bname 0 (compute i ~depth ctx constraints) state in
        let state, l = reduce state rest in
        begin match out with
          | Some out ->
              let state, ass =
-               map_acc3 (mk_inout_assign ~depth d bname hyps constraints) state i data out in 
+               map_acc3 (mk_inout_assignC ~depth embed bname ctx constraints) state i data out in 
              state, List.(gls @ concat (rev extra) @ rev (concat ass) @ l)
          | None -> state, List.(gls @ concat (rev extra) @ rev l)
        end
-    | BuiltInPredicate.In(d, _, ffi), t :: rest ->
-        let state, i, gls = in_of_term ~depth d n bname hyps constraints state t in
-        aux ffi ~compute:(compute i) ~reduce rest (n + 1) state (gls :: extra)
-    | BuiltInPredicate.Out(d, _, ffi), t :: rest ->
-        let i = out_of_term ~depth d n bname hyps constraints state t in
+    | BuiltInPredicate.CIn({ ContextualConversion.readback }, _, ffi), t :: rest ->
+        let state, i, gls = in_of_termC ~depth readback n bname ctx constraints state t in
+        aux ffi ctx constraints ~compute:(compute i) ~reduce rest (n + 1) state (gls :: extra)
+    | BuiltInPredicate.COut({ ContextualConversion.embed; readback }, _, ffi), t :: rest ->
+        let i = out_of_term ~depth readback n bname state t in
         let reduce state (rest, out) =
           let state, l = reduce state rest in
-          let state, ass = mk_out_assign ~depth d bname hyps constraints state i t out in
+          let state, ass = mk_out_assignC ~depth embed bname ctx constraints state i t out in
           state, ass @ l in
-        aux ffi ~compute:(compute i) ~reduce rest (n + 1) state extra
-    | BuiltInPredicate.InOut(d, _, ffi), t :: rest ->
-        let state, i, gls = inout_of_term ~depth d n bname hyps constraints state t in
+        aux ffi ctx constraints ~compute:(compute i) ~reduce rest (n + 1) state extra
+    | BuiltInPredicate.CInOut({ ContextualConversion.embed; readback }, _, ffi), t :: rest ->
+        let state, i, gls = inout_of_termC ~depth readback n bname ctx constraints state t in
         let reduce state (rest, out) =
           let state, l = reduce state rest in
-          let state, ass = mk_inout_assign ~depth d bname hyps constraints state i t out in
+          let state, ass = mk_inout_assignC ~depth embed bname ctx constraints state i t out in
           state, ass @ l in
-        aux ffi ~compute:(compute i) ~reduce rest (n + 1) state (gls :: extra)
+        aux ffi ctx constraints ~compute:(compute i) ~reduce rest (n + 1) state (gls :: extra)
+    | BuiltInPredicate.In({ Conversion.readback }, _, ffi), t :: rest ->
+        let state, i, gls = in_of_term ~depth readback n bname state t in
+        aux ffi ctx constraints ~compute:(compute i) ~reduce rest (n + 1) state (gls :: extra)
+    | BuiltInPredicate.Out({ Conversion.embed; readback }, _, ffi), t :: rest ->
+        let i = out_of_term ~depth readback n bname state t in
+        let reduce state (rest, out) =
+          let state, l = reduce state rest in
+          let state, ass = mk_out_assign ~depth embed bname state i t out in
+          state, ass @ l in
+        aux ffi ctx constraints ~compute:(compute i) ~reduce rest (n + 1) state extra
+    | BuiltInPredicate.InOut({ Conversion.embed; readback }, _, ffi), t :: rest ->
+        let state, i, gls = inout_of_term ~depth readback n bname state t in
+        let reduce state (rest, out) =
+          let state, l = reduce state rest in
+          let state, ass = mk_inout_assign ~depth embed bname state i t out in
+          state, ass @ l in
+        aux ffi ctx constraints ~compute:(compute i) ~reduce rest (n + 1) state (gls :: extra)
 
     | _, t :: _ -> arity_err ~depth bname n (Some t)
     | _, [] -> arity_err ~depth bname n None
 
   in
+  let rec aux_ctx : type i o h c. (i,o,h,c) BuiltInPredicate.ffi -> (h,c) ContextualConversion.ctx_readback = function
+    | BuiltInPredicate.Full(f,_) -> f
+    | BuiltInPredicate.Read(f,_) -> f
+    | BuiltInPredicate.VariadicIn(f,_,_) -> f
+    | BuiltInPredicate.VariadicOut(f,_,_) -> f
+    | BuiltInPredicate.VariadicInOut(f,_,_) -> f
+    | BuiltInPredicate.Easy _ -> ContextualConversion.unit_ctx
+    | BuiltInPredicate.In(_,_,rest) -> aux_ctx rest
+    | BuiltInPredicate.Out(_,_,rest) -> aux_ctx rest
+    | BuiltInPredicate.InOut(_,_,rest) -> aux_ctx rest
+    | BuiltInPredicate.CIn(_,_,rest) -> aux_ctx rest
+    | BuiltInPredicate.COut(_,_,rest) -> aux_ctx rest
+    | BuiltInPredicate.CInOut(_,_,rest) -> aux_ctx rest
+  in
     let reduce state _ = state, [] in
-    aux ffi ~compute ~reduce data 1 state []
+    let state, ctx, csts, gls_ctx = aux_ctx ffi ~depth hyps constraints state in
+    let state, gls = aux ffi ctx csts ~compute ~reduce data 1 state [] in
+    state, gls_ctx @ gls
 ;;
 
 let exect_builtin_predicate c ~depth idx args =
        if c == C.declare_constraintc then begin
                declare_constraint ~depth idx args; [] end
   else if c == C.print_constraintsc then begin
-               printf "@[<hov 0>%a@]\n%!" CS.print (CS.contents ());
+               printf "@[<hov 0>%a@]\n%!" (CS.print ?pp_ctx:None) (CS.contents ());
                [] 
   end else
     let b =
@@ -3226,12 +3291,13 @@ open Mainloop
 let mk_outcome search get_cs assignments =
  try
    let alts = search () in
-   let syn_csts, state, qargs = get_cs () in
+   let syn_csts, state, qargs, pp_ctx = get_cs () in
    let solution = {
      assignments;
      constraints = syn_csts;
      state;
-     output = Query.output qargs assignments state syn_csts;
+     output = Query.output qargs assignments state;
+     pp_ctx = ref pp_ctx;
    } in
    Success solution, alts
  with
@@ -3241,7 +3307,7 @@ let mk_outcome search get_cs assignments =
 let execute_once ?max_steps ?delay_outside_fragment exec =
  auxsg := [];
  let { search; get } = make_runtime ?max_steps ?delay_outside_fragment exec in
- fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.state, exec.query_arguments) exec.assignments)
+ fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.state, exec.query_arguments, get uv_names) exec.assignments)
 ;;
 
 let execute_loop ?delay_outside_fragment exec ~more ~pp =
@@ -3249,7 +3315,7 @@ let execute_loop ?delay_outside_fragment exec ~more ~pp =
  let k = ref noalts in
  let do_with_infos f =
   let time0 = Unix.gettimeofday() in
-  let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, get CS.state, exec.query_arguments) exec.assignments in
+  let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, get CS.state, exec.query_arguments, get uv_names) exec.assignments in
   let time1 = Unix.gettimeofday() in
   k := alts;
   pp (time1 -. time0) o in
@@ -3262,7 +3328,7 @@ let execute_loop ?delay_outside_fragment exec ~more ~pp =
 ;;
 
 let print_constraints () = CS.print Fmt.std_formatter (CS.contents ())
-let pp_stuck_goal fmt s = CS.pp_stuck_goal fmt s
+let pp_stuck_goal ?pp_ctx fmt s = CS.pp_stuck_goal ?pp_ctx fmt s
 let is_flex = HO.is_flex
 let deref_uv = HO.deref_uv
 let deref_appuv = HO.deref_appuv

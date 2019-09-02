@@ -527,6 +527,7 @@ module PtrMap = struct
   }
 
   let empty () = { cache = IntMap.empty; authoritative = [] }
+  let is_empty { authoritative } = authoritative = []
 
   let address_of =
     match Sys.backend_type with

@@ -36,6 +36,7 @@ let init ~builtins:(fname,decls) ~basedir:cwd argv =
   List.iter (function
     | Data.BuiltInPredicate.MLCode (p,_) -> Data.BuiltInPredicate.register p
     | Data.BuiltInPredicate.MLData _ -> ()
+    | Data.BuiltInPredicate.MLDataC _ -> ()
     | Data.BuiltInPredicate.LPCode _ -> ()
     | Data.BuiltInPredicate.LPDoc _ -> ()) decls;
   (* This is a bit ugly, since we print and then parse... *)
@@ -105,12 +106,14 @@ module Data = struct
   type term = Data.term
   type constraints = Data.constraints
   type state = Data.State.t
+  type pretty_printer_context = (string Util.PtrMap.t * int) ref
   module StrMap = Util.StrMap
   type 'a solution = 'a Data.solution = {
     assignments : term StrMap.t;
     constraints : constraints;
     state : state;
     output : 'a;
+    pp_ctx : pretty_printer_context;
   }
   type hyp = Data.clause_src = {
     hdepth : int;
@@ -160,13 +163,13 @@ module Execute = struct
 end
 
 module Pp = struct
-  let term f t = (* XXX query depth *)
+  let term pp_ctx f t = (* XXX query depth *)
     let module R = (val !r) in let open R in
-    R.Pp.uppterm 0 [] 0 [||] f t
+    R.Pp.uppterm ~pp_ctx 0 [] 0 [||] f t
 
-  let constraints f c =
+  let constraints pp_ctx f c =
     let module R = (val !r) in let open R in
-    Util.pplist ~boxed:true R.pp_stuck_goal "" f c
+    Util.pplist ~boxed:true R.(pp_stuck_goal ~pp_ctx) "" f c
 
   let state = ED.State.pp
 
@@ -185,6 +188,8 @@ module Conversion = struct
   type extra_goals = ED.extra_goals
   include ED.Conversion
 end
+
+module ContextualConversion = ED.ContextualConversion
 
 module RawOpaqueData = struct
   include Util.CData
@@ -207,9 +212,9 @@ module RawOpaqueData = struct
       { cin; isc; cout; name=c }
   =
   let ty = Conversion.TyName name in
-  let embed ~depth:_ _ _ state x =
+  let embed ~depth:_ state x =
     state, ED.Term.CData (cin x), [] in
-  let readback ~depth _ _ state t =
+  let readback ~depth state t =
     let module R = (val !r) in let open R in
     match R.deref_head ~depth t with
     | ED.Term.CData c when isc c -> state, cout c, []
@@ -279,8 +284,8 @@ module BuiltInData = struct
   let string = RawOpaqueData.conversion_of_cdata ~name:"string" ED.C.string
   let loc    = RawOpaqueData.conversion_of_cdata ~name:"loc"    ED.C.loc
   let poly ty =
-    let embed ~depth:_ _ _ state x = state, x, [] in
-    let readback ~depth _ _ state t = state, t, [] in
+    let embed ~depth:_ state x = state, x, [] in
+    let readback ~depth state t = state, t, [] in
     { Conversion.embed; readback; ty = Conversion.TyName ty;
       pp = (fun fmt _ -> Format.fprintf fmt "<poly>");
       pp_doc = (fun fmt () -> ()) }
@@ -312,10 +317,10 @@ module BuiltInData = struct
 
   let closed ty =
     let ty = Conversion.(TyName ty) in
-    let embed ~depth _ _ state (x,from) =
+    let embed ~depth state (x,from) =
       let module R = (val !r) in let open R in
       state, R.hmove ~from ~to_:depth ?avoid:None x, [] in
-    let readback ~depth _ _ state t =
+    let readback ~depth state t =
       state, fresh_copy t depth, [] in
     { Conversion.embed; readback; ty;
       pp = (fun fmt (t,d) ->
@@ -332,14 +337,31 @@ module BuiltInData = struct
     in
       aux [] [] s l
 
-  let list d =
+  let listC d =
     let embed ~depth h c s l =
       let module R = (val !r) in let open R in
-      let s, l, eg = map_acc (d.Conversion.embed ~depth h c) s l in
+      let s, l, eg = map_acc (d.ContextualConversion.embed ~depth h c) s l in
       s, list_to_lp_list l, eg in
     let readback ~depth h c s t =
       let module R = (val !r) in let open R in
-      map_acc (d.Conversion.readback ~depth h c) s
+      map_acc (d.ContextualConversion.readback ~depth h c) s
+        (lp_list_to_list ~depth t)
+    in
+    let pp fmt l =
+      Format.fprintf fmt "[%a]" (Util.pplist d.pp ~boxed:true "; ") l in
+    { ContextualConversion.embed; readback;
+      ty = TyApp ("list",d.ty,[]);
+      pp;
+      pp_doc = (fun fmt () -> ()) }
+  
+  let list d =
+    let embed ~depth s l =
+      let module R = (val !r) in let open R in
+      let s, l, eg = map_acc (d.Conversion.embed ~depth) s l in
+      s, list_to_lp_list l, eg in
+    let readback ~depth s t =
+      let module R = (val !r) in let open R in
+      map_acc (d.Conversion.readback ~depth) s
         (lp_list_to_list ~depth t)
     in
     let pp fmt l =
@@ -348,7 +370,6 @@ module BuiltInData = struct
       ty = TyApp ("list",d.ty,[]);
       pp;
       pp_doc = (fun fmt () -> ()) }
-
 
 end
 
@@ -361,7 +382,8 @@ module Elpi = struct
     | Arg str ->
         Format.fprintf fmt "%s" str
     | Ref ub ->
-        Pp.term fmt (ED.mkUVar ub 0 0)
+        let module R = (val !r) in let open R in
+        R.Pp.uppterm 0 [] 0 [||] fmt (ED.mkUVar ub 0 0)
 
   let show m = Format.asprintf "%a" pp m
 
@@ -608,8 +630,8 @@ module FlexibleData = struct
     Conversion.ty = Conversion.TyName "uvar";
     pp_doc = (fun fmt () -> Format.fprintf fmt "Unification variable, as the uvar keyword");
     pp = (fun fmt (k,_) -> Format.fprintf fmt "%a" Elpi.pp k);
-    embed = (fun ~depth _ _ s (k,args) -> s, RawData.mkUnifVar k ~args s, []);
-    readback = (fun ~depth _ _ state t ->
+    embed = (fun ~depth s (k,args) -> s, RawData.mkUnifVar k ~args s, []);
+    readback = (fun ~depth state t ->
       match RawData.look ~depth t with
       | RawData.UnifVar(k,args) ->
           state, (k,args), []
@@ -772,9 +794,9 @@ module RawPp = struct
     let module R = (val !r) in let open R in
     R.Pp.uppterm depth [] 0 ED.empty_env fmt t
 
-  let constraint_ f c = 
+  let constraints f c = 
     let module R = (val !r) in let open R in
-    R.pp_stuck_goal f c
+    Util.pplist ~boxed:true (R.pp_stuck_goal ?pp_ctx:None) "" f c
 
   let list = Util.pplist
 
