@@ -35,3 +35,8 @@ let () = declare "backtracking"
   ~source_elpi:"trail.elpi"
   ~description:"backtracking variable assignment"
   ()
+
+let () = declare "uminus"
+  ~source_elpi:"uminus.elpi"
+  ~description:"parsing and evaluation of unary minus"
+  ()

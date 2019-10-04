@@ -189,7 +189,8 @@ let idchar = lexer [ lcase | ucase | digit | schar ]
 let rec idcharstar = lexer [ idchar idcharstar | ]
 let rec idcharstarns = lexer [ idchar idcharstarns | ?= [ '.' 'a'-'z' | '.' 'A'-'Z' ] '.' idchar idcharstarns | ]
 let idcharplus = lexer [ idchar idcharstar ]
-let rec num = lexer [ digit | digit num ]
+let rec pnum = lexer [ digit | digit pnum ]
+let num = lexer [ pnum | ?= [ '-' '0'-'9' ] '-' pnum ]
 let symbchar = lexer [ lcase | ucase | digit | schar | ':' ]
 let rec symbcharstar = lexer [ symbchar symbcharstar | ]
 
@@ -241,7 +242,7 @@ let rec tok b s = let eol_found = ref 0 in (*spy ~name:"tok" ~pp:(fun (a,b) -> a
   | lcase idcharstarns -> constant,$buf,!eol_found
   | schar2 symbcharstar -> constant,$buf,!eol_found
   | num -> "INTEGER",$buf,!eol_found
-  | num ?= [ '.' '0'-'9' ] '.' num -> "FLOAT",$buf,!eol_found
+  | num ?= [ '.' '0'-'9' ] '.' pnum -> "FLOAT",$buf,!eol_found
   | '-' idcharstar -> constant,$buf,!eol_found
   | '_' -> "FRESHUV", "_",!eol_found
   | '_' idcharplus -> constant,$buf,!eol_found
@@ -252,7 +253,7 @@ let rec tok b s = let eol_found = ref 0 in (*spy ~name:"tok" ~pp:(fun (a,b) -> a
   | ';' -> constant,$buf,!eol_found
   | '?' -> constant,$buf,!eol_found
   | '.' -> "FULLSTOP",$buf,!eol_found
-  | '.' num -> "FLOAT",$buf,!eol_found
+  | '.' pnum -> "FLOAT",$buf,!eol_found
   | '\\' -> "BIND","\\",!eol_found
   | '(' [ is_infix ->
              "ESCAPE",  String.(sub $buf 0 (length $buf - 1)),!eol_found
