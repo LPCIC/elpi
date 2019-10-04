@@ -215,10 +215,10 @@ pred str_concat i:list string, o:string.
 str_concat [] "".
 str_concat [S|SS] R :- str_concat SS RR, R is S ^ " " ^ RR.
 
-warn-undeclared Known (pr ( "main") _) :- !.
-warn-undeclared Known (pr ( S) _) :- rex_match ".*\\.aux" S, !.
-warn-undeclared Known (pr ( S) _) :- rex_match ".*\\.aux\\." S, !.
-warn-undeclared Known (pr ( S) LOC) :-
+warn-undeclared Known (pr ( "main") _) ff :- !.
+warn-undeclared Known (pr ( S) _) ff :- rex_match ".*\\.aux" S, !.
+warn-undeclared Known (pr ( S) _) ff :- rex_match ".*\\.aux\\." S, !.
+warn-undeclared Known (pr ( S) LOC) tt :-
   filter-similar Known S Hints,
   if (Hints = []) (H = "") (H is " Did you mean " ^ {str_concat Hints} ^ "?"),
   MSG is "constant " ^ S ^ " has no declared type." ^ H,
@@ -227,10 +227,13 @@ warn-undeclared Known (pr ( S) LOC) :-
 type (`:) term -> typ -> entry.
 forall_uto10 [] _ _ :- !.
 forall_uto10 [X|XS] N P :- N < 10, !,
-  M is N + 1, P X, !, forall_uto10 XS M P.
-forall_uto10 L _ _  :- print "[suppressing" {std.length L} "warnings]".
+  P X Done, !,
+  if (Done = tt) (M is N + 1) (M = N),
+  forall_uto10 XS M P.
+forall_uto10 _ _ _ :-
+  Msg is "[suppressing " ^ {term_to_string {std.length L}} ^ " warnings]",
+  warning LOC Msg.
   
-
 under-decl-env [] P :- P.
 under-decl-env [ X `: PT | XS ] P :-
   %print "Assume" X PT,
