@@ -1,38 +1,29 @@
 kind std.map type -> type -> type.
-type std.map std.map.private.map K V -> (K -> K -> prop) -> (K -> K -> prop) -> std.map K V.
+type std.map std.map.private.map K V -> (K -> K -> cmp -> prop) -> std.map K V.
 
 namespace std.map {
 
 % [make Eq Ltn M] builds an empty map M where keys are compared using Eq and Ltn
-pred make i:(K -> K -> prop), i:(K -> K -> prop), o:std.map K V.
-make Req Rltn (std.map private.empty Req Rltn).
+pred make i:(K -> K -> cmp -> prop), o:std.map K V.
+make Cmp (std.map private.empty Cmp).
 
 % [find K M V] looks in M for the value V associated to K
 pred find i:K, i:std.map K V, o:V.
-find K (std.map M Req Rltn) V :-
-  (pi x y\ private.eq x y :- !, Req x y) =>
-  (pi x y\ private.ltn x y :- !, Rltn x y) =>
-  private.find M K V.
+find K (std.map M Cmp) V :- private.find M Cmp K V.
 
 % [add K V M M1] M1 is M where K is bound to V
 pred add i:K, i:V, i:std.map K V, o:std.map K V.
-add K V (std.map M Req Rltn) (std.map M1 Req Rltn) :-
-  (pi x y\ private.eq x y :- !, Req x y) =>
-  (pi x y\ private.ltn x y :- !, Rltn x y) =>
-  private.add M K V M1.
+add K V (std.map M Cmp) (std.map M1 Cmp) :- private.add M Cmp K V M1.
 
 % [remove K M M1] M1 is M where K is unbound
 pred remove i:K, i:std.map K V, o:std.map K V.
-remove K (std.map M Req Rltn) (std.map M1 Req Rltn) :-
-  (pi x y\ private.eq x y :- !, Req x y) =>
-  (pi x y\ private.ltn x y :- !, Rltn x y) =>
-  private.remove M K M1.
+remove K (std.map M Cmp) (std.map M1 Cmp) :- private.remove M Cmp K M1.
+
+% [bindings M L] L is the key-value pairs in increasing order
+pred bindings i:std.map K V, o:list (pair K V).
+bindings (std.map M _) L :- private.bindings M [] L.
 
 namespace private {
-
-% These are provided by the constructor
-pred ltn i:K, i:K.
-pred eq i:K, i:K.
 
 % Taken from OCaml's map.ml
 kind map type -> type -> type.
@@ -68,18 +59,18 @@ bal.aux _ HR HL2 _ L X D (node (node RLL RLV RLD RLR _) RV RD RR _) T :-
   create {create L X D RLL} RLV RLD {create RLR RV RD RR} T.
 bal.aux _ _ _ _ L K V R T :- create L K V R T.
 
-pred add i:map K V, i:K, i:V, o:map K V.
-add empty K V T :- create empty K V empty T.
-add (node L X _ R H) X1 XD (node L X1 XD R H) :- eq X X1, !.
-add (node L V D R _) X XD T :- ltn X V, !,
-  bal {add L X XD} V D R T.
-add (node L V D R _) X XD T :-
-  bal L V D {add R X XD} T.
+pred add i:map K V, i:(K -> K -> cmp -> prop), i:K, i:V, o:map K V.
+add empty _ K V T :- create empty K V empty T.
+add (node _ X _ _ _ as M) Cmp X1 XD M1 :- Cmp X1 X E, add.aux E M Cmp X1 XD M1.
+add.aux eq (node L _ _ R H) _   X XD T :- T = node L X XD R H. 
+add.aux lt (node L V D R _) Cmp X XD T :- bal {add L Cmp X XD} V D R T.
+add.aux gt (node L V D R _) Cmp X XD T :- bal L V D {add R Cmp X XD} T.
 
-pred find i:map K V, i:K, o:V.
-find (node _ K1 V _ _) K V :- eq K1 K, !.
-find (node L K1 _ _ _) K V :- ltn K K1, !, find L K V.
-find (node _ _ _ R _) K V :- find R K V.
+pred find i:map K V, i:(K -> K -> cmp -> prop), i:K, o:V.
+find (node L K1 V1 R _) Cmp K V :- Cmp K K1 E, find.aux E Cmp L R V1 K V.
+find.aux eq _   _ _ V _ V.
+find.aux lt Cmp L _ _ K V :- find L Cmp K V.
+find.aux gt Cmp _ R _ K V :- find R Cmp K V.
 
 pred remove-min-binding i:map K V, o:map K V.
 remove-min-binding (node empty _ _ R _) R :- !.
@@ -96,11 +87,18 @@ merge M1 M2 R :-
   min-binding M2 X D,
   bal M1 X D {remove-min-binding M2} R.
 
-pred remove i:map K V, i:K, o:map K V.
-remove empty _ empty :- !.
-remove (node L V _ R _) X M :- eq V X, !, merge L R M.
-remove (node L V D R _) X M :- ltn X V, !, bal {remove L X} V D R M.
-remove (node L V D R _) X M :- bal L V D {remove R X} M.
+pred remove i:map K V, i:(K -> K -> cmp -> prop), i:K, o:map K V.
+remove empty _ _ empty :- !.
+remove (node L V D R _) Cmp X M :- Cmp X V E, remove.aux E Cmp L R V D X M.
+remove.aux eq _   L R _ _ _ M :- merge L R M.
+remove.aux lt Cmp L R V D X M :- bal {remove L Cmp X} V D R M.
+remove.aux gt Cmp L R V D X M :- bal L V D {remove R Cmp X} M.
+
+pred bindings i:map K V, i:list (pair K V), o:list (pair K V).
+bindings empty X X.
+bindings (node L V D R _) X X1 :-
+  bindings L [pr V D|{bindings R X}] X1.
+
 
 } % std.map.private
 } % std.map

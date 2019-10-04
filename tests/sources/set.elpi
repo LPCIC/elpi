@@ -23,8 +23,10 @@ test2 N M F X R :-
 macro @iters :- 4096.
 
 main :-
-  std.time (build 0 @iters {std.set.make (=) (<)} T) Time0, !,
+  std.time (build 0 @iters {std.set.make cmp_term} T) Time0, !,
   std.time (test 0 @iters std.set.mem T) Time1, !,
+  std.set.elements T L,
+  std.assert! ({std.length L} = @iters, L = [0|_]) "elements broken", !,
   std.time (test2 0 @iters std.set.remove T E) Time2, !,
   std.assert! (std.set.cardinal E 0) "not empty",
   print Time0 "+" Time1 "+" Time2.

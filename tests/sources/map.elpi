@@ -23,7 +23,9 @@ test2 N M F X :-
 macro @iters :- 4096.
 
 main :-
-  std.time (build 0 @iters {std.map.make (=) (<)} T) Time0, !,
+  std.time (build 0 @iters {std.map.make cmp_term} T) Time0, !,
   std.time (test 0 @iters std.map.find T) Time1, !,
+  std.map.bindings T B,
+  std.assert! ({std.length B} = @iters, B = [pr 0 0|_]) "bindings broken", !,
   std.time (test2 0 @iters std.map.remove T) Time2, !,
   print Time0 "+" Time1 "+" Time2.
