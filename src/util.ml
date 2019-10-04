@@ -428,7 +428,7 @@ module CData = struct
   type 'a data_declaration = {
     data_name : string;
     data_pp : Format.formatter -> 'a -> unit;
-    data_eq : 'a -> 'a -> bool;
+    data_compare : 'a -> 'a -> int;
     data_hash : 'a -> int;
     data_hconsed : bool;
   }
@@ -438,7 +438,7 @@ module CData = struct
   type cdata_declaration = {
     cdata_name : string;
     cdata_pp : Format.formatter -> t -> unit;
-    cdata_eq : t -> t -> bool;
+    cdata_compare : t -> t -> int;
     cdata_hash : t -> int;
     cdata_canon : t -> t;
   }
@@ -447,7 +447,10 @@ let m : cdata_declaration IntMap.t ref = ref IntMap.empty
 
 let cget x = Obj.obj x.t
 let pp f x = (IntMap.find x.ty !m).cdata_pp f x
-let equal x y = x.ty = y.ty && (IntMap.find x.ty !m).cdata_eq x y
+let equal x y = x.ty = y.ty && (IntMap.find x.ty !m).cdata_compare x y == 0
+let compare x y =
+  if x.ty = y.ty then (IntMap.find x.ty !m).cdata_compare x y
+  else type_error "cdata of different type compared"
 let hash x = (IntMap.find x.ty !m).cdata_hash x
 let name x = (IntMap.find x.ty !m).cdata_name
 let hcons x = (IntMap.find x.ty !m).cdata_canon x
@@ -461,28 +464,28 @@ let fresh_tid =
   let tid = ref 0 in
   fun () -> incr tid; !tid
 
-let declare { data_eq; data_pp; data_hash; data_name; data_hconsed } =
+let declare { data_compare; data_pp; data_hash; data_name; data_hconsed } =
   let tid = fresh_tid () in
-  let cdata_eq x y = data_eq (cget x) (cget y) in
+  let cdata_compare x y = data_compare (cget x) (cget y) in
   let cdata_hash x = data_hash (cget x) in
   let cdata_canon =
     if data_hconsed then
       let module CD : Hashtbl.HashedType with type t = tt = struct
         type t = tt
         let hash = cdata_hash
-        let equal = cdata_eq
+        let equal x y = cdata_compare x y == 0
       end in
       let module HS : Weak.S with type data = tt = Weak.Make(CD) in
       let h = HS.create 17 in
       (fun x -> try HS.find h x
                 with Not_found -> HS.add h x; x)
     else (fun x -> x) in
-  let cdata_eq_hconsed =
-    if data_hconsed then (fun x y -> cget x == cget y)
-    else cdata_eq in
+  let cdata_compare_hconsed =
+    if data_hconsed then (fun x y -> if x == y then 0 else cdata_compare x y)
+    else cdata_compare in
   m := IntMap.add tid { cdata_name = data_name;
                    cdata_pp = (fun f x -> data_pp f (cget x));
-                   cdata_eq = cdata_eq_hconsed;
+                   cdata_compare = cdata_compare_hconsed;
                    cdata_hash;
                    cdata_canon;
        } !m;

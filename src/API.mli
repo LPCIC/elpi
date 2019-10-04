@@ -315,7 +315,7 @@ module OpaqueData : sig
     name : name;
     doc : doc;
     pp : Format.formatter -> 'a -> unit;
-    eq : 'a -> 'a -> bool;
+    compare : 'a -> 'a -> int;
     hash : 'a -> int;
     hconsed : bool;
     constants : (name * 'a) list; (* global constants of that type, eg "std_in" *)
@@ -756,7 +756,7 @@ module RawOpaqueData : sig
     name : name;
     doc : doc;
     pp : Format.formatter -> 'a -> unit;
-    eq : 'a -> 'a -> bool;
+    compare : 'a -> 'a -> int;
     hash : 'a -> int;
     hconsed : bool;
     constants : (name * 'a) list; (* global constants of that type, eg "std_in" *)
@@ -774,6 +774,7 @@ module RawOpaqueData : sig
   val pp : Format.formatter -> t -> unit
   val show : t -> string
   val equal : t -> t -> bool
+  val compare : t -> t -> int
   val hash : t -> int
   val name : t -> string
   val hcons : t -> t
@@ -862,6 +863,7 @@ module RawData : sig
   val mkBuiltin : builtin -> term list -> term
   val mkConst : constant -> term (* no check, works for globals and bound *)
 
+  val cmp_builtin : builtin -> builtin -> int
   type hyp = {
     hdepth : int;
     hsrc : term

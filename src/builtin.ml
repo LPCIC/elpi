@@ -14,7 +14,7 @@ module Str = Re.Str
 let in_stream = OpaqueData.declare {
   OpaqueData.name = "in_stream";
   pp = (fun fmt (_,d) -> Format.fprintf fmt "<in_stream:%s>" d);
-  eq = (fun (x,_) (y,_) -> x = y);
+  compare = (fun (_,s1) (_,s2) -> String.compare s1 s2);
   hash = (fun (x,_) -> Hashtbl.hash x);
   hconsed = false;
   constants = ["std_in",(stdin,"stdin")];
@@ -24,7 +24,7 @@ let in_stream = OpaqueData.declare {
 let out_stream = OpaqueData.declare {
   OpaqueData.name = "out_stream";
   pp = (fun fmt (_,d) -> Format.fprintf fmt "<out_stream:%s>" d);
-  eq = (fun (x,_) (y,_) -> x = y);
+  compare = (fun (_,s1) (_,s2) -> String.compare s1 s2);
   hash = (fun (x,_) -> Hashtbl.hash x);
   hconsed = false;
   doc = "";
@@ -715,7 +715,7 @@ let safe = OpaqueData.declare {
   pp = (fun fmt (id,l) ->
      Format.fprintf fmt "[safe %d: %a]" id
        (RawPp.list (fun fmt (t,d) -> RawPp.term d fmt t) ";") !l);
-  eq = (fun (id1, _) (id2,_) -> id1 == id2);
+  compare = (fun (id1, _) (id2,_) -> Util.Int.compare id1 id2);
   hash = (fun (id,_) -> id);
   hconsed = false;
   doc = "Holds data across bracktracking; can only contain closed terms";
@@ -941,7 +941,7 @@ let set = OpaqueData.declare {
   OpaqueData.name;
   doc = "";
   pp = (fun fmt m -> Format.fprintf fmt "%a" Set.pp m );
-  eq = (fun m1 m2 -> Set.equal m1 m2);
+  compare = (fun m1 m2 -> Set.compare m1 m2);
   hash = Hashtbl.hash;
   hconsed = false;
   constants = [];
@@ -1047,7 +1047,7 @@ let map = OpaqueData.declare {
   OpaqueData.name;
   doc = "";
   pp = (fun fmt m -> Format.fprintf fmt "%a" (Map.pp closed_A.pp) m );
-  eq = (fun m1 m2 -> Map.equal (=) m1 m2);
+  compare = (fun m1 m2 -> Map.compare Pervasives.compare m1 m2);
   hash = Hashtbl.hash;
   hconsed = false;
   constants = [];

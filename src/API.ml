@@ -202,7 +202,7 @@ module RawOpaqueData = struct
     name : name;
     doc : doc;
     pp : Format.formatter -> 'a -> unit;
-    eq : 'a -> 'a -> bool;
+    compare : 'a -> 'a -> int;
     hash : 'a -> int;
     hconsed : bool;
     constants : (name * 'a) list; (* global constants of that type, eg "std_in" *)
@@ -245,9 +245,9 @@ module RawOpaqueData = struct
         constants ED.Constants.Map.empty in
     conversion_of_cdata ~name:(prefix^name) ?doc ~constants cd
 
-  let declare { name; doc; pp; eq; hash; hconsed; constants; } =
+  let declare { name; doc; pp; compare; hash; hconsed; constants; } =
     let cdata = declare {
-      data_eq = eq;
+      data_compare = compare;
       data_pp = pp;
       data_hash = hash;
       data_name = name;
@@ -267,7 +267,7 @@ module OpaqueData = struct
     name : name;
     doc : doc;
     pp : Format.formatter -> 'a -> unit;
-    eq : 'a -> 'a -> bool;
+    compare : 'a -> 'a -> int;
     hash : 'a -> int;
     hconsed : bool;
     constants : (name * 'a) list; (* global constants of that type, eg "std_in" *)
@@ -491,6 +491,8 @@ module RawData = struct
   let mkBound i =
     if i < 0 then Util.anomaly "mkBound: got a global constant";
     mkConst i
+
+  let cmp_builtin i j = i - j
 
   module Constants = ED.Term.Constants
 

@@ -220,7 +220,7 @@ module CData : sig
   type 'a data_declaration = {
     data_name : string;
     data_pp : Format.formatter -> 'a -> unit;
-    data_eq : 'a -> 'a -> bool;
+    data_compare : 'a -> 'a -> int;
     data_hash : 'a -> int;
     data_hconsed : bool;
   }
@@ -236,6 +236,7 @@ module CData : sig
   val pp : Format.formatter -> t -> unit
   val show : t -> string
   val equal : t -> t -> bool
+  val compare : t -> t -> int
   val hash : t -> int
   val name : t -> string
   val hcons : t -> t
