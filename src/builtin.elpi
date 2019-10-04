@@ -164,6 +164,12 @@ kind option type -> type.
 type none option A.
 type some A -> option A.
 
+% Result of a comparison
+kind cmp type.
+type eq cmp.
+type lt cmp.
+type gt cmp.
+
 %  == I/O builtins =====================================
 
 %  -- I/O --
@@ -301,6 +307,9 @@ pred (==) i:A, i:A.
 X == Y :- same_term X Y.
 
 
+% [cmp_term A B Cmp] Compares A and B. Only works if A and B are ground.
+external pred cmp_term i:any, i:any, o:cmp.
+
 % [name T ...] checks if T is a eigenvariable. When used with tree arguments
 % it relates an applied name with its head and argument list.
 external type name any -> variadic any prop.
@@ -319,6 +328,9 @@ external pred occurs % checks if the constant occurs in the term
 % [closed_term T] unify T with a variable that has no eigenvariables in
 % scope
 external pred closed_term o:any.
+
+% [ground_term T] Checks if T contains unification variables
+external pred ground_term i:any.
 
 % [is_cdata T Ctype] checks if T is primitive of type Ctype, eg (ctype
 % "int")
