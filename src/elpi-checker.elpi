@@ -230,7 +230,7 @@ forall_uto10 [X|XS] N P :- N < 10, !,
   P X Done, !,
   if (Done = tt) (M is N + 1) (M = N),
   forall_uto10 XS M P.
-forall_uto10 _ _ _ :-
+forall_uto10 ([pr _ LOC|_] as L) _ _ :-
   Msg is "[suppressing " ^ {term_to_string {std.length L}} ^ " warnings]",
   warning LOC Msg.
   
