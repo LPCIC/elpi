@@ -1,0 +1,46 @@
+pred add i:int, i:int, i:list (pair int int), o:list (pair int int).
+add K V [] [pr K V] :- !.
+add K V [pr K _| L] [pr K V| L] :- !.
+add K V [X| L] [X| L1] :- add K V L L1.
+
+pred bindings i:list (pair int int), o:list (pair int int).
+bindings X X.
+
+pred assoc i:int, i:list (pair int int), o:int.
+assoc K [pr K V| _] V :- !.
+assoc K [_| L] V :- assoc K L V.
+
+pred remove i:int, i:list (pair int int), o:list (pair int int).
+remove K [pr K _| L] L :- !.
+remove K [X| L] [X| L1] :- remove K L L1.
+
+pred build i:int, i:int, i:list (pair int int), o:list (pair int int).
+build N N X X :- !.
+build N M X X1 :-
+  N1 is N + 1,
+  add N N X XR,
+  build N1 M XR X1.
+
+pred test i:int, i:int, i:(B -> A -> B -> prop), i:A.
+test N N _ _ :- !.
+test N M F X :-
+  N1 is N + 1,
+  std.assert! (F N X N) "not found",
+  test N1 M F X.
+
+pred test2 i:int, i:int, i:(B -> A -> A -> prop), i:A.
+test2 N N _ _ :- !.
+test2 N M F X :-
+  N1 is N + 1,
+  std.assert! (F N X X1) "not found",
+  test2 N1 M F X1.
+
+macro @iters :- 4096.
+
+main :-
+  std.time (build 0 @iters [] T) Time0, !,
+  std.time (test 0 @iters assoc T) Time1, !,
+  bindings T B,
+  std.assert! ({std.length B} = @iters, B = [pr 0 0|_]) "bindings broken", !,
+  std.time (test2 0 @iters remove T) Time2, !,
+  print Time0 "+" Time1 "+" Time2.
