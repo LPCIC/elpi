@@ -1,0 +1,4 @@
+shorten std.string.set.{ empty }.
+
+main :-
+  print {empty}.

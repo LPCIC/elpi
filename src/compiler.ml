@@ -866,7 +866,9 @@ end = struct (* {{{ *)
     let rec aux = function
       | Const c as x ->
           let c1 = f c in
-          if c == c1 then x else mkConst c1
+          if c == c1 then x else
+          if BuiltInPredicate.is_declared c1 then Builtin(c1,[])
+          else mkConst c1
       | Lam t as x ->
           let t1 = aux t in
           if t == t1 then x else Lam t1
@@ -878,15 +880,18 @@ end = struct (* {{{ *)
           let ts1 = smart_map aux ts in
           if ts == ts1 then x else AppUVar(r,lvl,ts1)
       | Builtin(c,ts) as x ->
-          if f c != c then
-            error ("declaring a clause for builtin: " ^ Constants.show c);
+          let c1 = f c in
           let ts1 = smart_map aux ts in
-          if ts == ts1 then x else Builtin(c,ts1)
+          if c == c1 && ts == ts1 then x
+          else if BuiltInPredicate.is_declared c1 then Builtin(c,ts1)
+          else if ts1 = [] then mkConst c1 else App(c,List.hd ts1,List.tl ts1)
       | App(c,t,ts) as x ->
           let c1 = f c in
           let t1 = aux t in
           let ts1 = smart_map aux ts in
-          if c == c1 && t == t1 && ts == ts1 then x else App(c1,t1,ts1)
+          if c == c1 && t == t1 && ts == ts1 then x else
+          if BuiltInPredicate.is_declared c1 then Builtin (c1,t1 :: ts1)
+          else App(c1,t1,ts1)
       | Cons(hd,tl) as x ->
           let hd1 = aux hd in
           let tl1 = aux tl in
