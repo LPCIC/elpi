@@ -1,3 +1,20 @@
+## UNRELEASED
+
+- Bugfix:
+  - `shorten foo.{ bar }.` when `foo.bar` is a builtin used to be miscompiled.
+  - `elpi-typechecker.elpi` now correclty stops printing warnings after it
+    printed 10 (used to stop after he processed 10, that may not be the same
+    thing, since some warnings are suppressed).
+
+- Parser:
+  - Interpret `-2` (with no space) as the negative `2` not as the constant `-2`.
+    This way `X is 3 - 2` and `Y is 3 + -2` are both valid.
+
+- Stdlib:
+  - `std.set` and `std.map` now based on ternary comparison, see also
+    the new data type `cmp` and the builtin `cmp_term` (for ground terms)
+    and the buildin `ground_term` to check if a term is ground.
+
 ## v1.7.0 (September 2019)
 
 - Parser:
