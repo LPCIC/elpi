@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.8.0 (October 2019)
 
 - Bugfix:
   - `shorten foo.{ bar }.` when `foo.bar` is a builtin used to be miscompiled.
@@ -10,10 +10,16 @@
   - Interpret `-2` (with no space) as the negative `2` not as the constant `-2`.
     This way `X is 3 - 2` and `Y is 3 + -2` are both valid.
 
+- FFI:
+  - `OpaqueData` now requires a ternary comparison, not just equality.
+
 - Stdlib:
-  - `std.set` and `std.map` now based on ternary comparison, see also
-    the new data type `cmp` and the builtin `cmp_term` (for ground terms)
-    and the buildin `ground_term` to check if a term is ground.
+  - new data type `cmp` for ternary comparison.
+  - `std.set` and `std.map` now based on ternary comparison.
+
+- Builtin:
+  - `cmp_term` giving an order on ground terms.
+  - `ground_term` to check if a term is ground.
 
 ## v1.7.0 (September 2019)
 
