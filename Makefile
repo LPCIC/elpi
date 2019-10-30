@@ -23,10 +23,11 @@ RUNNERS=\
   $(shell if type tjsim >/dev/null 2>&1; then type -P tjsim; else echo; fi)
 TIME=--time $(shell if type -P gtime >/dev/null 2>&1; then type -P gtime; else echo /usr/bin/time; fi)
 STACK=32768
+DUNE_OPTS=
 
 # this is to work around https://github.com/ocaml/dune/issues/1212
 .merlin:
-	@dune build .merlin
+	@dune build $(DUNE_OPTS) .merlin
 	@for ppx in `ls $$PWD/_build/default/.ppx/*/ppx.exe`; do\
 		if $$ppx --print-transformations | grep -q trace; then\
 	      echo PKG ppx_deriving.std ppx_deriving.runtime >> .merlin;\
@@ -38,20 +39,20 @@ STACK=32768
 
 build:
 	@$(MAKE) --no-print-directory .merlin
-	dune build @install; RC=$?; $(MAKE) --no-print-directory .merlin; exit $$RC
+	dune build $(DUNE_OPTS) @install; RC=$?; $(MAKE) --no-print-directory .merlin; exit $$RC
 
 install:
-	dune install
+	dune install $(DUNE_OPTS) 
 
 doc:
-	dune build @doc
+	dune build $(DUNE_OPTS) @doc
 
 clean:
 	rm -rf _build
 
 tests:
-	dune build $(INSTALL)/bin/elpi
-	dune build $(BUILD)/tests/test.exe
+	dune build $(DUNE_OPTS) $(INSTALL)/bin/elpi
+	dune build $(DUNE_OPTS) $(BUILD)/tests/test.exe
 	ulimit -s $(STACK); \
 		$(BUILD)/tests/test.exe \
 		--seed $$RANDOM \
@@ -68,7 +69,7 @@ git/%:
 	git clone -l . "elpi-$*"
 	cd "elpi-$*" && git checkout "$*"
 	cd "elpi-$*" && \
-	  if [ -f dune ]; then dune build --root . @install; else make; fi
+	  if [ -f dune ]; then dune build --root . $(DUNE_OPTS) @install; else make; fi
 	cp "elpi-$*/elpi" "elpi.git.$*" || \
 		cp "elpi-$*/$(INSTALL)/bin/elpi" "elpi.git.$*"
 	rm -rf "$$PWD/elpi-$*"
