@@ -3,7 +3,7 @@ H = @
 ENGINE = lyp_engine.elpi
 EXPORT = export-lyp
 
-ELPI       = ../../../local/usr/bin/elpi
+ELPI       = elpi
 HELENA_DIR = helena
 
 TEMP = etc/temp.txt

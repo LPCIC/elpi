@@ -1,0 +1,91 @@
+% Engine for \lambda\delta version 3C - types
+
+% label of global constant: L
+kind label type.
+
+% sort index: S
+kind universe type.
+
+% abstraction layer: E
+kind layer type.
+
+% closed term: T, U, V, W
+kind term type.
+
+% term body: B
+macro @body :- term -> term.
+
+% application arguments: Vs, Ws 
+macro @args :- list term.
+
+% sort S: sort of index S
+type sort universe -> term.
+% abbr V B: abbreviation of V in B
+type abbr term -> @body -> term.
+% abst E W B: abstraction of type W in B
+type abst layer -> term -> @body -> term.
+% appl V T: application of T to V
+type appl term -> term -> term.
+% cast U T: annotation with type U of T
+type cast term -> term -> term.
+% impl: implicit (to be inferred)
+type impl term.
+
+% rt-reduction side: D
+kind side type.
+
+% context side
+type d_rc side.
+
+% inferred side
+type d_sn side.
+
+% expected side
+type d_dx side.
+
+% ldef X V: local definition of X with V
+type ldef term -> side -> term -> prop.
+% ldec X W: local declaration of X of type W
+type ldec term -> side -> term -> prop.
+
+% whd mode: M
+kind whm type.
+
+% no \upsilon-reduction detected (full mode)
+type m_f whm.
+
+% \upsilon-reduction detected (restricted mode)
+type m_y whm.
+
+% PARAMETER: no \Pi-reuctions needed
+type no_pir prop.
+
+% PARAMETER: successive sort
+type succ universe -> universe -> prop.
+
+% PARAMETER: layer has beta-reduction
+type has_beta layer -> prop.
+
+% PARAMETER: layer has upsilon-reduction
+type has_upsilon layer -> prop.
+
+% PARAMETER: preceding layer
+type prec layer -> layer -> prop.
+
+% predicates
+
+type valid_c term -> @args -> term -> @args -> prop.
+type valid_t term -> term -> prop.
+type valid_v @args -> @args -> prop.
+
+type sta_t term -> side -> term -> prop.
+
+type appl_c term -> @args -> @args -> side -> prop.
+type appl_t @args -> term -> prop.
+
+type conv_c term -> @args -> whm -> term -> @args -> whm -> prop.
+type conv_d term -> term -> @args -> whm -> term -> @args -> whm -> prop.
+type conv_t term -> term -> prop.
+type conv_v @args -> @args -> prop.
+
+type cast_t term -> term -> prop.

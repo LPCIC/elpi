@@ -1,0 +1,304 @@
+% Engine for \lambda\delta version 3C - kernel
+
+% application arguments: Vs, Ws 
+macro @args :- list term.
+
+% task list: Ks 
+macro @tasks :- list task.
+
+% validity predicate (term) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type valid term -> @args -> term -> @args -> prop.
+mode (valid i o).
+
+% structural application
+valid (appl V1 T1) Vs1 (appl V2 T2) Vs2:- !,
+  valid T1 [V1|Vs1] T2 [V2|Vs2].
+
+% structural abbreviation
+valid (abbr V1 B1) Vs1 (abbr V2 B2) Vs2 :- !,
+  valid V1 [] V2 [],
+  pi x\ ldef x d_rc V2 => valid (B1 x) Vs1 (B2 x) Vs2.
+
+% sort
+valid (sort S) [] (sort S) [] :- !.
+
+% abstraction
+valid (abst E W1 B1) Vs1 (abst E W2 B2) Vs2:- !,
+  valids Vs1 Vs2, valid W1 [] W2 [],
+  pi x\ ldec x d_rc W2 => valid (B1 x) [] (B2 x) [],
+  applicable Vs2 (abst E W2 B2).
+
+% type annotation
+valid (cast U1 T1) Vs1 (cast U2 T2) Vs2 :- !,
+  valids Vs1 Vs2, valid U1 [] U2 [], valid T1 [] T2 [],
+  applicable Vs2 (cast U2 T2), castable T2 U2.
+
+% implicit
+valid impl Vs1 T2 Vs2:- !,
+  valids Vs1 Vs2,
+  applicable Vs2 T2.
+
+% defined variable
+valid X Vs1 X Vs2 :- ldef X d_rc _, !,
+  valids Vs1 Vs2,
+  applicable Vs2 X.
+
+% declared variable
+valid X Vs1 X Vs2 :- ldec X d_rc _, !,
+  valids Vs1 Vs2,
+  applicable Vs2 X.
+
+% validity predicate (arguments) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type valids @args -> @args -> prop.
+mode (valid i o).
+
+% empty
+valids [] [].
+
+% cons
+valids [V1|Vs1] [V2|Vs2] :-
+  valid V1 [] V2 [], valids Vs1 Vs2.
+
+% static type predicate (term) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type sta term -> side -> term -> prop.
+mode (sta i i o).
+
+% structural abbreviation
+sta (abbr V B1) D (abbr V B2) :- !,
+  pi x\ ldef x D V => sta (B1 x) D (B2 x).
+
+% structural application
+sta (appl V T1) D (appl V T2) :- !,
+  sta T1 D T2.
+
+% x
+sta (abst E1 W B1) D (abst E2 W B2) :- !,
+  prec E1 E2, 
+  pi x\ ldec x D W => sta (B1 x) D (B2 x).
+
+% s
+sta (sort S1) _ (sort S2) :- !,
+  succ S1 S2.
+
+% e
+sta (cast U _) _ U :- !.
+
+% local l
+sta X D U :- ldec X D U, !. %, print "Ll".
+
+% context l
+sta X _ U :- ldec X d_rc U, !. %, print "Gl".
+
+% local delta 
+sta X D T2 :- ldef X D T1, !, sta T1 D T2. %, print "Ld".
+
+% context delta 
+sta X D T2 :- ldef X d_rc T1, !, sta T1 D T2. %, print "Gd".
+
+% task manager %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type exec @tasks -> term -> @args -> whm -> prop.
+mode (exec i i i i i).
+
+% whd
+exec [k_whd D|Ks] T Vs M :- !, whd T Vs M D Ks.
+
+% acnd
+exec [k_acnd Vs0|_] T Vs M :- !, acnd T Vs M Vs0.
+
+% comp sn
+exec [k_comp_sn T1 Vs1 M1|_] T2 Vs2 M2 :- !, 
+  comp T1 Vs1 M1 T2 Vs2 M2.
+
+% comp dx
+exec [k_comp_dx T2 Vs2 M2|_] T1 Vs1 M1:- !, 
+  comp T1 Vs1 M1 T2 Vs2 M2.
+
+% conv sn
+exec [k_conv_sn T1 Vs1 M1|Ks] T2 Vs2 M2 :- !, 
+  exec [k_whd d_sn, k_comp_dx T2 Vs2 M2|Ks] T1 Vs1 M1.
+
+% conv dx
+exec [k_conv_dx T2 Vs2 M2|Ks] T1 Vs1 M1 :- !, 
+  exec [k_whd d_dx, k_comp_sn T1 Vs1 M1|Ks] T2 Vs2 M2. 
+
+% weak head task (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type whd term -> @args -> whm -> side -> @tasks -> prop.
+mode (whd i i i i i).
+
+% structural abbreviation
+whd (abbr V B) Vs M D Ks :- !,
+  pi x\ ldef x D V => whd (B x) Vs M D Ks.
+
+% structural application
+whd (appl V T) Vs M D Ks :- !,
+  whd T [V|Vs] M D Ks.
+
+% epsilon
+whd (cast _ T) Vs M D Ks :- !,
+  whd T Vs M D Ks.
+
+% beta
+whd (abst E W B) [V|Vs] M D Ks :- !, 
+  has_beta E,  % print "b",
+  pi x\ ldef x D (cast W V) => whd (B x) Vs M D Ks.
+
+% upsilon
+whd (abst E W B) [] _ D Ks :-
+  has_upsilon E, !,
+  pi x\ ldec x D W => whd (B x) [] m_y D Ks.
+
+% local delta 
+whd X Vs M D Ks :-
+  ldef X D T, !, whd T Vs M D Ks. %, print "Ld".
+
+% normal form
+whd T Vs M _ Ks :- !,
+  exec Ks T Vs M.
+
+% applicability condition task (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type acnd term -> @args -> whm -> @args -> prop.
+mode (acnd i i i i).
+
+% beta
+acnd (abst _ W B) [] m_f [V|Vs] :- !,
+  castable V W, % print "B",
+  pi x\ ldef x d_dx (cast W V) => applicable Vs (B x).
+
+% local l
+acnd X Vs M Vs0 :-
+  ldec X d_dx U, !, applicable_rc Vs0 U Vs M. %, print "Ll".
+
+% context l
+acnd X Vs M Vs0 :-
+  ldec X d_rc U, !, applicable_rc Vs0 U Vs M. %, print "Gl".
+
+% context delta
+acnd X Vs M Vs0 :-
+  ldef X d_rc T, !, applicable_rc Vs0 T Vs M. %, print "Gd".
+
+% compare task (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type comp term -> @args -> whm -> term -> @args -> whm -> prop.
+mode (comp i i i i i i).
+
+% reflexivity
+comp T Vs1 _ T Vs2 _ :- convs Vs1 Vs2, !. %, print "r".
+
+% xi
+comp (abst E W1 B1) [] m_f (abst E W2 B2) [] m_f :- !,
+  conv W1 W2,
+  pi x\ ldec x d_sn W1 => ldec x d_dx W2 => conv (B1 x) (B2 x).
+
+% delayed context delta (sn)
+comp X1 Vs1 M1 T2 Vs2 M2 :-
+  ldef X1 d_rc T1, !,
+  comp_cd X1 T1 Vs1 M1 T2 Vs2 M2.
+
+%comp X Vs1 M1 X Vs2 M2 :-
+%  ldef X d_rc T, !,
+%  conv_rc T Vs1 M1 T Vs2 M2.
+
+%comp X1 Vs1 M1 X2 Vs2 M2 :-
+%  ldef X1 d_rc T1, ldef X2 d_rc T2, !,
+%  if (X1 < X2) (conv_sn T1 Vs1 M1 X2 Vs2 M2) (conv_dx X1 Vs1 M1 T2 Vs2 M2).
+
+%comp X1 Vs1 M1 T2 Vs2 M2 :-
+%  ldef X1 d_rc T1, !,
+%  conv_sn T1 Vs1 M1 T2 Vs2 M2.
+
+% forced context delta (dx)
+comp T1 Vs1 M1 X2 Vs2 M2 :-
+  ldef X2 d_rc T2, !, % print "Gd", 
+  conv_dx T1 Vs1 M1 T2 Vs2 M2.
+
+% compare task for controlled delta (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type comp_cd term -> term -> @args -> whm -> term -> @args -> whm -> prop.
+mode (comp_cd i i i i i i i).
+
+% forced context delta (bi)
+comp_cd X T Vs1 M1 X Vs2 M2 :- !, % print "Gp",
+  conv_rc T Vs1 M1 T Vs2 M2.
+
+% controlled context delta
+comp_cd X1 T1 Vs1 M1 X2 Vs2 M2 :-
+  ldef X2 d_rc T2, !, % print "Gd",
+  if (X1 < X2) (conv_sn T1 Vs1 M1 X2 Vs2 M2) (conv_dx X1 Vs1 M1 T2 Vs2 M2).
+
+% forced context delta (sn)
+comp_cd _ T1 Vs1 M1 T2 Vs2 M2 :- !, % print "Gd",
+  conv_sn T1 Vs1 M1 T2 Vs2 M2.
+
+% applicable rc task helper (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type applicable_rc @args -> term -> @args -> whm -> prop.
+mode (applicable_rc i i i i).
+
+applicable_rc Vs0 T Vs M :-
+  exec [k_whd d_dx, k_acnd Vs0] T Vs M.
+
+% applicable task helper (term) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type applicable @args -> term -> prop.
+mode (applicable i i).
+
+% empty
+applicable [] _ :- !.
+
+% cons
+applicable Vs T :- applicable_rc Vs T [] m_f.
+
+% convert sn task helper (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type conv_sn term -> @args -> whm -> term -> @args -> whm -> prop.
+mode (conv_sn i i i i i i).
+
+conv_sn T1 Vs1 M1 T2 Vs2 M2 :- 
+  exec [k_whd d_sn, k_comp_dx T2 Vs2 M2] T1 Vs1 M1.
+
+% convert dx task helper (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type conv_dx term -> @args -> whm -> term -> @args -> whm -> prop.
+mode (conv_dx i i i i i i).
+
+conv_dx T1 Vs1 M1 T2 Vs2 M2 :- 
+  exec [k_whd d_dx, k_comp_sn T1 Vs1 M1] T2 Vs2 M2.
+
+% convert rc task helper (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type conv_rc term -> @args -> whm -> term -> @args -> whm -> prop.
+mode (conv_rc i i i i i i).
+
+conv_rc T1 Vs1 M1 T2 Vs2 M2 :- 
+  exec [k_whd d_sn, k_conv_dx T2 Vs2 M2] T1 Vs1 M1.
+
+% convert task helper (term) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type conv term -> term -> prop.
+mode (conv i i).
+
+conv T1 T2 :- conv_rc T1 [] m_f T2 [] m_f.
+
+% convert task helper (arguments) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type convs @args -> @args -> prop.
+mode (convs i i).
+
+% empty
+convs [] [] :- !.
+
+% cons
+convs [V1|Vs1] [V2|Vs2] :- conv V1 V2, convs Vs1 Vs2.
+
+% castable (term) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type castable term -> term -> prop.
+mode (castable i i).
+
+castable T1 U2 :- sta T1 d_sn U1, conv U1 U2.

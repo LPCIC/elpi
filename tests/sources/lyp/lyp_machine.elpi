@@ -159,11 +159,11 @@ whd_t X S M T2 :- def_l X T1, !, % print "d",
 whd_t (appl _ V T1) S M T2 :- whd_t T1 [V|S] M T2.
 
 % full beta
-whd_t (abst _ _ T1) [V|S] M T2 :- % print "bf",
+whd_t (abst _ _ T1) [V|S] M T2 :- print "bf",
   pi x\ def_l x V => whd_t (T1 x) S M T2.
 
 % restricted beta
-whd_t (rest _ _ T1) [V|S] M T2 :- % print "br",
+whd_t (rest _ _ T1) [V|S] M T2 :- print "br",
   pi x\ def_l x V => whd_t (T1 x) S M T2.
 
 % Stack Conversion %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -202,23 +202,23 @@ conv_t T1 S1 S2 (appl _ V2 T2) :- !,
   conv_t T1 S1 [V2|S2] T2.
 
 % left full beta
-conv_t (abst _ _ T1) [V1|S1] S2 T2 :- !, % print "bf",
+conv_t (abst _ _ T1) [V1|S1] S2 T2 :- !, print "bf",
   pi x\ def_l x V1 => conv_t (T1 x) S1 S2 T2.
 
 % left restricted beta
-conv_t (rest _ _ T1) [V1|S1] S2 T2 :- !, % print "br",
+conv_t (rest _ _ T1) [V1|S1] S2 T2 :- !, print "br",
   pi x\ def_l x V1 => conv_t (T1 x) S1 S2 T2.
 
 % right full beta
-conv_t T1 S1 [V2|S2] (abst _ _ T2) :- !, % print "bf",
+conv_t T1 S1 [V2|S2] (abst _ _ T2) :- !, print "bf",
   pi x\ def_l x V2 => conv_t T1 S1 S2 (T2 x).
 
 % right restricted beta
-conv_t T1 S1 [V2|S2] (rest _ _ T2) :- !, % print "br",
+conv_t T1 S1 [V2|S2] (rest _ _ T2) :- !, print "br",
   pi x\ def_l x V2 => conv_t T1 S1 S2 (T2 x).
 
 % parallel delta
-conv_t X S1 S2 X :- def_l X T, !, % print "dd",
+conv_t X S1 S2 X :- def_l X T, !, % print "D",
   conv_t T S1 S2 T.
 
 % implied delta 
@@ -245,19 +245,19 @@ conv_i _ T1 S1 S2 _ X2 :- conv_t T1 S1 S2 X2.
 
 type ac_t term -> @stack -> prog -> prop.
 
-ac_t (prod f_sb W U) [] (p_appl f_sb V P) :- !,
+ac_t (prod f_sb W U) [] (p_appl f_sb V P) :- !, % print "Bf",
   @TYPE_T d_2 V W,
   pi x\ def_l x V => proc_t P (U x).
 
-ac_t (prod f_ss W U) [] (p_appl f_ss V P) :- !,
+ac_t (prod f_ss W U) [] (p_appl f_ss V P) :- !, % print "Bf",
   @TYPE_T d_2 V W,
   pi x\ def_l x V => proc_t P (U x).
 
-ac_t (rest f_bb W U) [] (p_appl f_bb V P) :- !,
+ac_t (rest f_bb W U) [] (p_appl f_bb V P) :- !, % print "Br",
   @TYPE_T d_1 V W,
   pi x\ def_l x V => proc_t P (U x).
 
-ac_t (rest f_ho W U) [] (p_appl f_bs V P) :- !,
+ac_t (rest f_ho W U) [] (p_appl f_bs V P) :- !, % print "Br",
   @TYPE_T d_1 V W,
   pi x\ def_l x V => proc_t P (U x).
 
@@ -269,11 +269,11 @@ ac_t X S P :- def_l X T, !, % print "d",
 ac_t (appl _ V T) S P :- ac_t T [V|S] P.
 
 % full beta
-ac_t (abst _ _ T) [V|S] P :- % print "bf",
+ac_t (abst _ _ T) [V|S] P :- print "bf",
   pi x\ def_l x V => ac_t (T x) S P.
 
 % restricted beta
-ac_t (rest _ _ T) [V|S] P :- % print "br",
+ac_t (rest _ _ T) [V|S] P :- print "br",
   pi x\ def_l x V => ac_t (T x) S P.
 
 % Static type assignment %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

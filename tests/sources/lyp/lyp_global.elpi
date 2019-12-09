@@ -33,9 +33,9 @@ type valid_g genv -> prop.
 valid_g g_top.
 
 valid_g (g_dec X G) :-
-  type_g X R D U, % print R X,
+  type_g X R D U, print R X,
   dec_t D U, dec_l X D U => valid_g G.
 
 valid_g (g_def X G) :-
-  cast_g X R D U T, % print R X,
+  cast_g X R D U T, print R X,
   def_t D U T, dec_l X D U => def_l X T => valid_g G.

@@ -1,0 +1,13 @@
+% Engine for \lambda\delta version 3C - engine
+
+%accumulate ld3c_types.
+%accumulate ld3c_trace.
+accumulate ld3c_kernel.
+accumulate ld3c_global.
+
+accumulate grundlagen_pars.
+%accumulate grundlagen_types.
+accumulate grundlagen_2b_ld3.
+
+type main prop.
+main :- grundlagen.

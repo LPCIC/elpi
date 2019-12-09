@@ -1,0 +1,23 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type k+type universe.
+type k+set universe.
+type k+prop universe.
+
+type l+0 layer.
+type l+1 layer.
+type l+2 layer.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+succ k+set k+type.
+succ k+prop k+type.
+
+has_upsilon l+0.
+has_beta l+1. 
+has_beta l+2. 
+
+prec l+1 l+0.
+prec l+2 l+1.
+
+no_pir.

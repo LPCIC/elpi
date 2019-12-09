@@ -1,0 +1,11 @@
+%conv_c X Vs1 M1 X Vs2 M2 :-
+%  ldef X d_rc T, !,
+%  conv_rc T Vs1 M1 T Vs2 M2.
+
+%conv_c X1 Vs1 M1 X2 Vs2 M2 :-
+%  ldef X1 d_rc T1, ldef X2 d_rc T2, !,
+%  if (X1 < X2) (conv_sn T1 Vs1 M1 X2 Vs2 M2) (conv_dx X1 Vs1 M1 T2 Vs2 M2).
+
+%conv_c X1 Vs1 M1 T2 Vs2 M2 :-
+%  ldef X1 d_rc T1, !,
+%  conv_sn T1 Vs1 M1 T2 Vs2 M2.

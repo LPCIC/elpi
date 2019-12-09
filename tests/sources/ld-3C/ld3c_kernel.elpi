@@ -1,0 +1,268 @@
+% Engine for \lambda\delta version 3C - kernel
+
+% validity predicate (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+mode (valid_c i i o o).
+
+% structural application
+valid_c (appl V1 T1) Vs1 (appl V2 T2) Vs2:- !,
+  valid_c T1 [V1|Vs1] T2 [V2|Vs2].
+
+% structural abbreviation
+valid_c (abbr V1 B1) Vs1 (abbr V2 B2) Vs2 :- !,
+  valid_t V1 V2,
+  pi x\ ldef x d_rc V2 => valid_c (B1 x) Vs1 (B2 x) Vs2.
+
+% sort
+valid_c (sort S) [] (sort S) [] :- !.
+
+% abstraction
+valid_c (abst E W1 B1) Vs1 (abst E W2 B2) Vs2:- !,
+  valid_v Vs1 Vs2, valid_t W1 W2,
+  pi x\ ldec x d_rc W2 => valid_t (B1 x) (B2 x),
+  appl_t Vs2 (abst E W2 B2).
+
+% type annotation
+valid_c (cast U1 T1) Vs1 (cast U2 T2) Vs2 :- !,
+  valid_v Vs1 Vs2, valid_t U1 U2, valid_t T1 T2,
+  appl_t Vs2 (cast U2 T2), cast_t T2 U2.
+
+% implicit
+valid_c impl Vs1 T2 Vs2:- !,
+  valid_v Vs1 Vs2,
+  appl_t Vs2 T2.
+
+% defined variable
+valid_c X Vs1 X Vs2 :- ldef X d_rc _, !,
+  valid_v Vs1 Vs2,
+  appl_t Vs2 X.
+
+% declared variable
+valid_c X Vs1 X Vs2 :- ldec X d_rc _, !,
+  valid_v Vs1 Vs2,
+  appl_t Vs2 X.
+
+% validity predicate (term) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+mode (valid_v i o).
+
+valid_t T1 T2 :- valid_c T1 [] T2 [].
+
+% validity predicate (arguments) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+mode (valid i o).
+
+% empty
+valid_v [] [].
+
+% cons
+valid_v [V1|Vs1] [V2|Vs2] :-
+  valid_t V1 V2, valid_v Vs1 Vs2.
+
+% static type predicate (term) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+mode (sta_t i i o).
+
+% structural application
+sta_t (appl V T1) D (appl V T2) :- !,
+  sta_t T1 D T2.
+
+% structural abbreviation
+sta_t (abbr V B1) D (abbr V B2) :- !,
+  pi x\ ldef x D V => sta_t (B1 x) D (B2 x).
+
+% x
+sta_t (abst E1 W B1) D (abst E2 W B2) :- !,
+  prec E1 E2, 
+  pi x\ ldec x D W => sta_t (B1 x) D (B2 x).
+
+% s
+sta_t (sort S1) _ (sort S2) :- !,
+  succ S1 S2.
+
+% e
+sta_t (cast U _) _ U :- !.
+
+% local l
+sta_t X D U :- ldec X D U, !. %, print "l".
+
+% context l
+sta_t X _ U :- ldec X d_rc U, !. %, print "L".
+
+% local delta 
+sta_t X D T2 :- ldef X D T1, !, sta_t T1 D T2. %, print "d".
+
+% context delta 
+sta_t X D T2 :- ldef X d_rc T1, !, sta_t T1 D T2. %, print "D".
+
+% applicability predicate (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+mode (appl_c i i i i).
+
+% empty
+appl_c _ _ [] _ :- !.
+
+% structural application
+appl_c (appl V T) Vs Ws D :- !,
+  appl_c T [V|Vs] Ws D.
+
+% structural abbreviation
+appl_c (abbr V B) Vs Ws D :- !,
+  pi x\ ldef x D V => appl_c (B x) Vs Ws D.
+
+% inner beta 
+appl_c (abst E W B) [V|Vs] Ws D :- !,
+  has_beta E, print "b",
+  pi x\ ldef x D (cast W V) => appl_c (B x) Vs Ws D.
+
+% outer beta 
+appl_c (abst E W B) [] [V|Ws] D :- !,
+  has_beta E, cast_t V W, % print "B",
+  pi x\ ldef x D (cast W V) => appl_c (B x) [] Ws D.
+
+% e
+appl_c (cast _ T) Vs Ws D :- !,
+  appl_c T Vs Ws D.
+
+% local delta
+appl_c X Vs Ws D :-
+  ldef X D T, !, % print "d",
+  appl_c T Vs Ws D.
+
+% context delta
+appl_c X Vs Ws D :-
+  ldef X d_rc T, !, % print "D",
+  appl_c T Vs Ws D.
+
+% local l
+appl_c X Vs Ws D :-
+  ldec X D U, !, % print "l",
+  appl_c U Vs Ws D.
+
+% context l
+appl_c X Vs Ws D :-
+  ldec X d_rc U, !, % print "L",
+  appl_c U Vs Ws D.
+
+% applicability predicate (term) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+mode (appl_t i i).
+
+appl_t Ws T :- no_pir, !, sta_t T d_dx U, appl_c U [] Ws d_dx.
+
+appl_t Ws T :- appl_c T [] Ws d_dx.
+
+% convertibility predicate (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+mode (conv_c i i i i i i).
+
+% reflexivity
+conv_c T Vs1 _ T Vs2 _ :- conv_v Vs1 Vs2, !. %, print "r". 
+
+% structural application (sn)
+conv_c (appl V1 T1) Vs1 M1 T2 Vs2 M2 :- !,
+  conv_c T1 [V1|Vs1] M1 T2 Vs2 M2.
+
+% structural application (dx)
+conv_c T1 Vs1 M1 (appl V2 T2) Vs2 M2 :- !,
+  conv_c T1 Vs1 M1 T2 [V2|Vs2] M2.
+
+% structural abbreviation (sn)
+conv_c (abbr V1 B1) Vs1 M1 T2 Vs2 M2 :- !,
+  pi x\ ldef x d_sn V1 => conv_c (B1 x) Vs1 M1 T2 Vs2 M2.
+
+% structural abbreviation (dx)
+conv_c T1 Vs1 M1 (abbr V2 B2) Vs2 M2 :- !,
+  pi x\ ldef x d_dx V2 => conv_c T1 Vs1 M1 (B2 x) Vs2 M2.
+
+% beta (sn)
+conv_c (abst E W1 B1) [V1|Vs1] M1 T2 Vs2 M2 :- 
+  has_beta E, !, print "b",
+  pi x\ ldef x d_sn (cast W1 V1) => conv_c (B1 x) Vs1 M1 T2 Vs2 M2.
+
+% beta (dx)
+conv_c T1 Vs1 M1 (abst E W2 B2) [V2|Vs2] M2 :- 
+  has_beta E, !, print "b",
+  pi x\ ldef x d_dx (cast W2 V2) => conv_c T1 Vs1 M1 (B2 x) Vs2 M2.
+
+% upsilon (sn)
+conv_c (abst E W1 B1) [] _ T2 Vs2 M2 :- 
+  has_upsilon E, !,
+  pi x\ ldec x d_sn W1 => conv_c (B1 x) [] m_y T2 Vs2 M2.
+
+% upsilon (dx)
+conv_c T1 Vs1 M1 (abst E W2 B2) [] _ :- 
+  has_upsilon E, !,
+  pi x\ ldec x d_dx W2 => conv_c T1 Vs1 M1 (B2 x) [] m_y.
+
+% epsilon (sn)
+conv_c (cast _ T1) Vs1 M1 T2 Vs2 M2 :- !,
+  conv_c T1 Vs1 M1 T2 Vs2 M2.
+
+% epsilon (dx)
+conv_c T1 Vs1 M1 (cast _ T2) Vs2 M2 :- !,
+  conv_c T1 Vs1 M1 T2 Vs2 M2.
+
+% local delta (sn)
+conv_c X1 Vs1 M1 T2 Vs2 M2 :-
+  ldef X1 d_sn T1, !, % print "d"
+  conv_c T1 Vs1 M1 T2 Vs2 M2.
+
+% local delta (dx)
+conv_c T1 Vs1 M1 X2 Vs2 M2 :-
+  ldef X2 d_dx T2, !, % print "d"
+  conv_c T1 Vs1 M1 T2 Vs2 M2.
+
+% xi
+conv_c (abst E W1 B1) [] m_f (abst E W2 B2) [] m_f :- !,
+  conv_t W1 W2,
+  pi x\ ldec x d_sn W1 => ldec x d_dx W2 => conv_t (B1 x) (B2 x).
+
+% delayed context delta (sn)
+conv_c X1 Vs1 M1 T2 Vs2 M2 :-
+  ldef X1 d_rc T1, !,
+  conv_d X1 T1 Vs1 M1 T2 Vs2 M2.
+
+% forced context delta (dx)
+conv_c T1 Vs1 M1 X2 Vs2 M2 :-
+  ldef X2 d_rc T2, !, % print "D", 
+  conv_c T1 Vs1 M1 T2 Vs2 M2.
+
+% controlled convertibility predicate (closure) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+mode (conv_c_cd i i i i i i i).
+
+% forced context delta (bi)
+conv_d X T Vs1 M1 X Vs2 M2 :- !, % print "P",
+  conv_c T Vs1 M1 T Vs2 M2.
+
+% controlled context delta
+conv_d X1 T1 Vs1 M1 X2 Vs2 M2 :-
+  ldef X2 d_rc T2, !, % print "D",
+  if (X1 < X2) (conv_c T1 Vs1 M1 X2 Vs2 M2) (conv_c X1 Vs1 M1 T2 Vs2 M2).
+
+% forced context delta (sn)
+conv_d _ T1 Vs1 M1 T2 Vs2 M2 :- !, % print "D",
+  conv_c T1 Vs1 M1 T2 Vs2 M2.
+
+% convertibility predicate (term) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+mode (conv_t i i).
+
+conv_t T1 T2 :- conv_c T1 [] m_f T2 [] m_f.
+
+% convertibility predicate (arguments) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+mode (conv_v i i).
+
+% empty
+conv_v [] [] :- !.
+
+% cons
+conv_v [V1|Vs1] [V2|Vs2] :- conv_t V1 V2, conv_v Vs1 Vs2.
+
+% castability predicate (term) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+mode (cast_t i i).
+
+cast_t T1 U2 :- sta_t T1 d_sn U1, conv_t U1 U2.

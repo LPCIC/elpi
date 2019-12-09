@@ -1,0 +1,30 @@
+% Engine for \lambda\delta version 3C - line-based global environment
+
+type g+line term -> label -> term -> prop.
+
+kind genv type.
+
+type gtop genv.
+
+type gdec+2 term -> genv -> genv.
+
+type gdef+2 term -> genv -> genv.
+
+type gv+ genv -> prop.
+
+% validity predicate (global environment) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% atom
+gv+ gtop.
+
+% global devalaration
+gv+ (gdec+2 X G) :-
+  g+line X L U1, print L X,
+  current L => valid_t U1 U2,
+  ldec X d_rc U2 => gv+ G.
+
+% global definition
+gv+ (gdef+2 X G) :-
+  g+line X L T1, print L X,
+  current L => valid_t T1 T2,
+  ldef X d_rc T2 => gv+ G.

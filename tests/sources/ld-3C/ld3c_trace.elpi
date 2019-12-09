@@ -1,0 +1,27 @@
+% Engine for \lambda\delta version 3C - trace facility
+
+type current label -> o.
+type is_current o.
+
+is_current :- current c+113.
+
+valid_c T Vs _ _ :- is_current,
+  print "VALID_C" "*" T "*" Vs, fail.
+
+valid_v Vs _ :- is_current,
+  print "VALID_V" "*" Vs, fail.
+
+sta_t T D _ :- is_current,
+  print "STA_T" "*" D ">" T, fail.
+
+appl_c T Vs Ws D :- is_current,
+  print "APPL_C" "*" D ">" T "*" Vs "|" Ws, fail.
+
+conv_c T1 V1s M1 T2 V2s M2 :- is_current,
+  print "CONV_C" "*" M1 "*" M2 ">" T1 "*" V1s "<->" T2 "*" V2s, fail.
+
+% applicable Vs T :- is_current,
+%  print "APPLICABLE" "*" T "*" Vs, fail.
+
+% castable T U :- is_current,
+%  print "CASTABLE" "*" T "*" U, fail.
