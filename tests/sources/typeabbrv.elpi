@@ -1,0 +1,11 @@
+typeabbrev xx bool.
+
+namespace foo {
+
+pred f i:xx.
+f _.
+
+}
+
+
+main :- foo.f tt.

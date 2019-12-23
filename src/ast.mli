@@ -173,7 +173,21 @@ module Mode : sig
 
   type 'name t =
     { name : 'name; args : bool list; loc : Loc.t }
-  
+
+  val pp :
+    (Format.formatter -> 'name -> unit) ->
+      Format.formatter -> 'name t -> unit
+  val show :
+    (Format.formatter -> 'name -> unit) ->
+       'name t -> string
+
+end
+
+module TypeAbbreviation : sig
+
+  type ('name) t =
+    { name : 'name; value : Term.t; nparams : int; loc : Loc.t }
+
   val pp :
     (Format.formatter -> 'name -> unit) ->
       Format.formatter -> 'name t -> unit
@@ -192,9 +206,9 @@ module Program : sig
     | Constraint of Loc.t * Func.t list
     | Shorten of Loc.t * Func.t * Func.t (* prefix suffix *)
     | End of Loc.t
-  
+
     | Accumulated of Loc.t * decl list
-  
+
     (* data *)
     | Clause of (Term.t, Clause.attribute list) Clause.t
     | Local of Func.t
@@ -202,6 +216,7 @@ module Program : sig
     | Chr of Chr.attribute list Chr.t
     | Macro of (Func.t, Term.t) Macro.t
     | Type of Type.attribute list Type.t
+    | TypeAbbreviation of Func.t TypeAbbreviation.t
 
   val pp_decl : Format.formatter -> decl -> unit
   val show_decl : decl -> string

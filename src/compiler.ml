@@ -30,6 +30,7 @@ open Ast
 type program = {
   macros : (F.t, Ast.Term.t) Macro.t list;   
   types : tattribute Type.t list;
+  type_abbrevs : F.t Ast.TypeAbbreviation.t list;
   modes : F.t Mode.t list;
   body : block list;
 }
@@ -66,13 +67,14 @@ module C = Constants
 
 module Structured = struct
 
-type program = { 
-  pbody : pbody;      
+type program = {
+  pbody : pbody;
   local_names : int;
   toplevel_macros : macro_declaration;
 }
 and pbody = {
-  types : typ list;
+  types : typ list; (* type abbrevs and macro applied *)
+  type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : (mode * Loc.t) C.Map.t;
   body : block list;
   (* defined (global) symbols (including in sub blocks) *)
@@ -85,7 +87,6 @@ and block =
   | Constraints of constant list * prechr_rule list * pbody
 and typ = {
   tindex : StructuredAST.tattribute;
-  loc : Loc.t;
   decl : type_declaration
 }
 [@@deriving show]
@@ -95,7 +96,8 @@ end
 module Flat = struct
 
 type program = {
-  types : Structured.typ list; 
+  types : Structured.typ list;
+  type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : (mode * Loc.t) C.Map.t;
   clauses : (preterm,StructuredAST.attribute) Ast.Clause.t list;
   chr : (constant list * prechr_rule list) list;
@@ -110,7 +112,8 @@ end
 module Assembled = struct
 
 type program = {
-  types : Structured.typ list; 
+  types : Structured.typ list;
+  type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : mode C.Map.t;
   clauses : (preterm,attribute) Ast.Clause.t list;
   chr : (constant list * prechr_rule list) list;
@@ -135,7 +138,7 @@ type program = {
   compiler_flags : flags;
 }
 [@@deriving show]
-  
+
 end
 type program = Compiled.program
 
@@ -143,7 +146,8 @@ module WithMain = struct
 
 (* The entire program + query, but still in "printable" format *)
 type 'a query = {
-  types : Structured.typ list; 
+  types : Structured.typ list;
+  type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : mode C.Map.t;
   clauses : (preterm,Assembled.attribute) Ast.Clause.t list;
   chr : (constant list * prechr_rule list) list;
@@ -260,80 +264,83 @@ end = struct (* {{{ *)
       | None -> Indexed [1]
       | Some x -> x in
     { c with Type.attributes }
-               
+
 
   let run ~flags:_ dl =
-    let rec aux blocks clauses macros types modes  locals chr = function
+    let rec aux blocks clauses macros types tabbrs modes locals chr = function
       | (Program.End _ :: _ | []) as rest ->
           { body = List.rev (cl2b clauses @ blocks);
             types = List.rev types;
+            type_abbrevs = List.rev tabbrs;
             macros = List.rev macros;
             modes = List.rev modes },
           locals,
           List.rev chr,
           rest
       | Program.Begin loc :: rest ->
-          let p, locals1, chr1, rest = aux [] [] [] [] [] [] [] rest in
+          let p, locals1, chr1, rest = aux [] [] [] [] [] [] [] [] rest in
           if chr1 <> [] then
             error "CHR cannot be declared inside an anonymous block";
           aux_end_block loc (Locals(locals1,p) :: cl2b clauses @ blocks)
-            [] macros types modes locals chr rest
+            [] macros types tabbrs modes locals chr rest
       | Program.Constraint (loc, f) :: rest ->
           if chr <> [] then
             error "Constraint blocks cannot be nested";
-          let p, locals1, chr, rest = aux [] [] [] [] [] [] [] rest in
+          let p, locals1, chr, rest = aux [] [] [] [] [] [] [] [] rest in
           if locals1 <> [] then
             error "locals cannot be declared inside a Constraint block";
           aux_end_block loc (Constraints(f,chr,p) :: cl2b clauses @ blocks)
-            [] macros types modes locals [] rest
+            [] macros types tabbrs modes locals [] rest
       | Program.Namespace (loc, n) :: rest ->
-          let p, locals1, chr1, rest = aux [] [] [] [] [] [] [] rest in
+          let p, locals1, chr1, rest = aux [] [] [] [] [] [] [] [] rest in
           if chr1 <> [] then
             error "CHR cannot be declared inside a namespace block";
           if locals1 <> [] then
             error "locals cannot be declared inside a namespace block";
           aux_end_block loc (Namespace (n,p) :: cl2b clauses @ blocks)
-            [] macros types modes locals chr rest
+            [] macros types tabbrs modes locals chr rest
       | Program.Shorten (loc,full_name,short_name) :: rest ->
           let shorthand = { iloc = loc; full_name; short_name } in  
-          let p, locals1, chr1, rest = aux [] [] [] [] [] [] [] rest in
+          let p, locals1, chr1, rest = aux [] [] [] [] [] [] [] [] rest in
           if locals1 <> [] then
             error "locals cannot be declared after a shorthand";
           if chr1 <> [] then
             error "CHR cannot be declared after a shorthand";
           aux ((Shorten([shorthand],p) :: cl2b clauses @ blocks))
-            [] macros types modes locals chr rest
+            [] macros types tabbrs modes locals chr rest
 
       | Program.Accumulated (loc,a) :: rest ->
-          aux blocks clauses macros types modes locals chr
+          aux blocks clauses macros types tabbrs modes locals chr
             (Program.Begin loc :: a @ Program.End loc :: rest)
 
       | Program.Clause c :: rest ->
           let c = structure_clause_attributes c in
-          aux blocks (c::clauses) macros types modes locals chr rest
+          aux blocks (c::clauses) macros types tabbrs modes locals chr rest
       | Program.Macro m :: rest ->
-          aux blocks clauses (m::macros) types modes locals chr rest
+          aux blocks clauses (m::macros) types tabbrs modes locals chr rest
       | Program.Type t :: rest ->
           let t = structure_type_attributes t in
           let types =
             if List.mem t types then types else t :: types in
-          aux blocks clauses macros types modes locals chr rest
+          aux blocks clauses macros types tabbrs modes locals chr rest
+      | Program.TypeAbbreviation abbr :: rest ->
+          aux blocks clauses macros types (abbr :: tabbrs) modes locals chr rest
       | Program.Mode ms :: rest ->
-          aux blocks clauses macros types (ms @ modes) locals chr rest
+          aux blocks clauses macros types tabbrs (ms @ modes) locals chr rest
       | Program.Local l :: rest ->
-          aux blocks clauses macros types modes (l::locals) chr rest
+          aux blocks clauses macros types tabbrs modes (l::locals) chr rest
       | Program.Chr r :: rest ->
           let r = structure_chr_attributes r in
-          aux blocks clauses macros types modes locals (r::chr) rest
+          aux blocks clauses macros types tabbrs modes locals (r::chr) rest
 
-    and aux_end_block loc blocks clauses macros types modes locals chr rest =
+    and aux_end_block loc blocks clauses macros types tabbrs modes locals chr rest =
       match rest with
       | Program.End _ :: rest ->
-          aux blocks clauses macros types modes locals chr rest
+          aux blocks clauses macros types tabbrs modes locals chr rest
       | _ -> error ~loc "matching } is missing"
 
     in
-    let blocks, locals, chr, rest = aux [] [] [] [] [] [] [] dl in
+    let blocks, locals, chr, rest = aux [] [] [] [] [] [] [] [] dl in
     assert(rest = []);
     if chr <> [] then
       error "CHR cannot be declared outside a Constraint block";
@@ -383,9 +390,13 @@ module ToDBL : sig
   val prefix_const : string list -> C.t -> C.t
   val merge_modes : (mode * Loc.t) Map.t -> (mode * Loc.t) Map.t -> (mode * Loc.t) Map.t
   val merge_types :
-        Structured.typ list ->
-        Structured.typ list ->
-        Structured.typ list
+    Structured.typ list ->
+    Structured.typ list ->
+    Structured.typ list
+  val merge_type_abbrevs :
+    type_abbrev_declaration C.Map.t ->
+    type_abbrev_declaration C.Map.t ->
+    type_abbrev_declaration C.Map.t
 
   (* Exported to compile the query *)
   val query_preterm_of_ast :
@@ -654,11 +665,30 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
     end;
     F.Map.add n (body,loc) m
 
+  let compile_type_abbrev lcs macros state { Ast.TypeAbbreviation.name; nparams; loc; value } =
+    let taname, _ = C.funct_of_ast name in
+    let state, tavalue = preterms_of_ast loc ~depth:lcs macros state (fun ~depth state x -> state, [loc,x]) value in
+    let tavalue = assert(List.length tavalue = 1); List.hd tavalue in
+    if tavalue.Data.amap.Data.nargs != 0 then
+      error ~loc ("type abbreviation for " ^ C.show taname ^ " has unbound variables");
+    state, { Data.taname; tavalue; taparams = nparams; taloc = loc }
+
+  let add_to_index_type_abbrev m ({ Data.taname; taloc; tavalue; taparams } as x) =
+    if C.Map.mem taname m then begin
+      let { taloc = otherloc; tavalue = othervalue; taparams = otherparams } =
+        C.Map.find taname m in
+      if taparams != otherparams || othervalue.Data.term != tavalue.Data.term then
+      error ~loc:taloc
+        ("duplicate type abbreviation for " ^ C.show taname ^
+          ". Previous declaration: " ^ Loc.show otherloc)
+    end;
+    C.Map.add taname x m
+
   let compile_type lcs macros state { Ast.Type.attributes; loc; name; ty } =
     let tname, _ = C.funct_of_ast name in
     let state, ttype = preterms_of_ast loc ~depth:lcs macros state (fun ~depth state x -> state, [loc,x]) ty in
     let ttype = assert(List.length ttype = 1); List.hd ttype in
-    state, { Structured.tindex = attributes; loc; decl = { tname; ttype } }
+    state, { Structured.tindex = attributes; decl = { tname; ttype; tloc = loc } }
 
    let funct_of_ast state c =
      try
@@ -686,6 +716,9 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
 
   let merge_types t1 t2 =
     t1 @ (List.filter (fun x -> not @@ List.mem x t1) t2)
+
+  let merge_type_abbrevs m1 m2 =
+    C.Map.fold (fun _ v m -> add_to_index_type_abbrev m v) m1 m2
 
   let rec toplevel_clausify loc ~depth state t =
     let state, cl = map_acc (pi2arg loc ~depth []) state (R.split_conj ~depth t) in
@@ -721,11 +754,12 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
 
   let defs_of_modes modes =
     C.Map.fold (fun k _ -> C.Set.add k) modes C.Set.empty
-  
+
   let defs_of_types types =
     List.fold_left (fun s { Structured.decl = { tname } } ->
         C.Set.add tname s)
       C.Set.empty types
+
 
   let global_hd_symbols_of_clauses cl =
     List.fold_left (fun s { Ast.Clause.body = { term } } ->
@@ -756,26 +790,28 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
     !res
 
 
-  let run ~flags:_ state p =
+  let run ~flags:_ (state : State.t) p =
  (* FIXME: otypes omodes - NO, rewrite spilling on data.term *)
-    let rec compile_program omacros lcs state { macros; types; modes; body } =
+    let rec compile_program omacros lcs state { macros; types; type_abbrevs; modes; body } =
       check_no_overlap_macros omacros macros;
       let active_macros =
         List.fold_left compile_macro omacros macros in
+      let state, type_abbrevs = map_acc (compile_type_abbrev lcs active_macros) state type_abbrevs in
+      let type_abbrevs = List.fold_left add_to_index_type_abbrev C.Map.empty type_abbrevs in
       let state, types =
         map_acc (compile_type lcs active_macros) state types in
       let modes =
         List.fold_left (compile_mode state) C.Map.empty modes in
       let defs_m = defs_of_modes modes in
       let defs_t = defs_of_types types in
-      let lcs, state, types, modes, defs_b, body =
-        compile_body active_macros types modes lcs C.Set.empty state body in
+      let lcs, state, types, type_abbrevs, modes, defs_b, body =
+        compile_body active_macros types type_abbrevs modes lcs C.Set.empty state body in
       let symbols = C.Set.(union (union defs_m defs_t) defs_b) in
-      state, lcs, active_macros,
-      { Structured.types; modes; body; symbols }
-  
-    and compile_body macros types modes lcs defs state = function
-      | [] -> lcs, state, types, modes, defs, []
+      (state : State.t), lcs, active_macros,
+      { Structured.types; type_abbrevs; modes; body; symbols }
+
+    and compile_body macros types type_abbrevs modes lcs defs state = function
+      | [] -> lcs, state, types, type_abbrevs, modes, defs, []
       | Locals (nlist, p) :: rest ->
           let orig_varmap = get_varmap state in
           let lcs, state =
@@ -784,31 +820,32 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
               lcs+1, update_varmap state (F.Map.add name rel))
             (lcs,state) nlist in
           let state, lcs, _,
-            { Structured.types = tp; modes = mp; body; symbols }
+            { Structured.types = tp; type_abbrevs = ta; modes = mp; body; symbols }
             =
             compile_program macros lcs state p in
           let defs = C.Set.union defs symbols in
           let modes = merge_modes modes mp in
           let types = merge_types types tp in
+          let type_abbrevs = merge_type_abbrevs type_abbrevs ta in
           let state = set_varmap state orig_varmap in
-          let lcs, state, types, modes, defs, compiled_rest =
-            compile_body macros types modes lcs defs state rest in
-          lcs, state, types, modes, defs, append_body body compiled_rest
+          let lcs, state, types, type_abbrevs, modes, defs, compiled_rest =
+            compile_body macros types type_abbrevs modes lcs defs state rest in
+          lcs, state, types, type_abbrevs, modes, defs, append_body body compiled_rest
       | Clauses cl :: rest ->
           let lcs, state, compiled_cl = compile_clauses lcs state macros cl in
           let compiled_cl = List.concat compiled_cl in
           let defs =
             C.Set.union defs (global_hd_symbols_of_clauses compiled_cl) in
           let compiled_cl = [Structured.Clauses compiled_cl] in
-          let lcs, state, types, modes, defs, compiled_rest =
-            compile_body macros types modes lcs defs state rest in
-          lcs, state, types, modes, defs, append_body compiled_cl compiled_rest
+          let lcs, state, types, type_abbrevs, modes, defs, compiled_rest =
+            compile_body macros types type_abbrevs modes lcs defs state rest in
+          lcs, state, types, type_abbrevs, modes, defs, append_body compiled_cl compiled_rest
       | Namespace (prefix, p) :: rest ->
           let prefix = F.show prefix in
           let state, lcs, _, p = compile_program macros lcs state p in
-          let lcs, state, types, modes, defs, compiled_rest =
-            compile_body macros types modes lcs defs state rest in
-          lcs, state, types, modes,
+          let lcs, state, types, type_abbrevs, modes, defs, compiled_rest =
+            compile_body macros types type_abbrevs modes lcs defs state rest in
+          lcs, state, types, type_abbrevs, modes,
           C.Set.union defs (prepend prefix p.Structured.symbols),
           Structured.Namespace(prefix, p) :: compiled_rest
       | Shorten(shorthands,p) :: rest ->
@@ -816,9 +853,9 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
           let shorts = List.fold_left (fun s { short_name } ->
             C.Set.add short_name s) C.Set.empty shorthands in
           let state, lcs, _, p = compile_program macros lcs state p in
-          let lcs, state, types, modes, defs, compiled_rest =
-            compile_body macros types modes lcs defs state rest in
-          lcs, state, types, modes,
+          let lcs, state, types, type_abbrevs, modes, defs, compiled_rest =
+            compile_body macros types type_abbrevs modes lcs defs state rest in
+          lcs, state, types, type_abbrevs, modes,
           C.Set.union defs (C.Set.diff p.Structured.symbols shorts),
           Structured.Shorten(shorthands, p) :: compiled_rest
       | Constraints (clique, rules, p) :: rest ->
@@ -827,9 +864,9 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
           let state, rules =
             map_acc (prechr_rule_of_ast lcs macros) state rules in
           let state, lcs, _, p = compile_program macros lcs state p in
-          let lcs, state, types, modes, defs, compiled_rest =
-            compile_body macros types modes lcs defs state rest in
-          lcs, state, types, modes,
+          let lcs, state, types, type_abbrevs, modes, defs, compiled_rest =
+            compile_body macros types type_abbrevs modes lcs defs state rest in
+          lcs, state, types, type_abbrevs, modes,
           C.Set.union defs p.Structured.symbols,
           Structured.Constraints(clique, rules,p) :: compiled_rest
     in
@@ -903,11 +940,11 @@ end = struct (* {{{ *)
     in
       aux t
 
-  let smart_map_type f ({ Structured.loc; tindex; decl = { tname; ttype }} as tdecl) =
+  let smart_map_type f ({ Structured.tindex; decl = { tname; ttype; tloc }} as tdecl) =
     let tname1 = f tname in
     let ttype1 = smart_map_term f ttype.term in
     if tname1 == tname && ttype1 == ttype.term then tdecl
-    else { Structured.loc; tindex; decl = { tname = tname1; ttype = { term = ttype1; amap = ttype.amap; loc = ttype.loc } } }
+    else { Structured.tindex; decl = { tname = tname1; tloc; ttype = { term = ttype1; amap = ttype.amap; loc = ttype.loc } } }
 
 
   let map_sequent f { peigen; pcontext; pconclusion } =
@@ -938,9 +975,19 @@ end = struct (* {{{ *)
 
   let apply_subst_list f = apply_subst (fun x -> smart_map (f x))
 
+  let tabbrevs_map f m =
+    C.Map.fold (fun _ { Data.taname; tavalue; taparams; taloc } m ->
+      (* TODO: check for collisions *)
+      let taname = f taname in
+      let tavalue = smart_map_preterm ~on_type:true f tavalue in
+      C.Map.add taname { taname; tavalue; taparams; taloc } m
+      ) m C.Map.empty
+
   let apply_subst_constant = apply_subst (fun f x -> f x)
 
   let apply_subst_types = apply_subst_list smart_map_type
+
+  let apply_subst_type_abbrevs = apply_subst tabbrevs_map
 
   let apply_subst_modes =
     apply_subst (fun f modes ->
@@ -949,7 +996,7 @@ end = struct (* {{{ *)
   let apply_subst_chr = apply_subst_list map_chr
 
   let apply_subst_clauses = apply_subst_list map_clause
-    
+
   let push_subst extra_prefix symbols_affected (oldprefix, oldsubst) =
     let newprefix = oldprefix @ [extra_prefix] in
     let newsubst c =
@@ -964,46 +1011,50 @@ end = struct (* {{{ *)
     in
     oldprefix, List.fold_left push1 oldsubst shorthands
 
-  let rec compile_body lcs types modes clauses chr subst state bl =
+  let rec compile_body lcs types type_abbrevs modes clauses chr subst state bl =
     match bl with
-    | [] -> types, modes, clauses, chr
-    | Shorten(shorthands, { types = t; modes = m; body; symbols }) :: rest ->
+    | [] -> types, type_abbrevs, modes, clauses, chr
+    | Shorten(shorthands, { types = t; type_abbrevs = ta; modes = m; body; symbols }) :: rest ->
         let insubst = push_subst_shorthands shorthands symbols subst in
         let types = ToDBL.merge_types (apply_subst_types insubst t) types in
+        let type_abbrevs = ToDBL.merge_type_abbrevs (apply_subst_type_abbrevs insubst ta) type_abbrevs in
         let modes = ToDBL.merge_modes (apply_subst_modes insubst m) modes in
-        let types, modes, clauses, chr =
-          compile_body lcs types modes clauses chr insubst state body in
-        compile_body lcs types modes clauses chr subst state rest
-    | Namespace (extra, { types = t; modes = m; body; symbols }) :: rest ->
+        let types, type_abbrevs, modes, clauses, chr =
+          compile_body lcs types type_abbrevs modes clauses chr insubst state body in
+        compile_body lcs types type_abbrevs modes clauses chr subst state rest
+    | Namespace (extra, { types = t; type_abbrevs = ta; modes = m; body; symbols }) :: rest ->
         let insubst = push_subst extra symbols subst in
         let types = ToDBL.merge_types (apply_subst_types insubst t) types in
+        let type_abbrevs = ToDBL.merge_type_abbrevs (apply_subst_type_abbrevs insubst ta) type_abbrevs in
         let modes = ToDBL.merge_modes (apply_subst_modes insubst m) modes in
-        let types, modes, clauses, chr =
-          compile_body lcs types modes clauses chr insubst state body in
-        compile_body lcs types modes clauses chr subst state rest
+        let types, type_abbrevs, modes, clauses, chr =
+          compile_body lcs types type_abbrevs modes clauses chr insubst state body in
+        compile_body lcs types type_abbrevs modes clauses chr subst state rest
     | Clauses cl :: rest ->
         let cl = apply_subst_clauses subst cl in
         let clauses = clauses @ cl in
-        compile_body lcs types modes clauses chr subst state rest
-    | Constraints (clique, rules, { types = t; modes = m; body }) :: rest ->
+        compile_body lcs types type_abbrevs modes clauses chr subst state rest
+    | Constraints (clique, rules, { types = t; type_abbrevs = ta; modes = m; body }) :: rest ->
         let types = ToDBL.merge_types t types in
+        let type_abbrevs = ToDBL.merge_type_abbrevs ta type_abbrevs in
         let modes = ToDBL.merge_modes m modes in
         let clique = List.map (apply_subst_constant subst) clique in
         let rules = apply_subst_chr subst rules in
         let chr = (clique, rules) :: chr in
-        let types, modes, clauses, chr =
-          compile_body lcs types modes clauses chr subst state body in
-        compile_body lcs types modes clauses chr subst state rest
+        let types, type_abbrevs, modes, clauses, chr =
+          compile_body lcs types type_abbrevs modes clauses chr subst state body in
+        compile_body lcs types type_abbrevs modes clauses chr subst state rest
 
   let run ~flags:_ state
     { Structured.local_names;
-      pbody = { types; modes; body; symbols = _ };
+      pbody = { types; type_abbrevs; modes; body; symbols = _ };
       toplevel_macros;
     }
   =
-    let types, modes, clauses, chr =
-      compile_body local_names types modes [] [] ([],fun x -> x) state body in
+    let types, type_abbrevs, modes, clauses, chr =
+      compile_body local_names types type_abbrevs modes [] [] ([],fun x -> x) state body in
     { Flat.types;
+      type_abbrevs;
       modes;
       clauses;
       chr = List.rev chr;
@@ -1306,11 +1357,11 @@ end = struct (* {{{ *)
   let run ~flags:_ pl =
     if List.length pl <> 1 then
       error "Only 1 program assembly is supported";
-    let { Flat.clauses; types; modes; chr; local_names; toplevel_macros } =
+    let { Flat.clauses; types; type_abbrevs; modes; chr; local_names; toplevel_macros } =
       List.hd pl in
     let clauses = sort_insertion clauses in
     let modes = C.Map.map fst modes in
-    { Assembled.clauses; types; modes; chr; local_names; toplevel_macros }
+    { Assembled.clauses; types; type_abbrevs; modes; chr; local_names; toplevel_macros }
 
 end (* }}} *)
 
@@ -1371,21 +1422,21 @@ let is_builtin tname =
 let check_all_builtin_are_typed types =
    List.iter (fun c ->
      if not (List.exists
-        (fun { Structured.tindex; loc; decl = { tname }} ->
+        (fun { Structured.tindex; decl = { tname }} ->
             tindex = StructuredAST.External && tname == c) types) then
        error ("Built-in without external type declaration: " ^ C.show c))
    (BuiltInPredicate.all ());
-  List.iter (fun { Structured.tindex; loc; decl = { tname }} ->
+  List.iter (fun { Structured.tindex; decl = { tname; tloc }} ->
     if tindex = StructuredAST.External && not (is_builtin tname) then
-      error ~loc ("external type declaration without Built-in: " ^
+      error ~loc:tloc ("external type declaration without Built-in: " ^
             C.show tname))
   types
 ;;
 
 let check_no_regular_types_for_builtins types =
-  List.iter (fun {Structured.tindex; loc; decl = { tname } } ->
+  List.iter (fun {Structured.tindex; decl = { tname; tloc } } ->
     if tindex <> StructuredAST.External && is_builtin tname then
-      error ~loc ("type declaration for Built-in " ^
+      error ~loc:tloc ("type declaration for Built-in " ^
             C.show tname ^ " must be flagged as external");
  ) types
 
@@ -1409,7 +1460,7 @@ let stack_term_of_preterm ~depth:arg_lvl { term = t; amap = { c2i } } =
     | Builtin(c, args) as x ->
         let args1 = smart_map stack_term_of_preterm args in
         if args1 == args then x else Builtin(c, args1)
-    | UVar _ | AppUVar _ | Arg _ | AppArg _ -> assert false
+    | UVar _ | AppUVar _ | Arg _ | AppArg _ -> anomaly "preterm containing a variable"
     | Nil as x -> x
     | Discard as x -> x
     | Cons(hd, tl) as x ->
@@ -1434,6 +1485,7 @@ let query_of_ast { Compiled.assembled_program; compiler_state; compiler_flags } 
 =
   let initial_depth = assembled_program.Assembled.local_names in
   let types = assembled_program.Assembled.types in
+  let type_abbrevs = assembled_program.Assembled.type_abbrevs in 
   let modes = assembled_program.Assembled.modes in
   let active_macros = assembled_program.Assembled.toplevel_macros in
   let state, query =
@@ -1447,6 +1499,7 @@ let query_of_ast { Compiled.assembled_program; compiler_state; compiler_flags } 
   {
     WithMain.types;
     modes;
+    type_abbrevs;
     clauses = assembled_program.Assembled.clauses;
     chr = assembled_program.Assembled.chr;
     initial_depth;
@@ -1461,6 +1514,7 @@ let query_of_ast { Compiled.assembled_program; compiler_state; compiler_flags } 
 let query_of_term { Compiled.assembled_program; compiler_state; compiler_flags } f =
   let initial_depth = assembled_program.Assembled.local_names in
   let types = assembled_program.Assembled.types in
+  let type_abbrevs = assembled_program.Assembled.type_abbrevs in
   let modes = assembled_program.Assembled.modes in
   let active_macros = assembled_program.Assembled.toplevel_macros in
   let state, query =
@@ -1474,6 +1528,7 @@ let query_of_term { Compiled.assembled_program; compiler_state; compiler_flags }
   let assignments = StrMap.map (fun i -> query_env.(i)) query.amap.n2i in
  {
     WithMain.types;
+    type_abbrevs;
     modes;
     clauses = assembled_program.Assembled.clauses;
     chr = assembled_program.Assembled.chr;
@@ -1690,12 +1745,6 @@ let quote_preterm ?(on_type=false) { term; amap } =
   let mkQApp = mkQApp ~on_type in
   let mkQCon = mkQCon ~on_type ~amap in
   let rec aux depth term = match term with
-    | Const n when on_type && C.show n = "string" -> 
-        App(C.ctypec, Data.C.of_string "string",[])
-    | Const n when on_type && C.show n = "int" ->
-        App(C.ctypec, Data.C.of_string "int",[])
-    | Const n when on_type && C.show n = "float" ->
-        App(C.ctypec, Data.C.of_string "float",[])
     | App(c,CData s,[])
       when on_type && c == C.ctypec && Data.C.is_string s -> term
     | App(c,s,[t]) when on_type && c == C.arrowc ->
@@ -1771,17 +1820,58 @@ let default_checker () =
          ~print_accumulated_files:false ["elpi-checker.elpi"]
   with Parser.ParseError(loc,err) -> error ~loc err
 
+let unfold_type_abbrevs lcs type_abbrevs { Data.term; loc; amap } =
+  let find_opt c =
+    try Some (C.Map.find c type_abbrevs) with Not_found -> None in
+  let rec aux seen = function
+    | Const c as x ->
+        begin match find_opt c with
+        | Some { Data.tavalue; taparams } ->
+          if taparams > 0 then
+            error ~loc ("type abbreviation " ^ C.show c ^ " needs " ^
+              string_of_int taparams ^ " arguments");
+          if C.Set.mem c seen then
+            error ~loc
+              ("looping while unfolding type abbreviation for "^ C.show c);
+          aux (C.Set.add c seen) tavalue.Data.term
+        | None -> x
+        end
+    | App(c,t,ts) as x ->
+        begin match find_opt c with
+        | Some { Data.tavalue; taparams } ->
+          let nargs = 1 + List.length ts in
+          if taparams > nargs then
+            error ~loc ("type abbreviation " ^ C.show c ^ " needs " ^
+              string_of_int taparams ^ " arguments, only " ^
+              string_of_int nargs ^ " are provided");
+          if C.Set.mem c seen then
+            error ~loc
+              ("looping while unfolding type abbreviation for "^ C.show c);
+          aux (C.Set.add c seen) (R.deref_appuv ~from:lcs ~to_:lcs (t::ts) tavalue.Data.term)
+        | None ->
+          let t1 = aux seen t in
+          let ts1 = smart_map (aux seen) ts in
+          if t1 == t && ts1 == ts then x
+          else App(c,t1,ts1)
+        end
+    | x -> x
+  in
+    { Data.term = aux C.Set.empty term; loc; amap }
+
 let static_check header
   ?(exec=R.execute_once ~delay_outside_fragment:false) ?(checker=default_checker ()) ?(flags=default_flags)
-  ({ WithMain.types } as q)
+  ({ WithMain.types; type_abbrevs; initial_depth } as q)
 =
   let p,q = quote_syntax q in
   let tlist = R.list_to_lp_list (List.map
     (fun { Structured.decl = { tname; ttype } } ->
       App(C.from_stringc "`:",mkQCon ~on_type:false tname,
-        [close_w_binder forallc (quote_preterm ~on_type:true ttype)
+        [close_w_binder forallc
+          (quote_preterm ~on_type:true
+            (unfold_type_abbrevs initial_depth type_abbrevs ttype))
           ttype.amap]))
     types) in
+    (* TODO: quote type abbreviations *)
   let checker =
     program_of_ast
       ~flags:{ flags with allow_untyped_builtin = true }

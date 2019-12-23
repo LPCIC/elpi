@@ -1,0 +1,4 @@
+typeabbrev x (option A).
+pred f i:x.
+f _.
+main :- f (some 3).

@@ -40,3 +40,31 @@ let () = declare "uminus"
   ~source_elpi:"uminus.elpi"
   ~description:"parsing and evaluation of unary minus"
   ()
+
+let () = declare "typeabbrv1"
+  ~source_elpi:"typeabbrv1.elpi"
+  ~description:"type abbreviations"
+  ()
+let () = declare "typeabbrv2"
+  ~source_elpi:"typeabbrv2.elpi"
+  ~expectation:Failure
+  ~description:"type abbreviations"
+  ()
+let () = declare "typeabbrv3"
+  ~source_elpi:"typeabbrv3.elpi"
+  ~description:"type abbreviations"
+  ()
+let () = declare "typeabbrv4"
+  ~source_elpi:"typeabbrv4.elpi"
+  ~description:"type abbreviations"
+  ()
+let () = declare "typeabbrv5"
+  ~source_elpi:"typeabbrv5.elpi"
+  ~expectation:Failure
+  ~description:"type abbreviations"
+  ()
+let () = declare "typeabbrv6"
+  ~source_elpi:"typeabbrv6.elpi"
+  ~expectation:Failure
+  ~description:"type abbreviations"
+  ()

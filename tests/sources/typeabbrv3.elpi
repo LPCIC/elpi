@@ -1,0 +1,6 @@
+typeabbrev (t1 X Y) (pair Y X).
+
+pred f i:t1 bool int.
+f _.
+
+main :- f (pr 2 tt).

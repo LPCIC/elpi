@@ -1,0 +1,8 @@
+typeabbrev t1 int.
+
+pred f i:t1.
+f _.
+
+typeabbrev t1 int.
+
+main :- f 3.

@@ -711,7 +711,14 @@ EXTEND
          List.map (fun n ->
            Program.Type { Type.loc=of_ploc loc; attributes=[]; name=Func.from_string n; ty=t })
          names
-     | TYPEABBREV; abbrform; TYPE; FULLSTOP -> []
+     | TYPEABBREV; a = abbrform; t = type_; FULLSTOP -> [
+         let name, args = a in
+         let nparams = List.length args in
+         let value = List.fold_right mkLam args t in
+         TypeAbbreviation { TypeAbbreviation.name = name;
+                            nparams = nparams; value = value;
+                            loc = of_ploc loc }
+       ]
      | fix = FIXITY; syms = LIST1 const_sym SEP SYMBOL ","; prec = INTEGER; FULLSTOP ->
          List.iter (fun sym ->
            gram_extend (of_ploc loc) {
@@ -739,9 +746,8 @@ EXTEND
               | LPAREN; t = type_; RPAREN -> t ]
      ];
   abbrform:
-    [[ CONSTANT -> ()
-     | LPAREN; CONSTANT; LIST1 CONSTANT; RPAREN -> ()
-     | LPAREN; abbrform; RPAREN -> ()
+    [[ c = const_sym -> Func.from_string c, []
+     | LPAREN; hd = const_sym; args = LIST1 CONSTANT; RPAREN -> Func.from_string hd, args
     ]];
   goal:
     [[ OPT pragma; p = premise; OPT FULLSTOP -> of_ploc loc, p ]];
