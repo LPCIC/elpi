@@ -2633,8 +2633,7 @@ let mk_out_assign ~depth embed bname state input v  output =
   | Some t, BuiltInPredicate.Keep ->
      let state, t, extra = embed ~depth state t in
      state, extra @ [App(C.eqc, v, [t])]
-  | None, BuiltInPredicate.Keep ->
-      anomaly ("ffi: " ^ bname ^ ": some output was requested but not produced")
+  | None, BuiltInPredicate.Keep -> state, []
 
 let mk_inout_assign ~depth embed bname state input v  output =
   match output, input with
@@ -2643,8 +2642,7 @@ let mk_inout_assign ~depth embed bname state input v  output =
   | Some t, BuiltInPredicate.Data _ ->
      let state, t, extra = embed ~depth state t in
      state, extra @ [App(C.eqc, v, [t])]
-  | None, BuiltInPredicate.Data _ ->
-      anomaly ("ffi: " ^ bname ^ ": some output was requested but not produced")
+  | None, BuiltInPredicate.Data _ -> state, []
 
 let in_of_termC ~depth readback n bname hyps constraints state t =
   wrap_type_err bname n (readback ~depth hyps constraints state) t
@@ -2664,8 +2662,7 @@ let mk_out_assignC ~depth embed bname hyps constraints state input v  output =
   | Some t, BuiltInPredicate.Keep ->
      let state, t, extra = embed ~depth hyps constraints state t in
      state, extra @ [App(C.eqc, v, [t])]
-  | None, BuiltInPredicate.Keep ->
-      anomaly ("ffi: " ^ bname ^ ": some output was requested but not produced")
+  | None, BuiltInPredicate.Keep -> state, []
 
 let mk_inout_assignC ~depth embed bname hyps constraints state input v  output =
   match output, input with
@@ -2674,8 +2671,7 @@ let mk_inout_assignC ~depth embed bname hyps constraints state input v  output =
   | Some t, BuiltInPredicate.Data _ ->
      let state, t, extra = embed ~depth hyps constraints state t in
      state, extra @ [App(C.eqc, v, [t])]
-  | None, BuiltInPredicate.Data _ ->
-      anomaly ("ffi: " ^ bname ^ ": some output was requested but not produced")
+  | None, BuiltInPredicate.Data _ -> state, []
 
 let map_acc f s l =
    let rec aux acc extra s = function
