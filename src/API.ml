@@ -659,6 +659,40 @@ module BuiltInPredicate = struct
   include ED.BuiltInPredicate
   exception No_clause = ED.No_clause
 
+  let mkData x = Data x
+
+  let ioargC a = let open ContextualConversion in { a with
+    pp = (fun fmt -> function Data x -> a.pp fmt x | NoData -> Format.fprintf fmt "_");
+    embed = (fun ~depth hyps csts state -> function
+             | Data x -> a.embed ~depth hyps csts state x
+             | NoData -> assert false);
+    readback = (fun ~depth hyps csts state t ->
+             let module R = (val !r) in let open R in
+             match R.deref_head ~depth t with
+             | ED.Term.Arg _ | ED.Term.AppArg _ -> assert false
+             | ED.Term.UVar _ | ED.Term.AppUVar _
+             | ED.Term.Discard -> state, NoData, []
+             | _ -> let state, x, gls = a.readback ~depth hyps csts state t in
+                    state, mkData x, gls);
+  }
+  let ioarg a =
+    let open ContextualConversion in
+    !< (ioargC (!> a))
+
+  let ioarg_any = let open Conversion in { BuiltInData.any with
+    pp = (fun fmt -> function
+             | Data x -> BuiltInData.any.pp fmt x
+             | NoData -> Format.fprintf fmt "_");
+    embed = (fun ~depth state -> function
+             | Data x -> state, x, []
+             | NoData -> assert false);
+    readback = (fun ~depth state t ->
+             let module R = (val !r) in
+             match R.deref_head ~depth t with
+             | ED.Term.Discard -> state, NoData, []
+             | _ -> state, Data t, []);
+  }
+
   module Notation = struct
 
     let (!:) x = (), Some x

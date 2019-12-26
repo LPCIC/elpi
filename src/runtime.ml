@@ -2619,12 +2619,7 @@ let in_of_term ~depth readback n bname state t =
   wrap_type_err bname n (readback ~depth state) t
 
 let inout_of_term ~depth readback n bname state t =
-  match deref_head ~depth t with
-  | Discard -> state, BuiltInPredicate.NoData, []
-  | _ ->
-     wrap_type_err bname n (fun () ->
-       let state, t, gls = readback ~depth state t in
-       state, BuiltInPredicate.Data t, gls) ()
+  wrap_type_err bname n (readback ~depth state) t
 
 let mk_out_assign ~depth embed bname state input v  output =
   match output, input with
@@ -2636,24 +2631,16 @@ let mk_out_assign ~depth embed bname state input v  output =
   | None, BuiltInPredicate.Keep -> state, []
 
 let mk_inout_assign ~depth embed bname state input v  output =
-  match output, input with
-  | None, BuiltInPredicate.NoData -> state, []
-  | Some _, BuiltInPredicate.NoData -> state, [] (* We could warn that such output was generated without being required *)
-  | Some t, BuiltInPredicate.Data _ ->
-     let state, t, extra = embed ~depth state t in
+  match output with
+  | None -> state, []
+  | Some t ->
+     let state, t, extra = embed ~depth state (BuiltInPredicate.Data t) in
      state, extra @ [App(C.eqc, v, [t])]
-  | None, BuiltInPredicate.Data _ -> state, []
 
 let in_of_termC ~depth readback n bname hyps constraints state t =
   wrap_type_err bname n (readback ~depth hyps constraints state) t
 
-let inout_of_termC ~depth readback n bname hyps constraints state t =
-  match deref_head ~depth t with
-  | Discard -> state, BuiltInPredicate.NoData, []
-  | _ ->
-     wrap_type_err bname n (fun () ->
-       let state, t, gls = readback ~depth hyps constraints state t in
-       state, BuiltInPredicate.Data t, gls) ()
+let inout_of_termC  = in_of_termC
 
 let mk_out_assignC ~depth embed bname hyps constraints state input v  output =
   match output, input with
@@ -2665,13 +2652,11 @@ let mk_out_assignC ~depth embed bname hyps constraints state input v  output =
   | None, BuiltInPredicate.Keep -> state, []
 
 let mk_inout_assignC ~depth embed bname hyps constraints state input v  output =
-  match output, input with
-  | None, BuiltInPredicate.NoData -> state, []
-  | Some _, BuiltInPredicate.NoData -> state, [] (* We could warn that such output was generated without being required *)
-  | Some t, BuiltInPredicate.Data _ ->
-     let state, t, extra = embed ~depth hyps constraints state t in
+  match output with
+  | Some t ->
+     let state, t, extra = embed ~depth hyps constraints state (Data.BuiltInPredicate.Data t) in
      state, extra @ [App(C.eqc, v, [t])]
-  | None, BuiltInPredicate.Data _ -> state, []
+  | None -> state, []
 
 let map_acc f s l =
    let rec aux acc extra s = function

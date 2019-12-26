@@ -482,18 +482,18 @@ module BuiltInPredicate : sig
   type doc = string
 
   type 'a oarg = Keep | Discard
-  type 'a ioarg = Data of 'a | NoData
+  type 'a ioarg = private Data of 'a | NoData
 
   type ('function_type, 'inernal_outtype_in, 'internal_hyps, 'internal_constraints) ffi =
     (* Arguemnts that are translated independently of the program context *)
     | In    : 't Conversion.t * doc * ('i, 'o,'h,'c) ffi -> ('t -> 'i,'o,'h,'c) ffi
     | Out   : 't Conversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t oarg -> 'i,'o,'h,'c) ffi
-    | InOut : 't Conversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t ioarg -> 'i,'o,'h,'c) ffi
+    | InOut : 't ioarg Conversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t ioarg -> 'i,'o,'h,'c) ffi
 
     (* Arguemnts that are translated looking at the program context *)
     | CIn    : ('t,'h,'c) ContextualConversion.t * doc * ('i, 'o,'h,'c) ffi -> ('t -> 'i,'o,'h,'c) ffi
     | COut   : ('t,'h,'c) ContextualConversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t oarg -> 'i,'o,'h,'c) ffi
-    | CInOut : ('t,'h,'c) ContextualConversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t ioarg -> 'i,'o,'h,'c) ffi
+    | CInOut : ('t ioarg,'h,'c) ContextualConversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t ioarg -> 'i,'o,'h,'c) ffi
 
     (* The easy case: all arguments are context independent *)
     | Easy : doc -> (depth:int -> 'o, 'o, unit, unit) ffi
@@ -504,7 +504,7 @@ module BuiltInPredicate : sig
     | Full : ('h,'c) ContextualConversion.ctx_readback * doc -> (depth:int -> 'h -> 'c -> Data.state -> Data.state * 'o * Conversion.extra_goals, 'o,'h,'c) ffi
     | VariadicIn    : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * 'o, 'o,'h,'c) ffi
     | VariadicOut   : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t oarg list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * ('o * 't option list option), 'o,'h,'c) ffi
-    | VariadicInOut : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t ioarg list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * ('o * 't option list option), 'o,'h,'c) ffi
+    | VariadicInOut : ('h,'c) ContextualConversion.ctx_readback * ('t ioarg,'h,'c) ContextualConversion.t * doc -> ('t ioarg list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * ('o * 't option list option), 'o,'h,'c) ffi
 
   type t = Pred : name * ('a,unit,'h,'c) ffi * 'a -> t
 
@@ -527,6 +527,11 @@ module BuiltInPredicate : sig
     val (+!) : 'a -> 'b -> 'a * 'b option
 
   end
+
+  val mkData : 'a -> 'a ioarg
+  val ioargC : ('t,'h,'c) ContextualConversion.t -> ('t ioarg,'h,'c) ContextualConversion.t
+  val ioarg : 't Conversion.t -> 't ioarg Conversion.t
+  val ioarg_any : Data.term ioarg Conversion.t
 
 end
 

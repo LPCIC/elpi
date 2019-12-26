@@ -903,14 +903,14 @@ X == Y :- same_term X Y.
   DocAbove);
 
   MLCode(Pred("name",
-    InOut(any, "T",
-    VariadicInOut(unit_ctx, !> any,"checks if T is a eigenvariable. When used with tree arguments it relates an applied name with its head and argument list.")),
+    InOut(ioarg_any, "T",
+    VariadicInOut(unit_ctx, !> (ioarg any),"checks if T is a eigenvariable. When used with tree arguments it relates an applied name with its head and argument list.")),
   (name_or_constant "name" (fun x -> x >= 0))),
   DocAbove);
 
   MLCode(Pred("constant",
-    InOut(any, "T",
-    VariadicInOut(unit_ctx, !> any,"checks if T is a (global) constant.  When used with tree arguments it relates an applied constant with its head and argument list.")),
+    InOut(ioarg_any, "T",
+    VariadicInOut(unit_ctx, !> (ioarg any),"checks if T is a (global) constant.  When used with tree arguments it relates an applied constant with its head and argument list.")),
   (name_or_constant "constant" (fun x -> x < 0))),
   DocAbove);
 
