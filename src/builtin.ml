@@ -234,6 +234,30 @@ let option a = let open AlgebraicData in declare {
   ]
 } |> ContextualConversion.(!<)
 
+type diagnostic = OK | ERROR of string ioarg
+let mkOK = OK
+let mkERROR s = ERROR (mkData s)
+
+let diagnostic = let open API.AlgebraicData in declare {
+  ty = TyName "diagnostic";
+  doc = "Used in builtin variants that return Coq's error rather than failing";
+  pp = (fun fmt -> function
+    | OK -> Format.fprintf fmt "OK"
+    | ERROR NoData -> Format.fprintf fmt "ERROR _"
+    | ERROR (Data s) -> Format.fprintf fmt "ERROR %S" s);
+  constructors = [
+    K("ok","Success",N,
+      B mkOK,
+      M (fun ~ok ~ko -> function OK -> ok | _ -> ko ()));
+    K("error","Failure",A(BuiltInPredicate.ioarg BuiltInData.string,N),
+      B (fun s -> ERROR s),
+      M (fun ~ok ~ko -> function ERROR s -> ok s | _ -> ko ()));
+    K("uvar","",A(FlexibleData.uvar,N),
+      B (fun _ -> assert false),
+      M (fun ~ok ~ko _ -> ko ()))
+  ]
+} |> ContextualConversion.(!<)
+
 let cmp = let open AlgebraicData in declare {
   ty = TyName "cmp";
   doc = "Result of a comparison";
@@ -470,6 +494,8 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   MLData (option (BuiltInData.poly "A"));
 
   MLData cmp;
+
+  MLData diagnostic;
 
   ]
 ;;

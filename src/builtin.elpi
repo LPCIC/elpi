@@ -170,6 +170,11 @@ type eq cmp.
 type lt cmp.
 type gt cmp.
 
+% Used in builtin variants that return Coq's error rather than failing
+kind diagnostic type.
+type ok diagnostic. % Success
+type error string -> diagnostic. % Failure
+
 %  == I/O builtins =====================================
 
 %  -- I/O --
@@ -411,6 +416,12 @@ ignore-failure! _.
 pred assert! i:prop, i:string.
 assert! Cond Msg :- (Cond ; fatal-error-w-data Msg Cond), !.
 
+% [assert-ok! C M] like assert! but the last argument of the predicate must
+% be a diagnostic that is printed after M in case it is not ok
+pred assert-ok! i:(diagnostic -> prop), i:string.
+assert-ok! Cond Msg :- Cond Diagnostic, !, (Diagnostic = ok ; Diagnostic = error S, fatal-error-w-data Msg S), !.
+assert-ok! _ Msg :- fatal-error-w-data Msg "no diagnostic returned".
+
 % [spy P] traces the call to P, printing all success and the final failure
 pred spy i:prop.
 spy P :- counter "run" NR, if (not(NR = 0)) (debug-print "run=" NR) true,
@@ -547,6 +558,10 @@ pred forall i:list A, i:(A -> prop).
 forall [] _.
 forall [X|L] P :- P X, forall L P.
 
+pred forall-ok i:list A, i:(A -> diagnostic -> prop), o:diagnostic.
+forall-ok [X|L] P S :- P X S0, if (S0 = ok) (forall-ok L P S) (S = S0).
+forall-ok [] _ ok.
+
 pred forall2 i:list A, i:list B, i:(A -> B -> prop).
 forall2 [] [_|_] _ :- fatal-error "forall2 on lists of different length".
 forall2 [_|_] [] _ :- fatal-error "forall2 on lists of different length".
@@ -591,8 +606,21 @@ pred do! i:list prop.
 do! [].
 do! [P|PS] :- P, !, do! PS.
 
+:index(_ 1)
+pred do-ok! o:diagnostic, i:list (diagnostic -> prop).
+do-ok! ok [].
+do-ok! S [P|PS] :- P S0, !, if (S0 = ok) (do-ok! S PS) (S = S0).
+
+pred lift-ok i:prop, i:string, o:diagnostic.
+lift-ok P Msg R :- (P, R = ok; R = error Msg).
+
 pred spy-do! i:list prop.
 spy-do! L :- map L (x\y\y = spy x) L1, do! L1.
+
+pred while-ok-do! i:diagnostic, i:list (diagnostic -> prop), o:diagnostic.
+while-ok-do! (error _ as E) _ E.
+while-ok-do! ok [] ok.
+while-ok-do! ok [P|PS] R :- P C, !, while-ok-do! C PS R.
 
 pred any->string i:A, o:string.
 any->string X Y :- term_to_string X Y.
