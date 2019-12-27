@@ -40,7 +40,7 @@ module Setup : sig
 
   (** Initialize ELPI.
       [init] must be called before invoking the parser.
-      [builtins] the set of built-in predicates, eg [Elpi_builtin.std_builtins] 
+      [builtins] the set of built-in predicates, eg [Elpi_builtin.std_builtins]
       [basedir] current working directory (used to make paths absolute);
       [argv] is list of options, see the {!val:usage} string;
       It returns part of [argv] not relevant to ELPI and a [program_header]
@@ -84,7 +84,7 @@ module Parse : sig
 end
 
 module Data : sig
-  
+
   module StrMap : sig
    include Map.S with type key = string
    val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
@@ -179,7 +179,7 @@ module Execute : sig
     [pp] is called on all solutions.
     [more] is called to know if another solution has to be searched for. *)
   val loop :
-    ?delay_outside_fragment:bool -> 
+    ?delay_outside_fragment:bool ->
     'a Compile.executable ->
     more:(unit -> bool) -> pp:(float -> 'a outcome -> unit) -> unit
 end
@@ -217,7 +217,7 @@ module Conversion : sig
   type 'a embedding =
     depth:int ->
     Data.state -> 'a -> Data.state * Data.term * extra_goals
-    
+
   type 'a readback =
     depth:int ->
     Data.state -> Data.term -> Data.state * 'a * extra_goals
@@ -244,7 +244,7 @@ module ContextualConversion : sig
   type ('a,'hyps,'constraints) embedding =
     depth:int -> 'hyps -> 'constraints ->
     Data.state -> 'a -> Data.state * Data.term * Conversion.extra_goals
-    
+
   type ('a,'hyps,'constraints) readback =
     depth:int -> 'hyps -> 'constraints ->
     Data.state -> Data.term -> Data.state * 'a * Conversion.extra_goals
@@ -320,7 +320,7 @@ module OpaqueData : sig
     hconsed : bool;
     constants : (name * 'a) list; (* global constants of that type, eg "std_in" *)
   }
-   
+
   val declare : 'a declaration -> 'a Conversion.t
 
 end
@@ -350,10 +350,10 @@ end
    }
 
    ]}
-        
+
     [K] stands for "constructor", [B] for "build", [M] for "match".
-    Variants [BS] and [MS] give read/write access to the state. 
-    
+    Variants [BS] and [MS] give read/write access to the state.
+
 *)
 module AlgebraicData : sig
 
@@ -394,15 +394,13 @@ module AlgebraicData : sig
       `S args` above is a shortcut for `C(fun x -> x, args)` *)
     | C : (('self,'hyps,'constraints) ContextualConversion.t -> ('a,'hyps,'constraints) ContextualConversion.t) * ('bs,'b,'ms,'m,'self, 'hyps,'constraints) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms,'a -> 'm, 'self, 'hyps,'constraints) constructor_arguments
 
-
-
   type ('t,'h,'c) constructor =
     K : name * doc *
         ('build_stateful_t,'build_t,'match_stateful_t,'match_t,'t,'h,'c) constructor_arguments *   (* args ty *)
         ('build_stateful_t,'build_t) build_t *
         ('match_stateful_t,'match_t,'t) match_t
       -> ('t,'h,'c) constructor
-      
+
   type ('t,'h,'c) declaration = {
     ty : Conversion.ty_ast;
     doc : doc;
@@ -508,6 +506,39 @@ module BuiltInPredicate : sig
 
   type t = Pred : name * ('a,unit,'h,'c) ffi * 'a -> t
 
+  (** Tools for InOut arguments.
+   *
+   *  InOut arguments need to be equipped with an 'a ioarg Conversion.t.
+   *  The ioarg adaptor here maps variables to NoData and anything else to the
+   *  to Data of the provided 'a Conversion.t.
+   *
+   *  If the 'a is an atomic data type, eg int, then things are good.
+   *  If the 'a is an algebraic data type then some more work has to be done
+   *  in order to have a good implementation, but the type system cannot
+   *  enforce it hence this documentation. Let's take the example of int option.
+   *  The Conversion.t to be passed is [int ioarg option ioarg Conversion.t],
+   *  that is, ioarg should wrap each type constructor. In this way the user
+   *  can pass non-ground terms. Eg
+   *  given term : X       none       some X              some 3
+   *  readback to: NoData  Data None  Data (Some NoData)  Data (Some (Data 3))
+   *
+   *  Alternatively the data type 'a must be able to represent unification
+   *  variables, such as the raw terms, see [ioarg_any] below.
+   *
+   *  An example of an API taking advantage of this feature is
+   *    pred typecheck i:term, o:ty, o:diagnostic
+   *  that can be used to both check a term is well typed and backtrack if not
+   *    typecheck T TY ok
+   *  or assert a term is illtyped or to test weather it is illtyped
+   *    typecheck T TY (error _), typecheck T TY Diagnostic
+   *  The ML code can see in which case we are and for example optimize the
+   *  first case by not even generating the error message (since error "message"
+   *  would fail to unify with ok anyway) or the second one by not assigning TY.
+   *)
+  val mkData : 'a -> 'a ioarg
+  val ioargC : ('t,'h,'c) ContextualConversion.t -> ('t ioarg,'h,'c) ContextualConversion.t
+  val ioarg : 't Conversion.t -> 't ioarg Conversion.t
+  val ioarg_any : Data.term ioarg Conversion.t
 
   module Notation : sig
 
@@ -527,11 +558,6 @@ module BuiltInPredicate : sig
     val (+!) : 'a -> 'b -> 'a * 'b option
 
   end
-
-  val mkData : 'a -> 'a ioarg
-  val ioargC : ('t,'h,'c) ContextualConversion.t -> ('t ioarg,'h,'c) ContextualConversion.t
-  val ioarg : 't Conversion.t -> 't ioarg Conversion.t
-  val ioarg_any : Data.term ioarg Conversion.t
 
 end
 
@@ -581,7 +607,7 @@ end
 
 (** Commodity module to build a simple query
     and extract the output from the solution found by Elpi.
-    
+
     Example: "foo data Output" where [data] has type [t] ([a] is [t Conversion.t])
     and [Output] has type [v] ([b] is a [v Conversion.t]) can be described as:
 {[
@@ -598,11 +624,11 @@ end
    Then [compile q] can be used to obtain the compiled query such that the
    resulting solution has a fied output of type [(v * unit)]. Example:
 {[
-   
+
      Query.compile q |> Compile.link |> Execute.once |> function
        | Execute.Success { output } -> output
        | _ -> ...
-   
+
    ]} *)
 module Query : sig
 
@@ -661,7 +687,7 @@ end
     variables to represent the host equivalent, here the API the keep a link
     between the two. *)
 module FlexibleData : sig
-  
+
   (** key for Elpi's flexible data *)
   module Elpi : sig
     type t
@@ -711,17 +737,17 @@ module FlexibleData : sig
         let pp fmt i = Format.fprintf fmt "%d" i
         let show = string_of_int
       end)
-  
+
       let stv = ref 0
       let incr_get r = incr r; !r
-  
+
       let record k state =
         State.update_return UV2STV.uvmap state (fun m ->
           try m, Stv (UV2STV.host k m)
           with Not_found ->
             let j = incr_get stv in
             UV2STV.add k j m, Stv j)
-  
+
       (* The constructor name "uvar" is special and has to be used with the
          following Conversion.t *)
 
@@ -732,7 +758,7 @@ module FlexibleData : sig
         constructors = [
           ...
           K("uvar","",A(uvar,N),
-             BS (fun (k,_) state -> record k state),         
+             BS (fun (k,_) state -> record k state),
              M (fun ~ok ~ko _ -> ko ()))
         ]
       }
@@ -741,7 +767,7 @@ module FlexibleData : sig
 
     In this way an Elpi term containig a variable [X] twice gets read back
     using [Stv i] for the same [i].
-    
+
   *)
 
   val uvar : (Elpi.t * Data.term list) Conversion.t
@@ -887,7 +913,7 @@ module RawData : sig
 
     val from_string : string -> term
     val from_stringc : string -> constant
-    
+
     val show : constant -> string
 
     val eqc    : constant (* = *)
@@ -906,10 +932,10 @@ module RawData : sig
 
     (* Marker for spilling function calls, as in [{ rev L }] *)
     val spillc : constant
-  
+
     module Map : Map.S with type key = constant
     module Set : Set.S with type elt = constant
-    
+
   end
 
 end
@@ -986,7 +1012,7 @@ module Utils : sig
   val list_to_lp_list : Data.term list -> Data.term
   val lp_list_to_list : depth:int -> Data.term -> Data.term list
 
-  (** The body of an assignment, if any (LOW LEVEL). 
+  (** The body of an assignment, if any (LOW LEVEL).
    * Use [look] and forget about this API since the term you get
    * needs to be moved and/or reduced, and you have no API for this. *)
   val get_assignment : FlexibleData.Elpi.t -> Data.term option
@@ -1021,7 +1047,7 @@ module Utils : sig
       include Map.S
       include Show1 with type 'a t := 'a t
     end
-    
+
     module type OrderedType = sig
       include Map.OrderedType
       include Show with type t := t
@@ -1037,7 +1063,7 @@ module Utils : sig
       include Set.S
       include Show with type t := t
     end
-    
+
     module type OrderedType = sig
       include Set.OrderedType
       include Show with type t := t
@@ -1048,7 +1074,7 @@ module Utils : sig
   end
 
 end
-        
+
 module RawPp : sig
   (** If the term is under [depth] binders this is the function that has to be
    * called in order to print the term correct. WARNING: as of today printing

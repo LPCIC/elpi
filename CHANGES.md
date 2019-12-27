@@ -1,3 +1,15 @@
+## v1.9.0 UNRELEASED
+
+- FFI:
+  - built int predicate are allowed to not assign (not produce a value) for
+    output and input-output arguments
+  - input-output argument are forced to be Conversions of type `'a ioarg`,
+    and recommended to wrap any nested type not able to represent variables
+    in `ioarg`. Eg `int option` should be `int ioarg option ioarg`. In this
+    way one can safely call these builtins with non-ground terms, such as
+    `some _`, for example to assert the result is not `none` but without
+    providing a ground term as `some 3` would be.
+
 ## v1.8.0 (October 2019)
 
 - Bugfix:
