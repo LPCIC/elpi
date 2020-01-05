@@ -1421,6 +1421,11 @@ let stack_term_of_preterm ~depth:arg_lvl { term = t; amap = { c2i } } =
 ;;
 
 let uvbodies_of_assignments assignments =
+  (* Clients may add spurious args that, not occurring in the query,
+     are not turned into uvars *)
+   let assignments = assignments |> StrMap.filter (fun _ -> function
+     | UVar _ | AppUVar _ -> true
+     | _ -> false) in
    State.end_goal_compilation (StrMap.map (function
      | UVar(b,_,_) | AppUVar(b,_,_) -> b
      | _ -> assert false) assignments)
