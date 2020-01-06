@@ -41,8 +41,10 @@ warning Loc Msg :- print Loc "Warning:" Msg.
 assert P _ :- P, !.
 assert _ (type-err T Ty ETy) :- !,
   checking LOC,
-  MSG is {pp T} ^ " has type " ^ {ppt Ty} ^
-         " but is used with type " ^ {ppt ETy},
+  ppt Ty TyPP, ppt ETy ETyPP,
+  if (TyPP = ETyPP) (term_to_string Ty TyS, term_to_string ETy ETyS) (TyS = TyPP, ETyS = ETyPP),
+  MSG is {pp T} ^ " has type " ^ TyS ^
+         " but is used with type " ^ ETyS,
   error [pr LOC MSG] _.
 assert _ (wrong-arity T Ty A) :- !,
   checking LOC,
