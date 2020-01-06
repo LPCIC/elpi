@@ -6,6 +6,11 @@
     when printing error messages (it does it only for opaque data types,
     i.e. `cdata`).
 
+- Compiler:
+  - `@macro` are no more accepted in types, since `typeabbrev` provides the
+    same functionality.
+  - fix clash between builtin names and type names
+
 - FFI:
   - built int predicate are allowed to not assign (not produce a value) for
     output and input-output arguments
