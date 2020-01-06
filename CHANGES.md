@@ -10,6 +10,8 @@
   - `@macro` are no more accepted in types, since `typeabbrev` provides the
     same functionality.
   - fix clash between builtin names and type names
+  - `accumulate` is idempotent: accumulating the same file a second time
+    has no effect.
 
 - FFI:
   - built int predicate are allowed to not assign (not produce a value) for
