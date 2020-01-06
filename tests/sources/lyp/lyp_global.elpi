@@ -1,8 +1,5 @@
 % The Formal System λΥP: signature validation
 
-% repeated from lyp_machine
-macro @id :- term.
-
 % Syntax %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % annotation: R
@@ -15,16 +12,16 @@ kind genv type.
 type g_top genv.
 
 % referred declaration
-type g_dec @id -> genv -> genv.
+type g_dec id -> genv -> genv.
 
 % referred definition
-type g_def @id -> genv -> genv.
+type g_def id -> genv -> genv.
 
 % specification for referred declaration
-type type_g @id -> ann -> deg -> term -> prop.
+type type_g id -> ann -> deg -> term -> prop.
 
 % specification for referred definition
-type cast_g @id -> ann -> deg -> term -> term -> prop.
+type cast_g id -> ann -> deg -> term -> term -> prop.
 
 % Signature Validity %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
