@@ -491,7 +491,7 @@ let fresh_Arg =
 
 let get_Args s = StrMap.map fst (get_argmap s).n2t
 
-let preterm_of_ast loc ~depth:arg_lvl macro state ast =
+let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
 
   let is_uvar_name f = 
      let c = (F.show f).[0] in
@@ -520,7 +520,7 @@ let preterm_of_ast loc ~depth:arg_lvl macro state ast =
        mk_Arg state ~name:(F.show f) ~args:[]
      else if is_macro_name f then
        stack_macro_of_ast inner curlvl state f
-     else if BuiltInPredicate.is_declared (fst (C.funct_of_ast f)) then
+     else if not on_type && BuiltInPredicate.is_declared (fst (C.funct_of_ast f)) then
        state, Builtin(fst (C.funct_of_ast f),[])
      else if CustomFunctorCompilation.is_backtick f then
        CustomFunctorCompilation.compile_backtick state f
@@ -627,9 +627,9 @@ let prechr_rule_of_ast depth macros state r =
   { pto_match; pto_remove; pguard; pnew_goal; pamap; pname; pifexpr; pcloc }
   
 (* used below *)
-let preterms_of_ast loc ~depth macros state f t =
+let preterms_of_ast ?on_type loc ~depth macros state f t =
   assert(is_empty_amap (get_argmap state));
-  let state, term = preterm_of_ast loc ~depth macros state t in
+  let state, term = preterm_of_ast ?on_type loc ~depth macros state t in
   let state, terms = f ~depth state term in
   let amap = get_argmap state in
   let state = State.end_clause_compilation state in
@@ -667,7 +667,7 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
 
   let compile_type_abbrev lcs macros state { Ast.TypeAbbreviation.name; nparams; loc; value } =
     let taname, _ = C.funct_of_ast name in
-    let state, tavalue = preterms_of_ast loc ~depth:lcs macros state (fun ~depth state x -> state, [loc,x]) value in
+    let state, tavalue = preterms_of_ast ~on_type:true loc ~depth:lcs macros state (fun ~depth state x -> state, [loc,x]) value in
     let tavalue = assert(List.length tavalue = 1); List.hd tavalue in
     if tavalue.Data.amap.Data.nargs != 0 then
       error ~loc ("type abbreviation for " ^ C.show taname ^ " has unbound variables");
@@ -686,7 +686,7 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
 
   let compile_type lcs macros state { Ast.Type.attributes; loc; name; ty } =
     let tname, _ = C.funct_of_ast name in
-    let state, ttype = preterms_of_ast loc ~depth:lcs macros state (fun ~depth state x -> state, [loc,x]) ty in
+    let state, ttype = preterms_of_ast ~on_type:true loc ~depth:lcs macros state (fun ~depth state x -> state, [loc,x]) ty in
     let ttype = assert(List.length ttype = 1); List.hd ttype in
     state, { Structured.tindex = attributes; decl = { tname; ttype; tloc = loc } }
 
@@ -899,12 +899,12 @@ end = struct (* {{{ *)
   (* Customs are already translated inside terms,
    * may sill require translation inside type/modes declaration *)
 
-  let smart_map_term f t =
+  let smart_map_term ?(on_type=false) f t =
     let rec aux = function
       | Const c as x ->
           let c1 = f c in
           if c == c1 then x else
-          if BuiltInPredicate.is_declared c1 then Builtin(c1,[])
+          if not on_type && BuiltInPredicate.is_declared c1 then Builtin(c1,[])
           else mkConst c1
       | Lam t as x ->
           let t1 = aux t in
@@ -920,14 +920,14 @@ end = struct (* {{{ *)
           let c1 = f c in
           let ts1 = smart_map aux ts in
           if c == c1 && ts == ts1 then x
-          else if BuiltInPredicate.is_declared c1 then Builtin(c,ts1)
+          else if not on_type && BuiltInPredicate.is_declared c1 then Builtin(c,ts1)
           else if ts1 = [] then mkConst c1 else App(c,List.hd ts1,List.tl ts1)
       | App(c,t,ts) as x ->
           let c1 = f c in
           let t1 = aux t in
           let ts1 = smart_map aux ts in
           if c == c1 && t == t1 && ts == ts1 then x else
-          if BuiltInPredicate.is_declared c1 then Builtin (c1,t1 :: ts1)
+          if not on_type && BuiltInPredicate.is_declared c1 then Builtin (c1,t1 :: ts1)
           else App(c1,t1,ts1)
       | Cons(hd,tl) as x ->
           let hd1 = aux hd in
@@ -942,7 +942,7 @@ end = struct (* {{{ *)
 
   let smart_map_type f ({ Structured.tindex; decl = { tname; ttype; tloc }} as tdecl) =
     let tname1 = f tname in
-    let ttype1 = smart_map_term f ttype.term in
+    let ttype1 = smart_map_term ~on_type:true f ttype.term in
     if tname1 == tname && ttype1 == ttype.term then tdecl
     else { Structured.tindex; decl = { tname = tname1; tloc; ttype = { term = ttype1; amap = ttype.amap; loc = ttype.loc } } }
 
@@ -965,8 +965,12 @@ end = struct (* {{{ *)
       pamap; pifexpr; pname; pcloc;
     }
 
-  let map_clause f ({ Ast.Clause.body = { term; amap; loc } } as x) =
-    { x with Ast.Clause.body = { term = smart_map_term f term; amap; loc } }
+  let smart_map_preterm ?on_type f ({ term; amap; loc } as x) =
+    let term1 = smart_map_term ?on_type f term in
+    if term1 == term then x else { term = term1; amap; loc }
+
+  let map_clause f ({ Ast.Clause.body } as x) =
+    { x with Ast.Clause.body = smart_map_preterm f body }
 
   type subst = (string list * (C.t -> C.t))
 
