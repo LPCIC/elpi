@@ -54,7 +54,7 @@ module Func = struct
 end
 
 module Term = struct
-
+  
   type t =
    | Const of Func.t
    | App of t * t list
@@ -211,7 +211,7 @@ module Program = struct
     | Shorten of Loc.t * Func.t * Func.t (* prefix suffix *)
     | End of Loc.t
 
-    | Accumulated of Loc.t * decl list
+    | Accumulated of Loc.t * (Digest.t * decl list)
 
     (* data *)
     | Clause of (Term.t, Clause.attribute list) Clause.t

@@ -118,8 +118,8 @@ let rec parse_one e (origfilename as filename) =
  if List.mem_assoc inode !parsed then begin
   if not !parse_silent then Printf.eprintf "already loaded %s\n%!" origfilename;
   match !(List.assoc inode !parsed) with
-  | None -> []
-  | Some l -> l
+  | None -> inode, []
+  | Some l -> inode, l
  end else begin
   let sigs =
    if Filename.check_suffix filename ".sig" then []
@@ -127,7 +127,7 @@ let rec parse_one e (origfilename as filename) =
     let signame = prefixname ^ ".sig" in
     if Sys.file_exists signame then
      let origsigname = origprefixname ^ ".sig" in
-     parse_one e origsigname
+     snd (parse_one e origsigname)
     else [] in
   if not !parse_silent then
     Printf.printf "loading %s (%s)\n%!" origfilename (Digest.to_hex inode);
@@ -136,7 +136,7 @@ let rec parse_one e (origfilename as filename) =
   let ch = open_in filename in
   let saved_cur_dirname = !cur_dirname in
   cur_dirname := symlink_dirname filename;
-  sigs @
+  inode, sigs @
   try
    let loc = !last_loc in
    set_fname filename;
@@ -155,7 +155,7 @@ let rec parse_one e (origfilename as filename) =
  end
   
 let parse e filenames =
-  List.concat (List.map (parse_one e) filenames)
+  List.concat (List.map (fun x -> snd (parse_one e x)) filenames)
 
 let string_of_chars chars = 
   let buf = Buffer.create 10 in

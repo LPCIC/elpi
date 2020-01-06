@@ -1,0 +1,2 @@
+doomed 0 :- fail.
+doomed N :- N > 0, M is N - 1, doomed M.

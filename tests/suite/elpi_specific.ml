@@ -195,3 +195,16 @@ let () = declare "heap_discard"
   ~typecheck:true
   ~expectation:Test.Success
   ()
+
+let () = declare "accumulate_twice1"
+  ~source_elpi:"accumulate_twice1.elpi"
+  ~description:"double accumulate"
+  ~typecheck:true
+  ~expectation:Test.Failure
+  ()
+let () = declare "accumulate_twice2"
+  ~source_elpi:"accumulate_twice2.elpi"
+  ~description:"double accumulate"
+  ~typecheck:true
+  ~expectation:Test.Failure
+  ()

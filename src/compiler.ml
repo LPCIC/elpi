@@ -267,7 +267,7 @@ end = struct (* {{{ *)
 
 
   let run ~flags:_ dl =
-    let rec aux blocks clauses macros types tabbrs modes locals chr = function
+    let rec aux ns blocks clauses macros types tabbrs modes locals chr accs = function
       | (Program.End _ :: _ | []) as rest ->
           { body = List.rev (cl2b clauses @ blocks);
             types = List.rev types;
@@ -278,69 +278,74 @@ end = struct (* {{{ *)
           List.rev chr,
           rest
       | Program.Begin loc :: rest ->
-          let p, locals1, chr1, rest = aux [] [] [] [] [] [] [] [] rest in
+          let p, locals1, chr1, rest = aux ns [] [] [] [] [] [] [] [] accs rest in
           if chr1 <> [] then
             error "CHR cannot be declared inside an anonymous block";
-          aux_end_block loc (Locals(locals1,p) :: cl2b clauses @ blocks)
-            [] macros types tabbrs modes locals chr rest
+          aux_end_block loc ns (Locals(locals1,p) :: cl2b clauses @ blocks)
+            [] macros types tabbrs modes locals chr accs rest
       | Program.Constraint (loc, f) :: rest ->
           if chr <> [] then
             error "Constraint blocks cannot be nested";
-          let p, locals1, chr, rest = aux [] [] [] [] [] [] [] [] rest in
+          let p, locals1, chr, rest = aux ns [] [] [] [] [] [] [] [] accs rest in
           if locals1 <> [] then
             error "locals cannot be declared inside a Constraint block";
-          aux_end_block loc (Constraints(f,chr,p) :: cl2b clauses @ blocks)
-            [] macros types tabbrs modes locals [] rest
+          aux_end_block loc ns (Constraints(f,chr,p) :: cl2b clauses @ blocks)
+            [] macros types tabbrs modes locals [] accs rest
       | Program.Namespace (loc, n) :: rest ->
-          let p, locals1, chr1, rest = aux [] [] [] [] [] [] [] [] rest in
+          let p, locals1, chr1, rest = aux (n::ns) [] [] [] [] [] [] [] [] StrSet.empty rest in
           if chr1 <> [] then
             error "CHR cannot be declared inside a namespace block";
           if locals1 <> [] then
             error "locals cannot be declared inside a namespace block";
-          aux_end_block loc (Namespace (n,p) :: cl2b clauses @ blocks)
-            [] macros types tabbrs modes locals chr rest
+          aux_end_block loc ns (Namespace (n,p) :: cl2b clauses @ blocks)
+            [] macros types tabbrs modes locals chr accs rest
       | Program.Shorten (loc,full_name,short_name) :: rest ->
           let shorthand = { iloc = loc; full_name; short_name } in  
-          let p, locals1, chr1, rest = aux [] [] [] [] [] [] [] [] rest in
+          let p, locals1, chr1, rest = aux ns [] [] [] [] [] [] [] [] accs rest in
           if locals1 <> [] then
             error "locals cannot be declared after a shorthand";
           if chr1 <> [] then
             error "CHR cannot be declared after a shorthand";
-          aux ((Shorten([shorthand],p) :: cl2b clauses @ blocks))
-            [] macros types tabbrs modes locals chr rest
+          aux ns ((Shorten([shorthand],p) :: cl2b clauses @ blocks))
+            [] macros types tabbrs modes locals chr accs rest
 
-      | Program.Accumulated (loc,a) :: rest ->
-          aux blocks clauses macros types tabbrs modes locals chr
-            (Program.Begin loc :: a @ Program.End loc :: rest)
+      | Program.Accumulated (loc,(digest,a)) :: rest ->
+          let digest = String.concat "." (digest :: List.map F.show ns) in
+          if StrSet.mem digest accs then
+            aux ns blocks clauses macros types tabbrs modes locals chr accs rest
+          else
+            aux ns blocks clauses macros types tabbrs modes locals chr
+              (StrSet.add digest accs)
+              (Program.Begin loc :: a @ Program.End loc :: rest)
 
       | Program.Clause c :: rest ->
           let c = structure_clause_attributes c in
-          aux blocks (c::clauses) macros types tabbrs modes locals chr rest
+          aux ns blocks (c::clauses) macros types tabbrs modes locals chr accs rest
       | Program.Macro m :: rest ->
-          aux blocks clauses (m::macros) types tabbrs modes locals chr rest
+          aux ns blocks clauses (m::macros) types tabbrs modes locals chr accs rest
       | Program.Type t :: rest ->
           let t = structure_type_attributes t in
           let types =
             if List.mem t types then types else t :: types in
-          aux blocks clauses macros types tabbrs modes locals chr rest
+          aux ns blocks clauses macros types tabbrs modes locals chr accs rest
       | Program.TypeAbbreviation abbr :: rest ->
-          aux blocks clauses macros types (abbr :: tabbrs) modes locals chr rest
+          aux ns blocks clauses macros types (abbr :: tabbrs) modes locals chr accs rest
       | Program.Mode ms :: rest ->
-          aux blocks clauses macros types tabbrs (ms @ modes) locals chr rest
+          aux ns blocks clauses macros types tabbrs (ms @ modes) locals chr accs rest
       | Program.Local l :: rest ->
-          aux blocks clauses macros types tabbrs modes (l::locals) chr rest
+          aux ns blocks clauses macros types tabbrs modes (l::locals) chr accs rest
       | Program.Chr r :: rest ->
           let r = structure_chr_attributes r in
-          aux blocks clauses macros types tabbrs modes locals (r::chr) rest
+          aux ns blocks clauses macros types tabbrs modes locals (r::chr) accs rest
 
-    and aux_end_block loc blocks clauses macros types tabbrs modes locals chr rest =
+    and aux_end_block loc ns blocks clauses macros types tabbrs modes locals chr accs rest =
       match rest with
       | Program.End _ :: rest ->
-          aux blocks clauses macros types tabbrs modes locals chr rest
+          aux ns blocks clauses macros types tabbrs modes locals chr accs rest
       | _ -> error ~loc "matching } is missing"
 
     in
-    let blocks, locals, chr, rest = aux [] [] [] [] [] [] [] [] dl in
+    let blocks, locals, chr, rest = aux [] [] [] [] [] [] [] [] [] StrSet.empty dl in
     assert(rest = []);
     if chr <> [] then
       error "CHR cannot be declared outside a Constraint block";
@@ -504,7 +509,6 @@ let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
   let is_macro_name f = 
      let c = (F.show f).[0] in
      c = '@' in
-
 
   let rec stack_macro_of_ast inner lvl state f =
     if on_type then error ~loc ("Macros cannot occur in types. Use a typeabbrev declaration instead");

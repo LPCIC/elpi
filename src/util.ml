@@ -87,6 +87,12 @@ module IntSet = Set.Make(Int)
 module StrSet = Set.Make(String)
 module Fmt = Format
 
+module Digest = struct
+  include Digest
+  let show = Digest.to_hex
+  let pp fmt d = Fmt.fprintf fmt "%s" (show d)
+end
+
 module Loc = struct
   type t = {
     source_name : string;
