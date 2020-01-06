@@ -73,7 +73,7 @@ type program = {
   toplevel_macros : macro_declaration;
 }
 and pbody = {
-  types : typ list; (* type abbrevs and macro applied *)
+  types : typ list;
   type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : (mode * Loc.t) C.Map.t;
   body : block list;
@@ -507,8 +507,9 @@ let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
 
 
   let rec stack_macro_of_ast inner lvl state f =
+    if on_type then error ~loc ("Macros cannot occur in types. Use a typeabbrev declaration instead");
     try aux inner lvl state (fst (F.Map.find f macro))
-    with Not_found -> error ~loc ("Undeclared macro " ^ F.show f) 
+    with Not_found -> error ~loc ("Undeclared macro " ^ F.show f)
 
   (* compilation of "functors" *) 
   and stack_funct_of_ast inner curlvl state f =
@@ -665,9 +666,9 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
     end;
     F.Map.add n (body,loc) m
 
-  let compile_type_abbrev lcs macros state { Ast.TypeAbbreviation.name; nparams; loc; value } =
+  let compile_type_abbrev lcs state { Ast.TypeAbbreviation.name; nparams; loc; value } =
     let taname, _ = C.funct_of_ast name in
-    let state, tavalue = preterms_of_ast ~on_type:true loc ~depth:lcs macros state (fun ~depth state x -> state, [loc,x]) value in
+    let state, tavalue = preterms_of_ast ~on_type:true loc ~depth:lcs F.Map.empty state (fun ~depth state x -> state, [loc,x]) value in
     let tavalue = assert(List.length tavalue = 1); List.hd tavalue in
     if tavalue.Data.amap.Data.nargs != 0 then
       error ~loc ("type abbreviation for " ^ C.show taname ^ " has unbound variables");
@@ -684,9 +685,9 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
     end;
     C.Map.add taname x m
 
-  let compile_type lcs macros state { Ast.Type.attributes; loc; name; ty } =
+  let compile_type lcs state { Ast.Type.attributes; loc; name; ty } =
     let tname, _ = C.funct_of_ast name in
-    let state, ttype = preterms_of_ast ~on_type:true loc ~depth:lcs macros state (fun ~depth state x -> state, [loc,x]) ty in
+    let state, ttype = preterms_of_ast ~on_type:true loc ~depth:lcs F.Map.empty state (fun ~depth state x -> state, [loc,x]) ty in
     let ttype = assert(List.length ttype = 1); List.hd ttype in
     state, { Structured.tindex = attributes; decl = { tname; ttype; tloc = loc } }
 
@@ -796,10 +797,10 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
       check_no_overlap_macros omacros macros;
       let active_macros =
         List.fold_left compile_macro omacros macros in
-      let state, type_abbrevs = map_acc (compile_type_abbrev lcs active_macros) state type_abbrevs in
+      let state, type_abbrevs = map_acc (compile_type_abbrev lcs) state type_abbrevs in
       let type_abbrevs = List.fold_left add_to_index_type_abbrev C.Map.empty type_abbrevs in
       let state, types =
-        map_acc (compile_type lcs active_macros) state types in
+        map_acc (compile_type lcs) state types in
       let modes =
         List.fold_left (compile_mode state) C.Map.empty modes in
       let defs_m = defs_of_modes modes in
