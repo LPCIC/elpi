@@ -1,0 +1,5 @@
+typeabbrev (foo A) (list A).
+
+pred foo i:int, o:int.
+
+main :- std.map 3 foo _.

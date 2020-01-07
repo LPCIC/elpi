@@ -68,3 +68,23 @@ let () = declare "typeabbrv6"
   ~expectation:Failure
   ~description:"type abbreviations"
   ()
+let () = declare "typeabbrv7"
+  ~source_elpi:"typeabbrv7.elpi"
+  ~expectation:Success
+  ~description:"type abbreviations"
+  ()
+let () = declare "typeabbrv8"
+  ~source_elpi:"typeabbrv8.elpi"
+  ~expectation:Success
+  ~description:"type abbreviations"
+  ()
+let () = declare "typeabbrv9"
+  ~source_elpi:"typeabbrv9.elpi"
+  ~expectation:Success
+  ~description:"type abbreviations"
+  ()
+let () = declare "typeabbrv10"
+  ~source_elpi:"typeabbrv10.elpi"
+  ~expectation:(Output (Str.regexp_string "3 has type int but is used with type foo"))
+  ~description:"type abbreviations and error messages"
+  ()
