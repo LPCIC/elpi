@@ -32,6 +32,7 @@
     and `Elpi.Builtin.mkERROR "msg"` to build its values.
   - `std.assert-ok!`, `std.forall-ok`, `std.do-ok!`, `std.lift-ok` and
     `std.while-ok-do!` commodity predicates.
+  - All operators for `calc` (infix `_ is _`) now come with a type declaration.
 
 ## v1.8.0 (October 2019)
 
