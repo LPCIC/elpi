@@ -5,17 +5,17 @@
    let pp fmt i = Format.fprintf fmt &quot;%d&quot; i
    let show = string_of_int
  end)
-  
+
  let stv = ref 0
  let incr_get r = incr r; !r
-  
+
  let record k state =
    State.update_return UV2STV.uvmap state (fun m -&gt;
      try m, Stv (UV2STV.host k m)
      with Not_found -&gt;
        let j = incr_get stv in
        UV2STV.add k j m, Stv j)
-  
+
  (* The constructor name &quot;uvar&quot; is special and has to be used with the
     following Conversion.t *)
 
@@ -26,7 +26,7 @@
    constructors = [
      ...
      K(&quot;uvar&quot;,&quot;&quot;,A(uvar,N),
-        BS (fun (k,_) state -&gt; record k state),         
+        BS (fun (k,_) state -&gt; record k state),
         M (fun ~ok ~ko _ -&gt; ko ()))
    ]
  }</code></pre><p>In this way an Elpi term containig a variable <code>X</code> twice gets read back using <code>Stv i</code> for the same <code>i</code>.</p></aside><dl><dt class="spec value" id="val-uvar"><a href="#val-uvar" class="anchor"></a><code><span class="keyword">val</span> uvar : <span><span>(<a href="Elpi/index.html#type-t">Elpi.t</a> * <span><a href="../Data/index.html#type-term">Data.term</a> list</span>)</span> <a href="../Conversion/index.html#type-t">Conversion.t</a></span></code></dt></dl></div></body></html>
