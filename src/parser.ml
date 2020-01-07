@@ -888,6 +888,7 @@ let lp_gramext = [
   { fix = Infixr;	sym = "::";	prec = 140; };
   { fix = Infix;	sym = "`->";	prec = 141; };
   { fix = Infix;	sym = "`:";	prec = 141; };
+  { fix = Infix;	sym = "`:=";	prec = 141; };
   { fix = Infixl;	sym = "^";	prec = 150; };
   { fix = Infixl;	sym = "-";	prec = 150; };
   { fix = Infixl;	sym = "+";	prec = 150; };

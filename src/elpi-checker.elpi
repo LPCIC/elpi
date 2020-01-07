@@ -18,9 +18,8 @@ type ctype string -> typ.
 
 % --------- utils  ---------------------------------------------------------
 
-pred mem-assoc i:list entry, i:term.
-mem-assoc [X `: _ | _] X :- !.
-mem-assoc [ _ | XS] X :- mem-assoc XS X.
+type (`:) term -> typ -> entry.
+type (`:=) string -> typ -> entry.
 
 % --------- error reporting  ------------------------------------------------
 kind err type.
@@ -80,7 +79,7 @@ pp-list [X|XS] Y :- pp-list XS XSS, pp X XT, Y is XT ^ " " ^ XSS.
 pp-list [] "".
 
 mode (ppt i o).
-ppt (ctype X) X :- !.
+ppt (ctype S) X :- !, X is "(ctype " ^ S ^ ")".
 ppt (tconst X) X :- !.
 ppt (tapp L) X :- !, ppt-list L T, X is "(" ^ T ^ ")".
 ppt (arrow A B) S :- !, ppt A AS, ppt B BS, S is "(" ^ AS ^ " -> " ^ BS ^ ")".
@@ -226,7 +225,6 @@ warn-undeclared Known (pr ( S) LOC) tt :-
   MSG is "constant " ^ S ^ " has no declared type." ^ H,
   warning LOC MSG.
 
-type (`:) term -> typ -> entry.
 forall_uto10 [] _ _ :- !.
 forall_uto10 [X|XS] N P :- N < 10, !,
   P X Done, !,
@@ -324,8 +322,17 @@ main.
 
 % ------- entry ---------------------------------------
 
-check P Q DeclaredTypes :-
-  typecheck-program P Q DeclaredTypes RC, !,
+type->ppt-clause S (forall F) (pi C) :- !,
+  pi x\ type->ppt-clause S (F x) (C x).
+type->ppt-clause S T (ppt T S :- !).
+
+compile-type-abbreviation (S `:= T) Clause :-
+  type->ppt-clause S T Clause.
+
+check P Q DeclaredTypes TypeAbbreviations :-
+  std.map TypeAbbreviations compile-type-abbreviation Abbrevs,
+  print TypeAbbreviations Abbrevs,
+  Abbrevs => typecheck-program P Q DeclaredTypes RC, !,
   warn-linear P, !,
   if (var RC) (true) (fail).
 

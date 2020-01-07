@@ -2,9 +2,8 @@
 
 - Typing:
   - `typeabbrev` declarations are now taken into account and unfolded
-    by the compiler. The type checker does not refold abbreviations
-    when printing error messages (it does it only for opaque data types,
-    i.e. `cdata`).
+    by the compiler. The type checker refolds abbreviations
+    when printing error messages.
 
 - Compiler:
   - `@macro` are no more accepted in types, since `typeabbrev` provides the

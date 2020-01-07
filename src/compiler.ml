@@ -1818,6 +1818,16 @@ let quote_clause { Ast.Clause.loc; attributes = { Assembled.id }; body } =
   App(clausec,CData clloc,[R.list_to_lp_list names; qt])
 ;;
 
+let rec lam2forall = function
+  | App(c,x,[]) when c == lamc -> mkApp forallc (lam2forall x) []
+  | App(c,x,xs) -> mkApp c (lam2forall x) (List.map lam2forall xs)
+  | (Const _ | Nil | CData _| Discard) as x -> x
+  | Cons(x,xs) -> mkCons (lam2forall x) (lam2forall xs)
+  | Builtin(c,xs) -> mkBuiltin c (List.map lam2forall xs)
+  | Lam x -> mkLam (lam2forall x)
+  | UVar _ | AppUVar _ -> assert false
+  | Arg _ | AppArg _ -> assert false
+
 let quote_syntax { WithMain.clauses; query } =
   let names = sorted_names_of_argmap query.amap in
   let clist = List.map quote_clause clauses in
@@ -1883,7 +1893,12 @@ let static_check header
             (unfold_type_abbrevs initial_depth type_abbrevs ttype))
           ttype.amap]))
     types) in
-    (* TODO: quote type abbreviations *)
+  let talist =
+    C.Map.bindings type_abbrevs |> List.map (fun (name, { Data.tavalue;  } ) ->
+        App(C.from_stringc "`:=", Data.C.of_string (C.show name),
+          [lam2forall (quote_preterm ~on_type:true tavalue)]))
+    |> R.list_to_lp_list
+    in
   let checker =
     program_of_ast
       ~flags:{ flags with allow_untyped_builtin = true }
@@ -1892,7 +1907,7 @@ let static_check header
   let query =
     query_of_term checker (fun ~depth state ->
       assert(depth=0);
-      state, (loc,App(C.from_stringc "check",R.list_to_lp_list p,[q;tlist]))) in
+      state, (loc,App(C.from_stringc "check",R.list_to_lp_list p,[q;tlist;talist]))) in
   let executable = executable_of_query query in
   exec executable <> Failure
 ;;
