@@ -31,12 +31,27 @@ let out_stream = OpaqueData.declare {
   constants = ["std_out",(stdout,"stdout");"std_err",(stderr,"stderr")];
 }
 
-let register_eval, lookup_eval =
+let register_eval, register_eval_ty, lookup_eval, eval_declaration =
+ let rec str_of_ty n s =
+   if n = 0 then s else s ^ " -> " ^ str_of_ty (n-1) s in
  let (evals : ('a, view list -> term) Hashtbl.t)
    =
      Hashtbl.create 17 in
- (fun s -> Hashtbl.add evals (from_stringc s)),
- Hashtbl.find evals
+ let declaration = ref [] in
+ (fun nargs (s,tys) f ->
+   tys |> List.iter (fun ty ->
+     let ty =
+       if nargs = 2 then 
+         Printf.sprintf "type (%s) %s." s (str_of_ty nargs ty)
+       else
+         Printf.sprintf "type %s %s." s (str_of_ty nargs ty) in
+     declaration := BuiltIn.LPCode ty :: !declaration);
+   Hashtbl.add evals (from_stringc s) f),
+ (fun s ty f ->
+   declaration := BuiltIn.LPCode (Printf.sprintf "type %s %s." s ty) :: !declaration;
+   Hashtbl.add evals (from_stringc s) f),
+ Hashtbl.find evals,
+ (fun () -> List.rev !declaration)
 ;;
 
 (* Traverses the expression evaluating all custom evaluable functions *)
@@ -64,96 +79,96 @@ let rec eval depth t =
   | CData _ as x -> kool x
 ;;
 
-let register_evals l f = List.iter (fun i -> register_eval i f) l;;
+let register_evals n l f = List.iter (fun i -> register_eval n i f) l;;
 
 let _ =
   let open RawOpaqueData in
-  register_evals [ "-" ; "i-" ; "r-" ] (function
+  register_evals 2 [ "-",["A"] ; "i-",["int"] ; "r-",["float"] ] (function
    | [ CData x; CData y ] when ty2 int x y -> mkCData(morph2 int (-) x y)
    | [ CData x; CData y ] when ty2 float x y -> mkCData(morph2 float (-.) x y)
    | _ -> type_error "Wrong arguments to -/i-/r-") ;
-  register_evals [ "+" ; "i+" ; "r+" ] (function
+  register_evals 2 [ "+",["int";"float"] ; "i+",["int"] ; "r+",["float"] ] (function
    | [ CData x; CData y ] when ty2 int x y -> mkCData(morph2 int (+) x y)
    | [ CData x; CData y ] when ty2 float x y -> mkCData(morph2 float (+.) x y)
    | _ -> type_error "Wrong arguments to +/i+/r+") ;
-  register_eval "*" (function
+  register_eval 2 ("*",["int";"float"]) (function
    | [ CData x; CData y ] when ty2 int x y -> mkCData(morph2 int ( * ) x y)
    | [ CData x; CData y] when ty2 float x y -> mkCData(morph2 float ( *.) x y)
    | _ -> type_error "Wrong arguments to *") ;
-  register_eval "/" (function
+  register_eval 2 ("/",["float"]) (function
    | [ CData x; CData y] when ty2 float x y -> mkCData(morph2 float ( /.) x y)
    | _ -> type_error "Wrong arguments to /") ;
-  register_eval "mod" (function
+  register_eval 2 ("mod",["int"]) (function
    | [ CData x; CData y ] when ty2 int x y -> mkCData(morph2 int (mod) x y)
    | _ -> type_error "Wrong arguments to mod") ;
-  register_eval "div" (function
+  register_eval 2 ("div",["int"]) (function
    | [ CData x; CData y ] when ty2 int x y -> mkCData(morph2 int (/) x y)
    | _ -> type_error "Wrong arguments to div") ;
-  register_eval "^" (function
+  register_eval 2 ("^",["string"]) (function
    | [ CData x; CData y ] when ty2 string x y ->
          of_string (to_string x ^ to_string y)
    | _ -> type_error "Wrong arguments to ^") ;
-  register_evals [ "~" ; "i~" ; "r~" ] (function
+  register_evals 1 [ "~",["int";"float"] ; "i~",["int"] ; "r~",["float"] ] (function
    | [ CData x ] when is_int x -> mkCData(morph1 int (~-) x)
    | [ CData x ] when is_float x -> mkCData(morph1 float (~-.) x)
    | _ -> type_error "Wrong arguments to ~/i~/r~") ;
-  register_evals [ "abs" ; "iabs" ; "rabs" ] (function
+  register_evals 1 [ "abs",["int";"float"] ; "iabs",["int"] ; "rabs",["float"] ] (function
    | [ CData x ] when is_int x -> mkCData(map int int abs x)
    | [ CData x ] when is_float x -> mkCData(map float float abs_float x)
    | _ -> type_error "Wrong arguments to abs/iabs/rabs") ;
-  register_eval "int_to_real" (function
-   | [ CData x ] when is_int x -> mkCData(map int float float_of_int x)
-   | _ -> type_error "Wrong arguments to int_to_real") ;
-  register_eval "sqrt" (function
+  register_eval 1 ("sqrt",["float"]) (function
    | [ CData x ] when is_float x -> mkCData(map float float sqrt x)
    | _ -> type_error "Wrong arguments to sqrt") ;
-  register_eval "sin" (function
+  register_eval 1 ("sin",["float"]) (function
    | [ CData x ] when is_float x -> mkCData(map float float sqrt x)
    | _ -> type_error "Wrong arguments to sin") ;
-  register_eval "cos" (function
+  register_eval 1 ("cos",["float"]) (function
    | [ CData x ] when is_float x -> mkCData(map float float cos x)
    | _ -> type_error "Wrong arguments to cosin") ;
-  register_eval "arctan" (function
+  register_eval 1 ("arctan",["float"]) (function
    | [ CData x ] when is_float x -> mkCData(map float float atan x)
    | _ -> type_error "Wrong arguments to arctan") ;
-  register_eval "ln" (function
+  register_eval 1 ("ln",["float"]) (function
    | [ CData x ] when is_float x -> mkCData(map float float log x)
    | _ -> type_error "Wrong arguments to ln") ;
-  register_eval "floor" (function
+  register_eval_ty "int_to_real" "int -> float" (function
+   | [ CData x ] when is_int x -> mkCData(map int float float_of_int x)
+   | _ -> type_error "Wrong arguments to int_to_real") ;
+  register_eval_ty "floor" "float -> int" (function
    | [ CData x ] when is_float x ->
          mkCData(map float int (fun x -> int_of_float (floor x)) x)
    | _ -> type_error "Wrong arguments to floor") ;
-  register_eval "ceil" (function
+  register_eval_ty "ceil" "float -> int" (function
    | [ CData x ] when is_float x ->
          mkCData(map float int (fun x -> int_of_float (ceil x)) x)
    | _ -> type_error "Wrong arguments to ceil") ;
-  register_eval "truncate" (function
+  register_eval_ty "truncate" "float -> int" (function
    | [ CData x ] when is_float x -> mkCData(map float int truncate x)
    | _ -> type_error "Wrong arguments to truncate") ;
-  register_eval "size" (function
+  register_eval_ty "size" "string -> int" (function
    | [ CData x ] when is_string x ->
          of_int (String.length (to_string x))
    | _ -> type_error "Wrong arguments to size") ;
-  register_eval "chr" (function
+  register_eval_ty "chr" "int -> string" (function
    | [ CData x ] when is_int x ->
          of_string (String.make 1 (char_of_int (to_int x)))
    | _ -> type_error "Wrong arguments to chr") ;
-  register_eval "string_to_int" (function
+  register_eval_ty "string_to_int" "string -> int" (function
    | [ CData x ] when is_string x && String.length (to_string x) = 1 ->
        of_int (int_of_char (to_string x).[0])
    | _ -> type_error "Wrong arguments to string_to_int") ;
-  register_eval "substring" (function
+  register_eval_ty "int_to_string" "int -> string" (function
+   | [ CData x ] when is_int x ->
+         of_string (string_of_int (to_int x))
+   | _ -> type_error "Wrong arguments to int_to_string") ;
+  register_eval_ty "substring" "string -> int -> int -> string" (function
    | [ CData x ; CData i ; CData j ] when is_string x && ty2 int i j ->
        let x = to_string x and i = to_int i and j = to_int j in
        if i >= 0 && j >= 0 && String.length x >= i+j then
          of_string (String.sub x i j)
        else type_error "Wrong arguments to substring"
    | _ -> type_error "Wrong argument type to substring") ;
-  register_eval "int_to_string" (function
-   | [ CData x ] when is_int x ->
-         of_string (string_of_int (to_int x))
-   | _ -> type_error "Wrong arguments to int_to_string") ;
-  register_eval "real_to_string" (function
+  register_eval_ty "real_to_string" "float -> string" (function
    | [ CData x ] when is_float x ->
          of_string (string_of_float (to_float x))
    | _ -> type_error "Wrong arguments to real_to_string")
@@ -410,16 +425,8 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "pred (is) o:A, i:A.";
   LPCode "X is Y :- calc Y X.";
 
-  LPCode "type (-) A -> A -> A.";
+  ] @ eval_declaration () @ [
 
-  LPCode "type (^) string -> string -> string.";
-
-  LPCode "type (+) int -> int -> int.";
-  LPCode "type (+) float -> float -> float.";
-
-  LPCode "type (*) int -> int -> int.";
-  LPCode "type (*) float -> float -> float.";
-    
   LPDoc " -- Arithmetic tests --";
 
   ] @ List.map (fun { p; psym; pname } ->
