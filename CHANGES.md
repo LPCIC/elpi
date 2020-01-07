@@ -1,10 +1,10 @@
-## v1.9.0 UNRELEASED
+## v1.9.0 (January 2020)
 
 - Typing:
   - `typeabbrev` declarations are now taken into account and unfolded
     by the compiler. The type checker refolds abbreviations
     when printing error messages with the following caveat: when two type
-    abbreviations can be refolded on the same term the last declared one wins.
+    abbreviations can be refolded the last declared one wins.
 
 - Compiler:
   - `@macro` are no more accepted in types, since `typeabbrev` provides the
@@ -15,16 +15,16 @@
 
 - FFI:
   - built int predicate are allowed to not assign (not produce a value) for
-    output and input-output arguments
-  - input-output argument are forced to be Conversions of type `'a ioarg`,
+    output and input-output arguments.
+  - input-output arguments are forced to be `Conversion.t` of type `'a ioarg`,
     and recommended to wrap any nested type not able to represent variables
     in `ioarg`. Eg `int option` should be `int ioarg option ioarg`. In this
     way one can safely call these builtins with non-ground terms, such as
     `some _`, for example to assert the result is not `none` but without
-    providing a ground term as `some 3` would be.
-  - `OpaqueData` is no more named using a macro but rather using a type
-    abbreviation. This can break user code. The fix is to substitutie
-    `@myopaquetype` with `myopaquetype` everywhere.
+    providing a ground term such as `some 3`.
+  - `MLData` declarations for `OpaqueData` are no more named using a macro
+    but rather using a type abbreviation. This can break user code. The fix
+    is to substitutie `@myopaquetype` with `myopaquetype` everywhere.
 
 ## v1.8.0 (October 2019)
 
