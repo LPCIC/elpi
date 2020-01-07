@@ -469,6 +469,7 @@ module CHR : sig
   val new_clique : constant list -> t -> t * clique
   val clique_of : constant -> t -> Constants.Set.t option
   val add_rule : clique -> rule -> t -> t
+  val in_clique : clique -> constant -> bool
   
   val rules_for : constant -> t -> rule list
 
@@ -497,6 +498,8 @@ end = struct (* {{{ *)
   type clique = Constants.Set.t
 
   let empty = { cliques = Constants.Map.empty; rules = Constants.Map.empty }
+
+  let in_clique m c = Constants.Set.mem c m
 
   let new_clique cl ({ cliques } as chr) =
     if cl = [] then error "empty clique";

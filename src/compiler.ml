@@ -1628,6 +1628,14 @@ let chose_indexing predicate l =
   in
     aux 0 l
 
+let check_rule_pattern_in_clique clique { Data.CHR.pattern; rule_name } =
+  try
+    let outside =
+      List.find (fun x -> not (Data.CHR.in_clique clique x)) pattern in
+    error ("CHR rule " ^ rule_name ^ ": matches " ^ C.show outside ^
+      " which is not a constraint on which it is applied. Check the list of predicates after the \"constraint\" keyword.");
+  with Not_found -> ()
+
 let run
   {
     WithMain.types;
@@ -1653,6 +1661,7 @@ let run
       let chr, clique = CHR.new_clique clique chr in
       let rules = filter_if flags.defined_variables pifexpr rules in 
       let rules = List.map (compile_chr initial_depth) rules in
+      List.iter (check_rule_pattern_in_clique clique) rules;
       List.fold_left (fun x y -> CHR.add_rule clique y x) chr rules)
     CHR.empty chr in
   let ifexpr { Ast.Clause.attributes = { Assembled.ifexpr } } = ifexpr in

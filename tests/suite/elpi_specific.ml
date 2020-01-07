@@ -208,3 +208,10 @@ let () = declare "accumulate_twice2"
   ~typecheck:true
   ~expectation:Test.Failure
   ()
+
+let () = declare "CHR_no_clique"
+  ~source_elpi:"chr_not_clique.elpi"
+  ~description:"CHR rule on a non constraint"
+  ~typecheck:true
+  ~expectation:Test.Failure
+  ()
