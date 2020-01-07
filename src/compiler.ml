@@ -765,6 +765,8 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
         C.Set.add tname s)
       C.Set.empty types
 
+  let defs_of_type_abbrevs m =
+    C.Map.fold (fun k _ acc -> C.Set.add k acc) m C.Set.empty
 
   let global_hd_symbols_of_clauses cl =
     List.fold_left (fun s { Ast.Clause.body = { term } } ->
@@ -809,9 +811,10 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
         List.fold_left (compile_mode state) C.Map.empty modes in
       let defs_m = defs_of_modes modes in
       let defs_t = defs_of_types types in
+      let defs_ta = defs_of_type_abbrevs type_abbrevs in
       let lcs, state, types, type_abbrevs, modes, defs_b, body =
         compile_body active_macros types type_abbrevs modes lcs C.Set.empty state body in
-      let symbols = C.Set.(union (union defs_m defs_t) defs_b) in
+      let symbols = C.Set.(union (union (union defs_m defs_t) defs_b) defs_ta) in
       (state : State.t), lcs, active_macros,
       { Structured.types; type_abbrevs; modes; body; symbols }
 
