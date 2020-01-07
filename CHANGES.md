@@ -14,7 +14,7 @@
     has no effect.
 
 - FFI:
-  - built int predicate are allowed to not assign (not produce a value) for
+  - built in predicate are allowed to not assign (not produce a value) for
     output and input-output arguments.
   - input-output arguments are forced to be `Conversion.t` of type `'a ioarg`,
     and recommended to wrap any nested type not able to represent variables
@@ -25,6 +25,13 @@
   - `MLData` declarations for `OpaqueData` are no more named using a macro
     but rather using a type abbreviation. This can break user code. The fix
     is to substitutie `@myopaquetype` with `myopaquetype` everywhere.
+
+- Stdlib:
+  - `diagnostic` data type to be used as an `ioarg` for builtins that can fail
+    with a relevant error message. On the ML side one can used `Elpi.Builtin.mkOK`
+    and `Elpi.Builtin.mkERROR "msg"` to build its values.
+  - `std.assert-ok!`, `std.forall-ok`, `std.do-ok!`, `std.lift-ok` and
+    `std.while-ok-do!` commodity predicates.
 
 ## v1.8.0 (October 2019)
 
