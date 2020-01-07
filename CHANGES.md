@@ -3,7 +3,8 @@
 - Typing:
   - `typeabbrev` declarations are now taken into account and unfolded
     by the compiler. The type checker refolds abbreviations
-    when printing error messages.
+    when printing error messages with the following caveat: when two type
+    abbreviations can be refolded on the same term the last declared one wins.
 
 - Compiler:
   - `@macro` are no more accepted in types, since `typeabbrev` provides the

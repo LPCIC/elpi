@@ -1,4 +1,6 @@
-typeabbrev (foo A) (list A).
+typeabbrev (bar A) (list A).
+typeabbrev (tmp A) (list A).
+typeabbrev (foo A) (tmp A).
 
 pred foo i:int, o:int.
 

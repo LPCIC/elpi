@@ -85,6 +85,6 @@ let () = declare "typeabbrv9"
   ()
 let () = declare "typeabbrv10"
   ~source_elpi:"typeabbrv10.elpi"
-  ~expectation:(Output (Str.regexp_string "3 has type int but is used with type foo"))
+  ~expectation:(Output (Str.regexp "3 has type int but is used with type (foo X[0-9]+)"))
   ~description:"type abbreviations and error messages"
   ()

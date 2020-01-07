@@ -322,16 +322,16 @@ main.
 
 % ------- entry ---------------------------------------
 
-type->ppt-clause S (forall F) (pi C) :- !,
-  pi x\ type->ppt-clause S (F x) (C x).
-type->ppt-clause S T (ppt T S :- !).
+type->ppt-clause S ACC (forall F) (pi C) :- !,
+  pi x\ type->ppt-clause S [x|ACC] (F x) (C x).
+type->ppt-clause S [] T (pi Str\ ppt T Str :- !, ppt (tconst S) Str).
+type->ppt-clause S ACC T (pi Str\ ppt T Str :- !, ppt (tapp [tconst S|Args]) Str) :- std.rev ACC Args.
 
 compile-type-abbreviation (S `:= T) Clause :-
-  type->ppt-clause S T Clause.
+  type->ppt-clause S [] T Clause.
 
 check P Q DeclaredTypes TypeAbbreviations :-
   std.map TypeAbbreviations compile-type-abbreviation Abbrevs,
-  print TypeAbbreviations Abbrevs,
   Abbrevs => typecheck-program P Q DeclaredTypes RC, !,
   warn-linear P, !,
   if (var RC) (true) (fail).
