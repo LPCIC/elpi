@@ -1,0 +1,11 @@
+{ typeabbrev xx bool. }
+
+type g xx -> xx.
+{
+pred f i:xx.
+f (g _).
+
+}
+
+
+main :- f (g tt).

@@ -39,10 +39,10 @@ type prod frag -> term -> (term -> term) -> term.
 type rest frag -> term -> (term -> term) -> term.
 
 % identifier
-macro @id :- term.
+typeabbrev id term.
 
 % application stack: S
-macro @stack :- list term.
+typeabbrev stack (list term).
 
 % degree: D
 kind deg type.
@@ -54,10 +54,10 @@ type d_1 deg.
 type d_2 deg.
 
 % local assumption
-type dec_l @id -> deg -> term -> prop.
+type dec_l id -> deg -> term -> prop.
 
 % local definition for substitution
-type def_l @id -> term -> prop.
+type def_l id -> term -> prop.
 
 % deferred whd mode: M
 kind whd_mode type.
@@ -144,7 +144,7 @@ expand_t (rest F W1 T1) (rest F W2 T2) :-
 
 % Weak normal form to kind %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type whd_t term -> @stack -> whd_mode -> term -> prop.
+type whd_t term -> stack -> whd_mode -> term -> prop.
 
 whd_t (sort) [] _ T :- (sort) = T.
 
@@ -168,7 +168,7 @@ whd_t (rest _ _ T1) [V|S] M T2 :- print "br",
 
 % Stack Conversion %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type conv_s @stack -> @stack -> prop.
+type conv_s stack -> stack -> prop.
 
 conv_s [] [].
 
@@ -176,7 +176,7 @@ conv_s [V1|S1] [V2|S2] :- conv_t V1 [] [] V2, conv_s S1 S2.
 
 % Term Conversion %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type conv_t term -> @stack -> @stack -> term -> prop.
+type conv_t term -> stack -> stack -> term -> prop.
 
 % reflexivity 
 conv_t T S1 S2 T :- conv_s S1 S2, !. %, print "r".
@@ -235,7 +235,7 @@ conv_t T1 S1 S2 X2 :- def_l X2 T2, !, % print "d",
 
 % Implied conversion %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type conv_i @id -> term -> @stack -> @stack -> term -> @id -> prop.
+type conv_i id -> term -> stack -> stack -> term -> id -> prop.
 
 conv_i X1 _ S1 S2 T2 X2 :- X1 < X2, !, conv_t X1 S1 S2 T2.
 
@@ -243,7 +243,7 @@ conv_i _ T1 S1 S2 _ X2 :- conv_t T1 S1 S2 X2.
 
 % Applicability condition %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-type ac_t term -> @stack -> prog -> prop.
+type ac_t term -> stack -> prog -> prop.
 
 ac_t (prod f_sb W U) [] (p_appl f_sb V P) :- !, % print "Bf",
   @TYPE_T d_2 V W,

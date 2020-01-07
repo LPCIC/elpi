@@ -1,0 +1,10 @@
+typeabbrev t int.
+
+namespace xx {
+    typeabbrev t int.
+}
+
+pred f i:t, i:xx.t.
+f 0 0.
+
+main :- f 0 0.

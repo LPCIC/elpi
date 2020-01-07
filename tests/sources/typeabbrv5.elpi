@@ -1,0 +1,7 @@
+typeabbrev x y.
+typeabbrev y x.
+
+pred f i:x.
+f _.
+
+main :- f 0.

@@ -1,0 +1,5 @@
+pred doomed o:int.
+accumulate accumulated.
+accumulate accumulated.
+main :-
+  doomed 100.

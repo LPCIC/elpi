@@ -6,7 +6,7 @@ type fname = string
 type expectation =
   | Success
   | Failure
-  | Output of fname
+  | Output of Str.regexp
 
 val declare :
   (*name*)string ->

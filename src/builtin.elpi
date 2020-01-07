@@ -16,6 +16,15 @@ pred (=) o:A, o:A.
 
 X = X.
 
+typeabbrev int (ctype "int").
+
+
+typeabbrev string (ctype "string").
+
+
+typeabbrev float (ctype "float").
+
+
 pred (;) o:prop, o:prop.
 
 (A ; _) :- A.
@@ -179,44 +188,44 @@ type error string -> diagnostic. % Failure
 
 %  -- I/O --
 
-macro @in_stream :- ctype "in_stream".
+typeabbrev in_stream (ctype "in_stream").
 
-type std_in @in_stream.
+type std_in in_stream.
 
-macro @out_stream :- ctype "out_stream".
+typeabbrev out_stream (ctype "out_stream").
 
-type std_out @out_stream.
-type std_err @out_stream.
+type std_out out_stream.
+type std_err out_stream.
 
 % [open_in FileName InStream] opens FileName for input
-external pred open_in i:string, o:@in_stream.
+external pred open_in i:string, o:in_stream.
 
 % [open_out FileName OutStream] opens FileName for output
-external pred open_out i:string, o:@out_stream.
+external pred open_out i:string, o:out_stream.
 
 % [open_append FileName OutStream] opens FileName for output in append mode
-external pred open_append i:string, o:@out_stream.
+external pred open_append i:string, o:out_stream.
 
 % [close_in InStream] closes input stream InStream
-external pred close_in i:@in_stream.
+external pred close_in i:in_stream.
 
 % [close_out OutStream] closes output stream OutStream
-external pred close_out i:@out_stream.
+external pred close_out i:out_stream.
 
 % [output OutStream Data] writes Data to OutStream
-external pred output i:@out_stream, i:string.
+external pred output i:out_stream, i:string.
 
 % [flush OutStream] flush all output not yet finalized to OutStream
-external pred flush i:@out_stream.
+external pred flush i:out_stream.
 
 % [input InStream Bytes Data] reads Bytes from InStream
-external pred input i:@in_stream, i:int, o:string.
+external pred input i:in_stream, i:int, o:string.
 
 % [input_line InStream Line] reads a full line from InStream
-external pred input_line i:@in_stream, o:string.
+external pred input_line i:in_stream, o:string.
 
 % [eof InStream] checks if no more data can be read from InStream
-external pred eof i:@in_stream.
+external pred eof i:in_stream.
 
 %  -- System --
 
@@ -239,10 +248,10 @@ external pred term_to_string i:any, o:string.
 %  -- Extra I/O --
 
 % [open_string DataIn InStream] opens DataIn as an input stream
-external pred open_string i:string, o:@in_stream.
+external pred open_string i:string, o:in_stream.
 
 % [lookahead InStream NextChar] peeks one byte from InStream
-external pred lookahead i:@in_stream, o:string.
+external pred lookahead i:in_stream, o:string.
 
 %  -- Hacks --
 
@@ -250,9 +259,9 @@ external pred lookahead i:@in_stream, o:string.
 external pred string_to_term i:string, o:any.
 
 % [readterm InStream T] reads T from InStream
-external pred readterm i:@in_stream, o:any.
+external pred readterm i:in_stream, o:any.
 
-pred printterm i:@out_stream, i:A.
+pred printterm i:out_stream, i:A.
 
 printterm S T :- term_to_string T T1, output S T1.
 
@@ -285,7 +294,7 @@ external pred rex_replace i:string, i:string, i:string, o:string.
 % the syntax tree
 external pred quote_syntax i:string, i:string, o:list A, o:A.
 
-macro @loc :- ctype "Loc.t".
+typeabbrev loc (ctype "Loc.t").
 
 
 % == Elpi nonlogical builtins =====================================
@@ -349,17 +358,17 @@ primitive? X S :- is_cdata X (ctype S).
 external pred new_int o:int.
 
 % Holds data across bracktracking; can only contain closed terms
-macro @safe :- ctype "safe".
+typeabbrev safe (ctype "safe").
 
 
 % [new_safe Safe] creates a safe: a store that persists across backtracking
-external pred new_safe o:@safe.
+external pred new_safe o:safe.
 
 % [stash_in_safe Safe Data] stores Data in the Safe
-external pred stash_in_safe i:@safe, i:A.
+external pred stash_in_safe i:safe, i:A.
 
 % [open_safe Safe Data] retrieves the Data stored in Safe
-external pred open_safe i:@safe, o:list A.
+external pred open_safe i:safe, o:list A.
 
 
 % [if C T E] picks the first success of C then runs T (never E).
@@ -694,20 +703,20 @@ kind std.loc.map type -> type.
 external pred std.loc.map.empty o:std.loc.map A.
 
 % [std.loc.map.mem S M] Checks if S is bound in M
-external pred std.loc.map.mem i:@loc, i:std.loc.map A.
+external pred std.loc.map.mem i:loc, i:std.loc.map A.
 
 % [std.loc.map.add S V M M1] M1 is M where V is bound to S
-external pred std.loc.map.add i:@loc, i:A, i:std.loc.map A, 
+external pred std.loc.map.add i:loc, i:A, i:std.loc.map A, 
                               o:std.loc.map A.
 
 % [std.loc.map.remove S M M1] M1 is M where S is unbound
-external pred std.loc.map.remove i:@loc, i:std.loc.map A, o:std.loc.map A.
+external pred std.loc.map.remove i:loc, i:std.loc.map A, o:std.loc.map A.
 
 % [std.loc.map.find S M V] V is the binding of S in M
-external pred std.loc.map.find i:@loc, i:std.loc.map A, o:A.
+external pred std.loc.map.find i:loc, i:std.loc.map A, o:A.
 
 % [std.loc.map.bindings M L] L is M transformed into an associative list
-external pred std.loc.map.bindings i:std.loc.map A, o:list (pair @loc A).
+external pred std.loc.map.bindings i:std.loc.map A, o:list (pair loc A).
 
 kind std.string.set type.
 
@@ -793,13 +802,13 @@ kind std.loc.set type.
 external pred std.loc.set.empty o:std.loc.set.
 
 % [std.loc.set.mem Elem A] Checks if Elem is in a
-external pred std.loc.set.mem i:@loc, i:std.loc.set.
+external pred std.loc.set.mem i:loc, i:std.loc.set.
 
 % [std.loc.set.add Elem A B] B is A union {Elem}
-external pred std.loc.set.add i:@loc, i:std.loc.set, o:std.loc.set.
+external pred std.loc.set.add i:loc, i:std.loc.set, o:std.loc.set.
 
 % [std.loc.set.remove Elem A B] B is A  {Elem}
-external pred std.loc.set.remove i:@loc, i:std.loc.set, o:std.loc.set.
+external pred std.loc.set.remove i:loc, i:std.loc.set, o:std.loc.set.
 
 % [std.loc.set.union A B X] X is A union B
 external pred std.loc.set.union i:std.loc.set, i:std.loc.set, 
@@ -820,7 +829,7 @@ external pred std.loc.set.equal i:std.loc.set, i:std.loc.set.
 external pred std.loc.set.subset i:std.loc.set, i:std.loc.set.
 
 % [std.loc.set.elements M L] L is M transformed into list
-external pred std.loc.set.elements i:std.loc.set, o:list @loc.
+external pred std.loc.set.elements i:std.loc.set, o:list loc.
 
 % [std.loc.set.cardinal M N] N is the number of elements of M
 external pred std.loc.set.cardinal i:std.loc.set, o:int.

@@ -54,7 +54,7 @@ module Func = struct
 end
 
 module Term = struct
-
+  
   type t =
    | Const of Func.t
    | App of t * t list
@@ -192,6 +192,15 @@ module Mode = struct
 
 end
 
+module TypeAbbreviation = struct
+
+  type ('name) t =
+    { name : 'name; value : Term.t; nparams : int; loc : Loc.t }
+  [@@deriving show]
+
+end
+
+
 module Program = struct
 
   type decl =
@@ -201,9 +210,9 @@ module Program = struct
     | Constraint of Loc.t * Func.t list
     | Shorten of Loc.t * Func.t * Func.t (* prefix suffix *)
     | End of Loc.t
-  
-    | Accumulated of Loc.t * decl list
-  
+
+    | Accumulated of Loc.t * (Digest.t * decl list)
+
     (* data *)
     | Clause of (Term.t, Clause.attribute list) Clause.t
     | Local of Func.t
@@ -211,6 +220,7 @@ module Program = struct
     | Chr of Chr.attribute list Chr.t
     | Macro of (Func.t, Term.t) Macro.t
     | Type of Type.attribute list Type.t
+    | TypeAbbreviation of Func.t TypeAbbreviation.t
   [@@deriving show]
 
 

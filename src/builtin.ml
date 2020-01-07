@@ -353,6 +353,10 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "pred (=) o:A, o:A.";
   LPCode "X = X.";
 
+  MLData BuiltInData.int;
+  MLData BuiltInData.string;
+  MLData BuiltInData.float;
+
   LPCode "pred (;) o:prop, o:prop.";
   LPCode "(A ; _) :- A.";
   LPCode "(_ ; B) :- B.";
@@ -723,7 +727,7 @@ let lp_builtins = let open BuiltIn in let open BuiltInData in [
      | Parse.ParseError _ -> raise No_clause)),
   DocAbove);
 
-  LPCode "pred printterm i:@out_stream, i:A.";
+  LPCode "pred printterm i:out_stream, i:A.";
   LPCode "printterm S T :- term_to_string T T1, output S T1.";
 
   LPCode "pred read o:A.";

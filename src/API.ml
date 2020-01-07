@@ -227,8 +227,7 @@ module RawOpaqueData = struct
       ED.BuiltInPredicate.pp_comment fmt ("% " ^ doc);
       Format.fprintf fmt "@\n";
     end;
-    (* TODO: use typeabbrv *)
-    Format.fprintf fmt "@[<hov 2>macro %s :- ctype \"%s\".@]@\n@\n" name c;
+    Format.fprintf fmt "@[<hov 2>typeabbrev %s (ctype \"%s\").@]@\n@\n" name c;
     ED.Constants.Map.iter (fun c _ ->
       Format.fprintf fmt "@[<hov 2>type %a %s.@]@\n" ED.Constants.pp c name)
       constants
@@ -236,14 +235,11 @@ module RawOpaqueData = struct
   { Conversion.embed; readback; ty; pp_doc; pp = (fun fmt x -> pp fmt (cin x)) }
 
   let conversion_of_cdata ~name ?doc ?(constants=[]) cd =
-    let prefix =
-      if name = "int" || name = "float" || name = "string" then ""
-      else "@" in
     let constants =
       List.fold_right (fun (n,v) ->
         ED.Constants.Map.add (ED.Constants.from_stringc n) v)
         constants ED.Constants.Map.empty in
-    conversion_of_cdata ~name:(prefix^name) ?doc ~constants cd
+    conversion_of_cdata ~name ?doc ~constants cd
 
   let declare { name; doc; pp; compare; hash; hconsed; constants; } =
     let cdata = declare {

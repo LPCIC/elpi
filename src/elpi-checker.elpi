@@ -18,9 +18,8 @@ type ctype string -> typ.
 
 % --------- utils  ---------------------------------------------------------
 
-pred mem-assoc i:list entry, i:term.
-mem-assoc [X `: _ | _] X :- !.
-mem-assoc [ _ | XS] X :- mem-assoc XS X.
+type (`:) term -> typ -> entry.
+type (`:=) string -> typ -> entry.
 
 % --------- error reporting  ------------------------------------------------
 kind err type.
@@ -41,8 +40,10 @@ warning Loc Msg :- print Loc "Warning:" Msg.
 assert P _ :- P, !.
 assert _ (type-err T Ty ETy) :- !,
   checking LOC,
-  MSG is {pp T} ^ " has type " ^ {ppt Ty} ^
-         " but is used with type " ^ {ppt ETy},
+  ppt Ty TyPP, ppt ETy ETyPP,
+  if (TyPP = ETyPP) (term_to_string Ty TyS, term_to_string ETy ETyS) (TyS = TyPP, ETyS = ETyPP),
+  MSG is {pp T} ^ " has type " ^ TyS ^
+         " but is used with type " ^ ETyS,
   error [pr LOC MSG] _.
 assert _ (wrong-arity T Ty A) :- !,
   checking LOC,
@@ -78,7 +79,7 @@ pp-list [X|XS] Y :- pp-list XS XSS, pp X XT, Y is XT ^ " " ^ XSS.
 pp-list [] "".
 
 mode (ppt i o).
-ppt (ctype X) X :- !.
+ppt (ctype S) X :- !, X is "(ctype " ^ S ^ ")".
 ppt (tconst X) X :- !.
 ppt (tapp L) X :- !, ppt-list L T, X is "(" ^ T ^ ")".
 ppt (arrow A B) S :- !, ppt A AS, ppt B BS, S is "(" ^ AS ^ " -> " ^ BS ^ ")".
@@ -224,7 +225,6 @@ warn-undeclared Known (pr ( S) LOC) tt :-
   MSG is "constant " ^ S ^ " has no declared type." ^ H,
   warning LOC MSG.
 
-type (`:) term -> typ -> entry.
 forall_uto10 [] _ _ :- !.
 forall_uto10 [X|XS] N P :- N < 10, !,
   P X Done, !,
@@ -322,8 +322,17 @@ main.
 
 % ------- entry ---------------------------------------
 
-check P Q DeclaredTypes :-
-  typecheck-program P Q DeclaredTypes RC, !,
+type->ppt-clause S ACC (forall F) (pi C) :- !,
+  pi x\ type->ppt-clause S [x|ACC] (F x) (C x).
+type->ppt-clause S [] T (pi Str\ ppt T Str :- !, ppt (tconst S) Str).
+type->ppt-clause S ACC T (pi Str\ ppt T Str :- !, ppt (tapp [tconst S|Args]) Str) :- std.rev ACC Args.
+
+compile-type-abbreviation (S `:= T) Clause :-
+  type->ppt-clause S [] T Clause.
+
+check P Q DeclaredTypes TypeAbbreviations :-
+  std.map TypeAbbreviations compile-type-abbreviation Abbrevs,
+  Abbrevs => typecheck-program P Q DeclaredTypes RC, !,
   warn-linear P, !,
   if (var RC) (true) (fail).
 

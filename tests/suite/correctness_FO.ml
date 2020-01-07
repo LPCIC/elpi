@@ -40,3 +40,51 @@ let () = declare "uminus"
   ~source_elpi:"uminus.elpi"
   ~description:"parsing and evaluation of unary minus"
   ()
+
+let () = declare "typeabbrv1"
+  ~source_elpi:"typeabbrv1.elpi"
+  ~description:"type abbreviations"
+  ()
+let () = declare "typeabbrv2"
+  ~source_elpi:"typeabbrv2.elpi"
+  ~expectation:Failure
+  ~description:"type abbreviations"
+  ()
+let () = declare "typeabbrv3"
+  ~source_elpi:"typeabbrv3.elpi"
+  ~description:"type abbreviations"
+  ()
+let () = declare "typeabbrv4"
+  ~source_elpi:"typeabbrv4.elpi"
+  ~description:"type abbreviations"
+  ()
+let () = declare "typeabbrv5"
+  ~source_elpi:"typeabbrv5.elpi"
+  ~expectation:Failure
+  ~description:"type abbreviations"
+  ()
+let () = declare "typeabbrv6"
+  ~source_elpi:"typeabbrv6.elpi"
+  ~expectation:Failure
+  ~description:"type abbreviations"
+  ()
+let () = declare "typeabbrv7"
+  ~source_elpi:"typeabbrv7.elpi"
+  ~expectation:Success
+  ~description:"type abbreviations"
+  ()
+let () = declare "typeabbrv8"
+  ~source_elpi:"typeabbrv8.elpi"
+  ~expectation:Success
+  ~description:"type abbreviations"
+  ()
+let () = declare "typeabbrv9"
+  ~source_elpi:"typeabbrv9.elpi"
+  ~expectation:Success
+  ~description:"type abbreviations"
+  ()
+let () = declare "typeabbrv10"
+  ~source_elpi:"typeabbrv10.elpi"
+  ~expectation:(Output (Str.regexp "3 has type int but is used with type (foo X[0-9]+)"))
+  ~description:"type abbreviations and error messages"
+  ()

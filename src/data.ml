@@ -639,6 +639,15 @@ type preterm = {
 type type_declaration = {
   tname : constant;
   ttype : preterm;
+  tloc : Loc.t;
+}
+[@@ deriving show]
+
+type type_abbrev_declaration = {
+  taname : constant;
+  tavalue : preterm;
+  taparams : int;
+  taloc : Loc.t;
 }
 [@@ deriving show]
 

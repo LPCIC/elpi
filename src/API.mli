@@ -926,8 +926,8 @@ module RawData : sig
     val cutc   : constant (* ! *)
 
     (* LambdaProlog built-in data types are just instances of CData.
-      * Still the parser translated the type [int], [float] and [string]
-      * to [ctype "int"], [ctype "float"] and [ctype "string"]. *)
+     * The typeabbrev machinery translates [int], [float] and [string]
+     * to [ctype "int"], [ctype "float"] and [ctype "string"]. *)
     val ctypec : constant (* ctype *)
 
     (* Marker for spilling function calls, as in [{ rev L }] *)

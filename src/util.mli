@@ -76,6 +76,12 @@ module PtrMap : sig
 
 end
 
+module Digest : sig
+  include module type of Digest
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
+end
+
 module Loc : sig
   type t = {
     source_name : string;

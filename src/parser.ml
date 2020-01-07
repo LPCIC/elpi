@@ -118,8 +118,8 @@ let rec parse_one e (origfilename as filename) =
  if List.mem_assoc inode !parsed then begin
   if not !parse_silent then Printf.eprintf "already loaded %s\n%!" origfilename;
   match !(List.assoc inode !parsed) with
-  | None -> []
-  | Some l -> l
+  | None -> inode, []
+  | Some l -> inode, l
  end else begin
   let sigs =
    if Filename.check_suffix filename ".sig" then []
@@ -127,7 +127,7 @@ let rec parse_one e (origfilename as filename) =
     let signame = prefixname ^ ".sig" in
     if Sys.file_exists signame then
      let origsigname = origprefixname ^ ".sig" in
-     parse_one e origsigname
+     snd (parse_one e origsigname)
     else [] in
   if not !parse_silent then
     Printf.printf "loading %s (%s)\n%!" origfilename (Digest.to_hex inode);
@@ -136,7 +136,7 @@ let rec parse_one e (origfilename as filename) =
   let ch = open_in filename in
   let saved_cur_dirname = !cur_dirname in
   cur_dirname := symlink_dirname filename;
-  sigs @
+  inode, sigs @
   try
    let loc = !last_loc in
    set_fname filename;
@@ -155,7 +155,7 @@ let rec parse_one e (origfilename as filename) =
  end
   
 let parse e filenames =
-  List.concat (List.map (parse_one e) filenames)
+  List.concat (List.map (fun x -> snd (parse_one e x)) filenames)
 
 let string_of_chars chars = 
   let buf = Buffer.create 10 in
@@ -711,7 +711,14 @@ EXTEND
          List.map (fun n ->
            Program.Type { Type.loc=of_ploc loc; attributes=[]; name=Func.from_string n; ty=t })
          names
-     | TYPEABBREV; abbrform; TYPE; FULLSTOP -> []
+     | TYPEABBREV; a = abbrform; t = type_; FULLSTOP -> [
+         let name, args = a in
+         let nparams = List.length args in
+         let value = List.fold_right mkLam args t in
+         TypeAbbreviation { TypeAbbreviation.name = name;
+                            nparams = nparams; value = value;
+                            loc = of_ploc loc }
+       ]
      | fix = FIXITY; syms = LIST1 const_sym SEP SYMBOL ","; prec = INTEGER; FULLSTOP ->
          List.iter (fun sym ->
            gram_extend (of_ploc loc) {
@@ -739,9 +746,8 @@ EXTEND
               | LPAREN; t = type_; RPAREN -> t ]
      ];
   abbrform:
-    [[ CONSTANT -> ()
-     | LPAREN; CONSTANT; LIST1 CONSTANT; RPAREN -> ()
-     | LPAREN; abbrform; RPAREN -> ()
+    [[ c = const_sym -> Func.from_string c, []
+     | LPAREN; hd = const_sym; args = LIST1 CONSTANT; RPAREN -> Func.from_string hd, args
     ]];
   goal:
     [[ OPT pragma; p = premise; OPT FULLSTOP -> of_ploc loc, p ]];
@@ -882,6 +888,7 @@ let lp_gramext = [
   { fix = Infixr;	sym = "::";	prec = 140; };
   { fix = Infix;	sym = "`->";	prec = 141; };
   { fix = Infix;	sym = "`:";	prec = 141; };
+  { fix = Infix;	sym = "`:=";	prec = 141; };
   { fix = Infixl;	sym = "^";	prec = 150; };
   { fix = Infixl;	sym = "-";	prec = 150; };
   { fix = Infixl;	sym = "+";	prec = 150; };

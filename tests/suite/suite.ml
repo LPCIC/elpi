@@ -8,7 +8,7 @@ type fname = string
 type expectation =
   | Success
   | Failure
-  | Output of fname
+  | Output of Str.regexp
 
 type t = {
   name : string;
@@ -244,6 +244,15 @@ let read_time input_line =
   done; !time
   with End_of_file -> !time
 
+let match_rex rex input_line =
+  let b = ref false in
+  try while true do
+    let l = input_line () in
+    try ignore(Str.search_forward rex l 0); b := true
+    with Not_found -> ()
+  done; !b
+  with End_of_file -> !b
+
 let read_tctime input_line =
   let time = ref 0.0 in
   try while true do
@@ -293,8 +302,13 @@ let () = Runner.declare
         Runner.Timeout timeout
       | Test.Failure, Util.Timeout ->
         Runner.Timeout timeout
-      | Test.Output _, _ -> assert false
-
+      | Test.Output rex, Util.Exit(_,walltime,mem) ->
+          if Util.with_log log (match_rex rex) then 
+            Runner.Success { walltime; typechecking = Util.with_log log read_tctime; execution = Util.with_log log read_time; mem }
+          else
+            Runner.Failure { walltime; typechecking = Util.with_log log read_tctime; execution = walltime; mem }
+      | Test.Output _, Util.Timeout ->
+        Runner.Timeout timeout
     in
     Runner.(Done { Runner.rc; executable; test; log = snd log })
   end
@@ -367,8 +381,10 @@ let is_tjsim =
         Runner.Timeout timeout
       | Test.Failure, Util.Timeout ->
         Runner.Timeout timeout
-      | Test.Output _, _ -> assert false
-
+      | Test.Output _, Util.Exit(_,walltime,mem) ->
+        Runner.Success { walltime; typechecking = 0.0; execution = walltime; mem }
+      | Test.Output _, Util.Timeout ->
+        Runner.Timeout timeout
     in
     Runner.Done { Runner.rc; executable; test; log = snd log }
   end
