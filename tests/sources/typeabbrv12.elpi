@@ -1,0 +1,6 @@
+typeabbrev y (list int).
+
+pred f i:y.
+f "x".
+
+main.

@@ -1905,7 +1905,7 @@ let static_check header
   let talist =
     C.Map.bindings type_abbrevs |> List.map (fun (name, { Data.tavalue;  } ) ->
         App(C.from_stringc "`:=", Data.C.of_string (C.show name),
-          [lam2forall (quote_preterm ~on_type:true tavalue)]))
+          [lam2forall (quote_preterm ~on_type:true (unfold_type_abbrevs initial_depth type_abbrevs tavalue))]))
     |> R.list_to_lp_list
     in
   let checker =

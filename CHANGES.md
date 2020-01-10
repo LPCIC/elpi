@@ -1,5 +1,11 @@
 ## UNRELEASED
 
+- Typing:
+  - Name alias abbreviations are not refolded in error messages.
+    Eg. `typeabbrev x int` does not take over `int`, while
+    `typeabbrev x (list int)` does over `list int`.
+  - Fix type abbreviation refolding, was not working on some cases.
+
 - Stdlib:
   - Fix `is` function `int_of_string` to do what it says
   - New `is` function `rhc : string -> int` computes the inverse of `chr`
