@@ -141,6 +141,8 @@ type size string -> int.
 
 type chr int -> string.
 
+type rhc string -> int.
+
 type string_to_int string -> int.
 
 type int_to_string int -> string.

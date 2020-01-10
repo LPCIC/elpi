@@ -1,3 +1,9 @@
+## UNRELEASED
+
+- Stdlib:
+  - Fix `is` function `int_of_string` to do what it says
+  - New `is` function `rhc : string -> int` computes the inverse of `chr`
+
 ## v1.9.0 (January 2020)
 
 - Typing:

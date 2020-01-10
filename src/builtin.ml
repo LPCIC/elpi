@@ -153,9 +153,12 @@ let _ =
    | [ CData x ] when is_int x ->
          of_string (String.make 1 (char_of_int (to_int x)))
    | _ -> type_error "Wrong arguments to chr") ;
-  register_eval_ty "string_to_int" "string -> int" (function
+  register_eval_ty "rhc" "string -> int" (function
    | [ CData x ] when is_string x && String.length (to_string x) = 1 ->
        of_int (int_of_char (to_string x).[0])
+   | _ -> type_error "Wrong arguments to rhc") ;
+  register_eval_ty "string_to_int" "string -> int" (function
+   | [ CData x ] when is_string x -> of_int (int_of_string (to_string x))
    | _ -> type_error "Wrong arguments to string_to_int") ;
   register_eval_ty "int_to_string" "int -> string" (function
    | [ CData x ] when is_int x ->
