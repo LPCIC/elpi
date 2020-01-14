@@ -1,5 +1,9 @@
 ## UNRELEASED
 
+- Parser:
+  - Line nubers after quotations were wrong, since `\n` inside
+    quotations were not taken into account.
+
 - Typing:
   - Name alias abbreviations are not refolded in error messages.
     Eg. `typeabbrev x int` does not take over `int`, while
