@@ -1,4 +1,7 @@
-## UNRELEASED
+## v1.9.1 (January 2020)
+
+- Tests:
+  - Fix testing framework on runners pre 1.9.0.
 
 - Parser:
   - Line nubers after quotations were wrong, since `\n` inside
