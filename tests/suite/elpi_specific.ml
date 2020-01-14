@@ -162,14 +162,14 @@ let () = declare "asclause"
   ()
 
 let () = declare "elpi-checker"
-  ~source_elpi:"elpi-checker.elpi"
+  ~source_elpi:"elpi-checker-copy.elpi"
   ~description:"type checking the type checker"
   ~typecheck:true
   ~expectation:Test.Success
   ()
 
 let () = declare "elpi2html"
-  ~source_elpi:"elpi2html.elpi"
+  ~source_elpi:"elpi2html-copy.elpi"
   ~description:"type checking elpi2html"
   ~typecheck:true
   ~expectation:Test.Success

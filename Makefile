@@ -19,7 +19,7 @@ SHELL:=/bin/bash
 TIMEOUT=90.0
 RUNNERS=\
   $(shell pwd)/$(INSTALL)/bin/elpi \
-  $(addprefix $(shell pwd)/,$(wildcard elpi.git.*)) \
+  $(addprefix $(shell pwd)/,$(wildcard _build/git/*/$(INSTALL)/bin/elpi.git.*)) \
   $(shell if type tjsim >/dev/null 2>&1; then type -P tjsim; else echo; fi)
 TIME=--time $(shell if type -P gtime >/dev/null 2>&1; then type -P gtime; else echo /usr/bin/time; fi)
 STACK=32768
@@ -51,7 +51,7 @@ clean:
 	rm -rf _build
 
 tests:
-	dune build $(DUNE_OPTS) $(INSTALL)/bin/elpi
+	dune build $(DUNE_OPTS) @install
 	dune build $(DUNE_OPTS) $(BUILD)/tests/test.exe
 	ulimit -s $(STACK); \
 		$(BUILD)/tests/test.exe \
@@ -64,14 +64,19 @@ tests:
 		$(addprefix --runner , $(RUNNERS))
 
 git/%:
-	rm -rf "$$PWD/elpi-$*"
-	mkdir "elpi-$*"
-	git clone -l . "elpi-$*"
-	cd "elpi-$*" && git checkout "$*"
-	cd "elpi-$*" && \
-	  if [ -f dune ]; then dune build --root . $(DUNE_OPTS) @install; else make; fi
-	cp "elpi-$*/elpi" "elpi.git.$*" || \
-		cp "elpi-$*/$(INSTALL)/bin/elpi" "elpi.git.$*"
-	rm -rf "$$PWD/elpi-$*"
+	rm -rf "_build/git/elpi-$*"
+	mkdir -p "_build/git/elpi-$*"
+	git clone -l . "_build/git/elpi-$*"
+	cd "_build/git/elpi-$*" && git checkout "$*"
+	cd "_build/git/elpi-$*" && \
+	  if [ -f dune ]; then \
+	    dune build --root . $(DUNE_OPTS) @install; \
+	    cd _build/install/default/bin/; \
+		ln -sf elpi elpi.git.$*; \
+	  else \
+	    make; \
+		mkdir -p _build/install/default/bin/; \
+		ln -s $$PWD/elpi _build/install/default/bin/elpi.git.$*; \
+	  fi
 
 .PHONY: tests help .merlin install build clean

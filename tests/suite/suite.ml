@@ -276,10 +276,11 @@ let () = Runner.declare
   else
     let log = Util.open_log ~executable test in
     Util.write log (Printf.sprintf "executable: %s\n" executable);
+    let executable_stuff = Filename.dirname executable ^ "/../lib/elpi/" in
 
     let { Test.expectation; input; outside_llam ; typecheck; _ } = test in
     let input = Util.option_map (fun x -> sources^x) input in
-    let args = ["-test";"-I";sources;source] in
+    let args = ["-test";"-I";executable_stuff;"-I";sources;source] in
     let args =
       if typecheck then args
       else "-no-tc" :: args in
