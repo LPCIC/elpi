@@ -213,7 +213,9 @@ let stringchar eol_found = lexer
  | _ ]
 
 let rec string eol_found = lexer [ '"' / '"' (string eol_found) | '"' / | (stringchar eol_found) (string  eol_found)]
-let any = lexer [ _ ]
+let any eol_found = lexer
+  [ "\n" -> incr eol_found ; $add "\n"
+  | _ ]
 let mk_terminator keep n b s =
   let l = Stream.npeek n s in
   if List.length l = n && List.for_all ((=) '}') l then begin
@@ -223,17 +225,17 @@ let mk_terminator keep n b s =
      if keep then b := Plexing.Lexbuf.add '}' !b;
    done; !b
   end else raise Stream.Failure
-let rec quoted_inner d = (*spy ~name:"quoted_inner"*) (lexer
+let rec quoted_inner eol_found d = (*spy ~name:"quoted_inner"*) (lexer
   [ d
-  | "{" (maybe_quoted_inner d)
-  | any (quoted_inner d) ])
-and maybe_quoted_inner d = (*spy ~name:"maybe"*) (lexer
+  | "{" (maybe_quoted_inner eol_found d)
+  | (any eol_found) (quoted_inner eol_found d) ])
+and maybe_quoted_inner eol_found d = (*spy ~name:"maybe"*) (lexer
   [ d
-  | "{" (quoted true 2) (quoted_inner d)
-  | any (quoted_inner d) ])
-and  quoted keep n = (*spy ~name:"quoted"*) (lexer
-  [ "{" (quoted keep (n+1))
-  | (quoted_inner (mk_terminator keep n)) ])
+  | "{" (quoted eol_found true 2) (quoted_inner eol_found d)
+  | (any eol_found) (quoted_inner eol_found d) ])
+and  quoted eol_found keep n = (*spy ~name:"quoted"*) (lexer
+  [ "{" (quoted eol_found keep (n+1))
+  | (quoted_inner eol_found (mk_terminator keep n)) ])
 
 let constant = "CONSTANT" (* to use physical equality *)
 
@@ -261,7 +263,7 @@ let rec tok b s = let eol_found = ref 0 in (*spy ~name:"tok" ~pp:(fun (a,b) -> a
   | ')' -> "RPAREN",$buf,!eol_found
   | '[' -> "LBRACKET",$buf,!eol_found
   | ']' -> "RBRACKET",$buf,!eol_found
-  | "{{" / (quoted false 2) -> "QUOTED", $buf,!eol_found
+  | "{{" / (quoted eol_found false 2) -> "QUOTED", $buf,!eol_found
   | '{' -> "LCURLY",$buf,!eol_found
   | '}' -> "RCURLY",$buf,!eol_found
   | '|' -> "PIPE",$buf,!eol_found
