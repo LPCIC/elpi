@@ -215,3 +215,5 @@ let () = declare "CHR_no_clique"
   ~typecheck:true
   ~expectation:Test.Failure
   ()
+
+

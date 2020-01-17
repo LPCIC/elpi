@@ -18,6 +18,7 @@ BUILD=_build/default
 SHELL:=/bin/bash
 TIMEOUT=90.0
 RUNNERS=\
+  dune \
   $(shell pwd)/$(INSTALL)/bin/elpi \
   $(addprefix $(shell pwd)/,$(wildcard _build/git/*/$(INSTALL)/bin/elpi.git.*)) \
   $(shell if type tjsim >/dev/null 2>&1; then type -P tjsim; else echo; fi)

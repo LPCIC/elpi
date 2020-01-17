@@ -14,6 +14,7 @@ val declare :
   ?source_elpi:fname ->
   ?source_teyjus:fname ->
   ?deps_teyjus:fname list ->
+  ?source_dune:fname ->
   ?typecheck:bool ->
   ?input:fname -> 
   ?expectation:expectation -> 
@@ -28,6 +29,7 @@ type t = {
   source_elpi : fname option;
   source_teyjus : fname option;
   deps_teyjus : fname list;
+  source_dune : fname option;
   typecheck : bool;
   input : fname option;
   expectation : expectation;
