@@ -896,7 +896,7 @@ module Flatten : sig
 
   (* Eliminating the structure (name spaces) *)
 
-  val run : flags:flags -> State.t -> Structured.program -> Flat.program
+  val run : flags:flags -> Structured.program -> Flat.program
 
 end = struct (* {{{ *)
 
@@ -1023,7 +1023,7 @@ end = struct (* {{{ *)
     in
     oldprefix, List.fold_left push1 oldsubst shorthands
 
-  let rec compile_body lcs types type_abbrevs modes clauses chr subst state bl =
+  let rec compile_body lcs types type_abbrevs modes clauses chr subst bl =
     match bl with
     | [] -> types, type_abbrevs, modes, clauses, chr
     | Shorten(shorthands, { types = t; type_abbrevs = ta; modes = m; body; symbols }) :: rest ->
@@ -1032,20 +1032,20 @@ end = struct (* {{{ *)
         let type_abbrevs = ToDBL.merge_type_abbrevs (apply_subst_type_abbrevs insubst ta) type_abbrevs in
         let modes = ToDBL.merge_modes (apply_subst_modes insubst m) modes in
         let types, type_abbrevs, modes, clauses, chr =
-          compile_body lcs types type_abbrevs modes clauses chr insubst state body in
-        compile_body lcs types type_abbrevs modes clauses chr subst state rest
+          compile_body lcs types type_abbrevs modes clauses chr insubst body in
+        compile_body lcs types type_abbrevs modes clauses chr subst rest
     | Namespace (extra, { types = t; type_abbrevs = ta; modes = m; body; symbols }) :: rest ->
         let insubst = push_subst extra symbols subst in
         let types = ToDBL.merge_types (apply_subst_types insubst t) types in
         let type_abbrevs = ToDBL.merge_type_abbrevs (apply_subst_type_abbrevs insubst ta) type_abbrevs in
         let modes = ToDBL.merge_modes (apply_subst_modes insubst m) modes in
         let types, type_abbrevs, modes, clauses, chr =
-          compile_body lcs types type_abbrevs modes clauses chr insubst state body in
-        compile_body lcs types type_abbrevs modes clauses chr subst state rest
+          compile_body lcs types type_abbrevs modes clauses chr insubst body in
+        compile_body lcs types type_abbrevs modes clauses chr subst rest
     | Clauses cl :: rest ->
         let cl = apply_subst_clauses subst cl in
         let clauses = clauses @ cl in
-        compile_body lcs types type_abbrevs modes clauses chr subst state rest
+        compile_body lcs types type_abbrevs modes clauses chr subst rest
     | Constraints (clique, rules, { types = t; type_abbrevs = ta; modes = m; body }) :: rest ->
         let types = ToDBL.merge_types t types in
         let type_abbrevs = ToDBL.merge_type_abbrevs ta type_abbrevs in
@@ -1054,17 +1054,17 @@ end = struct (* {{{ *)
         let rules = apply_subst_chr subst rules in
         let chr = (clique, rules) :: chr in
         let types, type_abbrevs, modes, clauses, chr =
-          compile_body lcs types type_abbrevs modes clauses chr subst state body in
-        compile_body lcs types type_abbrevs modes clauses chr subst state rest
+          compile_body lcs types type_abbrevs modes clauses chr subst body in
+        compile_body lcs types type_abbrevs modes clauses chr subst rest
 
-  let run ~flags:_ state
+  let run ~flags:_
     { Structured.local_names;
       pbody = { types; type_abbrevs; modes; body; symbols = _ };
       toplevel_macros;
     }
   =
     let types, type_abbrevs, modes, clauses, chr =
-      compile_body local_names types type_abbrevs modes [] [] ([],fun x -> x) state body in
+      compile_body local_names types type_abbrevs modes [] [] ([],fun x -> x) body in
     { Flat.types;
       type_abbrevs;
       modes;
@@ -1383,7 +1383,7 @@ end (* }}} *)
  ****************************************************************************)
 
 (* Compiler passes *)
-let program_of_ast ~flags:({ print_passes } as flags) p =
+let unit_of_ast ~flags:({ print_passes } as flags) p =
 
   if print_passes then
     Format.eprintf "== AST ================@\n@[<v 0>%a@]@\n"
@@ -1401,7 +1401,7 @@ let program_of_ast ~flags:({ print_passes } as flags) p =
     Format.eprintf "== Structured ================@\n@[<v 0>%a@]@\n"
       Structured.pp_program p;
  
-  let p = Flatten.run ~flags s p in
+  let p = Flatten.run ~flags p in
  
   if print_passes then
     Format.eprintf "== Flat ================@\n@[<v 0>%a@]@\n"
