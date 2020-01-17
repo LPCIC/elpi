@@ -18,7 +18,7 @@ let set_trace argv =
 module Setup = struct
 
 type builtins = string * Data.BuiltInPredicate.declaration list
-type program_header = Ast.Program.t
+type program_header = Compiler.compilation_unit
 
 let init ~builtins:(fname,decls) ~basedir:cwd argv =
   let new_argv = set_trace argv in
@@ -49,8 +49,9 @@ let init ~builtins:(fname,decls) ~basedir:cwd argv =
   let loc = Util.Loc.initial fname in
   let header =
     try
-      Parser.parse_program_from_stream
-        ~print_accumulated_files:false loc strm 
+      Compiler.unit_of_ast ~flags:Compiler.default_flags ~header:true
+        (Parser.parse_program_from_stream
+         ~print_accumulated_files:false loc strm)
     with Parser.ParseError(loc,msg) ->
       List.iteri (fun i s ->
         Printf.eprintf "%4d: %s\n" (i+1) s)
@@ -125,17 +126,21 @@ end
 module Compile = struct
 
   type program = Compiler.program
+  type compilation_unit = Compiler.compilation_unit
   type 'a query = 'a Compiler.query
   type 'a executable = 'a ED.executable
 
   let program ~flags header l =
-    Compiler.program_of_ast ~flags (header @ List.flatten l)
+    Compiler.program_of_ast ~flags ~header (List.flatten l)
   let query = Compiler.query_of_ast
+
+  let unit ~flags ast = Compiler.unit_of_ast ~flags ast
+  let assemble ~flags header us = Compiler.assemble_units ~flags ~header us
 
   let static_check header ?checker ?flags p =
     let module R = (val !r) in let open R in
     let checker = Util.option_map List.flatten checker in
-    Compiler.static_check header ~exec:(execute_once ~delay_outside_fragment:false) ?checker ?flags p
+    Compiler.static_check ~header ~exec:(execute_once ~delay_outside_fragment:false) ?checker ?flags p
 
   module StrSet = Util.StrSet
 
@@ -145,9 +150,9 @@ module Compile = struct
     print_passes : bool;
   }
   let default_flags = Compiler.default_flags
-  let link x = Compiler.executable_of_query x
+  let link = Compiler.executable_of_query
 
-  let dummy_header = []
+  let dummy_header = Compiler.unit_of_ast ~flags:default_flags ~header:true []
 end
 
 module Execute = struct

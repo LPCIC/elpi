@@ -129,18 +129,8 @@ and attribute = {
 
 end
 
-module Compiled = struct
 
-(* The entire program + stuff needed in order to run the query *)
-type program = {
-  assembled_program : Assembled.program;
-  compiler_state : State.t;
-  compiler_flags : flags;
-}
-[@@deriving show]
-
-end
-type program = Compiled.program
+type program = Assembled.program
 
 module WithMain = struct
 
@@ -157,7 +147,6 @@ type 'a query = {
   (* We pre-compile the query to ease the API *)
   initial_goal : term; assignments : term StrMap.t;
   initial_state : State.t;
-  compiler_flags : flags;
 }
 [@@deriving show]
 
@@ -898,6 +887,8 @@ module Flatten : sig
 
   val run : flags:flags -> Structured.program -> Flat.program
 
+  val relocate : (Data.constant -> Data.constant) -> Flat.program -> Flat.program
+
 end = struct (* {{{ *)
 
 
@@ -909,11 +900,10 @@ end = struct (* {{{ *)
 
   let smart_map_term ?(on_type=false) f t =
     let rec aux = function
-      | Const c as x ->
+      | Const c ->
           let c1 = f c in
-          if c == c1 then x else
           if not on_type && BuiltInPredicate.is_declared c1 then Builtin(c1,[])
-          else mkConst c1
+          else mkConst c1 (* we re-hashcons *)
       | Lam t as x ->
           let t1 = aux t in
           if t == t1 then x else Lam t1
@@ -982,8 +972,8 @@ end = struct (* {{{ *)
 
   type subst = (string list * (C.t -> C.t))
 
-  let apply_subst (f : (C.t -> C.t) -> 'a -> 'a) (s : subst) : 'a -> 'a =
-    fun x -> f (snd s) x
+  let apply_subst (f : (C.t -> C.t) -> 'a -> 'a) (s : C.t -> C.t) : 'a -> 'a =
+    fun x -> f s x
 
   let apply_subst_list f = apply_subst (fun x -> smart_map (f x))
 
@@ -995,19 +985,24 @@ end = struct (* {{{ *)
       C.Map.add taname { taname; tavalue; taparams; taloc } m
       ) m C.Map.empty
 
-  let apply_subst_constant = apply_subst (fun f x -> f x)
+  let id f x = f x
 
-  let apply_subst_types = apply_subst_list smart_map_type
+  let apply_subst_constant (_,s) = apply_subst id s
 
-  let apply_subst_type_abbrevs = apply_subst tabbrevs_map
+  let apply_subst_types (_,s) = apply_subst_list smart_map_type s
 
-  let apply_subst_modes =
+  let apply_subst_type_abbrevs (_,s) = apply_subst tabbrevs_map s
+
+  let apply_subst_modes (_,s) =
     apply_subst (fun f modes ->
-       C.Map.fold (fun c v m -> C.Map.add (f c) v m) modes C.Map.empty)
+       C.Map.fold (fun c v m -> C.Map.add (f c) v m) modes C.Map.empty) s
 
-  let apply_subst_chr = apply_subst_list map_chr
+  let apply_subst_chr1 (_,s) (clique,rule) =
+    ( apply_subst_list id s clique, apply_subst_list map_chr s rule )
 
-  let apply_subst_clauses = apply_subst_list map_clause
+  let apply_subst_chr s l = smart_map (apply_subst_chr1 s) l
+
+  let apply_subst_clauses (_,s) = apply_subst_list map_clause s
 
   let push_subst extra_prefix symbols_affected (oldprefix, oldsubst) =
     let newprefix = oldprefix @ [extra_prefix] in
@@ -1050,9 +1045,8 @@ end = struct (* {{{ *)
         let types = ToDBL.merge_types t types in
         let type_abbrevs = ToDBL.merge_type_abbrevs ta type_abbrevs in
         let modes = ToDBL.merge_modes m modes in
-        let clique = List.map (apply_subst_constant subst) clique in
-        let rules = apply_subst_chr subst rules in
-        let chr = (clique, rules) :: chr in
+        let clique_rules = apply_subst_chr1 subst (clique, rules) in
+        let chr = clique_rules :: chr in
         let types, type_abbrevs, modes, clauses, chr =
           compile_body lcs types type_abbrevs modes clauses chr subst body in
         compile_body lcs types type_abbrevs modes clauses chr subst rest
@@ -1074,13 +1068,33 @@ end = struct (* {{{ *)
       toplevel_macros;
     }
 
+    let relocate f {
+      Flat.types;
+      type_abbrevs;
+      modes;
+      clauses;
+      chr;
+      local_names;
+      toplevel_macros;
+    } =
+      let f = [], f in
+    {
+      Flat.types = apply_subst_types f types;
+      type_abbrevs = apply_subst_type_abbrevs f type_abbrevs;
+      modes = apply_subst_modes f modes;
+      clauses = apply_subst_clauses f clauses;
+      chr = apply_subst_chr f chr;
+      local_names;
+      toplevel_macros;
+    }
+
 end (* }}} *)
 
 module Spill : sig
 
   (* Eliminate {func call} *)
 
-  val run : flags:flags -> Flat.program -> Flat.program
+  val run : flags:flags -> Assembled.program -> Assembled.program
 
   (* Exported to compile the query *)
   val spill_preterm :
@@ -1312,10 +1326,10 @@ end = struct (* {{{ *)
     let amap, term = spill_term loc modes types amap term in
     { x with Ast.Clause.body = { term; amap; loc } }
 
-  let run ~flags:_ ({ Flat.clauses; modes; types; chr } as p) =
-    let clauses = List.map (spill_clause (fun c -> fst @@ C.Map.find c modes) types) clauses in
-    let chr = List.map (spill_chr (fun c -> fst @@ C.Map.find c modes) types) chr in
-    { p with Flat.clauses; chr }
+  let run ~flags:_ ({ Assembled.clauses; modes; types; chr } as p) =
+    let clauses = List.map (spill_clause (fun c -> C.Map.find c modes) types) clauses in
+    let chr = List.map (spill_chr (fun c -> C.Map.find c modes) types) chr in
+    { p with Assembled.clauses; chr }
 
   let spill_preterm types modes { term; amap; loc } =
     let amap, term = spill_term loc modes types amap term in
@@ -1323,9 +1337,15 @@ end = struct (* {{{ *)
 
 end (* }}} *)
 
+type compilation_unit = {
+  version : string;
+  code : Flat.program;
+  symbol_table : Data.Constants.symbol_table;
+}
+
 module Assemble : sig
 
-  val run : flags:flags -> Flat.program list -> Assembled.program
+  val run : flags:flags -> header:compilation_unit -> compilation_unit list -> Assembled.program
 
 end = struct (* {{{ *)
 
@@ -1366,14 +1386,53 @@ end = struct (* {{{ *)
     in
     aux StrMap.empty  [] l
 
-  let run ~flags:_ pl =
-    if List.length pl <> 1 then
-      error "Only 1 program assembly is supported";
-    let { Flat.clauses; types; type_abbrevs; modes; chr; local_names; toplevel_macros } =
-      List.hd pl in
-    let clauses = sort_insertion clauses in
-    let modes = C.Map.map fst modes in
-    { Assembled.clauses; types; type_abbrevs; modes; chr; local_names; toplevel_macros }
+  let build_shift base symbols =
+    let open Data.Constants in
+    Hashtbl.fold (fun v name (base,shift as acc) ->
+      try
+        let c, _ = Hashtbl.find base.s2ct (Ast.Func.from_string name) in
+        if c == v then acc
+        else base, IntMap.add v c shift
+      with Not_found ->
+        let c, base = allocate_symbol (Ast.Func.from_string name) base in
+        base, IntMap.add v c shift
+      )
+      symbols.c2s (base,IntMap.empty)
+
+  let shift_pp fmt ({ Data.Constants.c2s},s,{ Data.Constants.c2s = c2s2 }) =
+    Format.fprintf fmt "{{ @[<hov 2>";
+    IntMap.iter (fun k v ->
+      Format.fprintf fmt "(%s)%a ->@ (%s)%a;@ "
+        (Hashtbl.find c2s k) Int.pp k (Hashtbl.find c2s2 v) Int.pp v) s;
+    Format.fprintf fmt "@] }}"
+
+  let run ~flags:_ ~header ul =
+      let nunits_with_locals =
+        ul |> List.filter (fun {code = { Flat.local_names = x }} -> x > 0) |> List.length in
+      if nunits_with_locals > 0 then
+        error "Only 1 compilation unit is supported when local directives are used";
+
+      (* Format.eprintf "HEADER: %a\n%!" Data.Constants.pp_symbol_table header.symbol_table; *)
+
+      let _, { Flat.clauses; types; type_abbrevs; modes; chr; local_names; toplevel_macros } =
+        List.fold_left (fun (gtable, { Flat.clauses = cl1; types = t1; type_abbrevs = ta1; modes = m1; chr = c1; toplevel_macros = _ })
+          { symbol_table; code } ->
+          let gtable, shift = build_shift gtable symbol_table in
+          Data.Constants.install_symbol_table gtable;
+          (* Format.eprintf "SHIFT: %a\n%!" shift_pp (symbol_table,shift,gtable); *)
+          let { Flat.clauses = cl2; types = t2; type_abbrevs = ta2; modes = m2; chr = c2; toplevel_macros = _ } as xxx =
+            Flatten.relocate (fun x -> try IntMap.find x shift with Not_found -> x) code in
+          (* Format.eprintf "RELOCATED UNIT: %a\n%!" Flat.pp_program xxx; *)
+          let modes = ToDBL.merge_modes m1 m2 in
+          let type_abbrevs = ToDBL.merge_type_abbrevs ta1 ta2 in
+          let types = ToDBL.merge_types t1 t2 in
+          let chr = c1 @ c2 in
+          let toplevel_macros = Data.F.Map.empty in
+          gtable, { Flat.clauses = cl1 @ cl2; types; type_abbrevs; modes; chr; local_names = 0; toplevel_macros }
+        ) (header.symbol_table, header.code) ul in
+      let clauses = sort_insertion clauses in
+      let modes = C.Map.map fst modes in
+      { Assembled.clauses; types; type_abbrevs; modes; chr; local_names; toplevel_macros }
 
 end (* }}} *)
 
@@ -1383,7 +1442,7 @@ end (* }}} *)
  ****************************************************************************)
 
 (* Compiler passes *)
-let unit_of_ast ~flags:({ print_passes } as flags) p =
+let unit_of_ast ~flags:({ print_passes } as flags) ?(header=false) p =
 
   if print_passes then
     Format.eprintf "== AST ================@\n@[<v 0>%a@]@\n"
@@ -1395,8 +1454,10 @@ let unit_of_ast ~flags:({ print_passes } as flags) p =
     Format.eprintf "== StructuredAST ================@\n@[<v 0>%a@]@\n"
       StructuredAST.pp_program p;
  
+  if not header then Data.Constants.(install_symbol_table (empty_symbol_table ()));
   let s, p = ToDBL.run ~flags (State.init()) p in
- 
+  (* Format.eprintf "UNIT(%b): %a\n%!" header Data.Constants.pp_symbol_table (Data.Constants.dump_symbol_table ()); *)
+
   if print_passes then
     Format.eprintf "== Structured ================@\n@[<v 0>%a@]@\n"
       Structured.pp_program p;
@@ -1407,24 +1468,40 @@ let unit_of_ast ~flags:({ print_passes } as flags) p =
     Format.eprintf "== Flat ================@\n@[<v 0>%a@]@\n"
       Flat.pp_program p;
  
-  let p = Spill.run ~flags p in
- 
-  if print_passes then
-    Format.eprintf "== Spilled ================@\n@[<v 0>%a@]@\n"
-      Flat.pp_program p;
- 
-  let p = Assemble.run ~flags [ p ] in
+  { version = "%%VERSION_NUM%%";
+    code = p;
+    symbol_table = Data.Constants.dump_symbol_table ();
+  }
+
+;;
+
+let assemble_units ~flags:({ print_passes } as flags) ~header us =
+
+  (header :: us) |> List.iter (fun { version = v; _ } ->
+    if not (String.equal v "%%VERSION_NUM%%") then
+      error (Printf.sprintf "unit version mismatch: %s != %%VERSION_NUM%%" v);
+  );
+
+  let p = Assemble.run ~flags ~header us in
  
   if print_passes then
     Format.eprintf "== Assembled ================@\n@[<v 0>%a@]@\n"
       Assembled.pp_program p;
+
+  (* TODO: do in assemble after having merged the types *)
+  let p = Spill.run ~flags p in
  
-  {
-    Compiled.assembled_program = p;
-    compiler_state = s;
-    compiler_flags = flags;
-  }
+  if print_passes then
+    Format.eprintf "== Spilled ================@\n@[<v 0>%a@]@\n"
+      Assembled.pp_program p;
+ 
+  p
 ;;
+
+let program_of_ast ~flags ~header p =
+  let u = unit_of_ast ~flags p in
+  assemble_units ~flags ~header [u]
+
 
 let is_builtin tname =
   let all_builtin = BuiltInPredicate.all () in
@@ -1436,12 +1513,13 @@ let check_all_builtin_are_typed types =
      if not (List.exists
         (fun { Structured.tindex; decl = { tname }} ->
             tindex = StructuredAST.External && tname == c) types) then
-       error ("Built-in without external type declaration: " ^ C.show c))
+       error ("Built-in without external type declaration: " ^ C.show c ^ " not in " ^ String.concat " " (List.map (fun { Structured.decl = { tname } } -> C.show tname) types)))
    (BuiltInPredicate.all ());
   List.iter (fun { Structured.tindex; decl = { tname; tloc }} ->
     if tindex = StructuredAST.External && not (is_builtin tname) then
       error ~loc:tloc ("external type declaration without Built-in: " ^
-            C.show tname))
+            let elpi_builtins = [C.cutc;C.declare_constraintc;C.print_constraintsc] in
+  C.show tname ^ String.concat " " (List.map string_of_int elpi_builtins)))
   types
 ;;
 
@@ -1493,15 +1571,14 @@ let uvbodies_of_assignments assignments =
      | UVar(b,_,_) | AppUVar(b,_,_) -> b
      | _ -> assert false) assignments)
 
-let query_of_ast { Compiled.assembled_program; compiler_state; compiler_flags } t
-=
+let query_of_ast assembled_program t =
   let initial_depth = assembled_program.Assembled.local_names in
   let types = assembled_program.Assembled.types in
   let type_abbrevs = assembled_program.Assembled.type_abbrevs in 
   let modes = assembled_program.Assembled.modes in
   let active_macros = assembled_program.Assembled.toplevel_macros in
   let state, query =
-    ToDBL.query_preterm_of_ast ~depth:initial_depth active_macros compiler_state t in
+    ToDBL.query_preterm_of_ast ~depth:initial_depth active_macros (State.init()) t in
   let query = Spill.spill_preterm types (fun c -> C.Map.find c modes) query in
   let query_env = Array.make query.amap.nargs C.dummy in
   let initial_goal =
@@ -1520,10 +1597,9 @@ let query_of_ast { Compiled.assembled_program; compiler_state; compiler_flags } 
     initial_goal;
     assignments;
     initial_state = state |> (uvbodies_of_assignments assignments);
-    compiler_flags;
   }
 
-let query_of_term { Compiled.assembled_program; compiler_state; compiler_flags } f =
+let query_of_term assembled_program f =
   let initial_depth = assembled_program.Assembled.local_names in
   let types = assembled_program.Assembled.types in
   let type_abbrevs = assembled_program.Assembled.type_abbrevs in
@@ -1531,7 +1607,7 @@ let query_of_term { Compiled.assembled_program; compiler_state; compiler_flags }
   let active_macros = assembled_program.Assembled.toplevel_macros in
   let state, query =
     ToDBL.query_preterm_of_function
-      ~depth:initial_depth active_macros compiler_state
+      ~depth:initial_depth active_macros (State.init())
       (f ~depth:initial_depth) in
   let query_env = Array.make query.amap.nargs C.dummy in
   let initial_goal =
@@ -1550,7 +1626,6 @@ let query_of_term { Compiled.assembled_program; compiler_state; compiler_flags }
     initial_goal;
     assignments;
     initial_state = state |> (uvbodies_of_assignments assignments);
-    compiler_flags;
   }
 
 
@@ -1565,7 +1640,7 @@ module Compiler : sig
   (* Translates preterms in terms and AST clauses into clauses (with a key,
    * subgoals, etc *)
 
-  val run : 'a query -> 'a executable
+  val run : flags:flags -> 'a query -> 'a executable
 
 end = struct (* {{{ *)
 
@@ -1636,7 +1711,7 @@ let check_rule_pattern_in_clique clique { Data.CHR.pattern; rule_name } =
       " which is not a constraint on which it is applied. Check the list of predicates after the \"constraint\" keyword.");
   with Not_found -> ()
 
-let run
+let run ~flags
   {
     WithMain.types;
     modes;
@@ -1646,7 +1721,6 @@ let run
     initial_goal;
     assignments;
     initial_state;
-    compiler_flags = flags;
     query_arguments;
   }
 =
@@ -1889,7 +1963,7 @@ let unfold_type_abbrevs lcs type_abbrevs { Data.term; loc; amap } =
   in
     { Data.term = aux C.Set.empty term; loc; amap }
 
-let static_check header
+let static_check ~header
   ?(exec=R.execute_once ~delay_outside_fragment:false) ?(checker=default_checker ()) ?(flags=default_flags)
   ({ WithMain.types; type_abbrevs; initial_depth } as q)
 =
@@ -1911,13 +1985,13 @@ let static_check header
   let checker =
     program_of_ast
       ~flags:{ flags with allow_untyped_builtin = true }
-      (header @ checker) in
+      ~header checker in
   let loc = Loc.initial "(static_check)" in
   let query =
     query_of_term checker (fun ~depth state ->
       assert(depth=0);
       state, (loc,App(C.from_stringc "check",R.list_to_lp_list p,[q;tlist;talist]))) in
-  let executable = executable_of_query query in
+  let executable = executable_of_query ~flags query in
   exec executable <> Failure
 ;;
 

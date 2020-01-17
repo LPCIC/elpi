@@ -144,7 +144,7 @@ module Compile : sig
   (* Warning: this API will change to support separate compilation of
    * Ast.program, esp the [link] one *)
 
-  (* compile all program files *)
+  (* compile all program files (easy path) *)
   val program : flags:flags ->
     Setup.program_header -> Ast.program list -> program
 
@@ -152,7 +152,12 @@ module Compile : sig
   val query : program -> Ast.query -> unit query
 
   (* finally obtain the executable *)
-  val link : 'a query -> 'a executable
+  val link : flags:flags -> 'a query -> 'a executable
+
+  (* separate compilation *)
+  type compilation_unit
+  val unit : flags:flags -> Ast.program -> compilation_unit
+  val assemble : flags:flags -> Setup.program_header -> compilation_unit list -> program
 
   (** Runs [elpi-checker.elpi] by default.
       Returns true if no errors were found *)

@@ -181,7 +181,7 @@ let _ =
     API.Pp.query Format.std_formatter query;
     exit 0;
   end;
-  let exec = API.Compile.link query in
+  let exec = API.Compile.link ~flags query in
   if !print_passes then begin
     exit 0;
   end;
