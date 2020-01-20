@@ -15,6 +15,7 @@ val declare :
   ?source_teyjus:fname ->
   ?deps_teyjus:fname list ->
   ?source_dune:fname ->
+  ?after:string ->
   ?typecheck:bool ->
   ?input:fname -> 
   ?expectation:expectation -> 
@@ -30,6 +31,7 @@ type t = {
   source_teyjus : fname option;
   deps_teyjus : fname list;
   source_dune : fname option;
+  after : string list;
   typecheck : bool;
   input : fname option;
   expectation : expectation;
