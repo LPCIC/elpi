@@ -31,6 +31,15 @@ let () = declare "sepcomp4"
 
 let () = declare "sepcomp5"
   ~source_dune:"sepcomp5.ml"
-  ~description:"separate compilation double naming"
+  ~description:"separate compilation different processes (step 1)"
+  ~expectation:Test.Success
+  ()
+
+let () = declare "sepcomp6"
+  ~source_dune:"sepcomp6.ml"
+  ~after:"sepcomp5"
+  ~description:"separate compilation different processes (step 2)"
   ~expectation:Test.(Output (Str.regexp "ok"))
   ()
+
+

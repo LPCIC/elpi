@@ -18,6 +18,7 @@ type t = {
   source_teyjus : fname option;
   deps_teyjus : fname list;
   source_dune : fname option;
+  after: string list;
   typecheck : bool;
   input: fname option;
   expectation : expectation;
@@ -28,6 +29,7 @@ let tests = ref []
 
 let declare
     name ~description ?source_elpi ?source_teyjus ?(deps_teyjus=[]) ?source_dune
+    ?after
     ?(typecheck=true) ?input ?(expectation=Success)
     ?(outside_llam=false)
     ~category
@@ -46,6 +48,7 @@ let declare
     source_teyjus;
     deps_teyjus;
     source_dune;
+    after = (match after with None -> [] | Some x -> [x]);
     typecheck;
     input;
     expectation;
@@ -53,11 +56,22 @@ let declare
     outside_llam;
   } :: !tests
 
+module SM = Map.Make(String)
+module SS = Set.Make(String)
 
 let get filter =
-  List.filter (fun { name; _ } -> filter ~name) !tests
+  let alltests = List.fold_left (fun acc ({ name; _ } as t) -> SM.add name t acc ) SM.empty !tests in
+  let tests = List.filter (fun { name; _ } -> filter ~name) !tests in
+  let testset = List.fold_left (fun acc { name; _ } -> SS.add name acc ) SS.empty tests in
+  let deps = List.fold_left (fun acc { after; _ } -> List.fold_right SS.add after acc ) SS.empty tests in
+  let to_add = SS.fold (fun n acc -> if SS.mem n testset then acc else SS.add n acc) deps SS.empty in
+  let tests = (SS.elements to_add |> List.map (fun x -> SM.find x alltests)) @ tests in
+  List.sort (fun { name = n1; after = a1; _}  { name = n2; after = a2; _} ->
+    if List.mem n1 a2 then -1
+    else if List.mem n2 a1 then 1
+    else String.compare n1 n2
+    ) tests
 
-module SM = Map.Make(String)
 
 let names () =
   let m = ref SM.empty in

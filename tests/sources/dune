@@ -4,3 +4,4 @@
 (executable (name sepcomp3) (modules sepcomp3) (libraries sepcomp))
 (executable (name sepcomp4) (modules sepcomp4) (libraries sepcomp))
 (executable (name sepcomp5) (modules sepcomp5) (libraries sepcomp))
+(executable (name sepcomp6) (modules sepcomp6) (libraries sepcomp))
