@@ -8,7 +8,8 @@ type fname = string
 type expectation =
   | Success
   | Failure
-  | Output of Str.regexp
+  | SuccessOutput of Str.regexp
+  | FailureOutput of Str.regexp
 
 type t = {
   name : string;
@@ -319,12 +320,21 @@ let () = Runner.declare
         Runner.Timeout timeout
       | Test.Failure, Util.Timeout ->
         Runner.Timeout timeout
-      | Test.Output rex, Util.Exit(_,walltime,mem) ->
-          if Util.with_log log (match_rex rex) then 
+      | Test.FailureOutput _, Util.Exit(0,walltime,mem) ->
+           Runner.Failure { walltime; typechecking = Util.with_log log read_tctime; execution = walltime; mem }
+     | Test.SuccessOutput rex, Util.Exit(0,walltime,mem) ->
+          if Util.with_log log (match_rex rex) then
             Runner.Success { walltime; typechecking = Util.with_log log read_tctime; execution = Util.with_log log read_time; mem }
           else
             Runner.Failure { walltime; typechecking = Util.with_log log read_tctime; execution = walltime; mem }
-      | Test.Output _, Util.Timeout ->
+      | Test.SuccessOutput _, Util.Exit(_,walltime,mem) ->
+          Runner.Failure { walltime; typechecking = Util.with_log log read_tctime; execution = walltime; mem }
+      | Test.FailureOutput rex, Util.Exit(_,walltime,mem) ->
+          if Util.with_log log (match_rex rex) then
+            Runner.Success { walltime; typechecking = Util.with_log log read_tctime; execution = Util.with_log log read_time; mem }
+          else
+            Runner.Failure { walltime; typechecking = Util.with_log log read_tctime; execution = walltime; mem }
+      | (Test.FailureOutput _ | Test.SuccessOutput _), Util.Timeout ->
         Runner.Timeout timeout
     in
     Runner.(Done { Runner.rc; executable; test; log = snd log })
@@ -398,9 +408,9 @@ let is_tjsim =
         Runner.Timeout timeout
       | Test.Failure, Util.Timeout ->
         Runner.Timeout timeout
-      | Test.Output _, Util.Exit(_,walltime,mem) ->
+      | (Test.SuccessOutput _ | Test.FailureOutput _), Util.Exit(_,walltime,mem) ->
         Runner.Success { walltime; typechecking = 0.0; execution = walltime; mem }
-      | Test.Output _, Util.Timeout ->
+      | (Test.SuccessOutput _ | Test.FailureOutput _), Util.Timeout ->
         Runner.Timeout timeout
     in
     Runner.Done { Runner.rc; executable; test; log = snd log }
@@ -454,8 +464,17 @@ let () = Runner.declare
         Runner.Failure { walltime; typechecking = 0.0; execution = 0.0; mem }
       | Test.Failure, Util.Exit(_,walltime,mem)->
         Runner.Success { walltime; typechecking = 0.0; execution = 0.0; mem }
-      | Test.Output rex, Util.Exit(_,walltime,mem) ->
-          if Util.with_log log (match_rex rex) then 
+      | Test.SuccessOutput rex, Util.Exit(0,walltime,mem) ->
+          if Util.with_log log (match_rex rex) then
+            Runner.Success { walltime; typechecking = 0.0; execution = 0.0; mem }
+          else
+            Runner.Failure { walltime; typechecking = 0.0; execution = walltime; mem }
+      | Test.FailureOutput _, Util.Exit(0,walltime,mem) ->
+            Runner.Failure { walltime; typechecking = 0.0; execution = walltime; mem }
+      | Test.SuccessOutput _, Util.Exit(_,walltime,mem) ->
+            Runner.Failure { walltime; typechecking = 0.0; execution = walltime; mem }
+      | Test.FailureOutput rex, Util.Exit(_,walltime,mem) ->
+          if Util.with_log log (match_rex rex) then
             Runner.Success { walltime; typechecking = 0.0; execution = 0.0; mem }
           else
             Runner.Failure { walltime; typechecking = 0.0; execution = walltime; mem }
