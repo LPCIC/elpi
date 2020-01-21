@@ -14,6 +14,12 @@ module type Show1 = sig
   val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
 end
 
+module type Show2 = sig
+  type ('a,'b) t
+  val pp : (Format.formatter -> 'a -> unit) -> (Format.formatter -> 'b -> unit) -> Format.formatter -> ('a,'b) t -> unit
+  val show : (Format.formatter -> 'a -> unit) -> (Format.formatter -> 'b -> unit) -> ('a,'b) t -> string
+end
+
 module Map = struct
 
   module type S = sig
@@ -91,6 +97,20 @@ module Digest = struct
   include Digest
   let show = Digest.to_hex
   let pp fmt d = Fmt.fprintf fmt "%s" (show d)
+end
+
+module Hashtbl = struct
+  include Hashtbl
+  let pp pa pb fmt h =
+   Format.fprintf fmt "{{ @[<hov 2>";
+   Hashtbl.iter (fun k v -> Format.fprintf fmt "%a -> %a;@ " pa k pb v) h;
+   Format.fprintf fmt "@] }}"
+  let show pa pb h =
+    let b = Buffer.create 20 in
+    let fmt = Format.formatter_of_buffer b in
+    pp pa pb fmt h;
+    Format.fprintf fmt "@?";
+    Buffer.contents b
 end
 
 module Loc = struct
