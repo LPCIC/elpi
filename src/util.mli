@@ -14,6 +14,12 @@ module type Show1 = sig
   val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
 end
 
+module type Show2 = sig
+  type ('a,'b) t
+  val pp : (Format.formatter -> 'a -> unit) -> (Format.formatter -> 'b -> unit) -> Format.formatter -> ('a,'b) t -> unit
+  val show : (Format.formatter -> 'a -> unit) -> (Format.formatter -> 'b -> unit) -> ('a,'b) t -> string
+end
+
 module Map : sig
 
   module type S = sig
@@ -78,9 +84,14 @@ end
 
 module Digest : sig
   include module type of Digest
-  val pp : Format.formatter -> t -> unit
-  val show : t -> string
+  include Show with type t := t
 end
+
+module Hashtbl : sig
+  include module type of Hashtbl
+  include Show2 with type ('a,'b) t := ('a,'b) t
+end
+
 
 module Loc : sig
   type t = {
