@@ -239,19 +239,77 @@ module Constants : sig
   (* mkinterval d n 0 = [d; ...; d+n-1] *)
   val mkinterval : int -> int -> int -> term list
 
+  type symbol_table = {
+    (* Ast (functor name) -> negative int n (constant) * hashconsed (Const n) *)
+    s2ct : (F.t, constant * term) Hashtbl.t;
+    (* constant -> string *)
+    c2s : (constant, string) Hashtbl.t;
+    (* constant n -> hashconsed (Const n) *)
+    c2t : (constant, term) Hashtbl.t;
+    (* last used global symbol *)
+    fresh: int;
+  }
+  val empty_symbol_table : unit -> symbol_table
+  val install_symbol_table : symbol_table -> unit
+  val dump_symbol_table : unit -> symbol_table
+  val pp_symbol_table : Format.formatter -> symbol_table -> unit
+  val show_symbol_table : symbol_table -> string
+  val allocate_symbol : F.t -> symbol_table -> constant * symbol_table
+
 end = struct (* {{{ *)
 
-(* Ast (functor name) -> negative int n (constant) * hashconsed (Const n) *)
-let ast2ct : (F.t, constant * term) Hashtbl.t = Hashtbl.create 37
-(* constant -> string *)
-let c2s : (constant, string) Hashtbl.t = Hashtbl.create 37
-(* constant n -> hashconsed (Const n) *)
-let c2t : (constant, term) Hashtbl.t = Hashtbl.create 17
+type symbol_table = {
+  s2ct : (F.t, constant * term) Hashtbl.t;
+  c2s : (constant, string) Hashtbl.t
+    [@printer (fun fmt h ->
+      Format.fprintf fmt "{{ @[<hov 2>";
+      Hashtbl.iter (fun k v -> Format.fprintf fmt "%d ->@ \"%s\";@ " k v) h;
+      Format.fprintf fmt "@] }}"
+    )];
+  c2t : (constant, term) Hashtbl.t;
+  fresh : int;
+}
+[@@ deriving show]
 
+let s2ct : (F.t, constant * term) Hashtbl.t = Hashtbl.create 37
+let c2s : (constant, string) Hashtbl.t = Hashtbl.create 37
+let c2t : (constant, term) Hashtbl.t = Hashtbl.create 37
 let fresh = ref 0
 
+let empty_symbol_table () = {
+    s2ct = Hashtbl.create 37;
+    c2s = Hashtbl.create 37;
+    c2t = Hashtbl.create 37;
+    fresh = !fresh;
+  }
+
+let install_symbol_table { s2ct = t1; c2s = t2; c2t = t3; fresh = f } =
+  Hashtbl.reset s2ct;
+  Hashtbl.reset c2s;
+  Hashtbl.reset c2t;
+  Hashtbl.iter (Hashtbl.add s2ct) t1;
+  Hashtbl.iter (Hashtbl.add c2s) t2;
+  Hashtbl.iter (Hashtbl.add c2t) t3;
+  fresh := f
+;;
+
+let dump_symbol_table () = {
+  s2ct = Hashtbl.copy s2ct;
+  c2s = Hashtbl.copy c2s;
+  c2t = Hashtbl.copy c2t;
+  fresh = !fresh;
+}
+
+let allocate_symbol name { fresh; c2s; c2t; s2ct } =
+  let id = fresh - 1 in
+  Hashtbl.add c2s id (F.show name);
+  let t = Const id in
+  Hashtbl.add c2t id t;
+  Hashtbl.add s2ct name (id, t);
+  id, { fresh = id; c2s; c2t; s2ct }
+
 let funct_of_ast x =
-  try Hashtbl.find ast2ct x
+  try Hashtbl.find s2ct x
   with Not_found ->
     decr fresh;
     let n = !fresh in
@@ -259,7 +317,7 @@ let funct_of_ast x =
     let p = n,xx in
     Hashtbl.add c2s n (F.show x);
     Hashtbl.add c2t n xx;
-    Hashtbl.add ast2ct x p;
+    Hashtbl.add s2ct x p;
     p
 
 let mkConst x =
@@ -273,7 +331,7 @@ let mkConst x =
 
 let show n =
    try Hashtbl.find c2s n
-   with Not_found -> string_of_int n
+   with Not_found -> "UNKNOWN_SYMBOL" ^ string_of_int n (* TODO *)
 
 let fresh () =
    decr fresh;
