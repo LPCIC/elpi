@@ -118,6 +118,7 @@ type program = {
   clauses : (preterm,attribute) Ast.Clause.t list;
   chr : (constant list * prechr_rule list) list;
   local_names : int;
+  symbol_table : Data.Constants.symbol_table;
 
   toplevel_macros : macro_declaration;
 }
@@ -147,6 +148,7 @@ type 'a query = {
   (* We pre-compile the query to ease the API *)
   initial_goal : term; assignments : term StrMap.t;
   initial_state : State.t;
+  symbol_table : Data.Constants.symbol_table;
 }
 [@@deriving show]
 
@@ -171,6 +173,7 @@ type 'a executable = 'a Data.executable = {
   assignments : term StrMap.t;
   (* reified type of the query *)
   query_arguments : 'a Query.arguments;
+  symbol_table : Data.Constants.symbol_table;
 }
 
 end
@@ -965,7 +968,8 @@ end = struct (* {{{ *)
 
   let smart_map_preterm ?on_type f ({ term; amap; loc } as x) =
     let term1 = smart_map_term ?on_type f term in
-    if term1 == term then x else { term = term1; amap; loc }
+    let amap1 = Data.subst_amap f amap in
+    if term1 == term && amap1 == amap then x else { term = term1; amap = amap1; loc }
 
   let map_clause f ({ Ast.Clause.body } as x) =
     { x with Ast.Clause.body = smart_map_preterm f body }
@@ -1394,8 +1398,12 @@ end = struct (* {{{ *)
         if c == v then acc
         else base, IntMap.add v c shift
       with Not_found ->
-        let c, base = allocate_symbol (Ast.Func.from_string name) base in
-        base, IntMap.add v c shift
+        if v >= 0 then
+          let base = allocate_bound_var v base in
+          base, IntMap.add v v shift
+        else
+          let c, base = allocate_symbol (Ast.Func.from_string name) base in
+          base, IntMap.add v c shift
       )
       symbols.c2s (base,IntMap.empty)
 
@@ -1414,7 +1422,7 @@ end = struct (* {{{ *)
 
       (* Format.eprintf "HEADER: %a\n%!" Data.Constants.pp_symbol_table header.symbol_table; *)
 
-      let _, { Flat.clauses; types; type_abbrevs; modes; chr; local_names; toplevel_macros } =
+      let symbol_table, { Flat.clauses; types; type_abbrevs; modes; chr; local_names; toplevel_macros } =
         List.fold_left (fun (gtable, { Flat.clauses = cl1; types = t1; type_abbrevs = ta1; modes = m1; chr = c1; toplevel_macros = _ })
           { symbol_table; code } ->
           let gtable, shift = build_shift gtable symbol_table in
@@ -1432,7 +1440,7 @@ end = struct (* {{{ *)
         ) (header.symbol_table, header.code) ul in
       let clauses = sort_insertion clauses in
       let modes = C.Map.map fst modes in
-      { Assembled.clauses; types; type_abbrevs; modes; chr; local_names; toplevel_macros }
+      { Assembled.clauses; types; type_abbrevs; modes; chr; local_names; toplevel_macros; symbol_table }
 
 end (* }}} *)
 
@@ -1443,6 +1451,8 @@ end (* }}} *)
 
 (* Compiler passes *)
 let unit_of_ast ~flags:({ print_passes } as flags) ?(header=false) p =
+  if not header then Data.Constants.(install_symbol_table (empty_symbol_table ()));
+  let orig_symtab = Data.Constants.dump_symbol_table () in
 
   if print_passes then
     Format.eprintf "== AST ================@\n@[<v 0>%a@]@\n"
@@ -1454,7 +1464,6 @@ let unit_of_ast ~flags:({ print_passes } as flags) ?(header=false) p =
     Format.eprintf "== StructuredAST ================@\n@[<v 0>%a@]@\n"
       StructuredAST.pp_program p;
  
-  if not header then Data.Constants.(install_symbol_table (empty_symbol_table ()));
   let s, p = ToDBL.run ~flags (State.init()) p in
   (* Format.eprintf "UNIT(%b): %a\n%!" header Data.Constants.pp_symbol_table (Data.Constants.dump_symbol_table ()); *)
 
@@ -1467,10 +1476,12 @@ let unit_of_ast ~flags:({ print_passes } as flags) ?(header=false) p =
   if print_passes then
     Format.eprintf "== Flat ================@\n@[<v 0>%a@]@\n"
       Flat.pp_program p;
- 
+
+  let unit_symtab = Data.Constants.dump_symbol_table () in
+  if not header then Data.Constants.install_symbol_table orig_symtab;
   { version = "%%VERSION_NUM%%";
     code = p;
-    symbol_table = Data.Constants.dump_symbol_table ();
+    symbol_table = unit_symtab;
   }
 
 ;;
@@ -1597,6 +1608,7 @@ let query_of_ast assembled_program t =
     initial_goal;
     assignments;
     initial_state = state |> (uvbodies_of_assignments assignments);
+    symbol_table = assembled_program.Assembled.symbol_table;
   }
 
 let query_of_term assembled_program f =
@@ -1626,6 +1638,7 @@ let query_of_term assembled_program f =
     initial_goal;
     assignments;
     initial_state = state |> (uvbodies_of_assignments assignments);
+    symbol_table = assembled_program.Assembled.symbol_table;
   }
 
 
@@ -1634,7 +1647,7 @@ let query_of_data p loc (Query.Query { arguments } as descr) =
     let state, term = Query.embed_query ~mk_Arg ~depth state descr in
     state, (loc, term)) in
   { query with query_arguments = arguments }
-  
+
 module Compiler : sig
 
   (* Translates preterms in terms and AST clauses into clauses (with a key,
@@ -1672,7 +1685,7 @@ let compile_chr depth
         rule_name = pname;
       }
 ;;
-  
+
 let compile_clause modes initial_depth
     { Ast.Clause.body = ({ amap = { nargs }} as body); loc }
 =
@@ -1722,6 +1735,7 @@ let run ~flags
     assignments;
     initial_state;
     query_arguments;
+    symbol_table;
   }
 =
 
@@ -1770,6 +1784,7 @@ let run ~flags
     initial_state;
     assignments;
     query_arguments;
+    symbol_table;
   }
 
 end (* }}} *)
@@ -1963,6 +1978,10 @@ let unfold_type_abbrevs lcs type_abbrevs { Data.term; loc; amap } =
   in
     { Data.term = aux C.Set.empty term; loc; amap }
 
+let tic_colon = C.from_stringc "`:"
+let tic_coloneq = C.from_stringc "`:="
+let check = C.from_stringc "check"
+
 let static_check ~header
   ?(exec=R.execute_once ~delay_outside_fragment:false) ?(checker=default_checker ()) ?(flags=default_flags)
   ({ WithMain.types; type_abbrevs; initial_depth } as q)
@@ -1970,7 +1989,7 @@ let static_check ~header
   let p,q = quote_syntax q in
   let tlist = R.list_to_lp_list (List.map
     (fun { Structured.decl = { tname; ttype } } ->
-      App(C.from_stringc "`:",mkQCon ~on_type:false tname,
+      App(tic_colon,mkQCon ~on_type:false tname,
         [close_w_binder forallc
           (quote_preterm ~on_type:true
             (unfold_type_abbrevs initial_depth type_abbrevs ttype))
@@ -1978,7 +1997,7 @@ let static_check ~header
     types) in
   let talist =
     C.Map.bindings type_abbrevs |> List.map (fun (name, { Data.tavalue;  } ) ->
-        App(C.from_stringc "`:=", Data.C.of_string (C.show name),
+        App(tic_coloneq, Data.C.of_string (C.show name),
           [lam2forall (quote_preterm ~on_type:true (unfold_type_abbrevs initial_depth type_abbrevs tavalue))]))
     |> R.list_to_lp_list
     in
@@ -1990,7 +2009,7 @@ let static_check ~header
   let query =
     query_of_term checker (fun ~depth state ->
       assert(depth=0);
-      state, (loc,App(C.from_stringc "check",R.list_to_lp_list p,[q;tlist;talist]))) in
+      state, (loc,App(check,R.list_to_lp_list p,[q;tlist;talist]))) in
   let executable = executable_of_query ~flags query in
   exec executable <> Failure
 ;;

@@ -2866,6 +2866,7 @@ let try_fire_rule rule (constraints as orig_constraints) =
     initial_depth = max_depth;
     initial_state = State.(init () |> end_goal_compilation StrMap.empty);
     query_arguments = Query.N;
+    symbol_table = Constants.dump_symbol_table (); (* XXX slow *)
   } in
   let { search; get; exec; destroy } = !do_make_runtime executable in
  
@@ -3237,6 +3238,7 @@ end;*)
     initial_goal;
     initial_state;
     assignments;
+    symbol_table;
   } ->
   let { Fork.exec = exec ; get = get ; set = set } = Fork.fork () in
   set orig_prolog_program compiled_program;
@@ -3251,6 +3253,7 @@ end;*)
   set delay_hard_unif_problems delay_outside_fragment;
   set steps_made 0;
   set CS.state initial_state;
+  Constants.install_symbol_table symbol_table;
   let search = exec (fun () ->
      [%spy "run-trail" (fun fmt _ -> T.print_trail fmt) ()];
      T.initial_trail := !T.trail;

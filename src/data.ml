@@ -255,6 +255,7 @@ module Constants : sig
   val pp_symbol_table : Format.formatter -> symbol_table -> unit
   val show_symbol_table : symbol_table -> string
   val allocate_symbol : F.t -> symbol_table -> constant * symbol_table
+  val allocate_bound_var : constant -> symbol_table -> symbol_table
 
 end = struct (* {{{ *)
 
@@ -307,6 +308,12 @@ let allocate_symbol name { fresh; c2s; c2t; s2ct } =
   Hashtbl.add c2t id t;
   Hashtbl.add s2ct name (id, t);
   id, { fresh = id; c2s; c2t; s2ct }
+
+let allocate_bound_var x { fresh; c2s; c2t; s2ct } =
+  let xx = Const x in
+  Hashtbl.add c2s x ("c" ^ string_of_int x);
+  Hashtbl.add c2t x xx;
+  { fresh; c2s; c2t; s2ct }
 
 let funct_of_ast x =
   try Hashtbl.find s2ct x
@@ -391,7 +398,8 @@ module Set = Set.Make(Self)
 include Self
 
 let () = extend_printer pp_const (fun fmt i ->
-  Fmt.fprintf fmt "%s" (show i);
+  Fmt.fprintf fmt "%d" i;
+  (* Fmt.fprintf fmt "%s" (show i); *)
   `Printed)
 
 (* mkinterval d n 0 = [d; ...; d+n-1] *)
@@ -664,6 +672,16 @@ type argmap = {
   n2i : int StrMap.t;
 }
 [@@ deriving show]
+
+let subst_amap f { nargs; c2i; i2n; n2t; n2i } =
+  let c2i = Constants.Map.fold (fun k v m -> Constants.Map.add (f k) v m) c2i Constants.Map.empty in
+  let n2t = StrMap.map (fun (t,c) ->
+    let c = f c in
+    let t = match t with
+      | Const c -> Constants.mkConst (f c)
+      | _ -> assert false in
+    t,c) n2t in
+  { nargs; c2i; i2n; n2t; n2i }
 
 let empty_amap = {
  nargs = 0;
@@ -1351,6 +1369,7 @@ type 'a executable = {
   assignments : term StrMap.t;
   (* type of the query, reified *)
   query_arguments: 'a Query.arguments;
+  symbol_table : Constants.symbol_table;
 }
 
 exception No_clause
