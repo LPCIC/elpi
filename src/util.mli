@@ -160,16 +160,16 @@ val pp_pair :
     Format.formatter -> 'a * 'b -> unit
 
 (* for open types *)
-type 'a extensible_printer
-val mk_extensible_printer : unit -> 'a extensible_printer
-val extend_printer :
-  'a extensible_printer ->
-  (Format.formatter -> 'a -> [`Printed | `Passed]) ->
+type 'a spaghetti_printer
+val mk_spaghetti_printer : unit -> 'a spaghetti_printer
+val set_spaghetti_printer :
+  'a spaghetti_printer ->
+  (Format.formatter -> 'a -> unit) ->
      unit
-val pp_extensible :
-  'a extensible_printer -> Format.formatter -> 'a -> unit
-val pp_extensible_any :
-  (UUID.t * Obj.t) extensible_printer -> id:UUID.t -> Format.formatter -> 'a -> unit
+val pp_spaghetti :
+  'a spaghetti_printer -> Format.formatter -> 'a -> unit
+val pp_spaghetti_any :
+  (UUID.t * Obj.t) spaghetti_printer -> id:UUID.t -> Format.formatter -> 'a -> unit
 
 (******************** runtime is reentrant ******************)
 

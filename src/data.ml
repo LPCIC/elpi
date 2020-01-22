@@ -38,13 +38,13 @@ open Util
 module Term = struct
 
 (* Used by pretty printers, to be later instantiated in module Constants *)
-let pp_const = mk_extensible_printer ()
+let pp_const = mk_spaghetti_printer ()
 type constant = int (* De Bruijn levels *)
-[@printer (pp_extensible pp_const)]
+[@printer (pp_spaghetti pp_const)]
 [@@deriving show, eq]
 
 (* To be instantiated after the dummy term is defined *)
-let pp_oref = mk_extensible_printer ()
+let pp_oref = mk_spaghetti_printer ()
 
 let id_term = UUID.make ()
 type term =
@@ -66,7 +66,7 @@ type term =
   | Arg of (*id:*)int * (*argsno:*)int
   | AppArg of (*id*)int * term list
 and uvar_body = {
-  mutable contents : term [@printer (pp_extensible_any ~id:id_term pp_oref)];
+  mutable contents : term [@printer (pp_spaghetti_any ~id:id_term pp_oref)];
   mutable rest : stuck_goal list [@printer fun _ _ -> ()]
                                  [@equal fun _ _ -> true];
 }
