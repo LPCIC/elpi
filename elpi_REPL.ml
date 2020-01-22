@@ -170,7 +170,7 @@ let _ =
   let query = API.Compile.query prog g in
   if !typecheck then begin
     let t0 = Unix.gettimeofday () in
-    let b = API.Compile.static_check ~flags pheader query in
+    let b = API.Compile.static_check ~flags query in
     Format.eprintf "@\nTypechecking time: %5.3f@\n%!" (Unix.gettimeofday () -. t0);
     if not b then begin
        Format.eprintf "Type error. To ignore it, pass -no-tc.\n";

@@ -2,21 +2,32 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
+open Util
 open Data
 
 module Pp : sig
   val ppterm :
-    ?pp_ctx:(string Util.PtrMap.t * int) ref -> ?min_prec:int -> int -> string list -> int -> env ->
+    ?pp_ctx:(string PtrMap.t * int) ref -> ?min_prec:int -> int -> string list -> int -> env ->
        Format.formatter -> term -> unit
   val uppterm :
-    ?pp_ctx:(string Util.PtrMap.t * int) ref -> ?min_prec:int -> int -> string list -> int -> env ->
+    ?pp_ctx:(string PtrMap.t * int) ref -> ?min_prec:int -> int -> string list -> int -> env ->
        Format.formatter -> term -> unit
+
+  val pp_constant : Format.formatter -> constant -> unit
+  val pp_oref : Format.formatter -> (UUID.t * Obj.t) -> unit
 end
-val pp_stuck_goal : ?pp_ctx:(string Util.PtrMap.t * int) ref -> Fmt.formatter -> stuck_goal -> unit
+val pp_stuck_goal : ?pp_ctx:(string PtrMap.t * int) ref -> Fmt.formatter -> stuck_goal -> unit
+
+val embed_query :
+  mk_Arg:(State.t -> name:string -> args:term list -> State.t * term) ->
+  depth:int ->
+  State.t -> 'a Query.t -> State.t * term
 
 (* Interpreter API *)
-val execute_once : ?max_steps:int -> ?delay_outside_fragment:bool -> 'a executable -> 'a outcome
-val execute_loop : ?delay_outside_fragment:bool -> 'a executable -> more:(unit -> bool) -> pp:(float -> 'a outcome -> unit) -> unit
+val execute_once :
+  ?max_steps:int -> ?delay_outside_fragment:bool -> 'a executable -> 'a outcome
+val execute_loop :
+  ?delay_outside_fragment:bool -> 'a executable -> more:(unit -> bool) -> pp:(float -> 'a outcome -> unit) -> unit
 
 (* Functions useful to implement built-in predicates and evaluable functions *)
 val deref_uv : ?avoid:uvar_body -> from:constant -> to_:constant -> int -> term -> term
@@ -31,6 +42,10 @@ val lp_list_to_list : depth:int -> term -> term list
 val list_to_lp_list : term list -> term
 
 val split_conj : depth:int -> term -> term list
+
+val mkinterval : int -> int -> int -> term list
+val mkConst : constant -> term
+val mkAppL : constant -> term list -> term
 
 val mkAppArg : int -> int -> term list -> term
 val move : 
@@ -50,7 +65,7 @@ val make_index :
 
 (* used by the compiler *)
 val clausify1 :
-  loc:Util.Loc.t ->
+  loc:Loc.t ->
   mode Constants.Map.t -> (* for caching it in the clause *)
   nargs:int -> depth:int -> term -> (constant * clause) * clause_src * int
 

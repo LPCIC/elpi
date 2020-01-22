@@ -156,8 +156,7 @@ module Compile : sig
 
   (** Runs [elpi-checker.elpi] by default.
       Returns true if no errors were found *)
-  val static_check :
-    Setup.program_header -> ?checker:Ast.program list -> ?flags:flags -> 'a query -> bool
+  val static_check : ?checker:Ast.program list -> ?flags:flags -> 'a query -> bool
 
   (** HACK: don't use *)
   val dummy_header : Setup.program_header
@@ -875,15 +874,11 @@ module RawData : sig
   val kool : view -> term
 
   (** Smart constructors *)
-  val mkGlobalS : string -> term  (* global constant, i.e. < 0 *)
   val mkBound : constant -> term  (* bound variable, i.e. >= 0 *)
   val mkLam : term -> term
-  val mkAppS : string -> term -> term list -> term
-  val mkAppSL : string -> term list -> term
   val mkCons : term -> term -> term
   val mkNil : term
   val mkDiscard : term
-  val mkBuiltinS : string -> term list -> term
   val mkCData : RawOpaqueData.t -> term
   val mkUnifVar : FlexibleData.Elpi.t -> args:term list -> State.t -> term
 
@@ -911,8 +906,7 @@ module RawData : sig
 
   module Constants : sig
 
-    val from_string : string -> term
-    val from_stringc : string -> constant
+    val declare_global_symbol : string -> constant
 
     val show : constant -> string
 
@@ -974,11 +968,11 @@ module Quotation : sig
   val lp : quotation
 
   (** See elpi-quoted_syntax.elpi (EXPERIMENTAL, used by elpi-checker) *)
-  val quote_syntax : 'a Compile.query -> Data.term list * Data.term
+  val quote_syntax : State.t -> 'a Compile.query -> State.t * Data.term list * Data.term
 
   (** To implement the string_to_term built-in (AVOID, makes little sense
    * if depth is non zero, since bound variables have no name!) *)
-  val term_at : depth:int -> Ast.query -> Data.term
+  val term_at : depth:int -> State.t -> Ast.query -> State.t * Data.term
 
   (** Like quotations but for identifiers that begin and end with
    * "`" or "'", e.g. `this` and 'that'. Useful if the object language

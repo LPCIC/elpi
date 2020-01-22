@@ -452,6 +452,11 @@ let mk_spaghetti_printer () =
 let set_spaghetti_printer r f = r := f
 
 let pp_spaghetti r fmt x = !r fmt x
+let show_spaghetti r x =
+  let b = Buffer.create 20 in
+  let fmt = Format.formatter_of_buffer b in
+  Format.fprintf fmt "%a%!" !r x;
+  Buffer.contents b
 
 let pp_spaghetti_any r ~id fmt x = !r fmt (id,Obj.repr x)
 

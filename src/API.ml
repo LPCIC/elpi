@@ -2,23 +2,29 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-module type Runtime = module type of Runtime_trace_off
+module type Runtime = (module type of Runtime_trace_off)
 
 let r = ref (module Runtime_trace_off : Runtime)
 
-let set_runtime = function
+let set_runtime b =
+  begin match b with
   | true  -> r := (module Runtime_trace_on  : Runtime)
   | false -> r := (module Runtime_trace_off : Runtime)
+  end;
+  let module R = (val !r) in
+  Util.set_spaghetti_printer Data.pp_const R.Pp.pp_constant
 
 let set_trace argv =
   let args = Trace.Runtime.parse_argv argv in
   set_runtime !Trace.Runtime.debug;
   args
 
+type header = Ast.Program.t
+type handle = { header : header; state : Data.State.t }
 module Setup = struct
 
 type builtins = string * Data.BuiltInPredicate.declaration list
-type program_header = Ast.Program.t
+type program_header = handle
 
 let init ~builtins:(fname,decls) ~basedir:cwd argv =
   let new_argv = set_trace argv in
@@ -30,37 +36,42 @@ let init ~builtins:(fname,decls) ~basedir:cwd argv =
     in
       aux [] [] new_argv
   in
+  (* At the moment we can only init the parser once *)
   Parser.init ~lp_syntax:Parser.lp_gramext ~paths ~cwd ();
-  (* This is a bit ugly, since builtins are global but could be made
-   * program specific *)
-  List.iter (function
-    | Data.BuiltInPredicate.MLCode (p,_) -> Data.BuiltInPredicate.register p
-    | Data.BuiltInPredicate.MLData _ -> ()
-    | Data.BuiltInPredicate.MLDataC _ -> ()
-    | Data.BuiltInPredicate.LPCode _ -> ()
-    | Data.BuiltInPredicate.LPDoc _ -> ()) decls;
-  (* This is a bit ugly, since we print and then parse... *)
-  let b = Buffer.create 1024 in
-  let fmt = Format.formatter_of_buffer b in
-  Data.BuiltInPredicate.document fmt decls;
-  Format.pp_print_flush fmt ();
-  let text = Buffer.contents b in
-  let strm = Stream.of_string text in
-  let loc = Util.Loc.initial fname in
+  let state = Compiler.init_state Compiler.default_flags in
+  let state = Data.State.set Data.while_compiling state true in
+  (* This runtime contains statically allocated data that is common to all runtimes *)
+  (* This part could be put in a separate API Setup.mk_runtime and it should be
+     passed to all Compile.* APIs *)
+  let state =
+    List.fold_left (fun state -> function
+    | Data.BuiltInPredicate.MLCode (p,_) -> Compiler.Builtins.register state p
+    | Data.BuiltInPredicate.MLData _ -> state
+    | Data.BuiltInPredicate.MLDataC _ -> state
+    | Data.BuiltInPredicate.LPCode _ -> state
+    | Data.BuiltInPredicate.LPDoc _ -> state) state decls in
   let header =
+    (* This is a bit ugly, since we print and then parse... *)
+    let b = Buffer.create 1024 in
+    let fmt = Format.formatter_of_buffer b in
+    Data.BuiltInPredicate.document fmt decls;
+    Format.pp_print_flush fmt ();
+    let text = Buffer.contents b in
+    let strm = Stream.of_string text in
+    let loc = Util.Loc.initial fname in
     try
       Parser.parse_program_from_stream
-        ~print_accumulated_files:false loc strm 
+        ~print_accumulated_files:false loc strm
     with Parser.ParseError(loc,msg) ->
       List.iteri (fun i s ->
         Printf.eprintf "%4d: %s\n" (i+1) s)
         (Re.Str.(split_delim (regexp_string "\n") text));
       Printf.eprintf "Excerpt of %s:\n%s\n" fname
-       (String.sub text loc.Util.Loc.line_starts_at
-         Util.Loc.(loc.source_stop - loc.line_starts_at));
-      Util.anomaly ~loc msg
-  in
-  header, new_argv
+        (String.sub text loc.Util.Loc.line_starts_at
+          Util.Loc.(loc.source_stop - loc.line_starts_at));
+      Util.anomaly ~loc msg in
+  let state = Data.State.set Data.while_compiling state false in
+  { header; state }, new_argv
 
 let trace args =
   match set_trace args with
@@ -70,7 +81,7 @@ let trace args =
 let usage =
   "\nParsing options:\n" ^
   "\t-I PATH  search for accumulated files in PATH\n" ^
-  Trace.Runtime.usage 
+  Trace.Runtime.usage
 
 let set_warn = Util.set_warn
 let set_error = Util.set_error
@@ -124,18 +135,20 @@ end
 
 module Compile = struct
 
-  type program = Compiler.program
-  type 'a query = 'a Compiler.query
+  type program = Compiler.program * handle
+  type 'a query = 'a Compiler.query * header
   type 'a executable = 'a ED.executable
 
-  let program ~flags header l =
-    Compiler.program_of_ast ~flags (header @ List.flatten l)
-  let query = Compiler.query_of_ast
+  let program ~flags h l =
+    let state, p = Compiler.program_of_ast h.state (h.header @ List.flatten l) in
+    p, { h with state }
+  let query (p,h) t =
+    Compiler.query_of_ast h.state p t, h.header
 
-  let static_check header ?checker ?flags p =
+  let static_check ?checker ?flags (q,header) =
     let module R = (val !r) in let open R in
     let checker = Util.option_map List.flatten checker in
-    Compiler.static_check header ~exec:(execute_once ~delay_outside_fragment:false) ?checker ?flags p
+    Compiler.static_check header ~exec:(execute_once ~delay_outside_fragment:false) ?checker ?flags q
 
   module StrSet = Util.StrSet
 
@@ -145,20 +158,20 @@ module Compile = struct
     print_passes : bool;
   }
   let default_flags = Compiler.default_flags
-  let link x = Compiler.executable_of_query x
+  let link (x,_) = Compiler.executable_of_query x
 
-  let dummy_header = []
+  let dummy_header = { header = []; state = ED.State.init () }
 end
 
 module Execute = struct
   type 'a outcome = 'a ED.outcome =
     Success of 'a Data.solution | Failure | NoMoreSteps
-  let once ?max_steps ?delay_outside_fragment p = 
-    let module R = (val !r) in let open R in
-    execute_once ?max_steps ?delay_outside_fragment p     
+  let once ?max_steps ?delay_outside_fragment p =
+    let module R = (val !r) in
+    R.execute_once ?max_steps ?delay_outside_fragment p
   let loop ?delay_outside_fragment p ~more ~pp =
-    let module R = (val !r) in let open R in
-    execute_loop ?delay_outside_fragment p ~more ~pp
+    let module R = (val !r) in
+    R.execute_loop ?delay_outside_fragment p ~more ~pp
 
 end
 
@@ -173,7 +186,7 @@ module Pp = struct
 
   let state = ED.State.pp
 
-  let query f c =
+  let query f (c,_) =
     let module R = (val !r) in let open R in
     Compiler.pp_query (fun ~depth -> R.Pp.uppterm depth [] 0 [||]) f c
 
@@ -208,7 +221,7 @@ module RawOpaqueData = struct
     constants : (name * 'a) list; (* global constants of that type, eg "std_in" *)
   }
 
-  let conversion_of_cdata ~name ?(doc="") ~constants
+  let conversion_of_cdata ~name ?(doc="") ~constants_map ~constants
       { cin; isc; cout; name=c }
   =
   let ty = Conversion.TyName name in
@@ -219,27 +232,29 @@ module RawOpaqueData = struct
     match R.deref_head ~depth t with
     | ED.Term.CData c when isc c -> state, cout c, []
     | ED.Term.Const i as t when i < 0 ->
-        begin try state, ED.Constants.Map.find i constants, []
+        begin try state, ED.Constants.Map.find i constants_map, []
         with Not_found -> raise (Conversion.TypeErr(ty,depth,t)) end
     | t -> raise (Conversion.TypeErr(ty,depth,t)) in
   let pp_doc fmt () =
+    let module R = (val !r) in let open R in
     if doc <> "" then begin
       ED.BuiltInPredicate.pp_comment fmt ("% " ^ doc);
       Format.fprintf fmt "@\n";
     end;
     Format.fprintf fmt "@[<hov 2>typeabbrev %s (ctype \"%s\").@]@\n@\n" name c;
-    ED.Constants.Map.iter (fun c _ ->
-      Format.fprintf fmt "@[<hov 2>type %a %s.@]@\n" ED.Constants.pp c name)
+    List.iter (fun (c,_) ->
+      Format.fprintf fmt "@[<hov 2>type %s %s.@]@\n" c name)
       constants
     in
   { Conversion.embed; readback; ty; pp_doc; pp = (fun fmt x -> pp fmt (cin x)) }
 
   let conversion_of_cdata ~name ?doc ?(constants=[]) cd =
-    let constants =
+    let module R = (val !r) in let open R in
+    let constants_map =
       List.fold_right (fun (n,v) ->
-        ED.Constants.Map.add (ED.Constants.from_stringc n) v)
+        ED.Constants.Map.add (ED.Global_symbols.declare_global_symbol n) v)
         constants ED.Constants.Map.empty in
-    conversion_of_cdata ~name ?doc ~constants cd
+    conversion_of_cdata ~name ?doc ~constants_map ~constants cd
 
   let declare { name; doc; pp; compare; hash; hconsed; constants; } =
     let cdata = declare {
@@ -400,24 +415,26 @@ module Elpi = struct
     ~clause_compilation_is_over:(fun x -> Util.StrMap.empty)
     ~goal_compilation_is_over:(fun ~args x ->
         Some (Util.StrMap.map (compilation_is_over ~args) x))
+    ~compilation_is_over:(fun _ -> None)
     ~init:(fun () -> Util.StrMap.empty)
 
   let fresh_name =
     let i = ref 0 in
     fun () -> incr i; Printf.sprintf "_uvk_%d_" !i
-  
-  let alloc_Elpi name state =            
-    if ED.State.get Compiler.while_compiling state then
+
+  let alloc_Elpi name state =
+    if ED.State.get ED.while_compiling state then
       let state, _arg = Compiler.mk_Arg ~name ~args:[] state in
       state, Arg name
     else
-      state, Ref (ED.oref ED.Constants.dummy)
+      let module R = (val !r) in
+      state, Ref (ED.oref ED.dummy)
 
   let make ?name state =
     match name with
     | None -> alloc_Elpi (fresh_name ()) state
     | Some name ->
-        try state, Util.StrMap.find name (ED.State.get uvk state) 
+        try state, Util.StrMap.find name (ED.State.get uvk state)
         with Not_found ->
           let state, k = alloc_Elpi name state in
           ED.State.update uvk state (Util.StrMap.add name k), k
@@ -456,8 +473,8 @@ module RawData = struct
     | ED.Term.AppUVar(ub,lvl,args) -> look ~depth (R.expand_appuv ub ~depth ~lvl ~args)
     | ED.Term.UVar(ub,lvl,ano) -> look ~depth (R.expand_uv ub ~depth ~lvl ~ano)
     | ED.Term.Discard ->
-        let ub = ED.oref ED.Term.Constants.dummy in
-        UnifVar (Ref ub,ED.Term.Constants.mkinterval 0 depth 0)
+        let ub = ED.oref ED.dummy in
+        UnifVar (Ref ub,R.mkinterval 0 depth 0)
     | x -> Obj.magic x (* HACK: view is a "subtype" of Term.term *)
 
   let kool = function
@@ -466,7 +483,7 @@ module RawData = struct
     | x -> Obj.magic x
   [@@ inline]
 
-  let mkConst = ED.Term.mkConst
+  let mkConst n = let module R = (val !r) in R.mkConst n
   let mkLam = ED.Term.mkLam
   let mkApp = ED.Term.mkApp
   let mkCons = ED.Term.mkCons
@@ -474,12 +491,7 @@ module RawData = struct
   let mkDiscard = ED.Term.mkDiscard
   let mkBuiltin = ED.Term.mkBuiltin
   let mkCData = ED.Term.mkCData
-  let mkAppL = ED.Term.mkAppL
-  let mkAppS = ED.Term.mkAppS
-  let mkAppSL = ED.Term.mkAppSL
-  
-  let mkGlobalS s = ED.Term.Constants.from_string s
-  let mkBuiltinS s args = mkBuiltin (ED.BuiltInPredicate.from_builtin_name s) args
+  let mkAppL x l = let module R = (val !r) in R.mkAppL x l
 
   let mkGlobal i =
     if i >= 0 then Util.anomaly "mkGlobal: got a bound variable";
@@ -490,9 +502,29 @@ module RawData = struct
 
   let cmp_builtin i j = i - j
 
-  module Constants = ED.Term.Constants
+  module Constants = struct
 
-  let of_term = ED.of_term
+    let declare_global_symbol = ED.Global_symbols.declare_global_symbol
+
+    let show c = ED.Constants.show c
+
+    let eqc    = ED.Global_symbols.eqc
+    let orc    = ED.Global_symbols.orc
+    let andc   = ED.Global_symbols.andc
+    let rimplc = ED.Global_symbols.rimplc
+    let pic    = ED.Global_symbols.pic
+    let sigmac = ED.Global_symbols.sigmac
+    let implc  = ED.Global_symbols.implc
+    let cutc   = ED.Global_symbols.cutc
+    let ctypec = ED.Global_symbols.ctypec
+    let spillc = ED.Global_symbols.spillc
+
+    module Map = ED.Constants.Map
+    module Set = ED.Constants.Set
+
+  end
+
+  let of_term x = x
 
   let of_hyps x = x
 
@@ -508,7 +540,7 @@ module RawData = struct
   }
 
   type constraints = Data.constraints
-  
+
   let constraints = Util.map_filter (function
     | { ED.kind = Constraint { cdepth; conclusion; context } } ->
         Some { context ; goal = (cdepth, conclusion) }
@@ -525,7 +557,7 @@ end
 module FlexibleData = struct
 
   module Elpi = Elpi
-  
+
   module type Host = sig
     type t
     val compare : t -> t -> int
@@ -588,12 +620,12 @@ module FlexibleData = struct
       let e2h_run = PtrMap.filter (fun ub v -> f v (H2E.find v h2e)) e2h_run in
       let h2e = H2E.filter f h2e in
       { h2e; e2h_compile; e2h_run }
-      
+
     let fold f { h2e } acc =
       let module R = (val !r) in let open R in
       let get_val = function
         | Elpi.Ref { ED.Term.contents = ub }
-          when ub != ED.Term.Constants.dummy ->
+          when ub != ED.dummy ->
             Some (R.deref_head ~depth:0 ub)
         | Elpi.Ref _ -> None
         | Elpi.Arg _ -> None in
@@ -609,7 +641,7 @@ module FlexibleData = struct
       fold pp m ();
       Format.fprintf fmt "@]"
     ;;
-    
+
     let show m = Format.asprintf "%a" pp m
 
     let uvmap = ED.State.declare ~name:(Printf.sprintf "elpi:uvm:%d" uvn) ~pp
@@ -620,6 +652,7 @@ module FlexibleData = struct
           StrMap.fold (fun k v m ->
             PtrMap.add (StrMap.find k args) v m) e2h_compile (PtrMap.empty ()) in
         Some { h2e; e2h_compile = StrMap.empty; e2h_run })
+      ~compilation_is_over:(fun x -> Some x)
       ~init:(fun () -> empty)
 
   end
@@ -639,16 +672,18 @@ module FlexibleData = struct
 end
 
 module AlgebraicData = struct
+  include ED.BuiltInPredicate.ADT
   type name = string
   type doc = string
 
-  include ED.BuiltInPredicate.ADT
-  let declare x = 
-    let look ~depth t =
-      let module R = (val !r) in
-      R.deref_head ~depth t in
-    ED.BuiltInPredicate.adt
-      ~look ~alloc:FlexibleData.Elpi.make ~mkUnifVar:RawData.mkUnifVar x
+  let declare x =
+    let module R = (val !r) in
+    ED.BuiltInPredicate.ADT.adt
+      ~look:R.deref_head
+      ~mkinterval:R.mkinterval
+      ~mkConst:R.mkConst
+      ~alloc:FlexibleData.Elpi.make
+      ~mkUnifVar:RawData.mkUnifVar x
 end
 
 module BuiltInPredicate = struct
@@ -706,8 +741,18 @@ module BuiltIn = struct
 end
 
 module Query = struct
-  include ED.Query
-  let compile = Compiler.query_of_data
+  type name = string
+  type 'f arguments = 'f ED.Query.arguments =
+    | N : unit arguments
+    | D : 'a Conversion.t * 'a *    'x arguments -> 'x arguments
+    | Q : 'a Conversion.t * name * 'x arguments -> ('a * 'x) arguments
+
+  type 'x t = Query of { predicate : name; arguments : 'x arguments }
+
+  let compile (p,h) l (Query { predicate; arguments }) =
+    let state, predicate = Compiler.Symbols.allocate_global_symbol_str h.state predicate in
+    let q = ED.Query.Query{ predicate; arguments } in
+    Compiler.query_of_data state p l q, h.header
 end
 
 module State = struct
@@ -718,26 +763,30 @@ module State = struct
     declare ~name ~pp ~init
       ~clause_compilation_is_over:(fun x -> x)
       ~goal_compilation_is_over:(fun ~args:_ x -> Some x)
+      ~compilation_is_over:(fun x -> Some x)
 end
 
 
 module RawQuery = struct
   let mk_Arg = Compiler.mk_Arg
   let is_Arg = Compiler.is_Arg
-  let compile = Compiler.query_of_term
+  let compile (p,h) f =
+    Compiler.query_of_term h.state p f, h.header
 end
 
 module Quotation = struct
   include Compiler
   let declare_backtick ~name f =
-    ED.CustomFunctorCompilation.declare_backtick_compilation name
+    Compiler.CustomFunctorCompilation.declare_backtick_compilation name
       (fun s x -> f s (EA.Func.show x))
 
   let declare_singlequote ~name f =
-    ED.CustomFunctorCompilation.declare_singlequote_compilation name
+    Compiler.CustomFunctorCompilation.declare_singlequote_compilation name
       (fun s x -> f s (EA.Func.show x))
 
-  let term_at ~depth x = Compiler.term_of_ast ~depth x
+  let term_at ~depth s x = Compiler.term_of_ast ~depth s x
+
+  let quote_syntax s (q,_) = Compiler.quote_syntax s q
 
 end
 
@@ -745,21 +794,22 @@ module Utils = struct
   let lp_list_to_list ~depth t =
     let module R = (val !r) in let open R in
     lp_list_to_list ~depth t
-          
+
   let list_to_lp_list tl =
     let module R = (val !r) in let open R in
     list_to_lp_list tl
 
   let get_assignment = function
     | Elpi.Arg _ -> assert false
-    | Elpi.Ref { ED.contents = r } ->
-        if r == ED.Constants.dummy then None
-        else Some r
+    | Elpi.Ref { ED.contents = t } ->
+        let module R = (val !r) in
+        if t == ED.dummy then None
+        else Some t
 
   let move ~from ~to_ t =
     let module R = (val !r) in let open R in
     R.hmove ~from ~to_ ?avoid:None t
-  
+
   let error = Util.error
   let type_error = Util.type_error
   let anomaly = Util.anomaly
@@ -770,18 +820,18 @@ module Utils = struct
     let module Data = ED.Term in
     let module R = (val !r) in let open R in
     let rec aux d ctx t =
-      match R.deref_head ~depth:d t with       
+      match R.deref_head ~depth:d t with
       | Data.Const i when i >= 0 && i < depth ->
           error "program_of_term: the term is not closed"
       | Data.Const i when i < 0 ->
-          Term.mkCon (Data.Constants.show i)
+          Term.mkCon (ED.Constants.show i)
       | Data.Const i -> Util.IntMap.find i ctx
       | Data.Lam t ->
           let s = "x" ^ string_of_int d in
           let ctx = Util.IntMap.add d (Term.mkCon s) ctx in
           Term.mkLam s (aux (d+1) ctx t)
       | Data.App(c,x,xs) ->
-          let c = aux d ctx (Data.Constants.mkConst c) in
+          let c = aux d ctx (R.mkConst c) in
           let x = aux d ctx x in
           let xs = List.map (aux d ctx) xs in
           Term.mkApp loc (c :: x :: xs)
@@ -792,7 +842,7 @@ module Utils = struct
           Term.mkSeq [hd;tl]
       | Data.Nil -> Term.mkNil
       | Data.Builtin(c,xs) ->
-          let c = aux d ctx (Data.Constants.mkConst c) in
+          let c = aux d ctx (R.mkConst c) in
           let xs = List.map (aux d ctx) xs in
           Term.mkApp loc (c :: xs)
       | Data.CData x -> Term.mkC x

@@ -179,6 +179,8 @@ val set_spaghetti_printer :
      unit
 val pp_spaghetti :
   'a spaghetti_printer -> Format.formatter -> 'a -> unit
+val show_spaghetti :
+  'a spaghetti_printer -> 'a -> string
 val pp_spaghetti_any :
   (UUID.t * Obj.t) spaghetti_printer -> id:UUID.t -> Format.formatter -> 'a -> unit
 
