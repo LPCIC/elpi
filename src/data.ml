@@ -241,46 +241,49 @@ module Constants : sig
 
 end = struct (* {{{ *)
 
-(* Ast (functor name) -> negative int n (constant) * hashconsed (Const n) *)
-let ast2ct : (F.t, constant * term) Hashtbl.t = Hashtbl.create 37
-(* constant -> string *)
-let c2s : (constant, string) Hashtbl.t = Hashtbl.create 37
+type symbol_table = {
+  (* Ast (functor name) -> negative int n (constant) * hashconsed (Const n) *)
+  ast2ct : (F.t, constant * term) Hashtbl.t;
+  (* constant -> string *)
+  c2s : (constant, string) Hashtbl.t;
 (* constant n -> hashconsed (Const n) *)
-let c2t : (constant, term) Hashtbl.t = Hashtbl.create 17
+  c2t : (constant, term) Hashtbl.t;
+  mutable fresh : int;
+}
 
-let fresh = ref 0
+let symb = ref { fresh = 0; ast2ct = Hashtbl.create 37; c2s = Hashtbl.create 37; c2t = Hashtbl.create 17 }
 
 let funct_of_ast x =
-  try Hashtbl.find ast2ct x
+  try Hashtbl.find !symb.ast2ct x
   with Not_found ->
-    decr fresh;
-    let n = !fresh in
+    !symb.fresh <- !symb.fresh - 1;
+    let n = !symb.fresh in
     let xx = Const n in
     let p = n,xx in
-    Hashtbl.add c2s n (F.show x);
-    Hashtbl.add c2t n xx;
-    Hashtbl.add ast2ct x p;
+    Hashtbl.add !symb.c2s n (F.show x);
+    Hashtbl.add !symb.c2t n xx;
+    Hashtbl.add !symb.ast2ct x p;
     p
 
 let mkConst x =
-  try Hashtbl.find c2t x
+  try Hashtbl.find !symb.c2t x
   with Not_found ->
     let xx = Const x in
-    Hashtbl.add c2s x ("c" ^ string_of_int x);
-    Hashtbl.add c2t x xx;
+    Hashtbl.add !symb.c2s x ("c" ^ string_of_int x);
+    Hashtbl.add !symb.c2t x xx;
     xx
   [@@inline]
 
 let show n =
-   try Hashtbl.find c2s n
+   try Hashtbl.find !symb.c2s n
    with Not_found -> string_of_int n
 
 let fresh () =
-   decr fresh;
-   let n = !fresh in
+   !symb.fresh <- !symb.fresh - 1;
+   let n = !symb.fresh in
    let xx = Const n in
-   Hashtbl.add c2s n ("frozen-" ^ string_of_int n);
-   Hashtbl.add c2t n xx;
+   Hashtbl.add !symb.c2s n ("frozen-" ^ string_of_int n);
+   Hashtbl.add !symb.c2t n xx;
    n, xx
 
 let pp fmt c = Fmt.fprintf fmt "%s" (show c)
