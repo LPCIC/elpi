@@ -190,7 +190,28 @@ let default_error ?loc s =
   Printf.eprintf "Fatal error: %s%s\n%!" (pp_loc_opt loc) s;
   exit 1
 let default_anomaly ?loc s =
-  Printf.eprintf "Anomaly: %s%s\n%!" (pp_loc_opt loc) s;
+  let trace =
+    match Printexc.(get_callstack max_int |> backtrace_slots) with
+    | None -> ""
+    | Some slots ->
+        let lines = Array.mapi Printexc.Slot.format slots in
+        let _, lines_repetitions =
+          List.fold_left (fun (pos,acc) l ->
+            match l with
+            | None -> pos+1, acc
+            | Some _ when pos = 0 -> pos+1, acc
+            | Some l ->
+                match acc with
+                | (l1,q) :: acc when l = l1 -> pos+1, (l1,q+1) :: acc
+                | _ -> pos+1, (l,1) :: acc)
+            (0,[]) (Array.to_list lines) in
+        let lines =
+          lines_repetitions |> List.map (function
+            | (l,1) -> l
+            | (l,n) -> l ^ Printf.sprintf " [%d times]" n) in
+        String.concat "\n" lines
+    in
+ Printf.eprintf "%s\nAnomaly: %s%s\n%!" trace (pp_loc_opt loc) s;
   exit 2
 let default_type_error ?loc s = default_error ?loc s
 let default_printf = Printf.printf
