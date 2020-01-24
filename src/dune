@@ -5,7 +5,7 @@
     ((pps ppx_deriving.std) API util ast data compiler)
     ((pps ppx_deriving.std elpi.trace_ppx --trace_ppx-on) runtime_trace_on)
     ((pps ppx_deriving.std elpi.trace_ppx --trace_ppx-off) runtime_trace_off)
-    ((action (system "camlp5o -I . -I +camlp5 pa_extend.cmo pa_lexer.cmo %{input-file}")) parser)
+    ((action (run camlp5o -I . -I +camlp5 pa_extend.cmo pa_lexer.cmo %{input-file})) parser)
     ))
   (libraries re.str camlp5.gramlib unix)
   (flags -linkall)
