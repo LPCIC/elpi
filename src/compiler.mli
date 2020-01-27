@@ -7,7 +7,6 @@ open Data
 
 type flags = {
   defined_variables : StrSet.t;
-  allow_untyped_builtin : bool;
   print_passes : bool; (* debug *)
 }
 val default_flags : flags
@@ -18,14 +17,18 @@ val init_state : flags -> State.t
 type program
 type 'a query
 
-(* Flags are threaded *)
-val program_of_ast : State.t -> Ast.Program.t -> State.t * program
+type compilation_unit
+
+val program_of_ast : State.t -> header:compilation_unit -> Ast.Program.t -> State.t * program
+val unit_of_ast : State.t -> Ast.Program.t -> compilation_unit
+val assemble_units : header:compilation_unit -> compilation_unit list -> State.t * program
+
 val query_of_ast : State.t -> program -> Ast.Goal.t -> unit query
 val query_of_term :
   State.t -> program -> (depth:int -> State.t -> State.t * (Loc.t * term)) -> unit query
 val query_of_data :
   State.t -> program -> Loc.t -> 'a Query.t -> 'a query
-val executable_of_query : 'a query -> 'a executable
+val optimize_query : 'a query -> 'a executable
 val term_of_ast : depth:int -> State.t -> Loc.t * Ast.Term.t -> State.t * term
 
 val pp_query : (depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> 'a query -> unit
@@ -59,10 +62,9 @@ val get_Arg : State.t -> name:string -> args:term list -> term
 val quote_syntax : State.t -> 'a query -> State.t * term list * term
 
 (* false means a type error was found *)
-val static_check : Ast.Program.t -> (* header *)
+val static_check :
   exec:(unit executable -> unit outcome) ->
-  ?checker:Ast.Program.t ->
-  ?flags:flags ->
+  checker:(State.t * program) ->
   'a query -> bool
 
 module CustomFunctorCompilation : sig

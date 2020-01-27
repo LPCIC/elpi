@@ -36,19 +36,21 @@ module Setup : sig
 
   (* Built-in predicates, see {!module:BuiltIn} *)
   type builtins
-  type program_header
+
+  (* Handle to an elpi instance *)
+  type elpi
 
   (** Initialize ELPI.
       [init] must be called before invoking the parser.
       [builtins] the set of built-in predicates, eg [Elpi_builtin.std_builtins]
       [basedir] current working directory (used to make paths absolute);
       [argv] is list of options, see the {!val:usage} string;
-      It returns part of [argv] not relevant to ELPI and a [program_header]
+      It returns part of [argv] not relevant to ELPI and a [elpi]
       that contains the declaration of builtins. *)
   val init :
     builtins:builtins ->
     basedir:string ->
-    string list -> program_header * string list
+    string list -> elpi * string list
 
   (** Usage string *)
   val usage : string
@@ -71,9 +73,9 @@ end
 module Parse : sig
 
   (** [program file_list] parses a list of files *)
-  val program : ?print_accumulated_files:bool ->
+  val program : elpi:Setup.elpi -> ?print_accumulated_files:bool ->
     string list -> Ast.program
-  val program_from_stream : ?print_accumulated_files:bool ->
+  val program_from_stream : elpi:Setup.elpi -> ?print_accumulated_files:bool ->
     Ast.Loc.t -> char Stream.t -> Ast.program
 
   (** [goal file_list] parses the query *)
@@ -130,8 +132,6 @@ module Compile : sig
   type flags = {
     (* variables used in conditional compilation, that is :if clauses *)
     defined_variables : StrSet.t;
-    (* disable check that all built-in must come with a type declaration *)
-    allow_untyped_builtin : bool;
     (* debug: print intermediate data during the compilation phase *)
     print_passes : bool;
   }
@@ -144,22 +144,26 @@ module Compile : sig
   (* Warning: this API will change to support separate compilation of
    * Ast.program, esp the [link] one *)
 
-  (* compile all program files *)
+  (* compile all program files in one go *)
   val program : flags:flags ->
-    Setup.program_header -> Ast.program list -> program
+    elpi:Setup.elpi -> Ast.program list -> program
+  (* separate compilation *)
+  type compilation_unit
+  val unit : flags:flags -> Ast.program -> compilation_unit
+  val assemble : elpi:Setup.elpi -> compilation_unit list -> program
 
   (* then compile the query *)
   val query : program -> Ast.query -> unit query
 
   (* finally obtain the executable *)
-  val link : 'a query -> 'a executable
+  val optimize : 'a query -> 'a executable
 
-  (** Runs [elpi-checker.elpi] by default.
-      Returns true if no errors were found *)
-  val static_check : ?checker:Ast.program list -> ?flags:flags -> 'a query -> bool
+  (** Runs a checker. Returns true if no errors were found.
+      See also Builtins.default_checker. *)
+  val static_check : checker:program -> 'a query -> bool
 
   (** HACK: don't use *)
-  val dummy_header : Setup.program_header
+  val dummy_header : Setup.elpi
 
 end
 

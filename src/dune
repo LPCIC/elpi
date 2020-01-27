@@ -9,8 +9,8 @@
     ))
   (libraries re.str camlp5.gramlib unix)
   (flags -linkall)
-  (modules elpi util parser ast compiler data ptmap builtin builtin_stdlib builtin_map builtin_set API runtime_trace_on runtime_trace_off)
-  (private_modules util parser ast compiler data ptmap builtin_stdlib builtin_map builtin_set runtime_trace_on runtime_trace_off )
+  (modules elpi util parser ast compiler data ptmap builtin builtin_checker builtin_stdlib builtin_map builtin_set API runtime_trace_on runtime_trace_off)
+  (private_modules util parser ast compiler data ptmap builtin_checker builtin_stdlib builtin_map builtin_set runtime_trace_on runtime_trace_off )
 )
 
 (rule (copy# runtime.ml runtime_trace_on.ml))
@@ -32,11 +32,19 @@
   (cat builtin_set.elpi)
   (echo "|code};;")
 )))
+(rule (with-stdout-to builtin_checker.ml (progn
+  (echo "let code = {code|")
+  (echo "#line 0 \"elpi-quoted_syntax.elpi\"\n")
+  (cat elpi-quoted_syntax.elpi)
+  (echo "#line 0 \"elpi-checker.elpi\"\n")
+  (cat elpi-checker.elpi)
+  (echo "|code};;")
+)))
 
 
 (install
   (section lib)
-  (files builtin.elpi elpi-checker.elpi elpi-quoted_syntax.elpi elpi2html.elpi)
+  (files builtin.elpi elpi-quoted_syntax.elpi elpi2html.elpi)
 )
 
 (rule

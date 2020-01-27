@@ -2,9 +2,6 @@
 /* license: GNU Lesser General Public License Version 2.1 or later           */
 /* ------------------------------------------------------------------------- */
 
-% Simple type checker for lambda-Prolog programs
-accumulate elpi-quoted_syntax.
-
 % --------- HOAS or programs  ------------------------------------------------
 
 kind typ type. %%%%% types %%%%%%

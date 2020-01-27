@@ -804,13 +804,14 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in let open Context
      Easy    ("quotes the program from FileName and the QueryText. "^
               "See elpi-quoted_syntax.elpi for the syntax tree"))))),
    (fun f s _ _ ~depth ->
+      assert false; (*
       let ap = Parse.program [f] in
       let loc = Ast.Loc.initial "(quote_syntax)" in
       let aq = Parse.goal loc s in
       let p =
         API.Compile.(program ~flags:default_flags dummy_header [ap]) in
       let q = API.Compile.query p aq in
-      assert false;
+      assert false;*)
       (* let qp, qq = Quotation.quote_syntax q in *)
       (*!: qp +! qq*))),
   DocAbove);
@@ -1280,3 +1281,8 @@ let std_declarations =
 let std_builtins =
   BuiltIn.declare ~file_name:"builtin.elpi" std_declarations
 
+
+let default_checker () =
+  let elpi, _ = API.Setup.init ~builtins:std_builtins ~basedir:(Sys.getcwd ()) [] in
+  let ast = API.Parse.program_from_stream ~elpi (API.Ast.Loc.initial "(checker)") (Stream.of_string Builtin_checker.code) in
+  API.Compile.program ~flags:API.Compile.default_flags ~elpi [ast]

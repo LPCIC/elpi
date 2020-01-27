@@ -19,12 +19,10 @@ let set_trace argv =
   set_runtime !Trace.Runtime.debug;
   args
 
-type header = Ast.Program.t
-type handle = { header : header; state : Data.State.t }
 module Setup = struct
 
 type builtins = string * Data.BuiltInPredicate.declaration list
-type program_header = handle
+type elpi = Parser.parser_state * Compiler.compilation_unit
 
 let init ~builtins:(fname,decls) ~basedir:cwd argv =
   let new_argv = set_trace argv in
@@ -37,9 +35,9 @@ let init ~builtins:(fname,decls) ~basedir:cwd argv =
       aux [] [] new_argv
   in
   (* At the moment we can only init the parser once *)
-  Parser.init ~lp_syntax:Parser.lp_gramext ~paths ~cwd ();
+  let pstate = Parser.init ~lp_syntax:Parser.lp_gramext ~paths ~cwd in
+
   let state = Compiler.init_state Compiler.default_flags in
-  let state = Data.State.set Data.while_compiling state true in
   (* This runtime contains statically allocated data that is common to all runtimes *)
   (* This part could be put in a separate API Setup.mk_runtime and it should be
      passed to all Compile.* APIs *)
@@ -60,8 +58,9 @@ let init ~builtins:(fname,decls) ~basedir:cwd argv =
     let strm = Stream.of_string text in
     let loc = Util.Loc.initial fname in
     try
-      Parser.parse_program_from_stream
-        ~print_accumulated_files:false loc strm
+      Compiler.unit_of_ast state
+        (Parser.parse_program_from_stream pstate
+          ~print_accumulated_files:false loc strm)
     with Parser.ParseError(loc,msg) ->
       List.iteri (fun i s ->
         Printf.eprintf "%4d: %s\n" (i+1) s)
@@ -70,8 +69,7 @@ let init ~builtins:(fname,decls) ~basedir:cwd argv =
         (String.sub text loc.Util.Loc.line_starts_at
           Util.Loc.(loc.source_stop - loc.line_starts_at));
       Util.anomaly ~loc msg in
-  let state = Data.State.set Data.while_compiling state false in
-  { header; state }, new_argv
+  (pstate, header), new_argv
 
 let trace args =
   match set_trace args with
@@ -102,10 +100,10 @@ module Ast = struct
 end
 
 module Parse = struct
-  let program ?(print_accumulated_files=false) =
-    Parser.parse_program ~print_accumulated_files
-  let program_from_stream ?(print_accumulated_files=false) =
-    Parser.parse_program_from_stream ~print_accumulated_files
+  let program ~elpi:(ps,_) ?(print_accumulated_files=false) =
+    Parser.parse_program ps ~print_accumulated_files
+  let program_from_stream ~elpi:(ps,_) ?(print_accumulated_files=false) =
+    Parser.parse_program_from_stream ps ~print_accumulated_files
   let goal loc s = Parser.parse_goal ~loc s
   let goal_from_stream loc s = Parser.parse_goal_from_stream ~loc s
   exception ParseError = Parser.ParseError
@@ -117,7 +115,7 @@ module Data = struct
   type term = Data.term
   type constraints = Data.constraints
   type state = Data.State.t
-  type pretty_printer_context = (string Util.PtrMap.t * int) ref
+  type pretty_printer_context = ED.pp_ctx
   module StrMap = Util.StrMap
   type 'a solution = 'a Data.solution = {
     assignments : term StrMap.t;
@@ -135,32 +133,34 @@ end
 
 module Compile = struct
 
-  type program = Compiler.program * handle
-  type 'a query = 'a Compiler.query * header
+  type program = ED.State.t * Compiler.program
+  type 'a query = 'a Compiler.query
   type 'a executable = 'a ED.executable
+  type compilation_unit = Compiler.compilation_unit
 
-  let program ~flags h l =
-    let state, p = Compiler.program_of_ast h.state (h.header @ List.flatten l) in
-    p, { h with state }
-  let query (p,h) t =
-    Compiler.query_of_ast h.state p t, h.header
+  let program ~flags ~elpi:(_,header) l =
+    Compiler.program_of_ast (Compiler.init_state flags) ~header (List.flatten l)
 
-  let static_check ?checker ?flags (q,header) =
+  let query (s,p) t =
+    Compiler.query_of_ast s p t
+
+  let static_check ~checker q =
     let module R = (val !r) in let open R in
-    let checker = Util.option_map List.flatten checker in
-    Compiler.static_check header ~exec:(execute_once ~delay_outside_fragment:false) ?checker ?flags q
+    Compiler.static_check ~exec:(execute_once ~delay_outside_fragment:false) ~checker q
 
   module StrSet = Util.StrSet
 
   type flags = Compiler.flags = {
     defined_variables : StrSet.t;
-    allow_untyped_builtin : bool;
     print_passes : bool;
   }
   let default_flags = Compiler.default_flags
-  let link (x,_) = Compiler.executable_of_query x
+  let optimize = Compiler.optimize_query
+  let unit ~flags x = Compiler.unit_of_ast (Compiler.init_state flags) x
+  let assemble ~elpi:(_,header) = Compiler.assemble_units ~header
 
-  let dummy_header = { header = []; state = ED.State.init () }
+  let dummy_header =
+     Parser.dummy_state, Compiler.unit_of_ast (Compiler.init_state default_flags) []
 end
 
 module Execute = struct
@@ -186,7 +186,7 @@ module Pp = struct
 
   let state = ED.State.pp
 
-  let query f (c,_) =
+  let query f c =
     let module R = (val !r) in let open R in
     Compiler.pp_query (fun ~depth -> R.Pp.uppterm depth [] 0 [||]) f c
 
@@ -416,6 +416,7 @@ module Elpi = struct
     ~goal_compilation_is_over:(fun ~args x ->
         Some (Util.StrMap.map (compilation_is_over ~args) x))
     ~compilation_is_over:(fun _ -> None)
+    ~execution_is_over:(fun _ -> None)
     ~init:(fun () -> Util.StrMap.empty)
 
   let fresh_name =
@@ -653,6 +654,7 @@ module FlexibleData = struct
             PtrMap.add (StrMap.find k args) v m) e2h_compile (PtrMap.empty ()) in
         Some { h2e; e2h_compile = StrMap.empty; e2h_run })
       ~compilation_is_over:(fun x -> Some x)
+      ~execution_is_over:(fun x -> Some x)
       ~init:(fun () -> empty)
 
   end
@@ -749,10 +751,11 @@ module Query = struct
 
   type 'x t = Query of { predicate : name; arguments : 'x arguments }
 
-  let compile (p,h) l (Query { predicate; arguments }) =
-    let state, predicate = Compiler.Symbols.allocate_global_symbol_str h.state predicate in
+  let compile (state,p) loc (Query { predicate; arguments }) =
+    let state, predicate =
+      Compiler.Symbols.allocate_global_symbol_str state predicate in
     let q = ED.Query.Query{ predicate; arguments } in
-    Compiler.query_of_data state p l q, h.header
+    Compiler.query_of_data state p loc q
 end
 
 module State = struct
@@ -764,14 +767,16 @@ module State = struct
       ~clause_compilation_is_over:(fun x -> x)
       ~goal_compilation_is_over:(fun ~args:_ x -> Some x)
       ~compilation_is_over:(fun x -> Some x)
+      ~execution_is_over:(fun x -> Some x)
+
 end
 
 
 module RawQuery = struct
   let mk_Arg = Compiler.mk_Arg
   let is_Arg = Compiler.is_Arg
-  let compile (p,h) f =
-    Compiler.query_of_term h.state p f, h.header
+  let compile (state,p) f =
+    Compiler.query_of_term state p f
 end
 
 module Quotation = struct
@@ -786,7 +791,7 @@ module Quotation = struct
 
   let term_at ~depth s x = Compiler.term_of_ast ~depth s x
 
-  let quote_syntax s (q,_) = Compiler.quote_syntax s q
+  let quote_syntax s q = Compiler.quote_syntax s q
 
 end
 

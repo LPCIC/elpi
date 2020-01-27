@@ -218,6 +218,7 @@ module State : sig
     clause_compilation_is_over:('a -> 'a) ->
     goal_compilation_is_over:(args:uvar_body StrMap.t -> 'a -> 'a option) ->
     compilation_is_over:('a -> 'a option) ->
+    execution_is_over:('a -> 'a option) ->
      'a component
 
   (* an instance of the State.t type *)
@@ -227,6 +228,7 @@ module State : sig
   val end_clause_compilation : t -> t
   val end_goal_compilation : uvar_body StrMap.t -> t -> t
   val end_compilation : t -> t
+  val end_execution : t -> t
   val get : 'a component -> t -> 'a
   val set : 'a component -> t -> 'a -> t
   val drop : 'a component -> t -> t
@@ -244,6 +246,7 @@ end = struct
     end_clause : Obj.t -> Obj.t;
     end_goal : args:uvar_body StrMap.t -> Obj.t -> Obj.t option;
     end_comp : Obj.t -> Obj.t option;
+    end_exec : Obj.t -> Obj.t option;
     pp   : Format.formatter -> Obj.t -> unit;
   }
   let extensions : extension StrMap.t ref = ref StrMap.empty
@@ -263,7 +266,7 @@ end = struct
     let t = set name t x in
     t, res
 
-  let declare ~name ~pp ~init ~clause_compilation_is_over ~goal_compilation_is_over ~compilation_is_over =
+  let declare ~name ~pp ~init ~clause_compilation_is_over ~goal_compilation_is_over ~compilation_is_over ~execution_is_over =
     if StrMap.mem name !extensions then
       anomaly ("Extension "^name^" already declared");
     extensions := StrMap.add name {
@@ -272,6 +275,7 @@ end = struct
         end_goal = (fun ~args x -> option_map Obj.repr (goal_compilation_is_over ~args (Obj.obj x)));
         end_clause = (fun x -> Obj.repr (clause_compilation_is_over (Obj.obj x)));
         end_comp = (fun x -> option_map Obj.repr (compilation_is_over (Obj.obj x)));
+        end_exec = (fun x -> option_map Obj.repr (execution_is_over (Obj.obj x)));
       }
       !extensions;
     name
@@ -294,6 +298,12 @@ end = struct
   let end_compilation m =
     StrMap.fold (fun name obj acc ->
       match (StrMap.find name !extensions).end_comp obj with
+      | None -> acc
+      | Some o -> StrMap.add name o acc) m StrMap.empty
+
+  let end_execution m =
+    StrMap.fold (fun name obj acc ->
+      match (StrMap.find name !extensions).end_exec obj with
       | None -> acc
       | Some o -> StrMap.add name o acc) m StrMap.empty
 
@@ -509,14 +519,6 @@ type macro_declaration = (Ast.Term.t * Loc.t) F.Map.t
 
 exception No_clause
 exception No_more_steps
-type 'a solution = {
-  assignments : term StrMap.t;
-  constraints : constraints;
-  state : State.t;
-  output : 'a;
-  pp_ctx : (string PtrMap.t * int) ref;
-}
-type 'a outcome = Success of 'a solution | Failure | NoMoreSteps
 
 
 module Conversion = struct
@@ -640,6 +642,7 @@ let while_compiling = State.declare ~name:"elpi:compiling"
   ~clause_compilation_is_over:(fun b -> b)
   ~goal_compilation_is_over:(fun ~args:_ b -> Some b)
   ~compilation_is_over:(fun _ -> Some false)
+  ~execution_is_over:(fun _ -> None)
   ~init:(fun () -> false)
 
 module BuiltInPredicate = struct
@@ -1086,3 +1089,17 @@ type 'a executable = {
   (* type of the query, reified *)
   query_arguments: 'a Query.arguments;
 }
+
+type pp_ctx = {
+  uv_names : (string Util.PtrMap.t * int) ref;
+  table : symbol_table;
+}
+
+type 'a solution = {
+  assignments : term StrMap.t;
+  constraints : constraints;
+  state : State.t;
+  output : 'a;
+  pp_ctx : pp_ctx;
+}
+type 'a outcome = Success of 'a solution | Failure | NoMoreSteps

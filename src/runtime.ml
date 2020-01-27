@@ -7,14 +7,14 @@ module F = Ast.Func
 open Util
 open Data
 
-module Constants : sig
+module C : sig
 
   type t = Constants.t
 
   module Map = Constants.Map
   module Set = Constants.Set
 
-  val show : t -> string
+  val show : ?table:symbol_table -> t -> string
   val pp : Fmt.formatter -> t -> unit
 
   val mkConst : constant -> term
@@ -24,12 +24,14 @@ module Constants : sig
 
   (* mkinterval d n 0 = [d; ...; d+n-1] *)
   val mkinterval : int -> int -> int -> term list
+  val dummy : term
 
   val table : symbol_table Fork.local_ref
 
 end = struct
 
   type t = Constants.t
+  let dummy = Data.dummy
 
 let table = Fork.new_local {
   c2s = Hashtbl.create 37;
@@ -37,9 +39,11 @@ let table = Fork.new_local {
   frozen_constants = 0;
 }
 
-let show n =
-  try Hashtbl.find !table.c2s n
-  with Not_found -> "SYMBOL" ^ string_of_int n
+let show ?(table = !table) n =
+  try Hashtbl.find table.c2s n
+  with Not_found ->
+    if n >= 0 then "c" ^ string_of_int n
+    else "SYMBOL" ^ string_of_int n
 
 let pp fmt n = Format.fprintf fmt "%s" (show n)
 
@@ -47,7 +51,6 @@ let mkConst x =
   try Hashtbl.find !table.c2t x
   with Not_found ->
     let xx = Const x in
-    Hashtbl.add !table.c2s x ("c" ^ string_of_int x);
     Hashtbl.add !table.c2t x xx;
     xx
   [@@inline]
@@ -78,6 +81,7 @@ let mkAppL c = function
   | x::xs -> mkApp c x xs [@@inline]
 
 end
+let mkConst = C.mkConst
 
 (* Dereferencing an UVar(r,args) when !!r != dummy requires a function
    of this kind.  The pretty printer needs one but will only be defined
@@ -88,12 +92,12 @@ type 'args deref_fun =
 module Pp : sig
 
   (* Low level printing *)
-  val ppterm : ?pp_ctx:(string Util.PtrMap.t * int) ref -> ?min_prec:int ->
+  val ppterm : ?pp_ctx:pp_ctx -> ?min_prec:int ->
     (*depth:*)int -> (*names:*)string list -> (*argsdepth:*)int -> env ->
     Fmt.formatter -> term -> unit
 
   (* For user consumption *)
-  val uppterm : ?pp_ctx:(string Util.PtrMap.t * int) ref -> ?min_prec:int ->
+  val uppterm : ?pp_ctx:pp_ctx -> ?min_prec:int ->
     (*depth:*)int -> (*names:*)string list -> (*argsdepth:*)int -> env ->
     Fmt.formatter -> term -> unit
 
@@ -120,23 +124,23 @@ let appl_prec = Parser.appl_precedence
 let lam_prec = Parser.lam_precedence
 let inf_prec = Parser.inf_precedence
 
-let xppterm ~nice ?(pp_ctx=uv_names) ?(min_prec=min_prec) depth0 names argsdepth env f t =
+let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=min_prec) depth0 names argsdepth env f t =
   let pp_app f pphd pparg ?pplastarg (hd,args) =
    if args = [] then pphd f hd
    else
     Fmt.fprintf f "@[<hov 1>%a@ %a@]" pphd hd
      (pplist pparg ?pplastelem:pplastarg " ") args in
-  let ppconstant f c = Fmt.fprintf f "%s" (Constants.show c) in
+  let ppconstant f c = Fmt.fprintf f "%s" (C.show ~table:pp_ctx.table c) in
   let rec pp_uvar prec depth vardepth args f r =
-   if !!r == Data.dummy then begin
+   if !!r == C.dummy then begin
     let s =
-     try PtrMap.find r (fst !pp_ctx)
+     try PtrMap.find r (fst !(pp_ctx.uv_names))
      with Not_found ->
-      let m, n = !pp_ctx in
+      let m, n = !(pp_ctx.uv_names) in
       let s = "X" ^ string_of_int n in
       let n = n + 1 in
       let m = PtrMap.add r s m in
-      pp_ctx := (m,n);
+      pp_ctx.uv_names := (m,n);
       s
     in
      Fmt.fprintf f "%s%s%s" s
@@ -147,7 +151,7 @@ let xppterm ~nice ?(pp_ctx=uv_names) ?(min_prec=min_prec) depth0 names argsdepth
    end else Fmt.fprintf f "<%a>_%d" (aux min_prec vardepth) !!r vardepth
   and pp_arg prec depth f n =
    let name= try List.nth names n with Failure _ -> "A" ^ string_of_int n in
-   if try env.(n) == Data.dummy with Invalid_argument _ -> true then
+   if try env.(n) == C.dummy with Invalid_argument _ -> true then
     Fmt.fprintf f "%s" name
    else if nice then begin
     if argsdepth <= depth then
@@ -161,10 +165,10 @@ let xppterm ~nice ?(pp_ctx=uv_names) ?(min_prec=min_prec) depth0 names argsdepth
 
   (* ::(a, ::(b, nil))  -->  [a,b] *)
   and flat_cons_to_list depth acc t = match t with
-      UVar (r,vardepth,terms) when !!r != Data.dummy ->
+      UVar (r,vardepth,terms) when !!r != C.dummy ->
        flat_cons_to_list depth acc
         (!do_deref ~from:vardepth ~to_:depth terms !!r)
-    | AppUVar (r,vardepth,terms) when !!r != Data.dummy ->
+    | AppUVar (r,vardepth,terms) when !!r != C.dummy ->
        flat_cons_to_list depth acc
         (!do_app_deref ~from:vardepth ~to_:depth terms !!r)
     | Cons (x,y) -> flat_cons_to_list depth (x::acc) y
@@ -172,18 +176,18 @@ let xppterm ~nice ?(pp_ctx=uv_names) ?(min_prec=min_prec) depth0 names argsdepth
   and is_lambda depth =
    function
       Lam _ -> true
-    | UVar (r,vardepth,terms) when !!r != Data.dummy ->
+    | UVar (r,vardepth,terms) when !!r != C.dummy ->
        is_lambda depth (!do_deref ~from:vardepth ~to_:depth terms !!r)
-    | AppUVar (r,vardepth,terms) when !!r != Data.dummy ->
+    | AppUVar (r,vardepth,terms) when !!r != C.dummy ->
        is_lambda depth (!do_app_deref ~from:vardepth ~to_:depth terms !!r)
     | _ -> false
   and aux_last prec depth f t =
    if nice then begin
    match t with
      Lam _ -> aux min_prec depth f t
-   | UVar (r,vardepth,terms) when !!r != Data.dummy ->
+   | UVar (r,vardepth,terms) when !!r != C.dummy ->
       aux_last prec depth f (!do_deref ~from:vardepth ~to_:depth terms !!r)
-   | AppUVar (r,vardepth,terms) when !!r != Data.dummy ->
+   | AppUVar (r,vardepth,terms) when !!r != C.dummy ->
       aux_last prec depth f
        (!do_app_deref ~from:vardepth ~to_:depth terms !!r)
    | _ -> aux prec depth f t
@@ -207,7 +211,7 @@ let xppterm ~nice ?(pp_ctx=uv_names) ?(min_prec=min_prec) depth0 names argsdepth
     | App (hd,x,xs) ->
        (try
          let assoc,hdlvl =
-          Parser.precedence_of (F.from_string (Constants.show hd)) in
+          Parser.precedence_of (F.from_string (C.show hd)) in
          with_parens hdlvl
          (fun _ -> match assoc with
             Parser.Infix when List.length xs = 1 ->
@@ -247,28 +251,28 @@ let xppterm ~nice ?(pp_ctx=uv_names) ?(min_prec=min_prec) depth0 names argsdepth
         pp_app f ppconstant (aux inf_prec depth)
          ~pplastarg:(aux_last inf_prec depth) (hd,xs))
     | UVar (r,vardepth,argsno) when not nice ->
-       let args = List.map destConst (Constants.mkinterval vardepth argsno 0) in
+       let args = List.map destConst (C.mkinterval vardepth argsno 0) in
        with_parens ~test:(args <> []) appl_prec (fun _ ->
         Fmt.fprintf f "." ;
         pp_app f (pp_uvar inf_prec depth vardepth 0) ppconstant (r,args))
-    | UVar (r,vardepth,argsno) when !!r == Data.dummy ->
+    | UVar (r,vardepth,argsno) when !!r == C.dummy ->
        let diff = vardepth - depth0 in
        let diff = if diff >= 0 then diff else 0 in
        let vardepth = vardepth - diff in
        let argsno = argsno + diff in
-       let args = List.map destConst (Constants.mkinterval vardepth argsno 0) in
+       let args = List.map destConst (C.mkinterval vardepth argsno 0) in
        with_parens ~test:(args <> []) appl_prec (fun _ ->
         pp_app f (pp_uvar inf_prec depth vardepth 0) ppconstant (r,args))
     | UVar (r,vardepth,argsno) ->
        pp_uvar prec depth vardepth argsno f r
-    | AppUVar (r,vardepth,terms) when !!r != Data.dummy && nice ->
+    | AppUVar (r,vardepth,terms) when !!r != C.dummy && nice ->
        aux prec depth f (!do_app_deref ~from:vardepth ~to_:depth terms !!r)
     | AppUVar (r,vardepth,terms) -> 
        with_parens appl_prec (fun _ ->
         pp_app f (pp_uvar inf_prec depth vardepth 0) (aux inf_prec depth)
          ~pplastarg:(aux_last inf_prec depth) (r,terms))
     | Arg (n,argsno) ->
-       let args = List.map destConst (Constants.mkinterval argsdepth argsno 0) in
+       let args = List.map destConst (C.mkinterval argsdepth argsno 0) in
        with_parens ~test:(args <> []) appl_prec (fun _ ->
         pp_app f (pp_arg prec depth) ppconstant (n,args))
     | AppArg (v,terms) ->
@@ -277,7 +281,7 @@ let xppterm ~nice ?(pp_ctx=uv_names) ?(min_prec=min_prec) depth0 names argsdepth
          ~pplastarg:(aux_last inf_prec depth) (v,terms))
     | Lam t ->
        with_parens lam_prec (fun _ ->
-        let c = Constants.mkConst depth in
+        let c = mkConst depth in
         Fmt.fprintf f "%a \\@ %a" (aux inf_prec depth) c
          (aux min_prec (depth+1)) t)
     | CData d -> CData.pp f d
@@ -293,10 +297,10 @@ let pp_oref fmt (id,t) =
   if not (UUID.equal id id_term) then anomaly "pp_oref"
   else
     let t : term = Obj.obj t in
-    if t == Data.dummy then Fmt.fprintf fmt "_"
+    if t == C.dummy then Fmt.fprintf fmt "_"
     else uppterm 0  [] 0 empty_env fmt t
 
-let pp_constant = Constants.pp
+let pp_constant = C.pp
 
 end (* }}} *)
 
@@ -337,8 +341,8 @@ module ConstraintStoreAndTrail : sig
 
   val contents :
     ?overlapping:uvar_body list -> unit -> (constraint_def * blockers) list
-  val print : ?pp_ctx:(string Util.PtrMap.t * int) ref -> Fmt.formatter -> (constraint_def * blockers) list -> unit
-  val pp_stuck_goal : ?pp_ctx:(string Util.PtrMap.t * int) ref -> Fmt.formatter -> stuck_goal -> unit
+  val print : ?pp_ctx:pp_ctx -> Fmt.formatter -> (constraint_def * blockers) list -> unit
+  val pp_stuck_goal : ?pp_ctx:pp_ctx -> Fmt.formatter -> stuck_goal -> unit
 
   val state : State.t Fork.local_ref
 
@@ -498,7 +502,7 @@ let undo ~old_trail ?old_state () =
   while !trail != old_trail do
     match !trail with
     | Assignement r :: rest ->
-       r.contents <- Data.dummy;
+       r.contents <- C.dummy;
        trail := rest
     | StuckGoalAddition sg :: rest -> remove sg; trail := rest
     | StuckGoalRemoval sg :: rest -> add sg; trail := rest
@@ -513,7 +517,7 @@ let print ?pp_ctx fmt x =
   let pp_depth fmt d =
     if d > 0 then
       Fmt.fprintf fmt "{%a} :@ "
-        (pplist (uppterm ?pp_ctx d [] 0 empty_env) " ") (Constants.mkinterval 0 d 0) in
+        (pplist (uppterm ?pp_ctx d [] 0 empty_env) " ") (C.mkinterval 0 d 0) in
   let pp_hyps fmt ctx =
     if ctx <> [] then
      Fmt.fprintf fmt "@[<hov 2>%a@]@ ?- "
@@ -626,7 +630,7 @@ let rec in_fragment expected =
 (* Invariant not true anymore, since we may not deref aggressively
    to avoid occur-check
  | UVar (r,_,_)::_
- | AppUVar (r,_,_)::_ when !!r != Data.dummy ->
+ | AppUVar (r,_,_)::_ when !!r != C.dummy ->
      anomaly "non dereferenced terms in in_fragment"
 *)
  | _ -> raise NotInTheFragment
@@ -641,12 +645,12 @@ let deterministic_restriction e ~args_safe t =
   | Cons (x,xs) -> aux x; aux xs
   | Builtin (_,l) -> List.iter aux l
   | UVar (r,_,_) 
-  | AppUVar (r,_,_) when !!r == Data.dummy -> raise NonMetaClosed
+  | AppUVar (r,_,_) when !!r == C.dummy -> raise NonMetaClosed
   | UVar (r,_,_) -> aux !!r
   | AppUVar (r,_,l) -> aux !!r ; List.iter aux l
-  | Arg (i,_) when e.(i) == Data.dummy && not args_safe -> raise NonMetaClosed
-  | AppArg (i,_) when e.(i) == Data.dummy -> raise NonMetaClosed
-  | Arg (i,_) -> if e.(i) != Data.dummy then aux e.(i)
+  | Arg (i,_) when e.(i) == C.dummy && not args_safe -> raise NonMetaClosed
+  | AppArg (i,_) when e.(i) == C.dummy -> raise NonMetaClosed
+  | Arg (i,_) -> if e.(i) != C.dummy then aux e.(i)
   | AppArg (i,l) -> aux e.(i) ; List.iter aux l
   | Const _
   | Nil
@@ -664,7 +668,7 @@ let occurr_check r1 r2 =
   | Some r1 -> if r1 == r2 then raise RestrictionFailure
 
 let rec make_lambdas destdepth args =
- if args = 0 then let x = UVar(oref Data.dummy,destdepth,0) in x,x
+ if args = 0 then let x = UVar(oref C.dummy,destdepth,0) in x,x
  else let x,y = make_lambdas (destdepth+1) (args-1) in Lam x, y
 
 let rec mknLam n x = if n = 0 then x else Lam (mknLam (n-1) x)
@@ -678,9 +682,9 @@ let mkAppArg i fromdepth xxs' =
   with NotInTheFragment -> AppArg (i,xxs')
 
 let expand_uv r ~lvl ~ano =
-  let args = Constants.mkinterval 0 (lvl+ano) 0 in
+  let args = C.mkinterval 0 (lvl+ano) 0 in
   if lvl = 0 then AppUVar(r,lvl,args), None else
-  let r1 = oref Data.dummy in
+  let r1 = oref C.dummy in
   let t = AppUVar(r1,0,args) in
   let assignment = mknLam ano t in
   t, Some (r,lvl,assignment)
@@ -700,12 +704,12 @@ let expand_uv ~depth r ~lvl ~ano =
 
 let expand_appuv r ~lvl ~args =
   if lvl = 0 then AppUVar(r,lvl,args), None else
-  let args_lvl = Constants.mkinterval 0 lvl 0 in
-  let r1 = oref Data.dummy in
+  let args_lvl = C.mkinterval 0 lvl 0 in
+  let r1 = oref C.dummy in
   let t = AppUVar(r1,0,args_lvl @ args) in
   let nargs = List.length args in
   let assignment =
-    mknLam nargs (AppUVar(r1,0,args_lvl @ Constants.mkinterval lvl nargs 0)) in
+    mknLam nargs (AppUVar(r1,0,args_lvl @ C.mkinterval lvl nargs 0)) in
   t, Some (r,lvl,assignment)
 let expand_appuv ~depth r ~lvl ~args =
   [%spy "expand-appuv-in" (fun fmt t ->
@@ -762,7 +766,7 @@ let expand_appuv ~depth r ~lvl ~args =
       that is triggered by an unification problem
       .... X^to_ .... == .... A^argsdepth ....
       that is triggered by calling a clause at depth argsdepth with a formal
-      parameter containing an UVar whose depth is higher than the current_table depth
+      parameter containing an UVar whose depth is higher than the current depth
       of the program. How could such a variable enters the formal parameters
       without being restricted earlier?
 
@@ -831,7 +835,7 @@ let rec move ~adepth:argsdepth e ?avoid ~from ~to_ t =
     match x with
     | Const c ->
        if delta == 0 then x else                          (* optimization  *)
-       if c >= from then Constants.mkConst (c - delta) else (* locally bound *)
+       if c >= from then mkConst (c - delta) else (* locally bound *)
        if c < to_ then x else                             (* constant      *)
        raise RestrictionFailure
     | Lam f ->
@@ -855,22 +859,22 @@ let rec move ~adepth:argsdepth e ?avoid ~from ~to_ t =
     | Nil -> x
     | Discard when avoid = None -> x
     | Discard ->
-       let r = oref Data.dummy in
+       let r = oref C.dummy in
        UVar(r,to_,0)
 
     (* fast path with no deref... *)
     | UVar _ when delta == 0 && avoid == None -> x
 
     (* deref *)
-    | UVar ({ contents = t }, vardepth, args) when t != Data.dummy ->
+    | UVar ({ contents = t }, vardepth, args) when t != C.dummy ->
        if depth == 0 then deref_uv ?avoid ~from:vardepth ~to_ args t
        else maux empty_env depth (deref_uv ~from:vardepth ~to_:(from+depth) args t)
-    | AppUVar ({ contents = t }, vardepth, args) when t != Data.dummy ->
+    | AppUVar ({ contents = t }, vardepth, args) when t != C.dummy ->
        if depth == 0 then deref_appuv ?avoid ~from:vardepth ~to_ args t
        else maux empty_env depth (deref_appuv ~from:vardepth ~to_:(from+depth) args t)
-    | Arg (i, args) when e.(i) != Data.dummy ->
+    | Arg (i, args) when e.(i) != C.dummy ->
        deref_uv ?avoid ~from:argsdepth ~to_:(to_+depth) args e.(i)
-    | AppArg(i, args) when e.(i) != Data.dummy ->
+    | AppArg(i, args) when e.(i) != C.dummy ->
        let args =
         try smart_map (maux e depth) args
         with RestrictionFailure ->
@@ -880,7 +884,7 @@ let rec move ~adepth:argsdepth e ?avoid ~from ~to_ t =
     (* heapification/restriction of Arg and AppArg *)
     | Arg (i, args) ->
        let to_ = min argsdepth to_ in
-       let r = oref Data.dummy in
+       let r = oref C.dummy in
        let v = UVar(r,to_,0) in
        e.(i) <- v;
        if args == 0 then v else UVar(r,to_,args)
@@ -892,7 +896,7 @@ let rec move ~adepth:argsdepth e ?avoid ~from ~to_ t =
         try List.map (maux e depth) args
         with RestrictionFailure ->
          anomaly "TODO: implement deterministic restriction" in
-       let r = oref Data.dummy in
+       let r = oref C.dummy in
        let v = UVar(r,to_,0) in
        e.(i) <- v;
        mkAppUVar r to_ args
@@ -910,7 +914,7 @@ let rec move ~adepth:argsdepth e ?avoid ~from ~to_ t =
          else
            let r,vardepth,argsno =
              decrease_depth r ~from:vardepth ~to_:from argsno in
-           let args = Constants.mkinterval vardepth argsno 0 in
+           let args = C.mkinterval vardepth argsno 0 in
            let args = List.map (maux empty_env depth) args in
            mkAppUVar r vardepth args
        else
@@ -929,7 +933,7 @@ let rec move ~adepth:argsdepth e ?avoid ~from ~to_ t =
        if delta < 0 then
          let r,vardepth,argsno =
            decrease_depth r ~from:vardepth ~to_:from 0 in
-         let args0= Constants.mkinterval vardepth argsno 0 in
+         let args0= C.mkinterval vardepth argsno 0 in
          let args =
           try List.map (maux e depth) (args0@args)
           with RestrictionFailure -> anomaly "impossible, delta < 0" in
@@ -948,7 +952,7 @@ let rec move ~adepth:argsdepth e ?avoid ~from ~to_ t =
               | arg :: args ->
                   try
                     let arg = maux e depth arg in
-                    arg :: filter (succ i) (Constants.mkConst (vardepth + i) :: acc) args
+                    arg :: filter (succ i) (mkConst (vardepth + i) :: acc) args
                   with RestrictionFailure ->
                     pruned := true;
                     filter (succ i) acc args
@@ -957,7 +961,7 @@ let rec move ~adepth:argsdepth e ?avoid ~from ~to_ t =
 
           if !pruned then begin
             let vardepth' = min vardepth to_ in
-            let r' = oref Data.dummy in
+            let r' = oref C.dummy in
             let newvar = mkAppUVar r' vardepth' !filteredargs_vardepth in
             let assignment = mknLam orig_argsno newvar in
             [%spy "assign (restriction:AppUVar)" (fun fmt _ -> Fmt.fprintf fmt "%d %a := %a" vardepth
@@ -994,7 +998,7 @@ and hmove ?avoid ~from ~to_ t =
 and decrease_depth r ~from ~to_ argsno =
  if from <= to_ then r,from,argsno
  else
-  let newr = oref Data.dummy in
+  let newr = oref C.dummy in
   let newargsno = argsno+from-to_ in
   let newvar = UVar(newr,to_,from-to_) in
   r @:= newvar;
@@ -1022,7 +1026,7 @@ and subst fromdepth ts t =
         | Arg(i,0) as t -> t 
         | t -> hmove ~from:fromdepth ~to_:(depth-len) t
       else if c < fromdepth then x
-      else Constants.mkConst (c-len) (* NOT LIFTED *)
+      else mkConst (c-len) (* NOT LIFTED *)
    | Arg _ | AppArg _ -> anomaly "subst takes a heap term"
    | App(c,x,xs) as orig ->
       let x' = aux depth x in
@@ -1046,22 +1050,22 @@ and subst fromdepth ts t =
        if hd == hd' && tl == tl' then orig else Cons(hd',tl')
    | Nil -> tt
    | Discard -> tt
-   | UVar({contents=g},vardepth,argsno) when g != Data.dummy ->
+   | UVar({contents=g},vardepth,argsno) when g != C.dummy ->
       [%tcall aux depth (deref_uv ~from:vardepth ~to_:depth argsno g)]
    | UVar(r,vardepth,argsno) as orig ->
       if vardepth+argsno <= fromdepth then orig
       else
        let r,vardepth,argsno =
          decrease_depth r ~from:vardepth ~to_:fromdepth argsno in
-       let args = Constants.mkinterval vardepth argsno 0 in
+       let args = C.mkinterval vardepth argsno 0 in
        let args = List.map (aux depth) args in
        mkAppUVar r vardepth args
-   | AppUVar({ contents = t },vardepth,args) when t != Data.dummy ->
+   | AppUVar({ contents = t },vardepth,args) when t != C.dummy ->
       [%tcall aux depth (deref_appuv ~from:vardepth ~to_:depth args t)]
    | AppUVar(r,vardepth,args) ->
       let r,vardepth,argsno =
         decrease_depth r ~from:vardepth ~to_:fromdepth 0 in
-      let args0 = Constants.mkinterval vardepth argsno 0 in
+      let args0 = C.mkinterval vardepth argsno 0 in
       let args = List.map (aux depth) (args0@args) in
       mkAppUVar r vardepth args
    | Lam t -> Lam (aux (depth+1) t)
@@ -1075,10 +1079,10 @@ and beta depth sub t args =
      (uppterm (depth+List.length sub) [] 0 empty_env) t
      (pplist (uppterm depth [] 0 empty_env) ", ") args)
  begin match t, args with
- | UVar ({contents=g},vardepth,argsno), _ when g != Data.dummy ->
+ | UVar ({contents=g},vardepth,argsno), _ when g != C.dummy ->
     [%tcall beta depth sub
         (deref_uv ~from:vardepth ~to_:(depth+List.length sub) argsno g) args]
- | AppUVar({ contents=g },vardepth,uargs), _ when g != Data.dummy ->
+ | AppUVar({ contents=g },vardepth,uargs), _ when g != C.dummy ->
     [%tcall beta depth sub
          (deref_appuv ~from:vardepth ~to_:(depth+List.length sub) uargs g) args]
  | Lam t', hd::tl -> [%tcall beta depth (hd::sub) t' tl]
@@ -1097,7 +1101,7 @@ and beta depth sub t args =
          | UVar (r,n,m) -> begin
             try UVar(r,n,m + in_fragment (n+m) args)
             with NotInTheFragment ->
-              let args1 = Constants.mkinterval n m 0 in
+              let args1 = C.mkinterval n m 0 in
               AppUVar (r,n,args1@args) end
          | AppUVar (r,depth,args1) -> AppUVar (r,depth,args1@args)
          | Lam _ -> anomaly "beta: some args and some lambdas"
@@ -1113,9 +1117,9 @@ and beta depth sub t args =
 and eat_args depth l t =
   match t with
   | Lam t' when l > 0 -> eat_args (depth+1) (l-1) t'
-  | UVar ({contents=t},origdepth,args) when t != Data.dummy ->
+  | UVar ({contents=t},origdepth,args) when t != C.dummy ->
      eat_args depth l (deref_uv ~from:origdepth ~to_:depth args t)
-  | AppUVar  ({contents=t},origdepth,args) when t != Data.dummy ->
+  | AppUVar  ({contents=t},origdepth,args) when t != C.dummy ->
      eat_args depth l (deref_appuv ~from:origdepth ~to_:depth args t)
   | _ -> depth,l,t
 
@@ -1149,25 +1153,25 @@ and deref_uv ?avoid ~from ~to_ args t =
      match t with
      | Lam _ -> anomaly "eat_args went crazy"
      | Const c ->
-        let args = Constants.mkinterval (from+1) (args'-1) 0 in
-        App (c,Constants.mkConst from, args)
+        let args = C.mkinterval (from+1) (args'-1) 0 in
+        App (c,mkConst from, args)
      | App (c,arg,args2) ->
-        let args = Constants.mkinterval from args' 0 in
+        let args = C.mkinterval from args' 0 in
         App (c,arg,args2 @ args)
      | Builtin (c,args2) ->
-        let args = Constants.mkinterval from args' 0 in
+        let args = C.mkinterval from args' 0 in
         Builtin (c,args2 @ args)
-     (* TODO: when the UVar/Arg is not Data.dummy, we call deref_uv that
+     (* TODO: when the UVar/Arg is not C.dummy, we call deref_uv that
         will call move that will call_deref_uv again. Optimize the
         path *)
      | UVar(t,depth,args2) when from = depth+args2 ->
         UVar(t,depth,args2+args')
      | AppUVar (r,depth,args2) ->
-        let args = Constants.mkinterval from args' 0 in
+        let args = C.mkinterval from args' 0 in
         AppUVar (r,depth,args2 @ args)
      | UVar (r,vardepth,argsno) ->
-        let args1 = Constants.mkinterval vardepth argsno 0 in
-        let args2 = Constants.mkinterval from args' 0 in
+        let args1 = C.mkinterval vardepth argsno 0 in
+        let args2 = C.mkinterval from args' 0 in
         let args = args1 @ args2 in
         AppUVar (r,vardepth,args)
      | Cons _ | Nil -> type_error "deref_uv: applied list"
@@ -1186,9 +1190,9 @@ and deref_uv ?avoid ~from ~to_ args t =
 let rec is_flex ~depth =
  function
   | Arg _ | AppArg _ -> anomaly "is_flex called on Args"
-  | UVar ({ contents = t }, vardepth, args) when t != Data.dummy ->
+  | UVar ({ contents = t }, vardepth, args) when t != C.dummy ->
      is_flex ~depth (deref_uv ~from:vardepth ~to_:depth args t)
-  | AppUVar ({ contents = t }, vardepth, args) when t != Data.dummy ->
+  | AppUVar ({ contents = t }, vardepth, args) when t != C.dummy ->
      is_flex ~depth (deref_appuv ~from:vardepth ~to_:depth args t)
   | UVar (r, _, _) | AppUVar (r, _, _) -> Some r
   | Const _ | Lam _ | App _ | Builtin _ | CData _ | Cons _ | Nil | Discard -> None
@@ -1228,13 +1232,13 @@ let is_llam lvl args adepth bdepth depth left e =
   let to_ = if left then adepth+depth else bdepth+depth in
   let get_con = function Const x -> x | _ -> raise RestrictionFailure in
   let deref_to_const = function
-    | UVar ({ contents = t }, from, args) when t != Data.dummy ->
+    | UVar ({ contents = t }, from, args) when t != C.dummy ->
         get_con (deref_uv ~from ~to_ args t)
-    | AppUVar ({ contents = t }, from, args) when t != Data.dummy ->
+    | AppUVar ({ contents = t }, from, args) when t != C.dummy ->
         get_con (deref_appuv ~from ~to_ args t)
-    | Arg (i,args) when e.(i) != Data.dummy ->
+    | Arg (i,args) when e.(i) != C.dummy ->
         get_con (deref_uv ~from:adepth ~to_ args e.(i))
-    | AppArg (i,args) when e.(i) != Data.dummy ->
+    | AppArg (i,args) when e.(i) != C.dummy ->
         get_con (deref_appuv ~from:adepth ~to_ args e.(i))
     | Const x -> if not left && x >= bdepth then x + (adepth-bdepth) else x
     | _ -> raise RestrictionFailure
@@ -1262,7 +1266,7 @@ let rec mknLam n t = if n = 0 then t else mknLam (n-1) (Lam t)
  * a is adepth
  * b is bdepth
  * d is depth (local lamdas traversed during unif
- *   w is the same but during bind, hence current_table depth is (d+w)
+ *   w is the same but during bind, hence current depth is (d+w)
  * delta is (a-b)
  * left is true when the variable being assigned is on the left (goal)
  * t is the term we are assigning to r
@@ -1294,11 +1298,11 @@ let bind r gamma l a d delta b left t e =
   let rec bind b delta w t =
     [%trace "bind" ("%b gamma:%d + %a = t:%a a:%d delta:%d d:%d w:%d b:%d"
         left gamma (pplist (fun fmt (x,n) -> Fmt.fprintf fmt "%a |-> %d"
-        (ppterm a [] b e) (Constants.mkConst x) n) " ") l
+        (ppterm a [] b e) (mkConst x) n) " ") l
         (ppterm a [] b empty_env) t a delta d w b) begin
     match t with
     | UVar (r1,_,_) | AppUVar (r1,_,_) when r == r1 -> raise RestrictionFailure
-    | Const c -> let n = cst c b delta in if n < 0 then Constants.mkConst n else Const n
+    | Const c -> let n = cst c b delta in if n < 0 then mkConst n else Const n
     | Lam t -> Lam (bind b delta (w+1) t)
     | App (c,t,ts) -> App (cst c b delta, bind b delta w t, List.map (bind b delta w) ts)
     | Cons(hd,tl) -> Cons(bind b delta w hd, bind b delta w tl)
@@ -1306,13 +1310,13 @@ let bind r gamma l a d delta b left t e =
     | Builtin (c, tl) -> Builtin(c, List.map (bind b delta w) tl)
     | CData _ -> t
     (* deref_uv *)
-    | Arg (i,args) when e.(i) != Data.dummy ->
+    | Arg (i,args) when e.(i) != C.dummy ->
         bind a 0 w (deref_uv ~from:a ~to_:(a+d+w) args e.(i))
-    | AppArg (i,args) when e.(i) != Data.dummy ->
+    | AppArg (i,args) when e.(i) != C.dummy ->
         bind a 0 w (deref_appuv ~from:a ~to_:(a+d+w) args e.(i))
-    | UVar ({ contents = t }, from, args) when t != Data.dummy ->
+    | UVar ({ contents = t }, from, args) when t != C.dummy ->
         bind b delta w (deref_uv ~from ~to_:((if left then b else a)+d+w) args t)
-    | AppUVar ({ contents = t }, from, args) when t != Data.dummy ->
+    | AppUVar ({ contents = t }, from, args) when t != C.dummy ->
         bind b delta w (deref_appuv ~from ~to_:((if left then b else a)+d+w) args t)
     (* pruning *)
     | (UVar _ | AppUVar _ | Arg _ | AppArg _ | Discard) as orig ->
@@ -1320,31 +1324,31 @@ let bind r gamma l a d delta b left t e =
         let r, lvl, (is_llam, args), orig_args = match orig with
           | UVar(r,lvl,0) -> r, lvl, (true, []), []
           | UVar(r,lvl,args) ->
-              let r' = oref Data.dummy in
+              let r' = oref C.dummy in
               let v = UVar(r',lvl+args,0) in
               r @:= mknLam args v;
               r', (lvl+args),  (true,[]), []
           | AppUVar (r,lvl, orig_args) ->
               r, lvl, is_llam lvl orig_args a b (d+w) left e, orig_args
           | Discard ->
-              let r = oref Data.dummy in
+              let r = oref C.dummy in
               r, a+d+w, (true,[]), []
           | Arg (i,0) ->
-              let r = oref Data.dummy in
+              let r = oref C.dummy in
               let v = UVar(r,a,0) in
               e.(i) <- v;
               r, a, (true,[]), []
           | Arg (i,args) ->
-              let r = oref Data.dummy in
+              let r = oref C.dummy in
               let v = UVar(r,a,0) in
               e.(i) <- v;
-              let r' = oref Data.dummy in
+              let r' = oref C.dummy in
               let v' = UVar(r',a+args,0) in
               r @:= mknLam args v';
               r', a+args, (true, []), []
           | AppArg (i,orig_args) ->
               let is_llam, args = is_llam a orig_args a b (d+w) false e in
-              let r = oref Data.dummy in
+              let r = oref C.dummy in
               let v = UVar(r,a,0) in
               e.(i) <- v;
               r, a, (is_llam, args), orig_args
@@ -1353,7 +1357,7 @@ let bind r gamma l a d delta b left t e =
            Fmt.fprintf fmt "lvl:%d is_llam:%b args:%a orig_args:%a orig:%a"
              lvl is_llam 
              (pplist (fun fmt (x,n) ->
-                Fmt.fprintf fmt "%a->%d" (ppterm a [] b e) (Constants.mkConst x) n) " ") args
+                Fmt.fprintf fmt "%a->%d" (ppterm a [] b e) (mkConst x) n) " ") args
              (pplist (ppterm a [] b e) " ") orig_args
              (ppterm a [] b e) orig) ()];
         if is_llam then begin
@@ -1362,7 +1366,7 @@ let bind r gamma l a d delta b left t e =
             (* All orig args go away, but some between gamma and lvl can stay
              * if they are in l or locally bound [d,w] *)
             let args_gamma_lvl_abs, args_gamma_lvl_here =
-              let mk_arg i = Constants.mkConst i, Constants.mkConst (cst ~hmove:false i b delta) in
+              let mk_arg i = mkConst i, mkConst (cst ~hmove:false i b delta) in
               let rec mk_interval d argsno n =
                 if n = argsno then []
                 else if n+d >= lvl then
@@ -1370,7 +1374,7 @@ let bind r gamma l a d delta b left t e =
                  (* cut&paste from below *)
                  (try
                    let nn = List.assoc i args in
-                   (Constants.mkConst (lvl+nn), Constants.mkConst (gamma+List.length l+n)) :: mk_interval d argsno (n+1)
+                   (mkConst (lvl+nn), mkConst (gamma+List.length l+n)) :: mk_interval d argsno (n+1)
                   with Not_found -> mk_interval d argsno (n+1))
                 else mk_arg (n+d)::mk_interval d argsno (n+1) in
               let rec keep_cst_for_lvl = function
@@ -1382,10 +1386,10 @@ let bind r gamma l a d delta b left t e =
                     ) else
                      (try
                        let nn = List.assoc i args in
-                       (Constants.mkConst (lvl+nn), Constants.mkConst mm) :: keep_cst_for_lvl rest
+                       (mkConst (lvl+nn), mkConst mm) :: keep_cst_for_lvl rest
                       with Not_found -> keep_cst_for_lvl rest) in
               List.split (keep_cst_for_lvl (List.sort Pervasives.compare l)) in
-            let r' = oref Data.dummy in
+            let r' = oref C.dummy in
             r @:= mknLam n_args (mkAppUVar r' gamma args_gamma_lvl_abs);
             mkAppUVar r' gamma args_gamma_lvl_here
           else
@@ -1400,15 +1404,15 @@ let bind r gamma l a d delta b left t e =
                     if c < gamma then c
                     else if c >= (if left then b else a) + d then c + new_lams - (a+d - gamma)
                     else pos c + gamma in
-                  Constants.mkConst (c_p + lvl) :: a_lvl,
-                  Constants.mkConst i :: a_here
+                  mkConst (c_p + lvl) :: a_lvl,
+                  mkConst i :: a_here
                 with RestrictionFailure -> acc) args ([],[]) in
             if n_args = List.length args_here then
               (* no pruning, just binding the args as a normal App *)
               mkAppUVar r lvl (List.map (bind b delta w) orig_args)
             else
               (* we need to project away some of the args *)
-              let r' = oref Data.dummy in
+              let r' = oref C.dummy in
               let v = mkAppUVar r' lvl args_lvl in
               r @:= mknLam n_args v;
               (* This should be the beta reduct. One could also
@@ -1464,14 +1468,14 @@ let rec unif matching depth adepth a bdepth b e =
 (* TODO: test if it is better to deref_uv first or not, i.e. the relative order
    of the clauses below *)
    | UVar(r1,_,args1), UVar(r2,_,args2)
-     when r1 == r2 && !!r1 == Data.dummy -> args1 == args2
+     when r1 == r2 && !!r1 == C.dummy -> args1 == args2
      (* XXX this would be a type error *)
    | UVar(r1,vd,xs), AppUVar(r2,_,ys)
-     when r1 == r2 && !!r1 == Data.dummy -> unif matching depth adepth (AppUVar(r1,vd,Constants.mkinterval vd xs 0)) bdepth b e
+     when r1 == r2 && !!r1 == C.dummy -> unif matching depth adepth (AppUVar(r1,vd,C.mkinterval vd xs 0)) bdepth b e
    | AppUVar(r1,vd,xs), UVar(r2,_,ys)
-     when r1 == r2 && !!r1 == Data.dummy -> unif matching depth adepth a bdepth (AppUVar(r1,vd,Constants.mkinterval vd ys 0)) e
+     when r1 == r2 && !!r1 == C.dummy -> unif matching depth adepth a bdepth (AppUVar(r1,vd,C.mkinterval vd ys 0)) e
    | AppUVar(r1,vd,xs), AppUVar(r2,_,ys)
-     when r1 == r2 && !!r1 == Data.dummy ->
+     when r1 == r2 && !!r1 == C.dummy ->
        let pruned = ref false in
        let filtered_args_rev = fold_left2i (fun i args x y ->
          let b = unif matching depth adepth x bdepth y e in
@@ -1480,27 +1484,27 @@ let rec unif matching depth adepth a bdepth b e =
          ) [] xs ys in
        if !pruned then begin
          let len = List.length xs in
-         let r = oref Data.dummy in
+         let r = oref C.dummy in
          r1 @:= mknLam len (mkAppUVar r vd (List.rev filtered_args_rev));
        end;
        true
 
    (* deref_uv *)
-   | UVar ({ contents = t }, from, args), _ when t != Data.dummy ->
+   | UVar ({ contents = t }, from, args), _ when t != C.dummy ->
       unif matching depth adepth (deref_uv ~from ~to_:(adepth+depth) args t) bdepth b e
-   | AppUVar ({ contents = t }, from, args), _ when t != Data.dummy ->
+   | AppUVar ({ contents = t }, from, args), _ when t != C.dummy ->
       unif matching depth adepth (deref_appuv ~from ~to_:(adepth+depth) args t) bdepth b e
-   | _, UVar ({ contents = t }, from, args) when t != Data.dummy ->
+   | _, UVar ({ contents = t }, from, args) when t != C.dummy ->
       unif matching depth adepth a bdepth (deref_uv ~from ~to_:(bdepth+depth) args t) empty_env
-   | _, AppUVar ({ contents = t }, from, args) when t != Data.dummy ->
+   | _, AppUVar ({ contents = t }, from, args) when t != C.dummy ->
       unif matching depth adepth a bdepth (deref_appuv ~from ~to_:(bdepth+depth) args t) empty_env
-   | _, Arg (i,args) when e.(i) != Data.dummy ->
+   | _, Arg (i,args) when e.(i) != C.dummy ->
 (*        if matching then raise Non_linear; *)
       (* XXX BROKEN deref_uv invariant XXX
        *   args not living in to_ but in bdepth+depth *)
       unif matching depth adepth a adepth
         (deref_uv ~from:adepth ~to_:(adepth+depth) args e.(i)) empty_env
-   | _, AppArg (i,args) when e.(i) != Data.dummy ->
+   | _, AppArg (i,args) when e.(i) != C.dummy ->
 (*        if matching then raise Non_linear; *)
       (* XXX BROKEN deref_uv invariant XXX
        *   args not living in to_ but in bdepth+depth
@@ -1518,18 +1522,18 @@ let rec unif matching depth adepth a bdepth b e =
    | AppUVar(r,vd,_), App(c,hd,[]) when c == Global_symbols.uvarc && matching ->
       unif matching depth adepth (UVar(r,vd,0)) bdepth hd e
    | UVar(r,vd,ano), App(c,hd,[arg]) when c == Global_symbols.uvarc && matching ->
-      let r_exp = oref Data.dummy in
+      let r_exp = oref C.dummy in
       let exp = UVar(r_exp,0,0) in
       r @:= UVar(r_exp,0,vd);
       unif matching depth adepth exp bdepth hd e &&
-      let args = list_to_lp_list (Constants.mkinterval 0 (vd+ano) 0) in
+      let args = list_to_lp_list (C.mkinterval 0 (vd+ano) 0) in
       unif matching depth adepth args bdepth arg e
    | AppUVar(r,vd,args), App(c,hd,[arg]) when c == Global_symbols.uvarc && matching ->
-      let r_exp = oref Data.dummy in
+      let r_exp = oref C.dummy in
       let exp = UVar(r_exp,0,0) in
       r @:= UVar(r_exp,0,vd);
       unif matching depth adepth exp bdepth hd e &&
-      let args = list_to_lp_list (Constants.mkinterval 0 vd 0 @ args) in
+      let args = list_to_lp_list (C.mkinterval 0 vd 0 @ args) in
       unif matching depth adepth args bdepth arg e
    | _, (Const c | App(c,_,[])) when c == Global_symbols.uvarc && matching -> false
    (* On purpose we let the fully applied uvarc pass, so that at the
@@ -1612,12 +1616,12 @@ let rec unif matching depth adepth a bdepth b e =
    | other, AppArg(i,args) ->
        let is_llam, args = is_llam adepth args adepth bdepth depth false e in
        if is_llam then
-         let r = oref Data.dummy in
+         let r = oref C.dummy in
          e.(i) <- UVar(r,adepth,0);
          bind r adepth args adepth depth delta bdepth false other e
        else if !delay_hard_unif_problems then begin
        Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!" (uppterm depth [] adepth empty_env) a (uppterm depth [] bdepth e) b ;
-       let r = oref Data.dummy in
+       let r = oref C.dummy in
        e.(i) <- UVar(r,adepth,0);
        let kind = Unification {adepth = adepth+depth; env = e; bdepth = bdepth+depth; a; b; matching} in
        let blockers =
@@ -1679,22 +1683,22 @@ let rec unif matching depth adepth a bdepth b e =
 
    (* eta *)
    | Lam t, Const c ->
-       let extra = Constants.mkConst (bdepth+depth) in
+       let extra = mkConst (bdepth+depth) in
        let eta = App(c,extra,[]) in
        unif matching (depth+1) adepth t bdepth eta e
    | Const c, Lam t ->
-       let extra = Constants.mkConst (adepth+depth) in
+       let extra = mkConst (adepth+depth) in
        let eta = App(c,extra,[]) in
        unif matching (depth+1) adepth eta bdepth t e
    | Lam t, App (c,x,xs) ->
-       let extra = Constants.mkConst (bdepth+depth) in
+       let extra = mkConst (bdepth+depth) in
        let motion = move ~adepth ~from:(bdepth+depth) ~to_:(bdepth+depth+1) e in
        let x = motion x in
        let xs = List.map motion xs @ [extra] in
        let eta = App(c,x,xs) in
        unif matching (depth+1) adepth t bdepth eta e
    | App (c,x,xs), Lam t ->
-       let extra = Constants.mkConst (adepth+depth) in
+       let extra = mkConst (adepth+depth) in
        let motion = hmove ~from:(bdepth+depth) ~to_:(bdepth+depth+1) in
        let x = motion x in
        let xs = List.map motion xs @ [extra] in
@@ -1725,10 +1729,10 @@ let unif ~matching adepth e bdepth a b =
 
 let rec deref_head ~depth = function
   | UVar ({ contents = t }, from, ano)
-    when t != Data.dummy ->
+    when t != C.dummy ->
       deref_head ~depth (deref_uv ~from ~to_:depth ano t)
   | AppUVar ({contents = t}, from, args)
-    when t != Data.dummy ->
+    when t != C.dummy ->
       deref_head ~depth (deref_appuv ~from ~to_:depth args t)
   | x -> x
 
@@ -1740,16 +1744,16 @@ let full_deref ~adepth env ~depth t =
   | Cons(hd,tl) -> Cons(deref d hd, deref d tl)
   | Nil as x -> x
   | Discard as x -> x
-  | Arg (i,ano) when env.(i) != Data.dummy ->
+  | Arg (i,ano) when env.(i) != C.dummy ->
       deref d (deref_uv ~from:adepth ~to_:d ano env.(i))
   | Arg _ as x -> x
-  | AppArg (i,args) when env.(i) != Data.dummy ->
+  | AppArg (i,args) when env.(i) != C.dummy ->
       deref d (deref_appuv ~from:adepth ~to_:d args env.(i))
   | AppArg (i,args) -> AppArg (i, List.map (deref d) args)
-  | UVar (r,lvl,ano) when !!r != Data.dummy ->
+  | UVar (r,lvl,ano) when !!r != C.dummy ->
       deref d (deref_uv ~from:lvl ~to_:d ano !!r)
   | UVar _ as x -> x
-  | AppUVar (r,lvl,args) when !!r != Data.dummy ->
+  | AppUVar (r,lvl,args) when !!r != C.dummy ->
       deref d (deref_appuv ~from:lvl ~to_:d args !!r)
   | AppUVar (r,lvl,args) -> AppUVar (r,lvl,List.map (deref d) args)
   | Builtin(c,xs) -> Builtin(c,List.map (deref d) xs)
@@ -1764,7 +1768,7 @@ let shift_bound_vars ~depth ~to_ t =
     if n < depth then n
     else n + to_ - depth in
   let rec shift d = function
-  | Const n as x -> let m = shift_db d n in if m = n then x else  Constants.mkConst m
+  | Const n as x -> let m = shift_db d n in if m = n then x else  mkConst m
   | Lam r -> Lam (shift (d+1) r)
   | App (n,x,xs) ->
       App(shift_db d n, shift d x, List.map (shift d) xs)
@@ -1773,7 +1777,7 @@ let shift_bound_vars ~depth ~to_ t =
   | Discard as x -> x
   | Arg _ as x -> x
   | AppArg (i,args) -> AppArg (i, List.map (shift d) args)
-  | (UVar (r,_,_) | AppUVar(r,_,_)) when !!r != Data.dummy ->
+  | (UVar (r,_,_) | AppUVar(r,_,_)) when !!r != C.dummy ->
       anomaly "shift_bound_vars: non-derefd term"
   | UVar _ as x -> x
   | AppUVar (r,lvl,args) -> AppUVar (r,lvl,List.map (shift d) args)
@@ -1789,7 +1793,7 @@ let subtract_to_consts ~amount ~depth t =
       error "The term cannot be put in the desired context"
     else n - amount in
   let rec shift d = function
-  | Const n as x -> let m = shift_db d n in if m = n then x else  Constants.mkConst m
+  | Const n as x -> let m = shift_db d n in if m = n then x else  mkConst m
   | Lam r -> Lam (shift (d+1) r)
   | App (n,x,xs) ->
       App(shift_db d n, shift d x, List.map (shift d) xs)
@@ -1798,7 +1802,7 @@ let subtract_to_consts ~amount ~depth t =
   | Discard as x -> x
   | Arg _ as x -> x
   | AppArg (i,args) -> AppArg (i, List.map (shift d) args)
-  | (UVar (r,_,_) | AppUVar(r,_,_)) when !!r != Data.dummy ->
+  | (UVar (r,_,_) | AppUVar(r,_,_)) when !!r != C.dummy ->
       anomaly "subtract_to_consts: non-derefd term"
   | (UVar _ | AppUVar _) ->
       error "The term cannot be put in the desired context (leftover uvar)"
@@ -2022,8 +2026,8 @@ let rec embed_query_aux : type a. mk_Arg:(State.t -> name:string -> args:term li
         let args = List.rev args in
         state,
         match gls with
-        | [] -> Constants.mkAppL predicate args
-        | gls -> Constants.mkAppL Global_symbols.andc (gls @ [Constants.mkAppL predicate args])
+        | [] -> C.mkAppL predicate args
+        | gls -> C.mkAppL Global_symbols.andc (gls @ [C.mkAppL predicate args])
 ;;
 
 let embed_query ~mk_Arg ~depth state (Query.Query { predicate; arguments }) =
@@ -2051,7 +2055,7 @@ module Indexing = struct (* {{{ *)
 let mustbevariablec = min_int (* uvar or uvar t or uvar l t *)
 
 let ppclause f ~depth hd { args = args; hyps = hyps; } =
-  Fmt.fprintf f "@[<hov 1>%s %a :- %a.@]" (Constants.show hd)
+  Fmt.fprintf f "@[<hov 1>%s %a :- %a.@]" (C.show hd)
      (pplist (uppterm ~min_prec:(Parser.appl_precedence+1) depth [] depth empty_env) " ") args
      (pplist (uppterm ~min_prec:(Parser.appl_precedence+1) depth [] depth empty_env) ", ") hyps
 
@@ -2109,7 +2113,7 @@ let hash_arg_list goal hd ~depth args mode spec =
     let kabs = Hashtbl.hash k in
     let h = kabs mod modulus in
     [%spy "subhash-const" (fun fmt () ->
-       Fmt.fprintf fmt "%s: %s" (Constants.show k)
+       Fmt.fprintf fmt "%s: %s" (C.show k)
          (dec_to_bin2 h)) ()];
     h in
   let all_1 size = max_int lsr (hash_bits - size) in
@@ -2256,7 +2260,7 @@ let add_clauses ~depth clauses p =
   p
 
 let make_index ~depth ~indexing p =
-  let m = Constants.Map.fold (fun predicate (mode, indexing) m ->
+  let m = C.Map.fold (fun predicate (mode, indexing) m ->
     match indexing with
     | Hash args ->
       Ptmap.add predicate (BitHash {
@@ -2345,7 +2349,7 @@ let get_clauses ~depth goal { index = m } =
        List.(map fst (sort (fun (_,cl1) (_,cl2) -> cl2 - cl1) cl))
    with Not_found -> []
  in
- [%log "get_clauses" (Constants.show predicate) (List.length rc)];
+ [%log "get_clauses" (C.show predicate) (List.length rc)];
  rc
 
 (* flatten_snd = List.flatten o (List.map ~~snd~~) *)
@@ -2364,9 +2368,9 @@ let close_with_pis depth vars t =
      instantiation of Args. The two codes should be unified *)
   let rec aux =
    function
-    | Const c -> Constants.mkConst (fix_const c)
+    | Const c -> mkConst (fix_const c)
     | Arg (i,argsno) ->
-       (match Constants.mkinterval (depth+vars) argsno 0 with
+       (match C.mkinterval (depth+vars) argsno 0 with
         | [] -> Const(i+depth)
         | [x] -> App(i+depth,x,[])
         | x::xs -> App(i+depth,x,xs))
@@ -2399,7 +2403,7 @@ end (* }}} *)
 open Indexing
 
 (* Used to pass the program to the CHR runtime *)
-let orig_prolog_program = Fork.new_local (make_index ~depth:0 ~indexing:Constants.Map.empty [])
+let orig_prolog_program = Fork.new_local (make_index ~depth:0 ~indexing:C.Map.empty [])
 
 (******************************************************************************
   Dynamic Prolog program
@@ -2409,7 +2413,7 @@ module Clausify : sig
 
   val clausify : prolog_prog -> depth:int -> term -> (constant*clause) list * clause_src list * int
 
-  val clausify1 : loc:Loc.t -> mode Constants.Map.t -> nargs:int -> depth:int -> term -> (constant*clause) * clause_src * int
+  val clausify1 : loc:Loc.t -> mode C.Map.t -> nargs:int -> depth:int -> term -> (constant*clause) * clause_src * int
   
   (* Utilities that deref on the fly *)
   val lp_list_to_list : depth:int -> term -> term list
@@ -2419,7 +2423,7 @@ module Clausify : sig
 end = struct  (* {{{ *)
 
 let rec term_map m = function
-  | Const x when List.mem_assoc x m -> Constants.mkConst (List.assoc x m)
+  | Const x when List.mem_assoc x m -> mkConst (List.assoc x m)
   | Const _ as x -> x
   | App(c,x,xs) when List.mem_assoc c m ->
       App(List.assoc c m,term_map m x, smart_map (term_map m) xs)
@@ -2440,9 +2444,9 @@ let rec split_conj ~depth = function
       split_conj ~depth hd @ List.(flatten (map (split_conj ~depth) args))
   | Nil -> []
   | Cons(x,xs) -> split_conj ~depth x @ split_conj ~depth xs
-  | UVar ({ contents=g },from,args) when g != Data.dummy ->
+  | UVar ({ contents=g },from,args) when g != C.dummy ->
     split_conj ~depth (deref_uv ~from ~to_:depth args g)
-  | AppUVar ({contents=g},from,args) when g != Data.dummy ->
+  | AppUVar ({contents=g},from,args) when g != C.dummy ->
     split_conj ~depth (deref_appuv ~from ~to_:depth args g)
   | Discard -> []
   | _ as f -> [ f ]
@@ -2451,17 +2455,17 @@ let rec split_conj ~depth = function
 let rec lp_list_to_list ~depth = function
   | Cons(hd, tl) -> hd :: lp_list_to_list ~depth tl
   | Nil -> []
-  | UVar ({ contents=g },from,args) when g != Data.dummy ->
+  | UVar ({ contents=g },from,args) when g != C.dummy ->
     lp_list_to_list ~depth (deref_uv ~from ~to_:depth args g)
-  | AppUVar ({contents=g},from,args) when g != Data.dummy ->
+  | AppUVar ({contents=g},from,args) when g != C.dummy ->
     lp_list_to_list ~depth (deref_appuv ~from ~to_:depth args g)
   | x -> error (Fmt.sprintf "%s is not a list" (show_term x))
 ;;
 
 let rec get_lambda_body ~depth = function
- | UVar ({ contents=g },from,args) when g != Data.dummy ->
+ | UVar ({ contents=g },from,args) when g != C.dummy ->
     get_lambda_body ~depth (deref_uv ~from ~to_:depth args g)
- | AppUVar ({contents=g},from,args) when g != Data.dummy ->
+ | AppUVar ({contents=g},from,args) when g != C.dummy ->
     get_lambda_body ~depth (deref_appuv ~from ~to_:depth args g)
  | Lam b -> b
  | _ -> error "pi/sigma applied to something that is not a Lam"
@@ -2535,15 +2539,15 @@ let rec claux1 ?loc get_mode vars depth hyps ts lts lcs t =
      let c = { depth = depth+lcs; args; hyps; mode = get_mode hd; vars } in
      [%spy "extra" (fun fmt -> ppclause fmt ~depth:(depth+lcs) hd) c];
      (hd,c), { hdepth = depth; hsrc = g }, lcs
-  | UVar ({ contents=g },from,args) when g != Data.dummy ->
+  | UVar ({ contents=g },from,args) when g != C.dummy ->
      claux1 ?loc get_mode vars depth hyps ts lts lcs
        (deref_uv ~from ~to_:(depth+lts) args g)
-  | AppUVar ({contents=g},from,args) when g != Data.dummy ->
+  | AppUVar ({contents=g},from,args) when g != C.dummy ->
      claux1 ?loc get_mode vars depth hyps ts lts lcs
        (deref_appuv ~from ~to_:(depth+lts) args g)
   | Arg _ | AppArg _ -> anomaly "claux1 called on non-heap term"
   | Builtin (c,_) ->
-     error ?loc ("Declaring a clause for built in predicate " ^ Constants.show c)
+     error ?loc ("Declaring a clause for built in predicate " ^ C.show c)
   | (Lam _ | CData _ ) as x ->
      error ?loc ("Assuming a string or int or float or function:" ^ show_term x)
   | UVar _ | AppUVar _ -> error ?loc "Flexible hypothetical clause"
@@ -2565,7 +2569,7 @@ let clausify { index } ~depth t =
 ;;
 
 let clausify1 ~loc m ~nargs ~depth t =
-  claux1 ~loc (fun x -> try Constants.Map.find x m with Not_found -> [])
+  claux1 ~loc (fun x -> try C.Map.find x m with Not_found -> [])
     nargs depth [] [] 0 0 t
 
 end (* }}} *) 
@@ -2672,12 +2676,12 @@ module Ice : sig
 end = struct (* {{{ *)
 
   type freezer = {
-    c2uv : uvar_body Constants.Map.t;
+    c2uv : uvar_body C.Map.t;
     uv2c : (uvar_body * term) list;
     assignments : assignment list; (* assignment to lower the level to 0 *)
   }
 
-  let empty_freezer = { c2uv = Constants.Map.empty; uv2c = []; assignments = [] }
+  let empty_freezer = { c2uv = C.Map.empty; uv2c = []; assignments = [] }
 
   let freeze ~depth t ~ground ~newground ~maxground f =
     let f = ref f in
@@ -2690,11 +2694,11 @@ end = struct (* {{{ *)
     let freeze_uv r =
       try List.assq r !f.uv2c
       with Not_found ->
-        let n, c = Constants.fresh_global_constant () in
+        let n, c = C.fresh_global_constant () in
         [%spy "freeze-add" (fun fmt tt ->
-          Fmt.fprintf fmt "%s == %a" (Constants.show n) (ppterm 0 [] 0 empty_env) tt)
+          Fmt.fprintf fmt "%s == %a" (C.show n) (ppterm 0 [] 0 empty_env) tt)
           (UVar (r,0,0))];
-        f := { !f with c2uv = Constants.Map.add n r !f.c2uv;
+        f := { !f with c2uv = C.Map.add n r !f.c2uv;
                        uv2c = (r,c) :: !f.uv2c };
         c in
     let rec faux d = function
@@ -2705,13 +2709,13 @@ end = struct (* {{{ *)
       | (Arg _ | AppArg _) -> error "only heap terms can be frozen"
       | Lam t -> Lam (faux (d+1) t)
       (* freeze *)
-      | AppUVar(r,0,args) when !!r == Data.dummy ->
+      | AppUVar(r,0,args) when !!r == C.dummy ->
           let args = List.map (faux d) args in
           App(Global_symbols.uvarc, freeze_uv r, [list_to_lp_list args])
       (* expansion *)
-      | UVar(r,lvl,ano) when !!r == Data.dummy ->
+      | UVar(r,lvl,ano) when !!r == C.dummy ->
           faux d (log_assignment(expand_uv ~depth:d r ~lvl ~ano))
-      | AppUVar(r,lvl,args) when !!r == Data.dummy ->
+      | AppUVar(r,lvl,args) when !!r == C.dummy ->
           faux d (log_assignment(expand_appuv ~depth:d r ~lvl ~args))
       (* deref *)
       | UVar(r,lvl,ano) -> faux d (deref_uv ~from:lvl ~to_:d ano !!r)
@@ -2747,22 +2751,22 @@ end = struct (* {{{ *)
     Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
       (uppterm to_ [] 0 empty_env) t) t];
     let rec daux d = function
-      | Const c when Constants.Map.mem c f.c2uv ->
-          UVar(Constants.Map.find c f.c2uv,0,0)
+      | Const c when C.Map.mem c f.c2uv ->
+          UVar(C.Map.find c f.c2uv,0,0)
       | (Const _ | CData _ | Nil | Discard) as x -> x
       | Cons(hd,tl) -> Cons(daux d hd, daux d tl)
       | App(c,Const x,[args]) when c == Global_symbols.uvarc ->
-          let r = Constants.Map.find x f.c2uv in
+          let r = C.Map.find x f.c2uv in
           let args = lp_list_to_list ~depth:d args in
           mkAppUVar r 0 (List.map (daux d) args)
       | App(c,x,xs) -> App(c,daux d x, List.map (daux d) xs)
       | Builtin(c,args) -> Builtin(c,List.map (daux d) args)
-      | Arg(i,ano) when env.(i) != Data.dummy ->
+      | Arg(i,ano) when env.(i) != C.dummy ->
           daux d (deref_uv ~from:to_ ~to_:d ano env.(i))
-      | AppArg (i,args) when env.(i) != Data.dummy ->
+      | AppArg (i,args) when env.(i) != C.dummy ->
           daux d (deref_appuv ~from:to_ ~to_:d args env.(i))
       | (Arg(i,_) | AppArg(i,_)) as x ->
-          env.(i) <- UVar(oref Data.dummy, to_, 0);
+          env.(i) <- UVar(oref C.dummy, to_, 0);
           daux d x
       | Lam t -> Lam (daux (d+1) t)
       | UVar _ as x -> x
@@ -2774,7 +2778,7 @@ end = struct (* {{{ *)
 
 let replace_const m t =
   let rec rcaux = function
-    | Const c as x -> (try Constants.mkConst (List.assoc c m) with Not_found -> x)
+    | Const c as x -> (try mkConst (List.assoc c m) with Not_found -> x)
     | Lam t -> Lam (rcaux t)
     | App(c,x,xs) ->
         App((try List.assoc c m with Not_found -> c),
@@ -2790,7 +2794,7 @@ let replace_const m t =
   t
 ;;
 let ppmap fmt (g,l) =
-  let aux fmt (c1,c2) = Fmt.fprintf fmt "%s -> %s" (Constants.show c1) (Constants.show c2) in
+  let aux fmt (c1,c2) = Fmt.fprintf fmt "%s -> %s" (C.show c1) (C.show c2) in
   Fmt.fprintf fmt "%d = %a" g (pplist aux ",") l
 ;;
 
@@ -2857,7 +2861,7 @@ let rec head_of = function
   | App(x,_,_) -> x
   | Builtin(x,_) -> x
   | AppUVar(r,_,_)
-  | UVar(r,_,_) when !!r != Data.dummy -> head_of !!r
+  | UVar(r,_,_) when !!r != C.dummy -> head_of !!r
   | CData _ -> type_error "A constraint cannot be a primitive data"
   | Cons(x,_) -> head_of x
   | Nil -> type_error "A constraint cannot be a list"
@@ -2866,7 +2870,7 @@ let rec head_of = function
   | Discard -> type_error "A constraint cannot be _"
   | Lam _ -> type_error "A constraint cannot be a function"
 
-let dummy_uvar_body = { contents = Data.dummy; rest = [] }
+let dummy_uvar_body = { contents = C.dummy; rest = [] }
 
 let declare_constraint ~depth prog args =
   let g, keys =
@@ -2890,7 +2894,7 @@ let declare_constraint ~depth prog args =
   match CHR.clique_of (head_of g) !chrules with
   | Some clique -> (* real constraint *)
      (* XXX head_of is weak because no clausify ? XXX *)
-     delay_goal ~filter_ctx:(fun { hsrc = x } -> Constants.Set.mem (head_of x) clique)
+     delay_goal ~filter_ctx:(fun { hsrc = x } -> C.Set.mem (head_of x) clique)
        ~depth prog ~goal:g ~on:keys
   | None -> delay_goal ~depth prog ~goal:g ~on:keys
 
@@ -2904,7 +2908,7 @@ let exect_builtin_predicate c ~depth idx args =
     let b =
       try FFI.lookup c
       with Not_found -> 
-        anomaly ("no built-in predicated named " ^ Constants.show c) in
+        anomaly ("no built-in predicated named " ^ C.show c) in
     let constraints = !CS.Ugly.delayed in
     let state = !CS.state  in
     let state, gs = FFI.call b ~depth (local_prog idx) constraints state args in
@@ -2953,7 +2957,7 @@ let try_fire_rule rule (constraints as orig_constraints) =
         (dto,d,d) :: ds, (dto,d,c) :: ctxs, (dto,d,g) :: gs)
       constraints ([],[],[]) in
  
-  let env = Array.make nargs Data.dummy in
+  let env = Array.make nargs C.dummy in
  
   let patterns_eigens, patterns_contexts, patterns_goals =
     List.fold_right (fun { CHR.eigen; context; conclusion } (es, cs, gs) ->
@@ -2970,7 +2974,7 @@ let try_fire_rule rule (constraints as orig_constraints) =
   let guard =
     match guard with
     | Some g -> g
-    | None -> Constants.mkConst Global_symbols.truec
+    | None -> mkConst Global_symbols.truec
   in
  
   let initial_program = !orig_prolog_program in
@@ -2987,7 +2991,7 @@ let try_fire_rule rule (constraints as orig_constraints) =
     initial_depth = max_depth;
     initial_runtime_state = State.(init () |> end_goal_compilation StrMap.empty |> end_compilation);
     query_arguments = Query.N;
-    symbol_table = !Constants.table;
+    symbol_table = !C.table;
     builtins = !FFI.builtins;
   } in
   let { search; get; exec; destroy } = !do_make_runtime executable in
@@ -3150,9 +3154,9 @@ let steps_made = Fork.new_local 0
 
 let pred_of g =
   match g with
-  | App(c,_,_) -> Some(Constants.show c)
-  | Const c -> Some(Constants.show c)
-  | Builtin(c,_) -> Some(Constants.show c)
+  | App(c,_,_) -> Some(C.show c)
+  | Const c -> Some(C.show c)
+  | Builtin(c,_) -> Some(C.show c)
   | _ -> None
 
 (* The block of recursive functions spares the allocation of a Some/None
@@ -3208,11 +3212,11 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
        run (depth+1) p f gs next alts lvl
     | App(c, arg, []) when c == Global_symbols.sigmac ->
        let f = get_lambda_body ~depth arg in
-       let v = UVar(oref Data.dummy, depth, 0) in
+       let v = UVar(oref C.dummy, depth, 0) in
        run depth p (subst depth [v] f) gs next alts lvl
-    | UVar ({ contents = g }, from, args) when g != Data.dummy ->
+    | UVar ({ contents = g }, from, args) when g != C.dummy ->
        run depth p (deref_uv ~from ~to_:depth args g) gs next alts lvl
-    | AppUVar ({contents = t}, from, args) when t != Data.dummy ->
+    | AppUVar ({contents = t}, from, args) when t != C.dummy ->
        run depth p (deref_appuv ~from ~to_:depth args t) gs next alts lvl 
     | Const _ | App _ -> (* Atom case *)
        let cp = get_clauses depth g p in
@@ -3236,9 +3240,9 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
     let rec args_of = function
       | Const k -> k, []
       | App(k,x,xs) -> k, x::xs
-      | UVar ({ contents = g },origdepth,args) when g != Data.dummy ->
+      | UVar ({ contents = g },origdepth,args) when g != C.dummy ->
          args_of (deref_uv ~from:origdepth ~to_:depth args g) 
-      | AppUVar({ contents = g },origdepth,args) when g != Data.dummy ->
+      | AppUVar({ contents = g },origdepth,args) when g != C.dummy ->
          args_of (deref_appuv ~from:origdepth ~to_:depth args g) 
       | _ -> anomaly "ill-formed goal" in
     let k, args_of_g = args_of g in
@@ -3250,7 +3254,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
       | c :: cs ->
         let old_trail = !T.trail in
         T.last_call := maybe_last_call && cs = [];
-        let env = Array.make c.vars Data.dummy in
+        let env = Array.make c.vars C.dummy in
         match
          for_all3b (fun x y matching -> unif ~matching depth env c.depth x y)
            args_of_g c.args c.mode false
@@ -3376,7 +3380,7 @@ end;*)
   set delay_hard_unif_problems delay_outside_fragment;
   set steps_made 0;
   set CS.state initial_runtime_state;
-  set Constants.table symbol_table;
+  set C.table symbol_table;
   set FFI.builtins builtins;
   let search = exec (fun () ->
      [%spy "run-trail" (fun fmt _ -> T.print_trail fmt) ()];
@@ -3405,7 +3409,7 @@ let mk_outcome search get_cs assignments =
      constraints = syn_csts;
      state;
      output = output qargs assignments state;
-     pp_ctx = ref pp_ctx;
+     pp_ctx = pp_ctx;
    } in
    Success solution, alts
  with
@@ -3415,7 +3419,7 @@ let mk_outcome search get_cs assignments =
 let execute_once ?max_steps ?delay_outside_fragment exec =
  auxsg := [];
  let { search; get } = make_runtime ?max_steps ?delay_outside_fragment exec in
- fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.state, exec.query_arguments, get uv_names) exec.assignments)
+ fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.state |> State.end_execution, exec.query_arguments, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments)
 ;;
 
 let execute_loop ?delay_outside_fragment exec ~more ~pp =
@@ -3423,7 +3427,7 @@ let execute_loop ?delay_outside_fragment exec ~more ~pp =
  let k = ref noalts in
  let do_with_infos f =
   let time0 = Unix.gettimeofday() in
-  let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, get CS.state, exec.query_arguments, get uv_names) exec.assignments in
+  let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, get CS.state |> State.end_execution, exec.query_arguments, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments in
   let time1 = Unix.gettimeofday() in
   k := alts;
   pp (time1 -. time0) o in
@@ -3451,9 +3455,8 @@ let move = HO.move
 let hmove = HO.hmove
 let make_index = make_index
 let clausify1 = Clausify.clausify1
-let mkinterval = Constants.mkinterval
-let mkConst = Constants.mkConst
-let mkAppL = Constants.mkAppL
+let mkinterval = C.mkinterval
+let mkAppL = C.mkAppL
 
 let expand_uv ~depth r ~lvl ~ano =
   let t, assignment = HO.expand_uv ~depth r ~lvl ~ano in

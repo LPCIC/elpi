@@ -6,17 +6,18 @@ open Util
 open Data
 
 module Pp : sig
+
   val ppterm :
-    ?pp_ctx:(string PtrMap.t * int) ref -> ?min_prec:int -> int -> string list -> int -> env ->
+    ?pp_ctx:pp_ctx -> ?min_prec:int -> int -> string list -> int -> env ->
        Format.formatter -> term -> unit
   val uppterm :
-    ?pp_ctx:(string PtrMap.t * int) ref -> ?min_prec:int -> int -> string list -> int -> env ->
+    ?pp_ctx:pp_ctx -> ?min_prec:int -> int -> string list -> int -> env ->
        Format.formatter -> term -> unit
 
   val pp_constant : Format.formatter -> constant -> unit
   val pp_oref : Format.formatter -> (UUID.t * Obj.t) -> unit
 end
-val pp_stuck_goal : ?pp_ctx:(string PtrMap.t * int) ref -> Fmt.formatter -> stuck_goal -> unit
+val pp_stuck_goal : ?pp_ctx:pp_ctx -> Fmt.formatter -> stuck_goal -> unit
 
 val embed_query :
   mk_Arg:(State.t -> name:string -> args:term list -> State.t * term) ->

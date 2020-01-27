@@ -811,16 +811,25 @@ let init_loc = {
   line_starts_at = 0;
 }
 
-let init ~lp_syntax ~paths ~cwd () =
-  assert(!parser_initialized = false);
-  parsed := [];
-  set_tjpath cwd paths;
-  List.iter (gram_extend init_loc) lp_syntax;
-  parser_initialized := true
+type parser_state_aux = { cwd : string; paths : string list }
+type parser_state = parser_state_aux option
+let dummy_state = None
+
+let set_state = function
+  | Some { cwd; paths } ->
+      parsed := [];
+      set_tjpath cwd paths;
+  | None -> ()
+
+let init ~lp_syntax ~paths ~cwd =
+  if !parser_initialized = false then
+    List.iter (gram_extend init_loc) lp_syntax;
+  parser_initialized := true;
+  Some { cwd; paths }
 ;;
 
-let run_parser f x =
-  if !parser_initialized = false then U.anomaly "parsing before calling init";
+let run_parser state f x =
+  set_state state;
   try f x with
   | Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) ->
       let loc = of_ploc l in
@@ -831,14 +840,14 @@ let run_parser f x =
   | NotInProlog(loc,s) -> raise (ParseError(loc, "NotInProlog: " ^ s))
 ;;
 
-let parse_program ~print_accumulated_files filenames : Program.t =
+let parse_program s ~print_accumulated_files filenames : Program.t =
   parse_silent := not print_accumulated_files;
-  run_parser (parse lp) filenames
+  run_parser s (parse lp) filenames
 
-let parse_program_from_stream ~print_accumulated_files loc strm : Program.t =
+let parse_program_from_stream s ~print_accumulated_files loc strm : Program.t =
   parse_silent := not print_accumulated_files;
   last_loc := to_ploc loc;
-  run_parser (Grammar.Entry.parse lp) strm
+  run_parser s (Grammar.Entry.parse lp) strm
 
 let set_last_loc = function
   | None -> ()
@@ -847,7 +856,7 @@ let set_last_loc = function
 let parse_goal ?loc s : Goal.t =
   set_last_loc loc;
   let stream = Stream.of_string s in
-  let ast = run_parser (Grammar.Entry.parse goal) stream in
+  let ast = run_parser None (Grammar.Entry.parse goal) stream in
   let next, _ = lex_fun stream in
   try begin match Stream.peek next with
   | None -> ast
@@ -857,7 +866,7 @@ let parse_goal ?loc s : Goal.t =
 
 let parse_goal_from_stream ?loc strm =
   set_last_loc loc;
-  run_parser (Grammar.Entry.parse goal) strm
+  run_parser None (Grammar.Entry.parse goal) strm
 
 let lp_gramext = [
   { fix = Infixl;	sym = ":-";	prec = 1; };
