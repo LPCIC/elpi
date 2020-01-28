@@ -971,7 +971,8 @@ module Quotation : sig
   val lp : quotation
 
   (** See elpi-quoted_syntax.elpi (EXPERIMENTAL, used by elpi-checker) *)
-  val quote_syntax : State.t -> 'a Compile.query -> State.t * Data.term list * Data.term
+  val quote_syntax_runtime : State.t -> 'a Compile.query -> State.t * Data.term list * Data.term
+  val quote_syntax_compiletime : State.t -> 'a Compile.query -> State.t * Data.term list * Data.term
 
   (** To implement the string_to_term built-in (AVOID, makes little sense
    * if depth is non zero, since bound variables have no name!) *)

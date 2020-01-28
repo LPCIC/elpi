@@ -811,7 +811,7 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in let open Context
         let aq = Parse.goal loc s in
         let p = Compile.(program ~flags:default_flags ~elpi [ap]) in
         let q = API.Compile.query p aq in
-        let state, qp, qq = Quotation.quote_syntax state q in
+        let state, qp, qq = Quotation.quote_syntax_runtime state q in
         state, !: qp +! qq, []
       with Parse.ParseError (_,m) | Compile.CompileError (_,m) ->
         Printf.eprintf "%s\n" m;

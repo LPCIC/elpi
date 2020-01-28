@@ -967,14 +967,18 @@ let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
          let unquote =
            option_get ~err:"No default quotation" !default_quotation in
          let state = set_mtm state (Some { macros = macro}) in
-         begin try unquote ~depth:lvl state loc data 
+         begin try
+           let state, t = unquote ~depth:lvl state loc data in
+           hcons_alien_term state t
          with Parser.ParseError(loc,msg) -> error ~loc msg end
     | Ast.Term.Quoted { Ast.Term.data; kind = Some name; loc } ->
-         let unquote = 
+         let unquote =
            try StrMap.find name !named_quotations
            with Not_found -> anomaly ("No '"^name^"' quotation") in
          let state = set_mtm state (Some { macros = macro}) in
-         begin try unquote ~depth:lvl state loc data
+         begin try
+           let state, t = unquote ~depth:lvl state loc data in
+           hcons_alien_term state t
          with Parser.ParseError(loc,msg) -> error ~loc msg end
     | Ast.Term.App (Ast.Term.Quoted _,_) ->
         error ~loc "Applied quotation"
