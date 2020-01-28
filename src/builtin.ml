@@ -801,19 +801,21 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in let open Context
      In(string, "QueryText",
      Out(list (poly "A"), "QuotedProgram",
      Out(poly "A",        "QuotedQuery",
-     Easy    ("quotes the program from FileName and the QueryText. "^
+     Full    (unit_ctx, "quotes the program from FileName and the QueryText. "^
               "See elpi-quoted_syntax.elpi for the syntax tree"))))),
-   (fun f s _ _ ~depth ->
-      assert false; (*
-      let ap = Parse.program [f] in
-      let loc = Ast.Loc.initial "(quote_syntax)" in
-      let aq = Parse.goal loc s in
-      let p =
-        API.Compile.(program ~flags:default_flags dummy_header [ap]) in
-      let q = API.Compile.query p aq in
-      assert false;*)
-      (* let qp, qq = Quotation.quote_syntax q in *)
-      (*!: qp +! qq*))),
+   (fun f s _ _ ~depth _ _ state ->
+      let elpi, _ = Setup.init ~builtins:(BuiltIn.declare ~file_name:"(dummy)" []) ~basedir:Sys.(getcwd()) [] in
+      try
+        let ap = Parse.program ~elpi [f] in
+        let loc = Ast.Loc.initial "(quote_syntax)" in
+        let aq = Parse.goal loc s in
+        let p = Compile.(program ~flags:default_flags ~elpi [ap]) in
+        let q = API.Compile.query p aq in
+        let state, qp, qq = Quotation.quote_syntax state q in
+        state, !: qp +! qq, []
+      with Parse.ParseError (_,m) | Compile.CompileError (_,m) ->
+        Printf.eprintf "%s\n" m;
+        raise No_clause)),
   DocAbove);
 
   MLData loc;

@@ -2231,18 +2231,22 @@ let mkQApp ~on_type l =
   let c = if on_type then tappc else appc in
   App(c,R.list_to_lp_list l,[])
 
-let mkQCon ~compiler_state new_state ~on_type ?(amap=empty_amap) c =
-  try Symbols.allocate_bound_symbol new_state (C.Map.find c amap.c2i)
+let mkQCon time ~compiler_state new_state ~on_type ?(amap=empty_amap) c =
+  let allocate_bound_symbol =
+    match time with
+    | `Compiletime -> Symbols.allocate_bound_symbol
+    | `Runtime f -> (fun s c -> s, f c) in
+  try allocate_bound_symbol new_state (C.Map.find c amap.c2i)
   with Not_found ->
     let a = if on_type then tconstc else constc in
     if c < 0 then new_state, App(a,D.C.of_string (Symbols.show compiler_state c),[])
-    else Symbols.allocate_bound_symbol new_state (c + amap.nargs)
+    else allocate_bound_symbol new_state (c + amap.nargs)
 
-let quote_preterm ~compiler_state new_state ?(on_type=false) { term; amap } =
+let quote_preterm time ~compiler_state new_state ?(on_type=false) { term; amap } =
   let new_state = ref new_state in
   let mkQApp = mkQApp ~on_type in
   let mkQCon c =
-    let n, x = mkQCon ~compiler_state !new_state ~on_type ~amap c in
+    let n, x = mkQCon time ~compiler_state !new_state ~on_type ~amap c in
     new_state := n;
     x in
   let rec aux depth term = match term with
@@ -2301,9 +2305,9 @@ let quote_loc ?id loc =
     | None -> loc.Loc.source_name in
   Ast.cloc.CData.cin { loc with Loc.source_name }
 
-let quote_clause ~compiler_state new_state { Ast.Clause.loc; attributes = { Assembled.id }; body } =
+let quote_clause time ~compiler_state new_state { Ast.Clause.loc; attributes = { Assembled.id }; body } =
   let clloc = quote_loc ?id loc in
-  let new_state, bodyt = quote_preterm ~compiler_state new_state body in
+  let new_state, bodyt = quote_preterm time ~compiler_state new_state body in
   let qt = close_w_binder argc bodyt body.amap in
   let names = sorted_names_of_argmap body.amap in
   new_state, App(clausec,CData clloc,[R.list_to_lp_list names; qt])
@@ -2319,10 +2323,10 @@ let rec lam2forall = function
   | UVar _ | AppUVar _ -> assert false
   | Arg _ | AppArg _ -> assert false
 
-let quote_syntax new_state { WithMain.clauses; query; compiler_state } =
+let quote_syntax time new_state { WithMain.clauses; query; compiler_state } =
   let names = sorted_names_of_argmap query.amap in
-  let new_state, clist = map_acc (quote_clause ~compiler_state) new_state clauses in
-  let new_state, queryt = quote_preterm ~on_type:false ~compiler_state new_state query in
+  let new_state, clist = map_acc (quote_clause time ~compiler_state) new_state clauses in
+  let new_state, queryt = quote_preterm time ~on_type:false ~compiler_state new_state query in
   let q =
     App(clausec,CData (quote_loc ~id:"query" query.loc),
       [R.list_to_lp_list names;
@@ -2382,19 +2386,20 @@ let term_of_ast ~depth state t =
 
 let static_check ~exec ~checker:(state,program)
   ({ WithMain.types; type_abbrevs; initial_depth; compiler_state } as q) =
-  let state, p,q = quote_syntax state q in
+  let time = `Compiletime in
+  let state, p,q = quote_syntax time state q in
   let state, tlist = map_acc
     (fun state { Structured.decl = { tname; ttype } } ->
-      let state, c = mkQCon ~compiler_state state ~on_type:false tname in
+      let state, c = mkQCon time ~compiler_state state ~on_type:false tname in
       let ttypet = unfold_type_abbrevs ~compiler_state initial_depth type_abbrevs ttype in
-      let state, ttypet = quote_preterm ~compiler_state state ~on_type:true ttypet in
+      let state, ttypet = quote_preterm time ~compiler_state state ~on_type:true ttypet in
       state, App(colonc,c, [close_w_binder forallc ttypet ttype.amap]))
       state types in
   let state, talist =
     C.Map.bindings type_abbrevs |>
     map_acc (fun state (name, { tavalue;  } ) ->
       let tavaluet = unfold_type_abbrevs ~compiler_state initial_depth type_abbrevs tavalue in
-      let state, tavaluet = quote_preterm ~compiler_state state ~on_type:true tavaluet in
+      let state, tavaluet = quote_preterm time ~compiler_state state ~on_type:true tavaluet in
       state, App(colonec, D.C.of_string (Symbols.show compiler_state name), [lam2forall tavaluet])) state
     in
   let loc = Loc.initial "(static_check)" in

@@ -59,7 +59,7 @@ val mk_Arg :
 val get_Arg : State.t -> name:string -> args:term list -> term
 
 (* Quotes the program and the query, see elpi-quoted_syntax.elpi *)
-val quote_syntax : State.t -> 'a query -> State.t * term list * term
+val quote_syntax : [ `Compiletime | `Runtime of constant -> term ] -> State.t -> 'a query -> State.t * term list * term
 
 (* false means a type error was found *)
 val static_check :

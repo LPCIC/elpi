@@ -791,7 +791,9 @@ module Quotation = struct
 
   let term_at ~depth s x = Compiler.term_of_ast ~depth s x
 
-  let quote_syntax s q = Compiler.quote_syntax s q
+  let quote_syntax s q =
+    let module R = (val !r) in
+    Compiler.quote_syntax (`Runtime R.mkConst) s q
 
 end
 
