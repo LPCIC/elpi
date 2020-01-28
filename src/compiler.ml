@@ -44,6 +44,17 @@ let rec filter_if ({ defined_variables } as flags) proj = function
     | Some e when StrSet.mem e defined_variables -> c :: filter_if flags proj rest
     | Some _ -> filter_if flags proj rest
 
+(* Symbol table of a compilation unit (part of the compiler state).
+
+   The initial value is taken from Data.Global_symbols, then both global
+   names and local ones are allocated (hashconsed) in this table.
+
+   Given a two symbols table (base and second) we can obtain a new one
+   (updated base) via [build_shift] that contains the union of the symbols
+   and a relocation to be applied to a program that lives in the second table.
+   The code applying the shift is also supposed to re-hashcons and recognize
+   builtins.
+*)
 module Symbols : sig
 
   (* Compilation phase *)
@@ -1295,8 +1306,8 @@ end = struct (* {{{ *)
   open Structured
   open Flat
 
-  (* Customs are already translated inside terms,
-   * may sill require translation inside type/modes declaration *)
+  (* This function *must* re-hashcons all leaves (Const) and recognize
+     builtins since it is (also) used to apply a compilation unit relocation *)
 
   let smart_map_term ?(on_type=false) state f t =
     let rec aux = function

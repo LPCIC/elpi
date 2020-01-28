@@ -45,8 +45,8 @@ module Setup : sig
       [builtins] the set of built-in predicates, eg [Elpi_builtin.std_builtins]
       [basedir] current working directory (used to make paths absolute);
       [argv] is list of options, see the {!val:usage} string;
-      It returns part of [argv] not relevant to ELPI and a [elpi]
-      that contains the declaration of builtins. *)
+      It returns part of [argv] not relevant to ELPI and a handle [elpi]
+      to an elpi instance equipped with the given builtins. *)
   val init :
     builtins:builtins ->
     basedir:string ->
@@ -61,7 +61,7 @@ module Setup : sig
       the tracing facility. *)
   val trace : string list -> unit
 
-  (** Override default error functions (they call exit) *)
+  (** Override default runtime error functions (they call exit) *)
   val set_warn : (?loc:Ast.Loc.t -> string -> unit) -> unit
   val set_error : (?loc:Ast.Loc.t -> string -> 'a) -> unit
   val set_anomaly : (?loc:Ast.Loc.t -> string -> 'a) -> unit
@@ -143,13 +143,12 @@ module Compile : sig
 
   exception CompileError of Ast.Loc.t option * string
 
-  (* Warning: this API will change to support separate compilation of
-   * Ast.program, esp the [link] one *)
-
-  (* compile all program files in one go *)
+  (* basic API: Compile all program files in one go *)
   val program : flags:flags ->
     elpi:Setup.elpi -> Ast.program list -> program
-  (* separate compilation *)
+
+  (* separate compilation API: units are marshalable and closed w.r.t.
+     the host application (eg quotations are desugared) *)
   type compilation_unit
   val unit : elpi:Setup.elpi -> flags:flags -> Ast.program -> compilation_unit
   val assemble : elpi:Setup.elpi -> compilation_unit list -> program

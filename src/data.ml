@@ -315,6 +315,14 @@ end = struct
 
 end
 
+(* This module contains the symbols reserved by Elpi and the ones
+   declared by the API client via declare_global_symbol statically
+   (eg the API must be called in a OCaml toplevel value).
+
+   These symbols are part of any Elpi program.
+   The runtime only uses the symbols listed in the module signature,
+   the declared ones are read by the compiler and propagated to the runtime.
+*)
 module Global_symbols : sig
 
   (* Table used at link time *)

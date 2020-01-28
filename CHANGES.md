@@ -1,3 +1,19 @@
+## UNRELEASED
+
+- Compiler:
+  - large refactoring to separate the table of global (statically initialized)
+    symbols, the table of symbols of a program being compiled and the table
+    of symbols used at runtime.
+  - API for separate compilation.
+
+- API:
+  - Setup.init now returns a handle to an elpi instance to be passed to
+    many other APIs.
+  - New APIs Compile.unit and Compile.assemble for separate compilation.
+  - Constants.from_stringc and Constants.mk*S API removed in favor for
+    Constants.declare_global_symbol (to be used in module initialization code).
+
+
 ## v1.9.1 (January 2020)
 
 - Tests:
