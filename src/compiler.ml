@@ -1314,17 +1314,15 @@ end = struct (* {{{ *)
           assert(!!r == D.dummy);
           let ts1 = smart_map aux ts in
           if ts == ts1 then x else AppUVar(r,lvl,ts1)
-      | Builtin(c,ts) as x ->
+      | Builtin(c,ts) ->
           let c1 = f c in
           let ts1 = smart_map aux ts in
-          if c == c1 && ts == ts1 then x
-          else if not on_type && Builtins.is_declared state c1 then Builtin(c,ts1)
+          if not on_type && Builtins.is_declared state c1 then Builtin(c,ts1)
           else if ts1 = [] then Symbols.get_canonical state c1 else App(c,List.hd ts1,List.tl ts1)
-      | App(c,t,ts) as x ->
+      | App(c,t,ts) ->
           let c1 = f c in
           let t1 = aux t in
           let ts1 = smart_map aux ts in
-          if c == c1 && t == t1 && ts == ts1 then x else
           if not on_type && Builtins.is_declared state c1 then Builtin (c1,t1 :: ts1)
           else App(c1,t1,ts1)
       | Cons(hd,tl) as x ->
