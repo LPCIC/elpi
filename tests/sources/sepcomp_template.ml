@@ -7,7 +7,7 @@ let init () =
   elpi
 
 let cc ~elpi ~flags i u =
-  Compile.unit ~flags
+  Compile.unit ~elpi ~flags
     (Parse.program_from_stream ~elpi (Ast.Loc.initial (Printf.sprintf "<u%d>" i))
       (Stream.of_string u))
 
