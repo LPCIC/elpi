@@ -141,6 +141,8 @@ module Compile : sig
   type 'a query
   type 'a executable
 
+  exception CompileError of Ast.Loc.t option * string
+
   (* Warning: this API will change to support separate compilation of
    * Ast.program, esp the [link] one *)
 
@@ -161,9 +163,6 @@ module Compile : sig
   (** Runs a checker. Returns true if no errors were found.
       See also Builtins.default_checker. *)
   val static_check : checker:program -> 'a query -> bool
-
-  (** HACK: don't use *)
-  val dummy_header : Setup.elpi
 
 end
 

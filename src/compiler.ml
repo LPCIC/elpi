@@ -7,6 +7,10 @@ module F = Ast.Func
 module R = Runtime_trace_off
 module D = Data
 
+exception CompileError of Loc.t option * string
+
+let error ?loc msg = raise (CompileError(loc,msg))
+
 type flags = {
   defined_variables : StrSet.t;
   print_passes : bool;
@@ -955,8 +959,10 @@ let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
     | Ast.Term.App (Ast.Term.App (f,l1),l2) ->
        aux lvl state (Ast.Term.App (f, l1@l2))
     | Ast.Term.CData c -> state, Term.CData (CData.hcons c)
-    | Ast.Term.App (Ast.Term.Lam _,_) -> error ~loc "Beta-redexes not in our language"
-    | Ast.Term.App (Ast.Term.CData _,_) -> type_error ~loc "Applied literal"
+    | Ast.Term.App (Ast.Term.Lam _,_) ->
+        error ~loc "Beta-redexes not allowed, use something like (F = x\\x, F a)"
+    | Ast.Term.App (Ast.Term.CData _,_) ->
+        error ~loc "Applied literal"
     | Ast.Term.Quoted { Ast.Term.data; kind = None; loc } ->
          let unquote =
            option_get ~err:"No default quotation" !default_quotation in
@@ -970,7 +976,8 @@ let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
          let state = set_mtm state (Some { macros = macro}) in
          begin try unquote ~depth:lvl state loc data
          with Parser.ParseError(loc,msg) -> error ~loc msg end
-    | Ast.Term.App (Ast.Term.Quoted _,_) -> type_error ~loc "Applied quotation"
+    | Ast.Term.App (Ast.Term.Quoted _,_) ->
+        error ~loc "Applied quotation"
   in
 
   (* arg_lvl is the number of local variables *)

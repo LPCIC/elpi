@@ -137,6 +137,7 @@ module Compile = struct
   type 'a query = 'a Compiler.query
   type 'a executable = 'a ED.executable
   type compilation_unit = Compiler.compilation_unit
+  exception CompileError = Compiler.CompileError
 
   let program ~flags ~elpi:(_,header) l =
     Compiler.program_of_ast (Compiler.init_state flags) ~header (List.flatten l)
@@ -159,8 +160,6 @@ module Compile = struct
   let unit ~flags x = Compiler.unit_of_ast (Compiler.init_state flags) x
   let assemble ~elpi:(_,header) = Compiler.assemble_units ~header
 
-  let dummy_header =
-     Parser.dummy_state, Compiler.unit_of_ast (Compiler.init_state default_flags) []
 end
 
 module Execute = struct

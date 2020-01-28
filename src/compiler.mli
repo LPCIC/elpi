@@ -17,6 +17,8 @@ val init_state : flags -> State.t
 type program
 type 'a query
 
+exception CompileError of Loc.t option * string
+
 type compilation_unit
 
 val program_of_ast : State.t -> header:compilation_unit -> Ast.Program.t -> State.t * program

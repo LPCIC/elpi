@@ -167,11 +167,17 @@ let _ =
       API.Compile.defined_variables = !vars;
       API.Compile.print_passes = !print_passes;
   } in
-  let t0_compilation = Unix.gettimeofday () in
-  let prog = API.Compile.program ~flags ~elpi [p] in
-  let query = API.Compile.query prog g in
-  let exec = API.Compile.optimize query in
-  Format.eprintf "@\nCompilation time: %5.3f@\n%!" (Unix.gettimeofday () -. t0_compilation);
+  let query, exec =
+    let t0_compilation = Unix.gettimeofday () in
+    try
+      let prog = API.Compile.program ~flags ~elpi [p] in
+      let query = API.Compile.query prog g in
+      let exec = API.Compile.optimize query in
+      Format.eprintf "@\nCompilation time: %5.3f@\n%!" (Unix.gettimeofday () -. t0_compilation);
+      query, exec
+    with API.Compile.CompileError(loc,msg) ->
+      API.Utils.error ?loc msg
+  in
   if !typecheck then begin
     let t0 = Unix.gettimeofday () in
     let b = API.Compile.static_check ~checker:(Builtin.default_checker ()) query in
