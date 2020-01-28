@@ -2016,13 +2016,13 @@ end
 let rec embed_query_aux : type a. mk_Arg:(State.t -> name:string -> args:term list -> State.t * term) -> depth:int -> predicate:constant -> term list -> term list -> State.t -> a Query.arguments -> State.t * term
   = fun ~mk_Arg ~depth ~predicate gls args state descr ->
     match descr with
-    | D(d,x,rest) ->
+    | Data.Query.D(d,x,rest) ->
         let state, x, glsx = d.Conversion.embed ~depth state x in
         embed_query_aux ~mk_Arg ~depth ~predicate (gls @ glsx) (x :: args) state rest
-    | Q(d,name,rest) ->
+    | Data.Query.Q(d,name,rest) ->
         let state, x = mk_Arg state ~name ~args:[] in
         embed_query_aux ~mk_Arg ~depth ~predicate gls (x :: args) state rest
-    | N ->
+    | Data.Query.N ->
         let args = List.rev args in
         state,
         match gls with
@@ -2036,9 +2036,9 @@ let embed_query ~mk_Arg ~depth state (Query.Query { predicate; arguments }) =
 let rec query_solution_aux : type a. a Query.arguments -> term StrMap.t -> State.t -> a
  = fun args assignments state ->
      match args with
-     | N -> ()
-     | D(_,_,args) -> query_solution_aux args assignments state
-     | Q(d,name,args) ->
+     | Data.Query.N -> ()
+     | Data.Query.D(_,_,args) -> query_solution_aux args assignments state
+     | Data.Query.Q(d,name,args) ->
          let x = StrMap.find name assignments in
          let state, x, _gls = d.Conversion.readback ~depth:0 state x in
          x, query_solution_aux args assignments state
