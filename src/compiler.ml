@@ -720,7 +720,7 @@ module ToDBL : sig
      Const "%Arg2")
   *)
 
-  val run : State.t -> StructuredAST.program -> State.t * Structured.program
+  val run : State.t -> toplevel_macros:(Ast.Term.t * Util.Loc.t) F.Map.t -> StructuredAST.program -> State.t * Structured.program
 
   (* Exported since also used to flatten (here we "flatten" locals) *)
   val prefix_const : State.t -> string list -> C.t -> State.t * C.t
@@ -1187,7 +1187,7 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
     state, !res
 
 
-  let run (state : State.t) p =
+  let run (state : State.t) ~toplevel_macros p =
  (* FIXME: otypes omodes - NO, rewrite spilling on data.term *)
     let rec compile_program omacros lcs state { macros; types; type_abbrevs; modes; body } =
       check_no_overlap_macros omacros macros;
@@ -1268,7 +1268,7 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
           Structured.Constraints(clique, rules,p) :: compiled_rest
     in
     let state, local_names, toplevel_macros, pbody =
-      compile_program F.Map.empty 0 state p in
+      compile_program toplevel_macros 0 state p in
     state, { Structured.local_names; pbody; toplevel_macros }
 
 end (* }}} *)
@@ -1834,7 +1834,7 @@ end = struct (* {{{ *)
       let state = State.set Symbols.table state symbol_table in
 
       let state, { Flat.clauses; types; type_abbrevs; modes; chr; local_names; toplevel_macros } =
-        List.fold_left (fun (state, { Flat.clauses = cl1; types = t1; type_abbrevs = ta1; modes = m1; chr = c1; toplevel_macros = _ })
+        List.fold_left (fun (state, { Flat.clauses = cl1; types = t1; type_abbrevs = ta1; modes = m1; chr = c1; toplevel_macros = tm1 })
           { symbol_table; code; flags } ->
           let state, shift = Symbols.build_shift ~base:state symbol_table in
           let { Flat.clauses = cl2; types = t2; type_abbrevs = ta2; modes = m2; chr = c2; toplevel_macros = _ } as xxx =
@@ -1843,7 +1843,7 @@ end = struct (* {{{ *)
           let type_abbrevs = ToDBL.merge_type_abbrevs state ta1 ta2 in
           let types = ToDBL.merge_types t1 t2 in
           let chr = c1 @ c2 in
-          let toplevel_macros = Data.F.Map.empty in
+          let toplevel_macros = tm1 in
           let cl2 = filter_if flags clause_name cl2 in
           state, { Flat.clauses = cl1 @ cl2; types; type_abbrevs; modes; chr; local_names = 0; toplevel_macros }
         ) (state, { code with clauses = filter_if flags clause_name code.Flat.clauses }) ul in
@@ -1859,7 +1859,7 @@ end (* }}} *)
  ****************************************************************************)
 
 (* Compiler passes *)
-let unit_of_ast s p =
+let unit_of_ast s ?header p =
   let { print_passes } = State.get compiler_flags s in
 
   if print_passes then
@@ -1871,8 +1871,12 @@ let unit_of_ast s p =
   if print_passes then
     Format.eprintf "== StructuredAST ================@\n@[<v 0>%a@]@\n"
       StructuredAST.pp_program p;
- 
-  let s, p = ToDBL.run s p in
+
+  let toplevel_macros =
+    match header with
+    | Some { code = { Flat.toplevel_macros }} -> toplevel_macros
+    | None -> F.Map.empty in
+  let s, p = ToDBL.run s ~toplevel_macros p in
  
   if print_passes then
     Format.eprintf "== Structured ================@\n@[<v 0>%a@]@\n"

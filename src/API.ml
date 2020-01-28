@@ -157,7 +157,7 @@ module Compile = struct
   }
   let default_flags = Compiler.default_flags
   let optimize = Compiler.optimize_query
-  let unit ~flags x = Compiler.unit_of_ast (Compiler.init_state flags) x
+  let unit ~elpi:(_,header) ~flags x = Compiler.unit_of_ast (Compiler.init_state flags) ~header x
   let assemble ~elpi:(_,header) = Compiler.assemble_units ~header
 
 end

@@ -151,7 +151,7 @@ module Compile : sig
     elpi:Setup.elpi -> Ast.program list -> program
   (* separate compilation *)
   type compilation_unit
-  val unit : flags:flags -> Ast.program -> compilation_unit
+  val unit : elpi:Setup.elpi -> flags:flags -> Ast.program -> compilation_unit
   val assemble : elpi:Setup.elpi -> compilation_unit list -> program
 
   (* then compile the query *)

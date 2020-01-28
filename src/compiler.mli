@@ -22,7 +22,7 @@ exception CompileError of Loc.t option * string
 type compilation_unit
 
 val program_of_ast : State.t -> header:compilation_unit -> Ast.Program.t -> State.t * program
-val unit_of_ast : State.t -> Ast.Program.t -> compilation_unit
+val unit_of_ast : State.t -> ?header:compilation_unit -> Ast.Program.t -> compilation_unit
 val assemble_units : header:compilation_unit -> compilation_unit list -> State.t * program
 
 val query_of_ast : State.t -> program -> Ast.Goal.t -> unit query
