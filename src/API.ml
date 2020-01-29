@@ -24,7 +24,7 @@ module Setup = struct
 type builtins = string * Data.BuiltInPredicate.declaration list
 type elpi = Parser.parser_state * Compiler.compilation_unit
 
-let init ~builtins:(fname,decls) ~basedir:cwd argv =
+let init ~builtins ~basedir:cwd argv =
   let new_argv = set_trace argv in
   let new_argv, paths =
     let rec aux args paths = function
@@ -35,41 +35,45 @@ let init ~builtins:(fname,decls) ~basedir:cwd argv =
       aux [] [] new_argv
   in
   (* At the moment we can only init the parser once *)
-  let pstate = Parser.init ~lp_syntax:Parser.lp_gramext ~paths ~cwd in
+  let parsing_state = Parser.init ~lp_syntax:Parser.lp_gramext ~paths ~cwd in
 
   let state = Compiler.init_state Compiler.default_flags in
   (* This runtime contains statically allocated data that is common to all runtimes *)
   (* This part could be put in a separate API Setup.mk_runtime and it should be
      passed to all Compile.* APIs *)
   let state =
-    List.fold_left (fun state -> function
-    | Data.BuiltInPredicate.MLCode (p,_) -> Compiler.Builtins.register state p
-    | Data.BuiltInPredicate.MLData _ -> state
-    | Data.BuiltInPredicate.MLDataC _ -> state
-    | Data.BuiltInPredicate.LPCode _ -> state
-    | Data.BuiltInPredicate.LPDoc _ -> state) state decls in
+    List.fold_left (fun state (_,decls) ->
+      List.fold_left (fun state -> function
+      | Data.BuiltInPredicate.MLCode (p,_) -> Compiler.Builtins.register state p
+      | Data.BuiltInPredicate.MLData _ -> state
+      | Data.BuiltInPredicate.MLDataC _ -> state
+      | Data.BuiltInPredicate.LPCode _ -> state
+      | Data.BuiltInPredicate.LPDoc _ -> state) state decls) state builtins in
   let header =
-    (* This is a bit ugly, since we print and then parse... *)
-    let b = Buffer.create 1024 in
-    let fmt = Format.formatter_of_buffer b in
-    Data.BuiltInPredicate.document fmt decls;
-    Format.pp_print_flush fmt ();
-    let text = Buffer.contents b in
-    let strm = Stream.of_string text in
-    let loc = Util.Loc.initial fname in
-    try
-      Compiler.unit_of_ast state
-        (Parser.parse_program_from_stream pstate
-          ~print_accumulated_files:false loc strm)
-    with Parser.ParseError(loc,msg) ->
-      List.iteri (fun i s ->
-        Printf.eprintf "%4d: %s\n" (i+1) s)
-        (Re.Str.(split_delim (regexp_string "\n") text));
-      Printf.eprintf "Excerpt of %s:\n%s\n" fname
-        (String.sub text loc.Util.Loc.line_starts_at
-          Util.Loc.(loc.source_stop - loc.line_starts_at));
-      Util.anomaly ~loc msg in
-  (pstate, header), new_argv
+    builtins |> List.map (fun (fname,decls) ->
+      (* This is a bit ugly, since we print and then parse... *)
+      let b = Buffer.create 1024 in
+      let fmt = Format.formatter_of_buffer b in
+      Data.BuiltInPredicate.document fmt decls;
+      Format.pp_print_flush fmt ();
+      let text = Buffer.contents b in
+      let strm = Stream.of_string text in
+      let loc = Util.Loc.initial fname in
+      try
+        Parser.parse_program_from_stream parsing_state
+          ~print_accumulated_files:false loc strm
+      with Parser.ParseError(loc,msg) ->
+        List.iteri (fun i s ->
+          Printf.eprintf "%4d: %s\n" (i+1) s)
+          (Re.Str.(split_delim (regexp_string "\n") text));
+        Printf.eprintf "Excerpt of %s:\n%s\n" fname
+          (String.sub text loc.Util.Loc.line_starts_at
+            Util.Loc.(loc.source_stop - loc.line_starts_at));
+      Util.anomaly ~loc msg) in
+  let header =
+    try Compiler.unit_of_ast state (List.concat header)
+    with Compiler.CompileError(loc,msg) -> Util.anomaly ?loc msg in
+  (parsing_state, header), new_argv
 
 let trace args =
   match set_trace args with
@@ -733,12 +737,20 @@ module BuiltInPredicate = struct
     let (+?) a b = a, b
 
   end
-
 end
 
 module BuiltIn = struct
   include ED.BuiltInPredicate
   let declare ~file_name l = file_name, l
+  let document_fmt fmt (_,l) =
+    ED.BuiltInPredicate.document fmt l
+  let document_file ?(header="") (name,l) =
+    let oc = open_out name in
+    let fmt = Format.formatter_of_out_channel oc in
+    Format.fprintf fmt "%s%!" header;
+    ED.BuiltInPredicate.document fmt l;
+    Format.pp_print_flush fmt ();
+    close_out oc
 end
 
 module Query = struct
