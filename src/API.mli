@@ -143,7 +143,16 @@ module Compile : sig
 
   exception CompileError of Ast.Loc.t option * string
 
-  (* basic API: Compile all program files in one go *)
+  (* basic API: Compile all program files in one go.
+
+     Note:
+     - programs are concatened and compiled together, as if their sources
+       were glued together
+     - unless explicitly delimited via `{` and `}`, shorten directives and
+       macros are globally visible
+     - the `accumulate` directive inserts `{` and `}` around the accumulated
+       code
+   *)
   val program : flags:flags ->
     elpi:Setup.elpi -> Ast.program list -> program
 
