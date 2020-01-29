@@ -148,7 +148,16 @@ module Compile : sig
     elpi:Setup.elpi -> Ast.program list -> program
 
   (* separate compilation API: units are marshalable and closed w.r.t.
-     the host application (eg quotations are desugared) *)
+     the host application (eg quotations are desugared).
+
+     Note:
+     - macros and shorten directives part of a unit are not visible in other
+       units
+     - macros declared as part of the builtins given to Setup.init are
+       visible in all units
+     - types, type abbreviations and mode declarations from all units are
+       merged at assembly time
+     *)
   type compilation_unit
   val unit : elpi:Setup.elpi -> flags:flags -> Ast.program -> compilation_unit
   val assemble : elpi:Setup.elpi -> compilation_unit list -> program
