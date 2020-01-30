@@ -2,7 +2,7 @@ open Elpi.API
 
 let init () =
   let elpi, rest =
-    Setup.init ~builtins:Elpi.Builtin.std_builtins ~basedir:"." (List.tl (Array.to_list Sys.argv)) in
+    Setup.init ~builtins:[Elpi.Builtin.std_builtins] ~basedir:"." (List.tl (Array.to_list Sys.argv)) in
   assert(rest = []);
   elpi
 
