@@ -215,3 +215,11 @@ let () = declare "CHR_no_clique"
   ~typecheck:true
   ~expectation:Test.Failure
   ()
+
+let () = declare "quote_syntax"
+  ~source_elpi:"quote_syntax.elpi"
+  ~description:"quote_syntax API"
+  ~typecheck:true
+  ~expectation:(Test.SuccessOutput (Str.regexp "const main"))
+  ()
+

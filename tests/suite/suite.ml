@@ -8,7 +8,8 @@ type fname = string
 type expectation =
   | Success
   | Failure
-  | Output of Str.regexp
+  | SuccessOutput of Str.regexp
+  | FailureOutput of Str.regexp
 
 type t = {
   name : string;
@@ -17,6 +18,8 @@ type t = {
   source_elpi : fname option;
   source_teyjus : fname option;
   deps_teyjus : fname list;
+  source_dune : fname option;
+  after: string list;
   typecheck : bool;
   input: fname option;
   expectation : expectation;
@@ -26,7 +29,8 @@ type t = {
 let tests = ref []
 
 let declare
-    name ~description ?source_elpi ?source_teyjus ?(deps_teyjus=[])
+    name ~description ?source_elpi ?source_teyjus ?(deps_teyjus=[]) ?source_dune
+    ?after
     ?(typecheck=true) ?input ?(expectation=Success)
     ?(outside_llam=false)
     ~category
@@ -34,8 +38,8 @@ let declare
 =
   if List.exists (fun { name = x; _ } -> x = name) !tests then
     failwith ("a test named " ^ name ^ " already exists");
-  begin match source_elpi, source_teyjus with
-    | None, None -> failwith ("test "^name^" has no sources");
+  begin match source_elpi, source_teyjus, source_dune with
+    | None, None, None -> failwith ("test "^name^" has no sources");
     | _ -> ()
   end;
   tests := { 
@@ -44,6 +48,8 @@ let declare
     source_elpi;
     source_teyjus;
     deps_teyjus;
+    source_dune;
+    after = (match after with None -> [] | Some x -> [x]);
     typecheck;
     input;
     expectation;
@@ -51,11 +57,22 @@ let declare
     outside_llam;
   } :: !tests
 
+module SM = Map.Make(String)
+module SS = Set.Make(String)
 
 let get filter =
-  List.filter (fun { name; _ } -> filter ~name) !tests
+  let alltests = List.fold_left (fun acc ({ name; _ } as t) -> SM.add name t acc ) SM.empty !tests in
+  let tests = List.filter (fun { name; _ } -> filter ~name) !tests in
+  let testset = List.fold_left (fun acc { name; _ } -> SS.add name acc ) SS.empty tests in
+  let deps = List.fold_left (fun acc { after; _ } -> List.fold_right SS.add after acc ) SS.empty tests in
+  let to_add = SS.fold (fun n acc -> if SS.mem n testset then acc else SS.add n acc) deps SS.empty in
+  let tests = (SS.elements to_add |> List.map (fun x -> SM.find x alltests)) @ tests in
+  List.sort (fun { name = n1; after = a1; _}  { name = n2; after = a2; _} ->
+    if List.mem n1 a2 then -1
+    else if List.mem n2 a1 then 1
+    else String.compare n1 n2
+    ) tests
 
-module SM = Map.Make(String)
 
 let names () =
   let m = ref SM.empty in
@@ -303,12 +320,21 @@ let () = Runner.declare
         Runner.Timeout timeout
       | Test.Failure, Util.Timeout ->
         Runner.Timeout timeout
-      | Test.Output rex, Util.Exit(_,walltime,mem) ->
-          if Util.with_log log (match_rex rex) then 
+      | Test.FailureOutput _, Util.Exit(0,walltime,mem) ->
+           Runner.Failure { walltime; typechecking = Util.with_log log read_tctime; execution = walltime; mem }
+     | Test.SuccessOutput rex, Util.Exit(0,walltime,mem) ->
+          if Util.with_log log (match_rex rex) then
             Runner.Success { walltime; typechecking = Util.with_log log read_tctime; execution = Util.with_log log read_time; mem }
           else
             Runner.Failure { walltime; typechecking = Util.with_log log read_tctime; execution = walltime; mem }
-      | Test.Output _, Util.Timeout ->
+      | Test.SuccessOutput _, Util.Exit(_,walltime,mem) ->
+          Runner.Failure { walltime; typechecking = Util.with_log log read_tctime; execution = walltime; mem }
+      | Test.FailureOutput rex, Util.Exit(_,walltime,mem) ->
+          if Util.with_log log (match_rex rex) then
+            Runner.Success { walltime; typechecking = Util.with_log log read_tctime; execution = Util.with_log log read_time; mem }
+          else
+            Runner.Failure { walltime; typechecking = Util.with_log log read_tctime; execution = walltime; mem }
+      | (Test.FailureOutput _ | Test.SuccessOutput _), Util.Timeout ->
         Runner.Timeout timeout
     in
     Runner.(Done { Runner.rc; executable; test; log = snd log })
@@ -382,13 +408,81 @@ let is_tjsim =
         Runner.Timeout timeout
       | Test.Failure, Util.Timeout ->
         Runner.Timeout timeout
-      | Test.Output _, Util.Exit(_,walltime,mem) ->
+      | (Test.SuccessOutput _ | Test.FailureOutput _), Util.Exit(_,walltime,mem) ->
         Runner.Success { walltime; typechecking = 0.0; execution = walltime; mem }
-      | Test.Output _, Util.Timeout ->
+      | (Test.SuccessOutput _ | Test.FailureOutput _), Util.Timeout ->
         Runner.Timeout timeout
     in
     Runner.Done { Runner.rc; executable; test; log = snd log }
   end
 
+end
+
+module Dune = struct
+
+let is_dune =
+  let rex = Str.regexp "dune" in
+  fun s -> Str.string_match rex (Filename.basename s) 0
+
+let is_dune_src = function
+  | None -> false
+  | Some s -> Filename.check_suffix s ".ml"
+
+let match_rex rex input_line =
+  let b = ref false in
+  try while true do
+    let l = input_line () in
+    try ignore(Str.search_forward rex l 0); b := true
+    with Not_found -> ()
+  done; !b
+  with End_of_file -> !b
+
+let () = Runner.declare
+  ~applicable:begin fun ~executable { source_dune; _ } ->
+    if is_dune executable && is_dune_src source_dune then Runner.Can_run_it else Runner.Not_for_me
+  end
+  ~run:begin fun ~executable ~timetool ~timeout ~env ~sources test ->
+  let source =
+    match test.Test.source_dune with Some x -> x | _ -> assert false in
+  if not (Sys.file_exists executable) then Runner.Skipped
+  else if not (Sys.file_exists (sources^source)) then Runner.Skipped
+  else
+    let log = Util.open_log ~executable test in
+    Util.write log (Printf.sprintf "executable: %s\n" executable);
+    let { Test.expectation; input; outside_llam = _ ; typecheck = _; _ } = test in
+    let sources = Str.global_replace (Str.regexp_string (Sys.getcwd () ^ "/")) "" sources in
+    let source = Filename.remove_extension source ^ ".exe" in
+    let args = ["exec"; sources ^ "/" ^ source; "--"; "-I"; "src/"] in
+    Util.write log (Printf.sprintf "args: %s\n" (String.concat " " args));
+    let rc =
+      match expectation, Util.exec ~timeout ~timetool ?input ~executable ~env ~log ~args () with
+      | Test.Success, Util.Exit(0,walltime,mem) ->
+        Runner.Success { walltime; typechecking = 0.0; execution = 0.0; mem }
+      | Test.Success, Util.Exit(_,walltime,mem)->
+        Runner.Failure { walltime; typechecking = 0.0; execution = 0.0; mem }
+      | Test.Failure, Util.Exit(0,walltime,mem) ->
+        Runner.Failure { walltime; typechecking = 0.0; execution = 0.0; mem }
+      | Test.Failure, Util.Exit(_,walltime,mem)->
+        Runner.Success { walltime; typechecking = 0.0; execution = 0.0; mem }
+      | Test.SuccessOutput rex, Util.Exit(0,walltime,mem) ->
+          if Util.with_log log (match_rex rex) then
+            Runner.Success { walltime; typechecking = 0.0; execution = 0.0; mem }
+          else
+            Runner.Failure { walltime; typechecking = 0.0; execution = walltime; mem }
+      | Test.FailureOutput _, Util.Exit(0,walltime,mem) ->
+            Runner.Failure { walltime; typechecking = 0.0; execution = walltime; mem }
+      | Test.SuccessOutput _, Util.Exit(_,walltime,mem) ->
+            Runner.Failure { walltime; typechecking = 0.0; execution = walltime; mem }
+      | Test.FailureOutput rex, Util.Exit(_,walltime,mem) ->
+          if Util.with_log log (match_rex rex) then
+            Runner.Success { walltime; typechecking = 0.0; execution = 0.0; mem }
+          else
+            Runner.Failure { walltime; typechecking = 0.0; execution = walltime; mem }
+      | _, Util.Timeout ->
+        Runner.Timeout timeout
+    in
+    Runner.(Done { Runner.rc; executable; test; log = snd log })
+
+  end
 
 end

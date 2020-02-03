@@ -14,6 +14,12 @@ module type Show1 = sig
   val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
 end
 
+module type Show2 = sig
+  type ('a,'b) t
+  val pp : (Format.formatter -> 'a -> unit) -> (Format.formatter -> 'b -> unit) -> Format.formatter -> ('a,'b) t -> unit
+  val show : (Format.formatter -> 'a -> unit) -> (Format.formatter -> 'b -> unit) -> ('a,'b) t -> string
+end
+
 module Map : sig
 
   module type S = sig
@@ -78,9 +84,14 @@ end
 
 module Digest : sig
   include module type of Digest
-  val pp : Format.formatter -> t -> unit
-  val show : t -> string
+  include Show with type t := t
 end
+
+module Hashtbl : sig
+  include module type of Hashtbl
+  include Show2 with type ('a,'b) t := ('a,'b) t
+end
+
 
 module Loc : sig
   type t = {
@@ -160,16 +171,18 @@ val pp_pair :
     Format.formatter -> 'a * 'b -> unit
 
 (* for open types *)
-type 'a extensible_printer
-val mk_extensible_printer : unit -> 'a extensible_printer
-val extend_printer :
-  'a extensible_printer ->
-  (Format.formatter -> 'a -> [`Printed | `Passed]) ->
+type 'a spaghetti_printer
+val mk_spaghetti_printer : unit -> 'a spaghetti_printer
+val set_spaghetti_printer :
+  'a spaghetti_printer ->
+  (Format.formatter -> 'a -> unit) ->
      unit
-val pp_extensible :
-  'a extensible_printer -> Format.formatter -> 'a -> unit
-val pp_extensible_any :
-  (UUID.t * Obj.t) extensible_printer -> id:UUID.t -> Format.formatter -> 'a -> unit
+val pp_spaghetti :
+  'a spaghetti_printer -> Format.formatter -> 'a -> unit
+val show_spaghetti :
+  'a spaghetti_printer -> 'a -> string
+val pp_spaghetti_any :
+  (UUID.t * Obj.t) spaghetti_printer -> id:UUID.t -> Format.formatter -> 'a -> unit
 
 (******************** runtime is reentrant ******************)
 

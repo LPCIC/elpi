@@ -57,3 +57,6 @@ val mkERROR : string -> diagnostic
 (* The string is the "file name" *)
 val in_stream  : (in_channel * string) API.Conversion.t
 val out_stream : (out_channel * string) API.Conversion.t
+
+(* This is the default checker [elpi-checker] *)
+val default_checker : unit -> API.Compile.program

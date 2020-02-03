@@ -4,7 +4,6 @@
 
 open API
 open RawData
-open Constants
 open Utils
 open BuiltInPredicate
 open Notation
@@ -41,15 +40,15 @@ let register_eval, register_eval_ty, lookup_eval, eval_declaration =
  (fun nargs (s,tys) f ->
    tys |> List.iter (fun ty ->
      let ty =
-       if nargs = 2 then 
+       if nargs = 2 then
          Printf.sprintf "type (%s) %s." s (str_of_ty nargs ty)
        else
          Printf.sprintf "type %s %s." s (str_of_ty nargs ty) in
      declaration := BuiltIn.LPCode ty :: !declaration);
-   Hashtbl.add evals (from_stringc s) f),
+   Hashtbl.add evals (Constants.declare_global_symbol s) f),
  (fun s ty f ->
    declaration := BuiltIn.LPCode (Printf.sprintf "type %s %s." s ty) :: !declaration;
-   Hashtbl.add evals (from_stringc s) f),
+   Hashtbl.add evals (Constants.declare_global_symbol s) f),
  Hashtbl.find evals,
  (fun () -> List.rev !declaration)
 ;;
@@ -710,13 +709,13 @@ let lp_builtins = let open BuiltIn in let open BuiltInData in [
   MLCode(Pred("string_to_term",
     In(string, "S",
     Out(any,   "T",
-    Easy       "parses a term T from S")),
-  (fun s _ ~depth ->
+    Full(ContextualConversion.unit_ctx, "parses a term T from S"))),
+  (fun s _ ~depth () () state ->
      try
        let loc = Ast.Loc.initial "(string_of_term)" in
        let t = Parse.goal loc s in
-       let t = Quotation.term_at ~depth t in
-       !:t
+       let state, t = Quotation.term_at ~depth state t in
+       state, !:t, []
      with
      | Parse.ParseError _ -> raise No_clause)),
   DocAbove);
@@ -724,15 +723,15 @@ let lp_builtins = let open BuiltIn in let open BuiltInData in [
   MLCode(Pred("readterm",
     In(in_stream, "InStream",
     Out(any,      "T",
-    Easy          "reads T from InStream")),
-  (fun (i,source_name) _ ~depth ->
+    Full(ContextualConversion.unit_ctx, "reads T from InStream"))),
+  (fun (i,source_name) _ ~depth () () state ->
      try
        let loc = Ast.Loc.initial source_name in
        let strm = Stream.of_channel i in
        let t = Parse.goal_from_stream loc strm in
-       let t = Quotation.term_at ~depth t in
-       !:t
-     with 
+       let state, t = Quotation.term_at ~depth state t in
+       state, !:t, []
+     with
      | Sys_error msg -> error msg
      | Parse.ParseError _ -> raise No_clause)),
   DocAbove);
@@ -802,17 +801,21 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in let open Context
      In(string, "QueryText",
      Out(list (poly "A"), "QuotedProgram",
      Out(poly "A",        "QuotedQuery",
-     Easy    ("quotes the program from FileName and the QueryText. "^
+     Full    (unit_ctx, "quotes the program from FileName and the QueryText. "^
               "See elpi-quoted_syntax.elpi for the syntax tree"))))),
-   (fun f s _ _ ~depth ->
-      let ap = Parse.program [f] in
-      let loc = Ast.Loc.initial "(quote_syntax)" in
-      let aq = Parse.goal loc s in
-      let p =
-        API.Compile.(program ~flags:default_flags dummy_header [ap]) in
-      let q = API.Compile.query p aq in
-      let qp, qq = Quotation.quote_syntax q in
-      !: qp +! qq)),
+   (fun f s _ _ ~depth _ _ state ->
+      let elpi, _ = Setup.init ~builtins:[BuiltIn.declare ~file_name:"(dummy)" []] ~basedir:Sys.(getcwd()) [] in
+      try
+        let ap = Parse.program ~elpi [f] in
+        let loc = Ast.Loc.initial "(quote_syntax)" in
+        let aq = Parse.goal loc s in
+        let p = Compile.(program ~flags:default_flags ~elpi [ap]) in
+        let q = API.Compile.query p aq in
+        let state, qp, qq = Quotation.quote_syntax_runtime state q in
+        state, !: qp +! qq, []
+      with Parse.ParseError (_,m) | Compile.CompileError (_,m) ->
+        Printf.eprintf "%s\n" m;
+        raise No_clause)),
   DocAbove);
 
   MLData loc;
@@ -1280,3 +1283,8 @@ let std_declarations =
 let std_builtins =
   BuiltIn.declare ~file_name:"builtin.elpi" std_declarations
 
+
+let default_checker () =
+  let elpi, _ = API.Setup.init ~builtins:[std_builtins] ~basedir:(Sys.getcwd ()) [] in
+  let ast = API.Parse.program_from_stream ~elpi (API.Ast.Loc.initial "(checker)") (Stream.of_string Builtin_checker.code) in
+  API.Compile.program ~flags:API.Compile.default_flags ~elpi [ast]

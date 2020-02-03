@@ -17,14 +17,16 @@ val precedence_of : Func.t -> fixity * int
 
 type gramext = { fix : fixity; sym : string; prec : int }
 
+type parser_state
+val dummy_state : parser_state
+
 (* Loads the basic grammar and sets the paths.
- * ~silent=true (default) does not print accumulated files *)
-val init : lp_syntax:gramext list -> paths:string list -> cwd:string ->
-  unit -> unit
+   Camlp5 limitation: the grammar is loaded once and forall. *)
+val init : lp_syntax:gramext list -> paths:string list -> cwd:string -> parser_state
 
 (* BUG: extending the grammar is imperative, cannot be undone *)
-val parse_program : print_accumulated_files:bool -> string list -> Program.t
-val parse_program_from_stream : print_accumulated_files:bool -> Loc.t -> char Stream.t -> Program.t
+val parse_program : parser_state -> print_accumulated_files:bool -> string list -> Program.t
+val parse_program_from_stream : parser_state -> print_accumulated_files:bool -> Loc.t -> char Stream.t -> Program.t
 val parse_goal : ?loc:Loc.t -> string -> Goal.t
 val parse_goal_from_stream : ?loc:Loc.t -> char Stream.t -> Goal.t
 

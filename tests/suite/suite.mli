@@ -6,7 +6,8 @@ type fname = string
 type expectation =
   | Success
   | Failure
-  | Output of Str.regexp
+  | SuccessOutput of Str.regexp
+  | FailureOutput of Str.regexp
 
 val declare :
   (*name*)string ->
@@ -14,6 +15,8 @@ val declare :
   ?source_elpi:fname ->
   ?source_teyjus:fname ->
   ?deps_teyjus:fname list ->
+  ?source_dune:fname ->
+  ?after:string ->
   ?typecheck:bool ->
   ?input:fname -> 
   ?expectation:expectation -> 
@@ -28,6 +31,8 @@ type t = {
   source_elpi : fname option;
   source_teyjus : fname option;
   deps_teyjus : fname list;
+  source_dune : fname option;
+  after : string list;
   typecheck : bool;
   input : fname option;
   expectation : expectation;

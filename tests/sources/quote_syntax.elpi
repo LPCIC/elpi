@@ -1,0 +1,2 @@
+main :-
+  quote_syntax "src/builtin.elpi" "main" A B, print B.

@@ -14,6 +14,12 @@ module type Show1 = sig
   val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
 end
 
+module type Show2 = sig
+  type ('a,'b) t
+  val pp : (Format.formatter -> 'a -> unit) -> (Format.formatter -> 'b -> unit) -> Format.formatter -> ('a,'b) t -> unit
+  val show : (Format.formatter -> 'a -> unit) -> (Format.formatter -> 'b -> unit) -> ('a,'b) t -> string
+end
+
 module Map = struct
 
   module type S = sig
@@ -91,6 +97,20 @@ module Digest = struct
   include Digest
   let show = Digest.to_hex
   let pp fmt d = Fmt.fprintf fmt "%s" (show d)
+end
+
+module Hashtbl = struct
+  include Hashtbl
+  let pp pa pb fmt h =
+   Format.fprintf fmt "{{ @[<hov 2>";
+   Hashtbl.iter (fun k v -> Format.fprintf fmt "%a -> %a;@ " pa k pb v) h;
+   Format.fprintf fmt "@] }}"
+  let show pa pb h =
+    let b = Buffer.create 20 in
+    let fmt = Format.formatter_of_buffer b in
+    pp pa pb fmt h;
+    Format.fprintf fmt "@?";
+    Buffer.contents b
 end
 
 module Loc = struct
@@ -190,7 +210,28 @@ let default_error ?loc s =
   Printf.eprintf "Fatal error: %s%s\n%!" (pp_loc_opt loc) s;
   exit 1
 let default_anomaly ?loc s =
-  Printf.eprintf "Anomaly: %s%s\n%!" (pp_loc_opt loc) s;
+  let trace =
+    match Printexc.(get_callstack max_int |> backtrace_slots) with
+    | None -> ""
+    | Some slots ->
+        let lines = Array.mapi Printexc.Slot.format slots in
+        let _, lines_repetitions =
+          List.fold_left (fun (pos,acc) l ->
+            match l with
+            | None -> pos+1, acc
+            | Some _ when pos = 0 -> pos+1, acc
+            | Some l ->
+                match acc with
+                | (l1,q) :: acc when l = l1 -> pos+1, (l1,q+1) :: acc
+                | _ -> pos+1, (l,1) :: acc)
+            (0,[]) (Array.to_list lines) in
+        let lines =
+          lines_repetitions |> List.map (function
+            | (l,1) -> l
+            | (l,n) -> l ^ Printf.sprintf " [%d times]" n) in
+        String.concat "\n" lines
+    in
+ Printf.eprintf "%s\nAnomaly: %s%s\n%!" trace (pp_loc_opt loc) s;
   exit 2
 let default_type_error ?loc s = default_error ?loc s
 let default_printf = Printf.printf
@@ -404,25 +445,20 @@ module UUID = struct
  include Self
 end        
 
-type 'a extensible_printer =
-  (Format.formatter -> 'a -> [`Printed | `Passed]) ref
-let mk_extensible_printer () =
-  ref (fun fmt _ -> Fmt.fprintf fmt "please extend this printer"; `Printed)
-let extend_printer r f =
-  let g = !r in
-  r := (fun fmt x ->
-          match f fmt x with
-          | `Printed -> `Printed
-          | `Passed -> g fmt x)
+type 'a spaghetti_printer =
+  (Format.formatter -> 'a -> unit) ref
+let mk_spaghetti_printer () =
+  ref (fun fmt _ -> Fmt.fprintf fmt "please extend this printer")
+let set_spaghetti_printer r f = r := f
 
-let pp_extensible r fmt x =
-  match !r fmt x with
-  | `Printed -> ()
-  | `Passed -> assert false
-let pp_extensible_any r ~id fmt x =
-  match !r fmt (id,Obj.repr x) with
-  | `Printed -> ()
-  | `Passed -> assert false
+let pp_spaghetti r fmt x = !r fmt x
+let show_spaghetti r x =
+  let b = Buffer.create 20 in
+  let fmt = Format.formatter_of_buffer b in
+  Format.fprintf fmt "%a%!" !r x;
+  Buffer.contents b
+
+let pp_spaghetti_any r ~id fmt x = !r fmt (id,Obj.repr x)
 
 module CData = struct
   type t = {

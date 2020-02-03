@@ -1,0 +1,7 @@
+(library (name sepcomp) (modules sepcomp_template) (libraries elpi))
+(executable (name sepcomp1) (modules sepcomp1) (libraries sepcomp))
+(executable (name sepcomp2) (modules sepcomp2) (libraries sepcomp))
+(executable (name sepcomp3) (modules sepcomp3) (libraries sepcomp))
+(executable (name sepcomp4) (modules sepcomp4) (libraries sepcomp))
+(executable (name sepcomp5) (modules sepcomp5) (libraries sepcomp))
+(executable (name sepcomp6) (modules sepcomp6) (libraries sepcomp))

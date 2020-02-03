@@ -18,6 +18,7 @@ BUILD=_build/default
 SHELL:=/bin/bash
 TIMEOUT=90.0
 RUNNERS=\
+  dune \
   $(shell pwd)/$(INSTALL)/bin/elpi \
   $(addprefix $(shell pwd)/,$(wildcard _build/git/*/$(INSTALL)/bin/elpi.git.*)) \
   $(shell if type tjsim >/dev/null 2>&1; then type -P tjsim; else echo; fi)
@@ -25,24 +26,11 @@ TIME=--time $(shell if type -P gtime >/dev/null 2>&1; then type -P gtime; else e
 STACK=32768
 DUNE_OPTS=
 
-# this is to work around https://github.com/ocaml/dune/issues/1212
-.merlin:
-	@dune build $(DUNE_OPTS) .merlin
-	@for ppx in `ls $$PWD/_build/default/.ppx/*/ppx.exe`; do\
-		if $$ppx --print-transformations | grep -q trace; then\
-	      echo PKG ppx_deriving.std ppx_deriving.runtime >> .merlin;\
-	      echo FLG -ppx \"$$ppx --as-ppx\" >> .merlin;\
-	      echo PKG ppx_deriving.std ppx_deriving.runtime >> src/.merlin;\
-	      echo FLG -ppx \"$$ppx --as-ppx\" >> src/.merlin;\
-		fi;\
-	done
-
 build:
-	@$(MAKE) --no-print-directory .merlin
-	dune build $(DUNE_OPTS) @install; RC=$?; $(MAKE) --no-print-directory .merlin; exit $$RC
+	dune build $(DUNE_OPTS) @install
 
 install:
-	dune install $(DUNE_OPTS) 
+	dune install $(DUNE_OPTS)
 
 doc:
 	dune build $(DUNE_OPTS) @doc

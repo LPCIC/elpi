@@ -6,7 +6,82 @@ module Fmt = Format
 module F = Ast.Func
 open Util
 open Data
-module C = Constants
+
+module C : sig
+
+  type t = Constants.t
+
+  module Map = Constants.Map
+  module Set = Constants.Set
+
+  val show : ?table:symbol_table -> t -> string
+  val pp : Fmt.formatter -> t -> unit
+
+  val mkConst : constant -> term
+  val mkAppL : constant -> term list -> term
+
+  val fresh_global_constant : unit -> constant * term
+
+  (* mkinterval d n 0 = [d; ...; d+n-1] *)
+  val mkinterval : int -> int -> int -> term list
+  val dummy : term
+
+  val table : symbol_table Fork.local_ref
+
+end = struct
+
+  type t = Constants.t
+  let dummy = Data.dummy
+
+let table = Fork.new_local {
+  c2s = Hashtbl.create 37;
+  c2t = Hashtbl.create 37;
+  frozen_constants = 0;
+}
+
+let show ?(table = !table) n =
+  try Hashtbl.find table.c2s n
+  with Not_found ->
+    if n >= 0 then "c" ^ string_of_int n
+    else "SYMBOL" ^ string_of_int n
+
+let pp fmt n = Format.fprintf fmt "%s" (show n)
+
+let mkConst x =
+  try Hashtbl.find !table.c2t x
+  with Not_found ->
+    let xx = Const x in
+    Hashtbl.add !table.c2t x xx;
+    xx
+  [@@inline]
+
+let fresh_global_constant () =
+   !table.frozen_constants <- !table.frozen_constants - 1;
+   let n = !table.frozen_constants in
+   let xx = Const n in
+   Hashtbl.add !table.c2s n ("frozen-" ^ string_of_int n);
+   Hashtbl.add !table.c2t n xx;
+   n, xx
+
+module Map = Constants.Map
+module Set = Constants.Set
+
+(* - negative constants are global names
+   - constants are hashconsed (terms)
+   - we use special constants to represent !, pi, sigma *)
+
+(* mkinterval d n 0 = [d; ...; d+n-1] *)
+let rec mkinterval depth argsno n =
+ if n = argsno then []
+ else mkConst (n+depth)::mkinterval depth argsno (n+1)
+;;
+
+let mkAppL c = function
+  | [] -> mkConst c
+  | x::xs -> mkApp c x xs [@@inline]
+
+end
+let mkConst = C.mkConst
 
 (* Dereferencing an UVar(r,args) when !!r != dummy requires a function
    of this kind.  The pretty printer needs one but will only be defined
@@ -15,14 +90,14 @@ type 'args deref_fun =
   ?avoid:uvar_body -> from:int -> to_:int -> 'args -> term -> term
 
 module Pp : sig
- 
+
   (* Low level printing *)
-  val ppterm : ?pp_ctx:(string Util.PtrMap.t * int) ref -> ?min_prec:int ->
+  val ppterm : ?pp_ctx:pp_ctx -> ?min_prec:int ->
     (*depth:*)int -> (*names:*)string list -> (*argsdepth:*)int -> env ->
     Fmt.formatter -> term -> unit
 
   (* For user consumption *)
-  val uppterm : ?pp_ctx:(string Util.PtrMap.t * int) ref -> ?min_prec:int ->
+  val uppterm : ?pp_ctx:pp_ctx -> ?min_prec:int ->
     (*depth:*)int -> (*names:*)string list -> (*argsdepth:*)int -> env ->
     Fmt.formatter -> term -> unit
 
@@ -32,6 +107,10 @@ module Pp : sig
 
   (* To put it in the solution *)
   val uv_names : (string PtrMap.t * int) Fork.local_ref
+
+  val pp_oref : Format.formatter -> (Util.UUID.t * Obj.t) -> unit
+
+  val pp_constant : Format.formatter -> constant -> unit
 
 end = struct (* {{{ *)
 
@@ -45,23 +124,23 @@ let appl_prec = Parser.appl_precedence
 let lam_prec = Parser.lam_precedence
 let inf_prec = Parser.inf_precedence
 
-let xppterm ~nice ?(pp_ctx=uv_names) ?(min_prec=min_prec) depth0 names argsdepth env f t =
+let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=min_prec) depth0 names argsdepth env f t =
   let pp_app f pphd pparg ?pplastarg (hd,args) =
    if args = [] then pphd f hd
    else
     Fmt.fprintf f "@[<hov 1>%a@ %a@]" pphd hd
      (pplist pparg ?pplastelem:pplastarg " ") args in
-  let ppconstant f c = Fmt.fprintf f "%s" (C.show c) in
+  let ppconstant f c = Fmt.fprintf f "%s" (C.show ~table:pp_ctx.table c) in
   let rec pp_uvar prec depth vardepth args f r =
    if !!r == C.dummy then begin
     let s =
-     try PtrMap.find r (fst !pp_ctx)
+     try PtrMap.find r (fst !(pp_ctx.uv_names))
      with Not_found ->
-      let m, n = !pp_ctx in
+      let m, n = !(pp_ctx.uv_names) in
       let s = "X" ^ string_of_int n in
       let n = n + 1 in
       let m = PtrMap.add r s m in
-      pp_ctx := (m,n);
+      pp_ctx.uv_names := (m,n);
       s
     in
      Fmt.fprintf f "%s%s%s" s
@@ -86,10 +165,10 @@ let xppterm ~nice ?(pp_ctx=uv_names) ?(min_prec=min_prec) depth0 names argsdepth
 
   (* ::(a, ::(b, nil))  -->  [a,b] *)
   and flat_cons_to_list depth acc t = match t with
-      UVar (r,vardepth,terms) when !!r != C.dummy -> 
+      UVar (r,vardepth,terms) when !!r != C.dummy ->
        flat_cons_to_list depth acc
         (!do_deref ~from:vardepth ~to_:depth terms !!r)
-    | AppUVar (r,vardepth,terms) when !!r != C.dummy -> 
+    | AppUVar (r,vardepth,terms) when !!r != C.dummy ->
        flat_cons_to_list depth acc
         (!do_app_deref ~from:vardepth ~to_:depth terms !!r)
     | Cons (x,y) -> flat_cons_to_list depth (x::acc) y
@@ -99,16 +178,16 @@ let xppterm ~nice ?(pp_ctx=uv_names) ?(min_prec=min_prec) depth0 names argsdepth
       Lam _ -> true
     | UVar (r,vardepth,terms) when !!r != C.dummy ->
        is_lambda depth (!do_deref ~from:vardepth ~to_:depth terms !!r)
-    | AppUVar (r,vardepth,terms) when !!r != C.dummy -> 
+    | AppUVar (r,vardepth,terms) when !!r != C.dummy ->
        is_lambda depth (!do_app_deref ~from:vardepth ~to_:depth terms !!r)
     | _ -> false
   and aux_last prec depth f t =
    if nice then begin
    match t with
      Lam _ -> aux min_prec depth f t
-   | UVar (r,vardepth,terms) when !!r != C.dummy -> 
+   | UVar (r,vardepth,terms) when !!r != C.dummy ->
       aux_last prec depth f (!do_deref ~from:vardepth ~to_:depth terms !!r)
-   | AppUVar (r,vardepth,terms) when !!r != C.dummy -> 
+   | AppUVar (r,vardepth,terms) when !!r != C.dummy ->
       aux_last prec depth f
        (!do_app_deref ~from:vardepth ~to_:depth terms !!r)
    | _ -> aux prec depth f t
@@ -126,9 +205,9 @@ let xppterm ~nice ?(pp_ctx=uv_names) ?(min_prec=min_prec) depth0 names argsdepth
       if last != Nil then begin
        Fmt.fprintf f " | " ;
        aux prec 1 f last
-      end;   
+      end;
       Fmt.fprintf f "]"
-    | Const s -> ppconstant f s 
+    | Const s -> ppconstant f s
     | App (hd,x,xs) ->
        (try
          let assoc,hdlvl =
@@ -160,10 +239,10 @@ let xppterm ~nice ?(pp_ctx=uv_names) ?(min_prec=min_prec) depth0 names argsdepth
          let lastarg = List.nth (x::xs) (List.length xs) in
          let hdlvl =
           if is_lambda depth lastarg then lam_prec
-          else if hd == C.andc then 110 
+          else if hd == Global_symbols.andc then 110
           else appl_prec in
          with_parens hdlvl (fun _ ->
-          if hd == C.andc then
+          if hd == Global_symbols.andc then
             pplist (aux inf_prec depth) ~pplastelem:(aux_last inf_prec depth) ", " f (x::xs)
           else pp_app f ppconstant (aux inf_prec depth)
                  ~pplastarg:(aux_last inf_prec depth) (hd,x::xs)))
@@ -186,7 +265,7 @@ let xppterm ~nice ?(pp_ctx=uv_names) ?(min_prec=min_prec) depth0 names argsdepth
         pp_app f (pp_uvar inf_prec depth vardepth 0) ppconstant (r,args))
     | UVar (r,vardepth,argsno) ->
        pp_uvar prec depth vardepth argsno f r
-    | AppUVar (r,vardepth,terms) when !!r != C.dummy && nice -> 
+    | AppUVar (r,vardepth,terms) when !!r != C.dummy && nice ->
        aux prec depth f (!do_app_deref ~from:vardepth ~to_:depth terms !!r)
     | AppUVar (r,vardepth,terms) -> 
        with_parens appl_prec (fun _ ->
@@ -214,15 +293,17 @@ let xppterm ~nice ?(pp_ctx=uv_names) ?(min_prec=min_prec) depth0 names argsdepth
 let ppterm = xppterm ~nice:false
 let uppterm = xppterm ~nice:true
 
-let () = extend_printer pp_oref (fun fmt (id,t) ->
-  if not (UUID.equal id id_term) then `Passed
+let pp_oref fmt (id,t) =
+  if not (UUID.equal id id_term) then anomaly "pp_oref"
   else
     let t : term = Obj.obj t in
     if t == C.dummy then Fmt.fprintf fmt "_"
-    else uppterm 0  [] 0 empty_env fmt t;
-    `Printed)
+    else uppterm 0  [] 0 empty_env fmt t
+
+let pp_constant = C.pp
 
 end (* }}} *)
+
 open Pp
 
 (******************************************************************************
@@ -260,10 +341,10 @@ module ConstraintStoreAndTrail : sig
 
   val contents :
     ?overlapping:uvar_body list -> unit -> (constraint_def * blockers) list
-  val print : ?pp_ctx:(string Util.PtrMap.t * int) ref -> Fmt.formatter -> (constraint_def * blockers) list -> unit
-  val pp_stuck_goal : ?pp_ctx:(string Util.PtrMap.t * int) ref -> Fmt.formatter -> stuck_goal -> unit
+  val print : ?pp_ctx:pp_ctx -> Fmt.formatter -> (constraint_def * blockers) list -> unit
+  val pp_stuck_goal : ?pp_ctx:pp_ctx -> Fmt.formatter -> stuck_goal -> unit
 
-  val state : state Fork.local_ref
+  val state : State.t Fork.local_ref
 
   (* ---------------------------------------------------- *)
 
@@ -286,7 +367,7 @@ module ConstraintStoreAndTrail : sig
 
   (* backtrack *)
   val undo :
-    old_trail:trail -> ?old_state:state -> unit -> unit
+    old_trail:trail -> ?old_state:State.t -> unit -> unit
 
   val print_trail : Fmt.formatter -> unit
 
@@ -304,7 +385,7 @@ end = struct (* {{{ *)
  }
 
   let state =
-    Fork.new_local (State.init () |> State.end_goal_compilation StrMap.empty)
+    Fork.new_local (State.init () |> State.end_goal_compilation StrMap.empty |> State.end_compilation)
   let read_custom_constraint ct =
     State.get ct !state
   let update_custom_constraint ct f =
@@ -861,7 +942,7 @@ let rec move ~adepth:argsdepth e ?avoid ~from ~to_ t =
          AppUVar (r,vardepth,List.map (maux e depth) args)
        else if List.for_all (deterministic_restriction e ~args_safe:(argsdepth=to_)) args then
           (* Code for deterministic restriction *)
-          
+
           let pruned = ref (vardepth > to_) in
           let orig_argsno = List.length args in
           let filteredargs_vardepth = ref [] in
@@ -1111,7 +1192,7 @@ let rec is_flex ~depth =
   | Arg _ | AppArg _ -> anomaly "is_flex called on Args"
   | UVar ({ contents = t }, vardepth, args) when t != C.dummy ->
      is_flex ~depth (deref_uv ~from:vardepth ~to_:depth args t)
-  | AppUVar ({ contents = t }, vardepth, args) when t != C.dummy -> 
+  | AppUVar ({ contents = t }, vardepth, args) when t != C.dummy ->
      is_flex ~depth (deref_appuv ~from:vardepth ~to_:depth args t)
   | UVar (r, _, _) | AppUVar (r, _, _) -> Some r
   | Const _ | Lam _ | App _ | Builtin _ | CData _ | Cons _ | Nil | Discard -> None
@@ -1153,11 +1234,11 @@ let is_llam lvl args adepth bdepth depth left e =
   let deref_to_const = function
     | UVar ({ contents = t }, from, args) when t != C.dummy ->
         get_con (deref_uv ~from ~to_ args t)
-    | AppUVar ({ contents = t }, from, args) when t != C.dummy -> 
+    | AppUVar ({ contents = t }, from, args) when t != C.dummy ->
         get_con (deref_appuv ~from ~to_ args t)
     | Arg (i,args) when e.(i) != C.dummy ->
         get_con (deref_uv ~from:adepth ~to_ args e.(i))
-    | AppArg (i,args) when e.(i) != C.dummy -> 
+    | AppArg (i,args) when e.(i) != C.dummy ->
         get_con (deref_appuv ~from:adepth ~to_ args e.(i))
     | Const x -> if not left && x >= bdepth then x + (adepth-bdepth) else x
     | _ -> raise RestrictionFailure
@@ -1375,13 +1456,13 @@ let rec unif matching depth adepth a bdepth b e =
    begin let delta = adepth - bdepth in
    (delta = 0 && a == b) || match a,b with
     | (Discard, _ | _, Discard) -> true
-  
+
    (* _ as X binding *)
-   | _, App(c,arg,[(Arg _ | AppArg _) as as_this]) when c == C.asc ->
+   | _, App(c,arg,[(Arg _ | AppArg _) as as_this]) when c == Global_symbols.asc ->
       unif matching depth adepth a bdepth arg e &&
-      unif matching depth adepth a bdepth as_this e 
-   | _, App(c,arg,_) when c == C.asc -> error "syntax error in as"
-   | App(c,arg,_), _ when c == C.asc ->
+      unif matching depth adepth a bdepth as_this e
+   | _, App(c,arg,_) when c == Global_symbols.asc -> error "syntax error in as"
+   | App(c,arg,_), _ when c == Global_symbols.asc ->
       unif matching depth adepth arg bdepth b e
 
 (* TODO: test if it is better to deref_uv first or not, i.e. the relative order
@@ -1411,7 +1492,7 @@ let rec unif matching depth adepth a bdepth b e =
    (* deref_uv *)
    | UVar ({ contents = t }, from, args), _ when t != C.dummy ->
       unif matching depth adepth (deref_uv ~from ~to_:(adepth+depth) args t) bdepth b e
-   | AppUVar ({ contents = t }, from, args), _ when t != C.dummy -> 
+   | AppUVar ({ contents = t }, from, args), _ when t != C.dummy ->
       unif matching depth adepth (deref_appuv ~from ~to_:(adepth+depth) args t) bdepth b e
    | _, UVar ({ contents = t }, from, args) when t != C.dummy ->
       unif matching depth adepth a bdepth (deref_uv ~from ~to_:(bdepth+depth) args t) empty_env
@@ -1423,7 +1504,7 @@ let rec unif matching depth adepth a bdepth b e =
        *   args not living in to_ but in bdepth+depth *)
       unif matching depth adepth a adepth
         (deref_uv ~from:adepth ~to_:(adepth+depth) args e.(i)) empty_env
-   | _, AppArg (i,args) when e.(i) != C.dummy -> 
+   | _, AppArg (i,args) when e.(i) != C.dummy ->
 (*        if matching then raise Non_linear; *)
       (* XXX BROKEN deref_uv invariant XXX
        *   args not living in to_ but in bdepth+depth
@@ -1435,26 +1516,26 @@ let rec unif matching depth adepth a bdepth b e =
         (deref_appuv ~from:adepth ~to_:(adepth+depth) args e.(i)) empty_env
 
    (* UVar introspection (matching) *)
-   | (UVar _ | AppUVar _), Const c when c == C.uvarc && matching -> true
-   | UVar(r,vd,ano), App(c,hd,[]) when c == C.uvarc && matching ->
+   | (UVar _ | AppUVar _), Const c when c == Global_symbols.uvarc && matching -> true
+   | UVar(r,vd,ano), App(c,hd,[]) when c == Global_symbols.uvarc && matching ->
       unif matching depth adepth (UVar(r,vd,ano)) bdepth hd e
-   | AppUVar(r,vd,_), App(c,hd,[]) when c == C.uvarc && matching ->
+   | AppUVar(r,vd,_), App(c,hd,[]) when c == Global_symbols.uvarc && matching ->
       unif matching depth adepth (UVar(r,vd,0)) bdepth hd e
-   | UVar(r,vd,ano), App(c,hd,[arg]) when c == C.uvarc && matching ->
+   | UVar(r,vd,ano), App(c,hd,[arg]) when c == Global_symbols.uvarc && matching ->
       let r_exp = oref C.dummy in
       let exp = UVar(r_exp,0,0) in
       r @:= UVar(r_exp,0,vd);
       unif matching depth adepth exp bdepth hd e &&
       let args = list_to_lp_list (C.mkinterval 0 (vd+ano) 0) in
       unif matching depth adepth args bdepth arg e
-   | AppUVar(r,vd,args), App(c,hd,[arg]) when c == C.uvarc && matching ->
+   | AppUVar(r,vd,args), App(c,hd,[arg]) when c == Global_symbols.uvarc && matching ->
       let r_exp = oref C.dummy in
       let exp = UVar(r_exp,0,0) in
       r @:= UVar(r_exp,0,vd);
       unif matching depth adepth exp bdepth hd e &&
       let args = list_to_lp_list (C.mkinterval 0 vd 0 @ args) in
       unif matching depth adepth args bdepth arg e
-   | _, (Const c | App(c,_,[])) when c == C.uvarc && matching -> false
+   | _, (Const c | App(c,_,[])) when c == Global_symbols.uvarc && matching -> false
    (* On purpose we let the fully applied uvarc pass, so that at the
     * meta level one can unify fronzen constants. One can use the var builtin
     * to discriminate the two cases, as in "p (uvar F L as X) :- var X, .." *)
@@ -1737,6 +1818,234 @@ open HO
 let _ = do_deref := deref_uv;;
 let _ = do_app_deref := deref_appuv;;
 
+
+(* Built-in predicates and their FFI *************************************** *)
+
+
+module FFI = struct
+
+let builtins : Data.BuiltInPredicate.builtin_table ref = Fork.new_local (Hashtbl.create 17)
+let lookup c = Hashtbl.find !builtins c
+
+let type_err ~depth bname n ty t =
+  type_error begin
+    "builtin " ^ bname ^ ": " ^
+    (if n = 0 then "" else string_of_int n ^ "th argument: ") ^
+    "expected " ^ ty ^ ": got " ^
+    match t with
+    | None -> "_"
+    | Some t -> Format.asprintf "%a" (Pp.uppterm depth [] 0 empty_env) t
+  end
+
+let wrap_type_err bname n f x =
+  try f x
+  with Conversion.TypeErr(ty,depth,t) -> type_err ~depth bname n (Conversion.show_ty_ast ty) (Some t)
+
+let arity_err ~depth bname n t =
+  type_error ("builtin " ^ bname ^ ": " ^
+    match t with
+    | None -> string_of_int n ^ "th argument is missing"
+    | Some t -> "too many arguments at: " ^
+                  Format.asprintf "%a" (Pp.uppterm depth [] 0 empty_env) t)
+
+let out_of_term ~depth readback n bname state t =
+  match deref_head ~depth t with
+  | Discard -> Data.BuiltInPredicate.Discard
+  | _ -> Data.BuiltInPredicate.Keep
+
+let in_of_term ~depth readback n bname state t =
+  wrap_type_err bname n (readback ~depth state) t
+
+let inout_of_term ~depth readback n bname state t =
+  wrap_type_err bname n (readback ~depth state) t
+
+let mk_out_assign ~depth embed bname state input v  output =
+  match output, input with
+  | None, Data.BuiltInPredicate.Discard -> state, []
+  | Some _, Data.BuiltInPredicate.Discard -> state, [] (* We could warn that such output was generated without being required *)
+  | Some t, Data.BuiltInPredicate.Keep ->
+     let state, t, extra = embed ~depth state t in
+     state, extra @ [App(Global_symbols.eqc, v, [t])]
+  | None, Data.BuiltInPredicate.Keep -> state, []
+
+let mk_inout_assign ~depth embed bname state input v  output =
+  match output with
+  | None -> state, []
+  | Some t ->
+     let state, t, extra = embed ~depth state (Data.BuiltInPredicate.Data t) in
+     state, extra @ [App(Global_symbols.eqc, v, [t])]
+
+let in_of_termC ~depth readback n bname hyps constraints state t =
+  wrap_type_err bname n (readback ~depth hyps constraints state) t
+
+let inout_of_termC  = in_of_termC
+
+let mk_out_assignC ~depth embed bname hyps constraints state input v  output =
+  match output, input with
+  | None, Data.BuiltInPredicate.Discard -> state, []
+  | Some _, Data.BuiltInPredicate.Discard -> state, [] (* We could warn that such output was generated without being required *)
+  | Some t, Data.BuiltInPredicate.Keep ->
+     let state, t, extra = embed ~depth hyps constraints state t in
+     state, extra @ [App(Global_symbols.eqc, v, [t])]
+  | None, Data.BuiltInPredicate.Keep -> state, []
+
+let mk_inout_assignC ~depth embed bname hyps constraints state input v  output =
+  match output with
+  | Some t ->
+     let state, t, extra = embed ~depth hyps constraints state (Data.BuiltInPredicate.Data t) in
+     state, extra @ [App(Global_symbols.eqc, v, [t])]
+  | None -> state, []
+
+let map_acc f s l =
+   let rec aux acc extra s = function
+   | [] -> s, List.rev acc, List.(concat (rev extra))
+   | x :: xs ->
+       let s, x, gls = f s x in
+       aux (x :: acc) (gls :: extra) s xs
+   in
+     aux [] [] s l
+
+let call (Data.BuiltInPredicate.Pred(bname,ffi,compute)) ~depth hyps constraints state data =
+  let rec aux : type i o h c.
+    (i,o,h,c) Data.BuiltInPredicate.ffi -> h -> c -> compute:i -> reduce:(State.t -> o -> State.t * extra_goals) ->
+       term list -> int -> State.t -> extra_goals list -> State.t * extra_goals =
+  fun ffi ctx constraints ~compute ~reduce data n state extra ->
+    match ffi, data with
+    | Data.BuiltInPredicate.Easy _, [] ->
+       let result = wrap_type_err bname 0 (fun () -> compute ~depth) () in
+       let state, l = reduce state result in
+       state, List.(concat (rev extra) @ rev l)
+    | Data.BuiltInPredicate.Read _, [] ->
+       let result = wrap_type_err bname 0 (compute ~depth ctx constraints) state in
+       let state, l = reduce state result in
+       state, List.(concat (rev extra) @ rev l)
+    | Data.BuiltInPredicate.Full _, [] ->
+       let state, result, gls = wrap_type_err bname 0 (compute ~depth ctx constraints) state in
+       let state, l = reduce state result in
+       state, List.(concat (rev extra)) @ gls @ List.rev l
+    | Data.BuiltInPredicate.VariadicIn(_,{ ContextualConversion.readback }, _), data ->
+       let state, i, gls =
+         map_acc (in_of_termC ~depth readback n bname ctx constraints) state data in
+       let state, rest = wrap_type_err bname 0 (compute i ~depth ctx constraints) state in
+       let state, l = reduce state rest in
+       state, List.(gls @ concat (rev extra) @ rev l)
+    | Data.BuiltInPredicate.VariadicOut(_,{ ContextualConversion.embed; readback }, _), data ->
+       let i = List.map (out_of_term ~depth readback n bname state) data in
+       let state, (rest, out) = wrap_type_err bname 0 (compute i ~depth ctx constraints) state in
+       let state, l = reduce state rest in
+       begin match out with
+         | Some out ->
+             let state, ass =
+               map_acc3 (mk_out_assignC ~depth embed bname ctx constraints) state i data out in 
+             state, List.(concat (rev extra) @ rev (concat ass) @ l)
+         | None -> state, List.(concat (rev extra) @ rev l)
+       end
+    | Data.BuiltInPredicate.VariadicInOut(_,{ ContextualConversion.embed; readback }, _), data ->
+       let state, i, gls =
+         map_acc (inout_of_termC ~depth readback n bname ctx constraints) state data in
+       let state, (rest, out) = wrap_type_err bname 0 (compute i ~depth ctx constraints) state in
+       let state, l = reduce state rest in
+       begin match out with
+         | Some out ->
+             let state, ass =
+               map_acc3 (mk_inout_assignC ~depth embed bname ctx constraints) state i data out in 
+             state, List.(gls @ concat (rev extra) @ rev (concat ass) @ l)
+         | None -> state, List.(gls @ concat (rev extra) @ rev l)
+       end
+    | Data.BuiltInPredicate.CIn({ ContextualConversion.readback }, _, ffi), t :: rest ->
+        let state, i, gls = in_of_termC ~depth readback n bname ctx constraints state t in
+        aux ffi ctx constraints ~compute:(compute i) ~reduce rest (n + 1) state (gls :: extra)
+    | Data.BuiltInPredicate.COut({ ContextualConversion.embed; readback }, _, ffi), t :: rest ->
+        let i = out_of_term ~depth readback n bname state t in
+        let reduce state (rest, out) =
+          let state, l = reduce state rest in
+          let state, ass = mk_out_assignC ~depth embed bname ctx constraints state i t out in
+          state, ass @ l in
+        aux ffi ctx constraints ~compute:(compute i) ~reduce rest (n + 1) state extra
+    | Data.BuiltInPredicate.CInOut({ ContextualConversion.embed; readback }, _, ffi), t :: rest ->
+        let state, i, gls = inout_of_termC ~depth readback n bname ctx constraints state t in
+        let reduce state (rest, out) =
+          let state, l = reduce state rest in
+          let state, ass = mk_inout_assignC ~depth embed bname ctx constraints state i t out in
+          state, ass @ l in
+        aux ffi ctx constraints ~compute:(compute i) ~reduce rest (n + 1) state (gls :: extra)
+    | Data.BuiltInPredicate.In({ Conversion.readback }, _, ffi), t :: rest ->
+        let state, i, gls = in_of_term ~depth readback n bname state t in
+        aux ffi ctx constraints ~compute:(compute i) ~reduce rest (n + 1) state (gls :: extra)
+    | Data.BuiltInPredicate.Out({ Conversion.embed; readback }, _, ffi), t :: rest ->
+        let i = out_of_term ~depth readback n bname state t in
+        let reduce state (rest, out) =
+          let state, l = reduce state rest in
+          let state, ass = mk_out_assign ~depth embed bname state i t out in
+          state, ass @ l in
+        aux ffi ctx constraints ~compute:(compute i) ~reduce rest (n + 1) state extra
+    | Data.BuiltInPredicate.InOut({ Conversion.embed; readback }, _, ffi), t :: rest ->
+        let state, i, gls = inout_of_term ~depth readback n bname state t in
+        let reduce state (rest, out) =
+          let state, l = reduce state rest in
+          let state, ass = mk_inout_assign ~depth embed bname state i t out in
+          state, ass @ l in
+        aux ffi ctx constraints ~compute:(compute i) ~reduce rest (n + 1) state (gls :: extra)
+
+    | _, t :: _ -> arity_err ~depth bname n (Some t)
+    | _, [] -> arity_err ~depth bname n None
+
+  in
+  let rec aux_ctx : type i o h c. (i,o,h,c) Data.BuiltInPredicate.ffi -> (h,c) ContextualConversion.ctx_readback = function
+    | Data.BuiltInPredicate.Full(f,_) -> f
+    | Data.BuiltInPredicate.Read(f,_) -> f
+    | Data.BuiltInPredicate.VariadicIn(f,_,_) -> f
+    | Data.BuiltInPredicate.VariadicOut(f,_,_) -> f
+    | Data.BuiltInPredicate.VariadicInOut(f,_,_) -> f
+    | Data.BuiltInPredicate.Easy _ -> ContextualConversion.unit_ctx
+    | Data.BuiltInPredicate.In(_,_,rest) -> aux_ctx rest
+    | Data.BuiltInPredicate.Out(_,_,rest) -> aux_ctx rest
+    | Data.BuiltInPredicate.InOut(_,_,rest) -> aux_ctx rest
+    | Data.BuiltInPredicate.CIn(_,_,rest) -> aux_ctx rest
+    | Data.BuiltInPredicate.COut(_,_,rest) -> aux_ctx rest
+    | Data.BuiltInPredicate.CInOut(_,_,rest) -> aux_ctx rest
+  in
+    let reduce state _ = state, [] in
+    let state, ctx, csts, gls_ctx = aux_ctx ffi ~depth hyps constraints state in
+    let state, gls = aux ffi ctx csts ~compute ~reduce data 1 state [] in
+    state, gls_ctx @ gls
+;;
+
+end
+
+let rec embed_query_aux : type a. mk_Arg:(State.t -> name:string -> args:term list -> State.t * term) -> depth:int -> predicate:constant -> term list -> term list -> State.t -> a Query.arguments -> State.t * term
+  = fun ~mk_Arg ~depth ~predicate gls args state descr ->
+    match descr with
+    | Data.Query.D(d,x,rest) ->
+        let state, x, glsx = d.Conversion.embed ~depth state x in
+        embed_query_aux ~mk_Arg ~depth ~predicate (gls @ glsx) (x :: args) state rest
+    | Data.Query.Q(d,name,rest) ->
+        let state, x = mk_Arg state ~name ~args:[] in
+        embed_query_aux ~mk_Arg ~depth ~predicate gls (x :: args) state rest
+    | Data.Query.N ->
+        let args = List.rev args in
+        state,
+        match gls with
+        | [] -> C.mkAppL predicate args
+        | gls -> C.mkAppL Global_symbols.andc (gls @ [C.mkAppL predicate args])
+;;
+
+let embed_query ~mk_Arg ~depth state (Query.Query { predicate; arguments }) =
+    embed_query_aux  ~mk_Arg ~depth ~predicate [] [] state arguments
+
+let rec query_solution_aux : type a. a Query.arguments -> term StrMap.t -> State.t -> a
+ = fun args assignments state ->
+     match args with
+     | Data.Query.N -> ()
+     | Data.Query.D(_,_,args) -> query_solution_aux args assignments state
+     | Data.Query.Q(d,name,args) ->
+         let x = StrMap.find name assignments in
+         let state, x, _gls = d.Conversion.readback ~depth:0 state x in
+         x, query_solution_aux args assignments state
+
+let output arguments assignments state =
+  query_solution_aux arguments assignments state
+
 (******************************************************************************
   Indexing
  ******************************************************************************)
@@ -1765,16 +2074,16 @@ type clause_arg_classification =
 
 let rec classify_clause_arg ~depth matching t =
   match deref_head ~depth t with
-  | Const k when k == C.uvarc -> MustBeVariable
+  | Const k when k == Global_symbols.uvarc -> MustBeVariable
   | Const k -> Rigid(k,matching)
-  | Nil -> Rigid (C.nilc,matching)
-  | Cons _ -> Rigid (C.consc,matching)
-  | App (k,_,_) when k == C.uvarc -> MustBeVariable
-  | App (k,a,_) when k == C.asc -> classify_clause_arg ~depth matching a
+  | Nil -> Rigid (Global_symbols.nilc,matching)
+  | Cons _ -> Rigid (Global_symbols.consc,matching)
+  | App (k,_,_) when k == Global_symbols.uvarc -> MustBeVariable
+  | App (k,a,_) when k == Global_symbols.asc -> classify_clause_arg ~depth matching a
   | (App (k,_,_) | Builtin (k,_)) -> Rigid (k,matching)
   | Lam _ -> Variable (* loose indexing to enable eta *)
   | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> Variable
-  | CData d -> 
+  | CData d ->
      let hash = -(CData.hash d) in
      if hash > mustbevariablec then Rigid (hash,matching)
      else Rigid (hash+1,matching)
@@ -1785,9 +2094,9 @@ let rec classify_clause_argno ~depth argno mode = function
   | _ :: xs -> classify_clause_argno ~depth (argno-1) (tail_opt mode) xs
 
 let dec_to_bin2 num =
-  let rec aux x = 
+  let rec aux x =
     if x==1 then ["1"] else
-    if x==0 then ["0"] else 
+    if x==0 then ["0"] else
     if x mod 2 == 1 then "1" :: aux (x/2)
     else "0" :: aux (x/2)
   in
@@ -1820,10 +2129,10 @@ let hash_arg_list goal hd ~depth args mode spec =
   and aux_arg size matching deep arg =
     let h =
       match deref_head ~depth arg with
-      | App (k,a,_) when k == C.asc -> aux_arg size matching deep a
-      | Const k when k == C.uvarc ->
+      | App (k,a,_) when k == Global_symbols.asc -> aux_arg size matching deep a
+      | Const k when k == Global_symbols.uvarc ->
           hash size mustbevariablec
-      | App(k,_,_) when k == C.uvarc && deep = 1 ->
+      | App(k,_,_) when k == Global_symbols.uvarc && deep = 1 ->
           hash size mustbevariablec
       | Const k -> hash size k
       | App(k,_,_) when deep = 1 -> hash size k
@@ -1838,12 +2147,12 @@ let hash_arg_list goal hd ~depth args mode spec =
       | (UVar _ | AppUVar _) when matching -> all_1 size
       | (UVar _ | AppUVar _) -> if goal then all_0 size else all_1 size
       | (Arg _ | AppArg _) -> all_1 size
-      | Nil -> hash size C.nilc
+      | Nil -> hash size Global_symbols.nilc
       | Cons (x,xs) ->
           let size = size / 2 in
           let self = aux_arg size matching (deep-1) in
           let shift = shift size in
-          (hash size C.consc) lor (shift 1 (self x))
+          (hash size Global_symbols.consc) lor (shift 1 (self x))
       | CData s -> hash size (CData.hash s)
       | Lam _ -> all_1 size
       | Discard -> all_1 size
@@ -1951,7 +2260,7 @@ let add_clauses ~depth clauses p =
   p
 
 let make_index ~depth ~indexing p =
-  let m = Constants.Map.fold (fun predicate (mode, indexing) m ->
+  let m = C.Map.fold (fun predicate (mode, indexing) m ->
     match indexing with
     | Hash args ->
       Ptmap.add predicate (BitHash {
@@ -1990,12 +2299,12 @@ type goal_arg_classification =
 
 let rec classify_goal_arg ~depth t =
   match deref_head ~depth t with
-  | Const k when k == C.uvarc -> Rigid mustbevariablec
+  | Const k when k == Global_symbols.uvarc -> Rigid mustbevariablec
   | Const k -> Rigid(k)
-  | Nil -> Rigid (C.nilc)
-  | Cons _ -> Rigid (C.consc)
-  | App (k,_,_) when k == C.uvarc -> Rigid mustbevariablec
-  | App (k,a,_) when k == C.asc -> classify_goal_arg ~depth a
+  | Nil -> Rigid (Global_symbols.nilc)
+  | Cons _ -> Rigid (Global_symbols.consc)
+  | App (k,_,_) when k == Global_symbols.uvarc -> Rigid mustbevariablec
+  | App (k,a,_) when k == Global_symbols.asc -> classify_goal_arg ~depth a
   | (App (k,_,_) | Builtin (k,_)) -> Rigid (k)
   | Lam _ -> Variable (* loose indexing to enable eta *)
   | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> Variable
@@ -2040,7 +2349,7 @@ let get_clauses ~depth goal { index = m } =
        List.(map fst (sort (fun (_,cl1) (_,cl2) -> cl2 - cl1) cl))
    with Not_found -> []
  in
- [%log "get_clauses" (Constants.show predicate) (List.length rc)];
+ [%log "get_clauses" (C.show predicate) (List.length rc)];
  rc
 
 (* flatten_snd = List.flatten o (List.map ~~snd~~) *)
@@ -2084,7 +2393,7 @@ let close_with_pis depth vars t =
     | CData _ as x -> x
   in
   let rec add_pis n t =
-   if n = 0 then t else App(C.pic,Lam (add_pis (n-1) t),[]) in
+   if n = 0 then t else App(Global_symbols.pic,Lam (add_pis (n-1) t),[]) in
   add_pis vars (aux t)
 
 let local_prog { src } =  src
@@ -2094,7 +2403,7 @@ end (* }}} *)
 open Indexing
 
 (* Used to pass the program to the CHR runtime *)
-let orig_prolog_program = Fork.new_local (make_index ~depth:0 ~indexing:Constants.Map.empty [])
+let orig_prolog_program = Fork.new_local (make_index ~depth:0 ~indexing:C.Map.empty [])
 
 (******************************************************************************
   Dynamic Prolog program
@@ -2131,13 +2440,13 @@ let rec term_map m = function
   | CData _ as x -> x
 
 let rec split_conj ~depth = function
-  | App(c, hd, args) when c == C.andc ->
+  | App(c, hd, args) when c == Global_symbols.andc ->
       split_conj ~depth hd @ List.(flatten (map (split_conj ~depth) args))
   | Nil -> []
   | Cons(x,xs) -> split_conj ~depth x @ split_conj ~depth xs
   | UVar ({ contents=g },from,args) when g != C.dummy ->
     split_conj ~depth (deref_uv ~from ~to_:depth args g)
-  | AppUVar ({contents=g},from,args) when g != C.dummy -> 
+  | AppUVar ({contents=g},from,args) when g != C.dummy ->
     split_conj ~depth (deref_appuv ~from ~to_:depth args g)
   | Discard -> []
   | _ as f -> [ f ]
@@ -2148,7 +2457,7 @@ let rec lp_list_to_list ~depth = function
   | Nil -> []
   | UVar ({ contents=g },from,args) when g != C.dummy ->
     lp_list_to_list ~depth (deref_uv ~from ~to_:depth args g)
-  | AppUVar ({contents=g},from,args) when g != C.dummy -> 
+  | AppUVar ({contents=g},from,args) when g != C.dummy ->
     lp_list_to_list ~depth (deref_appuv ~from ~to_:depth args g)
   | x -> error (Fmt.sprintf "%s is not a list" (show_term x))
 ;;
@@ -2156,7 +2465,7 @@ let rec lp_list_to_list ~depth = function
 let rec get_lambda_body ~depth = function
  | UVar ({ contents=g },from,args) when g != C.dummy ->
     get_lambda_body ~depth (deref_uv ~from ~to_:depth args g)
- | AppUVar ({contents=g},from,args) when g != C.dummy -> 
+ | AppUVar ({contents=g},from,args) when g != C.dummy ->
     get_lambda_body ~depth (deref_appuv ~from ~to_:depth args g)
  | Lam b -> b
  | _ -> error "pi/sigma applied to something that is not a Lam"
@@ -2184,13 +2493,13 @@ let rec claux1 ?loc get_mode vars depth hyps ts lts lcs t =
       (ppterm (depth+lts) [] 0 empty_env) t depth lts lcs (List.length ts)) begin
   match t with
   | Discard -> error ?loc "ill-formed hypothetical clause: discard in head position"
-  | App(c, g2, [g1]) when c == C.rimplc ->
+  | App(c, g2, [g1]) when c == Global_symbols.rimplc ->
      claux1 ?loc get_mode vars depth ((ts,g1)::hyps) ts lts lcs g2
-  | App(c, _, _) when c == C.rimplc -> error ?loc "ill-formed hypothetical clause"
-  | App(c, g1, [g2]) when c == C.implc ->
+  | App(c, _, _) when c == Global_symbols.rimplc -> error ?loc "ill-formed hypothetical clause"
+  | App(c, g1, [g2]) when c == Global_symbols.implc ->
      claux1 ?loc get_mode vars depth ((ts,g1)::hyps) ts lts lcs g2
-  | App(c, _, _) when c == C.implc -> error ?loc "ill-formed hypothetical clause"
-  | App(c, arg, []) when c == C.sigmac ->
+  | App(c, _, _) when c == Global_symbols.implc -> error ?loc "ill-formed hypothetical clause"
+  | App(c, arg, []) when c == Global_symbols.sigmac ->
      let b = get_lambda_body ~depth:(depth+lts) arg in
      let args =
       List.rev (List.filter (function (Arg _) -> true | _ -> false) ts) in
@@ -2199,10 +2508,10 @@ let rec claux1 ?loc get_mode vars depth hyps ts lts lcs t =
          [] -> Const (depth+lcs)
        | hd::rest -> App (depth+lcs,hd,rest) in
      claux1 ?loc get_mode vars depth hyps (cst::ts) (lts+1) (lcs+1) b
-  | App(c, arg, []) when c == C.pic ->
+  | App(c, arg, []) when c == Global_symbols.pic ->
      let b = get_lambda_body ~depth:(depth+lts) arg in
      claux1 ?loc get_mode (vars+1) depth hyps (Arg(vars,0)::ts) (lts+1) lcs b
-  | App(c, _, _) when c == C.andc ->
+  | App(c, _, _) when c == Global_symbols.andc ->
      error ?loc "Conjunction in the head of a clause is not supported"
   | Const _
   | App _ as g ->
@@ -2233,12 +2542,12 @@ let rec claux1 ?loc get_mode vars depth hyps ts lts lcs t =
   | UVar ({ contents=g },from,args) when g != C.dummy ->
      claux1 ?loc get_mode vars depth hyps ts lts lcs
        (deref_uv ~from ~to_:(depth+lts) args g)
-  | AppUVar ({contents=g},from,args) when g != C.dummy -> 
+  | AppUVar ({contents=g},from,args) when g != C.dummy ->
      claux1 ?loc get_mode vars depth hyps ts lts lcs
        (deref_appuv ~from ~to_:(depth+lts) args g)
   | Arg _ | AppArg _ -> anomaly "claux1 called on non-heap term"
   | Builtin (c,_) ->
-     error ?loc ("Declaring a clause for built in predicate " ^ Constants.show c)
+     error ?loc ("Declaring a clause for built in predicate " ^ C.show c)
   | (Lam _ | CData _ ) as x ->
      error ?loc ("Assuming a string or int or float or function:" ^ show_term x)
   | UVar _ | AppUVar _ -> error ?loc "Flexible hypothetical clause"
@@ -2286,7 +2595,7 @@ and alternative = {
   goals : goal list;
   stack : frame;
   trail : T.trail;
-  state : state;
+  state : State.t;
   clauses : clause list;
   next : alternative
 }
@@ -2320,12 +2629,12 @@ type 'x runtime = {
   get : 'a. 'a Fork.local_ref -> 'a;
 }
 
-         
+
 let do_make_runtime : (?max_steps:int -> ?delay_outside_fragment:bool -> 'x executable -> 'x runtime) ref =
  ref (fun ?max_steps ?delay_outside_fragment _ -> anomaly "do_make_runtime not initialized")
 
 module Constraints : sig
-    
+
   val propagation : unit -> constraint_def list
   val resumption : constraint_def list -> (int * prolog_prog * term) list
 
@@ -2340,7 +2649,7 @@ end = struct (* {{{ *)
 exception NoMatch
 
 module Ice : sig
-  
+
   type freezer
 
   val empty_freezer : freezer
@@ -2385,7 +2694,7 @@ end = struct (* {{{ *)
     let freeze_uv r =
       try List.assq r !f.uv2c
       with Not_found ->
-        let n, c = C.fresh () in
+        let n, c = C.fresh_global_constant () in
         [%spy "freeze-add" (fun fmt tt ->
           Fmt.fprintf fmt "%s == %a" (C.show n) (ppterm 0 [] 0 empty_env) tt)
           (UVar (r,0,0))];
@@ -2402,7 +2711,7 @@ end = struct (* {{{ *)
       (* freeze *)
       | AppUVar(r,0,args) when !!r == C.dummy ->
           let args = List.map (faux d) args in
-          App(C.uvarc, freeze_uv r, [list_to_lp_list args])
+          App(Global_symbols.uvarc, freeze_uv r, [list_to_lp_list args])
       (* expansion *)
       | UVar(r,lvl,ano) when !!r == C.dummy ->
           faux d (log_assignment(expand_uv ~depth:d r ~lvl ~ano))
@@ -2428,7 +2737,7 @@ end = struct (* {{{ *)
     [%spy "freeze-after-shift->maxground" (fun fmt t ->
       Fmt.fprintf fmt "%a" (uppterm maxground [] 0 empty_env) t) t];
     !f, t
-       
+
   let defrost ~maxd t env ~to_ f =
   [%spy "defrost-in" (fun fmt t ->
     Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
@@ -2446,7 +2755,7 @@ end = struct (* {{{ *)
           UVar(C.Map.find c f.c2uv,0,0)
       | (Const _ | CData _ | Nil | Discard) as x -> x
       | Cons(hd,tl) -> Cons(daux d hd, daux d tl)
-      | App(c,Const x,[args]) when c == C.uvarc ->
+      | App(c,Const x,[args]) when c == Global_symbols.uvarc ->
           let r = C.Map.find x f.c2uv in
           let args = lp_list_to_list ~depth:d args in
           mkAppUVar r 0 (List.map (daux d) args)
@@ -2465,7 +2774,7 @@ end = struct (* {{{ *)
     in
      daux to_ t
 
-  let assignments { assignments } = assignments 
+  let assignments { assignments } = assignments
 
 let replace_const m t =
   let rec rcaux = function
@@ -2546,9 +2855,9 @@ let delay_goal ?(filter_ctx=fun _ -> true) ~depth prog ~goal:g ~on:keys =
 
 let rec head_of = function
   | Const x -> x
-  | App(x,Lam f,_) when C.(x == pic) -> head_of f
-  | App(x,hd,_) when C.(x == rimplc) -> head_of hd
-  | App(x,hd,_) when C.(x == andc) -> head_of hd (* FIXME *)
+  | App(x,Lam f,_) when x == Global_symbols.pic -> head_of f
+  | App(x,hd,_) when x == Global_symbols.rimplc -> head_of hd
+  | App(x,hd,_) when x == Global_symbols.andc -> head_of hd (* FIXME *)
   | App(x,_,_) -> x
   | Builtin(x,_) -> x
   | AppUVar(r,_,_)
@@ -2589,204 +2898,20 @@ let declare_constraint ~depth prog args =
        ~depth prog ~goal:g ~on:keys
   | None -> delay_goal ~depth prog ~goal:g ~on:keys
 
-let type_err ~depth bname n ty t =
-  type_error begin
-    "builtin " ^ bname ^ ": " ^
-    (if n = 0 then "" else string_of_int n ^ "th argument: ") ^
-    "expected " ^ ty ^ ": got " ^
-    match t with
-    | None -> "_"
-    | Some t -> Format.asprintf "%a" (uppterm depth [] 0 empty_env) t
-  end
-
-let wrap_type_err bname n f x =
-  try f x
-  with Conversion.TypeErr(ty,depth,t) -> type_err ~depth bname n (Conversion.show_ty_ast ty) (Some t)
-
-let arity_err ~depth bname n t =
-  type_error ("builtin " ^ bname ^ ": " ^ 
-    match t with
-    | None -> string_of_int n ^ "th argument is missing"
-    | Some t -> "too many arguments at: " ^
-                  Format.asprintf "%a" (uppterm depth [] 0 empty_env) t)
-
-let out_of_term ~depth readback n bname state t =
-  match deref_head ~depth t with
-  | Discard -> BuiltInPredicate.Discard
-  | _ -> BuiltInPredicate.Keep
-
-let in_of_term ~depth readback n bname state t =
-  wrap_type_err bname n (readback ~depth state) t
-
-let inout_of_term ~depth readback n bname state t =
-  wrap_type_err bname n (readback ~depth state) t
-
-let mk_out_assign ~depth embed bname state input v  output =
-  match output, input with
-  | None, BuiltInPredicate.Discard -> state, []
-  | Some _, BuiltInPredicate.Discard -> state, [] (* We could warn that such output was generated without being required *)
-  | Some t, BuiltInPredicate.Keep ->
-     let state, t, extra = embed ~depth state t in
-     state, extra @ [App(C.eqc, v, [t])]
-  | None, BuiltInPredicate.Keep -> state, []
-
-let mk_inout_assign ~depth embed bname state input v  output =
-  match output with
-  | None -> state, []
-  | Some t ->
-     let state, t, extra = embed ~depth state (BuiltInPredicate.Data t) in
-     state, extra @ [App(C.eqc, v, [t])]
-
-let in_of_termC ~depth readback n bname hyps constraints state t =
-  wrap_type_err bname n (readback ~depth hyps constraints state) t
-
-let inout_of_termC  = in_of_termC
-
-let mk_out_assignC ~depth embed bname hyps constraints state input v  output =
-  match output, input with
-  | None, BuiltInPredicate.Discard -> state, []
-  | Some _, BuiltInPredicate.Discard -> state, [] (* We could warn that such output was generated without being required *)
-  | Some t, BuiltInPredicate.Keep ->
-     let state, t, extra = embed ~depth hyps constraints state t in
-     state, extra @ [App(C.eqc, v, [t])]
-  | None, BuiltInPredicate.Keep -> state, []
-
-let mk_inout_assignC ~depth embed bname hyps constraints state input v  output =
-  match output with
-  | Some t ->
-     let state, t, extra = embed ~depth hyps constraints state (Data.BuiltInPredicate.Data t) in
-     state, extra @ [App(C.eqc, v, [t])]
-  | None -> state, []
-
-let map_acc f s l =
-   let rec aux acc extra s = function
-   | [] -> s, List.rev acc, List.(concat (rev extra))
-   | x :: xs ->
-       let s, x, gls = f s x in
-       aux (x :: acc) (gls :: extra) s xs
-   in
-     aux [] [] s l
-
-let call (BuiltInPredicate.Pred(bname,ffi,compute)) ~depth hyps constraints state data =
-  let rec aux : type i o h c.
-    (i,o,h,c) BuiltInPredicate.ffi -> h -> c -> compute:i -> reduce:(state -> o -> state * extra_goals) ->
-       term list -> int -> state -> extra_goals list -> state * extra_goals =
-  fun ffi ctx constraints ~compute ~reduce data n state extra ->
-    match ffi, data with
-    | BuiltInPredicate.Easy _, [] ->
-       let result = wrap_type_err bname 0 (fun () -> compute ~depth) () in
-       let state, l = reduce state result in
-       state, List.(concat (rev extra) @ rev l)
-    | BuiltInPredicate.Read _, [] ->
-       let result = wrap_type_err bname 0 (compute ~depth ctx constraints) state in
-       let state, l = reduce state result in
-       state, List.(concat (rev extra) @ rev l)
-    | BuiltInPredicate.Full _, [] ->
-       let state, result, gls = wrap_type_err bname 0 (compute ~depth ctx constraints) state in
-       let state, l = reduce state result in
-       state, List.(concat (rev extra)) @ gls @ List.rev l
-    | BuiltInPredicate.VariadicIn(_,{ ContextualConversion.readback }, _), data ->
-       let state, i, gls =
-         map_acc (in_of_termC ~depth readback n bname ctx constraints) state data in
-       let state, rest = wrap_type_err bname 0 (compute i ~depth ctx constraints) state in
-       let state, l = reduce state rest in
-       state, List.(gls @ concat (rev extra) @ rev l)
-    | BuiltInPredicate.VariadicOut(_,{ ContextualConversion.embed; readback }, _), data ->
-       let i = List.map (out_of_term ~depth readback n bname state) data in
-       let state, (rest, out) = wrap_type_err bname 0 (compute i ~depth ctx constraints) state in
-       let state, l = reduce state rest in
-       begin match out with
-         | Some out ->
-             let state, ass =
-               map_acc3 (mk_out_assignC ~depth embed bname ctx constraints) state i data out in 
-             state, List.(concat (rev extra) @ rev (concat ass) @ l)
-         | None -> state, List.(concat (rev extra) @ rev l)
-       end
-    | BuiltInPredicate.VariadicInOut(_,{ ContextualConversion.embed; readback }, _), data ->
-       let state, i, gls =
-         map_acc (inout_of_termC ~depth readback n bname ctx constraints) state data in
-       let state, (rest, out) = wrap_type_err bname 0 (compute i ~depth ctx constraints) state in
-       let state, l = reduce state rest in
-       begin match out with
-         | Some out ->
-             let state, ass =
-               map_acc3 (mk_inout_assignC ~depth embed bname ctx constraints) state i data out in 
-             state, List.(gls @ concat (rev extra) @ rev (concat ass) @ l)
-         | None -> state, List.(gls @ concat (rev extra) @ rev l)
-       end
-    | BuiltInPredicate.CIn({ ContextualConversion.readback }, _, ffi), t :: rest ->
-        let state, i, gls = in_of_termC ~depth readback n bname ctx constraints state t in
-        aux ffi ctx constraints ~compute:(compute i) ~reduce rest (n + 1) state (gls :: extra)
-    | BuiltInPredicate.COut({ ContextualConversion.embed; readback }, _, ffi), t :: rest ->
-        let i = out_of_term ~depth readback n bname state t in
-        let reduce state (rest, out) =
-          let state, l = reduce state rest in
-          let state, ass = mk_out_assignC ~depth embed bname ctx constraints state i t out in
-          state, ass @ l in
-        aux ffi ctx constraints ~compute:(compute i) ~reduce rest (n + 1) state extra
-    | BuiltInPredicate.CInOut({ ContextualConversion.embed; readback }, _, ffi), t :: rest ->
-        let state, i, gls = inout_of_termC ~depth readback n bname ctx constraints state t in
-        let reduce state (rest, out) =
-          let state, l = reduce state rest in
-          let state, ass = mk_inout_assignC ~depth embed bname ctx constraints state i t out in
-          state, ass @ l in
-        aux ffi ctx constraints ~compute:(compute i) ~reduce rest (n + 1) state (gls :: extra)
-    | BuiltInPredicate.In({ Conversion.readback }, _, ffi), t :: rest ->
-        let state, i, gls = in_of_term ~depth readback n bname state t in
-        aux ffi ctx constraints ~compute:(compute i) ~reduce rest (n + 1) state (gls :: extra)
-    | BuiltInPredicate.Out({ Conversion.embed; readback }, _, ffi), t :: rest ->
-        let i = out_of_term ~depth readback n bname state t in
-        let reduce state (rest, out) =
-          let state, l = reduce state rest in
-          let state, ass = mk_out_assign ~depth embed bname state i t out in
-          state, ass @ l in
-        aux ffi ctx constraints ~compute:(compute i) ~reduce rest (n + 1) state extra
-    | BuiltInPredicate.InOut({ Conversion.embed; readback }, _, ffi), t :: rest ->
-        let state, i, gls = inout_of_term ~depth readback n bname state t in
-        let reduce state (rest, out) =
-          let state, l = reduce state rest in
-          let state, ass = mk_inout_assign ~depth embed bname state i t out in
-          state, ass @ l in
-        aux ffi ctx constraints ~compute:(compute i) ~reduce rest (n + 1) state (gls :: extra)
-
-    | _, t :: _ -> arity_err ~depth bname n (Some t)
-    | _, [] -> arity_err ~depth bname n None
-
-  in
-  let rec aux_ctx : type i o h c. (i,o,h,c) BuiltInPredicate.ffi -> (h,c) ContextualConversion.ctx_readback = function
-    | BuiltInPredicate.Full(f,_) -> f
-    | BuiltInPredicate.Read(f,_) -> f
-    | BuiltInPredicate.VariadicIn(f,_,_) -> f
-    | BuiltInPredicate.VariadicOut(f,_,_) -> f
-    | BuiltInPredicate.VariadicInOut(f,_,_) -> f
-    | BuiltInPredicate.Easy _ -> ContextualConversion.unit_ctx
-    | BuiltInPredicate.In(_,_,rest) -> aux_ctx rest
-    | BuiltInPredicate.Out(_,_,rest) -> aux_ctx rest
-    | BuiltInPredicate.InOut(_,_,rest) -> aux_ctx rest
-    | BuiltInPredicate.CIn(_,_,rest) -> aux_ctx rest
-    | BuiltInPredicate.COut(_,_,rest) -> aux_ctx rest
-    | BuiltInPredicate.CInOut(_,_,rest) -> aux_ctx rest
-  in
-    let reduce state _ = state, [] in
-    let state, ctx, csts, gls_ctx = aux_ctx ffi ~depth hyps constraints state in
-    let state, gls = aux ffi ctx csts ~compute ~reduce data 1 state [] in
-    state, gls_ctx @ gls
-;;
-
 let exect_builtin_predicate c ~depth idx args =
-       if c == C.declare_constraintc then begin
+       if c == Global_symbols.declare_constraintc then begin
                declare_constraint ~depth idx args; [] end
-  else if c == C.print_constraintsc then begin
+  else if c == Global_symbols.print_constraintsc then begin
                printf "@[<hov 0>%a@]\n%!" (CS.print ?pp_ctx:None) (CS.contents ());
                [] 
   end else
     let b =
-      try BuiltInPredicate.lookup c
+      try FFI.lookup c
       with Not_found -> 
         anomaly ("no built-in predicated named " ^ C.show c) in
     let constraints = !CS.Ugly.delayed in
     let state = !CS.state  in
-    let state, gs = call b ~depth (local_prog idx) constraints state args in
+    let state, gs = FFI.call b ~depth (local_prog idx) constraints state args in
     CS.state := state;
     gs
 ;;
@@ -2849,7 +2974,7 @@ let try_fire_rule rule (constraints as orig_constraints) =
   let guard =
     match guard with
     | Some g -> g
-    | None -> Constants.truec
+    | None -> mkConst Global_symbols.truec
   in
  
   let initial_program = !orig_prolog_program in
@@ -2864,8 +2989,10 @@ let try_fire_rule rule (constraints as orig_constraints) =
         (shift_bound_vars ~depth:0 ~to_:max_depth guard);
     assignments = StrMap.empty;
     initial_depth = max_depth;
-    initial_state = State.(init () |> end_goal_compilation StrMap.empty);
+    initial_runtime_state = State.(init () |> end_goal_compilation StrMap.empty |> end_compilation);
     query_arguments = Query.N;
+    symbol_table = !C.table;
+    builtins = !FFI.builtins;
   } in
   let { search; get; exec; destroy } = !do_make_runtime executable in
  
@@ -2921,7 +3048,7 @@ let try_fire_rule rule (constraints as orig_constraints) =
         | _ -> error "eigen not resolving to an integer" in
       let conclusion =
         Ice.defrost ~maxd:max_depth ~to_:eigen
-          (App(C.implc,context,[conclusion])) env m in
+          (App(Global_symbols.implc,context,[conclusion])) env m in
       (* TODO: check things make sense in heigen *)
       let prog = initial_program in
       [{ cdepth = eigen; prog; context = []; conclusion }] in
@@ -3057,8 +3184,8 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
  | Some [] ->
     [%spy "run-goal" (fun fmt -> Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env)) g];
     match g with
-    | Builtin(c,[]) when c == C.cutc -> [%tcall cut p gs next alts lvl]
-    | App(c, g, gs') when c == C.andc ->
+    | Builtin(c,[]) when c == Global_symbols.cutc -> [%tcall cut p gs next alts lvl]
+    | App(c, g, gs') when c == Global_symbols.andc ->
        run depth p g (List.map(fun x -> depth,p,x) gs'@gs) next alts lvl
     | Cons (g,gs') ->
        run depth p g ((depth,p,gs') :: gs) next alts lvl
@@ -3066,13 +3193,13 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
       begin match gs with
       | [] -> pop_andl alts next lvl
       | (depth, p, g) :: gs -> run depth p g gs next alts lvl end
-    | App(c, g2, [g1]) when c == C.rimplc ->
+    | App(c, g2, [g1]) when c == Global_symbols.rimplc ->
        (*Fmt.eprintf "RUN: %a\n%!" (uppterm depth [] 0 empty_env) g ;*)
        let clauses, pdiff, lcs = clausify p ~depth g1 in
        let g2 = hmove ~from:depth ~to_:(depth+lcs) g2 in
        (*Fmt.eprintf "TO: %a \n%!" (uppterm (depth+lcs) [] 0 empty_env) g2;*)
        run (depth+lcs) (add_clauses ~depth clauses pdiff p) g2 gs next alts lvl
-    | App(c, g1, [g2]) when c == C.implc ->
+    | App(c, g1, [g2]) when c == Global_symbols.implc ->
        (*Fmt.eprintf "RUN: %a\n%!" (uppterm depth [] 0 empty_env) g ;*)
        let clauses, pdiff, lcs = clausify p ~depth g1 in
        let g2 = hmove ~from:depth ~to_:(depth+lcs) g2 in
@@ -3080,10 +3207,10 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
        run (depth+lcs) (add_clauses ~depth clauses pdiff p) g2 gs next alts lvl
 (*  This stays commented out because it slows down rev18 in a visible way!   *)
 (*  | App(c, _, _) when c == implc -> anomaly "Implication must have 2 args" *)
-    | App(c, arg, []) when c == C.pic ->
+    | App(c, arg, []) when c == Global_symbols.pic ->
        let f = get_lambda_body ~depth arg in
        run (depth+1) p f gs next alts lvl
-    | App(c, arg, []) when c == C.sigmac ->
+    | App(c, arg, []) when c == Global_symbols.sigmac ->
        let f = get_lambda_body ~depth arg in
        let v = UVar(oref C.dummy, depth, 0) in
        run depth p (subst depth [v] f) gs next alts lvl
@@ -3235,8 +3362,10 @@ end;*)
     chr;
     initial_depth;
     initial_goal;
-    initial_state;
+    initial_runtime_state;
     assignments;
+    symbol_table;
+    builtins;
   } ->
   let { Fork.exec = exec ; get = get ; set = set } = Fork.fork () in
   set orig_prolog_program compiled_program;
@@ -3250,7 +3379,9 @@ end;*)
   set steps_bound max_steps;
   set delay_hard_unif_problems delay_outside_fragment;
   set steps_made 0;
-  set CS.state initial_state;
+  set CS.state initial_runtime_state;
+  set C.table symbol_table;
+  set FFI.builtins builtins;
   let search = exec (fun () ->
      [%spy "run-trail" (fun fmt _ -> T.print_trail fmt) ()];
      T.initial_trail := !T.trail;
@@ -3277,8 +3408,8 @@ let mk_outcome search get_cs assignments =
      assignments;
      constraints = syn_csts;
      state;
-     output = Query.output qargs assignments state;
-     pp_ctx = ref pp_ctx;
+     output = output qargs assignments state;
+     pp_ctx = pp_ctx;
    } in
    Success solution, alts
  with
@@ -3288,7 +3419,7 @@ let mk_outcome search get_cs assignments =
 let execute_once ?max_steps ?delay_outside_fragment exec =
  auxsg := [];
  let { search; get } = make_runtime ?max_steps ?delay_outside_fragment exec in
- fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.state, exec.query_arguments, get uv_names) exec.assignments)
+ fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.state |> State.end_execution, exec.query_arguments, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments)
 ;;
 
 let execute_loop ?delay_outside_fragment exec ~more ~pp =
@@ -3296,7 +3427,7 @@ let execute_loop ?delay_outside_fragment exec ~more ~pp =
  let k = ref noalts in
  let do_with_infos f =
   let time0 = Unix.gettimeofday() in
-  let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, get CS.state, exec.query_arguments, get uv_names) exec.assignments in
+  let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, get CS.state |> State.end_execution, exec.query_arguments, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments in
   let time1 = Unix.gettimeofday() in
   k := alts;
   pp (time1 -. time0) o in
@@ -3324,6 +3455,8 @@ let move = HO.move
 let hmove = HO.hmove
 let make_index = make_index
 let clausify1 = Clausify.clausify1
+let mkinterval = C.mkinterval
+let mkAppL = C.mkAppL
 
 let expand_uv ~depth r ~lvl ~ano =
   let t, assignment = HO.expand_uv ~depth r ~lvl ~ano in
