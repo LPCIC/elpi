@@ -1,0 +1,136 @@
+
+========= builtins ==========
+
+
+external pred type-error % raise a fatal type inference error
+  i:any, % the term
+  i:any, % its type
+  i:any. % the type expected by its context
+  
+external pred eqtype-error % raise a fatal equality type error
+  i:any. % the term
+  
+
+
+
+
+============= W: 3 = 2 ==============
+The term:
+  3 = 2
+  ^^^^^
+has type: mono boolean
+
+
+============= W: (fun x -> x) = (fun x -> x) ==============
+The term:
+  (fun x -> x) = (fun x -> x)
+  ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+has type: mono boolean
+
+Equality type constraint unsatisfied at:
+  (fun x -> x) = (fun x -> x)
+   ^^^^^^^^^^                
+
+============= W: let id x = x in id [] ==============
+The term:
+  let id x = x in id []
+  ^^^^^^^^^^^^^^^^^^^^^
+has type: mono (list X0)
+
+The term:
+  let id x = x in id []
+         ^^^^^         
+has type: all any c0 \ mono (c0 ==> c0)
+
+
+============= W: let id x = x in (id [], id 1) ==============
+The term:
+  let id x = x in (id [], id 1)
+  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+has type: mono (pair (list X1) integer)
+
+The term:
+  let id x = x in (id [], id 1)
+         ^^^^^                 
+has type: all any c0 \ mono (c0 ==> c0)
+
+
+============= W: let refl x = x = x in refl [] ==============
+The term:
+  let refl x = x = x in refl []
+  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+has type: mono boolean
+
+The term:
+  let refl x = x = x in refl []
+           ^^^^^^^^^           
+has type: all eqt c0 \ mono (c0 ==> boolean)
+
+
+============= W: let refl x = x = x in refl (fun x -> x) ==============
+The term:
+  let refl x = x = x in refl (fun x -> x)
+  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+has type: mono boolean
+
+The term:
+  let refl x = x = x in refl (fun x -> x)
+           ^^^^^^^^^                     
+has type: all eqt c0 \ mono (c0 ==> boolean)
+
+Equality type constraint unsatisfied at:
+  let refl x = x = x in refl (fun x -> x)
+                        ^^^^             
+
+============= W: let card x = size (undup x) in card [] ==============
+The term:
+  let card x = size (undup x) in card []
+  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+has type: mono integer
+
+The term:
+  let card x = size (undup x) in card []
+           ^^^^^^^^^^^^^^^^^^           
+has type: all eqt c0 \ mono (list c0 ==> integer)
+
+
+============= W: let f y = let g x = (x,y) in g y in f 1 ==============
+The term:
+  let f y = let g x = (x,y) in g y in f 1
+  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+has type: mono (pair integer integer)
+
+The term:
+  let f y = let g x = (x,y) in g y in f 1
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^       
+has type: all any c0 \ mono (c0 ==> pair c0 c0)
+
+The term:
+  let f y = let g x = (x,y) in g y in f 1
+                  ^^^^^^^^^              
+has type: all any c0 \ mono (c0 ==> pair c0 X2)
+
+
+============= W: size 1 ==============
+The term:
+  size 1
+  ^^^^^^
+has type: mono integer
+
+Type error:
+  size 1
+       ^
+has type integer
+but is expected to have type list X3
+
+============= W: [1] = (1,1) ==============
+The term:
+  [1] = (1,1)
+  ^^^^^^^^^^^
+has type: mono boolean
+
+Type error:
+  [1] = (1,1)
+          ^  
+has type X4 ==> X5 ==> pair X4 X5
+but is expected to have type X6 ==> X7 ==> list integer

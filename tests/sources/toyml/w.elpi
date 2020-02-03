@@ -1,0 +1,186 @@
+%%%%%%%%%%% datatypes %%%%%%%%%%%%%%%
+
+% terms
+kind term type.
+
+type literal int -> term.
+type global  string -> term.
+
+type app term -> term -> term.
+type lam (term -> term) -> term.
+type let term -> ty -> (term -> term) -> term.
+type eq  term -> term -> term.
+
+
+% type expressions
+kind tye type.
+
+infixr ==> 50.
+
+type (==>)   tye -> tye -> tye.
+type integer tye.
+type boolean tye.
+type list    tye -> tye.
+type pair    tye -> tye -> tye.
+
+% types
+kind eq? type.
+type any eq?.
+type eqt eq?.
+
+kind ty type.
+
+type all    eq? -> (tye -> ty) -> ty.
+type mono   tye -> ty.
+
+%%%%%%%%%%%% w %%%%%%%%%%%%%%
+
+pred w i:term, o:ty.
+
+% constants
+
+w (literal _)      (mono integer).
+w (global "plus")  (mono (integer ==> integer ==> integer)).
+
+w (global "[]")    (all any x\ mono (list x)).
+w (global "::")    (all any x\ mono (x ==> list x ==> list x)).
+w (global "size")  (all any x\ mono (list x ==> integer)).
+w (global "undup") (all eqt x\ mono (list x ==> list x)).
+
+w (global ",")     (all any x\ all any y\ mono (x ==> y ==> (pair x y))).
+
+% terms
+
+w (app H A) (mono T) :-
+  w H (mono (S ==> T)),
+  w A (mono S).
+
+w (lam F) (mono (S ==> T)) :-
+  pi x\ w x (mono S) => w (F x) (mono T).
+
+w (let E PT B) (mono TB) :-
+  w E (mono T),
+  gammabar (mono T) PT,
+  pi x\ w x PT => w (B x) (mono TB).
+
+w (eq LHS RHS) (mono boolean) :-
+  w LHS (mono T),
+  w RHS (mono T1), (T = T1 ; type-error RHS T1 T ),
+  eqbar LHS T.
+
+w X (mono T) :- w X (all E Poly), specialize X (all E Poly) T.
+
+pred err.
+
+w X (mono ETY) :- not err, err => w X (mono TY), type-error X TY ETY.
+
+% schemas
+pred specialize i:term, i:ty, o:tye.
+
+specialize X (all any F) T :- specialize X (F E_) T.
+specialize X (all eqt F) T :- specialize X (F E) T, (eqbar X E).
+specialize _ (mono T) T.
+
+specialize X (mono TY) ETY :- type-error X TY ETY.
+
+% main
+main T TY :- theta [], w T TY.
+
+%%%%%%%%%%%%% theta %%%%%%%%%%%%%%%%
+
+pred theta i:list tye.
+
+theta L :- new_constraint (theta L) [_].
+
+constraint w gammabar eqbar theta {
+
+rule (eqbar _ V) \ (theta L) | (not(mem-theta L V)) <=> (theta (V :: L)).
+
+% 'uvar X L' is the frozen 'X' and its arguments 'L'
+mem-theta (uvar X _ :: _) (uvar X _).
+mem-theta (uvar _ _ :: XS) Y :- mem-theta XS Y.
+
+}
+
+%%%%%%%%%%%%% eqbar %%%%%%%%%%%%%%%%
+
+pred eqbar i:term, i:tye.
+
+eqbar _ boolean.
+eqbar _ integer.
+eqbar X (list A) :- eqbar X A.
+eqbar X (pair A B) :- eqbar X A, eqbar X B.
+
+eqbar X T :- var T, new_constraint (eqbar X T) [T,_].
+
+eqbar X _ :- eqtype-error X.
+
+%%%%%%%%%%%% gammabar %%%%%%%%%%%%%
+
+pred gammabar i:ty, o:ty.
+
+gammabar (mono T) TS :-
+  new_constraint (gammabar (mono T) TS) [_].
+
+constraint w gammabar eqbar theta {
+
+rule (theta L)                   % matched
+     \  (G ?- gammabar T TS)     % matched and removed
+     |  (generalize L G T POLYT) % guard + syntesis
+    <=> (TS = POLYT).            % new goal
+
+generalize Theta Gamma (mono T) PolyT :-
+  free-ty (mono T) [] VT,
+  free-gamma Gamma [] VGamma,
+  filter VT (x\ not(mem VGamma x)) ToQuantify,
+  bind ToQuantify Theta T PolyT.
+
+% computation of free (unification) variables
+free-ty (mono X) L L1 :- free X L L1.
+free-ty (all _ F) L L1 :- pi x\ free-ty (F x) L L1.
+
+free-gamma [] L L.
+free-gamma [w _ T|X] L L2 :- free-ty T L L1, free-gamma X L1 L2.
+
+free (list A) L L1 :- free A L L1.
+free (pair A B) L L2 :- free A L L1, free B L1 L2.
+free (A ==> B) L L2 :- free A L L1, free B L1 L2.
+free (uvar X _) L L1 :- if (mem L X) (L1 = L) (L1 = [X|L]).
+free _ L L.
+
+% quantification (binding) of a list of variables
+bind [] _ T (mono T1) :- copy T T1.
+bind [X|XS] Theta T (all E x\ T2 x) :-
+  if (mem-theta Theta (uvar X _)) (E = eqt) (E = any),
+  bind XS Theta T T1,
+  pi c\ copy (uvar X _) c => copy-ty T1 (T2 c).
+
+copy-ty (mono X1) (mono X2) :- copy X1 X2.
+copy-ty (all E F1) (all E F2) :- pi x\ copy x x => copy-ty (F1 x) (F2 x).
+
+copy integer integer.
+copy boolean boolean.
+copy (A ==> B) (A1 ==> B1) :- copy A A1, copy B B1.
+copy (list A) (list A1) :- copy A A1.
+copy (pair A B) (pair A1 B1) :- copy A A1, copy B B1.
+copy (uvar U L) (uvar U L).
+
+}
+
+% {{{ stdlib: mem, filter, if...
+
+new_constraint P L :- declare_constraint P L.
+
+filter [] _ [].
+filter [X|XS] P [X|YS] :- P X, !, filter XS P YS.
+filter [_|XS] P YS :- filter XS P YS.
+
+mem [X|_] X :- !.
+mem [_|XS] X :- mem XS X.
+
+if G T _ :- G, !, T.
+if _ _ E :- E.
+
+% }}}
+
+% vim:set foldmethod=marker spelllang=:
