@@ -1,0 +1,10 @@
+3 = 2
+(fun x -> x) = (fun x -> x)
+let id x = x in id []
+let id x = x in (id [], id 1)
+let refl x = x = x in refl []
+let refl x = x = x in refl (fun x -> x)
+let card x = size (undup x) in card []
+let f y = let g x = (x,y) in g y in f 1
+size 1
+[1] = (1,1)

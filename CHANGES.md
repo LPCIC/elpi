@@ -1,4 +1,4 @@
-## UNRELEASED
+## v1.10.0 (February 2020)
 
 - Compiler:
   - large refactoring to separate the table of global (statically initialized)
@@ -20,7 +20,7 @@
   - Fix testing framework on runners pre 1.9.0.
 
 - Parser:
-  - Line nubers after quotations were wrong, since `\n` inside
+  - Line numbers after quotations were wrong, since `\n` inside
     quotations were not taken into account.
 
 - Typing:
@@ -59,7 +59,7 @@
     providing a ground term such as `some 3`.
   - `MLData` declarations for `OpaqueData` are no more named using a macro
     but rather using a type abbreviation. This can break user code. The fix
-    is to substitutie `@myopaquetype` with `myopaquetype` everywhere.
+    is to substitute `@myopaquetype` with `myopaquetype` everywhere.
 
 - Stdlib:
   - `diagnostic` data type to be used as an `ioarg` for builtins that can fail
