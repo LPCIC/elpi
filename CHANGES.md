@@ -1,3 +1,7 @@
+## v1.10.1 (February 2020)
+- make API.Builtin_checker module public so that third parties can reuse the
+  source
+
 ## v1.10.0 (February 2020)
 
 - Compiler:
