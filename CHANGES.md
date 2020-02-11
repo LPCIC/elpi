@@ -1,4 +1,13 @@
+## v1.10.2 (February 2020)
+
+- Builtin:
+  - occurs now accepts arguments of different types
+
+- API:
+  - expose beta reduction on raw terms
+
 ## v1.10.1 (February 2020)
+
 - make API.Builtin_checker module public so that third parties can reuse the
   source
 
