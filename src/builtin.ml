@@ -969,8 +969,8 @@ X == Y :- same_term X Y.
   DocNext);
 
   MLCode(Pred("occurs",
-    In(poly "A", "a constant (global or eigenvariable)",
-    In(poly "A", "a term", 
+    In(any, "a constant (global or eigenvariable)",
+    In(any, "a term",
     Easy     "checks if the constant occurs in the term")),
   (fun t1 t2 ~depth ->
      let occurs_in t2 t =

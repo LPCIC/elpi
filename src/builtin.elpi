@@ -398,8 +398,8 @@ external pred names % generates the list of eigenvariable
   o:list any. % list of eigenvariables in order of age (young first)
   
 external pred occurs % checks if the constant occurs in the term
-  i:A, % a constant (global or eigenvariable)
-  i:A. % a term
+  i:any, % a constant (global or eigenvariable)
+  i:any. % a term
   
 % [closed_term T] unify T with a variable that has no eigenvariables in
 % scope
