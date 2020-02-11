@@ -830,6 +830,9 @@ module Utils = struct
   let move ~from ~to_ t =
     let module R = (val !r) in let open R in
     R.hmove ~from ~to_ ?avoid:None t
+  let beta ~depth t args =
+    let module R = (val !r) in let open R in
+    R.deref_appuv ~from:depth ~to_:depth ?avoid:None args t
 
   let error = Util.error
   let type_error = Util.type_error

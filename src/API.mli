@@ -1038,8 +1038,9 @@ module Utils : sig
     ?name:string -> ?graft:([`After | `Before] * string) ->
     depth:int -> Ast.Loc.t -> Data.term -> Ast.program
 
-  (** Lifting/restriction (LOW LEVEL, don't use) *)
+  (** Lifting/restriction/beta (LOW LEVEL, don't use) *)
   val move : from:int -> to_:int -> Data.term -> Data.term
+  val beta : depth:int -> Data.term -> Data.term list -> Data.term
 
   (** readback/embed on lists *)
   val map_acc :
