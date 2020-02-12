@@ -1,4 +1,10 @@
-type pos = [%import: Lexing.position] [@@deriving show, ord, eq]
+type pos = Lexing.position = {
+  pos_fname : string;
+  pos_lnum : int;
+  pos_bol : int;
+  pos_cnum : int;
+}
+[@@deriving show, ord, eq]
 type position = pos * pos [@@deriving show, ord, eq]
 
 type term =

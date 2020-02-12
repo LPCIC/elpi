@@ -1,8 +1,0 @@
-(executable
-    (name toyml)
-    (modules ast lexer parser pmap toyml)
-    (preprocess (per_module ((pps ppx_import ppx_deriving.std) ast)))
-    (libraries elpi ppx_import ppx_deriving.std))
-
-(ocamllex lexer)
-(ocamlyacc parser)
