@@ -2161,7 +2161,7 @@ let run
   let pifexpr { pifexpr } = pifexpr in
   let state, chr =
     List.fold_left (fun (state, chr) (clique, rules) ->
-      let chr, clique = CHR.new_clique clique chr in
+      let chr, clique = CHR.new_clique (Symbols.show state) clique chr in
       let rules = filter_if flags pifexpr rules in
       let state, rules = map_acc (compile_chr initial_depth) state rules in
       List.iter (check_rule_pattern_in_clique state clique) rules;

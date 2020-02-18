@@ -444,7 +444,7 @@ module CHR : sig
 
   val empty : t
 
-  val new_clique : constant list -> t -> t * clique
+  val new_clique : (constant -> string) -> constant list -> t -> t * clique
   val clique_of : constant -> t -> Constants.Set.t option
   val add_rule : clique -> rule -> t -> t
   val in_clique : clique -> constant -> bool
@@ -479,7 +479,7 @@ end = struct (* {{{ *)
 
   let in_clique m c = Constants.Set.mem c m
 
-  let new_clique cl ({ cliques } as chr) =
+  let new_clique show_constant cl ({ cliques } as chr) =
     if cl = [] then error "empty clique";
     let c = List.fold_right Constants.Set.add cl Constants.Set.empty in
     Constants.Map.iter (fun _ c' ->
