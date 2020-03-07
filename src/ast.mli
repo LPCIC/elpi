@@ -44,10 +44,9 @@ module Term : sig
    | CData of CData.t
    | Quoted of quote
   and quote = { data : string; loc : Loc.t; kind : string option }
+  [@@ deriving show]
 
   val equal : t -> t -> bool
-  val pp : Format.formatter -> t -> unit
-  val show : t -> string
 
   exception NotInProlog of Loc.t * string
 
@@ -70,33 +69,22 @@ module Clause : sig
     | After of string
     | Before of string
     | If of string
-
-  val pp_attribute : Format.formatter -> attribute -> unit
-  val show_attribute : attribute -> string
+  [@@ deriving show]
 
   type ('term,'attributes) t = {
     loc : Loc.t;
     attributes : 'attributes;
     body : 'term;
   }
+  [@@ deriving show]
 
-  val pp :
-    (Format.formatter -> 'term -> unit) ->
-    (Format.formatter -> 'attribute -> unit) ->
-      Format.formatter -> ('term,'attribute) t -> unit
-  val show :
-    (Format.formatter -> 'term -> unit) ->
-    (Format.formatter -> 'attribute -> unit) ->
-       ('term,'attribute) t -> string
 end
 
 module Chr : sig
   type attribute =
     | Name of string
     | If of string
-
-  val pp_attribute : Format.formatter -> attribute -> unit
-  val show_attribute : attribute -> string
+  [@@ deriving show]
 
   type sequent = { eigen : Term.t; context : Term.t; conclusion : Term.t }
   and 'attribute t = {
@@ -107,6 +95,7 @@ module Chr : sig
     attributes : 'attribute;
     loc : Loc.t;
   }
+  [@@ deriving show]
 
   val create :
     ?to_match: sequent list ->
@@ -116,12 +105,6 @@ module Chr : sig
     attributes: 'attribute ->
     loc:Loc.t ->
     unit -> 'attribute t
-  val pp :
-    (Format.formatter -> 'attribute -> unit) ->
-       Format.formatter -> 'attribute t -> unit
-  val show :
-    (Format.formatter -> 'attribute -> unit) ->
-       'attribute t -> string
 
 end
 
@@ -131,15 +114,7 @@ module Macro : sig
      name : 'name;
      body : 'term
   }
-
-  val pp :
-    (Format.formatter -> 'name -> unit) ->
-    (Format.formatter -> 'term -> unit) ->
-      Format.formatter -> ('name,'term) t -> unit
-  val show :
-    (Format.formatter -> 'name -> unit) ->
-    (Format.formatter -> 'term -> unit) ->
-       ('name,'term) t -> string
+  [@@ deriving show]
 
 end
 
@@ -149,9 +124,7 @@ module Type : sig
   type attribute =
     | External
     | Index of int list (* depth *)
-
-  val pp_attribute : Format.formatter -> attribute -> unit
-  val show_attribute : attribute -> string
+  [@@ deriving show]
 
   type 'attribute t = {
     loc : Loc.t;
@@ -159,13 +132,7 @@ module Type : sig
     name : Func.t;
     ty : Term.t;
   }
-
-  val pp :
-    (Format.formatter -> 'attribute -> unit) ->
-      Format.formatter -> 'attribute t -> unit
-  val show :
-    (Format.formatter -> 'attribute -> unit) ->
-       'attribute t -> string
+  [@@ deriving show]
 
 end
 
@@ -173,13 +140,7 @@ module Mode : sig
 
   type 'name t =
     { name : 'name; args : bool list; loc : Loc.t }
-
-  val pp :
-    (Format.formatter -> 'name -> unit) ->
-      Format.formatter -> 'name t -> unit
-  val show :
-    (Format.formatter -> 'name -> unit) ->
-       'name t -> string
+  [@@ deriving show]
 
 end
 
@@ -187,13 +148,7 @@ module TypeAbbreviation : sig
 
   type ('name) t =
     { name : 'name; value : Term.t; nparams : int; loc : Loc.t }
-
-  val pp :
-    (Format.formatter -> 'name -> unit) ->
-      Format.formatter -> 'name t -> unit
-  val show :
-    (Format.formatter -> 'name -> unit) ->
-       'name t -> string
+  [@@ deriving show]
 
 end
 
@@ -217,25 +172,19 @@ module Program : sig
     | Macro of (Func.t, Term.t) Macro.t
     | Type of Type.attribute list Type.t
     | TypeAbbreviation of Func.t TypeAbbreviation.t
-
-  val pp_decl : Format.formatter -> decl -> unit
-  val show_decl : decl -> string
+  [@@ deriving show]
 
   val mkLocal : string -> decl
 
   type t = decl list
-
-  val pp : Format.formatter -> t -> unit
-  val show : t -> string
+  [@@ deriving show]
 
 end
 
 module Goal : sig
 
   type t = Loc.t * Term.t
-
-  val pp : Format.formatter -> t -> unit
-  val show : t -> string
+  [@@ deriving show]
 
 end
 
