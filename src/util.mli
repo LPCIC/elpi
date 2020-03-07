@@ -4,20 +4,17 @@
 
 module type Show = sig
   type t
-  val pp : Format.formatter -> t -> unit
-  val show : t -> string
+  [@@deriving show]
 end
 
 module type Show1 = sig
   type 'a t
-  val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
-  val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
+  [@@deriving show]
 end
 
 module type Show2 = sig
   type ('a,'b) t
-  val pp : (Format.formatter -> 'a -> unit) -> (Format.formatter -> 'b -> unit) -> Format.formatter -> ('a,'b) t -> unit
-  val show : (Format.formatter -> 'a -> unit) -> (Format.formatter -> 'b -> unit) -> ('a,'b) t -> string
+  [@@deriving show]
 end
 
 module Map : sig
@@ -26,7 +23,7 @@ module Map : sig
     include Map.S
     include Show1 with type 'a t := 'a t
   end
-  
+
   module type OrderedType = sig
     include Map.OrderedType
     include Show with type t := t
@@ -42,7 +39,7 @@ module Set : sig
     include Set.S
     include Show with type t := t
   end
-  
+
   module type OrderedType = sig
     include Set.OrderedType
     include Show with type t := t
@@ -69,7 +66,7 @@ module StrSet : Set.S with type elt = string
 module IntSet : Set.S with type elt = int
 
 module PtrMap : sig
-  
+
   type 'a t
 
   val empty : unit -> 'a t
@@ -92,7 +89,6 @@ module Hashtbl : sig
   include Show2 with type ('a,'b) t := ('a,'b) t
 end
 
-
 module Loc : sig
   type t = {
     source_name : string;
@@ -101,10 +97,8 @@ module Loc : sig
     line: int;
     line_starts_at: int;
   }
-  val show : t -> string
-  val pp : Format.formatter -> t -> unit
-  val equal : t -> t -> bool
-  val compare : t -> t -> int
+  [@@deriving show, eq, ord]
+
   val initial : string -> t
 end
 
@@ -145,11 +139,9 @@ val option_iter : ('a -> unit) -> 'a option -> unit
 module UUID : sig
 
  type t
- val compare : t -> t -> int
- val equal : t -> t -> bool
+ [@@deriving eq, ord, show]
+
  val hash : t -> int
- val pp : Format.formatter -> t -> unit
- val show : t -> string
 
  val make : unit -> t
 
@@ -203,7 +195,7 @@ module Fork : sig
     get : 'a. 'a local_ref -> 'a;
     set : 'a. 'a local_ref -> 'a -> unit
   }
-  
+
   val fork : unit -> process
 
 end
@@ -235,6 +227,7 @@ val set_formatters_maxbox : int -> unit
 
 module CData : sig
   type t
+  [@@ deriving show, eq, ord]
 
   type 'a data_declaration = {
     data_name : string;
@@ -252,10 +245,6 @@ module CData : sig
   }
 
   val declare : 'a data_declaration -> 'a cdata
-  val pp : Format.formatter -> t -> unit
-  val show : t -> string
-  val equal : t -> t -> bool
-  val compare : t -> t -> int
   val hash : t -> int
   val name : t -> string
   val hcons : t -> t
@@ -264,7 +253,7 @@ module CData : sig
 
   val ty2 : 'a cdata -> t -> t -> bool
   val morph2 : 'a cdata -> ('a -> 'a -> 'a) -> t -> t -> t
-  
+
   val map : 'a cdata -> 'b cdata -> ('a -> 'b) -> t -> t
 end
 
