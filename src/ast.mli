@@ -44,16 +44,16 @@ module Term : sig
    | CData of CData.t
    | Quoted of quote
   and quote = { data : string; loc : Loc.t; kind : string option }
-  
+
   val equal : t -> t -> bool
   val pp : Format.formatter -> t -> unit
   val show : t -> string
 
   exception NotInProlog of Loc.t * string
-  
+
   (* Can raise NotInProlog *)
   val mkApp : Loc.t -> t list -> t
-  
+
   val mkCon : string -> t
   val mkNil : t
   val mkSeq : t list -> t
@@ -70,7 +70,7 @@ module Clause : sig
     | After of string
     | Before of string
     | If of string
-  
+
   val pp_attribute : Format.formatter -> attribute -> unit
   val show_attribute : attribute -> string
 
@@ -94,7 +94,7 @@ module Chr : sig
   type attribute =
     | Name of string
     | If of string
-  
+
   val pp_attribute : Format.formatter -> attribute -> unit
   val show_attribute : attribute -> string
 
@@ -107,7 +107,7 @@ module Chr : sig
     attributes : 'attribute;
     loc : Loc.t;
   }
-  
+
   val create :
     ?to_match: sequent list ->
     ?to_remove: sequent list ->
@@ -116,13 +116,13 @@ module Chr : sig
     attributes: 'attribute ->
     loc:Loc.t ->
     unit -> 'attribute t
-  val pp : 
+  val pp :
     (Format.formatter -> 'attribute -> unit) ->
        Format.formatter -> 'attribute t -> unit
-  val show : 
+  val show :
     (Format.formatter -> 'attribute -> unit) ->
        'attribute t -> string
-  
+
 end
 
 module Macro : sig
@@ -131,7 +131,7 @@ module Macro : sig
      name : 'name;
      body : 'term
   }
-  
+
   val pp :
     (Format.formatter -> 'name -> unit) ->
     (Format.formatter -> 'term -> unit) ->
@@ -149,7 +149,7 @@ module Type : sig
   type attribute =
     | External
     | Index of int list (* depth *)
-  
+
   val pp_attribute : Format.formatter -> attribute -> unit
   val show_attribute : attribute -> string
 
@@ -159,7 +159,7 @@ module Type : sig
     name : Func.t;
     ty : Term.t;
   }
-  
+
   val pp :
     (Format.formatter -> 'attribute -> unit) ->
       Format.formatter -> 'attribute t -> unit
@@ -220,11 +220,11 @@ module Program : sig
 
   val pp_decl : Format.formatter -> decl -> unit
   val show_decl : decl -> string
-  
+
   val mkLocal : string -> decl
-  
+
   type t = decl list
-  
+
   val pp : Format.formatter -> t -> unit
   val show : t -> string
 
@@ -248,3 +248,39 @@ val cint : int cdata
 val cstring : string cdata
 val cloc : Loc.t cdata
 
+module Structured : sig
+
+type program = {
+  macros : (Func.t, Term.t) Macro.t list;
+  types : tattribute Type.t list;
+  type_abbrevs : Func.t TypeAbbreviation.t list;
+  modes : Func.t Mode.t list;
+  body : block list;
+}
+and block =
+  | Locals of Func.t list * program
+  | Clauses of (Term.t,attribute) Clause.t list
+  | Namespace of Func.t * program
+  | Shorten of Func.t shorthand list * program
+  | Constraints of Func.t list * cattribute Chr.t list * program
+and attribute = {
+  insertion : insertion option;
+  id : string option;
+  ifexpr : string option;
+}
+and insertion = Before of string | After of string
+and cattribute = {
+  cid : string;
+  cifexpr : string option
+}
+and tattribute =
+  | External
+  | Indexed of int list
+and 'a shorthand = {
+  iloc : Loc.t;
+  full_name : 'a;
+  short_name : 'a;
+}
+[@@deriving show]
+
+end

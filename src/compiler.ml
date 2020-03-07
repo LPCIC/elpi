@@ -367,45 +367,6 @@ type prechr_rule = {
   Intermediate program representation
  ****************************************************************************)
 
-module StructuredAST = struct
-
-open Ast
-
-type program = {
-  macros : (F.t, Ast.Term.t) Macro.t list;
-  types : tattribute Type.t list;
-  type_abbrevs : F.t Ast.TypeAbbreviation.t list;
-  modes : F.t Mode.t list;
-  body : block list;
-}
-and block =
-  | Locals of F.t list * program
-  | Clauses of (Term.t,attribute) Clause.t list
-  | Namespace of F.t * program
-  | Shorten of F.t shorthand list * program
-  | Constraints of F.t list * cattribute Chr.t list * program
-and attribute = {
-  insertion : insertion option;
-  id : string option;
-  ifexpr : string option;
-}
-and insertion = Before of string | After of string
-and cattribute = {
-  cid : string;
-  cifexpr : string option
-}
-and tattribute =
-  | External
-  | Indexed of int list
-and 'a shorthand = {
-  iloc : Loc.t;
-  full_name : 'a;
-  short_name : 'a;
-}
-[@@deriving show]
-
-end
-
 open Data
 module C = Constants
 
@@ -425,12 +386,12 @@ and pbody = {
   symbols : C.Set.t;
 }
 and block =
-  | Clauses of (preterm,StructuredAST.attribute) Ast.Clause.t list
+  | Clauses of (preterm,Ast.Structured.attribute) Ast.Clause.t list
   | Namespace of string * pbody
-  | Shorten of C.t StructuredAST.shorthand list * pbody
+  | Shorten of C.t Ast.Structured.shorthand list * pbody
   | Constraints of constant list * prechr_rule list * pbody
 and typ = {
-  tindex : StructuredAST.tattribute;
+  tindex : Ast.Structured.tattribute;
   decl : type_declaration
 }
 [@@deriving show]
@@ -443,7 +404,7 @@ type program = {
   types : Structured.typ list;
   type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : (mode * Loc.t) C.Map.t;
-  clauses : (preterm,StructuredAST.attribute) Ast.Clause.t list;
+  clauses : (preterm,Ast.Structured.attribute) Ast.Clause.t list;
   chr : (constant list * prechr_rule list) list;
   local_names : int;
 
@@ -503,11 +464,11 @@ module RecoverStructure : sig
 
   (* Reconstructs the structure of the AST (i.e. matches { with }) *)
 
-  val run : State.t -> Ast.Program.t -> StructuredAST.program
+  val run : State.t -> Ast.Program.t -> Ast.Structured.program
 
 end = struct (* {{{ *)
   
-  open StructuredAST
+  open Ast.Structured
   open Ast
  
   let cl2b = function
@@ -731,7 +692,7 @@ module ToDBL : sig
      Const "%Arg2")
   *)
 
-  val run : State.t -> toplevel_macros:(Ast.Term.t * Util.Loc.t) F.Map.t -> StructuredAST.program -> State.t * Structured.program
+  val run : State.t -> toplevel_macros:(Ast.Term.t * Util.Loc.t) F.Map.t -> Ast.Structured.program -> State.t * Structured.program
 
   (* Exported since also used to flatten (here we "flatten" locals) *)
   val prefix_const : State.t -> string list -> C.t -> State.t * C.t
@@ -1022,8 +983,8 @@ let prechr_rule_of_ast depth macros state r =
   let state, pnew_goal = option_mapacc intern_sequent state r.Ast.Chr.new_goal in
   let pamap = get_argmap state in
   let state = State.end_clause_compilation state in
-  let pname = r.Ast.Chr.attributes.StructuredAST.cid in
-  let pifexpr = r.Ast.Chr.attributes.StructuredAST.cifexpr in
+  let pname = r.Ast.Chr.attributes.Ast.Structured.cid in
+  let pifexpr = r.Ast.Chr.attributes.Ast.Structured.cifexpr in
   state,
   { pto_match; pto_remove; pguard; pnew_goal; pamap; pname; pifexpr; pcloc }
   
@@ -1053,7 +1014,7 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
   state, { term; amap; loc }
 ;;
 
-  open StructuredAST
+  open Ast.Structured
 
   let check_no_overlap_macros _ _ = ()
  
@@ -1143,10 +1104,10 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
       let lcs, state, rest = compile_clauses lcs state macros rest in
       lcs, state, cl :: rest
 
-  let compile_shorthand state { StructuredAST.full_name; short_name; iloc } = 
+  let compile_shorthand state { Ast.Structured.full_name; short_name; iloc } = 
     let state, full_name = funct_of_ast state full_name in
     let state, short_name = funct_of_ast state short_name in
-    state, { StructuredAST.full_name; short_name; iloc }
+    state, { Ast.Structured.full_name; short_name; iloc }
 
   let rec append_body b1 b2 =
     match b1, b2 with
@@ -1435,7 +1396,7 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
     state, (newprefix, newsubst)
 
   let push_subst_shorthands shorthands _symbols_defined (oldprefix, oldsubst) =
-    let push1 m { StructuredAST.short_name; full_name } =
+    let push1 m { Ast.Structured.short_name; full_name } =
       C.Map.add short_name
         (try C.Map.find full_name m with Not_found -> full_name) m
     in
@@ -1795,25 +1756,25 @@ end = struct (* {{{ *)
                    " already exists at " ^ Loc.show (StrMap.find n s))
           else
             StrMap.add n loc s in
-    let compile_clause ({ Ast.Clause.attributes = { StructuredAST.id }} as c) =
+    let compile_clause ({ Ast.Clause.attributes = { Ast.Structured.id }} as c) =
       { c with Ast.Clause.attributes = { Assembled.id }}
     in
     let rec insert loc_name c l =
       match l, loc_name with
       | [],_ -> error ~loc:c.Ast.Clause.loc ("unable to graft this clause: no clause named " ^
              match loc_name with
-             | StructuredAST.After x -> x
-             | StructuredAST.Before x -> x)
+             | Ast.Structured.After x -> x
+             | Ast.Structured.Before x -> x)
       | { Ast.Clause.attributes = { Assembled.id = Some n }} as x :: xs,
-        StructuredAST.After name when n = name ->
+        Ast.Structured.After name when n = name ->
            c :: x :: xs
       | { Ast.Clause.attributes = { Assembled.id = Some n }} as x :: xs,
-        StructuredAST.Before name when n = name ->
+        Ast.Structured.Before name when n = name ->
            x :: c :: xs
       | x :: xs, _ -> x :: insert loc_name c xs in
     let rec aux seen acc = function
       | [] -> List.rev acc
-      | { Ast.Clause.attributes = { StructuredAST.insertion = Some i }} as x :: xs ->
+      | { Ast.Clause.attributes = { Ast.Structured.insertion = Some i }} as x :: xs ->
           let x = compile_clause x in
           aux (add seen x) (insert i x acc) xs
       | x :: xs ->
@@ -1828,7 +1789,7 @@ end = struct (* {{{ *)
       Format.fprintf fmt "(%s)%a ->@ (%s)%a;@ "
         (Hashtbl.find c2s k) Int.pp k (Hashtbl.find c2s2 v) Int.pp v) s;
     Format.fprintf fmt "@] }}" *)
-  let clause_name { Ast.Clause.attributes = { StructuredAST.ifexpr } } = ifexpr
+  let clause_name { Ast.Clause.attributes = { Ast.Structured.ifexpr } } = ifexpr
 
   let run ~header:({ symbol_table; builtins; code; flags } as h) ul =
       let nunits_with_locals =
@@ -1880,8 +1841,8 @@ let unit_of_ast s ?header p =
   let p = RecoverStructure.run s p in
  
   if print_passes then
-    Format.eprintf "== StructuredAST ================@\n@[<v 0>%a@]@\n"
-      StructuredAST.pp_program p;
+    Format.eprintf "== Ast.Structured ================@\n@[<v 0>%a@]@\n"
+      Ast.Structured.pp_program p;
 
   let toplevel_macros =
     match header with
@@ -1939,11 +1900,11 @@ let check_all_builtin_are_typed state types =
    Constants.Set.iter (fun c ->
      if not (List.exists
         (fun { Structured.tindex; decl = { tname }} ->
-            tindex = StructuredAST.External && tname == c) types) then
+            tindex = Ast.Structured.External && tname == c) types) then
        error ("Built-in without external type declaration: " ^ Symbols.show state c))
    (Builtins.all state);
   List.iter (fun { Structured.tindex; decl = { tname; tloc }} ->
-    if tindex = StructuredAST.External && not (is_builtin state tname) then
+    if tindex = Ast.Structured.External && not (is_builtin state tname) then
       error ~loc:tloc ("external type declaration without Built-in: " ^
             Symbols.show state tname))
   types
@@ -1951,7 +1912,7 @@ let check_all_builtin_are_typed state types =
 
 let check_no_regular_types_for_builtins state types =
   List.iter (fun {Structured.tindex; decl = { tname; tloc } } ->
-    if tindex <> StructuredAST.External && is_builtin state tname then
+    if tindex <> Ast.Structured.External && is_builtin state tname then
       anomaly ~loc:tloc ("type declaration for Built-in " ^
             Symbols.show state tname ^ " must be flagged as external");
  ) types

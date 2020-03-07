@@ -273,3 +273,42 @@ let { CData.cin = in_loc; isc = is_loc; cout = out_loc } as cloc =
     data_hash = Hashtbl.hash;
     data_hconsed = false;
   })
+
+module Structured = struct
+
+open Ast
+
+type program = {
+  macros : (Func.t, Term.t) Macro.t list;
+  types : tattribute Type.t list;
+  type_abbrevs : Func.t TypeAbbreviation.t list;
+  modes : Func.t Mode.t list;
+  body : block list;
+}
+and block =
+  | Locals of Func.t list * program
+  | Clauses of (Term.t,attribute) Clause.t list
+  | Namespace of Func.t * program
+  | Shorten of Func.t shorthand list * program
+  | Constraints of Func.t list * cattribute Chr.t list * program
+and attribute = {
+  insertion : insertion option;
+  id : string option;
+  ifexpr : string option;
+}
+and insertion = Before of string | After of string
+and cattribute = {
+  cid : string;
+  cifexpr : string option
+}
+and tattribute =
+  | External
+  | Indexed of int list
+and 'a shorthand = {
+  iloc : Loc.t;
+  full_name : 'a;
+  short_name : 'a;
+}
+[@@deriving show]
+
+end
