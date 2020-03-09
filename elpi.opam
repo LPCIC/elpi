@@ -18,6 +18,7 @@ depends: [
   "stdlib-shims"
   "camlp5" {> "7.99"}
   "ppxlib" {>= "0.12.0" }
+  "menhir" {>= "20211230" }
   "re" {>= "1.7.2"}
   "ppx_deriving" {>= "4.2"}
   "ANSITerminal" {with-test}

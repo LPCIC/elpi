@@ -2,6 +2,8 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
+open Elpi_util
+
 open API
 open RawData
 open Utils
@@ -40,7 +42,7 @@ let register_eval, register_eval_ty, lookup_eval, eval_declaration =
  (fun nargs (s,tys) f ->
    tys |> List.iter (fun ty ->
      let ty =
-       if nargs = -2 then
+       if nargs < 0 then
          Printf.sprintf "type (%s) %s." s (str_of_ty (abs nargs) ty)
        else
          Printf.sprintf "type %s %s." s (str_of_ty (abs nargs) ty) in
@@ -107,7 +109,7 @@ let _ =
    | [ CData x; CData y ] when ty2 string x y ->
          of_string (to_string x ^ to_string y)
    | _ -> type_error "Wrong arguments to ^") ;
-  register_evals 1 [ "~",["int";"float"] ; "i~",["int"] ; "r~",["float"] ] (function
+  register_evals ~-1 [ "~",["int";"float"] ; "i~",["int"] ; "r~",["float"] ] (function
    | [ CData x ] when is_int x -> (morph1 int (~-) x)
    | [ CData x ] when is_float x -> (morph1 float (~-.) x)
    | _ -> type_error "Wrong arguments to ~/i~/r~") ;
@@ -738,11 +740,9 @@ let lp_builtins = let open BuiltIn in let open BuiltInData in [
     In(string, "S",
     Out(any,   "T",
     Full(ContextualConversion.unit_ctx, "parses a term T from S"))),
-  (fun s _ ~depth () () state ->
+  (fun text _ ~depth () () state ->
      try
-       let loc = Ast.Loc.initial "(string_of_term)" in
-       let t = Parse.goal loc s in
-       let state, t = Quotation.term_at ~depth state t in
+       let state, t = Quotation.term_at ~depth state text in
        state, !:t, []
      with
      | Parse.ParseError _ -> raise No_clause)),
@@ -751,13 +751,11 @@ let lp_builtins = let open BuiltIn in let open BuiltInData in [
   MLCode(Pred("readterm",
     In(in_stream, "InStream",
     Out(any,      "T",
-    Full(ContextualConversion.unit_ctx, "reads T from InStream"))),
+    Full(ContextualConversion.unit_ctx, "reads T from InStream, ends with \\n"))),
   (fun (i,source_name) _ ~depth () () state ->
      try
-       let loc = Ast.Loc.initial source_name in
-       let strm = Stream.of_channel i in
-       let t = Parse.goal_from_stream loc strm in
-       let state, t = Quotation.term_at ~depth state t in
+       let text = input_line i in
+       let state, t = Quotation.term_at ~depth state text in
        state, !:t, []
      with
      | Sys_error msg -> error msg
@@ -813,9 +811,9 @@ counter C N :- trace.counter C N.|};
           ~file_resolver:(Parse.std_resolver ~paths:[] ())
           () in
       try
-        let ap = Parse.program ~elpi [f] in
+        let ap = Parse.program ~elpi ~files:[f] in
         let loc = Ast.Loc.initial "(quote_syntax)" in
-        let aq = Parse.goal loc s in
+        let aq = Parse.goal ~elpi ~loc ~text:s in
         let p = Compile.(program ~flags:default_flags ~elpi [ap]) in
         let q = API.Compile.query p aq in
         let state, qp, qq = Quotation.quote_syntax_runtime state q in
@@ -1192,7 +1190,7 @@ if2 _  _  _  _  E :- !, E. |};
 ]
 ;;
 
-let elpi_stdlib_src = let open BuiltIn in let open BuiltInData in [ 
+let elpi_stdlib_src = let open BuiltIn in [ 
 
   LPCode Builtin_stdlib.code
 
@@ -1380,13 +1378,13 @@ let open BuiltIn in let open BuiltInData in
 module LocMap : Util.Map.S with type key = Ast.Loc.t = Util.Map.Make(Ast.Loc)
 module LocSet : Util.Set.S with type elt = Ast.Loc.t = Util.Set.Make(Ast.Loc)
 
-let elpi_map =  let open BuiltIn in let open BuiltInData in [
+let elpi_map =  let open BuiltIn in [
   
     LPCode Builtin_map.code
     
 ]
 
-let elpi_set =  let open BuiltIn in let open BuiltInData in [
+let elpi_set =  let open BuiltIn in [
   
     LPCode Builtin_set.code
     
@@ -1519,5 +1517,5 @@ let std_builtins =
 
 let default_checker () =
   let elpi = API.Setup.init ~builtins:[std_builtins] () in
-  let ast = API.Parse.program_from_stream ~elpi (API.Ast.Loc.initial "(checker)") (Stream.of_string Builtin_checker.code) in
+  let ast = API.Parse.program_from ~elpi ~loc:(API.Ast.Loc.initial "(checker)") (Lexing.from_string Builtin_checker.code) in
   API.Compile.program ~flags:API.Compile.default_flags ~elpi [ast]

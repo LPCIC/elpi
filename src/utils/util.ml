@@ -134,7 +134,7 @@ module Loc = struct
     let source =
      if source_name = "" then ""
      else "File \"" ^ source_name ^ "\", " in
-    let chars = Printf.sprintf "characters %d-%d" source_start source_stop in
+    let chars = Printf.sprintf "character %d" source_start (*source_stop*) in
     let pos =
       if line = -1 then chars
       else Printf.sprintf "line %d, column %d, %s"
@@ -238,7 +238,7 @@ let rec for_all23 ~argsdepth (p : argsdepth:int -> matching:bool -> 'a) x1 x2 x3
 
 let pp_loc_opt = function
   | None -> ""
-  | Some loc -> Loc.show loc ^ ": "
+  | Some loc -> Loc.show loc
 let default_warn ?loc s =
   Printf.eprintf "Warning: %s%s\n%!" (pp_loc_opt loc) s
 let default_error ?loc s =
@@ -266,11 +266,9 @@ let default_anomaly ?loc s =
             | (l,n) -> l ^ Printf.sprintf " [%d times]" n) in
         String.concat "\n" lines
     in
- Printf.eprintf "%s\nAnomaly: %s%s\n%!" trace (pp_loc_opt loc) s;
+ Printf.eprintf "%s\nAnomaly: %s %s\n%!" trace (pp_loc_opt loc) s;
   exit 2
 let default_type_error ?loc s = default_error ?loc s
-let default_printf = Printf.printf
-let default_eprintf = Printf.eprintf
 
 let warn_f       = ref (Obj.repr default_warn)
 let error_f      = ref (Obj.repr default_error)
@@ -311,22 +309,10 @@ let option_mapacc f acc = function
   | Some x -> let acc, y = f acc x in acc, Some y
   | None -> acc, None
 let option_iter f = function None -> () | Some x -> f x
+let option_default d = function None -> d | Some x -> x
 
-module Option = struct
-  type 'a t = 'a option = None | Some of 'a
-  let pp poly_a fmt x =
-    match x with
-    | None -> Format.pp_print_string fmt "None"
-    | Some x ->
-        (Format.pp_open_box fmt 1;
-          Format.pp_print_string fmt "Some (";
-          poly_a fmt x;
-          Format.pp_print_string fmt ")";
-          Format.pp_close_box fmt ())
-  let show poly_a x = Format.asprintf "@[%a@]" (pp poly_a) x
-end
 module Pair = struct
-  type ('a,'b) t = 'a * 'b
+
   let pp poly_a poly_b fmt x =
     let (x0, x1) = x in
     Format.pp_open_box fmt 1;
@@ -348,6 +334,7 @@ let pp_option f fmt = function None -> () | Some x -> f fmt x
 let pp_int = Int.pp
 let pp_string = String.pp
 let pp_pair = Pair.pp
+let show_pair = Pair.show
 
 let remove_from_list x =
  let rec aux acc =
@@ -563,7 +550,7 @@ let compare x y =
 let hash x = (IntMap.find x.ty !m).cdata_hash x
 let name x = (IntMap.find x.ty !m).cdata_name
 let hcons x = (IntMap.find x.ty !m).cdata_canon x
-let ty2 { isc } ({ ty = t1 } as x) { ty = t2 } = isc x && t1 = t2
+let ty2 { isc; _ } ({ ty = t1; _ } as x) { ty = t2; _ } = isc x && t1 = t2
 let show x =
   let b = Buffer.create 22 in
   Format.fprintf (Format.formatter_of_buffer b) "@[%a@]" pp x;
@@ -605,8 +592,51 @@ let declare { data_compare; data_pp; data_hash; data_name; data_hconsed } =
     name = data_name;
   }
 
-  let morph1 { cin; cout } f x = cin (f (cout x))
-  let morph2 { cin; cout } f x y = cin (f (cout x) (cout y))
+  let morph1 { cin; cout; _ } f x = cin (f (cout x))
+  let morph2 { cin; cout; _ } f x y = cin (f (cout x) (cout y))
   
-  let map { cout } { cin } f x = cin (f (cout x))
+  let map { cout; _ } { cin; _ } f x = cin (f (cout x))
 end
+
+let make_absolute cwd filename =
+  if not (Filename.is_relative filename) then filename
+  else Filename.concat cwd filename
+
+let rec readsymlinks f =
+  try
+    let link = Unix.readlink f in
+    if not(Filename.is_relative link) then readsymlinks link
+    else readsymlinks Filename.(concat (dirname f) link)
+  with Unix.Unix_error _ | Failure _ -> f
+  
+exception File_not_found of string
+
+let std_resolver ?(cwd=Sys.getcwd()) ~paths () =
+  let dirs = List.map (fun f -> make_absolute cwd (readsymlinks f)) paths in
+fun ?(cwd=Sys.getcwd()) ~unit:(origfilename as filename) () ->
+  let rec iter_tjpath dirnames =
+    let filename,dirnames,relative =
+     if not (Filename.is_relative filename) then filename,[],false
+     else
+      match dirnames with
+         [] -> raise (File_not_found filename)
+       | dirname::dirnames->Filename.concat dirname filename,dirnames,true in
+    let prefixname = Filename.remove_extension filename in
+     let change_suffix filename =
+      if Filename.check_suffix filename ".elpi" then
+       (* Backward compatibility with Teyjus *) 
+       prefixname ^ ".mod"
+      else if Filename.check_suffix filename ".mod" then
+       (* Forward compatibility with Teyjus *) 
+       prefixname ^ ".elpi"
+      else filename in
+     if Sys.file_exists filename then filename
+     else
+      let changed_filename = change_suffix filename in
+      if Sys.file_exists changed_filename then changed_filename
+      else if relative then iter_tjpath dirnames
+      else raise (File_not_found origfilename)
+  in
+  try iter_tjpath (cwd :: dirs)
+  with File_not_found f ->
+    raise (Failure ("File "^f^" not found in: " ^ String.concat ", " dirs))

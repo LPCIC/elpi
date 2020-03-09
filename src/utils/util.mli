@@ -117,7 +117,6 @@ val map_acc : ('acc -> 'a -> 'acc * 'b) -> 'acc -> 'a list -> 'acc * 'b list
 val map_acc2 : ('acc -> 'a -> 'b -> 'acc * 'c) -> 'acc -> 'a list -> 'b list -> 'acc * 'c list
 val map_acc3 : ('acc -> 'a -> 'b -> 'd -> 'acc * 'c) -> 'acc -> 'a list -> 'b list -> 'd list -> 'acc * 'c list
 val partition_i : (int -> 'a -> bool) -> 'a list -> 'a list * 'a list
-val partition_i : (int -> 'a -> bool) -> 'a list -> 'a list * 'a list
 val fold_left2i :
   (int -> 'acc -> 'x -> 'y -> 'acc) -> 'acc -> 'x list -> 'y list -> 'acc
 val uniq : 'a list -> 'a list
@@ -131,6 +130,7 @@ val pp_option :
 val option_mapacc :
   ('acc -> 'a -> 'acc * 'b) -> 'acc -> 'a option -> 'acc * 'b option
 val option_iter : ('a -> unit) -> 'a option -> unit
+val option_default : 'a -> 'a option -> 'a
 
 (***************** Unique ID ****************)
 
@@ -162,9 +162,10 @@ val pp_pair :
   (Format.formatter -> 'a -> unit) ->
   (Format.formatter -> 'b -> unit) ->
     Format.formatter -> 'a * 'b -> unit
-val pp_option :
-  (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a option -> unit
-
+val show_pair :
+  (Format.formatter -> 'a -> unit) ->
+  (Format.formatter -> 'b -> unit) ->
+    ('a * 'b) -> string
 
 (* for open types *)
 type 'a spaghetti_printer
@@ -264,3 +265,7 @@ module CData : sig
   val map : 'a cdata -> 'b cdata -> ('a -> 'b) -> t -> t
 end
 
+(* file access *)
+val std_resolver :
+  ?cwd:string -> paths:string list -> unit ->
+     (?cwd:string -> unit:string -> unit -> string)

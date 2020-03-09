@@ -264,12 +264,12 @@ typecheck-program P Q DeclaredTypes RC :-
 
 % ---------- warnings ------------------------------------------------------
 
-type `-> term -> int -> entry.
+type (->) term -> int -> entry.
 type variable term -> prop.
 
 mode (report-linear i).
 report-linear [].
-report-linear [V `-> 1 + uvar |NS] :- !,
+report-linear [V -> 1 + uvar |NS] :- !,
   pp V VN,
   if (not(rex_match "_" VN), not(rex_match ".*_" VN))
     (checking LOC,
@@ -278,13 +278,13 @@ report-linear [V `-> 1 + uvar |NS] :- !,
      warning LOC MSG)
     true,
   report-linear NS.
-report-linear [V `-> uvar |NS] :-
+report-linear [V -> uvar |NS] :-
   pp V VN,
   if (not(rex_match "_" VN), not(rex_match ".*_" VN))
     (checking LOC, MSG is VN ^" is unused", warning LOC MSG)
     true,
   report-linear NS.
-report-linear [_ `-> _ | NS] :- report-linear NS.
+report-linear [_ -> _ | NS] :- report-linear NS.
 
 type count A -> list B -> prop.
 count (lam F) E :- pi x\ count (F x) E.
@@ -294,7 +294,7 @@ count X E :- variable X, !, incr X E.
 count A _.
 
 mode (incr i i).
-incr X [X `-> K | _] :- add1 K.
+incr X [X -> K | _] :- add1 K.
 incr X [_ | XS] :- incr X XS.
 
 mode (add1 i).
@@ -302,9 +302,9 @@ add1 (uvar as K) :- K = 1 + FRESH_.
 add1 (1 + K) :- add1 K.
 
 check-non-linear [N|NS] (arg C) L :- pi x\
- (pp x N :- !) => (variable x) => check-non-linear NS (C x) [x `-> FRESH_ | L].
+ (pp x N :- !) => (variable x) => check-non-linear NS (C x) [x -> FRESH_ | L].
 check-non-linear [] (arg C) L :- pi x\
- (variable x) => check-non-linear NS (C x) [x `-> FRESH_ | L].
+ (variable x) => check-non-linear NS (C x) [x -> FRESH_ | L].
 check-non-linear _ C L :-
   count C L, report-linear L.
 

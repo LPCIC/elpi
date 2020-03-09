@@ -1,0 +1,167 @@
+{
+(* elpi: embedded lambda prolog interpreter                                  *)
+(* license: GNU Lesser General Public License Version 2.1 or later           *)
+(* ------------------------------------------------------------------------- *)
+    open Elpi_lexer_config.Tokens
+    exception Error of string
+
+    let new_line b =
+      Lexing.new_line b
+
+    let skip b n =
+      let open Lexing in
+      b.lex_curr_p <- { b.lex_curr_p with pos_cnum = b.lex_curr_p.pos_cnum + n }
+
+}
+
+let digit = [ '0' - '9' ]
+
+let pnum = (digit +)
+
+let num = '-' ? pnum
+
+let ucase = [ 'A' - 'Z' ]
+let lcase = [ 'a' - 'z' ]
+let schar2 = '+'  | '*' | '/' | '^' | '<' | '>' | '`' | '\'' | '?' | '@' | '#' | '~' | '=' | '&' | '!'
+let schar = schar2 | '-' | '$' | '_'
+let idchar = lcase | ucase | digit | schar
+let idcharstar = idchar *
+let idcharstarns = (idchar | "." ( ucase | lcase )) *
+let symbchar = lcase | ucase | digit | schar | ':'
+let symbcharstar = symbchar *
+let symbcharplus = symbchar +
+
+rule linecomment = parse
+| '\n' { new_line lexbuf; token lexbuf }
+| eof { token lexbuf }
+| _ { skip lexbuf 1; linecomment lexbuf }
+
+and multilinecomment nest = parse
+| '\n' { new_line lexbuf; multilinecomment nest lexbuf }
+| "*/" { if nest = 0 then token lexbuf else multilinecomment (nest - 1) lexbuf }
+| "/*" { multilinecomment (nest+1) lexbuf }
+| _ { skip lexbuf 1; multilinecomment nest lexbuf }
+
+and string b = parse
+| '\n'     { Buffer.add_char b '\n'; new_line lexbuf; string b lexbuf }
+| '\\' 'n' { Buffer.add_char b '\n'; skip lexbuf 2; string b lexbuf }
+| '\\' 'b' { Buffer.add_char b '\b'; skip lexbuf 2; string b lexbuf }
+| '\\' 't' { Buffer.add_char b '\t'; skip lexbuf 2; string b lexbuf }
+| '\\' 'r' { Buffer.add_char b '\r'; skip lexbuf 2; string b lexbuf }
+| '\\' '\\' { Buffer.add_char b '\\'; skip lexbuf 2; string b lexbuf }
+| '\\' '"' { Buffer.add_char b '"';  skip lexbuf 2; string b lexbuf }
+| '"' '"'  { Buffer.add_char b '"';  skip lexbuf 2; string b lexbuf }
+| '"' { STRING (Buffer.contents b) }
+| _ # '"' as c { Buffer.add_char b c; skip lexbuf 1; string b lexbuf }
+
+and quoted n = parse
+| '{' { skip lexbuf 1; quoted (n+1) lexbuf }
+| '\n' { let b = Buffer.create 80 in Buffer.add_char b '\n'; skip lexbuf 1; new_line lexbuf; quoted_inner b n 0 lexbuf }
+| _ as c { let b = Buffer.create 80 in Buffer.add_char b c; skip lexbuf 1; quoted_inner b n 0 lexbuf }
+
+and quoted_inner b n l = parse
+| '}' {
+    Buffer.add_char b '}'; skip lexbuf 1; 
+    try lookahead_close b (n-1) lexbuf;
+      if l = 0 then begin
+        lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_cnum = lexbuf.lex_curr_p.pos_cnum - 1};
+        QUOTED (Buffer.sub b 0 (Buffer.length b -n))
+      end
+      else quoted_inner b n (l-1) lexbuf
+    with Failure _ -> quoted_inner b n l lexbuf
+  }
+| '{' {
+    Buffer.add_char b '{'; skip lexbuf 1; 
+    try lookahead_open b (n-1) lexbuf; quoted_inner b n (l+1) lexbuf
+    with Failure _ -> quoted_inner b n l lexbuf
+  }
+| '\n' { Buffer.add_char b '\n'; new_line lexbuf; quoted_inner b n l lexbuf }
+| _ as c { Buffer.add_char b c; quoted_inner b n l lexbuf }
+
+and lookahead_close b n = parse
+| '}' {
+    Buffer.add_char b '}'; skip lexbuf 1; 
+    if n = 1 then () else lookahead_close b (n-1) lexbuf
+  }
+
+and lookahead_open b n = parse
+| '{' {
+    Buffer.add_char b '{'; skip lexbuf 1; 
+    if n = 1 then () else lookahead_open b (n-1) lexbuf
+  }
+
+and token = parse
+| ("#line" " "+ (num as n) " "+ '"' ([^'"']+ as f) '"' " "* '\n' as x) {
+    let open Lexing in
+    lexbuf.lex_curr_p <- {
+      pos_fname = f;
+      pos_lnum = int_of_string n;
+      pos_cnum = 0;
+      pos_bol = lexbuf.lex_curr_p.pos_bol;
+    };
+    lexbuf.lex_abs_pos <- - (String.length x) - lexbuf.lex_start_p.pos_cnum;
+    lexbuf.lex_start_p <- lexbuf.lex_curr_p;
+    token lexbuf }
+| ( ' ' | '\t' | '\r' ) { skip lexbuf 1; token lexbuf }
+| '\n' { new_line lexbuf; token lexbuf }
+| '%' { linecomment lexbuf }
+| "/*" { multilinecomment 0 lexbuf }
+| "." { FULLSTOP }
+| "_" idchar + as c { CONSTANT c }
+| "_" { FRESHUV }
+| num as i { INTEGER (int_of_string i) }
+| num "." pnum as f { FLOAT (float_of_string f) }
+| "." pnum as f { FLOAT (float_of_string f) }
+| '"' { string (Buffer.create 80) lexbuf }
+| ":" { COLON }
+| "\\" { BIND }
+| "(" { LPAREN }
+| ")" { RPAREN }
+| "([])" { NIL }
+| "[" { LBRACKET }
+| "]" { RBRACKET }
+| "{" { LCURLY }
+| "}" { RCURLY }
+| "|" { PIPE }
+| "{{" { skip lexbuf 2; quoted 2 lexbuf }
+| ("i" | "o") as s { IO s }
+| "shorten" { SHORTEN }
+| "accumulate" { ACCUMULATE }
+| "local" { LOCAL }
+| "pred" { PRED }
+| "mode" { MODE }
+| "macro" { MACRO }
+| "rule" { RULE }
+| "namespace" { NAMESPACE }
+| "constraint" { CONSTRAINT }
+| "kind" { KIND }
+| "type" { TYPE }
+| "typeabbrev" { TYPEABBREV }
+| "external" { EXTERNAL }
+| "module" { MODULE }
+| "sig" { SIG }
+| "import" { IMPORT }
+| "accum_sig" { ACCUM_SIG }
+| "use_sig" { USE_SIG }
+| "localkind" { LOCALKIND }
+| "useonly" { USEONLY }
+| "exportdef" { EXPORTDEF }
+| "closed" { CLOSED }
+| "as" { AS }
+| "<=>" { IFF }
+| ("infix" | "infixl" | "infixr" | "prefix" | "prefixr" | "postfix" | "postfixl" ) as x { FIXITY x }
+| '\'' symbcharstar '\'' as s { CONSTANT s }
+| '`' symbcharstar '`' as s { CONSTANT s }
+| "!" { CUT }
+| "pi" { PI }
+| "sigma" { SIGMA }
+| "after" { AFTER }
+| "before" { BEFORE }
+| "name" { NAME }
+| "if" { IF }
+| "index" { INDEX }
+@@MIXFIX@@
+| ucase idcharstar as c { CONSTANT c }
+| lcase idcharstarns as c { CONSTANT c }
+| '@' idcharstar as c { CONSTANT c }
+| eof { EOF }

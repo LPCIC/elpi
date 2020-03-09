@@ -2,9 +2,12 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
+open Elpi_util
+
 module U = Util
 module Loc = U.Loc
-open Ast
+open Elpi_parser.Ast
+open Elpi_parser.Parser_config
 open Term
 
 module Str = Re.Str
@@ -23,8 +26,6 @@ let to_ploc {
   source_start = source_start;
   source_stop = source_stop;
 } = Ploc.make_loc source_name line line_starts_at (source_start, source_stop) ""
-
-exception ParseError of Loc.t * string
 
 type fixity = Infixl | Infixr | Infix | Prefix | Prefixr | Postfix | Postfixl
 
@@ -45,9 +46,9 @@ let set_precedence, precedence_of =
  (fun c -> ConstMap.find c !precs)
 ;;
 
-type parser_state_aux = { file_resolver : ?cwd:string -> file:string -> unit -> string }
+type parser_state_aux = { file_resolver : ?cwd:string -> unit:string -> unit -> string }
 type parser_state = parser_state_aux option
-let parser_state = ref { file_resolver = (fun ?cwd:_ ~file:_ () -> assert false) }
+let parser_state = ref { file_resolver = (fun ?cwd:_ ~unit:_ () -> assert false) }
 let cur_dirname = ref "./"
 
 let last_loc : Ploc.t ref = ref (Ploc.make_loc "dummy" 1 0 (0, 0) "")
@@ -70,46 +71,14 @@ let parse_silent = ref true
 (* the parsed variable is a cache to avoid parsing the same file twice *)
 let parsed = ref []
 
-exception File_not_found of string
-
-let std_resolver ?(cwd=Sys.getcwd()) ~paths () =
-  let dirs = List.map (fun f -> make_absolute cwd (readsymlinks f)) paths in
-fun ?(cwd=Sys.getcwd()) ~file:(origfilename as filename) () ->
-  let rec iter_tjpath dirnames =
-    let filename,dirnames,relative =
-     if not (Filename.is_relative filename) then filename,[],false
-     else
-      match dirnames with
-         [] -> raise (File_not_found filename)
-       | dirname::dirnames->Filename.concat dirname filename,dirnames,true in
-    let prefixname = Filename.remove_extension filename in
-     let change_suffix filename =
-      if Filename.check_suffix filename ".elpi" then
-       (* Backward compatibility with Teyjus *) 
-       prefixname ^ ".mod"
-      else if Filename.check_suffix filename ".mod" then
-       (* Forward compatibility with Teyjus *) 
-       prefixname ^ ".elpi"
-      else filename in
-     if Sys.file_exists filename then filename
-     else
-      let changed_filename = change_suffix filename in
-      if Sys.file_exists changed_filename then changed_filename
-      else if relative then iter_tjpath dirnames
-      else raise (File_not_found origfilename)
-  in
-  try iter_tjpath (cwd :: dirs)
-  with File_not_found f ->
-    raise (Failure ("File "^f^" not found in: " ^ String.concat ", " dirs))
-
-let resolve ?cwd ~file () = !parser_state.file_resolver ?cwd ~file ()
+let resolve ?cwd ~unit () = !parser_state.file_resolver ?cwd ~unit ()
 
 let rec parse_one e (origfilename as filename) =
  let origprefixname =
    try Filename.chop_extension origfilename
    with Invalid_argument _ ->
      raise (Failure ("File "^origfilename^" has no extension")) in
- let filename = resolve ~cwd:!cur_dirname ~file:filename () in
+ let filename = resolve ~cwd:!cur_dirname ~unit:filename () in
  let prefixname = Filename.chop_extension filename in
  let inode = Digest.file filename in
  if List.mem_assoc inode !parsed then begin
@@ -552,7 +521,7 @@ let gram_extend loc { fix; sym = cst; prec = nprec } =
           prerr_endline ""; *)
 
 let accumulate loc extension modnames =
-  List.map (fun file -> Program.Accumulated(of_ploc loc, parse_one lp (file ^ extension))) modnames
+  List.map (fun file -> Program.Accumulated(of_ploc loc, [parse_one lp (file ^ extension)])) modnames
 
 EXTEND
   GLOBAL: lp goal atom;
@@ -573,7 +542,12 @@ EXTEND
        to_remove = OPT [ BIND; l = LIST1 sequent -> l ];
        guard = OPT [ PIPE; a = atom LEVEL "abstterm" -> a ];
        new_goal = OPT [ SYMBOL "<=>"; gs = sequent -> gs ] ->
-         Chr.create ~to_match ?to_remove ?guard ?new_goal ~attributes:[] ~loc:(of_ploc loc) ()
+         { Chr.to_match = to_match;
+               to_remove = Util.option_default [] to_remove;
+               guard = guard;
+               new_goal = new_goal;
+               attributes=[];
+               loc=(of_ploc loc) }
     ]];
   sequent_core :
     [ [ constant_colon; e = CONSTANT; COLON; t = atom -> Some e, (t : Term.t) 
@@ -600,13 +574,13 @@ EXTEND
   indexing_expr :
     [[ LPAREN; l = LIST1 indexing_arg_spec; RPAREN -> l ]];
   clause_attribute :
-   [[ CONSTANT "name";   name = LITERAL -> Clause.Name name
-    | CONSTANT "before"; name = LITERAL -> Clause.Before name
-    | CONSTANT "after";  name = LITERAL -> Clause.After name
-    | CONSTANT "if";     expr = LITERAL -> Clause.If expr
+   [[ CONSTANT "name";   name = LITERAL -> Name name
+    | CONSTANT "before"; name = LITERAL -> Before name
+    | CONSTANT "after";  name = LITERAL -> After name
+    | CONSTANT "if";     expr = LITERAL -> If expr
     ]];
   type_attribute :
-   [[ CONSTANT "index";  expr = indexing_expr -> Type.Index expr
+   [[ CONSTANT "index";  expr = indexing_expr -> Index expr
     ]];
   clause_attributes : [[ l = LIST1 clause_attribute SEP COLON-> l ]];
   type_attributes : [[ l = LIST1 type_attribute SEP COLON-> l ]];
@@ -633,29 +607,32 @@ EXTEND
   decl :
     [[ pragma -> []
      | COLON; cattributes = clause_attributes; RULE; r = chrrule; FULLSTOP ->
-       let cattributes = cattributes |> List.map (function
-          | Clause.Name s -> Chr.Name s
-          | Clause.If c -> Chr.If c
-          | (Clause.Before _ | Clause.After _) as x->
-            raise (ParseError(of_ploc loc,"unsupported attribute " ^ Clause.show_attribute x))) in
+       let cattributes = cattributes in
        [Program.Chr { r with Chr.attributes = cattributes } ]
      | RULE; r = chrrule; FULLSTOP ->
        [Program.Chr { r with Chr.attributes = [] } ]
      | COLON; attributes = type_attributes; PRED; p = pred; FULLSTOP ->
          let m, (n,t) = p in
-         [Program.Type { Type.loc=of_ploc loc; attributes; name = n ; ty = t }; Program.Mode m]
+         [Program.Type [{ Type.loc=of_ploc loc; attributes; name = n ; ty = t }]; Program.Mode m]
      | PRED; p = pred; FULLSTOP ->
          let m, (n,t) = p in
-         [Program.Type { Type.loc=of_ploc loc; attributes = []; name = n ; ty = t }; Program.Mode m]
+         [Program.Type [{ Type.loc=of_ploc loc; attributes = []; name = n ; ty = t }]; Program.Mode m]
      | COLON; attributes = type_attributes; TYPE;
        names = LIST1 const_sym SEP SYMBOL ","; t = type_; FULLSTOP ->
-         List.map (fun n ->
-           Program.Type { Type.loc=of_ploc loc; attributes; name=Func.from_string n; ty=t })
-           names
+        [Program.Type 
+          (List.map (fun n ->
+           { Type.loc=of_ploc loc; attributes; name=Func.from_string n; ty=t })
+           names)]
      | TYPE; names = LIST1 const_sym SEP SYMBOL ","; t = type_; FULLSTOP ->
-         List.map (fun n ->
-           Program.Type { Type.loc=of_ploc loc; attributes = []; name=Func.from_string n; ty=t })
-           names
+        [Program.Type
+          (List.map (fun n ->
+           { Type.loc=of_ploc loc; attributes = []; name=Func.from_string n; ty=t })
+           names)]
+     | KIND; names = LIST1 const_sym SEP SYMBOL ","; t = kind; FULLSTOP ->
+        [Program.Type 
+          (List.map (fun n ->
+           { Type.loc=of_ploc loc; attributes=[]; name=Func.from_string n; ty=t })
+           names)]
      | COLON; attributes = clause_attributes; f = atom; FULLSTOP ->
        let c = { Clause.loc = of_ploc loc; attributes; body = f } in
        [Program.Clause c]
@@ -664,18 +641,19 @@ EXTEND
        [Program.Clause c]
      | EXTERNAL;
        TYPE; names = LIST1 const_sym SEP SYMBOL ","; t = type_; FULLSTOP ->
-         List.map (fun n ->
-           Program.Type { Type.loc = of_ploc loc;
-                  attributes=[Type.External];
+        [Program.Type 
+          (List.map (fun n ->
+           { Type.loc = of_ploc loc;
+                  attributes=[External];
                   name=Func.from_string n;
                   ty=t })
-         names
+         names)]
      | EXTERNAL; PRED; p = pred; FULLSTOP ->
          let _, (n,t) = p in (* No mode for ML code *)
-         [Program.Type { Type.loc = of_ploc loc;
-                 attributes = [Type.External];
+         [Program.Type [{ Type.loc = of_ploc loc;
+                 attributes = [External];
                  name = n;
-                 ty = t }]
+                 ty = t }]]
      | LCURLY -> [Program.Begin (of_ploc loc)]
      | RCURLY -> [Program.End (of_ploc loc)]
      | MODE; m = LIST1 mode SEP SYMBOL ","; FULLSTOP -> [Program.Mode m]
@@ -698,12 +676,12 @@ EXTEND
          accumulate loc ".sig" filenames
      | SHORTEN; names = string_trie; FULLSTOP ->
         List.map (fun (prefix, name) ->
-          Program.Shorten(of_ploc loc, Func.from_string prefix, Func.from_string name))
+          Program.Shorten(of_ploc loc, [Func.from_string prefix, Func.from_string name]))
           names
      | LOCAL; vars = LIST1 const_sym SEP SYMBOL ","; FULLSTOP ->
-        List.map (fun x -> Program.mkLocal x) vars
+        [Program.mkLocal vars]
      | LOCAL; vars = LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP ->
-        List.map (fun x -> Program.mkLocal x) vars
+        [Program.mkLocal vars]
      | LOCALKIND; LIST1 const_sym SEP SYMBOL ","; FULLSTOP -> []
      | LOCALKIND; LIST1 const_sym SEP SYMBOL ","; kind; FULLSTOP -> []
      | CLOSED; LIST1 const_sym SEP SYMBOL ","; FULLSTOP -> []
@@ -712,10 +690,6 @@ EXTEND
      | USEONLY; LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP -> []
      | EXPORTDEF; LIST1 const_sym SEP SYMBOL ","; FULLSTOP -> []
      | EXPORTDEF; LIST1 const_sym SEP SYMBOL ","; type_; FULLSTOP -> []
-     | KIND; names = LIST1 const_sym SEP SYMBOL ","; t = kind; FULLSTOP ->
-         List.map (fun n ->
-           Program.Type { Type.loc=of_ploc loc; attributes=[]; name=Func.from_string n; ty=t })
-         names
      | TYPEABBREV; a = abbrform; t = type_; FULLSTOP -> [
          let name, args = a in
          let nparams = List.length args in
@@ -820,12 +794,6 @@ let set_state = function
       parsed := [];
       parser_state := x
 
-let init ~lp_syntax ~file_resolver =
-  if !parser_initialized = false then
-    List.iter (gram_extend init_loc) lp_syntax;
-  parser_initialized := true;
-  Some { file_resolver }
-;;
 
 let run_parser state f x =
   set_state state;
@@ -916,3 +884,10 @@ let lp_gramext = [
   { fix = Prefix;	sym = "i~";	prec = 256; };
   { fix = Prefix;	sym = "r~";	prec = 256; };
 ]
+
+let init  ~file_resolver =
+  if !parser_initialized = false then
+    List.iter (gram_extend init_loc) lp_gramext;
+  parser_initialized := true;
+  Some { file_resolver }
+;;

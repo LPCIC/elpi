@@ -8,7 +8,6 @@
        (test_suite ANSITerminal cmdliner str unix -> test.real.ml)
        (-> test.dummy.ml)))
 )
-
 (env
   (dev
     (flags (:standard -w -9 -w -32 -w -27 -w -6 -w -37 -warn-error -A))))

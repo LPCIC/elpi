@@ -1,0 +1,8 @@
+(library
+  (name elpi_legacy_parser)
+  (public_name elpi.legacy_parser)
+  (optional)
+  (libraries elpi.util elpi.parser camlp5.gramlib)
+  (flags -w -A)
+  (preprocess (per_module ((action (run camlp5o -I . -I +camlp5 pa_extend.cmo pa_lexer.cmo %{input-file})) parser)))
+  (modules parser))

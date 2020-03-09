@@ -1,16 +1,26 @@
 (library
-  (name elpi)
   (public_name elpi)
   (preprocess (per_module
-    ((pps ppx_deriving.std) API ast data compiler)
+    ((pps ppx_deriving.std) API data compiler)
     ((pps ppx_deriving.std elpi.trace.ppx -- --cookie "elpi_trace=\"true\"") runtime)
     ((pps ppx_deriving.std elpi.trace.ppx -- --cookie "elpi_trace=\"false\"") runtime_trace_off)
-    ((action (run camlp5o -I . -I +camlp5 pa_extend.cmo pa_lexer.cmo %{input-file})) parser)
     ))
-  (libraries re.str camlp5.gramlib unix stdlib-shims)
-  (flags -linkall)
-  (modules elpi util parser ast compiler data ptmap builtin builtin_checker builtin_stdlib builtin_map builtin_set API runtime_trace_off runtime)
-  (private_modules util parser ast compiler data ptmap builtin_stdlib builtin_map builtin_set runtime runtime_trace_off)
+  (libraries re.str unix stdlib-shims elpi.parser elpi.util
+    (select legacy_parser_proxy.ml from
+      (elpi.legacy_parser -> legacy_parser_proxy.real.ml)
+      (-> legacy_parser_proxy.dummy.ml)))
+  ; (flags -linkall)
+  (modules
+    ; ----- public API ---------------------------------
+    elpi API builtin builtin_checker
+    ; ----- internal stuff -----------------------------
+    compiler data ptmap runtime_trace_off runtime
+    builtin_stdlib builtin_map builtin_set
+    legacy_parser_proxy)
+  (private_modules
+    compiler data ptmap runtime_trace_off runtime
+    builtin_stdlib builtin_map builtin_set
+    legacy_parser_proxy)
 )
 
 (rule (with-stdout-to builtin_stdlib.ml (progn

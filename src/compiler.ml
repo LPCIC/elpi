@@ -2,6 +2,9 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
+open Elpi_util
+open Elpi_parser
+
 open Util
 module F = Ast.Func
 module R = Runtime_trace_off
@@ -23,6 +26,15 @@ let default_flags = {
   print_passes = false;
   print_units = false;
 }
+
+let parser : (module Parse.Parser) option D.State.component = D.State.declare ~name:"elpi:parser"
+  ~pp:(fun fmt _ -> Format.fprintf fmt "<parser>")
+  ~clause_compilation_is_over:(fun x -> x)
+  ~goal_compilation_begins:(fun x -> x)
+  ~goal_compilation_is_over:(fun ~args:_ x -> Some x)
+  ~compilation_is_over:(fun x -> Some x)
+  ~execution_is_over:(fun _ -> None)
+  ~init:(fun () -> None)
 
 let rec filter_if ({ defined_variables } as flags) proj = function
   | [] -> []
@@ -545,20 +557,23 @@ end = struct (* {{{ *)
   let structure_clause_attributes ({ Clause.attributes; loc } as c) =
     let duplicate_err s =
       error ~loc ("duplicate attribute " ^ s) in
+    let illegal_err a =
+      error ~loc ("illegal attribute " ^ show_raw_attribute a) in
     let rec aux r = function
       | [] -> r
-      | Clause.Name s :: rest ->
+      | Name s :: rest ->
          if r.id <> None then duplicate_err "name";
          aux { r with id = Some s } rest
-      | Clause.After s :: rest ->
+      | After s :: rest ->
          if r.insertion <> None then duplicate_err "insertion";
          aux { r with insertion = Some (After s) } rest
-      | Clause.Before s :: rest ->
+      | Before s :: rest ->
          if r.insertion <> None then duplicate_err "insertion";
          aux { r with insertion = Some (Before s) } rest
-      | Clause.If s :: rest ->
+      | If s :: rest ->
          if r.ifexpr <> None then duplicate_err "if";
          aux { r with ifexpr = Some s } rest
+      | (External | Index _) as a :: _-> illegal_err a
     in
     { c with Clause.attributes =
         aux { insertion = None; id = None; ifexpr = None } attributes }
@@ -566,45 +581,53 @@ end = struct (* {{{ *)
   let structure_chr_attributes ({ Chr.attributes; loc } as c) =
     let duplicate_err s =
       error ~loc ("duplicate attribute " ^ s) in
+    let illegal_err a =
+      error ~loc ("illegal attribute " ^ show_raw_attribute a) in
     let rec aux r = function
       | [] -> r
-      | Chr.Name s :: rest ->
+      | Name s :: rest ->
          aux { r with cid = s } rest
-      | Chr.If s :: rest ->
+      | If s :: rest ->
          if r.cifexpr <> None then duplicate_err "if";
          aux { r with cifexpr = Some s } rest
+      | (Before _ | After _ | External | Index _) as a :: _ -> illegal_err a 
     in
     let cid = Loc.show loc in 
     { c with Chr.attributes = aux { cid; cifexpr = None } attributes }
 
-  let structure_type_attributes ({ Type.attributes; loc } as c) =
+  let structure_type_attributes { Type.attributes; loc; name; ty } =
     let duplicate_err s =
       error ~loc ("duplicate attribute " ^ s) in
+    let illegal_err a =
+      error ~loc ("illegal attribute " ^ show_raw_attribute a) in
     let rec aux r = function
       | [] -> r
-      | Type.External :: rest ->
+      | External :: rest ->
          begin match r with
-           | None -> aux (Some External) rest
-           | Some External -> duplicate_err "external"
+           | None -> aux (Some Structured.External) rest
+           | Some Structured.External -> duplicate_err "external"
            | Some _ -> error ~loc "external predicates cannot be indexed"
          end
-      | Type.Index i :: rest ->
+      | Index i :: rest ->
          begin match r with
-           | None -> aux (Some (Indexed i)) rest
-           | Some (Indexed _) -> duplicate_err "index"
+           | None -> aux (Some (Structured.Index i)) rest
+           | Some (Structured.Index _) -> duplicate_err "index"
            | Some _ -> error ~loc "external predicates cannot be indexed"
          end
+      | (Before _ | After _ | Name _ | If _) as a :: _ -> illegal_err a 
     in
     let attributes = aux None attributes in
     let attributes =
       match attributes with
-      | None -> Indexed [1]
+      | None -> Structured.Index [1]
       | Some x -> x in
-    { c with Type.attributes }
+    { Type.attributes; loc; name; ty }
 
 
   let run _ dl =
     let rec aux ns blocks clauses macros types tabbrs modes locals chr accs = function
+      | Program.Ignored _ :: rest ->
+          aux ns blocks clauses macros types tabbrs modes locals chr accs rest
       | (Program.End _ :: _ | []) as rest ->
           { body = List.rev (cl2b clauses @ blocks);
             types = List.rev types;
@@ -636,17 +659,24 @@ end = struct (* {{{ *)
             error "locals cannot be declared inside a namespace block";
           aux_end_block loc ns (Namespace (n,p) :: cl2b clauses @ blocks)
             [] macros types tabbrs modes locals chr accs rest
-      | Program.Shorten (loc,full_name,short_name) :: rest ->
-          let shorthand = { iloc = loc; full_name; short_name } in  
+      | Program.Shorten (loc,[]) :: _ ->
+          anomaly ~loc "parser returns empty list of shorten directives"
+      | Program.Shorten (loc,directives) :: rest ->
+          let shorthand (full_name,short_name) = { iloc = loc; full_name; short_name } in
+          let shorthands = List.map shorthand directives in
           let p, locals1, chr1, rest = aux ns [] [] [] [] [] [] [] [] accs rest in
           if locals1 <> [] then
             error "locals cannot be declared after a shorthand";
           if chr1 <> [] then
             error "CHR cannot be declared after a shorthand";
-          aux ns ((Shorten([shorthand],p) :: cl2b clauses @ blocks))
+          aux ns ((Shorten(shorthands,p) :: cl2b clauses @ blocks))
             [] macros types tabbrs modes locals chr accs rest
 
-      | Program.Accumulated (loc,(digest,a)) :: rest ->
+      | Program.Accumulated (_,[]) :: rest ->
+          aux ns blocks clauses macros types tabbrs modes locals chr accs rest
+
+      | Program.Accumulated (loc,(digest,a) :: more) :: rest ->
+          let rest = Program.Accumulated (loc, more) :: rest in
           let digest = String.concat "." (digest :: List.map F.show ns) in
           if StrSet.mem digest accs then
             aux ns blocks clauses macros types tabbrs modes locals chr accs rest
@@ -660,17 +690,22 @@ end = struct (* {{{ *)
           aux ns blocks (c::clauses) macros types tabbrs modes locals chr accs rest
       | Program.Macro m :: rest ->
           aux ns blocks clauses (m::macros) types tabbrs modes locals chr accs rest
-      | Program.Type t :: rest ->
-          let t = structure_type_attributes t in
-          let types =
-            if List.mem t types then types else t :: types in
-          aux ns blocks clauses macros types tabbrs modes locals chr accs rest
-      | Program.TypeAbbreviation abbr :: rest ->
-          aux ns blocks clauses macros types (abbr :: tabbrs) modes locals chr accs rest
+      | Program.Pred (t,m) :: rest ->
+          aux ns blocks clauses macros types tabbrs modes locals chr accs
+            (Program.Mode [m] :: Program.Type [t] :: rest)
       | Program.Mode ms :: rest ->
           aux ns blocks clauses macros types tabbrs (ms @ modes) locals chr accs rest
+      | Program.Type [] :: rest ->
+          aux ns blocks clauses macros types tabbrs modes locals chr accs rest
+      | Program.Type (t::ts) :: rest ->
+          let t = structure_type_attributes t in
+          let types = if List.mem t types then types else t :: types in
+          aux ns blocks clauses macros types tabbrs modes locals chr accs
+            (Program.Type ts :: rest)
+      | Program.TypeAbbreviation abbr :: rest ->
+          aux ns blocks clauses macros types (abbr :: tabbrs) modes locals chr accs rest
       | Program.Local l :: rest ->
-          aux ns blocks clauses macros types tabbrs modes (l::locals) chr accs rest
+          aux ns blocks clauses macros types tabbrs modes (l@locals) chr accs rest
       | Program.Chr r :: rest ->
           let r = structure_chr_attributes r in
           aux ns blocks clauses macros types tabbrs modes locals (r::chr) accs rest
@@ -789,9 +824,6 @@ module ToDBL : sig
   (* Exported for quations *)
   val lp : quotation
   val is_Arg : State.t -> term -> bool
-  val fresh_Arg :
-    State.t -> name_hint:string -> args:term list ->
-      State.t * term
   val mk_Arg : State.t -> name:string -> args:term list -> State.t * term
   val get_Arg : State.t -> name:string -> args:term list -> term
   val get_Args : State.t -> term StrMap.t
@@ -805,9 +837,9 @@ end = struct (* {{{ *)
 
 (* **** ast->term compiler state ***************************************** *)
 
-let todopp name fmt _ = error ("pp not implemented for field: "^name)
+let todopp name _fmt _ = error ("pp not implemented for field: "^name)
 
-let get_argmap, set_argmap, update_argmap, drop_argmap =
+let get_argmap, set_argmap, _update_argmap, drop_argmap =
   let argmap =
     State.declare ~name:"elpi:argmap" ~pp:(todopp "elpi:argmap")
       ~clause_compilation_is_over:(fun _ -> empty_amap)
@@ -822,7 +854,7 @@ let get_argmap, set_argmap, update_argmap, drop_argmap =
 type varmap = term F.Map.t
 
 let get_varmap, set_varmap, update_varmap, drop_varmap =
-  let varmap =
+  let varmap : varmap State.component =
     State.declare ~name:"elpi:varmap" ~pp:(todopp "elpi:varmap")
       ~clause_compilation_is_over:(fun x -> assert(F.Map.is_empty x); x)
       ~goal_compilation_begins:(fun x -> assert(F.Map.is_empty x); x)
@@ -907,10 +939,11 @@ let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
      ('A' <= c && c <= 'Z') in
     
   let is_discard f =
-     let c = (F.show f).[0] in
+    F.(equal f dummyname) ||
+    let c = (F.show f).[0] in
      c = '_' in
 
-  let is_macro_name f = 
+  let is_macro_name f =
      let c = (F.show f).[0] in
      c = '@' in
 
@@ -1020,7 +1053,7 @@ let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
          begin try
            let state, t = unquote ~depth:lvl state loc data in
            hcons_alien_term state t
-         with Parser.ParseError(loc,msg) -> error ~loc msg end
+         with Elpi_parser.Parser_config.ParseError(loc,msg) -> error ~loc msg end
     | Ast.Term.Quoted { Ast.Term.data; kind = Some name; loc } ->
          let unquote =
            try StrMap.find name !named_quotations
@@ -1029,7 +1062,7 @@ let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
          begin try
            let state, t = unquote ~depth:lvl state loc data in
            hcons_alien_term state t
-         with Parser.ParseError(loc,msg) -> error ~loc msg end
+         with Elpi_parser.Parser_config.ParseError(loc,msg) -> error ~loc msg end
     | Ast.Term.App (Ast.Term.Quoted _,_) ->
         error ~loc "Applied quotation"
   in
@@ -1040,7 +1073,8 @@ let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
 ;;
 
 let lp ~depth state loc s =
-  let loc, ast = Parser.parse_goal ~loc s in
+  let module P = (val option_get ~err:"No parser" (State.get parser state)) in
+  let loc, ast = P.goal ~loc ~text:s in
   let macros =
     match get_mtm state with
     | None -> F.Map.empty
@@ -1080,7 +1114,7 @@ let preterms_of_ast ?on_type loc ~depth macros state f t =
 ;;
 
 (* exported *)
-let query_preterm_of_function ~depth macros state f =
+let query_preterm_of_function ~depth:_ macros state f =
   assert(is_empty_amap (get_argmap state));
   let state = set_mtm state (Some { macros }) in
   let state, (loc, main), gls = f state in
@@ -1116,7 +1150,7 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
 
   let compile_type_abbrev lcs state { Ast.TypeAbbreviation.name; nparams; loc; value } =
     let state, (taname, _) = Symbols.allocate_global_symbol state name in
-    let state, tavalue = preterms_of_ast ~on_type:true loc ~depth:lcs F.Map.empty state (fun ~depth state x -> state, [loc,x]) value in
+    let state, tavalue = preterms_of_ast ~on_type:true loc ~depth:lcs F.Map.empty state (fun ~depth:_ state x -> state, [loc,x]) value in
     let tavalue = assert(List.length tavalue = 1); List.hd tavalue in
     if tavalue.amap.nargs != 0 then
       error ~loc ("type abbreviation for " ^ F.show name ^ " has unbound variables");
@@ -1135,7 +1169,8 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
 
   let compile_type lcs state { Ast.Type.attributes; loc; name; ty } =
     let state, (tname, _) = Symbols.allocate_global_symbol state name in
-    let state, ttype = preterms_of_ast ~on_type:true loc ~depth:lcs F.Map.empty state (fun ~depth state x -> state, [loc,x]) ty in
+    let state, ttype =
+      preterms_of_ast ~on_type:true loc ~depth:lcs F.Map.empty state (fun ~depth:_ state x -> state, [loc,x]) ty in
     let ttype = assert(List.length ttype = 1); List.hd ttype in
     state, { Structured.tindex = attributes; decl = { tname; ttype; tloc = loc } }
 
@@ -1334,7 +1369,6 @@ end (* }}} *)
 
 let lp = ToDBL.lp
 let is_Arg = ToDBL.is_Arg
-let fresh_Arg = ToDBL.fresh_Arg
 let mk_Arg = ToDBL.mk_Arg
 let get_Args = ToDBL.get_Args
 let get_Arg = ToDBL.get_Arg
@@ -1352,7 +1386,6 @@ end = struct (* {{{ *)
 
 
   open Structured
-  open Flat
 
   (* This function *must* re-hashcons all leaves (Const) and recognize
      builtins since it is (also) used to apply a compilation unit relocation *)
@@ -1449,7 +1482,7 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
   let apply_subst (f : C.t C.Map.t -> 'a -> 'a) (s : subst) : 'a -> 'a =
     fun x -> f (snd s) x
 
-  let apply_subst_list f = apply_subst (fun x -> smart_map (f x))
+  let _apply_subst_list f = apply_subst (fun x -> smart_map (f x))
 
   let tabbrevs_map state f m =
     C.Map.fold (fun _ { taname; tavalue; taparams; taloc } m ->
@@ -1984,7 +2017,7 @@ let print_unit { print_units } x =
         (String.concat ", " (List.sort compare (Symbols.symbols x.symbol_table)))
 ;;
 
-let header_of_ast ~flags builtins ast : header =
+let header_of_ast ~flags ~parser:p builtins ast : header =
   let state = D.State.init () in
   let state = D.State.set D.while_compiling state true in
   let state = State.set Symbols.table state (Symbols.global_table ()) in
@@ -1996,6 +2029,7 @@ let header_of_ast ~flags builtins ast : header =
       | Data.BuiltInPredicate.MLDataC _ -> state
       | Data.BuiltInPredicate.LPCode _ -> state
       | Data.BuiltInPredicate.LPDoc _ -> state) state decls) state builtins in
+  let state = D.State.set parser state (Some p) in
   let state, u = unit_or_header_of_ast flags state ast in
   print_unit flags u;
   state, u
@@ -2214,7 +2248,7 @@ let compile_chr depth state
     match pconclusion with
     | Const x -> x
     | App(x,_,_) -> x
-    | f -> error ~loc "CHR: rule without head symbol" in
+    | _ -> error ~loc "CHR: rule without head symbol" in
   let stack_term_of_preterm s term =
     stack_term_of_preterm ~depth:0 s { term; amap = pamap; loc; spilling = true } in
   let stack_sequent_of_presequent s { pcontext; pconclusion; peigen } =
@@ -2301,7 +2335,7 @@ let run
       let mode = try C.Map.find name modes with Not_found -> [] in
       let declare_index, index =
         match tindex with
-        | Some (Ast.Structured.Indexed l) -> true, chose_indexing state name l
+        | Some (Ast.Structured.Index l) -> true, chose_indexing state name l
         | _ -> false, chose_indexing state name [1] in
       try
         let _, old_tindex = C.Map.find name map in
@@ -2348,10 +2382,7 @@ end (* }}} *)
 let optimize_query = Compiler.run
 
 let pp_query pp fmt {
-    WithMain.types;
-    modes;
-    clauses;
-    chr;
+    WithMain.clauses;
     initial_depth;
     compiler_state;
     query; } =
@@ -2532,9 +2563,12 @@ let unfold_type_abbrevs ~compiler_state lcs type_abbrevs { term; loc; amap } =
   in
     { term = aux C.Set.empty term; loc; amap; spilling = false }
 
-let term_of_ast ~depth state t =
+let term_of_ast ~depth state text =
  if State.get D.while_compiling state then
    anomaly ("term_of_ast cannot be used at compilation time");
+ let module P = (val option_get ~err:"No parser" (State.get parser state)) in
+ let loc = Ast.Loc.initial "(string_of_term)" in
+ let t = P.goal ~loc ~text in
  let state, (t,nargs) = ToDBL.temporary_compilation_at_runtime (fun s x ->
     let s, x = ToDBL.query_preterm_of_ast ~depth F.Map.empty s x in
     let s, t = stack_term_of_preterm ~depth s x in

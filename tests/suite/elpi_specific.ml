@@ -159,7 +159,7 @@ let () = declare "elpi_only_llam"
 
 let () = declare "hollight"
   ~source_elpi:"hollight.elpi"
-  ~description:"hollinght implementation"
+  ~description:"hollight implementation"
   ~expectation:Test.Failure (* needs advanced modes *)
   ()
 let () = declare "hollight_legacy"
@@ -261,4 +261,25 @@ let () = declare "variadic_declare_constraints"
   ~source_elpi:"variadic_declare_constraints.elpi"
   ~description:"declare_constraint takes keys of different types"
   ~expectation:Test.Success
+  ()
+
+let () = declare "notation_error"
+  ~source_elpi:"notation_error.elpi"
+  ~description:"infix declaration error"
+  ~expectation:Test.(FailureOutput (Str.regexp "not supported by this parser"))
+  ()
+
+let () = declare "printer"
+  ~source_elpi:"printer.elpi"
+  ~description:"printing infix"
+  ~typecheck:false
+  ~expectation:Test.(SuccessOutput (Str.regexp_string (
+    Str.global_replace (Str.regexp_string "\r") "" {|p X0 :- q X0 , r x
+X0 is f X1 mod r X0
+X0 is f X1 + r X0 * g X2
+X0 is (f X1 + r X0) * g X2
+X0 is f X1 ^ r X0 ^ g X2
+X0 || X2 && X3 ==> X4
+[f X0, g X1, (a , b), a + b]
+|})))
   ()

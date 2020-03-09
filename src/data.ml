@@ -4,6 +4,9 @@
 
 (* Internal term representation *)
 
+open Elpi_util
+open Elpi_parser
+
 module Fmt = Format
 module F = Ast.Func
 open Util

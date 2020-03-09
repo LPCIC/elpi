@@ -1,0 +1,493 @@
+goal: FAMILY_TILDE VDASH
+program: FAMILY_TILDE VDASH
+goal: LBRACKET FAMILY_TILDE VDASH
+
+This prefix operator expects an argument.
+
+goal: CONSTANT FAMILY_TIMES VDASH
+goal: CONSTANT FAMILY_MINUS VDASH
+goal: CONSTANT FAMILY_LT VDASH
+goal: CONSTANT FAMILY_EXP VDASH
+goal: CONSTANT FAMILY_BTICK VDASH
+goal: CONSTANT FAMILY_GT VDASH
+goal: CONSTANT FAMILY_EQ VDASH
+goal: CONSTANT FAMILY_AND VDASH
+goal: CONSTANT FAMILY_SHARP VDASH
+goal: CONSTANT FAMILY_TICK VDASH
+goal: CONSTANT SLASH VDASH
+goal: CONSTANT IS VDASH
+program: AFTER IS VDASH
+program: AFTER FAMILY_PLUS VDASH
+program: AFTER FAMILY_TIMES VDASH
+goal: LBRACKET AFTER FAMILY_TIMES VDASH
+program: AFTER FAMILY_TICK VDASH
+program: AFTER SLASH VDASH
+program: AFTER FAMILY_SHARP VDASH
+program: AFTER FAMILY_OR VDASH
+program: AFTER FAMILY_MINUS VDASH
+program: AFTER FAMILY_LT VDASH
+program: AFTER FAMILY_GT VDASH
+program: AFTER FAMILY_EXP VDASH
+program: AFTER FAMILY_EQ VDASH
+program: AFTER FAMILY_BTICK VDASH
+program: AFTER FAMILY_AND VDASH
+goal: LBRACKET AFTER FAMILY_EQ VDASH
+goal: LBRACKET AFTER FAMILY_GT VDASH
+goal: LBRACKET AFTER FAMILY_BTICK VDASH
+goal: LBRACKET AFTER FAMILY_LT VDASH
+goal: LBRACKET AFTER FAMILY_EXP VDASH
+goal: LBRACKET AFTER FAMILY_MINUS VDASH
+goal: LBRACKET AFTER FAMILY_OR VDASH
+goal: LBRACKET AFTER FAMILY_PLUS VDASH
+goal: LBRACKET AFTER FAMILY_AND VDASH
+goal: LBRACKET AFTER SLASH VDASH
+goal: LBRACKET AFTER FAMILY_TICK VDASH
+goal: LBRACKET AFTER FAMILY_SHARP VDASH
+goal: AFTER FAMILY_OR VDASH
+goal: AFTER FAMILY_PLUS VDASH
+program: AFTER DARROW VDASH
+program: AFTER QDASH VDASH
+program: AFTER OR VDASH
+program: AFTER MOD VDASH
+program: AFTER EQ VDASH
+program: AFTER DIV VDASH
+program: AFTER CONS VDASH
+program: AFTER CONJ VDASH
+program: AFTER ARROW VDASH
+program: AFTER VDASH VDASH
+goal: LBRACKET AFTER CONS VDASH
+goal: LBRACKET AFTER DIV VDASH
+goal: LBRACKET AFTER MOD VDASH
+goal: AFTER VDASH VDASH
+goal: AFTER MOD VDASH
+goal: AFTER DIV VDASH
+goal: AFTER CONS VDASH
+goal: AFTER OR VDASH
+goal: AFTER EQ VDASH
+goal: AFTER DARROW VDASH
+goal: AFTER CONJ VDASH
+goal: AFTER ARROW VDASH
+goal: AFTER QDASH VDASH
+goal: LBRACKET AFTER VDASH VDASH
+goal: LBRACKET AFTER OR VDASH
+goal: LBRACKET AFTER IS VDASH
+goal: LBRACKET AFTER EQ VDASH
+goal: LBRACKET AFTER DARROW VDASH
+goal: LBRACKET AFTER ARROW VDASH
+goal: LBRACKET AFTER QDASH VDASH
+goal: LPAREN AFTER AS VDASH
+goal: AFTER BIND VDASH
+goal: LBRACKET AFTER CONJ VDASH
+goal: LBRACKET AFTER BIND VDASH
+goal: AFTER MINUSs VDASH
+goal: AFTER MINUSr VDASH
+goal: AFTER MINUSi VDASH
+goal: AFTER MINUS VDASH
+goal: AFTER EQ2 VDASH
+goal: LBRACKET AFTER MINUSs VDASH
+goal: LBRACKET AFTER MINUSr VDASH
+goal: LBRACKET AFTER MINUSi VDASH
+goal: LBRACKET AFTER MINUS VDASH
+goal: LBRACKET AFTER EQ2 VDASH
+program: AFTER MINUSs VDASH
+program: AFTER MINUSr VDASH
+program: AFTER MINUSi VDASH
+program: AFTER MINUS VDASH
+program: AFTER EQ2 VDASH
+
+This infix operator expects a right hand side.
+
+program: VDASH
+program: CONSTANT FULLSTOP VDASH
+
+Unexpected start of program clause or declaration.
+
+program: CONSTANT RPAREN
+
+Unexpected ')'.
+
+goal: AFTER USE_SIG
+program: AFTER FAMILY_QMARK USE_SIG
+program: AFTER VDASH FLOAT USE_SIG
+program: AFTER FAMILY_TIMES FLOAT USE_SIG
+program: AFTER FAMILY_TICK FLOAT USE_SIG
+program: AFTER SLASH FLOAT USE_SIG
+program: AFTER FAMILY_SHARP FLOAT USE_SIG
+program: AFTER FAMILY_PLUS FLOAT USE_SIG
+program: AFTER FAMILY_OR FLOAT USE_SIG
+program: AFTER FAMILY_MINUS FLOAT USE_SIG
+program: AFTER FAMILY_LT FLOAT USE_SIG
+program: AFTER FAMILY_GT FLOAT USE_SIG
+program: AFTER FAMILY_EXP FLOAT USE_SIG
+program: AFTER FAMILY_EQ FLOAT USE_SIG
+program: AFTER FAMILY_BTICK FLOAT USE_SIG
+program: AFTER FAMILY_AND FLOAT USE_SIG
+program: AFTER QDASH FLOAT USE_SIG
+program: AFTER OR FLOAT USE_SIG
+program: AFTER MOD FLOAT USE_SIG
+program: AFTER IS FLOAT USE_SIG
+program: AFTER EQ FLOAT USE_SIG
+program: AFTER DIV FLOAT USE_SIG
+program: AFTER DARROW FLOAT USE_SIG
+program: AFTER CONS FLOAT USE_SIG
+program: AFTER CONJ FLOAT USE_SIG
+program: AFTER ARROW FLOAT USE_SIG
+program: LPAREN USE_SIG
+program: LPAREN FLOAT USE_SIG
+goal: LBRACKET AFTER VDASH FLOAT USE_SIG
+goal: LBRACKET AFTER FAMILY_TIMES FLOAT USE_SIG
+goal: LBRACKET AFTER FAMILY_SHARP FLOAT USE_SIG
+goal: LBRACKET AFTER FAMILY_TICK FLOAT USE_SIG
+goal: LBRACKET AFTER SLASH FLOAT USE_SIG
+goal: LBRACKET AFTER FAMILY_AND FLOAT USE_SIG
+goal: LBRACKET AFTER MOD FLOAT USE_SIG
+goal: LBRACKET AFTER DIV FLOAT USE_SIG
+goal: LBRACKET AFTER FAMILY_PLUS FLOAT USE_SIG
+goal: LBRACKET AFTER FAMILY_OR FLOAT USE_SIG
+goal: LBRACKET AFTER FAMILY_MINUS FLOAT USE_SIG
+goal: LBRACKET AFTER FAMILY_EXP FLOAT USE_SIG
+goal: LBRACKET AFTER FAMILY_LT FLOAT USE_SIG
+goal: LBRACKET AFTER FAMILY_BTICK FLOAT USE_SIG
+goal: LBRACKET AFTER CONS FLOAT USE_SIG
+goal: LBRACKET AFTER FAMILY_GT FLOAT USE_SIG
+goal: LBRACKET AFTER FAMILY_EQ FLOAT USE_SIG
+goal: LBRACKET AFTER BIND FLOAT USE_SIG
+goal: LBRACKET AFTER OR FLOAT USE_SIG
+goal: LBRACKET AFTER IS FLOAT USE_SIG
+goal: LBRACKET AFTER EQ FLOAT USE_SIG
+goal: LBRACKET PIPE FLOAT USE_SIG
+goal: LBRACKET FLOAT USE_SIG
+goal: LCURLY FLOAT USE_SIG
+goal: FAMILY_TILDE FLOAT USE_SIG
+goal: LPAREN AFTER AS FLOAT USE_SIG
+goal: FLOAT USE_SIG
+goal: AFTER QDASH FLOAT USE_SIG
+goal: LBRACKET AFTER USE_SIG
+goal: AFTER OR FLOAT USE_SIG
+goal: AFTER IS FLOAT USE_SIG
+goal: AFTER CONS FLOAT USE_SIG
+goal: AFTER FAMILY_GT FLOAT USE_SIG
+goal: AFTER FAMILY_EQ FLOAT USE_SIG
+goal: AFTER DIV FLOAT USE_SIG
+goal: AFTER FAMILY_PLUS FLOAT USE_SIG
+goal: AFTER FAMILY_OR FLOAT USE_SIG
+goal: AFTER FAMILY_MINUS FLOAT USE_SIG
+goal: AFTER FAMILY_EXP FLOAT USE_SIG
+goal: AFTER FAMILY_LT FLOAT USE_SIG
+goal: AFTER FAMILY_BTICK FLOAT USE_SIG
+goal: LBRACKET FAMILY_TILDE FLOAT USE_SIG
+goal: LBRACKET LPAREN AFTER RPAREN USE_SIG
+goal: AFTER VDASH FLOAT USE_SIG
+goal: AFTER FAMILY_TIMES FLOAT USE_SIG
+goal: AFTER FAMILY_SHARP FLOAT USE_SIG
+goal: LPAREN AFTER RPAREN USE_SIG
+goal: AFTER AFTER USE_SIG
+goal: AFTER FAMILY_TICK FLOAT USE_SIG
+goal: AFTER SLASH FLOAT USE_SIG
+goal: AFTER FAMILY_AND FLOAT USE_SIG
+goal: AFTER BIND FLOAT USE_SIG
+goal: AFTER MOD FLOAT USE_SIG
+goal: AFTER EQ FLOAT USE_SIG
+goal: AFTER DARROW FLOAT USE_SIG
+goal: AFTER CONJ FLOAT USE_SIG
+goal: AFTER ARROW FLOAT USE_SIG
+goal: LBRACKET AFTER DARROW FLOAT USE_SIG
+goal: LBRACKET AFTER ARROW FLOAT USE_SIG
+goal: LBRACKET AFTER QDASH FLOAT USE_SIG
+goal: LBRACKET AFTER PIPE FLOAT USE_SIG
+program: FAMILY_TILDE FLOAT USE_SIG
+goal: LPAREN LBRACKET RBRACKET USE_SIG
+program: LPAREN AFTER RPAREN USE_SIG
+goal: AFTER MINUSs FLOAT USE_SIG
+goal: AFTER MINUSr FLOAT USE_SIG
+goal: AFTER MINUSi FLOAT USE_SIG
+goal: AFTER MINUS FLOAT USE_SIG
+goal: AFTER EQ2 FLOAT USE_SIG
+goal: LBRACKET AFTER MINUSs FLOAT USE_SIG
+goal: LBRACKET AFTER MINUSr FLOAT USE_SIG
+goal: LBRACKET AFTER MINUSi FLOAT USE_SIG
+goal: LBRACKET AFTER MINUS FLOAT USE_SIG
+goal: LBRACKET AFTER EQ2 FLOAT USE_SIG
+program: AFTER MINUSs FLOAT USE_SIG
+program: AFTER MINUSr FLOAT USE_SIG
+program: AFTER MINUSi FLOAT USE_SIG
+program: AFTER MINUS FLOAT USE_SIG
+program: AFTER EQ2 FLOAT USE_SIG
+
+Term expected, got keyword.
+
+goal: LPAREN USE_SIG
+goal: LPAREN FAMILY_TILDE VDASH
+
+Mixfix symbol or term expected.
+
+goal: LPAREN AS VDASH
+
+Malformed as binding. Examples:
+(f X as Y)
+([_,_|_] as Y)
+
+goal: VDASH
+goal: LCURLY VDASH
+goal: LBRACKET VDASH
+
+Term expected.
+
+goal: LPAREN ARROW VDASH
+
+Right parenthesis ')' expected.
+
+infix_SYMB: USE_SIG
+
+Infix symbol expected.
+
+postfix_SYMB: VDASH
+
+Postifx symbol expected.
+
+prefix_SYMB: VDASH
+
+Prefix symbol expected.
+
+program: MODE VDASH
+program: MODE LPAREN VDASH
+program: MODE LPAREN AFTER VDASH
+program: MODE LPAREN AFTER IO VDASH
+program: MODE LPAREN AFTER IO RPAREN VDASH
+
+Malformed mode declaration. Example:
+mode (foo i i o).
+
+program: MACRO VDASH
+program: MACRO FLOAT USE_SIG
+program: MACRO AFTER VDASH VDASH
+program: MACRO AFTER VDASH FLOAT USE_SIG
+
+Malformed macro declaration. Example:
+macro @foo X Y :- p X => q Y.
+
+program: COLON VDASH
+
+Attribute expected. Examples:
+:name "some name"
+:index (_ 1 1)
+
+program: COLON NAME VDASH
+
+Malformed 'name' attribute. Example:
+:name "name of the clause"
+
+program: COLON INDEX VDASH
+program: COLON INDEX LPAREN VDASH
+program: COLON INDEX LPAREN FRESHUV VDASH
+
+Malformed 'index' attribute. Example:
+:index(1 _ 1)
+
+program: COLON IF VDASH
+
+Malformed 'if' attribute. Example:
+:if "VARIABLE"
+
+program: COLON BEFORE VDASH
+program: COLON AFTER VDASH
+
+Malformed grafting attribute. Example:
+:before "some name"
+:after "some other name"
+
+program: COLON EXTERNAL VDASH
+program: COLON EXTERNAL COLON VDASH
+
+Malformed 'external' attribute. Example:
+:external pred
+
+program: TYPE VDASH
+program: TYPE AFTER TYPE
+program: TYPE AFTER AFTER RPAREN
+
+Malformed type declaration. Examples:
+type app tm -> tm -> tm.
+type lam (tm -> tm) -> tm.
+type (++) list A -> list A -> list A.
+
+program: RULE LPAREN USE_SIG
+program: RULE LPAREN AFTER USE_SIG
+program: RULE VDASH
+program: RULE IFF AFTER VDASH
+program: RULE LPAREN AFTER COLON VDASH
+program: RULE LPAREN AFTER COLON FLOAT USE_SIG
+program: RULE AFTER VDASH
+program: RULE BIND VDASH
+program: RULE BIND AFTER VDASH
+program: RULE PIPE VDASH
+program: RULE PIPE FLOAT USE_SIG
+program: RULE IFF VDASH
+
+Malformed CHR rule declaration. Examples:
+rule (match this).
+rule (match this) \ (remove that).
+rule (match this) \ (remove that) | (only when).
+rule (match this) \ (remove that) | (only when) <=> (add this).
+
+program: ACCUMULATE VDASH
+program: ACCUMULATE AFTER CONJ VDASH
+program: ACCUMULATE LPAREN USE_SIG
+program: ACCUMULATE AFTER VDASH
+
+Malformed accumulate. Examples:
+accumulate foo.
+accumulate foo, bar.
+accumulate "foo/bar".
+
+goal: LBRACKET AFTER AFTER RPAREN
+
+Closing '[' with ')'.
+
+goal: LBRACKET PIPE VDASH
+goal: LBRACKET AFTER PIPE VDASH
+
+List expected. Examples:
+[ this , that | More ].
+[ Head | Tail ].
+
+program: TYPEABBREV VDASH
+program: TYPEABBREV LPAREN USE_SIG
+program: TYPEABBREV LPAREN AFTER AFTER VDASH
+program: TYPEABBREV AFTER VDASH
+program: TYPEABBREV AFTER AFTER RPAREN
+program: TYPEABBREV LPAREN AFTER VDASH
+
+Type abbreviation expected. Examples:
+typeabbrev context (list term).
+typeabbrev (two A) (pair A A).
+
+program: SHORTEN VDASH
+program: SHORTEN AFTER FULLSTOP LCURLY AFTER RCURLY VDASH
+program: SHORTEN AFTER VDASH
+program: SHORTEN AFTER FULLSTOP VDASH
+program: SHORTEN AFTER FULLSTOP LCURLY VDASH
+program: SHORTEN AFTER FULLSTOP LCURLY AFTER FULLSTOP LCURLY AFTER RCURLY VDASH
+program: SHORTEN AFTER FULLSTOP LCURLY AFTER CONJ VDASH
+program: SHORTEN AFTER FULLSTOP LCURLY AFTER VDASH
+program: SHORTEN AFTER FULLSTOP LCURLY AFTER FULLSTOP VDASH
+program: SHORTEN AFTER FULLSTOP LCURLY AFTER FULLSTOP LCURLY VDASH
+
+Shortening directive expected. Examples:
+shorten foo.{ bar }.
+shorten foo.{ bar , baz }.
+shorten foo.{ bar , baz. { qux , dim } }.
+
+program: NAMESPACE VDASH
+program: NAMESPACE AFTER VDASH
+
+Namespace header expected. Examples:
+namespace foo {
+
+program: LOCAL VDASH
+program: LOCAL AFTER TYPE
+program: LOCAL AFTER AFTER RPAREN
+
+Local symbol declaration expected. Examples:
+local foo.
+local foo, bar.
+local foo (term -> term).
+
+program: KIND VDASH
+program: KIND AFTER SIGMA
+program: KIND AFTER TYPE VDASH
+program: KIND AFTER TYPE ARROW VDASH
+
+Kind declaration expected. Examples:
+kind term  type.
+kind list  type -> type.
+
+program: CONSTRAINT VDASH
+program: CONSTRAINT AFTER VDASH
+
+Constraint Handling Rule header expected. Examples:
+constraint foo {
+constraint foo bar {
+
+program: EXTERNAL VDASH
+
+External declaration expected. Examples:
+external type foo term -> prop.
+external pred foo i:term.
+
+program: AFTER AFTER RPAREN
+
+Unexpected ')'.
+
+program: PRED VDASH
+program: PRED AFTER VDASH
+program: PRED AFTER IO COLON AFTER CONJ VDASH
+program: PRED AFTER IO VDASH
+program: PRED AFTER IO COLON VDASH
+program: PRED AFTER IO COLON AFTER RPAREN
+
+Predicate declaration expected. Examples:
+pred append i:list A, i:list A, o:list A.
+pred map i:list A, i:(A -> B -> prop), o:list B.
+
+program: EXPORTDEF AFTER LPAREN USE_SIG
+program: EXPORTDEF AFTER LPAREN AFTER FULLSTOP
+program: EXPORTDEF AFTER AFTER ARROW VDASH
+program: EXPORTDEF AFTER AFTER ARROW LPAREN AFTER RPAREN VDASH
+program: EXPORTDEF AFTER AFTER VDASH
+program: EXPORTDEF AFTER AFTER LPAREN USE_SIG
+program: EXPORTDEF AFTER AFTER LPAREN AFTER FULLSTOP
+program: EXPORTDEF AFTER AFTER AFTER VDASH
+program: EXPORTDEF VDASH
+program: EXPORTDEF AFTER TYPE
+program: EXPORTDEF AFTER AFTER RPAREN
+
+Definition export directive expected (Teyjus compatibility, ignored by Elpi).
+Examples:
+exportdef foo, bar.
+exportdef foo  (term -> term).
+
+program: SIG VDASH
+program: MODULE VDASH
+program: MODULE AFTER VDASH
+
+Module/Signature header expected (Teyjus compatibility, ignored by Elpi).
+Examples:
+module foo.
+sig bar.
+
+program: LOCALKIND VDASH
+
+Local kind declaration expected (Teyjus compatibility, ignored by Elpi).
+Examples:
+localkind foo.
+localkind foo, bar.
+
+program: CLOSED AFTER VDASH
+program: CLOSED AFTER CONJ VDASH
+program: CLOSED VDASH
+
+Closed directive expected (Teyjus compatibility, ignored by Elpi).
+Examples:
+closed foo.
+closed foo, bar.
+
+program: USEONLY VDASH
+program: USEONLY AFTER TYPE
+program: USEONLY AFTER AFTER RPAREN
+
+Useonly directive expected (Teyjus compatibility, ignored by Elpi).
+Examples:
+useonly foo.
+useonly foo, bar.
+
+program: FIXITY AFTER INTEGER VDASH
+program: FIXITY USE_SIG
+program: FIXITY FAMILY_TILDE VDASH
+program: FIXITY AFTER VDASH
+
+Mixfix declaration expected (Teyjus compatibility, ignored by Elpi).
+Examples:
+infixl and 30.
+infixr ++ 45.
+prefix - 12.

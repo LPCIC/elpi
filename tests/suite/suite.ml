@@ -298,6 +298,7 @@ let match_rex rex input_line =
     done
   with End_of_file -> () end;
   let s = Buffer.contents b in
+  let s = Str.global_replace (Str.regexp_string "\r") "" s in
   try ignore(Str.search_forward rex s 0); true
   with Not_found -> false
 

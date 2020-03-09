@@ -2,6 +2,9 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
+open Elpi_util
+open Elpi_parser
+
 open Util
 open Ast
 
@@ -22,12 +25,8 @@ type parser_state
 (* Loads the basic grammar and sets the paths.
    Camlp5 limitation: the grammar is loaded once and forall. *)
 val init :
-  lp_syntax:gramext list ->
-  file_resolver:(?cwd:string -> file:string -> unit -> string) ->
+  file_resolver:(?cwd:string -> unit:string -> unit -> string) ->
     parser_state
-val std_resolver :
-  ?cwd:string -> paths:string list -> unit ->
-     (?cwd:string -> file:string -> unit -> string)
 
 (* BUG: extending the grammar is imperative, cannot be undone *)
 val parse_program : parser_state -> print_accumulated_files:bool -> string list -> Program.t
@@ -35,9 +34,7 @@ val parse_program_from_stream : parser_state -> print_accumulated_files:bool -> 
 val parse_goal : ?loc:Loc.t -> string -> Goal.t
 val parse_goal_from_stream : ?loc:Loc.t -> char Stream.t -> Goal.t
 
-val resolve : ?cwd:string -> file:string -> unit -> string
-
-exception ParseError of Loc.t * string
+val resolve : ?cwd:string -> unit:string -> unit -> string
 
 val get_literal : string -> string
 

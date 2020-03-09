@@ -1,0 +1,44 @@
+(library
+  (name elpi_parser)
+  (public_name elpi.parser)
+  (preprocess (per_module ((pps ppx_deriving.std) ast)))
+  (libraries unix menhirLib elpi_lexer_config elpi.util stdlib-shims)
+  (modules ast grammar lexer parser_config error_messages parse))
+
+(library
+  (name elpi_lexer_config)
+  (public_name elpi.lexer_config)
+  (libraries elpi.util)
+  (modules tokens lexer_config))
+
+(executable
+  (name gen_token_precedence)
+  (modules gen_token_precedence)
+  (libraries elpi.lexer_config))
+
+(executable
+  (name gen_infix_lexer)
+  (modules gen_infix_lexer)
+  (libraries elpi.lexer_config str))
+
+(menhir (modules tokens) (flags --only-tokens))
+(menhir (modules grammar tokens token_precedence) (flags --external-tokens Elpi_lexer_config.Tokens --exn-carries-state) (merge_into grammar))
+(ocamllex (modules lexer))
+
+(rule
+;  (mode promote)
+  (action (with-stdout-to lexer.mll
+    (run %{project_root}/src/parser/gen_infix_lexer.exe %{dep:lexer.mll.in}))))
+
+(rule
+  (mode promote) ; needed by --list-errors
+  (action (with-stdout-to token_precedence.mly
+    (run %{project_root}/src/parser/gen_token_precedence.exe))))
+
+(rule
+  (action (with-stdout-to error_messages.ml
+    (run menhir %{dep:tokens.mly} %{dep:grammar.mly} %{dep:token_precedence.mly}
+      --base grammar --compile-errors %{dep:error_messages.txt} ))))
+
+(test (name test_lexer) (libraries elpi_parser str) (modules test_lexer) (preprocess (pps ppx_deriving.std)))
+(test (name test_parser) (libraries elpi_parser str menhirLib) (modules test_parser) (preprocess (pps ppx_deriving.std)))
