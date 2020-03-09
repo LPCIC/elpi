@@ -1009,9 +1009,10 @@ X == Y :- same_term X Y.
 
   MLCode(Pred("new_int",
      Out(int, "N",
-     Easy     "unifies N with a different int every time it is called"),
+     Easy     "unifies N with a different int every time it is called. Values of N are guaranteed to be incresing."),
    (fun _ ~depth ->
       incr fresh_int;
+      if !fresh_int < 0 then anomaly "new_int: reached max_int";
       !: !fresh_int)),
   DocAbove);
 
