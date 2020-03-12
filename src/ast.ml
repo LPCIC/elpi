@@ -276,8 +276,6 @@ let { CData.cin = in_loc; isc = is_loc; cout = out_loc } as cloc =
 
 module Structured = struct
 
-open Ast
-
 type program = {
   macros : (Func.t, Term.t) Macro.t list;
   types : tattribute Type.t list;
