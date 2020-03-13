@@ -7,6 +7,7 @@ env:
     - OCAML_MAX=4.08.1
     - PREDEPS="ocamlfind"
     - DEPS="camlp5 ocamlfind ppx_tools_versioned ppx_deriving ocaml-migrate-parsetree re dune cmdliner ANSITerminal"
+    - MINDEPS="camlp5 ocamlfind dune"
     - JOBS=2
 
 install:
@@ -68,6 +69,48 @@ matrix:
     - opam install -j $JOBS -y $DEPS
     - dune build
     - make tests
+
+  - env: TEST="linux build $OCAML_MIN minimal-deps"
+    os: linux
+    addons:
+      apt:
+        sources:
+        - avsm
+        packages:
+        - lua5.1
+        - gcc-multilib
+    cache:
+      apt: true
+      directories:
+      - $HOME/opam-cache
+    script:
+    - opam switch min
+    - eval $(opam env)
+    - opam install -j $JOBS -y $PREDEPS
+    - opam install -j $JOBS -y $MINDEPS
+    - make build
+    - make install
+
+  - env: TEST="linux build $OCAML_MAX minimal-deps"
+    os: linux
+    addons:
+      apt:
+        sources:
+        - avsm
+        packages:
+        - lua5.1
+        - gcc-multilib
+    cache:
+      apt: true
+      directories:
+      - $HOME/opam-cache
+    script:
+    - opam switch max
+    - eval $(opam env)
+    - opam install -j $JOBS -y $PREDEPS
+    - opam install -j $JOBS -y $MINDEPS
+    - make build
+    - make install
 
   - env: TEST="osx build $OCAML_MIN"
     os: osx
