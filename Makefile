@@ -27,6 +27,8 @@ STACK=32768
 DUNE_OPTS=
 
 build:
+	cd vendor && ./config.sh
+	dune build $(DUNE_OPTS) trace
 	dune build $(DUNE_OPTS) @install
 
 install:

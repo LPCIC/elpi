@@ -5,3 +5,4 @@
   (modules elpi_REPL)
 )
 
+(vendored_dirs vendor)

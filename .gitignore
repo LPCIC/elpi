@@ -15,5 +15,7 @@ tests/sources/lyp/etc
 tests/sources/helena_elpi/helena
 tests/sources/helena_elpi/etc
 
+vendor/*/
+
 _build
 _log
