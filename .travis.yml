@@ -146,7 +146,32 @@ matrix:
     - opam install -j $JOBS -y $DEPS
     - dune build
 
-  - env: TEST="linux opam package installation"
+  - env: TEST="linux opam package installation $OCAML_MIN"
+    os: linux
+    addons:
+      apt:
+        sources:
+        - avsm
+        packages:
+        - lua5.1
+        - gnuplot
+        - gcc-multilib
+    cache:
+      directories:
+      - $HOME/opam-cache
+    script:
+    - opam switch min
+    - eval $(opam env)
+    - opam pin -y -t -v add elpi "https://github.com/${TRAVIS_REPO_SLUG}.git#${TRAVIS_COMMIT}" 
+    - ocamlfind query elpi
+    - ls `ocamlfind printconf destdir`/elpi
+    - which elpi
+    - opam remove elpi
+    - opam pin -y remove elpi
+    - if ocamlfind query elpi; then false; else true; fi
+    - if which elpi; then false; else true; fi
+
+  - env: TEST="linux opam package installation $OCAML_MAX"
     os: linux
     addons:
       apt:
