@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Behaves like ppxfind but promotes the files after ppx rewriting
+# to the source tree and uses them if available and up to date
+
+set -o pipefail
+
+PPX="$1"
+shift
+SRC="$1"
+shift
+
+CACHEDIR="../../$(dirname ${SRC})/.ppcache"
+mkdir -p ${CACHEDIR}
+CACHE="${CACHEDIR}/$(basename ${SRC})"
+
+SHA="(*$(sha1sum ${SRC}) ${PPX} ${*}*)"
+if [ -f ${CACHE} ] && [ "$(head -1 ${CACHE})" = "${SHA}" ]; then
+    cat ${CACHE}
+    exit 0
+else
+    echo "${SHA}" > ${CACHE}
+    ppxfind ${PPX} ${*} ${SRC} | lua -e "
+    s = io.stdin:read('*a')
+    print((s:gsub('let rec (%b())',function(x) return 'let rec '..x:sub(2,-2) end)))
+    " | tee -a ${CACHE}
+    exit 0
+fi
