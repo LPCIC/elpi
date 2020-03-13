@@ -26,7 +26,7 @@ install:
 matrix:
   include:
 
-  - env: TEST="linux build $OCAML_MIN"
+  - env: TEST="build & test | $OCAML_MIN"
     os: linux
     addons:
       apt:
@@ -48,7 +48,7 @@ matrix:
     - dune build
     - make tests
 
-  - env: TEST="linux build $OCAML_MAX"
+  - env: TEST="build & test | $OCAML_MAX"
     os: linux
     addons:
       apt:
@@ -70,7 +70,7 @@ matrix:
     - dune build
     - make tests
 
-  - env: TEST="linux build $OCAML_MIN minimal-deps"
+  - env: TEST="build | $OCAML_MIN | minimal-deps"
     os: linux
     addons:
       apt:
@@ -91,7 +91,7 @@ matrix:
     - make build
     - make install
 
-  - env: TEST="linux build $OCAML_MAX minimal-deps"
+  - env: TEST="build | $OCAML_MAX | minimal-deps"
     os: linux
     addons:
       apt:
@@ -112,7 +112,7 @@ matrix:
     - make build
     - make install
 
-  - env: TEST="osx build $OCAML_MIN"
+  - env: TEST="build | $OCAML_MIN"
     os: osx
     before_install:
     - brew update
@@ -129,7 +129,7 @@ matrix:
     - opam install -j $JOBS -y $DEPS
     - dune build
 
-  - env: TEST="osx build $OCAML_MAX"
+  - env: TEST="build | $OCAML_MAX"
     os: osx
     before_install:
     - brew update
@@ -146,7 +146,7 @@ matrix:
     - opam install -j $JOBS -y $DEPS
     - dune build
 
-  - env: TEST="linux opam package installation $OCAML_MIN"
+  - env: TEST="opam | $OCAML_MIN"
     os: linux
     addons:
       apt:
@@ -162,7 +162,7 @@ matrix:
     script:
     - opam switch min
     - eval $(opam env)
-    - opam pin -y -t -v add elpi "https://github.com/${TRAVIS_REPO_SLUG}.git#${TRAVIS_COMMIT}" 
+    - opam pin -y -t -v add elpi "https://github.com/${TRAVIS_REPO_SLUG}.git#${TRAVIS_COMMIT}"
     - ocamlfind query elpi
     - ls `ocamlfind printconf destdir`/elpi
     - which elpi
@@ -171,7 +171,7 @@ matrix:
     - if ocamlfind query elpi; then false; else true; fi
     - if which elpi; then false; else true; fi
 
-  - env: TEST="linux opam package installation $OCAML_MAX"
+  - env: TEST="opam | $OCAML_MAX"
     os: linux
     addons:
       apt:
@@ -187,7 +187,7 @@ matrix:
     script:
     - opam switch max
     - eval $(opam env)
-    - opam pin -y -t -v add elpi "https://github.com/${TRAVIS_REPO_SLUG}.git#${TRAVIS_COMMIT}" 
+    - opam pin -y -t -v add elpi "https://github.com/${TRAVIS_REPO_SLUG}.git#${TRAVIS_COMMIT}"
     - ocamlfind query elpi
     - ls `ocamlfind printconf destdir`/elpi
     - which elpi
