@@ -1,3 +1,9 @@
+## v1.10.3 UNRELEASED
+
+- Build system:
+  - cache ppx output so that it builds without ppx_deriving and trace_ppx
+  - vendor dependencies so that it builds with just: camlp5 ocamlfind dune
+
 ## v1.10.2 (February 2020)
 
 - Builtin:
