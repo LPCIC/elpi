@@ -4,7 +4,7 @@ language: c
 env:
   global:
     - OCAML_MIN=4.04.0
-    - OCAML_MAX=4.08.1
+    - OCAML_MAX=4.09.0
     - PREDEPS="ocamlfind"
     - DEPS="camlp5 ocamlfind ppx_tools_versioned ppx_deriving ocaml-migrate-parsetree re dune cmdliner ANSITerminal"
     - MINDEPS="camlp5 ocamlfind dune"
