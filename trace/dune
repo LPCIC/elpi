@@ -1,4 +1,4 @@
-(library 
+(library
   (name trace_ppx)
   (public_name elpi.trace_ppx)
   (libraries ppx_tools_versioned ocaml-migrate-parsetree)
@@ -6,9 +6,10 @@
   (kind ppx_rewriter)
   (ppx_runtime_libraries elpi.trace)
   (modules trace_ppx)
+  (optional)
 )
 
-(library 
+(library
   (name trace)
   (public_name elpi.trace)
   (libraries re)
