@@ -20,6 +20,7 @@ if ocamlfind query -qo ppx_deriving 2>/dev/null; then
     TMP=`mktemp`
     ppxfind ${PPX} ${*} ${SRC} --as-pp > $TMP
     echo "${SHA}" > ${CACHE}
+    echo "#1 \"${SRC}\"" >> ${CACHE}
     ppxfind ${PPX} ${*} ${SRC} | lua -e "
     s = io.stdin:read('*a')
     print((s:gsub('let rec (%b())',function(x) return 'let rec '..x:sub(2,-2) end)))

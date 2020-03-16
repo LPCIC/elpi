@@ -1,4 +1,5 @@
 (*927d066a4a64bd8ebdf616cca09a2e6c6b896a27  src/API.mli ppx_deriving.std *)
+#1 "src/API.mli"
 [@@@ocaml.text " This module is the API for clients of the Elpi library. "]
 [@@@ocaml.text
   " These APIs are sufficient to parse programs and queries from text, run\n    the interpreter and finally print the result "]

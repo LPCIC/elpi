@@ -60,7 +60,7 @@ git/%:
 	cd "_build/git/elpi-$*" && git checkout "$*"
 	cd "_build/git/elpi-$*" && \
 	  if [ -f dune ]; then \
-	    dune build --root . $(DUNE_OPTS) @install; \
+	    make build DUNE_OPTS="$(DUNE_OPTS) --root .";\
 	    cd _build/install/default/bin/; \
 		ln -sf elpi elpi.git.$*; \
 	  else \
