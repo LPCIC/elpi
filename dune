@@ -5,4 +5,11 @@
   (modules elpi_REPL)
 )
 
+(executable
+  (name ppxfindcache)
+  (public_name ppxfindcache)
+  (modules ppxfindcache)
+  (libraries unix)
+)
+
 (vendored_dirs vendor)

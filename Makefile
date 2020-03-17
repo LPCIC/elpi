@@ -30,6 +30,7 @@ build:
 	cd vendor && ./config.sh
 	dune build $(DUNE_OPTS) trace
 	dune build $(DUNE_OPTS) @install
+	cp -r _build/default/src/.ppcache src/
 
 install:
 	dune install $(DUNE_OPTS)

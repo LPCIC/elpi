@@ -2,9 +2,9 @@
   (name elpi)
   (public_name elpi)
   (preprocess (per_module
-    ((action (run ./ppxfindcache ppx_deriving.std %{input-file})) API util ast data compiler)
-    ((action (run ./ppxfindcache ppx_deriving.std,elpi.trace_ppx %{input-file} --trace_ppx-on)) runtime_trace_on)
-    ((action (run ./ppxfindcache ppx_deriving.std,elpi.trace_ppx %{input-file} --trace_ppx-off)) runtime_trace_off)
+    ((action (run ppxfindcache ppx_deriving.std %{input-file})) API util ast data compiler)
+    ((action (run ppxfindcache ppx_deriving.std,elpi.trace_ppx %{input-file} --trace_ppx-on)) runtime_trace_on)
+    ((action (run ppxfindcache ppx_deriving.std,elpi.trace_ppx %{input-file} --trace_ppx-off)) runtime_trace_off)
     ((action (run camlp5o -I . -I +camlp5 pa_extend.cmo pa_lexer.cmo %{input-file})) parser)
     ))
   (libraries re.str camlp5.gramlib unix ppx_deriving.runtime elpi.trace)
@@ -12,8 +12,6 @@
   (modules elpi util parser ast compiler data ptmap builtin builtin_checker builtin_stdlib builtin_map builtin_set API runtime_trace_on runtime_trace_off)
   (private_modules util parser ast compiler data ptmap builtin_stdlib builtin_map builtin_set runtime_trace_on runtime_trace_off )
 )
-
-(dirs :standard \ .ppxcache)
 
 (rule (copy# runtime.ml runtime_trace_on.ml))
 (rule (copy# runtime.ml runtime_trace_off.ml))
