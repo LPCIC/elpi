@@ -53,6 +53,7 @@ let main () =
   let () =
     let open Arg in
     parse [
+      "--dep", String (fun s -> Printf.eprintf "skip %s\n" s), "ignored";
       "--ppx", Set_string ppx, "list of ppx, glued using , (eg foo,bar,baz)";
       "--ppx-opt", String (fun s -> flag := Array.append !flag [|s|]), "option for the ppx rewriter";
       "--cache-file", String (fun s -> cache := s :: !cache), "files for which a cache is stored";
@@ -65,12 +66,12 @@ let main () =
 
   let sha = must @@ exec "sha1sum" [|file|] in
   let sha = String.sub sha 0 (String.length sha - 1) in
-  let sha = Printf.sprintf "(*%s %s %s*)" sha Sys.argv.(1) (String.concat " " (Array.to_list flag)) in
+  let sha = Printf.sprintf "(*%s %s %s*)\n" sha ppx (String.concat " " (Array.to_list flag)) in
 
   let cachefile =
     let open Filename in
     let dir, file = dirname file, basename file in
-    let cachedir = concat ".ppcache" dir in
+    let cachedir = concat dir ".ppcache" in
     (try Unix.mkdir cachedir 0o700 with Unix.Unix_error _ -> ());
     concat cachedir file in
 
@@ -90,17 +91,20 @@ let main () =
     let text = must @@ exec "ppxfind" args in
     if List.mem cachefile cache then begin
       let o = open_out cachefile in
-      Printf.fprintf o "%s\n#1 \"%s\"\n" sha file;
+      Printf.fprintf o "%s#1 \"%s\"\n" sha file;
       output_fix o text 0 (String.length text);
       output_char o '\n';
       close_out o;
     end;
     output_string stdout binary
   else
-    let _, header = exec "head" [|"-1";cachefile|] in
+    let h, header = exec "head" [|"-1";cachefile|] in
     if header = sha then
       output_string stdout @@ read_file (open_in cachefile)
-    else
+    else begin
+      Printf.eprintf "No ppx and no %s cache file for %s"
+        (if h then "matching" else "") file;
       exit 1
+    end
 ;;
 main ()
