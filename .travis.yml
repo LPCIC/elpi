@@ -45,7 +45,7 @@ matrix:
     - eval $(opam env)
     - opam install -j $JOBS -y $PREDEPS
     - opam install -j $JOBS -y $DEPS
-    - dune build
+    - make build
     - make tests
 
   - env: TEST="build & test | $OCAML_MAX"
@@ -67,7 +67,7 @@ matrix:
     - eval $(opam env)
     - opam install -j $JOBS -y $PREDEPS
     - opam install -j $JOBS -y $DEPS
-    - dune build
+    - make build
     - make tests
 
   - env: TEST="build | $OCAML_MIN | minimal-deps"
@@ -127,7 +127,7 @@ matrix:
     - eval $(opam env)
     - opam install -j $JOBS -y $PREDEPS
     - opam install -j $JOBS -y $DEPS
-    - dune build
+    - make build
 
   - env: TEST="build | $OCAML_MAX"
     os: osx
@@ -144,7 +144,7 @@ matrix:
     - eval $(opam env)
     - opam install -j $JOBS -y $PREDEPS
     - opam install -j $JOBS -y $DEPS
-    - dune build
+    - make build
 
   - env: TEST="opam | $OCAML_MIN"
     os: linux
