@@ -1,4 +1,4 @@
-(*0fc688f515359f1a9ca5b86a0779277be74c6319  src/runtime_trace_off.ml ppx_deriving.std,elpi.trace_ppx --trace_ppx-off*)
+(*ae1fa019919cf627f3c4e9b34a3619ed49c31e51  src/runtime_trace_off.ml ppx_deriving.std,elpi.trace_ppx --trace_ppx-off*)
 #1 "src/runtime_trace_off.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -2403,7 +2403,6 @@ and alternative =
   lvl: alternative ;
   program: prolog_prog ;
   depth: int ;
-  gid: int ;
   goal: term ;
   goals: goal list ;
   stack: frame ;
@@ -2879,7 +2878,6 @@ module Mainloop :
           ?delay_outside_fragment:bool -> 'x executable -> 'x runtime
       =
       let rec run depth p g gs (next : frame) alts lvl =
-        let gid = 0 in
         ();
         (match !steps_bound with
          | Some bound ->
@@ -2931,7 +2929,7 @@ module Mainloop :
                      alts lvl
                | Const _|App _ ->
                    let cp = get_clauses depth g p in
-                   backchain depth p g gs gid cp next alts lvl
+                   backchain depth p g gs cp next alts lvl
                | Arg _|AppArg _ -> anomaly "Not a heap term"
                | Lam _|CData _ ->
                    type_error
@@ -2948,7 +2946,7 @@ module Mainloop :
                          | (depth, p, g)::gs ->
                              run depth p g gs next alts lvl)
                     | exception No_clause -> next_alt alts))))
-      and backchain depth p g gs gid cp next alts lvl =
+      and backchain depth p g gs cp next alts lvl =
         let maybe_last_call = alts == noalts in
         let rec args_of =
           function
@@ -2989,7 +2987,6 @@ module Mainloop :
                           stack = next;
                           trail = old_trail;
                           state = (!CS.state);
-                          gid;
                           clauses = cs;
                           lvl;
                           next = alts
@@ -3067,11 +3064,11 @@ module Mainloop :
         then raise No_clause
         else
           (let { program = p; clauses; goal = g; goals = gs; stack = next;
-                 trail = old_trail; state = old_state; gid; depth; lvl;
+                 trail = old_trail; state = old_state; depth; lvl;
                  next = alts }
              = alts in
            T.undo ~old_trail ~old_state ();
-           backchain depth p g gs gid clauses next alts lvl) in
+           backchain depth p g gs clauses next alts lvl) in
       fun ?max_steps ->
         fun ?(delay_outside_fragment= false) ->
           fun
