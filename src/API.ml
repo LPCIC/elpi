@@ -538,17 +538,16 @@ module RawData = struct
   }
   type hyps = hyp list
 
-  type suspended_goal = {
+  type suspended_goal = ED.suspended_goal = {
     context : hyps;
     goal : int * term
   }
 
   type constraints = Data.constraints
 
-  let constraints = Util.map_filter (function
-    | { ED.kind = Constraint { cdepth; conclusion; context } } ->
-        Some { context ; goal = (cdepth, conclusion) }
-    | _ -> None)
+  let constraints l =
+    let module R = (val !r) in let open R in
+    Util.map_filter (fun x -> R.get_suspended_goal x.ED.kind) l
   let no_constraints = []
 
   let mkUnifVar handle ~args state =

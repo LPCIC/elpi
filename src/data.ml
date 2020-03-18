@@ -69,6 +69,17 @@ end
 let pp_oref = mk_spaghetti_printer ()
 
 let id_term = UUID.make ()
+
+(* This data type is open since runtime (traced or not) adds to it
+   its own representation of constraints, projectable to the type
+   suspended_goal below *)
+type 'unification_def stuck_goal_kind = ..
+let pp_stuck_goal_kind p1 fmt x = ()
+let show_stuck_goal_kind p1 _ = ""
+let equal_stuck_goal_kind _ x y = x == y
+type 'unification_def stuck_goal_kind +=
+  | Unification of 'unification_def
+
 type term =
   (* Pure terms *)
   | Const of constant
@@ -94,12 +105,9 @@ and uvar_body = {
 }
 and stuck_goal = {
   mutable blockers : blockers;
-  kind : stuck_goal_kind;
+  kind : unification_def stuck_goal_kind;
 }
 and blockers = uvar_body list
-and stuck_goal_kind =
- | Constraint of constraint_def
- | Unification of unification_def 
 and unification_def = {
   adepth : int;
   env : term array;
@@ -107,13 +115,6 @@ and unification_def = {
   a : term;
   b : term;
   matching: bool;
-}
-and constraint_def = {
-  cdepth : int;
-  prog : prolog_prog [@equal fun _ _ -> true]
-               [@printer (fun fmt _ -> Fmt.fprintf fmt "<prolog_prog>")];
-  context : clause_src list;
-  conclusion : term;
 }
 and clause_src = { hdepth : int; hsrc : term }
 and prolog_prog = {
@@ -124,7 +125,7 @@ and index = second_lvl_idx Ptmap.t
 and second_lvl_idx =
 | TwoLevelIndex of {
     mode : mode;
-    argno : int; 
+    argno : int;
     all_clauses : clause list;         (* when the query is flexible *)
     flex_arg_clauses : clause list;       (* when the query is rigid but arg_id ha nothing *)
     arg_idx : clause list Ptmap.t;   (* when the query is rigid (includes in each binding flex_arg_clauses) *)
@@ -148,6 +149,11 @@ and mode = bool list (* true=input, false=output *)
 type constraints = stuck_goal list
 type hyps = clause_src list
 type extra_goals = term list
+
+type suspended_goal = {
+  context : hyps;
+  goal : int * term
+}
 
 type indexing =
   | MapOn of int

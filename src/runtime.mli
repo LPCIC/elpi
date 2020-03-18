@@ -64,6 +64,9 @@ val make_index :
   (constant * clause) list ->
     prolog_prog
 
+(* The projection from the internal notion of constraints in the API one *)
+val get_suspended_goal : 'a stuck_goal_kind -> suspended_goal option
+
 (* used by the compiler *)
 val clausify1 :
   loc:Loc.t ->

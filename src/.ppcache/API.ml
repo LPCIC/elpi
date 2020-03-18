@@ -1,4 +1,4 @@
-(*30c382e94816dc23e076d026a85ee4a2aff9264a  src/API.ml ppx_deriving.std *)
+(*073bfa7dae72950bba2f8af31ee08bfe6c7ab205  src/API.ml ppx_deriving.std *)
 #1 "src/API.ml"
 module type Runtime  = module type of Runtime_trace_off
 let r = ref ((module Runtime_trace_off) : (module Runtime))
@@ -513,16 +513,15 @@ module RawData =
       hdepth: int ;
       hsrc: term }
     type hyps = hyp list
-    type suspended_goal = {
+    type suspended_goal = ED.suspended_goal =
+      {
       context: hyps ;
       goal: (int * term) }
     type constraints = Data.constraints
-    let constraints =
-      Util.map_filter
-        (function
-         | { ED.kind = Constraint { cdepth; conclusion; context } } ->
-             Some { context; goal = (cdepth, conclusion) }
-         | _ -> None)
+    let constraints l =
+      let module R = (val !r) in
+        let open R in
+          Util.map_filter (fun x -> R.get_suspended_goal x.ED.kind) l
     let no_constraints = []
     let mkUnifVar handle ~args  state =
       match handle with

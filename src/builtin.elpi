@@ -416,7 +416,8 @@ pred primitive? i:A, i:string.
 
 primitive? X S :- is_cdata X (ctype S).
 
-% [new_int N] unifies N with a different int every time it is called
+% [new_int N] unifies N with a different int every time it is called. Values
+% of N are guaranteed to be incresing.
 external pred new_int o:int.
 
 % Holds data across bracktracking; can only contain closed terms

@@ -1,4 +1,4 @@
-(*64baf72a3733e97fd4d38e7c985bc35f9256d52f  src/runtime_trace_on.mli ppx_deriving.std,elpi.trace_ppx --trace_ppx-on*)
+(*e0914f3476d15e2ba79d82fa97efbbd05a6e4c75  src/runtime_trace_on.mli ppx_deriving.std,elpi.trace_ppx --trace_ppx-on*)
 #1 "src/runtime_trace_on.mli"
 open Util
 open Data
@@ -52,6 +52,7 @@ val make_index :
   depth:int ->
     indexing:(mode * indexing) Constants.Map.t ->
       (constant * clause) list -> prolog_prog
+val get_suspended_goal : 'a stuck_goal_kind -> suspended_goal option
 val clausify1 :
   loc:Loc.t ->
     mode Constants.Map.t ->

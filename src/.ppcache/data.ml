@@ -1,4 +1,4 @@
-(*d557a8e52078b2dac27f3e440be150afa3af9cef  src/data.ml ppx_deriving.std *)
+(*6673fdb577f0205021fdb12e87f962b57a750766  src/data.ml ppx_deriving.std *)
 #1 "src/data.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -32,6 +32,12 @@ module Term =
       end 
     let pp_oref = mk_spaghetti_printer ()
     let id_term = UUID.make ()
+    type 'unification_def stuck_goal_kind = ..
+    let pp_stuck_goal_kind p1 fmt x = ()
+    let show_stuck_goal_kind p1 _ = ""
+    let equal_stuck_goal_kind _ x y = x == y
+    type 'unification_def stuck_goal_kind +=  
+      | Unification of 'unification_def 
     type term =
       | Const of constant 
       | Lam of term 
@@ -50,13 +56,11 @@ module Term =
       mutable contents: term [@printer pp_spaghetti_any ~id:id_term pp_oref];
       mutable rest: stuck_goal list
         [@printer fun _ -> fun _ -> ()][@equal fun _ -> fun _ -> true]}
-    and stuck_goal = {
+    and stuck_goal =
+      {
       mutable blockers: blockers ;
-      kind: stuck_goal_kind }
+      kind: unification_def stuck_goal_kind }
     and blockers = uvar_body list
-    and stuck_goal_kind =
-      | Constraint of constraint_def 
-      | Unification of unification_def 
     and unification_def =
       {
       adepth: int ;
@@ -65,16 +69,6 @@ module Term =
       a: term ;
       b: term ;
       matching: bool }
-    and constraint_def =
-      {
-      cdepth: int ;
-      prog: prolog_prog
-        [@equal fun _ -> fun _ -> true][@printer
-                                         fun fmt ->
-                                           fun _ ->
-                                             Fmt.fprintf fmt "<prolog_prog>"];
-      context: clause_src list ;
-      conclusion: term }
     and clause_src = {
       hdepth: int ;
       hsrc: term }
@@ -286,7 +280,8 @@ module Term =
       Ppx_deriving_runtime.Format.formatter ->
         stuck_goal -> Ppx_deriving_runtime.unit
       =
-      let __1 () = pp_stuck_goal_kind
+      let __2 () = pp_stuck_goal_kind
+      and __1 () = pp_unification_def
       and __0 () = pp_blockers in
       ((let open! Ppx_deriving_runtime in
           fun fmt ->
@@ -298,7 +293,7 @@ module Term =
                 Ppx_deriving_runtime.Format.fprintf fmt "@]");
                Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
                Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "kind";
-               ((__1 ()) fmt) x.kind;
+               ((__2 ()) (fun fmt -> (__1 ()) fmt) fmt) x.kind;
                Ppx_deriving_runtime.Format.fprintf fmt "@]");
               Ppx_deriving_runtime.Format.fprintf fmt "@ }@]")
         [@ocaml.warning "-A"])
@@ -326,30 +321,6 @@ module Term =
         [@ocaml.warning "-A"])
     and show_blockers : blockers -> Ppx_deriving_runtime.string =
       fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_blockers x
-    [@@ocaml.warning "-32"]
-    and pp_stuck_goal_kind :
-      Ppx_deriving_runtime.Format.formatter ->
-        stuck_goal_kind -> Ppx_deriving_runtime.unit
-      =
-      let __1 () = pp_unification_def
-      and __0 () = pp_constraint_def in
-      ((let open! Ppx_deriving_runtime in
-          fun fmt ->
-            function
-            | Constraint a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
-                   "(@[<2>Data.Term.Constraint@ ";
-                 ((__0 ()) fmt) a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])")
-            | Unification a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
-                   "(@[<2>Data.Term.Unification@ ";
-                 ((__1 ()) fmt) a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])"))
-        [@ocaml.warning "-A"])
-    and show_stuck_goal_kind : stuck_goal_kind -> Ppx_deriving_runtime.string
-      =
-      fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_stuck_goal_kind x
     [@@ocaml.warning "-32"]
     and pp_unification_def :
       Ppx_deriving_runtime.Format.formatter ->
@@ -404,54 +375,6 @@ module Term =
     and show_unification_def : unification_def -> Ppx_deriving_runtime.string
       =
       fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_unification_def x
-    [@@ocaml.warning "-32"]
-    and pp_constraint_def :
-      Ppx_deriving_runtime.Format.formatter ->
-        constraint_def -> Ppx_deriving_runtime.unit
-      =
-      let __2 () = pp_term
-      and __1 () = pp_clause_src
-      and __0 () =
-        ((let fprintf = Ppx_deriving_runtime.Format.fprintf in
-          fun fmt -> fun _ -> Fmt.fprintf fmt "<prolog_prog>")
-        [@ocaml.warning "-26"]) in
-      ((let open! Ppx_deriving_runtime in
-          fun fmt ->
-            fun x ->
-              Ppx_deriving_runtime.Format.fprintf fmt "@[<2>{ ";
-              ((((Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
-                    "Data.Term.cdepth";
-                  (Ppx_deriving_runtime.Format.fprintf fmt "%d") x.cdepth;
-                  Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                 Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                 Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "prog";
-                 ((__0 ()) fmt) x.prog;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "context";
-                ((fun x ->
-                    Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
-                    ignore
-                      (List.fold_left
-                         (fun sep ->
-                            fun x ->
-                              if sep
-                              then
-                                Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                              ((__1 ()) fmt) x;
-                              true) false x);
-                    Ppx_deriving_runtime.Format.fprintf fmt "@,]@]"))
-                  x.context;
-                Ppx_deriving_runtime.Format.fprintf fmt "@]");
-               Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-               Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
-                 "conclusion";
-               ((__2 ()) fmt) x.conclusion;
-               Ppx_deriving_runtime.Format.fprintf fmt "@]");
-              Ppx_deriving_runtime.Format.fprintf fmt "@ }@]")
-        [@ocaml.warning "-A"])
-    and show_constraint_def : constraint_def -> Ppx_deriving_runtime.string =
-      fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_constraint_def x
     [@@ocaml.warning "-32"]
     and pp_clause_src :
       Ppx_deriving_runtime.Format.formatter ->
@@ -846,13 +769,15 @@ module Term =
         [@ocaml.warning "-A"])[@@ocaml.warning "-39"]
     and equal_stuck_goal :
       stuck_goal -> stuck_goal -> Ppx_deriving_runtime.bool =
-      let __1 () = equal_stuck_goal_kind
+      let __2 () = equal_stuck_goal_kind
+      and __1 () = equal_unification_def
       and __0 () = equal_blockers in
       ((let open! Ppx_deriving_runtime in
           fun lhs ->
             fun rhs ->
               ((fun x -> (__0 ()) x) lhs.blockers rhs.blockers) &&
-                ((fun x -> (__1 ()) x) lhs.kind rhs.kind))
+                ((fun x -> ((__2 ()) (fun x -> (__1 ()) x)) x) lhs.kind
+                   rhs.kind))
         [@ocaml.warning "-A"])[@@ocaml.warning "-39"]
     and equal_blockers : blockers -> blockers -> Ppx_deriving_runtime.bool =
       let __0 () = equal_uvar_body in
@@ -863,20 +788,6 @@ module Term =
             | (a::x, b::y) -> ((fun x -> (__0 ()) x) a b) && (loop x y)
             | _ -> false in
           fun x -> fun y -> loop x y)
-        [@ocaml.warning "-A"])[@@ocaml.warning "-39"]
-    and equal_stuck_goal_kind :
-      stuck_goal_kind -> stuck_goal_kind -> Ppx_deriving_runtime.bool =
-      let __1 () = equal_unification_def
-      and __0 () = equal_constraint_def in
-      ((let open! Ppx_deriving_runtime in
-          fun lhs ->
-            fun rhs ->
-              match (lhs, rhs) with
-              | (Constraint lhs0, Constraint rhs0) ->
-                  ((fun x -> (__0 ()) x)) lhs0 rhs0
-              | (Unification lhs0, Unification rhs0) ->
-                  ((fun x -> (__1 ()) x)) lhs0 rhs0
-              | _ -> false)
         [@ocaml.warning "-A"])[@@ocaml.warning "-39"]
     and equal_unification_def :
       unification_def -> unification_def -> Ppx_deriving_runtime.bool =
@@ -902,26 +813,6 @@ module Term =
                  && ((fun x -> (__2 ()) x) lhs.b rhs.b))
                 &&
                 ((fun (a : bool) -> fun b -> a = b) lhs.matching rhs.matching))
-        [@ocaml.warning "-A"])[@@ocaml.warning "-39"]
-    and equal_constraint_def :
-      constraint_def -> constraint_def -> Ppx_deriving_runtime.bool =
-      let __2 () = equal_term
-      and __1 () = equal_clause_src
-      and __0 () _ _ = true in
-      ((let open! Ppx_deriving_runtime in
-          fun lhs ->
-            fun rhs ->
-              ((((fun (a : int) -> fun b -> a = b) lhs.cdepth rhs.cdepth) &&
-                  ((__0 ()) lhs.prog rhs.prog))
-                 &&
-                 ((let rec loop x y =
-                     match (x, y) with
-                     | ([], []) -> true
-                     | (a::x, b::y) ->
-                         ((fun x -> (__1 ()) x) a b) && (loop x y)
-                     | _ -> false in
-                   fun x -> fun y -> loop x y) lhs.context rhs.context))
-                && ((fun x -> (__2 ()) x) lhs.conclusion rhs.conclusion))
         [@ocaml.warning "-A"])[@@ocaml.warning "-39"]
     and equal_clause_src :
       clause_src -> clause_src -> Ppx_deriving_runtime.bool =
@@ -1083,6 +974,9 @@ module Term =
     type constraints = stuck_goal list
     type hyps = clause_src list
     type extra_goals = term list
+    type suspended_goal = {
+      context: hyps ;
+      goal: (int * term) }
     type indexing =
       | MapOn of int 
       | Hash of int list [@@deriving show]

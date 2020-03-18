@@ -57,8 +57,10 @@ let trace name ppfun body = [%expr
       raise e
 ]
 
-let spy name pp =
-  [%expr Trace.Runtime.info [%e name] [%e pp]]
+let spy gid name pp =
+  match gid with
+  | None -> [%expr Trace.Runtime.info [%e name] [%e pp]]
+  | Some gid -> [%expr Trace.Runtime.info ~goal_id:(Util.UUID.hash [%e gid]) [%e name] [%e pp]]
 
 let spyif name cond pp =
   [%expr if [%e cond] then Trace.Runtime.info [%e name] [%e pp]]
@@ -130,11 +132,23 @@ expr = begin fun mapper expr ->
       | _ -> err ~loc "use: [%tcall f args]"
       end
   | { pexp_desc = Pexp_extension ({ txt = "spy"; loc; _ }, pstr); _ } ->
-      let err () = err ~loc "use: [%spy id ?pred pp data]" in
+      let err () = err ~loc "use: [%spy id pp] or [%spy id gid pp] (pp may be a string)" in
+      let is_string_literal = function
+        | { pexp_desc = Pexp_constant (Pconst_string _); _ } -> true
+        | _ -> false in
+      let expr_of_msg msg =
+        if is_string_literal msg then [%expr (fun fmt -> Format.fprintf fmt "%s" [%e msg])]
+        else aux msg in
       begin match pstr with
-      | PStr [ { pstr_desc = Pstr_eval(
-              { pexp_desc = Pexp_apply(name,[(_,pp)]); _ },_); _} ] ->
-        if !enabled then spy (aux name) (aux pp)
+      | PStr [{ pstr_desc = Pstr_eval(
+               { pexp_desc = Pexp_apply(name,
+                [(_,msg)]); _ },_); _} ] when is_string_literal name ->
+        if !enabled then spy None name (expr_of_msg msg)
+        else [%expr ()]
+       | PStr [{ pstr_desc = Pstr_eval(
+               { pexp_desc = Pexp_apply(name,
+                  [(_,gid);(_,msg)]); _ },_); _} ] when is_string_literal name ->
+        if !enabled then spy (Some (aux gid)) name (expr_of_msg msg)
         else [%expr ()]
       | _ -> err ()
       end

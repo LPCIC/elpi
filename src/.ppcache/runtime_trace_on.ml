@@ -1,9 +1,27 @@
-(*f5fca9d221c8df9d4674c22af66f5e7c91effb01  src/runtime_trace_on.ml ppx_deriving.std,elpi.trace_ppx --trace_ppx-on*)
+(*d3477bfa3b0122bf33217f03703a4643362fe617  src/runtime_trace_on.ml ppx_deriving.std,elpi.trace_ppx --trace_ppx-on*)
 #1 "src/runtime_trace_on.ml"
 module Fmt = Format
 module F = Ast.Func
 open Util
 open Data
+type constraint_def =
+  {
+  cdepth: int ;
+  prog: prolog_prog
+    [@equal fun _ -> fun _ -> true][@printer
+                                     fun fmt ->
+                                       fun _ ->
+                                         Fmt.fprintf fmt "<prolog_prog>"];
+  context: clause_src list ;
+  conclusion: term ;
+  cgid: UUID.t [@trace ]}
+type 'unification_def stuck_goal_kind +=  
+  | Constraint of constraint_def 
+let get_suspended_goal =
+  function
+  | Constraint { cdepth; conclusion; context;_} ->
+      Some { context; goal = (cdepth, conclusion) }
+  | _ -> None
 module C :
   sig
     type t = Constants.t
@@ -409,7 +427,7 @@ module ConstraintStoreAndTrail :
     let trail = Fork.new_local []
     let initial_trail = Fork.new_local []
     let last_call = Fork.new_local false
-    let cut_trail () = trail := (!initial_trail)[@@inlined ]
+    let cut_trail () = trail := (!initial_trail)[@@inline ]
     module Ugly =
       struct let delayed : stuck_goal list ref = Fork.new_local [] end
     open Ugly
@@ -469,7 +487,8 @@ module ConstraintStoreAndTrail :
        | Unification _ -> ()
        | Constraint cstr ->
            new_delayed := ({ cstr; cstr_blockers = (sg.blockers) } ::
-             (!new_delayed)));
+             (!new_delayed))
+       | _ -> assert false);
       ((trail_stuck_goal_addition)[@inlined ]) sg
     let remove_cstr_if_exists x l =
       let rec aux acc =
@@ -483,7 +502,8 @@ module ConstraintStoreAndTrail :
       (match cstr.kind with
        | Unification _ -> ()
        | Constraint c ->
-           new_delayed := (remove_cstr_if_exists c (!new_delayed)));
+           new_delayed := (remove_cstr_if_exists c (!new_delayed))
+       | _ -> assert false);
       ((trail_stuck_goal_removal)[@inlined ]) cstr
     let remove_old_constraint cd =
       let c =
@@ -542,6 +562,7 @@ module ConstraintStoreAndTrail :
             (pplist ~boxed:false (uppterm ?pp_ctx 0 [] 0 empty_env) ", ")
             (List.map (fun r -> UVar (r, 0, 0)) blockers)
       | Constraint c -> print ?pp_ctx fmt [(c, blockers)]
+      | _ -> assert false
   end 
 module T = ConstraintStoreAndTrail
 module CS = ConstraintStoreAndTrail
@@ -2274,7 +2295,7 @@ let output arguments assignments state =
 module Indexing =
   struct
     let mustbevariablec = min_int
-    let ppclause f ~depth  hd { args; hyps } =
+    let ppclause f ~depth  ~hd  { args; hyps } =
       Fmt.fprintf f "@[<hov 1>%s %a :- %a.@]" (C.show hd)
         (pplist
            (uppterm ~min_prec:(Parser.appl_precedence + 1) depth [] depth
@@ -2765,7 +2786,7 @@ module Clausify :
                    vars
                  } in
                (Trace.Runtime.info "extra"
-                  (fun fmt -> ppclause fmt ~depth:(depth + lcs) hd c);
+                  (fun fmt -> ppclause fmt ~depth:(depth + lcs) ~hd c);
                 ((hd, c), { hdepth = depth; hsrc = g }, lcs))
            | UVar ({ contents = g }, from, args) when g != C.dummy ->
                claux1 ?loc get_mode vars depth hyps ts lts lcs
@@ -2814,7 +2835,53 @@ module Clausify :
         depth [] [] 0 0 t
   end 
 open Clausify
-type goal = (int * prolog_prog * term)
+type goal =
+  {
+  depth: int ;
+  program: prolog_prog ;
+  goal: term ;
+  gid: UUID.t [@trace ]}[@@deriving show]
+let rec pp_goal :
+  Ppx_deriving_runtime.Format.formatter -> goal -> Ppx_deriving_runtime.unit
+  =
+  let __2 () = UUID.pp
+  and __1 () = pp_term
+  and __0 () = pp_prolog_prog in
+  ((let open! Ppx_deriving_runtime in
+      fun fmt ->
+        fun x ->
+          Ppx_deriving_runtime.Format.fprintf fmt "@[<2>{ ";
+          ((((Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+                "Runtime_trace_on.depth";
+              (Ppx_deriving_runtime.Format.fprintf fmt "%d") x.depth;
+              Ppx_deriving_runtime.Format.fprintf fmt "@]");
+             Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
+             Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "program";
+             ((__0 ()) fmt) x.program;
+             Ppx_deriving_runtime.Format.fprintf fmt "@]");
+            Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
+            Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "goal";
+            ((__1 ()) fmt) x.goal;
+            Ppx_deriving_runtime.Format.fprintf fmt "@]");
+           Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
+           Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "gid";
+           ((__2 ()) fmt) x.gid;
+           Ppx_deriving_runtime.Format.fprintf fmt "@]");
+          Ppx_deriving_runtime.Format.fprintf fmt "@ }@]")
+    [@ocaml.warning "-A"])
+and show_goal : goal -> Ppx_deriving_runtime.string =
+  fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_goal x[@@ocaml.warning
+                                                                "-32"]
+let make_sub_goal_id ogid =
+  let gid = UUID.make () in
+  Trace.Runtime.info "user:sub-goal"
+    (fun fmt -> Fmt.fprintf fmt "%a %a" UUID.pp ogid UUID.pp gid);
+  gid[@@inline ]
+let make_sub_goal ((gid)[@trace ]) ~depth  program goal =
+  let ((gid)[@trace ]) = make_sub_goal_id gid in
+  { depth; program; goal; gid = ((gid)[@trace ]) }[@@inline ]
+let repack_goal ((gid)[@trace ]) ~depth  program goal =
+  { depth; program; goal; gid = ((gid)[@trace ]) }[@@inline ]
 type frame =
   | FNil 
   | FCons of alternative * goal list * frame 
@@ -2822,8 +2889,9 @@ and alternative =
   {
   lvl: alternative ;
   program: prolog_prog ;
-  depth: int ;
-  goal: term ;
+  adepth: int ;
+  agoal: term ;
+  agid: UUID.t [@trace ];
   goals: goal list ;
   stack: frame ;
   trail: T.trail ;
@@ -2850,10 +2918,12 @@ let do_make_runtime
 module Constraints :
   sig
     val propagation : unit -> constraint_def list
-    val resumption : constraint_def list -> (int * prolog_prog * term) list
+    val resumption : constraint_def list -> goal list
     val chrules : CHR.t Fork.local_ref
     val exect_builtin_predicate :
-      constant -> depth:int -> prolog_prog -> term list -> term list
+      constant ->
+        depth:int ->
+          prolog_prog -> ((UUID.t)[@trace ]) -> term list -> term list
   end =
   struct
     exception NoMatch 
@@ -3081,8 +3151,17 @@ module Constraints :
                          (p == p') && (for_all2 (==) lp lp')
                      end)
     let chrules = Fork.new_local CHR.empty
+    let make_constraint_def ?(gid= UUID.make ())  depth prog pdiff conclusion
+      =
+      {
+        cdepth = depth;
+        prog;
+        context = pdiff;
+        cgid = ((gid)[@trace ]);
+        conclusion
+      }
     let delay_goal ?(filter_ctx= fun _ -> true)  ~depth  prog ~goal:g 
-      ~on:keys  =
+      ((gid)[@trace ]) ~on:keys  =
       let pdiff = local_prog prog in
       let pdiff = List.filter filter_ctx pdiff in
       Trace.Runtime.info "delay-goal"
@@ -3090,7 +3169,8 @@ module Constraints :
            Fmt.fprintf fmt "@[<hov 2> ...@ \226\138\162^%d %a@]\n%!" depth
              (uppterm depth [] 0 empty_env) g);
       (let kind =
-         Constraint { cdepth = depth; prog; context = pdiff; conclusion = g } in
+         Constraint
+           (make_constraint_def ~gid:((gid)[@trace ]) depth prog pdiff g) in
        CS.declare_new { kind; blockers = keys })
     let rec head_of =
       function
@@ -3111,7 +3191,7 @@ module Constraints :
       | Discard -> type_error "A constraint cannot be _"
       | Lam _ -> type_error "A constraint cannot be a function"
     let dummy_uvar_body = { contents = C.dummy; rest = [] }
-    let declare_constraint ~depth  prog args =
+    let declare_constraint ~depth  prog ((gid)[@trace ]) args =
       let (g, keys) =
         match args with
         | t1::t2::[] ->
@@ -3133,11 +3213,11 @@ module Constraints :
       | Some clique ->
           delay_goal
             ~filter_ctx:(fun { hsrc = x } -> C.Set.mem (head_of x) clique)
-            ~depth prog ~goal:g ~on:keys
-      | None -> delay_goal ~depth prog ~goal:g ~on:keys
-    let exect_builtin_predicate c ~depth  idx args =
+            ~depth prog ~goal:g ((gid)[@trace ]) ~on:keys
+      | None -> delay_goal ~depth prog ~goal:g ((gid)[@trace ]) ~on:keys
+    let exect_builtin_predicate c ~depth  idx ((gid)[@trace ]) args =
       if c == Global_symbols.declare_constraintc
-      then (declare_constraint ~depth idx args; [])
+      then (declare_constraint ~depth idx ((gid)[@trace ]) args; [])
       else
         if c == Global_symbols.print_constraintsc
         then
@@ -3279,7 +3359,7 @@ module Constraints :
                         (App (Global_symbols.implc, context, [conclusion]))
                         env m in
                     let prog = initial_program in
-                    [{ cdepth = eigen; prog; context = []; conclusion }] in
+                    [make_constraint_def eigen prog [] conclusion] in
               Trace.Runtime.info "propagate-delivery"
                 (fun fmt -> Fmt.pp_print_string fmt "delivered");
               Some
@@ -3292,10 +3372,11 @@ module Constraints :
          destroy (); result)
     let resumption to_be_resumed_rev =
       List.map
-        (fun { cdepth = d; prog; conclusion = g } ->
+        (fun { cdepth = d; prog; conclusion = g; cgid = ((gid)[@trace ]) } ->
            Trace.Runtime.info "run-scheduling-resume"
              (fun fmt -> Fmt.fprintf fmt "%a" (uppterm d [] d empty_env) g);
-           (d, prog, g)) (List.rev to_be_resumed_rev)
+           ((repack_goal)[@inlined ]) ~depth:d ((gid)[@trace ]) prog g)
+        (List.rev to_be_resumed_rev)
     let mk_permutations len pivot pivot_position rest =
       let open List in
         let rec insert x =
@@ -3394,10 +3475,11 @@ module Mainloop :
       : ?max_steps:int ->
           ?delay_outside_fragment:bool -> 'x executable -> 'x runtime
       =
-      let rec run depth p g gs (next : frame) alts lvl =
+      let rec run depth p g ((gid)[@trace ]) gs (next : frame) alts lvl =
         Trace.Runtime.set_cur_pred (pred_of g);
         (let wall_clock = Unix.gettimeofday () in
-         Trace.Runtime.enter "run" (fun _ -> ());
+         Trace.Runtime.enter "run"
+           (fun fmt -> Fmt.fprintf fmt "gid:%a" UUID.pp gid);
          (try
             let rc =
               (match !steps_bound with
@@ -3405,91 +3487,199 @@ module Mainloop :
                    (incr steps_made;
                     if (!steps_made) > bound then raise No_more_steps)
                | None -> ());
+              Trace.Runtime.info ~goal_id:(Util.UUID.hash gid) "user:step"
+                (fun fmt -> Fmt.fprintf fmt "%d" (!steps_made));
+              Trace.Runtime.info ~goal_id:(Util.UUID.hash gid) "user:goal"
+                (fun fmt ->
+                   Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) g);
               (match resume_all () with
                | None ->
-                   (Trace.Runtime.info "run-resumed-fail" (fun _ -> ());
+                   (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                      "user:rule"
+                      (fun fmt -> Format.fprintf fmt "%s" "fail-resume");
                     raise
                       (Trace.Runtime.TREC_CALL
                          ((Obj.repr next_alt), (Obj.repr alts))))
-               | Some ((ndepth, np, ng)::goals) ->
-                   (Trace.Runtime.info "run-resumed-goal"
-                      (fun fmt ->
-                         Fmt.fprintf fmt "%a" (ppterm ndepth [] 0 empty_env)
-                           ng);
+               | Some
+                   ({ depth = ndepth; program; goal; gid = ((ngid)[@trace ])
+                      }::goals)
+                   ->
+                   (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                      "user:rule"
+                      (fun fmt -> Format.fprintf fmt "%s" "resume");
                     raise
                       (Trace.Runtime.TREC_CALL
                          ((Obj.repr
-                             ((((((run ndepth) np) ng)
-                                  (goals @ ((depth, p, g) :: gs))) next) alts)),
-                           (Obj.repr lvl))))
+                             (((((((run ndepth) program) goal) ((ngid)
+                                   [@trace ]))
+                                  (goals @
+                                     ((((repack_goal)[@inlined ]) ((gid)
+                                         [@trace ]) ~depth p g)
+                                     :: gs))) next) alts)), (Obj.repr lvl))))
                | Some [] ->
-                   (Trace.Runtime.info "run-goal"
-                      (fun fmt ->
-                         Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env)
-                           g);
-                    (match g with
-                     | Builtin (c, []) when c == Global_symbols.cutc ->
+                   (match g with
+                    | Builtin (c, []) when c == Global_symbols.cutc ->
+                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                           "user:rule"
+                           (fun fmt -> Format.fprintf fmt "%s" "cut");
                          raise
                            (Trace.Runtime.TREC_CALL
                               ((Obj.repr ((((cut p) gs) next) alts)),
-                                (Obj.repr lvl)))
-                     | App (c, g, gs') when c == Global_symbols.andc ->
-                         run depth p g
-                           ((List.map (fun x -> (depth, p, x)) gs') @ gs)
-                           next alts lvl
-                     | Cons (g, gs') ->
-                         run depth p g ((depth, p, gs') :: gs) next alts lvl
-                     | Nil ->
+                                (Obj.repr lvl))))
+                    | App (c, g, gs') when c == Global_symbols.andc ->
+                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                           "user:rule"
+                           (fun fmt -> Format.fprintf fmt "%s" "and");
+                         (let gs' =
+                            List.map
+                              (fun x ->
+                                 ((make_sub_goal)[@inlined ]) ~depth ((gid)
+                                   [@trace ]) p x) gs' in
+                          let ((gid)[@trace ]) = make_sub_goal_id gid in
+                          raise
+                            (Trace.Runtime.TREC_CALL
+                               ((Obj.repr
+                                   (((((((run depth) p) g) ((gid)[@trace ]))
+                                        (gs' @ gs)) next) alts)),
+                                 (Obj.repr lvl)))))
+                    | Cons (g, gs') ->
+                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                           "user:rule"
+                           (fun fmt -> Format.fprintf fmt "%s" "and");
+                         (let gs' =
+                            ((make_sub_goal)[@inlined ]) ~depth ((gid)
+                              [@trace ]) p gs' in
+                          let ((gid)[@trace ]) = make_sub_goal_id gid in
+                          raise
+                            (Trace.Runtime.TREC_CALL
+                               ((Obj.repr
+                                   (((((((run depth) p) g) ((gid)[@trace ]))
+                                        (gs' :: gs)) next) alts)),
+                                 (Obj.repr lvl)))))
+                    | Nil ->
+                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                           "user:rule"
+                           (fun fmt -> Format.fprintf fmt "%s" "true");
                          (match gs with
-                          | [] -> pop_andl alts next lvl
-                          | (depth, p, g)::gs ->
-                              run depth p g gs next alts lvl)
-                     | App (c, g2, g1::[]) when c == Global_symbols.rimplc ->
-                         let (clauses, pdiff, lcs) = clausify p ~depth g1 in
-                         let g2 = hmove ~from:depth ~to_:(depth + lcs) g2 in
-                         run (depth + lcs)
-                           (add_clauses ~depth clauses pdiff p) g2 gs next
-                           alts lvl
-                     | App (c, g1, g2::[]) when c == Global_symbols.implc ->
-                         let (clauses, pdiff, lcs) = clausify p ~depth g1 in
-                         let g2 = hmove ~from:depth ~to_:(depth + lcs) g2 in
-                         run (depth + lcs)
-                           (add_clauses ~depth clauses pdiff p) g2 gs next
-                           alts lvl
-                     | App (c, arg, []) when c == Global_symbols.pic ->
-                         let f = get_lambda_body ~depth arg in
-                         run (depth + 1) p f gs next alts lvl
-                     | App (c, arg, []) when c == Global_symbols.sigmac ->
-                         let f = get_lambda_body ~depth arg in
-                         let v = UVar ((oref C.dummy), depth, 0) in
-                         run depth p (subst depth [v] f) gs next alts lvl
-                     | UVar ({ contents = g }, from, args) when g != C.dummy
-                         ->
-                         run depth p (deref_uv ~from ~to_:depth args g) gs
-                           next alts lvl
-                     | AppUVar ({ contents = t }, from, args) when
-                         t != C.dummy ->
-                         run depth p (deref_appuv ~from ~to_:depth args t) gs
-                           next alts lvl
-                     | Const _|App _ ->
-                         let cp = get_clauses depth g p in
+                          | [] ->
+                              raise
+                                (Trace.Runtime.TREC_CALL
+                                   ((Obj.repr ((pop_andl alts) next)),
+                                     (Obj.repr lvl)))
+                          | { depth; program; goal; gid = ((gid)[@trace ]) }::gs
+                              ->
+                              raise
+                                (Trace.Runtime.TREC_CALL
+                                   ((Obj.repr
+                                       (((((((run depth) program) goal)
+                                             ((gid)[@trace ])) gs) next) alts)),
+                                     (Obj.repr lvl)))))
+                    | App (c, g2, g1::[]) when c == Global_symbols.rimplc ->
+                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                           "user:rule"
+                           (fun fmt -> Format.fprintf fmt "%s" "implication");
+                         (let (clauses, pdiff, lcs) = clausify p ~depth g1 in
+                          let g2 = hmove ~from:depth ~to_:(depth + lcs) g2 in
+                          let ((gid)[@trace ]) = make_sub_goal_id gid in
+                          raise
+                            (Trace.Runtime.TREC_CALL
+                               ((Obj.repr
+                                   (((((((run (depth + lcs))
+                                           (add_clauses ~depth clauses pdiff
+                                              p)) g2) ((gid)[@trace ])) gs)
+                                       next) alts)), (Obj.repr lvl)))))
+                    | App (c, g1, g2::[]) when c == Global_symbols.implc ->
+                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                           "user:rule"
+                           (fun fmt -> Format.fprintf fmt "%s" "implication");
+                         (let (clauses, pdiff, lcs) = clausify p ~depth g1 in
+                          let g2 = hmove ~from:depth ~to_:(depth + lcs) g2 in
+                          let ((gid)[@trace ]) = make_sub_goal_id gid in
+                          raise
+                            (Trace.Runtime.TREC_CALL
+                               ((Obj.repr
+                                   (((((((run (depth + lcs))
+                                           (add_clauses ~depth clauses pdiff
+                                              p)) g2) ((gid)[@trace ])) gs)
+                                       next) alts)), (Obj.repr lvl)))))
+                    | App (c, arg, []) when c == Global_symbols.pic ->
+                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                           "user:rule"
+                           (fun fmt -> Format.fprintf fmt "%s" "pi");
+                         (let f = get_lambda_body ~depth arg in
+                          let ((gid)[@trace ]) = make_sub_goal_id gid in
+                          raise
+                            (Trace.Runtime.TREC_CALL
+                               ((Obj.repr
+                                   (((((((run (depth + 1)) p) f) ((gid)
+                                         [@trace ])) gs) next) alts)),
+                                 (Obj.repr lvl)))))
+                    | App (c, arg, []) when c == Global_symbols.sigmac ->
+                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                           "user:rule"
+                           (fun fmt -> Format.fprintf fmt "%s" "sigma");
+                         (let f = get_lambda_body ~depth arg in
+                          let v = UVar ((oref C.dummy), depth, 0) in
+                          let ((gid)[@trace ]) = make_sub_goal_id gid in
+                          raise
+                            (Trace.Runtime.TREC_CALL
+                               ((Obj.repr
+                                   (((((((run depth) p) (subst depth [v] f))
+                                         ((gid)[@trace ])) gs) next) alts)),
+                                 (Obj.repr lvl)))))
+                    | UVar ({ contents = g }, from, args) when g != C.dummy
+                        ->
+                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                           "user:rule"
+                           (fun fmt -> Format.fprintf fmt "%s" "deref");
                          raise
                            (Trace.Runtime.TREC_CALL
                               ((Obj.repr
-                                  (((((((backchain depth) p) g) gs) cp) next)
-                                     alts)), (Obj.repr lvl)))
-                     | Arg _|AppArg _ -> anomaly "Not a heap term"
-                     | Lam _|CData _ ->
-                         type_error
-                           ("The goal is not a predicate:" ^ (show_term g))
-                     | UVar _|AppUVar _|Discard ->
-                         error "The goal is a flexible term"
-                     | Builtin (c, args) ->
+                                  (((((((run depth) p)
+                                         (deref_uv ~from ~to_:depth args g))
+                                        ((gid)[@trace ])) gs) next) alts)),
+                                (Obj.repr lvl))))
+                    | AppUVar ({ contents = t }, from, args) when
+                        t != C.dummy ->
+                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                           "user:rule"
+                           (fun fmt -> Format.fprintf fmt "%s" "deref");
+                         raise
+                           (Trace.Runtime.TREC_CALL
+                              ((Obj.repr
+                                  (((((((run depth) p)
+                                         (deref_appuv ~from ~to_:depth args t))
+                                        ((gid)[@trace ])) gs) next) alts)),
+                                (Obj.repr lvl))))
+                    | Const k|App (k, _, _) ->
+                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                           "user:rule"
+                           (fun fmt -> Format.fprintf fmt "%s" "backchain");
+                         (let cp = get_clauses depth g p in
+                          Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                            "user:candidates"
+                            (fun fmt ->
+                               pplist ~max:1 ~boxed:true
+                                 (fun fmt -> ppclause fmt ~depth ~hd:k) " | "
+                                 fmt cp);
+                          raise
+                            (Trace.Runtime.TREC_CALL
+                               ((Obj.repr
+                                   ((((((((backchain depth) p) g) gs) ((gid)
+                                         [@trace ])) cp) next) alts)),
+                                 (Obj.repr lvl)))))
+                    | Builtin (c, args) ->
+                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                           "user:rule"
+                           (fun fmt -> Format.fprintf fmt "%s" "builtin");
                          (match Constraints.exect_builtin_predicate c ~depth
-                                  p args
+                                  p ((gid)[@trace ]) args
                           with
                           | gs' ->
-                              (match (List.map (fun g -> (depth, p, g)) gs')
+                              (match (List.map
+                                        (fun g ->
+                                           ((make_sub_goal)[@inlined ])
+                                             ((gid)[@trace ]) ~depth p g) gs')
                                        @ gs
                                with
                                | [] ->
@@ -3497,12 +3687,24 @@ module Mainloop :
                                      (Trace.Runtime.TREC_CALL
                                         ((Obj.repr ((pop_andl alts) next)),
                                           (Obj.repr lvl)))
-                               | (depth, p, g)::gs ->
-                                   run depth p g gs next alts lvl)
+                               | { depth; program; goal;
+                                   gid = ((gid)[@trace ]) }::gs ->
+                                   raise
+                                     (Trace.Runtime.TREC_CALL
+                                        ((Obj.repr
+                                            (((((((run depth) program) goal)
+                                                  ((gid)[@trace ])) gs) next)
+                                               alts)), (Obj.repr lvl))))
                           | exception No_clause ->
                               raise
                                 (Trace.Runtime.TREC_CALL
-                                   ((Obj.repr next_alt), (Obj.repr alts))))))) in
+                                   ((Obj.repr next_alt), (Obj.repr alts)))))
+                    | Arg _|AppArg _ -> anomaly "The goal is not a heap term"
+                    | Lam _|CData _ ->
+                        type_error
+                          ("The goal is not a predicate:" ^ (show_term g))
+                    | UVar _|AppUVar _|Discard ->
+                        error "The goal is a flexible term")) in
             let elapsed = (Unix.gettimeofday ()) -. wall_clock in
             Trace.Runtime.exit "run" false None elapsed; rc
           with
@@ -3513,7 +3715,7 @@ module Mainloop :
           | e ->
               let elapsed = (Unix.gettimeofday ()) -. wall_clock in
               (Trace.Runtime.exit "run" false (Some e) elapsed; raise e)))
-      and backchain depth p g gs cp next alts lvl =
+      and backchain depth p g gs ((gid)[@trace ]) cp next alts lvl =
         let maybe_last_call = alts == noalts in
         let rec args_of =
           function
@@ -3529,8 +3731,12 @@ module Mainloop :
           let wall_clock = Unix.gettimeofday () in
           Trace.Runtime.enter "select"
             (fun fmt ->
-               pplist ~max:1 ~boxed:true (fun fmt -> ppclause fmt ~depth k)
-                 "|" fmt l);
+               match l with
+               | [] ->
+                   Fmt.fprintf fmt "gid:%a no more candidates" UUID.pp gid
+               | c::_ ->
+                   Fmt.fprintf fmt "gid:%a candidate %a" UUID.pp gid
+                     (ppclause ~depth ~hd:k) c);
           (try
              let rc =
                match l with
@@ -3562,8 +3768,9 @@ module Mainloop :
                            else
                              {
                                program = p;
-                               depth;
-                               goal = g;
+                               adepth = depth;
+                               agoal = g;
+                               agid = ((gid)[@trace ]);
                                goals = gs;
                                stack = next;
                                trail = old_trail;
@@ -3580,11 +3787,13 @@ module Mainloop :
                                      (Trace.Runtime.TREC_CALL
                                         ((Obj.repr ((pop_andl alts) next)),
                                           (Obj.repr lvl)))
-                               | (depth, p, g)::gs ->
+                               | { depth; program; goal;
+                                   gid = ((gid)[@trace ]) }::gs ->
                                    raise
                                      (Trace.Runtime.TREC_CALL
                                         ((Obj.repr
-                                            ((((((run depth) p) g) gs) next)
+                                            (((((((run depth) program) goal)
+                                                  ((gid)[@trace ])) gs) next)
                                                alts)), (Obj.repr lvl))))
                           | h::hs ->
                               let next =
@@ -3597,13 +3806,16 @@ module Mainloop :
                               let hs =
                                 List.map
                                   (fun x ->
-                                     (depth, p,
+                                     ((make_sub_goal)[@inlined ]) ((gid)
+                                       [@trace ]) ~depth p
                                        (move ~adepth:depth ~from:(c.depth)
-                                          ~to_:depth env x))) hs in
+                                          ~to_:depth env x)) hs in
+                              let ((gid)[@trace ]) = make_sub_goal_id gid in
                               raise
                                 (Trace.Runtime.TREC_CALL
                                    ((Obj.repr
-                                       ((((((run depth) p) h) hs) next) alts)),
+                                       (((((((run depth) p) h) ((gid)
+                                             [@trace ])) hs) next) alts)),
                                      (Obj.repr oldalts)))))) in
              let elapsed = (Unix.gettimeofday ()) -. wall_clock in
              Trace.Runtime.exit "select" false None elapsed; rc
@@ -3619,10 +3831,11 @@ module Mainloop :
       and cut p gs next alts lvl =
         let rec prune alts = if alts == lvl then alts else prune alts.next in
         let alts = prune alts in
-        if alts == noalts then T.cut_trail ();
+        if alts == noalts then ((T.cut_trail)[@inlined ]) ();
         (match gs with
          | [] -> pop_andl alts next lvl
-         | (depth, p, g)::gs -> run depth p g gs next alts lvl)
+         | { depth; program; goal; gid = ((gid)[@trace ]) }::gs ->
+             run depth program goal ((gid)[@trace ]) gs next alts lvl)
       and pop_andl alts next lvl =
         match next with
         | FNil ->
@@ -3633,53 +3846,54 @@ module Mainloop :
                   raise
                     (Trace.Runtime.TREC_CALL
                        ((Obj.repr next_alt), (Obj.repr alts))))
-             | Some ((ndepth, p, ng)::goals) ->
-                 run ndepth p ng goals FNil alts lvl
+             | Some ({ depth; program; goal; gid = ((gid)[@trace ]) }::gs) ->
+                 run depth program goal ((gid)[@trace ]) gs FNil alts lvl
              | Some [] -> alts)
         | FCons (_, [], _) -> anomaly "empty stack frame"
-        | FCons (lvl, (depth, p, g)::gs, next) ->
-            run depth p g gs next alts lvl
+        | FCons
+            (lvl, { depth; program; goal; gid = ((gid)[@trace ]) }::gs, next)
+            -> run depth program goal ((gid)[@trace ]) gs next alts lvl
       and resume_all () =
-        let ok = ref true in
-        let to_be_resumed = ref [] in
-        while (!ok) && ((!CS.to_resume) <> []) do
-          (match !CS.to_resume with
-           | ({ kind = Unification { adepth; bdepth; env; a; b; matching } }
-                as dg)::rest
-               ->
-               (CS.remove_old dg;
-                CS.to_resume := rest;
-                Trace.Runtime.info "run-resumed-unif"
-                  (fun fmt ->
-                     Fmt.fprintf fmt "@[<hov 2>^%d:%a@ == ^%d:%a@]\n%!"
-                       adepth (uppterm adepth [] 0 empty_env) a bdepth
-                       (uppterm bdepth [] adepth env) b);
-                ok := (unif ~matching adepth env bdepth a b))
-           | ({ kind = Constraint dpg } as c)::rest ->
-               (CS.remove_old c;
-                CS.to_resume := rest;
-                to_be_resumed := (dpg :: (!to_be_resumed)))
-           | _ -> anomaly "Unknown constraint type")
-          done;
-        if !ok
-        then
-          (if (!CS.new_delayed) <> []
-           then
-             Some
-               (Constraints.resumption
-                  ((Constraints.propagation ()) @ (!to_be_resumed)))
-           else Some (Constraints.resumption (!to_be_resumed)))
-        else None
+        (let ok = ref true in
+         let to_be_resumed = ref [] in
+         while (!ok) && ((!CS.to_resume) <> []) do
+           (match !CS.to_resume with
+            | ({ kind = Unification { adepth; bdepth; env; a; b; matching } }
+                 as dg)::rest
+                ->
+                (CS.remove_old dg;
+                 CS.to_resume := rest;
+                 Trace.Runtime.info "run-resumed-unif"
+                   (fun fmt ->
+                      Fmt.fprintf fmt "@[<hov 2>^%d:%a@ == ^%d:%a@]\n%!"
+                        adepth (uppterm adepth [] 0 empty_env) a bdepth
+                        (uppterm bdepth [] adepth env) b);
+                 ok := (unif ~matching adepth env bdepth a b))
+            | ({ kind = Constraint dpg } as c)::rest ->
+                (CS.remove_old c;
+                 CS.to_resume := rest;
+                 to_be_resumed := (dpg :: (!to_be_resumed)))
+            | _ -> anomaly "Unknown constraint type")
+           done;
+         if !ok
+         then
+           (if (!CS.new_delayed) <> []
+            then
+              Some
+                (Constraints.resumption
+                   ((Constraints.propagation ()) @ (!to_be_resumed)))
+            else Some (Constraints.resumption (!to_be_resumed)))
+         else None : goal list option)
       and next_alt alts =
         if alts == noalts
         then raise No_clause
         else
-          (let { program = p; clauses; goal = g; goals = gs; stack = next;
-                 trail = old_trail; state = old_state; depth; lvl;
-                 next = alts }
+          (let { program = p; clauses; agoal = g; agid = ((gid)[@trace ]);
+                 goals = gs; stack = next; trail = old_trail;
+                 state = old_state; adepth = depth; lvl; next = alts }
              = alts in
            T.undo ~old_trail ~old_state ();
-           backchain depth p g gs clauses next alts lvl) in
+           backchain depth p g gs ((gid)[@trace ]) clauses next alts lvl) in
       fun ?max_steps ->
         fun ?(delay_outside_fragment= false) ->
           fun
@@ -3707,8 +3921,8 @@ module Mainloop :
                     Trace.Runtime.info "run-trail"
                       (fun fmt -> T.print_trail fmt);
                     T.initial_trail := (!T.trail);
-                    run initial_depth (!orig_prolog_program) initial_goal []
-                      FNil noalts noalts) in
+                    run initial_depth (!orig_prolog_program) initial_goal
+                      ((UUID.make ())[@trace ]) [] FNil noalts noalts) in
              let destroy () =
                exec (fun () -> T.undo ~old_trail:T.empty ()) () in
              let next_solution = exec next_alt in

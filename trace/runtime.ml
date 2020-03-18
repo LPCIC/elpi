@@ -153,9 +153,9 @@ let enter k payload =
       !printer { goal_id = 0; name = k; step = Trace.get_cur_step k; kind = Start; payload }
   end
 
-let info k payload =
+let info ?(goal_id=0) k payload =
  if not !trace_noprint && Trace.condition k then
-   !printer { goal_id = 0; name = k; step = 0; kind = Info; payload }
+   !printer { goal_id ; name = k; step = Trace.get_cur_step k; kind = Info; payload }
 
 
 exception TREC_CALL of Obj.t * Obj.t (* ('a -> 'b) * 'a *)
