@@ -17,5 +17,7 @@ tests/sources/helena_elpi/etc
 
 vendor/*/
 
+src/merlinppx.exe
+
 _build
 _log
