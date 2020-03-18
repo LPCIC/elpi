@@ -91,7 +91,7 @@ let set_anomaly = Util.set_anomaly
 let set_type_error = Util.set_type_error
 let set_std_formatter = Util.set_std_formatter
 let set_err_formatter fmt =
-  Util.set_err_formatter fmt; Trace.Runtime.set_formatter fmt
+  Util.set_err_formatter fmt; Trace.Runtime.(set_trace_output TTY fmt)
 
 end
 

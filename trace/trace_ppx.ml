@@ -1,5 +1,5 @@
 (* provides:
-        
+
     let rec f x =
      [%trace "f" (fun fmt -> .. x ..) begin
          match x with
@@ -12,10 +12,10 @@
             [%log "K2" "whatever" 37];
             z + f y
      end]
-     
+
   All syntactic extensions vanish if --off is passed
   to the ppx rewriter
-     
+
   requires:
 *)
 module Ast_404 = Migrate_parsetree.Ast_404
@@ -31,30 +31,30 @@ let trace name ppfun body = [%expr
   try
     let rc = [%e body] in
     let elapsed = Unix.gettimeofday () -. wall_clock in
-    Trace.Runtime.exit [%e name] false elapsed;
+    Trace.Runtime.exit [%e name] false None elapsed;
     rc
   with
   | Trace.Runtime.TREC_CALL(f,x) ->
       let elapsed = Unix.gettimeofday () -. wall_clock in
-      Trace.Runtime.exit [%e name] true elapsed;
+      Trace.Runtime.exit [%e name] true None elapsed;
       Obj.obj f (Obj.obj x)
   | e ->
       let elapsed = Unix.gettimeofday () -. wall_clock in
-      Trace.Runtime.exit [%e name] false elapsed;
+      Trace.Runtime.exit [%e name] false (Some e) elapsed;
       raise e
 ]
 
-let spy name pp data =
-  [%expr Trace.Runtime.print [%e name] [%e pp] [%e data]]
+let spy name pp =
+  [%expr Trace.Runtime.info [%e name] [%e pp]]
 
-let spyif name cond pp data =
-  [%expr if [%e cond] then Trace.Runtime.print [%e name] [%e pp] [%e data]]
+let spyif name cond pp =
+  [%expr if [%e cond] then Trace.Runtime.info [%e name] [%e pp]]
 
 let log name key data =
   [%expr Trace.Runtime.log [%e name] [%e key] [%e data]]
 
 let cur_pred name =
-  [%expr Trace.Runtime.cur_pred [%e name]]
+  [%expr Trace.Runtime.set_cur_pred [%e name]]
 
 let rec mkapp f = function
   | [] -> f
@@ -112,8 +112,8 @@ let trace_mapper _config _cookies =
       let err () = err ~loc "use: [%spy id ?pred pp data]" in
       begin match pstr with
       | PStr [ { pstr_desc = Pstr_eval(
-              { pexp_desc = Pexp_apply(name,[(_,pp);(_,code)]); _ },_); _} ] ->
-        if !enabled then spy (aux name) (aux pp) (aux code)
+              { pexp_desc = Pexp_apply(name,[(_,pp)]); _ },_); _} ] ->
+        if !enabled then spy (aux name) (aux pp)
         else [%expr ()]
       | _ -> err ()
       end
@@ -121,8 +121,8 @@ let trace_mapper _config _cookies =
       let err () = err ~loc "use: [%spyif id ?pred cond pp data]" in
       begin match pstr with
       | PStr [ { pstr_desc = Pstr_eval(
-              { pexp_desc = Pexp_apply(name,[(_,cond);(_,pp);(_,code)]); _ },_); _} ] ->
-        if !enabled then spyif (aux name) (aux cond) (aux pp) (aux code)
+              { pexp_desc = Pexp_apply(name,[(_,cond);(_,pp)]); _ },_); _} ] ->
+        if !enabled then spyif (aux name) (aux cond) (aux pp)
         else [%expr ()]
       | _ -> err ()
       end

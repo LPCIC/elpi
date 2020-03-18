@@ -8,23 +8,18 @@
 exception TREC_CALL of Obj.t * Obj.t (* ('a -> 'b) * 'a *)
 
 val enter : string ->  (Format.formatter -> unit) -> unit
-val print : string -> (Format.formatter -> 'a -> unit) -> 'a -> unit
-val exit : string -> bool -> ?e:exn -> float -> unit
+val info : string -> (Format.formatter -> unit) -> unit
+val exit : string -> bool -> exn option -> float -> unit
 
-val cur_pred : string option -> unit
+val set_cur_pred : string option -> unit
+val get_cur_step : string -> int
 
 val log : string -> string -> int -> unit
 
-exception Unknown
-val pr_exn : (exn -> string) -> unit
-
 val debug : bool ref
-val dverbose : bool ref
-
-val get_cur_step : string -> int
-
 val parse_argv : string list -> string list
 val usage: string
 
 (* prints here *)
-val set_formatter : Format.formatter -> unit
+type trace_format = TTY | JSON
+val set_trace_output : trace_format -> Format.formatter -> unit

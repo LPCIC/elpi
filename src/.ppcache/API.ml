@@ -1,4 +1,4 @@
-(*439765c40bb9f815292d49f1765b25d9f4924fbb  src/API.ml ppx_deriving.std *)
+(*30c382e94816dc23e076d026a85ee4a2aff9264a  src/API.ml ppx_deriving.std *)
 #1 "src/API.ml"
 module type Runtime  = module type of Runtime_trace_off
 let r = ref ((module Runtime_trace_off) : (module Runtime))
@@ -87,7 +87,8 @@ module Setup =
     let set_type_error = Util.set_type_error
     let set_std_formatter = Util.set_std_formatter
     let set_err_formatter fmt =
-      Util.set_err_formatter fmt; Trace.Runtime.set_formatter fmt
+      Util.set_err_formatter fmt;
+      (let open Trace.Runtime in set_trace_output TTY fmt)
   end
 module EA = Ast
 module Ast =

@@ -1,4 +1,4 @@
-(*ae1fa019919cf627f3c4e9b34a3619ed49c31e51  src/runtime_trace_on.ml ppx_deriving.std,elpi.trace_ppx --trace_ppx-on*)
+(*f5fca9d221c8df9d4674c22af66f5e7c91effb01  src/runtime_trace_on.ml ppx_deriving.std,elpi.trace_ppx --trace_ppx-on*)
 #1 "src/runtime_trace_on.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -424,37 +424,34 @@ module ConstraintStoreAndTrail :
              Some (c, blockers)
          | _ -> None) (!delayed)
     let trail_assignment x =
-      Trace.Runtime.print "trail-this"
+      Trace.Runtime.info "trail-this"
         (fun fmt ->
-           fun i ->
-             Fmt.fprintf fmt "last_call:%b item:%a" (!last_call)
-               pp_trail_item (Assignement i)) x;
+           Fmt.fprintf fmt "last_call:%b item:%a" (!last_call) pp_trail_item
+             (Assignement x));
       if not (!last_call) then trail := ((Assignement x) :: (!trail))
       [@@inline ]
     let trail_stuck_goal_addition x =
-      Trace.Runtime.print "trail-this"
+      Trace.Runtime.info "trail-this"
         (fun fmt ->
-           fun i ->
-             Fmt.fprintf fmt "last_call:%b item:%a" (!last_call)
-               pp_trail_item (StuckGoalAddition i)) x;
+           Fmt.fprintf fmt "last_call:%b item:%a" (!last_call) pp_trail_item
+             (StuckGoalAddition x));
       if not (!last_call) then trail := ((StuckGoalAddition x) :: (!trail))
       [@@inline ]
     let trail_stuck_goal_removal x =
-      Trace.Runtime.print "trail-this"
+      Trace.Runtime.info "trail-this"
         (fun fmt ->
-           fun i ->
-             Fmt.fprintf fmt "last_call:%b item:%a" (!last_call)
-               pp_trail_item (StuckGoalRemoval i)) x;
+           Fmt.fprintf fmt "last_call:%b item:%a" (!last_call) pp_trail_item
+             (StuckGoalRemoval x));
       if not (!last_call) then trail := ((StuckGoalRemoval x) :: (!trail))
       [@@inline ]
     let remove ({ blockers } as sg) =
-      Trace.Runtime.print "remove"
-        (fun fmt -> Fmt.fprintf fmt "%a" pp_stuck_goal) sg;
+      Trace.Runtime.info "remove"
+        (fun fmt -> Fmt.fprintf fmt "%a" pp_stuck_goal sg);
       delayed := (remove_from_list sg (!delayed));
       List.iter (fun r -> r.rest <- (remove_from_list sg r.rest)) blockers
     let add ({ blockers } as sg) =
-      Trace.Runtime.print "add"
-        (fun fmt -> Fmt.fprintf fmt "%a" pp_stuck_goal) sg;
+      Trace.Runtime.info "add"
+        (fun fmt -> Fmt.fprintf fmt "%a" pp_stuck_goal sg);
       auxsg := (sg :: (!auxsg));
       delayed := (sg :: (!delayed));
       List.iter (fun r -> r.rest <- (sg :: (r.rest))) blockers
@@ -497,8 +494,8 @@ module ConstraintStoreAndTrail :
     let undo ~old_trail  ?old_state  () =
       to_resume := [];
       new_delayed := [];
-      Trace.Runtime.print "trail-undo-from" pp_trail (!trail);
-      Trace.Runtime.print "trail-undo-to" pp_trail old_trail;
+      Trace.Runtime.info "trail-undo-from" (fun fmt -> pp_trail fmt (!trail));
+      Trace.Runtime.info "trail-undo-to" (fun fmt -> pp_trail fmt old_trail);
       while (!trail) != old_trail do
         (match !trail with
          | (Assignement r)::rest -> (r.contents <- C.dummy; trail := rest)
@@ -552,8 +549,8 @@ let (@:=) r v =
   ((T.trail_assignment)[@inlined ]) r;
   if r.rest <> []
   then
-    (Trace.Runtime.print "assign-to_resume"
-       (fun fmt -> fun l -> Fmt.fprintf fmt "%d" (List.length l)) r.rest;
+    (Trace.Runtime.info "assign-to_resume"
+       (fun fmt -> let l = r.rest in Fmt.fprintf fmt "%d" (List.length l));
      CS.to_resume :=
        (List.fold_right
           (fun x -> fun acc -> if List.memq x acc then acc else x :: acc)
@@ -641,21 +638,20 @@ module HO :
          let t = AppUVar (r1, 0, args) in
          let assignment = mknLam ano t in (t, (Some (r, lvl, assignment))))
     let expand_uv ~depth  r ~lvl  ~ano  =
-      Trace.Runtime.print "expand-uv-in"
+      Trace.Runtime.info "expand-uv-in"
         (fun fmt ->
-           fun t -> Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t)
-        (UVar (r, lvl, ano));
+           let t = UVar (r, lvl, ano) in
+           Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t);
       (let (t, ass) as rc = expand_uv r ~lvl ~ano in
-       Trace.Runtime.print "expand-uv-out"
+       Trace.Runtime.info "expand-uv-out"
+         (fun fmt -> Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t);
+       Trace.Runtime.info "expand-uv-out"
          (fun fmt ->
-            fun t -> Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) t;
-       Trace.Runtime.print "expand-uv-out"
-         (fun fmt ->
-            function
+            match ass with
             | None -> Fmt.fprintf fmt "no assignment"
             | Some (_, _, t) ->
                 Fmt.fprintf fmt "%a := %a" (uppterm depth [] 0 empty_env)
-                  (UVar (r, lvl, ano)) (uppterm lvl [] 0 empty_env) t) ass;
+                  (UVar (r, lvl, ano)) (uppterm lvl [] 0 empty_env) t);
        rc)
     let expand_appuv r ~lvl  ~args  =
       if lvl = 0
@@ -670,22 +666,20 @@ module HO :
              (AppUVar (r1, 0, (args_lvl @ (C.mkinterval lvl nargs 0)))) in
          (t, (Some (r, lvl, assignment))))
     let expand_appuv ~depth  r ~lvl  ~args  =
-      Trace.Runtime.print "expand-appuv-in"
+      Trace.Runtime.info "expand-appuv-in"
         (fun fmt ->
-           fun t -> Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t)
-        (AppUVar (r, lvl, args));
+           let t = AppUVar (r, lvl, args) in
+           Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t);
       (let (t, ass) as rc = expand_appuv r ~lvl ~args in
-       Trace.Runtime.print "expand-appuv-out"
+       Trace.Runtime.info "expand-appuv-out"
+         (fun fmt -> Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t);
+       Trace.Runtime.info "expand-uv-out"
          (fun fmt ->
-            fun t -> Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) t;
-       Trace.Runtime.print "expand-uv-out"
-         (fun fmt ->
-            function
+            match ass with
             | None -> Fmt.fprintf fmt "no assignment"
             | Some (_, _, t) ->
                 Fmt.fprintf fmt "%a := %a" (uppterm depth [] 0 empty_env)
-                  (AppUVar (r, lvl, args)) (uppterm lvl [] 0 empty_env) t)
-         ass;
+                  (AppUVar (r, lvl, args)) (uppterm lvl [] 0 empty_env) t);
        rc)
     let rec move ~adepth:argsdepth  e ?avoid  ~from  ~to_  t =
       let delta = from - to_ in
@@ -813,15 +807,14 @@ module HO :
                                 ~ano:argsno in
                             option_iter
                               (fun (r, _, assignment) ->
-                                 Trace.Runtime.print
+                                 Trace.Runtime.info
                                    "assign (restriction:expand)"
                                    (fun fmt ->
-                                      fun _ ->
-                                        Fmt.fprintf fmt "%a := %a"
-                                          (uppterm (from + depth) []
-                                             argsdepth e) x
-                                          (uppterm vardepth [] argsdepth e)
-                                          assignment) ();
+                                      Fmt.fprintf fmt "%a := %a"
+                                        (uppterm (from + depth) [] argsdepth
+                                           e) x
+                                        (uppterm vardepth [] argsdepth e)
+                                        assignment);
                                  r @:= assignment) assignment;
                             maux e depth t))
                   | AppUVar (r, vardepth, args) ->
@@ -877,16 +870,13 @@ module HO :
                                   mkAppUVar r' vardepth'
                                     (!filteredargs_vardepth) in
                                 let assignment = mknLam orig_argsno newvar in
-                                (Trace.Runtime.print
+                                (Trace.Runtime.info
                                    "assign (restriction:AppUVar)"
                                    (fun fmt ->
-                                      fun _ ->
-                                        Fmt.fprintf fmt "%d %a := %a"
-                                          vardepth
-                                          (ppterm (from + depth) [] argsdepth
-                                             e) x
-                                          (ppterm vardepth [] argsdepth e)
-                                          assignment) ();
+                                      Fmt.fprintf fmt "%d %a := %a" vardepth
+                                        (ppterm (from + depth) [] argsdepth e)
+                                        x (ppterm vardepth [] argsdepth e)
+                                        assignment);
                                  r @:= assignment;
                                  mkAppUVar r' vardepth' filteredargs_to)
                               else mkAppUVar r vardepth filteredargs_to)
@@ -896,17 +886,19 @@ module HO :
                                 (ppterm depth [] argsdepth e) x delta;
                               anomaly (Fmt.flush_str_formatter ()))) in
                 let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-                Trace.Runtime.exit "move" false elapsed; rc
+                Trace.Runtime.exit "move" false None elapsed; rc
               with
               | Trace.Runtime.TREC_CALL (f, x) ->
                   let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-                  (Trace.Runtime.exit "move" true elapsed;
+                  (Trace.Runtime.exit "move" true None elapsed;
                    Obj.obj f (Obj.obj x))
               | e ->
                   let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-                  (Trace.Runtime.exit "move" false elapsed; raise e)) in
+                  (Trace.Runtime.exit "move" false (Some e) elapsed; raise e)) in
            maux e 0 t) in
-      Trace.Runtime.print "move-output" (ppterm to_ [] argsdepth e) rc; rc
+      Trace.Runtime.info "move-output"
+        (fun fmt -> ppterm to_ [] argsdepth e fmt rc);
+      rc
     and hmove ?avoid  ~from  ~to_  t =
       let wall_clock = Unix.gettimeofday () in
       Trace.Runtime.enter "hmove"
@@ -916,14 +908,15 @@ module HO :
       (try
          let rc = move ?avoid ~adepth:0 ~from ~to_ empty_env t in
          let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-         Trace.Runtime.exit "hmove" false elapsed; rc
+         Trace.Runtime.exit "hmove" false None elapsed; rc
        with
        | Trace.Runtime.TREC_CALL (f, x) ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace.Runtime.exit "hmove" true elapsed; Obj.obj f (Obj.obj x))
+           (Trace.Runtime.exit "hmove" true None elapsed;
+            Obj.obj f (Obj.obj x))
        | e ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace.Runtime.exit "hmove" false elapsed; raise e))
+           (Trace.Runtime.exit "hmove" false (Some e) elapsed; raise e))
     and decrease_depth r ~from  ~to_  argsno =
       if from <= to_
       then (r, from, argsno)
@@ -1030,25 +1023,27 @@ module HO :
                      | Lam t -> Lam (aux (depth + 1) t)
                      | CData _ as x -> x in
                    let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-                   Trace.Runtime.exit "subst-aux" false elapsed; rc
+                   Trace.Runtime.exit "subst-aux" false None elapsed; rc
                  with
                  | Trace.Runtime.TREC_CALL (f, x) ->
                      let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-                     (Trace.Runtime.exit "subst-aux" true elapsed;
+                     (Trace.Runtime.exit "subst-aux" true None elapsed;
                       Obj.obj f (Obj.obj x))
                  | e ->
                      let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-                     (Trace.Runtime.exit "subst-aux" false elapsed; raise e)) in
+                     (Trace.Runtime.exit "subst-aux" false (Some e) elapsed;
+                      raise e)) in
               aux fromdepthlen t) in
          let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-         Trace.Runtime.exit "subst" false elapsed; rc
+         Trace.Runtime.exit "subst" false None elapsed; rc
        with
        | Trace.Runtime.TREC_CALL (f, x) ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace.Runtime.exit "subst" true elapsed; Obj.obj f (Obj.obj x))
+           (Trace.Runtime.exit "subst" true None elapsed;
+            Obj.obj f (Obj.obj x))
        | e ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace.Runtime.exit "subst" false elapsed; raise e))
+           (Trace.Runtime.exit "subst" false (Some e) elapsed; raise e))
     and beta depth sub t args =
       let wall_clock = Unix.gettimeofday () in
       Trace.Runtime.enter "beta"
@@ -1084,8 +1079,8 @@ module HO :
                       (Obj.repr tl)))
            | _ ->
                let t' = subst depth sub t in
-               (Trace.Runtime.print "subst-result"
-                  (ppterm depth [] 0 empty_env) t';
+               (Trace.Runtime.info "subst-result"
+                  (fun fmt -> ppterm depth [] 0 empty_env fmt t');
                 (match args with
                  | [] -> t'
                  | ahd::atl ->
@@ -1111,14 +1106,15 @@ module HO :
                       | Cons _ -> type_error "beta: Cons"
                       | Discard -> type_error "beta: Discard"))) in
          let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-         Trace.Runtime.exit "beta" false elapsed; rc
+         Trace.Runtime.exit "beta" false None elapsed; rc
        with
        | Trace.Runtime.TREC_CALL (f, x) ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace.Runtime.exit "beta" true elapsed; Obj.obj f (Obj.obj x))
+           (Trace.Runtime.exit "beta" true None elapsed;
+            Obj.obj f (Obj.obj x))
        | e ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace.Runtime.exit "beta" false elapsed; raise e))
+           (Trace.Runtime.exit "beta" false (Some e) elapsed; raise e))
     and eat_args depth l t =
       match t with
       | Lam t' when l > 0 -> eat_args (depth + 1) (l - 1) t'
@@ -1170,14 +1166,15 @@ module HO :
                  | CData _ -> t
                  | Arg _|AppArg _ -> assert false)) in
          let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-         Trace.Runtime.exit "deref_uv" false elapsed; rc
+         Trace.Runtime.exit "deref_uv" false None elapsed; rc
        with
        | Trace.Runtime.TREC_CALL (f, x) ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace.Runtime.exit "deref_uv" true elapsed; Obj.obj f (Obj.obj x))
+           (Trace.Runtime.exit "deref_uv" true None elapsed;
+            Obj.obj f (Obj.obj x))
        | e ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace.Runtime.exit "deref_uv" false elapsed; raise e))
+           (Trace.Runtime.exit "deref_uv" false (Some e) elapsed; raise e))
     let rec is_flex ~depth  =
       function
       | Arg _|AppArg _ -> anomaly "is_flex called on Args"
@@ -1214,14 +1211,14 @@ module HO :
       with | RestrictionFailure -> (false, [])
     let is_llam lvl args adepth bdepth depth left e =
       let res = is_llam lvl args adepth bdepth depth left e in
-      Trace.Runtime.print "is_llam"
+      Trace.Runtime.info "is_llam"
         (fun fmt ->
-           fun (b, map) ->
-             Fmt.fprintf fmt "%d + %a = %b, %a" lvl
-               (pplist (ppterm adepth [] bdepth e) " ") args b
-               (pplist
-                  (fun fmt -> fun (x, n) -> Fmt.fprintf fmt "%d |-> %d" x n)
-                  " ") map) res;
+           let (b, map) = res in
+           Fmt.fprintf fmt "%d + %a = %b, %a" lvl
+             (pplist (ppterm adepth [] bdepth e) " ") args b
+             (pplist
+                (fun fmt -> fun (x, n) -> Fmt.fprintf fmt "%d |-> %d" x n)
+                " ") map);
       res
     let rec mknLam n t = if n = 0 then t else mknLam (n - 1) (Lam t)
     let bind r gamma l a d delta b left t e =
@@ -1250,11 +1247,11 @@ module HO :
             else (pos c) + gamma in
       let cst ?hmove  c b delta =
         let n = cst ?hmove c b delta in
-        Trace.Runtime.print "cst"
+        Trace.Runtime.info "cst"
           (fun fmt ->
-             fun (n, m) ->
-               Fmt.fprintf fmt "%d -> %d (c:%d b:%d gamma:%d delta:%d d:%d)"
-                 n m c b gamma delta d) (c, n);
+             let (n, m) = (c, n) in
+             Fmt.fprintf fmt "%d -> %d (c:%d b:%d gamma:%d delta:%d d:%d)" n
+               m c b gamma delta d);
         n in
       let rec bind b delta w t =
         let wall_clock = Unix.gettimeofday () in
@@ -1335,19 +1332,18 @@ module HO :
                        let v = UVar (r, a, 0) in
                        (e.(i) <- v; (r, a, (is_llam, args), orig_args))
                    | _ -> assert false in
-                 (Trace.Runtime.print "bind-maybe-prune"
+                 (Trace.Runtime.info "bind-maybe-prune"
                     (fun fmt ->
-                       fun () ->
-                         Fmt.fprintf fmt
-                           "lvl:%d is_llam:%b args:%a orig_args:%a orig:%a"
-                           lvl is_llam
-                           (pplist
-                              (fun fmt ->
-                                 fun (x, n) ->
-                                   Fmt.fprintf fmt "%a->%d" (ppterm a [] b e)
-                                     (mkConst x) n) " ") args
-                           (pplist (ppterm a [] b e) " ") orig_args
-                           (ppterm a [] b e) orig) ();
+                       Fmt.fprintf fmt
+                         "lvl:%d is_llam:%b args:%a orig_args:%a orig:%a" lvl
+                         is_llam
+                         (pplist
+                            (fun fmt ->
+                               fun (x, n) ->
+                                 Fmt.fprintf fmt "%a->%d" (ppterm a [] b e)
+                                   (mkConst x) n) " ") args
+                         (pplist (ppterm a [] b e) " ") orig_args
+                         (ppterm a [] b e) orig);
                   if is_llam
                   then
                     (let n_args = List.length args in
@@ -1423,27 +1419,27 @@ module HO :
                            mkAppUVar r' lvl args_here)))
                   else mkAppUVar r lvl (List.map (bind b delta w) orig_args)) in
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           Trace.Runtime.exit "bind" false elapsed; rc
+           Trace.Runtime.exit "bind" false None elapsed; rc
          with
          | Trace.Runtime.TREC_CALL (f, x) ->
              let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-             (Trace.Runtime.exit "bind" true elapsed; Obj.obj f (Obj.obj x))
+             (Trace.Runtime.exit "bind" true None elapsed;
+              Obj.obj f (Obj.obj x))
          | e ->
              let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-             (Trace.Runtime.exit "bind" false elapsed; raise e)) in
+             (Trace.Runtime.exit "bind" false (Some e) elapsed; raise e)) in
       try
         let v = mknLam new_lams (bind b delta 0 t) in
-        Trace.Runtime.print "assign(HO)"
+        Trace.Runtime.info "assign(HO)"
           (fun fmt ->
-             fun _ ->
-               Fmt.fprintf fmt "%a := %a" (uppterm gamma [] a e)
-                 (UVar (r, gamma, 0)) (uppterm gamma [] a e) v) ();
+             Fmt.fprintf fmt "%a := %a" (uppterm gamma [] a e)
+               (UVar (r, gamma, 0)) (uppterm gamma [] a e) v);
         r @:= v;
         true
       with
       | RestrictionFailure ->
-          (Trace.Runtime.print "bind result"
-             (fun fmt -> fun x -> Fmt.fprintf fmt "%b" x) false;
+          (Trace.Runtime.info "bind result"
+             (fun fmt -> Fmt.fprintf fmt "%b" false);
            false)
     let rec list_to_lp_list =
       function | [] -> Nil | x::xs -> Cons (x, (list_to_lp_list xs))
@@ -1568,12 +1564,11 @@ module HO :
               | (_, Arg (i, 0)) ->
                   (try
                      let v = hmove ~from:(adepth + depth) ~to_:adepth a in
-                     Trace.Runtime.print "assign"
+                     Trace.Runtime.info "assign"
                        (fun fmt ->
-                          fun _ ->
-                            Fmt.fprintf fmt "%a := %a"
-                              (uppterm adepth [] adepth e) b
-                              (uppterm adepth [] adepth e) v) ();
+                          Fmt.fprintf fmt "%a := %a"
+                            (uppterm adepth [] adepth e) b
+                            (uppterm adepth [] adepth e) v);
                      e.(i) <- v;
                      true
                    with | RestrictionFailure -> false)
@@ -1591,12 +1586,11 @@ module HO :
                             hmove ~avoid:r ~from:(adepth + depth)
                               ~to_:(bdepth + depth) a in
                           hmove ~from:(bdepth + depth) ~to_:origdepth a) in
-                     Trace.Runtime.print "assign"
+                     Trace.Runtime.info "assign"
                        (fun fmt ->
-                          fun _ ->
-                            Fmt.fprintf fmt "%a := %a"
-                              (uppterm depth [] bdepth e) b
-                              (uppterm depth [] bdepth e) t) ();
+                          Fmt.fprintf fmt "%a := %a"
+                            (uppterm depth [] bdepth e) b
+                            (uppterm depth [] bdepth e) t);
                      r @:= t;
                      true
                    with | RestrictionFailure -> false)
@@ -1612,26 +1606,24 @@ module HO :
                             move ~avoid:r ~adepth ~from:(bdepth + depth)
                               ~to_:(adepth + depth) e b in
                           hmove ~from:(adepth + depth) ~to_:origdepth b) in
-                     Trace.Runtime.print "assign"
+                     Trace.Runtime.info "assign"
                        (fun fmt ->
-                          fun _ ->
-                            Fmt.fprintf fmt "%a := %a"
-                              (uppterm origdepth [] 0 empty_env) a
-                              (uppterm origdepth [] 0 empty_env) t) ();
+                          Fmt.fprintf fmt "%a := %a"
+                            (uppterm origdepth [] 0 empty_env) a
+                            (uppterm origdepth [] 0 empty_env) t);
                      r @:= t;
                      true
                    with | RestrictionFailure -> false)
               | (_, Arg (i, args)) ->
                   let v = fst (make_lambdas adepth args) in
-                  (Trace.Runtime.print "assign"
+                  (Trace.Runtime.info "assign"
                      (fun fmt ->
-                        fun _ ->
-                          Fmt.fprintf fmt "%a := %a"
-                            (uppterm depth [] bdepth e) (Arg (i, 0))
-                            (uppterm depth [] bdepth e) v) ();
+                        Fmt.fprintf fmt "%a := %a"
+                          (uppterm depth [] bdepth e) (Arg (i, 0))
+                          (uppterm depth [] bdepth e) v);
                    e.(i) <- v;
-                   Trace.Runtime.print "assign"
-                     (ppterm depth [] adepth empty_env) (e.(i));
+                   Trace.Runtime.info "assign"
+                     (fun fmt -> ppterm depth [] adepth empty_env fmt (e.(i)));
                    unif matching depth adepth a bdepth b e)
               | (UVar ({ rest = [] }, _, a1), UVar ({ rest = _::_ }, _, a2))
                   when (a1 + a2) > 0 ->
@@ -1646,13 +1638,12 @@ module HO :
                      | _ -> true)
                   ->
                   let v = fst (make_lambdas origdepth args) in
-                  (Trace.Runtime.print "assign (simplify)"
+                  (Trace.Runtime.info "assign (simplify)"
                      (fun fmt ->
-                        fun _ ->
-                          Fmt.fprintf fmt "%a := %a"
-                            (uppterm depth [] bdepth e)
-                            (UVar (r, origdepth, 0))
-                            (uppterm depth [] bdepth e) v) ();
+                        Fmt.fprintf fmt "%a := %a"
+                          (uppterm depth [] bdepth e)
+                          (UVar (r, origdepth, 0))
+                          (uppterm depth [] bdepth e) v);
                    r @:= v;
                    unif matching depth adepth a bdepth b e)
               | (UVar (r, origdepth, args), _) when
@@ -1662,13 +1653,12 @@ module HO :
                      | _ -> true)
                   ->
                   let v = fst (make_lambdas origdepth args) in
-                  (Trace.Runtime.print "assign (simplify)"
+                  (Trace.Runtime.info "assign (simplify)"
                      (fun fmt ->
-                        fun _ ->
-                          Fmt.fprintf fmt "%a := %a"
-                            (uppterm depth [] adepth e)
-                            (UVar (r, origdepth, 0))
-                            (uppterm depth [] adepth e) v) ();
+                        Fmt.fprintf fmt "%a := %a"
+                          (uppterm depth [] adepth e)
+                          (UVar (r, origdepth, 0))
+                          (uppterm depth [] adepth e) v);
                    r @:= v;
                    unif matching depth adepth a bdepth b e)
               | (other, AppArg (i, args)) ->
@@ -1820,27 +1810,26 @@ module HO :
                   unif matching (depth + 1) adepth eta bdepth t e
               | _ -> false) in
          let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-         Trace.Runtime.exit "unif" false elapsed; rc
+         Trace.Runtime.exit "unif" false None elapsed; rc
        with
        | Trace.Runtime.TREC_CALL (f, x) ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace.Runtime.exit "unif" true elapsed; Obj.obj f (Obj.obj x))
+           (Trace.Runtime.exit "unif" true None elapsed;
+            Obj.obj f (Obj.obj x))
        | e ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace.Runtime.exit "unif" false elapsed; raise e))
+           (Trace.Runtime.exit "unif" false (Some e) elapsed; raise e))
     let unif ~matching  adepth e bdepth a b =
       let res = unif matching 0 adepth a bdepth b e in
-      Trace.Runtime.print "unif result"
-        (fun fmt -> fun x -> Fmt.fprintf fmt "%b" x) res;
+      Trace.Runtime.info "unif result" (fun fmt -> Fmt.fprintf fmt "%b" res);
       if not res
       then
-        Trace.Runtime.print "select"
+        Trace.Runtime.info "select"
           (fun fmt ->
-             fun op ->
-               Fmt.fprintf fmt "@[<hov 2>fail to %s: %a@ with %a@]" op
-                 (ppterm adepth [] adepth empty_env) a
-                 (ppterm bdepth [] adepth e) b)
-          (if matching then "match" else "unify");
+             let op = if matching then "match" else "unify" in
+             Fmt.fprintf fmt "@[<hov 2>fail to %s: %a@ with %a@]" op
+               (ppterm adepth [] adepth empty_env) a
+               (ppterm bdepth [] adepth e) b);
       res
     let rec deref_head ~depth  =
       function
@@ -2341,10 +2330,8 @@ module Indexing =
         let modulus = 1 lsl size in
         let kabs = Hashtbl.hash k in
         let h = kabs mod modulus in
-        Trace.Runtime.print "subhash-const"
-          (fun fmt ->
-             fun () -> Fmt.fprintf fmt "%s: %s" (C.show k) (dec_to_bin2 h))
-          ();
+        Trace.Runtime.info "subhash-const"
+          (fun fmt -> Fmt.fprintf fmt "%s: %s" (C.show k) (dec_to_bin2 h));
         h in
       let all_1 size = max_int lsr (hash_bits - size) in
       let all_0 size = 0 in
@@ -2398,19 +2385,19 @@ module Indexing =
                 (let open List in
                    fold_left (lor) 0
                      (mapi (fun i -> fun x -> shift (i + 1) (self x)) xs)) in
-        Trace.Runtime.print "subhash"
+        Trace.Runtime.info "subhash"
           (fun fmt ->
              Fmt.fprintf fmt "%s: %d: %s: %a"
                (if goal then "goal" else "clause") size (dec_to_bin2 h)
-               (uppterm depth [] 0 empty_env)) arg;
+               (uppterm depth [] 0 empty_env) arg);
         h in
       let h = aux 0 0 args mode spec in
-      Trace.Runtime.print "hash"
+      Trace.Runtime.info "hash"
         (fun fmt ->
            Fmt.fprintf fmt "%s: %s: %a" (if goal then "goal" else "clause")
              (dec_to_bin2 h)
-             (pplist ~boxed:true (uppterm depth [] 0 empty_env) " "))
-        ((Const hd) :: args);
+             (pplist ~boxed:true (uppterm depth [] 0 empty_env) " ")
+             ((Const hd) :: args));
       h
     let hash_clause_arg_list = hash_arg_list false
     let hash_goal_arg_list = hash_arg_list true
@@ -2777,8 +2764,8 @@ module Clausify :
                    mode = (get_mode hd);
                    vars
                  } in
-               (Trace.Runtime.print "extra"
-                  (fun fmt -> ppclause fmt ~depth:(depth + lcs) hd) c;
+               (Trace.Runtime.info "extra"
+                  (fun fmt -> ppclause fmt ~depth:(depth + lcs) hd c);
                 ((hd, c), { hdepth = depth; hsrc = g }, lcs))
            | UVar ({ contents = g }, from, args) when g != C.dummy ->
                claux1 ?loc get_mode vars depth hyps ts lts lcs
@@ -2797,14 +2784,15 @@ module Clausify :
            | UVar _|AppUVar _ -> error ?loc "Flexible hypothetical clause"
            | Nil|Cons _ -> error ?loc "ill-formed hypothetical clause" in
          let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-         Trace.Runtime.exit "clausify" false elapsed; rc
+         Trace.Runtime.exit "clausify" false None elapsed; rc
        with
        | Trace.Runtime.TREC_CALL (f, x) ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace.Runtime.exit "clausify" true elapsed; Obj.obj f (Obj.obj x))
+           (Trace.Runtime.exit "clausify" true None elapsed;
+            Obj.obj f (Obj.obj x))
        | e ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace.Runtime.exit "clausify" false elapsed; raise e))
+           (Trace.Runtime.exit "clausify" false (Some e) elapsed; raise e))
     let clausify { index } ~depth  t =
       let get_mode x =
         match Ptmap.find x index with
@@ -2903,11 +2891,11 @@ module Constraints :
             with
             | Not_found ->
                 let (n, c) = C.fresh_global_constant () in
-                (Trace.Runtime.print "freeze-add"
+                (Trace.Runtime.info "freeze-add"
                    (fun fmt ->
-                      fun tt ->
-                        Fmt.fprintf fmt "%s == %a" (C.show n)
-                          (ppterm 0 [] 0 empty_env) tt) (UVar (r, 0, 0));
+                      let tt = UVar (r, 0, 0) in
+                      Fmt.fprintf fmt "%s == %a" (C.show n)
+                        (ppterm 0 [] 0 empty_env) tt);
                  f :=
                    {
                      (!f) with
@@ -2936,54 +2924,43 @@ module Constraints :
                 faux d (deref_uv ~from:lvl ~to_:d ano (!! r))
             | AppUVar (r, lvl, args) ->
                 faux d (deref_appuv ~from:lvl ~to_:d args (!! r)) in
-          Trace.Runtime.print "freeze-in"
+          Trace.Runtime.info "freeze-in"
             (fun fmt ->
-               fun t ->
-                 Fmt.fprintf fmt
-                   "depth:%d ground:%d newground:%d maxground:%d %a" depth
-                   ground newground maxground (uppterm depth [] 0 empty_env)
-                   t) t;
+               Fmt.fprintf fmt
+                 "depth:%d ground:%d newground:%d maxground:%d %a" depth
+                 ground newground maxground (uppterm depth [] 0 empty_env) t);
           (let t = faux depth t in
-           Trace.Runtime.print "freeze-after-faux"
+           Trace.Runtime.info "freeze-after-faux"
              (fun fmt ->
-                fun t ->
-                  Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t) t;
+                Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env) t);
            (let t = shift_bound_vars ~depth ~to_:ground t in
-            Trace.Runtime.print "freeze-after-shift->ground"
+            Trace.Runtime.info "freeze-after-shift->ground"
               (fun fmt ->
-                 fun t ->
-                   Fmt.fprintf fmt "%a" (uppterm ground [] 0 empty_env) t) t;
+                 Fmt.fprintf fmt "%a" (uppterm ground [] 0 empty_env) t);
             (let t = shift_bound_vars ~depth:0 ~to_:(newground - ground) t in
-             Trace.Runtime.print "freeze-after-reloc->newground"
+             Trace.Runtime.info "freeze-after-reloc->newground"
                (fun fmt ->
-                  fun t ->
-                    Fmt.fprintf fmt "%a" (uppterm newground [] 0 empty_env) t)
-               t;
+                  Fmt.fprintf fmt "%a" (uppterm newground [] 0 empty_env) t);
              (let t = shift_bound_vars ~depth:newground ~to_:maxground t in
-              Trace.Runtime.print "freeze-after-shift->maxground"
+              Trace.Runtime.info "freeze-after-shift->maxground"
                 (fun fmt ->
-                   fun t ->
-                     Fmt.fprintf fmt "%a" (uppterm maxground [] 0 empty_env)
-                       t) t;
+                   Fmt.fprintf fmt "%a" (uppterm maxground [] 0 empty_env) t);
               ((!f), t)))))
         let defrost ~maxd  t env ~to_  f =
-          Trace.Runtime.print "defrost-in"
+          Trace.Runtime.info "defrost-in"
             (fun fmt ->
-               fun t ->
-                 Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
-                   (uppterm maxd [] maxd env) t) t;
+               Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
+                 (uppterm maxd [] maxd env) t);
           (let t = full_deref ~adepth:maxd env ~depth:maxd t in
-           Trace.Runtime.print "defrost-fully-derefd"
+           Trace.Runtime.info "defrost-fully-derefd"
              (fun fmt ->
-                fun t ->
-                  Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
-                    (uppterm maxd [] 0 empty_env) t) t;
+                Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
+                  (uppterm maxd [] 0 empty_env) t);
            (let t = subtract_to_consts ~amount:(maxd - to_) ~depth:maxd t in
-            Trace.Runtime.print "defrost-shifted"
+            Trace.Runtime.info "defrost-shifted"
               (fun fmt ->
-                 fun t ->
-                   Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
-                     (uppterm to_ [] 0 empty_env) t) t;
+                 Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
+                   (uppterm to_ [] 0 empty_env) t);
             (let rec daux d =
                function
                | Const c when C.Map.mem c f.c2uv ->
@@ -3025,11 +3002,11 @@ module Constraints :
             | Arg _|AppArg _ -> assert false
             | AppUVar (r, lvl, args) ->
                 AppUVar (r, lvl, (smart_map rcaux args)) in
-          Trace.Runtime.print "alignment-replace-in"
-            (uppterm 0 [] 0 empty_env) t;
+          Trace.Runtime.info "alignment-replace-in"
+            (fun fmt -> uppterm 0 [] 0 empty_env fmt t);
           (let t = rcaux t in
-           Trace.Runtime.print "alignment-replace-out"
-             (uppterm 0 [] 0 empty_env) t;
+           Trace.Runtime.info "alignment-replace-out"
+             (fun fmt -> uppterm 0 [] 0 empty_env fmt t);
            t)
         let ppmap fmt (g, l) =
           let aux fmt (c1, c2) =
@@ -3052,14 +3029,15 @@ module Constraints :
            then freezer
            else raise NoMatch in
          let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-         Trace.Runtime.exit "matching" false elapsed; rc
+         Trace.Runtime.exit "matching" false None elapsed; rc
        with
        | Trace.Runtime.TREC_CALL (f, x) ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace.Runtime.exit "matching" true elapsed; Obj.obj f (Obj.obj x))
+           (Trace.Runtime.exit "matching" true None elapsed;
+            Obj.obj f (Obj.obj x))
        | e ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace.Runtime.exit "matching" false elapsed; raise e))
+           (Trace.Runtime.exit "matching" false (Some e) elapsed; raise e))
     let match_context goalno maxground env freezer (newground, ground, lt)
       pattern =
       let (freezer, lt) =
@@ -3081,14 +3059,15 @@ module Constraints :
            then freezer
            else raise NoMatch in
          let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-         Trace.Runtime.exit "matching" false elapsed; rc
+         Trace.Runtime.exit "matching" false None elapsed; rc
        with
        | Trace.Runtime.TREC_CALL (f, x) ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace.Runtime.exit "matching" true elapsed; Obj.obj f (Obj.obj x))
+           (Trace.Runtime.exit "matching" true None elapsed;
+            Obj.obj f (Obj.obj x))
        | e ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace.Runtime.exit "matching" false elapsed; raise e))
+           (Trace.Runtime.exit "matching" false (Some e) elapsed; raise e))
     type chrattempt =
       {
       propagation_rule: CHR.rule ;
@@ -3106,11 +3085,10 @@ module Constraints :
       ~on:keys  =
       let pdiff = local_prog prog in
       let pdiff = List.filter filter_ctx pdiff in
-      Trace.Runtime.print "delay-goal"
+      Trace.Runtime.info "delay-goal"
         (fun fmt ->
-           fun x ->
-             Fmt.fprintf fmt "@[<hov 2> ...@ \226\138\162^%d %a@]\n%!" depth
-               (uppterm depth [] 0 empty_env) x) g;
+           Fmt.fprintf fmt "@[<hov 2> ...@ \226\138\162^%d %a@]\n%!" depth
+             (uppterm depth [] 0 empty_env) g);
       (let kind =
          Constraint { cdepth = depth; prog; context = pdiff; conclusion = g } in
        CS.declare_new { kind; blockers = keys })
@@ -3251,14 +3229,16 @@ module Constraints :
              let m =
                exec
                  (fun m ->
-                    Trace.Runtime.print "propagate-try-on"
-                      (pplist
-                         (fun f ->
-                            fun (dto, dt, t) ->
-                              Format.fprintf f
-                                "(lives-at:%d, to-be-lifted-to:%d) %a" dt dto
-                                (uppterm dt [] 0 empty_env) t) ";")
-                      constraints_goals;
+                    Trace.Runtime.info "propagate-try-on"
+                      (fun f ->
+                         pplist
+                           (fun f ->
+                              fun x ->
+                                let (dto, dt, t) = x in
+                                Format.fprintf f
+                                  "(lives-at:%d, to-be-lifted-to:%d) %a" dt
+                                  dto (uppterm dt [] 0 empty_env) t) ";" f
+                           constraints_goals);
                     (let m =
                        fold_left2i match_eigen m constraints_depts
                          patterns_eigens in
@@ -3268,16 +3248,16 @@ module Constraints :
                      let m =
                        fold_left2i match_context m constraints_contexts
                          patterns_contexts in
-                     Trace.Runtime.print "propagate-matched-args"
-                       (pplist (uppterm max_depth [] 0 empty_env)
-                          ~boxed:false ",") (Array.to_list env);
+                     Trace.Runtime.info "propagate-matched-args"
+                       (fun fmt ->
+                          pplist (uppterm max_depth [] 0 empty_env)
+                            ~boxed:false "," fmt (Array.to_list env));
                      T.to_resume := [];
                      assert ((!T.new_delayed) = []);
                      m)) Ice.empty_freezer in
-             Trace.Runtime.print "propagate-try-rule-guard"
+             Trace.Runtime.info "propagate-try-rule-guard"
                (fun fmt ->
-                  fun () ->
-                    Format.fprintf fmt "@[<hov 2>depth=%d@ @]" max_depth) ();
+                  Format.fprintf fmt "@[<hov 2>depth=%d@ @]" max_depth);
              check_guard ();
              (let (_, constraints_to_remove) =
                 let len_pats_to_match = List.length pats_to_match in
@@ -3300,22 +3280,21 @@ module Constraints :
                         env m in
                     let prog = initial_program in
                     [{ cdepth = eigen; prog; context = []; conclusion }] in
-              Trace.Runtime.print "propagate-delivery" Fmt.pp_print_string
-                "delivered";
+              Trace.Runtime.info "propagate-delivery"
+                (fun fmt -> Fmt.pp_print_string fmt "delivered");
               Some
                 (rule_name, constraints_to_remove, new_goals,
                   (Ice.assignments m)))
            with
            | NoMatch ->
-               (Trace.Runtime.print "propagate-try-rule-fail"
-                  (fun _ -> fun _ -> ()) ();
+               (Trace.Runtime.info "propagate-try-rule-fail" (fun _ -> ());
                 None) in
          destroy (); result)
     let resumption to_be_resumed_rev =
       List.map
         (fun { cdepth = d; prog; conclusion = g } ->
-           Trace.Runtime.print "run-scheduling-resume"
-             (fun fmt -> Fmt.fprintf fmt "%a" (uppterm d [] d empty_env)) g;
+           Trace.Runtime.info "run-scheduling-resume"
+             (fun fmt -> Fmt.fprintf fmt "%a" (uppterm d [] d empty_env) g);
            (d, prog, g)) (List.rev to_be_resumed_rev)
     let mk_permutations len pivot pivot_position rest =
       let open List in
@@ -3376,9 +3355,11 @@ module Constraints :
                                            (rule_name, to_be_removed,
                                             to_be_added, assignments)
                                            ->
-                                           (Trace.Runtime.print
+                                           (Trace.Runtime.info
                                               "run-CHR-rule-fired"
-                                              Fmt.pp_print_string rule_name;
+                                              (fun fmt ->
+                                                 Fmt.pp_print_string fmt
+                                                   rule_name);
                                             removed :=
                                               (to_be_removed @ (!removed));
                                             List.iter
@@ -3414,7 +3395,7 @@ module Mainloop :
           ?delay_outside_fragment:bool -> 'x executable -> 'x runtime
       =
       let rec run depth p g gs (next : frame) alts lvl =
-        Trace.Runtime.cur_pred (pred_of g);
+        Trace.Runtime.set_cur_pred (pred_of g);
         (let wall_clock = Unix.gettimeofday () in
          Trace.Runtime.enter "run" (fun _ -> ());
          (try
@@ -3426,16 +3407,15 @@ module Mainloop :
                | None -> ());
               (match resume_all () with
                | None ->
-                   (Trace.Runtime.print "run-resumed-fail"
-                      (fun _ -> fun _ -> ()) ();
+                   (Trace.Runtime.info "run-resumed-fail" (fun _ -> ());
                     raise
                       (Trace.Runtime.TREC_CALL
                          ((Obj.repr next_alt), (Obj.repr alts))))
                | Some ((ndepth, np, ng)::goals) ->
-                   (Trace.Runtime.print "run-resumed-goal"
+                   (Trace.Runtime.info "run-resumed-goal"
                       (fun fmt ->
-                         Fmt.fprintf fmt "%a" (ppterm ndepth [] 0 empty_env))
-                      ng;
+                         Fmt.fprintf fmt "%a" (ppterm ndepth [] 0 empty_env)
+                           ng);
                     raise
                       (Trace.Runtime.TREC_CALL
                          ((Obj.repr
@@ -3443,10 +3423,10 @@ module Mainloop :
                                   (goals @ ((depth, p, g) :: gs))) next) alts)),
                            (Obj.repr lvl))))
                | Some [] ->
-                   (Trace.Runtime.print "run-goal"
+                   (Trace.Runtime.info "run-goal"
                       (fun fmt ->
-                         Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env))
-                      g;
+                         Fmt.fprintf fmt "%a" (uppterm depth [] 0 empty_env)
+                           g);
                     (match g with
                      | Builtin (c, []) when c == Global_symbols.cutc ->
                          raise
@@ -3524,14 +3504,15 @@ module Mainloop :
                                 (Trace.Runtime.TREC_CALL
                                    ((Obj.repr next_alt), (Obj.repr alts))))))) in
             let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-            Trace.Runtime.exit "run" false elapsed; rc
+            Trace.Runtime.exit "run" false None elapsed; rc
           with
           | Trace.Runtime.TREC_CALL (f, x) ->
               let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-              (Trace.Runtime.exit "run" true elapsed; Obj.obj f (Obj.obj x))
+              (Trace.Runtime.exit "run" true None elapsed;
+               Obj.obj f (Obj.obj x))
           | e ->
               let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-              (Trace.Runtime.exit "run" false elapsed; raise e)))
+              (Trace.Runtime.exit "run" false (Some e) elapsed; raise e)))
       and backchain depth p g gs cp next alts lvl =
         let maybe_last_call = alts == noalts in
         let rec args_of =
@@ -3625,15 +3606,15 @@ module Mainloop :
                                        ((((((run depth) p) h) hs) next) alts)),
                                      (Obj.repr oldalts)))))) in
              let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-             Trace.Runtime.exit "select" false elapsed; rc
+             Trace.Runtime.exit "select" false None elapsed; rc
            with
            | Trace.Runtime.TREC_CALL (f, x) ->
                let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-               (Trace.Runtime.exit "select" true elapsed;
+               (Trace.Runtime.exit "select" true None elapsed;
                 Obj.obj f (Obj.obj x))
            | e ->
                let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-               (Trace.Runtime.exit "select" false elapsed; raise e)) in
+               (Trace.Runtime.exit "select" false (Some e) elapsed; raise e)) in
         select cp
       and cut p gs next alts lvl =
         let rec prune alts = if alts == lvl then alts else prune alts.next in
@@ -3668,12 +3649,11 @@ module Mainloop :
                ->
                (CS.remove_old dg;
                 CS.to_resume := rest;
-                Trace.Runtime.print "run-resumed-unif"
+                Trace.Runtime.info "run-resumed-unif"
                   (fun fmt ->
-                     fun _ ->
-                       Fmt.fprintf fmt "@[<hov 2>^%d:%a@ == ^%d:%a@]\n%!"
-                         adepth (uppterm adepth [] 0 empty_env) a bdepth
-                         (uppterm bdepth [] adepth env) b) ();
+                     Fmt.fprintf fmt "@[<hov 2>^%d:%a@ == ^%d:%a@]\n%!"
+                       adepth (uppterm adepth [] 0 empty_env) a bdepth
+                       (uppterm bdepth [] adepth env) b);
                 ok := (unif ~matching adepth env bdepth a b))
            | ({ kind = Constraint dpg } as c)::rest ->
                (CS.remove_old c;
@@ -3724,8 +3704,8 @@ module Mainloop :
             (let search =
                exec
                  (fun () ->
-                    Trace.Runtime.print "run-trail"
-                      (fun fmt -> fun _ -> T.print_trail fmt) ();
+                    Trace.Runtime.info "run-trail"
+                      (fun fmt -> T.print_trail fmt);
                     T.initial_trail := (!T.trail);
                     run initial_depth (!orig_prolog_program) initial_goal []
                       FNil noalts noalts) in
