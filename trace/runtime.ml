@@ -22,12 +22,13 @@ let trace_noprint = ref false
 let cur_pred = ref None
 
 type message_kind = Start | Stop of { cause : string; time : float } | Info
+type j = J : (F.formatter -> 'a -> unit) * 'a -> j
 type message = {
   goal_id : int;
   kind : message_kind;
   name : string;
   step : int;
-  payload : F.formatter -> unit;
+  payload : j list;
 }
 
 let printer : (message -> unit) ref = ref (fun _ -> assert false)
@@ -62,7 +63,7 @@ let collect_perf_exit time =
   match !perf_stack with
   | { name = n1; _ } as top :: ({ name = n2; _ } as prev) :: rest when n1 = n2 ->
       perf_stack := { name = n2;
-                      self = prev.self; 
+                      self = prev.self;
                       progeny = merge top.progeny prev.progeny } :: rest
   | top :: ({ progeny; _ } as prev) :: rest ->
       let top = { top with self = top.self +. time } in
@@ -94,7 +95,7 @@ let print_perf () =
     F.fprintf fmt "%s\n" (String.make 80 '-');
     StrMap.iter (fun _ t -> print_tree fmt "run" t 0) stack;
     F.pp_print_flush fmt () in
-  !printer { kind = Info; goal_id = 0; name = "perf"; step = 0; payload }
+  !printer { kind = Info; goal_id = 0; name = "perf"; step = 0; payload = [J((fun fmt () -> payload fmt),())] }
 
 let () = at_exit (fun () -> if !collect_perf then print_perf ())
 
@@ -102,7 +103,11 @@ end
 
 module Trace = struct
 
-let get_cur_step k = try StrMap.find k !cur_step with Not_found -> 0
+let get_cur_step k =
+  try StrMap.find k !cur_step
+  with Not_found ->
+  try StrMap.find "run" !cur_step
+  with Not_found -> 0
 
 let condition k =
   (* -trace-on *)
@@ -150,7 +155,7 @@ let enter k payload =
   if Trace.condition k then begin
     Perf.collect_perf_enter k;
     if not !trace_noprint then
-      !printer { goal_id = 0; name = k; step = Trace.get_cur_step k; kind = Start; payload }
+      !printer { goal_id = 0; name = k; step = Trace.get_cur_step k; kind = Start; payload = [J((fun fmt () -> payload fmt),())] }
   end
 
 let info ?(goal_id=0) k payload =
@@ -170,7 +175,7 @@ let exit k tailcall e time =
   if Trace.condition k then begin
     Perf.collect_perf_exit time;
     if not !trace_noprint then
-      !printer { goal_id = 0; name = k; step = Trace.get_cur_step k; kind = Stop { cause = (if tailcall then "->" else pr_exc e); time }; payload = fun _ -> () }
+      !printer { goal_id = 0; name = k; step = Trace.get_cur_step k; kind = Stop { cause = (if tailcall then "->" else pr_exc e); time }; payload = [J((fun _ _ -> ()),())] }
   end;
   decr level
 
@@ -183,8 +188,6 @@ let pp_i fmt i =
 
 let pp_f fmt f =
   Format.fprintf fmt "%f" f
-
-type j = J : (F.formatter -> 'a -> unit) * 'a -> j
 
 let pp_kv fmt = function
   | k, J(pp_v, v) -> F.fprintf fmt "%a : %a" pp_s k pp_v v
@@ -204,6 +207,20 @@ let pp_a fmt (l : j list) =
   end;
   F.fprintf fmt "]"
 
+let pp_as fmt (l : j list) =
+  let pp_j fmt x =
+    let s = F.asprintf "%a" pp_j x in
+    F.fprintf fmt "%S" s in
+  F.fprintf fmt "[";
+  begin match l with
+  | [] -> ()
+  | x :: l ->
+     pp_j fmt x;
+     pp_comma_l fmt pp_j l
+  end;
+  F.fprintf fmt "]"
+
+
 let pp_d fmt (l : (string * j) list) =
   F.fprintf fmt "{";
   begin match l with
@@ -211,10 +228,6 @@ let pp_d fmt (l : (string * j) list) =
   | x :: l -> pp_kv fmt x; pp_comma_l fmt pp_kv l
   end;
   F.fprintf fmt "}"
-
-let pp_id fmt p =
-  let s = F.asprintf "%a" (fun fmt () -> p fmt) () in
-  F.fprintf fmt "%S" s
 
 let pp_kind fmt = function
   | Start -> pp_a fmt [J(pp_s,"Start")]
@@ -227,7 +240,7 @@ let print_json fmt  = (); fun { goal_id; kind; name; step; payload } ->
     "goal_id", J(pp_i,goal_id);
     "name", J(pp_s,name);
     "step", J(pp_i,step);
-    "payload", J(pp_id,payload)
+    "payload", J(pp_as, payload)
   ];
   F.pp_print_newline fmt ();
   F.pp_print_flush fmt ()
@@ -241,16 +254,23 @@ let set_tty_formatter_maxbox i = tty_formatter_maxbox := i
 let make_indent () =
   String.make (max 0 (!level - !hot_level)) ' '
 
+let pplist ppelem f l =
+    F.fprintf f "@[<hov>";
+    List.iter (fun x -> F.fprintf f "%a%s@," ppelem x " ") l;
+    F.fprintf f "@]"
+;;
+
 let print_tty fmt = (); fun { goal_id = _; kind; name; step; payload } ->
   match kind with
   | Start ->
-    F.fprintf fmt "%s%s %d {{{@[<hov1> %a@]\n%!"
-      (make_indent ()) name step (fun fmt () -> payload fmt) ()
+    F.fprintf fmt "%s%s %d {{{@[<hov1> %a@]\n%!" (make_indent ()) name step
+        (pplist pp_j) payload
   | Stop { cause; time } ->
     F.fprintf fmt "%s}}} %s  (%.3fs)\n%!"
       (make_indent ()) cause time
   | Info ->
-    F.fprintf fmt "%s %s =@[<hov1> %a@]\n%!" (make_indent ()) name (fun fmt () -> payload fmt) ()
+    F.fprintf fmt "%s %s =@[<hov1> %a@]\n%!" (make_indent ()) name
+      (pplist pp_j) payload
 
 let () = printer := print_tty F.err_formatter
 
@@ -271,14 +291,14 @@ let logs = ref []
 let log name key value =
   if !collecting_stats then
     logs := (name,key,Trace.get_cur_step "run",value) :: !logs
-let () = 
+let () =
   at_exit (fun () ->
     if !logs != [] then begin
       List.iter (fun (name,key,step,value) ->
         !printer {
            kind = Info; name = name; step = step;
-           goal_id = 0; payload = fun fmt ->
-             F.fprintf fmt "%s = %d" key value })
+           goal_id = 0; payload = [J((fun fmt () ->
+             F.fprintf fmt "%s = %d" key value),())] })
       !logs
     end)
 
