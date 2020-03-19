@@ -127,6 +127,10 @@ expr = begin fun mapper expr ->
         begin match aux e with
         | { pexp_desc = Pexp_apply(hd,args); _ } when !enabled ->
            tcall hd (List.map snd args)
+        | { pexp_desc = Pexp_apply(hd,args); _ } as r ->
+           { r with pexp_desc = Pexp_apply(
+               ({ hd with pexp_attributes = (({ txt = "tailcall"; loc },PStr []) :: hd.pexp_attributes) }),
+                 args) }
         | x -> x
         end
       | _ -> err ~loc "use: [%tcall f args]"
