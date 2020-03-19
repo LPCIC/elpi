@@ -142,6 +142,7 @@ and clause = {
     hyps : term list;
     vars : int;
     mode : mode; (* CACHE to avoid allocation in get_clauses *)
+    loc : Loc.t option; (* debug *)
 }
 and mode = bool list (* true=input, false=output *)
 [@@deriving show, eq]

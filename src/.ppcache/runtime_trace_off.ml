@@ -1,4 +1,4 @@
-(*c16b6a153ad715b479dfe8e40afae7d4ab7db336  src/runtime_trace_off.ml ppx_deriving.std,elpi.trace_ppx --trace_ppx-off*)
+(*28d7bad6722a65efca423f6dc757316bf78ecf84  src/runtime_trace_off.ml ppx_deriving.std,elpi.trace_ppx --trace_ppx-off*)
 #1 "src/runtime_trace_off.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -2369,7 +2369,14 @@ module Clausify :
             | UVar _|AppUVar _ -> assert false
             | Cons _|Nil|Discard -> assert false in
           let c =
-            { depth = (depth + lcs); args; hyps; mode = (get_mode hd); vars } in
+            {
+              depth = (depth + lcs);
+              args;
+              hyps;
+              mode = (get_mode hd);
+              vars;
+              loc
+            } in
           ((); ((hd, c), { hdepth = depth; hsrc = g }, lcs))
       | UVar ({ contents = g }, from, args) when g != C.dummy ->
           claux1 ?loc get_mode vars depth hyps ts lts lcs
@@ -2437,8 +2444,8 @@ let rec pp_goal :
 and show_goal : goal -> Ppx_deriving_runtime.string =
   fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_goal x[@@ocaml.warning
                                                                 "-32"]
-let make_sub_goal_id ogid = let gid = UUID.make () in (); gid[@@inline ]
-let make_sub_goal ~depth  program goal = { depth; program; goal }[@@inline ]
+let make_subgoal_id ogid = let gid = UUID.make () in (); (); gid[@@inline ]
+let make_subgoal ~depth  program goal = { depth; program; goal }[@@inline ]
 let repack_goal ~depth  program goal = { depth; program; goal }[@@inline ]
 type frame =
   | FNil 
@@ -2641,8 +2648,8 @@ module Constraints :
                          (p == p') && (for_all2 (==) lp lp')
                      end)
     let chrules = Fork.new_local CHR.empty
-    let make_constraint_def ?(gid= UUID.make ())  depth prog pdiff conclusion
-      = { cdepth = depth; prog; context = pdiff; conclusion }
+    let make_constraint_def depth prog pdiff conclusion =
+      { cdepth = depth; prog; context = pdiff; conclusion }
     let delay_goal ?(filter_ctx= fun _ -> true)  ~depth  prog ~goal:g 
       ~on:keys  =
       let pdiff = local_prog prog in
@@ -2807,7 +2814,7 @@ module Constraints :
                   orig_constraints in
               let new_goals =
                 match new_goal with
-                | None -> []
+                | None -> None
                 | Some { CHR.eigen = eigen; context; conclusion } ->
                     let eigen =
                       match full_deref ~adepth:max_depth env ~depth:max_depth
@@ -2821,7 +2828,7 @@ module Constraints :
                         (App (Global_symbols.implc, context, [conclusion]))
                         env m in
                     let prog = initial_program in
-                    [make_constraint_def eigen prog [] conclusion] in
+                    Some (make_constraint_def eigen prog [] conclusion) in
               ();
               Some
                 (rule_name, constraints_to_remove, new_goals,
@@ -2893,6 +2900,7 @@ module Constraints :
                                             to_be_added, assignments)
                                            ->
                                            (();
+                                            ();
                                             removed :=
                                               (to_be_removed @ (!removed));
                                             List.iter
@@ -2901,9 +2909,12 @@ module Constraints :
                                             List.iter
                                               (fun (r, _lvl, t) -> r @:= t)
                                               assignments;
-                                            to_be_resumed_rev :=
-                                              (to_be_added @
-                                                 (!to_be_resumed_rev)))))))
+                                            (match to_be_added with
+                                             | None -> ()
+                                             | Some to_be_added ->
+                                                 to_be_resumed_rev :=
+                                                   (to_be_added ::
+                                                   (!to_be_resumed_rev))))))))
                        done)))))
         done;
       !to_be_resumed_rev
@@ -2923,6 +2934,10 @@ module Mainloop :
       | Const c -> Some (C.show c)
       | Builtin (c, _) -> Some (C.show c)
       | _ -> None
+    let pp_candidate fmt { loc } =
+      match loc with
+      | Some x -> Loc.pp fmt x
+      | None -> Fmt.fprintf fmt "context"
     let make_runtime
       : ?max_steps:int ->
           ?delay_outside_fragment:bool -> 'x executable -> 'x runtime
@@ -2934,7 +2949,6 @@ module Mainloop :
              (incr steps_made;
               if (!steps_made) > bound then raise No_more_steps)
          | None -> ());
-        ();
         ();
         (match resume_all () with
          | None -> ((); ((next_alt)[@tailcall ]) alts)
@@ -2951,12 +2965,11 @@ module Mainloop :
                   (();
                    (let gs' =
                       List.map
-                        (fun x -> ((make_sub_goal)[@inlined ]) ~depth p x)
-                        gs' in
+                        (fun x -> ((make_subgoal)[@inlined ]) ~depth p x) gs' in
                     ((run)[@tailcall ]) depth p g (gs' @ gs) next alts lvl))
               | Cons (g, gs') ->
                   (();
-                   (let gs' = ((make_sub_goal)[@inlined ]) ~depth p gs' in
+                   (let gs' = ((make_subgoal)[@inlined ]) ~depth p gs' in
                     ((run)[@tailcall ]) depth p g (gs' :: gs) next alts lvl))
               | Nil ->
                   (();
@@ -2987,8 +3000,8 @@ module Mainloop :
                   (();
                    (let f = get_lambda_body ~depth arg in
                     let v = UVar ((oref C.dummy), depth, 0) in
-                    ((run)[@tailcall ]) depth p (subst depth [v] f) gs next
-                      alts lvl))
+                    let fv = subst depth [v] f in
+                    ((run)[@tailcall ]) depth p fv gs next alts lvl))
               | UVar ({ contents = g }, from, args) when g != C.dummy ->
                   (();
                    ((run)[@tailcall ]) depth p
@@ -3014,17 +3027,19 @@ module Mainloop :
                    (match Constraints.exect_builtin_predicate c ~depth p args
                     with
                     | gs' ->
-                        (match (List.map
-                                  (fun g ->
-                                     ((make_sub_goal)[@inlined ]) ~depth p g)
-                                  gs')
-                                 @ gs
-                         with
-                         | [] -> ((pop_andl)[@tailcall ]) alts next lvl
-                         | { depth; program; goal }::gs ->
-                             ((run)[@tailcall ]) depth program goal gs next
-                               alts lvl)
-                    | exception No_clause -> ((next_alt)[@tailcall ]) alts))
+                        (();
+                         (match (List.map
+                                   (fun g ->
+                                      ((make_subgoal)[@inlined ]) ~depth p g)
+                                   gs')
+                                  @ gs
+                          with
+                          | [] -> ((pop_andl)[@tailcall ]) alts next lvl
+                          | { depth; program; goal }::gs ->
+                              ((run)[@tailcall ]) depth program goal gs next
+                                alts lvl))
+                    | exception No_clause ->
+                        ((); ((next_alt)[@tailcall ]) alts)))
               | Arg _|AppArg _ -> anomaly "The goal is not a heap term"
               | Lam _|CData _ ->
                   type_error ("The goal is not a predicate:" ^ (show_term g))
@@ -3034,7 +3049,7 @@ module Mainloop :
         match cp with
         | [] -> ((); ((next_alt)[@tailcall ]) alts)
         | { depth = c_depth; mode = c_mode; args = c_args; hyps = c_hyps;
-            vars = c_vars }::cs ->
+            vars = c_vars; loc }::cs ->
             (();
              (let old_trail = !T.trail in
               T.last_call := ((alts == noalts) && (cs == []));
@@ -3102,12 +3117,12 @@ module Mainloop :
                         let hs =
                           List.map
                             (fun x ->
-                               ((make_sub_goal)[@inlined ]) ~depth p
+                               ((make_subgoal)[@inlined ]) ~depth p
                                  (move ~adepth:depth ~from:c_depth ~to_:depth
                                     env x)) hs in
                         ((run)[@tailcall ]) depth p h hs next alts oldalts))))
       and cut gs next alts lvl =
-        let rec prune alts =
+        let rec prune ({ clauses; adepth = depth; agoal_hd = hd } as alts) =
           if alts == lvl then alts else ((); prune alts.next) in
         let alts = prune alts in
         if alts == noalts then ((T.cut_trail)[@inlined ]) ();

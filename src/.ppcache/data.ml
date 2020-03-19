@@ -1,4 +1,4 @@
-(*3e6f6018e87d757c5ac54736ed97a41d34fb5c38  src/data.ml ppx_deriving.std *)
+(*db79d4f88cab77a0a673a3ca8966bc94ec77e1ca  src/data.ml ppx_deriving.std *)
 #1 "src/data.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -96,7 +96,8 @@ module Term =
       args: term list ;
       hyps: term list ;
       vars: int ;
-      mode: mode }
+      mode: mode ;
+      loc: Loc.t option }
     and mode = bool list[@@deriving (show, eq)]
     let rec pp_term :
       Ppx_deriving_runtime.Format.formatter ->
@@ -602,19 +603,37 @@ module Term =
       Ppx_deriving_runtime.Format.formatter ->
         clause -> Ppx_deriving_runtime.unit
       =
-      let __2 () = pp_mode
+      let __3 () = Loc.pp
+      and __2 () = pp_mode
       and __1 () = pp_term
       and __0 () = pp_term in
       ((let open! Ppx_deriving_runtime in
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime.Format.fprintf fmt "@[<2>{ ";
-              (((((Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
-                     "Data.Term.depth";
-                   (Ppx_deriving_runtime.Format.fprintf fmt "%d") x.depth;
+              ((((((Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+                      "Data.Term.depth";
+                    (Ppx_deriving_runtime.Format.fprintf fmt "%d") x.depth;
+                    Ppx_deriving_runtime.Format.fprintf fmt "@]");
+                   Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
+                   Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "args";
+                   ((fun x ->
+                       Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+                       ignore
+                         (List.fold_left
+                            (fun sep ->
+                               fun x ->
+                                 if sep
+                                 then
+                                   Ppx_deriving_runtime.Format.fprintf fmt
+                                     ";@ ";
+                                 ((__0 ()) fmt) x;
+                                 true) false x);
+                       Ppx_deriving_runtime.Format.fprintf fmt "@,]@]"))
+                     x.args;
                    Ppx_deriving_runtime.Format.fprintf fmt "@]");
                   Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                  Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "args";
+                  Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "hyps";
                   ((fun x ->
                       Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
                       ignore
@@ -625,35 +644,30 @@ module Term =
                                 then
                                   Ppx_deriving_runtime.Format.fprintf fmt
                                     ";@ ";
-                                ((__0 ()) fmt) x;
+                                ((__1 ()) fmt) x;
                                 true) false x);
                       Ppx_deriving_runtime.Format.fprintf fmt "@,]@]"))
-                    x.args;
+                    x.hyps;
                   Ppx_deriving_runtime.Format.fprintf fmt "@]");
                  Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                 Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "hyps";
-                 ((fun x ->
-                     Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
-                     ignore
-                       (List.fold_left
-                          (fun sep ->
-                             fun x ->
-                               if sep
-                               then
-                                 Ppx_deriving_runtime.Format.fprintf fmt
-                                   ";@ ";
-                               ((__1 ()) fmt) x;
-                               true) false x);
-                     Ppx_deriving_runtime.Format.fprintf fmt "@,]@]")) 
-                   x.hyps;
+                 Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "vars";
+                 (Ppx_deriving_runtime.Format.fprintf fmt "%d") x.vars;
                  Ppx_deriving_runtime.Format.fprintf fmt "@]");
                 Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "vars";
-                (Ppx_deriving_runtime.Format.fprintf fmt "%d") x.vars;
+                Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "mode";
+                ((__2 ()) fmt) x.mode;
                 Ppx_deriving_runtime.Format.fprintf fmt "@]");
                Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-               Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "mode";
-               ((__2 ()) fmt) x.mode;
+               Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "loc";
+               ((function
+                 | None ->
+                     Ppx_deriving_runtime.Format.pp_print_string fmt "None"
+                 | Some x ->
+                     (Ppx_deriving_runtime.Format.pp_print_string fmt
+                        "(Some ";
+                      ((__3 ()) fmt) x;
+                      Ppx_deriving_runtime.Format.pp_print_string fmt ")")))
+                 x.loc;
                Ppx_deriving_runtime.Format.fprintf fmt "@]");
               Ppx_deriving_runtime.Format.fprintf fmt "@ }@]")
         [@ocaml.warning "-A"])
@@ -936,30 +950,38 @@ module Term =
               | _ -> false)
         [@ocaml.warning "-A"])[@@ocaml.warning "-39"]
     and equal_clause : clause -> clause -> Ppx_deriving_runtime.bool =
-      let __2 () = equal_mode
+      let __3 () = Loc.equal
+      and __2 () = equal_mode
       and __1 () = equal_term
       and __0 () = equal_term in
       ((let open! Ppx_deriving_runtime in
           fun lhs ->
             fun rhs ->
-              (((((fun (a : int) -> fun b -> a = b) lhs.depth rhs.depth) &&
+              ((((((fun (a : int) -> fun b -> a = b) lhs.depth rhs.depth) &&
+                    ((let rec loop x y =
+                        match (x, y) with
+                        | ([], []) -> true
+                        | (a::x, b::y) ->
+                            ((fun x -> (__0 ()) x) a b) && (loop x y)
+                        | _ -> false in
+                      fun x -> fun y -> loop x y) lhs.args rhs.args))
+                   &&
                    ((let rec loop x y =
                        match (x, y) with
                        | ([], []) -> true
                        | (a::x, b::y) ->
-                           ((fun x -> (__0 ()) x) a b) && (loop x y)
+                           ((fun x -> (__1 ()) x) a b) && (loop x y)
                        | _ -> false in
-                     fun x -> fun y -> loop x y) lhs.args rhs.args))
-                  &&
-                  ((let rec loop x y =
+                     fun x -> fun y -> loop x y) lhs.hyps rhs.hyps))
+                  && ((fun (a : int) -> fun b -> a = b) lhs.vars rhs.vars))
+                 && ((fun x -> (__2 ()) x) lhs.mode rhs.mode))
+                &&
+                ((fun x ->
+                    fun y ->
                       match (x, y) with
-                      | ([], []) -> true
-                      | (a::x, b::y) ->
-                          ((fun x -> (__1 ()) x) a b) && (loop x y)
-                      | _ -> false in
-                    fun x -> fun y -> loop x y) lhs.hyps rhs.hyps))
-                 && ((fun (a : int) -> fun b -> a = b) lhs.vars rhs.vars))
-                && ((fun x -> (__2 ()) x) lhs.mode rhs.mode))
+                      | (None, None) -> true
+                      | (Some a, Some b) -> ((fun x -> (__3 ()) x)) a b
+                      | _ -> false) lhs.loc rhs.loc))
         [@ocaml.warning "-A"])[@@ocaml.warning "-39"]
     and (equal_mode : mode -> mode -> Ppx_deriving_runtime.bool) =
       ((let open! Ppx_deriving_runtime in

@@ -1,4 +1,4 @@
-(*dffc408b5d2e2f206eb04e207c1da03031faf2e2  src/util.mli ppx_deriving.std *)
+(*f81b6f53e85d7c289fb4bc5c47b7848e424f39c1  src/util.mli ppx_deriving.std *)
 #1 "src/util.mli"
 module type Show  =
   sig
@@ -154,6 +154,8 @@ val pp_string : Format.formatter -> string -> unit
 val pp_pair :
   (Format.formatter -> 'a -> unit) ->
     (Format.formatter -> 'b -> unit) -> Format.formatter -> ('a * 'b) -> unit
+val pp_option :
+  (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a option -> unit
 type 'a spaghetti_printer
 val mk_spaghetti_printer : unit -> 'a spaghetti_printer
 val set_spaghetti_printer :
