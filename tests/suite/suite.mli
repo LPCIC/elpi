@@ -9,6 +9,8 @@ type expectation =
   | SuccessOutput of Str.regexp
   | FailureOutput of Str.regexp
 
+type trace = Off | On of string list
+
 val declare :
   (*name*)string ->
   description:string ->
@@ -21,6 +23,7 @@ val declare :
   ?input:fname -> 
   ?expectation:expectation -> 
   ?outside_llam:bool ->
+  ?trace:trace ->
   category:string ->
   unit -> unit
 
@@ -37,6 +40,7 @@ type t = {
   input : fname option;
   expectation : expectation;
   outside_llam : bool;
+  trace: string list;
 }
 
 val get : (name:string -> bool) -> t list

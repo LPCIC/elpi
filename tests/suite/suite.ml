@@ -11,6 +11,8 @@ type expectation =
   | SuccessOutput of Str.regexp
   | FailureOutput of Str.regexp
 
+type trace = Off | On of string list
+
 type t = {
   name : string;
   description : string;
@@ -24,6 +26,7 @@ type t = {
   input: fname option;
   expectation : expectation;
   outside_llam : bool;
+  trace : string list;
 }
 
 let tests = ref []
@@ -33,6 +36,7 @@ let declare
     ?after
     ?(typecheck=true) ?input ?(expectation=Success)
     ?(outside_llam=false)
+    ?(trace=Off)
     ~category
     ()
 =
@@ -55,6 +59,7 @@ let declare
     expectation;
     category;
     outside_llam;
+    trace = (match trace with Off -> [] | On l -> "-trace-on" :: l)
   } :: !tests
 
 module SM = Map.Make(String)
@@ -295,9 +300,9 @@ let () = Runner.declare
     Util.write log (Printf.sprintf "executable: %s\n" executable);
     let executable_stuff = Filename.dirname executable ^ "/../lib/elpi/" in
 
-    let { Test.expectation; input; outside_llam ; typecheck; _ } = test in
+    let { Test.expectation; input; outside_llam ; typecheck; trace; _ } = test in
     let input = Util.option_map (fun x -> sources^x) input in
-    let args = ["-test";"-I";executable_stuff;"-I";sources;source] in
+    let args = ["-test";"-I";executable_stuff;"-I";sources;source] @ trace in
     let args =
       if typecheck then args
       else "-no-tc" :: args in
