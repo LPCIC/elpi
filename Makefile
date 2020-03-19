@@ -47,7 +47,7 @@ clean:
 	rm -rf _build
 
 tests:
-	dune build $(DUNE_OPTS) @install
+	$(MAKE) build
 	dune build $(DUNE_OPTS) $(BUILD)/tests/test.exe
 	ulimit -s $(STACK); \
 		$(BUILD)/tests/test.exe \
