@@ -141,7 +141,7 @@ and clause = {
     args : term list;
     hyps : term list;
     vars : int;
-    mode : mode; (* CACHE to avoid allocation in get_clause *)
+    mode : mode; (* CACHE to avoid allocation in get_clauses *)
 }
 and mode = bool list (* true=input, false=output *)
 [@@deriving show, eq]

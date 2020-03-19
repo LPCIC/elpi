@@ -227,7 +227,7 @@ let print_json fmt  = (); fun { goal_id; kind; name; step; payload } ->
     "goal_id", J(pp_i,goal_id);
     "name", J(pp_s,name);
     "step", J(pp_i,step);
-    "payoad", J(pp_id,payload)
+    "payload", J(pp_id,payload)
   ];
   F.pp_print_newline fmt ();
   F.pp_print_flush fmt ()

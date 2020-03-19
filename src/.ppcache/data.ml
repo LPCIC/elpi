@@ -1,4 +1,4 @@
-(*6673fdb577f0205021fdb12e87f962b57a750766  src/data.ml ppx_deriving.std *)
+(*3e6f6018e87d757c5ac54736ed97a41d34fb5c38  src/data.ml ppx_deriving.std *)
 #1 "src/data.ml"
 module Fmt = Format
 module F = Ast.Func
