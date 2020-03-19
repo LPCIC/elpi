@@ -19,6 +19,7 @@
 (executable
   (name merlinppx)
   (promote)
+  (optional)
   (modules merlinppx)
   (libraries ocaml-migrate-parsetree ppx_tools_versioned ppx_tools_versioned.metaquot_404)
   (flags -linkall)
