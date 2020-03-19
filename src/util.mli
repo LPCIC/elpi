@@ -161,6 +161,9 @@ val pp_pair :
   (Format.formatter -> 'a -> unit) ->
   (Format.formatter -> 'b -> unit) ->
     Format.formatter -> 'a * 'b -> unit
+val pp_option :
+  (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a option -> unit
+
 
 (* for open types *)
 type 'a spaghetti_printer
