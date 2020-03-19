@@ -569,17 +569,18 @@ module CS = ConstraintStoreAndTrail
 (* Assigning an UVar wakes up suspended goals/constraints *)
 let (@:=) r v =
   (T.trail_assignment[@inlined]) r;
-  if r.rest <> [] then
-    begin
-    [%spy "assign-to_resume" (fun fmt ->
-        let l = r.rest in
-        Fmt.fprintf fmt "%d" (List.length l))];
-     CS.to_resume :=
+  if r.rest <> [] then begin
+    [%spy "user:assign(resume)" (fun fmt ->
+      let l = map_filter (function
+        | { kind = Constraint { cgid; _ } ; _ } -> Some cgid
+        | _ -> None) r.rest in
+      Fmt.fprintf fmt "%a" (pplist ~boxed:true UUID.pp " ") l)];
+    CS.to_resume :=
       List.fold_right
        (fun x acc -> if List.memq x acc then acc else x::acc) r.rest
         !CS.to_resume
-    end;
- r.contents <- v
+  end;
+  r.contents <- v
 ;;
 (******************************************************************************
   Unification (dereferencing and lift, to_heap)
@@ -942,7 +943,7 @@ let rec move ~adepth:argsdepth e ?avoid ~from ~to_ t =
          else
            let t, assignment = expand_uv ~depth:(from+depth) r ~lvl:vardepth ~ano:argsno in
            option_iter (fun (r,_,assignment) ->
-              [%spy "assign (restriction:expand)" (fun fmt -> Fmt.fprintf fmt "%a := %a"
+              [%spy "user:assign(expand)" (fun fmt -> Fmt.fprintf fmt "%a := %a"
                (uppterm (from+depth) [] argsdepth e) x
                (uppterm vardepth [] argsdepth e) assignment)];
               r @:= assignment) assignment;
@@ -984,7 +985,7 @@ let rec move ~adepth:argsdepth e ?avoid ~from ~to_ t =
             let r' = oref C.dummy in
             let newvar = mkAppUVar r' vardepth' !filteredargs_vardepth in
             let assignment = mknLam orig_argsno newvar in
-            [%spy "assign (restriction:AppUVar)" (fun fmt -> Fmt.fprintf fmt "%d %a := %a" vardepth
+            [%spy "user:assign(restrict)" (fun fmt -> Fmt.fprintf fmt "%d %a := %a" vardepth
                (ppterm (from+depth) [] argsdepth e) x
                (ppterm (vardepth) [] argsdepth e) assignment)];
             r @:= assignment;
@@ -1443,7 +1444,7 @@ let bind r gamma l a d delta b left t e =
   end] in
   try
     let v = mknLam new_lams (bind b delta 0 t) in
-    [%spy "assign(HO)" (fun fmt -> Fmt.fprintf fmt "%a := %a"
+    [%spy "user:assign(HO)" (fun fmt -> Fmt.fprintf fmt "%a := %a"
         (uppterm gamma [] a e) (UVar(r,gamma,0))
         (uppterm gamma [] a e) v)];
     r @:= v;
@@ -1563,7 +1564,7 @@ let rec unif matching depth adepth a bdepth b e =
    | _, Arg (i,0) ->
      begin try
       let v = hmove ~from:(adepth+depth) ~to_:adepth a in
-      [%spy "assign" (fun fmt -> Fmt.fprintf fmt "%a := %a"
+      [%spy "user:assign" (fun fmt -> Fmt.fprintf fmt "%a := %a"
           (uppterm adepth [] adepth e) b (uppterm adepth [] adepth e) v)];
       e.(i) <- v;
       true
@@ -1580,7 +1581,7 @@ let rec unif matching depth adepth a bdepth b e =
              let a = hmove ~avoid:r ~from:(adepth+depth) ~to_:(bdepth+depth) a in
              (* Second step: we restrict the l.h.s. *)
              hmove ~from:(bdepth+depth) ~to_:origdepth a in
-         [%spy "assign" (fun fmt -> Fmt.fprintf fmt "%a := %a"
+         [%spy "user:assign" (fun fmt -> Fmt.fprintf fmt "%a := %a"
            (uppterm depth [] bdepth e) b
            (uppterm depth [] bdepth e) t)];
          r @:= t;
@@ -1596,7 +1597,7 @@ let rec unif matching depth adepth a bdepth b e =
              let b = move ~avoid:r ~adepth ~from:(bdepth+depth) ~to_:(adepth+depth) e b in
              (* Second step: we restrict the r.h.s. *)
              hmove ~from:(adepth+depth) ~to_:origdepth b in
-         [%spy "assign" (fun fmt -> Fmt.fprintf fmt "%a := %a"
+         [%spy "user:assign" (fun fmt -> Fmt.fprintf fmt "%a := %a"
            (uppterm origdepth [] 0 empty_env) a
            (uppterm origdepth [] 0 empty_env) t)];
          r @:= t;
@@ -1607,25 +1608,25 @@ let rec unif matching depth adepth a bdepth b e =
    (* TODO: unif matching->deref_uv case. Rewrite the code to do the job directly? *)
    | _, Arg (i,args) ->
       let v = fst (make_lambdas adepth args) in
-      [%spy "assign" (fun fmt -> Fmt.fprintf fmt "%a := %a"
+      [%spy "user:assign" (fun fmt -> Fmt.fprintf fmt "%a := %a"
         (uppterm depth [] bdepth e) (Arg(i,0))
         (uppterm depth [] bdepth e) v)];
       e.(i) <- v;
-      [%spy "assign" (fun fmt -> ppterm depth [] adepth empty_env fmt (e.(i)))];
+      [%spy "user:assign" (fun fmt -> ppterm depth [] adepth empty_env fmt (e.(i)))];
       unif matching depth adepth a bdepth b e
    | UVar({ rest = [] },_,a1), UVar ({ rest = _ :: _ },_,a2) when a1 + a2 > 0 -> unif matching depth bdepth b adepth a e
    | AppUVar({ rest = [] },_,_), UVar ({ rest = _ :: _ },_,a2) when  a2 > 0 -> unif matching depth bdepth b adepth a e
 
    | _, UVar (r,origdepth,args) when args > 0 && match a with UVar(r1,_,_) | AppUVar(r1,_,_) -> r != r1 | _ -> true ->
       let v = fst (make_lambdas origdepth args) in
-      [%spy "assign (simplify)" (fun fmt -> Fmt.fprintf fmt "%a := %a"
+      [%spy "user:assign(simplify)" (fun fmt -> Fmt.fprintf fmt "%a := %a"
         (uppterm depth [] bdepth e) (UVar(r,origdepth,0))
         (uppterm depth [] bdepth e) v)];
       r @:= v;
       unif matching depth adepth a bdepth b e
    | UVar (r,origdepth,args), _ when args > 0 && match b with UVar(r1,_,_) | AppUVar(r1,_,_) -> r != r1 | _ -> true ->
       let v = fst (make_lambdas origdepth args) in
-      [%spy "assign (simplify)" (fun fmt -> Fmt.fprintf fmt "%a := %a"
+      [%spy "user:assign(simplify)" (fun fmt -> Fmt.fprintf fmt "%a := %a"
          (uppterm depth [] adepth e) (UVar(r,origdepth,0))
          (uppterm depth [] adepth e) v)];
       r @:= v;
@@ -2301,16 +2302,6 @@ let make_index ~depth ~indexing p =
 let add_clauses ~depth clauses clauses_src { index; src } =
   { index = add_clauses ~depth clauses index; src = List.rev clauses_src @ src }
 
- 
-let predicate_of_goal ~depth t =
-  match deref_head ~depth t with
-  | Const k as x -> k, x
-  | App (k,_,_) as x -> k, x
-  | Builtin _ -> assert false
-  | (Nil | Cons _ | Arg _ | AppArg _ | Lam _
-    | UVar _ | AppUVar _ | CData _ | Discard) as x ->
-    type_error ("The goal's head is not a predicate: " ^ show_term x)
-
 type goal_arg_classification =
   | Variable
   | Rigid of constant
@@ -2349,8 +2340,7 @@ let hash_goal_args ~depth mode args goal =
   | App(k,x,xs) -> hash_goal_arg_list k ~depth (x::xs) mode args
   | _ -> assert false
 
-let get_clauses ~depth goal { index = m } =
- let predicate, goal = predicate_of_goal ~depth goal in
+let get_clauses ~depth predicate goal { index = m } =
  let rc =
    try
      match Ptmap.find predicate m with
@@ -2625,14 +2615,16 @@ and alternative = {
   lvl : alternative;
   program : prolog_prog;
   adepth : int;
-  agoal : term;
+  agoal_hd : constant;
+  ogoal_arg : term;
+  ogoal_args : term list;
   agid : UUID.t; [@trace]
   goals : goal list;
   stack : frame;
   trail : T.trail;
   state : State.t;
   clauses : clause list;
-  next : alternative
+  next : alternative;
 }
 let noalts : alternative = Obj.magic 0
 
@@ -3222,7 +3214,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
  | Some [] ->
     match g with
     | Builtin(c,[]) when c == Global_symbols.cutc -> [%spy "user:rule" gid "cut"];
-       [%tcall cut p gs next alts lvl]
+       [%tcall cut (gid[@trace]) gs next alts lvl]
     | App(c, g, gs') when c == Global_symbols.andc -> [%spy "user:rule" gid "and"];
        let gs' = List.map (fun x -> (make_sub_goal[@inlined]) ~depth (gid[@trace]) p x) gs' in
        let gid[@trace] = make_sub_goal_id gid in
@@ -3260,10 +3252,14 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
        [%tcall run depth p (deref_uv ~from ~to_:depth args g) (gid[@trace]) gs next alts lvl]
     | AppUVar ({contents = t}, from, args) when t != C.dummy -> [%spy "user:rule" gid "deref"];
        [%tcall run depth p (deref_appuv ~from ~to_:depth args t) (gid[@trace]) gs next alts lvl]
-    | Const k | App (k,_,_) -> [%spy "user:rule" gid "backchain"];
-       let cp = get_clauses depth g p in
-       [%spy "user:candidates" gid (fun fmt -> pplist ~max:1 ~boxed:true (fun fmt -> ppclause fmt ~depth ~hd:k) " | " fmt cp)];
-       [%tcall backchain depth p g gs (gid[@trace]) cp next alts lvl]
+    | Const k -> [%spy "user:rule" gid "backchain"];
+       let clauses = get_clauses depth k g p in
+       [%spy "user:candidates" gid (fun fmt -> pplist ~max:1 ~boxed:true (fun fmt -> ppclause fmt ~depth ~hd:k) " | " fmt clauses)];
+       [%tcall backchain depth p (k, C.dummy, [], gs) (gid[@trace]) next alts lvl clauses]
+    | App (k,x,xs) -> [%spy "user:rule" gid "backchain"];
+       let clauses = get_clauses depth k g p in
+       [%spy "user:candidates" gid (fun fmt -> pplist ~max:1 ~boxed:true (fun fmt -> ppclause fmt ~depth ~hd:k) " | " fmt clauses)];
+       [%tcall backchain depth p (k, x, xs, gs) (gid[@trace]) next alts lvl clauses]
     | Builtin(c, args) -> [%spy "user:rule" gid "builtin"];
        begin match Constraints.exect_builtin_predicate c ~depth p (gid[@trace]) args with
        | gs' ->
@@ -3279,62 +3275,61 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
         error "The goal is a flexible term"
   end]
 
-  and backchain depth p g gs (gid[@trace]) cp next alts lvl =
-    let maybe_last_call = alts == noalts in
-    let rec args_of = function
-      | Const k -> k, []
-      | App(k,x,xs) -> k, x::xs
-      | UVar ({ contents = g },origdepth,args) when g != C.dummy ->
-         args_of (deref_uv ~from:origdepth ~to_:depth args g)
-      | AppUVar({ contents = g },origdepth,args) when g != C.dummy ->
-         args_of (deref_appuv ~from:origdepth ~to_:depth args g)
-      | _ -> anomaly "ill-formed goal" in
-    let k, args_of_g = args_of g in
-    let rec select l =
-      [%trace "select" (fun fmt ->
-          match l with
-          | [] -> Fmt.fprintf fmt "gid:%a no more candidates" UUID.pp gid
-          | c :: _ -> Fmt.fprintf fmt "gid:%a candidate %a" UUID.pp gid (ppclause ~depth ~hd:k) c)
-     begin match l with
-      | [] -> [%tcall next_alt alts]
-      | c :: cs ->
+  (* We pack some arguments into a tuple otherwise we consume too much stack *)
+  and backchain depth p (k, arg, args_of_g, gs) (gid[@trace]) next alts lvl cp =
+    [%trace "select" (fun fmt ->
+       match cp with
+       | [] -> Fmt.fprintf fmt "gid:%a no more candidates" UUID.pp gid
+       | c :: _ -> Fmt.fprintf fmt "gid:%a candidate %a" UUID.pp gid (ppclause ~depth ~hd:k) c)
+     begin match cp with
+      | [] -> [%spy "user:select" gid "fail"];
+        [%tcall next_alt alts]
+      | { depth = c_depth; mode = c_mode; args = c_args; hyps = c_hyps; vars = c_vars } :: cs ->
+        [%spy "user:select" gid (fun fmt -> ppclause ~depth ~hd:k fmt { depth = c_depth; mode = c_mode; args = c_args; hyps = c_hyps; vars = c_vars })];
         let old_trail = !T.trail in
-        T.last_call := maybe_last_call && cs = [];
-        let env = Array.make c.vars C.dummy in
+        T.last_call := alts == noalts && cs == [];
+        let env = Array.make c_vars C.dummy in
         match
-         for_all3b (fun x y matching -> unif ~matching depth env c.depth x y)
-           args_of_g c.args c.mode false
+          match c_args with
+          | [] -> arg == C.dummy && args_of_g == []
+          | x :: xs -> arg != C.dummy &&
+             match c_mode with
+             | [] -> unif ~matching:false depth env c_depth arg x && for_all3b (fun x y matching -> unif ~matching depth env c_depth x y) args_of_g xs [] false
+             | matching :: ms -> unif ~matching depth env c_depth arg x && for_all3b (fun x y matching -> unif ~matching depth env c_depth x y) args_of_g xs ms false
         with
-        | false -> T.undo old_trail (); [%tcall select cs]
+        | false -> T.undo old_trail (); [%tcall backchain depth p (k, arg, args_of_g, gs) (gid[@trace]) next alts lvl cs]
         | true ->
            let oldalts = alts in
            let alts = if cs = [] then alts else
-             { program = p; adepth = depth; agoal = g; agid = gid[@trace]; goals = gs; stack = next;
+             { program = p; adepth = depth; agoal_hd = k; ogoal_arg = arg; ogoal_args = args_of_g; agid = gid[@trace]; goals = gs; stack = next;
                trail = old_trail;
                state = !CS.state;
                clauses = cs; lvl = lvl ; next = alts} in
-           begin match c.hyps with
+           begin match c_hyps with
            | [] ->
               begin match gs with
               | [] -> [%tcall pop_andl alts next lvl]
               | { depth ; program; goal; gid = gid [@trace] } :: gs -> [%tcall run depth program goal (gid[@trace]) gs next alts lvl] end
            | h::hs ->
               let next = if gs = [] then next else FCons (lvl,gs,next) in
-              let h = move ~adepth:depth ~from:c.depth ~to_:depth env h in
+              let h = move ~adepth:depth ~from:c_depth ~to_:depth env h in
               let hs =
                 List.map (fun x->
-                  (make_sub_goal[@inlined]) (gid[@trace]) ~depth p (move ~adepth:depth ~from:c.depth ~to_:depth env x))
+                  (make_sub_goal[@inlined]) (gid[@trace]) ~depth p (move ~adepth:depth ~from:c_depth ~to_:depth env x))
                 hs in
               let gid[@trace] = make_sub_goal_id gid in
               [%tcall run depth p h (gid[@trace]) hs next alts oldalts] end
-      end] in
-      select cp
+      end]
 
-  and cut p gs next alts lvl =
+  and cut (gid[@trace]) gs next alts lvl =
     (* cut the or list until the last frame not to be cut (called lvl) *)
-    let rec prune alts = if alts == lvl then alts else prune alts.next in
+    let rec prune alts =
+      if alts == lvl then alts
+      else begin
+        [%spy "user:cut" alts.agid (fun fmt -> pplist ~max:1 ~boxed:true (fun fmt -> ppclause fmt ~depth:alts.adepth ~hd:alts.agoal_hd) " | " fmt alts.clauses)];
+        prune alts.next
+      end in
     let alts = prune alts in
-    (* XXX what about custom constraints *)
     if alts == noalts then (T.cut_trail[@inlined]) ();
     match gs with
     | [] -> pop_andl alts next lvl
@@ -3395,11 +3390,11 @@ end;*)
   and next_alt alts =
    if alts == noalts then raise No_clause
    else
-     let { program = p; clauses; agoal = g; agid = gid [@trace]; goals = gs; stack = next;
+     let { program = p; clauses; agoal_hd = k; ogoal_arg = arg; ogoal_args = args; agid = gid [@trace]; goals = gs; stack = next;
           trail = old_trail; state = old_state;
           adepth = depth; lvl = lvl; next = alts} = alts in
     T.undo ~old_trail ~old_state ();
-    backchain depth p g gs (gid[@trace]) clauses next alts lvl (* XXX *)
+    backchain depth p (k, arg, args, gs) (gid[@trace]) next alts lvl clauses
   in
 
 
