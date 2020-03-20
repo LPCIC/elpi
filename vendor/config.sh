@@ -10,5 +10,5 @@ function provide() {
 provide seq
 provide result
 provide cppo
-provide ppx_deriving
+provide ppx_deriving; rm -fr ppx_deriving.*/src_plugins
 provide re
