@@ -8,8 +8,11 @@
 (executable
   (name ppxfindcache)
   (public_name ppxfindcache)
-  (modules ppxfindcache)
-  (libraries unix)
+  (modules ppxfindcache ppxfindcache_aux)
+  (libraries unix
+    (select ppxfindcache.ml from
+      (elpi.trace_ppx -> ppxfindcache.useppx.ml)
+      (-> ppxfindcache.cacheonly.ml)))
 )
 
 (vendored_dirs vendor)

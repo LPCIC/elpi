@@ -1,4 +1,4 @@
-(*7ddd9d31d8fba8bac967c4c3aa7fd37dd197cb79  src/util.ml ppx_deriving.std *)
+(*c7c51af0bc940c71755b1a9375a8fab7d247a0b6  src/util.ml ppx_deriving.std *)
 #1 "src/util.ml"
 module type Show  =
   sig type t val pp : Format.formatter -> t -> unit val show : t -> string
@@ -363,7 +363,7 @@ module Pair =
             Ppx_deriving_runtime.Format.asprintf "%a" ((pp poly_a) poly_b) x
     [@@ocaml.warning "-32"]
   end
-let pp_option = Option.pp
+let pp_option f fmt = function | None -> () | Some x -> f fmt x
 let pp_int = Int.pp
 let pp_string = String.pp
 let pp_pair = Pair.pp

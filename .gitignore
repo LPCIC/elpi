@@ -14,6 +14,7 @@ tests/sources/lyp/helena
 tests/sources/lyp/etc
 tests/sources/helena_elpi/helena
 tests/sources/helena_elpi/etc
+tests/test.exe
 
 vendor/*/
 

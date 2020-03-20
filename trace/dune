@@ -19,8 +19,10 @@
 (executable
   (name merlinppx)
   (promote)
-  (optional)
   (modules merlinppx)
-  (libraries ocaml-migrate-parsetree ppx_tools_versioned ppx_tools_versioned.metaquot_404)
+  (libraries
+    (select merlinppx.ml from
+     (ocaml-migrate-parsetree ppx_tools_versioned ppx_tools_versioned.metaquot_404 -> merlinppx.ppx.ml)
+     (-> merlinppx.noop.ml)))
   (flags -linkall)
 )

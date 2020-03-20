@@ -45,7 +45,7 @@ let exec ?(err=fun _ -> false, "") p args =
 let must (b,s) =
   if b then s else exit 1
 
-let main () =
+let main use_ppx =
   let ppx = ref "" in
   let file = ref "" in
   let flag = ref [||] in
@@ -83,7 +83,8 @@ let main () =
         |> map (fun x -> exec "ocamlfind" [|"query";"-qo";x|])
         |> map fst) in
 
-  if all_ppx_available then
+  if use_ppx then
+    let () = if not all_ppx_available then (Printf.eprintf "some ppx not available"; exit 1) in
     let args =
       let open Array in
       append [|ppx|] (append flag [|file|]) in
@@ -107,4 +108,3 @@ let main () =
       exit 1
     end
 ;;
-main ()

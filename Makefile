@@ -28,12 +28,9 @@ DUNE_OPTS=
 
 build:
 	cd vendor && ./config.sh
-	( dune build $(DUNE_OPTS) trace && dune build $(DUNE_OPTS) @install ) ; \
-	RC=$$?; \
+	dune build $(DUNE_OPTS) @all ; RC=$$?; \
 	( cp -r _build/default/src/.ppcache src/ 2>/dev/null || true ); \
-	( dune build $(DUNE_OPTS) trace/merlinppx.exe; \
-	  dune build $(DUNE_OPTS) src/merlinppx.exe; \
-	  echo "FLG -ppx './merlinppx.exe --as-ppx'" >> trace/.merlin;\
+	( echo "FLG -ppx './merlinppx.exe --as-ppx'" >> trace/.merlin;\
 	  echo "FLG -ppx './merlinppx.exe --as-ppx --trace_ppx-on'" >> src/.merlin );\
 	exit $$RC
 
@@ -46,11 +43,13 @@ doc:
 clean:
 	rm -rf _build
 
+cleancache:
+	$(foreach f, $(wildcard src/.ppcache/*), echo > $(f); )
+
 tests:
 	$(MAKE) build
-	dune build $(DUNE_OPTS) $(BUILD)/tests/test.exe
 	ulimit -s $(STACK); \
-		$(BUILD)/tests/test.exe \
+		tests/test.exe \
 		--seed $$RANDOM \
 		--timeout $(TIMEOUT) \
 		$(TIME) \

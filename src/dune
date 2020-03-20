@@ -13,11 +13,11 @@
                     --cache-file %{dep:.ppcache/compiler.ml}
                     --cache-file %{dep:.ppcache/compiler.mli}))
               util API ast data compiler)
-    ((action (run ppxfindcache %{input-file} --ppx ppx_deriving.std,elpi.trace_ppx --ppx-opt --trace_ppx-on
+    ((action (run ppxfindcache %{input-file} --ppx elpi.trace_ppx,ppx_deriving.std --ppx-opt --trace_ppx-on
                     --cache-file %{dep:.ppcache/runtime_trace_on.ml}
                     --cache-file %{dep:.ppcache/runtime_trace_on.mli}))
               runtime_trace_on)
-    ((action (run ppxfindcache %{input-file} --ppx ppx_deriving.std,elpi.trace_ppx --ppx-opt --trace_ppx-off
+    ((action (run ppxfindcache %{input-file} --ppx elpi.trace_ppx,ppx_deriving.std --ppx-opt --trace_ppx-off
                     --cache-file %{dep:.ppcache/runtime_trace_off.ml}
                     --cache-file %{dep:.ppcache/runtime_trace_off.mli}))
               runtime_trace_off)
@@ -77,8 +77,10 @@
 (executable
   (name merlinppx)
   (promote)
-  (optional)
   (modules merlinppx)
-  (libraries ocaml-migrate-parsetree elpi.trace_ppx ppx_deriving.std)
+  (libraries
+    (select merlinppx.ml from
+     (ocaml-migrate-parsetree elpi.trace_ppx ppx_deriving.std -> merlinppx.ppx.ml)
+     (-> merlinppx.noop.ml)))
   (flags -linkall)
 )

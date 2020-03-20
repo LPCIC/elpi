@@ -245,13 +245,13 @@ expr = begin fun mapper expr ->
 end;
 
 type_declaration = begin fun mapper type_declaration ->
-  let type_declaration = default_mapper.type_declaration mapper type_declaration in
-  match type_declaration with
+  let type_declaration = match type_declaration with
   | { ptype_kind = Ptype_record lbls; _ } as r when not !enabled ->
      let lbls = lbls |> List.filter (fun { pld_attributes = l; _ } ->
        not (has_iftrace_attribute l)) in
      { r with ptype_kind = Ptype_record lbls }
-  | x -> x
+  | x -> x in
+  default_mapper.type_declaration mapper type_declaration
 end;
 
 pat = begin fun mapper pat ->
