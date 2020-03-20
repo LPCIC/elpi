@@ -1,4 +1,4 @@
-(*28d7bad6722a65efca423f6dc757316bf78ecf84  src/runtime_trace_on.ml elpi.trace_ppx,ppx_deriving.std --trace_ppx-on*)
+(*0d1693a4fe694862cb320ffda87405e1c9e2e163  src/runtime_trace_on.ml elpi.trace_ppx,ppx_deriving.std --trace_ppx-on*)
 #1 "src/runtime_trace_on.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -442,38 +442,41 @@ module ConstraintStoreAndTrail :
              Some (c, blockers)
          | _ -> None) (!delayed)
     let trail_assignment x =
-      Trace.Runtime.info "trail-this"
-        [Trace.Runtime.J
-           (((fun fmt ->
-                fun () ->
-                  Fmt.fprintf fmt "last_call:%b item:%a" (!last_call)
-                    pp_trail_item (Assignement x))), ())];
+      if true
+      then
+        Trace.Runtime.info "dev:trail:assign"
+          [Trace.Runtime.J (Fmt.pp_print_bool, (!last_call));
+          Trace.Runtime.J (pp_trail_item, (Assignement x))];
       if not (!last_call) then trail := ((Assignement x) :: (!trail))
       [@@inline ]
     let trail_stuck_goal_addition x =
-      Trace.Runtime.info "trail-this"
-        [Trace.Runtime.J
-           (((fun fmt ->
-                fun () ->
-                  Fmt.fprintf fmt "last_call:%b item:%a" (!last_call)
-                    pp_trail_item (StuckGoalAddition x))), ())];
+      if true
+      then
+        Trace.Runtime.info "dev:trail:add-constraint"
+          [Trace.Runtime.J (Fmt.pp_print_bool, (!last_call));
+          Trace.Runtime.J (pp_trail_item, (StuckGoalAddition x))];
       if not (!last_call) then trail := ((StuckGoalAddition x) :: (!trail))
       [@@inline ]
     let trail_stuck_goal_removal x =
-      Trace.Runtime.info "trail-this"
-        [Trace.Runtime.J
-           (((fun fmt ->
-                fun () ->
-                  Fmt.fprintf fmt "last_call:%b item:%a" (!last_call)
-                    pp_trail_item (StuckGoalRemoval x))), ())];
+      if true
+      then
+        Trace.Runtime.info "dev:trail:remove-constraint"
+          [Trace.Runtime.J (Fmt.pp_print_bool, (!last_call));
+          Trace.Runtime.J (pp_trail_item, (StuckGoalRemoval x))];
       if not (!last_call) then trail := ((StuckGoalRemoval x) :: (!trail))
       [@@inline ]
     let remove ({ blockers } as sg) =
-      Trace.Runtime.info "remove" [Trace.Runtime.J (pp_stuck_goal, sg)];
+      if true
+      then
+        Trace.Runtime.info "dev:constraint:remove"
+          [Trace.Runtime.J (pp_stuck_goal, sg)];
       delayed := (remove_from_list sg (!delayed));
       List.iter (fun r -> r.rest <- (remove_from_list sg r.rest)) blockers
     let add ({ blockers } as sg) =
-      Trace.Runtime.info "add" [Trace.Runtime.J (pp_stuck_goal, sg)];
+      if true
+      then
+        Trace.Runtime.info "dev:constraint:add"
+          [Trace.Runtime.J (pp_stuck_goal, sg)];
       auxsg := (sg :: (!auxsg));
       delayed := (sg :: (!delayed));
       List.iter (fun r -> r.rest <- (sg :: (r.rest))) blockers
@@ -518,10 +521,12 @@ module ConstraintStoreAndTrail :
     let undo ~old_trail  ?old_state  () =
       to_resume := [];
       new_delayed := [];
-      Trace.Runtime.info "trail-undo-from"
-        [Trace.Runtime.J (pp_trail, (!trail))];
-      Trace.Runtime.info "trail-undo-to"
-        [Trace.Runtime.J (pp_trail, old_trail)];
+      if true
+      then
+        Trace.Runtime.info "dev:trail:undo"
+          [Trace.Runtime.J (pp_trail, (!trail));
+          Trace.Runtime.J (pp_string, "->");
+          Trace.Runtime.J (pp_trail, old_trail)];
       while (!trail) != old_trail do
         (match !trail with
          | (Assignement r)::rest -> (r.contents <- C.dummy; trail := rest)
@@ -576,17 +581,19 @@ let (@:=) r v =
   ((T.trail_assignment)[@inlined ]) r;
   if r.rest <> []
   then
-    (Trace.Runtime.info "user:assign(resume)"
-       [Trace.Runtime.J
-          (((fun fmt ->
-               fun l ->
-                 let l =
-                   map_filter
-                     (function
-                      | { kind = Constraint { cgid;_};_} -> Some cgid
-                      | _ -> None) l in
-                 Fmt.fprintf fmt "%a" (pplist ~boxed:true UUID.pp " ") l)),
-            (r.rest))];
+    (if true
+     then
+       Trace.Runtime.info "user:assign(resume)"
+         [Trace.Runtime.J
+            (((fun fmt ->
+                 fun l ->
+                   let l =
+                     map_filter
+                       (function
+                        | { kind = Constraint { cgid;_};_} -> Some cgid
+                        | _ -> None) l in
+                   Fmt.fprintf fmt "%a" (pplist ~boxed:true UUID.pp " ") l)),
+              (r.rest))];
      CS.to_resume :=
        (List.fold_right
           (fun x -> fun acc -> if List.memq x acc then acc else x :: acc)
@@ -594,7 +601,9 @@ let (@:=) r v =
   r.contents <- v
 module HO :
   sig
-    val unif : matching:bool -> int -> env -> int -> term -> term -> bool
+    val unif :
+      matching:bool ->
+        ((UUID.t)[@trace ]) -> int -> env -> int -> term -> term -> bool
     val move :
       adepth:int ->
         env -> ?avoid:uvar_body -> from:int -> to_:int -> term -> term
@@ -674,22 +683,24 @@ module HO :
          let t = AppUVar (r1, 0, args) in
          let assignment = mknLam ano t in (t, (Some (r, lvl, assignment))))
     let expand_uv ~depth  r ~lvl  ~ano  =
-      Trace.Runtime.info "expand-uv-in"
-        [Trace.Runtime.J
-           ((uppterm depth [] 0 empty_env), (UVar (r, lvl, ano)))];
+      if true
+      then
+        Trace.Runtime.info "dev:expand_uv:in"
+          [Trace.Runtime.J
+             ((uppterm depth [] 0 empty_env), (UVar (r, lvl, ano)))];
       (let (t, ass) as rc = expand_uv r ~lvl ~ano in
-       Trace.Runtime.info "expand-uv-out"
-         [Trace.Runtime.J ((uppterm depth [] 0 empty_env), t)];
-       Trace.Runtime.info "expand-uv-out"
-         [Trace.Runtime.J
-            (((fun fmt ->
-                 fun () ->
-                   match ass with
-                   | None -> Fmt.fprintf fmt "no assignment"
-                   | Some (_, _, t) ->
-                       Fmt.fprintf fmt "%a := %a"
-                         (uppterm depth [] 0 empty_env) (UVar (r, lvl, ano))
-                         (uppterm lvl [] 0 empty_env) t)), ())];
+       if true
+       then
+         Trace.Runtime.info "dev:expand_uv:out"
+           [Trace.Runtime.J ((uppterm depth [] 0 empty_env), t);
+           Trace.Runtime.J
+             (((fun fmt ->
+                  function
+                  | None -> Fmt.fprintf fmt "no assignment"
+                  | Some (_, _, t) ->
+                      Fmt.fprintf fmt "%a := %a"
+                        (uppterm depth [] 0 empty_env) (UVar (r, lvl, ano))
+                        (uppterm lvl [] 0 empty_env) t)), ass)];
        rc)
     let expand_appuv r ~lvl  ~args  =
       if lvl = 0
@@ -704,23 +715,25 @@ module HO :
              (AppUVar (r1, 0, (args_lvl @ (C.mkinterval lvl nargs 0)))) in
          (t, (Some (r, lvl, assignment))))
     let expand_appuv ~depth  r ~lvl  ~args  =
-      Trace.Runtime.info "expand-appuv-in"
-        [Trace.Runtime.J
-           ((uppterm depth [] 0 empty_env), (AppUVar (r, lvl, args)))];
+      if true
+      then
+        Trace.Runtime.info "dev:expand_appuv:in"
+          [Trace.Runtime.J
+             ((uppterm depth [] 0 empty_env), (AppUVar (r, lvl, args)))];
       (let (t, ass) as rc = expand_appuv r ~lvl ~args in
-       Trace.Runtime.info "expand-appuv-out"
-         [Trace.Runtime.J ((uppterm depth [] 0 empty_env), t)];
-       Trace.Runtime.info "expand-uv-out"
-         [Trace.Runtime.J
-            (((fun fmt ->
-                 fun () ->
-                   match ass with
-                   | None -> Fmt.fprintf fmt "no assignment"
-                   | Some (_, _, t) ->
-                       Fmt.fprintf fmt "%a := %a"
-                         (uppterm depth [] 0 empty_env)
-                         (AppUVar (r, lvl, args))
-                         (uppterm lvl [] 0 empty_env) t)), ())];
+       if true
+       then
+         Trace.Runtime.info "dev:expand_appuv:out"
+           [Trace.Runtime.J ((uppterm depth [] 0 empty_env), t);
+           Trace.Runtime.J
+             (((fun fmt ->
+                  function
+                  | None -> Fmt.fprintf fmt "no assignment"
+                  | Some (_, _, t) ->
+                      Fmt.fprintf fmt "%a := %a"
+                        (uppterm depth [] 0 empty_env)
+                        (AppUVar (r, lvl, args)) (uppterm lvl [] 0 empty_env)
+                        t)), ass)];
        rc)
     let rec move ~adepth:argsdepth  e ?avoid  ~from  ~to_  t =
       let delta = from - to_ in
@@ -848,15 +861,18 @@ module HO :
                                 ~ano:argsno in
                             option_iter
                               (fun (r, _, assignment) ->
-                                 Trace.Runtime.info "user:assign(expand)"
-                                   [Trace.Runtime.J
-                                      (((fun fmt ->
-                                           fun () ->
-                                             Fmt.fprintf fmt "%a := %a"
-                                               (uppterm (from + depth) []
-                                                  argsdepth e) x
-                                               (uppterm vardepth [] argsdepth
-                                                  e) assignment)), ())];
+                                 if true
+                                 then
+                                   Trace.Runtime.info "user:assign(expand)"
+                                     [Trace.Runtime.J
+                                        (((fun fmt ->
+                                             fun () ->
+                                               Fmt.fprintf fmt "%a := %a"
+                                                 (uppterm (from + depth) []
+                                                    argsdepth e) x
+                                                 (uppterm vardepth []
+                                                    argsdepth e) assignment)),
+                                          ())];
                                  r @:= assignment) assignment;
                             maux e depth t))
                   | AppUVar (r, vardepth, args) ->
@@ -912,16 +928,19 @@ module HO :
                                   mkAppUVar r' vardepth'
                                     (!filteredargs_vardepth) in
                                 let assignment = mknLam orig_argsno newvar in
-                                (Trace.Runtime.info "user:assign(restrict)"
-                                   [Trace.Runtime.J
-                                      (((fun fmt ->
-                                           fun () ->
-                                             Fmt.fprintf fmt "%d %a := %a"
-                                               vardepth
-                                               (ppterm (from + depth) []
-                                                  argsdepth e) x
-                                               (ppterm vardepth [] argsdepth
-                                                  e) assignment)), ())];
+                                (if true
+                                 then
+                                   Trace.Runtime.info "user:assign(restrict)"
+                                     [Trace.Runtime.J
+                                        (((fun fmt ->
+                                             fun () ->
+                                               Fmt.fprintf fmt "%d %a := %a"
+                                                 vardepth
+                                                 (ppterm (from + depth) []
+                                                    argsdepth e) x
+                                                 (ppterm vardepth []
+                                                    argsdepth e) assignment)),
+                                          ())];
                                  r @:= assignment;
                                  mkAppUVar r' vardepth' filteredargs_to)
                               else mkAppUVar r vardepth filteredargs_to)
@@ -941,8 +960,10 @@ module HO :
                   let elapsed = (Unix.gettimeofday ()) -. wall_clock in
                   (Trace.Runtime.exit "move" false (Some e) elapsed; raise e)) in
            maux e 0 t) in
-      Trace.Runtime.info "move-output"
-        [Trace.Runtime.J ((ppterm to_ [] argsdepth e), rc)];
+      if true
+      then
+        Trace.Runtime.info "dev:move:out"
+          [Trace.Runtime.J ((ppterm to_ [] argsdepth e), rc)];
       rc
     and hmove ?avoid  ~from  ~to_  t =
       let wall_clock = Unix.gettimeofday () in
@@ -1124,8 +1145,10 @@ module HO :
                       (Obj.repr tl)))
            | _ ->
                let t' = subst depth sub t in
-               (Trace.Runtime.info "subst-result"
-                  [Trace.Runtime.J ((ppterm depth [] 0 empty_env), t')];
+               (if true
+                then
+                  Trace.Runtime.info "dev:subst:out"
+                    [Trace.Runtime.J ((ppterm depth [] 0 empty_env), t')];
                 (match args with
                  | [] -> t'
                  | ahd::atl ->
@@ -1256,17 +1279,19 @@ module HO :
       with | RestrictionFailure -> (false, [])
     let is_llam lvl args adepth bdepth depth left e =
       let res = is_llam lvl args adepth bdepth depth left e in
-      Trace.Runtime.info "is_llam"
-        [Trace.Runtime.J
-           (((fun fmt ->
-                fun () ->
-                  let (b, map) = res in
-                  Fmt.fprintf fmt "%d + %a = %b, %a" lvl
-                    (pplist (ppterm adepth [] bdepth e) " ") args b
-                    (pplist
-                       (fun fmt ->
-                          fun (x, n) -> Fmt.fprintf fmt "%d |-> %d" x n) " ")
-                    map)), ())];
+      if true
+      then
+        Trace.Runtime.info "dev:is_llam"
+          [Trace.Runtime.J
+             (((fun fmt ->
+                  fun () ->
+                    let (b, map) = res in
+                    Fmt.fprintf fmt "%d + %a = %b, %a" lvl
+                      (pplist (ppterm adepth [] bdepth e) " ") args b
+                      (pplist
+                         (fun fmt ->
+                            fun (x, n) -> Fmt.fprintf fmt "%d |-> %d" x n)
+                         " ") map)), ())];
       res
     let rec mknLam n t = if n = 0 then t else mknLam (n - 1) (Lam t)
     let bind r gamma l a d delta b left t e =
@@ -1295,14 +1320,16 @@ module HO :
             else (pos c) + gamma in
       let cst ?hmove  c b delta =
         let n = cst ?hmove c b delta in
-        Trace.Runtime.info "cst"
-          [Trace.Runtime.J
-             (((fun fmt ->
-                  fun () ->
-                    let (n, m) = (c, n) in
-                    Fmt.fprintf fmt
-                      "%d -> %d (c:%d b:%d gamma:%d delta:%d d:%d)" n m c b
-                      gamma delta d)), ())];
+        if true
+        then
+          Trace.Runtime.info "dev:bind:constant-mapping"
+            [Trace.Runtime.J
+               (((fun fmt ->
+                    fun () ->
+                      let (n, m) = (c, n) in
+                      Fmt.fprintf fmt
+                        "%d -> %d (c:%d b:%d gamma:%d delta:%d d:%d)" n m c b
+                        gamma delta d)), ())];
         n in
       let rec bind b delta w t =
         let wall_clock = Unix.gettimeofday () in
@@ -1383,20 +1410,22 @@ module HO :
                        let v = UVar (r, a, 0) in
                        (e.(i) <- v; (r, a, (is_llam, args), orig_args))
                    | _ -> assert false in
-                 (Trace.Runtime.info "bind-maybe-prune"
-                    [Trace.Runtime.J
-                       (((fun fmt ->
-                            fun () ->
-                              Fmt.fprintf fmt
-                                "lvl:%d is_llam:%b args:%a orig_args:%a orig:%a"
-                                lvl is_llam
-                                (pplist
-                                   (fun fmt ->
-                                      fun (x, n) ->
-                                        Fmt.fprintf fmt "%a->%d"
-                                          (ppterm a [] b e) (mkConst x) n)
-                                   " ") args (pplist (ppterm a [] b e) " ")
-                                orig_args (ppterm a [] b e) orig)), ())];
+                 (if true
+                  then
+                    Trace.Runtime.info "dev:bind:maybe-prune"
+                      [Trace.Runtime.J
+                         (((fun fmt ->
+                              fun () ->
+                                Fmt.fprintf fmt
+                                  "lvl:%d is_llam:%b args:%a orig_args:%a orig:%a"
+                                  lvl is_llam
+                                  (pplist
+                                     (fun fmt ->
+                                        fun (x, n) ->
+                                          Fmt.fprintf fmt "%a->%d"
+                                            (ppterm a [] b e) (mkConst x) n)
+                                     " ") args (pplist (ppterm a [] b e) " ")
+                                  orig_args (ppterm a [] b e) orig)), ())];
                   if is_llam
                   then
                     (let n_args = List.length args in
@@ -1483,18 +1512,19 @@ module HO :
              (Trace.Runtime.exit "bind" false (Some e) elapsed; raise e)) in
       try
         let v = mknLam new_lams (bind b delta 0 t) in
-        Trace.Runtime.info "user:assign(HO)"
-          [Trace.Runtime.J
-             (((fun fmt ->
-                  fun () ->
-                    Fmt.fprintf fmt "%a := %a" (uppterm gamma [] a e)
-                      (UVar (r, gamma, 0)) (uppterm gamma [] a e) v)), ())];
+        if true
+        then
+          Trace.Runtime.info "user:assign(HO)"
+            [Trace.Runtime.J
+               (((fun fmt ->
+                    fun () ->
+                      Fmt.fprintf fmt "%a := %a" (uppterm gamma [] a e)
+                        (UVar (r, gamma, 0)) (uppterm gamma [] a e) v)), ())];
         r @:= v;
         true
       with
       | RestrictionFailure ->
-          (Trace.Runtime.info "bind result"
-             [Trace.Runtime.J (Fmt.pp_print_bool, false)];
+          (if true then Trace.Runtime.info "dev:bind:restriction-failure" [];
            false)
     let rec list_to_lp_list =
       function | [] -> Nil | x::xs -> Cons (x, (list_to_lp_list xs))
@@ -1619,13 +1649,15 @@ module HO :
               | (_, Arg (i, 0)) ->
                   (try
                      let v = hmove ~from:(adepth + depth) ~to_:adepth a in
-                     Trace.Runtime.info "user:assign"
-                       [Trace.Runtime.J
-                          (((fun fmt ->
-                               fun () ->
-                                 Fmt.fprintf fmt "%a := %a"
-                                   (uppterm adepth [] adepth e) b
-                                   (uppterm adepth [] adepth e) v)), ())];
+                     if true
+                     then
+                       Trace.Runtime.info "user:assign"
+                         [Trace.Runtime.J
+                            (((fun fmt ->
+                                 fun () ->
+                                   Fmt.fprintf fmt "%a := %a"
+                                     (uppterm adepth [] adepth e) b
+                                     (uppterm adepth [] adepth e) v)), ())];
                      e.(i) <- v;
                      true
                    with | RestrictionFailure -> false)
@@ -1643,13 +1675,15 @@ module HO :
                             hmove ~avoid:r ~from:(adepth + depth)
                               ~to_:(bdepth + depth) a in
                           hmove ~from:(bdepth + depth) ~to_:origdepth a) in
-                     Trace.Runtime.info "user:assign"
-                       [Trace.Runtime.J
-                          (((fun fmt ->
-                               fun () ->
-                                 Fmt.fprintf fmt "%a := %a"
-                                   (uppterm depth [] bdepth e) b
-                                   (uppterm depth [] bdepth e) t)), ())];
+                     if true
+                     then
+                       Trace.Runtime.info "user:assign"
+                         [Trace.Runtime.J
+                            (((fun fmt ->
+                                 fun () ->
+                                   Fmt.fprintf fmt "%a := %a"
+                                     (uppterm depth [] bdepth e) b
+                                     (uppterm depth [] bdepth e) t)), ())];
                      r @:= t;
                      true
                    with | RestrictionFailure -> false)
@@ -1665,33 +1699,39 @@ module HO :
                             move ~avoid:r ~adepth ~from:(bdepth + depth)
                               ~to_:(adepth + depth) e b in
                           hmove ~from:(adepth + depth) ~to_:origdepth b) in
-                     Trace.Runtime.info "user:assign"
-                       [Trace.Runtime.J
-                          (((fun fmt ->
-                               fun () ->
-                                 Fmt.fprintf fmt "%a := %a"
-                                   (uppterm origdepth [] 0 empty_env) a
-                                   (uppterm origdepth [] 0 empty_env) t)),
-                            ())];
+                     if true
+                     then
+                       Trace.Runtime.info "user:assign"
+                         [Trace.Runtime.J
+                            (((fun fmt ->
+                                 fun () ->
+                                   Fmt.fprintf fmt "%a := %a"
+                                     (uppterm origdepth [] 0 empty_env) a
+                                     (uppterm origdepth [] 0 empty_env) t)),
+                              ())];
                      r @:= t;
                      true
                    with | RestrictionFailure -> false)
               | (_, Arg (i, args)) ->
                   let v = fst (make_lambdas adepth args) in
-                  (Trace.Runtime.info "user:assign"
-                     [Trace.Runtime.J
-                        (((fun fmt ->
-                             fun () ->
-                               Fmt.fprintf fmt "%a := %a"
-                                 (uppterm depth [] bdepth e) (Arg (i, 0))
-                                 (uppterm depth [] bdepth e) v)), ())];
+                  (if true
+                   then
+                     Trace.Runtime.info "user:assign"
+                       [Trace.Runtime.J
+                          (((fun fmt ->
+                               fun () ->
+                                 Fmt.fprintf fmt "%a := %a"
+                                   (uppterm depth [] bdepth e) (Arg (i, 0))
+                                   (uppterm depth [] bdepth e) v)), ())];
                    e.(i) <- v;
-                   Trace.Runtime.info "user:assign"
-                     [Trace.Runtime.J
-                        (((fun fmt ->
-                             fun () ->
-                               ppterm depth [] adepth empty_env fmt (e.(i)))),
-                          ())];
+                   if true
+                   then
+                     Trace.Runtime.info "user:assign"
+                       [Trace.Runtime.J
+                          (((fun fmt ->
+                               fun () ->
+                                 ppterm depth [] adepth empty_env fmt (e.(i)))),
+                            ())];
                    unif matching depth adepth a bdepth b e)
               | (UVar ({ rest = [] }, _, a1), UVar ({ rest = _::_ }, _, a2))
                   when (a1 + a2) > 0 ->
@@ -1706,14 +1746,16 @@ module HO :
                      | _ -> true)
                   ->
                   let v = fst (make_lambdas origdepth args) in
-                  (Trace.Runtime.info "user:assign(simplify)"
-                     [Trace.Runtime.J
-                        (((fun fmt ->
-                             fun () ->
-                               Fmt.fprintf fmt "%a := %a"
-                                 (uppterm depth [] bdepth e)
-                                 (UVar (r, origdepth, 0))
-                                 (uppterm depth [] bdepth e) v)), ())];
+                  (if true
+                   then
+                     Trace.Runtime.info "user:assign(simplify)"
+                       [Trace.Runtime.J
+                          (((fun fmt ->
+                               fun () ->
+                                 Fmt.fprintf fmt "%a := %a"
+                                   (uppterm depth [] bdepth e)
+                                   (UVar (r, origdepth, 0))
+                                   (uppterm depth [] bdepth e) v)), ())];
                    r @:= v;
                    unif matching depth adepth a bdepth b e)
               | (UVar (r, origdepth, args), _) when
@@ -1723,14 +1765,16 @@ module HO :
                      | _ -> true)
                   ->
                   let v = fst (make_lambdas origdepth args) in
-                  (Trace.Runtime.info "user:assign(simplify)"
-                     [Trace.Runtime.J
-                        (((fun fmt ->
-                             fun () ->
-                               Fmt.fprintf fmt "%a := %a"
-                                 (uppterm depth [] adepth e)
-                                 (UVar (r, origdepth, 0))
-                                 (uppterm depth [] adepth e) v)), ())];
+                  (if true
+                   then
+                     Trace.Runtime.info "user:assign(simplify)"
+                       [Trace.Runtime.J
+                          (((fun fmt ->
+                               fun () ->
+                                 Fmt.fprintf fmt "%a := %a"
+                                   (uppterm depth [] adepth e)
+                                   (UVar (r, origdepth, 0))
+                                   (uppterm depth [] adepth e) v)), ())];
                    r @:= v;
                    unif matching depth adepth a bdepth b e)
               | (other, AppArg (i, args)) ->
@@ -1891,13 +1935,15 @@ module HO :
        | e ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
            (Trace.Runtime.exit "unif" false (Some e) elapsed; raise e))
-    let unif ~matching  adepth e bdepth a b =
+    let unif ~matching  ((gid)[@trace ]) adepth e bdepth a b =
       let res = unif matching 0 adepth a bdepth b e in
-      Trace.Runtime.info "unif result"
-        [Trace.Runtime.J (Fmt.pp_print_bool, res)];
+      if true
+      then
+        Trace.Runtime.info "dev:unif:out"
+          [Trace.Runtime.J (Fmt.pp_print_bool, res)];
       if not res
       then
-        Trace.Runtime.info "user:select"
+        Trace.Runtime.info ~goal_id:(Util.UUID.hash gid) "user:select"
           [Trace.Runtime.J
              (((fun fmt ->
                   fun () ->
@@ -2405,12 +2451,11 @@ module Indexing =
         let modulus = 1 lsl size in
         let kabs = Hashtbl.hash k in
         let h = kabs mod modulus in
-        Trace.Runtime.info "subhash-const"
-          [Trace.Runtime.J
-             (((fun fmt ->
-                  fun () ->
-                    Fmt.fprintf fmt "%s: %s" (C.show k) (dec_to_bin2 h))),
-               ())];
+        if true
+        then
+          Trace.Runtime.info "dev:index:subhash-const"
+            [Trace.Runtime.J (C.pp, k);
+            Trace.Runtime.J (pp_string, (dec_to_bin2 h))];
         h in
       let all_1 size = max_int lsr (hash_bits - size) in
       let all_0 size = 0 in
@@ -2464,24 +2509,28 @@ module Indexing =
                 (let open List in
                    fold_left (lor) 0
                      (mapi (fun i -> fun x -> shift (i + 1) (self x)) xs)) in
-        Trace.Runtime.info "subhash"
+        if true
+        then
+          Trace.Runtime.info "dev:index:subhash"
+            [Trace.Runtime.J
+               (((fun fmt ->
+                    fun () ->
+                      Fmt.fprintf fmt "%s: %d: %s: %a"
+                        (if goal then "goal" else "clause") size
+                        (dec_to_bin2 h) (uppterm depth [] 0 empty_env) arg)),
+                 ())];
+        h in
+      let h = aux 0 0 args mode spec in
+      if true
+      then
+        Trace.Runtime.info "dev:index:hash"
           [Trace.Runtime.J
              (((fun fmt ->
                   fun () ->
-                    Fmt.fprintf fmt "%s: %d: %s: %a"
-                      (if goal then "goal" else "clause") size
-                      (dec_to_bin2 h) (uppterm depth [] 0 empty_env) arg)),
-               ())];
-        h in
-      let h = aux 0 0 args mode spec in
-      Trace.Runtime.info "hash"
-        [Trace.Runtime.J
-           (((fun fmt ->
-                fun () ->
-                  Fmt.fprintf fmt "%s: %s: %a"
-                    (if goal then "goal" else "clause") (dec_to_bin2 h)
-                    (pplist ~boxed:true (uppterm depth [] 0 empty_env) " ")
-                    ((Const hd) :: args))), ())];
+                    Fmt.fprintf fmt "%s: %s: %a"
+                      (if goal then "goal" else "clause") (dec_to_bin2 h)
+                      (pplist ~boxed:true (uppterm depth [] 0 empty_env) " ")
+                      ((Const hd) :: args))), ())];
       h
     let hash_clause_arg_list = hash_arg_list false
     let hash_goal_arg_list = hash_arg_list true
@@ -2840,8 +2889,10 @@ module Clausify :
                    vars;
                    loc
                  } in
-               (Trace.Runtime.info "extra"
-                  [Trace.Runtime.J ((ppclause ~depth:(depth + lcs) ~hd), c)];
+               (if true
+                then
+                  Trace.Runtime.info "dev:claudify:extra-clause"
+                    [Trace.Runtime.J ((ppclause ~depth:(depth + lcs) ~hd), c)];
                 ((hd, c), { hdepth = depth; hsrc = g }, lcs))
            | UVar ({ contents = g }, from, args) when g != C.dummy ->
                claux1 ?loc get_mode vars depth hyps ts lts lcs
@@ -2929,10 +2980,14 @@ and show_goal : goal -> Ppx_deriving_runtime.string =
                                                                 "-32"]
 let make_subgoal_id ogid (((depth, goal))[@trace ]) =
   let gid = UUID.make () in
-  Trace.Runtime.info ~goal_id:(Util.UUID.hash ogid) "user:subgoalof"
-    [Trace.Runtime.J (UUID.pp, gid)];
-  Trace.Runtime.info ~goal_id:(Util.UUID.hash gid) "user:newgoal"
-    [Trace.Runtime.J ((uppterm depth [] depth empty_env), goal)];
+  if true
+  then
+    Trace.Runtime.info ~goal_id:(Util.UUID.hash ogid) "user:subgoalof"
+      [Trace.Runtime.J (UUID.pp, gid)];
+  if true
+  then
+    Trace.Runtime.info ~goal_id:(Util.UUID.hash gid) "user:newgoal"
+      [Trace.Runtime.J ((uppterm depth [] depth empty_env), goal)];
   gid[@@inline ]
 let make_subgoal ((gid)[@trace ]) ~depth  program goal =
   let ((gid)[@trace ]) = make_subgoal_id gid (((depth, goal))[@trace ]) in
@@ -3020,13 +3075,15 @@ module Constraints :
             with
             | Not_found ->
                 let (n, c) = C.fresh_global_constant () in
-                (Trace.Runtime.info "freeze-add"
-                   [Trace.Runtime.J
-                      (((fun fmt ->
-                           fun () ->
-                             let tt = UVar (r, 0, 0) in
-                             Fmt.fprintf fmt "%s == %a" (C.show n)
-                               (ppterm 0 [] 0 empty_env) tt)), ())];
+                (if true
+                 then
+                   Trace.Runtime.info "dev:freeze_uv:new"
+                     [Trace.Runtime.J
+                        (((fun fmt ->
+                             fun () ->
+                               let tt = UVar (r, 0, 0) in
+                               Fmt.fprintf fmt "%s == %a" (C.show n)
+                                 (ppterm 0 [] 0 empty_env) tt)), ())];
                  f :=
                    {
                      (!f) with
@@ -3055,48 +3112,64 @@ module Constraints :
                 faux d (deref_uv ~from:lvl ~to_:d ano (!! r))
             | AppUVar (r, lvl, args) ->
                 faux d (deref_appuv ~from:lvl ~to_:d args (!! r)) in
-          Trace.Runtime.info "freeze-in"
-            [Trace.Runtime.J
-               (((fun fmt ->
-                    fun () ->
-                      Fmt.fprintf fmt
-                        "depth:%d ground:%d newground:%d maxground:%d %a"
-                        depth ground newground maxground
-                        (uppterm depth [] 0 empty_env) t)), ())];
+          if true
+          then
+            Trace.Runtime.info "dev:freeze:in"
+              [Trace.Runtime.J
+                 (((fun fmt ->
+                      fun () ->
+                        Fmt.fprintf fmt
+                          "depth:%d ground:%d newground:%d maxground:%d %a"
+                          depth ground newground maxground
+                          (uppterm depth [] 0 empty_env) t)), ())];
           (let t = faux depth t in
-           Trace.Runtime.info "freeze-after-faux"
-             [Trace.Runtime.J ((uppterm depth [] 0 empty_env), t)];
+           if true
+           then
+             Trace.Runtime.info "dev:freeze:after-faux"
+               [Trace.Runtime.J ((uppterm depth [] 0 empty_env), t)];
            (let t = shift_bound_vars ~depth ~to_:ground t in
-            Trace.Runtime.info "freeze-after-shift->ground"
-              [Trace.Runtime.J ((uppterm ground [] 0 empty_env), t)];
+            if true
+            then
+              Trace.Runtime.info "dev:freeze:after-shift->ground"
+                [Trace.Runtime.J ((uppterm ground [] 0 empty_env), t)];
             (let t = shift_bound_vars ~depth:0 ~to_:(newground - ground) t in
-             Trace.Runtime.info "freeze-after-reloc->newground"
-               [Trace.Runtime.J ((uppterm newground [] 0 empty_env), t)];
+             if true
+             then
+               Trace.Runtime.info "dev:freeze:after-reloc->newground"
+                 [Trace.Runtime.J ((uppterm newground [] 0 empty_env), t)];
              (let t = shift_bound_vars ~depth:newground ~to_:maxground t in
-              Trace.Runtime.info "freeze-after-shift->maxground"
-                [Trace.Runtime.J ((uppterm maxground [] 0 empty_env), t)];
+              if true
+              then
+                Trace.Runtime.info "dev:freeze:out"
+                  [Trace.Runtime.J ((uppterm maxground [] 0 empty_env), t)];
               ((!f), t)))))
         let defrost ~maxd  t env ~to_  f =
-          Trace.Runtime.info "defrost-in"
-            [Trace.Runtime.J
-               (((fun fmt ->
-                    fun () ->
-                      Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
-                        (uppterm maxd [] maxd env) t)), ())];
-          (let t = full_deref ~adepth:maxd env ~depth:maxd t in
-           Trace.Runtime.info "defrost-fully-derefd"
-             [Trace.Runtime.J
-                (((fun fmt ->
-                     fun () ->
-                       Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
-                         (uppterm maxd [] 0 empty_env) t)), ())];
-           (let t = subtract_to_consts ~amount:(maxd - to_) ~depth:maxd t in
-            Trace.Runtime.info "defrost-shifted"
+          if true
+          then
+            Trace.Runtime.info "dev:defrost:in"
               [Trace.Runtime.J
                  (((fun fmt ->
                       fun () ->
                         Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
-                          (uppterm to_ [] 0 empty_env) t)), ())];
+                          (uppterm maxd [] maxd env) t)), ())];
+          (let t = full_deref ~adepth:maxd env ~depth:maxd t in
+           if true
+           then
+             Trace.Runtime.info "dev:defrost:fully-derefd"
+               [Trace.Runtime.J
+                  (((fun fmt ->
+                       fun () ->
+                         Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
+                           (uppterm maxd [] 0 empty_env) t)), ())];
+           (let t = subtract_to_consts ~amount:(maxd - to_) ~depth:maxd t in
+            if true
+            then
+              Trace.Runtime.info "dev:defrost:shifted"
+                [Trace.Runtime.J
+                   (((fun fmt ->
+                        fun () ->
+                          Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
+                            (uppterm to_ [] 0 empty_env) t)), ())];
             (let rec daux d =
                function
                | Const c when C.Map.mem c f.c2uv ->
@@ -3138,44 +3211,48 @@ module Constraints :
             | Arg _|AppArg _ -> assert false
             | AppUVar (r, lvl, args) ->
                 AppUVar (r, lvl, (smart_map rcaux args)) in
-          Trace.Runtime.info "alignment-replace-in"
-            [Trace.Runtime.J ((uppterm 0 [] 0 empty_env), t)];
+          if true
+          then
+            Trace.Runtime.info "dev:replace_const:in"
+              [Trace.Runtime.J ((uppterm 0 [] 0 empty_env), t)];
           (let t = rcaux t in
-           Trace.Runtime.info "alignment-replace-out"
-             [Trace.Runtime.J ((uppterm 0 [] 0 empty_env), t)];
+           if true
+           then
+             Trace.Runtime.info "dev:replace_const:out"
+               [Trace.Runtime.J ((uppterm 0 [] 0 empty_env), t)];
            t)
         let ppmap fmt (g, l) =
           let aux fmt (c1, c2) =
             Fmt.fprintf fmt "%s -> %s" (C.show c1) (C.show c2) in
           Fmt.fprintf fmt "%d = %a" g (pplist aux ",") l
       end 
-    let match_goal goalno maxground env freezer (newground, depth, t) pattern
-      =
+    let match_goal ((gid)[@trace ]) goalno maxground env freezer
+      (newground, depth, t) pattern =
       let (freezer, t) =
         Ice.freeze ~depth t ~ground:depth ~newground ~maxground freezer in
       let wall_clock = Unix.gettimeofday () in
-      Trace.Runtime.enter "matching"
+      Trace.Runtime.enter "match_goal"
         (fun fmt ->
            (((((Format.fprintf fmt) "@[<hov>%a ===@ %a@]")
                 (uppterm maxground [] maxground env)) t)
               (uppterm 0 [] maxground env)) pattern);
       (try
          let rc =
-           if unif ~matching:false maxground env 0 t pattern
+           if unif ~matching:false ((gid)[@trace ]) maxground env 0 t pattern
            then freezer
            else raise NoMatch in
          let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-         Trace.Runtime.exit "matching" false None elapsed; rc
+         Trace.Runtime.exit "match_goal" false None elapsed; rc
        with
        | Trace.Runtime.TREC_CALL (f, x) ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace.Runtime.exit "matching" true None elapsed;
+           (Trace.Runtime.exit "match_goal" true None elapsed;
             Obj.obj f (Obj.obj x))
        | e ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace.Runtime.exit "matching" false (Some e) elapsed; raise e))
-    let match_context goalno maxground env freezer (newground, ground, lt)
-      pattern =
+           (Trace.Runtime.exit "match_goal" false (Some e) elapsed; raise e))
+    let match_context ((gid)[@trace ]) goalno maxground env freezer
+      (newground, ground, lt) pattern =
       let (freezer, lt) =
         map_acc
           (fun freezer ->
@@ -3184,26 +3261,27 @@ module Constraints :
           freezer lt in
       let t = list_to_lp_list lt in
       let wall_clock = Unix.gettimeofday () in
-      Trace.Runtime.enter "matching"
+      Trace.Runtime.enter "match_context"
         (fun fmt ->
            (((((Format.fprintf fmt) "@[<hov>%a ===@ %a@]")
                 (uppterm maxground [] maxground env)) t)
               (uppterm 0 [] maxground env)) pattern);
       (try
          let rc =
-           if unif ~matching:false maxground env 0 t pattern
+           if unif ~matching:false ((gid)[@trace ]) maxground env 0 t pattern
            then freezer
            else raise NoMatch in
          let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-         Trace.Runtime.exit "matching" false None elapsed; rc
+         Trace.Runtime.exit "match_context" false None elapsed; rc
        with
        | Trace.Runtime.TREC_CALL (f, x) ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace.Runtime.exit "matching" true None elapsed;
+           (Trace.Runtime.exit "match_context" true None elapsed;
             Obj.obj f (Obj.obj x))
        | e ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace.Runtime.exit "matching" false (Some e) elapsed; raise e))
+           (Trace.Runtime.exit "match_context" false (Some e) elapsed;
+            raise e))
     type chrattempt =
       {
       propagation_rule: CHR.rule ;
@@ -3230,8 +3308,10 @@ module Constraints :
       ((gid)[@trace ]) ~on:keys  =
       let pdiff = local_prog prog in
       let pdiff = List.filter filter_ctx pdiff in
-      Trace.Runtime.info ~goal_id:(Util.UUID.hash gid) "user:suspend"
-        [Trace.Runtime.J ((uppterm depth [] 0 empty_env), g)];
+      if true
+      then
+        Trace.Runtime.info ~goal_id:(Util.UUID.hash gid) "user:suspend"
+          [Trace.Runtime.J ((uppterm depth [] 0 empty_env), g)];
       (let kind =
          Constraint
            (make_constraint_def ~gid:((gid)[@trace ]) depth prog pdiff g) in
@@ -3336,10 +3416,12 @@ module Constraints :
                   ((eigen :: es), (context :: cs), (conclusion :: gs)))
              (pats_to_match @ pats_to_remove) ([], [], []) in
          let match_eigen i m (dto, d, eigen) pat =
-           match_goal i max_depth env m (dto, d, (Data.C.of_int eigen)) pat in
-         let match_conclusion i m g pat = match_goal i max_depth env m g pat in
+           match_goal ((gid)[@trace ]) i max_depth env m
+             (dto, d, (Data.C.of_int eigen)) pat in
+         let match_conclusion i m g pat =
+           match_goal ((gid)[@trace ]) i max_depth env m g pat in
          let match_context i m ctx pctx =
-           match_context i max_depth env m ctx pctx in
+           match_context ((gid)[@trace ]) i max_depth env m ctx pctx in
          let guard =
            match guard with
            | Some g -> g
@@ -3374,16 +3456,18 @@ module Constraints :
              let m =
                exec
                  (fun m ->
-                    Trace.Runtime.info "propagate-try-on"
-                      [Trace.Runtime.J
-                         ((pplist
-                             (fun f ->
-                                fun x ->
-                                  let (dto, dt, t) = x in
-                                  Format.fprintf f
-                                    "(lives-at:%d, to-be-lifted-to:%d) %a" dt
-                                    dto (uppterm dt [] 0 empty_env) t) ";"),
-                           constraints_goals)];
+                    if true
+                    then
+                      Trace.Runtime.info "dev:CHR:candidate"
+                        [Trace.Runtime.J
+                           ((pplist
+                               (fun f ->
+                                  fun x ->
+                                    let (dto, dt, t) = x in
+                                    Format.fprintf f
+                                      "(lives-at:%d, to-be-lifted-to:%d) %a"
+                                      dt dto (uppterm dt [] 0 empty_env) t)
+                               ";"), constraints_goals)];
                     (let m =
                        fold_left2i match_eigen m constraints_depts
                          patterns_eigens in
@@ -3393,19 +3477,19 @@ module Constraints :
                      let m =
                        fold_left2i match_context m constraints_contexts
                          patterns_contexts in
-                     Trace.Runtime.info "propagate-matched-args"
-                       [Trace.Runtime.J
-                          ((pplist (uppterm max_depth [] 0 empty_env)
-                              ~boxed:false ","), (Array.to_list env))];
+                     if true
+                     then
+                       Trace.Runtime.info "dev:CHR:matching-assignments"
+                         [Trace.Runtime.J
+                            ((pplist (uppterm max_depth [] 0 empty_env)
+                                ~boxed:false ","), (Array.to_list env))];
                      T.to_resume := [];
                      assert ((!T.new_delayed) = []);
                      m)) Ice.empty_freezer in
-             Trace.Runtime.info "propagate-try-rule-guard"
-               [Trace.Runtime.J
-                  (((fun fmt ->
-                       fun () ->
-                         Format.fprintf fmt "@[<hov 2>depth=%d@ @]" max_depth)),
-                    ())];
+             if true
+             then
+               Trace.Runtime.info "dev:CHR:maxdepth"
+                 [Trace.Runtime.J (Fmt.pp_print_int, max_depth)];
              check_guard ();
              (let (_, constraints_to_remove) =
                 let len_pats_to_match = List.length pats_to_match in
@@ -3431,22 +3515,22 @@ module Constraints :
                       (make_constraint_def
                          ~gid:((make_subgoal_id gid (eigen, conclusion))
                          [@trace ]) eigen prog [] conclusion) in
-              Trace.Runtime.info "propagate-delivery"
-                [Trace.Runtime.J (Fmt.pp_print_string, "delivered")];
+              if true then Trace.Runtime.info "dev:CHR:try-rule:success" [];
               Some
                 (rule_name, constraints_to_remove, new_goals,
                   (Ice.assignments m)))
            with
            | NoMatch ->
-               (Trace.Runtime.info "propagate-try-rule-fail"
-                  [Trace.Runtime.J (Fmt.pp_print_string, "")];
+               (if true then Trace.Runtime.info "dev:CHR:try-rule:fail" [];
                 None) in
          destroy (); result)
     let resumption to_be_resumed_rev =
       List.map
         (fun { cdepth = d; prog; conclusion = g; cgid = ((gid)[@trace ]) } ->
-           Trace.Runtime.info "run-scheduling-resume"
-             [Trace.Runtime.J ((uppterm d [] d empty_env), g)];
+           if true
+           then
+             Trace.Runtime.info ~goal_id:(Util.UUID.hash gid) "user:resume"
+               [Trace.Runtime.J ((uppterm d [] d empty_env), g)];
            ((repack_goal)[@inlined ]) ~depth:d ((gid)[@trace ]) prog g)
         (List.rev to_be_resumed_rev)
     let mk_permutations len pivot pivot_position rest =
@@ -3501,49 +3585,65 @@ module Constraints :
                                     if outdated constraints
                                     then ()
                                     else
-                                      (match try_fire_rule ((active.cgid)
-                                               [@trace ]) rule constraints
-                                       with
-                                       | None -> ()
-                                       | Some
-                                           (rule_name, to_be_removed,
-                                            to_be_added, assignments)
-                                           ->
-                                           (Trace.Runtime.info
-                                              ~goal_id:(Util.UUID.hash
-                                                          ((active.cgid)
-                                                          [@trace ]))
-                                              "user:CHR:fired"
-                                              [Trace.Runtime.J
-                                                 (Fmt.pp_print_string,
-                                                   rule_name)];
-                                            Trace.Runtime.info
-                                              ~goal_id:(Util.UUID.hash
-                                                          ((active.cgid)
-                                                          [@trace ]))
-                                              "user:CHR:remove"
-                                              ((List.map
-                                                  (fun x ->
-                                                     Trace.Runtime.J
-                                                       ((fun fmt ->
-                                                           fun { cgid } ->
-                                                             UUID.pp fmt cgid),
-                                                         x)) to_be_removed)
-                                                 @ []);
-                                            removed :=
-                                              (to_be_removed @ (!removed));
-                                            List.iter
-                                              CS.remove_old_constraint
-                                              to_be_removed;
-                                            List.iter
-                                              (fun (r, _lvl, t) -> r @:= t)
-                                              assignments;
-                                            (match to_be_added with
-                                             | None -> ()
-                                             | Some to_be_added ->
-                                                 to_be_resumed_rev :=
-                                                   (to_be_added ::
-                                                   (!to_be_resumed_rev))))))))
+                                      (if true
+                                       then
+                                         Trace.Runtime.info
+                                           ~goal_id:(Util.UUID.hash
+                                                       active.cgid)
+                                           "user:CHR:try-rule-on"
+                                           [Trace.Runtime.J
+                                              (UUID.pp, (active.cgid))];
+                                       (match try_fire_rule ((active.cgid)
+                                                [@trace ]) rule constraints
+                                        with
+                                        | None ->
+                                            if true
+                                            then
+                                              Trace.Runtime.info
+                                                "user:CHR:rule-failed" []
+                                        | Some
+                                            (rule_name, to_be_removed,
+                                             to_be_added, assignments)
+                                            ->
+                                            (if true
+                                             then
+                                               Trace.Runtime.info
+                                                 ~goal_id:(Util.UUID.hash
+                                                             ((active.cgid)
+                                                             [@trace ]))
+                                                 "user:CHR:rule-fired"
+                                                 [Trace.Runtime.J
+                                                    (pp_string, rule_name)];
+                                             if true
+                                             then
+                                               Trace.Runtime.info
+                                                 ~goal_id:(Util.UUID.hash
+                                                             ((active.cgid)
+                                                             [@trace ]))
+                                                 "user:CHR:rule-remove-constraints"
+                                                 ((List.map
+                                                     (fun x ->
+                                                        Trace.Runtime.J
+                                                          ((fun fmt ->
+                                                              fun { cgid } ->
+                                                                UUID.pp fmt
+                                                                  cgid), x))
+                                                     to_be_removed)
+                                                    @ []);
+                                             removed :=
+                                               (to_be_removed @ (!removed));
+                                             List.iter
+                                               CS.remove_old_constraint
+                                               to_be_removed;
+                                             List.iter
+                                               (fun (r, _lvl, t) -> r @:= t)
+                                               assignments;
+                                             (match to_be_added with
+                                              | None -> ()
+                                              | Some to_be_added ->
+                                                  to_be_resumed_rev :=
+                                                    (to_be_added ::
+                                                    (!to_be_resumed_rev)))))))))
                        done)))))
         done;
       !to_be_resumed_rev
@@ -3574,8 +3674,7 @@ module Mainloop :
       let rec run depth p g ((gid)[@trace ]) gs (next : frame) alts lvl =
         Trace.Runtime.set_cur_pred (pred_of g);
         (let wall_clock = Unix.gettimeofday () in
-         Trace.Runtime.enter "run"
-           (fun fmt -> Fmt.fprintf fmt "gid:%a" UUID.pp gid);
+         Trace.Runtime.enter "run" (fun _ -> ());
          (try
             let rc =
               (match !steps_bound with
@@ -3583,13 +3682,13 @@ module Mainloop :
                    (incr steps_made;
                     if (!steps_made) > bound then raise No_more_steps)
                | None -> ());
-              Trace.Runtime.info ~goal_id:(Util.UUID.hash gid) "user:curgoal"
-                [Trace.Runtime.J ((uppterm depth [] 0 empty_env), g)];
               (match resume_all () with
                | None ->
-                   (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
-                      "user:rule"
-                      [Trace.Runtime.J (Fmt.pp_print_string, "fail-resume")];
+                   (if true
+                    then
+                      Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                        "user:rule"
+                        [Trace.Runtime.J (pp_string, "fail-resume")];
                     raise
                       (Trace.Runtime.TREC_CALL
                          ((Obj.repr next_alt), (Obj.repr alts))))
@@ -3597,9 +3696,10 @@ module Mainloop :
                    ({ depth = ndepth; program; goal; gid = ((ngid)[@trace ])
                       }::goals)
                    ->
-                   (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
-                      "user:rule"
-                      [Trace.Runtime.J (Fmt.pp_print_string, "resume")];
+                   (if true
+                    then
+                      Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                        "user:rule" [Trace.Runtime.J (pp_string, "resume")];
                     raise
                       (Trace.Runtime.TREC_CALL
                          ((Obj.repr
@@ -3610,232 +3710,271 @@ module Mainloop :
                                          [@trace ]) ~depth p g)
                                      :: gs))) next) alts)), (Obj.repr lvl))))
                | Some [] ->
-                   (match g with
-                    | Builtin (c, []) when c == Global_symbols.cutc ->
-                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
-                           "user:rule"
-                           [Trace.Runtime.J (Fmt.pp_print_string, "cut")];
-                         raise
-                           (Trace.Runtime.TREC_CALL
-                              ((Obj.repr
-                                  ((((cut ((gid)[@trace ])) gs) next) alts)),
-                                (Obj.repr lvl))))
-                    | App (c, g, gs') when c == Global_symbols.andc ->
-                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
-                           "user:rule"
-                           [Trace.Runtime.J (Fmt.pp_print_string, "and")];
-                         (let gs' =
-                            List.map
-                              (fun x ->
-                                 ((make_subgoal)[@inlined ]) ~depth ((gid)
-                                   [@trace ]) p x) gs' in
-                          let ((gid)[@trace ]) =
-                            make_subgoal_id gid (((depth, g))[@trace ]) in
+                   (if true
+                    then
+                      Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                        "user:curgoal"
+                        [Trace.Runtime.J ((uppterm depth [] 0 empty_env), g)];
+                    (match g with
+                     | Builtin (c, []) when c == Global_symbols.cutc ->
+                         (if true
+                          then
+                            Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                              "user:rule"
+                              [Trace.Runtime.J (pp_string, "cut")];
                           raise
                             (Trace.Runtime.TREC_CALL
                                ((Obj.repr
-                                   (((((((run depth) p) g) ((gid)[@trace ]))
-                                        (gs' @ gs)) next) alts)),
-                                 (Obj.repr lvl)))))
-                    | Cons (g, gs') ->
-                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
-                           "user:rule"
-                           [Trace.Runtime.J (Fmt.pp_print_string, "and")];
-                         (let gs' =
-                            ((make_subgoal)[@inlined ]) ~depth ((gid)
-                              [@trace ]) p gs' in
-                          let ((gid)[@trace ]) =
-                            make_subgoal_id gid (((depth, g))[@trace ]) in
-                          raise
-                            (Trace.Runtime.TREC_CALL
-                               ((Obj.repr
-                                   (((((((run depth) p) g) ((gid)[@trace ]))
-                                        (gs' :: gs)) next) alts)),
-                                 (Obj.repr lvl)))))
-                    | Nil ->
-                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
-                           "user:rule"
-                           [Trace.Runtime.J (Fmt.pp_print_string, "true")];
-                         (match gs with
-                          | [] ->
-                              raise
-                                (Trace.Runtime.TREC_CALL
-                                   ((Obj.repr ((pop_andl alts) next)),
-                                     (Obj.repr lvl)))
-                          | { depth; program; goal; gid = ((gid)[@trace ]) }::gs
-                              ->
-                              raise
-                                (Trace.Runtime.TREC_CALL
-                                   ((Obj.repr
-                                       (((((((run depth) program) goal)
-                                             ((gid)[@trace ])) gs) next) alts)),
-                                     (Obj.repr lvl)))))
-                    | App (c, g2, g1::[]) when c == Global_symbols.rimplc ->
-                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
-                           "user:rule"
-                           [Trace.Runtime.J
-                              (Fmt.pp_print_string, "implication")];
-                         (let (clauses, pdiff, lcs) = clausify p ~depth g1 in
-                          let g2 = hmove ~from:depth ~to_:(depth + lcs) g2 in
-                          let ((gid)[@trace ]) =
-                            make_subgoal_id gid (((depth, g2))[@trace ]) in
-                          raise
-                            (Trace.Runtime.TREC_CALL
-                               ((Obj.repr
-                                   (((((((run (depth + lcs))
-                                           (add_clauses ~depth clauses pdiff
-                                              p)) g2) ((gid)[@trace ])) gs)
-                                       next) alts)), (Obj.repr lvl)))))
-                    | App (c, g1, g2::[]) when c == Global_symbols.implc ->
-                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
-                           "user:rule"
-                           [Trace.Runtime.J
-                              (Fmt.pp_print_string, "implication")];
-                         (let (clauses, pdiff, lcs) = clausify p ~depth g1 in
-                          let g2 = hmove ~from:depth ~to_:(depth + lcs) g2 in
-                          let ((gid)[@trace ]) =
-                            make_subgoal_id gid (((depth, g2))[@trace ]) in
-                          raise
-                            (Trace.Runtime.TREC_CALL
-                               ((Obj.repr
-                                   (((((((run (depth + lcs))
-                                           (add_clauses ~depth clauses pdiff
-                                              p)) g2) ((gid)[@trace ])) gs)
-                                       next) alts)), (Obj.repr lvl)))))
-                    | App (c, arg, []) when c == Global_symbols.pic ->
-                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
-                           "user:rule"
-                           [Trace.Runtime.J (Fmt.pp_print_string, "pi")];
-                         (let f = get_lambda_body ~depth arg in
-                          let ((gid)[@trace ]) =
-                            make_subgoal_id gid ((((depth + 1), f))[@trace ]) in
-                          raise
-                            (Trace.Runtime.TREC_CALL
-                               ((Obj.repr
-                                   (((((((run (depth + 1)) p) f) ((gid)
-                                         [@trace ])) gs) next) alts)),
-                                 (Obj.repr lvl)))))
-                    | App (c, arg, []) when c == Global_symbols.sigmac ->
-                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
-                           "user:rule"
-                           [Trace.Runtime.J (Fmt.pp_print_string, "sigma")];
-                         (let f = get_lambda_body ~depth arg in
-                          let v = UVar ((oref C.dummy), depth, 0) in
-                          let fv = subst depth [v] f in
-                          let ((gid)[@trace ]) =
-                            make_subgoal_id gid (((depth, fv))[@trace ]) in
-                          raise
-                            (Trace.Runtime.TREC_CALL
-                               ((Obj.repr
-                                   (((((((run depth) p) fv) ((gid)[@trace ]))
-                                        gs) next) alts)), (Obj.repr lvl)))))
-                    | UVar ({ contents = g }, from, args) when g != C.dummy
-                        ->
-                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
-                           "user:rule"
-                           [Trace.Runtime.J (Fmt.pp_print_string, "deref")];
-                         raise
-                           (Trace.Runtime.TREC_CALL
-                              ((Obj.repr
-                                  (((((((run depth) p)
-                                         (deref_uv ~from ~to_:depth args g))
-                                        ((gid)[@trace ])) gs) next) alts)),
-                                (Obj.repr lvl))))
-                    | AppUVar ({ contents = t }, from, args) when
-                        t != C.dummy ->
-                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
-                           "user:rule"
-                           [Trace.Runtime.J (Fmt.pp_print_string, "deref")];
-                         raise
-                           (Trace.Runtime.TREC_CALL
-                              ((Obj.repr
-                                  (((((((run depth) p)
-                                         (deref_appuv ~from ~to_:depth args t))
-                                        ((gid)[@trace ])) gs) next) alts)),
-                                (Obj.repr lvl))))
-                    | Const k ->
-                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
-                           "user:rule"
-                           [Trace.Runtime.J
-                              (Fmt.pp_print_string, "backchain")];
-                         (let clauses = get_clauses depth k g p in
-                          Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
-                            "user:candidates"
-                            ((List.map
-                                (fun x -> Trace.Runtime.J (pp_candidate, x))
-                                clauses)
-                               @ []);
-                          raise
-                            (Trace.Runtime.TREC_CALL
-                               ((Obj.repr
-                                   (((((((backchain depth) p)
-                                          (k, C.dummy, [], gs)) ((gid)
-                                         [@trace ])) next) alts) lvl)),
-                                 (Obj.repr clauses)))))
-                    | App (k, x, xs) ->
-                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
-                           "user:rule"
-                           [Trace.Runtime.J
-                              (Fmt.pp_print_string, "backchain")];
-                         (let clauses = get_clauses depth k g p in
-                          Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
-                            "user:candidates"
-                            ((List.map
-                                (fun x -> Trace.Runtime.J (pp_candidate, x))
-                                clauses)
-                               @ []);
-                          raise
-                            (Trace.Runtime.TREC_CALL
-                               ((Obj.repr
-                                   (((((((backchain depth) p) (k, x, xs, gs))
-                                         ((gid)[@trace ])) next) alts) lvl)),
-                                 (Obj.repr clauses)))))
-                    | Builtin (c, args) ->
-                        (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
-                           "user:rule"
-                           [Trace.Runtime.J (Fmt.pp_print_string, "builtin")];
-                         (match Constraints.exect_builtin_predicate c ~depth
-                                  p ((gid)[@trace ]) args
-                          with
-                          | gs' ->
-                              (Trace.Runtime.info
-                                 ~goal_id:(Util.UUID.hash gid) "user:builtin"
-                                 [Trace.Runtime.J
-                                    (Fmt.pp_print_string, "success")];
-                               (match (List.map
-                                         (fun g ->
-                                            ((make_subgoal)[@inlined ])
-                                              ((gid)[@trace ]) ~depth p g)
-                                         gs')
-                                        @ gs
-                                with
-                                | [] ->
-                                    raise
-                                      (Trace.Runtime.TREC_CALL
-                                         ((Obj.repr ((pop_andl alts) next)),
-                                           (Obj.repr lvl)))
-                                | { depth; program; goal;
-                                    gid = ((gid)[@trace ]) }::gs ->
-                                    raise
-                                      (Trace.Runtime.TREC_CALL
-                                         ((Obj.repr
-                                             (((((((run depth) program) goal)
-                                                   ((gid)[@trace ])) gs) next)
-                                                alts)), (Obj.repr lvl)))))
-                          | exception No_clause ->
-                              (Trace.Runtime.info
-                                 ~goal_id:(Util.UUID.hash gid) "user:builtin"
-                                 [Trace.Runtime.J
-                                    (Fmt.pp_print_string, "fail")];
+                                   ((((cut ((gid)[@trace ])) gs) next) alts)),
+                                 (Obj.repr lvl))))
+                     | App (c, g, gs') when c == Global_symbols.andc ->
+                         (if true
+                          then
+                            Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                              "user:rule"
+                              [Trace.Runtime.J (pp_string, "and")];
+                          (let gs' =
+                             List.map
+                               (fun x ->
+                                  ((make_subgoal)[@inlined ]) ~depth ((gid)
+                                    [@trace ]) p x) gs' in
+                           let ((gid)[@trace ]) =
+                             make_subgoal_id gid (((depth, g))[@trace ]) in
+                           raise
+                             (Trace.Runtime.TREC_CALL
+                                ((Obj.repr
+                                    (((((((run depth) p) g) ((gid)[@trace ]))
+                                         (gs' @ gs)) next) alts)),
+                                  (Obj.repr lvl)))))
+                     | Cons (g, gs') ->
+                         (if true
+                          then
+                            Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                              "user:rule"
+                              [Trace.Runtime.J (pp_string, "and")];
+                          (let gs' =
+                             ((make_subgoal)[@inlined ]) ~depth ((gid)
+                               [@trace ]) p gs' in
+                           let ((gid)[@trace ]) =
+                             make_subgoal_id gid (((depth, g))[@trace ]) in
+                           raise
+                             (Trace.Runtime.TREC_CALL
+                                ((Obj.repr
+                                    (((((((run depth) p) g) ((gid)[@trace ]))
+                                         (gs' :: gs)) next) alts)),
+                                  (Obj.repr lvl)))))
+                     | Nil ->
+                         (if true
+                          then
+                            Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                              "user:rule"
+                              [Trace.Runtime.J (pp_string, "true")];
+                          (match gs with
+                           | [] ->
                                raise
                                  (Trace.Runtime.TREC_CALL
-                                    ((Obj.repr next_alt), (Obj.repr alts))))))
-                    | Arg _|AppArg _ -> anomaly "The goal is not a heap term"
-                    | Lam _|CData _ ->
-                        type_error
-                          ("The goal is not a predicate:" ^ (show_term g))
-                    | UVar _|AppUVar _|Discard ->
-                        error "The goal is a flexible term")) in
+                                    ((Obj.repr ((pop_andl alts) next)),
+                                      (Obj.repr lvl)))
+                           | { depth; program; goal; gid = ((gid)[@trace ]) }::gs
+                               ->
+                               raise
+                                 (Trace.Runtime.TREC_CALL
+                                    ((Obj.repr
+                                        (((((((run depth) program) goal)
+                                              ((gid)[@trace ])) gs) next)
+                                           alts)), (Obj.repr lvl)))))
+                     | App (c, g2, g1::[]) when c == Global_symbols.rimplc ->
+                         (if true
+                          then
+                            Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                              "user:rule"
+                              [Trace.Runtime.J (pp_string, "implication")];
+                          (let (clauses, pdiff, lcs) = clausify p ~depth g1 in
+                           let g2 = hmove ~from:depth ~to_:(depth + lcs) g2 in
+                           let ((gid)[@trace ]) =
+                             make_subgoal_id gid (((depth, g2))[@trace ]) in
+                           raise
+                             (Trace.Runtime.TREC_CALL
+                                ((Obj.repr
+                                    (((((((run (depth + lcs))
+                                            (add_clauses ~depth clauses pdiff
+                                               p)) g2) ((gid)[@trace ])) gs)
+                                        next) alts)), (Obj.repr lvl)))))
+                     | App (c, g1, g2::[]) when c == Global_symbols.implc ->
+                         (if true
+                          then
+                            Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                              "user:rule"
+                              [Trace.Runtime.J (pp_string, "implication")];
+                          (let (clauses, pdiff, lcs) = clausify p ~depth g1 in
+                           let g2 = hmove ~from:depth ~to_:(depth + lcs) g2 in
+                           let ((gid)[@trace ]) =
+                             make_subgoal_id gid (((depth, g2))[@trace ]) in
+                           raise
+                             (Trace.Runtime.TREC_CALL
+                                ((Obj.repr
+                                    (((((((run (depth + lcs))
+                                            (add_clauses ~depth clauses pdiff
+                                               p)) g2) ((gid)[@trace ])) gs)
+                                        next) alts)), (Obj.repr lvl)))))
+                     | App (c, arg, []) when c == Global_symbols.pic ->
+                         (if true
+                          then
+                            Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                              "user:rule" [Trace.Runtime.J (pp_string, "pi")];
+                          (let f = get_lambda_body ~depth arg in
+                           let ((gid)[@trace ]) =
+                             make_subgoal_id gid ((((depth + 1), f))
+                               [@trace ]) in
+                           raise
+                             (Trace.Runtime.TREC_CALL
+                                ((Obj.repr
+                                    (((((((run (depth + 1)) p) f) ((gid)
+                                          [@trace ])) gs) next) alts)),
+                                  (Obj.repr lvl)))))
+                     | App (c, arg, []) when c == Global_symbols.sigmac ->
+                         (if true
+                          then
+                            Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                              "user:rule"
+                              [Trace.Runtime.J (pp_string, "sigma")];
+                          (let f = get_lambda_body ~depth arg in
+                           let v = UVar ((oref C.dummy), depth, 0) in
+                           let fv = subst depth [v] f in
+                           let ((gid)[@trace ]) =
+                             make_subgoal_id gid (((depth, fv))[@trace ]) in
+                           raise
+                             (Trace.Runtime.TREC_CALL
+                                ((Obj.repr
+                                    (((((((run depth) p) fv) ((gid)[@trace ]))
+                                         gs) next) alts)), (Obj.repr lvl)))))
+                     | UVar ({ contents = g }, from, args) when g != C.dummy
+                         ->
+                         (if true
+                          then
+                            Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                              "user:rule"
+                              [Trace.Runtime.J (pp_string, "deref")];
+                          raise
+                            (Trace.Runtime.TREC_CALL
+                               ((Obj.repr
+                                   (((((((run depth) p)
+                                          (deref_uv ~from ~to_:depth args g))
+                                         ((gid)[@trace ])) gs) next) alts)),
+                                 (Obj.repr lvl))))
+                     | AppUVar ({ contents = t }, from, args) when
+                         t != C.dummy ->
+                         (if true
+                          then
+                            Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                              "user:rule"
+                              [Trace.Runtime.J (pp_string, "deref")];
+                          raise
+                            (Trace.Runtime.TREC_CALL
+                               ((Obj.repr
+                                   (((((((run depth) p)
+                                          (deref_appuv ~from ~to_:depth args
+                                             t)) ((gid)[@trace ])) gs) next)
+                                      alts)), (Obj.repr lvl))))
+                     | Const k ->
+                         (if true
+                          then
+                            Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                              "user:rule"
+                              [Trace.Runtime.J (pp_string, "backchain")];
+                          (let clauses = get_clauses depth k g p in
+                           if true
+                           then
+                             Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                               "user:candidates"
+                               ((List.map
+                                   (fun x ->
+                                      Trace.Runtime.J (pp_candidate, x))
+                                   clauses)
+                                  @ []);
+                           raise
+                             (Trace.Runtime.TREC_CALL
+                                ((Obj.repr
+                                    (((((((backchain depth) p)
+                                           (k, C.dummy, [], gs)) ((gid)
+                                          [@trace ])) next) alts) lvl)),
+                                  (Obj.repr clauses)))))
+                     | App (k, x, xs) ->
+                         (if true
+                          then
+                            Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                              "user:rule"
+                              [Trace.Runtime.J (pp_string, "backchain")];
+                          (let clauses = get_clauses depth k g p in
+                           if true
+                           then
+                             Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                               "user:candidates"
+                               ((List.map
+                                   (fun x ->
+                                      Trace.Runtime.J (pp_candidate, x))
+                                   clauses)
+                                  @ []);
+                           raise
+                             (Trace.Runtime.TREC_CALL
+                                ((Obj.repr
+                                    (((((((backchain depth) p) (k, x, xs, gs))
+                                          ((gid)[@trace ])) next) alts) lvl)),
+                                  (Obj.repr clauses)))))
+                     | Builtin (c, args) ->
+                         (if true
+                          then
+                            Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                              "user:rule"
+                              [Trace.Runtime.J (pp_string, "builtin")];
+                          (match Constraints.exect_builtin_predicate c ~depth
+                                   p ((gid)[@trace ]) args
+                           with
+                           | gs' ->
+                               (if true
+                                then
+                                  Trace.Runtime.info
+                                    ~goal_id:(Util.UUID.hash gid)
+                                    "user:builtin"
+                                    [Trace.Runtime.J (pp_string, "success")];
+                                (match (List.map
+                                          (fun g ->
+                                             ((make_subgoal)[@inlined ])
+                                               ((gid)[@trace ]) ~depth p g)
+                                          gs')
+                                         @ gs
+                                 with
+                                 | [] ->
+                                     raise
+                                       (Trace.Runtime.TREC_CALL
+                                          ((Obj.repr ((pop_andl alts) next)),
+                                            (Obj.repr lvl)))
+                                 | { depth; program; goal;
+                                     gid = ((gid)[@trace ]) }::gs ->
+                                     raise
+                                       (Trace.Runtime.TREC_CALL
+                                          ((Obj.repr
+                                              (((((((run depth) program) goal)
+                                                    ((gid)[@trace ])) gs)
+                                                  next) alts)),
+                                            (Obj.repr lvl)))))
+                           | exception No_clause ->
+                               (if true
+                                then
+                                  Trace.Runtime.info
+                                    ~goal_id:(Util.UUID.hash gid)
+                                    "user:builtin"
+                                    [Trace.Runtime.J (pp_string, "fail")];
+                                raise
+                                  (Trace.Runtime.TREC_CALL
+                                     ((Obj.repr next_alt), (Obj.repr alts))))))
+                     | Arg _|AppArg _ ->
+                         anomaly "The goal is not a heap term"
+                     | Lam _|CData _ ->
+                         type_error
+                           ("The goal is not a predicate:" ^ (show_term g))
+                     | UVar _|AppUVar _|Discard ->
+                         error "The goal is a flexible term"))) in
             let elapsed = (Unix.gettimeofday ()) -. wall_clock in
             Trace.Runtime.exit "run" false None elapsed; rc
           with
@@ -3849,38 +3988,35 @@ module Mainloop :
       and backchain depth p (k, arg, args_of_g, gs) ((gid)[@trace ]) next
         alts lvl cp =
         let wall_clock = Unix.gettimeofday () in
-        Trace.Runtime.enter "select"
-          (fun fmt ->
-             match cp with
-             | [] -> Fmt.fprintf fmt "gid:%a no more candidates" UUID.pp gid
-             | c::_ ->
-                 Fmt.fprintf fmt "gid:%a candidate %a" UUID.pp gid
-                   (ppclause ~depth ~hd:k) c);
+        Trace.Runtime.enter "select" (fun _ -> ());
         (try
            let rc =
              match cp with
              | [] ->
-                 (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
-                    "user:select"
-                    [Trace.Runtime.J (Fmt.pp_print_string, "fail")];
+                 (if true
+                  then
+                    Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                      "user:select" [Trace.Runtime.J (pp_string, "fail")];
                   raise
                     (Trace.Runtime.TREC_CALL
                        ((Obj.repr next_alt), (Obj.repr alts))))
              | { depth = c_depth; mode = c_mode; args = c_args;
                  hyps = c_hyps; vars = c_vars; loc }::cs ->
-                 (Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
-                    "user:select"
-                    [Trace.Runtime.J ((pp_option Loc.pp), loc);
-                    Trace.Runtime.J
-                      ((ppclause ~depth ~hd:k),
-                        {
-                          depth = c_depth;
-                          mode = c_mode;
-                          args = c_args;
-                          hyps = c_hyps;
-                          vars = c_vars;
-                          loc
-                        })];
+                 (if true
+                  then
+                    Trace.Runtime.info ~goal_id:(Util.UUID.hash gid)
+                      "user:select"
+                      [Trace.Runtime.J ((pp_option Loc.pp), loc);
+                      Trace.Runtime.J
+                        ((ppclause ~depth ~hd:k),
+                          {
+                            depth = c_depth;
+                            mode = c_mode;
+                            args = c_args;
+                            hyps = c_hyps;
+                            vars = c_vars;
+                            loc
+                          })];
                   (let old_trail = !T.trail in
                    T.last_call := ((alts == noalts) && (cs == []));
                    (let env = Array.make c_vars C.dummy in
@@ -3890,24 +4026,27 @@ module Mainloop :
                               (arg != C.dummy) &&
                                 ((match c_mode with
                                   | [] ->
-                                      (unif ~matching:false depth env c_depth
-                                         arg x)
+                                      (unif ~matching:false ((gid)[@trace ])
+                                         depth env c_depth arg x)
                                         &&
                                         (for_all3b
                                            (fun x ->
                                               fun y ->
                                                 fun matching ->
-                                                  unif ~matching depth env
+                                                  unif ~matching ((gid)
+                                                    [@trace ]) depth env
                                                     c_depth x y) args_of_g xs
                                            [] false)
                                   | matching::ms ->
-                                      (unif ~matching depth env c_depth arg x)
+                                      (unif ~matching ((gid)[@trace ]) depth
+                                         env c_depth arg x)
                                         &&
                                         (for_all3b
                                            (fun x ->
                                               fun y ->
                                                 fun matching ->
-                                                  unif ~matching depth env
+                                                  unif ~matching ((gid)
+                                                    [@trace ]) depth env
                                                     c_depth x y) args_of_g xs
                                            ms false)))
                     with
@@ -3998,9 +4137,11 @@ module Mainloop :
           if alts == lvl
           then alts
           else
-            (Trace.Runtime.info ~goal_id:(Util.UUID.hash agid) "user:cut"
-               [Trace.Runtime.J
-                  ((pplist (ppclause ~depth ~hd) " | "), clauses)];
+            (if true
+             then
+               Trace.Runtime.info ~goal_id:(Util.UUID.hash agid) "user:cut"
+                 [Trace.Runtime.J
+                    ((pplist (ppclause ~depth ~hd) " | "), clauses)];
              prune alts.next) in
         let alts = prune alts in
         if alts == noalts then ((T.cut_trail)[@inlined ]) ();
@@ -4035,15 +4176,19 @@ module Mainloop :
                 ->
                 (CS.remove_old dg;
                  CS.to_resume := rest;
-                 Trace.Runtime.info "run-resumed-unif"
-                   [Trace.Runtime.J
-                      (((fun fmt ->
-                           fun () ->
-                             Fmt.fprintf fmt
-                               "@[<hov 2>^%d:%a@ == ^%d:%a@]\n%!" adepth
-                               (uppterm adepth [] 0 empty_env) a bdepth
-                               (uppterm bdepth [] adepth env) b)), ())];
-                 ok := (unif ~matching adepth env bdepth a b))
+                 if true
+                 then
+                   Trace.Runtime.info "user:resume-unif"
+                     [Trace.Runtime.J
+                        (((fun fmt ->
+                             fun () ->
+                               Fmt.fprintf fmt
+                                 "@[<hov 2>^%d:%a@ == ^%d:%a@]\n%!" adepth
+                                 (uppterm adepth [] 0 empty_env) a bdepth
+                                 (uppterm bdepth [] adepth env) b)), ())];
+                 ok :=
+                   (unif ~matching ((UUID.make ())[@trace ]) adepth env
+                      bdepth a b))
             | ({ kind = Constraint dpg } as c)::rest ->
                 (CS.remove_old c;
                  CS.to_resume := rest;
@@ -4095,9 +4240,11 @@ module Mainloop :
             (let search =
                exec
                  (fun () ->
-                    Trace.Runtime.info "run-trail"
-                      [Trace.Runtime.J
-                         (((fun fmt -> fun () -> T.print_trail fmt)), ())];
+                    if true
+                    then
+                      Trace.Runtime.info "dev:trail:init"
+                        [Trace.Runtime.J
+                           (((fun fmt -> fun () -> T.print_trail fmt)), ())];
                     T.initial_trail := (!T.trail);
                     run initial_depth (!orig_prolog_program) initial_goal
                       ((UUID.make ())[@trace ]) [] FNil noalts noalts) in

@@ -1,4 +1,4 @@
-(*28d7bad6722a65efca423f6dc757316bf78ecf84  src/runtime_trace_off.ml elpi.trace_ppx,ppx_deriving.std --trace_ppx-off*)
+(*0d1693a4fe694862cb320ffda87405e1c9e2e163  src/runtime_trace_off.ml elpi.trace_ppx,ppx_deriving.std --trace_ppx-off*)
 #1 "src/runtime_trace_off.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -502,7 +502,6 @@ module ConstraintStoreAndTrail :
       to_resume := [];
       new_delayed := [];
       ();
-      ();
       while (!trail) != old_trail do
         (match !trail with
          | (Assignement r)::rest -> (r.contents <- C.dummy; trail := rest)
@@ -645,7 +644,7 @@ module HO :
          let t = AppUVar (r1, 0, args) in
          let assignment = mknLam ano t in (t, (Some (r, lvl, assignment))))
     let expand_uv ~depth  r ~lvl  ~ano  =
-      (); (let (t, ass) as rc = expand_uv r ~lvl ~ano in (); (); rc)
+      (); (let (t, ass) as rc = expand_uv r ~lvl ~ano in (); rc)
     let expand_appuv r ~lvl  ~args  =
       if lvl = 0
       then ((AppUVar (r, lvl, args)), None)
@@ -659,7 +658,7 @@ module HO :
              (AppUVar (r1, 0, (args_lvl @ (C.mkinterval lvl nargs 0)))) in
          (t, (Some (r, lvl, assignment))))
     let expand_appuv ~depth  r ~lvl  ~args  =
-      (); (let (t, ass) as rc = expand_appuv r ~lvl ~args in (); (); rc)
+      (); (let (t, ass) as rc = expand_appuv r ~lvl ~args in (); rc)
     let rec move ~adepth:argsdepth  e ?avoid  ~from  ~to_  t =
       let delta = from - to_ in
       let rc =
@@ -2892,29 +2891,30 @@ module Constraints :
                                     if outdated constraints
                                     then ()
                                     else
-                                      (match try_fire_rule rule constraints
-                                       with
-                                       | None -> ()
-                                       | Some
-                                           (rule_name, to_be_removed,
-                                            to_be_added, assignments)
-                                           ->
-                                           (();
-                                            ();
-                                            removed :=
-                                              (to_be_removed @ (!removed));
-                                            List.iter
-                                              CS.remove_old_constraint
-                                              to_be_removed;
-                                            List.iter
-                                              (fun (r, _lvl, t) -> r @:= t)
-                                              assignments;
-                                            (match to_be_added with
-                                             | None -> ()
-                                             | Some to_be_added ->
-                                                 to_be_resumed_rev :=
-                                                   (to_be_added ::
-                                                   (!to_be_resumed_rev))))))))
+                                      (();
+                                       (match try_fire_rule rule constraints
+                                        with
+                                        | None -> ()
+                                        | Some
+                                            (rule_name, to_be_removed,
+                                             to_be_added, assignments)
+                                            ->
+                                            (();
+                                             ();
+                                             removed :=
+                                               (to_be_removed @ (!removed));
+                                             List.iter
+                                               CS.remove_old_constraint
+                                               to_be_removed;
+                                             List.iter
+                                               (fun (r, _lvl, t) -> r @:= t)
+                                               assignments;
+                                             (match to_be_added with
+                                              | None -> ()
+                                              | Some to_be_added ->
+                                                  to_be_resumed_rev :=
+                                                    (to_be_added ::
+                                                    (!to_be_resumed_rev)))))))))
                        done)))))
         done;
       !to_be_resumed_rev
@@ -2949,7 +2949,6 @@ module Mainloop :
              (incr steps_made;
               if (!steps_made) > bound then raise No_more_steps)
          | None -> ());
-        ();
         (match resume_all () with
          | None -> ((); ((next_alt)[@tailcall ]) alts)
          | Some ({ depth = ndepth; program; goal }::goals) ->
@@ -2958,93 +2957,97 @@ module Mainloop :
                 (goals @ ((((repack_goal)[@inlined ]) ~depth p g) :: gs))
                 next alts lvl)
          | Some [] ->
-             (match g with
-              | Builtin (c, []) when c == Global_symbols.cutc ->
-                  ((); ((cut)[@tailcall ]) gs next alts lvl)
-              | App (c, g, gs') when c == Global_symbols.andc ->
-                  (();
-                   (let gs' =
-                      List.map
-                        (fun x -> ((make_subgoal)[@inlined ]) ~depth p x) gs' in
-                    ((run)[@tailcall ]) depth p g (gs' @ gs) next alts lvl))
-              | Cons (g, gs') ->
-                  (();
-                   (let gs' = ((make_subgoal)[@inlined ]) ~depth p gs' in
-                    ((run)[@tailcall ]) depth p g (gs' :: gs) next alts lvl))
-              | Nil ->
-                  (();
-                   (match gs with
-                    | [] -> ((pop_andl)[@tailcall ]) alts next lvl
-                    | { depth; program; goal }::gs ->
-                        ((run)[@tailcall ]) depth program goal gs next alts
-                          lvl))
-              | App (c, g2, g1::[]) when c == Global_symbols.rimplc ->
-                  (();
-                   (let (clauses, pdiff, lcs) = clausify p ~depth g1 in
-                    let g2 = hmove ~from:depth ~to_:(depth + lcs) g2 in
-                    ((run)[@tailcall ]) (depth + lcs)
-                      (add_clauses ~depth clauses pdiff p) g2 gs next alts
-                      lvl))
-              | App (c, g1, g2::[]) when c == Global_symbols.implc ->
-                  (();
-                   (let (clauses, pdiff, lcs) = clausify p ~depth g1 in
-                    let g2 = hmove ~from:depth ~to_:(depth + lcs) g2 in
-                    ((run)[@tailcall ]) (depth + lcs)
-                      (add_clauses ~depth clauses pdiff p) g2 gs next alts
-                      lvl))
-              | App (c, arg, []) when c == Global_symbols.pic ->
-                  (();
-                   (let f = get_lambda_body ~depth arg in
-                    ((run)[@tailcall ]) (depth + 1) p f gs next alts lvl))
-              | App (c, arg, []) when c == Global_symbols.sigmac ->
-                  (();
-                   (let f = get_lambda_body ~depth arg in
-                    let v = UVar ((oref C.dummy), depth, 0) in
-                    let fv = subst depth [v] f in
-                    ((run)[@tailcall ]) depth p fv gs next alts lvl))
-              | UVar ({ contents = g }, from, args) when g != C.dummy ->
-                  (();
-                   ((run)[@tailcall ]) depth p
-                     (deref_uv ~from ~to_:depth args g) gs next alts lvl)
-              | AppUVar ({ contents = t }, from, args) when t != C.dummy ->
-                  (();
-                   ((run)[@tailcall ]) depth p
-                     (deref_appuv ~from ~to_:depth args t) gs next alts lvl)
-              | Const k ->
-                  (();
-                   (let clauses = get_clauses depth k g p in
-                    ();
-                    ((backchain)[@tailcall ]) depth p (k, C.dummy, [], gs)
-                      next alts lvl clauses))
-              | App (k, x, xs) ->
-                  (();
-                   (let clauses = get_clauses depth k g p in
-                    ();
-                    ((backchain)[@tailcall ]) depth p (k, x, xs, gs) next
-                      alts lvl clauses))
-              | Builtin (c, args) ->
-                  (();
-                   (match Constraints.exect_builtin_predicate c ~depth p args
-                    with
-                    | gs' ->
-                        (();
-                         (match (List.map
-                                   (fun g ->
-                                      ((make_subgoal)[@inlined ]) ~depth p g)
-                                   gs')
-                                  @ gs
-                          with
-                          | [] -> ((pop_andl)[@tailcall ]) alts next lvl
-                          | { depth; program; goal }::gs ->
-                              ((run)[@tailcall ]) depth program goal gs next
-                                alts lvl))
-                    | exception No_clause ->
-                        ((); ((next_alt)[@tailcall ]) alts)))
-              | Arg _|AppArg _ -> anomaly "The goal is not a heap term"
-              | Lam _|CData _ ->
-                  type_error ("The goal is not a predicate:" ^ (show_term g))
-              | UVar _|AppUVar _|Discard ->
-                  error "The goal is a flexible term"))
+             (();
+              (match g with
+               | Builtin (c, []) when c == Global_symbols.cutc ->
+                   ((); ((cut)[@tailcall ]) gs next alts lvl)
+               | App (c, g, gs') when c == Global_symbols.andc ->
+                   (();
+                    (let gs' =
+                       List.map
+                         (fun x -> ((make_subgoal)[@inlined ]) ~depth p x)
+                         gs' in
+                     ((run)[@tailcall ]) depth p g (gs' @ gs) next alts lvl))
+               | Cons (g, gs') ->
+                   (();
+                    (let gs' = ((make_subgoal)[@inlined ]) ~depth p gs' in
+                     ((run)[@tailcall ]) depth p g (gs' :: gs) next alts lvl))
+               | Nil ->
+                   (();
+                    (match gs with
+                     | [] -> ((pop_andl)[@tailcall ]) alts next lvl
+                     | { depth; program; goal }::gs ->
+                         ((run)[@tailcall ]) depth program goal gs next alts
+                           lvl))
+               | App (c, g2, g1::[]) when c == Global_symbols.rimplc ->
+                   (();
+                    (let (clauses, pdiff, lcs) = clausify p ~depth g1 in
+                     let g2 = hmove ~from:depth ~to_:(depth + lcs) g2 in
+                     ((run)[@tailcall ]) (depth + lcs)
+                       (add_clauses ~depth clauses pdiff p) g2 gs next alts
+                       lvl))
+               | App (c, g1, g2::[]) when c == Global_symbols.implc ->
+                   (();
+                    (let (clauses, pdiff, lcs) = clausify p ~depth g1 in
+                     let g2 = hmove ~from:depth ~to_:(depth + lcs) g2 in
+                     ((run)[@tailcall ]) (depth + lcs)
+                       (add_clauses ~depth clauses pdiff p) g2 gs next alts
+                       lvl))
+               | App (c, arg, []) when c == Global_symbols.pic ->
+                   (();
+                    (let f = get_lambda_body ~depth arg in
+                     ((run)[@tailcall ]) (depth + 1) p f gs next alts lvl))
+               | App (c, arg, []) when c == Global_symbols.sigmac ->
+                   (();
+                    (let f = get_lambda_body ~depth arg in
+                     let v = UVar ((oref C.dummy), depth, 0) in
+                     let fv = subst depth [v] f in
+                     ((run)[@tailcall ]) depth p fv gs next alts lvl))
+               | UVar ({ contents = g }, from, args) when g != C.dummy ->
+                   (();
+                    ((run)[@tailcall ]) depth p
+                      (deref_uv ~from ~to_:depth args g) gs next alts lvl)
+               | AppUVar ({ contents = t }, from, args) when t != C.dummy ->
+                   (();
+                    ((run)[@tailcall ]) depth p
+                      (deref_appuv ~from ~to_:depth args t) gs next alts lvl)
+               | Const k ->
+                   (();
+                    (let clauses = get_clauses depth k g p in
+                     ();
+                     ((backchain)[@tailcall ]) depth p (k, C.dummy, [], gs)
+                       next alts lvl clauses))
+               | App (k, x, xs) ->
+                   (();
+                    (let clauses = get_clauses depth k g p in
+                     ();
+                     ((backchain)[@tailcall ]) depth p (k, x, xs, gs) next
+                       alts lvl clauses))
+               | Builtin (c, args) ->
+                   (();
+                    (match Constraints.exect_builtin_predicate c ~depth p
+                             args
+                     with
+                     | gs' ->
+                         (();
+                          (match (List.map
+                                    (fun g ->
+                                       ((make_subgoal)[@inlined ]) ~depth p g)
+                                    gs')
+                                   @ gs
+                           with
+                           | [] -> ((pop_andl)[@tailcall ]) alts next lvl
+                           | { depth; program; goal }::gs ->
+                               ((run)[@tailcall ]) depth program goal gs next
+                                 alts lvl))
+                     | exception No_clause ->
+                         ((); ((next_alt)[@tailcall ]) alts)))
+               | Arg _|AppArg _ -> anomaly "The goal is not a heap term"
+               | Lam _|CData _ ->
+                   type_error
+                     ("The goal is not a predicate:" ^ (show_term g))
+               | UVar _|AppUVar _|Discard ->
+                   error "The goal is a flexible term")))
       and backchain depth p (k, arg, args_of_g, gs) next alts lvl cp =
         match cp with
         | [] -> ((); ((next_alt)[@tailcall ]) alts)

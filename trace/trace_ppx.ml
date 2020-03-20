@@ -9,9 +9,8 @@
          | K2 x -> [%tcall f x]
          | K2(x,y) ->
             let z = f x in
-            [%spy "z" (fun fmt z -> .. z ..) z];
-            [%spyl "z" (fun fmt z -> .. z ..) zs];
-            [%spyif "z" b (fun fmt -> .. z ..) z];
+            [%spy "z" ~gid ~cond (fun fmt z -> .. z ..) z];
+            [%spyl "z" ~gid ~cond (fun fmt z -> .. z ..) zs];
             [%log "K2" "whatever" 37];
             let x[@trace] = ... in e
             let w = { a; b = b[@trace ] } in
@@ -23,7 +22,7 @@
   If --off is passed to the ppx rewriter:
     - [%trace "foo" pp code] ---> code
     - [%tcall f x] ---> f x
-    - [%spy ...] [%spyif ...] and [%log ...] ---> ()
+    - [%spy ...] [%spyl ...] and [%log ...] ---> ()
     - f x (y[@trace]) z ---> f x z
     - type x = { a : T; b : T [@trace] } ---> type x = { a : T }
     - { a; b = b [@trace] } ---> { a } (in both patterns and expressions)
@@ -61,7 +60,7 @@ let trace name ppfun body = [%expr
 let err ~loc str =
   raise (Location.Error(Location.error ~loc str))
 
-let spy err gid name pp =
+let spy err ?(cond=[%expr true]) ?gid name pp =
   let ppl =
     let rec aux = function
       | [] -> [%expr []]
@@ -70,10 +69,10 @@ let spy err gid name pp =
       in
     aux pp in
   match gid with
-  | None -> [%expr Trace.Runtime.info [%e name] [%e ppl]]
-  | Some gid -> [%expr Trace.Runtime.info ~goal_id:(Util.UUID.hash [%e gid]) [%e name] [%e ppl]]
+  | None -> [%expr if [%e cond] then Trace.Runtime.info [%e name] [%e ppl]]
+  | Some gid -> [%expr if [%e cond] then Trace.Runtime.info ~goal_id:(Util.UUID.hash [%e gid]) [%e name] [%e ppl]]
 
-let spyl err gid name pp =
+let spyl err ?(cond=[%expr true]) ?gid name pp =
   let ppl =
     let rec aux = function
       | [] -> [%expr []]
@@ -82,11 +81,8 @@ let spyl err gid name pp =
       in
     aux pp in
   match gid with
-  | None -> [%expr Trace.Runtime.info [%e name] [%e ppl]]
-  | Some gid -> [%expr Trace.Runtime.info ~goal_id:(Util.UUID.hash [%e gid]) [%e name] [%e ppl]]
-
-let spyif name cond pp x =
-  [%expr if [%e cond] then Trace.Runtime.info [%e name] [Trace.Runtime.J([%e pp],[%e x])]]
+  | None -> [%expr if [%e cond] then Trace.Runtime.info [%e name] [%e ppl]]
+  | Some gid -> [%expr if [%e cond] then Trace.Runtime.info ~goal_id:(Util.UUID.hash [%e gid]) [%e name] [%e ppl]]
 
 let log name key data =
   [%expr Trace.Runtime.log [%e name] [%e key] [%e data]]
@@ -126,16 +122,21 @@ expr = begin fun mapper expr ->
   let aux = mapper.expr mapper in
   match expr with
   | { pexp_desc = Pexp_extension ({ txt = "trace"; loc; _ }, pstr); _ } ->
-      let err () = err ~loc "use: [%trace id pp code]" in
+      let err () = err ~loc "use: [%trace pp code]" in
       begin match pstr with
       | PStr [ { pstr_desc = Pstr_eval(
-              { pexp_desc = Pexp_apply(name,[(_,pp);(_,code)]); _ },_); _} ] ->
-        let pp =
-          match pp with
-          | { pexp_desc = Pexp_apply(hd,args); _ } ->
-             [%expr fun fmt -> [%e mkapp [%expr Format.fprintf fmt]
-                (hd :: List.map snd args)]]
-          | _ -> pp in
+              { pexp_desc = Pexp_apply(name,args); _ },_); _} ] ->
+        let pp, code =
+          match args with
+          | [_,code] -> [%expr fun _ -> ()], code
+          | [(_,pp);(_,code)] ->
+              begin match pp with
+              | { pexp_desc = Pexp_apply(hd,args); _ } ->
+                 [%expr fun fmt -> [%e mkapp [%expr Format.fprintf fmt]
+                    (hd :: List.map snd args)]], code
+              | _ -> pp, code
+              end
+          | _ -> err () in
         if !enabled then trace (aux name) (aux pp) (aux code)
         else aux code
       | _ -> err ()
@@ -155,52 +156,32 @@ expr = begin fun mapper expr ->
         end
       | _ -> err ~loc "use: [%tcall f args]"
       end
-  | { pexp_desc = Pexp_extension ({ txt = "spy"; loc; _ }, pstr); _ } ->
-      let err () = err ~loc "use: [%spy id pp x] or [%spy id ~gid pp x]" in
+  | { pexp_desc = Pexp_extension ({ txt; loc; _ }, pstr); _ } when txt = "spy" || txt = "spyl" ->
+      let err () = err ~loc "use: [%spy id pp x] or [%spy id ~gid ~cond pp x]" in
       let is_string_literal = function
         | { pexp_desc = Pexp_constant (Pconst_string _); _ } -> true
         | _ -> false in
-       let is_gid (lbl,_) = lbl = Labelled "gid" in
+       let is_gid lbl = lbl = Labelled "gid" in
+       let is_cond lbl = lbl = Labelled "cond" in
+       let pull f l =
+         let rec pull acc = function
+           | [] -> None, l
+           | (x,y) :: xs when f x -> Some y, List.rev acc @ xs
+           | x :: xs -> pull (x :: acc) xs in
+          pull [] l in
       let expr_of_msg (_,msg) = aux msg in
       begin match pstr with
+      | PStr [{ pstr_desc = Pstr_eval(name,_); _ }] when is_string_literal name ->
+        if !enabled then spy err name []
+        else [%expr ()]
       | PStr [{ pstr_desc = Pstr_eval(
-               { pexp_desc = Pexp_apply(name,
-                msg :: msgs); _ },_); _} ] when is_string_literal name && is_gid msg ->
-        if !enabled then spy err (Some (snd msg)) name (List.map expr_of_msg msgs)
-        else [%expr ()]
-       | PStr [{ pstr_desc = Pstr_eval(
-               { pexp_desc = Pexp_apply(name,
-                  msgs); _ },_); _} ] when is_string_literal name ->
-        if !enabled then spy err None name (List.map expr_of_msg msgs)
-        else [%expr ()]
-      | _ -> err ()
-      end
-  | { pexp_desc = Pexp_extension ({ txt = "spyl"; loc; _ }, pstr); _ } ->
-      let err () = err ~loc "use: [%spyl id pp xs] or [%spyl id ~gid pp xs]" in
-      let is_string_literal = function
-        | { pexp_desc = Pexp_constant (Pconst_string _); _ } -> true
-        | _ -> false in
-       let is_gid (lbl,_) = lbl = Labelled "gid" in
-      let expr_of_msg (_,msg) = aux msg in
-      begin match pstr with
-      | PStr [{ pstr_desc = Pstr_eval(
-               { pexp_desc = Pexp_apply(name,
-                msg :: msgs); _ },_); _} ] when is_string_literal name && is_gid msg ->
-        if !enabled then spyl err (Some (snd msg)) name (List.map expr_of_msg msgs)
-        else [%expr ()]
-       | PStr [{ pstr_desc = Pstr_eval(
-               { pexp_desc = Pexp_apply(name,
-                  msgs); _ },_); _} ] when is_string_literal name ->
-        if !enabled then spyl err None name (List.map expr_of_msg msgs)
-        else [%expr ()]
-      | _ -> err ()
-      end
-  | { pexp_desc = Pexp_extension ({ txt = "spyif"; loc; _ }, pstr); _ } ->
-      let err () = err ~loc "use: [%spyif id cond pp data]" in
-      begin match pstr with
-      | PStr [ { pstr_desc = Pstr_eval(
-              { pexp_desc = Pexp_apply(name,[(_,cond);(_,pp);(_,x)]); _ },_); _} ] ->
-        if !enabled then spyif (aux name) (aux cond) (aux pp) (aux x)
+               { pexp_desc = Pexp_apply(name, args); _ },_); _} ] when is_string_literal name ->
+        let cond, args = pull is_cond args in
+        let gid, args = pull is_gid args in
+        if !enabled then
+          if txt = "spy" then spy err ?cond ?gid name (List.map expr_of_msg args)
+          else if txt = "spyl" then spyl err ?cond ?gid name (List.map expr_of_msg args)
+          else assert false
         else [%expr ()]
       | _ -> err ()
       end

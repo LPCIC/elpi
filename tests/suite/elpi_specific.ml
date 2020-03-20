@@ -99,8 +99,8 @@ let () = declare "chr_even_odd"
   ~source_elpi:"even-odd.elpi"
   ~description:"CHR example at MLWS"
   ~typecheck:false
-  ~trace:(On["json";"stdout";"-trace-at";"run";"1";"99";"-trace-only";"user"])
-  ~expectation:(SuccessOutput (Str.regexp "user:CHR:fired"))
+  ~trace:(On["json";"stdout";"-trace-at";"1";"99";"-trace-only";"user"])
+  ~expectation:(SuccessOutput (Str.regexp "user:CHR:rule-fired"))
   ()
 let () = declare "w"
   ~source_elpi:"w.elpi"

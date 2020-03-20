@@ -11,12 +11,10 @@ module Str = Re.Str
 let debug = ref false
 let where_loc = ref ("",0,max_int)
 let cur_step = ref StrMap.empty
-let level = ref 0
 let filter = ref []
 let fonly = ref []
 let ponly = ref []
 let hot = ref false
-let hot_level = ref 0
 let collect_perf = ref false
 let trace_noprint = ref false
 let cur_pred = ref None
@@ -118,7 +116,6 @@ let condition k =
        (k = loc &&
        let cur_step = get_cur_step k in
        hot := cur_step >= first_step && cur_step <= last_step;
-       if !hot && !hot_level = 0 then hot_level := !level;
        !hot))
     (* -trace-only *)
     && (!fonly = [] || List.exists (fun p -> Str.string_match p k 0) !fonly)
@@ -138,9 +135,7 @@ let init ?(where="",0,max_int) ?(skip=[]) ?(only=[]) ?(only_pred=[]) b =
   fonly := List.map Str.regexp only;
   ponly := List.map Str.regexp only_pred;
   where_loc := where;
-  level := 0;
   hot := false;
-  hot_level := 0
 ;;
 
 let incr_cur_step k =
@@ -150,7 +145,6 @@ let incr_cur_step k =
 end
 
 let enter k payload =
-  incr level;
   Trace.incr_cur_step k;
   if Trace.condition k then begin
     Perf.collect_perf_enter k;
@@ -176,8 +170,7 @@ let exit k tailcall e time =
     Perf.collect_perf_exit time;
     if not !trace_noprint then
       !printer { goal_id = 0; name = k; step = Trace.get_cur_step k; kind = Stop { cause = (if tailcall then "->" else pr_exc e); time }; payload = [J((fun _ _ -> ()),())] }
-  end;
-  decr level
+  end
 
 (* Json *)
 let pp_s fmt s =
@@ -251,9 +244,6 @@ let tty_formatter_maxbox = ref max_int
 let set_tty_formatter_maxcols i = tty_formatter_maxcols := i
 let set_tty_formatter_maxbox i = tty_formatter_maxbox := i
 
-let make_indent () =
-  String.make (max 0 (!level - !hot_level)) ' '
-
 let pplist ppelem f l =
     F.fprintf f "@[<hov>";
     List.iter (fun x -> F.fprintf f "%a%s@," ppelem x " ") l;
@@ -263,14 +253,11 @@ let pplist ppelem f l =
 let print_tty fmt = (); fun { goal_id = _; kind; name; step; payload } ->
   match kind with
   | Start ->
-    F.fprintf fmt "%s%s %d {{{@[<hov1> %a@]\n%!" (make_indent ()) name step
-        (pplist pp_j) payload
+    F.fprintf fmt "%s %d {{{@[<hov1> %a@]\n%!" name step (pplist pp_j) payload
   | Stop { cause; time } ->
-    F.fprintf fmt "%s}}} %s  (%.3fs)\n%!"
-      (make_indent ()) cause time
+    F.fprintf fmt "}}} %s  (%.3fs)\n%!" cause time
   | Info ->
-    F.fprintf fmt "%s %s =@[<hov1> %a@]\n%!" (make_indent ()) name
-      (pplist pp_j) payload
+    F.fprintf fmt "  %s =@[<hov1> %a@]\n%!" name (pplist pp_j) payload
 
 let () = printer := print_tty F.err_formatter
 
@@ -305,12 +292,11 @@ let () =
 let usage = {|
 Tracing options can be used to debug your programs and Elpi as well.
 A sensible set of options to debug your programs is
-  -trace-on -trace-at run 1 9999
-  -trace-only run -trace-only select -trace-only assign
+  -trace-on -trace-at 1 9999 -trace-only user
 Tracing options:
-  -trace-at FUNCNAME START STOP  print trace between call START
-    and STOP of function FNAME
-  -trace-on KIND FILE enable trace printing. KIND is tty or json (default tty).
+  -trace-at FNAME START STOP  print trace between call START
+    and STOP of function FNAME (FNAME can be omitted, default is run)
+  -trace-on KIND FILE enable trace printing. KIND is tty or json (default is tty).
     FILE is stdout or stderr (default) or host:port or /path or ./path
   -trace-skip REX  ignore trace items matching REX
   -trace-only REX  trace only items matching REX
@@ -352,8 +338,13 @@ let parse_argv argv =
     | [] -> []
     | "-trace-v" :: rest -> verbose := true; aux rest
     | "-trace-at" :: fname :: start :: stop :: rest ->
+       if Str.(string_match (regexp "[0-9]+") fname 0) then begin
+         where := ("run", int_of_string fname, int_of_string start);
+         aux (stop :: rest)
+       end else begin
          where := (fname, int_of_string start, int_of_string stop);
          aux rest
+       end
     | "-trace-on" :: "tty" :: file :: rest ->
          set_trace_output TTY (fmt_of_file file);
          trace_noprint := false; on := true; aux rest

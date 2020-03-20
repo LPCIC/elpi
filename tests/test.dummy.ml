@@ -1,3 +1,3 @@
 let () =
-  Printf.eprintf "test suite not available in this environment\n";
+  Printf.eprintf "test not available, some build dependencies are missing\n";
   exit 1
