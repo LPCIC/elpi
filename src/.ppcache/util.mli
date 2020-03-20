@@ -1,4 +1,4 @@
-(*f81b6f53e85d7c289fb4bc5c47b7848e424f39c1  src/util.mli ppx_deriving.std *)
+(*f81b6f53e85d7c289fb4bc5c47b7848e424f39c1  src/util.mli *)
 #1 "src/util.mli"
 module type Show  =
   sig

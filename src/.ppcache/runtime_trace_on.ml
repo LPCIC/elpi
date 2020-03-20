@@ -1,4 +1,4 @@
-(*0d1693a4fe694862cb320ffda87405e1c9e2e163  src/runtime_trace_on.ml elpi.trace_ppx,ppx_deriving.std --trace_ppx-on*)
+(*0d1693a4fe694862cb320ffda87405e1c9e2e163  src/runtime_trace_on.ml --trace_ppx-on*)
 #1 "src/runtime_trace_on.ml"
 module Fmt = Format
 module F = Ast.Func

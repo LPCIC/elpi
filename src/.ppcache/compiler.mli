@@ -1,4 +1,4 @@
-(*d53ed81516fb5c87752f86676d2c2b0ac20ba07f  src/compiler.mli ppx_deriving.std *)
+(*d53ed81516fb5c87752f86676d2c2b0ac20ba07f  src/compiler.mli *)
 #1 "src/compiler.mli"
 open Util
 open Data

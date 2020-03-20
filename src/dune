@@ -2,7 +2,7 @@
   (name elpi)
   (public_name elpi)
   (preprocess (per_module
-    ((action (run ppxfindcache %{input-file} --ppx ppx_deriving.std
+    ((action (run ppxfindcache_deriving_std %{input-file}
                     --cache-file %{dep:.ppcache/API.ml}
                     --cache-file %{dep:.ppcache/API.mli}
                     --cache-file %{dep:.ppcache/util.ml}
@@ -13,11 +13,11 @@
                     --cache-file %{dep:.ppcache/compiler.ml}
                     --cache-file %{dep:.ppcache/compiler.mli}))
               util API ast data compiler)
-    ((action (run ppxfindcache %{input-file} --ppx elpi.trace_ppx,ppx_deriving.std --ppx-opt --trace_ppx-on
+    ((action (run ppxfindcache_elpi_trace_deriving_std %{input-file} --ppx-opt --trace_ppx-on
                     --cache-file %{dep:.ppcache/runtime_trace_on.ml}
                     --cache-file %{dep:.ppcache/runtime_trace_on.mli}))
               runtime_trace_on)
-    ((action (run ppxfindcache %{input-file} --ppx elpi.trace_ppx,ppx_deriving.std --ppx-opt --trace_ppx-off
+    ((action (run ppxfindcache_elpi_trace_deriving_std %{input-file} --ppx-opt --trace_ppx-off
                     --cache-file %{dep:.ppcache/runtime_trace_off.ml}
                     --cache-file %{dep:.ppcache/runtime_trace_off.mli}))
               runtime_trace_off)

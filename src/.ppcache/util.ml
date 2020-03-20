@@ -1,4 +1,4 @@
-(*c7c51af0bc940c71755b1a9375a8fab7d247a0b6  src/util.ml ppx_deriving.std *)
+(*c7c51af0bc940c71755b1a9375a8fab7d247a0b6  src/util.ml *)
 #1 "src/util.ml"
 module type Show  =
   sig type t val pp : Format.formatter -> t -> unit val show : t -> string

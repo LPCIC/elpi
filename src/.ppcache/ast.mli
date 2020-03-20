@@ -1,4 +1,4 @@
-(*0955ec849b56078e3758eb95f9bd37800d3dcecc  src/ast.mli ppx_deriving.std *)
+(*0955ec849b56078e3758eb95f9bd37800d3dcecc  src/ast.mli *)
 #1 "src/ast.mli"
 open Util
 module Func :
