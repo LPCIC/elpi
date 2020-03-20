@@ -1,8 +1,15 @@
-## v1.10.3 UNRELEASED
+## v1.11.0 UNRELEASED
+
+- Trace:
+  - json output, with messages representing the tree structure of the proof
+  - categorize spy points into user and dev
+  - improve trace_ppx, revise all trace points
 
 - Build system:
   - cache ppx output so that it builds without ppx_deriving and trace_ppx
+    using a new tool in ppxfindcache/
   - vendor dependencies so that it builds with just: camlp5 ocamlfind dune
+  - generate custom merlinppx for src/ and trace/ and patch .merlin files
 
 ## v1.10.2 (February 2020)
 
