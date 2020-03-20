@@ -2575,7 +2575,7 @@ open Clausify
   Choice stack
  ******************************************************************************)
 
-type goal = { depth : int; program : prolog_prog; goal : term; gid : UUID.t [@trace] } [@@deriving show]
+type goal = { depth : int; program : prolog_prog; goal : term; gid : UUID.t [@trace] }
 
 let make_subgoal_id ogid ((depth,goal)[@trace]) =
   let gid = UUID.make () in

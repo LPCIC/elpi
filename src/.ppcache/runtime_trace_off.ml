@@ -1,4 +1,4 @@
-(*0d1693a4fe694862cb320ffda87405e1c9e2e163  src/runtime_trace_off.ml --trace_ppx-off*)
+(*25823e968f78a65500da52de3f79f1aeb00d2b5a  src/runtime_trace_off.ml --trace_ppx-off*)
 #1 "src/runtime_trace_off.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -2416,33 +2416,7 @@ open Clausify
 type goal = {
   depth: int ;
   program: prolog_prog ;
-  goal: term }[@@deriving show]
-let rec pp_goal :
-  Ppx_deriving_runtime.Format.formatter -> goal -> Ppx_deriving_runtime.unit
-  =
-  let __1 () = pp_term
-  and __0 () = pp_prolog_prog in
-  ((let open! Ppx_deriving_runtime in
-      fun fmt ->
-        fun x ->
-          Ppx_deriving_runtime.Format.fprintf fmt "@[<2>{ ";
-          (((Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
-               "Runtime_trace_off.depth";
-             (Ppx_deriving_runtime.Format.fprintf fmt "%d") x.depth;
-             Ppx_deriving_runtime.Format.fprintf fmt "@]");
-            Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-            Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "program";
-            ((__0 ()) fmt) x.program;
-            Ppx_deriving_runtime.Format.fprintf fmt "@]");
-           Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-           Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "goal";
-           ((__1 ()) fmt) x.goal;
-           Ppx_deriving_runtime.Format.fprintf fmt "@]");
-          Ppx_deriving_runtime.Format.fprintf fmt "@ }@]")
-    [@ocaml.warning "-A"])
-and show_goal : goal -> Ppx_deriving_runtime.string =
-  fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_goal x[@@ocaml.warning
-                                                                "-32"]
+  goal: term }
 let make_subgoal_id ogid = let gid = UUID.make () in (); (); gid[@@inline ]
 let make_subgoal ~depth  program goal = { depth; program; goal }[@@inline ]
 let repack_goal ~depth  program goal = { depth; program; goal }[@@inline ]

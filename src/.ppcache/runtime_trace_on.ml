@@ -1,4 +1,4 @@
-(*0d1693a4fe694862cb320ffda87405e1c9e2e163  src/runtime_trace_on.ml --trace_ppx-on*)
+(*25823e968f78a65500da52de3f79f1aeb00d2b5a  src/runtime_trace_on.ml --trace_ppx-on*)
 #1 "src/runtime_trace_on.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -2946,38 +2946,7 @@ type goal =
   depth: int ;
   program: prolog_prog ;
   goal: term ;
-  gid: UUID.t [@trace ]}[@@deriving show]
-let rec pp_goal :
-  Ppx_deriving_runtime.Format.formatter -> goal -> Ppx_deriving_runtime.unit
-  =
-  let __2 () = UUID.pp
-  and __1 () = pp_term
-  and __0 () = pp_prolog_prog in
-  ((let open! Ppx_deriving_runtime in
-      fun fmt ->
-        fun x ->
-          Ppx_deriving_runtime.Format.fprintf fmt "@[<2>{ ";
-          ((((Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
-                "Runtime_trace_on.depth";
-              (Ppx_deriving_runtime.Format.fprintf fmt "%d") x.depth;
-              Ppx_deriving_runtime.Format.fprintf fmt "@]");
-             Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-             Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "program";
-             ((__0 ()) fmt) x.program;
-             Ppx_deriving_runtime.Format.fprintf fmt "@]");
-            Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-            Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "goal";
-            ((__1 ()) fmt) x.goal;
-            Ppx_deriving_runtime.Format.fprintf fmt "@]");
-           Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-           Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "gid";
-           ((__2 ()) fmt) x.gid;
-           Ppx_deriving_runtime.Format.fprintf fmt "@]");
-          Ppx_deriving_runtime.Format.fprintf fmt "@ }@]")
-    [@ocaml.warning "-A"])
-and show_goal : goal -> Ppx_deriving_runtime.string =
-  fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_goal x[@@ocaml.warning
-                                                                "-32"]
+  gid: UUID.t [@trace ]}
 let make_subgoal_id ogid (((depth, goal))[@trace ]) =
   let gid = UUID.make () in
   if true
