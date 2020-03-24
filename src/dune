@@ -33,8 +33,8 @@
        (-> ppx_deriving_runtime_proxy.embed.ml)
        ))
   (flags -linkall)
-  (modules elpi util parser ast compiler data ptmap builtin builtin_checker builtin_stdlib builtin_map builtin_set API runtime_trace_on runtime_trace_off ppx_deriving_runtime_proxy)
-  (private_modules util parser ast compiler data ptmap builtin_stdlib builtin_map builtin_set runtime_trace_on runtime_trace_off ppx_deriving_runtime_proxy)
+  (modules elpi util parser ast compiler data ptmap builtin builtin_checker builtin_stdlib builtin_map builtin_set builtin_ppx API runtime_trace_on runtime_trace_off ppx_deriving_runtime_proxy)
+  (private_modules util parser ast compiler data ptmap builtin_stdlib builtin_map builtin_set builtin_ppx runtime_trace_on runtime_trace_off ppx_deriving_runtime_proxy)
 )
 
 (dirs .ppcache)
@@ -56,6 +56,11 @@
 (rule (with-stdout-to builtin_set.ml (progn
   (echo "let code = {code|#line 0 \"builtin_set.elpi\"\n")
   (cat builtin_set.elpi)
+  (echo "|code};;")
+)))
+(rule (with-stdout-to builtin_ppx.ml (progn
+  (echo "let code = {code|#line 0 \"builtin_ppx.elpi\"\n")
+  (cat builtin_ppx.elpi)
   (echo "|code};;")
 )))
 (rule (with-stdout-to builtin_checker.ml (progn

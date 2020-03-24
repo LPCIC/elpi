@@ -48,6 +48,11 @@ val std_builtins : API.Setup.builtins
 val pair : 'a API.Conversion.t -> 'b API.Conversion.t -> ('a * 'b) API.Conversion.t
 val option : 'a API.Conversion.t -> 'a option API.Conversion.t
 val bool : bool API.Conversion.t
+val char : char API.Conversion.t
+
+val tripleC    : ('a, 'h, 'cs) API.ContextualConversion.t -> ('b, 'h, 'cs) API.ContextualConversion.t -> ('c, 'h, 'cs) API.ContextualConversion.t -> ('a * 'b * 'c, 'h, 'cs) API.ContextualConversion.t
+val quadrupleC : ('a, 'h, 'cs) API.ContextualConversion.t -> ('b, 'h, 'cs) API.ContextualConversion.t -> ('c, 'h, 'cs) API.ContextualConversion.t -> ('d, 'h, 'cs) API.ContextualConversion.t -> ('a * 'b * 'c * 'd, 'h, 'cs) API.ContextualConversion.t
+val quintupleC : ('a, 'h, 'cs) API.ContextualConversion.t -> ('b, 'h, 'cs) API.ContextualConversion.t -> ('c, 'h, 'cs) API.ContextualConversion.t -> ('d, 'h, 'cs) API.ContextualConversion.t -> ('e, 'h, 'cs) API.ContextualConversion.t -> ('a * 'b * 'c * 'd * 'e, 'h, 'cs) API.ContextualConversion.t
 
 type diagnostic = private OK | ERROR of string API.BuiltInPredicate.ioarg
 val diagnostic : diagnostic API.Conversion.t
@@ -60,3 +65,28 @@ val out_stream : (out_channel * string) API.Conversion.t
 
 (* This is the default checker [elpi-checker] *)
 val default_checker : unit -> API.Compile.program
+
+module PPX : sig
+  (** internal API for elpi.ppx *)
+
+  val readback_pair : ('a, 'h, 'cs) API.ContextualConversion.readback -> ('b, 'h, 'cs) API.ContextualConversion.readback -> ('a * 'b, 'h, 'cs) API.ContextualConversion.readback
+  val readback_option : ('a, 'h, 'cs) API.ContextualConversion.readback -> ('a option, 'h, 'cs) API.ContextualConversion.readback
+  val readback_bool : (bool, 'h, 'cs) API.ContextualConversion.readback
+  val readback_char : (char, 'h, 'cs) API.ContextualConversion.readback
+
+  val readback_triple    : ('a, 'h, 'cs) API.ContextualConversion.readback -> ('b, 'h, 'cs) API.ContextualConversion.readback -> ('c, 'h, 'cs) API.ContextualConversion.readback -> ('a * 'b * 'c, 'h, 'cs) API.ContextualConversion.readback
+  val readback_quadruple : ('a, 'h, 'cs) API.ContextualConversion.readback -> ('b, 'h, 'cs) API.ContextualConversion.readback -> ('c, 'h, 'cs) API.ContextualConversion.readback -> ('d, 'h, 'cs) API.ContextualConversion.readback -> ('a * 'b * 'c * 'd, 'h, 'cs) API.ContextualConversion.readback
+  val readback_quintuple : ('a, 'h, 'cs) API.ContextualConversion.readback -> ('b, 'h, 'cs) API.ContextualConversion.readback -> ('c, 'h, 'cs) API.ContextualConversion.readback -> ('d, 'h, 'cs) API.ContextualConversion.readback -> ('e, 'h, 'cs) API.ContextualConversion.readback -> ('a * 'b * 'c * 'd * 'e, 'h, 'cs) API.ContextualConversion.readback
+
+  val embed_pair : ('a, 'h, 'cs) API.ContextualConversion.embedding -> ('b, 'h, 'cs) API.ContextualConversion.embedding -> ('a * 'b, 'h, 'cs) API.ContextualConversion.embedding
+  val embed_option : ('a, 'h, 'cs) API.ContextualConversion.embedding -> ('a option, 'h, 'cs) API.ContextualConversion.embedding
+  val embed_bool : (bool, 'h, 'cs) API.ContextualConversion.embedding
+  val embed_char : (char, 'h, 'cs) API.ContextualConversion.embedding
+
+  val embed_triple    : ('a, 'h, 'cs) API.ContextualConversion.embedding -> ('b, 'h, 'cs) API.ContextualConversion.embedding -> ('c, 'h, 'cs) API.ContextualConversion.embedding -> ('a * 'b * 'c, 'h, 'cs) API.ContextualConversion.embedding
+  val embed_quadruple : ('a, 'h, 'cs) API.ContextualConversion.embedding -> ('b, 'h, 'cs) API.ContextualConversion.embedding -> ('c, 'h, 'cs) API.ContextualConversion.embedding -> ('d, 'h, 'cs) API.ContextualConversion.embedding -> ('a * 'b * 'c * 'd, 'h, 'cs) API.ContextualConversion.embedding
+  val embed_quintuple : ('a, 'h, 'cs) API.ContextualConversion.embedding -> ('b, 'h, 'cs) API.ContextualConversion.embedding -> ('c, 'h, 'cs) API.ContextualConversion.embedding -> ('d, 'h, 'cs) API.ContextualConversion.embedding -> ('e, 'h, 'cs) API.ContextualConversion.embedding -> ('a * 'b * 'c * 'd * 'e, 'h, 'cs) API.ContextualConversion.embedding
+
+  val declarations : declaration list
+
+end

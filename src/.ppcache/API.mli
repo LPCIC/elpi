@@ -1,4 +1,4 @@
-(*927d066a4a64bd8ebdf616cca09a2e6c6b896a27 *src/API.mli *)
+(*4467f673214a6e11e471c7b922bbb61fb3d13283 *src/API.mli *)
 #1 "src/API.mli"
 [@@@ocaml.text " This module is the API for clients of the Elpi library. "]
 [@@@ocaml.text
@@ -185,6 +185,14 @@ sig
         Data.constraints ->
           Data.state ->
             (Data.state * 'hyps * 'constraints * Conversion.extra_goals)
+  type 'a ctx_entry = {
+    entry: 'a ;
+    depth: int }
+  val pp_ctx_entry :
+    (Format.formatter -> 'a -> unit) ->
+      Format.formatter -> 'a ctx_entry -> unit
+  val show_ctx_entry :
+    (Format.formatter -> 'a -> unit) -> 'a ctx_entry -> string
   val unit_ctx : (unit, unit) ctx_readback
   val raw_ctx : (Data.hyps, Data.constraints) ctx_readback
   val (!<) : ('a, unit, unit) t -> 'a Conversion.t
@@ -196,6 +204,10 @@ sig
     ('a Conversion.t -> 'b Conversion.t -> 'c Conversion.t) ->
       ('a, 'hyps, 'constraints) t ->
         ('b, 'hyps, 'constraints) t -> ('c, 'hyps, 'constraints) t
+  val (|+|) :
+    ('h1, Data.constraints) ctx_readback ->
+      ('h2, Data.constraints) ctx_readback ->
+        (('h1 * 'h2), Data.constraints) ctx_readback
 end[@@ocaml.doc
      " This module defines what embedding and readback functions are\n    for datatypes that need the context of the program (hypothetical clauses and\n    constraints) "]
 module BuiltInData :
@@ -437,6 +449,62 @@ sig
   val uvar : (Elpi.t * Data.term list) Conversion.t
 end[@@ocaml.doc
      " Flexible data is for unification variables. One can use Elpi's unification\n    variables to represent the host equivalent, here the API the keep a link\n    between the two. "]
+module Utils :
+sig
+  val error : ?loc:Ast.Loc.t -> string -> 'a[@@ocaml.doc
+                                              " A regular error (fatal) "]
+  val anomaly : ?loc:Ast.Loc.t -> string -> 'a[@@ocaml.doc
+                                                " An invariant is broken, i.e. a bug "]
+  val type_error : ?loc:Ast.Loc.t -> string -> 'a[@@ocaml.doc
+                                                   " A type error (in principle ruled out by [elpi-checker.elpi]) "]
+  val warn : ?loc:Ast.Loc.t -> string -> unit[@@ocaml.doc
+                                               " A non fatal warning "]
+  val printf : ('a, Format.formatter, unit) format -> 'a[@@ocaml.doc
+                                                          " alias for printf and eprintf that write on the formatters set in Setup "]
+  val eprintf : ('a, Format.formatter, unit) format -> 'a
+  val list_to_lp_list : Data.term list -> Data.term[@@ocaml.doc
+                                                     " link between OCaml and LP lists. Note that [1,2|X] is not a valid\n   * OCaml list! "]
+  val lp_list_to_list : depth:int -> Data.term -> Data.term list
+  val get_assignment : FlexibleData.Elpi.t -> Data.term option[@@ocaml.doc
+                                                                " The body of an assignment, if any (LOW LEVEL).\n   * Use [look] and forget about this API since the term you get\n   * needs to be moved and/or reduced, and you have no API for this. "]
+  val clause_of_term :
+    ?name:string ->
+      ?graft:([ `After  | `Before ] * string) ->
+        depth:int -> Ast.Loc.t -> Data.term -> Ast.program[@@ocaml.doc
+                                                            " Hackish, in particular the output should be a compiled program "]
+  val move : from:int -> to_:int -> Data.term -> Data.term[@@ocaml.doc
+                                                            " Lifting/restriction/beta (LOW LEVEL, don't use) "]
+  val beta : depth:int -> Data.term -> Data.term list -> Data.term
+  val map_acc :
+    (State.t -> 't -> (State.t * 'a * Conversion.extra_goals)) ->
+      State.t -> 't list -> (State.t * 'a list * Conversion.extra_goals)
+  [@@ocaml.doc " readback/embed on lists "]
+  module type Show  =
+    sig type t val pp : Format.formatter -> t -> unit val show : t -> string
+    end
+  module type Show1  =
+    sig
+      type 'a t
+      val pp :
+        (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+      val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
+    end
+  module Map :
+  sig
+    module type S  =
+      sig include Map.S include Show1 with type 'a t :=  'a t end
+    module type OrderedType  =
+      sig include Map.OrderedType include Show with type  t :=  t end
+    module Make : functor (Ord : OrderedType) -> S with type  key =  Ord.t
+  end
+  module Set :
+  sig
+    module type S  = sig include Set.S include Show with type  t :=  t end
+    module type OrderedType  =
+      sig include Set.OrderedType include Show with type  t :=  t end
+    module Make : functor (Ord : OrderedType) -> S with type  elt =  Ord.t
+  end
+end
 module RawOpaqueData :
 sig
   type name = string
@@ -544,8 +612,8 @@ sig
     val cutc : constant
     val ctypec : constant
     val spillc : constant
-    module Map : Map.S with type  key =  constant
-    module Set : Set.S with type  elt =  constant
+    module Map : Utils.Map.S with type  key =  constant
+    module Set : Utils.Set.S with type  elt =  constant
   end
 end[@@ocaml.doc
      " This module exposes the low level representation of terms.\n   *\n   * The data type [term] is opaque and can only be accessed by using the\n   * [look] API that exposes a term [view]. The [look] view automatically\n   * substitutes assigned unification variables by their value. "]
@@ -567,7 +635,7 @@ sig
   val set_default_quotation : quotation -> unit[@@ocaml.doc
                                                  " The default quotation [{{code}}] "]
   val register_named_quotation : name:string -> quotation -> unit[@@ocaml.doc
-                                                                   " Named quotation [{{name:code}}] "]
+                                                                   " Named quotation [{{:name code}}] "]
   val lp : quotation[@@ocaml.doc " The anti-quotation to lambda Prolog "]
   val quote_syntax_runtime :
     State.t -> 'a Compile.query -> (State.t * Data.term list * Data.term)
@@ -585,59 +653,6 @@ sig
   val declare_singlequote :
     name:string -> (State.t -> string -> (State.t * Data.term)) -> unit
 end
-module Utils :
-sig
-  val error : ?loc:Ast.Loc.t -> string -> 'a[@@ocaml.doc
-                                              " A regular error (fatal) "]
-  val anomaly : ?loc:Ast.Loc.t -> string -> 'a[@@ocaml.doc
-                                                " An invariant is broken, i.e. a bug "]
-  val type_error : ?loc:Ast.Loc.t -> string -> 'a[@@ocaml.doc
-                                                   " A type error (in principle ruled out by [elpi-checker.elpi]) "]
-  val warn : ?loc:Ast.Loc.t -> string -> unit[@@ocaml.doc
-                                               " A non fatal warning "]
-  val list_to_lp_list : Data.term list -> Data.term[@@ocaml.doc
-                                                     " link between OCaml and LP lists. Note that [1,2|X] is not a valid\n   * OCaml list! "]
-  val lp_list_to_list : depth:int -> Data.term -> Data.term list
-  val get_assignment : FlexibleData.Elpi.t -> Data.term option[@@ocaml.doc
-                                                                " The body of an assignment, if any (LOW LEVEL).\n   * Use [look] and forget about this API since the term you get\n   * needs to be moved and/or reduced, and you have no API for this. "]
-  val clause_of_term :
-    ?name:string ->
-      ?graft:([ `After  | `Before ] * string) ->
-        depth:int -> Ast.Loc.t -> Data.term -> Ast.program[@@ocaml.doc
-                                                            " Hackish, in particular the output should be a compiled program "]
-  val move : from:int -> to_:int -> Data.term -> Data.term[@@ocaml.doc
-                                                            " Lifting/restriction/beta (LOW LEVEL, don't use) "]
-  val beta : depth:int -> Data.term -> Data.term list -> Data.term
-  val map_acc :
-    (State.t -> 't -> (State.t * 'a * Conversion.extra_goals)) ->
-      State.t -> 't list -> (State.t * 'a list * Conversion.extra_goals)
-  [@@ocaml.doc " readback/embed on lists "]
-  module type Show  =
-    sig type t val pp : Format.formatter -> t -> unit val show : t -> string
-    end
-  module type Show1  =
-    sig
-      type 'a t
-      val pp :
-        (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
-      val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
-    end
-  module Map :
-  sig
-    module type S  =
-      sig include Map.S include Show1 with type 'a t :=  'a t end
-    module type OrderedType  =
-      sig include Map.OrderedType include Show with type  t :=  t end
-    module Make : functor (Ord : OrderedType) -> S with type  key =  Ord.t
-  end
-  module Set :
-  sig
-    module type S  = sig include Set.S include Show with type  t :=  t end
-    module type OrderedType  =
-      sig include Set.OrderedType include Show with type  t :=  t end
-    module Make : functor (Ord : OrderedType) -> S with type  elt =  Ord.t
-  end
-end
 module RawPp :
 sig
   val term : int -> Format.formatter -> Data.term -> unit[@@ocaml.doc
@@ -653,6 +668,47 @@ sig
   sig
     val term : int -> Format.formatter -> Data.term -> unit
     val show_term : Data.term -> string
+  end
+end
+module PPX :
+sig
+  [@@@ocaml.text " Access to internal API to implement elpi.ppx "]
+  val readback_int : (int, 'h, 'c) ContextualConversion.readback
+  val readback_float : (float, 'h, 'c) ContextualConversion.readback
+  val readback_string : (string, 'h, 'c) ContextualConversion.readback
+  val readback_list :
+    ('a, 'h, 'c) ContextualConversion.readback ->
+      ('a list, 'h, 'c) ContextualConversion.readback
+  val readback_loc : (Ast.Loc.t, 'h, 'c) ContextualConversion.readback
+  val readback_nominal :
+    (RawData.constant, 'h, 'c) ContextualConversion.readback
+  val embed_int : (int, 'h, 'c) ContextualConversion.embedding
+  val embed_float : (float, 'h, 'c) ContextualConversion.embedding
+  val embed_string : (string, 'h, 'c) ContextualConversion.embedding
+  val embed_list :
+    ('a, 'h, 'c) ContextualConversion.embedding ->
+      ('a list, 'h, 'c) ContextualConversion.embedding
+  val embed_loc : (Ast.Loc.t, 'h, 'c) ContextualConversion.embedding
+  val embed_nominal :
+    (RawData.constant, 'h, 'c) ContextualConversion.embedding
+  val nominal : (RawData.constant, 'h, 'c) ContextualConversion.t
+  module Doc :
+  sig
+    val kind :
+      Format.formatter -> ContextualConversion.ty_ast -> doc:string -> unit
+    val comment : Format.formatter -> string -> unit
+    val constructor :
+      Format.formatter ->
+        name:string ->
+          doc:string ->
+            ty:ContextualConversion.ty_ast ->
+              args:ContextualConversion.ty_ast list -> unit
+    val adt :
+      doc:string ->
+        ty:ContextualConversion.ty_ast ->
+          args:(string * string * ContextualConversion.ty_ast list) list ->
+            Format.formatter -> unit -> unit
+    val show_ty_ast : ?outer:bool -> ContextualConversion.ty_ast -> string
   end
 end
 [@@@ocaml.text "/*"]

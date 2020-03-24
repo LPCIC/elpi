@@ -306,6 +306,20 @@ module BuiltInData = struct
 
   let any = poly "any"
 
+  let nominal =
+    let embed ~depth:_ _ _ state x =
+       let module R = (val !r) in let open R in
+       if x < 0 then Util.type_error "not a bound variable";
+       state, R.mkConst x, [] in
+    let readback ~depth _ _ state t =
+       let module R = (val !r) in let open R in
+       match deref_head ~depth t with
+       | ED.Const i when i >= 0 -> state, i, []
+       | _ -> Util.type_error "not a bound variable" in
+    { ContextualConversion.embed; readback; ty = TyName "nominal";
+      pp = (fun fmt d -> Format.fprintf fmt "%d" d);
+      pp_doc = (fun fmt () -> ()) }
+
   let fresh_copy t depth =
     let module R = (val !r) in let open R in
     let open ED in
@@ -341,7 +355,7 @@ module BuiltInData = struct
         let module R = (val !r) in let open R in
         R.Pp.uppterm d [] d ED.empty_env fmt t);
       pp_doc = (fun fmt () -> ()) }
-   
+
   let map_acc f s l =
     let rec aux acc extra s = function
     | [] -> s, List.rev acc, List.(concat (rev extra))
@@ -351,23 +365,22 @@ module BuiltInData = struct
     in
       aux [] [] s l
 
+  let listC_embed d_embed ~depth h c s l =
+    let module R = (val !r) in let open R in
+    let s, l, eg = map_acc (d_embed ~depth h c) s l in
+    s, list_to_lp_list l, eg
+  let listC_readback d_readback ~depth h c s t =
+    let module R = (val !r) in let open R in
+    map_acc (d_readback ~depth h c) s
+      (lp_list_to_list ~depth t)
   let listC d =
-    let embed ~depth h c s l =
-      let module R = (val !r) in let open R in
-      let s, l, eg = map_acc (d.ContextualConversion.embed ~depth h c) s l in
-      s, list_to_lp_list l, eg in
-    let readback ~depth h c s t =
-      let module R = (val !r) in let open R in
-      map_acc (d.ContextualConversion.readback ~depth h c) s
-        (lp_list_to_list ~depth t)
-    in
     let pp fmt l =
-      Format.fprintf fmt "[%a]" (Util.pplist d.pp ~boxed:true "; ") l in
-    { ContextualConversion.embed; readback;
-      ty = TyApp ("list",d.ty,[]);
+      Format.fprintf fmt "[%a]" (Util.pplist d.ContextualConversion.pp ~boxed:true "; ") l in
+    { ContextualConversion.embed = listC_embed d.ContextualConversion.embed; readback = listC_readback d.ContextualConversion.readback;
+      ty = TyApp ("list",d.ContextualConversion.ty,[]);
       pp;
       pp_doc = (fun fmt () -> ()) }
-  
+
   let list d =
     let embed ~depth s l =
       let module R = (val !r) in let open R in
@@ -837,6 +850,8 @@ module Utils = struct
   let type_error = Util.type_error
   let anomaly = Util.anomaly
   let warn = Util.warn
+  let printf = Util.printf
+  let eprintf = Util.eprintf
 
   let clause_of_term ?name ?graft ~depth loc term =
     let open EA in
@@ -911,4 +926,37 @@ module RawPp = struct
       R.Pp.ppterm depth [] 0 ED.empty_env fmt t
     let show_term = ED.show_term
   end
+end
+
+module PPX = struct
+
+module Doc = struct
+
+  let comment = ED.BuiltInPredicate.pp_comment
+  let kind fmt ty ~doc = ED.BuiltInPredicate.ADT.document_kind fmt ty doc
+  let constructor fmt ~name ~doc ~ty ~args =
+    ED.BuiltInPredicate.ADT.document_constructor
+      fmt name doc (List.map ED.Conversion.show_ty_ast (args @ [ty]))
+  let adt ~doc ~ty ~args =
+    ED.BuiltInPredicate.ADT.document_adt doc ty
+      (List.map (fun (n,s,a) -> n,s,List.map ED.Conversion.show_ty_ast (a@[ty])) args)
+  let show_ty_ast = ED.Conversion.show_ty_ast
+end
+
+  let readback_int ~depth _ _ s x = BuiltInData.int.Conversion.readback ~depth s x
+  let readback_float ~depth _ _ s x = BuiltInData.float.Conversion.readback ~depth s x
+  let readback_string ~depth _ _ s x = BuiltInData.string.Conversion.readback ~depth s x
+  let readback_list a ~depth h c s x = BuiltInData.listC_readback a ~depth h c s x
+  let readback_loc ~depth _ _ s x = BuiltInData.loc.Conversion.readback ~depth s x
+  let readback_nominal = BuiltInData.nominal.ContextualConversion.readback
+
+  let embed_int ~depth _ _ s x = BuiltInData.int.Conversion.embed ~depth s x
+  let embed_float ~depth _ _ s x = BuiltInData.float.Conversion.embed ~depth s x
+  let embed_string ~depth _ _ s x = BuiltInData.string.Conversion.embed ~depth s x
+  let embed_list a ~depth h c s x = BuiltInData.listC_embed a ~depth h c s x
+  let embed_loc ~depth _ _ s x = BuiltInData.loc.Conversion.embed ~depth s x
+  let embed_nominal = BuiltInData.nominal.ContextualConversion.embed
+
+  let nominal =  BuiltInData.nominal
+
 end

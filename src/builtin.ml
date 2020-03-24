@@ -226,30 +226,156 @@ let bool = AlgebraicData.declare {
   ]
 }|> ContextualConversion.(!<)
 
-let pair a b = let open AlgebraicData in declare {
-  ty = TyApp ("pair",a.Conversion.ty,[b.Conversion.ty]);
-  doc = "Pair: the constructor is pr, since ',' is for conjunction";
-  pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_pair a.Conversion.pp b.Conversion.pp) o);
-  constructors = [
-    K("pr","",A(a,A(b,N)),
-      B (fun a b -> (a,b)),
-      M (fun ~ok ~ko:_ -> function (a,b) -> ok a b));
-  ]
-} |> ContextualConversion.(!<)
+let char = OpaqueData.declare {
+  OpaqueData.name = "char";
+  doc = "an octect";
+  pp = (fun fmt c -> Format.fprintf fmt "%c" c);
+  compare = Pervasives.compare;
+  hash = Hashtbl.hash;
+  hconsed = false;
+  constants = []
+}
 
-let option a = let open AlgebraicData in declare {
-  ty = TyApp("option",a.Conversion.ty,[]);
-  doc = "The option type (aka Maybe)";
-  pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_option a.Conversion.pp) o);
-  constructors = [
-    K("none","",N,
-      B None,
-      M (fun ~ok ~ko -> function None -> ok | _ -> ko ())); 
-    K("some","",A(a,N),
-      B (fun x -> Some x),
-      M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko ())); 
-  ]
-} |> ContextualConversion.(!<)
+let typec = RawData.Constants.declare_global_symbol "pair"
+let constructorc = RawData.Constants.declare_global_symbol "pr"
+let tyast a b = ContextualConversion.TyApp("pair",a,[b])
+let readback_pair readback_a1 readback_a2 ~depth hyps csts st x =
+  match RawData.look ~depth x with
+  | RawData.App(c,x1,[x2]) when c == constructorc ->
+      let st, x1, gls1 = readback_a1 ~depth hyps csts st x1 in
+      let st, x2, gls2 = readback_a2 ~depth hyps csts st x2 in
+      st, (x1,x2), gls1 @ gls2
+  | _ -> raise (Conversion.TypeErr(tyast (ContextualConversion.TyName "A") (ContextualConversion.TyName "B"),depth,x))
+let embed_pair embed_a1 embed_a2 ~depth hyps csts st x =
+  let (x1,x2) = x in
+  let st, x1, gls1 = embed_a1 ~depth hyps csts st x1 in
+  let st, x2, gls2 = embed_a2 ~depth hyps csts st x2 in
+  st, RawData.mkApp constructorc x1 [x2], gls1 @ gls2
+let pairC a1 a2 = let open ContextualConversion in
+  let ty = tyast a1.ty a2.ty in {
+  ty;
+  pp_doc = (PPX.Doc.adt ~doc:"Pair: the constructor is pr, since ',' is for conjunction" ~ty ~args:["pr","",[a1.ty;a2.ty]]);
+  pp = (fun fmt (x1,x2) -> Format.fprintf fmt "(%a,%a)" a1.pp x1 a2.pp x2);
+  embed = embed_pair a1.embed a2.embed;
+  readback = readback_pair a1.readback a2.readback;
+}
+let pair a b = let open ContextualConversion in !< (pairC (!> a) (!> b))
+
+let typec = RawData.Constants.declare_global_symbol "triple"
+let constructorc = RawData.Constants.declare_global_symbol "triple"
+let tyast a b c = ContextualConversion.TyApp("triple",a,[b;c])
+let readback_triple readback_a1 readback_a2 readback_a3 ~depth hyps csts st x =
+  match RawData.look ~depth x with
+  | RawData.App(c,x1,[x2;x3]) when c == constructorc ->
+      let st, x1, gls1 = readback_a1 ~depth hyps csts st x1 in
+      let st, x2, gls2 = readback_a2 ~depth hyps csts st x2 in
+      let st, x3, gls3 = readback_a3 ~depth hyps csts st x3 in
+      st, (x1,x2,x3), gls1 @ gls2 @ gls3
+  | _ -> raise (Conversion.TypeErr(tyast (ContextualConversion.TyName "A") (ContextualConversion.TyName "B") (ContextualConversion.TyName "C"),depth,x))
+let embed_triple embed_a1 embed_a2 embed_a3 ~depth hyps csts st x =
+  let (x1,x2,x3) = x in
+  let st, x1, gls1 = embed_a1 ~depth hyps csts st x1 in
+  let st, x2, gls2 = embed_a2 ~depth hyps csts st x2 in
+  let st, x3, gls3 = embed_a3 ~depth hyps csts st x3 in
+  st, RawData.mkApp constructorc x1 [x2;x3], gls1 @ gls2 @ gls3
+let tripleC a1 a2 a3 = let open ContextualConversion in
+  let ty = tyast a1.ty a2.ty a3.ty in {
+  ty;
+  pp_doc = (PPX.Doc.adt ~doc:"" ~ty ~args:["triple","",[a1.ty;a2.ty;a3.ty]]);
+  pp = (fun fmt (x1,x2,x3) -> Format.fprintf fmt "(%a,%a,%a)" a1.pp x1 a2.pp x2 a3.pp x3);
+  embed = embed_triple a1.embed a2.embed a3.embed;
+  readback = readback_triple a1.readback a2.readback a3.readback;
+}
+let triple a b c = let open ContextualConversion in !< (tripleC (!> a) (!> b) (!> c))
+
+let typec = RawData.Constants.declare_global_symbol "quadruple"
+let constructorc = RawData.Constants.declare_global_symbol "quadruple"
+let tyast a b c d = ContextualConversion.TyApp("quadruple",a,[b;c;d])
+let readback_quadruple readback_a1 readback_a2 readback_a3 readback_a4 ~depth hyps csts st x =
+  match RawData.look ~depth x with
+  | RawData.App(c,x1,[x2;x3;x4]) when c == constructorc ->
+      let st, x1, gls1 = readback_a1 ~depth hyps csts st x1 in
+      let st, x2, gls2 = readback_a2 ~depth hyps csts st x2 in
+      let st, x3, gls3 = readback_a3 ~depth hyps csts st x3 in
+      let st, x4, gls4 = readback_a4 ~depth hyps csts st x4 in
+      st, (x1,x2,x3,x4), gls1 @ gls2 @ gls3 @ gls4
+  | _ -> raise (Conversion.TypeErr(tyast (ContextualConversion.TyName "A") (ContextualConversion.TyName "B") (ContextualConversion.TyName "C") (ContextualConversion.TyName "D"),depth,x))
+let embed_quadruple embed_a1 embed_a2 embed_a3 embed_a4 ~depth hyps csts st x =
+  let (x1,x2,x3,x4) = x in
+  let st, x1, gls1 = embed_a1 ~depth hyps csts st x1 in
+  let st, x2, gls2 = embed_a2 ~depth hyps csts st x2 in
+  let st, x3, gls3 = embed_a3 ~depth hyps csts st x3 in
+  let st, x4, gls4 = embed_a4 ~depth hyps csts st x4 in
+  st, RawData.mkApp constructorc x1 [x2;x3;x4], gls1 @ gls2 @ gls3 @ gls4
+let quadrupleC a1 a2 a3 a4 = let open ContextualConversion in
+  let ty = tyast a1.ty a2.ty a3.ty a4.ty in {
+  ty;
+  pp_doc = (PPX.Doc.adt ~doc:"" ~ty ~args:["quadruple","",[a1.ty;a2.ty;a3.ty;a4.ty]]);
+  pp = (fun fmt (x1,x2,x3,x4) -> Format.fprintf fmt "(%a,%a,%a,%a)" a1.pp x1 a2.pp x2 a3.pp x3 a4.pp x4);
+  embed = embed_quadruple a1.embed a2.embed a3.embed a4.embed;
+  readback = readback_quadruple a1.readback a2.readback a3.readback a4.readback;
+}
+let quadruple a b c d = let open ContextualConversion in !< (quadrupleC (!> a) (!> b) (!> c) (!> d))
+
+let typec = RawData.Constants.declare_global_symbol "quintuple"
+let constructorc = RawData.Constants.declare_global_symbol "quintuple"
+let tyast a b c d e = ContextualConversion.TyApp("quintuple",a,[b;c;d;e])
+let readback_quintuple readback_a1 readback_a2 readback_a3 readback_a4 readback_a5 ~depth hyps csts st x =
+  match RawData.look ~depth x with
+  | RawData.App(c,x1,[x2;x3;x4;x5]) when c == constructorc ->
+      let st, x1, gls1 = readback_a1 ~depth hyps csts st x1 in
+      let st, x2, gls2 = readback_a2 ~depth hyps csts st x2 in
+      let st, x3, gls3 = readback_a3 ~depth hyps csts st x3 in
+      let st, x4, gls4 = readback_a4 ~depth hyps csts st x4 in
+      let st, x5, gls5 = readback_a5 ~depth hyps csts st x5 in
+      st, (x1,x2,x3,x4,x5), gls1 @ gls2 @ gls3 @ gls4 @ gls5
+  | _ -> raise (Conversion.TypeErr(tyast (ContextualConversion.TyName "A") (ContextualConversion.TyName "B") (ContextualConversion.TyName "C") (ContextualConversion.TyName "D") (ContextualConversion.TyName "E"),depth,x))
+let embed_quintuple embed_a1 embed_a2 embed_a3 embed_a4 embed_a5 ~depth hyps csts st x =
+  let (x1,x2,x3,x4,x5) = x in
+  let st, x1, gls1 = embed_a1 ~depth hyps csts st x1 in
+  let st, x2, gls2 = embed_a2 ~depth hyps csts st x2 in
+  let st, x3, gls3 = embed_a3 ~depth hyps csts st x3 in
+  let st, x4, gls4 = embed_a4 ~depth hyps csts st x4 in
+  let st, x5, gls5 = embed_a5 ~depth hyps csts st x5 in
+  st, RawData.mkApp constructorc x1 [x2;x3;x4;x5], gls1 @ gls2 @ gls3 @ gls4 @ gls5
+let quintupleC a1 a2 a3 a4 a5 = let open ContextualConversion in
+  let ty = tyast a1.ty a2.ty a3.ty a4.ty a5.ty in {
+  ty;
+  pp_doc = (PPX.Doc.adt ~doc:"" ~ty ~args:["quintuple","",[a1.ty;a2.ty;a3.ty;a4.ty;a5.ty]]);
+  pp = (fun fmt (x1,x2,x3,x4,x5) -> Format.fprintf fmt "(%a,%a,%a,%a,%a)" a1.pp x1 a2.pp x2 a3.pp x3 a4.pp x4 a5.pp x5);
+  embed = embed_quintuple a1.embed a2.embed a3.embed a4.embed a5.embed;
+  readback = readback_quintuple a1.readback a2.readback a3.readback a4.readback a5.readback;
+}
+let quintuple a b c d e = let open ContextualConversion in !< (quintupleC (!> a) (!> b) (!> c) (!> d) (!> e))
+
+let typec = RawData.Constants.declare_global_symbol "option"
+let constructor1c = RawData.Constants.declare_global_symbol "none"
+let constructor2c = RawData.Constants.declare_global_symbol "some"
+let tyast a = ContextualConversion.TyApp("option",a,[])
+let readback_option readback_a1 ~depth hyps csts st x =
+  match RawData.look ~depth x with
+  | RawData.App(c,x1,[]) when c == constructor2c ->
+      let st, x1, gls1 = readback_a1 ~depth hyps csts st x1 in
+      st, Some x1, gls1
+  | RawData.Const c when c == constructor1c ->
+      st, None, []
+  | _ -> raise (Conversion.TypeErr(tyast (ContextualConversion.TyName "A"),depth,x))
+let embed_option embed_a1 ~depth hyps csts st x =
+  match x with
+  | None -> st, RawData.mkConst constructor1c, []
+  | Some x1 ->
+     let st, x1, gls1 = embed_a1 ~depth hyps csts st x1 in
+     st, RawData.mkApp constructor2c x1 [], gls1
+let optionC a1 = let open ContextualConversion in
+  let ty = tyast a1.ty in {
+  ty;
+  pp_doc = (PPX.Doc.adt ~doc:"The option type (aka Maybe)" ~ty ~args:["none","",[];"some","",[a1.ty]]);
+  pp = (fun fmt -> function None -> Format.fprintf fmt "None" | Some x1 -> Format.fprintf fmt "(Some %a)" a1.pp x1);
+  embed = embed_option a1.embed;
+  readback = readback_option a1.readback;
+}
+let option a = let open ContextualConversion in !< (optionC (!> a))
+
 
 type diagnostic = OK | ERROR of string ioarg
 let mkOK = OK
@@ -496,6 +622,7 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "type ([]) list X.";
 
   MLData bool;
+  MLData char;
 
   MLData (pair (BuiltInData.poly "A") (BuiltInData.poly "B"));
 
@@ -503,6 +630,39 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "fst (pr A _) A.";
   LPCode "pred snd  i:pair A B, o:B.";
   LPCode "snd (pr _ B) B.";
+
+  MLData (triple (BuiltInData.poly "A") (BuiltInData.poly "B") (BuiltInData.poly "C"));
+
+  LPCode "pred triple_1  i:triple A1 A2 A3, o:A1.";
+  LPCode "triple_1 (triple X _ _) X.";
+  LPCode "pred triple_2  i:triple A1 A2 A3, o:A2.";
+  LPCode "triple_2 (triple _ X _) X.";
+  LPCode "pred triple_3  i:triple A1 A2 A3, o:A3.";
+  LPCode "triple_3 (triple _ _ X) X.";
+
+  MLData (quadruple (BuiltInData.poly "A") (BuiltInData.poly "B") (BuiltInData.poly "C") (BuiltInData.poly "D"));
+
+  LPCode "pred quadruple_1  i:quadruple A1 A2 A3 A4, o:A1.";
+  LPCode "quadruple_1 (quadruple X _ _ _) X.";
+  LPCode "pred quadruple_2  i:quadruple A1 A2 A3 A4, o:A2.";
+  LPCode "quadruple_2 (quadruple _ X _ _) X.";
+  LPCode "pred quadruple_3  i:quadruple A1 A2 A3 A4, o:A3.";
+  LPCode "quadruple_3 (quadruple _ _ X _) X.";
+  LPCode "pred quadruple_4  i:quadruple A1 A2 A3 A4, o:A4.";
+  LPCode "quadruple_4 (quadruple _ _ _ X) X.";
+
+  MLData (quintuple (BuiltInData.poly "A") (BuiltInData.poly "B") (BuiltInData.poly "C") (BuiltInData.poly "D") (BuiltInData.poly "E"));
+
+  LPCode "pred quintuple_1  i:quintuple A1 A2 A3 A4 A5, o:A1.";
+  LPCode "quintuple_1 (quintuple X _ _ _ _) X.";
+  LPCode "pred quintuple_2  i:quintuple A1 A2 A3 A4 A5, o:A2.";
+  LPCode "quintuple_2 (quintuple _ X _ _ _) X.";
+  LPCode "pred quintuple_3  i:quintuple A1 A2 A3 A4 A5, o:A3.";
+  LPCode "quintuple_3 (quintuple _ _ X _ _) X.";
+  LPCode "pred quintuple_4  i:quintuple A1 A2 A3 A4 A5, o:A4.";
+  LPCode "quintuple_4 (quintuple _ _ _ X _) X.";
+  LPCode "pred quintuple_5  i:quintuple A1 A2 A3 A4 A5, o:A5.";
+  LPCode "quintuple_5 (quintuple _ _ _ _ X) X.";
 
   MLData (option (BuiltInData.poly "A"));
 
@@ -754,7 +914,7 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in let open Context
   MLCode(Pred("dprint",
     VariadicIn(unit_ctx, !> any, "prints raw terms (debugging)"),
   (fun args ~depth _ _ state ->
-     Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
+     Utils.printf "@[<hov 1>%a@]@\n%!"
        (RawPp.list (RawPp.Debug.term depth) " ") args ;
      state, ())),
   DocAbove);
@@ -762,7 +922,7 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in let open Context
   MLCode(Pred("print",
     VariadicIn(unit_ctx, !> any,"prints terms"),
   (fun args ~depth _ _ state ->
-     Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
+     Utils.printf "@[<hov 1>%a@]@\n%!"
        (RawPp.list (RawPp.term depth) " ") args ;
      state, ())),
   DocAbove);
@@ -1266,7 +1426,6 @@ let elpi_set =  let open BuiltIn in let open BuiltInData in [
     
 ]
 
-
 let elpi_stdlib =
   elpi_stdlib_src @
   ocaml_map ~name:"std.string.map" BuiltInData.string (module Util.StrMap) @ 
@@ -1289,3 +1448,30 @@ let default_checker () =
   let elpi, _ = API.Setup.init ~builtins:[std_builtins] ~basedir:(Sys.getcwd ()) [] in
   let ast = API.Parse.program_from_stream ~elpi (API.Ast.Loc.initial "(checker)") (Stream.of_string Builtin_checker.code) in
   API.Compile.program ~flags:API.Compile.default_flags ~elpi [ast]
+
+
+module PPX = struct
+
+  let readback_pair = readback_pair
+  let readback_option = readback_option
+  let readback_bool ~depth _ _ s x = bool.API.Conversion.readback ~depth s x
+  let readback_char ~depth _ _ s x = char.API.Conversion.readback ~depth s x
+
+  let readback_triple = readback_triple
+  let readback_quadruple = readback_quadruple
+  let readback_quintuple = readback_quintuple
+
+  let embed_pair = embed_pair
+  let embed_option = embed_option
+  let embed_bool ~depth _ _ s x = bool.API.Conversion.embed ~depth s x
+  let embed_char ~depth _ _ s x = char.API.Conversion.embed ~depth s x
+
+  let embed_triple = embed_triple
+  let embed_quadruple = embed_quadruple
+  let embed_quintuple = embed_quintuple
+
+  let declarations =  let open BuiltIn in let open BuiltInData in [
+    LPCode Builtin_ppx.code
+  ]
+
+end

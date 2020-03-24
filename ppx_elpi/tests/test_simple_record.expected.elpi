@@ -1,0 +1,14 @@
+
+
+% simple
+kind simple type.
+type simple int -> bool -> simple. % simple
+
+pred map.simple  i:simple, o:simple.
+map.simple (simple A0 A1) (simple B0 B1) :- ((=) A0 B0), ((=) A1 B1).
+
+
+
+
+
+

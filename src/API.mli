@@ -280,6 +280,10 @@ module ContextualConversion : sig
     depth:int -> Data.hyps -> Data.constraints ->
     Data.state -> Data.state * 'hyps * 'constraints * Conversion.extra_goals
 
+  type 'a ctx_entry = { entry : 'a; depth : int }
+  val pp_ctx_entry : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a ctx_entry -> unit
+  val show_ctx_entry : (Format.formatter -> 'a -> unit) -> 'a ctx_entry -> string
+
   val unit_ctx : (unit,unit) ctx_readback
   val raw_ctx : (Data.hyps,Data.constraints) ctx_readback
 
@@ -290,6 +294,9 @@ module ContextualConversion : sig
   val (!>)   : 'a Conversion.t -> ('a,'hyps,'constraints) t
   val (!>>)  : ('a Conversion.t -> 'b Conversion.t) -> ('a,'hyps,'constraints) t -> ('b,'hyps,'constraints) t
   val (!>>>) : ('a Conversion.t -> 'b Conversion.t -> 'c Conversion.t) -> ('a,'hyps,'constraints) t -> ('b,'hyps,'constraints) t -> ('c,'hyps,'constraints) t
+
+  (* composition *)
+  val (|+|) : ('h1,Data.constraints) ctx_readback -> ('h2,Data.constraints) ctx_readback -> ('h1 * 'h2,Data.constraints) ctx_readback
 
 end
 
@@ -793,6 +800,93 @@ module FlexibleData : sig
   val uvar : (Elpi.t * Data.term list) Conversion.t
 end
 
+module Utils : sig
+
+  (** A regular error (fatal) *)
+  val error : ?loc:Ast.Loc.t ->string -> 'a
+
+  (** An invariant is broken, i.e. a bug *)
+  val anomaly : ?loc:Ast.Loc.t ->string -> 'a
+
+  (** A type error (in principle ruled out by [elpi-checker.elpi]) *)
+  val type_error : ?loc:Ast.Loc.t ->string -> 'a
+
+  (** A non fatal warning *)
+  val warn : ?loc:Ast.Loc.t ->string -> unit
+
+  (** alias for printf and eprintf that write on the formatters set in Setup *)
+  val printf : ('a, Format.formatter, unit) format -> 'a
+  val eprintf : ('a, Format.formatter, unit) format -> 'a
+
+  (** link between OCaml and LP lists. Note that [1,2|X] is not a valid
+   * OCaml list! *)
+  val list_to_lp_list : Data.term list -> Data.term
+  val lp_list_to_list : depth:int -> Data.term -> Data.term list
+
+  (** The body of an assignment, if any (LOW LEVEL).
+   * Use [look] and forget about this API since the term you get
+   * needs to be moved and/or reduced, and you have no API for this. *)
+  val get_assignment : FlexibleData.Elpi.t -> Data.term option
+
+  (** Hackish, in particular the output should be a compiled program *)
+  val clause_of_term :
+    ?name:string -> ?graft:([`After | `Before] * string) ->
+    depth:int -> Ast.Loc.t -> Data.term -> Ast.program
+
+  (** Lifting/restriction/beta (LOW LEVEL, don't use) *)
+  val move : from:int -> to_:int -> Data.term -> Data.term
+  val beta : depth:int -> Data.term -> Data.term list -> Data.term
+
+  (** readback/embed on lists *)
+  val map_acc :
+    (State.t -> 't -> State.t * 'a * Conversion.extra_goals) ->
+    State.t -> 't list -> State.t * 'a list * Conversion.extra_goals
+
+  module type Show = sig
+    type t
+    val pp : Format.formatter -> t -> unit
+    val show : t -> string
+  end
+
+  module type Show1 = sig
+    type 'a t
+    val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+    val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
+  end
+
+  module Map : sig
+    module type S = sig
+      include Map.S
+      include Show1 with type 'a t := 'a t
+    end
+
+    module type OrderedType = sig
+      include Map.OrderedType
+      include Show with type t := t
+    end
+
+    module Make (Ord : OrderedType) : S with type key = Ord.t
+
+  end
+
+  module Set : sig
+
+    module type S = sig
+      include Set.S
+      include Show with type t := t
+    end
+
+    module type OrderedType = sig
+      include Set.OrderedType
+      include Show with type t := t
+    end
+
+    module Make (Ord : OrderedType) : S with type elt = Ord.t
+
+  end
+
+end
+
 (** Low level module for OpaqueData *)
 module RawOpaqueData : sig
 
@@ -948,8 +1042,8 @@ module RawData : sig
     (* Marker for spilling function calls, as in [{ rev L }] *)
     val spillc : constant
 
-    module Map : Map.S with type key = constant
-    module Set : Set.S with type elt = constant
+    module Map : Utils.Map.S with type key = constant
+    module Set : Utils.Set.S with type elt = constant
 
   end
 
@@ -982,7 +1076,7 @@ module Quotation : sig
   (** The default quotation [{{code}}] *)
   val set_default_quotation : quotation -> unit
 
-  (** Named quotation [{{name:code}}] *)
+  (** Named quotation [{{:name code}}] *)
   val register_named_quotation : name:string -> quotation -> unit
 
   (** The anti-quotation to lambda Prolog *)
@@ -1009,89 +1103,6 @@ module Quotation : sig
 
 end
 
-module Utils : sig
-
-  (** A regular error (fatal) *)
-  val error : ?loc:Ast.Loc.t ->string -> 'a
-
-  (** An invariant is broken, i.e. a bug *)
-  val anomaly : ?loc:Ast.Loc.t ->string -> 'a
-
-  (** A type error (in principle ruled out by [elpi-checker.elpi]) *)
-  val type_error : ?loc:Ast.Loc.t ->string -> 'a
-
-  (** A non fatal warning *)
-  val warn : ?loc:Ast.Loc.t ->string -> unit
-
-  (** link between OCaml and LP lists. Note that [1,2|X] is not a valid
-   * OCaml list! *)
-  val list_to_lp_list : Data.term list -> Data.term
-  val lp_list_to_list : depth:int -> Data.term -> Data.term list
-
-  (** The body of an assignment, if any (LOW LEVEL).
-   * Use [look] and forget about this API since the term you get
-   * needs to be moved and/or reduced, and you have no API for this. *)
-  val get_assignment : FlexibleData.Elpi.t -> Data.term option
-
-  (** Hackish, in particular the output should be a compiled program *)
-  val clause_of_term :
-    ?name:string -> ?graft:([`After | `Before] * string) ->
-    depth:int -> Ast.Loc.t -> Data.term -> Ast.program
-
-  (** Lifting/restriction/beta (LOW LEVEL, don't use) *)
-  val move : from:int -> to_:int -> Data.term -> Data.term
-  val beta : depth:int -> Data.term -> Data.term list -> Data.term
-
-  (** readback/embed on lists *)
-  val map_acc :
-    (State.t -> 't -> State.t * 'a * Conversion.extra_goals) ->
-    State.t -> 't list -> State.t * 'a list * Conversion.extra_goals
-
-  module type Show = sig
-    type t
-    val pp : Format.formatter -> t -> unit
-    val show : t -> string
-  end
-
-  module type Show1 = sig
-    type 'a t
-    val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
-    val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
-  end
-
-  module Map : sig
-    module type S = sig
-      include Map.S
-      include Show1 with type 'a t := 'a t
-    end
-
-    module type OrderedType = sig
-      include Map.OrderedType
-      include Show with type t := t
-    end
-
-    module Make (Ord : OrderedType) : S with type key = Ord.t
-
-  end
-
-  module Set : sig
-
-    module type S = sig
-      include Set.S
-      include Show with type t := t
-    end
-
-    module type OrderedType = sig
-      include Set.OrderedType
-      include Show with type t := t
-    end
-
-    module Make (Ord : OrderedType) : S with type elt = Ord.t
-
-  end
-
-end
-
 module RawPp : sig
   (** If the term is under [depth] binders this is the function that has to be
    * called in order to print the term correct. WARNING: as of today printing
@@ -1113,5 +1124,44 @@ module RawPp : sig
  end
 
 end
+
+module PPX : sig
+  (** Access to internal API to implement elpi.ppx *)
+
+  val readback_int    : (int,'h,'c) ContextualConversion.readback
+  val readback_float  : (float,'h,'c) ContextualConversion.readback
+  val readback_string : (string,'h,'c) ContextualConversion.readback
+  val readback_list   : ('a,'h,'c) ContextualConversion.readback -> ('a list,'h,'c) ContextualConversion.readback
+  val readback_loc    : (Ast.Loc.t,'h,'c) ContextualConversion.readback
+  val readback_nominal : (RawData.constant,'h,'c) ContextualConversion.readback
+
+  val embed_int    : (int,'h,'c) ContextualConversion.embedding
+  val embed_float  : (float,'h,'c) ContextualConversion.embedding
+  val embed_string : (string,'h,'c) ContextualConversion.embedding
+  val embed_list   : ('a,'h,'c) ContextualConversion.embedding -> ('a list,'h,'c) ContextualConversion.embedding
+  val embed_loc    : (Ast.Loc.t,'h,'c) ContextualConversion.embedding
+  val embed_nominal : (RawData.constant,'h,'c) ContextualConversion.embedding
+
+  val nominal : (RawData.constant,'h,'c) ContextualConversion.t
+
+  module Doc : sig
+
+    val kind : Format.formatter -> ContextualConversion.ty_ast -> doc:string -> unit
+    val comment : Format.formatter -> string -> unit
+    val constructor : Format.formatter ->
+      name:string -> doc:string ->
+     ty:ContextualConversion.ty_ast ->
+     args:ContextualConversion.ty_ast list -> unit
+    val adt :
+      doc:string ->
+      ty:ContextualConversion.ty_ast ->
+      args:(string * string * ContextualConversion.ty_ast list) list ->
+      Format.formatter -> unit -> unit
+    val show_ty_ast : ?outer:bool -> ContextualConversion.ty_ast -> string
+  end
+
+end
+
+
 
 (**/**)

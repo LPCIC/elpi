@@ -1,4 +1,4 @@
-(*2d1e91f72ff28de5f87971da214ef74780dddbf1 *src/compiler.ml *)
+(*8167874ecb268271d3498fe116ec285fb13271f7 *src/compiler.ml *)
 #1 "src/compiler.ml"
 open Util
 module F = Ast.Func
@@ -2562,7 +2562,7 @@ module Spill :
       let rec spaux ((depth, vars) as ctx) =
         function
         | App (c, fcall, rest) when c == D.Global_symbols.spillc ->
-            (assert (rest = []);
+            (if rest <> [] then error ~loc "Spilling cannot be applied";
              (let (spills, fcall) = spaux1 ctx fcall in
               let args =
                 mkSpilled (List.rev vars)
@@ -2612,7 +2612,10 @@ module Spill :
         | Cons (hd, tl) ->
             let (sp1, hd) = spaux ctx hd in
             let (sp2, tl) = spaux ctx tl in
-            (assert (((List.length hd) = 1) && ((List.length tl) = 1));
+            (if not (((List.length hd) = 1) && ((List.length tl) = 1))
+             then
+               error ~loc
+                 "Spilling in a list, but I don't know if it is a list of props";
              ((sp1 @ sp2), [Cons ((List.hd hd), (List.hd tl))]))
         | Builtin (c, args) ->
             let (spills, args) =

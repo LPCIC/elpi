@@ -1,4 +1,4 @@
-(*83d0917ef4644ac288b486b091a03067003847df *src/data.ml *)
+(*da923bae8d9c934904717e1c4b86efc9fa7815ac *src/data.ml *)
 #1 "src/data.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -1451,6 +1451,8 @@ module Conversion =
     let rec show_ty_ast ?(outer= true)  =
       function
       | TyName s -> s
+      | TyApp ("->", x, y::[]) ->
+          "(" ^ ((show_ty_ast x) ^ (" -> " ^ ((show_ty_ast y) ^ ")")))
       | TyApp (s, x, xs) ->
           let t =
             String.concat " " (s ::
@@ -1601,6 +1603,42 @@ module ContextualConversion =
       fun ~depth:_ -> fun _ -> fun _ -> fun s -> (s, (), (), [])
     let raw_ctx : (hyps, constraints) ctx_readback =
       fun ~depth:_ -> fun h -> fun c -> fun s -> (s, h, c, [])
+    type 'a ctx_entry = {
+      entry: 'a ;
+      depth: int }[@@deriving show]
+    let rec pp_ctx_entry :
+              'a .
+                (Ppx_deriving_runtime_proxy.Format.formatter ->
+                   'a -> Ppx_deriving_runtime_proxy.unit)
+                  ->
+                  Ppx_deriving_runtime_proxy.Format.formatter ->
+                    'a ctx_entry -> Ppx_deriving_runtime_proxy.unit
+      =
+      ((let open! Ppx_deriving_runtime_proxy in
+          fun poly_a ->
+            fun fmt ->
+              fun x ->
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
+                ((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
+                    "Data.ContextualConversion.entry";
+                  (poly_a fmt) x.entry;
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "depth";
+                 (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%d") x.depth;
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@ }@]")
+      [@ocaml.warning "-A"])
+    and show_ctx_entry :
+      'a .
+        (Ppx_deriving_runtime_proxy.Format.formatter ->
+           'a -> Ppx_deriving_runtime_proxy.unit)
+          -> 'a ctx_entry -> Ppx_deriving_runtime_proxy.string
+      =
+      fun poly_a ->
+        fun x ->
+          Ppx_deriving_runtime_proxy.Format.asprintf "%a" (pp_ctx_entry poly_a) x
+    [@@ocaml.warning "-32"]
     let (!<) { ty; pp_doc; pp; embed; readback } =
       {
         Conversion.ty = ty;
@@ -1690,6 +1728,11 @@ module ContextualConversion =
                  fun s ->
                    fun t -> (f (mk h c cc) (mk h c dd)).readback ~depth s t)
       }
+    let (|+|) (f : ('hf, 'c) ctx_readback) (g : ('hg, 'c) ctx_readback)
+      ~depth  h c s =
+      let (s, hyp_f, c, gls_f) = f ~depth h c s in
+      let (s, hyp_g, c, gls_g) = g ~depth h c s in
+      (s, (hyp_f, hyp_g), c, (gls_f @ gls_g))
   end
 let while_compiling =
   State.declare ~name:"elpi:compiling" ~pp:(fun fmt -> fun _ -> ())
@@ -2093,28 +2136,38 @@ module BuiltInPredicate =
                      acc),
                    (StrMap.add name (tyargs_of_args self_name args) sacc)))
             (Constants.Map.empty, StrMap.empty) l
-        let document_constructor fmt name doc argsdoc =
+        let document_compiled_constructor fmt name doc argsdoc =
           Fmt.fprintf fmt "@[<hov2>type %s@[<hov>%a.%s@]@]@\n" name
             pp_ty_args argsdoc (if doc = "" then "" else " % " ^ doc)
-        let document_kind fmt =
-          function
-          | Conversion.TyApp (s, _, l) ->
-              let n = (List.length l) + 2 in
-              let l = Array.init n (fun _ -> "type") in
-              Fmt.fprintf fmt "@[<hov 2>kind %s %s.@]@\n" s
-                (String.concat " -> " (Array.to_list l))
-          | Conversion.TyName s ->
-              Fmt.fprintf fmt "@[<hov 2>kind %s type.@]@\n" s
-        let document_adt doc ty ks cks fmt () =
+        let document_constructor fmt name doc argsdoc =
+          let pp_ty sep fmt s = Fmt.fprintf fmt " %s%s" s sep in
+          let pp_ty_args = pplist (pp_ty "") " ->" ~pplastelem:(pp_ty "") in
+          Fmt.fprintf fmt "@[<hov2>type %s@[<hov>%a.%s@]@]@\n" name
+            pp_ty_args argsdoc (if doc = "" then "" else " % " ^ doc)
+        let document_kind fmt ty doc =
           if doc <> ""
           then (pp_comment fmt ("% " ^ doc); Fmt.fprintf fmt "@\n");
-          document_kind fmt ty;
+          (match ty with
+           | Conversion.TyApp (s, _, l) ->
+               let n = (List.length l) + 2 in
+               let l = Array.init n (fun _ -> "type") in
+               Fmt.fprintf fmt "@[<hov 2>kind %s %s.@]@\n" s
+                 (String.concat " -> " (Array.to_list l))
+           | Conversion.TyName s ->
+               Fmt.fprintf fmt "@[<hov 2>kind %s type.@]@\n" s)
+        let document_compiled_adt doc ty ks cks fmt () =
+          document_kind fmt ty doc;
           List.iter
             (fun (K (name, doc, _, _, _)) ->
                if name <> "uvar"
                then
                  let argsdoc = StrMap.find name cks in
-                 document_constructor fmt name doc argsdoc) ks
+                 document_compiled_constructor fmt name doc argsdoc) ks
+        let document_adt doc ty ks fmt () =
+          document_kind fmt ty doc;
+          List.iter
+            (fun (name, doc, spec) -> document_constructor fmt name doc spec)
+            ks
         let adt ~mkinterval  ~look  ~mkConst  ~alloc  ~mkUnifVar 
           { ty; constructors; doc; pp } =
           let readback_ref =
@@ -2131,8 +2184,8 @@ module BuiltInPredicate =
               pp_doc =
                 (fun fmt ->
                    fun () ->
-                     document_adt doc ty constructors (!sconstructors_ref)
-                       fmt ());
+                     document_compiled_adt doc ty constructors
+                       (!sconstructors_ref) fmt ());
               readback =
                 (fun ~depth ->
                    fun hyps ->
