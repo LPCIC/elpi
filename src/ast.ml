@@ -62,7 +62,7 @@ module Term = struct
    | CData of CData.t
    | Quoted of quote
   and quote = { data : string; loc : Loc.t; kind : string option }
-  [@@deriving show, eq]
+  [@@deriving show]
 
 let mkC x = CData x
 let mkLam x t = Lam (Func.from_string x,t)

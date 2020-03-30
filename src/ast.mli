@@ -46,8 +46,6 @@ module Term : sig
   and quote = { data : string; loc : Loc.t; kind : string option }
   [@@ deriving show]
 
-  val equal : t -> t -> bool
-
   exception NotInProlog of Loc.t * string
 
   (* Can raise NotInProlog *)
