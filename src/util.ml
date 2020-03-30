@@ -26,7 +26,7 @@ module Map = struct
     include Map.S
     include Show1 with type 'a t := 'a t
   end
-  
+
   module type OrderedType = sig
     include Map.OrderedType
     include Show with type t := t
@@ -54,7 +54,7 @@ module Set = struct
     include Set.S
     include Show with type t := t
   end
-  
+
   module type OrderedType = sig
     include Set.OrderedType
     include Show with type t := t
@@ -77,7 +77,9 @@ module Set = struct
 end
 
 module Int = struct
-  type t = int [@@deriving show]
+  type t = int
+  let pp fmt x = Format.pp_print_int fmt x
+  let show x = Format.asprintf "@[%a@]" pp x
   let compare x y = x - y
 end
 
@@ -121,7 +123,6 @@ module Loc = struct
     line: int;
     line_starts_at: int;
   }
-  [@@deriving eq, ord]
 
   let to_string {
     source_name;
@@ -142,6 +143,8 @@ module Loc = struct
 
   let pp fmt l = Fmt.fprintf fmt "%s" (to_string l)
   let show l = to_string l
+  let compare = Pervasives.compare
+  let equal = (=)
 
   let initial source_name = {
     source_name;
@@ -278,10 +281,36 @@ let option_mapacc f acc = function
 let option_iter f = function None -> () | Some x -> f x
 
 module Option = struct
-  type 'a t = 'a option = None | Some of 'a [@@deriving_inline show]
+  type 'a t = 'a option = None | Some of 'a
+  let pp poly_a fmt x =
+    match x with
+    | None -> Format.pp_print_string fmt "None"
+    | Some x ->
+        (Format.pp_open_box fmt 1;
+          Format.pp_print_string fmt "Some (";
+          poly_a fmt x;
+          Format.pp_print_string fmt ")";
+          Format.pp_close_box fmt ())
+  let show poly_a x = Format.asprintf "@[%a@]" (pp poly_a) x
 end
 module Pair = struct
-  type ('a,'b) t = 'a * 'b [@@deriving show]
+  type ('a,'b) t = 'a * 'b
+  let pp poly_a poly_b fmt x =
+    let (x0, x1) = x in
+    Format.pp_open_box fmt 1;
+    Format.pp_print_string fmt "(";
+    Format.pp_open_box fmt 0;
+    poly_a fmt x0;
+    Format.pp_close_box fmt ();
+    Format.pp_print_string fmt ",";
+    Format.pp_print_space fmt ();
+    Format.pp_open_box fmt 0;
+    poly_b fmt x1;
+    Format.pp_close_box fmt ();
+    Format.pp_print_string fmt ")";
+    Format.pp_close_box fmt ()
+  let show poly_a poly_b x =
+    Format.asprintf "@[%a@]" (pp poly_a poly_b) x
 end
 let pp_option f fmt = function None -> () | Some x -> f fmt x
 let pp_int = Int.pp
@@ -428,12 +457,18 @@ module Fork = struct
     { exec = ensure_runtime;
       get = (fun p -> Global.get_value p !my_globals);
       set = (fun p v -> my_globals := Global.set_value p v !my_globals) }
-          
+
 end
 
 module UUID = struct
  module Self = struct
-   type t = int [@@ deriving show, eq, ord]
+   type t = int
+   let pp fmt x = Format.pp_print_int fmt x
+   let show x = Format.asprintf "@[%a@]" pp x
+let _ = show
+[@@@end]
+   let compare x y = x - y
+   let equal x y = x == y
    let hash x = x
  end
 
@@ -443,7 +478,7 @@ module UUID = struct
  module Htbl = Hashtbl.Make(Self)
 
  include Self
-end        
+end
 
 type 'a spaghetti_printer =
   (Format.formatter -> 'a -> unit) ref

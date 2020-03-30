@@ -13,7 +13,6 @@
                     --cache-file %{dep:.ppcache/compiler.ml}
                     --cache-file %{dep:.ppcache/compiler.mli}))
               API ast data compiler)
-    ((pps ppx_deriving.std) util)
     ((pps elpi.trace.ppx ppx_deriving.std  -- --cookie "elpi_trace=\"true\"") runtime_trace_on)
     ((pps elpi.trace.ppx ppx_deriving.std  -- --cookie "elpi_trace=\"false\"") runtime_trace_off)
     ((action (run camlp5o -I . -I +camlp5 pa_extend.cmo pa_lexer.cmo %{input-file})) parser)

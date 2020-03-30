@@ -4,17 +4,22 @@
 
 module type Show = sig
   type t
-  [@@deriving show]
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
 end
 
 module type Show1 = sig
   type 'a t
-  [@@deriving show]
+  val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+  val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
+
 end
 
 module type Show2 = sig
   type ('a,'b) t
-  [@@deriving show]
+  val pp : (Format.formatter -> 'a -> unit) -> (Format.formatter -> 'b -> unit) -> Format.formatter -> ('a,'b) t -> unit
+  val show : (Format.formatter -> 'a -> unit) -> (Format.formatter -> 'b -> unit) -> ('a,'b) t -> string
+
 end
 
 module Map : sig
@@ -97,7 +102,10 @@ module Loc : sig
     line: int;
     line_starts_at: int;
   }
-  [@@deriving show, eq, ord]
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
+  val equal : t -> t -> bool
+  val compare : t -> t -> int
 
   val initial : string -> t
 end
@@ -138,14 +146,17 @@ val option_iter : ('a -> unit) -> 'a option -> unit
 
 module UUID : sig
 
- type t
- [@@deriving eq, ord, show]
+  type t
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
+  val equal : t -> t -> bool
+  val compare : t -> t -> int
 
- val hash : t -> int
+  val hash : t -> int
 
- val make : unit -> t
+  val make : unit -> t
 
- module Htbl : Hashtbl.S with type key = t
+  module Htbl : Hashtbl.S with type key = t
 
 end
 
@@ -230,7 +241,10 @@ val set_formatters_maxbox : int -> unit
 
 module CData : sig
   type t
-  [@@ deriving show, eq, ord]
+  val pp : Format.formatter -> t -> unit
+  val show : t -> string
+  val equal : t -> t -> bool
+  val compare : t -> t -> int
 
   type 'a data_declaration = {
     data_name : string;
