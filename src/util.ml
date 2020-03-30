@@ -278,7 +278,7 @@ let option_mapacc f acc = function
 let option_iter f = function None -> () | Some x -> f x
 
 module Option = struct
-  type 'a t = 'a option = None | Some of 'a [@@deriving show]
+  type 'a t = 'a option = None | Some of 'a [@@deriving_inline show]
 end
 module Pair = struct
   type ('a,'b) t = 'a * 'b [@@deriving show]

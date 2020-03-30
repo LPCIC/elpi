@@ -12,15 +12,10 @@
                     --cache-file %{dep:.ppcache/data.ml}
                     --cache-file %{dep:.ppcache/compiler.ml}
                     --cache-file %{dep:.ppcache/compiler.mli}))
-              util API ast data compiler)
-    ((action (run ppxfindcache_elpi_trace_deriving_std %{input-file} --ppx-opt --trace_ppx-on
-                    --cache-file %{dep:.ppcache/runtime_trace_on.ml}
-                    --cache-file %{dep:.ppcache/runtime_trace_on.mli}))
-              runtime_trace_on)
-    ((action (run ppxfindcache_elpi_trace_deriving_std %{input-file} --ppx-opt --trace_ppx-off
-                    --cache-file %{dep:.ppcache/runtime_trace_off.ml}
-                    --cache-file %{dep:.ppcache/runtime_trace_off.mli}))
-              runtime_trace_off)
+              API ast data compiler)
+    ((pps ppx_deriving.std) util)
+    ((pps elpi.trace.ppx ppx_deriving.std  -- --cookie "elpi_trace=\"true\"") runtime_trace_on)
+    ((pps elpi.trace.ppx ppx_deriving.std  -- --cookie "elpi_trace=\"false\"") runtime_trace_off)
     ((action (run camlp5o -I . -I +camlp5 pa_extend.cmo pa_lexer.cmo %{input-file})) parser)
     ))
   (libraries re.str camlp5.gramlib unix elpi.trace
