@@ -1,4 +1,4 @@
-(*25823e968f78a65500da52de3f79f1aeb00d2b5a  src/runtime_trace_off.ml --trace_ppx-off*)
+(*25823e968f78a65500da52de3f79f1aeb00d2b5a *src/runtime_trace_off.ml --trace_ppx-off*)
 #1 "src/runtime_trace_off.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -371,56 +371,56 @@ module ConstraintStoreAndTrail :
       | StuckGoalAddition of stuck_goal 
       | StuckGoalRemoval of stuck_goal [@@deriving show]
     let rec pp_trail_item :
-      Ppx_deriving_runtime.Format.formatter ->
-        trail_item -> Ppx_deriving_runtime.unit
+      Ppx_deriving_runtime_proxy.Format.formatter ->
+        trail_item -> Ppx_deriving_runtime_proxy.unit
       =
       let __2 () = pp_stuck_goal
       and __1 () = pp_stuck_goal
       and __0 () = pp_uvar_body in
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             function
             | Assignement a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Runtime_trace_off.ConstraintStoreAndTrail.Assignement@ ";
                  ((__0 ()) fmt) a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])")
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])")
             | StuckGoalAddition a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Runtime_trace_off.ConstraintStoreAndTrail.StuckGoalAddition@ ";
                  ((__1 ()) fmt) a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])")
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])")
             | StuckGoalRemoval a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Runtime_trace_off.ConstraintStoreAndTrail.StuckGoalRemoval@ ";
                  ((__2 ()) fmt) a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])"))
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])"))
         [@ocaml.warning "-A"])
-    and show_trail_item : trail_item -> Ppx_deriving_runtime.string =
-      fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_trail_item x
+    and show_trail_item : trail_item -> Ppx_deriving_runtime_proxy.string =
+      fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_trail_item x
     [@@ocaml.warning "-32"]
     type trail = trail_item list[@@deriving show]
     let rec pp_trail :
-      Ppx_deriving_runtime.Format.formatter ->
-        trail -> Ppx_deriving_runtime.unit
+      Ppx_deriving_runtime_proxy.Format.formatter ->
+        trail -> Ppx_deriving_runtime_proxy.unit
       =
       let __0 () = pp_trail_item in
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
-              Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+              Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
               ignore
                 (List.fold_left
                    (fun sep ->
                       fun x ->
                         if sep
-                        then Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
+                        then Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
                         ((__0 ()) fmt) x;
                         true) false x);
-              Ppx_deriving_runtime.Format.fprintf fmt "@,]@]")
+              Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]")
         [@ocaml.warning "-A"])
-    and show_trail : trail -> Ppx_deriving_runtime.string =
-      fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_trail x[@@ocaml.warning
+    and show_trail : trail -> Ppx_deriving_runtime_proxy.string =
+      fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_trail x[@@ocaml.warning
                                                                     "-32"]
     let empty = []
     let trail = Fork.new_local []

@@ -6,7 +6,7 @@
   (name ppxfindcache)
   (public_name ppxfindcache_elpi_trace_deriving_std)
   (modules ppxfindcache)
-  (libraries unix ppxfindcache_aux
+  (libraries unix re ppxfindcache_aux
     (select ppxfindcache.ml from
       (elpi.trace_ppx ppx_deriving.std -> ppxfindcache.useppx.ml)
       (-> ppxfindcache.cacheonly.ml)))
@@ -17,7 +17,7 @@
   (name ppxfindcache2)
   (public_name ppxfindcache_deriving_std)
   (modules ppxfindcache2)
-  (libraries unix ppxfindcache_aux
+  (libraries unix re ppxfindcache_aux
     (select ppxfindcache2.ml from
       (ppx_deriving.std -> ppxfindcache2.useppx.ml)
       (-> ppxfindcache2.cacheonly.ml)))

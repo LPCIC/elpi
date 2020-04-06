@@ -1,4 +1,4 @@
-(*0955ec849b56078e3758eb95f9bd37800d3dcecc  src/ast.mli *)
+(*0955ec849b56078e3758eb95f9bd37800d3dcecc *src/ast.mli *)
 #1 "src/ast.mli"
 open Util
 module Func :
@@ -41,12 +41,12 @@ sig
     loc: Loc.t ;
     kind: string option }[@@deriving show]
   val pp :
-    Ppx_deriving_runtime.Format.formatter -> t -> Ppx_deriving_runtime.unit
-  val show : t -> Ppx_deriving_runtime.string
+    Ppx_deriving_runtime_proxy.Format.formatter -> t -> Ppx_deriving_runtime_proxy.unit
+  val show : t -> Ppx_deriving_runtime_proxy.string
   val pp_quote :
-    Ppx_deriving_runtime.Format.formatter ->
-      quote -> Ppx_deriving_runtime.unit
-  val show_quote : quote -> Ppx_deriving_runtime.string
+    Ppx_deriving_runtime_proxy.Format.formatter ->
+      quote -> Ppx_deriving_runtime_proxy.unit
+  val show_quote : quote -> Ppx_deriving_runtime_proxy.string
   val equal : t -> t -> bool
   exception NotInProlog of Loc.t * string 
   val mkApp : Loc.t -> t list -> t
@@ -67,30 +67,30 @@ sig
     | Before of string 
     | If of string [@@deriving show]
   val pp_attribute :
-    Ppx_deriving_runtime.Format.formatter ->
-      attribute -> Ppx_deriving_runtime.unit
-  val show_attribute : attribute -> Ppx_deriving_runtime.string
+    Ppx_deriving_runtime_proxy.Format.formatter ->
+      attribute -> Ppx_deriving_runtime_proxy.unit
+  val show_attribute : attribute -> Ppx_deriving_runtime_proxy.string
   type ('term, 'attributes) t =
     {
     loc: Loc.t ;
     attributes: 'attributes ;
     body: 'term }[@@deriving show]
   val pp :
-    (Ppx_deriving_runtime.Format.formatter ->
-       'term -> Ppx_deriving_runtime.unit)
+    (Ppx_deriving_runtime_proxy.Format.formatter ->
+       'term -> Ppx_deriving_runtime_proxy.unit)
       ->
-      (Ppx_deriving_runtime.Format.formatter ->
-         'attributes -> Ppx_deriving_runtime.unit)
+      (Ppx_deriving_runtime_proxy.Format.formatter ->
+         'attributes -> Ppx_deriving_runtime_proxy.unit)
         ->
-        Ppx_deriving_runtime.Format.formatter ->
-          ('term, 'attributes) t -> Ppx_deriving_runtime.unit
+        Ppx_deriving_runtime_proxy.Format.formatter ->
+          ('term, 'attributes) t -> Ppx_deriving_runtime_proxy.unit
   val show :
-    (Ppx_deriving_runtime.Format.formatter ->
-       'term -> Ppx_deriving_runtime.unit)
+    (Ppx_deriving_runtime_proxy.Format.formatter ->
+       'term -> Ppx_deriving_runtime_proxy.unit)
       ->
-      (Ppx_deriving_runtime.Format.formatter ->
-         'attributes -> Ppx_deriving_runtime.unit)
-        -> ('term, 'attributes) t -> Ppx_deriving_runtime.string
+      (Ppx_deriving_runtime_proxy.Format.formatter ->
+         'attributes -> Ppx_deriving_runtime_proxy.unit)
+        -> ('term, 'attributes) t -> Ppx_deriving_runtime_proxy.string
 end
 module Chr :
 sig
@@ -98,9 +98,9 @@ sig
     | Name of string 
     | If of string [@@deriving show]
   val pp_attribute :
-    Ppx_deriving_runtime.Format.formatter ->
-      attribute -> Ppx_deriving_runtime.unit
-  val show_attribute : attribute -> Ppx_deriving_runtime.string
+    Ppx_deriving_runtime_proxy.Format.formatter ->
+      attribute -> Ppx_deriving_runtime_proxy.unit
+  val show_attribute : attribute -> Ppx_deriving_runtime_proxy.string
   type sequent = {
     eigen: Term.t ;
     context: Term.t ;
@@ -114,19 +114,19 @@ sig
     attributes: 'attribute ;
     loc: Loc.t }[@@deriving show]
   val pp_sequent :
-    Ppx_deriving_runtime.Format.formatter ->
-      sequent -> Ppx_deriving_runtime.unit
-  val show_sequent : sequent -> Ppx_deriving_runtime.string
+    Ppx_deriving_runtime_proxy.Format.formatter ->
+      sequent -> Ppx_deriving_runtime_proxy.unit
+  val show_sequent : sequent -> Ppx_deriving_runtime_proxy.string
   val pp :
-    (Ppx_deriving_runtime.Format.formatter ->
-       'attribute -> Ppx_deriving_runtime.unit)
+    (Ppx_deriving_runtime_proxy.Format.formatter ->
+       'attribute -> Ppx_deriving_runtime_proxy.unit)
       ->
-      Ppx_deriving_runtime.Format.formatter ->
-        'attribute t -> Ppx_deriving_runtime.unit
+      Ppx_deriving_runtime_proxy.Format.formatter ->
+        'attribute t -> Ppx_deriving_runtime_proxy.unit
   val show :
-    (Ppx_deriving_runtime.Format.formatter ->
-       'attribute -> Ppx_deriving_runtime.unit)
-      -> 'attribute t -> Ppx_deriving_runtime.string
+    (Ppx_deriving_runtime_proxy.Format.formatter ->
+       'attribute -> Ppx_deriving_runtime_proxy.unit)
+      -> 'attribute t -> Ppx_deriving_runtime_proxy.string
   val create :
     ?to_match:sequent list ->
       ?to_remove:sequent list ->
@@ -141,21 +141,21 @@ sig
     name: 'name ;
     body: 'term }[@@deriving show]
   val pp :
-    (Ppx_deriving_runtime.Format.formatter ->
-       'name -> Ppx_deriving_runtime.unit)
+    (Ppx_deriving_runtime_proxy.Format.formatter ->
+       'name -> Ppx_deriving_runtime_proxy.unit)
       ->
-      (Ppx_deriving_runtime.Format.formatter ->
-         'term -> Ppx_deriving_runtime.unit)
+      (Ppx_deriving_runtime_proxy.Format.formatter ->
+         'term -> Ppx_deriving_runtime_proxy.unit)
         ->
-        Ppx_deriving_runtime.Format.formatter ->
-          ('name, 'term) t -> Ppx_deriving_runtime.unit
+        Ppx_deriving_runtime_proxy.Format.formatter ->
+          ('name, 'term) t -> Ppx_deriving_runtime_proxy.unit
   val show :
-    (Ppx_deriving_runtime.Format.formatter ->
-       'name -> Ppx_deriving_runtime.unit)
+    (Ppx_deriving_runtime_proxy.Format.formatter ->
+       'name -> Ppx_deriving_runtime_proxy.unit)
       ->
-      (Ppx_deriving_runtime.Format.formatter ->
-         'term -> Ppx_deriving_runtime.unit)
-        -> ('name, 'term) t -> Ppx_deriving_runtime.string
+      (Ppx_deriving_runtime_proxy.Format.formatter ->
+         'term -> Ppx_deriving_runtime_proxy.unit)
+        -> ('name, 'term) t -> Ppx_deriving_runtime_proxy.string
 end
 module Type :
 sig
@@ -163,9 +163,9 @@ sig
     | External 
     | Index of int list [@@deriving show]
   val pp_attribute :
-    Ppx_deriving_runtime.Format.formatter ->
-      attribute -> Ppx_deriving_runtime.unit
-  val show_attribute : attribute -> Ppx_deriving_runtime.string
+    Ppx_deriving_runtime_proxy.Format.formatter ->
+      attribute -> Ppx_deriving_runtime_proxy.unit
+  val show_attribute : attribute -> Ppx_deriving_runtime_proxy.string
   type 'attribute t =
     {
     loc: Loc.t ;
@@ -173,15 +173,15 @@ sig
     name: Func.t ;
     ty: Term.t }[@@deriving show]
   val pp :
-    (Ppx_deriving_runtime.Format.formatter ->
-       'attribute -> Ppx_deriving_runtime.unit)
+    (Ppx_deriving_runtime_proxy.Format.formatter ->
+       'attribute -> Ppx_deriving_runtime_proxy.unit)
       ->
-      Ppx_deriving_runtime.Format.formatter ->
-        'attribute t -> Ppx_deriving_runtime.unit
+      Ppx_deriving_runtime_proxy.Format.formatter ->
+        'attribute t -> Ppx_deriving_runtime_proxy.unit
   val show :
-    (Ppx_deriving_runtime.Format.formatter ->
-       'attribute -> Ppx_deriving_runtime.unit)
-      -> 'attribute t -> Ppx_deriving_runtime.string
+    (Ppx_deriving_runtime_proxy.Format.formatter ->
+       'attribute -> Ppx_deriving_runtime_proxy.unit)
+      -> 'attribute t -> Ppx_deriving_runtime_proxy.string
 end
 module Mode :
 sig
@@ -190,15 +190,15 @@ sig
     args: bool list ;
     loc: Loc.t }[@@deriving show]
   val pp :
-    (Ppx_deriving_runtime.Format.formatter ->
-       'name -> Ppx_deriving_runtime.unit)
+    (Ppx_deriving_runtime_proxy.Format.formatter ->
+       'name -> Ppx_deriving_runtime_proxy.unit)
       ->
-      Ppx_deriving_runtime.Format.formatter ->
-        'name t -> Ppx_deriving_runtime.unit
+      Ppx_deriving_runtime_proxy.Format.formatter ->
+        'name t -> Ppx_deriving_runtime_proxy.unit
   val show :
-    (Ppx_deriving_runtime.Format.formatter ->
-       'name -> Ppx_deriving_runtime.unit)
-      -> 'name t -> Ppx_deriving_runtime.string
+    (Ppx_deriving_runtime_proxy.Format.formatter ->
+       'name -> Ppx_deriving_runtime_proxy.unit)
+      -> 'name t -> Ppx_deriving_runtime_proxy.string
 end
 module TypeAbbreviation :
 sig
@@ -208,15 +208,15 @@ sig
     nparams: int ;
     loc: Loc.t }[@@deriving show]
   val pp :
-    (Ppx_deriving_runtime.Format.formatter ->
-       'name -> Ppx_deriving_runtime.unit)
+    (Ppx_deriving_runtime_proxy.Format.formatter ->
+       'name -> Ppx_deriving_runtime_proxy.unit)
       ->
-      Ppx_deriving_runtime.Format.formatter ->
-        'name t -> Ppx_deriving_runtime.unit
+      Ppx_deriving_runtime_proxy.Format.formatter ->
+        'name t -> Ppx_deriving_runtime_proxy.unit
   val show :
-    (Ppx_deriving_runtime.Format.formatter ->
-       'name -> Ppx_deriving_runtime.unit)
-      -> 'name t -> Ppx_deriving_runtime.string
+    (Ppx_deriving_runtime_proxy.Format.formatter ->
+       'name -> Ppx_deriving_runtime_proxy.unit)
+      -> 'name t -> Ppx_deriving_runtime_proxy.string
 end
 module Program :
 sig
@@ -235,21 +235,21 @@ sig
     | Type of Type.attribute list Type.t 
     | TypeAbbreviation of Func.t TypeAbbreviation.t [@@deriving show]
   val pp_decl :
-    Ppx_deriving_runtime.Format.formatter ->
-      decl -> Ppx_deriving_runtime.unit
-  val show_decl : decl -> Ppx_deriving_runtime.string
+    Ppx_deriving_runtime_proxy.Format.formatter ->
+      decl -> Ppx_deriving_runtime_proxy.unit
+  val show_decl : decl -> Ppx_deriving_runtime_proxy.string
   val mkLocal : string -> decl
   type t = decl list[@@deriving show]
   val pp :
-    Ppx_deriving_runtime.Format.formatter -> t -> Ppx_deriving_runtime.unit
-  val show : t -> Ppx_deriving_runtime.string
+    Ppx_deriving_runtime_proxy.Format.formatter -> t -> Ppx_deriving_runtime_proxy.unit
+  val show : t -> Ppx_deriving_runtime_proxy.string
 end
 module Goal :
 sig
   type t = (Loc.t * Term.t)[@@deriving show]
   val pp :
-    Ppx_deriving_runtime.Format.formatter -> t -> Ppx_deriving_runtime.unit
-  val show : t -> Ppx_deriving_runtime.string
+    Ppx_deriving_runtime_proxy.Format.formatter -> t -> Ppx_deriving_runtime_proxy.unit
+  val show : t -> Ppx_deriving_runtime_proxy.string
 end
 open CData
 val cfloat : float cdata
@@ -290,36 +290,36 @@ sig
     full_name: 'a ;
     short_name: 'a }[@@deriving show]
   val pp_program :
-    Ppx_deriving_runtime.Format.formatter ->
-      program -> Ppx_deriving_runtime.unit
-  val show_program : program -> Ppx_deriving_runtime.string
+    Ppx_deriving_runtime_proxy.Format.formatter ->
+      program -> Ppx_deriving_runtime_proxy.unit
+  val show_program : program -> Ppx_deriving_runtime_proxy.string
   val pp_block :
-    Ppx_deriving_runtime.Format.formatter ->
-      block -> Ppx_deriving_runtime.unit
-  val show_block : block -> Ppx_deriving_runtime.string
+    Ppx_deriving_runtime_proxy.Format.formatter ->
+      block -> Ppx_deriving_runtime_proxy.unit
+  val show_block : block -> Ppx_deriving_runtime_proxy.string
   val pp_attribute :
-    Ppx_deriving_runtime.Format.formatter ->
-      attribute -> Ppx_deriving_runtime.unit
-  val show_attribute : attribute -> Ppx_deriving_runtime.string
+    Ppx_deriving_runtime_proxy.Format.formatter ->
+      attribute -> Ppx_deriving_runtime_proxy.unit
+  val show_attribute : attribute -> Ppx_deriving_runtime_proxy.string
   val pp_insertion :
-    Ppx_deriving_runtime.Format.formatter ->
-      insertion -> Ppx_deriving_runtime.unit
-  val show_insertion : insertion -> Ppx_deriving_runtime.string
+    Ppx_deriving_runtime_proxy.Format.formatter ->
+      insertion -> Ppx_deriving_runtime_proxy.unit
+  val show_insertion : insertion -> Ppx_deriving_runtime_proxy.string
   val pp_cattribute :
-    Ppx_deriving_runtime.Format.formatter ->
-      cattribute -> Ppx_deriving_runtime.unit
-  val show_cattribute : cattribute -> Ppx_deriving_runtime.string
+    Ppx_deriving_runtime_proxy.Format.formatter ->
+      cattribute -> Ppx_deriving_runtime_proxy.unit
+  val show_cattribute : cattribute -> Ppx_deriving_runtime_proxy.string
   val pp_tattribute :
-    Ppx_deriving_runtime.Format.formatter ->
-      tattribute -> Ppx_deriving_runtime.unit
-  val show_tattribute : tattribute -> Ppx_deriving_runtime.string
+    Ppx_deriving_runtime_proxy.Format.formatter ->
+      tattribute -> Ppx_deriving_runtime_proxy.unit
+  val show_tattribute : tattribute -> Ppx_deriving_runtime_proxy.string
   val pp_shorthand :
-    (Ppx_deriving_runtime.Format.formatter -> 'a -> Ppx_deriving_runtime.unit)
+    (Ppx_deriving_runtime_proxy.Format.formatter -> 'a -> Ppx_deriving_runtime_proxy.unit)
       ->
-      Ppx_deriving_runtime.Format.formatter ->
-        'a shorthand -> Ppx_deriving_runtime.unit
+      Ppx_deriving_runtime_proxy.Format.formatter ->
+        'a shorthand -> Ppx_deriving_runtime_proxy.unit
   val show_shorthand :
-    (Ppx_deriving_runtime.Format.formatter -> 'a -> Ppx_deriving_runtime.unit)
-      -> 'a shorthand -> Ppx_deriving_runtime.string
+    (Ppx_deriving_runtime_proxy.Format.formatter -> 'a -> Ppx_deriving_runtime_proxy.unit)
+      -> 'a shorthand -> Ppx_deriving_runtime_proxy.string
 end
 

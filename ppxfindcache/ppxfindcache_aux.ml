@@ -45,6 +45,8 @@ let exec ?(err=fun _ -> false, "") p args =
 let must (b,s) =
   if b then s else exit 1
 
+let path_sanitize s = String.map (function '\\' -> '/' | x -> x) s
+
 let common () =
   let file = ref "" in
   let flag = ref [||] in
@@ -54,14 +56,14 @@ let common () =
     parse [
       "--dep", String (fun s -> Printf.eprintf "skip %s\n" s), "ignored";
       "--ppx-opt", String (fun s -> flag := Array.append !flag [|s|]), "option for the ppx rewriter";
-      "--cache-file", String (fun s -> cache := s :: !cache), "files for which a cache is stored";
+      "--cache-file", String (fun s -> cache := path_sanitize s :: !cache), "files for which a cache is stored";
     ] (fun x -> file := x) "usage"
     in
   let file = !file in
   let flag = !flag in
-  let cache = !cache in
+  let cache x = List.mem (path_sanitize x) !cache in
 
-  let sha = must @@ exec "sha1sum" [|file|] in
+  let sha = must @@ exec "sha1sum" [|"-b";file|] in
   let sha = String.sub sha 0 (String.length sha - 1) in
   let sha = Printf.sprintf "(*%s %s*)\n" sha (String.concat " " (Array.to_list flag)) in
 

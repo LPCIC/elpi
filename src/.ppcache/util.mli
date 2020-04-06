@@ -1,45 +1,45 @@
-(*f81b6f53e85d7c289fb4bc5c47b7848e424f39c1  src/util.mli *)
+(*f81b6f53e85d7c289fb4bc5c47b7848e424f39c1 *src/util.mli *)
 #1 "src/util.mli"
 module type Show  =
   sig
     type t[@@deriving show]
     val pp :
-      Ppx_deriving_runtime.Format.formatter -> t -> Ppx_deriving_runtime.unit
-    val show : t -> Ppx_deriving_runtime.string
+      Ppx_deriving_runtime_proxy.Format.formatter -> t -> Ppx_deriving_runtime_proxy.unit
+    val show : t -> Ppx_deriving_runtime_proxy.string
   end
 module type Show1  =
   sig
     type 'a t[@@deriving show]
     val pp :
-      (Ppx_deriving_runtime.Format.formatter ->
-         'a -> Ppx_deriving_runtime.unit)
+      (Ppx_deriving_runtime_proxy.Format.formatter ->
+         'a -> Ppx_deriving_runtime_proxy.unit)
         ->
-        Ppx_deriving_runtime.Format.formatter ->
-          'a t -> Ppx_deriving_runtime.unit
+        Ppx_deriving_runtime_proxy.Format.formatter ->
+          'a t -> Ppx_deriving_runtime_proxy.unit
     val show :
-      (Ppx_deriving_runtime.Format.formatter ->
-         'a -> Ppx_deriving_runtime.unit)
-        -> 'a t -> Ppx_deriving_runtime.string
+      (Ppx_deriving_runtime_proxy.Format.formatter ->
+         'a -> Ppx_deriving_runtime_proxy.unit)
+        -> 'a t -> Ppx_deriving_runtime_proxy.string
   end
 module type Show2  =
   sig
     type ('a, 'b) t[@@deriving show]
     val pp :
-      (Ppx_deriving_runtime.Format.formatter ->
-         'a -> Ppx_deriving_runtime.unit)
+      (Ppx_deriving_runtime_proxy.Format.formatter ->
+         'a -> Ppx_deriving_runtime_proxy.unit)
         ->
-        (Ppx_deriving_runtime.Format.formatter ->
-           'b -> Ppx_deriving_runtime.unit)
+        (Ppx_deriving_runtime_proxy.Format.formatter ->
+           'b -> Ppx_deriving_runtime_proxy.unit)
           ->
-          Ppx_deriving_runtime.Format.formatter ->
-            ('a, 'b) t -> Ppx_deriving_runtime.unit
+          Ppx_deriving_runtime_proxy.Format.formatter ->
+            ('a, 'b) t -> Ppx_deriving_runtime_proxy.unit
     val show :
-      (Ppx_deriving_runtime.Format.formatter ->
-         'a -> Ppx_deriving_runtime.unit)
+      (Ppx_deriving_runtime_proxy.Format.formatter ->
+         'a -> Ppx_deriving_runtime_proxy.unit)
         ->
-        (Ppx_deriving_runtime.Format.formatter ->
-           'b -> Ppx_deriving_runtime.unit)
-          -> ('a, 'b) t -> Ppx_deriving_runtime.string
+        (Ppx_deriving_runtime_proxy.Format.formatter ->
+           'b -> Ppx_deriving_runtime_proxy.unit)
+          -> ('a, 'b) t -> Ppx_deriving_runtime_proxy.string
   end
 module Map :
 sig
@@ -96,10 +96,10 @@ sig
     line: int ;
     line_starts_at: int }[@@deriving (show, eq, ord)]
   val pp :
-    Ppx_deriving_runtime.Format.formatter -> t -> Ppx_deriving_runtime.unit
-  val show : t -> Ppx_deriving_runtime.string
-  val equal : t -> t -> Ppx_deriving_runtime.bool
-  val compare : t -> t -> Ppx_deriving_runtime.int
+    Ppx_deriving_runtime_proxy.Format.formatter -> t -> Ppx_deriving_runtime_proxy.unit
+  val show : t -> Ppx_deriving_runtime_proxy.string
+  val equal : t -> t -> Ppx_deriving_runtime_proxy.bool
+  val compare : t -> t -> Ppx_deriving_runtime_proxy.int
   val initial : string -> t
 end
 val smart_map : ('a -> 'a) -> 'a list -> 'a list
@@ -134,11 +134,11 @@ val option_iter : ('a -> unit) -> 'a option -> unit
 module UUID :
 sig
   type t[@@deriving (eq, ord, show)]
-  val equal : t -> t -> Ppx_deriving_runtime.bool
-  val compare : t -> t -> Ppx_deriving_runtime.int
+  val equal : t -> t -> Ppx_deriving_runtime_proxy.bool
+  val compare : t -> t -> Ppx_deriving_runtime_proxy.int
   val pp :
-    Ppx_deriving_runtime.Format.formatter -> t -> Ppx_deriving_runtime.unit
-  val show : t -> Ppx_deriving_runtime.string
+    Ppx_deriving_runtime_proxy.Format.formatter -> t -> Ppx_deriving_runtime_proxy.unit
+  val show : t -> Ppx_deriving_runtime_proxy.string
   val hash : t -> int
   val make : unit -> t
   module Htbl : Hashtbl.S with type  key =  t
@@ -194,10 +194,10 @@ module CData :
 sig
   type t[@@deriving (show, eq, ord)]
   val pp :
-    Ppx_deriving_runtime.Format.formatter -> t -> Ppx_deriving_runtime.unit
-  val show : t -> Ppx_deriving_runtime.string
-  val equal : t -> t -> Ppx_deriving_runtime.bool
-  val compare : t -> t -> Ppx_deriving_runtime.int
+    Ppx_deriving_runtime_proxy.Format.formatter -> t -> Ppx_deriving_runtime_proxy.unit
+  val show : t -> Ppx_deriving_runtime_proxy.string
+  val equal : t -> t -> Ppx_deriving_runtime_proxy.bool
+  val compare : t -> t -> Ppx_deriving_runtime_proxy.int
   type 'a data_declaration =
     {
     data_name: string ;
