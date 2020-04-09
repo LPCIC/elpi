@@ -1,0 +1,5 @@
+(executable
+  (name show)
+  (preprocess (pps ppx_show))
+  (flags -dsource)
+  (libraries ppx_show_runtime))
