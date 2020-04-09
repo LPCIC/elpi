@@ -1617,7 +1617,8 @@ end = struct (* {{{ *)
 
     let rec spaux (depth,vars as ctx) = function
       | App(c, fcall, rest) when c == D.Global_symbols.spillc ->
-         assert (rest = []);
+         if rest <> [] then
+           error ~loc "Spilling cannot be applied";
          let spills, fcall = spaux1 ctx fcall in
          let args =
             mkSpilled (List.rev vars) (missing_args_of !state loc modes types fcall) in
@@ -1665,7 +1666,8 @@ end = struct (* {{{ *)
          let sp1, hd = spaux ctx hd in
          let sp2, tl = spaux ctx tl in
          (* FIXME: it could be in prop *)
-         assert(List.length hd = 1 && List.length tl = 1);
+         if not (List.length hd = 1 && List.length tl = 1) then
+           error ~loc "Spilling in a list, but I don't know if it is a list of props";
          sp1 @ sp2, [Cons(List.hd hd, List.hd tl)]
       | Builtin(c,args) ->
          let spills, args = map_acc (fun sp x ->
