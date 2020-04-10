@@ -1,0 +1,3 @@
+(lang dune 2.0)
+(name ocaml-elpi)
+(allow_approximate_merlin)

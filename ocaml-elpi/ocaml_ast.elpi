@@ -1,0 +1,1192 @@
+
+
+% position
+kind position type.
+type position string -> int -> int -> int -> position. % position
+
+% location
+kind location type.
+type location position -> position -> bool -> location. % location
+
+typeabbrev location-stack (list location). % location_stack
+
+% loc
+kind loc_ type -> type.
+type loc_ A0 -> location -> loc_ A0. % loc
+
+% longident
+kind longident type.
+type lident string -> longident. % Lident
+type ldot longident -> string -> longident. % Ldot
+type lapply longident -> longident -> longident. % Lapply
+
+typeabbrev longident-loc (loc_ longident). % longident_loc
+
+% rec_flag
+kind rec-flag type.
+type nonrecursive rec-flag. % Nonrecursive
+type recursive rec-flag. % Recursive
+
+% direction_flag
+kind direction-flag type.
+type upto direction-flag. % Upto
+type downto direction-flag. % Downto
+
+% private_flag
+kind private-flag type.
+type private private-flag. % Private
+type public private-flag. % Public
+
+% mutable_flag
+kind mutable-flag type.
+type immutable mutable-flag. % Immutable
+type mutable mutable-flag. % Mutable
+
+% virtual_flag
+kind virtual-flag type.
+type virtual virtual-flag. % Virtual
+type concrete virtual-flag. % Concrete
+
+% override_flag
+kind override-flag type.
+type override override-flag. % Override
+type fresh override-flag. % Fresh
+
+% closed_flag
+kind closed-flag type.
+type closed_ closed-flag. % Closed
+type open_ closed-flag. % Open
+
+typeabbrev label string. % label
+
+% arg_label
+kind arg-label type.
+type nolabel arg-label. % Nolabel
+type labelled string -> arg-label. % Labelled
+type optional string -> arg-label. % Optional
+
+% variance
+kind variance type.
+type covariant variance. % Covariant
+type contravariant variance. % Contravariant
+type invariant variance. % Invariant
+
+% constant
+kind constant_ type.
+type pconst-integer string -> option char -> constant_. % Pconst_integer
+type pconst-char char -> constant_. % Pconst_char
+type pconst-string string -> option string -> constant_. % Pconst_string
+type pconst-float string -> option char -> constant_. % Pconst_float
+
+% attribute
+kind attribute type.
+type attribute loc_ string -> payload -> location ->
+               attribute. % attribute
+
+typeabbrev extension (pair (loc_ string) payload). % extension
+
+typeabbrev attributes (list attribute). % attributes
+
+% payload
+kind payload type.
+type pstr structure -> payload. % PStr
+type psig signature -> payload. % PSig
+type ptyp core-type -> payload. % PTyp
+type ppat pattern -> option expression -> payload. % PPat
+
+% core_type
+kind core-type type.
+type core-type core-type-desc -> location -> location-stack ->
+               attributes -> core-type. % core_type
+
+% core_type_desc
+kind core-type-desc type.
+type ptyp-any core-type-desc. % Ptyp_any
+type ptyp-var string -> core-type-desc. % Ptyp_var
+type ptyp-arrow arg-label -> core-type -> core-type ->
+                core-type-desc. % Ptyp_arrow
+type ptyp-tuple list core-type -> core-type-desc. % Ptyp_tuple
+type ptyp-constr longident-loc -> list core-type ->
+                 core-type-desc. % Ptyp_constr
+type ptyp-object list object-field -> closed-flag ->
+                 core-type-desc. % Ptyp_object
+type ptyp-class longident-loc -> list core-type ->
+                core-type-desc. % Ptyp_class
+type ptyp-alias core-type -> string -> core-type-desc. % Ptyp_alias
+type ptyp-variant list row-field -> closed-flag -> option (list label) ->
+                  core-type-desc. % Ptyp_variant
+type ptyp-poly list (loc_ string) -> core-type ->
+               core-type-desc. % Ptyp_poly
+type ptyp-package package-type -> core-type-desc. % Ptyp_package
+type ptyp-extension extension -> core-type-desc. % Ptyp_extension
+
+typeabbrev package-type (pair longident-loc (list (pair longident-loc core-type))). % package_type
+
+% row_field
+kind row-field type.
+type row-field row-field-desc -> location -> attributes ->
+               row-field. % row_field
+
+% row_field_desc
+kind row-field-desc type.
+type rtag loc_ label -> bool -> list core-type -> row-field-desc. % Rtag
+type rinherit core-type -> row-field-desc. % Rinherit
+
+% object_field
+kind object-field type.
+type object-field object-field-desc -> location -> attributes ->
+                  object-field. % object_field
+
+% object_field_desc
+kind object-field-desc type.
+type otag loc_ label -> core-type -> object-field-desc. % Otag
+type oinherit core-type -> object-field-desc. % Oinherit
+
+% pattern
+kind pattern type.
+type pattern pattern-desc -> location -> location-stack -> attributes ->
+             pattern. % pattern
+
+% pattern_desc
+kind pattern-desc type.
+type ppat-any pattern-desc. % Ppat_any
+type ppat-var loc_ string -> pattern-desc. % Ppat_var
+type ppat-alias pattern -> loc_ string -> pattern-desc. % Ppat_alias
+type ppat-constant constant_ -> pattern-desc. % Ppat_constant
+type ppat-interval constant_ -> constant_ -> pattern-desc. % Ppat_interval
+type ppat-tuple list pattern -> pattern-desc. % Ppat_tuple
+type ppat-construct longident-loc -> option pattern ->
+                    pattern-desc. % Ppat_construct
+type ppat-variant label -> option pattern -> pattern-desc. % Ppat_variant
+type ppat-record list (pair longident-loc pattern) -> closed-flag ->
+                 pattern-desc. % Ppat_record
+type ppat-array list pattern -> pattern-desc. % Ppat_array
+type ppat-or pattern -> pattern -> pattern-desc. % Ppat_or
+type ppat-constraint pattern -> core-type ->
+                     pattern-desc. % Ppat_constraint
+type ppat-type longident-loc -> pattern-desc. % Ppat_type
+type ppat-lazy pattern -> pattern-desc. % Ppat_lazy
+type ppat-unpack loc_ string -> pattern-desc. % Ppat_unpack
+type ppat-exception pattern -> pattern-desc. % Ppat_exception
+type ppat-extension extension -> pattern-desc. % Ppat_extension
+type ppat-open longident-loc -> pattern -> pattern-desc. % Ppat_open
+
+% expression
+kind expression type.
+type expression expression-desc -> location -> location-stack ->
+                attributes -> expression. % expression
+
+% expression_desc
+kind expression-desc type.
+type pexp-ident longident-loc -> expression-desc. % Pexp_ident
+type pexp-constant constant_ -> expression-desc. % Pexp_constant
+type pexp-let rec-flag -> list value-binding -> expression ->
+              expression-desc. % Pexp_let
+type pexp-function list case -> expression-desc. % Pexp_function
+type pexp-fun arg-label -> option expression -> pattern -> expression ->
+              expression-desc. % Pexp_fun
+type pexp-apply expression -> list (pair arg-label expression) ->
+                expression-desc. % Pexp_apply
+type pexp-match expression -> list case -> expression-desc. % Pexp_match
+type pexp-try expression -> list case -> expression-desc. % Pexp_try
+type pexp-tuple list expression -> expression-desc. % Pexp_tuple
+type pexp-construct longident-loc -> option expression ->
+                    expression-desc. % Pexp_construct
+type pexp-variant label -> option expression ->
+                  expression-desc. % Pexp_variant
+type pexp-record list (pair longident-loc expression) ->
+                 option expression -> expression-desc. % Pexp_record
+type pexp-field expression -> longident-loc ->
+                expression-desc. % Pexp_field
+type pexp-setfield expression -> longident-loc -> expression ->
+                   expression-desc. % Pexp_setfield
+type pexp-array list expression -> expression-desc. % Pexp_array
+type pexp-ifthenelse expression -> expression -> option expression ->
+                     expression-desc. % Pexp_ifthenelse
+type pexp-sequence expression -> expression ->
+                   expression-desc. % Pexp_sequence
+type pexp-while expression -> expression -> expression-desc. % Pexp_while
+type pexp-for pattern -> expression -> expression -> direction-flag ->
+              expression -> expression-desc. % Pexp_for
+type pexp-constraint expression -> core-type ->
+                     expression-desc. % Pexp_constraint
+type pexp-coerce expression -> option core-type -> core-type ->
+                 expression-desc. % Pexp_coerce
+type pexp-send expression -> loc_ label -> expression-desc. % Pexp_send
+type pexp-new longident-loc -> expression-desc. % Pexp_new
+type pexp-setinstvar loc_ label -> expression ->
+                     expression-desc. % Pexp_setinstvar
+type pexp-override list (pair (loc_ label) expression) ->
+                   expression-desc. % Pexp_override
+type pexp-letmodule loc_ string -> module-expr -> expression ->
+                    expression-desc. % Pexp_letmodule
+type pexp-letexception extension-constructor -> expression ->
+                       expression-desc. % Pexp_letexception
+type pexp-assert expression -> expression-desc. % Pexp_assert
+type pexp-lazy expression -> expression-desc. % Pexp_lazy
+type pexp-poly expression -> option core-type ->
+               expression-desc. % Pexp_poly
+type pexp-object class-structure -> expression-desc. % Pexp_object
+type pexp-newtype loc_ string -> expression ->
+                  expression-desc. % Pexp_newtype
+type pexp-pack module-expr -> expression-desc. % Pexp_pack
+type pexp-open open-declaration -> expression ->
+               expression-desc. % Pexp_open
+type pexp-letop letop -> expression-desc. % Pexp_letop
+type pexp-extension extension -> expression-desc. % Pexp_extension
+type pexp-unreachable expression-desc. % Pexp_unreachable
+
+% case
+kind case type.
+type case pattern -> option expression -> expression -> case. % case
+
+% letop
+kind letop type.
+type letop binding-op -> list binding-op -> expression -> letop. % letop
+
+% binding_op
+kind binding-op type.
+type binding-op loc_ string -> pattern -> expression -> location ->
+                binding-op. % binding_op
+
+% value_description
+kind value-description type.
+type value-description loc_ string -> core-type -> list string ->
+                       attributes -> location ->
+                       value-description. % value_description
+
+% type_declaration
+kind type-declaration type.
+type type-declaration loc_ string -> list (pair core-type variance) ->
+                      list (triple core-type core-type location) ->
+                      type-kind -> private-flag -> option core-type ->
+                      attributes -> location ->
+                      type-declaration. % type_declaration
+
+% type_kind
+kind type-kind type.
+type ptype-abstract type-kind. % Ptype_abstract
+type ptype-variant list constructor-declaration ->
+                   type-kind. % Ptype_variant
+type ptype-record list label-declaration -> type-kind. % Ptype_record
+type ptype-open type-kind. % Ptype_open
+
+% label_declaration
+kind label-declaration type.
+type label-declaration loc_ string -> mutable-flag -> core-type ->
+                       location -> attributes ->
+                       label-declaration. % label_declaration
+
+% constructor_declaration
+kind constructor-declaration type.
+type constructor-declaration loc_ string -> constructor-arguments ->
+                             option core-type -> location -> attributes ->
+                             constructor-declaration. % constructor_declaration
+
+% constructor_arguments
+kind constructor-arguments type.
+type pcstr-tuple list core-type -> constructor-arguments. % Pcstr_tuple
+type pcstr-record list label-declaration ->
+                  constructor-arguments. % Pcstr_record
+
+% type_extension
+kind type-extension type.
+type type-extension longident-loc -> list (pair core-type variance) ->
+                    list extension-constructor -> private-flag ->
+                    location -> attributes ->
+                    type-extension. % type_extension
+
+% extension_constructor
+kind extension-constructor type.
+type extension-constructor loc_ string -> extension-constructor-kind ->
+                           location -> attributes ->
+                           extension-constructor. % extension_constructor
+
+% type_exception
+kind type-exception type.
+type type-exception extension-constructor -> location -> attributes ->
+                    type-exception. % type_exception
+
+% extension_constructor_kind
+kind extension-constructor-kind type.
+type pext-decl constructor-arguments -> option core-type ->
+               extension-constructor-kind. % Pext_decl
+type pext-rebind longident-loc ->
+                 extension-constructor-kind. % Pext_rebind
+
+% class_type
+kind class-type type.
+type class-type class-type-desc -> location -> attributes ->
+                class-type. % class_type
+
+% class_type_desc
+kind class-type-desc type.
+type pcty-constr longident-loc -> list core-type ->
+                 class-type-desc. % Pcty_constr
+type pcty-signature class-signature -> class-type-desc. % Pcty_signature
+type pcty-arrow arg-label -> core-type -> class-type ->
+                class-type-desc. % Pcty_arrow
+type pcty-extension extension -> class-type-desc. % Pcty_extension
+type pcty-open open-description -> class-type ->
+               class-type-desc. % Pcty_open
+
+% class_signature
+kind class-signature type.
+type class-signature core-type -> list class-type-field ->
+                     class-signature. % class_signature
+
+% class_type_field
+kind class-type-field type.
+type class-type-field class-type-field-desc -> location -> attributes ->
+                      class-type-field. % class_type_field
+
+% class_type_field_desc
+kind class-type-field-desc type.
+type pctf-inherit class-type -> class-type-field-desc. % Pctf_inherit
+type pctf-val quadruple (loc_ label) mutable-flag virtual-flag core-type ->
+              class-type-field-desc. % Pctf_val
+type pctf-method quadruple (loc_ label) private-flag virtual-flag core-type ->
+                 class-type-field-desc. % Pctf_method
+type pctf-constraint pair core-type core-type ->
+                     class-type-field-desc. % Pctf_constraint
+type pctf-attribute attribute -> class-type-field-desc. % Pctf_attribute
+type pctf-extension extension -> class-type-field-desc. % Pctf_extension
+
+% class_infos
+kind class-infos type -> type.
+type class-infos virtual-flag -> list (pair core-type variance) ->
+                 loc_ string -> A0 -> location -> attributes ->
+                 class-infos A0. % class_infos
+
+typeabbrev class-description (class-infos class-type). % class_description
+
+typeabbrev class-type-declaration (class-infos class-type). % class_type_declaration
+
+% class_expr
+kind class-expr type.
+type class-expr class-expr-desc -> location -> attributes ->
+                class-expr. % class_expr
+
+% class_expr_desc
+kind class-expr-desc type.
+type pcl-constr longident-loc -> list core-type ->
+                class-expr-desc. % Pcl_constr
+type pcl-structure class-structure -> class-expr-desc. % Pcl_structure
+type pcl-fun arg-label -> option expression -> pattern -> class-expr ->
+             class-expr-desc. % Pcl_fun
+type pcl-apply class-expr -> list (pair arg-label expression) ->
+               class-expr-desc. % Pcl_apply
+type pcl-let rec-flag -> list value-binding -> class-expr ->
+             class-expr-desc. % Pcl_let
+type pcl-constraint class-expr -> class-type ->
+                    class-expr-desc. % Pcl_constraint
+type pcl-extension extension -> class-expr-desc. % Pcl_extension
+type pcl-open open-description -> class-expr ->
+              class-expr-desc. % Pcl_open
+
+% class_structure
+kind class-structure type.
+type class-structure pattern -> list class-field ->
+                     class-structure. % class_structure
+
+% class_field
+kind class-field type.
+type class-field class-field-desc -> location -> attributes ->
+                 class-field. % class_field
+
+% class_field_desc
+kind class-field-desc type.
+type pcf-inherit override-flag -> class-expr -> option (loc_ string) ->
+                 class-field-desc. % Pcf_inherit
+type pcf-val triple (loc_ label) mutable-flag class-field-kind ->
+             class-field-desc. % Pcf_val
+type pcf-method triple (loc_ label) private-flag class-field-kind ->
+                class-field-desc. % Pcf_method
+type pcf-constraint pair core-type core-type ->
+                    class-field-desc. % Pcf_constraint
+type pcf-initializer expression -> class-field-desc. % Pcf_initializer
+type pcf-attribute attribute -> class-field-desc. % Pcf_attribute
+type pcf-extension extension -> class-field-desc. % Pcf_extension
+
+% class_field_kind
+kind class-field-kind type.
+type cfk-virtual core-type -> class-field-kind. % Cfk_virtual
+type cfk-concrete override-flag -> expression ->
+                  class-field-kind. % Cfk_concrete
+
+typeabbrev class-declaration (class-infos class-expr). % class_declaration
+
+% module_type
+kind module-type type.
+type module-type module-type-desc -> location -> attributes ->
+                 module-type. % module_type
+
+% module_type_desc
+kind module-type-desc type.
+type pmty-ident longident-loc -> module-type-desc. % Pmty_ident
+type pmty-signature signature -> module-type-desc. % Pmty_signature
+type pmty-functor loc_ string -> option module-type -> module-type ->
+                  module-type-desc. % Pmty_functor
+type pmty-with module-type -> list with-constraint ->
+               module-type-desc. % Pmty_with
+type pmty-typeof module-expr -> module-type-desc. % Pmty_typeof
+type pmty-extension extension -> module-type-desc. % Pmty_extension
+type pmty-alias longident-loc -> module-type-desc. % Pmty_alias
+
+typeabbrev signature (list signature-item). % signature
+
+% signature_item
+kind signature-item type.
+type signature-item signature-item-desc -> location ->
+                    signature-item. % signature_item
+
+% signature_item_desc
+kind signature-item-desc type.
+type psig-value value-description -> signature-item-desc. % Psig_value
+type psig-type rec-flag -> list type-declaration ->
+               signature-item-desc. % Psig_type
+type psig-typesubst list type-declaration ->
+                    signature-item-desc. % Psig_typesubst
+type psig-typext type-extension -> signature-item-desc. % Psig_typext
+type psig-exception type-exception ->
+                    signature-item-desc. % Psig_exception
+type psig-module module-declaration -> signature-item-desc. % Psig_module
+type psig-modsubst module-substitution ->
+                   signature-item-desc. % Psig_modsubst
+type psig-recmodule list module-declaration ->
+                    signature-item-desc. % Psig_recmodule
+type psig-modtype module-type-declaration ->
+                  signature-item-desc. % Psig_modtype
+type psig-open open-description -> signature-item-desc. % Psig_open
+type psig-include include-description ->
+                  signature-item-desc. % Psig_include
+type psig-class list class-description ->
+                signature-item-desc. % Psig_class
+type psig-class-type list class-type-declaration ->
+                     signature-item-desc. % Psig_class_type
+type psig-attribute attribute -> signature-item-desc. % Psig_attribute
+type psig-extension extension -> attributes ->
+                    signature-item-desc. % Psig_extension
+
+% module_declaration
+kind module-declaration type.
+type module-declaration loc_ string -> module-type -> attributes ->
+                        location ->
+                        module-declaration. % module_declaration
+
+% module_substitution
+kind module-substitution type.
+type module-substitution loc_ string -> longident-loc -> attributes ->
+                         location ->
+                         module-substitution. % module_substitution
+
+% module_type_declaration
+kind module-type-declaration type.
+type module-type-declaration loc_ string -> option module-type ->
+                             attributes -> location ->
+                             module-type-declaration. % module_type_declaration
+
+% open_infos
+kind open-infos type -> type.
+type open-infos A0 -> override-flag -> location -> attributes ->
+                open-infos A0. % open_infos
+
+typeabbrev open-description (open-infos longident-loc). % open_description
+
+typeabbrev open-declaration (open-infos module-expr). % open_declaration
+
+% include_infos
+kind include-infos type -> type.
+type include-infos A0 -> location -> attributes ->
+                   include-infos A0. % include_infos
+
+typeabbrev include-description (include-infos module-type). % include_description
+
+typeabbrev include-declaration (include-infos module-expr). % include_declaration
+
+% with_constraint
+kind with-constraint type.
+type pwith-type longident-loc -> type-declaration ->
+                with-constraint. % Pwith_type
+type pwith-module longident-loc -> longident-loc ->
+                  with-constraint. % Pwith_module
+type pwith-typesubst longident-loc -> type-declaration ->
+                     with-constraint. % Pwith_typesubst
+type pwith-modsubst longident-loc -> longident-loc ->
+                    with-constraint. % Pwith_modsubst
+
+% module_expr
+kind module-expr type.
+type module-expr module-expr-desc -> location -> attributes ->
+                 module-expr. % module_expr
+
+% module_expr_desc
+kind module-expr-desc type.
+type pmod-ident longident-loc -> module-expr-desc. % Pmod_ident
+type pmod-structure structure -> module-expr-desc. % Pmod_structure
+type pmod-functor loc_ string -> option module-type -> module-expr ->
+                  module-expr-desc. % Pmod_functor
+type pmod-apply module-expr -> module-expr ->
+                module-expr-desc. % Pmod_apply
+type pmod-constraint module-expr -> module-type ->
+                     module-expr-desc. % Pmod_constraint
+type pmod-unpack expression -> module-expr-desc. % Pmod_unpack
+type pmod-extension extension -> module-expr-desc. % Pmod_extension
+
+typeabbrev structure (list structure-item). % structure
+
+% structure_item
+kind structure-item type.
+type structure-item structure-item-desc -> location ->
+                    structure-item. % structure_item
+
+% structure_item_desc
+kind structure-item-desc type.
+type pstr-eval expression -> attributes ->
+               structure-item-desc. % Pstr_eval
+type pstr-value rec-flag -> list value-binding ->
+                structure-item-desc. % Pstr_value
+type pstr-primitive value-description ->
+                    structure-item-desc. % Pstr_primitive
+type pstr-type rec-flag -> list type-declaration ->
+               structure-item-desc. % Pstr_type
+type pstr-typext type-extension -> structure-item-desc. % Pstr_typext
+type pstr-exception type-exception ->
+                    structure-item-desc. % Pstr_exception
+type pstr-module module-binding -> structure-item-desc. % Pstr_module
+type pstr-recmodule list module-binding ->
+                    structure-item-desc. % Pstr_recmodule
+type pstr-modtype module-type-declaration ->
+                  structure-item-desc. % Pstr_modtype
+type pstr-open open-declaration -> structure-item-desc. % Pstr_open
+type pstr-class list class-declaration ->
+                structure-item-desc. % Pstr_class
+type pstr-class-type list class-type-declaration ->
+                     structure-item-desc. % Pstr_class_type
+type pstr-include include-declaration ->
+                  structure-item-desc. % Pstr_include
+type pstr-attribute attribute -> structure-item-desc. % Pstr_attribute
+type pstr-extension extension -> attributes ->
+                    structure-item-desc. % Pstr_extension
+
+% value_binding
+kind value-binding type.
+type value-binding pattern -> expression -> attributes -> location ->
+                   value-binding. % value_binding
+
+% module_binding
+kind module-binding type.
+type module-binding loc_ string -> module-expr -> attributes ->
+                    location -> module-binding. % module_binding
+
+% toplevel_phrase
+kind toplevel-phrase type.
+type ptop-def structure -> toplevel-phrase. % Ptop_def
+type ptop-dir toplevel-directive -> toplevel-phrase. % Ptop_dir
+
+% toplevel_directive
+kind toplevel-directive type.
+type toplevel-directive loc_ string -> option directive-argument ->
+                        location ->
+                        toplevel-directive. % toplevel_directive
+
+% directive_argument
+kind directive-argument type.
+type directive-argument directive-argument-desc -> location ->
+                        directive-argument. % directive_argument
+
+% directive_argument_desc
+kind directive-argument-desc type.
+type pdir-string string -> directive-argument-desc. % Pdir_string
+type pdir-int string -> option char -> directive-argument-desc. % Pdir_int
+type pdir-ident longident -> directive-argument-desc. % Pdir_ident
+type pdir-bool bool -> directive-argument-desc. % Pdir_bool
+
+pred map.position  i:position, o:position.
+map.position (position A0 A1 A2 A3) (position B0 B1 B2 B3) :- ((=) A0 B0), ((=) A1 B1), ((=) A2 B2), ((=) A3 B3).
+
+
+
+pred map.location  i:location, o:location.
+map.location (location A0 A1 A2) (location B0 B1 B2) :- (map.position A0 B0), (map.position A1 B1), ((=) A2 B2).
+
+
+
+pred map.location-stack  i:location-stack, o:location-stack.
+map.location-stack A B :- ((ppx.map.list map.location) A B).
+
+pred map.loc_ i:(X0 -> Y0 -> prop),  i:loc_ X0, o:loc_ Y0.
+map.loc_ F0 (loc_ A0 A1) (loc_ B0 B1) :- (F0 A0 B0), (map.location A1 B1).
+
+
+
+pred map.longident  i:longident, o:longident.
+map.longident (lident A0) (lident B0) :- ((=) A0 B0).
+map.longident (ldot A0 A1) (ldot B0 B1) :- (map.longident A0 B0), ((=) A1 B1).
+map.longident (lapply A0 A1) (lapply B0 B1) :- (map.longident A0 B0), (map.longident A1 B1).
+
+
+
+pred map.longident-loc  i:longident-loc, o:longident-loc.
+map.longident-loc A B :- ((map.loc_ map.longident) A B).
+
+pred map.rec-flag  i:rec-flag, o:rec-flag.
+map.rec-flag nonrecursive nonrecursive.
+map.rec-flag recursive recursive.
+
+
+
+pred map.direction-flag  i:direction-flag, o:direction-flag.
+map.direction-flag upto upto.
+map.direction-flag downto downto.
+
+
+
+pred map.private-flag  i:private-flag, o:private-flag.
+map.private-flag private private.
+map.private-flag public public.
+
+
+
+pred map.mutable-flag  i:mutable-flag, o:mutable-flag.
+map.mutable-flag immutable immutable.
+map.mutable-flag mutable mutable.
+
+
+
+pred map.virtual-flag  i:virtual-flag, o:virtual-flag.
+map.virtual-flag virtual virtual.
+map.virtual-flag concrete concrete.
+
+
+
+pred map.override-flag  i:override-flag, o:override-flag.
+map.override-flag override override.
+map.override-flag fresh fresh.
+
+
+
+pred map.closed-flag  i:closed-flag, o:closed-flag.
+map.closed-flag closed_ closed_.
+map.closed-flag open_ open_.
+
+
+
+pred map.label  i:label, o:label.
+map.label A B :- ((=) A B).
+
+pred map.arg-label  i:arg-label, o:arg-label.
+map.arg-label nolabel nolabel.
+map.arg-label (labelled A0) (labelled B0) :- ((=) A0 B0).
+map.arg-label (optional A0) (optional B0) :- ((=) A0 B0).
+
+
+
+pred map.variance  i:variance, o:variance.
+map.variance covariant covariant.
+map.variance contravariant contravariant.
+map.variance invariant invariant.
+
+
+
+pred map.constant_  i:constant_, o:constant_.
+map.constant_ (pconst-integer A0 A1) (pconst-integer B0 B1) :- ((=) A0 B0), ((ppx.map.option (=)) A1 B1).
+map.constant_ (pconst-char A0) (pconst-char B0) :- ((=) A0 B0).
+map.constant_ (pconst-string A0 A1) (pconst-string B0 B1) :- ((=) A0 B0), ((ppx.map.option (=)) A1 B1).
+map.constant_ (pconst-float A0 A1) (pconst-float B0 B1) :- ((=) A0 B0), ((ppx.map.option (=)) A1 B1).
+
+
+
+pred map.attribute  i:attribute, o:attribute.
+map.attribute (attribute A0 A1 A2) (attribute B0 B1 B2) :- ((map.loc_ (=)) A0 B0), (map.payload A1 B1), (map.location A2 B2).
+
+
+
+pred map.extension  i:extension, o:extension.
+map.extension A B :- ((ppx.map.pair (map.loc_ (=)) map.payload) A B).
+
+pred map.attributes  i:attributes, o:attributes.
+map.attributes A B :- ((ppx.map.list map.attribute) A B).
+
+pred map.payload  i:payload, o:payload.
+map.payload (pstr A0) (pstr B0) :- (map.structure A0 B0).
+map.payload (psig A0) (psig B0) :- (map.signature A0 B0).
+map.payload (ptyp A0) (ptyp B0) :- (map.core-type A0 B0).
+map.payload (ppat A0 A1) (ppat B0 B1) :- (map.pattern A0 B0), ((ppx.map.option map.expression) A1 B1).
+
+
+
+pred map.core-type  i:core-type, o:core-type.
+map.core-type (core-type A0 A1 A2 A3) (core-type B0 B1 B2 B3) :- (map.core-type-desc A0 B0), (map.location A1 B1), (map.location-stack A2 B2), (map.attributes A3 B3).
+
+
+
+pred map.core-type-desc  i:core-type-desc, o:core-type-desc.
+map.core-type-desc ptyp-any ptyp-any.
+map.core-type-desc (ptyp-var A0) (ptyp-var B0) :- ((=) A0 B0).
+map.core-type-desc (ptyp-arrow A0 A1 A2) (ptyp-arrow B0 B1 B2) :- (map.arg-label A0 B0), (map.core-type A1 B1), (map.core-type A2 B2).
+map.core-type-desc (ptyp-tuple A0) (ptyp-tuple B0) :- ((ppx.map.list map.core-type) A0 B0).
+map.core-type-desc (ptyp-constr A0 A1) (ptyp-constr B0 B1) :- (map.longident-loc A0 B0), ((ppx.map.list map.core-type) A1 B1).
+map.core-type-desc (ptyp-object A0 A1) (ptyp-object B0 B1) :- ((ppx.map.list map.object-field) A0 B0), (map.closed-flag A1 B1).
+map.core-type-desc (ptyp-class A0 A1) (ptyp-class B0 B1) :- (map.longident-loc A0 B0), ((ppx.map.list map.core-type) A1 B1).
+map.core-type-desc (ptyp-alias A0 A1) (ptyp-alias B0 B1) :- (map.core-type A0 B0), ((=) A1 B1).
+map.core-type-desc (ptyp-variant A0 A1 A2) (ptyp-variant B0 B1 B2) :- ((ppx.map.list map.row-field) A0 B0), (map.closed-flag A1 B1), ((ppx.map.option (ppx.map.list map.label)) A2 B2).
+map.core-type-desc (ptyp-poly A0 A1) (ptyp-poly B0 B1) :- ((ppx.map.list (map.loc_ (=))) A0 B0), (map.core-type A1 B1).
+map.core-type-desc (ptyp-package A0) (ptyp-package B0) :- (map.package-type A0 B0).
+map.core-type-desc (ptyp-extension A0) (ptyp-extension B0) :- (map.extension A0 B0).
+
+
+
+pred map.package-type  i:package-type, o:package-type.
+map.package-type A B :- ((ppx.map.pair map.longident-loc (ppx.map.list (ppx.map.pair map.longident-loc map.core-type))) A B).
+
+pred map.row-field  i:row-field, o:row-field.
+map.row-field (row-field A0 A1 A2) (row-field B0 B1 B2) :- (map.row-field-desc A0 B0), (map.location A1 B1), (map.attributes A2 B2).
+
+
+
+pred map.row-field-desc  i:row-field-desc, o:row-field-desc.
+map.row-field-desc (rtag A0 A1 A2) (rtag B0 B1 B2) :- ((map.loc_ map.label) A0 B0), ((=) A1 B1), ((ppx.map.list map.core-type) A2 B2).
+map.row-field-desc (rinherit A0) (rinherit B0) :- (map.core-type A0 B0).
+
+
+
+pred map.object-field  i:object-field, o:object-field.
+map.object-field (object-field A0 A1 A2) (object-field B0 B1 B2) :- (map.object-field-desc A0 B0), (map.location A1 B1), (map.attributes A2 B2).
+
+
+
+pred map.object-field-desc  i:object-field-desc, o:object-field-desc.
+map.object-field-desc (otag A0 A1) (otag B0 B1) :- ((map.loc_ map.label) A0 B0), (map.core-type A1 B1).
+map.object-field-desc (oinherit A0) (oinherit B0) :- (map.core-type A0 B0).
+
+
+
+pred map.pattern  i:pattern, o:pattern.
+map.pattern (pattern A0 A1 A2 A3) (pattern B0 B1 B2 B3) :- (map.pattern-desc A0 B0), (map.location A1 B1), (map.location-stack A2 B2), (map.attributes A3 B3).
+
+
+
+pred map.pattern-desc  i:pattern-desc, o:pattern-desc.
+map.pattern-desc ppat-any ppat-any.
+map.pattern-desc (ppat-var A0) (ppat-var B0) :- ((map.loc_ (=)) A0 B0).
+map.pattern-desc (ppat-alias A0 A1) (ppat-alias B0 B1) :- (map.pattern A0 B0), ((map.loc_ (=)) A1 B1).
+map.pattern-desc (ppat-constant A0) (ppat-constant B0) :- (map.constant_ A0 B0).
+map.pattern-desc (ppat-interval A0 A1) (ppat-interval B0 B1) :- (map.constant_ A0 B0), (map.constant_ A1 B1).
+map.pattern-desc (ppat-tuple A0) (ppat-tuple B0) :- ((ppx.map.list map.pattern) A0 B0).
+map.pattern-desc (ppat-construct A0 A1) (ppat-construct B0 B1) :- (map.longident-loc A0 B0), ((ppx.map.option map.pattern) A1 B1).
+map.pattern-desc (ppat-variant A0 A1) (ppat-variant B0 B1) :- (map.label A0 B0), ((ppx.map.option map.pattern) A1 B1).
+map.pattern-desc (ppat-record A0 A1) (ppat-record B0 B1) :- ((ppx.map.list (ppx.map.pair map.longident-loc map.pattern)) A0 B0), (map.closed-flag A1 B1).
+map.pattern-desc (ppat-array A0) (ppat-array B0) :- ((ppx.map.list map.pattern) A0 B0).
+map.pattern-desc (ppat-or A0 A1) (ppat-or B0 B1) :- (map.pattern A0 B0), (map.pattern A1 B1).
+map.pattern-desc (ppat-constraint A0 A1) (ppat-constraint B0 B1) :- (map.pattern A0 B0), (map.core-type A1 B1).
+map.pattern-desc (ppat-type A0) (ppat-type B0) :- (map.longident-loc A0 B0).
+map.pattern-desc (ppat-lazy A0) (ppat-lazy B0) :- (map.pattern A0 B0).
+map.pattern-desc (ppat-unpack A0) (ppat-unpack B0) :- ((map.loc_ (=)) A0 B0).
+map.pattern-desc (ppat-exception A0) (ppat-exception B0) :- (map.pattern A0 B0).
+map.pattern-desc (ppat-extension A0) (ppat-extension B0) :- (map.extension A0 B0).
+map.pattern-desc (ppat-open A0 A1) (ppat-open B0 B1) :- (map.longident-loc A0 B0), (map.pattern A1 B1).
+
+
+
+pred map.expression  i:expression, o:expression.
+map.expression (expression A0 A1 A2 A3) (expression B0 B1 B2 B3) :- (map.expression-desc A0 B0), (map.location A1 B1), (map.location-stack A2 B2), (map.attributes A3 B3).
+
+
+
+pred map.expression-desc  i:expression-desc, o:expression-desc.
+map.expression-desc (pexp-ident A0) (pexp-ident B0) :- (map.longident-loc A0 B0).
+map.expression-desc (pexp-constant A0) (pexp-constant B0) :- (map.constant_ A0 B0).
+map.expression-desc (pexp-let A0 A1 A2) (pexp-let B0 B1 B2) :- (map.rec-flag A0 B0), ((ppx.map.list map.value-binding) A1 B1), (map.expression A2 B2).
+map.expression-desc (pexp-function A0) (pexp-function B0) :- ((ppx.map.list map.case) A0 B0).
+map.expression-desc (pexp-fun A0 A1 A2 A3) (pexp-fun B0 B1 B2 B3) :- (map.arg-label A0 B0), ((ppx.map.option map.expression) A1 B1), (map.pattern A2 B2), (map.expression A3 B3).
+map.expression-desc (pexp-apply A0 A1) (pexp-apply B0 B1) :- (map.expression A0 B0), ((ppx.map.list (ppx.map.pair map.arg-label map.expression)) A1 B1).
+map.expression-desc (pexp-match A0 A1) (pexp-match B0 B1) :- (map.expression A0 B0), ((ppx.map.list map.case) A1 B1).
+map.expression-desc (pexp-try A0 A1) (pexp-try B0 B1) :- (map.expression A0 B0), ((ppx.map.list map.case) A1 B1).
+map.expression-desc (pexp-tuple A0) (pexp-tuple B0) :- ((ppx.map.list map.expression) A0 B0).
+map.expression-desc (pexp-construct A0 A1) (pexp-construct B0 B1) :- (map.longident-loc A0 B0), ((ppx.map.option map.expression) A1 B1).
+map.expression-desc (pexp-variant A0 A1) (pexp-variant B0 B1) :- (map.label A0 B0), ((ppx.map.option map.expression) A1 B1).
+map.expression-desc (pexp-record A0 A1) (pexp-record B0 B1) :- ((ppx.map.list (ppx.map.pair map.longident-loc map.expression)) A0 B0), ((ppx.map.option map.expression) A1 B1).
+map.expression-desc (pexp-field A0 A1) (pexp-field B0 B1) :- (map.expression A0 B0), (map.longident-loc A1 B1).
+map.expression-desc (pexp-setfield A0 A1 A2) (pexp-setfield B0 B1 B2) :- (map.expression A0 B0), (map.longident-loc A1 B1), (map.expression A2 B2).
+map.expression-desc (pexp-array A0) (pexp-array B0) :- ((ppx.map.list map.expression) A0 B0).
+map.expression-desc (pexp-ifthenelse A0 A1 A2) (pexp-ifthenelse B0 B1 B2) :- (map.expression A0 B0), (map.expression A1 B1), ((ppx.map.option map.expression) A2 B2).
+map.expression-desc (pexp-sequence A0 A1) (pexp-sequence B0 B1) :- (map.expression A0 B0), (map.expression A1 B1).
+map.expression-desc (pexp-while A0 A1) (pexp-while B0 B1) :- (map.expression A0 B0), (map.expression A1 B1).
+map.expression-desc (pexp-for A0 A1 A2 A3 A4) (pexp-for B0 B1 B2 B3 B4) :- (map.pattern A0 B0), (map.expression A1 B1), (map.expression A2 B2), (map.direction-flag A3 B3), (map.expression A4 B4).
+map.expression-desc (pexp-constraint A0 A1) (pexp-constraint B0 B1) :- (map.expression A0 B0), (map.core-type A1 B1).
+map.expression-desc (pexp-coerce A0 A1 A2) (pexp-coerce B0 B1 B2) :- (map.expression A0 B0), ((ppx.map.option map.core-type) A1 B1), (map.core-type A2 B2).
+map.expression-desc (pexp-send A0 A1) (pexp-send B0 B1) :- (map.expression A0 B0), ((map.loc_ map.label) A1 B1).
+map.expression-desc (pexp-new A0) (pexp-new B0) :- (map.longident-loc A0 B0).
+map.expression-desc (pexp-setinstvar A0 A1) (pexp-setinstvar B0 B1) :- ((map.loc_ map.label) A0 B0), (map.expression A1 B1).
+map.expression-desc (pexp-override A0) (pexp-override B0) :- ((ppx.map.list (ppx.map.pair (map.loc_ map.label) map.expression)) A0 B0).
+map.expression-desc (pexp-letmodule A0 A1 A2) (pexp-letmodule B0 B1 B2) :- ((map.loc_ (=)) A0 B0), (map.module-expr A1 B1), (map.expression A2 B2).
+map.expression-desc (pexp-letexception A0 A1) (pexp-letexception B0 B1) :- (map.extension-constructor A0 B0), (map.expression A1 B1).
+map.expression-desc (pexp-assert A0) (pexp-assert B0) :- (map.expression A0 B0).
+map.expression-desc (pexp-lazy A0) (pexp-lazy B0) :- (map.expression A0 B0).
+map.expression-desc (pexp-poly A0 A1) (pexp-poly B0 B1) :- (map.expression A0 B0), ((ppx.map.option map.core-type) A1 B1).
+map.expression-desc (pexp-object A0) (pexp-object B0) :- (map.class-structure A0 B0).
+map.expression-desc (pexp-newtype A0 A1) (pexp-newtype B0 B1) :- ((map.loc_ (=)) A0 B0), (map.expression A1 B1).
+map.expression-desc (pexp-pack A0) (pexp-pack B0) :- (map.module-expr A0 B0).
+map.expression-desc (pexp-open A0 A1) (pexp-open B0 B1) :- (map.open-declaration A0 B0), (map.expression A1 B1).
+map.expression-desc (pexp-letop A0) (pexp-letop B0) :- (map.letop A0 B0).
+map.expression-desc (pexp-extension A0) (pexp-extension B0) :- (map.extension A0 B0).
+map.expression-desc pexp-unreachable pexp-unreachable.
+
+
+
+pred map.case  i:case, o:case.
+map.case (case A0 A1 A2) (case B0 B1 B2) :- (map.pattern A0 B0), ((ppx.map.option map.expression) A1 B1), (map.expression A2 B2).
+
+
+
+pred map.letop  i:letop, o:letop.
+map.letop (letop A0 A1 A2) (letop B0 B1 B2) :- (map.binding-op A0 B0), ((ppx.map.list map.binding-op) A1 B1), (map.expression A2 B2).
+
+
+
+pred map.binding-op  i:binding-op, o:binding-op.
+map.binding-op (binding-op A0 A1 A2 A3) (binding-op B0 B1 B2 B3) :- ((map.loc_ (=)) A0 B0), (map.pattern A1 B1), (map.expression A2 B2), (map.location A3 B3).
+
+
+
+pred map.value-description  i:value-description, o:value-description.
+map.value-description (value-description A0 A1 A2 A3 A4) (value-description B0 B1 B2 B3 B4) :- ((map.loc_ (=)) A0 B0), (map.core-type A1 B1), ((ppx.map.list (=)) A2 B2), (map.attributes A3 B3), (map.location A4 B4).
+
+
+
+pred map.type-declaration  i:type-declaration, o:type-declaration.
+map.type-declaration (type-declaration A0 A1 A2 A3 A4 A5 A6 A7) (type-declaration B0 B1 B2 B3 B4 B5 B6 B7) :- ((map.loc_ (=)) A0 B0), ((ppx.map.list (ppx.map.pair map.core-type map.variance)) A1 B1), ((ppx.map.list (ppx.map.triple map.core-type map.core-type map.location)) A2 B2), (map.type-kind A3 B3), (map.private-flag A4 B4), ((ppx.map.option map.core-type) A5 B5), (map.attributes A6 B6), (map.location A7 B7).
+
+
+
+pred map.type-kind  i:type-kind, o:type-kind.
+map.type-kind ptype-abstract ptype-abstract.
+map.type-kind (ptype-variant A0) (ptype-variant B0) :- ((ppx.map.list map.constructor-declaration) A0 B0).
+map.type-kind (ptype-record A0) (ptype-record B0) :- ((ppx.map.list map.label-declaration) A0 B0).
+map.type-kind ptype-open ptype-open.
+
+
+
+pred map.label-declaration  i:label-declaration, o:label-declaration.
+map.label-declaration (label-declaration A0 A1 A2 A3 A4) (label-declaration B0 B1 B2 B3 B4) :- ((map.loc_ (=)) A0 B0), (map.mutable-flag A1 B1), (map.core-type A2 B2), (map.location A3 B3), (map.attributes A4 B4).
+
+
+
+pred map.constructor-declaration  i:constructor-declaration, o:constructor-declaration.
+map.constructor-declaration (constructor-declaration A0 A1 A2 A3 A4) (constructor-declaration B0 B1 B2 B3 B4) :- ((map.loc_ (=)) A0 B0), (map.constructor-arguments A1 B1), ((ppx.map.option map.core-type) A2 B2), (map.location A3 B3), (map.attributes A4 B4).
+
+
+
+pred map.constructor-arguments  i:constructor-arguments, o:constructor-arguments.
+map.constructor-arguments (pcstr-tuple A0) (pcstr-tuple B0) :- ((ppx.map.list map.core-type) A0 B0).
+map.constructor-arguments (pcstr-record A0) (pcstr-record B0) :- ((ppx.map.list map.label-declaration) A0 B0).
+
+
+
+pred map.type-extension  i:type-extension, o:type-extension.
+map.type-extension (type-extension A0 A1 A2 A3 A4 A5) (type-extension B0 B1 B2 B3 B4 B5) :- (map.longident-loc A0 B0), ((ppx.map.list (ppx.map.pair map.core-type map.variance)) A1 B1), ((ppx.map.list map.extension-constructor) A2 B2), (map.private-flag A3 B3), (map.location A4 B4), (map.attributes A5 B5).
+
+
+
+pred map.extension-constructor  i:extension-constructor, o:extension-constructor.
+map.extension-constructor (extension-constructor A0 A1 A2 A3) (extension-constructor B0 B1 B2 B3) :- ((map.loc_ (=)) A0 B0), (map.extension-constructor-kind A1 B1), (map.location A2 B2), (map.attributes A3 B3).
+
+
+
+pred map.type-exception  i:type-exception, o:type-exception.
+map.type-exception (type-exception A0 A1 A2) (type-exception B0 B1 B2) :- (map.extension-constructor A0 B0), (map.location A1 B1), (map.attributes A2 B2).
+
+
+
+pred map.extension-constructor-kind  i:extension-constructor-kind, o:extension-constructor-kind.
+map.extension-constructor-kind (pext-decl A0 A1) (pext-decl B0 B1) :- (map.constructor-arguments A0 B0), ((ppx.map.option map.core-type) A1 B1).
+map.extension-constructor-kind (pext-rebind A0) (pext-rebind B0) :- (map.longident-loc A0 B0).
+
+
+
+pred map.class-type  i:class-type, o:class-type.
+map.class-type (class-type A0 A1 A2) (class-type B0 B1 B2) :- (map.class-type-desc A0 B0), (map.location A1 B1), (map.attributes A2 B2).
+
+
+
+pred map.class-type-desc  i:class-type-desc, o:class-type-desc.
+map.class-type-desc (pcty-constr A0 A1) (pcty-constr B0 B1) :- (map.longident-loc A0 B0), ((ppx.map.list map.core-type) A1 B1).
+map.class-type-desc (pcty-signature A0) (pcty-signature B0) :- (map.class-signature A0 B0).
+map.class-type-desc (pcty-arrow A0 A1 A2) (pcty-arrow B0 B1 B2) :- (map.arg-label A0 B0), (map.core-type A1 B1), (map.class-type A2 B2).
+map.class-type-desc (pcty-extension A0) (pcty-extension B0) :- (map.extension A0 B0).
+map.class-type-desc (pcty-open A0 A1) (pcty-open B0 B1) :- (map.open-description A0 B0), (map.class-type A1 B1).
+
+
+
+pred map.class-signature  i:class-signature, o:class-signature.
+map.class-signature (class-signature A0 A1) (class-signature B0 B1) :- (map.core-type A0 B0), ((ppx.map.list map.class-type-field) A1 B1).
+
+
+
+pred map.class-type-field  i:class-type-field, o:class-type-field.
+map.class-type-field (class-type-field A0 A1 A2) (class-type-field B0 B1 B2) :- (map.class-type-field-desc A0 B0), (map.location A1 B1), (map.attributes A2 B2).
+
+
+
+pred map.class-type-field-desc  i:class-type-field-desc, o:class-type-field-desc.
+map.class-type-field-desc (pctf-inherit A0) (pctf-inherit B0) :- (map.class-type A0 B0).
+map.class-type-field-desc (pctf-val A0) (pctf-val B0) :- ((ppx.map.quadruple (map.loc_ map.label) map.mutable-flag map.virtual-flag map.core-type) A0 B0).
+map.class-type-field-desc (pctf-method A0) (pctf-method B0) :- ((ppx.map.quadruple (map.loc_ map.label) map.private-flag map.virtual-flag map.core-type) A0 B0).
+map.class-type-field-desc (pctf-constraint A0) (pctf-constraint B0) :- ((ppx.map.pair map.core-type map.core-type) A0 B0).
+map.class-type-field-desc (pctf-attribute A0) (pctf-attribute B0) :- (map.attribute A0 B0).
+map.class-type-field-desc (pctf-extension A0) (pctf-extension B0) :- (map.extension A0 B0).
+
+
+
+pred map.class-infos i:(X0 -> Y0 -> prop),  i:class-infos X0, o:class-infos Y0.
+map.class-infos F0 (class-infos A0 A1 A2 A3 A4 A5) (class-infos B0 B1 B2 B3 B4 B5) :- (map.virtual-flag A0 B0), ((ppx.map.list (ppx.map.pair map.core-type map.variance)) A1 B1), ((map.loc_ (=)) A2 B2), (F0 A3 B3), (map.location A4 B4), (map.attributes A5 B5).
+
+
+
+pred map.class-description  i:class-description, o:class-description.
+map.class-description A B :- ((map.class-infos map.class-type) A B).
+
+pred map.class-type-declaration  i:class-type-declaration, o:class-type-declaration.
+map.class-type-declaration A B :- ((map.class-infos map.class-type) A B).
+
+pred map.class-expr  i:class-expr, o:class-expr.
+map.class-expr (class-expr A0 A1 A2) (class-expr B0 B1 B2) :- (map.class-expr-desc A0 B0), (map.location A1 B1), (map.attributes A2 B2).
+
+
+
+pred map.class-expr-desc  i:class-expr-desc, o:class-expr-desc.
+map.class-expr-desc (pcl-constr A0 A1) (pcl-constr B0 B1) :- (map.longident-loc A0 B0), ((ppx.map.list map.core-type) A1 B1).
+map.class-expr-desc (pcl-structure A0) (pcl-structure B0) :- (map.class-structure A0 B0).
+map.class-expr-desc (pcl-fun A0 A1 A2 A3) (pcl-fun B0 B1 B2 B3) :- (map.arg-label A0 B0), ((ppx.map.option map.expression) A1 B1), (map.pattern A2 B2), (map.class-expr A3 B3).
+map.class-expr-desc (pcl-apply A0 A1) (pcl-apply B0 B1) :- (map.class-expr A0 B0), ((ppx.map.list (ppx.map.pair map.arg-label map.expression)) A1 B1).
+map.class-expr-desc (pcl-let A0 A1 A2) (pcl-let B0 B1 B2) :- (map.rec-flag A0 B0), ((ppx.map.list map.value-binding) A1 B1), (map.class-expr A2 B2).
+map.class-expr-desc (pcl-constraint A0 A1) (pcl-constraint B0 B1) :- (map.class-expr A0 B0), (map.class-type A1 B1).
+map.class-expr-desc (pcl-extension A0) (pcl-extension B0) :- (map.extension A0 B0).
+map.class-expr-desc (pcl-open A0 A1) (pcl-open B0 B1) :- (map.open-description A0 B0), (map.class-expr A1 B1).
+
+
+
+pred map.class-structure  i:class-structure, o:class-structure.
+map.class-structure (class-structure A0 A1) (class-structure B0 B1) :- (map.pattern A0 B0), ((ppx.map.list map.class-field) A1 B1).
+
+
+
+pred map.class-field  i:class-field, o:class-field.
+map.class-field (class-field A0 A1 A2) (class-field B0 B1 B2) :- (map.class-field-desc A0 B0), (map.location A1 B1), (map.attributes A2 B2).
+
+
+
+pred map.class-field-desc  i:class-field-desc, o:class-field-desc.
+map.class-field-desc (pcf-inherit A0 A1 A2) (pcf-inherit B0 B1 B2) :- (map.override-flag A0 B0), (map.class-expr A1 B1), ((ppx.map.option (map.loc_ (=))) A2 B2).
+map.class-field-desc (pcf-val A0) (pcf-val B0) :- ((ppx.map.triple (map.loc_ map.label) map.mutable-flag map.class-field-kind) A0 B0).
+map.class-field-desc (pcf-method A0) (pcf-method B0) :- ((ppx.map.triple (map.loc_ map.label) map.private-flag map.class-field-kind) A0 B0).
+map.class-field-desc (pcf-constraint A0) (pcf-constraint B0) :- ((ppx.map.pair map.core-type map.core-type) A0 B0).
+map.class-field-desc (pcf-initializer A0) (pcf-initializer B0) :- (map.expression A0 B0).
+map.class-field-desc (pcf-attribute A0) (pcf-attribute B0) :- (map.attribute A0 B0).
+map.class-field-desc (pcf-extension A0) (pcf-extension B0) :- (map.extension A0 B0).
+
+
+
+pred map.class-field-kind  i:class-field-kind, o:class-field-kind.
+map.class-field-kind (cfk-virtual A0) (cfk-virtual B0) :- (map.core-type A0 B0).
+map.class-field-kind (cfk-concrete A0 A1) (cfk-concrete B0 B1) :- (map.override-flag A0 B0), (map.expression A1 B1).
+
+
+
+pred map.class-declaration  i:class-declaration, o:class-declaration.
+map.class-declaration A B :- ((map.class-infos map.class-expr) A B).
+
+pred map.module-type  i:module-type, o:module-type.
+map.module-type (module-type A0 A1 A2) (module-type B0 B1 B2) :- (map.module-type-desc A0 B0), (map.location A1 B1), (map.attributes A2 B2).
+
+
+
+pred map.module-type-desc  i:module-type-desc, o:module-type-desc.
+map.module-type-desc (pmty-ident A0) (pmty-ident B0) :- (map.longident-loc A0 B0).
+map.module-type-desc (pmty-signature A0) (pmty-signature B0) :- (map.signature A0 B0).
+map.module-type-desc (pmty-functor A0 A1 A2) (pmty-functor B0 B1 B2) :- ((map.loc_ (=)) A0 B0), ((ppx.map.option map.module-type) A1 B1), (map.module-type A2 B2).
+map.module-type-desc (pmty-with A0 A1) (pmty-with B0 B1) :- (map.module-type A0 B0), ((ppx.map.list map.with-constraint) A1 B1).
+map.module-type-desc (pmty-typeof A0) (pmty-typeof B0) :- (map.module-expr A0 B0).
+map.module-type-desc (pmty-extension A0) (pmty-extension B0) :- (map.extension A0 B0).
+map.module-type-desc (pmty-alias A0) (pmty-alias B0) :- (map.longident-loc A0 B0).
+
+
+
+pred map.signature  i:signature, o:signature.
+map.signature A B :- ((ppx.map.list map.signature-item) A B).
+
+pred map.signature-item  i:signature-item, o:signature-item.
+map.signature-item (signature-item A0 A1) (signature-item B0 B1) :- (map.signature-item-desc A0 B0), (map.location A1 B1).
+
+
+
+pred map.signature-item-desc  i:signature-item-desc, o:signature-item-desc.
+map.signature-item-desc (psig-value A0) (psig-value B0) :- (map.value-description A0 B0).
+map.signature-item-desc (psig-type A0 A1) (psig-type B0 B1) :- (map.rec-flag A0 B0), ((ppx.map.list map.type-declaration) A1 B1).
+map.signature-item-desc (psig-typesubst A0) (psig-typesubst B0) :- ((ppx.map.list map.type-declaration) A0 B0).
+map.signature-item-desc (psig-typext A0) (psig-typext B0) :- (map.type-extension A0 B0).
+map.signature-item-desc (psig-exception A0) (psig-exception B0) :- (map.type-exception A0 B0).
+map.signature-item-desc (psig-module A0) (psig-module B0) :- (map.module-declaration A0 B0).
+map.signature-item-desc (psig-modsubst A0) (psig-modsubst B0) :- (map.module-substitution A0 B0).
+map.signature-item-desc (psig-recmodule A0) (psig-recmodule B0) :- ((ppx.map.list map.module-declaration) A0 B0).
+map.signature-item-desc (psig-modtype A0) (psig-modtype B0) :- (map.module-type-declaration A0 B0).
+map.signature-item-desc (psig-open A0) (psig-open B0) :- (map.open-description A0 B0).
+map.signature-item-desc (psig-include A0) (psig-include B0) :- (map.include-description A0 B0).
+map.signature-item-desc (psig-class A0) (psig-class B0) :- ((ppx.map.list map.class-description) A0 B0).
+map.signature-item-desc (psig-class-type A0) (psig-class-type B0) :- ((ppx.map.list map.class-type-declaration) A0 B0).
+map.signature-item-desc (psig-attribute A0) (psig-attribute B0) :- (map.attribute A0 B0).
+map.signature-item-desc (psig-extension A0 A1) (psig-extension B0 B1) :- (map.extension A0 B0), (map.attributes A1 B1).
+
+
+
+pred map.module-declaration  i:module-declaration, o:module-declaration.
+map.module-declaration (module-declaration A0 A1 A2 A3) (module-declaration B0 B1 B2 B3) :- ((map.loc_ (=)) A0 B0), (map.module-type A1 B1), (map.attributes A2 B2), (map.location A3 B3).
+
+
+
+pred map.module-substitution  i:module-substitution, o:module-substitution.
+map.module-substitution (module-substitution A0 A1 A2 A3) (module-substitution B0 B1 B2 B3) :- ((map.loc_ (=)) A0 B0), (map.longident-loc A1 B1), (map.attributes A2 B2), (map.location A3 B3).
+
+
+
+pred map.module-type-declaration  i:module-type-declaration, o:module-type-declaration.
+map.module-type-declaration (module-type-declaration A0 A1 A2 A3) (module-type-declaration B0 B1 B2 B3) :- ((map.loc_ (=)) A0 B0), ((ppx.map.option map.module-type) A1 B1), (map.attributes A2 B2), (map.location A3 B3).
+
+
+
+pred map.open-infos i:(X0 -> Y0 -> prop),  i:open-infos X0, o:open-infos Y0.
+map.open-infos F0 (open-infos A0 A1 A2 A3) (open-infos B0 B1 B2 B3) :- (F0 A0 B0), (map.override-flag A1 B1), (map.location A2 B2), (map.attributes A3 B3).
+
+
+
+pred map.open-description  i:open-description, o:open-description.
+map.open-description A B :- ((map.open-infos map.longident-loc) A B).
+
+pred map.open-declaration  i:open-declaration, o:open-declaration.
+map.open-declaration A B :- ((map.open-infos map.module-expr) A B).
+
+pred map.include-infos i:(X0 -> Y0 -> prop),  i:include-infos X0, o:include-infos Y0.
+map.include-infos F0 (include-infos A0 A1 A2) (include-infos B0 B1 B2) :- (F0 A0 B0), (map.location A1 B1), (map.attributes A2 B2).
+
+
+
+pred map.include-description  i:include-description, o:include-description.
+map.include-description A B :- ((map.include-infos map.module-type) A B).
+
+pred map.include-declaration  i:include-declaration, o:include-declaration.
+map.include-declaration A B :- ((map.include-infos map.module-expr) A B).
+
+pred map.with-constraint  i:with-constraint, o:with-constraint.
+map.with-constraint (pwith-type A0 A1) (pwith-type B0 B1) :- (map.longident-loc A0 B0), (map.type-declaration A1 B1).
+map.with-constraint (pwith-module A0 A1) (pwith-module B0 B1) :- (map.longident-loc A0 B0), (map.longident-loc A1 B1).
+map.with-constraint (pwith-typesubst A0 A1) (pwith-typesubst B0 B1) :- (map.longident-loc A0 B0), (map.type-declaration A1 B1).
+map.with-constraint (pwith-modsubst A0 A1) (pwith-modsubst B0 B1) :- (map.longident-loc A0 B0), (map.longident-loc A1 B1).
+
+
+
+pred map.module-expr  i:module-expr, o:module-expr.
+map.module-expr (module-expr A0 A1 A2) (module-expr B0 B1 B2) :- (map.module-expr-desc A0 B0), (map.location A1 B1), (map.attributes A2 B2).
+
+
+
+pred map.module-expr-desc  i:module-expr-desc, o:module-expr-desc.
+map.module-expr-desc (pmod-ident A0) (pmod-ident B0) :- (map.longident-loc A0 B0).
+map.module-expr-desc (pmod-structure A0) (pmod-structure B0) :- (map.structure A0 B0).
+map.module-expr-desc (pmod-functor A0 A1 A2) (pmod-functor B0 B1 B2) :- ((map.loc_ (=)) A0 B0), ((ppx.map.option map.module-type) A1 B1), (map.module-expr A2 B2).
+map.module-expr-desc (pmod-apply A0 A1) (pmod-apply B0 B1) :- (map.module-expr A0 B0), (map.module-expr A1 B1).
+map.module-expr-desc (pmod-constraint A0 A1) (pmod-constraint B0 B1) :- (map.module-expr A0 B0), (map.module-type A1 B1).
+map.module-expr-desc (pmod-unpack A0) (pmod-unpack B0) :- (map.expression A0 B0).
+map.module-expr-desc (pmod-extension A0) (pmod-extension B0) :- (map.extension A0 B0).
+
+
+
+pred map.structure  i:structure, o:structure.
+map.structure A B :- ((ppx.map.list map.structure-item) A B).
+
+pred map.structure-item  i:structure-item, o:structure-item.
+map.structure-item (structure-item A0 A1) (structure-item B0 B1) :- (map.structure-item-desc A0 B0), (map.location A1 B1).
+
+
+
+pred map.structure-item-desc  i:structure-item-desc, o:structure-item-desc.
+map.structure-item-desc (pstr-eval A0 A1) (pstr-eval B0 B1) :- (map.expression A0 B0), (map.attributes A1 B1).
+map.structure-item-desc (pstr-value A0 A1) (pstr-value B0 B1) :- (map.rec-flag A0 B0), ((ppx.map.list map.value-binding) A1 B1).
+map.structure-item-desc (pstr-primitive A0) (pstr-primitive B0) :- (map.value-description A0 B0).
+map.structure-item-desc (pstr-type A0 A1) (pstr-type B0 B1) :- (map.rec-flag A0 B0), ((ppx.map.list map.type-declaration) A1 B1).
+map.structure-item-desc (pstr-typext A0) (pstr-typext B0) :- (map.type-extension A0 B0).
+map.structure-item-desc (pstr-exception A0) (pstr-exception B0) :- (map.type-exception A0 B0).
+map.structure-item-desc (pstr-module A0) (pstr-module B0) :- (map.module-binding A0 B0).
+map.structure-item-desc (pstr-recmodule A0) (pstr-recmodule B0) :- ((ppx.map.list map.module-binding) A0 B0).
+map.structure-item-desc (pstr-modtype A0) (pstr-modtype B0) :- (map.module-type-declaration A0 B0).
+map.structure-item-desc (pstr-open A0) (pstr-open B0) :- (map.open-declaration A0 B0).
+map.structure-item-desc (pstr-class A0) (pstr-class B0) :- ((ppx.map.list map.class-declaration) A0 B0).
+map.structure-item-desc (pstr-class-type A0) (pstr-class-type B0) :- ((ppx.map.list map.class-type-declaration) A0 B0).
+map.structure-item-desc (pstr-include A0) (pstr-include B0) :- (map.include-declaration A0 B0).
+map.structure-item-desc (pstr-attribute A0) (pstr-attribute B0) :- (map.attribute A0 B0).
+map.structure-item-desc (pstr-extension A0 A1) (pstr-extension B0 B1) :- (map.extension A0 B0), (map.attributes A1 B1).
+
+
+
+pred map.value-binding  i:value-binding, o:value-binding.
+map.value-binding (value-binding A0 A1 A2 A3) (value-binding B0 B1 B2 B3) :- (map.pattern A0 B0), (map.expression A1 B1), (map.attributes A2 B2), (map.location A3 B3).
+
+
+
+pred map.module-binding  i:module-binding, o:module-binding.
+map.module-binding (module-binding A0 A1 A2 A3) (module-binding B0 B1 B2 B3) :- ((map.loc_ (=)) A0 B0), (map.module-expr A1 B1), (map.attributes A2 B2), (map.location A3 B3).
+
+
+
+pred map.toplevel-phrase  i:toplevel-phrase, o:toplevel-phrase.
+map.toplevel-phrase (ptop-def A0) (ptop-def B0) :- (map.structure A0 B0).
+map.toplevel-phrase (ptop-dir A0) (ptop-dir B0) :- (map.toplevel-directive A0 B0).
+
+
+
+pred map.toplevel-directive  i:toplevel-directive, o:toplevel-directive.
+map.toplevel-directive (toplevel-directive A0 A1 A2) (toplevel-directive B0 B1 B2) :- ((map.loc_ (=)) A0 B0), ((ppx.map.option map.directive-argument) A1 B1), (map.location A2 B2).
+
+
+
+pred map.directive-argument  i:directive-argument, o:directive-argument.
+map.directive-argument (directive-argument A0 A1) (directive-argument B0 B1) :- (map.directive-argument-desc A0 B0), (map.location A1 B1).
+
+
+
+pred map.directive-argument-desc  i:directive-argument-desc, o:directive-argument-desc.
+map.directive-argument-desc (pdir-string A0) (pdir-string B0) :- ((=) A0 B0).
+map.directive-argument-desc (pdir-int A0 A1) (pdir-int B0 B1) :- ((=) A0 B0), ((ppx.map.option (=)) A1 B1).
+map.directive-argument-desc (pdir-ident A0) (pdir-ident B0) :- (map.longident A0 B0).
+map.directive-argument-desc (pdir-bool A0) (pdir-bool B0) :- ((=) A0 B0).
+
+
+
+#line 0 "builtin_ppx.elpi"
+namespace ppx {
+
+pred map.list i:(A -> B -> prop), i:list A, o:list B.
+map.list _ [] [].
+map.list F [X|XS] [Y|YS] :- F X Y, map.list F XS YS.
+
+pred map.option i:(A -> B -> prop), i:option A, o:option B.
+map.option _ none none.
+map.option F (some X) (some Y) :- F X Y.
+
+pred map.pair i:(A1 -> B1 -> prop), i:(A2 -> B2 -> prop), i:pair A1 A2, o:pair B1 B2.
+map.pair F1 F2 (pr X1 X2) (pr Y1 Y2) :- F1 X1 Y1, F2 X2 Y2.
+
+pred map.triple i:(A1 -> B1 -> prop), i:(A2 -> B2 -> prop), i:(A3 -> B3 -> prop), i:triple A1 A2 A3, o:triple B1 B2 B3.
+map.triple F1 F2 F3 (triple X1 X2 X3) (triple Y1 Y2 Y3) :- F1 X1 Y1, F2 X2 Y2, F3 X3 Y3.
+
+pred map.quadruple i:(A1 -> B1 -> prop), i:(A2 -> B2 -> prop), i:(A3 -> B3 -> prop), i:(A4 -> B4 -> prop), i:quadruple A1 A2 A3 A4, o:quadruple B1 B2 B3 B4.
+map.quadruple F1 F2 F3 F4 (quadruple X1 X2 X3 X4) (quadruple Y1 Y2 Y3 Y4) :- F1 X1 Y1, F2 X2 Y2, F3 X3 Y3, F4 X4 Y4.
+
+pred map.quintuple i:(A1 -> B1 -> prop), i:(A2 -> B2 -> prop), i:(A3 -> B3 -> prop), i:(A4 -> B4 -> prop), i:(A5 -> B5 -> prop), i:quintuple A1 A2 A3 A4 A5, o:quintuple B1 B2 B3 B4 B5.
+map.quintuple F1 F2 F3 F4 F5 (quintuple X1 X2 X3 X4 X5) (quintuple Y1 Y2 Y3 Y4 Y5) :- F1 X1 Y1, F2 X2 Y2, F3 X3 Y3, F4 X4 Y4, F5 X5 Y5.
+
+}
+
+
+
+
