@@ -1,5 +1,8 @@
 ## v1.11.0 UNRELEASED
 
+- PPX:
+  - new, experimental, elpi.ppx to generate glue code from an ADT declaration
+
 - Trace:
   - json output, with messages representing the tree structure of the proof
   - categorize spy points into `user` and `dev`
