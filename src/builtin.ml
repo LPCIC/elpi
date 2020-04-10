@@ -771,7 +771,7 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in let open Context
     In (string,"Name",
     Out(int,   "Value",
     Easy       "reads the Value of a trace point Name")),
-  (fun s _ ~depth:_ -> !:(Trace.Runtime.get_cur_step s))),
+  (fun s _ ~depth:_ -> !:(Trace_ppx_runtime.Runtime.get_cur_step s))),
   DocAbove);
 
   MLCode(Pred("rex_match",

@@ -1,4 +1,4 @@
-(*25823e968f78a65500da52de3f79f1aeb00d2b5a *src/runtime_trace_off.ml --trace_ppx-off*)
+(*25823e968f78a65500da52de3f79f1aeb00d2b5a *src/runtime_trace_off.ml --cookie elpi_trace="false"*)
 #1 "src/runtime_trace_off.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -370,6 +370,9 @@ module ConstraintStoreAndTrail :
       | Assignement of uvar_body 
       | StuckGoalAddition of stuck_goal 
       | StuckGoalRemoval of stuck_goal [@@deriving show]
+    include struct let _ = fun (_ : trail_item) -> () end[@@ocaml.doc
+                                                           "@inline"]
+    [@@merlin.hide ]
     let rec pp_trail_item :
       Ppx_deriving_runtime_proxy.Format.formatter ->
         trail_item -> Ppx_deriving_runtime_proxy.unit
@@ -400,6 +403,8 @@ module ConstraintStoreAndTrail :
       fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_trail_item x
     [@@ocaml.warning "-32"]
     type trail = trail_item list[@@deriving show]
+    include struct let _ = fun (_ : trail) -> () end[@@ocaml.doc "@inline"]
+    [@@merlin.hide ]
     let rec pp_trail :
       Ppx_deriving_runtime_proxy.Format.formatter ->
         trail -> Ppx_deriving_runtime_proxy.unit
@@ -885,8 +890,7 @@ module HO :
            | Nil -> tt
            | Discard -> tt
            | UVar ({ contents = g }, vardepth, argsno) when g != C.dummy ->
-               ((aux)[@tailcall ]) depth
-                 (deref_uv ~from:vardepth ~to_:depth argsno g)
+               aux depth (deref_uv ~from:vardepth ~to_:depth argsno g)
            | UVar (r, vardepth, argsno) as orig ->
                if (vardepth + argsno) <= fromdepth
                then orig
@@ -897,8 +901,7 @@ module HO :
                   let args = List.map (aux depth) args in
                   mkAppUVar r vardepth args)
            | AppUVar ({ contents = t }, vardepth, args) when t != C.dummy ->
-               ((aux)[@tailcall ]) depth
-                 (deref_appuv ~from:vardepth ~to_:depth args t)
+               aux depth (deref_appuv ~from:vardepth ~to_:depth args t)
            | AppUVar (r, vardepth, args) ->
                let (r, vardepth, argsno) =
                  decrease_depth r ~from:vardepth ~to_:fromdepth 0 in
@@ -911,14 +914,14 @@ module HO :
     and beta depth sub t args =
       match (t, args) with
       | (UVar ({ contents = g }, vardepth, argsno), _) when g != C.dummy ->
-          ((beta)[@tailcall ]) depth sub
+          beta depth sub
             (deref_uv ~from:vardepth ~to_:(depth + (List.length sub)) argsno
                g) args
       | (AppUVar ({ contents = g }, vardepth, uargs), _) when g != C.dummy ->
-          ((beta)[@tailcall ]) depth sub
+          beta depth sub
             (deref_appuv ~from:vardepth ~to_:(depth + (List.length sub))
                uargs g) args
-      | (Lam t', hd::tl) -> ((beta)[@tailcall ]) depth (hd :: sub) t' tl
+      | (Lam t', hd::tl) -> beta depth (hd :: sub) t' tl
       | _ ->
           let t' = subst depth sub t in
           (();
@@ -2924,79 +2927,75 @@ module Mainloop :
               if (!steps_made) > bound then raise No_more_steps)
          | None -> ());
         (match resume_all () with
-         | None -> ((); ((next_alt)[@tailcall ]) alts)
+         | None -> ((); next_alt alts)
          | Some ({ depth = ndepth; program; goal }::goals) ->
              (();
-              ((run)[@tailcall ]) ndepth program goal
+              run ndepth program goal
                 (goals @ ((((repack_goal)[@inlined ]) ~depth p g) :: gs))
                 next alts lvl)
          | Some [] ->
              (();
               (match g with
                | Builtin (c, []) when c == Global_symbols.cutc ->
-                   ((); ((cut)[@tailcall ]) gs next alts lvl)
+                   ((); cut gs next alts lvl)
                | App (c, g, gs') when c == Global_symbols.andc ->
                    (();
                     (let gs' =
                        List.map
                          (fun x -> ((make_subgoal)[@inlined ]) ~depth p x)
                          gs' in
-                     ((run)[@tailcall ]) depth p g (gs' @ gs) next alts lvl))
+                     run depth p g (gs' @ gs) next alts lvl))
                | Cons (g, gs') ->
                    (();
                     (let gs' = ((make_subgoal)[@inlined ]) ~depth p gs' in
-                     ((run)[@tailcall ]) depth p g (gs' :: gs) next alts lvl))
+                     run depth p g (gs' :: gs) next alts lvl))
                | Nil ->
                    (();
                     (match gs with
-                     | [] -> ((pop_andl)[@tailcall ]) alts next lvl
+                     | [] -> pop_andl alts next lvl
                      | { depth; program; goal }::gs ->
-                         ((run)[@tailcall ]) depth program goal gs next alts
-                           lvl))
+                         run depth program goal gs next alts lvl))
                | App (c, g2, g1::[]) when c == Global_symbols.rimplc ->
                    (();
                     (let (clauses, pdiff, lcs) = clausify p ~depth g1 in
                      let g2 = hmove ~from:depth ~to_:(depth + lcs) g2 in
-                     ((run)[@tailcall ]) (depth + lcs)
-                       (add_clauses ~depth clauses pdiff p) g2 gs next alts
-                       lvl))
+                     run (depth + lcs) (add_clauses ~depth clauses pdiff p)
+                       g2 gs next alts lvl))
                | App (c, g1, g2::[]) when c == Global_symbols.implc ->
                    (();
                     (let (clauses, pdiff, lcs) = clausify p ~depth g1 in
                      let g2 = hmove ~from:depth ~to_:(depth + lcs) g2 in
-                     ((run)[@tailcall ]) (depth + lcs)
-                       (add_clauses ~depth clauses pdiff p) g2 gs next alts
-                       lvl))
+                     run (depth + lcs) (add_clauses ~depth clauses pdiff p)
+                       g2 gs next alts lvl))
                | App (c, arg, []) when c == Global_symbols.pic ->
                    (();
                     (let f = get_lambda_body ~depth arg in
-                     ((run)[@tailcall ]) (depth + 1) p f gs next alts lvl))
+                     run (depth + 1) p f gs next alts lvl))
                | App (c, arg, []) when c == Global_symbols.sigmac ->
                    (();
                     (let f = get_lambda_body ~depth arg in
                      let v = UVar ((oref C.dummy), depth, 0) in
                      let fv = subst depth [v] f in
-                     ((run)[@tailcall ]) depth p fv gs next alts lvl))
+                     run depth p fv gs next alts lvl))
                | UVar ({ contents = g }, from, args) when g != C.dummy ->
                    (();
-                    ((run)[@tailcall ]) depth p
-                      (deref_uv ~from ~to_:depth args g) gs next alts lvl)
+                    run depth p (deref_uv ~from ~to_:depth args g) gs next
+                      alts lvl)
                | AppUVar ({ contents = t }, from, args) when t != C.dummy ->
                    (();
-                    ((run)[@tailcall ]) depth p
-                      (deref_appuv ~from ~to_:depth args t) gs next alts lvl)
+                    run depth p (deref_appuv ~from ~to_:depth args t) gs next
+                      alts lvl)
                | Const k ->
                    (();
                     (let clauses = get_clauses depth k g p in
                      ();
-                     ((backchain)[@tailcall ]) depth p (k, C.dummy, [], gs)
-                       next alts lvl clauses))
+                     backchain depth p (k, C.dummy, [], gs) next alts lvl
+                       clauses))
                | App (k, x, xs) ->
                    (();
                     (let clauses = get_clauses depth k g p in
                      ();
-                     ((backchain)[@tailcall ]) depth p (k, x, xs, gs) next
-                       alts lvl clauses))
+                     backchain depth p (k, x, xs, gs) next alts lvl clauses))
                | Builtin (c, args) ->
                    (();
                     (match Constraints.exect_builtin_predicate c ~depth p
@@ -3010,12 +3009,10 @@ module Mainloop :
                                     gs')
                                    @ gs
                            with
-                           | [] -> ((pop_andl)[@tailcall ]) alts next lvl
+                           | [] -> pop_andl alts next lvl
                            | { depth; program; goal }::gs ->
-                               ((run)[@tailcall ]) depth program goal gs next
-                                 alts lvl))
-                     | exception No_clause ->
-                         ((); ((next_alt)[@tailcall ]) alts)))
+                               run depth program goal gs next alts lvl))
+                     | exception No_clause -> ((); next_alt alts)))
                | Arg _|AppArg _ -> anomaly "The goal is not a heap term"
                | Lam _|CData _ ->
                    type_error
@@ -3024,7 +3021,7 @@ module Mainloop :
                    error "The goal is a flexible term")))
       and backchain depth p (k, arg, args_of_g, gs) next alts lvl cp =
         match cp with
-        | [] -> ((); ((next_alt)[@tailcall ]) alts)
+        | [] -> ((); next_alt alts)
         | { depth = c_depth; mode = c_mode; args = c_args; hyps = c_hyps;
             vars = c_vars; loc }::cs ->
             (();
@@ -3057,8 +3054,8 @@ module Mainloop :
                with
                | false ->
                    (T.undo old_trail ();
-                    ((backchain)[@tailcall ]) depth p (k, arg, args_of_g, gs)
-                      next alts lvl cs)
+                    backchain depth p (k, arg, args_of_g, gs) next alts lvl
+                      cs)
                | true ->
                    let oldalts = alts in
                    let alts =
@@ -3082,10 +3079,9 @@ module Mainloop :
                    (match c_hyps with
                     | [] ->
                         (match gs with
-                         | [] -> ((pop_andl)[@tailcall ]) alts next lvl
+                         | [] -> pop_andl alts next lvl
                          | { depth; program; goal }::gs ->
-                             ((run)[@tailcall ]) depth program goal gs next
-                               alts lvl)
+                             run depth program goal gs next alts lvl)
                     | h::hs ->
                         let next =
                           if gs = [] then next else FCons (lvl, gs, next) in
@@ -3097,7 +3093,7 @@ module Mainloop :
                                ((make_subgoal)[@inlined ]) ~depth p
                                  (move ~adepth:depth ~from:c_depth ~to_:depth
                                     env x)) hs in
-                        ((run)[@tailcall ]) depth p h hs next alts oldalts))))
+                        run depth p h hs next alts oldalts))))
       and cut gs next alts lvl =
         let rec prune ({ clauses; adepth = depth; agoal_hd = hd } as alts) =
           if alts == lvl then alts else ((); prune alts.next) in
@@ -3114,7 +3110,7 @@ module Mainloop :
              | None ->
                  (Fmt.fprintf Fmt.std_formatter
                     "Undo triggered by goal resumption\n%!";
-                  ((next_alt)[@tailcall ]) alts)
+                  next_alt alts)
              | Some ({ depth; program; goal }::gs) ->
                  run depth program goal gs FNil alts lvl
              | Some [] -> alts)
