@@ -17,9 +17,8 @@ build: [
 depends: [
   "ocaml" {>= "4.04.0"}
   "camlp5"
-  "ppx_tools_versioned"
+  "ppxlib"
   "ppx_deriving"
-  "ocaml-migrate-parsetree"
   "re" {>= "1.7.2"}
   "ANSITerminal" {with-test}
   "cmdliner" {with-test}
