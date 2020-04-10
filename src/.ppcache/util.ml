@@ -1,4 +1,4 @@
-(*c7c51af0bc940c71755b1a9375a8fab7d247a0b6  src/util.ml *)
+(*c7c51af0bc940c71755b1a9375a8fab7d247a0b6 *src/util.ml *)
 #1 "src/util.ml"
 module type Show  =
   sig type t val pp : Format.formatter -> t -> unit val show : t -> string
@@ -64,14 +64,14 @@ module Int =
   struct
     type t = int[@@deriving show]
     let rec pp :
-              Ppx_deriving_runtime.Format.formatter ->
-                t -> Ppx_deriving_runtime.unit
+              Ppx_deriving_runtime_proxy.Format.formatter ->
+                t -> Ppx_deriving_runtime_proxy.unit
       =
-      ((let open! Ppx_deriving_runtime in
-          fun fmt -> Ppx_deriving_runtime.Format.fprintf fmt "%d")
+      ((let open! Ppx_deriving_runtime_proxy in
+          fun fmt -> Ppx_deriving_runtime_proxy.Format.fprintf fmt "%d")
       [@ocaml.warning "-A"])
-    and show : t -> Ppx_deriving_runtime.string =
-      fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp x[@@ocaml.warning
+    and show : t -> Ppx_deriving_runtime_proxy.string =
+      fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp x[@@ocaml.warning
                                                                "-32"]
     let compare x y = x - y
   end
@@ -114,8 +114,8 @@ module Loc =
       source_stop: int ;
       line: int ;
       line_starts_at: int }[@@deriving (eq, ord)]
-    let rec equal : t -> t -> Ppx_deriving_runtime.bool =
-      ((let open! Ppx_deriving_runtime in
+    let rec equal : t -> t -> Ppx_deriving_runtime_proxy.bool =
+      ((let open! Ppx_deriving_runtime_proxy in
           fun lhs ->
             fun rhs ->
               (((((fun (a : string) -> fun b -> a = b) lhs.source_name
@@ -131,13 +131,13 @@ module Loc =
                 ((fun (a : int) -> fun b -> a = b) lhs.line_starts_at
                    rhs.line_starts_at))
       [@ocaml.warning "-A"])[@@ocaml.warning "-39"]
-    let rec compare : t -> t -> Ppx_deriving_runtime.int =
-      let __4 () (a : int) b = Ppx_deriving_runtime.compare a b
-      and __3 () (a : int) b = Ppx_deriving_runtime.compare a b
-      and __2 () (a : int) b = Ppx_deriving_runtime.compare a b
-      and __1 () (a : int) b = Ppx_deriving_runtime.compare a b
-      and __0 () (a : string) b = Ppx_deriving_runtime.compare a b in
-      ((let open! Ppx_deriving_runtime in
+    let rec compare : t -> t -> Ppx_deriving_runtime_proxy.int =
+      let __4 () (a : int) b = Ppx_deriving_runtime_proxy.compare a b
+      and __3 () (a : int) b = Ppx_deriving_runtime_proxy.compare a b
+      and __2 () (a : int) b = Ppx_deriving_runtime_proxy.compare a b
+      and __1 () (a : int) b = Ppx_deriving_runtime_proxy.compare a b
+      and __0 () (a : string) b = Ppx_deriving_runtime_proxy.compare a b in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun lhs ->
             fun rhs ->
               match (__0 ()) lhs.source_name rhs.source_name with
@@ -296,31 +296,31 @@ module Option =
       | Some of 'a [@@deriving show]
     let rec pp :
               'a .
-                (Ppx_deriving_runtime.Format.formatter ->
-                   'a -> Ppx_deriving_runtime.unit)
+                (Ppx_deriving_runtime_proxy.Format.formatter ->
+                   'a -> Ppx_deriving_runtime_proxy.unit)
                   ->
-                  Ppx_deriving_runtime.Format.formatter ->
-                    'a t -> Ppx_deriving_runtime.unit
+                  Ppx_deriving_runtime_proxy.Format.formatter ->
+                    'a t -> Ppx_deriving_runtime_proxy.unit
       =
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun poly_a ->
             fun fmt ->
               function
               | None ->
-                  Ppx_deriving_runtime.Format.pp_print_string fmt "None"
+                  Ppx_deriving_runtime_proxy.Format.pp_print_string fmt "None"
               | Some a0 ->
-                  (Ppx_deriving_runtime.Format.fprintf fmt "(@[<2>Some@ ";
+                  (Ppx_deriving_runtime_proxy.Format.fprintf fmt "(@[<2>Some@ ";
                    (poly_a fmt) a0;
-                   Ppx_deriving_runtime.Format.fprintf fmt "@])"))
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])"))
       [@ocaml.warning "-A"])
     and show :
       'a .
-        (Ppx_deriving_runtime.Format.formatter ->
-           'a -> Ppx_deriving_runtime.unit)
-          -> 'a t -> Ppx_deriving_runtime.string
+        (Ppx_deriving_runtime_proxy.Format.formatter ->
+           'a -> Ppx_deriving_runtime_proxy.unit)
+          -> 'a t -> Ppx_deriving_runtime_proxy.string
       =
       fun poly_a ->
-        fun x -> Ppx_deriving_runtime.Format.asprintf "%a" (pp poly_a) x
+        fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" (pp poly_a) x
     [@@ocaml.warning "-32"]
   end
 module Pair =
@@ -328,39 +328,39 @@ module Pair =
     type ('a, 'b) t = ('a * 'b)[@@deriving show]
     let rec pp :
               'a 'b .
-                (Ppx_deriving_runtime.Format.formatter ->
-                   'a -> Ppx_deriving_runtime.unit)
+                (Ppx_deriving_runtime_proxy.Format.formatter ->
+                   'a -> Ppx_deriving_runtime_proxy.unit)
                   ->
-                  (Ppx_deriving_runtime.Format.formatter ->
-                     'b -> Ppx_deriving_runtime.unit)
+                  (Ppx_deriving_runtime_proxy.Format.formatter ->
+                     'b -> Ppx_deriving_runtime_proxy.unit)
                     ->
-                    Ppx_deriving_runtime.Format.formatter ->
-                      ('a, 'b) t -> Ppx_deriving_runtime.unit
+                    Ppx_deriving_runtime_proxy.Format.formatter ->
+                      ('a, 'b) t -> Ppx_deriving_runtime_proxy.unit
       =
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun poly_a ->
             fun poly_b ->
               fun fmt ->
                 fun (a0, a1) ->
-                  Ppx_deriving_runtime.Format.fprintf fmt "(@[";
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "(@[";
                   ((poly_a fmt) a0;
-                   Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt ",@ ";
                    (poly_b fmt) a1);
-                  Ppx_deriving_runtime.Format.fprintf fmt "@])")
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])")
       [@ocaml.warning "-A"])
     and show :
       'a 'b .
-        (Ppx_deriving_runtime.Format.formatter ->
-           'a -> Ppx_deriving_runtime.unit)
+        (Ppx_deriving_runtime_proxy.Format.formatter ->
+           'a -> Ppx_deriving_runtime_proxy.unit)
           ->
-          (Ppx_deriving_runtime.Format.formatter ->
-             'b -> Ppx_deriving_runtime.unit)
-            -> ('a, 'b) t -> Ppx_deriving_runtime.string
+          (Ppx_deriving_runtime_proxy.Format.formatter ->
+             'b -> Ppx_deriving_runtime_proxy.unit)
+            -> ('a, 'b) t -> Ppx_deriving_runtime_proxy.string
       =
       fun poly_a ->
         fun poly_b ->
           fun x ->
-            Ppx_deriving_runtime.Format.asprintf "%a" ((pp poly_a) poly_b) x
+            Ppx_deriving_runtime_proxy.Format.asprintf "%a" ((pp poly_a) poly_b) x
     [@@ocaml.warning "-32"]
   end
 let pp_option f fmt = function | None -> () | Some x -> f fmt x
@@ -492,21 +492,21 @@ module UUID =
       struct
         type t = int[@@deriving (show, eq, ord)]
         let rec pp :
-                  Ppx_deriving_runtime.Format.formatter ->
-                    t -> Ppx_deriving_runtime.unit
+                  Ppx_deriving_runtime_proxy.Format.formatter ->
+                    t -> Ppx_deriving_runtime_proxy.unit
           =
-          ((let open! Ppx_deriving_runtime in
-              fun fmt -> Ppx_deriving_runtime.Format.fprintf fmt "%d")
+          ((let open! Ppx_deriving_runtime_proxy in
+              fun fmt -> Ppx_deriving_runtime_proxy.Format.fprintf fmt "%d")
           [@ocaml.warning "-A"])
-        and show : t -> Ppx_deriving_runtime.string =
-          fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp x[@@ocaml.warning
+        and show : t -> Ppx_deriving_runtime_proxy.string =
+          fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp x[@@ocaml.warning
                                                                    "-32"]
-        let rec equal : t -> t -> Ppx_deriving_runtime.bool =
-          ((let open! Ppx_deriving_runtime in fun (a : int) -> fun b -> a = b)
+        let rec equal : t -> t -> Ppx_deriving_runtime_proxy.bool =
+          ((let open! Ppx_deriving_runtime_proxy in fun (a : int) -> fun b -> a = b)
           [@ocaml.warning "-A"])[@@ocaml.warning "-39"]
-        let rec compare : t -> t -> Ppx_deriving_runtime.int =
-          let __0 () (a : int) b = Ppx_deriving_runtime.compare a b in
-          ((let open! Ppx_deriving_runtime in __0 ())[@ocaml.warning "-A"])
+        let rec compare : t -> t -> Ppx_deriving_runtime_proxy.int =
+          let __0 () (a : int) b = Ppx_deriving_runtime_proxy.compare a b in
+          ((let open! Ppx_deriving_runtime_proxy in __0 ())[@ocaml.warning "-A"])
           [@@ocaml.warning "-39"]
         let hash x = x
       end

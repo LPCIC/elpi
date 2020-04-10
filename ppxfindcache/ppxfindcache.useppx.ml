@@ -1,10 +1,10 @@
 let () =
   let open Ppxfindcache_aux in
-  let file, sha, cachefile, cache, ppx_args = common () in
+  let file, sha, cachefile, in_cache, ppx_args = common () in
   let argv = Array.concat [ [|Sys.executable_name;file;"--dump-ast";"--embed-errors"|] ; ppx_args ; ] in
   Migrate_parsetree.Driver.run_main ~argv ();
   flush_all ();
-  if List.mem cachefile cache then begin
+  if in_cache cachefile then begin
     let tmp = Filename.temp_file "" ".ppfindcache" in
     let tmpfd = Unix.(openfile tmp [O_WRONLY] 00600) in
     Unix.dup2 tmpfd Unix.stdout;
@@ -15,6 +15,7 @@ let () =
     Unix.close tmpfd;
     let o = open_out cachefile in
     let text = read_file (open_in tmp) in
+    let text = Re.(Str.global_replace (Str.regexp_string "Ppx_deriving_runtime") "Ppx_deriving_runtime_proxy" text) in
     output_fix o text 0 (String.length text);
     output_char o '\n';
     close_out o;

@@ -27,7 +27,6 @@ STACK=32768
 DUNE_OPTS=
 
 build:
-	cd vendor && ./config.sh
 	dune build $(DUNE_OPTS) @all ; RC=$$?; \
 	( cp -r _build/default/src/.ppcache src/ 2>/dev/null || true ); \
 	( echo "FLG -ppx './merlinppx.exe --as-ppx'" >> trace/.merlin;\

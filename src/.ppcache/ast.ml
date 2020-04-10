@@ -1,4 +1,4 @@
-(*22d2254f965bf867074da578c36ae5ac1513eed7  src/ast.ml *)
+(*22d2254f965bf867074da578c36ae5ac1513eed7 *src/ast.ml *)
 #1 "src/ast.ml"
 open Util
 module Func =
@@ -55,7 +55,7 @@ module Term =
       loc: Loc.t ;
       kind: string option }[@@deriving (show, eq)]
     let rec pp :
-      Ppx_deriving_runtime.Format.formatter -> t -> Ppx_deriving_runtime.unit
+      Ppx_deriving_runtime_proxy.Format.formatter -> t -> Ppx_deriving_runtime_proxy.unit
       =
       let __6 () = pp_quote
       and __5 () = CData.pp
@@ -64,89 +64,89 @@ module Term =
       and __2 () = pp
       and __1 () = pp
       and __0 () = Func.pp in
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             function
             | Const a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Term.Const@ ";
                  ((__0 ()) fmt) a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])")
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])")
             | App (a0, a1) ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Term.App (@,";
                  (((__1 ()) fmt) a0;
-                  Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt ",@ ";
                   ((fun x ->
-                      Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+                      Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
                       ignore
                         (List.fold_left
                            (fun sep ->
                               fun x ->
                                 if sep
                                 then
-                                  Ppx_deriving_runtime.Format.fprintf fmt
+                                  Ppx_deriving_runtime_proxy.Format.fprintf fmt
                                     ";@ ";
                                 ((__2 ()) fmt) x;
                                 true) false x);
-                      Ppx_deriving_runtime.Format.fprintf fmt "@,]@]")) a1);
-                 Ppx_deriving_runtime.Format.fprintf fmt "@,))@]")
+                      Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]")) a1);
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,))@]")
             | Lam (a0, a1) ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Term.Lam (@,";
                  (((__3 ()) fmt) a0;
-                  Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt ",@ ";
                   ((__4 ()) fmt) a1);
-                 Ppx_deriving_runtime.Format.fprintf fmt "@,))@]")
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,))@]")
             | CData a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Term.CData@ ";
                  ((__5 ()) fmt) a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])")
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])")
             | Quoted a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Term.Quoted@ ";
                  ((__6 ()) fmt) a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])"))
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])"))
         [@ocaml.warning "-A"])
-    and show : t -> Ppx_deriving_runtime.string =
-      fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp x[@@ocaml.warning
+    and show : t -> Ppx_deriving_runtime_proxy.string =
+      fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp x[@@ocaml.warning
                                                                "-32"]
     and pp_quote :
-      Ppx_deriving_runtime.Format.formatter ->
-        quote -> Ppx_deriving_runtime.unit
+      Ppx_deriving_runtime_proxy.Format.formatter ->
+        quote -> Ppx_deriving_runtime_proxy.unit
       =
       let __0 () = Loc.pp in
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
-              Ppx_deriving_runtime.Format.fprintf fmt "@[<2>{ ";
-              (((Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+              Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
+              (((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                    "Ast.Term.data";
-                 (Ppx_deriving_runtime.Format.fprintf fmt "%S") x.data;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "loc";
+                 (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%S") x.data;
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "loc";
                 ((__0 ()) fmt) x.loc;
-                Ppx_deriving_runtime.Format.fprintf fmt "@]");
-               Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-               Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "kind";
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+               Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "kind";
                ((function
                  | None ->
-                     Ppx_deriving_runtime.Format.pp_print_string fmt "None"
+                     Ppx_deriving_runtime_proxy.Format.pp_print_string fmt "None"
                  | Some x ->
-                     (Ppx_deriving_runtime.Format.pp_print_string fmt
+                     (Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
                         "(Some ";
-                      (Ppx_deriving_runtime.Format.fprintf fmt "%S") x;
-                      Ppx_deriving_runtime.Format.pp_print_string fmt ")")))
+                      (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%S") x;
+                      Ppx_deriving_runtime_proxy.Format.pp_print_string fmt ")")))
                  x.kind;
-               Ppx_deriving_runtime.Format.fprintf fmt "@]");
-              Ppx_deriving_runtime.Format.fprintf fmt "@ }@]")
+               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+              Ppx_deriving_runtime_proxy.Format.fprintf fmt "@ }@]")
         [@ocaml.warning "-A"])
-    and show_quote : quote -> Ppx_deriving_runtime.string =
-      fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_quote x[@@ocaml.warning
+    and show_quote : quote -> Ppx_deriving_runtime_proxy.string =
+      fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_quote x[@@ocaml.warning
                                                                     "-32"]
-    let rec equal : t -> t -> Ppx_deriving_runtime.bool =
+    let rec equal : t -> t -> Ppx_deriving_runtime_proxy.bool =
       let __6 () = equal_quote
       and __5 () = CData.equal
       and __4 () = equal
@@ -154,7 +154,7 @@ module Term =
       and __2 () = equal
       and __1 () = equal
       and __0 () = Func.equal in
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun lhs ->
             fun rhs ->
               match (lhs, rhs) with
@@ -176,9 +176,9 @@ module Term =
                   ((fun x -> (__6 ()) x)) lhs0 rhs0
               | _ -> false)
         [@ocaml.warning "-A"])[@@ocaml.warning "-39"]
-    and equal_quote : quote -> quote -> Ppx_deriving_runtime.bool =
+    and equal_quote : quote -> quote -> Ppx_deriving_runtime_proxy.bool =
       let __0 () = Loc.equal in
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun lhs ->
             fun rhs ->
               (((fun (a : string) -> fun b -> a = b) lhs.data rhs.data) &&
@@ -264,35 +264,35 @@ module Clause =
       | Before of string 
       | If of string [@@deriving show]
     let rec pp_attribute :
-              Ppx_deriving_runtime.Format.formatter ->
-                attribute -> Ppx_deriving_runtime.unit
+              Ppx_deriving_runtime_proxy.Format.formatter ->
+                attribute -> Ppx_deriving_runtime_proxy.unit
       =
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             function
             | Name a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Clause.Name@ ";
-                 (Ppx_deriving_runtime.Format.fprintf fmt "%S") a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])")
+                 (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%S") a0;
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])")
             | After a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Clause.After@ ";
-                 (Ppx_deriving_runtime.Format.fprintf fmt "%S") a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])")
+                 (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%S") a0;
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])")
             | Before a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Clause.Before@ ";
-                 (Ppx_deriving_runtime.Format.fprintf fmt "%S") a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])")
+                 (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%S") a0;
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])")
             | If a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Clause.If@ ";
-                 (Ppx_deriving_runtime.Format.fprintf fmt "%S") a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])"))
+                 (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%S") a0;
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])"))
       [@ocaml.warning "-A"])
-    and show_attribute : attribute -> Ppx_deriving_runtime.string =
-      fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_attribute x
+    and show_attribute : attribute -> Ppx_deriving_runtime_proxy.string =
+      fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_attribute x
     [@@ocaml.warning "-32"]
     type ('term, 'attributes) t =
       {
@@ -301,50 +301,50 @@ module Clause =
       body: 'term }[@@deriving show]
     let rec pp :
       'term 'attributes .
-        (Ppx_deriving_runtime.Format.formatter ->
-           'term -> Ppx_deriving_runtime.unit)
+        (Ppx_deriving_runtime_proxy.Format.formatter ->
+           'term -> Ppx_deriving_runtime_proxy.unit)
           ->
-          (Ppx_deriving_runtime.Format.formatter ->
-             'attributes -> Ppx_deriving_runtime.unit)
+          (Ppx_deriving_runtime_proxy.Format.formatter ->
+             'attributes -> Ppx_deriving_runtime_proxy.unit)
             ->
-            Ppx_deriving_runtime.Format.formatter ->
-              ('term, 'attributes) t -> Ppx_deriving_runtime.unit
+            Ppx_deriving_runtime_proxy.Format.formatter ->
+              ('term, 'attributes) t -> Ppx_deriving_runtime_proxy.unit
       =
       let __0 () = Loc.pp in
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun poly_term ->
             fun poly_attributes ->
               fun fmt ->
                 fun x ->
-                  Ppx_deriving_runtime.Format.fprintf fmt "@[<2>{ ";
-                  (((Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
+                  (((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                        "Ast.Clause.loc";
                      ((__0 ()) fmt) x.loc;
-                     Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                    Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                    Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                    Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                    Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                       "attributes";
                     (poly_attributes fmt) x.attributes;
-                    Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                   Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                   Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "body";
+                    Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "body";
                    (poly_term fmt) x.body;
-                   Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                  Ppx_deriving_runtime.Format.fprintf fmt "@ }@]")
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@ }@]")
         [@ocaml.warning "-A"])
     and show :
       'term 'attributes .
-        (Ppx_deriving_runtime.Format.formatter ->
-           'term -> Ppx_deriving_runtime.unit)
+        (Ppx_deriving_runtime_proxy.Format.formatter ->
+           'term -> Ppx_deriving_runtime_proxy.unit)
           ->
-          (Ppx_deriving_runtime.Format.formatter ->
-             'attributes -> Ppx_deriving_runtime.unit)
-            -> ('term, 'attributes) t -> Ppx_deriving_runtime.string
+          (Ppx_deriving_runtime_proxy.Format.formatter ->
+             'attributes -> Ppx_deriving_runtime_proxy.unit)
+            -> ('term, 'attributes) t -> Ppx_deriving_runtime_proxy.string
       =
       fun poly_term ->
         fun poly_attributes ->
           fun x ->
-            Ppx_deriving_runtime.Format.asprintf "%a"
+            Ppx_deriving_runtime_proxy.Format.asprintf "%a"
               ((pp poly_term) poly_attributes) x[@@ocaml.warning "-32"]
   end
 module Chr =
@@ -353,24 +353,24 @@ module Chr =
       | Name of string 
       | If of string [@@deriving show]
     let rec pp_attribute :
-              Ppx_deriving_runtime.Format.formatter ->
-                attribute -> Ppx_deriving_runtime.unit
+              Ppx_deriving_runtime_proxy.Format.formatter ->
+                attribute -> Ppx_deriving_runtime_proxy.unit
       =
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             function
             | Name a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Chr.Name@ ";
-                 (Ppx_deriving_runtime.Format.fprintf fmt "%S") a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])")
+                 (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%S") a0;
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])")
             | If a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt "(@[<2>Ast.Chr.If@ ";
-                 (Ppx_deriving_runtime.Format.fprintf fmt "%S") a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])"))
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt "(@[<2>Ast.Chr.If@ ";
+                 (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%S") a0;
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])"))
       [@ocaml.warning "-A"])
-    and show_attribute : attribute -> Ppx_deriving_runtime.string =
-      fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_attribute x
+    and show_attribute : attribute -> Ppx_deriving_runtime_proxy.string =
+      fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_attribute x
     [@@ocaml.warning "-32"]
     type sequent = {
       eigen: Term.t ;
@@ -385,144 +385,144 @@ module Chr =
       attributes: 'attribute ;
       loc: Loc.t }[@@deriving (show, create)]
     let rec pp_sequent :
-      Ppx_deriving_runtime.Format.formatter ->
-        sequent -> Ppx_deriving_runtime.unit
+      Ppx_deriving_runtime_proxy.Format.formatter ->
+        sequent -> Ppx_deriving_runtime_proxy.unit
       =
       let __2 () = Term.pp
       and __1 () = Term.pp
       and __0 () = Term.pp in
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
-              Ppx_deriving_runtime.Format.fprintf fmt "@[<2>{ ";
-              (((Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+              Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
+              (((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                    "Ast.Chr.eigen";
                  ((__0 ()) fmt) x.eigen;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "context";
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "context";
                 ((__1 ()) fmt) x.context;
-                Ppx_deriving_runtime.Format.fprintf fmt "@]");
-               Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-               Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+               Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                  "conclusion";
                ((__2 ()) fmt) x.conclusion;
-               Ppx_deriving_runtime.Format.fprintf fmt "@]");
-              Ppx_deriving_runtime.Format.fprintf fmt "@ }@]")
+               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+              Ppx_deriving_runtime_proxy.Format.fprintf fmt "@ }@]")
         [@ocaml.warning "-A"])
-    and show_sequent : sequent -> Ppx_deriving_runtime.string =
-      fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_sequent x
+    and show_sequent : sequent -> Ppx_deriving_runtime_proxy.string =
+      fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_sequent x
     [@@ocaml.warning "-32"]
     and pp :
       'attribute .
-        (Ppx_deriving_runtime.Format.formatter ->
-           'attribute -> Ppx_deriving_runtime.unit)
+        (Ppx_deriving_runtime_proxy.Format.formatter ->
+           'attribute -> Ppx_deriving_runtime_proxy.unit)
           ->
-          Ppx_deriving_runtime.Format.formatter ->
-            'attribute t -> Ppx_deriving_runtime.unit
+          Ppx_deriving_runtime_proxy.Format.formatter ->
+            'attribute t -> Ppx_deriving_runtime_proxy.unit
       =
       let __4 () = Loc.pp
       and __3 () = pp_sequent
       and __2 () = Term.pp
       and __1 () = pp_sequent
       and __0 () = pp_sequent in
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun poly_attribute ->
             fun fmt ->
               fun x ->
-                Ppx_deriving_runtime.Format.fprintf fmt "@[<2>{ ";
-                ((((((Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
+                ((((((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                         "Ast.Chr.to_match";
                       ((fun x ->
-                          Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+                          Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
                           ignore
                             (List.fold_left
                                (fun sep ->
                                   fun x ->
                                     if sep
                                     then
-                                      Ppx_deriving_runtime.Format.fprintf fmt
+                                      Ppx_deriving_runtime_proxy.Format.fprintf fmt
                                         ";@ ";
                                     ((__0 ()) fmt) x;
                                     true) false x);
-                          Ppx_deriving_runtime.Format.fprintf fmt "@,]@]"))
+                          Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]"))
                         x.to_match;
-                      Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                     Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                     Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+                      Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                     Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                        "to_remove";
                      ((fun x ->
-                         Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+                         Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
                          ignore
                            (List.fold_left
                               (fun sep ->
                                  fun x ->
                                    if sep
                                    then
-                                     Ppx_deriving_runtime.Format.fprintf fmt
+                                     Ppx_deriving_runtime_proxy.Format.fprintf fmt
                                        ";@ ";
                                    ((__1 ()) fmt) x;
                                    true) false x);
-                         Ppx_deriving_runtime.Format.fprintf fmt "@,]@]"))
+                         Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]"))
                        x.to_remove;
-                     Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                    Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                    Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                    Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                    Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                       "guard";
                     ((function
                       | None ->
-                          Ppx_deriving_runtime.Format.pp_print_string fmt
+                          Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
                             "None"
                       | Some x ->
-                          (Ppx_deriving_runtime.Format.pp_print_string fmt
+                          (Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
                              "(Some ";
                            ((__2 ()) fmt) x;
-                           Ppx_deriving_runtime.Format.pp_print_string fmt
+                           Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
                              ")"))) x.guard;
-                    Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                   Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                   Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+                    Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                      "new_goal";
                    ((function
                      | None ->
-                         Ppx_deriving_runtime.Format.pp_print_string fmt
+                         Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
                            "None"
                      | Some x ->
-                         (Ppx_deriving_runtime.Format.pp_print_string fmt
+                         (Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
                             "(Some ";
                           ((__3 ()) fmt) x;
-                          Ppx_deriving_runtime.Format.pp_print_string fmt ")")))
+                          Ppx_deriving_runtime_proxy.Format.pp_print_string fmt ")")))
                      x.new_goal;
-                   Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                  Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                  Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                     "attributes";
                   (poly_attribute fmt) x.attributes;
-                  Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                 Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                 Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "loc";
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "loc";
                  ((__4 ()) fmt) x.loc;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                Ppx_deriving_runtime.Format.fprintf fmt "@ }@]")
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@ }@]")
         [@ocaml.warning "-A"])
     and show :
       'attribute .
-        (Ppx_deriving_runtime.Format.formatter ->
-           'attribute -> Ppx_deriving_runtime.unit)
-          -> 'attribute t -> Ppx_deriving_runtime.string
+        (Ppx_deriving_runtime_proxy.Format.formatter ->
+           'attribute -> Ppx_deriving_runtime_proxy.unit)
+          -> 'attribute t -> Ppx_deriving_runtime_proxy.string
       =
       fun poly_attribute ->
         fun x ->
-          Ppx_deriving_runtime.Format.asprintf "%a" (pp poly_attribute) x
+          Ppx_deriving_runtime_proxy.Format.asprintf "%a" (pp poly_attribute) x
     [@@ocaml.warning "-32"]
     let create_sequent =
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun ~eigen ->
             fun ~context ->
               fun ~conclusion -> fun () -> { eigen; context; conclusion })
       [@ocaml.warning "-A"])
     and create =
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun ?(to_match= []) ->
             fun ?(to_remove= []) ->
               fun ?guard ->
@@ -548,49 +548,49 @@ module Macro =
       body: 'term }[@@deriving show]
     let rec pp :
       'name 'term .
-        (Ppx_deriving_runtime.Format.formatter ->
-           'name -> Ppx_deriving_runtime.unit)
+        (Ppx_deriving_runtime_proxy.Format.formatter ->
+           'name -> Ppx_deriving_runtime_proxy.unit)
           ->
-          (Ppx_deriving_runtime.Format.formatter ->
-             'term -> Ppx_deriving_runtime.unit)
+          (Ppx_deriving_runtime_proxy.Format.formatter ->
+             'term -> Ppx_deriving_runtime_proxy.unit)
             ->
-            Ppx_deriving_runtime.Format.formatter ->
-              ('name, 'term) t -> Ppx_deriving_runtime.unit
+            Ppx_deriving_runtime_proxy.Format.formatter ->
+              ('name, 'term) t -> Ppx_deriving_runtime_proxy.unit
       =
       let __0 () = Loc.pp in
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun poly_name ->
             fun poly_term ->
               fun fmt ->
                 fun x ->
-                  Ppx_deriving_runtime.Format.fprintf fmt "@[<2>{ ";
-                  (((Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
+                  (((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                        "Ast.Macro.loc";
                      ((__0 ()) fmt) x.loc;
-                     Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                    Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                    Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "name";
+                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                    Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                    Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "name";
                     (poly_name fmt) x.name;
-                    Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                   Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                   Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "body";
+                    Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "body";
                    (poly_term fmt) x.body;
-                   Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                  Ppx_deriving_runtime.Format.fprintf fmt "@ }@]")
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@ }@]")
         [@ocaml.warning "-A"])
     and show :
       'name 'term .
-        (Ppx_deriving_runtime.Format.formatter ->
-           'name -> Ppx_deriving_runtime.unit)
+        (Ppx_deriving_runtime_proxy.Format.formatter ->
+           'name -> Ppx_deriving_runtime_proxy.unit)
           ->
-          (Ppx_deriving_runtime.Format.formatter ->
-             'term -> Ppx_deriving_runtime.unit)
-            -> ('name, 'term) t -> Ppx_deriving_runtime.string
+          (Ppx_deriving_runtime_proxy.Format.formatter ->
+             'term -> Ppx_deriving_runtime_proxy.unit)
+            -> ('name, 'term) t -> Ppx_deriving_runtime_proxy.string
       =
       fun poly_name ->
         fun poly_term ->
           fun x ->
-            Ppx_deriving_runtime.Format.asprintf "%a"
+            Ppx_deriving_runtime_proxy.Format.asprintf "%a"
               ((pp poly_name) poly_term) x[@@ocaml.warning "-32"]
   end
 module Type =
@@ -599,36 +599,36 @@ module Type =
       | External 
       | Index of int list [@@deriving show]
     let rec pp_attribute :
-              Ppx_deriving_runtime.Format.formatter ->
-                attribute -> Ppx_deriving_runtime.unit
+              Ppx_deriving_runtime_proxy.Format.formatter ->
+                attribute -> Ppx_deriving_runtime_proxy.unit
       =
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             function
             | External ->
-                Ppx_deriving_runtime.Format.pp_print_string fmt
+                Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
                   "Ast.Type.External"
             | Index a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Type.Index@ ";
                  ((fun x ->
-                     Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
                      ignore
                        (List.fold_left
                           (fun sep ->
                              fun x ->
                                if sep
                                then
-                                 Ppx_deriving_runtime.Format.fprintf fmt
+                                 Ppx_deriving_runtime_proxy.Format.fprintf fmt
                                    ";@ ";
-                               (Ppx_deriving_runtime.Format.fprintf fmt "%d")
+                               (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%d")
                                  x;
                                true) false x);
-                     Ppx_deriving_runtime.Format.fprintf fmt "@,]@]")) a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])"))
+                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]")) a0;
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])"))
       [@ocaml.warning "-A"])
-    and show_attribute : attribute -> Ppx_deriving_runtime.string =
-      fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_attribute x
+    and show_attribute : attribute -> Ppx_deriving_runtime_proxy.string =
+      fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_attribute x
     [@@ocaml.warning "-32"]
     type 'attribute t =
       {
@@ -638,48 +638,48 @@ module Type =
       ty: Term.t }[@@deriving show]
     let rec pp :
       'attribute .
-        (Ppx_deriving_runtime.Format.formatter ->
-           'attribute -> Ppx_deriving_runtime.unit)
+        (Ppx_deriving_runtime_proxy.Format.formatter ->
+           'attribute -> Ppx_deriving_runtime_proxy.unit)
           ->
-          Ppx_deriving_runtime.Format.formatter ->
-            'attribute t -> Ppx_deriving_runtime.unit
+          Ppx_deriving_runtime_proxy.Format.formatter ->
+            'attribute t -> Ppx_deriving_runtime_proxy.unit
       =
       let __2 () = Term.pp
       and __1 () = Func.pp
       and __0 () = Loc.pp in
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun poly_attribute ->
             fun fmt ->
               fun x ->
-                Ppx_deriving_runtime.Format.fprintf fmt "@[<2>{ ";
-                ((((Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
+                ((((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                       "Ast.Type.loc";
                     ((__0 ()) fmt) x.loc;
-                    Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                   Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                   Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+                    Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                      "attributes";
                    (poly_attribute fmt) x.attributes;
-                   Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                  Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                  Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "name";
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "name";
                   ((__1 ()) fmt) x.name;
-                  Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                 Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                 Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "ty";
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "ty";
                  ((__2 ()) fmt) x.ty;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                Ppx_deriving_runtime.Format.fprintf fmt "@ }@]")
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@ }@]")
         [@ocaml.warning "-A"])
     and show :
       'attribute .
-        (Ppx_deriving_runtime.Format.formatter ->
-           'attribute -> Ppx_deriving_runtime.unit)
-          -> 'attribute t -> Ppx_deriving_runtime.string
+        (Ppx_deriving_runtime_proxy.Format.formatter ->
+           'attribute -> Ppx_deriving_runtime_proxy.unit)
+          -> 'attribute t -> Ppx_deriving_runtime_proxy.string
       =
       fun poly_attribute ->
         fun x ->
-          Ppx_deriving_runtime.Format.asprintf "%a" (pp poly_attribute) x
+          Ppx_deriving_runtime_proxy.Format.asprintf "%a" (pp poly_attribute) x
     [@@ocaml.warning "-32"]
   end
 module Mode =
@@ -690,54 +690,54 @@ module Mode =
       loc: Loc.t }[@@deriving show]
     let rec pp :
       'name .
-        (Ppx_deriving_runtime.Format.formatter ->
-           'name -> Ppx_deriving_runtime.unit)
+        (Ppx_deriving_runtime_proxy.Format.formatter ->
+           'name -> Ppx_deriving_runtime_proxy.unit)
           ->
-          Ppx_deriving_runtime.Format.formatter ->
-            'name t -> Ppx_deriving_runtime.unit
+          Ppx_deriving_runtime_proxy.Format.formatter ->
+            'name t -> Ppx_deriving_runtime_proxy.unit
       =
       let __0 () = Loc.pp in
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun poly_name ->
             fun fmt ->
               fun x ->
-                Ppx_deriving_runtime.Format.fprintf fmt "@[<2>{ ";
-                (((Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
+                (((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                      "Ast.Mode.name";
                    (poly_name fmt) x.name;
-                   Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                  Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                  Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "args";
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "args";
                   ((fun x ->
-                      Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+                      Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
                       ignore
                         (List.fold_left
                            (fun sep ->
                               fun x ->
                                 if sep
                                 then
-                                  Ppx_deriving_runtime.Format.fprintf fmt
+                                  Ppx_deriving_runtime_proxy.Format.fprintf fmt
                                     ";@ ";
-                                (Ppx_deriving_runtime.Format.fprintf fmt "%B")
+                                (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%B")
                                   x;
                                 true) false x);
-                      Ppx_deriving_runtime.Format.fprintf fmt "@,]@]"))
+                      Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]"))
                     x.args;
-                  Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                 Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                 Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "loc";
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "loc";
                  ((__0 ()) fmt) x.loc;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                Ppx_deriving_runtime.Format.fprintf fmt "@ }@]")
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@ }@]")
         [@ocaml.warning "-A"])
     and show :
       'name .
-        (Ppx_deriving_runtime.Format.formatter ->
-           'name -> Ppx_deriving_runtime.unit)
-          -> 'name t -> Ppx_deriving_runtime.string
+        (Ppx_deriving_runtime_proxy.Format.formatter ->
+           'name -> Ppx_deriving_runtime_proxy.unit)
+          -> 'name t -> Ppx_deriving_runtime_proxy.string
       =
       fun poly_name ->
-        fun x -> Ppx_deriving_runtime.Format.asprintf "%a" (pp poly_name) x
+        fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" (pp poly_name) x
     [@@ocaml.warning "-32"]
   end
 module TypeAbbreviation =
@@ -749,46 +749,46 @@ module TypeAbbreviation =
       loc: Loc.t }[@@deriving show]
     let rec pp :
       'name .
-        (Ppx_deriving_runtime.Format.formatter ->
-           'name -> Ppx_deriving_runtime.unit)
+        (Ppx_deriving_runtime_proxy.Format.formatter ->
+           'name -> Ppx_deriving_runtime_proxy.unit)
           ->
-          Ppx_deriving_runtime.Format.formatter ->
-            'name t -> Ppx_deriving_runtime.unit
+          Ppx_deriving_runtime_proxy.Format.formatter ->
+            'name t -> Ppx_deriving_runtime_proxy.unit
       =
       let __1 () = Loc.pp
       and __0 () = Term.pp in
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun poly_name ->
             fun fmt ->
               fun x ->
-                Ppx_deriving_runtime.Format.fprintf fmt "@[<2>{ ";
-                ((((Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
+                ((((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                       "Ast.TypeAbbreviation.name";
                     (poly_name fmt) x.name;
-                    Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                   Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                   Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "value";
+                    Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "value";
                    ((__0 ()) fmt) x.value;
-                   Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                  Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                  Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                     "nparams";
-                  (Ppx_deriving_runtime.Format.fprintf fmt "%d") x.nparams;
-                  Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                 Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                 Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "loc";
+                  (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%d") x.nparams;
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "loc";
                  ((__1 ()) fmt) x.loc;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                Ppx_deriving_runtime.Format.fprintf fmt "@ }@]")
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@ }@]")
         [@ocaml.warning "-A"])
     and show :
       'name .
-        (Ppx_deriving_runtime.Format.formatter ->
-           'name -> Ppx_deriving_runtime.unit)
-          -> 'name t -> Ppx_deriving_runtime.string
+        (Ppx_deriving_runtime_proxy.Format.formatter ->
+           'name -> Ppx_deriving_runtime_proxy.unit)
+          -> 'name t -> Ppx_deriving_runtime_proxy.string
       =
       fun poly_name ->
-        fun x -> Ppx_deriving_runtime.Format.asprintf "%a" (pp poly_name) x
+        fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" (pp poly_name) x
     [@@ocaml.warning "-32"]
   end
 module Program =
@@ -808,8 +808,8 @@ module Program =
       | Type of Type.attribute list Type.t 
       | TypeAbbreviation of Func.t TypeAbbreviation.t [@@deriving show]
     let rec pp_decl :
-      Ppx_deriving_runtime.Format.formatter ->
-        decl -> Ppx_deriving_runtime.unit
+      Ppx_deriving_runtime_proxy.Format.formatter ->
+        decl -> Ppx_deriving_runtime_proxy.unit
       =
       let __26 () = TypeAbbreviation.pp
       and __25 () = Func.pp
@@ -838,219 +838,219 @@ module Program =
       and __2 () = Func.pp
       and __1 () = Loc.pp
       and __0 () = Loc.pp in
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             function
             | Begin a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Program.Begin@ ";
                  ((__0 ()) fmt) a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])")
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])")
             | Namespace (a0, a1) ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Program.Namespace (@,";
                  (((__1 ()) fmt) a0;
-                  Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt ",@ ";
                   ((__2 ()) fmt) a1);
-                 Ppx_deriving_runtime.Format.fprintf fmt "@,))@]")
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,))@]")
             | Constraint (a0, a1) ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Program.Constraint (@,";
                  (((__3 ()) fmt) a0;
-                  Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt ",@ ";
                   ((fun x ->
-                      Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+                      Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
                       ignore
                         (List.fold_left
                            (fun sep ->
                               fun x ->
                                 if sep
                                 then
-                                  Ppx_deriving_runtime.Format.fprintf fmt
+                                  Ppx_deriving_runtime_proxy.Format.fprintf fmt
                                     ";@ ";
                                 ((__4 ()) fmt) x;
                                 true) false x);
-                      Ppx_deriving_runtime.Format.fprintf fmt "@,]@]")) a1);
-                 Ppx_deriving_runtime.Format.fprintf fmt "@,))@]")
+                      Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]")) a1);
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,))@]")
             | Shorten (a0, a1, a2) ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Program.Shorten (@,";
                  ((((__5 ()) fmt) a0;
-                   Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt ",@ ";
                    ((__6 ()) fmt) a1);
-                  Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt ",@ ";
                   ((__7 ()) fmt) a2);
-                 Ppx_deriving_runtime.Format.fprintf fmt "@,))@]")
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,))@]")
             | End a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Program.End@ ";
                  ((__8 ()) fmt) a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])")
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])")
             | Accumulated (a0, a1) ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Program.Accumulated (@,";
                  (((__9 ()) fmt) a0;
-                  Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt ",@ ";
                   ((fun (a0, a1) ->
-                      Ppx_deriving_runtime.Format.fprintf fmt "(@[";
+                      Ppx_deriving_runtime_proxy.Format.fprintf fmt "(@[";
                       (((__10 ()) fmt) a0;
-                       Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+                       Ppx_deriving_runtime_proxy.Format.fprintf fmt ",@ ";
                        ((fun x ->
-                           Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+                           Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
                            ignore
                              (List.fold_left
                                 (fun sep ->
                                    fun x ->
                                      if sep
                                      then
-                                       Ppx_deriving_runtime.Format.fprintf
+                                       Ppx_deriving_runtime_proxy.Format.fprintf
                                          fmt ";@ ";
                                      ((__11 ()) fmt) x;
                                      true) false x);
-                           Ppx_deriving_runtime.Format.fprintf fmt "@,]@]"))
+                           Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]"))
                          a1);
-                      Ppx_deriving_runtime.Format.fprintf fmt "@])")) a1);
-                 Ppx_deriving_runtime.Format.fprintf fmt "@,))@]")
+                      Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])")) a1);
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,))@]")
             | Clause a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Program.Clause@ ";
                  ((__14 ()) (fun fmt -> (__12 ()) fmt)
                     (fun fmt ->
                        fun x ->
-                         Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+                         Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
                          ignore
                            (List.fold_left
                               (fun sep ->
                                  fun x ->
                                    if sep
                                    then
-                                     Ppx_deriving_runtime.Format.fprintf fmt
+                                     Ppx_deriving_runtime_proxy.Format.fprintf fmt
                                        ";@ ";
                                    ((__13 ()) fmt) x;
                                    true) false x);
-                         Ppx_deriving_runtime.Format.fprintf fmt "@,]@]") fmt)
+                         Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]") fmt)
                    a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])")
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])")
             | Local a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Program.Local@ ";
                  ((__15 ()) fmt) a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])")
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])")
             | Mode a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Program.Mode@ ";
                  ((fun x ->
-                     Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
                      ignore
                        (List.fold_left
                           (fun sep ->
                              fun x ->
                                if sep
                                then
-                                 Ppx_deriving_runtime.Format.fprintf fmt
+                                 Ppx_deriving_runtime_proxy.Format.fprintf fmt
                                    ";@ ";
                                ((__17 ()) (fun fmt -> (__16 ()) fmt) fmt) x;
                                true) false x);
-                     Ppx_deriving_runtime.Format.fprintf fmt "@,]@]")) a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])")
+                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]")) a0;
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])")
             | Chr a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Program.Chr@ ";
                  ((__19 ())
                     (fun fmt ->
                        fun x ->
-                         Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+                         Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
                          ignore
                            (List.fold_left
                               (fun sep ->
                                  fun x ->
                                    if sep
                                    then
-                                     Ppx_deriving_runtime.Format.fprintf fmt
+                                     Ppx_deriving_runtime_proxy.Format.fprintf fmt
                                        ";@ ";
                                    ((__18 ()) fmt) x;
                                    true) false x);
-                         Ppx_deriving_runtime.Format.fprintf fmt "@,]@]") fmt)
+                         Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]") fmt)
                    a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])")
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])")
             | Macro a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Program.Macro@ ";
                  ((__22 ()) (fun fmt -> (__20 ()) fmt)
                     (fun fmt -> (__21 ()) fmt) fmt) a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])")
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])")
             | Type a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Program.Type@ ";
                  ((__24 ())
                     (fun fmt ->
                        fun x ->
-                         Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+                         Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
                          ignore
                            (List.fold_left
                               (fun sep ->
                                  fun x ->
                                    if sep
                                    then
-                                     Ppx_deriving_runtime.Format.fprintf fmt
+                                     Ppx_deriving_runtime_proxy.Format.fprintf fmt
                                        ";@ ";
                                    ((__23 ()) fmt) x;
                                    true) false x);
-                         Ppx_deriving_runtime.Format.fprintf fmt "@,]@]") fmt)
+                         Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]") fmt)
                    a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])")
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])")
             | TypeAbbreviation a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Program.TypeAbbreviation@ ";
                  ((__26 ()) (fun fmt -> (__25 ()) fmt) fmt) a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])"))
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])"))
         [@ocaml.warning "-A"])
-    and show_decl : decl -> Ppx_deriving_runtime.string =
-      fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_decl x[@@ocaml.warning
+    and show_decl : decl -> Ppx_deriving_runtime_proxy.string =
+      fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_decl x[@@ocaml.warning
                                                                     "-32"]
     let mkLocal x = Local (Func.from_string x)
     type t = decl list[@@deriving show]
     let rec pp :
-      Ppx_deriving_runtime.Format.formatter -> t -> Ppx_deriving_runtime.unit
+      Ppx_deriving_runtime_proxy.Format.formatter -> t -> Ppx_deriving_runtime_proxy.unit
       =
       let __0 () = pp_decl in
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
-              Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+              Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
               ignore
                 (List.fold_left
                    (fun sep ->
                       fun x ->
                         if sep
-                        then Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
+                        then Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
                         ((__0 ()) fmt) x;
                         true) false x);
-              Ppx_deriving_runtime.Format.fprintf fmt "@,]@]")
+              Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]")
         [@ocaml.warning "-A"])
-    and show : t -> Ppx_deriving_runtime.string =
-      fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp x[@@ocaml.warning
+    and show : t -> Ppx_deriving_runtime_proxy.string =
+      fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp x[@@ocaml.warning
                                                                "-32"]
   end
 module Goal =
   struct
     type t = (Loc.t * Term.t)[@@deriving show]
     let rec pp :
-      Ppx_deriving_runtime.Format.formatter -> t -> Ppx_deriving_runtime.unit
+      Ppx_deriving_runtime_proxy.Format.formatter -> t -> Ppx_deriving_runtime_proxy.unit
       =
       let __1 () = Term.pp
       and __0 () = Loc.pp in
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun (a0, a1) ->
-              Ppx_deriving_runtime.Format.fprintf fmt "(@[";
+              Ppx_deriving_runtime_proxy.Format.fprintf fmt "(@[";
               (((__0 ()) fmt) a0;
-               Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+               Ppx_deriving_runtime_proxy.Format.fprintf fmt ",@ ";
                ((__1 ()) fmt) a1);
-              Ppx_deriving_runtime.Format.fprintf fmt "@])")
+              Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])")
         [@ocaml.warning "-A"])
-    and show : t -> Ppx_deriving_runtime.string =
-      fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp x[@@ocaml.warning
+    and show : t -> Ppx_deriving_runtime_proxy.string =
+      fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp x[@@ocaml.warning
                                                                "-32"]
   end
 module Fmt = Format
@@ -1134,8 +1134,8 @@ module Structured =
       full_name: 'a ;
       short_name: 'a }[@@deriving show]
     let rec pp_program :
-      Ppx_deriving_runtime.Format.formatter ->
-        program -> Ppx_deriving_runtime.unit
+      Ppx_deriving_runtime_proxy.Format.formatter ->
+        program -> Ppx_deriving_runtime_proxy.unit
       =
       let __9 () = pp_block
       and __8 () = Mode.pp
@@ -1147,103 +1147,103 @@ module Structured =
       and __2 () = Macro.pp
       and __1 () = Term.pp
       and __0 () = Func.pp in
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
-              Ppx_deriving_runtime.Format.fprintf fmt "@[<2>{ ";
-              (((((Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+              Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
+              (((((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                      "Ast.Structured.macros";
                    ((fun x ->
-                       Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+                       Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
                        ignore
                          (List.fold_left
                             (fun sep ->
                                fun x ->
                                  if sep
                                  then
-                                   Ppx_deriving_runtime.Format.fprintf fmt
+                                   Ppx_deriving_runtime_proxy.Format.fprintf fmt
                                      ";@ ";
                                  ((__2 ()) (fun fmt -> (__0 ()) fmt)
                                     (fun fmt -> (__1 ()) fmt) fmt) x;
                                  true) false x);
-                       Ppx_deriving_runtime.Format.fprintf fmt "@,]@]"))
+                       Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]"))
                      x.macros;
-                   Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                  Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                  Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "types";
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "types";
                   ((fun x ->
-                      Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+                      Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
                       ignore
                         (List.fold_left
                            (fun sep ->
                               fun x ->
                                 if sep
                                 then
-                                  Ppx_deriving_runtime.Format.fprintf fmt
+                                  Ppx_deriving_runtime_proxy.Format.fprintf fmt
                                     ";@ ";
                                 ((__4 ()) (fun fmt -> (__3 ()) fmt) fmt) x;
                                 true) false x);
-                      Ppx_deriving_runtime.Format.fprintf fmt "@,]@]"))
+                      Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]"))
                     x.types;
-                  Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                 Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                 Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                    "type_abbrevs";
                  ((fun x ->
-                     Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
                      ignore
                        (List.fold_left
                           (fun sep ->
                              fun x ->
                                if sep
                                then
-                                 Ppx_deriving_runtime.Format.fprintf fmt
+                                 Ppx_deriving_runtime_proxy.Format.fprintf fmt
                                    ";@ ";
                                ((__6 ()) (fun fmt -> (__5 ()) fmt) fmt) x;
                                true) false x);
-                     Ppx_deriving_runtime.Format.fprintf fmt "@,]@]"))
+                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]"))
                    x.type_abbrevs;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "modes";
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "modes";
                 ((fun x ->
-                    Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+                    Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
                     ignore
                       (List.fold_left
                          (fun sep ->
                             fun x ->
                               if sep
                               then
-                                Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
+                                Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
                               ((__8 ()) (fun fmt -> (__7 ()) fmt) fmt) x;
                               true) false x);
-                    Ppx_deriving_runtime.Format.fprintf fmt "@,]@]")) 
+                    Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]")) 
                   x.modes;
-                Ppx_deriving_runtime.Format.fprintf fmt "@]");
-               Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-               Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "body";
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+               Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "body";
                ((fun x ->
-                   Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
                    ignore
                      (List.fold_left
                         (fun sep ->
                            fun x ->
                              if sep
                              then
-                               Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
+                               Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
                              ((__9 ()) fmt) x;
                              true) false x);
-                   Ppx_deriving_runtime.Format.fprintf fmt "@,]@]")) 
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]")) 
                  x.body;
-               Ppx_deriving_runtime.Format.fprintf fmt "@]");
-              Ppx_deriving_runtime.Format.fprintf fmt "@ }@]")
+               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+              Ppx_deriving_runtime_proxy.Format.fprintf fmt "@ }@]")
         [@ocaml.warning "-A"])
-    and show_program : program -> Ppx_deriving_runtime.string =
-      fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_program x
+    and show_program : program -> Ppx_deriving_runtime_proxy.string =
+      fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_program x
     [@@ocaml.warning "-32"]
     and pp_block :
-      Ppx_deriving_runtime.Format.formatter ->
-        block -> Ppx_deriving_runtime.unit
+      Ppx_deriving_runtime_proxy.Format.formatter ->
+        block -> Ppx_deriving_runtime_proxy.unit
       =
       let __13 () = pp_program
       and __12 () = Chr.pp
@@ -1259,280 +1259,280 @@ module Structured =
       and __2 () = Term.pp
       and __1 () = pp_program
       and __0 () = Func.pp in
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             function
             | Locals (a0, a1) ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Structured.Locals (@,";
                  (((fun x ->
-                      Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+                      Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
                       ignore
                         (List.fold_left
                            (fun sep ->
                               fun x ->
                                 if sep
                                 then
-                                  Ppx_deriving_runtime.Format.fprintf fmt
+                                  Ppx_deriving_runtime_proxy.Format.fprintf fmt
                                     ";@ ";
                                 ((__0 ()) fmt) x;
                                 true) false x);
-                      Ppx_deriving_runtime.Format.fprintf fmt "@,]@]")) a0;
-                  Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+                      Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]")) a0;
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt ",@ ";
                   ((__1 ()) fmt) a1);
-                 Ppx_deriving_runtime.Format.fprintf fmt "@,))@]")
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,))@]")
             | Clauses a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Structured.Clauses@ ";
                  ((fun x ->
-                     Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
                      ignore
                        (List.fold_left
                           (fun sep ->
                              fun x ->
                                if sep
                                then
-                                 Ppx_deriving_runtime.Format.fprintf fmt
+                                 Ppx_deriving_runtime_proxy.Format.fprintf fmt
                                    ";@ ";
                                ((__4 ()) (fun fmt -> (__2 ()) fmt)
                                   (fun fmt -> (__3 ()) fmt) fmt) x;
                                true) false x);
-                     Ppx_deriving_runtime.Format.fprintf fmt "@,]@]")) a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])")
+                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]")) a0;
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])")
             | Namespace (a0, a1) ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Structured.Namespace (@,";
                  (((__5 ()) fmt) a0;
-                  Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt ",@ ";
                   ((__6 ()) fmt) a1);
-                 Ppx_deriving_runtime.Format.fprintf fmt "@,))@]")
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,))@]")
             | Shorten (a0, a1) ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Structured.Shorten (@,";
                  (((fun x ->
-                      Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+                      Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
                       ignore
                         (List.fold_left
                            (fun sep ->
                               fun x ->
                                 if sep
                                 then
-                                  Ppx_deriving_runtime.Format.fprintf fmt
+                                  Ppx_deriving_runtime_proxy.Format.fprintf fmt
                                     ";@ ";
                                 ((__8 ()) (fun fmt -> (__7 ()) fmt) fmt) x;
                                 true) false x);
-                      Ppx_deriving_runtime.Format.fprintf fmt "@,]@]")) a0;
-                  Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+                      Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]")) a0;
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt ",@ ";
                   ((__9 ()) fmt) a1);
-                 Ppx_deriving_runtime.Format.fprintf fmt "@,))@]")
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,))@]")
             | Constraints (a0, a1, a2) ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Structured.Constraints (@,";
                  ((((fun x ->
-                       Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+                       Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
                        ignore
                          (List.fold_left
                             (fun sep ->
                                fun x ->
                                  if sep
                                  then
-                                   Ppx_deriving_runtime.Format.fprintf fmt
+                                   Ppx_deriving_runtime_proxy.Format.fprintf fmt
                                      ";@ ";
                                  ((__10 ()) fmt) x;
                                  true) false x);
-                       Ppx_deriving_runtime.Format.fprintf fmt "@,]@]")) a0;
-                   Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+                       Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]")) a0;
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt ",@ ";
                    ((fun x ->
-                       Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+                       Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
                        ignore
                          (List.fold_left
                             (fun sep ->
                                fun x ->
                                  if sep
                                  then
-                                   Ppx_deriving_runtime.Format.fprintf fmt
+                                   Ppx_deriving_runtime_proxy.Format.fprintf fmt
                                      ";@ ";
                                  ((__12 ()) (fun fmt -> (__11 ()) fmt) fmt) x;
                                  true) false x);
-                       Ppx_deriving_runtime.Format.fprintf fmt "@,]@]")) a1);
-                  Ppx_deriving_runtime.Format.fprintf fmt ",@ ";
+                       Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]")) a1);
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt ",@ ";
                   ((__13 ()) fmt) a2);
-                 Ppx_deriving_runtime.Format.fprintf fmt "@,))@]"))
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,))@]"))
         [@ocaml.warning "-A"])
-    and show_block : block -> Ppx_deriving_runtime.string =
-      fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_block x[@@ocaml.warning
+    and show_block : block -> Ppx_deriving_runtime_proxy.string =
+      fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_block x[@@ocaml.warning
                                                                     "-32"]
     and pp_attribute :
-      Ppx_deriving_runtime.Format.formatter ->
-        attribute -> Ppx_deriving_runtime.unit
+      Ppx_deriving_runtime_proxy.Format.formatter ->
+        attribute -> Ppx_deriving_runtime_proxy.unit
       =
       let __0 () = pp_insertion in
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
-              Ppx_deriving_runtime.Format.fprintf fmt "@[<2>{ ";
-              (((Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+              Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
+              (((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                    "Ast.Structured.insertion";
                  ((function
                    | None ->
-                       Ppx_deriving_runtime.Format.pp_print_string fmt "None"
+                       Ppx_deriving_runtime_proxy.Format.pp_print_string fmt "None"
                    | Some x ->
-                       (Ppx_deriving_runtime.Format.pp_print_string fmt
+                       (Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
                           "(Some ";
                         ((__0 ()) fmt) x;
-                        Ppx_deriving_runtime.Format.pp_print_string fmt ")")))
+                        Ppx_deriving_runtime_proxy.Format.pp_print_string fmt ")")))
                    x.insertion;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "id";
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "id";
                 ((function
                   | None ->
-                      Ppx_deriving_runtime.Format.pp_print_string fmt "None"
+                      Ppx_deriving_runtime_proxy.Format.pp_print_string fmt "None"
                   | Some x ->
-                      (Ppx_deriving_runtime.Format.pp_print_string fmt
+                      (Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
                          "(Some ";
-                       (Ppx_deriving_runtime.Format.fprintf fmt "%S") x;
-                       Ppx_deriving_runtime.Format.pp_print_string fmt ")")))
+                       (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%S") x;
+                       Ppx_deriving_runtime_proxy.Format.pp_print_string fmt ")")))
                   x.id;
-                Ppx_deriving_runtime.Format.fprintf fmt "@]");
-               Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-               Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "ifexpr";
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+               Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "ifexpr";
                ((function
                  | None ->
-                     Ppx_deriving_runtime.Format.pp_print_string fmt "None"
+                     Ppx_deriving_runtime_proxy.Format.pp_print_string fmt "None"
                  | Some x ->
-                     (Ppx_deriving_runtime.Format.pp_print_string fmt
+                     (Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
                         "(Some ";
-                      (Ppx_deriving_runtime.Format.fprintf fmt "%S") x;
-                      Ppx_deriving_runtime.Format.pp_print_string fmt ")")))
+                      (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%S") x;
+                      Ppx_deriving_runtime_proxy.Format.pp_print_string fmt ")")))
                  x.ifexpr;
-               Ppx_deriving_runtime.Format.fprintf fmt "@]");
-              Ppx_deriving_runtime.Format.fprintf fmt "@ }@]")
+               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+              Ppx_deriving_runtime_proxy.Format.fprintf fmt "@ }@]")
         [@ocaml.warning "-A"])
-    and show_attribute : attribute -> Ppx_deriving_runtime.string =
-      fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_attribute x
+    and show_attribute : attribute -> Ppx_deriving_runtime_proxy.string =
+      fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_attribute x
     [@@ocaml.warning "-32"]
     and (pp_insertion :
-          Ppx_deriving_runtime.Format.formatter ->
-            insertion -> Ppx_deriving_runtime.unit)
+          Ppx_deriving_runtime_proxy.Format.formatter ->
+            insertion -> Ppx_deriving_runtime_proxy.unit)
       =
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             function
             | Before a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Structured.Before@ ";
-                 (Ppx_deriving_runtime.Format.fprintf fmt "%S") a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])")
+                 (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%S") a0;
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])")
             | After a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Structured.After@ ";
-                 (Ppx_deriving_runtime.Format.fprintf fmt "%S") a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])"))
+                 (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%S") a0;
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])"))
       [@ocaml.warning "-A"])
-    and show_insertion : insertion -> Ppx_deriving_runtime.string =
-      fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_insertion x
+    and show_insertion : insertion -> Ppx_deriving_runtime_proxy.string =
+      fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_insertion x
     [@@ocaml.warning "-32"]
     and (pp_cattribute :
-          Ppx_deriving_runtime.Format.formatter ->
-            cattribute -> Ppx_deriving_runtime.unit)
+          Ppx_deriving_runtime_proxy.Format.formatter ->
+            cattribute -> Ppx_deriving_runtime_proxy.unit)
       =
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
-              Ppx_deriving_runtime.Format.fprintf fmt "@[<2>{ ";
-              ((Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+              Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
+              ((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                   "Ast.Structured.cid";
-                (Ppx_deriving_runtime.Format.fprintf fmt "%S") x.cid;
-                Ppx_deriving_runtime.Format.fprintf fmt "@]");
-               Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-               Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ " "cifexpr";
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%S") x.cid;
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+               Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "cifexpr";
                ((function
                  | None ->
-                     Ppx_deriving_runtime.Format.pp_print_string fmt "None"
+                     Ppx_deriving_runtime_proxy.Format.pp_print_string fmt "None"
                  | Some x ->
-                     (Ppx_deriving_runtime.Format.pp_print_string fmt
+                     (Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
                         "(Some ";
-                      (Ppx_deriving_runtime.Format.fprintf fmt "%S") x;
-                      Ppx_deriving_runtime.Format.pp_print_string fmt ")")))
+                      (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%S") x;
+                      Ppx_deriving_runtime_proxy.Format.pp_print_string fmt ")")))
                  x.cifexpr;
-               Ppx_deriving_runtime.Format.fprintf fmt "@]");
-              Ppx_deriving_runtime.Format.fprintf fmt "@ }@]")
+               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+              Ppx_deriving_runtime_proxy.Format.fprintf fmt "@ }@]")
       [@ocaml.warning "-A"])
-    and show_cattribute : cattribute -> Ppx_deriving_runtime.string =
-      fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_cattribute x
+    and show_cattribute : cattribute -> Ppx_deriving_runtime_proxy.string =
+      fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_cattribute x
     [@@ocaml.warning "-32"]
     and (pp_tattribute :
-          Ppx_deriving_runtime.Format.formatter ->
-            tattribute -> Ppx_deriving_runtime.unit)
+          Ppx_deriving_runtime_proxy.Format.formatter ->
+            tattribute -> Ppx_deriving_runtime_proxy.unit)
       =
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             function
             | External ->
-                Ppx_deriving_runtime.Format.pp_print_string fmt
+                Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
                   "Ast.Structured.External"
             | Indexed a0 ->
-                (Ppx_deriving_runtime.Format.fprintf fmt
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
                    "(@[<2>Ast.Structured.Indexed@ ";
                  ((fun x ->
-                     Ppx_deriving_runtime.Format.fprintf fmt "@[<2>[";
+                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
                      ignore
                        (List.fold_left
                           (fun sep ->
                              fun x ->
                                if sep
                                then
-                                 Ppx_deriving_runtime.Format.fprintf fmt
+                                 Ppx_deriving_runtime_proxy.Format.fprintf fmt
                                    ";@ ";
-                               (Ppx_deriving_runtime.Format.fprintf fmt "%d")
+                               (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%d")
                                  x;
                                true) false x);
-                     Ppx_deriving_runtime.Format.fprintf fmt "@,]@]")) a0;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@])"))
+                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]")) a0;
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])"))
       [@ocaml.warning "-A"])
-    and show_tattribute : tattribute -> Ppx_deriving_runtime.string =
-      fun x -> Ppx_deriving_runtime.Format.asprintf "%a" pp_tattribute x
+    and show_tattribute : tattribute -> Ppx_deriving_runtime_proxy.string =
+      fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_tattribute x
     [@@ocaml.warning "-32"]
     and pp_shorthand :
       'a .
-        (Ppx_deriving_runtime.Format.formatter ->
-           'a -> Ppx_deriving_runtime.unit)
+        (Ppx_deriving_runtime_proxy.Format.formatter ->
+           'a -> Ppx_deriving_runtime_proxy.unit)
           ->
-          Ppx_deriving_runtime.Format.formatter ->
-            'a shorthand -> Ppx_deriving_runtime.unit
+          Ppx_deriving_runtime_proxy.Format.formatter ->
+            'a shorthand -> Ppx_deriving_runtime_proxy.unit
       =
       let __0 () = Loc.pp in
-      ((let open! Ppx_deriving_runtime in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun poly_a ->
             fun fmt ->
               fun x ->
-                Ppx_deriving_runtime.Format.fprintf fmt "@[<2>{ ";
-                (((Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
+                (((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                      "Ast.Structured.iloc";
                    ((__0 ()) fmt) x.iloc;
-                   Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                  Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                  Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                     "full_name";
                   (poly_a fmt) x.full_name;
-                  Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                 Ppx_deriving_runtime.Format.fprintf fmt ";@ ";
-                 Ppx_deriving_runtime.Format.fprintf fmt "@[%s =@ "
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                    "short_name";
                  (poly_a fmt) x.short_name;
-                 Ppx_deriving_runtime.Format.fprintf fmt "@]");
-                Ppx_deriving_runtime.Format.fprintf fmt "@ }@]")
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@ }@]")
         [@ocaml.warning "-A"])
     and show_shorthand :
       'a .
-        (Ppx_deriving_runtime.Format.formatter ->
-           'a -> Ppx_deriving_runtime.unit)
-          -> 'a shorthand -> Ppx_deriving_runtime.string
+        (Ppx_deriving_runtime_proxy.Format.formatter ->
+           'a -> Ppx_deriving_runtime_proxy.unit)
+          -> 'a shorthand -> Ppx_deriving_runtime_proxy.string
       =
       fun poly_a ->
         fun x ->
-          Ppx_deriving_runtime.Format.asprintf "%a" (pp_shorthand poly_a) x
+          Ppx_deriving_runtime_proxy.Format.asprintf "%a" (pp_shorthand poly_a) x
     [@@ocaml.warning "-32"]
   end
 

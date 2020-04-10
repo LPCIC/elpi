@@ -1,4 +1,4 @@
-(*927d066a4a64bd8ebdf616cca09a2e6c6b896a27  src/API.mli *)
+(*927d066a4a64bd8ebdf616cca09a2e6c6b896a27 *src/API.mli *)
 #1 "src/API.mli"
 [@@@ocaml.text " This module is the API for clients of the Elpi library. "]
 [@@@ocaml.text
