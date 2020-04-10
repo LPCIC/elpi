@@ -1,4 +1,5 @@
-(* provides:
+(**
+    elpi.trace.ppx provides the following syntax extensions:
 
     type t = { a : T; b : S [@trace] }
 
@@ -19,21 +20,29 @@
                z + f y (b[@trace])
      end]
 
-  If --off is passed to the ppx rewriter:
+  If
+    --cookie "elpi_trace=\"true\""
+  is not passed to the ppx rewriter:
+
     - [%trace "foo" pp code] ---> code
     - [%tcall f x] ---> f x
     - [%spy ...] [%spyl ...] and [%log ...] ---> ()
     - f x (y[@trace]) z ---> f x z
+    - let x[@trace] = .. in e ---> e
     - type x = { a : T; b : T [@trace] } ---> type x = { a : T }
     - { a; b = b [@trace] } ---> { a } (in both patterns and expressions)
     - T -> (S[@trace]) -> U  --->  T -> U
-  The shorcut "x" to mean "x = x" does not work, you have to use the longer form
 
-  requires:
+  In records, the shorcut "x" to mean "x = x" does not work, you have to use the
+  longer form.
+
 *)
 
 open Ppxlib
 open Ast_builder.Default
+
+let err ~loc str =
+  Location.raise_errorf~loc "%s" str
 
 let trace ~loc name ppfun body = [%expr
   let wall_clock = Unix.gettimeofday () in
@@ -53,9 +62,6 @@ let trace ~loc name ppfun body = [%expr
       Trace_ppx_runtime.Runtime.exit [%e name] false (Some e) elapsed;
       raise e
 ]
-
-let err ~loc str =
-  Location.raise_errorf~loc "%s" str
 
 let spy ~loc err ?(cond=[%expr true]) ?gid name pp =
   let ppl =
@@ -101,19 +107,6 @@ let enabled = ref false
 let has_iftrace_attribute (l : attributes) =
   List.exists (fun {attr_name = { txt; _ } ; _ } -> txt = "trace") l
 
-(*
-let has_iftrace_attribute (l : attributes) =
-  List.exists (fun ( { txt; _ },_) -> txt = "trace") l
-
-let trace_mapper _config _cookies =
-  { default_mapper with
-
-expr = begin fun mapper expr ->
-  let aux =
-
-
-}
-*)
 let has_iftrace { ptyp_attributes = l; _ } = has_iftrace_attribute l
 
 let map_trace = object(self)
