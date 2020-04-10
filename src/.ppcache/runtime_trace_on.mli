@@ -1,4 +1,4 @@
-(*e0914f3476d15e2ba79d82fa97efbbd05a6e4c75 *src/runtime_trace_on.mli --trace_ppx-on*)
+(*e0914f3476d15e2ba79d82fa97efbbd05a6e4c75 *src/runtime_trace_on.mli --cookie elpi_trace="true"*)
 #1 "src/runtime_trace_on.mli"
 open Util
 open Data

@@ -16,12 +16,14 @@
     ((action (run ppxfindcache_elpi_trace_deriving_std %{input-file}
                     --ppx-opt --cookie
                     --ppx-opt "elpi_trace=\"true\""
-                    --cache-file %{dep:.ppcache/runtime_trace_on.ml}))
+                    --cache-file %{dep:.ppcache/runtime_trace_on.ml}
+                    --cache-file %{dep:.ppcache/runtime_trace_on.mli}))
               runtime_trace_on)
     ((action (run ppxfindcache_elpi_trace_deriving_std %{input-file}
                     --ppx-opt --cookie
                     --ppx-opt "elpi_trace=\"false\""
-                    --cache-file %{dep:.ppcache/runtime_trace_off.ml}))
+                    --cache-file %{dep:.ppcache/runtime_trace_off.ml}
+                    --cache-file %{dep:.ppcache/runtime_trace_off.mli}))
               runtime_trace_off)
     ((action (run camlp5o -I . -I +camlp5 pa_extend.cmo pa_lexer.cmo %{input-file})) parser)
     ))
