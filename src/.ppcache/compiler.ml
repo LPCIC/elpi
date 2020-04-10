@@ -1,4 +1,4 @@
-(*51f94d069cf95f3d77b0b67b18eb2e0eb619dfea *src/compiler.ml *)
+(*2d1e91f72ff28de5f87971da214ef74780dddbf1 *src/compiler.ml *)
 #1 "src/compiler.ml"
 open Util
 module F = Ast.Func
@@ -2538,15 +2538,16 @@ module Spill :
               mkAppC c (on_last aux (x :: xs))
           | t -> mkApp t args in
         aux fcall in
+      let equal_term c = function | Const d -> c == d | _ -> false in
       let rec apply_to names variable =
         function
-        | Const f as x when List.exists (equal_term x) names ->
+        | Const f when List.exists (equal_term f) names ->
             mkAppC f [variable]
         | Const _|CData _|Nil|Discard as x -> x
         | Cons (hd, tl) ->
             Cons ((apply_to names variable hd), (apply_to names variable tl))
         | Lam t -> Lam (apply_to names variable t)
-        | App (f, x, xs) when List.exists (equal_term (Const f)) names ->
+        | App (f, x, xs) when List.exists (equal_term f) names ->
             mkAppC f
               ((List.map (apply_to names variable) (x :: xs)) @ [variable])
         | App (hd, x, xs) ->

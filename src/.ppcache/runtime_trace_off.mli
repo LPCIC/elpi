@@ -1,4 +1,4 @@
-(*e0914f3476d15e2ba79d82fa97efbbd05a6e4c75 *src/runtime_trace_off.mli --trace_ppx-off*)
+(*e0914f3476d15e2ba79d82fa97efbbd05a6e4c75 *src/runtime_trace_off.mli --cookie elpi_trace="false"*)
 #1 "src/runtime_trace_off.mli"
 open Util
 open Data

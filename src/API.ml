@@ -15,8 +15,8 @@ let set_runtime b =
   Util.set_spaghetti_printer Data.pp_const R.Pp.pp_constant
 
 let set_trace argv =
-  let args = Trace.Runtime.parse_argv argv in
-  set_runtime !Trace.Runtime.debug;
+  let args = Trace_ppx_runtime.Runtime.parse_argv argv in
+  set_runtime !Trace_ppx_runtime.Runtime.debug;
   args
 
 module Setup = struct
@@ -83,7 +83,7 @@ let trace args =
 let usage =
   "\nParsing options:\n" ^
   "\t-I PATH  search for accumulated files in PATH\n" ^
-  Trace.Runtime.usage
+  Trace_ppx_runtime.Runtime.usage
 
 let set_warn = Util.set_warn
 let set_error = Util.set_error
@@ -91,7 +91,7 @@ let set_anomaly = Util.set_anomaly
 let set_type_error = Util.set_type_error
 let set_std_formatter = Util.set_std_formatter
 let set_err_formatter fmt =
-  Util.set_err_formatter fmt; Trace.Runtime.(set_trace_output TTY fmt)
+  Util.set_err_formatter fmt; Trace_ppx_runtime.Runtime.(set_trace_output TTY fmt)
 
 end
 

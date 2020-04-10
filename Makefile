@@ -29,8 +29,7 @@ DUNE_OPTS=
 build:
 	dune build $(DUNE_OPTS) @all ; RC=$$?; \
 	( cp -r _build/default/src/.ppcache src/ 2>/dev/null || true ); \
-	( echo "FLG -ppx './merlinppx.exe --as-ppx'" >> trace/.merlin;\
-	  echo "FLG -ppx './merlinppx.exe --as-ppx --trace_ppx-on'" >> src/.merlin );\
+	( echo "FLG -ppx './merlinppx.exe --as-ppx --trace_ppx-on'" >> src/.merlin );\
 	exit $$RC
 
 install:

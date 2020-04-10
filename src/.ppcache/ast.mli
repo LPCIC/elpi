@@ -1,4 +1,4 @@
-(*0955ec849b56078e3758eb95f9bd37800d3dcecc *src/ast.mli *)
+(*d1e10e659d2784c096b79ed06927f74b2b885a06 *src/ast.mli *)
 #1 "src/ast.mli"
 open Util
 module Func :
@@ -47,7 +47,6 @@ sig
     Ppx_deriving_runtime_proxy.Format.formatter ->
       quote -> Ppx_deriving_runtime_proxy.unit
   val show_quote : quote -> Ppx_deriving_runtime_proxy.string
-  val equal : t -> t -> bool
   exception NotInProlog of Loc.t * string 
   val mkApp : Loc.t -> t list -> t
   val mkCon : string -> t

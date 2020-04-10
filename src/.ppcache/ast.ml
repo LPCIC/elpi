@@ -1,4 +1,4 @@
-(*22d2254f965bf867074da578c36ae5ac1513eed7 *src/ast.ml *)
+(*3dec149d2e83496835c79a07436ba29ede6e179f *src/ast.ml *)
 #1 "src/ast.ml"
 open Util
 module Func =
@@ -53,7 +53,7 @@ module Term =
     and quote = {
       data: string ;
       loc: Loc.t ;
-      kind: string option }[@@deriving (show, eq)]
+      kind: string option }[@@deriving show]
     let rec pp :
       Ppx_deriving_runtime_proxy.Format.formatter -> t -> Ppx_deriving_runtime_proxy.unit
       =
@@ -146,52 +146,6 @@ module Term =
     and show_quote : quote -> Ppx_deriving_runtime_proxy.string =
       fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_quote x[@@ocaml.warning
                                                                     "-32"]
-    let rec equal : t -> t -> Ppx_deriving_runtime_proxy.bool =
-      let __6 () = equal_quote
-      and __5 () = CData.equal
-      and __4 () = equal
-      and __3 () = Func.equal
-      and __2 () = equal
-      and __1 () = equal
-      and __0 () = Func.equal in
-      ((let open! Ppx_deriving_runtime_proxy in
-          fun lhs ->
-            fun rhs ->
-              match (lhs, rhs) with
-              | (Const lhs0, Const rhs0) -> ((fun x -> (__0 ()) x)) lhs0 rhs0
-              | (App (lhs0, lhs1), App (rhs0, rhs1)) ->
-                  ((fun x -> (__1 ()) x) lhs0 rhs0) &&
-                    ((let rec loop x y =
-                        match (x, y) with
-                        | ([], []) -> true
-                        | (a::x, b::y) ->
-                            ((fun x -> (__2 ()) x) a b) && (loop x y)
-                        | _ -> false in
-                      (fun x -> fun y -> loop x y)) lhs1 rhs1)
-              | (Lam (lhs0, lhs1), Lam (rhs0, rhs1)) ->
-                  ((fun x -> (__3 ()) x) lhs0 rhs0) &&
-                    (((fun x -> (__4 ()) x)) lhs1 rhs1)
-              | (CData lhs0, CData rhs0) -> ((fun x -> (__5 ()) x)) lhs0 rhs0
-              | (Quoted lhs0, Quoted rhs0) ->
-                  ((fun x -> (__6 ()) x)) lhs0 rhs0
-              | _ -> false)
-        [@ocaml.warning "-A"])[@@ocaml.warning "-39"]
-    and equal_quote : quote -> quote -> Ppx_deriving_runtime_proxy.bool =
-      let __0 () = Loc.equal in
-      ((let open! Ppx_deriving_runtime_proxy in
-          fun lhs ->
-            fun rhs ->
-              (((fun (a : string) -> fun b -> a = b) lhs.data rhs.data) &&
-                 ((fun x -> (__0 ()) x) lhs.loc rhs.loc))
-                &&
-                ((fun x ->
-                    fun y ->
-                      match (x, y) with
-                      | (None, None) -> true
-                      | (Some a, Some b) ->
-                          ((fun (a : string) -> fun b -> a = b)) a b
-                      | _ -> false) lhs.kind rhs.kind))
-        [@ocaml.warning "-A"])[@@ocaml.warning "-39"]
     let mkC x = CData x
     let mkLam x t = Lam ((Func.from_string x), t)
     let mkNil = Const Func.nilf

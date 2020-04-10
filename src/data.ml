@@ -145,7 +145,7 @@ and clause = {
     loc : Loc.t option; (* debug *)
 }
 and mode = bool list (* true=input, false=output *)
-[@@deriving show, eq]
+[@@deriving show]
 
 type constraints = stuck_goal list
 type hyps = clause_src list

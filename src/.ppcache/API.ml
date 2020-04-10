@@ -1,4 +1,4 @@
-(*073bfa7dae72950bba2f8af31ee08bfe6c7ab205 *src/API.ml *)
+(*2186ca58e78b30b2616c65e76db3513ad756c89d *src/API.ml *)
 #1 "src/API.ml"
 module type Runtime  = module type of Runtime_trace_off
 let r = ref ((module Runtime_trace_off) : (module Runtime))
@@ -9,8 +9,8 @@ let set_runtime b =
   (let module R = (val !r) in
      Util.set_spaghetti_printer Data.pp_const R.Pp.pp_constant)
 let set_trace argv =
-  let args = Trace.Runtime.parse_argv argv in
-  set_runtime (!Trace.Runtime.debug); args
+  let args = Trace_ppx_runtime.Runtime.parse_argv argv in
+  set_runtime (!Trace_ppx_runtime.Runtime.debug); args
 module Setup =
   struct
     type builtins = (string * Data.BuiltInPredicate.declaration list)
@@ -80,7 +80,7 @@ module Setup =
     let usage =
       "\nParsing options:\n" ^
         ("\t-I PATH  search for accumulated files in PATH\n" ^
-           Trace.Runtime.usage)
+           Trace_ppx_runtime.Runtime.usage)
     let set_warn = Util.set_warn
     let set_error = Util.set_error
     let set_anomaly = Util.set_anomaly
@@ -88,7 +88,7 @@ module Setup =
     let set_std_formatter = Util.set_std_formatter
     let set_err_formatter fmt =
       Util.set_err_formatter fmt;
-      (let open Trace.Runtime in set_trace_output TTY fmt)
+      (let open Trace_ppx_runtime.Runtime in set_trace_output TTY fmt)
   end
 module EA = Ast
 module Ast =

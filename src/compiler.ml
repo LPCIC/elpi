@@ -1594,14 +1594,18 @@ end = struct (* {{{ *)
       in
         aux fcall in
 
+    let equal_term c = function
+      | Const d -> c == d
+      | _ -> false in
+
     let rec apply_to names variable = function
-      | Const f as x when List.exists (equal_term x) names ->
+      | Const f when List.exists (equal_term f) names ->
           mkAppC f [variable]
       | (Const _ | CData _ | Nil | Discard) as x -> x
       | Cons(hd,tl) ->
           Cons(apply_to names variable hd,apply_to names variable tl)
       | Lam t -> Lam (apply_to names variable t)
-      | App(f,x,xs) when List.exists (equal_term (Const f)) names ->
+      | App(f,x,xs) when List.exists (equal_term f) names ->
           mkAppC f (List.map (apply_to names variable) (x::xs) @ [variable])
       | App(hd,x,xs) -> mkAppC hd (List.map (apply_to names variable) (x::xs))
       | Builtin(hd,xs) -> Builtin(hd, List.map (apply_to names variable) xs)

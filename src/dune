@@ -12,18 +12,22 @@
                     --cache-file %{dep:.ppcache/data.ml}
                     --cache-file %{dep:.ppcache/compiler.ml}
                     --cache-file %{dep:.ppcache/compiler.mli}))
-              util API ast data compiler)
-    ((action (run ppxfindcache_elpi_trace_deriving_std %{input-file} --ppx-opt --trace_ppx-on
+              API ast data compiler)
+    ((action (run ppxfindcache_elpi_trace_deriving_std %{input-file}
+                    --ppx-opt --cookie
+                    --ppx-opt "elpi_trace=\"true\""
                     --cache-file %{dep:.ppcache/runtime_trace_on.ml}
                     --cache-file %{dep:.ppcache/runtime_trace_on.mli}))
               runtime_trace_on)
-    ((action (run ppxfindcache_elpi_trace_deriving_std %{input-file} --ppx-opt --trace_ppx-off
+    ((action (run ppxfindcache_elpi_trace_deriving_std %{input-file}
+                    --ppx-opt --cookie
+                    --ppx-opt "elpi_trace=\"false\""
                     --cache-file %{dep:.ppcache/runtime_trace_off.ml}
                     --cache-file %{dep:.ppcache/runtime_trace_off.mli}))
               runtime_trace_off)
     ((action (run camlp5o -I . -I +camlp5 pa_extend.cmo pa_lexer.cmo %{input-file})) parser)
     ))
-  (libraries re.str camlp5.gramlib unix elpi.trace
+  (libraries re.str camlp5.gramlib unix elpi.trace.runtime
      (select ppx_deriving_runtime_proxy.ml from
        (ppx_deriving.runtime -> ppx_deriving_runtime_proxy.ppx.ml)
        (-> ppx_deriving_runtime_proxy.embed.ml)

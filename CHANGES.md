@@ -2,8 +2,9 @@
 
 - Trace:
   - json output, with messages representing the tree structure of the proof
-  - categorize spy points into user and dev
+  - categorize spy points into `user` and `dev`
   - improve trace_ppx, revise all trace points
+  - port to ppxlib
 
 - Build system:
   - cache ppx output so that it builds without ppx_deriving and trace_ppx

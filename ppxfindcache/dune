@@ -8,7 +8,7 @@
   (modules ppxfindcache)
   (libraries unix re ppxfindcache_aux
     (select ppxfindcache.ml from
-      (elpi.trace_ppx ppx_deriving.std -> ppxfindcache.useppx.ml)
+      (elpi.trace.ppx ppx_deriving.std -> ppxfindcache.useppx.ml)
       (-> ppxfindcache.cacheonly.ml)))
   (flags -linkall)
 )
