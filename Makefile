@@ -46,6 +46,7 @@ cleancache:
 
 tests:
 	$(MAKE) build
+	dune runtest
 	ulimit -s $(STACK); \
 		tests/test.exe \
 		--seed $$RANDOM \

@@ -5,6 +5,10 @@ let builtin = let open BuiltIn in
   declare ~file_name:(Sys.argv.(1)) 
     (parsetree_declaration @ Elpi.Builtin.PPX.declarations)
 
+TODO: separate declarations (in elpi.ppx) so that we can assemble the
+program differently (put before the source of the rewriter, than the
+identity mapping provided by the ppx)
+
 let program_src = ref ""
 let typecheck = ref false
 
