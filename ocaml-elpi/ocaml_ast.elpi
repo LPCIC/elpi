@@ -602,31 +602,6 @@ type pdir-int string -> option char -> directive-argument-desc. % Pdir_int
 type pdir-ident longident -> directive-argument-desc. % Pdir_ident
 type pdir-bool bool -> directive-argument-desc. % Pdir_bool
 
-#line 0 "builtin_ppx.elpi"
-namespace ppx {
-
-pred map.list i:(A -> B -> prop), i:list A, o:list B.
-map.list _ [] [].
-map.list F [X|XS] [Y|YS] :- F X Y, map.list F XS YS.
-
-pred map.option i:(A -> B -> prop), i:option A, o:option B.
-map.option _ none none.
-map.option F (some X) (some Y) :- F X Y.
-
-pred map.pair i:(A1 -> B1 -> prop), i:(A2 -> B2 -> prop), i:pair A1 A2, o:pair B1 B2.
-map.pair F1 F2 (pr X1 X2) (pr Y1 Y2) :- F1 X1 Y1, F2 X2 Y2.
-
-pred map.triple i:(A1 -> B1 -> prop), i:(A2 -> B2 -> prop), i:(A3 -> B3 -> prop), i:triple A1 A2 A3, o:triple B1 B2 B3.
-map.triple F1 F2 F3 (triple X1 X2 X3) (triple Y1 Y2 Y3) :- F1 X1 Y1, F2 X2 Y2, F3 X3 Y3.
-
-pred map.quadruple i:(A1 -> B1 -> prop), i:(A2 -> B2 -> prop), i:(A3 -> B3 -> prop), i:(A4 -> B4 -> prop), i:quadruple A1 A2 A3 A4, o:quadruple B1 B2 B3 B4.
-map.quadruple F1 F2 F3 F4 (quadruple X1 X2 X3 X4) (quadruple Y1 Y2 Y3 Y4) :- F1 X1 Y1, F2 X2 Y2, F3 X3 Y3, F4 X4 Y4.
-
-pred map.quintuple i:(A1 -> B1 -> prop), i:(A2 -> B2 -> prop), i:(A3 -> B3 -> prop), i:(A4 -> B4 -> prop), i:(A5 -> B5 -> prop), i:quintuple A1 A2 A3 A4 A5, o:quintuple B1 B2 B3 B4 B5.
-map.quintuple F1 F2 F3 F4 F5 (quintuple X1 X2 X3 X4 X5) (quintuple Y1 Y2 Y3 Y4 Y5) :- F1 X1 Y1, F2 X2 Y2, F3 X3 Y3, F4 X4 Y4, F5 X5 Y5.
-
-}
-
 
 
 

@@ -4,8 +4,7 @@ open Elpi.API
 
 let builtin = let open BuiltIn in
   declare ~file_name:(Sys.argv.(1))
-    (Ocaml_elpi_ppx.Ocaml_ast_for_elpi.parsetree_declaration @
-     [BuiltIn.LPCode Elpi.Builtin.PPX.mapper_src])
+    (Ocaml_elpi_ppx.Ocaml_ast_for_elpi.parsetree_declaration)
 
 let main () =
   let elpi, _ = Setup.init ~builtins:[builtin ; Elpi.Builtin.std_builtins] ~basedir:"." [] in
