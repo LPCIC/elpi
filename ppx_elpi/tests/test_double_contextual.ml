@@ -8,26 +8,26 @@ end
 
 let pp_tctx _ _ = ()
 type tctx = TEntry of (string[@elpi.key]) * bool
-[@@deriving elpi { append = elpi_stuff; index = (module String) }]
+[@@deriving elpi { declaration = elpi_stuff; index = (module String) }]
 
 let pp_ty _ _ = ()
 type ty =
   | TVar of string [@elpi.var]
   | TApp of string * ty
   | TAll of bool * string * (ty[@elpi.binder (fun b s -> TEntry(s,b))])
-[@@deriving elpi { append = elpi_stuff; context = (() : ty -> tctx) }]
+[@@deriving elpi { declaration = elpi_stuff; context = (() : ty -> tctx) }]
 
 
 let pp_ctx _ _ = ()
 type ctx = Entry of (string[@elpi.key]) * ty
-[@@deriving elpi { append = elpi_stuff; index = (module String); context = (() : tctx) } ]
+[@@deriving elpi { declaration = elpi_stuff; index = (module String); context = (() : tctx) } ]
 
 let pp_term _ _ = ()
 type term =
   | Var of string [@elpi.var]
   | App of term * term
   | Lam of ty * string * (term[@elpi.binder (fun b s -> Entry(s,b))])
-[@@deriving elpi { append = elpi_stuff; context = (() : (ty -> tctx) * (term -> ctx)) }]
+[@@deriving elpi { declaration = elpi_stuff; context = (() : (ty -> tctx) * (term -> ctx)) }]
 
 open Elpi.API
 

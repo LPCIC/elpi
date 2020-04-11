@@ -11,5 +11,5 @@
 (executable
   (name test_swap)
   (modules test_swap)
-  (preprocess (pps ocaml-elpi.ppx -- --cookie "program=\"ocaml_elpi/tests/test_swap.elpi\"")))
+  (preprocess (pps ocaml-elpi.ppx -- --cookie "program=\"ocaml-elpi/tests/test_swap.elpi\"")))
 

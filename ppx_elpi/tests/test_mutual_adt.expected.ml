@@ -6,7 +6,7 @@ type simple =
   | B of int * mut 
 and mut =
   | C 
-  | D of simple [@@deriving elpi { append = elpi_stuff }]
+  | D of simple [@@deriving elpi { declaration = elpi_stuff }]
 include
   struct
     [@@@warning "-26-27-32-39-60"]
@@ -194,34 +194,7 @@ include
       }
     let elpi_simple = Elpi.API.BuiltIn.MLDataC simple
     let elpi_mut = Elpi.API.BuiltIn.MLDataC mut
-    let () =
-      elpi_stuff :=
-        ((!elpi_stuff) @
-           ([elpi_simple; elpi_mut] @
-              [Elpi.API.BuiltIn.LPCode
-                 (String.concat "\n"
-                    ["pred map.simple  i:simple, o:simple.";
-                    "map.simple a a.";
-                    Printf.sprintf "map.%s %s(%s %s) (%s %s) :- %s." "simple"
-                      "" "b" "A0 A1" "b" "B0 B1"
-                      (String.concat ", "
-                         ["(" ^
-                            ("(=)" ^ (" " ^ ("A0" ^ (" " ^ ("B0" ^ ")")))));
-                         "(" ^
-                           (("map." ^ elpi_constant_type_mut) ^
-                              (" " ^ ("A1" ^ (" " ^ ("B1" ^ ")")))))]);
-                    "\n"]);
-              Elpi.API.BuiltIn.LPCode
-                (String.concat "\n"
-                   ["pred map.mut  i:mut, o:mut.";
-                   "map.mut c c.";
-                   Printf.sprintf "map.%s %s(%s %s) (%s %s) :- %s." "mut" ""
-                     "d" "A0" "d" "B0"
-                     (String.concat ", "
-                        ["(" ^
-                           (("map." ^ elpi_constant_type_simple) ^
-                              (" " ^ ("A0" ^ (" " ^ ("B0" ^ ")")))))]);
-                   "\n"])]))
+    let () = elpi_stuff := ((!elpi_stuff) @ [elpi_simple; elpi_mut])
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
 open Elpi.API
 let builtin =

@@ -2,7 +2,7 @@ let elpi_stuff = ref []
 let pp_simple _ _ = ()
 type simple =
   | A 
-  | B of int [@@deriving elpi { append = elpi_stuff }]
+  | B of int [@@deriving elpi { declaration = elpi_stuff }]
 include
   struct
     [@@@warning "-26-27-32-39-60"]
@@ -94,20 +94,7 @@ include
         readback = elpi_readback_simple
       }
     let elpi_simple = Elpi.API.BuiltIn.MLDataC simple
-    let () =
-      elpi_stuff :=
-        ((!elpi_stuff) @
-           ([elpi_simple] @
-              [Elpi.API.BuiltIn.LPCode
-                 (String.concat "\n"
-                    ["pred map.simple  i:simple, o:simple.";
-                    "map.simple a a.";
-                    Printf.sprintf "map.%s %s(%s %s) (%s %s) :- %s." "simple"
-                      "" "b" "A0" "b" "B0"
-                      (String.concat ", "
-                         ["(" ^
-                            ("(=)" ^ (" " ^ ("A0" ^ (" " ^ ("B0" ^ ")")))))]);
-                    "\n"])]))
+    let () = elpi_stuff := ((!elpi_stuff) @ [elpi_simple])
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
 open Elpi.API
 let builtin =

@@ -3,7 +3,7 @@ let pp_simple _ _ _ = ()
 type 'a simple =
   | A 
   | B of int 
-  | C of 'a * int [@@deriving elpi { append = elpi_stuff }]
+  | C of 'a * int [@@deriving elpi { declaration = elpi_stuff }]
 include
   struct
     [@@@warning "-26-27-32-39-60"]
@@ -154,27 +154,7 @@ include
         (simple
            (Elpi.API.ContextualConversion.(!>) @@
               (Elpi.API.BuiltInData.poly "A0")))
-    let () =
-      elpi_stuff :=
-        ((!elpi_stuff) @
-           ([elpi_simple] @
-              [Elpi.API.BuiltIn.LPCode
-                 (String.concat "\n"
-                    ["pred map.simple i:(X0 -> Y0 -> prop),  i:simple X0, o:simple Y0.";
-                    "map.simple F0 a a.";
-                    Printf.sprintf "map.%s %s(%s %s) (%s %s) :- %s." "simple"
-                      "F0 " "b" "A0" "b" "B0"
-                      (String.concat ", "
-                         ["(" ^
-                            ("(=)" ^ (" " ^ ("A0" ^ (" " ^ ("B0" ^ ")")))))]);
-                    Printf.sprintf "map.%s %s(%s %s) (%s %s) :- %s." "simple"
-                      "F0 " "c" "A0 A1" "c" "B0 B1"
-                      (String.concat ", "
-                         ["(" ^
-                            ("F0" ^ (" " ^ ("A0" ^ (" " ^ ("B0" ^ ")")))));
-                         "(" ^
-                           ("(=)" ^ (" " ^ ("A1" ^ (" " ^ ("B1" ^ ")")))))]);
-                    "\n"])]))
+    let () = elpi_stuff := ((!elpi_stuff) @ [elpi_simple])
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
 let _ =
   simple @@ (Elpi.API.ContextualConversion.(!>) Elpi.API.BuiltInData.int)

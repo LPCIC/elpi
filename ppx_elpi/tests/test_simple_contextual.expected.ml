@@ -10,7 +10,7 @@ type ctx =
   | Entry of ((string)[@elpi.key ]) * bool [@@deriving
                                              elpi
                                                {
-                                                 append = elpi_stuff;
+                                                 declaration = elpi_stuff;
                                                  index = (module String)
                                                }]
 include
@@ -205,7 +205,7 @@ include
         (elpi__state, elpi__dbl2ctx, elpi__constraints, elpi__gls)
     let in_ctx = in_ctx_alone
     let elpi_ctx = Elpi.API.BuiltIn.MLDataC ctx
-    let () = elpi_stuff := ((!elpi_stuff) @ ([elpi_ctx] @ []))
+    let () = elpi_stuff := ((!elpi_stuff) @ [elpi_ctx])
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
 let pp_term _ _ = ()
 type term =
@@ -215,7 +215,7 @@ type term =
   ((term)[@elpi.binder fun b -> fun s -> Entry (s, b)]) [@@deriving
                                                           elpi
                                                             {
-                                                              append =
+                                                              declaration =
                                                                 elpi_stuff;
                                                               context =
                                                                 (() : 
@@ -434,37 +434,7 @@ include
         readback = elpi_readback_term
       }
     let elpi_term = Elpi.API.BuiltIn.MLDataC term
-    let () =
-      elpi_stuff :=
-        ((!elpi_stuff) @
-           ([elpi_term] @
-              [Elpi.API.BuiltIn.LPCode
-                 (String.concat "\n"
-                    ["pred map.term  i:term, o:term.";
-                    Printf.sprintf "map.%s %s(%s %s) (%s %s) :- %s." "term"
-                      "" "var" "A0" "var" "B0"
-                      (String.concat ", "
-                         ["(" ^
-                            ("(=)" ^ (" " ^ ("A0" ^ (" " ^ ("B0" ^ ")")))))]);
-                    Printf.sprintf "map.%s %s(%s %s) (%s %s) :- %s." "term"
-                      "" "app" "A0 A1" "app" "B0 B1"
-                      (String.concat ", "
-                         ["(" ^
-                            (("map." ^ elpi_constant_type_term) ^
-                               (" " ^ ("A0" ^ (" " ^ ("B0" ^ ")")))));
-                         "(" ^
-                           (("map." ^ elpi_constant_type_term) ^
-                              (" " ^ ("A1" ^ (" " ^ ("B1" ^ ")")))))]);
-                    Printf.sprintf "map.%s %s(%s %s) (%s %s) :- %s." "term"
-                      "" "lam" "A0 A1 A2" "lam" "B0 B1 B2"
-                      (String.concat ", "
-                         ["(" ^
-                            ("(=)" ^ (" " ^ ("A0" ^ (" " ^ ("B0" ^ ")")))));
-                         "(" ^
-                           ("(=)" ^ (" " ^ ("A1" ^ (" " ^ ("B1" ^ ")")))));
-                         Printf.sprintf "(pi x fixme x => (=) %s %s)" "A2"
-                           "B2"]);
-                    "\n"])]))
+    let () = elpi_stuff := ((!elpi_stuff) @ [elpi_term])
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
 open Elpi.API
 let builtin =

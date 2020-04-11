@@ -87,6 +87,6 @@ module PPX : sig
   val embed_quadruple : ('a, 'h, 'cs) API.ContextualConversion.embedding -> ('b, 'h, 'cs) API.ContextualConversion.embedding -> ('c, 'h, 'cs) API.ContextualConversion.embedding -> ('d, 'h, 'cs) API.ContextualConversion.embedding -> ('a * 'b * 'c * 'd, 'h, 'cs) API.ContextualConversion.embedding
   val embed_quintuple : ('a, 'h, 'cs) API.ContextualConversion.embedding -> ('b, 'h, 'cs) API.ContextualConversion.embedding -> ('c, 'h, 'cs) API.ContextualConversion.embedding -> ('d, 'h, 'cs) API.ContextualConversion.embedding -> ('e, 'h, 'cs) API.ContextualConversion.embedding -> ('a * 'b * 'c * 'd * 'e, 'h, 'cs) API.ContextualConversion.embedding
 
-  val declarations : declaration list
+  val mapper_src : string
 
 end

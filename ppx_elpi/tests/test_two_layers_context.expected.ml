@@ -11,7 +11,7 @@ type tctx =
                                              elpi
                                                {
                                                  index = (module String);
-                                                 append = elpi_stuff
+                                                 declaration = elpi_stuff
                                                }]
 include
   struct
@@ -206,7 +206,7 @@ include
         (elpi__state, elpi__dbl2ctx, elpi__constraints, elpi__gls)
     let in_tctx = in_tctx_alone
     let elpi_tctx = Elpi.API.BuiltIn.MLDataC tctx
-    let () = elpi_stuff := ((!elpi_stuff) @ ([elpi_tctx] @ []))
+    let () = elpi_stuff := ((!elpi_stuff) @ [elpi_tctx])
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
 let pp_tye _ _ = ()
 type tye =
@@ -216,7 +216,7 @@ type tye =
                           elpi
                             {
                               context = (x : tye -> tctx);
-                              append = elpi_stuff
+                              declaration = elpi_stuff
                             }]
 include
   struct
@@ -372,33 +372,7 @@ include
         readback = elpi_readback_tye
       }
     let elpi_tye = Elpi.API.BuiltIn.MLDataC tye
-    let () =
-      elpi_stuff :=
-        ((!elpi_stuff) @
-           ([elpi_tye] @
-              [Elpi.API.BuiltIn.LPCode
-                 (String.concat "\n"
-                    ["pred map.tye  i:tye, o:tye.";
-                    Printf.sprintf "map.%s %s(%s %s) (%s %s) :- %s." "tye" ""
-                      "tvar" "A0" "tvar" "B0"
-                      (String.concat ", "
-                         ["(" ^
-                            ("(=)" ^ (" " ^ ("A0" ^ (" " ^ ("B0" ^ ")")))))]);
-                    Printf.sprintf "map.%s %s(%s %s) (%s %s) :- %s." "tye" ""
-                      "tconst" "A0" "tconst" "B0"
-                      (String.concat ", "
-                         ["(" ^
-                            ("(=)" ^ (" " ^ ("A0" ^ (" " ^ ("B0" ^ ")")))))]);
-                    Printf.sprintf "map.%s %s(%s %s) (%s %s) :- %s." "tye" ""
-                      "tarrow" "A0 A1" "tarrow" "B0 B1"
-                      (String.concat ", "
-                         ["(" ^
-                            (("map." ^ elpi_constant_type_tye) ^
-                               (" " ^ ("A0" ^ (" " ^ ("B0" ^ ")")))));
-                         "(" ^
-                           (("map." ^ elpi_constant_type_tye) ^
-                              (" " ^ ("A1" ^ (" " ^ ("B1" ^ ")")))))]);
-                    "\n"])]))
+    let () = elpi_stuff := ((!elpi_stuff) @ [elpi_tye])
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
 let pp_ty _ _ = ()
 type ty =
@@ -589,7 +563,7 @@ type ctx =
                                             {
                                               index = (module String);
                                               context = (x : tctx);
-                                              append = elpi_stuff
+                                              declaration = elpi_stuff
                                             }]
 include
   struct
@@ -787,7 +761,7 @@ include
     let in_ctx =
       Elpi.API.ContextualConversion.(|+|) in_tctx_alone in_ctx_alone
     let elpi_ctx = Elpi.API.BuiltIn.MLDataC ctx
-    let () = elpi_stuff := ((!elpi_stuff) @ ([elpi_ctx] @ []))
+    let () = elpi_stuff := ((!elpi_stuff) @ [elpi_ctx])
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
 type term =
   | Var of string [@elpi.var ]
@@ -1086,10 +1060,10 @@ include
                                      ~loc:{
                                             Elpi.API.Ast.Loc.source_name =
                                               "test_two_layers_context.ml";
-                                            source_start = 1777;
-                                            source_stop = 1777;
+                                            source_start = 1792;
+                                            source_stop = 1792;
                                             line = 49;
-                                            line_starts_at = 1766
+                                            line_starts_at = 1781
                                           }
                                      "standard branch readback takes 1 argument or more")
                       ~depth:elpi__depth elpi__hyps elpi__constraints

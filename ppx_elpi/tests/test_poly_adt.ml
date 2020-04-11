@@ -2,7 +2,7 @@ let elpi_stuff = ref []
 
 let pp_simple _ _ _ = ()
 type 'a simple = A | B of int | C of 'a * int
-[@@deriving elpi { append = elpi_stuff } ]
+[@@deriving elpi { declaration = elpi_stuff } ]
 
 let _ = simple @@ Elpi.API.ContextualConversion.(!>) Elpi.API.BuiltInData.int
 let _ = simple @@ Elpi.API.ContextualConversion.(!>) Elpi.API.BuiltInData.float

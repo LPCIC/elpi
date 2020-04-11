@@ -1470,8 +1470,6 @@ module PPX = struct
   let embed_quadruple = embed_quadruple
   let embed_quintuple = embed_quintuple
 
-  let declarations =  let open BuiltIn in let open BuiltInData in [
-    LPCode Builtin_ppx.code
-  ]
+  let mapper_src = Builtin_ppx.code
 
 end

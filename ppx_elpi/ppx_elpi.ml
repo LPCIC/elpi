@@ -19,9 +19,14 @@ open Ppxlib.Ast_pattern
        ctx1 ... ctxn. ": ty" stands for ": (current_type -> ty)".
        Constructors can have the [@elpi.var] attribute and
        constructor arguments can have the [@elpi.binder] attribute
-    [@@deriving elpi { append = l }]
+    [@@deriving elpi { declaration = l }]
        appends to list (l : Elpi.API.BuiltIn.declaration list ref)
        all data types that were derived
+    [@@deriving elpi { mapper = l }]
+       appends to list (l : Elpi.API.BuiltIn.declaration list ref)
+       a LPCode declaration of a mapper for the data type, eg a
+       pre map.typename i:typename, o:typename (with parameters if
+       it is a container).
 
     In all cases the type must come with a pretty printer named following the
     ppx_deriving.show convention (named pp if the type is named t, pp_ty
@@ -34,7 +39,8 @@ let pexp_ignore = Deriving.Args.of_func (fun _ _ (_e : expression) b -> b)
 let arguments = Deriving.Args.(empty
   +> arg "index" (pexp_pack __)
   +> arg "context" (pexp_constraint pexp_ignore __)
-  +> arg "append" __
+  +> arg "declaration" __
+  +> arg "mapper" __
 )
 (**
   Type attributes:
@@ -1264,7 +1270,7 @@ let typedecl_extras index context (module B : Ast_builder.S) tyd_names tyd =
   extras_of_task (module B) task tyd_names
 ;;
 
-let tydecls ~loc index context append _r tdls =
+let tydecls ~loc index context append_decl append_mapper _r tdls =
   let module B = Ast_builder.Make(struct  let loc = loc end) in
   let open B in
   let extra = List.map (typedecl_extras index context (module B) (List.map (fun x -> x.ptype_name.txt) tdls)) tdls in
@@ -1289,17 +1295,24 @@ let tydecls ~loc index context append _r tdls =
 
   List.(concat (map (fun x -> x.ty_context_readback) extra)) @
   List.(map (fun x -> x.ty_elpi_declaration.decl) extra) @
-  match append with
+
+  begin match append_decl with
   | None -> []
   | Some l -> [pstr_value Nonrecursive [value_binding ~pat:(punit)
       ~expr:[%expr [%e l] := ![%e l] @
-               [%e elist @@ List.(map (fun x -> x.ty_elpi_declaration.decl_name) extra) ]
-               @
-               [%e elist @@ List.concat (List.map (fun x ->
+               [%e elist @@ List.(map (fun x -> x.ty_elpi_declaration.decl_name) extra) ]]]]
+  end @
+
+  begin match append_mapper with
+  | None -> []
+  | Some l -> [pstr_value Nonrecursive [value_binding ~pat:(punit)
+      ~expr:[%expr [%e l] := ![%e l] @ [String.concat "\n"
+               [%e elist @@ List.map (fun x ->
                       match x.ty_library with
-                      | None -> []
-                      | Some e -> [[%expr Elpi.API.BuiltIn.LPCode [%e e]]]) extra)]
-              ]]]
+                      | None -> [%expr ""]
+                      | Some e -> e) extra]
+              ]]]]
+  end
 ;;
 
 let conversion_of_expansion ~loc ~path:_ ty =
@@ -1312,7 +1325,7 @@ let conversion_extension =
     Ast_pattern.(ptyp __)
     conversion_of_expansion
 
-let expand_str ~loc ~path:_ (r,tydecl) (index : module_expr option) (context : core_type option) (append : expression option) = tydecls ~loc index context append r tydecl
+let expand_str ~loc ~path:_ (r,tydecl) (index : module_expr option) (context : core_type option) (declaration : expression option) (mapper : expression option) = tydecls ~loc index context declaration mapper r tydecl
 let expand_sig ~loc ~path:_ (_r,_tydecl) (_index : module_expr option) (_context : core_type option) = nYI ~loc ~__LOC__ ()
 
 let attributes = Attribute.([

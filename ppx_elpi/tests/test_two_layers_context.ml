@@ -8,14 +8,14 @@ end
 
 let pp_tctx _ _ = ()
 type tctx = TDecl of (string[@elpi.key]) * bool
-[@@deriving elpi { index = (module String) ; append = elpi_stuff } ]
+[@@deriving elpi { index = (module String) ; declaration = elpi_stuff } ]
 
 let pp_tye _ _ = ()
 type tye =
   | TVar of string [@elpi.var]
   | TConst of string
   | TArrow of tye * tye
-[@@deriving elpi { context = (x : (tye -> tctx) ) ; append = elpi_stuff  } ]
+[@@deriving elpi { context = (x : (tye -> tctx) ) ; declaration = elpi_stuff  } ]
 
 let pp_ty _ _ = ()
 type ty =
@@ -25,7 +25,7 @@ type ty =
 
 let pp_ctx _ _ = ()
 type ctx = Decl of (string[@elpi.key]) * ty
-[@@deriving elpi { index = (module String); context = (x : tctx) ; append = elpi_stuff  } ]
+[@@deriving elpi { index = (module String); context = (x : tctx) ; declaration = elpi_stuff  } ]
 
 type term =
   | Var of string [@elpi.var]

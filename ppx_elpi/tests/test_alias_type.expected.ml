@@ -1,6 +1,6 @@
 let elpi_stuff = ref []
 let pp_simple _ _ = ()
-type simple = int[@@deriving elpi { append = elpi_stuff }]
+type simple = int[@@deriving elpi { declaration = elpi_stuff }]
 include
   struct
     [@@@warning "-26-27-32-39-60"]
@@ -48,15 +48,7 @@ include
                      (Elpi.API.ContextualConversion.(!>)
                         Elpi.API.BuiltInData.int).Elpi.API.ContextualConversion.ty)
                     ^ (". % " ^ "simple")))))
-    let () =
-      elpi_stuff :=
-        ((!elpi_stuff) @
-           ([elpi_simple] @
-              [Elpi.API.BuiltIn.LPCode
-                 (String.concat "\n"
-                    ["pred map.simple  i:simple, o:simple.";
-                    Printf.sprintf "map.%s %sA B :- %s." "simple" ""
-                      ("(" ^ ("(=)" ^ (" " ^ ("A" ^ (" " ^ ("B" ^ ")"))))))])]))
+    let () = elpi_stuff := ((!elpi_stuff) @ [elpi_simple])
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
 open Elpi.API
 let builtin =

@@ -2,7 +2,7 @@ let elpi_stuff = ref []
 
 let pp_simple _ _ _ = ()
 type 'a simple = 'a * int
-[@@deriving elpi { append = elpi_stuff }]
+[@@deriving elpi { declaration = elpi_stuff }]
 
 open Elpi.API
 

@@ -1,4 +1,5 @@
 let parsetree_declaration = ref []
+let parsetree_mapper = ref []
 open Ppxlib_ast.Import_for_core
 
 let elpi_loc_of_location loc =
@@ -32,7 +33,7 @@ let dummy_location =
 let maybe_override_embed default = fun ~depth h c st e ->
   let open Parsetree in
   match e with
-  | ({ Location.txt = "e"; _ }, PStr [{ pstr_desc = Pstr_eval ({ pexp_desc = Parsetree.Pexp_constant (Pconst_string(s,_)); pexp_loc = loc; _ },[]) ; _}]) ->
+  | ({ Location.txt = ("e"|"p"|"t"|"m"|"i"); _ }, PStr [{ pstr_desc = Pstr_eval ({ pexp_desc = Parsetree.Pexp_constant (Pconst_string(s,_)); pexp_loc = loc; _ },[]) ; _}]) ->
       let loc = elpi_loc_of_location loc in
       let st, x = Elpi.API.Quotation.lp ~depth st loc s in
       st, x, []
@@ -41,7 +42,7 @@ let maybe_override_embed default = fun ~depth h c st e ->
 let maybe_override_embed2 default = fun ~depth h c st e a ->
   let open Parsetree in
   match e with
-  | ({ Location.txt = "e"; _ }, PStr [{ pstr_desc = Pstr_eval ({ pexp_desc = Parsetree.Pexp_constant (Pconst_string(s,_)); pexp_loc = loc; _ },[]) ; _}]) ->
+  | ({ Location.txt = ("e"|"p"|"t"|"m"|"i"); _ }, PStr [{ pstr_desc = Pstr_eval ({ pexp_desc = Parsetree.Pexp_constant (Pconst_string(s,_)); pexp_loc = loc; _ },[]) ; _}]) ->
       let loc = elpi_loc_of_location loc in
       let st, x = Elpi.API.Quotation.lp ~depth st loc s in
       st, x, []
@@ -1083,6 +1084,7 @@ and directive_argument_desc = Parsetree.directive_argument_desc =
   | Pdir_int of string * char option
   | Pdir_ident of longident
   | Pdir_bool of bool
-[@@deriving show, elpi { append = parsetree_declaration }]
+[@@deriving show, elpi { declaration = parsetree_declaration; mapper = parsetree_mapper }]
 
 let parsetree_declaration = !parsetree_declaration
+let parsetree_mapper = !parsetree_mapper

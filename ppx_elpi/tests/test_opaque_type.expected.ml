@@ -1,6 +1,6 @@
 let elpi_stuff = ref []
 let pp_simple _ _ = ()
-type simple[@@deriving elpi { append = elpi_stuff }]
+type simple[@@deriving elpi { declaration = elpi_stuff }]
 include
   struct
     [@@@warning "-26-27-32-39-60"]
@@ -24,7 +24,7 @@ include
     let elpi_readback_simple ~depth  _ _ s t =
       simple.Elpi.API.Conversion.readback ~depth s t
     let elpi_simple = Elpi.API.BuiltIn.MLData simple
-    let () = elpi_stuff := ((!elpi_stuff) @ ([elpi_simple] @ []))
+    let () = elpi_stuff := ((!elpi_stuff) @ [elpi_simple])
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
 open Elpi.API
 [@@@warning "-26-27-32-39-60"]

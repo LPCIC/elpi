@@ -15,7 +15,7 @@ let output_stanzas filename =
 (executable
   (name %s)
   (modules %s)
-  (preprocess (pps ocaml-elpi.ppx -- --cookie "program=\"ocaml_elpi/tests/%s.elpi\"")))
+  (preprocess (pps ocaml-elpi.ppx -- --cookie "program=\"ocaml-elpi/tests/%s.elpi\"")))
 
 |}
   base base base base base base base base

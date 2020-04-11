@@ -8,14 +8,14 @@ end
 
 let pp_ctx _ _ = ()
 type ctx = Entry of (string[@elpi.key]) * bool
-[@@deriving elpi { append = elpi_stuff; index = (module String) }]
+[@@deriving elpi { declaration = elpi_stuff; index = (module String) }]
 
 let pp_term _ _ = ()
 type term =
   | Var of string [@elpi.var]
   | App of term * term
   | Lam of bool * string * (term[@elpi.binder (fun b s -> Entry(s,b))])
-[@@deriving elpi { append = elpi_stuff; context = (() : term -> ctx) }]
+[@@deriving elpi { declaration = elpi_stuff; context = (() : term -> ctx) }]
 
 open Elpi.API
 
