@@ -24,7 +24,7 @@
   (name document_ocaml_ast_for_elpi)
   (modules document_ocaml_ast_for_elpi)
   (optional)
-  (libraries ocaml_elpi_ppx))
+  (libraries ocaml-elpi.ppx))
 
 (env
   (dev
