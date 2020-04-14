@@ -46,7 +46,7 @@ cleancache:
 
 tests:
 	$(MAKE) build
-	dune runtest
+	dune runtest --diff-command 'diff -w -u'
 	ulimit -s $(STACK); \
 		tests/test.exe \
 		--seed $$RANDOM \
