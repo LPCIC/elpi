@@ -49,17 +49,25 @@ let arguments = Deriving.Args.(empty
       see the constructor attribute with the same name
     [@@elpi.doc]
       see the constructor attribute with the same name
-    [@@elpi.default_readback]
+    [@@elpi.default_constructor_readback]
       the default case can be used to read back flexible terms. The default is
       a runtime type error
+    [@@elpi.readback]
+      take over the readback of the entire type (useful in a block of mutually
+      recursive types). The argument has type Elpi.API.ContextualConversion.readback
+    [@@elpi.embed]
+      take over the embed of the entire type (useful in a block of mutually
+      recursive types). The argument has type Elpi.API.ContextualConversion.embedding
     [@@elpi.pp]
       code for pretty printing the data. Type is the one ppx_deriving.show
       would produce
 *)
-let att_elpi_tcode     = Attribute.(declare "elpi.code"     Context.type_declaration (single_expr_payload __) (fun x -> x))
-let att_elpi_tdoc      = Attribute.(declare "elpi.doc"      Context.type_declaration (single_expr_payload (estring __)) (fun x -> x))
-let att_elpi_treadback = Attribute.(declare "elpi.default_readback" Context.type_declaration (single_expr_payload __) (fun x -> x))
-let att_elpi_pp        = Attribute.(declare "elpi.pp" Context.type_declaration (single_expr_payload __) (fun x -> x))
+let att_elpi_tcode          = Attribute.(declare "elpi.code"     Context.type_declaration (single_expr_payload __) (fun x -> x))
+let att_elpi_tdoc           = Attribute.(declare "elpi.doc"      Context.type_declaration (single_expr_payload (estring __)) (fun x -> x))
+let att_elpi_def_k_readback = Attribute.(declare "elpi.default_constructor_readback" Context.type_declaration (single_expr_payload __) (fun x -> x))
+let att_elpi_pp             = Attribute.(declare "elpi.pp" Context.type_declaration (single_expr_payload __) (fun x -> x))
+let att_elpi_treadback      = Attribute.(declare "elpi.readback" Context.type_declaration (single_expr_payload __) (fun x -> x))
+let att_elpi_tembed         = Attribute.(declare "elpi.embed" Context.type_declaration (single_expr_payload __) (fun x -> x))
 (**
   Constructor attributes:
 
@@ -68,9 +76,11 @@ let att_elpi_pp        = Attribute.(declare "elpi.pp" Context.type_declaration (
       type being the [@elpi.key] for the context.
     [@elpi.skip] Not exposed to Elpi.
     [@elpi.embed] Custom embedding code.
-      Argument of type Elpi.API.ContextualConversion.embedding
+      Argument of type Elpi.API.ContextualConversion.(embedding -> embedding)
+      where the input function is the one this ppx would generate
     [@elpi.readback] Custom readback code.
-      Argument of type Elpi.API.ContextualConversion.embedding
+      Argument of type Elpi.API.ContextualConversion.(readback -> readback)
+      where the input function is the one this ppx would generate
     [@elpi.code] Custom Elpi declaration.
       First argument is a string and stands for the name of the type
       constructor. The default is the name of the OCaml constructor in lowercase
