@@ -66,8 +66,8 @@ let att_elpi_tcode          = Attribute.(declare "elpi.code"     Context.type_de
 let att_elpi_tdoc           = Attribute.(declare "elpi.doc"      Context.type_declaration (single_expr_payload (estring __)) (fun x -> x))
 let att_elpi_def_k_readback = Attribute.(declare "elpi.default_constructor_readback" Context.type_declaration (single_expr_payload __) (fun x -> x))
 let att_elpi_pp             = Attribute.(declare "elpi.pp" Context.type_declaration (single_expr_payload __) (fun x -> x))
-let att_elpi_treadback      = Attribute.(declare "elpi.readback" Context.type_declaration (single_expr_payload __) (fun x -> x))
-let att_elpi_tembed         = Attribute.(declare "elpi.embed" Context.type_declaration (single_expr_payload __) (fun x -> x))
+let att_elpi_treadback      = Attribute.(declare "elpi.type_readback" Context.type_declaration (single_expr_payload __) (fun x -> x))
+let att_elpi_tembed         = Attribute.(declare "elpi.type_embed" Context.type_declaration (single_expr_payload __) (fun x -> x))
 (**
   Constructor attributes:
 
@@ -731,8 +731,8 @@ let get_elpi_doc kname kattributes =
   option_default kname (Attribute.get att_elpi_doc kattributes)
 let get_elpi_tdoc kname kattributes =
   option_default kname (Attribute.get att_elpi_tdoc kattributes)
-let get_elpi_treadback tattributes =
-  Attribute.get att_elpi_treadback tattributes
+let get_elpi_tdefkreadback tattributes =
+  Attribute.get att_elpi_def_k_readback tattributes
 let get_elpi_pp tattributes =
   Attribute.get att_elpi_pp tattributes
 
@@ -1213,7 +1213,7 @@ let analyze_typedecl (module B : Ast_builder.S) same_mutrec_block tdecl =
       let csts = List.map (analyze_constructor (module B) name same_mutrec_block) csts in
       let elpi_name, elpi_code = get_elpi_tcode (module B) name tdecl in
       let elpi_doc = get_elpi_tdoc name tdecl in
-      let default_readback = get_elpi_treadback tdecl in
+      let default_readback = get_elpi_tdefkreadback tdecl in
       let pp = get_elpi_pp tdecl in
       { name; params; type_decl = Algebraic(csts,default_readback); elpi_name; elpi_code; elpi_doc; pp }
 
@@ -1240,7 +1240,7 @@ let analyze_typedecl (module B : Ast_builder.S) same_mutrec_block tdecl =
       let csts = [analyze_tuple_constructor (module B) name name kdecl tl make_k match_k same_mutrec_block] in
       let elpi_name, elpi_code = get_elpi_tcode (module B) name tdecl in
       let elpi_doc = get_elpi_tdoc name tdecl in
-      let default_readback = get_elpi_treadback tdecl in
+      let default_readback = get_elpi_tdefkreadback tdecl in
       let pp = get_elpi_pp tdecl in
       { name; params; type_decl = Algebraic(csts,default_readback); elpi_name; elpi_code; elpi_doc; pp }
 

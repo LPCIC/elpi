@@ -104,7 +104,7 @@ and location = Location.t = {
          st, Elpi.API.RawData.mkUnifVar v ~args: [] st, []
        else
          default ~depth h c st start end_ ghost ]
-  [@@elpi.default_readback fun default ~depth h c st t ->
+  [@@elpi.default_constructor_readback fun default ~depth h c st t ->
        match Elpi.API.RawData.look ~depth t with
        | Elpi.API.RawData.UnifVar _ -> st, dummy_location, []
        | _ -> default ~depth h c st t]
