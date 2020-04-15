@@ -1,4 +1,4 @@
-let elpi_stuff = ref []
+let declaration = ref []
 
 module String = struct
   include String
@@ -8,38 +8,40 @@ end
 
 let pp_tctx _ _ = ()
 type tctx = TDecl of (string[@elpi.key]) * bool
-[@@deriving elpi { index = (module String) ; declaration = elpi_stuff } ]
+  [@@elpi.index (module String)]
+[@@deriving elpi { declaration } ]
 
 let pp_tye _ _ = ()
 type tye =
-  | TVar of string [@elpi.var]
+  | TVar of string [@elpi.var tctx]
   | TConst of string
   | TArrow of tye * tye
-[@@deriving elpi { context = (x : (tye -> tctx) ) ; declaration = elpi_stuff  } ]
+[@@deriving elpi { declaration  } ]
 
 let pp_ty _ _ = ()
 type ty =
   | Mono of tye
-  | Forall of string * bool * (ty[@elpi.binder tye (fun s b -> TDecl(s,b))])
-[@@deriving elpi { context = (x : (tye -> tctx) * (ty -> tctx)) }]
+  | Forall of string * bool * (ty[@elpi.binder "tye" tctx (fun s b -> TDecl(s,b))])
+[@@deriving elpi ]
 
 let pp_ctx _ _ = ()
 type ctx = Decl of (string[@elpi.key]) * ty
-[@@deriving elpi { index = (module String); context = (x : tctx) ; declaration = elpi_stuff  } ]
+  [@@elpi.index (module String)]
+[@@deriving elpi { declaration  } ]
 
 type term =
-  | Var of string [@elpi.var]
+  | Var of string [@elpi.var ctx]
   | App of term list [@elpi.code "appl"] [@elpi.doc "bla bla"]
-  | Lam of string * ty * (term[@elpi.binder term (fun s ty -> Decl(s,ty))])
+  | Lam of string * ty * (term[@elpi.binder ctx (fun s ty -> Decl(s,ty))])
   | Literal of int [@elpi.skip]
   | Cast of term * ty
       (* Example: override the embed and readback code for this constructor *)
       [@elpi.embed fun default ~depth hyps constraints state a1 a2 ->
-        default ~depth hyps constraints state a1 a2 ]
+         default ~depth hyps constraints state a1 a2 ]
       [@elpi.readback fun default ~depth hyps constraints state l ->
          default ~depth hyps constraints state l ]
       [@elpi.code "type-cast" "term -> ty -> term"]
-[@@deriving elpi { context = (x : (ty -> tctx) * (term -> ctx)) } ]
+[@@deriving elpi { context = [ tctx ; ctx ] } ]
 [@@elpi.pp let rec aux fmt = function
    | Var s -> Format.fprintf fmt "%s" s
    | App tl -> Format.fprintf fmt "App %a" (Elpi.API.RawPp.list aux " ") tl
@@ -68,7 +70,7 @@ let term_to_string = Pred("term->string",
 )
 
 let builtin = let open BuiltIn in
-  declare ~file_name:"test_ppx.elpi" (!elpi_stuff @ [
+  declare ~file_name:"test_ppx.elpi" (!declaration @ [
     MLCode(term_to_string,DocAbove);
     LPDoc "----------------- elpi ----------------"
   ] @ Elpi.Builtin.(core_builtins @ elpi_builtins))

@@ -122,7 +122,7 @@ and 'a loc = 'a Location.loc = {
   txt : 'a;
   loc : location;
 }
-[@@elpi.code "loc_"]
+[@@elpi.type_code "loc_"]
 
 (* Long identifiers, used in parsetree. *)
 
@@ -183,7 +183,7 @@ and constant = Parsetree.constant =
      Suffixes [g-z][G-Z] are accepted by the parser.
      Suffixes are rejected by the typechecker.
   *)
-[@@elpi.code "constant_"] (* silly bug in Elpi, constant is also a builtin *)
+[@@elpi.type_code "constant_"] (* silly bug in Elpi, constant is also a builtin *)
 (** {1 Extension points} *)
 
 and attribute = Parsetree.attribute =
