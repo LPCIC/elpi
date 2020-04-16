@@ -1,4 +1,4 @@
-(*4467f673214a6e11e471c7b922bbb61fb3d13283 *src/API.mli *)
+(*8f812463e02395f1c677804f711e333ca142566f *src/API.mli *)
 #1 "src/API.mli"
 [@@@ocaml.text " This module is the API for clients of the Elpi library. "]
 [@@@ocaml.text
@@ -79,6 +79,17 @@ sig
     pp_ctx: pretty_printer_context }
   type hyp
   type hyps = hyp list
+  type constant = int
+  module Constants :
+  sig
+    module Map :
+    sig
+      include Map.S with type  key =  constant
+      val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
+      val pp :
+        (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+    end
+  end
 end
 module Compile :
 sig
@@ -141,50 +152,32 @@ sig
     | TyName of string 
     | TyApp of string * ty_ast * ty_ast list 
   type extra_goals = Data.term list
-  type 'a embedding =
-    depth:int -> Data.state -> 'a -> (Data.state * Data.term * extra_goals)
-  type 'a readback =
-    depth:int -> Data.state -> Data.term -> (Data.state * 'a * extra_goals)
-  type 'a t =
-    {
-    ty: ty_ast ;
-    pp_doc: Format.formatter -> unit -> unit ;
-    pp: Format.formatter -> 'a -> unit ;
-    embed: 'a embedding ;
-    readback: 'a readback }
   exception TypeErr of ty_ast * int * Data.term 
-end[@@ocaml.doc
-     " This module defines what embedding and readback functions are "]
-module ContextualConversion :
-sig
-  type ty_ast = Conversion.ty_ast =
-    | TyName of string 
-    | TyApp of string * ty_ast * ty_ast list 
-  type ('a, 'hyps, 'constraints) embedding =
+  class ctx :
+    Data.hyps -> object method  raw : Data.hyps method  convs : unit list end
+  type ('a, 'c) embedding =
     depth:int ->
-      'hyps ->
-        'constraints ->
-          Data.state ->
-            'a -> (Data.state * Data.term * Conversion.extra_goals)
-  type ('a, 'hyps, 'constraints) readback =
+      'c ->
+        Data.constraints ->
+          Data.state -> 'a -> (Data.state * Data.term * extra_goals)
+                                                                    constraint
+                                                                    'c = 
+                                                                    #ctx
+  type ('a, 'c) readback =
     depth:int ->
-      'hyps ->
-        'constraints ->
-          Data.state ->
-            Data.term -> (Data.state * 'a * Conversion.extra_goals)
-  type ('a, 'h, 'c) t =
+      'c ->
+        Data.constraints ->
+          Data.state -> Data.term -> (Data.state * 'a * extra_goals)
+                                                                    constraint
+                                                                    'c = 
+                                                                    #ctx
+  type ('a, 'c) t =
     {
     ty: ty_ast ;
     pp_doc: Format.formatter -> unit -> unit ;
     pp: Format.formatter -> 'a -> unit ;
-    embed: ('a, 'h, 'c) embedding ;
-    readback: ('a, 'h, 'c) readback }
-  type ('hyps, 'constraints) ctx_readback =
-    depth:int ->
-      Data.hyps ->
-        Data.constraints ->
-          Data.state ->
-            (Data.state * 'hyps * 'constraints * Conversion.extra_goals)
+    embed: ('a, 'c) embedding ;
+    readback: ('a, 'c) readback } constraint 'c = #ctx
   type 'a ctx_entry = {
     entry: 'a ;
     depth: int }
@@ -193,33 +186,36 @@ sig
       Format.formatter -> 'a ctx_entry -> unit
   val show_ctx_entry :
     (Format.formatter -> 'a -> unit) -> 'a ctx_entry -> string
-  val unit_ctx : (unit, unit) ctx_readback
-  val raw_ctx : (Data.hyps, Data.constraints) ctx_readback
-  val (!<) : ('a, unit, unit) t -> 'a Conversion.t
-  val (!>) : 'a Conversion.t -> ('a, 'hyps, 'constraints) t
-  val (!>>) :
-    ('a Conversion.t -> 'b Conversion.t) ->
-      ('a, 'hyps, 'constraints) t -> ('b, 'hyps, 'constraints) t
-  val (!>>>) :
-    ('a Conversion.t -> 'b Conversion.t -> 'c Conversion.t) ->
-      ('a, 'hyps, 'constraints) t ->
-        ('b, 'hyps, 'constraints) t -> ('c, 'hyps, 'constraints) t
-  val (|+|) :
-    ('h1, Data.constraints) ctx_readback ->
-      ('h2, Data.constraints) ctx_readback ->
-        (('h1 * 'h2), Data.constraints) ctx_readback
+  type 'a ctx_field = 'a ctx_entry Data.Constants.Map.t
+  type ('a, 'k) context =
+    {
+    is_entry_for_nominal: Data.hyp -> Data.constant option ;
+    to_key: depth:int -> 'a -> 'k ;
+    push: depth:int -> Data.state -> 'k -> 'a ctx_entry -> Data.state ;
+    pop: depth:int -> Data.state -> 'k -> Data.state ;
+    conv: 'c . ((Data.constant * 'a), #ctx as 'c) t ;
+    init: Data.state -> Data.state ;
+    get: Data.state -> 'a ctx_field }
+  type 'c ctx_readback =
+    depth:int ->
+      Data.hyps ->
+        Data.constraints -> Data.state -> (Data.state * 'c * extra_goals)
+     constraint 'c = #ctx
+  val in_raw_ctx : ctx ctx_readback
 end[@@ocaml.doc
-     " This module defines what embedding and readback functions are\n    for datatypes that need the context of the program (hypothetical clauses and\n    constraints) "]
+     " This module defines what embedding and readback functions are "]
 module BuiltInData :
 sig
-  val int : int Conversion.t[@@ocaml.doc " See Elpi_builtin for a few more "]
-  val float : float Conversion.t
-  val string : string Conversion.t
-  val list : 'a Conversion.t -> 'a list Conversion.t
-  val loc : Ast.Loc.t Conversion.t
-  val poly : string -> Data.term Conversion.t
-  val closed : string -> (Data.term * int) Conversion.t
-  val any : Data.term Conversion.t
+  val int : (int, Conversion.ctx) Conversion.t[@@ocaml.doc
+                                                " See Elpi_builtin for a few more "]
+  val float : (float, Conversion.ctx) Conversion.t
+  val string : (string, Conversion.ctx) Conversion.t
+  val list : ('a, 'c) Conversion.t -> ('a list, 'c) Conversion.t
+  val loc : (Ast.Loc.t, Conversion.ctx) Conversion.t
+  val poly : string -> (Data.term, Conversion.ctx) Conversion.t
+  val closed : string -> ((Data.term * int), Conversion.ctx) Conversion.t
+  val any : (Data.term, Conversion.ctx) Conversion.t
+  val nominal : (Data.constant, Conversion.ctx) Conversion.t
 end[@@ocaml.doc " Conversion for Elpi's built-in data types "]
 module OpaqueData :
 sig
@@ -235,7 +231,7 @@ sig
     hconsed: bool ;
     constants: (name * 'a) list }[@@ocaml.doc
                                    " The [eq] function is used by unification. Limitation: unification of\n   * two cdata cannot alter the constraint store. This can be lifted in the\n   * future if there is user request.\n   *\n   * If the hconsed is true, then the [readback] function is\n   * automatically hashcons the data using the [eq] and [hash] functions.\n   "]
-  val declare : 'a declaration -> 'a Conversion.t
+  val declare : 'a declaration -> ('a, Conversion.ctx) Conversion.t
 end[@@ocaml.doc
      " Declare data from the host application that is opaque (no syntax), like\n    int but not like list or pair "]
 module AlgebraicData :
@@ -255,40 +251,32 @@ sig
     | B of 'build_t 
     | BS of 'build_stateful_t 
   type ('stateful_builder, 'builder, 'stateful_matcher, 'matcher, 'self,
-    'hyps, 'constraints) constructor_arguments =
+    'c) constructor_arguments =
     | N: (Data.state -> (Data.state * 'self), 'self,
     Data.state -> (Data.state * Data.term * Conversion.extra_goals),
-    Data.term, 'self, 'hyps, 'constraints) constructor_arguments 
-    | A: 'a Conversion.t * ('bs, 'b, 'ms, 'm, 'self, 'hyps, 'constraints)
+    Data.term, 'self, 'c) constructor_arguments 
+    | A: ('a, 'c) Conversion.t * ('bs, 'b, 'ms, 'm, 'self, 'c)
     constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms, 'a -> 'm,
-    'self, 'hyps, 'constraints) constructor_arguments 
-    | CA: ('a, 'hyps, 'constraints) ContextualConversion.t * ('bs, 'b, 
-    'ms, 'm, 'self, 'hyps, 'constraints) constructor_arguments -> ('a -> 'bs,
-    'a -> 'b, 'a -> 'ms, 'a -> 'm, 'self, 'hyps, 'constraints)
+    'self, 'c) constructor_arguments 
+    | S: ('bs, 'b, 'ms, 'm, 'self, 'c) constructor_arguments ->
+    ('self -> 'bs, 'self -> 'b, 'self -> 'ms, 'self -> 'm, 'self, 'c)
     constructor_arguments 
-    | S: ('bs, 'b, 'ms, 'm, 'self, 'hyps, 'constraints) constructor_arguments
-    -> ('self -> 'bs, 'self -> 'b, 'self -> 'ms, 'self -> 'm, 'self, 
-    'hyps, 'constraints) constructor_arguments 
-    | C:
-    (('self, 'hyps, 'constraints) ContextualConversion.t ->
-       ('a, 'hyps, 'constraints) ContextualConversion.t)
-    * ('bs, 'b, 'ms, 'm, 'self, 'hyps, 'constraints) constructor_arguments ->
-    ('a -> 'bs, 'a -> 'b, 'a -> 'ms, 'a -> 'm, 'self, 'hyps, 'constraints)
-    constructor_arguments [@@ocaml.doc
-                            " GADT for describing the type of the constructor:\n      - N is the terminator\n      - A(a,...) is an argument of type a (a is a Conversion.t)\n      - S stands for self\n      - C stands for container\n  "]
-  type ('t, 'h, 'c) constructor =
+    | C: (('self, 'c) Conversion.t -> ('a, 'c) Conversion.t) * ('bs, 
+    'b, 'ms, 'm, 'self, 'c) constructor_arguments -> ('a -> 'bs, 'a -> 'b,
+    'a -> 'ms, 'a -> 'm, 'self, 'c) constructor_arguments [@@ocaml.doc
+                                                            " GADT for describing the type of the constructor:\n      - N is the terminator\n      - A(a,...) is an argument of type a (a is a Conversion.t)\n      - S stands for self\n      - C stands for container\n  "]
+  type ('t, 'c) constructor =
     | K: name * doc * ('build_stateful_t, 'build_t, 'match_stateful_t,
-    'match_t, 't, 'h, 'c) constructor_arguments * ('build_stateful_t,
-    'build_t) build_t * ('match_stateful_t, 'match_t, 't) match_t -> (
-    't, 'h, 'c) constructor 
-  type ('t, 'h, 'c) declaration =
+    'match_t, 't, 'c) constructor_arguments * ('build_stateful_t, 'build_t)
+    build_t * ('match_stateful_t, 'match_t, 't) match_t -> ('t, 'c)
+    constructor 
+  type ('t, 'c) declaration =
     {
     ty: Conversion.ty_ast ;
     doc: doc ;
     pp: Format.formatter -> 't -> unit ;
-    constructors: ('t, 'h, 'c) constructor list }
-  val declare :
-    ('t, 'h, 'c) declaration -> ('t, 'h, 'c) ContextualConversion.t
+    constructors: ('t, 'c) constructor list } constraint 'c = #Conversion.ctx
+  val declare : ('t, 'c) declaration -> ('t, 'c) Conversion.t
 end[@@ocaml.doc
      " Declare data from the host application that has syntax, like\n    list or pair but not like int. So far there is no support for\n    data with binder using this API. The type of each constructor is\n    described using a GADT so that the code to build or match the data\n    can be given the right type. Example: define the ADT for \"option a\"\n{[\n   let option_declaration a = {\n     ty = TyApp(\"option\",a.ty,[]);\n     doc = \"The option type (aka Maybe)\";\n     pp = (fun fmt -> function\n             | None -> Format.fprintf fmt \"None\"\n             | Some x -> Format.fprintf fmt \"Some %a\" a.pp x);\n     constructors = [\n      K(\"none\",\"nothing in this case\",\n        N,                                                   (* no arguments *)\n        B None,                                                   (* builder *)\n        M (fun ~ok ~ko -> function None -> ok | _ -> ko ()));     (* matcher *)\n      K(\"some\",\"something in this case\",\n        A (a,N),                                   (* one argument of type a *)\n        B (fun x -> Some x),                                      (* builder *)\n        M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko ())); (* matcher *)\n     ]\n   }\n\n   ]}\n\n    [K] stands for \"constructor\", [B] for \"build\", [M] for \"match\".\n    Variants [BS] and [MS] give read/write access to the state.\n\n"]
 module BuiltInPredicate :
@@ -302,54 +290,46 @@ sig
   type 'a ioarg = private
     | Data of 'a 
     | NoData 
-  type ('function_type, 'inernal_outtype_in, 'internal_hyps,
-    'internal_constraints) ffi =
-    | In: 't Conversion.t * doc * ('i, 'o, 'h, 'c) ffi -> ('t -> 'i, 
-    'o, 'h, 'c) ffi 
-    | Out: 't Conversion.t * doc * ('i, ('o * 't option), 'h, 'c) ffi ->
-    ('t oarg -> 'i, 'o, 'h, 'c) ffi 
-    | InOut: 't ioarg Conversion.t * doc * ('i, ('o * 't option), 'h, 
-    'c) ffi -> ('t ioarg -> 'i, 'o, 'h, 'c) ffi 
-    | CIn: ('t, 'h, 'c) ContextualConversion.t * doc * ('i, 'o, 'h, 'c) ffi
-    -> ('t -> 'i, 'o, 'h, 'c) ffi 
-    | COut: ('t, 'h, 'c) ContextualConversion.t * doc * ('i,
-    ('o * 't option), 'h, 'c) ffi -> ('t oarg -> 'i, 'o, 'h, 'c) ffi 
-    | CInOut: ('t ioarg, 'h, 'c) ContextualConversion.t * doc * ('i,
-    ('o * 't option), 'h, 'c) ffi -> ('t ioarg -> 'i, 'o, 'h, 'c) ffi 
-    | Easy: doc -> (depth:int -> 'o, 'o, unit, unit) ffi 
-    | Read: ('h, 'c) ContextualConversion.ctx_readback * doc ->
-    (depth:int -> 'h -> 'c -> Data.state -> 'o, 'o, 'h, 'c) ffi 
-    | Full: ('h, 'c) ContextualConversion.ctx_readback * doc ->
+  type ('function_type, 'inernal_outtype_in, 'internal_hyps) ffi =
+    | In: ('t, 'h) Conversion.t * doc * ('i, 'o, 'h) ffi -> ('t -> 'i, 
+    'o, 'h) ffi 
+    | Out: ('t, 'h) Conversion.t * doc * ('i, ('o * 't option), 'h) ffi ->
+    ('t oarg -> 'i, 'o, 'h) ffi 
+    | InOut: ('t ioarg, 'h) Conversion.t * doc * ('i, ('o * 't option), 
+    'h) ffi -> ('t ioarg -> 'i, 'o, 'h) ffi 
+    | Easy: doc -> (depth:int -> 'o, 'o, 'h) ffi 
+    | Read: doc -> (depth:int -> 'h -> Data.constraints -> Data.state -> 'o,
+    'o, 'h) ffi 
+    | Full: doc ->
     (depth:int ->
-       'h -> 'c -> Data.state -> (Data.state * 'o * Conversion.extra_goals),
-    'o, 'h, 'c) ffi 
-    | VariadicIn: ('h, 'c) ContextualConversion.ctx_readback * ('t, 'h, 
-    'c) ContextualConversion.t * doc ->
-    ('t list -> depth:int -> 'h -> 'c -> Data.state -> (Data.state * 'o), 
-    'o, 'h, 'c) ffi 
-    | VariadicOut: ('h, 'c) ContextualConversion.ctx_readback * ('t, 
-    'h, 'c) ContextualConversion.t * doc ->
+       'h ->
+         Data.constraints ->
+           Data.state -> (Data.state * 'o * Conversion.extra_goals),
+    'o, 'h) ffi 
+    | VariadicIn: ('t, 'h) Conversion.t * doc ->
+    ('t list ->
+       depth:int -> 'h -> Data.constraints -> Data.state -> (Data.state * 'o),
+    'o, 'h) ffi 
+    | VariadicOut: ('t, 'h) Conversion.t * doc ->
     ('t oarg list ->
        depth:int ->
          'h ->
-           'c -> Data.state -> (Data.state * ('o * 't option list option)),
-    'o, 'h, 'c) ffi 
-    | VariadicInOut: ('h, 'c) ContextualConversion.ctx_readback * ('t ioarg,
-    'h, 'c) ContextualConversion.t * doc ->
+           Data.constraints ->
+             Data.state -> (Data.state * ('o * 't option list option)),
+    'o, 'h) ffi 
+    | VariadicInOut: ('t ioarg, 'h) Conversion.t * doc ->
     ('t ioarg list ->
        depth:int ->
          'h ->
-           'c -> Data.state -> (Data.state * ('o * 't option list option)),
-    'o, 'h, 'c) ffi 
+           Data.constraints ->
+             Data.state -> (Data.state * ('o * 't option list option)),
+    'o, 'h) ffi 
   type t =
-    | Pred: name * ('a, unit, 'h, 'c) ffi * 'a -> t 
+    | Pred: name * ('a, unit, 'h) ffi * 'h Conversion.ctx_readback * 'a -> t 
   val mkData : 'a -> 'a ioarg[@@ocaml.doc
                                " Tools for InOut arguments.\n   *\n   *  InOut arguments need to be equipped with an 'a ioarg Conversion.t.\n   *  The ioarg adaptor here maps variables to NoData and anything else to the\n   *  to Data of the provided 'a Conversion.t.\n   *\n   *  If the 'a is an atomic data type, eg int, then things are good.\n   *  If the 'a is an algebraic data type then some more work has to be done\n   *  in order to have a good implementation, but the type system cannot\n   *  enforce it hence this documentation. Let's take the example of int option.\n   *  The Conversion.t to be passed is [int ioarg option ioarg Conversion.t],\n   *  that is, ioarg should wrap each type constructor. In this way the user\n   *  can pass non-ground terms. Eg\n   *  given term : X       none       some X              some 3\n   *  readback to: NoData  Data None  Data (Some NoData)  Data (Some (Data 3))\n   *\n   *  Alternatively the data type 'a must be able to represent unification\n   *  variables, such as the raw terms, see [ioarg_any] below.\n   *\n   *  An example of an API taking advantage of this feature is\n   *    pred typecheck i:term, o:ty, o:diagnostic\n   *  that can be used to both check a term is well typed and backtrack if not\n   *    typecheck T TY ok\n   *  or assert a term is illtyped or to test weather it is illtyped\n   *    typecheck T TY (error _), typecheck T TY Diagnostic\n   *  The ML code can see in which case we are and for example optimize the\n   *  first case by not even generating the error message (since error \"message\"\n   *  would fail to unify with ok anyway) or the second one by not assigning TY.\n   "]
-  val ioargC :
-    ('t, 'h, 'c) ContextualConversion.t ->
-      ('t ioarg, 'h, 'c) ContextualConversion.t
-  val ioarg : 't Conversion.t -> 't ioarg Conversion.t
-  val ioarg_any : Data.term ioarg Conversion.t
+  val ioarg : ('t, 'c) Conversion.t -> ('t ioarg, 'c) Conversion.t
+  val ioarg_any : (Data.term ioarg, 'c) Conversion.t
   module Notation :
   sig
     val (?:) : 'a -> (unit * 'a)
@@ -366,8 +346,7 @@ sig
                 " Where to print the documentation. For the running example DocAbove\n    * generates\n    *   % [div N M D R] division of N by M gives D with reminder R\n    *   pred div i:int, i:int, o:int, o:int.\n    * while DocNext generates\n    *   pred div % division of N by M gives D with reminder R\n    *    i:int, % N\n    *    i:int, % M\n    *    o:int, % D\n    *    o:int. % R\n    * The latter format it is useful to give longer doc for each argument. "]
   type declaration =
     | MLCode of BuiltInPredicate.t * doc_spec 
-    | MLData: 'a Conversion.t -> declaration 
-    | MLDataC: ('a, 'h, 'c) ContextualConversion.t -> declaration 
+    | MLData: ('a, 'c) Conversion.t -> declaration 
     | LPDoc of string 
     | LPCode of string 
   val declare : file_name:string -> declaration list -> Setup.builtins
@@ -382,8 +361,10 @@ sig
   type name = string
   type _ arguments =
     | N: unit arguments 
-    | D: 'a Conversion.t * 'a * 'x arguments -> 'x arguments 
-    | Q: 'a Conversion.t * name * 'x arguments -> ('a * 'x) arguments 
+    | D: ('a, Conversion.ctx) Conversion.t * 'a * 'x arguments -> 'x
+    arguments 
+    | Q: ('a, Conversion.ctx) Conversion.t * name * 'x arguments -> ('a * 'x)
+    arguments 
   type 'x t =
     | Query of {
     predicate: name ;
@@ -446,7 +427,7 @@ sig
     end
   [@@@ocaml.text
     " Example from Hol-light + elpi:\n{[\n\n     module UV2STV = FlexibleData.Map(struct\n        type t = int\n        let compare x y = x - y\n        let pp fmt i = Format.fprintf fmt \"%d\" i\n        let show = string_of_int\n      end)\n\n      let stv = ref 0\n      let incr_get r = incr r; !r\n\n      let record k state =\n        State.update_return UV2STV.uvmap state (fun m ->\n          try m, Stv (UV2STV.host k m)\n          with Not_found ->\n            let j = incr_get stv in\n            UV2STV.add k j m, Stv j)\n\n      (* The constructor name \"uvar\" is special and has to be used with the\n         following Conversion.t *)\n\n      let hol_pretype = AlgebraicData.declare {\n        ty = TyName \"pretype\";\n        doc = \"The algebraic data type of pretypes\";\n        pp = (fun fmt t -> ...);\n        constructors = [\n          ...\n          K(\"uvar\",\"\",A(uvar,N),\n             BS (fun (k,_) state -> record k state),\n             M (fun ~ok ~ko _ -> ko ()))\n        ]\n      }\n\n    ]}\n\n    In this way an Elpi term containig a variable [X] twice gets read back\n    using [Stv i] for the same [i].\n\n  "]
-  val uvar : (Elpi.t * Data.term list) Conversion.t
+  val uvar : ((Elpi.t * Data.term list), 'c) Conversion.t
 end[@@ocaml.doc
      " Flexible data is for unification variables. One can use Elpi's unification\n    variables to represent the host equivalent, here the API the keep a link\n    between the two. "]
 module Utils :
@@ -476,9 +457,10 @@ sig
                                                             " Lifting/restriction/beta (LOW LEVEL, don't use) "]
   val beta : depth:int -> Data.term -> Data.term list -> Data.term
   val map_acc :
-    (State.t -> 't -> (State.t * 'a * Conversion.extra_goals)) ->
-      State.t -> 't list -> (State.t * 'a list * Conversion.extra_goals)
-  [@@ocaml.doc " readback/embed on lists "]
+    (Data.state -> 't -> (Data.state * 'a * Conversion.extra_goals)) ->
+      Data.state ->
+        't list -> (Data.state * 'a list * Conversion.extra_goals)[@@ocaml.doc
+                                                                    " readback/embed on lists "]
   module type Show  =
     sig type t val pp : Format.formatter -> t -> unit val show : t -> string
     end
@@ -526,7 +508,7 @@ sig
     isc: t -> bool ;
     cout: t -> 'a ;
     name: string }
-  val declare : 'a declaration -> ('a cdata * 'a Conversion.t)
+  val declare : 'a declaration -> ('a cdata * ('a, 'c) Conversion.t)
   val pp : Format.formatter -> t -> unit
   val show : t -> string
   val equal : t -> t -> bool
@@ -557,8 +539,8 @@ sig
 end[@@ocaml.doc " Low level module for OpaqueData "]
 module RawData :
 sig
-  type constant = int[@@ocaml.doc
-                       " De Bruijn levels (not indexes):\n                          the distance of the binder from the root.\n                          Starts at 0 and grows for bound variables;\n                          global constants have negative values. "]
+  type constant = Data.constant[@@ocaml.doc
+                                 " De Bruijn levels (not indexes):\n                          the distance of the binder from the root.\n                          Starts at 0 and grows for bound variables;\n                          global constants have negative values. "]
   type builtin[@@ocaml.doc
                 " De Bruijn levels (not indexes):\n                          the distance of the binder from the root.\n                          Starts at 0 and grows for bound variables;\n                          global constants have negative values. "]
   type term = Data.term
@@ -580,7 +562,7 @@ sig
   val mkNil : term
   val mkDiscard : term
   val mkCData : RawOpaqueData.t -> term
-  val mkUnifVar : FlexibleData.Elpi.t -> args:term list -> State.t -> term
+  val mkUnifVar : FlexibleData.Elpi.t -> args:term list -> Data.state -> term
   val mkGlobal : constant -> term[@@ocaml.doc
                                    " Lower level smart constructors "]
   val mkApp : constant -> term -> term list -> term
@@ -620,38 +602,44 @@ end[@@ocaml.doc
 module RawQuery :
 sig
   val mk_Arg :
-    State.t -> name:string -> args:Data.term list -> (State.t * Data.term)
-  val is_Arg : State.t -> Data.term -> bool
+    Data.state ->
+      name:string -> args:Data.term list -> (Data.state * Data.term)
+  val is_Arg : Data.state -> Data.term -> bool
   val compile :
     Compile.program ->
-      (depth:int -> State.t -> (State.t * (Ast.Loc.t * Data.term))) ->
-        unit Compile.query
+      (depth:int ->
+         Data.hyps ->
+           Data.constraints ->
+             Data.state -> (Data.state * (Ast.Loc.t * Data.term)))
+        -> unit Compile.query
 end[@@ocaml.doc
      " This module lets one generate a query by providing a RawData.term directly "]
 module Quotation :
 sig
   type quotation =
-    depth:int -> State.t -> Ast.Loc.t -> string -> (State.t * Data.term)
+    depth:int ->
+      Data.state -> Ast.Loc.t -> string -> (Data.state * Data.term)
   val set_default_quotation : quotation -> unit[@@ocaml.doc
                                                  " The default quotation [{{code}}] "]
   val register_named_quotation : name:string -> quotation -> unit[@@ocaml.doc
                                                                    " Named quotation [{{:name code}}] "]
   val lp : quotation[@@ocaml.doc " The anti-quotation to lambda Prolog "]
   val quote_syntax_runtime :
-    State.t -> 'a Compile.query -> (State.t * Data.term list * Data.term)
-  [@@ocaml.doc
-    " See elpi-quoted_syntax.elpi (EXPERIMENTAL, used by elpi-checker) "]
+    Data.state ->
+      'a Compile.query -> (Data.state * Data.term list * Data.term)[@@ocaml.doc
+                                                                    " See elpi-quoted_syntax.elpi (EXPERIMENTAL, used by elpi-checker) "]
   val quote_syntax_compiletime :
-    State.t -> 'a Compile.query -> (State.t * Data.term list * Data.term)
-  val term_at : depth:int -> State.t -> Ast.query -> (State.t * Data.term)
-  [@@ocaml.doc
-    " To implement the string_to_term built-in (AVOID, makes little sense\n   * if depth is non zero, since bound variables have no name!) "]
+    Data.state ->
+      'a Compile.query -> (Data.state * Data.term list * Data.term)
+  val term_at :
+    depth:int -> Data.state -> Ast.query -> (Data.state * Data.term)[@@ocaml.doc
+                                                                    " To implement the string_to_term built-in (AVOID, makes little sense\n   * if depth is non zero, since bound variables have no name!) "]
   [@@@ocaml.text
     " Like quotations but for identifiers that begin and end with\n   * \"`\" or \"'\", e.g. `this` and 'that'. Useful if the object language\n   * needs something that looks like a string but with a custom compilation\n   * (e.g. CD.string like but with a case insensitive comparison) "]
   val declare_backtick :
-    name:string -> (State.t -> string -> (State.t * Data.term)) -> unit
+    name:string -> (Data.state -> string -> (Data.state * Data.term)) -> unit
   val declare_singlequote :
-    name:string -> (State.t -> string -> (State.t * Data.term)) -> unit
+    name:string -> (Data.state -> string -> (Data.state * Data.term)) -> unit
 end
 module RawPp :
 sig
@@ -673,42 +661,29 @@ end
 module PPX :
 sig
   [@@@ocaml.text " Access to internal API to implement elpi.ppx "]
-  val readback_int : (int, 'h, 'c) ContextualConversion.readback
-  val readback_float : (float, 'h, 'c) ContextualConversion.readback
-  val readback_string : (string, 'h, 'c) ContextualConversion.readback
-  val readback_list :
-    ('a, 'h, 'c) ContextualConversion.readback ->
-      ('a list, 'h, 'c) ContextualConversion.readback
-  val readback_loc : (Ast.Loc.t, 'h, 'c) ContextualConversion.readback
-  val readback_nominal :
-    (RawData.constant, 'h, 'c) ContextualConversion.readback
-  val embed_int : (int, 'h, 'c) ContextualConversion.embedding
-  val embed_float : (float, 'h, 'c) ContextualConversion.embedding
-  val embed_string : (string, 'h, 'c) ContextualConversion.embedding
-  val embed_list :
-    ('a, 'h, 'c) ContextualConversion.embedding ->
-      ('a list, 'h, 'c) ContextualConversion.embedding
-  val embed_loc : (Ast.Loc.t, 'h, 'c) ContextualConversion.embedding
-  val embed_nominal :
-    (RawData.constant, 'h, 'c) ContextualConversion.embedding
-  val nominal : (RawData.constant, 'h, 'c) ContextualConversion.t
+  type context_description =
+    | C: ('a, 'k) Conversion.context -> context_description 
+  val readback_context :
+    context_description list ->
+      depth:int ->
+        Data.hyps ->
+          Data.constraints ->
+            Data.state -> (Data.state * Conversion.extra_goals)
   module Doc :
   sig
-    val kind :
-      Format.formatter -> ContextualConversion.ty_ast -> doc:string -> unit
+    val kind : Format.formatter -> Conversion.ty_ast -> doc:string -> unit
     val comment : Format.formatter -> string -> unit
     val constructor :
       Format.formatter ->
         name:string ->
           doc:string ->
-            ty:ContextualConversion.ty_ast ->
-              args:ContextualConversion.ty_ast list -> unit
+            ty:Conversion.ty_ast -> args:Conversion.ty_ast list -> unit
     val adt :
       doc:string ->
-        ty:ContextualConversion.ty_ast ->
-          args:(string * string * ContextualConversion.ty_ast list) list ->
+        ty:Conversion.ty_ast ->
+          args:(string * string * Conversion.ty_ast list) list ->
             Format.formatter -> unit -> unit
-    val show_ty_ast : ?outer:bool -> ContextualConversion.ty_ast -> string
+    val show_ty_ast : ?outer:bool -> Conversion.ty_ast -> string
   end
 end
 [@@@ocaml.text "/*"]

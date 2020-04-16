@@ -1,4 +1,4 @@
-(*d53ed81516fb5c87752f86676d2c2b0ac20ba07f *src/compiler.mli *)
+(*236a6f802b725b0b7125f292daff8dfa43fe4334 *src/compiler.mli *)
 #1 "src/compiler.mli"
 open Util
 open Data
@@ -22,7 +22,9 @@ val query_of_ast : State.t -> program -> Ast.Goal.t -> unit query
 val query_of_term :
   State.t ->
     program ->
-      (depth:int -> State.t -> (State.t * (Loc.t * term))) -> unit query
+      (depth:int ->
+         hyps -> constraints -> State.t -> (State.t * (Loc.t * term)))
+        -> unit query
 val query_of_data : State.t -> program -> Loc.t -> 'a Query.t -> 'a query
 val optimize_query : 'a query -> 'a executable
 val term_of_ast :

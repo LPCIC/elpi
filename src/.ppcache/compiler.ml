@@ -1,4 +1,4 @@
-(*8167874ecb268271d3498fe116ec285fb13271f7 *src/compiler.ml *)
+(*460c62986d53adb8c20297ac71da3ae5b3c7414a *src/compiler.ml *)
 #1 "src/compiler.ml"
 open Util
 module F = Ast.Func
@@ -291,7 +291,7 @@ module Builtins :
         ~compilation_is_over:(fun x -> Some x)
         ~execution_is_over:(fun _ -> None)
     let all state = (D.State.get builtins state).constants
-    let register state (D.BuiltInPredicate.Pred (s, _, _) as b) =
+    let register state (D.BuiltInPredicate.Pred (s, _, _, _) as b) =
       if s = "" then anomaly "Built-in predicate name must be non empty";
       if not (D.State.get D.while_compiling state)
       then anomaly "Built-in can only be declared at compile time";
@@ -2971,7 +2971,7 @@ let query_of_term compiler_state assembled_program f =
   let active_macros = assembled_program.Assembled.toplevel_macros in
   let (state, query) =
     ToDBL.query_preterm_of_function ~depth:initial_depth active_macros
-      compiler_state (f ~depth:initial_depth) in
+      compiler_state (f ~depth:initial_depth [] []) in
   let query_env = Array.make (query.amap).nargs D.dummy in
   let (state, queryt) =
     stack_term_of_preterm ~depth:initial_depth state query in
@@ -2996,9 +2996,12 @@ let query_of_data state p loc (Query.Query { arguments } as descr) =
   let query =
     query_of_term state p
       (fun ~depth ->
-         fun state ->
-           let (state, term) = R.embed_query ~mk_Arg ~depth state descr in
-           (state, (loc, term))) in
+         fun hyps ->
+           fun constraints ->
+             fun state ->
+               let (state, term) =
+                 R.embed_query ~mk_Arg ~depth hyps constraints state descr in
+               (state, (loc, term))) in
   { query with query_arguments = arguments }
 module Compiler : sig val run : 'a query -> 'a executable end =
   struct
@@ -3126,7 +3129,7 @@ module Compiler : sig val run : 'a query -> 'a executable end =
        let builtins = Hashtbl.create 17 in
        let pred_list = (State.get Builtins.builtins state).code in
        List.iter
-         (fun (D.BuiltInPredicate.Pred (s, _, _) as p) ->
+         (fun (D.BuiltInPredicate.Pred (s, _, _, _) as p) ->
             let (c, _) = Symbols.get_global_symbol_str state s in
             Hashtbl.add builtins c p) pred_list;
        (let symbol_table = Symbols.compile_table compiler_symbol_table in
@@ -3362,12 +3365,16 @@ let static_check ~exec  ~checker:(state, program)
   let query =
     query_of_term state program
       (fun ~depth ->
-         fun state ->
-           assert (depth = 0);
-           (state,
-             (loc,
-               (App
-                  (checkc, (R.list_to_lp_list p),
-                    [q; R.list_to_lp_list tlist; R.list_to_lp_list talist]))))) in
+         fun hyps ->
+           fun constraints ->
+             fun state ->
+               assert (depth = 0);
+               (state,
+                 (loc,
+                   (App
+                      (checkc, (R.list_to_lp_list p),
+                        [q;
+                        R.list_to_lp_list tlist;
+                        R.list_to_lp_list talist]))))) in
   let executable = optimize_query query in (exec executable) <> Failure
 

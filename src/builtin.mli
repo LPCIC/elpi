@@ -33,11 +33,11 @@ val elpi_set : declaration list
    ocaml_map ~name:"strmap" BuiltInData.string (module StrMap) *)
 val ocaml_map :
   name:string ->
-  'a API.Conversion.t -> (module API.Utils.Map.S with type key = 'a) ->
+  ('a, API.Conversion.ctx) API.Conversion.t -> (module API.Utils.Map.S with type key = 'a) ->
   declaration list
 val ocaml_set :
   name:string ->
-  'a API.Conversion.t -> (module API.Utils.Set.S with type elt = 'a) ->
+  ('a, API.Conversion.ctx) API.Conversion.t -> (module API.Utils.Set.S with type elt = 'a) ->
   declaration list
 
 (* All the above, to be used as a sane default in Setup.init *)
@@ -45,23 +45,23 @@ val std_declarations : declaration list
 val std_builtins : API.Setup.builtins
 
 (* Type descriptors for built-in predicates *)
-val pair : 'a API.Conversion.t -> 'b API.Conversion.t -> ('a * 'b) API.Conversion.t
-val option : 'a API.Conversion.t -> 'a option API.Conversion.t
-val bool : bool API.Conversion.t
-val char : char API.Conversion.t
+val pair : ('a,'c) API.Conversion.t -> ('b,'c) API.Conversion.t -> ('a * 'b, 'c) API.Conversion.t
+val option : ('a,'c) API.Conversion.t -> ('a option,'c) API.Conversion.t
+val bool : (bool, API.Conversion.ctx) API.Conversion.t
+val char : (char, API.Conversion.ctx) API.Conversion.t
 
-val tripleC    : ('a, 'h, 'cs) API.ContextualConversion.t -> ('b, 'h, 'cs) API.ContextualConversion.t -> ('c, 'h, 'cs) API.ContextualConversion.t -> ('a * 'b * 'c, 'h, 'cs) API.ContextualConversion.t
-val quadrupleC : ('a, 'h, 'cs) API.ContextualConversion.t -> ('b, 'h, 'cs) API.ContextualConversion.t -> ('c, 'h, 'cs) API.ContextualConversion.t -> ('d, 'h, 'cs) API.ContextualConversion.t -> ('a * 'b * 'c * 'd, 'h, 'cs) API.ContextualConversion.t
-val quintupleC : ('a, 'h, 'cs) API.ContextualConversion.t -> ('b, 'h, 'cs) API.ContextualConversion.t -> ('c, 'h, 'cs) API.ContextualConversion.t -> ('d, 'h, 'cs) API.ContextualConversion.t -> ('e, 'h, 'cs) API.ContextualConversion.t -> ('a * 'b * 'c * 'd * 'e, 'h, 'cs) API.ContextualConversion.t
+val triple    : ('a, 'h) API.Conversion.t -> ('b, 'h) API.Conversion.t -> ('c, 'h) API.Conversion.t -> ('a * 'b * 'c, 'h) API.Conversion.t
+val quadruple : ('a, 'h) API.Conversion.t -> ('b, 'h) API.Conversion.t -> ('c, 'h) API.Conversion.t -> ('d, 'h) API.Conversion.t -> ('a * 'b * 'c * 'd, 'h) API.Conversion.t
+val quintuple : ('a, 'h) API.Conversion.t -> ('b, 'h) API.Conversion.t -> ('c, 'h) API.Conversion.t -> ('d, 'h) API.Conversion.t -> ('e, 'h) API.Conversion.t -> ('a * 'b * 'c * 'd * 'e, 'h) API.Conversion.t
 
 type diagnostic = private OK | ERROR of string API.BuiltInPredicate.ioarg
-val diagnostic : diagnostic API.Conversion.t
+val diagnostic : (diagnostic, API.Conversion.ctx) API.Conversion.t
 val mkOK : diagnostic
 val mkERROR : string -> diagnostic
 
 (* The string is the "file name" *)
-val in_stream  : (in_channel * string) API.Conversion.t
-val out_stream : (out_channel * string) API.Conversion.t
+val in_stream  : (in_channel * string, API.Conversion.ctx) API.Conversion.t
+val out_stream : (out_channel * string, API.Conversion.ctx) API.Conversion.t
 
 (* This is the default checker [elpi-checker] *)
 val default_checker : unit -> API.Compile.program
@@ -86,7 +86,6 @@ module PPX : sig
   val embed_triple    : ('a, 'h, 'cs) API.ContextualConversion.embedding -> ('b, 'h, 'cs) API.ContextualConversion.embedding -> ('c, 'h, 'cs) API.ContextualConversion.embedding -> ('a * 'b * 'c, 'h, 'cs) API.ContextualConversion.embedding
   val embed_quadruple : ('a, 'h, 'cs) API.ContextualConversion.embedding -> ('b, 'h, 'cs) API.ContextualConversion.embedding -> ('c, 'h, 'cs) API.ContextualConversion.embedding -> ('d, 'h, 'cs) API.ContextualConversion.embedding -> ('a * 'b * 'c * 'd, 'h, 'cs) API.ContextualConversion.embedding
   val embed_quintuple : ('a, 'h, 'cs) API.ContextualConversion.embedding -> ('b, 'h, 'cs) API.ContextualConversion.embedding -> ('c, 'h, 'cs) API.ContextualConversion.embedding -> ('d, 'h, 'cs) API.ContextualConversion.embedding -> ('e, 'h, 'cs) API.ContextualConversion.embedding -> ('a * 'b * 'c * 'd * 'e, 'h, 'cs) API.ContextualConversion.embedding
-
   val mapper_src : string
 
 end

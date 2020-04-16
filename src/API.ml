@@ -46,7 +46,6 @@ let init ~builtins ~basedir:cwd argv =
       List.fold_left (fun state -> function
       | Data.BuiltInPredicate.MLCode (p,_) -> Compiler.Builtins.register state p
       | Data.BuiltInPredicate.MLData _ -> state
-      | Data.BuiltInPredicate.MLDataC _ -> state
       | Data.BuiltInPredicate.LPCode _ -> state
       | Data.BuiltInPredicate.LPDoc _ -> state) state decls) state builtins in
   let header =
@@ -120,6 +119,7 @@ module Data = struct
   type constraints = Data.constraints
   type state = Data.State.t
   type pretty_printer_context = ED.pp_ctx
+  type constant = Data.constant
   module StrMap = Util.StrMap
   type 'a solution = 'a Data.solution = {
     assignments : term StrMap.t;
@@ -133,6 +133,9 @@ module Data = struct
     hsrc : term
   }
   type hyps = hyp list
+  module Constants = struct
+    module Map = Data.Constants.Map
+  end
 end
 
 module Compile = struct
@@ -205,8 +208,6 @@ module Conversion = struct
   include ED.Conversion
 end
 
-module ContextualConversion = ED.ContextualConversion
-
 module RawOpaqueData = struct
   include Util.CData
   include ED.C
@@ -228,9 +229,9 @@ module RawOpaqueData = struct
       { cin; isc; cout; name=c }
   =
   let ty = Conversion.TyName name in
-  let embed ~depth:_ state x =
+  let embed ~depth:_ _ _ state x =
     state, ED.Term.CData (cin x), [] in
-  let readback ~depth state t =
+  let readback ~depth _ _ state t =
     let module R = (val !r) in let open R in
     match R.deref_head ~depth t with
     | ED.Term.CData c when isc c -> state, cout c, []
@@ -298,8 +299,8 @@ module BuiltInData = struct
   let string = RawOpaqueData.conversion_of_cdata ~name:"string" ED.C.string
   let loc    = RawOpaqueData.conversion_of_cdata ~name:"loc"    ED.C.loc
   let poly ty =
-    let embed ~depth:_ state x = state, x, [] in
-    let readback ~depth state t = state, t, [] in
+    let embed ~depth:_ _ _ state x = state, x, [] in
+    let readback ~depth _ _ state t = state, t, [] in
     { Conversion.embed; readback; ty = Conversion.TyName ty;
       pp = (fun fmt _ -> Format.fprintf fmt "<poly>");
       pp_doc = (fun fmt () -> ()) }
@@ -316,7 +317,7 @@ module BuiltInData = struct
        match deref_head ~depth t with
        | ED.Const i when i >= 0 -> state, i, []
        | _ -> Util.type_error "not a bound variable" in
-    { ContextualConversion.embed; readback; ty = TyName "nominal";
+    { Conversion.embed; readback; ty = TyName "nominal";
       pp = (fun fmt d -> Format.fprintf fmt "%d" d);
       pp_doc = (fun fmt () -> ()) }
 
@@ -345,10 +346,10 @@ module BuiltInData = struct
 
   let closed ty =
     let ty = Conversion.(TyName ty) in
-    let embed ~depth state (x,from) =
+    let embed ~depth _ _ state (x,from) =
       let module R = (val !r) in let open R in
       state, R.hmove ~from ~to_:depth ?avoid:None x, [] in
-    let readback ~depth state t =
+    let readback ~depth _ _ state t =
       state, fresh_copy t depth, [] in
     { Conversion.embed; readback; ty;
       pp = (fun fmt (t,d) ->
@@ -365,30 +366,14 @@ module BuiltInData = struct
     in
       aux [] [] s l
 
-  let listC_embed d_embed ~depth h c s l =
-    let module R = (val !r) in let open R in
-    let s, l, eg = map_acc (d_embed ~depth h c) s l in
-    s, list_to_lp_list l, eg
-  let listC_readback d_readback ~depth h c s t =
-    let module R = (val !r) in let open R in
-    map_acc (d_readback ~depth h c) s
-      (lp_list_to_list ~depth t)
-  let listC d =
-    let pp fmt l =
-      Format.fprintf fmt "[%a]" (Util.pplist d.ContextualConversion.pp ~boxed:true "; ") l in
-    { ContextualConversion.embed = listC_embed d.ContextualConversion.embed; readback = listC_readback d.ContextualConversion.readback;
-      ty = TyApp ("list",d.ContextualConversion.ty,[]);
-      pp;
-      pp_doc = (fun fmt () -> ()) }
-
   let list d =
-    let embed ~depth s l =
+    let embed ~depth h c s l =
       let module R = (val !r) in let open R in
-      let s, l, eg = map_acc (d.Conversion.embed ~depth) s l in
+      let s, l, eg = map_acc (d.Conversion.embed ~depth h c) s l in
       s, list_to_lp_list l, eg in
-    let readback ~depth s t =
+    let readback ~depth h c s t =
       let module R = (val !r) in let open R in
-      map_acc (d.Conversion.readback ~depth) s
+      map_acc (d.Conversion.readback ~depth h c) s
         (lp_list_to_list ~depth t)
     in
     let pp fmt l =
@@ -678,8 +663,8 @@ module FlexibleData = struct
     Conversion.ty = Conversion.TyName "uvar";
     pp_doc = (fun fmt () -> Format.fprintf fmt "Unification variable, as the uvar keyword");
     pp = (fun fmt (k,_) -> Format.fprintf fmt "%a" Elpi.pp k);
-    embed = (fun ~depth s (k,args) -> s, RawData.mkUnifVar k ~args s, []);
-    readback = (fun ~depth state t ->
+    embed = (fun ~depth _ _ s (k,args) -> s, RawData.mkUnifVar k ~args s, []);
+    readback = (fun ~depth _ _ state t ->
       match RawData.look ~depth t with
       | RawData.UnifVar(k,args) ->
           state, (k,args), []
@@ -709,7 +694,7 @@ module BuiltInPredicate = struct
 
   let mkData x = Data x
 
-  let ioargC a = let open ContextualConversion in { a with
+  let ioarg a = let open Conversion in { a with
     pp = (fun fmt -> function Data x -> a.pp fmt x | NoData -> Format.fprintf fmt "_");
     embed = (fun ~depth hyps csts state -> function
              | Data x -> a.embed ~depth hyps csts state x
@@ -723,18 +708,15 @@ module BuiltInPredicate = struct
              | _ -> let state, x, gls = a.readback ~depth hyps csts state t in
                     state, mkData x, gls);
   }
-  let ioarg a =
-    let open ContextualConversion in
-    !< (ioargC (!> a))
 
   let ioarg_any = let open Conversion in { BuiltInData.any with
     pp = (fun fmt -> function
              | Data x -> BuiltInData.any.pp fmt x
              | NoData -> Format.fprintf fmt "_");
-    embed = (fun ~depth state -> function
+    embed = (fun ~depth _ _ state -> function
              | Data x -> state, x, []
              | NoData -> assert false);
-    readback = (fun ~depth state t ->
+    readback = (fun ~depth _ _ state t ->
              let module R = (val !r) in
              match R.deref_head ~depth t with
              | ED.Term.Discard -> state, NoData, []
@@ -769,8 +751,8 @@ module Query = struct
   type name = string
   type 'f arguments = 'f ED.Query.arguments =
     | N : unit arguments
-    | D : 'a Conversion.t * 'a *    'x arguments -> 'x arguments
-    | Q : 'a Conversion.t * name * 'x arguments -> ('a * 'x) arguments
+    | D : ('a,Conversion.ctx) Conversion.t * 'a *    'x arguments -> 'x arguments
+    | Q : ('a,Conversion.ctx) Conversion.t * name * 'x arguments -> ('a * 'x) arguments
 
   type 'x t = Query of { predicate : name; arguments : 'x arguments }
 
@@ -956,7 +938,38 @@ end
   let embed_list a ~depth h c s x = BuiltInData.listC_embed a ~depth h c s x
   let embed_loc ~depth _ _ s x = BuiltInData.loc.Conversion.embed ~depth s x
   let embed_nominal = BuiltInData.nominal.ContextualConversion.embed
+  type context_description =
+    | C : ('a,'k) Conversion.context -> context_description
 
-  let nominal =  BuiltInData.nominal
+  let readback_context cdl ~depth hyps constraints state =
+    let module CMap = RawData.Constants.Map in
+    let filtered_hyps =
+      List.fold_left (fun m hyp ->
+        List.fold_left (fun m (C { is_entry_for_nominal; _ } as c) ->
+          match is_entry_for_nominal hyp with
+          | None -> m
+          | Some idx ->
+              if CMap.mem idx m then
+                 Utils.type_error "more than one context entry for the same nominal";
+              CMap.add idx (hyp,c) m) m cdl) CMap.empty
+        (RawData.of_hyps hyps) in
+    let rec aux state gls i =
+      if i = depth then state, List.concat (List.rev gls)
+      else
+        if not (CMap.mem i filtered_hyps) then aux state gls (i + 1)
+        else
+          let hyp, C { conv; to_key; push; _} = CMap.find i filtered_hyps in
+          let hyp_depth = hyp.RawData.hdepth in
+          let state, (nominal, t), gls_t =
+            conv.Conversion.readback
+               ~depth:hyp_depth (new Conversion.ctx hyps) constraints state hyp.RawData.hsrc in
+          assert (nominal = i);
+          let s = to_key ~depth:hyp_depth t in
+          let state =
+            push ~depth:i state s { Conversion.entry = t; depth = hyp_depth } in
+          aux state (gls_t :: gls) (i + 1) in
+    let state =
+      List.fold_left (fun state (C { init; _ }) -> init state) state cdl in
+    aux state [] 0
 
 end
