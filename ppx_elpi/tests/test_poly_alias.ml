@@ -6,6 +6,8 @@ type 'a simple = 'a * int
 
 open Elpi.API
 
+let x : 'c. ('a, 'c) Conversion.t -> ('a simple, 'c)Conversion.t = simple
+
 let builtin = let open BuiltIn in
   declare ~file_name:(Sys.argv.(1)) !elpi_stuff
 

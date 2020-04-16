@@ -558,11 +558,11 @@ let rec show_ty_ast ?(outer=true) = function
     end
 
   type ('a,'ctx) embedding =
-    depth:int -> (#ctx as 'ctx) -> constraints ->
+    depth:int -> ((*#ctx as *)'ctx) -> constraints ->
     State.t -> 'a -> State.t * term * extra_goals
 
   type ('a,'ctx) readback =
-    depth:int -> (#ctx as 'ctx) -> constraints ->
+    depth:int -> ((*#ctx as *)'ctx) -> constraints ->
     State.t -> term -> State.t * 'a * extra_goals
 
   type ('a,'ctx) t = {

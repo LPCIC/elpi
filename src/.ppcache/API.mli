@@ -1,4 +1,4 @@
-(*8f812463e02395f1c677804f711e333ca142566f *src/API.mli *)
+(*b6e6084513b7d102767f7fa2f05b659465663b43 *src/API.mli *)
 #1 "src/API.mli"
 [@@@ocaml.text " This module is the API for clients of the Elpi library. "]
 [@@@ocaml.text
@@ -206,16 +206,16 @@ end[@@ocaml.doc
      " This module defines what embedding and readback functions are "]
 module BuiltInData :
 sig
-  val int : (int, Conversion.ctx) Conversion.t[@@ocaml.doc
-                                                " See Elpi_builtin for a few more "]
-  val float : (float, Conversion.ctx) Conversion.t
-  val string : (string, Conversion.ctx) Conversion.t
+  val int : (int, 'c) Conversion.t[@@ocaml.doc
+                                    " See Elpi_builtin for a few more "]
+  val float : (float, 'c) Conversion.t
+  val string : (string, 'c) Conversion.t
   val list : ('a, 'c) Conversion.t -> ('a list, 'c) Conversion.t
-  val loc : (Ast.Loc.t, Conversion.ctx) Conversion.t
-  val poly : string -> (Data.term, Conversion.ctx) Conversion.t
-  val closed : string -> ((Data.term * int), Conversion.ctx) Conversion.t
-  val any : (Data.term, Conversion.ctx) Conversion.t
-  val nominal : (Data.constant, Conversion.ctx) Conversion.t
+  val loc : (Ast.Loc.t, 'c) Conversion.t
+  val poly : string -> (Data.term, 'c) Conversion.t
+  val closed : string -> ((Data.term * int), 'c) Conversion.t
+  val any : (Data.term, 'c) Conversion.t
+  val nominal : (Data.constant, 'c) Conversion.t
 end[@@ocaml.doc " Conversion for Elpi's built-in data types "]
 module OpaqueData :
 sig
@@ -661,6 +661,20 @@ end
 module PPX :
 sig
   [@@@ocaml.text " Access to internal API to implement elpi.ppx "]
+  val readback_int : (int, 'c) Conversion.readback
+  val readback_float : (float, 'c) Conversion.readback
+  val readback_string : (string, 'c) Conversion.readback
+  val readback_list :
+    ('a, 'c) Conversion.readback -> ('a list, 'c) Conversion.readback
+  val readback_loc : (Ast.Loc.t, 'c) Conversion.readback
+  val readback_nominal : (RawData.constant, 'c) Conversion.readback
+  val embed_int : (int, 'c) Conversion.embedding
+  val embed_float : (float, 'c) Conversion.embedding
+  val embed_string : (string, 'c) Conversion.embedding
+  val embed_list :
+    ('a, 'c) Conversion.embedding -> ('a list, 'c) Conversion.embedding
+  val embed_loc : (Ast.Loc.t, 'c) Conversion.embedding
+  val embed_nominal : (RawData.constant, 'c) Conversion.embedding
   type context_description =
     | C: ('a, 'k) Conversion.context -> context_description 
   val readback_context :

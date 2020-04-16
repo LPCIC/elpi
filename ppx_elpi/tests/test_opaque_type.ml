@@ -7,7 +7,7 @@ type simple
 open Elpi.API
 
 [@@@warning "-26-27-32-39-60"]
-let rec test : type h c . depth:int -> h -> c -> State.t -> RawData.term -> State.t * simple * Conversion.extra_goals =
+let rec test : depth:int -> Conversion.ctx -> Data.constraints -> State.t -> RawData.term -> State.t * simple * Conversion.extra_goals =
   elpi_readback_simple
 
 let builtin = let open BuiltIn in

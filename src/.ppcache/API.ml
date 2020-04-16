@@ -1,4 +1,4 @@
-(*f57577f5ac70e546c583f0283081932629498cbb *src/API.ml *)
+(*86ae5c1904b0a5887c9483bb52b0c38393dbaa3b *src/API.ml *)
 #1 "src/API.ml"
 module type Runtime  = module type of Runtime_trace_off
 let r = ref ((module Runtime_trace_off) : (module Runtime))
@@ -238,15 +238,12 @@ module RawOpaqueData =
         pp = (fun fmt -> fun x -> pp fmt (cin x))
       }
     let conversion_of_cdata ~name  ?doc  ?(constants= [])  cd =
-      let module R = (val !r) in
-        let open R in
-          let constants_map =
-            List.fold_right
-              (fun (n, v) ->
-                 ED.Constants.Map.add
-                   (ED.Global_symbols.declare_global_symbol n) v) constants
-              ED.Constants.Map.empty in
-          conversion_of_cdata ~name ?doc ~constants_map ~constants cd
+      let constants_map =
+        List.fold_right
+          (fun (n, v) ->
+             ED.Constants.Map.add (ED.Global_symbols.declare_global_symbol n)
+               v) constants ED.Constants.Map.empty in
+      conversion_of_cdata ~name ?doc ~constants_map ~constants cd
     let declare { name; doc; pp; compare; hash; hconsed; constants } =
       let cdata =
         declare
@@ -276,7 +273,8 @@ module OpaqueData =
   end
 module BuiltInData =
   struct
-    let int = RawOpaqueData.conversion_of_cdata ~name:"int" ED.C.int
+    let int : 'h . (int, #Conversion.ctx as 'h) Conversion.t =
+      RawOpaqueData.conversion_of_cdata ~name:"int" ED.C.int
     let float = RawOpaqueData.conversion_of_cdata ~name:"float" ED.C.float
     let string = RawOpaqueData.conversion_of_cdata ~name:"string" ED.C.string
     let loc = RawOpaqueData.conversion_of_cdata ~name:"loc" ED.C.loc
@@ -366,22 +364,21 @@ module BuiltInData =
         | x::xs ->
             let (s, x, gls) = f s x in aux (x :: acc) (gls :: extra) s xs in
       aux [] [] s l
+    let embed_list d ~depth  h c s l =
+      let module R = (val !r) in
+        let open R in
+          let (s, l, eg) = map_acc (d ~depth h c) s l in
+          (s, (list_to_lp_list l), eg)
+    let readback_list d ~depth  h c s t =
+      let module R = (val !r) in
+        let open R in map_acc (d ~depth h c) s (lp_list_to_list ~depth t)
     let list d =
-      let embed ~depth  h c s l =
-        let module R = (val !r) in
-          let open R in
-            let (s, l, eg) = map_acc (d.Conversion.embed ~depth h c) s l in
-            (s, (list_to_lp_list l), eg) in
-      let readback ~depth  h c s t =
-        let module R = (val !r) in
-          let open R in
-            map_acc (d.Conversion.readback ~depth h c) s
-              (lp_list_to_list ~depth t) in
       let pp fmt l =
-        Format.fprintf fmt "[%a]" (Util.pplist d.pp ~boxed:true "; ") l in
+        Format.fprintf fmt "[%a]"
+          (Util.pplist d.Conversion.pp ~boxed:true "; ") l in
       {
-        Conversion.embed = embed;
-        readback;
+        Conversion.embed = (embed_list d.Conversion.embed);
+        readback = (readback_list d.Conversion.readback);
         ty = (TyApp ("list", (d.ty), []));
         pp;
         pp_doc = (fun fmt -> fun () -> ())
@@ -911,6 +908,36 @@ module PPX =
                args)
         let show_ty_ast = ED.Conversion.show_ty_ast
       end
+    let readback_int ~depth  _ c s x =
+      BuiltInData.int.Conversion.readback ~depth ((new Conversion.ctx) []) c
+        s x
+    let readback_float ~depth  _ c s x =
+      BuiltInData.float.Conversion.readback ~depth ((new Conversion.ctx) [])
+        c s x
+    let readback_string ~depth  _ c s x =
+      BuiltInData.string.Conversion.readback ~depth ((new Conversion.ctx) [])
+        c s x
+    let readback_list = BuiltInData.readback_list
+    let readback_loc ~depth  _ c s x =
+      BuiltInData.loc.Conversion.readback ~depth ((new Conversion.ctx) []) c
+        s x
+    let readback_nominal ~depth  _ c s x =
+      BuiltInData.nominal.Conversion.readback ~depth
+        ((new Conversion.ctx) []) c s x
+    let embed_int ~depth  _ c s x =
+      BuiltInData.int.Conversion.embed ~depth ((new Conversion.ctx) []) c s x
+    let embed_float ~depth  _ c s x =
+      BuiltInData.float.Conversion.embed ~depth ((new Conversion.ctx) []) c s
+        x
+    let embed_string ~depth  _ c s x =
+      BuiltInData.string.Conversion.embed ~depth ((new Conversion.ctx) []) c
+        s x
+    let embed_list = BuiltInData.embed_list
+    let embed_loc ~depth  _ c s x =
+      BuiltInData.loc.Conversion.embed ~depth ((new Conversion.ctx) []) c s x
+    let embed_nominal ~depth  _ c s x =
+      BuiltInData.nominal.Conversion.embed ~depth ((new Conversion.ctx) []) c
+        s x
     type context_description =
       | C: ('a, 'k) Conversion.context -> context_description 
     let readback_context cdl ~depth  hyps constraints state =

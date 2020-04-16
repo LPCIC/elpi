@@ -1,4 +1,4 @@
-(*26831a560d3298455ec2ee41cd1d769c53f615f9 *src/data.ml *)
+(*58251a03e60cd3a227c0e030e43a21bffeee6e36 *src/data.ml *)
 #1 "src/data.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -1396,11 +1396,11 @@ module Conversion =
       object method raw = h method convs : unit list= [] end
     type ('a, 'ctx) embedding =
       depth:int ->
-        (#ctx as 'ctx) ->
+        'ctx ->
           constraints -> State.t -> 'a -> (State.t * term * extra_goals)
     type ('a, 'ctx) readback =
       depth:int ->
-        (#ctx as 'ctx) ->
+        'ctx ->
           constraints -> State.t -> term -> (State.t * 'a * extra_goals)
     type ('a, 'ctx) t =
       {

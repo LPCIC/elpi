@@ -296,23 +296,23 @@ end
 module BuiltInData : sig
 
   (** See Elpi_builtin for a few more *)
-  val int    : (int, Conversion.ctx) Conversion.t
-  val float  : (float, Conversion.ctx) Conversion.t
-  val string : (string, Conversion.ctx) Conversion.t
+  val int    : (int, 'c) Conversion.t
+  val float  : (float, 'c) Conversion.t
+  val string : (string, 'c) Conversion.t
   val list   : ('a, 'c) Conversion.t -> ('a list, 'c) Conversion.t
-  val loc    : (Ast.Loc.t, Conversion.ctx) Conversion.t
+  val loc    : (Ast.Loc.t, 'c) Conversion.t
 
   (* poly "A" is what one would use for, say, [type eq A -> A -> prop] *)
-  val poly   : string -> (Data.term, Conversion.ctx) Conversion.t
+  val poly   : string -> (Data.term, 'c) Conversion.t
 
   (* like poly "A" but "A" must be a closed term, e.g. no unification variables
      and no variables bound by the program (context) *)
-  val closed : string -> (Data.term * int, Conversion.ctx) Conversion.t
+  val closed : string -> (Data.term * int, 'c) Conversion.t
 
   (* any is like poly "X" for X fresh *)
-  val any    : (Data.term, Conversion.ctx) Conversion.t
+  val any    : (Data.term, 'c) Conversion.t
 
-  val nominal : (Data.constant, Conversion.ctx) Conversion.t
+  val nominal : (Data.constant, 'c) Conversion.t
 
 end
 
@@ -1112,19 +1112,20 @@ end
 module PPX : sig
   (** Access to internal API to implement elpi.ppx *)
 
-  val readback_int    : (int,#ContextualConversion.raw_ctx,'c) ContextualConversion.readback
-  val readback_float  : (float,#ContextualConversion.raw_ctx,'c) ContextualConversion.readback
-  val readback_string : (string,#ContextualConversion.raw_ctx,'c) ContextualConversion.readback
-  val readback_list   : ('a,#ContextualConversion.raw_ctx,'c) ContextualConversion.readback -> ('a list,#ContextualConversion.raw_ctx,'c) ContextualConversion.readback
-  val readback_loc    : (Ast.Loc.t,#ContextualConversion.raw_ctx,'c) ContextualConversion.readback
-  val readback_nominal : (RawData.constant,#ContextualConversion.raw_ctx,'c) ContextualConversion.readback
+  val readback_int    : (int, 'c) Conversion.readback
+  val readback_float  : (float, 'c) Conversion.readback
+  val readback_string : (string, 'c) Conversion.readback
+  val readback_list   : ('a, 'c) Conversion.readback -> ('a list,'c) Conversion.readback
+  val readback_loc    : (Ast.Loc.t, 'c) Conversion.readback
+  val readback_nominal : (RawData.constant, 'c) Conversion.readback
 
-  val embed_int    : (int,#ContextualConversion.raw_ctx,'c) ContextualConversion.embedding
-  val embed_float  : (float,#ContextualConversion.raw_ctx,'c) ContextualConversion.embedding
-  val embed_string : (string,#ContextualConversion.raw_ctx,'c) ContextualConversion.embedding
-  val embed_list   : ('a,#ContextualConversion.raw_ctx,'c) ContextualConversion.embedding -> ('a list,#ContextualConversion.raw_ctx,'c) ContextualConversion.embedding
-  val embed_loc    : (Ast.Loc.t,#ContextualConversion.raw_ctx,'c) ContextualConversion.embedding
-  val embed_nominal : (RawData.constant,#ContextualConversion.raw_ctx,'c) ContextualConversion.embedding
+  val embed_int    : (int, 'c) Conversion.embedding
+  val embed_float  : (float, 'c) Conversion.embedding
+  val embed_string : (string, 'c) Conversion.embedding
+  val embed_list   : ('a, 'c) Conversion.embedding -> ('a list, 'c) Conversion.embedding
+  val embed_loc    : (Ast.Loc.t, 'c) Conversion.embedding
+  val embed_nominal : (RawData.constant, 'c) Conversion.embedding
+
   type context_description =
     | C : ('a,'k) Conversion.context -> context_description
 
