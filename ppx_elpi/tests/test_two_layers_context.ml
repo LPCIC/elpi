@@ -18,11 +18,23 @@ type tye =
   | TArrow of tye * tye
 [@@deriving elpi { declaration  } ]
 
+let tye : (tye,
+          < tctx : tctx Elpi.API.PPX.ctx;
+            .. >,
+          'a)
+         Elpi.API.ContextualConversion.t  = tye
+
 let pp_ty _ _ = ()
 type ty =
   | Mono of tye
   | Forall of string * bool * (ty[@elpi.binder "tye" tctx (fun s b -> TDecl(s,b))])
 [@@deriving elpi ]
+
+let ty : (ty,
+          < tctx : tctx Elpi.API.PPX.ctx;
+            .. >,
+          'a)
+         Elpi.API.ContextualConversion.t  = ty
 
 let pp_ctx _ _ = ()
 type ctx = Decl of (string[@elpi.key]) * ty
@@ -49,6 +61,13 @@ type term =
    | Literal i -> Format.fprintf fmt "%d" i
    | Cast(t,_) -> aux fmt t
    in aux ]
+
+let term : (ty,
+          < tctx : tctx Elpi.API.ContextualConversion.ctx_entry Elpi.API.RawData.Constants.Map.t;
+            ctx  : ctx  Elpi.API.ContextualConversion.ctx_entry Elpi.API.RawData.Constants.Map.t;
+            .. >,
+          'a)
+         Elpi.API.ContextualConversion.t  = term
 
 open Elpi.API
 open BuiltInPredicate

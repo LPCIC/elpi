@@ -1128,21 +1128,42 @@ end
 module PPX : sig
   (** Access to internal API to implement elpi.ppx *)
 
-  val readback_int    : (int,'h,'c) ContextualConversion.readback
-  val readback_float  : (float,'h,'c) ContextualConversion.readback
-  val readback_string : (string,'h,'c) ContextualConversion.readback
-  val readback_list   : ('a,'h,'c) ContextualConversion.readback -> ('a list,'h,'c) ContextualConversion.readback
-  val readback_loc    : (Ast.Loc.t,'h,'c) ContextualConversion.readback
-  val readback_nominal : (RawData.constant,'h,'c) ContextualConversion.readback
+  val readback_int    : (int,#ContextualConversion.raw_ctx,'c) ContextualConversion.readback
+  val readback_float  : (float,#ContextualConversion.raw_ctx,'c) ContextualConversion.readback
+  val readback_string : (string,#ContextualConversion.raw_ctx,'c) ContextualConversion.readback
+  val readback_list   : ('a,#ContextualConversion.raw_ctx,'c) ContextualConversion.readback -> ('a list,#ContextualConversion.raw_ctx,'c) ContextualConversion.readback
+  val readback_loc    : (Ast.Loc.t,#ContextualConversion.raw_ctx,'c) ContextualConversion.readback
+  val readback_nominal : (RawData.constant,#ContextualConversion.raw_ctx,'c) ContextualConversion.readback
 
-  val embed_int    : (int,'h,'c) ContextualConversion.embedding
-  val embed_float  : (float,'h,'c) ContextualConversion.embedding
-  val embed_string : (string,'h,'c) ContextualConversion.embedding
-  val embed_list   : ('a,'h,'c) ContextualConversion.embedding -> ('a list,'h,'c) ContextualConversion.embedding
-  val embed_loc    : (Ast.Loc.t,'h,'c) ContextualConversion.embedding
-  val embed_nominal : (RawData.constant,'h,'c) ContextualConversion.embedding
+  val embed_int    : (int,#ContextualConversion.raw_ctx,'c) ContextualConversion.embedding
+  val embed_float  : (float,#ContextualConversion.raw_ctx,'c) ContextualConversion.embedding
+  val embed_string : (string,#ContextualConversion.raw_ctx,'c) ContextualConversion.embedding
+  val embed_list   : ('a,#ContextualConversion.raw_ctx,'c) ContextualConversion.embedding -> ('a list,#ContextualConversion.raw_ctx,'c) ContextualConversion.embedding
+  val embed_loc    : (Ast.Loc.t,#ContextualConversion.raw_ctx,'c) ContextualConversion.embedding
+  val embed_nominal : (RawData.constant,#ContextualConversion.raw_ctx,'c) ContextualConversion.embedding
 
-  val nominal : (RawData.constant,'h,'c) ContextualConversion.t
+  val nominal : (RawData.constant,#ContextualConversion.raw_ctx,'c) ContextualConversion.t
+
+  type 'a ctx = 'a ContextualConversion.ctx_entry RawData.Constants.Map.t
+
+  type ('a,'k) context = {
+    is_entry_for_nominal : RawData.hyp -> int option;
+    to_key : depth:int -> 'a -> 'k;
+    push : depth:int -> State.t -> 'k -> 'a ContextualConversion.ctx_entry -> Data.state;
+    pop : depth:int -> State.t -> 'k -> State.t;
+    conv : 'c 'h. (RawData.constant * 'a,< raw : RawData.hyp list; .. > as 'h,'c) ContextualConversion.t;
+    init : State.t -> State.t;
+    get : State.t -> 'a ContextualConversion.ctx_entry RawData.Constants.Map.t
+  }
+  type context_description =
+    | C : ('a,'k) context -> context_description
+
+  val readback_context :
+    context_description list ->
+    depth:int ->
+    Data.hyps ->
+    Data.constraints ->
+    Data.state -> Data.state * Conversion.extra_goals
 
   module Doc : sig
 

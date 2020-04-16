@@ -4,8 +4,8 @@ let pp_simple _ _ _ = ()
 type 'a simple = A | B of int | C of 'a * int
 [@@deriving elpi { declaration = elpi_stuff } ]
 
-let _ = simple @@ Elpi.API.ContextualConversion.(!>) Elpi.API.BuiltInData.int
-let _ = simple @@ Elpi.API.ContextualConversion.(!>) Elpi.API.BuiltInData.float
+let _ :  (int simple, < .. > as 'a,'b) Elpi.API.ContextualConversion.t = simple @@ Elpi.API.ContextualConversion.(!>) Elpi.API.BuiltInData.int
+let _ :  (float simple, < .. > as 'a,'b) Elpi.API.ContextualConversion.t = simple @@ Elpi.API.ContextualConversion.(!>) Elpi.API.BuiltInData.float
 
 open Elpi.API
 

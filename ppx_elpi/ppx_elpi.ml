@@ -160,7 +160,6 @@ let att_elpi_binder = Attribute.(declare "elpi.binder" Context.core_type (single
   String.lowercase_ascii txt
 let elpi_map_name x = "Elpi_"^x^"_Map"
 let elpi_state_name x = "elpi_"^x^"_state"
-let elpi_in_name_alone x = "in_" ^ x ^ "_alone"
 let elpi_in_name x = "in_" ^ x
 let elpi_to_key x = "elpi_" ^ x ^ "_to_key"
 let elpi_is_ctx_entry_name x = "elpi_is_" ^ x
@@ -548,7 +547,8 @@ let ctx_entry_key (module B : Ast_builder.S) kl = let open B in
     List.map (error_constructor_not_supported (module B)) (keep_skip kl)) ] ]
 
 let is_ctx_entry (module B : Ast_builder.S) kl = let open B in
-  [%expr fun ~depth: elpi__depth elpi__x -> match  Elpi.API.RawData.look ~depth: elpi__depth elpi__x with
+  [%expr fun { Elpi.API.RawData.hdepth = elpi__depth; hsrc = elpi__x } ->
+    match  Elpi.API.RawData.look ~depth: elpi__depth elpi__x with
     | Elpi.API.RawData.Const _ -> None
     | Elpi.API.RawData.App(elpi__hd,elpi__idx,_) ->
       if [%e
@@ -563,7 +563,7 @@ let is_ctx_entry (module B : Ast_builder.S) kl = let open B in
         | _ -> Elpi.API.Utils.type_error "context entry applied to a non nominal"
       else None
     | _ -> None ]
-
+(*
 let ctx_readback (module B : Ast_builder.S) name = let open B in
   let elpi_Map = elpi_Map ~loc name in
   let elpi_push = evar (elpi_push name) in
@@ -608,6 +608,9 @@ let rec compose_ctx_readback (module B : Ast_builder.S) = function
                [%expr Elpi.API.ContextualConversion.(|+|)
                     [%e evar (elpi_in_name_alone x) ]
                     [%e compose_ctx_readback (module B) xs] ]
+*)
+
+
 
 let ctx_push (module B : Ast_builder.S) name = let open B in
   let elpi_Map = elpi_Map ~loc name in
@@ -808,8 +811,6 @@ let analyze_tuple_constructor (module B : Ast_builder.S) tyname kname kattribute
                embed = find_embed_of (module B) same_mutrec_block ty;
                ty_ast = find_ty_ast_of (module B) same_mutrec_block ty;
              }) in
-    let ctx_names =
-      List.concat (List.map (function HO { ctx; _ } -> [ctx] | _ -> []) tl) in
     let var_ =
       match Attribute.get att_elpi_var kattributes with
       | Some [%expr [%e? ctx_name ] [%e? get_key ]] when option_is_some (one_lident ctx_name) ->
@@ -832,7 +833,14 @@ let analyze_tuple_constructor (module B : Ast_builder.S) tyname kname kattribute
           else error "[@elpi.var] on a constructor with more than one argument and not [@elpi.readback]"
       | (Some _ as r), None, Some p -> opt2custom r, p
       | Some _, Some _, Some _ -> error "[@elpi.var] on a constructor with [@elpi.readback] and [@elpi.embed]" in
-    Expose {
+    let ctx_names_of_directive = function
+      | Custom _ -> []
+      | Standard -> []
+      | Name { ctx_name; _ } -> [ctx_name] in
+    let ctx_names =
+      List.concat (ctx_names_of_directive embed :: ctx_names_of_directive readback ::
+                     List.map (function HO { ctx; _ } -> [ctx] | _ -> []) tl) in
+   Expose {
       declaration = [pstr_value Nonrecursive [decl_str]; pstr_value Nonrecursive [decl]] ;
       constant = evar c;
       constant_name = str;
@@ -969,15 +977,18 @@ let pp_for_conversion (module B : Ast_builder.S) name is_pred params pp = let op
 let quantify_ty_over_params (module B : Ast_builder.S) params t = let open B in
   ptyp_poly (List.map Located.mk params) t
 
-let conversion_type (module B : Ast_builder.S) name params is_pred = let open B in
+let conversion_type (module B : Ast_builder.S) name params is_pred all_ctx = let open B in
+  let ctx_obj =
+    if is_pred then [%type: < raw : Elpi.API.RawData.hyp list; .. > ]
+    else ptyp_object (SSet.elements all_ctx |> List.map (fun x -> otag (Located.mk x) [%type: [%t ptyp_constr (Located.lident x) []] Elpi.API.PPX.ctx ])) Open in
   let rec aux = function
     | [] ->
          let t = ptyp_constr (Located.lident name) (List.map ptyp_var params) in
          let t = if is_pred then ptyp_tuple [ [%type: Elpi.API.RawData.constant ] ;t] else t in
-         [%type: ([%t t ],'elpi__param__poly_hyps,'elpi__param__poly_csts) Elpi.API.ContextualConversion.t]
-    | t :: ts -> [%type: ([%t ptyp_var t ],'elpi__param__poly_hyps,'elpi__param__poly_csts) Elpi.API.ContextualConversion.t -> [%t aux ts]]
+         [%type: ([%t t ],[%t ctx_obj ],'elpi__param__poly_csts) Elpi.API.ContextualConversion.t]
+    | t :: ts -> [%type: ([%t ptyp_var t ], < .. > ,'elpi__param__poly_csts) Elpi.API.ContextualConversion.t -> [%t aux ts]]
   in
-    quantify_ty_over_params (module B) (params @ ["elpi__param__poly_hyps"; "elpi__param__poly_csts"]) (aux params)
+    quantify_ty_over_params (module B) (params @ ["elpi__param__poly_csts"]) (aux params)
 
 
 let readback_type (module B : Ast_builder.S) name params is_pred = let open B in
@@ -995,7 +1006,7 @@ let embed_type (module B : Ast_builder.S) name params is_pred = let open B in
     | [] ->
          let t = ptyp_constr (Located.lident name) (List.map ptyp_var params) in
          let t = if is_pred then ptyp_tuple [ [%type: Elpi.API.RawData.constant ] ;t] else t in
-         [%type: ([%t t ],'elpi__param__poly_hyps,'elpi__param__poly_csts) Elpi.API.ContextualConversion.embedding]
+         [%type: ([%t t ],< .. > as 'elpi__param__poly_hyps,'elpi__param__poly_csts) Elpi.API.ContextualConversion.embedding]
     | t :: ts -> [%type: ([%t ptyp_var t ],'elpi__param__poly_hyps,'elpi__param__poly_csts) Elpi.API.ContextualConversion.embedding -> [%t aux ts]]
   in
     quantify_ty_over_params (module B) (params @ ["elpi__param__poly_hyps"; "elpi__param__poly_csts"]) (aux params)
@@ -1021,16 +1032,12 @@ let abstract_expr_over_params (module B : Ast_builder.S) vl f e = let open B in
   in
     aux vl
 
-let conversion_for_alias (module B : Ast_builder.S) orig name params _same_mutrec_block = let open B in
-  let conv = conversion_of (module B) orig in
-  value_binding ~pat:(ppat_constraint (pvar name) (conversion_type (module B) name params false)) ~expr:(abstract_expr_over_params (module B) params (fun x -> x) conv)
-
-let conversion_for_tyd (module B : Ast_builder.S) _same_mutrec_block { name; params;  elpi_name; elpi_code; elpi_doc; type_decl; pp; index } = let open B in
+let conversion_for_tyd (module B : Ast_builder.S) all_ctx { name; params;  elpi_name; elpi_code; elpi_doc; type_decl; pp; index } = let open B in
   let is_pred = option_is_some index in
   match type_decl with
   | Opaque -> coversion_for_opaque (module B) (estring elpi_name) name pp
   | Alias _ ->
-    value_binding ~pat:(ppat_constraint (pvar name) (conversion_type (module B) name params is_pred)) ~expr:(abstract_expr_over_params (module B) params (fun x -> x) ([%expr
+    value_binding ~pat:(ppat_constraint (pvar name) (conversion_type (module B) name params is_pred all_ctx)) ~expr:(abstract_expr_over_params (module B) params (fun x -> x) ([%expr
       let kind = [%e mk_kind (module B) params (estring elpi_name) ] in
       {
         Elpi.API.ContextualConversion.ty = kind;
@@ -1040,7 +1047,7 @@ let conversion_for_tyd (module B : Ast_builder.S) _same_mutrec_block { name; par
         readback = [%e eapply (evar (elpi_readback_name name)) (List.map (fun x -> [%expr [%e evar x].Elpi.API.ContextualConversion.readback]) params) ];
       }]))
   | Algebraic(csts,_)->
-    value_binding ~pat:(ppat_constraint (pvar name) (conversion_type (module B) name params is_pred)) ~expr:(abstract_expr_over_params (module B) params (fun x -> x) ([%expr
+    value_binding ~pat:(ppat_constraint (pvar name) (conversion_type (module B) name params is_pred all_ctx)) ~expr:(abstract_expr_over_params (module B) params (fun x -> x) ([%expr
       let kind = [%e mk_kind (module B) params (estring elpi_name) ] in
       {
         Elpi.API.ContextualConversion.ty = kind;
@@ -1050,6 +1057,29 @@ let conversion_for_tyd (module B : Ast_builder.S) _same_mutrec_block { name; par
         readback = [%e eapply (evar (elpi_readback_name name)) (List.map (fun x -> [%expr [%e evar x].Elpi.API.ContextualConversion.readback]) params) ];
       }]))
 ;;
+
+let initial_state (module B : Ast_builder.S) name = let open B in
+  let elpi_Map = elpi_Map ~loc name in [%expr
+    ( [%e elpi_Map "empty" ] : [%t ptyp_constr (Located.lident (elpi_map_name name ^ ".t")) [ [%type: Elpi.API.RawData.constant] ] ])
+    ,
+    (Elpi.API.RawData.Constants.Map.empty : [%t ptyp_constr (Located.lident name) [] ] Elpi.API.ContextualConversion.ctx_entry Elpi.API.RawData.Constants.Map.t)
+  ]
+
+let context_for_tyd (module B : Ast_builder.S) name = let open B in
+  [%expr
+  {
+    Elpi.API.PPX.is_entry_for_nominal = [%e evar @@ elpi_is_ctx_entry_name name ];
+    to_key = [%e evar @@ elpi_to_key name ];
+    push = [%e evar @@ elpi_push name ];
+    pop = [%e evar @@ elpi_pop name ];
+    conv = [%e evar name];
+    init = (fun state ->
+      Elpi.API.State.set [%e evar @@ elpi_state_name name ] state
+        [%e initial_state (module B) name]);
+    get = (fun state ->
+             snd @@ Elpi.API.State.get [%e evar @@ elpi_state_name name ] state);
+  }
+  ]
 
 let embed_for_tyd (module B : Ast_builder.S) same_mutrec_block { name; params; type_decl; index; _ } = let open B in
   let is_pred = option_is_some index in
@@ -1168,7 +1198,7 @@ let extras_of_task (module B : Ast_builder.S) { types; names; context; ctx_names
       ty_constants = constants_of_tyd (module B) tyd;
       ty_embed = embed_for_tyd (module B) names tyd;
       ty_readback = readback_for_tyd (module B) names tyd;
-      ty_conversion = conversion_for_tyd (module B) names tyd;
+      ty_conversion = conversion_for_tyd (module B) ctx_names tyd;
       ty_conversion_name = tyd.name;
       ty_elpi_declaration = elpi_declaration_of_tyd (module B) tyd;
       ty_opaque = tyd.type_decl = Opaque;
@@ -1178,7 +1208,6 @@ let extras_of_task (module B : Ast_builder.S) { types; names; context; ctx_names
     match context with
     | None -> None
     | Some(name,m,tyd) ->
-      let elpi_Map = elpi_Map ~loc name in
       let elpi_name = tyd.elpi_name in
       let csts =
         match tyd.type_decl with Algebraic(x,_) -> x | _ -> error "context ADT must be explicit" in
@@ -1188,10 +1217,7 @@ let extras_of_task (module B : Ast_builder.S) { types; names; context; ctx_names
             ~expr:(pmod_apply (pmod_ident (Located.mk (Longident.parse "Elpi.API.Utils.Map.Make"))) m));
           pstr_value Nonrecursive [value_binding ~pat:(pvar (elpi_state_name name)) ~expr:[%expr
             Elpi.API.State.declare ~name:[%e estring elpi_name] ~pp:(fun fmt _ -> Format.fprintf fmt "TODO")
-              ~init:(fun () ->
-                ([%e elpi_Map "empty" ] :
-                  [%t ptyp_constr (Located.lident (elpi_map_name name ^ ".t")) [ [%type: Elpi.API.RawData.constant] ] ]),
-                (Elpi.API.RawData.Constants.Map.empty : [%t ptyp_constr (Located.lident name) [] ] Elpi.API.ContextualConversion.ctx_entry Elpi.API.RawData.Constants.Map.t))
+              ~init:(fun () -> [%e initial_state (module B) name]);
           ]];
           pstr_value Nonrecursive [value_binding ~pat:(pvar (elpi_to_key name)) ~expr:(ctx_entry_key (module B) csts)];
           pstr_value Nonrecursive [value_binding ~pat:(pvar (elpi_is_ctx_entry_name name)) ~expr:(is_ctx_entry (module B) csts)];
@@ -1199,10 +1225,7 @@ let extras_of_task (module B : Ast_builder.S) { types; names; context; ctx_names
           pstr_value Nonrecursive [value_binding ~pat:(pvar (elpi_pop name)) ~expr:(ctx_pop (module B) name)];
       ];
       ty_context_readback = [
-        pstr_value Nonrecursive [value_binding ~pat:(pvar (elpi_in_name_alone name)) ~expr:(ctx_readback (module B) name)];
-        pstr_value Nonrecursive [value_binding ~pat:(pvar (elpi_in_name name)) ~expr:(
-          compose_ctx_readback (module B) ((*ctx_names @*) [name])
-        )]
+        pstr_value Nonrecursive [value_binding ~pat:(pvar @@ elpi_in_name tyd.name) ~expr:(context_for_tyd (module B) tyd.name) ]
       ];
     } in
   { ty_extras; ctx_extras }
@@ -1298,11 +1321,7 @@ let typedecl_extras (module B : Ast_builder.S) all_context tyds =
       | Algebraic (cl,_) ->
           List.fold_left (fun acc -> function
             | Skip _ -> acc
-            | Expose { arg_types; _ } ->
-                List.fold_left (fun acc -> function
-                  | FO _ -> acc
-                  | HO { ctx; _ } -> SSet.add ctx acc)
-                  acc arg_types)
+            | Expose { ctx_names; _ } -> List.fold_right SSet.add ctx_names acc)
             acc cl)
         SSet.empty tyds in
   let ctx_names =

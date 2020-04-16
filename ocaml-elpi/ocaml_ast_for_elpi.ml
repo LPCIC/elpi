@@ -116,8 +116,8 @@ and location_stack = location list
    If [pos_lnum = -1], then [pos_bol = 0]. Use [pos_cnum] and
    re-parse the file to get the line and character numbers.
    Else all fields are correct.
-*)
 
+*)
 and 'a loc = 'a Location.loc = {
   txt : 'a;
   loc : location;

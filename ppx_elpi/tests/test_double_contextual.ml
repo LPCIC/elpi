@@ -33,6 +33,9 @@ type term =
 
 open Elpi.API
 
+let term : (term, < ctx : ctx ContextualConversion.ctx_entry RawData.Constants.Map.t;
+                    tctx : tctx ContextualConversion.ctx_entry RawData.Constants.Map.t;
+                  >, Data.constraints) ContextualConversion.t = term
 let in_ctx : (tctx ContextualConversion.ctx_entry RawData.Constants.Map.t * ctx ContextualConversion.ctx_entry RawData.Constants.Map.t, Data.constraints) ContextualConversion.ctx_readback = in_ctx
 
 let builtin = let open BuiltIn in
