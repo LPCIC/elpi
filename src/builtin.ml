@@ -212,7 +212,7 @@ type polyop = {
   pname : string;
 }
 
-let bool = AlgebraicData.declare {
+let bool : (bool, #Conversion.ctx as 'h) Conversion.t = AlgebraicData.declare {
   AlgebraicData.ty = TyName "bool";
   doc = "Boolean values: tt and ff since true and false are predicates";
   pp = (fun fmt b -> Format.fprintf fmt "%b" b);

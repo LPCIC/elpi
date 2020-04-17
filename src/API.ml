@@ -225,7 +225,7 @@ module RawOpaqueData = struct
     constants : (name * 'a) list; (* global constants of that type, eg "std_in" *)
   }
 
-  let conversion_of_cdata ~name ?(doc="") ~constants_map ~constants
+  let conversion_of_cdata ~name ?(doc="") ~constants_map
       { cin; isc; cout; name=c }
   =
   let ty = Conversion.TyName name in
@@ -236,7 +236,7 @@ module RawOpaqueData = struct
     match R.deref_head ~depth t with
     | ED.Term.CData c when isc c -> state, cout c, []
     | ED.Term.Const i as t when i < 0 ->
-        begin try state, ED.Constants.Map.find i constants_map, []
+        begin try state, snd @@ ED.Constants.Map.find i constants_map, []
         with Not_found -> raise (Conversion.TypeErr(ty,depth,t)) end
     | t -> raise (Conversion.TypeErr(ty,depth,t)) in
   let pp_doc fmt () =
@@ -246,18 +246,11 @@ module RawOpaqueData = struct
       Format.fprintf fmt "@\n";
     end;
     Format.fprintf fmt "@[<hov 2>typeabbrev %s (ctype \"%s\").@]@\n@\n" name c;
-    List.iter (fun (c,_) ->
+    ED.Constants.Map.iter (fun _ (c,_) ->
       Format.fprintf fmt "@[<hov 2>type %s %s.@]@\n" c name)
-      constants
+      constants_map
     in
   { Conversion.embed; readback; ty; pp_doc; pp = (fun fmt x -> pp fmt (cin x)) }
-
-  let conversion_of_cdata ~name ?doc ?(constants=[]) cd =
-    let constants_map =
-      List.fold_right (fun (n,v) ->
-        ED.Constants.Map.add (ED.Global_symbols.declare_global_symbol n) v)
-        constants ED.Constants.Map.empty in
-    conversion_of_cdata ~name ?doc ~constants_map ~constants cd
 
   let declare { name; doc; pp; compare; hash; hconsed; constants; } =
     let cdata = declare {
@@ -267,7 +260,13 @@ module RawOpaqueData = struct
       data_name = name;
       data_hconsed = hconsed;
    } in
-   cdata, conversion_of_cdata ~name ~doc ~constants cdata
+   cdata,
+      List.fold_right (fun (n,v) ->
+        ED.Constants.Map.add (ED.Global_symbols.declare_global_symbol n) (n,v))
+        constants ED.Constants.Map.empty, doc
+
+  let declare_cdata (cd,constants_map,doc) =
+    conversion_of_cdata ~name:cd.Util.CData.name ~doc ~constants_map cd
 
 end
 
@@ -287,48 +286,43 @@ module OpaqueData = struct
     constants : (name * 'a) list; (* global constants of that type, eg "std_in" *)
   }
 
-  let declare x = snd @@ RawOpaqueData.declare x
+  let declare x = x |> RawOpaqueData.declare |> RawOpaqueData.declare_cdata
 
 end
 
 module BuiltInData = struct
 
-  let int    : 'h. (int, 'h) Conversion.t =
-  let name = "int" in
-  let doc = "" in
-  let cdata = ED.C.int in
-  let { Util.CData.cin; isc; cout; name=c } = cdata in
-  let constants_map = ED.Constants.Map.empty in
-    let ty = Conversion.TyName name in
-  let embed ~depth:_ _ _ state x =
-    state, ED.Term.CData (cin x), [] in
-  let readback ~depth _ _ state t =
-    let module R = (val !r) in let open R in
-    match R.deref_head ~depth t with
-    | ED.Term.CData c when isc c -> state, cout c, []
-    | ED.Term.Const i as t when i < 0 ->
-        begin try state, ED.Constants.Map.find i constants_map, []
-        with Not_found -> raise (Conversion.TypeErr(ty,depth,t)) end
-    | t -> raise (Conversion.TypeErr(ty,depth,t)) in
-  let pp_doc fmt () =
-    let module R = (val !r) in let open R in
-    if doc <> "" then begin
-      ED.BuiltInPredicate.pp_comment fmt ("% " ^ doc);
-      Format.fprintf fmt "@\n";
-    end;
-    Format.fprintf fmt "@[<hov 2>typeabbrev %s (ctype \"%s\").@]@\n@\n" name c;
-    List.iter (fun (c,_) ->
-      Format.fprintf fmt "@[<hov 2>type %s %s.@]@\n" c name)
-      constants
-    in
-
+  let[@elpi.template] inline_data = fun name doc cdata ->
+    let { Util.CData.cin; isc; cout; name=c } = cdata in
+    let constants = [] in
+    let constants_map = ED.Constants.Map.empty in
+      let ty = Conversion.TyName name in
+    let embed ~depth:_ _ _ state x =
+      state, ED.Term.CData (cin x), [] in
+    let readback ~depth _ _ state t =
+      let module R = (val !r) in let open R in
+      match R.deref_head ~depth t with
+      | ED.Term.CData c when isc c -> state, cout c, []
+      | ED.Term.Const i as t when i < 0 ->
+          begin try state, ED.Constants.Map.find i constants_map, []
+          with Not_found -> raise (Conversion.TypeErr(ty,depth,t)) end
+      | t -> raise (Conversion.TypeErr(ty,depth,t)) in
+    let pp_doc fmt () =
+      let module R = (val !r) in let open R in
+      if doc <> "" then begin
+        ED.BuiltInPredicate.pp_comment fmt ("% " ^ doc);
+        Format.fprintf fmt "@\n";
+      end;
+      Format.fprintf fmt "@[<hov 2>typeabbrev %s (ctype \"%s\").@]@\n@\n" name c;
+      List.iter (fun (c,_) ->
+        Format.fprintf fmt "@[<hov 2>type %s %s.@]@\n" c name)
+        constants in
     { Conversion.embed; readback; ty; pp_doc; pp = (fun fmt x -> Util.CData.pp fmt (cin x)) }
-  
-  
-  (*RawOpaqueData.conversion_of_cdata ~name:"int"    ED.C.int*)
-  let float  = RawOpaqueData.conversion_of_cdata ~name:"float"  ED.C.float
-  let string = RawOpaqueData.conversion_of_cdata ~name:"string" ED.C.string
-  let loc    = RawOpaqueData.conversion_of_cdata ~name:"loc"    ED.C.loc
+
+  let int    : 'h. (int, 'h) Conversion.t        = [%elpi.template inline_data "int" "" ED.C.int]
+  let float  : 'h. (float, 'h) Conversion.t      = [%elpi.template inline_data "float" "" ED.C.float]
+  let string : 'h. (string, 'h) Conversion.t     = [%elpi.template inline_data "string" "" ED.C.string]
+  let loc    : 'h. (Util.Loc.t, 'h) Conversion.t = [%elpi.template inline_data "loc" "" ED.C.loc]
 
   let poly ty =
     let embed ~depth:_ _ _ state x = state, x, [] in
@@ -337,7 +331,12 @@ module BuiltInData = struct
       pp = (fun fmt _ -> Format.fprintf fmt "<poly>");
       pp_doc = (fun fmt () -> ()) }
 
-  let any = poly "any"
+  let any =
+    let embed ~depth:_ _ _ state x = state, x, [] in
+    let readback ~depth _ _ state t = state, t, [] in
+    { Conversion.embed; readback; ty = Conversion.TyName "any";
+      pp = (fun fmt _ -> Format.fprintf fmt "<any>");
+      pp_doc = (fun fmt () -> ()) }
 
   let nominal =
     let embed ~depth:_ _ _ state x =
@@ -560,16 +559,8 @@ module RawData = struct
 
   let of_term x = x
 
-  let of_hyps x = x
-
-  type hyp = Data.hyp = {
-    hdepth : int;
-    hsrc : term
-  }
-  type hyps = hyp list
-
   type suspended_goal = ED.suspended_goal = {
-    context : hyps;
+    context : Data.hyps;
     goal : int * term
   }
 
@@ -984,17 +975,17 @@ end
               if CMap.mem idx m then
                  Utils.type_error "more than one context entry for the same nominal";
               CMap.add idx (hyp,c) m) m cdl) CMap.empty
-        (RawData.of_hyps hyps) in
+       hyps in
     let rec aux state gls i =
       if i = depth then state, List.concat (List.rev gls)
       else
         if not (CMap.mem i filtered_hyps) then aux state gls (i + 1)
         else
           let hyp, C { conv; to_key; push; _} = CMap.find i filtered_hyps in
-          let hyp_depth = hyp.RawData.hdepth in
+          let hyp_depth = hyp.Data.hdepth in
           let state, (nominal, t), gls_t =
             conv.Conversion.readback
-               ~depth:hyp_depth (new Conversion.ctx hyps) constraints state hyp.RawData.hsrc in
+               ~depth:hyp_depth (new Conversion.ctx hyps) constraints state hyp.Data.hsrc in
           assert (nominal = i);
           let s = to_key ~depth:hyp_depth t in
           let state =

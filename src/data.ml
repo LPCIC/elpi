@@ -554,16 +554,17 @@ let rec show_ty_ast ?(outer=true) = function
   class ctx (h : hyps) =
     object
       method raw = h
-      method convs : unit list = []
     end
 
   type ('a,'ctx) embedding =
-    depth:int -> ((*#ctx as *)'ctx) -> constraints ->
+    depth:int -> 'ctx -> constraints ->
     State.t -> 'a -> State.t * term * extra_goals
+  constraint 'ctx = #ctx
 
   type ('a,'ctx) readback =
-    depth:int -> ((*#ctx as *)'ctx) -> constraints ->
+    depth:int -> 'ctx -> constraints ->
     State.t -> term -> State.t * 'a * extra_goals
+  constraint 'ctx = #ctx
 
   type ('a,'ctx) t = {
     ty : ty_ast;
@@ -572,6 +573,7 @@ let rec show_ty_ast ?(outer=true) = function
     embed : ('a,'ctx) embedding [@opaque];   (* 'a -> term *)
     readback : ('a,'ctx) readback [@opaque]; (* term -> 'a *)
   }
+  constraint 'ctx = #ctx
   [@@deriving show]
 
   type 'a ctx_entry = { entry : 'a; depth : int }
@@ -591,7 +593,8 @@ let rec show_ty_ast ?(outer=true) = function
     get : State.t -> 'a ctx_field
   }
   type 'ctx ctx_readback =
-    depth:int -> hyps -> constraints -> State.t -> State.t * (#ctx as 'ctx) * extra_goals
+    depth:int -> hyps -> constraints -> State.t -> State.t * 'ctx * extra_goals
+  constraint 'ctx = #ctx
 
   let in_raw_ctx : ctx ctx_readback =
     fun ~depth:_ h c s -> s, new ctx h, []

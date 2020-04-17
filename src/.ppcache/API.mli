@@ -1,4 +1,4 @@
-(*b6e6084513b7d102767f7fa2f05b659465663b43 *src/API.mli *)
+(*dcb9f73541b93828b6dd0c2ba0fbc41e6d60974b *src/API.mli --cookie elpi_trace="false"*)
 #1 "src/API.mli"
 [@@@ocaml.text " This module is the API for clients of the Elpi library. "]
 [@@@ocaml.text
@@ -77,7 +77,9 @@ sig
     state: state ;
     output: 'a ;
     pp_ctx: pretty_printer_context }
-  type hyp
+  type hyp = {
+    hdepth: int ;
+    hsrc: term }
   type hyps = hyp list
   type constant = int
   module Constants :
@@ -153,8 +155,7 @@ sig
     | TyApp of string * ty_ast * ty_ast list 
   type extra_goals = Data.term list
   exception TypeErr of ty_ast * int * Data.term 
-  class ctx :
-    Data.hyps -> object method  raw : Data.hyps method  convs : unit list end
+  class ctx : Data.hyps -> object method  raw : Data.hyps end
   type ('a, 'c) embedding =
     depth:int ->
       'c ->
@@ -231,7 +232,7 @@ sig
     hconsed: bool ;
     constants: (name * 'a) list }[@@ocaml.doc
                                    " The [eq] function is used by unification. Limitation: unification of\n   * two cdata cannot alter the constraint store. This can be lifted in the\n   * future if there is user request.\n   *\n   * If the hconsed is true, then the [readback] function is\n   * automatically hashcons the data using the [eq] and [hash] functions.\n   "]
-  val declare : 'a declaration -> ('a, Conversion.ctx) Conversion.t
+  val declare : 'a declaration -> ('a, 'c) Conversion.t
 end[@@ocaml.doc
      " Declare data from the host application that is opaque (no syntax), like\n    int but not like list or pair "]
 module AlgebraicData :
@@ -508,7 +509,11 @@ sig
     isc: t -> bool ;
     cout: t -> 'a ;
     name: string }
-  val declare : 'a declaration -> ('a cdata * ('a, 'c) Conversion.t)
+  val declare :
+    'a declaration -> ('a cdata * (name * 'a) Data.Constants.Map.t * string)
+  val declare_cdata :
+    ('a cdata * (name * 'a) Data.Constants.Map.t * string) ->
+      ('a, 'c) Conversion.t
   val pp : Format.formatter -> t -> unit
   val show : t -> string
   val equal : t -> t -> bool
@@ -570,13 +575,8 @@ sig
   val mkBuiltin : builtin -> term list -> term
   val mkConst : constant -> term
   val cmp_builtin : builtin -> builtin -> int
-  type hyp = {
-    hdepth: int ;
-    hsrc: term }
-  type hyps = hyp list
-  val of_hyps : Data.hyp list -> hyps
   type suspended_goal = {
-    context: hyps ;
+    context: Data.hyps ;
     goal: (int * term) }
   val constraints : Data.constraints -> suspended_goal list
   val no_constraints : Data.constraints
@@ -594,7 +594,7 @@ sig
     val cutc : constant
     val ctypec : constant
     val spillc : constant
-    module Map : Utils.Map.S with type  key =  constant
+    module Map = Data.Constants.Map
     module Set : Utils.Set.S with type  elt =  constant
   end
 end[@@ocaml.doc

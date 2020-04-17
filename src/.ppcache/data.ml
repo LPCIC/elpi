@@ -1,4 +1,4 @@
-(*58251a03e60cd3a227c0e030e43a21bffeee6e36 *src/data.ml *)
+(*1d5427e9c3c1baf35bae68d140d26966cc0eacd4 *src/data.ml *)
 #1 "src/data.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -1392,23 +1392,25 @@ module Conversion =
             String.concat " " (s ::
               (List.map (show_ty_ast ~outer:false) (x :: xs))) in
           if outer then t else "(" ^ (t ^ ")")
-    class ctx (h : hyps) =
-      object method raw = h method convs : unit list= [] end
+    class ctx (h : hyps) = object method raw = h end
     type ('a, 'ctx) embedding =
       depth:int ->
         'ctx ->
           constraints -> State.t -> 'a -> (State.t * term * extra_goals)
+       constraint 'ctx = #ctx
     type ('a, 'ctx) readback =
       depth:int ->
         'ctx ->
           constraints -> State.t -> term -> (State.t * 'a * extra_goals)
+       constraint 'ctx = #ctx
     type ('a, 'ctx) t =
       {
       ty: ty_ast ;
       pp_doc: Format.formatter -> unit -> unit [@opaque ];
       pp: Format.formatter -> 'a -> unit [@opaque ];
       embed: ('a, 'ctx) embedding [@opaque ];
-      readback: ('a, 'ctx) readback [@opaque ]}[@@deriving show]
+      readback: ('a, 'ctx) readback [@opaque ]} constraint 'ctx = #ctx
+    [@@deriving show]
     let rec pp :
       'a 'ctx .
         (Ppx_deriving_runtime_proxy.Format.formatter ->
@@ -1523,8 +1525,8 @@ module Conversion =
       get: State.t -> 'a ctx_field }
     type 'ctx ctx_readback =
       depth:int ->
-        hyps ->
-          constraints -> State.t -> (State.t * (#ctx as 'ctx) * extra_goals)
+        hyps -> constraints -> State.t -> (State.t * 'ctx * extra_goals)
+       constraint 'ctx = #ctx
     let in_raw_ctx : ctx ctx_readback =
       fun ~depth:_ -> fun h -> fun c -> fun s -> (s, ((new ctx) h), [])
   end

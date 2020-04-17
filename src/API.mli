@@ -116,11 +116,15 @@ module Data : sig
   }
 
   (* Hypothetical context *)
-  type hyp
+  type hyp = {
+    hdepth : int;
+    hsrc : term
+  }
   type hyps = hyp list
 
   type constant = int
   module Constants : sig
+
     module Map : sig
       include Map.S with type key = constant
       val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
@@ -246,7 +250,6 @@ module Conversion : sig
   class ctx : Data.hyps ->
   object
     method raw : Data.hyps
-    method convs : unit list
   end
 
   type ('a,'c) embedding =
@@ -340,7 +343,7 @@ module OpaqueData : sig
     constants : (name * 'a) list; (* global constants of that type, eg "std_in" *)
   }
 
-  val declare : 'a declaration -> ('a, Conversion.ctx) Conversion.t
+  val declare : 'a declaration -> ('a, 'c) Conversion.t
 
 end
 
@@ -898,7 +901,8 @@ module RawOpaqueData : sig
     name : string;
   }
 
-  val declare : 'a declaration -> 'a cdata * ('a,'c) Conversion.t
+  val declare : 'a declaration -> 'a cdata * (name * 'a) Data.Constants.Map.t * string
+  val declare_cdata : 'a cdata * (name * 'a) Data.Constants.Map.t * string -> ('a,'c) Conversion.t
 
   val pp : Format.formatter -> t -> unit
   val show : t -> string
@@ -989,15 +993,9 @@ module RawData : sig
   val mkConst : constant -> term (* no check, works for globals and bound *)
 
   val cmp_builtin : builtin -> builtin -> int
-  type hyp = {
-    hdepth : int;
-    hsrc : term
-  }
-  type hyps = hyp list
-  val of_hyps : Data.hyp list -> hyps
 
   type suspended_goal = {
-    context : hyps;
+    context : Data.hyps;
     goal : int * term
   }
   val constraints : Data.constraints -> suspended_goal list
@@ -1026,7 +1024,7 @@ module RawData : sig
     (* Marker for spilling function calls, as in [{ rev L }] *)
     val spillc : constant
 
-    module Map : Utils.Map.S with type key = constant
+    module Map = Data.Constants.Map
     module Set : Utils.Set.S with type elt = constant
 
   end
