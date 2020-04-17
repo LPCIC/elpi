@@ -1155,18 +1155,23 @@ let readback_for_tyd (module B : Ast_builder.S) same_mutrec_block { name; params
       value_binding ~pat:(ppat_constraint (pvar (elpi_readback_name name)) (readback_type (module B) name params is_pred))
         ~expr:(abstract_expr_over_params (module B) params elpi_readback_name @@ readback (module B) name is_pred def_readback csts)
 
-let in_ctx_for_tyd (module B : Ast_builder.S) ctx { type_decl ; elpi_name; name; _ } = let open B in
+let in_ctx_for_tyd (module B : Ast_builder.S) ctx { name; _ } = let open B in
  if SSet.is_empty ctx then [] else
- [
-   pstr_class [class_infos ~virt:Concrete ~params:[] ~name:(Located.mk (elpi_ctx_class_name name))
-     ~expr:(pcl_fun Nolabel None (pvar "h") @@
-            pcl_fun Nolabel None (pvar "s") @@
-            pcl_structure @@ class_structure ~self:(pvar "_") ~fields:(
+ let ctx = SSet.elements ctx in
+ [ (* apparently you cannot declare a class type and a class with the same name *)
+  [%stri let ([%p pvar @@ elpi_ctx_class_name name] : Elpi.API.Data.hyps -> Elpi.API.State.t -> [%t ptyp_constr (Located.lident @@ elpi_ctx_class_name name) []]) = fun h s ->
+   [%e pexp_object @@ class_structure ~self:(pvar "_") ~fields:(
               pcf_inherit Fresh
                 (pcl_apply (pcl_constr (Located.lident "Elpi.API.Conversion.ctx") []) [Nolabel,evar "h"]) None
-              :: (SSet.elements ctx |> List.map (fun c ->
+              :: (ctx |> List.map (fun c ->
                  pcf_method (Located.mk c,Public,Cfk_concrete (Fresh,
-                   [%expr [%e evar @@ elpi_in_name c ].Elpi.API.Conversion.get s]))))))];
+                   [%expr [%e evar @@ elpi_in_name c ].Elpi.API.Conversion.get s])))))]];
+
+   [%stri let [%p pvar @@ elpi_in_ctx_name name ] = fun ~depth h c s ->
+      let ctl = [%e elist @@ List.map (fun c -> [%expr Elpi.API.PPX.C [%e evar @@ elpi_in_name c]]) ctx ] in
+      let s, gls = Elpi.API.PPX.readback_context ~depth ctl h c s in
+      s, [%e evar @@ elpi_ctx_class_name name] h s, gls
+    ]
  ]
 
 let constants_of_tyd (module B : Ast_builder.S) { type_decl ; elpi_name; name; _ } = let open B in
