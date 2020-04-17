@@ -1,4 +1,4 @@
-(*1d5427e9c3c1baf35bae68d140d26966cc0eacd4 *src/data.ml *)
+(*efadecd6f424aa15bbe5c6ff89d850658175cfb2 *src/data.ml *)
 #1 "src/data.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -1514,13 +1514,13 @@ module Conversion =
     [@@ocaml.warning "-32"]
     type 'a ctx_field = 'a ctx_entry Constants.Map.t
     type hyp = clause_src
-    type ('a, 'k) context =
+    type ('a, 'k, 'h) context =
       {
       is_entry_for_nominal: hyp -> constant option ;
       to_key: depth:int -> 'a -> 'k ;
       push: depth:int -> State.t -> 'k -> 'a ctx_entry -> State.t ;
       pop: depth:int -> State.t -> 'k -> State.t ;
-      conv: 'h . ((constant * 'a), #ctx as 'h) t ;
+      conv: ((constant * 'a), #ctx as 'h) t ;
       init: State.t -> State.t ;
       get: State.t -> 'a ctx_field }
     type 'ctx ctx_readback =

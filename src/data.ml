@@ -583,12 +583,12 @@ let rec show_ty_ast ?(outer=true) = function
 
   type hyp = clause_src
 
-  type ('a,'k) context = {
+  type ('a,'k,'h) context = {
     is_entry_for_nominal : hyp -> constant option;
     to_key : depth:int -> 'a -> 'k;
     push : depth:int -> State.t -> 'k -> 'a ctx_entry -> State.t;
     pop : depth:int -> State.t -> 'k -> State.t;
-    conv : 'h. (constant * 'a, #ctx as 'h) t;
+    conv : (constant * 'a, #ctx as 'h) t;
     init : State.t -> State.t;
     get : State.t -> 'a ctx_field
   }

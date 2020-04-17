@@ -277,12 +277,12 @@ module Conversion : sig
 
   type 'a ctx_field = 'a ctx_entry Data.Constants.Map.t
 
-  type ('a,'k) context = {
+  type ('a,'k,'c) context = {
     is_entry_for_nominal : Data.hyp -> Data.constant option;
     to_key : depth:int -> 'a -> 'k;
     push : depth:int -> Data.state -> 'k -> 'a ctx_entry -> Data.state;
     pop : depth:int -> Data.state -> 'k -> Data.state;
-    conv : 'c. (Data.constant * 'a, #ctx as 'c) t;
+    conv : (Data.constant * 'a, #ctx as 'c) t;
     init : Data.state -> Data.state;
     get : Data.state -> 'a ctx_field
   }
@@ -1125,7 +1125,7 @@ module PPX : sig
   val embed_nominal : (RawData.constant, 'c) Conversion.embedding
 
   type context_description =
-    | C : ('a,'k) Conversion.context -> context_description
+    | C : ('a,'k,'c) Conversion.context -> context_description
 
   val readback_context :
     context_description list ->

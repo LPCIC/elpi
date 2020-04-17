@@ -1,4 +1,4 @@
-(*dcb9f73541b93828b6dd0c2ba0fbc41e6d60974b *src/API.mli --cookie elpi_trace="false"*)
+(*9a51cb901b6f53d22c1d348718a769d3fbf76e36 *src/API.mli --cookie elpi_trace="false"*)
 #1 "src/API.mli"
 [@@@ocaml.text " This module is the API for clients of the Elpi library. "]
 [@@@ocaml.text
@@ -188,13 +188,13 @@ sig
   val show_ctx_entry :
     (Format.formatter -> 'a -> unit) -> 'a ctx_entry -> string
   type 'a ctx_field = 'a ctx_entry Data.Constants.Map.t
-  type ('a, 'k) context =
+  type ('a, 'k, 'c) context =
     {
     is_entry_for_nominal: Data.hyp -> Data.constant option ;
     to_key: depth:int -> 'a -> 'k ;
     push: depth:int -> Data.state -> 'k -> 'a ctx_entry -> Data.state ;
     pop: depth:int -> Data.state -> 'k -> Data.state ;
-    conv: 'c . ((Data.constant * 'a), #ctx as 'c) t ;
+    conv: ((Data.constant * 'a), #ctx as 'c) t ;
     init: Data.state -> Data.state ;
     get: Data.state -> 'a ctx_field }
   type 'c ctx_readback =
@@ -676,7 +676,7 @@ sig
   val embed_loc : (Ast.Loc.t, 'c) Conversion.embedding
   val embed_nominal : (RawData.constant, 'c) Conversion.embedding
   type context_description =
-    | C: ('a, 'k) Conversion.context -> context_description 
+    | C: ('a, 'k, 'c) Conversion.context -> context_description 
   val readback_context :
     context_description list ->
       depth:int ->

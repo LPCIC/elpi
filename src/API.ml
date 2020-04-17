@@ -962,7 +962,7 @@ end
   let embed_loc ~depth _ c s x = BuiltInData.loc.Conversion.embed ~depth (new Conversion.ctx []) c s x
   let embed_nominal ~depth _ c s x = BuiltInData.nominal.Conversion.embed ~depth (new Conversion.ctx []) c s x
   type context_description =
-    | C : ('a,'k) Conversion.context -> context_description
+    | C : ('a,'k,'c) Conversion.context -> context_description
 
   let readback_context cdl ~depth hyps constraints state =
     let module CMap = RawData.Constants.Map in
