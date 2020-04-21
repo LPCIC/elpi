@@ -219,10 +219,11 @@ let att_elpi_binder = Attribute.(declare "elpi.binder" Context.core_type (single
   String.lowercase_ascii txt
 let elpi_map_name x = "Elpi_"^x^"_Map"
 let elpi_state_name x = "elpi_"^x^"_state"
-let elpi_ctx_class_name x = "ctx_for_" ^ x
-let elpi_new_ctx_class_name x = "new_" ^ elpi_ctx_class_name x
+let elpi_ctx_class_module_name x = "Ctx_for_" ^ x
+let elpi_ctx_class_name x = elpi_ctx_class_module_name x ^ ".t"
+let elpi_ctx_object_name x = "ctx_for_" ^ x
 let elpi_readback_ctx_name x = "context_made_of_" ^ x
-let elpi_in_ctx_for_name x = "in_" ^ elpi_ctx_class_name x
+let elpi_in_ctx_for_name x = "in_" ^ elpi_ctx_object_name x
 let elpi_to_key x = "elpi_" ^ x ^ "_to_key"
 let elpi_is_ctx_entry_name x = "elpi_is_" ^ x
 let elpi_embed_name x = "elpi_embed_" ^ x
@@ -1142,15 +1143,17 @@ let abstract_expr_over_params (module B : Ast_builder.S) vl f e = let open B in
     aux vl
 
 let ctx_class_type_for_tyd (module B : Ast_builder.S) all_ctx { name; _ } = let open B in
+  pstr_module @@ module_binding ~name:(Located.mk (elpi_ctx_class_module_name name)) ~expr:(pmod_structure [
   pstr_class_type [class_infos ~virt:Concrete ~params:[]
-    ~name:(Located.mk (elpi_ctx_class_name name))
+    ~name:(Located.mk "t")
     ~expr:(pcty_signature @@ class_signature ~self:[%type: _] ~fields:(
       (pctf_inherit (pcty_constr (Located.lident "Elpi.API.Conversion.ctx") []))
       :: List.flatten (SSet.elements all_ctx |> List.(map (fun c ->
           [
-            (* pctf_inherit (pcty_constr (Located.lident @@ elpi_ctx_class_name c) []); *)
+            pctf_inherit (pcty_constr (Located.lident @@ elpi_ctx_class_name c) []);
             pctf_method (Located.mk c,Public,Concrete,[%type: [%t ptyp_constr (Located.lident c) [] ] Elpi.API.Conversion.ctx_field]);
           ])))))]
+  ])
 
 let conversion_for_tyd (module B : Ast_builder.S) all_ctx { name; params;  elpi_name; elpi_code; elpi_doc; type_decl; pp; index } = let open B in
   let is_pred = option_is_some index in
@@ -1224,14 +1227,21 @@ let readback_for_tyd (module B : Ast_builder.S) same_mutrec_block all_ctx { name
 let in_ctx_for_tyd (module B : Ast_builder.S) ctx { name; _ } = let open B in
  let ctx = SSet.elements ctx in
  [
-   [%stri let ([%p pvar @@ elpi_new_ctx_class_name name] : Elpi.API.Data.hyps -> Elpi.API.State.t -> [%t ptyp_constr (Located.lident @@ elpi_ctx_class_name name) []]) = fun h s ->
-   [%e pexp_object @@ class_structure ~self:(pvar "_") ~fields:(
-              pcf_inherit Fresh
-                (pcl_apply (pcl_constr (Located.lident "Elpi.API.Conversion.ctx") []) [Nolabel,evar "h"]) None
-              :: (ctx |> List.map (fun c ->
-                 pcf_method (Located.mk c,Public,Cfk_concrete (Fresh,
-                   [%expr [%e evar @@ elpi_readback_ctx_name c ].Elpi.API.Conversion.get s])))))]]
-
+   pstr_class [class_infos ~virt:Concrete ~params:[]
+    ~name:(Located.mk @@ elpi_ctx_object_name name)
+    ~expr:(pcl_fun Nolabel None (ppat_constraint (pvar "h") (ptyp_constr (Located.lident "Elpi.API.Data.hyps") [])) @@
+           pcl_fun Nolabel None (ppat_constraint (pvar "s") (ptyp_constr (Located.lident "Elpi.API.Data.state") [])) @@
+           pcl_constraint
+            (pcl_structure @@ class_structure ~self:(pvar "_")
+            ~fields:(
+                pcf_inherit Fresh
+                  (pcl_apply (pcl_constr (Located.lident "Elpi.API.Conversion.ctx") []) [Nolabel,evar "h"]) None
+                :: List.flatten (ctx |> List.map (fun c -> [
+                  pcf_inherit Override
+                  (pcl_apply (pcl_constr (Located.lident @@ elpi_ctx_object_name c) []) [Nolabel,evar "h";Nolabel,evar "s"]) None ;
+                  pcf_method (Located.mk c,Public,Cfk_concrete (Fresh,
+                    [%expr [%e evar @@ elpi_readback_ctx_name c ].Elpi.API.Conversion.get s]))]))))
+            (pcty_constr (Located.lident @@ elpi_ctx_class_name name) []))]
 ;
    (* apparently you cannot declare a class type and a class with the same name *)
    [%stri let [%p pvar @@ elpi_in_ctx_for_name name ] :
@@ -1239,10 +1249,10 @@ let in_ctx_for_tyd (module B : Ast_builder.S) ctx { name; _ } = let open B in
    = fun ~depth h c s -> [%e
      let gls = List.mapi (fun i _ -> Printf.sprintf "gls%d" i) ctx in
      let rec aux = function
-       | [] -> [%expr s, [%e evar @@ elpi_new_ctx_class_name name] h s, List.concat [%e elist @@ List.map evar gls ]]
+       | [] -> [%expr s, [%e pexp_new @@ Located.lident @@ elpi_ctx_object_name name] h s, List.concat [%e elist @@ List.map evar gls ]]
        | (c,gls) :: cs ->
           [%expr
-            let ctx = [%e evar @@ elpi_new_ctx_class_name c] h s in
+            let ctx = [%e pexp_new @@ Located.lident @@ elpi_ctx_object_name c] h s in
             let s, [%p pvar gls ] =
               Elpi.API.PPX.readback_context ~depth [%e evar @@ elpi_readback_ctx_name c] ctx h c s in
             [%e aux cs ]

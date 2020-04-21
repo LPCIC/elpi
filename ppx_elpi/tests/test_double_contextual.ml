@@ -32,7 +32,7 @@ type term =
   | Var of string [@elpi.var tctx]
   | App of term * term
   | Lam of ty * string * (term[@elpi.binder tctx (fun b s -> Entry(s,b))])
-[@@deriving elpi { declaration; context = [tyctx;tctx] }]
+[@@deriving elpi { declaration }]
 
 let _ =
    fun (f : #ctx_for_tctx -> unit) ->
