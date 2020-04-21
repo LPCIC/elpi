@@ -1,4 +1,4 @@
-(*efadecd6f424aa15bbe5c6ff89d850658175cfb2 *src/data.ml *)
+(*9e41ed19c2304eae433f81858bfaabcd5701c359 *src/data.ml *)
 #1 "src/data.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -1527,8 +1527,30 @@ module Conversion =
       depth:int ->
         hyps -> constraints -> State.t -> (State.t * 'ctx * extra_goals)
        constraint 'ctx = #ctx
+    type dummy = unit
+    let dummy =
+      {
+        ty = (TyName "dummy");
+        pp = (fun _ -> fun _ -> assert false);
+        pp_doc = (fun _ -> fun _ -> assert false);
+        embed =
+          (fun ~depth -> fun _ -> fun _ -> fun _ -> fun _ -> assert false);
+        readback =
+          (fun ~depth -> fun _ -> fun _ -> fun _ -> fun _ -> assert false)
+      }
+    let in_raw =
+      {
+        is_entry_for_nominal = (fun _ -> None);
+        to_key = (fun ~depth -> fun _ -> ());
+        push = (fun ~depth -> fun st -> fun _ -> fun _ -> st);
+        pop = (fun ~depth -> fun st -> fun _ -> st);
+        conv = dummy;
+        init = (fun st -> st);
+        get = (fun st -> Constants.Map.empty)
+      }
+    let build_raw_ctx h s = (new ctx) h
     let in_raw_ctx : ctx ctx_readback =
-      fun ~depth:_ -> fun h -> fun c -> fun s -> (s, ((new ctx) h), [])
+      fun ~depth:_ -> fun h -> fun c -> fun s -> (s, (build_raw_ctx h s), [])
   end
 let while_compiling =
   State.declare ~name:"elpi:compiling" ~pp:(fun fmt -> fun _ -> ())

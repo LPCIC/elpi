@@ -596,8 +596,29 @@ let rec show_ty_ast ?(outer=true) = function
     depth:int -> hyps -> constraints -> State.t -> State.t * 'ctx * extra_goals
   constraint 'ctx = #ctx
 
+  type dummy = unit
+
+  let dummy = {
+    ty = TyName "dummy";
+    pp = (fun _ _ -> assert false);
+    pp_doc = (fun _ _ -> assert false);
+    embed = (fun ~depth _ _ _ _ -> assert false);
+    readback = (fun ~depth _ _ _ _ -> assert false);
+  }
+
+  let in_raw = {
+    is_entry_for_nominal = (fun _ -> None);
+    to_key = (fun ~depth _ -> ());
+    push = (fun ~depth st _ _ -> st);
+    pop = (fun ~depth st _ -> st);
+    conv = dummy;
+    init = (fun st -> st);
+    get = (fun st -> Constants.Map.empty);
+  }
+
+  let build_raw_ctx h s = new ctx h
   let in_raw_ctx : ctx ctx_readback =
-    fun ~depth:_ h c s -> s, new ctx h, []
+    fun ~depth:_ h c s -> s, build_raw_ctx h s, []
 
   end
 

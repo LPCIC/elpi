@@ -6,23 +6,24 @@ module String = struct
   let show = Format.asprintf "%a" pp
 end
 
-let pp_ctx _ _ = ()
-type ctx = Entry of (string[@elpi.key]) * bool
+let pp_tctx _ _ = ()
+type tctx = Entry of (string[@elpi.key]) * bool
   [@@elpi.index (module String)]
 [@@deriving elpi { declaration }]
 
-let ctx : 'c. (int * ctx, 'c) Elpi.API.Conversion.t  = ctx
-let in_ctx : (ctx, string) Elpi.API.Conversion.context = in_ctx
+let tctx : 'c. (int * tctx, 'c) Elpi.API.Conversion.t  = tctx
+let context_made_of_tctx : 'c. (tctx, string, #ctx_for_tctx as 'c) Elpi.API.Conversion.context = context_made_of_tctx
+let in_ctx_for_tctx : ctx_for_tctx Elpi.API.Conversion.ctx_readback = in_ctx_for_tctx
 
 let pp_term _ _ = ()
 type term =
-  | Var of string [@elpi.var ctx]
+  | Var of string [@elpi.var tctx]
   | App of term * term
-  | Lam of bool * string * (term[@elpi.binder "term" ctx (fun b s -> Entry(s,b))])
+  | Lam of bool * string * (term[@elpi.binder "term" tctx (fun b s -> Entry(s,b))])
 [@@deriving elpi { declaration }]
 
-let term : 'c. (term, #term_ctx as 'c) Elpi.API.Conversion.t  = term
-let in_term_ctx : term_ctx Elpi.API.Conversion.ctx_readback = in_term_ctx
+let term : 'c. (term, #ctx_for_term as 'c) Elpi.API.Conversion.t  = term
+let in_ctx_for_term : ctx_for_term Elpi.API.Conversion.ctx_readback = in_ctx_for_term
 
 open Elpi.API
 open BuiltInPredicate
@@ -31,12 +32,12 @@ open Notation
 let term_to_string = Pred("term->string",
   In(term,"T",
   Out(BuiltInData.string,"S",
-  Read("what else"))),in_term_ctx,
+  Read("what else"))),in_ctx_for_term,
   fun (t : term) (_ety : string oarg)
     ~depth:_ c (_cst : Data.constraints) (_state : State.t) ->
 
     !: (Format.asprintf "@[<hov>%a@ |-@ %a@]@\n%!"
-      (RawData.Constants.Map.pp (Conversion.pp_ctx_entry pp_ctx)) c#ctx
+      (RawData.Constants.Map.pp (Conversion.pp_ctx_entry pp_tctx)) c#tctx
        term.pp t)
 
 )

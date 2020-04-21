@@ -1,4 +1,4 @@
-(*9a51cb901b6f53d22c1d348718a769d3fbf76e36 *src/API.mli --cookie elpi_trace="false"*)
+(*21f2418b88f629e52346930408abffd5be0e4ee9 *src/API.mli --cookie elpi_trace="false"*)
 #1 "src/API.mli"
 [@@@ocaml.text " This module is the API for clients of the Elpi library. "]
 [@@@ocaml.text
@@ -202,7 +202,9 @@ sig
       Data.hyps ->
         Data.constraints -> Data.state -> (Data.state * 'c * extra_goals)
      constraint 'c = #ctx
+  type dummy
   val in_raw_ctx : ctx ctx_readback
+  val in_raw : (dummy, dummy, #ctx as 'a) context
 end[@@ocaml.doc
      " This module defines what embedding and readback functions are "]
 module BuiltInData :
@@ -678,11 +680,12 @@ sig
   type context_description =
     | C: ('a, 'k, 'c) Conversion.context -> context_description 
   val readback_context :
-    context_description list ->
-      depth:int ->
-        Data.hyps ->
-          Data.constraints ->
-            Data.state -> (Data.state * Conversion.extra_goals)
+    ('a, 'k, 'c) Conversion.context ->
+      'c ->
+        depth:int ->
+          Data.hyps ->
+            Data.constraints ->
+              Data.state -> (Data.state * Conversion.extra_goals)
   module Doc :
   sig
     val kind : Format.formatter -> Conversion.ty_ast -> doc:string -> unit

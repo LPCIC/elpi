@@ -964,35 +964,33 @@ end
   type context_description =
     | C : ('a,'k,'c) Conversion.context -> context_description
 
-  let readback_context cdl ~depth hyps constraints state =
+  let readback_context { Conversion.conv; to_key; push; is_entry_for_nominal; init} ctx ~depth hyps constraints state =
     let module CMap = RawData.Constants.Map in
     let filtered_hyps =
       List.fold_left (fun m hyp ->
-        List.fold_left (fun m (C { is_entry_for_nominal; _ } as c) ->
           match is_entry_for_nominal hyp with
           | None -> m
           | Some idx ->
               if CMap.mem idx m then
                  Utils.type_error "more than one context entry for the same nominal";
-              CMap.add idx (hyp,c) m) m cdl) CMap.empty
+              CMap.add idx hyp m) CMap.empty
        hyps in
     let rec aux state gls i =
       if i = depth then state, List.concat (List.rev gls)
       else
         if not (CMap.mem i filtered_hyps) then aux state gls (i + 1)
         else
-          let hyp, C { conv; to_key; push; _} = CMap.find i filtered_hyps in
+          let hyp = CMap.find i filtered_hyps in
           let hyp_depth = hyp.Data.hdepth in
           let state, (nominal, t), gls_t =
             conv.Conversion.readback
-               ~depth:hyp_depth (new Conversion.ctx hyps) constraints state hyp.Data.hsrc in
+               ~depth:hyp_depth ctx constraints state hyp.Data.hsrc in
           assert (nominal = i);
           let s = to_key ~depth:hyp_depth t in
           let state =
             push ~depth:i state s { Conversion.entry = t; depth = hyp_depth } in
           aux state (gls_t :: gls) (i + 1) in
-    let state =
-      List.fold_left (fun state (C { init; _ }) -> init state) state cdl in
+    let state = init state in
     aux state [] 0
 
 end

@@ -30,6 +30,7 @@ build:
 	dune build $(DUNE_OPTS) @all ; RC=$$?; \
 	( cp -r _build/default/src/.ppcache src/ 2>/dev/null || true ); \
 	( echo "FLG -ppx './merlinppx.exe --as-ppx --cookie '\''elpi_trace=\"true\"'\'''" >> src/.merlin );\
+	( echo "FLG -ppx './pp.exe --as-ppx '" >> ppx_elpi/tests/.merlin );\
 	exit $$RC
 
 install:

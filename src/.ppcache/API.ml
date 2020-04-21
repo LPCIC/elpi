@@ -1,4 +1,4 @@
-(*12db8b6e6aacbeef485630afee8d42e1a88d2fca *src/API.ml --cookie elpi_trace="false"*)
+(*404252280a090e300e5d66f2723c8d488acf0ff9 *src/API.ml --cookie elpi_trace="false"*)
 #1 "src/API.ml"
 module type Runtime  = module type of Runtime_trace_off
 let r = ref ((module Runtime_trace_off) : (module Runtime))
@@ -1099,24 +1099,23 @@ module PPX =
       BuiltInData.nominal.Conversion.embed ~depth ((new Conversion.ctx) []) c
         s x
     type context_description =
-      | C: ('a, 'k) Conversion.context -> context_description 
-    let readback_context cdl ~depth  hyps constraints state =
+      | C: ('a, 'k, 'c) Conversion.context -> context_description 
+    let readback_context
+      { Conversion.conv = conv; to_key; push; is_entry_for_nominal; init }
+      ctx ~depth  hyps constraints state =
       let module CMap = RawData.Constants.Map in
         let filtered_hyps =
           List.fold_left
             (fun m ->
                fun hyp ->
-                 List.fold_left
-                   (fun m ->
-                      fun (C { is_entry_for_nominal;_} as c) ->
-                        match is_entry_for_nominal hyp with
-                        | None -> m
-                        | Some idx ->
-                            (if CMap.mem idx m
-                             then
-                               Utils.type_error
-                                 "more than one context entry for the same nominal";
-                             CMap.add idx (hyp, c) m)) m cdl) CMap.empty hyps in
+                 match is_entry_for_nominal hyp with
+                 | None -> m
+                 | Some idx ->
+                     (if CMap.mem idx m
+                      then
+                        Utils.type_error
+                          "more than one context entry for the same nominal";
+                      CMap.add idx hyp m)) CMap.empty hyps in
         let rec aux state gls i =
           if i = depth
           then (state, (List.concat (List.rev gls)))
@@ -1124,22 +1123,17 @@ module PPX =
             if not (CMap.mem i filtered_hyps)
             then aux state gls (i + 1)
             else
-              (let (hyp, C { conv; to_key; push;_}) =
-                 CMap.find i filtered_hyps in
+              (let hyp = CMap.find i filtered_hyps in
                let hyp_depth = hyp.Data.hdepth in
                let (state, (nominal, t), gls_t) =
-                 conv.Conversion.readback ~depth:hyp_depth
-                   ((new Conversion.ctx) hyps) constraints state
-                   hyp.Data.hsrc in
+                 conv.Conversion.readback ~depth:hyp_depth ctx constraints
+                   state hyp.Data.hsrc in
                assert (nominal = i);
                (let s = to_key ~depth:hyp_depth t in
                 let state =
                   push ~depth:i state s
                     { Conversion.entry = t; depth = hyp_depth } in
                 aux state (gls_t :: gls) (i + 1))) in
-        let state =
-          List.fold_left (fun state -> fun (C { init;_}) -> init state) state
-            cdl in
-        aux state [] 0
+        let state = init state in aux state [] 0
   end
 

@@ -277,6 +277,7 @@ module Conversion : sig
 
   type 'a ctx_field = 'a ctx_entry Data.Constants.Map.t
 
+  (* A context that can be read on top of context 'c, made of items 'a indexed by 'k  *)
   type ('a,'k,'c) context = {
     is_entry_for_nominal : Data.hyp -> Data.constant option;
     to_key : depth:int -> 'a -> 'k;
@@ -290,7 +291,9 @@ module Conversion : sig
     depth:int -> Data.hyps -> Data.constraints -> Data.state -> Data.state * 'c * extra_goals
   constraint 'c = #ctx
 
+  type dummy
   val in_raw_ctx : ctx ctx_readback
+  val in_raw : (dummy, dummy, #ctx as 'a) context
 
 end
 
@@ -1128,7 +1131,8 @@ module PPX : sig
     | C : ('a,'k,'c) Conversion.context -> context_description
 
   val readback_context :
-    context_description list ->
+    ('a,'k,'c) Conversion.context ->
+    'c ->
     depth:int ->
     Data.hyps ->
     Data.constraints ->
