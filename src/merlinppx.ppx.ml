@@ -1,1 +1,1 @@
-let () = Migrate_parsetree.Driver.run_main ()
+let () = Ppxlib.Driver.standalone ()
