@@ -1,0 +1,23 @@
+
+
+% tyctx
+kind tyctx type.
+type tentry nominal -> string -> bool -> prop. % TEntry
+
+% ty
+kind ty type.
+type tapp string -> ty -> ty. % TApp
+type tall bool -> string -> (ty -> ty) -> ty. % TAll
+
+% tctx
+kind tctx type.
+type entry nominal -> string -> ty -> prop. % Entry
+
+% term
+kind term type.
+type app term -> term -> term. % App
+type lam ty -> string -> (term -> term) -> term. % Lam
+
+
+
+

@@ -3,8 +3,6 @@
   (public_name elpi)
   (preprocess (per_module
     ((action (run ppxfindcache_deriving_std %{input-file}
-                    --cache-file %{dep:.ppcache/API.ml}
-                    --cache-file %{dep:.ppcache/API.mli}
                     --cache-file %{dep:.ppcache/util.ml}
                     --cache-file %{dep:.ppcache/util.mli}
                     --cache-file %{dep:.ppcache/ast.ml}
@@ -12,7 +10,7 @@
                     --cache-file %{dep:.ppcache/data.ml}
                     --cache-file %{dep:.ppcache/compiler.ml}
                     --cache-file %{dep:.ppcache/compiler.mli}))
-              API ast data compiler)
+              ast data compiler)
     ((action (run ppxfindcache_elpi_trace_deriving_std %{input-file}
                     --ppx-opt --cookie
                     --ppx-opt "elpi_trace=\"true\""
@@ -22,9 +20,11 @@
     ((action (run ppxfindcache_elpi_trace_deriving_std %{input-file}
                     --ppx-opt --cookie
                     --ppx-opt "elpi_trace=\"false\""
+                    --cache-file %{dep:.ppcache/API.ml}
+                    --cache-file %{dep:.ppcache/API.mli}
                     --cache-file %{dep:.ppcache/runtime_trace_off.ml}
                     --cache-file %{dep:.ppcache/runtime_trace_off.mli}))
-              runtime_trace_off)
+              runtime_trace_off API)
     ((action (run camlp5o -I . -I +camlp5 pa_extend.cmo pa_lexer.cmo %{input-file})) parser)
     ))
   (libraries re.str camlp5.gramlib unix elpi.trace.runtime
@@ -33,8 +33,8 @@
        (-> ppx_deriving_runtime_proxy.embed.ml)
        ))
   (flags -linkall)
-  (modules elpi util parser ast compiler data ptmap builtin builtin_checker builtin_stdlib builtin_map builtin_set API runtime_trace_on runtime_trace_off ppx_deriving_runtime_proxy)
-  (private_modules util parser ast compiler data ptmap builtin_stdlib builtin_map builtin_set runtime_trace_on runtime_trace_off ppx_deriving_runtime_proxy)
+  (modules elpi util parser ast compiler data ptmap builtin builtin_checker builtin_stdlib builtin_map builtin_set builtin_ppx API runtime_trace_on runtime_trace_off ppx_deriving_runtime_proxy)
+  (private_modules util parser ast compiler data ptmap builtin_stdlib builtin_map builtin_set builtin_ppx runtime_trace_on runtime_trace_off ppx_deriving_runtime_proxy)
 )
 
 (dirs .ppcache)
@@ -56,6 +56,11 @@
 (rule (with-stdout-to builtin_set.ml (progn
   (echo "let code = {code|#line 0 \"builtin_set.elpi\"\n")
   (cat builtin_set.elpi)
+  (echo "|code};;")
+)))
+(rule (with-stdout-to builtin_ppx.ml (progn
+  (echo "let code = {code|#line 0 \"builtin_ppx.elpi\"\n")
+  (cat builtin_ppx.elpi)
   (echo "|code};;")
 )))
 (rule (with-stdout-to builtin_checker.ml (progn
@@ -88,7 +93,7 @@
   (modules merlinppx)
   (libraries
     (select merlinppx.ml from
-     (ocaml-migrate-parsetree elpi.trace_ppx ppx_deriving.std -> merlinppx.ppx.ml)
+     (elpi.trace.ppx ppx_deriving.std -> merlinppx.ppx.ml)
      (-> merlinppx.noop.ml)))
   (flags -linkall)
 )

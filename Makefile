@@ -29,7 +29,8 @@ DUNE_OPTS=
 build:
 	dune build $(DUNE_OPTS) @all ; RC=$$?; \
 	( cp -r _build/default/src/.ppcache src/ 2>/dev/null || true ); \
-	( echo "FLG -ppx './merlinppx.exe --as-ppx --trace_ppx-on'" >> src/.merlin );\
+	( echo "FLG -ppx './merlinppx.exe --as-ppx --cookie '\''elpi_trace=\"true\"'\'''" >> src/.merlin );\
+	( echo "FLG -ppx './pp.exe --as-ppx '" >> ppx_elpi/tests/.merlin );\
 	exit $$RC
 
 install:
@@ -46,6 +47,7 @@ cleancache:
 
 tests:
 	$(MAKE) build
+	dune runtest --diff-command 'diff -w -u'
 	ulimit -s $(STACK); \
 		tests/test.exe \
 		--seed $$RANDOM \

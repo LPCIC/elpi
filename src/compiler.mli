@@ -27,7 +27,7 @@ val assemble_units : header:compilation_unit -> compilation_unit list -> State.t
 
 val query_of_ast : State.t -> program -> Ast.Goal.t -> unit query
 val query_of_term :
-  State.t -> program -> (depth:int -> State.t -> State.t * (Loc.t * term)) -> unit query
+  State.t -> program -> (depth:int -> hyps -> constraints -> State.t -> State.t * (Loc.t * term)) -> unit query
 val query_of_data :
   State.t -> program -> Loc.t -> 'a Query.t -> 'a query
 val optimize_query : 'a query -> 'a executable

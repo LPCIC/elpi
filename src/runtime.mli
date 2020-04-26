@@ -22,6 +22,7 @@ val pp_stuck_goal : ?pp_ctx:pp_ctx -> Fmt.formatter -> stuck_goal -> unit
 val embed_query :
   mk_Arg:(State.t -> name:string -> args:term list -> State.t * term) ->
   depth:int ->
+  hyps -> constraints ->
   State.t -> 'a Query.t -> State.t * term
 
 (* Interpreter API *)
@@ -49,11 +50,11 @@ val mkConst : constant -> term
 val mkAppL : constant -> term list -> term
 
 val mkAppArg : int -> int -> term list -> term
-val move : 
+val move :
   adepth:int -> env ->
   ?avoid:uvar_body ->
   from:int -> to_:int -> term -> term
-val hmove : 
+val hmove :
   ?avoid:uvar_body ->
   from:int -> to_:int -> term -> term
 val subst: depth:int -> term list -> term -> term
