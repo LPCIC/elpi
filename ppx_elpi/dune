@@ -2,7 +2,7 @@
  (name ppx_elpi)
  (public_name elpi.ppx)
  (synopsis "[@@elpi]")
- (libraries re ppxlib)
+ (libraries re ppxlib elpi)
  (preprocess (pps ppxlib.metaquot))
  (ppx_runtime_libraries elpi)
  (modules ppx_elpi)

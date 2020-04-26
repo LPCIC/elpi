@@ -3,7 +3,7 @@ let pp_simple _ _ _ = ()
 type 'a simple =
   | A 
   | B of int 
-  | C of 'a * int [@@deriving elpi { append = elpi_stuff }]
+  | C of 'a * int [@@deriving elpi { declaration = elpi_stuff }]
 include
   struct
     [@@@warning "-26-27-32-39-60"]
@@ -23,12 +23,13 @@ include
     let elpi_constant_constructor_simple_Cc =
       Elpi.API.RawData.Constants.declare_global_symbol
         elpi_constant_constructor_simple_C
+    module Ctx_for_simple =
+      struct class type t = object inherit Elpi.API.Conversion.ctx end end
     let rec elpi_embed_simple :
-      'elpi__param__a 'elpi__param__poly_hyps 'elpi__param__poly_csts .
-        ('elpi__param__a, 'elpi__param__poly_hyps, 'elpi__param__poly_csts)
-          Elpi.API.ContextualConversion.embedding ->
-          ('elpi__param__a simple, 'elpi__param__poly_hyps,
-            'elpi__param__poly_csts) Elpi.API.ContextualConversion.embedding
+      'elpi__param__a 'c .
+        ('elpi__param__a, 'c) Elpi.API.Conversion.embedding ->
+          ('elpi__param__a simple, #Ctx_for_simple.t as 'c)
+            Elpi.API.Conversion.embedding
       =
       fun elpi_embed_elpi__param__a ->
         fun ~depth:elpi__depth ->
@@ -62,11 +63,10 @@ include
                          [elpi__14; elpi__15]),
                       (List.concat [elpi__12; elpi__13]))
     let rec elpi_readback_simple :
-      'elpi__param__a 'elpi__param__poly_hyps 'elpi__param__poly_csts .
-        ('elpi__param__a, 'elpi__param__poly_hyps, 'elpi__param__poly_csts)
-          Elpi.API.ContextualConversion.readback ->
-          ('elpi__param__a simple, 'elpi__param__poly_hyps,
-            'elpi__param__poly_csts) Elpi.API.ContextualConversion.readback
+      'elpi__param__a 'c .
+        ('elpi__param__a, 'c) Elpi.API.Conversion.readback ->
+          ('elpi__param__a simple, #Ctx_for_simple.t as 'c)
+            Elpi.API.Conversion.readback
       =
       fun elpi_readback_elpi__param__a ->
         fun ~depth:elpi__depth ->
@@ -115,18 +115,17 @@ include
                         (Format.asprintf "Not a constructor of type %s: %a"
                            "simple" (Elpi.API.RawPp.term elpi__depth) elpi__x)
     let simple :
-      'elpi__param__a 'elpi__param__poly_hyps 'elpi__param__poly_csts .
-        ('elpi__param__a, 'elpi__param__poly_hyps, 'elpi__param__poly_csts)
-          Elpi.API.ContextualConversion.t ->
-          ('elpi__param__a simple, 'elpi__param__poly_hyps,
-            'elpi__param__poly_csts) Elpi.API.ContextualConversion.t
+      'elpi__param__a 'c .
+        ('elpi__param__a, 'c) Elpi.API.Conversion.t ->
+          ('elpi__param__a simple, #Ctx_for_simple.t as 'c)
+            Elpi.API.Conversion.t
       =
       fun elpi__param__a ->
         let kind =
-          Elpi.API.ContextualConversion.TyApp
-            ("simple", (elpi__param__a.Elpi.API.ContextualConversion.ty), []) in
+          Elpi.API.Conversion.TyApp
+            ("simple", (elpi__param__a.Elpi.API.Conversion.ty), []) in
         {
-          Elpi.API.ContextualConversion.ty = kind;
+          Elpi.API.Conversion.ty = kind;
           pp_doc =
             (fun fmt ->
                fun () ->
@@ -135,51 +134,34 @@ include
                     ~doc:"A" ~args:[];
                   Elpi.API.PPX.Doc.constructor fmt ~ty:kind ~name:"b"
                     ~doc:"B"
-                    ~args:[(Elpi.API.ContextualConversion.(!>)
-                              Elpi.API.BuiltInData.int).Elpi.API.ContextualConversion.ty]);
+                    ~args:[Elpi.API.BuiltInData.int.Elpi.API.Conversion.ty]);
                  Elpi.API.PPX.Doc.constructor fmt ~ty:kind ~name:"c" ~doc:"C"
-                   ~args:[elpi__param__a.Elpi.API.ContextualConversion.ty;
-                         (Elpi.API.ContextualConversion.(!>)
-                            Elpi.API.BuiltInData.int).Elpi.API.ContextualConversion.ty]);
+                   ~args:[elpi__param__a.Elpi.API.Conversion.ty;
+                         Elpi.API.BuiltInData.int.Elpi.API.Conversion.ty]);
           pp = (pp_simple elpi__param__a.pp);
           embed =
-            (elpi_embed_simple
-               elpi__param__a.Elpi.API.ContextualConversion.embed);
+            (elpi_embed_simple elpi__param__a.Elpi.API.Conversion.embed);
           readback =
-            (elpi_readback_simple
-               elpi__param__a.Elpi.API.ContextualConversion.readback)
+            (elpi_readback_simple elpi__param__a.Elpi.API.Conversion.readback)
         }
     let elpi_simple =
-      Elpi.API.BuiltIn.MLDataC
-        (simple
-           (Elpi.API.ContextualConversion.(!>) @@
-              (Elpi.API.BuiltInData.poly "A0")))
-    let () =
-      elpi_stuff :=
-        ((!elpi_stuff) @
-           ([elpi_simple] @
-              [Elpi.API.BuiltIn.LPCode
-                 (String.concat "\n"
-                    ["pred map.simple i:(X0 -> Y0 -> prop),  i:simple X0, o:simple Y0.";
-                    "map.simple F0 a a.";
-                    Printf.sprintf "map.%s %s(%s %s) (%s %s) :- %s." "simple"
-                      "F0 " "b" "A0" "b" "B0"
-                      (String.concat ", "
-                         ["(" ^
-                            ("(=)" ^ (" " ^ ("A0" ^ (" " ^ ("B0" ^ ")")))))]);
-                    Printf.sprintf "map.%s %s(%s %s) (%s %s) :- %s." "simple"
-                      "F0 " "c" "A0 A1" "c" "B0 B1"
-                      (String.concat ", "
-                         ["(" ^
-                            ("F0" ^ (" " ^ ("A0" ^ (" " ^ ("B0" ^ ")")))));
-                         "(" ^
-                           ("(=)" ^ (" " ^ ("A1" ^ (" " ^ ("B1" ^ ")")))))]);
-                    "\n"])]))
+      Elpi.API.BuiltIn.MLData (simple (Elpi.API.BuiltInData.poly "A0"))
+    class ctx_for_simple (h : Elpi.API.Data.hyps)  (s : Elpi.API.Data.state)
+      : Ctx_for_simple.t =
+      object (_) inherit  ((Elpi.API.Conversion.ctx) h) end
+    let (in_ctx_for_simple :
+      Ctx_for_simple.t Elpi.API.Conversion.ctx_readback) =
+      fun ~depth ->
+        fun h ->
+          fun c -> fun s -> (s, ((new ctx_for_simple) h s), (List.concat []))
+    let () = elpi_stuff := ((!elpi_stuff) @ [elpi_simple])
   end[@@ocaml.doc "@inline"][@@merlin.hide ]
-let _ =
-  simple @@ (Elpi.API.ContextualConversion.(!>) Elpi.API.BuiltInData.int)
-let _ =
-  simple @@ (Elpi.API.ContextualConversion.(!>) Elpi.API.BuiltInData.float)
+class type o =
+  object inherit Elpi.API.Conversion.ctx method  foobar : bool end
+let (_ : (int simple, o) Elpi.API.Conversion.t) =
+  simple Elpi.API.BuiltInData.int
+let (_ : (float simple, o) Elpi.API.Conversion.t) =
+  simple Elpi.API.BuiltInData.float
 open Elpi.API
 let builtin =
   let open BuiltIn in declare ~file_name:(Sys.argv.(1)) (!elpi_stuff)

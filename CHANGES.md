@@ -1,5 +1,8 @@
 ## v1.11.0 UNRELEASED
 
+- PPX:
+  - new, experimental, elpi.ppx to generate glue code from an ADT declaration
+
 - Stdlib:
   - triple, quadruple and quintuple data types
   - char builtin
