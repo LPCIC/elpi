@@ -1,0 +1,10 @@
+
+
+typeabbrev simple int. % simple
+
+pred map.simple  i:simple, o:simple.
+map.simple A B :- ((=) A B).
+
+
+
+
