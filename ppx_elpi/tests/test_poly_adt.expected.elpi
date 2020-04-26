@@ -1,0 +1,18 @@
+
+
+% simple
+kind simple type -> type.
+type a simple A0. % A
+type b int -> simple A0. % B
+type c A0 -> int -> simple A0. % C
+
+pred map.simple i:(X0 -> Y0 -> prop),  i:simple X0, o:simple Y0.
+map.simple F0 a a.
+map.simple F0 (b A0) (b B0) :- ((=) A0 B0).
+map.simple F0 (c A0 A1) (c B0 B1) :- (F0 A0 B0), ((=) A1 B1).
+
+
+
+
+
+

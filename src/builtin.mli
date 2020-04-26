@@ -54,3 +54,27 @@ val quintuple : ('a, 'h) API.Conversion.t -> ('b, 'h) API.Conversion.t -> ('c, '
 
 (* This is the default checker [elpi-checker] *)
 val default_checker : unit -> API.Compile.program
+
+module PPX : sig
+  (** internal API for elpi.ppx *)
+
+  val readback_pair : ('a, 'h) API.Conversion.readback -> ('b, 'h) API.Conversion.readback -> ('a * 'b, 'h) API.Conversion.readback
+  val readback_option : ('a, 'h) API.Conversion.readback -> ('a option, 'h) API.Conversion.readback
+  val readback_bool : (bool, 'h) API.Conversion.readback
+  val readback_char : (char, 'h) API.Conversion.readback
+
+  val readback_triple    : ('a, 'h) API.Conversion.readback -> ('b, 'h) API.Conversion.readback -> ('c, 'h) API.Conversion.readback -> ('a * 'b * 'c, 'h) API.Conversion.readback
+  val readback_quadruple : ('a, 'h) API.Conversion.readback -> ('b, 'h) API.Conversion.readback -> ('c, 'h) API.Conversion.readback -> ('d, 'h) API.Conversion.readback -> ('a * 'b * 'c * 'd, 'h) API.Conversion.readback
+  val readback_quintuple : ('a, 'h) API.Conversion.readback -> ('b, 'h) API.Conversion.readback -> ('c, 'h) API.Conversion.readback -> ('d, 'h) API.Conversion.readback -> ('e, 'h) API.Conversion.readback -> ('a * 'b * 'c * 'd * 'e, 'h) API.Conversion.readback
+
+  val embed_pair : ('a, 'h) API.Conversion.embedding -> ('b, 'h) API.Conversion.embedding -> ('a * 'b, 'h) API.Conversion.embedding
+  val embed_option : ('a, 'h) API.Conversion.embedding -> ('a option, 'h) API.Conversion.embedding
+  val embed_bool : (bool, 'h) API.Conversion.embedding
+  val embed_char : (char, 'h) API.Conversion.embedding
+
+  val embed_triple    : ('a, 'h) API.Conversion.embedding -> ('b, 'h) API.Conversion.embedding -> ('c, 'h) API.Conversion.embedding -> ('a * 'b * 'c, 'h) API.Conversion.embedding
+  val embed_quadruple : ('a, 'h) API.Conversion.embedding -> ('b, 'h) API.Conversion.embedding -> ('c, 'h) API.Conversion.embedding -> ('d, 'h) API.Conversion.embedding -> ('a * 'b * 'c * 'd, 'h) API.Conversion.embedding
+  val embed_quintuple : ('a, 'h) API.Conversion.embedding -> ('b, 'h) API.Conversion.embedding -> ('c, 'h) API.Conversion.embedding -> ('d, 'h) API.Conversion.embedding -> ('e, 'h) API.Conversion.embedding -> ('a * 'b * 'c * 'd * 'e, 'h) API.Conversion.embedding
+
+  val declarations : declaration list
+end

@@ -1374,3 +1374,29 @@ let default_checker () =
   let elpi, _ = API.Setup.init ~builtins:[std_builtins] ~basedir:(Sys.getcwd ()) [] in
   let ast = API.Parse.program_from_stream ~elpi (API.Ast.Loc.initial "(checker)") (Stream.of_string Builtin_checker.code) in
   API.Compile.program ~flags:API.Compile.default_flags ~elpi [ast]
+
+module PPX = struct
+
+  let readback_pair = readback_pair
+  let readback_option = readback_option
+  let readback_bool ~depth _ c s x = bool.API.Conversion.readback ~depth (new Conversion.ctx []) c s x
+  let readback_char ~depth _ c s x = char.API.Conversion.readback ~depth (new Conversion.ctx []) c s x
+
+  let readback_triple = readback_triple
+  let readback_quadruple = readback_quadruple
+  let readback_quintuple = readback_quintuple
+
+  let embed_pair = embed_pair
+  let embed_option = embed_option
+  let embed_bool ~depth _ c s x = bool.API.Conversion.embed ~depth (new Conversion.ctx []) c s x
+  let embed_char ~depth _ c s x = char.API.Conversion.embed ~depth (new Conversion.ctx []) c s x
+
+  let embed_triple = embed_triple
+  let embed_quadruple = embed_quadruple
+  let embed_quintuple = embed_quintuple
+
+  let declarations =  let open BuiltIn in let open BuiltInData in [
+    LPCode Builtin_ppx.code
+  ]
+
+end
