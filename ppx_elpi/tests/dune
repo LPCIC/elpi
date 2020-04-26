@@ -5,6 +5,7 @@
 (executable
  (name pp)
  (modules pp)
+ (promote)
  (libraries elpi.ppx ppxlib))
 
 (include dune.inc)

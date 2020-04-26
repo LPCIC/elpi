@@ -4,7 +4,7 @@ let pp_simple _ _ = ()
 let pp_mut _ _ = ()
 type simple = A | B of int * mut
 and mut = C | D of simple
-[@@deriving elpi { append = elpi_stuff }]
+[@@deriving elpi { declaration = elpi_stuff }]
 
 open Elpi.API
 

@@ -1,4 +1,4 @@
-let elpi_stuff = ref []
+let declaration = ref []
 
 module String = struct
   include String
@@ -6,40 +6,70 @@ module String = struct
   let show = Format.asprintf "%a" pp
 end
 
-let pp_tctx _ _ = ()
-type tctx = TEntry of (string[@elpi.key]) * bool
-[@@deriving elpi { append = elpi_stuff; index = (module String) }]
+let pp_tyctx _ _ = ()
+type tyctx = TEntry of (string[@elpi.key]) * bool
+[@@elpi.index (module String)]
+[@@deriving elpi { declaration }]
+
 
 let pp_ty _ _ = ()
 type ty =
-  | TVar of string [@elpi.var]
+  | TVar of string [@elpi.var tyctx]
   | TApp of string * ty
-  | TAll of bool * string * (ty[@elpi.binder (fun b s -> TEntry(s,b))])
-[@@deriving elpi { append = elpi_stuff; context = (() : ty -> tctx) }]
+  | TAll of bool * string * (ty[@elpi.binder tyctx (fun b s -> TEntry(s,b))])
+[@@deriving elpi { declaration; }]
 
 
-let pp_ctx _ _ = ()
-type ctx = Entry of (string[@elpi.key]) * ty
-[@@deriving elpi { append = elpi_stuff; index = (module String); context = (() : tctx) } ]
+
+let pp_tctx _ _ = ()
+type tctx = Entry of (string[@elpi.key]) * ty
+[@@elpi.index (module String)]
+[@@deriving elpi { declaration ; context = [tyctx]} ]
+
 
 let pp_term _ _ = ()
 type term =
-  | Var of string [@elpi.var]
+  | Var of string [@elpi.var tctx]
   | App of term * term
-  | Lam of ty * string * (term[@elpi.binder (fun b s -> Entry(s,b))])
-[@@deriving elpi { append = elpi_stuff; context = (() : (ty -> tctx) * (term -> ctx)) }]
+  | Lam of ty * string * (term[@elpi.binder tctx (fun b s -> Entry(s,b))])
+[@@deriving elpi { declaration }]
+
+let _ =
+   fun (f : #ctx_for_tctx -> unit) ->
+   fun (x : ctx_for_term) ->
+     f x
+
 
 open Elpi.API
+open BuiltInPredicate
+open Notation
 
-let in_ctx : (tctx ContextualConversion.ctx_entry RawData.Constants.Map.t * ctx ContextualConversion.ctx_entry RawData.Constants.Map.t, Data.constraints) ContextualConversion.ctx_readback = in_ctx
+let term_to_string = Pred("term->string",
+  In(term,"T",
+  Out(BuiltInData.string,"S",
+  Read("what else"))),in_ctx_for_term,
+  fun (t : term) (_ety : string oarg)
+    ~depth:_ c (_cst : Data.constraints) (_state : State.t) ->
 
-let builtin = let open BuiltIn in
-  declare ~file_name:(Sys.argv.(1)) !elpi_stuff
+    !: (Format.asprintf "@[<hov>%a@ ; %a@ |-@ %a@]@\n%!"
+      (RawData.Constants.Map.pp (Conversion.pp_ctx_entry pp_tctx)) c#tyctx
+      (RawData.Constants.Map.pp (Conversion.pp_ctx_entry pp_tctx)) c#tctx
+       term.pp t)
+
+)
+
+let builtin1 = let open BuiltIn in
+  declare ~file_name:"test_ppx.elpi" (!declaration @ [
+    MLCode(term_to_string,DocAbove);
+    LPDoc "----------------- elpi ----------------"
+  ] @ Elpi.Builtin.(core_builtins @ elpi_builtins))
+
+let builtin2 = let open BuiltIn in
+  declare ~file_name:(Sys.argv.(1)) !declaration
 
 let main () =
-  let _elpi, _ = Setup.init ~builtins:[builtin] ~basedir:"." [] in
-  BuiltIn.document_file builtin;
+  let _elpi, _ = Setup.init ~builtins:[builtin1;builtin2] ~basedir:"." [] in
+  BuiltIn.document_file builtin2;
   exit 0
 ;;
-
 main ()

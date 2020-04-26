@@ -69,6 +69,29 @@
 
 
 (rule
+ (targets test_mutual_contextual.actual.ml)
+ (deps (:pp pp.exe) (:input test_mutual_contextual.ml))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+
+(rule
+ (alias runtest)
+ (action (diff test_mutual_contextual.expected.ml test_mutual_contextual.actual.ml)))
+
+(rule
+ (alias runtest)
+ (action (diff test_mutual_contextual.expected.elpi test_mutual_contextual.actual.elpi)))
+
+(rule
+  (target test_mutual_contextual.actual.elpi)
+  (action (run ./test_mutual_contextual.exe %{target})))
+
+(executable
+  (name test_mutual_contextual)
+  (modules test_mutual_contextual)
+  (preprocess (pps elpi.ppx)))
+
+
+(rule
  (targets test_opaque_type.actual.ml)
  (deps (:pp pp.exe) (:input test_opaque_type.ml))
  (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))

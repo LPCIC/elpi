@@ -1,4 +1,4 @@
-let elpi_stuff = ref []
+let declaration = ref []
 
 module String = struct
   include String
@@ -8,38 +8,44 @@ end
 
 let pp_tctx _ _ = ()
 type tctx = TDecl of (string[@elpi.key]) * bool
-[@@deriving elpi { index = (module String) ; append = elpi_stuff } ]
+  [@@elpi.index (module String)]
+[@@deriving elpi { declaration } ]
 
 let pp_tye _ _ = ()
 type tye =
-  | TVar of string [@elpi.var]
+  | TVar of string [@elpi.var tctx]
   | TConst of string
   | TArrow of tye * tye
-[@@deriving elpi { context = (x : (tye -> tctx) ) ; append = elpi_stuff  } ]
+[@@deriving elpi { declaration  } ]
+
+let tye : 'a. (tye, #ctx_for_tye as 'a) Elpi.API.Conversion.t  = tye
 
 let pp_ty _ _ = ()
 type ty =
   | Mono of tye
-  | Forall of string * bool * (ty[@elpi.binder tye (fun s b -> TDecl(s,b))])
-[@@deriving elpi { context = (x : (tye -> tctx) * (ty -> tctx)) }]
+  | Forall of string * bool * (ty[@elpi.binder "tye" tctx (fun s b -> TDecl(s,b))])
+[@@deriving elpi ]
+
+let ty : 'a. (ty, #ctx_for_ty as 'a) Elpi.API.Conversion.t  = ty
 
 let pp_ctx _ _ = ()
 type ctx = Decl of (string[@elpi.key]) * ty
-[@@deriving elpi { index = (module String); context = (x : tctx) ; append = elpi_stuff  } ]
+  [@@elpi.index (module String)]
+[@@deriving elpi { declaration ; context = [tctx] } ]
 
 type term =
-  | Var of string [@elpi.var]
+  | Var of string [@elpi.var ctx]
   | App of term list [@elpi.code "appl"] [@elpi.doc "bla bla"]
-  | Lam of string * ty * (term[@elpi.binder term (fun s ty -> Decl(s,ty))])
+  | Lam of string * ty * (term[@elpi.binder ctx (fun s ty -> Decl(s,ty))])
   | Literal of int [@elpi.skip]
   | Cast of term * ty
       (* Example: override the embed and readback code for this constructor *)
       [@elpi.embed fun default ~depth hyps constraints state a1 a2 ->
-        default ~depth hyps constraints state a1 a2 ]
+         default ~depth hyps constraints state a1 a2 ]
       [@elpi.readback fun default ~depth hyps constraints state l ->
          default ~depth hyps constraints state l ]
       [@elpi.code "type-cast" "term -> ty -> term"]
-[@@deriving elpi { context = (x : (ty -> tctx) * (term -> ctx)) } ]
+[@@deriving elpi { context = [ tctx ; ctx ] } ]
 [@@elpi.pp let rec aux fmt = function
    | Var s -> Format.fprintf fmt "%s" s
    | App tl -> Format.fprintf fmt "App %a" (Elpi.API.RawPp.list aux " ") tl
@@ -48,27 +54,28 @@ type term =
    | Cast(t,_) -> aux fmt t
    in aux ]
 
+let term : 'a. (term, #ctx_for_term as 'a) Elpi.API.Conversion.t  = term
+
 open Elpi.API
 open BuiltInPredicate
 open Notation
 
 let term_to_string = Pred("term->string",
-  CIn(term,"T",
-  COut(ContextualConversion.(!>) BuiltInData.string,"S",
-  Read(in_ctx, "what else"))),
+  In(term,"T",
+  Out(BuiltInData.string,"S",
+  Read("what else"))), in_ctx_for_term,
   fun (t : term) (_ety : string oarg)
-    ~depth:_ ((ctx1,ctx2) : tctx ContextualConversion.ctx_entry RawData.Constants.Map.t * ctx ContextualConversion.ctx_entry RawData.Constants.Map.t)
-    (_cst : Data.constraints) (_state : State.t) ->
+    ~depth:_ c (_cst : Data.constraints) (_state : State.t) ->
 
     !: (Format.asprintf "@[<hov>%a@ %a@ |-@ %a@]@\n%!"
-      (RawData.Constants.Map.pp (ContextualConversion.pp_ctx_entry pp_tctx)) ctx1
-      (RawData.Constants.Map.pp (ContextualConversion.pp_ctx_entry pp_ctx)) ctx2
+      (RawData.Constants.Map.pp (Conversion.pp_ctx_entry pp_tctx)) c#tctx
+      (RawData.Constants.Map.pp (Conversion.pp_ctx_entry pp_ctx)) c#ctx
        term.pp t)
 
 )
 
 let builtin = let open BuiltIn in
-  declare ~file_name:"test_ppx.elpi" (!elpi_stuff @ [
+  declare ~file_name:"test_ppx.elpi" (!declaration @ [
     MLCode(term_to_string,DocAbove);
     LPDoc "----------------- elpi ----------------"
   ] @ Elpi.Builtin.(core_builtins @ elpi_builtins))
