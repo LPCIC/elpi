@@ -60,8 +60,6 @@ module PPX : sig
 
   val readback_pair : ('a, 'h) API.Conversion.readback -> ('b, 'h) API.Conversion.readback -> ('a * 'b, 'h) API.Conversion.readback
   val readback_option : ('a, 'h) API.Conversion.readback -> ('a option, 'h) API.Conversion.readback
-  val readback_bool : (bool, 'h) API.Conversion.readback
-  val readback_char : (char, 'h) API.Conversion.readback
 
   val readback_triple    : ('a, 'h) API.Conversion.readback -> ('b, 'h) API.Conversion.readback -> ('c, 'h) API.Conversion.readback -> ('a * 'b * 'c, 'h) API.Conversion.readback
   val readback_quadruple : ('a, 'h) API.Conversion.readback -> ('b, 'h) API.Conversion.readback -> ('c, 'h) API.Conversion.readback -> ('d, 'h) API.Conversion.readback -> ('a * 'b * 'c * 'd, 'h) API.Conversion.readback
@@ -69,8 +67,6 @@ module PPX : sig
 
   val embed_pair : ('a, 'h) API.Conversion.embedding -> ('b, 'h) API.Conversion.embedding -> ('a * 'b, 'h) API.Conversion.embedding
   val embed_option : ('a, 'h) API.Conversion.embedding -> ('a option, 'h) API.Conversion.embedding
-  val embed_bool : (bool, 'h) API.Conversion.embedding
-  val embed_char : (char, 'h) API.Conversion.embedding
 
   val embed_triple    : ('a, 'h) API.Conversion.embedding -> ('b, 'h) API.Conversion.embedding -> ('c, 'h) API.Conversion.embedding -> ('a * 'b * 'c, 'h) API.Conversion.embedding
   val embed_quadruple : ('a, 'h) API.Conversion.embedding -> ('b, 'h) API.Conversion.embedding -> ('c, 'h) API.Conversion.embedding -> ('d, 'h) API.Conversion.embedding -> ('a * 'b * 'c * 'd, 'h) API.Conversion.embedding

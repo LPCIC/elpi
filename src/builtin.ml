@@ -1391,8 +1391,6 @@ module PPX = struct
 
   let readback_pair = readback_pair
   let readback_option = readback_option
-  let readback_bool ~depth _ c s x = bool.API.Conversion.readback ~depth (new Conversion.ctx []) c s x
-  let readback_char ~depth _ c s x = char.API.Conversion.readback ~depth (new Conversion.ctx []) c s x
 
   let readback_triple = readback_triple
   let readback_quadruple = readback_quadruple
@@ -1400,8 +1398,6 @@ module PPX = struct
 
   let embed_pair = embed_pair
   let embed_option = embed_option
-  let embed_bool ~depth _ c s x = bool.API.Conversion.embed ~depth (new Conversion.ctx []) c s x
-  let embed_char ~depth _ c s x = char.API.Conversion.embed ~depth (new Conversion.ctx []) c s x
 
   let embed_triple = embed_triple
   let embed_quadruple = embed_quadruple
