@@ -1136,6 +1136,8 @@ module PPX : sig
   val readback_list   : ('a, 'c) Conversion.readback -> ('a list,'c) Conversion.readback
   val readback_loc    : (Ast.Loc.t, 'c) Conversion.readback
   val readback_nominal : (RawData.constant, 'c) Conversion.readback
+  val readback_bool : (bool, 'h) Conversion.readback
+  val readback_char : (char, 'h) Conversion.readback
 
   val embed_int    : (int, 'c) Conversion.embedding
   val embed_float  : (float, 'c) Conversion.embedding
@@ -1143,6 +1145,8 @@ module PPX : sig
   val embed_list   : ('a, 'c) Conversion.embedding -> ('a list, 'c) Conversion.embedding
   val embed_loc    : (Ast.Loc.t, 'c) Conversion.embedding
   val embed_nominal : (RawData.constant, 'c) Conversion.embedding
+  val embed_bool : (bool, 'h) Conversion.embedding
+  val embed_char : (char, 'h) Conversion.embedding
 
   type context_description =
     | C : ('a,'k,'c) Conversion.context -> context_description

@@ -1,4 +1,4 @@
-(*09dd92d029bc5129509dbb9e46c435ff8be4de41 *src/API.ml --cookie elpi_trace="false"*)
+(*02b4f581e688efce20aa37de517a1147f85853f8 *src/API.ml --cookie elpi_trace="false"*)
 #1 "src/API.ml"
 module type Runtime  = module type of Runtime_trace_off
 let r = ref ((module Runtime_trace_off) : (module Runtime))
@@ -1338,35 +1338,49 @@ module PPX =
                args)
         let show_ty_ast = ED.Conversion.show_ty_ast
       end
-    let readback_int ~depth  _ c s x =
-      BuiltInData.int.Conversion.readback ~depth ((new Conversion.ctx) []) c
-        s x
-    let readback_float ~depth  _ c s x =
-      BuiltInData.float.Conversion.readback ~depth ((new Conversion.ctx) [])
+    let readback_int ~depth  h c s x =
+      BuiltInData.int.Conversion.readback ~depth ((new Conversion.ctx) h#raw)
         c s x
-    let readback_string ~depth  _ c s x =
-      BuiltInData.string.Conversion.readback ~depth ((new Conversion.ctx) [])
-        c s x
+    let readback_float ~depth  h c s x =
+      BuiltInData.float.Conversion.readback ~depth
+        ((new Conversion.ctx) h#raw) c s x
+    let readback_string ~depth  h c s x =
+      BuiltInData.string.Conversion.readback ~depth
+        ((new Conversion.ctx) h#raw) c s x
     let readback_list = BuiltInData.readback_list
-    let readback_loc ~depth  _ c s x =
-      BuiltInData.loc.Conversion.readback ~depth ((new Conversion.ctx) []) c
-        s x
-    let readback_nominal ~depth  _ c s x =
+    let readback_loc ~depth  h c s x =
+      BuiltInData.loc.Conversion.readback ~depth ((new Conversion.ctx) h#raw)
+        c s x
+    let readback_nominal ~depth  h c s x =
       BuiltInData.nominal.Conversion.readback ~depth
-        ((new Conversion.ctx) []) c s x
-    let embed_int ~depth  _ c s x =
-      BuiltInData.int.Conversion.embed ~depth ((new Conversion.ctx) []) c s x
-    let embed_float ~depth  _ c s x =
-      BuiltInData.float.Conversion.embed ~depth ((new Conversion.ctx) []) c s
-        x
-    let embed_string ~depth  _ c s x =
-      BuiltInData.string.Conversion.embed ~depth ((new Conversion.ctx) []) c
+        ((new Conversion.ctx) h#raw) c s x
+    let readback_bool ~depth  h c s x =
+      BuiltInData.bool.Conversion.readback ~depth
+        ((new Conversion.ctx) h#raw) c s x
+    let readback_char ~depth  h c s x =
+      BuiltInData.char.Conversion.readback ~depth
+        ((new Conversion.ctx) h#raw) c s x
+    let embed_int ~depth  h c s x =
+      BuiltInData.int.Conversion.embed ~depth ((new Conversion.ctx) h#raw) c
         s x
+    let embed_float ~depth  h c s x =
+      BuiltInData.float.Conversion.embed ~depth ((new Conversion.ctx) h#raw)
+        c s x
+    let embed_string ~depth  h c s x =
+      BuiltInData.string.Conversion.embed ~depth ((new Conversion.ctx) h#raw)
+        c s x
     let embed_list = BuiltInData.embed_list
-    let embed_loc ~depth  _ c s x =
-      BuiltInData.loc.Conversion.embed ~depth ((new Conversion.ctx) []) c s x
-    let embed_nominal ~depth  _ c s x =
-      BuiltInData.nominal.Conversion.embed ~depth ((new Conversion.ctx) []) c
+    let embed_loc ~depth  h c s x =
+      BuiltInData.loc.Conversion.embed ~depth ((new Conversion.ctx) h#raw) c
+        s x
+    let embed_nominal ~depth  h c s x =
+      BuiltInData.nominal.Conversion.embed ~depth
+        ((new Conversion.ctx) h#raw) c s x
+    let embed_bool ~depth  h c s x =
+      BuiltInData.bool.Conversion.embed ~depth ((new Conversion.ctx) h#raw) c
+        s x
+    let embed_char ~depth  h c s x =
+      BuiltInData.char.Conversion.embed ~depth ((new Conversion.ctx) h#raw) c
         s x
     type context_description =
       | C: ('a, 'k, 'c) Conversion.context -> context_description 

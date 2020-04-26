@@ -1,4 +1,4 @@
-(*262f7f42585df543898448e5ff436973e6f64995 *src/API.mli --cookie elpi_trace="false"*)
+(*a0dedc3be4f51309a9b50b6fd946f6c63f474e0c *src/API.mli --cookie elpi_trace="false"*)
 #1 "src/API.mli"
 [@@@ocaml.text " This module is the API for clients of the Elpi library. "]
 [@@@ocaml.text
@@ -685,6 +685,8 @@ sig
     ('a, 'c) Conversion.readback -> ('a list, 'c) Conversion.readback
   val readback_loc : (Ast.Loc.t, 'c) Conversion.readback
   val readback_nominal : (RawData.constant, 'c) Conversion.readback
+  val readback_bool : (bool, 'h) Conversion.readback
+  val readback_char : (char, 'h) Conversion.readback
   val embed_int : (int, 'c) Conversion.embedding
   val embed_float : (float, 'c) Conversion.embedding
   val embed_string : (string, 'c) Conversion.embedding
@@ -692,6 +694,8 @@ sig
     ('a, 'c) Conversion.embedding -> ('a list, 'c) Conversion.embedding
   val embed_loc : (Ast.Loc.t, 'c) Conversion.embedding
   val embed_nominal : (RawData.constant, 'c) Conversion.embedding
+  val embed_bool : (bool, 'h) Conversion.embedding
+  val embed_char : (char, 'h) Conversion.embedding
   type context_description =
     | C: ('a, 'k, 'c) Conversion.context -> context_description 
   val readback_context :

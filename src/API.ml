@@ -1066,19 +1066,23 @@ module Doc = struct
   let show_ty_ast = ED.Conversion.show_ty_ast
 end
 
-  let readback_int ~depth _ c s x = BuiltInData.int.Conversion.readback ~depth (new Conversion.ctx []) c s x
-  let readback_float ~depth _ c s x = BuiltInData.float.Conversion.readback ~depth (new Conversion.ctx []) c s x
-  let readback_string ~depth _ c s x = BuiltInData.string.Conversion.readback ~depth (new Conversion.ctx []) c s x
+  let readback_int ~depth h c s x = BuiltInData.int.Conversion.readback ~depth (new Conversion.ctx h#raw) c s x
+  let readback_float ~depth h c s x = BuiltInData.float.Conversion.readback ~depth (new Conversion.ctx h#raw) c s x
+  let readback_string ~depth h c s x = BuiltInData.string.Conversion.readback ~depth (new Conversion.ctx h#raw) c s x
   let readback_list = BuiltInData.readback_list
-  let readback_loc ~depth _ c s x = BuiltInData.loc.Conversion.readback ~depth (new Conversion.ctx []) c s x
-  let readback_nominal ~depth _ c s x = BuiltInData.nominal.Conversion.readback ~depth (new Conversion.ctx []) c s x
+  let readback_loc ~depth h c s x = BuiltInData.loc.Conversion.readback ~depth (new Conversion.ctx h#raw) c s x
+  let readback_nominal ~depth h c s x = BuiltInData.nominal.Conversion.readback ~depth (new Conversion.ctx h#raw) c s x
+  let readback_bool ~depth h c s x = BuiltInData.bool.Conversion.readback ~depth (new Conversion.ctx h#raw) c s x
+  let readback_char ~depth h c s x = BuiltInData.char.Conversion.readback ~depth (new Conversion.ctx h#raw) c s x
 
-  let embed_int ~depth _ c s x = BuiltInData.int.Conversion.embed ~depth (new Conversion.ctx []) c s x
-  let embed_float ~depth _ c s x = BuiltInData.float.Conversion.embed ~depth (new Conversion.ctx []) c s x
-  let embed_string ~depth _ c s x = BuiltInData.string.Conversion.embed ~depth (new Conversion.ctx []) c s x
+  let embed_int ~depth h c s x = BuiltInData.int.Conversion.embed ~depth (new Conversion.ctx h#raw) c s x
+  let embed_float ~depth h c s x = BuiltInData.float.Conversion.embed ~depth (new Conversion.ctx h#raw) c s x
+  let embed_string ~depth h c s x = BuiltInData.string.Conversion.embed ~depth (new Conversion.ctx h#raw) c s x
   let embed_list = BuiltInData.embed_list
-  let embed_loc ~depth _ c s x = BuiltInData.loc.Conversion.embed ~depth (new Conversion.ctx []) c s x
-  let embed_nominal ~depth _ c s x = BuiltInData.nominal.Conversion.embed ~depth (new Conversion.ctx []) c s x
+  let embed_loc ~depth h c s x = BuiltInData.loc.Conversion.embed ~depth (new Conversion.ctx h#raw) c s x
+  let embed_nominal ~depth h c s x = BuiltInData.nominal.Conversion.embed ~depth (new Conversion.ctx h#raw) c s x
+  let embed_bool ~depth h c s x = BuiltInData.bool.Conversion.embed ~depth (new Conversion.ctx h#raw) c s x
+  let embed_char ~depth h c s x = BuiltInData.char.Conversion.embed ~depth (new Conversion.ctx h#raw) c s x
   type context_description =
     | C : ('a,'k,'c) Conversion.context -> context_description
 
