@@ -3,8 +3,6 @@
   (public_name elpi)
   (preprocess (per_module
     ((action (run ppxfindcache_deriving_std %{input-file}
-                    --cache-file %{dep:.ppcache/API.ml}
-                    --cache-file %{dep:.ppcache/API.mli}
                     --cache-file %{dep:.ppcache/util.ml}
                     --cache-file %{dep:.ppcache/util.mli}
                     --cache-file %{dep:.ppcache/ast.ml}
@@ -12,7 +10,7 @@
                     --cache-file %{dep:.ppcache/data.ml}
                     --cache-file %{dep:.ppcache/compiler.ml}
                     --cache-file %{dep:.ppcache/compiler.mli}))
-              API ast data compiler)
+              ast data compiler)
     ((action (run ppxfindcache_elpi_trace_deriving_std %{input-file}
                     --ppx-opt --cookie
                     --ppx-opt "elpi_trace=\"true\""
@@ -22,9 +20,11 @@
     ((action (run ppxfindcache_elpi_trace_deriving_std %{input-file}
                     --ppx-opt --cookie
                     --ppx-opt "elpi_trace=\"false\""
+                    --cache-file %{dep:.ppcache/API.ml}
+                    --cache-file %{dep:.ppcache/API.mli}
                     --cache-file %{dep:.ppcache/runtime_trace_off.ml}
                     --cache-file %{dep:.ppcache/runtime_trace_off.mli}))
-              runtime_trace_off)
+              runtime_trace_off API)
     ((action (run camlp5o -I . -I +camlp5 pa_extend.cmo pa_lexer.cmo %{input-file})) parser)
     ))
   (libraries re.str camlp5.gramlib unix elpi.trace.runtime
@@ -88,7 +88,7 @@
   (modules merlinppx)
   (libraries
     (select merlinppx.ml from
-     (ocaml-migrate-parsetree elpi.trace_ppx ppx_deriving.std -> merlinppx.ppx.ml)
+     (elpi.trace.ppx ppx_deriving.std -> merlinppx.ppx.ml)
      (-> merlinppx.noop.ml)))
   (flags -linkall)
 )

@@ -94,6 +94,7 @@ unif A B :- (A = B ; rm-any-variadic A A1, rm-any-variadic B B1, A1 = B1), !.
 
 pred rm-any-variadic i:typ, o:typ.
 rm-any-variadic (tconst S as C) X :- !, if (S = "any") (X = FRESH_) (X = C).
+rm-any-variadic (tconst S as C) X :- !, if (S = "nominal") (X = FRESH_) (X = C).
 rm-any-variadic (tapp [tconst "variadic",_,X]) X1 :- !, rm-any-variadic X X1.
 rm-any-variadic (tapp L) (tapp L1) :- !, rm-any-variadic-list L L1.
 rm-any-variadic (ctype _ as X) X.
@@ -169,7 +170,7 @@ typecheck [ (clause Loc Names Clause) | Rest] Q T0 NP RC :-
 
 mode (refresh i o).
 refresh (forall F) T :- !, refresh (F FRESH_) T.
-refresh (tconst "any") FRESH_ :- !.
+refresh (tconst "nominal") FRESH_ :- !.
 refresh X X.
 
 safe-dest-app (app [X | A]) X A :- !.

@@ -251,7 +251,7 @@ let builtins : t D.State.component = D.State.declare ~name:"elpi:compiler:builti
 let all state = (D.State.get builtins state).constants
 
 
-let register state (D.BuiltInPredicate.Pred(s,_,_) as b) =
+let register state (D.BuiltInPredicate.Pred(s,_,_,_) as b) =
   if s = "" then anomaly "Built-in predicate name must be non empty";
   if not (D.State.get D.while_compiling state) then
     anomaly "Built-in can only be declared at compile time";
@@ -2008,7 +2008,7 @@ let query_of_term compiler_state assembled_program f =
   let state, query =
     ToDBL.query_preterm_of_function
       ~depth:initial_depth active_macros compiler_state
-      (f ~depth:initial_depth) in
+      (f ~depth:initial_depth [] []) in
   let query_env = Array.make query.amap.nargs D.dummy in
     let state, queryt = stack_term_of_preterm ~depth:initial_depth state query in
   let initial_goal =
@@ -2031,8 +2031,8 @@ let query_of_term compiler_state assembled_program f =
 
 
 let query_of_data state p loc (Query.Query { arguments } as descr) =
-  let query = query_of_term state p (fun ~depth state ->
-    let state, term = R.embed_query ~mk_Arg ~depth state descr in
+  let query = query_of_term state p (fun ~depth hyps constraints state ->
+    let state, term = R.embed_query ~mk_Arg ~depth hyps constraints state descr in
     state, (loc, term)) in
   { query with query_arguments = arguments }
 
@@ -2160,7 +2160,7 @@ let run
   let builtins = Hashtbl.create 17 in
   let pred_list = (State.get Builtins.builtins state).code in
   List.iter
-    (fun (D.BuiltInPredicate.Pred(s,_,_) as p) ->
+    (fun (D.BuiltInPredicate.Pred(s,_,_,_) as p) ->
       let c, _ = Symbols.get_global_symbol_str state s in
       Hashtbl.add builtins c p)
     pred_list;
@@ -2395,7 +2395,7 @@ let static_check ~exec ~checker:(state,program)
     in
   let loc = Loc.initial "(static_check)" in
   let query =
-    query_of_term state program (fun ~depth state ->
+    query_of_term state program (fun ~depth hyps constraints state ->
       assert(depth=0);
       state, (loc,App(checkc,R.list_to_lp_list p,[q;R.list_to_lp_list tlist;R.list_to_lp_list talist]))) in
   let executable = optimize_query query in
