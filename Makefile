@@ -56,6 +56,9 @@ tests:
 		$(addprefix --name-match ,$(ONLY)) \
 		$(addprefix --runner , $(RUNNERS))
 
+test-noppx:
+	dune build --workspace dune-workspace.noppx
+
 git/%:
 	rm -rf "_build/git/elpi-$*"
 	mkdir -p "_build/git/elpi-$*"
