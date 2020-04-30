@@ -10,26 +10,6 @@ open Notation
 
 module Str = Re.Str
 
-let in_stream = OpaqueData.declare {
-  OpaqueData.name = "in_stream";
-  pp = (fun fmt (_,d) -> Format.fprintf fmt "<in_stream:%s>" d);
-  compare = (fun (_,s1) (_,s2) -> String.compare s1 s2);
-  hash = (fun (x,_) -> Hashtbl.hash x);
-  hconsed = false;
-  constants = ["std_in",(stdin,"stdin")];
-  doc = "";
-}
-
-let out_stream = OpaqueData.declare {
-  OpaqueData.name = "out_stream";
-  pp = (fun fmt (_,d) -> Format.fprintf fmt "<out_stream:%s>" d);
-  compare = (fun (_,s1) (_,s2) -> String.compare s1 s2);
-  hash = (fun (x,_) -> Hashtbl.hash x);
-  hconsed = false;
-  doc = "";
-  constants = ["std_out",(stdout,"stdout");"std_err",(stderr,"stderr")];
-}
-
 let register_eval, register_eval_ty, lookup_eval, eval_declaration =
  let rec str_of_ty n s =
    if n = 0 then s else s ^ " -> " ^ str_of_ty (n-1) s in
@@ -212,68 +192,140 @@ type polyop = {
   pname : string;
 }
 
-let bool = AlgebraicData.declare {
-  AlgebraicData.ty = TyName "bool";
-  doc = "Boolean values: tt and ff since true and false are predicates";
-  pp = (fun fmt b -> Format.fprintf fmt "%b" b);
-  constructors = [
-    K("tt","",N,
-      B true,
-      M (fun ~ok ~ko -> function true ->  ok | _ -> ko ()));
-    K("ff","",N,
-      B false,
-      M (fun ~ok ~ko -> function false -> ok | _ -> ko ()));
-  ]
-}|> ContextualConversion.(!<)
+let typec = RawData.Constants.declare_global_symbol "pair"
+let constructorc = RawData.Constants.declare_global_symbol "pr"
+let tyast a b = Conversion.TyApp("pair",a,[b])
+let readback_pair readback_a1 readback_a2 ~depth hyps csts st x =
+  match RawData.look ~depth x with
+  | RawData.App(c,x1,[x2]) when c == constructorc ->
+      let st, x1, gls1 = readback_a1 ~depth hyps csts st x1 in
+      let st, x2, gls2 = readback_a2 ~depth hyps csts st x2 in
+      st, (x1,x2), gls1 @ gls2
+  | _ -> raise (Conversion.TypeErr(tyast (Conversion.TyName "A") (Conversion.TyName "B"),depth,x))
+let embed_pair embed_a1 embed_a2 ~depth hyps csts st x =
+  let (x1,x2) = x in
+  let st, x1, gls1 = embed_a1 ~depth hyps csts st x1 in
+  let st, x2, gls2 = embed_a2 ~depth hyps csts st x2 in
+  st, RawData.mkApp constructorc x1 [x2], gls1 @ gls2
+let pair a1 a2 = let open Conversion in
+  let ty = tyast a1.ty a2.ty in {
+  ty;
+  pp_doc = (PPX.Doc.adt ~doc:"Pair: the constructor is pr, since ',' is for conjunction" ~ty ~args:["pr","",[a1.ty;a2.ty]]);
+  pp = (fun fmt (x1,x2) -> Format.fprintf fmt "(%a,%a)" a1.pp x1 a2.pp x2);
+  embed = embed_pair a1.embed a2.embed;
+  readback = readback_pair a1.readback a2.readback;
+}
 
-let pair a b = let open AlgebraicData in declare {
-  ty = TyApp ("pair",a.Conversion.ty,[b.Conversion.ty]);
-  doc = "Pair: the constructor is pr, since ',' is for conjunction";
-  pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_pair a.Conversion.pp b.Conversion.pp) o);
-  constructors = [
-    K("pr","",A(a,A(b,N)),
-      B (fun a b -> (a,b)),
-      M (fun ~ok ~ko:_ -> function (a,b) -> ok a b));
-  ]
-} |> ContextualConversion.(!<)
+let typec = RawData.Constants.declare_global_symbol "triple"
+let constructorc = RawData.Constants.declare_global_symbol "triple"
+let tyast a b c = Conversion.TyApp("triple",a,[b;c])
+let readback_triple readback_a1 readback_a2 readback_a3 ~depth hyps csts st x =
+  match RawData.look ~depth x with
+  | RawData.App(c,x1,[x2;x3]) when c == constructorc ->
+      let st, x1, gls1 = readback_a1 ~depth hyps csts st x1 in
+      let st, x2, gls2 = readback_a2 ~depth hyps csts st x2 in
+      let st, x3, gls3 = readback_a3 ~depth hyps csts st x3 in
+      st, (x1,x2,x3), gls1 @ gls2 @ gls3
+  | _ -> raise (Conversion.TypeErr(tyast (Conversion.TyName "A") (Conversion.TyName "B") (Conversion.TyName "C"),depth,x))
+let embed_triple embed_a1 embed_a2 embed_a3 ~depth hyps csts st x =
+  let (x1,x2,x3) = x in
+  let st, x1, gls1 = embed_a1 ~depth hyps csts st x1 in
+  let st, x2, gls2 = embed_a2 ~depth hyps csts st x2 in
+  let st, x3, gls3 = embed_a3 ~depth hyps csts st x3 in
+  st, RawData.mkApp constructorc x1 [x2;x3], gls1 @ gls2 @ gls3
+let triple a1 a2 a3 = let open Conversion in
+  let ty = tyast a1.ty a2.ty a3.ty in {
+  ty;
+  pp_doc = (PPX.Doc.adt ~doc:"" ~ty ~args:["triple","",[a1.ty;a2.ty;a3.ty]]);
+  pp = (fun fmt (x1,x2,x3) -> Format.fprintf fmt "(%a,%a,%a)" a1.pp x1 a2.pp x2 a3.pp x3);
+  embed = embed_triple a1.embed a2.embed a3.embed;
+  readback = readback_triple a1.readback a2.readback a3.readback;
+}
 
-let option a = let open AlgebraicData in declare {
-  ty = TyApp("option",a.Conversion.ty,[]);
-  doc = "The option type (aka Maybe)";
-  pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_option a.Conversion.pp) o);
-  constructors = [
-    K("none","",N,
-      B None,
-      M (fun ~ok ~ko -> function None -> ok | _ -> ko ())); 
-    K("some","",A(a,N),
-      B (fun x -> Some x),
-      M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko ())); 
-  ]
-} |> ContextualConversion.(!<)
+let typec = RawData.Constants.declare_global_symbol "quadruple"
+let constructorc = RawData.Constants.declare_global_symbol "quadruple"
+let tyast a b c d = Conversion.TyApp("quadruple",a,[b;c;d])
+let readback_quadruple readback_a1 readback_a2 readback_a3 readback_a4 ~depth hyps csts st x =
+  match RawData.look ~depth x with
+  | RawData.App(c,x1,[x2;x3;x4]) when c == constructorc ->
+      let st, x1, gls1 = readback_a1 ~depth hyps csts st x1 in
+      let st, x2, gls2 = readback_a2 ~depth hyps csts st x2 in
+      let st, x3, gls3 = readback_a3 ~depth hyps csts st x3 in
+      let st, x4, gls4 = readback_a4 ~depth hyps csts st x4 in
+      st, (x1,x2,x3,x4), gls1 @ gls2 @ gls3 @ gls4
+  | _ -> raise (Conversion.TypeErr(tyast (Conversion.TyName "A") (Conversion.TyName "B") (Conversion.TyName "C") (Conversion.TyName "D"),depth,x))
+let embed_quadruple embed_a1 embed_a2 embed_a3 embed_a4 ~depth hyps csts st x =
+  let (x1,x2,x3,x4) = x in
+  let st, x1, gls1 = embed_a1 ~depth hyps csts st x1 in
+  let st, x2, gls2 = embed_a2 ~depth hyps csts st x2 in
+  let st, x3, gls3 = embed_a3 ~depth hyps csts st x3 in
+  let st, x4, gls4 = embed_a4 ~depth hyps csts st x4 in
+  st, RawData.mkApp constructorc x1 [x2;x3;x4], gls1 @ gls2 @ gls3 @ gls4
+let quadruple a1 a2 a3 a4 = let open Conversion in
+  let ty = tyast a1.ty a2.ty a3.ty a4.ty in {
+  ty;
+  pp_doc = (PPX.Doc.adt ~doc:"" ~ty ~args:["quadruple","",[a1.ty;a2.ty;a3.ty;a4.ty]]);
+  pp = (fun fmt (x1,x2,x3,x4) -> Format.fprintf fmt "(%a,%a,%a,%a)" a1.pp x1 a2.pp x2 a3.pp x3 a4.pp x4);
+  embed = embed_quadruple a1.embed a2.embed a3.embed a4.embed;
+  readback = readback_quadruple a1.readback a2.readback a3.readback a4.readback;
+}
 
-type diagnostic = OK | ERROR of string ioarg
-let mkOK = OK
-let mkERROR s = ERROR (mkData s)
+let typec = RawData.Constants.declare_global_symbol "quintuple"
+let constructorc = RawData.Constants.declare_global_symbol "quintuple"
+let tyast a b c d e = Conversion.TyApp("quintuple",a,[b;c;d;e])
+let readback_quintuple readback_a1 readback_a2 readback_a3 readback_a4 readback_a5 ~depth hyps csts st x =
+  match RawData.look ~depth x with
+  | RawData.App(c,x1,[x2;x3;x4;x5]) when c == constructorc ->
+      let st, x1, gls1 = readback_a1 ~depth hyps csts st x1 in
+      let st, x2, gls2 = readback_a2 ~depth hyps csts st x2 in
+      let st, x3, gls3 = readback_a3 ~depth hyps csts st x3 in
+      let st, x4, gls4 = readback_a4 ~depth hyps csts st x4 in
+      let st, x5, gls5 = readback_a5 ~depth hyps csts st x5 in
+      st, (x1,x2,x3,x4,x5), gls1 @ gls2 @ gls3 @ gls4 @ gls5
+  | _ -> raise (Conversion.TypeErr(tyast (Conversion.TyName "A") (Conversion.TyName "B") (Conversion.TyName "C") (Conversion.TyName "D") (Conversion.TyName "E"),depth,x))
+let embed_quintuple embed_a1 embed_a2 embed_a3 embed_a4 embed_a5 ~depth hyps csts st x =
+  let (x1,x2,x3,x4,x5) = x in
+  let st, x1, gls1 = embed_a1 ~depth hyps csts st x1 in
+  let st, x2, gls2 = embed_a2 ~depth hyps csts st x2 in
+  let st, x3, gls3 = embed_a3 ~depth hyps csts st x3 in
+  let st, x4, gls4 = embed_a4 ~depth hyps csts st x4 in
+  let st, x5, gls5 = embed_a5 ~depth hyps csts st x5 in
+  st, RawData.mkApp constructorc x1 [x2;x3;x4;x5], gls1 @ gls2 @ gls3 @ gls4 @ gls5
+let quintuple a1 a2 a3 a4 a5 = let open Conversion in
+  let ty = tyast a1.ty a2.ty a3.ty a4.ty a5.ty in {
+  ty;
+  pp_doc = (PPX.Doc.adt ~doc:"" ~ty ~args:["quintuple","",[a1.ty;a2.ty;a3.ty;a4.ty;a5.ty]]);
+  pp = (fun fmt (x1,x2,x3,x4,x5) -> Format.fprintf fmt "(%a,%a,%a,%a,%a)" a1.pp x1 a2.pp x2 a3.pp x3 a4.pp x4 a5.pp x5);
+  embed = embed_quintuple a1.embed a2.embed a3.embed a4.embed a5.embed;
+  readback = readback_quintuple a1.readback a2.readback a3.readback a4.readback a5.readback;
+}
 
-let diagnostic = let open API.AlgebraicData in declare {
-  ty = TyName "diagnostic";
-  doc = "Used in builtin variants that return Coq's error rather than failing";
-  pp = (fun fmt -> function
-    | OK -> Format.fprintf fmt "OK"
-    | ERROR NoData -> Format.fprintf fmt "ERROR _"
-    | ERROR (Data s) -> Format.fprintf fmt "ERROR %S" s);
-  constructors = [
-    K("ok","Success",N,
-      B mkOK,
-      M (fun ~ok ~ko -> function OK -> ok | _ -> ko ()));
-    K("error","Failure",A(BuiltInPredicate.ioarg BuiltInData.string,N),
-      B (fun s -> ERROR s),
-      M (fun ~ok ~ko -> function ERROR s -> ok s | _ -> ko ()));
-    K("uvar","",A(FlexibleData.uvar,N),
-      B (fun _ -> assert false),
-      M (fun ~ok ~ko _ -> ko ()))
-  ]
-} |> ContextualConversion.(!<)
+let typec = RawData.Constants.declare_global_symbol "option"
+let constructor1c = RawData.Constants.declare_global_symbol "none"
+let constructor2c = RawData.Constants.declare_global_symbol "some"
+let tyast a = Conversion.TyApp("option",a,[])
+let readback_option readback_a1 ~depth hyps csts st x =
+  match RawData.look ~depth x with
+  | RawData.App(c,x1,[]) when c == constructor2c ->
+      let st, x1, gls1 = readback_a1 ~depth hyps csts st x1 in
+      st, Some x1, gls1
+  | RawData.Const c when c == constructor1c ->
+      st, None, []
+  | _ -> raise (Conversion.TypeErr(tyast (Conversion.TyName "A"),depth,x))
+let embed_option embed_a1 ~depth hyps csts st x =
+  match x with
+  | None -> st, RawData.mkConst constructor1c, []
+  | Some x1 ->
+     let st, x1, gls1 = embed_a1 ~depth hyps csts st x1 in
+     st, RawData.mkApp constructor2c x1 [], gls1
+let option a1 = let open Conversion in
+  let ty = tyast a1.ty in {
+  ty;
+  pp_doc = (PPX.Doc.adt ~doc:"The option type (aka Maybe)" ~ty ~args:["none","",[];"some","",[a1.ty]]);
+  pp = (fun fmt -> function None -> Format.fprintf fmt "None" | Some x1 -> Format.fprintf fmt "(Some %a)" a1.pp x1);
+  embed = embed_option a1.embed;
+  readback = readback_option a1.readback;
+}
 
 let cmp = let open AlgebraicData in declare {
   ty = TyName "cmp";
@@ -284,7 +336,7 @@ let cmp = let open AlgebraicData in declare {
     K("lt", "", N, B ~-1, M(fun ~ok ~ko i -> if i < 0  then ok else ko ()));
     K("gt", "", N, B 1,   M(fun ~ok ~ko i -> if i > 0  then ok else ko ()))
   ]
-} |> ContextualConversion.(!<)
+}
 
 
 let error_cmp_flex ~depth t1 t2 = error "cmp_term on non-ground terms"
@@ -355,7 +407,7 @@ let rec check_ground ~depth t =
 
 (** Core built-in ********************************************************* *)
 
-let core_builtins = let open BuiltIn in let open ContextualConversion in [
+let core_builtins = let open BuiltIn in let open Conversion in [
 
   LPDoc " == Core builtins =====================================";
 
@@ -402,7 +454,7 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
           "external pred declare_constraint i:any, i:list any.");
   LPCode "external pred print_constraints. % prints all constraints";
 
-  MLCode(Pred("halt", VariadicIn(unit_ctx, !> BuiltInData.any, "halts the program and print the terms"),
+  MLCode(Pred("halt", VariadicIn(BuiltInData.any, "halts the program and print the terms"),in_raw_ctx,
   (fun args ~depth _ _ ->
      if args = [] then error "halt"
      else
@@ -420,7 +472,7 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   MLCode(Pred("calc",
     In(BuiltInData.poly "A",  "Expr",
     Out(BuiltInData.poly "A", "Out",
-    Easy          "unifies Out with the value of Expr. It can be used in tandem with spilling, eg [f {calc (N + 1)}]")),
+    Easy          "unifies Out with the value of Expr. It can be used in tandem with spilling, eg [f {calc (N + 1)}]")),in_raw_ctx,
   (fun t _ ~depth -> !:(eval depth t))),
   DocAbove);
 
@@ -436,7 +488,7 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   MLCode(Pred(pname,
     In(BuiltInData.poly "A","X",
     In(BuiltInData.poly "A","Y",
-    Easy     ("checks if X " ^ psym ^ " Y. Works for string, int and float"))),
+    Easy     ("checks if X " ^ psym ^ " Y. Works for string, int and float"))),in_raw_ctx,
   (fun t1 t2 ~depth ->
      let open RawOpaqueData in
      let t1 = look ~depth (eval depth t1) in
@@ -495,7 +547,8 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "type (::) X -> list X -> list X.";
   LPCode "type ([]) list X.";
 
-  MLData bool;
+  MLData BuiltInData.bool;
+  MLData BuiltInData.char;
 
   MLData (pair (BuiltInData.poly "A") (BuiltInData.poly "B"));
 
@@ -504,18 +557,51 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "pred snd  i:pair A B, o:B.";
   LPCode "snd (pr _ B) B.";
 
+  MLData (triple (BuiltInData.poly "A") (BuiltInData.poly "B") (BuiltInData.poly "C"));
+
+  LPCode "pred triple_1  i:triple A1 A2 A3, o:A1.";
+  LPCode "triple_1 (triple X _ _) X.";
+  LPCode "pred triple_2  i:triple A1 A2 A3, o:A2.";
+  LPCode "triple_2 (triple _ X _) X.";
+  LPCode "pred triple_3  i:triple A1 A2 A3, o:A3.";
+  LPCode "triple_3 (triple _ _ X) X.";
+
+  MLData (quadruple (BuiltInData.poly "A") (BuiltInData.poly "B") (BuiltInData.poly "C") (BuiltInData.poly "D"));
+
+  LPCode "pred quadruple_1  i:quadruple A1 A2 A3 A4, o:A1.";
+  LPCode "quadruple_1 (quadruple X _ _ _) X.";
+  LPCode "pred quadruple_2  i:quadruple A1 A2 A3 A4, o:A2.";
+  LPCode "quadruple_2 (quadruple _ X _ _) X.";
+  LPCode "pred quadruple_3  i:quadruple A1 A2 A3 A4, o:A3.";
+  LPCode "quadruple_3 (quadruple _ _ X _) X.";
+  LPCode "pred quadruple_4  i:quadruple A1 A2 A3 A4, o:A4.";
+  LPCode "quadruple_4 (quadruple _ _ _ X) X.";
+
+  MLData (quintuple (BuiltInData.poly "A") (BuiltInData.poly "B") (BuiltInData.poly "C") (BuiltInData.poly "D") (BuiltInData.poly "E"));
+
+  LPCode "pred quintuple_1  i:quintuple A1 A2 A3 A4 A5, o:A1.";
+  LPCode "quintuple_1 (quintuple X _ _ _ _) X.";
+  LPCode "pred quintuple_2  i:quintuple A1 A2 A3 A4 A5, o:A2.";
+  LPCode "quintuple_2 (quintuple _ X _ _ _) X.";
+  LPCode "pred quintuple_3  i:quintuple A1 A2 A3 A4 A5, o:A3.";
+  LPCode "quintuple_3 (quintuple _ _ X _ _) X.";
+  LPCode "pred quintuple_4  i:quintuple A1 A2 A3 A4 A5, o:A4.";
+  LPCode "quintuple_4 (quintuple _ _ _ X _) X.";
+  LPCode "pred quintuple_5  i:quintuple A1 A2 A3 A4 A5, o:A5.";
+  LPCode "quintuple_5 (quintuple _ _ _ _ X) X.";
+
   MLData (option (BuiltInData.poly "A"));
 
   MLData cmp;
 
-  MLData diagnostic;
+  MLData BuiltInData.diagnostic;
 
   ]
 ;;
 
 (** Standard lambda Prolog I/O built-in *********************************** *)
 
-let io_builtins = let open BuiltIn in let open BuiltInData in [
+let io_builtins = let open BuiltIn in let open BuiltInData in let open Conversion in [
 
   LPDoc " == I/O builtins =====================================";
 
@@ -524,11 +610,11 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
   MLData (in_stream);
 
   MLData (out_stream);
-     
+
   MLCode(Pred("open_in",
     In(string,     "FileName",
     Out(in_stream, "InStream",
-    Easy           "opens FileName for input")),
+    Easy           "opens FileName for input")),in_raw_ctx,
   (fun s _ ~depth ->
      try !:(open_in s,s)
      with Sys_error msg -> error msg)),
@@ -537,7 +623,7 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
   MLCode(Pred("open_out",
     In(string,      "FileName",
     Out(out_stream, "OutStream",
-    Easy            "opens FileName for output")),
+    Easy            "opens FileName for output")),in_raw_ctx,
   (fun s _ ~depth ->
      try !:(open_out s,s)
      with Sys_error msg -> error msg)),
@@ -546,7 +632,7 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
   MLCode(Pred("open_append",
     In(string,      "FileName",
     Out(out_stream, "OutStream",
-    Easy            "opens FileName for output in append mode")),
+    Easy            "opens FileName for output in append mode")),in_raw_ctx,
   (fun s _ ~depth ->
      let flags = [Open_wronly; Open_append; Open_creat; Open_text] in
      try !:(open_out_gen flags 0x664 s,s)
@@ -555,7 +641,7 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
 
   MLCode(Pred("close_in",
     In(in_stream, "InStream",
-    Easy          "closes input stream InStream"),
+    Easy          "closes input stream InStream"),in_raw_ctx,
   (fun (i,_) ~depth ->
      try close_in i
      with Sys_error msg -> error msg)),
@@ -563,7 +649,7 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
 
   MLCode(Pred("close_out",
     In(out_stream, "OutStream",
-    Easy           "closes output stream OutStream"),
+    Easy           "closes output stream OutStream"),in_raw_ctx,
   (fun (o,_) ~depth ->
      try close_out o
      with Sys_error msg -> error msg)),
@@ -572,7 +658,7 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
   MLCode(Pred("output",
     In(out_stream, "OutStream",
     In(string,     "Data",
-    Easy           "writes Data to OutStream")),
+    Easy           "writes Data to OutStream")),in_raw_ctx,
   (fun (o,_) s ~depth ->
      try output_string o s
      with Sys_error msg -> error msg)),
@@ -580,7 +666,7 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
 
   MLCode(Pred("flush",
     In(out_stream, "OutStream",
-    Easy           "flush all output not yet finalized to OutStream"),
+    Easy           "flush all output not yet finalized to OutStream"),in_raw_ctx,
   (fun (o,_) ~depth ->
      try flush o
      with Sys_error msg -> error msg)),
@@ -590,7 +676,7 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
     In(in_stream, "InStream",
     In(int,       "Bytes",
     Out(string,   "Data",
-    Easy          "reads Bytes from InStream"))),
+    Easy          "reads Bytes from InStream"))),in_raw_ctx,
   (fun (i,_) n _ ~depth ->
      let buf = Bytes.make n ' ' in
      try
@@ -603,7 +689,7 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
   MLCode(Pred("input_line",
     In(in_stream, "InStream",
     Out(string,   "Line",
-    Easy          "reads a full line from InStream")),
+    Easy          "reads a full line from InStream")),in_raw_ctx,
   (fun (i,_) _ ~depth ->
      try !:(input_line i)
      with
@@ -613,7 +699,7 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
 
   MLCode(Pred("eof",
     In(in_stream, "InStream",
-    Easy          "checks if no more data can be read from InStream"),
+    Easy          "checks if no more data can be read from InStream"),in_raw_ctx,
   (fun (i,_) ~depth ->
      try
        let pos = pos_in i in
@@ -629,14 +715,14 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
 
   MLCode(Pred("gettimeofday",
     Out(float, "T",
-    Easy       "sets T to the number of seconds elapsed since 1/1/1970"),
+    Easy       "sets T to the number of seconds elapsed since 1/1/1970"),in_raw_ctx,
   (fun _ ~depth -> !:(Unix.gettimeofday ()))),
   DocAbove);
 
   MLCode(Pred("getenv",
     In(string,  "VarName",
     Out(option string, "Value",
-    Easy      ("Like Sys.getenv"))),
+    Easy      ("Like Sys.getenv"))),in_raw_ctx,
   (fun s _ ~depth ->
      try !:(Some (Sys.getenv s))
      with Not_found -> !: None)),
@@ -645,7 +731,7 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
   MLCode(Pred("system",
     In(string, "Command",
     Out(int,   "RetVal",
-    Easy       "executes Command and sets RetVal to the exit code")),
+    Easy       "executes Command and sets RetVal to the exit code")),in_raw_ctx,
   (fun s _ ~depth -> !:(Sys.command s))),
   DocAbove);
 
@@ -654,7 +740,7 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
   MLCode(Pred("term_to_string",
     In(any,     "T",
     Out(string, "S",
-    Easy        "prints T to S")),
+    Easy        "prints T to S")),in_raw_ctx,
   (fun t _ ~depth ->
      let b = Buffer.create 1024 in
      let fmt = Format.formatter_of_buffer b in
@@ -668,7 +754,7 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
 
 (** Standard lambda Prolog built-in ************************************** *)
 
-let lp_builtins = let open BuiltIn in let open BuiltInData in [
+let lp_builtins = let open BuiltIn in let open BuiltInData in let open Conversion in [
 
   LPDoc "== Lambda Prolog builtins =====================================";
 
@@ -677,7 +763,7 @@ let lp_builtins = let open BuiltIn in let open BuiltInData in [
   MLCode(Pred("open_string",
     In(string,     "DataIn",
     Out(in_stream, "InStream",
-    Easy           "opens DataIn as an input stream")),
+    Easy           "opens DataIn as an input stream")),in_raw_ctx,
   (fun data _ ~depth ->
      try
        let filename, outch = Filename.open_temp_file "elpi" "tmp" in
@@ -692,7 +778,7 @@ let lp_builtins = let open BuiltIn in let open BuiltInData in [
   MLCode(Pred("lookahead",
     In(in_stream, "InStream",
     Out(string,   "NextChar",
-    Easy          "peeks one byte from InStream")),
+    Easy          "peeks one byte from InStream")),in_raw_ctx,
   (fun (i,_) _ ~depth ->
      try
        let pos = pos_in i in
@@ -709,8 +795,8 @@ let lp_builtins = let open BuiltIn in let open BuiltInData in [
   MLCode(Pred("string_to_term",
     In(string, "S",
     Out(any,   "T",
-    Full(ContextualConversion.unit_ctx, "parses a term T from S"))),
-  (fun s _ ~depth () () state ->
+    Full("parses a term T from S"))),in_raw_ctx,
+  (fun s _ ~depth _ _ state ->
      try
        let loc = Ast.Loc.initial "(string_of_term)" in
        let t = Parse.goal loc s in
@@ -723,8 +809,8 @@ let lp_builtins = let open BuiltIn in let open BuiltInData in [
   MLCode(Pred("readterm",
     In(in_stream, "InStream",
     Out(any,      "T",
-    Full(ContextualConversion.unit_ctx, "reads T from InStream"))),
-  (fun (i,source_name) _ ~depth () () state ->
+    Full("reads T from InStream"))),in_raw_ctx,
+  (fun (i,source_name) _ ~depth _ _ state ->
      try
        let loc = Ast.Loc.initial source_name in
        let strm = Stream.of_channel i in
@@ -747,22 +833,22 @@ let lp_builtins = let open BuiltIn in let open BuiltInData in [
 
 (** ELPI specific built-in ************************************************ *)
 
-let elpi_builtins = let open BuiltIn in let open BuiltInData in let open ContextualConversion in [
+let elpi_builtins = let open BuiltIn in let open BuiltInData in let open Conversion in [
 
   LPDoc "== Elpi builtins =====================================";
 
   MLCode(Pred("dprint",
-    VariadicIn(unit_ctx, !> any, "prints raw terms (debugging)"),
+    VariadicIn(any, "prints raw terms (debugging)"),in_raw_ctx,
   (fun args ~depth _ _ state ->
-     Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
+     Utils.printf "@[<hov 1>%a@]@\n%!"
        (RawPp.list (RawPp.Debug.term depth) " ") args ;
      state, ())),
   DocAbove);
 
   MLCode(Pred("print",
-    VariadicIn(unit_ctx, !> any,"prints terms"),
+    VariadicIn(any,"prints terms"),in_raw_ctx,
   (fun args ~depth _ _ state ->
-     Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
+     Utils.printf "@[<hov 1>%a@]@\n%!"
        (RawPp.list (RawPp.term depth) " ") args ;
      state, ())),
   DocAbove);
@@ -770,7 +856,7 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in let open Context
   MLCode(Pred("counter",
     In (string,"Name",
     Out(int,   "Value",
-    Easy       "reads the Value of a trace point Name")),
+    Easy       "reads the Value of a trace point Name")),in_raw_ctx,
   (fun s _ ~depth:_ -> !:(Trace_ppx_runtime.Runtime.get_cur_step s))),
   DocAbove);
 
@@ -778,7 +864,7 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in let open Context
     In(string, "Rex",
     In(string, "Subject",
     Easy      ("checks if Subject matches Rex. "^
-               "Matching is based on OCaml's Str library"))),
+               "Matching is based on OCaml's Str library"))),in_raw_ctx,
   (fun rex subj ~depth ->
      let rex = Str.regexp rex in
      if Str.string_match rex subj 0 then () else raise No_clause)),
@@ -790,7 +876,7 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in let open Context
     In(string,  "Subject",
     Out(string, "Out",
     Easy   ("Out is obtained by replacing all occurrences of Rex with "^
-            "Replacement in Subject. See also OCaml's Str.global_replace"))))),
+            "Replacement in Subject. See also OCaml's Str.global_replace"))))),in_raw_ctx,
   (fun rex repl subj _ ~depth ->
      let rex = Str.regexp rex in
      !:(Str.global_replace rex repl subj))),
@@ -801,8 +887,8 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in let open Context
      In(string, "QueryText",
      Out(list (poly "A"), "QuotedProgram",
      Out(poly "A",        "QuotedQuery",
-     Full    (unit_ctx, "quotes the program from FileName and the QueryText. "^
-              "See elpi-quoted_syntax.elpi for the syntax tree"))))),
+     Full    ("quotes the program from FileName and the QueryText. "^
+              "See elpi-quoted_syntax.elpi for the syntax tree"))))),in_raw_ctx,
    (fun f s _ _ ~depth _ _ state ->
       let elpi, _ = Setup.init ~builtins:[BuiltIn.declare ~file_name:"(dummy)" []] ~basedir:Sys.(getcwd()) [] in
       try
@@ -831,10 +917,11 @@ let ctype = AlgebraicData.declare {
   constructors = [
     K("ctype","",A(BuiltInData.string,N),B (fun x -> x), M (fun ~ok ~ko x -> ok x))  
   ]
-} |> ContextualConversion.(!<)
-   
-let safe = OpaqueData.declare {
+}
+
+let ty, pp, pp_doc, safe = OpaqueData.declare {
   OpaqueData.name = "safe";
+  cname = "safe";
   pp = (fun fmt (id,l) ->
      Format.fprintf fmt "[safe %d: %a]" id
        (RawPp.list (fun fmt (t,d) -> RawPp.term d fmt t) ";") !l);
@@ -843,6 +930,10 @@ let safe = OpaqueData.declare {
   hconsed = false;
   doc = "Holds data across bracktracking; can only contain closed terms";
   constants = [];
+}
+let safe : 'c. ('a, #Conversion.ctx as 'c) Conversion.t = { Conversion.ty; pp; pp_doc;
+  embed = (fun ~depth -> OpaqueData.embed safe ~depth);
+  readback = (fun ~depth -> OpaqueData.readback safe ~depth);
 }
 
 let safeno = ref 0
@@ -898,7 +989,7 @@ and same_term_list ~depth xs ys =
   | x::xs, y::ys -> same_term ~depth x y && same_term_list ~depth xs ys
   | _ -> false
 
-let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in let open ContextualConversion in [ 
+let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in let open Conversion in [
 
   LPDoc "== Elpi nonlogical builtins =====================================";
 
@@ -906,7 +997,7 @@ let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in let o
 
   MLCode(Pred("var",
     In(any,   "V",
-    Easy       "checks if the term V is a variable"),
+    Easy       "checks if the term V is a variable"),in_raw_ctx,
   (fun t1 ~depth ->
      match look ~depth t1 with
      | UnifVar _ -> ()
@@ -916,7 +1007,7 @@ let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in let o
   MLCode(Pred("same_var",
     In(poly "A",   "V1",
     In(poly "A",   "V2",
-    Easy       "checks if the two terms V1 and V2 are the same variable, ignoring the arguments of the variables")),
+    Easy       "checks if the two terms V1 and V2 are the same variable, ignoring the arguments of the variables")),in_raw_ctx,
   (fun t1 t2 ~depth ->
      match look ~depth t1, look ~depth t2 with
      | UnifVar(p1,_), UnifVar (p2,_) when FlexibleData.Elpi.equal p1 p2 -> ()
@@ -926,7 +1017,7 @@ let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in let o
   MLCode(Pred("same_term",
     In(poly "A",   "T1",
     In(poly "A",   "T2",
-    Easy {|checks if the two terms T1 and T2 are syntactically equal (no unification). It behaves differently than same_var since it recursively compares the arguments of the variables|})),
+    Easy {|checks if the two terms T1 and T2 are syntactically equal (no unification). It behaves differently than same_var since it recursively compares the arguments of the variables|})),in_raw_ctx,
   (fun t1 t2 ~depth ->
      if same_term ~depth t1 t2 then () else raise No_clause)),
   DocAbove);
@@ -941,25 +1032,25 @@ X == Y :- same_term X Y.
     In(any, "A",
     In(any, "B",
     Out(cmp,"Cmp",
-    Easy "Compares A and B. Only works if A and B are ground."))),
+    Easy "Compares A and B. Only works if A and B are ground."))),in_raw_ctx,
   (fun t1 t2 _ ~depth -> !: (cmp_term ~depth t1 t2))),
   DocAbove);
 
   MLCode(Pred("name",
     InOut(ioarg_any, "T",
-    VariadicInOut(unit_ctx, !> (ioarg any),"checks if T is a eigenvariable. When used with tree arguments it relates an applied name with its head and argument list.")),
+    VariadicInOut(ioarg any,"checks if T is a eigenvariable. When used with tree arguments it relates an applied name with its head and argument list.")),in_raw_ctx,
   (name_or_constant "name" (fun x -> x >= 0))),
   DocAbove);
 
   MLCode(Pred("constant",
     InOut(ioarg_any, "T",
-    VariadicInOut(unit_ctx, !> (ioarg any),"checks if T is a (global) constant.  When used with tree arguments it relates an applied constant with its head and argument list.")),
+    VariadicInOut(ioarg any,"checks if T is a (global) constant.  When used with tree arguments it relates an applied constant with its head and argument list.")),in_raw_ctx,
   (name_or_constant "constant" (fun x -> x < 0))),
   DocAbove);
 
   MLCode(Pred("names",
     Out(list any, "list of eigenvariables in order of age (young first)",
-    Easy           "generates the list of eigenvariable"),
+    Easy           "generates the list of eigenvariable"),in_raw_ctx,
   (* XXX 4.06: (fun _ ~depth -> !:(List.init depth mkConst))), *)
   (fun _ ~depth ->
      let rec list_init i n f =
@@ -971,7 +1062,7 @@ X == Y :- same_term X Y.
   MLCode(Pred("occurs",
     In(any, "a constant (global or eigenvariable)",
     In(any, "a term",
-    Easy     "checks if the constant occurs in the term")),
+    Easy     "checks if the constant occurs in the term")),in_raw_ctx,
   (fun t1 t2 ~depth ->
      let occurs_in t2 t =
        match look ~depth t with
@@ -982,7 +1073,7 @@ X == Y :- same_term X Y.
 
   MLCode(Pred("closed_term",
     Out(any, "T",
-    Full (unit_ctx, "unify T with a variable that has no eigenvariables in scope")),
+    Full ("unify T with a variable that has no eigenvariables in scope")),in_raw_ctx,
   (fun _ ~depth _ _ state ->
       let state, k = FlexibleData.Elpi.make state in
       state, !:(mkUnifVar k ~args:[] state), [])),
@@ -990,14 +1081,14 @@ X == Y :- same_term X Y.
 
   MLCode(Pred("ground_term",
     In(any, "T",
-    Easy ("Checks if T contains unification variables")),
+    Easy ("Checks if T contains unification variables")),in_raw_ctx,
   (fun t ~depth -> check_ground ~depth t)),
   DocAbove);
 
   MLCode(Pred("is_cdata",
     In(any,     "T",
     Out(ctype,  "Ctype",
-    Easy        "checks if T is primitive of type Ctype, eg (ctype \"int\")")),
+    Easy        "checks if T is primitive of type Ctype, eg (ctype \"int\")")),in_raw_ctx,
   (fun t _ ~depth ->
      match look ~depth t with
      | CData n -> !:(RawOpaqueData.name n)
@@ -1009,7 +1100,7 @@ X == Y :- same_term X Y.
 
   MLCode(Pred("new_int",
      Out(int, "N",
-     Easy     "unifies N with a different int every time it is called. Values of N are guaranteed to be incresing."),
+     Easy     "unifies N with a different int every time it is called. Values of N are guaranteed to be incresing."),in_raw_ctx,
    (fun _ ~depth ->
       incr fresh_int;
       if !fresh_int < 0 then anomaly "new_int: reached max_int";
@@ -1020,21 +1111,21 @@ X == Y :- same_term X Y.
 
    MLCode(Pred("new_safe",
      Out(safe, "Safe",
-     Easy      "creates a safe: a store that persists across backtracking"),
+     Easy      "creates a safe: a store that persists across backtracking"),in_raw_ctx,
    (fun _ ~depth -> incr safeno; !:(!safeno,ref []))),
   DocAbove);
 
    MLCode(Pred("stash_in_safe",
      In(safe,  "Safe",
      In(closed "A",   "Data",
-     Easy      "stores Data in the Safe")),
+     Easy      "stores Data in the Safe")),in_raw_ctx,
    (fun (_,l) t ~depth -> l := t :: !l)),
   DocAbove);
 
    MLCode(Pred("open_safe",
      In(safe, "Safe",
      Out(list (closed "A"), "Data",
-     Easy          "retrieves the Data stored in Safe")),
+     Easy          "retrieves the Data stored in Safe")),in_raw_ctx,
    (fun (_,l) _ ~depth -> !:(List.rev !l))),
   DocAbove);
 
@@ -1047,36 +1138,37 @@ if _ _ E :- E.  |};
 
   MLCode(Pred("random.init",
      In(int, "Seed",
-     Easy     "Initialize OCaml's PRNG with the given Seed"),
+     Easy     "Initialize OCaml's PRNG with the given Seed"),in_raw_ctx,
    (fun seed ~depth:_ -> Random.init seed)),
   DocAbove);
 
   MLCode(Pred("random.self_init",
-     Easy     "Initialize OCaml's PRNG with some seed",
+     Easy     "Initialize OCaml's PRNG with some seed",in_raw_ctx,
    (fun ~depth:_ -> Random.self_init ())),
   DocAbove);
 
   MLCode(Pred("random.int",
      In(int, "Bound",
      Out(int, "N",
-     Easy     "unifies N with a random int between 0 and Bound (excluded)")),
+     Easy     "unifies N with a random int between 0 and Bound (excluded)")),in_raw_ctx,
    (fun bound _ ~depth -> !: (Random.int bound))),
   DocAbove);
 
 ]
 ;;
 
-let elpi_stdlib_src = let open BuiltIn in let open BuiltInData in [ 
+let elpi_stdlib_src = let open BuiltIn in let open BuiltInData in [
 
   LPCode Builtin_stdlib.code
 
 ]
 
 let ocaml_set ~name (type a)
-   (alpha : a Conversion.t) (module Set : Util.Set.S with type elt = a) =
- 
-let set = OpaqueData.declare {
+   (alpha : (a,Conversion.ctx) Conversion.t) (module Set : Util.Set.S with type elt = a) =
+
+let ty, pp, pp_doc, set = OpaqueData.declare {
   OpaqueData.name;
+  cname = name;
   doc = "";
   pp = (fun fmt m -> Format.fprintf fmt "%a" Set.pp m );
   compare = (fun m1 m2 -> Set.compare m1 m2);
@@ -1084,24 +1176,26 @@ let set = OpaqueData.declare {
   hconsed = false;
   constants = [];
 } in
+let set : (Set.t, #Conversion.ctx as 'c) Conversion.t = { Conversion.ty; pp; pp_doc;
+  embed = (fun ~depth -> OpaqueData.embed set ~depth);
+  readback = (fun ~depth -> OpaqueData.readback set ~depth);
+} in
 
-let set = { set with Conversion.ty = Conversion.(TyName name) } in
-
-let open BuiltIn in let open BuiltInData in 
+let open BuiltIn in let open BuiltInData in let open Conversion in
 
 [
   LPCode ("kind "^name^" type.");
 
   MLCode(Pred(name^".empty",
     Out(set,"A",
-    Easy "The empty set"),
+    Easy "The empty set"),in_raw_ctx,
     (fun _ ~depth -> !: Set.empty)),
   DocAbove);
 
   MLCode(Pred(name^".mem",
     In(alpha,"Elem",
     In(set,"A",
-    Easy "Checks if Elem is in a")),
+    Easy "Checks if Elem is in a")),in_raw_ctx,
     (fun s m ~depth ->
       if Set.mem s m then () else raise No_clause)),
   DocAbove);
@@ -1110,7 +1204,7 @@ let open BuiltIn in let open BuiltInData in
     In(alpha,"Elem",
     In(set,"A",
     Out(set,"B",
-    Easy "B is A union {Elem}"))),
+    Easy "B is A union {Elem}"))),in_raw_ctx,
     (fun s m _ ~depth -> !: (Set.add s m))),
   DocAbove);
 
@@ -1118,7 +1212,7 @@ let open BuiltIn in let open BuiltInData in
     In(alpha,"Elem",
     In(set,"A",
     Out(set,"B",
-    Easy "B is A \ {Elem}"))),
+    Easy "B is A \ {Elem}"))),in_raw_ctx,
     (fun s m _ ~depth -> !: (Set.remove s m))),
   DocAbove);
 
@@ -1126,7 +1220,7 @@ let open BuiltIn in let open BuiltInData in
     In(set,"A",
     In(set,"B",
     Out(set,"X",
-    Easy "X is A union B"))),
+    Easy "X is A union B"))),in_raw_ctx,
     (fun a b _ ~depth -> !: (Set.union a b))),
     DocAbove);
 
@@ -1134,7 +1228,7 @@ let open BuiltIn in let open BuiltInData in
     In(set,"A",
     In(set,"B",
     Out(set,"X",
-    Easy "X is A intersection B"))),
+    Easy "X is A intersection B"))),in_raw_ctx,
     (fun a b _ ~depth -> !: (Set.inter a b))),
   DocAbove);
 
@@ -1142,47 +1236,48 @@ let open BuiltIn in let open BuiltInData in
     In(set,"A",
     In(set,"B",
     Out(set,"X",
-    Easy "X is A \ B"))),
+    Easy "X is A \ B"))),in_raw_ctx,
     (fun a b _ ~depth -> !: (Set.diff a b))),
   DocAbove);
 
   MLCode(Pred(name^".equal",
     In(set,"A",
     In(set,"B",
-    Easy "tests A and B for equality")),
+    Easy "tests A and B for equality")),in_raw_ctx,
     (fun a b ~depth -> if Set.equal a b then () else raise No_clause)),
   DocAbove);
 
   MLCode(Pred(name^".subset",
     In(set,"A",
     In(set,"B",
-    Easy "tests if A is a subset of B")),
+    Easy "tests if A is a subset of B")),in_raw_ctx,
     (fun a b ~depth -> if Set.subset a b then () else raise No_clause)),
   DocAbove);
 
   MLCode(Pred(name^".elements",
     In(set,"M",
     Out(list alpha,"L",
-    Easy "L is M transformed into list")),
+    Easy "L is M transformed into list")),in_raw_ctx,
     (fun m _ ~depth -> !: (Set.elements m))),
   DocAbove);
 
   MLCode(Pred(name^".cardinal",
     In(set,"M",
     Out(int,"N",
-    Easy "N is the number of elements of M")),
+    Easy "N is the number of elements of M")),in_raw_ctx,
     (fun m _ ~depth -> !: (Set.cardinal m))),
   DocAbove);
-] 
+]
 ;;
 
 let ocaml_map ~name (type a)
-   (alpha : a Conversion.t) (module Map : Util.Map.S with type key = a) =
- 
+   (alpha : (a,Conversion.ctx) Conversion.t) (module Map : Util.Map.S with type key = a) =
+
 let closed_A = BuiltInData.closed "A" in
 
-let map = OpaqueData.declare {
+let ty, pp, pp_doc, map = OpaqueData.declare {
   OpaqueData.name;
+  cname = name;
   doc = "";
   pp = (fun fmt m -> Format.fprintf fmt "%a" (Map.pp closed_A.pp) m );
   compare = (fun m1 m2 -> Map.compare Pervasives.compare m1 m2);
@@ -1190,11 +1285,14 @@ let map = OpaqueData.declare {
   hconsed = false;
   constants = [];
 } in
+let map a = {
+  Conversion.ty = Conversion.(TyApp(name,TyName a,[]));
+  pp; pp_doc;
+  embed = (fun ~depth -> OpaqueData.embed map ~depth);
+  readback = (fun ~depth -> OpaqueData.readback map ~depth);
+} in
 
-let map a = { map with
-  Conversion.ty = Conversion.(TyApp(name,TyName a,[])) } in
-
-let open BuiltIn in let open BuiltInData in 
+let open BuiltIn in let open BuiltInData in let open Conversion in
 
 [
   LPDoc ("CAVEAT: the type parameter of "^name^" must be a closed term");
@@ -1202,14 +1300,14 @@ let open BuiltIn in let open BuiltInData in
 
   MLCode(Pred(name^".empty",
     Out(map "A","M",
-    Easy "The empty map"),
+    Easy "The empty map"),in_raw_ctx,
     (fun _ ~depth -> !: Map.empty)),
   DocAbove);
 
   MLCode(Pred(name^".mem",
     In(alpha,"S",
     In(map "A","M",
-    Easy "Checks if S is bound in M")),
+    Easy "Checks if S is bound in M")),in_raw_ctx,
     (fun s m ~depth ->
       if Map.mem s m then () else raise No_clause)),
   DocAbove);
@@ -1219,7 +1317,7 @@ let open BuiltIn in let open BuiltInData in
     In(closed_A,"V",
     In(map "A","M",
     Out(map "A","M1",
-    Easy "M1 is M where V is bound to S")))),
+    Easy "M1 is M where V is bound to S")))),in_raw_ctx,
     (fun s l m _ ~depth -> !: (Map.add s l m))),
   DocAbove);
 
@@ -1227,7 +1325,7 @@ let open BuiltIn in let open BuiltInData in
     In(alpha,"S",
     In(map "A","M",
     Out(map "A","M1",
-    Easy "M1 is M where S is unbound"))),
+    Easy "M1 is M where S is unbound"))),in_raw_ctx,
     (fun s m _ ~depth -> !: (Map.remove s m))),
   DocAbove);
 
@@ -1235,7 +1333,7 @@ let open BuiltIn in let open BuiltInData in
     In(alpha,"S",
     In(map "A","M",
     Out(closed_A,"V",
-    Easy "V is the binding of S in M"))),
+    Easy "V is the binding of S in M"))),in_raw_ctx,
     (fun s m _ ~depth ->
        try !: (Map.find s m)
        with Not_found -> raise No_clause)),
@@ -1244,36 +1342,35 @@ let open BuiltIn in let open BuiltInData in
   MLCode(Pred(name^".bindings",
     In(map "A","M",
     Out(list (pair alpha (closed_A)),"L",
-    Easy "L is M transformed into an associative list")),
+    Easy "L is M transformed into an associative list")),in_raw_ctx,
     (fun m _ ~depth -> !: (Map.bindings m))),
   DocAbove);
 
-] 
+]
 ;;
 
 module LocMap : Util.Map.S with type key = Ast.Loc.t = Util.Map.Make(Ast.Loc)
 module LocSet : Util.Set.S with type elt = Ast.Loc.t = Util.Set.Make(Ast.Loc)
 
 let elpi_map =  let open BuiltIn in let open BuiltInData in [
-  
+
     LPCode Builtin_map.code
-    
+
 ]
 
 let elpi_set =  let open BuiltIn in let open BuiltInData in [
-  
-    LPCode Builtin_set.code
-    
-]
 
+    LPCode Builtin_set.code
+
+]
 
 let elpi_stdlib =
   elpi_stdlib_src @
-  ocaml_map ~name:"std.string.map" BuiltInData.string (module Util.StrMap) @ 
-  ocaml_map ~name:"std.int.map"    BuiltInData.int    (module Util.IntMap) @ 
-  ocaml_map ~name:"std.loc.map"    BuiltInData.loc    (module LocMap) @ 
-  ocaml_set ~name:"std.string.set" BuiltInData.string (module Util.StrSet) @ 
-  ocaml_set ~name:"std.int.set"    BuiltInData.int    (module Util.IntSet) @ 
+  ocaml_map ~name:"std.string.map" BuiltInData.string (module Util.StrMap) @
+  ocaml_map ~name:"std.int.map"    BuiltInData.int    (module Util.IntMap) @
+  ocaml_map ~name:"std.loc.map"    BuiltInData.loc    (module LocMap) @
+  ocaml_set ~name:"std.string.set" BuiltInData.string (module Util.StrSet) @
+  ocaml_set ~name:"std.int.set"    BuiltInData.int    (module Util.IntSet) @
   ocaml_set ~name:"std.loc.set"    BuiltInData.loc    (module LocSet) @
   []
 ;;

@@ -3,7 +3,7 @@ type std.set std.set.private.set E -> (E -> E -> cmp -> prop) -> std.set E.
 
 namespace std.set {
 
-% [make Eq Ltn M] builds an empty set M where keys are compared using Eq and Ltn
+% [make Cmp M] builds an empty set M where keys are compared using Cmp
 pred make i:(E -> E -> cmp -> prop), o:std.set E.
 make Cmp (std.set private.empty Cmp).
 

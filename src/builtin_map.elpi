@@ -3,7 +3,7 @@ type std.map std.map.private.map K V -> (K -> K -> cmp -> prop) -> std.map K V.
 
 namespace std.map {
 
-% [make Eq Ltn M] builds an empty map M where keys are compared using Eq and Ltn
+% [make Cmp M] builds an empty map M where keys are compared using Cmp
 pred make i:(K -> K -> cmp -> prop), o:std.map K V.
 make Cmp (std.map private.empty Cmp).
 
