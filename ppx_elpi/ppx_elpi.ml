@@ -723,8 +723,8 @@ let conversion_of (module B : Ast_builder.S)  ty = let open B in
    | [%type: string] -> [%expr Elpi.API.BuiltInData.string]
    | [%type: int]    -> [%expr Elpi.API.BuiltInData.int]
    | [%type: float]  -> [%expr Elpi.API.BuiltInData.float]
-   | [%type: bool]   -> [%expr Elpi.Builtin.bool]
-   | [%type: char]   -> [%expr Elpi.Builtin.char]
+   | [%type: bool]   -> [%expr Elpi.API.BuiltInData.bool]
+   | [%type: char]   -> [%expr Elpi.API.BuiltInData.char]
    | [%type: [%t? typ] list]          -> [%expr Elpi.API.BuiltInData.list [%e aux typ ]]
    | [%type: [%t? typ] option]        -> [%expr Elpi.Builtin.option [%e aux typ ]]
    | [%type: [%t? typ1] * [%t? typ2]] -> [%expr Elpi.Builtin.pair [%e aux typ1 ] [%e aux typ2 ]]
@@ -747,8 +747,8 @@ let rec find_embed_of (module B : Ast_builder.S) current_mutrec_block  ty = let 
    | [%type: string] -> [%expr Elpi.API.PPX.embed_string]
    | [%type: int]    -> [%expr Elpi.API.PPX.embed_int]
    | [%type: float]  -> [%expr Elpi.API.PPX.embed_float]
-   | [%type: bool]   -> [%expr Elpi.Builtin.PPX.embed_bool]
-   | [%type: char]   -> [%expr Elpi.Builtin.PPX.embed_char]
+   | [%type: bool]   -> [%expr Elpi.API.PPX.embed_bool]
+   | [%type: char]   -> [%expr Elpi.API.PPX.embed_char]
    | [%type: [%t? typ] list]          -> [%expr Elpi.API.PPX.embed_list [%e aux typ ]]
    | [%type: [%t? typ] option]        -> [%expr Elpi.Builtin.PPX.embed_option [%e aux typ ]]
    | [%type: [%t? typ1] * [%t? typ2]] -> [%expr Elpi.Builtin.PPX.embed_pair [%e aux typ1 ] [%e aux typ2 ]]
@@ -768,8 +768,8 @@ let rec find_readback_of (module B : Ast_builder.S) current_mutrec_block  ty = l
    | [%type: string] -> [%expr Elpi.API.PPX.readback_string]
    | [%type: int]    -> [%expr Elpi.API.PPX.readback_int]
    | [%type: float]  -> [%expr Elpi.API.PPX.readback_float]
-   | [%type: bool]   -> [%expr Elpi.Builtin.PPX.readback_bool]
-   | [%type: char]   -> [%expr Elpi.Builtin.PPX.readback_char]
+   | [%type: bool]   -> [%expr Elpi.API.PPX.readback_bool]
+   | [%type: char]   -> [%expr Elpi.API.PPX.readback_char]
    | [%type: [%t? typ] list]          -> [%expr Elpi.API.PPX.readback_list [%e aux typ ]]
    | [%type: [%t? typ] option]        -> [%expr Elpi.Builtin.PPX.readback_option [%e aux typ ]]
    | [%type: [%t? typ1] * [%t? typ2]] -> [%expr Elpi.Builtin.PPX.readback_pair [%e aux typ1 ] [%e aux typ2 ]]
@@ -1108,32 +1108,12 @@ let coversion_for_opaque (module B : Ast_builder.S) elpi_name name = let open B 
         [%type: ( [%t ptyp_constr (Located.lident name) []] , #Elpi.API.Conversion.ctx as 'c) Elpi.API.Conversion.t]))
     ~expr:[%expr
 
-  let name = [%e elpi_name ] in
-  let { Elpi.API.RawOpaqueData.cin; isc; cout; name=c }, constants_map, doc = [%e evar @@ elpi_cdata_name name ] in
-
-  let ty = Elpi.API.Conversion.TyName name in
-  let embed ~depth:_ _ _ state x =
-    state, Elpi.API.RawData.mkCData (cin x), [] in
-  let readback ~depth _ _ state t =
-    match Elpi.API.RawData.look ~depth t with
-    | Elpi.API.RawData.CData c when isc c -> state, cout c, []
-    | Elpi.API.RawData.Const i when i < 0 ->
-        begin try state, snd @@ Elpi.API.RawData.Constants.Map.find i constants_map, []
-        with Not_found -> raise (Elpi.API.Conversion.TypeErr(ty,depth,t)) end
-    | _ -> raise (Elpi.API.Conversion.TypeErr(ty,depth,t)) in
-  let pp_doc fmt () =
-    if doc <> "" then begin
-      Elpi.API.PPX.Doc.comment fmt ("% " ^ doc);
-      Format.fprintf fmt "@\n";
-    end;
-    Format.fprintf fmt "@[<hov 2>typeabbrev %s (ctype \"%s\").@]@\n@\n" name c;
-    Elpi.API.RawData.Constants.Map.iter (fun _ (c,_) ->
-      Format.fprintf fmt "@[<hov 2>type %s %s.@]@\n" c name)
-      constants_map
-    in
-  { Elpi.API.Conversion.embed; readback; ty; pp_doc; pp = (fun fmt x -> Elpi.API.RawOpaqueData.pp fmt (cin x)) }
-
-  ]
+        let ty, pp, pp_doc, cdata = [%e evar @@ elpi_cdata_name name ] in {
+          Elpi.API.Conversion.ty; pp_doc; pp;
+          embed = (fun ~depth -> Elpi.API.OpaqueData.embed cdata ~depth);
+          readback = (fun ~depth -> Elpi.API.OpaqueData.readback cdata ~depth);
+        }
+    ]
 
 let abstract_expr_over_params (module B : Ast_builder.S) vl f e = let open B in
   let rec aux = function
@@ -1276,7 +1256,7 @@ let constants_of_tyd (module B : Ast_builder.S) { type_decl ; elpi_name; name; _
   | Opaque opaque_data ->
       [pstr_value Nonrecursive [
         value_binding ~pat:(pvar @@ elpi_cdata_name name)
-                      ~expr:[%expr Elpi.API.RawOpaqueData.declare [%e opaque_data]]]]
+                      ~expr:[%expr Elpi.API.OpaqueData.declare [%e opaque_data]]]]
   | Algebraic (csts,_) -> List.flatten @@ List.map (fun x -> x.declaration) @@ drop_skip csts
 
 let elpi_declaration_of_tyd (module B : Ast_builder.S) tyd = let open B in

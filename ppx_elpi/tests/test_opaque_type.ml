@@ -1,7 +1,16 @@
 let elpi_stuff = ref []
 
 let pp_simple _ _ = ()
-type simple [@@elpi.opaque {Elpi.API.OpaqueData.name = "simple"; doc = ""; pp = (fun fmt _ -> Format.fprintf fmt "<simple>"); compare = Pervasives.compare; hash = Hashtbl.hash; hconsed = false; constants = []; } ]
+type simple [@@elpi.opaque { Elpi.API.OpaqueData.
+  name = "simple";
+  cname = "simple";
+  doc = "a simple opaque data type";
+  pp = (fun fmt _ -> Format.fprintf fmt "<simple>");
+  compare = Pervasives.compare;
+  hash = Hashtbl.hash;
+  hconsed = false;
+  constants = [];
+}]
 [@@deriving elpi { declaration = elpi_stuff }]
 
 open Elpi.API
