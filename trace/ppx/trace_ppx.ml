@@ -102,12 +102,49 @@ let tcall ~loc hd args =
     | f::a -> [%expr Obj.repr [%e eapply ~loc f a]] in
   [%expr raise (Trace_ppx_runtime.Runtime.TREC_CALL ([%e papp], Obj.repr [%e last]))]
 
+let template_db : (string * expression) list ref = ref []
+
+let template ~loc name args =
+  if not (List.mem_assoc name !template_db) then
+    Location.raise_errorf ~loc "template %s not found" name;
+  let e = List.assoc name !template_db in
+  let rec aux e = function
+    | [] -> e
+    | arg :: args ->
+       match e with
+       | [%expr fun [%p? name ] -> [%e? v] ] ->
+           [%expr let [%p name ] = [%e arg ] in [%e aux v args ]]
+       | _ -> Location.raise_errorf ~loc "template %s:  too many arguments" name
+  in
+    aux e args
+
 let enabled = ref false
 
 let has_iftrace_attribute (l : attributes) =
   List.exists (fun {attr_name = { txt; _ } ; _ } -> txt = "trace") l
 
 let has_iftrace { ptyp_attributes = l; _ } = has_iftrace_attribute l
+
+let att_elpi_template =
+  let open Ppxlib.Ast_pattern in
+  Attribute.(declare "elpi.template" Context.value_binding (pstr nil) ())
+
+let map_template = object
+  inherit Ast_traverse.map as super
+
+  method! structure_item i =
+    let i = super#structure_item i in
+    match i.pstr_desc with
+    | Pstr_value(Nonrecursive, [ { pvb_pat = { ppat_desc = Ppat_var { txt; _ } ; _ }; _ } as vb]) ->
+       begin match Attribute.get att_elpi_template vb with
+       | Some () ->
+            template_db := (txt, vb.pvb_expr) :: !template_db;
+            let loc = i.pstr_loc in [%stri let () = ()]
+       | None -> i
+      end
+    | _ -> i
+
+end
 
 let map_trace = object(self)
   inherit Ast_traverse.map as super
@@ -312,6 +349,23 @@ let log_extension =
 let log_rule = Context_free.Rule.extension log_extension
 
 (* ----------------------------------------------------------------- *)
+
+let template_expand_function ~loc ~path:_ e = match e.pexp_desc with
+  | Pexp_apply ({ pexp_desc = Pexp_ident { txt = Lident name; _}; _ }, args) ->
+        template ~loc name (List.map snd args)
+  | _ -> err ~loc "use: [%elpi.template id data..]"
+
+let template_extension =
+  Extension.declare
+    "elpi.template"
+    Extension.Context.expression
+    Ast_pattern.(single_expr_payload __)
+    template_expand_function
+
+let template_rule = Context_free.Rule.extension template_extension
+
+
+(* ----------------------------------------------------------------- *)
 (* ----------------------------------------------------------------- *)
 (* ----------------------------------------------------------------- *)
 
@@ -323,7 +377,8 @@ let arg_trace t =
 let () =
   Driver.Cookies.add_handler arg_trace;
   Driver.register_transformation
-    ~rules:[ log_rule; cur_pred_rule; trace_rule; tcall_rule; spy_rule; spyl_rule; ]
+    ~preprocess_impl:map_template#structure
+    ~rules:[ log_rule; cur_pred_rule; trace_rule; tcall_rule; spy_rule; spyl_rule; template_rule ]
     ~impl:map_trace#structure
     ~intf:map_trace#signature
     "elpi.trace"
