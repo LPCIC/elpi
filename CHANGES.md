@@ -1,10 +1,33 @@
 ## v1.11.0 UNRELEASED
 
+- PPX:
+  - new, experimental, elpi.ppx to generate glue code from an ADT declaration
+
+- Stdlib:
+  - triple, quadruple and quintuple data types
+  - char builtin
+
+- API:
+  - `ContextualConversion` module is gone.
+  - `('a, #ctx as 'c) Conversion.t` is the only datatype describing the
+    conversion for type `'a` under a context `'c` which is a subclass of
+    the raw context `#ctx`.
+  - `('i, 'k, #ctx as 'c) Conversion.context` is a datatype describing
+    the conversion for context `'i` indexed in the host application with keys
+    `'k`. A context items conversion can depend on a context as well.
+  - `BuiltInData.nominal` for nominal constants.
+  - `PPX` sub module gathering private access points for the `elpi_ppx` deriver.
+  - Conversions for data types such as `diagnostic`, `bool`, `*_stream`
+    moved from `Elpi.Builtin` to `Elpi.API.BuiltInData`.
+
 - Trace:
   - json output, with messages representing the tree structure of the proof
   - categorize spy points into `user` and `dev`
   - improve trace_ppx, revise all trace points
   - port to ppxlib
+  - commodity extension `[%elpi.template name args]` and
+    `let[@elpi.template] f = fun args -> code` attribute to perform
+    compile time inlining (can be used to circumvent the value restriction)
 
 - Build system:
   - cache ppx output so that it builds without ppx_deriving and trace_ppx

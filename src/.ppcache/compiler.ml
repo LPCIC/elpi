@@ -1,4 +1,4 @@
-(*2d1e91f72ff28de5f87971da214ef74780dddbf1 *src/compiler.ml *)
+(*456a86c1e7ead6322ffd1d9e45fcecda7099e3ac *src/compiler.ml *)
 #1 "src/compiler.ml"
 open Util
 module F = Ast.Func
@@ -291,7 +291,7 @@ module Builtins :
         ~compilation_is_over:(fun x -> Some x)
         ~execution_is_over:(fun _ -> None)
     let all state = (D.State.get builtins state).constants
-    let register state (D.BuiltInPredicate.Pred (s, _, _) as b) =
+    let register state (D.BuiltInPredicate.Pred (s, _, _, _) as b) =
       if s = "" then anomaly "Built-in predicate name must be non empty";
       if not (D.State.get D.while_compiling state)
       then anomaly "Built-in can only be declared at compile time";
@@ -1238,7 +1238,7 @@ module WithMain =
       chr: (constant list * prechr_rule list) list ;
       initial_depth: int ;
       query: preterm ;
-      query_arguments: 'a Query.arguments [@opaque ];
+      query_readback: 'a query_readback [@opaque ];
       initial_goal: term ;
       assignments: term StrMap.t ;
       compiler_state: State.t }[@@deriving show]
@@ -1385,10 +1385,10 @@ module WithMain =
                      Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
                     Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
-                      "query_arguments";
+                      "query_readback";
                     ((fun _ ->
                         Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
-                          "<opaque>")) x.query_arguments;
+                          "<opaque>")) x.query_readback;
                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
                    Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
                    Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
@@ -1651,12 +1651,14 @@ module ToDBL :
     val query_preterm_of_ast :
       depth:int ->
         macro_declaration ->
-          State.t -> (Loc.t * Ast.Term.t) -> (State.t * preterm)
+          State.t ->
+            (Loc.t * Ast.Term.t) -> (State.t * preterm * unit query_readback)
     val query_preterm_of_function :
       depth:int ->
         macro_declaration ->
           State.t ->
-            (State.t -> (State.t * (Loc.t * term))) -> (State.t * preterm)
+            (State.t -> (State.t * (Loc.t * term) * 'a query_readback)) ->
+              (State.t * preterm * 'a query_readback)
     val lp : quotation
     val is_Arg : State.t -> term -> bool
     val fresh_Arg :
@@ -1911,12 +1913,13 @@ module ToDBL :
     let query_preterm_of_function ~depth  macros state f =
       assert (is_empty_amap (get_argmap state));
       (let state = set_mtm state (Some { macros }) in
-       let (state, (loc, term)) = f state in
-       let amap = get_argmap state in (state, { amap; term; loc }))
+       let (state, (loc, term), readback) = f state in
+       let amap = get_argmap state in (state, { amap; term; loc }, readback))
     let query_preterm_of_ast ~depth  macros state (loc, t) =
       assert (is_empty_amap (get_argmap state));
       (let (state, term) = preterm_of_ast loc ~depth macros state t in
-       let amap = get_argmap state in (state, { term; amap; loc }))
+       let amap = get_argmap state in
+       (state, { term; amap; loc }, (fun _ -> fun _ -> fun _ -> ())))
     open Ast.Structured
     let check_no_overlap_macros _ _ = ()
     let compile_macro m { Ast.Macro.loc = loc; name = n; body } =
@@ -2562,7 +2565,7 @@ module Spill :
       let rec spaux ((depth, vars) as ctx) =
         function
         | App (c, fcall, rest) when c == D.Global_symbols.spillc ->
-            (assert (rest = []);
+            (if rest <> [] then error ~loc "Spilling cannot be applied";
              (let (spills, fcall) = spaux1 ctx fcall in
               let args =
                 mkSpilled (List.rev vars)
@@ -2612,7 +2615,10 @@ module Spill :
         | Cons (hd, tl) ->
             let (sp1, hd) = spaux ctx hd in
             let (sp2, tl) = spaux ctx tl in
-            (assert (((List.length hd) = 1) && ((List.length tl) = 1));
+            (if not (((List.length hd) = 1) && ((List.length tl) = 1))
+             then
+               error ~loc
+                 "Spilling in a list, but I don't know if it is a list of props";
              ((sp1 @ sp2), [Cons ((List.hd hd), (List.hd tl))]))
         | Builtin (c, args) ->
             let (spills, args) =
@@ -2935,7 +2941,7 @@ let query_of_ast compiler_state assembled_program t =
   let type_abbrevs = assembled_program.Assembled.type_abbrevs in
   let modes = assembled_program.Assembled.modes in
   let active_macros = assembled_program.Assembled.toplevel_macros in
-  let (state, query) =
+  let (state, query, query_readback) =
     ToDBL.query_preterm_of_ast ~depth:initial_depth active_macros
       compiler_state t in
   let query =
@@ -2955,7 +2961,7 @@ let query_of_ast compiler_state assembled_program t =
     chr = (assembled_program.Assembled.chr);
     initial_depth;
     query;
-    query_arguments = Query.N;
+    query_readback;
     initial_goal;
     assignments;
     compiler_state = (state |> (uvbodies_of_assignments assignments))
@@ -2966,9 +2972,9 @@ let query_of_term compiler_state assembled_program f =
   let type_abbrevs = assembled_program.Assembled.type_abbrevs in
   let modes = assembled_program.Assembled.modes in
   let active_macros = assembled_program.Assembled.toplevel_macros in
-  let (state, query) =
+  let (state, query, query_readback) =
     ToDBL.query_preterm_of_function ~depth:initial_depth active_macros
-      compiler_state (f ~depth:initial_depth) in
+      compiler_state (f ~depth:initial_depth [] []) in
   let query_env = Array.make (query.amap).nargs D.dummy in
   let (state, queryt) =
     stack_term_of_preterm ~depth:initial_depth state query in
@@ -2984,19 +2990,20 @@ let query_of_term compiler_state assembled_program f =
     chr = (assembled_program.Assembled.chr);
     initial_depth;
     query;
-    query_arguments = Query.N;
+    query_readback;
     initial_goal;
     assignments;
     compiler_state = (state |> (uvbodies_of_assignments assignments))
   }
-let query_of_data state p loc (Query.Query { arguments } as descr) =
-  let query =
-    query_of_term state p
-      (fun ~depth ->
-         fun state ->
-           let (state, term) = R.embed_query ~mk_Arg ~depth state descr in
-           (state, (loc, term))) in
-  { query with query_arguments = arguments }
+let query_of_data state p loc qdescr =
+  query_of_term state p
+    (fun ~depth ->
+       fun hyps ->
+         fun constraints ->
+           fun state ->
+             let ((state, term), query_readback) =
+               R.embed_query ~mk_Arg ~depth hyps constraints state qdescr in
+             (state, (loc, term), query_readback))
 module Compiler : sig val run : 'a query -> 'a executable end =
   struct
     let compile_chr depth state
@@ -3069,7 +3076,7 @@ module Compiler : sig val run : 'a query -> 'a executable end =
       with | Not_found -> ()
     let run
       { WithMain.types = types; modes; clauses; chr; initial_depth;
-        initial_goal; assignments; compiler_state = state; query_arguments }
+        initial_goal; assignments; compiler_state = state; query_readback }
       =
       let flags = State.get compiler_flags state in
       check_all_builtin_are_typed state types;
@@ -3123,7 +3130,7 @@ module Compiler : sig val run : 'a query -> 'a executable end =
        let builtins = Hashtbl.create 17 in
        let pred_list = (State.get Builtins.builtins state).code in
        List.iter
-         (fun (D.BuiltInPredicate.Pred (s, _, _) as p) ->
+         (fun (D.BuiltInPredicate.Pred (s, _, _, _) as p) ->
             let (c, _) = Symbols.get_global_symbol_str state s in
             Hashtbl.add builtins c p) pred_list;
        (let symbol_table = Symbols.compile_table compiler_symbol_table in
@@ -3134,7 +3141,7 @@ module Compiler : sig val run : 'a query -> 'a executable end =
           initial_goal;
           initial_runtime_state = (State.end_compilation state);
           assignments;
-          query_arguments;
+          query_readback;
           symbol_table;
           builtins
         }))
@@ -3313,7 +3320,7 @@ let term_of_ast ~depth  state t =
      ToDBL.temporary_compilation_at_runtime
        (fun s ->
           fun x ->
-            let (s, x) = ToDBL.query_preterm_of_ast ~depth F.Map.empty s x in
+            let (s, x, _) = ToDBL.query_preterm_of_ast ~depth F.Map.empty s x in
             let (s, t) = stack_term_of_preterm ~depth s x in
             (s, (t, ((x.amap).nargs)))) state t in
    let env = Array.make nargs D.dummy in
@@ -3359,12 +3366,17 @@ let static_check ~exec  ~checker:(state, program)
   let query =
     query_of_term state program
       (fun ~depth ->
-         fun state ->
-           assert (depth = 0);
-           (state,
-             (loc,
-               (App
-                  (checkc, (R.list_to_lp_list p),
-                    [q; R.list_to_lp_list tlist; R.list_to_lp_list talist]))))) in
+         fun hyps ->
+           fun constraints ->
+             fun state ->
+               assert (depth = 0);
+               (state,
+                 (loc,
+                   (App
+                      (checkc, (R.list_to_lp_list p),
+                        [q;
+                        R.list_to_lp_list tlist;
+                        R.list_to_lp_list talist]))),
+                 ((fun _ -> fun _ -> fun _ -> ())))) in
   let executable = optimize_query query in (exec executable) <> Failure
 

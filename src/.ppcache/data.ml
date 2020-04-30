@@ -1,4 +1,4 @@
-(*83d0917ef4644ac288b486b091a03067003847df *src/data.ml *)
+(*7f2ba7fa31dccc0775a96d5831ee46cdbb09241c *src/data.ml *)
 #1 "src/data.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -1381,315 +1381,203 @@ module Conversion =
     and show_ty_ast : ty_ast -> Ppx_deriving_runtime_proxy.string =
       fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_ty_ast x[@@ocaml.warning
                                                                     "-32"]
-    type 'a embedding =
-      depth:int -> State.t -> 'a -> (State.t * term * extra_goals)
-    type 'a readback =
-      depth:int -> State.t -> term -> (State.t * 'a * extra_goals)
-    type 'a t =
-      {
-      ty: ty_ast ;
-      pp_doc: Format.formatter -> unit -> unit [@opaque ];
-      pp: Format.formatter -> 'a -> unit [@opaque ];
-      embed: 'a embedding [@opaque ];
-      readback: 'a readback [@opaque ]}[@@deriving show]
-    let rec pp :
-      'a .
-        (Ppx_deriving_runtime_proxy.Format.formatter ->
-           'a -> Ppx_deriving_runtime_proxy.unit)
-          ->
-          Ppx_deriving_runtime_proxy.Format.formatter ->
-            'a t -> Ppx_deriving_runtime_proxy.unit
-      =
-      let __0 () = pp_ty_ast in
-      ((let open! Ppx_deriving_runtime_proxy in
-          fun poly_a ->
-            fun fmt ->
-              fun x ->
-                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
-                (((((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
-                       "Data.Conversion.ty";
-                     ((__0 ()) fmt) x.ty;
-                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
-                    Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
-                    Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
-                      "pp_doc";
-                    ((fun _ ->
-                        Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
-                          "<opaque>")) x.pp_doc;
-                    Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
-                   Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
-                   Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "pp";
-                   ((fun _ ->
-                       Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
-                         "<opaque>")) x.pp;
-                   Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
-                  Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
-                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "embed";
-                  ((fun _ ->
-                      Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
-                        "<opaque>")) x.embed;
-                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
-                 Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
-                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
-                   "readback";
-                 ((fun _ ->
-                     Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
-                       "<opaque>")) x.readback;
-                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
-                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@ }@]")
-        [@ocaml.warning "-A"])
-    and show :
-      'a .
-        (Ppx_deriving_runtime_proxy.Format.formatter ->
-           'a -> Ppx_deriving_runtime_proxy.unit)
-          -> 'a t -> Ppx_deriving_runtime_proxy.string
-      =
-      fun poly_a ->
-        fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" (pp poly_a) x
-    [@@ocaml.warning "-32"]
     exception TypeErr of ty_ast * int * term 
     let rec show_ty_ast ?(outer= true)  =
       function
       | TyName s -> s
+      | TyApp ("->", x, y::[]) ->
+          "(" ^ ((show_ty_ast x) ^ (" -> " ^ ((show_ty_ast y) ^ ")")))
       | TyApp (s, x, xs) ->
           let t =
             String.concat " " (s ::
               (List.map (show_ty_ast ~outer:false) (x :: xs))) in
           if outer then t else "(" ^ (t ^ ")")
-  end
-module ContextualConversion =
-  struct
-    type ty_ast = Conversion.ty_ast =
-      | TyName of string 
-      | TyApp of string * ty_ast * ty_ast list [@@deriving show]
-    let rec pp_ty_ast :
-      Ppx_deriving_runtime_proxy.Format.formatter ->
-        ty_ast -> Ppx_deriving_runtime_proxy.unit
-      =
-      let __1 () = pp_ty_ast
-      and __0 () = pp_ty_ast in
-      ((let open! Ppx_deriving_runtime_proxy in
-          fun fmt ->
-            function
-            | TyName a0 ->
-                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
-                   "(@[<2>Conversion.TyName@ ";
-                 (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%S") a0;
-                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])")
-            | TyApp (a0, a1, a2) ->
-                (Ppx_deriving_runtime_proxy.Format.fprintf fmt
-                   "(@[<2>Conversion.TyApp (@,";
-                 (((Ppx_deriving_runtime_proxy.Format.fprintf fmt "%S") a0;
-                   Ppx_deriving_runtime_proxy.Format.fprintf fmt ",@ ";
-                   ((__0 ()) fmt) a1);
-                  Ppx_deriving_runtime_proxy.Format.fprintf fmt ",@ ";
-                  ((fun x ->
-                      Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
-                      ignore
-                        (List.fold_left
-                           (fun sep ->
-                              fun x ->
-                                if sep
-                                then
-                                  Ppx_deriving_runtime_proxy.Format.fprintf fmt
-                                    ";@ ";
-                                ((__1 ()) fmt) x;
-                                true) false x);
-                      Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]")) a2);
-                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,))@]"))
-        [@ocaml.warning "-A"])
-    and show_ty_ast : ty_ast -> Ppx_deriving_runtime_proxy.string =
-      fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_ty_ast x[@@ocaml.warning
-                                                                    "-32"]
-    type ('a, 'hyps, 'constraints) embedding =
+    class ctx (h : hyps) = object method raw = h end
+    type ('a, 'ctx) embedding =
       depth:int ->
-        'hyps ->
-          'constraints -> State.t -> 'a -> (State.t * term * extra_goals)
-    type ('a, 'hyps, 'constraints) readback =
+        'ctx ->
+          constraints -> State.t -> 'a -> (State.t * term * extra_goals)
+       constraint 'ctx = #ctx
+    type ('a, 'ctx) readback =
       depth:int ->
-        'hyps ->
-          'constraints -> State.t -> term -> (State.t * 'a * extra_goals)
-    type ('a, 'hyps, 'constraints) t =
+        'ctx ->
+          constraints -> State.t -> term -> (State.t * 'a * extra_goals)
+       constraint 'ctx = #ctx
+    type ('a, 'ctx) t =
       {
       ty: ty_ast ;
       pp_doc: Format.formatter -> unit -> unit [@opaque ];
       pp: Format.formatter -> 'a -> unit [@opaque ];
-      embed: ('a, 'hyps, 'constraints) embedding [@opaque ];
-      readback: ('a, 'hyps, 'constraints) readback [@opaque ]}[@@deriving
-                                                                show]
+      embed: ('a, 'ctx) embedding [@opaque ];
+      readback: ('a, 'ctx) readback [@opaque ]} constraint 'ctx = #ctx
+    [@@deriving show]
     let rec pp :
-      'a 'hyps 'constraints .
+      'a 'ctx .
         (Ppx_deriving_runtime_proxy.Format.formatter ->
            'a -> Ppx_deriving_runtime_proxy.unit)
           ->
           (Ppx_deriving_runtime_proxy.Format.formatter ->
-             'hyps -> Ppx_deriving_runtime_proxy.unit)
+             'ctx -> Ppx_deriving_runtime_proxy.unit)
             ->
-            (Ppx_deriving_runtime_proxy.Format.formatter ->
-               'constraints -> Ppx_deriving_runtime_proxy.unit)
-              ->
-              Ppx_deriving_runtime_proxy.Format.formatter ->
-                ('a, 'hyps, 'constraints) t -> Ppx_deriving_runtime_proxy.unit
+            Ppx_deriving_runtime_proxy.Format.formatter ->
+              ('a, 'ctx) t -> Ppx_deriving_runtime_proxy.unit
       =
       let __0 () = pp_ty_ast in
       ((let open! Ppx_deriving_runtime_proxy in
           fun poly_a ->
-            fun poly_hyps ->
-              fun poly_constraints ->
-                fun fmt ->
-                  fun x ->
-                    Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
-                    (((((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
-                           "Data.ContextualConversion.ty";
-                         ((__0 ()) fmt) x.ty;
-                         Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
-                        Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
-                        Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
-                          "pp_doc";
-                        ((fun _ ->
-                            Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
-                              "<opaque>")) x.pp_doc;
-                        Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
-                       Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
-                       Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
-                         "pp";
-                       ((fun _ ->
-                           Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
-                             "<opaque>")) x.pp;
+            fun poly_ctx ->
+              fun fmt ->
+                fun x ->
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
+                  (((((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
+                         "Data.Conversion.ty";
+                       ((__0 ()) fmt) x.ty;
                        Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
                       Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
                       Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
-                        "embed";
+                        "pp_doc";
                       ((fun _ ->
                           Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
-                            "<opaque>")) x.embed;
+                            "<opaque>")) x.pp_doc;
                       Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
                      Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
-                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
-                       "readback";
+                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "pp";
                      ((fun _ ->
                          Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
-                           "<opaque>")) x.readback;
+                           "<opaque>")) x.pp;
                      Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
-                    Ppx_deriving_runtime_proxy.Format.fprintf fmt "@ }@]")
+                    Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                    Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
+                      "embed";
+                    ((fun _ ->
+                        Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
+                          "<opaque>")) x.embed;
+                    Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
+                     "readback";
+                   ((fun _ ->
+                       Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
+                         "<opaque>")) x.readback;
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@ }@]")
         [@ocaml.warning "-A"])
     and show :
-      'a 'hyps 'constraints .
+      'a 'ctx .
         (Ppx_deriving_runtime_proxy.Format.formatter ->
            'a -> Ppx_deriving_runtime_proxy.unit)
           ->
           (Ppx_deriving_runtime_proxy.Format.formatter ->
-             'hyps -> Ppx_deriving_runtime_proxy.unit)
-            ->
-            (Ppx_deriving_runtime_proxy.Format.formatter ->
-               'constraints -> Ppx_deriving_runtime_proxy.unit)
-              -> ('a, 'hyps, 'constraints) t -> Ppx_deriving_runtime_proxy.string
+             'ctx -> Ppx_deriving_runtime_proxy.unit)
+            -> ('a, 'ctx) t -> Ppx_deriving_runtime_proxy.string
       =
       fun poly_a ->
-        fun poly_hyps ->
-          fun poly_constraints ->
-            fun x ->
-              Ppx_deriving_runtime_proxy.Format.asprintf "%a"
-                (((pp poly_a) poly_hyps) poly_constraints) x[@@ocaml.warning
-                                                              "-32"]
-    type ('hyps, 'constraints) ctx_readback =
+        fun poly_ctx ->
+          fun x ->
+            Ppx_deriving_runtime_proxy.Format.asprintf "%a" ((pp poly_a) poly_ctx)
+              x[@@ocaml.warning "-32"]
+    type 'a ctx_entry = {
+      entry: 'a ;
+      depth: int }[@@deriving show]
+    let rec pp_ctx_entry :
+              'a .
+                (Ppx_deriving_runtime_proxy.Format.formatter ->
+                   'a -> Ppx_deriving_runtime_proxy.unit)
+                  ->
+                  Ppx_deriving_runtime_proxy.Format.formatter ->
+                    'a ctx_entry -> Ppx_deriving_runtime_proxy.unit
+      =
+      ((let open! Ppx_deriving_runtime_proxy in
+          fun poly_a ->
+            fun fmt ->
+              fun x ->
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
+                ((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
+                    "Data.Conversion.entry";
+                  (poly_a fmt) x.entry;
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "depth";
+                 (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%d") x.depth;
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@ }@]")
+      [@ocaml.warning "-A"])
+    and show_ctx_entry :
+      'a .
+        (Ppx_deriving_runtime_proxy.Format.formatter ->
+           'a -> Ppx_deriving_runtime_proxy.unit)
+          -> 'a ctx_entry -> Ppx_deriving_runtime_proxy.string
+      =
+      fun poly_a ->
+        fun x ->
+          Ppx_deriving_runtime_proxy.Format.asprintf "%a" (pp_ctx_entry poly_a) x
+    [@@ocaml.warning "-32"]
+    type 'a ctx_field = 'a ctx_entry Constants.Map.t
+    type hyp = clause_src
+    type ('a, 'k, 'h) context =
+      {
+      is_entry_for_nominal: hyp -> constant option ;
+      to_key: depth:int -> 'a -> 'k ;
+      push: depth:int -> State.t -> 'k -> 'a ctx_entry -> State.t ;
+      pop: depth:int -> State.t -> 'k -> State.t ;
+      conv: ((constant * 'a), #ctx as 'h) t ;
+      init: State.t -> State.t ;
+      get: State.t -> 'a ctx_field }
+    type 'ctx ctx_readback =
       depth:int ->
-        hyps ->
-          constraints ->
-            State.t -> (State.t * 'hyps * 'constraints * extra_goals)
-    let unit_ctx : (unit, unit) ctx_readback =
-      fun ~depth:_ -> fun _ -> fun _ -> fun s -> (s, (), (), [])
-    let raw_ctx : (hyps, constraints) ctx_readback =
-      fun ~depth:_ -> fun h -> fun c -> fun s -> (s, h, c, [])
-    let (!<) { ty; pp_doc; pp; embed; readback } =
+        hyps -> constraints -> State.t -> (State.t * 'ctx * extra_goals)
+       constraint 'ctx = #ctx
+    type ('a, 'ctx) context_builder =
+      depth:int ->
+        constraints ->
+          'a list ->
+            State.t ->
+              (State.t * term ctx_entry Constants.Map.t * 'ctx * extra_goals)
+       constraint 'ctx = #ctx
+    type dummy = unit
+    let dummy =
       {
-        Conversion.ty = ty;
-        pp;
-        pp_doc;
-        embed = (fun ~depth -> fun s -> fun t -> embed ~depth () () s t);
-        readback =
-          (fun ~depth -> fun s -> fun t -> readback ~depth () () s t)
-      }
-    let (!>) { Conversion.ty = ty; pp_doc; pp; embed; readback } =
-      {
-        ty;
-        pp;
-        pp_doc;
+        ty = (TyName "dummy");
+        pp = (fun _ -> fun _ -> assert false);
+        pp_doc = (fun _ -> fun _ -> assert false);
         embed =
-          (fun ~depth -> fun _ -> fun _ -> fun s -> fun t -> embed ~depth s t);
+          (fun ~depth -> fun _ -> fun _ -> fun _ -> fun _ -> assert false);
         readback =
-          (fun ~depth ->
-             fun _ -> fun _ -> fun s -> fun t -> readback ~depth s t)
+          (fun ~depth -> fun _ -> fun _ -> fun _ -> fun _ -> assert false)
       }
-    let (!>>) (f : 'a Conversion.t -> 'b Conversion.t) cc =
-      let mk h c { ty; pp_doc; pp; embed; readback } =
-        {
-          Conversion.ty = ty;
-          pp;
-          pp_doc;
-          embed = (fun ~depth -> fun s -> fun t -> embed ~depth h c s t);
-          readback =
-            (fun ~depth -> fun s -> fun t -> readback ~depth h c s t)
-        } in
-      let mk_pp { ty; pp_doc; pp } =
-        {
-          Conversion.ty = ty;
-          pp;
-          pp_doc;
-          embed = (fun ~depth -> fun s -> fun t -> assert false);
-          readback = (fun ~depth -> fun s -> fun t -> assert false)
-        } in
-      let { Conversion.ty = ty; pp; pp_doc } = f (mk_pp cc) in
+    let in_raw =
       {
-        ty;
-        pp;
-        pp_doc;
-        embed =
-          (fun ~depth ->
-             fun h ->
-               fun c -> fun s -> fun t -> (f (mk h c cc)).embed ~depth s t);
-        readback =
-          (fun ~depth ->
-             fun h ->
-               fun c -> fun s -> fun t -> (f (mk h c cc)).readback ~depth s t)
+        is_entry_for_nominal = (fun _ -> None);
+        to_key = (fun ~depth -> fun _ -> ());
+        push = (fun ~depth -> fun st -> fun _ -> fun _ -> st);
+        pop = (fun ~depth -> fun st -> fun _ -> st);
+        conv = dummy;
+        init = (fun st -> st);
+        get = (fun st -> Constants.Map.empty)
       }
-    let (!>>>) (f : 'a Conversion.t -> 'b Conversion.t -> 'c Conversion.t) cc
-      dd =
-      let mk h c { ty; pp_doc; pp; embed; readback } =
-        {
-          Conversion.ty = ty;
-          pp;
-          pp_doc;
-          embed = (fun ~depth -> fun s -> fun t -> embed ~depth h c s t);
-          readback =
-            (fun ~depth -> fun s -> fun t -> readback ~depth h c s t)
-        } in
-      let mk_pp { ty; pp_doc; pp } =
-        {
-          Conversion.ty = ty;
-          pp;
-          pp_doc;
-          embed = (fun ~depth -> fun s -> fun t -> assert false);
-          readback = (fun ~depth -> fun s -> fun t -> assert false)
-        } in
-      let { Conversion.ty = ty; pp; pp_doc } = f (mk_pp cc) (mk_pp dd) in
-      {
-        ty;
-        pp;
-        pp_doc;
-        embed =
-          (fun ~depth ->
-             fun h ->
-               fun c ->
-                 fun s ->
-                   fun t -> (f (mk h c cc) (mk h c dd)).embed ~depth s t);
-        readback =
-          (fun ~depth ->
-             fun h ->
-               fun c ->
-                 fun s ->
-                   fun t -> (f (mk h c cc) (mk h c dd)).readback ~depth s t)
-      }
+    let build_raw_ctx h s = (new ctx) h
+    let in_raw_ctx : ctx ctx_readback =
+      fun ~depth:_ -> fun h -> fun c -> fun s -> (s, (build_raw_ctx h s), [])
+    let context_builder { conv; to_key; push; init } obj_builder hyps =
+      (let do1 ~depth  csts a m st =
+         let k = to_key ~depth a in
+         let st = push ~depth st k { depth; entry = a } in
+         let (st, a, gls) = conv.embed ~depth hyps csts st (depth, a) in
+         (st, (Constants.Map.add depth { depth; entry = a } m), gls) in
+       fun ~depth ->
+         fun csts ->
+           fun items ->
+             fun st ->
+               let st = init st in
+               let (st, m, glsl_rev, _) =
+                 List.fold_left
+                   (fun (st, m, gls, depth) ->
+                      fun a ->
+                        let (st, m, g) = do1 ~depth csts a m st in
+                        (st, m, (g :: gls), (depth + 1)))
+                   (st, Constants.Map.empty, [], depth) items in
+               (st, m, (obj_builder st), (List.concat (List.rev glsl_rev))) : 
+      ('a, 'h) context_builder)
   end
 let while_compiling =
   State.declare ~name:"elpi:compiling" ~pp:(fun fmt -> fun _ -> ())
@@ -1707,44 +1595,40 @@ module BuiltInPredicate =
     type 'a ioarg =
       | Data of 'a 
       | NoData 
-    type ('function_type, 'inernal_outtype_in, 'internal_hyps,
-      'internal_constraints) ffi =
-      | In: 't Conversion.t * doc * ('i, 'o, 'h, 'c) ffi -> ('t -> 'i, 
-      'o, 'h, 'c) ffi 
-      | Out: 't Conversion.t * doc * ('i, ('o * 't option), 'h, 'c) ffi ->
-      ('t oarg -> 'i, 'o, 'h, 'c) ffi 
-      | InOut: 't ioarg Conversion.t * doc * ('i, ('o * 't option), 'h, 
-      'c) ffi -> ('t ioarg -> 'i, 'o, 'h, 'c) ffi 
-      | CIn: ('t, 'h, 'c) ContextualConversion.t * doc * ('i, 'o, 'h, 
-      'c) ffi -> ('t -> 'i, 'o, 'h, 'c) ffi 
-      | COut: ('t, 'h, 'c) ContextualConversion.t * doc * ('i,
-      ('o * 't option), 'h, 'c) ffi -> ('t oarg -> 'i, 'o, 'h, 'c) ffi 
-      | CInOut: ('t ioarg, 'h, 'c) ContextualConversion.t * doc * ('i,
-      ('o * 't option), 'h, 'c) ffi -> ('t ioarg -> 'i, 'o, 'h, 'c) ffi 
-      | Easy: doc -> (depth:int -> 'o, 'o, unit, unit) ffi 
-      | Read: ('h, 'c) ContextualConversion.ctx_readback * doc ->
-      (depth:int -> 'h -> 'c -> State.t -> 'o, 'o, 'h, 'c) ffi 
-      | Full: ('h, 'c) ContextualConversion.ctx_readback * doc ->
-      (depth:int -> 'h -> 'c -> State.t -> (State.t * 'o * extra_goals), 
-      'o, 'h, 'c) ffi 
-      | VariadicIn: ('h, 'c) ContextualConversion.ctx_readback * ('t, 
-      'h, 'c) ContextualConversion.t * doc ->
-      ('t list -> depth:int -> 'h -> 'c -> State.t -> (State.t * 'o), 
-      'o, 'h, 'c) ffi 
-      | VariadicOut: ('h, 'c) ContextualConversion.ctx_readback * ('t, 
-      'h, 'c) ContextualConversion.t * doc ->
+    type ('function_type, 'inernal_outtype_in, 'internal_hyps) ffi =
+      | In: ('t, 'h) Conversion.t * doc * ('i, 'o, 'h) ffi -> ('t -> 'i, 
+      'o, 'h) ffi 
+      | Out: ('t, 'h) Conversion.t * doc * ('i, ('o * 't option), 'h) ffi ->
+      ('t oarg -> 'i, 'o, 'h) ffi 
+      | InOut: ('t ioarg, 'h) Conversion.t * doc * ('i, ('o * 't option), 
+      'h) ffi -> ('t ioarg -> 'i, 'o, 'h) ffi 
+      | Easy: doc -> (depth:int -> 'o, 'o, 'h) ffi 
+      | Read: doc -> (depth:int -> 'h -> constraints -> State.t -> 'o, 
+      'o, 'h) ffi 
+      | Full: doc ->
+      (depth:int ->
+         'h -> constraints -> State.t -> (State.t * 'o * extra_goals),
+      'o, 'h) ffi 
+      | VariadicIn: ('t, 'h) Conversion.t * doc ->
+      ('t list -> depth:int -> 'h -> constraints -> State.t -> (State.t * 'o),
+      'o, 'h) ffi 
+      | VariadicOut: ('t, 'h) Conversion.t * doc ->
       ('t oarg list ->
          depth:int ->
-           'h -> 'c -> State.t -> (State.t * ('o * 't option list option)),
-      'o, 'h, 'c) ffi 
-      | VariadicInOut: ('h, 'c) ContextualConversion.ctx_readback *
-      ('t ioarg, 'h, 'c) ContextualConversion.t * doc ->
+           'h ->
+             constraints ->
+               State.t -> (State.t * ('o * 't option list option)),
+      'o, 'h) ffi 
+      | VariadicInOut: ('t ioarg, 'h) Conversion.t * doc ->
       ('t ioarg list ->
          depth:int ->
-           'h -> 'c -> State.t -> (State.t * ('o * 't option list option)),
-      'o, 'h, 'c) ffi 
+           'h ->
+             constraints ->
+               State.t -> (State.t * ('o * 't option list option)),
+      'o, 'h) ffi 
     type t =
-      | Pred: name * ('a, unit, 'h, 'c) ffi * 'a -> t 
+      | Pred: name * ('a, unit, 'h) ffi * 'h Conversion.ctx_readback * 'a ->
+      t 
     type doc_spec =
       | DocAbove 
       | DocNext 
@@ -1775,67 +1659,64 @@ module BuiltInPredicate =
           | B of 'build_t 
           | BS of 'build_stateful_t 
         type ('stateful_builder, 'builder, 'stateful_matcher, 'matcher,
-          'self, 'hyps, 'constraints) constructor_arguments =
+          'self, 'ctx) constructor_arguments =
           | N: (State.t -> (State.t * 'self), 'self,
-          State.t -> (State.t * term * extra_goals), term, 'self, 'hyps,
-          'constraints) constructor_arguments 
-          | A: 'a Conversion.t * ('bs, 'b, 'ms, 'm, 'self, 'hyps,
-          'constraints) constructor_arguments -> ('a -> 'bs, 'a -> 'b,
-          'a -> 'ms, 'a -> 'm, 'self, 'hyps, 'constraints)
+          State.t -> (State.t * term * extra_goals), term, 'self, 'ctx)
           constructor_arguments 
-          | CA: ('a, 'hyps, 'constraints) ContextualConversion.t * ('bs, 
-          'b, 'ms, 'm, 'self, 'hyps, 'constraints) constructor_arguments ->
-          ('a -> 'bs, 'a -> 'b, 'a -> 'ms, 'a -> 'm, 'self, 'hyps,
-          'constraints) constructor_arguments 
-          | S: ('bs, 'b, 'ms, 'm, 'self, 'hyps, 'constraints)
-          constructor_arguments -> ('self -> 'bs, 'self -> 'b, 'self -> 'ms,
-          'self -> 'm, 'self, 'hyps, 'constraints) constructor_arguments 
-          | C:
-          (('self, 'hyps, 'constraints) ContextualConversion.t ->
-             ('a, 'hyps, 'constraints) ContextualConversion.t)
-          * ('bs, 'b, 'ms, 'm, 'self, 'hyps, 'constraints)
+          | A: ('a, 'ctx) Conversion.t * ('bs, 'b, 'ms, 'm, 'self, 'ctx)
           constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms, 'a -> 'm,
-          'self, 'hyps, 'constraints) constructor_arguments 
-        type ('t, 'h, 'c) constructor =
+          'self, 'ctx) constructor_arguments 
+          | S: ('bs, 'b, 'ms, 'm, 'self, 'ctx) constructor_arguments ->
+          ('self -> 'bs, 'self -> 'b, 'self -> 'ms, 'self -> 'm, 'self, 
+          'ctx) constructor_arguments 
+          | C:
+          (('self, Conversion.ctx) Conversion.t ->
+             ('a, Conversion.ctx) Conversion.t)
+          * ('bs, 'b, 'ms, 'm, 'self, 'ctx) constructor_arguments ->
+          ('a -> 'bs, 'a -> 'b, 'a -> 'ms, 'a -> 'm, 'self, 'ctx)
+          constructor_arguments 
+        type ('t, 'h) constructor =
           | K: name * doc * ('build_stateful_t, 'build_t, 'match_stateful_t,
-          'match_t, 't, 'h, 'c) constructor_arguments * ('build_stateful_t,
+          'match_t, 't, 'h) constructor_arguments * ('build_stateful_t,
           'build_t) build_t * ('match_stateful_t, 'match_t, 't) match_t ->
-          ('t, 'h, 'c) constructor 
-        type ('t, 'h, 'c) declaration =
+          ('t, 'h) constructor 
+        type ('t, 'h) declaration =
           {
           ty: Conversion.ty_ast ;
           doc: doc ;
           pp: Format.formatter -> 't -> unit ;
-          constructors: ('t, 'h, 'c) constructor list }
-        type ('b, 'm, 't, 'h, 'c) compiled_constructor_arguments =
+          constructors: ('t, 'h) constructor list } constraint 'h =
+                                                     #Conversion.ctx
+        type ('b, 'm, 't, 'h) compiled_constructor_arguments =
           | XN: (State.t -> (State.t * 't),
-          State.t -> (State.t * term * extra_goals), 't, 'h, 'c)
+          State.t -> (State.t * term * extra_goals), 't, 'h)
           compiled_constructor_arguments 
-          | XA: ('a, 'h, 'c) ContextualConversion.t * ('b, 'm, 't, 'h, 
-          'c) compiled_constructor_arguments -> ('a -> 'b, 'a -> 'm, 
-          't, 'h, 'c) compiled_constructor_arguments 
+          | XA: ('a, 'h) Conversion.t * ('b, 'm, 't, 'h)
+          compiled_constructor_arguments -> ('a -> 'b, 'a -> 'm, 't, 
+          'h) compiled_constructor_arguments 
         type ('match_t, 't) compiled_match_t =
           ok:'match_t ->
             ko:(State.t -> (State.t * term * extra_goals)) ->
               't -> State.t -> (State.t * term * extra_goals)
-        type ('t, 'h, 'c) compiled_constructor =
-          | XK: ('build_t, 'matched_t, 't, 'h, 'c)
-          compiled_constructor_arguments * 'build_t * ('matched_t, 't)
-          compiled_match_t -> ('t, 'h, 'c) compiled_constructor 
-        type ('t, 'h, 'c) compiled_adt =
-          ('t, 'h, 'c) compiled_constructor Constants.Map.t
+        type ('t, 'h) compiled_constructor =
+          | XK: ('build_t, 'matched_t, 't, 'h) compiled_constructor_arguments
+          * 'build_t * ('matched_t, 't) compiled_match_t -> ('t, 'h)
+          compiled_constructor 
+        type ('t, 'h) compiled_adt =
+          ('t, 'h) compiled_constructor Constants.Map.t
         let buildk ~mkConst  kname =
           function | [] -> mkConst kname | x::xs -> mkApp kname x xs
-        let rec readback_args : type a m t h c.
+        let rec readback_args : type a m t.
           look:(depth:int -> term -> term) ->
             Conversion.ty_ast ->
               depth:int ->
-                h ->
-                  c ->
+                #Conversion.ctx ->
+                  constraints ->
                     State.t ->
                       extra_goals list ->
                         term ->
-                          (a, m, t, h, c) compiled_constructor_arguments ->
+                          (a, m, t, Conversion.ctx)
+                            compiled_constructor_arguments ->
                             a -> term list -> (State.t * t * extra_goals)
           =
           fun ~look ->
@@ -1865,16 +1746,17 @@ module BuiltInPredicate =
                                     readback_args ~look ty ~depth hyps
                                       constraints state (gls :: extra) origin
                                       rest (convert x) xs
-        and readback : type t h c.
+        and readback : type t.
           mkinterval:(int -> int -> int -> term list) ->
             look:(depth:int -> term -> term) ->
               alloc:(?name:string -> State.t -> (State.t * 'uk)) ->
                 mkUnifVar:('uk -> args:term list -> State.t -> term) ->
                   Conversion.ty_ast ->
-                    (t, h, c) compiled_adt ->
+                    (t, Conversion.ctx) compiled_adt ->
                       depth:int ->
-                        h ->
-                          c -> State.t -> term -> (State.t * t * extra_goals)
+                        #Conversion.ctx ->
+                          constraints ->
+                            State.t -> term -> (State.t * t * extra_goals)
           =
           fun ~mkinterval ->
             fun ~look ->
@@ -1922,15 +1804,16 @@ module BuiltInPredicate =
                                 with
                                 | Not_found ->
                                     raise (Conversion.TypeErr (ty, depth, t))
-        and adt_embed_args : type m a t h c.
+        and adt_embed_args : type m a t.
           mkConst:(int -> term) ->
             Conversion.ty_ast ->
-              (t, h, c) compiled_adt ->
+              (t, Conversion.ctx) compiled_adt ->
                 constant ->
                   depth:int ->
-                    h ->
-                      c ->
-                        (a, m, t, h, c) compiled_constructor_arguments ->
+                    #Conversion.ctx ->
+                      constraints ->
+                        (a, m, t, Conversion.ctx)
+                          compiled_constructor_arguments ->
                           (State.t -> (State.t * term * extra_goals)) list ->
                             m
           =
@@ -1962,13 +1845,15 @@ module BuiltInPredicate =
                                      ((fun state ->
                                          d.embed ~depth hyps constraints
                                            state x) :: acc))
-        and embed : type a h c.
+        and embed : type a.
           mkConst:(int -> term) ->
             Conversion.ty_ast ->
               (Format.formatter -> a -> unit) ->
-                (a, h, c) compiled_adt ->
+                (a, Conversion.ctx) compiled_adt ->
                   depth:int ->
-                    h -> c -> State.t -> a -> (State.t * term * extra_goals)
+                    #Conversion.ctx ->
+                      constraints ->
+                        State.t -> a -> (State.t * term * extra_goals)
           =
           fun ~mkConst ->
             fun ty ->
@@ -1993,38 +1878,32 @@ module BuiltInPredicate =
                                       ~depth hyps constraints args [] in
                                   matcher ~ok ~ko:(aux rest) t state in
                             aux bindings state
-        let rec compile_arguments : type b bs m ms t h c.
-          (bs, b, ms, m, t, h, c) constructor_arguments ->
-            (t, h, c) ContextualConversion.t ->
-              (bs, ms, t, h, c) compiled_constructor_arguments
+        let rec compile_arguments : type b bs m ms t.
+          (bs, b, ms, m, t, Conversion.ctx) constructor_arguments ->
+            (t, #Conversion.ctx) Conversion.t ->
+              (bs, ms, t, Conversion.ctx) compiled_constructor_arguments
           =
           fun arg ->
             fun self ->
               match arg with
               | N -> XN
-              | A (d, rest) ->
-                  XA
-                    ((ContextualConversion.(!>) d),
-                      (compile_arguments rest self))
-              | CA (d, rest) -> XA (d, (compile_arguments rest self))
+              | A (d, rest) -> XA (d, (compile_arguments rest self))
               | S rest -> XA (self, (compile_arguments rest self))
               | C (fs, rest) -> XA ((fs self), (compile_arguments rest self))
-        let rec compile_builder_aux : type bs b m ms t h c.
-          (bs, b, ms, m, t, h, c) constructor_arguments -> b -> bs =
+        let rec compile_builder_aux : type bs b m ms t h.
+          (bs, b, ms, m, t, h) constructor_arguments -> b -> bs =
           fun args ->
             fun f ->
               match args with
               | N -> (fun state -> (state, f))
               | A (_, rest) -> (fun a -> compile_builder_aux rest (f a))
-              | CA (_, rest) -> (fun a -> compile_builder_aux rest (f a))
               | S rest -> (fun a -> compile_builder_aux rest (f a))
               | C (_, rest) -> (fun a -> compile_builder_aux rest (f a))
-        let compile_builder : type bs b m ms t h c.
-          (bs, b, ms, m, t, h, c) constructor_arguments ->
-            (bs, b) build_t -> bs
+        let compile_builder : type bs b m ms t h.
+          (bs, b, ms, m, t, h) constructor_arguments -> (bs, b) build_t -> bs
           = fun a -> function | B f -> compile_builder_aux a f | BS f -> f
-        let rec compile_matcher_ok : type bs b m ms t h c.
-          (bs, b, ms, m, t, h, c) constructor_arguments ->
+        let rec compile_matcher_ok : type bs b m ms t h.
+          (bs, b, ms, m, t, h) constructor_arguments ->
             ms -> extra_goals ref -> State.t ref -> m
           =
           fun args ->
@@ -2037,8 +1916,6 @@ module BuiltInPredicate =
                       (state := state'; gls := gls'; t)
                   | A (_, rest) ->
                       (fun a -> compile_matcher_ok rest (f a) gls state)
-                  | CA (_, rest) ->
-                      (fun a -> compile_matcher_ok rest (f a) gls state)
                   | S rest ->
                       (fun a -> compile_matcher_ok rest (f a) gls state)
                   | C (_, rest) ->
@@ -2046,8 +1923,8 @@ module BuiltInPredicate =
         let compile_matcher_ko f gls state () =
           let (state', t, gls') = f (!state) in
           state := state'; gls := gls'; t
-        let compile_matcher : type bs b m ms t h c.
-          (bs, b, ms, m, t, h, c) constructor_arguments ->
+        let compile_matcher : type bs b m ms t h.
+          (bs, b, ms, m, t, h) constructor_arguments ->
             (ms, m, t) match_t -> (ms, t) compiled_match_t
           =
           fun a ->
@@ -2064,9 +1941,9 @@ module BuiltInPredicate =
                               ~ko:(compile_matcher_ko ko gls state) t),
                            (!gls)))
             | MS f -> f
-        let rec tyargs_of_args : type a b c d e.
+        let rec tyargs_of_args : type a b c d.
           string ->
-            (a, b, c, d, e) compiled_constructor_arguments ->
+            (a, b, c, d) compiled_constructor_arguments ->
               (bool * string * string) list
           =
           fun self ->
@@ -2093,28 +1970,38 @@ module BuiltInPredicate =
                      acc),
                    (StrMap.add name (tyargs_of_args self_name args) sacc)))
             (Constants.Map.empty, StrMap.empty) l
-        let document_constructor fmt name doc argsdoc =
+        let document_compiled_constructor fmt name doc argsdoc =
           Fmt.fprintf fmt "@[<hov2>type %s@[<hov>%a.%s@]@]@\n" name
             pp_ty_args argsdoc (if doc = "" then "" else " % " ^ doc)
-        let document_kind fmt =
-          function
-          | Conversion.TyApp (s, _, l) ->
-              let n = (List.length l) + 2 in
-              let l = Array.init n (fun _ -> "type") in
-              Fmt.fprintf fmt "@[<hov 2>kind %s %s.@]@\n" s
-                (String.concat " -> " (Array.to_list l))
-          | Conversion.TyName s ->
-              Fmt.fprintf fmt "@[<hov 2>kind %s type.@]@\n" s
-        let document_adt doc ty ks cks fmt () =
+        let document_constructor fmt name doc argsdoc =
+          let pp_ty sep fmt s = Fmt.fprintf fmt " %s%s" s sep in
+          let pp_ty_args = pplist (pp_ty "") " ->" ~pplastelem:(pp_ty "") in
+          Fmt.fprintf fmt "@[<hov2>type %s@[<hov>%a.%s@]@]@\n" name
+            pp_ty_args argsdoc (if doc = "" then "" else " % " ^ doc)
+        let document_kind fmt ty doc =
           if doc <> ""
           then (pp_comment fmt ("% " ^ doc); Fmt.fprintf fmt "@\n");
-          document_kind fmt ty;
+          (match ty with
+           | Conversion.TyApp (s, _, l) ->
+               let n = (List.length l) + 2 in
+               let l = Array.init n (fun _ -> "type") in
+               Fmt.fprintf fmt "@[<hov 2>kind %s %s.@]@\n" s
+                 (String.concat " -> " (Array.to_list l))
+           | Conversion.TyName s ->
+               Fmt.fprintf fmt "@[<hov 2>kind %s type.@]@\n" s)
+        let document_compiled_adt doc ty ks cks fmt () =
+          document_kind fmt ty doc;
           List.iter
             (fun (K (name, doc, _, _, _)) ->
                if name <> "uvar"
                then
                  let argsdoc = StrMap.find name cks in
-                 document_constructor fmt name doc argsdoc) ks
+                 document_compiled_constructor fmt name doc argsdoc) ks
+        let document_adt doc ty ks fmt () =
+          document_kind fmt ty doc;
+          List.iter
+            (fun (name, doc, spec) -> document_constructor fmt name doc spec)
+            ks
         let adt ~mkinterval  ~look  ~mkConst  ~alloc  ~mkUnifVar 
           { ty; constructors; doc; pp } =
           let readback_ref =
@@ -2126,13 +2013,13 @@ module BuiltInPredicate =
           let sconstructors_ref = ref StrMap.empty in
           let self =
             {
-              ContextualConversion.ty = ty;
+              Conversion.ty = ty;
               pp;
               pp_doc =
                 (fun fmt ->
                    fun () ->
-                     document_adt doc ty constructors (!sconstructors_ref)
-                       fmt ());
+                     document_compiled_adt doc ty constructors
+                       (!sconstructors_ref) fmt ());
               readback =
                 (fun ~depth ->
                    fun hyps ->
@@ -2159,8 +2046,7 @@ module BuiltInPredicate =
       end
     type declaration =
       | MLCode of t * doc_spec 
-      | MLData: 'a Conversion.t -> declaration 
-      | MLDataC: ('a, 'h, 'c) ContextualConversion.t -> declaration 
+      | MLData: ('a, 'h) Conversion.t -> declaration 
       | LPDoc of string 
       | LPCode of string 
     let pp_tab_arg i sep fmt (dir, ty, doc) =
@@ -2209,8 +2095,8 @@ module BuiltInPredicate =
       Fmt.fprintf fmt "@[<v>%% %a@.external type %s@[<hov>%a.@]@]@.@."
         pp_comment doc name pp_ty_args args
     let document_pred fmt docspec name ffi =
-      let rec doc : type i o h c.
-        (bool * string * string) list -> (i, o, h, c) ffi -> unit =
+      let rec doc : type i o h.
+        (bool * string * string) list -> (i, o, h) ffi -> unit =
         fun args ->
           function
           | In ({ Conversion.ty = ty }, s, ffi) ->
@@ -2219,20 +2105,14 @@ module BuiltInPredicate =
               doc ((false, (Conversion.show_ty_ast ty), s) :: args) ffi
           | InOut ({ Conversion.ty = ty }, s, ffi) ->
               doc ((false, (Conversion.show_ty_ast ty), s) :: args) ffi
-          | CIn ({ ContextualConversion.ty = ty }, s, ffi) ->
-              doc ((true, (Conversion.show_ty_ast ty), s) :: args) ffi
-          | COut ({ ContextualConversion.ty = ty }, s, ffi) ->
-              doc ((false, (Conversion.show_ty_ast ty), s) :: args) ffi
-          | CInOut ({ ContextualConversion.ty = ty }, s, ffi) ->
-              doc ((false, (Conversion.show_ty_ast ty), s) :: args) ffi
-          | Read (_, s) -> pp_pred fmt docspec name s args
+          | Read s -> pp_pred fmt docspec name s args
           | Easy s -> pp_pred fmt docspec name s args
-          | Full (_, s) -> pp_pred fmt docspec name s args
-          | VariadicIn (_, { ContextualConversion.ty = ty }, s) ->
+          | Full s -> pp_pred fmt docspec name s args
+          | VariadicIn ({ Conversion.ty = ty }, s) ->
               pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
-          | VariadicOut (_, { ContextualConversion.ty = ty }, s) ->
+          | VariadicOut ({ Conversion.ty = ty }, s) ->
               pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
-          | VariadicInOut (_, { ContextualConversion.ty = ty }, s) ->
+          | VariadicInOut ({ Conversion.ty = ty }, s) ->
               pp_variadictype fmt name s (Conversion.show_ty_ast ty) args in
       doc [] ffi
     let document fmt l =
@@ -2242,10 +2122,9 @@ module BuiltInPredicate =
       Fmt.fprintf fmt "@\n@\n";
       List.iter
         (function
-         | MLCode (Pred (name, ffi, _), docspec) ->
+         | MLCode (Pred (name, ffi, _, _), docspec) ->
              document_pred fmt docspec name ffi
          | MLData { pp_doc } -> Fmt.fprintf fmt "%a@\n" pp_doc ()
-         | MLDataC { pp_doc } -> Fmt.fprintf fmt "%a@\n" pp_doc ()
          | LPCode s -> (Fmt.fprintf fmt "%s" s; Fmt.fprintf fmt "@\n@\n")
          | LPDoc s -> (pp_comment fmt ("% " ^ s); Fmt.fprintf fmt "@\n@\n"))
         l;
@@ -2257,14 +2136,21 @@ module BuiltInPredicate =
 module Query =
   struct
     type name = string
-    type _ arguments =
-      | N: unit arguments 
-      | D: 'a Conversion.t * 'a * 'x arguments -> 'x arguments 
-      | Q: 'a Conversion.t * name * 'x arguments -> ('a * 'x) arguments 
-    type 'x t =
-      | Query of {
+    type ('x, 'c) arguments =
+      | N: (unit, 'c) arguments 
+      | D: ('a, #Conversion.ctx as 'c) Conversion.t * 'a * ('x, 'c) arguments
+      -> ('x, 'c) arguments 
+      | Q: ('a, #Conversion.ctx as 'c) Conversion.t * name * ('x, 'c)
+      arguments -> (('a * 'x), 'c) arguments 
+    type 'c obj_builder = State.t -> 'c constraint 'c = #Conversion.ctx
+    type _ t =
+      | Query: ('a, 'x, 'c) query_contents * ('a, 'k, Conversion.ctx)
+      Conversion.context * 'c obj_builder -> 'x t 
+    and ('a, 'x, 'c) query_contents =
+      {
+      context: 'a list ;
       predicate: constant ;
-      arguments: 'x arguments } 
+      arguments: ('x, 'c) arguments }
   end
 type symbol_table =
   {
@@ -2304,6 +2190,7 @@ let rec pp_symbol_table :
 and show_symbol_table : symbol_table -> Ppx_deriving_runtime_proxy.string =
   fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_symbol_table x
 [@@ocaml.warning "-32"]
+type 'a query_readback = term StrMap.t -> constraints -> State.t -> 'a
 type 'a executable =
   {
   compiled_program: prolog_prog ;
@@ -2314,7 +2201,7 @@ type 'a executable =
   symbol_table: symbol_table ;
   builtins: BuiltInPredicate.builtin_table ;
   assignments: term Util.StrMap.t ;
-  query_arguments: 'a Query.arguments }
+  query_readback: 'a query_readback }
 type pp_ctx =
   {
   uv_names: (string Util.PtrMap.t * int) ref ;

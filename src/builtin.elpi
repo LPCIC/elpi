@@ -218,6 +218,10 @@ kind bool type.
 type tt bool.
 type ff bool.
 
+% an octect
+typeabbrev char (ctype "char").
+
+
 % Pair: the constructor is pr, since ',' is for conjunction
 kind pair type -> type -> type.
 type pr A -> B -> pair A B.
@@ -229,6 +233,63 @@ fst (pr A _) A.
 pred snd  i:pair A B, o:B.
 
 snd (pr _ B) B.
+
+kind triple type -> type -> type -> type.
+type triple A -> B -> C -> triple A B C.
+
+pred triple_1  i:triple A1 A2 A3, o:A1.
+
+triple_1 (triple X _ _) X.
+
+pred triple_2  i:triple A1 A2 A3, o:A2.
+
+triple_2 (triple _ X _) X.
+
+pred triple_3  i:triple A1 A2 A3, o:A3.
+
+triple_3 (triple _ _ X) X.
+
+kind quadruple type -> type -> type -> type -> type.
+type quadruple A -> B -> C -> D -> quadruple A B C D.
+
+pred quadruple_1  i:quadruple A1 A2 A3 A4, o:A1.
+
+quadruple_1 (quadruple X _ _ _) X.
+
+pred quadruple_2  i:quadruple A1 A2 A3 A4, o:A2.
+
+quadruple_2 (quadruple _ X _ _) X.
+
+pred quadruple_3  i:quadruple A1 A2 A3 A4, o:A3.
+
+quadruple_3 (quadruple _ _ X _) X.
+
+pred quadruple_4  i:quadruple A1 A2 A3 A4, o:A4.
+
+quadruple_4 (quadruple _ _ _ X) X.
+
+kind quintuple type -> type -> type -> type -> type -> type.
+type quintuple A -> B -> C -> D -> E -> quintuple A B C D E.
+
+pred quintuple_1  i:quintuple A1 A2 A3 A4 A5, o:A1.
+
+quintuple_1 (quintuple X _ _ _ _) X.
+
+pred quintuple_2  i:quintuple A1 A2 A3 A4 A5, o:A2.
+
+quintuple_2 (quintuple _ X _ _ _) X.
+
+pred quintuple_3  i:quintuple A1 A2 A3 A4 A5, o:A3.
+
+quintuple_3 (quintuple _ _ X _ _) X.
+
+pred quintuple_4  i:quintuple A1 A2 A3 A4 A5, o:A4.
+
+quintuple_4 (quintuple _ _ _ X _) X.
+
+pred quintuple_5  i:quintuple A1 A2 A3 A4 A5, o:A5.
+
+quintuple_5 (quintuple _ _ _ _ X) X.
 
 % The option type (aka Maybe)
 kind option type -> type.
@@ -903,7 +964,7 @@ type std.map std.map.private.map K V -> (K -> K -> cmp -> prop) -> std.map K V.
 
 namespace std.map {
 
-% [make Eq Ltn M] builds an empty map M where keys are compared using Eq and Ltn
+% [make Cmp M] builds an empty map M where keys are compared using Cmp
 pred make i:(K -> K -> cmp -> prop), o:std.map K V.
 make Cmp (std.map private.empty Cmp).
 
@@ -1010,7 +1071,7 @@ type std.set std.set.private.set E -> (E -> E -> cmp -> prop) -> std.set E.
 
 namespace std.set {
 
-% [make Eq Ltn M] builds an empty set M where keys are compared using Eq and Ltn
+% [make Cmp M] builds an empty set M where keys are compared using Cmp
 pred make i:(E -> E -> cmp -> prop), o:std.set E.
 make Cmp (std.set private.empty Cmp).
 

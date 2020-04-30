@@ -1,4 +1,4 @@
-(*e0914f3476d15e2ba79d82fa97efbbd05a6e4c75 *src/runtime_trace_on.mli --cookie elpi_trace="true"*)
+(*dbd414a954857bee083d74bb49562a268062675f *src/runtime_trace_on.mli --cookie elpi_trace="true"*)
 #1 "src/runtime_trace_on.mli"
 open Util
 open Data
@@ -18,7 +18,10 @@ end
 val pp_stuck_goal : ?pp_ctx:pp_ctx -> Fmt.formatter -> stuck_goal -> unit
 val embed_query :
   mk_Arg:(State.t -> name:string -> args:term list -> (State.t * term)) ->
-    depth:int -> State.t -> 'a Query.t -> (State.t * term)
+    depth:int ->
+      hyps ->
+        constraints ->
+          State.t -> 'a Query.t -> ((State.t * term) * 'a query_readback)
 val execute_once :
   ?max_steps:int ->
     ?delay_outside_fragment:bool -> 'a executable -> 'a outcome

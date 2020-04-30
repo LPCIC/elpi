@@ -1,4 +1,4 @@
-(*25823e968f78a65500da52de3f79f1aeb00d2b5a *src/runtime_trace_on.ml --cookie elpi_trace="true"*)
+(*3a434c451cdabf1a722d3fd2ed37b08e1240c2f9 *src/runtime_trace_on.ml --cookie elpi_trace="true"*)
 #1 "src/runtime_trace_on.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -2100,25 +2100,6 @@ module FFI =
       match deref_head ~depth t with
       | Discard -> Data.BuiltInPredicate.Discard
       | _ -> Data.BuiltInPredicate.Keep
-    let in_of_term ~depth  readback n bname state t =
-      wrap_type_err bname n (readback ~depth state) t
-    let inout_of_term ~depth  readback n bname state t =
-      wrap_type_err bname n (readback ~depth state) t
-    let mk_out_assign ~depth  embed bname state input v output =
-      match (output, input) with
-      | (None, Data.BuiltInPredicate.Discard) -> (state, [])
-      | (Some _, Data.BuiltInPredicate.Discard) -> (state, [])
-      | (Some t, Data.BuiltInPredicate.Keep) ->
-          let (state, t, extra) = embed ~depth state t in
-          (state, (extra @ [App (Global_symbols.eqc, v, [t])]))
-      | (None, Data.BuiltInPredicate.Keep) -> (state, [])
-    let mk_inout_assign ~depth  embed bname state input v output =
-      match output with
-      | None -> (state, [])
-      | Some t ->
-          let (state, t, extra) =
-            embed ~depth state (Data.BuiltInPredicate.Data t) in
-          (state, (extra @ [App (Global_symbols.eqc, v, [t])]))
     let in_of_termC ~depth  readback n bname hyps constraints state t =
       wrap_type_err bname n (readback ~depth hyps constraints state) t
     let inout_of_termC = in_of_termC
@@ -2147,12 +2128,12 @@ module FFI =
         | x::xs ->
             let (s, x, gls) = f s x in aux (x :: acc) (gls :: extra) s xs in
       aux [] [] s l
-    let call (Data.BuiltInPredicate.Pred (bname, ffi, compute)) ~depth  hyps
-      constraints state data =
-      let rec aux : type i o h c.
-        (i, o, h, c) Data.BuiltInPredicate.ffi ->
+    let call (Data.BuiltInPredicate.Pred (bname, ffi, in_ctx, compute))
+      ~depth  hyps constraints state data =
+      let rec aux : type i o h.
+        (i, o, h) Data.BuiltInPredicate.ffi ->
           h ->
-            c ->
+            constraints ->
               compute:i ->
                 reduce:(State.t -> o -> (State.t * extra_goals)) ->
                   term list ->
@@ -2194,10 +2175,8 @@ module FFI =
                                 ((let open List in concat (rev extra)) @
                                    (gls @ (List.rev l))))
                           | (Data.BuiltInPredicate.VariadicIn
-                             (_,
-                              { ContextualConversion.readback = readback },
-                              _),
-                             data) ->
+                             ({ Conversion.readback = readback }, _), data)
+                              ->
                               let (state, i, gls) =
                                 map_acc
                                   (in_of_termC ~depth readback n bname ctx
@@ -2210,10 +2189,7 @@ module FFI =
                                 (let open List in
                                    gls @ ((concat (rev extra)) @ (rev l))))
                           | (Data.BuiltInPredicate.VariadicOut
-                             (_,
-                              { ContextualConversion.embed = embed; readback
-                                },
-                              _),
+                             ({ Conversion.embed = embed; readback }, _),
                              data) ->
                               let i =
                                 List.map
@@ -2238,10 +2214,7 @@ module FFI =
                                      (let open List in
                                         (concat (rev extra)) @ (rev l))))
                           | (Data.BuiltInPredicate.VariadicInOut
-                             (_,
-                              { ContextualConversion.embed = embed; readback
-                                },
-                              _),
+                             ({ Conversion.embed = embed; readback }, _),
                              data) ->
                               let (state, i, gls) =
                                 map_acc
@@ -2267,19 +2240,16 @@ module FFI =
                                      (let open List in
                                         gls @
                                           ((concat (rev extra)) @ (rev l)))))
-                          | (Data.BuiltInPredicate.CIn
-                             ({ ContextualConversion.readback = readback },
-                              _, ffi),
+                          | (Data.BuiltInPredicate.In
+                             ({ Conversion.readback = readback }, _, ffi),
                              t::rest) ->
                               let (state, i, gls) =
                                 in_of_termC ~depth readback n bname ctx
                                   constraints state t in
                               aux ffi ctx constraints ~compute:(compute i)
                                 ~reduce rest (n + 1) state (gls :: extra)
-                          | (Data.BuiltInPredicate.COut
-                             ({ ContextualConversion.embed = embed; readback
-                                },
-                              _, ffi),
+                          | (Data.BuiltInPredicate.Out
+                             ({ Conversion.embed = embed; readback }, _, ffi),
                              t::rest) ->
                               let i =
                                 out_of_term ~depth readback n bname state t in
@@ -2291,10 +2261,8 @@ module FFI =
                                 (state, (ass @ l)) in
                               aux ffi ctx constraints ~compute:(compute i)
                                 ~reduce rest (n + 1) state extra
-                          | (Data.BuiltInPredicate.CInOut
-                             ({ ContextualConversion.embed = embed; readback
-                                },
-                              _, ffi),
+                          | (Data.BuiltInPredicate.InOut
+                             ({ Conversion.embed = embed; readback }, _, ffi),
                              t::rest) ->
                               let (state, i, gls) =
                                 inout_of_termC ~depth readback n bname ctx
@@ -2307,112 +2275,78 @@ module FFI =
                                 (state, (ass @ l)) in
                               aux ffi ctx constraints ~compute:(compute i)
                                 ~reduce rest (n + 1) state (gls :: extra)
-                          | (Data.BuiltInPredicate.In
-                             ({ Conversion.readback = readback }, _, ffi),
-                             t::rest) ->
-                              let (state, i, gls) =
-                                in_of_term ~depth readback n bname state t in
-                              aux ffi ctx constraints ~compute:(compute i)
-                                ~reduce rest (n + 1) state (gls :: extra)
-                          | (Data.BuiltInPredicate.Out
-                             ({ Conversion.embed = embed; readback }, _, ffi),
-                             t::rest) ->
-                              let i =
-                                out_of_term ~depth readback n bname state t in
-                              let reduce state (rest, out) =
-                                let (state, l) = reduce state rest in
-                                let (state, ass) =
-                                  mk_out_assign ~depth embed bname state i t
-                                    out in
-                                (state, (ass @ l)) in
-                              aux ffi ctx constraints ~compute:(compute i)
-                                ~reduce rest (n + 1) state extra
-                          | (Data.BuiltInPredicate.InOut
-                             ({ Conversion.embed = embed; readback }, _, ffi),
-                             t::rest) ->
-                              let (state, i, gls) =
-                                inout_of_term ~depth readback n bname state t in
-                              let reduce state (rest, out) =
-                                let (state, l) = reduce state rest in
-                                let (state, ass) =
-                                  mk_inout_assign ~depth embed bname state i
-                                    t out in
-                                (state, (ass @ l)) in
-                              aux ffi ctx constraints ~compute:(compute i)
-                                ~reduce rest (n + 1) state (gls :: extra)
                           | (_, t::_) -> arity_err ~depth bname n (Some t)
                           | (_, []) -> arity_err ~depth bname n None in
-      let rec aux_ctx : type i o h c.
-        (i, o, h, c) Data.BuiltInPredicate.ffi ->
-          (h, c) ContextualConversion.ctx_readback
-        =
-        function
-        | Data.BuiltInPredicate.Full (f, _) -> f
-        | Data.BuiltInPredicate.Read (f, _) -> f
-        | Data.BuiltInPredicate.VariadicIn (f, _, _) -> f
-        | Data.BuiltInPredicate.VariadicOut (f, _, _) -> f
-        | Data.BuiltInPredicate.VariadicInOut (f, _, _) -> f
-        | Data.BuiltInPredicate.Easy _ -> ContextualConversion.unit_ctx
-        | Data.BuiltInPredicate.In (_, _, rest) -> aux_ctx rest
-        | Data.BuiltInPredicate.Out (_, _, rest) -> aux_ctx rest
-        | Data.BuiltInPredicate.InOut (_, _, rest) -> aux_ctx rest
-        | Data.BuiltInPredicate.CIn (_, _, rest) -> aux_ctx rest
-        | Data.BuiltInPredicate.COut (_, _, rest) -> aux_ctx rest
-        | Data.BuiltInPredicate.CInOut (_, _, rest) -> aux_ctx rest in
       let reduce state _ = (state, []) in
-      let (state, ctx, csts, gls_ctx) =
-        aux_ctx ffi ~depth hyps constraints state in
-      let (state, gls) = aux ffi ctx csts ~compute ~reduce data 1 state [] in
+      let (state, ctx, gls_ctx) = in_ctx ~depth hyps constraints state in
+      let (state, gls) =
+        aux ffi ctx constraints ~compute ~reduce data 1 state [] in
       (state, (gls_ctx @ gls))
   end
-let rec embed_query_aux : type a.
-  mk_Arg:(State.t -> name:string -> args:term list -> (State.t * term)) ->
+let embed_query_args ctx ~mk_Arg  =
+  let rec aux : type a.
     depth:int ->
       predicate:constant ->
         term list ->
-          term list -> State.t -> a Query.arguments -> (State.t * term)
-  =
-  fun ~mk_Arg ->
+          term list ->
+            constraints ->
+              State.t -> (a, 'ctx) Query.arguments -> (State.t * term)
+    =
     fun ~depth ->
       fun ~predicate ->
         fun gls ->
           fun args ->
-            fun state ->
-              fun descr ->
-                match descr with
-                | Data.Query.D (d, x, rest) ->
-                    let (state, x, glsx) = d.Conversion.embed ~depth state x in
-                    embed_query_aux ~mk_Arg ~depth ~predicate (gls @ glsx) (x
-                      :: args) state rest
-                | Data.Query.Q (d, name, rest) ->
-                    let (state, x) = mk_Arg state ~name ~args:[] in
-                    embed_query_aux ~mk_Arg ~depth ~predicate gls (x :: args)
-                      state rest
-                | Data.Query.N ->
-                    let args = List.rev args in
-                    (state,
-                      ((match gls with
-                        | [] -> C.mkAppL predicate args
-                        | gls ->
-                            C.mkAppL Global_symbols.andc
-                              (gls @ [C.mkAppL predicate args]))))
-let embed_query ~mk_Arg  ~depth  state (Query.Query { predicate; arguments })
-  = embed_query_aux ~mk_Arg ~depth ~predicate [] [] state arguments
+            fun constraints ->
+              fun state ->
+                fun descr ->
+                  match descr with
+                  | Data.Query.D (d, x, rest) ->
+                      let (state, x, glsx) =
+                        d.Conversion.embed ~depth ctx constraints state x in
+                      aux ~depth ~predicate (gls @ glsx) (x :: args)
+                        constraints state rest
+                  | Data.Query.Q (d, name, rest) ->
+                      let (state, x) = mk_Arg state ~name ~args:[] in
+                      aux ~depth ~predicate gls (x :: args) constraints state
+                        rest
+                  | Data.Query.N ->
+                      let args = List.rev args in
+                      (state,
+                        ((match gls with
+                          | [] -> C.mkAppL predicate args
+                          | gls ->
+                              C.mkAppL Global_symbols.andc
+                                (gls @ [C.mkAppL predicate args])))) in
+  aux
 let rec query_solution_aux : type a.
-  a Query.arguments -> term StrMap.t -> State.t -> a =
+  (a, 'ctx) Query.arguments ->
+    term StrMap.t -> 'ctx -> constraints -> State.t -> a
+  =
   fun args ->
     fun assignments ->
-      fun state ->
-        match args with
-        | Data.Query.N -> ()
-        | Data.Query.D (_, _, args) ->
-            query_solution_aux args assignments state
-        | Data.Query.Q (d, name, args) ->
-            let x = StrMap.find name assignments in
-            let (state, x, _gls) = d.Conversion.readback ~depth:0 state x in
-            (x, (query_solution_aux args assignments state))
-let output arguments assignments state =
-  query_solution_aux arguments assignments state
+      fun ctx ->
+        fun constraints ->
+          fun state ->
+            match args with
+            | Data.Query.N -> ()
+            | Data.Query.D (_, _, args) ->
+                query_solution_aux args assignments ctx constraints state
+            | Data.Query.Q (d, name, args) ->
+                let x = StrMap.find name assignments in
+                let (state, x, _gls) =
+                  d.Conversion.readback ~depth:0 ctx constraints state x in
+                (x,
+                  (query_solution_aux args assignments ctx constraints state))
+let output ctx arguments assignments constraints state =
+  query_solution_aux arguments assignments ctx constraints state
+let embed_query ~mk_Arg  ~depth  hyps constraints state (Query.Query
+  ({ Query.context = context; predicate; arguments }, cc, builder)) =
+  let ctx_builder =
+    Data.Conversion.context_builder cc builder ((new Conversion.ctx) hyps) in
+  let (state, ctx_entries, ctx, gls) =
+    ctx_builder ~depth constraints context state in
+  ((embed_query_args ctx ~mk_Arg ~depth ~predicate gls [] constraints state
+      arguments), (output ctx arguments))
 module Indexing =
   struct
     let mustbevariablec = min_int
@@ -3445,7 +3379,7 @@ module Constraints :
                (let open State in
                   ((init ()) |> (end_goal_compilation StrMap.empty)) |>
                     end_compilation);
-             query_arguments = Query.N;
+             query_readback = (fun _ -> fun _ -> fun _ -> ());
              symbol_table = (!C.table);
              builtins = (!FFI.builtins)
            } in
@@ -4282,13 +4216,13 @@ open Mainloop
 let mk_outcome search get_cs assignments =
   try
     let alts = search () in
-    let (syn_csts, state, qargs, pp_ctx) = get_cs () in
+    let (syn_csts, state, readback_output, pp_ctx) = get_cs () in
     let solution =
       {
         assignments;
         constraints = syn_csts;
         state;
-        output = (output qargs assignments state);
+        output = (readback_output assignments syn_csts state);
         pp_ctx
       } in
     ((Success solution), alts)
@@ -4301,7 +4235,7 @@ let execute_once ?max_steps  ?delay_outside_fragment  exec =
      (mk_outcome search
         (fun () ->
            ((get CS.Ugly.delayed), ((get CS.state) |> State.end_execution),
-             (exec.query_arguments),
+             (exec.query_readback),
              { Data.uv_names = (ref (get Pp.uv_names)); table = (get C.table)
              })) exec.assignments))
 let execute_loop ?delay_outside_fragment  exec ~more  ~pp  =
@@ -4314,7 +4248,7 @@ let execute_loop ?delay_outside_fragment  exec ~more  ~pp  =
       mk_outcome f
         (fun () ->
            ((get CS.Ugly.delayed), ((get CS.state) |> State.end_execution),
-             (exec.query_arguments),
+             (exec.query_readback),
              { Data.uv_names = (ref (get Pp.uv_names)); table = (get C.table)
              })) exec.assignments in
     let time1 = Unix.gettimeofday () in k := alts; pp (time1 -. time0) o in
