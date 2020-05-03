@@ -29,7 +29,7 @@ DUNE_OPTS=
 build:
 	dune build $(DUNE_OPTS) @all ; RC=$$?; \
 	( cp -r _build/default/src/.ppcache src/ 2>/dev/null || true ); \
-	( echo "FLG -ppx './merlinppx.exe --as-ppx --trace_ppx-on'" >> src/.merlin );\
+	( echo "FLG -ppx './merlinppx.exe --as-ppx --cookie '\''elpi_trace=\"true\"'\'''" >> src/.merlin );\
 	exit $$RC
 
 install:
@@ -55,6 +55,9 @@ tests:
 		--plot=$(shell pwd)/tests/plot \
 		$(addprefix --name-match ,$(ONLY)) \
 		$(addprefix --runner , $(RUNNERS))
+
+test-noppx:
+	dune build --workspace dune-workspace.noppx
 
 git/%:
 	rm -rf "_build/git/elpi-$*"
