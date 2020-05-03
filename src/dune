@@ -88,7 +88,7 @@
   (modules merlinppx)
   (libraries
     (select merlinppx.ml from
-     (ocaml-migrate-parsetree elpi.trace_ppx ppx_deriving.std -> merlinppx.ppx.ml)
+     (elpi.trace.ppx ppx_deriving.std -> merlinppx.ppx.ml)
      (-> merlinppx.noop.ml)))
   (flags -linkall)
 )
