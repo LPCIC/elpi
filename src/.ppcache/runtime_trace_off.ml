@@ -1,4 +1,4 @@
-(*25823e968f78a65500da52de3f79f1aeb00d2b5a *src/runtime_trace_off.ml --cookie elpi_trace="false"*)
+(*93c8b7e123ddd0582844b078d87665e8bed5dc00 *src/runtime_trace_off.ml --cookie elpi_trace="false"*)
 #1 "src/runtime_trace_off.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -317,6 +317,7 @@ module Pp :
     let pp_constant = C.pp
   end 
 open Pp
+let (rid, max_runtime_id) = ((Fork.new_local 0), (ref 0))
 let auxsg = ref []
 let get_auxsg sg l =
   let rec aux i =
@@ -2624,14 +2625,14 @@ module Constraints :
                          (p == p') && (for_all2 (==) lp lp')
                      end)
     let chrules = Fork.new_local CHR.empty
-    let make_constraint_def depth prog pdiff conclusion =
+    let make_constraint_def ~rid  depth prog pdiff conclusion =
       { cdepth = depth; prog; context = pdiff; conclusion }
     let delay_goal ?(filter_ctx= fun _ -> true)  ~depth  prog ~goal:g 
       ~on:keys  =
       let pdiff = local_prog prog in
       let pdiff = List.filter filter_ctx pdiff in
       ();
-      (let kind = Constraint (make_constraint_def depth prog pdiff g) in
+      (let kind = Constraint (make_constraint_def ~rid depth prog pdiff g) in
        CS.declare_new { kind; blockers = keys })
     let rec head_of =
       function
@@ -2804,7 +2805,7 @@ module Constraints :
                         (App (Global_symbols.implc, context, [conclusion]))
                         env m in
                     let prog = initial_program in
-                    Some (make_constraint_def eigen prog [] conclusion) in
+                    Some (make_constraint_def ~rid eigen prog [] conclusion) in
               ();
               Some
                 (rule_name, constraints_to_remove, new_goals,
@@ -2911,10 +2912,12 @@ module Mainloop :
       | Const c -> Some (C.show c)
       | Builtin (c, _) -> Some (C.show c)
       | _ -> None
-    let pp_candidate fmt { loc } =
+    let pp_candidate ~depth  ~k  fmt ({ loc } as cl) =
       match loc with
       | Some x -> Loc.pp fmt x
-      | None -> Fmt.fprintf fmt "context"
+      | None ->
+          Fmt.fprintf fmt "hypothetical clause: %a" (ppclause ~depth ~hd:k)
+            cl
     let make_runtime
       : ?max_steps:int ->
           ?delay_outside_fragment:bool -> 'x executable -> 'x runtime
@@ -3176,6 +3179,7 @@ module Mainloop :
             set CS.state initial_runtime_state;
             set C.table symbol_table;
             set FFI.builtins builtins;
+            set rid (!max_runtime_id);
             (let search =
                exec
                  (fun () ->
@@ -3186,6 +3190,7 @@ module Mainloop :
              let destroy () =
                exec (fun () -> T.undo ~old_trail:T.empty ()) () in
              let next_solution = exec next_alt in
+             incr max_runtime_id;
              { search; next_solution; destroy; exec; get })
     ;;do_make_runtime := make_runtime
   end 

@@ -322,6 +322,8 @@ end (* }}} *)
 
 open Pp
 
+let rid, max_runtime_id = Fork.new_local 0, ref 0
+
 (******************************************************************************
   Stores for:
    - backtracking (trail)
@@ -437,28 +439,28 @@ let contents ?overlapping () =
     | _ -> None) !delayed
 
 let trail_assignment x =
-  [%spy "dev:trail:assign" Fmt.pp_print_bool !last_call pp_trail_item (Assignement x)];
+  [%spy "dev:trail:assign" ~rid Fmt.pp_print_bool !last_call pp_trail_item (Assignement x)];
   if not !last_call then trail := Assignement x :: !trail
   [@@inline]
 ;;
 let trail_stuck_goal_addition x =
-  [%spy "dev:trail:add-constraint" Fmt.pp_print_bool !last_call pp_trail_item (StuckGoalAddition x)];
+  [%spy "dev:trail:add-constraint" ~rid Fmt.pp_print_bool !last_call pp_trail_item (StuckGoalAddition x)];
   if not !last_call then trail := StuckGoalAddition x :: !trail
   [@@inline]
 ;;
 let trail_stuck_goal_removal x =
-  [%spy "dev:trail:remove-constraint" Fmt.pp_print_bool !last_call pp_trail_item (StuckGoalRemoval x)];
+  [%spy "dev:trail:remove-constraint" ~rid Fmt.pp_print_bool !last_call pp_trail_item (StuckGoalRemoval x)];
   if not !last_call then trail := StuckGoalRemoval x :: !trail
   [@@inline]
 ;;
 
 let remove ({ blockers } as sg) =
- [%spy "dev:constraint:remove" pp_stuck_goal sg];
+ [%spy "dev:constraint:remove" ~rid pp_stuck_goal sg];
  delayed := remove_from_list sg !delayed;
  List.iter (fun r -> r.rest <- remove_from_list sg r.rest) blockers
 
 let add ({ blockers } as sg) =
- [%spy "dev:constraint:add" pp_stuck_goal sg];
+ [%spy "dev:constraint:add" ~rid pp_stuck_goal sg];
  auxsg := sg :: !auxsg;
  delayed := sg :: !delayed;
  List.iter (fun r -> r.rest <- sg :: r.rest) blockers
@@ -512,7 +514,7 @@ let undo ~old_trail ?old_state () =
    when we allow more interesting constraints and constraint propagation
    rules. *)
   to_resume := []; new_delayed := [];
-  [%spy "dev:trail:undo" pp_trail !trail pp_string "->" pp_trail old_trail];
+  [%spy "dev:trail:undo" ~rid pp_trail !trail pp_string "->" pp_trail old_trail];
   while !trail != old_trail do
     match !trail with
     | Assignement r :: rest ->
@@ -566,7 +568,7 @@ module CS = ConstraintStoreAndTrail
 let (@:=) r v =
   (T.trail_assignment[@inlined]) r;
   if r.rest <> [] then begin
-    [%spy "user:assign(resume)" (fun fmt l ->
+    [%spy "user:assign(resume)" ~rid (fun fmt l ->
       let l = map_filter (function
         | { kind = Constraint { cgid; _ } ; _ } -> Some cgid
         | _ -> None) l in
@@ -706,9 +708,9 @@ let expand_uv r ~lvl ~ano =
   let assignment = mknLam ano t in
   t, Some (r,lvl,assignment)
 let expand_uv ~depth r ~lvl ~ano =
-  [%spy "dev:expand_uv:in" (uppterm depth [] 0 empty_env) (UVar(r,lvl,ano))];
+  [%spy "dev:expand_uv:in" ~rid (uppterm depth [] 0 empty_env) (UVar(r,lvl,ano))];
   let t, ass as rc = expand_uv r ~lvl ~ano in
-  [%spy "dev:expand_uv:out" (uppterm depth [] 0 empty_env) t (fun fmt -> function
+  [%spy "dev:expand_uv:out" ~rid (uppterm depth [] 0 empty_env) t (fun fmt -> function
     | None -> Fmt.fprintf fmt "no assignment"
     | Some (_,_,t) ->
         Fmt.fprintf fmt "%a := %a"
@@ -726,9 +728,9 @@ let expand_appuv r ~lvl ~args =
     mknLam nargs (AppUVar(r1,0,args_lvl @ C.mkinterval lvl nargs 0)) in
   t, Some (r,lvl,assignment)
 let expand_appuv ~depth r ~lvl ~args =
-  [%spy "dev:expand_appuv:in" (uppterm depth [] 0 empty_env) (AppUVar(r,lvl,args))];
+  [%spy "dev:expand_appuv:in" ~rid (uppterm depth [] 0 empty_env) (AppUVar(r,lvl,args))];
   let t, ass as rc = expand_appuv r ~lvl ~args in
-  [%spy "dev:expand_appuv:out" (uppterm depth [] 0 empty_env) t (fun fmt -> function
+  [%spy "dev:expand_appuv:out" ~rid (uppterm depth [] 0 empty_env) t (fun fmt -> function
     | None -> Fmt.fprintf fmt "no assignment"
     | Some (_,_,t) ->
         Fmt.fprintf fmt "%a := %a"
@@ -841,7 +843,7 @@ let rec move ~adepth:argsdepth e ?avoid ~from ~to_ t =
  else begin
   (*if delta = 0 && e == empty_env && avoid <> None then prerr_endline "# EXPENSIVE OCCUR CHECK";*)
   let rec maux e depth x =
-    [%trace "move" ("adepth:%d depth:%d from:%d to:%d x:%a"
+    [%trace "move" ~rid ("adepth:%d depth:%d from:%d to:%d x:%a"
         argsdepth depth from to_ (ppterm (from+depth) [] argsdepth e) x) begin
     match x with
     | Const c ->
@@ -933,7 +935,7 @@ let rec move ~adepth:argsdepth e ?avoid ~from ~to_ t =
          else
            let t, assignment = expand_uv ~depth:(from+depth) r ~lvl:vardepth ~ano:argsno in
            option_iter (fun (r,_,assignment) ->
-              [%spy "user:assign(expand)" (fun fmt () -> Fmt.fprintf fmt "%a := %a"
+              [%spy "user:assign(expand)" ~rid (fun fmt () -> Fmt.fprintf fmt "%a := %a"
                (uppterm (from+depth) [] argsdepth e) x
                (uppterm vardepth [] argsdepth e) assignment) ()];
               r @:= assignment) assignment;
@@ -975,7 +977,7 @@ let rec move ~adepth:argsdepth e ?avoid ~from ~to_ t =
             let r' = oref C.dummy in
             let newvar = mkAppUVar r' vardepth' !filteredargs_vardepth in
             let assignment = mknLam orig_argsno newvar in
-            [%spy "user:assign(restrict)" (fun fmt () -> Fmt.fprintf fmt "%d %a := %a" vardepth
+            [%spy "user:assign(restrict)" ~rid (fun fmt () -> Fmt.fprintf fmt "%d %a := %a" vardepth
                (ppterm (from+depth) [] argsdepth e) x
                (ppterm (vardepth) [] argsdepth e) assignment) ()];
             r @:= assignment;
@@ -994,13 +996,13 @@ let rec move ~adepth:argsdepth e ?avoid ~from ~to_ t =
    maux e 0 t
   end
  in
-  [%spy "dev:move:out" (ppterm to_ [] argsdepth e) rc];
+  [%spy "dev:move:out" ~rid (ppterm to_ [] argsdepth e) rc];
   rc
 
 (* Hmove is like move for heap terms. By setting env to empty_env, it triggers
    fast paths in move (no need to heapify, the term already lives in the heap)*)
 and hmove ?avoid ~from ~to_ t =
- [%trace "hmove" ("@[<hov 1>from:%d@ to:%d@ %a@]" from to_ (uppterm from [] 0 empty_env) t) begin
+ [%trace "hmove" ~rid ("@[<hov 1>from:%d@ to:%d@ %a@]" from to_ (uppterm from [] 0 empty_env) t) begin
    move ?avoid ~adepth:0 ~from ~to_ empty_env t
  end]
 
@@ -1020,7 +1022,7 @@ and decrease_depth r ~from ~to_ argsno =
    every t in ts must be either an heap term or an Arg(i,0)
    the ts are lifted as usual *)
 and subst fromdepth ts t =
- [%trace "subst" ("@[<hov 2>fromdepth:%d t: %a@ ts: %a@]" fromdepth
+ [%trace "subst" ~rid ("@[<hov 2>fromdepth:%d t: %a@ ts: %a@]" fromdepth
    (uppterm (fromdepth) [] 0 empty_env) t (pplist (uppterm fromdepth [] 0 empty_env) ", ") ts)
  begin
  if ts == [] then t
@@ -1028,7 +1030,7 @@ and subst fromdepth ts t =
    let len = List.length ts in
    let fromdepthlen = fromdepth + len in
    let rec aux depth tt =
-   [%trace "subst-aux" ("@[<hov 2>t: %a@]" (uppterm (fromdepth+1) [] 0 empty_env) tt)
+   [%trace "subst-aux" ~rid ("@[<hov 2>t: %a@]" (uppterm (fromdepth+1) [] 0 empty_env) tt)
    begin match tt with
    | Const c as x ->
       if c >= fromdepth && c < fromdepthlen then
@@ -1085,7 +1087,7 @@ and subst fromdepth ts t =
  end]
 
 and beta depth sub t args =
- [%trace "beta" ("@[<hov 2>subst@ t: %a@ args: %a@]"
+ [%trace "beta" ~rid ("@[<hov 2>subst@ t: %a@ args: %a@]"
      (uppterm (depth+List.length sub) [] 0 empty_env) t
      (pplist (uppterm depth [] 0 empty_env) ", ") args)
  begin match t, args with
@@ -1098,7 +1100,7 @@ and beta depth sub t args =
  | Lam t', hd::tl -> [%tcall beta depth (hd::sub) t' tl]
  | _ ->
     let t' = subst depth sub t in
-    [%spy "dev:subst:out" (ppterm depth [] 0 empty_env) t'];
+    [%spy "dev:subst:out" ~rid (ppterm depth [] 0 empty_env) t'];
     match args with
     | [] -> t'
     | ahd::atl ->
@@ -1152,7 +1154,7 @@ and deref_appuv ?avoid ~from ~to_ args t =
   beta to_ [] (deref_uv ?avoid ~from ~to_ 0 t) args
 
 and deref_uv ?avoid ~from ~to_ args t =
-  [%trace "deref_uv" ("from:%d to:%d %a @@ %d"
+  [%trace "deref_uv" ~rid ("from:%d to:%d %a @@ %d"
       from to_ (ppterm from [] 0 empty_env) t args) begin
  if args == 0 then hmove ?avoid ~from ~to_ t
  else (* O(1) reduction fragment tested here *)
@@ -1262,7 +1264,7 @@ let is_llam lvl args adepth bdepth depth left e =
   with RestrictionFailure -> false, []
 let is_llam lvl args adepth bdepth depth left e =
   let res = is_llam lvl args adepth bdepth depth left e in
-  [%spy "dev:is_llam" (fun fmt () -> let (b,map) = res in Fmt.fprintf fmt "%d + %a = %b, %a"
+  [%spy "dev:is_llam" ~rid (fun fmt () -> let (b,map) = res in Fmt.fprintf fmt "%d + %a = %b, %a"
     lvl (pplist (ppterm adepth [] bdepth e) " ") args b
     (pplist (fun fmt (x,n) -> Fmt.fprintf fmt "%d |-> %d" x n) " ") map) ()];
   res
@@ -1301,11 +1303,11 @@ let bind r gamma l a d delta b left t e =
     end in
   let cst ?hmove c b delta =
     let n = cst ?hmove c b delta in
-    [%spy "dev:bind:constant-mapping" (fun fmt () -> let (n,m) = c,n in Fmt.fprintf fmt
+    [%spy "dev:bind:constant-mapping" ~rid (fun fmt () -> let (n,m) = c,n in Fmt.fprintf fmt
       "%d -> %d (c:%d b:%d gamma:%d delta:%d d:%d)" n m c b gamma delta d) ()];
     n in
   let rec bind b delta w t =
-    [%trace "bind" ("%b gamma:%d + %a = t:%a a:%d delta:%d d:%d w:%d b:%d"
+    [%trace "bind" ~rid ("%b gamma:%d + %a = t:%a a:%d delta:%d d:%d w:%d b:%d"
         left gamma (pplist (fun fmt (x,n) -> Fmt.fprintf fmt "%a |-> %d"
         (ppterm a [] b e) (mkConst x) n) " ") l
         (ppterm a [] b empty_env) t a delta d w b) begin
@@ -1362,7 +1364,7 @@ let bind r gamma l a d delta b left t e =
               e.(i) <- v;
               r, a, (is_llam, args), orig_args
           | _ -> assert false in
-        [%spy "dev:bind:maybe-prune" (fun fmt () ->
+        [%spy "dev:bind:maybe-prune" ~rid (fun fmt () ->
            Fmt.fprintf fmt "lvl:%d is_llam:%b args:%a orig_args:%a orig:%a"
              lvl is_llam
              (pplist (fun fmt (x,n) ->
@@ -1433,12 +1435,12 @@ let bind r gamma l a d delta b left t e =
   end] in
   try
     let v = mknLam new_lams (bind b delta 0 t) in
-    [%spy "user:assign(HO)" (fun fmt () -> Fmt.fprintf fmt "%a := %a"
+    [%spy "user:assign(HO)" ~rid (fun fmt () -> Fmt.fprintf fmt "%a := %a"
         (uppterm gamma [] a e) (UVar(r,gamma,0))
         (uppterm gamma [] a e) v) ()];
     r @:= v;
     true
-  with RestrictionFailure -> [%spy "dev:bind:restriction-failure"];false
+  with RestrictionFailure -> [%spy "dev:bind:restriction-failure" ~rid];false
 ;;
 (* exception Non_linear *)
 
@@ -1458,7 +1460,7 @@ let error_msg_hard_unif a b =
   "(deprecated, for Teyjus compatibility)."
 
 let rec unif matching depth adepth a bdepth b e =
-   [%trace "unif" ("@[<hov 2>^%d:%a@ =%d%s= ^%d:%a@]%!"
+   [%trace "unif" ~rid ("@[<hov 2>^%d:%a@ =%d%s= ^%d:%a@]%!"
        adepth (ppterm (adepth+depth) [] adepth empty_env) a
        depth (if matching then "m" else "")
        bdepth (ppterm (bdepth+depth) [] adepth e) b)
@@ -1553,7 +1555,7 @@ let rec unif matching depth adepth a bdepth b e =
    | _, Arg (i,0) ->
      begin try
       let v = hmove ~from:(adepth+depth) ~to_:adepth a in
-      [%spy "user:assign" (fun fmt () -> Fmt.fprintf fmt "%a := %a"
+      [%spy "user:assign" ~rid (fun fmt () -> Fmt.fprintf fmt "%a := %a"
           (uppterm adepth [] adepth e) b (uppterm adepth [] adepth e) v) ()];
       e.(i) <- v;
       true
@@ -1570,7 +1572,7 @@ let rec unif matching depth adepth a bdepth b e =
              let a = hmove ~avoid:r ~from:(adepth+depth) ~to_:(bdepth+depth) a in
              (* Second step: we restrict the l.h.s. *)
              hmove ~from:(bdepth+depth) ~to_:origdepth a in
-         [%spy "user:assign" (fun fmt () -> Fmt.fprintf fmt "%a := %a"
+         [%spy "user:assign" ~rid (fun fmt () -> Fmt.fprintf fmt "%a := %a"
            (uppterm depth [] bdepth e) b
            (uppterm depth [] bdepth e) t) ()];
          r @:= t;
@@ -1586,7 +1588,7 @@ let rec unif matching depth adepth a bdepth b e =
              let b = move ~avoid:r ~adepth ~from:(bdepth+depth) ~to_:(adepth+depth) e b in
              (* Second step: we restrict the r.h.s. *)
              hmove ~from:(adepth+depth) ~to_:origdepth b in
-         [%spy "user:assign" (fun fmt () -> Fmt.fprintf fmt "%a := %a"
+         [%spy "user:assign" ~rid (fun fmt () -> Fmt.fprintf fmt "%a := %a"
            (uppterm origdepth [] 0 empty_env) a
            (uppterm origdepth [] 0 empty_env) t) ()];
          r @:= t;
@@ -1597,25 +1599,25 @@ let rec unif matching depth adepth a bdepth b e =
    (* TODO: unif matching->deref_uv case. Rewrite the code to do the job directly? *)
    | _, Arg (i,args) ->
       let v = fst (make_lambdas adepth args) in
-      [%spy "user:assign" (fun fmt () -> Fmt.fprintf fmt "%a := %a"
+      [%spy "user:assign" ~rid (fun fmt () -> Fmt.fprintf fmt "%a := %a"
         (uppterm depth [] bdepth e) (Arg(i,0))
         (uppterm depth [] bdepth e) v) ()];
       e.(i) <- v;
-      [%spy "user:assign" (fun fmt () -> ppterm depth [] adepth empty_env fmt (e.(i))) ()];
+      [%spy "user:assign" ~rid (fun fmt () -> ppterm depth [] adepth empty_env fmt (e.(i))) ()];
       unif matching depth adepth a bdepth b e
    | UVar({ rest = [] },_,a1), UVar ({ rest = _ :: _ },_,a2) when a1 + a2 > 0 -> unif matching depth bdepth b adepth a e
    | AppUVar({ rest = [] },_,_), UVar ({ rest = _ :: _ },_,a2) when  a2 > 0 -> unif matching depth bdepth b adepth a e
 
    | _, UVar (r,origdepth,args) when args > 0 && match a with UVar(r1,_,_) | AppUVar(r1,_,_) -> r != r1 | _ -> true ->
       let v = fst (make_lambdas origdepth args) in
-      [%spy "user:assign(simplify)" (fun fmt () -> Fmt.fprintf fmt "%a := %a"
+      [%spy "user:assign(simplify)" ~rid (fun fmt () -> Fmt.fprintf fmt "%a := %a"
         (uppterm depth [] bdepth e) (UVar(r,origdepth,0))
         (uppterm depth [] bdepth e) v) ()];
       r @:= v;
       unif matching depth adepth a bdepth b e
    | UVar (r,origdepth,args), _ when args > 0 && match b with UVar(r1,_,_) | AppUVar(r1,_,_) -> r != r1 | _ -> true ->
       let v = fst (make_lambdas origdepth args) in
-      [%spy "user:assign(simplify)" (fun fmt () -> Fmt.fprintf fmt "%a := %a"
+      [%spy "user:assign(simplify)" ~rid (fun fmt () -> Fmt.fprintf fmt "%a := %a"
          (uppterm depth [] adepth e) (UVar(r,origdepth,0))
          (uppterm depth [] adepth e) v) ()];
       r @:= v;
@@ -1722,8 +1724,8 @@ let rec unif matching depth adepth a bdepth b e =
 
 let unif ~matching (gid[@trace]) adepth e bdepth a b =
  let res = unif matching 0 adepth a bdepth b e in
- [%spy "dev:unif:out" Fmt.pp_print_bool res];
- [%spy "user:select" ~gid ~cond:(not res) (fun fmt () ->
+ [%spy "dev:unif:out" ~rid Fmt.pp_print_bool res];
+ [%spy "user:select" ~rid ~gid ~cond:(not res) (fun fmt () ->
      let op = if matching then "match" else "unify" in
      Fmt.fprintf fmt "@[<hov 2>fail to %s: %a@ with %a@]" op
        (ppterm (adepth) [] adepth empty_env) a
@@ -2121,7 +2123,7 @@ let hash_arg_list goal hd ~depth args mode spec =
     let modulus = 1 lsl size in
     let kabs = Hashtbl.hash k in
     let h = kabs mod modulus in
-    [%spy "dev:index:subhash-const" C.pp k pp_string (dec_to_bin2 h)];
+    [%spy "dev:index:subhash-const" ~rid C.pp k pp_string (dec_to_bin2 h)];
     h in
   let all_1 size = max_int lsr (hash_bits - size) in
   let all_0 size = 0 in
@@ -2170,7 +2172,7 @@ let hash_arg_list goal hd ~depth args mode spec =
           (hash size k) lor
           List.(fold_left (lor) 0 (mapi (fun i x -> shift (i+1) (self x)) xs))
     in
-    [%spy "dev:index:subhash" (fun fmt () ->
+    [%spy "dev:index:subhash" ~rid (fun fmt () ->
        Fmt.fprintf fmt "%s: %d: %s: %a"
          (if goal then "goal" else "clause")
          size
@@ -2179,7 +2181,7 @@ let hash_arg_list goal hd ~depth args mode spec =
     h
   in
   let h = aux 0 0 args mode spec in
-  [%spy "dev:index:hash" (fun fmt () ->
+  [%spy "dev:index:hash" ~rid (fun fmt () ->
      Fmt.fprintf fmt "%s: %s: %a"
        (if goal then "goal" else "clause")
        (dec_to_bin2 h)
@@ -2485,7 +2487,7 @@ r :- (pi X\ pi Y\ q X Y :- pi c\ pi d\ q (Z c d) (X c d) (Y c)) => ... *)
  *)
 
 let rec claux1 ?loc get_mode vars depth hyps ts lts lcs t =
-  [%trace "clausify" ("%a %d %d %d %d\n%!"
+  [%trace "clausify" ~rid ("%a %d %d %d %d\n%!"
       (ppterm (depth+lts) [] 0 empty_env) t depth lts lcs (List.length ts)) begin
   match t with
   | Discard -> error ?loc "ill-formed hypothetical clause: discard in head position"
@@ -2533,7 +2535,7 @@ let rec claux1 ?loc get_mode vars depth hyps ts lts lcs t =
        | Cons _ | Nil | Discard -> assert false
      in
      let c = { depth = depth+lcs; args; hyps; mode = get_mode hd; vars; loc } in
-     [%spy "dev:claudify:extra-clause" (ppclause ~depth:(depth+lcs) ~hd) c];
+     [%spy "dev:claudify:extra-clause" ~rid (ppclause ~depth:(depth+lcs) ~hd) c];
      (hd,c), { hdepth = depth; hsrc = g }, lcs
   | UVar ({ contents=g },from,args) when g != C.dummy ->
      claux1 ?loc get_mode vars depth hyps ts lts lcs
@@ -2579,8 +2581,8 @@ type goal = { depth : int; program : prolog_prog; goal : term; gid : UUID.t [@tr
 
 let make_subgoal_id ogid ((depth,goal)[@trace]) =
   let gid = UUID.make () in
-  [%spy "user:subgoalof" ~gid: ogid UUID.pp gid];
-  [%spy "user:newgoal" ~gid (uppterm depth [] depth empty_env) goal];
+  [%spy "user:subgoal" ~rid ~gid: ogid UUID.pp gid];
+  [%spy "user:newgoal" ~rid ~gid (uppterm depth [] depth empty_env) goal];
   gid
   [@@inline]
 
@@ -2711,7 +2713,7 @@ end = struct (* {{{ *)
       try List.assq r !f.uv2c
       with Not_found ->
         let n, c = C.fresh_global_constant () in
-        [%spy "dev:freeze_uv:new" (fun fmt () -> let tt = UVar (r,0,0) in
+        [%spy "dev:freeze_uv:new" ~rid (fun fmt () -> let tt = UVar (r,0,0) in
           Fmt.fprintf fmt "%s == %a" (C.show n) (ppterm 0 [] 0 empty_env) tt) ()];
         f := { !f with c2uv = C.Map.add n r !f.c2uv;
                        uv2c = (r,c) :: !f.uv2c };
@@ -2736,29 +2738,29 @@ end = struct (* {{{ *)
       | UVar(r,lvl,ano) -> faux d (deref_uv ~from:lvl ~to_:d ano !!r)
       | AppUVar(r,lvl,args) -> faux d (deref_appuv ~from:lvl ~to_:d args !!r)
     in
-    [%spy "dev:freeze:in" (fun fmt () ->
+    [%spy "dev:freeze:in" ~rid (fun fmt () ->
       Fmt.fprintf fmt "depth:%d ground:%d newground:%d maxground:%d %a"
         depth ground newground maxground (uppterm depth [] 0 empty_env) t) ()];
     let t = faux depth t in
-    [%spy "dev:freeze:after-faux" (uppterm depth [] 0 empty_env) t];
+    [%spy "dev:freeze:after-faux" ~rid (uppterm depth [] 0 empty_env) t];
     let t = shift_bound_vars ~depth ~to_:ground t in
-    [%spy "dev:freeze:after-shift->ground" (uppterm ground [] 0 empty_env) t];
+    [%spy "dev:freeze:after-shift->ground" ~rid (uppterm ground [] 0 empty_env) t];
     let t = shift_bound_vars ~depth:0 ~to_:(newground-ground) t in
-    [%spy "dev:freeze:after-reloc->newground" (uppterm newground [] 0 empty_env) t];
+    [%spy "dev:freeze:after-reloc->newground" ~rid (uppterm newground [] 0 empty_env) t];
     let t = shift_bound_vars ~depth:newground ~to_:maxground t in
-    [%spy "dev:freeze:out" (uppterm maxground [] 0 empty_env) t];
+    [%spy "dev:freeze:out" ~rid (uppterm maxground [] 0 empty_env) t];
     !f, t
 
   let defrost ~maxd t env ~to_ f =
-  [%spy "dev:defrost:in" (fun fmt () ->
+  [%spy "dev:defrost:in" ~rid (fun fmt () ->
     Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
       (uppterm maxd [] maxd env) t) ()];
     let t = full_deref ~adepth:maxd env ~depth:maxd t in
-  [%spy "dev:defrost:fully-derefd" (fun fmt ()->
+  [%spy "dev:defrost:fully-derefd" ~rid (fun fmt ()->
     Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
       (uppterm maxd [] 0 empty_env) t) ()];
     let t = subtract_to_consts ~amount:(maxd - to_) ~depth:maxd t in
-  [%spy "dev:defrost:shifted" (fun fmt () ->
+  [%spy "dev:defrost:shifted" ~rid (fun fmt () ->
     Fmt.fprintf fmt "maxd:%d to:%d %a" maxd to_
       (uppterm to_ [] 0 empty_env) t) ()];
     let rec daux d = function
@@ -2799,9 +2801,9 @@ let replace_const m t =
     | (CData _ | UVar _ | Nil | Discard) as x -> x
     | Arg _ | AppArg _ -> assert false
     | AppUVar(r,lvl,args) -> AppUVar(r,lvl,smart_map rcaux args) in
-  [%spy "dev:replace_const:in" (uppterm 0 [] 0 empty_env) t];
+  [%spy "dev:replace_const:in" ~rid (uppterm 0 [] 0 empty_env) t];
   let t = rcaux t in
-  [%spy "dev:replace_const:out" (uppterm 0 [] 0 empty_env) t];
+  [%spy "dev:replace_const:out" ~rid (uppterm 0 [] 0 empty_env) t];
   t
 ;;
 let ppmap fmt (g,l) =
@@ -2815,7 +2817,7 @@ end (* }}} *)
 let match_goal (gid[@trace]) goalno maxground env freezer (newground,depth,t) pattern =
   let freezer, t =
     Ice.freeze ~depth t ~ground:depth ~newground ~maxground freezer in
-  [%trace "match_goal" ("@[<hov>%a ===@ %a@]"
+  [%trace "match_goal" ~rid ("@[<hov>%a ===@ %a@]"
      (uppterm maxground [] maxground env) t
      (uppterm 0 [] maxground env) pattern) begin
   if unif ~matching:false (gid[@trace]) maxground env 0 t pattern then freezer
@@ -2828,7 +2830,7 @@ let match_context (gid[@trace]) goalno maxground env freezer (newground,ground,l
       Ice.freeze ~depth t ~ground ~newground ~maxground freezer)
     freezer lt in
   let t = list_to_lp_list lt in
-  [%trace "match_context" ("@[<hov>%a ===@ %a@]"
+  [%trace "match_context" ~rid ("@[<hov>%a ===@ %a@]"
      (uppterm maxground [] maxground env) t
      (uppterm 0 [] maxground env) pattern) begin
   if unif ~matching:false (gid[@trace]) maxground env 0 t pattern then freezer
@@ -2851,14 +2853,14 @@ end)
 
 let chrules = Fork.new_local CHR.empty
 
-let make_constraint_def ~gid:(gid[@trace]) depth prog pdiff conclusion =
+let make_constraint_def ~rid ~gid:(gid[@trace]) depth prog pdiff conclusion =
   { cdepth = depth; prog = prog; context = pdiff; cgid = gid [@trace]; conclusion }
 
 let delay_goal ?(filter_ctx=fun _ -> true) ~depth prog ~goal:g (gid[@trace]) ~on:keys =
   let pdiff = local_prog prog in
   let pdiff = List.filter filter_ctx pdiff in
-  [%spy "user:suspend" ~gid (uppterm depth [] 0 empty_env) g];
-  let kind = Constraint (make_constraint_def ~gid:(gid[@trace]) depth prog pdiff g) in
+  [%spy "user:suspend" ~rid ~gid (uppterm depth [] 0 empty_env) g];
+  let kind = Constraint (make_constraint_def ~rid ~gid:(gid[@trace]) depth prog pdiff g) in
   CS.declare_new { kind ; blockers = keys }
 ;;
 
@@ -3016,7 +3018,7 @@ let try_fire_rule (gid[@trace]) rule (constraints as orig_constraints) =
 
     (* matching *)
     let m = exec (fun m ->
-      [%spy "dev:CHR:candidate"
+      [%spy "dev:CHR:candidate" ~rid
         (pplist (fun f x ->
            let dto,dt,t = x in
            Format.fprintf f "(lives-at:%d, to-be-lifted-to:%d) %a"
@@ -3029,14 +3031,14 @@ let try_fire_rule (gid[@trace]) rule (constraints as orig_constraints) =
       let m = fold_left2i match_context m
         constraints_contexts patterns_contexts in
 
-      [%spy "dev:CHR:matching-assignments"
+      [%spy "dev:CHR:matching-assignments" ~rid
         (pplist (uppterm max_depth [] 0 empty_env) ~boxed:false ",") (Array.to_list env)];
 
       T.to_resume := [];
       assert(!T.new_delayed = []);
       m) Ice.empty_freezer in
 
-    [%spy "dev:CHR:maxdepth" Fmt.pp_print_int max_depth];
+    [%spy "dev:CHR:maxdepth" ~rid Fmt.pp_print_int max_depth];
 
     check_guard ();
 
@@ -3058,11 +3060,11 @@ let try_fire_rule (gid[@trace]) rule (constraints as orig_constraints) =
           (App(Global_symbols.implc,context,[conclusion])) env m in
       (* TODO: check things make sense in heigen *)
       let prog = initial_program in
-      Some (make_constraint_def ~gid:((make_subgoal_id gid (eigen,conclusion))[@trace]) eigen prog [] conclusion) in
-    [%spy "dev:CHR:try-rule:success"];
+      Some (make_constraint_def ~rid ~gid:((make_subgoal_id gid (eigen,conclusion))[@trace]) eigen prog [] conclusion) in
+    [%spy "dev:CHR:try-rule:success" ~rid];
     Some(rule_name, constraints_to_remove, new_goals, Ice.assignments m)
   with NoMatch ->
-    [%spy "dev:CHR:try-rule:fail"];
+    [%spy "dev:CHR:try-rule:fail" ~rid];
     None
   in
   destroy ();
@@ -3071,7 +3073,7 @@ let try_fire_rule (gid[@trace]) rule (constraints as orig_constraints) =
 
 let resumption to_be_resumed_rev =
   List.map (fun { cdepth = d; prog; conclusion = g; cgid = gid [@trace] } ->
-    [%spy "user:resume" ~gid (uppterm d [] d empty_env) g];
+    [%spy "user:resume" ~rid ~gid (uppterm d [] d empty_env) g];
     (repack_goal[@inlined]) ~depth:d (gid[@trace]) prog g)
   (List.rev to_be_resumed_rev)
 
@@ -3131,12 +3133,12 @@ let propagation () =
               * was generated before the removal *)
              if outdated constraints then ()
              else begin
-               [%spy "user:CHR:try-rule-on" ~gid: active.cgid UUID.pp active.cgid];
+               [%spy "user:CHR:try-rule-on" ~rid ~gid: active.cgid UUID.pp active.cgid];
                match try_fire_rule (active.cgid[@trace]) rule constraints with
-               | None -> [%spy "user:CHR:rule-failed"]
+               | None -> [%spy "user:CHR:rule-failed" ~rid ]
                | Some (rule_name, to_be_removed, to_be_added, assignments) ->
-                   [%spy "user:CHR:rule-fired" ~gid: (active.cgid[@trace]) pp_string rule_name];
-                   [%spyl "user:CHR:rule-remove-constraints" ~gid: (active.cgid[@trace]) (fun fmt { cgid } -> UUID.pp fmt cgid) to_be_removed];
+                   [%spy "user:CHR:rule-fired" ~rid ~gid: (active.cgid[@trace]) pp_string rule_name];
+                   [%spyl "user:CHR:rule-remove-constraints" ~rid ~gid: (active.cgid[@trace]) (fun fmt { cgid } -> UUID.pp fmt cgid) to_be_removed];
                    removed := to_be_removed @ !removed;
                    List.iter CS.remove_old_constraint to_be_removed;
                    List.iter (fun (r,_lvl,t) -> r @:= t) assignments;
@@ -3170,10 +3172,10 @@ let pred_of g =
   | Builtin(c,_) -> Some(C.show c)
   | _ -> None
 
-let pp_candidate fmt { loc } =
+let pp_candidate ~depth ~k fmt ({ loc } as cl) =
   match loc with
   | Some x -> Loc.pp fmt x
-  | None -> Fmt.fprintf fmt "context"
+  | None -> Fmt.fprintf fmt "hypothetical clause: %a" (ppclause ~depth ~hd:k) cl
 
 (* The block of recursive functions spares the allocation of a Some/None
  * at each iteration in order to know if one needs to backtrack or continue *)
@@ -3182,7 +3184,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
      depth >= 0 is the number of variables in the context. *)
   let rec run depth p g (gid[@trace]) gs (next : frame) alts lvl =
     [%cur_pred (pred_of g)];
-    [%trace "run" begin
+    [%trace "run" ~rid begin
 
     begin match !steps_bound with
     | Some bound ->
@@ -3192,71 +3194,71 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
 
  match resume_all () with
  | None ->
-    [%spy "user:rule" ~gid pp_string "fail-resume"];
+    [%spy "user:rule" ~rid ~gid pp_string "fail-resume"];
     [%tcall next_alt alts]
  | Some ({ depth = ndepth; program; goal; gid = ngid [@trace] } :: goals) ->
-    [%spy "user:rule" ~gid pp_string "resume"];
+    [%spy "user:rule" ~rid ~gid pp_string "resume"];
     [%tcall run ndepth program goal (ngid[@trace]) (goals @ (repack_goal[@inlined]) (gid[@trace]) ~depth p g :: gs) next alts lvl]
  | Some [] ->
-    [%spy "user:curgoal" ~gid (uppterm depth [] 0 empty_env) g];
+    [%spy "user:curgoal" ~rid ~gid (uppterm depth [] 0 empty_env) g];
     match g with
-    | Builtin(c,[]) when c == Global_symbols.cutc -> [%spy "user:rule" ~gid pp_string "cut"];
+    | Builtin(c,[]) when c == Global_symbols.cutc -> [%spy "user:rule" ~rid ~gid pp_string "cut"];
        [%tcall cut (gid[@trace]) gs next alts lvl]
-    | App(c, g, gs') when c == Global_symbols.andc -> [%spy "user:rule" ~gid pp_string "and"];
+    | App(c, g, gs') when c == Global_symbols.andc -> [%spy "user:rule" ~rid ~gid pp_string "and"];
        let gs' = List.map (fun x -> (make_subgoal[@inlined]) ~depth (gid[@trace]) p x) gs' in
        let gid[@trace] = make_subgoal_id gid ((depth,g)[@trace]) in
        [%tcall run depth p g (gid[@trace]) (gs' @ gs) next alts lvl]
-    | Cons (g,gs') -> [%spy "user:rule" ~gid pp_string "and"];
+    | Cons (g,gs') -> [%spy "user:rule" ~rid ~gid pp_string "and"];
        let gs' = (make_subgoal[@inlined]) ~depth (gid[@trace]) p gs' in
        let gid[@trace] = make_subgoal_id gid ((depth,g)[@trace]) in
        [%tcall run depth p g (gid[@trace]) (gs' :: gs) next alts lvl]
-    | Nil -> [%spy "user:rule" ~gid pp_string "true"];
+    | Nil -> [%spy "user:rule" ~rid ~gid pp_string "true"];
       begin match gs with
       | [] -> [%tcall pop_andl alts next lvl]
       | { depth; program; goal; gid = gid [@trace] } :: gs ->
         [%tcall run depth program goal (gid[@trace]) gs next alts lvl]
       end
-    | App(c, g2, [g1]) when c == Global_symbols.rimplc -> [%spy "user:rule" ~gid pp_string "implication"];
+    | App(c, g2, [g1]) when c == Global_symbols.rimplc -> [%spy "user:rule" ~rid ~gid pp_string "implication"];
        let clauses, pdiff, lcs = clausify p ~depth g1 in
        let g2 = hmove ~from:depth ~to_:(depth+lcs) g2 in
        let gid[@trace] = make_subgoal_id gid ((depth,g2)[@trace]) in
        [%tcall run (depth+lcs) (add_clauses ~depth clauses pdiff p) g2 (gid[@trace]) gs next alts lvl]
-    | App(c, g1, [g2]) when c == Global_symbols.implc -> [%spy "user:rule" ~gid pp_string "implication"];
+    | App(c, g1, [g2]) when c == Global_symbols.implc -> [%spy "user:rule" ~rid ~gid pp_string "implication"];
        let clauses, pdiff, lcs = clausify p ~depth g1 in
        let g2 = hmove ~from:depth ~to_:(depth+lcs) g2 in
        let gid[@trace] = make_subgoal_id gid ((depth,g2)[@trace]) in
        [%tcall run (depth+lcs) (add_clauses ~depth clauses pdiff p) g2 (gid[@trace]) gs next alts lvl]
-    | App(c, arg, []) when c == Global_symbols.pic -> [%spy "user:rule" ~gid pp_string "pi"];
+    | App(c, arg, []) when c == Global_symbols.pic -> [%spy "user:rule" ~rid ~gid pp_string "pi"];
        let f = get_lambda_body ~depth arg in
        let gid[@trace] = make_subgoal_id gid ((depth+1,f)[@trace]) in
        [%tcall run (depth+1) p f (gid[@trace]) gs next alts lvl]
-    | App(c, arg, []) when c == Global_symbols.sigmac -> [%spy "user:rule" ~gid pp_string "sigma"];
+    | App(c, arg, []) when c == Global_symbols.sigmac -> [%spy "user:rule" ~rid ~gid pp_string "sigma"];
        let f = get_lambda_body ~depth arg in
        let v = UVar(oref C.dummy, depth, 0) in
        let fv = subst depth [v] f in
        let gid[@trace] = make_subgoal_id gid ((depth,fv)[@trace]) in
        [%tcall run depth p fv (gid[@trace]) gs next alts lvl]
-    | UVar ({ contents = g }, from, args) when g != C.dummy -> [%spy "user:rule" ~gid pp_string "deref"];
+    | UVar ({ contents = g }, from, args) when g != C.dummy -> [%spy "user:rule" ~rid ~gid pp_string "deref"];
        [%tcall run depth p (deref_uv ~from ~to_:depth args g) (gid[@trace]) gs next alts lvl]
-    | AppUVar ({contents = t}, from, args) when t != C.dummy -> [%spy "user:rule" ~gid pp_string "deref"];
+    | AppUVar ({contents = t}, from, args) when t != C.dummy -> [%spy "user:rule" ~rid ~gid pp_string "deref"];
        [%tcall run depth p (deref_appuv ~from ~to_:depth args t) (gid[@trace]) gs next alts lvl]
-    | Const k -> [%spy "user:rule" ~gid pp_string "backchain"];
+    | Const k -> [%spy "user:rule" ~rid ~gid pp_string "backchain"];
        let clauses = get_clauses depth k g p in
-       [%spyl "user:candidates" ~gid pp_candidate clauses];
+       [%spyl "user:candidates" ~rid ~gid (pp_candidate ~depth ~k) clauses];
        [%tcall backchain depth p (k, C.dummy, [], gs) (gid[@trace]) next alts lvl clauses]
-    | App (k,x,xs) -> [%spy "user:rule" ~gid pp_string "backchain"];
+    | App (k,x,xs) -> [%spy "user:rule" ~rid ~gid pp_string "backchain"];
        let clauses = get_clauses depth k g p in
-       [%spyl "user:candidates" ~gid pp_candidate clauses];
+       [%spyl "user:candidates" ~rid ~gid (pp_candidate ~depth ~k) clauses];
        [%tcall backchain depth p (k, x, xs, gs) (gid[@trace]) next alts lvl clauses]
-    | Builtin(c, args) -> [%spy "user:rule" ~gid pp_string "builtin"];
+    | Builtin(c, args) -> [%spy "user:rule" ~rid ~gid pp_string "builtin"];
        begin match Constraints.exect_builtin_predicate c ~depth p (gid[@trace]) args with
        | gs' ->
-          [%spy "user:builtin" ~gid pp_string "success"];
+          [%spy "user:builtin" ~rid ~gid pp_string "success"];
           (match List.map (fun g -> (make_subgoal[@inlined]) (gid[@trace]) ~depth p g) gs' @ gs with
           | [] -> [%tcall pop_andl alts next lvl]
           | { depth; program; goal; gid = gid [@trace] } :: gs -> [%tcall run depth program goal (gid[@trace]) gs next alts lvl])
        | exception No_clause ->
-          [%spy "user:builtin" ~gid pp_string "fail"];
+          [%spy "user:builtin" ~rid ~gid pp_string "fail"];
           [%tcall next_alt alts]
        end
     | Arg _ | AppArg _ -> anomaly "The goal is not a heap term"
@@ -3267,12 +3269,12 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
   end]
 
   (* We pack some arguments into a tuple otherwise we consume too much stack *)
-  and backchain depth p (k, arg, args_of_g, gs) (gid[@trace]) next alts lvl cp = [%trace "select" begin
+  and backchain depth p (k, arg, args_of_g, gs) (gid[@trace]) next alts lvl cp = [%trace "select" ~rid begin
     match cp with
-      | [] -> [%spy "user:select" ~gid pp_string "fail"];
+      | [] -> [%spy "user:select" ~rid ~gid pp_string "fail"];
         [%tcall next_alt alts]
       | { depth = c_depth; mode = c_mode; args = c_args; hyps = c_hyps; vars = c_vars; loc } :: cs ->
-        [%spy "user:select" ~gid (pp_option Loc.pp) loc (ppclause ~depth ~hd:k) { depth = c_depth; mode = c_mode; args = c_args; hyps = c_hyps; vars = c_vars; loc }];
+        [%spy "user:select" ~rid ~gid (pp_option Loc.pp) loc (ppclause ~depth ~hd:k) { depth = c_depth; mode = c_mode; args = c_args; hyps = c_hyps; vars = c_vars; loc }];
         let old_trail = !T.trail in
         T.last_call := alts == noalts && cs == [];
         let env = Array.make c_vars C.dummy in
@@ -3313,7 +3315,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
     let rec prune ({ agid = agid[@trace]; clauses; adepth = depth; agoal_hd = hd } as alts) =
       if alts == lvl then alts
       else begin
-        [%spy "user:cut" ~gid: agid (pplist (ppclause ~depth ~hd) " | ") clauses];
+        [%spy "user:cut" ~rid ~gid: agid (pplist (ppclause ~depth ~hd) " | ") clauses];
         prune alts.next
       end in
     let alts = prune alts in
@@ -3351,7 +3353,7 @@ end;*)
      | { kind = Unification { adepth; bdepth; env; a; b; matching } } as dg :: rest ->
          CS.remove_old dg;
          CS.to_resume := rest;
-         [%spy "user:resume-unif" (fun fmt () -> Fmt.fprintf fmt
+         [%spy "user:resume-unif" ~rid (fun fmt () -> Fmt.fprintf fmt
            "@[<hov 2>^%d:%a@ == ^%d:%a@]\n%!"
            adepth (uppterm adepth [] 0 empty_env) a
            bdepth (uppterm bdepth [] adepth env) b) ()];
@@ -3384,7 +3386,6 @@ end;*)
     backchain depth p (k, arg, args, gs) (gid[@trace]) next alts lvl clauses
   in
 
-
  (* Finally the runtime *)
  fun ?max_steps ?(delay_outside_fragment = false) {
     compiled_program;
@@ -3411,12 +3412,14 @@ end;*)
   set CS.state initial_runtime_state;
   set C.table symbol_table;
   set FFI.builtins builtins;
+  set rid !max_runtime_id;
   let search = exec (fun () ->
-     [%spy "dev:trail:init" (fun fmt () -> T.print_trail fmt) ()];
+     [%spy "dev:trail:init" ~rid (fun fmt () -> T.print_trail fmt) ()];
      T.initial_trail := !T.trail;
      run initial_depth !orig_prolog_program initial_goal ((UUID.make ())[@trace]) [] FNil noalts noalts) in
   let destroy () = exec (fun () -> T.undo ~old_trail:T.empty ()) () in
   let next_solution = exec next_alt in
+  incr max_runtime_id;
   { search; next_solution; destroy; exec; get }
 ;;
 

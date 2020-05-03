@@ -10,8 +10,8 @@
          | K2 x -> [%tcall f x]
          | K2(x,y) ->
             let z = f x in
-            [%spy "z" ~gid ~cond (fun fmt z -> .. z ..) z];
-            [%spyl "z" ~gid ~cond (fun fmt z -> .. z ..) zs];
+            [%spy "z" ~rid ~gid ~cond (fun fmt z -> .. z ..) z];
+            [%spyl "z" ~rid ~gid ~cond (fun fmt z -> .. z ..) zs];
             [%log "K2" "whatever" 37];
             let x[@trace] = ... in e
             let w = { a; b = b[@trace ] } in
@@ -44,26 +44,26 @@ open Ast_builder.Default
 let err ~loc str =
   Location.raise_errorf~loc "%s" str
 
-let trace ~loc name ppfun body = [%expr
+let trace ~rid ~loc name ppfun body = [%expr
   let wall_clock = Unix.gettimeofday () in
-  Trace_ppx_runtime.Runtime.enter [%e name] [%e ppfun];
+  Trace_ppx_runtime.Runtime.enter ~runtime_id:![%e rid] [%e name] [%e ppfun];
   try
     let rc = [%e body] in
     let elapsed = Unix.gettimeofday () -. wall_clock in
-    Trace_ppx_runtime.Runtime.exit [%e name] false None elapsed;
+    Trace_ppx_runtime.Runtime.exit ~runtime_id:![%e rid] [%e name] false None elapsed;
     rc
   with
   | Trace_ppx_runtime.Runtime.TREC_CALL(f,x) ->
       let elapsed = Unix.gettimeofday () -. wall_clock in
-      Trace_ppx_runtime.Runtime.exit [%e name] true None elapsed;
+      Trace_ppx_runtime.Runtime.exit ~runtime_id:![%e rid] [%e name] true None elapsed;
       Obj.obj f (Obj.obj x)
   | e ->
       let elapsed = Unix.gettimeofday () -. wall_clock in
-      Trace_ppx_runtime.Runtime.exit [%e name] false (Some e) elapsed;
+      Trace_ppx_runtime.Runtime.exit ~runtime_id:![%e rid] [%e name] false (Some e) elapsed;
       raise e
 ]
 
-let spy ~loc err ?(cond=[%expr true]) ?gid name pp =
+let spy ~loc err ?(cond=[%expr true]) ~rid ?gid name pp =
   let ppl =
     let rec aux = function
       | [] -> [%expr []]
@@ -72,10 +72,10 @@ let spy ~loc err ?(cond=[%expr true]) ?gid name pp =
       in
     aux pp in
   match gid with
-  | None -> [%expr if [%e cond] then Trace_ppx_runtime.Runtime.info [%e name] [%e ppl]]
-  | Some gid -> [%expr if [%e cond] then Trace_ppx_runtime.Runtime.info ~goal_id:(Util.UUID.hash [%e gid]) [%e name] [%e ppl]]
+  | None -> [%expr if [%e cond] then Trace_ppx_runtime.Runtime.info ~runtime_id:![%e rid] [%e name] [%e ppl]]
+  | Some gid -> [%expr if [%e cond] then Trace_ppx_runtime.Runtime.info ~runtime_id:![%e rid] ~goal_id:(Util.UUID.hash [%e gid]) [%e name] [%e ppl]]
 
-let spyl ~loc err ?(cond=[%expr true]) ?gid name pp =
+let spyl ~loc err ?(cond=[%expr true]) ~rid ?gid name pp =
   let ppl =
     let rec aux = function
       | [] -> [%expr []]
@@ -84,8 +84,8 @@ let spyl ~loc err ?(cond=[%expr true]) ?gid name pp =
       in
     aux pp in
   match gid with
-  | None -> [%expr if [%e cond] then Trace_ppx_runtime.Runtime.info [%e name] [%e ppl]]
-  | Some gid -> [%expr if [%e cond] then Trace_ppx_runtime.Runtime.info ~goal_id:(Util.UUID.hash [%e gid]) [%e name] [%e ppl]]
+  | None -> [%expr if [%e cond] then Trace_ppx_runtime.Runtime.info ~runtime_id:![%e rid] [%e name] [%e ppl]]
+  | Some gid -> [%expr if [%e cond] then Trace_ppx_runtime.Runtime.info ~runtime_id:![%e rid] ~goal_id:(Util.UUID.hash [%e gid]) [%e name] [%e ppl]]
 
 let log ~loc name key data =
   [%expr Trace_ppx_runtime.Runtime.log [%e name] [%e key] [%e data]]
@@ -188,6 +188,7 @@ let is_string_literal = function
   | _ -> false
 
 let is_gid lbl = lbl = Labelled "gid"
+let is_rid lbl = lbl = Labelled "rid"
 let is_cond lbl = lbl = Labelled "cond"
 let pull f l =
   let rec pull acc = function
@@ -202,7 +203,11 @@ let spyl_expand_function ~loc ~path:_ = function
   | { pexp_desc = Pexp_apply(name, args); _ } when is_string_literal name ->
         let cond, args = pull is_cond args in
         let gid, args = pull is_gid args in
-        if !enabled then spyl ~loc err_spy ?cond ?gid name (List.map snd args)
+        let rid, args = pull is_rid args in
+        if !enabled then
+          match rid with
+          | Some rid -> spyl ~loc err_spy ?cond ~rid ?gid name (List.map snd args)
+          | None -> err_spy ~loc ()
         else [%expr ()]
   | _ -> err_spy ~loc ()
 
@@ -216,13 +221,14 @@ let spyl_extension =
 let spyl_rule = Context_free.Rule.extension spyl_extension
 
 let spy_expand_function ~loc ~path:_ = function
-  | name when is_string_literal name ->
-        if !enabled then spy ~loc err_spy name []
-        else [%expr ()]
   | { pexp_desc = Pexp_apply(name, args); _ } when is_string_literal name ->
         let cond, args = pull is_cond args in
         let gid, args = pull is_gid args in
-        if !enabled then spy ~loc err_spy ?cond ?gid name (List.map snd args)
+        let rid, args = pull is_rid args in
+        if !enabled then
+          match rid with
+          | Some rid -> spy ~loc err_spy ?cond ?gid ~rid name (List.map snd args)
+          | None -> err_spy ~loc ()
         else [%expr ()]
   | _ -> err_spy ~loc ()
 
@@ -257,18 +263,22 @@ let tcall_rule = Context_free.Rule.extension tcall_extension
 (* ----------------------------------------------------------------- *)
 
 let trace_expand_function ~loc ~path:_ = function
-   |  [%expr ([%e? name] [%e? code]) ] ->
-        if !enabled then trace ~loc name [%expr fun _ -> ()] code
-        else code
-   |  [%expr ([%e? name] [%e? pp] [%e? code]) ] ->
-        let pp =
-          match pp with
-          | { pexp_desc = Pexp_apply(hd,args); _ } ->
-              [%expr fun fmt -> [%e eapply ~loc [%expr Format.fprintf fmt] (hd :: List.map snd args)]]
-          | x -> x in
-        if !enabled then trace ~loc name pp code
-        else code
-   | _ -> err ~loc "use: [%trace name pp code]"
+   | { pexp_desc = Pexp_apply (name,args); _ } when !enabled ->
+        let rid, args = pull is_rid args in
+        begin match rid, args with
+        | Some rid, [ _, code ] -> trace ~rid ~loc name [%expr fun _ -> ()] code
+        | Some rid, [_, pp; _, code] ->
+          let pp = match pp with
+            | { pexp_desc = Pexp_apply(hd,args); _ } ->
+                [%expr fun fmt -> [%e eapply ~loc [%expr Format.fprintf fmt] (hd :: List.map snd args)]]
+            | x -> x in
+          trace ~rid ~loc name pp code
+        | _ -> err ~loc "use: [%trace ~rid name pp code]"
+        end
+   | { pexp_desc = Pexp_apply (_,args); _ } ->
+       let _, code = List.hd (List.rev args) in
+       code
+   | _ -> err ~loc "use: [%trace ~rid name pp code]"
 
 let trace_extension =
   Extension.declare

@@ -22,6 +22,7 @@ let cur_pred = ref None
 type message_kind = Start | Stop of { cause : string; time : float } | Info
 type j = J : (F.formatter -> 'a -> unit) * 'a -> j
 type message = {
+  runtime_id : int;
   goal_id : int;
   kind : message_kind;
   name : string;
@@ -93,7 +94,7 @@ let print_perf () =
     F.fprintf fmt "%s\n" (String.make 80 '-');
     StrMap.iter (fun _ t -> print_tree fmt "run" t 0) stack;
     F.pp_print_flush fmt () in
-  !printer { kind = Info; goal_id = 0; name = "perf"; step = 0; payload = [J((fun fmt () -> payload fmt),())] }
+  !printer { runtime_id = 0; kind = Info; goal_id = 0; name = "perf"; step = 0; payload = [J((fun fmt () -> payload fmt),())] }
 
 let () = at_exit (fun () -> if !collect_perf then print_perf ())
 
@@ -144,17 +145,17 @@ let incr_cur_step k =
 
 end
 
-let enter k payload =
+let enter ~runtime_id k payload =
   Trace.incr_cur_step k;
   if Trace.condition k then begin
     Perf.collect_perf_enter k;
     if not !trace_noprint then
-      !printer { goal_id = 0; name = k; step = Trace.get_cur_step k; kind = Start; payload = [J((fun fmt () -> payload fmt),())] }
+      !printer { runtime_id; goal_id = 0; name = k; step = Trace.get_cur_step k; kind = Start; payload = [J((fun fmt () -> payload fmt),())] }
   end
 
-let info ?(goal_id=0) k payload =
+let info ~runtime_id ?(goal_id=0) k payload =
  if not !trace_noprint && Trace.condition k then
-   !printer { goal_id ; name = k; step = Trace.get_cur_step k; kind = Info; payload }
+   !printer { runtime_id; goal_id ; name = k; step = Trace.get_cur_step k; kind = Info; payload }
 
 
 exception TREC_CALL of Obj.t * Obj.t (* ('a -> 'b) * 'a *)
@@ -164,12 +165,12 @@ let pr_exc = function
   | OK -> "ok"
   | e ->"error: " ^Printexc.to_string e
 
-let exit k tailcall e time =
+let exit ~runtime_id k tailcall e time =
   let e = match e with None -> OK | Some x -> x in
   if Trace.condition k then begin
     Perf.collect_perf_exit time;
     if not !trace_noprint then
-      !printer { goal_id = 0; name = k; step = Trace.get_cur_step k; kind = Stop { cause = (if tailcall then "->" else pr_exc e); time }; payload = [J((fun _ _ -> ()),())] }
+      !printer { runtime_id; goal_id = 0; name = k; step = Trace.get_cur_step k; kind = Stop { cause = (if tailcall then "->" else pr_exc e); time }; payload = [J((fun _ _ -> ()),())] }
   end
 
 (* Json *)
@@ -227,10 +228,11 @@ let pp_kind fmt = function
   | Info -> pp_a fmt [J(pp_s,"Info")]
   | Stop { cause; time } -> pp_a fmt [J(pp_s,"Stop");J(pp_s,cause);J(pp_f,time)]
 
-let print_json fmt  = (); fun { goal_id; kind; name; step; payload } ->
+let print_json fmt  = (); fun { runtime_id; goal_id; kind; name; step; payload } ->
   pp_d fmt [
     "kind", J(pp_kind,kind);
     "goal_id", J(pp_i,goal_id);
+    "runtime_id", J(pp_i,runtime_id);
     "name", J(pp_s,name);
     "step", J(pp_i,step);
     "payload", J(pp_as, payload)
@@ -245,19 +247,19 @@ let set_tty_formatter_maxcols i = tty_formatter_maxcols := i
 let set_tty_formatter_maxbox i = tty_formatter_maxbox := i
 
 let pplist ppelem f l =
-    F.fprintf f "@[<hov>";
+    F.fprintf f "@[<v>";
     List.iter (fun x -> F.fprintf f "%a%s@," ppelem x " ") l;
     F.fprintf f "@]"
 ;;
 
-let print_tty fmt = (); fun { goal_id = _; kind; name; step; payload } ->
+let print_tty fmt = (); fun { runtime_id; goal_id; kind; name; step; payload } ->
   match kind with
   | Start ->
     F.fprintf fmt "%s %d {{{@[<hov1> %a@]\n%!" name step (pplist pp_j) payload
   | Stop { cause; time } ->
     F.fprintf fmt "}}} %s  (%.3fs)\n%!" cause time
   | Info ->
-    F.fprintf fmt "  %s =@[<hov1> %a@]\n%!" name (pplist pp_j) payload
+    F.fprintf fmt "  rid:%d step:%d gid:%d %s =@[<hov1> %a@]\n%!" runtime_id step goal_id name (pplist pp_j) payload
 
 let () = printer := print_tty F.err_formatter
 
@@ -284,7 +286,7 @@ let () =
       List.iter (fun (name,key,step,value) ->
         !printer {
            kind = Info; name = name; step = step;
-           goal_id = 0; payload = [J((fun fmt () ->
+           goal_id = 0; runtime_id = 0; payload = [J((fun fmt () ->
              F.fprintf fmt "%s = %d" key value),())] })
       !logs
     end)
@@ -292,7 +294,7 @@ let () =
 let usage = {|
 Tracing options can be used to debug your programs and Elpi as well.
 A sensible set of options to debug your programs is
-  -trace-on -trace-at 1 9999 -trace-only user
+  -trace-on -trace-at 1 9999 -trace-only '\(run\|select\|user:\)'
 Tracing options:
   -trace-at FNAME START STOP  print trace between call START
     and STOP of function FNAME (FNAME can be omitted, default is run)

@@ -1,4 +1,4 @@
-(*25823e968f78a65500da52de3f79f1aeb00d2b5a *src/runtime_trace_on.ml --cookie elpi_trace="true"*)
+(*93c8b7e123ddd0582844b078d87665e8bed5dc00 *src/runtime_trace_on.ml --cookie elpi_trace="true"*)
 #1 "src/runtime_trace_on.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -318,6 +318,7 @@ module Pp :
     let pp_constant = C.pp
   end 
 open Pp
+let (rid, max_runtime_id) = ((Fork.new_local 0), (ref 0))
 let auxsg = ref []
 let get_auxsg sg l =
   let rec aux i =
@@ -449,7 +450,7 @@ module ConstraintStoreAndTrail :
     let trail_assignment x =
       if true
       then
-        Trace_ppx_runtime.Runtime.info "dev:trail:assign"
+        Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid) "dev:trail:assign"
           [Trace_ppx_runtime.Runtime.J (Fmt.pp_print_bool, (!last_call));
           Trace_ppx_runtime.Runtime.J (pp_trail_item, (Assignement x))];
       if not (!last_call) then trail := ((Assignement x) :: (!trail))
@@ -457,7 +458,8 @@ module ConstraintStoreAndTrail :
     let trail_stuck_goal_addition x =
       if true
       then
-        Trace_ppx_runtime.Runtime.info "dev:trail:add-constraint"
+        Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+          "dev:trail:add-constraint"
           [Trace_ppx_runtime.Runtime.J (Fmt.pp_print_bool, (!last_call));
           Trace_ppx_runtime.Runtime.J (pp_trail_item, (StuckGoalAddition x))];
       if not (!last_call) then trail := ((StuckGoalAddition x) :: (!trail))
@@ -465,7 +467,8 @@ module ConstraintStoreAndTrail :
     let trail_stuck_goal_removal x =
       if true
       then
-        Trace_ppx_runtime.Runtime.info "dev:trail:remove-constraint"
+        Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+          "dev:trail:remove-constraint"
           [Trace_ppx_runtime.Runtime.J (Fmt.pp_print_bool, (!last_call));
           Trace_ppx_runtime.Runtime.J (pp_trail_item, (StuckGoalRemoval x))];
       if not (!last_call) then trail := ((StuckGoalRemoval x) :: (!trail))
@@ -473,14 +476,16 @@ module ConstraintStoreAndTrail :
     let remove ({ blockers } as sg) =
       if true
       then
-        Trace_ppx_runtime.Runtime.info "dev:constraint:remove"
+        Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+          "dev:constraint:remove"
           [Trace_ppx_runtime.Runtime.J (pp_stuck_goal, sg)];
       delayed := (remove_from_list sg (!delayed));
       List.iter (fun r -> r.rest <- (remove_from_list sg r.rest)) blockers
     let add ({ blockers } as sg) =
       if true
       then
-        Trace_ppx_runtime.Runtime.info "dev:constraint:add"
+        Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+          "dev:constraint:add"
           [Trace_ppx_runtime.Runtime.J (pp_stuck_goal, sg)];
       auxsg := (sg :: (!auxsg));
       delayed := (sg :: (!delayed));
@@ -528,7 +533,7 @@ module ConstraintStoreAndTrail :
       new_delayed := [];
       if true
       then
-        Trace_ppx_runtime.Runtime.info "dev:trail:undo"
+        Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid) "dev:trail:undo"
           [Trace_ppx_runtime.Runtime.J (pp_trail, (!trail));
           Trace_ppx_runtime.Runtime.J (pp_string, "->");
           Trace_ppx_runtime.Runtime.J (pp_trail, old_trail)];
@@ -588,7 +593,8 @@ let (@:=) r v =
   then
     (if true
      then
-       Trace_ppx_runtime.Runtime.info "user:assign(resume)"
+       Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+         "user:assign(resume)"
          [Trace_ppx_runtime.Runtime.J
             (((fun fmt ->
                  fun l ->
@@ -690,13 +696,14 @@ module HO :
     let expand_uv ~depth  r ~lvl  ~ano  =
       if true
       then
-        Trace_ppx_runtime.Runtime.info "dev:expand_uv:in"
+        Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid) "dev:expand_uv:in"
           [Trace_ppx_runtime.Runtime.J
              ((uppterm depth [] 0 empty_env), (UVar (r, lvl, ano)))];
       (let (t, ass) as rc = expand_uv r ~lvl ~ano in
        if true
        then
-         Trace_ppx_runtime.Runtime.info "dev:expand_uv:out"
+         Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+           "dev:expand_uv:out"
            [Trace_ppx_runtime.Runtime.J ((uppterm depth [] 0 empty_env), t);
            Trace_ppx_runtime.Runtime.J
              (((fun fmt ->
@@ -722,13 +729,15 @@ module HO :
     let expand_appuv ~depth  r ~lvl  ~args  =
       if true
       then
-        Trace_ppx_runtime.Runtime.info "dev:expand_appuv:in"
+        Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+          "dev:expand_appuv:in"
           [Trace_ppx_runtime.Runtime.J
              ((uppterm depth [] 0 empty_env), (AppUVar (r, lvl, args)))];
       (let (t, ass) as rc = expand_appuv r ~lvl ~args in
        if true
        then
-         Trace_ppx_runtime.Runtime.info "dev:expand_appuv:out"
+         Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+           "dev:expand_appuv:out"
            [Trace_ppx_runtime.Runtime.J ((uppterm depth [] 0 empty_env), t);
            Trace_ppx_runtime.Runtime.J
              (((fun fmt ->
@@ -748,7 +757,7 @@ module HO :
         else
           (let rec maux e depth x =
              let wall_clock = Unix.gettimeofday () in
-             Trace_ppx_runtime.Runtime.enter "move"
+             Trace_ppx_runtime.Runtime.enter ~runtime_id:(!rid) "move"
                (fun fmt ->
                   Format.fprintf fmt "adepth:%d depth:%d from:%d to:%d x:%a"
                     argsdepth depth from to_
@@ -868,7 +877,7 @@ module HO :
                                  if true
                                  then
                                    Trace_ppx_runtime.Runtime.info
-                                     "user:assign(expand)"
+                                     ~runtime_id:(!rid) "user:assign(expand)"
                                      [Trace_ppx_runtime.Runtime.J
                                         (((fun fmt ->
                                              fun () ->
@@ -936,6 +945,7 @@ module HO :
                                 (if true
                                  then
                                    Trace_ppx_runtime.Runtime.info
+                                     ~runtime_id:(!rid)
                                      "user:assign(restrict)"
                                      [Trace_ppx_runtime.Runtime.J
                                         (((fun fmt ->
@@ -956,41 +966,48 @@ module HO :
                                 (ppterm depth [] argsdepth e) x delta;
                               anomaly (Fmt.flush_str_formatter ()))) in
                 let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-                Trace_ppx_runtime.Runtime.exit "move" false None elapsed; rc
+                Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "move"
+                  false None elapsed;
+                rc
               with
               | Trace_ppx_runtime.Runtime.TREC_CALL (f, x) ->
                   let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-                  (Trace_ppx_runtime.Runtime.exit "move" true None elapsed;
+                  (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "move"
+                     true None elapsed;
                    Obj.obj f (Obj.obj x))
               | e ->
                   let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-                  (Trace_ppx_runtime.Runtime.exit "move" false (Some e)
-                     elapsed;
+                  (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "move"
+                     false (Some e) elapsed;
                    raise e)) in
            maux e 0 t) in
       if true
       then
-        Trace_ppx_runtime.Runtime.info "dev:move:out"
+        Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid) "dev:move:out"
           [Trace_ppx_runtime.Runtime.J ((ppterm to_ [] argsdepth e), rc)];
       rc
     and hmove ?avoid  ~from  ~to_  t =
       let wall_clock = Unix.gettimeofday () in
-      Trace_ppx_runtime.Runtime.enter "hmove"
+      Trace_ppx_runtime.Runtime.enter ~runtime_id:(!rid) "hmove"
         (fun fmt ->
            Format.fprintf fmt "@[<hov 1>from:%d@ to:%d@ %a@]" from to_
              (uppterm from [] 0 empty_env) t);
       (try
          let rc = move ?avoid ~adepth:0 ~from ~to_ empty_env t in
          let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-         Trace_ppx_runtime.Runtime.exit "hmove" false None elapsed; rc
+         Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "hmove" false None
+           elapsed;
+         rc
        with
        | Trace_ppx_runtime.Runtime.TREC_CALL (f, x) ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace_ppx_runtime.Runtime.exit "hmove" true None elapsed;
+           (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "hmove" true
+              None elapsed;
             Obj.obj f (Obj.obj x))
        | e ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace_ppx_runtime.Runtime.exit "hmove" false (Some e) elapsed;
+           (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "hmove" false
+              (Some e) elapsed;
             raise e))
     and decrease_depth r ~from  ~to_  argsno =
       if from <= to_
@@ -1002,7 +1019,7 @@ module HO :
          r @:= newvar; (newr, to_, newargsno))
     and subst fromdepth ts t =
       let wall_clock = Unix.gettimeofday () in
-      Trace_ppx_runtime.Runtime.enter "subst"
+      Trace_ppx_runtime.Runtime.enter ~runtime_id:(!rid) "subst"
         (fun fmt ->
            Format.fprintf fmt "@[<hov 2>fromdepth:%d t: %a@ ts: %a@]"
              fromdepth (uppterm fromdepth [] 0 empty_env) t
@@ -1016,7 +1033,8 @@ module HO :
               let fromdepthlen = fromdepth + len in
               let rec aux depth tt =
                 let wall_clock = Unix.gettimeofday () in
-                Trace_ppx_runtime.Runtime.enter "subst-aux"
+                Trace_ppx_runtime.Runtime.enter ~runtime_id:(!rid)
+                  "subst-aux"
                   (fun fmt ->
                      Format.fprintf fmt "@[<hov 2>t: %a@]"
                        (uppterm (fromdepth + 1) [] 0 empty_env) tt);
@@ -1098,35 +1116,39 @@ module HO :
                      | Lam t -> Lam (aux (depth + 1) t)
                      | CData _ as x -> x in
                    let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-                   Trace_ppx_runtime.Runtime.exit "subst-aux" false None
-                     elapsed;
+                   Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid)
+                     "subst-aux" false None elapsed;
                    rc
                  with
                  | Trace_ppx_runtime.Runtime.TREC_CALL (f, x) ->
                      let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-                     (Trace_ppx_runtime.Runtime.exit "subst-aux" true None
-                        elapsed;
+                     (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid)
+                        "subst-aux" true None elapsed;
                       Obj.obj f (Obj.obj x))
                  | e ->
                      let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-                     (Trace_ppx_runtime.Runtime.exit "subst-aux" false
-                        (Some e) elapsed;
+                     (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid)
+                        "subst-aux" false (Some e) elapsed;
                       raise e)) in
               aux fromdepthlen t) in
          let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-         Trace_ppx_runtime.Runtime.exit "subst" false None elapsed; rc
+         Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "subst" false None
+           elapsed;
+         rc
        with
        | Trace_ppx_runtime.Runtime.TREC_CALL (f, x) ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace_ppx_runtime.Runtime.exit "subst" true None elapsed;
+           (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "subst" true
+              None elapsed;
             Obj.obj f (Obj.obj x))
        | e ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace_ppx_runtime.Runtime.exit "subst" false (Some e) elapsed;
+           (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "subst" false
+              (Some e) elapsed;
             raise e))
     and beta depth sub t args =
       let wall_clock = Unix.gettimeofday () in
-      Trace_ppx_runtime.Runtime.enter "beta"
+      Trace_ppx_runtime.Runtime.enter ~runtime_id:(!rid) "beta"
         (fun fmt ->
            Format.fprintf fmt "@[<hov 2>subst@ t: %a@ args: %a@]"
              (uppterm (depth + (List.length sub)) [] 0 empty_env) t
@@ -1160,7 +1182,8 @@ module HO :
                let t' = subst depth sub t in
                (if true
                 then
-                  Trace_ppx_runtime.Runtime.info "dev:subst:out"
+                  Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+                    "dev:subst:out"
                     [Trace_ppx_runtime.Runtime.J
                        ((ppterm depth [] 0 empty_env), t')];
                 (match args with
@@ -1188,15 +1211,19 @@ module HO :
                       | Cons _ -> type_error "beta: Cons"
                       | Discard -> type_error "beta: Discard"))) in
          let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-         Trace_ppx_runtime.Runtime.exit "beta" false None elapsed; rc
+         Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "beta" false None
+           elapsed;
+         rc
        with
        | Trace_ppx_runtime.Runtime.TREC_CALL (f, x) ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace_ppx_runtime.Runtime.exit "beta" true None elapsed;
+           (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "beta" true
+              None elapsed;
             Obj.obj f (Obj.obj x))
        | e ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace_ppx_runtime.Runtime.exit "beta" false (Some e) elapsed;
+           (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "beta" false
+              (Some e) elapsed;
             raise e))
     and eat_args depth l t =
       match t with
@@ -1210,7 +1237,7 @@ module HO :
       beta to_ [] (deref_uv ?avoid ~from ~to_ 0 t) args
     and deref_uv ?avoid  ~from  ~to_  args t =
       let wall_clock = Unix.gettimeofday () in
-      Trace_ppx_runtime.Runtime.enter "deref_uv"
+      Trace_ppx_runtime.Runtime.enter ~runtime_id:(!rid) "deref_uv"
         (fun fmt ->
            Format.fprintf fmt "from:%d to:%d %a @@ %d" from to_
              (ppterm from [] 0 empty_env) t args);
@@ -1249,15 +1276,19 @@ module HO :
                  | CData _ -> t
                  | Arg _|AppArg _ -> assert false)) in
          let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-         Trace_ppx_runtime.Runtime.exit "deref_uv" false None elapsed; rc
+         Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "deref_uv" false
+           None elapsed;
+         rc
        with
        | Trace_ppx_runtime.Runtime.TREC_CALL (f, x) ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace_ppx_runtime.Runtime.exit "deref_uv" true None elapsed;
+           (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "deref_uv" true
+              None elapsed;
             Obj.obj f (Obj.obj x))
        | e ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace_ppx_runtime.Runtime.exit "deref_uv" false (Some e) elapsed;
+           (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "deref_uv"
+              false (Some e) elapsed;
             raise e))
     let rec is_flex ~depth  =
       function
@@ -1297,7 +1328,7 @@ module HO :
       let res = is_llam lvl args adepth bdepth depth left e in
       if true
       then
-        Trace_ppx_runtime.Runtime.info "dev:is_llam"
+        Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid) "dev:is_llam"
           [Trace_ppx_runtime.Runtime.J
              (((fun fmt ->
                   fun () ->
@@ -1338,7 +1369,8 @@ module HO :
         let n = cst ?hmove c b delta in
         if true
         then
-          Trace_ppx_runtime.Runtime.info "dev:bind:constant-mapping"
+          Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+            "dev:bind:constant-mapping"
             [Trace_ppx_runtime.Runtime.J
                (((fun fmt ->
                     fun () ->
@@ -1349,7 +1381,7 @@ module HO :
         n in
       let rec bind b delta w t =
         let wall_clock = Unix.gettimeofday () in
-        Trace_ppx_runtime.Runtime.enter "bind"
+        Trace_ppx_runtime.Runtime.enter ~runtime_id:(!rid) "bind"
           (fun fmt ->
              Format.fprintf fmt
                "%b gamma:%d + %a = t:%a a:%d delta:%d d:%d w:%d b:%d" left
@@ -1428,7 +1460,8 @@ module HO :
                    | _ -> assert false in
                  (if true
                   then
-                    Trace_ppx_runtime.Runtime.info "dev:bind:maybe-prune"
+                    Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+                      "dev:bind:maybe-prune"
                       [Trace_ppx_runtime.Runtime.J
                          (((fun fmt ->
                               fun () ->
@@ -1517,21 +1550,25 @@ module HO :
                            mkAppUVar r' lvl args_here)))
                   else mkAppUVar r lvl (List.map (bind b delta w) orig_args)) in
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           Trace_ppx_runtime.Runtime.exit "bind" false None elapsed; rc
+           Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "bind" false
+             None elapsed;
+           rc
          with
          | Trace_ppx_runtime.Runtime.TREC_CALL (f, x) ->
              let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-             (Trace_ppx_runtime.Runtime.exit "bind" true None elapsed;
+             (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "bind" true
+                None elapsed;
               Obj.obj f (Obj.obj x))
          | e ->
              let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-             (Trace_ppx_runtime.Runtime.exit "bind" false (Some e) elapsed;
+             (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "bind" false
+                (Some e) elapsed;
               raise e)) in
       try
         let v = mknLam new_lams (bind b delta 0 t) in
         if true
         then
-          Trace_ppx_runtime.Runtime.info "user:assign(HO)"
+          Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid) "user:assign(HO)"
             [Trace_ppx_runtime.Runtime.J
                (((fun fmt ->
                     fun () ->
@@ -1543,7 +1580,8 @@ module HO :
       | RestrictionFailure ->
           (if true
            then
-             Trace_ppx_runtime.Runtime.info "dev:bind:restriction-failure" [];
+             Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+               "dev:bind:restriction-failure" [];
            false)
     let rec list_to_lp_list =
       function | [] -> Nil | x::xs -> Cons (x, (list_to_lp_list xs))
@@ -1559,7 +1597,7 @@ module HO :
                        ^ "(deprecated, for Teyjus compatibility).")))))
     let rec unif matching depth adepth a bdepth b e =
       let wall_clock = Unix.gettimeofday () in
-      Trace_ppx_runtime.Runtime.enter "unif"
+      Trace_ppx_runtime.Runtime.enter ~runtime_id:(!rid) "unif"
         (fun fmt ->
            Format.fprintf fmt "@[<hov 2>^%d:%a@ =%d%s= ^%d:%a@]%!" adepth
              (ppterm (adepth + depth) [] adepth empty_env) a depth
@@ -1670,7 +1708,8 @@ module HO :
                      let v = hmove ~from:(adepth + depth) ~to_:adepth a in
                      if true
                      then
-                       Trace_ppx_runtime.Runtime.info "user:assign"
+                       Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+                         "user:assign"
                          [Trace_ppx_runtime.Runtime.J
                             (((fun fmt ->
                                  fun () ->
@@ -1696,7 +1735,8 @@ module HO :
                           hmove ~from:(bdepth + depth) ~to_:origdepth a) in
                      if true
                      then
-                       Trace_ppx_runtime.Runtime.info "user:assign"
+                       Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+                         "user:assign"
                          [Trace_ppx_runtime.Runtime.J
                             (((fun fmt ->
                                  fun () ->
@@ -1720,7 +1760,8 @@ module HO :
                           hmove ~from:(adepth + depth) ~to_:origdepth b) in
                      if true
                      then
-                       Trace_ppx_runtime.Runtime.info "user:assign"
+                       Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+                         "user:assign"
                          [Trace_ppx_runtime.Runtime.J
                             (((fun fmt ->
                                  fun () ->
@@ -1735,7 +1776,8 @@ module HO :
                   let v = fst (make_lambdas adepth args) in
                   (if true
                    then
-                     Trace_ppx_runtime.Runtime.info "user:assign"
+                     Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+                       "user:assign"
                        [Trace_ppx_runtime.Runtime.J
                           (((fun fmt ->
                                fun () ->
@@ -1745,7 +1787,8 @@ module HO :
                    e.(i) <- v;
                    if true
                    then
-                     Trace_ppx_runtime.Runtime.info "user:assign"
+                     Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+                       "user:assign"
                        [Trace_ppx_runtime.Runtime.J
                           (((fun fmt ->
                                fun () ->
@@ -1767,7 +1810,8 @@ module HO :
                   let v = fst (make_lambdas origdepth args) in
                   (if true
                    then
-                     Trace_ppx_runtime.Runtime.info "user:assign(simplify)"
+                     Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+                       "user:assign(simplify)"
                        [Trace_ppx_runtime.Runtime.J
                           (((fun fmt ->
                                fun () ->
@@ -1786,7 +1830,8 @@ module HO :
                   let v = fst (make_lambdas origdepth args) in
                   (if true
                    then
-                     Trace_ppx_runtime.Runtime.info "user:assign(simplify)"
+                     Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+                       "user:assign(simplify)"
                        [Trace_ppx_runtime.Runtime.J
                           (((fun fmt ->
                                fun () ->
@@ -1945,26 +1990,30 @@ module HO :
                   unif matching (depth + 1) adepth eta bdepth t e
               | _ -> false) in
          let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-         Trace_ppx_runtime.Runtime.exit "unif" false None elapsed; rc
+         Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "unif" false None
+           elapsed;
+         rc
        with
        | Trace_ppx_runtime.Runtime.TREC_CALL (f, x) ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace_ppx_runtime.Runtime.exit "unif" true None elapsed;
+           (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "unif" true
+              None elapsed;
             Obj.obj f (Obj.obj x))
        | e ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace_ppx_runtime.Runtime.exit "unif" false (Some e) elapsed;
+           (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "unif" false
+              (Some e) elapsed;
             raise e))
     let unif ~matching  ((gid)[@trace ]) adepth e bdepth a b =
       let res = unif matching 0 adepth a bdepth b e in
       if true
       then
-        Trace_ppx_runtime.Runtime.info "dev:unif:out"
+        Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid) "dev:unif:out"
           [Trace_ppx_runtime.Runtime.J (Fmt.pp_print_bool, res)];
       if not res
       then
-        Trace_ppx_runtime.Runtime.info ~goal_id:(Util.UUID.hash gid)
-          "user:select"
+        Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+          ~goal_id:(Util.UUID.hash gid) "user:select"
           [Trace_ppx_runtime.Runtime.J
              (((fun fmt ->
                   fun () ->
@@ -2474,7 +2523,8 @@ module Indexing =
         let h = kabs mod modulus in
         if true
         then
-          Trace_ppx_runtime.Runtime.info "dev:index:subhash-const"
+          Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+            "dev:index:subhash-const"
             [Trace_ppx_runtime.Runtime.J (C.pp, k);
             Trace_ppx_runtime.Runtime.J (pp_string, (dec_to_bin2 h))];
         h in
@@ -2532,7 +2582,8 @@ module Indexing =
                      (mapi (fun i -> fun x -> shift (i + 1) (self x)) xs)) in
         if true
         then
-          Trace_ppx_runtime.Runtime.info "dev:index:subhash"
+          Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+            "dev:index:subhash"
             [Trace_ppx_runtime.Runtime.J
                (((fun fmt ->
                     fun () ->
@@ -2544,7 +2595,7 @@ module Indexing =
       let h = aux 0 0 args mode spec in
       if true
       then
-        Trace_ppx_runtime.Runtime.info "dev:index:hash"
+        Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid) "dev:index:hash"
           [Trace_ppx_runtime.Runtime.J
              (((fun fmt ->
                   fun () ->
@@ -2843,7 +2894,7 @@ module Clausify :
       | _ -> error "pi/sigma applied to something that is not a Lam"
     let rec claux1 ?loc  get_mode vars depth hyps ts lts lcs t =
       let wall_clock = Unix.gettimeofday () in
-      Trace_ppx_runtime.Runtime.enter "clausify"
+      Trace_ppx_runtime.Runtime.enter ~runtime_id:(!rid) "clausify"
         (fun fmt ->
            Format.fprintf fmt "%a %d %d %d %d\n%!"
              (ppterm (depth + lts) [] 0 empty_env) t depth lts lcs
@@ -2914,7 +2965,8 @@ module Clausify :
                  } in
                (if true
                 then
-                  Trace_ppx_runtime.Runtime.info "dev:claudify:extra-clause"
+                  Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+                    "dev:claudify:extra-clause"
                     [Trace_ppx_runtime.Runtime.J
                        ((ppclause ~depth:(depth + lcs) ~hd), c)];
                 ((hd, c), { hdepth = depth; hsrc = g }, lcs))
@@ -2935,15 +2987,19 @@ module Clausify :
            | UVar _|AppUVar _ -> error ?loc "Flexible hypothetical clause"
            | Nil|Cons _ -> error ?loc "ill-formed hypothetical clause" in
          let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-         Trace_ppx_runtime.Runtime.exit "clausify" false None elapsed; rc
+         Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "clausify" false
+           None elapsed;
+         rc
        with
        | Trace_ppx_runtime.Runtime.TREC_CALL (f, x) ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace_ppx_runtime.Runtime.exit "clausify" true None elapsed;
+           (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "clausify" true
+              None elapsed;
             Obj.obj f (Obj.obj x))
        | e ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace_ppx_runtime.Runtime.exit "clausify" false (Some e) elapsed;
+           (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "clausify"
+              false (Some e) elapsed;
             raise e))
     let clausify { index } ~depth  t =
       let get_mode x =
@@ -2976,12 +3032,13 @@ let make_subgoal_id ogid (((depth, goal))[@trace ]) =
   let gid = UUID.make () in
   if true
   then
-    Trace_ppx_runtime.Runtime.info ~goal_id:(Util.UUID.hash ogid)
-      "user:subgoalof" [Trace_ppx_runtime.Runtime.J (UUID.pp, gid)];
+    Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+      ~goal_id:(Util.UUID.hash ogid) "user:subgoal"
+      [Trace_ppx_runtime.Runtime.J (UUID.pp, gid)];
   if true
   then
-    Trace_ppx_runtime.Runtime.info ~goal_id:(Util.UUID.hash gid)
-      "user:newgoal"
+    Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+      ~goal_id:(Util.UUID.hash gid) "user:newgoal"
       [Trace_ppx_runtime.Runtime.J ((uppterm depth [] depth empty_env), goal)];
   gid[@@inline ]
 let make_subgoal ((gid)[@trace ]) ~depth  program goal =
@@ -3072,7 +3129,8 @@ module Constraints :
                 let (n, c) = C.fresh_global_constant () in
                 (if true
                  then
-                   Trace_ppx_runtime.Runtime.info "dev:freeze_uv:new"
+                   Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+                     "dev:freeze_uv:new"
                      [Trace_ppx_runtime.Runtime.J
                         (((fun fmt ->
                              fun () ->
@@ -3109,7 +3167,7 @@ module Constraints :
                 faux d (deref_appuv ~from:lvl ~to_:d args (!! r)) in
           if true
           then
-            Trace_ppx_runtime.Runtime.info "dev:freeze:in"
+            Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid) "dev:freeze:in"
               [Trace_ppx_runtime.Runtime.J
                  (((fun fmt ->
                       fun () ->
@@ -3120,33 +3178,37 @@ module Constraints :
           (let t = faux depth t in
            if true
            then
-             Trace_ppx_runtime.Runtime.info "dev:freeze:after-faux"
+             Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+               "dev:freeze:after-faux"
                [Trace_ppx_runtime.Runtime.J
                   ((uppterm depth [] 0 empty_env), t)];
            (let t = shift_bound_vars ~depth ~to_:ground t in
             if true
             then
-              Trace_ppx_runtime.Runtime.info "dev:freeze:after-shift->ground"
+              Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+                "dev:freeze:after-shift->ground"
                 [Trace_ppx_runtime.Runtime.J
                    ((uppterm ground [] 0 empty_env), t)];
             (let t = shift_bound_vars ~depth:0 ~to_:(newground - ground) t in
              if true
              then
-               Trace_ppx_runtime.Runtime.info
+               Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
                  "dev:freeze:after-reloc->newground"
                  [Trace_ppx_runtime.Runtime.J
                     ((uppterm newground [] 0 empty_env), t)];
              (let t = shift_bound_vars ~depth:newground ~to_:maxground t in
               if true
               then
-                Trace_ppx_runtime.Runtime.info "dev:freeze:out"
+                Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+                  "dev:freeze:out"
                   [Trace_ppx_runtime.Runtime.J
                      ((uppterm maxground [] 0 empty_env), t)];
               ((!f), t)))))
         let defrost ~maxd  t env ~to_  f =
           if true
           then
-            Trace_ppx_runtime.Runtime.info "dev:defrost:in"
+            Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+              "dev:defrost:in"
               [Trace_ppx_runtime.Runtime.J
                  (((fun fmt ->
                       fun () ->
@@ -3155,7 +3217,8 @@ module Constraints :
           (let t = full_deref ~adepth:maxd env ~depth:maxd t in
            if true
            then
-             Trace_ppx_runtime.Runtime.info "dev:defrost:fully-derefd"
+             Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+               "dev:defrost:fully-derefd"
                [Trace_ppx_runtime.Runtime.J
                   (((fun fmt ->
                        fun () ->
@@ -3164,7 +3227,8 @@ module Constraints :
            (let t = subtract_to_consts ~amount:(maxd - to_) ~depth:maxd t in
             if true
             then
-              Trace_ppx_runtime.Runtime.info "dev:defrost:shifted"
+              Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+                "dev:defrost:shifted"
                 [Trace_ppx_runtime.Runtime.J
                    (((fun fmt ->
                         fun () ->
@@ -3213,12 +3277,14 @@ module Constraints :
                 AppUVar (r, lvl, (smart_map rcaux args)) in
           if true
           then
-            Trace_ppx_runtime.Runtime.info "dev:replace_const:in"
+            Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+              "dev:replace_const:in"
               [Trace_ppx_runtime.Runtime.J ((uppterm 0 [] 0 empty_env), t)];
           (let t = rcaux t in
            if true
            then
-             Trace_ppx_runtime.Runtime.info "dev:replace_const:out"
+             Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+               "dev:replace_const:out"
                [Trace_ppx_runtime.Runtime.J ((uppterm 0 [] 0 empty_env), t)];
            t)
         let ppmap fmt (g, l) =
@@ -3231,7 +3297,7 @@ module Constraints :
       let (freezer, t) =
         Ice.freeze ~depth t ~ground:depth ~newground ~maxground freezer in
       let wall_clock = Unix.gettimeofday () in
-      Trace_ppx_runtime.Runtime.enter "match_goal"
+      Trace_ppx_runtime.Runtime.enter ~runtime_id:(!rid) "match_goal"
         (fun fmt ->
            Format.fprintf fmt "@[<hov>%a ===@ %a@]"
              (uppterm maxground [] maxground env) t
@@ -3242,16 +3308,19 @@ module Constraints :
            then freezer
            else raise NoMatch in
          let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-         Trace_ppx_runtime.Runtime.exit "match_goal" false None elapsed; rc
+         Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "match_goal" false
+           None elapsed;
+         rc
        with
        | Trace_ppx_runtime.Runtime.TREC_CALL (f, x) ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace_ppx_runtime.Runtime.exit "match_goal" true None elapsed;
+           (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "match_goal"
+              true None elapsed;
             Obj.obj f (Obj.obj x))
        | e ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace_ppx_runtime.Runtime.exit "match_goal" false (Some e)
-              elapsed;
+           (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "match_goal"
+              false (Some e) elapsed;
             raise e))
     let match_context ((gid)[@trace ]) goalno maxground env freezer
       (newground, ground, lt) pattern =
@@ -3263,7 +3332,7 @@ module Constraints :
           freezer lt in
       let t = list_to_lp_list lt in
       let wall_clock = Unix.gettimeofday () in
-      Trace_ppx_runtime.Runtime.enter "match_context"
+      Trace_ppx_runtime.Runtime.enter ~runtime_id:(!rid) "match_context"
         (fun fmt ->
            Format.fprintf fmt "@[<hov>%a ===@ %a@]"
              (uppterm maxground [] maxground env) t
@@ -3274,17 +3343,19 @@ module Constraints :
            then freezer
            else raise NoMatch in
          let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-         Trace_ppx_runtime.Runtime.exit "match_context" false None elapsed;
+         Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "match_context"
+           false None elapsed;
          rc
        with
        | Trace_ppx_runtime.Runtime.TREC_CALL (f, x) ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace_ppx_runtime.Runtime.exit "match_context" true None elapsed;
+           (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "match_context"
+              true None elapsed;
             Obj.obj f (Obj.obj x))
        | e ->
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           (Trace_ppx_runtime.Runtime.exit "match_context" false (Some e)
-              elapsed;
+           (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "match_context"
+              false (Some e) elapsed;
             raise e))
     type chrattempt =
       {
@@ -3299,7 +3370,7 @@ module Constraints :
                          (p == p') && (for_all2 (==) lp lp')
                      end)
     let chrules = Fork.new_local CHR.empty
-    let make_constraint_def ~gid:((gid)[@trace ])  depth prog pdiff
+    let make_constraint_def ~rid  ~gid:((gid)[@trace ])  depth prog pdiff
       conclusion =
       {
         cdepth = depth;
@@ -3314,12 +3385,12 @@ module Constraints :
       let pdiff = List.filter filter_ctx pdiff in
       if true
       then
-        Trace_ppx_runtime.Runtime.info ~goal_id:(Util.UUID.hash gid)
-          "user:suspend"
+        Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+          ~goal_id:(Util.UUID.hash gid) "user:suspend"
           [Trace_ppx_runtime.Runtime.J ((uppterm depth [] 0 empty_env), g)];
       (let kind =
          Constraint
-           (make_constraint_def ~gid:((gid)[@trace ]) depth prog pdiff g) in
+           (make_constraint_def ~rid ~gid:((gid)[@trace ]) depth prog pdiff g) in
        CS.declare_new { kind; blockers = keys })
     let rec head_of =
       function
@@ -3463,7 +3534,8 @@ module Constraints :
                  (fun m ->
                     if true
                     then
-                      Trace_ppx_runtime.Runtime.info "dev:CHR:candidate"
+                      Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+                        "dev:CHR:candidate"
                         [Trace_ppx_runtime.Runtime.J
                            ((pplist
                                (fun f ->
@@ -3484,7 +3556,7 @@ module Constraints :
                          patterns_contexts in
                      if true
                      then
-                       Trace_ppx_runtime.Runtime.info
+                       Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
                          "dev:CHR:matching-assignments"
                          [Trace_ppx_runtime.Runtime.J
                             ((pplist (uppterm max_depth [] 0 empty_env)
@@ -3494,7 +3566,8 @@ module Constraints :
                      m)) Ice.empty_freezer in
              if true
              then
-               Trace_ppx_runtime.Runtime.info "dev:CHR:maxdepth"
+               Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+                 "dev:CHR:maxdepth"
                  [Trace_ppx_runtime.Runtime.J (Fmt.pp_print_int, max_depth)];
              check_guard ();
              (let (_, constraints_to_remove) =
@@ -3518,12 +3591,13 @@ module Constraints :
                         env m in
                     let prog = initial_program in
                     Some
-                      (make_constraint_def
+                      (make_constraint_def ~rid
                          ~gid:((make_subgoal_id gid (eigen, conclusion))
                          [@trace ]) eigen prog [] conclusion) in
               if true
               then
-                Trace_ppx_runtime.Runtime.info "dev:CHR:try-rule:success" [];
+                Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+                  "dev:CHR:try-rule:success" [];
               Some
                 (rule_name, constraints_to_remove, new_goals,
                   (Ice.assignments m)))
@@ -3531,7 +3605,8 @@ module Constraints :
            | NoMatch ->
                (if true
                 then
-                  Trace_ppx_runtime.Runtime.info "dev:CHR:try-rule:fail" [];
+                  Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+                    "dev:CHR:try-rule:fail" [];
                 None) in
          destroy (); result)
     let resumption to_be_resumed_rev =
@@ -3539,8 +3614,8 @@ module Constraints :
         (fun { cdepth = d; prog; conclusion = g; cgid = ((gid)[@trace ]) } ->
            if true
            then
-             Trace_ppx_runtime.Runtime.info ~goal_id:(Util.UUID.hash gid)
-               "user:resume"
+             Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+               ~goal_id:(Util.UUID.hash gid) "user:resume"
                [Trace_ppx_runtime.Runtime.J ((uppterm d [] d empty_env), g)];
            ((repack_goal)[@inlined ]) ~depth:d ((gid)[@trace ]) prog g)
         (List.rev to_be_resumed_rev)
@@ -3599,6 +3674,7 @@ module Constraints :
                                       (if true
                                        then
                                          Trace_ppx_runtime.Runtime.info
+                                           ~runtime_id:(!rid)
                                            ~goal_id:(Util.UUID.hash
                                                        active.cgid)
                                            "user:CHR:try-rule-on"
@@ -3611,6 +3687,7 @@ module Constraints :
                                             if true
                                             then
                                               Trace_ppx_runtime.Runtime.info
+                                                ~runtime_id:(!rid)
                                                 "user:CHR:rule-failed" []
                                         | Some
                                             (rule_name, to_be_removed,
@@ -3619,6 +3696,7 @@ module Constraints :
                                             (if true
                                              then
                                                Trace_ppx_runtime.Runtime.info
+                                                 ~runtime_id:(!rid)
                                                  ~goal_id:(Util.UUID.hash
                                                              ((active.cgid)
                                                              [@trace ]))
@@ -3628,6 +3706,7 @@ module Constraints :
                                              if true
                                              then
                                                Trace_ppx_runtime.Runtime.info
+                                                 ~runtime_id:(!rid)
                                                  ~goal_id:(Util.UUID.hash
                                                              ((active.cgid)
                                                              [@trace ]))
@@ -3674,10 +3753,12 @@ module Mainloop :
       | Const c -> Some (C.show c)
       | Builtin (c, _) -> Some (C.show c)
       | _ -> None
-    let pp_candidate fmt { loc } =
+    let pp_candidate ~depth  ~k  fmt ({ loc } as cl) =
       match loc with
       | Some x -> Loc.pp fmt x
-      | None -> Fmt.fprintf fmt "context"
+      | None ->
+          Fmt.fprintf fmt "hypothetical clause: %a" (ppclause ~depth ~hd:k)
+            cl
     let make_runtime
       : ?max_steps:int ->
           ?delay_outside_fragment:bool -> 'x executable -> 'x runtime
@@ -3685,7 +3766,8 @@ module Mainloop :
       let rec run depth p g ((gid)[@trace ]) gs (next : frame) alts lvl =
         Trace_ppx_runtime.Runtime.set_cur_pred (pred_of g);
         (let wall_clock = Unix.gettimeofday () in
-         Trace_ppx_runtime.Runtime.enter "run" (fun _ -> ());
+         Trace_ppx_runtime.Runtime.enter ~runtime_id:(!rid) "run"
+           (fun _ -> ());
          (try
             let rc =
               (match !steps_bound with
@@ -3697,7 +3779,7 @@ module Mainloop :
                | None ->
                    (if true
                     then
-                      Trace_ppx_runtime.Runtime.info
+                      Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
                         ~goal_id:(Util.UUID.hash gid) "user:rule"
                         [Trace_ppx_runtime.Runtime.J
                            (pp_string, "fail-resume")];
@@ -3710,7 +3792,7 @@ module Mainloop :
                    ->
                    (if true
                     then
-                      Trace_ppx_runtime.Runtime.info
+                      Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
                         ~goal_id:(Util.UUID.hash gid) "user:rule"
                         [Trace_ppx_runtime.Runtime.J (pp_string, "resume")];
                     raise
@@ -3724,7 +3806,7 @@ module Mainloop :
                | Some [] ->
                    (if true
                     then
-                      Trace_ppx_runtime.Runtime.info
+                      Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
                         ~goal_id:(Util.UUID.hash gid) "user:curgoal"
                         [Trace_ppx_runtime.Runtime.J
                            ((uppterm depth [] 0 empty_env), g)];
@@ -3732,8 +3814,8 @@ module Mainloop :
                      | Builtin (c, []) when c == Global_symbols.cutc ->
                          (if true
                           then
-                            Trace_ppx_runtime.Runtime.info
-                              ~goal_id:(Util.UUID.hash gid) "user:rule"
+                            Trace_ppx_runtime.Runtime.info ~runtime_id:(
+                              !rid) ~goal_id:(Util.UUID.hash gid) "user:rule"
                               [Trace_ppx_runtime.Runtime.J (pp_string, "cut")];
                           raise
                             (Trace_ppx_runtime.Runtime.TREC_CALL
@@ -3742,8 +3824,8 @@ module Mainloop :
                      | App (c, g, gs') when c == Global_symbols.andc ->
                          (if true
                           then
-                            Trace_ppx_runtime.Runtime.info
-                              ~goal_id:(Util.UUID.hash gid) "user:rule"
+                            Trace_ppx_runtime.Runtime.info ~runtime_id:(
+                              !rid) ~goal_id:(Util.UUID.hash gid) "user:rule"
                               [Trace_ppx_runtime.Runtime.J (pp_string, "and")];
                           (let gs' =
                              List.map
@@ -3761,8 +3843,8 @@ module Mainloop :
                      | Cons (g, gs') ->
                          (if true
                           then
-                            Trace_ppx_runtime.Runtime.info
-                              ~goal_id:(Util.UUID.hash gid) "user:rule"
+                            Trace_ppx_runtime.Runtime.info ~runtime_id:(
+                              !rid) ~goal_id:(Util.UUID.hash gid) "user:rule"
                               [Trace_ppx_runtime.Runtime.J (pp_string, "and")];
                           (let gs' =
                              ((make_subgoal)[@inlined ]) ~depth ((gid)
@@ -3777,8 +3859,8 @@ module Mainloop :
                      | Nil ->
                          (if true
                           then
-                            Trace_ppx_runtime.Runtime.info
-                              ~goal_id:(Util.UUID.hash gid) "user:rule"
+                            Trace_ppx_runtime.Runtime.info ~runtime_id:(
+                              !rid) ~goal_id:(Util.UUID.hash gid) "user:rule"
                               [Trace_ppx_runtime.Runtime.J
                                  (pp_string, "true")];
                           (match gs with
@@ -3798,8 +3880,8 @@ module Mainloop :
                      | App (c, g2, g1::[]) when c == Global_symbols.rimplc ->
                          (if true
                           then
-                            Trace_ppx_runtime.Runtime.info
-                              ~goal_id:(Util.UUID.hash gid) "user:rule"
+                            Trace_ppx_runtime.Runtime.info ~runtime_id:(
+                              !rid) ~goal_id:(Util.UUID.hash gid) "user:rule"
                               [Trace_ppx_runtime.Runtime.J
                                  (pp_string, "implication")];
                           (let (clauses, pdiff, lcs) = clausify p ~depth g1 in
@@ -3816,8 +3898,8 @@ module Mainloop :
                      | App (c, g1, g2::[]) when c == Global_symbols.implc ->
                          (if true
                           then
-                            Trace_ppx_runtime.Runtime.info
-                              ~goal_id:(Util.UUID.hash gid) "user:rule"
+                            Trace_ppx_runtime.Runtime.info ~runtime_id:(
+                              !rid) ~goal_id:(Util.UUID.hash gid) "user:rule"
                               [Trace_ppx_runtime.Runtime.J
                                  (pp_string, "implication")];
                           (let (clauses, pdiff, lcs) = clausify p ~depth g1 in
@@ -3834,8 +3916,8 @@ module Mainloop :
                      | App (c, arg, []) when c == Global_symbols.pic ->
                          (if true
                           then
-                            Trace_ppx_runtime.Runtime.info
-                              ~goal_id:(Util.UUID.hash gid) "user:rule"
+                            Trace_ppx_runtime.Runtime.info ~runtime_id:(
+                              !rid) ~goal_id:(Util.UUID.hash gid) "user:rule"
                               [Trace_ppx_runtime.Runtime.J (pp_string, "pi")];
                           (let f = get_lambda_body ~depth arg in
                            let ((gid)[@trace ]) =
@@ -3849,8 +3931,8 @@ module Mainloop :
                      | App (c, arg, []) when c == Global_symbols.sigmac ->
                          (if true
                           then
-                            Trace_ppx_runtime.Runtime.info
-                              ~goal_id:(Util.UUID.hash gid) "user:rule"
+                            Trace_ppx_runtime.Runtime.info ~runtime_id:(
+                              !rid) ~goal_id:(Util.UUID.hash gid) "user:rule"
                               [Trace_ppx_runtime.Runtime.J
                                  (pp_string, "sigma")];
                           (let f = get_lambda_body ~depth arg in
@@ -3867,8 +3949,8 @@ module Mainloop :
                          ->
                          (if true
                           then
-                            Trace_ppx_runtime.Runtime.info
-                              ~goal_id:(Util.UUID.hash gid) "user:rule"
+                            Trace_ppx_runtime.Runtime.info ~runtime_id:(
+                              !rid) ~goal_id:(Util.UUID.hash gid) "user:rule"
                               [Trace_ppx_runtime.Runtime.J
                                  (pp_string, "deref")];
                           raise
@@ -3882,8 +3964,8 @@ module Mainloop :
                          t != C.dummy ->
                          (if true
                           then
-                            Trace_ppx_runtime.Runtime.info
-                              ~goal_id:(Util.UUID.hash gid) "user:rule"
+                            Trace_ppx_runtime.Runtime.info ~runtime_id:(
+                              !rid) ~goal_id:(Util.UUID.hash gid) "user:rule"
                               [Trace_ppx_runtime.Runtime.J
                                  (pp_string, "deref")];
                           raise
@@ -3896,20 +3978,22 @@ module Mainloop :
                      | Const k ->
                          (if true
                           then
-                            Trace_ppx_runtime.Runtime.info
-                              ~goal_id:(Util.UUID.hash gid) "user:rule"
+                            Trace_ppx_runtime.Runtime.info ~runtime_id:(
+                              !rid) ~goal_id:(Util.UUID.hash gid) "user:rule"
                               [Trace_ppx_runtime.Runtime.J
                                  (pp_string, "backchain")];
                           (let clauses = get_clauses depth k g p in
                            if true
                            then
                              Trace_ppx_runtime.Runtime.info
+                               ~runtime_id:(!rid)
                                ~goal_id:(Util.UUID.hash gid)
                                "user:candidates"
                                ((List.map
                                    (fun x ->
                                       Trace_ppx_runtime.Runtime.J
-                                        (pp_candidate, x)) clauses)
+                                        ((pp_candidate ~depth ~k), x))
+                                   clauses)
                                   @ []);
                            raise
                              (Trace_ppx_runtime.Runtime.TREC_CALL
@@ -3920,20 +4004,22 @@ module Mainloop :
                      | App (k, x, xs) ->
                          (if true
                           then
-                            Trace_ppx_runtime.Runtime.info
-                              ~goal_id:(Util.UUID.hash gid) "user:rule"
+                            Trace_ppx_runtime.Runtime.info ~runtime_id:(
+                              !rid) ~goal_id:(Util.UUID.hash gid) "user:rule"
                               [Trace_ppx_runtime.Runtime.J
                                  (pp_string, "backchain")];
                           (let clauses = get_clauses depth k g p in
                            if true
                            then
                              Trace_ppx_runtime.Runtime.info
+                               ~runtime_id:(!rid)
                                ~goal_id:(Util.UUID.hash gid)
                                "user:candidates"
                                ((List.map
                                    (fun x ->
                                       Trace_ppx_runtime.Runtime.J
-                                        (pp_candidate, x)) clauses)
+                                        ((pp_candidate ~depth ~k), x))
+                                   clauses)
                                   @ []);
                            raise
                              (Trace_ppx_runtime.Runtime.TREC_CALL
@@ -3944,8 +4030,8 @@ module Mainloop :
                      | Builtin (c, args) ->
                          (if true
                           then
-                            Trace_ppx_runtime.Runtime.info
-                              ~goal_id:(Util.UUID.hash gid) "user:rule"
+                            Trace_ppx_runtime.Runtime.info ~runtime_id:(
+                              !rid) ~goal_id:(Util.UUID.hash gid) "user:rule"
                               [Trace_ppx_runtime.Runtime.J
                                  (pp_string, "builtin")];
                           (match Constraints.exect_builtin_predicate c ~depth
@@ -3955,6 +4041,7 @@ module Mainloop :
                                (if true
                                 then
                                   Trace_ppx_runtime.Runtime.info
+                                    ~runtime_id:(!rid)
                                     ~goal_id:(Util.UUID.hash gid)
                                     "user:builtin"
                                     [Trace_ppx_runtime.Runtime.J
@@ -3983,6 +4070,7 @@ module Mainloop :
                                (if true
                                 then
                                   Trace_ppx_runtime.Runtime.info
+                                    ~runtime_id:(!rid)
                                     ~goal_id:(Util.UUID.hash gid)
                                     "user:builtin"
                                     [Trace_ppx_runtime.Runtime.J
@@ -3998,27 +4086,32 @@ module Mainloop :
                      | UVar _|AppUVar _|Discard ->
                          error "The goal is a flexible term"))) in
             let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-            Trace_ppx_runtime.Runtime.exit "run" false None elapsed; rc
+            Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "run" false
+              None elapsed;
+            rc
           with
           | Trace_ppx_runtime.Runtime.TREC_CALL (f, x) ->
               let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-              (Trace_ppx_runtime.Runtime.exit "run" true None elapsed;
+              (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "run" true
+                 None elapsed;
                Obj.obj f (Obj.obj x))
           | e ->
               let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-              (Trace_ppx_runtime.Runtime.exit "run" false (Some e) elapsed;
+              (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "run" false
+                 (Some e) elapsed;
                raise e)))
       and backchain depth p (k, arg, args_of_g, gs) ((gid)[@trace ]) next
         alts lvl cp =
         let wall_clock = Unix.gettimeofday () in
-        Trace_ppx_runtime.Runtime.enter "select" (fun _ -> ());
+        Trace_ppx_runtime.Runtime.enter ~runtime_id:(!rid) "select"
+          (fun _ -> ());
         (try
            let rc =
              match cp with
              | [] ->
                  (if true
                   then
-                    Trace_ppx_runtime.Runtime.info
+                    Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
                       ~goal_id:(Util.UUID.hash gid) "user:select"
                       [Trace_ppx_runtime.Runtime.J (pp_string, "fail")];
                   raise
@@ -4028,7 +4121,7 @@ module Mainloop :
                  hyps = c_hyps; vars = c_vars; loc }::cs ->
                  (if true
                   then
-                    Trace_ppx_runtime.Runtime.info
+                    Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
                       ~goal_id:(Util.UUID.hash gid) "user:select"
                       [Trace_ppx_runtime.Runtime.J ((pp_option Loc.pp), loc);
                       Trace_ppx_runtime.Runtime.J
@@ -4142,15 +4235,19 @@ module Mainloop :
                                       (run depth p h ((gid)[@trace ]) hs next
                                          alts)), (Obj.repr oldalts))))))) in
            let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-           Trace_ppx_runtime.Runtime.exit "select" false None elapsed; rc
+           Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "select" false
+             None elapsed;
+           rc
          with
          | Trace_ppx_runtime.Runtime.TREC_CALL (f, x) ->
              let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-             (Trace_ppx_runtime.Runtime.exit "select" true None elapsed;
+             (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "select" true
+                None elapsed;
               Obj.obj f (Obj.obj x))
          | e ->
              let elapsed = (Unix.gettimeofday ()) -. wall_clock in
-             (Trace_ppx_runtime.Runtime.exit "select" false (Some e) elapsed;
+             (Trace_ppx_runtime.Runtime.exit ~runtime_id:(!rid) "select"
+                false (Some e) elapsed;
               raise e))
       and cut ((gid)[@trace ]) gs next alts lvl =
         let rec prune
@@ -4162,8 +4259,8 @@ module Mainloop :
           else
             (if true
              then
-               Trace_ppx_runtime.Runtime.info ~goal_id:(Util.UUID.hash agid)
-                 "user:cut"
+               Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+                 ~goal_id:(Util.UUID.hash agid) "user:cut"
                  [Trace_ppx_runtime.Runtime.J
                     ((pplist (ppclause ~depth ~hd) " | "), clauses)];
              prune alts.next) in
@@ -4202,7 +4299,8 @@ module Mainloop :
                  CS.to_resume := rest;
                  if true
                  then
-                   Trace_ppx_runtime.Runtime.info "user:resume-unif"
+                   Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+                     "user:resume-unif"
                      [Trace_ppx_runtime.Runtime.J
                         (((fun fmt ->
                              fun () ->
@@ -4261,12 +4359,14 @@ module Mainloop :
             set CS.state initial_runtime_state;
             set C.table symbol_table;
             set FFI.builtins builtins;
+            set rid (!max_runtime_id);
             (let search =
                exec
                  (fun () ->
                     if true
                     then
-                      Trace_ppx_runtime.Runtime.info "dev:trail:init"
+                      Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
+                        "dev:trail:init"
                         [Trace_ppx_runtime.Runtime.J
                            (((fun fmt -> fun () -> T.print_trail fmt)), ())];
                     T.initial_trail := (!T.trail);
@@ -4275,6 +4375,7 @@ module Mainloop :
              let destroy () =
                exec (fun () -> T.undo ~old_trail:T.empty ()) () in
              let next_solution = exec next_alt in
+             incr max_runtime_id;
              { search; next_solution; destroy; exec; get })
     ;;do_make_runtime := make_runtime
   end 
