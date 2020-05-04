@@ -232,3 +232,10 @@ let () = declare "var"
   ~typecheck:true
   ~expectation:Test.Success
   ()
+
+let () = declare "hyp_uvar"
+  ~source_elpi:"hyp_uvar.elpi"
+  ~description:"uvar at the left of implication"
+  ~typecheck:true
+  ~expectation:Test.Success
+  ()

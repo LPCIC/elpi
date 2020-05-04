@@ -1,0 +1,5 @@
+
+pred f i:any.
+
+main :-
+  (f uvar :- print "ok") => (f X, not(f 1)), var X.
