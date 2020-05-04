@@ -905,12 +905,28 @@ let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in let o
   MLData ctype;
 
   MLCode(Pred("var",
-    In(any,   "V",
-    Easy       "checks if the term V is a variable"),
-  (fun t1 ~depth ->
-     match look ~depth t1 with
-     | UnifVar _ -> ()
-     | _ -> raise No_clause)),
+    InOut(ioarg_any, "V",
+    VariadicInOut(unit_ctx, !> (ioarg_any),"checks if the term V is a variable. When used with tree arguments it relates an applied variable with its head and argument list.")),
+  (fun x out ~depth _ _ state ->
+    let len = List.length out in
+    if len != 0 && len != 2 then
+      type_error ("var only supports 1 or 3 arguments");
+    let is_var x =
+      match look ~depth x with
+      | UnifVar(v,a) -> v,a
+      | _ -> raise No_clause in
+    state,
+    match x, out with
+    | Data x, [] -> let _ = is_var x in ?: None +? None
+    | Data x, [NoData; NoData] -> let _ = is_var x in ?: None +? None
+    | Data x, [NoData; Data args] -> let _, a = is_var x in ?: None +! [None; Some (list_to_lp_list a)]
+    | Data x, [Data var; NoData] -> let v, _ = is_var x in ?: None +! [Some (mkUnifVar v ~args:[] state); None]
+    | Data x, [Data y; Data args] ->
+        let vx, ax = is_var x in
+        let vy, ay = is_var y in
+        !: (mkUnifVar vy ~args:(ay @ lp_list_to_list ~depth args) state)
+        +! [Some (mkUnifVar vx ~args:[] state); Some (list_to_lp_list ax)]
+    | _ -> raise No_clause)),
   DocAbove);
 
   MLCode(Pred("same_var",

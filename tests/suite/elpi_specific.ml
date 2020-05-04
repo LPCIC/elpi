@@ -226,3 +226,9 @@ let () = declare "quote_syntax"
   ~expectation:(Test.SuccessOutput (Str.regexp "const main"))
   ()
 
+let () = declare "var"
+  ~source_elpi:"var.elpi"
+  ~description:"var API"
+  ~typecheck:true
+  ~expectation:Test.Success
+  ()

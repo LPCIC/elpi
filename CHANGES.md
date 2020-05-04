@@ -1,5 +1,8 @@
 ## v1.11.0 UNRELEASED
 
+- Builtin:
+  - `var` now accepts 3 arguments, as `constant` and `name`.
+
 - Trace:
   - output facilities: json and tty on both files and network sockets
   - trace messages to link goals to their subgoals

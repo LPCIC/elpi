@@ -365,8 +365,9 @@ typeabbrev loc (ctype "Loc.t").
 kind ctyp type.
 type ctype string -> ctyp.
 
-% [var V] checks if the term V is a variable
-external pred var i:any.
+% [var V ...] checks if the term V is a variable. When used with tree
+% arguments it relates an applied variable with its head and argument list.
+external type var any -> variadic any prop.
 
 % [same_var V1 V2] checks if the two terms V1 and V2 are the same variable,
 % ignoring the arguments of the variables
