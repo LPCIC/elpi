@@ -11,7 +11,7 @@
   - port to ppxlib
 
 - Build system:
-  - minimal build dependencies are now: camlp5 ocamlfind dune
+  - minimal build dependencies are now: camlp5 ocamlfind dune re
   - cache ppx output in .ml format so that it builds without
     `ppx_deriving.std` and `elpi.trace.ppx` using a new tool in
     `ppxfindcache/`
