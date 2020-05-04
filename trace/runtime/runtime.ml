@@ -292,21 +292,24 @@ let () =
     end)
 
 let usage = {|
-Tracing options can be used to debug your programs and Elpi as well.
-A sensible set of options to debug your programs is
-  -trace-on -trace-at 1 9999 -trace-only '\(run\|select\|user:\)'
 Tracing options:
-  -trace-at FNAME START STOP  print trace between call START
-    and STOP of function FNAME (FNAME can be omitted, default is run)
-  -trace-on KIND FILE enable trace printing. KIND is tty or json (default is tty).
-    FILE is stdout or stderr (default) or host:port or /path or ./path
-  -trace-skip REX  ignore trace items matching REX
-  -trace-only REX  trace only items matching REX
-  -trace-only-pred REX  trace only when the current predicate matches REX
-  -trace-tty-maxbox NUM  Format max_boxes set to NUM
-  -trace-tty-maxcols NUM  Format margin set to NUM
-  -stats-on  Collect statistics
-  -perf-on  Disable trace output, but keep perf
+        -trace-at FNAME START STOP  print trace between call START
+         and STOP of function FNAME (FNAME can be omitted, default is run)
+        -trace-on KIND FILE enable trace printing.
+          KIND is tty or json (default is tty).
+          FILE is stdout or stderr (default) or host:port or /path or ./path
+        -trace-skip REX  ignore trace items matching REX
+        -trace-only REX  trace only items matching REX
+        -trace-only-pred REX  trace only when the current predicate matches REX
+        -trace-tty-maxbox NUM  Format max_boxes set to NUM
+        -trace-tty-maxcols NUM  Format margin set to NUM
+        -stats-on  Collect statistics
+        -perf-on  Disable trace output, but keep perf
+
+Tracing options can be used to debug your programs and the Elpi interpreter.
+Tracing points for the user are prefixed with 'user:' while the ones
+for the Elpi developer with 'dev:'. A sensible set of options to debug your
+programs is: -trace-on -trace-at 1 9999 -trace-only '\(run\|select\|user:\)'
 |}
 ;;
 
