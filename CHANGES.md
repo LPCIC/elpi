@@ -1,16 +1,21 @@
 ## v1.11.0 UNRELEASED
 
 - Trace:
-  - json output, with messages representing the tree structure of the proof
-  - categorize spy points into `user` and `dev`
-  - improve trace_ppx, revise all trace points
+  - output facilities: json and tty on both files and network sockets
+  - trace messages to link goals to their subgoals
+  - spy points categorized into `user` and `dev`
+  - all trace points were revised and improved
   - port to ppxlib
 
 - Build system:
-  - cache ppx output so that it builds without ppx_deriving and trace_ppx
-    using a new tool in ppxfindcache/
-  - vendor dependencies so that it builds with just: camlp5 ocamlfind dune
-  - generate custom merlinppx for src/ and trace/ and patch .merlin files
+  - minimal build dependencies are now: camlp5 ocamlfind dune
+  - cache ppx output in .ml format so that it builds without
+    `ppx_deriving.std` and `elpi.trace.ppx` using a new tool in
+    `ppxfindcache/`
+  - vendor a copy of `ppx_deriving_runtime` (suffix `_proxy`) to be used when
+    `ppx_deriving` is not installed
+  - generate custom `merlinppx.exe` for `src/` and and patch `.merlin` file so
+    that one can have decent merlin support
 
 ## v1.10.2 (February 2020)
 
