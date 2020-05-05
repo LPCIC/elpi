@@ -9,9 +9,9 @@ bug-reports: "https://github.com/LPCIC/elpi/issues"
 
 build: [
   ["dune" "subst"] {pinned}
-  [make "build" "DUNE_OPTS=-p %{name}%,ppxfindcache -j %{jobs}%"]
-  [make "tests" "DUNE_OPTS=-p %{name}%,ppxfindcache" "TIMEOUT=120"] {with-test & os != "macos"}
-  ["rm" "ppxfindcache/ppxfindcache.install"]
+  [make "build" "DUNE_OPTS=-p %{name}% -j %{jobs}%"]
+  [make "tests" "DUNE_OPTS=-p %{name}%" "TIMEOUT=120"] {with-test & os != "macos"}
+  [make "fix-elpi.install"]
 ]
 
 depends: [
