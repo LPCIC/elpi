@@ -1,4 +1,4 @@
-## v1.11.0 UNRELEASED
+## v1.11.0 (May 2020)
 
 - Builtin:
   - `var` now accepts 3 arguments, as `constant` and `name`.
@@ -12,13 +12,14 @@
 
 - Build system:
   - minimal build dependencies are now: camlp5 ocamlfind dune re
-  - cache ppx output in .ml format so that it builds without
-    `ppx_deriving.std` and `elpi.trace.ppx` using a new tool in
+  - cache ppx output in .ml format in `src/.ppcache` that Elpi can be buildt
+    without `ppx_deriving.std` and `elpi.trace.ppx` using a new tool in
     `ppxfindcache/`
   - vendor a copy of `ppx_deriving_runtime` (suffix `_proxy`) to be used when
     `ppx_deriving` is not installed
   - generate custom `merlinppx.exe` for `src/` and and patch `.merlin` file so
     that one can have decent merlin support
+  - make target `test-noppx` to compile on an alternative opam switch
 
 ## v1.10.2 (February 2020)
 
