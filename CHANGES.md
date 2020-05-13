@@ -1,3 +1,9 @@
+## Unreleased
+
+- Fix to the opam file, ppxlib is required to be >= 0.12.0
+- Print locations in such a way that VScode can understand then, and click jump
+  to type errors
+
 ## v1.11.0 (May 2020)
 
 - Builtin:
