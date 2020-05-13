@@ -266,9 +266,9 @@ let { CData.cin = in_loc; isc = is_loc; cout = out_loc } as cloc =
   CData.(declare {
     data_name = "Loc.t";
     data_pp = (fun f x ->
-      let bname = Filename.basename x.Loc.source_name in
+      let bname = x.Loc.source_name in
       let line_no = x.Loc.line in
-      Fmt.fprintf f "%s:%4d:" bname line_no); 
+      Fmt.fprintf f "File %S, line %d:" bname line_no);
     data_compare = Pervasives.compare;
     data_hash = Hashtbl.hash;
     data_hconsed = false;

@@ -1,4 +1,4 @@
-(*3dec149d2e83496835c79a07436ba29ede6e179f *src/ast.ml *)
+(*095a98a5f2dbe7a3c5e1d0e961068875adcf026f *src/ast.ml *)
 #1 "src/ast.ml"
 open Util
 module Func =
@@ -1047,9 +1047,9 @@ let { CData.cin = in_loc; isc = is_loc; cout = out_loc } as cloc =
         data_pp =
           (fun f ->
              fun x ->
-               let bname = Filename.basename x.Loc.source_name in
+               let bname = x.Loc.source_name in
                let line_no = x.Loc.line in
-               Fmt.fprintf f "%s:%4d:" bname line_no);
+               Fmt.fprintf f "File %S, line %d:" bname line_no);
         data_compare = Pervasives.compare;
         data_hash = Hashtbl.hash;
         data_hconsed = false
