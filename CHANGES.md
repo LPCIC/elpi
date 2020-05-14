@@ -1,6 +1,7 @@
-## Unreleased
+## v1.11.1 (May 2020)
 
-- Fix to the opam file, ppxlib is required to be >= 0.12.0
+- Fix to the opam file, ppxlib is required to be >= 0.12.0 and
+  ocaml-migrate-parsetree >= 1.6.0. Moreover we disable tests on Alpine linux
 - Print locations in such a way that VScode can understand then, and click jump
   to type errors
 
