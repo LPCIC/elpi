@@ -1,3 +1,9 @@
+## v1.11.2 (May 2020)
+
+- Nicer error message when compiling an applied spilling expression
+- Fix opam package
+- Trace: print locations in VScode friendly way
+
 ## v1.11.1 (May 2020)
 
 - Fix to the opam file, ppxlib is required to be >= 0.12.0 and
