@@ -1,4 +1,4 @@
-(*2d1e91f72ff28de5f87971da214ef74780dddbf1 *src/compiler.ml *)
+(*05a8d56278539868405064d882672f7caa8f3941 *src/compiler.ml *)
 #1 "src/compiler.ml"
 open Util
 module F = Ast.Func
@@ -2562,7 +2562,10 @@ module Spill :
       let rec spaux ((depth, vars) as ctx) =
         function
         | App (c, fcall, rest) when c == D.Global_symbols.spillc ->
-            (assert (rest = []);
+            (if rest <> []
+             then
+               error ~loc
+                 "A spill expression cannot be applied to an argument";
              (let (spills, fcall) = spaux1 ctx fcall in
               let args =
                 mkSpilled (List.rev vars)

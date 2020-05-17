@@ -1617,7 +1617,8 @@ end = struct (* {{{ *)
 
     let rec spaux (depth,vars as ctx) = function
       | App(c, fcall, rest) when c == D.Global_symbols.spillc ->
-         assert (rest = []);
+         if (rest <> []) then
+           error ~loc "A spill expression cannot be applied to an argument";
          let spills, fcall = spaux1 ctx fcall in
          let args =
             mkSpilled (List.rev vars) (missing_args_of !state loc modes types fcall) in
