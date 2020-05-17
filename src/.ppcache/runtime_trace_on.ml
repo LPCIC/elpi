@@ -1,4 +1,4 @@
-(*93c8b7e123ddd0582844b078d87665e8bed5dc00 *src/runtime_trace_on.ml --cookie elpi_trace="true"*)
+(*1875b87ecc9f302a23da9612e17e9e3050c05880 *src/runtime_trace_on.ml --cookie elpi_trace="true"*)
 #1 "src/runtime_trace_on.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -3755,7 +3755,7 @@ module Mainloop :
       | _ -> None
     let pp_candidate ~depth  ~k  fmt ({ loc } as cl) =
       match loc with
-      | Some x -> Loc.pp fmt x
+      | Some x -> Util.CData.pp fmt (Ast.cloc.Util.CData.cin x)
       | None ->
           Fmt.fprintf fmt "hypothetical clause: %a" (ppclause ~depth ~hd:k)
             cl
@@ -4123,7 +4123,9 @@ module Mainloop :
                   then
                     Trace_ppx_runtime.Runtime.info ~runtime_id:(!rid)
                       ~goal_id:(Util.UUID.hash gid) "user:select"
-                      [Trace_ppx_runtime.Runtime.J ((pp_option Loc.pp), loc);
+                      [Trace_ppx_runtime.Runtime.J
+                         ((pp_option Util.CData.pp),
+                           (Util.option_map Ast.cloc.Util.CData.cin loc));
                       Trace_ppx_runtime.Runtime.J
                         ((ppclause ~depth ~hd:k),
                           {

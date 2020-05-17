@@ -3174,7 +3174,7 @@ let pred_of g =
 
 let pp_candidate ~depth ~k fmt ({ loc } as cl) =
   match loc with
-  | Some x -> Loc.pp fmt x
+  | Some x -> Util.CData.pp fmt (Ast.cloc.Util.CData.cin x)
   | None -> Fmt.fprintf fmt "hypothetical clause: %a" (ppclause ~depth ~hd:k) cl
 
 (* The block of recursive functions spares the allocation of a Some/None
@@ -3274,7 +3274,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
       | [] -> [%spy "user:select" ~rid ~gid pp_string "fail"];
         [%tcall next_alt alts]
       | { depth = c_depth; mode = c_mode; args = c_args; hyps = c_hyps; vars = c_vars; loc } :: cs ->
-        [%spy "user:select" ~rid ~gid (pp_option Loc.pp) loc (ppclause ~depth ~hd:k) { depth = c_depth; mode = c_mode; args = c_args; hyps = c_hyps; vars = c_vars; loc }];
+        [%spy "user:select" ~rid ~gid (pp_option Util.CData.pp) (Util.option_map Ast.cloc.Util.CData.cin loc) (ppclause ~depth ~hd:k) { depth = c_depth; mode = c_mode; args = c_args; hyps = c_hyps; vars = c_vars; loc }];
         let old_trail = !T.trail in
         T.last_call := alts == noalts && cs == [];
         let env = Array.make c_vars C.dummy in
