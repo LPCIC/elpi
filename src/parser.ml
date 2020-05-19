@@ -149,7 +149,6 @@ let rec parse_one e (origfilename as filename) =
   with Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) ->
     close_in ch;
     let loc = of_ploc l in
-    let loc = { loc with Loc.source_name = origfilename } in
     raise (ParseError(loc,msg))
   | Ploc.Exc(_,e) -> close_in ch; raise e
  end
