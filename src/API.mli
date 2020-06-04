@@ -223,7 +223,8 @@ end
 
 (** This API lets one exchange with the host application opaque (primitive)
     data such as integers or strings as well as algebraic data such OCaml's
-    ADS. No support for binders or unification variables at thil point. *)
+    ADT. No support for binders or unification variables at this point, see
+    the RawData module. *)
 
 
 (** This module defines what embedding and readback functions are *)
