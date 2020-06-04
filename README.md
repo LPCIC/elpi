@@ -125,8 +125,8 @@ and is typically extended by the user.
 
 The elaborator manipulates terms with binders and holes 
 (unification variables) representing missing piece of 
-information.  Some of them have to be filled in in order 
-to make the term well typed. Some other are are filled in because 
+information.  Some of them have to be filled in order 
+to make the term well typed. Some others are filled in because 
 the user has programmed the eleborator to do so, e.g. ad-hoc polymorphism.
 
 Such software component is characterized by an high complexity
