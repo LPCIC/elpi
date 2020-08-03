@@ -1,4 +1,4 @@
-(*1875b87ecc9f302a23da9612e17e9e3050c05880 *src/runtime_trace_on.ml --cookie elpi_trace="true"*)
+(*601aa4d80b2ba18c7b8b839bc89548dac58fd7fb *src/runtime_trace_on.ml --cookie elpi_trace="true"*)
 #1 "src/runtime_trace_on.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -372,9 +372,6 @@ module ConstraintStoreAndTrail :
       | Assignement of uvar_body 
       | StuckGoalAddition of stuck_goal 
       | StuckGoalRemoval of stuck_goal [@@deriving show]
-    include struct let _ = fun (_ : trail_item) -> () end[@@ocaml.doc
-                                                           "@inline"]
-    [@@merlin.hide ]
     let rec pp_trail_item :
       Ppx_deriving_runtime_proxy.Format.formatter ->
         trail_item -> Ppx_deriving_runtime_proxy.unit
@@ -382,7 +379,7 @@ module ConstraintStoreAndTrail :
       let __2 () = pp_stuck_goal
       and __1 () = pp_stuck_goal
       and __0 () = pp_uvar_body in
-      ((let open! Ppx_deriving_runtime_proxy in
+      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
           fun fmt ->
             function
             | Assignement a0 ->
@@ -404,15 +401,16 @@ module ConstraintStoreAndTrail :
     and show_trail_item : trail_item -> Ppx_deriving_runtime_proxy.string =
       fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_trail_item x
     [@@ocaml.warning "-32"]
-    type trail = trail_item list[@@deriving show]
-    include struct let _ = fun (_ : trail) -> () end[@@ocaml.doc "@inline"]
+    include struct let _ = fun (_ : trail_item) -> () end[@@ocaml.doc
+                                                           "@inline"]
     [@@merlin.hide ]
+    type trail = trail_item list[@@deriving show]
     let rec pp_trail :
       Ppx_deriving_runtime_proxy.Format.formatter ->
         trail -> Ppx_deriving_runtime_proxy.unit
       =
       let __0 () = pp_trail_item in
-      ((let open! Ppx_deriving_runtime_proxy in
+      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
@@ -429,6 +427,8 @@ module ConstraintStoreAndTrail :
     and show_trail : trail -> Ppx_deriving_runtime_proxy.string =
       fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_trail x[@@ocaml.warning
                                                                     "-32"]
+    include struct let _ = fun (_ : trail) -> () end[@@ocaml.doc "@inline"]
+    [@@merlin.hide ]
     let empty = []
     let trail = Fork.new_local []
     let initial_trail = Fork.new_local []
@@ -1514,14 +1514,14 @@ module HO :
                                       (keep_cst_for_lvl rest)
                                   with | Not_found -> keep_cst_for_lvl rest) in
                          List.split
-                           (keep_cst_for_lvl (List.sort Pervasives.compare l)) in
+                           (keep_cst_for_lvl (List.sort Stdlib.compare l)) in
                        let r' = oref C.dummy in
                        (r @:=
                           (mknLam n_args
                              (mkAppUVar r' gamma args_gamma_lvl_abs));
                         mkAppUVar r' gamma args_gamma_lvl_here)
                      else
-                       (let args = List.sort Pervasives.compare args in
+                       (let args = List.sort Stdlib.compare args in
                         let (args_lvl, args_here) =
                           List.fold_right
                             (fun (c, c_p) ->

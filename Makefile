@@ -16,7 +16,7 @@ help:
 INSTALL=_build/install/default
 BUILD=_build/default
 SHELL:=/bin/bash
-TIMEOUT=90.0
+TIMEOUT=300.0
 RUNNERS=\
   dune \
   $(shell pwd)/$(INSTALL)/bin/elpi \

@@ -1399,7 +1399,7 @@ let bind r gamma l a d delta b left t e =
                        let nn = List.assoc i args in
                        (mkConst (lvl+nn), mkConst mm) :: keep_cst_for_lvl rest
                       with Not_found -> keep_cst_for_lvl rest) in
-              List.split (keep_cst_for_lvl (List.sort Pervasives.compare l)) in
+              List.split (keep_cst_for_lvl (List.sort Stdlib.compare l)) in
             let r' = oref C.dummy in
             r @:= mknLam n_args (mkAppUVar r' gamma args_gamma_lvl_abs);
             mkAppUVar r' gamma args_gamma_lvl_here
@@ -1407,7 +1407,7 @@ let bind r gamma l a d delta b left t e =
             (* given that we need to make lambdas to prune some args,
              * we also permute to make the restricted meta eventually
              * fall inside the small fragment (sort the args) *)
-            let args = List.sort Pervasives.compare args in
+            let args = List.sort Stdlib.compare args in
             let args_lvl, args_here =
               List.fold_right (fun (c, c_p) (a_lvl, a_here as acc) ->
                 try
