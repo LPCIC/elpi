@@ -6,7 +6,7 @@ env:
     - OCAML_MIN=4.04.1
     - OCAML_MAX=4.09.0
     - PREDEPS="ocamlfind"
-    - DEPS="camlp5 ocamlfind ppx_deriving ppxlib re dune cmdliner ANSITerminal"
+    - DEPS="camlp5 ocamlfind ppx_deriving 'ppxlib<0.15.0' re dune cmdliner ANSITerminal"
     - MINDEPS="camlp5 ocamlfind dune re stdlib-shims"
     - JOBS=2
 
