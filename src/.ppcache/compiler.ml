@@ -13,7 +13,7 @@ let rec pp_flags :
   Ppx_deriving_runtime_proxy.Format.formatter -> flags -> Ppx_deriving_runtime_proxy.unit
   =
   let __0 () = StrSet.pp in
-  ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+  ((let open! Ppx_deriving_runtime_proxy in
       fun fmt ->
         fun x ->
           Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -89,7 +89,7 @@ module Symbols :
       and __2 () = F.Map.pp
       and __1 () = D.pp_term
       and __0 () = D.pp_constant in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -342,7 +342,7 @@ let rec pp_argmap :
   and __2 () = D.pp_term
   and __1 () = IntMap.pp
   and __0 () = D.Constants.Map.pp in
-  ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+  ((let open! Ppx_deriving_runtime_proxy in
       fun fmt ->
         fun x ->
           Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -416,7 +416,7 @@ let rec pp_preterm :
   let __2 () = Loc.pp
   and __1 () = pp_argmap
   and __0 () = D.pp_term in
-  ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+  ((let open! Ppx_deriving_runtime_proxy in
       fun fmt ->
         fun x ->
           Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -448,7 +448,7 @@ let rec pp_type_declaration :
   let __2 () = Loc.pp
   and __1 () = pp_preterm
   and __0 () = D.pp_constant in
-  ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+  ((let open! Ppx_deriving_runtime_proxy in
       fun fmt ->
         fun x ->
           Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -482,7 +482,7 @@ let rec pp_type_abbrev_declaration :
   let __2 () = Loc.pp
   and __1 () = pp_preterm
   and __0 () = D.pp_constant in
-  ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+  ((let open! Ppx_deriving_runtime_proxy in
       fun fmt ->
         fun x ->
           Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -520,7 +520,7 @@ let rec pp_presequent :
   let __2 () = D.pp_term
   and __1 () = D.pp_term
   and __0 () = D.pp_term in
-  ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+  ((let open! Ppx_deriving_runtime_proxy in
       fun fmt ->
         fun x ->
           Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -561,7 +561,7 @@ let rec pp_prechr_rule :
   and __2 () = D.pp_term
   and __1 () = pp_presequent
   and __0 () = pp_presequent in
-  ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+  ((let open! Ppx_deriving_runtime_proxy in
       fun fmt ->
         fun x ->
           Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -682,7 +682,7 @@ module Structured =
       =
       let __1 () = pp_macro_declaration
       and __0 () = pp_pbody in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -717,7 +717,7 @@ module Structured =
       and __2 () = C.Map.pp
       and __1 () = pp_type_abbrev_declaration
       and __0 () = pp_typ in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -794,7 +794,7 @@ module Structured =
       and __2 () = Ast.Clause.pp
       and __1 () = Ast.Structured.pp_attribute
       and __0 () = pp_preterm in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             function
             | Clauses a0 ->
@@ -884,7 +884,7 @@ module Structured =
       =
       let __1 () = pp_type_declaration
       and __0 () = Ast.Structured.pp_tattribute in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -929,7 +929,7 @@ module Flat =
       and __2 () = C.Map.pp
       and __1 () = pp_type_abbrev_declaration
       and __0 () = Structured.pp_typ in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -1083,7 +1083,7 @@ module Assembled =
       and __2 () = C.Map.pp
       and __1 () = pp_type_abbrev_declaration
       and __0 () = Structured.pp_typ in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -1204,7 +1204,7 @@ module Assembled =
           Ppx_deriving_runtime_proxy.Format.formatter ->
             attribute -> Ppx_deriving_runtime_proxy.unit)
       =
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -1265,7 +1265,7 @@ module WithMain =
       and __2 () = C.Map.pp
       and __1 () = pp_type_abbrev_declaration
       and __0 () = Structured.pp_typ in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun poly_a ->
             fun fmt ->
               fun x ->

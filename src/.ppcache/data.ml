@@ -117,7 +117,7 @@ module Term =
       and __2 () = pp_constant
       and __1 () = pp_term
       and __0 () = pp_constant in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             function
             | Const a0 ->
@@ -260,7 +260,7 @@ module Term =
         ((let fprintf = Ppx_deriving_runtime_proxy.Format.fprintf in
           pp_spaghetti_any ~id:id_term pp_oref)
         [@ocaml.warning "-26"]) in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -284,7 +284,7 @@ module Term =
       let __2 () = pp_stuck_goal_kind
       and __1 () = pp_unification_def
       and __0 () = pp_blockers in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -306,7 +306,7 @@ module Term =
         blockers -> Ppx_deriving_runtime_proxy.unit
       =
       let __0 () = pp_uvar_body in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
@@ -330,7 +330,7 @@ module Term =
       let __2 () = pp_term
       and __1 () = pp_term
       and __0 () = pp_term in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -382,7 +382,7 @@ module Term =
         clause_src -> Ppx_deriving_runtime_proxy.unit
       =
       let __0 () = pp_term in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -405,7 +405,7 @@ module Term =
       =
       let __1 () = pp_index
       and __0 () = pp_clause_src in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -440,7 +440,7 @@ module Term =
       =
       let __1 () = Ptmap.pp
       and __0 () = pp_second_lvl_idx in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt -> (__1 ()) (fun fmt -> (__0 ()) fmt) fmt)
         [@ocaml.warning "-A"])
     and show_index : index -> Ppx_deriving_runtime_proxy.string =
@@ -458,7 +458,7 @@ module Term =
       and __2 () = pp_clause
       and __1 () = pp_clause
       and __0 () = pp_mode in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             function
             | TwoLevelIndex
@@ -607,7 +607,7 @@ module Term =
       and __2 () = pp_mode
       and __1 () = pp_term
       and __0 () = pp_term in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -678,7 +678,7 @@ module Term =
           Ppx_deriving_runtime_proxy.Format.formatter ->
             mode -> Ppx_deriving_runtime_proxy.unit)
       =
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
@@ -708,7 +708,7 @@ module Term =
               Ppx_deriving_runtime_proxy.Format.formatter ->
                 indexing -> Ppx_deriving_runtime_proxy.unit
       =
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             function
             | MapOn a0 ->
@@ -939,7 +939,7 @@ module Global_symbols :
       let __2 () = Constants.Map.pp
       and __1 () = StrMap.pp
       and __0 () = pp_constant in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -1053,7 +1053,7 @@ module CHR :
       let __2 () = pp_term
       and __1 () = pp_term
       and __0 () = pp_term in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -1084,7 +1084,7 @@ module CHR :
       and __2 () = pp_term
       and __1 () = pp_sequent
       and __0 () = pp_sequent in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -1195,7 +1195,7 @@ module CHR :
       and __2 () = pp_rule
       and __1 () = Constants.Map.pp
       and __0 () = Constants.Set.pp in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -1282,7 +1282,7 @@ let rec pp_clause_w_info :
   =
   let __1 () = pp_clause
   and __0 () = CData.pp in
-  ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+  ((let open! Ppx_deriving_runtime_proxy in
       fun fmt ->
         fun x ->
           Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
@@ -1321,7 +1321,7 @@ let rec pp_macro_declaration :
   let __2 () = F.Map.pp
   and __1 () = Loc.pp
   and __0 () = Ast.Term.pp in
-  ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+  ((let open! Ppx_deriving_runtime_proxy in
       fun fmt ->
         (__2 ())
           (fun fmt ->
@@ -1348,7 +1348,7 @@ module Conversion =
       =
       let __1 () = pp_ty_ast
       and __0 () = pp_ty_ast in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             function
             | TyName a0 ->
@@ -1401,7 +1401,7 @@ module Conversion =
             'a t -> Ppx_deriving_runtime_proxy.unit
       =
       let __0 () = pp_ty_ast in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun poly_a ->
             fun fmt ->
               fun x ->
@@ -1468,7 +1468,7 @@ module ContextualConversion =
       =
       let __1 () = pp_ty_ast
       and __0 () = pp_ty_ast in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             function
             | TyName a0 ->
@@ -1532,7 +1532,7 @@ module ContextualConversion =
                 ('a, 'hyps, 'constraints) t -> Ppx_deriving_runtime_proxy.unit
       =
       let __0 () = pp_ty_ast in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun poly_a ->
             fun poly_hyps ->
               fun poly_constraints ->
@@ -2280,7 +2280,7 @@ let rec pp_symbol_table :
   and __2 () = pp_constant
   and __1 () = Hashtbl.pp
   and __0 () = pp_constant in
-  ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+  ((let open! Ppx_deriving_runtime_proxy in
       fun fmt ->
         fun x ->
           Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";

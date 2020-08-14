@@ -371,6 +371,9 @@ module ConstraintStoreAndTrail :
       | Assignement of uvar_body 
       | StuckGoalAddition of stuck_goal 
       | StuckGoalRemoval of stuck_goal [@@deriving show]
+    include struct let _ = fun (_ : trail_item) -> () end[@@ocaml.doc
+                                                           "@inline"]
+    [@@merlin.hide ]
     let rec pp_trail_item :
       Ppx_deriving_runtime_proxy.Format.formatter ->
         trail_item -> Ppx_deriving_runtime_proxy.unit
@@ -378,7 +381,7 @@ module ConstraintStoreAndTrail :
       let __2 () = pp_stuck_goal
       and __1 () = pp_stuck_goal
       and __0 () = pp_uvar_body in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             function
             | Assignement a0 ->
@@ -400,16 +403,15 @@ module ConstraintStoreAndTrail :
     and show_trail_item : trail_item -> Ppx_deriving_runtime_proxy.string =
       fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_trail_item x
     [@@ocaml.warning "-32"]
-    include struct let _ = fun (_ : trail_item) -> () end[@@ocaml.doc
-                                                           "@inline"]
-    [@@merlin.hide ]
     type trail = trail_item list[@@deriving show]
+    include struct let _ = fun (_ : trail) -> () end[@@ocaml.doc "@inline"]
+    [@@merlin.hide ]
     let rec pp_trail :
       Ppx_deriving_runtime_proxy.Format.formatter ->
         trail -> Ppx_deriving_runtime_proxy.unit
       =
       let __0 () = pp_trail_item in
-      ((let open! ((Ppx_deriving_runtime_proxy)[@ocaml.warning "-A"]) in
+      ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
@@ -426,8 +428,6 @@ module ConstraintStoreAndTrail :
     and show_trail : trail -> Ppx_deriving_runtime_proxy.string =
       fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_trail x[@@ocaml.warning
                                                                     "-32"]
-    include struct let _ = fun (_ : trail) -> () end[@@ocaml.doc "@inline"]
-    [@@merlin.hide ]
     let empty = []
     let trail = Fork.new_local []
     let initial_trail = Fork.new_local []
