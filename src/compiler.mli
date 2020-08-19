@@ -33,7 +33,7 @@ val query_of_data :
 val optimize_query : 'a query -> 'a executable
 val term_of_ast : depth:int -> State.t -> Loc.t * Ast.Term.t -> State.t * term
 
-val pp_query : (depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> 'a query -> unit
+val pp_query : (pp_ctx:pp_ctx -> depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> 'a query -> unit
 
 module Symbols : sig
 

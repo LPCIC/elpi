@@ -31,7 +31,7 @@ module C : sig
   module Set = Constants.Set
 
   val show : ?table:symbol_table -> t -> string
-  val pp : Fmt.formatter -> t -> unit
+  val pp : ?table:symbol_table -> Fmt.formatter -> t -> unit
 
   val mkConst : constant -> term
   val mkAppL : constant -> term list -> term
@@ -61,7 +61,8 @@ let show ?(table = !table) n =
     if n >= 0 then "c" ^ string_of_int n
     else "SYMBOL" ^ string_of_int n
 
-let pp fmt n = Format.fprintf fmt "%s" (show n)
+let pp ?table fmt n =
+  Format.fprintf fmt "%s" (show ?table n)
 
 let mkConst x =
   try Hashtbl.find !table.c2t x
@@ -124,9 +125,9 @@ module Pp : sig
   (* To put it in the solution *)
   val uv_names : (string PtrMap.t * int) Fork.local_ref
 
-  val pp_oref : Format.formatter -> (Util.UUID.t * Obj.t) -> unit
+  val pp_oref : ?pp_ctx:pp_ctx -> Format.formatter -> (Util.UUID.t * Obj.t) -> unit
 
-  val pp_constant : Format.formatter -> constant -> unit
+  val pp_constant : ?pp_ctx:pp_ctx -> Format.formatter -> constant -> unit
 
 end = struct (* {{{ *)
 
@@ -309,14 +310,19 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
 let ppterm = xppterm ~nice:false
 let uppterm = xppterm ~nice:true
 
-let pp_oref fmt (id,t) =
+let pp_oref ?pp_ctx fmt (id,t) =
   if not (UUID.equal id id_term) then anomaly "pp_oref"
   else
     let t : term = Obj.obj t in
     if t == C.dummy then Fmt.fprintf fmt "_"
-    else uppterm 0  [] 0 empty_env fmt t
+    else uppterm ?pp_ctx 0  [] 0 empty_env fmt t
 
-let pp_constant = C.pp
+let pp_constant ?pp_ctx fmt c =
+  let table =
+    match pp_ctx with
+    | None -> None
+    | Some { table } -> Some table in
+  C.pp ?table fmt c
 
 end (* }}} *)
 
