@@ -14,8 +14,8 @@ module Pp : sig
     ?pp_ctx:pp_ctx -> ?min_prec:int -> int -> string list -> int -> env ->
        Format.formatter -> term -> unit
 
-  val pp_constant : Format.formatter -> constant -> unit
-  val pp_oref : Format.formatter -> (UUID.t * Obj.t) -> unit
+  val pp_constant : ?pp_ctx:pp_ctx -> Format.formatter -> constant -> unit
+  val pp_oref : ?pp_ctx:pp_ctx -> Format.formatter -> (UUID.t * Obj.t) -> unit
 end
 val pp_stuck_goal : ?pp_ctx:pp_ctx -> Fmt.formatter -> stuck_goal -> unit
 

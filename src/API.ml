@@ -191,7 +191,7 @@ module Pp = struct
 
   let query f c =
     let module R = (val !r) in let open R in
-    Compiler.pp_query (fun ~depth -> R.Pp.uppterm depth [] 0 [||]) f c
+    Compiler.pp_query (fun ~pp_ctx ~depth -> R.Pp.uppterm ~pp_ctx depth [] 0 [||]) f c
 
   module Ast = struct
     let program = EA.Program.pp
