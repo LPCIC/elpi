@@ -1,3 +1,8 @@
+## v1.11.3 (Aug 2020)
+
+- ppxfindcache: use `shasum` instead of `sha1sum`
+- Parser: print file names in a VScode friendly way
+
 ## v1.11.2 (May 2020)
 
 - Nicer error message when compiling an applied spilling expression
