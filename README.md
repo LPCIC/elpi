@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/LPCIC/elpi.svg?branch=master)](https://travis-ci.org/LPCIC/elpi)
+[![Build Status](https://travis-ci.com/LPCIC/elpi.svg?branch=master)](https://travis-ci.com/LPCIC/elpi)
 # ELPI - Embeddable λProlog Interpreter
 
 ELPI implements a variant of λProlog enriched with Constraint Handling Rules,
