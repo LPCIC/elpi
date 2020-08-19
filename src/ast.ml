@@ -242,7 +242,7 @@ let { CData.cin = in_float; isc = is_float; cout = out_float } as cfloat =
   CData.(declare {
     data_name = "float";
     data_pp = (fun f x -> Fmt.fprintf f "%f" x);
-    data_compare = Pervasives.compare (*Float.compare*);
+    data_compare = Stdlib.compare (*Float.compare*);
     data_hash = Hashtbl.hash;
     data_hconsed = false;
   })
@@ -269,7 +269,7 @@ let { CData.cin = in_loc; isc = is_loc; cout = out_loc } as cloc =
       let bname = x.Loc.source_name in
       let line_no = x.Loc.line in
       Fmt.fprintf f "File %S, line %d:" bname line_no);
-    data_compare = Pervasives.compare;
+    data_compare = Stdlib.compare;
     data_hash = Hashtbl.hash;
     data_hconsed = false;
   })

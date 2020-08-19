@@ -143,7 +143,7 @@ module Loc = struct
 
   let pp fmt l = Fmt.fprintf fmt "%s" (to_string l)
   let show l = to_string l
-  let compare = Pervasives.compare
+  let compare = Stdlib.compare
   let equal = (=)
 
   let initial source_name = {

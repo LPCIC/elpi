@@ -1,4 +1,4 @@
-(*1875b87ecc9f302a23da9612e17e9e3050c05880 *src/runtime_trace_off.ml --cookie elpi_trace="false"*)
+(*601aa4d80b2ba18c7b8b839bc89548dac58fd7fb *src/runtime_trace_off.ml --cookie elpi_trace="false"*)
 #1 "src/runtime_trace_off.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -1147,13 +1147,13 @@ module HO :
                                  (keep_cst_for_lvl rest)
                              with | Not_found -> keep_cst_for_lvl rest) in
                     List.split
-                      (keep_cst_for_lvl (List.sort Pervasives.compare l)) in
+                      (keep_cst_for_lvl (List.sort Stdlib.compare l)) in
                   let r' = oref C.dummy in
                   (r @:=
                      (mknLam n_args (mkAppUVar r' gamma args_gamma_lvl_abs));
                    mkAppUVar r' gamma args_gamma_lvl_here)
                 else
-                  (let args = List.sort Pervasives.compare args in
+                  (let args = List.sort Stdlib.compare args in
                    let (args_lvl, args_here) =
                      List.fold_right
                        (fun (c, c_p) ->

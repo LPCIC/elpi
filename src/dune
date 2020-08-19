@@ -27,7 +27,7 @@
               runtime_trace_off)
     ((action (run camlp5o -I . -I +camlp5 pa_extend.cmo pa_lexer.cmo %{input-file})) parser)
     ))
-  (libraries re.str camlp5.gramlib unix elpi.trace.runtime
+  (libraries stdlib-shims re.str camlp5.gramlib unix elpi.trace.runtime
      (select ppx_deriving_runtime_proxy.ml from
        (ppx_deriving.runtime -> ppx_deriving_runtime_proxy.ppx.ml)
        (-> ppx_deriving_runtime_proxy.embed.ml)

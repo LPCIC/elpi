@@ -220,7 +220,7 @@ let to_list s =
     | Leaf (k,x) -> (k,x) :: acc
     | Branch (_,_,l,r) -> elements_aux (elements_aux acc l) r
   in
-  List.sort (fun (k1,_) (k2,_) -> Pervasives.compare k1 k2)
+  List.sort (fun (k1,_) (k2,_) -> Stdlib.compare k1 k2)
    (elements_aux [] s)
 
 let pp f fmt m =

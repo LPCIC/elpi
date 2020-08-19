@@ -1,4 +1,4 @@
-(*095a98a5f2dbe7a3c5e1d0e961068875adcf026f *src/ast.ml *)
+(*c8d2337708067bd8e1bc35be440edf2e5840c3c7 *src/ast.ml *)
 #1 "src/ast.ml"
 open Util
 module Func =
@@ -1014,7 +1014,7 @@ let { CData.cin = in_float; isc = is_float; cout = out_float } as cfloat =
       {
         data_name = "float";
         data_pp = (fun f -> fun x -> Fmt.fprintf f "%f" x);
-        data_compare = Pervasives.compare;
+        data_compare = Stdlib.compare;
         data_hash = Hashtbl.hash;
         data_hconsed = false
       }
@@ -1050,7 +1050,7 @@ let { CData.cin = in_loc; isc = is_loc; cout = out_loc } as cloc =
                let bname = x.Loc.source_name in
                let line_no = x.Loc.line in
                Fmt.fprintf f "File %S, line %d:" bname line_no);
-        data_compare = Pervasives.compare;
+        data_compare = Stdlib.compare;
         data_hash = Hashtbl.hash;
         data_hconsed = false
       }

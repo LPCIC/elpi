@@ -1,4 +1,4 @@
-(*927d066a4a64bd8ebdf616cca09a2e6c6b896a27 *src/API.mli *)
+(*2417a3f401bc77492de0e537d65272a6bd92bf00 *src/API.mli *)
 #1 "src/API.mli"
 [@@@ocaml.text " This module is the API for clients of the Elpi library. "]
 [@@@ocaml.text
@@ -134,7 +134,7 @@ sig
   module Ast : sig val program : Format.formatter -> Ast.program -> unit end
 end
 [@@@ocaml.text
-  " This API lets one exchange with the host application opaque (primitive)\n    data such as integers or strings as well as algebraic data such OCaml's\n    ADS. No support for binders or unification variables at thil point. "]
+  " This API lets one exchange with the host application opaque (primitive)\n    data such as integers or strings as well as algebraic data such OCaml's\n    ADT. No support for binders or unification variables at this point, see\n    the RawData module. "]
 module Conversion :
 sig
   type ty_ast =
