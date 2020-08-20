@@ -351,6 +351,10 @@ external pred rex_match i:string, i:string.
 % Str.global_replace
 external pred rex_replace i:string, i:string, i:string, o:string.
 
+% [rex_split Rex Subject Out] Out is obtained by splitting Subject at all
+% occurrences of Rex. See also OCaml's Str.split
+external pred rex_split i:string, i:string, o:list string.
+
 % [quote_syntax FileName QueryText QuotedProgram QuotedQuery] quotes the
 % program from FileName and the QueryText. See elpi-quoted_syntax.elpi for
 % the syntax tree

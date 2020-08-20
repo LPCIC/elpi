@@ -796,6 +796,17 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in let open Context
      !:(Str.global_replace rex repl subj))),
   DocAbove);
 
+  MLCode(Pred("rex_split",
+    In(string,  "Rex",
+    In(string,  "Subject",
+    Out(list string, "Out",
+    Easy   ("Out is obtained by splitting Subject at all occurrences of Rex. "^
+            "See also OCaml's Str.split")))),
+  (fun rex subj _ ~depth ->
+     let rex = Str.regexp rex in
+     !:(Str.split rex subj))),
+  DocAbove);
+
    MLCode(Pred("quote_syntax",
      In(string, "FileName",
      In(string, "QueryText",

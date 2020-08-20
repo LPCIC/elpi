@@ -4,6 +4,7 @@
 - Parser: print file names in a VScode friendly way
 - Fix opam package dependency on camlp5 and ppxlib
 - Fix output of `-print*` options to the `elpi` command line utility
+- New builtin `rex_split` (like OCaml's `Str.split`)
 
 ## v1.11.2 (May 2020)
 
