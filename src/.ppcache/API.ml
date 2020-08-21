@@ -1,4 +1,4 @@
-(*2186ca58e78b30b2616c65e76db3513ad756c89d *src/API.ml *)
+(*5ea7f0e23680dfbc5f0478a3a360ac193a940fde *src/API.ml *)
 #1 "src/API.ml"
 module type Runtime  = module type of Runtime_trace_off
 let r = ref ((module Runtime_trace_off) : (module Runtime))
@@ -181,7 +181,9 @@ module Pp =
     let query f c =
       let module R = (val !r) in
         let open R in
-          Compiler.pp_query (fun ~depth -> R.Pp.uppterm depth [] 0 [||]) f c
+          Compiler.pp_query
+            (fun ~pp_ctx ->
+               fun ~depth -> R.Pp.uppterm ~pp_ctx depth [] 0 [||]) f c
     module Ast = struct let program = EA.Program.pp end
   end
 module Conversion =

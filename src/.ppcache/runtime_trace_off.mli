@@ -1,4 +1,4 @@
-(*e0914f3476d15e2ba79d82fa97efbbd05a6e4c75 *src/runtime_trace_off.mli --cookie elpi_trace="false"*)
+(*b993827a8ac92ff43df1206e5aefa0956bfcd36f *src/runtime_trace_off.mli --cookie elpi_trace="false"*)
 #1 "src/runtime_trace_off.mli"
 open Util
 open Data
@@ -12,8 +12,9 @@ sig
     ?pp_ctx:pp_ctx ->
       ?min_prec:int ->
         int -> string list -> int -> env -> Format.formatter -> term -> unit
-  val pp_constant : Format.formatter -> constant -> unit
-  val pp_oref : Format.formatter -> (UUID.t * Obj.t) -> unit
+  val pp_constant : ?pp_ctx:pp_ctx -> Format.formatter -> constant -> unit
+  val pp_oref :
+    ?pp_ctx:pp_ctx -> Format.formatter -> (UUID.t * Obj.t) -> unit
 end
 val pp_stuck_goal : ?pp_ctx:pp_ctx -> Fmt.formatter -> stuck_goal -> unit
 val embed_query :

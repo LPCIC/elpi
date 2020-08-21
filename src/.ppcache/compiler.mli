@@ -1,4 +1,4 @@
-(*d53ed81516fb5c87752f86676d2c2b0ac20ba07f *src/compiler.mli *)
+(*d8234deab7c788c119394625649abaddbdc7ad33 *src/compiler.mli *)
 #1 "src/compiler.mli"
 open Util
 open Data
@@ -28,7 +28,7 @@ val optimize_query : 'a query -> 'a executable
 val term_of_ast :
   depth:int -> State.t -> (Loc.t * Ast.Term.t) -> (State.t * term)
 val pp_query :
-  (depth:int -> Format.formatter -> term -> unit) ->
+  (pp_ctx:pp_ctx -> depth:int -> Format.formatter -> term -> unit) ->
     Format.formatter -> 'a query -> unit
 module Symbols :
 sig

@@ -1,4 +1,4 @@
-(*05a8d56278539868405064d882672f7caa8f3941 *src/compiler.ml *)
+(*e09c9ff20cab458722d50e6ca14a5bb19d5a6f73 *src/compiler.ml *)
 #1 "src/compiler.ml"
 open Util
 module F = Ast.Func
@@ -2812,6 +2812,10 @@ module Assemble :
            toplevel_macros
          }))
   end 
+let w_symbol_table s f x =
+  let table = Symbols.compile_table @@ (State.get Symbols.table s) in
+  let pp_ctx = { table; uv_names = (ref ((PtrMap.empty ()), 0)) } in
+  Util.set_spaghetti_printer Data.pp_const (R.Pp.pp_constant ~pp_ctx); f x
 let unit_of_ast s ?header  p =
   let { print_passes } = State.get compiler_flags s in
   if print_passes
@@ -2822,7 +2826,7 @@ let unit_of_ast s ?header  p =
    if print_passes
    then
      Format.eprintf "== Ast.Structured ================@\n@[<v 0>%a@]@\n"
-       Ast.Structured.pp_program p;
+       (w_symbol_table s Ast.Structured.pp_program) p;
    (let toplevel_macros =
       match header with
       | Some { code = { Flat.toplevel_macros = toplevel_macros } } ->
@@ -2832,12 +2836,12 @@ let unit_of_ast s ?header  p =
     if print_passes
     then
       Format.eprintf "== Structured ================@\n@[<v 0>%a@]@\n"
-        Structured.pp_program p;
+        (w_symbol_table s Structured.pp_program) p;
     (let p = Flatten.run s p in
      if print_passes
      then
        Format.eprintf "== Flat ================@\n@[<v 0>%a@]@\n"
-         Flat.pp_program p;
+         (w_symbol_table s Flat.pp_program) p;
      {
        version = "%%VERSION_NUM%%";
        code = p;
@@ -2851,12 +2855,12 @@ let assemble_units ~header  units =
   if print_passes
   then
     Format.eprintf "== Assembled ================@\n@[<v 0>%a@]@\n"
-      Assembled.pp_program p;
+      (w_symbol_table s Assembled.pp_program) p;
   (let p = Spill.run s p in
    if print_passes
    then
      Format.eprintf "== Spilled ================@\n@[<v 0>%a@]@\n"
-       Assembled.pp_program p;
+       (w_symbol_table s Assembled.pp_program) p;
    (s, p))
 let program_of_ast s ~header  p =
   let u = unit_of_ast s p in assemble_units ~header [u]
@@ -3147,14 +3151,20 @@ let pp_query pp fmt
   { WithMain.types = types; modes; clauses; chr; initial_depth;
     compiler_state; query }
   =
+  let pp_ctx =
+    {
+      uv_names = (ref ((PtrMap.empty ()), 0));
+      table =
+        (Symbols.compile_table (State.get Symbols.table compiler_state))
+    } in
   Format.fprintf fmt "@[<v>";
   List.iter
     (fun { Ast.Clause.body = body } ->
-       Format.fprintf fmt "%a.@;" (pp ~depth:initial_depth)
+       Format.fprintf fmt "%a.@;" (pp ~pp_ctx ~depth:initial_depth)
          (snd
             (stack_term_of_preterm compiler_state ~depth:initial_depth body)))
     clauses;
-  Format.fprintf fmt "?- %a.@;" (pp ~depth:initial_depth)
+  Format.fprintf fmt "?- %a.@;" (pp ~pp_ctx ~depth:initial_depth)
     (snd (stack_term_of_preterm compiler_state ~depth:initial_depth query));
   Format.fprintf fmt "@]"
 let constc = D.Global_symbols.declare_global_symbol "const"

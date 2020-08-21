@@ -1,4 +1,4 @@
-(*1875b87ecc9f302a23da9612e17e9e3050c05880 *src/runtime_trace_off.ml --cookie elpi_trace="false"*)
+(*d2284b18b7efca3e8e515d7da852773c403f167b *src/runtime_trace_off.ml --cookie elpi_trace="false"*)
 #1 "src/runtime_trace_off.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -27,7 +27,7 @@ module C :
     module Map = Constants.Map
     module Set = Constants.Set
     val show : ?table:symbol_table -> t -> string
-    val pp : Fmt.formatter -> t -> unit
+    val pp : ?table:symbol_table -> Fmt.formatter -> t -> unit
     val mkConst : constant -> term
     val mkAppL : constant -> term list -> term
     val fresh_global_constant : unit -> (constant * term)
@@ -52,7 +52,7 @@ module C :
           if n >= 0
           then "c" ^ (string_of_int n)
           else "SYMBOL" ^ (string_of_int n)
-    let pp fmt n = Format.fprintf fmt "%s" (show n)
+    let pp ?table  fmt n = Format.fprintf fmt "%s" (show ?table n)
     let mkConst x =
       try Hashtbl.find (!table).c2t x
       with
@@ -90,8 +90,9 @@ module Pp :
     val do_deref : int deref_fun ref
     val do_app_deref : term list deref_fun ref
     val uv_names : (string PtrMap.t * int) Fork.local_ref
-    val pp_oref : Format.formatter -> (Util.UUID.t * Obj.t) -> unit
-    val pp_constant : Format.formatter -> constant -> unit
+    val pp_oref :
+      ?pp_ctx:pp_ctx -> Format.formatter -> (Util.UUID.t * Obj.t) -> unit
+    val pp_constant : ?pp_ctx:pp_ctx -> Format.formatter -> constant -> unit
   end =
   struct
     let do_deref =
@@ -306,15 +307,18 @@ module Pp :
       with | e -> Fmt.fprintf f "EXN PRINTING: %s" (Printexc.to_string e)
     let ppterm = xppterm ~nice:false
     let uppterm = xppterm ~nice:true
-    let pp_oref fmt (id, t) =
+    let pp_oref ?pp_ctx  fmt (id, t) =
       if not (UUID.equal id id_term)
       then anomaly "pp_oref"
       else
         (let t : term = Obj.obj t in
          if t == C.dummy
          then Fmt.fprintf fmt "_"
-         else uppterm 0 [] 0 empty_env fmt t)
-    let pp_constant = C.pp
+         else uppterm ?pp_ctx 0 [] 0 empty_env fmt t)
+    let pp_constant ?pp_ctx  fmt c =
+      let table =
+        match pp_ctx with | None -> None | Some { table } -> Some table in
+      C.pp ?table fmt c
   end 
 open Pp
 let (rid, max_runtime_id) = ((Fork.new_local 0), (ref 0))
