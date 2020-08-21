@@ -15,7 +15,7 @@ help:
 
 INSTALL=_build/install/default
 BUILD=_build/default
-SHELL:=/bin/bash
+SHELL:=/usr/bin/env bash
 TIMEOUT=90.0
 RUNNERS=\
   dune \
