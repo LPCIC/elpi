@@ -1,3 +1,7 @@
+## v1.11.4 (Aug 2020)
+
+- do not rely on /bin/bash in Makefile (helps on nix and freebsd)
+
 ## v1.11.3 (Aug 2020)
 
 - ppxfindcache: use `shasum` instead of `sha1sum`
