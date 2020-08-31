@@ -326,7 +326,8 @@ let raw_mk_Arg s n  { c2i; nargs; i2n; n2t; n2i } =
 type preterm = {
   term : D.term; (* Args are still constants *)
   amap : argmap;
-  loc : Loc.t
+  loc : Loc.t;
+  spilling : bool;
 }
 [@@ deriving show]
 
@@ -824,6 +825,10 @@ let get_Args s = StrMap.map fst (get_argmap s).n2t
 
 let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
 
+  let spilling = ref false in
+  let spy_spill c =
+    spilling := !spilling || c == D.Global_symbols.spillc in
+
   let is_uvar_name f = 
      let c = (F.show f).[0] in
      ('A' <= c && c <= 'Z') in
@@ -899,9 +904,9 @@ let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
        let state, c = stack_funct_of_ast lvl state f in
        begin match c with
        | Const c -> begin match tl with
-          | hd2::tl -> state, Term.App(c,hd2,tl)
+          | hd2::tl -> spy_spill c; state, Term.App(c,hd2,tl)
           | _ -> anomaly "Application node with no arguments" end
-       | App(c,hd1,tl1) -> (* FG:decurrying: is this the right place for it? *)
+       | App(c,hd1,tl1) -> spy_spill c; (* FG:decurrying: is this the right place for it? *)
           state, Term.App(c,hd1,tl1@tl)
        | Builtin(c,tl1) -> state, Term.Builtin(c,tl1@tl)
        | Lam _ -> (* macro with args *)
@@ -957,7 +962,8 @@ let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
   in
 
   (* arg_lvl is the number of local variables *)
-  aux arg_lvl state ast
+  let state, t = aux arg_lvl state ast in
+  state, t, !spilling
 ;;
 
 let lp ~depth state loc s =
@@ -966,12 +972,13 @@ let lp ~depth state loc s =
     match get_mtm state with
     | None -> F.Map.empty
     | Some x -> x.macros in
-  preterm_of_ast loc ~depth macros state ast
+  let state, t, _ = preterm_of_ast loc ~depth macros state ast in
+  state, t
 
 let prechr_rule_of_ast depth macros state r =
   let pcloc = r.Ast.Chr.loc in
   assert(is_empty_amap (get_argmap state));
-  let intern state t = preterm_of_ast pcloc ~depth macros state t in
+  let intern state t = let state, t, _ = preterm_of_ast pcloc ~depth macros state t in state, t in
   let intern_sequent state { Ast.Chr.eigen; context; conclusion } =
     let state, peigen = intern state eigen in
     let state, pcontext = intern state context in
@@ -991,12 +998,12 @@ let prechr_rule_of_ast depth macros state r =
 (* used below *)
 let preterms_of_ast ?on_type loc ~depth macros state f t =
   assert(is_empty_amap (get_argmap state));
-  let state, term = preterm_of_ast ?on_type loc ~depth macros state t in
+  let state, term, spilling = preterm_of_ast ?on_type loc ~depth macros state t in
   let state, terms = f ~depth state term in
   let amap = get_argmap state in
   let state = State.end_clause_compilation state in
   (* TODO: may have spurious entries in the amap *)
-  state, List.map (fun (loc,term) -> { term; amap; loc }) terms
+  state, List.map (fun (loc,term) -> { term; amap; loc; spilling }) terms
 ;;
 
 (* exported *)
@@ -1005,13 +1012,13 @@ let query_preterm_of_function ~depth macros state f =
   let state = set_mtm state (Some { macros }) in
   let state, (loc, term) = f state in
   let amap = get_argmap state in
-  state, { amap; term; loc }
+  state, { amap; term; loc; spilling = false }
 
 let query_preterm_of_ast ~depth macros state (loc, t) =
   assert(is_empty_amap (get_argmap state));
-  let state, term = preterm_of_ast loc ~depth macros state t in
+  let state, term, spilling = preterm_of_ast loc ~depth macros state t in
   let amap = get_argmap state in
-  state, { term; amap; loc }
+  state, { term; amap; loc; spilling }
 ;;
 
   open Ast.Structured
@@ -1323,7 +1330,7 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
     let ttype1 = smart_map_term ~on_type:true state f ttype.term in
     let tamap1 =subst_amap state f ttype.amap in
     if tname1 == tname && ttype1 == ttype.term && ttype.amap = tamap1 then tdecl
-    else { Structured.tindex; decl = { tname = tname1; tloc; ttype = { term = ttype1; amap = tamap1; loc = ttype.loc } } }
+    else { Structured.tindex; decl = { tname = tname1; tloc; ttype = { term = ttype1; amap = tamap1; loc = ttype.loc; spilling = ttype.spilling } } }
 
 
   let map_sequent state f { peigen; pcontext; pconclusion } =
@@ -1345,11 +1352,11 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
       pifexpr; pname; pcloc;
     }
 
-  let smart_map_preterm ?on_type state f ({ term; amap; loc } as x) =
+  let smart_map_preterm ?on_type state f ({ term; amap; loc; spilling } as x) =
     let term1 = smart_map_term ?on_type state f term in
     let amap1 = subst_amap state f amap in
     if term1 == term && amap1 == amap then x
-    else { term = term1; amap = amap1; loc }
+    else { term = term1; amap = amap1; loc; spilling }
 
   let map_clause state f ({ Ast.Clause.body } as x) =
     { x with Ast.Clause.body = smart_map_preterm state f body }
@@ -1720,18 +1727,22 @@ end = struct (* {{{ *)
     let rules = List.map (spill_rule state modes types) rules in
     (clique, rules)
 
-  let spill_clause state modes types ({ Ast.Clause.body = { term; amap; loc } } as x) =
-    let amap, term = spill_term state loc modes types amap term in
-    { x with Ast.Clause.body = { term; amap; loc } }
+  let spill_clause state modes types ({ Ast.Clause.body = { term; amap; loc; spilling } } as x) =
+    if not spilling then x
+    else
+      let amap, term = spill_term state loc modes types amap term in
+      { x with Ast.Clause.body = { term; amap; loc; spilling = false } }
 
   let run state ({ Assembled.clauses; modes; types; chr } as p) =
     let clauses = List.map (spill_clause state (fun c -> C.Map.find c modes) types) clauses in
     let chr = List.map (spill_chr state (fun c -> C.Map.find c modes) types) chr in
     { p with Assembled.clauses; chr }
 
-  let spill_preterm state types modes { term; amap; loc } =
-    let amap, term = spill_term state loc modes types amap term in
-    { amap; term; loc }
+  let spill_preterm state types modes ({ term; amap; loc; spilling } as x) =
+    if not spilling then x
+    else
+      let amap, term = spill_term state loc modes types amap term in
+      { amap; term; loc; spilling = false; }
 
 end (* }}} *)
 
@@ -2060,7 +2071,7 @@ let compile_chr depth state
     | App(x,_,_) -> x
     | f -> error ~loc "CHR: rule without head symbol" in
   let stack_term_of_preterm s term =
-    stack_term_of_preterm ~depth:0 s { term; amap = pamap; loc } in
+    stack_term_of_preterm ~depth:0 s { term; amap = pamap; loc; spilling = true } in
   let stack_sequent_of_presequent s { pcontext; pconclusion; peigen } =
     let s, context = stack_term_of_preterm s pcontext in
     let s, conclusion = stack_term_of_preterm s pconclusion in
@@ -2369,7 +2380,7 @@ let unfold_type_abbrevs ~compiler_state lcs type_abbrevs { term; loc; amap } =
         end
     | x -> x
   in
-    { term = aux C.Set.empty term; loc; amap }
+    { term = aux C.Set.empty term; loc; amap; spilling = false }
 
 let term_of_ast ~depth state t =
  if State.get D.while_compiling state then
