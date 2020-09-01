@@ -166,10 +166,14 @@ module Compile : sig
        visible in all units
      - types, type abbreviations and mode declarations from all units are
        merged at assembly time
+     - extending a program with a unit is fast if the unit follows it. A unit
+       following a program is not allowed to allocate new global symbol. The
+       typical example is a new clause for an exising predicate.
      *)
   type compilation_unit
-  val unit : elpi:Setup.elpi -> flags:flags -> Ast.program -> compilation_unit
+  val unit : ?follows:program -> elpi:Setup.elpi -> flags:flags -> Ast.program -> compilation_unit
   val assemble : elpi:Setup.elpi -> compilation_unit list -> program
+  val extend : base:program -> compilation_unit list -> program
 
   (* then compile the query *)
   val query : program -> Ast.query -> unit query
@@ -691,6 +695,8 @@ module State : sig
     name:string ->
     pp:(Format.formatter -> 'a -> unit) ->
     init:(unit -> 'a) ->
+    (* run just before the goal is compiled (but after the program is) *)
+    start:('a -> 'a) ->
       'a component
 
   type t = Data.state

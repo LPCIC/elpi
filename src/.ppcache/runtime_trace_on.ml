@@ -1,4 +1,4 @@
-(*d2284b18b7efca3e8e515d7da852773c403f167b *src/runtime_trace_on.ml --cookie elpi_trace="true"*)
+(*1be108d15a5f71fca4ad3b97c89762767b3578ba *src/runtime_trace_on.ml --cookie elpi_trace="true"*)
 #1 "src/runtime_trace_on.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -368,8 +368,9 @@ module ConstraintStoreAndTrail :
       cstr_blockers: uvar_body list }
     let state =
       Fork.new_local
-        (((State.init ()) |> (State.end_goal_compilation StrMap.empty)) |>
-           State.end_compilation)
+        ((((State.init ()) |> State.begin_goal_compilation) |>
+            (State.end_goal_compilation StrMap.empty))
+           |> State.end_compilation)
     let read_custom_constraint ct = State.get ct (!state)
     let update_custom_constraint ct f = state := (State.update ct (!state) f)
     type trail_item =
@@ -3518,8 +3519,9 @@ module Constraints :
              initial_depth = max_depth;
              initial_runtime_state =
                (let open State in
-                  ((init ()) |> (end_goal_compilation StrMap.empty)) |>
-                    end_compilation);
+                  (((init ()) |> State.begin_goal_compilation) |>
+                     (end_goal_compilation StrMap.empty))
+                    |> end_compilation);
              query_arguments = Query.N;
              symbol_table = (!C.table);
              builtins = (!FFI.builtins)

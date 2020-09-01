@@ -409,7 +409,7 @@ end = struct (* {{{ *)
  }
 
   let state =
-    Fork.new_local (State.init () |> State.end_goal_compilation StrMap.empty |> State.end_compilation)
+    Fork.new_local (State.init () |> State.begin_goal_compilation |> State.end_goal_compilation StrMap.empty |> State.end_compilation)
   let read_custom_constraint ct =
     State.get ct !state
   let update_custom_constraint ct f =
@@ -3006,7 +3006,7 @@ let try_fire_rule (gid[@trace]) rule (constraints as orig_constraints) =
         (shift_bound_vars ~depth:0 ~to_:max_depth guard);
     assignments = StrMap.empty;
     initial_depth = max_depth;
-    initial_runtime_state = State.(init () |> end_goal_compilation StrMap.empty |> end_compilation);
+    initial_runtime_state = State.(init () |> State.begin_goal_compilation |> end_goal_compilation StrMap.empty |> end_compilation);
     query_arguments = Query.N;
     symbol_table = !C.table;
     builtins = !FFI.builtins;
@@ -3464,11 +3464,11 @@ let execute_loop ?delay_outside_fragment exec ~more ~pp =
  let { search; next_solution; get } = make_runtime ?delay_outside_fragment exec in
  let k = ref noalts in
  let do_with_infos f =
-  let time0 = Unix.gettimeofday() in
-  let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, get CS.state |> State.end_execution, exec.query_arguments, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments in
-  let time1 = Unix.gettimeofday() in
-  k := alts;
-  pp (time1 -. time0) o in
+   let time0 = Unix.gettimeofday() in
+   let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, get CS.state |> State.end_execution, exec.query_arguments, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments in
+   let time1 = Unix.gettimeofday() in
+   k := alts;
+   pp (time1 -. time0) o in
  do_with_infos search;
  while !k != noalts do
    if not(more()) then k := noalts else

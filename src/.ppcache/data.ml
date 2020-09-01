@@ -1,4 +1,4 @@
-(*83d0917ef4644ac288b486b091a03067003847df *src/data.ml *)
+(*51c80c95dcd61ef458ccf107e3103c29a49faa62 *src/data.ml *)
 #1 "src/data.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -788,14 +788,16 @@ module State :
         pp:(Format.formatter -> 'a -> unit) ->
           init:(unit -> 'a) ->
             clause_compilation_is_over:('a -> 'a) ->
-              goal_compilation_is_over:(args:uvar_body StrMap.t ->
-                                          'a -> 'a option)
-                ->
-                compilation_is_over:('a -> 'a option) ->
-                  execution_is_over:('a -> 'a option) -> 'a component
+              goal_compilation_begins:('a -> 'a) ->
+                goal_compilation_is_over:(args:uvar_body StrMap.t ->
+                                            'a -> 'a option)
+                  ->
+                  compilation_is_over:('a -> 'a option) ->
+                    execution_is_over:('a -> 'a option) -> 'a component
     type t
     val init : unit -> t
     val end_clause_compilation : t -> t
+    val begin_goal_compilation : t -> t
     val end_goal_compilation : uvar_body StrMap.t -> t -> t
     val end_compilation : t -> t
     val end_execution : t -> t
@@ -807,31 +809,65 @@ module State :
     val pp : Format.formatter -> t -> unit
   end =
   struct
-    type t = Obj.t StrMap.t
+    type stage =
+      | Compile_prog 
+      | Compile_goal 
+      | Link 
+      | Run 
+      | Halt [@@deriving show]
+    let rec pp_stage :
+              Ppx_deriving_runtime_proxy.Format.formatter ->
+                stage -> Ppx_deriving_runtime_proxy.unit
+      =
+      ((let open! Ppx_deriving_runtime_proxy in
+          fun fmt ->
+            function
+            | Compile_prog ->
+                Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
+                  "Data.State.Compile_prog"
+            | Compile_goal ->
+                Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
+                  "Data.State.Compile_goal"
+            | Link ->
+                Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
+                  "Data.State.Link"
+            | Run ->
+                Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
+                  "Data.State.Run"
+            | Halt ->
+                Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
+                  "Data.State.Halt")
+      [@ocaml.warning "-A"])
+    and show_stage : stage -> Ppx_deriving_runtime_proxy.string =
+      fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_stage x[@@ocaml.warning
+                                                                    "-32"]
+    type t = (Obj.t StrMap.t * stage)
     type 'a component = string
     type extension =
       {
       init: unit -> Obj.t ;
       end_clause: Obj.t -> Obj.t ;
+      begin_goal: Obj.t -> Obj.t ;
       end_goal: args:uvar_body StrMap.t -> Obj.t -> Obj.t option ;
       end_comp: Obj.t -> Obj.t option ;
       end_exec: Obj.t -> Obj.t option ;
       pp: Format.formatter -> Obj.t -> unit }
     let extensions : extension StrMap.t ref = ref StrMap.empty
-    let get name t =
+    let get name (t, _) =
       try Obj.obj (StrMap.find name t)
       with
       | Not_found ->
           anomaly ("State.get: component " ^ (name ^ " not found"))
-    let set name t v = StrMap.add name (Obj.repr v) t
-    let drop name t = StrMap.remove name t
-    let update name t f =
-      StrMap.add name (Obj.repr (f (Obj.obj (StrMap.find name t)))) t
+    let set name (t, s) v = ((StrMap.add name (Obj.repr v) t), s)
+    let drop name (t, s) = ((StrMap.remove name t), s)
+    let update name (t, s) f =
+      ((StrMap.add name (Obj.repr (f (Obj.obj (StrMap.find name t)))) t), s)
     let update_return name t f =
       let x = get name t in
       let (x, res) = f x in let t = set name t x in (t, res)
     let declare ~name  ~pp  ~init  ~clause_compilation_is_over 
-      ~goal_compilation_is_over  ~compilation_is_over  ~execution_is_over  =
+      ~goal_compilation_begins  ~goal_compilation_is_over 
+      ~compilation_is_over  ~execution_is_over  =
       if StrMap.mem name (!extensions)
       then anomaly ("Extension " ^ (name ^ " already declared"));
       extensions :=
@@ -846,6 +882,8 @@ module State :
                       (goal_compilation_is_over ~args (Obj.obj x)));
              end_clause =
                (fun x -> Obj.repr (clause_compilation_is_over (Obj.obj x)));
+             begin_goal =
+               (fun x -> Obj.repr (goal_compilation_begins (Obj.obj x)));
              end_comp =
                (fun x ->
                   option_map Obj.repr (compilation_is_over (Obj.obj x)));
@@ -854,45 +892,62 @@ module State :
            } (!extensions));
       name
     let init () =
-      StrMap.fold (fun name -> fun { init } -> StrMap.add name (init ()))
-        (!extensions) StrMap.empty
-    let end_clause_compilation m =
-      StrMap.fold
-        (fun name ->
-           fun obj ->
-             fun acc ->
-               let o = (StrMap.find name (!extensions)).end_clause obj in
-               StrMap.add name o acc) m StrMap.empty
-    let end_goal_compilation args m =
-      StrMap.fold
-        (fun name ->
-           fun obj ->
-             fun acc ->
-               match (StrMap.find name (!extensions)).end_goal ~args obj with
-               | None -> acc
-               | Some o -> StrMap.add name o acc) m StrMap.empty
-    let end_compilation m =
-      StrMap.fold
-        (fun name ->
-           fun obj ->
-             fun acc ->
-               match (StrMap.find name (!extensions)).end_comp obj with
-               | None -> acc
-               | Some o -> StrMap.add name o acc) m StrMap.empty
-    let end_execution m =
-      StrMap.fold
-        (fun name ->
-           fun obj ->
-             fun acc ->
-               match (StrMap.find name (!extensions)).end_exec obj with
-               | None -> acc
-               | Some o -> StrMap.add name o acc) m StrMap.empty
-    let pp fmt t =
+      ((StrMap.fold
+          (fun name ->
+             fun { init } ->
+               fun acc -> let o = init () in StrMap.add name o acc)
+          (!extensions) StrMap.empty), Compile_prog)
+    let end_clause_compilation (m, s) =
+      assert (s = Compile_prog);
+      ((StrMap.fold
+          (fun name ->
+             fun obj ->
+               fun acc ->
+                 let o = (StrMap.find name (!extensions)).end_clause obj in
+                 StrMap.add name o acc) m StrMap.empty), s)
+    let begin_goal_compilation (m, s) =
+      assert (s = Compile_prog);
+      ((StrMap.fold
+          (fun name ->
+             fun obj ->
+               fun acc ->
+                 let o = (StrMap.find name (!extensions)).begin_goal obj in
+                 StrMap.add name o acc) m StrMap.empty), Compile_goal)
+    let end_goal_compilation args (m, s) =
+      assert (s = Compile_goal);
+      ((StrMap.fold
+          (fun name ->
+             fun obj ->
+               fun acc ->
+                 match (StrMap.find name (!extensions)).end_goal ~args obj
+                 with
+                 | None -> acc
+                 | Some o -> StrMap.add name o acc) m StrMap.empty), Link)
+    let end_compilation (m, s) =
+      assert (s = Link);
+      ((StrMap.fold
+          (fun name ->
+             fun obj ->
+               fun acc ->
+                 match (StrMap.find name (!extensions)).end_comp obj with
+                 | None -> acc
+                 | Some o -> StrMap.add name o acc) m StrMap.empty), Run)
+    let end_execution (m, s) =
+      assert (s = Run);
+      ((StrMap.fold
+          (fun name ->
+             fun obj ->
+               fun acc ->
+                 match (StrMap.find name (!extensions)).end_exec obj with
+                 | None -> acc
+                 | Some o -> StrMap.add name o acc) m StrMap.empty), Halt)
+    let pp fmt (t, s) =
       StrMap.iter
         (fun name ->
            fun { pp } ->
              try pp fmt (StrMap.find name t) with | Not_found -> ())
-        (!extensions)
+        (!extensions);
+      pp_stage fmt s
   end 
 module Global_symbols :
   sig
@@ -1694,6 +1749,7 @@ module ContextualConversion =
 let while_compiling =
   State.declare ~name:"elpi:compiling" ~pp:(fun fmt -> fun _ -> ())
     ~clause_compilation_is_over:(fun b -> b)
+    ~goal_compilation_begins:(fun b -> b)
     ~goal_compilation_is_over:(fun ~args:_ -> fun b -> Some b)
     ~compilation_is_over:(fun _ -> Some false)
     ~execution_is_over:(fun _ -> None) ~init:(fun () -> false)
