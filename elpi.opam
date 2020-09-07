@@ -11,7 +11,6 @@ build: [
   ["dune" "subst"] {pinned}
   [make "build" "DUNE_OPTS=-p %{name}% -j %{jobs}%"]
   [make "tests" "DUNE_OPTS=-p %{name}%" "TIMEOUT=120"] {with-test & os != "macos" & os-distribution != "alpine" & os-distribution != "freebsd"}
-  [make "fix-elpi.install"]
 ]
 
 depends: [
