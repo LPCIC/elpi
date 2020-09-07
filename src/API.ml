@@ -161,7 +161,8 @@ module Compile = struct
   }
   let default_flags = Compiler.default_flags
   let optimize = Compiler.optimize_query
-  let unit ~elpi:(_,header) ~flags x = Compiler.unit_of_ast (Compiler.init_state flags) ~header x
+  let unit ?follows ~elpi:(_,header) ~flags x = Compiler.unit_of_ast (Compiler.init_state ?symbols_of:(Util.option_map fst follows) flags) ~header x
+  let extend ~base ul = Compiler.extend base ul
   let assemble ~elpi:(_,header) = Compiler.assemble_units ~header
 
 end
@@ -416,6 +417,7 @@ module Elpi = struct
       after compilation *)
   let uvk = ED.State.declare ~name:"elpi:uvk" ~pp:(Util.StrMap.pp pp)
     ~clause_compilation_is_over:(fun x -> Util.StrMap.empty)
+    ~goal_compilation_begins:(fun x -> Util.StrMap.empty)
     ~goal_compilation_is_over:(fun ~args x ->
         Some (Util.StrMap.map (compilation_is_over ~args) x))
     ~compilation_is_over:(fun _ -> None)
@@ -649,6 +651,7 @@ module FlexibleData = struct
 
     let uvmap = ED.State.declare ~name:(Printf.sprintf "elpi:uvm:%d" uvn) ~pp
       ~clause_compilation_is_over:(fun x -> empty)
+      ~goal_compilation_begins:(fun x -> x)
       ~goal_compilation_is_over:(fun ~args { h2e; e2h_compile; e2h_run } ->
         let h2e = H2E.map (Elpi.compilation_is_over ~args) h2e in
         let e2h_run =
@@ -772,9 +775,10 @@ module State = struct
   include ED.State
   (* From now on, we pretend there is no difference between terms at
      compilation time and terms at execution time (in the API) *)
-  let declare ~name ~pp ~init =
+  let declare ~name ~pp ~init ~start =
     declare ~name ~pp ~init
       ~clause_compilation_is_over:(fun x -> x)
+      ~goal_compilation_begins:(fun x -> start x)
       ~goal_compilation_is_over:(fun ~args:_ x -> Some x)
       ~compilation_is_over:(fun x -> Some x)
       ~execution_is_over:(fun x -> Some x)

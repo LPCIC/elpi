@@ -12,7 +12,6 @@ type flags = {
 val default_flags : flags
 val compiler_flags : flags State.component
 
-val init_state : flags -> State.t
 
 type program
 type 'a query
@@ -20,10 +19,12 @@ type 'a query
 exception CompileError of Loc.t option * string
 
 type compilation_unit
+val init_state : ?symbols_of:State.t -> flags -> State.t
 
 val program_of_ast : State.t -> header:compilation_unit -> Ast.Program.t -> State.t * program
 val unit_of_ast : State.t -> ?header:compilation_unit -> Ast.Program.t -> compilation_unit
 val assemble_units : header:compilation_unit -> compilation_unit list -> State.t * program
+val extend : State.t * program -> compilation_unit list -> State.t * program
 
 val query_of_ast : State.t -> program -> Ast.Goal.t -> unit query
 val query_of_term :

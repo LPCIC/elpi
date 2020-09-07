@@ -1,3 +1,10 @@
+## UNRELEASED
+- API:
+  - New `Compile.extend` to (quickly) add clauses to a program
+  - New argument `?follows:program` to `Compile.unit` to have the unit
+    be compiled using the very same symbol table (no new symbols can be
+    declared by the unit in this case)
+
 ## v1.11.4 (Aug 2020)
 
 - do not rely on /bin/bash in Makefile (helps on nix and freebsd)

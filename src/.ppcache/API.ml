@@ -1,4 +1,4 @@
-(*5ea7f0e23680dfbc5f0478a3a360ac193a940fde *src/API.ml *)
+(*fc13cbdccb76016befcf0f151d83c8466017546b *src/API.ml *)
 #1 "src/API.ml"
 module type Runtime  = module type of Runtime_trace_off
 let r = ref ((module Runtime_trace_off) : (module Runtime))
@@ -150,8 +150,11 @@ module Compile =
       print_passes: bool }
     let default_flags = Compiler.default_flags
     let optimize = Compiler.optimize_query
-    let unit ~elpi:(_, header)  ~flags  x =
-      Compiler.unit_of_ast (Compiler.init_state flags) ~header x
+    let unit ?follows  ~elpi:(_, header)  ~flags  x =
+      Compiler.unit_of_ast
+        (Compiler.init_state ?symbols_of:(Util.option_map fst follows) flags)
+        ~header x
+    let extend ~base  ul = Compiler.extend base ul
     let assemble ~elpi:(_, header)  = Compiler.assemble_units ~header
   end
 module Execute =
@@ -415,6 +418,7 @@ module Elpi =
     let uvk =
       ED.State.declare ~name:"elpi:uvk" ~pp:(Util.StrMap.pp pp)
         ~clause_compilation_is_over:(fun x -> Util.StrMap.empty)
+        ~goal_compilation_begins:(fun x -> Util.StrMap.empty)
         ~goal_compilation_is_over:(fun ~args ->
                                      fun x ->
                                        Some
@@ -605,6 +609,7 @@ module FlexibleData =
         let uvmap =
           ED.State.declare ~name:(Printf.sprintf "elpi:uvm:%d" uvn) ~pp
             ~clause_compilation_is_over:(fun x -> empty)
+            ~goal_compilation_begins:(fun x -> x)
             ~goal_compilation_is_over:(fun ~args ->
                                          fun { h2e; e2h_compile; e2h_run } ->
                                            let h2e =
@@ -764,8 +769,9 @@ module Query =
 module State =
   struct
     include ED.State
-    let declare ~name  ~pp  ~init  =
+    let declare ~name  ~pp  ~init  ~start  =
       declare ~name ~pp ~init ~clause_compilation_is_over:(fun x -> x)
+        ~goal_compilation_begins:(fun x -> start x)
         ~goal_compilation_is_over:(fun ~args:_ -> fun x -> Some x)
         ~compilation_is_over:(fun x -> Some x)
         ~execution_is_over:(fun x -> Some x)

@@ -1,4 +1,4 @@
-(*d8234deab7c788c119394625649abaddbdc7ad33 *src/compiler.mli *)
+(*bef9b2a405cc0135c2a311e3f6e3dcdc2bb00acc *src/compiler.mli *)
 #1 "src/compiler.mli"
 open Util
 open Data
@@ -7,17 +7,19 @@ type flags = {
   print_passes: bool }
 val default_flags : flags
 val compiler_flags : flags State.component
-val init_state : flags -> State.t
 type program
 type 'a query
 exception CompileError of Loc.t option * string 
 type compilation_unit
+val init_state : ?symbols_of:State.t -> flags -> State.t
 val program_of_ast :
   State.t -> header:compilation_unit -> Ast.Program.t -> (State.t * program)
 val unit_of_ast :
   State.t -> ?header:compilation_unit -> Ast.Program.t -> compilation_unit
 val assemble_units :
   header:compilation_unit -> compilation_unit list -> (State.t * program)
+val extend :
+  (State.t * program) -> compilation_unit list -> (State.t * program)
 val query_of_ast : State.t -> program -> Ast.Goal.t -> unit query
 val query_of_term :
   State.t ->
