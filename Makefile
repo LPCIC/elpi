@@ -32,9 +32,6 @@ build:
 	( echo "FLG -ppx './merlinppx.exe --as-ppx --cookie '\''elpi_trace=\"true\"'\'''" >> src/.merlin );\
 	exit $$RC
 
-fix-elpi.install:
-	dune exec ./fix_elpi_install.exe -- elpi.install
-
 install:
 	dune install $(DUNE_OPTS)
 
