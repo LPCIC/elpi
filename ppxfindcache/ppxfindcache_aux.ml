@@ -63,9 +63,8 @@ let common () =
   let flag = !flag in
   let cache x = List.mem (path_sanitize x) !cache in
 
-  let sha = must @@ exec "shasum" [|"-b";file|] in
-  let sha = String.sub sha 0 (String.length sha - 1) in
-  let sha = Printf.sprintf "(*%s %s*)\n" sha (String.concat " " (Array.to_list flag)) in
+  let sha = Digest.file file |> Digest.to_hex in
+  let sha = Printf.sprintf "(*%s %s %s*)\n" sha file (String.concat " " (Array.to_list flag)) in
 
   let cachefile =
     let open Filename in
