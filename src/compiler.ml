@@ -57,7 +57,7 @@ module Symbols : sig
   val allocate_global_symbol_str : D.State.t -> string -> D.State.t * D.constant
   val allocate_Arg_symbol        : D.State.t -> int -> D.State.t * D.constant
   val allocate_bound_symbol      : D.State.t -> int -> D.State.t * D.term
-  val get_global_or_allocate_bound_symbol        : D.State.t -> int -> D.State.t * D.term
+  val get_global_or_allocate_bound_symbol : D.State.t -> int -> D.State.t * D.term
   val get_canonical              : D.State.t -> int -> D.term
   val get_global_symbol          : D.State.t -> F.t -> D.constant * D.term
   val get_global_symbol_str      : D.State.t -> string -> D.constant * D.term
