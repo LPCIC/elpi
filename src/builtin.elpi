@@ -581,6 +581,11 @@ map-i L F R :- map-i.aux L 0 F R.
 map-i.aux [] _ _ [].
 map-i.aux [X|XS] N F [Y|YS] :- F N X Y, M is N + 1, map-i.aux XS M F YS.
 
+pred map-filter i:list A, i:(A -> B -> prop), o:list B.
+map-filter [] _ [].
+map-filter [X|XS] F [Y|YS] :- F X Y, !, map-filter XS F YS.
+map-filter [_|XS] F YS :- map-filter XS F YS.
+
 :index(1 1)
 pred map2 i:list A, i:list B, i:(A -> B -> C -> prop), o:list C.
 map2 [] [_|_] _ _ :- fatal-error "map2 on lists of different length".
@@ -588,12 +593,12 @@ map2 [_|_] [] _ _ :- fatal-error "map2 on lists of different length".
 map2 [] [] _ [].
 map2 [X|XS] [Y|YS] F [Z|ZS] :- F X Y Z, map2 XS YS F ZS.
 
-pred map2_filter i:list A, i:list B, i:(A -> B -> C -> prop), o:list C.
-map2_filter [] [_|_] _ _ :- fatal-error "map2_filter on lists of different length".
-map2_filter [_|_] [] _ _ :- fatal-error "map2_filter on lists of different length".
-map2_filter [] [] _ [].
-map2_filter [X|XS] [Y|YS] F [Z|ZS] :- F X Y Z, !, map2_filter XS YS F ZS.
-map2_filter [_|XS] [_|YS] F ZS :- map2_filter XS YS F ZS.
+pred map2-filter i:list A, i:list B, i:(A -> B -> C -> prop), o:list C.
+map2-filter [] [_|_] _ _ :- fatal-error "map2-filter on lists of different length".
+map2-filter [_|_] [] _ _ :- fatal-error "map2-filter on lists of different length".
+map2-filter [] [] _ [].
+map2-filter [X|XS] [Y|YS] F [Z|ZS] :- F X Y Z, !, map2-filter XS YS F ZS.
+map2-filter [_|XS] [_|YS] F ZS :- map2-filter XS YS F ZS.
 
 % [nth N L X] picks in X the N-th element of L (L must be of length > N)
 pred nth i:int, i:list A, o:A.

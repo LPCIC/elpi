@@ -4,6 +4,9 @@
   - New argument `?follows:program` to `Compile.unit` to have the unit
     be compiled using the very same symbol table (no new symbols can be
     declared by the unit in this case)
+- Library:
+  - rename `map2_filter` -> `map2-filter`
+  - new `map-filter`
 
 ## v1.11.4 (Aug 2020)
 
