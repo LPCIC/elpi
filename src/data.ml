@@ -1005,21 +1005,25 @@ type declaration =
   | LPCode of string
 
 (* doc *)
-let pp_tab_arg i sep fmt (dir,ty,doc) =
+let ws_to_max fmt max n =
+  if n < max then Format.fprintf fmt "%s" (String.make (max - n) ' ')
+  else ()
+let pp_tab_arg i max sep fmt (dir,ty,doc) =
   let dir = if dir then "i" else "o" in
   if i = 0 then Fmt.pp_set_tab fmt () else ();
   Fmt.fprintf fmt "%s:%s%s" dir ty sep;
-  if i = 0 then Fmt.pp_set_tab fmt () else Fmt.pp_print_tab fmt ();
+  if i = 0 then (ws_to_max fmt max (String.length ty); Fmt.pp_set_tab fmt ()) else Fmt.pp_print_tab fmt ();
   if doc <> "" then begin Fmt.fprintf fmt " %% %s" doc end;
   Fmt.pp_print_tab fmt ()
 ;;
 
 let pp_tab_args fmt l =
   let n = List.length l - 1 in
+  let max = List.fold_left (fun m (_,s,_) -> max (String.length s) m) 0 l in
   Fmt.pp_open_tbox fmt ();
   List.iteri (fun i x ->
     let sep = if i = n then "." else "," in
-    pp_tab_arg i sep fmt x) l;
+    pp_tab_arg i max sep fmt x) l;
   Fmt.pp_close_tbox fmt ()
 ;;
 

@@ -1,4 +1,4 @@
-(*98431ce7697542dc20f64f21e5d1c8e3 src/data.ml *)
+(*23676cb264e7f320be53722b612a7237 src/data.ml *)
 #1 "src/data.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -2219,21 +2219,30 @@ module BuiltInPredicate =
       | MLDataC: ('a, 'h, 'c) ContextualConversion.t -> declaration 
       | LPDoc of string 
       | LPCode of string 
-    let pp_tab_arg i sep fmt (dir, ty, doc) =
+    let ws_to_max fmt max n =
+      if n < max
+      then Format.fprintf fmt "%s" (String.make (max - n) ' ')
+      else ()
+    let pp_tab_arg i max sep fmt (dir, ty, doc) =
       let dir = if dir then "i" else "o" in
       if i = 0 then Fmt.pp_set_tab fmt () else ();
       Fmt.fprintf fmt "%s:%s%s" dir ty sep;
-      if i = 0 then Fmt.pp_set_tab fmt () else Fmt.pp_print_tab fmt ();
+      if i = 0
+      then (ws_to_max fmt max (String.length ty); Fmt.pp_set_tab fmt ())
+      else Fmt.pp_print_tab fmt ();
       if doc <> "" then Fmt.fprintf fmt " %% %s" doc;
       Fmt.pp_print_tab fmt ()
     let pp_tab_args fmt l =
       let n = (List.length l) - 1 in
+      let max =
+        List.fold_left (fun m -> fun (_, s, _) -> max (String.length s) m) 0
+          l in
       Fmt.pp_open_tbox fmt ();
       List.iteri
         (fun i ->
            fun x ->
-             let sep = if i = n then "." else "," in pp_tab_arg i sep fmt x)
-        l;
+             let sep = if i = n then "." else "," in
+             pp_tab_arg i max sep fmt x) l;
       Fmt.pp_close_tbox fmt ()
     let pp_arg sep fmt (dir, ty, doc) =
       let dir = if dir then "i" else "o" in
