@@ -1,4 +1,4 @@
-(*ae61ed42af989c1d525eea322518dd04 src/API.mli *)
+(*bd37882aa8d1936d8967cf5c0dbaf075 src/API.mli *)
 #1 "src/API.mli"
 [@@@ocaml.text " This module is the API for clients of the Elpi library. "]
 [@@@ocaml.text
@@ -456,7 +456,7 @@ sig
                                    " If the data_hconsed is true, then the [cin] function below will\n     automatically hashcons the data using the [eq] and [hash] functions. "]
   type 'a cdata = private
     {
-    cin: 'a -> t ;
+    cin: 'a -> Data.term ;
     isc: t -> bool ;
     cout: t -> 'a ;
     name: string }
@@ -469,9 +469,9 @@ sig
   val name : t -> string
   val hcons : t -> t
   val ty2 : 'a cdata -> t -> t -> bool
-  val morph1 : 'a cdata -> ('a -> 'a) -> t -> t
-  val morph2 : 'a cdata -> ('a -> 'a -> 'a) -> t -> t -> t
-  val map : 'a cdata -> 'b cdata -> ('a -> 'b) -> t -> t
+  val morph1 : 'a cdata -> ('a -> 'a) -> t -> Data.term
+  val morph2 : 'a cdata -> ('a -> 'a -> 'a) -> t -> t -> Data.term
+  val map : 'a cdata -> 'b cdata -> ('a -> 'b) -> t -> Data.term
   val int : int cdata
   val is_int : t -> bool
   val to_int : t -> int

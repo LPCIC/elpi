@@ -821,7 +821,7 @@ module RawOpaqueData : sig
   }
 
   type 'a cdata = private {
-    cin : 'a -> t;
+    cin : 'a -> Data.term;
     isc : t -> bool;
     cout: t -> 'a;
     name : string;
@@ -839,9 +839,9 @@ module RawOpaqueData : sig
 
   (* tests if two cdata have the same given type *)
   val ty2 : 'a cdata -> t -> t -> bool
-  val morph1 : 'a cdata -> ('a -> 'a) -> t -> t
-  val morph2 : 'a cdata -> ('a -> 'a -> 'a) -> t -> t -> t
-  val map : 'a cdata -> 'b cdata -> ('a -> 'b) -> t -> t
+  val morph1 : 'a cdata -> ('a -> 'a) -> t -> Data.term
+  val morph2 : 'a cdata -> ('a -> 'a -> 'a) -> t -> t -> Data.term
+  val map : 'a cdata -> 'b cdata -> ('a -> 'b) -> t -> Data.term
 
   (* Raw builtin *)
   val int : int cdata

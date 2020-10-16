@@ -1,4 +1,4 @@
-(*bb8ea94331382716fa434ab1086133fc src/API.ml *)
+(*d0744a5ed66c82ffffdae64a6b486b28 src/API.ml *)
 #1 "src/API.ml"
 module type Runtime  = module type of Runtime_trace_off
 let r = ref ((module Runtime_trace_off) : (module Runtime))
@@ -195,8 +195,6 @@ module Conversion =
 module ContextualConversion = ED.ContextualConversion
 module RawOpaqueData =
   struct
-    include Util.CData
-    include ED.C
     type name = string
     type doc = string
     type 'a declaration =
@@ -208,10 +206,21 @@ module RawOpaqueData =
       hash: 'a -> int ;
       hconsed: bool ;
       constants: (name * 'a) list }
-    let conversion_of_cdata ~name  ?(doc= "")  ~constants_map  ~constants 
-      { cin; isc; cout; name = c } =
+    type t = Util.CData.t
+    type 'a cdata =
+      {
+      cin: 'a -> Data.term ;
+      isc: t -> bool ;
+      cout: t -> 'a ;
+      name: string }
+    let conversion_of_cdata ~name  ?(doc= "")  ~constants_map  ~values_map 
+      ~constants  ~pp  { Util.CData.cin = cin; isc; cout; name = c } =
       let ty = Conversion.TyName name in
-      let embed ~depth:_  state x = (state, (ED.Term.CData (cin x)), []) in
+      let cin x =
+        let module R = (val !r) in
+          try R.mkConst (values_map x)
+          with | Not_found -> ED.Term.CData (cin x) in
+      let embed ~depth:_  state x = (state, (cin x), []) in
       let readback ~depth  state t =
         let module R = (val !r) in
           let open R in
@@ -235,26 +244,28 @@ module RawOpaqueData =
               (fun (c, _) ->
                  Format.fprintf fmt "@[<hov 2>type %s %s.@]@\n" c name)
               constants in
-      {
-        Conversion.embed = embed;
-        readback;
-        ty;
-        pp_doc;
-        pp = (fun fmt -> fun x -> pp fmt (cin x))
-      }
-    let conversion_of_cdata ~name  ?doc  ?(constants= [])  cd =
+      ({ cin; cout; isc; name = c },
+        { Conversion.embed = embed; readback; ty; pp_doc; pp })
+    let conversion_of_cdata (type a) ~name  ?doc  ?(constants= [])  ~compare 
+      ~pp  cd =
       let module R = (val !r) in
         let open R in
-          let constants_map =
-            List.fold_right
-              (fun (n, v) ->
-                 ED.Constants.Map.add
-                   (ED.Global_symbols.declare_global_symbol n) v) constants
-              ED.Constants.Map.empty in
-          conversion_of_cdata ~name ?doc ~constants_map ~constants cd
+          let module VM =
+            (Map.Make)(struct type t = a
+                              let compare = compare end) in
+            let (constants_map, values_map) =
+              List.fold_right
+                (fun (n, v) ->
+                   fun (cm, vm) ->
+                     let c = ED.Global_symbols.declare_global_symbol n in
+                     ((ED.Constants.Map.add c v cm), (VM.add v c vm)))
+                constants (ED.Constants.Map.empty, VM.empty) in
+            let values_map x = VM.find x values_map in
+            conversion_of_cdata ~name ?doc ~constants_map ~values_map
+              ~constants ~pp cd
     let declare { name; doc; pp; compare; hash; hconsed; constants } =
       let cdata =
-        declare
+        Util.CData.declare
           {
             data_compare = compare;
             data_pp = pp;
@@ -262,7 +273,42 @@ module RawOpaqueData =
             data_name = name;
             data_hconsed = hconsed
           } in
-      (cdata, (conversion_of_cdata ~name ~doc ~constants cdata))
+      conversion_of_cdata ~name ~doc ~constants ~compare ~pp cdata
+    let morph1 { cin; cout } f x = cin (f (cout x))
+    let morph2 { cin; cout } f x y = cin (f (cout x) (cout y))
+    let map { cout } { cin } f x = cin (f (cout x))
+    let ty2 { isc } x y = (isc x) && (isc y)
+    let hcons = Util.CData.hcons
+    let name = Util.CData.name
+    let hash = Util.CData.hash
+    let compare = Util.CData.compare
+    let show = Util.CData.show
+    let pp = Util.CData.pp
+    let equal = Util.CData.equal
+    let int =
+      let { Util.CData.cin = cin; cout; isc; name } = ED.C.int in
+      { cin = (fun x -> ED.mkCData (cin x)); cout; isc; name }
+    let is_int = ED.C.is_int
+    let to_int = ED.C.to_int
+    let of_int = ED.C.of_int
+    let float =
+      let { Util.CData.cin = cin; cout; isc; name } = ED.C.float in
+      { cin = (fun x -> ED.mkCData (cin x)); cout; isc; name }
+    let is_float = ED.C.is_float
+    let to_float = ED.C.to_float
+    let of_float = ED.C.of_float
+    let string =
+      let { Util.CData.cin = cin; cout; isc; name } = ED.C.string in
+      { cin = (fun x -> ED.mkCData (cin x)); cout; isc; name }
+    let is_string = ED.C.is_string
+    let to_string = ED.C.to_string
+    let of_string = ED.C.of_string
+    let loc =
+      let { Util.CData.cin = cin; cout; isc; name } = ED.C.loc in
+      { cin = (fun x -> ED.mkCData (cin x)); cout; isc; name }
+    let is_loc = ED.C.is_loc
+    let to_loc = ED.C.to_loc
+    let of_loc = ED.C.of_loc
   end
 module OpaqueData =
   struct
@@ -281,10 +327,34 @@ module OpaqueData =
   end
 module BuiltInData =
   struct
-    let int = RawOpaqueData.conversion_of_cdata ~name:"int" ED.C.int
-    let float = RawOpaqueData.conversion_of_cdata ~name:"float" ED.C.float
-    let string = RawOpaqueData.conversion_of_cdata ~name:"string" ED.C.string
-    let loc = RawOpaqueData.conversion_of_cdata ~name:"loc" ED.C.loc
+    let int =
+      snd @@
+        (RawOpaqueData.conversion_of_cdata ~name:"int"
+           ~compare:(fun x -> fun y -> x - y)
+           ~pp:(fun fmt ->
+                  fun x -> Util.CData.pp fmt (ED.C.int.Util.CData.cin x))
+           ED.C.int)
+    let float =
+      snd @@
+        (RawOpaqueData.conversion_of_cdata ~name:"float"
+           ~compare:Float.compare
+           ~pp:(fun fmt ->
+                  fun x -> Util.CData.pp fmt (ED.C.float.Util.CData.cin x))
+           ED.C.float)
+    let string =
+      snd @@
+        (RawOpaqueData.conversion_of_cdata ~name:"string"
+           ~compare:String.compare
+           ~pp:(fun fmt ->
+                  fun x -> Util.CData.pp fmt (ED.C.string.Util.CData.cin x))
+           ED.C.string)
+    let loc =
+      snd @@
+        (RawOpaqueData.conversion_of_cdata ~name:"loc"
+           ~compare:Util.Loc.compare
+           ~pp:(fun fmt ->
+                  fun x -> Util.CData.pp fmt (ED.C.loc.Util.CData.cin x))
+           ED.C.loc)
     let poly ty =
       let embed ~depth:_  state x = (state, x, []) in
       let readback ~depth  state t = (state, t, []) in

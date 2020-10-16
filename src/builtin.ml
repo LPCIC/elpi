@@ -83,66 +83,66 @@ let register_evals n l f = List.iter (fun i -> register_eval n i f) l;;
 let _ =
   let open RawOpaqueData in
   register_evals 2 [ "-",["A"] ; "i-",["int"] ; "r-",["float"] ] (function
-   | [ CData x; CData y ] when ty2 int x y -> mkCData(morph2 int (-) x y)
-   | [ CData x; CData y ] when ty2 float x y -> mkCData(morph2 float (-.) x y)
+   | [ CData x; CData y ] when ty2 int x y -> (morph2 int (-) x y)
+   | [ CData x; CData y ] when ty2 float x y -> (morph2 float (-.) x y)
    | _ -> type_error "Wrong arguments to -/i-/r-") ;
   register_evals 2 [ "+",["int";"float"] ; "i+",["int"] ; "r+",["float"] ] (function
-   | [ CData x; CData y ] when ty2 int x y -> mkCData(morph2 int (+) x y)
-   | [ CData x; CData y ] when ty2 float x y -> mkCData(morph2 float (+.) x y)
+   | [ CData x; CData y ] when ty2 int x y -> (morph2 int (+) x y)
+   | [ CData x; CData y ] when ty2 float x y -> (morph2 float (+.) x y)
    | _ -> type_error "Wrong arguments to +/i+/r+") ;
   register_eval 2 ("*",["int";"float"]) (function
-   | [ CData x; CData y ] when ty2 int x y -> mkCData(morph2 int ( * ) x y)
-   | [ CData x; CData y] when ty2 float x y -> mkCData(morph2 float ( *.) x y)
+   | [ CData x; CData y ] when ty2 int x y -> (morph2 int ( * ) x y)
+   | [ CData x; CData y] when ty2 float x y -> (morph2 float ( *.) x y)
    | _ -> type_error "Wrong arguments to *") ;
   register_eval 2 ("/",["float"]) (function
-   | [ CData x; CData y] when ty2 float x y -> mkCData(morph2 float ( /.) x y)
+   | [ CData x; CData y] when ty2 float x y -> (morph2 float ( /.) x y)
    | _ -> type_error "Wrong arguments to /") ;
   register_eval 2 ("mod",["int"]) (function
-   | [ CData x; CData y ] when ty2 int x y -> mkCData(morph2 int (mod) x y)
+   | [ CData x; CData y ] when ty2 int x y -> (morph2 int (mod) x y)
    | _ -> type_error "Wrong arguments to mod") ;
   register_eval 2 ("div",["int"]) (function
-   | [ CData x; CData y ] when ty2 int x y -> mkCData(morph2 int (/) x y)
+   | [ CData x; CData y ] when ty2 int x y -> (morph2 int (/) x y)
    | _ -> type_error "Wrong arguments to div") ;
   register_eval 2 ("^",["string"]) (function
    | [ CData x; CData y ] when ty2 string x y ->
          of_string (to_string x ^ to_string y)
    | _ -> type_error "Wrong arguments to ^") ;
   register_evals 1 [ "~",["int";"float"] ; "i~",["int"] ; "r~",["float"] ] (function
-   | [ CData x ] when is_int x -> mkCData(morph1 int (~-) x)
-   | [ CData x ] when is_float x -> mkCData(morph1 float (~-.) x)
+   | [ CData x ] when is_int x -> (morph1 int (~-) x)
+   | [ CData x ] when is_float x -> (morph1 float (~-.) x)
    | _ -> type_error "Wrong arguments to ~/i~/r~") ;
   register_evals 1 [ "abs",["int";"float"] ; "iabs",["int"] ; "rabs",["float"] ] (function
-   | [ CData x ] when is_int x -> mkCData(map int int abs x)
-   | [ CData x ] when is_float x -> mkCData(map float float abs_float x)
+   | [ CData x ] when is_int x -> (map int int abs x)
+   | [ CData x ] when is_float x -> (map float float abs_float x)
    | _ -> type_error "Wrong arguments to abs/iabs/rabs") ;
   register_eval 1 ("sqrt",["float"]) (function
-   | [ CData x ] when is_float x -> mkCData(map float float sqrt x)
+   | [ CData x ] when is_float x -> (map float float sqrt x)
    | _ -> type_error "Wrong arguments to sqrt") ;
   register_eval 1 ("sin",["float"]) (function
-   | [ CData x ] when is_float x -> mkCData(map float float sqrt x)
+   | [ CData x ] when is_float x -> (map float float sqrt x)
    | _ -> type_error "Wrong arguments to sin") ;
   register_eval 1 ("cos",["float"]) (function
-   | [ CData x ] when is_float x -> mkCData(map float float cos x)
+   | [ CData x ] when is_float x -> (map float float cos x)
    | _ -> type_error "Wrong arguments to cosin") ;
   register_eval 1 ("arctan",["float"]) (function
-   | [ CData x ] when is_float x -> mkCData(map float float atan x)
+   | [ CData x ] when is_float x -> (map float float atan x)
    | _ -> type_error "Wrong arguments to arctan") ;
   register_eval 1 ("ln",["float"]) (function
-   | [ CData x ] when is_float x -> mkCData(map float float log x)
+   | [ CData x ] when is_float x -> (map float float log x)
    | _ -> type_error "Wrong arguments to ln") ;
   register_eval_ty "int_to_real" "int -> float" (function
-   | [ CData x ] when is_int x -> mkCData(map int float float_of_int x)
+   | [ CData x ] when is_int x -> (map int float float_of_int x)
    | _ -> type_error "Wrong arguments to int_to_real") ;
   register_eval_ty "floor" "float -> int" (function
    | [ CData x ] when is_float x ->
-         mkCData(map float int (fun x -> int_of_float (floor x)) x)
+         (map float int (fun x -> int_of_float (floor x)) x)
    | _ -> type_error "Wrong arguments to floor") ;
   register_eval_ty "ceil" "float -> int" (function
    | [ CData x ] when is_float x ->
-         mkCData(map float int (fun x -> int_of_float (ceil x)) x)
+         (map float int (fun x -> int_of_float (ceil x)) x)
    | _ -> type_error "Wrong arguments to ceil") ;
   register_eval_ty "truncate" "float -> int" (function
-   | [ CData x ] when is_float x -> mkCData(map float int truncate x)
+   | [ CData x ] when is_float x -> (map float int truncate x)
    | _ -> type_error "Wrong arguments to truncate") ;
   register_eval_ty "size" "string -> int" (function
    | [ CData x ] when is_string x ->
