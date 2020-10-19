@@ -1,4 +1,4 @@
-(*d0744a5ed66c82ffffdae64a6b486b28 src/API.ml *)
+(*31458cef276ecb3b77fdae3e2d93ce97 src/API.ml *)
 #1 "src/API.ml"
 module type Runtime  = module type of Runtime_trace_off
 let r = ref ((module Runtime_trace_off) : (module Runtime))
@@ -337,7 +337,7 @@ module BuiltInData =
     let float =
       snd @@
         (RawOpaqueData.conversion_of_cdata ~name:"float"
-           ~compare:Float.compare
+           ~compare:Pervasives.compare
            ~pp:(fun fmt ->
                   fun x -> Util.CData.pp fmt (ED.C.float.Util.CData.cin x))
            ED.C.float)
