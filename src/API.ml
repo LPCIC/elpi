@@ -346,7 +346,7 @@ end
 module BuiltInData = struct
 
   let int    = snd @@ RawOpaqueData.conversion_of_cdata ~name:"int"    ~compare:(fun x y -> x - y) ~pp:(fun fmt x -> Util.CData.pp fmt (ED.C.int.Util.CData.cin x)) ED.C.int
-  let float  = snd @@ RawOpaqueData.conversion_of_cdata ~name:"float"  ~compare:Float.compare      ~pp:(fun fmt x -> Util.CData.pp fmt (ED.C.float.Util.CData.cin x)) ED.C.float
+  let float  = snd @@ RawOpaqueData.conversion_of_cdata ~name:"float"  ~compare:Pervasives.compare (*Float.compare*)      ~pp:(fun fmt x -> Util.CData.pp fmt (ED.C.float.Util.CData.cin x)) ED.C.float
   let string = snd @@ RawOpaqueData.conversion_of_cdata ~name:"string" ~compare:String.compare     ~pp:(fun fmt x -> Util.CData.pp fmt (ED.C.string.Util.CData.cin x)) ED.C.string
   let loc    = snd @@ RawOpaqueData.conversion_of_cdata ~name:"loc"    ~compare:Util.Loc.compare   ~pp:(fun fmt x -> Util.CData.pp fmt (ED.C.loc.Util.CData.cin x)) ED.C.loc
   let poly ty =
