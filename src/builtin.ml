@@ -1169,7 +1169,7 @@ let open BuiltIn in let open BuiltInData in
     In(set,"A",
     In(set,"B",
     Out(set,"X",
-    Easy "X is A \ B"))),
+    Easy "X is A \\ B"))),
     (fun a b _ ~depth -> !: (Set.diff a b))),
   DocAbove);
 

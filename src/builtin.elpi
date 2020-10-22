@@ -815,7 +815,7 @@ external pred std.string.set.union i:std.string.set, i:std.string.set,
 external pred std.string.set.inter i:std.string.set, i:std.string.set, 
                                    o:std.string.set.
 
-% [std.string.set.diff A B X] X is A  B
+% [std.string.set.diff A B X] X is A \ B
 external pred std.string.set.diff i:std.string.set, i:std.string.set, 
                                   o:std.string.set.
 
@@ -853,7 +853,7 @@ external pred std.int.set.union i:std.int.set, i:std.int.set,
 external pred std.int.set.inter i:std.int.set, i:std.int.set, 
                                 o:std.int.set.
 
-% [std.int.set.diff A B X] X is A  B
+% [std.int.set.diff A B X] X is A \ B
 external pred std.int.set.diff i:std.int.set, i:std.int.set, 
                                o:std.int.set.
 
@@ -891,7 +891,7 @@ external pred std.loc.set.union i:std.loc.set, i:std.loc.set,
 external pred std.loc.set.inter i:std.loc.set, i:std.loc.set, 
                                 o:std.loc.set.
 
-% [std.loc.set.diff A B X] X is A  B
+% [std.loc.set.diff A B X] X is A \ B
 external pred std.loc.set.diff i:std.loc.set, i:std.loc.set, 
                                o:std.loc.set.
 
