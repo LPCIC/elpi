@@ -1,8 +1,9 @@
 ## UNRELEASED
 - FFI:
-  - RawOpaqueData.cin now returns a term and takes `constants` into account,
-    that is a value for which a constant has been declared is embedded using
-    this constant
+  - RawOpaqueData.cin now returns a term and takes `constants` into account.
+    Whenever a value is represented with a named constant, the API grants that:
+    - the value is embedded using that constant
+    - that constant is read back to the original value
 - API:
   - New `Compile.extend` to (quickly) add clauses to a program
   - New argument `?follows:program` to `Compile.unit` to have the unit
