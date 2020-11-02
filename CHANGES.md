@@ -12,6 +12,8 @@
 - Library:
   - rename `map2_filter` -> `map2-filter`
   - new `map-filter`
+- Build:
+  - use md5 (OCaml's digest) instead of sha1 (external utility)
 
 ## v1.11.4 (Aug 2020)
 
