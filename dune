@@ -5,10 +5,4 @@
   (modules elpi_REPL)
 )
 
-(executable
-  (name fix_elpi_install)
-  (libraries re)
-  (modules fix_elpi_install)
-)
-
 (vendored_dirs vendor)
