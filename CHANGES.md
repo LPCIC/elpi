@@ -1,6 +1,6 @@
-## UNRELEASED
+## v1.12.0 (Nov 2020)
 - FFI:
-  - RawOpaqueData.cin now returns a term and takes `constants` into account.
+  - `RawOpaqueData.cin` now returns a term and takes `constants` into account.
     Whenever a value is represented with a named constant, the API grants that:
     - the value is embedded using that constant
     - that constant is read back to the original value
