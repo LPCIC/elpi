@@ -2,7 +2,7 @@
   (name elpi)
   (public_name elpi)
   (preprocess (per_module
-    ((action (run %{project_root}/ppxfindcache/ppxfindcache2.exe %{input-file}
+    ((action (run %{project_root}/ppxfindcache/ppxfindcache2.exe
                     --cache-file %{dep:.ppcache/API.ml}
                     --cache-file %{dep:.ppcache/API.mli}
                     --cache-file %{dep:.ppcache/util.ml}
@@ -11,19 +11,22 @@
                     --cache-file %{dep:.ppcache/ast.mli}
                     --cache-file %{dep:.ppcache/data.ml}
                     --cache-file %{dep:.ppcache/compiler.ml}
-                    --cache-file %{dep:.ppcache/compiler.mli}))
+                    --cache-file %{dep:.ppcache/compiler.mli}
+                     %{input-file}))
               API ast data compiler)
-    ((action (run %{project_root}/ppxfindcache/ppxfindcache.exe %{input-file}
+    ((action (run %{project_root}/ppxfindcache/ppxfindcache.exe
                     --ppx-opt --cookie
                     --ppx-opt "elpi_trace=\"true\""
                     --cache-file %{dep:.ppcache/runtime_trace_on.ml}
-                    --cache-file %{dep:.ppcache/runtime_trace_on.mli}))
+                    --cache-file %{dep:.ppcache/runtime_trace_on.mli}
+                     %{input-file}))
               runtime_trace_on)
-    ((action (run %{project_root}/ppxfindcache/ppxfindcache.exe %{input-file}
+    ((action (run %{project_root}/ppxfindcache/ppxfindcache.exe
                     --ppx-opt --cookie
                     --ppx-opt "elpi_trace=\"false\""
                     --cache-file %{dep:.ppcache/runtime_trace_off.ml}
-                    --cache-file %{dep:.ppcache/runtime_trace_off.mli}))
+                    --cache-file %{dep:.ppcache/runtime_trace_off.mli}
+                     %{input-file}))
               runtime_trace_off)
     ((action (run camlp5o -I . -I +camlp5 pa_extend.cmo pa_lexer.cmo %{input-file})) parser)
     ))
