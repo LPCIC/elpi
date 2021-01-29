@@ -1,3 +1,8 @@
+# UNRELEASED
+
+- API:
+  - Fix `open_append` was messing up file permissions
+
 ## v1.12.0 (Nov 2020)
 - FFI:
   - `RawOpaqueData.cin` now returns a term and takes `constants` into account.

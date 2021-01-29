@@ -549,7 +549,7 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
     Easy            "opens FileName for output in append mode")),
   (fun s _ ~depth ->
      let flags = [Open_wronly; Open_append; Open_creat; Open_text] in
-     try !:(open_out_gen flags 0x664 s,s)
+     try !:(open_out_gen flags 0o664 s,s)
      with Sys_error msg -> error msg)),
   DocAbove);
 
