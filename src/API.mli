@@ -72,15 +72,22 @@ end
 
 module Parse : sig
 
-  (** [program file_list] parses a list of files *)
+  (** [program file_list] parses a list of files,
+      Raises Failure if the file does not exist. *)
   val program : elpi:Setup.elpi -> ?print_accumulated_files:bool ->
     string list -> Ast.program
   val program_from_stream : elpi:Setup.elpi -> ?print_accumulated_files:bool ->
     Ast.Loc.t -> char Stream.t -> Ast.program
 
-  (** [goal file_list] parses the query *)
+  (** [goal file_list] parses the query,
+      Raises Failure if the file does not exist.  *)
   val goal : Ast.Loc.t -> string -> Ast.query
   val goal_from_stream : Ast.Loc.t -> char Stream.t -> Ast.query
+
+  (** [resolve f] computes the full path of [f] as the parser would do (also)
+      for files recusrively accumulated. Raises Failure if the file does not
+      exist. *)
+  val resolve_file : string -> string
 
   exception ParseError of Ast.Loc.t * string
 end
