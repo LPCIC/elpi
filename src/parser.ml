@@ -78,42 +78,43 @@ let parsed = ref []
 
 exception File_not_found of string
 
+let resolve (origfilename as filename) =
+  let rec iter_tjpath dirnames =
+    let filename,dirnames,relative =
+     if not (Filename.is_relative filename) then filename,[],false
+     else
+      match dirnames with
+         [] -> raise (File_not_found filename)
+       | dirname::dirnames->Filename.concat dirname filename,dirnames,true in
+    let prefixname = Filename.chop_extension filename in
+    let prefixname,filename =
+     let change_suffix filename =
+      if Filename.check_suffix filename ".elpi" then
+       (* Backward compatibility with Teyjus *) 
+       prefixname ^ ".mod"
+      else if Filename.check_suffix filename ".mod" then
+       (* Forward compatibility with Teyjus *) 
+       prefixname ^ ".elpi"
+      else filename in
+     if Sys.file_exists filename then prefixname,filename
+     else
+      let changed_filename = change_suffix filename in
+      if Sys.file_exists changed_filename then prefixname,changed_filename
+      else if relative then iter_tjpath dirnames
+      else raise (File_not_found origfilename) in
+    prefixname,filename
+  in
+  let dirs = !cur_dirname :: !cur_tjpath in 
+  try iter_tjpath dirs
+  with File_not_found f ->
+    raise (Failure ("File "^f^" not found in: " ^ String.concat ", " dirs))
+
 let rec parse_one e (origfilename as filename) =
  let origprefixname =
    try Filename.chop_extension origfilename
    with Invalid_argument _ ->
      raise (Failure ("File "^origfilename^" has no extension")) in
- let prefixname, filename =
-  let rec iter_tjpath dirnames =
-   let filename,dirnames,relative =
-    if not (Filename.is_relative filename) then filename,[],false
-    else
-     match dirnames with
-        [] -> raise (File_not_found filename)
-      | dirname::dirnames->Filename.concat dirname filename,dirnames,true in
-   let prefixname = Filename.chop_extension filename in
-   let prefixname,filename =
-    let change_suffix filename =
-     if Filename.check_suffix filename ".elpi" then
-      (* Backward compatibility with Teyjus *) 
-      prefixname ^ ".mod"
-     else if Filename.check_suffix filename ".mod" then
-      (* Forward compatibility with Teyjus *) 
-      prefixname ^ ".elpi"
-     else filename in
-    if Sys.file_exists filename then prefixname,filename
-    else
-     let changed_filename = change_suffix filename in
-     if Sys.file_exists changed_filename then prefixname,changed_filename
-     else if relative then iter_tjpath dirnames
-     else raise (File_not_found origfilename) in
-   prefixname,filename
-  in
-   let dirs = !cur_dirname :: !cur_tjpath in 
-   try iter_tjpath dirs
-   with File_not_found f ->
-     raise (Failure ("File "^f^" not found in: " ^ String.concat ", " dirs))
- in
+ let prefixname, filename = resolve filename in
  let inode = Digest.file filename in
  if List.mem_assoc inode !parsed then begin
   if not !parse_silent then Printf.eprintf "already loaded %s\n%!" origfilename;

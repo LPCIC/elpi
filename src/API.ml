@@ -111,6 +111,8 @@ module Parse = struct
   let goal loc s = Parser.parse_goal ~loc s
   let goal_from_stream loc s = Parser.parse_goal_from_stream ~loc s
   exception ParseError = Parser.ParseError
+
+  let resolve_file f = snd @@ Parser.resolve f
 end
 
 module ED = Data

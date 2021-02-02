@@ -30,6 +30,8 @@ val parse_program_from_stream : parser_state -> print_accumulated_files:bool -> 
 val parse_goal : ?loc:Loc.t -> string -> Goal.t
 val parse_goal_from_stream : ?loc:Loc.t -> char Stream.t -> Goal.t
 
+val resolve : string -> string * string
+
 exception ParseError of Loc.t * string
 
 val get_literal : string -> string
