@@ -1,4 +1,4 @@
-(*490f36bdb4cc6ccfca542ccb70f771d2 src/runtime_trace_on.ml --cookie elpi_trace="true"*)
+(*97daff286c385a58da52e22a157bd04d src/runtime_trace_on.ml --cookie elpi_trace="true"*)
 #1 "src/runtime_trace_on.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -47,12 +47,15 @@ module C :
           frozen_constants = 0
         }
     let show ?(table= !table)  n =
-      try Hashtbl.find table.c2s n
+      try Constants.Map.find n Global_symbols.table.c2s
       with
       | Not_found ->
-          if n >= 0
-          then "c" ^ (string_of_int n)
-          else "SYMBOL" ^ (string_of_int n)
+          (try Hashtbl.find table.c2s n
+           with
+           | Not_found ->
+               if n >= 0
+               then "c" ^ (string_of_int n)
+               else "SYMBOL" ^ (string_of_int n))
     let pp ?table  fmt n = Format.fprintf fmt "%s" (show ?table n)
     let mkConst x =
       try Hashtbl.find (!table).c2t x

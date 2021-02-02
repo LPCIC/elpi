@@ -1,4 +1,4 @@
-(*a77f7214c3ba7118b7d54ae310a0bac7 src/compiler.ml *)
+(*bfc08ce5ca421de1b5da62ebf7d9e616 src/compiler.ml *)
 #1 "src/compiler.ml"
 open Util
 module F = Ast.Func
@@ -6,9 +6,11 @@ module R = Runtime_trace_off
 module D = Data
 exception CompileError of Loc.t option * string 
 let error ?loc  msg = raise (CompileError (loc, msg))
-type flags = {
+type flags =
+  {
   defined_variables: StrSet.t ;
-  print_passes: bool }[@@deriving show]
+  print_passes: bool ;
+  print_units: bool }[@@deriving show]
 let rec pp_flags :
   Ppx_deriving_runtime_proxy.Format.formatter -> flags -> Ppx_deriving_runtime_proxy.unit
   =
@@ -17,13 +19,17 @@ let rec pp_flags :
       fun fmt ->
         fun x ->
           Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
-          ((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
-              "Compiler.defined_variables";
-            ((__0 ()) fmt) x.defined_variables;
+          (((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
+               "Compiler.defined_variables";
+             ((__0 ()) fmt) x.defined_variables;
+             Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+            Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+            Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "print_passes";
+            (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%B") x.print_passes;
             Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
            Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
-           Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "print_passes";
-           (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%B") x.print_passes;
+           Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "print_units";
+           (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%B") x.print_units;
            Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
           Ppx_deriving_runtime_proxy.Format.fprintf fmt "@ }@]")
     [@ocaml.warning "-A"])
@@ -31,14 +37,11 @@ and show_flags : flags -> Ppx_deriving_runtime_proxy.string =
   fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_flags x[@@ocaml.warning
                                                                  "-32"]
 let default_flags =
-  { defined_variables = StrSet.empty; print_passes = false }
-let compiler_flags =
-  D.State.declare ~name:"elpi:compiler:flags" ~pp:pp_flags
-    ~clause_compilation_is_over:(fun x -> x)
-    ~goal_compilation_begins:(fun x -> x)
-    ~goal_compilation_is_over:(fun ~args:_ -> fun x -> Some x)
-    ~compilation_is_over:(fun _ -> None) ~execution_is_over:(fun _ -> None)
-    ~init:(fun () -> default_flags)
+  {
+    defined_variables = StrSet.empty;
+    print_passes = false;
+    print_units = false
+  }
 let rec filter_if ({ defined_variables } as flags) proj =
   function
   | [] -> []
@@ -63,14 +66,20 @@ module Symbols :
     val get_global_symbol_str : D.State.t -> string -> (D.constant * D.term)
     val show : D.State.t -> D.constant -> string
     type table
+    val pp_table : Format.formatter -> table -> unit
     val table : table D.State.component
     val compile_table : table -> D.symbol_table
     val lock : table -> table
-    val unlock : table -> table
     val locked : table -> bool
     val equal : table -> table -> bool
+    val size : table -> int
+    val prune : table -> D.Constants.Set.t -> table
+    val symbols : table -> string list
+    val global_table : unit -> table
+    val uuid : table -> UUID.t
     val build_shift :
-      base:D.State.t -> table -> (D.State.t * D.constant D.Constants.Map.t)
+      flags:flags ->
+        base:D.State.t -> table -> (D.State.t * D.constant D.Constants.Map.t)
   end =
   struct
     type table =
@@ -145,9 +154,25 @@ module Symbols :
                                                                     "-32"]
     let locked { locked } = locked
     let lock t = { t with locked = true }
-    let unlock t = assert (locked t); { t with locked = false }
     let uuid { uuid } = uuid
     let equal t1 t2 = (locked t1) && ((locked t2) && ((uuid t1) = (uuid t2)))
+    let size t = D.Constants.Map.cardinal t.c2t
+    let symbols { c2s } =
+      List.map (fun (c, s) -> s ^ (":" ^ (string_of_int c)))
+        (D.Constants.Map.bindings c2s)
+    let prune t alive =
+      {
+        t with
+        c2s =
+          (D.Constants.Map.filter
+             (fun k -> fun _ -> D.Constants.Set.mem k alive) t.c2s);
+        c2t =
+          (D.Constants.Map.filter
+             (fun k -> fun _ -> D.Constants.Set.mem k alive) t.c2t);
+        ast2ct =
+          (F.Map.filter (fun _ -> fun (k, _) -> D.Constants.Set.mem k alive)
+             t.ast2ct)
+      }
     let table =
       D.State.declare ~name:"elpi:compiler:symbol_table" ~pp:pp_table
         ~clause_compilation_is_over:(fun x -> x)
@@ -156,27 +181,31 @@ module Symbols :
         ~compilation_is_over:(fun x -> Some { x with frozen = true })
         ~execution_is_over:(fun _ -> None)
         ~init:(fun () ->
-                 let (ast2ct, c2s, c2t) =
-                   StrMap.fold
-                     (fun s ->
-                        fun c ->
-                          fun (ast2ct, c2s, c2t) ->
-                            let t = D.Term.Const c in
-                            ((F.Map.add (F.from_string s) (c, t) ast2ct),
-                              (D.Constants.Map.add c s c2s),
-                              (D.Constants.Map.add c t c2t)))
-                     D.Global_symbols.table.s2c
-                     (F.Map.empty, D.Constants.Map.empty,
-                       D.Constants.Map.empty) in
                  {
-                   ast2ct;
+                   ast2ct = F.Map.empty;
                    last_global = (D.Global_symbols.table.last_global);
-                   c2s;
-                   c2t;
+                   c2s = D.Constants.Map.empty;
+                   c2t = D.Constants.Map.empty;
                    locked = false;
                    uuid = (Util.UUID.make ());
                    frozen = false
                  })
+    let global_table () =
+      {
+        ast2ct =
+          (StrMap.fold
+             (fun s -> fun v -> fun m -> F.Map.add (F.from_string s) v m)
+             D.Global_symbols.table.s2ct F.Map.empty);
+        c2t =
+          (D.Constants.Map.map
+             (fun x -> snd @@ (StrMap.find x D.Global_symbols.table.s2ct))
+             D.Global_symbols.table.c2s);
+        c2s = (D.Global_symbols.table.c2s);
+        last_global = (D.Global_symbols.table.last_global);
+        locked = false;
+        uuid = (Util.UUID.make ());
+        frozen = false
+      }
     let compile_table t =
       let c2s = Hashtbl.create 37 in
       D.Constants.Map.iter (Hashtbl.add c2s) t.c2s;
@@ -185,27 +214,33 @@ module Symbols :
        { D.c2s = c2s; c2t; frozen_constants = (t.last_global) })
     let allocate_global_symbol_aux x
       ({ c2s; c2t; ast2ct; last_global; locked; frozen; uuid } as table) =
-      try (table, (F.Map.find x ast2ct))
+      try
+        (table,
+          (StrMap.find (F.show x)
+             D.Global_symbols.table.D.Global_symbols.s2ct))
       with
       | Not_found ->
-          (if frozen
-           then
-             error
-               ("allocating new global symbol '" ^
-                  ((F.show x) ^ "' at runtime"));
-           if locked
-           then
-             error
-               ("allocating new global symbol '" ^
-                  ((F.show x) ^ "' since the symbol table is locked"));
-           (let last_global = last_global - 1 in
-            let n = last_global in
-            let xx = D.Term.Const n in
-            let p = (n, xx) in
-            let c2s = D.Constants.Map.add n (F.show x) c2s in
-            let c2t = D.Constants.Map.add n xx c2t in
-            let ast2ct = F.Map.add x p ast2ct in
-            ({ c2s; c2t; ast2ct; last_global; locked; frozen; uuid }, p)))
+          (try (table, (F.Map.find x ast2ct))
+           with
+           | Not_found ->
+               (if frozen
+                then
+                  error
+                    ("allocating new global symbol '" ^
+                       ((F.show x) ^ "' at runtime"));
+                if locked
+                then
+                  error
+                    ("allocating new global symbol '" ^
+                       ((F.show x) ^ "' since the symbol table is locked"));
+                (let last_global = last_global - 1 in
+                 let n = last_global in
+                 let xx = D.Term.Const n in
+                 let p = (n, xx) in
+                 let c2s = D.Constants.Map.add n (F.show x) c2s in
+                 let c2t = D.Constants.Map.add n xx c2t in
+                 let ast2ct = F.Map.add x p ast2ct in
+                 ({ c2s; c2t; ast2ct; last_global; locked; frozen; uuid }, p))))
     let allocate_global_symbol state x =
       if not (D.State.get D.while_compiling state)
       then anomaly "global symbols can only be allocated during compilation";
@@ -216,12 +251,15 @@ module Symbols :
     let allocate_Arg_symbol st n =
       let x = Printf.sprintf "%%Arg%d" n in allocate_global_symbol_str st x
     let show state n =
-      try D.Constants.Map.find n (D.State.get table state).c2s
+      try D.Constants.Map.find n D.Global_symbols.table.D.Global_symbols.c2s
       with
       | Not_found ->
-          if n >= 0
-          then "c" ^ (string_of_int n)
-          else "SYMBOL" ^ (string_of_int n)
+          (try D.Constants.Map.find n (D.State.get table state).c2s
+           with
+           | Not_found ->
+               if n >= 0
+               then "c" ^ (string_of_int n)
+               else "SYMBOL" ^ (string_of_int n))
     let allocate_bound_symbol_aux n
       ({ c2s; c2t; ast2ct; last_global; locked; frozen; uuid } as table) =
       try (table, (D.Constants.Map.find n c2t))
@@ -243,8 +281,17 @@ module Symbols :
     let get_canonical state c =
       if not (D.State.get D.while_compiling state)
       then anomaly "get_canonical can only be used during compilation";
-      (try D.Constants.Map.find c (D.State.get table state).c2t
-       with | Not_found -> anomaly ("unknown symbol " ^ (string_of_int c)))
+      (try
+         snd @@
+           (StrMap.find
+              (D.Constants.Map.find c
+                 D.Global_symbols.table.D.Global_symbols.c2s)
+              D.Global_symbols.table.D.Global_symbols.s2ct)
+       with
+       | Not_found ->
+           (try D.Constants.Map.find c (D.State.get table state).c2t
+            with
+            | Not_found -> anomaly ("unknown symbol " ^ (string_of_int c))))
     let get_global_or_allocate_bound_symbol state n =
       if n >= 0
       then allocate_bound_symbol state n
@@ -252,11 +299,15 @@ module Symbols :
     let get_global_symbol state s =
       if not (D.State.get D.while_compiling state)
       then anomaly "get_global_symbol can only be used during compilation";
-      (try F.Map.find s (D.State.get table state).ast2ct
-       with | Not_found -> anomaly ("unknown symbol " ^ (F.show s)))
+      (try
+         StrMap.find (F.show s) D.Global_symbols.table.D.Global_symbols.s2ct
+       with
+       | Not_found ->
+           (try F.Map.find s (D.State.get table state).ast2ct
+            with | Not_found -> anomaly ("unknown symbol " ^ (F.show s))))
     let get_global_symbol_str state s =
       get_global_symbol state (F.from_string s)
-    let build_shift ~base  symbols =
+    let build_shift ~flags:{ print_units }  ~base  symbols =
       let open D.Constants in
         D.State.update_return table base
           (fun base ->
@@ -269,7 +320,14 @@ module Symbols :
                       try
                         let (c, _) =
                           F.Map.find (F.from_string name) base.ast2ct in
-                        if c == v then acc else (base, (Map.add v c shift))
+                        if c == v
+                        then acc
+                        else
+                          (if print_units
+                           then
+                             Printf.printf "Relocate: %d -> %d (%s)\n%!" v c
+                               name;
+                           (base, (Map.add v c shift)))
                       with
                       | Not_found ->
                           let (base, (c, _)) =
@@ -297,7 +355,9 @@ module Builtins :
       constants: D.Constants.Set.t ;
       code: D.BuiltInPredicate.t list }
     val is_empty : t -> bool
+    val empty : t
     val builtins : t D.State.component
+    val equal : t -> t -> bool
   end =
   struct
     type t =
@@ -305,16 +365,16 @@ module Builtins :
       names: StrSet.t ;
       constants: D.Constants.Set.t ;
       code: D.BuiltInPredicate.t list }
+    let equal t1 t2 =
+      (StrSet.equal t1.names t2.names) &&
+        (D.Constants.Set.equal t1.constants t2.constants)
     let is_empty { names } = StrSet.is_empty names
+    let empty =
+      { names = StrSet.empty; constants = D.Constants.Set.empty; code = [] }
     let builtins : t D.State.component =
       D.State.declare ~name:"elpi:compiler:builtins"
         ~pp:(fun fmt -> fun x -> StrSet.pp fmt x.names)
-        ~init:(fun () ->
-                 {
-                   names = StrSet.empty;
-                   constants = D.Constants.Set.empty;
-                   code = []
-                 }) ~clause_compilation_is_over:(fun x -> x)
+        ~init:(fun () -> empty) ~clause_compilation_is_over:(fun x -> x)
         ~goal_compilation_begins:(fun x -> x)
         ~goal_compilation_is_over:(fun ~args -> fun x -> Some x)
         ~compilation_is_over:(fun x -> Some x)
@@ -946,12 +1006,14 @@ module Flat =
       clauses: (preterm, Ast.Structured.attribute) Ast.Clause.t list ;
       chr: (constant list * prechr_rule list) list ;
       local_names: int ;
+      symbols: C.Set.t ;
       toplevel_macros: macro_declaration }[@@deriving show]
     let rec pp_program :
       Ppx_deriving_runtime_proxy.Format.formatter ->
         program -> Ppx_deriving_runtime_proxy.unit
       =
-      let __11 () = pp_macro_declaration
+      let __12 () = pp_macro_declaration
+      and __11 () = C.Set.pp
       and __10 () = pp_prechr_rule
       and __9 () = pp_constant
       and __8 () = Ast.Clause.pp
@@ -967,43 +1029,62 @@ module Flat =
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
-              (((((((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
-                       "Compiler.Flat.types";
-                     ((fun x ->
-                         Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
-                         ignore
-                           (List.fold_left
-                              (fun sep ->
-                                 fun x ->
-                                   if sep
-                                   then
-                                     Ppx_deriving_runtime_proxy.Format.fprintf fmt
-                                       ";@ ";
-                                   ((__0 ()) fmt) x;
-                                   true) false x);
-                         Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]"))
-                       x.types;
+              ((((((((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
+                        "Compiler.Flat.types";
+                      ((fun x ->
+                          Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
+                          ignore
+                            (List.fold_left
+                               (fun sep ->
+                                  fun x ->
+                                    if sep
+                                    then
+                                      Ppx_deriving_runtime_proxy.Format.fprintf fmt
+                                        ";@ ";
+                                    ((__0 ()) fmt) x;
+                                    true) false x);
+                          Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]"))
+                        x.types;
+                      Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                     Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
+                       "type_abbrevs";
+                     ((__2 ()) (fun fmt -> (__1 ()) fmt) fmt) x.type_abbrevs;
                      Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
                     Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
-                      "type_abbrevs";
-                    ((__2 ()) (fun fmt -> (__1 ()) fmt) fmt) x.type_abbrevs;
+                      "modes";
+                    ((__5 ())
+                       (fun fmt ->
+                          fun (a0, a1) ->
+                            Ppx_deriving_runtime_proxy.Format.fprintf fmt "(@[";
+                            (((__3 ()) fmt) a0;
+                             Ppx_deriving_runtime_proxy.Format.fprintf fmt ",@ ";
+                             ((__4 ()) fmt) a1);
+                            Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])")
+                       fmt) x.modes;
                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
                    Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
-                   Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "modes";
-                   ((__5 ())
-                      (fun fmt ->
-                         fun (a0, a1) ->
-                           Ppx_deriving_runtime_proxy.Format.fprintf fmt "(@[";
-                           (((__3 ()) fmt) a0;
-                            Ppx_deriving_runtime_proxy.Format.fprintf fmt ",@ ";
-                            ((__4 ()) fmt) a1);
-                           Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])") fmt)
-                     x.modes;
+                   Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
+                     "clauses";
+                   ((fun x ->
+                       Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
+                       ignore
+                         (List.fold_left
+                            (fun sep ->
+                               fun x ->
+                                 if sep
+                                 then
+                                   Ppx_deriving_runtime_proxy.Format.fprintf fmt
+                                     ";@ ";
+                                 ((__8 ()) (fun fmt -> (__6 ()) fmt)
+                                    (fun fmt -> (__7 ()) fmt) fmt) x;
+                                 true) false x);
+                       Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]"))
+                     x.clauses;
                    Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
                   Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
-                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
-                    "clauses";
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "chr";
                   ((fun x ->
                       Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
                       ignore
@@ -1014,74 +1095,60 @@ module Flat =
                                 then
                                   Ppx_deriving_runtime_proxy.Format.fprintf fmt
                                     ";@ ";
-                                ((__8 ()) (fun fmt -> (__6 ()) fmt)
-                                   (fun fmt -> (__7 ()) fmt) fmt) x;
+                                ((fun (a0, a1) ->
+                                    Ppx_deriving_runtime_proxy.Format.fprintf fmt
+                                      "(@[";
+                                    (((fun x ->
+                                         Ppx_deriving_runtime_proxy.Format.fprintf
+                                           fmt "@[<2>[";
+                                         ignore
+                                           (List.fold_left
+                                              (fun sep ->
+                                                 fun x ->
+                                                   if sep
+                                                   then
+                                                     Ppx_deriving_runtime_proxy.Format.fprintf
+                                                       fmt ";@ ";
+                                                   ((__9 ()) fmt) x;
+                                                   true) false x);
+                                         Ppx_deriving_runtime_proxy.Format.fprintf
+                                           fmt "@,]@]")) a0;
+                                     Ppx_deriving_runtime_proxy.Format.fprintf fmt
+                                       ",@ ";
+                                     ((fun x ->
+                                         Ppx_deriving_runtime_proxy.Format.fprintf
+                                           fmt "@[<2>[";
+                                         ignore
+                                           (List.fold_left
+                                              (fun sep ->
+                                                 fun x ->
+                                                   if sep
+                                                   then
+                                                     Ppx_deriving_runtime_proxy.Format.fprintf
+                                                       fmt ";@ ";
+                                                   ((__10 ()) fmt) x;
+                                                   true) false x);
+                                         Ppx_deriving_runtime_proxy.Format.fprintf
+                                           fmt "@,]@]")) a1);
+                                    Ppx_deriving_runtime_proxy.Format.fprintf fmt
+                                      "@])")) x;
                                 true) false x);
-                      Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]"))
-                    x.clauses;
+                      Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]")) 
+                    x.chr;
                   Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
                  Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
-                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "chr";
-                 ((fun x ->
-                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>[";
-                     ignore
-                       (List.fold_left
-                          (fun sep ->
-                             fun x ->
-                               if sep
-                               then
-                                 Ppx_deriving_runtime_proxy.Format.fprintf fmt
-                                   ";@ ";
-                               ((fun (a0, a1) ->
-                                   Ppx_deriving_runtime_proxy.Format.fprintf fmt
-                                     "(@[";
-                                   (((fun x ->
-                                        Ppx_deriving_runtime_proxy.Format.fprintf
-                                          fmt "@[<2>[";
-                                        ignore
-                                          (List.fold_left
-                                             (fun sep ->
-                                                fun x ->
-                                                  if sep
-                                                  then
-                                                    Ppx_deriving_runtime_proxy.Format.fprintf
-                                                      fmt ";@ ";
-                                                  ((__9 ()) fmt) x;
-                                                  true) false x);
-                                        Ppx_deriving_runtime_proxy.Format.fprintf
-                                          fmt "@,]@]")) a0;
-                                    Ppx_deriving_runtime_proxy.Format.fprintf fmt
-                                      ",@ ";
-                                    ((fun x ->
-                                        Ppx_deriving_runtime_proxy.Format.fprintf
-                                          fmt "@[<2>[";
-                                        ignore
-                                          (List.fold_left
-                                             (fun sep ->
-                                                fun x ->
-                                                  if sep
-                                                  then
-                                                    Ppx_deriving_runtime_proxy.Format.fprintf
-                                                      fmt ";@ ";
-                                                  ((__10 ()) fmt) x;
-                                                  true) false x);
-                                        Ppx_deriving_runtime_proxy.Format.fprintf
-                                          fmt "@,]@]")) a1);
-                                   Ppx_deriving_runtime_proxy.Format.fprintf fmt
-                                     "@])")) x;
-                               true) false x);
-                     Ppx_deriving_runtime_proxy.Format.fprintf fmt "@,]@]")) 
-                   x.chr;
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
+                   "local_names";
+                 (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%d") x.local_names;
                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
                 Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
-                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
-                  "local_names";
-                (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%d") x.local_names;
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "symbols";
+                ((__11 ()) fmt) x.symbols;
                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
                Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
                  "toplevel_macros";
-               ((__11 ()) fmt) x.toplevel_macros;
+               ((__12 ()) fmt) x.toplevel_macros;
                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@ }@]")
         [@ocaml.warning "-A"])
@@ -1279,7 +1346,41 @@ module Assembled =
         toplevel_macros = F.Map.empty
       }
   end
-type program = Assembled.program
+type compilation_unit =
+  {
+  symbol_table: Symbols.table ;
+  version: string ;
+  code: Flat.program }[@@deriving show]
+let rec pp_compilation_unit :
+  Ppx_deriving_runtime_proxy.Format.formatter ->
+    compilation_unit -> Ppx_deriving_runtime_proxy.unit
+  =
+  let __1 () = Flat.pp_program
+  and __0 () = Symbols.pp_table in
+  ((let open! Ppx_deriving_runtime_proxy in
+      fun fmt ->
+        fun x ->
+          Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
+          (((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
+               "Compiler.symbol_table";
+             ((__0 ()) fmt) x.symbol_table;
+             Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+            Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+            Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "version";
+            (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%S") x.version;
+            Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+           Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+           Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "code";
+           ((__1 ()) fmt) x.code;
+           Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+          Ppx_deriving_runtime_proxy.Format.fprintf fmt "@ }@]")
+    [@ocaml.warning "-A"])
+and show_compilation_unit : compilation_unit -> Ppx_deriving_runtime_proxy.string =
+  fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_compilation_unit x
+[@@ocaml.warning "-32"]
+type builtins = (string * Data.BuiltInPredicate.declaration list)
+type header = (State.t * compilation_unit)
+type program = (State.t * Assembled.program)
 module WithMain =
   struct
     type 'a query =
@@ -2383,22 +2484,30 @@ module Flatten :
                let tavalue = smart_map_preterm ~on_type:true state f tavalue in
                C.Map.add taname { taname; tavalue; taparams; taloc } m) m
         C.Map.empty
-    let apply_subst_constant =
+    let apply_subst_constant ?live_symbols  =
       apply_subst
-        (fun m -> fun x -> try C.Map.find x m with | Not_found -> x)
-    let apply_subst_types st s =
-      smart_map (smart_map_type st (apply_subst_constant s))
-    let apply_subst_type_abbrevs st s =
-      tabbrevs_map st (apply_subst_constant s)
-    let apply_subst_modes s m =
+        (fun m ->
+           fun x ->
+             let x = try C.Map.find x m with | Not_found -> x in
+             (match live_symbols with
+              | None -> ()
+              | Some r -> r := (C.Set.add x (!r)));
+             x)
+    let apply_subst_types ?live_symbols  st s =
+      smart_map (smart_map_type st (apply_subst_constant ?live_symbols s))
+    let apply_subst_type_abbrevs ?live_symbols  st s =
+      tabbrevs_map st (apply_subst_constant ?live_symbols s)
+    let apply_subst_modes ?live_symbols  s m =
       C.Map.fold
-        (fun c -> fun v -> fun m -> C.Map.add (apply_subst_constant s c) v m)
+        (fun c ->
+           fun v ->
+             fun m -> C.Map.add (apply_subst_constant ?live_symbols s c) v m)
         m C.Map.empty
-    let apply_subst_chr st s l =
-      map_pair (smart_map (apply_subst_constant s))
-        (smart_map (map_chr st (apply_subst_constant s))) l
-    let apply_subst_clauses st s =
-      smart_map (map_clause st (apply_subst_constant s))
+    let apply_subst_chr ?live_symbols  st s l =
+      map_pair (smart_map (apply_subst_constant ?live_symbols s))
+        (smart_map (map_chr st (apply_subst_constant ?live_symbols s))) l
+    let apply_subst_clauses ?live_symbols  st s =
+      smart_map (map_clause st (apply_subst_constant ?live_symbols s))
     let push_subst state extra_prefix symbols_affected (oldprefix, oldsubst)
       =
       let newprefix = oldprefix @ [extra_prefix] in
@@ -2416,68 +2525,90 @@ module Flatten :
         C.Map.add short_name
           (try C.Map.find full_name m with | Not_found -> full_name) m in
       (oldprefix, (List.fold_left push1 oldsubst shorthands))
-    let rec compile_body state lcs types type_abbrevs modes clauses chr subst
-      bl =
+    let rec compile_body live_symbols state lcs types type_abbrevs modes
+      clauses chr subst bl =
       match bl with
       | [] -> (types, type_abbrevs, modes, clauses, chr)
       | (Shorten
           (shorthands,
-           { types = t; type_abbrevs = ta; modes = m; body; symbols }))::rest
+           { types = t; type_abbrevs = ta; modes = m; body; symbols = s }))::rest
           ->
-          let insubst = push_subst_shorthands shorthands symbols subst in
+          let insubst = push_subst_shorthands shorthands s subst in
           let types =
-            ToDBL.merge_types (apply_subst_types state insubst t) types in
+            ToDBL.merge_types
+              (apply_subst_types ~live_symbols state insubst t) types in
           let type_abbrevs =
             ToDBL.merge_type_abbrevs state
-              (apply_subst_type_abbrevs state insubst ta) type_abbrevs in
+              (apply_subst_type_abbrevs ~live_symbols state insubst ta)
+              type_abbrevs in
           let modes =
-            ToDBL.merge_modes state (apply_subst_modes insubst m) modes in
+            ToDBL.merge_modes state
+              (apply_subst_modes ~live_symbols insubst m) modes in
           let (types, type_abbrevs, modes, clauses, chr) =
-            compile_body state lcs types type_abbrevs modes clauses chr
-              insubst body in
-          compile_body state lcs types type_abbrevs modes clauses chr subst
-            rest
+            compile_body live_symbols state lcs types type_abbrevs modes
+              clauses chr insubst body in
+          compile_body live_symbols state lcs types type_abbrevs modes
+            clauses chr subst rest
       | (Namespace
-          (extra, { types = t; type_abbrevs = ta; modes = m; body; symbols }))::rest
+          (extra,
+           { types = t; type_abbrevs = ta; modes = m; body; symbols = s }))::rest
           ->
-          let (state, insubst) = push_subst state extra symbols subst in
+          let (state, insubst) = push_subst state extra s subst in
           let types =
-            ToDBL.merge_types (apply_subst_types state insubst t) types in
+            ToDBL.merge_types
+              (apply_subst_types ~live_symbols state insubst t) types in
           let type_abbrevs =
             ToDBL.merge_type_abbrevs state
-              (apply_subst_type_abbrevs state insubst ta) type_abbrevs in
+              (apply_subst_type_abbrevs ~live_symbols state insubst ta)
+              type_abbrevs in
           let modes =
-            ToDBL.merge_modes state (apply_subst_modes insubst m) modes in
+            ToDBL.merge_modes state
+              (apply_subst_modes ~live_symbols insubst m) modes in
           let (types, type_abbrevs, modes, clauses, chr) =
-            compile_body state lcs types type_abbrevs modes clauses chr
-              insubst body in
-          compile_body state lcs types type_abbrevs modes clauses chr subst
-            rest
+            compile_body live_symbols state lcs types type_abbrevs modes
+              clauses chr insubst body in
+          compile_body live_symbols state lcs types type_abbrevs modes
+            clauses chr subst rest
       | (Clauses cl)::rest ->
-          let cl = apply_subst_clauses state subst cl in
+          let cl = apply_subst_clauses ~live_symbols state subst cl in
           let clauses = clauses @ cl in
-          compile_body state lcs types type_abbrevs modes clauses chr subst
-            rest
+          compile_body live_symbols state lcs types type_abbrevs modes
+            clauses chr subst rest
       | (Constraints
           (clique, rules, { types = t; type_abbrevs = ta; modes = m; body }))::rest
           ->
-          let types = ToDBL.merge_types t types in
-          let type_abbrevs = ToDBL.merge_type_abbrevs state ta type_abbrevs in
-          let modes = ToDBL.merge_modes state m modes in
-          let chr = (apply_subst_chr state subst (clique, rules)) :: chr in
+          let types =
+            ToDBL.merge_types (apply_subst_types ~live_symbols state subst t)
+              types in
+          let type_abbrevs =
+            ToDBL.merge_type_abbrevs state
+              (apply_subst_type_abbrevs ~live_symbols state subst ta)
+              type_abbrevs in
+          let modes =
+            ToDBL.merge_modes state (apply_subst_modes ~live_symbols subst m)
+              modes in
+          let chr =
+            (apply_subst_chr ~live_symbols state subst (clique, rules)) ::
+            chr in
           let (types, type_abbrevs, modes, clauses, chr) =
-            compile_body state lcs types type_abbrevs modes clauses chr subst
-              body in
-          compile_body state lcs types type_abbrevs modes clauses chr subst
-            rest
+            compile_body live_symbols state lcs types type_abbrevs modes
+              clauses chr subst body in
+          compile_body live_symbols state lcs types type_abbrevs modes
+            clauses chr subst rest
     let run state
       { Structured.local_names = local_names;
         pbody = { types; type_abbrevs; modes; body; symbols = _ };
         toplevel_macros }
       =
+      let live_symbols = ref C.Set.empty in
+      let empty_subst = ([], C.Map.empty) in
+      let types = apply_subst_types ~live_symbols state empty_subst types in
+      let type_abbrevs =
+        apply_subst_type_abbrevs ~live_symbols state empty_subst type_abbrevs in
+      let modes = apply_subst_modes ~live_symbols empty_subst modes in
       let (types, type_abbrevs, modes, clauses, chr) =
-        compile_body state local_names types type_abbrevs modes [] []
-          ([], C.Map.empty) body in
+        compile_body live_symbols state local_names types type_abbrevs modes
+          [] [] empty_subst body in
       {
         Flat.types = types;
         type_abbrevs;
@@ -2485,11 +2616,12 @@ module Flatten :
         clauses;
         chr = (List.rev chr);
         local_names;
-        toplevel_macros
+        toplevel_macros;
+        symbols = (!live_symbols)
       }
     let relocate state f
       { Flat.types = types; type_abbrevs; modes; clauses; chr; local_names;
-        toplevel_macros }
+        toplevel_macros; symbols }
       =
       let f = ([], f) in
       {
@@ -2499,7 +2631,8 @@ module Flatten :
         clauses = (apply_subst_clauses state f clauses);
         chr = (smart_map (apply_subst_chr state f) chr);
         local_names;
-        toplevel_macros
+        toplevel_macros;
+        symbols
       }
   end 
 module Spill :
@@ -2776,32 +2909,13 @@ module Spill :
         (let (amap, term) = spill_term state loc modes types amap term in
          { amap; term; loc; spilling = false })
   end 
-type compilation_unit =
-  {
-  version: string ;
-  code: Flat.program ;
-  symbol_table: Symbols.table ;
-  builtins: Builtins.t ;
-  flags: flags }
-let init_state ?symbols_of  flags =
-  let state = D.State.init () in
-  let state = D.State.set compiler_flags state flags in
-  let state = D.State.set D.while_compiling state true in
-  let state =
-    match symbols_of with
-    | None -> state
-    | Some previous ->
-        D.State.set Symbols.table state
-          (Symbols.lock (D.State.get Symbols.table previous)) in
-  state
 module Assemble :
   sig
-    val run :
-      header:compilation_unit ->
-        compilation_unit list -> (State.t * Assembled.program)
-    val extend :
-      (State.t * Assembled.program) ->
-        compilation_unit list -> (State.t * Assembled.program)
+    val assemble :
+      flags ->
+        State.t ->
+          Assembled.program ->
+            compilation_unit list -> (State.t * Assembled.program)
   end =
   struct
     let sort_insertion old l =
@@ -2843,23 +2957,22 @@ module Assemble :
       aux StrMap.empty (List.rev old) l
     let clause_name
       { Ast.Clause.attributes = { Ast.Structured.ifexpr = ifexpr } } = ifexpr
-    let extend (state, (code : Assembled.program)) ul =
+    let assemble flags state code (ul : compilation_unit list) =
       let (state, clauses_rev, types, type_abbrevs, modes, chr_rev) =
         List.fold_left
           (fun (state, cl1, t1, ta1, m1, c1) ->
-             fun { symbol_table; code; flags } ->
+             fun ({ symbol_table; code } as _u) ->
                let (state,
                     { Flat.clauses = cl2; types = t2; type_abbrevs = ta2;
                       modes = m2; chr = c2; toplevel_macros = _ })
                  =
-                 if
-                   Symbols.equal symbol_table (State.get Symbols.table state)
-                 then (state, code)
-                 else
-                   (let (state, shift) =
-                      Symbols.build_shift ~base:state symbol_table in
-                    let code = Flatten.relocate state shift code in
-                    (state, code)) in
+                 let (state, shift) =
+                   Symbols.build_shift ~flags ~base:state symbol_table in
+                 let code =
+                   if C.Map.is_empty shift
+                   then code
+                   else Flatten.relocate state shift code in
+                 (state, code) in
                let modes = ToDBL.merge_modes state m1 m2 in
                let type_abbrevs = ToDBL.merge_type_abbrevs state ta1 ta2 in
                let types = ToDBL.merge_types t1 t2 in
@@ -2870,6 +2983,11 @@ module Assemble :
       let clauses = List.concat (List.rev clauses_rev) in
       let clauses = sort_insertion code.clauses clauses in
       let chr = List.concat ((code.Assembled.chr) :: (List.rev chr_rev)) in
+      let chr =
+        let pifexpr { pifexpr } = pifexpr in
+        List.map
+          (fun (symbs, rules) -> (symbs, (filter_if flags pifexpr rules)))
+          chr in
       (state,
         {
           Assembled.clauses = clauses;
@@ -2880,36 +2998,13 @@ module Assemble :
           local_names = (code.Assembled.local_names);
           toplevel_macros = (code.Assembled.toplevel_macros)
         })
-    let run ~header:({ symbol_table; builtins; code; flags } as h)  ul =
-      let nunits_with_locals =
-        ((h :: ul) |>
-           (List.filter (fun { code = { Flat.local_names = x } } -> x > 0)))
-          |> List.length in
-      if nunits_with_locals > 0
-      then
-        error
-          "Only 1 compilation unit is supported when local directives are used";
-      if
-        ul |>
-          (List.exists (fun { builtins = b } -> not (Builtins.is_empty b)))
-      then error "All units should share the same builtins";
-      (let state = init_state default_flags in
-       let state = State.set Builtins.builtins state builtins in
-       let state = State.set Symbols.table state symbol_table in
-       extend
-         (state,
-           {
-             Assembled.empty with
-             toplevel_macros = (code.toplevel_macros);
-             local_names = (code.local_names)
-           }) (h :: ul))
   end 
 let w_symbol_table s f x =
   let table = Symbols.compile_table @@ (State.get Symbols.table s) in
   let pp_ctx = { table; uv_names = (ref ((PtrMap.empty ()), 0)) } in
   Util.set_spaghetti_printer Data.pp_const (R.Pp.pp_constant ~pp_ctx); f x
-let unit_of_ast s ?header  p =
-  let { print_passes } = State.get compiler_flags s in
+let unit_or_header_of_ast { print_passes } s ?(toplevel_macros= F.Map.empty) 
+  p =
   if print_passes
   then
     Format.eprintf "== AST ================@\n@[<v 0>%a@]@\n" Ast.Program.pp
@@ -2919,12 +3014,7 @@ let unit_of_ast s ?header  p =
    then
      Format.eprintf "== Ast.Structured ================@\n@[<v 0>%a@]@\n"
        (w_symbol_table s Ast.Structured.pp_program) p;
-   (let toplevel_macros =
-      match header with
-      | Some { code = { Flat.toplevel_macros = toplevel_macros } } ->
-          toplevel_macros
-      | None -> F.Map.empty in
-    let (s, p) = ToDBL.run s ~toplevel_macros p in
+   (let (s, p) = ToDBL.run s ~toplevel_macros p in
     if print_passes
     then
       Format.eprintf "== Structured ================@\n@[<v 0>%a@]@\n"
@@ -2934,34 +3024,91 @@ let unit_of_ast s ?header  p =
      then
        Format.eprintf "== Flat ================@\n@[<v 0>%a@]@\n"
          (w_symbol_table s Flat.pp_program) p;
-     {
-       version = "%%VERSION_NUM%%";
-       code = p;
-       symbol_table = (State.get Symbols.table s);
-       builtins = (State.get Builtins.builtins s);
-       flags = (State.get compiler_flags s)
-     })))
-let assemble_units ~header  units =
-  let (s, p) = Assemble.run ~header units in
-  let { print_passes } = State.get compiler_flags s in
-  if print_passes
+     (s,
+       {
+         version = "%%VERSION_NUM%%";
+         code = p;
+         symbol_table =
+           (Symbols.prune (State.get Symbols.table s) p.Flat.symbols)
+       }))))
+let print_unit { print_units } x =
+  if print_units
   then
-    Format.eprintf "== Assembled ================@\n@[<v 0>%a@]@\n"
-      (w_symbol_table s Assembled.pp_program) p;
-  (let p = Spill.run s p in
+    let b1 = Marshal.to_bytes x.code [] in
+    let b2 = Marshal.to_bytes x.symbol_table [] in
+    Printf.eprintf
+      "== UNIT =================\ncode: %dk (%d clauses)\nsymbols: %dk (%d entries: %s)\n%!"
+      ((Bytes.length b1) / 1024) (List.length (x.code).Flat.clauses)
+      ((Bytes.length b2) / 1024) (Symbols.size x.symbol_table)
+      (String.concat ", "
+         (List.sort Stdlib.compare (Symbols.symbols x.symbol_table)))
+let header_of_ast ~flags  builtins ast =
+  (let state = D.State.init () in
+   let state = D.State.set D.while_compiling state true in
+   let state = State.set Symbols.table state (Symbols.global_table ()) in
+   let state =
+     List.fold_left
+       (fun state ->
+          fun (_, decls) ->
+            List.fold_left
+              (fun state ->
+                 function
+                 | Data.BuiltInPredicate.MLCode (p, _) ->
+                     Builtins.register state p
+                 | Data.BuiltInPredicate.MLData _ -> state
+                 | Data.BuiltInPredicate.MLDataC _ -> state
+                 | Data.BuiltInPredicate.LPCode _ -> state
+                 | Data.BuiltInPredicate.LPDoc _ -> state) state decls) state
+       builtins in
+   let (state, u) = unit_or_header_of_ast flags state ast in
+   print_unit flags u; (state, u) : header)
+let unit_of_ast ~flags  ~header:(s, (header : compilation_unit))  p =
+  (let toplevel_macros = (header.code).Flat.toplevel_macros in
+   let (_, u) = unit_or_header_of_ast flags s ~toplevel_macros p in
+   print_unit flags u; u : compilation_unit)
+let assemble_units ~flags  ~header:(s, h)  units =
+  (let nunits_with_locals =
+     ((h :: units) |>
+        (List.filter (fun { code = { Flat.local_names = x } } -> x > 0)))
+       |> List.length in
+   if nunits_with_locals > 0
+   then
+     error
+       "Only 1 compilation unit is supported when local directives are used";
+   (let init =
+      {
+        Assembled.empty with
+        toplevel_macros = ((h.code).toplevel_macros);
+        local_names = ((h.code).local_names)
+      } in
+    let (s, p) = Assemble.assemble flags s init (h :: units) in
+    let { print_passes } = flags in
+    if print_passes
+    then
+      Format.eprintf "== Assembled ================@\n@[<v 0>%a@]@\n"
+        (w_symbol_table s Assembled.pp_program) p;
+    (let p = Spill.run s p in
+     if print_passes
+     then
+       Format.eprintf "== Spilled ================@\n@[<v 0>%a@]@\n"
+         (w_symbol_table s Assembled.pp_program) p;
+     (s, p))) : program)
+let append_units ~flags  ~base:(s, p)  units =
+  (let (s, p) = Assemble.assemble flags s p units in
+   let { print_passes } = flags in
    if print_passes
    then
-     Format.eprintf "== Spilled ================@\n@[<v 0>%a@]@\n"
+     Format.eprintf "== Assembled ================@\n@[<v 0>%a@]@\n"
        (w_symbol_table s Assembled.pp_program) p;
-   ((State.update Symbols.table s Symbols.lock), p))
-let program_of_ast s ~header  p =
-  let u = unit_of_ast s p in assemble_units ~header [u]
-let extend (s, p) ul =
-  if ul = []
-  then (s, p)
-  else
-    (let (s, p) = Assemble.extend (s, p) ul in
-     let p = Spill.run s p in (s, p))
+   (let p = Spill.run s p in
+    if print_passes
+    then
+      Format.eprintf "== Spilled ================@\n@[<v 0>%a@]@\n"
+        (w_symbol_table s Assembled.pp_program) p;
+    (s, p)) : program)
+let program_of_ast ~flags  ~header  p =
+  (let u = unit_of_ast ~flags ~header p in assemble_units ~flags ~header [u] : 
+  program)
 let is_builtin state tname = Builtins.is_declared state tname
 let check_all_builtin_are_typed state types =
   Constants.Set.iter
@@ -3034,15 +3181,13 @@ let uvbodies_of_assignments assignments =
     (StrMap.map
        (function | UVar (b, _, _)|AppUVar (b, _, _) -> b | _ -> assert false)
        assignments)
-let query_of_ast compiler_state assembled_program t =
+let query_of_ast (compiler_state, assembled_program) t =
   let compiler_state = State.begin_goal_compilation compiler_state in
   let initial_depth = assembled_program.Assembled.local_names in
   let types = assembled_program.Assembled.types in
   let type_abbrevs = assembled_program.Assembled.type_abbrevs in
   let modes = C.Map.map fst assembled_program.Assembled.modes in
   let active_macros = assembled_program.Assembled.toplevel_macros in
-  let compiler_state =
-    State.update Symbols.table compiler_state Symbols.unlock in
   let (state, query) =
     ToDBL.query_preterm_of_ast ~depth:initial_depth active_macros
       compiler_state t in
@@ -3068,15 +3213,13 @@ let query_of_ast compiler_state assembled_program t =
     assignments;
     compiler_state = (state |> (uvbodies_of_assignments assignments))
   }
-let query_of_term compiler_state assembled_program f =
+let query_of_term (compiler_state, assembled_program) f =
   let compiler_state = State.begin_goal_compilation compiler_state in
   let initial_depth = assembled_program.Assembled.local_names in
   let types = assembled_program.Assembled.types in
   let type_abbrevs = assembled_program.Assembled.type_abbrevs in
   let modes = C.Map.map fst assembled_program.Assembled.modes in
   let active_macros = assembled_program.Assembled.toplevel_macros in
-  let compiler_state =
-    State.update Symbols.table compiler_state Symbols.unlock in
   let (state, query) =
     ToDBL.query_preterm_of_function ~depth:initial_depth active_macros
       compiler_state (f ~depth:initial_depth) in
@@ -3100,15 +3243,18 @@ let query_of_term compiler_state assembled_program f =
     assignments;
     compiler_state = (state |> (uvbodies_of_assignments assignments))
   }
-let query_of_data state p loc (Query.Query { arguments } as descr) =
+let query_of_data (state, p) loc (Query.Query { arguments } as descr) =
   let state = State.begin_goal_compilation state in
   let query =
-    query_of_term state p
+    query_of_term (state, p)
       (fun ~depth ->
          fun state ->
            let (state, term) = R.embed_query ~mk_Arg ~depth state descr in
            (state, (loc, term))) in
   { query with query_arguments = arguments }
+let lookup_query_predicate (state, p) pred =
+  let (state, pred) = Symbols.allocate_global_symbol_str state pred in
+  ((state, p), pred)
 module Compiler : sig val run : 'a query -> 'a executable end =
   struct
     let compile_chr depth state
@@ -3184,17 +3330,14 @@ module Compiler : sig val run : 'a query -> 'a executable end =
       { WithMain.types = types; modes; clauses; chr; initial_depth;
         initial_goal; assignments; compiler_state = state; query_arguments }
       =
-      let flags = State.get compiler_flags state in
       check_all_builtin_are_typed state types;
       check_no_regular_types_for_builtins state types;
-      (let pifexpr { pifexpr } = pifexpr in
-       let (state, chr) =
+      (let (state, chr) =
          List.fold_left
            (fun (state, chr) ->
               fun (clique, rules) ->
                 let (chr, clique) =
                   CHR.new_clique (Symbols.show state) clique chr in
-                let rules = filter_if flags pifexpr rules in
                 let (state, rules) =
                   map_acc (compile_chr initial_depth) state rules in
                 List.iter (check_rule_pattern_in_clique state clique) rules;
@@ -3481,7 +3624,7 @@ let static_check ~exec  ~checker:(state, program)
                      [lam2forall tavaluet])))) state) in
   let loc = Loc.initial "(static_check)" in
   let query =
-    query_of_term state program
+    query_of_term (state, program)
       (fun ~depth ->
          fun state ->
            assert (depth = 0);

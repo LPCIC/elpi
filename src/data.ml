@@ -363,15 +363,19 @@ module Global_symbols : sig
   (* Table used at link time *)
   type t = {
     (* Ast (functor name) -> negative int n (constant) * hashconsed (Const n) *)
-    mutable s2c : constant StrMap.t;
+    mutable s2ct : (constant * term) StrMap.t;
     mutable c2s : string Constants.Map.t;
     (* negative *)
     mutable last_global : int;
+
+    (* Once the system is initialized this shall change no more *)
+    mutable locked: bool;
   }
   val table : t
 
   (* Static initialization, eg link time *)
   val declare_global_symbol : string -> constant
+  val lock : unit -> unit
 
   val cutc     : constant
   val andc     : constant
@@ -403,32 +407,50 @@ module Global_symbols : sig
 end = struct
 
 type t = {
-  mutable s2c : constant StrMap.t;
+  mutable s2ct : (constant * term) StrMap.t;
   mutable c2s : string Constants.Map.t;
   mutable last_global : int;
+  mutable locked : bool;
 }
 [@@deriving show]
 
 let table = {
   last_global = 0;
-  s2c = StrMap.empty;
+  s2ct = StrMap.empty;
   c2s = Constants.Map.empty;
+  locked = false;
 }
 
 let declare_global_symbol x =
-  try StrMap.find x table.s2c
+  try fst @@ StrMap.find x table.s2ct
+  with Not_found ->
+    if table.locked then
+      Util.anomaly "declare_global_symbol called after initialization";
+    table.last_global <- table.last_global - 1;
+    let n = table.last_global in
+    let t = Const n in
+    table.s2ct <- StrMap.add x (n,t) table.s2ct;
+    table.c2s <- Constants.Map.add n x table.c2s;
+    n
+
+let declare_global_symbol_for_builtin x =
+  if table.locked then
+    Util.anomaly "declare_global_symbol_for_builtin called after initialization";
+  try fst @@ StrMap.find x table.s2ct
   with Not_found ->
     table.last_global <- table.last_global - 1;
     let n = table.last_global in
-    table.s2c <- StrMap.add x n table.s2c;
+    let t = Builtin(n,[]) in
+    table.s2ct <- StrMap.add x (n,t) table.s2ct;
     table.c2s <- Constants.Map.add n x table.c2s;
     n
+
+let lock () = table.locked <- true
 
 let andc                = declare_global_symbol F.(show andf)
 let arrowc              = declare_global_symbol F.(show arrowf)
 let asc                 = declare_global_symbol "as"
 let consc               = declare_global_symbol F.(show consf)
-let cutc                = declare_global_symbol F.(show cutf)
 let entailsc            = declare_global_symbol "?-"
 let eqc                 = declare_global_symbol F.(show eqf)
 let uvarc               = declare_global_symbol "uvar"
@@ -445,8 +467,10 @@ let truec               = declare_global_symbol F.(show truef)
 let ctypec              = declare_global_symbol F.(show ctypef)
 let propc               = declare_global_symbol "prop"
 let variadic            = declare_global_symbol "variadic"
+
 let declare_constraintc = declare_global_symbol "declare_constraint"
-let print_constraintsc  = declare_global_symbol "print_constraints"
+let cutc                = declare_global_symbol_for_builtin F.(show cutf)
+let print_constraintsc  = declare_global_symbol_for_builtin "print_constraints"
 
 end
 

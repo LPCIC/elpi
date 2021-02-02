@@ -1,4 +1,4 @@
-(*23676cb264e7f320be53722b612a7237 src/data.ml *)
+(*2b7be6233dc1dc892ce7b8001159909a src/data.ml *)
 #1 "src/data.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -953,11 +953,13 @@ module Global_symbols :
   sig
     type t =
       {
-      mutable s2c: constant StrMap.t ;
+      mutable s2ct: (constant * term) StrMap.t ;
       mutable c2s: string Constants.Map.t ;
-      mutable last_global: int }
+      mutable last_global: int ;
+      mutable locked: bool }
     val table : t
     val declare_global_symbol : string -> constant
+    val lock : unit -> unit
     val cutc : constant
     val andc : constant
     val orc : constant
@@ -985,33 +987,47 @@ module Global_symbols :
   struct
     type t =
       {
-      mutable s2c: constant StrMap.t ;
+      mutable s2ct: (constant * term) StrMap.t ;
       mutable c2s: string Constants.Map.t ;
-      mutable last_global: int }[@@deriving show]
+      mutable last_global: int ;
+      mutable locked: bool }[@@deriving show]
     let rec pp :
       Ppx_deriving_runtime_proxy.Format.formatter -> t -> Ppx_deriving_runtime_proxy.unit
       =
-      let __2 () = Constants.Map.pp
-      and __1 () = StrMap.pp
+      let __3 () = Constants.Map.pp
+      and __2 () = StrMap.pp
+      and __1 () = pp_term
       and __0 () = pp_constant in
       ((let open! Ppx_deriving_runtime_proxy in
           fun fmt ->
             fun x ->
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[<2>{ ";
-              (((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
-                   "Data.Global_symbols.s2c";
-                 ((__1 ()) (fun fmt -> (__0 ()) fmt) fmt) x.s2c;
+              ((((Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
+                    "Data.Global_symbols.s2ct";
+                  ((__2 ())
+                     (fun fmt ->
+                        fun (a0, a1) ->
+                          Ppx_deriving_runtime_proxy.Format.fprintf fmt "(@[";
+                          (((__0 ()) fmt) a0;
+                           Ppx_deriving_runtime_proxy.Format.fprintf fmt ",@ ";
+                           ((__1 ()) fmt) a1);
+                          Ppx_deriving_runtime_proxy.Format.fprintf fmt "@])") fmt)
+                    x.s2ct;
+                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
+                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "c2s";
+                 ((__3 ())
+                    (fun fmt -> Ppx_deriving_runtime_proxy.Format.fprintf fmt "%S")
+                    fmt) x.c2s;
                  Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
                 Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
-                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "c2s";
-                ((__2 ())
-                   (fun fmt -> Ppx_deriving_runtime_proxy.Format.fprintf fmt "%S")
-                   fmt) x.c2s;
+                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
+                  "last_global";
+                (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%d") x.last_global;
                 Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
                Ppx_deriving_runtime_proxy.Format.fprintf fmt ";@ ";
-               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ "
-                 "last_global";
-               (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%d") x.last_global;
+               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@[%s =@ " "locked";
+               (Ppx_deriving_runtime_proxy.Format.fprintf fmt "%B") x.locked;
                Ppx_deriving_runtime_proxy.Format.fprintf fmt "@]");
               Ppx_deriving_runtime_proxy.Format.fprintf fmt "@ }@]")
         [@ocaml.warning "-A"])
@@ -1019,21 +1035,44 @@ module Global_symbols :
       fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp x[@@ocaml.warning
                                                                "-32"]
     let table =
-      { last_global = 0; s2c = StrMap.empty; c2s = Constants.Map.empty }
+      {
+        last_global = 0;
+        s2ct = StrMap.empty;
+        c2s = Constants.Map.empty;
+        locked = false
+      }
     let declare_global_symbol x =
-      try StrMap.find x table.s2c
+      try fst @@ (StrMap.find x table.s2ct)
       with
       | Not_found ->
-          (table.last_global <- (table.last_global - 1);
+          (if table.locked
+           then
+             Util.anomaly "declare_global_symbol called after initialization";
+           table.last_global <- (table.last_global - 1);
            (let n = table.last_global in
-            table.s2c <- (StrMap.add x n table.s2c);
+            let t = Const n in
+            table.s2ct <- (StrMap.add x (n, t) table.s2ct);
             table.c2s <- (Constants.Map.add n x table.c2s);
             n))
+    let declare_global_symbol_for_builtin x =
+      if table.locked
+      then
+        Util.anomaly
+          "declare_global_symbol_for_builtin called after initialization";
+      (try fst @@ (StrMap.find x table.s2ct)
+       with
+       | Not_found ->
+           (table.last_global <- (table.last_global - 1);
+            (let n = table.last_global in
+             let t = Builtin (n, []) in
+             table.s2ct <- (StrMap.add x (n, t) table.s2ct);
+             table.c2s <- (Constants.Map.add n x table.c2s);
+             n)))
+    let lock () = table.locked <- true
     let andc = declare_global_symbol (let open F in show andf)
     let arrowc = declare_global_symbol (let open F in show arrowf)
     let asc = declare_global_symbol "as"
     let consc = declare_global_symbol (let open F in show consf)
-    let cutc = declare_global_symbol (let open F in show cutf)
     let entailsc = declare_global_symbol "?-"
     let eqc = declare_global_symbol (let open F in show eqf)
     let uvarc = declare_global_symbol "uvar"
@@ -1051,7 +1090,9 @@ module Global_symbols :
     let propc = declare_global_symbol "prop"
     let variadic = declare_global_symbol "variadic"
     let declare_constraintc = declare_global_symbol "declare_constraint"
-    let print_constraintsc = declare_global_symbol "print_constraints"
+    let cutc = declare_global_symbol_for_builtin (let open F in show cutf)
+    let print_constraintsc =
+      declare_global_symbol_for_builtin "print_constraints"
   end 
 let dummy = App (Global_symbols.cutc, (Const Global_symbols.cutc), [])
 module CHR :
