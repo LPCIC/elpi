@@ -21,10 +21,11 @@ let set_trace argv =
 
 module Setup = struct
 
-type builtins = string * Data.BuiltInPredicate.declaration list
-type elpi = Parser.parser_state * Compiler.compilation_unit
+type builtins = Compiler.builtins
+type elpi = Parser.parser_state * Compiler.header
+type flags = Compiler.flags
 
-let init ~builtins ~basedir:cwd argv =
+let init ?(flags=Compiler.default_flags) ~builtins ~basedir:cwd argv =
   let new_argv = set_trace argv in
   let new_argv, paths =
     let rec aux args paths = function
@@ -36,20 +37,8 @@ let init ~builtins ~basedir:cwd argv =
   in
   (* At the moment we can only init the parser once *)
   let parsing_state = Parser.init ~lp_syntax:Parser.lp_gramext ~paths ~cwd in
-
-  let state = Compiler.init_state Compiler.default_flags in
-  (* This runtime contains statically allocated data that is common to all runtimes *)
-  (* This part could be put in a separate API Setup.mk_runtime and it should be
-     passed to all Compile.* APIs *)
-  let state =
-    List.fold_left (fun state (_,decls) ->
-      List.fold_left (fun state -> function
-      | Data.BuiltInPredicate.MLCode (p,_) -> Compiler.Builtins.register state p
-      | Data.BuiltInPredicate.MLData _ -> state
-      | Data.BuiltInPredicate.MLDataC _ -> state
-      | Data.BuiltInPredicate.LPCode _ -> state
-      | Data.BuiltInPredicate.LPDoc _ -> state) state decls) state builtins in
-  let header =
+  Data.Global_symbols.lock ();
+  let header_src =
     builtins |> List.map (fun (fname,decls) ->
       (* This is a bit ugly, since we print and then parse... *)
       let b = Buffer.create 1024 in
@@ -71,7 +60,7 @@ let init ~builtins ~basedir:cwd argv =
             Util.Loc.(loc.source_stop - loc.line_starts_at));
       Util.anomaly ~loc msg) in
   let header =
-    try Compiler.unit_of_ast state (List.concat header)
+    try Compiler.header_of_ast ~flags builtins (List.concat header_src)
     with Compiler.CompileError(loc,msg) -> Util.anomaly ?loc msg in
   (parsing_state, header), new_argv
 
@@ -139,17 +128,19 @@ end
 
 module Compile = struct
 
-  type program = ED.State.t * Compiler.program
+  type program = Compiler.program
   type 'a query = 'a Compiler.query
   type 'a executable = 'a ED.executable
   type compilation_unit = Compiler.compilation_unit
   exception CompileError = Compiler.CompileError
 
-  let program ~flags ~elpi:(_,header) l =
-    Compiler.program_of_ast (Compiler.init_state flags) ~header (List.flatten l)
+  let to_setup_flags x = x
 
-  let query (s,p) t =
-    Compiler.query_of_ast s p t
+  let program ?(flags=Compiler.default_flags) ~elpi:(_,header) l =
+    Compiler.program_of_ast ~flags ~header (List.flatten l)
+
+  let query s_p t =
+    Compiler.query_of_ast s_p t
 
   let static_check ~checker q =
     let module R = (val !r) in let open R in
@@ -160,12 +151,13 @@ module Compile = struct
   type flags = Compiler.flags = {
     defined_variables : StrSet.t;
     print_passes : bool;
+    print_units : bool;
   }
   let default_flags = Compiler.default_flags
   let optimize = Compiler.optimize_query
-  let unit ?follows ~elpi:(_,header) ~flags x = Compiler.unit_of_ast (Compiler.init_state ?symbols_of:(Util.option_map fst follows) flags) ~header x
-  let extend ~base ul = Compiler.extend base ul
-  let assemble ~elpi:(_,header) = Compiler.assemble_units ~header
+  let unit ?(flags=Compiler.default_flags) ~elpi:(_,header) x = Compiler.unit_of_ast ~flags ~header x
+  let extend ?(flags=Compiler.default_flags) ~base ul = Compiler.append_units ~flags ~base ul
+  let assemble ?(flags=Compiler.default_flags) ~elpi:(_,header) = Compiler.assemble_units ~flags ~header
 
 end
 
@@ -817,11 +809,10 @@ module Query = struct
 
   type 'x t = Query of { predicate : name; arguments : 'x arguments }
 
-  let compile (state,p) loc (Query { predicate; arguments }) =
-    let state, predicate =
-      Compiler.Symbols.allocate_global_symbol_str state predicate in
+  let compile p loc (Query { predicate; arguments }) =
+    let p, predicate = Compiler.lookup_query_predicate p predicate in
     let q = ED.Query.Query{ predicate; arguments } in
-    Compiler.query_of_data state p loc q
+    Compiler.query_of_data p loc q
 end
 
 module State = struct
@@ -842,8 +833,7 @@ end
 module RawQuery = struct
   let mk_Arg = Compiler.mk_Arg
   let is_Arg = Compiler.is_Arg
-  let compile (state,p) f =
-    Compiler.query_of_term state p f
+  let compile = Compiler.query_of_term
 end
 
 module Quotation = struct
@@ -922,7 +912,7 @@ module Utils = struct
           Term.mkSeq [hd;tl]
       | Data.Nil -> Term.mkNil
       | Data.Builtin(c,xs) ->
-          let c = aux d ctx (R.mkConst c) in
+          let c = Term.mkCon (ED.Constants.show c) in
           let xs = List.map (aux d ctx) xs in
           Term.mkApp loc (c :: xs)
       | Data.CData x -> Term.mkC x

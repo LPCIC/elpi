@@ -37,6 +37,9 @@ module Setup : sig
   (* Built-in predicates, see {!module:BuiltIn} *)
   type builtins
 
+  (* Compilation flags, see {!module:Compile} *)
+  type flags
+  
   (* Handle to an elpi instance *)
   type elpi
 
@@ -48,6 +51,7 @@ module Setup : sig
       It returns part of [argv] not relevant to ELPI and a handle [elpi]
       to an elpi instance equipped with the given builtins. *)
   val init :
+    ?flags:flags ->
     builtins:builtins list ->
     basedir:string ->
     string list -> elpi * string list
@@ -85,7 +89,7 @@ module Parse : sig
   val goal_from_stream : Ast.Loc.t -> char Stream.t -> Ast.query
 
   (** [resolve f] computes the full path of [f] as the parser would do (also)
-      for files recusrively accumulated. Raises Failure if the file does not
+      for files recursively accumulated. Raises Failure if the file does not
       exist. *)
   val resolve_file : string -> string
 
@@ -141,8 +145,11 @@ module Compile : sig
     defined_variables : StrSet.t;
     (* debug: print intermediate data during the compilation phase *)
     print_passes : bool;
+    (* debug: print compilation units *)
+    print_units : bool;
   }
   val default_flags : flags
+  val to_setup_flags : flags -> Setup.flags
 
   type program
   type 'a query
@@ -160,8 +167,7 @@ module Compile : sig
      - the `accumulate` directive inserts `{` and `}` around the accumulated
        code
    *)
-  val program : flags:flags ->
-    elpi:Setup.elpi -> Ast.program list -> program
+  val program : ?flags:flags -> elpi:Setup.elpi -> Ast.program list -> program
 
   (* separate compilation API: units are marshalable and closed w.r.t.
      the host application (eg quotations are desugared).
@@ -173,14 +179,12 @@ module Compile : sig
        visible in all units
      - types, type abbreviations and mode declarations from all units are
        merged at assembly time
-     - extending a program with a unit is fast if the unit follows it. A unit
-       following a program is not allowed to allocate new global symbol. The
-       typical example is a new clause for an exising predicate.
+
      *)
   type compilation_unit
-  val unit : ?follows:program -> elpi:Setup.elpi -> flags:flags -> Ast.program -> compilation_unit
-  val assemble : elpi:Setup.elpi -> compilation_unit list -> program
-  val extend : base:program -> compilation_unit list -> program
+  val unit : ?flags:flags -> elpi:Setup.elpi -> Ast.program -> compilation_unit
+  val assemble : ?flags:flags -> elpi:Setup.elpi -> compilation_unit list -> program
+  val extend : ?flags:flags -> base:program -> compilation_unit list -> program
 
   (* then compile the query *)
   val query : program -> Ast.query -> unit query

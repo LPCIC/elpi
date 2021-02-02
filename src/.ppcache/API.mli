@@ -1,4 +1,4 @@
-(*bd37882aa8d1936d8967cf5c0dbaf075 src/API.mli *)
+(*5ce365fd0f86ded5a2698f5a87b46eb3 src/API.mli *)
 #1 "src/API.mli"
 [@@@ocaml.text " This module is the API for clients of the Elpi library. "]
 [@@@ocaml.text
@@ -26,11 +26,13 @@ end
 module Setup :
 sig
   type builtins
+  type flags
   type elpi
   val init :
-    builtins:builtins list ->
-      basedir:string -> string list -> (elpi * string list)[@@ocaml.doc
-                                                             " Initialize ELPI.\n      [init] must be called before invoking the parser.\n      [builtins] the set of built-in predicates, eg [Elpi_builtin.std_builtins]\n      [basedir] current working directory (used to make paths absolute);\n      [argv] is list of options, see the {!val:usage} string;\n      It returns part of [argv] not relevant to ELPI and a handle [elpi]\n      to an elpi instance equipped with the given builtins. "]
+    ?flags:flags ->
+      builtins:builtins list ->
+        basedir:string -> string list -> (elpi * string list)[@@ocaml.doc
+                                                               " Initialize ELPI.\n      [init] must be called before invoking the parser.\n      [builtins] the set of built-in predicates, eg [Elpi_builtin.std_builtins]\n      [basedir] current working directory (used to make paths absolute);\n      [argv] is list of options, see the {!val:usage} string;\n      It returns part of [argv] not relevant to ELPI and a handle [elpi]\n      to an elpi instance equipped with the given builtins. "]
   val usage : string[@@ocaml.doc " Usage string "]
   val trace : string list -> unit[@@ocaml.doc
                                    " Set tracing options.\n      [trace argv] can be called before {!module:Execute}.\n      [argv] is expected to only contain options relevant for\n      the tracing facility. "]
@@ -47,14 +49,16 @@ sig
   val program :
     elpi:Setup.elpi ->
       ?print_accumulated_files:bool -> string list -> Ast.program[@@ocaml.doc
-                                                                   " [program file_list] parses a list of files "]
+                                                                   " [program file_list] parses a list of files,\n      Raises Failure if the file does not exist. "]
   val program_from_stream :
     elpi:Setup.elpi ->
       ?print_accumulated_files:bool ->
         Ast.Loc.t -> char Stream.t -> Ast.program
   val goal : Ast.Loc.t -> string -> Ast.query[@@ocaml.doc
-                                               " [goal file_list] parses the query "]
+                                               " [goal file_list] parses the query,\n      Raises Failure if the file does not exist.  "]
   val goal_from_stream : Ast.Loc.t -> char Stream.t -> Ast.query
+  val resolve_file : string -> string[@@ocaml.doc
+                                       " [resolve f] computes the full path of [f] as the parser would do (also)\n      for files recusrively accumulated. Raises Failure if the file does not\n      exist. "]
   exception ParseError of Ast.Loc.t * string 
 end
 module Data :
@@ -88,21 +92,26 @@ sig
     val show : t -> string
     val pp : Format.formatter -> t -> unit
   end
-  type flags = {
+  type flags =
+    {
     defined_variables: StrSet.t ;
-    print_passes: bool }
+    print_passes: bool ;
+    print_units: bool }
   val default_flags : flags
+  val to_setup_flags : flags -> Setup.flags
   type program
   type 'a query
   type 'a executable
   exception CompileError of Ast.Loc.t option * string 
-  val program : flags:flags -> elpi:Setup.elpi -> Ast.program list -> program
+  val program :
+    ?flags:flags -> elpi:Setup.elpi -> Ast.program list -> program
   type compilation_unit
   val unit :
-    ?follows:program ->
-      elpi:Setup.elpi -> flags:flags -> Ast.program -> compilation_unit
-  val assemble : elpi:Setup.elpi -> compilation_unit list -> program
-  val extend : base:program -> compilation_unit list -> program
+    ?flags:flags -> elpi:Setup.elpi -> Ast.program -> compilation_unit
+  val assemble :
+    ?flags:flags -> elpi:Setup.elpi -> compilation_unit list -> program
+  val extend :
+    ?flags:flags -> base:program -> compilation_unit list -> program
   val query : program -> Ast.query -> unit query
   val optimize : 'a query -> 'a executable
   val static_check : checker:program -> 'a query -> bool[@@ocaml.doc

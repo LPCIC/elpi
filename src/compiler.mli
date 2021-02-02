@@ -8,45 +8,39 @@ open Data
 type flags = {
   defined_variables : StrSet.t;
   print_passes : bool; (* debug *)
+  print_units : bool; (* debug *)
 }
 val default_flags : flags
-val compiler_flags : flags State.component
-
-
-type program
-type 'a query
 
 exception CompileError of Loc.t option * string
 
+type builtins = string * Data.BuiltInPredicate.declaration list
+
+type header
+val header_of_ast : flags:flags -> builtins list -> Ast.Program.t ->  header
+
+type program
+val program_of_ast : flags:flags -> header:header -> Ast.Program.t -> program
+
 type compilation_unit
-val init_state : ?symbols_of:State.t -> flags -> State.t
+val unit_of_ast : flags:flags -> header:header -> Ast.Program.t -> compilation_unit
+val assemble_units : flags:flags -> header:header -> compilation_unit list -> program
+val append_units : flags:flags -> base:program -> compilation_unit list -> program
 
-val program_of_ast : State.t -> header:compilation_unit -> Ast.Program.t -> State.t * program
-val unit_of_ast : State.t -> ?header:compilation_unit -> Ast.Program.t -> compilation_unit
-val assemble_units : header:compilation_unit -> compilation_unit list -> State.t * program
-val extend : State.t * program -> compilation_unit list -> State.t * program
-
-val query_of_ast : State.t -> program -> Ast.Goal.t -> unit query
+type 'a query
+val query_of_ast : program -> Ast.Goal.t -> unit query
 val query_of_term :
-  State.t -> program -> (depth:int -> State.t -> State.t * (Loc.t * term)) -> unit query
+  program -> (depth:int -> State.t -> State.t * (Loc.t * term)) -> unit query
 val query_of_data :
-  State.t -> program -> Loc.t -> 'a Query.t -> 'a query
+  program -> Loc.t -> 'a Query.t -> 'a query
+
 val optimize_query : 'a query -> 'a executable
+
 val term_of_ast : depth:int -> State.t -> Loc.t * Ast.Term.t -> State.t * term
 
 val pp_query : (pp_ctx:pp_ctx -> depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> 'a query -> unit
 
-module Symbols : sig
-
-  val allocate_global_symbol_str : State.t -> string -> State.t * constant
-
-end
-
-module Builtins : sig
-
-  val register : State.t -> BuiltInPredicate.t -> State.t
-
-end
+val lookup_query_predicate : program -> string -> program * Data.constant
 
 type quotation = depth:int -> State.t -> Loc.t -> string -> State.t * term
 val set_default_quotation : quotation -> unit
@@ -67,7 +61,7 @@ val quote_syntax : [ `Compiletime | `Runtime of constant -> term ] -> State.t ->
 (* false means a type error was found *)
 val static_check :
   exec:(unit executable -> unit outcome) ->
-  checker:(State.t * program) ->
+  checker:program ->
   'a query -> bool
 
 module CustomFunctorCompilation : sig

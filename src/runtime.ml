@@ -56,10 +56,12 @@ let table = Fork.new_local {
 }
 
 let show ?(table = !table) n =
-  try Hashtbl.find table.c2s n
+  try Constants.Map.find n Global_symbols.table.c2s
   with Not_found ->
-    if n >= 0 then "c" ^ string_of_int n
-    else "SYMBOL" ^ string_of_int n
+    try Hashtbl.find table.c2s n
+    with Not_found ->
+      if n >= 0 then "c" ^ string_of_int n
+      else "SYMBOL" ^ string_of_int n
 
 let pp ?table fmt n =
   Format.fprintf fmt "%s" (show ?table n)
