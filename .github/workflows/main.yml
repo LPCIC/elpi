@@ -1,0 +1,122 @@
+name: Main workflow
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    name: Build and test elpi
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
+        ocaml-version:
+          - 4.11.1
+          - 4.07.1
+          - 4.04.1
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+# Environment setup ###########################################################
+# 
+# We install missing bits and we mae ${{ env.workspace }} points to the current
+# working directory in a system agnostic way
+#
+# Note "opam exec -- stuff" executes stuff in a "system independent way" inside
+# the opam root *but* the way "stuff" is parsed is not system independent.
+# Hence we use GH's ${{ expressions }} rather than the ones from the shell.
+
+      - name: Use OCaml ${{ matrix.ocaml-version }}
+        uses: avsm/setup-ocaml@v1
+        with:
+          ocaml-version: ${{ matrix.ocaml-version }}
+
+      - name: Install extra stuff on macOS
+        if: runner.os == 'macOS'
+        run: brew install gnu-time
+
+      - name: Install extra stuff on Windows
+        if: runner.os == 'Windows'
+        run: c:\cygwin\setup-x86_64.exe -q -P time
+
+      - name: Install dependencies
+        run: opam install . --deps-only --with-doc --with-test
+
+      - name: Build elpi
+        run: |
+          opam exec dune subst
+          opam exec make build
+          opam exec cp _build/install/default/bin/elpi elpi-${{ matrix.ocaml-version }}-${{ runner.os }}.exe
+
+      - name: Test elpi on Unix
+        if: runner.os != 'Windows'
+        run: opam exec make tests
+
+      - name: Test elpi on Windows (disabled)
+        if: runner.os == 'Windows'
+        run: opam exec touch data.csv
+
+      - name: Strip binary on Unix
+        if: runner.os != 'Windows'
+        run: opam exec strip elpi-${{ matrix.ocaml-version }}-${{ runner.os }}.exe
+
+      - name: Strip binary on Windows
+        if: runner.os == 'Windows'
+        run: opam exec strip %CD%\elpi-${{ matrix.ocaml-version }}-${{ runner.os }}.exe
+
+      - name: Save binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: elpi-${{ matrix.ocaml-version }}-${{ runner.os }}
+          path: elpi-${{ matrix.ocaml-version }}-${{ runner.os }}.exe
+
+      - name: Fixup benchmarking data
+        run: |
+          opam exec mv data.csv data.csv.old
+          opam exec sed 's/^[^,]*/elpi-${{ matrix.ocaml-version }}-${{ runner.os }}/' data.csv.old > data.csv
+
+      - name: Save benchmarking data
+        uses: actions/upload-artifact@v2
+        with:
+          name: .benchmark-${{ matrix.ocaml-version }}-${{ runner.os }}
+          path: data.csv
+
+  aggregate:
+    name: Aggregate and plot benchmarking data
+    runs-on: ubuntu-latest
+    needs: build
+    if: always()
+
+    strategy:
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install extra stuff
+        run: sudo apt-get install lua5.1 gnuplot
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v2
+
+      - name: Plotting aggregated data
+        run: |
+          cat .benchmark-*/data.csv > data.csv
+          tests/plot data.csv
+          gnuplot data.csv.plot
+
+      - name: Save benchmarking plot
+        uses: actions/upload-artifact@v2
+        with:
+          name: benchmark-plot
+          path: data.csv.svg

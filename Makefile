@@ -17,10 +17,11 @@ INSTALL=_build/install/default
 BUILD=_build/default
 SHELL:=/usr/bin/env bash
 TIMEOUT=90.0
+PWD=$(shell pwd)
 RUNNERS=\
   dune \
-  $(shell pwd)/$(INSTALL)/bin/elpi \
-  $(addprefix $(shell pwd)/,$(wildcard _build/git/*/$(INSTALL)/bin/elpi.git.*)) \
+  $(PWD)/$(INSTALL)/bin/elpi \
+  $(addprefix $(PWD)/,$(wildcard _build/git/*/$(INSTALL)/bin/elpi.git.*)) \
   $(shell if type tjsim >/dev/null 2>&1; then type -P tjsim; else echo; fi)
 TIME=--time $(shell if type -P gtime >/dev/null 2>&1; then type -P gtime; else echo /usr/bin/time; fi)
 STACK=32768
@@ -51,8 +52,8 @@ tests:
 		--seed $$RANDOM \
 		--timeout $(TIMEOUT) \
 		$(TIME) \
-		--sources=$(shell pwd)/tests/sources/ \
-		--plot=$(shell pwd)/tests/plot \
+		--sources=$(PWD)/tests/sources/ \
+		--plot=$(PWD)/tests/plot \
 		$(addprefix --name-match ,$(ONLY)) \
 		$(addprefix --runner , $(RUNNERS))
 

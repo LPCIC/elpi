@@ -1,4 +1,4 @@
-(*5ce365fd0f86ded5a2698f5a87b46eb3 src/API.mli *)
+(*22838d7ad556bd020c45b042bfd82112 src/API.mli *)
 #1 "src/API.mli"
 [@@@ocaml.text " This module is the API for clients of the Elpi library. "]
 [@@@ocaml.text
@@ -58,7 +58,7 @@ sig
                                                " [goal file_list] parses the query,\n      Raises Failure if the file does not exist.  "]
   val goal_from_stream : Ast.Loc.t -> char Stream.t -> Ast.query
   val resolve_file : string -> string[@@ocaml.doc
-                                       " [resolve f] computes the full path of [f] as the parser would do (also)\n      for files recusrively accumulated. Raises Failure if the file does not\n      exist. "]
+                                       " [resolve f] computes the full path of [f] as the parser would do (also)\n      for files recursively accumulated. Raises Failure if the file does not\n      exist. "]
   exception ParseError of Ast.Loc.t * string 
 end
 module Data :
