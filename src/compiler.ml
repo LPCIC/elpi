@@ -2229,7 +2229,11 @@ let compile_clause modes initial_depth state
     { Ast.Clause.body = ({ amap = { nargs }} as body); loc }
 =
   let state, body = stack_term_of_preterm ~depth:0 state body in
-  let cl, _, morelcs = R.clausify1 ~loc modes ~nargs ~depth:initial_depth body in
+  let cl, _, morelcs =
+    try R.clausify1 ~loc modes ~nargs ~depth:initial_depth body
+    with D.CannotDeclareClauseForBuiltin(loc,c) ->
+      error ?loc ("Declaring a clause for built in predicate " ^ Symbols.show state c)
+    in
   if morelcs <> 0 then error ~loc "sigma in a toplevel clause is not supported";
   state, cl
 

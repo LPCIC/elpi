@@ -1174,3 +1174,5 @@ type 'a solution = {
   pp_ctx : pp_ctx;
 }
 type 'a outcome = Success of 'a solution | Failure | NoMoreSteps
+
+exception CannotDeclareClauseForBuiltin of Loc.t option * constant

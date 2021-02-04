@@ -1,4 +1,4 @@
-(*97daff286c385a58da52e22a157bd04d src/runtime_trace_on.ml --cookie elpi_trace="true"*)
+(*05283c3764b3dd6bbeeb85601a5ddc1e src/runtime_trace_on.ml --cookie elpi_trace="true"*)
 #1 "src/runtime_trace_on.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -2986,8 +2986,7 @@ module Clausify :
                  (deref_appuv ~from ~to_:(depth + lts) args g)
            | Arg _|AppArg _ -> anomaly "claux1 called on non-heap term"
            | Builtin (c, _) ->
-               error ?loc
-                 ("Declaring a clause for built in predicate " ^ (C.show c))
+               raise @@ (CannotDeclareClauseForBuiltin (loc, c))
            | Lam _|CData _ as x ->
                error ?loc
                  ("Assuming a string or int or float or function:" ^
@@ -3021,7 +3020,12 @@ module Clausify :
           (fun (clauses, programs, lcs) ->
              fun t ->
                let (clause, program, lcs) =
-                 claux1 get_mode 0 depth [] [] 0 lcs t in
+                 try claux1 get_mode 0 depth [] [] 0 lcs t
+                 with
+                 | CannotDeclareClauseForBuiltin (loc, c) ->
+                     error ?loc
+                       ("Declaring a clause for built in predicate " ^
+                          (C.show c)) in
                ((clause :: clauses), (program :: programs), lcs)) ([], [], 0)
           l in
       (clauses, program, lcs)
