@@ -1,4 +1,4 @@
-(*bfc08ce5ca421de1b5da62ebf7d9e616 src/compiler.ml *)
+(*3a80f51616b6fefc9b62cb62870f5427 src/compiler.ml *)
 #1 "src/compiler.ml"
 open Util
 module F = Ast.Func
@@ -214,33 +214,27 @@ module Symbols :
        { D.c2s = c2s; c2t; frozen_constants = (t.last_global) })
     let allocate_global_symbol_aux x
       ({ c2s; c2t; ast2ct; last_global; locked; frozen; uuid } as table) =
-      try
-        (table,
-          (StrMap.find (F.show x)
-             D.Global_symbols.table.D.Global_symbols.s2ct))
+      try (table, (F.Map.find x ast2ct))
       with
       | Not_found ->
-          (try (table, (F.Map.find x ast2ct))
-           with
-           | Not_found ->
-               (if frozen
-                then
-                  error
-                    ("allocating new global symbol '" ^
-                       ((F.show x) ^ "' at runtime"));
-                if locked
-                then
-                  error
-                    ("allocating new global symbol '" ^
-                       ((F.show x) ^ "' since the symbol table is locked"));
-                (let last_global = last_global - 1 in
-                 let n = last_global in
-                 let xx = D.Term.Const n in
-                 let p = (n, xx) in
-                 let c2s = D.Constants.Map.add n (F.show x) c2s in
-                 let c2t = D.Constants.Map.add n xx c2t in
-                 let ast2ct = F.Map.add x p ast2ct in
-                 ({ c2s; c2t; ast2ct; last_global; locked; frozen; uuid }, p))))
+          (if frozen
+           then
+             error
+               ("allocating new global symbol '" ^
+                  ((F.show x) ^ "' at runtime"));
+           if locked
+           then
+             error
+               ("allocating new global symbol '" ^
+                  ((F.show x) ^ "' since the symbol table is locked"));
+           (let last_global = last_global - 1 in
+            let n = last_global in
+            let xx = D.Term.Const n in
+            let p = (n, xx) in
+            let c2s = D.Constants.Map.add n (F.show x) c2s in
+            let c2t = D.Constants.Map.add n xx c2t in
+            let ast2ct = F.Map.add x p ast2ct in
+            ({ c2s; c2t; ast2ct; last_global; locked; frozen; uuid }, p)))
     let allocate_global_symbol state x =
       if not (D.State.get D.while_compiling state)
       then anomaly "global symbols can only be allocated during compilation";
@@ -251,15 +245,12 @@ module Symbols :
     let allocate_Arg_symbol st n =
       let x = Printf.sprintf "%%Arg%d" n in allocate_global_symbol_str st x
     let show state n =
-      try D.Constants.Map.find n D.Global_symbols.table.D.Global_symbols.c2s
+      try D.Constants.Map.find n (D.State.get table state).c2s
       with
       | Not_found ->
-          (try D.Constants.Map.find n (D.State.get table state).c2s
-           with
-           | Not_found ->
-               if n >= 0
-               then "c" ^ (string_of_int n)
-               else "SYMBOL" ^ (string_of_int n))
+          if n >= 0
+          then "c" ^ (string_of_int n)
+          else "SYMBOL" ^ (string_of_int n)
     let allocate_bound_symbol_aux n
       ({ c2s; c2t; ast2ct; last_global; locked; frozen; uuid } as table) =
       try (table, (D.Constants.Map.find n c2t))
@@ -281,17 +272,8 @@ module Symbols :
     let get_canonical state c =
       if not (D.State.get D.while_compiling state)
       then anomaly "get_canonical can only be used during compilation";
-      (try
-         snd @@
-           (StrMap.find
-              (D.Constants.Map.find c
-                 D.Global_symbols.table.D.Global_symbols.c2s)
-              D.Global_symbols.table.D.Global_symbols.s2ct)
-       with
-       | Not_found ->
-           (try D.Constants.Map.find c (D.State.get table state).c2t
-            with
-            | Not_found -> anomaly ("unknown symbol " ^ (string_of_int c))))
+      (try D.Constants.Map.find c (D.State.get table state).c2t
+       with | Not_found -> anomaly ("unknown symbol " ^ (string_of_int c)))
     let get_global_or_allocate_bound_symbol state n =
       if n >= 0
       then allocate_bound_symbol state n
@@ -299,12 +281,8 @@ module Symbols :
     let get_global_symbol state s =
       if not (D.State.get D.while_compiling state)
       then anomaly "get_global_symbol can only be used during compilation";
-      (try
-         StrMap.find (F.show s) D.Global_symbols.table.D.Global_symbols.s2ct
-       with
-       | Not_found ->
-           (try F.Map.find s (D.State.get table state).ast2ct
-            with | Not_found -> anomaly ("unknown symbol " ^ (F.show s))))
+      (try F.Map.find s (D.State.get table state).ast2ct
+       with | Not_found -> anomaly ("unknown symbol " ^ (F.show s)))
     let get_global_symbol_str state s =
       get_global_symbol state (F.from_string s)
     let build_shift ~flags:{ print_units }  ~base  symbols =
@@ -3041,7 +3019,7 @@ let print_unit { print_units } x =
       ((Bytes.length b1) / 1024) (List.length (x.code).Flat.clauses)
       ((Bytes.length b2) / 1024) (Symbols.size x.symbol_table)
       (String.concat ", "
-         (List.sort Stdlib.compare (Symbols.symbols x.symbol_table)))
+         (List.sort compare (Symbols.symbols x.symbol_table)))
 let header_of_ast ~flags  builtins ast =
   (let state = D.State.init () in
    let state = D.State.set D.while_compiling state true in
