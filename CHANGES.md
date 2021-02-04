@@ -2,6 +2,22 @@
 
 - API:
   - Fix `open_append` was messing up file permissions
+  - New `Parse.resolve_file` to find where the parser would find (or not) an
+    accumulated file
+  - Change signature of `Compile.unit`, `Compile.assemble` and `Compile.extend`
+    and improve their implementation. Units are now smaller and link/relocate
+    faster (making `~follows` not worth it)
+- CI:
+  - Switch to Github actions and avsm/setup-ocaml. Now testing on Linux, MacOS
+    and Windows
+- Library:
+  - New `if2`
+  - New `std.map-ok`
+  - New `std.fold-map`
+  - New `std.intersperse`
+  - New `std.omap`
+  - New `std.take-last`
+  - New `std.string.concat`
 
 ## v1.12.0 (Nov 2020)
 - FFI:
