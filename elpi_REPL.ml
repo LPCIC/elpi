@@ -40,9 +40,9 @@ let more () =
 
 let set_terminal_width ?(max_w=
    try
-    let ic, _ as p = Unix.open_process "tput cols" in
+    let ic, _, _ as p = Unix.open_process_full "tput cols" (Unix.environment()) in
     let w = int_of_string (input_line ic) in
-    let _ = Unix.close_process p in w
+    let _ = Unix.close_process_full p in w
    with _ -> 80) () =
   List.iter (fun fmt ->
     Format.pp_set_margin fmt max_w;
