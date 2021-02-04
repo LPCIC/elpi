@@ -262,7 +262,7 @@ end = struct
     | Link
     | Run
     | Halt
-  [@@deriving show]
+
   type t = Obj.t StrMap.t * stage
 
   type 'a component = string
@@ -345,8 +345,7 @@ end = struct
     StrMap.iter (fun name { pp } ->
       try pp fmt (StrMap.find name t)
       with Not_found -> ())
-    !extensions;
-    pp_stage fmt s
+    !extensions
 
 end
 

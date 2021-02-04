@@ -1,4 +1,4 @@
-(*2b7be6233dc1dc892ce7b8001159909a src/data.ml *)
+(*35db5d0b2aaccd337d193fef516a3745 src/data.ml *)
 #1 "src/data.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -814,33 +814,7 @@ module State :
       | Compile_goal 
       | Link 
       | Run 
-      | Halt [@@deriving show]
-    let rec pp_stage :
-              Ppx_deriving_runtime_proxy.Format.formatter ->
-                stage -> Ppx_deriving_runtime_proxy.unit
-      =
-      ((let open! Ppx_deriving_runtime_proxy in
-          fun fmt ->
-            function
-            | Compile_prog ->
-                Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
-                  "Data.State.Compile_prog"
-            | Compile_goal ->
-                Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
-                  "Data.State.Compile_goal"
-            | Link ->
-                Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
-                  "Data.State.Link"
-            | Run ->
-                Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
-                  "Data.State.Run"
-            | Halt ->
-                Ppx_deriving_runtime_proxy.Format.pp_print_string fmt
-                  "Data.State.Halt")
-      [@ocaml.warning "-A"])
-    and show_stage : stage -> Ppx_deriving_runtime_proxy.string =
-      fun x -> Ppx_deriving_runtime_proxy.Format.asprintf "%a" pp_stage x[@@ocaml.warning
-                                                                    "-32"]
+      | Halt 
     type t = (Obj.t StrMap.t * stage)
     type 'a component = string
     type extension =
@@ -946,8 +920,7 @@ module State :
         (fun name ->
            fun { pp } ->
              try pp fmt (StrMap.find name t) with | Not_found -> ())
-        (!extensions);
-      pp_stage fmt s
+        (!extensions)
   end 
 module Global_symbols :
   sig
