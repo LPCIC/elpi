@@ -443,7 +443,13 @@ external pred open_safe i:safe, o:list A.
 % if C has no success it runs E.
 pred if i:prop, i:prop, i:prop.
 if B T _ :- B, !, T.
-if _ _ E :- E.  
+if _ _ E :- E.
+
+% [if2 C1 B1 C2 B2 E] like if but with 2 then branches (and one else branch).
+pred if2 i:prop, i:prop, i:prop, i:prop, i:prop.
+if2 G1 P1 _  _  _ :- G1, !, P1.
+if2 _  _  G2 P2 _ :- G2, !, P2.
+if2 _  _  _  _  E :- !, E. 
 
 % [random.init Seed] Initialize OCaml's PRNG with the given Seed
 external pred random.init i:int.
@@ -548,6 +554,12 @@ take 0 _ [] :- !.
 take N [X|XS] [X|L] :- !, N1 is N - 1, take N1 XS L.
 take _ _ _ :- fatal-error "take run out of list items".
 
+pred take-last i:int, i:list A, o:list A.
+take-last N L R :-
+  length L M,
+  D is M - N,
+  drop D L R.
+
 pred drop i:int, i:list A, o:list A.
 drop 0 L L :- !.
 drop N [_|XS] L :- !, N1 is N - 1, drop N1 XS L.
@@ -599,6 +611,18 @@ map2-filter [_|_] [] _ _ :- fatal-error "map2-filter on lists of different lengt
 map2-filter [] [] _ [].
 map2-filter [X|XS] [Y|YS] F [Z|ZS] :- F X Y Z, !, map2-filter XS YS F ZS.
 map2-filter [_|XS] [_|YS] F ZS :- map2-filter XS YS F ZS.
+
+pred map-ok i:list A, i:(A -> B -> diagnostic -> prop), o:list A, o:diagnostic.
+map-ok [X|L] P [Y|YS] S :- P X Y S0, if (S0 = ok) (map-ok L P YS S) (S = S0).
+map-ok [] _ [] ok.
+
+pred fold-map i:list A, i:B, i:(A -> B -> C -> B -> prop), o:list C, o:B.
+fold-map [] A _ [] A.
+fold-map [X|XS] A F [Y|YS] A2 :- F X A Y A1, fold-map XS A1 F YS A2.
+
+pred omap i:option A, i:(A -> B -> prop), o:option B.
+omap none _ none.
+omap (some X) F (some Y) :- F X Y.
 
 % [nth N L X] picks in X the N-th element of L (L must be of length > N)
 pred nth i:int, i:list A, o:A.
@@ -676,6 +700,13 @@ iota N L :- iota.aux 0 N L.
 iota.aux X X [] :- !.
 iota.aux N X [N|R] :- M is N + 1, iota.aux M X R.
 
+% [intersperse X L R] R is [L0, X, ..., X, LN]
+:index(_ 1)
+pred intersperse i:A, i:list A, o:list A.
+intersperse _ [] [].
+intersperse _ [X] [X] :- !.
+intersperse Sep [X|XS] [X,Sep|YS] :- intersperse Sep XS YS.
+
 %  -- Misc --
 
 pred flip i:(A -> B -> prop), i:B, i:A.
@@ -719,6 +750,10 @@ findall.aux P F :- P, stash_in_safe F P, fail.
 findall.aux _ _.
 
 }
+
+% [std.string.concat Separator Items Result] concatenates Items
+% interspersing Separator
+external pred std.string.concat i:string, i:list string, o:string.
 
 % CAVEAT: the type parameter of std.string.map must be a closed term
 

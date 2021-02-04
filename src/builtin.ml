@@ -1070,7 +1070,13 @@ X == Y :- same_term X Y.
 % if C has no success it runs E.
 pred if i:prop, i:prop, i:prop.
 if B T _ :- B, !, T.
-if _ _ E :- E.  |};
+if _ _ E :- E.
+
+% [if2 C1 B1 C2 B2 E] like if but with 2 then branches (and one else branch).
+pred if2 i:prop, i:prop, i:prop, i:prop, i:prop.
+if2 G1 P1 _  _  _ :- G1, !, P1.
+if2 _  _  G2 P2 _ :- G2, !, P2.
+if2 _  _  _  _  E :- !, E. |};
 
   MLCode(Pred("random.init",
      In(int, "Seed",
@@ -1296,6 +1302,16 @@ let elpi_set =  let open BuiltIn in let open BuiltInData in [
 
 let elpi_stdlib =
   elpi_stdlib_src @
+  let open BuiltIn in
+  let open BuiltInData in [
+  MLCode(Pred("std.string.concat",
+     In(string, "Separator",
+     In(list string, "Items",
+     Out(string, "Result",
+     Easy     "concatenates Items interspersing Separator"))),
+   (fun sep l _ ~depth:_ -> !: (String.concat sep l))),
+  DocAbove);
+  ] @
   ocaml_map ~name:"std.string.map" BuiltInData.string (module Util.StrMap) @ 
   ocaml_map ~name:"std.int.map"    BuiltInData.int    (module Util.IntMap) @ 
   ocaml_map ~name:"std.loc.map"    BuiltInData.loc    (module LocMap) @ 
