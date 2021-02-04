@@ -1,4 +1,4 @@
-(*35db5d0b2aaccd337d193fef516a3745 src/data.ml *)
+(*107f00a71d66ddd3aa7987dc410e49e5 src/data.ml *)
 #1 "src/data.ml"
 module Fmt = Format
 module F = Ast.Func
@@ -2409,4 +2409,5 @@ type 'a outcome =
   | Success of 'a solution 
   | Failure 
   | NoMoreSteps 
+exception CannotDeclareClauseForBuiltin of Loc.t option * constant 
 

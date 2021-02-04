@@ -2493,7 +2493,6 @@ r :- (pi X\ pi Y\ q X Y :- pi c\ pi d\ q (Z c d) (X c d) (Y c)) => ... *)
  *  - the argument lives in (depth+lts)
  *  - the clause will live in (depth+lcs)
  *)
-
 let rec claux1 ?loc get_mode vars depth hyps ts lts lcs t =
   [%trace "clausify" ~rid ("%a %d %d %d %d\n%!"
       (ppterm (depth+lts) [] 0 empty_env) t depth lts lcs (List.length ts)) begin
@@ -2552,8 +2551,7 @@ let rec claux1 ?loc get_mode vars depth hyps ts lts lcs t =
      claux1 ?loc get_mode vars depth hyps ts lts lcs
        (deref_appuv ~from ~to_:(depth+lts) args g)
   | Arg _ | AppArg _ -> anomaly "claux1 called on non-heap term"
-  | Builtin (c,_) ->
-     error ?loc ("Declaring a clause for built in predicate " ^ C.show c)
+  | Builtin (c,_) -> raise @@ CannotDeclareClauseForBuiltin(loc,c)
   | (Lam _ | CData _ ) as x ->
      error ?loc ("Assuming a string or int or float or function:" ^ show_term x)
   | UVar _ | AppUVar _ -> error ?loc "Flexible hypothetical clause"
@@ -2569,8 +2567,12 @@ let clausify { index } ~depth t =
   let l = split_conj ~depth t in
   let clauses, program, lcs =
     List.fold_left (fun (clauses, programs, lcs) t ->
-      let clause, program, lcs = claux1 get_mode 0 depth [] [] 0 lcs t in
-    clause :: clauses, program :: programs, lcs) ([],[],0) l in
+      let clause, program, lcs =
+        try claux1 get_mode 0 depth [] [] 0 lcs t
+        with CannotDeclareClauseForBuiltin(loc,c) ->
+          error ?loc ("Declaring a clause for built in predicate " ^ C.show c)
+      in
+      clause :: clauses, program :: programs, lcs) ([],[],0) l in
   clauses, program, lcs
 ;;
 
