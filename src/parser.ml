@@ -744,7 +744,7 @@ EXTEND
                   else mkApp (of_ploc loc) (mkCon c :: l)
               | CONSTANT "ctype"; s = LITERAL ->
                   mkApp (of_ploc loc) [Const Func.ctypef; mkC (cstring.U.CData.cin s)] ]
-     | "arg"  [ c = CONSTANT -> mkCon c
+     | "arg"  [ c = CONSTANT -> if c = "o" then mkCon "prop" else mkCon c
               | LPAREN; t = type_; RPAREN -> t ]
      ];
   abbrform:
