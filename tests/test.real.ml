@@ -72,13 +72,17 @@ let print_log ~fname =
 
 end
 
+let aNSITerminal_move_bol () =
+  if Sys.win32 then ANSITerminal.printf [] "\n%!"
+  else ANSITerminal.move_bol ()
+
 let run timeout _seed sources env { Runner.run; test; executable }  =
 
   let { Test.name; description; _ } = test in
   let print = Printer.print ~executable:(Filename.basename executable) ~name ~description in
 
   print 0.0 0.0 0.0 0 `RUNNING;
-  ANSITerminal.move_bol ();
+  aNSITerminal_move_bol ();
 
   let rc = match run ~timeout ~env ~sources with
     | Runner.Skipped -> print 0.0 0.0 0.0 0 `SKIPPED; None
@@ -175,7 +179,7 @@ let timeout =
 
 let src =
   let doc = "Looks for the sources in $(docv)." in
-  Arg.(value & opt dir "sources/" & info ["sources"] ~docv:"DIR" ~doc)
+  Arg.(value & opt string "sources/" & info ["sources"] ~docv:"DIR" ~doc)
 
 let plot =
   let doc = "Path for the plot utility is $(docv)." in
