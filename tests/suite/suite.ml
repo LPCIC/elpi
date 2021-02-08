@@ -160,7 +160,7 @@ let open_log ~executable { Test.name; _ } =
 
 let write (fd,_) s = ignore(Unix.write_substring fd s 0 (String.length s))
 
-let open_input name = Unix.openfile name [] 0
+let open_input name = Unix.openfile name [Unix.O_RDONLY] 0
 
 type rc = Exit of int * float * int | Timeout
 
@@ -207,34 +207,48 @@ let wait pid timeout timelog =
     done;
     !rc
 
-let exec ~timeout ?timetool ~env ~log:(output,oname) ?(input="/dev/null") ~executable ~args ?(close_output=true) () =
+
+let fork_wait_win ~close_output exe argv env input output timefile timeout =
+  ignore close_output;
+  let pid =
+    Unix.create_process_env
+      exe (Array.of_list argv) env input output output in
+  wait pid timeout timefile
+
+let fork_wait_unix ~close_output exe argv env input output timefile timeout =
+  let pid = Unix.fork () in
+  if pid = 0 then begin
+    let _ = Unix.setsid () in
+    let runner =
+      Unix.create_process_env
+        exe (Array.of_list argv) env input output output in
+    let _, rc = Unix.waitpid [] runner in
+    match rc with
+    | Unix.WEXITED n -> exit n
+    | Unix.WSIGNALED _ -> exit 1
+    | Unix.WSTOPPED _ -> exit 1
+  end else
+  try
+    Unix.close input;
+    if close_output then Unix.close output;
+    wait pid timeout timefile
+  with Sys.Break -> Unix.kill (- pid) 9; exit 1
+
+let null = if Sys.win32 then "NUL:" else "/dev/null"
+
+let exec ~timeout ?timetool ~env ~log:(output,oname) ?(input=null) ~executable ~args ?(close_output=true) () =
   Sys.catch_break true;
   let exe, argv, timefile =
     match timetool with
-    | None -> executable, executable :: args, "/dev/null"
+    | None -> executable, executable :: args, null
     | Some timetool -> 
       let timefile = oname ^ ".time" in
       timetool, (timetool :: "-o" :: timefile :: "--format=%x %E %Mk" :: "--" ::
                    executable :: args), timefile in
   Unix.handle_unix_error (fun () ->
     let input = open_input input in
-    let pid = Unix.fork () in
-    if pid = 0 then begin
-      let _ = Unix.setsid () in
-      let runner =
-        Unix.create_process_env
-          exe (Array.of_list argv) env input output output in
-      let _, rc = Unix.waitpid [] runner in
-      match rc with
-      | Unix.WEXITED n -> exit n
-      | Unix.WSIGNALED _ -> exit 1
-      | Unix.WSTOPPED _ -> exit 1
-    end else
-    try
-      Unix.close input;
-      if close_output then Unix.close output;
-      wait pid timeout timefile
-    with Sys.Break -> Unix.kill (- pid) 9; exit 1)
+    if Sys.win32 then fork_wait_win ~close_output exe argv env input output timefile timeout
+    else fork_wait_unix  ~close_output exe argv env input output timefile timeout)
     ()
 
 let with_log (_,log) f =
@@ -455,7 +469,7 @@ let () = Runner.declare
     let log = Util.open_log ~executable test in
     Util.write log (Printf.sprintf "executable: %s\n" executable);
     let { Test.expectation; input; outside_llam = _ ; typecheck = _; _ } = test in
-    let sources = Str.global_replace (Str.regexp_string (Sys.getcwd () ^ "/")) "" sources in
+    let sources = Str.global_replace (Str.regexp "^.*tests/sources/") "tests/sources/" sources in
     let source = Filename.remove_extension source ^ ".exe" in
     let args = ["exec"; sources ^ "/" ^ source; "--"; "-I"; "src/"] in
     Util.write log (Printf.sprintf "args: %s\n" (String.concat " " args));
