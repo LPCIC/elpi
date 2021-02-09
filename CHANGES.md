@@ -1,4 +1,4 @@
-# UNRELEASED
+# v1.13.0 (Feb 2021)
 
 - API:
   - Fix `open_append` was messing up file permissions
@@ -9,7 +9,8 @@
     faster (making `~follows` not worth it)
 - CI:
   - Switch to Github actions and avsm/setup-ocaml. Now testing on Linux, MacOS
-    and Windows
+    and Windows. Artifacts produce binaries for all platforms and a benchmarks
+    plot.
 - Library:
   - New `if2`
   - New `std.map-ok`
@@ -20,6 +21,7 @@
   - New `std.string.concat`
 
 ## v1.12.0 (Nov 2020)
+
 - FFI:
   - `RawOpaqueData.cin` now returns a term and takes `constants` into account.
     Whenever a value is represented with a named constant, the API grants that:
