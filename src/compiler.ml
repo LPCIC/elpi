@@ -679,7 +679,11 @@ end = struct (* {{{ *)
 
     in
     let blocks, locals, chr, rest = aux [] [] [] [] [] [] [] [] [] StrSet.empty dl in
-    assert(rest = []);
+    begin match rest with
+    | [] -> ()
+    | Program.End loc :: _ -> error ~loc "extra }"
+    | _ -> assert false
+    end;
     if chr <> [] then
       error "CHR cannot be declared outside a Constraint block";
     if locals <> [] then

@@ -1,4 +1,4 @@
-(*3a80f51616b6fefc9b62cb62870f5427 src/compiler.ml *)
+(*53d87d1b4fc604903bf0559d54322300 src/compiler.ml *)
 #1 "src/compiler.ml"
 open Util
 module F = Ast.Func
@@ -1706,7 +1706,10 @@ module RecoverStructure :
         | _ -> error ~loc "matching } is missing" in
       let (blocks, locals, chr, rest) =
         aux [] [] [] [] [] [] [] [] [] StrSet.empty dl in
-      assert (rest = []);
+      (match rest with
+       | [] -> ()
+       | (Program.End loc)::_ -> error ~loc "extra }"
+       | _ -> assert false);
       if chr <> []
       then error "CHR cannot be declared outside a Constraint block";
       if locals <> []
@@ -3277,7 +3280,12 @@ module Compiler : sig val run : 'a query -> 'a executable end =
       { Ast.Clause.body = ({ amap = { nargs } } as body); loc } =
       let (state, body) = stack_term_of_preterm ~depth:0 state body in
       let (cl, _, morelcs) =
-        R.clausify1 ~loc modes ~nargs ~depth:initial_depth body in
+        try R.clausify1 ~loc modes ~nargs ~depth:initial_depth body
+        with
+        | D.CannotDeclareClauseForBuiltin (loc, c) ->
+            error ?loc
+              ("Declaring a clause for built in predicate " ^
+                 (Symbols.show state c)) in
       if morelcs <> 0
       then error ~loc "sigma in a toplevel clause is not supported";
       (state, cl)
