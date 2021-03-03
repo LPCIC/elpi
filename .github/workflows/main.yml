@@ -55,8 +55,9 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           opam exec -- cygpath -m ${{ github.workspace }} | % {$_ -replace "^","workspace=" }  | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+          opam exec -- cygpath -m "$Env:CYGWIN_ROOT" | % {$_ -replace "^","cygwin_root=" }  | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
           opam exec -- sed -i ' ' tests/sources/*.elpi
-          %CYGWIN_ROOT%/setup-x86_64.exe -q -P time
+          & "$Env:CYGWIN_ROOT/setup-x86_64.exe" -q -P time
 
 # Build ######################################################################
 #
@@ -83,7 +84,7 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           opam exec -- ls -l tests/sources/*.elpi
-          opam exec -- make tests PWD=${{ env.workspace }} RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-version }}-${{ runner.os }}.exe' TIME=--time=%CYGWIN_ROOT%/bin/time.exe
+          opam exec -- make tests PWD=${{ env.workspace }} RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-version }}-${{ runner.os }}.exe' TIME=--time=${{ env.cygwin_root }}/bin/time.exe
 
       - name: Strip binary
         run: opam exec -- strip ${{ env.workspace }}/elpi-${{ matrix.ocaml-version }}-${{ runner.os }}.exe
