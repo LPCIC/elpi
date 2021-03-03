@@ -83,7 +83,7 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           opam exec -- ls -l tests/sources/*.elpi
-          opam exec -- make tests PWD=${{ env.workspace }} RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-version }}-${{ runner.os }}.exe' TIME=--time=C:/cygwin/bin/time.exe
+          opam exec -- make tests PWD=${{ env.workspace }} RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-version }}-${{ runner.os }}.exe' TIME=--time=D:/cygwin/bin/time.exe
 
       - name: Strip binary
         run: opam exec -- strip ${{ env.workspace }}/elpi-${{ matrix.ocaml-version }}-${{ runner.os }}.exe
