@@ -1151,7 +1151,7 @@ let open BuiltIn in let open BuiltInData in
     In(alpha,"Elem",
     In(set,"A",
     Out(set,"B",
-    Easy "B is A \ {Elem}"))),
+    Easy "B is A \\ {Elem}"))),
     (fun s m _ ~depth -> !: (Set.remove s m))),
   DocAbove);
 

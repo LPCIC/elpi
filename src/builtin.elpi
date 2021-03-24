@@ -838,7 +838,7 @@ external pred std.string.set.mem i:string, i:std.string.set.
 external pred std.string.set.add i:string, i:std.string.set, 
                                  o:std.string.set.
 
-% [std.string.set.remove Elem A B] B is A  {Elem}
+% [std.string.set.remove Elem A B] B is A \ {Elem}
 external pred std.string.set.remove i:string, i:std.string.set, 
                                     o:std.string.set.
 
@@ -877,7 +877,7 @@ external pred std.int.set.mem i:int, i:std.int.set.
 % [std.int.set.add Elem A B] B is A union {Elem}
 external pred std.int.set.add i:int, i:std.int.set, o:std.int.set.
 
-% [std.int.set.remove Elem A B] B is A  {Elem}
+% [std.int.set.remove Elem A B] B is A \ {Elem}
 external pred std.int.set.remove i:int, i:std.int.set, o:std.int.set.
 
 % [std.int.set.union A B X] X is A union B
@@ -915,7 +915,7 @@ external pred std.loc.set.mem i:loc, i:std.loc.set.
 % [std.loc.set.add Elem A B] B is A union {Elem}
 external pred std.loc.set.add i:loc, i:std.loc.set, o:std.loc.set.
 
-% [std.loc.set.remove Elem A B] B is A  {Elem}
+% [std.loc.set.remove Elem A B] B is A \ {Elem}
 external pred std.loc.set.remove i:loc, i:std.loc.set, o:std.loc.set.
 
 % [std.loc.set.union A B X] X is A union B
