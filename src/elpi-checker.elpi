@@ -121,7 +121,7 @@ mode (of-app i i o o o).
 
 :if "DEBUG:CHECKER"
 of-app Ty Args Tgt Hd _ :-
-  print {counter "run"} "of-app" {pp Hd} ":" {ppt Ty} "@" {pp-list Args} "=" {ppt Tgt}, fail.
+  print {trace.counter "run"} "of-app" {pp Hd} ":" {ppt Ty} "@" {pp-list Args} "=" {ppt Tgt}, fail.
 
 of-app (tapp [tconst "variadic", T, _] as V) [X|XS] TGT HD (B - BT) :- !,
   of X TX, assert (unif T TX) (type-err X TX T), BT = X :: TL, of-app V XS TGT HD (B - TL).
@@ -150,7 +150,7 @@ of-clause _ C :- of C TC, assert (unif TC prop) (type-err C TC prop).
 type checking (ctype "Loc.t") -> prop.
 
 :if "DEBUG:CHECKER"
-log-tc-clause Loc Query :- !, print {counter "run"} "typecheck" Loc Query.
+log-tc-clause Loc Query :- !, print {trace.counter "run"} "typecheck" Loc Query.
 log-tc-clause _ _.
 
 
