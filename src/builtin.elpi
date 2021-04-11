@@ -1198,10 +1198,12 @@ elements (node L E R _) Acc X :-
 % [trace.counter Name Value] reads the Value of a trace point Name
 external pred trace.counter i:string, o:int.
 
-% Garbage collector settings, see the doc of OCaml's Gc module
+% Garbage collector settings, see the doc of OCaml's Gc module.
+% Fields are: minor_heap_size, major_heap_increment, space_overhead,
+% verbose, max_overhead, stack_limit, allocation_policy, window_size
 kind gc.control type.
 type gc.control int -> int -> int -> int -> int -> int -> int -> int ->
-                gc.control. % minor_heap_size, major_heap_increment, space_overhead, verbose, max_overhead, stack_limit, allocation_policy, window_size
+                gc.control.
 
 % [gc.get Control] Reads the current settings of the garbage collector
 external pred gc.get o:gc.control.
