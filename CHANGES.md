@@ -4,6 +4,10 @@
   - New `gc` namespace and type with APIs to access the garbage collector
   - New `min` and `max` operators for the `is` builtin, they work on
     `int` and `real`
+  - Rename `rex_match` -> `rex.match`
+  - Rename `rex_replace` -> `rex.replace`
+  - Rename `rex_split` -> `rex.split`
+  - Rename `counter` -> `trace.cuonter`
 
 # v1.13.0 (Feb 2021)
 
