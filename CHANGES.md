@@ -1,6 +1,7 @@
 # UNRELEASED
 
 - API:
+  - New `gc` namespace and type with APIs to access the garbage collector
   - New `min` and `max` operators for the `is` builtin, they work on
     `int` and `real`
 
