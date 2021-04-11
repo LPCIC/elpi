@@ -1170,6 +1170,32 @@ elements (node L E R _) Acc X :-
 } % std.set
 
 
+% Garbage collector settings, see the doc of OCaml's Gc module
+kind gc.control type.
+type gc.control int -> int -> int -> int -> int -> int -> int -> int ->
+                gc.control. % minor_heap_size, major_heap_increment, space_overhead, verbose, max_overhead, stack_limit, allocation_policy, window_size
+
+% [gc.get Control] Reads the current settings of the garbage collector
+external pred gc.get o:gc.control.
+
+% [gc.set Control] Reads the current settings of the garbage collector
+external pred gc.set i:gc.control.
+
+% [gc.minor] See OCaml's Gc.minor
+external pred gc.minor .
+
+% [gc.major] See OCaml's Gc.major
+external pred gc.major .
+
+% [gc.full] See OCaml's Gc.full_major
+external pred gc.full .
+
+% [gc.compact] See OCaml's Gc.compact
+external pred gc.compact .
+
+% [gc.print_stat OC] See OCaml's Gc.print_stat, prints on OC
+external pred gc.print_stat i:out_stream.
+
 
 
 

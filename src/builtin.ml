@@ -361,6 +361,41 @@ let rec check_ground ~depth t =
   | App(_,x,xs) -> check_ground ~depth x; List.iter (check_ground ~depth) xs
   | UnifVar _ -> raise No_clause
 
+
+(* copy of GC.control *)
+type control =
+  { minor_heap_size : int;
+    major_heap_increment : int;
+    space_overhead : int;
+    verbose : int;
+    max_overhead : int;
+    stack_limit : int;
+    allocation_policy : int;
+    window_size : int; }
+
+let ocaml_control_to_control
+ { Gc.minor_heap_size; major_heap_increment; space_overhead; verbose; max_overhead; stack_limit; allocation_policy; window_size; _ }
+ =
+ { minor_heap_size; major_heap_increment; space_overhead; verbose; max_overhead; stack_limit; allocation_policy; window_size; }
+
+let control_to_ocaml_control
+ { minor_heap_size; major_heap_increment; space_overhead; verbose; max_overhead; stack_limit; allocation_policy; window_size; }
+ =
+ { (Gc.get ()) with Gc.minor_heap_size; major_heap_increment; space_overhead; verbose; max_overhead; stack_limit; allocation_policy; window_size; } [@ocaml.warning "-23"]
+
+let gc_control = let open AlgebraicData in let open BuiltInData in declare {
+  ty = TyName "gc.control";
+  doc = "Garbage collector settings, see the doc of OCaml's Gc module";
+  pp = (fun fmt i -> Format.fprintf fmt "{ minor_heap_size : %d; major_heap_increment : %d; space_overhead : %d; verbose : %d; max_overhead : %d; stack_limit : %d; allocation_policy : %d; window_size : %d; }"
+                     i.minor_heap_size i.major_heap_increment i.space_overhead i.verbose i.max_overhead i.stack_limit i.allocation_policy i.window_size);
+  constructors = [
+    K("gc.control", "minor_heap_size, major_heap_increment, space_overhead, verbose, max_overhead, stack_limit, allocation_policy, window_size",
+      A(int,A(int,A(int,A(int,A(int,A(int,A(int,A(int,N)))))))),
+      B (fun minor_heap_size major_heap_increment space_overhead verbose max_overhead stack_limit allocation_policy window_size -> { minor_heap_size; major_heap_increment; space_overhead; verbose; max_overhead; stack_limit; allocation_policy; window_size; }),
+      M(fun ~ok ~ko:_ { minor_heap_size; major_heap_increment; space_overhead; verbose; max_overhead; stack_limit; allocation_policy; window_size; } -> ok minor_heap_size major_heap_increment space_overhead verbose max_overhead stack_limit allocation_policy window_size));
+  ]
+} |> ContextualConversion.(!<)
+
 (** Core built-in ********************************************************* *)
 
 let core_builtins = let open BuiltIn in let open ContextualConversion in [
@@ -1329,8 +1364,37 @@ let elpi_stdlib =
   []
 ;;
 
+let ocaml_runtime = let open BuiltIn in let open BuiltInData in [
+
+  MLData gc_control;
+
+  MLCode(Pred("gc.get",
+    Out(gc_control,"Control",
+    Easy "Reads the current settings of the garbage collector"),
+   (fun _ ~depth:_ -> !: (ocaml_control_to_control @@ Gc.get ()))),
+   DocAbove);
+
+  MLCode(Pred("gc.set",
+    In(gc_control,"Control",
+    Easy "Reads the current settings of the garbage collector"),
+   (fun c ~depth:_ -> Gc.set (control_to_ocaml_control c))),
+   DocAbove);
+
+  MLCode(Pred("gc.minor",  Easy "See OCaml's Gc.minor",     (fun ~depth:_ -> Gc.minor ())),     DocAbove);
+  MLCode(Pred("gc.major",  Easy "See OCaml's Gc.major",     (fun ~depth:_ -> Gc.major ())),     DocAbove);
+  MLCode(Pred("gc.full",   Easy "See OCaml's Gc.full_major",(fun ~depth:_ -> Gc.full_major ())),DocAbove);
+  MLCode(Pred("gc.compact",Easy "See OCaml's Gc.compact",   (fun ~depth:_ -> Gc.compact ())),   DocAbove);
+
+  MLCode(Pred("gc.print_stat",
+    In(out_stream,"OC",
+    Easy "See OCaml's Gc.print_stat, prints on OC"),
+  (fun (c,_) ~depth:_ -> Gc.print_stat c)),
+  DocAbove);
+
+]
+
 let std_declarations =
-  core_builtins @ io_builtins @ lp_builtins @ elpi_builtins @ elpi_nonlogical_builtins @ elpi_stdlib @ elpi_map @ elpi_set
+  core_builtins @ io_builtins @ lp_builtins @ elpi_builtins @ elpi_nonlogical_builtins @ elpi_stdlib @ elpi_map @ elpi_set @ ocaml_runtime
 
 let std_builtins =
   BuiltIn.declare ~file_name:"builtin.elpi" std_declarations
