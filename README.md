@@ -14,7 +14,8 @@ ELPI is free software released under LGPL vesion 2.1 or above.
 
 ## How to install ELPI
 
-ELPI is developed under Linux and is known to also work on MacOSX and Windows.
+ELPI runs on Linux, MacOS and Windows.
+
 The simplest way is to use [OPAM](http://opam.ocaml.org/) and type
 ```
 opam install elpi
