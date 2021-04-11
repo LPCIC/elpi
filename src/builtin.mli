@@ -28,6 +28,9 @@ val elpi_stdlib : declaration list
 val elpi_map : declaration list
 val elpi_set : declaration list
 
+(* Elpi/OCaml's runtime *)
+val ocaml_runtime : declaration list
+
 (** Easy export of OCaml's Map/Set modules, use as follows:
    module StrMap = API.Utils.Map.Make(String)
    ocaml_map ~name:"strmap" BuiltInData.string (module StrMap) *)
