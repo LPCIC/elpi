@@ -385,11 +385,11 @@ let control_to_ocaml_control
 
 let gc_control = let open AlgebraicData in let open BuiltInData in declare {
   ty = TyName "gc.control";
-  doc = "Garbage collector settings, see the doc of OCaml's Gc module";
+  doc = "Garbage collector settings, see the doc of OCaml's Gc module.\nFields are: minor_heap_size, major_heap_increment, space_overhead, verbose, max_overhead, stack_limit, allocation_policy, window_size.";
   pp = (fun fmt i -> Format.fprintf fmt "{ minor_heap_size : %d; major_heap_increment : %d; space_overhead : %d; verbose : %d; max_overhead : %d; stack_limit : %d; allocation_policy : %d; window_size : %d; }"
                      i.minor_heap_size i.major_heap_increment i.space_overhead i.verbose i.max_overhead i.stack_limit i.allocation_policy i.window_size);
   constructors = [
-    K("gc.control", "minor_heap_size, major_heap_increment, space_overhead, verbose, max_overhead, stack_limit, allocation_policy, window_size",
+    K("gc.control", "",
       A(int,A(int,A(int,A(int,A(int,A(int,A(int,A(int,N)))))))),
       B (fun minor_heap_size major_heap_increment space_overhead verbose max_overhead stack_limit allocation_policy window_size -> { minor_heap_size; major_heap_increment; space_overhead; verbose; max_overhead; stack_limit; allocation_policy; window_size; }),
       M(fun ~ok ~ko:_ { minor_heap_size; major_heap_increment; space_overhead; verbose; max_overhead; stack_limit; allocation_policy; window_size; } -> ok minor_heap_size major_heap_increment space_overhead verbose max_overhead stack_limit allocation_policy window_size));
