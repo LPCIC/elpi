@@ -30,8 +30,10 @@ opam pin add elpi https://github.com/LPCIC/elpi.git
 ```
 You can also clone this repository and type `make build`.
 
-Finally, each CI run builds statically linked binaries, clikc the
-[Actions](https://github.com/LPCIC/elpi/actions) tab to download them.
+Finally, each CI run builds statically linked binaries for the
+three supported operating systems, click on any
+job from the [Actions](https://github.com/LPCIC/elpi/actions) tab
+to download them.
 
 ### Syntax highlight in Visual studio code
 
