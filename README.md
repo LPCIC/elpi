@@ -14,7 +14,7 @@ ELPI is free software released under LGPL vesion 2.1 or above.
 
 ## How to install ELPI
 
-ELPI is developed under Linux and is known to also work on MacOSX.
+ELPI is developed under Linux and is known to also work on MacOSX and Windows.
 The simplest way is to use [OPAM](http://opam.ocaml.org/) and type
 ```
 opam install elpi
@@ -28,6 +28,9 @@ you can type
 opam pin add elpi https://github.com/LPCIC/elpi.git
 ```
 You can also clone this repository and type `make build`.
+
+Finally, each CI run builds statically linked binaries, clikc the
+[Actions](https://github.com/LPCIC/elpi/actions) tab to download them.
 
 ### Syntax highlight in Visual studio code
 
