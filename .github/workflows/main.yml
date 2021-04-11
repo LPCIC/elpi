@@ -103,6 +103,7 @@ jobs:
         with:
           name: .benchmark-${{ matrix.ocaml-version }}-${{ runner.os }}
           path: data.csv
+          retention-days: 1
 
   aggregate:
     name: Aggregate and plot benchmarking data
