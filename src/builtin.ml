@@ -810,11 +810,9 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in let open Context
      state, ())),
   DocAbove);
 
-  LPCode {|
-% Deprecated, use trace.counter
+  LPCode {|% Deprecated, use trace.counter
 pred counter i:string, o:int.
-counter C N :- trace.counter C N.
-|};
+counter C N :- trace.counter C N.|};
 
    MLCode(Pred("quote_syntax",
      In(string, "FileName",
@@ -875,23 +873,17 @@ counter C N :- trace.counter C N.
      !:(Str.split rex subj))),
   DocAbove);
 
-    LPCode {|
-% Deprecated, use rex.match
+    LPCode {|% Deprecated, use rex.match
 pred rex_match i:string, i:string.
-rex_match Rx S :- rex.match Rx S.
-|};
+rex_match Rx S :- rex.match Rx S.|};
 
-  LPCode {|
-% Deprecated, use rex.replace
+  LPCode {|% Deprecated, use rex.replace
 pred rex_replace i:string, i:string, i:string, o:string.
-rex_replace Rx R S O :- rex.replace Rx R S O.
-|};
+rex_replace Rx R S O :- rex.replace Rx R S O.|};
 
-  LPCode {|
-% Deprecated, use rex.split
+  LPCode {|% Deprecated, use rex.split
 pred rex_split i:string, i:string, o:list string.
-rex_split Rx S L :- rex.split Rx S L.
-|};
+rex_split Rx S L :- rex.split Rx S L.|};
 
 
 ]
@@ -1406,7 +1398,7 @@ let ocaml_runtime = let open BuiltIn in let open BuiltInData in [
 
   MLCode(Pred("gc.set",
     In(gc_control,"Control",
-    Easy "Reads the current settings of the garbage collector"),
+    Easy "Writes the current settings of the garbage collector"),
    (fun c ~depth:_ -> Gc.set (control_to_ocaml_control c))),
    DocAbove);
 
