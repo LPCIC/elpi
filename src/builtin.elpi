@@ -347,11 +347,9 @@ external type dprint variadic any prop.
 % [print ...] prints terms
 external type print variadic any prop.
 
-
 % Deprecated, use trace.counter
 pred counter i:string, o:int.
 counter C N :- trace.counter C N.
-
 
 % [quote_syntax FileName QueryText QuotedProgram QuotedQuery] quotes the
 % program from FileName and the QueryText. See elpi-quoted_syntax.elpi for
@@ -376,23 +374,17 @@ external pred rex.replace i:string, i:string, i:string, o:string.
 % occurrences of Rex. See also OCaml's Str.split
 external pred rex.split i:string, i:string, o:list string.
 
-
 % Deprecated, use rex.match
 pred rex_match i:string, i:string.
 rex_match Rx S :- rex.match Rx S.
-
-
 
 % Deprecated, use rex.replace
 pred rex_replace i:string, i:string, i:string, o:string.
 rex_replace Rx R S O :- rex.replace Rx R S O.
 
-
-
 % Deprecated, use rex.split
 pred rex_split i:string, i:string, o:list string.
 rex_split Rx S L :- rex.split Rx S L.
-
 
 % == Elpi nonlogical builtins =====================================
 
@@ -1200,7 +1192,7 @@ external pred trace.counter i:string, o:int.
 
 % Garbage collector settings, see the doc of OCaml's Gc module.
 % Fields are: minor_heap_size, major_heap_increment, space_overhead,
-% verbose, max_overhead, stack_limit, allocation_policy, window_size
+% verbose, max_overhead, stack_limit, allocation_policy, window_size.
 kind gc.control type.
 type gc.control int -> int -> int -> int -> int -> int -> int -> int ->
                 gc.control.
@@ -1208,7 +1200,7 @@ type gc.control int -> int -> int -> int -> int -> int -> int -> int ->
 % [gc.get Control] Reads the current settings of the garbage collector
 external pred gc.get o:gc.control.
 
-% [gc.set Control] Reads the current settings of the garbage collector
+% [gc.set Control] Writes the current settings of the garbage collector
 external pred gc.set i:gc.control.
 
 % [gc.minor] See OCaml's Gc.minor

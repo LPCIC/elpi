@@ -1,13 +1,18 @@
 # UNRELEASED
 
 - API:
-  - New `gc` namespace and type with APIs to access the garbage collector
+  - New `gc.control` type for the garbage collector settings
+  - New `gc.get` and `gc.set` for reading and writing GC settings
+  - New `gc.minor`
+  - New `gc.major`
+  - New `gc.full`
+  - New `gc.print_stat`
   - New `min` and `max` operators for the `is` builtin, they work on
-    `int` and `real`
+    `int` and `float`
   - Rename `rex_match` -> `rex.match`
   - Rename `rex_replace` -> `rex.replace`
   - Rename `rex_split` -> `rex.split`
-  - Rename `counter` -> `trace.cuonter`
+  - Rename `counter` -> `trace.counter`
 
 # v1.13.0 (Feb 2021)
 
