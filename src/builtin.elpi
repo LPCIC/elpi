@@ -353,25 +353,45 @@ pred counter i:string, o:int.
 counter C N :- trace.counter C N.
 
 
-% [rex_match Rex Subject] checks if Subject matches Rex. Matching is based
-% on OCaml's Str library
-external pred rex_match i:string, i:string.
-
-% [rex_replace Rex Replacement Subject Out] Out is obtained by replacing all
-% occurrences of Rex with Replacement in Subject. See also OCaml's
-% Str.global_replace
-external pred rex_replace i:string, i:string, i:string, o:string.
-
-% [rex_split Rex Subject Out] Out is obtained by splitting Subject at all
-% occurrences of Rex. See also OCaml's Str.split
-external pred rex_split i:string, i:string, o:list string.
-
 % [quote_syntax FileName QueryText QuotedProgram QuotedQuery] quotes the
 % program from FileName and the QueryText. See elpi-quoted_syntax.elpi for
 % the syntax tree
 external pred quote_syntax i:string, i:string, o:list A, o:A.
 
 typeabbrev loc (ctype "Loc.t").
+
+
+% == Regular Expressions =====================================
+
+% [rex.match Rex Subject] checks if Subject matches Rex. Matching is based
+% on OCaml's Str library
+external pred rex.match i:string, i:string.
+
+% [rex.replace Rex Replacement Subject Out] Out is obtained by replacing all
+% occurrences of Rex with Replacement in Subject. See also OCaml's
+% Str.global_replace
+external pred rex.replace i:string, i:string, i:string, o:string.
+
+% [rex.split Rex Subject Out] Out is obtained by splitting Subject at all
+% occurrences of Rex. See also OCaml's Str.split
+external pred rex.split i:string, i:string, o:list string.
+
+
+% Deprecated, use rex.match
+pred rex_match i:string, i:string.
+rex_match Rx S :- rex.match Rx S.
+
+
+
+% Deprecated, use rex.replace
+pred rex_replace i:string, i:string, i:string, o:string.
+rex_replace Rx R S O :- rex.replace Rx R S O.
+
+
+
+% Deprecated, use rex.split
+pred rex_split i:string, i:string, o:list string.
+rex_split Rx S L :- rex.split Rx S L.
 
 
 % == Elpi nonlogical builtins =====================================

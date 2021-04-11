@@ -816,39 +816,6 @@ pred counter i:string, o:int.
 counter C N :- trace.counter C N.
 |};
 
-  MLCode(Pred("rex_match",
-    In(string, "Rex",
-    In(string, "Subject",
-    Easy      ("checks if Subject matches Rex. "^
-               "Matching is based on OCaml's Str library"))),
-  (fun rex subj ~depth ->
-     let rex = Str.regexp rex in
-     if Str.string_match rex subj 0 then () else raise No_clause)),
-  DocAbove);
-
-  MLCode(Pred("rex_replace",
-    In(string,  "Rex",
-    In(string,  "Replacement",
-    In(string,  "Subject",
-    Out(string, "Out",
-    Easy   ("Out is obtained by replacing all occurrences of Rex with "^
-            "Replacement in Subject. See also OCaml's Str.global_replace"))))),
-  (fun rex repl subj _ ~depth ->
-     let rex = Str.regexp rex in
-     !:(Str.global_replace rex repl subj))),
-  DocAbove);
-
-  MLCode(Pred("rex_split",
-    In(string,  "Rex",
-    In(string,  "Subject",
-    Out(list string, "Out",
-    Easy   ("Out is obtained by splitting Subject at all occurrences of Rex. "^
-            "See also OCaml's Str.split")))),
-  (fun rex subj _ ~depth ->
-     let rex = Str.regexp rex in
-     !:(Str.split rex subj))),
-  DocAbove);
-
    MLCode(Pred("quote_syntax",
      In(string, "FileName",
      In(string, "QueryText",
@@ -872,6 +839,61 @@ counter C N :- trace.counter C N.
   DocAbove);
 
   MLData loc;
+
+  LPDoc "== Regular Expressions =====================================";
+
+  MLCode(Pred("rex.match",
+    In(string, "Rex",
+    In(string, "Subject",
+    Easy      ("checks if Subject matches Rex. "^
+               "Matching is based on OCaml's Str library"))),
+  (fun rex subj ~depth ->
+     let rex = Str.regexp rex in
+     if Str.string_match rex subj 0 then () else raise No_clause)),
+  DocAbove);
+
+  MLCode(Pred("rex.replace",
+    In(string,  "Rex",
+    In(string,  "Replacement",
+    In(string,  "Subject",
+    Out(string, "Out",
+    Easy   ("Out is obtained by replacing all occurrences of Rex with "^
+            "Replacement in Subject. See also OCaml's Str.global_replace"))))),
+  (fun rex repl subj _ ~depth ->
+     let rex = Str.regexp rex in
+     !:(Str.global_replace rex repl subj))),
+  DocAbove);
+
+  MLCode(Pred("rex.split",
+    In(string,  "Rex",
+    In(string,  "Subject",
+    Out(list string, "Out",
+    Easy   ("Out is obtained by splitting Subject at all occurrences of Rex. "^
+            "See also OCaml's Str.split")))),
+  (fun rex subj _ ~depth ->
+     let rex = Str.regexp rex in
+     !:(Str.split rex subj))),
+  DocAbove);
+
+    LPCode {|
+% Deprecated, use rex.match
+pred rex_match i:string, i:string.
+rex_match Rx S :- rex.match Rx S.
+|};
+
+  LPCode {|
+% Deprecated, use rex.replace
+pred rex_replace i:string, i:string, i:string, o:string.
+rex_replace Rx R S O :- rex.replace Rx R S O.
+|};
+
+  LPCode {|
+% Deprecated, use rex.split
+pred rex_split i:string, i:string, o:list string.
+rex_split Rx S L :- rex.split Rx S L.
+|};
+
+
 ]
 ;;
 
