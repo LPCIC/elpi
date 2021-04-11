@@ -347,8 +347,11 @@ external type dprint variadic any prop.
 % [print ...] prints terms
 external type print variadic any prop.
 
-% [counter Name Value] reads the Value of a trace point Name
-external pred counter i:string, o:int.
+
+% Deprecated, use trace.counter
+pred counter i:string, o:int.
+counter C N :- trace.counter C N.
+
 
 % [rex_match Rex Subject] checks if Subject matches Rex. Matching is based
 % on OCaml's Str library
@@ -515,7 +518,7 @@ assert-ok! _ Msg :- fatal-error-w-data Msg "no diagnostic returned".
 
 % [spy P] traces the call to P, printing all success and the final failure
 pred spy i:prop.
-spy P :- counter "run" NR, if (not(NR = 0)) (debug-print "run=" NR) true,
+spy P :- trace.counter "run" NR, if (not(NR = 0)) (debug-print "run=" NR) true,
          debug-print "----<<---- enter: " P,
          P,
          debug-print "---->>---- exit: " P.
@@ -523,7 +526,7 @@ spy P :- debug-print "---->>---- fail: " P, fail.
 
 % [spy! P] traces the first call to P without leaving a choice point
 pred spy! i:prop.
-spy! P :- counter "run" NR, if (not(NR = 0)) (debug-print "run=" NR) true,
+spy! P :- trace.counter "run" NR, if (not(NR = 0)) (debug-print "run=" NR) true,
          debug-print "----<<---- enter: " P,
          P,
          debug-print "---->>---- exit: " P, !.
@@ -1169,6 +1172,11 @@ elements (node L E R _) Acc X :-
 } % std.set.private
 } % std.set
 
+
+% == Elpi runtime builtins =====================================
+
+% [trace.counter Name Value] reads the Value of a trace point Name
+external pred trace.counter i:string, o:int.
 
 % Garbage collector settings, see the doc of OCaml's Gc module
 kind gc.control type.

@@ -43,7 +43,7 @@ assert-ok! _ Msg :- fatal-error-w-data Msg "no diagnostic returned".
 
 % [spy P] traces the call to P, printing all success and the final failure
 pred spy i:prop.
-spy P :- counter "run" NR, if (not(NR = 0)) (debug-print "run=" NR) true,
+spy P :- trace.counter "run" NR, if (not(NR = 0)) (debug-print "run=" NR) true,
          debug-print "----<<---- enter: " P,
          P,
          debug-print "---->>---- exit: " P.
@@ -51,7 +51,7 @@ spy P :- debug-print "---->>---- fail: " P, fail.
 
 % [spy! P] traces the first call to P without leaving a choice point
 pred spy! i:prop.
-spy! P :- counter "run" NR, if (not(NR = 0)) (debug-print "run=" NR) true,
+spy! P :- trace.counter "run" NR, if (not(NR = 0)) (debug-print "run=" NR) true,
          debug-print "----<<---- enter: " P,
          P,
          debug-print "---->>---- exit: " P, !.

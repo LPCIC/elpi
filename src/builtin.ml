@@ -810,12 +810,11 @@ let elpi_builtins = let open BuiltIn in let open BuiltInData in let open Context
      state, ())),
   DocAbove);
 
-  MLCode(Pred("counter",
-    In (string,"Name",
-    Out(int,   "Value",
-    Easy       "reads the Value of a trace point Name")),
-  (fun s _ ~depth:_ -> !:(Trace_ppx_runtime.Runtime.get_cur_step s))),
-  DocAbove);
+  LPCode {|
+% Deprecated, use trace.counter
+pred counter i:string, o:int.
+counter C N :- trace.counter C N.
+|};
 
   MLCode(Pred("rex_match",
     In(string, "Rex",
@@ -1365,6 +1364,15 @@ let elpi_stdlib =
 ;;
 
 let ocaml_runtime = let open BuiltIn in let open BuiltInData in [
+
+  LPDoc "== Elpi runtime builtins =====================================";
+
+  MLCode(Pred("trace.counter",
+    In (string,"Name",
+    Out(int,   "Value",
+    Easy       "reads the Value of a trace point Name")),
+  (fun s _ ~depth:_ -> !:(Trace_ppx_runtime.Runtime.get_cur_step s))),
+  DocAbove);
 
   MLData gc_control;
 
