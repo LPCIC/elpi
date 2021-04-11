@@ -1407,7 +1407,7 @@ let ocaml_runtime = let open BuiltIn in let open BuiltInData in [
   MLCode(Pred("gc.full",   Easy "See OCaml's Gc.full_major",(fun ~depth:_ -> Gc.full_major ())),DocAbove);
   MLCode(Pred("gc.compact",Easy "See OCaml's Gc.compact",   (fun ~depth:_ -> Gc.compact ())),   DocAbove);
 
-  MLCode(Pred("gc.print_stat",
+  MLCode(Pred("gc.print-stat",
     In(out_stream,"OC",
     Easy "See OCaml's Gc.print_stat, prints on OC"),
   (fun (c,_) ~depth:_ -> Gc.print_stat c)),
