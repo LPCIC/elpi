@@ -115,6 +115,14 @@ let _ =
    | [ CData x ] when is_int x -> (map int int abs x)
    | [ CData x ] when is_float x -> (map float float abs_float x)
    | _ -> type_error "Wrong arguments to abs/iabs/rabs") ;
+  register_evals 2 [ "max",["int";"float"]] (function
+   | [ CData x; CData y  ] when ty2 int x y -> (morph2 int max x y)
+   | [ CData x; CData y  ] when ty2 float x y -> (morph2 float max x y)
+   | _ -> type_error "Wrong arguments to abs/iabs/rabs") ;
+  register_evals 2 [ "min",["int";"float"]] (function
+   | [ CData x; CData y  ] when ty2 int x y -> (morph2 int min x y)
+   | [ CData x; CData y  ] when ty2 float x y -> (morph2 float min x y)
+   | _ -> type_error "Wrong arguments to abs/iabs/rabs") ;
   register_eval 1 ("sqrt",["float"]) (function
    | [ CData x ] when is_float x -> (map float float sqrt x)
    | _ -> type_error "Wrong arguments to sqrt") ;

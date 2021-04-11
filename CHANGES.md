@@ -1,3 +1,9 @@
+# UNRELEASED
+
+- API:
+  - New `min` and `max` operators for the `is` builtin, they work on
+    `int` and `real`
+
 # v1.13.0 (Feb 2021)
 
 - API:
