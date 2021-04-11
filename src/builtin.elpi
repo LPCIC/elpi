@@ -1215,8 +1215,8 @@ external pred gc.full .
 % [gc.compact] See OCaml's Gc.compact
 external pred gc.compact .
 
-% [gc.print_stat OC] See OCaml's Gc.print_stat, prints on OC
-external pred gc.print_stat i:out_stream.
+% [gc.print-stat OC] See OCaml's Gc.print_stat, prints on OC
+external pred gc.print-stat i:out_stream.
 
 
 

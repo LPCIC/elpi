@@ -6,7 +6,8 @@
   - New `gc.minor`
   - New `gc.major`
   - New `gc.full`
-  - New `gc.print_stat`
+  - New `gc.compact`
+  - New `gc.print-stat`
   - New `min` and `max` operators for the `is` builtin, they work on
     `int` and `float`
   - Rename `rex_match` -> `rex.match`
