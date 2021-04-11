@@ -119,6 +119,14 @@ type iabs int -> int.
 
 type rabs float -> float.
 
+type (max) int -> int -> int.
+
+type (max) float -> float -> float.
+
+type (min) int -> int -> int.
+
+type (min) float -> float -> float.
+
 type sqrt float -> float.
 
 type sin float -> float.
