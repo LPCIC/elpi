@@ -1,19 +1,21 @@
 # UNRELEASED
 
 - API:
-  - New `gc.control` type for the garbage collector settings
   - New `gc.get` and `gc.set` for reading and writing GC settings
   - New `gc.minor`
   - New `gc.major`
   - New `gc.full`
   - New `gc.compact`
-  - New `gc.print-stat`
+  - New `gc.stat`
+  - New `gc.quick-stat`
   - New `min` and `max` operators for the `is` builtin, they work on
     `int` and `float`
   - Rename `rex_match` -> `rex.match`
   - Rename `rex_replace` -> `rex.replace`
   - Rename `rex_split` -> `rex.split`
   - Rename `counter` -> `trace.counter`
+- FFI:
+  - New `Builtin.unspec` type to express optional input
 
 # v1.13.0 (Feb 2021)
 

@@ -1190,33 +1190,44 @@ elements (node L E R _) Acc X :-
 % [trace.counter Name Value] reads the Value of a trace point Name
 external pred trace.counter i:string, o:int.
 
-% Garbage collector settings, see the doc of OCaml's Gc module.
-% Fields are: minor_heap_size, major_heap_increment, space_overhead,
-% verbose, max_overhead, stack_limit, allocation_policy, window_size.
-kind gc.control type.
-type gc.control int -> int -> int -> int -> int -> int -> int -> int ->
-                gc.control.
+% [gc.get MinorHeapSize MajorHeapIncrement SpaceOverhead Verbose MaxOverhead
+% StackLimit AllocationPolicy WindowSize] Reads the current settings of the
+% garbage collector. See also OCaml's Gc.control type documentation.
+external pred gc.get o:int, o:int, o:int, o:int, o:int, o:int, o:int, 
+                     o:int.
 
-% [gc.get Control] Reads the current settings of the garbage collector
-external pred gc.get o:gc.control.
+% [gc.set MinorHeapSize MajorHeapIncrement SpaceOverhead Verbose MaxOverhead
+% StackLimit AllocationPolicy WindowSize] Writes the current settings of the
+% garbage collector. Any parameter left unspecificed (eg _) is not changed.
+% See also OCaml's Gc.control type documentation.
+external pred gc.set i:int, i:int, i:int, i:int, i:int, i:int, i:int, 
+                     i:int.
 
-% [gc.set Control] Writes the current settings of the garbage collector
-external pred gc.set i:gc.control.
-
-% [gc.minor] See OCaml's Gc.minor
+% [gc.minor] See OCaml's Gc.minor documentation.
 external pred gc.minor .
 
-% [gc.major] See OCaml's Gc.major
+% [gc.major] See OCaml's Gc.major documentation.
 external pred gc.major .
 
-% [gc.full] See OCaml's Gc.full_major
+% [gc.full] See OCaml's Gc.full_major documentation.
 external pred gc.full .
 
-% [gc.compact] See OCaml's Gc.compact
+% [gc.compact] See OCaml's Gc.compact documentation.
 external pred gc.compact .
 
-% [gc.print-stat OC] See OCaml's Gc.print_stat, prints on OC
-external pred gc.print-stat i:out_stream.
+% [gc.stat MinorWords PromotedWords MajorWords MinorCollections
+% MajorCollections HeapWords HeapChunks LiveWords LiveBlocks FreeWords
+% FreeBlocks LargestFree Fragments Compactions TopHeapWords StackSize] See
+% OCaml's Gc.stat documentation.
+external pred gc.stat o:float, o:float, o:float, o:int, o:int, o:int, 
+                      o:int, o:int, o:int, o:int, o:int, o:int, o:int, 
+                      o:int, o:int, o:int.
+
+% [gc.quick-stat MinorWords PromotedWords MajorWords MinorCollections
+% MajorCollections HeapWords HeapChunks Compactions TopHeapWords StackSize]
+% See OCaml's Gc.quick_stat documentation.
+external pred gc.quick-stat o:float, o:float, o:float, o:int, o:int, 
+                            o:int, o:int, o:int, o:int, o:int.
 
 
 
