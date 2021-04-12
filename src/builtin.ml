@@ -361,40 +361,25 @@ let rec check_ground ~depth t =
   | App(_,x,xs) -> check_ground ~depth x; List.iter (check_ground ~depth) xs
   | UnifVar _ -> raise No_clause
 
+type 'a unspec = Given of 'a | Unspec
 
-(* copy of GC.control *)
-type control =
-  { minor_heap_size : int;
-    major_heap_increment : int;
-    space_overhead : int;
-    verbose : int;
-    max_overhead : int;
-    stack_limit : int;
-    allocation_policy : int;
-    window_size : int; }
-
-let ocaml_control_to_control
- { Gc.minor_heap_size; major_heap_increment; space_overhead; verbose; max_overhead; stack_limit; allocation_policy; window_size; _ }
- =
- { minor_heap_size; major_heap_increment; space_overhead; verbose; max_overhead; stack_limit; allocation_policy; window_size; }
-
-let control_to_ocaml_control
- { minor_heap_size; major_heap_increment; space_overhead; verbose; max_overhead; stack_limit; allocation_policy; window_size; }
- =
- { (Gc.get ()) with Gc.minor_heap_size; major_heap_increment; space_overhead; verbose; max_overhead; stack_limit; allocation_policy; window_size; } [@ocaml.warning "-23"]
-
-let gc_control = let open AlgebraicData in let open BuiltInData in declare {
-  ty = TyName "gc.control";
-  doc = "Garbage collector settings, see the doc of OCaml's Gc module.\nFields are: minor_heap_size, major_heap_increment, space_overhead, verbose, max_overhead, stack_limit, allocation_policy, window_size.";
-  pp = (fun fmt i -> Format.fprintf fmt "{ minor_heap_size : %d; major_heap_increment : %d; space_overhead : %d; verbose : %d; max_overhead : %d; stack_limit : %d; allocation_policy : %d; window_size : %d; }"
-                     i.minor_heap_size i.major_heap_increment i.space_overhead i.verbose i.max_overhead i.stack_limit i.allocation_policy i.window_size);
-  constructors = [
-    K("gc.control", "",
-      A(int,A(int,A(int,A(int,A(int,A(int,A(int,A(int,N)))))))),
-      B (fun minor_heap_size major_heap_increment space_overhead verbose max_overhead stack_limit allocation_policy window_size -> { minor_heap_size; major_heap_increment; space_overhead; verbose; max_overhead; stack_limit; allocation_policy; window_size; }),
-      M(fun ~ok ~ko:_ { minor_heap_size; major_heap_increment; space_overhead; verbose; max_overhead; stack_limit; allocation_policy; window_size; } -> ok minor_heap_size major_heap_increment space_overhead verbose max_overhead stack_limit allocation_policy window_size));
-  ]
-} |> ContextualConversion.(!<)
+let unspecC data = let open API.ContextualConversion in let open API.RawData in {
+  ty = data.ty;
+  pp_doc = data.pp_doc;
+  pp = (fun fmt -> function
+    | Unspec -> Format.fprintf fmt "Unspec"
+    | Given x -> Format.fprintf fmt "Given %a" data.pp x);
+  embed = (fun ~depth hyps constraints state -> function
+     | Given x -> data.embed ~depth hyps constraints state x
+     | Unspec -> state, mkDiscard, []);
+  readback = (fun ~depth hyps constraints state x ->
+      match look ~depth x with
+      | UnifVar _ -> state, Unspec, []
+      | t ->
+        let state, x, gls = data.readback ~depth hyps constraints state (kool t) in
+        state, Given x, gls)
+}
+let unspec d = API.ContextualConversion.(!<(unspecC (!> d)))
 
 (** Core built-in ********************************************************* *)
 
@@ -1388,29 +1373,87 @@ let ocaml_runtime = let open BuiltIn in let open BuiltInData in [
   (fun s _ ~depth:_ -> !:(Trace_ppx_runtime.Runtime.get_cur_step s))),
   DocAbove);
 
-  MLData gc_control;
-
   MLCode(Pred("gc.get",
-    Out(gc_control,"Control",
-    Easy "Reads the current settings of the garbage collector"),
-   (fun _ ~depth:_ -> !: (ocaml_control_to_control @@ Gc.get ()))),
+    Out(int,"MinorHeapSize",
+    Out(int,"MajorHeapIncrement",
+    Out(int,"SpaceOverhead",
+    Out(int,"Verbose",
+    Out(int,"MaxOverhead",
+    Out(int,"StackLimit",
+    Out(int,"AllocationPolicy",
+    Out(int,"WindowSize",
+    Easy "Reads the current settings of the garbage collector. See also OCaml's Gc.control type documentation.")))))))),
+  (fun _ _ _ _ _ _ _ _ ~depth:_ ->
+    let { Gc.minor_heap_size; major_heap_increment; space_overhead; verbose; max_overhead; stack_limit; allocation_policy; window_size; _ } = Gc.get () in
+    !: minor_heap_size +! major_heap_increment +! space_overhead +! verbose +! max_overhead +! stack_limit +! allocation_policy +! window_size)),
    DocAbove);
 
   MLCode(Pred("gc.set",
-    In(gc_control,"Control",
-    Easy "Writes the current settings of the garbage collector"),
-   (fun c ~depth:_ -> Gc.set (control_to_ocaml_control c))),
+    In(unspec int,"MinorHeapSize",
+    In(unspec int,"MajorHeapIncrement",
+    In(unspec int,"SpaceOverhead",
+    In(unspec int,"Verbose",
+    In(unspec int,"MaxOverhead",
+    In(unspec int,"StackLimit",
+    In(unspec int,"AllocationPolicy",
+    In(unspec int,"WindowSize",
+    Easy "Writes the current settings of the garbage collector. Any parameter left unspecificed (eg _) is not changed. See also OCaml's Gc.control type documentation.")))))))),
+   (fun minor_heap_size major_heap_increment space_overhead verbose max_overhead stack_limit allocation_policy window_size ~depth:_ ->
+     let c = Gc.get () in
+     let c = match minor_heap_size with Unspec -> c | Given x -> { c with minor_heap_size = x } in
+     let c = match major_heap_increment with Unspec -> c | Given x -> { c with major_heap_increment = x } in
+     let c = match space_overhead with Unspec -> c | Given x -> { c with space_overhead = x } in
+     let c = match verbose with Unspec -> c | Given x -> { c with verbose = x } in
+     let c = match max_overhead with Unspec -> c | Given x -> { c with max_overhead = x } in
+     let c = match stack_limit with Unspec -> c | Given x -> { c with stack_limit = x } in
+     let c = match allocation_policy with Unspec -> c | Given x -> { c with allocation_policy = x } in
+     let c = match window_size with Unspec -> c | Given x -> { c with window_size = x } in
+     Gc.set c)),
    DocAbove);
 
-  MLCode(Pred("gc.minor",  Easy "See OCaml's Gc.minor",     (fun ~depth:_ -> Gc.minor ())),     DocAbove);
-  MLCode(Pred("gc.major",  Easy "See OCaml's Gc.major",     (fun ~depth:_ -> Gc.major ())),     DocAbove);
-  MLCode(Pred("gc.full",   Easy "See OCaml's Gc.full_major",(fun ~depth:_ -> Gc.full_major ())),DocAbove);
-  MLCode(Pred("gc.compact",Easy "See OCaml's Gc.compact",   (fun ~depth:_ -> Gc.compact ())),   DocAbove);
+  MLCode(Pred("gc.minor",  Easy "See OCaml's Gc.minor documentation.",     (fun ~depth:_ -> Gc.minor ())),     DocAbove);
+  MLCode(Pred("gc.major",  Easy "See OCaml's Gc.major documentation.",     (fun ~depth:_ -> Gc.major ())),     DocAbove);
+  MLCode(Pred("gc.full",   Easy "See OCaml's Gc.full_major documentation.",(fun ~depth:_ -> Gc.full_major ())),DocAbove);
+  MLCode(Pred("gc.compact",Easy "See OCaml's Gc.compact documentation.",   (fun ~depth:_ -> Gc.compact ())),   DocAbove);
 
-  MLCode(Pred("gc.print-stat",
-    In(out_stream,"OC",
-    Easy "See OCaml's Gc.print_stat, prints on OC"),
-  (fun (c,_) ~depth:_ -> Gc.print_stat c)),
+  MLCode(Pred("gc.stat",
+    Out(float,"MinorWords",
+    Out(float,"PromotedWords",
+    Out(float,"MajorWords",
+    Out(int,"MinorCollections",
+    Out(int,"MajorCollections",
+    Out(int,"HeapWords",
+    Out(int,"HeapChunks",
+    Out(int,"LiveWords",
+    Out(int,"LiveBlocks",
+    Out(int,"FreeWords",
+    Out(int,"FreeBlocks",
+    Out(int,"LargestFree",
+    Out(int,"Fragments",
+    Out(int,"Compactions",
+    Out(int,"TopHeapWords",
+    Out(int,"StackSize",
+    Easy "See OCaml's Gc.stat documentation.")))))))))))))))),
+  (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ~depth:_ ->
+    let { Gc.minor_words; promoted_words; major_words; minor_collections; major_collections; heap_words; heap_chunks; live_words; live_blocks; free_words; free_blocks; largest_free; fragments; compactions; top_heap_words; stack_size; _ } = Gc.stat () in
+    !: minor_words +! promoted_words +! major_words +! minor_collections +! major_collections +! heap_words +! heap_chunks +! live_words +! live_blocks +! free_words +! free_blocks +! largest_free +! fragments +! compactions +! top_heap_words +! stack_size)),
+  DocAbove);
+
+  MLCode(Pred("gc.quick-stat",
+    Out(float,"MinorWords",
+    Out(float,"PromotedWords",
+    Out(float,"MajorWords",
+    Out(int,"MinorCollections",
+    Out(int,"MajorCollections",
+    Out(int,"HeapWords",
+    Out(int,"HeapChunks",
+    Out(int,"Compactions",
+    Out(int,"TopHeapWords",
+    Out(int,"StackSize",
+    Easy "See OCaml's Gc.quick_stat documentation.")))))))))),
+  (fun _ _ _ _ _ _ _ _ _ _ ~depth:_ ->
+    let { Gc.minor_words; promoted_words; major_words; minor_collections; major_collections; heap_words; heap_chunks; compactions; top_heap_words; stack_size; _ } = Gc.quick_stat () in
+    !: minor_words +! promoted_words +! major_words +! minor_collections +! major_collections +! heap_words +! heap_chunks +! compactions +! top_heap_words +! stack_size)),
   DocAbove);
 
 ]

@@ -57,6 +57,10 @@ val diagnostic : diagnostic API.Conversion.t
 val mkOK : diagnostic
 val mkERROR : string -> diagnostic
 
+type 'a unspec = Given of 'a | Unspec
+val unspec : 'a API.Conversion.t -> 'a unspec API.Conversion.t
+val unspecC : ('a,'b,'c) API.ContextualConversion.t -> ('a unspec,'b,'c) API.ContextualConversion.t
+
 (* The string is the "file name" *)
 val in_stream  : (in_channel * string) API.Conversion.t
 val out_stream : (out_channel * string) API.Conversion.t
