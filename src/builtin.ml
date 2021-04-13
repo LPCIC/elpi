@@ -40,10 +40,10 @@ let register_eval, register_eval_ty, lookup_eval, eval_declaration =
  (fun nargs (s,tys) f ->
    tys |> List.iter (fun ty ->
      let ty =
-       if nargs = 2 then
-         Printf.sprintf "type (%s) %s." s (str_of_ty nargs ty)
+       if nargs = -2 then
+         Printf.sprintf "type (%s) %s." s (str_of_ty (abs nargs) ty)
        else
-         Printf.sprintf "type %s %s." s (str_of_ty nargs ty) in
+         Printf.sprintf "type %s %s." s (str_of_ty (abs nargs) ty) in
      declaration := BuiltIn.LPCode ty :: !declaration);
    Hashtbl.add evals (Constants.declare_global_symbol s) f),
  (fun s ty f ->
@@ -82,28 +82,28 @@ let register_evals n l f = List.iter (fun i -> register_eval n i f) l;;
 
 let _ =
   let open RawOpaqueData in
-  register_evals 2 [ "-",["A"] ; "i-",["int"] ; "r-",["float"] ] (function
+  register_evals ~-2 [ "-",["A"] ; "i-",["int"] ; "r-",["float"] ] (function
    | [ CData x; CData y ] when ty2 int x y -> (morph2 int (-) x y)
    | [ CData x; CData y ] when ty2 float x y -> (morph2 float (-.) x y)
    | _ -> type_error "Wrong arguments to -/i-/r-") ;
-  register_evals 2 [ "+",["int";"float"] ; "i+",["int"] ; "r+",["float"] ] (function
+  register_evals ~-2 [ "+",["int";"float"] ; "i+",["int"] ; "r+",["float"] ] (function
    | [ CData x; CData y ] when ty2 int x y -> (morph2 int (+) x y)
    | [ CData x; CData y ] when ty2 float x y -> (morph2 float (+.) x y)
    | _ -> type_error "Wrong arguments to +/i+/r+") ;
-  register_eval 2 ("*",["int";"float"]) (function
+  register_eval ~-2 ("*",["int";"float"]) (function
    | [ CData x; CData y ] when ty2 int x y -> (morph2 int ( * ) x y)
    | [ CData x; CData y] when ty2 float x y -> (morph2 float ( *.) x y)
    | _ -> type_error "Wrong arguments to *") ;
-  register_eval 2 ("/",["float"]) (function
+  register_eval ~-2 ("/",["float"]) (function
    | [ CData x; CData y] when ty2 float x y -> (morph2 float ( /.) x y)
    | _ -> type_error "Wrong arguments to /") ;
-  register_eval 2 ("mod",["int"]) (function
+  register_eval ~-2 ("mod",["int"]) (function
    | [ CData x; CData y ] when ty2 int x y -> (morph2 int (mod) x y)
    | _ -> type_error "Wrong arguments to mod") ;
-  register_eval 2 ("div",["int"]) (function
+  register_eval ~-2 ("div",["int"]) (function
    | [ CData x; CData y ] when ty2 int x y -> (morph2 int (/) x y)
    | _ -> type_error "Wrong arguments to div") ;
-  register_eval 2 ("^",["string"]) (function
+  register_eval ~-2 ("^",["string"]) (function
    | [ CData x; CData y ] when ty2 string x y ->
          of_string (to_string x ^ to_string y)
    | _ -> type_error "Wrong arguments to ^") ;
