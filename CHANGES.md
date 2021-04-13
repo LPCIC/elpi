@@ -1,4 +1,4 @@
-# UNRELEASED
+# v1.13.1 (April 2021)
 
 - API:
   - New `gc.get` and `gc.set` for reading and writing GC settings
