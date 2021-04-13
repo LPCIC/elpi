@@ -52,11 +52,13 @@ val pair : 'a API.Conversion.t -> 'b API.Conversion.t -> ('a * 'b) API.Conversio
 val option : 'a API.Conversion.t -> 'a option API.Conversion.t
 val bool : bool API.Conversion.t
 
+(* A standard way to make a predicate always succeed but still give errors *)
 type diagnostic = private OK | ERROR of string API.BuiltInPredicate.ioarg
 val diagnostic : diagnostic API.Conversion.t
 val mkOK : diagnostic
 val mkERROR : string -> diagnostic
 
+(* A way to make an argument optional, _ of flex is mapped to Unspec *)
 type 'a unspec = Given of 'a | Unspec
 val unspec : 'a API.Conversion.t -> 'a unspec API.Conversion.t
 val unspecC : ('a,'b,'c) API.ContextualConversion.t -> ('a unspec,'b,'c) API.ContextualConversion.t
