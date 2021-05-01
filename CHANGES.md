@@ -1,3 +1,9 @@
+# v1.13.2 (May 2021)
+
+- Build:
+  - drop ppxfindcache
+  - relax dependency on ocaml-migrate-parsetree
+
 # v1.13.1 (April 2021)
 
 - API:
