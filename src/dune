@@ -15,10 +15,6 @@
 
 (dirs .ppcache)
 
-(rule (copy# runtime.ml runtime_trace_on.ml))
-(rule (copy# runtime.ml runtime_trace_off.ml))
-(rule (copy# runtime.mli runtime_trace_on.mli))
-(rule (copy# runtime.mli runtime_trace_off.mli))
 (rule (with-stdout-to builtin_stdlib.ml (progn
   (echo "let code = {code|#line 0 \"builtin_stdlib.elpi\"\n")
   (cat builtin_stdlib.elpi)
