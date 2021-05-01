@@ -5,8 +5,6 @@ help:
 	@echo '  install          install elpi'
 	@echo '  clean            remove build artifacts'
 	@echo
-	@echo '  .merlin          builds a .merlin file'
-	@echo
 	@echo '  tests            runs the entire test suite'
 	@echo '  tests ONLY=rex   runs only tests matching rex'
 	@echo
@@ -28,10 +26,7 @@ STACK=32768
 DUNE_OPTS=
 
 build:
-	dune build $(DUNE_OPTS) @all ; RC=$$?; \
-	( cp -r _build/default/src/.ppcache src/ 2>/dev/null || true ); \
-	( echo "FLG -ppx './merlinppx.exe --as-ppx --cookie '\''elpi_trace=\"true\"'\'''" >> src/.merlin );\
-	exit $$RC
+	dune build $(DUNE_OPTS) @all
 
 install:
 	dune install $(DUNE_OPTS)
@@ -41,9 +36,6 @@ doc:
 
 clean:
 	rm -rf _build
-
-cleancache:
-	$(foreach f, $(wildcard src/.ppcache/*), echo > $(f); )
 
 tests:
 	$(MAKE) build
@@ -76,4 +68,4 @@ git/%:
 		ln -s $$PWD/elpi _build/install/default/bin/elpi.git.$*; \
 	  fi
 
-.PHONY: tests help .merlin install build clean
+.PHONY: tests help install build clean
