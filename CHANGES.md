@@ -1,3 +1,9 @@
+# v1.13.3 (May 2021)
+
+- Bugifx: keep the state component `while_compiling` even when execution is
+  over, since the API to allocate a new Elpi uvar needs it and Coq-Elpi may
+  call this API while translating the solution to Coq
+
 # v1.13.2 (May 2021)
 
 - Build:
