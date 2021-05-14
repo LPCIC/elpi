@@ -762,6 +762,24 @@ module BuiltInPredicate = struct
     let open ContextualConversion in
     !< (ioargC (!> a))
 
+  let ioargC_flex a = let open ContextualConversion in { a with
+    pp = (fun fmt -> function Data x -> a.pp fmt x | NoData -> Format.fprintf fmt "_");
+    embed = (fun ~depth hyps csts state -> function
+             | Data x -> a.embed ~depth hyps csts state x
+             | NoData -> assert false);
+    readback = (fun ~depth hyps csts state t ->
+             let module R = (val !r) in let open R in
+             match R.deref_head ~depth t with
+             | ED.Term.Arg _ | ED.Term.AppArg _ -> assert false
+             | ED.Term.Discard -> state, NoData, []
+             | _ -> let state, x, gls = a.readback ~depth hyps csts state t in
+                    state, mkData x, gls);
+  }
+
+  let ioarg_flex a =
+    let open ContextualConversion in
+    !< (ioargC_flex (!> a))
+
   let ioarg_any = let open Conversion in { BuiltInData.any with
     pp = (fun fmt -> function
              | Data x -> BuiltInData.any.pp fmt x

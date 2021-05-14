@@ -573,6 +573,8 @@ module BuiltInPredicate : sig
   val mkData : 'a -> 'a ioarg
   val ioargC : ('t,'h,'c) ContextualConversion.t -> ('t ioarg,'h,'c) ContextualConversion.t
   val ioarg : 't Conversion.t -> 't ioarg Conversion.t
+  val ioargC_flex : ('t,'h,'c) ContextualConversion.t -> ('t ioarg,'h,'c) ContextualConversion.t
+  val ioarg_flex : 't Conversion.t -> 't ioarg Conversion.t
   val ioarg_any : Data.term ioarg Conversion.t
 
   module Notation : sig

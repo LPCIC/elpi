@@ -1,3 +1,7 @@
+# v1.13.4 (May 2021)
+
+- FFI: new `ioargC_flex` which considers flexible terms as Data
+
 # v1.13.3 (May 2021)
 
 - Bugifx: keep the state component `while_compiling` even when execution is
