@@ -709,7 +709,7 @@ let while_compiling = State.declare ~name:"elpi:compiling"
   ~goal_compilation_begins:(fun b -> b)
   ~goal_compilation_is_over:(fun ~args:_ b -> Some b)
   ~compilation_is_over:(fun _ -> Some false)
-  ~execution_is_over:(fun _ -> None)
+  ~execution_is_over:(fun _ -> Some false) (* we keep it, since API.FlexibleData.Elpi.make needs it *)
   ~init:(fun () -> false)
 
 module BuiltInPredicate = struct
