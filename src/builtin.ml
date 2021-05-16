@@ -981,6 +981,32 @@ let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in let o
     | _ -> raise No_clause)),
   DocAbove);
 
+  MLCode(Pred("prune",
+  Out(any, "V",
+  In(list any, "L",
+  Full (unit_ctx, "V is pruned to L (V is unified with a variable that only sees the list of names L)"))),
+    (fun _ l ~depth _ _ state ->
+      if not (List.for_all (fun t -> match look ~depth t with
+        | Const n -> n >= 0
+        | _ -> false) l) then
+      type_error ("prune only accepts a list of names");
+      let state, u = FlexibleData.Elpi.make state in
+      state, !: (mkUnifVar u ~args:l state), [])),
+  DocAbove);
+
+  MLCode(Pred("distinct_names",
+  In(list any, "L",
+  Easy "checks if L is a list of distinct names. If L is the scope of a unification variable (its arguments, as per var predicate) then distinct_names L checks that such variable is in the Miller pattern fragment (L_\\lambda)"),
+    (fun l ~depth ->
+      let _ = List.fold_left (fun seen t ->
+        match look ~depth t with
+        | Const n when n >= 0 ->
+            if not (Util.IntSet.mem n seen) then Util.IntSet.add n seen
+            else raise No_clause
+        | _ -> raise No_clause) Util.IntSet.empty l in
+      ())),
+  DocAbove);
+
   MLCode(Pred("same_var",
     In(poly "A",   "V1",
     In(poly "A",   "V2",

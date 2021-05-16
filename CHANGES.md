@@ -1,3 +1,10 @@
+# v1.13.5 (May 2021)
+
+- API:
+  - New `prune` which can be used to prune a unification variable
+  - New `distinct_names` which checks if a list of arguments is in the pattern
+    fragment
+
 # v1.13.4 (May 2021)
 
 - FFI: new `ioargC_flex` which considers flexible terms as Data

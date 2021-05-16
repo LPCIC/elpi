@@ -396,6 +396,16 @@ type ctype string -> ctyp.
 % arguments it relates an applied variable with its head and argument list.
 external type var any -> variadic any prop.
 
+% [prune V L] V is pruned to L (V is unified with a variable that only sees
+% the list of names L)
+external pred prune o:any, i:list any.
+
+% [distinct_names L] checks if L is a list of distinct names. If L is the
+% scope of a unification variable (its arguments, as per var predicate) then
+% distinct_names L checks that such variable is in the Miller pattern
+% fragment (L_\lambda)
+external pred distinct_names i:list any.
+
 % [same_var V1 V2] checks if the two terms V1 and V2 are the same variable,
 % ignoring the arguments of the variables
 external pred same_var i:A, i:A.
