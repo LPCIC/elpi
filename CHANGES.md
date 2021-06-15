@@ -1,3 +1,10 @@
+# v1.13.6 (June 2021)
+
+- API:
+  - Fix `std.findall` is now calling a builtin which is able to produce
+    solutions which contain eigenvariables and uvars as well.
+  - `loc` is now printed using `/` as a path separator also on Windows
+
 # v1.13.5 (May 2021)
 
 - API:

@@ -402,6 +402,7 @@ module Global_symbols : sig
 
   val declare_constraintc : constant
   val print_constraintsc  : constant
+  val findall_solutionsc  : constant
 
 end = struct
 
@@ -470,6 +471,7 @@ let variadic            = declare_global_symbol "variadic"
 let declare_constraintc = declare_global_symbol "declare_constraint"
 let cutc                = declare_global_symbol_for_builtin F.(show cutf)
 let print_constraintsc  = declare_global_symbol_for_builtin "print_constraints"
+let findall_solutionsc  = declare_global_symbol_for_builtin "findall_solutions"
 
 end
 

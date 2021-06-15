@@ -1110,6 +1110,11 @@ X == Y :- same_term X Y.
       !: !fresh_int)),
   DocAbove);
 
+  LPDoc  {|[findall_solution P L] finds all the solved instances of P and puts them in L
+in the order in which they are found. Instances can contain eigenvariables
+and unification variables.|};
+  LPCode "external pred findall_solutions i:prop, o:list prop.";
+
   MLData safe;
 
    MLCode(Pred("new_safe",

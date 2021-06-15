@@ -3021,7 +3021,7 @@ let try_fire_rule (gid[@trace]) rule (constraints as orig_constraints) =
     try
       let _ = search () in
       if get CS.Ugly.delayed <> [] then
-        error "propagation rules must declare constraint(s)"
+        error "propagation rules must not declare constraint(s)"
     with No_clause -> raise NoMatch in
 
   let result = try
@@ -3214,6 +3214,8 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
     match g with
     | Builtin(c,[]) when c == Global_symbols.cutc -> [%spy "user:rule" ~rid ~gid pp_string "cut"];
        [%tcall cut (gid[@trace]) gs next alts lvl]
+    | Builtin(c,[q;sol]) when c == Global_symbols.findall_solutionsc -> [%spy "user:rule" ~rid ~gid pp_string "findall"];
+       [%tcall findall depth p q sol (gid[@trace]) gs next alts lvl]
     | App(c, g, gs') when c == Global_symbols.andc -> [%spy "user:rule" ~rid ~gid pp_string "and"];
        let gs' = List.map (fun x -> (make_subgoal[@inlined]) ~depth (gid[@trace]) p x) gs' in
        let gid[@trace] = make_subgoal_id gid ((depth,g)[@trace]) in
@@ -3333,6 +3335,53 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
     match gs with
     | [] -> pop_andl alts next lvl
     | { depth; program; goal; gid = gid [@trace] } :: gs -> run depth program goal (gid[@trace]) gs next alts lvl
+
+  and findall depth p g s (gid[@trace]) gs next alts lvl =
+    let avoid = oref C.dummy in (* to force a copy *)
+    let copy = move ~adepth:depth ~from:depth ~to_:depth empty_env ~avoid in
+    let g = copy g in (* so that Discard becomes a variable *)
+    [%trace "findall" ~rid ("@[<hov 2>query: %a@]" (uppterm depth [] 0 empty_env) g) begin
+    let executable = {
+      (* same program *)
+      compiled_program = p; 
+      (* no meta meta level *)
+      chr = CHR.empty;
+      initial_goal = g;
+      assignments = StrMap.empty;
+      initial_depth = depth;
+      initial_runtime_state = State.(init () |> State.begin_goal_compilation |> end_goal_compilation StrMap.empty |> end_compilation);
+      query_arguments = Query.N;
+      symbol_table = !C.table;
+      builtins = !FFI.builtins;
+    } in
+    let { search; next_solution; destroy; get; _ } = !do_make_runtime executable in
+    let solutions = ref [] in
+    let add_sol () =
+      if get CS.Ugly.delayed <> [] then
+        error "findall search must not declare constraint(s)";
+      let sol = copy g in
+      [%spy "findall solution:" ~rid ~gid (ppterm depth [] 0 empty_env) g];
+      solutions := sol :: !solutions in
+    let alternatives = ref noalts in
+    try
+      alternatives := search ();
+      add_sol ();
+      while true do
+        alternatives := next_solution !alternatives;
+        add_sol ();
+      done;
+      raise No_clause
+    with No_clause ->
+      destroy ();
+      let solutions = list_to_lp_list (List.rev !solutions) in
+      [%spy "findall solutions:" ~rid ~gid (ppterm depth [] 0 empty_env) solutions];
+      match unif ~matching:false (gid[@trace]) depth empty_env depth s solutions with
+      | false -> [%tcall next_alt alts]
+      | true ->
+        begin match gs with
+        | [] -> [%tcall pop_andl alts next lvl]
+        | { depth ; program; goal; gid = gid [@trace] } :: gs -> [%tcall run depth program goal (gid[@trace]) gs next alts lvl] end
+    end]
 
   and pop_andl alts next lvl =
    match next with
