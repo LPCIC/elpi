@@ -133,13 +133,13 @@ module Loc = struct
   =
     let source =
      if source_name = "" then ""
-     else source_name ^ ", " in
+     else "File \"" ^ source_name ^ "\", " in
     let chars = Printf.sprintf "characters %d-%d" source_start source_stop in
     let pos =
       if line = -1 then chars
-      else Printf.sprintf "%s, line %d, column %d"
-             chars line (source_stop - line_starts_at) in
-    source ^ pos
+      else Printf.sprintf "line %d, column %d, %s"
+             line (source_stop - line_starts_at) chars in
+    Re.(Str.global_replace (Str.regexp_string "\\") "/" source) ^ pos ^ ":"
 
   let pp fmt l = Fmt.fprintf fmt "%s" (to_string l)
   let show l = to_string l
