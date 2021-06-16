@@ -1850,10 +1850,13 @@ let type_err ~depth bname n ty t =
   type_error begin
     "builtin " ^ bname ^ ": " ^
     (if n = 0 then "" else string_of_int n ^ "th argument: ") ^
-    "expected " ^ ty ^ ": got " ^
+    "expected " ^ ty ^ " got" ^
     match t with
     | None -> "_"
-    | Some t -> Format.asprintf "%a" (Pp.uppterm depth [] 0 empty_env) t
+    | Some t ->
+       match t with
+       | CData c -> Format.asprintf " %s: %a" (CData.name c) (Pp.uppterm depth [] 0 empty_env) t
+       | _ -> Format.asprintf ":%a" (Pp.uppterm depth [] 0 empty_env) t
   end
 
 let wrap_type_err bname n f x =

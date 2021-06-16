@@ -359,6 +359,10 @@ external pred quote_syntax i:string, i:string, o:list A, o:A.
 typeabbrev loc (ctype "Loc.t").
 
 
+% [loc.fields Loc File StartChar StopChar Line LineStartsAtChar] Decomposes
+% a loc into its fields
+external pred loc.fields i:loc, o:string, o:int, o:int, o:int, o:int.
+
 % == Regular Expressions =====================================
 
 % [rex.match Rex Subject] checks if Subject matches Rex. Matching is based
