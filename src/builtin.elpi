@@ -359,6 +359,10 @@ external pred quote_syntax i:string, i:string, o:list A, o:A.
 typeabbrev loc (ctype "Loc.t").
 
 
+% [loc.fields Loc File StartChar StopChar Line LineStartsAtChar] Decomposes
+% a loc into its fields
+external pred loc.fields i:loc, o:string, o:int, o:int, o:int, o:int.
+
 % == Regular Expressions =====================================
 
 % [rex.match Rex Subject] checks if Subject matches Rex. Matching is based
@@ -457,6 +461,14 @@ primitive? X S :- is_cdata X (ctype S).
 % [new_int N] unifies N with a different int every time it is called. Values
 % of N are guaranteed to be incresing.
 external pred new_int o:int.
+
+% [findall_solution P L] finds all the solved instances of P and puts them
+% in L
+% in the order in which they are found. Instances can contain
+% eigenvariables
+% and unification variables.
+
+external pred findall_solutions i:prop, o:list prop.
 
 % Holds data across bracktracking; can only contain closed terms
 typeabbrev safe (ctype "safe").
@@ -776,11 +788,8 @@ max N M N :- N >= M, !.
 max _ M M.
 
 % [findall P L] L is the list [P1,P2,P3..] where each Pi is a solution to P.
-% Solutions must be closed (no unification variables nor eigenvariables).
 pred findall i:prop, o:list prop.
-findall P L :- new_safe F, findall.aux P F, open_safe F L.
-findall.aux P F :- P, stash_in_safe F P, fail.
-findall.aux _ _.
+findall P L :- findall_solutions P L.
 
 }
 

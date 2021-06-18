@@ -265,10 +265,7 @@ let { CData.cin = in_string; isc = is_string; cout = out_string } as cstring =
 let { CData.cin = in_loc; isc = is_loc; cout = out_loc } as cloc =
   CData.(declare {
     data_name = "Loc.t";
-    data_pp = (fun f x ->
-      let bname = x.Loc.source_name in
-      let line_no = x.Loc.line in
-      Fmt.fprintf f "File %S, line %d:" bname line_no);
+    data_pp = Util.Loc.pp;
     data_compare = Pervasives.compare;
     data_hash = Hashtbl.hash;
     data_hconsed = false;

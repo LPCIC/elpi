@@ -312,6 +312,7 @@ let is_declared_str state x =
   || x == Symbols.(show state D.Global_symbols.declare_constraintc)
   || x == Symbols.(show state D.Global_symbols.print_constraintsc)
   || x == Symbols.(show state D.Global_symbols.cutc)
+  || x == Symbols.(show state D.Global_symbols.findall_solutionsc)
 ;;
 
 let is_declared state x =
@@ -320,6 +321,7 @@ let is_declared state x =
   || x == D.Global_symbols.declare_constraintc
   || x == D.Global_symbols.print_constraintsc
   || x == D.Global_symbols.cutc
+  || x == D.Global_symbols.findall_solutionsc
 ;;
 
 end

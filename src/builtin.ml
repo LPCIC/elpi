@@ -823,6 +823,18 @@ counter C N :- trace.counter C N.|};
 
   MLData loc;
 
+  MLCode(Pred("loc.fields",
+    In(loc, "Loc",
+    Out(string, "File",
+    Out(int, "StartChar",
+    Out(int, "StopChar",
+    Out(int, "Line",
+    Out(int, "LineStartsAtChar",
+    Easy "Decomposes a loc into its fields")))))),
+  (fun { source_name; source_start; source_stop; line; line_starts_at; } _ _ _ _ _ ~depth:_ ->
+     !: source_name +! source_start +! source_stop +! line +! line_starts_at )),
+  DocAbove);
+
   LPDoc "== Regular Expressions =====================================";
 
   MLCode(Pred("rex.match",
@@ -1109,6 +1121,11 @@ X == Y :- same_term X Y.
       if !fresh_int < 0 then anomaly "new_int: reached max_int";
       !: !fresh_int)),
   DocAbove);
+
+  LPDoc  {|[findall_solution P L] finds all the solved instances of P and puts them in L
+in the order in which they are found. Instances can contain eigenvariables
+and unification variables.|};
+  LPCode "external pred findall_solutions i:prop, o:list prop.";
 
   MLData safe;
 
