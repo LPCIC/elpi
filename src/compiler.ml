@@ -1690,6 +1690,16 @@ end = struct (* {{{ *)
       | Const d -> c == d
       | _ -> false in
 
+    let rec drop n = function
+      | [] -> []
+      | _ :: xs when n > 0 -> drop (n-1) xs
+      | x -> x in
+
+    let size_outermost_spill ~default l =
+      match List.rev l with
+      | [] -> default
+      | (size, _) :: _ -> List.length size in
+
     let rec apply_to names variable = function
       | Const f when List.exists (equal_term f) names ->
           mkAppC f [variable]
@@ -1746,8 +1756,10 @@ end = struct (* {{{ *)
                    ([],spaux1_prop ctx a1) @@@ aux ty an
              | `Arrow(`Prop :: ty,c), a1 :: an ->
                    ([],spaux1_prop ctx a1) @@@ aux (`Arrow(ty,c)) an
-             | `Arrow(_ :: ty,c), a1 :: an ->
-                   spaux ctx a1 @@@ aux (`Arrow(ty,c)) an
+             | `Arrow((_ :: _ as ty),c), a1 :: an ->
+                   let spills, a1 = spaux ctx a1 in
+                   let ty = drop (size_outermost_spill spills ~default:1) ty in
+                   (spills, a1) @@@ aux (`Arrow(ty,c)) an
              | _, a1 :: an -> spaux ctx a1 @@@ aux ty an
            in
              aux (type_of_const types hd) args in

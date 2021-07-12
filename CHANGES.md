@@ -1,3 +1,9 @@
+# v1.13.7 (July 2021)
+
+- Compiler:
+  - Fix bug in spilling when the spilled expression generates more than one
+    argument.
+
 # v1.13.6 (June 2021)
 
 - API:
