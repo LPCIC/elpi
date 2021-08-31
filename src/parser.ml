@@ -603,7 +603,6 @@ EXTEND
     ]];
   type_attribute :
    [[ CONSTANT "index";  expr = indexing_expr -> Type.Index expr
-    | EXTERNAL;          expr = LITERAL       -> Type.External
     ]];
   clause_attributes : [[ l = LIST1 clause_attribute SEP COLON-> l ]];
   type_attributes : [[ l = LIST1 type_attribute SEP COLON-> l ]];
