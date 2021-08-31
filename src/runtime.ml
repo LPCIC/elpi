@@ -2347,7 +2347,7 @@ let rec classify_goal_arg ~depth t =
   | App (k,_,_) when k == Global_symbols.uvarc -> Rigid mustbevariablec
   | App (k,a,_) when k == Global_symbols.asc -> classify_goal_arg ~depth a
   | (App (k,_,_) | Builtin (k,_)) -> Rigid (k)
-  | Lam _ -> Variable (* loose indexing to enable eta *)
+  | Lam t -> classify_goal_arg ~depth:(depth+1) t (* eta *)
   | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> Variable
   | CData d -> 
      let hash = -(CData.hash d) in
