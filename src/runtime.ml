@@ -1477,7 +1477,7 @@ let rec unif matching depth adepth a bdepth b e =
     | (Discard, _ | _, Discard) -> true
 
    (* _ as X binding *)
-   | _, App(c,arg,[(Arg _ | AppArg _) as as_this]) when c == Global_symbols.asc ->
+   | _, App(c,arg,[as_this]) when c == Global_symbols.asc ->
       unif matching depth adepth a bdepth arg e &&
       unif matching depth adepth a bdepth as_this e
    | _, App(c,arg,_) when c == Global_symbols.asc -> error "syntax error in as"
