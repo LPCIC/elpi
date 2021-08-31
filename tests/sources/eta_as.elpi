@@ -1,0 +1,29 @@
+pred foo1 i:any.
+pred foo2 i:any.
+pred foo3 i:any.
+pred foo4 i:any.
+pred patternify i:A, o:A.
+
+patternify (uvar K Args) U :- print "pattern" K "@" Args, (distinct_names Args).
+
+more-tests :-
+      patternify X1 U1,
+  not(patternify (x \ X2) U2),
+      patternify (x \ X3 x) U3,
+  not(patternify (x \ X4 u x) U4).
+
+foo1 (bar (uvar as K)) :- print "foo1:" K.
+foo2 (uvar as K) :- print "foo2:" K.
+foo3 (bar (uvar K Args)) :- print "foo3:" K "@" Args.
+foo4 (bar X) :- (var X K Args), print "foo4:" K "@" Args.
+
+main :- 
+     (foo2 (x \ X1 x)) , % works
+       (pi a\ var (X1 a) _ [a]), % assert X1 was not pruned
+  not(foo1 (x \ bar u)), % fails because (bar (uvar as K) x ==!== bar u)
+  not(foo1 (x \ bar u x)), % fails because u is not flexible (input mode)
+     (foo1 (x \ bar (X2 x) x)), % works but X2 is pruned
+       (pi a\ var (X2 a) _ []), % assert pruning of X2
+  not(foo3 (bar (x \ u))),
+     (pi x \ (foo4 (bar (X x)))),
+  more-tests.

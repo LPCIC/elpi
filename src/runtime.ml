@@ -1467,6 +1467,37 @@ let error_msg_hard_unif a b =
   "or set delay_outside_fragment to true (Elpi_API) in order to delay "^
   "(deprecated, for Teyjus compatibility)."
 
+let mkAppEtaUV ~adepth t extra =
+    match t with
+    | Arg(i,ano) -> AppArg(i, C.mkinterval adepth (adepth+ano) 0 @ [extra])
+    | AppArg(i,args) -> AppArg(i,args @ [extra])
+    | UVar(r,lvl,ano) -> AppUVar(r,lvl, C.mkinterval adepth (lvl+ano) 0 @ [extra])
+    | AppUVar(r,lvl,args) -> AppUVar(r,lvl,args @ [extra])
+    | _ -> error "uvar clause too complex"
+
+let mkAppEtaArg ~adepth t extra =
+  match t with
+  | Arg _ | AppArg _ | UVar _ | AppUVar _ -> mkAppEtaUV ~adepth t extra
+  | Const c when c == Global_symbols.uvarc -> t
+  | Const c -> App(c,extra,[])
+  | App(c,x,xs) -> App(c,x, xs @ [extra])
+  | Discard as x -> x
+  | Builtin _ | Lam _ | CData _ | Cons _ | Nil -> error "as clause too complex"
+    
+let mkAppEta ~adepth c args extra =
+  if c == Global_symbols.asc then
+    match args with
+    | [t; as_t] -> C.mkAppL c [mkAppEtaArg ~adepth t extra; mkAppEtaArg ~adepth as_t extra]
+    | _ -> error "syntax error in as (2)"
+  else if c == Global_symbols.uvarc then
+    match args with
+    | [] -> C.mkConst c
+    | [uv] -> C.mkAppL c [mkAppEtaUV ~adepth uv extra]
+    | [uv; uvargs] -> C.mkAppL c [uv; Cons(extra,uvargs)]
+    | _ -> C.mkAppL c (args @ [extra])
+  else
+    C.mkAppL c (args @ [extra])
+
 let rec unif matching depth adepth a bdepth b e =
    [%trace "unif" ~rid ("@[<hov 2>^%d:%a@ =%d%s= ^%d:%a@]%!"
        adepth (ppterm (adepth+depth) [] adepth empty_env) a
@@ -1703,25 +1734,25 @@ let rec unif matching depth adepth a bdepth b e =
    (* eta *)
    | Lam t, Const c ->
        let extra = mkConst (bdepth+depth) in
-       let eta = App(c,extra,[]) in
+       let eta = mkAppEta ~adepth c [] extra in
        unif matching (depth+1) adepth t bdepth eta e
    | Const c, Lam t ->
        let extra = mkConst (adepth+depth) in
-       let eta = App(c,extra,[]) in
+       let eta = mkAppEta ~adepth c [] extra in
        unif matching (depth+1) adepth eta bdepth t e
    | Lam t, App (c,x,xs) ->
        let extra = mkConst (bdepth+depth) in
        let motion = move ~adepth ~from:(bdepth+depth) ~to_:(bdepth+depth+1) e in
        let x = motion x in
-       let xs = List.map motion xs @ [extra] in
-       let eta = App(c,x,xs) in
+       let xs = List.map motion xs in
+       let eta = mkAppEta ~adepth c (x :: xs) extra in
        unif matching (depth+1) adepth t bdepth eta e
    | App (c,x,xs), Lam t ->
        let extra = mkConst (adepth+depth) in
        let motion = hmove ~from:(bdepth+depth) ~to_:(bdepth+depth+1) in
        let x = motion x in
-       let xs = List.map motion xs @ [extra] in
-       let eta = App(c,x,xs) in
+       let xs = List.map motion xs in
+       let eta = mkAppEta ~adepth c (x :: xs) extra in
        unif matching (depth+1) adepth eta bdepth t e
 
    | _ -> false
