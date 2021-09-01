@@ -239,3 +239,9 @@ let () = declare "hyp_uvar"
   ~typecheck:true
   ~expectation:Test.Success
   ()
+
+let () = declare "trailing_comment"
+  ~source_elpi:"end_comment.elpi"
+  ~description:"trailing comment"
+  ~expectation:Test.Success
+  ()

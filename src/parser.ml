@@ -383,6 +383,7 @@ and literatecomment loc c init = parser
 and comment loc c init = parser
   | [< '( '\n' ); s >] ep -> lex (succ_line loc ep) c init s
   | [< '_ ; s >] -> comment loc c init s
+  | [< >] -> lex loc c init [< >]
 and comment2 loc lvl c init = parser
   | [< ?= [ '*'; '/' ]; '( '*' ); '( '/'); s >] ->
       if lvl = 0 then lex loc c init s else comment2 loc (lvl-1) c init s
@@ -603,7 +604,6 @@ EXTEND
     ]];
   type_attribute :
    [[ CONSTANT "index";  expr = indexing_expr -> Type.Index expr
-    | EXTERNAL;          expr = LITERAL       -> Type.External
     ]];
   clause_attributes : [[ l = LIST1 clause_attribute SEP COLON-> l ]];
   type_attributes : [[ l = LIST1 type_attribute SEP COLON-> l ]];
