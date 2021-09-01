@@ -988,8 +988,13 @@ let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in let o
     | Data x, [Data y; Data args] ->
         let vx, ax = is_var x in
         let vy, ay = is_var y in
-        !: (mkUnifVar vy ~args:(ay @ lp_list_to_list ~depth args) state)
-        +! [Some (mkUnifVar vx ~args:[] state); Some (list_to_lp_list ax)]
+        begin match look ~depth args with
+        | UnifVar _ ->
+          ?: None +! [Some (mkUnifVar vx ~args:[] state); Some (list_to_lp_list ax)]
+        | _ ->
+          !: (mkUnifVar vy ~args:(ay @ lp_list_to_list ~depth args) state)
+          +! [Some (mkUnifVar vx ~args:[] state); Some (list_to_lp_list ax)]
+        end
     | _ -> raise No_clause)),
   DocAbove);
 
