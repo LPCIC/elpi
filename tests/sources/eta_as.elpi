@@ -1,29 +1,56 @@
-pred foo1 i:any.
-pred foo2 i:any.
-pred foo3 i:any.
-pred foo4 i:any.
-pred patternify i:A, o:A.
+pred as_1 i:any.
+pred as_2 i:any.
+pred as_3 i:any.
 
-patternify (uvar K Args) U :- print "pattern" K "@" Args, (distinct_names Args).
+pred uvar_1 i:any.
+pred uvar_2 i:any.
+pred uvar_3 i:any.
+pred uvar_4 i:A.
+pred uvar_5 i:A.
 
-more-tests :-
-      patternify X1 U1,
-  not(patternify (x \ X2) U2),
-      patternify (x \ X3 x) U3,
-  not(patternify (x \ X4 u x) U4).
+pred test-as.
+pred test-uvar.
 
-foo1 (bar (uvar as K)) :- print "foo1:" K.
-foo2 (uvar as K) :- print "foo2:" K.
-foo3 (bar (uvar K Args)) :- print "foo3:" K "@" Args.
-foo4 (bar X) :- (var X K Args), print "foo4:" K "@" Args.
+uvar_1 (bar (uvar K Args)) :- std.assert! (var K) "uvar_1 bar X, not a var", print K Args.
+uvar_2 (bar X) :- std.assert! (var X K Args) "uvar_2 bar X, not a var", print K Args.
+uvar_3 (uvar K) :- std.assert! (var K) "uvar_3 X, not a var", print K.
+uvar_4 (uvar K Args) :- std.assert! (var K) "uvar_4 X, not a var", std.assert! (distinct_names Args) "uvar_4 not in pattern".
+uvar_5 (uvar K Args) :- std.assert! (var K) "uvar_5 X, not a var", distinct_names Args.
 
-main :- 
-     (foo2 (x \ X1 x)) , % works
-       (pi a\ var (X1 a) _ [a]), % assert X1 was not pruned
-  not(foo1 (x \ bar u)), % fails because (bar (uvar as K) x ==!== bar u)
-  not(foo1 (x \ bar u x)), % fails because u is not flexible (input mode)
-     (foo1 (x \ bar (X2 x) x)), % works but X2 is pruned
+as_1 (bar (uvar as K)) :- std.assert! (var K) "bar (uvar as_1 X), not a var", print K.
+as_2 (uvar as K) :- std.assert! (var K) "uvar as_2 X, not a var", print K.
+as_3 (uvar as K) :- std.assert! (var K) "uvar as_3 X, not a var", print K.
+
+tests-uvar :-
+  print "--------- uvar_1",
+  not(uvar_1 (bar (x \ u))),
+  print "--------- uvar_2",
+  (pi x \ (uvar_2 (bar (X x)))),
+  print "--------- uvar_3",
+  not (uvar_3 (x \ X0)),
+  print "--------- uvar_4",
+  uvar_4 X1,
+  print "--------- uvar_4 bis",
+  not(uvar_4 (x \ X2)),
+  print "--------- uvar_4 ter",
+  uvar_4 (x \ X3 x),
+  print "--------- uvar_4 quater",
+  (pi u\ uvar_4 (x \ X4 u x)),
+  print "--------- uvar_5",
+  not (uvar_5 (x \ X5 u x)).
+
+tests-as :-
+  print "---------- as_1",
+  not(as_1 (x \ bar u)), % fails because (bar (uvar as K) x ==!== bar u)
+  print "---------- as_1 bis",
+  not(as_1 (x \ bar u x)), % fails because u is not flexible (input mode)
+  print "---------- as_1 ter",
+     (as_1 (x \ bar (X2 x) x)), % works but X2 is pruned
        (pi a\ var (X2 a) _ []), % assert pruning of X2
-  not(foo3 (bar (x \ u))),
-     (pi x \ (foo4 (bar (X x)))),
-  more-tests.
+  print "---------- as_2",
+     (as_2 (x \ X1 x)) , % works
+       (pi a\ var (X1 a) _ []), % assert X1 was not pruned
+  print "---------- as_3",
+  not (as_3 (x \ X0)).
+
+main :- tests-uvar, tests-as.

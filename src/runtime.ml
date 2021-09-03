@@ -1467,18 +1467,10 @@ let error_msg_hard_unif a b =
   "or set delay_outside_fragment to true (Elpi_API) in order to delay "^
   "(deprecated, for Teyjus compatibility)."
 
-let mkAppEtaUV ~adepth t extra =
-    match t with
-    | Arg(i,ano) -> AppArg(i, C.mkinterval adepth (adepth+ano) 0 @ [extra])
-    | AppArg(i,args) -> AppArg(i,args @ [extra])
-    | UVar(r,lvl,ano) -> AppUVar(r,lvl, C.mkinterval adepth (lvl+ano) 0 @ [extra])
-    | AppUVar(r,lvl,args) -> AppUVar(r,lvl,args @ [extra])
-    | _ -> error "uvar clause too complex"
-
 let mkAppEtaArg ~adepth t extra =
   match t with
-  | Arg _ | AppArg _ | UVar _ | AppUVar _ -> mkAppEtaUV ~adepth t extra
-  | Const c when c == Global_symbols.uvarc -> t
+  | Arg _ | AppArg _ | UVar _ | AppUVar _ -> t
+  | (Const c | App(c,_,_)) when c == Global_symbols.uvarc -> t
   | Const c -> App(c,extra,[])
   | App(c,x,xs) -> App(c,x, xs @ [extra])
   | Discard as x -> x
@@ -1486,17 +1478,96 @@ let mkAppEtaArg ~adepth t extra =
     
 let mkAppEta ~adepth c args extra =
   if c == Global_symbols.asc then
-    match args with
+     match args with
     | [t; as_t] -> C.mkAppL c [mkAppEtaArg ~adepth t extra; mkAppEtaArg ~adepth as_t extra]
-    | _ -> error "syntax error in as (2)"
+    | _ -> error "syntax error in as"
   else if c == Global_symbols.uvarc then
-    match args with
-    | [] -> C.mkConst c
-    | [uv] -> C.mkAppL c [mkAppEtaUV ~adepth uv extra]
-    | [uv; uvargs] -> C.mkAppL c [uv; Cons(extra,uvargs)]
-    | _ -> C.mkAppL c (args @ [extra])
+    C.mkAppL c args
   else
     C.mkAppL c (args @ [extra])
+
+let rec deref_head ~depth = function
+  | UVar ({ contents = t }, from, ano)
+    when t != C.dummy ->
+      deref_head ~depth (deref_uv ~from ~to_:depth ano t)
+  | AppUVar ({contents = t}, from, args)
+    when t != C.dummy ->
+      deref_head ~depth (deref_appuv ~from ~to_:depth args t)
+  | x -> x
+
+  (* constant x occurs in term t with level d? *)
+let occurs x d adepth e t =
+  let rec aux d t = match deref_head ~depth:d t with
+    | Const c -> c = x
+    | Lam t -> aux (d+1) t
+    | App (c, v, vs) -> c = x || aux d v || auxs d vs
+    | UVar (r, lvl, ano) ->
+       let t, assignment = expand_uv ~depth:d r ~lvl ~ano in
+       option_iter (fun (r,_,assignment) -> r @:= assignment) assignment;
+       aux d t
+    | AppUVar (_, _, args) -> auxs d args
+    | Builtin (_, vs) -> auxs d vs
+    | Cons (v1, v2) -> aux d v1 || aux d v2
+    | Arg(i,args) when e.(i) != C.dummy ->
+      aux d (deref_uv ~from:adepth ~to_:d args e.(i))
+    | AppArg(i,args) when e.(i) != C.dummy ->
+      aux d (deref_appuv ~from:adepth ~to_:d args e.(i))
+    | Nil | CData _ | Discard | Arg _ | AppArg _ -> false
+  and auxs d = function
+    | [] -> false
+    | t :: ts -> aux d t || auxs d ts
+  in
+  x < d && aux d t
+
+let list_filter_mapi f l =
+  let rec aux i = function
+  | [] -> []
+  | x :: xs ->
+      match f i x with
+      | Some y -> y :: aux (i+1) xs
+      | None -> aux (i+1) xs
+  in
+    aux 0 l
+
+let rec restrict_for_eta this xdepth depth adepth e t =
+  match deref_head ~depth:(xdepth+depth) t with
+  | AppUVar(r,0,args) ->
+      let restrict = ref false in
+      let new_args = list_filter_mapi (fun i t ->
+        if occurs this (xdepth+depth) adepth e t then (restrict := true; None)
+        else Some (mkConst i)) args in
+      if !restrict then begin
+        let r' = oref C.dummy in
+        r@:=mknLam (List.length args) (mkAppUVar r' 0 new_args);
+      end;
+      !restrict
+  | Arg (i,args) when e.(i) != C.dummy ->
+      restrict_for_eta this xdepth depth adepth e
+        (deref_uv ~from:adepth ~to_:depth args e.(i))
+  | AppArg (i,args) when e.(i) != C.dummy ->
+      restrict_for_eta this xdepth depth adepth e
+        (deref_appuv ~from:adepth ~to_:depth args e.(i))
+  | Lam x ->
+      restrict_for_eta this xdepth (depth+1) adepth e t
+  | UVar(r,lvl,ano) ->
+      let t, assignment = expand_uv ~depth r ~lvl ~ano in
+      option_iter (fun (r,_,assignment) -> r @:= assignment) assignment;
+      restrict_for_eta this xdepth (depth+1) adepth e t
+  | AppUVar(r,lvl,args) ->
+      let t, assignment = expand_appuv ~depth r ~lvl ~args in
+      option_iter (fun (r,_,assignment) -> r @:= assignment) assignment;
+      restrict_for_eta this xdepth (depth+1) adepth e t
+  | _ -> true
+let restrict_for_eta this xdepth depth adepth e t =
+  [%spy "dev:restrict_eta:in" ~rid (fun fmt () ->
+      Fmt.fprintf fmt "@[<hov 2>prune %a@ from %a@]"
+        (ppterm (xdepth+depth) [] adepth e) (mkConst this)
+        (ppterm (xdepth+depth) [] adepth e) t) ()];
+  let res = restrict_for_eta this xdepth depth adepth e t in
+  [%spy "dev:restrict_eta:out" ~rid (fun fmt () ->
+      Fmt.fprintf fmt "@[<hov 2>%a -> %b@]"
+        (ppterm (xdepth+depth) [] adepth e) t res) ()];
+  res
 
 let rec unif matching depth adepth a bdepth b e =
    [%trace "unif" ~rid ("@[<hov 2>^%d:%a@ =%d%s= ^%d:%a@]%!"
@@ -1506,6 +1577,35 @@ let rec unif matching depth adepth a bdepth b e =
    begin let delta = adepth - bdepth in
    (delta = 0 && a == b) || match a,b with
     | (Discard, _ | _, Discard) -> true
+
+   (* eta *)
+    | Lam t, Const c ->
+      let extra = mkConst (bdepth+depth) in
+      let eta = mkAppEta ~adepth c [] extra in
+      restrict_for_eta (adepth+depth) adepth (depth+1) adepth e t &&
+      unif matching (depth+1) adepth t bdepth eta e
+   | Const c, Lam t ->
+      let extra = mkConst (adepth+depth) in
+      let eta = mkAppEta ~adepth c [] extra in
+      restrict_for_eta (bdepth+depth) bdepth (depth+1) adepth e t &&
+      unif matching (depth+1) adepth eta bdepth t e
+   | Lam t, App (c,x,xs) ->
+      let extra = mkConst (bdepth+depth) in
+      let motion = move ~adepth ~from:(bdepth+depth) ~to_:(bdepth+depth+1) e in
+      let x = motion x in
+      let xs = List.map motion xs in
+      let eta = mkAppEta ~adepth c (x :: xs) extra in
+      restrict_for_eta (adepth+depth) adepth (depth+1) adepth e t &&
+      unif matching (depth+1) adepth t bdepth eta e
+   | App (c,x,xs), Lam t ->
+      let extra = mkConst (adepth+depth) in
+      let motion = hmove ~from:(bdepth+depth) ~to_:(bdepth+depth+1) in
+      let x = motion x in
+      let xs = List.map motion xs in
+      let eta = mkAppEta ~adepth c (x :: xs) extra in
+      restrict_for_eta (bdepth+depth) bdepth (depth+1) adepth e t &&
+      unif matching (depth+1) adepth eta bdepth t e
+
 
    (* _ as X binding *)
    | _, App(c,arg,[as_this]) when c == Global_symbols.asc ->
@@ -1731,30 +1831,6 @@ let rec unif matching depth adepth a bdepth b e =
        unif matching depth adepth hd1 bdepth hd2 e && unif matching depth adepth tl1 bdepth tl2 e
    | Nil, Nil -> true
 
-   (* eta *)
-   | Lam t, Const c ->
-       let extra = mkConst (bdepth+depth) in
-       let eta = mkAppEta ~adepth c [] extra in
-       unif matching (depth+1) adepth t bdepth eta e
-   | Const c, Lam t ->
-       let extra = mkConst (adepth+depth) in
-       let eta = mkAppEta ~adepth c [] extra in
-       unif matching (depth+1) adepth eta bdepth t e
-   | Lam t, App (c,x,xs) ->
-       let extra = mkConst (bdepth+depth) in
-       let motion = move ~adepth ~from:(bdepth+depth) ~to_:(bdepth+depth+1) e in
-       let x = motion x in
-       let xs = List.map motion xs in
-       let eta = mkAppEta ~adepth c (x :: xs) extra in
-       unif matching (depth+1) adepth t bdepth eta e
-   | App (c,x,xs), Lam t ->
-       let extra = mkConst (adepth+depth) in
-       let motion = hmove ~from:(bdepth+depth) ~to_:(bdepth+depth+1) in
-       let x = motion x in
-       let xs = List.map motion xs in
-       let eta = mkAppEta ~adepth c (x :: xs) extra in
-       unif matching (depth+1) adepth eta bdepth t e
-
    | _ -> false
    end]
 ;;
@@ -1776,15 +1852,6 @@ let unif ~matching (gid[@trace]) adepth e bdepth a b =
    The tail recursive version is even slower. *)
 
 (* }}} *)
-
-let rec deref_head ~depth = function
-  | UVar ({ contents = t }, from, ano)
-    when t != C.dummy ->
-      deref_head ~depth (deref_uv ~from ~to_:depth ano t)
-  | AppUVar ({contents = t}, from, args)
-    when t != C.dummy ->
-      deref_head ~depth (deref_appuv ~from ~to_:depth args t)
-  | x -> x
 
 let full_deref ~adepth env ~depth t =
   let rec deref d = function
