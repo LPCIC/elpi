@@ -28,6 +28,8 @@ tests-uvar :-
   (pi x \ (uvar_2 (bar (X x)))),
   print "--------- uvar_3",
   not (uvar_3 (x \ X0)),
+  print "--------- uvar_3 bis",
+  uvar_3 (x \ y\ X01 x y),
   print "--------- uvar_4",
   uvar_4 X1,
   print "--------- uvar_4 bis",

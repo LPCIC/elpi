@@ -1548,7 +1548,7 @@ let rec restrict_for_eta this xdepth depth adepth e t =
       restrict_for_eta this xdepth depth adepth e
         (deref_appuv ~from:adepth ~to_:depth args e.(i))
   | Lam x ->
-      restrict_for_eta this xdepth (depth+1) adepth e t
+      restrict_for_eta this xdepth (depth+1) adepth e x
   | UVar(r,lvl,ano) ->
       let t, assignment = expand_uv ~depth r ~lvl ~ano in
       option_iter (fun (r,_,assignment) -> r @:= assignment) assignment;
@@ -1558,6 +1558,7 @@ let rec restrict_for_eta this xdepth depth adepth e t =
       option_iter (fun (r,_,assignment) -> r @:= assignment) assignment;
       restrict_for_eta this xdepth (depth+1) adepth e t
   | _ -> true
+
 let restrict_for_eta this xdepth depth adepth e t =
   [%spy "dev:restrict_eta:in" ~rid (fun fmt () ->
       Fmt.fprintf fmt "@[<hov 2>prune %a@ from %a@]"
