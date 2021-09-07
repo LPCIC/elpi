@@ -82,7 +82,7 @@ test-unif :-
     print "---------- unif_2 ter",
     unif_2 (x\ y\ X5 x y),
     print "---------- unif_zero",
-    not ((x\ X x) = X). % bug
+    not((x\ X6 x) = X6). % bug
 
 
 main :- tests-uvar, tests-as, test-unif.
