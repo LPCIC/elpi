@@ -978,6 +978,11 @@ let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in let o
     let is_var x =
       match look ~depth x with
       | UnifVar(v,a) -> v,a
+      | Lam _ ->
+          begin match eta_contract_flex ~depth x with
+          | Some(v,a) -> v,a
+          | None -> raise No_clause
+          end
       | _ -> raise No_clause in
     state,
     match x, out with

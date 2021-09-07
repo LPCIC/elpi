@@ -973,6 +973,8 @@ module RawData : sig
 
   end
 
+  val eta_contract_flex : depth:int -> term -> (FlexibleData.Elpi.t * term list) option
+
 end
 
 (** This module lets one generate a query by providing a RawData.term directly *)

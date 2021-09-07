@@ -34,6 +34,7 @@ val execute_loop :
 val deref_uv : ?avoid:uvar_body -> from:constant -> to_:constant -> int -> term -> term
 val deref_appuv : ?avoid:uvar_body -> from:constant -> to_:constant -> term list -> term -> term
 val deref_head : depth:int -> term -> term
+val eta_contract_flex : depth:int -> term -> term option
 val is_flex : depth:int -> term -> uvar_body option
 
 val expand_uv : depth:int -> uvar_body -> lvl:int -> ano:int -> term

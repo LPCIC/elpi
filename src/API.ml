@@ -534,6 +534,15 @@ module RawData = struct
     | x -> Obj.magic x
   [@@ inline]
 
+  let eta_contract_flex ~depth t =
+    let module R = (val !r) in let open R in
+    match R.eta_contract_flex ~depth t with
+    | None -> None
+    | Some t ->
+        match look ~depth t with
+        | UnifVar (ub,args) -> Some (ub,args)
+        | _ -> assert false
+
   let mkConst n = let module R = (val !r) in R.mkConst n
   let mkLam = ED.Term.mkLam
   let mkApp = ED.Term.mkApp
