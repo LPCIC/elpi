@@ -44,12 +44,15 @@ module Setup : sig
   type elpi
 
   (** Initialize ELPI.
+
       [init] must be called before invoking the parser.
-      [builtins] the set of built-in predicates, eg [Elpi_builtin.std_builtins]
-      [basedir] current working directory (used to make paths absolute);
-      [argv] is list of options, see the {!val:usage} string;
-      It returns part of [argv] not relevant to ELPI and a handle [elpi]
-      to an elpi instance equipped with the given builtins. *)
+
+      @param builtins the set of built-in predicates, eg {!val:Elpi.Builtin.std_builtins}
+      @param basedir current working directory (used to make paths absolute);
+      @param argv is list of options, see the {!val:usage} string;
+
+      @return the part of [argv] not relevant to ELPI and a handle [elpi] to an
+      elpi instance equipped with the given builtins. *)
   val init :
     ?flags:flags ->
     builtins:builtins list ->
@@ -313,7 +316,7 @@ end
 (** Conversion for Elpi's built-in data types *)
 module BuiltInData : sig
 
-  (** See Elpi_builtin for a few more *)
+  (** See {!module:Elpi.Builtin} for a few more *)
   val int    : int Conversion.t
   val float  : float Conversion.t
   val string : string Conversion.t
