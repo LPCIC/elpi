@@ -1502,63 +1502,63 @@ let occurs x d adepth e t =
   in
   x < d && aux d t
 
-let rec exta_contract_args ~depth r args eat adepth e =
+let rec exta_contract_args ~orig_depth ~depth r args eat adepth e =
   match args, eat with
   | _, [] -> [%spy "eta_contract_flex" ~rid (fun fmt () -> Fmt.fprintf fmt "all eaten") ()];
-      Some (depth,r,List.rev args)
+      begin
+        try Some (AppUVar(r,0,List.map (move ~adepth ~from:depth ~to_:orig_depth e) (List.rev args)))
+        with RestrictionFailure -> None
+      end
   | Const x::xs, y::ys when x == y && not (List.exists (occurs y depth adepth e) xs) ->
       [%spy "eta_contract_flex" ~rid (fun fmt -> Fmt.fprintf fmt "eat %d") y];
-      exta_contract_args ~depth r xs ys adepth e 
+      exta_contract_args ~orig_depth ~depth r xs ys adepth e 
   | _, y::_ ->
       [%spy "eta_contract_flex" ~rid (fun fmt -> Fmt.fprintf fmt "cannot eat %d") y];
       None
 ;;
 
-let rec eta_contract_flex depth xdepth adepth e t eat =
+let rec eta_contract_flex orig_depth depth xdepth adepth e t eat =
   [%trace "eta_contract_flex" ~rid ("@[<hov 2>eta_contract_flex %d+%d:%a <- [%a]%!"
   xdepth depth (ppterm (xdepth+depth) [] adepth e) t
   (pplist (fun fmt i -> Fmt.fprintf fmt "%d" i) " ") eat) begin
   match deref_head ~depth:(xdepth+depth) t with
   | AppUVar(r,0,args) ->
-    exta_contract_args ~depth:(xdepth+depth) r (List.rev args) eat adepth e 
-  | Lam t -> eta_contract_flex (depth+1) xdepth adepth e t (depth+xdepth::eat)
+      exta_contract_args ~orig_depth:(xdepth+orig_depth) ~depth:(xdepth+depth) r (List.rev args) eat adepth e
+  | Lam t -> eta_contract_flex orig_depth (depth+1) xdepth adepth e t (depth+xdepth::eat)
   | UVar(r,lvl,ano) ->
       let t, assignment = expand_uv ~depth r ~lvl ~ano in
       option_iter (fun (r,_,assignment) -> r @:= assignment) assignment;
-      eta_contract_flex depth xdepth adepth e t eat
+      eta_contract_flex orig_depth depth xdepth adepth e t eat
   | AppUVar(r,lvl,args) ->
       let t, assignment = expand_appuv ~depth r ~lvl ~args in
       option_iter (fun (r,_,assignment) -> r @:= assignment) assignment;
-      eta_contract_flex depth xdepth adepth e t eat
+      eta_contract_flex orig_depth depth xdepth adepth e t eat
   | Arg (i, args) when e.(i) != C.dummy ->
-      eta_contract_flex depth xdepth adepth e
+      eta_contract_flex orig_depth depth xdepth adepth e
         (deref_uv ~from:adepth ~to_:(xdepth+depth) args e.(i)) eat
   | AppArg(i, args) when e.(i) != C.dummy ->
-      eta_contract_flex depth xdepth adepth e
+      eta_contract_flex orig_depth depth xdepth adepth e
         (deref_appuv ~from:adepth ~to_:(xdepth+depth) args e.(i)) eat
   | Arg (i, args) ->
       let to_ = adepth in
       let r = oref C.dummy in
       let v = UVar(r,to_,0) in
       e.(i) <- v;
-      eta_contract_flex depth xdepth adepth e
+      eta_contract_flex orig_depth depth xdepth adepth e
         (if args == 0 then v else UVar(r,to_,args)) eat
    | AppArg(i, args) ->
       let to_ = adepth in
       let r = oref C.dummy in
       let v = UVar(r,to_,0) in
       e.(i) <- v;
-      eta_contract_flex depth xdepth adepth e
+      eta_contract_flex orig_depth depth xdepth adepth e
         (mkAppUVar r to_ args) eat
   | _ -> None
    end]
 ;;
 let eta_contract_flex depth xdepth adepth e t =
-  match eta_contract_flex depth xdepth adepth e t [] with
-  | None -> None
-  | Some (from,r,args) ->
-      try Some (AppUVar(r,0,List.map (move ~adepth ~from ~to_:(depth+xdepth) e) args))
-      with RestrictionFailure -> None
+  eta_contract_flex depth depth xdepth adepth e t []
+  [@@inline]
 
 let rec unif matching depth adepth a bdepth b e =
    [%trace "unif" ~rid ("@[<hov 2>^%d:%a@ =%d%s= ^%d:%a@]%!"
@@ -1929,6 +1929,7 @@ let subtract_to_consts ~amount ~depth t =
 
 let eta_contract_flex ~depth t =
   eta_contract_flex depth 0 0 empty_env t
+  [@@inline]
 
 end
 (* }}} *)
