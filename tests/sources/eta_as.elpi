@@ -11,6 +11,8 @@ pred uvar_6 i:A.
 
 pred test-as.
 pred test-uvar.
+pred test-var.
+pred test-declare-constraint.
 
 uvar_1 (bar (uvar K Args)) :- std.assert! (var K) "uvar_1 bar X, not a var", print K Args.
 uvar_2 (bar X) :- std.assert! (var X K Args) "uvar_2 bar X, not a var", print K Args.
@@ -84,5 +86,16 @@ test-unif :-
     print "---------- unif_zero",
     not((x\ X6 x) = X6). % bug
 
+test-var :-
+    print "---------- var 1",
+   pi x \ (var (y \ X x y)),
+    print "---------- var 2",
+   pi x \ (var (y \ X c y)), 
+    print "---------- var 3",
+   pi x z \ (var (y \ X x y)).
 
-main :- tests-uvar, tests-as, test-unif.
+test-declare-constraint :-
+  declare_constraint false [x\ X x],
+  not(X = 1).
+
+main :- tests-uvar, tests-as, test-unif, test-var, test-declare-constraint.

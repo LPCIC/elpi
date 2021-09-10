@@ -1504,19 +1504,23 @@ let occurs x d adepth e t =
 
 let rec exta_contract_args ~depth r args eat adepth e =
   match args, eat with
-  | [], [] -> Some (depth,r,[])
-  | _, [] when eat  |> List.for_all (fun x ->
-               args |> List.for_all (fun arg ->
-               not (occurs x depth adepth e arg))) ->
+  | _, [] -> [%spy "eta_contract_flex" ~rid (fun fmt () -> Fmt.fprintf fmt "all eaten") ()];
       Some (depth,r,List.rev args)
-  | Const x::xs, y::ys when x == y -> exta_contract_args ~depth r xs ys adepth e 
-  | _ -> None
+  | Const x::xs, y::ys when x == y && not (List.exists (occurs y depth adepth e) xs) ->
+      [%spy "eta_contract_flex" ~rid (fun fmt -> Fmt.fprintf fmt "eat %d") y];
+      exta_contract_args ~depth r xs ys adepth e 
+  | _, y::_ ->
+      [%spy "eta_contract_flex" ~rid (fun fmt -> Fmt.fprintf fmt "cannot eat %d") y];
+      None
 ;;
 
 let rec eta_contract_flex depth xdepth adepth e t eat =
+  [%trace "eta_contract_flex" ~rid ("@[<hov 2>eta_contract_flex %d+%d:%a <- [%a]%!"
+  xdepth depth (ppterm (xdepth+depth) [] adepth e) t
+  (pplist (fun fmt i -> Fmt.fprintf fmt "%d" i) " ") eat) begin
   match deref_head ~depth:(xdepth+depth) t with
   | AppUVar(r,0,args) ->
-      exta_contract_args ~depth:(xdepth+depth) r (List.rev args) eat adepth e 
+    exta_contract_args ~depth:(xdepth+depth) r (List.rev args) eat adepth e 
   | Lam t -> eta_contract_flex (depth+1) xdepth adepth e t (depth+xdepth::eat)
   | UVar(r,lvl,ano) ->
       let t, assignment = expand_uv ~depth r ~lvl ~ano in
@@ -1547,12 +1551,13 @@ let rec eta_contract_flex depth xdepth adepth e t eat =
       eta_contract_flex depth xdepth adepth e
         (mkAppUVar r to_ args) eat
   | _ -> None
+   end]
 ;;
-let eta_contract_flex depth xdepth adepth e t eat =
-  match eta_contract_flex depth xdepth adepth e t eat with
+let eta_contract_flex depth xdepth adepth e t =
+  match eta_contract_flex depth xdepth adepth e t [] with
   | None -> None
   | Some (from,r,args) ->
-      try Some (AppUVar(r,0,List.map (move ~adepth ~from ~to_:(depth+xdepth-1) e) args))
+      try Some (AppUVar(r,0,List.map (move ~adepth ~from ~to_:(depth+xdepth) e) args))
       with RestrictionFailure -> None
 
 let rec unif matching depth adepth a bdepth b e =
@@ -1801,7 +1806,7 @@ let rec unif matching depth adepth a bdepth b e =
    | _ -> false
    end]
 and eta_contract_heap_or_expand_stack matching depth adepth a x bdepth b c args e =
-  match eta_contract_flex (depth+1) adepth adepth e x [adepth+depth] with
+  match eta_contract_flex depth adepth adepth e a with
   | Some flex -> unif matching depth adepth flex bdepth b e
   | None when c == Global_symbols.uvarc-> false
   | None ->
@@ -1811,7 +1816,7 @@ and eta_contract_heap_or_expand_stack matching depth adepth a x bdepth b c args 
       let eta = C.mkAppL c (args @ [extra]) in
       unif matching (depth+1) adepth x bdepth eta e
 and eta_contract_stack_or_expand_heap matching depth adepth a c args bdepth b x e =
-  match eta_contract_flex (depth+1) bdepth adepth e x [bdepth+depth] with
+  match eta_contract_flex depth bdepth adepth e b with
   | Some flex -> unif matching depth adepth a bdepth flex e
   | None when c == Global_symbols.uvarc-> false
   | None ->
@@ -1917,7 +1922,7 @@ let subtract_to_consts ~amount ~depth t =
     if amount = 0 then t else shift 0 t
 
 let eta_contract_flex ~depth t =
-  eta_contract_flex depth 0 0 empty_env t []
+  eta_contract_flex depth 0 0 empty_env t
 
 end
 (* }}} *)
@@ -2995,6 +3000,11 @@ let declare_constraint ~depth prog (gid[@trace]) args =
       let rec collect_keys t = match deref_head ~depth t with
         | UVar (r, _, _) | AppUVar (r, _, _) -> [r]
         | Discard -> [dummy_uvar_body]
+        | Lam _ ->
+            begin match HO.eta_contract_flex ~depth t with
+            | None -> type_error err
+            | Some t -> collect_keys t
+            end
         | _ -> type_error err
       and collect_keys_list t = match deref_head ~depth t with
         | Nil -> []
