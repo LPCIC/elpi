@@ -1569,13 +1569,13 @@ let rec unif matching depth adepth a bdepth b e =
    (delta = 0 && a == b) || match a,b with
     | (Discard, _ | _, Discard) -> true
 
-    (* _ as X binding *)
-    | _, App(c,arg,[as_this]) when c == Global_symbols.asc ->
-       unif matching depth adepth a bdepth arg e &&
-       unif matching depth adepth a bdepth as_this e
-    | _, App(c,arg,_) when c == Global_symbols.asc -> error "syntax error in as"
-    | App(c,arg,_), _ when c == Global_symbols.asc ->
-       unif matching depth adepth arg bdepth b e
+   (* _ as X binding *)
+   | _, App(c,arg,[as_this]) when c == Global_symbols.asc ->
+      unif matching depth adepth a bdepth arg e &&
+      unif matching depth adepth a bdepth as_this e
+   | _, App(c,arg,_) when c == Global_symbols.asc -> error "syntax error in as"
+   | App(c,arg,_), _ when c == Global_symbols.asc ->
+      unif matching depth adepth arg bdepth b e
 
 (* TODO: test if it is better to deref_uv first or not, i.e. the relative order
    of the clauses below *)
@@ -1652,16 +1652,6 @@ let rec unif matching depth adepth a bdepth b e =
     * meta level one can unify fronzen constants. One can use the var builtin
     * to discriminate the two cases, as in "p (uvar F L as X) :- var X, .." *)
 
-   (* eta *) 
-   | Lam x, Const c ->
-       eta_contract_heap_or_expand_stack matching depth adepth a x bdepth b c [] e
-    | Lam t, App(c,x,xs) ->
-       eta_contract_heap_or_expand_stack matching depth adepth a t bdepth b c (x::xs) e
-   | Const c, Lam x ->
-       eta_contract_stack_or_expand_heap matching depth adepth a c [] bdepth b x e
-   | App(c,x,xs), Lam t ->
-       eta_contract_stack_or_expand_heap matching depth adepth a c (x::xs) bdepth b t e
-       
    (* assign *)
    | _, Arg (i,0) ->
      begin try
@@ -1689,6 +1679,7 @@ let rec unif matching depth adepth a bdepth b e =
          r @:= t;
          true
        with RestrictionFailure ->
+        (* avoid fail occur-check on: x\A x = A *)
         match eta_contract_flex depth adepth bdepth e a with
         | None -> false
         | Some a -> unif matching depth adepth a bdepth b e end
@@ -1708,6 +1699,7 @@ let rec unif matching depth adepth a bdepth b e =
          r @:= t;
          true
        with RestrictionFailure ->
+        (* avoid fail occur-check on: x\A x = A *)
         match eta_contract_flex depth bdepth bdepth e b with
         | None -> false
         | Some b -> unif matching depth adepth a bdepth b e end
@@ -1808,6 +1800,16 @@ let rec unif matching depth adepth a bdepth b e =
    | Cons(hd1,tl1), Cons(hd2,tl2) ->
        unif matching depth adepth hd1 bdepth hd2 e && unif matching depth adepth tl1 bdepth tl2 e
    | Nil, Nil -> true
+
+   (* eta *)
+   | Lam t, Const c ->
+       eta_contract_heap_or_expand_stack matching depth adepth a t bdepth b c [] e
+   | Const c, Lam t ->
+       eta_contract_stack_or_expand_heap matching depth adepth a c [] bdepth b t e
+   | Lam t, App (c,x,xs) ->
+       eta_contract_heap_or_expand_stack matching depth adepth a t bdepth b c (x::xs) e
+   | App (c,x,xs), Lam t ->
+       eta_contract_stack_or_expand_heap matching depth adepth a c (x::xs) bdepth b t e
 
    | _ -> false
    end]
