@@ -1502,7 +1502,7 @@ let occurs x d adepth e t =
   in
   x < d && aux d t
 
-let rec exta_contract_args ~orig_depth ~depth r args eat adepth e =
+let rec eta_contract_args ~orig_depth ~depth r args eat adepth e =
   match args, eat with
   | _, [] -> [%spy "eta_contract_flex" ~rid (fun fmt () -> Fmt.fprintf fmt "all eaten") ()];
       begin
@@ -1511,7 +1511,7 @@ let rec exta_contract_args ~orig_depth ~depth r args eat adepth e =
       end
   | Const x::xs, y::ys when x == y && not (List.exists (occurs y depth adepth e) xs) ->
       [%spy "eta_contract_flex" ~rid (fun fmt -> Fmt.fprintf fmt "eat %d") y];
-      exta_contract_args ~orig_depth ~depth r xs ys adepth e 
+      eta_contract_args ~orig_depth ~depth r xs ys adepth e 
   | _, y::_ ->
       [%spy "eta_contract_flex" ~rid (fun fmt -> Fmt.fprintf fmt "cannot eat %d") y];
       None
@@ -1523,7 +1523,7 @@ let rec eta_contract_flex orig_depth depth xdepth adepth e t eat =
   (pplist (fun fmt i -> Fmt.fprintf fmt "%d" i) " ") eat) begin
   match deref_head ~depth:(xdepth+depth) t with
   | AppUVar(r,0,args) ->
-      exta_contract_args ~orig_depth:(xdepth+orig_depth) ~depth:(xdepth+depth) r (List.rev args) eat adepth e
+      eta_contract_args ~orig_depth:(xdepth+orig_depth) ~depth:(xdepth+depth) r (List.rev args) eat adepth e
   | Lam t -> eta_contract_flex orig_depth (depth+1) xdepth adepth e t (depth+xdepth::eat)
   | UVar(r,lvl,ano) ->
       let t, assignment = expand_uv ~depth r ~lvl ~ano in

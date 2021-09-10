@@ -2,7 +2,7 @@
 
 - Runtime/FFI:
   - fix handling of eta expanded unification variables. Many thanks to
-    @nguermond for testing this tricky case.
+    Nathan Guermond for testing this tricky case.
 
 # v1.13.7 (July 2021)
 
