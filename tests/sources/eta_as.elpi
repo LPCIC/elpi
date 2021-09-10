@@ -84,7 +84,7 @@ test-unif :-
     print "---------- unif_2 ter",
     unif_2 (x\ y\ X5 x y),
     print "---------- unif_zero",
-    not((x\ X6 x) = X6). % bug
+    (x\ X6 x) = X6.
 
 test-var :-
     print "---------- var 1",

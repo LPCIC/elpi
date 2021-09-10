@@ -1688,7 +1688,10 @@ let rec unif matching depth adepth a bdepth b e =
            (uppterm depth [] bdepth e) t) ()];
          r @:= t;
          true
-       with RestrictionFailure -> false end
+       with RestrictionFailure ->
+        match eta_contract_flex depth adepth bdepth e a with
+        | None -> false
+        | Some a -> unif matching depth adepth a bdepth b e end
    | UVar (r,origdepth,0), _ when not matching ->
        begin try
          let t =
@@ -1704,7 +1707,10 @@ let rec unif matching depth adepth a bdepth b e =
            (uppterm origdepth [] 0 empty_env) t) ()];
          r @:= t;
          true
-       with RestrictionFailure -> false end
+       with RestrictionFailure ->
+        match eta_contract_flex depth bdepth bdepth e b with
+        | None -> false
+        | Some b -> unif matching depth adepth a bdepth b e end
 
    (* simplify *)
    (* TODO: unif matching->deref_uv case. Rewrite the code to do the job directly? *)
