@@ -526,6 +526,11 @@ module RawData = struct
     | ED.Term.Discard ->
         let ub = ED.oref ED.dummy in
         UnifVar (Ref ub,R.mkinterval 0 depth 0)
+    | ED.Term.Lam _ as t ->
+        begin match R.eta_contract_flex ~depth t with
+        | None -> Obj.magic t (* HACK: view is a "subtype" of Term.term *)
+        | Some t -> look ~depth t
+        end
     | x -> Obj.magic x (* HACK: view is a "subtype" of Term.term *)
 
   let kool = function
@@ -751,12 +756,20 @@ module BuiltInPredicate = struct
              | NoData -> assert false);
     readback = (fun ~depth hyps csts state t ->
              let module R = (val !r) in let open R in
-             match R.deref_head ~depth t with
-             | ED.Term.Arg _ | ED.Term.AppArg _ -> assert false
-             | ED.Term.UVar _ | ED.Term.AppUVar _
-             | ED.Term.Discard -> state, NoData, []
-             | _ -> let state, x, gls = a.readback ~depth hyps csts state t in
-                    state, mkData x, gls);
+             let rec aux t =
+               match R.deref_head ~depth t with
+               | ED.Term.Arg _ | ED.Term.AppArg _ -> assert false
+               | ED.Term.UVar _ | ED.Term.AppUVar _
+               | ED.Term.Discard -> state, NoData, []
+               | ED.Term.Lam _ ->
+                   begin match R.eta_contract_flex ~depth t with
+                   | None -> state, NoData, []
+                   | Some t -> aux t
+                   end
+               | _ -> let state, x, gls = a.readback ~depth hyps csts state t in
+                       state, mkData x, gls
+             in
+               aux t);
   }
   let ioarg a =
     let open ContextualConversion in

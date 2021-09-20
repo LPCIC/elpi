@@ -624,6 +624,8 @@ module HO : sig
   (* Head of an heap term *)
   val deref_head : depth:int -> term -> term
 
+  val eta_contract_flex : depth:int -> term -> term option
+
   (* Put a flexible term in canonical expanded form: X^0 args.
    * It returns the canonical term and an assignment if needed.
    * (The first term is the result of dereferencing after the assignment) *)
@@ -1467,6 +1469,97 @@ let error_msg_hard_unif a b =
   "or set delay_outside_fragment to true (Elpi_API) in order to delay "^
   "(deprecated, for Teyjus compatibility)."
 
+let rec deref_head ~depth = function
+  | UVar ({ contents = t }, from, ano)
+    when t != C.dummy ->
+      deref_head ~depth (deref_uv ~from ~to_:depth ano t)
+  | AppUVar ({contents = t}, from, args)
+    when t != C.dummy ->
+      deref_head ~depth (deref_appuv ~from ~to_:depth args t)
+  | x -> x
+
+(* constant x occurs in term t with level d? *)
+let occurs x d adepth e t =
+  let rec aux d t = match deref_head ~depth:d t with
+    | Const c -> c = x
+    | Lam t -> aux (d+1) t
+    | App (c, v, vs) -> c = x || aux d v || auxs d vs
+    | UVar (r, lvl, ano) ->
+       let t, assignment = expand_uv ~depth:d r ~lvl ~ano in
+       option_iter (fun (r,_,assignment) -> r @:= assignment) assignment;
+       aux d t
+    | AppUVar (_, _, args) -> auxs d args
+    | Builtin (_, vs) -> auxs d vs
+    | Cons (v1, v2) -> aux d v1 || aux d v2
+    | Arg(i,args) when e.(i) != C.dummy ->
+      aux d (deref_uv ~from:adepth ~to_:d args e.(i))
+    | AppArg(i,args) when e.(i) != C.dummy ->
+      aux d (deref_appuv ~from:adepth ~to_:d args e.(i))
+    | Nil | CData _ | Discard | Arg _ | AppArg _ -> false
+  and auxs d = function
+    | [] -> false
+    | t :: ts -> aux d t || auxs d ts
+  in
+  x < d && aux d t
+
+let rec eta_contract_args ~orig_depth ~depth r args eat adepth e =
+  match args, eat with
+  | _, [] -> [%spy "eta_contract_flex" ~rid (fun fmt () -> Fmt.fprintf fmt "all eaten") ()];
+      begin
+        try Some (AppUVar(r,0,List.map (move ~adepth ~from:depth ~to_:orig_depth e) (List.rev args)))
+        with RestrictionFailure -> None
+      end
+  | Const x::xs, y::ys when x == y && not (List.exists (occurs y depth adepth e) xs) ->
+      [%spy "eta_contract_flex" ~rid (fun fmt -> Fmt.fprintf fmt "eat %d") y];
+      eta_contract_args ~orig_depth ~depth r xs ys adepth e 
+  | _, y::_ ->
+      [%spy "eta_contract_flex" ~rid (fun fmt -> Fmt.fprintf fmt "cannot eat %d") y];
+      None
+;;
+
+let rec eta_contract_flex orig_depth depth xdepth adepth e t eat =
+  [%trace "eta_contract_flex" ~rid ("@[<hov 2>eta_contract_flex %d+%d:%a <- [%a]%!"
+  xdepth depth (ppterm (xdepth+depth) [] adepth e) t
+  (pplist (fun fmt i -> Fmt.fprintf fmt "%d" i) " ") eat) begin
+  match deref_head ~depth:(xdepth+depth) t with
+  | AppUVar(r,0,args) ->
+      eta_contract_args ~orig_depth:(xdepth+orig_depth) ~depth:(xdepth+depth) r (List.rev args) eat adepth e
+  | Lam t -> eta_contract_flex orig_depth (depth+1) xdepth adepth e t (depth+xdepth::eat)
+  | UVar(r,lvl,ano) ->
+      let t, assignment = expand_uv ~depth r ~lvl ~ano in
+      option_iter (fun (r,_,assignment) -> r @:= assignment) assignment;
+      eta_contract_flex orig_depth depth xdepth adepth e t eat
+  | AppUVar(r,lvl,args) ->
+      let t, assignment = expand_appuv ~depth r ~lvl ~args in
+      option_iter (fun (r,_,assignment) -> r @:= assignment) assignment;
+      eta_contract_flex orig_depth depth xdepth adepth e t eat
+  | Arg (i, args) when e.(i) != C.dummy ->
+      eta_contract_flex orig_depth depth xdepth adepth e
+        (deref_uv ~from:adepth ~to_:(xdepth+depth) args e.(i)) eat
+  | AppArg(i, args) when e.(i) != C.dummy ->
+      eta_contract_flex orig_depth depth xdepth adepth e
+        (deref_appuv ~from:adepth ~to_:(xdepth+depth) args e.(i)) eat
+  | Arg (i, args) ->
+      let to_ = adepth in
+      let r = oref C.dummy in
+      let v = UVar(r,to_,0) in
+      e.(i) <- v;
+      eta_contract_flex orig_depth depth xdepth adepth e
+        (if args == 0 then v else UVar(r,to_,args)) eat
+   | AppArg(i, args) ->
+      let to_ = adepth in
+      let r = oref C.dummy in
+      let v = UVar(r,to_,0) in
+      e.(i) <- v;
+      eta_contract_flex orig_depth depth xdepth adepth e
+        (mkAppUVar r to_ args) eat
+  | _ -> None
+   end]
+;;
+let eta_contract_flex depth xdepth adepth e t =
+  eta_contract_flex depth depth xdepth adepth e t []
+  [@@inline]
+
 let rec unif matching depth adepth a bdepth b e =
    [%trace "unif" ~rid ("@[<hov 2>^%d:%a@ =%d%s= ^%d:%a@]%!"
        adepth (ppterm (adepth+depth) [] adepth empty_env) a
@@ -1477,7 +1570,7 @@ let rec unif matching depth adepth a bdepth b e =
     | (Discard, _ | _, Discard) -> true
 
    (* _ as X binding *)
-   | _, App(c,arg,[(Arg _ | AppArg _) as as_this]) when c == Global_symbols.asc ->
+   | _, App(c,arg,[as_this]) when c == Global_symbols.asc ->
       unif matching depth adepth a bdepth arg e &&
       unif matching depth adepth a bdepth as_this e
    | _, App(c,arg,_) when c == Global_symbols.asc -> error "syntax error in as"
@@ -1554,7 +1647,7 @@ let rec unif matching depth adepth a bdepth b e =
       unif matching depth adepth exp bdepth hd e &&
       let args = list_to_lp_list (C.mkinterval 0 vd 0 @ args) in
       unif matching depth adepth args bdepth arg e
-   | _, (Const c | App(c,_,[])) when c == Global_symbols.uvarc && matching -> false
+   | (App _ | Const _ | Builtin _ | Nil | Cons _ | CData _), (Const c | App(c,_,[])) when c == Global_symbols.uvarc && matching -> false
    (* On purpose we let the fully applied uvarc pass, so that at the
     * meta level one can unify fronzen constants. One can use the var builtin
     * to discriminate the two cases, as in "p (uvar F L as X) :- var X, .." *)
@@ -1585,7 +1678,11 @@ let rec unif matching depth adepth a bdepth b e =
            (uppterm depth [] bdepth e) t) ()];
          r @:= t;
          true
-       with RestrictionFailure -> false end
+       with RestrictionFailure ->
+        (* avoid fail occur-check on: x\A x = A *)
+        match eta_contract_flex depth adepth bdepth e a with
+        | None -> false
+        | Some a -> unif matching depth adepth a bdepth b e end
    | UVar (r,origdepth,0), _ when not matching ->
        begin try
          let t =
@@ -1601,7 +1698,11 @@ let rec unif matching depth adepth a bdepth b e =
            (uppterm origdepth [] 0 empty_env) t) ()];
          r @:= t;
          true
-       with RestrictionFailure -> false end
+       with RestrictionFailure ->
+        (* avoid fail occur-check on: x\A x = A *)
+        match eta_contract_flex depth bdepth bdepth e b with
+        | None -> false
+        | Some b -> unif matching depth adepth a bdepth b e end
 
    (* simplify *)
    (* TODO: unif matching->deref_uv case. Rewrite the code to do the job directly? *)
@@ -1702,30 +1803,37 @@ let rec unif matching depth adepth a bdepth b e =
 
    (* eta *)
    | Lam t, Const c ->
-       let extra = mkConst (bdepth+depth) in
-       let eta = App(c,extra,[]) in
-       unif matching (depth+1) adepth t bdepth eta e
+       eta_contract_heap_or_expand_stack matching depth adepth a t bdepth b c [] e
    | Const c, Lam t ->
-       let extra = mkConst (adepth+depth) in
-       let eta = App(c,extra,[]) in
-       unif matching (depth+1) adepth eta bdepth t e
+       eta_contract_stack_or_expand_heap matching depth adepth a c [] bdepth b t e
    | Lam t, App (c,x,xs) ->
-       let extra = mkConst (bdepth+depth) in
-       let motion = move ~adepth ~from:(bdepth+depth) ~to_:(bdepth+depth+1) e in
-       let x = motion x in
-       let xs = List.map motion xs @ [extra] in
-       let eta = App(c,x,xs) in
-       unif matching (depth+1) adepth t bdepth eta e
+       eta_contract_heap_or_expand_stack matching depth adepth a t bdepth b c (x::xs) e
    | App (c,x,xs), Lam t ->
-       let extra = mkConst (adepth+depth) in
-       let motion = hmove ~from:(bdepth+depth) ~to_:(bdepth+depth+1) in
-       let x = motion x in
-       let xs = List.map motion xs @ [extra] in
-       let eta = App(c,x,xs) in
-       unif matching (depth+1) adepth eta bdepth t e
+       eta_contract_stack_or_expand_heap matching depth adepth a c (x::xs) bdepth b t e
 
    | _ -> false
    end]
+and eta_contract_heap_or_expand_stack matching depth adepth a x bdepth b c args e =
+  match eta_contract_flex depth adepth adepth e a with
+  | Some flex -> unif matching depth adepth flex bdepth b e
+  | None when c == Global_symbols.uvarc-> false
+  | None ->
+      let extra = mkConst (bdepth+depth) in
+      let motion = move ~adepth ~from:(bdepth+depth) ~to_:(bdepth+depth+1) e in
+      let args = List.map motion args in
+      let eta = C.mkAppL c (args @ [extra]) in
+      unif matching (depth+1) adepth x bdepth eta e
+and eta_contract_stack_or_expand_heap matching depth adepth a c args bdepth b x e =
+  match eta_contract_flex depth bdepth adepth e b with
+  | Some flex -> unif matching depth adepth a bdepth flex e
+  | None when c == Global_symbols.uvarc-> false
+  | None ->
+      let extra = mkConst (adepth+depth) in
+      let motion = hmove ~from:(adepth+depth) ~to_:(adepth+depth+1) in
+      let args = List.map motion args in
+      let eta= C.mkAppL c (args @ [extra]) in
+      unif matching (depth+1) adepth eta bdepth x e
+
 ;;
 
 (* FISSA PRECEDENZA PER AS e FISSA INDEXING per AS e fai coso generale in unif *)
@@ -1745,15 +1853,6 @@ let unif ~matching (gid[@trace]) adepth e bdepth a b =
    The tail recursive version is even slower. *)
 
 (* }}} *)
-
-let rec deref_head ~depth = function
-  | UVar ({ contents = t }, from, ano)
-    when t != C.dummy ->
-      deref_head ~depth (deref_uv ~from ~to_:depth ano t)
-  | AppUVar ({contents = t}, from, args)
-    when t != C.dummy ->
-      deref_head ~depth (deref_appuv ~from ~to_:depth args t)
-  | x -> x
 
 let full_deref ~adepth env ~depth t =
   let rec deref d = function
@@ -1829,6 +1928,10 @@ let subtract_to_consts ~amount ~depth t =
   | CData _ as x -> x
   in
     if amount = 0 then t else shift 0 t
+
+let eta_contract_flex ~depth t =
+  eta_contract_flex depth 0 0 empty_env t
+  [@@inline]
 
 end
 (* }}} *)
@@ -2316,7 +2419,7 @@ let rec classify_goal_arg ~depth t =
   | App (k,_,_) when k == Global_symbols.uvarc -> Rigid mustbevariablec
   | App (k,a,_) when k == Global_symbols.asc -> classify_goal_arg ~depth a
   | (App (k,_,_) | Builtin (k,_)) -> Rigid (k)
-  | Lam _ -> Variable (* loose indexing to enable eta *)
+  | Lam t -> classify_goal_arg ~depth:(depth+1) t (* eta *)
   | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> Variable
   | CData d -> 
      let hash = -(CData.hash d) in
@@ -2906,6 +3009,11 @@ let declare_constraint ~depth prog (gid[@trace]) args =
       let rec collect_keys t = match deref_head ~depth t with
         | UVar (r, _, _) | AppUVar (r, _, _) -> [r]
         | Discard -> [dummy_uvar_body]
+        | Lam _ ->
+            begin match HO.eta_contract_flex ~depth t with
+            | None -> type_error err
+            | Some t -> collect_keys t
+            end
         | _ -> type_error err
       and collect_keys_list t = match deref_head ~depth t with
         | Nil -> []
@@ -3539,6 +3647,7 @@ let is_flex = HO.is_flex
 let deref_uv = HO.deref_uv
 let deref_appuv = HO.deref_appuv
 let deref_head = HO.deref_head
+let eta_contract_flex = HO.eta_contract_flex
 let make_runtime = Mainloop.make_runtime
 let lp_list_to_list = Clausify.lp_list_to_list
 let list_to_lp_list = HO.list_to_lp_list
