@@ -5,4 +5,11 @@
   (modules elpi_REPL)
 )
 
+(executable
+  (name toy)
+  (preprocess (per_module
+    ((pps ppx_deriving.std elpi.trace.ppx -- --cookie "elpi_trace=\"true\"") toy)))
+  (libraries unix)
+  (modules toy))
+
 (vendored_dirs vendor)
