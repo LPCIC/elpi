@@ -7,15 +7,16 @@ type tm =
 
 let dummy = App('!',[App('!',[])])
 
-let pp_var =
+let pp_var, pp_reset =
   let l = ref [] in
-  fun v ->
+  (fun v ->
     try
       List.assq v !l
     with Not_found ->
       let s = "X" ^ string_of_int (List.length !l) in
       l := (v,s) :: !l;
-      s
+      s),
+  (fun () -> l := [])
 
 let rec pp fmt = function
   | App(c,[]) -> Format.fprintf fmt "%c" c
@@ -151,20 +152,37 @@ let graph1 = [
 let main program query steps n =
   all_rules := program;
   gas := steps;
-  Format.eprintf "@\n%!query: %a@\n%!" pp query;
+  pp_reset ();
   let rec all n = function
-  | `FAIL -> Format.eprintf "no more solutions@\n%!"
-  | `TIMEOUT -> Format.eprintf "no more steps@\n%!"
+  | `FAIL -> [Format.asprintf "no"]
+  | `TIMEOUT -> [Format.asprintf "steps"]
   | `OK alts ->
-      Format.eprintf "solution %d: %a@\n%!" n pp query;
-      if n = 1 then Format.eprintf "stop@\n%!"
-      else all (n-1) (next_alt alts)
+      let s = Format.asprintf "solution: %a" pp query in
+      if n = 1 then [s]
+      else s :: all (n-1) (next_alt alts)
   in
-  all n (run query !all_rules Done [])
+  let q = Format.asprintf "query: %a" pp query in
+  q :: all n (run query !all_rules Done [])
+
+let check s l1 l2 =
+  if l1 <> l2 then
+    Format.eprintf "%s:\n%a\n%a\n%!" s
+      (Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f " ") Format.pp_print_string) l1
+      (Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f " ") Format.pp_print_string) l2
+  else
+    Format.eprintf "%s: ok\n%!" s
 
 let () =
   let _ = Trace_ppx_runtime.Runtime.parse_argv (Array.to_list Sys.argv) in
 
-  main (graph1 @ tr_closure) (App('t',[const 'a';Var(ref dummy)])) 100 3;
-  main (tr_closure @ graph1) (App('t',[const 'a';Var(ref dummy)])) 100 3;
+  check "transitive closure fwd nofail"
+    (main (graph1 @ tr_closure) (App('t',[const 'a';Var(ref dummy)])) 100 3)
+    ["query: t(a, X0)"; "solution: t(a, b)"; "solution: t(a, c)"; "solution: t(a, d)"];
+  check "transitive closure fwd nofail 2"
+    (main (graph1 @ tr_closure) (App('t',[const 'a';Var(ref dummy)])) 100 4)
+    ["query: t(a, X0)"; "solution: t(a, b)"; "solution: t(a, c)"; "solution: t(a, d)"; "steps"];
+  check "transitive closure loop"
+    (main (tr_closure @ graph1) (App('t',[const 'a';Var(ref dummy)])) 100 3)
+    ["query: t(a, X0)"; "steps"]
+;;
 
