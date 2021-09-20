@@ -197,7 +197,7 @@ let pull f l =
     | x :: xs -> pull (x :: acc) xs in
   pull [] l
 
-let err_spy ~loc () = err ~loc "use: [%spy id pp x] or [%spy id ~gid ~cond pp x]"
+let err_spy ~loc () = err ~loc "use: [%spy id ~rid pp x] or [%spy id ~rid ~gid ~cond pp x]"
 
 let spyl_expand_function ~loc ~path:_ = function
   | { pexp_desc = Pexp_apply(name, args); _ } when is_string_literal name ->
@@ -273,12 +273,12 @@ let trace_expand_function ~loc ~path:_ = function
                 [%expr fun fmt -> [%e eapply ~loc [%expr Format.fprintf fmt] (hd :: List.map snd args)]]
             | x -> x in
           trace ~rid ~loc name pp code
-        | _ -> err ~loc "use: [%trace ~rid name pp code]"
+        | _ -> err ~loc "use: [%trace name ~rid pp code]"
         end
    | { pexp_desc = Pexp_apply (_,args); _ } ->
        let _, code = List.hd (List.rev args) in
        code
-   | _ -> err ~loc "use: [%trace ~rid name pp code]"
+   | _ -> err ~loc "use: [%trace name ~rid pp code]"
 
 let trace_extension =
   Extension.declare
