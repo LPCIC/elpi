@@ -1,0 +1,9 @@
+(executable
+  (name toy)
+  (preprocess (per_module
+    ((pps ppx_deriving.std elpi.trace.ppx -- --cookie "elpi_trace=\"true\"") toy ast)))
+  (libraries unix)
+  (modules toy parser lexer ast))
+
+(ocamllex lexer)
+(menhir (modules parser))
