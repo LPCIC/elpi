@@ -29,9 +29,6 @@ type 'a path_string_elem =
   | Constant of 'a * int (* name, arity *)
   | Bound of int * int (* rel, arity *)
   | Variable (* arity is 0 *)
-  | Proposition (* arity is 0 *) 
-  | Datatype (* arity is 0 *) 
-  | Dead (* arity is 0 *) 
 ;;  
 
 type 'a path = ('a path_string_elem) list;;
