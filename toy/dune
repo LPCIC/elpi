@@ -3,7 +3,7 @@
   (preprocess (per_module
     ((pps ppx_deriving.std elpi.trace.ppx -- --cookie "elpi_trace=\"true\"") toy ast)))
   (libraries unix)
-  (modules toy parser lexer ast))
+  (modules toy parser lexer ast trie discrimination_tree))
 
 (ocamllex lexer)
 (menhir (modules parser))
