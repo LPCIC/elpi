@@ -98,7 +98,7 @@ let rec unif (s:tm array) (a:tm) (b:tm) = match a, b with
 
 (******************************* table ****************************)
 
-(*
+
 let canonical_names = [|
   App(" 0 ",[]) ;
   App(" 1 ",[]) ;
@@ -113,12 +113,66 @@ let canonical_names = [|
 |]
 
 type canonical_goal = goal
-let canonify (g : goal) : canonical_goal = assert false
-let variant (c : canonical_goal) (g : goal) = assert false
 
-*)
+let rec map_acc f acc = function
+  | [] -> acc, []
+  | x :: xs ->
+      let acc, y = f acc x in
+      let acc, ys = map_acc f acc xs in
+      acc, y :: ys
 
-module DT = Discrimination_tree
+let rec canonify i (g : goal) : int * canonical_goal =
+  match g with
+  | Arg _ -> assert false
+  | Var r when !r <> dummy -> canonify i !r
+  | Var r -> assign r canonical_names.(i); i+1, !r
+  | App(s,args) ->
+      let i, args = map_acc canonify i args in
+      i, App(s,args)
+
+let canonify (g : goal) : canonical_goal =
+  let old_trail = !trail in
+  let _, g = canonify 0 g in
+  backtrack old_trail;
+  g
+
+(* we could canonify g and then Stdlib.compare (OC can be expensive)*)
+let variant (c : canonical_goal) (g : goal) =
+  let old_trail = !trail in
+  let u = unif [||] g c in (* pass g on the left to avoid heapify on assign *)
+  backtrack old_trail;
+  u
+
+module TMI = struct
+  type input = canonical_goal
+  type constant_name = string
+  let compare = Stdlib.compare
+  let rec path_string_of = function
+    | Arg _ -> assert false
+    | Var r when !r <> dummy -> assert false
+    | Var _ -> assert false (* we are on canonical goals *)
+    | App(s,args) ->
+        let arity = List.length args in
+        Discrimination_tree.Constant(s,arity) ::
+          List.flatten (List.map path_string_of args)
+
+end
+
+module TMS = Set.Make(struct
+
+  type t = goal list (* what if not ground? *)
+  let compare = Stdlib.compare
+
+end)
+
+module DT = Discrimination_tree.Make(TMI)(TMS)
+
+let table_find t cg =
+  let s = DT.retrieve_unifiables t cg in
+  match TMS.elements s with
+  | [] -> raise Not_found
+  | [x] -> x
+  | _ -> assert false
 
 
 (******************************* run ****************************)

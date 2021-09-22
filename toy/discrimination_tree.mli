@@ -26,7 +26,6 @@
 
 type 'a path_string_elem = 
   | Constant of 'a * int (* name, arity *)
-  | Bound of int * int (* rel, arity *)
   | Variable (* arity is 0 *)
 ;;  
 
@@ -38,7 +37,6 @@ module type Indexable = sig
   val compare: 
     constant_name path_string_elem -> 
     constant_name path_string_elem -> int
-  val string_of_path : constant_name path -> string
   val path_string_of : input -> constant_name path
 end
 

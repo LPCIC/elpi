@@ -26,9 +26,8 @@
 (* $Id: discrimination_tree.ml 11171 2011-01-11 15:12:32Z tassi $ *)
 
 type 'a path_string_elem = 
-  | Constant of 'a * int (* name, arity *)
-  | Bound of int * int (* rel, arity *)
-  | Variable (* arity is 0 *)
+  | Constant of 'a * int
+  | Variable
 ;;  
 
 type 'a path = ('a path_string_elem) list;;
@@ -39,14 +38,12 @@ module type Indexable = sig
   val compare: 
     constant_name path_string_elem -> 
     constant_name path_string_elem -> int
-  val string_of_path : constant_name path -> string
   val path_string_of : input -> constant_name path
 end
 
 let arity_of = function
-  | Constant (_,a) 
-  | Bound (_,a) -> a
-  | _ -> 0 
+  | Constant (_,a) -> a 
+  | Variable -> 0 
 ;;
 
 module type DiscriminationTree =
