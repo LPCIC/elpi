@@ -1,7 +1,9 @@
+(******************************* ast ****************************)
 open Ast
+let dummy = App("!",[App("!",[])])
+let cut = App("!",[])
 
 let rid = ref 0 (* trace_ppx, runtime id *)
-let dummy = App("!",[App("!",[])])
 
 let pp_var, pp_reset =
   let l = ref [] in
@@ -23,8 +25,8 @@ let rec pp fmt = function
 
 let pp_tm = pp
 let ppl s = Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f s) pp
-let dummy = App("!",[App("!",[])])
 
+(******************************* backtrack ****************************)
 let trail = ref []
 
 let assign v t =
@@ -40,6 +42,32 @@ let rec backtrack o =
         trail := vs;
         backtrack o
   end
+
+  type goal = tm
+[@@deriving show]
+
+type rule = int * tm * tm list
+[@@deriving show]
+
+type frame =
+  | Done
+  | Todo of {
+      brothers : goal list;
+      cutinfo : alt list; [@printer (fun _ _ -> ())]
+      siblings : frame;
+    }
+and alt = {
+  goal: goal;
+  rules : rule list; [@printer (fun _ _ -> ())]
+  stack : frame; [@printer (fun _ _ -> ())]
+  old_trail : tm ref list; [@printer (fun _ _ -> ())]
+  cutinfo : alt list; [@printer (fun _ _ -> ())]
+}
+[@@deriving show]
+type alts = alt list
+[@@deriving show]
+
+(******************************* unif ****************************)
 
 let rec fold_left2 f l1 l2 = match l1, l2 with
   | [], [] -> true
@@ -68,31 +96,33 @@ let rec unif (s:tm array) (a:tm) (b:tm) = match a, b with
     if c1 <> c2 then false
     else fold_left2 (unif s) args1 args2
 
+(******************************* table ****************************)
 
-type goal = tm
-[@@deriving show]
+(*
+let canonical_names = [|
+  App(" 0 ",[]) ;
+  App(" 1 ",[]) ;
+  App(" 2 ",[]) ;
+  App(" 3 ",[]) ;
+  App(" 4 ",[]) ;
+  App(" 5 ",[]) ;
+  App(" 6 ",[]) ;
+  App(" 7 ",[]) ;
+  App(" 8 ",[]) ;
+  App(" 9 ",[]) ;
+|]
 
-type rule = int * tm * tm list
-[@@deriving show]
+type canonical_goal = goal
+let canonify (g : goal) : canonical_goal = assert false
+let variant (c : canonical_goal) (g : goal) = assert false
 
-type frame =
-  | Done
-  | Todo of {
-      brothers : goal list;
-      cutinfo : alt list; [@printer (fun _ _ -> ())]
-      siblings : frame;
-    }
-and alt = {
-  goal: goal;
-  rules : rule list; [@printer (fun _ _ -> ())]
-  stack : frame; [@printer (fun _ _ -> ())]
-  old_trail : tm ref list; [@printer (fun _ _ -> ())]
-  cutinfo : alt list; [@printer (fun _ _ -> ())]
+*)
 
-}
-[@@deriving show]
-type alts = alt list
-[@@deriving show]
+module DT = Discrimination_tree
+
+
+(******************************* run ****************************)
+
 
 let all_rules = ref []
 let gas = ref 0
@@ -103,7 +133,7 @@ let rec run goal rules next (alts : alts) (cutinfo : alts) =
   begin 
   if !gas = 0 then `TIMEOUT else begin decr gas;
   (* CONTROL *)
-  if goal = App("!",[]) then pop_andl next cutinfo
+  if goal = cut then pop_andl next cutinfo
   (* TABLE *)
   (* SLD *)
   else match rules with
@@ -145,8 +175,7 @@ let run goal rules =
   | [g] -> run g rules Done [] []
   | g::gs -> run g rules (Todo { brothers = gs; siblings = Done; cutinfo = []}) [] []
 
-let const x = App(x,[])
-
+(***************************** TEST *************************)
 module P = struct
 
   let l = ref []
@@ -205,19 +234,21 @@ let main query steps n program =
   in
   all n (run query !all_rules)
 
+let errors = ref 0
 let check ?(steps=100) s p q n l1 =
   let l2 = main q steps n p in
-  if l1 <> l2 then
+  if l1 <> l2 then begin
+    incr errors;
     Format.eprintf "ERROR: %s:\n%a\n%a\n%!" s
       (Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f " ") Format.pp_print_string) l1
       (Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f " ") Format.pp_print_string) l2
-  else
+  end else
     Format.eprintf "%s: ok\n%!" s
 
 let () =
   let _ = Trace_ppx_runtime.Runtime.parse_argv (Array.to_list Sys.argv) in
 
-  check "transitive closure fwd nofail"
+  check "transitive closure loops instead of fail"
       "
       t(a,b).
       t(a,c).
@@ -227,17 +258,7 @@ let () =
       "
     "t(a,X)" 4 ["t(a, b)"; "t(a, c)"; "t(a, d)"; "steps"];
 
-  check "transitive closure fwd fail after solutions"
-      "
-      t(a,b).
-      t(a,c).
-      t(b,d).
-      t(X,Y) :- t(X,Z), t(Z,Y).
-      t(X,X).
-      "
-    "t(a,X)" 4 ["t(a, b)"; "t(a, c)"; "t(a, d)"; "steps"];
-
-  check "transitive closure loop"
+  check "transitive closure loops before producing any solution"
       "
       t(X,Y) :- t(X,Z), t(Z,Y).
       t(X,X).
@@ -247,21 +268,21 @@ let () =
       "
     "t(a,X)" 1 ["steps"];
 
-  check "cut fail"
+  check "cutting the solution is failure"
       "
       t :- !, fail.
       t.
       "
     "t" 1 ["no"];
 
-  check "cut"
+  check "cutting nothing is noop"
       "
       t.
       t :- !, fail.
       "
     "t" 2 ["t"; "no"];
 
-  check "tail cut"
+  check "tail cut kills alternatives"
       "
       t.
       t.
@@ -269,7 +290,7 @@ let () =
       "
     "p" 2 ["p"; "no"];
 
-  check "tail no cut"
+  check "tail cut removed, more solutions"
       "
       t.
       t.
@@ -277,6 +298,7 @@ let () =
       "
     "p" 3 ["p"; "p"; "no"];
 
+  exit !errors
 ;;
 
 
