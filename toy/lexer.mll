@@ -31,10 +31,10 @@ let non_escape = any_character # ['\\']
 let sign = ['+' '-']
 
 (* Atoms *)
-let atom = lower_case alphanumerical *
+let atom = (lower_case | underline) alphanumerical *
 
 (* Variables *)
-let variable = (upper_case | underline) alphanumerical *
+let variable = upper_case alphanumerical *
 
 rule token = parse
     (* Meta-characters *)

@@ -181,6 +181,12 @@ let table_find t cg =
 let all_rules = ref []
 let gas = ref 0
 
+let tabled = function
+  | App(s,_) -> s.[0] = '_'
+  | _ -> false
+
+let table = ref DT.empty
+
 let rec run goal rules next (alts : alts) (cutinfo : alts) =
   [%trace "run" ~rid 
     ("@[<hov 2>g: %a@ next: %a@ alts: %a@]@\n" pp_tm goal pp_frame next pp_alts alts)
@@ -189,6 +195,17 @@ let rec run goal rules next (alts : alts) (cutinfo : alts) =
   (* CONTROL *)
   if goal = cut then pop_andl next cutinfo
   (* TABLE *)
+  else if tabled goal then
+    begin
+      let cgoal = canonify goal in
+      try
+        let solutions = table_find !table cgoal in
+        if solutions = [] then `TIMEOUT
+        else assert false
+      with Not_found ->
+        table := DT.index !table cgoal [];
+        run goal rules next alts cutinfo
+    end
   (* SLD *)
   else match rules with
   | [] -> next_alt alts
@@ -351,6 +368,12 @@ let () =
       p :- t.
       "
     "p" 3 ["p"; "p"; "no"];
+
+  check "table"
+      "
+      _t :- _t.
+      "
+    "_t" 1 ["steps"];
 
   exit !errors
 ;;
