@@ -27,22 +27,31 @@ let pp_tm = pp
 let ppl s = Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f s) pp
 
 (******************************* backtrack ****************************)
-let trail = ref []
+type trail_log = tm ref list ref
+[@@deriving show]
+type fwd_trail = (tm ref * tm) list
+[@@deriving show]
 
-let assign v t =
+type trail = { log : trail_log; old_trail : tm ref list }
+[@@deriving show]
+
+let assign { log = trail; _ }  v t =
   trail := v :: !trail;
   [%spy "assign" ~rid pp_tm (Var v)];
   [%spy "assign:with" ~rid pp_tm t];
   v := t
 
-let rec backtrack o =
+let empty_trail () = let bottom = [] in { log = ref bottom; old_trail = bottom }
+
+let rec backtrack ?(already_undone=false) ({ log = trail; old_trail = o } as t) =
   if o != !trail then begin
     match !trail with
-    | [] -> assert false
+    | [] ->
+        if already_undone then () else assert false
     | v :: vs ->
         v := dummy;
         trail := vs;
-        backtrack o
+        backtrack ~already_undone t
   end
 
 let rec chop_trail o trail =
@@ -52,8 +61,18 @@ let rec chop_trail o trail =
     | v :: vs -> v :: chop_trail o vs
   else
      []
-let chop_trail o = chop_trail o !trail
+let chop_trail trail o = chop_trail o !trail
 
+let rec redo trail = function
+  | [] -> ()
+  | (r,v) :: rest -> assign trail r v; redo trail rest
+
+let rec copy_trail = function
+  | [] -> []
+  | r :: trail -> (r, !r) :: copy_trail trail
+let copy_trail { log; _ } = copy_trail !log
+
+let checkpoint { log; _ } = { log; old_trail = !log }
 
 type goal = tm
 [@@deriving show]
@@ -74,21 +93,21 @@ let rec heapify s = function
   | Arg i when s.(i) != dummy -> s.(i)
   | Arg i -> let t = Var (ref dummy) in s.(i) <- t; t
 
-let rec unif (s:tm array) (a:tm) (b:tm) = match a, b with
+let rec unif (trail:trail) (s:tm array) (a:tm) (b:tm) = match a, b with
   (* deref *)
-  | Var r, _ when !r != dummy -> unif s !r b
-  | _, Var r when !r != dummy -> unif s a !r
-  | _, Arg i when s.(i) != dummy -> unif s a s.(i)
+  | Var r, _ when !r != dummy -> unif trail s !r b
+  | _, Var r when !r != dummy -> unif trail s a !r
+  | _, Arg i when s.(i) != dummy -> unif trail s a s.(i)
   | Arg _, _ -> assert false
 
   (* assign *)
-  | Var r, _ -> assign r (heapify s b); true
-  | _, Var r -> assign r a; true (* missing OC *)
+  | Var r, _ -> assign trail r (heapify s b); true
+  | _, Var r -> assign trail r a; true (* missing OC *)
   | _, Arg i -> s.(i) <- a; true
 
   | App(c1,args1), App(c2,args2) ->
     if c1 <> c2 then false
-    else fold_left2 (unif s) args1 args2
+    else fold_left2 (unif trail s) args1 args2
 
 (******************************* table ****************************)
 
@@ -115,19 +134,19 @@ let rec map_acc f acc = function
       let acc, ys = map_acc f acc xs in
       acc, y :: ys
 
-let rec canonify i (g : tm) : int * canonical_goal =
+let rec canonify trail i (g : tm) : int * canonical_goal =
   match g with
   | Arg _ -> assert false
-  | Var r when !r <> dummy -> canonify i !r
-  | Var r -> assign r canonical_names.(i); i+1, !r
+  | Var r when !r <> dummy -> (canonify trail) i !r
+  | Var r -> assign trail r canonical_names.(i); i+1, !r
   | App(s,args) ->
-      let i, args = map_acc canonify i args in
+      let i, args = map_acc (canonify trail) i args in
       i, App(s,args)
 
 let copy g =
-  let old_trail = !trail in
-  let n, _ = canonify 0 g in
-  backtrack old_trail;
+  let trail = empty_trail () in
+  let n, _ = canonify trail 0 g in
+  backtrack trail;
   let v = Array.init n (fun _ -> ref @@ Var (ref dummy)) in
   let rec aux i = function
     | Arg _ -> assert false
@@ -147,16 +166,16 @@ let rec ground = function
       App(s,List.map ground args)
 
 let canonify (g : tm) : canonical_goal =
-  let old_trail = !trail in
-  let _, g = canonify 0 g in
-  backtrack old_trail;
+  let trail = empty_trail () in
+  let _, g = canonify trail 0 g in
+  backtrack trail;
   g
 
 (* we could canonify g and then Stdlib.compare (OC can be expensive)*)
 let variant (c : canonical_goal) (g : goal) =
-  let old_trail = !trail in
-  let u = unif [||] g c in (* pass g on the left to avoid heapify on assign *)
-  backtrack old_trail;
+  let trail = empty_trail () in
+  let u = unif trail [||] g c in (* pass g on the left to avoid heapify on assign *)
+  backtrack trail;
   u
 
   module DT : sig
@@ -208,7 +227,7 @@ and alt = {
   goal: goal;
   rules : rule list; [@printer (fun _ _ -> ())]
   stack : frame; [@printer (fun _ _ -> ())]
-  old_trail : tm ref list; [@printer (fun _ _ -> ())]
+  trail : trail; [@printer (fun _ _ -> ())]
   cutinfo : alt list; [@printer (fun _ _ -> ())]
 }
 
@@ -245,14 +264,15 @@ type table_entry_status = Incomplete | Complete
 
 let table = ref DT.empty
 
-let rec select goal = function
+let table_reset () = table := DT.empty
+
+let rec select trail goal = function
   | [] -> None
   | (stack,hd,conds)::rules ->
-    let old_trail = !trail in
     let stack = Array.init stack (fun _ -> dummy) in
-    if not (unif stack goal hd) then begin
-      backtrack old_trail;
-      select goal rules
+    if not (unif trail stack goal hd) then begin
+      backtrack trail;
+      select trail goal rules
     end else begin
       [%spy "select" ~rid (fun fmt () -> Format.fprintf fmt "%a /// %a :- %a." pp_tm goal pp_tm hd pp_tm (App("&",conds))) ()];
       Some (List.map (heapify stack) conds, rules)
@@ -264,6 +284,8 @@ let new_table_entry cgoal =
 type consumer = {
   next : frame;
   goal : tm;
+  trail : trail;
+  env : fwd_trail;
 }
 [@@deriving show]
 
@@ -271,7 +293,7 @@ type generator = {
   next : frame;
   goal : tm;
   rules : rule list; [@printer (fun fmt l -> Format.fprintf fmt "%d" (List.length l))]
-  undo : tm ref list;
+  trail : trail;
 }
 [@@deriving show]
 
@@ -294,6 +316,7 @@ type sld_status = {
   next : frame;
   alts : alts;
   cutinfo : alts;
+  trail : trail;
 }
 
 let dt_append k v t =
@@ -337,111 +360,115 @@ let table_entry_complete cgoal =
   | _, Complete -> assert false
   | exception Not_found -> assert false
 
-let rec run { goal; rules; next; alts; cutinfo } (sgs : slg_status) =
+type result = TIMEOUT | FAIL | OK of alts * slg_status
+
+let rec run { goal; rules; next; alts; cutinfo; trail } (sgs : slg_status) : result =
   [%trace "run" ~rid 
     ("@[<hov 2>g: %a@ next: %a@ alts: %a@]@\n" pp_tm goal pp_frame next pp_alts alts)
   begin match !gas with
-  | 0 -> `TIMEOUT
+  | 0 -> TIMEOUT
   | _ ->
     decr gas;
-    if tabled goal then enter_slg goal rules next alts cutinfo sgs
-    else sld goal rules next alts cutinfo sgs
+    if tabled goal then enter_slg goal rules next alts cutinfo trail sgs
+    else sld goal rules next alts cutinfo trail sgs
 end]
 
-and enter_slg goal rules next alts cutinfo sgs =
+and enter_slg goal rules next alts cutinfo trail sgs =
   let cgoal = canonify goal in
   match DT.find cgoal !table with
   | [], Incomplete ->
       [%spy "slg:suspend" ~rid pp_tm cgoal];
-      let sgs = push_consumer cgoal { goal; next } sgs in
+      let sgs = push_consumer cgoal { goal; next; trail = checkpoint trail; env = copy_trail trail } sgs in
       advance_slg sgs
   | answers, Complete ->
       [%spy "slg:complete->sld" ~rid pp_tm cgoal];
-      sld goal answers next alts cutinfo sgs
+      sld goal answers next alts cutinfo trail sgs
   | answers, Incomplete ->
       [%spy "slg:incomplete->sld+slg" ~rid pp_tm cgoal];
-      let sgs = push_consumer cgoal { goal; next } sgs in
-      sld goal answers next alts cutinfo sgs
+      let sgs = push_consumer cgoal { goal; next; trail = checkpoint trail; env = [] } sgs in
+      sld goal answers next alts cutinfo trail sgs
   | exception Not_found ->
       [%spy "slg:new" ~rid pp_tm cgoal];
+      let sgs = push_consumer cgoal { goal; next = Root(next,alts); trail = checkpoint trail; env = [] } sgs in
       new_table_entry cgoal;
-      let sgs = push_consumer cgoal { goal; next = Root(next,alts) } sgs in
+      let trail = empty_trail () in
       let goal = copy goal in (* also copy the program *)
-      let sgs = push_generator { undo = []; goal; rules; next = Contribute(goal,cgoal) } sgs in
+      let sgs = push_generator { trail; goal; rules; next = Contribute(goal,cgoal) } sgs in
       advance_slg sgs
 
 and advance_slg ({ generators; resume_queue; _ } as s) =
   [%trace "slg:step" ~rid ("@[<hov 2>%a]@\n" pp_slg_status s)
   begin match resume_queue with
-  | ({goal ; next }, solution) :: resume_queue ->
+  | ({goal ; next; trail; env }, solution) :: resume_queue ->
       let s = { s with resume_queue } in
-      (*let old_trail = !trail in*)
-      begin match select goal [solution] with
+      backtrack ~already_undone:true trail;
+      redo trail env;
+      begin match select trail goal [solution] with
       | None -> advance_slg s
-      | Some([],[]) -> pop_andl next [] s
+      | Some([],[]) -> pop_andl next [] trail s
       | _ -> assert false (* solutions have no subgoals *)
       end
   | [] ->
      match generators with
-     | [] -> `FAIL (* TODO backtrack on the alternativbes of the root *)
+     | [] -> FAIL (* TODO backtrack on the alternativbes of the root *)
      | { rules = []; next = Contribute(_,cgoal); _ } :: generators ->
           table_entry_complete cgoal;
           advance_slg { s with generators }
      | { rules = []; _ } :: generators -> advance_slg { s with generators }
-     | { undo; goal; next; rules } :: generators ->
-        List.iter (fun x -> x := dummy) undo;
-        let old_trail = !trail in
-        match select goal rules with
+     | { trail; goal; next; rules } :: generators ->
+        backtrack trail;
+        match select trail goal rules with
         | None -> advance_slg { s with generators }
         | Some ([], rules) ->
-            let s = { s with generators = { undo = chop_trail old_trail; goal; next; rules } :: generators } in
-            pop_andl next [] s
+            let s = { s with generators = { trail; goal; next; rules } :: generators } in
+            pop_andl next [] trail s
         | Some (ngoal::brothers, rules) ->
-            let s = { s with generators = { undo = chop_trail old_trail; goal; next; rules } :: generators } in
+            let s = { s with generators = { trail; goal; next; rules } :: generators } in
             let next = Todo { brothers; cutinfo = []; siblings = next } in
-            run { goal = ngoal; next; alts = []; rules = !all_rules; cutinfo = [] } s        
+            run { goal = ngoal; next; alts = []; rules = !all_rules; cutinfo = []; trail } s        
   end]
 
-and sld goal rules next (alts : alts) (cutinfo : alts) (sgs : slg_status) =
-  if goal = cut then pop_andl next cutinfo sgs
+and sld goal rules next (alts : alts) (cutinfo : alts) trail (sgs : slg_status) =
+  if goal = cut then pop_andl next cutinfo trail sgs
   else 
-    let old_trail = !trail in
-    match select goal rules with
+    let trail = checkpoint trail in
+    match select trail goal rules with
     | None -> next_alt alts sgs
-    | Some ([], []) -> pop_andl next alts sgs
+    | Some ([], []) -> pop_andl next alts trail sgs
     | Some ([], rules) ->
-        let alts = { goal; rules; stack=next; old_trail; cutinfo } :: alts in
-        pop_andl next alts sgs
+        let alts = { goal; rules; stack=next; trail; cutinfo } :: alts in
+        pop_andl next alts trail sgs
     | Some (goal :: rest, rules) ->
         let old_alts = alts in
-        let alts = { goal; rules; stack=next; old_trail; cutinfo } :: alts in
+        let alts = { goal; rules; stack=next; trail; cutinfo } :: alts in
         let next = Todo { brothers = rest; cutinfo; siblings = next } in
-        run { goal; rules = !all_rules; next; alts; cutinfo = old_alts } sgs
+        run { goal; rules = !all_rules; next; alts; cutinfo = old_alts; trail } sgs
 
-and pop_andl next alts sgs =
+and pop_andl (next : frame) (alts : alts) (trail : trail) (sgs : slg_status) =
   match next with
-  | Done -> `OK (alts,sgs)
-  | Root(next, alts) -> pop_andl next alts sgs
+  | Done -> OK (alts,sgs)
+  | Root(next, alts) -> pop_andl next alts trail sgs
   | Contribute(solution,cgoal) ->
       let sgs = table_solution cgoal solution sgs in
       advance_slg sgs
-  | Todo { brothers = []; siblings = next; _ } -> pop_andl next alts sgs
+  | Todo { brothers = []; siblings = next; _ } -> pop_andl next alts trail sgs
   | Todo { brothers = goal :: brothers; cutinfo; siblings } ->
       run { goal; rules = !all_rules;
             next = Todo { brothers = brothers; cutinfo; siblings };
-            alts; cutinfo } sgs
+            alts; cutinfo; trail } sgs
             
-and next_alt alts sgs = match alts with
+and next_alt alts (sgs : slg_status) : result = match alts with
   | [] -> (*`FAIL (* TODO: do slg *)*) advance_slg sgs
-  | { goal; rules; stack=next; old_trail; cutinfo } :: alts ->
-      backtrack old_trail;
-      run { goal; rules; next; alts; cutinfo } sgs
+  | { goal; rules; stack=next; trail; cutinfo } :: alts ->
+      backtrack trail;
+      run { goal; rules; next; alts; cutinfo; trail } sgs
 
 let run goal rules =
+  let trail = empty_trail () in
   match goal with
   | [] -> assert false
-  | [goal] -> run { goal; rules; next = Done; alts = []; cutinfo = [] } empty_slg_status
-  | goal::gs -> run { goal; rules; next = Todo { brothers = gs; siblings = Done; cutinfo = []}; alts = []; cutinfo = [] } empty_slg_status
+  | [goal] -> run { goal; rules; next = Done; alts = []; cutinfo = []; trail } empty_slg_status
+  | goal::gs -> run { goal; rules; next = Todo { brothers = gs; siblings = Done; cutinfo = []}; alts = []; cutinfo = []; trail } empty_slg_status
 
 (***************************** TEST *************************)
 module P = struct
@@ -492,10 +519,11 @@ let main query steps n program =
   all_rules := program;
   gas := steps;
   pp_reset ();
+  table_reset ();
   let rec all n = function
-  | `FAIL -> [Format.asprintf "no"]
-  | `TIMEOUT -> [Format.asprintf "steps"]
-  | `OK (alts,sgs) ->
+  | FAIL -> [Format.asprintf "no"]
+  | TIMEOUT -> [Format.asprintf "steps"]
+  | OK (alts,sgs) ->
       let s = Format.asprintf "%a" (ppl ", ") query in
       if n = 1 then [s]
       else s :: all (n-1) (next_alt alts sgs)
@@ -592,7 +620,87 @@ let () =
     q(b).
     q(c).
     ",
-    "_p(a,Z)", 2, ["_p(a, b)"; "_p(a, c)"; "no"]);
+    "_p(a,Z)", 3, ["_p(a, b)"; "_p(a, c)"; "no"]);
+
+    `Check("AAMFTESLP nodup",
+    "
+    _p(X,Z) :- _p(X,Y), _p(Y,Z).
+    _p(X,Z) :- e(X,Z), q(Z).
+    e(a,b).
+    e(a,d).
+    e(b,c).
+    q(a).
+    q(b). q(b).
+    q(c).
+    ",
+    "_p(a,Z)", 3, ["_p(a, b)"; "_p(a, c)"; "no"]);
+
+    `Check("AAMFTESLP trclosure order",
+    "
+    _p(X,Z) :- e(X,Z), q(Z).
+    _p(X,Z) :- _p(X,Y), _p(Y,Z).
+    e(a,b).
+    e(a,d).
+    e(b,c).
+    q(a).
+    q(b). q(b).
+    q(c).
+    ",
+    "_p(a,Z)", 3, ["_p(a, b)"; "_p(a, c)"; "no"]);
+
+    `Check("AAMFTESLP facts order",
+    "
+    _p(X,Z) :- e(X,Z), q(Z).
+    _p(X,Z) :- _p(X,Y), _p(Y,Z).
+    e(a,d).
+    e(a,b).
+    e(b,c).
+    q(a).
+    q(b). q(b).
+    q(c).
+    ",
+    "_p(a,Z)", 3, ["_p(a, b)"; "_p(a, c)"; "no"]);
+
+    `Check("AAMFTESLP sld cut",
+    "
+    _p(X,Z) :- e(X,Z), q(Z).
+    _p(X,Z) :- _p(X,Y), _p(Y,Z).
+    e(a,d) :- !.
+    e(a,b).
+    e(b,c).
+    q(a).
+    q(b). q(b).
+    q(c).
+    ",
+    "_p(a,Z)", 1, ["no"]);
+
+    `Check("AAMFTESLP sld context",
+    "
+    _p(X,Z) :- e(X,Z), q(Z).
+    _p(X,Z) :- _p(X,Y), _p(Y,Z).
+    e(a,d).
+    e(a,b).
+    e(b,c).
+    q(a).
+    q(b). q(b).
+    q(c).
+    x(c).
+    ",
+    "_p(a,Z), x(Z)", 2, ["_p(a, c), x(c)"; "no"]);
+
+    `Check("AAMFTESLP sld context fail",
+    "
+    _p(X,Z) :- e(X,Z), q(Z).
+    _p(X,Z) :- _p(X,Y), _p(Y,Z).
+    e(a,d).
+    e(a,b).
+    e(b,c).
+    q(a).
+    q(b). q(b).
+    q(c).
+    x(d).
+    ",
+    "_p(a,Z), x(Z)", 1, ["no"]);
 
   ] in
 
