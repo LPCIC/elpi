@@ -290,9 +290,9 @@ type consumer = {
 [@@deriving show]
 
 type generator = {
-  next : frame;
   goal : tm;
   rules : rule list; [@printer (fun fmt l -> Format.fprintf fmt "%d" (List.length l))]
+  next : frame;
   trail : trail;
 }
 [@@deriving show]
@@ -314,9 +314,9 @@ type sld_status = {
   goal : goal;
   rules : rule list;
   next : frame;
+  trail : trail;
   alts : alts;
   cutinfo : alts;
-  trail : trail;
 }
 
 let dt_append k v t =
@@ -458,7 +458,7 @@ and pop_andl (next : frame) (alts : alts) (trail : trail) (sgs : slg_status) =
             alts; cutinfo; trail } sgs
             
 and next_alt alts (sgs : slg_status) : result = match alts with
-  | [] -> (*`FAIL (* TODO: do slg *)*) advance_slg sgs
+  | [] -> advance_slg sgs
   | { goal; rules; stack=next; trail; cutinfo } :: alts ->
       backtrack trail;
       run { goal; rules; next; alts; cutinfo; trail } sgs
@@ -531,7 +531,7 @@ let main query steps n program =
   all n (run query !all_rules)
 
 let errors = ref 0
-let check ?(steps=100) (`Check(s,p,q,n,l1)) =
+let check ?(steps=1000) (`Check(s,p,q,n,l1)) =
   let l2 = main q steps n p in
   if l1 <> l2 then begin
     incr errors;
@@ -539,7 +539,7 @@ let check ?(steps=100) (`Check(s,p,q,n,l1)) =
       (Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f " ") Format.pp_print_string) l1
       (Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f " ") Format.pp_print_string) l2
   end else
-    Format.eprintf "%s: ok\n%!" s
+    Format.eprintf "%s: ok (%d steps)\n%!" s (steps - !gas)
 
 let () =
   let filters = Trace_ppx_runtime.Runtime.parse_argv (List.tl @@ Array.to_list Sys.argv) in
@@ -701,6 +701,22 @@ let () =
     x(d).
     ",
     "_p(a,Z), x(Z)", 1, ["no"]);
+
+    `Check("fibo",
+    "
+    f(z).
+    f(s(z)).
+    f(s(s(X))) :- f(s(X)), f(X).
+    ",
+    "f(s(s(s(s(s(s(s(s(s(s(s(s(s(s(s(s(z)))))))))))))))))", 1, ["steps"]);
+
+    `Check("fibo tab",
+    "
+    _f(z).
+    _f(s(z)).
+    _f(s(s(X))) :- _f(s(X)), _f(X).
+    ",
+    "_f(s(s(s(s(s(s(s(s(s(s(s(s(s(s(s(s(z)))))))))))))))))", 1, ["_f(s(s(s(s(s(s(s(s(s(s(s(s(s(s(s(s(z)))))))))))))))))"]);
 
   ] in
 
