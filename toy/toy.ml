@@ -79,6 +79,8 @@ type goal = tm
 
 type rule = int * tm * tm list
 [@@deriving show]
+type rules = rule list
+[@@deriving show]
 
 (******************************* unif ****************************)
 
@@ -231,6 +233,8 @@ and alt = {
   cutinfo : alt list; [@printer (fun _ _ -> ())]
 }
 
+let pp_alt fmt { rules; goal; _ } = Format.fprintf fmt "%a | %a" pp_tm goal pp_rules rules
+
 let rec flatten_frame = function
   | Todo { brothers; siblings; _ } ->
       let goals, action = flatten_frame siblings in
@@ -251,7 +255,9 @@ let pp_frame fmt frame =
 
 type alts = alt list
 
-let pp_alts fmt l = Format.fprintf fmt "%d" (List.length l)
+let pp_alts fmt l =
+  Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f "; ")
+    pp_alt fmt l
     
 let all_rules = ref []
 let gas = ref 0
@@ -301,6 +307,7 @@ type slg_status = {
   consumers : consumer list DT.t; [@printer (fun _ _ -> ())]
   generators : generator list;
   resume_queue : (consumer * rule) list;
+  root : alts option;
 }
 [@@deriving show]
 
@@ -308,6 +315,7 @@ let empty_slg_status = {
   consumers = DT.empty;
   generators = [];
   resume_queue = [];
+  root = None;
 }
 
 type sld_status = {
@@ -333,6 +341,10 @@ let push_consumer cgoal (c : consumer) (s : slg_status) =
 
 let push_generator (g : generator) (s : slg_status) =
   { s with generators = g :: s.generators }
+
+let set_root_if_not_set alts s =
+  if s.root = None then { s with root = Some alts } else s
+let unset_root s = { s with root = None }
 
 let resume_all_consumers cgoal (c : rule) (s : slg_status) =
   try
@@ -389,6 +401,7 @@ and enter_slg goal rules next alts cutinfo trail sgs =
       sld goal answers next alts cutinfo trail sgs
   | exception Not_found ->
       [%spy "slg:new" ~rid pp_tm cgoal];
+      let sgs = set_root_if_not_set alts sgs in
       let sgs = push_consumer cgoal { goal; next = Root(next,alts); trail = checkpoint trail; env = [] } sgs in
       new_table_entry cgoal;
       let trail = empty_trail () in
@@ -396,7 +409,7 @@ and enter_slg goal rules next alts cutinfo trail sgs =
       let sgs = push_generator { trail; goal; rules; next = Contribute(goal,cgoal) } sgs in
       advance_slg sgs
 
-and advance_slg ({ generators; resume_queue; _ } as s) =
+and advance_slg ({ generators; resume_queue; root; _ } as s) =
   [%trace "slg:step" ~rid ("@[<hov 2>%a]@\n" pp_slg_status s)
   begin match resume_queue with
   | ({goal ; next; trail; env }, solution) :: resume_queue ->
@@ -410,7 +423,13 @@ and advance_slg ({ generators; resume_queue; _ } as s) =
       end
   | [] ->
      match generators with
-     | [] -> FAIL (* TODO backtrack on the alternativbes of the root *)
+     | [] ->
+        begin match root with
+        | None -> FAIL
+        | Some alts ->
+            let s = unset_root s in
+            next_alt alts s
+        end
      | { rules = []; next = Contribute(_,cgoal); _ } :: generators ->
           table_entry_complete cgoal;
           advance_slg { s with generators }
@@ -426,7 +445,7 @@ and advance_slg ({ generators; resume_queue; _ } as s) =
             let s = { s with generators = { trail; goal; next; rules } :: generators } in
             let next = Todo { brothers; cutinfo = []; siblings = next } in
             run { goal = ngoal; next; alts = []; rules = !all_rules; cutinfo = []; trail } s        
-  end]
+end]
 
 and sld goal rules next (alts : alts) (cutinfo : alts) trail (sgs : slg_status) =
   if goal = cut then pop_andl next cutinfo trail sgs
@@ -438,11 +457,11 @@ and sld goal rules next (alts : alts) (cutinfo : alts) trail (sgs : slg_status) 
     | Some ([], rules) ->
         let alts = { goal; rules; stack=next; trail; cutinfo } :: alts in
         pop_andl next alts trail sgs
-    | Some (goal :: rest, rules) ->
+    | Some (ngoal :: brothers, rules) ->
         let old_alts = alts in
         let alts = { goal; rules; stack=next; trail; cutinfo } :: alts in
-        let next = Todo { brothers = rest; cutinfo; siblings = next } in
-        run { goal; rules = !all_rules; next; alts; cutinfo = old_alts; trail } sgs
+        let next = Todo { brothers; cutinfo; siblings = next } in
+        run { goal = ngoal; rules = !all_rules; next; alts; cutinfo = old_alts; trail } sgs
 
 and pop_andl (next : frame) (alts : alts) (trail : trail) (sgs : slg_status) =
   match next with
@@ -717,6 +736,19 @@ let () =
     _f(s(s(X))) :- _f(s(X)), _f(X).
     ",
     "_f(s(s(s(s(s(s(s(s(s(s(s(s(s(s(s(s(z)))))))))))))))))", 1, ["_f(s(s(s(s(s(s(s(s(s(s(s(s(s(s(s(s(z)))))))))))))))))"]);
+
+    `Check("alternatives to root",
+    "
+    _p(X,Z) :- _p(X,Y), _p(Y,Z).
+    _p(X,Z) :- e(X,Z).
+    e(a,d).
+    e(a,b).
+    e(b,c).
+    main(X,Y) :-  _p(X,Y).
+    main(a,a).
+    main(a,a).
+    ",
+    "main(a,a)", 3, ["main(a, a)"; "main(a, a)"; "no"]);
 
   ] in
 
