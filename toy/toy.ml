@@ -225,7 +225,9 @@ type frame =
       cutinfo : alt list; [@printer (fun _ _ -> ())]
       siblings : frame;
     }
-and alt = {
+and alt = 
+  | Unblock of int
+  | Alt of {
   goal: goal;
   rules : rule list; [@printer (fun _ _ -> ())]
   stack : frame; [@printer (fun _ _ -> ())]
@@ -233,7 +235,9 @@ and alt = {
   cutinfo : alt list; [@printer (fun _ _ -> ())]
 }
 
-let pp_alt fmt { rules; goal; _ } = Format.fprintf fmt "%a | %a" pp_tm goal pp_rules rules
+let pp_alt fmt = function
+ | Alt { rules; goal; _ } -> Format.fprintf fmt "%a | %a" pp_tm goal pp_rules rules
+ | Unblock i -> Format.fprintf fmt "%d" i
 
 let rec flatten_frame = function
   | Todo { brothers; siblings; _ } ->
@@ -275,12 +279,12 @@ let table_reset () = table := DT.empty
 let rec select trail goal = function
   | [] -> None
   | (stack,hd,conds)::rules ->
+    [%spy "select" ~rid (fun fmt () -> Format.fprintf fmt "%a /// %a :- %a." pp_tm goal pp_tm hd pp_tm (App("&",conds))) ()];
     let stack = Array.init stack (fun _ -> dummy) in
     if not (unif trail stack goal hd) then begin
       backtrack trail;
       select trail goal rules
     end else begin
-      [%spy "select" ~rid (fun fmt () -> Format.fprintf fmt "%a /// %a :- %a." pp_tm goal pp_tm hd pp_tm (App("&",conds))) ()];
       Some (List.map (heapify stack) conds, rules)
     end
 
@@ -303,9 +307,12 @@ type generator = {
 }
 [@@deriving show]
 
+module IM = Map.Make(struct type t = int let compare = Stdlib.compare end)
+
 type slg_status = {
   consumers : consumer list DT.t; [@printer (fun _ _ -> ())]
   generators : generator list;
+  stuck_generators : generator IM.t; [@printer (fun fmt m -> IM.iter (fun _ -> pp_generator fmt) m)]
   resume_queue : (consumer * rule) list;
   root : alts option;
 }
@@ -313,7 +320,7 @@ type slg_status = {
 
 let empty_slg_status = {
   consumers = DT.empty;
-  generators = [];
+  generators = []; stuck_generators = IM.empty;
   resume_queue = [];
   root = None;
 }
@@ -341,6 +348,16 @@ let push_consumer cgoal (c : consumer) (s : slg_status) =
 
 let push_generator (g : generator) (s : slg_status) =
   { s with generators = g :: s.generators }
+
+let push_stuck_generator = let nonce = ref 0 in
+ fun (g : generator) (s : slg_status) ->
+ incr nonce;
+ !nonce, { s with stuck_generators = IM.add !nonce g s.stuck_generators }
+
+let pop_stuck_generator i ({ stuck_generators; _ } as s) =
+  assert(IM.mem i stuck_generators);
+  let g = IM.find i stuck_generators in
+  push_generator g { s with stuck_generators = IM.remove i stuck_generators }
 
 let set_root_if_not_set alts s =
   if s.root = None then { s with root = Some alts } else s
@@ -372,7 +389,10 @@ let table_entry_complete cgoal =
   | _, Complete -> assert false
   | exception Not_found -> assert false
 
+let has_cut = List.mem cut
+
 type result = TIMEOUT | FAIL | OK of alts * slg_status
+
 
 let rec run { goal; rules; next; alts; cutinfo; trail } (sgs : slg_status) : result =
   [%trace "run" ~rid 
@@ -397,12 +417,12 @@ and enter_slg goal rules next alts cutinfo trail sgs =
       sld goal answers next alts cutinfo trail sgs
   | answers, Incomplete ->
       [%spy "slg:incomplete->sld+slg" ~rid pp_tm cgoal];
-      let sgs = push_consumer cgoal { goal; next; trail = checkpoint trail; env = [] } sgs in
+      let sgs = push_consumer cgoal { goal; next; trail = checkpoint trail; env = copy_trail trail } sgs in
       sld goal answers next alts cutinfo trail sgs
   | exception Not_found ->
       [%spy "slg:new" ~rid pp_tm cgoal];
       let sgs = set_root_if_not_set alts sgs in
-      let sgs = push_consumer cgoal { goal; next = Root(next,alts); trail = checkpoint trail; env = [] } sgs in
+      let sgs = push_consumer cgoal { goal; next = Root(next,alts); trail = checkpoint trail; env = copy_trail trail } sgs in
       new_table_entry cgoal;
       let trail = empty_trail () in
       let goal = copy goal in (* also copy the program *)
@@ -442,9 +462,15 @@ and advance_slg ({ generators; resume_queue; root; _ } as s) =
             let s = { s with generators = { trail; goal; next; rules } :: generators } in
             pop_andl next [] trail s
         | Some (ngoal::brothers, rules) ->
-            let s = { s with generators = { trail; goal; next; rules } :: generators } in
-            let next = Todo { brothers; cutinfo = []; siblings = next } in
-            run { goal = ngoal; next; alts = []; rules = !all_rules; cutinfo = []; trail } s        
+            let s = { s with generators } in
+            if rules <> [] && has_cut (ngoal :: brothers) then
+              let nonce, s = push_stuck_generator { trail; goal; next; rules } s in
+              let next = Todo { brothers; cutinfo = []; siblings = next } in
+              run { goal = ngoal; next; alts = [Unblock nonce]; rules = !all_rules; cutinfo = []; trail } s        
+            else
+              let s = push_generator { trail; goal; next; rules } s in
+              let next = Todo { brothers; cutinfo = []; siblings = next } in
+              run { goal = ngoal; next; alts = []; rules = !all_rules; cutinfo = []; trail } s        
 end]
 
 and sld goal rules next (alts : alts) (cutinfo : alts) trail (sgs : slg_status) =
@@ -455,15 +481,16 @@ and sld goal rules next (alts : alts) (cutinfo : alts) trail (sgs : slg_status) 
     | None -> next_alt alts sgs
     | Some ([], []) -> pop_andl next alts trail sgs
     | Some ([], rules) ->
-        let alts = { goal; rules; stack=next; trail; cutinfo } :: alts in
+        let alts = Alt { goal; rules; stack=next; trail; cutinfo } :: alts in
         pop_andl next alts trail sgs
     | Some (ngoal :: brothers, rules) ->
         let old_alts = alts in
-        let alts = { goal; rules; stack=next; trail; cutinfo } :: alts in
+        let alts = Alt { goal; rules; stack=next; trail; cutinfo } :: alts in
         let next = Todo { brothers; cutinfo; siblings = next } in
         run { goal = ngoal; rules = !all_rules; next; alts; cutinfo = old_alts; trail } sgs
 
 and pop_andl (next : frame) (alts : alts) (trail : trail) (sgs : slg_status) =
+  [%trace "pop_andl" ~rid ("@[<hov 2>%a]@\n" pp_frame next) begin
   match next with
   | Done -> OK (alts,sgs)
   | Root(next, alts) -> pop_andl next alts trail sgs
@@ -475,10 +502,13 @@ and pop_andl (next : frame) (alts : alts) (trail : trail) (sgs : slg_status) =
       run { goal; rules = !all_rules;
             next = Todo { brothers = brothers; cutinfo; siblings };
             alts; cutinfo; trail } sgs
-            
+  end]
 and next_alt alts (sgs : slg_status) : result = match alts with
   | [] -> advance_slg sgs
-  | { goal; rules; stack=next; trail; cutinfo } :: alts ->
+  | Unblock nonce :: alts ->
+      let sgs = pop_stuck_generator nonce sgs in
+      next_alt alts sgs
+  | Alt { goal; rules; stack=next; trail; cutinfo } :: alts ->
       backtrack trail;
       run { goal; rules; next; alts; cutinfo; trail } sgs
 
@@ -749,6 +779,24 @@ let () =
     main(a,a).
     ",
     "main(a,a)", 3, ["main(a, a)"; "main(a, a)"; "no"]);
+
+    `Check("table trail hard",
+    "
+    _p(a,b).
+    _p(b,c).
+    _p(X,Z) :- _p(X,Y), _p(Y,Z).
+    _p(X,X).
+    ",
+    "_p(a, X)", 4, ["_p(a, b)"; "_p(a, c)"; "_p(a, a)"; "no"]);
+
+    `Check("table cut",
+    "
+    _p(a,b).
+    _p(b,c).
+    _p(X,Z) :- _p(X,Y), !, _p(Y,Z).
+    _p(X,X).
+    ",
+    "_p(a, X)", 3, ["_p(a, b)"; "_p(a, c)";"no"]);
 
   ] in
 
