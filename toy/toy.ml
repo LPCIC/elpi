@@ -218,8 +218,8 @@ end
 
 type frame =
   | Done
-  | Root of frame * alt list
-  | Contribute of tm * canonical_goal
+  | SLGRoot of { next : frame; alts : alt list }
+  | TableSolution of tm * canonical_goal
   | Todo of {
       brothers : goal list;
       cutinfo : alt list; [@printer (fun _ _ -> ())]
@@ -247,8 +247,8 @@ let rec flatten_frame = function
 
 let pp_end_frame fmt = function
   | Done -> Format.fprintf fmt "Done"
-  | Root _ -> Format.fprintf fmt "Root"
-  | Contribute(sol,cg) -> Format.fprintf fmt "Contribute %a to %a" pp_tm sol pp_tm cg
+  | SLGRoot _ -> Format.fprintf fmt "SLGRoot"
+  | TableSolution(sol,cg) -> Format.fprintf fmt "TableSolution %a to %a" pp_tm sol pp_tm cg
   | _ -> assert false
 
 let pp_frame fmt frame =
@@ -422,11 +422,11 @@ and enter_slg goal rules next alts cutinfo trail sgs =
   | exception Not_found ->
       [%spy "slg:new" ~rid pp_tm cgoal];
       let sgs = set_root_if_not_set alts sgs in
-      let sgs = push_consumer cgoal { goal; next = Root(next,alts); trail = checkpoint trail; env = copy_trail trail } sgs in
+      let sgs = push_consumer cgoal { goal; next = SLGRoot { next; alts }; trail = checkpoint trail; env = copy_trail trail } sgs in
       new_table_entry cgoal;
       let trail = empty_trail () in
       let goal = copy goal in (* also copy the program *)
-      let sgs = push_generator { trail; goal; rules; next = Contribute(goal,cgoal) } sgs in
+      let sgs = push_generator { trail; goal; rules; next = TableSolution(goal,cgoal) } sgs in
       advance_slg sgs
 
 and advance_slg ({ generators; resume_queue; root; _ } as s) =
@@ -450,7 +450,7 @@ and advance_slg ({ generators; resume_queue; root; _ } as s) =
             let s = unset_root s in
             next_alt alts s
         end
-     | { rules = []; next = Contribute(_,cgoal); _ } :: generators ->
+     | { rules = []; next = TableSolution(_,cgoal); _ } :: generators ->
           table_entry_complete cgoal;
           advance_slg { s with generators }
      | { rules = []; _ } :: generators -> advance_slg { s with generators }
@@ -493,8 +493,8 @@ and pop_andl (next : frame) (alts : alts) (trail : trail) (sgs : slg_status) =
   [%trace "pop_andl" ~rid ("@[<hov 2>%a]@\n" pp_frame next) begin
   match next with
   | Done -> OK (alts,sgs)
-  | Root(next, alts) -> pop_andl next alts trail sgs
-  | Contribute(solution,cgoal) ->
+  | SLGRoot { next; alts = o } -> assert(alts = []); pop_andl next o trail sgs
+  | TableSolution(solution,cgoal) ->
       let sgs = table_solution cgoal solution sgs in
       advance_slg sgs
   | Todo { brothers = []; siblings = next; _ } -> pop_andl next alts trail sgs
@@ -797,6 +797,42 @@ let () =
     _p(X,X).
     ",
     "_p(a, X)", 3, ["_p(a, b)"; "_p(a, c)";"no"]);
+
+    `Check("table fail",
+    "
+    _p(a,b).
+    _p(b,c).
+    _p(c,d).
+    _p(d,e).
+    _p(X,Z) :- _p(X,Y), _p(Y,Z).
+    _p(X,Z) :- _p(X,Y), _p(Y,Z).
+    _p(X,X).
+    main :- _p(a, q).
+    main :- _p(a, q).
+    main :- _p(a, q).
+    main :- _p(a, q).
+    main :- _p(a, q).
+    main :- _p(a, q).
+    ",
+    "main", 1, ["no"]);
+
+    `Check("no table fail",
+    "
+    p1(a,b).
+    p1(b,c).
+    p1(c,d).
+    p1(d,e).
+    p(X,Z) :- p1(X,Y), p(Y,Z).
+    p(X,Z) :- p1(X,Y), p(Y,Z).
+    p(X,X).
+    main :- p(a, q).
+    main :- p(a, q).
+    main :- p(a, q).
+    main :- p(a, q).
+    main :- p(a, q).
+    main :- p(a, q).
+    ",
+    "main", 1, ["steps"]);
 
   ] in
 
