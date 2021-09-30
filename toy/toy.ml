@@ -429,7 +429,7 @@ and enter_slg goal rules next alts cutinfo trail sgs =
       [%spy "slg:suspend" ~rid pp_tm cgoal];
       let sgs = push_consumer cgoal { goal; next; trail = checkpoint trail; env = copy_trail trail } sgs in
       advance_slg sgs
-  | answers, Complete ->
+  | answers, Complete -> (* TODO: Trie -> DT(find_unifiable) *)
       [%spy "slg:complete->sld" ~rid pp_tm cgoal];
       sld goal answers next alts cutinfo trail sgs
   | answers, Incomplete ->
