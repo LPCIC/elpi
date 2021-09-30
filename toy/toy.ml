@@ -160,12 +160,23 @@ let copy g =
   in
     snd @@ aux 0 g
 
-let rec ground = function
+let clausify_solution t =
+  let m = ref [] in
+  let rec aux = function
   | Arg _ -> assert false
-  | Var r when !r <> dummy -> ground !r
-  | Var _ -> assert false
+  | Var r when !r <> dummy -> aux !r
+  | Var r -> 
+      begin try
+        List.assq r !m
+      with Not_found ->
+        m := (r, Arg(List.length !m)) :: !m;
+        List.assq r !m
+      end
   | App(s,args) ->
-      App(s,List.map ground args)
+      App(s,List.map aux args)
+  in
+  let t = aux t in
+  List.length !m, t, []
 
 let canonify (g : tm) : canonical_goal =
   let trail = empty_trail () in
@@ -187,6 +198,7 @@ let variant (c : canonical_goal) (g : goal) =
     val add : canonical_goal -> 'a -> 'a t -> 'a t
     val mem : canonical_goal -> 'a t -> bool
     val find : canonical_goal -> 'a t -> 'a
+    val iter : ((string * int) list -> 'a -> unit) -> 'a t -> unit
 
   end = struct
     
@@ -211,6 +223,7 @@ let variant (c : canonical_goal) (g : goal) =
   let mem i t = mem (path_string_of i) t
   let add i v t = add (path_string_of i) v t
   let find i t = find (path_string_of i) t
+  let iter f t = iter f t
 
 end
 
@@ -271,8 +284,12 @@ let tabled = function
   | _ -> false
 
 type table_entry_status = Incomplete | Complete
+[@@deriving show]
 
 let table = ref DT.empty
+
+let pp_table fmt dt =
+ DT.iter (fun _ (l,s) -> Format.fprintf fmt "(%a, [%a])@ " pp_table_entry_status s (Format.pp_print_list pp_rule) l) dt
 
 let table_reset () = table := DT.empty
 
@@ -373,7 +390,7 @@ let resume_all_consumers cgoal (c : rule) (s : slg_status) =
 let table_solution cgoal solution s =
   match DT.find cgoal !table with
   | solutions, status ->
-      let solution = 0, ground solution, [] in
+      let solution = clausify_solution solution in
       if List.mem solution solutions then
         s
       else begin
@@ -451,7 +468,7 @@ and advance_slg ({ generators; resume_queue; root; _ } as s) =
             next_alt alts s
         end
      | { rules = []; next = TableSolution(_,cgoal); _ } :: generators ->
-          table_entry_complete cgoal;
+          table_entry_complete cgoal; (* TODO: do this more ofted/early *)
           advance_slg { s with generators }
      | { rules = []; _ } :: generators -> advance_slg { s with generators }
      | { trail; goal; next; rules } :: generators ->
@@ -588,7 +605,8 @@ let check ?(steps=1000) (`Check(s,p,q,n,l1)) =
       (Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f " ") Format.pp_print_string) l1
       (Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f " ") Format.pp_print_string) l2
   end else
-    Format.eprintf "%s: ok (%d steps)\n%!" s (steps - !gas)
+    Format.eprintf "@[<hov 2> %s: ok (%d steps)@]\n%!" s (steps - !gas)
+    (*Format.eprintf "@[<hov 2> %s: ok (%d steps, table: @[<hov>%a@])@]\n%!" s (steps - !gas) pp_table !table*)
 
 let () =
   let filters = Trace_ppx_runtime.Runtime.parse_argv (List.tl @@ Array.to_list Sys.argv) in
@@ -833,6 +851,21 @@ let () =
     main :- p(a, q).
     ",
     "main", 1, ["steps"]);
+
+    `Check("table open solution",
+    "
+    _p(a,Y).
+    _p(Y,c).
+    _p(a,b) :- _p(a,X), _p(X,c).
+    ",
+    "_p(a, X)", 4, ["_p(a, X0)"; "_p(a, c)"; "_p(a, b)";"no"]);
+
+    `Check("table subsumption",
+    "
+    _p(X).
+    ",
+    "_p(X),_p(s(X)),_p(z)", 2, ["_p(X0), _p(s(X0)), _p(z)"; "no"]);
+
 
   ] in
 
