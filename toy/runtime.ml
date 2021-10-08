@@ -142,16 +142,21 @@ let pp_tm = pp
 let ppl s = Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f s) pp
 
 (******************************* backtrack ****************************)
-type trail_log = tm ref list ref
+
+type trail_item =
+  | Assign of tm ref
+[@@deriving show]
+
+type trail_log = trail_item list ref
 [@@deriving show]
 type fwd_trail = (tm ref * tm) list
 [@@deriving show]
 
-type trail = { log : trail_log; old_trail : tm ref list }
+type trail = { log : trail_log; old_trail : trail_item list }
 [@@deriving show]
 
 let assign { log = trail; _ }  v t =
-  trail := v :: !trail;
+  trail := Assign v :: !trail;
   [%spy "assign" ~rid pp_tm (Var v)];
   [%spy "assign:with" ~rid pp_tm t];
   v := t
@@ -163,7 +168,7 @@ let rec backtrack ?(already_undone=false) ({ log = trail; old_trail = o } as t) 
     match !trail with
     | [] ->
         if already_undone then () else assert false
-    | v :: vs ->
+    | Assign v :: vs ->
         v := dummy;
         trail := vs;
         backtrack ~already_undone t
@@ -184,7 +189,7 @@ let rec redo trail = function
 
 let rec copy_trail = function
   | [] -> []
-  | r :: trail -> (r, !r) :: copy_trail trail
+  | Assign r :: trail -> (r, !r) :: copy_trail trail
 let copy_trail { log; _ } = copy_trail !log
 
 let checkpoint { log; _ } = { log; old_trail = !log }
