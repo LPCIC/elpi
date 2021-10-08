@@ -23,6 +23,7 @@ module PtrMap : sig
   val filter : ('block -> 'a -> bool) -> 'a t -> 'a t
   val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
   val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
+  val keys : 'a t -> 'block list (* unsafe *)
 
 end = struct
 
@@ -39,6 +40,8 @@ end = struct
        entries. *)
     authoritative : (Obj.t * ('a * int ref)) list;
   }
+
+  let keys { authoritative; _ } = List.map (fun (x,_) -> Obj.obj x) authoritative
 
   let empty () = { cache = IntMap.empty; authoritative = [] }
   let is_empty { authoritative; _ } = authoritative = []
@@ -136,7 +139,7 @@ let rec pp fmt = function
   | App(c,l) -> Format.fprintf fmt "@[<hov 2>%s(%a)@]" c (Format.pp_print_list ~pp_sep:(fun fmt () -> Format.fprintf fmt ",@ ") pp) l
   | Var r when !r <> dummy -> pp fmt !r
   | Var r -> let s = pp_var r in Format.fprintf fmt "%s" s
-  | Arg i -> Format.fprintf fmt "_%d_" i
+  | Arg i -> Format.fprintf fmt "$%d" i
 
 let pp_tm = pp
 let ppl s = Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f s) pp
@@ -215,71 +218,54 @@ let rec heapify s = function
   | Arg i when s.(i) != dummy -> s.(i)
   | Arg i -> let t = Var (ref dummy) in s.(i) <- t; t
 
-let rec unif (trail:trail) (s:tm array) (a:tm) (b:tm) = match a, b with
+let rec unif (trail:trail) (sa:tm array) (sb:tm array) (a:tm) (b:tm) = match a, b with
   (* deref *)
-  | Var r, _ when !r != dummy -> unif trail s !r b
-  | _, Var r when !r != dummy -> unif trail s a !r
-  | _, Arg i when s.(i) != dummy -> unif trail s a s.(i)
-  | Arg _, _ -> assert false
+  | Var r, _ when !r != dummy -> unif trail sa sb !r b
+  | _, Var r when !r != dummy -> unif trail sa sb a !r
+  | Arg i, _ when sa.(i) != dummy -> unif trail sa sb sa.(i) b
+  | _, Arg i when sb.(i) != dummy -> unif trail sa sb a sb.(i)
 
   (* assign *)
-  | Var r, _ -> assign trail r (heapify s b); true
-  | _, Var r -> assign trail r a; true (* missing OC *)
-  | _, Arg i -> s.(i) <- a; true
+  | Var r, _ -> assign trail r (heapify sb b); true
+  | _, Var r -> assign trail r (heapify sa a); true (* missing OC *)
+  | Arg i, _ -> sa.(i) <- (heapify sb b); true
+  | _, Arg i -> sb.(i) <- (heapify sa a); true
 
   | App(c1,args1), App(c2,args2) ->
     if c1 <> c2 then false
-    else fold_left2 (unif trail s) args1 args2
+    else fold_left2 (unif trail sa sb) args1 args2
 
 (******************************* table ****************************)
 
 type canonical_goal = tm
 [@@deriving show]
 
-let canonical_names = [|
-  App("$0",[]) ;
-  App("$1",[]) ;
-  App("$2",[]) ;
-  App("$3",[]) ;
-  App("$4",[]) ;
-  App("$5",[]) ;
-  App("$6",[]) ;
-  App("$7",[]) ;
-  App("$8",[]) ;
-  App("$9",[]) ;
-|]
-
 let rec map_acc f acc = function
-  | [] -> acc, []
+  | [] -> acc, [], []
   | x :: xs ->
-      let acc, y = f acc x in
-      let acc, ys = map_acc f acc xs in
-      acc, y :: ys
+      let acc, y, z = f acc x in
+      let acc, ys, zs = map_acc f acc xs in
+      acc, y :: ys, z :: zs
 
-let rec canonify trail i (g : tm) : int * canonical_goal =
-  match g with
-  | Arg _ -> assert false
-  | Var r when !r <> dummy -> (canonify trail) i !r
-  | Var r -> assign trail r canonical_names.(i); i+1, !r
-  | App(s,args) ->
-      let i, args = map_acc (canonify trail) i args in
-      i, App(s,args)
-
-let copy g =
-  let trail = empty_trail () in
-  let n, _ = canonify trail 0 g in
-  backtrack trail;
-  let v = Array.init n (fun _ -> ref @@ Var (ref dummy)) in
+let abstract g =
+  let m = ref @@ PtrMap.empty () in
   let rec aux i = function
     | Arg _ -> assert false
     | Var r when !r <> dummy -> aux i !r
-    | Var _ -> i+1, Var(v.(i))
+    | Var r as x ->
+        begin match PtrMap.find r !m with
+        | n -> i, Arg(n), x
+        | exception Not_found ->
+            m := PtrMap.add r i !m;
+            i+1, Arg i, x
+        end
     | App(s,args) ->
-      let i, args = map_acc aux i args in
-      i, App(s,args)
+        let i, args, dereffedargs = map_acc aux i args in
+        i, App(s,args), App(s,dereffedargs)
   in
-    snd @@ aux 0 g
-
+  let n, abstract, dereffed = aux 0 g in
+  n, abstract, dereffed, PtrMap.keys !m
+    
 let clausify_solution t =
   let m = ref [] in
   let rec aux = function
@@ -298,18 +284,7 @@ let clausify_solution t =
   let t = aux t in
   List.length !m, t, []
 
-let canonify (g : tm) : canonical_goal =
-  let trail = empty_trail () in
-  let _, g = canonify trail 0 g in
-  backtrack trail;
-  g
-
 (* we could canonify g and then Stdlib.compare (OC can be expensive)*)
-let variant (c : canonical_goal) (g : goal) =
-  let trail = empty_trail () in
-  let u = unif trail [||] g c in (* pass g on the left to avoid heapify on assign *)
-  backtrack trail;
-  u
 
   module DT : sig
     
@@ -319,12 +294,16 @@ let variant (c : canonical_goal) (g : goal) =
     val mem : canonical_goal -> 'a t -> bool
     val find : canonical_goal -> 'a t -> 'a
     val iter : ((string * int) list -> 'a -> unit) -> 'a t -> unit
+    val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
 
   end = struct
     
     type path_string_elem = string * int
+    [@@deriving show]
+    type path_string_elem_list = path_string_elem list
+    [@@deriving show]
     let rec path_string_of = function
-      | Arg _ -> assert false
+      | Arg i -> [string_of_int i, 0]
       | Var r when !r <> dummy -> assert false
       | Var _ -> assert false (* we are on canonical goals *)
       | App(s,args) ->
@@ -345,6 +324,12 @@ let variant (c : canonical_goal) (g : goal) =
   let find i t = find (path_string_of i) t
   let iter f t = iter f t
 
+  let pp f fmt t =
+    let p k v = Format.fprintf fmt "@[<hov 2>%a |->@ %a@]@ " pp_path_string_elem_list k f v in
+    Format.fprintf fmt "@[<hov>";
+    iter p t;
+    Format.fprintf fmt "@]"
+
 end
 
 (******************************* run ****************************)
@@ -352,7 +337,7 @@ end
 type frame =
   | Done
   | SLGRoot of { next : frame; alts : alt list }
-  | TableSolution of tm * canonical_goal
+  | TableSolution of canonical_goal * tm
   | Todo of {
       brothers : goal list;
       cutinfo : alt list; [@printer (fun _ _ -> ())]
@@ -381,7 +366,7 @@ let rec flatten_frame = function
 let pp_end_frame fmt = function
   | Done -> Format.fprintf fmt "Done"
   | SLGRoot _ -> Format.fprintf fmt "SLGRoot"
-  | TableSolution(sol,cg) -> Format.fprintf fmt "TableSolution %a to %a" pp_tm sol pp_tm cg
+  | TableSolution(cg, sol) -> Format.fprintf fmt "TableSolution %a to %a" pp_tm sol pp_tm cg
   | _ -> assert false
 
 let pp_frame fmt frame =
@@ -413,16 +398,17 @@ let pp_table fmt dt =
 
 let table_reset () = table := DT.empty
 
-let rec select trail goal = function
+let rec select trail nvars goal = function
   | [] -> None
   | (stack,hd,conds)::rules ->
-    [%spy "select" ~rid (fun fmt () -> Format.fprintf fmt "%a /// %a :- %a." pp_tm goal pp_tm hd pp_tm (App("&",conds))) ()];
     let stack = Array.init stack (fun _ -> dummy) in
-    if not (unif trail stack goal hd) then begin
+    let gstack = Array.init nvars (fun _ -> dummy) in
+    [%spy "select" ~rid (fun fmt () -> Format.fprintf fmt "%a /// %a :- %a." pp_tm goal pp_tm hd pp_tm (App("&",conds))) ()];
+    if not (unif trail gstack stack goal hd) then begin
       backtrack trail;
-      select trail goal rules
+      select trail nvars goal rules
     end else begin
-      Some (List.map (heapify stack) conds, rules)
+      Some (heapify gstack goal, List.map (heapify stack) conds, rules)
     end
 
 let new_table_entry cgoal =
@@ -437,17 +423,15 @@ type consumer = {
 [@@deriving show]
 
 type generator = {
-  goal : tm;
+  initial_goal : (int * tm);
   rules : rule list; [@printer (fun fmt l -> Format.fprintf fmt "%d" (List.length l))]
-  next : frame;
-  trail : trail;
 }
 [@@deriving show]
 
 module IM = Map.Make(struct type t = int let compare = Stdlib.compare end)
 
 type slg_status = {
-  consumers : consumer list DT.t; [@printer (fun _ _ -> ())]
+  consumers : consumer list DT.t;
   generators : generator list;
   stuck_generators : generator IM.t; [@printer (fun fmt m -> IM.iter (fun _ -> pp_generator fmt) m)]
   resume_queue : (consumer * rule) list;
@@ -543,7 +527,7 @@ let rec run { goal; rules; next; alts; cutinfo; trail } (sgs : slg_status) : res
 end]
 
 and enter_slg goal rules next alts cutinfo trail sgs =
-  let cgoal = canonify goal in
+  let nvars, cgoal, _, _ = abstract goal in
   match DT.find cgoal !table with
   | [], Incomplete ->
       [%spy "slg:suspend" ~rid pp_tm cgoal];
@@ -561,21 +545,19 @@ and enter_slg goal rules next alts cutinfo trail sgs =
       let sgs = set_root_if_not_set alts sgs in
       let sgs = push_consumer cgoal { goal; next = SLGRoot { next; alts }; trail = checkpoint trail; env = copy_trail trail } sgs in
       new_table_entry cgoal;
-      let trail = empty_trail () in
-      let goal = copy goal in (* also copy the program *)
-      let sgs = push_generator { trail; goal; rules; next = TableSolution(goal,cgoal) } sgs in
+      let sgs = push_generator { initial_goal = (nvars,cgoal); rules } sgs in
       advance_slg sgs
 
 and advance_slg ({ generators; resume_queue; root; _ } as s) =
-  [%trace "slg:step" ~rid ("@[<hov 2>%a]@\n" pp_slg_status s)
+  [%trace "slg:step" ~rid ("@[<hov 2>%a@ table:@[<hov 2>%a@]@]\n" pp_slg_status s pp_table !table)
   begin match resume_queue with
   | ({goal ; next; trail; env }, solution) :: resume_queue ->
       let s = { s with resume_queue } in
       backtrack ~already_undone:true trail;
       redo trail env;
-      begin match select trail goal [solution] with
+      begin match select trail 0 goal [solution] with
       | None -> advance_slg s
-      | Some([],[]) -> pop_andl next [] trail s
+      | Some(_,[],[]) -> pop_andl next [] trail s
       | _ -> assert false (* solutions have no subgoals *)
       end
   | [] ->
@@ -587,26 +569,25 @@ and advance_slg ({ generators; resume_queue; root; _ } as s) =
             let s = unset_root s in
             next_alt alts s
         end
-     | { rules = []; next = TableSolution(_,cgoal); _ } :: generators ->
+     | { initial_goal = (_, cgoal); rules = []; _ } :: generators ->
           table_entry_complete cgoal; (* TODO: do this more ofted/early *)
           advance_slg { s with generators }
-     | { rules = []; _ } :: generators -> advance_slg { s with generators }
-     | { trail; goal; next; rules } :: generators ->
-        backtrack trail;
-        match select trail goal rules with
+     | { initial_goal = (nvars, cgoal); rules } :: generators ->
+        let trail = empty_trail () in
+        match select trail nvars cgoal rules with
         | None -> advance_slg { s with generators }
-        | Some ([], rules) ->
-            let s = { s with generators = { trail; goal; next; rules } :: generators } in
-            pop_andl next [] trail s
-        | Some (ngoal::brothers, rules) ->
+        | Some (solution,[], rules) ->
+            let s = { s with generators = { initial_goal = (nvars, cgoal); rules } :: generators } in
+            pop_andl (TableSolution(cgoal,solution)) [] trail s
+        | Some (solution,ngoal::brothers, rules) ->
             let s = { s with generators } in
             if rules <> [] && has_cut (ngoal :: brothers) then
-              let nonce, s = push_stuck_generator { trail; goal; next; rules } s in
-              let next = Todo { brothers; cutinfo = []; siblings = next } in
+              let nonce, s = push_stuck_generator { initial_goal = (nvars, cgoal); rules } s in
+              let next = Todo { brothers; cutinfo = []; siblings = (TableSolution(cgoal,solution)) } in
               run { goal = ngoal; next; alts = [Unblock nonce]; rules = !all_rules; cutinfo = []; trail } s        
             else
-              let s = push_generator { trail; goal; next; rules } s in
-              let next = Todo { brothers; cutinfo = []; siblings = next } in
+              let s = push_generator { initial_goal = (nvars, cgoal); rules } s in
+              let next = Todo { brothers; cutinfo = []; siblings = (TableSolution(cgoal,solution)) } in
               run { goal = ngoal; next; alts = []; rules = !all_rules; cutinfo = []; trail } s        
 end]
 
@@ -614,13 +595,13 @@ and sld goal rules next (alts : alts) (cutinfo : alts) trail (sgs : slg_status) 
   if goal = cut then pop_andl next cutinfo trail sgs
   else 
     let trail = checkpoint trail in
-    match select trail goal rules with
+    match select trail 0 goal rules with
     | None -> next_alt alts sgs
-    | Some ([], []) -> pop_andl next alts trail sgs
-    | Some ([], rules) ->
+    | Some (_,[], []) -> pop_andl next alts trail sgs
+    | Some (_, [], rules) ->
         let alts = Alt { goal; rules; stack=next; trail; cutinfo } :: alts in
         pop_andl next alts trail sgs
-    | Some (ngoal :: brothers, rules) ->
+    | Some (_, ngoal :: brothers, rules) ->
         let old_alts = alts in
         let alts = Alt { goal; rules; stack=next; trail; cutinfo } :: alts in
         let next = Todo { brothers; cutinfo; siblings = next } in
@@ -631,7 +612,7 @@ and pop_andl (next : frame) (alts : alts) (trail : trail) (sgs : slg_status) =
   match next with
   | Done -> OK (alts,sgs)
   | SLGRoot { next; alts = o } -> assert(alts = []); pop_andl next o trail sgs
-  | TableSolution(solution,cgoal) ->
+  | TableSolution(cgoal,solution) ->
       let sgs = table_solution cgoal solution sgs in
       advance_slg sgs
   | Todo { brothers = []; siblings = next; _ } -> pop_andl next alts trail sgs

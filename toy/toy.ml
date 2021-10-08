@@ -107,6 +107,15 @@ let () =
     ",
     "_p(a,Z)", 3, ["_p(a, b)"; "_p(a, c)"; "no"]);
 
+    `Check("slg+sld",
+    "
+    _p(a,b).
+    _p(X,Z) :- _p(X,Y), _p(Y,Z).
+    _p(b,c).
+    _p(b,d).
+    ",
+    "_p(a,Z)", 4, ["_p(a, b)"; "_p(a, c)"; "_p(a, d)"; "no"]);
+
     `Check("AAMFTESLP facts order",
     "
     _p(X,Z) :- e(X,Z), q(Z).
