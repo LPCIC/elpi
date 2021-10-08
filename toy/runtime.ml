@@ -1,3 +1,118 @@
+
+(* A map with opaque bodex data as key.
+
+This data structure is faster than an associative list + List.assq
+asyntotically since it keeps a cache with log(n) lookup time.
+
+On standard OCaml backends we compuete the pointer of a boxed value and
+turn it into an integer key and use that value as the key for the cache.
+Since the Gc may move the boxed value a sanity check is performed at lookup
+time and the cache is eventually updated on the bases of an authoritative
+associative list.    
+*)
+module IntMap = Map.Make(struct type t = int let compare = Stdlib.compare end)
+module PtrMap : sig
+
+  type 'a t
+
+  val empty : unit -> 'a t
+  val is_empty : 'a t -> bool
+  val find : 'block -> 'a t -> 'a
+  val add : 'block -> 'a -> 'a t -> 'a t
+  val remove : 'block -> 'a t -> 'a t
+  val filter : ('block -> 'a -> bool) -> 'a t -> 'a t
+  val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+  val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
+
+end = struct
+
+  type 'a t = {
+    (* maps the key's address to the value. It also holds the key
+       itself so that we can check if the key was moved by the Gc
+       and fall back to the authoritative associative list *)
+    mutable cache : (Obj.t * 'a) IntMap.t;
+    (* We associate to the boxed key a value, but we also keep track of
+       its address. When it is found to be outdated, we remove the old
+       entry in the cache. All OCaml data is eventually moved by the Gc
+       at least once, so we keep the size of the cache close to the
+       size of the list, and not to its double, by puring outdated cache
+       entries. *)
+    authoritative : (Obj.t * ('a * int ref)) list;
+  }
+
+  let empty () = { cache = IntMap.empty; authoritative = [] }
+  let is_empty { authoritative; _ } = authoritative = []
+
+  let address_of =
+    match Sys.backend_type with
+    | (Sys.Bytecode | Sys.Native) ->
+        fun (ro : Obj.t) : int -> begin
+          assert(Obj.is_block ro);
+          let a : int = Obj.magic ro in
+          ~- a (* so that the Gc will not mistake it for a block *)
+        end
+    | Sys.Other _ ->
+        (* We don't know how the backend deals with memory, so we play safe.
+           In this way the cache is a 1 slot for the last used entry. *)
+        fun _ -> 46
+
+  let add o v { cache;  authoritative } =
+    let ro = Obj.repr o in
+    let address = address_of ro in
+    { cache = IntMap.add address (ro,v) cache;
+      authoritative = (ro,(v,ref address)) :: authoritative }
+
+  let linear_search_and_cache ro address cache authoritative orig =
+    let v, old_address = List.assq ro authoritative in
+    orig.cache <- IntMap.add address (ro,v) (IntMap.remove !old_address cache);
+    old_address := address;
+    v
+
+  let linear_scan_attempted = ref false
+  let find o ({ cache; authoritative } as orig) =
+    linear_scan_attempted := false;
+    let ro = Obj.repr o in
+    let address = address_of ro in
+    try
+      let ro', v = IntMap.find address cache in
+      if ro' == ro then v
+      else
+        let cache = IntMap.remove address cache in
+        linear_scan_attempted := true;
+        linear_search_and_cache ro address cache authoritative orig        
+    with Not_found when not !linear_scan_attempted -> 
+      linear_search_and_cache ro address cache authoritative orig
+    
+  let remove o { cache; authoritative } =
+    let ro = Obj.repr o in
+    let address = address_of ro in
+    let _, old_address = List.assq ro authoritative in
+    let authoritative = List.remove_assq ro authoritative in
+    let cache = IntMap.remove address cache in
+    let cache =
+      if !old_address != address then IntMap.remove !old_address cache
+      else cache in
+    { cache; authoritative }
+
+  let filter f { cache; authoritative } =
+    let cache = ref cache in
+    let authoritative = authoritative |> List.filter (fun (o,(v,old_address)) ->
+      let keep = f (Obj.obj o) v in
+      if not keep then begin
+        let address = address_of o in
+        cache := IntMap.remove address !cache;
+        if !old_address != address then cache := IntMap.remove !old_address !cache
+      end;
+      keep) in
+    { cache = !cache; authoritative }
+
+  let pp f fmt { authoritative; _ } =
+    Format.pp_print_list (fun fmt (_,(x,_)) -> f fmt x) ~pp_sep:(fun fmt () -> Format.pp_print_string fmt ";") fmt authoritative
+
+  let show f m = Format.asprintf "%a" (pp f) m
+    
+end
+
 (******************************* ast ****************************)
 open Ast
 let dummy = App("!",[App("!",[])])
