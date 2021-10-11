@@ -6,7 +6,7 @@
        is equivalent to the rule:
            Head :- true.
     *)
-    let fact_sugar p = (p, [])
+    let fact_sugar p = (p, [], [])
 
     (* An atom can be regarded as a compound term with arity zero *)
     let atom_sugar a = App (a, [])
@@ -29,6 +29,9 @@
 
 /* Symbols */
 %token RULE       /* :- */
+%token CRULE       /* ?- */
+%token PIPE       /* | */
+%token LTN       /* < */
 %token PERIOD     /* .  */
 %token LPAREN     /* (  */
 %token RPAREN     /* )  */
@@ -40,8 +43,8 @@
 %start clause query program
 
 /* Types */
-%type <Ast.tm * Ast.tm list> clause
-%type <(Ast.tm * Ast.tm list) list> program
+%type <Ast.tm * (string * string) list * Ast.tm list> clause
+%type <(Ast.tm * (string * string) list * Ast.tm list) list> program
 %type <Ast.tm> predicate term structure
 %type <Ast.tm list> term_list predicate_list query
 
@@ -53,11 +56,19 @@ program:
 
 clause:
     | p = predicate; PERIOD                             { fact_sugar p }
-    | p = predicate; RULE; pl = predicate_list; PERIOD  { (p, pl) }
+    | p = predicate; RULE; pl = predicate_list; PERIOD  { (p, [], pl) }
+    | p = predicate; CRULE; cl = constraint_list; PIPE; pl = predicate_list; PERIOD  { (p, cl, pl) }
 
 predicate_list:
     | p = predicate                                     { [p] }
     | p = predicate; COMMA; pl = predicate_list         { p :: pl }
+
+constraint_list:
+    | c = cst { [c] }
+    | c = cst; COMMA; cl = constraint_list    { c :: cl }
+
+cst:
+    | c1 = cterm; LTN; c2 = cterm {  (c1,c2) }
 
 query:
     | pl = predicate_list; EOF { pl }
@@ -78,4 +89,8 @@ term:
     | a = ATOM                                          { atom_sugar a }
     | v = VAR                                           { atom_sugar v }
     | s = structure                                     { s }
+
+cterm:
+    | a = ATOM                                          { a }
+    | v = VAR                                           { v }
 

@@ -149,8 +149,13 @@ let rec pp fmt = function
   | Var r -> let s = pp_var r in Format.fprintf fmt "%s" s
   | Arg i -> Format.fprintf fmt "$%d" i
 
+let ppi fmt = function
+  | App(s,[a;b]) -> pp fmt a; Format.fprintf fmt " %s " s; pp fmt b
+  | _ -> assert false
+
 let pp_tm = pp
 let ppl s = Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f s) pp
+let ppli s = Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f s) ppi
 
 (******************************* backtrack ****************************)
 
@@ -216,7 +221,7 @@ let empty_trail constraints = { log = ref []; env = ref []; constraints }
 type goal = tm
 [@@deriving show]
 
-type rule = int * tm * tm list
+type rule = int * tm * tm list * tm list
 [@@deriving show]
 type rules = rule list
 [@@deriving show]
@@ -304,7 +309,7 @@ let abstract_constraints from constraints =
   let constraints = List.map (fun c -> abstract c, c) constraints in
   fixpoint from [] constraints
 
-let clausify_solution t =
+let clausify_solution t csts =
   let m = ref [] in
   let rec aux = function
   | Arg _ -> assert false
@@ -320,7 +325,8 @@ let clausify_solution t =
       App(s,List.map aux args)
   in
   let t = aux t in
-  List.length !m, t, []
+  let csts = List.map aux csts in
+  List.length !m, t, csts, []
 
 (* we could canonify g and then Stdlib.compare (OC can be expensive)*)
 
@@ -436,9 +442,11 @@ let pp_table fmt dt =
 
 let table_reset () = table := DT.empty
 
+let consistent _ _ = true
+
 let rec select trail goal = function
   | [] -> None
-  | (stack,hd,conds)::rules ->
+  | (stack,hd,csts,conds)::rules ->
     let stack = Array.init stack (fun _ -> dummy) in
     [%spy "select" ~rid (fun fmt () -> Format.fprintf fmt "%a /// %a :- %a." pp_tm goal pp_tm hd pp_tm (App("&",conds))) ()];
     let trail = checkpoint trail in
@@ -446,7 +454,12 @@ let rec select trail goal = function
       let trail = backtrack trail in
       select trail goal rules
     end else begin
-      Some (List.map (heapify stack) conds, rules)
+      let csts = List.map (heapify stack) csts in
+      if consistent csts trail.constraints then
+        Some ({trail with constraints = trail.constraints @ csts }, List.map (heapify stack) conds, rules)
+      else
+        let trail = backtrack trail in
+        select trail goal rules
     end
 
 let new_table_entry cgoal =
@@ -535,10 +548,10 @@ let resume_all_consumers cgoal (c : rule) (s : slg_status) =
   with Not_found ->
     s
   
-let table_solution cgoal solution s =
+let table_solution cgoal solution constraints s =
   match DT.find cgoal !table with
   | solutions, status ->
-      let solution = clausify_solution solution in
+      let solution = clausify_solution solution constraints in
       if List.mem solution solutions then
         s
       else begin
@@ -556,7 +569,7 @@ let table_entry_complete cgoal =
 
 let has_cut = List.mem cut
 
-type result = TIMEOUT | FAIL | OK of alts * slg_status
+type result = TIMEOUT | FAIL | OK of tm list * alts * slg_status
 
 
 let rec run { goal; rules; next; alts; cutinfo; trail } (sgs : slg_status) : result =
@@ -601,7 +614,7 @@ and advance_slg ({ generators; resume_queue; root; _ } as s) =
       let trail = backtrack trail in
       begin match select trail goal [solution] with
       | None -> advance_slg s
-      | Some([],[]) -> pop_andl next [] trail s
+      | Some(trail,[],[]) -> pop_andl next [] trail s
       | _ -> assert false (* solutions have no subgoals *)
       end
   | [] ->
@@ -621,10 +634,10 @@ and advance_slg ({ generators; resume_queue; root; _ } as s) =
         let goal, trail = init_tree initial_goal in
         match select trail goal rules with
         | None -> advance_slg { s with generators }
-        | Some ([], rules) ->
+        | Some (trail,[], rules) ->
             let s = { s with generators = { initial_goal; rules } :: generators } in
             pop_andl (TableSolution(cgoal,goal)) [] trail s
-        | Some (ngoal::brothers, rules) ->
+        | Some (trail,ngoal::brothers, rules) ->
             let s = { s with generators } in
             if rules <> [] && has_cut (ngoal :: brothers) then
               let nonce, s = push_stuck_generator { initial_goal; rules } s in
@@ -642,11 +655,11 @@ and sld goal rules next (alts : alts) (cutinfo : alts) trail (sgs : slg_status) 
     let trail = checkpoint trail in
     match select trail goal rules with
     | None -> next_alt alts sgs
-    | Some ([], []) -> pop_andl next alts trail sgs
-    | Some ([], rules) ->
+    | Some (trail, [], []) -> pop_andl next alts trail sgs
+    | Some (trail, [], rules) ->
         let alts = Alt { goal; rules; stack=next; trail; cutinfo } :: alts in
         pop_andl next alts trail sgs
-    | Some (ngoal :: brothers, rules) ->
+    | Some (trail, ngoal :: brothers, rules) ->
         let old_alts = alts in
         let alts = Alt { goal; rules; stack=next; trail; cutinfo } :: alts in
         let next = Todo { brothers; cutinfo; siblings = next } in
@@ -655,10 +668,10 @@ and sld goal rules next (alts : alts) (cutinfo : alts) trail (sgs : slg_status) 
 and pop_andl (next : frame) (alts : alts) (trail : trail) (sgs : slg_status) =
   [%trace "pop_andl" ~rid ("@[<hov 2>%a]@\n" pp_frame next) begin
   match next with
-  | Done -> OK (alts,sgs)
+  | Done -> OK (trail.constraints,alts,sgs)
   | SLGRoot { next; alts = o } -> assert(alts = []); pop_andl next o trail sgs
   | TableSolution(cgoal,solution) ->
-      let sgs = table_solution cgoal solution sgs in
+      let sgs = table_solution cgoal solution trail.constraints sgs in
       advance_slg sgs
   | Todo { brothers = []; siblings = next; _ } -> pop_andl next alts trail sgs
   | Todo { brothers = goal :: brothers; cutinfo; siblings } ->
@@ -686,19 +699,25 @@ let run goal rules =
 module P = struct
 
   let l = ref []
-  let rec vars = function
-    | App(s,[]) ->
-        begin match s.[0] with
-        | 'A'..'Z' -> 
-            begin try
-              let i = List.assoc s !l in
-              Arg i
-            with Not_found ->
-              l := (s, List.length !l) :: !l;
-              Arg (List.assoc s !l)
-            end
-        | _ -> App(s,[])
+
+
+  let v s =
+    begin match s.[0] with
+    | 'A'..'Z' -> 
+        begin try
+          let i = List.assoc s !l in
+          Arg i
+        with Not_found ->
+          l := (s, List.length !l) :: !l;
+          Arg (List.assoc s !l)
         end
+    | _ -> App(s,[])
+    end
+
+  let cvars (s1,s2) = App("<",[v s1; v s2])
+
+  let rec vars = function
+    | App(s,[]) -> v s
     | App(x,xs) -> App(x,List.map vars xs)
     | x -> x
   
@@ -706,11 +725,12 @@ module P = struct
   let parse_program s = try
     let lexbuf = Lexing.from_string s in
     let cl = Parser.program Lexer.token lexbuf in
-    cl |> List.map (fun (hd,hyps) ->
+    cl |> List.map (fun (hd,csts,hyps) ->
         l := [];
         let hd = vars hd in
         let hyps = List.map vars hyps in
-        List.length !l, hd, hyps)
+        let csts = List.map cvars csts in
+        List.length !l, hd, csts, hyps)
     with Parser.Error -> Format.eprintf "cannot parse %s\n%!" s; exit 1
 
   let parse_query s = try
@@ -735,8 +755,10 @@ let main query steps n program =
   let rec all n = function
   | FAIL -> [Format.asprintf "no"]
   | TIMEOUT -> [Format.asprintf "steps"]
-  | OK (alts,sgs) ->
-      let s = Format.asprintf "%a" (ppl ", ") query in
+  | OK (csts,alts,sgs) ->
+      let g = Format.asprintf "%a" (ppl ", ") query in
+      let c = if csts = [] then "" else Format.asprintf "%a| " (ppli ", ") csts in
+      let s = c^g in
       if n = 1 then [s]
       else s :: all (n-1) (next_alt alts sgs)
   in

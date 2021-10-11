@@ -267,6 +267,12 @@ let () =
     ",
     "_p(X),_p(s(X)),_p(z)", 2, ["_p(X0), _p(s(X0)), _p(z)"; "no"]);
 
+    `Check("csts1",
+    "
+    p(X) ?- X < one | true.
+    true.
+    ",
+    "p(X), p(A)", 2, ["X0 < one, X1 < one| p(X0), p(X1)"; "no"]);
 
   ] in
 

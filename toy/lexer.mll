@@ -55,6 +55,9 @@ rule token = parse
 
     (* Symbols *)
     | ":-"              { RULE      }
+    | "?-"              { CRULE      }
+    | "|"              { PIPE     }
+    | "<"              { LTN     }
     | '.'               { PERIOD    }
     | '('               { LPAREN    }
     | ')'               { RPAREN    }
