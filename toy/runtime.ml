@@ -148,14 +148,13 @@ let ppl s = Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f s
 
 type trail_item =
   | Assign of tm ref
+  | Observer of (tm ref * tm) list ref list
 [@@deriving show]
 
 type trail_log = trail_item list ref
 [@@deriving show]
-type fwd_trail = (tm ref * tm) list
-[@@deriving show]
 
-type trail = { log : trail_log; old_trail : trail_item list }
+type trail = { log : trail_log; env : (tm ref * tm) list ref }
 [@@deriving show]
 
 let assign { log = trail; _ }  v t =
@@ -164,38 +163,39 @@ let assign { log = trail; _ }  v t =
   [%spy "assign:with" ~rid pp_tm t];
   v := t
 
-let empty_trail () = let bottom = [] in { log = ref bottom; old_trail = bottom }
-
-let rec backtrack ?(already_undone=false) ({ log = trail; old_trail = o } as t) =
-  if o != !trail then begin
-    match !trail with
-    | [] ->
-        if already_undone then () else assert false
-    | Assign v :: vs ->
-        v := dummy;
-        trail := vs;
-        backtrack ~already_undone t
-  end
-
-let rec chop_trail o trail =
-  if o != trail then
-    match trail with
-    | [] -> assert false
-    | v :: vs -> v :: chop_trail o vs
-  else
-     []
-let chop_trail trail o = chop_trail o !trail
-
 let rec redo trail = function
-  | [] -> ()
+  | [] -> trail
   | (r,v) :: rest -> assign trail r v; redo trail rest
 
-let rec copy_trail = function
-  | [] -> []
-  | Assign r :: trail -> (r, !r) :: copy_trail trail
-let copy_trail { log; _ } = copy_trail !log
+let rec backtrack trail env observers =
+    match !trail with
+    | [] -> assert false
+    | Assign v :: vs ->
+        List.iter (fun o -> o := (v,!v) :: !o) observers;
+        v := dummy;
+        trail := vs;
+        backtrack trail env observers
+    | Observer os :: vs ->
+        if List.memq env os then begin
+          let observers = List.filter (fun x -> x != env) observers in
+          if observers != [] then
+            trail := Observer observers :: !trail;
+          !env
+        end else begin
+          trail := vs;
+          backtrack trail env (os @ observers)
+        end
 
-let checkpoint { log; _ } = { log; old_trail = !log }
+let backtrack { log; env } =
+  let fwd = backtrack log env [] in
+  redo { log; env = ref [] } fwd
+
+let checkpoint { log; _ } =
+  let env = ref [] in
+  log := Observer [env] :: !log;
+  { log; env }
+
+let empty_trail () = { log = ref []; env = ref [] }
 
 type goal = tm
 [@@deriving show]
@@ -404,8 +404,9 @@ let rec select trail nvars goal = function
     let stack = Array.init stack (fun _ -> dummy) in
     let gstack = Array.init nvars (fun _ -> dummy) in
     [%spy "select" ~rid (fun fmt () -> Format.fprintf fmt "%a /// %a :- %a." pp_tm goal pp_tm hd pp_tm (App("&",conds))) ()];
+    let trail = checkpoint trail in
     if not (unif trail gstack stack goal hd) then begin
-      backtrack trail;
+      let trail = backtrack trail in
       select trail nvars goal rules
     end else begin
       Some (heapify gstack goal, List.map (heapify stack) conds, rules)
@@ -418,7 +419,6 @@ type consumer = {
   next : frame;
   goal : tm;
   trail : trail;
-  env : fwd_trail;
 }
 [@@deriving show]
 
@@ -531,19 +531,19 @@ and enter_slg goal rules next alts cutinfo trail sgs =
   match DT.find cgoal !table with
   | [], Incomplete ->
       [%spy "slg:suspend" ~rid pp_tm cgoal];
-      let sgs = push_consumer cgoal { goal; next; trail = checkpoint trail; env = copy_trail trail } sgs in
+      let sgs = push_consumer cgoal { goal; next; trail = checkpoint trail } sgs in
       advance_slg sgs
   | answers, Complete -> (* TODO: Trie -> DT(find_unifiable) *)
       [%spy "slg:complete->sld" ~rid pp_tm cgoal];
       sld goal answers next alts cutinfo trail sgs
   | answers, Incomplete ->
       [%spy "slg:incomplete->sld+slg" ~rid pp_tm cgoal];
-      let sgs = push_consumer cgoal { goal; next; trail = checkpoint trail; env = copy_trail trail } sgs in
+      let sgs = push_consumer cgoal { goal; next; trail = checkpoint trail } sgs in
       sld goal answers next alts cutinfo trail sgs
   | exception Not_found ->
       [%spy "slg:new" ~rid pp_tm cgoal];
       let sgs = set_root_if_not_set alts sgs in
-      let sgs = push_consumer cgoal { goal; next = SLGRoot { next; alts }; trail = checkpoint trail; env = copy_trail trail } sgs in
+      let sgs = push_consumer cgoal { goal; next = SLGRoot { next; alts }; trail = checkpoint trail } sgs in
       new_table_entry cgoal;
       let sgs = push_generator { initial_goal = (nvars,cgoal); rules } sgs in
       advance_slg sgs
@@ -551,10 +551,9 @@ and enter_slg goal rules next alts cutinfo trail sgs =
 and advance_slg ({ generators; resume_queue; root; _ } as s) =
   [%trace "slg:step" ~rid ("@[<hov 2>%a@ table:@[<hov 2>%a@]@]\n" pp_slg_status s pp_table !table)
   begin match resume_queue with
-  | ({goal ; next; trail; env }, solution) :: resume_queue ->
+  | ({goal ; next; trail }, solution) :: resume_queue ->
       let s = { s with resume_queue } in
-      backtrack ~already_undone:true trail;
-      redo trail env;
+      let trail = backtrack trail in
       begin match select trail 0 goal [solution] with
       | None -> advance_slg s
       | Some(_,[],[]) -> pop_andl next [] trail s
@@ -627,7 +626,7 @@ and next_alt alts (sgs : slg_status) : result = match alts with
       let sgs = pop_stuck_generator nonce sgs in
       next_alt alts sgs
   | Alt { goal; rules; stack=next; trail; cutinfo } :: alts ->
-      backtrack trail;
+      let trail = backtrack trail in
       run { goal; rules; next; alts; cutinfo; trail } sgs
 
 let run goal rules =
