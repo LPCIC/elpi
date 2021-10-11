@@ -23,7 +23,8 @@ module PtrMap : sig
   val filter : ('block -> 'a -> bool) -> 'a t -> 'a t
   val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
   val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
-  val keys : 'a t -> 'block list (* unsafe *)
+
+  val intersect : 'a t -> 'a t -> bool
 
 end = struct
 
@@ -40,8 +41,6 @@ end = struct
        entries. *)
     authoritative : (Obj.t * ('a * int ref)) list;
   }
-
-  let keys { authoritative; _ } = List.map (fun (x,_) -> Obj.obj x) authoritative
 
   let empty () = { cache = IntMap.empty; authoritative = [] }
   let is_empty { authoritative; _ } = authoritative = []
@@ -85,7 +84,16 @@ end = struct
         linear_search_and_cache ro address cache authoritative orig        
     with Not_found when not !linear_scan_attempted -> 
       linear_search_and_cache ro address cache authoritative orig
-    
+
+  let mem o m =
+    try
+      let _ = find o m in
+      true
+    with Not_found -> false
+
+  let intersect m { authoritative; _ } =
+    authoritative |> List.exists (fun (o,_) -> mem o m)    
+
   let remove o { cache; authoritative } =
     let ro = Obj.repr o in
     let address = address_of ro in
@@ -146,15 +154,19 @@ let ppl s = Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f s
 
 (******************************* backtrack ****************************)
 
+type env_item =
+  | ReAssign of tm ref * tm
+[@@deriving show]
+
 type trail_item =
   | Assign of tm ref
-  | Observer of (tm ref * tm) list ref list
+  | Observer of env_item list ref list
 [@@deriving show]
 
 type trail_log = trail_item list ref
 [@@deriving show]
 
-type trail = { log : trail_log; env : (tm ref * tm) list ref }
+type trail = { log : trail_log; env : env_item list ref; constraints : tm list }
 [@@deriving show]
 
 let assign { log = trail; _ }  v t =
@@ -163,39 +175,43 @@ let assign { log = trail; _ }  v t =
   [%spy "assign:with" ~rid pp_tm t];
   v := t
 
+let add_cs c t = { t with constraints = c :: t.constraints }
+let del_cs c t = { t with constraints = List.filter (fun x -> x != c) t.constraints }
+  
+
 let rec redo trail = function
   | [] -> trail
-  | (r,v) :: rest -> assign trail r v; redo trail rest
+  | ReAssign(r,v) :: rest -> assign trail r v; redo trail rest
 
-let rec backtrack trail env observers =
+let rec backtrack trail env constraints observers =
     match !trail with
     | [] -> assert false
-    | Assign v :: vs ->
-        List.iter (fun o -> o := (v,!v) :: !o) observers;
-        v := dummy;
-        trail := vs;
-        backtrack trail env observers
     | Observer os :: vs ->
         if List.memq env os then begin
           let observers = List.filter (fun x -> x != env) observers in
           if observers != [] then
             trail := Observer observers :: !trail;
-          !env
+          !env, constraints
         end else begin
           trail := vs;
-          backtrack trail env (os @ observers)
+          backtrack trail env constraints (os @ observers)
         end
+    | Assign v :: vs ->
+        List.iter (fun o -> o := ReAssign (v,!v) :: !o) observers;
+        v := dummy;
+        trail := vs;
+        backtrack trail env constraints observers
 
-let backtrack { log; env } =
-  let fwd = backtrack log env [] in
-  redo { log; env = ref [] } fwd
+let backtrack { log; env; constraints } =
+  let fwd, constraints = backtrack log env constraints [] in
+  redo { log; env = ref []; constraints } fwd
 
-let checkpoint { log; _ } =
+let checkpoint { log; constraints; _ } =
   let env = ref [] in
   log := Observer [env] :: !log;
-  { log; env }
+  { log; env; constraints }
 
-let empty_trail () = { log = ref []; env = ref [] }
+let empty_trail constraints = { log = ref []; env = ref []; constraints }
 
 type goal = tm
 [@@deriving show]
@@ -218,22 +234,22 @@ let rec heapify s = function
   | Arg i when s.(i) != dummy -> s.(i)
   | Arg i -> let t = Var (ref dummy) in s.(i) <- t; t
 
-let rec unif (trail:trail) (sa:tm array) (sb:tm array) (a:tm) (b:tm) = match a, b with
+let rec unif (trail:trail) (sb:tm array) (a:tm) (b:tm) = match a, b with
+  | Arg _, _ -> assert false
+
   (* deref *)
-  | Var r, _ when !r != dummy -> unif trail sa sb !r b
-  | _, Var r when !r != dummy -> unif trail sa sb a !r
-  | Arg i, _ when sa.(i) != dummy -> unif trail sa sb sa.(i) b
-  | _, Arg i when sb.(i) != dummy -> unif trail sa sb a sb.(i)
+  | Var r, _ when !r != dummy -> unif trail sb !r b
+  | _, Var r when !r != dummy -> unif trail sb a !r
+  | _, Arg i when sb.(i) != dummy -> unif trail sb a sb.(i)
 
   (* assign *)
   | Var r, _ -> assign trail r (heapify sb b); true
-  | _, Var r -> assign trail r (heapify sa a); true (* missing OC *)
-  | Arg i, _ -> sa.(i) <- (heapify sb b); true
-  | _, Arg i -> sb.(i) <- (heapify sa a); true
+  | _, Var r -> assign trail r a; true (* missing OC *)
+  | _, Arg i -> sb.(i) <- a; true
 
   | App(c1,args1), App(c2,args2) ->
     if c1 <> c2 then false
-    else fold_left2 (unif trail sa sb) args1 args2
+    else fold_left2 (unif trail sb) args1 args2
 
 (******************************* table ****************************)
 
@@ -247,25 +263,47 @@ let rec map_acc f acc = function
       let acc, ys, zs = map_acc f acc xs in
       acc, y :: ys, z :: zs
 
-let abstract g =
-  let m = ref @@ PtrMap.empty () in
-  let rec aux i = function
+let abstract ?(from = 0, PtrMap.empty ()) g =
+  let i, m = from in
+  let i = ref i in
+  let m = ref m in
+  let rec aux = function
     | Arg _ -> assert false
-    | Var r when !r <> dummy -> aux i !r
-    | Var r as x ->
+    | Var r when !r <> dummy -> aux !r
+    | Var r ->
         begin match PtrMap.find r !m with
-        | n -> i, Arg(n), x
+        | n -> Arg(n)
         | exception Not_found ->
-            m := PtrMap.add r i !m;
-            i+1, Arg i, x
+            m := PtrMap.add r !i !m;
+            let x = Arg !i in
+            incr i;
+            x
         end
     | App(s,args) ->
-        let i, args, dereffedargs = map_acc aux i args in
-        i, App(s,args), App(s,dereffedargs)
+        let args = List.map aux args in
+        App(s,args)
   in
-  let n, abstract, dereffed = aux 0 g in
-  n, abstract, dereffed, PtrMap.keys !m
+  let abstract = aux g in
+  (!i, !m), abstract
     
+let abstract_constraints from constraints =
+  let rec aux from relevant irrelevant changed = function
+    | [] -> changed, from, relevant, irrelevant
+    | (((_,f1),_),c as x) :: rest ->
+        if PtrMap.intersect (snd from) f1 then
+          let from, c = abstract ~from c in
+          aux from (c :: relevant) irrelevant true rest
+        else
+          aux from relevant (x :: irrelevant) changed rest
+  in
+  let rec fixpoint from relevant irrelevant =
+    let changed, from, relevant, irrelevant = aux from relevant irrelevant false irrelevant in
+    if changed then fixpoint from relevant irrelevant
+    else fst from, relevant
+  in
+  let constraints = List.map (fun c -> abstract c, c) constraints in
+  fixpoint from [] constraints
+
 let clausify_solution t =
   let m = ref [] in
   let rec aux = function
@@ -398,18 +436,17 @@ let pp_table fmt dt =
 
 let table_reset () = table := DT.empty
 
-let rec select trail nvars goal = function
+let rec select trail goal = function
   | [] -> None
   | (stack,hd,conds)::rules ->
     let stack = Array.init stack (fun _ -> dummy) in
-    let gstack = Array.init nvars (fun _ -> dummy) in
     [%spy "select" ~rid (fun fmt () -> Format.fprintf fmt "%a /// %a :- %a." pp_tm goal pp_tm hd pp_tm (App("&",conds))) ()];
     let trail = checkpoint trail in
-    if not (unif trail gstack stack goal hd) then begin
+    if not (unif trail stack goal hd) then begin
       let trail = backtrack trail in
-      select trail nvars goal rules
+      select trail goal rules
     end else begin
-      Some (heapify gstack goal, List.map (heapify stack) conds, rules)
+      Some (List.map (heapify stack) conds, rules)
     end
 
 let new_table_entry cgoal =
@@ -423,10 +460,17 @@ type consumer = {
 [@@deriving show]
 
 type generator = {
-  initial_goal : (int * tm);
+  initial_goal : (int * tm * tm list);
   rules : rule list; [@printer (fun fmt l -> Format.fprintf fmt "%d" (List.length l))]
 }
 [@@deriving show]
+
+let init_tree (stack,cg,cs) =
+  let stack = Array.init stack (fun _ -> dummy) in
+  let g = heapify stack cg in
+  let cs = List.map (heapify stack) cs in
+  g, empty_trail cs
+
 
 module IM = Map.Make(struct type t = int let compare = Stdlib.compare end)
 
@@ -527,7 +571,7 @@ let rec run { goal; rules; next; alts; cutinfo; trail } (sgs : slg_status) : res
 end]
 
 and enter_slg goal rules next alts cutinfo trail sgs =
-  let nvars, cgoal, _, _ = abstract goal in
+  let abstract_map, cgoal = abstract goal in
   match DT.find cgoal !table with
   | [], Incomplete ->
       [%spy "slg:suspend" ~rid pp_tm cgoal];
@@ -545,7 +589,8 @@ and enter_slg goal rules next alts cutinfo trail sgs =
       let sgs = set_root_if_not_set alts sgs in
       let sgs = push_consumer cgoal { goal; next = SLGRoot { next; alts }; trail = checkpoint trail } sgs in
       new_table_entry cgoal;
-      let sgs = push_generator { initial_goal = (nvars,cgoal); rules } sgs in
+      let nvars, cconstraints = abstract_constraints abstract_map trail.constraints in
+      let sgs = push_generator { initial_goal = (nvars,cgoal,cconstraints); rules } sgs in
       advance_slg sgs
 
 and advance_slg ({ generators; resume_queue; root; _ } as s) =
@@ -554,9 +599,9 @@ and advance_slg ({ generators; resume_queue; root; _ } as s) =
   | ({goal ; next; trail }, solution) :: resume_queue ->
       let s = { s with resume_queue } in
       let trail = backtrack trail in
-      begin match select trail 0 goal [solution] with
+      begin match select trail goal [solution] with
       | None -> advance_slg s
-      | Some(_,[],[]) -> pop_andl next [] trail s
+      | Some([],[]) -> pop_andl next [] trail s
       | _ -> assert false (* solutions have no subgoals *)
       end
   | [] ->
@@ -568,25 +613,26 @@ and advance_slg ({ generators; resume_queue; root; _ } as s) =
             let s = unset_root s in
             next_alt alts s
         end
-     | { initial_goal = (_, cgoal); rules = []; _ } :: generators ->
+     | { initial_goal = (_, cgoal,_); rules = []; _ } :: generators ->
           table_entry_complete cgoal; (* TODO: do this more ofted/early *)
           advance_slg { s with generators }
-     | { initial_goal = (nvars, cgoal); rules } :: generators ->
-        let trail = empty_trail () in
-        match select trail nvars cgoal rules with
+     | { initial_goal; rules } :: generators ->
+        let _, cgoal, _ = initial_goal in
+        let goal, trail = init_tree initial_goal in
+        match select trail goal rules with
         | None -> advance_slg { s with generators }
-        | Some (solution,[], rules) ->
-            let s = { s with generators = { initial_goal = (nvars, cgoal); rules } :: generators } in
-            pop_andl (TableSolution(cgoal,solution)) [] trail s
-        | Some (solution,ngoal::brothers, rules) ->
+        | Some ([], rules) ->
+            let s = { s with generators = { initial_goal; rules } :: generators } in
+            pop_andl (TableSolution(cgoal,goal)) [] trail s
+        | Some (ngoal::brothers, rules) ->
             let s = { s with generators } in
             if rules <> [] && has_cut (ngoal :: brothers) then
-              let nonce, s = push_stuck_generator { initial_goal = (nvars, cgoal); rules } s in
-              let next = Todo { brothers; cutinfo = []; siblings = (TableSolution(cgoal,solution)) } in
+              let nonce, s = push_stuck_generator { initial_goal; rules } s in
+              let next = Todo { brothers; cutinfo = []; siblings = (TableSolution(cgoal,goal)) } in
               run { goal = ngoal; next; alts = [Unblock nonce]; rules = !all_rules; cutinfo = []; trail } s        
             else
-              let s = push_generator { initial_goal = (nvars, cgoal); rules } s in
-              let next = Todo { brothers; cutinfo = []; siblings = (TableSolution(cgoal,solution)) } in
+              let s = push_generator { initial_goal; rules } s in
+              let next = Todo { brothers; cutinfo = []; siblings = (TableSolution(cgoal,goal)) } in
               run { goal = ngoal; next; alts = []; rules = !all_rules; cutinfo = []; trail } s        
 end]
 
@@ -594,13 +640,13 @@ and sld goal rules next (alts : alts) (cutinfo : alts) trail (sgs : slg_status) 
   if goal = cut then pop_andl next cutinfo trail sgs
   else 
     let trail = checkpoint trail in
-    match select trail 0 goal rules with
+    match select trail goal rules with
     | None -> next_alt alts sgs
-    | Some (_,[], []) -> pop_andl next alts trail sgs
-    | Some (_, [], rules) ->
+    | Some ([], []) -> pop_andl next alts trail sgs
+    | Some ([], rules) ->
         let alts = Alt { goal; rules; stack=next; trail; cutinfo } :: alts in
         pop_andl next alts trail sgs
-    | Some (_, ngoal :: brothers, rules) ->
+    | Some (ngoal :: brothers, rules) ->
         let old_alts = alts in
         let alts = Alt { goal; rules; stack=next; trail; cutinfo } :: alts in
         let next = Todo { brothers; cutinfo; siblings = next } in
@@ -630,7 +676,7 @@ and next_alt alts (sgs : slg_status) : result = match alts with
       run { goal; rules; next; alts; cutinfo; trail } sgs
 
 let run goal rules =
-  let trail = empty_trail () in
+  let trail = empty_trail [] in
   match goal with
   | [] -> assert false
   | [goal] -> run { goal; rules; next = Done; alts = []; cutinfo = []; trail } empty_slg_status
