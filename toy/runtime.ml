@@ -301,8 +301,8 @@ let abstract_constraints from constraints =
         else
           aux from relevant (x :: irrelevant) changed rest
   in
-  let rec fixpoint from relevant irrelevant =
-    let changed, from, relevant, irrelevant = aux from relevant irrelevant false irrelevant in
+  let rec fixpoint from relevant csts =
+    let changed, from, relevant, irrelevant = aux from relevant [] false csts in
     if changed then fixpoint from relevant irrelevant
     else fst from, relevant
   in

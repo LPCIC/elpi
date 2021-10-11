@@ -274,6 +274,36 @@ let () =
     ",
     "p(X), p(A)", 2, ["X0 < one, X1 < one| p(X0), p(X1)"; "no"]);
 
+    `Check("csts2",
+    "
+    p(X,Y) ?- X < Y | true.
+    true.
+    ",
+    "p(X,A), p(A,X)", 2, ["X0 < X1, X1 < X0| p(X0, X1), p(X1, X0)"; "no"]);
+
+    `Check("csts table",
+    "
+    _p(X,Y) ?- X < Y | true.
+    true.
+    ",
+    "_p(X,A), _p(Y,B)", 2, ["X0 < X1, X2 < X3| _p(X0, X1), _p(X2, X3)"; "no"]);
+
+    `Check("csts table2",
+    "
+    _p(X,Y) ?- X < Y | true.
+    c(X,Y) ?- X < Y | true.
+    true.
+    ",
+    "c(C, D), _p(X,A), _p(Y,B)", 2, ["X0 < X1, X2 < X3, X4 < X5| c(X0, X1), _p(X2, X3), _p(X4, X5)"; "no"]);
+
+    `Check("csts table3",
+    "
+    _p(X,Y) ?- X < Y | true.
+    c(X,Y) ?- X < Y | true.
+    true.
+    ",
+    "c(X, Y), _p(X,A), _p(Y,B)", 2, ["X0 < X1, ......., X0 < X2, ......., X1 < X3| c(X0, X1), _p(X0, X2), _p(X1, X3)"; "no"]);
+
   ] in
 
   let filter allowed = function
