@@ -1,7 +1,22 @@
 open Runtime
 
+let trail_checks () =
+  let t = empty_trail [] in
+  let t0 = checkpoint t in
+  let v = ref dummy in
+  let x = Ast.App("x",[]) in
+  let y = Ast.App("y",[]) in
+  assign t0 v x;
+  let t1 = checkpoint t0 in
+  let tx = backtrack t0 in
+  assign tx v y;
+  let _ = backtrack t1 in
+  assert(!v = x)
+
 let () =
   let filters = Trace_ppx_runtime.Runtime.parse_argv (List.tl @@ Array.to_list Sys.argv) in
+
+  trail_checks ();
 
   let checks = [
 
@@ -302,7 +317,15 @@ let () =
     c(X,Y) ?- X < Y | true.
     true.
     ",
-    "c(X, Y), _p(X,A), _p(Y,B)", 2, ["X0 < X1, ......., X0 < X2, ......., X1 < X3| c(X0, X1), _p(X0, X2), _p(X1, X3)"; "no"]);
+    "c(X, Y), _p(X,A), _p(Y,B)", 2, ["X0 < X1, X0 < X2, X0 < X1, X1 < X3, X1 < X1| c(X0, X1), _p(X0, X2), _p(X1, X3)"; "no"]);
+
+    `Check("csts table3 bis",
+    "
+    true.
+    c(X,Y) ?- X < Y | true.
+    _p(X,Y) ?- X < Y | true.
+    ",
+    "c(X, Y), _p(X,A), _p(Y,B)", 2, ["X0 < X1, X0 < X2, X0 < X1, X1 < X3, X1 < X1| c(X0, X1), _p(X0, X2), _p(X1, X3)"; "no"]);
 
   ] in
 

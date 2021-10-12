@@ -163,15 +163,32 @@ type env_item =
   | ReAssign of tm ref * tm
 [@@deriving show]
 
+type env = env_item list ref
+
+type choice_point = Box of int
+[@@deriving show]
+
+module OM = Ephemeron.K1.Make(struct
+  type t = choice_point
+  let equal (Box i) (Box j) = i == j
+  let hash (Box i) = i
+
+end)
+
+
 type trail_item =
   | Assign of tm ref
-  | Observer of env_item list ref list
+  | Observer of env OM.t [@printer fun fmt l -> Gc.compact (); OM.clean l; Format.fprintf fmt "/%d" (OM.length l)]
 [@@deriving show]
 
 type trail_log = trail_item list ref
 [@@deriving show]
 
-type trail = { log : trail_log; env : env_item list ref; constraints : tm list }
+type trail = {
+  log : trail_log;
+  last_choice_point : choice_point; 
+  constraints : tm list;
+}
 [@@deriving show]
 
 let assign { log = trail; _ }  v t =
@@ -188,35 +205,54 @@ let rec redo trail = function
   | [] -> trail
   | ReAssign(r,v) :: rest -> assign trail r v; redo trail rest
 
+
+let rec merge m = function
+  | [] -> m
+  | x :: xs ->
+      OM.iter (fun k v -> assert(not(OM.mem m k)); OM.add m k v) x;
+      merge m xs
+
 let rec backtrack trail env constraints observers =
     match !trail with
-    | [] -> assert false
-    | Observer os :: vs ->
-        if List.memq env os then begin
-          let observers = List.filter (fun x -> x != env) observers in
-          if observers != [] then
-            trail := Observer observers :: !trail;
-          !env, constraints
-        end else begin
-          trail := vs;
-          backtrack trail env constraints (os @ observers)
+    | [] -> 
+        assert false
+    | Observer m :: vs ->
+        begin match OM.find_opt m env with
+        | None ->
+            trail := vs;
+            backtrack trail env constraints (m :: observers)
+        | Some actions ->
+            trail := Observer (merge m observers) :: vs;
+            !actions, constraints
         end
     | Assign v :: vs ->
-        List.iter (fun o -> o := ReAssign (v,!v) :: !o) observers;
+        List.iter (fun m -> OM.iter (fun _ o -> o := ReAssign (v,!v) :: !o) m) observers;
         v := dummy;
         trail := vs;
         backtrack trail env constraints observers
 
-let backtrack { log; env; constraints } =
-  let fwd, constraints = backtrack log env constraints [] in
-  redo { log; env = ref []; constraints } fwd
+let backtrack ({ log; last_choice_point; constraints } as _t) =
+  (*Format.eprintf "backtracking: %a\n%!" pp_trail t;*)
+  let fwd, constraints = backtrack log last_choice_point constraints [] in
+  redo { log; last_choice_point; constraints } fwd
 
-let checkpoint { log; constraints; _ } =
-  let env = ref [] in
-  log := Observer [env] :: !log;
-  { log; env; constraints }
+let checkpoint =
+  let i = ref 0 in
+  fun { log; constraints; _ } ->
+  incr i;
+  let last_choice_point = Box !i in
+  match !log with
+  | Observer m :: _ -> 
+      OM.add m last_choice_point (ref []);
+      { log; last_choice_point; constraints }
+  | _ ->
+      let m = OM.create 1 in
+      OM.add m last_choice_point (ref []);
+      log := Observer m :: !log;
+      { log; last_choice_point; constraints }
 
-let empty_trail constraints = { log = ref []; env = ref []; constraints }
+
+let empty_trail constraints = { log = ref []; last_choice_point = Box 0; constraints }
 
 type goal = tm
 [@@deriving show]
@@ -268,8 +304,8 @@ let rec map_acc f acc = function
       let acc, ys, zs = map_acc f acc xs in
       acc, y :: ys, z :: zs
 
-let abstract ?(from = 0, PtrMap.empty ()) g =
-  let i, m = from in
+let abstract ?from g =
+  let i, m = match from with None -> 0, PtrMap.empty () | Some(i,m) -> i, m in
   let i = ref i in
   let m = ref m in
   let rec aux = function
@@ -278,11 +314,13 @@ let abstract ?(from = 0, PtrMap.empty ()) g =
     | Var r ->
         begin match PtrMap.find r !m with
         | n -> Arg(n)
-        | exception Not_found ->
+        | exception Not_found when from = None ->
             m := PtrMap.add r !i !m;
             let x = Arg !i in
             incr i;
             x
+        | exception Not_found ->
+            Var r
         end
     | App(s,args) ->
         let args = List.map aux args in
@@ -308,25 +346,6 @@ let abstract_constraints from constraints =
   in
   let constraints = List.map (fun c -> abstract c, c) constraints in
   fixpoint from [] constraints
-
-let clausify_solution t csts =
-  let m = ref [] in
-  let rec aux = function
-  | Arg _ -> assert false
-  | Var r when !r <> dummy -> aux !r
-  | Var r -> 
-      begin try
-        List.assq r !m
-      with Not_found ->
-        m := (r, Arg(List.length !m)) :: !m;
-        List.assq r !m
-      end
-  | App(s,args) ->
-      App(s,List.map aux args)
-  in
-  let t = aux t in
-  let csts = List.map aux csts in
-  List.length !m, t, csts, []
 
 (* we could canonify g and then Stdlib.compare (OC can be expensive)*)
 
@@ -448,8 +467,7 @@ let rec select trail goal = function
   | [] -> None
   | (stack,hd,csts,conds)::rules ->
     let stack = Array.init stack (fun _ -> dummy) in
-    [%spy "select" ~rid (fun fmt () -> Format.fprintf fmt "%a /// %a :- %a." pp_tm goal pp_tm hd pp_tm (App("&",conds))) ()];
-    let trail = checkpoint trail in
+    [%spy "select" ~rid (fun fmt () -> Format.fprintf fmt "%a /// %a :- %a %a." pp_tm goal pp_tm hd pp_tm (App("|",csts)) pp_tm (App("&",conds))) ()];
     if not (unif trail stack goal hd) then begin
       let trail = backtrack trail in
       select trail goal rules
@@ -461,6 +479,9 @@ let rec select trail goal = function
         let trail = backtrack trail in
         select trail goal rules
     end
+let select trail goal rules =
+  let trail = checkpoint trail in
+  select trail goal rules
 
 let new_table_entry cgoal =
   table := DT.add cgoal ([],Incomplete) !table
@@ -551,7 +572,9 @@ let resume_all_consumers cgoal (c : rule) (s : slg_status) =
 let table_solution cgoal solution constraints s =
   match DT.find cgoal !table with
   | solutions, status ->
-      let solution = clausify_solution solution constraints in
+      let abstract_map, solution = abstract solution in
+      let nvars, constraints = abstract_constraints abstract_map constraints in
+      let solution = nvars, solution, constraints, [] in
       if List.mem solution solutions then
         s
       else begin
