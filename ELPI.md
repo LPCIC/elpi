@@ -73,42 +73,6 @@ some variable occurring in something is out of scope for `DummyNameUsedOnlyOnce`
 Side note: `elpi-checker.elpi` (see below) reports warnings about linearly used
 variables, suggesting to start their name with `_` (`_Name` is just sugar for `_`).
 
-#### Example: type shortcut.
-```prolog
-macro @context :- list (pair string term).
-type typecheck @context -> term -> term -> prop.
-```
-
-#### Example: factor hypothetical clauses.
-```prolog
-macro @of X N T :- (of X T, pp X N).
-of (lambda Name   F) (arr A B) :-         pi x\ @of x Name A =>            of (F x) B.
-of (let-in Name V F) R         :- of V T, pi x\ @of x Name T => val x V => of (F x) R.
-```
-
-#### Example: optional cut.
-```prolog
-macro @neck-cut-if P Hd Hyps :- (
-  (Hd :- P,      !, Hyps),
-  (Hd :- not P,     Hyps)
-).
-
-@neck-cut-if greedy 
-(f X)  (X = 1).
- f X :- X = 2.
-```
-
-```
-goal> greedy => f X.
-Success:
-  X = 1
-goal> f X.
-Success:
-  X = 1
-More? (Y/n)
-Success:
-  X = 2 
-```
 ## Spilling
 The following boring code
 ```prolog
@@ -873,6 +837,37 @@ macro @name Args :- Body.
 ```
 It is expanded everywhere (even in type declarations)
 at compilation time. 
+
+#### Example: factor hypothetical clauses.
+```prolog
+macro @of X N T :- (of X T, pp X N).
+of (lambda Name   F) (arr A B) :-         pi x\ @of x Name A =>            of (F x) B.
+of (let-in Name V F) R         :- of V T, pi x\ @of x Name T => val x V => of (F x) R.
+```
+
+#### Example: optional cut.
+```prolog
+macro @neck-cut-if P Hd Hyps :- (
+  (Hd :- P,      !, Hyps),
+  (Hd :- not P,     Hyps)
+).
+
+@neck-cut-if greedy 
+(f X)  (X = 1).
+ f X :- X = 2.
+```
+
+```
+goal> greedy => f X.
+Success:
+  X = 1
+goal> f X.
+Success:
+  X = 1
+More? (Y/n)
+Success:
+  X = 2 
+```
 
 ### Caveat
 Currently macros are not truly "hygienic",
