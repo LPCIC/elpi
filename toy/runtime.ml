@@ -356,6 +356,7 @@ let abstract_constraints from constraints =
     val add : canonical_goal -> 'a -> 'a t -> 'a t
     val mem : canonical_goal -> 'a t -> bool
     val find : canonical_goal -> 'a t -> 'a
+    val remove : canonical_goal -> 'a t -> 'a t
     val iter : ((string * int) list -> 'a -> unit) -> 'a t -> unit
     val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
 
@@ -385,6 +386,8 @@ let abstract_constraints from constraints =
   let mem i t = mem (path_string_of i) t
   let add i v t = add (path_string_of i) v t
   let find i t = find (path_string_of i) t
+
+  let remove i t = remove (path_string_of i) t
   let iter f t = iter f t
 
   let pp f fmt t =
@@ -408,6 +411,7 @@ type frame =
     }
 and alt = 
   | Unblock of int
+  | AlreadyFedWithSolutionsFrom of canonical_goal
   | Alt of {
   goal: goal;
   rules : rule list; [@printer (fun _ _ -> ())]
@@ -417,8 +421,9 @@ and alt =
 }
 
 let pp_alt fmt = function
- | Alt { rules; goal; _ } -> Format.fprintf fmt "%a | %a" pp_tm goal pp_rules rules
- | Unblock i -> Format.fprintf fmt "%d" i
+ | Alt { rules; goal; _ } -> Format.fprintf fmt "(%a | %a)" pp_tm goal pp_rules rules
+ | Unblock i -> Format.fprintf fmt "unblock %d" i
+ | AlreadyFedWithSolutionsFrom cg -> Format.fprintf fmt "cgoal %a" pp_tm cg
 
 let rec flatten_frame = function
   | Todo { brothers; siblings; _ } ->
@@ -493,10 +498,12 @@ type consumer = {
 }
 [@@deriving show]
 
-type generator = {
-  initial_goal : (int * tm * tm list);
-  rules : rule list; [@printer (fun fmt l -> Format.fprintf fmt "%d" (List.length l))]
-}
+type generator =
+| Root of {
+    initial_goal : (int * tm * tm list);
+    rules : rule list; [@printer (fun fmt l -> Format.fprintf fmt "%d" (List.length l))]
+  }
+| UnexploredBranches of alt list
 [@@deriving show]
 
 let init_tree (stack,cg,cs) =
@@ -567,7 +574,7 @@ let resume_all_consumers cgoal (c : rule) (s : slg_status) =
     let consumers = DT.find cgoal s.consumers in
     {s with resume_queue = List.map (fun x -> x,c) consumers @ s.resume_queue }
   with Not_found ->
-    s
+    assert false
   
 let table_solution cgoal solution constraints s =
   match DT.find cgoal !table with
@@ -576,17 +583,18 @@ let table_solution cgoal solution constraints s =
       let nvars, constraints = abstract_constraints abstract_map constraints in
       let solution = nvars, solution, constraints, [] in
       if List.mem solution solutions then
-        s
+        s, false
       else begin
         table := DT.add cgoal (solutions @ [solution], status) !table;
-        resume_all_consumers cgoal solution s
+        resume_all_consumers cgoal solution s, true
       end
   | exception Not_found -> assert false
     
-let table_entry_complete cgoal =
+let table_entry_complete cgoal sgs =
   match DT.find cgoal !table with
   | solutions, Incomplete ->
-      table := DT.add cgoal (solutions, Complete) !table
+      table := DT.add cgoal (solutions, Complete) !table;
+      { sgs with consumers = DT.remove cgoal sgs.consumers }
   | _, Complete -> assert false
   | exception Not_found -> assert false
 
@@ -594,6 +602,10 @@ let has_cut = List.mem cut
 
 type result = TIMEOUT | FAIL | OK of tm list * alts * slg_status
 
+
+let hack_new cg rules alts =
+  if List.mem (AlreadyFedWithSolutionsFrom cg) alts then [], alts
+  else rules, AlreadyFedWithSolutionsFrom cg :: alts
 
 let rec run { goal; rules; next; alts; cutinfo; trail } (sgs : slg_status) : result =
   [%trace "run" ~rid 
@@ -615,10 +627,12 @@ and enter_slg goal rules next alts cutinfo trail sgs =
       advance_slg sgs
   | answers, Complete -> (* TODO: Trie -> DT(find_unifiable) *)
       [%spy "slg:complete->sld" ~rid pp_tm cgoal];
+      let answers, alts = hack_new cgoal answers alts in
       sld goal answers next alts cutinfo trail sgs
   | answers, Incomplete ->
       [%spy "slg:incomplete->sld+slg" ~rid pp_tm cgoal];
       let sgs = push_consumer cgoal { goal; next; trail = checkpoint trail } sgs in
+      let answers, alts = hack_new cgoal answers alts in
       sld goal answers next alts cutinfo trail sgs
   | exception Not_found ->
       [%spy "slg:new" ~rid pp_tm cgoal];
@@ -626,7 +640,7 @@ and enter_slg goal rules next alts cutinfo trail sgs =
       let sgs = push_consumer cgoal { goal; next = SLGRoot { next; alts }; trail = checkpoint trail } sgs in
       new_table_entry cgoal;
       let nvars, cconstraints = abstract_constraints abstract_map trail.constraints in
-      let sgs = push_generator { initial_goal = (nvars,cgoal,cconstraints); rules } sgs in
+      let sgs = push_generator (Root { initial_goal = (nvars,cgoal,cconstraints); rules }) sgs in
       advance_slg sgs
 
 and advance_slg ({ generators; resume_queue; root; _ } as s) =
@@ -649,25 +663,28 @@ and advance_slg ({ generators; resume_queue; root; _ } as s) =
             let s = unset_root s in
             next_alt alts s
         end
-     | { initial_goal = (_, cgoal,_); rules = []; _ } :: generators ->
-          table_entry_complete cgoal; (* TODO: do this more ofted/early *)
-          advance_slg { s with generators }
-     | { initial_goal; rules } :: generators ->
+     | UnexploredBranches [] :: generators -> advance_slg { s with generators }
+     | UnexploredBranches alts :: generators ->
+        next_alt alts { s with generators }
+     | Root { initial_goal = (_, cgoal,_); rules = []; _ } :: generators ->
+        let s = table_entry_complete cgoal s in (* TODO: do this more ofted/early *)
+        advance_slg { s with generators }
+     | Root { initial_goal; rules } :: generators ->
         let _, cgoal, _ = initial_goal in
         let goal, trail = init_tree initial_goal in
         match select trail goal rules with
         | None -> advance_slg { s with generators }
         | Some (trail,[], rules) ->
-            let s = { s with generators = { initial_goal; rules } :: generators } in
+            let s = { s with generators = Root { initial_goal; rules } :: generators } in
             pop_andl (TableSolution(cgoal,goal)) [] trail s
         | Some (trail,ngoal::brothers, rules) ->
             let s = { s with generators } in
             if rules <> [] && has_cut (ngoal :: brothers) then
-              let nonce, s = push_stuck_generator { initial_goal; rules } s in
+              let nonce, s = push_stuck_generator (Root { initial_goal; rules }) s in
               let next = Todo { brothers; cutinfo = []; siblings = (TableSolution(cgoal,goal)) } in
               run { goal = ngoal; next; alts = [Unblock nonce]; rules = !all_rules; cutinfo = []; trail } s        
             else
-              let s = push_generator { initial_goal; rules } s in
+              let s = push_generator (Root { initial_goal; rules }) s in
               let next = Todo { brothers; cutinfo = []; siblings = (TableSolution(cgoal,goal)) } in
               run { goal = ngoal; next; alts = []; rules = !all_rules; cutinfo = []; trail } s        
 end]
@@ -689,27 +706,35 @@ and sld goal rules next (alts : alts) (cutinfo : alts) trail (sgs : slg_status) 
         run { goal = ngoal; rules = !all_rules; next; alts; cutinfo = old_alts; trail } sgs
 
 and pop_andl (next : frame) (alts : alts) (trail : trail) (sgs : slg_status) =
-  [%trace "pop_andl" ~rid ("@[<hov 2>%a]@\n" pp_frame next) begin
+  [%trace "pop_andl" ~rid ("@[<hov 2>next: %a / alts: %a]@\n" pp_frame next pp_alts alts) begin
   match next with
   | Done -> OK (trail.constraints,alts,sgs)
   | SLGRoot { next; alts = o } -> assert(alts = []); pop_andl next o trail sgs
   | TableSolution(cgoal,solution) ->
-      let sgs = table_solution cgoal solution trail.constraints sgs in
-      advance_slg sgs
+      let sgs, progress = table_solution cgoal solution trail.constraints sgs in
+      if progress then
+        let sgs = if alts != [] then push_generator (UnexploredBranches alts) sgs else sgs in
+        advance_slg sgs
+      else
+        next_alt alts sgs
   | Todo { brothers = []; siblings = next; _ } -> pop_andl next alts trail sgs
   | Todo { brothers = goal :: brothers; cutinfo; siblings } ->
       run { goal; rules = !all_rules;
             next = Todo { brothers = brothers; cutinfo; siblings };
             alts; cutinfo; trail } sgs
   end]
-and next_alt alts (sgs : slg_status) : result = match alts with
+and next_alt alts (sgs : slg_status) : result =
+  [%trace "next_alt" ~rid ("@[<hov 2>%a]@\n" pp_alts alts) begin
+  match alts with
   | [] -> advance_slg sgs
+  | AlreadyFedWithSolutionsFrom _ :: alts -> next_alt alts sgs
   | Unblock nonce :: alts ->
       let sgs = pop_stuck_generator nonce sgs in
       next_alt alts sgs
   | Alt { goal; rules; stack=next; trail; cutinfo } :: alts ->
       let trail = backtrack trail in
       run { goal; rules; next; alts; cutinfo; trail } sgs
+  end]
 
 let run goal rules =
   let trail = empty_trail [] in
@@ -792,10 +817,10 @@ let check ?(steps=1000) (`Check(s,p,q,n,l1)) =
   let l2 = main q steps n p in
   if l1 <> l2 then begin
     incr errors;
-    Format.eprintf "ERROR: %s:\n%a\n%a\n%!" s
+    Format.eprintf "ERROR: %s:\nExpected: %a\nActual:   %a\n%!" s
       (Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f " ") Format.pp_print_string) l1
       (Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f " ") Format.pp_print_string) l2
   end else
-    Format.eprintf "@[<hov 2> %s: ok (%d steps)@]\n%!" s (steps - !gas)
+    Format.eprintf "@[<hov 2>   %s: ok (%d steps)@]\n%!" s (steps - !gas)
     (*Format.eprintf "@[<hov 2> %s: ok (%d steps, table: @[<hov>%a@])@]\n%!" s (steps - !gas) pp_table !table*)
 

@@ -96,6 +96,18 @@ let () =
     ",
     "_p(a,Z)", 3, ["_p(a, b)"; "_p(a, c)"; "no"]);
 
+    `Check("AAMFTESLP alts sld",
+    "
+    _p(X,Z) :- _p(X,Y), _p(Y,Z).
+    _p(X,Z) :- e(X,Z).
+    e(a,b).
+    e(a,d).
+    e(b,c).
+    e(b,d).
+    ",
+    "_p(a,Z)", 4, ["_p(a, b)"; "_p(a, c)"; "_p(a, d)"; "no"]);
+
+
     `Check("AAMFTESLP nodup",
     "
     _p(X,Z) :- _p(X,Y), _p(Y,Z).
