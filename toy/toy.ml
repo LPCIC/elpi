@@ -47,6 +47,17 @@ let () =
       ",
     "t", 1, ["no"]);
 
+  `Check("non-hd cut",
+    "
+    t :- true, !, fail.
+    t.
+    true.
+    x :- t.
+    x.
+    ",
+  "x", 1, ["x"]);
+
+
   `Check("cutting nothing is noop",
       "
       t.

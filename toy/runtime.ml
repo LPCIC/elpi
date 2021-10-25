@@ -371,46 +371,44 @@ end
 
 (******************************* run ****************************)
 
-type frame =
+type continuation =
   | Done
-  | SLGRoot of { heap : heap; next : frame; alts : alt list }
+  | ExitSLGRoot of { heap : heap; next : continuation; alts : alt list }
   | TableSolution of canonical_goal * tm
-  | Todo of {
+  | SolveGoals of {
       brothers : goal list;
       cutinfo : alt list; [@printer (fun _ _ -> ())]
-      siblings : frame;
+      next : continuation;
     }
 and alt = 
   | UnblockSLGGenerator of int
   | AlreadyFedWithSolutionsFrom of canonical_goal
-  | Alt of {
+  | ExploreSearchSpace of {
+      choice_point : history; [@printer (fun _ _ -> ())]
       goal: goal;
       rules : rule list; [@printer (fun _ _ -> ())]
-      stack : frame; [@printer (fun _ _ -> ())]
-      (*heap : heap; [@printer (fun _ _ -> ())]*)
-      choice_point : history; [@printer (fun _ _ -> ())]
-      cutinfo : alt list; [@printer (fun _ _ -> ())]
+      next : continuation; [@printer (fun _ _ -> ())]
 }
 
 let pp_alt fmt = function
- | Alt { rules; goal; _ } -> Format.fprintf fmt "(%a | %a)" pp_tm goal pp_rules rules
+ | ExploreSearchSpace { rules; goal; _ } -> Format.fprintf fmt "(%a | %a)" pp_tm goal pp_rules rules
  | UnblockSLGGenerator i -> Format.fprintf fmt "unblock %d" i
  | AlreadyFedWithSolutionsFrom cg -> Format.fprintf fmt "cgoal %a" pp_tm cg
 
 let rec flatten_frame = function
-  | Todo { brothers; siblings; _ } ->
-      let goals, action = flatten_frame siblings in
+  | SolveGoals { brothers; next; _ } ->
+      let goals, action = flatten_frame next in
       brothers @ goals, action
   | x -> [], x
 
 let pp_end_frame fmt = function
   | Done -> Format.fprintf fmt "Done"
-  | SLGRoot _ -> Format.fprintf fmt "SLGRoot"
+  | ExitSLGRoot _ -> Format.fprintf fmt "ExitSLGRoot"
   | TableSolution(cg, sol) -> Format.fprintf fmt "TableSolution %a to %a" pp_tm sol pp_tm cg
   | _ -> assert false
 
-let pp_frame fmt frame =
-  let brothers, siblings = flatten_frame frame in
+let pp_continuation fmt continuation =
+  let brothers, siblings = flatten_frame continuation in
     Format.fprintf fmt "%a; %a"
       (Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f "; ") pp_tm) brothers
       pp_end_frame siblings
@@ -465,7 +463,7 @@ let new_table_entry cgoal =
 
 type slg_consumer = {
   goal : goal;
-  next : frame;
+  next : continuation;
   heap : heap;
   checkpoint : history;
 }
@@ -506,7 +504,7 @@ let empty_slg_status = {
 
 type sld_status = {
   goal : goal;
-  next : frame;
+  next : continuation;
   heap : heap;
   cutinfo : alts;
   rules : rule list;
@@ -581,7 +579,7 @@ let use_table_once cg rules alts =
 
 let rec run { goal; rules; next; alts; cutinfo; heap } (sgs : slg_status) : result =
   [%trace "run" ~rid 
-    ("@[<hov 2>g: %a@ next: %a@ alts: %a@]@\n" pp_tm goal pp_frame next pp_alts alts)
+    ("@[<hov 2>g: %a@ next: %a@ alts: %a@]@\n" pp_tm goal pp_continuation next pp_alts alts)
   begin match !gas with
   | 0 -> TIMEOUT
   | _ ->
@@ -610,7 +608,7 @@ and enter_slg goal rules next alts cutinfo heap sgs =
   | exception Not_found ->
       [%spy "slg:new" ~rid pp_tm cgoal];
       let sgs = set_root_if_not_set heap alts sgs in
-      let sgs = push_consumer cgoal { goal; next = SLGRoot { heap; next; alts }; heap; checkpoint = checkpoint heap } sgs in
+      let sgs = push_consumer cgoal { goal; next = ExitSLGRoot { heap; next; alts }; heap; checkpoint = checkpoint heap } sgs in
       new_table_entry cgoal;
       let nvars, cconstraints = abstract_constraints abstract_map !(heap.constraints) in
       let sgs = push_generator (Root { initial_goal = (nvars,cgoal,cconstraints); rules }) sgs in
@@ -653,11 +651,11 @@ and advance_slg ({ generators; resume_queue; root_alts; _ } as s) =
             let s = { s with generators } in
             if rules <> [] && has_cut (ngoal :: brothers) then
               let nonce, s = push_stuck_generator (Root { initial_goal; rules }) s in
-              let next = Todo { brothers; cutinfo = []; siblings = (TableSolution(cgoal,goal)) } in
+              let next = SolveGoals { brothers; cutinfo = []; next = TableSolution(cgoal,goal) } in
               run { goal = ngoal; next; alts = [UnblockSLGGenerator nonce]; rules = !all_rules; cutinfo = []; heap; } s        
             else
               let s = push_generator (Root { initial_goal; rules }) s in
-              let next = Todo { brothers; cutinfo = []; siblings = (TableSolution(cgoal,goal)) } in
+              let next = SolveGoals { brothers; cutinfo = []; next = TableSolution(cgoal,goal) } in
               run { goal = ngoal; next; alts = []; rules = !all_rules; cutinfo = []; heap } s        
 end]
 
@@ -668,19 +666,19 @@ and sld goal rules next (alts : alts) (cutinfo : alts) (heap:heap) (sgs : slg_st
     | None -> next_alt heap alts sgs
     | Some (_, [], []) -> pop_andl next alts heap sgs
     | Some (choice_point, [], rules) ->
-        let alts = Alt { goal; rules; stack=next; choice_point; cutinfo } :: alts in
+        let alts = ExploreSearchSpace { goal; rules; next; choice_point } :: alts in
         pop_andl next alts heap sgs
     | Some (choice_point, ngoal :: brothers, rules) ->
         let old_alts = alts in
-        let alts = Alt { goal; rules; stack=next; choice_point; cutinfo } :: alts in
-        let next = Todo { brothers; cutinfo; siblings = next } in
+        let alts = ExploreSearchSpace { goal; rules; next; choice_point } :: alts in
+        let next = SolveGoals { brothers; cutinfo = old_alts; next } in
         run { goal = ngoal; rules = !all_rules; next; alts; cutinfo = old_alts; heap } sgs
 
-and pop_andl (next : frame) (alts : alts) (heap : heap) (sgs : slg_status) =
-  [%trace "pop_andl" ~rid ("@[<hov 2>next: %a / alts: %a]@\n" pp_frame next pp_alts alts) begin
+and pop_andl (next : continuation) (alts : alts) (heap : heap) (sgs : slg_status) =
+  [%trace "pop_andl" ~rid ("@[<hov 2>next: %a / alts: %a]@\n" pp_continuation next pp_alts alts) begin
   match next with
   | Done -> OK (!(heap.constraints),heap,alts,sgs)
-  | SLGRoot { heap; next; alts = o } -> assert(alts = [] (* #1 *)); pop_andl next o heap sgs
+  | ExitSLGRoot { heap; next; alts = o } -> assert(alts = [] (* #1 *)); pop_andl next o heap sgs
   | TableSolution(cgoal,solution) ->
       let sgs, progress = table_solution cgoal solution !(heap.constraints) sgs in
       if progress then
@@ -688,10 +686,10 @@ and pop_andl (next : frame) (alts : alts) (heap : heap) (sgs : slg_status) =
         advance_slg sgs
       else
         next_alt heap alts sgs
-  | Todo { brothers = []; siblings = next; _ } -> pop_andl next alts heap sgs
-  | Todo { brothers = goal :: brothers; cutinfo; siblings } ->
+  | SolveGoals { brothers = []; next; _ } -> pop_andl next alts heap sgs
+  | SolveGoals { brothers = goal :: brothers; cutinfo; next } ->
       run { goal; rules = !all_rules;
-            next = Todo { brothers = brothers; cutinfo; siblings };
+            next = SolveGoals { brothers = brothers; cutinfo; next };
             alts; cutinfo; heap; } sgs
   end]
 
@@ -703,9 +701,9 @@ and next_alt (heap : heap) alts (sgs : slg_status) : result =
   | UnblockSLGGenerator nonce :: alts ->
       let sgs = pop_stuck_generator nonce sgs in
       next_alt heap alts sgs
-  | Alt { goal; rules; stack=next; (*heap;*) choice_point; cutinfo } :: alts ->
+  | ExploreSearchSpace { goal; rules; next; choice_point } :: alts ->
       backtrack heap choice_point;
-      run { goal; rules; next; alts; cutinfo; heap } sgs
+      run { goal; rules; next; alts; cutinfo = [] (* goal cannot be ! *); heap } sgs
   end]
 
 let run goal rules =
@@ -713,7 +711,7 @@ let run goal rules =
   match goal with
   | [] -> assert false
   | [goal] -> run { goal; rules; next = Done; alts = []; cutinfo = []; heap } empty_slg_status
-  | goal::gs -> run { goal; rules; next = Todo { brothers = gs; siblings = Done; cutinfo = []}; alts = []; cutinfo = []; heap } empty_slg_status
+  | goal::gs -> run { goal; rules; next = SolveGoals { brothers = gs; next = Done; cutinfo = []}; alts = []; cutinfo = []; heap } empty_slg_status
 
 (***************************** TEST *************************)
 module P = struct
