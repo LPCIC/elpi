@@ -377,13 +377,12 @@ type continuation =
   | TableSolution of canonical_goal * tm
   | SolveGoals of {
       brothers : goal list;
-      cutinfo : alt list; [@printer (fun _ _ -> ())]
+      cutinfo : alt list; [@printer (fun _ _ -> ())] (* in elpi this is kept by passing it to run for the immediate brothers *)
       next : continuation;
     }
 and alt = 
   | UnblockSLGGenerator of int (* a ! did not fire *)
-  | AlreadyFedWithSolutionsFrom of canonical_goal (* *)
-  | ExploreSearchSpace of {
+  | ExploreAnotherSLDPath of {
       choice_point : history; [@printer (fun _ _ -> ())]
       goal: goal;
       rules : rule list; [@printer (fun _ _ -> ())]
@@ -391,9 +390,8 @@ and alt =
 }
 
 let pp_alt fmt = function
- | ExploreSearchSpace { rules; goal; _ } -> Format.fprintf fmt "(%a | %a)" pp_tm goal pp_rules rules
+ | ExploreAnotherSLDPath { rules; goal; _ } -> Format.fprintf fmt "(%a | %a)" pp_tm goal pp_rules rules
  | UnblockSLGGenerator i -> Format.fprintf fmt "unblock %d" i
- | AlreadyFedWithSolutionsFrom cg -> Format.fprintf fmt "cgoal %a" pp_tm cg
 
 let rec flatten_frame = function
   | SolveGoals { brothers; next; _ } ->
@@ -572,24 +570,21 @@ let has_cut = List.mem cut
 
 type result = TIMEOUT | FAIL | OK of tm list * heap * alts * slg_status
 
-
-let use_table_once cg rules alts =
-  if List.mem (AlreadyFedWithSolutionsFrom cg) alts then true, [], alts
-  else false, rules, AlreadyFedWithSolutionsFrom cg :: alts
-
+(* called on a goal as we see it for the first time *)
 let rec run { goal; rules; next; alts; cutinfo; heap } (sgs : slg_status) : result =
   [%trace "run" ~rid 
     ("@[<hov 2>g: %a@ next: %a@ alts: %a@]@\n" pp_tm goal pp_continuation next pp_alts alts)
-  begin match !gas with
-  | 0 -> TIMEOUT
-  | _ ->
-    decr gas;
+  begin 
     if tabled goal
     then enter_slg goal rules next alts cutinfo heap sgs
     else       sld goal rules next alts cutinfo heap sgs
 end]
 
 and enter_slg goal rules next alts cutinfo heap sgs =
+match !gas with
+  | 0 -> TIMEOUT
+  | _ ->
+    decr gas;
   let abstract_map, cgoal = abstract goal in
   match DT.find cgoal !table with
   | [], Incomplete ->
@@ -598,12 +593,10 @@ and enter_slg goal rules next alts cutinfo heap sgs =
       advance_slg sgs
   | answers, Complete -> (* TODO: Trie -> DT(find_unifiable) *)
       [%spy "slg:complete->sld" ~rid pp_tm cgoal];
-      let _, answers, alts = use_table_once cgoal answers alts in
       sld goal answers next alts cutinfo heap sgs
   | answers, Incomplete ->
       [%spy "slg:incomplete->sld+slg" ~rid pp_tm cgoal];
-      let already_fed, answers, alts = use_table_once cgoal answers alts in
-      let sgs = if already_fed then sgs else push_consumer cgoal { goal; next; heap; checkpoint = checkpoint heap } sgs in
+      let sgs = push_consumer cgoal { goal; next; heap; checkpoint = checkpoint heap } sgs in
       sld goal answers next alts cutinfo heap sgs
   | exception Not_found ->
       [%spy "slg:new" ~rid pp_tm cgoal];
@@ -660,17 +653,21 @@ and advance_slg ({ generators; resume_queue; root_alts; _ } as s) =
 end]
 
 and sld goal rules next (alts : alts) (cutinfo : alts) (heap:heap) (sgs : slg_status) =
+match !gas with
+| 0 -> TIMEOUT
+| _ ->
+  decr gas;
   if goal = cut then pop_andl next cutinfo heap sgs
   else 
     match select heap goal rules with
     | None -> next_alt heap alts sgs
     | Some (_, [], []) -> pop_andl next alts heap sgs
     | Some (choice_point, [], rules) ->
-        let alts = ExploreSearchSpace { goal; rules; next; choice_point } :: alts in
+        let alts = ExploreAnotherSLDPath { goal; rules; next; choice_point } :: alts in
         pop_andl next alts heap sgs
     | Some (choice_point, ngoal :: brothers, rules) ->
         let old_alts = alts in
-        let alts = ExploreSearchSpace { goal; rules; next; choice_point } :: alts in
+        let alts = ExploreAnotherSLDPath { goal; rules; next; choice_point } :: alts in
         let next = SolveGoals { brothers; cutinfo = old_alts; next } in
         run { goal = ngoal; rules = !all_rules; next; alts; cutinfo = old_alts; heap } sgs
 
@@ -697,13 +694,12 @@ and next_alt (heap : heap) alts (sgs : slg_status) : result =
   [%trace "next_alt" ~rid ("@[<hov 2>%a]@\n" pp_alts alts) begin
   match alts with
   | [] -> advance_slg sgs
-  | AlreadyFedWithSolutionsFrom _ :: alts -> next_alt heap alts sgs
   | UnblockSLGGenerator nonce :: alts ->
       let sgs = pop_stuck_generator nonce sgs in
       next_alt heap alts sgs
-  | ExploreSearchSpace { goal; rules; next; choice_point } :: alts ->
+  | ExploreAnotherSLDPath { goal; rules; next; choice_point } :: alts ->
       backtrack heap choice_point;
-      run { goal; rules; next; alts; cutinfo = [] (* goal cannot be ! *); heap } sgs
+      sld goal rules next (alts : alts) ([] : alts) (heap:heap) (sgs : slg_status)
   end]
 
 let run goal rules =
