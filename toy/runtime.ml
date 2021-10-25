@@ -381,8 +381,8 @@ type continuation =
       next : continuation;
     }
 and alt = 
-  | UnblockSLGGenerator of int
-  | AlreadyFedWithSolutionsFrom of canonical_goal
+  | UnblockSLGGenerator of int (* a ! did not fire *)
+  | AlreadyFedWithSolutionsFrom of canonical_goal (* *)
   | ExploreSearchSpace of {
       choice_point : history; [@printer (fun _ _ -> ())]
       goal: goal;
@@ -574,8 +574,8 @@ type result = TIMEOUT | FAIL | OK of tm list * heap * alts * slg_status
 
 
 let use_table_once cg rules alts =
-  if List.mem (AlreadyFedWithSolutionsFrom cg) alts then [], alts
-  else rules, AlreadyFedWithSolutionsFrom cg :: alts
+  if List.mem (AlreadyFedWithSolutionsFrom cg) alts then true, [], alts
+  else false, rules, AlreadyFedWithSolutionsFrom cg :: alts
 
 let rec run { goal; rules; next; alts; cutinfo; heap } (sgs : slg_status) : result =
   [%trace "run" ~rid 
@@ -598,12 +598,12 @@ and enter_slg goal rules next alts cutinfo heap sgs =
       advance_slg sgs
   | answers, Complete -> (* TODO: Trie -> DT(find_unifiable) *)
       [%spy "slg:complete->sld" ~rid pp_tm cgoal];
-      let answers, alts = use_table_once cgoal answers alts in
+      let _, answers, alts = use_table_once cgoal answers alts in
       sld goal answers next alts cutinfo heap sgs
   | answers, Incomplete ->
       [%spy "slg:incomplete->sld+slg" ~rid pp_tm cgoal];
-      let sgs = push_consumer cgoal { goal; next; heap; checkpoint = checkpoint heap } sgs in
-      let answers, alts = use_table_once cgoal answers alts in
+      let already_fed, answers, alts = use_table_once cgoal answers alts in
+      let sgs = if already_fed then sgs else push_consumer cgoal { goal; next; heap; checkpoint = checkpoint heap } sgs in
       sld goal answers next alts cutinfo heap sgs
   | exception Not_found ->
       [%spy "slg:new" ~rid pp_tm cgoal];
