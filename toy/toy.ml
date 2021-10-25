@@ -1,16 +1,16 @@
 open Runtime
 
 let trail_checks () =
-  let t = empty_trail [] in
+  let t = init_heap [] in
   let t0 = checkpoint t in
   let v = ref dummy in
   let x = Ast.App("x",[]) in
   let y = Ast.App("y",[]) in
-  assign t0 v x;
-  let t1 = checkpoint t0 in
-  let tx = backtrack t0 in
-  assign tx v y;
-  let _ = backtrack t1 in
+  assign t v x;
+  let t1 = checkpoint t in
+  backtrack t t0;
+  assign t v y;
+  let _ = backtrack t t1 in
   assert(!v = x)
 
 let () =

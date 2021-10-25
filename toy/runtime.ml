@@ -159,100 +159,78 @@ let ppli s = Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f 
 
 (******************************* backtrack ****************************)
 
-type env_item =
-  | ReAssign of tm ref * tm
+type history_item =
+  | Assign of tm ref * history
+  | Restore of tm ref * tm * history
+  | AddConstraint of tm * history
+  | RmConstraint of tm * history
+  | Top
+and history = history_item ref
 [@@deriving show]
 
-type env = env_item list ref
-
-type choice_point = Box of int
-[@@deriving show]
-
-module OM = Ephemeron.K1.Make(struct
-  type t = choice_point
-  let equal (Box i) (Box j) = i == j
-  let hash (Box i) = i
-
-end)
-
-
-type trail_item =
-  | Assign of tm ref
-  | Observer of env OM.t [@printer fun fmt l -> Gc.compact (); OM.clean l; Format.fprintf fmt "/%d" (OM.length l)]
-[@@deriving show]
-
-type trail_log = trail_item list ref
-[@@deriving show]
-
-type trail = {
-  log : trail_log;
-  last_choice_point : choice_point; 
-  constraints : tm list;
+type heap = {
+  log : history ref; (* tracks the tip *)
+  constraints : tm list ref;
 }
 [@@deriving show]
 
 let assign { log = trail; _ }  v t =
-  trail := Assign v :: !trail;
+  assert(! (!trail) = Top);
+  let new_top = ref Top in
+  !trail := Assign(v,new_top);
+  trail := new_top;
   [%spy "assign" ~rid pp_tm (Var v)];
   [%spy "assign:with" ~rid pp_tm t];
   v := t
 
-let add_cs c t = { t with constraints = c :: t.constraints }
-let del_cs c t = { t with constraints = List.filter (fun x -> x != c) t.constraints }
+let add_cs { log = trail; constraints } c =
+  let new_top = ref Top in
+  !trail := AddConstraint(c,new_top);
+  trail := new_top;
+  constraints := !constraints @ [c]
   
+let del_cs { log = trail; constraints } c =
+  let new_top = ref Top in
+  !trail := RmConstraint(c,new_top);
+  trail := new_top;
+  constraints := List.filter (fun x -> x != c) !constraints
+  
+let backtrack log cstore last_choice_point =
+  let rec aux h k =
+    match !h with
+    | Top -> k ()
+    | Assign(r,h') ->
+        aux h' (fun () ->
+          h' := Restore(r,!r, h);
+          r := dummy;
+          k ())
+    | Restore(r,v,h') ->
+        aux h' (fun () ->
+          h' := Assign(r,h);
+          r := v;
+          k ())
+    | AddConstraint(c,h') ->
+        aux h' (fun () ->
+          h := RmConstraint(c,h);
+          cstore := List.filter (fun x -> x != c) !cstore;
+          k ())
+    | RmConstraint(c,h') ->
+      aux h' (fun () ->
+        h := AddConstraint(c,h);
+        cstore := c :: !cstore;
+        k ())
+      in
+    aux last_choice_point (fun () ->
+      log := last_choice_point;
+      last_choice_point := Top)
+let backtrack heap last_choice_point =
+  backtrack heap.log heap.constraints last_choice_point
 
-let rec redo trail = function
-  | [] -> trail
-  | ReAssign(r,v) :: rest -> assign trail r v; redo trail rest
+let checkpoint (heap : heap) : history = !(heap.log)
 
-
-let rec merge m = function
-  | [] -> m
-  | x :: xs ->
-      OM.iter (fun k v -> assert(not(OM.mem m k)); OM.add m k v) x;
-      merge m xs
-
-let rec backtrack trail env constraints observers =
-    match !trail with
-    | [] -> 
-        assert false
-    | Observer m :: vs ->
-        begin match OM.find_opt m env with
-        | None ->
-            trail := vs;
-            backtrack trail env constraints (m :: observers)
-        | Some actions ->
-            trail := Observer (merge m observers) :: vs;
-            !actions, constraints
-        end
-    | Assign v :: vs ->
-        List.iter (fun m -> OM.iter (fun _ o -> o := ReAssign (v,!v) :: !o) m) observers;
-        v := dummy;
-        trail := vs;
-        backtrack trail env constraints observers
-
-let backtrack ({ log; last_choice_point; constraints } as _t) =
-  (*Format.eprintf "backtracking: %a\n%!" pp_trail t;*)
-  let fwd, constraints = backtrack log last_choice_point constraints [] in
-  redo { log; last_choice_point; constraints } fwd
-
-let checkpoint =
-  let i = ref 0 in
-  fun { log; constraints; _ } ->
-  incr i;
-  let last_choice_point = Box !i in
-  match !log with
-  | Observer m :: _ -> 
-      OM.add m last_choice_point (ref []);
-      { log; last_choice_point; constraints }
-  | _ ->
-      let m = OM.create 1 in
-      OM.add m last_choice_point (ref []);
-      log := Observer m :: !log;
-      { log; last_choice_point; constraints }
-
-
-let empty_trail constraints = { log = ref []; last_choice_point = Box 0; constraints }
+let init_heap constraints =
+  let top = ref Top in
+  { log = ref top; constraints = ref constraints }
 
 type goal = tm
 [@@deriving show]
@@ -275,7 +253,7 @@ let rec heapify s = function
   | Arg i when s.(i) != dummy -> s.(i)
   | Arg i -> let t = Var (ref dummy) in s.(i) <- t; t
 
-let rec unif (trail:trail) (sb:tm array) (a:tm) (b:tm) = match a, b with
+let rec unif (trail:heap) (sb:tm array) (a:tm) (b:tm) = match a, b with
   | Arg _, _ -> assert false
 
   (* deref *)
@@ -410,19 +388,20 @@ type frame =
       siblings : frame;
     }
 and alt = 
-  | Unblock of int
+  | UnblockSLGGenerator of int
   | AlreadyFedWithSolutionsFrom of canonical_goal
   | Alt of {
-  goal: goal;
-  rules : rule list; [@printer (fun _ _ -> ())]
-  stack : frame; [@printer (fun _ _ -> ())]
-  trail : trail; [@printer (fun _ _ -> ())]
-  cutinfo : alt list; [@printer (fun _ _ -> ())]
+      goal: goal;
+      rules : rule list; [@printer (fun _ _ -> ())]
+      stack : frame; [@printer (fun _ _ -> ())]
+      heap : heap; [@printer (fun _ _ -> ())]
+      choice_point : history; [@printer (fun _ _ -> ())]
+      cutinfo : alt list; [@printer (fun _ _ -> ())]
 }
 
 let pp_alt fmt = function
  | Alt { rules; goal; _ } -> Format.fprintf fmt "(%a | %a)" pp_tm goal pp_rules rules
- | Unblock i -> Format.fprintf fmt "unblock %d" i
+ | UnblockSLGGenerator i -> Format.fprintf fmt "unblock %d" i
  | AlreadyFedWithSolutionsFrom cg -> Format.fprintf fmt "cgoal %a" pp_tm cg
 
 let rec flatten_frame = function
@@ -468,25 +447,25 @@ let table_reset () = table := DT.empty
 
 let consistent _ _ = true
 
-let rec select trail goal = function
+let rec select (heap : heap) goal = function
   | [] -> None
   | (stack,hd,csts,conds)::rules ->
     let stack = Array.init stack (fun _ -> dummy) in
     [%spy "select" ~rid (fun fmt () -> Format.fprintf fmt "%a /// %a :- %a %a." pp_tm goal pp_tm hd pp_tm (App("|",csts)) pp_tm (App("&",conds))) ()];
-    if not (unif trail stack goal hd) then begin
-      let trail = backtrack trail in
-      select trail goal rules
+    let prev = checkpoint heap in
+    if not (unif heap stack goal hd) then begin
+      backtrack heap prev;
+      select heap goal rules
     end else begin
       let csts = List.map (heapify stack) csts in
-      if consistent csts trail.constraints then
-        Some ({trail with constraints = trail.constraints @ csts }, List.map (heapify stack) conds, rules)
-      else
-        let trail = backtrack trail in
-        select trail goal rules
+      if consistent csts !(heap.constraints) then begin
+        List.iter (add_cs heap) csts;
+        Some (prev, List.map (heapify stack) conds, rules)
+      end else begin
+        backtrack heap prev;
+        select heap goal rules
+      end
     end
-let select trail goal rules =
-  let trail = checkpoint trail in
-  select trail goal rules
 
 let new_table_entry cgoal =
   table := DT.add cgoal ([],Incomplete) !table
@@ -494,7 +473,8 @@ let new_table_entry cgoal =
 type consumer = {
   next : frame;
   goal : tm;
-  trail : trail;
+  heap : heap;
+  checkpoint : history;
 }
 [@@deriving show]
 
@@ -510,7 +490,7 @@ let init_tree (stack,cg,cs) =
   let stack = Array.init stack (fun _ -> dummy) in
   let g = heapify stack cg in
   let cs = List.map (heapify stack) cs in
-  g, empty_trail cs
+  g, init_heap cs
 
 
 module IM = Map.Make(struct type t = int let compare = Stdlib.compare end)
@@ -535,7 +515,7 @@ type sld_status = {
   goal : goal;
   rules : rule list;
   next : frame;
-  trail : trail;
+  heap : heap;
   alts : alts;
   cutinfo : alts;
 }
@@ -607,51 +587,51 @@ let hack_new cg rules alts =
   if List.mem (AlreadyFedWithSolutionsFrom cg) alts then [], alts
   else rules, AlreadyFedWithSolutionsFrom cg :: alts
 
-let rec run { goal; rules; next; alts; cutinfo; trail } (sgs : slg_status) : result =
+let rec run { goal; rules; next; alts; cutinfo; heap } (sgs : slg_status) : result =
   [%trace "run" ~rid 
     ("@[<hov 2>g: %a@ next: %a@ alts: %a@]@\n" pp_tm goal pp_frame next pp_alts alts)
   begin match !gas with
   | 0 -> TIMEOUT
   | _ ->
     decr gas;
-    if tabled goal then enter_slg goal rules next alts cutinfo trail sgs
-    else sld goal rules next alts cutinfo trail sgs
+    if tabled goal then enter_slg goal rules next alts cutinfo heap sgs
+    else sld goal rules next alts cutinfo heap sgs
 end]
 
-and enter_slg goal rules next alts cutinfo trail sgs =
+and enter_slg goal rules next alts cutinfo heap sgs =
   let abstract_map, cgoal = abstract goal in
   match DT.find cgoal !table with
   | [], Incomplete ->
       [%spy "slg:suspend" ~rid pp_tm cgoal];
-      let sgs = push_consumer cgoal { goal; next; trail = checkpoint trail } sgs in
+      let sgs = push_consumer cgoal { goal; next; heap; checkpoint = checkpoint heap } sgs in
       advance_slg sgs
   | answers, Complete -> (* TODO: Trie -> DT(find_unifiable) *)
       [%spy "slg:complete->sld" ~rid pp_tm cgoal];
       let answers, alts = hack_new cgoal answers alts in
-      sld goal answers next alts cutinfo trail sgs
+      sld goal answers next alts cutinfo heap sgs
   | answers, Incomplete ->
       [%spy "slg:incomplete->sld+slg" ~rid pp_tm cgoal];
-      let sgs = push_consumer cgoal { goal; next; trail = checkpoint trail } sgs in
+      let sgs = push_consumer cgoal { goal; next; heap; checkpoint = checkpoint heap } sgs in
       let answers, alts = hack_new cgoal answers alts in
-      sld goal answers next alts cutinfo trail sgs
+      sld goal answers next alts cutinfo heap sgs
   | exception Not_found ->
       [%spy "slg:new" ~rid pp_tm cgoal];
       let sgs = set_root_if_not_set alts sgs in
-      let sgs = push_consumer cgoal { goal; next = SLGRoot { next; alts }; trail = checkpoint trail } sgs in
+      let sgs = push_consumer cgoal { goal; next = SLGRoot { next; alts }; heap; checkpoint = checkpoint heap } sgs in
       new_table_entry cgoal;
-      let nvars, cconstraints = abstract_constraints abstract_map trail.constraints in
+      let nvars, cconstraints = abstract_constraints abstract_map !(heap.constraints) in
       let sgs = push_generator (Root { initial_goal = (nvars,cgoal,cconstraints); rules }) sgs in
       advance_slg sgs
 
 and advance_slg ({ generators; resume_queue; root; _ } as s) =
   [%trace "slg:step" ~rid ("@[<hov 2>%a@ table:@[<hov 2>%a@]@]\n" pp_slg_status s pp_table !table)
   begin match resume_queue with
-  | ({goal ; next; trail }, solution) :: resume_queue ->
+  | ({goal ; next; heap; checkpoint }, solution) :: resume_queue ->
       let s = { s with resume_queue } in
-      let trail = backtrack trail in
-      begin match select trail goal [solution] with
+      backtrack heap checkpoint;
+      begin match select heap goal [solution] with
       | None -> advance_slg s
-      | Some(trail,[],[]) -> pop_andl next [] trail s
+      | Some(_,[],[]) -> pop_andl next [] heap s
       | _ -> assert false (* solutions have no subgoals *)
       end
   | [] ->
@@ -671,77 +651,76 @@ and advance_slg ({ generators; resume_queue; root; _ } as s) =
         advance_slg { s with generators }
      | Root { initial_goal; rules } :: generators ->
         let _, cgoal, _ = initial_goal in
-        let goal, trail = init_tree initial_goal in
-        match select trail goal rules with
+        let goal, heap = init_tree initial_goal in
+        match select heap goal rules with
         | None -> advance_slg { s with generators }
-        | Some (trail,[], rules) ->
+        | Some (_,[], rules) ->
             let s = { s with generators = Root { initial_goal; rules } :: generators } in
-            pop_andl (TableSolution(cgoal,goal)) [] trail s
-        | Some (trail,ngoal::brothers, rules) ->
+            pop_andl (TableSolution(cgoal,goal)) [] heap s
+        | Some (_,ngoal::brothers, rules) ->
             let s = { s with generators } in
             if rules <> [] && has_cut (ngoal :: brothers) then
               let nonce, s = push_stuck_generator (Root { initial_goal; rules }) s in
               let next = Todo { brothers; cutinfo = []; siblings = (TableSolution(cgoal,goal)) } in
-              run { goal = ngoal; next; alts = [Unblock nonce]; rules = !all_rules; cutinfo = []; trail } s        
+              run { goal = ngoal; next; alts = [UnblockSLGGenerator nonce]; rules = !all_rules; cutinfo = []; heap; } s        
             else
               let s = push_generator (Root { initial_goal; rules }) s in
               let next = Todo { brothers; cutinfo = []; siblings = (TableSolution(cgoal,goal)) } in
-              run { goal = ngoal; next; alts = []; rules = !all_rules; cutinfo = []; trail } s        
+              run { goal = ngoal; next; alts = []; rules = !all_rules; cutinfo = []; heap } s        
 end]
 
-and sld goal rules next (alts : alts) (cutinfo : alts) trail (sgs : slg_status) =
-  if goal = cut then pop_andl next cutinfo trail sgs
+and sld goal rules next (alts : alts) (cutinfo : alts) (heap:heap) (sgs : slg_status) =
+  if goal = cut then pop_andl next cutinfo heap sgs
   else 
-    let trail = checkpoint trail in
-    match select trail goal rules with
+    match select heap goal rules with
     | None -> next_alt alts sgs
-    | Some (trail, [], []) -> pop_andl next alts trail sgs
-    | Some (trail, [], rules) ->
-        let alts = Alt { goal; rules; stack=next; trail; cutinfo } :: alts in
-        pop_andl next alts trail sgs
-    | Some (trail, ngoal :: brothers, rules) ->
+    | Some (_, [], []) -> pop_andl next alts heap sgs
+    | Some (choice_point, [], rules) ->
+        let alts = Alt { goal; rules; stack=next; heap; choice_point; cutinfo } :: alts in
+        pop_andl next alts heap sgs
+    | Some (choice_point, ngoal :: brothers, rules) ->
         let old_alts = alts in
-        let alts = Alt { goal; rules; stack=next; trail; cutinfo } :: alts in
+        let alts = Alt { goal; rules; stack=next; heap; choice_point; cutinfo } :: alts in
         let next = Todo { brothers; cutinfo; siblings = next } in
-        run { goal = ngoal; rules = !all_rules; next; alts; cutinfo = old_alts; trail } sgs
+        run { goal = ngoal; rules = !all_rules; next; alts; cutinfo = old_alts; heap } sgs
 
-and pop_andl (next : frame) (alts : alts) (trail : trail) (sgs : slg_status) =
+and pop_andl (next : frame) (alts : alts) (heap : heap) (sgs : slg_status) =
   [%trace "pop_andl" ~rid ("@[<hov 2>next: %a / alts: %a]@\n" pp_frame next pp_alts alts) begin
   match next with
-  | Done -> OK (trail.constraints,alts,sgs)
-  | SLGRoot { next; alts = o } -> assert(alts = []); pop_andl next o trail sgs
+  | Done -> OK (!(heap.constraints),alts,sgs)
+  | SLGRoot { next; alts = o } -> assert(alts = []); pop_andl next o heap sgs
   | TableSolution(cgoal,solution) ->
-      let sgs, progress = table_solution cgoal solution trail.constraints sgs in
+      let sgs, progress = table_solution cgoal solution !(heap.constraints) sgs in
       if progress then
         let sgs = if alts != [] then push_generator (UnexploredBranches alts) sgs else sgs in
         advance_slg sgs
       else
         next_alt alts sgs
-  | Todo { brothers = []; siblings = next; _ } -> pop_andl next alts trail sgs
+  | Todo { brothers = []; siblings = next; _ } -> pop_andl next alts heap sgs
   | Todo { brothers = goal :: brothers; cutinfo; siblings } ->
       run { goal; rules = !all_rules;
             next = Todo { brothers = brothers; cutinfo; siblings };
-            alts; cutinfo; trail } sgs
+            alts; cutinfo; heap; } sgs
   end]
 and next_alt alts (sgs : slg_status) : result =
   [%trace "next_alt" ~rid ("@[<hov 2>%a]@\n" pp_alts alts) begin
   match alts with
   | [] -> advance_slg sgs
   | AlreadyFedWithSolutionsFrom _ :: alts -> next_alt alts sgs
-  | Unblock nonce :: alts ->
+  | UnblockSLGGenerator nonce :: alts ->
       let sgs = pop_stuck_generator nonce sgs in
       next_alt alts sgs
-  | Alt { goal; rules; stack=next; trail; cutinfo } :: alts ->
-      let trail = backtrack trail in
-      run { goal; rules; next; alts; cutinfo; trail } sgs
+  | Alt { goal; rules; stack=next; heap; choice_point; cutinfo } :: alts ->
+      backtrack heap choice_point;
+      run { goal; rules; next; alts; cutinfo; heap } sgs
   end]
 
 let run goal rules =
-  let trail = empty_trail [] in
+  let heap = init_heap [] in
   match goal with
   | [] -> assert false
-  | [goal] -> run { goal; rules; next = Done; alts = []; cutinfo = []; trail } empty_slg_status
-  | goal::gs -> run { goal; rules; next = Todo { brothers = gs; siblings = Done; cutinfo = []}; alts = []; cutinfo = []; trail } empty_slg_status
+  | [goal] -> run { goal; rules; next = Done; alts = []; cutinfo = []; heap } empty_slg_status
+  | goal::gs -> run { goal; rules; next = Todo { brothers = gs; siblings = Done; cutinfo = []}; alts = []; cutinfo = []; heap } empty_slg_status
 
 (***************************** TEST *************************)
 module P = struct
