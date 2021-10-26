@@ -381,17 +381,24 @@ type continuation =
       next : continuation;
     }
 and alt = 
-  | UnblockSLGGenerator of int (* a ! did not fire *)
+  | UnblockSLGGenerator of slg_generator (* a ! did not fire *)
   | ExploreAnotherSLDPath of {
       choice_point : history; [@printer (fun _ _ -> ())]
       goal: goal;
       rules : rule list; [@printer (fun _ _ -> ())]
       next : continuation; [@printer (fun _ _ -> ())]
 }
+and slg_generator =
+| Root of {
+    initial_goal : (int * tm * tm list);
+    rules : rule list; [@printer (fun fmt l -> Format.fprintf fmt "%d" (List.length l))]
+  }
+| UnexploredBranches of heap * alt list
+[@@deriving show]
 
 let pp_alt fmt = function
  | ExploreAnotherSLDPath { rules; goal; _ } -> Format.fprintf fmt "(%a | %a)" pp_tm goal pp_rules rules
- | UnblockSLGGenerator i -> Format.fprintf fmt "unblock %d" i
+ | UnblockSLGGenerator i -> Format.fprintf fmt "unblock %a" pp_slg_generator i
 
 let rec flatten_frame = function
   | SolveGoals { brothers; next; _ } ->
@@ -467,27 +474,15 @@ type slg_consumer = {
 }
 [@@deriving show]
 
-type generator =
-| Root of {
-    initial_goal : (int * tm * tm list);
-    rules : rule list; [@printer (fun fmt l -> Format.fprintf fmt "%d" (List.length l))]
-  }
-| UnexploredBranches of heap * alt list
-[@@deriving show]
-
 let init_tree (stack,cg,cs) =
   let stack = Array.init stack (fun _ -> dummy) in
   let g = heapify stack cg in
   let cs = List.map (heapify stack) cs in
   cg, g, init_heap cs
 
-
-module IM = Map.Make(struct type t = int let compare = Stdlib.compare end)
-
 type slg_status = {
   consumers : slg_consumer list DT.t;
-  generators : generator list;
-  stuck_generators : generator IM.t; [@printer (fun fmt m -> IM.iter (fun _ -> pp_generator fmt) m)]
+  generators : slg_generator list;
   resume_queue : (slg_consumer * rule) list;
   root_alts : (heap * alts) option;
 }
@@ -495,7 +490,7 @@ type slg_status = {
 
 let empty_slg_status = {
   consumers = DT.empty;
-  generators = []; stuck_generators = IM.empty;
+  generators = [];
   resume_queue = [];
   root_alts = None;
 }
@@ -521,18 +516,8 @@ let dt_append k v t =
 let push_consumer cgoal (c : slg_consumer) (s : slg_status) =
   { s with consumers = dt_append cgoal c s.consumers }
 
-let push_generator (g : generator) (s : slg_status) =
+let push_generator (g : slg_generator) (s : slg_status) =
   { s with generators = g :: s.generators }
-
-let push_stuck_generator = let nonce = ref 0 in
- fun (g : generator) (s : slg_status) ->
- incr nonce;
- !nonce, { s with stuck_generators = IM.add !nonce g s.stuck_generators }
-
-let pop_stuck_generator i ({ stuck_generators; _ } as s) =
-  assert(IM.mem i stuck_generators);
-  let g = IM.find i stuck_generators in
-  push_generator g { s with stuck_generators = IM.remove i stuck_generators }
 
 let set_root_if_not_set heap alts s =
   if s.root_alts = None then { s with root_alts = Some(heap, alts) } else s
@@ -612,7 +597,7 @@ and slg ({ generators; resume_queue; root_alts; _ } as s) =
       backtrack heap checkpoint;
       begin match select heap goal [solution] with
       | None -> slg s
-      | Some(_,[],[]) -> sld_pop_andl next [] heap s (* #1 *)
+      | Some(_,[],[]) -> pop_andl next [] heap s (* #1 *)
       | _ -> assert false (* solutions have no subgoals *)
       end
   | [] ->
@@ -621,11 +606,11 @@ and slg ({ generators; resume_queue; root_alts; _ } as s) =
         begin match root_alts with
         | None -> FAIL
         | Some (heap,alts) ->
-            sld_next_alt heap alts { s with root_alts = None }
+            next_alt heap alts { s with root_alts = None }
         end
      | UnexploredBranches (_,[]) :: generators -> slg { s with generators }
      | UnexploredBranches (heap,alts) :: generators ->
-        sld_next_alt heap alts { s with generators }
+        next_alt heap alts { s with generators }
      | Root { initial_goal = (_, cgoal,_); rules = []; _ } :: generators ->
         let s = table_entry_complete cgoal s in (* TODO: do this more ofted/early *)
         slg { s with generators }
@@ -635,13 +620,13 @@ and slg ({ generators; resume_queue; root_alts; _ } as s) =
         | None -> slg { s with generators }
         | Some (_,[], rules) ->
             let s = { s with generators = Root { initial_goal; rules } :: generators } in
-            sld_pop_andl (TableSolution(cgoal,goal)) [] heap s
+            pop_andl (TableSolution(cgoal,goal)) [] heap s
         | Some (_,ngoal::brothers, rules) ->
             let s = { s with generators } in
             if rules <> [] && has_cut (ngoal :: brothers) then
-              let nonce, s = push_stuck_generator (Root { initial_goal; rules }) s in
+              let stuck_generator = Root { initial_goal; rules } in
               let next = SolveGoals { brothers; cutinfo = []; next = TableSolution(cgoal,goal) } in
-              run { goal = ngoal; next; alts = [UnblockSLGGenerator nonce]; rules = !all_rules; cutinfo = []; heap; } s        
+              run { goal = ngoal; next; alts = [UnblockSLGGenerator stuck_generator]; rules = !all_rules; cutinfo = []; heap; } s        
             else
               let s = push_generator (Root { initial_goal; rules }) s in
               let next = SolveGoals { brothers; cutinfo = []; next = TableSolution(cgoal,goal) } in
@@ -650,46 +635,46 @@ end]
 
 and sld goal rules next (alts : alts) (cutinfo : alts) (heap:heap) (sgs : slg_status) =
   if !gas = 0 then TIMEOUT else let () = decr gas in
-  if goal = cut then sld_pop_andl next cutinfo heap sgs
+  if goal = cut then pop_andl next cutinfo heap sgs
   else 
     match select heap goal rules with
-    | None -> sld_next_alt heap alts sgs
-    | Some (_, [], []) -> sld_pop_andl next alts heap sgs
+    | None -> next_alt heap alts sgs
+    | Some (_, [], []) -> pop_andl next alts heap sgs
     | Some (choice_point, [], rules) ->
         let alts = ExploreAnotherSLDPath { goal; rules; next; choice_point } :: alts in
-        sld_pop_andl next alts heap sgs
+        pop_andl next alts heap sgs
     | Some (choice_point, ngoal :: brothers, rules) ->
         let old_alts = alts in
         let alts = ExploreAnotherSLDPath { goal; rules; next; choice_point } :: alts in
         let next = SolveGoals { brothers; cutinfo = old_alts; next } in
         run { goal = ngoal; rules = !all_rules; next; alts; cutinfo = old_alts; heap } sgs
 
-and sld_pop_andl (next : continuation) (alts : alts) (heap : heap) (sgs : slg_status) =
-  [%trace "sld_pop_andl" ~rid ("@[<hov 2>next: %a / alts: %a]@\n" pp_continuation next pp_alts alts) begin
+and pop_andl (next : continuation) (alts : alts) (heap : heap) (sgs : slg_status) =
+  [%trace "pop_andl" ~rid ("@[<hov 2>next: %a / alts: %a]@\n" pp_continuation next pp_alts alts) begin
   match next with
   | Done -> OK (!(heap.constraints),heap,alts,sgs)
-  | ExitSLGRoot { heap; next; alts = o } -> assert(alts = [] (* #1 *)); sld_pop_andl next o heap sgs
+  | ExitSLGRoot { heap; next; alts = o } -> assert(alts = [] (* #1 *)); pop_andl next o heap sgs
   | TableSolution(cgoal,solution) ->
       let sgs, progress = table_solution cgoal solution !(heap.constraints) sgs in
       if progress then
         let sgs = if alts != [] then push_generator (UnexploredBranches (heap,alts)) sgs else sgs in
         slg sgs
       else
-        sld_next_alt heap alts sgs
-  | SolveGoals { brothers = []; next; _ } -> sld_pop_andl next alts heap sgs
+        next_alt heap alts sgs
+  | SolveGoals { brothers = []; next; _ } -> pop_andl next alts heap sgs
   | SolveGoals { brothers = goal :: brothers; cutinfo; next } ->
       run { goal; rules = !all_rules;
             next = SolveGoals { brothers = brothers; cutinfo; next };
             alts; cutinfo; heap; } sgs
   end]
 
-and sld_next_alt (heap : heap) alts (sgs : slg_status) : result =
-  [%trace "sld_next_alt" ~rid ("@[<hov 2>%a]@\n" pp_alts alts) begin
+and next_alt (heap : heap) alts (sgs : slg_status) : result =
+  [%trace "next_alt" ~rid ("@[<hov 2>%a]@\n" pp_alts alts) begin
   match alts with
   | [] -> slg sgs
-  | UnblockSLGGenerator nonce :: alts ->
-      let sgs = pop_stuck_generator nonce sgs in
-      sld_next_alt heap alts sgs
+  | UnblockSLGGenerator stuck_generator :: alts ->
+      let sgs = push_generator stuck_generator sgs in
+      next_alt heap alts sgs
   | ExploreAnotherSLDPath { goal; rules; next; choice_point } :: alts ->
       backtrack heap choice_point;
       sld goal rules next (alts : alts) ([] : alts) (heap:heap) (sgs : slg_status)
@@ -767,7 +752,7 @@ let main query steps n program =
       let c = if csts = [] then "" else Format.asprintf "%a| " (ppli ", ") csts in
       let s = c^g in
       if n = 1 then [s]
-      else s :: all (n-1) (sld_next_alt heap alts sgs)
+      else s :: all (n-1) (next_alt heap alts sgs)
   in
   all n (run query !all_rules)
 
