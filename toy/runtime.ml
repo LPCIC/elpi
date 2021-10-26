@@ -479,7 +479,7 @@ let init_tree (stack,cg,cs) =
   let stack = Array.init stack (fun _ -> dummy) in
   let g = heapify stack cg in
   let cs = List.map (heapify stack) cs in
-  g, init_heap cs
+  cg, g, init_heap cs
 
 
 module IM = Map.Make(struct type t = int let compare = Stdlib.compare end)
@@ -581,16 +581,12 @@ let rec run { goal; rules; next; alts; cutinfo; heap } (sgs : slg_status) : resu
 end]
 
 and enter_slg goal rules next alts cutinfo heap sgs =
-match !gas with
-  | 0 -> TIMEOUT
-  | _ ->
-    decr gas;
   let abstract_map, cgoal = abstract goal in
   match DT.find cgoal !table with
   | [], Incomplete ->
       [%spy "slg:suspend" ~rid pp_tm cgoal];
       let sgs = push_consumer cgoal { goal; next; heap; checkpoint = checkpoint heap } sgs in
-      advance_slg sgs
+      slg sgs
   | answers, Complete -> (* TODO: Trie -> DT(find_unifiable) *)
       [%spy "slg:complete->sld" ~rid pp_tm cgoal];
       sld goal answers next alts cutinfo heap sgs
@@ -605,17 +601,18 @@ match !gas with
       new_table_entry cgoal;
       let nvars, cconstraints = abstract_constraints abstract_map !(heap.constraints) in
       let sgs = push_generator (Root { initial_goal = (nvars,cgoal,cconstraints); rules }) sgs in
-      advance_slg sgs
+      slg sgs
 
-and advance_slg ({ generators; resume_queue; root_alts; _ } as s) =
+and slg ({ generators; resume_queue; root_alts; _ } as s) =
+  if !gas = 0 then TIMEOUT else let () = decr gas in
   [%trace "slg:step" ~rid ("@[<hov 2>%a@ table:@[<hov 2>%a@]@]\n" pp_slg_status s pp_table !table)
   begin match resume_queue with
   | ({goal ; next; heap; checkpoint }, solution) :: resume_queue ->
       let s = { s with resume_queue } in
       backtrack heap checkpoint;
       begin match select heap goal [solution] with
-      | None -> advance_slg s
-      | Some(_,[],[]) -> pop_andl next [] heap s (* #1 *)
+      | None -> slg s
+      | Some(_,[],[]) -> sld_pop_andl next [] heap s (* #1 *)
       | _ -> assert false (* solutions have no subgoals *)
       end
   | [] ->
@@ -624,22 +621,21 @@ and advance_slg ({ generators; resume_queue; root_alts; _ } as s) =
         begin match root_alts with
         | None -> FAIL
         | Some (heap,alts) ->
-            next_alt heap alts { s with root_alts = None }
+            sld_next_alt heap alts { s with root_alts = None }
         end
-     | UnexploredBranches (_,[]) :: generators -> advance_slg { s with generators }
+     | UnexploredBranches (_,[]) :: generators -> slg { s with generators }
      | UnexploredBranches (heap,alts) :: generators ->
-        next_alt heap alts { s with generators }
+        sld_next_alt heap alts { s with generators }
      | Root { initial_goal = (_, cgoal,_); rules = []; _ } :: generators ->
         let s = table_entry_complete cgoal s in (* TODO: do this more ofted/early *)
-        advance_slg { s with generators }
+        slg { s with generators }
      | Root { initial_goal; rules } :: generators ->
-        let _, cgoal, _ = initial_goal in
-        let goal, heap = init_tree initial_goal in
+        let cgoal, goal, heap = init_tree initial_goal in
         match select heap goal rules with
-        | None -> advance_slg { s with generators }
+        | None -> slg { s with generators }
         | Some (_,[], rules) ->
             let s = { s with generators = Root { initial_goal; rules } :: generators } in
-            pop_andl (TableSolution(cgoal,goal)) [] heap s
+            sld_pop_andl (TableSolution(cgoal,goal)) [] heap s
         | Some (_,ngoal::brothers, rules) ->
             let s = { s with generators } in
             if rules <> [] && has_cut (ngoal :: brothers) then
@@ -653,50 +649,47 @@ and advance_slg ({ generators; resume_queue; root_alts; _ } as s) =
 end]
 
 and sld goal rules next (alts : alts) (cutinfo : alts) (heap:heap) (sgs : slg_status) =
-match !gas with
-| 0 -> TIMEOUT
-| _ ->
-  decr gas;
-  if goal = cut then pop_andl next cutinfo heap sgs
+  if !gas = 0 then TIMEOUT else let () = decr gas in
+  if goal = cut then sld_pop_andl next cutinfo heap sgs
   else 
     match select heap goal rules with
-    | None -> next_alt heap alts sgs
-    | Some (_, [], []) -> pop_andl next alts heap sgs
+    | None -> sld_next_alt heap alts sgs
+    | Some (_, [], []) -> sld_pop_andl next alts heap sgs
     | Some (choice_point, [], rules) ->
         let alts = ExploreAnotherSLDPath { goal; rules; next; choice_point } :: alts in
-        pop_andl next alts heap sgs
+        sld_pop_andl next alts heap sgs
     | Some (choice_point, ngoal :: brothers, rules) ->
         let old_alts = alts in
         let alts = ExploreAnotherSLDPath { goal; rules; next; choice_point } :: alts in
         let next = SolveGoals { brothers; cutinfo = old_alts; next } in
         run { goal = ngoal; rules = !all_rules; next; alts; cutinfo = old_alts; heap } sgs
 
-and pop_andl (next : continuation) (alts : alts) (heap : heap) (sgs : slg_status) =
-  [%trace "pop_andl" ~rid ("@[<hov 2>next: %a / alts: %a]@\n" pp_continuation next pp_alts alts) begin
+and sld_pop_andl (next : continuation) (alts : alts) (heap : heap) (sgs : slg_status) =
+  [%trace "sld_pop_andl" ~rid ("@[<hov 2>next: %a / alts: %a]@\n" pp_continuation next pp_alts alts) begin
   match next with
   | Done -> OK (!(heap.constraints),heap,alts,sgs)
-  | ExitSLGRoot { heap; next; alts = o } -> assert(alts = [] (* #1 *)); pop_andl next o heap sgs
+  | ExitSLGRoot { heap; next; alts = o } -> assert(alts = [] (* #1 *)); sld_pop_andl next o heap sgs
   | TableSolution(cgoal,solution) ->
       let sgs, progress = table_solution cgoal solution !(heap.constraints) sgs in
       if progress then
         let sgs = if alts != [] then push_generator (UnexploredBranches (heap,alts)) sgs else sgs in
-        advance_slg sgs
+        slg sgs
       else
-        next_alt heap alts sgs
-  | SolveGoals { brothers = []; next; _ } -> pop_andl next alts heap sgs
+        sld_next_alt heap alts sgs
+  | SolveGoals { brothers = []; next; _ } -> sld_pop_andl next alts heap sgs
   | SolveGoals { brothers = goal :: brothers; cutinfo; next } ->
       run { goal; rules = !all_rules;
             next = SolveGoals { brothers = brothers; cutinfo; next };
             alts; cutinfo; heap; } sgs
   end]
 
-and next_alt (heap : heap) alts (sgs : slg_status) : result =
-  [%trace "next_alt" ~rid ("@[<hov 2>%a]@\n" pp_alts alts) begin
+and sld_next_alt (heap : heap) alts (sgs : slg_status) : result =
+  [%trace "sld_next_alt" ~rid ("@[<hov 2>%a]@\n" pp_alts alts) begin
   match alts with
-  | [] -> advance_slg sgs
+  | [] -> slg sgs
   | UnblockSLGGenerator nonce :: alts ->
       let sgs = pop_stuck_generator nonce sgs in
-      next_alt heap alts sgs
+      sld_next_alt heap alts sgs
   | ExploreAnotherSLDPath { goal; rules; next; choice_point } :: alts ->
       backtrack heap choice_point;
       sld goal rules next (alts : alts) ([] : alts) (heap:heap) (sgs : slg_status)
@@ -774,7 +767,7 @@ let main query steps n program =
       let c = if csts = [] then "" else Format.asprintf "%a| " (ppli ", ") csts in
       let s = c^g in
       if n = 1 then [s]
-      else s :: all (n-1) (next_alt heap alts sgs)
+      else s :: all (n-1) (sld_next_alt heap alts sgs)
   in
   all n (run query !all_rules)
 
