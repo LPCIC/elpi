@@ -129,7 +129,7 @@ let () =
     _cut_q(one).
     _cut_q(two).
     ",
-    "_cut_p(A)", 3, ["_cut_p(one)"; "no"]);
+    "_cut_p(A)", 2, ["_cut_p(one)"; "no"]);
 
 
   `Check("table loop",
