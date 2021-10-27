@@ -607,7 +607,7 @@ and slg ({ generators; resume_queue; root; _ } as s) =
       | _ -> assert false (* solutions have no subgoals *)
       end
   | [] ->
-     if is_root_complete root || generators = [] then (* Hum, we should do a SCC here, there is not necessarily ONE root *)
+     if (*is_root_complete root ||*) generators = [] then (* Hum, we should do a SCC here, there is not necessarily ONE root *)
        match root with
        | None -> FAIL
        | Some (_,None) -> FAIL

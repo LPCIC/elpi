@@ -131,6 +131,16 @@ let () =
     ",
     "_cut_p(A)", 2, ["_cut_p(one)"; "no"]); (* XSB gives cut_p(2) ?!?!?! *)
 
+  `Check("cut, XSB 5.2.6 - 6",
+    "
+    _cut_p(X) :- _cut_q(X), _cut_r, !.
+    _cut_r :- _cut_s.
+    _cut_s :- _cut_q(X).
+    _cut_q(one).
+    _cut_q(two).
+    ",
+    "_cut_p(A), _cut_q(B)", 3, ["_cut_p(one), _cut_q(one)"; "_cut_p(one), _cut_q(two)"; "no"]);
+
   `Check("table loop",
       "
       _t :- _t.
