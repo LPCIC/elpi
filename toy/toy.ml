@@ -81,6 +81,46 @@ let () =
       ",
     "p", 3, ["p"; "p"; "no"]);
 
+  `Check("cut, XSB 5.2.6 - 1",
+    "
+    _cut_p(X) :- _cut_q(X), _cut_r.
+    _cut_r :- _cut_s.
+    _cut_s :- _cut_q(X).
+    _cut_q(one).
+    _cut_q(two).
+    ",
+    "_cut_p(one)", 1, ["_cut_p(one)"]);
+
+  `Check("cut, XSB 5.2.6 - 2",
+    "
+    _cut_p(X) :- _cut_q(X), _cut_r.
+    _cut_r :- _cut_s.
+    _cut_s :- _cut_q(X).
+    _cut_q(one).
+    _cut_q(two).
+    ",
+    "_cut_p(two)", 1, ["_cut_p(two)"]);
+
+  `Check("cut, XSB 5.2.6 - 3",
+    "
+    _cut_p(X) :- _cut_q(X), cut_r, !.
+    _cut_r :- _cut_s.
+    _cut_s :- _cut_q(X).
+    _cut_q(one).
+    _cut_q(two).
+    ",
+    "_cut_p(one)", 1, ["_cut_p(one)"]);
+
+    `Check("cut, XSB 5.2.6 - 4",
+    "
+    _cut_p(X) :- _cut_q(X), cut_r, !.
+    _cut_r :- _cut_s.
+    _cut_s :- _cut_q(X).
+    _cut_q(one).
+    _cut_q(two).
+    ",
+    "_cut_p(two)", 1, ["_cut_p(two)"]);
+
   `Check("table loop",
       "
       _t :- _t.
