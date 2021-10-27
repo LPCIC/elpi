@@ -3324,7 +3324,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
     [%spy "user:curgoal" ~rid ~gid (uppterm depth [] 0 empty_env) g];
     match g with
     | Builtin(c,[]) when c == Global_symbols.cutc -> [%spy "user:rule" ~rid ~gid pp_string "cut"];
-       [%tcall cut (gid[@trace]) gs next alts cutto_alts]
+       [%tcall cut (gid[@trace]) gs next (alts[@trace]) cutto_alts]
     | Builtin(c,[q;sol]) when c == Global_symbols.findall_solutionsc -> [%spy "user:rule" ~rid ~gid pp_string "findall"];
        [%tcall findall depth p q sol (gid[@trace]) gs next alts cutto_alts]
     | App(c, g, gs') when c == Global_symbols.andc -> [%spy "user:rule" ~rid ~gid pp_string "and"];
@@ -3433,19 +3433,19 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
               [%tcall run depth p h (gid[@trace]) hs next alts oldalts] end
     end]
 
-  and cut (gid[@trace]) gs next alts lvl =
-    (* cut the or list until the last frame not to be cut (called lvl) *)
-    let rec prune ({ agid = agid[@trace]; clauses; adepth = depth; agoal_hd = hd } as alts) =
-      if alts == lvl then alts
-      else begin
-        [%spy "user:cut" ~rid ~gid: agid (pplist (ppclause ~depth ~hd) " | ") clauses];
-        prune alts.next
-      end in
-    let alts = prune alts in
-    if alts == noalts then (T.cut_trail[@inlined]) ();
+  and cut (gid[@trace]) gs next (alts[@trace]) cutto_alts =
+    [%spy "user:cut" ~rid ~gid (fun fmt alts ->
+      let rec prune ({ agid = agid[@trace]; clauses; adepth = depth; agoal_hd = hd } as alts) =
+        if alts != cutto_alts then begin
+          Format.fprintf fmt "%a" (pplist (ppclause ~depth ~hd) " | ") clauses;
+          prune alts.next
+        end in
+      prune alts
+      ) alts];
+    if cutto_alts == noalts then (T.cut_trail[@inlined]) ();
     match gs with
-    | [] -> pop_andl alts next lvl
-    | { depth; program; goal; gid = gid [@trace] } :: gs -> run depth program goal (gid[@trace]) gs next alts lvl
+    | [] -> pop_andl cutto_alts next cutto_alts
+    | { depth; program; goal; gid = gid [@trace] } :: gs -> run depth program goal (gid[@trace]) gs next cutto_alts cutto_alts
 
   and findall depth p g s (gid[@trace]) gs next alts cutto_alts =
     let avoid = oref C.dummy in (* to force a copy *)
