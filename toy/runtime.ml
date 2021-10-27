@@ -610,6 +610,7 @@ and slg ({ generators; resume_queue; root_alts; _ } as s) =
         match select heap goal rules with
         | None -> slg { s with generators }
         | Some (_,[], rules) ->
+            let s = { s with generators } in
             let s = push_generator (Root { initial_goal; rules }) s in
             pop_andl (TableSolution { entry; solution = goal}) NoAlt heap s
         | Some (_,ngoal::brothers, rules) ->
