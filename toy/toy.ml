@@ -129,8 +129,7 @@ let () =
     _cut_q(one).
     _cut_q(two).
     ",
-    "_cut_p(A)", 2, ["_cut_p(one)"; "no"]);
-
+    "_cut_p(A)", 2, ["_cut_p(one)"; "no"]); (* XSB gives cut_p(2) ?!?!?! *)
 
   `Check("table loop",
       "

@@ -517,8 +517,8 @@ let resume_all_consumers cgoal (c : rule) (s : slg_status) =
   try
     let consumers = DT.find cgoal s.consumers in
     {s with resume_queue = List.map (fun x -> x,c) consumers @ s.resume_queue }
-  with Not_found ->
-    (*assert false*) s
+  with Not_found -> (* consumers may have been cut away *)
+    s
   
 let table_solution cgoal solution constraints s =
   match DT.find cgoal !table with
@@ -540,7 +540,7 @@ let table_entry_complete cgoal sgs =
       table := DT.add cgoal (solutions, Complete) !table;
       let sgs = { sgs with consumers = DT.remove cgoal sgs.consumers } in
       sgs
-  | _, Complete -> (*assert false*) sgs
+  | _, Complete -> sgs (* entry may have been completed early by a cut *)
   | exception Not_found -> assert false
 
 let table_last_solution cgoal solution constraints s =
@@ -607,7 +607,7 @@ and slg ({ generators; resume_queue; root; _ } as s) =
       | _ -> assert false (* solutions have no subgoals *)
       end
   | [] ->
-     if is_root_complete root || generators = [] then
+     if is_root_complete root || generators = [] then (* Hum, we should do a SCC here, there is not necessarily ONE root *)
        match root with
        | None -> FAIL
        | Some (_,None) -> FAIL
