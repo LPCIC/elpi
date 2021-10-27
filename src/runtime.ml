@@ -2714,12 +2714,12 @@ let repack_goal (gid[@trace]) ~depth program goal =
 
 (* The activation frames points to the choice point that
    cut should backtrack to, i.e. the first one not to be
-   removed. For bad reasons, we call it lvl in the code. *)
+   removed. We call it catto_alts in the code. *)
 type frame =
  | FNil
  | FCons of (*lvl:*)alternative * goal list * frame
 and alternative = {
-  lvl : alternative;
+  cutto_alts : alternative;
   program : prolog_prog;
   adepth : int;
   agoal_hd : constant;
@@ -3303,7 +3303,7 @@ let pp_candidate ~depth ~k fmt ({ loc } as cl) =
 let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x executable -> 'x runtime =
   (* Input to be read as the orl (((p,g)::gs)::next)::alts
      depth >= 0 is the number of variables in the context. *)
-  let rec run depth p g (gid[@trace]) gs (next : frame) alts lvl =
+  let rec run depth p g (gid[@trace]) gs (next : frame) alts cutto_alts =
     [%cur_pred (pred_of g)];
     [%trace "run" ~rid begin
 
@@ -3319,67 +3319,67 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
     [%tcall next_alt alts]
  | Some ({ depth = ndepth; program; goal; gid = ngid [@trace] } :: goals) ->
     [%spy "user:rule" ~rid ~gid pp_string "resume"];
-    [%tcall run ndepth program goal (ngid[@trace]) (goals @ (repack_goal[@inlined]) (gid[@trace]) ~depth p g :: gs) next alts lvl]
+    [%tcall run ndepth program goal (ngid[@trace]) (goals @ (repack_goal[@inlined]) (gid[@trace]) ~depth p g :: gs) next alts cutto_alts]
  | Some [] ->
     [%spy "user:curgoal" ~rid ~gid (uppterm depth [] 0 empty_env) g];
     match g with
     | Builtin(c,[]) when c == Global_symbols.cutc -> [%spy "user:rule" ~rid ~gid pp_string "cut"];
-       [%tcall cut (gid[@trace]) gs next alts lvl]
+       [%tcall cut (gid[@trace]) gs next alts cutto_alts]
     | Builtin(c,[q;sol]) when c == Global_symbols.findall_solutionsc -> [%spy "user:rule" ~rid ~gid pp_string "findall"];
-       [%tcall findall depth p q sol (gid[@trace]) gs next alts lvl]
+       [%tcall findall depth p q sol (gid[@trace]) gs next alts cutto_alts]
     | App(c, g, gs') when c == Global_symbols.andc -> [%spy "user:rule" ~rid ~gid pp_string "and"];
        let gs' = List.map (fun x -> (make_subgoal[@inlined]) ~depth (gid[@trace]) p x) gs' in
        let gid[@trace] = make_subgoal_id gid ((depth,g)[@trace]) in
-       [%tcall run depth p g (gid[@trace]) (gs' @ gs) next alts lvl]
+       [%tcall run depth p g (gid[@trace]) (gs' @ gs) next alts cutto_alts]
     | Cons (g,gs') -> [%spy "user:rule" ~rid ~gid pp_string "and"];
        let gs' = (make_subgoal[@inlined]) ~depth (gid[@trace]) p gs' in
        let gid[@trace] = make_subgoal_id gid ((depth,g)[@trace]) in
-       [%tcall run depth p g (gid[@trace]) (gs' :: gs) next alts lvl]
+       [%tcall run depth p g (gid[@trace]) (gs' :: gs) next alts cutto_alts]
     | Nil -> [%spy "user:rule" ~rid ~gid pp_string "true"];
       begin match gs with
-      | [] -> [%tcall pop_andl alts next lvl]
+      | [] -> [%tcall pop_andl alts next cutto_alts]
       | { depth; program; goal; gid = gid [@trace] } :: gs ->
-        [%tcall run depth program goal (gid[@trace]) gs next alts lvl]
+        [%tcall run depth program goal (gid[@trace]) gs next alts cutto_alts]
       end
     | App(c, g2, [g1]) when c == Global_symbols.rimplc -> [%spy "user:rule" ~rid ~gid pp_string "implication"];
        let clauses, pdiff, lcs = clausify p ~depth g1 in
        let g2 = hmove ~from:depth ~to_:(depth+lcs) g2 in
        let gid[@trace] = make_subgoal_id gid ((depth,g2)[@trace]) in
-       [%tcall run (depth+lcs) (add_clauses ~depth clauses pdiff p) g2 (gid[@trace]) gs next alts lvl]
+       [%tcall run (depth+lcs) (add_clauses ~depth clauses pdiff p) g2 (gid[@trace]) gs next alts cutto_alts]
     | App(c, g1, [g2]) when c == Global_symbols.implc -> [%spy "user:rule" ~rid ~gid pp_string "implication"];
        let clauses, pdiff, lcs = clausify p ~depth g1 in
        let g2 = hmove ~from:depth ~to_:(depth+lcs) g2 in
        let gid[@trace] = make_subgoal_id gid ((depth,g2)[@trace]) in
-       [%tcall run (depth+lcs) (add_clauses ~depth clauses pdiff p) g2 (gid[@trace]) gs next alts lvl]
+       [%tcall run (depth+lcs) (add_clauses ~depth clauses pdiff p) g2 (gid[@trace]) gs next alts cutto_alts]
     | App(c, arg, []) when c == Global_symbols.pic -> [%spy "user:rule" ~rid ~gid pp_string "pi"];
        let f = get_lambda_body ~depth arg in
        let gid[@trace] = make_subgoal_id gid ((depth+1,f)[@trace]) in
-       [%tcall run (depth+1) p f (gid[@trace]) gs next alts lvl]
+       [%tcall run (depth+1) p f (gid[@trace]) gs next alts cutto_alts]
     | App(c, arg, []) when c == Global_symbols.sigmac -> [%spy "user:rule" ~rid ~gid pp_string "sigma"];
        let f = get_lambda_body ~depth arg in
        let v = UVar(oref C.dummy, depth, 0) in
        let fv = subst depth [v] f in
        let gid[@trace] = make_subgoal_id gid ((depth,fv)[@trace]) in
-       [%tcall run depth p fv (gid[@trace]) gs next alts lvl]
+       [%tcall run depth p fv (gid[@trace]) gs next alts cutto_alts]
     | UVar ({ contents = g }, from, args) when g != C.dummy -> [%spy "user:rule" ~rid ~gid pp_string "deref"];
-       [%tcall run depth p (deref_uv ~from ~to_:depth args g) (gid[@trace]) gs next alts lvl]
+       [%tcall run depth p (deref_uv ~from ~to_:depth args g) (gid[@trace]) gs next alts cutto_alts]
     | AppUVar ({contents = t}, from, args) when t != C.dummy -> [%spy "user:rule" ~rid ~gid pp_string "deref"];
-       [%tcall run depth p (deref_appuv ~from ~to_:depth args t) (gid[@trace]) gs next alts lvl]
+       [%tcall run depth p (deref_appuv ~from ~to_:depth args t) (gid[@trace]) gs next alts cutto_alts]
     | Const k -> [%spy "user:rule" ~rid ~gid pp_string "backchain"];
        let clauses = get_clauses depth k g p in
        [%spyl "user:candidates" ~rid ~gid (pp_candidate ~depth ~k) clauses];
-       [%tcall backchain depth p (k, C.dummy, [], gs) (gid[@trace]) next alts lvl clauses]
+       [%tcall backchain depth p (k, C.dummy, [], gs) (gid[@trace]) next alts cutto_alts clauses]
     | App (k,x,xs) -> [%spy "user:rule" ~rid ~gid pp_string "backchain"];
        let clauses = get_clauses depth k g p in
        [%spyl "user:candidates" ~rid ~gid (pp_candidate ~depth ~k) clauses];
-       [%tcall backchain depth p (k, x, xs, gs) (gid[@trace]) next alts lvl clauses]
+       [%tcall backchain depth p (k, x, xs, gs) (gid[@trace]) next alts cutto_alts clauses]
     | Builtin(c, args) -> [%spy "user:rule" ~rid ~gid pp_string "builtin"];
        begin match Constraints.exect_builtin_predicate c ~depth p (gid[@trace]) args with
        | gs' ->
           [%spy "user:builtin" ~rid ~gid pp_string "success"];
           (match List.map (fun g -> (make_subgoal[@inlined]) (gid[@trace]) ~depth p g) gs' @ gs with
-          | [] -> [%tcall pop_andl alts next lvl]
-          | { depth; program; goal; gid = gid [@trace] } :: gs -> [%tcall run depth program goal (gid[@trace]) gs next alts lvl])
+          | [] -> [%tcall pop_andl alts next cutto_alts]
+          | { depth; program; goal; gid = gid [@trace] } :: gs -> [%tcall run depth program goal (gid[@trace]) gs next alts cutto_alts])
        | exception No_clause ->
           [%spy "user:builtin" ~rid ~gid pp_string "fail"];
           [%tcall next_alt alts]
@@ -3392,7 +3392,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
   end]
 
   (* We pack some arguments into a tuple otherwise we consume too much stack *)
-  and backchain depth p (k, arg, args_of_g, gs) (gid[@trace]) next alts lvl cp = [%trace "select" ~rid begin
+  and backchain depth p (k, arg, args_of_g, gs) (gid[@trace]) next alts cutto_alts cp = [%trace "select" ~rid begin
     match cp with
       | [] -> [%spy "user:select" ~rid ~gid pp_string "fail"];
         [%tcall next_alt alts]
@@ -3409,21 +3409,21 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
              | [] -> unif ~matching:false (gid[@trace]) depth env c_depth arg x && for_all3b (fun x y matching -> unif ~matching (gid[@trace]) depth env c_depth x y) args_of_g xs [] false
              | matching :: ms -> unif ~matching (gid[@trace]) depth env c_depth arg x && for_all3b (fun x y matching -> unif ~matching (gid[@trace]) depth env c_depth x y) args_of_g xs ms false
         with
-        | false -> T.undo old_trail (); [%tcall backchain depth p (k, arg, args_of_g, gs) (gid[@trace]) next alts lvl cs]
+        | false -> T.undo old_trail (); [%tcall backchain depth p (k, arg, args_of_g, gs) (gid[@trace]) next alts cutto_alts cs]
         | true ->
            let oldalts = alts in
            let alts = if cs = [] then alts else
              { program = p; adepth = depth; agoal_hd = k; ogoal_arg = arg; ogoal_args = args_of_g; agid = gid[@trace]; goals = gs; stack = next;
                trail = old_trail;
                state = !CS.state;
-               clauses = cs; lvl = lvl ; next = alts} in
+               clauses = cs; cutto_alts = cutto_alts ; next = alts} in
            begin match c_hyps with
            | [] ->
               begin match gs with
-              | [] -> [%tcall pop_andl alts next lvl]
-              | { depth ; program; goal; gid = gid [@trace] } :: gs -> [%tcall run depth program goal (gid[@trace]) gs next alts lvl] end
+              | [] -> [%tcall pop_andl alts next cutto_alts]
+              | { depth ; program; goal; gid = gid [@trace] } :: gs -> [%tcall run depth program goal (gid[@trace]) gs next alts cutto_alts] end
            | h::hs ->
-              let next = if gs = [] then next else FCons (lvl,gs,next) in
+              let next = if gs = [] then next else FCons (cutto_alts,gs,next) in
               let h = move ~adepth:depth ~from:c_depth ~to_:depth env h in
               let hs =
                 List.map (fun x->
@@ -3447,7 +3447,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
     | [] -> pop_andl alts next lvl
     | { depth; program; goal; gid = gid [@trace] } :: gs -> run depth program goal (gid[@trace]) gs next alts lvl
 
-  and findall depth p g s (gid[@trace]) gs next alts lvl =
+  and findall depth p g s (gid[@trace]) gs next alts cutto_alts =
     let avoid = oref C.dummy in (* to force a copy *)
     let copy = move ~adepth:depth ~from:depth ~to_:depth empty_env ~avoid in
     let g = copy g in (* so that Discard becomes a variable *)
@@ -3490,11 +3490,11 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
       | false -> [%tcall next_alt alts]
       | true ->
         begin match gs with
-        | [] -> [%tcall pop_andl alts next lvl]
-        | { depth ; program; goal; gid = gid [@trace] } :: gs -> [%tcall run depth program goal (gid[@trace]) gs next alts lvl] end
+        | [] -> [%tcall pop_andl alts next cutto_alts]
+        | { depth ; program; goal; gid = gid [@trace] } :: gs -> [%tcall run depth program goal (gid[@trace]) gs next alts cutto_alts] end
     end]
 
-  and pop_andl alts next lvl =
+  and pop_andl alts next cutto_alts =
    match next with
     | FNil ->
         (match resume_all () with
@@ -3503,11 +3503,11 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
              "Undo triggered by goal resumption\n%!";
             [%tcall next_alt alts]
          | Some ({ depth; program; goal; gid = gid [@trace] } :: gs) ->
-            run depth program goal (gid[@trace]) gs FNil alts lvl
+            run depth program goal (gid[@trace]) gs FNil alts cutto_alts
          | Some [] -> alts)
     | FCons (_,[],_) -> anomaly "empty stack frame"
-    | FCons(lvl, { depth; program; goal; gid = gid [@trace] } :: gs, next) ->
-        run depth program goal (gid[@trace]) gs next alts lvl
+    | FCons(cutto_alts, { depth; program; goal; gid = gid [@trace] } :: gs, next) ->
+        run depth program goal (gid[@trace]) gs next alts cutto_alts
 
   and resume_all () : goal list option =
 (*     if fm then Some [] else *)
@@ -3551,9 +3551,9 @@ end;*)
    else
      let { program = p; clauses; agoal_hd = k; ogoal_arg = arg; ogoal_args = args; agid = gid [@trace]; goals = gs; stack = next;
           trail = old_trail; state = old_state;
-          adepth = depth; lvl = lvl; next = alts} = alts in
+          adepth = depth; cutto_alts = cutto_alts; next = alts} = alts in
     T.undo ~old_trail ~old_state ();
-    backchain depth p (k, arg, args, gs) (gid[@trace]) next alts lvl clauses
+    backchain depth p (k, arg, args, gs) (gid[@trace]) next alts cutto_alts clauses
   in
 
  (* Finally the runtime *)
