@@ -176,7 +176,7 @@ end
 module Pp = struct
   let term pp_ctx f t = (* XXX query depth *)
     let module R = (val !r) in let open R in
-    R.Pp.uppterm ~pp_ctx 0 [] 0 [||] f t
+    R.Pp.uppterm ~pp_ctx 0 [] ~argsdepth:0 [||] f t
 
   let constraints pp_ctx f c =
     let module R = (val !r) in let open R in
@@ -186,7 +186,7 @@ module Pp = struct
 
   let query f c =
     let module R = (val !r) in let open R in
-    Compiler.pp_query (fun ~pp_ctx ~depth -> R.Pp.uppterm ~pp_ctx depth [] 0 [||]) f c
+    Compiler.pp_query (fun ~pp_ctx ~depth -> R.Pp.uppterm ~pp_ctx depth [] ~argsdepth:0 [||]) f c
 
   module Ast = struct
     let program = EA.Program.pp
