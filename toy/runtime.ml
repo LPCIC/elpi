@@ -583,7 +583,7 @@ and slg ({ generators; resume_queue; root_alts; _ } as s) =
   if !gas = 0 then TIMEOUT else let () = decr gas in
   [%trace "slg:step" ~rid ("@[<hov 2>%a@ table:@[<hov 2>%a@]@]\n" pp_slg_status s pp_table !table)
   begin match resume_queue with
-  | ({goal ; next; heap; checkpoint }, solution) :: resume_queue ->
+  | ({ goal; next; heap; checkpoint }, solution) :: resume_queue ->
       let s = { s with resume_queue } in
       backtrack heap checkpoint;
       begin match select heap goal [solution] with
@@ -599,30 +599,35 @@ and slg ({ generators; resume_queue; root_alts; _ } as s) =
         | Some (heap,alts) ->
             next_alt heap alts { s with root_alts = None }
         end
-     | UnexploredBranches { alts = NoAlt; _ } :: generators -> slg { s with generators }
+     | UnexploredBranches { alts = NoAlt; _ } :: _ -> assert false
      | UnexploredBranches { heap; alts } :: generators ->
-        next_alt heap alts { s with generators }
-     | Root { initial_goal = (_, cgoal,_); rules = []; _ } :: generators ->
-        let s = table_entry_complete cgoal s in (* TODO: do this more ofted/early *)
-        slg { s with generators }
+        let s = { s with generators } in
+        next_alt heap alts s
+     | Root { initial_goal = (_, entry,_); rules = []; _ } :: generators ->
+        let s = { s with generators } in
+        let s = table_entry_complete entry s in (* TODO: do this more ofted/early *)
+        slg s
      | Root { initial_goal; rules } :: generators ->
+        let s = { s with generators } in
         let entry, goal, heap = init_tree initial_goal in
         match select heap goal rules with
-        | None -> slg { s with generators }
-        | Some (_,[], rules) ->
-            let s = { s with generators } in
-            let s = push_generator (Root { initial_goal; rules }) s in
-            pop_andl (TableSolution { entry; solution = goal}) NoAlt heap s
-        | Some (_,ngoal::brothers, rules) ->
-            let s = { s with generators } in
-            if rules <> [] && has_cut (ngoal :: brothers) then
-              let stuck_generator = Root { initial_goal; rules } in
-              let next = SolveGoals { brothers; cutinfo = NoAlt; next = TableSolution { entry; solution = goal } } in
-              run { goal = ngoal; next; alts = UnblockSLGGenerator { generator = stuck_generator; alts = NoAlt }; rules = !all_rules; cutinfo = NoAlt; heap; } s        
-            else
-              let s = push_generator (Root { initial_goal; rules }) s in
-              let next = SolveGoals { brothers; cutinfo = NoAlt; next = TableSolution { entry; solution = goal } } in
-              run { goal = ngoal; next; alts = NoAlt; rules = !all_rules; cutinfo = NoAlt; heap } s        
+        | None ->
+            let s = table_entry_complete entry s in
+            slg s
+        | Some (_,subgoals, rules) ->
+            let generator = Root { initial_goal; rules } in
+            match subgoals with
+            | [] ->
+                let s = push_generator generator s in
+                pop_andl (TableSolution { entry; solution = goal}) NoAlt heap s
+            | ngoal :: brothers ->
+                let next = SolveGoals { brothers; cutinfo = NoAlt; next = TableSolution { entry; solution = goal } } in
+                if has_cut subgoals then
+                  let alts = UnblockSLGGenerator { generator; alts = NoAlt } in
+                  run { goal = ngoal; next; alts; rules = !all_rules; cutinfo = NoAlt; heap; } s        
+                else
+                  let s = push_generator generator s in
+                  run { goal = ngoal; next; alts = NoAlt; rules = !all_rules; cutinfo = NoAlt; heap } s        
 end]
 
 and sld goal rules next (alts : alt) (cutinfo : alt) (heap:heap) (sgs : slg_status) =
@@ -649,7 +654,7 @@ and pop_andl (next : continuation) (alts : alt) (heap : heap) (sgs : slg_status)
   | TableSolution { entry; solution } ->
       let sgs, progress = table_solution entry solution !(heap.constraints) sgs in
       if progress then
-        let sgs = if alts != NoAlt then push_generator (UnexploredBranches { heap; alts }) sgs else sgs in
+        let sgs = if alts = NoAlt then sgs else push_generator (UnexploredBranches { heap; alts }) sgs in
         slg sgs
       else
         next_alt heap alts sgs

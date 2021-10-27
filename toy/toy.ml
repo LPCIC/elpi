@@ -89,7 +89,7 @@ let () =
     _cut_q(one).
     _cut_q(two).
     ",
-    "_cut_p(one)", 1, ["_cut_p(one)"]);
+    "_cut_p(one)", 2, ["_cut_p(one)"; "no"]);
 
   `Check("cut, XSB 5.2.6 - 2",
     "
@@ -99,27 +99,38 @@ let () =
     _cut_q(one).
     _cut_q(two).
     ",
-    "_cut_p(two)", 1, ["_cut_p(two)"]);
+    "_cut_p(two)", 2, ["_cut_p(two)"; "no"]);
 
   `Check("cut, XSB 5.2.6 - 3",
     "
-    _cut_p(X) :- _cut_q(X), cut_r, !.
+    _cut_p(X) :- _cut_q(X), _cut_r, !.
     _cut_r :- _cut_s.
     _cut_s :- _cut_q(X).
     _cut_q(one).
     _cut_q(two).
     ",
-    "_cut_p(one)", 1, ["_cut_p(one)"]);
+    "_cut_p(one)", 2, ["_cut_p(one)"; "no"]);
 
-    `Check("cut, XSB 5.2.6 - 4",
+  `Check("cut, XSB 5.2.6 - 4",
     "
-    _cut_p(X) :- _cut_q(X), cut_r, !.
+    _cut_p(X) :- _cut_q(X), _cut_r, !.
     _cut_r :- _cut_s.
     _cut_s :- _cut_q(X).
     _cut_q(one).
     _cut_q(two).
     ",
-    "_cut_p(two)", 1, ["_cut_p(two)"]);
+    "_cut_p(two)", 2, ["_cut_p(two)"; "no"]);
+
+  `Check("cut, XSB 5.2.6 - 5",
+    "
+    _cut_p(X) :- _cut_q(X), _cut_r, !.
+    _cut_r :- _cut_s.
+    _cut_s :- _cut_q(X).
+    _cut_q(one).
+    _cut_q(two).
+    ",
+    "_cut_p(A)", 3, ["_cut_p(one)"; "no"]);
+
 
   `Check("table loop",
       "
