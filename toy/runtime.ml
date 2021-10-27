@@ -372,7 +372,7 @@ end
 
 type continuation = (* the AND part, what to do next *)
   | Done
-  | ExitSLGRoot of { heap : heap; next : continuation; alts : alt }
+  | ExitSLGRoot of { heap : heap; [@printer (fun _ _ -> ())] next : continuation; alts : alt }
   | TableSolution of { entry : canonical_goal; solution : tm }
   | SolveGoals of {
       brothers : goal list;
@@ -409,7 +409,7 @@ let pp_end_frame fmt = function
   | TableSolution { entry = cg; solution } -> Format.fprintf fmt "TableSolution %a to %a" pp_tm solution pp_tm cg
   | _ -> assert false
 
-let pp_continuation fmt continuation =
+let _pp_continuation fmt continuation =
   let brothers, siblings = flatten_frame continuation in
     Format.fprintf fmt "%a; %a"
       (Format.pp_print_list ~pp_sep:(fun f () -> Format.pp_print_string f "; ") pp_tm) brothers
@@ -476,7 +476,7 @@ type slg_status = {
   consumers : slg_consumer list DT.t;
   generators : slg_generator list;
   resume_queue : (slg_consumer * rule) list;
-  root_alts : (heap * alt) option;
+  root : (canonical_goal * (heap * alt) option) option;
 }
 [@@deriving show]
 
@@ -484,7 +484,7 @@ let empty_slg_status = {
   consumers = DT.empty;
   generators = [];
   resume_queue = [];
-  root_alts = None;
+  root = None;
 }
 
 type sld_status = {
@@ -510,15 +510,15 @@ let push_consumer cgoal (c : slg_consumer) (s : slg_status) =
 let push_generator (g : slg_generator) (s : slg_status) =
   { s with generators = g :: s.generators }
 
-let set_root_if_not_set heap alts s =
-  if s.root_alts = None then { s with root_alts = Some(heap, alts) } else s
+let set_root_if_not_set cgoal heap alts s =
+  if s.root = None then { s with root = Some(cgoal, Some(heap, alts)) } else s
 
 let resume_all_consumers cgoal (c : rule) (s : slg_status) =
   try
     let consumers = DT.find cgoal s.consumers in
     {s with resume_queue = List.map (fun x -> x,c) consumers @ s.resume_queue }
   with Not_found ->
-    assert false
+    (*assert false*) s
   
 let table_solution cgoal solution constraints s =
   match DT.find cgoal !table with
@@ -538,9 +538,24 @@ let table_entry_complete cgoal sgs =
   match DT.find cgoal !table with
   | solutions, Incomplete ->
       table := DT.add cgoal (solutions, Complete) !table;
-      { sgs with consumers = DT.remove cgoal sgs.consumers }
-  | _, Complete -> assert false
+      let sgs = { sgs with consumers = DT.remove cgoal sgs.consumers } in
+      sgs
+  | _, Complete -> (*assert false*) sgs
   | exception Not_found -> assert false
+
+let table_last_solution cgoal solution constraints s =
+  let s, progress = table_solution cgoal solution constraints s in
+  table_entry_complete cgoal s, progress
+  
+
+let is_root_complete root_entry =
+ match root_entry with
+ | None -> true
+ | Some (cgoal,_) ->
+     match DT.find cgoal !table with
+     | _, Complete -> true
+     | _, Incomplete -> false
+     | exception Not_found -> assert false
 
 let has_cut = List.mem cut
 
@@ -572,14 +587,14 @@ and enter_slg goal rules next alts cutinfo heap sgs =
       sld goal answers next alts cutinfo heap sgs
   | exception Not_found ->
       [%spy "slg:new" ~rid pp_tm cgoal];
-      let sgs = set_root_if_not_set heap alts sgs in
+      let sgs = set_root_if_not_set cgoal heap alts sgs in
       let sgs = push_consumer cgoal { goal; next = ExitSLGRoot { heap; next; alts }; heap; checkpoint = checkpoint heap } sgs in
       new_table_entry cgoal;
       let nvars, cconstraints = abstract_constraints abstract_map !(heap.constraints) in
       let sgs = push_generator (Root { initial_goal = (nvars,cgoal,cconstraints); rules }) sgs in
       slg sgs
 
-and slg ({ generators; resume_queue; root_alts; _ } as s) =
+and slg ({ generators; resume_queue; root; _ } as s) =
   if !gas = 0 then TIMEOUT else let () = decr gas in
   [%trace "slg:step" ~rid ("@[<hov 2>%a@ table:@[<hov 2>%a@]@]\n" pp_slg_status s pp_table !table)
   begin match resume_queue with
@@ -592,13 +607,13 @@ and slg ({ generators; resume_queue; root_alts; _ } as s) =
       | _ -> assert false (* solutions have no subgoals *)
       end
   | [] ->
-     match generators with
-     | [] ->
-        begin match root_alts with
-        | None -> FAIL
-        | Some (heap,alts) ->
-            next_alt heap alts { s with root_alts = None }
-        end
+     if is_root_complete root || generators = [] then
+       match root with
+       | None -> FAIL
+       | Some (_,None) -> FAIL
+       | Some (e,Some(heap,alts)) -> next_alt heap alts { s with root = Some (e,None) }
+     else match generators with
+     | [] -> assert false
      | UnexploredBranches { alts = NoAlt; _ } :: _ -> assert false
      | UnexploredBranches { heap; alts } :: generators ->
         let s = { s with generators } in
@@ -632,7 +647,8 @@ end]
 
 and sld goal rules next (alts : alt) (cutinfo : alt) (heap:heap) (sgs : slg_status) =
   if !gas = 0 then TIMEOUT else let () = decr gas in
-  if goal = cut then pop_andl next cutinfo heap sgs
+  if goal = cut then
+    pop_andl_maybe_tabled_tail_cut next cutinfo heap sgs
   else 
     match select heap goal rules with
     | None -> next_alt heap alts sgs
@@ -645,6 +661,17 @@ and sld goal rules next (alts : alt) (cutinfo : alt) (heap:heap) (sgs : slg_stat
         let alts = ExploreAnotherSLDPath { goal; rules; next; choice_point; alts } in
         let next = SolveGoals { brothers; cutinfo = old_alts; next } in
         run { goal = ngoal; rules = !all_rules; next; alts; cutinfo = old_alts; heap } sgs
+
+and pop_andl_maybe_tabled_tail_cut next alts heap sgs =
+  match next with
+  | SolveGoals { brothers = []; next; _ } -> pop_andl_maybe_tabled_tail_cut next alts heap sgs
+  | TableSolution { entry; solution } ->
+      let sgs, progress = table_last_solution entry solution !(heap.constraints) sgs in
+      if progress then
+        slg sgs
+      else
+        next_alt heap alts sgs
+| x -> pop_andl x alts heap sgs
 
 and pop_andl (next : continuation) (alts : alt) (heap : heap) (sgs : slg_status) =
   [%trace "pop_andl" ~rid ("@[<hov 2>next: %a / alts: %a]@\n" pp_continuation next pp_alt alts) begin
