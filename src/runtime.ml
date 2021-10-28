@@ -866,13 +866,13 @@ let rec move ~argsdepth e ?avoid ~from ~to_ t =
        if f == f' then x else Lam f'
     | App (c,t,l) when delta == 0 || c < from && c < to_ ->
        let t' = maux e depth t in
-       let l' = smart_map (maux e depth) l in
+       let l' = smart_map3 maux e depth l in
        if t == t' && l == l' then x else App (c,t',l')
     | App (c,t,l) when c >= from ->
-       App(c-delta, maux e depth t, smart_map (maux e depth) l)
+       App(c-delta, maux e depth t, smart_map3 maux e depth l)
     | App _ -> raise RestrictionFailure
     | Builtin (c,l) ->
-       let l' = smart_map (maux e depth) l in
+       let l' = smart_map3 maux e depth l in
        if l == l' then x else Builtin (c,l')
     | CData _ -> x
     | Cons(hd,tl) ->
@@ -899,7 +899,7 @@ let rec move ~argsdepth e ?avoid ~from ~to_ t =
        deref_uv ?avoid ~from:argsdepth ~to_:(to_+depth) args e.(i)
     | AppArg(i, args) when e.(i) != C.dummy ->
        let args =
-        try smart_map (maux e depth) args
+        try smart_map3 maux e depth args
         with RestrictionFailure ->
           anomaly "move: could check if unrestrictable args are unused" in
        deref_appuv ?avoid ~from:argsdepth ~to_:(to_+depth) args e.(i)
@@ -2540,14 +2540,14 @@ let rec term_map m = function
   | Const x when List.mem_assoc x m -> mkConst (List.assoc x m)
   | Const _ as x -> x
   | App(c,x,xs) when List.mem_assoc c m ->
-      App(List.assoc c m,term_map m x, smart_map (term_map m) xs)
-  | App(c,x,xs) -> App(c,term_map m x, smart_map (term_map m ) xs)
+      App(List.assoc c m,term_map m x, smart_map2 term_map m xs)
+  | App(c,x,xs) -> App(c,term_map m x, smart_map2 term_map m xs)
   | Lam x -> Lam (term_map m x)
   | UVar _ as x -> x
-  | AppUVar(r,lvl,xs) -> AppUVar(r,lvl,smart_map (term_map m) xs)
+  | AppUVar(r,lvl,xs) -> AppUVar(r,lvl,smart_map2 term_map m xs)
   | Arg _ as x -> x
-  | AppArg(i,xs) -> AppArg(i,smart_map (term_map m) xs)
-  | Builtin(c,xs) -> Builtin(c,smart_map (term_map m) xs)
+  | AppArg(i,xs) -> AppArg(i,smart_map2 term_map m xs)
+  | Builtin(c,xs) -> Builtin(c,smart_map2 term_map m xs)
   | Cons(hd,tl) -> Cons(term_map m hd, term_map m tl)
   | Nil as x -> x
   | Discard as x -> x
@@ -3408,8 +3408,8 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
           | [] -> arg == C.dummy && args_of_g == []
           | x :: xs -> arg != C.dummy &&
              match c_mode with
-             | [] -> unif ~argsdepth:depth ~matching:false (gid[@trace]) depth env c_depth arg x && for_all3b (fun x y matching -> unif ~argsdepth:depth ~matching (gid[@trace]) depth env c_depth x y) args_of_g xs [] false
-             | matching :: ms -> unif ~argsdepth:depth ~matching (gid[@trace]) depth env c_depth arg x && for_all3b (fun x y matching -> unif ~argsdepth:depth ~matching (gid[@trace]) depth env c_depth x y) args_of_g xs ms false
+             | [] -> unif ~argsdepth:depth ~matching:false (gid[@trace]) depth env c_depth arg x && for_all23 ~argsdepth:depth (unif (gid[@trace])) depth env c_depth args_of_g xs
+             | matching :: ms -> unif ~argsdepth:depth ~matching (gid[@trace]) depth env c_depth arg x && for_all3b3 ~argsdepth:depth (unif (gid[@trace])) depth env c_depth args_of_g xs ms false
         with
         | false -> T.undo old_trail (); [%tcall backchain depth p (k, arg, args_of_g, gs) (gid[@trace]) next alts cutto_alts cs]
         | true ->
