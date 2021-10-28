@@ -1293,7 +1293,7 @@ let rec mknLam n t = if n = 0 then t else mknLam (n-1) (Lam t)
  * left is true when the variable being assigned is on the left (goal)
  * t is the term we are assigning to r
  * e is the env for args *)
-let bind r gamma l a d delta b left t e =
+let bind ~argsdepth r gamma l a d delta b left t e =
   let new_lams = List.length l in
   let pos x = try List.assoc x l with Not_found -> raise RestrictionFailure in
   (* hmove = false makes the code insensitive to left/right, i.e. no hmove from b
@@ -1319,8 +1319,8 @@ let bind r gamma l a d delta b left t e =
   let rec bind b delta w t =
     [%trace "bind" ~rid ("%b gamma:%d + %a = t:%a a:%d delta:%d d:%d w:%d b:%d"
         left gamma (pplist (fun fmt (x,n) -> Fmt.fprintf fmt "%a |-> %d"
-        (ppterm a [] ~argsdepth:b e) (mkConst x) n) " ") l
-        (ppterm a [] ~argsdepth:b empty_env) t a delta d w b) begin
+        (ppterm a [] ~argsdepth e) (mkConst x) n) " ") l
+        (ppterm a [] ~argsdepth empty_env) t a delta d w b) begin
     match t with
     | UVar (r1,_,_) | AppUVar (r1,_,_) when r == r1 -> raise RestrictionFailure
     | Const c -> let n = cst c b delta in if n < 0 then mkConst n else Const n
@@ -1332,9 +1332,9 @@ let bind r gamma l a d delta b left t e =
     | CData _ -> t
     (* deref_uv *)
     | Arg (i,args) when e.(i) != C.dummy ->
-        bind a 0 w (deref_uv ~from:a ~to_:(a+d+w) args e.(i))
+        bind a 0 w (deref_uv ~from:argsdepth ~to_:(a+d+w) args e.(i))
     | AppArg (i,args) when e.(i) != C.dummy ->
-        bind a 0 w (deref_appuv ~from:a ~to_:(a+d+w) args e.(i))
+        bind a 0 w (deref_appuv ~from:argsdepth ~to_:(a+d+w) args e.(i))
     | UVar ({ contents = t }, from, args) when t != C.dummy ->
         bind b delta w (deref_uv ~from ~to_:((if left then b else a)+d+w) args t)
     | AppUVar ({ contents = t }, from, args) when t != C.dummy ->
@@ -1379,8 +1379,8 @@ let bind r gamma l a d delta b left t e =
              lvl is_llam
              (pplist (fun fmt (x,n) ->
                 Fmt.fprintf fmt "%a->%d" (ppterm a [] ~argsdepth:b e) (mkConst x) n) " ") args
-             (pplist (ppterm a [] ~argsdepth:b e) " ") orig_args
-             (ppterm a [] ~argsdepth:b e) orig) ()];
+             (pplist (ppterm a [] ~argsdepth e) " ") orig_args
+             (ppterm a [] ~argsdepth e) orig) ()];
         if is_llam then begin
           let n_args = List.length args in
           if lvl > gamma then
@@ -1446,8 +1446,8 @@ let bind r gamma l a d delta b left t e =
   try
     let v = mknLam new_lams (bind b delta 0 t) in
     [%spy "user:assign(HO)" ~rid (fun fmt () -> Fmt.fprintf fmt "%a := %a"
-        (uppterm gamma [] ~argsdepth:b e) (UVar(r,gamma,0))
-        (uppterm gamma [] ~argsdepth:b e) v) ()];
+        (uppterm gamma [] ~argsdepth e) (UVar(r,gamma,0))
+        (uppterm gamma [] ~argsdepth e) v) ()];
     r @:= v;
     true
   with RestrictionFailure -> [%spy "dev:bind:restriction-failure" ~rid];false
@@ -1739,7 +1739,7 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
        if is_llam then
          let r = oref C.dummy in
          e.(i) <- UVar(r,adepth,0);
-         bind r adepth args adepth depth delta bdepth false other e
+         bind ~argsdepth r adepth args adepth depth delta bdepth false other e
        else if !delay_hard_unif_problems then begin
        Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!"
          (uppterm depth [] ~argsdepth empty_env) a (uppterm depth [] ~argsdepth e) b ;
@@ -1757,7 +1757,7 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
    | AppUVar (r, lvl,args), other when not matching ->
        let is_llam, args = is_llam lvl args adepth bdepth depth true e in
        if is_llam then
-         bind r lvl args adepth depth delta bdepth true other e
+         bind ~argsdepth r lvl args adepth depth delta bdepth true other e
        else if !delay_hard_unif_problems then begin
        Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!"
          (uppterm depth [] ~argsdepth empty_env) a (uppterm depth [] ~argsdepth empty_env) b ;
@@ -1769,7 +1769,7 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
    | other, AppUVar (r, lvl,args) ->
        let is_llam, args = is_llam lvl args adepth bdepth depth false e in
        if is_llam then
-         bind r lvl args adepth depth delta bdepth false other e
+         bind ~argsdepth r lvl args adepth depth delta bdepth false other e
        else if !delay_hard_unif_problems then begin
        Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!"
          (uppterm depth [] ~argsdepth empty_env) a (uppterm depth [] ~argsdepth e) b ;
