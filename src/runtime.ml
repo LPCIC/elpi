@@ -1613,17 +1613,15 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
    | _, AppUVar ({ contents = t }, from, args) when t != C.dummy ->
       unif argsdepth matching depth adepth a bdepth (deref_appuv ~from ~to_:(bdepth+depth) args t) empty_env
    | _, Arg (i,args) when e.(i) != C.dummy ->
-(*        if matching then raise Non_linear; *)
-      (* XXX BROKEN deref_uv invariant XXX
-       *   args not living in to_ but in bdepth+depth *)
+      (* e.(i) is a heap term living at argsdepth wich can be > bdepth (e.g.
+         the clause is at 0 and we are under a pi x\. As a result we do the
+         deref to and the rec call at adepth *)
       unif argsdepth matching depth adepth a adepth
         (deref_uv ~from:argsdepth ~to_:(adepth+depth) args e.(i)) empty_env
    | _, AppArg (i,args) when e.(i) != C.dummy ->
-(*        if matching then raise Non_linear; *)
-      (* XXX BROKEN deref_uv invariant XXX
-       *   args not living in to_ but in bdepth+depth
-       *   NOTE: the map below has been added after the XXX, but
-           I believe it is wrong as well *)
+      (* e.(i) is a heap term living at argsdepth wich can be > bdepth (e.g.
+         the clause is at 0 and we are under a pi x\. As a result we do the
+         deref to and the rec call at adepth *)
       let args =
         List.map (move ~argsdepth ~from:bdepth ~to_:(adepth+depth) e) args in
       unif argsdepth matching depth adepth a adepth
@@ -1706,7 +1704,7 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
         | Some b -> unif argsdepth matching depth adepth a bdepth b e end
 
    (* simplify *)
-   (* TODO: unif argsdepth matching->deref_uv case. Rewrite the code to do the job directly? *)
+   (* TODO: unif->deref_uv case. Rewrite the code to do the job directly? *)
    | _, Arg (i,args) ->
       let v = fst (make_lambdas adepth args) in
       [%spy "user:assign" ~rid (fun fmt () -> Fmt.fprintf fmt "%a := %a"
