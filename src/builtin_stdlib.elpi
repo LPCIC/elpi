@@ -3,7 +3,7 @@
 % Conventions:
 % - all predicates declare a mode with some input arguments, unless...
 % - predicates whose name ends with R are relations (work in any direction,
-%   that is all arguments are in ouput mode)
+%   that is all arguments are in output mode)
 % - predicates whose name ends with ! do contain a cut and generate only the
 %   first result
 % - all errors given by this library end up calling fatal-error[-w-data],

@@ -312,6 +312,7 @@ let is_declared_str state x =
   || x == Symbols.(show state D.Global_symbols.declare_constraintc)
   || x == Symbols.(show state D.Global_symbols.print_constraintsc)
   || x == Symbols.(show state D.Global_symbols.cutc)
+  || x == Symbols.(show state D.Global_symbols.eqc)
   || x == Symbols.(show state D.Global_symbols.findall_solutionsc)
 ;;
 
@@ -321,6 +322,7 @@ let is_declared state x =
   || x == D.Global_symbols.declare_constraintc
   || x == D.Global_symbols.print_constraintsc
   || x == D.Global_symbols.cutc
+  || x == D.Global_symbols.eqc
   || x == D.Global_symbols.findall_solutionsc
 ;;
 
@@ -2128,7 +2130,7 @@ let query_of_ast (compiler_state, assembled_program) t =
   let query_env = Array.make query.amap.nargs D.dummy in
   let state, queryt = stack_term_of_preterm ~depth:initial_depth state query in
   let initial_goal =
-    R.move ~adepth:initial_depth ~from:initial_depth ~to_:initial_depth query_env
+    R.move ~argsdepth:initial_depth ~from:initial_depth ~to_:initial_depth query_env
       queryt in
   let assignments = StrMap.map (fun i -> query_env.(i)) query.amap.n2i in
   {
@@ -2159,7 +2161,7 @@ let query_of_term (compiler_state, assembled_program) f =
   let query_env = Array.make query.amap.nargs D.dummy in
     let state, queryt = stack_term_of_preterm ~depth:initial_depth state query in
   let initial_goal =
-    R.move ~adepth:initial_depth ~from:initial_depth ~to_:initial_depth query_env
+    R.move ~argsdepth:initial_depth ~from:initial_depth ~to_:initial_depth query_env
       queryt in
   let assignments = StrMap.map (fun i -> query_env.(i)) query.amap.n2i in
  {
@@ -2533,7 +2535,7 @@ let term_of_ast ~depth state t =
     ) state t in
  let env = Array.make nargs D.dummy in
  let argsdepth = depth in
- state, R.move ~adepth:argsdepth ~from:depth ~to_:depth env t
+ state, R.move ~argsdepth ~from:depth ~to_:depth env t
 ;;
 
 let static_check ~exec ~checker:(state,program)

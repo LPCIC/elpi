@@ -8,10 +8,10 @@ open Data
 module Pp : sig
 
   val ppterm :
-    ?pp_ctx:pp_ctx -> ?min_prec:int -> int -> string list -> int -> env ->
+    ?pp_ctx:pp_ctx -> ?min_prec:int -> int -> string list -> argsdepth:int -> env ->
        Format.formatter -> term -> unit
   val uppterm :
-    ?pp_ctx:pp_ctx -> ?min_prec:int -> int -> string list -> int -> env ->
+    ?pp_ctx:pp_ctx -> ?min_prec:int -> int -> string list -> argsdepth:int -> env ->
        Format.formatter -> term -> unit
 
   val pp_constant : ?pp_ctx:pp_ctx -> Format.formatter -> constant -> unit
@@ -51,7 +51,7 @@ val mkAppL : constant -> term list -> term
 
 val mkAppArg : int -> int -> term list -> term
 val move : 
-  adepth:int -> env ->
+  argsdepth:int -> env ->
   ?avoid:uvar_body ->
   from:int -> to_:int -> term -> term
 val hmove : 

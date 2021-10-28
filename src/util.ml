@@ -178,6 +178,22 @@ let rec smart_map f =
      let tl' = smart_map f tl in
      if hd==hd' && tl==tl' then l else hd'::tl'
 ;;
+let rec smart_map2 f x =
+  function
+     [] -> []
+   | (hd::tl) as l ->
+      let hd' = f x hd in
+      let tl' = smart_map2 f x tl in
+      if hd==hd' && tl==tl' then l else hd'::tl'
+ ;;
+ let rec smart_map3 f x y =
+  function
+     [] -> []
+   | (hd::tl) as l ->
+      let hd' = f x y hd in
+      let tl' = smart_map3 f x y tl in
+      if hd==hd' && tl==tl' then l else hd'::tl'
+ ;;
 
 let rec uniqq =
  function
@@ -195,12 +211,28 @@ let rec for_all3b p l1 l2 bl b =
   | (a1::l1, a2::l2, b3::bl) -> p a1 a2 b3 && for_all3b p l1 l2 bl b
   | (_, _, _) -> false
 ;;
+let rec for_all3b3 ~argsdepth (p : argsdepth:int -> matching:bool -> 'a) x1 x2 x3 l1 l2 bl b =
+  match (l1, l2, bl) with
+  | ([], [], _) -> true
+  | ([a1], [a2], []) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:b
+  | ([a1], [a2], b3::_) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:b3
+  | (a1::l1, a2::l2, []) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:b && for_all3b3 ~argsdepth p x1 x2 x3 l1 l2 bl b
+  | (a1::l1, a2::l2, b3::bl) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:b3 && for_all3b3 ~argsdepth p x1 x2 x3 l1 l2 bl b
+  | (_, _, _) -> false
+;;
 
 let rec for_all2 p l1 l2 =
   match (l1, l2) with
   | ([], []) -> true
   | ([a1], [a2]) -> p a1 a2
   | (a1::l1, a2::l2) -> p a1 a2 && for_all2 p l1 l2
+  | (_, _) -> false
+;;
+let rec for_all23 ~argsdepth (p : argsdepth:int -> matching:bool -> 'a) x1 x2 x3 l1 l2 =
+  match (l1, l2) with
+  | ([], []) -> true
+  | ([a1], [a2]) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:false
+  | (a1::l1, a2::l2) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:false && for_all23 ~argsdepth p x1 x2 x3 l1 l2
   | (_, _) -> false
 ;;
 

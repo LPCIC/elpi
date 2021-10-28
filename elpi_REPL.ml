@@ -61,7 +61,8 @@ let usage =
   "\t-no-tc don't typecheck the program\n" ^ 
   "\t-delay-problems-outside-pattern-fragment (deprecated, for Teyjus\n" ^
   "\t                                          compatibility)\n" ^
-  "\t-version prints the version of Elpi\n" ^ 
+  "\t--version prints the version of Elpi (also -v or -version)\n" ^ 
+  "\t--help prints this help (also -h or -help)\n" ^ 
  API.Setup.usage ^
   "\nDebug options (for debugging Elpi, not your program):\n" ^ 
   "\t-print-accumulated-files prints files loaded via accumulate\n" ^ 
@@ -103,8 +104,8 @@ let _ =
     | "-no-tc" :: rest -> typecheck := false; eat_options rest
     | "-document-builtins" :: rest -> doc_builtins := true; eat_options rest
     | "-D" :: var :: rest -> vars := API.Compile.StrSet.add var !vars; eat_options rest
-    | ("-h" | "--help") :: _ -> Printf.eprintf "%s" usage; exit 0
-    | "-version" :: _ -> Printf.printf "%s\n" "%%VERSION_NUM%%"; exit 0
+    | ("-h" | "--help" | "-help") :: _ -> Printf.eprintf "%s" usage; exit 0
+    | ("-v" | "--version" | "-version") :: _ -> Printf.printf "%s\n" "%%VERSION_NUM%%"; exit 0
     | "--" :: rest -> rest
     | x :: rest -> x :: eat_options rest
   in

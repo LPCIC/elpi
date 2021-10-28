@@ -161,7 +161,8 @@ let map_trace = object(self)
         let has_iftrace { pexp_attributes = l; _ } = has_iftrace_attribute l in
         let args = args |> List.filter (fun (_,e) -> not (has_iftrace e)) in
         let args = List.map (fun (x,y) -> x, self#expression y) args in
-        { e with pexp_desc = Pexp_apply (hd,args)}
+        if args = [] then hd
+        else { e with pexp_desc = Pexp_apply (hd,args)}
     | Pexp_fun(_,_,pat,rest) when not !enabled ->
         let has_iftrace { ppat_attributes = l; _ } = has_iftrace_attribute l in
         if has_iftrace pat then self#expression rest
