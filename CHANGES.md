@@ -3,6 +3,8 @@
 - Runtime/FFI:
   - fix handling of eta expanded unification variables. Many thanks to
     Nathan Guermond for testing this tricky case.
+  - Change `Rawdata.Constants.eqc` to a builtin
+  - Fix `Rawdata.Constants.cutc` has always been a builtin
 
 # v1.13.7 (July 2021)
 

@@ -395,9 +395,8 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "pred fail.";
   LPCode "pred false.";
 
-  LPCode "pred (=) o:A, o:A.";
-  LPCode "X = X.";
-
+  LPCode "external pred (=) o:A, o:A. % unification";
+  
   MLData BuiltInData.int;
   MLData BuiltInData.string;
   MLData BuiltInData.float;

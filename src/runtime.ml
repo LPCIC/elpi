@@ -1992,7 +1992,7 @@ let mk_out_assign ~depth embed bname state input v  output =
   | Some _, Data.BuiltInPredicate.Discard -> state, [] (* We could warn that such output was generated without being required *)
   | Some t, Data.BuiltInPredicate.Keep ->
      let state, t, extra = embed ~depth state t in
-     state, extra @ [App(Global_symbols.eqc, v, [t])]
+     state, extra @ [Builtin(Global_symbols.eqc, [v;t])]
   | None, Data.BuiltInPredicate.Keep -> state, []
 
 let mk_inout_assign ~depth embed bname state input v  output =
@@ -2000,7 +2000,7 @@ let mk_inout_assign ~depth embed bname state input v  output =
   | None -> state, []
   | Some t ->
      let state, t, extra = embed ~depth state (Data.BuiltInPredicate.Data t) in
-     state, extra @ [App(Global_symbols.eqc, v, [t])]
+     state, extra @ [Builtin(Global_symbols.eqc, [v; t])]
 
 let in_of_termC ~depth readback n bname hyps constraints state t =
   wrap_type_err bname n (readback ~depth hyps constraints state) t
@@ -2013,14 +2013,14 @@ let mk_out_assignC ~depth embed bname hyps constraints state input v  output =
   | Some _, Data.BuiltInPredicate.Discard -> state, [] (* We could warn that such output was generated without being required *)
   | Some t, Data.BuiltInPredicate.Keep ->
      let state, t, extra = embed ~depth hyps constraints state t in
-     state, extra @ [App(Global_symbols.eqc, v, [t])]
+     state, extra @ [Builtin(Global_symbols.eqc, [v;t])]
   | None, Data.BuiltInPredicate.Keep -> state, []
 
 let mk_inout_assignC ~depth embed bname hyps constraints state input v  output =
   match output with
   | Some t ->
      let state, t, extra = embed ~depth hyps constraints state (Data.BuiltInPredicate.Data t) in
-     state, extra @ [App(Global_symbols.eqc, v, [t])]
+     state, extra @ [Builtin(Global_symbols.eqc, [v;t])]
   | None -> state, []
 
 let map_acc f s l =
@@ -3343,6 +3343,13 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
       | { depth; program; goal; gid = gid [@trace] } :: gs ->
         [%tcall run depth program goal (gid[@trace]) gs next alts cutto_alts]
       end
+    | Builtin(c,[l;r]) when c == Global_symbols.eqc -> [%spy "user:rule" ~rid ~gid pp_string "eq"];
+      if unif ~argsdepth:depth ~matching:false (gid[@trace]) depth empty_env depth l r then
+        match gs with
+        | [] -> [%tcall pop_andl alts next cutto_alts]
+        | { depth; program; goal; gid = gid [@trace] } :: gs ->
+          [%tcall run depth program goal (gid[@trace]) gs next alts cutto_alts]
+      else [%tcall next_alt alts]
     | App(c, g2, [g1]) when c == Global_symbols.rimplc -> [%spy "user:rule" ~rid ~gid pp_string "implication"];
        let clauses, pdiff, lcs = clausify p ~depth g1 in
        let g2 = hmove ~from:depth ~to_:(depth+lcs) g2 in

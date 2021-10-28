@@ -12,9 +12,7 @@ pred fail.
 
 pred false.
 
-pred (=) o:A, o:A.
-
-X = X.
+external pred (=) o:A, o:A. % unification
 
 typeabbrev int (ctype "int").
 
