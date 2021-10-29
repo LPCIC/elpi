@@ -3,17 +3,15 @@
   (public_name elpi)
   (preprocess (per_module
     ((pps ppx_deriving.std) API ast data compiler)
-    ((pps ppx_deriving.std elpi.trace.ppx -- --cookie "elpi_trace=\"true\"") runtime_trace_on)
+    ((pps ppx_deriving.std elpi.trace.ppx -- --cookie "elpi_trace=\"true\"") runtime)
     ((pps ppx_deriving.std elpi.trace.ppx -- --cookie "elpi_trace=\"false\"") runtime_trace_off)
     ((action (run camlp5o -I . -I +camlp5 pa_extend.cmo pa_lexer.cmo %{input-file})) parser)
     ))
-  (libraries re.str camlp5.gramlib unix) ; elpi.trace.runtime ppx_deriving.runtime)
+  (libraries re.str camlp5.gramlib unix)
   (flags -linkall)
-  (modules elpi util parser ast compiler data ptmap builtin builtin_checker builtin_stdlib builtin_map builtin_set API runtime_trace_on runtime_trace_off)
-  (private_modules util parser ast compiler data ptmap builtin_stdlib builtin_map builtin_set runtime_trace_on runtime_trace_off)
+  (modules elpi util parser ast compiler data ptmap builtin builtin_checker builtin_stdlib builtin_map builtin_set API runtime_trace_off runtime)
+  (private_modules util parser ast compiler data ptmap builtin_stdlib builtin_map builtin_set runtime runtime_trace_off)
 )
-
-(dirs .ppcache)
 
 (rule (with-stdout-to builtin_stdlib.ml (progn
   (echo "let code = {code|#line 0 \"builtin_stdlib.elpi\"\n")
