@@ -162,8 +162,9 @@ omap (some X) F (some Y) :- F X Y.
 
 % [nth N L X] picks in X the N-th element of L (L must be of length > N)
 pred nth i:int, i:list A, o:A.
-nth 0 [X|_] X :- !.
-nth N [_|XS] R :- !, N1 is N - 1, nth N1 XS R.
+nth 0 [X|_ ] R :- !, X = R.
+nth N [_|XS] R :- N > 0, !, N1 is N - 1, nth N1 XS R.
+nth N _ _ :- N < 0, !, fatal-error "nth got a negative index".
 nth _ _ _ :- fatal-error "nth run out of list items".
 
 % [lookup L K V] sees L as a map from K to V
