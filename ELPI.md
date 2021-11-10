@@ -292,7 +292,7 @@ means that no false positives are returned by the index.
 
 If more than one argument is indexed, or if some argument is indexed at depth
 greater than 1, then Elpi uses an index based on the idea of
-[unification hashes](http://blog.ndrix.com/2013/03/prolog-unification-hashes.htmlas).
+[unification hashes](http://blog.ndrix.com/2013/03/prolog-unification-hashes.html).
 
 ```prolog
 :index(2)
