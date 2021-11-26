@@ -25,8 +25,15 @@ TIME=--time $(shell if type -P gtime >/dev/null 2>&1; then type -P gtime; else e
 STACK=32768
 DUNE_OPTS=
 
+CP5:=$(shell ocamlfind query camlp5)
+
 build:
 	dune build $(DUNE_OPTS) @all
+	# hack: link camlp5.gramlib in the plugin
+	ocamlfind opt -shared -linkall -o _build/install/default/lib/elpi/elpi.cmxs \
+		$(CP5)/gramlib.cmxa \
+		_build/install/default/lib/elpi/elpi.cmxa
+
 
 install:
 	dune install $(DUNE_OPTS)
