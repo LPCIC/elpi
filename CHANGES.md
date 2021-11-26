@@ -1,3 +1,9 @@
+# v1.13.8 (November 2021)
+
+- Build:
+  - link `camlp5.gramlib` as part of `elpi.cmxs` so that the plugin can be
+    loaded via findlib.
+
 # v1.13.7 (July 2021)
 
 - Compiler:
