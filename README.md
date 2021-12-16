@@ -105,7 +105,7 @@ that implements W (ML type inference) in Elpi is also available.
 
 The easiest way of embedding ELPI is by linking it using
 [findlib](http://projects.camlcity.org/projects/findlib.html)
-as in `ocamlfind opt -package elpi mycode.ml -o myprogram`.
+as in `ocamlfind opt -package elpi -linkpkg mycode.ml -o myprogram`.
 The API the host application can use to drive ELPI is documented in the
 [API.mli](src/API.mli) file ([html rendering](https://lpcic.github.io/elpi/elpi/Elpi/index.html)). The 
 [Builtin.ml](src/builtin.ml) file contains example of
