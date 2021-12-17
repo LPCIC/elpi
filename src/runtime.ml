@@ -2644,10 +2644,16 @@ let rec claux1 ?loc get_mode vars depth hyps ts lts lcs t =
       match g with
          Const h -> h, []
        | App(h,x,xs) -> h, x::xs
-       | Arg _ | AppArg _ -> assert false 
-       | Lam _ | Builtin _ | CData _ -> assert false
-       | UVar _ | AppUVar _ -> assert false
-       | Cons _ | Nil | Discard -> assert false
+       | UVar _ | AppUVar _
+       | Arg _ | AppArg _ | Discard ->
+           error ?loc "The head of a clause cannot be flexible"
+       | Lam _ ->
+           type_error ?loc "The head of a clause cannot be a lambda abstraction"
+       | Builtin _ ->
+           error ?loc "The head of a clause cannot be a builtin predicate"
+       | CData _ ->
+           type_error ?loc "The head of a clause cannot be a builtin data type"
+       | Cons _ | Nil -> assert false
      in
      let c = { depth = depth+lcs; args; hyps; mode = get_mode hd; vars; loc } in
      [%spy "dev:claudify:extra-clause" ~rid (ppclause ~depth:(depth+lcs) ~hd) c];
@@ -2658,10 +2664,11 @@ let rec claux1 ?loc get_mode vars depth hyps ts lts lcs t =
   | AppUVar ({contents=g},from,args) when g != C.dummy ->
      claux1 ?loc get_mode vars depth hyps ts lts lcs
        (deref_appuv ~from ~to_:(depth+lts) args g)
-  | Arg _ | AppArg _ -> anomaly "claux1 called on non-heap term"
+  | Arg _ | AppArg _ ->
+      error ?loc "The head of a clause cannot be flexible"
   | Builtin (c,_) -> raise @@ CannotDeclareClauseForBuiltin(loc,c)
   | (Lam _ | CData _ ) as x ->
-     error ?loc ("Assuming a string or int or float or function:" ^ show_term x)
+     type_error ?loc ("Assuming a string or int or float or function:" ^ show_term x)
   | UVar _ | AppUVar _ -> error ?loc "Flexible hypothetical clause"
   | Nil | Cons _ -> error ?loc "ill-formed hypothetical clause"
   end]
