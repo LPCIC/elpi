@@ -146,6 +146,16 @@ let map_trace = object(self)
         let lbls = lbls |> List.filter (fun { pld_attributes = l; _ } ->
           not (has_iftrace_attribute l)) in
         { tyd with ptype_kind = Ptype_record lbls }
+    | Ptype_variant l ->
+        let aux ({ pcd_args; _ } as pcd) =
+          match pcd_args with
+          | Pcstr_record lbls when not !enabled ->
+            let lbls = lbls |> List.filter (fun { pld_attributes = l; _ } ->
+              not (has_iftrace_attribute l)) in
+              {pcd with pcd_args = Pcstr_record lbls } 
+          | _ -> pcd in
+        let l = List.map aux l in
+        { tyd with ptype_kind = Ptype_variant l }
     | _ -> tyd
 
   method! expression e =

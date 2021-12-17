@@ -8,7 +8,7 @@ let r = ref (module Runtime_trace_off : Runtime)
 
 let set_runtime b =
   begin match b with
-  | true  -> r := (module Runtime_trace_on  : Runtime)
+  | true  -> r := (module Runtime  : Runtime)
   | false -> r := (module Runtime_trace_off : Runtime)
   end;
   let module R = (val !r) in
