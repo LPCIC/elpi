@@ -403,14 +403,14 @@ let after loc =
                 (Ploc.last_pos loc, Ploc.last_pos loc) (Ploc.comment loc)
 
 let lex_fun s =
-  let tab = Hashtbl.create 207 in
+  let tab = Plexing.Locations.create () in
   (Stream.from (fun id ->
      let tok, loc = lex !last_loc Lexbuf.empty (Stream.count s) s in
 (*      Printf.eprintf "tok: %s, %s, %s\n" (Loc.show (of_ploc loc)) (fst tok) (snd tok); *)
      last_loc := after loc;
-     Hashtbl.add tab id loc;
+     Plexing.Locations.add tab id loc;
      Some tok)),
-  (fun id -> try Hashtbl.find tab id with Not_found -> !last_loc)
+  tab
 ;;
 
 let tok_match =
@@ -517,12 +517,15 @@ let gram_extend loc { fix; sym = cst; prec = nprec } =
   else
     let binrule =
      [ Gramext.Sself ; Gramext.Stoken ("SYMBOL",cst); Gramext.Sself ],
+     "hash",
      Gramext.action (fun t2 cst t1 loc -> mkApp (of_ploc loc) [mkCon cst;t1;t2]) in
     let prerule =
      [ Gramext.Stoken ("SYMBOL",cst); Gramext.Sself ],
+     "hash",
      Gramext.action (fun t cst loc -> mkApp (of_ploc loc) [mkCon cst;t]) in
     let postrule =
      [ Gramext.Sself ; Gramext.Stoken ("SYMBOL",cst) ],
+     "hash",
      Gramext.action (fun cst t loc -> mkApp (of_ploc loc) [mkCon cst;t]) in
     let ppinfo = fix, nprec in
     let fixity,rule =
