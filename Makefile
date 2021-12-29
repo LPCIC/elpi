@@ -22,7 +22,7 @@ RUNNERS=\
   $(addprefix $(PWD)/,$(wildcard _build/git/*/$(INSTALL)/bin/elpi.git.*)) \
   $(shell if type tjsim >/dev/null 2>&1; then type -P tjsim; else echo; fi)
 TIME=--time $(shell if type -P gtime >/dev/null 2>&1; then type -P gtime; else echo /usr/bin/time; fi)
-STACK=32768
+STACK=1114112
 DUNE_OPTS=
 
 CP5:=$(shell ocamlfind query camlp5)
@@ -46,7 +46,7 @@ clean:
 
 tests:
 	$(MAKE) build
-	ulimit -s $(STACK); \
+	ulimit -s $(STACK); OCAMLRUNPARAM=l=$(STACK) \
 		tests/test.exe \
 		--seed $$RANDOM \
 		--timeout $(TIMEOUT) \
