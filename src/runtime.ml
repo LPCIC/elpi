@@ -125,7 +125,7 @@ module Pp : sig
   val do_app_deref : term list deref_fun ref
 
   (* To put it in the solution *)
-  val uv_names : (string PtrMap.t * int) Fork.local_ref
+  val uv_names : (string IntMap.t * int) Fork.local_ref
 
   val pp_oref : ?pp_ctx:pp_ctx -> Format.formatter -> (Util.UUID.t * Obj.t) -> unit
 
@@ -136,7 +136,7 @@ end = struct (* {{{ *)
 let do_deref = ref (fun ?avoid ~from ~to_ _ _ -> assert false);;
 let do_app_deref = ref (fun ?avoid ~from ~to_ _ _ -> assert false);;
 
-let uv_names = Fork.new_local (PtrMap.empty (), 0)
+let uv_names = Fork.new_local (IntMap.empty, 0)
 
 let min_prec = Parser.min_precedence
 let appl_prec = Parser.appl_precedence
@@ -153,12 +153,12 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
   let rec pp_uvar prec depth vardepth args f r =
    if !!r == C.dummy then begin
     let s =
-     try PtrMap.find r (fst !(pp_ctx.uv_names))
+     try IntMap.find r.uid (fst !(pp_ctx.uv_names))
      with Not_found ->
       let m, n = !(pp_ctx.uv_names) in
       let s = "X" ^ string_of_int n in
       let n = n + 1 in
-      let m = PtrMap.add r s m in
+      let m = IntMap.add r.uid s m in
       pp_ctx.uv_names := (m,n);
       s
     in
@@ -340,16 +340,6 @@ let rid, max_runtime_id = Fork.new_local 0, ref 0
   Note: propagation code for CHR rules is later
  ******************************************************************************)
 
-let auxsg = ref []
-
-let get_auxsg sg l =
-   let rec aux i = function
-      | []       -> assert false
-      | hd :: tl ->
-         if hd == sg then pred i else aux (pred i) tl
-   in
-   aux (List.length l) l
-
 (* Together to hide low level APIs of ConstraintStore needed by Trail *)
 module ConstraintStoreAndTrail : sig
 
@@ -358,8 +348,12 @@ module ConstraintStoreAndTrail : sig
      cstr_blockers : uvar_body list;
   }
 
-  val new_delayed      : propagation_item list ref
-  val to_resume        : stuck_goal list ref
+  val new_delayed      : propagation_item list Fork.local_ref
+  val to_resume        : stuck_goal list Fork.local_ref
+
+  val blockers_map     : stuck_goal list IntMap.t Fork.local_ref
+  val is_a_blocker     : uvar_body -> bool
+  val blocked_by       : uvar_body -> stuck_goal list
 
   val declare_new : stuck_goal -> unit
   val remove_old : stuck_goal -> unit
@@ -433,6 +427,11 @@ let initial_trail = Fork.new_local []
 let last_call = Fork.new_local false;;
 
 let cut_trail () = trail := !initial_trail [@@inline];;
+let blockers_map = Fork.new_local (IntMap.empty : stuck_goal list IntMap.t)
+let is_a_blocker { uid } = uid < 0
+let blocked_by { uid } =
+  try IntMap.find (abs uid) !blockers_map with
+  Not_found -> assert false
 
 module Ugly = struct let delayed : stuck_goal list ref = Fork.new_local [] end
 open Ugly
@@ -462,16 +461,40 @@ let trail_stuck_goal_removal x =
   [@@inline]
 ;;
 
+let append_blocked blocked map ({ uid = blocker; _ } as b) =
+  let blocker = abs blocker in
+  try
+    let old = IntMap.find blocker map in
+    assert(b.uid <= 0);
+    IntMap.add blocker (blocked :: old) map
+  with Not_found ->
+    b.uid <- -blocker;
+    IntMap.add blocker (blocked :: []) map
+
+let remove_blocked blocked map ({ uid = blocker; _ } as b) =
+  let blocker = abs blocker in
+  try
+    let old = IntMap.find blocker map in
+    assert(b.uid <= 0);
+    let l = remove_from_list blocked old in
+    if l = [] then begin
+      b.uid <- blocker;
+      IntMap.remove blocker map
+    end else
+      IntMap.add blocker l map
+  with Not_found ->
+    assert(b.uid >= 0);
+    map
+    
 let remove ({ blockers } as sg) =
  [%spy "dev:constraint:remove" ~rid pp_stuck_goal sg];
  delayed := remove_from_list sg !delayed;
- List.iter (fun r -> r.rest <- remove_from_list sg r.rest) blockers
+ blockers_map := List.fold_left (remove_blocked sg) !blockers_map blockers
 
 let add ({ blockers } as sg) =
  [%spy "dev:constraint:add" ~rid pp_stuck_goal sg];
- auxsg := sg :: !auxsg;
  delayed := sg :: !delayed;
- List.iter (fun r -> r.rest <- sg :: r.rest) blockers
+ blockers_map := List.fold_left (append_blocked sg) !blockers_map blockers
 
 let new_delayed = Fork.new_local []
 let to_resume = Fork.new_local []
@@ -575,19 +598,26 @@ module CS = ConstraintStoreAndTrail
 (* Assigning an UVar wakes up suspended goals/constraints *)
 let (@:=) r v =
   (T.trail_assignment[@inlined]) r;
-  if r.rest <> [] then begin
+  if CS.is_a_blocker r then begin
+    let blocked = CS.blocked_by r in
     [%spy "user:assign(resume)" ~rid (fun fmt l ->
       let l = map_filter (function
         | { kind = Constraint { cgid; _ } ; _ } -> Some cgid
         | _ -> None) l in
-      Fmt.fprintf fmt "%a" (pplist ~boxed:true UUID.pp " ") l) r.rest];
+      Fmt.fprintf fmt "%a" (pplist ~boxed:true UUID.pp " ") l) blocked];
     CS.to_resume :=
       List.fold_right
-       (fun x acc -> if List.memq x acc then acc else x::acc) r.rest
+       (fun x acc -> if List.memq x acc then acc else x::acc) blocked
         !CS.to_resume
   end;
   r.contents <- v
 ;;
+
+(* Low level, trail but no wakeup, used in freeze *)
+let (@::==) r v =
+  (T.trail_assignment[@inlined]) r;
+  r.contents <- v
+
 (******************************************************************************
   Unification (dereferencing and lift, to_heap)
  ******************************************************************************)
@@ -1409,7 +1439,7 @@ let bind ~argsdepth r gamma l a d delta b left t e =
                        let nn = List.assoc i args in
                        (mkConst (lvl+nn), mkConst mm) :: keep_cst_for_lvl rest
                       with Not_found -> keep_cst_for_lvl rest) in
-              List.split (keep_cst_for_lvl (List.sort Pervasives.compare l)) in
+              List.split (keep_cst_for_lvl (List.sort Stdlib.compare l)) in
             let r' = oref C.dummy in
             r @:= mknLam n_args (mkAppUVar r' gamma args_gamma_lvl_abs);
             mkAppUVar r' gamma args_gamma_lvl_here
@@ -1417,7 +1447,7 @@ let bind ~argsdepth r gamma l a d delta b left t e =
             (* given that we need to make lambdas to prune some args,
              * we also permute to make the restricted meta eventually
              * fall inside the small fragment (sort the args) *)
-            let args = List.sort Pervasives.compare args in
+            let args = List.sort Stdlib.compare args in
             let args_lvl, args_here =
               List.fold_right (fun (c, c_p) (a_lvl, a_here as acc) ->
                 try
@@ -1660,8 +1690,8 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
       e.(i) <- v;
       true
      with RestrictionFailure -> false end
-   | UVar({ rest = [] },_,0), UVar ({ rest = _ :: _ },_,0) -> unif argsdepth matching depth bdepth b adepth a e
-   | AppUVar({ rest = [] },_,_), UVar ({ rest = _ :: _ },_,0) -> unif argsdepth matching depth bdepth b adepth a e
+   | UVar({ uid = uid1 },_,0), UVar ({ uid = uid2 },_,0) when uid1 > 0 && uid2 < 0 -> unif argsdepth matching depth bdepth b adepth a e
+   | AppUVar({ uid = uid1 },_,_), UVar ({ uid = uid2 },_,0) when uid1 > 0 && uid2 < 0 -> unif argsdepth matching depth bdepth b adepth a e
    | _, UVar (r,origdepth,0) ->
        begin try
          let t =
@@ -1713,8 +1743,8 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
       e.(i) <- v;
       [%spy "user:assign" ~rid (fun fmt () -> ppterm depth [] ~argsdepth empty_env fmt (e.(i))) ()];
       unif argsdepth matching depth adepth a bdepth b e
-   | UVar({ rest = [] },_,a1), UVar ({ rest = _ :: _ },_,a2) when a1 + a2 > 0 -> unif argsdepth matching depth bdepth b adepth a e (* TODO argsdepth *)
-   | AppUVar({ rest = [] },_,_), UVar ({ rest = _ :: _ },_,a2) when  a2 > 0 -> unif argsdepth matching depth bdepth b adepth a e
+   | UVar({ uid = uid1 },_,a1), UVar ({ uid = uid2 },_,a2) when uid1 > 0 && uid2 < 0 && a1 + a2 > 0 -> unif argsdepth matching depth bdepth b adepth a e (* TODO argsdepth *)
+   | AppUVar({ uid = uid1 },_,_), UVar ({ uid = uid2 },_,a2) when uid1 > 0 && uid2 < 0 && a2 > 0 -> unif argsdepth matching depth bdepth b adepth a e
 
    | _, UVar (r,origdepth,args) when args > 0 && match a with UVar(r1,_,_) | AppUVar(r1,_,_) -> r != r1 | _ -> true ->
       let v = fst (make_lambdas origdepth args) in
@@ -1751,7 +1781,8 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
        CS.declare_new { kind; blockers };
        true
        end else error (error_msg_hard_unif a b)
-   | AppUVar({ rest = _ :: _ },_,_), (AppUVar ({ rest = [] },_,_) | UVar ({ rest = [] },_,_)) -> unif argsdepth matching depth bdepth b adepth a e
+   | AppUVar({ uid = uid2 },_,_), (AppUVar ({ uid = uid1 },_,_) | UVar ({ uid = uid1 },_,_)) when uid1 > 0 && uid2 < 0 ->
+       unif argsdepth matching depth bdepth b adepth a e
    | AppUVar (r, lvl,args), other when not matching ->
        let is_llam, args = is_llam lvl args adepth bdepth depth true e in
        if is_llam then
@@ -2832,7 +2863,7 @@ end = struct (* {{{ *)
       | t, None -> t
       | t, Some (r,_,nt as s) ->
           f := { !f with assignments = s :: !f.assignments };
-          r @:= nt;
+          r @::== nt;
           t in
     let freeze_uv r =
       try List.assq r !f.uv2c
@@ -3006,7 +3037,7 @@ let rec head_of = function
   | Discard -> type_error "A constraint cannot be _"
   | Lam _ -> type_error "A constraint cannot be a function"
 
-let dummy_uvar_body = { contents = C.dummy; rest = [] }
+let dummy_uvar_body = { contents = C.dummy; uid = 0 }
 
 let declare_constraint ~depth prog (gid[@trace]) args =
   let g, keys =
@@ -3591,6 +3622,7 @@ end;*)
   set T.last_call false;
   set CS.new_delayed [];
   set CS.to_resume [];
+  set CS.blockers_map IntMap.empty;
   set CS.Ugly.delayed [];
   set steps_bound max_steps;
   set delay_hard_unif_problems delay_outside_fragment;
@@ -3635,7 +3667,6 @@ let mk_outcome search get_cs assignments =
  | No_more_steps -> NoMoreSteps, noalts
 
 let execute_once ?max_steps ?delay_outside_fragment exec =
- auxsg := [];
  let { search; get } = make_runtime ?max_steps ?delay_outside_fragment exec in
  fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.state |> State.end_execution, exec.query_arguments, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments)
 ;;

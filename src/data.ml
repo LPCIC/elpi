@@ -100,8 +100,7 @@ type term =
   | AppArg of (*id*)int * term list
 and uvar_body = {
   mutable contents : term [@printer (pp_spaghetti_any ~id:id_term pp_oref)];
-  mutable rest : stuck_goal list [@printer fun _ _ -> ()]
-                                 [@equal fun _ _ -> true];
+  mutable uid : int;
 }
 and stuck_goal = {
   mutable blockers : blockers;
@@ -204,7 +203,9 @@ let destConst = function Const x -> x | _ -> assert false
 
 (* Our ref data type: creation and dereference.  Assignment is defined
    After the constraint store, since assigning may wake up some constraints *)
-let oref x = { contents = x; rest = [] }
+let oref =
+  let uid = ref 0 in
+  fun x -> incr uid; assert(!uid > 0); { contents = x; uid = !uid }
 let (!!) { contents = x } = x
 
 (* Arg/AppArg point to environments, here the empty one *)
@@ -1164,7 +1165,7 @@ type 'a executable = {
 }
 
 type pp_ctx = {
-  uv_names : (string Util.PtrMap.t * int) ref;
+  uv_names : (string Util.IntMap.t * int) ref;
   table : symbol_table;
 }
 

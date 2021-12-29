@@ -631,34 +631,34 @@ module FlexibleData = struct
     type t = {
         h2e : Elpi.t H2E.t;
         e2h_compile : T.t StrMap.t;
-        e2h_run : T.t PtrMap.t
+        e2h_run : T.t IntMap.t
     }
 
     let empty = {
       h2e = H2E.empty;
       e2h_compile = StrMap.empty;
-      e2h_run = PtrMap.empty ()
+      e2h_run = IntMap.empty
     }
 
     let add uv v { h2e; e2h_compile; e2h_run } =
       let h2e = H2E.add v uv h2e in
       match uv with
       | Elpi.Ref ub ->
-          { h2e; e2h_compile; e2h_run = PtrMap.add ub v e2h_run }
+          { h2e; e2h_compile; e2h_run = IntMap.add ub.uid v e2h_run }
       | Arg s ->
           { h2e; e2h_run; e2h_compile = StrMap.add s v e2h_compile }
 
     let elpi v { h2e } = H2E.find v h2e
     let host handle { e2h_compile; e2h_run } =
       match handle with
-      | Elpi.Ref ub -> PtrMap.find ub e2h_run
+      | Elpi.Ref ub -> IntMap.find ub.uid e2h_run
       | Arg s -> StrMap.find s e2h_compile
 
     let remove_both handle v { h2e; e2h_compile; e2h_run } = 
       let h2e = H2E.remove v h2e in
       match handle with
       | Elpi.Ref ub ->
-          { h2e; e2h_compile; e2h_run = PtrMap.remove ub e2h_run }
+          { h2e; e2h_compile; e2h_run = IntMap.remove ub.uid e2h_run }
       | Arg s ->
           { h2e; e2h_run; e2h_compile = StrMap.remove s e2h_compile }
 
@@ -672,7 +672,7 @@ module FlexibleData = struct
 
     let filter f { h2e; e2h_compile; e2h_run } =
       let e2h_compile = StrMap.filter (fun n v -> f v (H2E.find v h2e)) e2h_compile in
-      let e2h_run = PtrMap.filter (fun ub v -> f v (H2E.find v h2e)) e2h_run in
+      let e2h_run = IntMap.filter (fun ub v -> f v (H2E.find v h2e)) e2h_run in
       let h2e = H2E.filter f h2e in
       { h2e; e2h_compile; e2h_run }
 
@@ -706,7 +706,7 @@ module FlexibleData = struct
         let h2e = H2E.map (Elpi.compilation_is_over ~args) h2e in
         let e2h_run =
           StrMap.fold (fun k v m ->
-            PtrMap.add (StrMap.find k args) v m) e2h_compile (PtrMap.empty ()) in
+            IntMap.add (StrMap.find k args).uid v m) e2h_compile IntMap.empty in
         Some { h2e; e2h_compile = StrMap.empty; e2h_run })
       ~compilation_is_over:(fun x -> Some x)
       ~execution_is_over:(fun x -> Some x)
