@@ -453,6 +453,10 @@ module Elpi = struct
       | Arg s1, Arg s2 -> String.equal s1 s2
       | _ -> false
 
+  let hash = function
+    | Arg s -> Hashtbl.hash s
+    | Ref r -> ED.uvar_id r
+
   let compilation_is_over ~args k =
     match k with
     | Ref _ -> assert false
@@ -620,6 +624,13 @@ module FlexibleData = struct
     val show : t -> string
   end
 
+  module type HostWeak = sig
+    type t
+    val equal : t -> t -> bool
+    val hash : t -> int
+    val pp : Format.formatter -> t -> unit
+    val show : t -> string
+  end
 
     (* Bijective map between elpi UVar and host equivalent *)
   let uvmap_no = ref 0
@@ -711,6 +722,88 @@ module FlexibleData = struct
       ~compilation_is_over:(fun x -> Some x)
       ~execution_is_over:(fun x -> Some x)
       ~init:(fun () -> empty)
+
+  end
+
+  module type Show = Util.Show
+  module WeakMap = functor(T : HostWeak) -> functor (D : Show) -> struct
+    open Util
+
+    module H2E = Ephemeron.K1.Make(T)
+    module E2H = Ephemeron.K1.Make(Elpi)
+
+    type t = {
+        h2e : (Elpi.t * D.t) H2E.t;
+        e2h : (T.t * D.t) E2H.t;
+    }
+
+    let create n = {
+      h2e = H2E.create n;
+      e2h = E2H.create n;
+    }
+
+    let reset { h2e; e2h } = H2E.reset h2e; E2H.reset e2h
+
+    let add uv v d { h2e; e2h } =
+      H2E.replace h2e v (uv,d);
+      E2H.replace e2h uv (v,d)
+
+    let elpi v { h2e; e2h } =
+      H2E.find h2e v
+
+    let host e { h2e; e2h } =
+      E2H.find e2h e
+
+
+    let remove_both e v { h2e; e2h } = 
+      H2E.remove h2e v;
+      E2H.remove e2h e
+    let remove_elpi k m =
+      let v,_ = host k m in
+      remove_both k v m
+
+    let remove_host v m =
+      let e, _ = elpi v m in
+      remove_both e v m
+
+    let filter f { h2e; e2h } =
+      E2H.filter_map_inplace (fun e (v,d) -> if f v e d then Some(v,d) else None) e2h;
+      H2E.filter_map_inplace (fun v (e,d) -> if f v e d then Some(e,d) else None) h2e
+
+    let fold f { h2e } acc =
+      let module R = (val !r) in let open R in
+      let get_val = function
+        | Elpi.Ref { ED.Term.contents = ub }
+          when ub != ED.dummy ->
+            Some (R.deref_head ~depth:0 ub)
+        | Elpi.Ref _ -> None
+        | Elpi.Arg _ -> None in
+      H2E.fold (fun k (uk,d) acc -> f k uk (get_val uk) d acc) h2e acc
+
+    let uvn = incr uvmap_no; !uvmap_no
+
+    let pp fmt (m : t) =
+      let pp k uv _ d () =
+           Format.fprintf fmt "@[<h>%a@ <-> %a / %a@]@ " T.pp k Elpi.pp uv D.pp d
+        in
+      Format.fprintf fmt "@[<v>";
+      fold pp m ();
+      Format.fprintf fmt "@]"
+    ;;
+
+    let show m = Format.asprintf "%a" pp m
+
+    let uvmap = ED.State.declare ~name:(Printf.sprintf "elpi:weakuvm:%d" uvn) ~pp
+      ~clause_compilation_is_over:(fun x -> reset x; x)
+      ~goal_compilation_begins:(fun x -> x)
+      ~goal_compilation_is_over:(fun ~args { h2e; e2h } ->
+        let r = create 3 in
+        H2E.iter (fun v (e,d) -> H2E.add r.h2e v (Elpi.compilation_is_over ~args e,d)) h2e;
+        E2H.iter (fun e (v,d) -> E2H.add r.e2h (Elpi.compilation_is_over ~args e) (v,d)) e2h;
+        Some r)
+      ~compilation_is_over:(fun x -> Some x)
+      ~execution_is_over:(fun x -> Some x)
+      ~init:(fun () -> create 3)
 
   end
 
