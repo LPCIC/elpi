@@ -153,12 +153,12 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
   let rec pp_uvar prec depth vardepth args f r =
    if !!r == C.dummy then begin
     let s =
-     try IntMap.find r.uid (fst !(pp_ctx.uv_names))
+     try IntMap.find (uvar_id r) (fst !(pp_ctx.uv_names))
      with Not_found ->
       let m, n = !(pp_ctx.uv_names) in
       let s = "X" ^ string_of_int n in
       let n = n + 1 in
-      let m = IntMap.add r.uid s m in
+      let m = IntMap.add (uvar_id r) s m in
       pp_ctx.uv_names := (m,n);
       s
     in
@@ -352,7 +352,6 @@ module ConstraintStoreAndTrail : sig
   val to_resume        : stuck_goal list Fork.local_ref
 
   val blockers_map     : stuck_goal list IntMap.t Fork.local_ref
-  val is_a_blocker     : uvar_body -> bool
   val blocked_by       : uvar_body -> stuck_goal list
 
   val declare_new : stuck_goal -> unit
@@ -428,10 +427,7 @@ let last_call = Fork.new_local false;;
 
 let cut_trail () = trail := !initial_trail [@@inline];;
 let blockers_map = Fork.new_local (IntMap.empty : stuck_goal list IntMap.t)
-let is_a_blocker { uid } = uid < 0
-let blocked_by { uid } =
-  try IntMap.find (abs uid) !blockers_map with
-  Not_found -> assert false
+let blocked_by r = IntMap.find (uvar_id r) !blockers_map
 
 module Ugly = struct let delayed : stuck_goal list ref = Fork.new_local [] end
 open Ugly
@@ -461,30 +457,30 @@ let trail_stuck_goal_removal x =
   [@@inline]
 ;;
 
-let append_blocked blocked map ({ uid = blocker; _ } as b) =
-  let blocker = abs blocker in
+let append_blocked blocked map r =
+  let blocker = uvar_id r in
   try
     let old = IntMap.find blocker map in
-    assert(b.uid <= 0);
+    (*assert(b.uid <= 0);*)
     IntMap.add blocker (blocked :: old) map
   with Not_found ->
-    b.uid <- -blocker;
+    uvar_set_blocker r;
     IntMap.add blocker (blocked :: []) map
 
-let remove_blocked blocked map ({ uid = blocker; _ } as b) =
-  let blocker = abs blocker in
-  try
+let remove_blocked blocked map r =
+  let blocker = uvar_id r in
+  (*try*)
     let old = IntMap.find blocker map in
-    assert(b.uid <= 0);
+    (*assert(b.uid <= 0);*)
     let l = remove_from_list blocked old in
     if l = [] then begin
-      b.uid <- blocker;
+      uvar_unset_blocker r;
       IntMap.remove blocker map
     end else
       IntMap.add blocker l map
-  with Not_found ->
+  (*with Not_found ->
     assert(b.uid >= 0);
-    map
+    map*)
     
 let remove ({ blockers } as sg) =
  [%spy "dev:constraint:remove" ~rid pp_stuck_goal sg];
@@ -598,7 +594,7 @@ module CS = ConstraintStoreAndTrail
 (* Assigning an UVar wakes up suspended goals/constraints *)
 let (@:=) r v =
   (T.trail_assignment[@inlined]) r;
-  if CS.is_a_blocker r then begin
+  if uvar_is_a_blocker r then begin
     let blocked = CS.blocked_by r in
     [%spy "user:assign(resume)" ~rid (fun fmt l ->
       let l = map_filter (function
@@ -1690,8 +1686,8 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
       e.(i) <- v;
       true
      with RestrictionFailure -> false end
-   | UVar({ uid = uid1 },_,0), UVar ({ uid = uid2 },_,0) when uid1 > 0 && uid2 < 0 -> unif argsdepth matching depth bdepth b adepth a e
-   | AppUVar({ uid = uid1 },_,_), UVar ({ uid = uid2 },_,0) when uid1 > 0 && uid2 < 0 -> unif argsdepth matching depth bdepth b adepth a e
+   | UVar(r1,_,0), UVar (r2,_,0) when uvar_isnt_a_blocker r1 && uvar_is_a_blocker r2 -> unif argsdepth matching depth bdepth b adepth a e
+   | AppUVar(r1,_,_), UVar (r2,_,0) when uvar_isnt_a_blocker r1 && uvar_is_a_blocker r2 -> unif argsdepth matching depth bdepth b adepth a e
    | _, UVar (r,origdepth,0) ->
        begin try
          let t =
@@ -1743,8 +1739,8 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
       e.(i) <- v;
       [%spy "user:assign" ~rid (fun fmt () -> ppterm depth [] ~argsdepth empty_env fmt (e.(i))) ()];
       unif argsdepth matching depth adepth a bdepth b e
-   | UVar({ uid = uid1 },_,a1), UVar ({ uid = uid2 },_,a2) when uid1 > 0 && uid2 < 0 && a1 + a2 > 0 -> unif argsdepth matching depth bdepth b adepth a e (* TODO argsdepth *)
-   | AppUVar({ uid = uid1 },_,_), UVar ({ uid = uid2 },_,a2) when uid1 > 0 && uid2 < 0 && a2 > 0 -> unif argsdepth matching depth bdepth b adepth a e
+   | UVar(r1,_,a1), UVar (r2,_,a2) when uvar_isnt_a_blocker r1 && uvar_is_a_blocker r2 && a1 + a2 > 0 -> unif argsdepth matching depth bdepth b adepth a e (* TODO argsdepth *)
+   | AppUVar(r1,_,_), UVar (r2,_,a2) when uvar_isnt_a_blocker r1 && uvar_is_a_blocker r2 && a2 > 0 -> unif argsdepth matching depth bdepth b adepth a e
 
    | _, UVar (r,origdepth,args) when args > 0 && match a with UVar(r1,_,_) | AppUVar(r1,_,_) -> r != r1 | _ -> true ->
       let v = fst (make_lambdas origdepth args) in
@@ -1781,7 +1777,7 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
        CS.declare_new { kind; blockers };
        true
        end else error (error_msg_hard_unif a b)
-   | AppUVar({ uid = uid2 },_,_), (AppUVar ({ uid = uid1 },_,_) | UVar ({ uid = uid1 },_,_)) when uid1 > 0 && uid2 < 0 ->
+   | AppUVar(r2,_,_), (AppUVar (r1,_,_) | UVar (r1,_,_)) when uvar_isnt_a_blocker r1 && uvar_is_a_blocker r2 ->
        unif argsdepth matching depth bdepth b adepth a e
    | AppUVar (r, lvl,args), other when not matching ->
        let is_llam, args = is_llam lvl args adepth bdepth depth true e in
@@ -3036,8 +3032,6 @@ let rec head_of = function
   | (Arg _ | AppArg _) -> anomaly "head_of on non-heap term"
   | Discard -> type_error "A constraint cannot be _"
   | Lam _ -> type_error "A constraint cannot be a function"
-
-let dummy_uvar_body = { contents = C.dummy; uid = 0 }
 
 let declare_constraint ~depth prog (gid[@trace]) args =
   let g, keys =
