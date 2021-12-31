@@ -5,6 +5,10 @@
     Nathan Guermond for testing this tricky case.
   - Change `Rawdata.Constants.eqc` to a builtin
   - Fix `Rawdata.Constants.cutc` has always been a builtin
+  - Compatibility with OCaml multicore
+- API:
+  - New WeakMap to link unification variables with host data based on
+    ephemerons
 - Library:
   - Better error messages in `std.nth`
 
