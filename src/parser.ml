@@ -417,10 +417,10 @@ let tok_match =
  function
     ((s1:string),"") ->
       fun ((s2:string),v) ->
-       if Pervasives.compare s1 s2 == 0 then v else raise Stream.Failure
+       if Stdlib.compare s1 s2 == 0 then v else raise Stream.Failure
   | ((s1:string),v1) ->
       fun ((s2:string),v2) ->
-       if Pervasives.compare s1 s2==0 && Pervasives.compare v1 v2==0 then v2
+       if Stdlib.compare s1 s2==0 && Stdlib.compare v1 v2==0 then v2
        else raise Stream.Failure
 
 let lex = {

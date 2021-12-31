@@ -100,10 +100,19 @@ type term =
   | AppArg of (*id*)int * term list
 and uvar_body = {
   mutable contents : term [@printer (pp_spaghetti_any ~id:id_term pp_oref)];
-  mutable rest : stuck_goal list [@printer fun _ _ -> ()]
-                                 [@equal fun _ _ -> true];
+  mutable uid_private : int; (* unique name, the sign is flipped when blocks a constraint *)
 }
-and stuck_goal = {
+[@@deriving show]
+
+(* we use this projection to be sure we ignore the sign *)
+let uvar_id { uid_private } = abs uid_private [@@inline];;
+let uvar_is_a_blocker   { uid_private } = uid_private < 0 [@@inline];;
+let uvar_isnt_a_blocker { uid_private } = uid_private > 0 [@@inline];;
+
+let uvar_set_blocker r   = r.uid_private <- -(uvar_id r) [@@inline];;
+let uvar_unset_blocker r = r.uid_private <-  (uvar_id r) [@@inline];;
+
+type stuck_goal = {
   mutable blockers : blockers;
   kind : unification_def stuck_goal_kind;
 }
@@ -204,7 +213,9 @@ let destConst = function Const x -> x | _ -> assert false
 
 (* Our ref data type: creation and dereference.  Assignment is defined
    After the constraint store, since assigning may wake up some constraints *)
-let oref x = { contents = x; rest = [] }
+let oref =
+  let uid = ref 0 in
+  fun x -> incr uid; assert(!uid > 0); { contents = x; uid_private = !uid }
 let (!!) { contents = x } = x
 
 (* Arg/AppArg point to environments, here the empty one *)
@@ -477,6 +488,7 @@ end
 
 (* This term is hashconsed here *)
 let dummy = App (Global_symbols.cutc,Const Global_symbols.cutc,[])
+let dummy_uvar_body = { contents = dummy; uid_private = 0 }
 
 module CHR : sig
 
@@ -1164,7 +1176,7 @@ type 'a executable = {
 }
 
 type pp_ctx = {
-  uv_names : (string Util.PtrMap.t * int) ref;
+  uv_names : (string Util.IntMap.t * int) ref;
   table : symbol_table;
 }
 

@@ -1931,7 +1931,7 @@ end (* }}} *)
 
 let w_symbol_table s f x =
   let table = Symbols.compile_table @@ State.get Symbols.table s in
-  let pp_ctx = { table; uv_names = ref (PtrMap.empty (),0) } in
+  let pp_ctx = { table; uv_names = ref (IntMap.empty,0) } in
   Util.set_spaghetti_printer Data.pp_const (R.Pp.pp_constant ~pp_ctx);
   f x
 
@@ -2349,7 +2349,7 @@ let pp_query pp fmt {
     compiler_state;
     query; } =
   let pp_ctx = {
-    uv_names = ref (PtrMap.empty (), 0);
+    uv_names = ref (IntMap.empty, 0);
     table = Symbols.compile_table (State.get Symbols.table compiler_state);
   } in
   Format.fprintf fmt "@[<v>";

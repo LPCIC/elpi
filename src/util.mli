@@ -70,20 +70,6 @@ module IntMap : Map.S with type key = int
 module StrSet : Set.S with type elt = string
 module IntSet : Set.S with type elt = int
 
-module PtrMap : sig
-
-  type 'a t
-
-  val empty : unit -> 'a t
-  val is_empty : 'a t -> bool
-  val find : 'block -> 'a t -> 'a
-  val add : 'block -> 'a -> 'a t -> 'a t
-  val remove : 'block -> 'a t -> 'a t
-  val filter : ('block -> 'a -> bool) -> 'a t -> 'a t
-  include Show1 with type 'a t := 'a t
-
-end
-
 module Digest : sig
   include module type of Digest
   include Show with type t := t

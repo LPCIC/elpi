@@ -266,7 +266,7 @@ let { CData.cin = in_loc; isc = is_loc; cout = out_loc } as cloc =
   CData.(declare {
     data_name = "Loc.t";
     data_pp = Util.Loc.pp;
-    data_compare = Pervasives.compare;
+    data_compare = Stdlib.compare;
     data_hash = Hashtbl.hash;
     data_hconsed = false;
   })

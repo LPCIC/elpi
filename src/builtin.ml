@@ -645,7 +645,7 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
      try
        let pos = pos_in i in
        let _ = input_char i in
-       Pervasives.seek_in i pos;
+       Stdlib.seek_in i pos;
        raise No_clause
      with
      | End_of_file -> ()
@@ -724,7 +724,7 @@ let lp_builtins = let open BuiltIn in let open BuiltInData in [
      try
        let pos = pos_in i in
        let c = input_char i in
-       Pervasives.seek_in i pos;
+       Stdlib.seek_in i pos;
        !:(String.make 1 c)
      with
      | End_of_file -> !:""
@@ -1306,7 +1306,7 @@ let map = OpaqueData.declare {
   OpaqueData.name;
   doc = "";
   pp = (fun fmt m -> Format.fprintf fmt "%a" (Map.pp closed_A.pp) m );
-  compare = (fun m1 m2 -> Map.compare Pervasives.compare m1 m2);
+  compare = (fun m1 m2 -> Map.compare Stdlib.compare m1 m2);
   hash = Hashtbl.hash;
   hconsed = false;
   constants = [];

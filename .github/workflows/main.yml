@@ -17,9 +17,12 @@ jobs:
           - ubuntu-latest
           - windows-latest
         ocaml-version:
+          - 4.12.0+domains
           - 4.11.1
           - 4.07.1
-          - 4.04.1
+        exclude:
+          - os: windows-latest
+            ocaml-version: 4.12.0+domains
 
     runs-on: ${{ matrix.os }}
 
