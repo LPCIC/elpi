@@ -783,7 +783,7 @@ module ToDBL : sig
       Loc.t * Ast.Term.t -> State.t * preterm
   val query_preterm_of_function :
     depth:int -> macro_declaration -> State.t ->
-    (State.t -> State.t * (Loc.t * term)) ->
+    (State.t -> State.t * (Loc.t * term) * Conversion.extra_goals) ->
       State.t * preterm
 
   (* Exported for quations *)
@@ -1083,7 +1083,14 @@ let preterms_of_ast ?on_type loc ~depth macros state f t =
 let query_preterm_of_function ~depth macros state f =
   assert(is_empty_amap (get_argmap state));
   let state = set_mtm state (Some { macros }) in
-  let state, (loc, term) = f state in
+  let state, (loc, main), gls = f state in
+  let state, gls = !Data.Conversion.extra_goals_postprocessing gls state in
+  let gls = List.map Data.Conversion.term_of_extra_goal gls in
+  let term =
+    match gls @ [main] with
+    | [] -> assert false
+    | [g] -> g
+    | x :: xs -> mkApp D.Global_symbols.andc x xs in
   let amap = get_argmap state in
   state, { amap; term; loc; spilling = false }
 
@@ -2182,8 +2189,8 @@ let query_of_term (compiler_state, assembled_program) f =
 let query_of_data (state, p) loc (Query.Query { arguments } as descr) =
   let state = State.begin_goal_compilation state in
   let query = query_of_term (state, p) (fun ~depth state ->
-    let state, term = R.embed_query ~mk_Arg ~depth state descr in
-    state, (loc, term)) in
+    let state, term, gls = R.embed_query ~mk_Arg ~depth state descr in
+    state, (loc, term), gls) in
   { query with query_arguments = arguments }
 
 let lookup_query_predicate (state, p) pred =
@@ -2560,7 +2567,7 @@ let static_check ~exec ~checker:(state,program)
   let query =
     query_of_term (state, program) (fun ~depth state ->
       assert(depth=0);
-      state, (loc,App(checkc,R.list_to_lp_list p,[q;R.list_to_lp_list tlist;R.list_to_lp_list talist]))) in
+      state, (loc,App(checkc,R.list_to_lp_list p,[q;R.list_to_lp_list tlist;R.list_to_lp_list talist])), []) in
   let executable = optimize_query query in
   exec executable <> Failure
 ;;
