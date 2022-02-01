@@ -196,8 +196,29 @@ end
 (****************************************************************************)
 
 module Conversion = struct
-  type extra_goals = ED.extra_goals
-  include ED.Conversion
+type ty_ast = ED.Conversion.ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
+
+type extra_goal = ED.Conversion.extra_goal = ..
+type extra_goal +=
+  | Unify = ED.Conversion.Unify
+  | RawGoal = ED.Conversion.RawGoal
+
+type extra_goals = extra_goal list
+
+type 'a embedding = 'a ED.Conversion.embedding
+
+type 'a readback = 'a ED.Conversion.readback
+
+type 'a t = 'a ED.Conversion.t =  {
+  ty : ty_ast;
+  pp_doc : Format.formatter -> unit -> unit;
+  pp : Format.formatter -> 'a -> unit;
+  embed : 'a embedding;   (* 'a -> term *)
+  readback : 'a readback; (* term -> 'a *)
+}
+
+exception TypeErr = ED.Conversion.TypeErr
+
 end
 
 module ContextualConversion = ED.ContextualConversion
@@ -602,6 +623,7 @@ module RawData = struct
   | Elpi.Ref ub -> ED.Term.mkAppUVar ub 0 args
   | Elpi.Arg name -> Compiler.get_Arg state ~name ~args
 
+  let set_extra_goals_postprocessing f = ED.Conversion.extra_goals_postprocessing := f
 end
 
 module FlexibleData = struct

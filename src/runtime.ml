@@ -1556,7 +1556,7 @@ let rec unif matching depth adepth a bdepth b e =
       unif matching depth adepth args bdepth arg e
    | _, (Const c | App(c,_,[])) when c == Global_symbols.uvarc && matching -> false
    (* On purpose we let the fully applied uvarc pass, so that at the
-    * meta level one can unify fronzen constants. One can use the var builtin
+    * meta level one can Conversion.Unify fronzen constants. One can use the var builtin
     * to discriminate the two cases, as in "p (uvar F L as X) :- var X, .." *)
 
    (* assign *)
@@ -1734,7 +1734,7 @@ let unif ~matching (gid[@trace]) adepth e bdepth a b =
  let res = unif matching 0 adepth a bdepth b e in
  [%spy "dev:unif:out" ~rid Fmt.pp_print_bool res];
  [%spy "user:select" ~rid ~gid ~cond:(not res) (fun fmt () ->
-     let op = if matching then "match" else "unify" in
+     let op = if matching then "match" else "Conversion.Unify" in
      Fmt.fprintf fmt "@[<hov 2>fail to %s: %a@ with %a@]" op
        (ppterm (adepth) [] adepth empty_env) a
        (ppterm (bdepth) [] adepth e) b) ()];
@@ -1942,7 +1942,7 @@ let mk_out_assign ~depth embed bname state input v  output =
   | Some _, Data.BuiltInPredicate.Discard -> state, [] (* We could warn that such output was generated without being required *)
   | Some t, Data.BuiltInPredicate.Keep ->
      let state, t, extra = embed ~depth state t in
-     state, extra @ [App(Global_symbols.eqc, v, [t])]
+     state, extra @ [Conversion.Unify(v,t)]
   | None, Data.BuiltInPredicate.Keep -> state, []
 
 let mk_inout_assign ~depth embed bname state input v  output =
@@ -1950,7 +1950,7 @@ let mk_inout_assign ~depth embed bname state input v  output =
   | None -> state, []
   | Some t ->
      let state, t, extra = embed ~depth state (Data.BuiltInPredicate.Data t) in
-     state, extra @ [App(Global_symbols.eqc, v, [t])]
+     state, extra @ [Conversion.Unify(v,t)]
 
 let in_of_termC ~depth readback n bname hyps constraints state t =
   wrap_type_err bname n (readback ~depth hyps constraints state) t
@@ -1963,14 +1963,14 @@ let mk_out_assignC ~depth embed bname hyps constraints state input v  output =
   | Some _, Data.BuiltInPredicate.Discard -> state, [] (* We could warn that such output was generated without being required *)
   | Some t, Data.BuiltInPredicate.Keep ->
      let state, t, extra = embed ~depth hyps constraints state t in
-     state, extra @ [App(Global_symbols.eqc, v, [t])]
+     state, extra @ [Conversion.Unify(v,t)]
   | None, Data.BuiltInPredicate.Keep -> state, []
 
 let mk_inout_assignC ~depth embed bname hyps constraints state input v  output =
   match output with
   | Some t ->
      let state, t, extra = embed ~depth hyps constraints state (Data.BuiltInPredicate.Data t) in
-     state, extra @ [App(Global_symbols.eqc, v, [t])]
+     state, extra @ [Conversion.Unify(v,t)]
   | None -> state, []
 
 let map_acc f s l =
@@ -1984,8 +1984,8 @@ let map_acc f s l =
 
 let call (Data.BuiltInPredicate.Pred(bname,ffi,compute)) ~depth hyps constraints state data =
   let rec aux : type i o h c.
-    (i,o,h,c) Data.BuiltInPredicate.ffi -> h -> c -> compute:i -> reduce:(State.t -> o -> State.t * extra_goals) ->
-       term list -> int -> State.t -> extra_goals list -> State.t * extra_goals =
+    (i,o,h,c) Data.BuiltInPredicate.ffi -> h -> c -> compute:i -> reduce:(State.t -> o -> State.t * Conversion.extra_goals) ->
+       term list -> int -> State.t -> Conversion.extra_goals list -> State.t * Conversion.extra_goals =
   fun ffi ctx constraints ~compute ~reduce data n state extra ->
     match ffi, data with
     | Data.BuiltInPredicate.Easy _, [] ->
@@ -2090,7 +2090,7 @@ let call (Data.BuiltInPredicate.Pred(bname,ffi,compute)) ~depth hyps constraints
 
 end
 
-let rec embed_query_aux : type a. mk_Arg:(State.t -> name:string -> args:term list -> State.t * term) -> depth:int -> predicate:constant -> term list -> term list -> State.t -> a Query.arguments -> State.t * term
+let rec embed_query_aux : type a. mk_Arg:(State.t -> name:string -> args:term list -> State.t * term) -> depth:int -> predicate:constant -> Conversion.extra_goals -> term list -> State.t -> a Query.arguments -> State.t * term * Conversion.extra_goals
   = fun ~mk_Arg ~depth ~predicate gls args state descr ->
     match descr with
     | Data.Query.D(d,x,rest) ->
@@ -2101,10 +2101,7 @@ let rec embed_query_aux : type a. mk_Arg:(State.t -> name:string -> args:term li
         embed_query_aux ~mk_Arg ~depth ~predicate gls (x :: args) state rest
     | Data.Query.N ->
         let args = List.rev args in
-        state,
-        match gls with
-        | [] -> C.mkAppL predicate args
-        | gls -> C.mkAppL Global_symbols.andc (gls @ [C.mkAppL predicate args])
+        state, C.mkAppL predicate args, gls
 ;;
 
 let embed_query ~mk_Arg ~depth state (Query.Query { predicate; arguments }) =
@@ -3026,8 +3023,9 @@ let exect_builtin_predicate c ~depth idx (gid[@trace]) args =
     let constraints = !CS.Ugly.delayed in
     let state = !CS.state  in
     let state, gs = FFI.call b ~depth (local_prog idx) constraints state args in
+    let state, gs = !Data.Conversion.extra_goals_postprocessing gs state in
     CS.state := state;
-    gs
+    List.map Data.Conversion.term_of_extra_goal gs
 ;;
 
 let match_head { conclusion = x; cdepth } p =

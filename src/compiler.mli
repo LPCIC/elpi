@@ -30,7 +30,7 @@ val append_units : flags:flags -> base:program -> compilation_unit list -> progr
 type 'a query
 val query_of_ast : program -> Ast.Goal.t -> unit query
 val query_of_term :
-  program -> (depth:int -> State.t -> State.t * (Loc.t * term)) -> unit query
+  program -> (depth:int -> State.t -> State.t * (Loc.t * term) * Conversion.extra_goals) -> unit query
 val query_of_data :
   program -> Loc.t -> 'a Query.t -> 'a query
 
