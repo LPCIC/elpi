@@ -45,7 +45,11 @@ let set_precedence, precedence_of =
  (fun c -> ConstMap.find c !precs)
 ;;
 
+type parser_state_aux = { file_resolver : ?cwd:string -> file:string -> unit -> string }
+type parser_state = parser_state_aux option
+let parser_state = ref { file_resolver = (fun ?cwd:_ ~file:_ () -> assert false) }
 let cur_dirname = ref "./"
+
 let last_loc : Ploc.t ref = ref (Ploc.make_loc "dummy" 1 0 (0, 0) "")
 let set_fname ?(line=1) fname = last_loc := (Ploc.make_loc fname line 0 (0, 0) "")
 
@@ -58,27 +62,19 @@ let rec readsymlinks f =
 
 let symlink_dirname f = Filename.dirname (readsymlinks f)
 
-let make_absolute filename =
+let make_absolute cwd filename =
   if not (Filename.is_relative filename) then filename
-  else Filename.concat !cur_dirname filename
-
-let cur_tjpath = ref []
-
-let set_tjpath cwd paths =
- cur_dirname := cwd;
- let tjpath = List.map (fun f -> make_absolute (readsymlinks f)) paths in
- cur_tjpath := tjpath
-
-(*CSC: when parse_one opens a file for reading, open the .tex file
-  for writing (and put the header) *)
-(* the parsed variable is a cache to avoid parsing the same file twice *)
+  else Filename.concat cwd filename
 
 let parse_silent = ref true
+(* the parsed variable is a cache to avoid parsing the same file twice *)
 let parsed = ref []
 
 exception File_not_found of string
 
-let resolve (origfilename as filename) =
+let std_resolver ?(cwd=Sys.getcwd()) ~paths () =
+  let dirs = List.map (fun f -> make_absolute cwd (readsymlinks f)) paths in
+fun ?(cwd=Sys.getcwd()) ~file:(origfilename as filename) () ->
   let rec iter_tjpath dirnames =
     let filename,dirnames,relative =
      if not (Filename.is_relative filename) then filename,[],false
@@ -86,8 +82,7 @@ let resolve (origfilename as filename) =
       match dirnames with
          [] -> raise (File_not_found filename)
        | dirname::dirnames->Filename.concat dirname filename,dirnames,true in
-    let prefixname = Filename.chop_extension filename in
-    let prefixname,filename =
+    let prefixname = Filename.remove_extension filename in
      let change_suffix filename =
       if Filename.check_suffix filename ".elpi" then
        (* Backward compatibility with Teyjus *) 
@@ -96,25 +91,26 @@ let resolve (origfilename as filename) =
        (* Forward compatibility with Teyjus *) 
        prefixname ^ ".elpi"
       else filename in
-     if Sys.file_exists filename then prefixname,filename
+     if Sys.file_exists filename then filename
      else
       let changed_filename = change_suffix filename in
-      if Sys.file_exists changed_filename then prefixname,changed_filename
+      if Sys.file_exists changed_filename then changed_filename
       else if relative then iter_tjpath dirnames
-      else raise (File_not_found origfilename) in
-    prefixname,filename
+      else raise (File_not_found origfilename)
   in
-  let dirs = !cur_dirname :: !cur_tjpath in 
-  try iter_tjpath dirs
+  try iter_tjpath (cwd :: dirs)
   with File_not_found f ->
     raise (Failure ("File "^f^" not found in: " ^ String.concat ", " dirs))
+
+let resolve ?cwd ~file () = !parser_state.file_resolver ?cwd ~file ()
 
 let rec parse_one e (origfilename as filename) =
  let origprefixname =
    try Filename.chop_extension origfilename
    with Invalid_argument _ ->
      raise (Failure ("File "^origfilename^" has no extension")) in
- let prefixname, filename = resolve filename in
+ let filename = resolve ~cwd:!cur_dirname ~file:filename () in
+ let prefixname = Filename.chop_extension filename in
  let inode = Digest.file filename in
  if List.mem_assoc inode !parsed then begin
   if not !parse_silent then Printf.eprintf "already loaded %s\n%!" origfilename;
@@ -811,21 +807,17 @@ let init_loc = {
   line_starts_at = 0;
 }
 
-type parser_state_aux = { cwd : string; paths : string list }
-type parser_state = parser_state_aux option
-let dummy_state = None
-
 let set_state = function
-  | Some { cwd; paths } ->
-      parsed := [];
-      set_tjpath cwd paths;
   | None -> ()
+  | Some x ->
+      parsed := [];
+      parser_state := x
 
-let init ~lp_syntax ~paths ~cwd =
+let init ~lp_syntax ~file_resolver =
   if !parser_initialized = false then
     List.iter (gram_extend init_loc) lp_syntax;
   parser_initialized := true;
-  Some { cwd; paths }
+  Some { file_resolver }
 ;;
 
 let run_parser state f x =

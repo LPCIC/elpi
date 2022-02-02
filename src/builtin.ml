@@ -806,7 +806,11 @@ counter C N :- trace.counter C N.|};
      Full    (unit_ctx, "quotes the program from FileName and the QueryText. "^
               "See elpi-quoted_syntax.elpi for the syntax tree"))))),
    (fun f s _ _ ~depth _ _ state ->
-      let elpi, _ = Setup.init ~builtins:[BuiltIn.declare ~file_name:"(dummy)" []] ~basedir:Sys.(getcwd()) [] in
+      let elpi =
+        Setup.init
+          ~builtins:[BuiltIn.declare ~file_name:"(dummy)" []]
+          ~file_resolver:(Parse.std_resolver ~paths:[] ())
+          () in
       try
         let ap = Parse.program ~elpi [f] in
         let loc = Ast.Loc.initial "(quote_syntax)" in
@@ -1513,6 +1517,6 @@ let std_builtins =
 
 
 let default_checker () =
-  let elpi, _ = API.Setup.init ~builtins:[std_builtins] ~basedir:(Sys.getcwd ()) [] in
+  let elpi = API.Setup.init ~builtins:[std_builtins] () in
   let ast = API.Parse.program_from_stream ~elpi (API.Ast.Loc.initial "(checker)") (Stream.of_string Builtin_checker.code) in
   API.Compile.program ~flags:API.Compile.default_flags ~elpi [ast]

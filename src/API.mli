@@ -47,26 +47,32 @@ module Setup : sig
 
       [init] must be called before invoking the parser.
 
+      @param flags for the compiler, see {!type:Compile.flags}
       @param builtins the set of built-in predicates, eg {!val:Elpi.Builtin.std_builtins}
-      @param basedir current working directory (used to make paths absolute);
-      @param argv is list of options, see the {!val:usage} string;
+      @param file_resolver maps a file name to an absolute path, if not specified the
+        options like [-I] or the env variable [TJPATH] serve as resolver. The
+        resolver returns the abslute file name
+        (possibly adjusting the file extension). By default it fails.
+        See also {!val:Parse.std_resolver}.
 
-      @return the part of [argv] not relevant to ELPI and a handle [elpi] to an
-      elpi instance equipped with the given builtins. *)
+      @return a handle [elpi] to an elpi instance equipped with the given
+        [builtins] and where accumulate resolves files with the given
+        [file_resolver]. *)
   val init :
     ?flags:flags ->
     builtins:builtins list ->
-    basedir:string ->
-    string list -> elpi * string list
+    ?file_resolver:(?cwd:string -> file:string -> unit -> string) ->
+    unit ->
+    elpi
 
   (** Usage string *)
   val usage : string
 
   (** Set tracing options.
       [trace argv] can be called before {!module:Execute}.
-      [argv] is expected to only contain options relevant for
-      the tracing facility. *)
-  val trace : string list -> unit
+      returns options not known to the trace system.
+      *)
+  val trace : string list -> string list
 
   (** Override default runtime error functions (they call exit) *)
   val set_warn : (?loc:Ast.Loc.t -> string -> unit) -> unit
@@ -94,7 +100,13 @@ module Parse : sig
   (** [resolve f] computes the full path of [f] as the parser would do (also)
       for files recursively accumulated. Raises Failure if the file does not
       exist. *)
-  val resolve_file : string -> string
+  val resolve_file : ?cwd:string -> file:string -> unit -> string
+
+  (** [std_resolver cwd paths ()] returns a resolver function that looks in cwd
+      and paths (relative to cwd, or absolute) *)
+  val std_resolver :
+    ?cwd:string -> paths:string list -> unit ->
+      (?cwd:string -> file:string -> unit -> string)
 
   exception ParseError of Ast.Loc.t * string
 end
