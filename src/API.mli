@@ -250,7 +250,11 @@ module Conversion : sig
 
   type ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
 
-  type extra_goals = Data.term list
+  type extra_goal = ..
+  type extra_goal +=
+    | Unify of Data.term * Data.term
+  
+  type extra_goals = extra_goal list
 
   type 'a embedding =
     depth:int ->
@@ -1016,6 +1020,12 @@ module RawData : sig
 
   end
 
+  type Conversion.extra_goal +=
+  | RawGoal of Data.term
+
+  val set_extra_goals_postprocessing :
+    (Conversion.extra_goals -> State.t -> State.t * Conversion.extra_goals) -> unit
+
 end
 
 (** This module lets one generate a query by providing a RawData.term directly *)
@@ -1032,7 +1042,7 @@ module RawQuery : sig
   val is_Arg : State.t -> Data.term -> bool
 
   val compile :
-    Compile.program -> (depth:int -> State.t -> State.t * (Ast.Loc.t * Data.term)) ->
+    Compile.program -> (depth:int -> State.t -> State.t * (Ast.Loc.t * Data.term) * Conversion.extra_goals) ->
       unit Compile.query
 
 end

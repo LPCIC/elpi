@@ -22,7 +22,7 @@ val pp_stuck_goal : ?pp_ctx:pp_ctx -> Fmt.formatter -> stuck_goal -> unit
 val embed_query :
   mk_Arg:(State.t -> name:string -> args:term list -> State.t * term) ->
   depth:int ->
-  State.t -> 'a Query.t -> State.t * term
+  State.t -> 'a Query.t -> State.t * term * Conversion.extra_goals
 
 (* Interpreter API *)
 val execute_once :
