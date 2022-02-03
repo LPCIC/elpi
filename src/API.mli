@@ -1032,9 +1032,17 @@ module RawData : sig
 
   end
 
+  (* This extra_goal can be used as a target for postprocessing *)
   type Conversion.extra_goal +=
   | RawGoal of Data.term
 
+  (* This function is called just before returning from a builtin predicate,
+     it has visibility over all extra_goals and can add or remove some.
+     It must elaborate any extra_goal specific to the host application to
+     either Conversion.Unify or RawData.RawGoal.
+     
+     Since extension to the data type extra_goal are global to all elpi
+     instances, this post-processing function is also global *)
   val set_extra_goals_postprocessing :
     (Conversion.extra_goals -> State.t -> State.t * Conversion.extra_goals) -> unit
 
