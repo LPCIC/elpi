@@ -1675,7 +1675,7 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
       unif argsdepth matching depth adepth args bdepth arg e
    | (App _ | Const _ | Builtin _ | Nil | Cons _ | CData _), (Const c | App(c,_,[])) when c == Global_symbols.uvarc && matching -> false
    (* On purpose we let the fully applied uvarc pass, so that at the
-    * meta level one can Conversion.Unify fronzen constants. One can use the var builtin
+    * meta level one can unify fronzen constants. One can use the var builtin
     * to discriminate the two cases, as in "p (uvar F L as X) :- var X, .." *)
    (* assign *)
    | _, Arg (i,0) ->
@@ -1871,7 +1871,7 @@ let unif ~argsdepth ~matching (gid[@trace]) adepth e bdepth a b =
  let res = unif argsdepth matching 0 adepth a bdepth b e in
  [%spy "dev:unif:out" ~rid Fmt.pp_print_bool res];
  [%spy "user:select" ~rid ~gid ~cond:(not res) (fun fmt () ->
-     let op = if matching then "match" else "Conversion.Unify" in
+     let op = if matching then "match" else "unify" in
      Fmt.fprintf fmt "@[<hov 2>fail to %s: %a@ with %a@]" op
        (ppterm (adepth) [] ~argsdepth:bdepth empty_env) a
        (ppterm (bdepth) [] ~argsdepth:bdepth e) b) ()];
