@@ -3120,9 +3120,9 @@ let rec head_of = function
 let declare_constraint ~depth prog (gid[@trace]) args =
   let g, keys =
     match args with
-    | [t1; t2] ->
+    | t1 :: more ->
       let err =
-        "the second argument of declare_constraint must be a list of variables"
+        "the Key arguments of declare_constraint must be variables or list of variables"
       in
       let rec collect_keys t = match deref_head ~depth t with
         | UVar (r, _, _) | AppUVar (r, _, _) -> [r]
@@ -3136,10 +3136,10 @@ let declare_constraint ~depth prog (gid[@trace]) args =
       and collect_keys_list t = match deref_head ~depth t with
         | Nil -> []
         | Cons(hd,tl) -> collect_keys hd @ collect_keys_list tl
-        | _ -> type_error err
+        | x -> collect_keys x
       in
-        t1, collect_keys_list t2
-    | _ -> type_error "declare_constraint takes 2 arguments"
+        t1, List.flatten (List.map collect_keys_list more)
+    | _ -> type_error "declare_constraint takes at least one argument"
   in 
   match CHR.clique_of (head_of g) !chrules with
   | Some clique -> (* real constraint *)

@@ -425,8 +425,9 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
 
   (* These are not implemented here since the API has no access to the
    * store of syntactic constraints *)
-  LPCode ("% [declare_constraint C Keys] declares C with Keys (a list of variables).\n"^
-          "external pred declare_constraint i:any, i:list any.");
+  LPCode ("% [declare_constraint C Key1 Key2...] declares C blocked\n"^
+          "% on Key1 Key2 ... (variables, or lists thereof).\n"^
+          "external type declare_constraint variadic any prop.");
   LPCode "external pred print_constraints. % prints all constraints";
 
   MLCode(Pred("halt", VariadicIn(unit_ctx, !> BuiltInData.any, "halts the program and print the terms"),

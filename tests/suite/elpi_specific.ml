@@ -245,3 +245,9 @@ let () = declare "trailing_comment"
   ~description:"trailing comment"
   ~expectation:Test.Success
   ()
+
+let () = declare "variadic_declare_constraints"
+  ~source_elpi:"variadic_declare_constraints.elpi"
+  ~description:"declare_constraint takes keys of different types"
+  ~expectation:Test.Success
+  ()

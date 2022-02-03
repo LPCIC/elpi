@@ -23,6 +23,9 @@
   - Change signature of `Parse.resolve_file`
 - Library:
   - Better error messages in `std.nth`
+  - `declare_constraint` is now `variadic any prop`, so that one can pass
+    variables of different types as keys for the constraint. A list of variables
+    (of the same type) is still supported.
 
 # v1.13.8 (November 2021)
 

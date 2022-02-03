@@ -1,0 +1,4 @@
+type foo tm -> (tm -> tm) -> prop.
+
+main :-
+  declare_constraint (foo X Y) X [Y, Z].
