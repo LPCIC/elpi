@@ -18,11 +18,16 @@ val precedence_of : Func.t -> fixity * int
 type gramext = { fix : fixity; sym : string; prec : int }
 
 type parser_state
-val dummy_state : parser_state
 
 (* Loads the basic grammar and sets the paths.
    Camlp5 limitation: the grammar is loaded once and forall. *)
-val init : lp_syntax:gramext list -> paths:string list -> cwd:string -> parser_state
+val init :
+  lp_syntax:gramext list ->
+  file_resolver:(?cwd:string -> file:string -> unit -> string) ->
+    parser_state
+val std_resolver :
+  ?cwd:string -> paths:string list -> unit ->
+     (?cwd:string -> file:string -> unit -> string)
 
 (* BUG: extending the grammar is imperative, cannot be undone *)
 val parse_program : parser_state -> print_accumulated_files:bool -> string list -> Program.t
@@ -30,7 +35,7 @@ val parse_program_from_stream : parser_state -> print_accumulated_files:bool -> 
 val parse_goal : ?loc:Loc.t -> string -> Goal.t
 val parse_goal_from_stream : ?loc:Loc.t -> char Stream.t -> Goal.t
 
-val resolve : string -> string * string
+val resolve : ?cwd:string -> file:string -> unit -> string
 
 exception ParseError of Loc.t * string
 

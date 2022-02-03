@@ -1675,7 +1675,7 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
       unif argsdepth matching depth adepth args bdepth arg e
    | (App _ | Const _ | Builtin _ | Nil | Cons _ | CData _), (Const c | App(c,_,[])) when c == Global_symbols.uvarc && matching -> false
    (* On purpose we let the fully applied uvarc pass, so that at the
-    * meta level one can Conversion.Unify fronzen constants. One can use the var builtin
+    * meta level one can unify fronzen constants. One can use the var builtin
     * to discriminate the two cases, as in "p (uvar F L as X) :- var X, .." *)
    (* assign *)
    | _, Arg (i,0) ->
@@ -1871,7 +1871,7 @@ let unif ~argsdepth ~matching (gid[@trace]) adepth e bdepth a b =
  let res = unif argsdepth matching 0 adepth a bdepth b e in
  [%spy "dev:unif:out" ~rid Fmt.pp_print_bool res];
  [%spy "user:select" ~rid ~gid ~cond:(not res) (fun fmt () ->
-     let op = if matching then "match" else "Conversion.Unify" in
+     let op = if matching then "match" else "unify" in
      Fmt.fprintf fmt "@[<hov 2>fail to %s: %a@ with %a@]" op
        (ppterm (adepth) [] ~argsdepth:bdepth empty_env) a
        (ppterm (bdepth) [] ~argsdepth:bdepth e) b) ()];
@@ -3120,9 +3120,9 @@ let rec head_of = function
 let declare_constraint ~depth prog (gid[@trace]) args =
   let g, keys =
     match args with
-    | [t1; t2] ->
+    | t1 :: more ->
       let err =
-        "the second argument of declare_constraint must be a list of variables"
+        "the Key arguments of declare_constraint must be variables or list of variables"
       in
       let rec collect_keys t = match deref_head ~depth t with
         | UVar (r, _, _) | AppUVar (r, _, _) -> [r]
@@ -3136,10 +3136,10 @@ let declare_constraint ~depth prog (gid[@trace]) args =
       and collect_keys_list t = match deref_head ~depth t with
         | Nil -> []
         | Cons(hd,tl) -> collect_keys hd @ collect_keys_list tl
-        | _ -> type_error err
+        | x -> collect_keys x
       in
-        t1, collect_keys_list t2
-    | _ -> type_error "declare_constraint takes 2 arguments"
+        t1, List.flatten (List.map collect_keys_list more)
+    | _ -> type_error "declare_constraint takes at least one argument"
   in 
   match CHR.clique_of (head_of g) !chrules with
   | Some clique -> (* real constraint *)

@@ -1,10 +1,7 @@
 open Elpi.API
 
 let init () =
-  let elpi, rest =
-    Setup.init ~builtins:[Elpi.Builtin.std_builtins] ~basedir:"." (List.tl (Array.to_list Sys.argv)) in
-  assert(rest = []);
-  elpi
+  Setup.init ~builtins:[Elpi.Builtin.std_builtins] ~file_resolver:(Parse.std_resolver ~paths:[] ()) ()
 
 let cc ~elpi ~flags i u =
   Compile.unit ~elpi ~flags

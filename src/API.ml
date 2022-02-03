@@ -25,18 +25,14 @@ type builtins = Compiler.builtins
 type elpi = Parser.parser_state * Compiler.header
 type flags = Compiler.flags
 
-let init ?(flags=Compiler.default_flags) ~builtins ~basedir:cwd argv =
-  let new_argv = set_trace argv in
-  let new_argv, paths =
-    let rec aux args paths = function
-      | [] -> List.rev args, List.rev paths
-      | "-I" :: p :: rest -> aux args (p :: paths) rest
-      | x :: rest -> aux (x :: args) paths rest
-    in
-      aux [] [] new_argv
-  in
+let init ?(flags=Compiler.default_flags) ~builtins ?file_resolver () =
   (* At the moment we can only init the parser once *)
-  let parsing_state = Parser.init ~lp_syntax:Parser.lp_gramext ~paths ~cwd in
+  let file_resolver =
+    match file_resolver with
+    | Some x -> x
+    | None -> fun ?cwd:_ ~file:_ () ->
+        raise (Failure "'accumulate' is disabled since Setup.init was not given a ~file_resolver.") in
+  let parsing_state = Parser.init ~lp_syntax:Parser.lp_gramext ~file_resolver in
   Data.Global_symbols.lock ();
   let header_src =
     builtins |> List.map (fun (fname,decls) ->
@@ -62,16 +58,11 @@ let init ?(flags=Compiler.default_flags) ~builtins ~basedir:cwd argv =
   let header =
     try Compiler.header_of_ast ~flags builtins (List.concat header_src)
     with Compiler.CompileError(loc,msg) -> Util.anomaly ?loc msg in
-  (parsing_state, header), new_argv
+  (parsing_state, header)
 
-let trace args =
-  match set_trace args with
-  | [] -> ()
-  | l -> Util.error ("Elpi_API.trace got unknown arguments: " ^ (String.concat " " l))
+let trace = set_trace
 
 let usage =
-  "\nParsing options:\n" ^
-  "\t-I PATH  search for accumulated files in PATH\n" ^
   Trace_ppx_runtime.Runtime.usage
 
 let set_warn = Util.set_warn
@@ -101,7 +92,8 @@ module Parse = struct
   let goal_from_stream loc s = Parser.parse_goal_from_stream ~loc s
   exception ParseError = Parser.ParseError
 
-  let resolve_file f = snd @@ Parser.resolve f
+  let resolve_file = Parser.resolve
+  let std_resolver = Parser.std_resolver
 end
 
 module ED = Data
