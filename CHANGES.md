@@ -1,14 +1,14 @@
-# UNRELEASED
+# v1.14.0 (February 2022)
 
 - Runtime/FFI:
-  - fix handling of eta expanded unification variables. Many thanks to
+  - Fix handling of eta expanded unification variables. Many thanks to
     Nathan Guermond for testing this tricky case.
   - Change `Rawdata.Constants.eqc` to a builtin
   - Fix `Rawdata.Constants.cutc` has always been a builtin
-  - Compatibility with OCaml multicore
+  - Fix compatibility with OCaml multicore, no more `PtrMap`
 - API:
-  - New `WeakMap` to link unification variables with host data based on
-    ephemerons
+  - New `FlexibleData.WeakMap` to link unification variables with host
+    data based on OCaml's `Ephemeron`
   - Change `Conversion.extra_goals` is now an extensible data type with one
     standard constructor `Conversion.Unify` taking two terms
   - New `RawData.set_extra_goals_postprocessing` can be used to
@@ -18,9 +18,9 @@
     actions like cancelling out useless or duplicate goals
   - Change `Setup.init` to take in input a `~file_resolver` rather than a list
     of `~paths` and a `~basedir`. A custom file resolver can use some logic
-    from host application to find files, rather than an hardcoded one
+    from the host application to find files, rather than an hardcoded one
   - New `Parse.std_resolver` building a standard resolver (based on paths)
-  - Change signature of `Parse.resolve_file`
+  - Change signature of `Parse.resolve_file` making `?cwd` explicit
 - Library:
   - Better error messages in `std.nth`
   - `declare_constraint` is now `variadic any prop`, so that one can pass
