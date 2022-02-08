@@ -1,7 +1,7 @@
 # v1.14.1 (February 2022)
 
 - Runtime:
-  - Fix unification dealing with a deep `AppArg` (regression)
+  - Fix unification dealing with a deep `AppArg` (regression in 1.14.0)
   
 # v1.14.0 (February 2022)
 
