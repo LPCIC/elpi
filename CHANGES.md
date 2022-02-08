@@ -1,3 +1,8 @@
+# v1.14.1 (February 2022)
+
+- Runtime:
+  - Fix unification dealing with eta expanded clause argument
+  
 # v1.14.0 (February 2022)
 
 - Runtime/FFI:
