@@ -1,0 +1,16 @@
+kind foo type.
+
+type a ((int -> foo) -> foo) -> foo.
+type b foo -> foo.
+
+type p (foo -> foo) -> foo -> prop.
+type q (foo -> foo) -> foo -> prop.
+
+p K (a f\ K (f 0)).
+q K R :- R = (a f\ K (f 0)).
+
+main :-
+  (pi y\ p b (F y)),
+  (pi y\ q b (F y)),
+  (pi x y\ q b (F y)),
+  (pi x y\ p b (F y)).

@@ -235,3 +235,10 @@ let () = declare "eta_as"
   ~description:"eta expansion of as clause"
   ~typecheck:false
   ()
+
+let () = declare "hdclause"
+  ~source_elpi:"hdclause.elpi"
+  ~description:"hdclause unification"
+  ~typecheck:false
+  ()
+  

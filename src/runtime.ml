@@ -1649,7 +1649,7 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
          the clause is at 0 and we are under a pi x\. As a result we do the
          deref to and the rec call at adepth *)
       let args =
-        List.map (move ~argsdepth ~from:bdepth ~to_:(adepth+depth) e) args in
+        List.map (move ~argsdepth ~from:bdepth ~to_:adepth e) args in
       unif argsdepth matching depth adepth a adepth
         (deref_appuv ~from:argsdepth ~to_:(adepth+depth) args e.(i)) empty_env
 
