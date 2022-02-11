@@ -144,8 +144,9 @@ to customize its behavior.
 
 The programming language has the following features
 - Native support for variable binding and substitution, via an Higher Order
-  Abstract Syntax (HOAS) embedding of the object language. The programmer needs
-  not to care about De Bruijn indexes.
+  Abstract Syntax (HOAS) embedding of the object language.
+  The programmer does not need to care about technical devices to handle 
+  bound variables, like De Bruijn indices.
 - Native support for hypothetical context. When moving under a binder one can
   attach to the bound variable extra information that is collected when the
   variable gets out of scope. For example when writing a type-checker the
