@@ -5,4 +5,6 @@
   (modules elpi_REPL)
 )
 
-(vendored_dirs vendor)
+(env
+  (dev
+    (flags (:standard -w -9 -w -32 -w -27 -w -6 -w -37 -warn-error -A))))
