@@ -65,12 +65,6 @@ jobs:
           opam exec -- sed -i ' ' tests/sources/*.elpi
           & "$Env:CYGWIN_ROOT/setup-x86_64.exe" -q -P time
 
-      - name: Satisfy depext of camlp5 on OSX workaround
-        if: runner.os == 'macOS'
-        run: |
-          cpan install IPC::System::Simple
-          cpan install String::ShellQuote
-
 # Build ######################################################################
 #
 # We generate binaries like elpi-4.07.1-Linux.exe in the working directory
