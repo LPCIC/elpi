@@ -80,6 +80,17 @@ jobs:
           opam exec -- make build
           opam exec -- cp _build/install/default/bin/elpi elpi-${{ matrix.ocaml-version }}-${{ runner.os }}.exe
 
+      - name: Strip binary
+        run: opam exec -- strip ${{ env.workspace }}/elpi-${{ matrix.ocaml-version }}-${{ runner.os }}.exe
+
+# Artifacts 1 ################################################################
+
+      - name: Save binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: elpi-${{ matrix.ocaml-version }}-${{ runner.os }}
+          path: elpi-${{ matrix.ocaml-version }}-${{ runner.os }}.exe
+
 # Test ######################################################################
 #
 # We run the test suite which also produces data.csf containing benchmarks
@@ -94,17 +105,7 @@ jobs:
           opam exec -- ls -l tests/sources/*.elpi
           opam exec -- make tests PWD=${{ env.workspace }} RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-version }}-${{ runner.os }}.exe' TIME=--time=${{ env.cygwin_root }}/bin/time.exe
 
-      - name: Strip binary
-        run: opam exec -- strip ${{ env.workspace }}/elpi-${{ matrix.ocaml-version }}-${{ runner.os }}.exe
-
-# Artifacts ##################################################################
-
-
-      - name: Save binary
-        uses: actions/upload-artifact@v2
-        with:
-          name: elpi-${{ matrix.ocaml-version }}-${{ runner.os }}
-          path: elpi-${{ matrix.ocaml-version }}-${{ runner.os }}.exe
+# Artifacts 2 ################################################################
 
       - name: Save benchmarking data
         uses: actions/upload-artifact@v2
