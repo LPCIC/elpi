@@ -22,11 +22,18 @@ RUNNERS=\
   $(addprefix $(PWD)/,$(wildcard _build/git/*/$(INSTALL)/bin/elpi.git.*)) \
   $(shell if type tjsim >/dev/null 2>&1; then type -P tjsim; else echo; fi)
 TIME=--time $(shell if type -P gtime >/dev/null 2>&1; then type -P gtime; else echo /usr/bin/time; fi)
-STACK=32768
+STACK=1114112
 DUNE_OPTS=
+
+CP5:=$(shell ocamlfind query camlp5)
 
 build:
 	dune build $(DUNE_OPTS) @all
+	# hack: link camlp5.gramlib in the plugin
+	ocamlfind opt -shared -linkall -o _build/install/default/lib/elpi/elpi.cmxs \
+		$(CP5)/gramlib.cmxa \
+		_build/install/default/lib/elpi/elpi.cmxa
+
 
 install:
 	dune install $(DUNE_OPTS)
@@ -39,7 +46,7 @@ clean:
 
 tests:
 	$(MAKE) build
-	ulimit -s $(STACK); \
+	ulimit -s $(STACK); OCAMLRUNPARAM=l=$(STACK) \
 		tests/test.exe \
 		--seed $$RANDOM \
 		--timeout $(TIMEOUT) \
@@ -48,9 +55,6 @@ tests:
 		--plot=$(PWD)/tests/plot \
 		$(addprefix --name-match ,$(ONLY)) \
 		$(addprefix --runner , $(RUNNERS))
-
-test-noppx:
-	dune build --workspace dune-workspace.noppx
 
 git/%:
 	rm -rf "_build/git/elpi-$*"

@@ -44,26 +44,35 @@ module Setup : sig
   type elpi
 
   (** Initialize ELPI.
+
       [init] must be called before invoking the parser.
-      [builtins] the set of built-in predicates, eg [Elpi_builtin.std_builtins]
-      [basedir] current working directory (used to make paths absolute);
-      [argv] is list of options, see the {!val:usage} string;
-      It returns part of [argv] not relevant to ELPI and a handle [elpi]
-      to an elpi instance equipped with the given builtins. *)
+
+      @param flags for the compiler, see {!type:Compile.flags}
+      @param builtins the set of built-in predicates, eg {!val:Elpi.Builtin.std_builtins}
+      @param file_resolver maps a file name to an absolute path, if not specified the
+        options like [-I] or the env variable [TJPATH] serve as resolver. The
+        resolver returns the abslute file name
+        (possibly adjusting the file extension). By default it fails.
+        See also {!val:Parse.std_resolver}.
+
+      @return a handle [elpi] to an elpi instance equipped with the given
+        [builtins] and where accumulate resolves files with the given
+        [file_resolver]. *)
   val init :
     ?flags:flags ->
     builtins:builtins list ->
-    basedir:string ->
-    string list -> elpi * string list
+    ?file_resolver:(?cwd:string -> file:string -> unit -> string) ->
+    unit ->
+    elpi
 
   (** Usage string *)
   val usage : string
 
   (** Set tracing options.
       [trace argv] can be called before {!module:Execute}.
-      [argv] is expected to only contain options relevant for
-      the tracing facility. *)
-  val trace : string list -> unit
+      returns options not known to the trace system.
+      *)
+  val trace : string list -> string list
 
   (** Override default runtime error functions (they call exit) *)
   val set_warn : (?loc:Ast.Loc.t -> string -> unit) -> unit
@@ -91,7 +100,13 @@ module Parse : sig
   (** [resolve f] computes the full path of [f] as the parser would do (also)
       for files recursively accumulated. Raises Failure if the file does not
       exist. *)
-  val resolve_file : string -> string
+  val resolve_file : ?cwd:string -> file:string -> unit -> string
+
+  (** [std_resolver cwd paths ()] returns a resolver function that looks in cwd
+      and paths (relative to cwd, or absolute) *)
+  val std_resolver :
+    ?cwd:string -> paths:string list -> unit ->
+      (?cwd:string -> file:string -> unit -> string)
 
   exception ParseError of Ast.Loc.t * string
 end
@@ -247,7 +262,11 @@ module Conversion : sig
 
   type ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
 
-  type extra_goals = Data.term list
+  type extra_goal = ..
+  type extra_goal +=
+    | Unify of Data.term * Data.term
+  
+  type extra_goals = extra_goal list
 
   type 'a embedding =
     depth:int ->
@@ -313,7 +332,7 @@ end
 (** Conversion for Elpi's built-in data types *)
 module BuiltInData : sig
 
-  (** See Elpi_builtin for a few more *)
+  (** See {!module:Elpi.Builtin} for a few more *)
   val int    : int Conversion.t
   val float  : float Conversion.t
   val string : string Conversion.t
@@ -736,6 +755,7 @@ module FlexibleData : sig
     val pp :  Format.formatter -> t -> unit
     val show :  t -> string
     val equal : t -> t -> bool
+    val hash : t -> int
   end
 
   module type Host = sig
@@ -761,6 +781,45 @@ module FlexibleData : sig
 
     val elpi   : Host.t -> t -> Elpi.t
     val host : Elpi.t -> t -> Host.t
+
+    val uvmap : t State.component
+
+    val pp : Format.formatter -> t -> unit
+    val show : t -> string
+  end
+
+  module type HostWeak = sig
+    type t
+    val equal : t -> t -> bool
+    val hash : t -> int
+    val pp : Format.formatter -> t -> unit
+    val show : t -> string
+  end
+
+  module type Show = sig
+    type t
+    val pp : Format.formatter -> t -> unit
+    val show : t -> string
+  end
+
+  (* Keys Elpi.t and Host.t are weak, if any goes loose the entry is removed.
+     The reference to D.t is strong (but held by the weak ones) *)
+  module WeakMap : functor(Host : HostWeak) -> functor (D : Show) -> sig
+    type t
+
+    val create : int -> t
+    val add : Elpi.t -> Host.t -> D.t -> t -> unit
+
+    val remove_elpi : Elpi.t -> t -> unit
+    val remove_host : Host.t -> t -> unit
+
+    val filter : (Host.t -> Elpi.t -> D.t -> bool) -> t -> unit
+
+    (* The eventual body at its depth *)
+    val fold : (Host.t -> Elpi.t -> Data.term option -> D.t -> 'a -> 'a) -> t -> 'a -> 'a
+
+    val elpi   : Host.t -> t -> Elpi.t * D.t
+    val host : Elpi.t -> t -> Host.t * D.t
 
     val uvmap : t State.component
 
@@ -951,14 +1010,14 @@ module RawData : sig
 
     val show : constant -> string
 
-    val eqc    : constant (* = *)
+    val eqc    : builtin (* = *)
     val orc    : constant (* ; *)
     val andc   : constant (* , *)
     val rimplc : constant (* :- *)
     val pic    : constant (* pi *)
     val sigmac : constant (* sigma *)
     val implc  : constant (* => *)
-    val cutc   : constant (* ! *)
+    val cutc   : builtin (* ! *)
 
     (* LambdaProlog built-in data types are just instances of CData.
      * The typeabbrev machinery translates [int], [float] and [string]
@@ -972,6 +1031,20 @@ module RawData : sig
     module Set : Set.S with type elt = constant
 
   end
+
+  (* This extra_goal can be used as a target for postprocessing *)
+  type Conversion.extra_goal +=
+  | RawGoal of Data.term
+
+  (* This function is called just before returning from a builtin predicate,
+     it has visibility over all extra_goals and can add or remove some.
+     It must elaborate any extra_goal specific to the host application to
+     either Conversion.Unify or RawData.RawGoal.
+     
+     Since extension to the data type extra_goal are global to all elpi
+     instances, this post-processing function is also global *)
+  val set_extra_goals_postprocessing :
+    (Conversion.extra_goals -> State.t -> State.t * Conversion.extra_goals) -> unit
 
 end
 
@@ -989,7 +1062,7 @@ module RawQuery : sig
   val is_Arg : State.t -> Data.term -> bool
 
   val compile :
-    Compile.program -> (depth:int -> State.t -> State.t * (Ast.Loc.t * Data.term)) ->
+    Compile.program -> (depth:int -> State.t -> State.t * (Ast.Loc.t * Data.term) * Conversion.extra_goals) ->
       unit Compile.query
 
 end

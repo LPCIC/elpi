@@ -100,10 +100,19 @@ type term =
   | AppArg of (*id*)int * term list
 and uvar_body = {
   mutable contents : term [@printer (pp_spaghetti_any ~id:id_term pp_oref)];
-  mutable rest : stuck_goal list [@printer fun _ _ -> ()]
-                                 [@equal fun _ _ -> true];
+  mutable uid_private : int; (* unique name, the sign is flipped when blocks a constraint *)
 }
-and stuck_goal = {
+[@@deriving show]
+
+(* we use this projection to be sure we ignore the sign *)
+let uvar_id { uid_private } = abs uid_private [@@inline];;
+let uvar_is_a_blocker   { uid_private } = uid_private < 0 [@@inline];;
+let uvar_isnt_a_blocker { uid_private } = uid_private > 0 [@@inline];;
+
+let uvar_set_blocker r   = r.uid_private <- -(uvar_id r) [@@inline];;
+let uvar_unset_blocker r = r.uid_private <-  (uvar_id r) [@@inline];;
+
+type stuck_goal = {
   mutable blockers : blockers;
   kind : unification_def stuck_goal_kind;
 }
@@ -149,7 +158,6 @@ and mode = bool list (* true=input, false=output *)
 
 type constraints = stuck_goal list
 type hyps = clause_src list
-type extra_goals = term list
 
 type suspended_goal = {
   context : hyps;
@@ -204,7 +212,9 @@ let destConst = function Const x -> x | _ -> assert false
 
 (* Our ref data type: creation and dereference.  Assignment is defined
    After the constraint store, since assigning may wake up some constraints *)
-let oref x = { contents = x; rest = [] }
+let oref =
+  let uid = ref 0 in
+  fun x -> incr uid; assert(!uid > 0); { contents = x; uid_private = !uid }
 let (!!) { contents = x } = x
 
 (* Arg/AppArg point to environments, here the empty one *)
@@ -477,6 +487,7 @@ end
 
 (* This term is hashconsed here *)
 let dummy = App (Global_symbols.cutc,Const Global_symbols.cutc,[])
+let dummy_uvar_body = { contents = dummy; uid_private = 0 }
 
 module CHR : sig
 
@@ -591,6 +602,15 @@ exception No_more_steps
 
 module Conversion = struct
 
+  type extra_goal = .. 
+
+  type extra_goal +=
+    | Unify of term * term
+    | RawGoal of term
+  type extra_goals = extra_goal list
+  type extra_goals_postprocessing = extra_goals -> State.t -> State.t * extra_goals
+  let extra_goals_postprocessing : extra_goals_postprocessing ref = ref (fun x s -> s, x)
+  
   type ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
   [@@deriving show]
 
@@ -619,6 +639,14 @@ let rec show_ty_ast ?(outer=true) = function
       let t = String.concat " " (s :: List.map (show_ty_ast ~outer:false) (x::xs)) in
       if outer then t else "("^t^")"
 
+let term_of_extra_goal = function
+  | Unify(a,b) -> Builtin(Global_symbols.eqc,[a;b])
+  | RawGoal x -> x
+  | x ->
+      Util.anomaly (Printf.sprintf "Unprocessed extra_goal: %s.\nOnly %s and %s can be left unprocessed,\nplease call API.RawData.set_extra_goals_postprocessing.\n"
+        (Obj.(extension_name (extension_constructor x)))
+        (Obj.(extension_name (extension_constructor (Unify(dummy,dummy)))))
+        (Obj.(extension_name (extension_constructor (RawGoal dummy)))))
 
 end
 
@@ -629,11 +657,11 @@ module ContextualConversion = struct
 
   type ('a,'hyps,'constraints) embedding =
     depth:int -> 'hyps -> 'constraints ->
-    State.t -> 'a -> State.t * term * extra_goals
+    State.t -> 'a -> State.t * term * Conversion.extra_goals
 
   type ('a,'hyps,'constraints) readback =
     depth:int -> 'hyps -> 'constraints ->
-    State.t -> term -> State.t * 'a * extra_goals
+    State.t -> term -> State.t * 'a * Conversion.extra_goals
 
   type ('a,'hyps,'constraints) t = {
     ty : ty_ast;
@@ -645,7 +673,7 @@ module ContextualConversion = struct
   [@@deriving show]
 
   type ('hyps,'constraints) ctx_readback =
-    depth:int -> hyps -> constraints -> State.t -> State.t * 'hyps * 'constraints * extra_goals
+    depth:int -> hyps -> constraints -> State.t -> State.t * 'hyps * 'constraints * Conversion.extra_goals
 
   let unit_ctx : (unit,unit) ctx_readback = fun ~depth:_ _ _ s -> s, (), (), []
   let raw_ctx : (hyps,constraints) ctx_readback = fun ~depth:_ h c s -> s, h, c, []
@@ -733,7 +761,7 @@ type ('function_type, 'inernal_outtype_in, 'internal_hyps, 'internal_constraints
 
   | Easy : doc -> (depth:int -> 'o, 'o,unit,unit) ffi
   | Read : ('h,'c) ContextualConversion.ctx_readback * doc -> (depth:int -> 'h -> 'c -> State.t -> 'o, 'o,'h,'c) ffi
-  | Full : ('h,'c) ContextualConversion.ctx_readback * doc -> (depth:int -> 'h -> 'c -> State.t -> State.t * 'o * extra_goals, 'o,'h,'c) ffi
+  | Full : ('h,'c) ContextualConversion.ctx_readback * doc -> (depth:int -> 'h -> 'c -> State.t -> State.t * 'o * Conversion.extra_goals, 'o,'h,'c) ffi
   | VariadicIn    : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t list -> depth:int -> 'h -> 'c -> State.t -> State.t * 'o, 'o,'h,'c) ffi
   | VariadicOut   : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t oarg list -> depth:int -> 'h -> 'c -> State.t -> State.t * ('o * 't option list option), 'o,'h,'c) ffi
   | VariadicInOut : ('h,'c) ContextualConversion.ctx_readback * ('t ioarg,'h,'c) ContextualConversion.t * doc -> ('t ioarg list -> depth:int -> 'h -> 'c -> State.t -> State.t * ('o * 't option list option), 'o,'h,'c) ffi
@@ -770,16 +798,16 @@ type ('match_stateful_t,'match_t, 't) match_t =
         (* continuation to call passing subterms *)
         ok:'match_stateful_t ->
         (* continuation to call to signal pattern matching failure *)
-        ko:(State.t -> State.t * term * extra_goals) ->
+        ko:(State.t -> State.t * term * Conversion.extra_goals) ->
         (* match 't and pass its subterms to ~ok or just call ~ko *)
-        't -> State.t -> State.t * term * extra_goals)
+        't -> State.t -> State.t * term * Conversion.extra_goals)
 type ('build_stateful_t,'build_t) build_t =
   | B of 'build_t
   | BS of 'build_stateful_t
 
 type ('stateful_builder,'builder, 'stateful_matcher, 'matcher,  'self, 'hyps,'constraints) constructor_arguments =
   (* No arguments *)
-  | N : (State.t -> State.t * 'self, 'self, State.t -> State.t * term * extra_goals, term, 'self, 'hyps,'constraints) constructor_arguments
+  | N : (State.t -> State.t * 'self, 'self, State.t -> State.t * term * Conversion.extra_goals, term, 'self, 'hyps,'constraints) constructor_arguments
   (* An argument of type 'a *)
   | A : 'a Conversion.t * ('bs,'b, 'ms,'m, 'self, 'hyps,'constraints) constructor_arguments -> ('a -> 'bs, 'a -> 'b, 'a -> 'ms, 'a -> 'm, 'self, 'hyps,'constraints) constructor_arguments
   (* An argument of type 'a in context 'hyps,'constraints *)
@@ -805,16 +833,16 @@ type ('t,'h,'c) declaration = {
 }
 
 type ('b,'m,'t,'h,'c) compiled_constructor_arguments =
-  | XN : (State.t -> State.t * 't,State.t -> State.t * term * extra_goals, 't,'h,'c) compiled_constructor_arguments
+  | XN : (State.t -> State.t * 't,State.t -> State.t * term * Conversion.extra_goals, 't,'h,'c) compiled_constructor_arguments
   | XA : ('a,'h,'c) ContextualConversion.t * ('b,'m,'t,'h,'c) compiled_constructor_arguments -> ('a -> 'b, 'a -> 'm, 't,'h,'c) compiled_constructor_arguments
 
 type ('match_t, 't) compiled_match_t =
   (* continuation to call passing subterms *)
   ok:'match_t ->
   (* continuation to call to signal pattern matching failure *)
-  ko:(State.t -> State.t * term * extra_goals) ->
+  ko:(State.t -> State.t * term * Conversion.extra_goals) ->
   (* match 't and pass its subterms to ~ok or just call ~ko *)
-  't -> State.t -> State.t * term * extra_goals
+  't -> State.t -> State.t * term * Conversion.extra_goals
 
 type ('t,'h,'c) compiled_constructor =
     XK : ('build_t,'matched_t,'t,'h,'c) compiled_constructor_arguments *
@@ -829,9 +857,9 @@ let buildk ~mkConst kname = function
 
 let rec readback_args : type a m t h c.
   look:(depth:int -> term -> term) ->
-  Conversion.ty_ast -> depth:int -> h -> c -> State.t -> extra_goals list -> term ->
+  Conversion.ty_ast -> depth:int -> h -> c -> State.t -> Conversion.extra_goals list -> term ->
   (a,m,t,h,c) compiled_constructor_arguments -> a -> term list ->
-    State.t * t * extra_goals
+    State.t * t * Conversion.extra_goals
 = fun ~look ty ~depth hyps constraints state extra origin args convert l ->
     match args, l with
     | XN, [] ->
@@ -850,7 +878,7 @@ and readback : type t h c.
   alloc:(?name:string -> State.t -> State.t * 'uk) ->
   mkUnifVar:('uk -> args:term list -> State.t -> term) ->
   Conversion.ty_ast -> (t,h,c) compiled_adt -> depth:int -> h -> c -> State.t -> term ->
-    State.t * t * extra_goals
+    State.t * t * Conversion.extra_goals
 = fun ~mkinterval ~look ~alloc ~mkUnifVar ty adt ~depth hyps constraints state t ->
   try match look ~depth t with
   | Const c ->
@@ -875,7 +903,7 @@ and adt_embed_args : type m a t h c.
   Conversion.ty_ast -> (t,h,c) compiled_adt -> constant ->
   depth:int -> h -> c ->
   (a,m,t,h,c) compiled_constructor_arguments ->
-  (State.t -> State.t * term * extra_goals) list ->
+  (State.t -> State.t * term * Conversion.extra_goals) list ->
     m
 = fun ~mkConst ty adt kname ~depth hyps constraints args acc ->
     match args with
@@ -896,7 +924,7 @@ and embed : type a h c.
   Conversion.ty_ast -> (Format.formatter -> a -> unit) ->
   (a,h,c) compiled_adt ->
   depth:int -> h -> c -> State.t ->
-    a -> State.t * term * extra_goals
+    a -> State.t * term * Conversion.extra_goals
 = fun ~mkConst ty pp adt ->
   let bindings = Constants.Map.bindings adt in
   fun ~depth hyps constraints state t ->
@@ -934,7 +962,7 @@ let compile_builder : type bs b m ms t h c. (bs,b,ms,m,t,h,c) constructor_argume
     | BS f -> f
 
 let rec compile_matcher_ok : type bs b m ms t h c.
-  (bs,b,ms,m,t,h,c) constructor_arguments -> ms -> extra_goals ref -> State.t ref -> m
+  (bs,b,ms,m,t,h,c) constructor_arguments -> ms -> Conversion.extra_goals ref -> State.t ref -> m
   = fun args f gls state ->
     match args with
     | N -> let state', t, gls' = f !state in
@@ -1164,7 +1192,7 @@ type 'a executable = {
 }
 
 type pp_ctx = {
-  uv_names : (string Util.PtrMap.t * int) ref;
+  uv_names : (string Util.IntMap.t * int) ref;
   table : symbol_table;
 }
 

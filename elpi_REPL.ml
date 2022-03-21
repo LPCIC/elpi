@@ -59,9 +59,11 @@ let usage =
   "\t-D var  Define variable (conditional compilation)\n" ^ 
   "\t-document-builtins Print documentation for built-in predicates\n" ^
   "\t-no-tc don't typecheck the program\n" ^ 
+  "\t-I PATH  search for accumulated files in PATH\n" ^
   "\t-delay-problems-outside-pattern-fragment (deprecated, for Teyjus\n" ^
   "\t                                          compatibility)\n" ^
-  "\t-version prints the version of Elpi\n" ^ 
+  "\t--version prints the version of Elpi (also -v or -version)\n" ^ 
+  "\t--help prints this help (also -h or -help)\n" ^ 
  API.Setup.usage ^
   "\nDebug options (for debugging Elpi, not your program):\n" ^ 
   "\t-print-accumulated-files prints files loaded via accumulate\n" ^ 
@@ -88,6 +90,7 @@ let _ =
   let print_passes = ref false in
   let print_units = ref false in
   let print_accumulated_files = ref false in
+  let extra_paths = ref [] in
   let vars =
     ref API.Compile.(default_flags.defined_variables) in
   let rec eat_options = function
@@ -103,35 +106,36 @@ let _ =
     | "-no-tc" :: rest -> typecheck := false; eat_options rest
     | "-document-builtins" :: rest -> doc_builtins := true; eat_options rest
     | "-D" :: var :: rest -> vars := API.Compile.StrSet.add var !vars; eat_options rest
-    | ("-h" | "--help") :: _ -> Printf.eprintf "%s" usage; exit 0
-    | "-version" :: _ -> Printf.printf "%s\n" "%%VERSION_NUM%%"; exit 0
+    | "-I" :: p :: rest -> extra_paths := !extra_paths @ [p]; eat_options rest
+    | ("-h" | "--help" | "-help") :: _ -> Printf.eprintf "%s" usage; exit 0
+    | ("-v" | "--version" | "-version") :: _ -> Printf.printf "%s\n" "%%VERSION_NUM%%"; exit 0
     | "--" :: rest -> rest
     | x :: rest -> x :: eat_options rest
   in
-  let cwd = Unix.getcwd () in
   let tjpath =
     let v = try Sys.getenv "TJPATH" with Not_found -> "" in
-    let tjpath = Str.split (Str.regexp ":") v in
-    List.flatten (List.map (fun x -> ["-I";x]) tjpath) in
+    Str.split (Str.regexp ":") v in
   let installpath = 
     let v = try Sys.getenv "OCAMLPATH" with Not_found -> "" in
-    let ocamlpath =
-      (Filename.dirname Sys.executable_name ^ "/../lib/") ::
-      (Filename.dirname Sys.executable_name ^ "/../lib/ocaml") ::
-      Str.split (Str.regexp ":") v in
-    List.flatten (List.map (fun x -> ["-I";x^"/elpi/"]) ocamlpath) in
-  let execpath = ["-I"; Filename.dirname (Sys.executable_name)] in
-  let argv = tjpath @ installpath @ execpath @ List.tl (Array.to_list Sys.argv) in
+    (Filename.dirname Sys.executable_name ^ "/../lib/") ::
+    (Filename.dirname Sys.executable_name ^ "/../lib/ocaml") ::
+    Str.split (Str.regexp ":") v in
+  let execpath = Filename.dirname (Sys.executable_name) in
+  let argv = List.tl (Array.to_list Sys.argv) in
   let argv = eat_options argv in
+  let paths = tjpath @ installpath @ [execpath] @ !extra_paths in
   let flags = {
       API.Compile.defined_variables = !vars;
       API.Compile.print_passes = !print_passes;
       API.Compile.print_units = !print_units;
   } in
-  let elpi, argv =
+  let elpi =
     API.Setup.init
       ~flags:(API.Compile.to_setup_flags flags)
-      ~builtins:[Builtin.std_builtins] argv ~basedir:cwd in
+      ~builtins:[Builtin.std_builtins]
+      ~file_resolver:(API.Parse.std_resolver ~paths ())
+      () in
+  let argv = API.Setup.trace argv in
   let rec eat_filenames acc = function
     | [] -> List.rev acc, []
     | "--" :: rest -> List.rev acc, rest

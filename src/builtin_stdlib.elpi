@@ -3,7 +3,7 @@
 % Conventions:
 % - all predicates declare a mode with some input arguments, unless...
 % - predicates whose name ends with R are relations (work in any direction,
-%   that is all arguments are in ouput mode)
+%   that is all arguments are in output mode)
 % - predicates whose name ends with ! do contain a cut and generate only the
 %   first result
 % - all errors given by this library end up calling fatal-error[-w-data],
@@ -162,8 +162,9 @@ omap (some X) F (some Y) :- F X Y.
 
 % [nth N L X] picks in X the N-th element of L (L must be of length > N)
 pred nth i:int, i:list A, o:A.
-nth 0 [X|_] X :- !.
-nth N [_|XS] R :- !, N1 is N - 1, nth N1 XS R.
+nth 0 [X|_ ] R :- !, X = R.
+nth N [_|XS] R :- N > 0, !, N1 is N - 1, nth N1 XS R.
+nth N _ _ :- N < 0, !, fatal-error "nth got a negative index".
 nth _ _ _ :- fatal-error "nth run out of list items".
 
 % [lookup L K V] sees L as a map from K to V

@@ -6,6 +6,11 @@ macro @ctx A :- c (_\ A). % to have depth > 0 in unif
 k1 (x\ g x).
 k2 g.
 
+%mode (foo i i).
+pred foo i:(X -> X), i:(X -> X -> X).
+foo X (x1 \ (x2 \ X x2)) :- (print X).
+%% Fails, but should output `y`
+
 main :-
   pi f y\
     % 4 branches in unif
@@ -20,5 +25,8 @@ main :-
 
     % index + adepth=2 <> bdepth=0
     k1 g,
-    k2 (x\ g x)
+    k2 (x\ g x),
+    
+    % regression #135
+    foo y (x1 \ (x2 \ y x2))
 .

@@ -39,6 +39,7 @@ let print_header ~executables ~seed ~timeout =
   printf [blue] "Runners:"; printf [] " %s\n" (String.concat " " executables);
   printf [blue] "Random seed:"; printf [] " %d\n" seed;
   printf [blue] "Timeout:"; printf [] " %.2f seconds\n" timeout;
+  printf [blue] "Fiber stack:"; printf [] " %d\n" (Gc.get ()).Gc.stack_limit;
   printf [blue] "\n";
   printf [blue] "status   test                  time   typchk wall   mem     runner\n";
   printf [blue] "------------------------------------------------------------------\n";

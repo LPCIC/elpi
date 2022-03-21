@@ -8,10 +8,10 @@ open Data
 module Pp : sig
 
   val ppterm :
-    ?pp_ctx:pp_ctx -> ?min_prec:int -> int -> string list -> int -> env ->
+    ?pp_ctx:pp_ctx -> ?min_prec:int -> int -> string list -> argsdepth:int -> env ->
        Format.formatter -> term -> unit
   val uppterm :
-    ?pp_ctx:pp_ctx -> ?min_prec:int -> int -> string list -> int -> env ->
+    ?pp_ctx:pp_ctx -> ?min_prec:int -> int -> string list -> argsdepth:int -> env ->
        Format.formatter -> term -> unit
 
   val pp_constant : ?pp_ctx:pp_ctx -> Format.formatter -> constant -> unit
@@ -22,7 +22,7 @@ val pp_stuck_goal : ?pp_ctx:pp_ctx -> Fmt.formatter -> stuck_goal -> unit
 val embed_query :
   mk_Arg:(State.t -> name:string -> args:term list -> State.t * term) ->
   depth:int ->
-  State.t -> 'a Query.t -> State.t * term
+  State.t -> 'a Query.t -> State.t * term * Conversion.extra_goals
 
 (* Interpreter API *)
 val execute_once :
@@ -34,6 +34,7 @@ val execute_loop :
 val deref_uv : ?avoid:uvar_body -> from:constant -> to_:constant -> int -> term -> term
 val deref_appuv : ?avoid:uvar_body -> from:constant -> to_:constant -> term list -> term -> term
 val deref_head : depth:int -> term -> term
+val eta_contract_flex : depth:int -> term -> term option
 val is_flex : depth:int -> term -> uvar_body option
 
 val expand_uv : depth:int -> uvar_body -> lvl:int -> ano:int -> term
@@ -50,7 +51,7 @@ val mkAppL : constant -> term list -> term
 
 val mkAppArg : int -> int -> term list -> term
 val move : 
-  adepth:int -> env ->
+  argsdepth:int -> env ->
   ?avoid:uvar_body ->
   from:int -> to_:int -> term -> term
 val hmove : 

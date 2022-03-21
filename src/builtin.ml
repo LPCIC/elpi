@@ -199,20 +199,20 @@ let really_input ic s ofs len =
 
 (* constant x occurs in term t with level d? *)
 let occurs x d t =
-   let rec aux t = match look ~depth:d t with
+   let rec aux d t = match look ~depth:d t with
      | Const c                          -> c = x
-     | Lam t                            -> aux t
-     | App (c, v, vs)                   -> c = x || aux v || auxs vs
-     | UnifVar (_, l)                   -> auxs l
-     | Builtin (_, vs)                  -> auxs vs
-     | Cons (v1, v2)                    -> aux v1 || aux v2
+     | Lam t                            -> aux (d+1) t
+     | App (c, v, vs)                   -> c = x || aux d v || auxs d vs
+     | UnifVar (_, l)                   -> auxs d l
+     | Builtin (_, vs)                  -> auxs d vs
+     | Cons (v1, v2)                    -> aux d v1 || aux d v2
      | Nil
      | CData _                          -> false
-   and auxs = function
+   and auxs d = function
      | []      -> false
-     | t :: ts -> aux t || auxs ts
+     | t :: ts -> aux d t || auxs d ts
    in
-   x < d && aux t
+   x < d && aux d t
 
 type polyop = {
   p : 'a. 'a -> 'a -> bool;
@@ -395,9 +395,8 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
   LPCode "pred fail.";
   LPCode "pred false.";
 
-  LPCode "pred (=) o:A, o:A.";
-  LPCode "X = X.";
-
+  LPCode "external pred (=) o:A, o:A. % unification";
+  
   MLData BuiltInData.int;
   MLData BuiltInData.string;
   MLData BuiltInData.float;
@@ -426,8 +425,9 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
 
   (* These are not implemented here since the API has no access to the
    * store of syntactic constraints *)
-  LPCode ("% [declare_constraint C Keys] declares C with Keys (a list of variables).\n"^
-          "external pred declare_constraint i:any, i:list any.");
+  LPCode ("% [declare_constraint C Key1 Key2...] declares C blocked\n"^
+          "% on Key1 Key2 ... (variables, or lists thereof).\n"^
+          "external type declare_constraint variadic any prop.");
   LPCode "external pred print_constraints. % prints all constraints";
 
   MLCode(Pred("halt", VariadicIn(unit_ctx, !> BuiltInData.any, "halts the program and print the terms"),
@@ -646,7 +646,7 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
      try
        let pos = pos_in i in
        let _ = input_char i in
-       Pervasives.seek_in i pos;
+       Stdlib.seek_in i pos;
        raise No_clause
      with
      | End_of_file -> ()
@@ -725,7 +725,7 @@ let lp_builtins = let open BuiltIn in let open BuiltInData in [
      try
        let pos = pos_in i in
        let c = input_char i in
-       Pervasives.seek_in i pos;
+       Stdlib.seek_in i pos;
        !:(String.make 1 c)
      with
      | End_of_file -> !:""
@@ -807,7 +807,11 @@ counter C N :- trace.counter C N.|};
      Full    (unit_ctx, "quotes the program from FileName and the QueryText. "^
               "See elpi-quoted_syntax.elpi for the syntax tree"))))),
    (fun f s _ _ ~depth _ _ state ->
-      let elpi, _ = Setup.init ~builtins:[BuiltIn.declare ~file_name:"(dummy)" []] ~basedir:Sys.(getcwd()) [] in
+      let elpi =
+        Setup.init
+          ~builtins:[BuiltIn.declare ~file_name:"(dummy)" []]
+          ~file_resolver:(Parse.std_resolver ~paths:[] ())
+          () in
       try
         let ap = Parse.program ~elpi [f] in
         let loc = Ast.Loc.initial "(quote_syntax)" in
@@ -988,8 +992,13 @@ let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in let o
     | Data x, [Data y; Data args] ->
         let vx, ax = is_var x in
         let vy, ay = is_var y in
-        !: (mkUnifVar vy ~args:(ay @ lp_list_to_list ~depth args) state)
-        +! [Some (mkUnifVar vx ~args:[] state); Some (list_to_lp_list ax)]
+        begin match look ~depth args with
+        | UnifVar _ ->
+          ?: None +! [Some (mkUnifVar vx ~args:[] state); Some (list_to_lp_list ax)]
+        | _ ->
+          !: (mkUnifVar vy ~args:(ay @ lp_list_to_list ~depth args) state)
+          +! [Some (mkUnifVar vx ~args:[] state); Some (list_to_lp_list ax)]
+        end
     | _ -> raise No_clause)),
   DocAbove);
 
@@ -1302,7 +1311,7 @@ let map = OpaqueData.declare {
   OpaqueData.name;
   doc = "";
   pp = (fun fmt m -> Format.fprintf fmt "%a" (Map.pp closed_A.pp) m );
-  compare = (fun m1 m2 -> Map.compare Pervasives.compare m1 m2);
+  compare = (fun m1 m2 -> Map.compare Stdlib.compare m1 m2);
   hash = Hashtbl.hash;
   hconsed = false;
   constants = [];
@@ -1509,6 +1518,6 @@ let std_builtins =
 
 
 let default_checker () =
-  let elpi, _ = API.Setup.init ~builtins:[std_builtins] ~basedir:(Sys.getcwd ()) [] in
+  let elpi = API.Setup.init ~builtins:[std_builtins] () in
   let ast = API.Parse.program_from_stream ~elpi (API.Ast.Loc.initial "(checker)") (Stream.of_string Builtin_checker.code) in
   API.Compile.program ~flags:API.Compile.default_flags ~elpi [ast]

@@ -312,6 +312,7 @@ let is_declared_str state x =
   || x == Symbols.(show state D.Global_symbols.declare_constraintc)
   || x == Symbols.(show state D.Global_symbols.print_constraintsc)
   || x == Symbols.(show state D.Global_symbols.cutc)
+  || x == Symbols.(show state D.Global_symbols.eqc)
   || x == Symbols.(show state D.Global_symbols.findall_solutionsc)
 ;;
 
@@ -321,6 +322,7 @@ let is_declared state x =
   || x == D.Global_symbols.declare_constraintc
   || x == D.Global_symbols.print_constraintsc
   || x == D.Global_symbols.cutc
+  || x == D.Global_symbols.eqc
   || x == D.Global_symbols.findall_solutionsc
 ;;
 
@@ -781,7 +783,7 @@ module ToDBL : sig
       Loc.t * Ast.Term.t -> State.t * preterm
   val query_preterm_of_function :
     depth:int -> macro_declaration -> State.t ->
-    (State.t -> State.t * (Loc.t * term)) ->
+    (State.t -> State.t * (Loc.t * term) * Conversion.extra_goals) ->
       State.t * preterm
 
   (* Exported for quations *)
@@ -1081,7 +1083,14 @@ let preterms_of_ast ?on_type loc ~depth macros state f t =
 let query_preterm_of_function ~depth macros state f =
   assert(is_empty_amap (get_argmap state));
   let state = set_mtm state (Some { macros }) in
-  let state, (loc, term) = f state in
+  let state, (loc, main), gls = f state in
+  let state, gls = !Data.Conversion.extra_goals_postprocessing gls state in
+  let gls = List.map Data.Conversion.term_of_extra_goal gls in
+  let term =
+    match gls @ [main] with
+    | [] -> assert false
+    | [g] -> g
+    | x :: xs -> mkApp D.Global_symbols.andc x xs in
   let amap = get_argmap state in
   state, { amap; term; loc; spilling = false }
 
@@ -1929,7 +1938,7 @@ end (* }}} *)
 
 let w_symbol_table s f x =
   let table = Symbols.compile_table @@ State.get Symbols.table s in
-  let pp_ctx = { table; uv_names = ref (PtrMap.empty (),0) } in
+  let pp_ctx = { table; uv_names = ref (IntMap.empty,0) } in
   Util.set_spaghetti_printer Data.pp_const (R.Pp.pp_constant ~pp_ctx);
   f x
 
@@ -2128,7 +2137,7 @@ let query_of_ast (compiler_state, assembled_program) t =
   let query_env = Array.make query.amap.nargs D.dummy in
   let state, queryt = stack_term_of_preterm ~depth:initial_depth state query in
   let initial_goal =
-    R.move ~adepth:initial_depth ~from:initial_depth ~to_:initial_depth query_env
+    R.move ~argsdepth:initial_depth ~from:initial_depth ~to_:initial_depth query_env
       queryt in
   let assignments = StrMap.map (fun i -> query_env.(i)) query.amap.n2i in
   {
@@ -2159,7 +2168,7 @@ let query_of_term (compiler_state, assembled_program) f =
   let query_env = Array.make query.amap.nargs D.dummy in
     let state, queryt = stack_term_of_preterm ~depth:initial_depth state query in
   let initial_goal =
-    R.move ~adepth:initial_depth ~from:initial_depth ~to_:initial_depth query_env
+    R.move ~argsdepth:initial_depth ~from:initial_depth ~to_:initial_depth query_env
       queryt in
   let assignments = StrMap.map (fun i -> query_env.(i)) query.amap.n2i in
  {
@@ -2180,8 +2189,8 @@ let query_of_term (compiler_state, assembled_program) f =
 let query_of_data (state, p) loc (Query.Query { arguments } as descr) =
   let state = State.begin_goal_compilation state in
   let query = query_of_term (state, p) (fun ~depth state ->
-    let state, term = R.embed_query ~mk_Arg ~depth state descr in
-    state, (loc, term)) in
+    let state, term, gls = R.embed_query ~mk_Arg ~depth state descr in
+    state, (loc, term), gls) in
   { query with query_arguments = arguments }
 
 let lookup_query_predicate (state, p) pred =
@@ -2347,7 +2356,7 @@ let pp_query pp fmt {
     compiler_state;
     query; } =
   let pp_ctx = {
-    uv_names = ref (PtrMap.empty (), 0);
+    uv_names = ref (IntMap.empty, 0);
     table = Symbols.compile_table (State.get Symbols.table compiler_state);
   } in
   Format.fprintf fmt "@[<v>";
@@ -2533,7 +2542,7 @@ let term_of_ast ~depth state t =
     ) state t in
  let env = Array.make nargs D.dummy in
  let argsdepth = depth in
- state, R.move ~adepth:argsdepth ~from:depth ~to_:depth env t
+ state, R.move ~argsdepth ~from:depth ~to_:depth env t
 ;;
 
 let static_check ~exec ~checker:(state,program)
@@ -2558,7 +2567,7 @@ let static_check ~exec ~checker:(state,program)
   let query =
     query_of_term (state, program) (fun ~depth state ->
       assert(depth=0);
-      state, (loc,App(checkc,R.list_to_lp_list p,[q;R.list_to_lp_list tlist;R.list_to_lp_list talist]))) in
+      state, (loc,App(checkc,R.list_to_lp_list p,[q;R.list_to_lp_list tlist;R.list_to_lp_list talist])), []) in
   let executable = optimize_query query in
   exec executable <> Failure
 ;;

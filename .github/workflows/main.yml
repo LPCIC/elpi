@@ -17,9 +17,12 @@ jobs:
           - ubuntu-latest
           - windows-latest
         ocaml-version:
+          - 4.12.0+domains
           - 4.11.1
           - 4.07.1
-          - 4.04.1
+        exclude:
+          - os: windows-latest
+            ocaml-version: 4.12.0+domains
 
     runs-on: ${{ matrix.os }}
 
@@ -129,7 +132,9 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install extra stuff
-        run: sudo apt-get install lua5.1 gnuplot
+        run: |
+          sudo apt-get update
+          sudo apt-get install lua5.1 gnuplot
 
       - name: Download all artifacts
         uses: actions/download-artifact@v2

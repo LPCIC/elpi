@@ -105,7 +105,7 @@ that implements W (ML type inference) in Elpi is also available.
 
 The easiest way of embedding ELPI is by linking it using
 [findlib](http://projects.camlcity.org/projects/findlib.html)
-as in `ocamlfind opt -package elpi mycode.ml -o myprogram`.
+as in `ocamlfind opt -package elpi -linkpkg mycode.ml -o myprogram`.
 The API the host application can use to drive ELPI is documented in the
 [API.mli](src/API.mli) file ([html rendering](https://lpcic.github.io/elpi/elpi/Elpi/index.html)). The 
 [Builtin.ml](src/builtin.ml) file contains example of
@@ -144,8 +144,9 @@ to customize its behavior.
 
 The programming language has the following features
 - Native support for variable binding and substitution, via an Higher Order
-  Abstract Syntax (HOAS) embedding of the object language. The programmer needs
-  not to care about De Bruijn indexes.
+  Abstract Syntax (HOAS) embedding of the object language.
+  The programmer does not need to care about technical devices to handle 
+  bound variables, like De Bruijn indices.
 - Native support for hypothetical context. When moving under a binder one can
   attach to the bound variable extra information that is collected when the
   variable gets out of scope. For example when writing a type-checker the

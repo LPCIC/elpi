@@ -8,7 +8,7 @@ let r = ref (module Runtime_trace_off : Runtime)
 
 let set_runtime b =
   begin match b with
-  | true  -> r := (module Runtime_trace_on  : Runtime)
+  | true  -> r := (module Runtime  : Runtime)
   | false -> r := (module Runtime_trace_off : Runtime)
   end;
   let module R = (val !r) in
@@ -25,18 +25,14 @@ type builtins = Compiler.builtins
 type elpi = Parser.parser_state * Compiler.header
 type flags = Compiler.flags
 
-let init ?(flags=Compiler.default_flags) ~builtins ~basedir:cwd argv =
-  let new_argv = set_trace argv in
-  let new_argv, paths =
-    let rec aux args paths = function
-      | [] -> List.rev args, List.rev paths
-      | "-I" :: p :: rest -> aux args (p :: paths) rest
-      | x :: rest -> aux (x :: args) paths rest
-    in
-      aux [] [] new_argv
-  in
+let init ?(flags=Compiler.default_flags) ~builtins ?file_resolver () =
   (* At the moment we can only init the parser once *)
-  let parsing_state = Parser.init ~lp_syntax:Parser.lp_gramext ~paths ~cwd in
+  let file_resolver =
+    match file_resolver with
+    | Some x -> x
+    | None -> fun ?cwd:_ ~file:_ () ->
+        raise (Failure "'accumulate' is disabled since Setup.init was not given a ~file_resolver.") in
+  let parsing_state = Parser.init ~lp_syntax:Parser.lp_gramext ~file_resolver in
   Data.Global_symbols.lock ();
   let header_src =
     builtins |> List.map (fun (fname,decls) ->
@@ -62,16 +58,11 @@ let init ?(flags=Compiler.default_flags) ~builtins ~basedir:cwd argv =
   let header =
     try Compiler.header_of_ast ~flags builtins (List.concat header_src)
     with Compiler.CompileError(loc,msg) -> Util.anomaly ?loc msg in
-  (parsing_state, header), new_argv
+  (parsing_state, header)
 
-let trace args =
-  match set_trace args with
-  | [] -> ()
-  | l -> Util.error ("Elpi_API.trace got unknown arguments: " ^ (String.concat " " l))
+let trace = set_trace
 
 let usage =
-  "\nParsing options:\n" ^
-  "\t-I PATH  search for accumulated files in PATH\n" ^
   Trace_ppx_runtime.Runtime.usage
 
 let set_warn = Util.set_warn
@@ -101,7 +92,8 @@ module Parse = struct
   let goal_from_stream loc s = Parser.parse_goal_from_stream ~loc s
   exception ParseError = Parser.ParseError
 
-  let resolve_file f = snd @@ Parser.resolve f
+  let resolve_file = Parser.resolve
+  let std_resolver = Parser.std_resolver
 end
 
 module ED = Data
@@ -176,7 +168,7 @@ end
 module Pp = struct
   let term pp_ctx f t = (* XXX query depth *)
     let module R = (val !r) in let open R in
-    R.Pp.uppterm ~pp_ctx 0 [] 0 [||] f t
+    R.Pp.uppterm ~pp_ctx 0 [] ~argsdepth:0 [||] f t
 
   let constraints pp_ctx f c =
     let module R = (val !r) in let open R in
@@ -186,7 +178,7 @@ module Pp = struct
 
   let query f c =
     let module R = (val !r) in let open R in
-    Compiler.pp_query (fun ~pp_ctx ~depth -> R.Pp.uppterm ~pp_ctx depth [] 0 [||]) f c
+    Compiler.pp_query (fun ~pp_ctx ~depth -> R.Pp.uppterm ~pp_ctx depth [] ~argsdepth:0 [||]) f c
 
   module Ast = struct
     let program = EA.Program.pp
@@ -196,8 +188,28 @@ end
 (****************************************************************************)
 
 module Conversion = struct
-  type extra_goals = ED.extra_goals
-  include ED.Conversion
+type ty_ast = ED.Conversion.ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
+
+type extra_goal = ED.Conversion.extra_goal = ..
+type extra_goal +=
+  | Unify = ED.Conversion.Unify
+
+type extra_goals = extra_goal list
+
+type 'a embedding = 'a ED.Conversion.embedding
+
+type 'a readback = 'a ED.Conversion.readback
+
+type 'a t = 'a ED.Conversion.t =  {
+  ty : ty_ast;
+  pp_doc : Format.formatter -> unit -> unit;
+  pp : Format.formatter -> 'a -> unit;
+  embed : 'a embedding;   (* 'a -> term *)
+  readback : 'a readback; (* term -> 'a *)
+}
+
+exception TypeErr = ED.Conversion.TypeErr
+
 end
 
 module ContextualConversion = ED.ContextualConversion
@@ -453,6 +465,10 @@ module Elpi = struct
       | Arg s1, Arg s2 -> String.equal s1 s2
       | _ -> false
 
+  let hash = function
+    | Arg s -> Hashtbl.hash s
+    | Ref r -> ED.uvar_id r
+
   let compilation_is_over ~args k =
     match k with
     | Ref _ -> assert false
@@ -526,6 +542,11 @@ module RawData = struct
     | ED.Term.Discard ->
         let ub = ED.oref ED.dummy in
         UnifVar (Ref ub,R.mkinterval 0 depth 0)
+    | ED.Term.Lam _ as t ->
+        begin match R.eta_contract_flex ~depth t with
+        | None -> Obj.magic t (* HACK: view is a "subtype" of Term.term *)
+        | Some t -> look ~depth t
+        end
     | x -> Obj.magic x (* HACK: view is a "subtype" of Term.term *)
 
   let kool = function
@@ -602,6 +623,10 @@ module RawData = struct
   | Elpi.Ref ub -> ED.Term.mkAppUVar ub 0 args
   | Elpi.Arg name -> Compiler.get_Arg state ~name ~args
 
+  type Conversion.extra_goal +=
+  | RawGoal = ED.Conversion.RawGoal
+
+  let set_extra_goals_postprocessing f = ED.Conversion.extra_goals_postprocessing := f
 end
 
 module FlexibleData = struct
@@ -615,6 +640,13 @@ module FlexibleData = struct
     val show : t -> string
   end
 
+  module type HostWeak = sig
+    type t
+    val equal : t -> t -> bool
+    val hash : t -> int
+    val pp : Format.formatter -> t -> unit
+    val show : t -> string
+  end
 
     (* Bijective map between elpi UVar and host equivalent *)
   let uvmap_no = ref 0
@@ -626,34 +658,34 @@ module FlexibleData = struct
     type t = {
         h2e : Elpi.t H2E.t;
         e2h_compile : T.t StrMap.t;
-        e2h_run : T.t PtrMap.t
+        e2h_run : T.t IntMap.t
     }
 
     let empty = {
       h2e = H2E.empty;
       e2h_compile = StrMap.empty;
-      e2h_run = PtrMap.empty ()
+      e2h_run = IntMap.empty
     }
 
     let add uv v { h2e; e2h_compile; e2h_run } =
       let h2e = H2E.add v uv h2e in
       match uv with
       | Elpi.Ref ub ->
-          { h2e; e2h_compile; e2h_run = PtrMap.add ub v e2h_run }
+          { h2e; e2h_compile; e2h_run = IntMap.add (ED.uvar_id ub) v e2h_run }
       | Arg s ->
           { h2e; e2h_run; e2h_compile = StrMap.add s v e2h_compile }
 
     let elpi v { h2e } = H2E.find v h2e
     let host handle { e2h_compile; e2h_run } =
       match handle with
-      | Elpi.Ref ub -> PtrMap.find ub e2h_run
+      | Elpi.Ref ub -> IntMap.find (ED.uvar_id ub) e2h_run
       | Arg s -> StrMap.find s e2h_compile
 
     let remove_both handle v { h2e; e2h_compile; e2h_run } = 
       let h2e = H2E.remove v h2e in
       match handle with
       | Elpi.Ref ub ->
-          { h2e; e2h_compile; e2h_run = PtrMap.remove ub e2h_run }
+          { h2e; e2h_compile; e2h_run = IntMap.remove (ED.uvar_id ub) e2h_run }
       | Arg s ->
           { h2e; e2h_run; e2h_compile = StrMap.remove s e2h_compile }
 
@@ -667,7 +699,7 @@ module FlexibleData = struct
 
     let filter f { h2e; e2h_compile; e2h_run } =
       let e2h_compile = StrMap.filter (fun n v -> f v (H2E.find v h2e)) e2h_compile in
-      let e2h_run = PtrMap.filter (fun ub v -> f v (H2E.find v h2e)) e2h_run in
+      let e2h_run = IntMap.filter (fun ub v -> f v (H2E.find v h2e)) e2h_run in
       let h2e = H2E.filter f h2e in
       { h2e; e2h_compile; e2h_run }
 
@@ -701,11 +733,93 @@ module FlexibleData = struct
         let h2e = H2E.map (Elpi.compilation_is_over ~args) h2e in
         let e2h_run =
           StrMap.fold (fun k v m ->
-            PtrMap.add (StrMap.find k args) v m) e2h_compile (PtrMap.empty ()) in
+            IntMap.add (ED.uvar_id @@ StrMap.find k args) v m) e2h_compile IntMap.empty in
         Some { h2e; e2h_compile = StrMap.empty; e2h_run })
       ~compilation_is_over:(fun x -> Some x)
       ~execution_is_over:(fun x -> Some x)
       ~init:(fun () -> empty)
+
+  end
+
+  module type Show = Util.Show
+  module WeakMap = functor(T : HostWeak) -> functor (D : Show) -> struct
+    open Util
+
+    module H2E = Ephemeron.K1.Make(T)
+    module E2H = Ephemeron.K1.Make(Elpi)
+
+    type t = {
+        h2e : (Elpi.t * D.t) H2E.t;
+        e2h : (T.t * D.t) E2H.t;
+    }
+
+    let create n = {
+      h2e = H2E.create n;
+      e2h = E2H.create n;
+    }
+
+    let reset { h2e; e2h } = H2E.reset h2e; E2H.reset e2h
+
+    let add uv v d { h2e; e2h } =
+      H2E.replace h2e v (uv,d);
+      E2H.replace e2h uv (v,d)
+
+    let elpi v { h2e; e2h } =
+      H2E.find h2e v
+
+    let host e { h2e; e2h } =
+      E2H.find e2h e
+
+
+    let remove_both e v { h2e; e2h } = 
+      H2E.remove h2e v;
+      E2H.remove e2h e
+    let remove_elpi k m =
+      let v,_ = host k m in
+      remove_both k v m
+
+    let remove_host v m =
+      let e, _ = elpi v m in
+      remove_both e v m
+
+    let filter f { h2e; e2h } =
+      E2H.filter_map_inplace (fun e (v,d) -> if f v e d then Some(v,d) else None) e2h;
+      H2E.filter_map_inplace (fun v (e,d) -> if f v e d then Some(e,d) else None) h2e
+
+    let fold f { h2e } acc =
+      let module R = (val !r) in let open R in
+      let get_val = function
+        | Elpi.Ref { ED.Term.contents = ub }
+          when ub != ED.dummy ->
+            Some (R.deref_head ~depth:0 ub)
+        | Elpi.Ref _ -> None
+        | Elpi.Arg _ -> None in
+      H2E.fold (fun k (uk,d) acc -> f k uk (get_val uk) d acc) h2e acc
+
+    let uvn = incr uvmap_no; !uvmap_no
+
+    let pp fmt (m : t) =
+      let pp k uv _ d () =
+           Format.fprintf fmt "@[<h>%a@ <-> %a / %a@]@ " T.pp k Elpi.pp uv D.pp d
+        in
+      Format.fprintf fmt "@[<v>";
+      fold pp m ();
+      Format.fprintf fmt "@]"
+    ;;
+
+    let show m = Format.asprintf "%a" pp m
+
+    let uvmap = ED.State.declare ~name:(Printf.sprintf "elpi:weakuvm:%d" uvn) ~pp
+      ~clause_compilation_is_over:(fun x -> reset x; x)
+      ~goal_compilation_begins:(fun x -> x)
+      ~goal_compilation_is_over:(fun ~args { h2e; e2h } ->
+        let r = create 3 in
+        H2E.iter (fun v (e,d) -> H2E.add r.h2e v (Elpi.compilation_is_over ~args e,d)) h2e;
+        E2H.iter (fun e (v,d) -> E2H.add r.e2h (Elpi.compilation_is_over ~args e) (v,d)) e2h;
+        Some r)
+      ~compilation_is_over:(fun x -> Some x)
+      ~execution_is_over:(fun x -> Some x)
+      ~init:(fun () -> create 3)
 
   end
 
@@ -751,12 +865,20 @@ module BuiltInPredicate = struct
              | NoData -> assert false);
     readback = (fun ~depth hyps csts state t ->
              let module R = (val !r) in let open R in
-             match R.deref_head ~depth t with
-             | ED.Term.Arg _ | ED.Term.AppArg _ -> assert false
-             | ED.Term.UVar _ | ED.Term.AppUVar _
-             | ED.Term.Discard -> state, NoData, []
-             | _ -> let state, x, gls = a.readback ~depth hyps csts state t in
-                    state, mkData x, gls);
+             let rec aux t =
+               match R.deref_head ~depth t with
+               | ED.Term.Arg _ | ED.Term.AppArg _ -> assert false
+               | ED.Term.UVar _ | ED.Term.AppUVar _
+               | ED.Term.Discard -> state, NoData, []
+               | ED.Term.Lam _ ->
+                   begin match R.eta_contract_flex ~depth t with
+                   | None -> state, NoData, []
+                   | Some t -> aux t
+                   end
+               | _ -> let state, x, gls = a.readback ~depth hyps csts state t in
+                       state, mkData x, gls
+             in
+               aux t);
   }
   let ioarg a =
     let open ContextualConversion in

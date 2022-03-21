@@ -229,3 +229,16 @@ let () = declare "hilbert2"
   ~description:"hilbert2"
   ~outside_llam:true
   ()
+
+let () = declare "eta_as"
+  ~source_elpi:"eta_as.elpi"
+  ~description:"eta expansion of as clause"
+  ~typecheck:false
+  ()
+
+let () = declare "hdclause"
+  ~source_elpi:"hdclause.elpi"
+  ~description:"hdclause unification"
+  ~typecheck:false
+  ()
+  

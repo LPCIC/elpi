@@ -143,7 +143,7 @@ module Loc = struct
 
   let pp fmt l = Fmt.fprintf fmt "%s" (to_string l)
   let show l = to_string l
-  let compare = Pervasives.compare
+  let compare = Stdlib.compare
   let equal = (=)
 
   let initial source_name = {
@@ -178,6 +178,22 @@ let rec smart_map f =
      let tl' = smart_map f tl in
      if hd==hd' && tl==tl' then l else hd'::tl'
 ;;
+let rec smart_map2 f x =
+  function
+     [] -> []
+   | (hd::tl) as l ->
+      let hd' = f x hd in
+      let tl' = smart_map2 f x tl in
+      if hd==hd' && tl==tl' then l else hd'::tl'
+ ;;
+ let rec smart_map3 f x y =
+  function
+     [] -> []
+   | (hd::tl) as l ->
+      let hd' = f x y hd in
+      let tl' = smart_map3 f x y tl in
+      if hd==hd' && tl==tl' then l else hd'::tl'
+ ;;
 
 let rec uniqq =
  function
@@ -195,12 +211,28 @@ let rec for_all3b p l1 l2 bl b =
   | (a1::l1, a2::l2, b3::bl) -> p a1 a2 b3 && for_all3b p l1 l2 bl b
   | (_, _, _) -> false
 ;;
+let rec for_all3b3 ~argsdepth (p : argsdepth:int -> matching:bool -> 'a) x1 x2 x3 l1 l2 bl b =
+  match (l1, l2, bl) with
+  | ([], [], _) -> true
+  | ([a1], [a2], []) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:b
+  | ([a1], [a2], b3::_) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:b3
+  | (a1::l1, a2::l2, []) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:b && for_all3b3 ~argsdepth p x1 x2 x3 l1 l2 bl b
+  | (a1::l1, a2::l2, b3::bl) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:b3 && for_all3b3 ~argsdepth p x1 x2 x3 l1 l2 bl b
+  | (_, _, _) -> false
+;;
 
 let rec for_all2 p l1 l2 =
   match (l1, l2) with
   | ([], []) -> true
   | ([a1], [a2]) -> p a1 a2
   | (a1::l1, a2::l2) -> p a1 a2 && for_all2 p l1 l2
+  | (_, _) -> false
+;;
+let rec for_all23 ~argsdepth (p : argsdepth:int -> matching:bool -> 'a) x1 x2 x3 l1 l2 =
+  match (l1, l2) with
+  | ([], []) -> true
+  | ([a1], [a2]) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:false
+  | (a1::l1, a2::l2) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:false && for_all23 ~argsdepth p x1 x2 x3 l1 l2
   | (_, _) -> false
 ;;
 
@@ -577,104 +609,4 @@ let declare { data_compare; data_pp; data_hash; data_name; data_hconsed } =
   let morph2 { cin; cout } f x y = cin (f (cout x) (cout y))
   
   let map { cout } { cin } f x = cin (f (cout x))
-end
-  
-(* A map with opaque bodex data as key.
-
-   This data structure is faster than an associative list + List.assq
-   asyntotically since it keeps a cache with log(n) lookup time.
-
-   On standard OCaml backends we compuete the pointer of a boxed value and
-   turn it into an integer key and use that value as the key for the cache.
-   Since the Gc may move the boxed value a sanity check is performed at lookup
-   time and the cache is eventually updated on the bases of an authoritative
-   associative list.    
-*)
-
-module PtrMap = struct
-  type 'a t = {
-    (* maps the key's address to the value. It also holds the key
-       itself so that we can check if the key was moved by the Gc
-       and fall back to the authoritative associative list *)
-    mutable cache : (Obj.t * 'a) IntMap.t;
-    (* We associate to the boxed key a value, but we also keep track of
-       its address. When it is found to be outdated, we remove the old
-       entry in the cache. All OCaml data is eventually moved by the Gc
-       at least once, so we keep the size of the cache close to the
-       size of the list, and not to its double, by puring outdated cache
-       entries. *)
-    authoritative : (Obj.t * ('a * int ref)) list;
-  }
-
-  let empty () = { cache = IntMap.empty; authoritative = [] }
-  let is_empty { authoritative } = authoritative = []
-
-  let address_of =
-    match Sys.backend_type with
-    | (Sys.Bytecode | Sys.Native) ->
-        fun (ro : Obj.t) : int -> begin
-          assert(Obj.is_block ro);
-          let a : int = Obj.magic ro in
-          ~- a (* so that the Gc will not mistake it for a block *)
-        end
-    | Sys.Other _ ->
-        (* We don't know how the backend deals with memory, so we play safe.
-           In this way the cache is a 1 slot for the last used entry. *)
-        fun _ -> 46
-
-  let add o v { cache;  authoritative } =
-    let ro = Obj.repr o in
-    let address = address_of ro in
-    { cache = IntMap.add address (ro,v) cache;
-      authoritative = (ro,(v,ref address)) :: authoritative }
-
-  let linear_search_and_cache ro address cache authoritative orig =
-    let v, old_address = List.assq ro authoritative in
-    orig.cache <- IntMap.add address (ro,v) (IntMap.remove !old_address cache);
-    old_address := address;
-    v
-
-  let linear_scan_attempted = ref false
-  let find o ({ cache; authoritative } as orig) =
-    linear_scan_attempted := false;
-    let ro = Obj.repr o in
-    let address = address_of ro in
-    try
-      let ro', v = IntMap.find address cache in
-      if ro' == ro then v
-      else
-        let cache = IntMap.remove address cache in
-        linear_scan_attempted := true;
-        linear_search_and_cache ro address cache authoritative orig        
-    with Not_found when not !linear_scan_attempted -> 
-      linear_search_and_cache ro address cache authoritative orig
-    
-  let remove o { cache; authoritative } =
-    let ro = Obj.repr o in
-    let address = address_of ro in
-    let _, old_address = List.assq ro authoritative in
-    let authoritative = List.remove_assq ro authoritative in
-    let cache = IntMap.remove address cache in
-    let cache =
-      if !old_address != address then IntMap.remove !old_address cache
-      else cache in
-    { cache; authoritative }
-
-  let filter f { cache; authoritative } =
-    let cache = ref cache in
-    let authoritative = authoritative |> List.filter (fun (o,(v,old_address)) ->
-      let keep = f (Obj.obj o) v in
-      if not keep then begin
-        let address = address_of o in
-        cache := IntMap.remove address !cache;
-        if !old_address != address then cache := IntMap.remove !old_address !cache
-      end;
-      keep) in
-    { cache = !cache; authoritative }
-
-  let pp f fmt { authoritative } =
-    pplist (fun fmt (_,(x,_)) -> f fmt x) ";" fmt authoritative
-
-  let show f m = Format.asprintf "%a" (pp f) m
-    
 end
