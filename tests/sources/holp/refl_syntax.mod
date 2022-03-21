@@ -25,7 +25,7 @@ atom (adj X Y) :- termp X, termp Y.
 quant_free perp.
 quant_free tru.
 quant_free A :- atom A.
-quant_free (B and C) :- quant_free B, quant_free C.
-quant_free (B or C) :- quant_free B, quant_free C.
-quant_free (B imp C) :- quant_free B, quant_free C.
+quant_free (B `and C) :- quant_free B, quant_free C.
+quant_free (B `or C) :- quant_free B, quant_free C.
+quant_free (B `imp C) :- quant_free B, quant_free C.
 

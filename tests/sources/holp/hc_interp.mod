@@ -12,15 +12,15 @@ type   backchain   (list form) -> form -> o.
 type   try_clause  (list form) -> form -> form -> o.
 
 hc_interp Cs (some B)  :- !, hc_interp Cs (B T).
-hc_interp Cs (B and C) :- !, hc_interp Cs B, hc_interp Cs C.
-hc_interp Cs (B or C) :- !, (hc_interp Cs B ; hc_interp Cs C).
+hc_interp Cs (B `and C) :- !, hc_interp Cs B, hc_interp Cs C.
+hc_interp Cs (B `or C) :- !, (hc_interp Cs B ; hc_interp Cs C).
 hc_interp Cs A  :-  backchain Cs A.
 
 backchain Cs A :- memb D Cs, try_clause Cs D A.
 
-try_clause Cs (D1 and D2) A :- 
+try_clause Cs (D1 `and D2) A :- 
      !, (try_clause Cs D1 A ; try_clause Cs D2 A).
 try_clause Cs (all D) A :- !, try_clause Cs (D T) A. 
 try_clause Cs A A.
-try_clause Cs (G imp A) A :- hc_interp Cs G.
+try_clause Cs (G `imp A) A :- hc_interp Cs G.
 
