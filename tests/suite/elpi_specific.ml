@@ -106,6 +106,11 @@ let () = declare "w"
   ~source_elpi:"w.elpi"
   ~description:"ELPI example at MLWS"
   ()
+let () = declare "w_legacy"
+  ~source_elpi:"w_legacy.elpi"
+  ~legacy_parser:true
+  ~description:"ELPI example at MLWS"
+  ()
 let () = declare "uvar_keyword"
   ~source_elpi:"uvar_chr.elpi"
   ~description:"uvar kwd status at the meta level"
@@ -156,6 +161,12 @@ let () = declare "hollight"
   ~source_elpi:"hollight.elpi"
   ~description:"hollinght implementation"
   ~expectation:Test.Failure (* needs advanced modes *)
+  ()
+let () = declare "hollight_legacy"
+  ~source_elpi:"hollight_legacy.elpi"
+  ~description:"hollight implementation"
+  ~expectation:Test.Failure (* needs advanced modes *)
+  ~legacy_parser:true
   ()
 
 let () = declare "asclause"
