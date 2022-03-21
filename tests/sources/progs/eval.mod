@@ -10,7 +10,7 @@ eval  (cond X Y Z) V  :-
                 (eval X truth, eval Y V ; eval Z V), !.
 eval  (fix F) V               :-  
                 eval (F (fix F))  V, !.
-eval  (&& X Y) V   :-  
+eval  (X && Y) V   :-  
                 (eval X truth, eval Y truth, V = truth ;
                              V = false), !.
 eval  (plus X Y) (c V) :-  

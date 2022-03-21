@@ -18,7 +18,7 @@ term (c X).
 term null.
 term (cons Hd Tl) :- term Hd, term Tl.
 
-term (&& M N) :- term M, term N.
+term (M && N) :- term M, term N.
 term (plus M N) :- term M, term N.
 term (minus M N) :- term M, term N.
 term (times M N) :- term M, term N.
