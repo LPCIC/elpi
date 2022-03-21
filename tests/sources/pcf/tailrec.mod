@@ -20,6 +20,6 @@ trfn (fn R) :- pi X\ ((term X) => (trfn (R X))).
 trfn R :- trbody R.
 
 trbody (cond M N P) :- term M, trbody N, trbody P.
-trbody (M `@ N) :- !, trbody M, term N.
+trbody (M # N) :- !, trbody M, term N.
 trbody M :- headrec M; term M.
 

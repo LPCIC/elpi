@@ -14,8 +14,7 @@ type  tvar  ty -> o.
 
 % Representation of disagreement pairs
 kind  eq       type.             
-type  ===       ty -> ty -> eq.
-infix ===       4.
+type  (===)       ty -> ty -> eq.
 
 % (unify Eqs In Out) is true if solving the equations represented by 
 % Eqs results in In being instantiated to Out 

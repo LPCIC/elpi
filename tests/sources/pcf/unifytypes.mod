@@ -15,8 +15,7 @@ type  tvar  ty -> o.
 
 % Representation of disagreement pairs
 kind  eq       type.             
-type  ===       ty -> ty -> eq.
-infix ===       4.
+type  (===)       ty -> ty -> eq.
 
 
 % subst_ty is a predicate such that (subst_ty V T Ty1 Ty2) is true if
@@ -58,7 +57,7 @@ type  unify       list eq -> ty -> ty -> o.
 
 unify nil In In.
 unify ((A === A) :: Eqs) In Out :- !, unify Eqs In Out.
-unify ((A --> Ax === B --> Bx) :: Eqs) In Out :-
+unify (((A --> Ax) === (B --> Bx)) :: Eqs) In Out :-
   unify ((A === B) :: (Ax === Bx) :: Eqs) In Out.
 unify ((lst A === lst B) :: Eqs) In Out :- unify ((A === B) :: Eqs) In Out.
 unify ((A === B) :: Eqs) In Out :-

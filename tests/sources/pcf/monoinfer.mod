@@ -9,7 +9,7 @@ accum_sig  pcf, monotypes.
 
 type prim, infer      tm -> ty -> o.
 
-infer (M `@ N) B        :- infer M (A --> B), infer N A.
+infer (M # N) B        :- infer M (A --> B), infer N A.
 infer (fn M) (A --> B) :- pi x\ infer x A => infer (M x) B.
 infer (fixpt M) A      :- pi x\ infer x A => infer (M x) A.
 infer (cond C T E) A   :- infer C bool, infer T A, infer E A.

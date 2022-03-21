@@ -9,8 +9,7 @@ sig monotypes.
 
 kind   ty    type.              % constructor for mono types
 
-type   -->   ty -> ty -> ty.    % arrow type constructor
-infixr -->   5.
+type   (-->)   ty -> ty -> ty.    % arrow type constructor
 
 type lst     ty -> ty.          % list type constructor
 type num     ty.                % integer type

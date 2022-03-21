@@ -66,12 +66,12 @@ type  poly_inst   poly -> ty -> list (pair tm ty) -> list eq -> poly -> o.
 
 tyinfer Term Poly :- typeof (pr Term topvar :: nil) nil Poly.
 
-typeof (pr (M `@ N) A ::S) Eqs (all P) :- !,
+typeof (pr (M # N) A ::S) Eqs (all P) :- !,
   pi c\ tvar c => typeof (pr M (c --> A) :: pr N c :: S) Eqs (P c). 
 
 typeof (pr (fn M) A :: S) Eqs  (all d\ all e\ P d e) :- !,
   pi d\ tvar d => pi e\ tvar e => pi x\ tybind x d => 
-   typeof (pr (M x) e :: S) ((A === d --> e) :: Eqs) (P d e).
+   typeof (pr (M x) e :: S) ((A === (d --> e)) :: Eqs) (P d e).
 
 typeof (pr (fixpt M) A :: S) Eqs  (all P) :- !,
   pi d\ tvar d => pi x\ tybind x d => 
