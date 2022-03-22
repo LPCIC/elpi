@@ -1,3 +1,9 @@
+# v1.14.3 (March 2022)
+
+- Tests:
+  - `test.exe` understands `--skip-cat`
+  - `make tests` understands `SKIP` for the categories to skip
+
 # v1.14.2 (March 2022)
 
 - Dependencies:
