@@ -65,9 +65,10 @@ let declare
 module SM = Map.Make(String)
 module SS = Set.Make(String)
 
-let get filter =
+let get ~catskip filter =
+  let filtercat x = List.exists ((=) x) catskip in
   let alltests = List.fold_left (fun acc ({ name; _ } as t) -> SM.add name t acc ) SM.empty !tests in
-  let tests = List.filter (fun { name; _ } -> filter ~name) !tests in
+  let tests = List.filter (fun { name; category; _ } -> not (filtercat category) && filter ~name) !tests in
   let testset = List.fold_left (fun acc { name; _ } -> SS.add name acc ) SS.empty tests in
   let deps = List.fold_left (fun acc { after; _ } -> List.fold_right SS.add after acc ) SS.empty tests in
   let to_add = SS.fold (fun n acc -> if SS.mem n testset then acc else SS.add n acc) deps SS.empty in

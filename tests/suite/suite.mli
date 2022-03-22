@@ -43,7 +43,7 @@ type t = {
   trace: string list;
 }
 
-val get : (name:string -> bool) -> t list
+val get : catskip:string list -> (name:string -> bool) -> t list
 
 val names : unit -> (string * string list) list (* grouped by category *)
 

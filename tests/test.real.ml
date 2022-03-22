@@ -126,14 +126,14 @@ let rec find_map f = function
       | Some y -> y
       | None -> find_map f xs
 
-let main sources plot timeout executables namef timetool seed =
+let main sources plot timeout executables namef catskip timetool seed =
   Random.init seed;
   let filter_name =
     let rex = Str.regexp (".*"^namef) in
     fun ~name:x -> Str.string_match rex x 0 in
   let cruft = "CRUFT="^ String.make (Random.bits () mod (2 lsl 16)) 'x' in
   let env = Array.concat [[|cruft|];Unix.environment ()] in
-  let tests = Suite.Test.get filter_name in
+  let tests = Suite.Test.get ~catskip filter_name in
   Printer.print_header ~executables ~seed ~timeout;
   let jobs =
     tests |> List.map (Suite.Runner.jobs ~timetool ~executables)
@@ -166,10 +166,21 @@ let runners =
   let doc = "Run tests against $(docv)." in
   Arg.(non_empty & opt_all non_dir_file [] & info ["runner"] ~docv:"RUNNER" ~doc)
 
+let valid_category_parser c =
+  if List.exists (fun (c',_) -> c = c') (Test.names ())
+  then `Ok c
+  else `Error ("unknown category " ^ c)
+
+let valid_category = Arg.(valid_category_parser,conv_printer string)
+
 let namef =
   let doc = "Run only tests with a name that matches $(docv)." in
   Arg.(value & opt string "." & info ["name-match"] ~docv:"REX" ~doc)
 
+let catskip =
+  let doc = "Skip tests belonging to category $(docv)." in
+  Arg.(value & opt_all valid_category [] & info ["cat-skip"] ~docv:"STRING" ~doc)
+  
 let seed =
   let doc = "Uses $(docv) as the random number generator seed." in
   Arg.(value & opt int 0 & info ["seed"] ~docv:"INT" ~doc)
@@ -200,4 +211,4 @@ let info =
 ;;
 
 let () =
-  Term.exit @@ Term.eval (Term.(const main $ src $ plot $ timeout $ runners $ namef $ mem $ seed), info)
+  Term.exit @@ Term.eval (Term.(const main $ src $ plot $ timeout $ runners $ namef $ catskip $ mem $ seed), info)

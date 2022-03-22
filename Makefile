@@ -54,6 +54,7 @@ tests:
 		--sources=$(PWD)/tests/sources/ \
 		--plot=$(PWD)/tests/plot \
 		$(addprefix --name-match ,$(ONLY)) \
+		$(addprefix --cat-skip ,$(SKIP)) \
 		$(addprefix --runner , $(RUNNERS))
 
 git/%:
