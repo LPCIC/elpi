@@ -44,6 +44,9 @@ jobs:
         with:
           ocaml-version: ${{ matrix.ocaml-version }}
 
+      - name: Install opam-depext
+        run: opam install opam-depext || true # in opam 2.1 there is no depext to install
+
       - name: Extra setup on Linux
         if: runner.os == 'Linux'
         run: opam exec -- echo "workspace=${{ github.workspace }}" >> $GITHUB_ENV
@@ -67,7 +70,9 @@ jobs:
 # We generate binaries like elpi-4.07.1-Linux.exe in the working directory
 
       - name: Install dependencies
-        run: opam install . --deps-only --with-doc --with-test
+        run: |
+          opam depext camlp5 || true # no depext on opam 2.1
+          opam install . --deps-only --with-doc --with-test
 
       - name: Build elpi
         run: |
