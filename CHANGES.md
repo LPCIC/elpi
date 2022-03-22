@@ -1,3 +1,8 @@
+# v1.14.2 (March 2022)
+
+- Dependencies:
+  - bump camlp5 to >= 8.0
+
 # v1.14.1 (February 2022)
 
 - Runtime:
