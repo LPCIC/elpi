@@ -31,10 +31,16 @@ let symbchar = lcase | ucase | digit | schar | ':'
 let symbcharstar = symbchar *
 let symbcharplus = symbchar +
 
-rule linecomment = parse
-| '\n' { new_line lexbuf; token lexbuf }
+rule linecomment skipno = parse
+| '\n' { new_line lexbuf; if skipno > 0 then skip_lines skipno lexbuf else token lexbuf }
 | eof { token lexbuf }
-| _ { skip lexbuf 1; linecomment lexbuf }
+| "elpi:skip " (pnum as n) { skip lexbuf 10; skip lexbuf (String.length n); linecomment (int_of_string n) lexbuf }
+| _ { skip lexbuf 1; linecomment skipno lexbuf }
+
+and skip_lines skipno = parse
+| '\n' { new_line lexbuf; let skipno = skipno - 1 in if skipno > 0 then skip_lines skipno lexbuf else token lexbuf }
+| eof { token lexbuf }
+| _ { skip lexbuf 1; skip_lines skipno lexbuf }
 
 and multilinecomment nest = parse
 | '\n' { new_line lexbuf; multilinecomment nest lexbuf }
@@ -104,7 +110,7 @@ and token = parse
     token lexbuf }
 | ( ' ' | '\t' | '\r' ) { skip lexbuf 1; token lexbuf }
 | '\n' { new_line lexbuf; token lexbuf }
-| '%' { linecomment lexbuf }
+| '%' { linecomment 0 lexbuf }
 | "/*" { multilinecomment 0 lexbuf }
 | "." { FULLSTOP }
 | "_" idchar + as c { CONSTANT c }

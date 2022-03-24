@@ -14,6 +14,7 @@ type lam (term -> term) -> term.
 type let term -> ty -> (term -> term) -> term.
 
 kind tye type.
+% elpi:skip 2
 infixr ==> 50.
 infixl # 60.
 type (==>) tye -> tye -> tye.
