@@ -72,6 +72,7 @@ jobs:
       - name: Install dependencies
         run: |
           opam depext camlp5 || true # no depext on opam 2.1
+          opam install 'camlp5>=8' || true # not a strict dependency
           opam install . --deps-only --with-doc --with-test
 
       - name: Build elpi
