@@ -32,9 +32,10 @@ RUNNERS=\
   $(shell if type tjsim >/dev/null 2>&1; then type -P tjsim; else echo; fi)
 TIME=--time $(shell if type -P gtime >/dev/null 2>&1; then type -P gtime; else echo /usr/bin/time; fi)
 STACK=1114112
+
 DUNE_OPTS=
 
-CP5:=$(shell ocamlfind query camlp5)
+CP5:=$(shell if ocamlfind query camlp5x 2>/dev/null >&2; then : ; else echo "INFO: Camlp5 not found: legacy parser disabled." >& 2; fi)
 
 build:
 	dune build $(DUNE_OPTS) @all
