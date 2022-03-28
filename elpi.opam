@@ -14,7 +14,7 @@ build: [
 ]
 
 depends: [
-  "ocaml" {>= "4.04.0" & < "4.15.0"}
+  "ocaml" {>= "4.04.0"}
   "stdlib-shims"
   "camlp-streams"
   "camlp5" {> "7.99"}
