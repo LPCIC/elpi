@@ -99,25 +99,6 @@ end
 
 module Parse = struct
 
-  let eq_loc x y =
-    match x, y with
-    | { Util.Loc.source_name = n1; source_start = s1; source_stop = r1; line = l1; line_starts_at = bl1 },
-      { Util.Loc.source_name = n2; source_start = s2; source_stop = r2; line = l2; line_starts_at = bl2 } ->
-        n1 = n2 &&
-        s1 = s2 &&
-        r1 + 1 = r2 &&
-        l1 = l2 
-        (*bl1 - 1 = bl2*)
-
-  let eq x y =
-    match x,y with
-    | EA.Program.Clause { EA.Clause.loc = loc1; attributes = attributes1; body = body1 },
-      EA.Program.Clause { EA.Clause.loc = loc2; attributes = attributes2; body = body2 } ->
-        attributes1 = attributes2 &&
-        body1 = body2 &&
-        eq_loc loc1 loc2
-    | _ -> true
-
   let program ~elpi:{ Setup.parser } ~files =
     let module P = (val parser) in
     List.(concat (map (fun file -> P.program ~file) files))
