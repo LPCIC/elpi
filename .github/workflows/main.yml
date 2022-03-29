@@ -18,7 +18,7 @@ jobs:
           - windows-latest
         ocaml-version:
           - 4.12.0+domains
-          - 4.13.1
+          - 4.14.0
           - 4.07.1
         exclude:
           - os: windows-latest
@@ -69,10 +69,14 @@ jobs:
 #
 # We generate binaries like elpi-4.07.1-Linux.exe in the working directory
 
-      - name: Install dependencies
+      - name: Install optional dependencies on 4.07.1
+        if: matrix.ocaml-version == '4.07.1'
         run: |
           opam depext camlp5 || true # no depext on opam 2.1
           opam install 'camlp5>=8' || true # not a strict dependency
+  
+      - name: Install real dependencies
+        run: |
           opam install . --deps-only --with-doc --with-test
 
       - name: Build elpi
