@@ -1,6 +1,8 @@
 
 # UNRELEASED
 
+Requires Menhir 20211230 or above, camlp5 is now optional.
+
 - Parser:
   - New parser based on Menhir
     + The grammar is not extensible anymore
@@ -20,6 +22,7 @@
 - REPL:
   - New `-parse-term`
   - New `-legacy-parser`
+  - New `-legacy-parser-available`
   - Removed `-print-accumulated-files`
 
 # v1.14.3 (March 2022)
