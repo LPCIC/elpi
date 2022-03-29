@@ -8,7 +8,7 @@
   ## either using nixpkgs data or the overlays located in `.nix/coq-overlays`
   ## Will determine the default main-job of the bundles defined below
   attribute = "elpi";
-  path-to-attribute = "ocamlPackages"
+  path-to-attribute = [ "ocamlPackages" ];
 
   ## If you want to select a different attribute (to build from the local sources as well)
   ## when calling `nix-shell` and `nix-build` without the `--argstr job` argument
