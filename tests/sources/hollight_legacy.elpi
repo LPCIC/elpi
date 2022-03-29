@@ -90,7 +90,7 @@ reterm (uvar as T) TY :- declare_constraint (reterm T TY) T.
 constraint term reterm { /* No propagation rules for now */}
 
 % thm : bounded tactic -> bounded sequent -> list (bounded sequent) -> o
-thm C (seq Gamma G) _ :- debug, $print Gamma "|- " G " := " C, fail.
+thm C (seq Gamma G) _ :- debug, print Gamma "|- " G " := " C, fail.
 
 /* << HACKS FOR DEBUGGING */
 thm daemon (seq Gamma F) [].
@@ -118,7 +118,7 @@ thm (thenll TAC1 TACN) SEQ SEQS :-
 
 /*debprint _ (then _ _) :- !.
 debprint _ (thenl _ _) :- !.
-debprint O T :- $print O T.*/
+debprint O T :- print O T.*/
 
 thm TAC SEQ SEQS :-
  deftac TAC SEQ XTAC,
@@ -142,10 +142,10 @@ thm (bind A TAC) (bind A SEQ) NEWL :-
 thm ww (bind A x \ SEQ) [ SEQ ].
 
 /* debuggin only, remove it */
-%thm A B C :- $print "FAILED " (thm A B C), fail.
+%thm A B C :- print "FAILED " (thm A B C), fail.
 
 % loop : list (bounded sequent) -> certificate -> o
-%loop SEQS TACS :- $print "LOOP" (loop SEQS TACS), fail.
+%loop SEQS TACS :- print "LOOP" (loop SEQS TACS), fail.
 loop [] CERTIFICATE :- end_of_proof CERTIFICATE.
 loop [ SEQ | OLD ] CERTIFICATE :-
  next_tactic [ SEQ | OLD ] CERTIFICATE ITAC,
@@ -155,22 +155,22 @@ loop [ SEQ | OLD ] CERTIFICATE :-
  loop SEQS NEW_CERTIFICATE.
 
 prove G TACS :-
- (term G prop, ! ; ppterm PG G, $print "Bad statement:" PG, fail),
+ (term G prop, ! ; ppterm PG G, print "Bad statement:" PG, fail),
 % (TACS = (false,_), ! ;
  loop [ seq [] G ] TACS
 . % ).
 
 not_defined P NAME :-
- not (P NAME _) ; $print "Error:" NAME already defined, fail.
+ not (P NAME _) ; print "Error:" NAME already defined, fail.
 
 check_hyps HS (typ' TYPE) :-
- (not (typ' TYPE) ; $print "Error:" TYPE already defined, fail), $print HS new TYPE.
-check_hyps HS (def0 NAME DEF) :- ppterm PDEF DEF, $print HS NAME "=" PDEF.
+ (not (typ' TYPE) ; print "Error:" TYPE already defined, fail), print HS new TYPE.
+check_hyps HS (def0 NAME DEF) :- ppterm PDEF DEF, print HS NAME "=" PDEF.
 check_hyps HS (term NAME TYPE) :-
- not_defined term NAME, ppterm PTYPE TYPE, $print HS NAME ":" PTYPE.
+ not_defined term NAME, ppterm PTYPE TYPE, print HS NAME ":" PTYPE.
 check_hyps HS (reterm _ _).
 check_hyps HS (provable NAME TYPE) :-
- not_defined provable NAME, ppterm PTYPE TYPE, $print HS NAME ":" PTYPE.
+ not_defined provable NAME, ppterm PTYPE TYPE, print HS NAME ":" PTYPE.
 check_hyps HS (H1,H2) :- check_hyps HS H1, check_hyps HS H2.
 check_hyps HS (pi H) :- pi x \ typ' x => check_hyps [x | HS] (H x).
 check_hyps HS (_ => H2) :- check_hyps HS H2.
@@ -204,7 +204,7 @@ check1thm NAME (GOAL,TACTICS) (provable NAME GOAL) :-
 check1axm NAME (pi I) (pi HYPS) :- !,
  pi x \ typ' x => check1axm NAME (I x) (HYPS x).
 check1axm NAME GOAL (provable NAME GOAL) :-
- term GOAL prop, ! ; ppterm PGOAL GOAL, $print "Bad statement:" PGOAL, fail.
+ term GOAL prop, ! ; ppterm PGOAL GOAL, print "Bad statement:" PGOAL, fail.
 
 check1nbt TYPE REP ABS REPABS ABSREP PREPH (pi P_TACTICS) HYPSUCHTHAT (pi HYPS) :-
  pi x \ typ' x => check1nbt (TYPE '' x) (REP '' x) (ABS '' x) REPABS ABSREP PREPH (P_TACTICS x) (HYPSUCHTHAT, typ x) (HYPS x).
@@ -227,7 +227,7 @@ check1nbt TYPE REP ABS REPABS ABSREP PREPH (P,TACTICS) HYPSUCHTHAT HYPS :-
 
 check WHAT :-
  next_object WHAT C CONT,
- (C = stop, !, K = true ; check1 C H , check_hyps [] H, $print_constraints, K = (H => check CONT)),
+ (C = stop, !, K = true ; check1 C H , check_hyps [] H, print_constraints, K = (H => check CONT)),
  !, K.
 
 }
@@ -313,7 +313,7 @@ parse_axiom PST ST :- parseterm PST ST.
 parse_thm NAME (pi I) (pi O) :- pi x \ parse_thm NAME (I x) (O x).
 parse_thm _ (PST,TAC) (ST,(false,TAC)) :- !, parseterm PST ST.
 parse_thm NAME PST (ST,(true,[_])) :-
- (not (proves NAME _) ; $print "Error:" NAME already defined, fail),
+ (not (proves NAME _) ; print "Error:" NAME already defined, fail),
  parseterm PST ST.
 
 parse_nbt (pi I) (pi O) :- !, pi x \ parse_nbt (I x) (O x).
@@ -323,12 +323,12 @@ parse_nbt PP (P,(true,[_])) :- parseterm PP P.
 next_object [ C | NEXT ] CT CONTNEXT :-
   parse_obj C [ CT | CONT ], append CONT NEXT CONTNEXT.
 next_object [] C CONT :- 
- $print "Welcome to HOL extra-light",
+ print "Welcome to HOL extra-light",
  toplevel_loop [ C | CONT ].
 next_object toplevel C CONT :- toplevel_loop [ C | CONT ].
 
 read_cmd H :-
- $print "Enter a command or \"stop.\"",
+ print "Enter a command or \"stop.\"",
  flush std_out, $readterm std_in H,
  !.
 read_cmd H :- read_cmd H.
@@ -336,26 +336,26 @@ read_cmd H :- read_cmd H.
 toplevel_loop G :-
  read_cmd H,
  ( H = stop, !, G = [stop]
- ; parse_obj H PH, !, (append PH toplevel G ; $print "error", toplevel_loop G)
- ; $print "bad command", toplevel_loop G ).
+ ; parse_obj H PH, !, (append PH toplevel G ; print "error", toplevel_loop G)
+ ; print "bad command", toplevel_loop G ).
 
 callback_proved _ _ (false,_).
 callback_proved NAME G (true, [ TAC ]) :-
  canonical TAC CANONICALTAC,
  pptac PCANONICALTAC CANONICALTAC,
  ppterm PG G,
- $print (theorem NAME (PG , [ PCANONICALTAC ] )).
+ print (theorem NAME (PG , [ PCANONICALTAC ] )).
 
-end_of_proof (true, []) :- $print "proof completed".
+end_of_proof (true, []) :- print "proof completed".
 end_of_proof (false, []).
 
 next_tactic0 [ SEQ | OLD ] (true, [ _ | _ ]) ITAC :-
- $print,
+ print,
  list_iter_rev [ SEQ | OLD ] print_sequent,
  read_in_context SEQ ITAC BACKTRACK,
  BACKTRACK.
 next_tactic0 SEQS (true, CERT) ITAC :-
- $print "error",
+ print "error",
  next_tactic SEQS (true, CERT) ITAC.
 next_tactic0 SEQS (true_then_false, (_,INT_TACS,_)) ITAC :-
  next_tactic0 SEQS (true, INT_TACS) ITAC.
@@ -363,7 +363,7 @@ next_tactic0 SEQS (false, [ interactive | _ ]) ITAC :-
  next_tactic0 SEQS (true, [ _ ]) ITAC.
 next_tactic0 [ SEQ | OLD ] (false, [ TAC | _ ]) TAC.
 next_tactic0 _ (false, _) ITAC :-
- $print "aborted",
+ print "aborted",
  halt.
 
 next_tactic SEQS CERT TAC :- next_tactic0 SEQS CERT PTAC, parsetac PTAC TAC.
@@ -380,10 +380,10 @@ update_certificate (true_then_false, (SCRIPT,[ TAC | OTHER_TACS ],NON_INTERACTIV
    CERTIFICATE =
     (true_then_false, (SCRIPT,INTERACTIVE_TACS,NON_INTERACTIVE_TACS))
  ; CERTIFICATE = (false, NON_INTERACTIVE_TACS),
-   $print "INTERACTIVE SUBPROOF COMPLETED",
+   print "INTERACTIVE SUBPROOF COMPLETED",
    canonical SCRIPT CSCRIPT,
    pptac PSCRIPT CSCRIPT,
-   $print PSCRIPT).
+   print PSCRIPT).
 update_certificate (false, [ _ | OTHER_TACS ]) _ _ (false, OTHER_TACS).
 
 mk_script (bind A T) NEW NEW_TACS (bind A T2) :- !,
@@ -401,10 +401,10 @@ read_in_context (seq A B) TAC BACKTRACK :-
  (TAC = backtrack, !, BACKTRACK = (!, fail) ; BACKTRACK = true).
 
 print_sequent (seq Gamma G) :-
- $print,
- list_iter_rev Gamma (x \ sigma PX \ ppterm PX x, $print PX),
- $print "|------------------",
- ppterm PG G, $print PG.
+ print,
+ list_iter_rev Gamma (x \ sigma PX \ ppterm PX x, print PX),
+ print "|------------------",
+ ppterm PG G, print PG.
 print_sequent (bind A F) :- pi x \ print_sequent (F x).
 
 /* turns thenl into then */
@@ -633,7 +633,7 @@ deftac (repeat! TAC) SEQ (orelse! (then! TAC (repeat! (bind* TAC))) id).
 
 ppptac (pptac TAC) (pptac PTAC) :- ppptac TAC PTAC.
 deftac (pptac TAC) SEQ TAC :-
- $print "SEQ" SEQ ":=" TAC.
+ print "SEQ" SEQ ":=" TAC.
 
 ppptac (time TAC) (time PTAC) :- ppptac TAC PTAC.
 deftac (time TAC) SEQ XTAC :-
@@ -645,7 +645,7 @@ deftacl (time_after TAC B) SEQS TACL :-
  $gettimeofday A,
  D is A - B,
  mk_constant_list SEQS id TACL,
- $print "TIME SPENT " D "FOR" TAC.
+ print "TIME SPENT " D "FOR" TAC.
 
 /* For debugging only (?) For capturing metavariables */
 ppptac (inspect (seq Gamma F) TAC) (inspect (seq PGamma PF) PTAC) :-
@@ -961,7 +961,7 @@ deftac (sync N) (seq _ (exists '' _ ' _)) (then (applyth exists_i) (then (conv b
 ppptac (itaut N) (itaut N).
 deftac (itaut N) SEQ fail :- N =< 0, !.
 deftac (itaut N) SEQ TAC :-
- %$print (itaut N) SEQ,
+ %print (itaut N) SEQ,
  N1 is N - 1,
  N2 is N - 2,
  TAC =

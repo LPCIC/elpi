@@ -160,7 +160,7 @@ let () = declare "elpi_only_llam"
 let () = declare "hollight"
   ~source_elpi:"hollight.elpi"
   ~description:"hollight implementation"
-  ~expectation:Test.Failure (* needs advanced modes *)
+  ~expectation:Test.(FailureOutput (Str.regexp "line 231")) (* needs advanced modes *)
   ()
 let () = declare "hollight_legacy"
   ~source_elpi:"hollight_legacy.elpi"

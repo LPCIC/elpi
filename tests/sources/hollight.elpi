@@ -1,15 +1,3 @@
-% vim: set ft=lprolog:
-
-infixr --> 126. % type arrow
-infixl '   255. % infix application
-infixl ''  255. % infix System-F application
-infixl &&  128. % and
-infixl `or  127. % or
-infixr ==> 126. % implication
-infixr <=> 125. % iff
-infix  #in 135. % membership
-infix  <<= 130. % subseteq
-
 /* Untrusted predicates called from the kernel:
  * next_object            next object to check
  * callback_proved        proof completed
@@ -70,45 +58,45 @@ typ T :- !. % this line temporarily drops checking of well-formedness for types
 typ T :- var T, !, declare_constraint (typ T) [ T ].
 typ T :- typ' T.
 typ' prop.
-typ' (univ '' A '' B) :- typ A, typ B.
+typ' (univ ## A ## B) :- typ A, typ B.
 typ' (A --> B) :- typ A, typ B.
-typ' (disj_union '' A '' B) :- typ A, typ B.
+typ' (disj_union ## A ## B) :- typ A, typ B.
 
 mode (term i o).
 term (lam A F) (A --> B) :- typ A, pi x\ term x A => term (F x) B.
-term (F ' T) B :- term F (A --> B), term T A.
-term (eq '' A) (A --> A --> prop) :- typ A.
+term (F # T) B :- term F (A --> B), term T A.
+term (eq ## A) (A --> A --> prop) :- typ A.
 term (uvar as T) TY :- declare_constraint (term T TY) T.
 
 /* like term, but on terms that are already known to be well-typed */
 mode (reterm i o).
 reterm (lam A F) (A --> B) :- pi x\ reterm x A => reterm (F x) B.
-reterm (F ' T) B :- reterm F (A --> B).
-reterm (eq '' A) (A --> A --> prop).
+reterm (F # T) B :- reterm F (A --> B).
+reterm (eq ## A) (A --> A --> prop).
 reterm (uvar as T) TY :- declare_constraint (reterm T TY) T.
 
 constraint term reterm { /* No propagation rules for now */}
 
 % thm : bounded tactic -> bounded sequent -> list (bounded sequent) -> o
-thm C (seq Gamma G) _ :- debug, $print Gamma "|- " G " := " C, fail.
+thm C (seq Gamma G) _ :- debug, print Gamma "|- " G " := " C, fail.
 
 /* << HACKS FOR DEBUGGING */
 thm daemon (seq Gamma F) [].
 /* >> HACKS FOR DEBUGGING */
 
-thm r (seq Gamma (eq '' _ ' X ' X)) [].
-thm (t Y) (seq Gamma (eq '' A ' X ' Z))
- [ seq Gamma (eq '' A ' X ' Y), seq Gamma (eq '' A ' Y ' Z) ] :- term Y A.
-thm (m P) (seq Gamma Q) [ seq Gamma (eq '' prop ' P ' Q), seq Gamma P ] :- term P prop.
-thm b (seq Gamma (eq '' _ ' ((lam _ F) ' X) ' (F X))) [].
-thm c (seq Gamma (eq '' B ' (F ' X) ' (G ' Y)))
- [ seq Gamma (eq '' (A --> B) ' F ' G) , seq Gamma (eq '' A ' X ' Y) ] :- reterm X A, reterm Y A.
-thm k (seq Gamma (eq '' (A --> B) ' (lam A S) ' (lam A T)))
- [ bind A x \ seq Gamma (eq '' B ' (S x) ' (T x)) ].
-thm s (seq Gamma (eq '' prop ' P ' Q)) [ seq (P :: Gamma) Q, seq (Q :: Gamma) P ].
+thm r (seq Gamma (eq ## _ # X # X)) [].
+thm (t Y) (seq Gamma (eq ## A # X # Z))
+ [ seq Gamma (eq ## A # X # Y), seq Gamma (eq ## A # Y # Z) ] :- term Y A.
+thm (m P) (seq Gamma Q) [ seq Gamma (eq ## prop # P # Q), seq Gamma P ] :- term P prop.
+thm b (seq Gamma (eq ## _ # ((lam _ F) # X) # (F X))) [].
+thm c (seq Gamma (eq ## B # (F # X) # (G # Y)))
+ [ seq Gamma (eq ## (A --> B) # F # G) , seq Gamma (eq ## A # X # Y) ] :- reterm X A, reterm Y A.
+thm k (seq Gamma (eq ## (A --> B) # (lam A S) # (lam A T)))
+ [ bind A x \ seq Gamma (eq ## B # (S x) # (T x)) ].
+thm s (seq Gamma (eq ## prop # P # Q)) [ seq (P :: Gamma) Q, seq (Q :: Gamma) P ].
 thm (h IGN) (seq Gamma P) [] :- append' IGN [ P | Gamma2 ] Gamma.
 
-thm d (seq Gamma (eq '' _ ' C ' A)) [] :- def0 C A.
+thm d (seq Gamma (eq ## _ # C # A)) [] :- def0 C A.
 thm (th NAME) (seq _ G) [] :- provable NAME G.
 
 thm (thenll TAC1 TACN) SEQ SEQS :-
@@ -118,7 +106,7 @@ thm (thenll TAC1 TACN) SEQ SEQS :-
 
 /*debprint _ (then _ _) :- !.
 debprint _ (thenl _ _) :- !.
-debprint O T :- $print O T.*/
+debprint O T :- print O T.*/
 
 thm TAC SEQ SEQS :-
  deftac TAC SEQ XTAC,
@@ -142,10 +130,10 @@ thm (bind A TAC) (bind A SEQ) NEWL :-
 thm ww (bind A x \ SEQ) [ SEQ ].
 
 /* debuggin only, remove it */
-%thm A B C :- $print "FAILED " (thm A B C), fail.
+%thm A B C :- print "FAILED " (thm A B C), fail.
 
 % loop : list (bounded sequent) -> certificate -> o
-%loop SEQS TACS :- $print "LOOP" (loop SEQS TACS), fail.
+%loop SEQS TACS :- print "LOOP" (loop SEQS TACS), fail.
 loop [] CERTIFICATE :- end_of_proof CERTIFICATE.
 loop [ SEQ | OLD ] CERTIFICATE :-
  next_tactic [ SEQ | OLD ] CERTIFICATE ITAC,
@@ -155,22 +143,22 @@ loop [ SEQ | OLD ] CERTIFICATE :-
  loop SEQS NEW_CERTIFICATE.
 
 prove G TACS :-
- (term G prop, ! ; ppterm PG G, $print "Bad statement:" PG, fail),
+ (term G prop, ! ; ppterm PG G, print "Bad statement:" PG, fail),
 % (TACS = (false,_), ! ;
  loop [ seq [] G ] TACS
 . % ).
 
 not_defined P NAME :-
- not (P NAME _) ; $print "Error:" NAME already defined, fail.
+ not (P NAME _) ; print "Error:" NAME already defined, fail.
 
 check_hyps HS (typ' TYPE) :-
- (not (typ' TYPE) ; $print "Error:" TYPE already defined, fail), $print HS new TYPE.
-check_hyps HS (def0 NAME DEF) :- ppterm PDEF DEF, $print HS NAME "=" PDEF.
+ (not (typ' TYPE) ; print "Error:" TYPE already defined, fail), print HS new TYPE.
+check_hyps HS (def0 NAME DEF) :- ppterm PDEF DEF, print HS NAME "=" PDEF.
 check_hyps HS (term NAME TYPE) :-
- not_defined term NAME, ppterm PTYPE TYPE, $print HS NAME ":" PTYPE.
+ not_defined term NAME, ppterm PTYPE TYPE, print HS NAME ":" PTYPE.
 check_hyps HS (reterm _ _).
 check_hyps HS (provable NAME TYPE) :-
- not_defined provable NAME, ppterm PTYPE TYPE, $print HS NAME ":" PTYPE.
+ not_defined provable NAME, ppterm PTYPE TYPE, print HS NAME ":" PTYPE.
 check_hyps HS (H1,H2) :- check_hyps HS H1, check_hyps HS H2.
 check_hyps HS (pi H) :- pi x \ typ' x => check_hyps [x | HS] (H x).
 check_hyps HS (_ => H2) :- check_hyps HS H2.
@@ -185,13 +173,13 @@ check1 (def NAME TYPDEF) HYPS :- check1def NAME TYPDEF true HYPS, !.
 check1 (decl NAME TYP) HYPS :- check1decl NAME TYP true HYPS, !.
 
 check1def NAME (pi I) HYPSUCHTHAT (pi HYPS) :-
- pi x \ typ' x => check1def (NAME '' x) (I x) (HYPSUCHTHAT, typ x) (HYPS x).
+ pi x \ typ' x => check1def (NAME ## x) (I x) (HYPSUCHTHAT, typ x) (HYPS x).
 check1def NAME (TYP,DEF) HYPSUCHTHAT HYPS :-
  typ TYP, term DEF TYP,
  HYPS = ((HYPSUCHTHAT => term NAME TYP), reterm NAME TYP, def0 NAME DEF).
 
 check1decl NAME (pi I) HYPSUCHTHAT (pi HYPS) :-
- pi x \ typ' x => check1decl (NAME '' x) (I x) (HYPSUCHTHAT, typ x) (HYPS x).
+ pi x \ typ' x => check1decl (NAME ## x) (I x) (HYPSUCHTHAT, typ x) (HYPS x).
 check1decl NAME TYP HYPSUCHTHAT HYPS :-
  typ TYP, HYPS = ((HYPSUCHTHAT => term NAME TYP), reterm NAME TYP).
 
@@ -204,19 +192,19 @@ check1thm NAME (GOAL,TACTICS) (provable NAME GOAL) :-
 check1axm NAME (pi I) (pi HYPS) :- !,
  pi x \ typ' x => check1axm NAME (I x) (HYPS x).
 check1axm NAME GOAL (provable NAME GOAL) :-
- term GOAL prop, ! ; ppterm PGOAL GOAL, $print "Bad statement:" PGOAL, fail.
+ term GOAL prop, ! ; ppterm PGOAL GOAL, print "Bad statement:" PGOAL, fail.
 
 check1nbt TYPE REP ABS REPABS ABSREP PREPH (pi P_TACTICS) HYPSUCHTHAT (pi HYPS) :-
- pi x \ typ' x => check1nbt (TYPE '' x) (REP '' x) (ABS '' x) REPABS ABSREP PREPH (P_TACTICS x) (HYPSUCHTHAT, typ x) (HYPS x).
+ pi x \ typ' x => check1nbt (TYPE ## x) (REP ## x) (ABS ## x) REPABS ABSREP PREPH (P_TACTICS x) (HYPSUCHTHAT, typ x) (HYPS x).
 check1nbt TYPE REP ABS REPABS ABSREP PREPH (P,TACTICS) HYPSUCHTHAT HYPS :-
   term P (X --> prop),
-  prove (exists '' _ ' P ) TACTICS,
-  callback_proved existence_condition (exists '' _ ' P) TACTICS,
+  prove (exists ## _ # P ) TACTICS,
+  callback_proved existence_condition (exists ## _ # P) TACTICS,
   REPTYP = (TYPE --> X),
   ABSTYP = (X --> TYPE),
-  ABSREPTYP = (forall '' TYPE ' lam TYPE x \ eq '' TYPE ' (ABS ' (REP ' x)) ' x),
-  REPABSTYP = (forall '' X ' lam X x \ impl ' (P ' x) ' (eq '' X ' (REP ' (ABS ' x)) ' x)),
-  PREPHTYP = (forall '' TYPE ' lam TYPE x \ (P ' (REP ' x))),
+  ABSREPTYP = (forall ## TYPE # lam TYPE x \ eq ## TYPE # (ABS # (REP # x)) # x),
+  REPABSTYP = (forall ## X # lam X x \ impl # (P # x) # (eq ## X # (REP # (ABS # x)) # x)),
+  PREPHTYP = (forall ## TYPE # lam TYPE x \ (P # (REP # x))),
   !,
   HYPS =
    ( (HYPSUCHTHAT => typ' TYPE)
@@ -227,7 +215,7 @@ check1nbt TYPE REP ABS REPABS ABSREP PREPH (P,TACTICS) HYPSUCHTHAT HYPS :-
 
 check WHAT :-
  next_object WHAT C CONT,
- (C = stop, !, K = true ; check1 C H , check_hyps [] H, $print_constraints, K = (H => check CONT)),
+ (C = stop, !, K = true ; check1 C H , check_hyps [] H, print_constraints, K = (H => check CONT)),
  !, K.
 
 }
@@ -236,25 +224,25 @@ check WHAT :-
 % ppterm/parseterm
 %ppterm X Y :- ppp X Y. parseterm X Y :- ppp X Y.
 %ppp X Y :- var X, var Y, !, X = Y.
-%ppp X (F ' G) :- var X, (var F ; var G), !, X = (F ' G).
-%ppp X (F ' G ' H) :- var X, (var F ; var G ; var H), !,
-% X = (F ' G ' H).
+%ppp X (F # G) :- var X, (var F ; var G), !, X = (F # G).
+%ppp X (F # G # H) :- var X, (var F ; var G ; var H), !,
+% X = (F # G # H).
 
 mode (ppp o i) xas ppterm, (ppp i o) xas parseterm.
 
-ppp (! F2) (forall '' _ ' lam _ F1) :- !, pi x \ ppp (F2 x) (F1 x).
-ppp (! TY F2) (forall '' TY ' lam TY F1) :- !, pi x \ ppp (F2 x) (F1 x).
-ppp (? F2) (exists '' _ ' lam _ F1) :- !, pi x \ ppp (F2 x) (F1 x).
-ppp (? TY F2) (exists '' TY ' lam TY F1) :- !, pi x \ ppp (F2 x) (F1 x).
-ppp (F2 <=> G2) (eq '' prop ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
-ppp (F2 = G2) (eq '' _ ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
-ppp (F2 && G2) (and ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
-ppp (F2 `or G2) (or ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
-ppp (F2 ==> G2) (impl ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
-ppp (X2 #in S2) (in '' _ ' X1 ' S1) :- !, ppp X2 X1, ppp S2 S1.
-ppp (U2 <<= V2) (subseteq '' _ ' U1 ' V1) :- !, ppp U2 U1, ppp V2 V1.
-ppp (F2 + G2) (plus ' F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
-ppp (F2 ' G2) (F1 ' G1) :- !, ppp F2 F1, ppp G2 G1.
+ppp (! F2) (forall ## _ # lam _ F1) :- !, pi x \ ppp (F2 x) (F1 x).
+ppp (! TY F2) (forall ## TY # lam TY F1) :- !, pi x \ ppp (F2 x) (F1 x).
+ppp (? F2) (exists ## _ # lam _ F1) :- !, pi x \ ppp (F2 x) (F1 x).
+ppp (? TY F2) (exists ## TY # lam TY F1) :- !, pi x \ ppp (F2 x) (F1 x).
+ppp (F2 <=> G2) (eq ## prop # F1 # G1) :- !, ppp F2 F1, ppp G2 G1.
+ppp (F2 = G2) (eq ## _ # F1 # G1) :- !, ppp F2 F1, ppp G2 G1.
+ppp (F2 && G2) (and # F1 # G1) :- !, ppp F2 F1, ppp G2 G1.
+ppp (F2 || G2) (or # F1 # G1) :- !, ppp F2 F1, ppp G2 G1.
+ppp (F2 ==> G2) (impl # F1 # G1) :- !, ppp F2 F1, ppp G2 G1.
+ppp (X2 #in S2) (in ## _ # X1 # S1) :- !, ppp X2 X1, ppp S2 S1.
+ppp (U2 <<= V2) (subseteq ## _ # U1 # V1) :- !, ppp U2 U1, ppp V2 V1.
+ppp (F2 + G2) (plus # F1 # G1) :- !, ppp F2 F1, ppp G2 G1.
+ppp (F2 # G2) (F1 # G1) :- !, ppp F2 F1, ppp G2 G1.
 ppp (lam A F2) (lam A F1) :- !, pi x \ ppp (F2 x) (F1 x).
 ppp A A.
 
@@ -313,7 +301,7 @@ parse_axiom PST ST :- parseterm PST ST.
 parse_thm NAME (pi I) (pi O) :- pi x \ parse_thm NAME (I x) (O x).
 parse_thm _ (PST,TAC) (ST,(false,TAC)) :- !, parseterm PST ST.
 parse_thm NAME PST (ST,(true,[_])) :-
- (not (proves NAME _) ; $print "Error:" NAME already defined, fail),
+ (not (proves NAME _) ; print "Error:" NAME already defined, fail),
  parseterm PST ST.
 
 parse_nbt (pi I) (pi O) :- !, pi x \ parse_nbt (I x) (O x).
@@ -323,12 +311,12 @@ parse_nbt PP (P,(true,[_])) :- parseterm PP P.
 next_object [ C | NEXT ] CT CONTNEXT :-
   parse_obj C [ CT | CONT ], append CONT NEXT CONTNEXT.
 next_object [] C CONT :- 
- $print "Welcome to HOL extra-light",
+ print "Welcome to HOL extra-light",
  toplevel_loop [ C | CONT ].
 next_object toplevel C CONT :- toplevel_loop [ C | CONT ].
 
 read_cmd H :-
- $print "Enter a command or \"stop.\"",
+ print "Enter a command or \"stop.\"",
  flush std_out, $readterm std_in H,
  !.
 read_cmd H :- read_cmd H.
@@ -336,26 +324,26 @@ read_cmd H :- read_cmd H.
 toplevel_loop G :-
  read_cmd H,
  ( H = stop, !, G = [stop]
- ; parse_obj H PH, !, (append PH toplevel G ; $print "error", toplevel_loop G)
- ; $print "bad command", toplevel_loop G ).
+ ; parse_obj H PH, !, (append PH toplevel G ; print "error", toplevel_loop G)
+ ; print "bad command", toplevel_loop G ).
 
 callback_proved _ _ (false,_).
 callback_proved NAME G (true, [ TAC ]) :-
  canonical TAC CANONICALTAC,
  pptac PCANONICALTAC CANONICALTAC,
  ppterm PG G,
- $print (theorem NAME (PG , [ PCANONICALTAC ] )).
+ print (theorem NAME (PG , [ PCANONICALTAC ] )).
 
-end_of_proof (true, []) :- $print "proof completed".
+end_of_proof (true, []) :- print "proof completed".
 end_of_proof (false, []).
 
 next_tactic0 [ SEQ | OLD ] (true, [ _ | _ ]) ITAC :-
- $print,
+ print,
  list_iter_rev [ SEQ | OLD ] print_sequent,
  read_in_context SEQ ITAC BACKTRACK,
  BACKTRACK.
 next_tactic0 SEQS (true, CERT) ITAC :-
- $print "error",
+ print "error",
  next_tactic SEQS (true, CERT) ITAC.
 next_tactic0 SEQS (true_then_false, (_,INT_TACS,_)) ITAC :-
  next_tactic0 SEQS (true, INT_TACS) ITAC.
@@ -363,7 +351,7 @@ next_tactic0 SEQS (false, [ interactive | _ ]) ITAC :-
  next_tactic0 SEQS (true, [ _ ]) ITAC.
 next_tactic0 [ SEQ | OLD ] (false, [ TAC | _ ]) TAC.
 next_tactic0 _ (false, _) ITAC :-
- $print "aborted",
+ print "aborted",
  halt.
 
 next_tactic SEQS CERT TAC :- next_tactic0 SEQS CERT PTAC, parsetac PTAC TAC.
@@ -380,10 +368,10 @@ update_certificate (true_then_false, (SCRIPT,[ TAC | OTHER_TACS ],NON_INTERACTIV
    CERTIFICATE =
     (true_then_false, (SCRIPT,INTERACTIVE_TACS,NON_INTERACTIVE_TACS))
  ; CERTIFICATE = (false, NON_INTERACTIVE_TACS),
-   $print "INTERACTIVE SUBPROOF COMPLETED",
+   print "INTERACTIVE SUBPROOF COMPLETED",
    canonical SCRIPT CSCRIPT,
    pptac PSCRIPT CSCRIPT,
-   $print PSCRIPT).
+   print PSCRIPT).
 update_certificate (false, [ _ | OTHER_TACS ]) _ _ (false, OTHER_TACS).
 
 mk_script (bind A T) NEW NEW_TACS (bind A T2) :- !,
@@ -395,16 +383,16 @@ mk_script ITAC NEW NEW_TACS (thenl ITAC NEW_TACS) :-
  mk_list_of_bounded_fresh NEW NEW_TACS.
 
 read_in_context (bind A K) (bind A TAC) BACKTRACK :-
- pi x \ /* term x A => reterm ' x A => */ read_in_context (K x) (TAC x) BACKTRACK.
+ pi x \ /* term x A => reterm # x A => */ read_in_context (K x) (TAC x) BACKTRACK.
 read_in_context (seq A B) TAC BACKTRACK :-
  flush std_out, $readterm std_in TAC,
  (TAC = backtrack, !, BACKTRACK = (!, fail) ; BACKTRACK = true).
 
 print_sequent (seq Gamma G) :-
- $print,
- list_iter_rev Gamma (x \ sigma PX \ ppterm PX x, $print PX),
- $print "|------------------",
- ppterm PG G, $print PG.
+ print,
+ list_iter_rev Gamma (x \ sigma PX \ ppterm PX x, print PX),
+ print "|------------------",
+ ppterm PG G, print PG.
 print_sequent (bind A F) :- pi x \ print_sequent (F x).
 
 /* turns thenl into then */
@@ -436,38 +424,38 @@ build_quantified_predicate L (_, lam _ p \ lam _ x \ P p x) :-
 
 build_predicate [ (_,K) ] P X R :- !,
  process_constructor K P X R.
-build_predicate [ (_,K) | REST ] P X (or ' Q ' R) :-
+build_predicate [ (_,K) | REST ] P X (or # Q # R) :-
  process_constructor K P X Q,
  build_predicate REST P X R.
 
-process_constructor (forall '' TY ' lam TY Q) P X (exists '' TY ' lam TY R) :-
+process_constructor (forall ## TY # lam TY Q) P X (exists ## TY # lam TY R) :-
  pi y \ process_constructor (Q y) P X (R y).
-process_constructor (impl ' H ' K) P X (and ' H ' R) :-
+process_constructor (impl # H # K) P X (and # H # R) :-
  process_constructor K P X R.
-process_constructor (P ' T) P X (eq '' _ ' X ' T).
+process_constructor (P # T) P X (eq ## _ # X # T).
 
 prove_monotonicity_thm (pi F) PREDF APREDF (pi THM) :- !,
- pi A \ prove_monotonicity_thm (F A) PREDF (APREDF '' A) (THM A).
-prove_monotonicity_thm (param TY F) PREDF APREDF (forall '' TY ' lam TY STM, PROOF) :- !,
- pi x \ prove_monotonicity_thm (F x) PREDF (APREDF ' x) (STM x, PROOF).
+ pi A \ prove_monotonicity_thm (F A) PREDF (APREDF ## A) (THM A).
+prove_monotonicity_thm (param TY F) PREDF APREDF (forall ## TY # lam TY STM, PROOF) :- !,
+ pi x \ prove_monotonicity_thm (F x) PREDF (APREDF # x) (STM x, PROOF).
 prove_monotonicity_thm _ PREDF APREDF THM :-
  THM =
-  (monotone '' _ ' APREDF,
+  (monotone ## _ # APREDF,
    [ then inv (bind* (then (conv (depth_tac (dd [PREDF]))) auto_monotone)) ]).
 
 state_fixpoint_def (pi F) PREDF (pi DEF) :- !,
- pi A \ state_fixpoint_def (F A) (PREDF '' A) (DEF A).
+ pi A \ state_fixpoint_def (F A) (PREDF ## A) (DEF A).
 state_fixpoint_def (param TY F) PREDF (_, lam TY BO) :- !,
- pi x \ state_fixpoint_def (F x) (PREDF ' x) (_, BO x).
-state_fixpoint_def _ PREDF (_, fixpoint '' _ ' PREDF).
+ pi x \ state_fixpoint_def (F x) (PREDF # x) (_, BO x).
+state_fixpoint_def _ PREDF (_, fixpoint ## _ # PREDF).
 
 prove_fix_intro_thm (pi F) PREDF PRED PREDF_MONOTONE (pi THM) :- !,
- pi A \ prove_fix_intro_thm (F A) (PREDF '' A) (PRED '' A) PREDF_MONOTONE (THM A).
-prove_fix_intro_thm (param TY F) PREDF PRED PREDF_MONOTONE (forall '' TY ' lam TY STM, [ then forall_i (bind _ PROOF) ]) :- !,
- pi x \ prove_fix_intro_thm (F x) (PREDF ' x) (PRED ' x) PREDF_MONOTONE (STM x, [ PROOF x ]).
+ pi A \ prove_fix_intro_thm (F A) (PREDF ## A) (PRED ## A) PREDF_MONOTONE (THM A).
+prove_fix_intro_thm (param TY F) PREDF PRED PREDF_MONOTONE (forall ## TY # lam TY STM, [ then forall_i (bind _ PROOF) ]) :- !,
+ pi x \ prove_fix_intro_thm (F x) (PREDF # x) (PRED # x) PREDF_MONOTONE (STM x, [ PROOF x ]).
 prove_fix_intro_thm _ PREDF PRED PREDF_MONOTONE THM :-
  THM =
-  ((! x \ PREDF ' PRED ' x ==> PRED ' x),
+  ((! x \ PREDF # PRED # x ==> PRED # x),
    [then forall_i
      (bind _ x13 \
        then (conv (rand_tac (rator_tac dd)))
@@ -478,22 +466,22 @@ prove_fix_intro_thm _ PREDF PRED PREDF_MONOTONE THM :-
                 (thenl lapply [applyth PREDF_MONOTONE,
                   then
                    (g
-                     (subseteq '' _ '
-                       (PREDF ' (fixpoint '' _ ' PREDF)) '
-                       (fixpoint '' _ ' PREDF)))
+                     (subseteq ## _ '
+                       (PREDF # (fixpoint ## _ # PREDF)) '
+                       (fixpoint ## _ # PREDF)))
                    (then (conv (depth_tac (dd [subseteq])))
                      (then (conv (depth_tac (dd [in])))
                        (then (conv (depth_tac (dd [in])))(itaut 4))))]))))))]).
 
 prove_fix_elim_thm (pi F) PREDF PRED OPRED (pi THM) :- !,
- pi A \ prove_fix_elim_thm (F A) (PREDF '' A) (PRED '' A) OPRED (THM A).
-prove_fix_elim_thm (param TY F) PREDF PRED OPRED (forall '' TY ' lam TY STM, [ then forall_i (bind _ PROOF) ]) :- !,
- pi x \ prove_fix_elim_thm (F x) (PREDF ' x) (PRED ' x) OPRED (STM x, [ PROOF x ]).
+ pi A \ prove_fix_elim_thm (F A) (PREDF ## A) (PRED ## A) OPRED (THM A).
+prove_fix_elim_thm (param TY F) PREDF PRED OPRED (forall ## TY # lam TY STM, [ then forall_i (bind _ PROOF) ]) :- !,
+ pi x \ prove_fix_elim_thm (F x) (PREDF # x) (PRED # x) OPRED (STM x, [ PROOF x ]).
 prove_fix_elim_thm _ PREDF PRED OPRED THM :-
  THM =
   ((! x13 \
-     (! x14 \ PREDF ' x13 ' x14 ==> x13 ' x14) ==>
-      (! x14 \ PRED ' x14 ==> x13 ' x14)) ,
+     (! x14 \ PREDF # x13 # x14 ==> x13 # x14) ==>
+      (! x14 \ PRED # x14 ==> x13 # x14)) ,
     [then forall_i
       (bind _ x23 \
         then (cutth fixpoint_subseteq_any_prefixpoint)
@@ -504,8 +492,8 @@ prove_fix_elim_thm _ PREDF PRED OPRED THM :-
                  (bind _ x24 \
                    then
                     (g
-                      (impl ' (subseteq '' _ ' (PREDF ' x23) ' x23) '
-                        (subseteq '' _ ' (fixpoint '' _ ' PREDF) ' x23)))
+                      (impl # (subseteq ## _ # (PREDF # x23) # x23) '
+                        (subseteq ## _ # (fixpoint ## _ # PREDF) # x23)))
                     (then (conv (depth_tac (dd [subseteq])))
                       (then (conv (depth_tac (dd [subseteq])))
                         (then (conv (depth_tac (dd [in])))
@@ -515,9 +503,9 @@ prove_fix_elim_thm _ PREDF PRED OPRED THM :-
                                 (then
                                   (w
                                     (impl '
-                                      (subseteq '' _ ' (PREDF ' x23) ' x23) '
-                                      (subseteq '' _ '
-                                        (fixpoint '' _ ' PREDF) ' x23)))
+                                      (subseteq ## _ # (PREDF # x23) # x23) '
+                                      (subseteq ## _ '
+                                        (fixpoint ## _ # PREDF) # x23)))
                                   (then inv
                                     (thenl lapply_last [h,
                                       then (lforall_last x24)
@@ -525,17 +513,17 @@ prove_fix_elim_thm _ PREDF PRED OPRED THM :-
 
 prove_intro_thms (pi F) PRED PRED_I INTROTHMS :- !,
  pi A \
-  prove_intro_thms (F A) (PRED '' A) PRED_I (OUT A),
+  prove_intro_thms (F A) (PRED ## A) PRED_I (OUT A),
   list_map (OUT A)
    (i \ o \ sigma Y \ i = (theorem NAME (P A)), o = theorem NAME (pi P))
    INTROTHMS.
 prove_intro_thms (param TY F) PRED PRED_I INTROTHMS :- !,
  pi x \
-  prove_intro_thms (F x) (PRED ' x) PRED_I (OUT x),
+  prove_intro_thms (F x) (PRED # x) PRED_I (OUT x),
   list_map (OUT x)
    (i \ o \ sigma Y \
      i = (theorem NAME (STM x, [ PROOF x ])),
-     o = theorem NAME (forall '' TY ' lam TY STM, [ then forall_i (bind TY PROOF) ]))
+     o = theorem NAME (forall ## TY # lam TY STM, [ then forall_i (bind TY PROOF) ]))
    INTROTHMS.
 prove_intro_thms L PRED PRED_I INTROTHMS :-
  list_map (L PRED) (mk_intro_thm PRED_I) INTROTHMS.
@@ -633,7 +621,7 @@ deftac (repeat! TAC) SEQ (orelse! (then! TAC (repeat! (bind* TAC))) id).
 
 ppptac (pptac TAC) (pptac PTAC) :- ppptac TAC PTAC.
 deftac (pptac TAC) SEQ TAC :-
- $print "SEQ" SEQ ":=" TAC.
+ print "SEQ" SEQ ":=" TAC.
 
 ppptac (time TAC) (time PTAC) :- ppptac TAC PTAC.
 deftac (time TAC) SEQ XTAC :-
@@ -645,7 +633,7 @@ deftacl (time_after TAC B) SEQS TACL :-
  $gettimeofday A,
  D is A - B,
  mk_constant_list SEQS id TACL,
- $print "TIME SPENT " D "FOR" TAC.
+ print "TIME SPENT " D "FOR" TAC.
 
 /* For debugging only (?) For capturing metavariables */
 ppptac (inspect (seq Gamma F) TAC) (inspect (seq PGamma PF) PTAC) :-
@@ -664,11 +652,11 @@ deftac h SEQ (h L).
 /*** eq ***/
 
 ppptac sym sym.
-deftac sym (seq Gamma (eq '' T ' L ' R)) TAC :-
- TAC = thenl (m (eq '' T ' R ' R)) [ thenl c [ thenl c [ r , id ] , r ] , r ].
+deftac sym (seq Gamma (eq ## T # L # R)) TAC :-
+ TAC = thenl (m (eq ## T # R # R)) [ thenl c [ thenl c [ r , id ] , r ] , r ].
 
 ppptac eq_true_intro eq_true_intro.
-deftac eq_true_intro (seq Gamma (eq '' prop ' P ' tt)) TAC :-
+deftac eq_true_intro (seq Gamma (eq ## prop # P # tt)) TAC :-
  TAC = thenl s [ th tt_intro, wl [] ].
 
 /*** true ***/
@@ -676,7 +664,7 @@ deftac eq_true_intro (seq Gamma (eq '' prop ' P ' tt)) TAC :-
 /*** and ***/
 
 ppptac conj conj.
-deftac conj (seq Gamma (and ' P ' Q)) TAC :-
+deftac conj (seq Gamma (and # P # Q)) TAC :-
  TAC =
   then
    (then (conv dd)
@@ -686,80 +674,80 @@ deftac conj (seq Gamma (and ' P ' Q)) TAC :-
           eq_true_intro ])))
    ww.
 
-/* Gamma  "|-"  q    --->   Gamma "|-" and ' p ' q*/
+/* Gamma  "|-"  q    --->   Gamma "|-" and # p # q*/
 ppptac (andr P) (andr PP) :- ppp P PP.
 deftac (andr P) (seq Gamma Q) TAC :-
  TAC =
-  (thenl (m ((lam _ f \ f ' P ' Q) ' (lam _ x \ lam _ y \ y)))
+  (thenl (m ((lam _ f \ f # P # Q) # (lam _ x \ lam _ y \ y)))
     [ then
        %(repeat (conv (depth_tac b))) ROBUS VERSION LINE BELOW
        (then (conv (land_tac b)) (then (conv (land_tac (rator_tac b))) (conv (land_tac b))))
       r
     , thenl (conv (rator_tac id))
-       [ then (thenl (t (lam _ f \ f ' tt ' tt)) [ id, r ])
-          (thenl (m (and ' P ' Q)) [ dd , id ])
+       [ then (thenl (t (lam _ f \ f # tt # tt)) [ id, r ])
+          (thenl (m (and # P # Q)) [ dd , id ])
        , then (repeat (conv (depth_tac b))) (th tt_intro) ]]).
 
-/* (and ' p ' q) :: nil  "|-"  q */
+/* (and # p # q) :: nil  "|-"  q */
 ppptac andr andr.
 deftac andr (seq Gamma Q) TAC :-
- mem Gamma (and ' P ' Q),
+ mem Gamma (and # P # Q),
  TAC = then (andr P) h.
 
-/* Gamma  "|-"  p    --->   Gamma "|-" and ' p ' q*/
+/* Gamma  "|-"  p    --->   Gamma "|-" and # p # q*/
 ppptac (andl P) (andl PP) :- ppp P PP.
 deftac (andl Q) (seq Gamma P) TAC :-
  TAC =
-  (thenl (m ((lam _ f \ f ' P ' Q) ' (lam _ x \ lam _ y \ x)))
+  (thenl (m ((lam _ f \ f # P # Q) # (lam _ x \ lam _ y \ x)))
     [ then
        %(repeat (conv (depth_tac b))) ROBUS VERSION LINE BELOW
        (then (conv (land_tac b)) (then (conv (land_tac (rator_tac b))) (conv (land_tac b))))
       r
     , thenl (conv (rator_tac id))
-       [ then (thenl (t (lam _ f \ f ' tt ' tt)) [ id, r ])
-          (thenl (m (and ' P ' Q)) [ dd , id ])
+       [ then (thenl (t (lam _ f \ f # tt # tt)) [ id, r ])
+          (thenl (m (and # P # Q)) [ dd , id ])
        , then (repeat (conv (depth_tac b))) (th tt_intro) ]]).
 
-/* (and ' p ' q) :: nil  "|-"  p */
+/* (and # p # q) :: nil  "|-"  p */
 ppptac andl andl.
 deftac andl (seq Gamma P) TAC :-
- mem Gamma (and ' P ' Q),
+ mem Gamma (and # P # Q),
  TAC = then (andl Q) h.
 
 
 /*** forall ***/
 
-/* |- forall ' F  -->   |- F ' x */
+/* |- forall # F  -->   |- F # x */
 ppptac forall_i forall_i.
-deftac forall_i (seq Gamma (forall '' _ ' lam _ G)) TAC :-
+deftac forall_i (seq Gamma (forall ## _ # lam _ G)) TAC :-
  TAC = then (conv dd) (then k (bind _ x \ eq_true_intro)).
 
-/* forall ' F |- F ' T */
+/* forall # F |- F # T */
 ppptac forall_e forall_e.
 deftac forall_e (seq Gamma GX) TAC :-
- mem Gamma (forall '' _ ' (lam _ G)), GX = G X,
- TAC = thenl (m ((lam _ G) ' X)) [ b, thenl (m ((lam _ z \ tt) ' X))
-  [ thenl c [ then sym (thenl (m (forall '' _ ' lam _ G)) [dd,h ]), r ]
+ mem Gamma (forall ## _ # (lam _ G)), GX = G X,
+ TAC = thenl (m ((lam _ G) # X)) [ b, thenl (m ((lam _ z \ tt) # X))
+  [ thenl c [ then sym (thenl (m (forall ## _ # lam _ G)) [dd,h ]), r ]
   , then (conv b) (th tt_intro) ] ].
 
-/* forall ' F |- f  -->  F ' a, forall ' F |- f */
+/* forall # F |- f  -->  F # a, forall # F |- f */
 ppptac (lforall F A) (lforall PF PA) :- ppp F PF, ppp A PA.
 deftac (lforall F A) (seq Gamma G) TAC :-
- TAC = thenl (m (impl ' (F A) ' G))
-  [ thenl s [ then mp forall_e, then i h ] , then (w (forall '' _ ' lam _ F)) i ].
+ TAC = thenl (m (impl # (F A) # G))
+  [ thenl s [ then mp forall_e, then i h ] , then (w (forall ## _ # lam _ F)) i ].
 
-/* forall ' F |- f  -->  F ' a, forall ' F |- f */
+/* forall # F |- f  -->  F # a, forall # F |- f */
 ppptac (lforall A) (lforall PA) :- ppp A PA.
 deftac (lforall A) (seq Gamma G) (lforall F A) :-
- mem Gamma (forall '' _ ' lam _ F).
+ mem Gamma (forall ## _ # lam _ F).
 
-/* forall ' F |- f  -->  F ' a, forall ' F |- f */
+/* forall # F |- f  -->  F # a, forall # F |- f */
 ppptac lforall lforall.
 deftac lforall (seq Gamma G) (lforall A).
 
-/* forall ' F |- f  -->  F ' a, forall ' F |- f */
+/* forall # F |- f  -->  F # a, forall # F |- f */
 ppptac (lforall_last A) (lforall_last PA) :- ppp A PA.
-deftac (lforall_last A) (seq ((forall '' _ ' lam _ F)::Gamma) G) (lforall F A).
+deftac (lforall_last A) (seq ((forall ## _ # lam _ F)::Gamma) G) (lforall F A).
 
 /*** false ***/
               
@@ -767,23 +755,23 @@ deftac (lforall_last A) (seq ((forall '' _ ' lam _ F)::Gamma) G) (lforall F A).
 
 /* |- p=>q  -->  p |- q */
 ppptac i i.
-deftac i (seq Gamma (impl ' P ' Q)) TAC :-
+deftac i (seq Gamma (impl # P # Q)) TAC :-
  TAC = then (conv dd) (thenl s [ andl, thenl conj [ h [], id ]]).
 
 /* p=>q |- q  -->  |- p */
 ppptac (mp P) (mp PP) :- ppp P PP.
 deftac (mp P) (seq Gamma Q) TAC :-
- TAC = then (andr P) (thenl (m P) [ then sym (thenl (m (impl ' P ' Q)) [ dd , h ]) , id ]).
+ TAC = then (andr P) (thenl (m P) [ then sym (thenl (m (impl # P # Q)) [ dd , h ]) , id ]).
 
 /* p=>q |- q  -->  |- p */
 ppptac mp mp.
 deftac mp (seq Gamma Q) (mp P) :-
- mem Gamma (impl ' P ' Q).
+ mem Gamma (impl # P # Q).
 
 /* |- q   -->   p |- q  and  |- p */
 ppptac (cut P) (cut PP) :- ppp P PP.
 deftac (cut P) (seq Gamma Q) TAC :-
- TAC = then (andr P) (thenl (m P) [then sym (thenl (m (impl ' P ' Q)) [then (conv (land_tac dd)) r, i] ) , id]). 
+ TAC = then (andr P) (thenl (m P) [then sym (thenl (m (impl # P # Q)) [then (conv (land_tac dd)) r, i] ) , id]). 
 
 /* |-q  --> p |- q   where the theorem T proves p */
 ppptac (cutth P) (cutth PP) :- ppp P PP.
@@ -799,22 +787,22 @@ deftac (applyth T) SEQ (then (cutth T) apply_last).
 ppptac (lapply P Q) (lapply PP PQ) :- ppp P PP, ppp Q PQ.
 deftac (lapply P Q) (seq Gamma F) TAC :-
  TAC =
-  thenl (m (impl ' Q ' F)) [ thenl s [ then (mp Q) (then (w (impl ' Q ' F)) (then (mp P) (w (impl ' P ' Q)))) , then i (h [A]) ] , then (w (impl ' P ' Q)) (then i id) ].
+  thenl (m (impl # Q # F)) [ thenl s [ then (mp Q) (then (w (impl # Q # F)) (then (mp P) (w (impl # P # Q)))) , then i (h [A]) ] , then (w (impl # P # Q)) (then i id) ].
 
 /* impl p q, Gamma |- f   --->   /*impl q f*/ Gamma |- p  ,  q, Gamma |- f */
 ppptac lapply lapply.
 deftac lapply (seq Gamma F) (lapply P Q) :-
- mem Gamma (impl ' P ' Q).
+ mem Gamma (impl # P # Q).
 
 /* impl p q, Gamma |- f   --->   /*impl q f*/ Gamma |- p  ,  q, Gamma |- f */
 ppptac lapply_last lapply_last.
-deftac lapply_last (seq ((impl ' P ' Q)::Gamma) F) (lapply P Q).
+deftac lapply_last (seq ((impl # P # Q)::Gamma) F) (lapply P Q).
 
 /* p |- f ---> p |- p ==> f */
 ppptac (g P) (g PP) :- ppp P PP.
 deftac (g P) (seq _ F) TAC :-
  TAC =
-  (thenl (m (impl ' P ' F)) [thenl s [then mp h , then i h] , id ]).
+  (thenl (m (impl # P # F)) [thenl s [then mp h , then i h] , id ]).
 
 /*** not ***/
 
@@ -825,9 +813,9 @@ deftac (g P) (seq _ F) TAC :-
 ppptac (apply X) (apply PX) :- ppp X PX.
 deftac (apply X) SEQ h :- var X, !.
 deftac (apply X) SEQ h.
-deftac (apply (impl ' P ' Q)) SEQ TAC :-
+deftac (apply (impl # P # Q)) SEQ TAC :-
  TAC = thenl (lapply P Q) [ id, apply_last ].
-deftac (apply (forall '' _ ' lam _ G)) SEQ TAC :-
+deftac (apply (forall ## _ # lam _ G)) SEQ TAC :-
  TAC = then (lforall G X) apply_last.
 
 ppptac apply_last apply_last.
@@ -839,20 +827,20 @@ deftac apply (seq Gamma F) (apply H) :-
 
 /********** conversion(als) ***********/
 
-strip_constant (I '' _) H :- !, strip_constant I H.
+strip_constant (I ## _) H :- !, strip_constant I H.
 strip_constant H H.
 
 /* expands definitions, even if applied to arguments */
 ppptac (dd L) (dd L).
-deftac (dd L) (seq _ (eq '' _ ' T ' X)) d :- strip_constant T H, bang (mem L H).
-deftac (dd L) (seq _ (eq '' _ ' (D ' T) ' X))
+deftac (dd L) (seq _ (eq ## _ # T # X)) d :- strip_constant T H, bang (mem L H).
+deftac (dd L) (seq _ (eq ## _ # (D # T) # X))
  (thenl (t A) [thenl c [dd L , r], b]).
 
 ppptac dd dd.
 deftac dd _ (dd L).
 
 ppptac beta_expand beta_expand.
-deftac beta_expand (seq _ (eq '' _ ' (lam _ x \ F x) ' (lam _ x \ (lam _ F) ' x))) TAC :-
+deftac beta_expand (seq _ (eq ## _ # (lam _ x \ F x) # (lam _ x \ (lam _ F) # x))) TAC :-
  TAC = then k (bind _ x \ then sym b).
 
 /* folds a definition, even if applied to arguments */
@@ -897,49 +885,49 @@ deftac (conv C) (seq Gamma F) TAC :-
 /* left tries to reduce the search space via focusing */
 ppptac left left.
 deftac left (seq Gamma _) TAC :-
- mem Gamma (not ' F),
+ mem Gamma (not # F),
  TAC =
   (!
    (then (cutth not_e)
     (then (lforall_last F)
-     (thenl lapply [ h, (w (not ' F)) ])))).
+     (thenl lapply [ h, (w (not # F)) ])))).
 deftac left (seq Gamma _) TAC :-
  /* A bit long because we want to beta-reduce the produced hypothesis.
     Maybe this should be automatized somewhere else. */
- mem Gamma (exists '' _ ' F),
+ mem Gamma (exists ## _ # F),
  TAC =
   (!
    (then (cutth exists_e)
     (then (lforall_last F)
-     (thenl lapply [ h, then (w (exists '' _ ' F)) (then apply_last (then forall_i (bind _ x \ then (try (conv (land_tac b))) i))) ])))).
+     (thenl lapply [ h, then (w (exists ## _ # F)) (then apply_last (then forall_i (bind _ x \ then (try (conv (land_tac b))) i))) ])))).
 deftac left (seq Gamma H) TAC :-
- mem Gamma (or ' F ' G),
+ mem Gamma (or # F # G),
  TAC =
   (!
    (then (cutth or_e)
     (then (lforall_last F)
      (then (lforall_last G)
       (then (lforall_last H)
-       (thenl lapply [ h, then (w (or ' F ' G)) (then apply_last i)])))))).
+       (thenl lapply [ h, then (w (or # F # G)) (then apply_last i)])))))).
 deftac left (seq Gamma H) TAC :-
- mem Gamma (and ' F ' G),
+ mem Gamma (and # F # G),
  TAC =
   (!
    (then (cutth and_e)
     (then (lforall_last F)
      (then (lforall_last G)
       (then (lforall_last H)
-       (thenl lapply [ h, then (w (and ' F ' G)) (then apply_last (then i i))])))))).
+       (thenl lapply [ h, then (w (and # F # G)) (then apply_last (then i i))])))))).
 deftac left (seq Gamma H) TAC :-
- mem Gamma (eq '' TY ' F ' G),
+ mem Gamma (eq ## TY # F # G),
  not (var TY), TY = prop,
  TAC =
-  (then (g (eq '' TY ' F ' G))
+  (then (g (eq ## TY # F # G))
    (then (conv (land_tac (then (applyth eq_to_impl) h)))
-     (then i (w (eq '' TY ' F ' G))))).
+     (then i (w (eq ## TY # F # G))))).
 
 ppptac not_i not_i.
-deftac not_i (seq _ (not ' _)) (applyth not_i).
+deftac not_i (seq _ (not # _)) (applyth not_i).
 
 ppptac inv inv.
 deftac inv _ TAC :-
@@ -953,15 +941,15 @@ ppptac (sync N) (sync N).
 deftac (sync N) (seq _ tt) (th tt_intro).
 deftac (sync N) (seq Gamma _) (then (applyth ff_elim) h) :-
  mem Gamma ff.
-deftac (sync N) (seq _ (or ' _ ' _))
+deftac (sync N) (seq _ (or # _ # _))
  (orelse (then (applyth orr) (itaut N)) (then (applyth orl) (itaut N))).
-deftac (sync N) (seq _ (exists '' _ ' _)) (then (applyth exists_i) (then (conv b) (itaut N2))) :-
+deftac (sync N) (seq _ (exists ## _ # _)) (then (applyth exists_i) (then (conv b) (itaut N2))) :-
  N2 is N - 2.
 
 ppptac (itaut N) (itaut N).
 deftac (itaut N) SEQ fail :- N =< 0, !.
 deftac (itaut N) SEQ TAC :-
- %$print (itaut N) SEQ,
+ %print (itaut N) SEQ,
  N1 is N - 1,
  N2 is N - 2,
  TAC =
@@ -978,31 +966,31 @@ deftac (itauteq N) _ (then (cutth eq_reflexive) (itaut N)).
 /********** inductive predicates package ********/
 
 ppptac monotone monotone.
-deftac monotone (seq _ (impl ' X ' X)) (! (then i h)) :- !.
-deftac monotone (seq [forall '' _ ' lam _ x \ impl ' (F ' x) ' (G ' x)] (impl ' (F ' T) ' (G ' T))) (! apply) :- !.
-deftac monotone (seq _ (impl ' (and ' _ ' _) ' _)) TAC :-
+deftac monotone (seq _ (impl # X # X)) (! (then i h)) :- !.
+deftac monotone (seq [forall ## _ # lam _ x \ impl # (F # x) # (G # x)] (impl # (F # T) # (G # T))) (! apply) :- !.
+deftac monotone (seq _ (impl # (and # _ # _) # _)) TAC :-
  TAC = then (applyth and_monotone) monotone.
-deftac monotone (seq _ (impl ' (or ' _ ' _) ' _)) TAC :-
+deftac monotone (seq _ (impl # (or # _ # _) # _)) TAC :-
  TAC = then (applyth or_monotone) monotone.
-deftac monotone (seq _ (impl ' (impl ' _ ' _) ' _)) TAC :-
+deftac monotone (seq _ (impl # (impl # _ # _) # _)) TAC :-
  TAC = then (applyth impl_monotone) monotone.
-deftac monotone (seq _ (impl ' (not ' _) ' _)) TAC :-
+deftac monotone (seq _ (impl # (not # _) # _)) TAC :-
  TAC = then (applyth not_monotone) monotone.
-deftac monotone (seq _ (impl ' (forall '' _ ' lam _ _) ' _)) TAC :-
+deftac monotone (seq _ (impl # (forall ## _ # lam _ _) # _)) TAC :-
  TAC =
   then (conv (land_tac (rand_tac beta_expand)))
    (then (conv (rand_tac (rand_tac beta_expand)))
      (then (applyth forall_monotone) (then forall_i (bind _ x \
        then (conv (depth_tac b)) (then (conv (depth_tac b)) monotone))))).
-deftac monotone (seq _ (impl ' (exists '' _ ' lam _ _) ' _)) TAC :-
+deftac monotone (seq _ (impl # (exists ## _ # lam _ _) # _)) TAC :-
  TAC =
   then (conv (land_tac (rand_tac beta_expand)))
    (then (conv (rand_tac (rand_tac beta_expand)))
      (then (applyth exists_monotone) (then forall_i (bind _ x \
        then (conv (depth_tac b)) (then (conv (depth_tac b)) monotone))))).
 
-/* expands "monotone ' (lam _ f \ lam _ x \ X f x)" into
-   "! x \ p ' x ==> q ' x |- X p y ==> X q y"
+/* expands "monotone # (lam _ f \ lam _ x \ X f x)" into
+   "! x \ p # x ==> q # x |- X p y ==> X q y"
    and then calls the monotone tactic */
 ppptac auto_monotone auto_monotone.
 deftac auto_monotone _ TAC :-
@@ -1043,10 +1031,10 @@ the_library L :-
      (lam (A --> prop) f \ f = (lam A g \ tt)))
   , def ff (prop,(! x \ x))
   , def and ((prop --> prop --> prop),
-     (lam _ x \ lam _ y \ (lam (prop --> prop --> prop) f \ f ' x ' y) = (lam _ f \ f ' tt ' tt)))
+     (lam _ x \ lam _ y \ (lam (prop --> prop --> prop) f \ f # x # y) = (lam _ f \ f # tt # tt)))
   , def impl ((prop --> prop --> prop),(lam _ a \ lam _ b \ a && b <=> a))
   , def exists (pi A \ ((A --> prop) --> prop),
-     (lam (A --> prop) f \ ! c \ (! a \ f ' a ==> c) ==> c))
+     (lam (A --> prop) f \ ! c \ (! a \ f # a ==> c) ==> c))
   , def not ((prop --> prop),(lam _ x \ x ==> ff))
   , def or ((prop --> prop --> prop),
      (lam _ x \ lam _ y \ ! c \ (x ==> c) ==> (y ==> c) ==> c))
@@ -1059,7 +1047,7 @@ the_library L :-
        then forall_i
         (bind prop x13 \
           then i (then sym h)))])
-  , theorem not_e ((! p \ not ' p ==> p ==> ff),
+  , theorem not_e ((! p \ not # p ==> p ==> ff),
      [then forall_i (bind prop x3 \ then (conv (land_tac dd)) (then i h))])
   , theorem conj ((! p \ ! q \ p ==> q ==> p && q),
     [then forall_i
@@ -1080,9 +1068,9 @@ the_library L :-
           (bind prop x13 \
             then forall_i
              (bind prop x14 \ then i (then i (thenl apply [andl, andr])))))])
-  , theorem not_i ((! p \ (p ==> ff) ==> not ' p),
+  , theorem not_i ((! p \ (p ==> ff) ==> not # p),
      [then forall_i (bind prop x2 \ then i (then (conv dd) h))])
-  , theorem orl ((! p \ ! q \ p ==> p `or q),
+  , theorem orl ((! p \ ! q \ p ==> p || q),
       [then forall_i
         (bind prop x12 \
           then forall_i
@@ -1090,7 +1078,7 @@ the_library L :-
              then i
               (then (conv dd)
                 (then forall_i (bind prop x14 \ then i (then i (then apply h)))))))])
-  , theorem orr ((! p \ ! q \ q ==> p `or q),
+  , theorem orr ((! p \ ! q \ q ==> p || q),
       [then forall_i
         (bind prop x12 \
           then forall_i
@@ -1098,7 +1086,7 @@ the_library L :-
              then i
               (then (conv dd)
                 (then forall_i (bind prop x14 \ then i (then i (then apply h)))))))])
-  , theorem or_e ((! p \ ! q \ ! c \ p `or q ==> (p ==> c) ==> (q ==> c) ==> c),
+  , theorem or_e ((! p \ ! q \ ! c \ p || q ==> (p ==> c) ==> (q ==> c) ==> c),
      [then forall_i
        (bind prop x12 \
          then forall_i
@@ -1106,9 +1094,9 @@ the_library L :-
             then forall_i
              (bind prop x14 \ then (conv (land_tac dd)) (then i forall_e))))])
   , theorem exists_e (pi T \
-     (! f \ (exists '' T ' f) ==> (! c \ (! x \ f ' x ==> c) ==> c)),
+     (! f \ (exists ## T # f) ==> (! c \ (! x \ f # x ==> c) ==> c)),
      [then forall_i (bind (T --> prop) x12 \ then (conv (land_tac dd)) (then i h))])
- , theorem exists_i (pi T \ (! f \ ! w \ f ' w ==> (exists '' T ' f)),
+ , theorem exists_i (pi T \ (! f \ ! w \ f # w ==> (exists ## T # f)),
     [then forall_i
      (bind (T --> prop) x12 \
        then forall_i
@@ -1125,52 +1113,52 @@ the_library L :-
        (bind prop x13 \ bind prop x14 \ itaut 2)]])
 
  /*********** Axiomatization of disjoint union ********/
-  , decl inj1_disj_union (pi A \pi B \ A --> disj_union '' A '' B)
-  , decl inj2_disj_union (pi A \ pi B \ B --> disj_union '' A '' B)
-  , decl case_disj_union (pi A \pi B \ pi C \ disj_union '' A '' B --> (A --> C) --> (B --> C) --> C)
+  , decl inj1_disj_union (pi A \pi B \ A --> disj_union ## A ## B)
+  , decl inj2_disj_union (pi A \ pi B \ B --> disj_union ## A ## B)
+  , decl case_disj_union (pi A \pi B \ pi C \ disj_union ## A ## B --> (A --> C) --> (B --> C) --> C)
   , axiom case_disj_union_inj1 (pi A \ pi B \ pi C \ (! b \ ! (A --> C) e1 \ ! (B --> C) e2  \
-    case_disj_union '' A '' B '' C ' (inj1_disj_union '' A '' B ' b) ' e1 ' e2 = e1 ' b))
+    case_disj_union ## A ## B ## C # (inj1_disj_union ## A ## B # b) # e1 # e2 = e1 # b))
   , axiom case_disj_union_inj2 (pi A \ pi B \ pi C \ (! b \ ! (A --> C) e1 \ ! (B --> C) e2  \
-    case_disj_union '' A '' B '' C ' (inj2_disj_union '' A '' B ' b) ' e1 ' e2 = e2 ' b))
+    case_disj_union ## A ## B ## C # (inj2_disj_union ## A ## B # b) # e1 # e2 = e2 # b))
 
  /*********** Axiomatization of the universe ********/
- , decl injection_univ (pi A \pi B \ A --> univ '' A '' B)
- , decl ejection_univ (pi A \pi B \ univ '' A '' B --> A)
- , decl inject_limit_univ (pi A \pi B \ (B --> univ '' A '' B) --> univ '' A '' B)
- , decl eject_limit_univ (pi A \ pi B \ univ '' A '' B --> (B --> univ '' A '' B))
- , decl pair_univ (pi A \pi B \ univ '' A '' B --> univ '' A '' B --> univ '' A '' B)
- , decl proj1_univ (pi A \ pi B \ univ '' A '' B --> univ '' A '' B)
- , decl proj2_univ (pi A \pi B \ univ '' A '' B --> univ '' A '' B)
- , decl inj1_univ (pi A \pi B \ univ '' A '' B --> univ '' A '' B)
- , decl inj2_univ (pi A \pi B \ univ '' A '' B --> univ '' A '' B)
- , decl case_univ (pi A \pi B \ pi C \ univ '' A '' B --> (univ '' A '' B --> C) --> (univ '' A '' B --> C) --> C)
+ , decl injection_univ (pi A \pi B \ A --> univ ## A ## B)
+ , decl ejection_univ (pi A \pi B \ univ ## A ## B --> A)
+ , decl inject_limit_univ (pi A \pi B \ (B --> univ ## A ## B) --> univ ## A ## B)
+ , decl eject_limit_univ (pi A \ pi B \ univ ## A ## B --> (B --> univ ## A ## B))
+ , decl pair_univ (pi A \pi B \ univ ## A ## B --> univ ## A ## B --> univ ## A ## B)
+ , decl proj1_univ (pi A \ pi B \ univ ## A ## B --> univ ## A ## B)
+ , decl proj2_univ (pi A \pi B \ univ ## A ## B --> univ ## A ## B)
+ , decl inj1_univ (pi A \pi B \ univ ## A ## B --> univ ## A ## B)
+ , decl inj2_univ (pi A \pi B \ univ ## A ## B --> univ ## A ## B)
+ , decl case_univ (pi A \pi B \ pi C \ univ ## A ## B --> (univ ## A ## B --> C) --> (univ ## A ## B --> C) --> C)
  , axiom ejection_injection_univ (pi A \ pi B \
-    ! A p \ ejection_univ '' A '' B ' (injection_univ '' A '' B ' p) = p)
+    ! A p \ ejection_univ ## A ## B # (injection_univ ## A ## B # p) = p)
  , axiom eject_inject_limit_univ (pi A \ pi B \
-    ! (B --> univ '' A '' B) p \ eject_limit_univ '' A '' B ' (inject_limit_univ '' A '' B ' p) = p)
- , axiom proj1_pair_univ (pi A \ pi B \ ! (univ '' A '' B) p1 \ ! p2 \
-    proj1_univ '' A '' B ' (pair_univ '' A '' B ' p1 ' p2) = p1)
- , axiom proj2_pair_univ (pi A \ pi B \ ! p1 \ ! (univ '' A '' B) p2 \
-    proj2_univ '' A '' B ' (pair_univ '' A '' B ' p1 ' p2) = p2)
- , axiom case_univ_inj1 (pi A \ pi B \ pi C \ (! b \ ! (univ '' A '' B --> C) e1 \ ! e2  \
-    case_univ '' A '' B '' C ' (inj1_univ '' A '' B ' b) ' e1 ' e2 = e1 ' b))
- , axiom case_univ_inj2 (pi A \ pi B \ pi C \ (! b \ ! (univ '' A '' B --> C) e1 \ ! e2 \
-    case_univ '' A '' B '' C ' (inj2_univ '' A '' B ' b) ' e1 ' e2 = e2 ' b))
+    ! (B --> univ ## A ## B) p \ eject_limit_univ ## A ## B # (inject_limit_univ ## A ## B # p) = p)
+ , axiom proj1_pair_univ (pi A \ pi B \ ! (univ ## A ## B) p1 \ ! p2 \
+    proj1_univ ## A ## B # (pair_univ ## A ## B # p1 # p2) = p1)
+ , axiom proj2_pair_univ (pi A \ pi B \ ! p1 \ ! (univ ## A ## B) p2 \
+    proj2_univ ## A ## B # (pair_univ ## A ## B # p1 # p2) = p2)
+ , axiom case_univ_inj1 (pi A \ pi B \ pi C \ (! b \ ! (univ ## A ## B --> C) e1 \ ! e2  \
+    case_univ ## A ## B ## C # (inj1_univ ## A ## B # b) # e1 # e2 = e1 # b))
+ , axiom case_univ_inj2 (pi A \ pi B \ pi C \ (! b \ ! (univ ## A ## B --> C) e1 \ ! e2 \
+    case_univ ## A ## B ## C # (inj2_univ ## A ## B # b) # e1 # e2 = e2 # b))
 
  /******************* Equality *****************/
  , theorem eq_reflexive (pi A \ ((! A a \ a = a),
    [ then forall_i (bind A x \ r) ]))
 
  /******************* Logic *****************/
- , theorem or_commutative ((! a \ ! b \ a `or b <=> b `or a),
+ , theorem or_commutative ((! a \ ! b \ a || b <=> b || a),
    [itaut 1])
- , theorem or_ff ((! a \ a `or ff <=> a),
+ , theorem or_ff ((! a \ a || ff <=> a),
    [itaut 1])
- , theorem or_tt ((! a \ a `or tt <=> tt),
+ , theorem or_tt ((! a \ a || tt <=> tt),
    [itaut 1])
- , theorem or_idempotent ((! a \ a `or a <=> a),
+ , theorem or_idempotent ((! a \ a || a <=> a),
    [itaut 1])
- , theorem or_associative ((! a \ ! b \ ! c \ a `or (b `or c) <=> (a `or b) `or c),
+ , theorem or_associative ((! a \ ! b \ ! c \ a || (b || c) <=> (a || b) || c),
    [itaut 1])
  , theorem and_commutative ((! a \ ! b \ a && b <=> b && a),
    [itaut 1])
@@ -1182,21 +1170,21 @@ the_library L :-
    [itaut 1])
  , theorem and_associative ((! a \ ! b \ ! c \ a && (b && c) <=> (a && b) && c),
    [itaut 1])
- , theorem and_or ((! a \ ! b \ ! c \ a && (b `or c) <=> (a && b) `or (a && c)),
+ , theorem and_or ((! a \ ! b \ ! c \ a && (b || c) <=> (a && b) || (a && c)),
    [itaut 1])
- , theorem or_and ((! a \ ! b \ ! c \ a `or (b && c) <=> (a `or b) && (a `or c)),
+ , theorem or_and ((! a \ ! b \ ! c \ a || (b && c) <=> (a || b) && (a || c)),
    [itaut 1])
- , theorem ads_or_and ((! a \ ! b \ (a && b) `or b <=> b),
+ , theorem ads_or_and ((! a \ ! b \ (a && b) || b <=> b),
    [itaut 1])
- , theorem ads_and_or ((! a \ ! b \ (a `or b) && b <=> b),
+ , theorem ads_and_or ((! a \ ! b \ (a || b) && b <=> b),
    [itaut 1])
- , theorem not_or ((! a \ ! b \ not ' a && not ' b <=> not ' (a `or b)),
+ , theorem not_or ((! a \ ! b \ not # a && not # b <=> not # (a || b)),
    [itaut 2])
- , theorem not_and ((! a \ ! b \ not ' a `or not ' b ==> not ' (a && b)),
+ , theorem not_and ((! a \ ! b \ not # a || not # b ==> not # (a && b)),
    [itaut 2])
- , theorem not_not_not ((! p \ not ' (not ' (not ' p)) <=> not ' p),
+ , theorem not_not_not ((! p \ not # (not # (not # p)) <=> not # p),
    [itaut 3])
- , theorem impl_not_not ((! a \ ! b \ (a ==> b) ==> (not ' b ==> not ' a)),
+ , theorem impl_not_not ((! a \ ! b \ (a ==> b) ==> (not # b ==> not # a)),
    [itaut 3])
  , theorem eq_to_impl_f ((! p \ ! q \ (p <=> q) ==> p ==> q),
     [itaut 2])
@@ -1205,31 +1193,31 @@ the_library L :-
 
 /*************** Properties inj/disj/univ ***********/
  , theorem pair_univ_inj_l 
-   (pi A \ pi B \ (! (univ '' A '' B) x20 \ ! x21 \ ! x22 \ ! x23 \ pair_univ '' A '' B ' x20 ' x22 = pair_univ '' A '' B ' x21 ' x23 ==> x20 = x21) ,
+   (pi A \ pi B \ (! (univ ## A ## B) x20 \ ! x21 \ ! x22 \ ! x23 \ pair_univ ## A ## B # x20 # x22 = pair_univ ## A ## B # x21 # x23 ==> x20 = x21) ,
    [then (repeat forall_i)
-     (bind (univ '' A '' B) x22 \
-       bind (univ '' A '' B) x23 \
-        bind (univ '' A '' B) x24 \
-         bind (univ '' A '' B) x25 \
+     (bind (univ ## A ## B) x22 \
+       bind (univ ## A ## B) x23 \
+        bind (univ ## A ## B) x24 \
+         bind (univ ## A ## B) x25 \
           then i
            (then (cutth proj1_pair_univ)
              (then (lforall x22)
                (then (conv (land_tac (then sym apply)))
                  (then (conv (depth_tac h)) (applyth proj1_pair_univ))))))])
  , theorem pair_univ_inj_r 
-   (pi A \ pi B \ (! (univ '' A '' B) x20 \ ! x21 \ ! x22 \ ! x23 \ pair_univ '' A '' B ' x20 ' x22 = pair_univ '' A '' B ' x21 ' x23 ==> x22 = x23) ,
+   (pi A \ pi B \ (! (univ ## A ## B) x20 \ ! x21 \ ! x22 \ ! x23 \ pair_univ ## A ## B # x20 # x22 = pair_univ ## A ## B # x21 # x23 ==> x22 = x23) ,
    [then (repeat forall_i)
-     (bind (univ '' A '' B) x22 \
-       bind (univ '' A '' B) x23 \
-        bind (univ '' A '' B) x24 \
-         bind (univ '' A '' B) x25 \
+     (bind (univ ## A ## B) x22 \
+       bind (univ ## A ## B) x23 \
+        bind (univ ## A ## B) x24 \
+         bind (univ ## A ## B) x25 \
           then i
            (then (cutth proj2_pair_univ)
              (then (lforall x22)
                (then (conv (land_tac (then sym apply)))
                  (then (conv (depth_tac h)) (applyth proj2_pair_univ))))))])
  , theorem injection_univ_inj
-   (pi A \ pi B \ (! A x20 \ ! x21 \ injection_univ '' A '' B ' x20 = injection_univ '' A '' B ' x21 ==> x20 = x21) ,
+   (pi A \ pi B \ (! A x20 \ ! x21 \ injection_univ ## A ## B # x20 = injection_univ ## A ## B # x21 ==> x20 = x21) ,
     [then forall_i
      (bind A x20 \
        then forall_i
@@ -1239,22 +1227,22 @@ the_library L :-
              (then i
                (thenl
                  (cut
-                   (ejection_univ '' A '' B ' (injection_univ '' A '' B ' x20) =
-                     ejection_univ '' A '' B ' (injection_univ '' A '' B ' x21)))
+                   (ejection_univ ## A ## B # (injection_univ ## A ## B # x20) =
+                     ejection_univ ## A ## B # (injection_univ ## A ## B # x21)))
                  [thenl
                    (cut
-                     ((ejection_univ '' A '' B ' (injection_univ '' A '' B ' x20) =
-                        ejection_univ '' A '' B ' (injection_univ '' A '' B ' x21)) =
+                     ((ejection_univ ## A ## B # (injection_univ ## A ## B # x20) =
+                        ejection_univ ## A ## B # (injection_univ ## A ## B # x21)) =
                        (x20 = x21)))
                    [then (conv (depth_tac (then sym h))) h,
                    thenl c [thenl c [r, h], h]], thenl c [r, h]])))))])
  , theorem inj1_univ_inj
-   (pi A \ pi B \ (! (univ '' A '' B) x20 \ ! x21 \ inj1_univ '' A '' B ' x20 = inj1_univ '' A '' B ' x21 ==> x20 = x21) ,
+   (pi A \ pi B \ (! (univ ## A ## B) x20 \ ! x21 \ inj1_univ ## A ## B # x20 = inj1_univ ## A ## B # x21 ==> x20 = x21) ,
     [then inv
-     (bind (univ '' A '' B) x20 \ bind (univ '' A '' B) x21 \
-        thenl (t (case_univ '' A '' B '' (univ '' A '' B) ' (inj1_univ '' A '' B ' x20) '
-             (lam (univ '' A '' B) x22 \ x22) '
-             (lam (univ '' A '' B) x22 \ x22)))
+     (bind (univ ## A ## B) x20 \ bind (univ ## A ## B) x21 \
+        thenl (t (case_univ ## A ## B ## (univ ## A ## B) # (inj1_univ ## A ## B # x20) '
+             (lam (univ ## A ## B) x22 \ x22) '
+             (lam (univ ## A ## B) x22 \ x22)))
          [then sym
            (then (conv (land_tac (applyth case_univ_inj1)))
              (then (conv (land_tac b)) r)),
@@ -1262,12 +1250,12 @@ the_library L :-
           (then (conv (land_tac (applyth case_univ_inj1)))
             (then (conv (land_tac b)) r))])])
  , theorem inj2_univ_inj
-   (pi A \ pi B \ (! (univ '' A '' B) x22 \ ! x23 \ inj2_univ '' A '' B ' x22 = inj2_univ '' A '' B ' x23 ==> x22 = x23) ,
+   (pi A \ pi B \ (! (univ ## A ## B) x22 \ ! x23 \ inj2_univ ## A ## B # x22 = inj2_univ ## A ## B # x23 ==> x22 = x23) ,
     [then inv
-     (bind (univ '' A '' B) x20 \ bind (univ '' A '' B) x21 \
-        thenl (t (case_univ '' A '' B '' (univ '' A '' B) ' (inj2_univ '' A '' B ' x20) '
-             (lam (univ '' A '' B) x22 \ x22) '
-             (lam (univ '' A '' B) x22 \ x22)))
+     (bind (univ ## A ## B) x20 \ bind (univ ## A ## B) x21 \
+        thenl (t (case_univ ## A ## B ## (univ ## A ## B) # (inj2_univ ## A ## B # x20) '
+             (lam (univ ## A ## B) x22 \ x22) '
+             (lam (univ ## A ## B) x22 \ x22)))
          [then sym
            (then (conv (land_tac (applyth case_univ_inj2)))
              (then (conv (land_tac b)) r)),
@@ -1275,15 +1263,15 @@ the_library L :-
           (then (conv (land_tac (applyth case_univ_inj2)))
             (then (conv (land_tac b)) r))])])
  , theorem not_eq_inj1_inj2_univ 
-   (pi A \ pi B \ (! (univ '' A '' B) x22 \ ! x23 \ inj1_univ '' A '' B ' x22 = inj2_univ '' A '' B ' x23 ==> ff) ,
+   (pi A \ pi B \ (! (univ ## A ## B) x22 \ ! x23 \ inj1_univ ## A ## B # x22 = inj2_univ ## A ## B # x23 ==> ff) ,
     [then inv
-     (bind (univ '' A '' B) x22 \
-       bind (univ '' A '' B) x23 \
+     (bind (univ ## A ## B) x22 \
+       bind (univ ## A ## B) x23 \
         then (cutth case_univ_inj1)
          (then (lforall x22)
-           (then (lforall (lam (univ '' A '' B) x24 \ ff))
-             (then (lforall (lam (univ '' A '' B) x24 \ tt))
-               (thenl (m ((lam (univ '' A '' B) x24 \ ff) ' x22)) [b,
+           (then (lforall (lam (univ ## A ## B) x24 \ ff))
+             (then (lforall (lam (univ ## A ## B) x24 \ tt))
+               (thenl (m ((lam (univ ## A ## B) x24 \ ff) # x22)) [b,
                  then (conv (then sym h))
                   (then (wl [])
                     (then (conv (depth_tac h))
@@ -1292,15 +1280,15 @@ the_library L :-
                           (then (conv b) (itaut 1))))))])))))])
  , theorem inj1_disj_union_inj (pi A \ pi B \
     ((! x \ ! y \
-     inj1_disj_union '' A '' B ' x = inj1_disj_union '' A '' B ' y ==> x = y) ,
+     inj1_disj_union ## A ## B # x = inj1_disj_union ## A ## B # y ==> x = y) ,
     [then inv
       (bind A x23 \
         bind A x24 \
          then (cutth case_disj_union_inj1)
           (then (lforall x23)
             (then (lforall (lam A x25 \ x25))
-              (then (lforall (lam B x25 \ choose '' A))
-                (thenl (t ((lam A x25 \ x25) ' x23))
+              (then (lforall (lam B x25 \ choose ## A))
+                (thenl (t ((lam A x25 \ x25) # x23))
                   [then (conv (rand_tac b)) r,
                   then (conv (land_tac (then sym h)))
                    (then (wl [])
@@ -1310,15 +1298,15 @@ the_library L :-
                            b))))])))))]))
  , theorem inj2_disj_union_inj (pi A \ pi B \
     ((! x \ ! y \
-     inj2_disj_union '' A '' B ' x = inj2_disj_union '' A '' B ' y ==> x = y) ,
+     inj2_disj_union ## A ## B # x = inj2_disj_union ## A ## B # y ==> x = y) ,
     [then inv
       (bind B x23 \
         bind B x24 \
          then (cutth case_disj_union_inj2)
           (then (lforall x23)
-            (then (lforall (lam A x25 \ choose '' B))
+            (then (lforall (lam A x25 \ choose ## B))
               (then (lforall (lam B x25 \ x25))
-                (thenl (t ((lam B x25 \ x25) ' x23))
+                (thenl (t ((lam B x25 \ x25) # x23))
                   [then (conv (rand_tac b)) r,
                   then (conv (land_tac (then sym h)))
                    (then (wl [])
@@ -1332,23 +1320,23 @@ the_library L :-
     (a1 ==> b1) ==> (a2 ==> b2) ==> a1 && a2 ==> b1 && b2),
     [itaut 2])
  , theorem or_monotone ((! a1 \ ! b1 \ ! a2 \ ! b2 \
-    (a1 ==> b1) ==> (a2 ==> b2) ==> a1 `or a2 ==> b1 `or b2),
+    (a1 ==> b1) ==> (a2 ==> b2) ==> a1 || a2 ==> b1 || b2),
     [itaut 2])
  , theorem impl_monotone ((! a1 \ ! b1 \ ! a2 \ ! b2 \
     (b1 ==> a1) ==> (a2 ==> b2) ==> (a1 ==> a2) ==> (b1 ==> b2)),
     [itaut 3])
- , theorem not_monotone ((! p \ ! q \ (p ==> q) ==> (not ' q) ==> (not ' p)),
+ , theorem not_monotone ((! p \ ! q \ (p ==> q) ==> (not # q) ==> (not # p)),
     [itaut 3])
  , theorem forall_monotone (pi A \ (! p \ ! q \
-    (! A x \ p ' x ==> q ' x) ==> (! x \ p ' x) ==> (! x \ q ' x)),
+    (! A x \ p # x ==> q # x) ==> (! x \ p # x) ==> (! x \ q # x)),
     [itaut 6])
  , theorem exists_monotone (pi A \ (! p \ ! q \
-    (! A x \ p ' x ==> q ' x) ==> (? x \ p ' x) ==> (? x \ q ' x)),
+    (! A x \ p # x ==> q # x) ==> (? x \ p # x) ==> (? x \ q # x)),
     [itaut 6])
 
  /********** Knaster-Tarski theorem *********/
   , def in (pi A \ (A --> (A --> prop) --> prop),
-     (lam A x \ lam (A --> prop) j \ j ' x))
+     (lam A x \ lam (A --> prop) j \ j # x))
   , def subseteq (pi A \ ((A --> prop) --> (A --> prop) --> prop),
      (lam (A --> prop) x \ lam (A --> prop) y \ ! z \ z #in x ==> z #in y))
   , theorem in_subseteq (pi A \ 
@@ -1359,13 +1347,13 @@ the_library L :-
           (bind (A --> prop) x10 \
             then forall_i (bind A x11 \ then (conv (land_tac dd)) (itaut 4))))])
   , def monotone (pi A \ (((A --> prop) --> (A --> prop)) --> prop),
-      (lam (_ A) f \ ! x \ ! y \ x <<= y ==> f ' x <<= f ' y))
+      (lam (_ A) f \ ! x \ ! y \ x <<= y ==> f # x <<= f # y))
   , def is_fixpoint (pi A \ (((A --> prop) --> (A --> prop)) --> ((A --> prop) --> prop)),
-     (lam (_ A) f \ lam (_ A) x \ (f ' x) <<= x && x <<= (f ' x)))
+     (lam (_ A) f \ lam (_ A) x \ (f # x) <<= x && x <<= (f # x)))
   , def fixpoint (pi A \ (((A --> prop) --> (A --> prop)) --> (A --> prop)),
-     (lam (_ A) f \ lam A a \ ! e \ f ' e <<= e ==> a #in e))
+     (lam (_ A) f \ lam A a \ ! e \ f # e <<= e ==> a #in e))
   , theorem fixpoint_subseteq_any_prefixpoint (pi A \
-     (! f \ ! x\ f ' x <<= x ==> fixpoint '' A ' f <<= x),
+     (! f \ ! x\ f # x <<= x ==> fixpoint ## A # f <<= x),
      [then inv
        (bind ((A --> prop) --> (A --> prop)) x9 \
          (bind (A --> prop) x10 \
@@ -1376,7 +1364,7 @@ the_library L :-
                   then (conv (land_tac dd))
                    (then (conv (land_tac b)) (itaut 4)))))))])
   , theorem fixpoint_subseteq_any_fixpoint (pi A \
-     (! f \ ! x\ is_fixpoint '' A ' f ' x ==> fixpoint '' A ' f <<= x),
+     (! f \ ! x\ is_fixpoint ## A # f # x ==> fixpoint ## A # f <<= x),
      [then forall_i
        (bind ((A --> prop) --> (A --> prop)) x9 \
          then forall_i
@@ -1384,13 +1372,13 @@ the_library L :-
             then (conv (land_tac dd))
              (then (cutth fixpoint_subseteq_any_prefixpoint) (itaut 8))))])
   , theorem prefixpoint_to_prefixpoint (pi A \
-     (! f \ ! x \ monotone '' A ' f ==> f ' x <<= x ==> f ' (f ' x) <<= f ' x),
+     (! f \ ! x \ monotone ## A # f ==> f # x <<= x ==> f # (f # x) <<= f # x),
     [then forall_i
       (bind ((A --> prop) --> (A --> prop)) x9 \
         then forall_i
          (bind (A --> prop) x10 \ then (conv (land_tac dd)) (itaut 6)))])
   , theorem fixpoint_is_prefixpoint (pi A \
-     (! f \ monotone '' A ' f ==> f ' (fixpoint '' A ' f)<<= fixpoint '' A ' f),
+     (! f \ monotone ## A # f ==> f # (fixpoint ## A # f)<<= fixpoint ## A # f),
      [then inv
        (bind ((A --> prop) --> (A --> prop)) x9 \
          then (conv dd)
@@ -1401,26 +1389,26 @@ the_library L :-
                  (then (conv b)
                    (then inv
                      (bind (A --> prop) x11 \
-                       thenl (cut (fixpoint '' A ' x9 <<= x11))
+                       thenl (cut (fixpoint ## A # x9 <<= x11))
                         [thenl
-                          (cut (x9 ' (fixpoint '' A ' x9) <<= x9 ' x11))
+                          (cut (x9 # (fixpoint ## A # x9) <<= x9 # x11))
                           [then (cutth in_subseteq)
-                            (then (lforall_last (x9 ' x11))
+                            (then (lforall_last (x9 # x11))
                               (then (lforall_last x11)
                                 (thenl apply_last [h,
                                   then (cutth in_subseteq) (itaut 10)]))),
                           thenl
-                           (m (monotone '' A ' x9 ==> x9 ' (fixpoint '' A ' x9) <<= x9 ' x11))
+                           (m (monotone ## A # x9 ==> x9 # (fixpoint ## A # x9) <<= x9 # x11))
                            [itaut 10, then (conv (land_tac dd)) (itaut 10)]],
                         then (applyth fixpoint_subseteq_any_prefixpoint) h])))))))])
   , theorem fixpoint_is_fixpoint (pi A \
-    (! f \ monotone '' A ' f ==> is_fixpoint '' A ' f ' (fixpoint '' A ' f)),
+    (! f \ monotone ## A # f ==> is_fixpoint ## A # f # (fixpoint ## A # f)),
     [then inv
       (bind ((A --> prop) --> (A --> prop)) x9 \
         then (conv (depth_tac (dd [is_fixpoint])))
          (thenl inv [then (applyth fixpoint_is_prefixpoint) h,
            then (applyth fixpoint_subseteq_any_prefixpoint)
-            (then (g (monotone '' A ' x9))
+            (then (g (monotone ## A # x9))
               (then (conv (land_tac dd))
                 (then inv
                   (then apply (then (applyth fixpoint_is_prefixpoint) h)))))]))])
@@ -1429,17 +1417,17 @@ the_library L :-
  , decl rec (pi A \pi B \ ((A --> B) --> (A --> B)) --> (A --> B))
  , inductive_def acc accF accF_monotone acc_i0 acc_e0 acc_e
     (pi A \ param (A --> A --> prop) lt \ acc \
-     [ (acc_i, ! x \ (! y \ lt ' y ' x ==> acc ' y) ==> acc ' x) ])
+     [ (acc_i, ! x \ (! y \ lt # y # x ==> acc # y) ==> acc # x) ])
 
  , def well_founded (pi A \ ((A --> A --> prop) --> prop,
-    lam (_ A) lt \ ! x \ acc '' A ' lt ' x))
+    lam (_ A) lt \ ! x \ acc ## A # lt # x))
 
  , axiom rec_is_fixpoint (pi A \ pi B \
-   (! lt \ well_founded '' A ' lt ==>
+   (! lt \ well_founded ## A # lt ==>
     ! ((A --> B) --> (A --> B)) h \
      (! f \ ! g \ ! i \
-       (! p \ lt ' p ' i ==> f ' p = g ' p) ==> h ' f ' i = h ' g ' i) ==>
-     rec '' A '' B ' h = h ' (rec '' A '' B ' h)))
+       (! p \ lt # p # i ==> f # p = g # p) ==> h # f # i = h # g # i) ==>
+     rec ## A ## B # h = h # (rec ## A ## B # h)))
  /******************* TESTS *****************/
  /* The first three tests are commented out because they require extra-hacks
     in the kernel to avoid quantifying over p, q and g.
@@ -1449,19 +1437,19 @@ the_library L :-
     [then i (then i (then apply h))])
  , theorem test_itaut_1 (((? x \ g x) ==> ! x \ (! y \ g y ==> x) ==> x),
    [itaut 4])*/
- , theorem test_monotone1 (monotone '' _ ' (lam _ p \ lam _ x \ not ' (p ' x) ==> tt && p ' tt `or p ' x),
+ , theorem test_monotone1 (monotone ## _ # (lam _ p \ lam _ x \ not # (p # x) ==> tt && p # tt || p # x),
    [ auto_monotone ])
- , theorem test_monotone2 (monotone '' _ ' (lam _ p \ lam _ x \ ? z \ not ' (p ' x) ==> tt && p ' tt `or z),
+ , theorem test_monotone2 (monotone ## _ # (lam _ p \ lam _ x \ ? z \ not # (p # x) ==> tt && p # tt || z),
    [ auto_monotone ])
- , theorem test_monotone3 (monotone '' _ ' (lam _ p \ lam _ x \ ! z \ ? y \ (not ' (p ' x) ==> z && p ' y `or y)),
+ , theorem test_monotone3 (monotone ## _ # (lam _ p \ lam _ x \ ! z \ ? y \ (not # (p # x) ==> z && p # y || y)),
    [ auto_monotone ])
  , inductive_def pnn pnnF pnnF_monotone pnn_i pnn_e0 pnn_e (pnn \
-     [ (pnn_tt, pnn ' tt)
-     , (pnn_not, ! x \ pnn ' x ==> pnn ' (not ' x))])
+     [ (pnn_tt, pnn # tt)
+     , (pnn_not, ! x \ pnn # x ==> pnn # (not # x))])
  , theorem pnn_e
     ((! x13 \
-       x13 ' tt && (! x14 \ x13 ' x14 ==> x13 ' (not ' x14)) ==>
-        (! x14 \ pnn ' x14 ==> x13 ' x14)) ,
+       x13 # tt && (! x14 \ x13 # x14 ==> x13 # (not # x14)) ==>
+        (! x14 \ pnn # x14 ==> x13 # x14)) ,
    [then forall_i
      (bind (prop --> prop) x13 \
        then (cutth pnn_e0)
@@ -1479,10 +1467,10 @@ the_library L :-
                           then left (then (conv (depth_tac h)) (itaut 8)))]))),
               h]))))])
  , theorem pnn_has_two_values
-    ((! x13 \ pnn ' x13 ==> x13 = tt `or x13 = ff) ,
+    ((! x13 \ pnn # x13 ==> x13 = tt || x13 = ff) ,
     % applying an elimination principle is hard: it should be automatized
     [then (cutth pnn_e)
-      (then (lforall (lam prop x13 \ or ' (eq '' prop ' x13 ' tt) ' (eq '' prop ' x13 ' ff)))
+      (then (lforall (lam prop x13 \ or # (eq ## prop # x13 # tt) # (eq ## prop # x13 # ff)))
         (thenl lapply
           [thenl conj [then (conv b) (itaut 1),
             then (repeat (conv (depth_tac b)))
@@ -1493,27 +1481,27 @@ the_library L :-
               (thenl lapply [h,
                 then
                  (g
-                   ((lam prop x14 \ or ' (eq '' prop ' x14 ' tt) ' (eq '' prop ' x14 ' ff)) '
+                   ((lam prop x14 \ or # (eq ## prop # x14 # tt) # (eq ## prop # x14 # ff)) '
                      x13))
                  (then (repeat (conv (depth_tac b)))
                    (then
                      (w
-                       ((lam prop x14 \ or ' (eq '' prop ' x14 ' tt) ' (eq '' prop ' x14 ' ff))
-                         ' x13)) (then (w (pnn ' x13)) (itaut 2))))]))]))])
+                       ((lam prop x14 \ or # (eq ## prop # x14 # tt) # (eq ## prop # x14 # ff))
+                         # x13)) (then (w (pnn # x13)) (itaut 2))))]))]))])
  , inductive_def in_two in_twoF in_twoF_monotone in_two_i in_two_e0 in_two_e (in_two \
-     [ (in_two_tt, in_two ' tt)
-     , (in_two_ff, in_two ' ff) ])
+     [ (in_two_tt, in_two # tt)
+     , (in_two_ff, in_two # ff) ])
  , new_basic_type bool2 myrep2 myabs2 myrepabs2 myabsrep2 myproprep2
     (pnn,
     [then (cutth pnn_tt) (then (applyth exists_i) h)])
- , def mytt (bool2,(myabs2 ' tt))
- , def mynot ((bool2 --> bool2),(lam _ x \ myabs2 ' (not ' (myrep2 ' x))))
+ , def mytt (bool2,(myabs2 # tt))
+ , def mynot ((bool2 --> bool2),(lam _ x \ myabs2 # (not # (myrep2 # x))))
  , theorem mytt_transfer
-   (myrep2 ' mytt = tt ,
+   (myrep2 # mytt = tt ,
      [then (conv (depth_tac (dd [mytt])))
        (then (applyth myrepabs2) (applyth pnn_tt))])
  , theorem mynot_transfer
-   ((! x18 \ myrep2 ' (mynot ' x18) = not ' (myrep2 ' x18)) ,
+   ((! x18 \ myrep2 # (mynot # x18) = not # (myrep2 # x18)) ,
      [then (conv (depth_tac (dd [mynot])))
        (then forall_i
          (bind bool2 x18 \
@@ -1521,53 +1509,53 @@ the_library L :-
             (then (applyth pnn_not) (applyth myproprep2))))])
  , theorem mybool2_e
  ((! x18 \
-    x18 ' mytt && (! x19 \ x18 ' x19 ==> x18 ' (mynot ' x19)) ==>
-     (! x19 \ x18 ' x19)) ,
+    x18 # mytt && (! x19 \ x18 # x19 ==> x18 # (mynot # x19)) ==>
+     (! x19 \ x18 # x19)) ,
    [thenl
      (cut
-       (forall '' (bool2 --> prop) '
+       (forall ## (bool2 --> prop) '
          (lam (bool2 --> prop) x18 \
            impl '
-            (and ' (x18 ' (myabs2 ' (myrep2 ' mytt))) '
-              (forall '' bool2 '
+            (and # (x18 # (myabs2 # (myrep2 # mytt))) '
+              (forall ## bool2 '
                 (lam bool2 x19 \
-                  impl ' (x18 ' (myabs2 ' (myrep2 ' x19))) '
+                  impl # (x18 # (myabs2 # (myrep2 # x19))) '
                    (x18 '
                      (myabs2 '
-                       (myrep2 ' (mynot ' (myabs2 ' (myrep2 ' x19)))))))))
+                       (myrep2 # (mynot # (myabs2 # (myrep2 # x19)))))))))
             '
-            (forall '' bool2 '
-              (lam bool2 x19 \ x18 ' (myabs2 ' (myrep2 ' x19)))))))
+            (forall ## bool2 '
+              (lam bool2 x19 \ x18 # (myabs2 # (myrep2 # x19)))))))
      [then
        (g
-         (forall '' (bool2 --> prop) '
+         (forall ## (bool2 --> prop) '
            (lam (bool2 --> prop) x18 \
              impl '
-              (and ' (x18 ' (myabs2 ' (myrep2 ' mytt))) '
-                (forall '' bool2 '
+              (and # (x18 # (myabs2 # (myrep2 # mytt))) '
+                (forall ## bool2 '
                   (lam bool2 x19 \
-                    impl ' (x18 ' (myabs2 ' (myrep2 ' x19))) '
+                    impl # (x18 # (myabs2 # (myrep2 # x19))) '
                      (x18 '
                        (myabs2 '
-                         (myrep2 ' (mynot ' (myabs2 ' (myrep2 ' x19)))))))))
+                         (myrep2 # (mynot # (myabs2 # (myrep2 # x19)))))))))
               '
-              (forall '' bool2 '
-                (lam bool2 x19 \ x18 ' (myabs2 ' (myrep2 ' x19)))))))
+              (forall ## bool2 '
+                (lam bool2 x19 \ x18 # (myabs2 # (myrep2 # x19)))))))
        (then
          (w
-           (forall '' (bool2 --> prop) '
+           (forall ## (bool2 --> prop) '
              (lam (bool2 --> prop) x18 \
                impl '
-                (and ' (x18 ' (myabs2 ' (myrep2 ' mytt))) '
-                  (forall '' bool2 '
+                (and # (x18 # (myabs2 # (myrep2 # mytt))) '
+                  (forall ## bool2 '
                     (lam bool2 x19 \
-                      impl ' (x18 ' (myabs2 ' (myrep2 ' x19))) '
+                      impl # (x18 # (myabs2 # (myrep2 # x19))) '
                        (x18 '
                          (myabs2 '
-                           (myrep2 ' (mynot ' (myabs2 ' (myrep2 ' x19)))))))))
+                           (myrep2 # (mynot # (myabs2 # (myrep2 # x19)))))))))
                 '
-                (forall '' bool2 '
-                  (lam bool2 x19 \ x18 ' (myabs2 ' (myrep2 ' x19)))))))
+                (forall ## bool2 '
+                  (lam bool2 x19 \ x18 # (myabs2 # (myrep2 # x19)))))))
          (then (repeat (conv (depth_tac (applyth myabsrep2)))) (then i h))),
      then forall_i
       (bind (bool2 --> prop) x18 \
@@ -1575,26 +1563,26 @@ the_library L :-
          (then
            (lforall
              (lam prop x19 \
-               exists '' bool2 '
+               exists ## bool2 '
                 (lam bool2 x20 \
-                  and ' (eq '' _ ' x19 ' (myrep2 ' x20)) '
-                   (x18 ' (myabs2 ' x19)))))
+                  and # (eq ## _ # x19 # (myrep2 # x20)) '
+                   (x18 # (myabs2 # x19)))))
            (then inv
              (bind bool2 x19 \
                thenl
                 (cut
                   ((lam prop x20 \
-                     exists '' bool2 '
+                     exists ## bool2 '
                       (lam bool2 x21 \
-                        and ' (eq '' _ ' x20 ' (myrep2 ' x21)) '
-                         (x18 ' (myabs2 ' x20)))) ' (myrep2 ' x19)))
+                        and # (eq ## _ # x20 # (myrep2 # x21)) '
+                         (x18 # (myabs2 # x20)))) # (myrep2 # x19)))
                 [then
                   (g
                     ((lam prop x20 \
-                       exists '' bool2 '
+                       exists ## bool2 '
                         (lam bool2 x21 \
-                          and ' (eq '' _ ' x20 ' (myrep2 ' x21)) '
-                           (x18 ' (myabs2 ' x20)))) ' (myrep2 ' x19)))
+                          and # (eq ## _ # x20 # (myrep2 # x21)) '
+                           (x18 # (myabs2 # x20)))) # (myrep2 # x19)))
                   (then (conv (depth_tac b)) inv),
                 thenl apply
                  [then (repeat (conv (depth_tac b)))
@@ -1603,8 +1591,8 @@ the_library L :-
                        (then
                          (lforall_last
                            (lam bool2 x20 \
-                             and ' (eq '' _ ' tt ' (myrep2 ' x20)) '
-                              (x18 ' (myabs2 ' tt))))
+                             and # (eq ## _ # tt # (myrep2 # x20)) '
+                              (x18 # (myabs2 # tt))))
                          (then (lforall_last mytt)
                            (then apply_last (then (conv b)
                             (thenl inv
@@ -1612,7 +1600,7 @@ the_library L :-
                                (then (conv (depth_tac h)) (applyth tt_intro)),
                              (applyth tt_intro),
                              then (cutth mytt_transfer)
-                              (then (g (x18 ' (myabs2 ' (myrep2 ' mytt))))
+                              (then (g (x18 # (myabs2 # (myrep2 # mytt))))
                                 (then (conv (depth_tac h)) (then i h)))]))))),
                      (bind prop x20 \
                        bind bool2 x21 \
@@ -1620,26 +1608,26 @@ the_library L :-
                          (then
                            (lforall_last
                              (lam bool2 x22 \
-                               and ' (eq '' _ ' (not ' x20) ' (myrep2 ' x22)) '
-                                (x18 ' (myabs2 ' (not ' x20)))))
-                           (then (lforall_last (mynot ' x21))
+                               and # (eq ## _ # (not # x20) # (myrep2 # x22)) '
+                                (x18 # (myabs2 # (not # x20)))))
+                           (then (lforall_last (mynot # x21))
                              (then apply_last (then (conv b)
     (thenl inv
      [then (conv (applyth mynot_transfer))
        (then (conv (depth_tac (dd [not]))) (then inv (itaut 3))),
-     then (g (myrep2 ' (mynot ' x21)))
+     then (g (myrep2 # (mynot # x21)))
       (then (conv (land_tac (applyth mynot_transfer)))
         (then (conv (depth_tac (dd [not]))) (then inv (itaut 3)))),
-     then (lforall (myabs2 ' x20))
+     then (lforall (myabs2 # x20))
       (thenl lapply [then (conv (depth_tac (applyth myabsrep2))) h,
         then
          (g
            (x18 '
              (myabs2 '
-               (myrep2 ' (mynot ' (myabs2 ' (myrep2 ' (myabs2 ' x20))))))))
+               (myrep2 # (mynot # (myabs2 # (myrep2 # (myabs2 # x20))))))))
          (then (conv (depth_tac (applyth myabsrep2)))
            (then (conv (depth_tac (applyth myabsrep2)))
-             (thenl (cut (x20 = myrep2 ' x21))
+             (thenl (cut (x20 = myrep2 # x21))
                [then (conv (depth_tac h))
                  (then (conv (depth_tac h))
                    (then (conv (depth_tac (applyth myabsrep2)))
@@ -1653,27 +1641,27 @@ the_library L :-
                  applyth myproprep2]]))))]])
 
 , theorem step0
-    ((! x13 \ mynot ' (mynot ' (mynot ' x13)) = mynot ' x13) ,
+    ((! x13 \ mynot # (mynot # (mynot # x13)) = mynot # x13) ,
      [then inv
       (bind bool2 x13 \
         then (repeat (conv (depth_tac (dd [mynot]))))
          (thenl (conv (land_tac (rand_tac (rand_tac (applyth myrepabs2)))))
           [then (cutth pnn_not)
-            (then (lforall (myrep2 ' (myabs2 ' (not ' (myrep2 ' x13)))))
+            (then (lforall (myrep2 # (myabs2 # (not # (myrep2 # x13)))))
               (then (cutth myproprep2)
-                (then (lforall (myabs2 ' (not ' (myrep2 ' x13))))
+                (then (lforall (myabs2 # (not # (myrep2 # x13))))
                   (then apply h)))),
           thenl
            (conv
              (land_tac
                (rand_tac (rand_tac (rand_tac (applyth myrepabs2))))))
            [then (cutth pnn_not)
-             (then (lforall (myrep2 ' x13))
+             (then (lforall (myrep2 # x13))
                (then (cutth myproprep2)
                  (then (lforall x13) (then apply h)))),
            then (conv (land_tac (rand_tac (applyth not_not_not)))) r]]))])
  , theorem mynot_mynot_mytt
-    (mynot ' (mynot ' mytt) = mytt ,
+    (mynot # (mynot # mytt) = mytt ,
      [then (conv (depth_tac (dd [mynot])))
       (then (cutth mynot_transfer)
         (then (lforall mytt)
@@ -1682,18 +1670,18 @@ the_library L :-
               (then (conv (depth_tac h))
                 (then (conv (depth_tac (dd [mytt]))) (thenl c [r, itaut 3])))))))])
  , theorem step1
-    ((! x18 \ x18 = mytt `or x18 = mynot ' mytt) ,
+    ((! x18 \ x18 = mytt || x18 = mynot # mytt) ,
      [then forall_i
       (bind bool2 x18 \
        then (cutth mybool2_e)
         (thenl
           (cut
             ((lam bool2 x19 \
-               or ' (eq '' _ ' x19 ' mytt) ' (eq '' _ ' x19 ' (mynot ' mytt))) ' x18))
+               or # (eq ## _ # x19 # mytt) # (eq ## _ # x19 # (mynot # mytt))) # x18))
           [then
             (g
               ((lam bool2 x19 \
-                 or ' (eq '' _ ' x19 ' mytt) ' (eq '' _ ' x19 ' (mynot ' mytt))) '
+                 or # (eq ## _ # x19 # mytt) # (eq ## _ # x19 # (mynot # mytt))) '
                 x18)) (then (conv (depth_tac b)) (then i h)),
           then apply
            (then (repeat (conv (depth_tac b)))
@@ -1708,43 +1696,43 @@ the_library L :-
  /* TODO: this is an inductive type as well: generalize
     inductive_type to type abstractions */
  , def is_pair (pi A \ pi B \
-  (univ '' (disj_union '' A '' B) '' prop --> prop),
+  (univ ## (disj_union ## A ## B) ## prop --> prop),
   lam (_ A B) p \ ? A a \ ? B b \
    p =
-    pair_univ '' (_ A B) '' _ '
-     (injection_univ '' (_ A B) '' _ ' (inj1_disj_union '' A '' B ' a)) '
-     (injection_univ '' (_ A B) '' _ ' (inj2_disj_union '' A '' B ' b)))
+    pair_univ ## (_ A B) ## _ '
+     (injection_univ ## (_ A B) ## _ # (inj1_disj_union ## A ## B # a)) '
+     (injection_univ ## (_ A B) ## _ # (inj2_disj_union ## A ## B # b)))
  , new_basic_type prod prod_rep prod_abs prod_repabs prod_absrep prod_proprep
-    (pi A \ pi B \ is_pair '' A '' B, [daemon])
+    (pi A \ pi B \ is_pair ## A ## B, [daemon])
  , def pair (pi A \ pi B \
-    (A --> B --> prod '' A '' B,
+    (A --> B --> prod ## A ## B,
     lam A a \ lam B b \
-     prod_abs '' A '' B '
-      (pair_univ '' (_ A B) '' _ '
-       (injection_univ '' (_ A B) '' _ ' (inj1_disj_union '' A '' B ' a)) '
-       (injection_univ '' (_ A B) '' _ ' (inj2_disj_union '' A '' B ' b)))
+     prod_abs ## A ## B '
+      (pair_univ ## (_ A B) ## _ '
+       (injection_univ ## (_ A B) ## _ # (inj1_disj_union ## A ## B # a)) '
+       (injection_univ ## (_ A B) ## _ # (inj2_disj_union ## A ## B # b)))
     ))
  /* TODO: define fst and snd and prove the usual lemmas
-    fst ' (pair ' a ' b) = a */
+    fst # (pair # a # b) = a */
 
   /************* Natural numbers ***************/
  , inductive_def is_nat is_natF is_nat_monotone is_nat_i is_nat_e0 is_nat_e
    (is_nat \
-     [ (is_nat_z, is_nat ' (inj1_univ '' prop '' prop ' (injection_univ '' prop '' prop ' ff)))
-     , (is_nat_s, ! x \ is_nat ' x ==> is_nat ' (inj2_univ '' prop '' prop ' x))])
+     [ (is_nat_z, is_nat # (inj1_univ ## prop ## prop # (injection_univ ## prop ## prop # ff)))
+     , (is_nat_s, ! x \ is_nat # x ==> is_nat # (inj2_univ ## prop ## prop # x))])
  , new_basic_type nat nat_rep nat_abs nat_repabs nat_absrep nat_proprep
     (is_nat,
     [then (cutth is_nat_z) (then (applyth exists_i) h)])
- , def z (nat, nat_abs ' (inj1_univ '' prop '' prop ' (injection_univ '' prop '' prop ' ff)))
+ , def z (nat, nat_abs # (inj1_univ ## prop ## prop # (injection_univ ## prop ## prop # ff)))
  , def s (nat --> nat,
-    (lam _ x \ nat_abs ' (inj2_univ '' prop '' prop ' (nat_rep ' x))))
+    (lam _ x \ nat_abs # (inj2_univ ## prop ## prop # (nat_rep # x))))
  /* TODO: consequence of is_nat_e by transfer principles */
- , theorem nat_e ((! p \ p ' z ==> (! n \ p ' n ==> p ' (s ' n)) ==> ! n \ p ' n), [ daemon ])
+ , theorem nat_e ((! p \ p # z ==> (! n \ p # n ==> p # (s # n)) ==> ! n \ p # n), [ daemon ])
  , theorem nat_abs_inj
    ((! x18 \
       ! x19 \
-       is_nat ' x18 ==>
-        is_nat ' x19 ==> nat_abs ' x18 = nat_abs ' x19 ==> x18 = x19) ,
+       is_nat # x18 ==>
+        is_nat # x19 ==> nat_abs # x18 = nat_abs # x19 ==> x18 = x19) ,
      [then inv
        (bind _ x18 \
          bind _ x19 \
@@ -1752,14 +1740,14 @@ the_library L :-
            thenl (conv (rand_tac (then sym (applyth nat_repabs)))) [h,
             then (conv (depth_tac h)) r]])])
  , theorem nat_rep_inj
-   ((! x18 \ ! x19 \ nat_rep ' x18 = nat_rep ' x19 ==> x18 = x19) ,
+   ((! x18 \ ! x19 \ nat_rep # x18 = nat_rep # x19 ==> x18 = x19) ,
      [then inv
        (bind nat x18 \
          bind nat x19 \
           then (conv (land_tac (then sym (applyth nat_absrep))))
            (then (conv (rand_tac (then sym (applyth nat_absrep))))
              (then (conv (depth_tac h)) r)))])
- , theorem s_inj ((! x18 \ ! x19 \ s ' x18 = s ' x19 ==> x18 = x19) ,
+ , theorem s_inj ((! x18 \ ! x19 \ s # x18 = s # x19 ==> x18 = x19) ,
      [then (repeat (conv (depth_tac (dd [s]))))
        (then inv
          (bind nat x18 \
@@ -1769,7 +1757,7 @@ the_library L :-
                (thenl (applyth nat_abs_inj)
                  [then (applyth is_nat_s) (applyth nat_proprep),
                  then (applyth is_nat_s) (applyth nat_proprep), h]))))])
- , theorem not_equal_z_s ((! x20 \ not ' (z = s ' x20)) ,
+ , theorem not_equal_z_s ((! x20 \ not # (z = s # x20)) ,
      [then (repeat (conv (depth_tac (dd [z]))))
        (then (repeat (conv (depth_tac (dd [s]))))
          (then (repeat (conv (depth_tac (dd [not]))))
@@ -1781,8 +1769,8 @@ the_library L :-
                   then (applyth is_nat_s) (applyth nat_proprep)])))))])
  , def nat_case (pi A \ (nat --> A --> (nat --> A) --> A,
     lam _ n \ lam (_ A) a \ lam (_ A) f \
-     case_univ '' prop '' prop '' A ' (nat_rep ' n) ' (lam _ x \ a) ' (lam _ p \ f ' (nat_abs ' p))))
- , theorem nat_case_z (pi A \ ((! x21 \ ! x22 \ nat_case '' A ' z ' x21 ' x22 = x21) ,
+     case_univ ## prop ## prop ## A # (nat_rep # n) # (lam _ x \ a) # (lam _ p \ f # (nat_abs # p))))
+ , theorem nat_case_z (pi A \ ((! x21 \ ! x22 \ nat_case ## A # z # x21 # x22 = x21) ,
       [then (conv (depth_tac (dd [nat_case])))
         (then (conv (depth_tac (dd [z])))
           (then forall_i
@@ -1796,7 +1784,7 @@ the_library L :-
                     (then (conv (depth_tac b)) r)]))))]))
  , theorem nat_case_s
    (pi A \ (! x21 \ ! x22 \ ! x23 \
-     nat_case '' A ' (s ' x21) ' x22 ' x23 = x23 ' x21),
+     nat_case ## A # (s # x21) # x22 # x23 = x23 # x21),
      [then (conv (depth_tac (dd [nat_case])))
        (then (conv (depth_tac (dd [s])))
          (then forall_i
@@ -1814,7 +1802,7 @@ the_library L :-
 
 
  , theorem pred_well_founded
-   (well_founded '' nat ' (lam nat x21 \ lam nat x22 \ x22 = s ' x21) ,
+   (well_founded ## nat # (lam nat x21 \ lam nat x22 \ x22 = s # x21) ,
    [then (conv dd)
      (then forall_i
        (bind nat x21 \
@@ -1838,13 +1826,13 @@ the_library L :-
  , def nat_recF (pi A \
     A --> (nat --> A --> A) --> (nat --> A) --> (nat --> A)
     , lam A a \ lam (_ A) f \ lam (_ A) rec \ lam _ n \
-       nat_case '' A ' n ' a ' (lam _ p \ f ' p ' (rec ' p)))
+       nat_case ## A # n # a # (lam _ p \ f # p # (rec # p)))
  , def nat_rec (pi A \
     A --> (nat --> A --> A) --> nat --> A
-    , lam A a \ lam (_ A) f \ rec '' nat '' A ' (nat_recF '' A ' a ' f))
+    , lam A a \ lam (_ A) f \ rec ## nat ## A # (nat_recF ## A # a # f))
  , theorem nat_rec_ok0 (pi A \
    ((! a \ ! f \
-     nat_rec '' A ' a ' f = nat_recF '' A ' a ' f ' (nat_rec '' A ' a ' f)) ,
+     nat_rec ## A # a # f = nat_recF ## A # a # f # (nat_rec ## A # a # f)) ,
    [then inv
      (bind A x22 \
        bind (nat --> A --> A) x23 \
@@ -1873,8 +1861,8 @@ the_library L :-
                                       then (conv (land_tac (rand_tac h))) r]))))))])))))]))]))
  , theorem nat_rec_ok (pi A \
    (! a \ ! f \ ! n \
-     nat_rec '' A ' a ' f ' n =
-      nat_case '' A ' n ' a ' (lam _ p \ f ' p ' (nat_rec '' A ' a ' f ' p))),
+     nat_rec ## A # a # f # n =
+      nat_case ## A # n # a # (lam _ p \ f # p # (nat_rec ## A # a # f # p))),
    [then inv
      (bind A x22 \
        bind (nat --> A --> A) x23 \
@@ -1885,14 +1873,14 @@ the_library L :-
  /************* Arithmetics: plus ***************/
  , def plus (nat --> nat --> nat,
     lam _ n \ lam _ m \
-     nat_rec '' _ ' m ' (lam _ p \ lam _ sum \ s ' sum)' n)
+     nat_rec ## _ # m # (lam _ p \ lam _ sum \ s # sum)' n)
  , theorem plus_z ((! n \ z + n = n),
    [then (conv (depth_tac (dd [plus])))
      (then inv
        (bind nat x21 \
          then (conv (land_tac (applyth nat_rec_ok)))
           (then (conv (land_tac (applyth nat_case_z))) r)))])
- , theorem plus_s ((! n \ ! m \  s ' n + m = s ' (n + m)),
+ , theorem plus_s ((! n \ ! m \  s # n + m = s # (n + m)),
    [then (repeat (conv (depth_tac (dd [plus]))))
      (then inv
        (bind nat x21 \
@@ -1908,7 +1896,7 @@ the_library L :-
           (bind nat x21 \
             then (conv (land_tac (applyth plus_s)))
              (then (conv (depth_tac h)) r)))])])
- , theorem plus_n_s ((! n \ ! m \ n + (s ' m) = s ' (n + m)),
+ , theorem plus_n_s ((! n \ ! m \ n + (s # m) = s # (n + m)),
    [then (conv (rand_tac beta_expand))
      (thenl (applyth nat_e)
        [then (conv b)
