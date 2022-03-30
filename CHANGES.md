@@ -1,7 +1,8 @@
 
 # UNRELEASED
 
-Requires Menhir 20211230 or above, camlp5 is now optional.
+Requires Menhir 20211230 and OCaml 4.07 or above.
+Camlp5 is now optional.
 
 - Parser:
   - New parser based on Menhir

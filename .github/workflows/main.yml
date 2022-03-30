@@ -17,8 +17,9 @@ jobs:
           - ubuntu-latest
           - windows-latest
         ocaml-version:
-          - 4.12.0+domains
-          - 4.14.0
+          - 4.13.1
+          - 4.11.2
+          - 4.09.1
           - 4.07.1
         profile:
           - dev
@@ -26,9 +27,9 @@ jobs:
           - os: ubuntu-latest
             ocaml-version: 4.14.0
             profile: fatalwarnings
-        exclude:
-          - os: windows-latest
+          - os: ubuntu-latest
             ocaml-version: 4.12.0+domains
+            profile: dev
 
     runs-on: ${{ matrix.os }}
 
