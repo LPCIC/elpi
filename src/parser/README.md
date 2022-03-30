@@ -1,11 +1,11 @@
-This parser is a standard LR parser based on Menhir.
+This parser is a standard LR parser based on [Menhir](http://gallium.inria.fr/~fpottier/menhir/).
 
 Tokens, token families and their precedence is described in
 [lexer_config.ml](lexer_config.ml). Out of that we generate:
 - `lexer.mll` filling in a [template](lexer.mll.in) which contains all other
   lexical convention
 - [token_precedence.mly](token_precedence.mly) which is coalesced by Menhir
-  with [tokens.mly]([tokens.mly) and [grammar.mly](grammar.mly) in order to
+  with [tokens.mly](tokens.mly) and [grammar.mly](grammar.mly) in order to
   build the LR parser
 
 The file [parse.ml](parse.ml) ties the recursion knot: `accumulate` calls the
@@ -16,7 +16,7 @@ It also loads signature files when loading `.mod` files, for backward
 compatibility with Teyjus. The module type `Parser` is defined in
 [parse.mli](parse.mli), and is all that clients should use.
 
-The file [error_messages.txt](error_messages.txt) is maintained by a few
+The [error messages](error_messages.txt) are maintained by a few
 targets in the root `Makefile` starting with `menhir-`, mainly
 `menhir-complete-errormsgs` and `menhir-strip-errormsgs`.
 
@@ -24,9 +24,9 @@ Unit tests:
 - [test_lexer.ml](test_lexer.ml) tests some lexing rules
 - [test_parser.ml](test_parser.ml) tests some parsing rules
 
-While the grammar is not extensible token families are used to provide
+While the grammar is not extensible token families provide
 an open ended set of mixfix symbols. The relative precedence of a mixfix
-is given by their family which is identified by its prefix.
+is given by its family which is identified by its prefix.
 
 When this parser encounters an mixfix declaration it outputs an error along
 these lines:
