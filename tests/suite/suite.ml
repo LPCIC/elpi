@@ -27,6 +27,7 @@ type t = {
   expectation : expectation;
   outside_llam : bool;
   trace : string list;
+  legacy_parser : bool;
 }
 
 let tests = ref []
@@ -37,6 +38,7 @@ let declare
     ?(typecheck=true) ?input ?(expectation=Success)
     ?(outside_llam=false)
     ?(trace=Off)
+    ?(legacy_parser=false)
     ~category
     ()
 =
@@ -59,6 +61,7 @@ let declare
     expectation;
     category;
     outside_llam;
+    legacy_parser;
     trace = (match trace with Off -> [] | On l -> "-trace-on" :: l)
   } :: !tests
 
@@ -157,6 +160,10 @@ let open_file_w name =
 let open_log ~executable { Test.name; _ } =
   begin try Unix.mkdir logdir 0o770 with Unix.Unix_error _ -> () end;
   let name = logdir^"/"^Filename.basename executable^"+"^name^".log" in
+  open_file_w name, name
+
+let open_dummy_log () =
+  let name = Filename.temp_file "elpi" "txt" in
   open_file_w name, name
 
 let write (fd,_) s = ignore(Unix.write_substring fd s 0 (String.length s))
@@ -282,13 +289,18 @@ let read_time input_line =
   with End_of_file -> !time
 
 let match_rex rex input_line =
-  let b = ref false in
-  try while true do
+  let b = Buffer.create 100 in
+  begin try
+    while true do
     let l = input_line () in
-    try ignore(Str.search_forward rex l 0); b := true
-    with Not_found -> ()
-  done; !b
-  with End_of_file -> !b
+    Buffer.add_string b l;
+    Buffer.add_string b "\n";
+    done
+  with End_of_file -> () end;
+  let s = Buffer.contents b in
+  let s = Str.global_replace (Str.regexp_string "\r") "" s in
+  try ignore(Str.search_forward rex s 0); true
+  with Not_found -> false
 
 let read_tctime input_line =
   let time = ref 0.0 in
@@ -300,9 +312,20 @@ let read_tctime input_line =
   done; !time
   with End_of_file -> !time
 
+let legacy_parser_available executable =
+  let log = Util.open_dummy_log () in
+  let env = Unix.environment () in
+  match
+    Util.exec ~executable ~timeout:1.0 ~env ~log ~args:["-legacy-parser-available"] ()
+  with
+  | Util.Exit(0,_,_) -> true
+  | _ -> false
+
 let () = Runner.declare
-  ~applicable:begin fun ~executable { Test.source_elpi; _ } ->
-    if is_elpi executable && source_elpi <> None then Runner.Can_run_it
+  ~applicable:begin fun ~executable { Test.source_elpi; legacy_parser; _ } ->
+    if is_elpi executable && source_elpi <> None && 
+      (not legacy_parser || legacy_parser_available executable)
+      then Runner.Can_run_it
     else Runner.Not_for_me
   end
   ~run:begin fun ~executable ~timetool ~timeout ~env ~sources test ->
@@ -315,12 +338,15 @@ let () = Runner.declare
     Util.write log (Printf.sprintf "executable: %s\n" executable);
     let executable_stuff = Filename.dirname executable ^ "/../lib/elpi/" in
 
-    let { Test.expectation; input; outside_llam ; typecheck; trace; _ } = test in
+    let { Test.expectation; input; outside_llam ; typecheck; trace; legacy_parser; _ } = test in
     let input = Util.option_map (fun x -> sources^x) input in
     let args = ["-test";"-I";executable_stuff;"-I";sources;source] @ trace in
     let args =
       if typecheck then args
       else "-no-tc" :: args in
+    let args =
+      if not legacy_parser then args
+      else "-legacy-parser" :: args in
     let args =
       if outside_llam then "-delay-problems-outside-pattern-fragment"::args
       else args in

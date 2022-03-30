@@ -10,7 +10,7 @@ accum_sig   pcf.
 type   term      tm -> o.
 
 term (fn R) :- pi X\ ((term X) => (term (R X))).
-term (M `@ N) :- term M, term N.
+term (M # N) :- term M, term N.
 term (fixpt R) :- pi X\((term X) => (term (R X))).
 term (cond M N P) :- term M, term N, term P.
 

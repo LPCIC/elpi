@@ -12,6 +12,7 @@ This file tries to summarise known incompatibilities between Elpi and Teyjus.
 
 # Syntax
 
+- Since Elpi 1.15 the default parser does not support the `infix` directive
 - No syntax for negative numbers: `~ 2` is the unary minus applied to `2`,
   not the number `-2`. If you want to write `-2`, just write `-2` with no
   space in between.

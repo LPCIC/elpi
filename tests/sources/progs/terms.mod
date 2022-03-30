@@ -8,7 +8,7 @@ trm trfact1 (fix F \ (abs N\ (abs M\
                    (app (app F (minus N (c 1))) (times N M)))))).
 
 trm trfact2 (fix F \ (abs P \ 
-             (cond (&& (prp P) (eq (fst P) (c 0))) (snd P)
+             (cond ((prp P) && (eq (fst P) (c 0))) (snd P)
                    (cond (prp P) (app F (pr (minus (fst P) (c 1))
                                             (times (fst P) (snd P))))
                           err)))).

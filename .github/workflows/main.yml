@@ -17,12 +17,27 @@ jobs:
           - ubuntu-latest
           - windows-latest
         ocaml-version:
-          - 4.12.0+domains
           - 4.13.1
+          - 4.11.2
+          - 4.09.1
           - 4.07.1
-        exclude:
-          - os: windows-latest
+        profile:
+          - dev
+        parser:
+          - menhir
+        include:
+          - os: ubuntu-latest
+            ocaml-version: 4.14.0
+            profile: fatalwarnings
+            parser: menhir
+          - os: ubuntu-latest
             ocaml-version: 4.12.0+domains
+            profile: dev
+            parser: menhir
+          - os: ubuntu-latest
+            ocaml-version: 4.11.2
+            profile: dev
+            parser: menhir-camlp5
 
     runs-on: ${{ matrix.os }}
 
@@ -69,16 +84,32 @@ jobs:
 #
 # We generate binaries like elpi-4.07.1-Linux.exe in the working directory
 
-      - name: Install dependencies
+      - name: Install optional dependencies for menhir-camlp5 parser
+        if: matrix.parser == 'menhir-camlp5'
         run: |
           opam depext camlp5 || true # no depext on opam 2.1
+          opam install 'camlp5>=8'
+  
+      - name: Install real dependencies
+        run: |
           opam install . --deps-only --with-doc --with-test
 
-      - name: Build elpi
+      - name: Build elpi with dune profile ${{ matrix.profile }}
         run: |
           opam exec -- dune subst
-          opam exec -- make build
-          opam exec -- cp _build/install/default/bin/elpi elpi-${{ matrix.ocaml-version }}-${{ runner.os }}.exe
+          opam exec -- make build DUNE_OPTS='--profile ${{ matrix.profile }}'
+          opam exec -- cp _build/install/default/bin/elpi elpi-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}.exe
+
+      - name: Strip binary
+        run: opam exec -- strip ${{ env.workspace }}/elpi-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}.exe
+
+# Artifacts 1 ################################################################
+
+      - name: Save binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: elpi-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}
+          path: elpi-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}.exe
 
 # Test ######################################################################
 #
@@ -86,30 +117,20 @@ jobs:
 
       - name: Test elpi on Unix
         if: runner.os != 'Windows'
-        run: opam exec -- make tests RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-version }}-${{ runner.os }}.exe'
+        run: opam exec -- make tests RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}.exe'
 
       - name: Test elpi on Windows
         if: runner.os == 'Windows'
         run: |
           opam exec -- ls -l tests/sources/*.elpi
-          opam exec -- make tests PWD=${{ env.workspace }} RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-version }}-${{ runner.os }}.exe' TIME=--time=${{ env.cygwin_root }}/bin/time.exe
+          opam exec -- make tests PWD=${{ env.workspace }} RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}.exe' TIME=--time=${{ env.cygwin_root }}/bin/time.exe
 
-      - name: Strip binary
-        run: opam exec -- strip ${{ env.workspace }}/elpi-${{ matrix.ocaml-version }}-${{ runner.os }}.exe
-
-# Artifacts ##################################################################
-
-
-      - name: Save binary
-        uses: actions/upload-artifact@v2
-        with:
-          name: elpi-${{ matrix.ocaml-version }}-${{ runner.os }}
-          path: elpi-${{ matrix.ocaml-version }}-${{ runner.os }}.exe
+# Artifacts 2 ################################################################
 
       - name: Save benchmarking data
         uses: actions/upload-artifact@v2
         with:
-          name: .benchmark-${{ matrix.ocaml-version }}-${{ runner.os }}
+          name: .benchmark-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}
           path: data.csv
           retention-days: 1
 

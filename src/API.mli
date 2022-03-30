@@ -52,7 +52,7 @@ module Setup : sig
       @param file_resolver maps a file name to an absolute path, if not specified the
         options like [-I] or the env variable [TJPATH] serve as resolver. The
         resolver returns the abslute file name
-        (possibly adjusting the file extension). By default it fails.
+        (possibly adjusting the unit extension). By default it fails.
         See also {!val:Parse.std_resolver}.
 
       @return a handle [elpi] to an elpi instance equipped with the given
@@ -61,7 +61,8 @@ module Setup : sig
   val init :
     ?flags:flags ->
     builtins:builtins list ->
-    ?file_resolver:(?cwd:string -> file:string -> unit -> string) ->
+    ?file_resolver:(?cwd:string -> unit:string -> unit -> string) ->
+    ?legacy_parser:bool ->
     unit ->
     elpi
 
@@ -81,32 +82,37 @@ module Setup : sig
   val set_type_error : (?loc:Ast.Loc.t -> string -> 'a) -> unit
   val set_std_formatter : Format.formatter -> unit
   val set_err_formatter : Format.formatter -> unit
+
+  (** The legacy parser is an optional build dependency *)
+  val legacy_parser_available : bool
 end
 
 module Parse : sig
 
   (** [program file_list] parses a list of files,
       Raises Failure if the file does not exist. *)
-  val program : elpi:Setup.elpi -> ?print_accumulated_files:bool ->
-    string list -> Ast.program
-  val program_from_stream : elpi:Setup.elpi -> ?print_accumulated_files:bool ->
-    Ast.Loc.t -> char Stream.t -> Ast.program
+  val program : elpi:Setup.elpi ->
+    files:string list -> Ast.program
+  val program_from : elpi:Setup.elpi ->
+    loc:Ast.Loc.t -> Lexing.lexbuf -> Ast.program
 
   (** [goal file_list] parses the query,
       Raises Failure if the file does not exist.  *)
-  val goal : Ast.Loc.t -> string -> Ast.query
-  val goal_from_stream : Ast.Loc.t -> char Stream.t -> Ast.query
+  val goal : elpi:Setup.elpi ->
+    loc:Ast.Loc.t -> text:string -> Ast.query
+  val goal_from : elpi:Setup.elpi ->
+    loc:Ast.Loc.t -> Lexing.lexbuf -> Ast.query
 
   (** [resolve f] computes the full path of [f] as the parser would do (also)
       for files recursively accumulated. Raises Failure if the file does not
       exist. *)
-  val resolve_file : ?cwd:string -> file:string -> unit -> string
+  val resolve_file : elpi:Setup.elpi -> ?cwd:string -> unit:string -> unit -> string
 
   (** [std_resolver cwd paths ()] returns a resolver function that looks in cwd
       and paths (relative to cwd, or absolute) *)
   val std_resolver :
     ?cwd:string -> paths:string list -> unit ->
-      (?cwd:string -> file:string -> unit -> string)
+      (?cwd:string -> unit:string -> unit -> string)
 
   exception ParseError of Ast.Loc.t * string
 end
@@ -243,6 +249,7 @@ module Pp : sig
 
   module Ast : sig
     val program : Format.formatter -> Ast.program -> unit
+    val query : Format.formatter -> Ast.query -> unit
   end
 
 end
@@ -788,41 +795,8 @@ module FlexibleData : sig
     val show : t -> string
   end
 
-  module type HostWeak = sig
-    type t
-    val equal : t -> t -> bool
-    val hash : t -> int
-    val pp : Format.formatter -> t -> unit
-    val show : t -> string
-  end
-
   module type Show = sig
     type t
-    val pp : Format.formatter -> t -> unit
-    val show : t -> string
-  end
-
-  (* Keys Elpi.t and Host.t are weak, if any goes loose the entry is removed.
-     The reference to D.t is strong (but held by the weak ones) *)
-  module WeakMap : functor(Host : HostWeak) -> functor (D : Show) -> sig
-    type t
-
-    val create : int -> t
-    val add : Elpi.t -> Host.t -> D.t -> t -> unit
-
-    val remove_elpi : Elpi.t -> t -> unit
-    val remove_host : Host.t -> t -> unit
-
-    val filter : (Host.t -> Elpi.t -> D.t -> bool) -> t -> unit
-
-    (* The eventual body at its depth *)
-    val fold : (Host.t -> Elpi.t -> Data.term option -> D.t -> 'a -> 'a) -> t -> 'a -> 'a
-
-    val elpi   : Host.t -> t -> Elpi.t * D.t
-    val host : Elpi.t -> t -> Host.t * D.t
-
-    val uvmap : t State.component
-
     val pp : Format.formatter -> t -> unit
     val show : t -> string
   end
@@ -1087,7 +1061,7 @@ module Quotation : sig
 
   (** To implement the string_to_term built-in (AVOID, makes little sense
    * if depth is non zero, since bound variables have no name!) *)
-  val term_at : depth:int -> State.t -> Ast.query -> State.t * Data.term
+  val term_at : depth:int -> State.t -> string -> State.t * Data.term
 
   (** Like quotations but for identifiers that begin and end with
    * "`" or "'", e.g. `this` and 'that'. Useful if the object language

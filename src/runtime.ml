@@ -2,6 +2,9 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
+open Elpi_util
+open Elpi_parser
+
 module Fmt = Format
 module F = Ast.Func
 open Util
@@ -138,10 +141,10 @@ let do_app_deref = ref (fun ?avoid ~from ~to_ _ _ -> assert false);;
 
 let uv_names = Fork.new_local (IntMap.empty, 0)
 
-let min_prec = Parser.min_precedence
-let appl_prec = Parser.appl_precedence
-let lam_prec = Parser.lam_precedence
-let inf_prec = Parser.inf_precedence
+let min_prec = Elpi_parser.Parser_config.min_precedence
+let appl_prec = Elpi_parser.Parser_config.appl_precedence
+let lam_prec = Elpi_parser.Parser_config.lam_precedence
+let inf_prec = Elpi_parser.Parser_config.inf_precedence
 
 let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=min_prec) depth0 names ~argsdepth env f t =
   let pp_app f pphd pparg ?pplastarg (hd,args) =
@@ -220,7 +223,7 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
    | (Cons _ | Nil) ->
       let prefix,last = flat_cons_to_list depth [] t in
       Fmt.fprintf f "[" ;
-      pplist ~boxed:true (aux Parser.list_element_prec depth) ", " f prefix ;
+      pplist ~boxed:true (aux Elpi_parser.Parser_config.comma_precedence depth) ", " f prefix ;
       if last != Nil then begin
        Fmt.fprintf f " | " ;
        aux prec 1 f last
@@ -230,25 +233,25 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
     | App (hd,x,xs) ->
        (try
          let assoc,hdlvl =
-          Parser.precedence_of (F.from_string (C.show hd)) in
+          Elpi_parser.Parser_config.precedence_of (C.show hd) in
          with_parens hdlvl
          (fun _ -> match assoc with
-            Parser.Infix when List.length xs = 1 ->
+            Elpi_lexer_config.Lexer_config.Infix when List.length xs = 1 ->
              Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
               (aux (hdlvl+1) depth) x ppconstant hd
               (aux (hdlvl+1) depth) (List.hd xs)
-          | Parser.Infixl when List.length xs = 1 ->
+          | Elpi_lexer_config.Lexer_config.Infixl when List.length xs = 1 ->
              Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
               (aux hdlvl depth) x ppconstant hd
               (aux (hdlvl+1) depth) (List.hd xs)
-          | Parser.Infixr when List.length xs = 1 ->
+          | Elpi_lexer_config.Lexer_config.Infixr when List.length xs = 1 ->
              Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
               (aux (hdlvl+1) depth) x ppconstant hd
               (aux hdlvl depth) (List.hd xs)
-          | Parser.Prefix when xs = [] ->
+          | Elpi_lexer_config.Lexer_config.Prefix when xs = [] ->
              Fmt.fprintf f "@[<hov 1>%a@ %a@]" ppconstant hd
               (aux hdlvl depth) x
-          | Parser.Postfix when xs = [] ->
+          | Elpi_lexer_config.Lexer_config.Postfix when xs = [] ->
              Fmt.fprintf f "@[<hov 1>%a@ %a@]" (aux hdlvl depth) x
               ppconstant hd 
           | _ ->
@@ -2262,8 +2265,8 @@ let mustbevariablec = min_int (* uvar or uvar t or uvar l t *)
 
 let ppclause f ~depth ~hd { args = args; hyps = hyps } =
   Fmt.fprintf f "@[<hov 1>%s %a :- %a.@]" (C.show hd)
-     (pplist (uppterm ~min_prec:(Parser.appl_precedence+1) depth [] ~argsdepth:0 empty_env) " ") args
-     (pplist (uppterm ~min_prec:(Parser.appl_precedence+1) depth [] ~argsdepth:0 empty_env) ", ") hyps
+     (pplist (uppterm ~min_prec:(Elpi_parser.Parser_config.appl_precedence+1) depth [] ~argsdepth:0 empty_env) " ") args
+     (pplist (uppterm ~min_prec:(Elpi_parser.Parser_config.appl_precedence+1) depth [] ~argsdepth:0 empty_env) ", ") hyps
 
 let tail_opt = function
   | [] -> []

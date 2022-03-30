@@ -12,8 +12,8 @@ accum_sig goaltypes, ndproofs, logic.
 kind    judgment	type.
 kind    answer		type.
 
-type    of_type		proof_object -> bool -> judgment.
-type    -->		(list judgment) -> judgment -> goal.
+type    (`of_type)		proof_object -> bool -> judgment.
+type    (-->)	     	(list judgment) -> judgment -> goal.
 
 type	yes		answer.
 
@@ -35,7 +35,3 @@ exportdef	or_i1_tac	goal -> goal -> o.
 exportdef	and_i_tac	goal -> goal -> o.
 exportdef	close_tacn	int -> goal -> goal -> o.
 exportdef	close_tac	goal -> goal -> o.
-
-infix   of_type 120.
-infix   --> 110.
-

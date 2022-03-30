@@ -1,0 +1,8 @@
+main :-
+  print (p X :- q X, r x),
+  print (X is f Y mod r X),
+  print (X is f Y + r X * g A),
+  print (X is (f Y + r X) * g A),
+  print (X is f Y ^ r X ^ g A),
+  print (X || A && B ==> G),
+  print [f X, g Y, (a , b), a + b].

@@ -5,12 +5,12 @@ let init () =
 
 let cc ~elpi ~flags i u =
   Compile.unit ~elpi ~flags
-    (Parse.program_from_stream ~elpi (Ast.Loc.initial (Printf.sprintf "<u%d>" i))
-      (Stream.of_string u))
+    (Parse.program_from ~elpi ~loc:(Ast.Loc.initial (Printf.sprintf "<u%d>" i))
+      (Lexing.from_string u))
 
 let link ~elpi us =
   let p = Compile.assemble ~elpi us in
-  let q = Compile.query p (Parse.goal_from_stream (Ast.Loc.initial "g") (Stream.of_string "main")) in
+  let q = Compile.query p (Parse.goal_from ~elpi ~loc:(Ast.Loc.initial "g") (Lexing.from_string "main")) in
   q
 
 let check q =

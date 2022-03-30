@@ -24,6 +24,7 @@ val declare :
   ?expectation:expectation -> 
   ?outside_llam:bool ->
   ?trace:trace ->
+  ?legacy_parser:bool ->
   category:string ->
   unit -> unit
 
@@ -41,6 +42,7 @@ type t = {
   expectation : expectation;
   outside_llam : bool;
   trace: string list;
+  legacy_parser : bool;
 }
 
 val get : catskip:string list -> (name:string -> bool) -> t list

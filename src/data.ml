@@ -4,6 +4,9 @@
 
 (* Internal term representation *)
 
+open Elpi_util
+open Elpi_parser
+
 module Fmt = Format
 module F = Ast.Func
 open Util
@@ -644,10 +647,14 @@ let term_of_extra_goal = function
   | RawGoal x -> x
   | x ->
       Util.anomaly (Printf.sprintf "Unprocessed extra_goal: %s.\nOnly %s and %s can be left unprocessed,\nplease call API.RawData.set_extra_goals_postprocessing.\n"
+        (* ocaml >= 4.08 | (Obj.Extension_constructor.(name (of_val x)))
+        (Obj.Extension_constructor.(name (of_val (Unify(dummy,dummy)))))
+        (Obj.Extension_constructor.(name (of_val (RawGoal dummy))))) *)
         (Obj.(extension_name (extension_constructor x)))
         (Obj.(extension_name (extension_constructor (Unify(dummy,dummy)))))
         (Obj.(extension_name (extension_constructor (RawGoal dummy)))))
-
+        [@ warning "-A"]
+        
 end
 
 module ContextualConversion = struct

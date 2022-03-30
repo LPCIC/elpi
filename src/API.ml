@@ -2,6 +2,9 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
+open Elpi_util
+open Elpi_parser
+
 module type Runtime = (module type of Runtime_trace_off)
 
 let r = ref (module Runtime_trace_off : Runtime)
@@ -22,17 +25,27 @@ let set_trace argv =
 module Setup = struct
 
 type builtins = Compiler.builtins
-type elpi = Parser.parser_state * Compiler.header
+type elpi = {
+  parser : (module Parse.Parser);
+  resolver : ?cwd:string -> unit:string -> unit -> string;
+  header : Compiler.header
+}
 type flags = Compiler.flags
 
-let init ?(flags=Compiler.default_flags) ~builtins ?file_resolver () =
+let init ?(flags=Compiler.default_flags) ~builtins ?file_resolver ?(legacy_parser=false) () : elpi =
   (* At the moment we can only init the parser once *)
   let file_resolver =
     match file_resolver with
     | Some x -> x
-    | None -> fun ?cwd:_ ~file:_ () ->
+    | None -> fun ?cwd:_ ~unit:_ () ->
         raise (Failure "'accumulate' is disabled since Setup.init was not given a ~file_resolver.") in
-  let parsing_state = Parser.init ~lp_syntax:Parser.lp_gramext ~file_resolver in
+  let parser =
+    if legacy_parser then begin
+      if not Legacy_parser_proxy.valid then
+         Util.error "The legacy parser is not available (disabled at compile time)";
+      (module Legacy_parser_proxy.Make(struct let resolver = file_resolver end) : Parse.Parser)
+    end else
+      (module Parse.Make(struct let resolver = file_resolver end) : Parse.Parser) in
   Data.Global_symbols.lock ();
   let header_src =
     builtins |> List.map (fun (fname,decls) ->
@@ -42,23 +55,22 @@ let init ?(flags=Compiler.default_flags) ~builtins ?file_resolver () =
       Data.BuiltInPredicate.document fmt decls;
       Format.pp_print_flush fmt ();
       let text = Buffer.contents b in
-      let strm = Stream.of_string text in
-      let loc = Util.Loc.initial fname in
+      let lexbuf = Lexing.from_string text in
+      let module P = (val parser) in
       try
-        Parser.parse_program_from_stream parsing_state
-          ~print_accumulated_files:false loc strm
-      with Parser.ParseError(loc,msg) ->
+        P.program_from ~loc:(Util.Loc.initial fname) lexbuf
+      with Parse.ParseError(loc,msg) ->
         List.iteri (fun i s ->
           Printf.eprintf "%4d: %s\n" (i+1) s)
           (Re.Str.(split_delim (regexp_string "\n") text));
         Printf.eprintf "Excerpt of %s:\n%s\n" fname
           (String.sub text loc.Util.Loc.line_starts_at
             Util.Loc.(loc.source_stop - loc.line_starts_at));
-      Util.anomaly ~loc msg) in
+        Util.anomaly ~loc msg) in
   let header =
-    try Compiler.header_of_ast ~flags builtins (List.concat header_src)
+    try Compiler.header_of_ast ~flags ~parser builtins (List.concat header_src)
     with Compiler.CompileError(loc,msg) -> Util.anomaly ?loc msg in
-  (parsing_state, header)
+  { parser; header; resolver = file_resolver }
 
 let trace = set_trace
 
@@ -73,6 +85,7 @@ let set_std_formatter = Util.set_std_formatter
 let set_err_formatter fmt =
   Util.set_err_formatter fmt; Trace_ppx_runtime.Runtime.(set_trace_output TTY fmt)
 
+let legacy_parser_available = Legacy_parser_proxy.valid
 end
 
 module EA = Ast
@@ -81,19 +94,31 @@ module Ast = struct
   type program = Ast.Program.t
   type query = Ast.Goal.t
   module Loc = Util.Loc
+  module Goal = Ast.Goal
 end
 
 module Parse = struct
-  let program ~elpi:(ps,_) ?(print_accumulated_files=false) =
-    Parser.parse_program ps ~print_accumulated_files
-  let program_from_stream ~elpi:(ps,_) ?(print_accumulated_files=false) =
-    Parser.parse_program_from_stream ps ~print_accumulated_files
-  let goal loc s = Parser.parse_goal ~loc s
-  let goal_from_stream loc s = Parser.parse_goal_from_stream ~loc s
-  exception ParseError = Parser.ParseError
 
-  let resolve_file = Parser.resolve
-  let std_resolver = Parser.std_resolver
+  let program ~elpi:{ Setup.parser } ~files =
+    let module P = (val parser) in
+    List.(concat (map (fun file -> P.program ~file) files))
+
+  let program_from ~elpi:{ Setup.parser } ~loc buf =
+    let module P = (val parser) in
+    P.program_from ~loc buf
+
+  let goal ~elpi:{ Setup.parser } ~loc ~text =
+    let module P = (val parser) in
+    P.goal ~loc ~text
+  let goal_from ~elpi:{ Setup.parser } ~loc buf =
+    let module P = (val parser) in
+    P.goal_from ~loc buf
+
+  exception ParseError = Elpi_parser.Parser_config.ParseError
+
+  let resolve_file ~elpi:{ Setup.resolver } = resolver
+  let std_resolver = Elpi_util.Util.std_resolver
+
 end
 
 module ED = Data
@@ -128,7 +153,7 @@ module Compile = struct
 
   let to_setup_flags x = x
 
-  let program ?(flags=Compiler.default_flags) ~elpi:(_,header) l =
+  let program ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } l =
     Compiler.program_of_ast ~flags ~header (List.flatten l)
 
   let query s_p t =
@@ -147,9 +172,9 @@ module Compile = struct
   }
   let default_flags = Compiler.default_flags
   let optimize = Compiler.optimize_query
-  let unit ?(flags=Compiler.default_flags) ~elpi:(_,header) x = Compiler.unit_of_ast ~flags ~header x
+  let unit ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } x = Compiler.unit_of_ast ~flags ~header x
   let extend ?(flags=Compiler.default_flags) ~base ul = Compiler.append_units ~flags ~base ul
-  let assemble ?(flags=Compiler.default_flags) ~elpi:(_,header) = Compiler.assemble_units ~flags ~header
+  let assemble ?(flags=Compiler.default_flags) ~elpi:{ Setup.header } = Compiler.assemble_units ~flags ~header
 
 end
 
@@ -168,20 +193,21 @@ end
 module Pp = struct
   let term pp_ctx f t = (* XXX query depth *)
     let module R = (val !r) in let open R in
-    R.Pp.uppterm ~pp_ctx 0 [] ~argsdepth:0 [||] f t
+    Pp.uppterm ~pp_ctx 0 [] ~argsdepth:0 [||] f t
 
   let constraints pp_ctx f c =
     let module R = (val !r) in let open R in
-    Util.pplist ~boxed:true R.(pp_stuck_goal ~pp_ctx) "" f c
+    Util.pplist ~boxed:true (pp_stuck_goal ~pp_ctx) "" f c
 
   let state = ED.State.pp
 
   let query f c =
     let module R = (val !r) in let open R in
-    Compiler.pp_query (fun ~pp_ctx ~depth -> R.Pp.uppterm ~pp_ctx depth [] ~argsdepth:0 [||]) f c
+    Compiler.pp_query (fun ~pp_ctx ~depth -> Pp.uppterm ~pp_ctx depth [] ~argsdepth:0 [||]) f c
 
   module Ast = struct
     let program = EA.Program.pp
+    let query = EA.Goal.pp
   end
 end
 
@@ -248,14 +274,13 @@ module RawOpaqueData = struct
     state, cin x, [] in
   let readback ~depth state t =
     let module R = (val !r) in let open R in
-    match R.deref_head ~depth t with
+    match deref_head ~depth t with
     | ED.Term.CData c when isc c -> state, cout c, []
     | ED.Term.Const i as t when i < 0 ->
         begin try state, ED.Constants.Map.find i constants_map, []
         with Not_found -> raise (Conversion.TypeErr(ty,depth,t)) end
     | t -> raise (Conversion.TypeErr(ty,depth,t)) in
   let pp_doc fmt () =
-    let module R = (val !r) in let open R in
     if doc <> "" then begin
       ED.BuiltInPredicate.pp_comment fmt ("% " ^ doc);
       Format.fprintf fmt "@\n";
@@ -269,7 +294,6 @@ module RawOpaqueData = struct
   { Conversion.embed; readback; ty; pp_doc; pp }
 
   let conversion_of_cdata (type a) ~name ?doc ?(constants=[]) ~compare ~pp cd =
-    let module R = (val !r) in let open R in
     let module VM = Map.Make(struct type t = a let compare = compare end) in
     let constants_map, values_map =
       List.fold_right (fun (n,v) (cm,vm) ->
@@ -352,7 +376,7 @@ end
 module BuiltInData = struct
 
   let int    = snd @@ RawOpaqueData.conversion_of_cdata ~name:"int"    ~compare:(fun x y -> x - y) ~pp:(fun fmt x -> Util.CData.pp fmt (ED.C.int.Util.CData.cin x)) ED.C.int
-  let float  = snd @@ RawOpaqueData.conversion_of_cdata ~name:"float"  ~compare:Pervasives.compare (*Float.compare*)      ~pp:(fun fmt x -> Util.CData.pp fmt (ED.C.float.Util.CData.cin x)) ED.C.float
+  let float  = snd @@ RawOpaqueData.conversion_of_cdata ~name:"float"  ~compare:Float.compare      ~pp:(fun fmt x -> Util.CData.pp fmt (ED.C.float.Util.CData.cin x)) ED.C.float
   let string = snd @@ RawOpaqueData.conversion_of_cdata ~name:"string" ~compare:String.compare     ~pp:(fun fmt x -> Util.CData.pp fmt (ED.C.string.Util.CData.cin x)) ED.C.string
   let loc    = snd @@ RawOpaqueData.conversion_of_cdata ~name:"loc"    ~compare:Util.Loc.compare   ~pp:(fun fmt x -> Util.CData.pp fmt (ED.C.loc.Util.CData.cin x)) ED.C.loc
   let poly ty =
@@ -391,13 +415,13 @@ module BuiltInData = struct
     let ty = Conversion.(TyName ty) in
     let embed ~depth state (x,from) =
       let module R = (val !r) in let open R in
-      state, R.hmove ~from ~to_:depth ?avoid:None x, [] in
+      state, hmove ~from ~to_:depth ?avoid:None x, [] in
     let readback ~depth state t =
       state, fresh_copy t depth, [] in
     { Conversion.embed; readback; ty;
       pp = (fun fmt (t,d) ->
         let module R = (val !r) in let open R in
-        R.Pp.uppterm d [] d ED.empty_env fmt t);
+        Pp.uppterm d [] d ED.empty_env fmt t);
       pp_doc = (fun fmt () -> ()) }
    
   let map_acc f s l =
@@ -455,7 +479,7 @@ module Elpi = struct
         Format.fprintf fmt "%s" str
     | Ref ub ->
         let module R = (val !r) in let open R in
-        R.Pp.uppterm 0 [] 0 [||] fmt (ED.mkUVar ub 0 0)
+        Pp.uppterm 0 [] 0 [||] fmt (ED.mkUVar ub 0 0)
 
   let show m = Format.asprintf "%a" pp m
 
@@ -516,7 +540,6 @@ module RawData = struct
 
   type constant = ED.Term.constant
   type builtin = ED.Term.constant
-  type uvar_body = ED.Term.uvar_body
   type term = ED.Term.term
   type view =
     (* Pure subterms *)
@@ -534,7 +557,7 @@ module RawData = struct
 
   let rec look ~depth t =
     let module R = (val !r) in let open R in
-    match R.deref_head ~depth t with
+    match deref_head ~depth t with
     | ED.Term.Arg _ | ED.Term.AppArg _ -> assert false
     | ED.Term.AppUVar(ub,0,args) -> UnifVar (Ref ub,args)
     | ED.Term.AppUVar(ub,lvl,args) -> look ~depth (R.expand_appuv ub ~depth ~lvl ~args)
@@ -611,11 +634,9 @@ module RawData = struct
     goal : int * term
   }
 
-  type constraints = Data.constraints
-
   let constraints l =
     let module R = (val !r) in let open R in
-    Util.map_filter (fun x -> R.get_suspended_goal x.ED.kind) l
+    Util.map_filter (fun x -> get_suspended_goal x.ED.kind) l
   let no_constraints = []
 
   let mkUnifVar handle ~args state =
@@ -636,14 +657,6 @@ module FlexibleData = struct
   module type Host = sig
     type t
     val compare : t -> t -> int
-    val pp : Format.formatter -> t -> unit
-    val show : t -> string
-  end
-
-  module type HostWeak = sig
-    type t
-    val equal : t -> t -> bool
-    val hash : t -> int
     val pp : Format.formatter -> t -> unit
     val show : t -> string
   end
@@ -708,7 +721,7 @@ module FlexibleData = struct
       let get_val = function
         | Elpi.Ref { ED.Term.contents = ub }
           when ub != ED.dummy ->
-            Some (R.deref_head ~depth:0 ub)
+            Some (deref_head ~depth:0 ub)
         | Elpi.Ref _ -> None
         | Elpi.Arg _ -> None in
       H2E.fold (fun k uk acc -> f k uk (get_val uk) acc) h2e acc
@@ -742,87 +755,6 @@ module FlexibleData = struct
   end
 
   module type Show = Util.Show
-  module WeakMap = functor(T : HostWeak) -> functor (D : Show) -> struct
-    open Util
-
-    module H2E = Ephemeron.K1.Make(T)
-    module E2H = Ephemeron.K1.Make(Elpi)
-
-    type t = {
-        h2e : (Elpi.t * D.t) H2E.t;
-        e2h : (T.t * D.t) E2H.t;
-    }
-
-    let create n = {
-      h2e = H2E.create n;
-      e2h = E2H.create n;
-    }
-
-    let reset { h2e; e2h } = H2E.reset h2e; E2H.reset e2h
-
-    let add uv v d { h2e; e2h } =
-      H2E.replace h2e v (uv,d);
-      E2H.replace e2h uv (v,d)
-
-    let elpi v { h2e; e2h } =
-      H2E.find h2e v
-
-    let host e { h2e; e2h } =
-      E2H.find e2h e
-
-
-    let remove_both e v { h2e; e2h } = 
-      H2E.remove h2e v;
-      E2H.remove e2h e
-    let remove_elpi k m =
-      let v,_ = host k m in
-      remove_both k v m
-
-    let remove_host v m =
-      let e, _ = elpi v m in
-      remove_both e v m
-
-    let filter f { h2e; e2h } =
-      E2H.filter_map_inplace (fun e (v,d) -> if f v e d then Some(v,d) else None) e2h;
-      H2E.filter_map_inplace (fun v (e,d) -> if f v e d then Some(e,d) else None) h2e
-
-    let fold f { h2e } acc =
-      let module R = (val !r) in let open R in
-      let get_val = function
-        | Elpi.Ref { ED.Term.contents = ub }
-          when ub != ED.dummy ->
-            Some (R.deref_head ~depth:0 ub)
-        | Elpi.Ref _ -> None
-        | Elpi.Arg _ -> None in
-      H2E.fold (fun k (uk,d) acc -> f k uk (get_val uk) d acc) h2e acc
-
-    let uvn = incr uvmap_no; !uvmap_no
-
-    let pp fmt (m : t) =
-      let pp k uv _ d () =
-           Format.fprintf fmt "@[<h>%a@ <-> %a / %a@]@ " T.pp k Elpi.pp uv D.pp d
-        in
-      Format.fprintf fmt "@[<v>";
-      fold pp m ();
-      Format.fprintf fmt "@]"
-    ;;
-
-    let show m = Format.asprintf "%a" pp m
-
-    let uvmap = ED.State.declare ~name:(Printf.sprintf "elpi:weakuvm:%d" uvn) ~pp
-      ~clause_compilation_is_over:(fun x -> reset x; x)
-      ~goal_compilation_begins:(fun x -> x)
-      ~goal_compilation_is_over:(fun ~args { h2e; e2h } ->
-        let r = create 3 in
-        H2E.iter (fun v (e,d) -> H2E.add r.h2e v (Elpi.compilation_is_over ~args e,d)) h2e;
-        E2H.iter (fun e (v,d) -> E2H.add r.e2h (Elpi.compilation_is_over ~args e) (v,d)) e2h;
-        Some r)
-      ~compilation_is_over:(fun x -> Some x)
-      ~execution_is_over:(fun x -> Some x)
-      ~init:(fun () -> create 3)
-
-  end
-
   let uvar  = {
     Conversion.ty = Conversion.TyName "uvar";
     pp_doc = (fun fmt () -> Format.fprintf fmt "Unification variable, as the uvar keyword");
@@ -866,7 +798,7 @@ module BuiltInPredicate = struct
     readback = (fun ~depth hyps csts state t ->
              let module R = (val !r) in let open R in
              let rec aux t =
-               match R.deref_head ~depth t with
+               match deref_head ~depth t with
                | ED.Term.Arg _ | ED.Term.AppArg _ -> assert false
                | ED.Term.UVar _ | ED.Term.AppUVar _
                | ED.Term.Discard -> state, NoData, []
@@ -891,7 +823,7 @@ module BuiltInPredicate = struct
              | NoData -> assert false);
     readback = (fun ~depth hyps csts state t ->
              let module R = (val !r) in let open R in
-             match R.deref_head ~depth t with
+             match deref_head ~depth t with
              | ED.Term.Arg _ | ED.Term.AppArg _ -> assert false
              | ED.Term.Discard -> state, NoData, []
              | _ -> let state, x, gls = a.readback ~depth hyps csts state t in
@@ -1015,10 +947,10 @@ module Utils = struct
 
   let move ~from ~to_ t =
     let module R = (val !r) in let open R in
-    R.hmove ~from ~to_ ?avoid:None t
+    hmove ~from ~to_ ?avoid:None t
   let beta ~depth t args =
     let module R = (val !r) in let open R in
-    R.deref_appuv ~from:depth ~to_:depth ?avoid:None args t
+    deref_appuv ~from:depth ~to_:depth ?avoid:None args t
 
   let error = Util.error
   let type_error = Util.type_error
@@ -1030,7 +962,7 @@ module Utils = struct
     let module Data = ED.Term in
     let module R = (val !r) in let open R in
     let rec aux d ctx t =
-      match R.deref_head ~depth:d t with
+      match deref_head ~depth:d t with
       | Data.Const i when i >= 0 && i < depth ->
           error "program_of_term: the term is not closed"
       | Data.Const i when i < 0 ->
@@ -1061,10 +993,10 @@ module Utils = struct
       | Data.Discard -> Term.mkCon "_"
     in
     let attributes =
-      (match name with Some x -> [Clause.Name x] | None -> []) @
+      (match name with Some x -> [Name x] | None -> []) @
       (match graft with
-        | Some (`After,x) -> [Clause.After x]
-        | Some (`Before,x) -> [Clause.Before x]
+        | Some (`After,x) -> [After x]
+        | Some (`Before,x) -> [Before x]
         | None -> []) in
     [Program.Clause {
       Clause.loc = loc;
@@ -1084,18 +1016,18 @@ end
 module RawPp = struct
   let term depth fmt t =
     let module R = (val !r) in let open R in
-    R.Pp.uppterm depth [] 0 ED.empty_env fmt t
+    Pp.uppterm depth [] 0 ED.empty_env fmt t
 
   let constraints f c = 
     let module R = (val !r) in let open R in
-    Util.pplist ~boxed:true (R.pp_stuck_goal ?pp_ctx:None) "" f c
+    Util.pplist ~boxed:true (pp_stuck_goal ?pp_ctx:None) "" f c
 
   let list = Util.pplist
 
   module Debug = struct
     let term depth fmt t =
       let module R = (val !r) in let open R in
-      R.Pp.ppterm depth [] 0 ED.empty_env fmt t
+       Pp.ppterm depth [] 0 ED.empty_env fmt t
     let show_term = ED.show_term
   end
 end

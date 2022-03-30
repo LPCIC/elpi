@@ -1,0 +1,126 @@
+filter [] _ [].
+filter [X|XS] P [X|YS] :- P X, !, filter XS P YS.
+filter [_|XS] P YS :- filter XS P YS.
+
+mem [X|_] X :- !.
+mem [_|XS] X :- mem XS X.
+
+if G T _ :- G, !, T.
+if _ _ E :- E.
+
+kind term type.
+type app term -> term -> term.
+type lam (term -> term) -> term.
+type let term -> ty -> (term -> term) -> term.
+
+kind tye type.
+infixr ==> 50.
+infixl # 60.
+type (==>) tye -> tye -> tye.
+type (#) tye -> tye -> tye.
+
+kind ty type.
+type all (tye -> ty) -> ty.
+type mono tye -> ty.
+
+type one term.
+type plus term.
+type size term.
+type empty term.
+type comma term.
+
+type integer tye.
+type list tye.
+type pair tye.
+
+% constants
+w one    (mono integer).
+w plus   (mono (integer ==> integer ==> integer)).
+w size   (all x\ mono (list # x ==> integer)).
+w empty  (all x\ mono (list # x)).
+w comma  (all x\ all y\ mono (x ==> y ==> (pair # x # y))).
+
+pred w i:term, o:ty.
+
+w (app F X) (mono R) :-
+  w F (mono (A ==> R)),
+  w X (mono A).
+
+w (lam F) (mono (A ==> R)) :-
+  pi x\ w x (mono A) => w (F x) (mono R).
+
+w (let F FP B) (mono TC) :-
+  w F (mono FT),
+  declare_constraint (overbar (mono FT) FP) [],
+  pi x\ w x FP => w (B x) (mono TC).
+
+w X (mono T) :- w X (all Poly), specialize (all Poly) T.
+
+w X TY :- print "Error: " X "cannot have type" TY.
+
+pred specialize i:ty, o:tye.
+
+specialize (all F) T :- specialize (F FRESH_) T.
+specialize (mono X) X.
+
+pred overbar i:ty, o:ty.
+
+constraint w overbar {
+
+rule \ (G ?- overbar T T1)
+     | (generalize G T POLYT) <=> (T1 = POLYT).
+
+rule \ (G ?- overbar T _) <=> (print "overbar" G "|-" T "failed", halt).
+
+generalize G (mono T) ALL :-
+  free-ty (mono T) [] VT,
+  free-gamma G [] VG,
+  filter VT (x\ not(mem VG x)) Q,
+  quantify Q T ALL.
+
+free-ty (mono X) L L1 :- free X L L1.
+free-ty (all F) L L1 :- pi x\ free-ty (F x) L L1.
+
+free-gamma [] L L.
+free-gamma [w _ T|X] L L2 :- free-ty T L L1, free-gamma X L1 L2.
+
+free (A # B) L L2 :- free A L L1, free B L1 L2.
+free (A ==> B) L L2 :- free A L L1, free B L1 L2.
+free (uvar X _) L L1 :- if (mem L X) (L1 = L) (L1 = [X|L]).
+free X L L.
+
+copy-ty (mono X1) (mono X2) :- copy X1 X2.
+copy-ty (all F1) (all F2) :- pi x\ copy x x => copy-ty (F1 x) (F2 x).
+
+copy (A ==> B) (A1 ==> B1) :- copy A A1, copy B B1.
+copy (A # B) (A1 # B1) :- copy A A1, copy B B1.
+copy X X.
+
+quantify [] X (mono X1) :- copy X X1.
+quantify [X|XS] T (all x\ T2 x) :-
+  quantify XS T T1,
+  pi x\ copy (uvar X _) x => copy-ty T1 (T2 x).
+
+}
+
+main :-
+  print "Test 1",
+  P = let (lam x\x) T_ (id\ app (app plus (app id one))
+                                  (app size (app id empty))),
+  print "Typing" P,
+  w P TP,
+  print "OK" P "has type" TP,
+  print "",
+  print "Test 2",
+  X = lam (x\
+        let (lam y\ app (app comma x) y) Y_ (mk\
+          app (app comma (app mk one)) (app mk x))),
+  print "Typing" X,
+  w X XT,
+  print "OK" X "has type" XT,
+  print "",
+  print "Test 3",
+  Q = lam (id\ app (app plus (app id one))
+                                  (app size (app id empty))),
+  print "Typing" Q,
+  w Q TQ. % should print error

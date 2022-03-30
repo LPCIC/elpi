@@ -2,8 +2,10 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
+open Elpi_util
 open Util
 
+module Loc = Loc
 module Func = struct
 
   module Self = struct
@@ -17,7 +19,6 @@ module Func = struct
    let rec aux = function
     | "nil" -> aux "[]"
     | "cons" -> aux "::"
-    | "&" -> aux ","
     | x ->
        try Hashtbl.find h x
        with Not_found -> Hashtbl.add h x x ; x
@@ -96,17 +97,27 @@ let mkSeq l =
   | hd::tl -> App(Const Func.consf,[hd;aux tl])
  in
   aux l
-let mkIs x f = App(Const Func.isf,[x;f])
 
 exception NotInProlog of Loc.t * string
+
+let rec best_effort_pp = function
+ | Lam (x,t) -> "x\\" ^ best_effort_pp t
+ | CData c -> CData.show c
+ | Quoted _ -> "{{ .. }}"
+ | _ -> ".."
 
 let mkApp loc = function
 (* FG: for convenience, we accept an empty list of arguments *)
   | [(App _ | Const _ | Quoted _) as c] -> c
   | App(c,l1)::l2 -> App(c,l1@l2)
   | (Const _ | Quoted _) as c::l2 -> App(c,l2)
-  | [] -> raise (NotInProlog(loc,"empty application"))
-  | x::_ -> raise (NotInProlog(loc,"application head: " ^ show x))
+  | [] -> anomaly ~loc "empty application"
+  | x::_ -> raise (NotInProlog(loc,"syntax error: the head of an application must be a constant or a variable, got: " ^ best_effort_pp x))
+
+let mkAppF loc c = function
+  | [] -> anomaly ~loc "empty application"
+  | args -> App(Const c,args)
+
 
 let fresh_uv_names = ref (-1);;
 let mkFreshUVar () = incr fresh_uv_names; Const (Func.from_string ("_" ^ string_of_int !fresh_uv_names))
@@ -116,15 +127,16 @@ let mkCon c = Const (Func.from_string c)
 
 end
 
+type raw_attribute =
+  | If of string
+  | Name of string
+  | After of string
+  | Before of string
+  | External
+  | Index of int list
+[@@deriving show]
 
 module Clause = struct
-
-  type attribute =
-    | Name of string
-    | After of string
-    | Before of string
-    | If of string
-  [@@deriving show]
   
   type ('term,'attributes) t = {
     loc : Loc.t;
@@ -136,11 +148,6 @@ module Clause = struct
 end
 
 module Chr = struct
-
-  type attribute =
-    | Name of string
-    | If of string
-  [@@deriving show]
   
   type sequent = { eigen : Term.t; context : Term.t; conclusion : Term.t }
   and 'attribute t = {
@@ -151,7 +158,9 @@ module Chr = struct
     attributes : 'attribute;
     loc: Loc.t;
   }
-  [@@deriving show, create]
+  [@@deriving show]
+
+
 
 end
 
@@ -167,12 +176,6 @@ module Macro = struct
 end
 
 module Type = struct
-
-  type attribute =
-    | External
-    | Index of int list (* depth *)
-  [@@deriving show]
-  
 
   type 'attribute t = {
     loc : Loc.t;
@@ -208,23 +211,25 @@ module Program = struct
     | Begin of Loc.t
     | Namespace of Loc.t * Func.t
     | Constraint of Loc.t * Func.t list
-    | Shorten of Loc.t * Func.t * Func.t (* prefix suffix *)
+    | Shorten of Loc.t * (Func.t * Func.t) list (* prefix suffix *)
     | End of Loc.t
 
-    | Accumulated of Loc.t * (Digest.t * decl list)
+    | Accumulated of Loc.t * (Digest.t * decl list) list
 
     (* data *)
-    | Clause of (Term.t, Clause.attribute list) Clause.t
-    | Local of Func.t
+    | Clause of (Term.t, raw_attribute list) Clause.t
+    | Local of Func.t list
     | Mode of Func.t Mode.t list
-    | Chr of Chr.attribute list Chr.t
+    | Chr of raw_attribute list Chr.t
     | Macro of (Func.t, Term.t) Macro.t
-    | Type of Type.attribute list Type.t
+    | Type of raw_attribute list Type.t list
+    | Pred of raw_attribute list Type.t * Func.t Mode.t
     | TypeAbbreviation of Func.t TypeAbbreviation.t
+    | Ignored of Loc.t
   [@@deriving show]
 
 
-let mkLocal x = Local (Func.from_string x)
+let mkLocal x = Local (List.map Func.from_string x)
 
 type t = decl list [@@deriving show]
 
@@ -238,15 +243,15 @@ end
  
 module Fmt = Format
 
-let { CData.cin = in_float; isc = is_float; cout = out_float } as cfloat =
+let cfloat =
   CData.(declare {
     data_name = "float";
     data_pp = (fun f x -> Fmt.fprintf f "%f" x);
-    data_compare = Pervasives.compare (*Float.compare*);
+    data_compare = Float.compare;
     data_hash = Hashtbl.hash;
     data_hconsed = false;
   })
-let { CData.cin = in_int; isc = is_int; cout = out_int } as cint =
+let cint =
   CData.(declare {
     data_name = "int";
     data_pp = (fun f x -> Fmt.fprintf f "%d" x);
@@ -254,7 +259,7 @@ let { CData.cin = in_int; isc = is_int; cout = out_int } as cint =
     data_hash = Hashtbl.hash;
     data_hconsed = false;
   })
-let { CData.cin = in_string; isc = is_string; cout = out_string } as cstring =
+let cstring =
   CData.(declare {
     data_name = "string";
     data_pp = (fun f x -> Fmt.fprintf f "%s" x);
@@ -262,7 +267,7 @@ let { CData.cin = in_string; isc = is_string; cout = out_string } as cstring =
     data_hash = Hashtbl.hash;
     data_hconsed = true;
   })
-let { CData.cin = in_loc; isc = is_loc; cout = out_loc } as cloc =
+let cloc =
   CData.(declare {
     data_name = "Loc.t";
     data_pp = Util.Loc.pp;
@@ -298,7 +303,7 @@ and cattribute = {
 }
 and tattribute =
   | External
-  | Indexed of int list
+  | Index of int list
 and 'a shorthand = {
   iloc : Loc.t;
   full_name : 'a;

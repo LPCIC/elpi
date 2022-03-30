@@ -12,7 +12,7 @@ type special       tm -> int -> list tm -> tm.
 type eval_special  tm -> list tm -> tm -> o.
 
 eval (fn M)   (fn M).
-eval (M `@ N)   V :- eval M Fun, eval N U, apply Fun U V.
+eval (M # N)   V :- eval M Fun, eval N U, apply Fun U V.
 eval (fixpt R) V :- eval (R (fixpt R)) V.
 eval (cond Cond Then Else) V :- 
   eval Cond Bool, if (Bool = truth) (eval Then V) (eval Else V).
@@ -50,9 +50,9 @@ apply (special Fun C Args) U (special Fun K (U::Args)) :- K is C - 1.
 
 %% List primitives
 
-eval_special car   ((cons `@ V `@ U)::nil) V.
-eval_special cdr   ((cons `@ V `@ U)::nil) U.
-eval_special cons  (U::V::nil) (cons `@ V `@ U).
+eval_special car   ((cons # V # U)::nil) V.
+eval_special cdr   ((cons # V # U)::nil) U.
+eval_special cons  (U::V::nil) (cons # V # U).
 eval_special nullp (U::nil) V :- if (U = empty) (V = truth) (V = false).
 eval_special consp (U::nil) V :- if (U = empty) (V = false) (V = truth).
 

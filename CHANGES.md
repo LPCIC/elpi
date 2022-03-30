@@ -1,3 +1,31 @@
+
+# UNRELEASED
+
+Requires Menhir 20211230 and OCaml 4.07 or above.
+Camlp5 is now optional.
+
+- Parser:
+  - New parser based on Menhir
+    + The grammar is not extensible anymore
+    + Token families are used to provide open ended infix symbols, see
+      the [documentation](src/parser/README.md)
+  - Old parser available via `-legacy-parser`
+    + only compiled when `camlp5` is available
+
+- API:
+  - `Parse.goal_from_stream` -> `Parse.goal_from`
+  - `Parse.program_from_stream` -> `Parse.program_from`
+  - `Parse.resolve_file` now takes an `~elpi` argument
+  - `Setup.init` resolver argument takes a `~unit` instead of `~file`
+  - `Setup.init` takes `?legacy_parser`
+  - `Setup.legacy_parser_avaiable`
+
+- REPL:
+  - New `-parse-term`
+  - New `-legacy-parser`
+  - New `-legacy-parser-available`
+  - Removed `-print-accumulated-files`
+
 # v1.14.3 (March 2022)
 
 - Tests:

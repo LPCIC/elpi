@@ -20,16 +20,16 @@ type    write           A -> o.
 type    process_input   (goal -> goal -> o) -> goal -> goal -> o.
 
 inter_top Name P OutGoal :- formula Name Formula,
-  inter (nil --> P of_type Formula) OutGoal.
+  inter (nil --> P `of_type Formula) OutGoal.
 
 
-inter (Gamma --> P of_type A) NewGoal :-
+inter (Gamma --> P `of_type A) NewGoal :-
   nl, print "Assumptions: ",
   nl, print_form_list Gamma 1,
   nl, print "Conclusion: ",
   nl, write A, nl,
   print "Enter tactic: ", read Tac, write Tac,
-  process_input Tac (Gamma --> P of_type A) NewGoal.
+  process_input Tac (Gamma --> P `of_type A) NewGoal.
 
 process_input backup _ _ :- !, fail.
 process_input quitg NewGoal NewGoal :- !.
@@ -40,7 +40,7 @@ process_input _ OldGoal NewGoal :-
   inter OldGoal NewGoal. 
 
 print_form_list nil N.
-print_form_list ((P of_type A)::Tail) N :-
+print_form_list ((P `of_type A)::Tail) N :-
   write N, print " ", write A, nl,
   (N1 is (N + 1)),
   print_form_list Tail N1.

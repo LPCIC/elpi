@@ -207,8 +207,10 @@ let info =
     |> List.map (fun (cat,ts) -> [ `I(cat,String.concat ", " ts) ])
     |> List.concat in
   let man = [`Blocks [`S "KNOWN TESTS" ; `Blocks tests ] ] in
-  Term.info ~doc ~exits:Term.default_exits ~man "test" 
+  (Term.info ~doc ~exits:Term.default_exits ~man "test") [@ warning "-A"]
+  (* ocaml >= 4.08 | Cmd.info ~doc ~exits:Cmd.Exit.defaults ~man "test" *)
 ;;
 
 let () =
-  Term.exit @@ Term.eval (Term.(const main $ src $ plot $ timeout $ runners $ namef $ catskip $ mem $ seed), info)
+  (Term.exit @@ Term.eval (Term.(const main $ src $ plot $ timeout $ runners $ namef $ catskip $ mem $ seed),info)) [@ warning "-A"]
+  (* ocaml >= 4.08 | exit @@ Cmd.eval (Cmd.v info Term.(const main $ src $ plot $ timeout $ runners $ namef $ catskip $ mem $ seed)) *)

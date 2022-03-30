@@ -2,7 +2,9 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-open Util
+open Elpi_util.Util
+
+module Loc = Loc
 
 (* Prolog functors *)
 module Func : sig
@@ -51,6 +53,8 @@ module Term : sig
   (* Can raise NotInProlog *)
   val mkApp : Loc.t -> t list -> t
 
+  val mkAppF : Loc.t -> Func.t -> t list -> t
+
   val mkCon : string -> t
   val mkNil : t
   val mkSeq : t list -> t
@@ -61,13 +65,16 @@ module Term : sig
   val mkC : CData.t -> t
 end
 
+type raw_attribute =
+  | If of string
+  | Name of string
+  | After of string
+  | Before of string
+  | External
+  | Index of int list
+[@@ deriving show]
+
 module Clause : sig
-  type attribute =
-    | Name of string
-    | After of string
-    | Before of string
-    | If of string
-  [@@ deriving show]
 
   type ('term,'attributes) t = {
     loc : Loc.t;
@@ -79,10 +86,6 @@ module Clause : sig
 end
 
 module Chr : sig
-  type attribute =
-    | Name of string
-    | If of string
-  [@@ deriving show]
 
   type sequent = { eigen : Term.t; context : Term.t; conclusion : Term.t }
   and 'attribute t = {
@@ -94,15 +97,6 @@ module Chr : sig
     loc : Loc.t;
   }
   [@@ deriving show]
-
-  val create :
-    ?to_match: sequent list ->
-    ?to_remove: sequent list ->
-    ?guard: Term.t ->
-    ?new_goal: sequent ->
-    attributes: 'attribute ->
-    loc:Loc.t ->
-    unit -> 'attribute t
 
 end
 
@@ -117,12 +111,6 @@ module Macro : sig
 end
 
 module Type : sig
-
-
-  type attribute =
-    | External
-    | Index of int list (* depth *)
-  [@@ deriving show]
 
   type 'attribute t = {
     loc : Loc.t;
@@ -157,22 +145,24 @@ module Program : sig
     | Begin of Loc.t
     | Namespace of Loc.t * Func.t
     | Constraint of Loc.t * Func.t list
-    | Shorten of Loc.t * Func.t * Func.t (* prefix suffix *)
+    | Shorten of Loc.t * (Func.t * Func.t) list (* prefix suffix *)
     | End of Loc.t
 
-    | Accumulated of Loc.t * (Digest.t * decl list)
+    | Accumulated of Loc.t * (Digest.t * decl list) list
 
     (* data *)
-    | Clause of (Term.t, Clause.attribute list) Clause.t
-    | Local of Func.t
+    | Clause of (Term.t, raw_attribute list) Clause.t
+    | Local of Func.t list
     | Mode of Func.t Mode.t list
-    | Chr of Chr.attribute list Chr.t
+    | Chr of raw_attribute list Chr.t
     | Macro of (Func.t, Term.t) Macro.t
-    | Type of Type.attribute list Type.t
+    | Type of raw_attribute list Type.t list
+    | Pred of raw_attribute list Type.t * Func.t Mode.t
     | TypeAbbreviation of Func.t TypeAbbreviation.t
+    | Ignored of Loc.t
   [@@ deriving show]
 
-  val mkLocal : string -> decl
+  val mkLocal : string list -> decl
 
   type t = decl list
   [@@ deriving show]
@@ -222,7 +212,7 @@ and cattribute = {
 }
 and tattribute =
   | External
-  | Indexed of int list
+  | Index of int list
 and 'a shorthand = {
   iloc : Loc.t;
   full_name : 'a;

@@ -102,13 +102,13 @@ type (div) int -> int -> int.
 
 type (^) string -> string -> string.
 
-type ~ int -> int.
+type (~) int -> int.
 
-type ~ float -> float.
+type (~) float -> float.
 
-type i~ int -> int.
+type (i~) int -> int.
 
-type r~ float -> float.
+type (r~) float -> float.
 
 type abs int -> int.
 
@@ -327,7 +327,7 @@ external pred lookahead i:in_stream, o:string.
 % [string_to_term S T] parses a term T from S
 external pred string_to_term i:string, o:any.
 
-% [readterm InStream T] reads T from InStream
+% [readterm InStream T] reads T from InStream, ends with \n
 external pred readterm i:in_stream, o:any.
 
 pred printterm i:out_stream, i:A.

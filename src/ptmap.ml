@@ -225,7 +225,7 @@ let to_list s =
 
 let pp f fmt m =
   let l = to_list m in
-  Util.(pplist (pp_pair Int.pp f) " " fmt l)
+  Elpi_util.Util.(pplist (pp_pair Int.pp f) " " fmt l)
 
 let show f m =
   let b = Buffer.create 20 in

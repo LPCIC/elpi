@@ -9,8 +9,7 @@ kind   tm   type.
 
 type   fn   (tm -> tm) -> tm.       % abstraction constructor
 
-type   `@    tm -> tm -> tm.         % application constructor
-infixl `@    6.
+type   (#)    tm -> tm -> tm.         % application constructor
 
 type fixpt (tm -> tm) -> tm.        % fixed point constructor for recursion
 type cond  tm -> tm -> tm -> tm.    % conditional

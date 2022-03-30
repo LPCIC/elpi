@@ -1,0 +1,66 @@
+ *****************************************************************************
+ *                                                                           *
+ *   The code in this directory is due primarily to Dale Miller. Gopalan     *
+ *   Nadathur is responsible for some additions, debugging and               *
+ *   reorganization.                                                         *
+ *                                                                           *
+ *****************************************************************************
+
+The important conceptual content of the code in this directory is in
+the use of higher-order abstract syntax in representing and manipulating 
+programs and types in a simple functional programming language referred 
+to as PCF here. In particular, the code brings out the value of beta 
+reduction, unification and scoping primitives in carrying out operations 
+on HOAS representations. Another interesting facet of the code is that 
+it illustrates both a shallow and a deep embedding of types in the 
+context of implementing type inference.
+
+The relevant files are the following:
+
+pcf.sig                 Defines the kinds and constants used in encoding
+                        the functional programming language.
+
+monotypes.sig           Defines the kinds and constants used in the 
+                        (shallow) encoding of types.
+
+polytypes.sig           Augments monotypes.sig to realize a deep embedding
+                        of types.
+
+examples.sig,           Illustrates the use of the declarations in pcf.sig
+examples.mod            in representing programs.
+
+refl_syntax.mod,        Implement a recognizer for terms representing
+refl_syntax.sig         well-formed programs.
+
+eval.mod,               Implement a call-by-value evaluator for the 
+eval.sig,               functional programming language; meta-level beta 
+eval_test.mod,          reduction is used to realize substitution. The
+eval_test.sig           eval_test files provide a testing harness.
+
+monoinfer.mod,          Implement type inference for PCF. The shallow
+monoinfer.sig,          embedding of types is used; there is no explicit 
+mono_test.mod,          type quantification, type variables are realized 
+mono_test.sig           through meta variables and meta-language unification
+                        can be exploited. The mono_test files realize a
+                        testing harness.
+
+unifytypes.mod,         Implement unification for types in a situation 
+unifytypes.sig          where type variables are represented by specially
+                        marked constants; useful when the deep embedding 
+                        of types is used.
+
+polyinfer.mod,          Implement type inference for PCF using the deep 
+polyinfer.sig,          embedding of types. The poly_test files realize
+poly_test.mod,          a testing harness.
+poly_test.sig
+
+
+tailrec.mod,            Implement a recognizer for tail recursive programs.
+tailrec.sig,            The tr_test files realize a testing harness.
+tr_test.mod,
+tr_test.sig
+
+script1,                Depict the execution of the code in this directory.
+script2,                In particular, these scripts show the execution of
+script3,                the evaluator, type inference using the shallow and
+script4                 the deep embedding, and the tail recursion tester.

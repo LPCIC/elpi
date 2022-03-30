@@ -2,6 +2,9 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
+open Elpi_util
+open Elpi_parser
+
 open Util
 open Data
 
@@ -17,7 +20,7 @@ exception CompileError of Loc.t option * string
 type builtins = string * Data.BuiltInPredicate.declaration list
 
 type header
-val header_of_ast : flags:flags -> builtins list -> Ast.Program.t ->  header
+val header_of_ast : flags:flags -> parser:(module Parse.Parser) -> builtins list -> Ast.Program.t ->  header
 
 type program
 val program_of_ast : flags:flags -> header:header -> Ast.Program.t -> program
@@ -36,7 +39,7 @@ val query_of_data :
 
 val optimize_query : 'a query -> 'a executable
 
-val term_of_ast : depth:int -> State.t -> Loc.t * Ast.Term.t -> State.t * term
+val term_of_ast : depth:int -> State.t -> string -> State.t * term
 
 val pp_query : (pp_ctx:pp_ctx -> depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> 'a query -> unit
 

@@ -18,7 +18,7 @@ type   c       int -> tm.
 % encodings for booleans of the object language
 type   truth   tm.
 type   false   tm.
-type   &&      tm -> tm -> tm.
+type   (&&)      tm -> tm -> tm.
 
 % encodings for arithmetic functions of the object language
 type   plus    tm -> tm -> tm.
