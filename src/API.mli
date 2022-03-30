@@ -795,41 +795,8 @@ module FlexibleData : sig
     val show : t -> string
   end
 
-  module type HostWeak = sig
-    type t
-    val equal : t -> t -> bool
-    val hash : t -> int
-    val pp : Format.formatter -> t -> unit
-    val show : t -> string
-  end
-
   module type Show = sig
     type t
-    val pp : Format.formatter -> t -> unit
-    val show : t -> string
-  end
-
-  (* Keys Elpi.t and Host.t are weak, if any goes loose the entry is removed.
-     The reference to D.t is strong (but held by the weak ones) *)
-  module WeakMap : functor(Host : HostWeak) -> functor (D : Show) -> sig
-    type t
-
-    val create : int -> t
-    val add : Elpi.t -> Host.t -> D.t -> t -> unit
-
-    val remove_elpi : Elpi.t -> t -> unit
-    val remove_host : Host.t -> t -> unit
-
-    val filter : (Host.t -> Elpi.t -> D.t -> bool) -> t -> unit
-
-    (* The eventual body at its depth *)
-    val fold : (Host.t -> Elpi.t -> Data.term option -> D.t -> 'a -> 'a) -> t -> 'a -> 'a
-
-    val elpi   : Host.t -> t -> Elpi.t * D.t
-    val host : Elpi.t -> t -> Host.t * D.t
-
-    val uvmap : t State.component
-
     val pp : Format.formatter -> t -> unit
     val show : t -> string
   end

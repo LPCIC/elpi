@@ -241,7 +241,7 @@ let cfloat =
   CData.(declare {
     data_name = "float";
     data_pp = (fun f x -> Fmt.fprintf f "%f" x);
-    data_compare = Pervasives.compare (*Float.compare*);
+    data_compare = Float.compare;
     data_hash = Hashtbl.hash;
     data_hconsed = false;
   })
