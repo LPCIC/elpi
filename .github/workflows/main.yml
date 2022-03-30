@@ -23,13 +23,21 @@ jobs:
           - 4.07.1
         profile:
           - dev
+        parser:
+          - new
         include:
           - os: ubuntu-latest
             ocaml-version: 4.14.0
             profile: fatalwarnings
+            parser: new
           - os: ubuntu-latest
             ocaml-version: 4.12.0+domains
             profile: dev
+            parser: new
+          - os: ubuntu-latest
+            ocaml-version: 4.11.2
+            profile: dev
+            parser: legacy
 
     runs-on: ${{ matrix.os }}
 
@@ -76,11 +84,11 @@ jobs:
 #
 # We generate binaries like elpi-4.07.1-Linux.exe in the working directory
 
-      - name: Install optional dependencies on 4.07.1
-        if: matrix.ocaml-version == '4.07.1'
+      - name: Install optional dependencies for legacy parser
+        if: matrix.parser == 'legacy'
         run: |
           opam depext camlp5 || true # no depext on opam 2.1
-          opam install 'camlp5>=8' || true # not a strict dependency
+          opam install 'camlp5>=8'
   
       - name: Install real dependencies
         run: |
