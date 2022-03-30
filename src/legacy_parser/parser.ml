@@ -801,10 +801,10 @@ let run_parser state f x =
   | Ploc.Exc(l,(Token.Error msg | Stream.Error msg)) ->
       let loc = of_ploc l in
       raise(ParseError(loc,msg))
+  | Ploc.Exc(l,NotInProlog(loc,s)) -> raise (ParseError(loc, "NotInProlog: " ^ s))
   | Ploc.Exc(l,e) ->
       let loc = of_ploc l in
       raise(ParseError(loc,"Unexpected exception: " ^ Printexc.to_string e))
-  | NotInProlog(loc,s) -> raise (ParseError(loc, "NotInProlog: " ^ s))
 ;;
 
 let parse_program s ~print_accumulated_files filenames : Program.t =

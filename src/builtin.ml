@@ -1516,6 +1516,10 @@ let std_builtins =
 
 
 let default_checker () =
-  let elpi = API.Setup.init ~builtins:[std_builtins] () in
-  let ast = API.Parse.program_from ~elpi ~loc:(API.Ast.Loc.initial "(checker)") (Lexing.from_string Builtin_checker.code) in
-  API.Compile.program ~flags:API.Compile.default_flags ~elpi [ast]
+  try
+    let elpi = API.Setup.init ~builtins:[std_builtins] () in
+    let ast = API.Parse.program_from ~elpi ~loc:(API.Ast.Loc.initial "(checker)") (Lexing.from_string Builtin_checker.code) in
+    API.Compile.program ~flags:API.Compile.default_flags ~elpi [ast]
+  with
+  | API.Parse.ParseError(loc,msg) -> API.Utils.anomaly ~loc msg
+  | API.Compile.CompileError(loc,msg) -> API.Utils.anomaly ?loc msg

@@ -100,13 +100,19 @@ let mkSeq l =
 
 exception NotInProlog of Loc.t * string
 
+let rec best_effort_pp = function
+ | Lam (x,t) -> "x\\" ^ best_effort_pp t
+ | CData c -> CData.show c
+ | Quoted _ -> "{{ .. }}"
+ | _ -> ".."
+
 let mkApp loc = function
 (* FG: for convenience, we accept an empty list of arguments *)
   | [(App _ | Const _ | Quoted _) as c] -> c
   | App(c,l1)::l2 -> App(c,l1@l2)
   | (Const _ | Quoted _) as c::l2 -> App(c,l2)
   | [] -> anomaly ~loc "empty application"
-  | x::_ -> raise (NotInProlog(loc,"syntax error: the head of an application must be a constant or a variable"))
+  | x::_ -> raise (NotInProlog(loc,"syntax error: the head of an application must be a constant or a variable, got: " ^ best_effort_pp x))
 
 let mkAppF loc c = function
   | [] -> anomaly ~loc "empty application"
