@@ -20,6 +20,12 @@ jobs:
           - 4.12.0+domains
           - 4.14.0
           - 4.07.1
+        profile:
+          - dev
+        include:
+          - os: ubuntu-latest
+            ocaml-version: 4.14.0
+            profile: fatalwarnings
         exclude:
           - os: windows-latest
             ocaml-version: 4.12.0+domains
@@ -79,10 +85,10 @@ jobs:
         run: |
           opam install . --deps-only --with-doc --with-test
 
-      - name: Build elpi
+      - name: Build elpi with dune profile ${{ matrix.profile }}
         run: |
           opam exec -- dune subst
-          opam exec -- make build
+          opam exec -- make build DUNE_OPTS='--profile ${{ matrix.profile }}'
           opam exec -- cp _build/install/default/bin/elpi elpi-${{ matrix.ocaml-version }}-${{ runner.os }}.exe
 
       - name: Strip binary
