@@ -201,10 +201,13 @@ module Pp = struct
 
   let state = ED.State.pp
 
-  let query f c =
+  let program f c =
     let module R = (val !r) in let open R in
-    Compiler.pp_query (fun ~pp_ctx ~depth -> Pp.uppterm ~pp_ctx depth [] ~argsdepth:0 [||]) f c
-
+    Compiler.pp_program (fun ~pp_ctx ~depth -> Pp.uppterm ~pp_ctx depth [] ~argsdepth:0 [||]) f c
+  let goal f c =
+    let module R = (val !r) in let open R in
+    Compiler.pp_goal (fun ~pp_ctx ~depth -> Pp.uppterm ~pp_ctx depth [] ~argsdepth:0 [||]) f c
+  
   module Ast = struct
     let program = EA.Program.pp
     let query = EA.Goal.pp

@@ -82,5 +82,4 @@ infixr || 120.
 As a debugging facility one can ask Elpi to print the AST in order to
 verify how the text was parsed. Eg:
 
-echo 'X = a || b ==> c' | elpi -parse-term
-```
+echo 'MyFormula = a || b ==> c && d' | elpi -parse-term```

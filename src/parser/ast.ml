@@ -237,7 +237,9 @@ end
 
 module Goal = struct
 
-  type t = Loc.t * Term.t [@@deriving show]
+  type t = Loc.t * Term.t
+  let pp fmt (_,t) = Term.pp fmt t
+  let show x = Format.asprintf "%a" pp x
 
 end
  

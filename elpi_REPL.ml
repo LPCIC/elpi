@@ -146,7 +146,11 @@ let _ =
     let g =
       try API.Parse.goal_from ~elpi ~loc:(API.Ast.Loc.initial "(-parse-term)") (Lexing.from_channel stdin)
       with API.Parse.ParseError(loc,msg) -> Format.eprintf "%a@;%s\n" API.Ast.Loc.pp loc msg; exit 1 in
-    Format.printf "%a\n" API.Pp.Ast.query g;
+    Format.printf "Raw term: %a\n" API.Pp.Ast.query g;
+    let p = API.Parse.program ~elpi ~files:[] in
+    let prog = API.Compile.program ~flags ~elpi [p] in
+    let query = API.Compile.query prog g in
+    Format.printf "Compiled term: %a\n" API.Pp.goal query;
     exit 0;
   end;
   let argv = API.Setup.trace argv in
@@ -216,7 +220,9 @@ let _ =
     end;
   end;
   if !print_lprolog then begin
-    API.Pp.query Format.std_formatter query;
+    API.Pp.program Format.std_formatter query;
+    Format.printf "?- ";
+    API.Pp.goal Format.std_formatter query;
     exit 0;
   end;
   if !print_passes || !print_units then begin

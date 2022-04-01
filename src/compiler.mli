@@ -41,7 +41,8 @@ val optimize_query : 'a query -> 'a executable
 
 val term_of_ast : depth:int -> State.t -> string -> State.t * term
 
-val pp_query : (pp_ctx:pp_ctx -> depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> 'a query -> unit
+val pp_program : (pp_ctx:pp_ctx -> depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> 'a query -> unit
+val pp_goal : (pp_ctx:pp_ctx -> depth:int -> Format.formatter -> term -> unit) -> Format.formatter -> 'a query -> unit
 
 val lookup_query_predicate : program -> string -> program * Data.constant
 

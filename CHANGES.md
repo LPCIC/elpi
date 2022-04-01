@@ -19,6 +19,7 @@ Camlp5 is now optional.
   - `Setup.init` resolver argument takes a `~unit` instead of `~file`
   - `Setup.init` takes `?legacy_parser`
   - `Setup.legacy_parser_avaiable`
+  - `Pp.query` -> `Pp.program` and `Pp.goal`
 
 - REPL:
   - New `-parse-term`

@@ -233,7 +233,7 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
     | App (hd,x,xs) ->
        (try
          let assoc,hdlvl =
-          Elpi_parser.Parser_config.precedence_of (C.show hd) in
+          Elpi_parser.Parser_config.precedence_of (C.show ~table:pp_ctx.table hd) in
          with_parens hdlvl
          (fun _ -> match assoc with
             Elpi_lexer_config.Lexer_config.Infix when List.length xs = 1 ->
@@ -268,6 +268,13 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
             pplist (aux inf_prec depth) ~pplastelem:(aux_last inf_prec depth) ", " f (x::xs)
           else pp_app f ppconstant (aux inf_prec depth)
                  ~pplastarg:(aux_last inf_prec depth) (hd,x::xs)))
+    | Builtin (hd,[a;b]) when hd == Global_symbols.eqc ->
+       let _,hdlvl =
+         Elpi_parser.Parser_config.precedence_of (C.show ~table:pp_ctx.table hd) in
+       with_parens hdlvl (fun _ ->
+         Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
+           (aux (hdlvl+1) depth) a ppconstant hd
+           (aux (hdlvl+1) depth) b)
     | Builtin (hd,xs) ->
        with_parens appl_prec (fun _ ->
         pp_app f ppconstant (aux inf_prec depth)

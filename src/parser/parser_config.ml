@@ -19,7 +19,7 @@ let rec substrings i len_s s =
   if len_s - i >= 0 then
     String.sub s 0 i :: substrings (i+1) len_s s
   else []
-let substrings s = substrings 1 (String.length s) s
+let substrings s = List.rev @@ substrings 1 (String.length s) s
 
 let find_sub tab s =
   let rec aux = function
@@ -32,18 +32,26 @@ let find_sub tab s =
 
 let precedence_of, umax_precedence, appl_precedence, inf_precedence =
   let tab = Hashtbl.create 21 in
-  List.iteri (fun legacy_level { tokens; fixity } ->
+  List.iteri (fun level { tokens; fixity } ->
     List.iter (function
-      | Extensible { start; _ } -> Hashtbl.add tab start (fixity,legacy_level)
-      | Fixed { the_token; _ } -> Hashtbl.add tab the_token (fixity,legacy_level)
+      | Extensible { start; fixed; _ } ->
+          Hashtbl.add tab start (fixity,level);
+          List.iter (fun tok -> Hashtbl.add tab tok (fixity,level)) fixed
+      | Fixed { the_token; _ } ->
+          Hashtbl.add tab the_token (fixity,level)
       ) tokens;
     ) mixfix_symbols;
   let umax_precedence = List.length mixfix_symbols in
   let appl_precedence = umax_precedence + 1 in
   let inf_precedence = appl_precedence + 1 in (* greater than any used precedence*)
   (fun s ->
-    try find_sub tab s
-    with Not_found -> Prefix,appl_precedence),
+    try
+      let x = find_sub tab s in
+      (*Format.eprintf "Printer: found %s %a %d\n%!" s pp_fixity (fst x) (snd x);*)
+      x
+    with Not_found ->
+      (*Format.eprintf "Printer: not found: %s\n%!" s;*)
+      Prefix,appl_precedence),
   umax_precedence, appl_precedence, inf_precedence
 
 let comma_precedence = 1 + (snd @@ precedence_of ",")
@@ -129,7 +137,7 @@ let legacy_parser_compat_error =
   fprintf fmt "%s@;" "As a debugging facility one can ask Elpi to print the AST in order to";
   fprintf fmt "%s@;" "verify how the text was parsed. Eg:";
   fprintf fmt "%s@;" "";
-  fprintf fmt "%s@;" "echo 'X = a || b ==> c' | elpi -parse-term";
+  fprintf fmt "%s@;" "echo 'MyFormula = a || b ==> c && d' | elpi -parse-term";
   fprintf fmt "@]";
   pp_print_flush fmt ();
   Buffer.contents b

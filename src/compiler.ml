@@ -2381,22 +2381,35 @@ end (* }}} *)
 
 let optimize_query = Compiler.run
 
-let pp_query pp fmt {
+let pp_program pp fmt {
     WithMain.clauses;
     initial_depth;
-    compiler_state;
-    query; } =
+    compiler_state; } =
+  let compiler_state, clauses =
+    map_acc (fun state { Ast.Clause.body } ->
+       stack_term_of_preterm ~depth:initial_depth state body)
+       compiler_state clauses in
   let pp_ctx = {
     uv_names = ref (IntMap.empty, 0);
     table = Symbols.compile_table (State.get Symbols.table compiler_state);
   } in
   Format.fprintf fmt "@[<v>";
-  List.iter (fun { Ast.Clause.body } ->
-    Format.fprintf fmt "%a.@;" (pp ~pp_ctx ~depth:initial_depth)
-      (snd(stack_term_of_preterm compiler_state ~depth:initial_depth body)))
-  clauses;
-  Format.fprintf fmt "?- %a.@;" (pp ~pp_ctx ~depth:initial_depth)
-    (snd (stack_term_of_preterm compiler_state ~depth:initial_depth query));
+  List.iter (fun body ->
+    Format.fprintf fmt "%a.@;" (pp ~pp_ctx ~depth:initial_depth) body)
+    clauses;
+  Format.fprintf fmt "@]"
+;;
+let pp_goal pp fmt {
+    WithMain.initial_depth;
+    compiler_state;
+    query; } =
+  let compiler_state, goal = stack_term_of_preterm compiler_state ~depth:initial_depth query in
+  let pp_ctx = {
+    uv_names = ref (IntMap.empty, 0);
+    table = Symbols.compile_table (State.get Symbols.table compiler_state);
+  } in
+  Format.fprintf fmt "@[<v>";
+  Format.fprintf fmt "%a.@;" (pp ~pp_ctx ~depth:initial_depth) goal;
   Format.fprintf fmt "@]"
 ;;
 
