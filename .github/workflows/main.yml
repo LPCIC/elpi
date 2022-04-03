@@ -80,6 +80,9 @@ jobs:
           opam exec -- sed -i ' ' tests/sources/*.elpi
           & "$Env:CYGWIN_ROOT/setup-x86_64.exe" -q -P time
           & "$Env:CYGWIN_ROOT/setup-x86_64.exe" -q -P which
+          opam exec -- which which
+          opam exec -- time which
+          opam exec -- which time
 
 # Build ######################################################################
 #
