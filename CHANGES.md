@@ -1,16 +1,20 @@
 
-# UNRELEASED
+# v1.15.0 (April 2022)
 
 Requires Menhir 20211230 and OCaml 4.07 or above.
 Camlp5 is now optional.
 
+*warning: The parser used by default is not backward compatible*
+
 - Parser:
   - New parser based on Menhir
-    + The grammar is not extensible anymore
-    + Token families are used to provide open ended infix symbols, see
-      the [documentation](src/parser/README.md)
+    + The grammar is not extensible anymore; token families are used to provide
+      open ended infix symbols, see the [documentation](src/parser/README.md)
+    + Custom error messages suggesting examples with a valid syntax
+    + Faster on large files
   - Old parser available via `-legacy-parser`
-    + only compiled when `camlp5` is available
+    + Only compiled when `camlp5` is available
+    + Supports `infix` and similar mixfix directives
 
 - API:
   - `Parse.goal_from_stream` -> `Parse.goal_from`

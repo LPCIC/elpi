@@ -82,4 +82,12 @@ infixr || 120.
 As a debugging facility one can ask Elpi to print the AST in order to
 verify how the text was parsed. Eg:
 
-echo 'MyFormula = a || b ==> c && d' | elpi -parse-term```
+echo 'MyFormula = a || b ==> c && d' | elpi -parse-term
+```
+
+Tokens of families marked with `[*]` cannot end with the starting symbol,
+eg `foo` is not an infix, while ``` `foo ``` is.
+This is to enable ``` `foo` ``` or ``` 'foo'``` to
+be compiled as quoted identifiers, see the API `Quotation.declare_backtick`
+and `Quotation.declare_singlequote`.
+
