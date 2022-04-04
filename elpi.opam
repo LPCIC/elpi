@@ -28,6 +28,9 @@ depends: [
 depopts: [
   "camlp5" {> "7.99"}
 ]
+conflicts: [
+  "camlp5" {< "8"}
+]
 synopsis: "ELPI - Embeddable λProlog Interpreter"
 description: """
 ELPI implements a variant of λProlog enriched with Constraint Handling Rules,
