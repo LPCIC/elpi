@@ -438,8 +438,8 @@ external type constant any -> variadic any prop.
 external pred names % generates the list of eigenvariable
   o:list any. % list of eigenvariables in order of age (young first)
   
-external pred occurs % checks if the constant occurs in the term
-  i:any, % a constant (global or eigenvariable)
+external pred occurs % checks if the atom occurs in the term
+  i:any, % an atom, that is a global constant or a bound name (aka eigenvariable)
   i:any. % a term
   
 % [closed_term T] unify T with a variable that has no eigenvariables in

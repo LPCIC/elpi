@@ -1082,14 +1082,14 @@ X == Y :- same_term X Y.
   DocNext);
 
   MLCode(Pred("occurs",
-    In(any, "a constant (global or eigenvariable)",
+    In(any, "an atom, that is a global constant or a bound name (aka eigenvariable)",
     In(any, "a term",
-    Easy     "checks if the constant occurs in the term")),
+    Easy     "checks if the atom occurs in the term")),
   (fun t1 t2 ~depth ->
      let occurs_in t2 t =
        match look ~depth t with
        | Const n -> occurs n depth t2
-       | _ -> error "The second argument of occurs must be a constant" in
+       | _ -> error "The second argument of occurs must be an atom" in
      if occurs_in t2 t1 then () else raise No_clause)),
   DocNext);
 
