@@ -40,6 +40,7 @@ type t = Tokens.token =
   | LBRACKET
   | KIND
   | IS
+  | IO_COLON of (char)
   | IO of (char)
   | INTEGER of ( int )
   | INDEX
@@ -189,3 +190,8 @@ a|}                                   [T(CONSTANT "b", 2, 1, 2);T(CONSTANT "c", 
   test  ":name"                       [T(COLON,1,0,1); T(NAME,1,0,5)];
   test  "@foo"                        [T(CONSTANT "@foo",1,0,4)];
   test  "a && b"                       [T(CONSTANT "a",1,0,1);T(FAMILY_AND "&&",1,0,4);T(CONSTANT "b",1,0,6)];
+  (*    01234567890123456789012345 *)
+  test  "i:"                          [T(IO_COLON 'i', 1, 0, 2)];
+  test  "o:"                          [T(IO_COLON 'o', 1, 0, 2)];
+  test  "i"                           [T(IO 'i', 1, 0, 1)];
+  test  "o"                           [T(IO 'o', 1, 0, 1)];

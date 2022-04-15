@@ -421,13 +421,13 @@ Unexpected ')'.
 
 program: PRED VDASH
 program: PRED AFTER VDASH
-program: PRED AFTER IO COLON AFTER CONJ VDASH
-program: PRED AFTER IO VDASH
-program: PRED AFTER IO COLON VDASH
-program: PRED AFTER IO COLON AFTER RPAREN
+program: PRED AFTER IO_COLON AFTER CONJ VDASH
+program: PRED AFTER IO_COLON VDASH
+program: PRED AFTER IO_COLON AFTER RPAREN
 
 Predicate declaration expected. Examples:
 pred append i:list A, i:list A, o:list A.
+pred append i:list A i:list A o:list A.
 pred map i:list A, i:(A -> B -> prop), o:list B.
 
 program: EXPORTDEF AFTER LPAREN USE_SIG

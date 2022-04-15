@@ -154,7 +154,7 @@ chr_rule:
 
 pred:
 | attributes = attributes; PRED;
-  c = constant; args = separated_list(CONJ,pred_item) { 
+  c = constant; args = separated_list(option(CONJ),pred_item) {
    let name = c in
    { Mode.loc=loc $sloc; name; args = List.map fst args },
    { Type.loc=loc $sloc; attributes; name;
@@ -162,9 +162,9 @@ pred:
        mkApp (loc $loc(c)) [mkCon "->";t;ty]) args (mkCon "prop") }
  }
 pred_item:
-| io = i_o; COLON; ty = type_term { (io,ty) }
-i_o:
-| io = IO { 
+| io = i_o_colon; ty = type_term { (io,ty) }
+i_o_colon:
+| io = IO_COLON { 
     if io = 'i' then true
     else if io = 'o' then false
     else assert false
@@ -199,6 +199,12 @@ kind_term:
 mode:
 | MODE; LPAREN; c = constant; l = nonempty_list(i_o); RPAREN {
     { Mode.name = c; args = l; loc = loc $sloc } 
+}
+i_o:
+| io = IO { 
+    if io = 'i' then true
+    else if io = 'o' then false
+    else assert false
 }
 
 macro:
