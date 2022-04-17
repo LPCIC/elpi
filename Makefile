@@ -35,7 +35,7 @@ STACK=1114112
 
 DUNE_OPTS=
 
-CP5:=$(shell if ocamlfind query camlp5x 2>/dev/null >&2; then : ; else echo "INFO: Camlp5 not found: legacy parser disabled." >& 2; fi)
+CP5:=$(shell if ocamlfind query camlp5 2>/dev/null >&2; then : ; else echo "INFO: Camlp5 not found: legacy parser disabled." >& 2; fi)
 
 build:
 	dune build $(DUNE_OPTS) @all
