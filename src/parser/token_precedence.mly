@@ -1,7 +1,7 @@
 %right BIND
 %nonassoc VDASH QDASH 
 %right OR 
-%right CONJ 
+%right CONJ CONJ2 
 %right ARROW 
 %right DARROW 
 %nonassoc EQ EQ2 FAMILY_LT FAMILY_GT IS 

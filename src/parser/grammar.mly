@@ -469,6 +469,7 @@ postfix_SYMB:
 | DARROW { Func.implf }
 | QDASH  { Func.sequentf }
 | SLASH  { Func.from_string "/" }
+| CONJ2  { Func.andf }
 
 %inline non_extensible_infix_novdash:
 | x = non_extensible_infix_novdash_noconj { x }

@@ -60,6 +60,7 @@ let mixfix_symbols : mixfix list = [
     fixity = Infixr; legacy_level = 100  };
   { tokens = [ mkFix "CONJ" "," CONJ];
     fixity = Infixr; legacy_level = 110  };
+               mkFix "CONJ2" "&" CONJ2];
   { tokens = [ mkFix "ARROW" "->" ARROW];
     fixity = Infixr; legacy_level = 116  };
   { tokens = [ mkFix "DARROW" "=>" DARROW];
