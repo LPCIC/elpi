@@ -51,8 +51,7 @@
 (install
   (section lib)
   (files builtin.elpi elpi-quoted_syntax.elpi elpi2html.elpi)
-  (package elpi)
-)
+  (package elpi))
 
 (rule
   (targets builtin.elpi)

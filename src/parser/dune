@@ -10,14 +10,12 @@
   (name elpi_lexer_config)
   (public_name elpi.lexer_config)
   (libraries elpi.util)
-  (modules tokens lexer_config)
-  )
+  (modules tokens lexer_config))
 
 (executable
   (name gen_token_precedence)
   (modules gen_token_precedence)
-  (libraries elpi.lexer_config)
-  )
+  (libraries elpi.lexer_config))
 
 (executable
   (name gen_infix_lexer)
