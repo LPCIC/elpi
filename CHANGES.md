@@ -1,8 +1,10 @@
 
-# v1.15.1 UNRELEASED
+# v1.15.1 (April 2022)
 
 Requires Menhir 20211230 and OCaml 4.07 or above.
 Camlp5 8.0 or above is optional.
+
+*warning: The parser used by default is not backward compatible with 1.14.x*
 
 - Build:
   - Change legacy parser not built by default
@@ -13,7 +15,7 @@ Camlp5 8.0 or above is optional.
 - Parser:
   - Fix missing infix `&` (synonym of `,`)
   - New comma separator is optional in `pred` declarations, eg
-    `pred i:A o:B` is valid syntax
+    `pred i:A o:B.` is valid syntax
 
 # v1.15.0 (April 2022)
 
