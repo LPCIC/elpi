@@ -19,6 +19,7 @@ module Func = struct
    let rec aux = function
     | "nil" -> aux "[]"
     | "cons" -> aux "::"
+    | "&" -> aux "," (* legacy parser *)
     | x ->
        try Hashtbl.find h x
        with Not_found -> Hashtbl.add h x x ; x

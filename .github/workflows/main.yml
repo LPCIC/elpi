@@ -87,16 +87,17 @@ jobs:
 # Build ######################################################################
 #
 # We generate binaries like elpi-4.07.1-Linux.exe in the working directory
+  
+      - name: Install real dependencies
+        run: |
+          opam install ./elpi.opam --deps-only --with-doc --with-test
 
       - name: Install optional dependencies for menhir-camlp5 parser
         if: matrix.parser == 'menhir-camlp5'
         run: |
           opam depext camlp5 || true # no depext on opam 2.1
-          opam install 'camlp5>=8'
-  
-      - name: Install real dependencies
-        run: |
-          opam install . --deps-only --with-doc --with-test
+          opam install ./elpi-option-legacy-parser.opam
+          opam exec -- make config LEGACY_PARSER=1
 
       - name: Build elpi with dune profile ${{ matrix.profile }}
         run: |
@@ -105,7 +106,9 @@ jobs:
           opam exec -- cp _build/install/default/bin/elpi elpi-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}.exe
 
       - name: Strip binary
-        run: opam exec -- strip ${{ env.workspace }}/elpi-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}.exe
+        run: |
+          opam exec -- chmod u+w ${{ env.workspace }}/elpi-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}.exe
+          opam exec -- strip ${{ env.workspace }}/elpi-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}.exe
 
 # Artifacts 1 ################################################################
 

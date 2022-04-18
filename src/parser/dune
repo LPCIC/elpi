@@ -3,7 +3,8 @@
   (public_name elpi.parser)
   (preprocess (per_module ((pps ppx_deriving.std) ast)))
   (libraries unix menhirLib elpi_lexer_config elpi.util stdlib-shims)
-  (modules ast grammar lexer parser_config error_messages parse))
+  (modules ast grammar lexer parser_config error_messages parse)
+  )
 
 (library
   (name elpi_lexer_config)

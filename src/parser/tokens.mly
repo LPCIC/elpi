@@ -61,6 +61,7 @@
 %token INDEX 
 %token CONS
 %token CONJ
+%token CONJ2
 %token OR
 %token EQ
 %token EQ2

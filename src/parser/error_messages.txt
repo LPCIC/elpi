@@ -94,6 +94,8 @@ program: AFTER MINUSr VDASH
 program: AFTER MINUSi VDASH
 program: AFTER MINUS VDASH
 program: AFTER EQ2 VDASH
+goal: AFTER CONJ2 VDASH
+program: AFTER CONJ2 VDASH
 
 This infix operator expects a right hand side.
 
@@ -208,11 +210,14 @@ goal: LBRACKET AFTER MINUSr FLOAT USE_SIG
 goal: LBRACKET AFTER MINUSi FLOAT USE_SIG
 goal: LBRACKET AFTER MINUS FLOAT USE_SIG
 goal: LBRACKET AFTER EQ2 FLOAT USE_SIG
+goal: LBRACKET AFTER CONJ2 FLOAT USE_SIG
 program: AFTER MINUSs FLOAT USE_SIG
 program: AFTER MINUSr FLOAT USE_SIG
 program: AFTER MINUSi FLOAT USE_SIG
 program: AFTER MINUS FLOAT USE_SIG
 program: AFTER EQ2 FLOAT USE_SIG
+goal: AFTER CONJ2 FLOAT USE_SIG
+program: AFTER CONJ2 FLOAT USE_SIG
 
 Term expected, got keyword.
 
@@ -346,6 +351,7 @@ Closing '[' with ')'.
 
 goal: LBRACKET PIPE VDASH
 goal: LBRACKET AFTER PIPE VDASH
+goal: LBRACKET AFTER CONJ2 VDASH
 
 List expected. Examples:
 [ this , that | More ].

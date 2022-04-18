@@ -98,3 +98,14 @@ let () = declare "typeabbrv12"
   ~expectation:(FailureOutput (Str.regexp "x has type string but is used with type y"))
   ~description:"type abbreviations and error messages"
   ()
+
+let () = declare "conj2"
+  ~source_elpi:"conj2.elpi"
+  ~description:"parsing and evaluation of & (binary conj)"
+  ()
+
+let () = declare "conj2_legacy"
+  ~source_elpi:"conj2.elpi"
+  ~description:"parsing and evaluation of & (binary conj)"
+  ~legacy_parser:true
+  ()

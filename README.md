@@ -29,6 +29,8 @@ you can type
 opam pin add elpi https://github.com/LPCIC/elpi.git
 ```
 You can also clone this repository and type `make build`.
+If you want to build the legacy parser, do begin with
+`make config LEGACY_PARSER=1` and then `make build`.
 
 Finally, each CI run builds statically linked binaries for the
 three supported operating systems, click on any
