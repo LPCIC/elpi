@@ -1,6 +1,8 @@
 (**
     elpi.trace.ppx provides the following syntax extensions:
 
+    {[
+
     type t = { a : T; b : S [@trace] }
 
     let rec f x (w[@trace]) =
@@ -20,18 +22,20 @@
                z + f y (b[@trace])
      end]
 
+  ]}
+
   If
     --cookie "elpi_trace=\"true\""
   is not passed to the ppx rewriter:
 
-    - [%trace "foo" pp code] ---> code
-    - [%tcall f x] ---> f x
-    - [%spy ...] [%spyl ...] and [%log ...] ---> ()
-    - f x (y[@trace]) z ---> f x z
-    - let x[@trace] = .. in e ---> e
-    - type x = { a : T; b : T [@trace] } ---> type x = { a : T }
-    - { a; b = b [@trace] } ---> { a } (in both patterns and expressions)
-    - T -> (S[@trace]) -> U  --->  T -> U
+    - [[%trace "foo" pp code]] ---> [code]
+    - [[%tcall f x]] ---> [f x]
+    - [[%spy ...]] [[%spyl ...]] and [[%log ...]] ---> [()]
+    - [f x (y[@trace]) z] ---> [f x z]
+    - [let x[@trace] = .. in e] ---> [e]
+    - [type x = { a : T; b : T [@trace] }] ---> [type x = { a : T }]
+    - [{ a; b = b [@trace] }] ---> [{ a }] (in both patterns and expressions)
+    - [T -> (S[@trace]) -> U]  --->  [T -> U]
 
   In records, the shorcut "x" to mean "x = x" does not work, you have to use the
   longer form.
