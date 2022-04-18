@@ -77,6 +77,12 @@ let decode_sequent t =
 let prop = Func.from_string "prop"
 
 let fix_church x = if Func.show x = "o" then prop else x
+
+let mode_of_IO io =
+  if io = 'i' then true
+  else if io = 'o' then false
+  else assert false
+
 %}
 
 %on_error_reduce term
@@ -164,11 +170,7 @@ pred:
 pred_item:
 | io = i_o_colon; ty = type_term { (io,ty) }
 i_o_colon:
-| io = IO_COLON { 
-    if io = 'i' then true
-    else if io = 'o' then false
-    else assert false
-}
+| io = IO_COLON { mode_of_IO io }
 
 kind:
 | KIND; names = separated_nonempty_list(CONJ,constant); k = kind_term {
@@ -201,11 +203,7 @@ mode:
     { Mode.name = c; args = l; loc = loc $sloc } 
 }
 i_o:
-| io = IO { 
-    if io = 'i' then true
-    else if io = 'o' then false
-    else assert false
-}
+| io = IO { mode_of_IO io }
 
 macro:
 | MACRO; m = term; VDASH; b = term {
