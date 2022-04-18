@@ -106,7 +106,9 @@ jobs:
           opam exec -- cp _build/install/default/bin/elpi elpi-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}.exe
 
       - name: Strip binary
-        run: opam exec -- strip ${{ env.workspace }}/elpi-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}.exe
+        run: |
+          opam exec -- chmod u+w ${{ env.workspace }}/elpi-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}.exe
+          opam exec -- strip ${{ env.workspace }}/elpi-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}.exe
 
 # Artifacts 1 ################################################################
 
