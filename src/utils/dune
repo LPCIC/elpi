@@ -2,4 +2,5 @@
   (name elpi_util)
   (public_name elpi.util)
   (libraries re.str)
-  (modules util))
+  (modules util)
+  )
