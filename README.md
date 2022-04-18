@@ -115,9 +115,8 @@ The API the host application can use to drive ELPI is documented in the
 
 The [command line](elpi_REPL.ml) interface to ELPI is a very simple
 example of a client using ELPI as a library.
-More complex examples of embeddings of ELPI are
-[coq-elpi](https://github.com/LPCIC/coq-elpi) and
-[matita-elpi](https://github.com/LPCIC/matita).
+The most complex example of embedding of ELPI is
+[coq-elpi](https://github.com/LPCIC/coq-elpi).
 
 ## Why ELPI?
 
