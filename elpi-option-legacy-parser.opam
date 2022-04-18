@@ -9,6 +9,7 @@ bug-reports: "https://github.com/LPCIC/elpi/issues"
 
 depends: [
   "camlp5" {> "7.99"}
+  "ocaml" {< "4.14.0" }
 ]
 synopsis: "ELPI - option for legacy parser"
 description: """
