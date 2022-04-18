@@ -27,10 +27,10 @@ depends: [
   "conf-time" {with-test}
 ]
 depopts: [
-  "elpi-option-legacy-parser" {= 1}
+  "elpi-option-legacy-parser"
 ]
 conflicts: [
-  "elpi-option-legacy-parser" {!= 1}
+  "elpi-option-legacy-parser" {!= "1"}
 ]
 synopsis: "ELPI - Embeddable λProlog Interpreter"
 description: """
