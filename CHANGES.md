@@ -1,4 +1,20 @@
 
+# v1.15.1 UNRELEASED
+
+Requires Menhir 20211230 and OCaml 4.07 or above.
+Camlp5 8.0 or above is optional.
+
+- Build:
+  - Change legacy parser not built by default
+  - New `make config LEGACY_PARSER=1` to enable it
+  - New opam package `elpi-option-legacy-parser` to install elpi with
+    the legacy parser enabled 
+
+- Parser:
+  - Fix missing infix `&` (synonym of `,`)
+  - New comma separator is optional in `pred` declarations, eg
+    `pred i:A o:B` is valid syntax
+
 # v1.15.0 (April 2022)
 
 Requires Menhir 20211230 and OCaml 4.07 or above.

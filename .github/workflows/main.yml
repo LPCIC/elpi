@@ -87,17 +87,17 @@ jobs:
 # Build ######################################################################
 #
 # We generate binaries like elpi-4.07.1-Linux.exe in the working directory
+  
+      - name: Install real dependencies
+        run: |
+          opam install ./elpi.opam --deps-only --with-doc --with-test
 
       - name: Install optional dependencies for menhir-camlp5 parser
         if: matrix.parser == 'menhir-camlp5'
         run: |
           opam depext camlp5 || true # no depext on opam 2.1
-          opam install 'camlp5>=8'
+          opam install ./elpi-option-legacy-parser.opam
           opam exec -- make config LEGACY_PARSER=1
-  
-      - name: Install real dependencies
-        run: |
-          opam install . --deps-only --with-doc --with-test
 
       - name: Build elpi with dune profile ${{ matrix.profile }}
         run: |
