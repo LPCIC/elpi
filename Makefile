@@ -40,6 +40,12 @@ CP5:=$(shell if ocamlfind query camlp5 2>/dev/null >&2; then : ; else echo "INFO
 build:
 	dune build $(DUNE_OPTS) @all
 
+config:
+	@(if [ -z $$LEGACY_PARSER ]; \
+	then echo '(dirs :standard \ legacy_parser)'; \
+	else echo '(dirs :standard )'; \
+	fi ) > src/dune.config
+
 install:
 	dune install $(DUNE_OPTS)
 

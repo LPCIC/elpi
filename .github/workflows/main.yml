@@ -93,6 +93,7 @@ jobs:
         run: |
           opam depext camlp5 || true # no depext on opam 2.1
           opam install 'camlp5>=8'
+          opam exec -- make config LEGACY_PARSER=1
   
       - name: Install real dependencies
         run: |
