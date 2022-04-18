@@ -283,3 +283,9 @@ X0 || X2 && X3 ==> X4
 [f X0, g X1, (a , b), a + b]
 |})))
   ()
+
+let () = declare "IO_COLON"
+  ~source_elpi:"io_colon.elpi"
+  ~description:"IO_COLON token"
+  ~typecheck:true
+  ()

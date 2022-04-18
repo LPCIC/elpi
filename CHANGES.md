@@ -1,3 +1,13 @@
+# v1.15.2 (April 2022)
+
+Requires Menhir 20211230 and OCaml 4.07 or above.
+Camlp5 8.0 or above is optional.
+
+*warning: The parser used by default is not backward compatible with 1.14.x*
+
+- Parser:
+  - Change `pred foo i:A o:B` is valid, `pred foo i:A o :B` is not. This
+    change restores backward compatibility of existing code.
 
 # v1.15.1 (April 2022)
 

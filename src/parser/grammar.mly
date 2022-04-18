@@ -168,9 +168,7 @@ pred:
        mkApp (loc $loc(c)) [mkCon "->";t;ty]) args (mkCon "prop") }
  }
 pred_item:
-| io = i_o_colon; ty = type_term { (io,ty) }
-i_o_colon:
-| io = IO_COLON { mode_of_IO io }
+| io = IO_COLON; ty = type_term { (mode_of_IO io,ty) }
 
 kind:
 | KIND; names = separated_nonempty_list(CONJ,constant); k = kind_term {

@@ -195,5 +195,7 @@ a|}                                   [T(CONSTANT "b", 2, 1, 2);T(CONSTANT "c", 
   (*    01234567890123456789012345 *)
   test  "i:"                          [T(IO_COLON 'i', 1, 0, 2)];
   test  "o:"                          [T(IO_COLON 'o', 1, 0, 2)];
+  test  "i :"                         [T(IO 'i', 1, 0, 1); T(COLON,1,0,3)];
+  test  "o :"                         [T(IO 'o', 1, 0, 1); T(COLON,1,0,3)];
   test  "i"                           [T(IO 'i', 1, 0, 1)];
   test  "o"                           [T(IO 'o', 1, 0, 1)];
