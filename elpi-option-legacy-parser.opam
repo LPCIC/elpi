@@ -1,4 +1,5 @@
 opam-version: "2.0"
+version: "1"
 maintainer: "Enrico Tassi <enrico.tassi@inria.fr>"
 authors: [ "Enrico Tassi" ]
 license: "LGPL-2.1-or-later"
@@ -11,6 +12,7 @@ depends: [
   "camlp5" {> "7.99"}
   "ocaml" {< "4.14.0" }
 ]
+flags: conf
 synopsis: "ELPI - option for legacy parser"
 description: """
 Enables the -legacy-parser flag, implemented on top of CamlP5"""
