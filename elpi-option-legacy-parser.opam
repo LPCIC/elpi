@@ -9,7 +9,7 @@ dev-repo: "git+https://github.com/LPCIC/elpi.git"
 bug-reports: "https://github.com/LPCIC/elpi/issues"
 
 depends: [
-  "elpi" {post & >= "1.15.2"}
+  # "elpi" {post & >= "1.15.2"} # this is nice to have in the main repo, not here
   "camlp5" {> "7.99"}
   "ocaml" {< "4.14.0" }
 ]
