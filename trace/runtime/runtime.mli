@@ -14,9 +14,9 @@ val info : runtime_id:int -> ?goal_id:int -> string -> j list -> unit
 val exit : runtime_id:int -> string -> bool -> exn option -> float -> unit
 
 val set_cur_pred : string option -> unit
-val get_cur_step : string -> int
+val get_cur_step : runtime_id:int -> string -> int
 
-val log : string -> string -> int -> unit
+val log : runtime_id:int -> string -> string -> int -> unit
 
 val debug : bool ref
 val parse_argv : string list -> string list

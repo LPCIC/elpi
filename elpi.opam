@@ -25,6 +25,8 @@ depends: [
   "cmdliner" {with-test}
   "dune" {>= "2.8.0"}
   "conf-time" {with-test}
+  "atdgen" {>= "2.5.0"}
+  "atdts" {>= "2.5.0"}
 ]
 depopts: [
   "elpi-option-legacy-parser"

@@ -28,6 +28,7 @@ PWD=$(shell pwd)
 RUNNERS=\
   dune \
   $(PWD)/$(INSTALL)/bin/elpi \
+  $(PWD)/$(INSTALL)/bin/elpi-trace-elaborator \
   $(addprefix $(PWD)/,$(wildcard _build/git/*/$(INSTALL)/bin/elpi.git.*)) \
   $(shell if type tjsim >/dev/null 2>&1; then type -P tjsim; else echo; fi)
 TIME=--time $(shell if type -P gtime >/dev/null 2>&1; then type -P gtime; else echo /usr/bin/time; fi)

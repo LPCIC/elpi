@@ -1,0 +1,24 @@
+constraint even odd {
+  rule \ (even X) (odd X) | (odd z) <=> true.
+  rule \ (even X) (odd X) | (odd (s z)) <=> fail.
+}
+kind nat type.
+type s nat -> nat.
+type z nat.
+
+pred even i:nat.
+pred odd i:nat.
+even z.
+
+odd (s X) :- even X.
+even (s X) :- odd X.
+
+even (uvar as X) :- declare_constraint (even X) X.
+odd (uvar as X) :- declare_constraint (odd X) X.
+
+main :-
+  even Z,
+  declare_constraint true Z,
+  Z = s W,
+  not(even W).
+
