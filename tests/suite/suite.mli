@@ -1,4 +1,10 @@
 
+module Util : sig
+
+  val strip_cwd : string -> string
+
+end
+
 module Test : sig
 
 type fname = string
@@ -8,6 +14,7 @@ type expectation =
   | Failure
   | SuccessOutput of Str.regexp
   | FailureOutput of Str.regexp
+  | SuccessOutputFile of { sample : string; adjust : string -> string; reference : string }
 
 type trace = Off | On of string list
 
@@ -18,6 +25,7 @@ val declare :
   ?source_teyjus:fname ->
   ?deps_teyjus:fname list ->
   ?source_dune:fname ->
+  ?source_json:fname ->
   ?after:string ->
   ?typecheck:bool ->
   ?input:fname -> 
@@ -36,6 +44,7 @@ type t = {
   source_teyjus : fname option;
   deps_teyjus : fname list;
   source_dune : fname option;
+  source_json : fname option;
   after : string list;
   typecheck : bool;
   input : fname option;

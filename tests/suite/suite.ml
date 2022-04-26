@@ -10,6 +10,7 @@ type expectation =
   | Failure
   | SuccessOutput of Str.regexp
   | FailureOutput of Str.regexp
+  | SuccessOutputFile of { sample : string; adjust : string -> string; reference : string }
 
 type trace = Off | On of string list
 
@@ -21,6 +22,7 @@ type t = {
   source_teyjus : fname option;
   deps_teyjus : fname list;
   source_dune : fname option;
+  source_json : fname option;
   after: string list;
   typecheck : bool;
   input: fname option;
@@ -33,7 +35,7 @@ type t = {
 let tests = ref []
 
 let declare
-    name ~description ?source_elpi ?source_teyjus ?(deps_teyjus=[]) ?source_dune
+    name ~description ?source_elpi ?source_teyjus ?(deps_teyjus=[]) ?source_dune ?source_json
     ?after
     ?(typecheck=true) ?input ?(expectation=Success)
     ?(outside_llam=false)
@@ -44,8 +46,8 @@ let declare
 =
   if List.exists (fun { name = x; _ } -> x = name) !tests then
     failwith ("a test named " ^ name ^ " already exists");
-  begin match source_elpi, source_teyjus, source_dune with
-    | None, None, None -> failwith ("test "^name^" has no sources");
+  begin match source_elpi, source_teyjus, source_dune, source_json with
+    | None, None, None, None-> failwith ("test "^name^" has no sources");
     | _ -> ()
   end;
   tests := { 
@@ -55,6 +57,7 @@ let declare
     source_teyjus;
     deps_teyjus;
     source_dune;
+    source_json;
     after = (match after with None -> [] | Some x -> [x]);
     typecheck;
     input;
@@ -162,11 +165,14 @@ let open_log ~executable { Test.name; _ } =
   let name = logdir^"/"^Filename.basename executable^"+"^name^".log" in
   open_file_w name, name
 
+let close_log (fd,_) = Unix.close fd
+
 let open_dummy_log () =
   let name = Filename.temp_file "elpi" "txt" in
   open_file_w name, name
 
-let write (fd,_) s = ignore(Unix.write_substring fd s 0 (String.length s))
+let write (fd,f) s =
+  ignore(Unix.write_substring fd s 0 (String.length s))
 
 let open_input name = Unix.openfile name [Unix.O_RDONLY] 0
 
@@ -216,20 +222,20 @@ let wait pid timeout timelog =
     !rc
 
 
-let fork_wait_win ~close_output exe argv env input output timefile timeout =
+let fork_wait_win ~close_output exe argv env input output error timefile timeout =
   ignore close_output;
   let pid =
     Unix.create_process_env
-      exe (Array.of_list argv) env input output output in
+      exe (Array.of_list argv) env input output error in
   wait pid timeout timefile
 
-let fork_wait_unix ~close_output exe argv env input output timefile timeout =
+let fork_wait_unix ~close_output exe argv env input output error timefile timeout =
   let pid = Unix.fork () in
   if pid = 0 then begin
     let _ = Unix.setsid () in
     let runner =
       Unix.create_process_env
-        exe (Array.of_list argv) env input output output in
+        exe (Array.of_list argv) env input output error in
     let _, rc = Unix.waitpid [] runner in
     match rc with
     | Unix.WEXITED n -> exit n
@@ -244,7 +250,7 @@ let fork_wait_unix ~close_output exe argv env input output timefile timeout =
 
 let null = if Sys.win32 then "NUL:" else "/dev/null"
 
-let exec ~timeout ?timetool ~env ~log:(output,oname) ?(input=null) ~executable ~args ?(close_output=true) () =
+let exec ~timeout ?timetool ~env ~log:(output,oname) ?(input=null) ?(error=output,oname) ~executable ~args ?(close_output=true) () =
   Sys.catch_break true;
   let exe, argv, timefile =
     match timetool with
@@ -255,8 +261,8 @@ let exec ~timeout ?timetool ~env ~log:(output,oname) ?(input=null) ~executable ~
                    executable :: args), timefile in
   Unix.handle_unix_error (fun () ->
     let input = open_input input in
-    if Sys.win32 then fork_wait_win ~close_output exe argv env input output timefile timeout
-    else fork_wait_unix  ~close_output exe argv env input output timefile timeout)
+    if Sys.win32 then fork_wait_win ~close_output exe argv env input output (fst error) timefile timeout
+    else fork_wait_unix  ~close_output exe argv env input output (fst error) timefile timeout)
     ()
 
 let with_log (_,log) f =
@@ -269,13 +275,45 @@ let with_log (_,log) f =
 
 let option_map f = function None -> None | Some x -> Some (f x)
 
+let strip_cwd file =
+  let name = Filename.temp_file "elpi" "txt" in
+  let oc = open_out name in
+  let ic = open_in file in
+  let rex = Str.regexp_string (Sys.getcwd () ^ "/") in
+  try
+    while true do
+      let l = input_line ic in
+      let l = Str.global_replace rex "" l in
+      output_string oc (l ^ "\n")
+    done;
+    name
+  with End_of_file ->
+    close_in ic;
+    close_out oc;
+    name
+
 end
+
+let match_file ~log file adjust reference =
+  let file = adjust file in
+  Util.write log (Printf.sprintf "Diffing %s against %s\n" file reference);
+  match
+    Util.exec ~timeout:5.0 ~env:(Unix.environment ())
+      ~log ~close_output:false
+      ~executable:"diff" ~args:["-u";reference;file] ()
+  with
+  | Util.Exit(0,_,_) -> true
+  | Util.Exit(n,_,_) ->
+    Util.write log (Printf.sprintf "Exit code: %d\n" n);
+    Util.write log (Printf.sprintf "Promotion: cp %s %s\n" file reference);
+    false
+  | _ -> false
 
 
 module Elpi = struct
 
 let is_elpi =
-  let rex = Str.regexp "elpi.*" in
+  let rex = Str.regexp "\\(elpi\\|elpi\\.git\\..*\\)$" in
   fun s -> Str.string_match rex (Filename.basename s) 0
 
 let read_time input_line =
@@ -353,38 +391,74 @@ let () = Runner.declare
     Util.write log (Printf.sprintf "args: %s\n" (String.concat " " args));
 
     let rc =
-      match expectation, Util.exec ~timeout ~timetool ?input ~executable ~env ~log ~args () with
-      | Test.Success, Util.Exit(0,walltime,mem) ->
-        Runner.Success { walltime; typechecking = Util.with_log log read_tctime; execution = Util.with_log log read_time; mem }
-      | Test.Failure, Util.Exit(0,walltime,mem) ->
-        Runner.Failure { walltime; typechecking = Util.with_log log read_tctime; execution = Util.with_log log read_time; mem }
-      | Test.Success, Util.Exit(_,walltime,mem) ->
-        Runner.Failure { walltime; typechecking = Util.with_log log read_tctime; execution = walltime; mem }
-      | Test.Failure, Util.Exit(_,walltime,mem) ->
-        Runner.Success { walltime; typechecking = Util.with_log log read_tctime; execution = Util.with_log log read_time; mem }
-      | Test.Success, Util.Timeout ->
-        Runner.Timeout timeout
-      | Test.Failure, Util.Timeout ->
-        Runner.Timeout timeout
-      | Test.FailureOutput _, Util.Exit(0,walltime,mem) ->
-           Runner.Failure { walltime; typechecking = Util.with_log log read_tctime; execution = walltime; mem }
-     | Test.SuccessOutput rex, Util.Exit(0,walltime,mem) ->
-          if Util.with_log log (match_rex rex) then
-            Runner.Success { walltime; typechecking = Util.with_log log read_tctime; execution = Util.with_log log read_time; mem }
-          else
-            Runner.Failure { walltime; typechecking = Util.with_log log read_tctime; execution = walltime; mem }
-      | Test.SuccessOutput _, Util.Exit(_,walltime,mem) ->
-          Runner.Failure { walltime; typechecking = Util.with_log log read_tctime; execution = walltime; mem }
-      | Test.FailureOutput rex, Util.Exit(_,walltime,mem) ->
-          if Util.with_log log (match_rex rex) then
-            Runner.Success { walltime; typechecking = Util.with_log log read_tctime; execution = Util.with_log log read_time; mem }
-          else
-            Runner.Failure { walltime; typechecking = Util.with_log log read_tctime; execution = walltime; mem }
-      | (Test.FailureOutput _ | Test.SuccessOutput _), Util.Timeout ->
-        Runner.Timeout timeout
+      let outcome = Util.exec ~timeout ~timetool ~close_output:false ?input ~executable ~env ~log ~args () in
+      let typechecking = Util.with_log log read_tctime in
+      let execution = Util.with_log log read_time in
+
+      match outcome with
+      | Util.Exit(0,walltime,mem) ->
+        begin match expectation with
+        | Test.Success -> Runner.Success { walltime; typechecking; execution; mem }
+        | Test.SuccessOutput rex when Util.with_log log (match_rex rex) -> Runner.Success { walltime; typechecking; execution; mem }
+        | Test.SuccessOutputFile { sample; adjust; reference } when match_file ~log sample adjust (sources^"/"^reference) -> Runner.Success { walltime; typechecking; execution; mem }
+        | _ -> Runner.Failure { walltime; typechecking; execution; mem }
+        end
+
+      | Util.Exit(_,walltime,mem) ->
+        begin match expectation with
+        | Test.Failure -> Runner.Success { walltime; typechecking; execution; mem }
+        | Test.FailureOutput rex when Util.with_log log (match_rex rex) -> Runner.Success { walltime; typechecking; execution; mem }
+        | _ -> Runner.Failure { walltime; typechecking; execution; mem }
+        end
+
+      | Util.Timeout -> Runner.Timeout timeout
+        
     in
+    Util.close_log log;
     Runner.(Done { Runner.rc; executable; test; log = snd log })
   end
+
+end
+
+module ElpiTraceElab = struct
+  let is_elpi_elab =
+    let rex = Str.regexp "elpi-trace-elaborator" in
+    fun s -> Str.string_match rex (Filename.basename s) 0
+  
+  let () = Runner.declare
+    ~applicable:(fun ~executable { Test.source_json; } ->
+      if is_elpi_elab executable && source_json <> None then
+        Runner.Can_run_it
+      else Runner.Not_for_me)
+    ~run:(fun ~executable ~timetool ~timeout ~env ~sources test ->
+    if not (Sys.file_exists executable) then Runner.Skipped
+    else
+      let log = Util.open_log ~executable test in
+      Util.write log (Printf.sprintf "executable: %s\n" executable);
+      let source =
+        match test.Test.source_json with Some x -> x | _ -> assert false in
+      let input = sources ^ source in
+      Util.write log (Printf.sprintf "input: %s\n" input);
+      let output_file =
+        match test.Test.expectation with
+        | Test.SuccessOutputFile { sample } -> Util.open_file_w sample, sample
+        | _ -> Printf.eprintf "ElpiTraceElab only supoprts SuccessOutputFile tests"; exit 1 in
+      let output_file_tmp = Util.open_dummy_log () in
+      Util.write log (Printf.sprintf "output: %s\n" (snd output_file));
+      let log = Util.open_log ~executable test in
+      let outcome = Util.exec ~timeout ~timetool ~input ~executable ~env ~error:log ~log:output_file_tmp ~args:[] () in
+      let outcomey = Util.exec ~timeout ~timetool ~input:(snd output_file_tmp) ~executable:"ydump" ~env ~log:output_file ~args:[] () in
+      let typechecking = 0.0 in
+      let execution = 0.0 in
+      let rc =
+        match outcome, outcomey, test.Test.expectation with
+        | Util.Exit(0,walltime,mem), Util.Exit(0,_,_), Test.SuccessOutputFile { sample; adjust; reference } when match_file ~log sample adjust (sources^"/"^reference) ->
+            Runner.Success { walltime; typechecking; execution; mem }
+        | _ -> Runner.Failure { walltime = 0.0; typechecking; execution = 0.0; mem = 0 }
+      in
+      Util.close_log log;
+      Runner.(Done { Runner.rc; executable; test; log = snd log })
+      )
 
 end
 
@@ -439,25 +513,25 @@ let is_tjsim =
     let args = ["-m";"1";"-b";"-s";"main.";"-p";dir^"/";modname] in
 
     Util.write log (Printf.sprintf "%s %s\n" executable (String.concat " " args));
-    let rc = Util.exec ~timeout ~timetool ~executable ?input ~env ~log ~args ~close_output:false () in
+    let outcome = Util.exec ~timeout ~timetool ~executable ?input ~env ~log ~args ~close_output:false () in
+    let typechecking = 0.0 in
     let rc =
-      match expectation, rc with
-      | Test.Success, Util.Exit(0,walltime,mem) ->
-        Runner.Success { walltime; typechecking = 0.0; execution = walltime; mem }
-      | Test.Failure, Util.Exit(0,walltime,mem) ->
-        Runner.Failure { walltime; typechecking = 0.0; execution = walltime; mem }
-      | Test.Success, Util.Exit(_,walltime,mem) ->
-        Runner.Failure { walltime; typechecking = 0.0; execution = walltime; mem }
-      | Test.Failure, Util.Exit(_,walltime,mem) ->
-        Runner.Success { walltime; typechecking = 0.0; execution = walltime; mem }
-      | Test.Success, Util.Timeout ->
-        Runner.Timeout timeout
-      | Test.Failure, Util.Timeout ->
-        Runner.Timeout timeout
-      | (Test.SuccessOutput _ | Test.FailureOutput _), Util.Exit(_,walltime,mem) ->
-        Runner.Success { walltime; typechecking = 0.0; execution = walltime; mem }
-      | (Test.SuccessOutput _ | Test.FailureOutput _), Util.Timeout ->
-        Runner.Timeout timeout
+
+      match outcome with
+      | Util.Exit(0,walltime,mem) -> let execution = walltime in
+        begin match expectation with
+        | Test.Success -> Runner.Success { walltime; typechecking; execution; mem }
+        | _ -> Runner.Failure { walltime; typechecking; execution; mem }
+        end
+
+      | Util.Exit(_,walltime,mem) -> let execution = walltime in
+        begin match expectation with
+        | Test.Failure -> Runner.Success { walltime; typechecking; execution; mem }
+        | _ -> Runner.Failure { walltime; typechecking; execution; mem }
+        end
+
+      | Util.Timeout -> Runner.Timeout timeout
+
     in
     Runner.Done { Runner.rc; executable; test; log = snd log }
   end
@@ -501,31 +575,25 @@ let () = Runner.declare
     let args = ["exec"; sources ^ "/" ^ source; "--"; "-I"; "src/"] in
     Util.write log (Printf.sprintf "args: %s\n" (String.concat " " args));
     let rc =
-      match expectation, Util.exec ~timeout ~timetool ?input ~executable ~env ~log ~args () with
-      | Test.Success, Util.Exit(0,walltime,mem) ->
-        Runner.Success { walltime; typechecking = 0.0; execution = 0.0; mem }
-      | Test.Success, Util.Exit(_,walltime,mem)->
-        Runner.Failure { walltime; typechecking = 0.0; execution = 0.0; mem }
-      | Test.Failure, Util.Exit(0,walltime,mem) ->
-        Runner.Failure { walltime; typechecking = 0.0; execution = 0.0; mem }
-      | Test.Failure, Util.Exit(_,walltime,mem)->
-        Runner.Success { walltime; typechecking = 0.0; execution = 0.0; mem }
-      | Test.SuccessOutput rex, Util.Exit(0,walltime,mem) ->
-          if Util.with_log log (match_rex rex) then
-            Runner.Success { walltime; typechecking = 0.0; execution = 0.0; mem }
-          else
-            Runner.Failure { walltime; typechecking = 0.0; execution = walltime; mem }
-      | Test.FailureOutput _, Util.Exit(0,walltime,mem) ->
-            Runner.Failure { walltime; typechecking = 0.0; execution = walltime; mem }
-      | Test.SuccessOutput _, Util.Exit(_,walltime,mem) ->
-            Runner.Failure { walltime; typechecking = 0.0; execution = walltime; mem }
-      | Test.FailureOutput rex, Util.Exit(_,walltime,mem) ->
-          if Util.with_log log (match_rex rex) then
-            Runner.Success { walltime; typechecking = 0.0; execution = 0.0; mem }
-          else
-            Runner.Failure { walltime; typechecking = 0.0; execution = walltime; mem }
-      | _, Util.Timeout ->
-        Runner.Timeout timeout
+      let outcome = Util.exec ~timeout ~timetool ?input ~executable ~env ~log ~args () in
+      let typechecking = 0.0 in
+      match outcome with
+      | Util.Exit(0,walltime,mem) -> let execution = walltime in
+        begin match expectation with
+        | Test.Success -> Runner.Success { walltime; typechecking; execution; mem }
+        | Test.SuccessOutput rex when Util.with_log log (match_rex rex) -> Runner.Success { walltime; typechecking; execution; mem }
+        | _ -> Runner.Failure { walltime; typechecking; execution; mem }
+        end
+
+      | Util.Exit(_,walltime,mem) -> let execution = walltime in
+        begin match expectation with
+        | Test.Failure -> Runner.Success { walltime; typechecking; execution; mem }
+        | Test.FailureOutput rex when Util.with_log log (match_rex rex) -> Runner.Success { walltime; typechecking; execution; mem }
+        | _ -> Runner.Failure { walltime; typechecking; execution; mem }
+        end
+
+      | Util.Timeout -> Runner.Timeout timeout
+
     in
     Runner.(Done { Runner.rc; executable; test; log = snd log })
 

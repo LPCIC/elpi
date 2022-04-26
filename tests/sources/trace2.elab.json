@@ -1,0 +1,388 @@
+[
+  {
+    "step_id": 0,
+    "runtime_id": 0,
+    "step": [ "Init", { "goal_text": "main", "goal_id": 4 } ],
+    "color": "Grey"
+  },
+  {
+    "step_id": 1,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 4,
+        "current_goal_text": "main",
+        "current_goal_predicate": "main",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                {
+                  "rule_text": "main :- (print 1), (fail => (true , fail)).",
+                  "rule_loc": [
+                    "File",
+                    {
+                      "filename": "tests/sources/trace2.elpi",
+                      "line": 1,
+                      "column": 0,
+                      "character": 0
+                    }
+                  ]
+                }
+              ],
+              "events": []
+            },
+            "siblings": [
+              { "goal_text": "print 1", "goal_id": 5 },
+              { "goal_text": "fail => (true , fail)", "goal_id": 6 }
+            ],
+            "siblings_aggregated_outcome": "Success"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- (print 1), (fail => (true , fail)).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace2.elpi",
+                    "line": 1,
+                    "column": 0,
+                    "character": 0
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Green"
+  },
+  {
+    "step_id": 2,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 5,
+        "current_goal_text": "print 1",
+        "current_goal_predicate": "print",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [ "BuiltinRule", [ "FFI", "print" ] ],
+              "events": []
+            },
+            "siblings": [],
+            "siblings_aggregated_outcome": "Success"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [ "BuiltinRule", [ "FFI", "print" ] ],
+            "step_id": 2,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- (print 1), (fail => (true , fail)).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace2.elpi",
+                    "line": 1,
+                    "column": 0,
+                    "character": 0
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Green"
+  },
+  {
+    "step_id": 3,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 6,
+        "current_goal_text": "fail => (true , fail)",
+        "current_goal_predicate": "=>",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+              "events": []
+            },
+            "siblings": [ { "goal_text": "true , fail", "goal_id": 7 } ],
+            "siblings_aggregated_outcome": "Success"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "step_id": 3,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- (print 1), (fail => (true , fail)).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace2.elpi",
+                    "line": 1,
+                    "column": 0,
+                    "character": 0
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Green"
+  },
+  {
+    "step_id": 4,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 7,
+        "current_goal_text": "true , fail",
+        "current_goal_predicate": ",",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [ "BuiltinRule", [ "Logic", "and" ] ],
+              "events": []
+            },
+            "siblings": [
+              { "goal_text": "fail", "goal_id": 8 },
+              { "goal_text": "true", "goal_id": 9 }
+            ],
+            "siblings_aggregated_outcome": "Success"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "and" ] ],
+            "step_id": 4,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "step_id": 3,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- (print 1), (fail => (true , fail)).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace2.elpi",
+                    "line": 1,
+                    "column": 0,
+                    "character": 0
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Green"
+  },
+  {
+    "step_id": 5,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 9,
+        "current_goal_text": "true",
+        "current_goal_predicate": "true",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                {
+                  "rule_text": "true :- .",
+                  "rule_loc": [
+                    "File",
+                    {
+                      "filename": "builtin.elpi",
+                      "line": 9,
+                      "column": 0,
+                      "character": 89
+                    }
+                  ]
+                }
+              ],
+              "events": []
+            },
+            "siblings": [],
+            "siblings_aggregated_outcome": "Success"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "true :- .",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "builtin.elpi",
+                    "line": 9,
+                    "column": 0,
+                    "character": 89
+                  }
+                ]
+              }
+            ],
+            "step_id": 5,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "and" ] ],
+            "step_id": 4,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "step_id": 3,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- (print 1), (fail => (true , fail)).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace2.elpi",
+                    "line": 1,
+                    "column": 0,
+                    "character": 0
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Green"
+  },
+  {
+    "step_id": 6,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 8,
+        "current_goal_text": "fail",
+        "current_goal_predicate": "fail",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                { "rule_text": "fail :- .", "rule_loc": [ "Context", 3 ] }
+              ],
+              "events": []
+            },
+            "siblings": [],
+            "siblings_aggregated_outcome": "Success"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              { "rule_text": "fail :- .", "rule_loc": [ "Context", 3 ] }
+            ],
+            "step_id": 6,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "and" ] ],
+            "step_id": 4,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "step_id": 3,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- (print 1), (fail => (true , fail)).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace2.elpi",
+                    "line": 1,
+                    "column": 0,
+                    "character": 0
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Green"
+  }
+]

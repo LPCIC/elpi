@@ -70,6 +70,8 @@ let print_log ~fname =
   printf [red] "------------------------------------------------------------------\n";
   print_file fname;
   printf [red] "------------------------------------------------------------------\n";
+  printf [blue] "End log of the first failure: "; printf [] "%s\n" fname;
+  printf [red] "------------------------------------------------------------------\n";
 
 end
 

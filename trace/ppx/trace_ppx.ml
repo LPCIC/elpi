@@ -14,7 +14,7 @@
             let z = f x in
             [%spy "z" ~rid ~gid ~cond (fun fmt z -> .. z ..) z];
             [%spyl "z" ~rid ~gid ~cond (fun fmt z -> .. z ..) zs];
-            [%log "K2" "whatever" 37];
+            [%log "K2" ~rid "whatever" 37];
             let x[@trace] = ... in e
             let w = { a; b = b[@trace ] } in
             match w with
@@ -91,8 +91,8 @@ let spyl ~loc err ?(cond=[%expr true]) ~rid ?gid name pp =
   | None -> [%expr if [%e cond] then Trace_ppx_runtime.Runtime.info ~runtime_id:![%e rid] [%e name] [%e ppl]]
   | Some gid -> [%expr if [%e cond] then Trace_ppx_runtime.Runtime.info ~runtime_id:![%e rid] ~goal_id:(Util.UUID.hash [%e gid]) [%e name] [%e ppl]]
 
-let log ~loc name key data =
-  [%expr Trace_ppx_runtime.Runtime.log [%e name] [%e key] [%e data]]
+let log ~loc name ~rid  key data =
+  [%expr Trace_ppx_runtime.Runtime.log ~runtime_id:![%e rid] [%e name] [%e key] [%e data]]
 
 let cur_pred ~loc name =
   [%expr Trace_ppx_runtime.Runtime.set_cur_pred [%e name]]
@@ -312,10 +312,14 @@ let cur_pred_rule = Context_free.Rule.extension cur_pred_extension
 (* ----------------------------------------------------------------- *)
 
 let log_expand_function ~loc ~path:_ = function
-  | [%expr ([%e? name] [%e? key] [%e? code]) ] ->
-        if !enabled then log ~loc name key code
-        else [%expr ()]
-  | _ -> err ~loc "use: [%log id data]"
+  | { pexp_desc = Pexp_apply (name,args); _ } when !enabled ->
+    let rid, args = pull is_rid args in
+    begin match rid, args with
+    | Some rid, [_,key;_,code] -> log ~loc ~rid name key code
+    | _ -> err ~loc "use: [%log id ~rid data]"
+    end
+  | { pexp_desc = Pexp_apply _; _ } -> [%expr ()]
+  | _ -> err ~loc "use: [%log id ~rid data]"
 
 let log_extension =
   Extension.declare

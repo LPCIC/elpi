@@ -1420,7 +1420,7 @@ let ocaml_runtime = let open BuiltIn in let open BuiltInData in [
     In (string,"Name",
     Out(int,   "Value",
     Easy       "reads the Value of a trace point Name")),
-  (fun s _ ~depth:_ -> !:(Trace_ppx_runtime.Runtime.get_cur_step s))),
+  (fun s _ ~depth:_ -> !:(Trace_ppx_runtime.Runtime.get_cur_step ~runtime_id:0 s))),
   DocAbove);
 
   MLCode(Pred("gc.get",

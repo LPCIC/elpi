@@ -1,0 +1,1124 @@
+[
+  {
+    "step_id": 0,
+    "runtime_id": 0,
+    "step": [ "Init", { "goal_text": "main", "goal_id": 4 } ],
+    "color": "Grey"
+  },
+  {
+    "step_id": 1,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 4,
+        "current_goal_text": "main",
+        "current_goal_predicate": "main",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                {
+                  "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                  "rule_loc": [
+                    "File",
+                    {
+                      "filename": "tests/sources/trace.elpi",
+                      "line": 6,
+                      "column": 0,
+                      "character": 60
+                    }
+                  ]
+                }
+              ],
+              "events": []
+            },
+            "siblings": [ { "goal_text": "p 1 X0 ; p 2 X1", "goal_id": 5 } ],
+            "siblings_aggregated_outcome": "Success"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace.elpi",
+                    "line": 6,
+                    "column": 0,
+                    "character": 60
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Green"
+  },
+  {
+    "step_id": 2,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 5,
+        "current_goal_text": "p 1 X0 ; p 2 X1",
+        "current_goal_predicate": ";",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                {
+                  "rule_text": "(A0 ; _) :- A0.",
+                  "rule_loc": [
+                    "File",
+                    {
+                      "filename": "builtin.elpi",
+                      "line": 28,
+                      "column": 0,
+                      "character": 296
+                    }
+                  ]
+                }
+              ],
+              "events": [ [ "Assign", "A0 := p 1 X0" ] ]
+            },
+            "siblings": [ { "goal_text": "p 1 X0", "goal_id": 6 } ],
+            "siblings_aggregated_outcome": "Fail"
+          }
+        ],
+        "more_successful_attempts": [ 11 ],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(A0 ; _) :- A0.",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "builtin.elpi",
+                    "line": 28,
+                    "column": 0,
+                    "character": 296
+                  }
+                ]
+              }
+            ],
+            "step_id": 2,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace.elpi",
+                    "line": 6,
+                    "column": 0,
+                    "character": 60
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "YellowGreen"
+  },
+  {
+    "step_id": 3,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 6,
+        "current_goal_text": "p 1 X0",
+        "current_goal_predicate": "p",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                {
+                  "rule_text": "(p 1 1) :- (1 is 2 + 3).",
+                  "rule_loc": [
+                    "File",
+                    {
+                      "filename": "tests/sources/trace.elpi",
+                      "line": 2,
+                      "column": 0,
+                      "character": 1
+                    }
+                  ]
+                }
+              ],
+              "events": [ [ "Assign", "X0 := 1" ] ]
+            },
+            "siblings": [ { "goal_text": "1 is 2 + 3", "goal_id": 7 } ],
+            "siblings_aggregated_outcome": "Fail"
+          }
+        ],
+        "more_successful_attempts": [ 7 ],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(p 1 1) :- (1 is 2 + 3).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace.elpi",
+                    "line": 2,
+                    "column": 0,
+                    "character": 1
+                  }
+                ]
+              }
+            ],
+            "step_id": 3,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(A0 ; _) :- A0.",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "builtin.elpi",
+                    "line": 28,
+                    "column": 0,
+                    "character": 296
+                  }
+                ]
+              }
+            ],
+            "step_id": 2,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace.elpi",
+                    "line": 6,
+                    "column": 0,
+                    "character": 60
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "YellowRed"
+  },
+  {
+    "step_id": 4,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 7,
+        "current_goal_text": "1 is 2 + 3",
+        "current_goal_predicate": "is",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                {
+                  "rule_text": "(A0 is A1) :- (calc A1 A0).",
+                  "rule_loc": [
+                    "File",
+                    {
+                      "filename": "builtin.elpi",
+                      "line": 77,
+                      "column": 0,
+                      "character": 1165
+                    }
+                  ]
+                }
+              ],
+              "events": [
+                [ "Assign", "A0 := 1" ],
+                [ "Assign", "A1 := 2 + 3" ]
+              ]
+            },
+            "siblings": [ { "goal_text": "calc (2 + 3) 1", "goal_id": 8 } ],
+            "siblings_aggregated_outcome": "Fail"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(A0 is A1) :- (calc A1 A0).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "builtin.elpi",
+                    "line": 77,
+                    "column": 0,
+                    "character": 1165
+                  }
+                ]
+              }
+            ],
+            "step_id": 4,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(p 1 1) :- (1 is 2 + 3).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace.elpi",
+                    "line": 2,
+                    "column": 0,
+                    "character": 1
+                  }
+                ]
+              }
+            ],
+            "step_id": 3,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(A0 ; _) :- A0.",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "builtin.elpi",
+                    "line": 28,
+                    "column": 0,
+                    "character": 296
+                  }
+                ]
+              }
+            ],
+            "step_id": 2,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace.elpi",
+                    "line": 6,
+                    "column": 0,
+                    "character": 60
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Red"
+  },
+  {
+    "step_id": 5,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 8,
+        "current_goal_text": "calc (2 + 3) 1",
+        "current_goal_predicate": "calc",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [ "BuiltinRule", [ "FFI", "calc" ] ],
+              "events": []
+            },
+            "siblings": [ { "goal_text": "1 = 5", "goal_id": 9 } ],
+            "siblings_aggregated_outcome": "Fail"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [ "BuiltinRule", [ "FFI", "calc" ] ],
+            "step_id": 5,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(A0 is A1) :- (calc A1 A0).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "builtin.elpi",
+                    "line": 77,
+                    "column": 0,
+                    "character": 1165
+                  }
+                ]
+              }
+            ],
+            "step_id": 4,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(p 1 1) :- (1 is 2 + 3).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace.elpi",
+                    "line": 2,
+                    "column": 0,
+                    "character": 1
+                  }
+                ]
+              }
+            ],
+            "step_id": 3,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(A0 ; _) :- A0.",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "builtin.elpi",
+                    "line": 28,
+                    "column": 0,
+                    "character": 296
+                  }
+                ]
+              }
+            ],
+            "step_id": 2,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace.elpi",
+                    "line": 6,
+                    "column": 0,
+                    "character": 60
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Red"
+  },
+  {
+    "step_id": 6,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 9,
+        "current_goal_text": "1 = 5",
+        "current_goal_predicate": "=",
+        "failed_attempts": [
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
+            "events": [ [ "Fail", "unify 1 with 5" ] ]
+          }
+        ],
+        "successful_attempts": [],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
+            "step_id": 6,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "FFI", "calc" ] ],
+            "step_id": 5,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(A0 is A1) :- (calc A1 A0).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "builtin.elpi",
+                    "line": 77,
+                    "column": 0,
+                    "character": 1165
+                  }
+                ]
+              }
+            ],
+            "step_id": 4,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(p 1 1) :- (1 is 2 + 3).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace.elpi",
+                    "line": 2,
+                    "column": 0,
+                    "character": 1
+                  }
+                ]
+              }
+            ],
+            "step_id": 3,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(A0 ; _) :- A0.",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "builtin.elpi",
+                    "line": 28,
+                    "column": 0,
+                    "character": 296
+                  }
+                ]
+              }
+            ],
+            "step_id": 2,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace.elpi",
+                    "line": 6,
+                    "column": 0,
+                    "character": 60
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Red"
+  },
+  {
+    "step_id": 7,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 6,
+        "current_goal_text": "p 1 X0",
+        "current_goal_predicate": "p",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                {
+                  "rule_text": "(p 1 2) :- (A0 = 1), (A1 = 2), (A0 = A1).",
+                  "rule_loc": [
+                    "File",
+                    {
+                      "filename": "tests/sources/trace.elpi",
+                      "line": 3,
+                      "column": 0,
+                      "character": 22
+                    }
+                  ]
+                }
+              ],
+              "events": [ [ "Assign", "X0 := 2" ] ]
+            },
+            "siblings": [
+              { "goal_text": "X2 = 1", "goal_id": 10 },
+              { "goal_text": "X3 = 2", "goal_id": 11 },
+              { "goal_text": "X2 = X3", "goal_id": 12 }
+            ],
+            "siblings_aggregated_outcome": "Fail"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(p 1 2) :- (A0 = 1), (A1 = 2), (A0 = A1).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace.elpi",
+                    "line": 3,
+                    "column": 0,
+                    "character": 22
+                  }
+                ]
+              }
+            ],
+            "step_id": 7,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(A0 ; _) :- A0.",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "builtin.elpi",
+                    "line": 28,
+                    "column": 0,
+                    "character": 296
+                  }
+                ]
+              }
+            ],
+            "step_id": 2,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace.elpi",
+                    "line": 6,
+                    "column": 0,
+                    "character": 60
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Red"
+  },
+  {
+    "step_id": 8,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 10,
+        "current_goal_text": "X2 = 1",
+        "current_goal_predicate": "=",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
+              "events": [ [ "Assign", "X2 := 1" ] ]
+            },
+            "siblings": [],
+            "siblings_aggregated_outcome": "Success"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
+            "step_id": 8,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(p 1 2) :- (A0 = 1), (A1 = 2), (A0 = A1).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace.elpi",
+                    "line": 3,
+                    "column": 0,
+                    "character": 22
+                  }
+                ]
+              }
+            ],
+            "step_id": 7,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(A0 ; _) :- A0.",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "builtin.elpi",
+                    "line": 28,
+                    "column": 0,
+                    "character": 296
+                  }
+                ]
+              }
+            ],
+            "step_id": 2,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace.elpi",
+                    "line": 6,
+                    "column": 0,
+                    "character": 60
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Green"
+  },
+  {
+    "step_id": 9,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 11,
+        "current_goal_text": "X3 = 2",
+        "current_goal_predicate": "=",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
+              "events": [ [ "Assign", "X3 := 2" ] ]
+            },
+            "siblings": [],
+            "siblings_aggregated_outcome": "Success"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
+            "step_id": 9,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(p 1 2) :- (A0 = 1), (A1 = 2), (A0 = A1).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace.elpi",
+                    "line": 3,
+                    "column": 0,
+                    "character": 22
+                  }
+                ]
+              }
+            ],
+            "step_id": 7,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(A0 ; _) :- A0.",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "builtin.elpi",
+                    "line": 28,
+                    "column": 0,
+                    "character": 296
+                  }
+                ]
+              }
+            ],
+            "step_id": 2,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace.elpi",
+                    "line": 6,
+                    "column": 0,
+                    "character": 60
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Green"
+  },
+  {
+    "step_id": 10,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 12,
+        "current_goal_text": "1 = 2",
+        "current_goal_predicate": "=",
+        "failed_attempts": [
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
+            "events": [ [ "Fail", "unify 1 with 2" ] ]
+          }
+        ],
+        "successful_attempts": [],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
+            "step_id": 10,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(p 1 2) :- (A0 = 1), (A1 = 2), (A0 = A1).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace.elpi",
+                    "line": 3,
+                    "column": 0,
+                    "character": 22
+                  }
+                ]
+              }
+            ],
+            "step_id": 7,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(A0 ; _) :- A0.",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "builtin.elpi",
+                    "line": 28,
+                    "column": 0,
+                    "character": 296
+                  }
+                ]
+              }
+            ],
+            "step_id": 2,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace.elpi",
+                    "line": 6,
+                    "column": 0,
+                    "character": 60
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Red"
+  },
+  {
+    "step_id": 11,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 5,
+        "current_goal_text": "p 1 X0 ; p 2 X1",
+        "current_goal_predicate": ";",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                {
+                  "rule_text": "(_ ; A0) :- A0.",
+                  "rule_loc": [
+                    "File",
+                    {
+                      "filename": "builtin.elpi",
+                      "line": 30,
+                      "column": 0,
+                      "character": 311
+                    }
+                  ]
+                }
+              ],
+              "events": [ [ "Assign", "A0 := p 2 X1" ] ]
+            },
+            "siblings": [ { "goal_text": "p 2 X1", "goal_id": 13 } ],
+            "siblings_aggregated_outcome": "Success"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(_ ; A0) :- A0.",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "builtin.elpi",
+                    "line": 30,
+                    "column": 0,
+                    "character": 311
+                  }
+                ]
+              }
+            ],
+            "step_id": 11,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace.elpi",
+                    "line": 6,
+                    "column": 0,
+                    "character": 60
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Green"
+  },
+  {
+    "step_id": 12,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 13,
+        "current_goal_text": "p 2 X1",
+        "current_goal_predicate": "p",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                {
+                  "rule_text": "(p 2 3) :- .",
+                  "rule_loc": [
+                    "File",
+                    {
+                      "filename": "tests/sources/trace.elpi",
+                      "line": 4,
+                      "column": 0,
+                      "character": 52
+                    }
+                  ]
+                }
+              ],
+              "events": [ [ "Assign", "X1 := 3" ] ]
+            },
+            "siblings": [],
+            "siblings_aggregated_outcome": "Success"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(p 2 3) :- .",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace.elpi",
+                    "line": 4,
+                    "column": 0,
+                    "character": 52
+                  }
+                ]
+              }
+            ],
+            "step_id": 12,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(_ ; A0) :- A0.",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "builtin.elpi",
+                    "line": 30,
+                    "column": 0,
+                    "character": 311
+                  }
+                ]
+              }
+            ],
+            "step_id": 11,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- (p 1 A0 ; p 2 A1).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace.elpi",
+                    "line": 6,
+                    "column": 0,
+                    "character": 60
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Green"
+  }
+]
