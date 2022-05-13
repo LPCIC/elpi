@@ -46,12 +46,12 @@ let precedence_of, umax_precedence, appl_precedence, inf_precedence =
   let inf_precedence = appl_precedence + 1 in (* greater than any used precedence*)
   (fun s ->
     try
-      let x = find_sub tab s in
+      let fixity, prec = find_sub tab s in
       (*Format.eprintf "Printer: found %s %a %d\n%!" s pp_fixity (fst x) (snd x);*)
-      x
+      Some fixity, prec
     with Not_found ->
       (*Format.eprintf "Printer: not found: %s\n%!" s;*)
-      Prefix,appl_precedence),
+      None, appl_precedence),
   umax_precedence, appl_precedence, inf_precedence
 
 let comma_precedence = 1 + (snd @@ precedence_of ",")
