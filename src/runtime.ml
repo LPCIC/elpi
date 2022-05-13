@@ -232,26 +232,28 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
     | Const s -> ppconstant f s
     | App (hd,x,xs) ->
        (try
-         let assoc,hdlvl =
-          Elpi_parser.Parser_config.precedence_of (C.show ~table:pp_ctx.table hd) in
+         let prec, hdlvl =
+           Elpi_parser.Parser_config.precedence_of (C.show ~table:pp_ctx.table hd) in
          with_parens hdlvl
-         (fun _ -> match assoc with
-            Elpi_lexer_config.Lexer_config.Infix when List.length xs = 1 ->
+         (fun _ ->
+          let open Elpi_lexer_config.Lexer_config in
+          match prec with
+          | Some Infix when List.length xs = 1 ->
              Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
               (aux (hdlvl+1) depth) x ppconstant hd
               (aux (hdlvl+1) depth) (List.hd xs)
-          | Elpi_lexer_config.Lexer_config.Infixl when List.length xs = 1 ->
+          | Some Infixl when List.length xs = 1 ->
              Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
               (aux hdlvl depth) x ppconstant hd
               (aux (hdlvl+1) depth) (List.hd xs)
-          | Elpi_lexer_config.Lexer_config.Infixr when List.length xs = 1 ->
+          | Some Infixr when List.length xs = 1 ->
              Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
               (aux (hdlvl+1) depth) x ppconstant hd
               (aux hdlvl depth) (List.hd xs)
-          | Elpi_lexer_config.Lexer_config.Prefix when xs = [] ->
+          | Some Prefix when xs = [] ->
              Fmt.fprintf f "@[<hov 1>%a@ %a@]" ppconstant hd
               (aux hdlvl depth) x
-          | Elpi_lexer_config.Lexer_config.Postfix when xs = [] ->
+          | Some Postfix when xs = [] ->
              Fmt.fprintf f "@[<hov 1>%a@ %a@]" (aux hdlvl depth) x
               ppconstant hd 
           | _ ->
@@ -269,7 +271,7 @@ let xppterm ~nice ?(pp_ctx = { Data.uv_names; table = ! C.table }) ?(min_prec=mi
           else pp_app f ppconstant (aux inf_prec depth)
                  ~pplastarg:(aux_last inf_prec depth) (hd,x::xs)))
     | Builtin (hd,[a;b]) when hd == Global_symbols.eqc ->
-       let _,hdlvl =
+       let _, hdlvl =
          Elpi_parser.Parser_config.precedence_of (C.show ~table:pp_ctx.table hd) in
        with_parens hdlvl (fun _ ->
          Fmt.fprintf f "@[<hov 1>%a@ %a@ %a@]"
