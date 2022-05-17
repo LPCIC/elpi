@@ -18,8 +18,8 @@ let loc (startpos, endpos) = {
   Util.Loc.source_name = startpos.Lexing.pos_fname;
   source_start = startpos.Lexing.pos_cnum;
   source_stop = endpos.Lexing.pos_cnum;
-  line = endpos.Lexing.pos_lnum;
-  line_starts_at = endpos.Lexing.pos_bol;
+  line = startpos.Lexing.pos_lnum;
+  line_starts_at = startpos.Lexing.pos_bol;
 }
 
 let desugar_multi_binder loc = function
