@@ -138,7 +138,7 @@ module Loc = struct
     let pos =
       if line = -1 then chars
       else Printf.sprintf "line %d, column %d, %s"
-             line (source_stop - line_starts_at) chars in
+             line (source_start - line_starts_at) chars in
     Re.(Str.global_replace (Str.regexp_string "\\") "/" source) ^ pos ^ ":"
 
   let pp fmt l = Fmt.fprintf fmt "%s" (to_string l)
