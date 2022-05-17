@@ -2271,6 +2271,7 @@ let compile_chr depth state
         nargs = pamap.nargs;
         pattern;
         rule_name = pname;
+        rule_loc = loc;
       }
 ;;
 

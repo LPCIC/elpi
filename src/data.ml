@@ -509,7 +509,8 @@ module CHR : sig
     new_goal : sequent option;
     nargs : int [@default 0];
     pattern : constant list;
-    rule_name : string
+    rule_name : string;
+    rule_loc : Loc.t;
   }
   val pp_sequent : Fmt.formatter -> sequent -> unit
   val show_sequent : sequent -> string
@@ -540,6 +541,7 @@ end = struct (* {{{ *)
     nargs : int [@default 0];
     pattern : constant list;
     rule_name : string;
+    rule_loc : Loc.t;
   }
   [@@ deriving show]
   type t = {

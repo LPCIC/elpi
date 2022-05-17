@@ -3384,8 +3384,8 @@ let propagation () =
              (* a constraint just removed may occur in a permutation (that
               * was generated before the removal *)
              if outdated constraints then ()
-             else begin
-               [%spy "user:CHR:try-rule-on" ~rid ~gid: active.cgid UUID.pp active.cgid];
+             else begin          
+               [%spy "user:CHR:try-rule" ~rid ~gid:active.cgid Loc.pp rule.rule_loc];
                match try_fire_rule (active.cgid[@trace]) rule constraints with
                | None -> [%spy "user:CHR:rule-failed" ~rid ]
                | Some (rule_name, to_be_removed, to_be_added, assignments) ->
