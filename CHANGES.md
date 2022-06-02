@@ -1,3 +1,14 @@
+
+# UNRELEASED
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+Camlp5 8.0 or above is optional.
+
+- Trace:
+  - New `trace.atd` data type description for traces
+  - New `elpi-trace-elaborator` tool to turn raw traces into cards to be
+    displayed by a GUI
+
 # v1.15.2 (April 2022)
 
 Requires Menhir 20211230 and OCaml 4.07 or above.
