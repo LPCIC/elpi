@@ -1,0 +1,13 @@
+
+pred p.
+p :- fail.
+p :- !, fail.
+p.
+p :- print 1.
+
+pred q.
+q.
+q :- print 2.
+
+main :- p.
+main :- q, !, q => (q :- !) => q.
