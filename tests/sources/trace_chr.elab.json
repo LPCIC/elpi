@@ -321,7 +321,7 @@
       "Resume",
       [
         { "goal_text": "true", "goal_id": 11 },
-        { "goal_text": "even X0", "goal_id": 10 }
+        { "goal_text": "even (s X1)", "goal_id": 10 }
       ]
     ],
     "color": "Grey"

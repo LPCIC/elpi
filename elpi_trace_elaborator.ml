@@ -79,7 +79,7 @@ module Elaborate : sig
       | Findall of { goal : string; goal_id : goal_id; timestamp : timestamp; result : string list }
       | Cut of (goal_id * location) list
       | Suspend of { goal : string; goal_id : goal_id; sibling : goal_id }
-      | Resume of goal_id list
+      | Resume of (goal_id * string) list
       | CHR of { failed_attempts : chr_attempt list; successful_attempts : chr_attempt list; chr_store_before : (goal_id * goal_text) list; chr_store_after : (goal_id * goal_text) list;}
       | Init of goal_id
     
@@ -121,7 +121,7 @@ end = struct
       | Findall of { goal : string; goal_id : goal_id; timestamp : timestamp; result : string list }
       | Cut of (goal_id * location) list
       | Suspend of { goal : string; goal_id : goal_id; sibling : goal_id }
-      | Resume of goal_id list
+      | Resume of (goal_id * string) list
       | CHR of { failed_attempts : chr_attempt list; successful_attempts : chr_attempt list; chr_store_before : (goal_id * goal_text) list; chr_store_after : (goal_id * goal_text) list;}
       | Init of goal_id
     
@@ -330,9 +330,9 @@ try
       let () = push_stack (step,rid) goal_id (`BuiltinRule (`FFI "!")) [] in
       (* Cut *) assert false
   | `Resumption l ->
-      let resumed = List.map (fun ({ goal_id; payload },_) ->
+      let resumed = List.map (fun ({ goal_id; payload },_ as x) ->
         let () = update_stack (step,rid) goal_id (`BuiltinRule (`Logic "resume")) in
-        goal_id) l in
+        goal_id, decode_string x) l in
       Resume resumed
   | `CHR(chr_store_before,chr_store_after) ->
     let trylist = all_chr_event_chains "user:CHR:try" items in
@@ -524,7 +524,7 @@ end = struct
              assert(runtime_id = rid);
              `Inference inference
         | Resume l ->
-          `Resume (List.map (fun goal_id -> { goal_id; goal_text = find_goal_text goal_id }) l)
+          `Resume (List.map (fun (goal_id,goal_text) -> { goal_id; goal_text }) l)
         | Suspend { goal; goal_id; sibling } ->
           let stack =
             try StepMap.find (step_id,runtime_id) stack_frames
