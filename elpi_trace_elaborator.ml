@@ -77,7 +77,7 @@ module Elaborate : sig
     type step =
       | Inference of { pred : string; goal : string; goal_id : goal_id; action : action; rid : int }
       | Findall of { goal : string; goal_id : goal_id; timestamp : timestamp; result : string list }
-      | Cut of (goal_id * location) list
+      | Cut of (goal_id * location * string) list
       | Suspend of { goal : string; goal_id : goal_id; sibling : goal_id }
       | Resume of (goal_id * string) list
       | CHR of { failed_attempts : chr_attempt list; successful_attempts : chr_attempt list; chr_store_before : (goal_id * goal_text) list; chr_store_after : (goal_id * goal_text) list;}
@@ -119,7 +119,7 @@ end = struct
     type step =
       | Inference of { pred : string; goal : string; goal_id : goal_id; action : action; rid : int }
       | Findall of { goal : string; goal_id : goal_id; timestamp : timestamp; result : string list }
-      | Cut of (goal_id * location) list
+      | Cut of (goal_id * location * string) list
       | Suspend of { goal : string; goal_id : goal_id; sibling : goal_id }
       | Resume of (goal_id * string) list
       | CHR of { failed_attempts : chr_attempt list; successful_attempts : chr_attempt list; chr_store_before : (goal_id * goal_text) list; chr_store_after : (goal_id * goal_text) list;}
@@ -279,6 +279,9 @@ let decode_chr_try_list l =
   let successful_attempts = List.map a2 successful_attempts in
   failed_attempts, successful_attempts
 
+let decode_cut = function
+  | { payload = [g;r;t] }, _ -> int_of_string g, decode_loc r, t
+  | _ -> assert false
 
 let get_builtin_name l : builtin_name =
   match has "user:rule:builtin:name" l with
@@ -328,7 +331,8 @@ try
        Suspend {goal_id;goal;sibling = List.hd sibling} 
   | `Cut ({ goal_id; payload = [pred;goal] },_) ->
       let () = push_stack (step,rid) goal_id (`BuiltinRule (`FFI "!")) [] in
-      (* Cut *) assert false
+      let cutted = all "user:rule:cut:branch" decode_cut items in
+      Cut cutted
   | `Resumption l ->
       let resumed = List.map (fun ({ goal_id; payload },_ as x) ->
         let () = update_stack (step,rid) goal_id (`BuiltinRule (`Logic "resume")) in
@@ -535,7 +539,7 @@ end = struct
              suspend_sibling = { goal_id = sibling; goal_text = find_goal_text sibling };
              suspend_stack = stack;
             } 
-        | Cut l -> assert false
+        | Cut l -> `Cut (l |> List.map (fun (g,rule_loc,rule_text) -> { cut_branch_for_goal = { goal_id = g; goal_text = find_goal_text g }; cut_branch = { rule_text; rule_loc }}))
         | Findall { goal; goal_id; timestamp; result } ->
             `Findall_TODO ( goal, goal_id, timestamp, result)
         | CHR { failed_attempts; successful_attempts; chr_store_before; chr_store_after } ->

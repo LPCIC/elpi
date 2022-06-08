@@ -3655,7 +3655,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
       let rec prune ({ agid = agid[@trace]; clauses; adepth = depth; agoal_hd = hd } as alts) =
         if alts != cutto_alts then begin
           List.iter (fun c -> 
-            [%spy "user:rule:cut" ~rid UUID.pp gid (pp_candidate ~depth ~k:hd) c])
+            [%spy "user:rule:cut:branch" ~rid UUID.pp agid (pp_option Util.CData.pp) (Util.option_map Ast.cloc.Util.CData.cin c.loc) (ppclause ~depth ~hd) c])
           clauses;
           prune alts.next
         end

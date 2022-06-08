@@ -347,3 +347,17 @@ let () = declare "trace-browser-elab-findall"
   ~description:"trace elaboration"
   ~expectation:(SuccessOutputFile { sample = "/tmp/trace_findall.elab.json.new"; adjust = Util.strip_cwd; reference = "trace_findall.elab.json" })
   ()
+
+  let () = declare "trace-browser-cut"
+  ~source_elpi:"trace_cut.elpi"
+  ~description:"trace generation"
+  ~typecheck:false
+  ~trace:(On["json";"/tmp/trace_cut.json.new";"-trace-at";"0";"99";"-trace-only";"user"])
+  ~expectation:(SuccessOutputFile { sample = "/tmp/trace_cut.json.new"; adjust = Util.strip_cwd; reference = "trace_cut.json" })
+  ()
+
+let () = declare "trace-browser-elab-cut"
+  ~source_json:"trace_cut.json"
+  ~description:"trace elaboration"
+  ~expectation:(SuccessOutputFile { sample = "/tmp/trace_cut.elab.json.new"; adjust = Util.strip_cwd; reference = "trace_cut.elab.json" })
+  ()
