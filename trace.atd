@@ -107,7 +107,10 @@ type suspend = {
 }
 
 (* The ! operator eliminates some rules (for some goal) *)
-type cut = cutted list
+type cut = {
+  cut_goal_id : goal_id;  
+  cut_victims : cutted list;
+}
 type cutted = {
   cut_branch_for_goal : goal;
   cut_branch : user_rule

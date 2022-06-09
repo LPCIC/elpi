@@ -148,7 +148,10 @@ export type Suspend = {
   suspend_stack: Stack;
 }
 
-export type Cut = Cutted[]
+export type Cut = {
+  cut_goal_id: GoalId;
+  cut_victims: Cutted[];
+}
 
 export type Cutted = {
   cut_branch_for_goal: Goal;
@@ -227,7 +230,7 @@ export function readKind(x: any, context: any = x): Kind {
     _atd_check_json_tuple(2, x, context)
     switch (x[0]) {
       case 'Stop':
-        return { kind: 'Stop', value: writeStop(x[1], x) }
+        return { kind: 'Stop', value: readStop(x[1], x) }
       default:
         _atd_bad_json('Kind', x, context)
         throw new Error('impossible')
@@ -339,19 +342,19 @@ export function readStep(x: any, context: any = x): Step {
   _atd_check_json_tuple(2, x, context)
   switch (x[0]) {
     case 'Inference':
-      return { kind: 'Inference', value: writeInference(x[1], x) }
+      return { kind: 'Inference', value: readInference(x[1], x) }
     case 'Findall':
-      return { kind: 'Findall', value: writeFindall(x[1], x) }
+      return { kind: 'Findall', value: readFindall(x[1], x) }
     case 'Cut':
-      return { kind: 'Cut', value: writeCut(x[1], x) }
+      return { kind: 'Cut', value: readCut(x[1], x) }
     case 'Suspend':
-      return { kind: 'Suspend', value: writeSuspend(x[1], x) }
+      return { kind: 'Suspend', value: readSuspend(x[1], x) }
     case 'Resume':
-      return { kind: 'Resume', value: writeResume(x[1], x) }
+      return { kind: 'Resume', value: readResume(x[1], x) }
     case 'CHR':
-      return { kind: 'CHR', value: writeChr(x[1], x) }
+      return { kind: 'CHR', value: readChr(x[1], x) }
     case 'Init':
-      return { kind: 'Init', value: writeGoal(x[1], x) }
+      return { kind: 'Init', value: readGoal(x[1], x) }
     default:
       _atd_bad_json('Step', x, context)
       throw new Error('impossible')
@@ -409,9 +412,9 @@ export function readRule(x: any, context: any = x): Rule {
   _atd_check_json_tuple(2, x, context)
   switch (x[0]) {
     case 'BuiltinRule':
-      return { kind: 'BuiltinRule', value: writeBuiltinName(x[1], x) }
+      return { kind: 'BuiltinRule', value: readBuiltinName(x[1], x) }
     case 'UserRule':
-      return { kind: 'UserRule', value: writeUserRule(x[1], x) }
+      return { kind: 'UserRule', value: readUserRule(x[1], x) }
     default:
       _atd_bad_json('Rule', x, context)
       throw new Error('impossible')
@@ -445,9 +448,9 @@ export function readBuiltinName(x: any, context: any = x): BuiltinName {
   _atd_check_json_tuple(2, x, context)
   switch (x[0]) {
     case 'Logic':
-      return { kind: 'Logic', value: _atd_write_string(x[1], x) }
+      return { kind: 'Logic', value: _atd_read_string(x[1], x) }
     case 'FFI':
-      return { kind: 'FFI', value: _atd_write_string(x[1], x) }
+      return { kind: 'FFI', value: _atd_read_string(x[1], x) }
     default:
       _atd_bad_json('BuiltinName', x, context)
       throw new Error('impossible')
@@ -467,9 +470,9 @@ export function readLocation(x: any, context: any = x): Location {
   _atd_check_json_tuple(2, x, context)
   switch (x[0]) {
     case 'File':
-      return { kind: 'File', value: writeFileLocation(x[1], x) }
+      return { kind: 'File', value: readFileLocation(x[1], x) }
     case 'Context':
-      return { kind: 'Context', value: writeStepId(x[1], x) }
+      return { kind: 'Context', value: readStepId(x[1], x) }
     default:
       _atd_bad_json('Location', x, context)
       throw new Error('impossible')
@@ -509,11 +512,11 @@ export function readEvent(x: any, context: any = x): Event {
   _atd_check_json_tuple(2, x, context)
   switch (x[0]) {
     case 'Assign':
-      return { kind: 'Assign', value: _atd_write_string(x[1], x) }
+      return { kind: 'Assign', value: _atd_read_string(x[1], x) }
     case 'Fail':
-      return { kind: 'Fail', value: _atd_write_string(x[1], x) }
+      return { kind: 'Fail', value: _atd_read_string(x[1], x) }
     case 'ResumeGoal':
-      return { kind: 'ResumeGoal', value: _atd_write_array(writeGoalId)(x[1], x) }
+      return { kind: 'ResumeGoal', value: _atd_read_array(readGoalId)(x[1], x) }
     default:
       _atd_bad_json('Event', x, context)
       throw new Error('impossible')
@@ -682,11 +685,17 @@ export function readSuspend(x: any, context: any = x): Suspend {
 }
 
 export function writeCut(x: Cut, context: any = x): any {
-  return _atd_write_array(writeCutted)(x, context);
+  return {
+    'cut_goal_id': _atd_write_required_field('Cut', 'cut_goal_id', writeGoalId, x.cut_goal_id, x),
+    'cut_victims': _atd_write_required_field('Cut', 'cut_victims', _atd_write_array(writeCutted), x.cut_victims, x),
+  };
 }
 
 export function readCut(x: any, context: any = x): Cut {
-  return _atd_read_array(readCutted)(x, context);
+  return {
+    cut_goal_id: _atd_read_required_field('Cut', 'cut_goal_id', readGoalId, x['cut_goal_id'], x),
+    cut_victims: _atd_read_required_field('Cut', 'cut_victims', _atd_read_array(readCutted), x['cut_victims'], x),
+  };
 }
 
 export function writeCutted(x: Cutted, context: any = x): any {

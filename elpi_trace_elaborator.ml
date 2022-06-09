@@ -77,7 +77,7 @@ module Elaborate : sig
     type step =
       | Inference of { pred : string; goal : string; goal_id : goal_id; action : action; rid : int }
       | Findall of { goal : string; goal_id : goal_id; timestamp : timestamp; result : string list }
-      | Cut of (goal_id * location * string) list
+      | Cut of  goal_id * (goal_id * location * string) list
       | Suspend of { goal : string; goal_id : goal_id; sibling : goal_id }
       | Resume of (goal_id * string) list
       | CHR of { failed_attempts : chr_attempt list; successful_attempts : chr_attempt list; chr_store_before : (goal_id * goal_text) list; chr_store_after : (goal_id * goal_text) list;}
@@ -119,7 +119,7 @@ end = struct
     type step =
       | Inference of { pred : string; goal : string; goal_id : goal_id; action : action; rid : int }
       | Findall of { goal : string; goal_id : goal_id; timestamp : timestamp; result : string list }
-      | Cut of (goal_id * location * string) list
+      | Cut of goal_id * (goal_id * location * string) list
       | Suspend of { goal : string; goal_id : goal_id; sibling : goal_id }
       | Resume of (goal_id * string) list
       | CHR of { failed_attempts : chr_attempt list; successful_attempts : chr_attempt list; chr_store_before : (goal_id * goal_text) list; chr_store_after : (goal_id * goal_text) list;}
@@ -332,7 +332,7 @@ try
   | `Cut ({ goal_id; payload = [pred;goal] },_) ->
       let () = push_stack (step,rid) goal_id (`BuiltinRule (`FFI "!")) [] in
       let cutted = all "user:rule:cut:branch" decode_cut items in
-      Cut cutted
+      Cut (goal_id,cutted)
   | `Resumption l ->
       let resumed = List.map (fun ({ goal_id; payload },_ as x) ->
         let () = update_stack (step,rid) goal_id (`BuiltinRule (`Logic "resume")) in
@@ -539,7 +539,7 @@ end = struct
              suspend_sibling = { goal_id = sibling; goal_text = find_goal_text sibling };
              suspend_stack = stack;
             } 
-        | Cut l -> `Cut (l |> List.map (fun (g,rule_loc,rule_text) -> { cut_branch_for_goal = { goal_id = g; goal_text = find_goal_text g }; cut_branch = { rule_text; rule_loc }}))
+        | Cut (goal_id,l) -> `Cut (goal_id,l |> List.map (fun (g,rule_loc,rule_text) -> { cut_branch_for_goal = { goal_id = g; goal_text = find_goal_text g }; cut_branch = { rule_text; rule_loc }}))
         | Findall { goal; goal_id; timestamp; result } ->
             `Findall_TODO ( goal, goal_id, timestamp, result)
         | CHR { failed_attempts; successful_attempts; chr_store_before; chr_store_after } ->
@@ -622,7 +622,8 @@ end = struct
             findall_stack = stack } in
           { step_id; step = `Findall findall; runtime_id; color = `Green }
         | `Suspend x -> { step_id; step = `Suspend x; runtime_id; color = `Grey }
-        | `Cut x -> { step_id; step = `Cut x; runtime_id; color = `Grey }
+        | `Cut (cut_goal_id,cut_victims) ->
+             { step_id; step = `Cut { cut_goal_id; cut_victims }; runtime_id; color = `Grey }
       in
       pre_cards |> List.filter (fun (_,(_,_,rid)) -> rid = 0) |> List.map pre_card2card
       
