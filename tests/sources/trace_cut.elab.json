@@ -287,38 +287,41 @@
     "runtime_id": 0,
     "step": [
       "Cut",
-      [
-        {
-          "cut_branch_for_goal": { "goal_text": "p", "goal_id": 5 },
-          "cut_branch": {
-            "rule_text": "p :- .",
-            "rule_loc": [
-              "File",
-              {
-                "filename": "tests/sources/trace_cut.elpi",
-                "line": 5,
-                "column": 0,
-                "character": 34
-              }
-            ]
+      {
+        "cut_goal_id": 7,
+        "cut_victims": [
+          {
+            "cut_branch_for_goal": { "goal_text": "p", "goal_id": 5 },
+            "cut_branch": {
+              "rule_text": "p :- .",
+              "rule_loc": [
+                "File",
+                {
+                  "filename": "tests/sources/trace_cut.elpi",
+                  "line": 5,
+                  "column": 0,
+                  "character": 34
+                }
+              ]
+            }
+          },
+          {
+            "cut_branch_for_goal": { "goal_text": "p", "goal_id": 5 },
+            "cut_branch": {
+              "rule_text": "p :- (print 1).",
+              "rule_loc": [
+                "File",
+                {
+                  "filename": "tests/sources/trace_cut.elpi",
+                  "line": 6,
+                  "column": 0,
+                  "character": 37
+                }
+              ]
+            }
           }
-        },
-        {
-          "cut_branch_for_goal": { "goal_text": "p", "goal_id": 5 },
-          "cut_branch": {
-            "rule_text": "p :- (print 1).",
-            "rule_loc": [
-              "File",
-              {
-                "filename": "tests/sources/trace_cut.elpi",
-                "line": 6,
-                "column": 0,
-                "character": 37
-              }
-            ]
-          }
-        }
-      ]
+        ]
+      }
     ],
     "color": "Grey"
   },
@@ -526,23 +529,26 @@
     "runtime_id": 0,
     "step": [
       "Cut",
-      [
-        {
-          "cut_branch_for_goal": { "goal_text": "q", "goal_id": 9 },
-          "cut_branch": {
-            "rule_text": "q :- (print 2).",
-            "rule_loc": [
-              "File",
-              {
-                "filename": "tests/sources/trace_cut.elpi",
-                "line": 10,
-                "column": 0,
-                "character": 63
-              }
-            ]
+      {
+        "cut_goal_id": 10,
+        "cut_victims": [
+          {
+            "cut_branch_for_goal": { "goal_text": "q", "goal_id": 9 },
+            "cut_branch": {
+              "rule_text": "q :- (print 2).",
+              "rule_loc": [
+                "File",
+                {
+                  "filename": "tests/sources/trace_cut.elpi",
+                  "line": 10,
+                  "column": 0,
+                  "character": 63
+                }
+              ]
+            }
           }
-        }
-      ]
+        ]
+      }
     ],
     "color": "Grey"
   },
@@ -725,45 +731,48 @@
     "runtime_id": 0,
     "step": [
       "Cut",
-      [
-        {
-          "cut_branch_for_goal": { "goal_text": "q", "goal_id": 13 },
-          "cut_branch": {
-            "rule_text": "q :- .",
-            "rule_loc": [ "Context", 10 ]
+      {
+        "cut_goal_id": 14,
+        "cut_victims": [
+          {
+            "cut_branch_for_goal": { "goal_text": "q", "goal_id": 13 },
+            "cut_branch": {
+              "rule_text": "q :- .",
+              "rule_loc": [ "Context", 10 ]
+            }
+          },
+          {
+            "cut_branch_for_goal": { "goal_text": "q", "goal_id": 13 },
+            "cut_branch": {
+              "rule_text": "q :- .",
+              "rule_loc": [
+                "File",
+                {
+                  "filename": "tests/sources/trace_cut.elpi",
+                  "line": 9,
+                  "column": 0,
+                  "character": 60
+                }
+              ]
+            }
+          },
+          {
+            "cut_branch_for_goal": { "goal_text": "q", "goal_id": 13 },
+            "cut_branch": {
+              "rule_text": "q :- (print 2).",
+              "rule_loc": [
+                "File",
+                {
+                  "filename": "tests/sources/trace_cut.elpi",
+                  "line": 10,
+                  "column": 0,
+                  "character": 63
+                }
+              ]
+            }
           }
-        },
-        {
-          "cut_branch_for_goal": { "goal_text": "q", "goal_id": 13 },
-          "cut_branch": {
-            "rule_text": "q :- .",
-            "rule_loc": [
-              "File",
-              {
-                "filename": "tests/sources/trace_cut.elpi",
-                "line": 9,
-                "column": 0,
-                "character": 60
-              }
-            ]
-          }
-        },
-        {
-          "cut_branch_for_goal": { "goal_text": "q", "goal_id": 13 },
-          "cut_branch": {
-            "rule_text": "q :- (print 2).",
-            "rule_loc": [
-              "File",
-              {
-                "filename": "tests/sources/trace_cut.elpi",
-                "line": 10,
-                "column": 0,
-                "character": 63
-              }
-            ]
-          }
-        }
-      ]
+        ]
+      }
     ],
     "color": "Grey"
   }
