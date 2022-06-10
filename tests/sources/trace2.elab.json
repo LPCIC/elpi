@@ -320,8 +320,8 @@
               "events": []
             },
             "siblings": [
-              { "goal_text": "fail", "goal_id": 10 },
-              { "goal_text": "true", "goal_id": 11 }
+              { "goal_text": "true", "goal_id": 10 },
+              { "goal_text": "fail", "goal_id": 11 }
             ],
             "siblings_aggregated_outcome": "Success"
           }
@@ -379,7 +379,7 @@
     "step": [
       "Inference",
       {
-        "current_goal_id": 11,
+        "current_goal_id": 10,
         "current_goal_text": "true",
         "current_goal_predicate": "true",
         "failed_attempts": [],
@@ -479,7 +479,7 @@
     "step": [
       "Inference",
       {
-        "current_goal_id": 10,
+        "current_goal_id": 11,
         "current_goal_text": "fail",
         "current_goal_predicate": "fail",
         "failed_attempts": [],
