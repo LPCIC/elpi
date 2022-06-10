@@ -12,6 +12,7 @@ type j = J : (Format.formatter -> 'a -> unit) * 'a -> j
 val enter : runtime_id:int -> string ->  (Format.formatter -> unit) -> unit
 val info : runtime_id:int -> ?goal_id:int -> string -> j list -> unit
 val exit : runtime_id:int -> string -> bool -> exn option -> float -> unit
+val end_trace : runtime_id:int -> unit
 
 val set_cur_pred : string option -> unit
 val get_cur_step : runtime_id:int -> string -> int

@@ -287,6 +287,43 @@ let set_trace_output format formatter =
   | JSON ->
       printer := print_json formatter
 
+let output_file = ref None
+
+let end_trace ~runtime_id =
+  if runtime_id = 0 then
+    match !output_file with
+    | None -> ()
+    | Some(`File(tmp,final)) -> Sys.rename tmp final
+    | Some(`Socket i) -> Unix.close i
+
+let fmt_of_file s =
+  try
+         if s = "stdout" then F.std_formatter
+    else if s = "stderr" then F.err_formatter
+    else if s.[0] = '/' || s.[0] = '.' then begin
+      let file = s in
+      let tmp_file = s ^".tmp" in
+      output_file := Some (`File(tmp_file,file));
+      F.formatter_of_out_channel (open_out tmp_file)
+    end else
+        let n = String.index s ':' in
+        let host = String.sub s 0 n in
+        let port = String.sub s (n+1) (String.length s - n - 1) in
+        let open Unix in
+        match getaddrinfo host port [AI_FAMILY PF_INET;AI_SOCKTYPE SOCK_STREAM] with
+        | [] -> raise Not_found
+        | { ai_family ; ai_socktype ; ai_protocol ; ai_addr; _ } :: _ ->
+            let s = socket ai_family ai_socktype ai_protocol in
+            Unix.connect s ai_addr;
+            output_file := Some (`Socket s);
+            F.formatter_of_out_channel (Unix.out_channel_of_descr s)
+  with e ->
+     Printf.eprintf "error: %s\n" (Printexc.to_string e);
+     F.err_formatter
+
+let set_trace_output_file format file =
+  let formatter = fmt_of_file file in
+  set_trace_output format formatter 
 
 (* we should make another file... *)
 let collecting_stats = ref false
@@ -328,25 +365,6 @@ programs is: -trace-on -trace-at 1 9999 -trace-only '\(run\|select\|user:\)'
 |}
 ;;
 
-let fmt_of_file s = try
-       if s = "stdout" then F.std_formatter
-  else if s = "stderr" then F.err_formatter
-  else if s.[0] = '/' || s.[0] = '.' then F.formatter_of_out_channel (open_out s)
-  else
-      let n = String.index s ':' in
-      let host = String.sub s 0 n in
-      let port = String.sub s (n+1) (String.length s - n - 1) in
-      let open Unix in
-      match getaddrinfo host port [AI_FAMILY PF_INET;AI_SOCKTYPE SOCK_STREAM] with
-      | [] -> raise Not_found
-      | { ai_family ; ai_socktype ; ai_protocol ; ai_addr; _ } :: _ ->
-          let s = socket ai_family ai_socktype ai_protocol in
-          Unix.connect s ai_addr;
-          F.formatter_of_out_channel (Unix.out_channel_of_descr s)
-  with e ->
-    Printf.eprintf "error: %s\n" (Printexc.to_string e);
-    F.err_formatter
-
 let parse_argv argv =
   let on = ref false in
   let where = ref ("run",0,0) in
@@ -366,10 +384,10 @@ let parse_argv argv =
          aux rest
        end
     | "-trace-on" :: "tty" :: file :: rest ->
-         set_trace_output TTY (fmt_of_file file);
+         set_trace_output_file TTY file;
          trace_noprint := false; on := true; aux rest
     | "-trace-on" :: "json" :: file :: rest ->
-         set_trace_output JSON (fmt_of_file file);
+         set_trace_output_file JSON file;
          trace_noprint := false; on := true; aux rest
     | "-trace-on" :: rest -> trace_noprint := false; on := true; aux rest
     | "-stats-on" :: rest -> collecting_stats := true; aux rest
