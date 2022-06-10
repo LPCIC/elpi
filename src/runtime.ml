@@ -3519,15 +3519,15 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
     | Builtin(c,[q;sol]) when c == Global_symbols.findall_solutionsc ->
        [%tcall findall depth p q sol (gid[@trace]) gs next alts cutto_alts]
     | App(c, g, gs') when c == Global_symbols.andc -> [%spy "user:rule" ~rid ~gid pp_string "and"];
+       let gid'[@trace] = make_subgoal_id gid ((depth,g)[@trace]) in
        let gs' = List.map (fun x -> (make_subgoal[@inlined]) ~depth (gid[@trace]) p x) gs' in
-       let gid[@trace] = make_subgoal_id gid ((depth,g)[@trace]) in
        [%spy "user:rule:and" ~rid ~gid pp_string "success"];
-       [%tcall run depth p g (gid[@trace]) (gs' @ gs) next alts cutto_alts]
+       [%tcall run depth p g (gid'[@trace]) (gs' @ gs) next alts cutto_alts]
     | Cons (g,gs') -> [%spy "user:rule" ~rid ~gid pp_string "and"];
+       let gid'[@trace] = make_subgoal_id gid ((depth,g)[@trace]) in
        let gs' = (make_subgoal[@inlined]) ~depth (gid[@trace]) p gs' in
-       let gid[@trace] = make_subgoal_id gid ((depth,g)[@trace]) in
        [%spy "user:rule:and" ~rid ~gid pp_string "success"];
-       [%tcall run depth p g (gid[@trace]) (gs' :: gs) next alts cutto_alts]
+       [%tcall run depth p g (gid'[@trace]) (gs' :: gs) next alts cutto_alts]
     | Nil -> [%spy "user:rule" ~rid ~gid pp_string "true"]; [%spy "user:rule:true" ~rid ~gid pp_string "success"];
       begin match gs with
       | [] -> [%tcall pop_andl alts next cutto_alts]
