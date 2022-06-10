@@ -1,2 +1,2 @@
 main :-
-  print 1, (fail => (true, fail)).
+  print 1, (pi x\ sigma Y\ fail => (true, fail)).

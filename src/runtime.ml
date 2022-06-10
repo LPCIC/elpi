@@ -3564,13 +3564,14 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
     | App(c, arg, []) when c == Global_symbols.pic -> [%spy "user:rule" ~rid ~gid pp_string "pi"];
        let f = get_lambda_body ~depth arg in
        let gid[@trace] = make_subgoal_id gid ((depth+1,f)[@trace]) in
+       [%spy "user:rule:pi" ~rid ~gid pp_string "success"];
        [%tcall run (depth+1) p f (gid[@trace]) gs next alts cutto_alts]
     | App(c, arg, []) when c == Global_symbols.sigmac -> [%spy "user:rule" ~rid ~gid pp_string "sigma"];
        let f = get_lambda_body ~depth arg in
        let v = UVar(oref C.dummy, depth, 0) in
        let fv = subst depth [v] f in
        let gid[@trace] = make_subgoal_id gid ((depth,fv)[@trace]) in
-       [%spy "user:rule:pi" ~rid ~gid pp_string "success"];
+       [%spy "user:rule:sigma" ~rid ~gid pp_string "success"];
        [%tcall run depth p fv (gid[@trace]) gs next alts cutto_alts]
     | UVar ({ contents = g }, from, args) when g != C.dummy -> [%spy "user:rule" ~rid ~gid pp_string "deref"]; [%spy "user:rule:deref" ~rid ~gid pp_string "success"];
        [%tcall run depth p (deref_uv ~from ~to_:depth args g) (gid[@trace]) gs next alts cutto_alts]

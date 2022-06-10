@@ -21,7 +21,8 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text": "main :- (print 1), (fail => (true , fail)).",
+                  "rule_text":
+                    "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
                   "rule_loc": [
                     "File",
                     {
@@ -37,7 +38,10 @@
             },
             "siblings": [
               { "goal_text": "print 1", "goal_id": 5 },
-              { "goal_text": "fail => (true , fail)", "goal_id": 6 }
+              {
+                "goal_text": "pi c0 \\ sigma c1 \\ fail => (true , fail)",
+                "goal_id": 6
+              }
             ],
             "siblings_aggregated_outcome": "Success"
           }
@@ -48,7 +52,8 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (fail => (true , fail)).",
+                "rule_text":
+                  "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -99,7 +104,8 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (fail => (true , fail)).",
+                "rule_text":
+                  "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -126,23 +132,28 @@
       "Inference",
       {
         "current_goal_id": 6,
-        "current_goal_text": "fail => (true , fail)",
-        "current_goal_predicate": "=>",
+        "current_goal_text": "pi c0 \\ sigma c1 \\ fail => (true , fail)",
+        "current_goal_predicate": "pi",
         "failed_attempts": [],
         "successful_attempts": [
           {
             "attempt": {
-              "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+              "rule": [ "BuiltinRule", [ "Logic", "pi" ] ],
               "events": []
             },
-            "siblings": [ { "goal_text": "true , fail", "goal_id": 7 } ],
+            "siblings": [
+              {
+                "goal_text": "sigma c1 \\ fail => (true , fail)",
+                "goal_id": 7
+              }
+            ],
             "siblings_aggregated_outcome": "Success"
           }
         ],
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [ "BuiltinRule", [ "Logic", "pi" ] ],
             "step_id": 3,
             "runtime_id": 0
           },
@@ -150,7 +161,8 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (fail => (true , fail)).",
+                "rule_text":
+                  "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -177,18 +189,17 @@
       "Inference",
       {
         "current_goal_id": 7,
-        "current_goal_text": "true , fail",
-        "current_goal_predicate": ",",
+        "current_goal_text": "sigma c1 \\ fail => (true , fail)",
+        "current_goal_predicate": "sigma",
         "failed_attempts": [],
         "successful_attempts": [
           {
             "attempt": {
-              "rule": [ "BuiltinRule", [ "Logic", "and" ] ],
+              "rule": [ "BuiltinRule", [ "Logic", "sigma" ] ],
               "events": []
             },
             "siblings": [
-              { "goal_text": "fail", "goal_id": 8 },
-              { "goal_text": "true", "goal_id": 9 }
+              { "goal_text": "fail => (true , fail)", "goal_id": 8 }
             ],
             "siblings_aggregated_outcome": "Success"
           }
@@ -196,12 +207,12 @@
         "more_successful_attempts": [],
         "stack": [
           {
-            "rule": [ "BuiltinRule", [ "Logic", "and" ] ],
+            "rule": [ "BuiltinRule", [ "Logic", "sigma" ] ],
             "step_id": 4,
             "runtime_id": 0
           },
           {
-            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "rule": [ "BuiltinRule", [ "Logic", "pi" ] ],
             "step_id": 3,
             "runtime_id": 0
           },
@@ -209,7 +220,8 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (fail => (true , fail)).",
+                "rule_text":
+                  "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -235,7 +247,139 @@
     "step": [
       "Inference",
       {
+        "current_goal_id": 8,
+        "current_goal_text": "fail => (true , fail)",
+        "current_goal_predicate": "=>",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+              "events": []
+            },
+            "siblings": [ { "goal_text": "true , fail", "goal_id": 9 } ],
+            "siblings_aggregated_outcome": "Success"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "step_id": 5,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "sigma" ] ],
+            "step_id": 4,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "pi" ] ],
+            "step_id": 3,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace2.elpi",
+                    "line": 1,
+                    "column": 0,
+                    "character": 0
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Green"
+  },
+  {
+    "step_id": 6,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
         "current_goal_id": 9,
+        "current_goal_text": "true , fail",
+        "current_goal_predicate": ",",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [ "BuiltinRule", [ "Logic", "and" ] ],
+              "events": []
+            },
+            "siblings": [
+              { "goal_text": "fail", "goal_id": 10 },
+              { "goal_text": "true", "goal_id": 11 }
+            ],
+            "siblings_aggregated_outcome": "Success"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "and" ] ],
+            "step_id": 6,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "step_id": 5,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "sigma" ] ],
+            "step_id": 4,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "pi" ] ],
+            "step_id": 3,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace2.elpi",
+                    "line": 1,
+                    "column": 0,
+                    "character": 0
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Green"
+  },
+  {
+    "step_id": 7,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 11,
         "current_goal_text": "true",
         "current_goal_predicate": "true",
         "failed_attempts": [],
@@ -281,16 +425,26 @@
                 ]
               }
             ],
-            "step_id": 5,
+            "step_id": 7,
             "runtime_id": 0
           },
           {
             "rule": [ "BuiltinRule", [ "Logic", "and" ] ],
-            "step_id": 4,
+            "step_id": 6,
             "runtime_id": 0
           },
           {
             "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "step_id": 5,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "sigma" ] ],
+            "step_id": 4,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "pi" ] ],
             "step_id": 3,
             "runtime_id": 0
           },
@@ -298,7 +452,8 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (fail => (true , fail)).",
+                "rule_text":
+                  "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
                 "rule_loc": [
                   "File",
                   {
@@ -319,12 +474,12 @@
     "color": "Green"
   },
   {
-    "step_id": 6,
+    "step_id": 8,
     "runtime_id": 0,
     "step": [
       "Inference",
       {
-        "current_goal_id": 8,
+        "current_goal_id": 10,
         "current_goal_text": "fail",
         "current_goal_predicate": "fail",
         "failed_attempts": [],
@@ -333,7 +488,7 @@
             "attempt": {
               "rule": [
                 "UserRule",
-                { "rule_text": "fail :- .", "rule_loc": [ "Context", 3 ] }
+                { "rule_text": "fail :- .", "rule_loc": [ "Context", 5 ] }
               ],
               "events": []
             },
@@ -346,18 +501,28 @@
           {
             "rule": [
               "UserRule",
-              { "rule_text": "fail :- .", "rule_loc": [ "Context", 3 ] }
+              { "rule_text": "fail :- .", "rule_loc": [ "Context", 5 ] }
             ],
-            "step_id": 6,
+            "step_id": 8,
             "runtime_id": 0
           },
           {
             "rule": [ "BuiltinRule", [ "Logic", "and" ] ],
-            "step_id": 4,
+            "step_id": 6,
             "runtime_id": 0
           },
           {
             "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "step_id": 5,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "sigma" ] ],
+            "step_id": 4,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "pi" ] ],
             "step_id": 3,
             "runtime_id": 0
           },
@@ -365,7 +530,8 @@
             "rule": [
               "UserRule",
               {
-                "rule_text": "main :- (print 1), (fail => (true , fail)).",
+                "rule_text":
+                  "main :- (print 1), (pi (c0 \\ (sigma (c1 \\ (fail => (true , fail)))))).",
                 "rule_loc": [
                   "File",
                   {

@@ -188,7 +188,8 @@ type decoded_step =
   ]
 
 let decode_step l : decoded_step =
-  let curgoal, rule = has "user:curgoal" l, has "user:rule" l in
+  let curgoal = has "user:curgoal" l in
+  let rule = has "user:rule" l in
   let builtin = has "user:rule:builtin:name" l in
   let chr = has "user:CHR:try" l in
   let newg = has "user:newgoal" l in
