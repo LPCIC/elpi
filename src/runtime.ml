@@ -3855,11 +3855,13 @@ let mk_outcome search get_cs assignments =
 
 let execute_once ?max_steps ?delay_outside_fragment exec =
  let { search; get } = make_runtime ?max_steps ?delay_outside_fragment exec in
- fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.state |> State.end_execution, exec.query_arguments, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments)
+ let result = fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.state |> State.end_execution, exec.query_arguments, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments) in
+ [%end_trace "execute_once" ~rid];
+ result
 ;;
 
 let execute_loop ?delay_outside_fragment exec ~more ~pp =
- let { search; next_solution; get } = make_runtime ?delay_outside_fragment exec in
+ let { search; next_solution; get; destroy } = make_runtime ?delay_outside_fragment exec in
  let k = ref noalts in
  let do_with_infos f =
    let time0 = Unix.gettimeofday() in
@@ -3871,7 +3873,7 @@ let execute_loop ?delay_outside_fragment exec ~more ~pp =
  while !k != noalts do
    if not(more()) then k := noalts else
    try do_with_infos (fun () -> next_solution !k)
-   with No_clause -> pp 0.0 Failure; k := noalts
+   with No_clause -> pp 0.0 Failure; k := noalts; [%end_trace "execute_loop" ~rid]
  done
 ;;
 

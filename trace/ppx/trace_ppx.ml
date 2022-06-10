@@ -22,12 +22,15 @@
                z + f y (b[@trace])
      end]
 
+    [%end_trace "stop" ~rid]
+
   ]}
 
   If
     --cookie "elpi_trace=\"true\""
   is not passed to the ppx rewriter:
 
+    - [[%end_trace "stop" ~rid]] ---> [()]
     - [[%trace "foo" pp code]] ---> [code]
     - [[%tcall f x]] ---> [f x]
     - [[%spy ...]] [[%spyl ...]] and [[%log ...]] ---> [()]
@@ -96,6 +99,9 @@ let log ~loc name ~rid  key data =
 
 let cur_pred ~loc name =
   [%expr Trace_ppx_runtime.Runtime.set_cur_pred [%e name]]
+
+let end_trace ~loc ~rid =
+  [%expr Trace_ppx_runtime.Runtime.end_trace ~runtime_id:![%e rid]]
 
 let tcall ~loc hd args =
   let l = List.rev (hd :: args) in
@@ -331,6 +337,28 @@ let log_extension =
 let log_rule = Context_free.Rule.extension log_extension
 
 (* ----------------------------------------------------------------- *)
+
+let end_trace_expand_function ~loc ~path:_ = function
+  | { pexp_desc = Pexp_apply (_name,args); _ } when !enabled ->
+    let rid, args = pull is_rid args in
+    begin match rid, args with
+    | Some rid, [] -> end_trace ~loc ~rid
+    | _ -> err ~loc "use: [%end_trace ~rid]"
+    end
+  | { pexp_desc = Pexp_apply _; _ } -> [%expr ()]
+  | _ -> err ~loc "use: [%end_trace ~rid]"
+
+let end_trace_extension =
+  Extension.declare
+    "end_trace"
+    Extension.Context.expression
+    Ast_pattern.(single_expr_payload __)
+    end_trace_expand_function
+
+let end_trace_rule = Context_free.Rule.extension end_trace_extension
+
+
+(* ----------------------------------------------------------------- *)
 (* ----------------------------------------------------------------- *)
 (* ----------------------------------------------------------------- *)
 
@@ -342,7 +370,7 @@ let arg_trace t =
 let () =
   Driver.Cookies.add_handler arg_trace;
   Driver.register_transformation
-    ~rules:[ log_rule; cur_pred_rule; trace_rule; tcall_rule; spy_rule; spyl_rule; ]
+    ~rules:[ log_rule; cur_pred_rule; trace_rule; tcall_rule; spy_rule; spyl_rule; end_trace_rule ]
     ~impl:map_trace#structure
     ~intf:map_trace#signature
     "elpi.trace"
