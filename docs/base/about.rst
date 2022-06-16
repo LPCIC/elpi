@@ -11,6 +11,7 @@ Before building this documentation, make sure to have ``sphinx`` installed:
 .. code-block:: console
 
    pip install sphinx
+   pip install in-place
 
 To match the visuals used in the community (*e.g.* https://coq.inria.fr/distrib/current/refman/):
 
