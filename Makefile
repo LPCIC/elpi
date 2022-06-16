@@ -52,6 +52,9 @@ install:
 doc:
 	dune build $(DUNE_OPTS) @doc
 
+doc-sphinx:
+	cd docs && make html
+
 clean:
 	rm -rf _build
 
