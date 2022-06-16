@@ -53,7 +53,9 @@ doc:
 	dune build $(DUNE_OPTS) @doc
 
 doc-sphinx:
+	cp -r docs/base docs/source
 	cd docs && make html
+	rm -rf docs/source
 
 clean:
 	rm -rf _build
