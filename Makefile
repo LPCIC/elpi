@@ -54,6 +54,7 @@ doc:
 
 doc-sphinx:
 	cp -r docs/base docs/source
+	python docs/engine/engine.py
 	cd docs && make html
 	rm -rf docs/source
 
