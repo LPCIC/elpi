@@ -62,4 +62,25 @@
       (run elpi -document-builtins))))
 )
 
+(executable
+  (name elpi_trace_elaborator)
+  (public_name elpi-trace-elaborator)
+  (libraries yojson atdgen re)
+  (modules elpi_trace_elaborator trace_atd)
+  (package elpi)
+)
+
+(rule
+  (targets trace_atd.ml trace_atd.mli)
+  (action (run atdgen -o trace_atd -j-std %{dep:trace.atd})))
+
+(rule
+  (targets trace_atd.ts)
+  (mode promote)
+  (action (copy %{dep:trace.ts} trace_atd.ts)))
+
+(rule
+  (targets trace.ts)
+  (action (run atdts %{dep:trace.atd})))
+
 (include dune.config)
