@@ -4,6 +4,7 @@ help:
 	@echo '  build            builds elpi'
 	@echo '  install          install elpi'
 	@echo '  clean            remove build artifacts'
+	@echo '  release          release the software (note: git tag -s first)'
 	@echo
 	@echo 'Testing targets:'
 	@echo
@@ -53,6 +54,9 @@ doc:
 
 clean:
 	rm -rf _build
+
+release:
+	dune-release -p elpi
 
 # testing
 tests:
