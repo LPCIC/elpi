@@ -585,7 +585,9 @@ module BuiltInPredicate : sig
    *  readback to: NoData  Data None  Data (Some NoData)  Data (Some (Data 3))
    *
    *  Alternatively the data type 'a must be able to represent unification
-   *  variables, such as the raw terms, see [ioarg_any] below.
+   *  variables, such as the raw terms, see [ioarg_any] below. It gives NoData
+   *  if the user passed _ (Discard) and Data t for any other t including
+   *  variables such as X (UnifVar).
    *
    *  An example of an API taking advantage of this feature is
    *    pred typecheck i:term, o:ty, o:diagnostic

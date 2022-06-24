@@ -1,0 +1,1398 @@
+[
+  {
+    "step_id": 0,
+    "runtime_id": 0,
+    "step": [ "Init", { "goal_text": "main", "goal_id": 4 } ],
+    "color": "Grey"
+  },
+  {
+    "step_id": 1,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 4,
+        "current_goal_text": "main",
+        "current_goal_predicate": "main",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                {
+                  "rule_text":
+                    "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                  "rule_loc": [
+                    "File",
+                    {
+                      "filename": "tests/sources/trace_chr.elpi",
+                      "line": 19,
+                      "column": 0,
+                      "character": 353
+                    }
+                  ]
+                }
+              ],
+              "events": []
+            },
+            "siblings": [
+              { "goal_text": "even X0", "goal_id": 5 },
+              { "goal_text": "declare_constraint true X0", "goal_id": 6 },
+              { "goal_text": "X0 = s X1", "goal_id": 7 },
+              { "goal_text": "not (even X1)", "goal_id": 8 }
+            ],
+            "siblings_aggregated_outcome": "Fail"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 19,
+                    "column": 0,
+                    "character": 353
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Red"
+  },
+  {
+    "step_id": 2,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 5,
+        "current_goal_text": "even X0",
+        "current_goal_predicate": "even",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                {
+                  "rule_text":
+                    "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
+                  "rule_loc": [
+                    "File",
+                    {
+                      "filename": "tests/sources/trace_chr.elpi",
+                      "line": 16,
+                      "column": 0,
+                      "character": 252
+                    }
+                  ]
+                }
+              ],
+              "events": [ [ "Assign", "A0 := X0" ] ]
+            },
+            "siblings": [
+              {
+                "goal_text": "declare_constraint (even X0) X0",
+                "goal_id": 9
+              }
+            ],
+            "siblings_aggregated_outcome": "Fail"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 16,
+                    "column": 0,
+                    "character": 252
+                  }
+                ]
+              }
+            ],
+            "step_id": 2,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 19,
+                    "column": 0,
+                    "character": 353
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Red"
+  },
+  {
+    "step_id": 3,
+    "runtime_id": 0,
+    "step": [
+      "Suspend",
+      {
+        "suspend_goal_id": 9,
+        "suspend_goal_text": "declare_constraint (even X0) X0",
+        "suspend_sibling": { "goal_text": "even X0", "goal_id": 10 },
+        "suspend_stack": [
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "suspend" ] ],
+            "step_id": 3,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 16,
+                    "column": 0,
+                    "character": 252
+                  }
+                ]
+              }
+            ],
+            "step_id": 2,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 19,
+                    "column": 0,
+                    "character": 353
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Grey"
+  },
+  {
+    "step_id": 4,
+    "runtime_id": 0,
+    "step": [
+      "Suspend",
+      {
+        "suspend_goal_id": 6,
+        "suspend_goal_text": "declare_constraint true X0",
+        "suspend_sibling": { "goal_text": "true", "goal_id": 11 },
+        "suspend_stack": [
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "suspend" ] ],
+            "step_id": 4,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 19,
+                    "column": 0,
+                    "character": 353
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Grey"
+  },
+  {
+    "step_id": 5,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 7,
+        "current_goal_text": "X0 = s X1",
+        "current_goal_predicate": "=",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
+              "events": [
+                [ "Assign", "X0 := s X1" ],
+                [ "ResumeGoal", [ 11, 10 ] ]
+              ]
+            },
+            "siblings": [],
+            "siblings_aggregated_outcome": "Success"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
+            "step_id": 5,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 19,
+                    "column": 0,
+                    "character": 353
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Green"
+  },
+  {
+    "step_id": 6,
+    "runtime_id": 0,
+    "step": [
+      "Resume",
+      [
+        { "goal_text": "true", "goal_id": 11 },
+        { "goal_text": "even (s X1)", "goal_id": 10 }
+      ]
+    ],
+    "color": "Grey"
+  },
+  {
+    "step_id": 7,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 11,
+        "current_goal_text": "true",
+        "current_goal_predicate": "true",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                {
+                  "rule_text": "true :- .",
+                  "rule_loc": [
+                    "File",
+                    {
+                      "filename": "builtin.elpi",
+                      "line": 9,
+                      "column": 0,
+                      "character": 89
+                    }
+                  ]
+                }
+              ],
+              "events": []
+            },
+            "siblings": [],
+            "siblings_aggregated_outcome": "Success"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "true :- .",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "builtin.elpi",
+                    "line": 9,
+                    "column": 0,
+                    "character": 89
+                  }
+                ]
+              }
+            ],
+            "step_id": 7,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "resume" ] ],
+            "step_id": 6,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "suspend" ] ],
+            "step_id": 4,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 19,
+                    "column": 0,
+                    "character": 353
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Green"
+  },
+  {
+    "step_id": 8,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 10,
+        "current_goal_text": "even (s X1)",
+        "current_goal_predicate": "even",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                {
+                  "rule_text": "(even (s A0)) :- (odd A0).",
+                  "rule_loc": [
+                    "File",
+                    {
+                      "filename": "tests/sources/trace_chr.elpi",
+                      "line": 14,
+                      "column": 0,
+                      "character": 230
+                    }
+                  ]
+                }
+              ],
+              "events": [ [ "Assign", "A0 := X1" ] ]
+            },
+            "siblings": [ { "goal_text": "odd X1", "goal_id": 12 } ],
+            "siblings_aggregated_outcome": "Fail"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(even (s A0)) :- (odd A0).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 14,
+                    "column": 0,
+                    "character": 230
+                  }
+                ]
+              }
+            ],
+            "step_id": 8,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "resume" ] ],
+            "step_id": 6,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "suspend" ] ],
+            "step_id": 3,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 16,
+                    "column": 0,
+                    "character": 252
+                  }
+                ]
+              }
+            ],
+            "step_id": 2,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 19,
+                    "column": 0,
+                    "character": 353
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Red"
+  },
+  {
+    "step_id": 9,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 12,
+        "current_goal_text": "odd X1",
+        "current_goal_predicate": "odd",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                {
+                  "rule_text":
+                    "(odd (as uvar A0)) :- (declare_constraint (odd A0) A0).",
+                  "rule_loc": [
+                    "File",
+                    {
+                      "filename": "tests/sources/trace_chr.elpi",
+                      "line": 17,
+                      "column": 0,
+                      "character": 303
+                    }
+                  ]
+                }
+              ],
+              "events": [ [ "Assign", "A0 := X1" ] ]
+            },
+            "siblings": [
+              {
+                "goal_text": "declare_constraint (odd X1) X1",
+                "goal_id": 13
+              }
+            ],
+            "siblings_aggregated_outcome": "Fail"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "(odd (as uvar A0)) :- (declare_constraint (odd A0) A0).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 17,
+                    "column": 0,
+                    "character": 303
+                  }
+                ]
+              }
+            ],
+            "step_id": 9,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(even (s A0)) :- (odd A0).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 14,
+                    "column": 0,
+                    "character": 230
+                  }
+                ]
+              }
+            ],
+            "step_id": 8,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "resume" ] ],
+            "step_id": 6,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "suspend" ] ],
+            "step_id": 3,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 16,
+                    "column": 0,
+                    "character": 252
+                  }
+                ]
+              }
+            ],
+            "step_id": 2,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 19,
+                    "column": 0,
+                    "character": 353
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Red"
+  },
+  {
+    "step_id": 10,
+    "runtime_id": 0,
+    "step": [
+      "Suspend",
+      {
+        "suspend_goal_id": 13,
+        "suspend_goal_text": "declare_constraint (odd X1) X1",
+        "suspend_sibling": { "goal_text": "odd X1", "goal_id": 14 },
+        "suspend_stack": [
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "suspend" ] ],
+            "step_id": 10,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "(odd (as uvar A0)) :- (declare_constraint (odd A0) A0).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 17,
+                    "column": 0,
+                    "character": 303
+                  }
+                ]
+              }
+            ],
+            "step_id": 9,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(even (s A0)) :- (odd A0).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 14,
+                    "column": 0,
+                    "character": 230
+                  }
+                ]
+              }
+            ],
+            "step_id": 8,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "resume" ] ],
+            "step_id": 6,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "suspend" ] ],
+            "step_id": 3,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 16,
+                    "column": 0,
+                    "character": 252
+                  }
+                ]
+              }
+            ],
+            "step_id": 2,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 19,
+                    "column": 0,
+                    "character": 353
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Grey"
+  },
+  {
+    "step_id": 11,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 8,
+        "current_goal_text": "not (even X1)",
+        "current_goal_predicate": "not",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                {
+                  "rule_text": "(not A0) :- A0, (!), fail.",
+                  "rule_loc": [
+                    "File",
+                    {
+                      "filename": "builtin.elpi",
+                      "line": 52,
+                      "column": 0,
+                      "character": 609
+                    }
+                  ]
+                }
+              ],
+              "events": [ [ "Assign", "A0 := even X1" ] ]
+            },
+            "siblings": [
+              { "goal_text": "even X1", "goal_id": 15 },
+              { "goal_text": "!", "goal_id": 16 },
+              { "goal_text": "fail", "goal_id": 17 }
+            ],
+            "siblings_aggregated_outcome": "Fail"
+          }
+        ],
+        "more_successful_attempts": [ 17 ],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(not A0) :- A0, (!), fail.",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "builtin.elpi",
+                    "line": 52,
+                    "column": 0,
+                    "character": 609
+                  }
+                ]
+              }
+            ],
+            "step_id": 11,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 19,
+                    "column": 0,
+                    "character": 353
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "YellowGreen"
+  },
+  {
+    "step_id": 12,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 15,
+        "current_goal_text": "even X1",
+        "current_goal_predicate": "even",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                {
+                  "rule_text":
+                    "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
+                  "rule_loc": [
+                    "File",
+                    {
+                      "filename": "tests/sources/trace_chr.elpi",
+                      "line": 16,
+                      "column": 0,
+                      "character": 252
+                    }
+                  ]
+                }
+              ],
+              "events": [ [ "Assign", "A0 := X1" ] ]
+            },
+            "siblings": [
+              {
+                "goal_text": "declare_constraint (even X1) X1",
+                "goal_id": 18
+              }
+            ],
+            "siblings_aggregated_outcome": "Fail"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 16,
+                    "column": 0,
+                    "character": 252
+                  }
+                ]
+              }
+            ],
+            "step_id": 12,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(not A0) :- A0, (!), fail.",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "builtin.elpi",
+                    "line": 52,
+                    "column": 0,
+                    "character": 609
+                  }
+                ]
+              }
+            ],
+            "step_id": 11,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 19,
+                    "column": 0,
+                    "character": 353
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Red"
+  },
+  {
+    "step_id": 13,
+    "runtime_id": 0,
+    "step": [
+      "Suspend",
+      {
+        "suspend_goal_id": 18,
+        "suspend_goal_text": "declare_constraint (even X1) X1",
+        "suspend_sibling": { "goal_text": "even X1", "goal_id": 19 },
+        "suspend_stack": [
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "suspend" ] ],
+            "step_id": 13,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 16,
+                    "column": 0,
+                    "character": 252
+                  }
+                ]
+              }
+            ],
+            "step_id": 12,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(not A0) :- A0, (!), fail.",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "builtin.elpi",
+                    "line": 52,
+                    "column": 0,
+                    "character": 609
+                  }
+                ]
+              }
+            ],
+            "step_id": 11,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 19,
+                    "column": 0,
+                    "character": 353
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Grey"
+  },
+  {
+    "step_id": 14,
+    "runtime_id": 0,
+    "step": [
+      "CHR",
+      {
+        "chr_failed_attempts": [
+          {
+            "chr_text": " \\ (even A0) (odd A0) | (odd z) <=> (true)",
+            "chr_loc": {
+              "filename": "tests/sources/trace_chr.elpi",
+              "line": 2,
+              "column": 3,
+              "character": 25
+            },
+            "chr_condition_cards": [
+              {
+                "step_id": 0,
+                "runtime_id": 1,
+                "step": [ "Init", { "goal_text": "odd z", "goal_id": 21 } ],
+                "color": "Grey"
+              },
+              {
+                "step_id": 1,
+                "runtime_id": 1,
+                "step": [
+                  "Inference",
+                  {
+                    "current_goal_id": 21,
+                    "current_goal_text": "odd z",
+                    "current_goal_predicate": "odd",
+                    "failed_attempts": [],
+                    "successful_attempts": [],
+                    "more_successful_attempts": [],
+                    "stack": []
+                  }
+                ],
+                "color": "Red"
+              }
+            ]
+          }
+        ],
+        "chr_successful_attempts": [
+          {
+            "chr_attempt": {
+              "chr_text": " \\ (even A0) (odd A0) | (odd (s z)) <=> (fail)",
+              "chr_loc": {
+                "filename": "tests/sources/trace_chr.elpi",
+                "line": 3,
+                "column": 3,
+                "character": 71
+              },
+              "chr_condition_cards": [
+                {
+                  "step_id": 0,
+                  "runtime_id": 2,
+                  "step": [
+                    "Init",
+                    { "goal_text": "odd (s z)", "goal_id": 23 }
+                  ],
+                  "color": "Grey"
+                },
+                {
+                  "step_id": 1,
+                  "runtime_id": 2,
+                  "step": [
+                    "Inference",
+                    {
+                      "current_goal_id": 23,
+                      "current_goal_text": "odd (s z)",
+                      "current_goal_predicate": "odd",
+                      "failed_attempts": [],
+                      "successful_attempts": [
+                        {
+                          "attempt": {
+                            "rule": [
+                              "UserRule",
+                              {
+                                "rule_text": "(odd (s A0)) :- (even A0).",
+                                "rule_loc": [
+                                  "File",
+                                  {
+                                    "filename":
+                                      "tests/sources/trace_chr.elpi",
+                                    "line": 13,
+                                    "column": 0,
+                                    "character": 209
+                                  }
+                                ]
+                              }
+                            ],
+                            "events": [ [ "Assign", "A0 := z" ] ]
+                          },
+                          "siblings": [
+                            { "goal_text": "even z", "goal_id": 24 }
+                          ],
+                          "siblings_aggregated_outcome": "Success"
+                        }
+                      ],
+                      "more_successful_attempts": [],
+                      "stack": [
+                        {
+                          "rule": [
+                            "UserRule",
+                            {
+                              "rule_text": "(odd (s A0)) :- (even A0).",
+                              "rule_loc": [
+                                "File",
+                                {
+                                  "filename": "tests/sources/trace_chr.elpi",
+                                  "line": 13,
+                                  "column": 0,
+                                  "character": 209
+                                }
+                              ]
+                            }
+                          ],
+                          "step_id": 1,
+                          "runtime_id": 2
+                        }
+                      ]
+                    }
+                  ],
+                  "color": "Green"
+                },
+                {
+                  "step_id": 2,
+                  "runtime_id": 2,
+                  "step": [
+                    "Inference",
+                    {
+                      "current_goal_id": 24,
+                      "current_goal_text": "even z",
+                      "current_goal_predicate": "even",
+                      "failed_attempts": [],
+                      "successful_attempts": [
+                        {
+                          "attempt": {
+                            "rule": [
+                              "UserRule",
+                              {
+                                "rule_text": "(even z) :- .",
+                                "rule_loc": [
+                                  "File",
+                                  {
+                                    "filename":
+                                      "tests/sources/trace_chr.elpi",
+                                    "line": 11,
+                                    "column": 0,
+                                    "character": 200
+                                  }
+                                ]
+                              }
+                            ],
+                            "events": []
+                          },
+                          "siblings": [],
+                          "siblings_aggregated_outcome": "Success"
+                        }
+                      ],
+                      "more_successful_attempts": [],
+                      "stack": [
+                        {
+                          "rule": [
+                            "UserRule",
+                            {
+                              "rule_text": "(even z) :- .",
+                              "rule_loc": [
+                                "File",
+                                {
+                                  "filename": "tests/sources/trace_chr.elpi",
+                                  "line": 11,
+                                  "column": 0,
+                                  "character": 200
+                                }
+                              ]
+                            }
+                          ],
+                          "step_id": 2,
+                          "runtime_id": 2
+                        },
+                        {
+                          "rule": [
+                            "UserRule",
+                            {
+                              "rule_text": "(odd (s A0)) :- (even A0).",
+                              "rule_loc": [
+                                "File",
+                                {
+                                  "filename": "tests/sources/trace_chr.elpi",
+                                  "line": 13,
+                                  "column": 0,
+                                  "character": 209
+                                }
+                              ]
+                            }
+                          ],
+                          "step_id": 1,
+                          "runtime_id": 2
+                        }
+                      ]
+                    }
+                  ],
+                  "color": "Green"
+                }
+              ]
+            },
+            "chr_removed_goals": [ 19, 14 ],
+            "chr_new_goals": [ { "goal_text": "_ => fail", "goal_id": 25 } ]
+          }
+        ],
+        "chr_store_before": [
+          { "goal_text": " even X1  /* suspended on X1 */", "goal_id": 19 },
+          { "goal_text": " odd X1  /* suspended on X1 */", "goal_id": 14 }
+        ],
+        "chr_store_after": []
+      }
+    ],
+    "color": "Grey"
+  },
+  {
+    "step_id": 15,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 25,
+        "current_goal_text": "_ => fail",
+        "current_goal_predicate": "=>",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+              "events": []
+            },
+            "siblings": [ { "goal_text": "fail", "goal_id": 26 } ],
+            "siblings_aggregated_outcome": "Fail"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "step_id": 15,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Red"
+  },
+  {
+    "step_id": 16,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 26,
+        "current_goal_text": "fail",
+        "current_goal_predicate": "fail",
+        "failed_attempts": [],
+        "successful_attempts": [],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "step_id": 15,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Red"
+  },
+  {
+    "step_id": 17,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 8,
+        "current_goal_text": "not (even X1)",
+        "current_goal_predicate": "not",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                {
+                  "rule_text": "(not _) :- .",
+                  "rule_loc": [
+                    "File",
+                    {
+                      "filename": "builtin.elpi",
+                      "line": 54,
+                      "column": 0,
+                      "character": 631
+                    }
+                  ]
+                }
+              ],
+              "events": []
+            },
+            "siblings": [],
+            "siblings_aggregated_outcome": "Success"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "(not _) :- .",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "builtin.elpi",
+                    "line": 54,
+                    "column": 0,
+                    "character": 631
+                  }
+                ]
+              }
+            ],
+            "step_id": 17,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text":
+                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_chr.elpi",
+                    "line": 19,
+                    "column": 0,
+                    "character": 353
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Green"
+  }
+]

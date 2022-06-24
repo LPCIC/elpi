@@ -5,12 +5,13 @@
 
 module F = Format
 
+module IntMap = Map.Make(struct type t = int let compare x y = x - y end)
 module StrMap = Map.Make(String)
 module Str = Re.Str
 
 let debug = ref false
 let where_loc = ref ("",0,max_int)
-let cur_step = ref StrMap.empty
+let cur_step = ref IntMap.empty
 let filter = ref []
 let fonly = ref []
 let ponly = ref []
@@ -102,22 +103,26 @@ end
 
 module Trace = struct
 
-let get_cur_step k =
-  try StrMap.find k !cur_step
-  with Not_found ->
-  try StrMap.find "run" !cur_step
+let get_cur_step ~runtime_id k =
+  try
+    let m = IntMap.find runtime_id !cur_step in
+    try StrMap.find k m
+    with Not_found ->
+    try StrMap.find "run" m
+    with Not_found -> 0
   with Not_found -> 0
 
-let condition k =
+let condition ~runtime_id k =
   (* -trace-on *)
   !debug &&
     (* -trace-at *)
     let loc, first_step, last_step = !where_loc in
     ((!hot && k <> loc) ||
        (k = loc &&
-       let cur_step = get_cur_step k in
+       let cur_step = get_cur_step ~runtime_id k in
        hot := cur_step >= first_step && cur_step <= last_step;
-       !hot))
+       !hot) ||
+    (get_cur_step ~runtime_id:0 "run" = 0 && first_step = 0 && k = "user:newgoal"))
     (* -trace-only *)
     && (!fonly = [] || List.exists (fun p -> Str.string_match p k 0) !fonly)
     (* -trace-skip *)
@@ -130,7 +135,7 @@ let condition k =
             List.exists (fun p -> Str.string_match p pred 0) !ponly)
 
 let init ?(where="",0,max_int) ?(skip=[]) ?(only=[]) ?(only_pred=[]) b =
-  cur_step := StrMap.empty;
+  cur_step := IntMap.empty;
   debug := b;
   filter := List.map Str.regexp skip;
   fonly := List.map Str.regexp only;
@@ -139,23 +144,32 @@ let init ?(where="",0,max_int) ?(skip=[]) ?(only=[]) ?(only_pred=[]) b =
   hot := false;
 ;;
 
-let incr_cur_step k =
-  let n = get_cur_step k in
-  cur_step := StrMap.add k (n+1) !cur_step
+let incr_cur_step ~runtime_id k =
+  let n = get_cur_step ~runtime_id k in
+  let n = n + 1 in
+  try
+    let m = IntMap.find runtime_id !cur_step in
+    let m = StrMap.add k n m in
+    cur_step := IntMap.add runtime_id m !cur_step
+  with Not_found ->
+    let m = StrMap.empty in
+    let m = StrMap.add k n m in
+    cur_step := IntMap.add runtime_id m !cur_step
+
 
 end
 
 let enter ~runtime_id k payload =
-  Trace.incr_cur_step k;
-  if Trace.condition k then begin
+  Trace.incr_cur_step ~runtime_id k;
+  if Trace.condition ~runtime_id k then begin
     Perf.collect_perf_enter k;
     if not !trace_noprint then
-      !printer { runtime_id; goal_id = 0; name = k; step = Trace.get_cur_step k; kind = Start; payload = [J((fun fmt () -> payload fmt),())] }
+      !printer { runtime_id; goal_id = 0; name = k; step = Trace.get_cur_step ~runtime_id k; kind = Start; payload = [J((fun fmt () -> payload fmt),())] }
   end
 
 let info ~runtime_id ?(goal_id=0) k payload =
- if not !trace_noprint && Trace.condition k then
-   !printer { runtime_id; goal_id ; name = k; step = Trace.get_cur_step k; kind = Info; payload }
+ if not !trace_noprint && Trace.condition ~runtime_id k then
+   !printer { runtime_id; goal_id ; name = k; step = Trace.get_cur_step ~runtime_id k; kind = Info; payload }
 
 
 exception TREC_CALL of Obj.t * Obj.t (* ('a -> 'b) * 'a *)
@@ -167,10 +181,10 @@ let pr_exc = function
 
 let exit ~runtime_id k tailcall e time =
   let e = match e with None -> OK | Some x -> x in
-  if Trace.condition k then begin
+  if Trace.condition ~runtime_id k then begin
     Perf.collect_perf_exit time;
     if not !trace_noprint then
-      !printer { runtime_id; goal_id = 0; name = k; step = Trace.get_cur_step k; kind = Stop { cause = (if tailcall then "->" else pr_exc e); time }; payload = [J((fun _ _ -> ()),())] }
+      !printer { runtime_id; goal_id = 0; name = k; step = Trace.get_cur_step ~runtime_id k; kind = Stop { cause = (if tailcall then "->" else pr_exc e); time }; payload = [J((fun _ _ -> ()),())] }
   end
 
 (* Json *)
@@ -230,11 +244,11 @@ let pp_kind fmt = function
 
 let print_json fmt  = (); fun { runtime_id; goal_id; kind; name; step; payload } ->
   pp_d fmt [
+    "step", J(pp_i,step);
     "kind", J(pp_kind,kind);
     "goal_id", J(pp_i,goal_id);
     "runtime_id", J(pp_i,runtime_id);
     "name", J(pp_s,name);
-    "step", J(pp_i,step);
     "payload", J(pp_as, payload)
   ];
   F.pp_print_newline fmt ();
@@ -273,13 +287,51 @@ let set_trace_output format formatter =
   | JSON ->
       printer := print_json formatter
 
+let output_file = ref None
+
+let end_trace ~runtime_id =
+  if runtime_id = 0 then
+    match !output_file with
+    | None -> ()
+    | Some(`File(tmp,final)) -> Sys.rename tmp final
+    | Some(`Socket i) -> Unix.close i
+
+let fmt_of_file s =
+  try
+         if s = "stdout" then F.std_formatter
+    else if s = "stderr" then F.err_formatter
+    else if s.[0] = '/' || s.[0] = '.' then begin
+      let file = s in
+      let tmp_file = s ^".tmp" in
+      output_file := Some (`File(tmp_file,file));
+      F.formatter_of_out_channel (open_out tmp_file)
+    end else
+        let n = String.index s ':' in
+        let host = String.sub s 0 n in
+        let port = String.sub s (n+1) (String.length s - n - 1) in
+        let open Unix in
+        match getaddrinfo host port [AI_FAMILY PF_INET;AI_SOCKTYPE SOCK_STREAM] with
+        | [] -> raise Not_found
+        | { ai_family ; ai_socktype ; ai_protocol ; ai_addr; _ } :: _ ->
+            let s = socket ai_family ai_socktype ai_protocol in
+            Unix.connect s ai_addr;
+            output_file := Some (`Socket s);
+            F.formatter_of_out_channel (Unix.out_channel_of_descr s)
+  with e ->
+     Printf.eprintf "error: %s\n" (Printexc.to_string e);
+     F.err_formatter
+
+let set_trace_output_file format file =
+  let formatter = fmt_of_file file in
+  set_trace_output format formatter 
 
 (* we should make another file... *)
 let collecting_stats = ref false
 let logs = ref []
-let log name key value =
+let log ~runtime_id name key value =
   if !collecting_stats then
-    logs := (name,key,Trace.get_cur_step "run",value) :: !logs
+    logs := (name,key,Trace.get_cur_step ~runtime_id "run",value) :: !logs
+
 let () =
   at_exit (fun () ->
     if !logs != [] then begin
@@ -313,25 +365,6 @@ programs is: -trace-on -trace-at 1 9999 -trace-only '\(run\|select\|user:\)'
 |}
 ;;
 
-let fmt_of_file s = try
-       if s = "stdout" then F.std_formatter
-  else if s = "stderr" then F.err_formatter
-  else if s.[0] = '/' || s.[0] = '.' then F.formatter_of_out_channel (open_out s)
-  else
-      let n = String.index s ':' in
-      let host = String.sub s 0 n in
-      let port = String.sub s (n+1) (String.length s - n - 1) in
-      let open Unix in
-      match getaddrinfo host port [AI_FAMILY PF_INET;AI_SOCKTYPE SOCK_STREAM] with
-      | [] -> raise Not_found
-      | { ai_family ; ai_socktype ; ai_protocol ; ai_addr; _ } :: _ ->
-          let s = socket ai_family ai_socktype ai_protocol in
-          Unix.connect s ai_addr;
-          F.formatter_of_out_channel (Unix.out_channel_of_descr s)
-  with e ->
-    Printf.eprintf "error: %s\n" (Printexc.to_string e);
-    F.err_formatter
-
 let parse_argv argv =
   let on = ref false in
   let where = ref ("run",0,0) in
@@ -351,10 +384,10 @@ let parse_argv argv =
          aux rest
        end
     | "-trace-on" :: "tty" :: file :: rest ->
-         set_trace_output TTY (fmt_of_file file);
+         set_trace_output_file TTY file;
          trace_noprint := false; on := true; aux rest
     | "-trace-on" :: "json" :: file :: rest ->
-         set_trace_output JSON (fmt_of_file file);
+         set_trace_output_file JSON file;
          trace_noprint := false; on := true; aux rest
     | "-trace-on" :: rest -> trace_noprint := false; on := true; aux rest
     | "-stats-on" :: rest -> collecting_stats := true; aux rest
@@ -383,4 +416,4 @@ let parse_argv argv =
 ;;
 
 let set_cur_pred x = cur_pred := x
-let get_cur_step x = Trace.get_cur_step x
+let get_cur_step ~runtime_id x = Trace.get_cur_step ~runtime_id x

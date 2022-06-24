@@ -1,0 +1,779 @@
+[
+  {
+    "step_id": 0,
+    "runtime_id": 0,
+    "step": [ "Init", { "goal_text": "main", "goal_id": 4 } ],
+    "color": "Grey"
+  },
+  {
+    "step_id": 1,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 4,
+        "current_goal_text": "main",
+        "current_goal_predicate": "main",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                {
+                  "rule_text": "main :- p.",
+                  "rule_loc": [
+                    "File",
+                    {
+                      "filename": "tests/sources/trace_cut.elpi",
+                      "line": 12,
+                      "column": 0,
+                      "character": 78
+                    }
+                  ]
+                }
+              ],
+              "events": []
+            },
+            "siblings": [ { "goal_text": "p", "goal_id": 5 } ],
+            "siblings_aggregated_outcome": "Fail"
+          }
+        ],
+        "more_successful_attempts": [ 7 ],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- p.",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_cut.elpi",
+                    "line": 12,
+                    "column": 0,
+                    "character": 78
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "YellowRed"
+  },
+  {
+    "step_id": 2,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 5,
+        "current_goal_text": "p",
+        "current_goal_predicate": "p",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                {
+                  "rule_text": "p :- fail.",
+                  "rule_loc": [
+                    "File",
+                    {
+                      "filename": "tests/sources/trace_cut.elpi",
+                      "line": 3,
+                      "column": 0,
+                      "character": 9
+                    }
+                  ]
+                }
+              ],
+              "events": []
+            },
+            "siblings": [ { "goal_text": "fail", "goal_id": 6 } ],
+            "siblings_aggregated_outcome": "Fail"
+          }
+        ],
+        "more_successful_attempts": [ 4 ],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "p :- fail.",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_cut.elpi",
+                    "line": 3,
+                    "column": 0,
+                    "character": 9
+                  }
+                ]
+              }
+            ],
+            "step_id": 2,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- p.",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_cut.elpi",
+                    "line": 12,
+                    "column": 0,
+                    "character": 78
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "YellowRed"
+  },
+  {
+    "step_id": 3,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 6,
+        "current_goal_text": "fail",
+        "current_goal_predicate": "fail",
+        "failed_attempts": [],
+        "successful_attempts": [],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "p :- fail.",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_cut.elpi",
+                    "line": 3,
+                    "column": 0,
+                    "character": 9
+                  }
+                ]
+              }
+            ],
+            "step_id": 2,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- p.",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_cut.elpi",
+                    "line": 12,
+                    "column": 0,
+                    "character": 78
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Red"
+  },
+  {
+    "step_id": 4,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 5,
+        "current_goal_text": "p (! !)",
+        "current_goal_predicate": "p",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                {
+                  "rule_text": "p :- (!), fail.",
+                  "rule_loc": [
+                    "File",
+                    {
+                      "filename": "tests/sources/trace_cut.elpi",
+                      "line": 4,
+                      "column": 0,
+                      "character": 20
+                    }
+                  ]
+                }
+              ],
+              "events": []
+            },
+            "siblings": [
+              { "goal_text": "!", "goal_id": 7 },
+              { "goal_text": "fail", "goal_id": 8 }
+            ],
+            "siblings_aggregated_outcome": "Fail"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "p :- (!), fail.",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_cut.elpi",
+                    "line": 4,
+                    "column": 0,
+                    "character": 20
+                  }
+                ]
+              }
+            ],
+            "step_id": 4,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- p.",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_cut.elpi",
+                    "line": 12,
+                    "column": 0,
+                    "character": 78
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Red"
+  },
+  {
+    "step_id": 5,
+    "runtime_id": 0,
+    "step": [
+      "Cut",
+      {
+        "cut_goal_id": 7,
+        "cut_victims": [
+          {
+            "cut_branch_for_goal": { "goal_text": "p", "goal_id": 5 },
+            "cut_branch": {
+              "rule_text": "p :- .",
+              "rule_loc": [
+                "File",
+                {
+                  "filename": "tests/sources/trace_cut.elpi",
+                  "line": 5,
+                  "column": 0,
+                  "character": 34
+                }
+              ]
+            }
+          },
+          {
+            "cut_branch_for_goal": { "goal_text": "p", "goal_id": 5 },
+            "cut_branch": {
+              "rule_text": "p :- (print 1).",
+              "rule_loc": [
+                "File",
+                {
+                  "filename": "tests/sources/trace_cut.elpi",
+                  "line": 6,
+                  "column": 0,
+                  "character": 37
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "color": "Grey"
+  },
+  {
+    "step_id": 6,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 8,
+        "current_goal_text": "fail",
+        "current_goal_predicate": "fail",
+        "failed_attempts": [],
+        "successful_attempts": [],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "p :- (!), fail.",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_cut.elpi",
+                    "line": 4,
+                    "column": 0,
+                    "character": 20
+                  }
+                ]
+              }
+            ],
+            "step_id": 4,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- p.",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_cut.elpi",
+                    "line": 12,
+                    "column": 0,
+                    "character": 78
+                  }
+                ]
+              }
+            ],
+            "step_id": 1,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Red"
+  },
+  {
+    "step_id": 7,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 4,
+        "current_goal_text": "main (! !)",
+        "current_goal_predicate": "main",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                {
+                  "rule_text": "main :- q, (!), (q => (q :- !) => q).",
+                  "rule_loc": [
+                    "File",
+                    {
+                      "filename": "tests/sources/trace_cut.elpi",
+                      "line": 13,
+                      "column": 0,
+                      "character": 89
+                    }
+                  ]
+                }
+              ],
+              "events": []
+            },
+            "siblings": [
+              { "goal_text": "q", "goal_id": 9 },
+              { "goal_text": "!", "goal_id": 10 },
+              { "goal_text": "q => (q :- !) => q", "goal_id": 11 }
+            ],
+            "siblings_aggregated_outcome": "Fail"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- q, (!), (q => (q :- !) => q).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_cut.elpi",
+                    "line": 13,
+                    "column": 0,
+                    "character": 89
+                  }
+                ]
+              }
+            ],
+            "step_id": 7,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Red"
+  },
+  {
+    "step_id": 8,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 9,
+        "current_goal_text": "q",
+        "current_goal_predicate": "q",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                {
+                  "rule_text": "q :- .",
+                  "rule_loc": [
+                    "File",
+                    {
+                      "filename": "tests/sources/trace_cut.elpi",
+                      "line": 9,
+                      "column": 0,
+                      "character": 60
+                    }
+                  ]
+                }
+              ],
+              "events": []
+            },
+            "siblings": [],
+            "siblings_aggregated_outcome": "Success"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "q :- .",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_cut.elpi",
+                    "line": 9,
+                    "column": 0,
+                    "character": 60
+                  }
+                ]
+              }
+            ],
+            "step_id": 8,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- q, (!), (q => (q :- !) => q).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_cut.elpi",
+                    "line": 13,
+                    "column": 0,
+                    "character": 89
+                  }
+                ]
+              }
+            ],
+            "step_id": 7,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Green"
+  },
+  {
+    "step_id": 9,
+    "runtime_id": 0,
+    "step": [
+      "Cut",
+      {
+        "cut_goal_id": 10,
+        "cut_victims": [
+          {
+            "cut_branch_for_goal": { "goal_text": "q", "goal_id": 9 },
+            "cut_branch": {
+              "rule_text": "q :- (print 2).",
+              "rule_loc": [
+                "File",
+                {
+                  "filename": "tests/sources/trace_cut.elpi",
+                  "line": 10,
+                  "column": 0,
+                  "character": 63
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "color": "Grey"
+  },
+  {
+    "step_id": 10,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 11,
+        "current_goal_text": "q => (q :- !) => q",
+        "current_goal_predicate": "=>",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+              "events": []
+            },
+            "siblings": [ { "goal_text": "(q :- !) => q", "goal_id": 12 } ],
+            "siblings_aggregated_outcome": "Fail"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "step_id": 10,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- q, (!), (q => (q :- !) => q).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_cut.elpi",
+                    "line": 13,
+                    "column": 0,
+                    "character": 89
+                  }
+                ]
+              }
+            ],
+            "step_id": 7,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Red"
+  },
+  {
+    "step_id": 11,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 12,
+        "current_goal_text": "(q :- !) => q",
+        "current_goal_predicate": "=>",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+              "events": []
+            },
+            "siblings": [ { "goal_text": "q", "goal_id": 13 } ],
+            "siblings_aggregated_outcome": "Fail"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "step_id": 11,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "step_id": 10,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- q, (!), (q => (q :- !) => q).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_cut.elpi",
+                    "line": 13,
+                    "column": 0,
+                    "character": 89
+                  }
+                ]
+              }
+            ],
+            "step_id": 7,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Red"
+  },
+  {
+    "step_id": 12,
+    "runtime_id": 0,
+    "step": [
+      "Inference",
+      {
+        "current_goal_id": 13,
+        "current_goal_text": "q",
+        "current_goal_predicate": "q",
+        "failed_attempts": [],
+        "successful_attempts": [
+          {
+            "attempt": {
+              "rule": [
+                "UserRule",
+                { "rule_text": "q :- (!).", "rule_loc": [ "Context", 11 ] }
+              ],
+              "events": []
+            },
+            "siblings": [ { "goal_text": "!", "goal_id": 14 } ],
+            "siblings_aggregated_outcome": "Fail"
+          }
+        ],
+        "more_successful_attempts": [],
+        "stack": [
+          {
+            "rule": [
+              "UserRule",
+              { "rule_text": "q :- (!).", "rule_loc": [ "Context", 11 ] }
+            ],
+            "step_id": 12,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "step_id": 11,
+            "runtime_id": 0
+          },
+          {
+            "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
+            "step_id": 10,
+            "runtime_id": 0
+          },
+          {
+            "rule": [
+              "UserRule",
+              {
+                "rule_text": "main :- q, (!), (q => (q :- !) => q).",
+                "rule_loc": [
+                  "File",
+                  {
+                    "filename": "tests/sources/trace_cut.elpi",
+                    "line": 13,
+                    "column": 0,
+                    "character": 89
+                  }
+                ]
+              }
+            ],
+            "step_id": 7,
+            "runtime_id": 0
+          }
+        ]
+      }
+    ],
+    "color": "Red"
+  },
+  {
+    "step_id": 13,
+    "runtime_id": 0,
+    "step": [
+      "Cut",
+      {
+        "cut_goal_id": 14,
+        "cut_victims": [
+          {
+            "cut_branch_for_goal": { "goal_text": "q", "goal_id": 13 },
+            "cut_branch": {
+              "rule_text": "q :- .",
+              "rule_loc": [ "Context", 10 ]
+            }
+          },
+          {
+            "cut_branch_for_goal": { "goal_text": "q", "goal_id": 13 },
+            "cut_branch": {
+              "rule_text": "q :- .",
+              "rule_loc": [
+                "File",
+                {
+                  "filename": "tests/sources/trace_cut.elpi",
+                  "line": 9,
+                  "column": 0,
+                  "character": 60
+                }
+              ]
+            }
+          },
+          {
+            "cut_branch_for_goal": { "goal_text": "q", "goal_id": 13 },
+            "cut_branch": {
+              "rule_text": "q :- (print 2).",
+              "rule_loc": [
+                "File",
+                {
+                  "filename": "tests/sources/trace_cut.elpi",
+                  "line": 10,
+                  "column": 0,
+                  "character": 63
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "color": "Grey"
+  }
+]
