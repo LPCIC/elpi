@@ -1,13 +1,15 @@
 
-# UNRELEASED
+# v1.16.0 (June 2022)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.
 Camlp5 8.0 or above is optional.
 
 - Trace:
-  - New `trace.atd` data type description for traces
+  - New `src/trace.atd` data type description for traces
+  - New `src/trace_atd.ts` read/write the trace in `TypeScript`
   - New `elpi-trace-elaborator` tool to turn raw traces into cards to be
-    displayed by a GUI
+    displayed by a GUI. Work is in progress on the `elpi-lang` VS Code
+    extension.
 
 # v1.15.2 (April 2022)
 
