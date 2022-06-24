@@ -4,6 +4,13 @@
 Requires Menhir 20211230 and OCaml 4.08 or above.
 Camlp5 8.0 or above is optional.
 
+- Parser:
+  - Change the character count in the locations is now referring to the
+    beginning of the text, and not the end
+- Printer:
+  - Fix regression not putting parentheses correctly around some applications
+- Doc:
+  - Clarify `InOut` and `ioarg` doc in the API file
 - Trace:
   - New `src/trace.atd` data type description for traces
   - New `src/trace_atd.ts` read/write the trace in `TypeScript`
