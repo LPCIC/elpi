@@ -1,3 +1,10 @@
+# v1.16.1 (June 2022)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+Camlp5 8.0 or above is optional.
+
+- Tests:
+  - Fix temp file creation for trace testing
 
 # v1.16.0 (June 2022)
 
