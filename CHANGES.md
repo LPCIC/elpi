@@ -17,6 +17,11 @@ Camlp5 8.0 or above is optional.
   - New `elpi-trace-elaborator` tool to turn raw traces into cards to be
     displayed by a GUI. Work is in progress on the `elpi-lang` VS Code
     extension.
+  - Change the raw trace as output by the runtime is way more regular w.r.t.
+    what is printed when a rule, or a built in rule/predicate is run, also
+    the runtime_id attribute is now correctly set in all trace objects
+  - Fix the trace file is generated only once the trace is complete, so that
+    tools can watch for the file creation reliably
 
 # v1.15.2 (April 2022)
 
