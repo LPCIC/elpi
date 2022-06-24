@@ -50,7 +50,7 @@
 
 (install
   (section lib)
-  (files builtin.elpi elpi-quoted_syntax.elpi elpi2html.elpi)
+  (files builtin.elpi elpi-quoted_syntax.elpi elpi2html.elpi trace_atd.ts trace.atd)
   (package elpi))
 
 (rule
