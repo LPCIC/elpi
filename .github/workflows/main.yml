@@ -104,11 +104,14 @@ jobs:
           opam exec -- dune subst
           opam exec -- make build DUNE_OPTS='--profile ${{ matrix.profile }}'
           opam exec -- cp _build/install/default/bin/elpi elpi-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}.exe
+          opam exec -- cp _build/install/default/bin/elpi-trace-elaborator elpi-trace-elaborator-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}.exe
 
       - name: Strip binary
         run: |
           opam exec -- chmod u+w ${{ env.workspace }}/elpi-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}.exe
+          opam exec -- chmod u+w ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}.exe
           opam exec -- strip ${{ env.workspace }}/elpi-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}.exe
+          opam exec -- strip ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}.exe
 
 # Artifacts 1 ################################################################
 
@@ -116,7 +119,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: elpi-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}
-          path: elpi-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}.exe
+          path: elpi*-${{ matrix.ocaml-version }}-${{ matrix.parser }}-${{ runner.os }}.exe
 
 # Test ######################################################################
 #
