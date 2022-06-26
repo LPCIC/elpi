@@ -1,7 +1,7 @@
 Playground
 ==========
 
-This page will be used to test hooks in order to run ``elpi`` on code snippets and inject its output within ``sphinx`` documentation sources.
+This page is used to test hooks in order to run ``elpi`` on code snippets and inject its output within ``sphinx`` documentation sources.
 
 Prerequisites
 -------------
@@ -22,19 +22,22 @@ It doesn't hurt to check that ``dune`` runs the locally built ``elpi`` correctly
 Syntax
 ------
 
-Elpi code blocks to be evaluated and injection from ``docs/base`` to ``docs/source`` are conventionally denoted in ``reStructuredText`` as ``.. elpi:: FILE``.
+Elpi code blocks to be evaluated and which output is to be injected from ``docs/base`` to ``docs/source`` are conventionally denoted in ``reStructuredText`` as ``.. elpi:: FILE``.
 
 .. literalinclude:: ../../tests/sources/chr.elpi
    :linenos:
    :language: elpi
 
-The injection engine will:
+The injection engine:
 
-* Retrieve all ``.. elpi::`` directives
-* Change them into ``literalinclude`` in the generated source with relevant options
-* Run ``dune exec elpi -- -test FILE`` on the ``FILE`` containing the ``elpi`` snippet, test or example.
-* Capture its output (``stdout``)
-* Create a ``code-block:: console`` just after it to inject the captured console output
+* Retrieves all ``.. elpi::`` directives
+* Changes them into ``literalinclude`` in the generated source with relevant options
+* Runs ``dune exec elpi -- -test FILE`` on the ``FILE`` containing the ``elpi`` snippet, test or example.
+* Captures its output (``stdout``)
+* Creates a ``code-block:: console`` just after it to inject the captured console output
+* Captures its output (``stderr``)
+* Creates a ``code-block:: console`` just after it to inject the captured console erros
+* In case of an assertion option for the ``elpi`` directive, the output is injected only if matched
 
 Result should look as follows:
 
@@ -71,11 +74,156 @@ Result should look as follows:
 
    State:
 
+Regexp Matching
+---------------
+
+This ``elpi`` directive should pass validation:
+
+.. code-block:: console
+   
+   .. elpi:: ./a.elpi
+      :assert: V = s \(.*\)
+
+.. elpi:: ./a.elpi
+   :assert: V = s \(.*\)
+
+This one should fail validation, only a message stating the regexp matching error will be printed:
+
+.. code-block:: console
+   
+   .. elpi:: ./a.elpi
+      :assert: /(?!)/
+
+.. elpi:: ./a.elpi
+   :assert: /(?!)/
+
 Test Bed
 --------
 
+.. elpi:: ../../tests/sources/accumulate_twice1.elpi
+.. elpi:: ../../tests/sources/accumulate_twice2.elpi
 .. elpi:: ../../tests/sources/accumulated.elpi
-
 .. elpi:: ../../tests/sources/ackermann.elpi
-
+.. elpi:: ../../tests/sources/asclause.elpi
+.. elpi:: ../../tests/sources/beta.elpi
+.. elpi:: ../../tests/sources/block.elpi
 .. elpi:: ../../tests/sources/chr.elpi
+.. elpi:: ../../tests/sources/chrGCD.elpi
+.. elpi:: ../../tests/sources/chrLEQ.elpi
+.. elpi:: ../../tests/sources/chr_nokey.elpi
+.. elpi:: ../../tests/sources/chr_nokey2.elpi
+.. elpi:: ../../tests/sources/chr_not_clique.elpi
+.. elpi:: ../../tests/sources/chr_sem.elpi
+.. elpi:: ../../tests/sources/conj2.elpi
+.. elpi:: ../../tests/sources/ctx_loading.elpi
+.. elpi:: ../../tests/sources/cut.elpi
+.. elpi:: ../../tests/sources/cut2.elpi
+.. elpi:: ../../tests/sources/cut3.elpi
+.. elpi:: ../../tests/sources/cut4.elpi
+.. elpi:: ../../tests/sources/cut5.elpi
+.. elpi:: ../../tests/sources/cut6.elpi
+.. elpi:: ../../tests/sources/deep_indexing.elpi
+.. elpi:: ../../tests/sources/discard.elpi
+.. elpi:: ../../tests/sources/elpi_only_llam.elpi
+.. elpi:: ../../tests/sources/end_comment.elpi
+.. elpi:: ../../tests/sources/eta.elpi
+.. elpi:: ../../tests/sources/eta_as.elpi
+.. elpi:: ../../tests/sources/even-odd.elpi
+.. elpi:: ../../tests/sources/findall.elpi
+.. elpi:: ../../tests/sources/fragment_exit.elpi
+.. elpi:: ../../tests/sources/fragment_exit2.elpi
+.. elpi:: ../../tests/sources/fragment_exit3.elpi
+.. elpi:: ../../tests/sources/general_case.elpi
+.. elpi:: ../../tests/sources/general_case2.elpi
+.. elpi:: ../../tests/sources/general_case3.elpi
+.. elpi:: ../../tests/sources/hc_interp.elpi
+.. elpi:: ../../tests/sources/hdclause.elpi
+.. elpi:: ../../tests/sources/heap_discard.elpi
+.. elpi:: ../../tests/sources/ho.elpi
+.. elpi:: ../../tests/sources/hollight.elpi
+.. elpi:: ../../tests/sources/hollight_legacy.elpi
+.. elpi:: ../../tests/sources/hyp_uvar.elpi
+.. elpi:: ../../tests/sources/impl.elpi
+.. elpi:: ../../tests/sources/impl2.elpi
+.. elpi:: ../../tests/sources/index2.elpi
+.. elpi:: ../../tests/sources/io_colon.elpi
+.. elpi:: ../../tests/sources/lambda.elpi
+.. elpi:: ../../tests/sources/lambda2.elpi
+.. elpi:: ../../tests/sources/lambda3.elpi
+.. elpi:: ../../tests/sources/list_as_conj.elpi
+.. elpi:: ../../tests/sources/list_comma.elpi
+.. elpi:: ../../tests/sources/llam.elpi
+.. elpi:: ../../tests/sources/llamchr.elpi
+.. elpi:: ../../tests/sources/map.elpi
+.. elpi:: ../../tests/sources/map_list.elpi
+.. elpi:: ../../tests/sources/map_list_opt.elpi
+.. elpi:: ../../tests/sources/name_builtin.elpi
+.. elpi:: ../../tests/sources/named_clauses00.elpi
+.. elpi:: ../../tests/sources/named_clauses01.elpi
+.. elpi:: ../../tests/sources/named_clauses02.elpi
+.. elpi:: ../../tests/sources/namespaces00.elpi
+.. elpi:: ../../tests/sources/namespaces01.elpi
+.. elpi:: ../../tests/sources/namespaces02.elpi
+.. elpi:: ../../tests/sources/namespaces03.elpi
+.. elpi:: ../../tests/sources/nil_cons.elpi
+.. elpi:: ../../tests/sources/notation.elpi
+.. elpi:: ../../tests/sources/notation_error.elpi
+.. elpi:: ../../tests/sources/notation_legacy.elpi
+.. elpi:: ../../tests/sources/patternunif.elpi
+.. elpi:: ../../tests/sources/patternunif2.elpi
+.. elpi:: ../../tests/sources/pi.elpi
+.. elpi:: ../../tests/sources/pi3.elpi
+.. elpi:: ../../tests/sources/pi5.elpi
+.. elpi:: ../../tests/sources/pnf.elpi
+.. elpi:: ../../tests/sources/polymorphic_variants.elpi
+.. elpi:: ../../tests/sources/printer.elpi
+.. elpi:: ../../tests/sources/queens.elpi
+.. elpi:: ../../tests/sources/quote_syntax.elpi
+.. elpi:: ../../tests/sources/random.elpi
+.. elpi:: ../../tests/sources/reduce_cbn.elpi
+.. elpi:: ../../tests/sources/reduce_cbv.elpi
+.. elpi:: ../../tests/sources/restriction.elpi
+.. elpi:: ../../tests/sources/restriction3.elpi
+.. elpi:: ../../tests/sources/restriction4.elpi
+.. elpi:: ../../tests/sources/restriction5.elpi
+.. elpi:: ../../tests/sources/restriction6.elpi
+.. elpi:: ../../tests/sources/rev.elpi
+.. elpi:: ../../tests/sources/rev14.elpi
+.. elpi:: ../../tests/sources/same_term.elpi
+.. elpi:: ../../tests/sources/self_assignment.elpi
+.. elpi:: ../../tests/sources/set.elpi
+.. elpi:: ../../tests/sources/shorten.elpi
+.. elpi:: ../../tests/sources/shorten2.elpi
+.. elpi:: ../../tests/sources/shorten_aux.elpi
+.. elpi:: ../../tests/sources/shorten_aux2.elpi
+.. elpi:: ../../tests/sources/shorten_builtin.elpi
+.. elpi:: ../../tests/sources/shorten_trie.elpi
+.. elpi:: ../../tests/sources/spill_and.elpi
+.. elpi:: ../../tests/sources/spill_impl.elpi
+.. elpi:: ../../tests/sources/spill_lam.elpi
+.. elpi:: ../../tests/sources/trace.elpi
+.. elpi:: ../../tests/sources/trace2.elpi
+.. elpi:: ../../tests/sources/trace_chr.elpi
+.. elpi:: ../../tests/sources/trace_cut.elpi
+.. elpi:: ../../tests/sources/trace_findall.elpi
+.. elpi:: ../../tests/sources/trail.elpi
+.. elpi:: ../../tests/sources/typeabbrv.elpi
+.. elpi:: ../../tests/sources/typeabbrv1.elpi
+.. elpi:: ../../tests/sources/typeabbrv10.elpi
+.. elpi:: ../../tests/sources/typeabbrv11.elpi
+.. elpi:: ../../tests/sources/typeabbrv12.elpi
+.. elpi:: ../../tests/sources/typeabbrv2.elpi
+.. elpi:: ../../tests/sources/typeabbrv3.elpi
+.. elpi:: ../../tests/sources/typeabbrv4.elpi
+.. elpi:: ../../tests/sources/typeabbrv5.elpi
+.. elpi:: ../../tests/sources/typeabbrv6.elpi
+.. elpi:: ../../tests/sources/typeabbrv7.elpi
+.. elpi:: ../../tests/sources/typeabbrv8.elpi
+.. elpi:: ../../tests/sources/typeabbrv9.elpi
+.. elpi:: ../../tests/sources/uminus.elpi
+.. elpi:: ../../tests/sources/uvar_chr.elpi
+.. elpi:: ../../tests/sources/var.elpi
+.. elpi:: ../../tests/sources/variadic_declare_constraints.elpi
+.. elpi:: ../../tests/sources/w.elpi
+.. elpi:: ../../tests/sources/w_legacy.elpi
+.. elpi:: ../../tests/sources/zebra.elpi

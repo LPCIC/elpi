@@ -13,9 +13,9 @@ Welcome to Elpi's documentation!
    about
    playground
 
-.. Indices and tables
-.. ==================
-
-.. * :ref:`genindex`
-.. * :ref:`modindex`
-.. * :ref:`search`
+.. toctree::
+   :maxdepth: 2
+   :caption: API:
+   
+   elpi <elpi/index.html#http://>
+   elpi-option-legacy-parser <elpi-option-legacy-parser/index.html#http://>

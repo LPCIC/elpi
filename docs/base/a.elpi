@@ -1,0 +1,7 @@
+type s num -> num.
+type zero num.
+pred ack i:num, i:num, o:num.
+ack zero N V :- !, V = (s N).
+ack M zero V :- !, (s M2) = M, ack M2 (s zero) V.
+ack M N V :- (s M2) = M, (s N2) = N, ack M N2 V2, ack M2 V2 V.
+main :- ack (s (s (s zero))) (s zero) V, print "V =" V.
