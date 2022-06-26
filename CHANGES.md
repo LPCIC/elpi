@@ -1,13 +1,34 @@
-
-# UNRELEASED
+# v1.16.1 (June 2022)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.
 Camlp5 8.0 or above is optional.
 
+- Tests:
+  - Fix temp file creation for trace testing
+
+# v1.16.0 (June 2022)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+Camlp5 8.0 or above is optional.
+
+- Parser:
+  - Change the character count in the locations is now referring to the
+    beginning of the text, and not the end
+- Printer:
+  - Fix regression not putting parentheses correctly around some applications
+- Doc:
+  - Clarify `InOut` and `ioarg` doc in the API file
 - Trace:
-  - New `trace.atd` data type description for traces
+  - New `src/trace.atd` data type description for traces
+  - New `src/trace_atd.ts` read/write the trace in `TypeScript`
   - New `elpi-trace-elaborator` tool to turn raw traces into cards to be
-    displayed by a GUI
+    displayed by a GUI. Work is in progress on the `elpi-lang` VS Code
+    extension.
+  - Change the raw trace as output by the runtime is way more regular w.r.t.
+    what is printed when a rule, or a built in rule/predicate is run, also
+    the runtime_id attribute is now correctly set in all trace objects
+  - Fix the trace file is generated only once the trace is complete, so that
+    tools can watch for the file creation reliably
 
 # v1.15.2 (April 2022)
 
