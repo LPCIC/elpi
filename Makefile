@@ -52,11 +52,21 @@ install:
 doc:
 	dune build $(DUNE_OPTS) @doc
 
-doc-sphinx:
+doc-sphinx: doc
 	cp -r docs/base docs/source
-	python docs/engine/engine.py
+	python3 docs/engine/engine.py
 	cd docs && make html
 	rm -rf docs/source
+	cp -r _build/default/_doc/_html/elpi docs/build/html/
+	cp -r _build/default/_doc/_html/elpi-option-legacy-parser docs/build/html/
+	cp -r _build/default/_doc/_html/highlight.pack.js docs/build/html/
+	cp -r _build/default/_doc/_html/odoc.css docs/build/html/
+
+gh-pages: doc-sphinx
+	rm -rf /tmp/gh-pages
+	cp -r docs/build/html/ /tmp/gh-pages
+	git checkout gh-pages
+	rm -rf * && cp -r /tmp/gh-pages/* ./ && rm -rf /tmp/gh-pages && git add . && git commit -m "Updated gh-pages" && git push origin gh-pages && git checkout feature/doc
 
 clean:
 	rm -rf _build
@@ -121,4 +131,4 @@ menhir-complete-errormsgs:
 menhir-strip-errormsgs:
 	sed -e "/^##/d" -i.bak src/parser/error_messages.txt
 
-.PHONY: tests help install build clean
+.PHONY: tests help install build clean gh-pages

@@ -19,16 +19,24 @@ To match the visuals used in the community (*e.g.* https://coq.inria.fr/distrib/
 
    pip install sphinx-rtd-theme
 
+On debian based systems, one can use the package manager:
+
+.. code-block:: console
+
+   apt install sphinx-doc
+   apt install python3-sphinx-rtd-theme
+   pip install in-place
+
 Extensions
 ----------
 
-This documentation can me use of the following plugins:
+This documentation can make use of the following plugins:
 
 .. code-block:: python
 
    extensions = [
-       'sphinx.ext.intersphinx',
-       'sphinx.ext.githubpages'
+      'sphinx.ext.intersphinx',
+      'sphinx.ext.githubpages'
    ]
 
 Namely, ``intersphinx`` (https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html) can generate links to the documentation of objects in external projects, either explicitly through the external role, or as a fallback resolution for any other cross-reference, and, ``githubpages`` (https://www.sphinx-doc.org/en/master/usage/extensions/githubpages.html#module-sphinx.ext.githubpages) which creates a ``.nojekyll`` file on generated HTML directory to publish the document on GitHub Pages.
@@ -43,3 +51,9 @@ Instead, use the ``doc-sphinx`` target of the source tree's root's ``Makefile`` 
 .. code-block:: python
 
     make doc-sphinx
+ 
+Or, to build and publish the documentation to github pages:
+
+.. code-block:: python
+
+    make gh-pages
