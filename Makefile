@@ -74,7 +74,7 @@ clean:
 	rm -rf docs/build
 
 release: doc-publish
-	dune-release publish distrib elpi
+	dune-release -p elpi
 
 # testing
 tests:
