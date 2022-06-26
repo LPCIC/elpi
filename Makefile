@@ -52,7 +52,7 @@ install:
 doc:
 	dune build $(DUNE_OPTS) @doc
 
-doc-sphinx: doc
+doc-build: doc
 	cp -r docs/base docs/source
 	python3 docs/engine/engine.py
 	cd docs && make html
@@ -62,17 +62,19 @@ doc-sphinx: doc
 	cp -r _build/default/_doc/_html/highlight.pack.js docs/build/html/
 	cp -r _build/default/_doc/_html/odoc.css docs/build/html/
 
-gh-pages: doc-sphinx
+doc-publish: doc-build
 	rm -rf /tmp/gh-pages
 	cp -r docs/build/html/ /tmp/gh-pages
 	git checkout gh-pages
-	rm -rf * && cp -r /tmp/gh-pages/* ./ && rm -rf /tmp/gh-pages && git add . && git commit -m "Updated gh-pages" && git push origin gh-pages && git checkout feature/doc
+	rm -rf * && cp -r /tmp/gh-pages/* ./ && rm -rf /tmp/gh-pages && git add . && git commit -m "Updated gh-pages" && git checkout feature/doc
+#	rm -rf * && cp -r /tmp/gh-pages/* ./ && rm -rf /tmp/gh-pages && git add . && git commit -m "Updated gh-pages" && git push origin gh-pages && git checkout feature/doc
 
 clean:
 	rm -rf _build
+	rm -rf docs/build
 
-release:
-	dune-release -p elpi
+release: doc-publish
+	dune-release publish distrib elpi
 
 # testing
 tests:

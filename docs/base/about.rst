@@ -50,10 +50,10 @@ Instead, use the ``doc-sphinx`` target of the source tree's root's ``Makefile`` 
 
 .. code-block:: python
 
-    make doc-sphinx
+    make doc-build
  
 Or, to build and publish the documentation to github pages:
 
 .. code-block:: python
 
-    make gh-pages
+    make doc-publish
