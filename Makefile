@@ -54,10 +54,10 @@ doc:
 
 doc-build: doc
 	rm -rf docs/build
+	rm -rf docs/source
 	cp -r docs/base docs/source
 	python3 docs/engine/engine.py
 	cd docs && make html
-	rm -rf docs/source
 	cp -r _build/default/_doc/_html/elpi docs/build/html/
 	cp -r _build/default/_doc/_html/elpi-option-legacy-parser docs/build/html/
 	cp -r _build/default/_doc/_html/highlight.pack.js docs/build/html/
