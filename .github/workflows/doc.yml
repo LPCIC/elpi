@@ -24,7 +24,7 @@ jobs:
 
       - name: Install ocaml
         env:
-          - OPAMYES: true
+          OPAMYES: true
         run: |
           sudo apt install opam
           opam init
@@ -34,7 +34,7 @@ jobs:
 
       - name: Build
         env:
-          - OPAMYES: true
+          OPAMYES: true
         run: |
           eval $(opam env)
           make doc-build
