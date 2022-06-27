@@ -62,6 +62,7 @@ doc-build: doc
 	cp -r _build/default/_doc/_html/elpi-option-legacy-parser docs/build/html/
 	cp -r _build/default/_doc/_html/highlight.pack.js docs/build/html/
 	cp -r _build/default/_doc/_html/odoc.css docs/build/html/
+	touch docs/build/html/.nojekyll
 
 doc-publish: doc-build
 	rm -rf /tmp/gh-pages
