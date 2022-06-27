@@ -1,0 +1,26 @@
+name: Doc workflow
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    name: Build doc
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install sphinx
+        run: |
+          apt install sphinx-doc
+          apt install python3-sphinx-rtd-theme
+          pip install in-place
+
+      - name: Build
+        run: make doc-build
