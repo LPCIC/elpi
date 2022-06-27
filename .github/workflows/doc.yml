@@ -18,9 +18,9 @@ jobs:
 
       - name: Install sphinx
         run: |
-          apt install sphinx-doc
-          apt install python3-sphinx-rtd-theme
-          pip install in-place
+          sudo apt install sphinx-doc
+          sudo apt install python3-sphinx-rtd-theme
+          pip3 install in-place
 
       - name: Build
         run: make doc-build
