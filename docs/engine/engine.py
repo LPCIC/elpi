@@ -36,7 +36,7 @@ def process(source, base_path):
 
             if line.startswith(atext):
                 index += 1
-                file.write('')
+                #file.write('')
                 continue
 
             if line.startswith(stext):
