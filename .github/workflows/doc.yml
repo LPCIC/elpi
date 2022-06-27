@@ -31,4 +31,6 @@ jobs:
           opam install ./elpi.opam --deps-only
 
       - name: Build
-        run: make doc-build
+        run: |
+          eval $(opam env)
+          make doc-build
