@@ -22,5 +22,13 @@ jobs:
           sudo apt install python3-sphinx-rtd-theme
           pip3 install in-place
 
+      - name: Install ocaml
+        run: |
+          sudo apt install opam
+          opam init
+          opam switch create 4.09.1
+          eval $(opam env)
+          opam install ./elpi.opam --deps-only
+
       - name: Build
         run: make doc-build
