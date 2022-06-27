@@ -6,12 +6,12 @@
 Welcome to Elpi's documentation!
 ================================
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-
-   about
-   playground
+.. .. toctree:
+..    :maxdepth: 2
+..    :caption: Contents:
+.. 
+..    about
+..    playground
 
 .. toctree::
    :maxdepth: 2
@@ -19,3 +19,4 @@ Welcome to Elpi's documentation!
    
    elpi <elpi/index.html#http://>
    elpi-option-legacy-parser <elpi-option-legacy-parser/index.html#http://>
+
