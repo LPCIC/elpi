@@ -23,6 +23,8 @@ jobs:
           pip3 install in-place
 
       - name: Install ocaml
+        env:
+          - OPAMYES: true
         run: |
           sudo apt install opam
           opam init
@@ -31,6 +33,8 @@ jobs:
           opam install ./elpi.opam --deps-only
 
       - name: Build
+        env:
+          - OPAMYES: true
         run: |
           eval $(opam env)
           make doc-build
