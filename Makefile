@@ -73,9 +73,10 @@ clean:
 	rm -rf _build
 	rm -rf docs/build
 
-release: doc-publish
+release:
 	dune-release -p elpi
-
+ 	$(MAKE) doc-publish
+	
 # testing
 tests:
 	$(MAKE) build
