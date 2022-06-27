@@ -53,6 +53,7 @@ doc:
 	dune build $(DUNE_OPTS) @doc
 
 doc-build: doc
+	rm -rf docs/build
 	cp -r docs/base docs/source
 	python3 docs/engine/engine.py
 	cd docs && make html
@@ -75,8 +76,8 @@ clean:
 
 release:
 	dune-release -p elpi
- 	$(MAKE) doc-publish
-	
+	$(MAKE) doc-publish
+
 # testing
 tests:
 	$(MAKE) build
