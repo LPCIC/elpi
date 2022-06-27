@@ -68,7 +68,7 @@ doc-publish: doc-build
 	cp -r docs/build/html/ /tmp/gh-pages
 	OLD_BRANCH=`git branch --show-current`; \
 	git checkout gh-pages && rm -rf * && cp -r /tmp/gh-pages/* ./ && rm -rf /tmp/gh-pages && git add . && git commit -m "Updated gh-pages" && git checkout $$OLD_BRANCH
-	echo "uploading: enter to continue, ^C to abort"; read DUMMY; git push origin gh-pages
+	@echo "uploading: enter to continue, ^C to abort"; read DUMMY; git push origin gh-pages
 
 clean:
 	rm -rf _build
