@@ -626,7 +626,9 @@ end = struct
         | `Cut (cut_goal_id,cut_victims) ->
              { step_id; step = `Cut { cut_goal_id; cut_victims }; runtime_id; color = `Grey }
       in
-      pre_cards |> List.filter (fun (_,(_,_,rid)) -> rid = 0) |> List.map pre_card2card
+
+      let min_rid = List.fold_left (fun acc (_,(_,_,rid)) -> min acc rid) max_int pre_cards in
+      pre_cards |> List.filter (fun (_,(_,_,rid)) -> rid = min_rid) |> List.map pre_card2card
       
 end
 
