@@ -31,6 +31,7 @@ jobs:
           opam switch create 4.09.1
           eval $(opam env)
           opam install ./elpi.opam --deps-only
+          opam install odoc
 
       - name: Build
         env:
