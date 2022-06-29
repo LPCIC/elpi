@@ -1,3 +1,12 @@
+# v1.16.2 (June 2022)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+Camlp5 8.0 or above is optional.
+
+- Trace Elaborator:
+  - Fix json encoding of utf8 characters
+  - Fix runtime_id does not necessarily start at 0
+
 # v1.16.1 (June 2022)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.
