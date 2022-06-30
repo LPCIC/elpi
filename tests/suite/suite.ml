@@ -423,6 +423,15 @@ let () = Runner.declare
 
 end
 
+let match_rex rex input_line =
+  let b = ref false in
+  try while true do
+    let l = input_line () in
+    try ignore(Str.search_forward rex l 0); b := true
+    with Not_found -> ()
+  done; !b
+  with End_of_file -> !b
+
 module ElpiTraceElab = struct
   let is_elpi_elab =
     let rex = Str.regexp "elpi-trace-elaborator" in
@@ -442,20 +451,26 @@ module ElpiTraceElab = struct
         match test.Test.source_json with Some x -> x | _ -> assert false in
       let input = sources ^ source in
       Util.write log (Printf.sprintf "input: %s\n" input);
-      let output_file =
+      let outcome, outcomey =
         match test.Test.expectation with
-        | Test.SuccessOutputFile { sample } -> Util.open_file_w sample, sample
-        | _ -> Printf.eprintf "ElpiTraceElab only supoprts SuccessOutputFile tests"; exit 1 in
-      let output_file_tmp = Util.open_dummy_log () in
-      Util.write log (Printf.sprintf "output: %s\n" (snd output_file));
-      let log = Util.open_log ~executable test in
-      let outcome = Util.exec ~timeout ~timetool ~input ~executable ~env ~error:log ~log:output_file_tmp ~args:[] () in
-      let outcomey = Util.exec ~timeout ~timetool ~input:(snd output_file_tmp) ~executable:"ydump" ~env ~log:output_file ~args:[] () in
+        | Test.SuccessOutputFile { sample } ->
+            let output_file = Util.open_file_w sample, sample in
+            let output_file_tmp = Util.open_dummy_log () in
+            Util.write log (Printf.sprintf "output: %s\n" (snd output_file));
+            let outcome = Util.exec ~timeout ~timetool ~input ~executable ~env ~error:log ~log:output_file_tmp ~args:[] () in
+            let outcomey = Some (Util.exec ~timeout ~timetool ~input:(snd output_file_tmp) ~executable:"ydump" ~env ~log:output_file ~args:[] ()) in
+            outcome, outcomey
+        | Test.FailureOutput _ ->
+            let outcome = Util.exec ~timeout ~timetool ~input ~executable ~env ~log ~close_output:false ~args:[] () in
+            outcome, None
+        | _ -> Printf.eprintf "ElpiTraceElab only supoprts SuccessOutputFile / FailureOutput tests"; exit 1 in
       let typechecking = 0.0 in
       let execution = 0.0 in
       let rc =
         match outcome, outcomey, test.Test.expectation with
-        | Util.Exit(0,walltime,mem), Util.Exit(0,_,_), Test.SuccessOutputFile { sample; adjust; reference } when match_file ~log sample adjust (sources^"/"^reference) ->
+        | Util.Exit(0,walltime,mem), Some(Util.Exit(0,_,_)), Test.SuccessOutputFile { sample; adjust; reference } when match_file ~log sample adjust (sources^"/"^reference) ->
+            Runner.Success { walltime; typechecking; execution; mem }
+        | Util.Exit(m,walltime,mem), None, Test.FailureOutput rex when m != 0 && Util.with_log log (match_rex rex) ->
             Runner.Success { walltime; typechecking; execution; mem }
         | _ -> Runner.Failure { walltime = 0.0; typechecking; execution = 0.0; mem = 0 }
       in
@@ -550,15 +565,6 @@ let is_dune =
 let is_dune_src = function
   | None -> false
   | Some s -> Filename.check_suffix s ".ml"
-
-let match_rex rex input_line =
-  let b = ref false in
-  try while true do
-    let l = input_line () in
-    try ignore(Str.search_forward rex l 0); b := true
-    with Not_found -> ()
-  done; !b
-  with End_of_file -> !b
 
 let () = Runner.declare
   ~applicable:begin fun ~executable { source_dune; _ } ->

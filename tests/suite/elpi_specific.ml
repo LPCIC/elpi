@@ -371,3 +371,18 @@ let () = declare "trace-browser-elab-cut"
   ~description:"trace elaboration"
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace_cut.elab.json" })
   ()
+
+let sample = Filename.temp_file "broken_trace1.elab.json" ".new"
+let () = declare "trace-browser-elab-broken1"
+  ~source_json:"broken_trace1.json"
+  ~description:"recoverable broken trace elaboration"
+  ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "broken_trace1.elab.json" })
+  ()
+  
+let sample = Filename.temp_file "broken_trace2.elab.json" ".new"
+let () = declare "trace-browser-elab-broken2"
+  ~source_json:"broken_trace2.json"
+  ~description:"fatal broken trace elaboration"
+  ~expectation:(FailureOutput (Str.regexp "broken.*step_id 217.*json object 1857"))
+  ()
+  

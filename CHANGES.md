@@ -1,3 +1,10 @@
+# v1.16.4 (July 2022)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+Camlp5 8.0 or above is optional.
+
+- Fix generation and elaboration of incomplete traces
+
 # v1.16.3 (June 2022)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.
