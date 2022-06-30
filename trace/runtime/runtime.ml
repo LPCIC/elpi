@@ -344,30 +344,56 @@ let end_trace ~runtime_id =
   if runtime_id = 0 then
     match !output_file with
     | None -> ()
-    | Some(`File(tmp,final)) -> Sys.rename tmp final
     | Some(`Socket i) -> Unix.close i
+    | Some(`File(tmp,final)) ->
+        try Sys.rename tmp final
+        with _ ->
+        try
+          let ic = open_in tmp in
+          let oc = open_out final in
+          try (* fallback on copy *)
+            while true do output_byte oc (input_byte ic); done
+          with
+          | End_of_file -> close_out oc; close_in ic
+        with e ->
+          Printf.eprintf "Cannot move nor copy %s to %s: %s\n" tmp final (Printexc.to_string e);
+          Stdlib.exit 1
+
 
 let fmt_of_file s =
+  let of_socket ~host ~port =
+    let open Unix in
+    match getaddrinfo host port [AI_FAMILY PF_INET;AI_SOCKTYPE SOCK_STREAM] with
+    | [] -> raise Not_found
+    | { ai_family ; ai_socktype ; ai_protocol ; ai_addr; _ } :: _ ->
+        let s = socket ai_family ai_socktype ai_protocol in
+        Unix.connect s ai_addr;
+        output_file := Some (`Socket s);
+        F.formatter_of_out_channel (Unix.out_channel_of_descr s) in
+  let of_file ~path:s =
+    let file = s in
+    let tmp_file = s ^".tmp" in
+    output_file := Some (`File(tmp_file,file));
+    F.formatter_of_out_channel (open_out tmp_file) in
+
   try
          if s = "stdout" then F.std_formatter
     else if s = "stderr" then F.err_formatter
     else if s.[0] = '/' || s.[0] = '.' then begin
-      let file = s in
-      let tmp_file = s ^".tmp" in
-      output_file := Some (`File(tmp_file,file));
-      F.formatter_of_out_channel (open_out tmp_file)
+      of_file ~path:s
     end else
-        let n = String.index s ':' in
-        let host = String.sub s 0 n in
-        let port = String.sub s (n+1) (String.length s - n - 1) in
-        let open Unix in
-        match getaddrinfo host port [AI_FAMILY PF_INET;AI_SOCKTYPE SOCK_STREAM] with
-        | [] -> raise Not_found
-        | { ai_family ; ai_socktype ; ai_protocol ; ai_addr; _ } :: _ ->
-            let s = socket ai_family ai_socktype ai_protocol in
-            Unix.connect s ai_addr;
-            output_file := Some (`Socket s);
-            F.formatter_of_out_channel (Unix.out_channel_of_descr s)
+      let n = String.index s ':' in
+      let protocol, rest = String.sub s 0 n, String.sub s (n+1) (String.length s - n - 1)  in
+      if protocol = "file" then
+        let rest = String.sub rest 2 (String.length rest - 2) in (* kill // *)
+        of_file ~path:rest
+      else if protocol = "tcp" then
+        let rest = String.sub rest 2 (String.length rest - 2) in (* kill // *)
+        let n = String.index rest ':' in
+        let host, port = String.sub rest 0 n, String.sub rest (n+1) (String.length rest - n - 1)  in
+        of_socket ~host ~port
+      else
+        of_socket ~host:protocol ~port:rest
   with e ->
      Printf.eprintf "error: %s\n" (Printexc.to_string e);
      F.err_formatter
@@ -401,6 +427,7 @@ Tracing options:
         -trace-on KIND FILE enable trace printing.
           KIND is tty or json (default is tty).
           FILE is stdout or stderr (default) or host:port or /path or ./path
+          or file://path or tcp://host:port
         -trace-skip REX  ignore trace items matching REX
         -trace-only REX  trace only items matching REX
         -trace-only-pred REX  trace only when the current predicate matches REX
