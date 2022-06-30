@@ -1,3 +1,10 @@
+# v1.16.3 (June 2022)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+Camlp5 8.0 or above is optional.
+
+- Fix compilation on OCaml 5.0.0
+
 # v1.16.2 (June 2022)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.
