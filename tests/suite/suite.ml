@@ -313,8 +313,11 @@ let match_file ~log file adjust reference =
 module Elpi = struct
 
 let is_elpi =
-  let rex = Str.regexp "\\(elpi\\|elpi\\.git\\..*\\)$" in
-  fun s -> Str.string_match rex (Filename.basename s) 0
+  let rex1 = Str.regexp "elpi.*$" in
+  let rex2 = Str.regexp "elpi-trace-elaborator.*$" in
+  fun s ->
+    let s = Filename.basename s in
+    Str.string_match rex1 s 0 && not (Str.string_match rex2 s 0)
 
 let read_time input_line =
   let time = ref 0.0 in
