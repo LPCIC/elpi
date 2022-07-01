@@ -82,6 +82,7 @@ module Elaborate : sig
       | Resume of (goal_id * string) list
       | CHR of { failed_attempts : chr_attempt list; successful_attempts : chr_attempt list; chr_store_before : (goal_id * goal_text) list; chr_store_after : (goal_id * goal_text) list;}
       | Init of goal_id
+      | Broken of step_id * time
     
     type t = timestamp * step
 
@@ -124,6 +125,7 @@ end = struct
       | Resume of (goal_id * string) list
       | CHR of { failed_attempts : chr_attempt list; successful_attempts : chr_attempt list; chr_store_before : (goal_id * goal_text) list; chr_store_after : (goal_id * goal_text) list;}
       | Init of goal_id
+      | Broken of step_id * time
     
     type t = timestamp * step
     end
@@ -185,6 +187,7 @@ type decoded_step =
   | `Suspend of item * time
   | `Findall of (item * time) * time
   | `Cut of item * time
+  | `Broken of step_id * time
   ]
 
 let decode_step l : decoded_step =
@@ -201,7 +204,7 @@ let decode_step l : decoded_step =
   | None, _, _, Some c, _ -> `CHR (all "user:CHR:store:before" decode_chr_store_entry l, all "user:CHR:store:after" decode_chr_store_entry l)
   | None, _, _, None, Some (x,_) -> `Init (x.goal_id)
   | Some g, _, _, None, _ -> `Focus g
-  | _ -> assert false
+  | _ -> `Broken (let { step }, time = List.hd l in step, time)
 
 let decode_attempt = function
   | { payload = [ loc; code ] },_ -> loc, code
@@ -310,6 +313,8 @@ let push_end_stack step goal_id siblings =
   fstacks := StepMap.add step stack !fstacks;
   assert(siblings=[])
   
+exception Step_broken of step_id * time
+
 let elaborate_step (step,rid) (timestamp,(items : (item * time) list)) : t =
 try
   let items = List.rev items in
@@ -344,7 +349,7 @@ try
     let failed_attempts, successful_attempts = decode_chr_try_list trylist in
     CHR { failed_attempts; successful_attempts; chr_store_before; chr_store_after }
   | `Init g -> Init g
-  | `Focus ({ goal_id; payload = [pred;goal] },_) ->
+  | `Focus ({ goal_id; payload = [pred;goal];step },time) ->
     let action =
       match has "user:rule" items with
       | None | Some ({ payload = [] },_) | Some ({ payload = _ :: _ :: _ },_) -> assert false (* bug in instrumentaion *)
@@ -356,7 +361,7 @@ try
           | Some ({ payload = [ "fail" ] },_) ->
               (*assert(siblings = []);*)
               Fail
-          | _ -> assert false (* bug *) in
+          | _ -> raise (Step_broken(step,time)) (* bug *) in
         if name = "backchain" then
           let trylist = all_infer_event_chains "user:rule:backchain:try" items in
           let trylist = List.map decode_infer_try trylist in
@@ -387,8 +392,11 @@ try
      in
      Inference { rid; pred; goal; goal_id; action }
 
- | _ -> assert false 
-with e ->
+ | `Broken(step,time) -> Broken(step,time)
+ | _ -> assert false
+with
+| Step_broken(step_id,time) -> timestamp, Broken(step_id,time)
+| e ->
   let e = Printexc.to_string e in
   raise (Failure (Printf.sprintf "elaborating step %d: %s" step e))
 
@@ -414,6 +422,7 @@ let success_analysis (elaborated_steps : Elaborated_step.t StepMap.t) =
         try GoalMap.find x !gsuccess
         with Not_found -> false) l) in
     StepMap.bindings elaborated_steps |> List.rev |> List.iter (function
+      | _, (_,Broken _) -> ()
       | _, (_,Resume _) -> ()
       | _, (_,Suspend _) -> ()
       | _, (_,Cut _) -> ()
@@ -437,6 +446,7 @@ let success_analysis (elaborated_steps : Elaborated_step.t StepMap.t) =
         gattempts := GoalMap.add goal_id [step_id] !gattempts
       in
     StepMap.bindings elaborated_steps |> List.iter (function
+    | _, (_,Broken _) -> ()
     | _, (_,Resume _) -> ()
     | _, (_,Suspend _) -> ()
     | _, (_,Findall _) -> ()
@@ -548,8 +558,22 @@ end = struct
             let chr_store_after = chr_store_after |> List.map (fun (goal_id,goal_text) -> { goal_id; goal_text }) in
             `CHR_TODO (failed_attempts,successful_attempts,chr_store_before, chr_store_after)
         | Init goal_id -> `Init { goal_id; goal_text = find_goal_text goal_id }
+        | Broken(since,since_time) -> `Broken(since,since_time)
       in
       timestamp,(step,step_id,runtime_id)) in
+
+      (* check for broken trace *)
+      let broken_cards, pre_cards = List.partition (function (_,(`Broken _,_,_)) -> true | _ -> false) pre_cards in
+      let max_sid = List.fold_left (fun acc (_,(_,sid,_)) -> max acc sid) min_int pre_cards in
+      let () =
+        match broken_cards with
+        | [] -> () (* OK! *)
+        | (_,(`Broken(since,_),_,_)) :: [] when since >= max_sid -> () (* Broken, but recoverable *)
+        | (_,(`Broken(since,since_time),_,_)) :: _ ->
+            Printf.eprintf "elpi-trace-elaborator: input trace is broken since step_id %d, json object %d\n" since since_time;
+            exit 1
+        | _ -> assert false in
+
       (* bad complexity *)
       let in_time_stamp { start; stop } { start = start1; stop = stop1 } = start1 >= start && stop1 <= stop in
       let rec to_chr_attempt ( x : chr_attempt) : Trace_atd.chr_attempt =
@@ -625,8 +649,8 @@ end = struct
         | `Suspend x -> { step_id; step = `Suspend x; runtime_id; color = `Grey }
         | `Cut (cut_goal_id,cut_victims) ->
              { step_id; step = `Cut { cut_goal_id; cut_victims }; runtime_id; color = `Grey }
+        | `Broken _ -> assert false
       in
-
       let min_rid = List.fold_left (fun acc (_,(_,_,rid)) -> min acc rid) max_int pre_cards in
       pre_cards |> List.filter (fun (_,(_,_,rid)) -> rid = min_rid) |> List.map pre_card2card
       

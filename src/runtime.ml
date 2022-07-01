@@ -3855,9 +3855,14 @@ let mk_outcome search get_cs assignments =
 
 let execute_once ?max_steps ?delay_outside_fragment exec =
  let { search; get } = make_runtime ?max_steps ?delay_outside_fragment exec in
- let result = fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.state |> State.end_execution, exec.query_arguments, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments) in
- [%end_trace "execute_once" ~rid];
- result
+ try
+   let result = fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.state |> State.end_execution, exec.query_arguments, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments) in
+   [%end_trace "execute_once" ~rid];
+   result
+ with e ->
+  [%end_trace "execute_once" ~rid];
+  raise e
+
 ;;
 
 let execute_loop ?delay_outside_fragment exec ~more ~pp =
@@ -3873,7 +3878,9 @@ let execute_loop ?delay_outside_fragment exec ~more ~pp =
  while !k != noalts do
    if not(more()) then k := noalts else
    try do_with_infos (fun () -> next_solution !k)
-   with No_clause -> pp 0.0 Failure; k := noalts; [%end_trace "execute_loop" ~rid]
+   with
+   | No_clause -> pp 0.0 Failure; k := noalts; [%end_trace "execute_loop" ~rid]
+   | e -> pp 0.0 Failure; k := noalts; [%end_trace "execute_loop" ~rid]; raise e
  done
 ;;
 
