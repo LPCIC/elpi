@@ -290,17 +290,23 @@ let () = declare "IO_COLON"
   ~typecheck:true
   ()
 
-
-let sample = Filename.temp_file "trace.json" ".new"
+let mk_tmp_file =
+  let tmp = ref 0 in
+  let dir = Filename.get_temp_dir_name () in
+  fun x y ->
+    incr tmp;
+    dir ^ Filename.dir_sep ^ x ^ "__" ^ string_of_int !tmp ^ "__" ^ y
+    
+let sample = mk_tmp_file "trace.json" ".new"
 let () = declare "trace-browser"
   ~source_elpi:"trace.elpi"
   ~description:"trace generation"
   ~typecheck:false
-  ~trace:(On["json";sample;"-trace-at";"0";"99";"-trace-only";"user"])
+  ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace.json" })
   ()
 
-let sample = Filename.temp_file "trace.elab.json" ".new"
+let sample = mk_tmp_file "trace.elab.json" ".new"
 let () = declare "trace-browser-elab"
   ~source_json:"trace.json"
   ~description:"trace elaboration"
@@ -308,64 +314,64 @@ let () = declare "trace-browser-elab"
   ()
 
 
-let sample = Filename.temp_file "trace2.json" ".new"
+let sample = mk_tmp_file "trace2.json" ".new"
 let () = declare "trace-browser2"
   ~source_elpi:"trace2.elpi"
   ~description:"trace generation"
   ~typecheck:false
-  ~trace:(On["json";sample;"-trace-at";"0";"99";"-trace-only";"user"])
+  ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace2.json" })
   ()
 
-let sample = Filename.temp_file "trace2.elab.json" ".new"
+let sample = mk_tmp_file "trace2.elab.json" ".new"
 let () = declare "trace-browser2-elab"
   ~source_json:"trace2.json"
   ~description:"trace elaboration"
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace2.elab.json" })
   ()
 
-let sample = Filename.temp_file "trace_chr.json" ".new"
+let sample = mk_tmp_file "trace_chr.json" ".new"
 let () = declare "trace-browser-chr"
   ~source_elpi:"trace_chr.elpi"
   ~description:"trace generation"
   ~typecheck:false
-  ~trace:(On["json";sample;"-trace-at";"0";"99";"-trace-only";"user"])
+  ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace_chr.json" })
   ()
 
-let sample = Filename.temp_file "trace_chr.elab.json" ".new"
+let sample = mk_tmp_file "trace_chr.elab.json" ".new"
 let () = declare "trace-browser-elab-chr"
   ~source_json:"trace_chr.json"
   ~description:"trace elaboration"
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace_chr.elab.json" })
   ()
 
-let sample = Filename.temp_file "trace_findall.json" ".new"
+let sample = mk_tmp_file "trace_findall.json" ".new"
 let () = declare "trace-browser-findall"
   ~source_elpi:"trace_findall.elpi"
   ~description:"trace generation"
   ~typecheck:false
-  ~trace:(On["json";sample;"-trace-at";"0";"99";"-trace-only";"user"])
+  ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace_findall.json" })
   ()
 
-let sample = Filename.temp_file "trace_findall.elab.json" ".new"
+let sample = mk_tmp_file "trace_findall.elab.json" ".new"
 let () = declare "trace-browser-elab-findall"
   ~source_json:"trace_findall.json"
   ~description:"trace elaboration"
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace_findall.elab.json" })
   ()
 
-let sample = Filename.temp_file "trace_cut.json" ".new"
+let sample = mk_tmp_file "trace_cut.json" ".new"
 let () = declare "trace-browser-cut"
   ~source_elpi:"trace_cut.elpi"
   ~description:"trace generation"
   ~typecheck:false
-  ~trace:(On["json";sample;"-trace-at";"0";"99";"-trace-only";"user"])
+  ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace_cut.json" })
   ()
 
-let sample = Filename.temp_file "trace_cut.elab.json" ".new"
+let sample = mk_tmp_file "trace_cut.elab.json" ".new"
 let () = declare "trace-browser-elab-cut"
   ~source_json:"trace_cut.json"
   ~description:"trace elaboration"

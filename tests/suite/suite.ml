@@ -279,7 +279,7 @@ let strip_cwd file =
   let name = Filename.temp_file "elpi" "txt" in
   let oc = open_out name in
   let ic = open_in file in
-  let rex = Str.regexp_string (Sys.getcwd () ^ "/") in
+  let rex = Str.regexp_string (Str.global_replace (Str.regexp_string "\\") "/" (Sys.getcwd () ^ Filename.dir_sep)) in
   try
     while true do
       let l = input_line ic in
@@ -291,7 +291,7 @@ let strip_cwd file =
     close_in ic;
     close_out oc;
     name
-
+    
 end
 
 let match_file ~log file adjust reference =
@@ -300,7 +300,7 @@ let match_file ~log file adjust reference =
   match
     Util.exec ~timeout:5.0 ~env:(Unix.environment ())
       ~log ~close_output:false
-      ~executable:"diff" ~args:["-u";reference;file] ()
+      ~executable:"diff" ~args:["-u";"--strip-trailing-cr";reference;file] ()
   with
   | Util.Exit(0,_,_) -> true
   | Util.Exit(n,_,_) ->
