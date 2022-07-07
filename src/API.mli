@@ -1160,6 +1160,9 @@ module Utils : sig
 
   end
 
+  module IntSet : Set.S with type elt = int
+  module LocSet : Set.S with type elt = Ast.Loc.t
+
 end
 
 module RawPp : sig

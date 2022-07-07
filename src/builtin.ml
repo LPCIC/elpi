@@ -1196,8 +1196,8 @@ let elpi_stdlib_src = let open BuiltIn in [
 
 ]
 
-let ocaml_set ~name (type a)
-   (alpha : a Conversion.t) (module Set : Util.Set.S with type elt = a) =
+let ocaml_set_conv ~name (type a) (type b)
+   (alpha : a Conversion.t) (module Set : Util.Set.S with type elt = a and type t = b) =
  
 let set = OpaqueData.declare {
   OpaqueData.name;
@@ -1213,6 +1213,7 @@ let set = { set with Conversion.ty = Conversion.(TyName name) } in
 
 let open BuiltIn in let open BuiltInData in 
 
+set,
 [
   LPCode ("kind "^name^" type.");
 
@@ -1299,6 +1300,7 @@ let open BuiltIn in let open BuiltInData in
   DocAbove);
 ] 
 ;;
+let ocaml_set ~name c m = snd (ocaml_set_conv ~name c m)
 
 let ocaml_map ~name (type a)
    (alpha : a Conversion.t) (module Map : Util.Map.S with type key = a) =
@@ -1376,7 +1378,6 @@ let open BuiltIn in let open BuiltInData in
 ;;
 
 module LocMap : Util.Map.S with type key = Ast.Loc.t = Util.Map.Make(Ast.Loc)
-module LocSet : Util.Set.S with type elt = Ast.Loc.t = Util.Set.Make(Ast.Loc)
 
 let elpi_map =  let open BuiltIn in [
   
@@ -1390,6 +1391,9 @@ let elpi_set =  let open BuiltIn in [
     
 ]
 
+let string_set, string_set_decl = ocaml_set_conv ~name:"std.string.set" BuiltInData.string (module API.Compile.StrSet)
+let int_set, int_set_decl = ocaml_set_conv ~name:"std.int.set"    BuiltInData.int    (module API.Utils.IntSet)
+let loc_set, loc_set_decl = ocaml_set_conv ~name:"std.loc.set"    BuiltInData.loc    (module API.Utils.LocSet) 
 
 let elpi_stdlib =
   elpi_stdlib_src @
@@ -1406,9 +1410,9 @@ let elpi_stdlib =
   ocaml_map ~name:"std.string.map" BuiltInData.string (module Util.StrMap) @ 
   ocaml_map ~name:"std.int.map"    BuiltInData.int    (module Util.IntMap) @ 
   ocaml_map ~name:"std.loc.map"    BuiltInData.loc    (module LocMap) @ 
-  ocaml_set ~name:"std.string.set" BuiltInData.string (module Util.StrSet) @ 
-  ocaml_set ~name:"std.int.set"    BuiltInData.int    (module Util.IntSet) @ 
-  ocaml_set ~name:"std.loc.set"    BuiltInData.loc    (module LocSet) @
+  string_set_decl @ 
+  int_set_decl @ 
+  loc_set_decl @
   []
 ;;
 
