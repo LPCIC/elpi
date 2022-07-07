@@ -40,8 +40,15 @@ val ocaml_map :
   declaration list
 val ocaml_set :
   name:string ->
-  'a API.Conversion.t -> (module API.Utils.Set.S with type elt = 'a) ->
+  'a API.Conversion.t -> (module API.Utils.Set.S with type elt = 'a and type t = 'b) ->
   declaration list
+val ocaml_set_conv :
+  name:string ->
+  'a API.Conversion.t -> (module API.Utils.Set.S with type elt = 'a and type t = 'b) ->
+  'b API.Conversion.t * declaration list
+val int_set : API.Utils.IntSet.t API.Conversion.t
+val string_set : API.Compile.StrSet.t API.Conversion.t
+val loc_set : API.Utils.LocSet.t API.Conversion.t
 
 (* All the above, to be used as a sane default in Setup.init *)
 val std_declarations : declaration list

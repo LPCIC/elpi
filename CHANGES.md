@@ -1,3 +1,13 @@
+# v1.16.5 (July 2022)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+Camlp5 8.0 or above is optional.
+
+- Apis in the Builtin module:
+  - New `string_set`, `int_set` and `loc_set` conversions
+  - New `ocaml_set_conv` giving both the declarations and the conversion for the
+    provided OCaml `Set` module
+
 # v1.16.4 (July 2022)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.

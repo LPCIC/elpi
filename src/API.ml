@@ -1013,6 +1013,8 @@ module Utils = struct
   module type Show1 = Util.Show1
   module Map = Util.Map
   module Set = Util.Set
+  module IntSet = Util.IntSet
+  module LocSet : Util.Set.S with type elt = Ast.Loc.t = Util.Set.Make(Ast.Loc)
 
 end
 
