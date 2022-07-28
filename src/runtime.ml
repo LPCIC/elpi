@@ -2281,7 +2281,7 @@ module Indexing = struct (* {{{ *)
 
 let mustbevariablec = min_int (* uvar or uvar t or uvar l t *)
 
-let ppclause f ~depth ~hd { args = args; hyps = hyps } =
+let ppclause f ~hd { depth; args = args; hyps = hyps } =
   Fmt.fprintf f "@[<hov 1>%a :- %a.@]"
      (uppterm ~min_prec:(Elpi_parser.Parser_config.appl_precedence+1) depth [] ~argsdepth:0 empty_env) (C.mkAppL hd args)
      (pplist (uppterm ~min_prec:(Elpi_parser.Parser_config.appl_precedence+1) depth [] ~argsdepth:0 empty_env) ", ") hyps
@@ -2756,7 +2756,7 @@ let rec claux1 loc get_mode vars depth hyps ts lts lcs t =
        | Cons _ | Nil -> assert false
      in
      let c = { depth = depth+lcs; args; hyps; mode = get_mode hd; vars; loc } in
-     [%spy "dev:claudify:extra-clause" ~rid (ppclause ~depth:(depth+lcs) ~hd) c];
+     [%spy "dev:claudify:extra-clause" ~rid (ppclause ~hd) c];
      (hd,c), { hdepth = depth; hsrc = g }, lcs
   | UVar ({ contents=g },from,args) when g != C.dummy ->
      claux1 loc get_mode vars depth hyps ts lts lcs
@@ -3475,7 +3475,7 @@ let pred_of g =
 let pp_candidate ~depth ~k fmt ({ loc } as cl) =
   match loc with
   | Some x -> Util.CData.pp fmt (Ast.cloc.Util.CData.cin x)
-  | None -> Fmt.fprintf fmt "hypothetical clause: %a" (ppclause ~depth ~hd:k) cl
+  | None -> Fmt.fprintf fmt "hypothetical clause: %a" (ppclause ~hd:k) cl
 
 let hd_c_of = function
   | Const _ as x -> x
@@ -3611,7 +3611,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
       | [] -> [%spy "user:rule:backchain" ~rid ~gid pp_string "fail"];
         [%tcall next_alt alts]
       | { depth = c_depth; mode = c_mode; args = c_args; hyps = c_hyps; vars = c_vars; loc } :: cs ->
-        [%spy "user:rule:backchain:try" ~rid ~gid (pp_option Util.CData.pp) (Util.option_map Ast.cloc.Util.CData.cin loc) (ppclause ~depth ~hd:k) { depth = c_depth; mode = c_mode; args = c_args; hyps = c_hyps; vars = c_vars; loc }];
+        [%spy "user:rule:backchain:try" ~rid ~gid (pp_option Util.CData.pp) (Util.option_map Ast.cloc.Util.CData.cin loc) (ppclause ~hd:k) { depth = c_depth; mode = c_mode; args = c_args; hyps = c_hyps; vars = c_vars; loc }];
         let old_trail = !T.trail in
         T.last_call := alts == noalts && cs == [];
         let env = Array.make c_vars C.dummy in
@@ -3656,7 +3656,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
       let rec prune ({ agid = agid[@trace]; clauses; adepth = depth; agoal_hd = hd } as alts) =
         if alts != cutto_alts then begin
           List.iter (fun c -> 
-            [%spy "user:rule:cut:branch" ~rid UUID.pp agid (pp_option Util.CData.pp) (Util.option_map Ast.cloc.Util.CData.cin c.loc) (ppclause ~depth ~hd) c])
+            [%spy "user:rule:cut:branch" ~rid UUID.pp agid (pp_option Util.CData.pp) (Util.option_map Ast.cloc.Util.CData.cin c.loc) (ppclause ~hd) c])
           clauses;
           prune alts.next
         end

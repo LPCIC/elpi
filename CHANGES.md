@@ -1,3 +1,7 @@
+# UNRELEASED
+
+- Fix printing of clauses in trace
+
 # v1.16.5 (July 2022)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.
