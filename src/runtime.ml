@@ -2842,7 +2842,7 @@ and alternative = {
   clauses : clause list;
   next : alternative;
 }
-let noalts : alternative = Obj.magic 0
+let noalts : alternative = Obj.magic (Sys.opaque_identity 0)
 
 (******************************************************************************
   Constraint propagation
