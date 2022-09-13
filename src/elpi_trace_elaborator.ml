@@ -2,7 +2,7 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-(* This file elaborates a traec as spit by the runtime into a list of
+(* This file elaborates a trace as spit by the runtime into a list of
    cards to be displayed by the trace browser.
  
    Trace items are first aggregated into steps.
@@ -425,7 +425,7 @@ let success_analysis (elaborated_steps : Elaborated_step.t StepMap.t) =
       | _, (_,Broken _) -> ()
       | _, (_,Resume _) -> ()
       | _, (_,Suspend _) -> ()
-      | _, (_,Cut _) -> ()
+      | _, (_,Cut (goal_id,_)) -> set_success goal_id true
       | _, (_,CHR _) -> ()
       | _, (_,Init _) -> ()
       | _, (_,Findall { goal_id }) -> set_success goal_id true
@@ -605,7 +605,7 @@ end = struct
         | [], _ :: _ -> assert false
         | [ { siblings_aggregated_outcome = `Success }], [] -> `Green
         | [ { siblings_aggregated_outcome = `Success }], _ :: _ -> `YellowGreen
-        | [ { siblings_aggregated_outcome = `Fail }], [] -> `Red
+        | [ { siblings_aggregated_outcome = `Fail }], [] -> `YellowRed
         | [ { siblings_aggregated_outcome = `Fail }], last :: _ ->
               let (_,(step,_,_)) = List.find (fun (_,(_,step_id,runtime_id)) -> runtime_id = rid && step_id = last) pre_cards in
               begin match step with
