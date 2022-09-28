@@ -624,6 +624,7 @@ module RawData = struct
 
   let of_term x = x
 
+  let of_hyp x = x
   let of_hyps x = x
 
   type hyp = Data.hyp = {

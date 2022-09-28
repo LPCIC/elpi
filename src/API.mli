@@ -972,6 +972,7 @@ module RawData : sig
     hsrc : term
   }
   type hyps = hyp list
+  val of_hyp : Data.hyp -> hyp
   val of_hyps : Data.hyp list -> hyps
 
   type suspended_goal = {
