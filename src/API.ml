@@ -910,7 +910,12 @@ end
 
 
 module RawQuery = struct
-  let mk_Arg = Compiler.mk_Arg
+  let mk_Arg state ~name ~args = 
+    if ED.State.get ED.while_compiling state then
+      Compiler.mk_Arg state ~name ~args
+    else
+      Util.anomaly "The API RawQuery.mk_Arg can only be used at compile time"
+  
   let is_Arg = Compiler.is_Arg
   let compile = Compiler.query_of_term
 end
