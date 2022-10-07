@@ -528,11 +528,14 @@ module Elpi = struct
     match name with
     | None -> alloc_Elpi (fresh_name ()) state
     | Some name ->
+      if ED.State.get ED.while_compiling state then
         try state, Util.StrMap.find name (ED.State.get uvk state)
         with Not_found ->
           let state, k = alloc_Elpi name state in
           ED.State.update uvk state (Util.StrMap.add name k), k
-
+      else
+        alloc_Elpi name state
+    
   let get ~name state =
     try Some (Util.StrMap.find name (ED.State.get uvk state))
     with Not_found -> None
