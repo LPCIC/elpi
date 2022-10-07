@@ -528,11 +528,14 @@ module Elpi = struct
     match name with
     | None -> alloc_Elpi (fresh_name ()) state
     | Some name ->
+      if ED.State.get ED.while_compiling state then
         try state, Util.StrMap.find name (ED.State.get uvk state)
         with Not_found ->
           let state, k = alloc_Elpi name state in
           ED.State.update uvk state (Util.StrMap.add name k), k
-
+      else
+        alloc_Elpi name state
+    
   let get ~name state =
     try Some (Util.StrMap.find name (ED.State.get uvk state))
     with Not_found -> None
@@ -907,7 +910,12 @@ end
 
 
 module RawQuery = struct
-  let mk_Arg = Compiler.mk_Arg
+  let mk_Arg state ~name ~args = 
+    if ED.State.get ED.while_compiling state then
+      Compiler.mk_Arg state ~name ~args
+    else
+      Util.anomaly "The API RawQuery.mk_Arg can only be used at compile time"
+  
   let is_Arg = Compiler.is_Arg
   let compile = Compiler.query_of_term
 end
