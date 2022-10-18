@@ -21,23 +21,18 @@ jobs:
           pip3 install Sphinx sphinx-rtd-theme in-place
 
       - name: Install ocaml
-        env:
-          OPAMYES: true
-        run: |
-          sudo apt install opam
-          opam init
-          opam switch create 4.09.1
-          eval $(opam env)
-          opam install ./elpi.opam --deps-only --with-doc
+        uses: avsm/setup-ocaml@v2
+        with:
+          ocaml-compiler: 4.13.x
+          opam-local-packages:
 
       - name: Build
-        env:
-          OPAMYES: true
         run: |
           eval $(opam env)
+          opam install ./elpi.opam --deps-only --with-doc
           make doc-build
 
-      - name: Save doc artefact
+      - name: Save doc artifact
         uses: actions/upload-artifact@v2
         with:
           name: doc
