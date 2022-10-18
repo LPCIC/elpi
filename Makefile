@@ -52,11 +52,32 @@ install:
 doc:
 	dune build $(DUNE_OPTS) @doc
 
+doc-build: doc
+	rm -rf docs/build
+	rm -rf docs/source
+	cp -r docs/base docs/source
+	python3 docs/engine/engine.py
+	cd docs && make html
+	cp -r _build/default/_doc/_html/elpi docs/build/html/
+	cp -r _build/default/_doc/_html/elpi-option-legacy-parser docs/build/html/
+	cp -r _build/default/_doc/_html/highlight.pack.js docs/build/html/
+	cp -r _build/default/_doc/_html/odoc.css docs/build/html/
+	touch docs/build/html/.nojekyll
+
+doc-publish: doc-build
+	rm -rf /tmp/gh-pages
+	cp -r docs/build/html/ /tmp/gh-pages
+	OLD_BRANCH=`git branch --show-current`; \
+	git checkout gh-pages && rm -rf * && cp -r /tmp/gh-pages/* ./ && rm -rf /tmp/gh-pages && git add . && git commit -m "Updated gh-pages" && git checkout $$OLD_BRANCH
+	@echo "uploading: enter to continue, ^C to abort"; read DUMMY; git push origin gh-pages
+
 clean:
 	rm -rf _build
+	rm -rf docs/build
 
 release:
 	dune-release -p elpi
+	$(MAKE) doc-publish
 
 # testing
 tests:
@@ -115,4 +136,4 @@ menhir-complete-errormsgs:
 menhir-strip-errormsgs:
 	sed -e "/^##/d" -i.bak src/parser/error_messages.txt
 
-.PHONY: tests help install build clean
+.PHONY: tests help install build clean gh-pages

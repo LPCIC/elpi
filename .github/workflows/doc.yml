@@ -1,0 +1,39 @@
+name: Doc workflow
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    name: Build doc
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install sphinx
+        run: |
+          pip3 install Sphinx sphinx-rtd-theme in-place
+
+      - name: Install ocaml
+        uses: avsm/setup-ocaml@v2
+        with:
+          ocaml-compiler: 4.13.x
+          opam-local-packages:
+
+      - name: Build
+        run: |
+          eval $(opam env)
+          opam install ./elpi.opam --deps-only --with-doc
+          make doc-build
+
+      - name: Save doc artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: doc
+          path: docs/build

@@ -1,7 +1,7 @@
 *~
-
 .*.swp
 .merlin
+.vscode
 
 elpi.*
 
@@ -22,3 +22,6 @@ vendor/*/
 
 _build
 _log
+
+docs/build
+docs/source

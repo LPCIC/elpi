@@ -27,6 +27,7 @@ depends: [
   "conf-time" {with-test}
   "atdgen" {>= "2.9.1" & < "2.10.0"}
   "atdts" {>= "2.9.1" & < "2.10.0"}
+  "odoc" {with-doc}
 ]
 depopts: [
   "elpi-option-legacy-parser"
