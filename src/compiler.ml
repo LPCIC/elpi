@@ -2221,7 +2221,6 @@ let query_of_term (compiler_state, assembled_program) f =
 
 
 let query_of_data (state, p) loc (Query.Query { arguments } as descr) =
-  let state = State.begin_goal_compilation state in
   let query = query_of_term (state, p) (fun ~depth state ->
     let state, term, gls = R.embed_query ~mk_Arg ~depth state descr in
     state, (loc, term), gls) in
