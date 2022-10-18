@@ -18,9 +18,7 @@ jobs:
 
       - name: Install sphinx
         run: |
-          sudo apt install sphinx-doc
-          sudo apt install python3-sphinx-rtd-theme
-          pip3 install in-place
+          pip3 install Sphinx sphinx-rtd-theme in-place
 
       - name: Install ocaml
         env:
@@ -38,3 +36,9 @@ jobs:
         run: |
           eval $(opam env)
           make doc-build
+
+      - name: Save doc artefact
+        uses: actions/upload-artifact@v2
+        with:
+          name: doc
+          path: docs/build
