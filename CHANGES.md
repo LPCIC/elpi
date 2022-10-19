@@ -1,8 +1,16 @@
 # UNRELEASED
 
-- Fix `FlexData.Elpi.make` when called with a name after compilation is over
-- Fix `RawQuery.mk_Arg` can only be called at compile time
-- Fix printing of clauses in trace
+
+- API:
+  - Fix `FlexData.Elpi.make` when called with a name after compilation is over
+  - Fix `RawQuery.mk_Arg` can only be called at compile time
+  - Fix anomaly in `Query.compile`
+
+- Trace:
+  - Fix printing of clauses
+
+- Doc:
+  - New setup based on Sphinx (still no extra contents)
 
 # v1.16.5 (July 2022)
 
