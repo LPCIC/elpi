@@ -56,6 +56,7 @@ doc-build: doc
 	rm -rf docs/build
 	rm -rf docs/source
 	cp -r docs/base docs/source
+	sed -i "s/@@VERSION@@/$(shell git describe)/" docs/source/conf.py
 	python3 docs/engine/engine.py
 	cd docs && make html
 	cp -r _build/default/_doc/_html/elpi docs/build/html/
