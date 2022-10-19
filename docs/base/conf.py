@@ -22,7 +22,7 @@ copyright = '2022, Enrico Tassi'
 author = 'Enrico Tassi'
 
 # The full version, including alpha/beta/rc tags
-release = '1.15.2'
+release = '@@VERSION@@'
 
 
 # -- General configuration ---------------------------------------------------
