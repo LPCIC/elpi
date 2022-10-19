@@ -101,9 +101,9 @@ This ``elpi`` directive should pass validation:
    
    Parsing time: 0.000
    
-   Compilation time: 0.002
+   Compilation time: 0.003
    
-   Typechecking time: 0.079
+   Typechecking time: 0.102
    
    Success:
    
@@ -151,7 +151,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.077
+   Typechecking time: 0.095
    
 **../../tests/sources/accumulate_twice2.elpi
 :**
@@ -169,11 +169,11 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.001
+   Parsing time: 0.002
    
    Compilation time: 0.001
    
-   Typechecking time: 0.082
+   Typechecking time: 0.105
    
 **../../tests/sources/accumulated.elpi
 :**
@@ -193,9 +193,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.083
+   Typechecking time: 0.109
    
 **../../tests/sources/ackermann.elpi
 :**
@@ -224,7 +224,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.092
+   Typechecking time: 0.122
    
    Success:
    
@@ -260,9 +260,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.094
+   Typechecking time: 0.119
    
    Success:
    
@@ -299,9 +299,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.091
+   Typechecking time: 0.115
    
    Success:
    
@@ -369,7 +369,7 @@ Test Bed
    
    Compilation time: 0.003
    
-   Typechecking time: 0.095
+   Typechecking time: 0.125
    
    Success:
    
@@ -402,9 +402,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.002
+   Compilation time: 0.003
    
-   Typechecking time: 0.083
+   Typechecking time: 0.114
    
    Success:
    
@@ -436,9 +436,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.002
+   Compilation time: 0.003
    
-   Typechecking time: 0.088
+   Typechecking time: 0.111
    
    Success:
    
@@ -464,9 +464,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.079
+   Typechecking time: 0.097
    
    Success:
    
@@ -498,9 +498,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.087
+   Typechecking time: 0.108
    
    Success:
    
@@ -553,7 +553,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.091
+   Typechecking time: 0.112
    
    Success:
    
@@ -585,9 +585,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.088
+   Typechecking time: 0.109
    
    Success:
    
@@ -618,9 +618,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.002
+   Compilation time: 0.003
    
-   Typechecking time: 0.082
+   Typechecking time: 0.100
    
    Success:
    
@@ -669,7 +669,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.112
+   Typechecking time: 0.140
    
    Success:
    
@@ -717,7 +717,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.113
+   Typechecking time: 0.137
    
    Success:
    
@@ -760,7 +760,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.099
+   Typechecking time: 0.120
    
    Success:
    
@@ -784,9 +784,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.079
+   Typechecking time: 0.099
    
    Success:
    
@@ -840,7 +840,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.118
+   Typechecking time: 0.148
    
    Success:
    
@@ -883,7 +883,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.100
+   Typechecking time: 0.124
    
    Success:
    
@@ -907,9 +907,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.002
+   Compilation time: 0.003
    
-   Typechecking time: 0.079
+   Typechecking time: 0.103
    
    Success:
    
@@ -941,9 +941,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.088
+   Typechecking time: 0.117
    
    Success:
    
@@ -979,9 +979,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.092
+   Typechecking time: 0.111
    Fatal error: Unification problem outside the pattern fragment. ((Data.Term.App (f, (Data.Term.Const x), [])) == (Data.Term.AppUVar (
       { Data.Term.contents = please extend this printer; uid_private = 41116 },
       0,
@@ -1004,9 +1004,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.078
+   Typechecking time: 0.095
    
    Success:
    
@@ -1045,7 +1045,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.093
+   Typechecking time: 0.113
    
    Success:
    
@@ -1131,7 +1131,7 @@ Test Bed
    
    Compilation time: 0.003
    
-   Typechecking time: 0.120
+   Typechecking time: 0.150
    Type error. To ignore it, pass -no-tc.
    
 **../../tests/sources/even-odd.elpi
@@ -1152,9 +1152,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.002
+   Compilation time: 0.003
    
-   Typechecking time: 0.081
+   Typechecking time: 0.098
    
    Success:
    
@@ -1203,9 +1203,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.002
+   Compilation time: 0.003
    
-   Typechecking time: 0.104
+   Typechecking time: 0.126
    
    Success:
    
@@ -1240,9 +1240,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.089
+   Typechecking time: 0.112
    
    Success:
    
@@ -1278,9 +1278,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.088
+   Typechecking time: 0.109
    
    Success:
    
@@ -1317,9 +1317,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.092
+   Typechecking time: 0.114
    
    Success:
    
@@ -1362,7 +1362,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.097
+   Typechecking time: 0.119
    
    Success:
    
@@ -1398,9 +1398,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.092
+   Typechecking time: 0.115
    
    Success:
    
@@ -1431,9 +1431,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.083
+   Typechecking time: 0.103
    
    Success:
    
@@ -1493,7 +1493,7 @@ Test Bed
    
    Compilation time: 0.003
    
-   Typechecking time: 0.129
+   Typechecking time: 0.168
    
    Success:
    
@@ -1517,9 +1517,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.002
+   Compilation time: 0.003
    
-   Typechecking time: 0.078
+   Typechecking time: 0.101
    
    Success:
    
@@ -1549,9 +1549,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.080
+   Typechecking time: 0.097
    
    Success:
    
@@ -1584,9 +1584,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.087
+   Typechecking time: 0.107
    
    Success:
    
@@ -1695,7 +1695,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.079
+   Typechecking time: 0.101
    
    Success:
    
@@ -1741,7 +1741,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.105
+   Typechecking time: 0.123
    
    Success:
    
@@ -1785,7 +1785,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.099
+   Typechecking time: 0.122
    
    Success:
    
@@ -1817,11 +1817,11 @@ Test Bed
    
    Compilation time: 0.003
    
-   Typechecking time: 0.093
+   Typechecking time: 0.111
    
    Success:
    
-   Time: 1.815
+   Time: 2.070
    
    Constraints:
    
@@ -1848,9 +1848,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.083
+   Typechecking time: 0.096
    
    Success:
    
@@ -1896,7 +1896,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.109
+   Typechecking time: 0.131
    
    Success:
    
@@ -1936,9 +1936,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.100
+   Typechecking time: 0.125
    
    Success:
    
@@ -2000,11 +2000,11 @@ Test Bed
    
    Compilation time: 0.003
    
-   Typechecking time: 0.132
+   Typechecking time: 0.164
    
    Success:
    
-   Time: 0.375
+   Time: 0.459
    
    Constraints:
    
@@ -2036,7 +2036,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.084
+   Typechecking time: 0.103
    
    Success:
    
@@ -2060,9 +2060,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.078
+   Typechecking time: 0.097
    
    Success:
    
@@ -2296,7 +2296,7 @@ Test Bed
    
    Compilation time: 0.003
    
-   Typechecking time: 0.131
+   Typechecking time: 0.159
    
    Success:
    
@@ -2360,7 +2360,7 @@ Test Bed
    
    Compilation time: 0.003
    
-   Typechecking time: 0.128
+   Typechecking time: 0.166
    
    Success:
    
@@ -2381,7 +2381,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.288650 + 0.058599 + 0.916053
+   1.900074 + 0.070853 + 1.400706
    
 
 .. code-block:: console
@@ -2389,13 +2389,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.002
+   Compilation time: 0.003
    
-   Typechecking time: 0.081
+   Typechecking time: 0.093
    
    Success:
    
-   Time: 2.520
+   Time: 3.695
    
    Constraints:
    
@@ -2412,7 +2412,7 @@ Test Bed
 
 .. code-block:: console
 
-   7.082724 + 3.128672 + 0.429237
+   9.145731 + 3.934738 + 0.574573
    
 
 .. code-block:: console
@@ -2422,11 +2422,11 @@ Test Bed
    
    Compilation time: 0.003
    
-   Typechecking time: 0.081
+   Typechecking time: 0.100
    
    Success:
    
-   Time: 10.650
+   Time: 13.666
    
    Constraints:
    
@@ -2443,7 +2443,7 @@ Test Bed
 
 .. code-block:: console
 
-   6.192830 + 2.868347 + 0.255321
+   8.128959 + 3.766737 + 0.351539
    
 
 .. code-block:: console
@@ -2453,11 +2453,11 @@ Test Bed
    
    Compilation time: 0.003
    
-   Typechecking time: 0.082
+   Typechecking time: 0.118
    
    Success:
    
-   Time: 9.324
+   Time: 12.256
    
    Constraints:
    
@@ -2481,11 +2481,11 @@ Test Bed
 .. code-block:: console
 
    
-   Parsing time: 0.000
+   Parsing time: 0.001
    
    Compilation time: 0.002
    
-   Typechecking time: 0.079
+   Typechecking time: 0.101
    Type error. To ignore it, pass -no-tc.
    
 **../../tests/sources/named_clauses00.elpi
@@ -2533,9 +2533,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.082
+   Typechecking time: 0.110
    
    Success:
    
@@ -2567,7 +2567,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.084
+   Typechecking time: 0.106
    
    Success:
    
@@ -2601,9 +2601,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.093
+   Typechecking time: 0.119
    
    Success:
    
@@ -2637,9 +2637,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.002
+   Compilation time: 0.003
    
-   Typechecking time: 0.093
+   Typechecking time: 0.117
    
    Success:
    
@@ -2683,7 +2683,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.113
+   Typechecking time: 0.138
    
    Success:
    
@@ -2707,9 +2707,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.080
+   Typechecking time: 0.099
    
    Success:
    
@@ -2765,9 +2765,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.002
+   Compilation time: 0.003
    
-   Typechecking time: 0.121
+   Typechecking time: 0.157
    
    Success:
    
@@ -2889,7 +2889,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.096
+   Typechecking time: 0.120
    
    Success:
    
@@ -2924,7 +2924,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.087
+   Typechecking time: 0.105
    
    Success:
    
@@ -2966,7 +2966,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.100
+   Typechecking time: 0.120
    
    Success:
    
@@ -2998,9 +2998,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.087
+   Typechecking time: 0.106
    
    Success:
    
@@ -3044,7 +3044,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.103
+   Typechecking time: 0.124
    
    Success:
    
@@ -3093,9 +3093,9 @@ Test Bed
    
    Parsing time: 0.001
    
-   Compilation time: 0.003
+   Compilation time: 0.004
    
-   Typechecking time: 0.122
+   Typechecking time: 0.150
    
    Success:
    
@@ -3173,9 +3173,9 @@ Test Bed
    
    Parsing time: 0.001
    
-   Compilation time: 0.003
+   Compilation time: 0.004
    
-   Typechecking time: 0.142
+   Typechecking time: 0.171
    
    Success:
    
@@ -3250,7 +3250,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.121
+   Typechecking time: 0.148
    Type error. To ignore it, pass -no-tc.
    
 **../../tests/sources/queens.elpi
@@ -3306,11 +3306,11 @@ Test Bed
    
    Compilation time: 0.003
    
-   Typechecking time: 0.129
+   Typechecking time: 0.156
    
    Success:
    
-   Time: 1.826
+   Time: 2.355
    
    Constraints:
    
@@ -3338,13 +3338,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.078
+   Typechecking time: 0.100
    
    Success:
    
-   Time: 0.014
+   Time: 0.016
    
    Constraints:
    
@@ -3361,7 +3361,7 @@ Test Bed
 
 .. code-block:: console
 
-   9
+   7
    
 
 .. code-block:: console
@@ -3369,9 +3369,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.078
+   Typechecking time: 0.097
    
    Success:
    
@@ -3417,11 +3417,11 @@ Test Bed
    
    Compilation time: 0.003
    
-   Typechecking time: 0.104
+   Typechecking time: 0.132
    
    Success:
    
-   Time: 0.292
+   Time: 0.367
    
    Constraints:
    
@@ -3461,13 +3461,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.002
+   Compilation time: 0.003
    
-   Typechecking time: 0.104
+   Typechecking time: 0.133
    
    Success:
    
-   Time: 2.557
+   Time: 2.548
    
    Constraints:
    
@@ -3493,9 +3493,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.079
+   Typechecking time: 0.115
    
 **../../tests/sources/restriction3.elpi
 :**
@@ -3523,9 +3523,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.002
+   Compilation time: 0.003
    
-   Typechecking time: 0.085
+   Typechecking time: 0.103
    
    Success:
    
@@ -3560,9 +3560,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.083
+   Typechecking time: 0.104
    
    Success:
    
@@ -3592,9 +3592,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.079
+   Typechecking time: 0.096
    
    Success:
    
@@ -3629,9 +3629,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.084
+   Typechecking time: 0.103
    
    Success:
    
@@ -3681,13 +3681,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.002
+   Compilation time: 0.003
    
-   Typechecking time: 0.125
+   Typechecking time: 0.151
    
    Success:
    
-   Time: 0.148
+   Time: 0.181
    
    Constraints:
    
@@ -3733,13 +3733,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.002
+   Compilation time: 0.003
    
-   Typechecking time: 0.123
+   Typechecking time: 0.155
    
    Success:
    
-   Time: 0.148
+   Time: 0.182
    
    Constraints:
    
@@ -3761,7 +3761,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.080
+   Typechecking time: 0.094
    
    Success:
    
@@ -3798,7 +3798,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.088
+   Typechecking time: 0.106
    
    Success:
    
@@ -3819,7 +3819,7 @@ Test Bed
 
 .. code-block:: console
 
-   1.058191 + 0.053542 + 0.724540
+   1.615919 + 0.058800 + 1.149678
    
 
 .. code-block:: console
@@ -3827,13 +3827,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.002
+   Compilation time: 0.003
    
-   Typechecking time: 0.081
+   Typechecking time: 0.099
    
    Success:
    
-   Time: 1.995
+   Time: 2.982
    
    Constraints:
    
@@ -3869,7 +3869,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.100
+   Typechecking time: 0.124
    
    Success:
    
@@ -3905,7 +3905,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.092
+   Typechecking time: 0.112
    
    Success:
    
@@ -3935,9 +3935,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.084
+   Typechecking time: 0.103
    
 **../../tests/sources/shorten_aux2.elpi
 :**
@@ -3959,9 +3959,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.088
+   Typechecking time: 0.108
    
 **../../tests/sources/shorten_builtin.elpi
 :**
@@ -3980,9 +3980,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.079
+   Typechecking time: 0.102
    
    Success:
    
@@ -4024,7 +4024,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.095
+   Typechecking time: 0.115
    
    Success:
    
@@ -4053,9 +4053,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.002
+   Compilation time: 0.003
    
-   Typechecking time: 0.079
+   Typechecking time: 0.099
    
    Success:
    
@@ -4084,9 +4084,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.002
+   Compilation time: 0.003
    
-   Typechecking time: 0.079
+   Typechecking time: 0.096
    
    Success:
    
@@ -4118,7 +4118,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.079
+   Typechecking time: 0.095
    
    Success:
    
@@ -4153,9 +4153,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.084
+   Typechecking time: 0.102
    
    Success:
    
@@ -4184,9 +4184,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.079
+   Typechecking time: 0.112
    
    Success:
    
@@ -4210,9 +4210,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.002
+   Compilation time: 0.004
    
-   Typechecking time: 0.079
+   Typechecking time: 0.105
    
    Success:
    
@@ -4238,7 +4238,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.079
+   Typechecking time: 0.098
    
    Success:
    
@@ -4270,9 +4270,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.084
+   Typechecking time: 0.099
    
    Success:
    
@@ -4318,7 +4318,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.105
+   Typechecking time: 0.132
    
    Success:
    
@@ -4342,9 +4342,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.078
+   Typechecking time: 0.106
    
    Success:
    
@@ -4368,9 +4368,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.079
+   Typechecking time: 0.095
    
    Success:
    
@@ -4410,7 +4410,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.079
+   Typechecking time: 0.099
    Type error. To ignore it, pass -no-tc.
    
 **../../tests/sources/typeabbrv11.elpi
@@ -4431,9 +4431,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.079
+   Typechecking time: 0.099
    Type error. To ignore it, pass -no-tc.
    
 **../../tests/sources/typeabbrv12.elpi
@@ -4454,9 +4454,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.080
+   Typechecking time: 0.097
    Type error. To ignore it, pass -no-tc.
    
 **../../tests/sources/typeabbrv2.elpi
@@ -4486,7 +4486,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.079
+   Typechecking time: 0.101
    
    Success:
    
@@ -4510,9 +4510,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.080
+   Typechecking time: 0.101
    
    Success:
    
@@ -4536,7 +4536,7 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    Fatal error: exception Elpi__Compiler.CompileError(_, "looping while unfolding type abbreviation for x")
    
 **../../tests/sources/typeabbrv6.elpi
@@ -4566,7 +4566,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.079
+   Typechecking time: 0.100
    
    Success:
    
@@ -4590,9 +4590,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.079
+   Typechecking time: 0.103
    
    Success:
    
@@ -4616,9 +4616,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.079
+   Typechecking time: 0.103
    
    Success:
    
@@ -4642,9 +4642,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.080
+   Typechecking time: 0.102
    
    Success:
    
@@ -4680,7 +4680,7 @@ Test Bed
    
    Compilation time: 0.003
    
-   Typechecking time: 0.085
+   Typechecking time: 0.108
    
    Success:
    
@@ -4713,7 +4713,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.080
+   Typechecking time: 0.100
    
    Success:
    
@@ -4743,9 +4743,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.079
+   Typechecking time: 0.097
    
    Success:
    
@@ -4819,9 +4819,9 @@ Test Bed
    
    Parsing time: 0.001
    
-   Compilation time: 0.003
+   Compilation time: 0.004
    
-   Typechecking time: 0.138
+   Typechecking time: 0.173
    
    Success:
    
