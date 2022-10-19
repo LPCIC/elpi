@@ -1,5 +1,7 @@
-# UNRELEASED
+# v1.16.6 (October 2022)
 
+Requires Menhir 20211230 and OCaml 4.08 or above.
+Camlp5 8.0 or above is optional.
 
 - API:
   - Fix `FlexData.Elpi.make` when called with a name after compilation is over
