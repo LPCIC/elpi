@@ -1,3 +1,11 @@
+# v1.16.7 (October 2022)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+Camlp5 8.0 or above is optional.
+
+- Tests:
+  - Fix trace elaboration reference files
+
 # v1.16.6 (October 2022)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.
