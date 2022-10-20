@@ -70,7 +70,7 @@
         ]
       }
     ],
-    "color": "Red"
+    "color": "YellowRed"
   },
   {
     "step_id": 2,
@@ -157,7 +157,7 @@
         ]
       }
     ],
-    "color": "Red"
+    "color": "YellowRed"
   },
   {
     "step_id": 3,
@@ -524,7 +524,7 @@
         ]
       }
     ],
-    "color": "Red"
+    "color": "YellowRed"
   },
   {
     "step_id": 9,
@@ -660,7 +660,7 @@
         ]
       }
     ],
-    "color": "Red"
+    "color": "YellowRed"
   },
   {
     "step_id": 10,
@@ -959,7 +959,7 @@
         ]
       }
     ],
-    "color": "Red"
+    "color": "YellowRed"
   },
   {
     "step_id": 13,
@@ -1290,7 +1290,7 @@
         ]
       }
     ],
-    "color": "Red"
+    "color": "YellowRed"
   },
   {
     "step_id": 16,

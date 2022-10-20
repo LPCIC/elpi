@@ -63,7 +63,7 @@
         ]
       }
     ],
-    "color": "YellowRed"
+    "color": "YellowGreen"
   },
   {
     "step_id": 2,
@@ -280,7 +280,7 @@
         ]
       }
     ],
-    "color": "Red"
+    "color": "YellowRed"
   },
   {
     "step_id": 5,
@@ -416,7 +416,7 @@
               { "goal_text": "!", "goal_id": 10 },
               { "goal_text": "q => (q :- !) => q", "goal_id": 11 }
             ],
-            "siblings_aggregated_outcome": "Fail"
+            "siblings_aggregated_outcome": "Success"
           }
         ],
         "more_successful_attempts": [],
@@ -443,7 +443,7 @@
         ]
       }
     ],
-    "color": "Red"
+    "color": "Green"
   },
   {
     "step_id": 8,
@@ -569,7 +569,7 @@
               "events": []
             },
             "siblings": [ { "goal_text": "(q :- !) => q", "goal_id": 12 } ],
-            "siblings_aggregated_outcome": "Fail"
+            "siblings_aggregated_outcome": "Success"
           }
         ],
         "more_successful_attempts": [],
@@ -601,7 +601,7 @@
         ]
       }
     ],
-    "color": "Red"
+    "color": "Green"
   },
   {
     "step_id": 11,
@@ -620,7 +620,7 @@
               "events": []
             },
             "siblings": [ { "goal_text": "q", "goal_id": 13 } ],
-            "siblings_aggregated_outcome": "Fail"
+            "siblings_aggregated_outcome": "Success"
           }
         ],
         "more_successful_attempts": [],
@@ -657,7 +657,7 @@
         ]
       }
     ],
-    "color": "Red"
+    "color": "Green"
   },
   {
     "step_id": 12,
@@ -679,7 +679,7 @@
               "events": []
             },
             "siblings": [ { "goal_text": "!", "goal_id": 14 } ],
-            "siblings_aggregated_outcome": "Fail"
+            "siblings_aggregated_outcome": "Success"
           }
         ],
         "more_successful_attempts": [],
@@ -724,7 +724,7 @@
         ]
       }
     ],
-    "color": "Red"
+    "color": "Green"
   },
   {
     "step_id": 13,
