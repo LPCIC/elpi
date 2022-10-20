@@ -135,13 +135,13 @@ jobs:
 
       - name: Test elpi on Unix
         if: runner.os != 'Windows'
-        run: opam exec -- make tests RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ matrix.parser }}-${{ runner.os }}.exe'
+        run: opam exec -- make tests RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ matrix.parser }}-${{ runner.os }}.exe ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ matrix.parser }}-${{ runner.os }}.exe'
 
       - name: Test elpi on Windows
         if: runner.os == 'Windows'
         run: |
           opam exec -- ls -l tests/sources/*.elpi
-          opam exec -- make tests PWD=${{ env.workspace }} RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ matrix.parser }}-${{ runner.os }}.exe' TIME=--time=${{ env.cygwin_root }}/bin/time.exe
+          opam exec -- make tests PWD=${{ env.workspace }} RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ matrix.parser }}-${{ runner.os }}.exe ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ matrix.parser }}-${{ runner.os }}.exe' TIME=--time=${{ env.cygwin_root }}/bin/time.exe
 
 # Artifacts 2 ################################################################
 
