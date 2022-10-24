@@ -84,8 +84,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text":
-                    "(std.findall A0 A1) :- (findall_solutions A0 A1).",
+                  "rule_text": "(std.findall A0 A1) :- (findall_solutions A0 A1).",
                   "rule_loc": [
                     "File",
                     {
@@ -98,8 +97,7 @@
                 }
               ],
               "events": [
-                [ "Assign", "A0 := p _" ],
-                [ "Assign", "A1 := X0" ]
+                [ "Assign", "A0 := p _" ], [ "Assign", "A1 := X0" ]
               ]
             },
             "siblings": [
@@ -114,8 +112,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "(std.findall A0 A1) :- (findall_solutions A0 A1).",
+                "rule_text": "(std.findall A0 A1) :- (findall_solutions A0 A1).",
                 "rule_loc": [
                   "File",
                   {
@@ -440,8 +437,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "(std.findall A0 A1) :- (findall_solutions A0 A1).",
+                "rule_text": "(std.findall A0 A1) :- (findall_solutions A0 A1).",
                 "rule_loc": [
                   "File",
                   {
