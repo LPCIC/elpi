@@ -271,8 +271,7 @@
                 }
               ],
               "events": [
-                [ "Assign", "A0 := 1" ],
-                [ "Assign", "A1 := 2 + 3" ]
+                [ "Assign", "A0 := 1" ], [ "Assign", "A1 := 2 + 3" ]
               ]
             },
             "siblings": [ { "goal_text": "calc (2 + 3) 1", "goal_id": 8 } ],

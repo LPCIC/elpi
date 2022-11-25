@@ -664,6 +664,6 @@ let main =
 
   let cards = Trace.cards steps ~stack_frames ~aggregated_goal_success ~goal_text ~goal_attempts in
 
-  let ob = Bi_outbuf.create_channel_writer stdout in
-  write_trace ob cards;
-  Bi_outbuf.flush_channel_writer ob
+  let buf = Buffer.create 1000 in
+  write_trace buf cards;
+  Buffer.output_buffer stdout buf

@@ -21,8 +21,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text":
-                    "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                  "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                   "rule_loc": [
                     "File",
                     {
@@ -51,8 +50,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -88,8 +86,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text":
-                    "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
+                  "rule_text": "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
                   "rule_loc": [
                     "File",
                     {
@@ -118,8 +115,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
+                "rule_text": "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
                 "rule_loc": [
                   "File",
                   {
@@ -138,8 +134,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -178,8 +173,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
+                "rule_text": "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
                 "rule_loc": [
                   "File",
                   {
@@ -198,8 +192,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -238,8 +231,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -274,8 +266,7 @@
             "attempt": {
               "rule": [ "BuiltinRule", [ "Logic", "eq" ] ],
               "events": [
-                [ "Assign", "X0 := s X1" ],
-                [ "ResumeGoal", [ 11, 10 ] ]
+                [ "Assign", "X0 := s X1" ], [ "ResumeGoal", [ 11, 10 ] ]
               ]
             },
             "siblings": [],
@@ -293,8 +284,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -395,8 +385,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -485,8 +474,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
+                "rule_text": "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
                 "rule_loc": [
                   "File",
                   {
@@ -505,8 +493,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -542,8 +529,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text":
-                    "(odd (as uvar A0)) :- (declare_constraint (odd A0) A0).",
+                  "rule_text": "(odd (as uvar A0)) :- (declare_constraint (odd A0) A0).",
                   "rule_loc": [
                     "File",
                     {
@@ -572,8 +558,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "(odd (as uvar A0)) :- (declare_constraint (odd A0) A0).",
+                "rule_text": "(odd (as uvar A0)) :- (declare_constraint (odd A0) A0).",
                 "rule_loc": [
                   "File",
                   {
@@ -621,8 +606,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
+                "rule_text": "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
                 "rule_loc": [
                   "File",
                   {
@@ -641,8 +625,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -681,8 +664,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "(odd (as uvar A0)) :- (declare_constraint (odd A0) A0).",
+                "rule_text": "(odd (as uvar A0)) :- (declare_constraint (odd A0) A0).",
                 "rule_loc": [
                   "File",
                   {
@@ -730,8 +712,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
+                "rule_text": "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
                 "rule_loc": [
                   "File",
                   {
@@ -750,8 +731,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -834,8 +814,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -871,8 +850,7 @@
               "rule": [
                 "UserRule",
                 {
-                  "rule_text":
-                    "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
+                  "rule_text": "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
                   "rule_loc": [
                     "File",
                     {
@@ -901,8 +879,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
+                "rule_text": "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
                 "rule_loc": [
                   "File",
                   {
@@ -940,8 +917,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -980,8 +956,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
+                "rule_text": "(even (as uvar A0)) :- (declare_constraint (even A0) A0).",
                 "rule_loc": [
                   "File",
                   {
@@ -1019,8 +994,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
@@ -1097,8 +1071,7 @@
                   "step_id": 0,
                   "runtime_id": 2,
                   "step": [
-                    "Init",
-                    { "goal_text": "odd (s z)", "goal_id": 23 }
+                    "Init", { "goal_text": "odd (s z)", "goal_id": 23 }
                   ],
                   "color": "Grey"
                 },
@@ -1122,8 +1095,7 @@
                                 "rule_loc": [
                                   "File",
                                   {
-                                    "filename":
-                                      "tests/sources/trace_chr.elpi",
+                                    "filename": "tests/sources/trace_chr.elpi",
                                     "line": 13,
                                     "column": 0,
                                     "character": 209
@@ -1185,8 +1157,7 @@
                                 "rule_loc": [
                                   "File",
                                   {
-                                    "filename":
-                                      "tests/sources/trace_chr.elpi",
+                                    "filename": "tests/sources/trace_chr.elpi",
                                     "line": 11,
                                     "column": 0,
                                     "character": 200
@@ -1374,8 +1345,7 @@
             "rule": [
               "UserRule",
               {
-                "rule_text":
-                  "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
+                "rule_text": "main :- (even A0), (declare_constraint true A0), (A0 = s A1), \n (not (even A1)).",
                 "rule_loc": [
                   "File",
                   {
