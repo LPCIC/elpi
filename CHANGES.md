@@ -1,3 +1,11 @@
+# v1.16.8 (November 2022)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+Camlp5 8.0 or above is optional.
+
+- Dependencies:
+  - yojson 2.x, hence atd 2.10
+
 # v1.16.7 (October 2022)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.
