@@ -10,7 +10,7 @@ with an FFI for defining built-in predicates and data types, as well as
 quotations and similar goodies that come in handy to adapt the language to the host
 application.
 
-ELPI is free software released under LGPL vesion 2.1 or above.
+ELPI is free software released under LGPL version 2.1 or above.
 
 ## How to install ELPI
 
