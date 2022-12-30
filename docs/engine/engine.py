@@ -1,21 +1,56 @@
 #!/usr/bin/env python3
 
-import os, sys, in_place, pathlib, subprocess, re
+# Available options #########################################################
+
+atext       = ':assert:'   # regexp            - fail if not matched
+noerrtext   = ':nostderr:' #                   - omit stderr, by default show
+cmdlinetext = ':cmdline:'  # arguments to elpi - override default which is -test
+
+options =               [atext , noerrtext, cmdlinetext ]
+initial_option_status = (''    , False,     ['-test']   )
+
+#############################################################################
+
+import os, sys, in_place, pathlib, subprocess, re, shlex
 
 def check(input, expression):
-    pattern = re.compile(expression, re.IGNORECASE)
-    return pattern.match(input)
+    if expression == '':
+        return True
+    pattern = re.compile('.*' + expression, re.IGNORECASE | re.MULTILINE | re.DOTALL)
+    rc = pattern.match(input)
+    return rc
 
-def exec(path, base_path):
-    file = base_path / path
-    print('  - Executing elpi on', file.as_posix().rstrip())
-    elpi = subprocess.Popen(['dune', 'exec', 'elpi', '--', '-test', file.as_posix()[:-1]], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+def run(o, path, base_path):
+    _, _, cmd = o
+
+    if len(path) > 0:
+        file = [(base_path / path).as_posix()]
+    else:
+        file = []
+
+    exec = ['dune', 'exec', 'elpi', '--'] + file + cmd
+    print('  - Executing:',' '.join(exec))
+    elpi = subprocess.Popen(exec, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     output, errors = elpi.communicate()
     elpi.wait()
     return output, errors
 
+def parse_option(o, line):
+    a,e,c = o
+    if line.startswith(atext):
+        a = line[len(atext):].strip()
+        return (a,e,c)
+    elif line.startswith(noerrtext):
+        e = True
+        return (a,e,c)
+    elif line.startswith(cmdlinetext):
+        c = shlex.split(line[len(cmdlinetext):].strip())
+        return (a,e,c)
+    else:
+        print ('Error parsing options:',line)
+        exit(1)
+
 def process(source, base_path):
-    atext = '   :assert:'
     stext = '.. elpi::'
     rtext = '.. literalinclude::'
 
@@ -29,68 +64,66 @@ def process(source, base_path):
         for line in file:
 
             path = ''
-
             output = ''
             errors = ''
-            matchr = ''
+            option_status = initial_option_status
 
-            if line.startswith(atext):
-                index += 1
+            # ship options, already handled
+            if any(line.strip().startswith(x) for x in options):
                 #file.write('')
                 continue
 
-            if line.startswith(stext):
-                path = line[10:]
+            elif line.strip().startswith(stext):
+                indentation = ' '
+                indentation *= line.index(':') - 7
 
-                output, errors = exec(path, base_path)
+                path = line[line.index(':')+2:].strip()
+
+                stop = False
+                while not stop and index < len(lines)-1:
+                    next = lines[index+1].strip()
+                    if any(next.startswith(x) for x in options):
+                        index += 1
+                        option_status = parse_option(option_status,next)
+                    else:
+                        stop = True
+
+                output, errors = run(option_status, path, base_path)
                 
-                if index < len(lines)-1:
-                    next = lines[index+1]
-                    
-                    if next.startswith(atext):
-                        
-                        expression = next[12:].rstrip()
-                        
-                        if check(output, expression) is None:
-                            output = ''
-                            errors = ''
-                            matchr = 'Injection failure: result did not pass regexp check (' + expression + ')'
+                assert_expression, skip_stderr, _ = option_status
 
-            if line.startswith(stext):
-                block = '**' + path + ':' + '**' + '\n' + '\n'
-                block += line.replace(stext, rtext)
-                block += '   :linenos:' + '\n'
-                block += '   :language: elpi' + '\n'
-                file.write(block)
+                if check(output, assert_expression) is None:
+                    print('Failed to match',assert_expression,'on:\n')
+                    print(output)
+                    print(errors)
+                    exit(1)
+
+                if len(path) > 0:
+                    block  = ''
+                    block += line.replace(stext, rtext)
+                    block += indentation + '   :linenos:' + '\n'
+                    block += indentation + '   :language: elpi' + '\n'
+                    file.write(block)
+
+                if len(output) > 0:
+                    block  = indentation + '\n'
+                    block += indentation + '.. code-block:: console' + '\n'
+                    block += indentation + '\n   '
+                    block += indentation + output.replace('\n', '\n'+indentation+'   ')
+                    block += indentation + '\n'
+                    file.write(block)
+                    
+                if len(errors) > 0 and not skip_stderr:
+                    block  = indentation + '\n'
+                    block += indentation + '.. code-block:: console' + '\n'
+                    block += indentation + '\n   '
+                    block += indentation + errors.replace('\n', '\n'+indentation+'   ')
+                    block += indentation + '\n'
+                    file.write(block)
+
             else:
                 file.write(line)
 
-            if len(output) > 0:
-                block  = '\n'
-                block += '.. code-block:: console' + '\n'
-                block += '\n   '
-                block += output.replace('\n', '\n   ')
-                block += '\n'
-                file.write(block)
-                
-            if len(errors) > 0:
-                block  = '\n'
-                block += '.. code-block:: console' + '\n'
-                block += '\n   '
-                block += errors.replace('\n', '\n   ')
-                block += '\n'
-                file.write(block)
-
-            if len(matchr) > 0:
-                block  = '\n'
-                block += '.. raw:: html' + '\n'
-                block += '\n   '
-                block += '<div class="highlight-console notranslate"><div class="highlight" style="background-color: rgb(248, 148, 148);"><pre>'
-                block += matchr
-                block += '</pre></div></div>'
-                block += '\n'
-                file.write(block)
-            
             index += 1
 
 def find(path):
