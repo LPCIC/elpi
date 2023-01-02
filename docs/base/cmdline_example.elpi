@@ -1,0 +1,7 @@
+pred mypred i:list string.
+mypred Args :- print Args.
+
+pred guess o:int.
+guess 46.
+
+main :- print "Hello world!".

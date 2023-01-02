@@ -750,6 +750,8 @@ module State : sig
   val update : 'a component -> t -> ('a -> 'a) -> t
   val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
 
+  val is_empty : t -> bool
+
 end
 
 (** Flexible data is for unification variables. One can use Elpi's unification

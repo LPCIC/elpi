@@ -16,21 +16,26 @@ open Elpi
 
 module Str = Re.Str
 
-let print_solution time = function
+let print_solution print_time time = function
 | API.Execute.NoMoreSteps ->
-   Format.eprintf "Interrupted (no more steps)@\n%!"
-| API.Execute.Failure -> Format.eprintf "Failure@\n%!"
+   Format.printf "Interrupted (no more steps)@\n%!"
+| API.Execute.Failure -> Format.printf "Failure@\n%!"
 | API.Execute.Success {
     API.Data.assignments; constraints; state; pp_ctx; _ } ->
-  Format.eprintf "@\nSuccess:@\n%!" ;
-  API.Data.StrMap.iter (fun name v ->
-    Format.eprintf "  @[<hov 1>%s = %a@]@\n%!" name
-      (API.Pp.term pp_ctx) v) assignments;
-  Format.eprintf "@\nTime: %5.3f@\n%!" time;
-  Format.eprintf "@\nConstraints:@\n%a@\n%!"
-    (API.Pp.constraints pp_ctx) constraints;
-  Format.eprintf "@\nState:@\n%a@\n%!"
-    API.Pp.state state;
+  if not (API.Data.StrMap.is_empty assignments) then begin
+    Format.printf "@\nSuccess:@\n%!" ;
+    API.Data.StrMap.iter (fun name v ->
+      Format.printf "  @[<hov 1>%s = %a@]@\n%!" name
+        (API.Pp.term pp_ctx) v) assignments;
+  end;
+  if print_time then
+    Format.eprintf "@\nTime: %5.3f@\n%!" time;
+  if API.RawData.constraints constraints != [] then
+    Format.printf "@\nConstraints:@\n%a@\n%!"
+      (API.Pp.constraints pp_ctx) constraints;
+  if not(API.State.is_empty state) then
+    Format.printf "@\nState:@\n%a@\n%!"
+      API.Pp.state state;
 ;;
   
 let more () =
@@ -73,7 +78,8 @@ let usage =
   "\t-print-ast prints files as parsed, then exit\n" ^ 
   "\t-print prints files after most compilation passes, then exit\n" ^ 
   "\t-print-passes prints intermediate data during compilation, then exit\n" ^
-  "\t-print-units prints compilation units data, then exit\n"
+  "\t-print-units prints compilation units data, then exit\n" ^
+  "\t-print-time prints parsing, compilation, checking and esecution time\n"
 ;;
 
 (* For testing purposes we declare an identity quotation *)
@@ -90,6 +96,7 @@ let _ =
   let batch = ref false in
   let doc_builtins = ref false in
   let delay_outside_fragment = ref false in 
+  let print_time = ref false in
   let print_passes = ref false in
   let print_units = ref false in
   let extra_paths = ref [] in
@@ -107,6 +114,7 @@ let _ =
     | "-test" :: rest -> batch := true; main := true; eat_options rest
     | "-exec" :: goal :: rest ->  batch := true; exec := goal; eat_options rest
     | "-print" :: rest -> print_lprolog := true; eat_options rest
+    | "-print-time" :: rest -> print_time := true; eat_options rest
     | "-print-ast" :: rest -> print_ast := true; eat_options rest
     | "-print-passes" :: rest -> print_passes := true; eat_options rest
     | "-print-units" :: rest -> print_units := true; eat_options rest
@@ -200,14 +208,17 @@ let _ =
     exit 0;
   end;
   
-  Format.eprintf "@\nParsing time: %5.3f@\n%!" (Unix.gettimeofday () -. t0_parsing);
+  if !print_time then
+    Format.eprintf "@\nParsing time: %5.3f@\n%!" (Unix.gettimeofday () -. t0_parsing);
+
   let query, exec =
     let t0_compilation = Unix.gettimeofday () in
     try
       let prog = API.Compile.program ~flags ~elpi [p] in
       let query = API.Compile.query prog g in
       let exec = API.Compile.optimize query in
-      Format.eprintf "@\nCompilation time: %5.3f@\n%!" (Unix.gettimeofday () -. t0_compilation);
+      if !print_time then
+        Format.eprintf "@\nCompilation time: %5.3f@\n%!" (Unix.gettimeofday () -. t0_compilation);
       query, exec
     with API.Compile.CompileError(loc,msg) ->
       API.Utils.error ?loc msg
@@ -215,7 +226,8 @@ let _ =
   if !typecheck then begin
     let t0 = Unix.gettimeofday () in
     let b = API.Compile.static_check ~checker:(Builtin.default_checker ()) query in
-    Format.eprintf "@\nTypechecking time: %5.3f@\n%!" (Unix.gettimeofday () -. t0);
+    if !print_time then
+      Format.eprintf "@\nTypechecking time: %5.3f@\n%!" (Unix.gettimeofday () -. t0);
     if not b then begin
        Format.eprintf "Type error. To ignore it, pass -no-tc.\n";
        exit 1
@@ -232,7 +244,7 @@ let _ =
   end;
   if not !batch then 
     API.Execute.loop
-      ~delay_outside_fragment:!delay_outside_fragment ~more ~pp:print_solution
+      ~delay_outside_fragment:!delay_outside_fragment ~more ~pp:(print_solution !print_time)
       exec
   else begin
     Gc.compact ();
@@ -242,7 +254,7 @@ let _ =
           ~delay_outside_fragment:!delay_outside_fragment exec in
       let t1 = Unix.gettimeofday () in
       match b with
-      | API.Execute.Success _ -> print_solution (t1 -. t0) b; true
+      | API.Execute.Success _ -> print_solution !print_time (t1 -. t0) b; true
       | (API.Execute.Failure | API.Execute.NoMoreSteps) -> false
     then exit 0
     else exit 1
