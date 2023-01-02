@@ -54,7 +54,8 @@ let set_terminal_width ?(max_w=
 let usage =
   "\nUsage: elpi [OPTION].. [FILE].. [-- ARGS..] \n" ^ 
   "\nMain options:\n" ^ 
-  "\t-test runs the query \"main\"\n" ^ 
+  "\t-main runs the query \"main\"\n" ^ 
+  "\t-test runs the query \"main\" (deprecated)\n" ^ 
   "\t-exec pred  runs the query \"pred ARGS\"\n" ^ 
   "\t-D var  Define variable (conditional compilation)\n" ^ 
   "\t-document-builtins Print documentation for built-in predicates\n" ^
@@ -81,7 +82,7 @@ let _ =
     API.Quotation.lp
 
 let _ =
-  let test = ref false in
+  let main = ref false in
   let exec = ref "" in
   let print_lprolog = ref false in
   let print_ast = ref false in
@@ -102,7 +103,8 @@ let _ =
     | "-legacy-parser" :: rest -> legacy_parser := true; eat_options rest
     | "-legacy-parser-available" :: _ ->
           if API.Setup.legacy_parser_available then exit 0 else exit 1
-    | "-test" :: rest -> batch := true; test := true; eat_options rest
+    | "-main" :: rest -> batch := true; main := true; eat_options rest
+    | "-test" :: rest -> batch := true; main := true; eat_options rest
     | "-exec" :: goal :: rest ->  batch := true; exec := goal; eat_options rest
     | "-print" :: rest -> print_lprolog := true; eat_options rest
     | "-print-ast" :: rest -> print_ast := true; eat_options rest
@@ -176,8 +178,8 @@ let _ =
       exit 1;
   in
   let g =
-    if !test then
-      API.Parse.goal ~elpi ~loc:(API.Ast.Loc.initial "(-test)") ~text:"main."
+    if !main then
+      API.Parse.goal ~elpi ~loc:(API.Ast.Loc.initial "(-main)") ~text:"main."
     else if !exec <> "" then
       begin API.Parse.goal ~elpi
         ~loc:(API.Ast.Loc.initial "(-exec)")

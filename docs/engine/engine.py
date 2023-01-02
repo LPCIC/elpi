@@ -4,10 +4,10 @@
 
 atext       = ':assert:'   # regexp            - fail if not matched
 noerrtext   = ':nostderr:' #                   - omit stderr, by default show
-cmdlinetext = ':cmdline:'  # arguments to elpi - override default which is -test
+cmdlinetext = ':cmdline:'  # arguments to elpi - override default which is -main
 
 options =               [atext , noerrtext, cmdlinetext ]
-initial_option_status = (''    , False,     ['-test']   )
+initial_option_status = (''    , False,     ['-main']   )
 
 #############################################################################
 
@@ -30,7 +30,7 @@ def run(o, path, base_path):
 
     exec = ['dune', 'exec', 'elpi', '--'] + file + cmd
     print('  - Executing:',' '.join(exec))
-    elpi = subprocess.Popen(exec, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    elpi = subprocess.Popen(exec, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, text=True)
     output, errors = elpi.communicate()
     elpi.wait()
     return output, errors
@@ -90,7 +90,7 @@ def process(source, base_path):
 
                 output, errors = run(option_status, path, base_path)
                 
-                assert_expression, skip_stderr, _ = option_status
+                assert_expression, skip_stderr, command_line = option_status
 
                 if check(output, assert_expression) is None:
                     print('Failed to match',assert_expression,'on:\n')
@@ -104,6 +104,11 @@ def process(source, base_path):
                     block += indentation + '   :linenos:' + '\n'
                     block += indentation + '   :language: elpi' + '\n'
                     file.write(block)
+
+                if command_line == ['-main']:
+                    file.write('Output:\n')
+                else:
+                    file.write('Output of *elpi ' + shlex.join(command_line) + '*:\n')
 
                 if len(output) > 0:
                     block  = indentation + '\n'

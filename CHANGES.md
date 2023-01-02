@@ -1,3 +1,9 @@
+# UNRELEASED
+
+- Command line:
+  - Deprecate `-test`
+  - New `-main` to run `main` (with no arguments)
+
 # v1.16.8 (November 2022)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.

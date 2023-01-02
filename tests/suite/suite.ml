@@ -388,7 +388,7 @@ let () = Runner.declare
 
     let { Test.expectation; input; outside_llam ; typecheck; trace; legacy_parser; _ } = test in
     let input = Util.option_map (fun x -> sources^x) input in
-    let args = ["-test";"-I";executable_stuff;"-I";sources;source] @ trace in
+    let args = ["-main";"-I";executable_stuff;"-I";sources;source] @ trace in
     let args =
       if typecheck then args
       else "-no-tc" :: args in
