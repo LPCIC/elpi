@@ -39,7 +39,7 @@ let print_solution print_time time = function
 ;;
   
 let more () =
-  prerr_endline "\nMore? (Y/n)";
+  print_endline "\nMore? (Y/n)";
   read_line() <> "n"
 ;;
 
@@ -196,8 +196,9 @@ let _ =
          end
     else begin
      Printf.printf "goal> %!";
-     let buff = Lexing.from_channel stdin in
-     try API.Parse.goal_from ~elpi ~loc:(API.Ast.Loc.initial "(stdin)") buff
+     let buff = Lexing.from_function (fun b n -> try let c = input_char stdin in Bytes.set b 0 c; 1 with End_of_file -> 0) in
+     try
+       API.Parse.goal_from ~elpi ~loc:(API.Ast.Loc.initial "(stdin)") buff
      with API.Parse.ParseError(loc,err) ->
         Printf.eprintf "%s:\n%s\n" (API.Ast.Loc.show loc) err;
         exit 1;

@@ -52,7 +52,7 @@ def parse_option(o, line):
         c = shlex.split(line[len(cmdlinetext):].strip())
         return (a,e,x,c,i)
     elif line.startswith(stdintext):
-        i = line[len(stdintext):]
+        i = line[len(stdintext):].replace('\\n','\n')
         return (a,e,x,c,i)
     else:
         print ('Error parsing options:',line)

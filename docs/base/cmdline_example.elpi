@@ -3,5 +3,6 @@ mypred Args :- print Args.
 
 pred guess o:int.
 guess 46.
+guess 42.
 
 main :- print "Hello world!".

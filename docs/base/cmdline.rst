@@ -26,7 +26,7 @@ Interactive use
 Typing `guess X.` followed by enter runs the query.
 
 .. elpi:: cmdline_example.elpi
-   :stdin: guess X.
+   :stdin: guess X.\ny\n
    :nostderr:
    :cmdline:
    :nocode:
