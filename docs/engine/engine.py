@@ -31,9 +31,9 @@ def run(o, path, base_path):
         file = []
 
     exec = ['dune', 'exec', 'elpi', '--'] + file + cmd
-    print('  - Executing:',' '.join(exec),'|',s)
+    print('  - Executing: echo \''+s+'\' | '+' '.join(exec))
     elpi = subprocess.Popen(exec, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, text=True)
-    output, errors = elpi.communicate(input=(s+'\n'))
+    output, errors = elpi.communicate(input=(s.replace('\\n','\n') + '\n'))
     elpi.wait()
     return output, errors
 
@@ -52,7 +52,7 @@ def parse_option(o, line):
         c = shlex.split(line[len(cmdlinetext):].strip())
         return (a,e,x,c,i)
     elif line.startswith(stdintext):
-        i = line[len(stdintext):].replace('\\n','\n')
+        i = line[len(stdintext):].lstrip()
         return (a,e,x,c,i)
     else:
         print ('Error parsing options:',line)
@@ -70,6 +70,8 @@ def process(source, base_path):
 
         file.write('.. role:: console(code)\n')
         file.write('   :language: shell\n\n')   
+        file.write('.. role:: elpi(code)\n')
+        file.write('   :language: elpi\n\n')   
         for line in file:
 
             path = ''
@@ -99,7 +101,7 @@ def process(source, base_path):
 
                 output, errors = run(option_status, path, base_path)
                 
-                assert_expression, skip_stderr, skip_code, command_line, _ = option_status
+                assert_expression, skip_stderr, skip_code, command_line, input_text = option_status
 
                 if check(output, assert_expression) is None:
                     print('Failed to match',assert_expression,'on:\n')
@@ -116,9 +118,16 @@ def process(source, base_path):
                     file.write(block)
 
                 if len(path) > 0:
-                    file.write('\n' + indentation + 'Output of :console:`elpi ' + shlex.join([path] + command_line) + '`\n')
+                    elpi_args = shlex.join([path] + command_line)
                 else:
-                    file.write('\n' + indentation + 'Output of :console:`elpi ' + shlex.join(         command_line) + '`\n')
+                    elpi_args = shlex.join(         command_line)
+
+                if len(input_text) > 0:
+                    elpi_input = "echo -e '" + input_text + "' | "
+                else:
+                    elpi_input = ""
+
+                file.write('\n' + indentation + 'Output of :console:`' + elpi_input + 'elpi ' + elpi_args + '`\n')
 
                 if len(output) > 0:
                     block  = indentation + '\n'

@@ -1,0 +1,3 @@
+pred guess o:int.
+guess 46.
+guess 42.

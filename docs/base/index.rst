@@ -11,6 +11,7 @@ Welcome to Elpi's documentation!
    :caption: Usage:
 
    cmdline
+   trace-browser
 
 .. toctree::
    :maxdepth: 2
