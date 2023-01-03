@@ -1,0 +1,4 @@
+pred mypred i:list string.
+mypred Args :- print Args.
+
+main :- print "Hello world!".

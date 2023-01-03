@@ -1,0 +1,5 @@
+pred p i:int.
+p X :- X > 2.
+p 1.
+
+main :- p 1.

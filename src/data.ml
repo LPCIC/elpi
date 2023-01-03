@@ -266,6 +266,7 @@ module State : sig
   val update : 'a component -> t -> ('a -> 'a) -> t
   val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
   val pp : Format.formatter -> t -> unit
+  val is_empty : t -> bool
 
 end = struct
 
@@ -359,6 +360,18 @@ end = struct
       try pp fmt (StrMap.find name t)
       with Not_found -> ())
     !extensions
+
+  let is_empty (t,s) =
+    let reserved_prefix = "elpi:" in
+    let len_reserved = String.length reserved_prefix in
+    StrMap.fold (fun name { pp } acc ->
+      if String.length name > len_reserved && String.sub name 0 len_reserved = reserved_prefix then
+        acc
+      else
+        try acc && (ignore(StrMap.find name t);Printf.eprintf "%s\n%!" name; false)
+        with Not_found -> acc)
+   !extensions true
+  
 
 end
 

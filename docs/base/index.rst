@@ -6,12 +6,12 @@
 Welcome to Elpi's documentation!
 ================================
 
-.. .. toctree:
-..    :maxdepth: 2
-..    :caption: Contents:
-.. 
-..    about
-..    playground
+.. toctree::
+   :maxdepth: 2
+   :caption: Usage:
+
+   cmdline
+   trace-browser
 
 .. toctree::
    :maxdepth: 2

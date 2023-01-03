@@ -20,6 +20,11 @@ help:
 	@echo '  menhir-complete-errormsgs run when updating the grammar'
 	@echo '  menhir-strip-errormsgs remove comments from error message file'
 	@echo
+	@echo 'Doc and release targets:'
+	@echo
+	@echo '  doc-build      builds all doc in docs/build/'
+	@echo '  release        calls dune-release and uploads the doc'
+	@echo
 
 INSTALL=_build/install/default
 BUILD=_build/default
