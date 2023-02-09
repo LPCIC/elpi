@@ -9,6 +9,7 @@ module Loc = U.Loc
 open Elpi_parser.Ast
 open Elpi_parser.Parser_config
 open Term
+open Gramlib
 
 module Str = Re.Str
 
