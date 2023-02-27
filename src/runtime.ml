@@ -2878,7 +2878,12 @@ let do_make_runtime : (?max_steps:int -> ?delay_outside_fragment:bool -> 'x exec
 
 module Constraints : sig
 
-  val propagation : unit -> constraint_def list
+  type new_csts = {
+    new_goals : goal list;
+    some_rule_was_tried : bool; [@trace]
+  }
+
+  val propagation : unit -> new_csts
   val resumption : constraint_def list -> goal list
 
   val chrules : CHR.t Fork.local_ref
@@ -2888,6 +2893,11 @@ module Constraints : sig
     constant -> depth:int -> prolog_prog -> (UUID.t[@trace]) -> term list -> term list
 
 end = struct (* {{{ *)
+
+type new_csts = {
+  new_goals : goal list;
+  some_rule_was_tried : bool; [@trace]
+}
 
 exception NoMatch
 
@@ -3392,6 +3402,7 @@ let propagation () =
   let removed = ref [] in
   let outdated cs = List.exists (fun x -> List.memq x !removed) cs in
   let some_rule_fired[@trace] = ref false in
+  let some_rule_was_tried[@trace] = ref false in
   let orig_store_contents[@trace] = CS.contents () in
   while !CS.new_delayed <> [] do
     match !CS.new_delayed with
@@ -3422,6 +3433,7 @@ let propagation () =
               * was generated before the removal *)
              if outdated constraints then ()
              else begin
+               let ()[@trace] = some_rule_was_tried := true in
                [%spy "user:CHR:try" ~rid ~gid:active.cgid Loc.pp rule.rule_loc pp_urule rule];
                match try_fire_rule (active.cgid[@trace]) rule constraints with
                | None -> [%spy "user:CHR:rule-failed" ~rid ]
@@ -3446,9 +3458,10 @@ let propagation () =
       CS.contents () |> List.iter (fun it ->
         [%spy "user:CHR:store:after" ~rid CS.print_gid it CS.print1 it]
         );
-      end
+      end;
   in
-  !to_be_resumed_rev
+  { new_goals = resumption !to_be_resumed_rev;
+    some_rule_was_tried = !some_rule_was_tried [@trace] }
 
 end (* }}} *)
 
@@ -3486,6 +3499,10 @@ let hd_c_of = function
 let pp_resumed_goal { depth; program; goal; gid = gid[@trace] } =
   [%spy "user:rule:resume:resumed" ~rid ~gid (uppterm depth [] ~argsdepth:0 empty_env) goal]
 ;;
+let pp_CHR_resumed_goal { depth; program; goal; gid = gid[@trace] } =
+  [%spy "user:CHR:resumed" ~rid ~gid (uppterm depth [] ~argsdepth:0 empty_env) goal]
+;;
+
 
 (* The block of recursive functions spares the allocation of a Some/None
  * at each iteration in order to know if one needs to backtrack or continue *)
@@ -3504,12 +3521,8 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
 
  match resume_all () with
  | None ->
-    [%spy "user:rule" ~rid pp_string "constraint-failure"];
     [%tcall next_alt alts]
- | Some ({ depth = ndepth; program; goal; gid = ngid [@trace] } :: goals as all) ->
-    [%spy "user:rule" ~rid pp_string "resume"];
-    (List.iter pp_resumed_goal all)[@trace];
-    [%spy "user:rule:resume" ~rid pp_string "success"];
+ | Some ({ depth = ndepth; program; goal; gid = ngid [@trace] } :: goals) ->
     [%tcall run ndepth program goal (ngid[@trace]) (goals @ (repack_goal[@inlined]) (gid[@trace]) ~depth p g :: gs) next alts cutto_alts]
  | Some [] ->
     [%spyl "user:curgoal" ~rid ~gid (uppterm depth [] ~argsdepth:0 empty_env) [hd_c_of g;g]];
@@ -3766,10 +3779,40 @@ end;*)
    done ;
    (* Phase 2: we propagate the constraints *)
    if !ok then
+     let to_be_resumed = Constraints.resumption !to_be_resumed in
+
+     let ()[@trace] =
+       if to_be_resumed != [] then begin
+        [%spy "user:rule" ~rid pp_string "resume"];
+        List.iter pp_resumed_goal to_be_resumed;
+        [%spy "user:rule:resume" ~rid pp_string "success"];
+       end in
+
      (* Optimization: check here new_delayed *)
-     if !CS.new_delayed <> [] then Some (Constraints.resumption (Constraints.propagation () @ !to_be_resumed))
-     else Some (Constraints.resumption !to_be_resumed)
-   else None
+     if !CS.new_delayed <> [] then begin
+
+      let ()[@trace] =
+        if to_be_resumed != [] then begin
+          Trace_ppx_runtime.Runtime.incr_cur_step ~runtime_id:!rid "run";
+        end in
+
+      let { Constraints.new_goals;
+            some_rule_was_tried = some_rule_was_tried[@trace] } =
+        Constraints.propagation () in
+
+      let ()[@trace] =
+        List.iter pp_CHR_resumed_goal new_goals;
+        if some_rule_was_tried && new_goals = [] then begin
+          Trace_ppx_runtime.Runtime.incr_cur_step ~runtime_id:!rid "run";
+        end in
+  
+      Some (to_be_resumed @ new_goals)
+     end else
+      Some to_be_resumed
+   else begin
+    [%spy "user:rule" ~rid pp_string "constraint-failure"];
+    None
+   end
 
   and next_alt alts =
    if alts == noalts then raise No_clause

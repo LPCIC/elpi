@@ -159,6 +159,8 @@ let incr_cur_step ~runtime_id k =
 
 end
 
+let incr_cur_step = Trace.incr_cur_step
+
 let enter ~runtime_id k payload =
   Trace.incr_cur_step ~runtime_id k;
   if Trace.condition ~runtime_id k then begin

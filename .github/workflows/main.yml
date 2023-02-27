@@ -104,6 +104,8 @@ jobs:
         if: matrix.parser == 'menhir-camlp5'
         run: |
           opam depext camlp5 || true # no depext on opam 2.1
+          sudo apt-get install libstring-shellquote-perl
+          sudo apt-get install libipc-system-simple-perl
           opam install ./elpi-option-legacy-parser.opam
           opam exec -- make config LEGACY_PARSER=1
 
