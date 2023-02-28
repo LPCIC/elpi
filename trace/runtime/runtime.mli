@@ -16,6 +16,7 @@ val end_trace : runtime_id:int -> unit
 
 val set_cur_pred : string option -> unit
 val get_cur_step : runtime_id:int -> string -> int
+val incr_cur_step : runtime_id:int -> string -> unit
 
 val log : runtime_id:int -> string -> string -> int -> unit
 

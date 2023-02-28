@@ -220,7 +220,7 @@ let all_infer_event_chains f =
   all_chains f ["user:assign";"user:backchain:fail-to"]
 
 let all_chr_event_chains f =
-  all_chains f ["user:assign";"user:CHR:rule-failed";"user:CHR:rule-fired";"user:CHR:rule-remove-constraints";"user:subgoal";"user:rule:resume:resumed"]
+  all_chains f ["user:assign";"user:CHR:rule-failed";"user:CHR:rule-fired";"user:CHR:rule-remove-constraints";"user:subgoal";"user:CHR:resumed"]
   
 let int_of_string s =
   try int_of_string s
@@ -252,7 +252,7 @@ let decode_infer_try (attempt,events) : attempt =
 
 let decode_chr_event ( { name; payload; goal_id}, time as x) =
   match name with
-  | "user:rule:resume:resumed" -> Some (`CreateGoal goal_id)
+  | "user:CHR:resumed" -> Some (`CreateGoal goal_id)
   | "user:CHR:rule-remove-constraints" -> Some (`RemoveConstraint (List.map int_of_string payload))
   | "user:assign" -> Some (`Assign (decode_string x))
   | _ -> None
@@ -278,7 +278,6 @@ let decode_chr_try ((_,start as attempt),events) : chr_attempt2 =
 let decode_chr_try_list l =
   let l = List.map decode_chr_try l in
   let successful_attempts, failed_attempts  = List.partition (fun x -> x.success) l in
-  assert(List.length successful_attempts > 0);
   let failed_attempts = List.map a2 failed_attempts in
   let successful_attempts = List.map a2 successful_attempts in
   failed_attempts, successful_attempts
@@ -575,7 +574,7 @@ end = struct
         | _ -> assert false in
 
       (* bad complexity *)
-      let in_time_stamp { start; stop } { start = start1; stop = stop1 } = start1 >= start && stop1 <= stop in
+      let in_time_stamp { start; stop } { start = start1; stop = stop1 } = start1 > start && stop1 <= stop in
       let rec to_chr_attempt ( x : chr_attempt) : Trace_atd.chr_attempt =
         let chr_loc = match x.loc with `File x -> x | `Context _ -> assert false in
         let chr_text = x.code in

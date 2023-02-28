@@ -125,9 +125,7 @@
 {"step" : 14,"kind" : ["Info"],"goal_id" : 19,"runtime_id" : 0,"name" : "user:CHR:rule-remove-constraints","payload" : ["19","14"]}
 {"step" : 14,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:CHR:store:before","payload" : ["19"," even X1  /* suspended on X1 */"]}
 {"step" : 14,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:CHR:store:before","payload" : ["14"," odd X1  /* suspended on X1 */"]}
-{"step" : 14,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule","payload" : ["resume"]}
-{"step" : 14,"kind" : ["Info"],"goal_id" : 25,"runtime_id" : 0,"name" : "user:rule:resume:resumed","payload" : ["_ => fail"]}
-{"step" : 14,"kind" : ["Info"],"goal_id" : 0,"runtime_id" : 0,"name" : "user:rule:resume","payload" : ["success"]}
+{"step" : 14,"kind" : ["Info"],"goal_id" : 25,"runtime_id" : 0,"name" : "user:CHR:resumed","payload" : ["_ => fail"]}
 {"step" : 15,"kind" : ["Info"],"goal_id" : 25,"runtime_id" : 0,"name" : "user:curgoal","payload" : ["=>","_ => fail"]}
 {"step" : 15,"kind" : ["Info"],"goal_id" : 25,"runtime_id" : 0,"name" : "user:rule","payload" : ["implication"]}
 {"step" : 15,"kind" : ["Info"],"goal_id" : 25,"runtime_id" : 0,"name" : "user:subgoal","payload" : ["26"]}
