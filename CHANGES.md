@@ -1,4 +1,4 @@
-# v.1.16.9 (March 2023)
+# v1.16.9 (March 2023)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.
 Camlp5 8.0 or above is optional.
