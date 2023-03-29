@@ -1,3 +1,8 @@
+# UNRELEASED
+
+- Elpi:
+  - New attribute `:replace` which replaces a named clause by an unnamed one
+
 # v1.16.9 (March 2023)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.

@@ -1,0 +1,9 @@
+pred p o:int.
+:name "replace_me"
+p 1.
+
+:name "foo"
+:replace "replace_me"
+p 2.
+
+main :- fail.

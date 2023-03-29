@@ -14,6 +14,7 @@ type t = Tokens.token =
   | SHORTEN
   | RULE
   | RPAREN
+  | REPLACE
   | RCURLY
   | RBRACKET
   | QUOTED of ( string )

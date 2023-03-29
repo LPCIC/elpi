@@ -294,6 +294,7 @@ attribute:
 | NAME; s = STRING  { Name s }
 | AFTER; s = STRING { After s }
 | BEFORE; s = STRING { Before s }
+| REPLACE; s = STRING { Replace s }
 | EXTERNAL { External }
 | INDEX; LPAREN; l = nonempty_list(indexing) ; RPAREN { Index l }
 
@@ -393,6 +394,7 @@ constant:
 | NAME { Func.from_string "name" }
 | BEFORE { Func.from_string "before" }
 | AFTER { Func.from_string "after" }
+| REPLACE { Func.from_string "replace" }
 | INDEX { Func.from_string "index" }
 | c = IO { Func.from_string @@ String.make 1 c }
 | CUT { Func.cutf }

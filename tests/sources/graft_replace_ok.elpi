@@ -1,0 +1,9 @@
+pred p o:int.
+:name "replace_me"
+p 1.
+
+:replace "replace_me"
+p 2.
+
+main :-
+  std.findall (p _) [p 2].

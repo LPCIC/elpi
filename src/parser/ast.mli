@@ -70,6 +70,7 @@ type raw_attribute =
   | Name of string
   | After of string
   | Before of string
+  | Replace of string
   | External
   | Index of int list
 [@@ deriving show]
@@ -205,7 +206,7 @@ and attribute = {
   id : string option;
   ifexpr : string option;
 }
-and insertion = Before of string | After of string
+and insertion = Before of string | After of string | Replace of string
 and cattribute = {
   cid : string;
   cifexpr : string option
