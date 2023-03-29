@@ -57,6 +57,7 @@
 %token IF
 %token BEFORE
 %token AFTER
+%token REPLACE
 %token NAME 
 %token INDEX 
 %token CONS

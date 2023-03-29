@@ -164,6 +164,7 @@ and token = parse
 | "sigma" { SIGMA }
 | "after" { AFTER }
 | "before" { BEFORE }
+| "replace" { REPLACE }
 | "name" { NAME }
 | "if" { IF }
 | "index" { INDEX }

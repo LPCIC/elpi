@@ -290,6 +290,19 @@ let () = declare "IO_COLON"
   ~typecheck:true
   ()
 
+let () = declare "graft_replace_ok"
+  ~source_elpi:"graft_replace_ok.elpi"
+  ~description:"replacing a clase"
+  ~typecheck:true
+  ()
+
+let () = declare "graft_replace_err"
+  ~source_elpi:"graft_replace_err.elpi"
+  ~description:"replacing a clase"
+  ~typecheck:true
+  ~expectation:Test.(FailureOutput (Str.regexp "name attribute"))
+  ()
+
 let mk_tmp_file =
   let tmp = ref 0 in
   let dir = Filename.get_temp_dir_name () in

@@ -241,7 +241,25 @@ such clause using the `:before` attribute.
 fatal-error Msg :- !, M is "elpi: " ^ Msg, coq-err M.
 ```
 
-The `:after` attribute is also available.
+The `:after` and `:replace` attributes is also available.
+
+The `:replace` attribute cannot be given to a named clause. This is to avoid
+the following ambiguity:
+
+```prolog
+:name "replace-me"
+p 1.
+
+% from one accumulated file
+:replace "replace-me" :name "replace-me"
+p 2.
+
+% from another accumulated file
+:replace "replace-me" :name "replace-me"
+p 3.
+```
+Here the order in which replacement is performed would matter.
+
 
 ## Conditional compilation
 

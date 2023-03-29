@@ -559,6 +559,8 @@ end = struct (* {{{ *)
       error ~loc ("duplicate attribute " ^ s) in
     let illegal_err a =
       error ~loc ("illegal attribute " ^ show_raw_attribute a) in
+    let illegal_replace s =
+      error ~loc ("replacing clause for "^ s ^" cannot have a name attribute") in
     let rec aux r = function
       | [] -> r
       | Name s :: rest ->
@@ -570,13 +572,21 @@ end = struct (* {{{ *)
       | Before s :: rest ->
          if r.insertion <> None then duplicate_err "insertion";
          aux { r with insertion = Some (Before s) } rest
+      | Replace s :: rest ->
+          if r.insertion <> None then duplicate_err "insertion";
+          aux { r with insertion = Some (Replace s) } rest
       | If s :: rest ->
          if r.ifexpr <> None then duplicate_err "if";
          aux { r with ifexpr = Some s } rest
       | (External | Index _) as a :: _-> illegal_err a
     in
-    { c with Clause.attributes =
-        aux { insertion = None; id = None; ifexpr = None } attributes }
+    let attributes = aux { insertion = None; id = None; ifexpr = None } attributes in
+    begin
+      match attributes.insertion, attributes.id with
+      | Some (Replace x), Some _ -> illegal_replace x
+      | _ -> ()
+    end;
+    { c with Clause.attributes }
 
   let structure_chr_attributes ({ Chr.attributes; loc } as c) =
     let duplicate_err s =
@@ -590,7 +600,7 @@ end = struct (* {{{ *)
       | If s :: rest ->
          if r.cifexpr <> None then duplicate_err "if";
          aux { r with cifexpr = Some s } rest
-      | (Before _ | After _ | External | Index _) as a :: _ -> illegal_err a 
+      | (Before _ | After _ | Replace _ | External | Index _) as a :: _ -> illegal_err a 
     in
     let cid = Loc.show loc in 
     { c with Chr.attributes = aux { cid; cifexpr = None } attributes }
@@ -614,7 +624,7 @@ end = struct (* {{{ *)
            | Some (Structured.Index _) -> duplicate_err "index"
            | Some _ -> error ~loc "external predicates cannot be indexed"
          end
-      | (Before _ | After _ | Name _ | If _) as a :: _ -> illegal_err a 
+      | (Before _ | After _ | Replace _ | Name _ | If _) as a :: _ -> illegal_err a 
     in
     let attributes = aux None attributes in
     let attributes =
@@ -1910,8 +1920,12 @@ end = struct (* {{{ *)
       match l, loc_name with
       | [],_ -> error ~loc:c.Ast.Clause.loc ("unable to graft this clause: no clause named " ^
              match loc_name with
+             | Ast.Structured.Replace x -> x
              | Ast.Structured.After x -> x
              | Ast.Structured.Before x -> x)
+      | { Ast.Clause.attributes = { Assembled.id = Some n }} :: xs,
+        Ast.Structured.Replace name when n = name ->
+           c :: xs
       | { Ast.Clause.attributes = { Assembled.id = Some n }} as x :: xs,
         Ast.Structured.After name when n = name ->
            c :: x :: xs
