@@ -12,7 +12,6 @@
   (preprocess (pps ppx_show elpi.ppx))
   (modules ocaml_ast_for_elpi main_ocaml_elpi_rewriter)
   (kind ppx_rewriter)
-  (optional)
 )
 
 (rule
