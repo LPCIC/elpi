@@ -1,6 +1,7 @@
 let parsetree_declaration = ref []
 let parsetree_mapper = ref []
-open Ppxlib_ast.Import_for_core
+open Ppxlib_ast
+open Ocaml_common
 
 let elpi_loc_of_location loc =
   let open Location in
@@ -33,7 +34,7 @@ let dummy_location =
 let maybe_override_embed default = fun ~depth h c st e ->
   let open Parsetree in
   match e with
-  | ({ Location.txt = ("e"|"p"|"t"|"m"|"i"); _ }, PStr [{ pstr_desc = Pstr_eval ({ pexp_desc = Parsetree.Pexp_constant (Pconst_string(s,_)); pexp_loc = loc; _ },[]) ; _}]) ->
+  | ({ Location.txt = ("e"|"p"|"t"|"m"|"i"); _ }, PStr [{ pstr_desc = Pstr_eval ({ pexp_desc = Parsetree.Pexp_constant (Pconst_string(s,_,_)); pexp_loc = loc; _ },[]) ; _}]) ->
       let loc = elpi_loc_of_location loc in
       let st, x = Elpi.API.Quotation.lp ~depth st loc s in
       st, x, []
@@ -42,12 +43,22 @@ let maybe_override_embed default = fun ~depth h c st e ->
 let maybe_override_embed2 default = fun ~depth h c st e a ->
   let open Parsetree in
   match e with
-  | ({ Location.txt = ("e"|"p"|"t"|"m"|"i"); _ }, PStr [{ pstr_desc = Pstr_eval ({ pexp_desc = Parsetree.Pexp_constant (Pconst_string(s,_)); pexp_loc = loc; _ },[]) ; _}]) ->
+  | ({ Location.txt = ("e"|"p"|"t"|"m"|"i"); _ }, PStr [{ pstr_desc = Pstr_eval ({ pexp_desc = Parsetree.Pexp_constant (Pconst_string(s,_,_)); pexp_loc = loc; _ },[]) ; _}]) ->
       let loc = elpi_loc_of_location loc in
       let st, x = Elpi.API.Quotation.lp ~depth st loc s in
       st, x, []
   | _ -> default ~depth h c st e a
 
+module Warnings = struct
+  include Warnings
+
+  let pp_loc fmt vl = Location.print_loc fmt vl
+end
+
+module Longident = struct
+  include Longident
+  let pp fmt vl = Format.fprintf fmt "%s" (String.concat "." (Longident.flatten vl))
+end
 (**************************************************************************)
 (*                                                                        *)
 (*                                 OCaml                                  *)
@@ -160,7 +171,12 @@ and arg_label = Asttypes.arg_label =
 and variance = Asttypes.variance =
   | Covariant
   | Contravariant
-  | Invariant
+  | NoVariance
+
+and injectivity = Asttypes.injectivity =
+  | Injective
+  | NoInjectivity
+
 
 (** Abstract syntax tree produced by parsing *)
 
@@ -173,7 +189,7 @@ and constant = Parsetree.constant =
   *)
   | Pconst_char of char
   (* 'c' *)
-  | Pconst_string of string * string option
+  | Pconst_string of string * Warnings.loc * string option
   (* "constant"
      {delim|other constant|delim}
   *)
@@ -355,7 +371,7 @@ and pattern_desc = Parsetree.pattern_desc =
 
      Invariant: n >= 2
   *)
-  | Ppat_construct of longident_loc * pattern option
+  | Ppat_construct of longident_loc * (string loc list * pattern) option
   (* C                None
      C P              Some P
      C (P1, ..., Pn)  Some (Ppat_tuple [P1; ...; Pn])
@@ -380,7 +396,7 @@ and pattern_desc = Parsetree.pattern_desc =
   (* #tconst *)
   | Ppat_lazy of pattern
   (* lazy P *)
-  | Ppat_unpack of string loc
+  | Ppat_unpack of string option loc
   (* (module P)
      Note: (module P : S) is represented as
      Ppat_constraint(Ppat_unpack, Ptyp_package)
@@ -488,7 +504,7 @@ and expression_desc = Parsetree.expression_desc =
   (* x <- 2 *)
   | Pexp_override of (label loc * expression) list
   (* {< x1 = E1; ...; Xn = En >} *)
-  | Pexp_letmodule of string loc * module_expr * expression
+  | Pexp_letmodule of string option loc * module_expr * expression
   (* let module M = ME in E *)
   | Pexp_letexception of extension_constructor * expression
   (* let exception C in E *)
@@ -565,7 +581,7 @@ and value_description = Parsetree.value_description =
 and type_declaration = Parsetree.type_declaration =
   {
     ptype_name: string loc;
-    ptype_params: (core_type * variance) list;
+    ptype_params: (core_type * (variance * injectivity)) list;
     (* ('a1,...'an) t; None represents  _*)
     ptype_cstrs: (core_type * core_type * location) list;
     (* ... constraint T1=T1'  ... constraint Tn=Tn' *)
@@ -611,6 +627,7 @@ and label_declaration = Parsetree.label_declaration =
 and constructor_declaration = Parsetree.constructor_declaration =
   {
     pcd_name: string loc;
+    pcd_vars: string loc list;
     pcd_args: constructor_arguments;
     pcd_res: core_type option;
     pcd_loc: location;
@@ -633,7 +650,7 @@ and constructor_arguments = Parsetree.constructor_arguments =
 and type_extension = Parsetree.type_extension =
   {
     ptyext_path: longident_loc;
-    ptyext_params: (core_type * variance) list;
+    ptyext_params: (core_type * (variance * injectivity)) list;
     ptyext_constructors: extension_constructor list;
     ptyext_private: private_flag;
     ptyext_loc: location;
@@ -658,7 +675,7 @@ and type_exception = Parsetree.type_exception =
   }
 
 and extension_constructor_kind = Parsetree.extension_constructor_kind =
-    Pext_decl of constructor_arguments * core_type option
+    Pext_decl of string loc list * constructor_arguments * core_type option
         (*
      | C of T1 * ... * Tn     ([T1; ...; Tn], None)
      | C: T0                  ([], Some T0)
@@ -732,7 +749,7 @@ and class_type_field_desc = Parsetree.class_type_field_desc =
 and 'a class_infos = 'a Parsetree.class_infos =
   {
     pci_virt: virtual_flag;
-    pci_params: (core_type * variance) list;
+    pci_params: (core_type * (variance * injectivity)) list;
     pci_name: string loc;
     pci_expr: 'a;
     pci_loc: location;
@@ -851,7 +868,7 @@ and module_type_desc = Parsetree.module_type_desc =
   (* S *)
   | Pmty_signature of signature
   (* sig ... end *)
-  | Pmty_functor of string loc * module_type option * module_type
+  | Pmty_functor of functor_parameter * module_type
   (* functor(X : MT1) -> MT2 *)
   | Pmty_with of module_type * with_constraint list
   (* MT with ... *)
@@ -861,6 +878,10 @@ and module_type_desc = Parsetree.module_type_desc =
   (* [%id] *)
   | Pmty_alias of longident_loc
   (* (module M) *)
+
+and functor_parameter = Parsetree.functor_parameter =
+  | Unit
+  | Named of string option loc * module_type
 
 and signature = signature_item list
 
@@ -891,6 +912,7 @@ and signature_item_desc = Parsetree.signature_item_desc =
   | Psig_recmodule of module_declaration list
   (* module rec X1 : MT1 and ... and Xn : MTn *)
   | Psig_modtype of module_type_declaration
+  | Psig_modtypesubst of module_type_declaration
   (* module type S = MT
      module type S *)
   | Psig_open of open_description
@@ -908,7 +930,7 @@ and signature_item_desc = Parsetree.signature_item_desc =
 
 and module_declaration = Parsetree.module_declaration =
   {
-    pmd_name: string loc;
+    pmd_name: string option loc;
     pmd_type: module_type;
     pmd_attributes: attributes; (* ... [@@id1] [@@id2] *)
     pmd_loc: location;
@@ -969,6 +991,8 @@ and with_constraint = Parsetree.with_constraint =
      the name of the type_declaration. *)
   | Pwith_module of longident_loc * longident_loc
   (* with module X.Y = Z *)
+  | Pwith_modtype of Longident.t loc * module_type
+  | Pwith_modtypesubst of Longident.t loc * module_type
   | Pwith_typesubst of longident_loc * type_declaration
   (* with type X.t := ..., same format as [Pwith_type] *)
   | Pwith_modsubst of longident_loc * longident_loc
@@ -988,7 +1012,7 @@ and module_expr_desc = Parsetree.module_expr_desc =
   (* X *)
   | Pmod_structure of structure
   (* struct ... end *)
-  | Pmod_functor of string loc * module_type option * module_expr
+  | Pmod_functor of functor_parameter * module_expr
   (* functor(X : MT1) -> ME *)
   | Pmod_apply of module_expr * module_expr
   (* ME1(ME2) *)
@@ -1053,7 +1077,7 @@ and value_binding = Parsetree.value_binding =
 
 and module_binding = Parsetree.module_binding =
   {
-    pmb_name: string loc;
+    pmb_name: string option loc;
     pmb_expr: module_expr;
     pmb_attributes: attributes;
     pmb_loc: location;
