@@ -1,0 +1,28 @@
+(env
+  (dev
+    (flags (:standard -warn-error -A))))
+
+(executable
+ (name pp)
+ (modules pp)
+ (promote)
+ (libraries elpi.ppx ppxlib))
+
+(include dune.inc)
+
+(executable
+  (name gen_dune)
+  (libraries re)
+  (modules gen_dune)
+)
+
+(rule
+  (targets dune.inc.gen)
+  (deps (:gen gen_dune.exe) (source_tree .))
+  (action (with-stdout-to %{targets} (run %{gen})))
+)
+
+(rule
+  (alias runtest)
+  (action (diff dune.inc dune.inc.gen))
+)

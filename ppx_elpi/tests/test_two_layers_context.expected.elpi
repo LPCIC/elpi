@@ -1,0 +1,5 @@
+{{ c4 -> { Data.Conversion.entry = ; depth = 5 };  }}
+{{ c0 -> { Data.Conversion.entry = ; depth = 5 }; c2 ->
+     { Data.Conversion.entry = ; depth = 5 };  }} |- App f arg 
+Lam zzzz (zzzz)
+

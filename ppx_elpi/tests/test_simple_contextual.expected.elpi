@@ -1,0 +1,14 @@
+
+
+% tctx
+kind tctx type.
+type entry nominal -> string -> bool -> prop. % Entry
+
+% term
+kind term type.
+type app term -> term -> term. % App
+type lam bool -> string -> (term -> term) -> term. % Lam
+
+
+
+
