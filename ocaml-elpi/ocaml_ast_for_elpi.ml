@@ -31,23 +31,23 @@ let dummy_location =
     loc_ghost = false
   }
 
-let maybe_override_embed default = fun ~depth h c st e ->
+let maybe_override_embed default = fun ~depth st e ->
   let open Parsetree in
   match e with
   | ({ Location.txt = ("e"|"p"|"t"|"m"|"i"); _ }, PStr [{ pstr_desc = Pstr_eval ({ pexp_desc = Parsetree.Pexp_constant (Pconst_string(s,_,_)); pexp_loc = loc; _ },[]) ; _}]) ->
       let loc = elpi_loc_of_location loc in
       let st, x = Elpi.API.Quotation.lp ~depth st loc s in
       st, x, []
-  | e -> default ~depth h c st e
+  | e -> default ~depth st e
 
-let maybe_override_embed2 default = fun ~depth h c st e a ->
+let maybe_override_embed2 default = fun ~depth st e a ->
   let open Parsetree in
   match e with
   | ({ Location.txt = ("e"|"p"|"t"|"m"|"i"); _ }, PStr [{ pstr_desc = Pstr_eval ({ pexp_desc = Parsetree.Pexp_constant (Pconst_string(s,_,_)); pexp_loc = loc; _ },[]) ; _}]) ->
       let loc = elpi_loc_of_location loc in
       let st, x = Elpi.API.Quotation.lp ~depth st loc s in
       st, x, []
-  | _ -> default ~depth h c st e a
+  | _ -> default ~depth st e a
 
 module Warnings = struct
   include Warnings
@@ -109,16 +109,16 @@ and location = Location.t = {
   loc_start: position;
   loc_end: position;
   loc_ghost: bool;
-} [@@elpi.embed fun default ~depth h c st start end_ ghost ->
+} [@@elpi.embed fun default ~depth st start end_ ghost ->
        if ghost = false && start = dummy_position && end_ = dummy_position then
          let st, v = Elpi.API.FlexibleData.Elpi.make st in
          st, Elpi.API.RawData.mkUnifVar v ~args: [] st, []
        else
-         default ~depth h c st start end_ ghost ]
-  [@@elpi.default_constructor_readback fun default ~depth h c st t ->
+         default ~depth st start end_ ghost ]
+  [@@elpi.default_constructor_readback fun default ~depth st t ->
        match Elpi.API.RawData.look ~depth t with
        | Elpi.API.RawData.UnifVar _ -> st, dummy_location, []
-       | _ -> default ~depth h c st t]
+       | _ -> default ~depth st t]
 
 and location_stack = location list
 
@@ -141,8 +141,9 @@ and longident = Longident.t =
     Lident of string
   | Ldot of longident * string
   | Lapply of longident * longident
+[@@deriving show, elpi { declaration = parsetree_declaration; mapper = parsetree_mapper }]
 
-and longident_loc = longident loc
+type longident_loc = longident loc
 
 (** Auxiliary AST types used by parsetree and typedtree. *)
 
@@ -189,7 +190,7 @@ and constant = Parsetree.constant =
   *)
   | Pconst_char of char
   (* 'c' *)
-  | Pconst_string of string * Warnings.loc * string option
+  | Pconst_string of string * location * string option
   (* "constant"
      {delim|other constant|delim}
   *)
@@ -991,8 +992,8 @@ and with_constraint = Parsetree.with_constraint =
      the name of the type_declaration. *)
   | Pwith_module of longident_loc * longident_loc
   (* with module X.Y = Z *)
-  | Pwith_modtype of Longident.t loc * module_type
-  | Pwith_modtypesubst of Longident.t loc * module_type
+  | Pwith_modtype of longident loc * module_type
+  | Pwith_modtypesubst of longident loc * module_type
   | Pwith_typesubst of longident_loc * type_declaration
   (* with type X.t := ..., same format as [Pwith_type] *)
   | Pwith_modsubst of longident_loc * longident_loc
@@ -1109,6 +1110,8 @@ and directive_argument_desc = Parsetree.directive_argument_desc =
   | Pdir_ident of longident
   | Pdir_bool of bool
 [@@deriving show, elpi { declaration = parsetree_declaration; mapper = parsetree_mapper }]
+
+
 
 let parsetree_declaration = !parsetree_declaration
 let parsetree_mapper = !parsetree_mapper
