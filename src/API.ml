@@ -218,7 +218,6 @@ end
 
 module Conversion = struct
 type ty_ast = ED.Conversion.ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
-
 type extra_goal = ED.Conversion.extra_goal = ..
 type extra_goal +=
   | Unify = ED.Conversion.Unify
@@ -949,6 +948,8 @@ module Utils = struct
   let list_to_lp_list tl =
     let module R = (val !r) in let open R in
     list_to_lp_list tl
+
+  let show_ty_ast = ED.Conversion.show_ty_ast
 
   let get_assignment = function
     | Elpi.Arg _ -> assert false
