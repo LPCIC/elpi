@@ -56,8 +56,11 @@ val std_builtins : API.Setup.builtins
 
 (* Type descriptors for built-in predicates *)
 val pair : 'a API.Conversion.t -> 'b API.Conversion.t -> ('a * 'b) API.Conversion.t
+val triple : 'a API.Conversion.t -> 'b API.Conversion.t -> 'c API.Conversion.t -> ('a * 'b * 'c) API.Conversion.t
+val quadruple : 'a API.Conversion.t -> 'b API.Conversion.t -> 'c API.Conversion.t -> 'd API.Conversion.t -> ('a * 'b * 'c * 'd) API.Conversion.t
 val option : 'a API.Conversion.t -> 'a option API.Conversion.t
 val bool : bool API.Conversion.t
+val char : char API.Conversion.t
 
 (* A standard way to make a predicate always succeed but still give errors *)
 type diagnostic = private OK | ERROR of string API.BuiltInPredicate.ioarg

@@ -236,6 +236,18 @@ let bool = AlgebraicData.declare {
   ]
 }|> ContextualConversion.(!<)
 
+let char : char Conversion.t =  {
+  ty = TyName "char";
+  pp_doc = (fun fmt () -> Format.fprintf fmt "Char values: single character strings");
+  pp = (fun fmt b -> Format.fprintf fmt "%c" b);
+  embed = (fun ~depth (st: State.t) (c: char) -> BuiltInData.string.embed ~depth st (String.make 1 c));
+  readback = (fun ~depth st term  ->
+      let st,name,goals = BuiltInData.string.readback ~depth st term in
+      st,name.[0],goals
+    );
+}
+
+
 let pair a b = let open AlgebraicData in declare {
   ty = TyApp ("pair",a.Conversion.ty,[b.Conversion.ty]);
   doc = "Pair: the constructor is pr, since ',' is for conjunction";
@@ -244,6 +256,28 @@ let pair a b = let open AlgebraicData in declare {
     K("pr","",A(a,A(b,N)),
       B (fun a b -> (a,b)),
       M (fun ~ok ~ko:_ -> function (a,b) -> ok a b));
+  ]
+} |> ContextualConversion.(!<)
+
+let triple a b c = let open AlgebraicData in declare {
+  ty = TyApp ("triple",a.Conversion.ty,[b.Conversion.ty;c.Conversion.ty]);
+  doc = "Triple: the constructor is trpl, since ',' is for conjunction";
+  pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_triple a.Conversion.pp b.Conversion.pp c.Conversion.pp) o);
+  constructors = [
+    K("trpl","",A(a,A(b,A(c,N))),
+      B (fun a b c -> (a,b, c)),
+      M (fun ~ok ~ko:_ -> function (a,b,c) -> ok a b c));
+  ]
+} |> ContextualConversion.(!<)
+
+let quadruple a b c d = let open AlgebraicData in declare {
+  ty = TyApp ("quadruple",a.Conversion.ty,[b.Conversion.ty;c.Conversion.ty;d.Conversion.ty]);
+  doc = "Quadruple: the constructor is quadrpl, since ',' is for conjunction";
+  pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_quadruple a.Conversion.pp b.Conversion.pp c.Conversion.pp d.Conversion.pp) o);
+  constructors = [
+    K("quadrpl","",A(a,A(b,A(c,A(d,N)))),
+      B (fun a b c d -> (a,b,c,d)),
+      M (fun ~ok ~ko:_ -> function (a,b,c,d) -> ok a b c d));
   ]
 } |> ContextualConversion.(!<)
 
