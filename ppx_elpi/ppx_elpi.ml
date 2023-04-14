@@ -1,3 +1,4 @@
+[@@@warning "-27"]
 open Ppxlib
 open Ppxlib.Ast_pattern
 
@@ -219,13 +220,13 @@ let att_elpi_binder = Attribute.(declare "elpi.binder" Context.core_type (single
   String.lowercase_ascii txt
 let elpi_map_name x = "Elpi_"^x^"_Map"
 let elpi_state_name x = "elpi_"^x^"_state"
-let elpi_ctx_class_module_name x = "Ctx_for_" ^ x
-let elpi_ctx_class_name x = elpi_ctx_class_module_name x ^ ".t"
-let elpi_ctx_object_name x = "ctx_for_" ^ x
-let elpi_readback_ctx_name x = "context_made_of_" ^ x
-let elpi_in_ctx_for_name x = "in_" ^ elpi_ctx_object_name x
+(* let elpi_ctx_class_module_name x = "Ctx_for_" ^ x *)
+(* let elpi_ctx_class_name x = elpi_ctx_class_module_name x ^ ".t" *)
+(* let elpi_ctx_object_name x = "ctx_for_" ^ x *)
+(* let elpi_readback_ctx_name x = "context_made_of_" ^ x *)
+(* let elpi_in_ctx_for_name x = "in_" ^ elpi_ctx_object_name x *)
 let elpi_to_key x = "elpi_" ^ x ^ "_to_key"
-let elpi_is_ctx_entry_name x = "elpi_is_" ^ x
+(* let elpi_is_ctx_entry_name x = "elpi_is_" ^ x *)
 let elpi_embed_name x = "elpi_embed_" ^ x
 let elpi_readback_name x = "elpi_readback_" ^ x
 let elpi_push x = "elpi_push_" ^ x
@@ -378,12 +379,12 @@ type type_extras = {
   ty_constants : structure_item list;
   ty_embed : value_binding;
   ty_readback : value_binding;
-  ty_ctx_class_type : structure_item;
+  (* ty_ctx_class_type : structure_item; *)
   ty_conversion : structure_item;
   ty_conversion_name : string;
   ty_elpi_declaration : elpi_declaration;
   ty_opaque : bool;
-  ty_in_ctx : structure_item list; (* for contextual ADTs *)
+  (* ty_in_ctx : structure_item list; (\* for contextual ADTs *\) *)
   ty_library : expression option; (* should be Elpi AST *)
 }
 and elpi_declaration = {
@@ -393,7 +394,7 @@ and elpi_declaration = {
 
 type context_extras = {
   ty_context_helpers : structure_item list;
-  ty_context_readback : structure_item list;
+  (* ty_context_readback : structure_item list; *)
 }
 
 type mutual_type_extras = {
@@ -431,7 +432,7 @@ let rec embed_k (module B : Ast_builder.S) c all_kargs all_tmp kargs tmp tys n =
     [%expr elpi__state, Elpi.API.RawData.mkAppL [%e c] [%e elist @@ List.map evar @@ List.map fst all_kargs], List.concat [%e elist all_tmp] ]
   | (px,ex) :: xs, y :: ys, (FO { embed = t; _ }) :: ts -> [%expr
       let elpi__state, [%p pvar px], [%p pvar y] =
-        [%e t] ~depth: elpi__depth elpi__hyps elpi__constraints elpi__state [%e ex] in
+        [%e t] ~depth: elpi__depth elpi__state [%e ex] in
       [%e embed_k (module B) c all_kargs all_tmp xs ys ts (n+1)]]
   | (px,ex) :: xs, y :: ys, HO{ build_ctx = f; embed = t; ctx = ctx_name; _ } :: ts ->
       let xtmp = fresh () in
@@ -444,7 +445,7 @@ let rec embed_k (module B : Ast_builder.S) c all_kargs all_tmp kargs tmp tys n =
       let elpi__ctx_entry = { Elpi.API.Conversion.entry = elpi__ctx_entry; depth = elpi__depth } in
       let elpi__state = [%e elpi_push ] ~depth: (elpi__depth + 1) elpi__state elpi__ctx_key elpi__ctx_entry in
       let elpi__state, [%p pvar xtmp], [%p pvar y] =
-        [%e t] ~depth: (elpi__depth + 1) elpi__hyps elpi__constraints elpi__state [%e ex] in
+        [%e t] ~depth: (elpi__depth + 1)  elpi__state [%e ex] in
       let [%p pvar px] = Elpi.API.RawData.mkLam [%e evar xtmp] in
       let elpi__state = [%e elpi_pop ] ~depth: (elpi__depth + 1) elpi__state elpi__ctx_key in
       [%e embed_k (module B) c all_kargs all_tmp xs ys ts (n+1)]]
@@ -470,7 +471,7 @@ let abstract_standard_branch_embed (module B : Ast_builder.S) l e = let open B i
     | [] -> e
     | x::xs -> [%expr fun [%p pvar x] -> [%e aux xs]]
   in
-  [%expr fun ~depth: elpi__depth elpi__hyps elpi__constraints elpi__state -> [%e aux l ]]
+  [%expr fun ~depth: elpi__depth elpi__state -> [%e aux l ]]
 
 let embed_branch (module B : Ast_builder.S) is_pred = function
  | Skip { constructor_name; has_args } -> error_constructor_not_supported (module B) (constructor_name,has_args)
@@ -490,14 +491,14 @@ let embed_branch (module B : Ast_builder.S) is_pred = function
     ~rhs:begin match embed with
     | Custom { ml; _ } ->
         eapply [%expr [%e ml] [%e abstract_standard_branch_embed (module B) pvl standard ]
-             ~depth: elpi__depth elpi__hyps elpi__constraints elpi__state] (List.map evar pvl)
+             ~depth: elpi__depth  elpi__state] (List.map evar pvl)
     | Standard -> standard
     | Name { get_key; ctx_name } ->
            embed_var (module B) ctx_name (List.map evar pvl) get_key
     end
 
 let embed (module B : Ast_builder.S) is_pred kl = let open B in
-    [%expr fun ~depth: elpi__depth elpi__hyps elpi__constraints elpi__state ->
+    [%expr fun ~depth: elpi__depth  elpi__state ->
       [%e pexp_function (List.map (embed_branch (module B) is_pred) kl) ]]
 
 let readback_k (module B : Ast_builder.S) c mk_k t ts = let open B in
@@ -505,7 +506,7 @@ let readback_k (module B : Ast_builder.S) c mk_k t ts = let open B in
     match t with
     | FO { readback = t; _ } -> [%expr
         let elpi__state, [%p pvar p1], [%p pvar e1] =
-          [%e t] ~depth: elpi__depth elpi__hyps elpi__constraints elpi__state [%e x] in
+          [%e t] ~depth: elpi__depth  elpi__state [%e x] in
         [%e kont] ]
     | HO { build_ctx = f; readback = t; ctx = ctx_name; _ } ->
       let elpi_to_key = evar (elpi_to_key ctx_name) in
@@ -519,7 +520,7 @@ let readback_k (module B : Ast_builder.S) c mk_k t ts = let open B in
         let elpi__state, [%p pvar p1], [%p pvar e1] =
           match Elpi.API.RawData.look ~depth: elpi__depth [%e x] with
           | Elpi.API.RawData.Lam elpi__bo ->
-                [%e t] ~depth: (elpi__depth + 1) elpi__hyps elpi__constraints elpi__state elpi__bo
+                [%e t] ~depth: (elpi__depth + 1)  elpi__state elpi__bo
           | _ -> assert false in
        let elpi__state = [%e elpi_pop ] ~depth: elpi__depth elpi__state elpi__ctx_key in
        [%e kont]] in
@@ -560,12 +561,12 @@ let readback_var (module B : Ast_builder.S) ctx_name constructor = let open B in
   ]
 
 let abstract_standard_branch_readback (module B : Ast_builder.S) pos e = let open B in
-   [%expr fun ~depth: elpi__depth elpi__hyps elpi__constraints elpi__state -> function
+   [%expr fun ~depth: elpi__depth  elpi__state -> function
       | [] -> [%e e ]
       | _ -> Elpi.API.Utils.error ~loc: [%e elpi_loc_of_position (module B) pos ] "standard branch readback takes 0 arguments"]
 
 let abstract_standard_branch_readback2 (module B : Ast_builder.S) pos e = let open B in
-   [%expr fun ~depth: elpi__depth elpi__hyps elpi__constraints elpi__state -> function
+   [%expr fun ~depth: elpi__depth  elpi__state -> function
      | elpi__x :: elpi__xs -> [%e e ]
      | [] -> Elpi.API.Utils.error ~loc: [%e elpi_loc_of_position (module B) pos ] "standard branch readback takes 1 argument or more"]
 
@@ -580,7 +581,7 @@ let readback_branch (module B : Ast_builder.S) is_pred { constant; constructor; 
                ~guard:(Some [%expr elpi__hd == [%e constant]])
         ~rhs:begin match readback with
         | Standard -> standard
-        | Custom { ml; pos } -> [%expr [%e ml] [%e abstract_standard_branch_readback (module B) pos standard] ~depth: elpi__depth elpi__hyps elpi__constraints [] ]
+        | Custom { ml; pos } -> [%expr [%e ml] [%e abstract_standard_branch_readback (module B) pos standard] ~depth: elpi__depth  [] ]
         | Name _ -> assert false
         end
   | t :: ts ->
@@ -593,17 +594,17 @@ let readback_branch (module B : Ast_builder.S) is_pred { constant; constructor; 
       | Custom { ml; pos } ->
           case ~lhs:[%pat? Elpi.API.RawData.App (elpi__hd,elpi__x,elpi__xs)]
                ~guard:(Some [%expr elpi__hd == [%e constant]])
-               ~rhs:([%expr [%e ml] [%e abstract_standard_branch_readback2 (module B) pos standard ] ~depth: elpi__depth elpi__hyps elpi__constraints elpi__state (elpi__x :: elpi__xs)])
+               ~rhs:([%expr [%e ml] [%e abstract_standard_branch_readback2 (module B) pos standard ] ~depth: elpi__depth  elpi__state (elpi__x :: elpi__xs)])
       | Name { ctx_name; _} -> assert(ts = []);
           case ~lhs:[%pat? Elpi.API.RawData.Const elpi__hd]
               ~guard:(Some [%expr elpi__hd >= 0])
               ~rhs:(readback_var (module B) ctx_name constructor)
 
 let abstract_standard_default_readback (module B : Ast_builder.S) e = let open B in
-  [%expr fun ~depth: elpi__depth elpi__hyps elpi__constraints elpi__state elpi__x -> [%e e]]
+  [%expr fun ~depth: elpi__depth  elpi__state elpi__x -> [%e e]]
 
 let readback (module B : Ast_builder.S) name is_pred default_readback kl = let open B in
-    [%expr fun ~depth: elpi__depth elpi__hyps elpi__constraints elpi__state elpi__x ->
+    [%expr fun ~depth: elpi__depth  elpi__state elpi__x ->
       [%e pexp_match [%expr Elpi.API.RawData.look ~depth: elpi__depth elpi__x]
         (List.map (readback_branch (module B) is_pred) (drop_skip kl) @
         [case ~guard:None ~lhs:[%pat? _ ]
@@ -613,7 +614,7 @@ let readback (module B : Ast_builder.S) name is_pred default_readback kl = let o
                  [%e estring name] (Elpi.API.RawPp.term elpi__depth) elpi__x) ] in
             match default_readback with
             | None -> standard
-            | Some e -> [%expr [%e e] [%e abstract_standard_default_readback (module B) standard ] ~depth: elpi__depth elpi__hyps elpi__constraints elpi__state elpi__x ]
+            | Some e -> [%expr [%e e] [%e abstract_standard_default_readback (module B) standard ] ~depth: elpi__depth  elpi__state elpi__x ]
             end])]]
 
 let ctx_entry_key (module B : Ast_builder.S) kl = let open B in
@@ -742,19 +743,19 @@ let conversion_of (module B : Ast_builder.S)  ty = let open B in
 let is_parameter id = Re.(Str.string_match (Str.regexp_string param_prefix) id 0)
 
 let rec find_embed_of (module B : Ast_builder.S) current_mutrec_block  ty = let open B in
-  let rec aux ty =
+  let aux ty =
   match ty with
-   | [%type: string] -> [%expr Elpi.API.PPX.embed_string]
-   | [%type: int]    -> [%expr Elpi.API.PPX.embed_int]
-   | [%type: float]  -> [%expr Elpi.API.PPX.embed_float]
-   | [%type: bool]   -> [%expr Elpi.Builtin.PPX.embed_bool]
-   | [%type: char]   -> [%expr Elpi.Builtin.PPX.embed_char]
-   | [%type: [%t? typ] list]          -> [%expr Elpi.API.PPX.embed_list [%e aux typ ]]
-   | [%type: [%t? typ] option]        -> [%expr Elpi.Builtin.PPX.embed_option [%e aux typ ]]
-   | [%type: [%t? typ1] * [%t? typ2]] -> [%expr Elpi.Builtin.PPX.embed_pair [%e aux typ1 ] [%e aux typ2 ]]
-   | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3]] -> [%expr Elpi.Builtin.PPX.embed_triple [%e aux typ1 ]  [%e aux typ2 ] [%e aux typ3 ]]
-   | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3] * [%t? typ4]] -> [%expr Elpi.Builtin.PPX.embed_quadruple [%e aux typ1 ] [%e aux typ2 ] [%e aux typ3 ] [%e aux typ4 ]]
-   | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3] * [%t? typ4] * [%t? typ5]] -> [%expr Elpi.Builtin.PPX.embed_quintuple [%e aux typ1 ] [%e aux typ2 ] [%e aux typ3 ] [%e aux typ4 ] [%e aux typ5 ]]
+   | [%type: string] -> [%expr Elpi.API.BuiltInData.string.Elpi.API.Conversion.embed]
+   | [%type: int]    -> [%expr Elpi.API.BuiltInData.int.Elpi.API.Conversion.embed]
+   | [%type: float]  -> [%expr Elpi.API.BuiltInData.float.Elpi.API.Conversion.embed]
+   (* | [%type: bool]   -> [%expr Elpi.Builtin.PPX.embed_bool] *)
+   (* | [%type: char]   -> [%expr Elpi.Builtin.PPX.embed_char] *)
+   | [%type: [%t? typ] list]          -> [%expr (Elpi.API.BuiltInData.list [%e conversion_of (module B) typ]).Elpi.API.Conversion.embed ]
+   (* | [%type: [%t? typ] option]        -> [%expr Elpi.Builtin.PPX.embed_option [%e aux typ ]] *)
+   (* | [%type: [%t? typ1] * [%t? typ2]] -> [%expr Elpi.Builtin.PPX.embed_pair [%e aux typ1 ] [%e aux typ2 ]] *)
+   (* | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3]] -> [%expr Elpi.Builtin.PPX.embed_triple [%e aux typ1 ]  [%e aux typ2 ] [%e aux typ3 ]] *)
+   (* | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3] * [%t? typ4]] -> [%expr Elpi.Builtin.PPX.embed_quadruple [%e aux typ1 ] [%e aux typ2 ] [%e aux typ3 ] [%e aux typ4 ]] *)
+   (* | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3] * [%t? typ4] * [%t? typ5]] -> [%expr Elpi.Builtin.PPX.embed_quintuple [%e aux typ1 ] [%e aux typ2 ] [%e aux typ3 ] [%e aux typ4 ] [%e aux typ5 ]] *)
   | { ptyp_desc = Ptyp_constr ({ txt = Longident.Lident id; _ }, params); _ }
     when List.mem id current_mutrec_block || is_parameter id ->
       eapply (evar (elpi_embed_name id)) (List.map (find_embed_of (module B) current_mutrec_block) params)
@@ -763,19 +764,20 @@ let rec find_embed_of (module B : Ast_builder.S) current_mutrec_block  ty = let 
     aux ty
 
 let rec find_readback_of (module B : Ast_builder.S) current_mutrec_block  ty = let open B in
-  let rec aux ty =
+  let aux ty =
   match ty with
-   | [%type: string] -> [%expr Elpi.API.PPX.readback_string]
-   | [%type: int]    -> [%expr Elpi.API.PPX.readback_int]
-   | [%type: float]  -> [%expr Elpi.API.PPX.readback_float]
-   | [%type: bool]   -> [%expr Elpi.Builtin.PPX.readback_bool]
-   | [%type: char]   -> [%expr Elpi.Builtin.PPX.readback_char]
-   | [%type: [%t? typ] list]          -> [%expr Elpi.API.PPX.readback_list [%e aux typ ]]
-   | [%type: [%t? typ] option]        -> [%expr Elpi.Builtin.PPX.readback_option [%e aux typ ]]
-   | [%type: [%t? typ1] * [%t? typ2]] -> [%expr Elpi.Builtin.PPX.readback_pair [%e aux typ1 ] [%e aux typ2 ]]
-   | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3]] -> [%expr Elpi.Builtin.PPX.readback_triple [%e aux typ1 ]  [%e aux typ2 ] [%e aux typ3 ]]
-   | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3] * [%t? typ4]] -> [%expr Elpi.Builtin.PPX.readback_quadruple [%e aux typ1 ] [%e aux typ2 ] [%e aux typ3 ] [%e aux typ4 ]]
-   | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3] * [%t? typ4] * [%t? typ5]] -> [%expr Elpi.Builtin.PPX.readback_quintuple [%e aux typ1 ] [%e aux typ2 ] [%e aux typ3 ] [%e aux typ4 ] [%e aux typ5 ]]
+   | [%type: string] -> [%expr Elpi.API.BuiltInData.string.Elpi.API.Conversion.readback]
+   | [%type: int]    -> [%expr Elpi.API.BuiltInData.int.Elpi.API.Conversion.readback]
+   | [%type: float]  -> [%expr Elpi.API.BuiltInData.float.Elpi.API.Conversion.readback]
+   (* | [%type: bool]   -> [%expr Elpi.Builtin.PPX.readback_bool] *)
+   (* | [%type: char]   -> [%expr Elpi.Builtin.PPX.readback_char] *)
+   | [%type: [%t? typ] list]          ->
+     [%expr (Elpi.API.BuiltInData.list [%e conversion_of (module B) typ]).Elpi.API.Conversion.readback]
+   (* | [%type: [%t? typ] option]        -> [%expr Elpi.Builtin.PPX.readback_option [%e aux typ ]] *)
+   (* | [%type: [%t? typ1] * [%t? typ2]] -> [%expr Elpi.Builtin.PPX.readback_pair [%e aux typ1 ] [%e aux typ2 ]] *)
+   (* | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3]] -> [%expr Elpi.Builtin.PPX.readback_triple [%e aux typ1 ]  [%e aux typ2 ] [%e aux typ3 ]] *)
+   (* | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3] * [%t? typ4]] -> [%expr Elpi.Builtin.PPX.readback_quadruple [%e aux typ1 ] [%e aux typ2 ] [%e aux typ3 ] [%e aux typ4 ]] *)
+   (* | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3] * [%t? typ4] * [%t? typ5]] -> [%expr Elpi.Builtin.PPX.readback_quintuple [%e aux typ1 ] [%e aux typ2 ] [%e aux typ3 ] [%e aux typ4 ] [%e aux typ5 ]] *)
   | { ptyp_desc = Ptyp_constr ({ txt = Longident.Lident id; _ }, params); _ }
     when List.mem id current_mutrec_block || is_parameter id ->
       eapply (evar (elpi_readback_name id)) (List.map (find_readback_of (module B) current_mutrec_block) params)
@@ -824,11 +826,11 @@ let one_lident = function
   | _ -> None
 
 let one_string = function
-  | { pexp_desc = Pexp_constant (Pconst_string(s,_, _)); _ } -> Some s
+  | { pexp_desc = Pexp_constant (Pconst_string(s,_,None)); _ } -> Some s
   | _ -> None
 
 let one_or_two_strings (module B : Ast_builder.S) = function
-  | Pexp_constant (Pconst_string (s,_, _)) -> s, None
+  | Pexp_constant (Pconst_string (s,_,None)) -> s, None
   | Pexp_apply(x,[_,y]) when option_is_some (one_string x) && option_is_some (one_string y) ->
      option_get (one_string x), one_string y
   | _ -> error "string or ident expected"
@@ -1014,16 +1016,16 @@ let consistency_check ~loc tyds =
 
 let pp_doc (module B : Ast_builder.S) kind elpi_name elpi_code elpi_doc is_pred csts = let open B in [%expr fun fmt () ->
   [%e match elpi_code with
-  | None -> [%expr Elpi.API.PPX.Doc.kind fmt [%e kind] ~doc:[%e estring elpi_doc ] ]
+  | None -> [%expr Format.fprintf fmt "kind %s type." [%e estring elpi_doc ] ]
   | Some code ->
       [%expr
-        Elpi.API.Doc.comment fmt ("% " ^ [%e estring elpi_doc ]);
+         Format.fprintf fmt "%s" ("% " ^ [%e estring elpi_doc ]);
         Format.fprintf fmt "@\n@[<hov2>kind %s@[<hov> %s.@]@]@\n"
           [%e elpi_name ] [%e code ] ]
   ] ;
   [%e esequence @@
       List.(concat @@ (drop_skip csts |> map (fun { constant_name = c; arg_types; embed; readback; elpi_code; elpi_doc; _ } ->
-        let types, ty =
+        let _types, _ty =
           if is_pred then ctx_index_ty (module B) :: arg_types, [%expr Elpi.API.Conversion.TyName "prop"]
           else arg_types, [%expr kind ] in
         if is_name embed || is_name readback then []
@@ -1032,18 +1034,21 @@ let pp_doc (module B : Ast_builder.S) kind elpi_name elpi_code elpi_doc is_pred 
           | Some code ->
               [%expr
                 Format.fprintf fmt "@[<hov2>type %s@[<hov> %s. %% %s@]@]@\n" [%e estring c] [%e code] [%e estring elpi_doc ]]
-          | None -> [%expr Elpi.API.PPX.Doc.constructor fmt
-            ~ty:[%e ty ]
-            ~name:[%e estring c]
-            ~doc:[%e estring elpi_doc ]
-            ~args:[%e elist @@ List.map (function
-                | FO { ty_ast; _ } -> ty_ast
-                | HO { arrow_src_elpi = s; ty_ast; _ } ->
-                    [%expr Elpi.API.Conversion.TyApp("->",
-                             Elpi.API.Conversion.TyName [%e estring s],
-                             [[%e ty_ast]]) ]
-                ) types]
-          ]])))
+          | None -> (* [%expr *)
+          (*   Elpi.API.PPX.Doc.constructor fmt *)
+          (*   ~ty:[%e ty ] *)
+          (*   ~name:[%e estring c] *)
+          (*   ~doc:[%e estring elpi_doc ] *)
+          (*   ~args:[%e elist @@ List.map (function *)
+          (*       | FO { ty_ast; _ } -> ty_ast *)
+          (*       | HO { arrow_src_elpi = s; ty_ast; _ } -> *)
+          (*           [%expr Elpi.API.Conversion.TyApp("->", *)
+          (*                    Elpi.API.Conversion.TyName [%e estring s], *)
+          (*                    [[%e ty_ast]]) ] *)
+          (*       ) types] *)
+          (* ] *)
+            [%expr Format.fprintf fmt "type %s." [%e estring c]]
+        ])))
   ]]
 ;;
 
@@ -1067,15 +1072,15 @@ let pp_for_conversion (module B : Ast_builder.S) name is_pred params pp = let op
 let quantify_ty_over_params (module B : Ast_builder.S) params t = let open B in
   ptyp_poly (List.map Located.mk params) t
 
-let ctx_obj (module B : Ast_builder.S) name is_pred all_ctx = let open B in
-  ptyp_poly [] (ptyp_class (Located.lident (elpi_ctx_class_name name)) [])
+(* let ctx_obj (module B : Ast_builder.S) name _is_pred _all_ctx = let open B in *)
+(*   ptyp_poly [] (ptyp_class (Located.lident (elpi_ctx_class_name name)) []) *)
 
 let conversion_type (module B : Ast_builder.S) name params is_pred all_ctx = let open B in
   let rec aux = function
     | [] ->
          let t = ptyp_constr (Located.lident name) (List.map ptyp_var params) in
          let t = if is_pred then ptyp_tuple [ [%type: Elpi.API.RawData.constant ] ;t] else t in
-         [%type: ([%t t ],[%t ctx_obj (module B) name is_pred all_ctx ] as 'c) Elpi.API.Conversion.t]
+         [%type: ([%t t ]) Elpi.API.Conversion.t]
     | t :: ts -> [%type: ([%t ptyp_var t ], 'c ) Elpi.API.Conversion.t -> [%t aux ts]]
   in
     quantify_ty_over_params (module B) (params @ ["c"]) (aux params)
@@ -1086,7 +1091,7 @@ let readback_type (module B : Ast_builder.S) name params is_pred all_ctx = let o
     | [] ->
          let t = ptyp_constr (Located.lident name) (List.map ptyp_var params) in
          let t = if is_pred then ptyp_tuple [ [%type: Elpi.API.RawData.constant ] ;t] else t in
-         [%type: ([%t t ], [%t ctx_obj (module B) name is_pred all_ctx ] as 'c) Elpi.API.Conversion.readback]
+         [%type: ([%t t ](* , [%t ctx_obj (module B) name is_pred all_ctx ] as 'c *)) Elpi.API.Conversion.readback]
     | t :: ts -> [%type: ([%t ptyp_var t ],'c) Elpi.API.Conversion.readback -> [%t aux ts]]
   in
     quantify_ty_over_params (module B) (params @ ["c"]) (aux params)
@@ -1096,7 +1101,7 @@ let embed_type (module B : Ast_builder.S) name params is_pred all_ctx = let open
     | [] ->
          let t = ptyp_constr (Located.lident name) (List.map ptyp_var params) in
          let t = if is_pred then ptyp_tuple [ [%type: Elpi.API.RawData.constant ] ;t] else t in
-         [%type: ([%t t ], [%t ctx_obj (module B) name is_pred all_ctx ] as 'c) Elpi.API.Conversion.embedding]
+         [%type: ([%t t ]) Elpi.API.Conversion.embedding]
     | t :: ts -> [%type: ([%t ptyp_var t ],'c) Elpi.API.Conversion.embedding -> [%t aux ts]]
   in
     quantify_ty_over_params (module B) (params @ ["c"]) (aux params)
@@ -1142,18 +1147,18 @@ let abstract_expr_over_params (module B : Ast_builder.S) vl f e = let open B in
   in
     aux vl
 
-let ctx_class_type_for_tyd (module B : Ast_builder.S) all_ctx { name; _ } = let open B in
-  pstr_module @@ module_binding ~name:(Located.mk (Some (elpi_ctx_class_module_name name))) ~expr:(pmod_structure [
-  pstr_class_type [class_infos ~virt:Concrete ~params:[]
-    ~name:(Located.mk "t")
-    ~expr:(pcty_signature @@ class_signature ~self:[%type: _] ~fields:(
-      (pctf_inherit (pcty_constr (Located.lident "Elpi.API.Conversion.ctx") []))
-      :: List.flatten (SSet.elements all_ctx |> List.(map (fun c ->
-          [
-            pctf_inherit (pcty_constr (Located.lident @@ elpi_ctx_class_name c) []);
-            pctf_method (Located.mk c,Public,Concrete,[%type: [%t ptyp_constr (Located.lident c) [] ] Elpi.API.Conversion.ctx_field]);
-          ])))))]
-  ])
+(* let ctx_class_type_for_tyd (module B : Ast_builder.S) all_ctx { name; _ } = let open B in *)
+(*   pstr_module @@ module_binding ~name:(Located.mk (Some (elpi_ctx_class_module_name name))) ~expr:(pmod_structure [ *)
+(*   pstr_class_type [class_infos ~virt:Concrete ~params:[] *)
+(*     ~name:(Located.mk "t") *)
+(*     ~expr:(pcty_signature @@ class_signature ~self:[%type: _] ~fields:( *)
+(*       (pctf_inherit (pcty_constr (Located.lident "Elpi.API.Conversion.ctx") [])) *)
+(*       :: List.flatten (SSet.elements all_ctx |> List.(map (fun c -> *)
+(*           [ *)
+(*             pctf_inherit (pcty_constr (Located.lident @@ elpi_ctx_class_name c) []); *)
+(*             pctf_method (Located.mk c,Public,Concrete,[%type: [%t ptyp_constr (Located.lident c) [] ] Elpi.API.Conversion.ctx_field]); *)
+(*           ])))))] *)
+(*   ]) *)
 
 let conversion_for_tyd (module B : Ast_builder.S) all_ctx { name; params;  elpi_name; elpi_code; elpi_doc; type_decl; pp; index } = let open B in
   let is_pred = option_is_some index in
@@ -1189,16 +1194,16 @@ let initial_state (module B : Ast_builder.S) name = let open B in
     (Elpi.API.RawData.Constants.Map.empty : [%t ptyp_constr (Located.lident name) [] ] Elpi.API.Conversion.ctx_entry Elpi.API.RawData.Constants.Map.t)
   ]
 
-let conversion_context_for_tyd (module B : Ast_builder.S) name = let open B in [
-  [%stri let [%p pvar @@ elpi_readback_ctx_name name] = {
-    Elpi.API.Conversion.is_entry_for_nominal = [%e evar @@ elpi_is_ctx_entry_name name ];
-    to_key = [%e evar @@ elpi_to_key name ];
-    push = [%e evar @@ elpi_push name ];
-    pop = [%e evar @@ elpi_pop name ];
-    conv = [%e evar name];
-    init = (fun state -> Elpi.API.State.set [%e evar @@ elpi_state_name name ] state [%e initial_state (module B) name]);
-    get = (fun state -> snd @@ Elpi.API.State.get [%e evar @@ elpi_state_name name ] state);
-  }]]
+(* let conversion_context_for_tyd (module B : Ast_builder.S) name = let open B in [ *)
+(*   [%stri let [%p pvar @@ elpi_readback_ctx_name name] = { *)
+(*     Elpi.API.Conversion.is_entry_for_nominal = [%e evar @@ elpi_is_ctx_entry_name name ]; *)
+(*     to_key = [%e evar @@ elpi_to_key name ]; *)
+(*     push = [%e evar @@ elpi_push name ]; *)
+(*     pop = [%e evar @@ elpi_pop name ]; *)
+(*     conv = [%e evar name]; *)
+(*     init = (fun state -> Elpi.API.State.set [%e evar @@ elpi_state_name name ] state [%e initial_state (module B) name]); *)
+(*     get = (fun state -> snd @@ Elpi.API.State.get [%e evar @@ elpi_state_name name ] state); *)
+(*   }]] *)
 
 let embed_for_tyd (module B : Ast_builder.S) same_mutrec_block all_ctx { name; params; type_decl; index; _ } = let open B in
   let is_pred = option_is_some index in
@@ -1224,43 +1229,43 @@ let readback_for_tyd (module B : Ast_builder.S) same_mutrec_block all_ctx { name
       value_binding ~pat:(ppat_constraint (pvar (elpi_readback_name name)) (readback_type (module B) name params is_pred all_ctx))
         ~expr:(abstract_expr_over_params (module B) params elpi_readback_name @@ readback (module B) name is_pred def_readback csts)
 
-let in_ctx_for_tyd (module B : Ast_builder.S) ctx { name; _ } = let open B in
- let ctx = SSet.elements ctx in
- [
-   pstr_class [class_infos ~virt:Concrete ~params:[]
-    ~name:(Located.mk @@ elpi_ctx_object_name name)
-    ~expr:(pcl_fun Nolabel None (ppat_constraint (pvar "h") (ptyp_constr (Located.lident "Elpi.API.Data.hyps") [])) @@
-           pcl_fun Nolabel None (ppat_constraint (pvar "s") (ptyp_constr (Located.lident "Elpi.API.Data.state") [])) @@
-           pcl_constraint
-            (pcl_structure @@ class_structure ~self:(pvar "_")
-            ~fields:(
-                pcf_inherit Fresh
-                  (pcl_apply (pcl_constr (Located.lident "Elpi.API.Conversion.ctx") []) [Nolabel,evar "h"]) None
-                :: List.flatten (ctx |> List.map (fun c -> [
-                  pcf_inherit Override
-                  (pcl_apply (pcl_constr (Located.lident @@ elpi_ctx_object_name c) []) [Nolabel,evar "h";Nolabel,evar "s"]) None ;
-                  pcf_method (Located.mk c,Public,Cfk_concrete (Fresh,
-                    [%expr [%e evar @@ elpi_readback_ctx_name c ].Elpi.API.Conversion.get s]))]))))
-            (pcty_constr (Located.lident @@ elpi_ctx_class_name name) []))]
-;
-   (* apparently you cannot declare a class type and a class with the same name *)
-   [%stri let [%p pvar @@ elpi_in_ctx_for_name name ] :
-      [%t ptyp_constr (Located.lident @@ elpi_ctx_class_name name) []] Elpi.API.Conversion.ctx_readback
-   = fun ~depth h c s -> [%e
-     let gls = List.mapi (fun i _ -> Printf.sprintf "gls%d" i) ctx in
-     let rec aux = function
-       | [] -> [%expr s, [%e pexp_new @@ Located.lident @@ elpi_ctx_object_name name] h s, List.concat [%e elist @@ List.map evar gls ]]
-       | (c,gls) :: cs ->
-          [%expr
-            let ctx = [%e pexp_new @@ Located.lident @@ elpi_ctx_object_name c] h s in
-            let s, [%p pvar gls ] =
-              Elpi.API.PPX.readback_context ~depth [%e evar @@ elpi_readback_ctx_name c] ctx h c s in
-            [%e aux cs ]
-          ]
-     in
-       aux (List.combine ctx gls)
-   ]]
-]
+(* let in_ctx_for_tyd (module B : Ast_builder.S) ctx { name; _ } = let open B in *)
+(*  let ctx = SSet.elements ctx in *)
+(*  [ *)
+(*    pstr_class [class_infos ~virt:Concrete ~params:[] *)
+(*     ~name:(Located.mk @@ elpi_ctx_object_name name) *)
+(*     ~expr:(pcl_fun Nolabel None (ppat_constraint (pvar "h") (ptyp_constr (Located.lident "Elpi.API.Data.hyps") [])) @@ *)
+(*            pcl_fun Nolabel None (ppat_constraint (pvar "s") (ptyp_constr (Located.lident "Elpi.API.Data.state") [])) @@ *)
+(*            pcl_constraint *)
+(*             (pcl_structure @@ class_structure ~self:(pvar "_") *)
+(*             ~fields:( *)
+(*                 pcf_inherit Fresh *)
+(*                   (pcl_apply (pcl_constr (Located.lident "Elpi.API.Conversion.ctx") []) [Nolabel,evar "h"]) None *)
+(*                 :: List.flatten (ctx |> List.map (fun c -> [ *)
+(*                   pcf_inherit Override *)
+(*                   (pcl_apply (pcl_constr (Located.lident @@ elpi_ctx_object_name c) []) [Nolabel,evar "h";Nolabel,evar "s"]) None ; *)
+(*                   pcf_method (Located.mk c,Public,Cfk_concrete (Fresh, *)
+(*                     [%expr [%e evar @@ elpi_readback_ctx_name c ].Elpi.API.Conversion.get s]))])))) *)
+(*             (pcty_constr (Located.lident @@ elpi_ctx_class_name name) []))] *)
+(* ; *)
+(*    (\* apparently you cannot declare a class type and a class with the same name *\) *)
+(*    [%stri let [%p pvar @@ elpi_in_ctx_for_name name ] : *)
+(*       [%t ptyp_constr (Located.lident @@ elpi_ctx_class_name name) []] Elpi.API.Conversion.ctx_readback *)
+(*    = fun ~depth h c s -> [%e *)
+(*      let gls = List.mapi (fun i _ -> Printf.sprintf "gls%d" i) ctx in *)
+(*      let rec aux = function *)
+(*        | [] -> [%expr s, [%e pexp_new @@ Located.lident @@ elpi_ctx_object_name name] h s, List.concat [%e elist @@ List.map evar gls ]] *)
+(*        | (c,gls) :: cs -> *)
+(*           [%expr *)
+(*             let ctx = [%e pexp_new @@ Located.lident @@ elpi_ctx_object_name c] h s in *)
+(*             let s, [%p pvar gls ] = *)
+(*               Elpi.API.PPX.readback_context ~depth [%e evar @@ elpi_readback_ctx_name c] ctx h c s in *)
+(*             [%e aux cs ] *)
+(*           ] *)
+(*      in *)
+(*        aux (List.combine ctx gls) *)
+(*    ]] *)
+(* ] *)
 
 let constants_of_tyd (module B : Ast_builder.S) { type_decl ; elpi_name; name; _ } = let open B in
   let c_str = elpi_tname_str name in
@@ -1359,13 +1364,13 @@ let extras_of_task (module B : Ast_builder.S) { types; names; context; ctx_names
       ty_constants = constants_of_tyd (module B) tyd;
       ty_embed = embed_for_tyd (module B) names ctx_names tyd;
       ty_readback = readback_for_tyd (module B) names ctx_names tyd;
-      ty_ctx_class_type = ctx_class_type_for_tyd (module B) ctx_names tyd;
+      (* ty_ctx_class_type = ctx_class_type_for_tyd (module B) ctx_names tyd; *)
       ty_conversion = conversion_for_tyd (module B) ctx_names tyd;
       ty_conversion_name = tyd.name;
       ty_elpi_declaration = elpi_declaration_of_tyd (module B) tyd;
       ty_opaque = is_opaque tyd.type_decl;
       ty_library = mapper_for_tyd (module B) names tyd;
-      ty_in_ctx = in_ctx_for_tyd (module B) ctx_names tyd;
+      (* ty_in_ctx = in_ctx_for_tyd (module B) ctx_names tyd; *)
     }) in
   let ctx_extras =
     match context with
@@ -1383,11 +1388,11 @@ let extras_of_task (module B : Ast_builder.S) { types; names; context; ctx_names
               ~init:(fun () -> [%e initial_state (module B) name]);
           ]];
           pstr_value Nonrecursive [value_binding ~pat:(pvar (elpi_to_key name)) ~expr:(ctx_entry_key (module B) csts)];
-          pstr_value Nonrecursive [value_binding ~pat:(pvar (elpi_is_ctx_entry_name name)) ~expr:(is_ctx_entry (module B) csts)];
+          (* pstr_value Nonrecursive [value_binding ~pat:(pvar (elpi_is_ctx_entry_name name)) ~expr:(is_ctx_entry (module B) csts)]; *)
           pstr_value Nonrecursive [value_binding ~pat:(pvar (elpi_push name)) ~expr:(ctx_push (module B) name)];
           pstr_value Nonrecursive [value_binding ~pat:(pvar (elpi_pop name)) ~expr:(ctx_pop (module B) name)];
       ];
-      ty_context_readback = conversion_context_for_tyd (module B) tyd.name;
+      (* ty_context_readback = conversion_context_for_tyd (module B) tyd.name; *)
     } in
   { ty_extras; ctx_extras }
 ;;
@@ -1458,8 +1463,7 @@ let analyze_typedecl (module B : Ast_builder.S) same_mutrec_block tdecl =
       let match_k args = B.ppat_record (List.map2 (fun x y -> B.Located.lident x, y) lbls args) Closed in
       let kdecl = {
         pcd_name = B.Located.mk name;
-        pcd_args = Pcstr_tuple [];
-        pcd_vars = [];
+        pcd_args = Pcstr_tuple []; pcd_vars=[];
         pcd_res  = None;
         pcd_loc = B.loc;
         pcd_attributes = ptype_attributes;
@@ -1547,7 +1551,7 @@ let tydecls ~loc append_decl append_mapper all_context _r tdls =
 
   List.(concat (map (fun x -> x.ty_constants) ty_extras)) @
   option_default [] (option_map (fun x -> x.ty_context_helpers) ctx_extras) @
-  List.(map (fun x -> x.ty_ctx_class_type) ty_extras) @
+  (* List.(map (fun x -> x.ty_ctx_class_type) ty_extras) @ *)
 
   begin if opaque_extra <> [] then
     List.(map (fun x -> x.ty_conversion) opaque_extra) @
@@ -1561,9 +1565,9 @@ let tydecls ~loc append_decl append_mapper all_context _r tdls =
     List.(map (fun x -> x.ty_conversion) non_opaque_extra)
   else [] end @
 
-  option_default [] (option_map (fun x -> x.ty_context_readback) ctx_extras) @
+  (* option_default [] (option_map (fun x -> x.ty_context_readback) ctx_extras) @ *)
   List.(map (fun x -> x.ty_elpi_declaration.decl) ty_extras) @
-  List.(concat (map (fun x -> x.ty_in_ctx) ty_extras)) @
+  (* List.(concat (map (fun x -> x.ty_in_ctx) ty_extras)) @ *)
 
   begin match append_decl with
   | None -> []
