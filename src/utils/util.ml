@@ -340,11 +340,77 @@ module Pair = struct
   let show poly_a poly_b x =
     Format.asprintf "@[%a@]" (pp poly_a poly_b) x
 end
+
+module Triple = struct
+
+  let pp poly_a poly_b poly_c fmt x =
+    let (x0, x1, x2) = x in
+    Format.pp_open_box fmt 1;
+    Format.pp_print_string fmt "(";
+    Format.pp_open_box fmt 0;
+    poly_a fmt x0;
+    Format.pp_close_box fmt ();
+    Format.pp_print_string fmt ",";
+    Format.pp_print_space fmt ();
+    Format.pp_open_box fmt 0;
+    poly_b fmt x1;
+    Format.pp_close_box fmt ();
+    Format.pp_print_string fmt ",";
+    Format.pp_print_space fmt ();
+    Format.pp_open_box fmt 0;
+    poly_c fmt x2;
+    Format.pp_close_box fmt ();
+    Format.pp_print_string fmt ")";
+    Format.pp_close_box fmt ()
+
+  let show poly_a poly_b poly_c x =
+    Format.asprintf "@[%a@]" (pp poly_a poly_b poly_c) x
+end
+
+module Quadruple = struct
+
+  let pp poly_a poly_b poly_c poly_d fmt x =
+    let (x0, x1, x2, x3) = x in
+    Format.pp_open_box fmt 1;
+    Format.pp_print_string fmt "(";
+    Format.pp_open_box fmt 0;
+    poly_a fmt x0;
+    Format.pp_close_box fmt ();
+    Format.pp_print_string fmt ",";
+    Format.pp_print_space fmt ();
+    Format.pp_open_box fmt 0;
+    poly_b fmt x1;
+    Format.pp_close_box fmt ();
+    Format.pp_print_string fmt ",";
+    Format.pp_print_space fmt ();
+    Format.pp_open_box fmt 0;
+    poly_c fmt x2;
+    Format.pp_close_box fmt ();
+    Format.pp_print_string fmt ",";
+    Format.pp_print_space fmt ();
+    Format.pp_open_box fmt 0;
+    poly_d fmt x3;
+    Format.pp_close_box fmt ();
+    Format.pp_print_string fmt ")";
+    Format.pp_close_box fmt ()
+
+  let show poly_a poly_b poly_c poly_d x =
+    Format.asprintf "@[%a@]" (pp poly_a poly_b poly_c poly_d) x
+end
+
+
+
+
 let pp_option f fmt = function None -> () | Some x -> f fmt x
 let pp_int = Int.pp
 let pp_string = String.pp
 let pp_pair = Pair.pp
 let show_pair = Pair.show
+let pp_triple = Triple.pp
+let show_triple = Triple.show
+let pp_quadruple = Quadruple.pp
+let show_quadruple = Quadruple.show
+
 
 let remove_from_list x =
  let rec aux acc =
