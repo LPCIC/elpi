@@ -287,6 +287,7 @@ module Conversion : sig
 
   type ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
 
+
   type extra_goal = ..
   type extra_goal +=
     | Unify of Data.term * Data.term
@@ -1232,6 +1233,8 @@ module Utils : sig
   val map_acc :
     (State.t -> 't -> State.t * 'a * Conversion.extra_goals) ->
     State.t -> 't list -> State.t * 'a list * Conversion.extra_goals
+
+  val show_ty_ast: ?outer:bool -> Conversion.ty_ast -> string
 
   module type Show = sig
     type t
