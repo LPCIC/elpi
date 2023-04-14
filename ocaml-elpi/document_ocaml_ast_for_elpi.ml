@@ -7,10 +7,10 @@ let builtin = let open BuiltIn in
     (Ocaml_elpi_ppx.Ocaml_ast_for_elpi.parsetree_declaration)
 
 let main () =
-  let elpi, _ = Setup.init ~builtins:[builtin ; Elpi.Builtin.std_builtins] ~basedir:"." [] in
+  let elpi = Setup.init ~builtins:[builtin ; Elpi.Builtin.std_builtins] () in
   BuiltIn.document_file builtin;
   flush_all ();
-  let program = Parse.program ~elpi [] in
+  let program = Parse.program ~elpi ~files:[] in
   let program = Compile.program ~elpi ~flags:Compile.default_flags [program] in
   let query =
     let open Query in
