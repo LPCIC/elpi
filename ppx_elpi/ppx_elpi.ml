@@ -1030,7 +1030,7 @@ let pp_doc (module B : Ast_builder.S) kind elpi_name elpi_code elpi_doc is_pred 
   ] ;
   [%e esequence @@
       List.(concat @@ (drop_skip csts |> map (fun { constant_name = c; arg_types; embed; readback; elpi_code; elpi_doc; _ } ->
-        let _types, _ty =
+        let types, ty =
           if is_pred then ctx_index_ty (module B) :: arg_types, [%expr Elpi.API.Conversion.TyName "prop"]
           else arg_types, [%expr kind ] in
         if is_name embed || is_name readback then []
@@ -1039,20 +1039,19 @@ let pp_doc (module B : Ast_builder.S) kind elpi_name elpi_code elpi_doc is_pred 
           | Some code ->
               [%expr
                 Format.fprintf fmt "@[<hov2>type %s@[<hov> %s. %% %s@]@]@\n" [%e estring c] [%e code] [%e estring elpi_doc ]]
-          | None -> (* [%expr *)
-          (*   Elpi.API.PPX.Doc.constructor fmt *)
-          (*   ~ty:[%e ty ] *)
-          (*   ~name:[%e estring c] *)
-          (*   ~doc:[%e estring elpi_doc ] *)
-          (*   ~args:[%e elist @@ List.map (function *)
-          (*       | FO { ty_ast; _ } -> ty_ast *)
-          (*       | HO { arrow_src_elpi = s; ty_ast; _ } -> *)
-          (*           [%expr Elpi.API.Conversion.TyApp("->", *)
-          (*                    Elpi.API.Conversion.TyName [%e estring s], *)
-          (*                    [[%e ty_ast]]) ] *)
-          (*       ) types] *)
-          (* ] *)
-            [%expr Format.fprintf fmt "type %s." [%e estring c]]
+          | None -> [%expr
+             Elpi.API.PPX.Doc.constructor fmt
+             ~ty:[%e ty ]
+             ~name:[%e estring c]
+             ~doc:[%e estring elpi_doc ]
+             ~args:[%e elist @@ List.map (function
+                 | FO { ty_ast; _ } -> ty_ast
+                 | HO { arrow_src_elpi = s; ty_ast; _ } ->
+                     [%expr Elpi.API.Conversion.TyApp("->",
+                              Elpi.API.Conversion.TyName [%e estring s],
+                              [[%e ty_ast]]) ]
+                 ) types]
+           ]
         ])))
   ]]
 ;;
