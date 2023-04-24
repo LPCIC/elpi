@@ -1021,7 +1021,7 @@ let consistency_check ~loc tyds =
 
 let pp_doc (module B : Ast_builder.S) kind elpi_name elpi_code elpi_doc is_pred csts = let open B in [%expr fun fmt () ->
   [%e match elpi_code with
-  | None -> [%expr Format.fprintf fmt "kind %s type.\n" [%e estring elpi_doc ] ]
+  | None -> [%expr Elpi.API.PPX.Doc.kind fmt [%e kind] ~doc:[%e estring elpi_doc ] ]
   | Some code ->
       [%expr
          Format.fprintf fmt "%s" ("% " ^ [%e estring elpi_doc ]);
