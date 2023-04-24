@@ -1196,7 +1196,10 @@ let document_constructor fmt name doc argsdoc =
   Fmt.fprintf fmt "@[<hov2>type %s@[<hov>%a.%s@]@]@\n"
     name pp_ty_args argsdoc (if doc = "" then "" else " % " ^ doc)
 
-let document_kind fmt = function
+let document_kind fmt ty doc =
+  if doc <> "" then
+    begin pp_comment fmt ("% " ^ doc); Fmt.fprintf fmt "@\n" end;
+  match ty with
   | Conversion.TyApp(s,_,l) ->
       let n = List.length l + 2 in
       let l = Array.init n (fun _ -> "type") in
@@ -1204,14 +1207,16 @@ let document_kind fmt = function
         s (String.concat " -> " (Array.to_list l))
   | Conversion.TyName s -> Fmt.fprintf fmt "@[<hov 2>kind %s type.@]@\n" s
 
-let document_adt doc ty ks cks fmt () =
-  if doc <> "" then
-    begin pp_comment fmt ("% " ^ doc); Fmt.fprintf fmt "@\n" end;
-  document_kind fmt ty;
+let document_compiled_adt doc ty ks cks fmt () =
+  document_kind fmt ty doc;
   List.iter (fun (K(name,doc,_,_,_)) ->
     if name <> "uvar" then
       let argsdoc = StrMap.find name cks in
       document_constructor fmt name doc argsdoc) ks
+
+let document_adt doc ty ks fmt () =
+  document_kind fmt ty doc;
+  List.iter (fun (name,doc,spec) -> document_constructor fmt name doc spec) ks
 
 let adt ~mkinterval ~look ~mkConst ~alloc ~mkUnifVar { ty; constructors; doc; pp } =
   let readback_ref = ref (fun ~depth _ _ _ _ -> assert false) in
@@ -1221,7 +1226,7 @@ let adt ~mkinterval ~look ~mkConst ~alloc ~mkUnifVar { ty; constructors; doc; pp
     ContextualConversion.ty;
     pp;
     pp_doc = (fun fmt () ->
-      document_adt doc ty constructors !sconstructors_ref fmt ());
+      document_compiled_adt doc ty constructors !sconstructors_ref fmt ());
     readback = (fun ~depth hyps constraints state term ->
       !readback_ref ~depth hyps constraints state term);
     embed = (fun ~depth hyps constraints state term ->
