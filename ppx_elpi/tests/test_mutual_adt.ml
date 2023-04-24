@@ -12,7 +12,7 @@ let builtin = let open BuiltIn in
   declare ~file_name:(Sys.argv.(1)) !elpi_stuff
 
 let main () =
-  let _elpi, _ = Setup.init ~builtins:[builtin] ~basedir:"." [] in
+  let _elpi = Setup.init ~builtins:[builtin] () in
   BuiltIn.document_file builtin;
   exit 0
 ;;
