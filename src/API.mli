@@ -1191,4 +1191,24 @@ module RawPp : sig
 
 end
 
+module PPX : sig
+
+  module Doc : sig
+    val kind : Format.formatter -> Conversion.ty_ast -> doc:string -> unit
+    val comment : Format.formatter -> string -> unit
+    val constructor : Format.formatter ->
+      name:string -> doc:string ->
+     ty:Conversion.ty_ast ->
+     args:Conversion.ty_ast list -> unit
+    val adt :
+      doc:string ->
+      ty:Conversion.ty_ast ->
+      args:(string * string * Conversion.ty_ast list) list ->
+      Format.formatter -> unit -> unit
+    val show_ty_ast : ?outer:bool -> Conversion.ty_ast -> string
+
+  end
+
+end
+
 (**/**)
