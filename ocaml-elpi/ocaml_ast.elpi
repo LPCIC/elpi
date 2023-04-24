@@ -69,13 +69,19 @@ type optional string -> arg-label. % Optional
 kind variance type.
 type covariant variance. % Covariant
 type contravariant variance. % Contravariant
-type invariant variance. % Invariant
+type novariance variance. % NoVariance
+
+% injectivity
+kind injectivity type.
+type injective injectivity. % Injective
+type noinjectivity injectivity. % NoInjectivity
 
 % constant
 kind constant_ type.
 type pconst-integer string -> option char -> constant_. % Pconst_integer
 type pconst-char char -> constant_. % Pconst_char
-type pconst-string string -> option string -> constant_. % Pconst_string
+type pconst-string string -> location -> option string ->
+                   constant_. % Pconst_string
 type pconst-float string -> option char -> constant_. % Pconst_float
 
 % attribute
@@ -155,7 +161,8 @@ type ppat-alias pattern -> loc_ string -> pattern-desc. % Ppat_alias
 type ppat-constant constant_ -> pattern-desc. % Ppat_constant
 type ppat-interval constant_ -> constant_ -> pattern-desc. % Ppat_interval
 type ppat-tuple list pattern -> pattern-desc. % Ppat_tuple
-type ppat-construct longident-loc -> option pattern ->
+type ppat-construct longident-loc ->
+                    option (pair (list (loc_ string)) pattern) ->
                     pattern-desc. % Ppat_construct
 type ppat-variant label -> option pattern -> pattern-desc. % Ppat_variant
 type ppat-record list (pair longident-loc pattern) -> closed-flag ->
@@ -166,7 +173,7 @@ type ppat-constraint pattern -> core-type ->
                      pattern-desc. % Ppat_constraint
 type ppat-type longident-loc -> pattern-desc. % Ppat_type
 type ppat-lazy pattern -> pattern-desc. % Ppat_lazy
-type ppat-unpack loc_ string -> pattern-desc. % Ppat_unpack
+type ppat-unpack loc_ (option string) -> pattern-desc. % Ppat_unpack
 type ppat-exception pattern -> pattern-desc. % Ppat_exception
 type ppat-extension extension -> pattern-desc. % Ppat_extension
 type ppat-open longident-loc -> pattern -> pattern-desc. % Ppat_open
@@ -218,7 +225,7 @@ type pexp-setinstvar loc_ label -> expression ->
                      expression-desc. % Pexp_setinstvar
 type pexp-override list (pair (loc_ label) expression) ->
                    expression-desc. % Pexp_override
-type pexp-letmodule loc_ string -> module-expr -> expression ->
+type pexp-letmodule loc_ (option string) -> module-expr -> expression ->
                     expression-desc. % Pexp_letmodule
 type pexp-letexception extension-constructor -> expression ->
                        expression-desc. % Pexp_letexception
@@ -257,7 +264,8 @@ type value-description loc_ string -> core-type -> list string ->
 
 % type_declaration
 kind type-declaration type.
-type type-declaration loc_ string -> list (pair core-type variance) ->
+type type-declaration loc_ string ->
+                      list (pair core-type (pair variance injectivity)) ->
                       list (triple core-type core-type location) ->
                       type-kind -> private-flag -> option core-type ->
                       attributes -> location ->
@@ -279,8 +287,9 @@ type label-declaration loc_ string -> mutable-flag -> core-type ->
 
 % constructor_declaration
 kind constructor-declaration type.
-type constructor-declaration loc_ string -> constructor-arguments ->
-                             option core-type -> location -> attributes ->
+type constructor-declaration loc_ string -> list (loc_ string) ->
+                             constructor-arguments -> option core-type ->
+                             location -> attributes ->
                              constructor-declaration. % constructor_declaration
 
 % constructor_arguments
@@ -291,7 +300,8 @@ type pcstr-record list label-declaration ->
 
 % type_extension
 kind type-extension type.
-type type-extension longident-loc -> list (pair core-type variance) ->
+type type-extension longident-loc ->
+                    list (pair core-type (pair variance injectivity)) ->
                     list extension-constructor -> private-flag ->
                     location -> attributes ->
                     type-extension. % type_extension
@@ -309,8 +319,8 @@ type type-exception extension-constructor -> location -> attributes ->
 
 % extension_constructor_kind
 kind extension-constructor-kind type.
-type pext-decl constructor-arguments -> option core-type ->
-               extension-constructor-kind. % Pext_decl
+type pext-decl list (loc_ string) -> constructor-arguments ->
+               option core-type -> extension-constructor-kind. % Pext_decl
 type pext-rebind longident-loc ->
                  extension-constructor-kind. % Pext_rebind
 
@@ -354,7 +364,8 @@ type pctf-extension extension -> class-type-field-desc. % Pctf_extension
 
 % class_infos
 kind class-infos type -> type.
-type class-infos virtual-flag -> list (pair core-type variance) ->
+type class-infos virtual-flag ->
+                 list (pair core-type (pair variance injectivity)) ->
                  loc_ string -> A0 -> location -> attributes ->
                  class-infos A0. % class_infos
 
@@ -425,13 +436,19 @@ type module-type module-type-desc -> location -> attributes ->
 kind module-type-desc type.
 type pmty-ident longident-loc -> module-type-desc. % Pmty_ident
 type pmty-signature signature -> module-type-desc. % Pmty_signature
-type pmty-functor loc_ string -> option module-type -> module-type ->
+type pmty-functor functor-parameter -> module-type ->
                   module-type-desc. % Pmty_functor
 type pmty-with module-type -> list with-constraint ->
                module-type-desc. % Pmty_with
 type pmty-typeof module-expr -> module-type-desc. % Pmty_typeof
 type pmty-extension extension -> module-type-desc. % Pmty_extension
 type pmty-alias longident-loc -> module-type-desc. % Pmty_alias
+
+% functor_parameter
+kind functor-parameter type.
+type unit functor-parameter. % Unit
+type named loc_ (option string) -> module-type ->
+           functor-parameter. % Named
 
 typeabbrev signature (list signature-item). % signature
 
@@ -457,6 +474,8 @@ type psig-recmodule list module-declaration ->
                     signature-item-desc. % Psig_recmodule
 type psig-modtype module-type-declaration ->
                   signature-item-desc. % Psig_modtype
+type psig-modtypesubst module-type-declaration ->
+                       signature-item-desc. % Psig_modtypesubst
 type psig-open open-description -> signature-item-desc. % Psig_open
 type psig-include include-description ->
                   signature-item-desc. % Psig_include
@@ -470,8 +489,8 @@ type psig-extension extension -> attributes ->
 
 % module_declaration
 kind module-declaration type.
-type module-declaration loc_ string -> module-type -> attributes ->
-                        location ->
+type module-declaration loc_ (option string) -> module-type ->
+                        attributes -> location ->
                         module-declaration. % module_declaration
 
 % module_substitution
@@ -510,6 +529,10 @@ type pwith-type longident-loc -> type-declaration ->
                 with-constraint. % Pwith_type
 type pwith-module longident-loc -> longident-loc ->
                   with-constraint. % Pwith_module
+type pwith-modtype loc_ longident -> module-type ->
+                   with-constraint. % Pwith_modtype
+type pwith-modtypesubst loc_ longident -> module-type ->
+                        with-constraint. % Pwith_modtypesubst
 type pwith-typesubst longident-loc -> type-declaration ->
                      with-constraint. % Pwith_typesubst
 type pwith-modsubst longident-loc -> longident-loc ->
@@ -524,7 +547,7 @@ type module-expr module-expr-desc -> location -> attributes ->
 kind module-expr-desc type.
 type pmod-ident longident-loc -> module-expr-desc. % Pmod_ident
 type pmod-structure structure -> module-expr-desc. % Pmod_structure
-type pmod-functor loc_ string -> option module-type -> module-expr ->
+type pmod-functor functor-parameter -> module-expr ->
                   module-expr-desc. % Pmod_functor
 type pmod-apply module-expr -> module-expr ->
                 module-expr-desc. % Pmod_apply
@@ -576,7 +599,7 @@ type value-binding pattern -> expression -> attributes -> location ->
 
 % module_binding
 kind module-binding type.
-type module-binding loc_ string -> module-expr -> attributes ->
+type module-binding loc_ (option string) -> module-expr -> attributes ->
                     location -> module-binding. % module_binding
 
 % toplevel_phrase

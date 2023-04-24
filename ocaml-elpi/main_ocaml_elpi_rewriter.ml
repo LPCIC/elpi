@@ -46,7 +46,7 @@ ocaml-elpi.ppx: no program specified. Supported options:
 |};
     exit 1;
   end;
-  let elpi = Setup.init ~builtins:[builtin;Elpi.Builtin.std_builtins]  () in
+  let elpi = Setup.init ~builtins:[builtin;Elpi.Builtin.std_builtins] ~file_resolver:(Parse.std_resolver ~paths:[] ()) () in
   BuiltIn.document_file builtin;
   if !debug then
     ignore @@ Setup.trace ["-trace-on";"tty";"stderr";"-trace-only";"user";"-trace-only-pred";"map";"-trace-at";"run";"1";"99999"];
@@ -56,7 +56,6 @@ ocaml-elpi.ppx: no program specified. Supported options:
   let program = Compile.program ~elpi ~flags:Compile.default_flags [program;mapper] in
   let query =
     let open Query in
-    let open ContextualConversion in
     compile program (Ast.Loc.initial "ppx") @@
       Query { predicate = "map.structure"; arguments = D(structure,s,(Q(structure,"Result",N))) } in
   if !typecheck then begin
