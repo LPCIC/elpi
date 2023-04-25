@@ -62,6 +62,13 @@ val option : 'a API.Conversion.t -> 'a option API.Conversion.t
 val bool : bool API.Conversion.t
 val char : char API.Conversion.t
 
+module PPX : sig
+  val embed_option : 'a API.Conversion.embedding -> ('a option) API.Conversion.embedding
+  val embed_pair : 'a API.Conversion.embedding -> 'b API.Conversion.embedding -> ('a * 'b) API.Conversion.embedding
+  val embed_triple : 'a API.Conversion.embedding -> 'b API.Conversion.embedding -> 'c API.Conversion.embedding -> ('a * 'b * 'c) API.Conversion.embedding
+  val embed_quadruple : 'a API.Conversion.embedding -> 'b API.Conversion.embedding -> 'c API.Conversion.embedding -> 'd API.Conversion.embedding -> ('a * 'b * 'c * 'd) API.Conversion.embedding
+end
+
 (* A standard way to make a predicate always succeed but still give errors *)
 type diagnostic = private OK | ERROR of string API.BuiltInPredicate.ioarg
 val diagnostic : diagnostic API.Conversion.t
