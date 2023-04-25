@@ -296,17 +296,29 @@ let option a = let open AlgebraicData in declare {
 } |> ContextualConversion.(!<)
 
 module PPX = struct
-  let hack_conv_embed embed = {
+  let hack embed = {
     Conversion.embed;
     readback = (fun ~depth st x -> assert false);
     ty = Conversion.TyName "hack";
     pp = (fun fmt x -> assert false);
     pp_doc = (fun fmt x -> assert false);
   }
-  let embed_option a = (option (hack_conv_embed a)).Conversion.embed
-  let embed_pair a b = (pair (hack_conv_embed a) (hack_conv_embed b)).Conversion.embed
-  let embed_triple a b c = (triple (hack_conv_embed a) (hack_conv_embed b) (hack_conv_embed c)).Conversion.embed
-  let embed_quadruple a b c d = (quadruple (hack_conv_embed a) (hack_conv_embed b) (hack_conv_embed c) (hack_conv_embed d)).Conversion.embed
+  let embed_option a = (option (hack a)).Conversion.embed
+  let embed_pair a b = (pair (hack a) (hack b)).Conversion.embed
+  let embed_triple a b c = (triple (hack a) (hack b) (hack c)).Conversion.embed
+  let embed_quadruple a b c d = (quadruple (hack a) (hack b) (hack c) (hack d)).Conversion.embed
+
+  let hack readback = {
+    Conversion.readback;
+    embed = (fun ~depth st x -> assert false);
+    ty = Conversion.TyName "hack";
+    pp = (fun fmt x -> assert false);
+    pp_doc = (fun fmt x -> assert false);
+  }
+  let readback_option a = (option (hack a)).Conversion.readback
+  let readback_pair a b = (pair (hack a) (hack b)).Conversion.readback
+  let readback_triple a b c = (triple (hack a) (hack b) (hack c)).Conversion.readback
+  let readback_quadruple a b c d = (quadruple (hack a) (hack b) (hack c) (hack d)).Conversion.readback
 end
 
 

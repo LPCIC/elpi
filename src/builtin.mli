@@ -67,6 +67,10 @@ module PPX : sig
   val embed_pair : 'a API.Conversion.embedding -> 'b API.Conversion.embedding -> ('a * 'b) API.Conversion.embedding
   val embed_triple : 'a API.Conversion.embedding -> 'b API.Conversion.embedding -> 'c API.Conversion.embedding -> ('a * 'b * 'c) API.Conversion.embedding
   val embed_quadruple : 'a API.Conversion.embedding -> 'b API.Conversion.embedding -> 'c API.Conversion.embedding -> 'd API.Conversion.embedding -> ('a * 'b * 'c * 'd) API.Conversion.embedding
+  val readback_option : 'a API.Conversion.readback -> ('a option) API.Conversion.readback
+  val readback_pair : 'a API.Conversion.readback -> 'b API.Conversion.readback -> ('a * 'b) API.Conversion.readback
+  val readback_triple : 'a API.Conversion.readback -> 'b API.Conversion.readback -> 'c API.Conversion.readback -> ('a * 'b * 'c) API.Conversion.readback
+  val readback_quadruple : 'a API.Conversion.readback -> 'b API.Conversion.readback -> 'c API.Conversion.readback -> 'd API.Conversion.readback -> ('a * 'b * 'c * 'd) API.Conversion.readback
 end
 
 (* A standard way to make a predicate always succeed but still give errors *)
