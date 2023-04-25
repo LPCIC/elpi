@@ -295,6 +295,21 @@ let option a = let open AlgebraicData in declare {
   ]
 } |> ContextualConversion.(!<)
 
+module PPX = struct
+  let hack_conv_embed embed = {
+    Conversion.embed;
+    readback = (fun ~depth st x -> assert false);
+    ty = Conversion.TyName "hack";
+    pp = (fun fmt x -> assert false);
+    pp_doc = (fun fmt x -> assert false);
+  }
+  let embed_option a = (option (hack_conv_embed a)).Conversion.embed
+  let embed_pair a b = (pair (hack_conv_embed a) (hack_conv_embed b)).Conversion.embed
+  let embed_triple a b c = (triple (hack_conv_embed a) (hack_conv_embed b) (hack_conv_embed c)).Conversion.embed
+  let embed_quadruple a b c d = (quadruple (hack_conv_embed a) (hack_conv_embed b) (hack_conv_embed c) (hack_conv_embed d)).Conversion.embed
+end
+
+
 type diagnostic = OK | ERROR of string ioarg
 let mkOK = OK
 let mkERROR s = ERROR (mkData s)

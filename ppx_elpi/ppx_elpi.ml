@@ -748,17 +748,17 @@ let rec find_embed_of (module B : Ast_builder.S) current_mutrec_block  ty = let 
    | [%type: string] -> [%expr Elpi.API.BuiltInData.string.Elpi.API.Conversion.embed]
    | [%type: int]    -> [%expr Elpi.API.BuiltInData.int.Elpi.API.Conversion.embed]
    | [%type: float]  -> [%expr Elpi.API.BuiltInData.float.Elpi.API.Conversion.embed]
-   (* | [%type: bool]   -> [%expr Elpi.Builtin.PPX.embed_bool] *)
-   (* | [%type: char]   -> [%expr Elpi.Builtin.PPX.embed_char] *)
+   | [%type: bool]   -> [%expr Elpi.Builtin.bool.Elpi.API.Conversion.embed]
+   | [%type: char]   -> [%expr Elpi.Builtin.char.Elpi.API.Conversion.embed]
    | [%type: [%t? typ] list]          ->
      [%expr ((fun embed ~depth s l ->
          let s, l, eg = Elpi.API.Utils.map_acc (embed ~depth) s l in
          s, Elpi.API.Utils.list_to_lp_list l, eg) [%e aux typ]) ]
-   (* | [%type: [%t? typ] option]        -> [%expr Elpi.Builtin.PPX.embed_option [%e aux typ ]] *)
-   (* | [%type: [%t? typ1] * [%t? typ2]] -> [%expr Elpi.Builtin.PPX.embed_pair [%e aux typ1 ] [%e aux typ2 ]] *)
-   (* | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3]] -> [%expr Elpi.Builtin.PPX.embed_triple [%e aux typ1 ]  [%e aux typ2 ] [%e aux typ3 ]] *)
-   (* | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3] * [%t? typ4]] -> [%expr Elpi.Builtin.PPX.embed_quadruple [%e aux typ1 ] [%e aux typ2 ] [%e aux typ3 ] [%e aux typ4 ]] *)
-   (* | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3] * [%t? typ4] * [%t? typ5]] -> [%expr Elpi.Builtin.PPX.embed_quintuple [%e aux typ1 ] [%e aux typ2 ] [%e aux typ3 ] [%e aux typ4 ] [%e aux typ5 ]] *)
+   | [%type: [%t? typ] option]        -> [%expr Elpi.Builtin.PPX.embed_option [%e aux typ ]]
+   | [%type: [%t? typ1] * [%t? typ2]] -> [%expr Elpi.Builtin.PPX.embed_pair [%e aux typ1 ] [%e aux typ2 ]]
+   | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3]] -> [%expr Elpi.Builtin.PPX.embed_triple [%e aux typ1 ]  [%e aux typ2 ] [%e aux typ3 ]]
+   | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3] * [%t? typ4]] -> [%expr Elpi.Builtin.PPX.embed_quadruple [%e aux typ1 ] [%e aux typ2 ] [%e aux typ3 ] [%e aux typ4 ]]
+   | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3] * [%t? typ4] * [%t? typ5]] -> [%expr Elpi.Builtin.PPX.embed_quintuple [%e aux typ1 ] [%e aux typ2 ] [%e aux typ3 ] [%e aux typ4 ] [%e aux typ5 ]]
   | { ptyp_desc = Ptyp_constr ({ txt = Longident.Lident id; _ }, params); _ }
     when List.mem id current_mutrec_block || is_parameter id ->
       eapply (evar (elpi_embed_name id)) (List.map (find_embed_of (module B) current_mutrec_block) params)
