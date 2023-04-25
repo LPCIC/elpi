@@ -772,17 +772,17 @@ let rec find_readback_of (module B : Ast_builder.S) current_mutrec_block  ty = l
    | [%type: string] -> [%expr Elpi.API.BuiltInData.string.Elpi.API.Conversion.readback]
    | [%type: int]    -> [%expr Elpi.API.BuiltInData.int.Elpi.API.Conversion.readback]
    | [%type: float]  -> [%expr Elpi.API.BuiltInData.float.Elpi.API.Conversion.readback]
-   (* | [%type: bool]   -> [%expr Elpi.Builtin.PPX.readback_bool] *)
-   (* | [%type: char]   -> [%expr Elpi.Builtin.PPX.readback_char] *)
+   | [%type: bool]   -> [%expr Elpi.Builtin.bool.Elpi.API.Conversion.readback]
+   | [%type: char]   -> [%expr Elpi.Builtin.char.Elpi.API.Conversion.readback]
    | [%type: [%t? typ] list]          ->
      [%expr ((fun readback ~depth s t ->
          Elpi.API.Utils.map_acc (readback ~depth) s
            (Elpi.API.Utils.lp_list_to_list ~depth t)) [%e aux typ])]
-   (* | [%type: [%t? typ] option]        -> [%expr Elpi.Builtin.PPX.readback_option [%e aux typ ]] *)
-   (* | [%type: [%t? typ1] * [%t? typ2]] -> [%expr Elpi.Builtin.PPX.readback_pair [%e aux typ1 ] [%e aux typ2 ]] *)
-   (* | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3]] -> [%expr Elpi.Builtin.PPX.readback_triple [%e aux typ1 ]  [%e aux typ2 ] [%e aux typ3 ]] *)
-   (* | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3] * [%t? typ4]] -> [%expr Elpi.Builtin.PPX.readback_quadruple [%e aux typ1 ] [%e aux typ2 ] [%e aux typ3 ] [%e aux typ4 ]] *)
-   (* | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3] * [%t? typ4] * [%t? typ5]] -> [%expr Elpi.Builtin.PPX.readback_quintuple [%e aux typ1 ] [%e aux typ2 ] [%e aux typ3 ] [%e aux typ4 ] [%e aux typ5 ]] *)
+   | [%type: [%t? typ] option]        -> [%expr Elpi.Builtin.PPX.readback_option [%e aux typ ]]
+   | [%type: [%t? typ1] * [%t? typ2]] -> [%expr Elpi.Builtin.PPX.readback_pair [%e aux typ1 ] [%e aux typ2 ]]
+   | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3]] -> [%expr Elpi.Builtin.PPX.readback_triple [%e aux typ1 ]  [%e aux typ2 ] [%e aux typ3 ]]
+   | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3] * [%t? typ4]] -> [%expr Elpi.Builtin.PPX.readback_quadruple [%e aux typ1 ] [%e aux typ2 ] [%e aux typ3 ] [%e aux typ4 ]]
+   | [%type: [%t? typ1] * [%t? typ2] * [%t? typ3] * [%t? typ4] * [%t? typ5]] -> [%expr Elpi.Builtin.PPX.readback_quintuple [%e aux typ1 ] [%e aux typ2 ] [%e aux typ3 ] [%e aux typ4 ] [%e aux typ5 ]]
   | { ptyp_desc = Ptyp_constr ({ txt = Longident.Lident id; _ }, params); _ }
     when List.mem id current_mutrec_block || is_parameter id ->
       eapply (evar (elpi_readback_name id)) (List.map (find_readback_of (module B) current_mutrec_block) params)
