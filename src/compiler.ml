@@ -303,7 +303,7 @@ let builtins : t D.State.component = D.State.declare ~name:"elpi:compiler:builti
 let all state = (D.State.get builtins state).constants
 
 
-let register state (D.BuiltInPredicate.Pred(s,_,_) as b) =
+let register state s b =
   if s = "" then anomaly "Built-in predicate name must be non empty";
   if not (D.State.get D.while_compiling state) then
     anomaly "Built-in can only be declared at compile time";
@@ -317,6 +317,10 @@ let register state (D.BuiltInPredicate.Pred(s,_,_) as b) =
       code = b :: code;
     })
 ;;
+let register state = function
+| D.BuiltInPredicate.Pred(s,_,_) as b -> register state s b
+| D.BuiltInPredicate.CPred(s,_,_,_) as b -> register state s b
+
 
 let is_declared_str state x =
   let declared = (D.State.get builtins state).names in
@@ -2374,7 +2378,8 @@ let run
   let builtins = Hashtbl.create 17 in
   let pred_list = (State.get Builtins.builtins state).code in
   List.iter
-    (fun (D.BuiltInPredicate.Pred(s,_,_) as p) ->
+    (function
+    | (D.BuiltInPredicate.Pred(s,_,_) | D.BuiltInPredicate.CPred(s,_,_,_) as p) ->
       let c, _ = Symbols.get_global_symbol_str state s in
       Hashtbl.add builtins c p)
     pred_list;

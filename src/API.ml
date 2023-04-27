@@ -141,6 +141,13 @@ module Data = struct
     hsrc : term
   }
   type hyps = hyp list
+  type constant = int
+  module Constants = struct
+
+    module Map = ED.Constants.Map
+
+  end
+
 end
 
 module Compile = struct
@@ -240,7 +247,13 @@ exception TypeErr = ED.Conversion.TypeErr
 
 end
 
-module ContextualConversion = ED.ContextualConversion
+module ContextualConversion = struct
+  include ED.ContextualConversion
+  let (^^) t = { t with
+    embed = (fun ~depth h c s x -> t.embed ~depth (new ctx h#raw) c s x);
+    readback = (fun ~depth h c s x -> t.readback ~depth (new ctx h#raw) c s x);
+  }
+end
 
 module RawOpaqueData = struct
 
@@ -619,7 +632,7 @@ module RawData = struct
     let ctypec = ED.Global_symbols.ctypec
     let spillc = ED.Global_symbols.spillc
 
-    module Map = ED.Constants.Map
+    module Map = Data.Constants.Map
     module Set = ED.Constants.Set
 
   end

@@ -446,7 +446,7 @@ let unspec d = API.ContextualConversion.(!<(unspecC (!> d)))
 
 (** Core built-in ********************************************************* *)
 
-let core_builtins = let open BuiltIn in let open ContextualConversion in [
+let core_builtins = let open BuiltIn in [
 
   LPDoc " == Core builtins =====================================";
 
@@ -493,8 +493,8 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
           "external type declare_constraint variadic any prop.");
   LPCode "external pred print_constraints. % prints all constraints";
 
-  MLCode(Pred("halt", VariadicIn(unit_ctx, !> BuiltInData.any, "halts the program and print the terms"),
-  (fun args ~depth _ _ ->
+  MLCode(Pred("halt", VariadicIn(BuiltInData.any, "halts the program and print the terms"),
+  (fun args ~depth ->
      if args = [] then error "halt"
      else
        let b = Buffer.create 80 in
@@ -800,8 +800,8 @@ let lp_builtins = let open BuiltIn in let open BuiltInData in [
   MLCode(Pred("string_to_term",
     In(string, "S",
     Out(any,   "T",
-    Full(ContextualConversion.unit_ctx, "parses a term T from S"))),
-  (fun text _ ~depth () () state ->
+    Full("parses a term T from S"))),
+  (fun text _ ~depth state ->
      try
        let state, t = Quotation.term_at ~depth state text in
        state, !:t, []
@@ -812,8 +812,8 @@ let lp_builtins = let open BuiltIn in let open BuiltInData in [
   MLCode(Pred("readterm",
     In(in_stream, "InStream",
     Out(any,      "T",
-    Full(ContextualConversion.unit_ctx, "reads T from InStream, ends with \\n"))),
-  (fun (i,source_name) _ ~depth () () state ->
+    Full( "reads T from InStream, ends with \\n"))),
+  (fun (i,source_name) _ ~depth state ->
      try
        let text = input_line i in
        let state, t = Quotation.term_at ~depth state text in
@@ -834,21 +834,21 @@ let lp_builtins = let open BuiltIn in let open BuiltInData in [
 
 (** ELPI specific built-in ************************************************ *)
 
-let elpi_builtins = let open BuiltIn in let open BuiltInData in let open ContextualConversion in [
+let elpi_builtins = let open BuiltIn in let open BuiltInData in [
 
   LPDoc "== Elpi builtins =====================================";
 
   MLCode(Pred("dprint",
-    VariadicIn(unit_ctx, !> any, "prints raw terms (debugging)"),
-  (fun args ~depth _ _ state ->
+    VariadicIn(any, "prints raw terms (debugging)"),
+  (fun args ~depth state ->
      Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
        (RawPp.list (RawPp.Debug.term depth) " ") args ;
      state, ())),
   DocAbove);
 
   MLCode(Pred("print",
-    VariadicIn(unit_ctx, !> any,"prints terms"),
-  (fun args ~depth _ _ state ->
+    VariadicIn(any,"prints terms"),
+  (fun args ~depth state ->
      Format.fprintf Format.std_formatter "@[<hov 1>%a@]@\n%!"
        (RawPp.list (RawPp.term depth) " ") args ;
      state, ())),
@@ -863,9 +863,9 @@ counter C N :- trace.counter C N.|};
      In(string, "QueryText",
      Out(list (poly "A"), "QuotedProgram",
      Out(poly "A",        "QuotedQuery",
-     Full    (unit_ctx, "quotes the program from FileName and the QueryText. "^
+     Full    ("quotes the program from FileName and the QueryText. "^
               "See elpi-quoted_syntax.elpi for the syntax tree"))))),
-   (fun f s _ _ ~depth _ _ state ->
+   (fun f s _ _ ~depth state ->
       let elpi =
         Setup.init
           ~builtins:[BuiltIn.declare ~file_name:"(dummy)" []]
@@ -977,7 +977,7 @@ let safeno = ref 0
 let fresh_int = ref 0
 
 (* factor the code of name and constant *)
-let name_or_constant name condition = (); fun x out ~depth _ _ state ->
+let name_or_constant name condition = (); fun x out ~depth state ->
   let len = List.length out in
   if len != 0 && len != 2 then
     type_error (name^" only supports 1 or 3 arguments");
@@ -1025,7 +1025,7 @@ and same_term_list ~depth xs ys =
   | x::xs, y::ys -> same_term ~depth x y && same_term_list ~depth xs ys
   | _ -> false
 
-let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in let open ContextualConversion in [ 
+let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in [ 
 
   LPDoc "== Elpi nonlogical builtins =====================================";
 
@@ -1033,8 +1033,8 @@ let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in let o
 
   MLCode(Pred("var",
     InOut(ioarg_any, "V",
-    VariadicInOut(unit_ctx, !> (ioarg_any),"checks if the term V is a variable. When used with tree arguments it relates an applied variable with its head and argument list.")),
-  (fun x out ~depth _ _ state ->
+    VariadicInOut(ioarg_any,"checks if the term V is a variable. When used with tree arguments it relates an applied variable with its head and argument list.")),
+  (fun x out ~depth state ->
     let len = List.length out in
     if len != 0 && len != 2 then
       type_error ("var only supports 1 or 3 arguments");
@@ -1064,8 +1064,8 @@ let elpi_nonlogical_builtins = let open BuiltIn in let open BuiltInData in let o
   MLCode(Pred("prune",
   Out(any, "V",
   In(list any, "L",
-  Full (unit_ctx, "V is pruned to L (V is unified with a variable that only sees the list of names L)"))),
-    (fun _ l ~depth _ _ state ->
+  Full ("V is pruned to L (V is unified with a variable that only sees the list of names L)"))),
+    (fun _ l ~depth state ->
       if not (List.for_all (fun t -> match look ~depth t with
         | Const n -> n >= 0
         | _ -> false) l) then
@@ -1121,13 +1121,13 @@ X == Y :- same_term X Y.
 
   MLCode(Pred("name",
     InOut(ioarg_any, "T",
-    VariadicInOut(unit_ctx, !> (ioarg any),"checks if T is a eigenvariable. When used with tree arguments it relates an applied name with its head and argument list.")),
+    VariadicInOut(ioarg any,"checks if T is a eigenvariable. When used with tree arguments it relates an applied name with its head and argument list.")),
   (name_or_constant "name" (fun x -> x >= 0))),
   DocAbove);
 
   MLCode(Pred("constant",
     InOut(ioarg_any, "T",
-    VariadicInOut(unit_ctx, !> (ioarg any),"checks if T is a (global) constant.  When used with tree arguments it relates an applied constant with its head and argument list.")),
+    VariadicInOut(ioarg any,"checks if T is a (global) constant.  When used with tree arguments it relates an applied constant with its head and argument list.")),
   (name_or_constant "constant" (fun x -> x < 0))),
   DocAbove);
 
@@ -1156,8 +1156,8 @@ X == Y :- same_term X Y.
 
   MLCode(Pred("closed_term",
     Out(any, "T",
-    Full (unit_ctx, "unify T with a variable that has no eigenvariables in scope")),
-  (fun _ ~depth _ _ state ->
+    Full ("unify T with a variable that has no eigenvariables in scope")),
+  (fun _ ~depth state ->
       let state, k = FlexibleData.Elpi.make state in
       state, !:(mkUnifVar k ~args:[] state), [])),
   DocAbove);
