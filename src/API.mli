@@ -389,7 +389,7 @@ module ContextualConversion : sig
   val (!<) : ('a,ctx,unit) t -> 'a Conversion.t
 
   (* morphisms *)
-  val (!>)   : 'a Conversion.t -> ('a,'hyps,'constraints) t
+  val (!>)   : 'a Conversion.t -> ('a,#ctx as 'hyps,'constraints) t
   val (!>>)  : ('a Conversion.t -> 'b Conversion.t) -> ('a,'hyps,'constraints) t -> ('b,'hyps,'constraints) t
   val (!>>>) : ('a Conversion.t -> 'b Conversion.t -> 'c Conversion.t) -> ('a,'hyps,'constraints) t -> ('b,'hyps,'constraints) t -> ('c,'hyps,'constraints) t
 
@@ -1001,6 +1001,10 @@ module RawOpaqueData : sig
   }
 
   val declare : 'a declaration -> 'a cdata * 'a Conversion.t
+
+  module PPX : sig
+    val declare : 'a declaration -> 'a cdata * 'a Data.Constants.Map.t * doc
+  end
 
   val pp : Format.formatter -> t -> unit
   val show : t -> string
