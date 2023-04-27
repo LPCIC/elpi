@@ -153,6 +153,13 @@ module Data = struct
     hsrc : term
   }
   type hyps = hyp list
+  type constant = int
+  module Constants = struct
+
+    module Map = ED.Constants.Map
+
+  end
+
 end
 
 module Compile = struct
@@ -277,7 +284,13 @@ exception TypeErr = ED.Conversion.TypeErr
 
 end
 
-module ContextualConversion = ED.ContextualConversion
+module ContextualConversion = struct
+  include ED.ContextualConversion
+  let (^^) t = { t with
+    embed = (fun ~depth h c s x -> t.embed ~depth (new ctx h#raw) c s x);
+    readback = (fun ~depth h c s x -> t.readback ~depth (new ctx h#raw) c s x);
+  }
+end
 
 module RawOpaqueData = struct
 
@@ -656,7 +669,7 @@ module RawData = struct
     let ctypec = ED.Global_symbols.ctypec
     let spillc = ED.Global_symbols.spillc
 
-    module Map = ED.Constants.Map
+    module Map = Data.Constants.Map
     module Set = ED.Constants.Set
 
   end
@@ -1258,7 +1271,6 @@ module Calc = struct
 
  let calc =
    let open BuiltIn in
-   let open ContextualConversion in
    let open BuiltInPredicate.Notation in
     [
     LPDoc " -- Evaluation --";
@@ -1269,8 +1281,8 @@ module Calc = struct
     MLCode(Pred("calc",
       In(BuiltInData.poly "A",  "Expr",
       Out(BuiltInData.poly "A", "Out",
-      Read(unit_ctx, "unifies Out with the value of Expr. It can be used in tandem with spilling, eg [f {calc (N + 1)}]"))),
-        (fun t _ ~depth _ _ state -> !: (eval ~depth state t))),
+      Read("unifies Out with the value of Expr. It can be used in tandem with spilling, eg [f {calc (N + 1)}]"))),
+        (fun t _ ~depth state -> !: (eval ~depth state t))),
     DocAbove);
     ]
 
@@ -1285,8 +1297,6 @@ module Utils = struct
   let list_to_lp_list tl =
     let module R = (val !r) in let open R in
     list_to_lp_list tl
-
-  let show_ty_ast = ED.Conversion.show_ty_ast
 
   let get_assignment = function
     | Elpi.Arg _ -> assert false
@@ -1393,7 +1403,8 @@ module PPX = struct
     let adt ~doc ~ty ~args =
       ED.BuiltInPredicate.ADT.document_adt doc ty
         (List.map (fun (n,s,a) -> n,s,List.map (fun x -> (false,ED.Conversion.show_ty_ast x,"")) (a@[ty])) args)
+    type prec_level = ED.Conversion.prec_level = Arrow | AppArg
     let show_ty_ast = ED.Conversion.show_ty_ast
-    
+          
   end
 end

@@ -1062,7 +1062,7 @@ let typeabbrev_for (module B : Ast_builder.S) f params = let open B in
   if params = [] then f else [%expr "(" ^ [%e f]  ^ " " ^ [%e estring (String.concat " " vars) ] ^")" ]
 
 let typeabbrev_for_conv (module B : Ast_builder.S) ct = let open B in
-  [%expr Elpi.API.Utils.show_ty_ast ~outer: false @@ [%e conversion_of (module B) ct].Elpi.API.Conversion.ty ]
+  [%expr Elpi.API.PPX.Doc.(show_ty_ast ~prec:AppArg) @@ [%e conversion_of (module B) ct].Elpi.API.Conversion.ty ]
 
 let mk_pp_name (module B : Ast_builder.S) name = function
   | None -> if name = "t" then B.evar "pp" else B.evar ("pp_" ^ name)

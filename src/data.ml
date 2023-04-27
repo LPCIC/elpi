@@ -760,13 +760,23 @@ module ContextualConversion = struct
   type ty_ast = Conversion.ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
   [@@deriving show]
 
+  type hyp = clause_src
+
+  class ctx (h : hyps) =
+    object
+      method raw = h
+    end
+
   type ('a,'hyps,'constraints) embedding =
     depth:int -> 'hyps -> 'constraints ->
     State.t -> 'a -> State.t * term * Conversion.extra_goals
+  constraint 'hyps = #ctx
 
   type ('a,'hyps,'constraints) readback =
     depth:int -> 'hyps -> 'constraints ->
     State.t -> term -> State.t * 'a * Conversion.extra_goals
+  constraint 'hyps = #ctx
+
 
   type ('a,'hyps,'constraints) t = {
     ty : ty_ast;
@@ -775,19 +785,61 @@ module ContextualConversion = struct
     embed : ('a,'hyps,'constraints) embedding [@opaque];   (* 'a -> term *)
     readback : ('a,'hyps,'constraints) readback [@opaque]; (* term -> 'a *)
   }
+  constraint 'hyps = #ctx
   [@@deriving show]
 
+  type 'a ctx_entry = { entry : 'a; depth : int }
+  [@@deriving show]
+
+  type 'a ctx_field = 'a ctx_entry Constants.Map.t
+  
+  type ('a,'k,'h,'csts) context = {
+    is_entry_for_nominal : hyp -> constant option;
+    to_key : depth:int -> 'a -> 'k;
+    push : depth:int -> State.t -> 'k -> 'a ctx_entry -> State.t;
+    pop : depth:int -> State.t -> 'k -> State.t;
+    conv : (constant * 'a, #ctx as 'h,'csts) t;
+    init : State.t -> State.t;
+    get : State.t -> 'a ctx_field
+  }
+  
   type ('hyps,'constraints) ctx_readback =
     depth:int -> hyps -> constraints -> State.t -> State.t * 'hyps * 'constraints * Conversion.extra_goals
+  constraint 'hyps = #ctx
 
-  let unit_ctx : (unit,unit) ctx_readback = fun ~depth:_ _ _ s -> s, (), (), []
-  let raw_ctx : (hyps,constraints) ctx_readback = fun ~depth:_ h c s -> s, h, c, []
+  type dummy = unit
+
+  let dummy = {
+    ty = TyName "dummy";
+    pp = (fun _ _ -> assert false);
+    pp_doc = (fun _ _ -> assert false);
+    embed = (fun ~depth _ _ _ _ -> assert false);
+    readback = (fun ~depth _ _ _ _ -> assert false);
+  }
+
+  let in_raw = {
+    is_entry_for_nominal = (fun _ -> None);
+    to_key = (fun ~depth _ -> ());
+    push = (fun ~depth st _ _ -> st);
+    pop = (fun ~depth st _ -> st);
+    conv = dummy;
+    init = (fun st -> st);
+    get = (fun st -> Constants.Map.empty);
+  }
+
+  let build_raw_ctx h s = new ctx h
+
+  let in_raw_ctx : (ctx,'a) ctx_readback =
+    fun ~depth:_ h c s -> s, build_raw_ctx h s, c,[]
+
+  let unit_ctx : (ctx,unit) ctx_readback = fun ~depth:_ h _ s -> s, build_raw_ctx h s, (), []
+  let raw_ctx : (ctx,constraints) ctx_readback = fun ~depth:_ h c s -> s, build_raw_ctx h s, c, []
 
 
   let (!<) { ty; pp_doc; pp; embed; readback; } = {
     Conversion.ty; pp; pp_doc;
-    embed = (fun ~depth s t -> embed ~depth () () s t);
-    readback = (fun ~depth s t -> readback ~depth () () s t);
+    embed = (fun ~depth s t -> embed ~depth (build_raw_ctx [] s) () s t);
+    readback = (fun ~depth s t -> readback ~depth (build_raw_ctx [] s) () s t);
   }
 
   let (!>) { Conversion.ty; pp_doc; pp; embed; readback; } = {
@@ -934,24 +986,33 @@ type doc = string
 type 'a oarg = Keep | Discard
 type 'a ioarg = Data of 'a | NoData
 
-type ('function_type, 'inernal_outtype_in, 'internal_hyps, 'internal_constraints) ffi =
-  | In    : 't Conversion.t * doc * ('i, 'o,'h,'c) ffi -> ('t -> 'i,'o,'h,'c) ffi
-  | Out   : 't Conversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t oarg -> 'i,'o,'h,'c) ffi
-  | InOut : 't ioarg Conversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t ioarg -> 'i,'o,'h,'c) ffi
+type ('function_type, 'inernal_outtype_in) ffi =
+  | In    : 't Conversion.t * doc * ('i, 'o) ffi -> ('t -> 'i,'o) ffi
+  | Out   : 't Conversion.t * doc * ('i, 'o * 't option) ffi -> ('t oarg -> 'i,'o) ffi
+  | InOut : 't ioarg Conversion.t * doc * ('i, 'o * 't option) ffi -> ('t ioarg -> 'i,'o) ffi
+  | Easy : doc -> (depth:int -> 'o, 'o) ffi
+  | Read : doc -> (depth:int ->  State.t -> 'o,'o) ffi
+  | Full : doc -> (depth:int -> State.t -> State.t * 'o * Conversion.extra_goals, 'o) ffi
+  | FullHO : doc -> (once:(depth:int -> term -> State.t -> State.t) -> depth:int -> State.t -> State.t * 'o * Conversion.extra_goals, 'o) ffi
+  | VariadicIn    : 't Conversion.t * doc -> ('t list -> depth:int -> State.t -> State.t * 'o, 'o) ffi
+  | VariadicOut   : 't Conversion.t * doc -> ('t oarg list -> depth:int -> State.t -> State.t * ('o * 't option list option), 'o) ffi
+  | VariadicInOut : 't ioarg Conversion.t * doc -> ('t ioarg list -> depth:int -> State.t -> State.t * ('o * 't option list option), 'o) ffi
 
-  | CIn    : ('t,'h,'c) ContextualConversion.t * doc * ('i, 'o,'h,'c) ffi -> ('t -> 'i,'o,'h,'c) ffi
-  | COut   : ('t,'h,'c) ContextualConversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t oarg -> 'i,'o,'h,'c) ffi
-  | CInOut : ('t ioarg,'h,'c) ContextualConversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t ioarg -> 'i,'o,'h,'c) ffi
+type ('function_type, 'inernal_outtype_in, 'internal_hyps, 'internal_constraints) cffi =
+  | CIn    : ('t,'h,'c) ContextualConversion.t * doc * ('i, 'o,'h,'c) cffi -> ('t -> 'i,'o,'h,'c) cffi
+  | COut   : ('t,'h,'c) ContextualConversion.t * doc * ('i, 'o * 't option,'h,'c) cffi -> ('t oarg -> 'i,'o,'h,'c) cffi
+  | CInOut : ('t ioarg,'h,'c) ContextualConversion.t * doc * ('i, 'o * 't option,'h,'c) cffi -> ('t ioarg -> 'i,'o,'h,'c) cffi
+  | CEasy : doc -> (depth:int -> 'h -> 'c -> 'o, 'o,'h,'c) cffi
+  | CRead : doc -> (depth:int -> 'h -> 'c -> State.t -> 'o, 'o,'h,'c) cffi
+  | CFull : doc -> (depth:int -> 'h -> 'c -> State.t -> State.t * 'o * Conversion.extra_goals, 'o,'h,'c) cffi
+  | CFullHO : doc -> (once:(depth:int -> term -> State.t -> State.t) -> depth:int -> 'h -> 'c -> State.t -> State.t * 'o * Conversion.extra_goals, 'o,'h,'c) cffi
+  | CVariadicIn    : ('t,'h,'c) ContextualConversion.t * doc -> ('t list -> depth:int -> 'h -> 'c -> State.t -> State.t * 'o, 'o,'h,'c) cffi
+  | CVariadicOut   : ('t,'h,'c) ContextualConversion.t * doc -> ('t oarg list -> depth:int -> 'h -> 'c -> State.t -> State.t * ('o * 't option list option), 'o,'h,'c) cffi
+  | CVariadicInOut : ('t ioarg,'h,'c) ContextualConversion.t * doc -> ('t ioarg list -> depth:int -> 'h -> 'c -> State.t -> State.t * ('o * 't option list option), 'o,'h,'c) cffi
 
-  | Easy : doc -> (depth:int -> 'o, 'o,unit,unit) ffi
-  | Read : ('h,'c) ContextualConversion.ctx_readback * doc -> (depth:int -> 'h -> 'c -> State.t -> 'o, 'o,'h,'c) ffi
-  | Full : ('h,'c) ContextualConversion.ctx_readback * doc -> (depth:int -> 'h -> 'c -> State.t -> State.t * 'o * Conversion.extra_goals, 'o,'h,'c) ffi
-  | FullHO : ('h,'c) ContextualConversion.ctx_readback * doc -> (once:(depth:int -> term -> State.t -> State.t) -> depth:int -> 'h -> 'c -> State.t -> State.t * 'o * Conversion.extra_goals, 'o,'h,'c) ffi
-  | VariadicIn    : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t list -> depth:int -> 'h -> 'c -> State.t -> State.t * 'o, 'o,'h,'c) ffi
-  | VariadicOut   : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t oarg list -> depth:int -> 'h -> 'c -> State.t -> State.t * ('o * 't option list option), 'o,'h,'c) ffi
-  | VariadicInOut : ('h,'c) ContextualConversion.ctx_readback * ('t ioarg,'h,'c) ContextualConversion.t * doc -> ('t ioarg list -> depth:int -> 'h -> 'c -> State.t -> State.t * ('o * 't option list option), 'o,'h,'c) ffi
-
-type t = Pred : name * ('a,unit,'h,'c) ffi * 'a -> t
+type t =
+  | Pred  : name * ('a,unit) ffi * 'a -> t
+  | CPred : name * ('h,'c) ContextualConversion.ctx_readback * ('a,unit,'h,'c) cffi * 'a -> t
 
 type doc_spec = DocAbove | DocNext
 
@@ -1122,8 +1183,8 @@ and embed : type a h c.
         matcher ~ok ~ko:(aux rest) t state in
      aux bindings state
 
-let rec compile_arguments : type b bs m ms t h c.
-  (bs,b,ms,m,t,h,c) constructor_arguments -> (t,h,c) ContextualConversion.t -> (bs,ms,t,h,c) compiled_constructor_arguments =
+let rec compile_arguments : type b bs m ms t c.
+  (bs,b,ms,m,t,'h,c) constructor_arguments -> (t,#ContextualConversion.ctx as 'h,c) ContextualConversion.t -> (bs,ms,t,'h,c) compiled_constructor_arguments =
 fun arg self ->
   match arg with
   | N -> XN
@@ -1304,21 +1365,36 @@ let pp_variadictype fmt name doc_pred ty args =
 
 let document_pred fmt docspec name ffi =
   let rec doc
-  : type i o h c. (bool * string * string) list -> (i,o,h,c) ffi -> unit
+  : type i o. (bool * string * string) list -> (i,o) ffi -> unit
   = fun args -> function
     | In( { Conversion.ty }, s, ffi) -> doc ((true,Conversion.show_ty_ast ty,s) :: args) ffi
     | Out( { Conversion.ty }, s, ffi) -> doc ((false,Conversion.show_ty_ast ty,s) :: args) ffi
     | InOut( { Conversion.ty }, s, ffi) -> doc ((false,Conversion.show_ty_ast ty,s) :: args) ffi
+    | Easy s -> pp_pred fmt docspec name s args
+    | Read s -> pp_pred fmt docspec name s args
+    | Full s -> pp_pred fmt docspec name s args
+    | FullHO s -> pp_pred fmt docspec name s args
+    | VariadicIn({ Conversion.ty }, s) -> pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
+    | VariadicOut({ Conversion.ty }, s) -> pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
+    | VariadicInOut({ Conversion.ty }, s) -> pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
+
+  in
+    doc [] ffi
+;;
+let document_cpred fmt docspec name ffi =
+  let rec doc
+  : type i o h c. (bool * string * string) list -> (i,o,h,c) cffi -> unit
+  = fun args -> function
     | CIn( { ContextualConversion.ty }, s, ffi) -> doc ((true,Conversion.show_ty_ast ty,s) :: args) ffi
     | COut( { ContextualConversion.ty }, s, ffi) -> doc ((false,Conversion.show_ty_ast ty,s) :: args) ffi
     | CInOut( { ContextualConversion.ty }, s, ffi) -> doc ((false,Conversion.show_ty_ast ty,s) :: args) ffi
-    | Read (_,s) -> pp_pred fmt docspec name s args
-    | Easy s -> pp_pred fmt docspec name s args
-    | Full (_,s) -> pp_pred fmt docspec name s args
-    | FullHO (_,s) -> pp_pred fmt docspec name s args
-    | VariadicIn( _,{ ContextualConversion.ty }, s) -> pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
-    | VariadicOut( _,{ ContextualConversion.ty }, s) -> pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
-    | VariadicInOut( _,{ ContextualConversion.ty }, s) -> pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
+    | CEasy s -> pp_pred fmt docspec name s args
+    | CRead s -> pp_pred fmt docspec name s args
+    | CFull s -> pp_pred fmt docspec name s args
+    | CFullHO s -> pp_pred fmt docspec name s args
+    | CVariadicIn({ ContextualConversion.ty }, s) -> pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
+    | CVariadicOut({ ContextualConversion.ty }, s) -> pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
+    | CVariadicInOut({ ContextualConversion.ty }, s) -> pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
   in
     doc [] ffi
 ;;
@@ -1330,11 +1406,17 @@ let document fmt l calc_list =
   Fmt.fprintf fmt "@\n@\n";
   List.iter (function
     | MLCode(Pred(name,ffi,_), docspec) ->
-        document_pred fmt docspec name ffi;
-        if name = "calc" then begin
-          Format.fprintf fmt "%s@\n@\n" "%  --- Operators ---";
-          List.iter (fun (_,x) -> Format.fprintf fmt "%s@\n@\n" x.CalcHooks.ty_decl ) calc_list
-        end;
+    document_pred fmt docspec name ffi;
+    if name = "calc" then begin
+      Format.fprintf fmt "%s@\n@\n" "%  --- Operators ---";
+      List.iter (fun (_,x) -> Format.fprintf fmt "%s@\n@\n" x.CalcHooks.ty_decl ) calc_list
+    end;
+  | MLCode(CPred(name,_,ffi,_), docspec) ->
+      document_cpred fmt docspec name ffi;
+      if name = "calc" then begin
+        Format.fprintf fmt "%s@\n@\n" "%  --- Operators ---";
+        List.iter (fun (_,x) -> Format.fprintf fmt "%s@\n@\n" x.CalcHooks.ty_decl ) calc_list
+      end;
     | MLData { pp_doc } -> Fmt.fprintf fmt "%a@\n" pp_doc ()
     | MLDataC { pp_doc } -> Fmt.fprintf fmt "%a@\n" pp_doc ()
     | LPCode s -> Fmt.fprintf fmt "%s" s; Fmt.fprintf fmt "@\n@\n"

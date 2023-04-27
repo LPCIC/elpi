@@ -168,6 +168,17 @@ module Data : sig
   type hyp
   type hyps = hyp list
 
+  type constant = int
+  module Constants : sig
+
+    module Map : sig
+      include Map.S with type key = constant
+      val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
+      val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+    end
+
+  end
+
 end
 
 module Compile : sig
@@ -320,14 +331,20 @@ module ContextualConversion : sig
 
   type ty_ast = Conversion.ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
 
+  class ctx : Data.hyps ->
+    object
+      method raw : Data.hyps
+    end
 
   type ('a,'hyps,'constraints) embedding =
     depth:int -> 'hyps -> 'constraints ->
     Data.state -> 'a -> Data.state * Data.term * Conversion.extra_goals
+  constraint 'hyps = #ctx
 
   type ('a,'hyps,'constraints) readback =
     depth:int -> 'hyps -> 'constraints ->
     Data.state -> Data.term -> Data.state * 'a * Conversion.extra_goals
+  constraint 'hyps = #ctx
 
   type ('a,'h,'c) t = {
     ty : ty_ast;
@@ -336,16 +353,40 @@ module ContextualConversion : sig
     embed : ('a,'h,'c) embedding;   (* 'a -> term *)
     readback : ('a,'h,'c) readback; (* term -> 'a *)
   }
+  constraint 'h = #ctx
 
+  val (^^) : ('a, ctx, 'c) t -> ('a, 'x, 'c) t
+
+  type 'a ctx_entry = { entry : 'a; depth : int }
+  val pp_ctx_entry : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a ctx_entry -> unit
+  val show_ctx_entry : (Format.formatter -> 'a -> unit) -> 'a ctx_entry -> string
+
+  type 'a ctx_field = 'a ctx_entry Data.Constants.Map.t
+
+  (* A context that can be read on top of context 'c, made of items 'a indexed by 'k  *)
+  type ('a,'k,'c,'csts) context = {
+    is_entry_for_nominal : Data.hyp -> Data.constant option;
+    to_key : depth:int -> 'a -> 'k;
+    push : depth:int -> Data.state -> 'k -> 'a ctx_entry -> Data.state;
+    pop : depth:int -> Data.state -> 'k -> Data.state;
+    conv : (Data.constant * 'a, #ctx as 'c, 'csts) t;
+    init : Data.state -> Data.state;
+    get : Data.state -> 'a ctx_field
+  }
   type ('hyps,'constraints) ctx_readback =
     depth:int -> Data.hyps -> Data.constraints ->
     Data.state -> Data.state * 'hyps * 'constraints * Conversion.extra_goals
+  constraint 'hyps = #ctx
 
-  val unit_ctx : (unit,unit) ctx_readback
-  val raw_ctx : (Data.hyps,Data.constraints) ctx_readback
+  val unit_ctx : (ctx,unit) ctx_readback
+  val raw_ctx : (ctx,Data.constraints) ctx_readback
+
+  type dummy
+  val in_raw_ctx : (ctx,Data.constraints) ctx_readback
+  val in_raw : (dummy, dummy, #ctx as 'a,'csts) context
 
   (* cast *)
-  val (!<) : ('a,unit,unit) t -> 'a Conversion.t
+  val (!<) : ('a,ctx,unit) t -> 'a Conversion.t
 
   (* morphisms *)
   val (!>)   : 'a Conversion.t -> ('a,'hyps,'constraints) t
@@ -561,33 +602,37 @@ module BuiltInPredicate : sig
 
   type 'a oarg = Keep | Discard
   type 'a ioarg = private Data of 'a | NoData
-
   type once
 
-  type ('function_type, 'inernal_outtype_in, 'internal_hyps, 'internal_constraints) ffi =
-    (* Arguemnts that are translated independently of the program context *)
-    | In    : 't Conversion.t * doc * ('i, 'o,'h,'c) ffi -> ('t -> 'i,'o,'h,'c) ffi
-    | Out   : 't Conversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t oarg -> 'i,'o,'h,'c) ffi
-    | InOut : 't ioarg Conversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t ioarg -> 'i,'o,'h,'c) ffi
+  (* Arguemnts that are translated independently of the program context *)
+  type ('function_type, 'inernal_outtype_in) ffi =
+    | In    : 't Conversion.t * doc * ('i, 'o) ffi -> ('t -> 'i,'o) ffi
+    | Out   : 't Conversion.t * doc * ('i, 'o * 't option) ffi -> ('t oarg -> 'i,'o) ffi
+    | InOut : 't ioarg Conversion.t * doc * ('i, 'o * 't option) ffi -> ('t ioarg -> 'i,'o) ffi
+    | Easy : doc -> (depth:int -> 'o, 'o) ffi
+    | Read : doc -> (depth:int ->  Data.state -> 'o,'o) ffi
+    | Full : doc -> (depth:int -> Data.state -> Data.state * 'o * Conversion.extra_goals, 'o) ffi
+    | FullHO : doc -> (once:once -> depth:int -> Data.state -> Data.state * 'o * Conversion.extra_goals, 'o) ffi
+    | VariadicIn    : 't Conversion.t * doc -> ('t list -> depth:int -> Data.state -> Data.state * 'o, 'o) ffi
+    | VariadicOut   : 't Conversion.t * doc -> ('t oarg list -> depth:int -> Data.state -> Data.state * ('o * 't option list option), 'o) ffi
+    | VariadicInOut : ('t ioarg) Conversion.t * doc -> ('t ioarg list -> depth:int -> Data.state -> Data.state * ('o * 't option list option), 'o) ffi
 
-    (* Arguemnts that are translated looking at the program context *)
-    | CIn    : ('t,'h,'c) ContextualConversion.t * doc * ('i, 'o,'h,'c) ffi -> ('t -> 'i,'o,'h,'c) ffi
-    | COut   : ('t,'h,'c) ContextualConversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t oarg -> 'i,'o,'h,'c) ffi
-    | CInOut : ('t ioarg,'h,'c) ContextualConversion.t * doc * ('i, 'o * 't option,'h,'c) ffi -> ('t ioarg -> 'i,'o,'h,'c) ffi
+  (* Arguemnts that are translated looking at the program context *)
+  type ('function_type, 'inernal_outtype_in, 'internal_hyps, 'internal_constraints) cffi =
+    | CIn    : ('t,'h,'c) ContextualConversion.t * doc * ('i, 'o,'h,'c) cffi -> ('t -> 'i,'o,'h,'c) cffi
+    | COut   : ('t,'h,'c) ContextualConversion.t * doc * ('i, 'o * 't option,'h,'c) cffi -> ('t oarg -> 'i,'o,'h,'c) cffi
+    | CInOut : ('t ioarg,'h,'c) ContextualConversion.t * doc * ('i, 'o * 't option,'h,'c) cffi -> ('t ioarg -> 'i,'o,'h,'c) cffi
+    | CEasy : doc -> (depth:int -> 'h -> 'c -> 'o, 'o,'h,'c) cffi
+    | CRead : doc -> (depth:int -> 'h -> 'c -> Data.state -> 'o, 'o,'h,'c) cffi
+    | CFull : doc -> (depth:int -> 'h -> 'c -> Data.state -> Data.state * 'o * Conversion.extra_goals, 'o,'h,'c) cffi
+    | CFullHO : doc -> (once:once -> depth:int -> 'h -> 'c -> Data.state -> Data.state * 'o * Conversion.extra_goals, 'o,'h,'c) cffi
+    | CVariadicIn    : ('t,'h,'c) ContextualConversion.t * doc -> ('t list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * 'o, 'o,'h,'c) cffi
+    | CVariadicOut   : ('t,'h,'c) ContextualConversion.t * doc -> ('t oarg list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * ('o * 't option list option), 'o,'h,'c) cffi
+    | CVariadicInOut : ('t ioarg,'h,'c) ContextualConversion.t * doc -> ('t ioarg list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * ('o * 't option list option), 'o,'h,'c) cffi
 
-    (* The easy case: all arguments are context independent *)
-    | Easy : doc -> (depth:int -> 'o, 'o, unit, unit) ffi
-
-    (* The advanced case: arguments are context dependent, here we provide the
-      context readback function *)
-    | Read : ('h,'c) ContextualConversion.ctx_readback * doc -> (depth:int -> 'h -> 'c -> Data.state -> 'o, 'o,'h,'c) ffi
-    | Full : ('h,'c) ContextualConversion.ctx_readback * doc -> (depth:int -> 'h -> 'c -> Data.state -> Data.state * 'o * Conversion.extra_goals, 'o,'h,'c) ffi
-    | FullHO : ('h,'c) ContextualConversion.ctx_readback * doc -> (once:once -> depth:int -> 'h -> 'c -> Data.state -> Data.state * 'o * Conversion.extra_goals, 'o,'h,'c) ffi
-    | VariadicIn    : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * 'o, 'o,'h,'c) ffi
-    | VariadicOut   : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t oarg list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * ('o * 't option list option), 'o,'h,'c) ffi
-    | VariadicInOut : ('h,'c) ContextualConversion.ctx_readback * ('t ioarg,'h,'c) ContextualConversion.t * doc -> ('t ioarg list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * ('o * 't option list option), 'o,'h,'c) ffi
-
-  type t = Pred : name * ('a,unit,'h,'c) ffi * 'a -> t
+  type t =
+    | Pred : name * ('a,unit) ffi * 'a -> t
+    | CPred : name * ('h,'c) ContextualConversion.ctx_readback * ('a,unit,'h,'c) cffi * 'a -> t
 
   (** Tools for InOut arguments.
    *
@@ -1027,7 +1072,7 @@ end
    * substitutes assigned unification variables by their value. *)
 module RawData : sig
 
-  type constant = int (** De Bruijn levels (not indexes):
+  type constant = Data.constant (** De Bruijn levels (not indexes):
                           the distance of the binder from the root.
                           Starts at 0 and grows for bound variables;
                           global constants have negative values. *)
@@ -1110,7 +1155,7 @@ module RawData : sig
     (* Marker for spilling function calls, as in [{ rev L }] *)
     val spillc : constant
 
-    module Map : Map.S with type key = constant
+    module Map = Data.Constants.Map
     module Set : Set.S with type elt = constant
 
   end
@@ -1234,8 +1279,6 @@ module Utils : sig
     (State.t -> 't -> State.t * 'a * Conversion.extra_goals) ->
     State.t -> 't list -> State.t * 'a list * Conversion.extra_goals
 
-  val show_ty_ast: ?outer:bool -> Conversion.ty_ast -> string
-
   module type Show = sig
     type t
     val pp : Format.formatter -> t -> unit
@@ -1320,7 +1363,9 @@ module PPX : sig
       ty:Conversion.ty_ast ->
       args:(string * string * Conversion.ty_ast list) list ->
       Format.formatter -> unit -> unit
-    val show_ty_ast : ?outer:bool -> Conversion.ty_ast -> string
+      
+    type prec_level = Arrow | AppArg
+    val show_ty_ast: ?prec:prec_level -> Conversion.ty_ast -> string
 
   end
 
