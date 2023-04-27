@@ -316,7 +316,7 @@ module RawOpaqueData = struct
         ED.Constants.Map.add c v cm, VM.add v c vm)
       constants (ED.Constants.Map.empty,VM.empty) in
     let values_map x = VM.find x values_map in
-    conversion_of_cdata ~name ?doc ~constants_map ~values_map ~constants ~pp cd
+    constants_map, conversion_of_cdata ~name ?doc ~constants_map ~values_map ~constants ~pp cd
 
   let declare { name; doc; pp; compare; hash; hconsed; constants; } =
     let cdata = Util.CData.declare {
@@ -327,6 +327,16 @@ module RawOpaqueData = struct
       data_hconsed = hconsed;
    } in
    conversion_of_cdata ~name ~doc ~constants ~compare ~pp cdata
+
+   module PPX = struct
+     let declare d =
+       let map, (cd, _) = declare d in
+       cd, map, d.doc
+   end
+
+   let declare d = snd @@ declare d
+   let conversion_of_cdata ~name ?doc ?constants ~compare ~pp cd =
+     snd @@ conversion_of_cdata ~name ?doc ?constants ~compare ~pp cd
 
    let morph1 { cin; cout } f x = cin (f (cout x))
    let morph2 { cin; cout } f x y = cin (f (cout x) (cout y))

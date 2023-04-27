@@ -6,7 +6,7 @@ type simple [@@elpi.opaque {Elpi.API.OpaqueData.name = "simple"; doc = ""; pp = 
 
 open Elpi.API
 
-let test : 'h. (simple, #Conversion.ctx as 'h) Conversion.t = simple
+let test : 'h. (simple, #ContextualConversion.ctx as 'h,'c) ContextualConversion.t = simple
 
 let builtin = let open BuiltIn in
   declare ~file_name:(Sys.argv.(1)) !elpi_stuff
