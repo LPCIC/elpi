@@ -165,7 +165,10 @@ module Data : sig
   }
 
   (* Hypothetical context *)
-  type hyp
+  type hyp = {
+    hdepth : int;
+    hsrc : term
+  }
   type hyps = hyp list
 
   type constant = int
@@ -388,11 +391,6 @@ module ContextualConversion : sig
   (* cast *)
   val (!<) : ('a,ctx,unit) t -> 'a Conversion.t
 
-  (* morphisms *)
-  val (!>)   : 'a Conversion.t -> ('a,#ctx as 'hyps,'constraints) t
-  val (!>>)  : ('a Conversion.t -> 'b Conversion.t) -> ('a,'hyps,'constraints) t -> ('b,'hyps,'constraints) t
-  val (!>>>) : ('a Conversion.t -> 'b Conversion.t -> 'c Conversion.t) -> ('a,'hyps,'constraints) t -> ('b,'hyps,'constraints) t -> ('c,'hyps,'constraints) t
-
 end
 
 
@@ -415,6 +413,28 @@ module BuiltInData : sig
 
   (* any is like poly "X" for X fresh *)
   val any    : Data.term Conversion.t
+
+end
+
+module BuiltInContextualData : sig
+
+  (** See {!module:Elpi.Builtin} for a few more *)
+  val int    : (int,'c,'csts) ContextualConversion.t
+  val float  : (float,'c,'csts) ContextualConversion.t
+  val string : (string,'c,'csts) ContextualConversion.t
+  val list   : ('a,'c,'csts) ContextualConversion.t -> ('a list,'c,'csts) ContextualConversion.t
+  val loc    : (Ast.Loc.t,'c,'csts) ContextualConversion.t
+
+  (* poly "A" is what one would use for, say, [type eq A -> A -> prop] *)
+  val polyA0   : (Data.term,'c,'csts) ContextualConversion.t
+  val polyA1   : (Data.term,'c,'csts) ContextualConversion.t
+  val polyA2   : (Data.term,'c,'csts) ContextualConversion.t
+  val polyA3   : (Data.term,'c,'csts) ContextualConversion.t
+
+  (* any is like poly "X" for X fresh *)
+  val any    : (Data.term,'c,'csts) ContextualConversion.t
+
+  val nominal : (Data.constant,'c,'csts) ContextualConversion.t
 
 end
 
@@ -815,8 +835,14 @@ module Query : sig
     | N : unit arguments
     | D : 'a Conversion.t * 'a *    'x arguments -> 'x arguments
     | Q : 'a Conversion.t * name * 'x arguments -> ('a * 'x) arguments
+  type (_,_,_) carguments =
+    | NC : (unit,'c,'csts) carguments
+    | DC : ('a,'c,'csts) ContextualConversion.t * 'a *    ('x,'c,'csts) carguments -> ('x,'c,'csts) carguments
+    | QC : ('a,'c,'csts) ContextualConversion.t * name * ('x,'c,'csts) carguments -> ('a * 'x,'c,'csts) carguments
 
-  type 'x t = Query of { predicate : name; arguments : 'x arguments }
+  type 'x t =
+    | Query of { predicate : name; arguments : 'x arguments }
+    | CQuery : name * ('x,#ContextualConversion.ctx as 'c,'csts) carguments * (Data.state -> 'c) * 'csts -> 'x t
 
   val compile : Compile.program -> Ast.Loc.t -> 'a t -> 'a Compile.query
 
@@ -1121,16 +1147,9 @@ module RawData : sig
   val mkConst : constant -> term (* no check, works for globals and bound *)
 
   val cmp_builtin : builtin -> builtin -> int
-  type hyp = {
-    hdepth : int;
-    hsrc : term
-  }
-  type hyps = hyp list
-  val of_hyp : Data.hyp -> hyp
-  val of_hyps : Data.hyp list -> hyps
 
   type suspended_goal = {
-    context : hyps;
+    context : Data.hyps;
     goal : int * term
   }
   val constraints : Data.constraints -> suspended_goal list
@@ -1372,6 +1391,17 @@ module PPX : sig
     val show_ty_ast: ?prec:prec_level -> Conversion.ty_ast -> string
 
   end
+
+  type context_description =
+    | C : ('a,'k,'c,'csts) ContextualConversion.context -> context_description
+
+  val readback_context :
+    ('a,'k,'c,'csts) ContextualConversion.context ->
+    'c ->
+    depth:int ->
+    Data.hyps ->
+    'csts ->
+    Data.state -> Data.state * Conversion.extra_goals
 
 end
 

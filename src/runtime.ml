@@ -2318,8 +2318,25 @@ let rec embed_query_aux : type a. mk_Arg:(State.t -> name:string -> args:term li
         state, C.mkAppL predicate args, gls
 ;;
 
-let embed_query ~mk_Arg ~depth state (Query.Query { predicate; arguments }) =
-    embed_query_aux  ~mk_Arg ~depth ~predicate [] [] state arguments
+let rec embed_cquery_aux : type a csts. mk_Arg:(State.t -> name:string -> args:term list -> State.t * term) -> depth:int -> predicate:constant -> ctx:(#ContextualConversion.ctx as 'c) -> csts:csts -> Conversion.extra_goals -> term list -> State.t -> (a,'c,csts) Query.carguments -> State.t * term * Conversion.extra_goals
+  = fun ~mk_Arg ~depth ~predicate ~ctx ~csts gls args state descr ->
+    match descr with
+    | Data.Query.DC(d,x,rest) ->
+      let state, x, glsx = d.ContextualConversion.embed ~depth ctx csts state x in
+      embed_cquery_aux ~mk_Arg ~depth ~predicate ~ctx ~csts (gls @ glsx) (x :: args) state rest
+    | Data.Query.QC(d,name,rest) ->
+      let state, x = mk_Arg state ~name ~args:[] in
+      embed_cquery_aux ~mk_Arg ~depth ~predicate ~ctx ~csts gls (x :: args) state rest
+    | Data.Query.NC ->
+        let args = List.rev args in
+        state, C.mkAppL predicate args, gls
+;;
+
+let embed_query ~mk_Arg ~depth state = function
+  | Query.Query { predicate; arguments } ->
+      embed_query_aux  ~mk_Arg ~depth ~predicate [] [] state arguments
+  | Query.CQuery (predicate, arguments, ctx, csts) ->
+      embed_cquery_aux  ~mk_Arg ~depth ~predicate ~ctx:(ctx state) ~csts [] [] state arguments
 
 let rec query_solution_aux : type a. a Query.arguments -> term StrMap.t -> State.t -> a
  = fun args assignments state ->
@@ -2331,8 +2348,21 @@ let rec query_solution_aux : type a. a Query.arguments -> term StrMap.t -> State
          let state, x, _gls = d.Conversion.readback ~depth:0 state x in
          x, query_solution_aux args assignments state
 
-let output arguments assignments state =
-  query_solution_aux arguments assignments state
+let rec cquery_solution_aux : type a csts. (a,#ContextualConversion.ctx as 'c,csts) Query.carguments -> term StrMap.t -> State.t -> 'c -> csts -> a
+= fun args assignments state ctx csts ->
+    match args with
+    | Data.Query.NC -> ()
+    | Data.Query.DC(_,_,args) -> cquery_solution_aux args assignments state ctx csts
+    | Data.Query.QC(d,name,args) ->
+        let x = StrMap.find name assignments in
+        let state, x, _gls = d.ContextualConversion.readback ~depth:0 ctx csts state x in
+        x, cquery_solution_aux args assignments state ctx csts
+        
+
+let output query assignments state =
+  match query with
+  | Query.Query { arguments; _ } -> query_solution_aux arguments assignments state
+  | Query.CQuery (_,arguments,c,csts) -> cquery_solution_aux arguments assignments state (c state) csts
 
 (******************************************************************************
   Indexing
@@ -3481,7 +3511,7 @@ let try_fire_rule (gid[@trace]) rule (constraints as orig_constraints) =
     assignments = StrMap.empty;
     initial_depth = max_depth;
     initial_runtime_state = !CS.initial_state;
-    query_arguments = Query.N;
+    query_adt = Query.(Query { predicate = 0; arguments = N } );
     symbol_table = !C.table;
     builtins = !FFI.builtins;
   } in
@@ -3883,7 +3913,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
       assignments = StrMap.empty;
       initial_depth = depth;
       initial_runtime_state = !CS.initial_state;
-      query_arguments = Query.N;
+      query_adt = Query.(Query { predicate = 0; arguments = N });
       symbol_table = !C.table;
       builtins = !FFI.builtins;
     } in
@@ -4088,7 +4118,7 @@ let mk_outcome search get_cs assignments depth =
 let execute_once ?max_steps ?delay_outside_fragment exec =
  let { search; get } = make_runtime ?max_steps ?delay_outside_fragment exec in
  try
-   let result = fst (mk_outcome search (fun () -> get CS.Ugly.delayed, (exec.initial_depth,get CS.state), get CS.state |> State.end_execution, exec.query_arguments, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments exec.initial_depth) in
+   let result = fst (mk_outcome search (fun () -> get CS.Ugly.delayed, (exec.initial_depth,get CS.state), get CS.state |> State.end_execution, exec.query_adt, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments exec.initial_depth) in
    [%end_trace "execute_once" ~rid];
    result
  with e ->
@@ -4102,7 +4132,7 @@ let execute_loop ?delay_outside_fragment exec ~more ~pp =
  let k = ref noalts in
  let do_with_infos f =
    let time0 = Unix.gettimeofday() in
-   let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, (exec.initial_depth,get CS.state), get CS.state |> State.end_execution, exec.query_arguments, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments exec.initial_depth in
+   let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, (exec.initial_depth,get CS.state), get CS.state |> State.end_execution, exec.query_adt, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments exec.initial_depth in
    let time1 = Unix.gettimeofday() in
    k := alts;
    pp (time1 -. time0) o in

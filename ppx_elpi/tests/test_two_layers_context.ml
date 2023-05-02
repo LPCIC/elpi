@@ -18,15 +18,15 @@ type tye =
   | TArrow of tye * tye
 [@@deriving elpi { declaration  } ]
 
-let tye : 'a. (tye, #ctx_for_tye as 'a) Elpi.API.Conversion.t  = tye
-
+let tye : 'a 'csts. (tye, #ctx_for_tye as 'a,'csts) Elpi.API.ContextualConversion.t  = tye
+ 
 let pp_ty _ _ = ()
 type ty =
   | Mono of tye
   | Forall of string * bool * (ty[@elpi.binder "tye" tctx (fun s b -> TDecl(s,b))])
 [@@deriving elpi ]
 
-let ty : 'a. (ty, #ctx_for_ty as 'a) Elpi.API.Conversion.t  = ty
+let ty : 'a 'csts. (ty, #ctx_for_ty as 'a,'csts) Elpi.API.ContextualConversion.t  = ty
 
 let pp_ctx _ _ = ()
 type ctx = Decl of (string[@elpi.key]) * ty
@@ -54,22 +54,22 @@ type term =
    | Cast(t,_) -> aux fmt t
    in aux ]
 
-let term : 'a. (term, #ctx_for_term as 'a) Elpi.API.Conversion.t  = term
+let term : 'a 'csts. (term, #ctx_for_term as 'a,'csts) Elpi.API.ContextualConversion.t  = term
 
 open Elpi.API
 open BuiltInPredicate
 open Notation
 
-let term_to_string = Pred("term->string",
-  In(term,"T",
-  Out(BuiltInData.string,"S",
-  Read("what else"))), in_ctx_for_term,
+let term_to_string = CPred("term->string",in_ctx_for_term,
+  CIn(term,"T",
+  COut(BuiltInContextualData.string,"S",
+  CRead("what else"))),
   fun (t : term) (_ety : string oarg)
     ~depth:_ c (_cst : Data.constraints) (_state : State.t) ->
 
     !: (Format.asprintf "@[<hov>%a@ %a@ |-@ %a@]@\n%!"
-      (RawData.Constants.Map.pp (Conversion.pp_ctx_entry pp_tctx)) c#tctx
-      (RawData.Constants.Map.pp (Conversion.pp_ctx_entry pp_ctx)) c#ctx
+      (RawData.Constants.Map.pp (ContextualConversion.pp_ctx_entry pp_tctx)) c#tctx
+      (RawData.Constants.Map.pp (ContextualConversion.pp_ctx_entry pp_ctx)) c#ctx
        term.pp t)
 
 )
@@ -91,14 +91,13 @@ main :-
 |}
 
 let main () =
-  let elpi, _ = Setup.init ~builtins:[builtin] ~basedir:"." [] in
+  let elpi = Setup.init ~builtins:[builtin] () in
   let out = open_out Sys.argv.(1) in
   let fmt = Format.formatter_of_out_channel out in
   Setup.set_err_formatter fmt;
   Setup.set_std_formatter fmt;
-  let program = Parse.program_from_stream ~elpi (Ast.Loc.initial "test")
-    Stream.(of_string program) in
-  let goal = Parse.goal (Ast.Loc.initial "test") "main." in
+  let program = Parse.program_from ~elpi ~loc:(Ast.Loc.initial "test") (Lexing.from_string program) in
+  let goal = Parse.goal ~elpi ~loc:(Ast.Loc.initial "test") ~text:"main." in
   let program = Compile.program ~elpi ~flags:Compile.default_flags [program] in
   let goal = Compile.query program goal in
   let exe = Compile.optimize goal in

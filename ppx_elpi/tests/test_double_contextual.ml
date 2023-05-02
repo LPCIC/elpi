@@ -44,16 +44,16 @@ open Elpi.API
 open BuiltInPredicate
 open Notation
 
-let term_to_string = Pred("term->string",
-  In(term,"T",
-  Out(BuiltInData.string,"S",
-  Read("what else"))),in_ctx_for_term,
+let term_to_string = CPred("term->string",in_ctx_for_term,
+  CIn(term,"T",
+  COut(BuiltInContextualData.string,"S",
+  CRead("what else"))),
   fun (t : term) (_ety : string oarg)
     ~depth:_ c (_cst : Data.constraints) (_state : State.t) ->
 
     !: (Format.asprintf "@[<hov>%a@ ; %a@ |-@ %a@]@\n%!"
-      (RawData.Constants.Map.pp (Conversion.pp_ctx_entry pp_tctx)) c#tyctx
-      (RawData.Constants.Map.pp (Conversion.pp_ctx_entry pp_tctx)) c#tctx
+      (RawData.Constants.Map.pp (ContextualConversion.pp_ctx_entry pp_tctx)) c#tyctx
+      (RawData.Constants.Map.pp (ContextualConversion.pp_ctx_entry pp_tctx)) c#tctx
        term.pp t)
 
 )
@@ -68,7 +68,7 @@ let builtin2 = let open BuiltIn in
   declare ~file_name:(Sys.argv.(1)) !declaration
 
 let main () =
-  let _elpi, _ = Setup.init ~builtins:[builtin1;builtin2] ~basedir:"." [] in
+  let _elpi = Setup.init ~builtins:[builtin1;builtin2] () in
   BuiltIn.document_file builtin2;
   exit 0
 ;;

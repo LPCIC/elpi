@@ -63,14 +63,20 @@ val bool : bool API.Conversion.t
 val char : char API.Conversion.t
 
 module PPX : sig
-  val embed_option : 'a API.Conversion.embedding -> ('a option) API.Conversion.embedding
-  val embed_pair : 'a API.Conversion.embedding -> 'b API.Conversion.embedding -> ('a * 'b) API.Conversion.embedding
-  val embed_triple : 'a API.Conversion.embedding -> 'b API.Conversion.embedding -> 'c API.Conversion.embedding -> ('a * 'b * 'c) API.Conversion.embedding
-  val embed_quadruple : 'a API.Conversion.embedding -> 'b API.Conversion.embedding -> 'c API.Conversion.embedding -> 'd API.Conversion.embedding -> ('a * 'b * 'c * 'd) API.Conversion.embedding
-  val readback_option : 'a API.Conversion.readback -> ('a option) API.Conversion.readback
-  val readback_pair : 'a API.Conversion.readback -> 'b API.Conversion.readback -> ('a * 'b) API.Conversion.readback
-  val readback_triple : 'a API.Conversion.readback -> 'b API.Conversion.readback -> 'c API.Conversion.readback -> ('a * 'b * 'c) API.Conversion.readback
-  val readback_quadruple : 'a API.Conversion.readback -> 'b API.Conversion.readback -> 'c API.Conversion.readback -> 'd API.Conversion.readback -> ('a * 'b * 'c * 'd) API.Conversion.readback
+  val embed_option : ('a, 'ctx, 'csts) API.ContextualConversion.embedding -> ('a option, 'ctx, 'csts) API.ContextualConversion.embedding
+  val embed_pair : ('a, 'ctx, 'csts) API.ContextualConversion.embedding -> ('b, 'ctx, 'csts) API.ContextualConversion.embedding -> ('a * 'b, 'ctx, 'csts) API.ContextualConversion.embedding
+  val embed_triple : ('a, 'ctx, 'csts) API.ContextualConversion.embedding -> ('b, 'ctx, 'csts) API.ContextualConversion.embedding -> ('c, 'ctx, 'csts) API.ContextualConversion.embedding -> ('a * 'b * 'c, 'ctx, 'csts) API.ContextualConversion.embedding
+  val embed_quadruple : ('a, 'ctx, 'csts) API.ContextualConversion.embedding -> ('b, 'ctx, 'csts) API.ContextualConversion.embedding -> ('c, 'ctx, 'csts) API.ContextualConversion.embedding -> ('d, 'ctx, 'csts) API.ContextualConversion.embedding -> ('a * 'b * 'c * 'd, 'ctx, 'csts) API.ContextualConversion.embedding
+  val readback_option : ('a, 'ctx, 'csts) API.ContextualConversion.readback -> ('a option, 'ctx, 'csts) API.ContextualConversion.readback
+  val readback_pair : ('a, 'ctx, 'csts) API.ContextualConversion.readback -> ('b, 'ctx, 'csts) API.ContextualConversion.readback -> ('a * 'b, 'ctx, 'csts) API.ContextualConversion.readback
+  val readback_triple : ('a, 'ctx, 'csts) API.ContextualConversion.readback -> ('b, 'ctx, 'csts) API.ContextualConversion.readback -> ('c, 'ctx, 'csts) API.ContextualConversion.readback -> ('a * 'b * 'c, 'ctx, 'csts) API.ContextualConversion.readback
+  val readback_quadruple : ('a, 'ctx, 'csts) API.ContextualConversion.readback -> ('b, 'ctx, 'csts) API.ContextualConversion.readback -> ('c, 'ctx, 'csts) API.ContextualConversion.readback -> ('d, 'ctx, 'csts) API.ContextualConversion.readback -> ('a * 'b * 'c * 'd, 'ctx, 'csts) API.ContextualConversion.readback
+  val option : ('a, 'ctx, 'csts) API.ContextualConversion.t -> ('a option, 'ctx, 'csts) API.ContextualConversion.t
+  val pair : ('a, 'ctx, 'csts) API.ContextualConversion.t -> ('b, 'ctx, 'csts) API.ContextualConversion.t -> ('a * 'b, 'ctx, 'csts) API.ContextualConversion.t
+  val triple : ('a, 'ctx, 'csts) API.ContextualConversion.t -> ('b, 'ctx, 'csts) API.ContextualConversion.t -> ('c, 'ctx, 'csts) API.ContextualConversion.t -> ('a * 'b * 'c, 'ctx, 'csts) API.ContextualConversion.t
+  val quadruple : ('a, 'ctx, 'csts) API.ContextualConversion.t -> ('b, 'ctx, 'csts) API.ContextualConversion.t -> ('c, 'ctx, 'csts) API.ContextualConversion.t -> ('d, 'ctx, 'csts) API.ContextualConversion.t -> ('a * 'b * 'c * 'd, 'ctx, 'csts) API.ContextualConversion.t
+  val bool : (bool, 'ctx, 'csts) API.ContextualConversion.t
+  val char : (char, 'ctx, 'csts) API.ContextualConversion.t
 end
 
 (* A standard way to make a predicate always succeed but still give errors *)

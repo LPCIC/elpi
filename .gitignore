@@ -25,3 +25,4 @@ _log
 
 docs/build
 docs/source
+ppx_elpi/tests/pp.exe

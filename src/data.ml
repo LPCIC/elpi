@@ -832,7 +832,7 @@ module ContextualConversion = struct
   let in_raw_ctx : (ctx,'a) ctx_readback =
     fun ~depth:_ h c s -> s, build_raw_ctx h s, c,[]
 
-  let unit_ctx : (ctx,unit) ctx_readback = fun ~depth:_ h _ s -> s, build_raw_ctx h s, (), []
+  let unit_ctx : (ctx,unit) ctx_readback = fun ~depth:_ h c s -> s, build_raw_ctx h s, (), []
   let raw_ctx : (ctx,constraints) ctx_readback = fun ~depth:_ h c s -> s, build_raw_ctx h s, c, []
 
 
@@ -1436,9 +1436,14 @@ module Query = struct
     | N : unit arguments
     | D : 'a Conversion.t * 'a *    'x arguments -> 'x arguments
     | Q : 'a Conversion.t * name * 'x arguments -> ('a * 'x) arguments
+  type (_,_,_) carguments =
+    | NC : (unit,'c,'csts) carguments
+    | DC : ('a,'c,'csts) ContextualConversion.t * 'a *    ('x,'c,'csts) carguments -> ('x,'c,'csts) carguments
+    | QC : ('a,'c,'csts) ContextualConversion.t * name * ('x,'c,'csts) carguments -> ('a * 'x,'c,'csts) carguments
 
   type 'x t =
     | Query of { predicate : constant; arguments : 'x arguments }
+    | CQuery : constant * ('x,#ContextualConversion.ctx as 'c,'csts) carguments * (State.t -> 'c) * 'csts -> 'x t
 
 end
 
@@ -1467,7 +1472,7 @@ type 'a executable = {
   (* solution *)
   assignments : term Util.StrMap.t;
   (* type of the query, reified *)
-  query_arguments: 'a Query.arguments;
+  query_adt: 'a Query.t;
 }
 
 type pp_ctx = {

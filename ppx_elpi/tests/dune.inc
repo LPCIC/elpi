@@ -23,6 +23,29 @@
 
 
 (rule
+ (targets test_container.actual.ml)
+ (deps (:pp pp.exe) (:input test_container.ml))
+ (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
+
+(rule
+ (alias runtest)
+ (action (diff test_container.expected.ml test_container.actual.ml)))
+
+(rule
+ (alias runtest)
+ (action (diff test_container.expected.elpi test_container.actual.elpi)))
+
+(rule
+  (target test_container.actual.elpi)
+  (action (run ./test_container.exe %{target})))
+
+(executable
+  (name test_container)
+  (modules test_container)
+  (preprocess (pps elpi.ppx)))
+
+
+(rule
  (targets test_double_contextual.actual.ml)
  (deps (:pp pp.exe) (:input test_double_contextual.ml))
  (action (run ./%{pp} -deriving-keep-w32 both --impl %{input} -o %{targets})))
