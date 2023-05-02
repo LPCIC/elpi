@@ -638,8 +638,10 @@ module Conversion = struct
 
   exception TypeErr of ty_ast * int * term (* a type error at data conversion time *)
 
-let rec show_ty_ast ?(outer=true) = function
+  let rec show_ty_ast ?(outer=true) = function
   | TyName s -> s
+  | TyApp ("->",x,[y]) ->
+      "("^ show_ty_ast x ^ " -> " ^ show_ty_ast y ^")"
   | TyApp (s,x,xs) ->
       let t = String.concat " " (s :: List.map (show_ty_ast ~outer:false) (x::xs)) in
       if outer then t else "("^t^")"
