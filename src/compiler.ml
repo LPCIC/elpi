@@ -529,7 +529,7 @@ type 'a query = {
   chr : (constant list * prechr_rule list) list;
   initial_depth : int;
   query : preterm;
-  query_arguments : 'a Query.arguments [@opaque];
+  query_adt : 'a Query.t [@opaque];
   (* We pre-compile the query to ease the API *)
   initial_goal : term; assignments : term StrMap.t;
   compiler_state : State.t;
@@ -2200,7 +2200,7 @@ let query_of_ast (compiler_state, assembled_program) t =
     chr = assembled_program.Assembled.chr;
     initial_depth;
     query;
-    query_arguments = Query.N;
+    query_adt = Query.(Query {predicate=0;arguments=N});
     initial_goal;
     assignments;
     compiler_state = state |> (uvbodies_of_assignments assignments);
@@ -2231,18 +2231,18 @@ let query_of_term (compiler_state, assembled_program) f =
     chr = assembled_program.Assembled.chr;
     initial_depth;
     query;
-    query_arguments = Query.N;
+    query_adt = Query.(Query {predicate=0;arguments=N});
     initial_goal;
     assignments;
     compiler_state = state |> (uvbodies_of_assignments assignments);
   }
 
 
-let query_of_data (state, p) loc (Query.Query { arguments } as descr) =
+let query_of_data (state, p) loc descr =
   let query = query_of_term (state, p) (fun ~depth state ->
     let state, term, gls = R.embed_query ~mk_Arg ~depth state descr in
     state, (loc, term), gls) in
-  { query with query_arguments = arguments }
+  { query with query_adt = descr }
 
 let lookup_query_predicate (state, p) pred =
   let state, pred = Symbols.allocate_global_symbol_str state pred in
@@ -2335,7 +2335,7 @@ let run
     initial_goal;
     assignments;
     compiler_state = state;
-    query_arguments;
+    query_adt;
   }
 =
   check_all_builtin_are_typed state types;
@@ -2391,7 +2391,7 @@ let run
     initial_goal;
     initial_runtime_state = State.end_compilation state;
     assignments;
-    query_arguments;
+    query_adt;
     symbol_table;
     builtins;
   }

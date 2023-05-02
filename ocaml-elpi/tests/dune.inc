@@ -1,7 +1,7 @@
 
 (rule
  (targets test_swap.actual.ml)
- (deps (:pp pp.exe) (:input test_swap.ml) ../ocaml_ast.elpi)
+ (deps (:pp pp.exe) (:input test_swap.ml) ../ocaml_ast.elpi test_swap.elpi)
  (action (run ./%{pp} --impl %{input} --cookie "program=\"test_swap.elpi\"" -o %{targets})))
 
 (rule

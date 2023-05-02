@@ -5,7 +5,7 @@ let output_stanzas filename =
   Printf.printf {|
 (rule
  (targets %s.actual.ml)
- (deps (:pp pp.exe) (:input %s.ml) ../ocaml_ast.elpi)
+ (deps (:pp pp.exe) (:input %s.ml) ../ocaml_ast.elpi %s.elpi)
  (action (run ./%%{pp} --impl %%{input} --cookie "program=\"%s.elpi\"" -o %%{targets})))
 
 (rule
@@ -18,7 +18,7 @@ let output_stanzas filename =
   (preprocess (pps ocaml-elpi.ppx -- --cookie "program=\"ocaml-elpi/tests/%s.elpi\"")))
 
 |}
-  base base base base base base base base
+  base base base base base base base base base
 
 let is_test filename =
   Filename.check_suffix filename ".ml" &&

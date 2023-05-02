@@ -57,7 +57,7 @@ ocaml-elpi.ppx: no program specified. Supported options:
   let query =
     let open Query in
     compile program (Ast.Loc.initial "ppx") @@
-      Query { predicate = "map.structure"; arguments = D(structure,s,(Q(structure,"Result",N))) } in
+      CQuery ("map.structure", DC(structure,s,(QC(structure,"Result",NC))),new ctx_for_structure [],RawData.no_constraints) in
   if !typecheck then begin
     if not @@ Compile.static_check ~checker:Elpi.Builtin.(default_checker ()) query then begin
       exit 1
@@ -77,13 +77,16 @@ let erase_loc =
   object
     inherit [State.t] Ast_traverse.fold_map
     method! location _ (st : State.t) = Ocaml_ast_for_elpi.dummy_location, st
+    method! location_stack l (st : State.t) = [], st
   end
 ;;
 
 let expression_quotation ~depth state _loc s =
   let e = Ppxlib.Parse.expression (Lexing.from_string s) in
   let e, state = erase_loc#expression e state in
-  let state, x, gls = (expression).Conversion.embed ~depth state e in
+  let ctx = new ctx_for_expression [] state in
+  let csts = RawData.no_constraints in
+  let state, x, gls = (expression).ContextualConversion.embed ~depth ctx csts state e in
   assert(gls = []);
   state, x
 
@@ -93,7 +96,9 @@ let () = Quotation.set_default_quotation expression_quotation
 let pattern_quotation ~depth state _loc s =
   let e = Ppxlib.Parse.pattern (Lexing.from_string s) in
   let e, state = erase_loc#pattern e state in
-  let state, x, gls = (pattern).Conversion.embed ~depth state e in
+  let ctx = new ctx_for_pattern [] state in
+  let csts = RawData.no_constraints in
+  let state, x, gls = (pattern).ContextualConversion.embed ~depth ctx csts state e in
   assert(gls = []);
   state, x
 
@@ -102,7 +107,9 @@ let () = Quotation.register_named_quotation ~name:"pat" pattern_quotation
 let type_quotation ~depth state _loc s =
   let e = Ppxlib.Parse.core_type (Lexing.from_string s) in
   let e, state = erase_loc#core_type e state in
-  let state, x, gls = (core_type).Conversion.embed ~depth state e in
+  let ctx = new ctx_for_core_type [] state in
+  let csts = RawData.no_constraints in
+  let state, x, gls = (core_type).ContextualConversion.embed ~depth ctx csts state e in
   assert(gls = []);
   state, x
 
@@ -113,7 +120,9 @@ let stri_quotation ~depth state _loc s =
   match e with
   | Ptop_def [e] ->
       let e, state = erase_loc#structure_item e state in
-      let state, x, gls = (structure_item).Conversion.embed ~depth state e in
+      let ctx = new ctx_for_structure_item [] state in
+      let csts = RawData.no_constraints in
+      let state, x, gls = (structure_item).ContextualConversion.embed ~depth ctx csts state e in
       assert(gls = []);
       state, x
   | Ptop_def _ ->
@@ -128,7 +137,9 @@ let sigi_quotation ~depth state _loc s =
   match e with
   | [e] ->
       let e, state = erase_loc#signature_item e state in
-      let state, x, gls = (signature_item).Conversion.embed ~depth state e in
+      let ctx = new ctx_for_signature_item [] state in
+      let csts = RawData.no_constraints in
+      let state, x, gls = (signature_item).ContextualConversion.embed ~depth ctx csts state e in
       assert(gls = []);
       state, x
   | _ ->
@@ -139,7 +150,9 @@ let () = Quotation.register_named_quotation ~name:"sigi" stri_quotation
 let structure_quotation ~depth state _loc s =
   let e = Ppxlib.Parse.implementation (Lexing.from_string s) in
   let e, state = erase_loc#structure e state in
-  let state, x, gls = (structure).Conversion.embed ~depth state e in
+  let ctx = new ctx_for_structure [] state in
+  let csts = RawData.no_constraints in
+  let state, x, gls = (structure).ContextualConversion.embed ~depth ctx csts state e in
   assert(gls = []);
   state, x
 
@@ -148,7 +161,9 @@ let () = Quotation.register_named_quotation ~name:"str" structure_quotation
 let signature_quotation ~depth state _loc s =
   let e = Ppxlib.Parse.interface (Lexing.from_string s) in
   let e, state = erase_loc#signature e state in
-  let state, x, gls = (signature).Conversion.embed ~depth state e in
+  let ctx = new ctx_for_signature [] state in
+  let csts = RawData.no_constraints in
+  let state, x, gls = (signature).ContextualConversion.embed ~depth ctx csts state e in
   assert(gls = []);
   state, x
 
@@ -166,7 +181,7 @@ let arg_typecheck t =
   match Driver.Cookies.get t "typecheck" Ast_pattern.(__) with
   | Some _ -> typecheck := true
   | _ -> ()
-
+ 
 let arg_debug t =
   match Driver.Cookies.get t "debug" Ast_pattern.(__) with
   | Some _ -> debug := true

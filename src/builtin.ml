@@ -248,6 +248,99 @@ let char : char Conversion.t =  {
 }
 
 
+
+module PPX = struct
+
+   let bool : (bool,'c,'csts) ContextualConversion.t = {
+      ty = TyName "bool";
+      pp_doc = (fun fmt () -> Format.fprintf fmt "Char values: single character strings");
+      pp = (fun fmt b -> Format.fprintf fmt "%b" b);
+      embed = (fun ~depth _ _ (st: State.t) c -> bool.embed ~depth st c);
+      readback = (fun ~depth _ _ st term  -> bool.readback ~depth st term);
+    }
+   let char : (char,'c,'csts) ContextualConversion.t = {
+    ty = TyName "char";
+    pp_doc = (fun fmt () -> Format.fprintf fmt "Char values: single character strings");
+    pp = (fun fmt b -> Format.fprintf fmt "%c" b);
+    embed = (fun ~depth _ _ (st: State.t) (c: char) -> BuiltInData.string.embed ~depth st (String.make 1 c));
+    readback = (fun ~depth _ _ st term  ->
+        let st,name,goals = BuiltInData.string.readback ~depth st term in
+        st,name.[0],goals
+      );
+  }
+  
+  let pair a b = let open AlgebraicData in declare {
+    ty = TyApp ("pair",a.ContextualConversion.ty,[b.ContextualConversion.ty]);
+    doc = "Pair: the constructor is pr, since ',' is for conjunction";
+    pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_pair a.ContextualConversion.pp b.ContextualConversion.pp) o);
+    constructors = [
+      K("pr","",CA(a,CA(b,N)),
+        B (fun a b -> (a,b)),
+        M (fun ~ok ~ko:_ -> function (a,b) -> ok a b));
+    ]
+  }
+
+  let triple a b c = let open AlgebraicData in declare {
+    ty = TyApp ("triple",a.ContextualConversion.ty,[b.ContextualConversion.ty;c.ContextualConversion.ty]);
+    doc = "Triple: the constructor is trpl, since ',' is for conjunction";
+    pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_triple a.ContextualConversion.pp b.ContextualConversion.pp c.ContextualConversion.pp) o);
+    constructors = [
+      K("trpl","",CA(a,CA(b,CA(c,N))),
+        B (fun a b c -> (a,b, c)),
+        M (fun ~ok ~ko:_ -> function (a,b,c) -> ok a b c));
+    ]
+  }
+
+  let quadruple a b c d = let open AlgebraicData in declare {
+    ty = TyApp ("quadruple",a.ContextualConversion.ty,[b.ContextualConversion.ty;c.ContextualConversion.ty;d.ContextualConversion.ty]);
+    doc = "Quadruple: the constructor is quadrpl, since ',' is for conjunction";
+    pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_quadruple a.ContextualConversion.pp b.ContextualConversion.pp c.ContextualConversion.pp d.ContextualConversion.pp) o);
+    constructors = [
+      K("quadrpl","",CA(a,CA(b,CA(c,CA(d,N)))),
+        B (fun a b c d -> (a,b,c,d)),
+        M (fun ~ok ~ko:_ -> function (a,b,c,d) -> ok a b c d));
+    ]
+  }
+
+  let option a = let open AlgebraicData in declare {
+    ty = TyApp("option",a.ContextualConversion.ty,[]);
+    doc = "The option type (aka Maybe)";
+    pp = (fun fmt o -> Format.fprintf fmt "%a" (Util.pp_option a.ContextualConversion.pp) o);
+    constructors = [
+      K("none","",N,
+        B None,
+        M (fun ~ok ~ko -> function None -> ok | _ -> ko ())); 
+      K("some","",CA(a,N),
+        B (fun x -> Some x),
+        M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko ())); 
+    ]
+  }
+
+  let hack embed = {
+    ContextualConversion.embed;
+    readback = (fun ~depth _ _ st x -> assert false);
+    ty = Conversion.TyName "hack";
+    pp = (fun fmt x -> assert false);
+    pp_doc = (fun fmt x -> assert false);
+  }
+  let embed_option a = (option (hack a)).ContextualConversion.embed
+  let embed_pair a b = (pair (hack a) (hack b)).ContextualConversion.embed
+  let embed_triple a b c = (triple (hack a) (hack b) (hack c)).ContextualConversion.embed
+  let embed_quadruple a b c d = (quadruple (hack a) (hack b) (hack c) (hack d)).ContextualConversion.embed
+
+  let hack readback = {
+    ContextualConversion.readback;
+    embed = (fun ~depth _ _ st x -> assert false);
+    ty = ContextualConversion.TyName "hack";
+    pp = (fun fmt x -> assert false);
+    pp_doc = (fun fmt x -> assert false);
+  }
+  let readback_option a = (option (hack a)).ContextualConversion.readback
+  let readback_pair a b = (pair (hack a) (hack b)).ContextualConversion.readback
+  let readback_triple a b c = (triple (hack a) (hack b) (hack c)).ContextualConversion.readback
+  let readback_quadruple a b c d = (quadruple (hack a) (hack b) (hack c) (hack d)).ContextualConversion.readback
+end
+
 let pair a b = let open AlgebraicData in declare {
   ty = TyApp ("pair",a.Conversion.ty,[b.Conversion.ty]);
   doc = "Pair: the constructor is pr, since ',' is for conjunction";
@@ -294,33 +387,6 @@ let option a = let open AlgebraicData in declare {
       M (fun ~ok ~ko -> function Some x -> ok x | _ -> ko ())); 
   ]
 } |> ContextualConversion.(!<)
-
-module PPX = struct
-  let hack embed = {
-    Conversion.embed;
-    readback = (fun ~depth st x -> assert false);
-    ty = Conversion.TyName "hack";
-    pp = (fun fmt x -> assert false);
-    pp_doc = (fun fmt x -> assert false);
-  }
-  let embed_option a = (option (hack a)).Conversion.embed
-  let embed_pair a b = (pair (hack a) (hack b)).Conversion.embed
-  let embed_triple a b c = (triple (hack a) (hack b) (hack c)).Conversion.embed
-  let embed_quadruple a b c d = (quadruple (hack a) (hack b) (hack c) (hack d)).Conversion.embed
-
-  let hack readback = {
-    Conversion.readback;
-    embed = (fun ~depth st x -> assert false);
-    ty = Conversion.TyName "hack";
-    pp = (fun fmt x -> assert false);
-    pp_doc = (fun fmt x -> assert false);
-  }
-  let readback_option a = (option (hack a)).Conversion.readback
-  let readback_pair a b = (pair (hack a) (hack b)).Conversion.readback
-  let readback_triple a b c = (triple (hack a) (hack b) (hack c)).Conversion.readback
-  let readback_quadruple a b c d = (quadruple (hack a) (hack b) (hack c) (hack d)).Conversion.readback
-end
-
 
 type diagnostic = OK | ERROR of string ioarg
 let mkOK = OK
@@ -442,7 +508,22 @@ let unspecC data = let open API.ContextualConversion in let open API.RawData in 
         let state, x, gls = data.readback ~depth hyps constraints state (kool t) in
         state, Given x, gls)
 }
-let unspec d = API.ContextualConversion.(!<(unspecC (!> d)))
+let unspec data = let open API.Conversion in let open API.RawData in {
+  ty = data.ty;
+  pp_doc = data.pp_doc;
+  pp = (fun fmt -> function
+    | Unspec -> Format.fprintf fmt "Unspec"
+    | Given x -> Format.fprintf fmt "Given %a" data.pp x);
+  embed = (fun ~depth state -> function
+     | Given x -> data.embed ~depth state x
+     | Unspec -> state, mkDiscard, []);
+  readback = (fun ~depth state x ->
+      match look ~depth x with
+      | UnifVar _ -> state, Unspec, []
+      | t ->
+        let state, x, gls = data.readback ~depth state (kool t) in
+        state, Given x, gls)
+}
 
 (** Core built-in ********************************************************* *)
 
