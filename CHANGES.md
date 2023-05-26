@@ -1,7 +1,13 @@
-# UNRELEASED
+# v1.16.10 (May 2023)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+Camlp5 8.0 or above is optional.
 
 - Elpi:
   - New attribute `:replace` which replaces a named clause by an unnamed one
+
+Trace browser:
+  - Fix display of rule applied after failures
 
 # v1.16.9 (March 2023)
 

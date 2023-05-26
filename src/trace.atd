@@ -56,6 +56,7 @@ type inference = {
   failed_attempts : attempt list;
   successful_attempts : successful_attempt list;
   more_successful_attempts : step_id list;
+  ~more_failing_attempts : step_id list; (* optional, for backward compatibility *)
   stack : stack;
 }
 

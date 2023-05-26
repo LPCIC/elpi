@@ -61,6 +61,7 @@ export type Inference = {
   failed_attempts: Attempt[];
   successful_attempts: SuccessfulAttempt[];
   more_successful_attempts: StepId[];
+  more_failing_attempts: StepId[];
   stack: Stack;
 }
 
@@ -369,6 +370,7 @@ export function writeInference(x: Inference, context: any = x): any {
     'failed_attempts': _atd_write_required_field('Inference', 'failed_attempts', _atd_write_array(writeAttempt), x.failed_attempts, x),
     'successful_attempts': _atd_write_required_field('Inference', 'successful_attempts', _atd_write_array(writeSuccessfulAttempt), x.successful_attempts, x),
     'more_successful_attempts': _atd_write_required_field('Inference', 'more_successful_attempts', _atd_write_array(writeStepId), x.more_successful_attempts, x),
+    'more_failing_attempts': _atd_write_field_with_default(_atd_write_array(writeStepId), [], x.more_failing_attempts, x),
     'stack': _atd_write_required_field('Inference', 'stack', writeStack, x.stack, x),
   };
 }
@@ -381,6 +383,7 @@ export function readInference(x: any, context: any = x): Inference {
     failed_attempts: _atd_read_required_field('Inference', 'failed_attempts', _atd_read_array(readAttempt), x['failed_attempts'], x),
     successful_attempts: _atd_read_required_field('Inference', 'successful_attempts', _atd_read_array(readSuccessfulAttempt), x['successful_attempts'], x),
     more_successful_attempts: _atd_read_required_field('Inference', 'more_successful_attempts', _atd_read_array(readStepId), x['more_successful_attempts'], x),
+    more_failing_attempts: _atd_read_field_with_default(_atd_read_array(readStepId), [], x['more_failing_attempts'], x),
     stack: _atd_read_required_field('Inference', 'stack', readStack, x['stack'], x),
   };
 }

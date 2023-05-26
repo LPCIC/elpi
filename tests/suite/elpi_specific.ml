@@ -343,6 +343,39 @@ let () = declare "trace-browser2-elab"
   ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace2.elab.json" })
   ()
 
+let sample = mk_tmp_file "trace3.json" ".new"
+let () = declare "trace-browser3"
+  ~source_elpi:"trace3.elpi"
+  ~description:"trace generation"
+  ~typecheck:false
+  ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
+  ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace3.json" })
+  ()
+
+let sample = mk_tmp_file "trace3.elab.json" ".new"
+let () = declare "trace-browser3-elab"
+  ~source_json:"trace3.json"
+  ~description:"trace elaboration"
+  ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace3.elab.json" })
+  ()
+
+let sample = mk_tmp_file "trace4.json" ".new"
+let () = declare "trace-browser4"
+  ~source_elpi:"trace4.elpi"
+  ~description:"trace generation"
+  ~typecheck:false
+  ~trace:(On["json";"file://"^sample;"-trace-at";"0";"99";"-trace-only";"user"])
+  ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace4.json" })
+  ()
+
+let sample = mk_tmp_file "trace4.elab.json" ".new"
+let () = declare "trace-browser4-elab"
+  ~source_json:"trace4.json"
+  ~description:"trace elaboration"
+  ~expectation:(SuccessOutputFile { sample; adjust = Util.strip_cwd; reference = "trace4.elab.json" })
+  ()
+  
+
 let sample = mk_tmp_file "trace_chr.json" ".new"
 let () = declare "trace-browser-chr"
   ~source_elpi:"trace_chr.elpi"
