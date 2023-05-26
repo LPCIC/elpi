@@ -1,0 +1,11 @@
+
+pred p o:int, o:int.
+p 1 1.
+p 2 2.
+p 3 3 :- fail.
+p 4 1.
+p 4 2.
+p 4 4.
+
+
+main :- p X 3 ; true.

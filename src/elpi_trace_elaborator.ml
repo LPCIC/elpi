@@ -96,9 +96,12 @@ module Elaborate : sig
 
   val elaborate : (timestamp * (item * time) list) StepMap.t -> elaboration
 
+  type goal_attempt = step_id * runtime_id
+  type goal_attempts = { successful : goal_attempt list; failing : goal_attempt list }
+
   type analysis = {
     aggregated_goal_success : bool GoalMap.t;
-    goal_attempts : (step_id * runtime_id) list GoalMap.t
+    goal_attempts : goal_attempts GoalMap.t
   }
 
   val success_analysis : Elaborated_step.t StepMap.t -> analysis
@@ -137,11 +140,14 @@ end = struct
       goal_text : string GoalMap.t
     }
 
+    type goal_attempt = step_id * runtime_id
+    type goal_attempts = { successful : goal_attempt list; failing : goal_attempt list }
+  
     type analysis = {
-    aggregated_goal_success : bool GoalMap.t;
-    goal_attempts : (step_id * runtime_id) list GoalMap.t
-  }
-
+      aggregated_goal_success : bool GoalMap.t;
+      goal_attempts : goal_attempts GoalMap.t
+    }
+  
 let elaborated_steps : Elaborated_step.t StepMap.t ref = ref StepMap.empty
 
 (* elaboration *)
@@ -216,8 +222,8 @@ let all_chains f fs l =
     List.hd l, 
     List.filter (starts_with fs) (List.tl l)) chains
 
-let all_infer_event_chains f =
-  all_chains f ["user:assign";"user:backchain:fail-to"]
+let all_infer_event_chains f l =
+  all_chains f ["user:assign";"user:backchain:fail-to"] l
 
 let all_chr_event_chains f =
   all_chains f ["user:assign";"user:CHR:rule-failed";"user:CHR:rule-fired";"user:CHR:rule-remove-constraints";"user:subgoal";"user:CHR:resumed"]
@@ -436,13 +442,20 @@ let success_analysis (elaborated_steps : Elaborated_step.t StepMap.t) =
     !gsuccess in
 
   let goal_attempts =
-    let gattempts : (step_id * runtime_id) list GoalMap.t ref = ref GoalMap.empty in (* goal_id -> true = success *)
+    let gattempts : goal_attempts GoalMap.t ref = ref GoalMap.empty in (* goal_id -> true = success *)
     let add_more_success goal_id step_id =
       try
-        let l = GoalMap.find goal_id !gattempts in
-        gattempts := GoalMap.add goal_id (step_id :: l) !gattempts
+        let { successful = l; failing } = GoalMap.find goal_id !gattempts in
+        gattempts := GoalMap.add goal_id {successful = step_id :: l; failing } !gattempts
       with Not_found ->
-        gattempts := GoalMap.add goal_id [step_id] !gattempts
+        gattempts := GoalMap.add goal_id {successful = [step_id]; failing = []} !gattempts
+      in
+    let add_more_failing goal_id step_id =
+      try
+        let { successful; failing = l } = GoalMap.find goal_id !gattempts in
+        gattempts := GoalMap.add goal_id {successful; failing = step_id :: l} !gattempts
+      with Not_found ->
+        gattempts := GoalMap.add goal_id {successful = []; failing = [step_id]} !gattempts
       in
     StepMap.bindings elaborated_steps |> List.iter (function
     | _, (_,Broken _) -> ()
@@ -453,11 +466,12 @@ let success_analysis (elaborated_steps : Elaborated_step.t StepMap.t) =
     | _, (_,CHR _) -> ()
     | _, (_,Init _) -> ()
     | _, (_,Inference { action = Builtin _}) -> ()
-    | _, (_,Inference { action = Backchain { outcome = Fail }}) -> ()
     | step_id, (_,Inference { goal_id; action = Backchain { outcome = Success _ }}) ->
         add_more_success goal_id step_id
+    | step_id, (_,Inference { goal_id; action = Backchain { outcome = Fail }}) ->
+        add_more_failing goal_id step_id  
     );
-    !gattempts in
+   !gattempts in
 
   { aggregated_goal_success; goal_attempts }
 
@@ -471,7 +485,7 @@ module Trace : sig
     stack_frames:frame list StepMap.t ->
     aggregated_goal_success:bool GoalMap.t ->
     goal_text:string GoalMap.t ->
-    goal_attempts:(step_id * runtime_id) list GoalMap.t ->
+    goal_attempts:Elaborate.goal_attempts GoalMap.t ->
       trace
 
 end = struct
@@ -486,6 +500,10 @@ end = struct
     try GoalMap.find x goal_goal_text 
     with Not_found -> raise (Failure (Printf.sprintf "find_goal_text  %d not found" x))
  
+  let get_last l =
+    match List.rev l with
+    | hd :: tl -> hd, List.rev tl
+    | [] -> assert false
 
   let cards elaborated_steps ~stack_frames ~aggregated_goal_success ~goal_text ~goal_attempts : trace =
     let find_success = find_success aggregated_goal_success in
@@ -510,8 +528,7 @@ end = struct
                | Backchain { trylist ; outcome = Fail } ->
                   List.map (fun ({ loc; code; events } : attempt) -> { rule = `UserRule { rule_text = code; rule_loc = loc } ; events } ) trylist,[]
                | Backchain { trylist ; outcome = Success { siblings } } ->
-                  let faillist = List.tl trylist in
-                  let { loc; code; events } : attempt = List.hd trylist in
+                  let ({ loc; code; events } : attempt), faillist = get_last trylist in
                   List.map (fun ({ loc; code; events } : attempt) -> { rule = `UserRule { rule_text = code; rule_loc = loc } ; events } ) faillist,
                   let siblings_aggregated_outcome =
                     if List.fold_left (&&) true (List.map find_success siblings) then `Success else `Fail in
@@ -520,12 +537,20 @@ end = struct
              in
              let more_successful_attempts =
                try
-                 GoalMap.find goal_id goal_attempts |>
+                 GoalMap.find goal_id goal_attempts |> fun x -> x.Elaborate.successful |>
                  List.filter (fun (s,r) -> r = runtime_id && s > step_id) |>
                  List.map fst |>
                  List.sort Stdlib.compare
                with
                  Not_found -> [] in
+              let more_failing_attempts =
+                try
+                  GoalMap.find goal_id goal_attempts |> fun x -> x.Elaborate.failing |>
+                  List.filter (fun (s,r) -> r = runtime_id && s > step_id) |>
+                  List.map fst |>
+                  List.sort Stdlib.compare
+                with
+                  Not_found -> [] in
              let inference = {
                current_goal_id = goal_id;
                current_goal_text = goal;
@@ -533,6 +558,7 @@ end = struct
                failed_attempts;
                successful_attempts;
                more_successful_attempts;
+               more_failing_attempts;
                stack;
              } in
              assert(runtime_id = rid);
