@@ -1,3 +1,8 @@
+# UNRELEASED
+
+Trace browser:
+  - Fix elaboration of CHR rule with no condition
+
 # v1.16.10 (May 2023)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.

@@ -607,7 +607,7 @@ end = struct
         let chr_condition_cards : card list =
           pre_cards |> List.filter (fun (time,_) -> in_time_stamp x.timestamp time)
           |> List.map pre_card2card in
-        assert(
+        assert(chr_condition_cards == [] ||
           let rid = (List.hd chr_condition_cards).runtime_id in
           List.for_all (fun ({ runtime_id } : card) -> runtime_id = rid) chr_condition_cards);
         { Trace_atd.chr_loc; chr_text; chr_condition_cards }
