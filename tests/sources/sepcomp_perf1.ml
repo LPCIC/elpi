@@ -32,6 +32,7 @@ let () =
   let flags = Compile.default_flags in
   let us = cc ~elpi ~flags 1 us in
   let ex = cc ~elpi ~flags 2 ex in
-  let p = Compile.assemble ~elpi (us :: list_init 0 50000 (fun _ -> ex)) in
+  let exs = list_init 0 50000 (fun _ -> ex) in
+  let p = Compile.assemble ~elpi (us :: exs) in
   let q = Compile.query p (Parse.goal_from ~elpi ~loc:(Ast.Loc.initial "g") (Lexing.from_string "main")) in
   exec q

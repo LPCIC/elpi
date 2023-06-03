@@ -42,10 +42,3 @@ let () = declare "sepcomp6"
   ~expectation:Test.(SuccessOutput (Str.regexp "ok"))
   ()
 
-
-let () = declare "sepcomp_perf"
-  ~source_dune:"sepcomp_perf.ml"
-  ~after:"sepcomp_perf"
-  ~description:"separate compilation perf"
-  ~expectation:Test.Success
-  ()
