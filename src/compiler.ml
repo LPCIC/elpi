@@ -1623,8 +1623,15 @@ module Spill : sig
 
   (* Eliminate {func call} *)
 
-  val run : State.t -> Assembled.program -> Assembled.program
+  
+  val spill_clause :
+    State.t -> types:Structured.typ list -> modes:(constant -> bool list) ->
+      (preterm, 'a) Ast.Clause.t -> (preterm, 'a) Ast.Clause.t
 
+  val spill_chr :
+    State.t -> types:Structured.typ list -> modes:(constant -> bool list) ->
+      (constant list * prechr_rule list) -> (constant list * prechr_rule list)
+  
   (* Exported to compile the query *)
   val spill_preterm :
     State.t -> Structured.typ list -> (C.t -> mode) -> preterm -> preterm
@@ -1872,20 +1879,15 @@ end = struct (* {{{ *)
       option_mapacc (spill_presequent state modes types pcloc) pamap pnew_goal in
     { r with pguard; pnew_goal; pamap }
 
-  let spill_chr state modes types (clique, rules) =
+  let spill_chr state ~types ~modes (clique, rules) =
     let rules = List.map (spill_rule state modes types) rules in
     (clique, rules)
 
-  let spill_clause state modes types ({ Ast.Clause.body = { term; amap; loc; spilling } } as x) =
+  let spill_clause state ~types ~modes ({ Ast.Clause.body = { term; amap; loc; spilling } } as x) =
     if not spilling then x
     else
       let amap, term = spill_term state loc modes types amap term in
       { x with Ast.Clause.body = { term; amap; loc; spilling = false } }
-
-  let run state ({ Assembled.clauses; modes; types; chr } as p) =
-    let clauses = List.map (spill_clause state (fun c -> fst @@ C.Map.find c modes) types) clauses in
-    let chr = List.map (spill_chr state (fun c -> fst @@ C.Map.find c modes) types) chr in
-    { p with Assembled.clauses; chr }
 
   let spill_preterm state types modes ({ term; amap; loc; spilling } as x) =
     if not spilling then x
@@ -1966,6 +1968,8 @@ let assemble flags state code  (ul : compilation_unit list) =
       let type_abbrevs = ToDBL.merge_type_abbrevs state ta1 ta2 in
       let types = ToDBL.merge_types t1 t2 in
       let cl2 = filter_if flags clause_name cl2 in
+      let cl2 = List.map (Spill.spill_clause state ~types ~modes:(fun c -> fst @@ C.Map.find c modes)) cl2 in
+      let c2 = List.map (Spill.spill_chr state ~types ~modes:(fun c -> fst @@ C.Map.find c modes)) c2 in
       state, cl2 :: cl1, types, type_abbrevs, modes, c2 :: c1
     ) (state, [], code.Assembled.types, code.Assembled.type_abbrevs, code.Assembled.modes, []) ul in
   let clauses = List.concat (List.rev clauses_rev) in
@@ -2072,12 +2076,6 @@ let assemble_units ~flags ~header:(s,h) units : program =
     Format.eprintf "== Assembled ================@\n@[<v 0>%a@]@\n"
       (w_symbol_table s Assembled.pp_program) p;
 
-  let p = Spill.run s p in
-
-  if print_passes then
-    Format.eprintf "== Spilled ================@\n@[<v 0>%a@]@\n"
-      (w_symbol_table s Assembled.pp_program) p;
-
  s, p
 ;;
 
@@ -2087,12 +2085,6 @@ let append_units ~flags ~base:(s,p) units : program =
 
   if print_passes then
     Format.eprintf "== Assembled ================@\n@[<v 0>%a@]@\n"
-      (w_symbol_table s Assembled.pp_program) p;
-
-  let p = Spill.run s p in
-
-  if print_passes then
-    Format.eprintf "== Spilled ================@\n@[<v 0>%a@]@\n"
       (w_symbol_table s Assembled.pp_program) p;
 
   s, p
