@@ -55,7 +55,7 @@ not _.
 
 % [declare_constraint C Key1 Key2...] declares C blocked
 % on Key1 Key2 ... (variables, or lists thereof).
-external type declare_constraint variadic any prop.
+external type declare_constraint any -> any -> variadic any prop.
 
 external pred print_constraints. % prints all constraints
 
