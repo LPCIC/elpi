@@ -1,5 +1,9 @@
 # UNRELEASED
 
+Builtins:
+  - Change type of `declare_constraint` to `any -> any -> variadic any prop`
+    making it explicitly take at least two arguments
+
 Trace browser:
   - Fix elaboration of CHR rule with no condition
 
