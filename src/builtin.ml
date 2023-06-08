@@ -429,7 +429,7 @@ let core_builtins = let open BuiltIn in let open ContextualConversion in [
    * store of syntactic constraints *)
   LPCode ("% [declare_constraint C Key1 Key2...] declares C blocked\n"^
           "% on Key1 Key2 ... (variables, or lists thereof).\n"^
-          "external type declare_constraint variadic any prop.");
+          "external type declare_constraint any -> any -> variadic any prop.");
   LPCode "external pred print_constraints. % prints all constraints";
 
   MLCode(Pred("halt", VariadicIn(unit_ctx, !> BuiltInData.any, "halts the program and print the terms"),
