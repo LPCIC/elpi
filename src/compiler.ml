@@ -478,7 +478,7 @@ type program = {
   types : Structured.typ list C.Map.t;
   type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : (mode * Loc.t) C.Map.t;
-  clauses : (preterm,attribute) Ast.Clause.t list;
+  clauses_rev : (preterm,attribute) Ast.Clause.t list;
   chr : (constant list * prechr_rule list) list;
   local_names : int;
 
@@ -493,7 +493,7 @@ let empty = {
   types = C.Map.empty;
   type_abbrevs = C.Map.empty;
   modes = C.Map.empty;
-  clauses = [];
+  clauses_rev = [];
   chr = [];
   local_names = 0;
   toplevel_macros = F.Map.empty;
@@ -521,7 +521,7 @@ type 'a query = {
   types : Structured.typ list C.Map.t;
   type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : mode C.Map.t;
-  clauses : (preterm,Assembled.attribute) Ast.Clause.t list;
+  clauses_rev : (preterm,Assembled.attribute) Ast.Clause.t list;
   chr : (constant list * prechr_rule list) list;
   initial_depth : int;
   query : preterm;
@@ -1494,7 +1494,8 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
     else { term = term1; amap = amap1; loc; spilling }
 
   let map_clause state f ({ Ast.Clause.body } as x) =
-    { x with Ast.Clause.body = smart_map_preterm state f body }
+    let body1 = smart_map_preterm state f body in
+    if body1 == body then x else { x with Ast.Clause.body = body1 }
 
   let map_pair f g (x,y) = f x, g y
 
@@ -1918,7 +1919,7 @@ module Assemble : sig
 
 end = struct (* {{{ *)
 
-  let sort_insertion old l =
+  let sort_insertion ~old_rev ~extra:l =
     let add s { Ast.Clause.attributes = { Assembled.id }; loc } =
       match id with
       | None -> s
@@ -1949,7 +1950,7 @@ end = struct (* {{{ *)
            x :: c :: xs
       | x :: xs, _ -> x :: insert loc_name c xs in
     let rec aux seen acc = function
-      | [] -> List.rev acc
+      | [] -> acc
       | { Ast.Clause.attributes = { Ast.Structured.insertion = Some i }} as x :: xs ->
           let x = compile_clause x in
           aux (add seen x) (insert i x acc) xs
@@ -1957,7 +1958,7 @@ end = struct (* {{{ *)
           let x = compile_clause x in
           aux (add seen x) (x :: acc) xs
     in
-    aux StrMap.empty (List.rev old) l
+    aux StrMap.empty old_rev l
 
   (* let shift_pp fmt ({ Data.Constants.c2s},s,{ Data.Constants.c2s = c2s2 }) =
     Format.fprintf fmt "{{ @[<hov 2>";
@@ -1986,12 +1987,12 @@ let assemble flags state code  (ul : compilation_unit list) =
       state, cl2 :: cl1, types, type_abbrevs, modes, c2 :: c1
     ) (state, [], code.Assembled.types, code.Assembled.type_abbrevs, code.Assembled.modes, []) ul in
   let clauses = List.concat (List.rev clauses_rev) in
-  let clauses = sort_insertion code.clauses clauses in
+  let clauses_rev = sort_insertion ~old_rev:code.clauses_rev ~extra:clauses in
   let chr = List.concat (code.Assembled.chr :: List.rev chr_rev) in
   let chr =
     let pifexpr { pifexpr } = pifexpr in
     List.map (fun (symbs,rules) -> symbs, filter_if flags pifexpr rules) chr in
-  state, { Assembled.clauses; types; type_abbrevs; modes; chr; local_names = code.Assembled.local_names; toplevel_macros = code.Assembled.toplevel_macros }
+  state, { Assembled.clauses_rev; types; type_abbrevs; modes; chr; local_names = code.Assembled.local_names; toplevel_macros = code.Assembled.toplevel_macros }
 
 end (* }}} *)
 
@@ -2197,7 +2198,7 @@ let query_of_ast (compiler_state, assembled_program) t =
     WithMain.types;
     modes;
     type_abbrevs;
-    clauses = assembled_program.Assembled.clauses;
+    clauses_rev = assembled_program.Assembled.clauses_rev;
     chr = assembled_program.Assembled.chr;
     initial_depth;
     query;
@@ -2228,7 +2229,7 @@ let query_of_term (compiler_state, assembled_program) f =
     WithMain.types;
     type_abbrevs;
     modes;
-    clauses = assembled_program.Assembled.clauses;
+    clauses_rev = assembled_program.Assembled.clauses_rev;
     chr = assembled_program.Assembled.chr;
     initial_depth;
     query;
@@ -2330,7 +2331,7 @@ let run
   {
     WithMain.types;
     modes;
-    clauses;
+    clauses_rev;
     chr;
     initial_depth;
     initial_goal;
@@ -2372,9 +2373,9 @@ let run
     let map = C.Map.fold (fun tname l acc -> l |> List.fold_left (fun acc { Structured.tindex } -> add_indexing_for tname (Some tindex) acc) acc) types C.Map.empty in
     let map = C.Map.fold (fun k _ m -> add_indexing_for k None m) modes map in
     map in
-  let state, clauses =
-    map_acc (compile_clause modes initial_depth) state clauses in
-  let prolog_program = R.make_index ~depth:initial_depth ~indexing clauses in
+  let state, clauses_rev =
+    map_acc (compile_clause modes initial_depth) state clauses_rev in
+  let prolog_program = R.make_index ~depth:initial_depth ~indexing ~clauses_rev in
   let compiler_symbol_table = State.get Symbols.table state in
   let builtins = Hashtbl.create 17 in
   let pred_list = (State.get Builtins.builtins state).code in
@@ -2401,9 +2402,10 @@ end (* }}} *)
 let optimize_query = Compiler.run
 
 let pp_program pp fmt {
-    WithMain.clauses;
+    WithMain.clauses_rev;
     initial_depth;
     compiler_state; } =
+  let clauses = List.rev clauses_rev in
   let compiler_state, clauses =
     map_acc (fun state { Ast.Clause.body } ->
        stack_term_of_preterm ~depth:initial_depth state body)
@@ -2547,9 +2549,9 @@ let rec lam2forall = function
   | UVar _ | AppUVar _ -> assert false
   | Arg _ | AppArg _ -> assert false
 
-let quote_syntax time new_state { WithMain.clauses; query; compiler_state } =
+let quote_syntax time new_state { WithMain.clauses_rev; query; compiler_state } =
   let names = sorted_names_of_argmap query.amap in
-  let new_state, clist = map_acc (quote_clause time ~compiler_state) new_state clauses in
+  let new_state, clist = map_acc (quote_clause time ~compiler_state) new_state (List.rev clauses_rev) in
   let new_state, queryt = quote_preterm time ~on_type:false ~compiler_state new_state query in
   let q =
     App(clausec,CData (quote_loc ~id:"query" query.loc),

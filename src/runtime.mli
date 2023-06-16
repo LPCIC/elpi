@@ -64,7 +64,7 @@ val subst: depth:int -> term list -> term -> term
 val make_index :
   depth:int ->
   indexing:(mode * indexing) Constants.Map.t ->
-  (constant * clause) list ->
+  clauses_rev:(constant * clause) list ->
     prolog_prog
 
 (* The projection from the internal notion of constraints in the API one *)
