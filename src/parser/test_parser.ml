@@ -132,10 +132,12 @@ let _ =
   testF ":-"                2 "unexpected start";
   testF "type ( -> :-"      12 ".*parenthesis.*expected";
   testF "+"                 1 "unexpected start";
-  testF "x. x)"             5 "unexpected ')'";
+  testF "x. x)"             5 "unexpected keyword";
+  testF "x. x]"             5 "unexpected keyword";
   testF "x. +"              4 "unexpected start";
   test  ":name \"x\" x."     0 11 1 0 [Name "x"] (c"x");
   testF "p :- g (f x) \\ y." 14 ".*bind.*must follow.*name.*";
+  testF "foo i:term, o:term. foo A B :- A = [B]." 6 "unexpected keyword";
   (*    01234567890123456789012345 *)
   testF ":nam \"x\" x."     4 "attribute expected";
   testR "rule p (q r)."     0 12 1 0 [] [ss (c"p");ss ("q" @ [c"r"])] [] None None;

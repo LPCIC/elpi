@@ -106,7 +106,7 @@ Unexpected start of program clause or declaration.
 
 program: CONSTANT RPAREN
 
-Unexpected ')'.
+Unexpected keyword.
 
 goal: AFTER USE_SIG
 program: AFTER FAMILY_QMARK USE_SIG
@@ -423,7 +423,7 @@ external pred foo i:term.
 
 program: AFTER AFTER RPAREN
 
-Unexpected ')'.
+Unexpected keyword.
 
 program: PRED VDASH
 program: PRED AFTER VDASH

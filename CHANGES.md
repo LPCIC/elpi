@@ -1,5 +1,9 @@
 # UNRELEASED
 
+Parser:
+  - Fix error message on unexpected keyword (was wrongly assuming the
+    keyword was `)` misleading the user)
+
 Builtins:
   - Change type of `declare_constraint` to `any -> any -> variadic any prop`
     making it explicitly take at least two arguments
