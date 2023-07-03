@@ -715,6 +715,7 @@ main :- long.name, othername.
 the body of `main` is equivalent to
 ```prolog
 main :- my.long.name, my.long.othername. 
+```
 
 The scope of the `shorten` directive ends with the current file or
 with the end of the enclosing code block.
