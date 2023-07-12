@@ -5,4 +5,7 @@
 (executable (name sepcomp4) (modules sepcomp4) (libraries sepcomp))
 (executable (name sepcomp5) (modules sepcomp5) (libraries sepcomp))
 (executable (name sepcomp6) (modules sepcomp6) (libraries sepcomp))
-(executable (name sepcomp_perf) (modules sepcomp_perf) (libraries sepcomp))
+(executable (name sepcomp_perf1) (modules sepcomp_perf1) (libraries sepcomp))
+(executable (name sepcomp_perf2) (modules sepcomp_perf2) (libraries sepcomp))
+(executable (name sepcomp_perf3) (modules sepcomp_perf3) (libraries sepcomp))
+(executable (name sepcomp_perf4) (modules sepcomp_perf4) (libraries sepcomp))

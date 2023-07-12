@@ -2484,7 +2484,7 @@ let add_clauses ~depth clauses p =
   let p = List.fold_left (add1clause ~depth) p clauses in
   p
 
-let make_index ~depth ~indexing p =
+let make_index ~depth ~indexing ~clauses_rev:p =
   let m = C.Map.fold (fun predicate (mode, indexing) m ->
     match indexing with
     | Hash args ->
@@ -2502,7 +2502,6 @@ let make_index ~depth ~indexing p =
         flex_arg_clauses = [];
         arg_idx = Ptmap.empty;
       }) m) indexing Ptmap.empty in
-  let p = List.rev p in
   { index = add_clauses ~depth p m; src = [] }
 
 let add_clauses ~depth clauses clauses_src { index; src } =
@@ -2617,7 +2616,7 @@ end (* }}} *)
 open Indexing
 
 (* Used to pass the program to the CHR runtime *)
-let orig_prolog_program = Fork.new_local (make_index ~depth:0 ~indexing:C.Map.empty [])
+let orig_prolog_program = Fork.new_local (make_index ~depth:0 ~indexing:C.Map.empty ~clauses_rev:[])
 
 (******************************************************************************
   Dynamic Prolog program
