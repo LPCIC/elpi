@@ -435,7 +435,7 @@ type program = {
   toplevel_macros : macro_declaration;
 }
 and pbody = {
-  types : typ list C.Map.t; (* TODO: use a map : symbol -> types to speed up merge types *)
+  types : typ list C.Map.t;
   type_abbrevs : type_abbrev_declaration C.Map.t;
   modes : (mode * Loc.t) C.Map.t;
   body : block list;
