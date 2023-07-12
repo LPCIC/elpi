@@ -1,4 +1,14 @@
-# UNRELEASED
+# v1.17.0 (July 2023)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+Camlp5 8.0 or above is optional.
+
+Compiler:
+  - Improve performance of separate compilation, in particular
+    extending a program with more clauses. This change may
+    break existing code which accumulates units containing
+    the spilling of a predicate *before* the unit declaring
+    the predicate signature.
 
 Parser:
   - Fix error message on unexpected keyword (was wrongly assuming the
