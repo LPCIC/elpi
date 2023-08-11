@@ -72,12 +72,14 @@ jobs:
 
       - name: Extra setup on Linux
         if: runner.os == 'Linux'
-        run: opam exec -- echo "workspace=${{ github.workspace }}" >> $GITHUB_ENV
+        run: |
+          opam exec -- echo "workspace=${{ github.workspace }}" >> $GITHUB_ENV
+          sudo apt-get install lua5.1 gnuplot
 
       - name: Extra setup on macOS
         if: runner.os == 'macOS'
         run: |
-          brew install gnu-time
+          brew install gnu-time gnuplot lua
           opam exec -- echo "workspace=${{ github.workspace }}" >> $GITHUB_ENV
 
       - name: Extra setup on Windows
@@ -88,9 +90,13 @@ jobs:
           opam exec -- sed -i ' ' tests/sources/*.elpi
           & "$Env:CYGWIN_ROOT/setup-x86_64.exe" -q -P time
           & "$Env:CYGWIN_ROOT/setup-x86_64.exe" -q -P which
+          & "$Env:CYGWIN_ROOT/setup-x86_64.exe" -q -P gnuplot-base
+          & "$Env:CYGWIN_ROOT/setup-x86_64.exe" -q -P lua5.1
           opam exec -- which which
           opam exec -- time which
           opam exec -- which time
+          opam exec -- which lua5.1
+          opam exec -- which gnuplot
 
 # Build ######################################################################
 #
