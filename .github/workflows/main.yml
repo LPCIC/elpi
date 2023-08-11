@@ -95,7 +95,7 @@ jobs:
           opam exec -- which which
           opam exec -- time which
           opam exec -- which time
-          opam exec -- which lua5.1
+          opam exec -- which lua
           opam exec -- which gnuplot
 
 # Build ######################################################################
