@@ -28,8 +28,6 @@ depends: [
   "atdgen" {>= "2.10.0"}
   "atdts" {>= "2.10.0"}
   "odoc" {with-doc}
-  "conf-lua" {with-test}
-  "conf-gnuplot" {with-test}
 ]
 depopts: [
   "elpi-option-legacy-parser"
