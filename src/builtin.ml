@@ -679,6 +679,18 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
   (fun s _ ~depth -> !:(Sys.command s))),
   DocAbove);
 
+  MLCode(Pred("system_output",
+    In(list string, "Command",
+    Out(in_stream,  "StdOut",
+    Easy            "executes Command creates StdOut stream")),
+    (fun cmd _ ~depth ->
+      (match cmd with
+       | executable :: _ ->
+          let ch = Unix.open_process_args_in executable (Array.of_list cmd)
+          in !:(ch, String.concat " " cmd)
+       | [] -> ?: None))),
+  DocAbove);
+
   LPDoc " -- Debugging --";
 
   MLCode(Pred("term_to_string",
