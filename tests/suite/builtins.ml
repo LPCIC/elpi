@@ -25,3 +25,8 @@ let () = declare "findall"
   ~source_elpi:"findall.elpi"
   ~description:"stash across backtrack"
   ()
+
+let () = declare "unix"
+  ~source_elpi:"unix.elpi"
+  ~description:"unix APIs"
+  ()

@@ -1,0 +1,22 @@
+pred works.
+works :-
+  unix.open-process "ls" ["ls","-l"] _ Out In Err ok,
+  input_line Out L,
+  print "first line of: ls -l:" L,
+  unix.close-process Out In Err ok.
+
+pred starts-but-fails.
+starts-but-fails :-
+  unix.open-process "ls" ["ls","non-existent"] _ Out In Err ok,
+  input_line Err L,
+  print "error from: ls non-existent:" L,
+  unix.close-process Out In Err (error Msg),
+  print "exit code:" Msg.
+
+pred does-not-start.
+does-not-start :-
+  unix.open-process "non-existent" [] _ Out In Err (error Msg),
+  print "Unix API error:" Msg,
+  var In, var Out, var Err.
+
+main :- works, starts-but-fails, does-not-start.

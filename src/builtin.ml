@@ -285,6 +285,9 @@ let diagnostic = let open API.AlgebraicData in declare {
   ]
 } |> ContextualConversion.(!<)
 
+let unix_error_to_diagnostic e f a =
+  mkERROR (Printf.sprintf "%s: %s" (if a <> "" then f ^ " " ^ a else f) (Unix.error_message e))
+
 let cmp = let open AlgebraicData in declare {
   ty = TyName "cmp";
   doc = "Result of a comparison";
@@ -679,16 +682,45 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
   (fun s _ ~depth -> !:(Sys.command s))),
   DocAbove);
 
-  MLCode(Pred("system_output",
-    In(list string, "Command",
-    Out(in_stream,  "StdOut",
-    Easy            "executes Command creates StdOut stream")),
-    (fun cmd _ ~depth ->
-      (match cmd with
-       | executable :: _ ->
-          let ch = Unix.open_process_args_in executable (Array.of_list cmd)
-          in !:(ch, String.concat " " cmd)
-       | [] -> ?: None))),
+  LPDoc " -- Unix --";
+
+  MLCode(Pred("unix.open-process",
+    In(string, "Executable",
+    In(list string, "Arguments",
+    In(unspec (list string), "Environment",
+    Out(in_stream, "StdOut",
+    Out(out_stream, "StdIn",
+    Out(in_stream, "StdErr",
+    Out(diagnostic, "Diagnostic",
+    Easy {|OCaml's Unix.open_process_args_full.
+Note that the first argument is the executable name (as in argv[0]).
+Environment can be left unspecified, defaults to the current process environment.|}))))))),
+    (fun cmd args env _ _ _ _ ~depth ->
+      try
+        let env =
+          match env with
+          | Given l -> Array.of_list l
+          | Unspec -> Unix.environment () in
+        let (out,in_,err) as full = Unix.open_process_args_full cmd (Array.of_list args) env in
+        let pid = Unix.process_full_pid full in
+        let name_fd s = Printf.sprintf "%s of process %d (%s)" s pid cmd in
+        !: (out,name_fd "stdout") +! (in_,name_fd "stdin") +! (err,name_fd "stderr") +! mkOK
+      with Unix.Unix_error(e,f,a) -> ?: None +? None +? None +! (unix_error_to_diagnostic e f a))),
+  DocAbove);
+
+  MLCode(Pred("unix.close-process",
+    In(in_stream,  "StdOut",
+    In(out_stream,  "StdIn",
+    In(in_stream,  "StdErr",
+    Out(diagnostic, "Diagnostic",
+    Easy            "OCaml's Unix.close_process_full")))),
+    (fun (out,_) (in_,_) (err,_) _ ~depth ->
+      match Unix.close_process_full (out,in_,err) with
+      | Unix.WEXITED 0 -> !: mkOK
+      | Unix.WEXITED i -> !: (mkERROR (Printf.sprintf "exited: %d" i))
+      | Unix.WSIGNALED i -> !: (mkERROR (Printf.sprintf "signaled: %d" i))
+      | Unix.WSTOPPED i -> !: (mkERROR (Printf.sprintf "stopped: %d" i))
+      | exception Unix.Unix_error(e,f,a) -> !: (unix_error_to_diagnostic e f a))),
   DocAbove);
 
   LPDoc " -- Debugging --";
