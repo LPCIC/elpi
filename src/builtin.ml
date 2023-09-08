@@ -723,6 +723,20 @@ Environment can be left unspecified, defaults to the current process environment
       | exception Unix.Unix_error(e,f,a) -> !: (unix_error_to_diagnostic e f a))),
   DocAbove);
 
+  LPCode {|
+kind process type.
+type process in_stream -> out_stream -> in_stream -> process.
+
+pred open-process i:list i:string, i:list string, o:process, o:diagnostic.
+open-process Args Env (process Out In Err) Diag :-
+  Argv = [Cmd | _],
+  unix.open-process Cmd Argv Env Out In Err Diag.
+
+pred close-process i:process, o:diagnostic.
+close-process (process Out In Err) Diag :-
+  unix.close-process Out In Err Diag.
+|};
+
   LPDoc " -- Debugging --";
 
   MLCode(Pred("term_to_string",

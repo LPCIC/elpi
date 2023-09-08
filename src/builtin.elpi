@@ -324,6 +324,20 @@ external pred unix.open-process i:string, i:list string, i:list string,
 external pred unix.close-process i:in_stream, i:out_stream, i:in_stream, 
                                  o:diagnostic.
 
+
+kind process type.
+type process in_stream -> out_stream -> in_stream -> process.
+
+pred open-process i:list i:string, i:list string, o:process, o:diagnostic.
+open-process Args Env (process Out In Err) Diag :-
+  Argv = [Cmd | _],
+  unix.open-process Cmd Argv Env Out In Err Diag.
+
+pred close-process i:process, o:diagnostic.
+close-process (process Out In Err) Diag :-
+  unix.close-process Out In Err Diag.
+
+
 %  -- Debugging --
 
 % [term_to_string T S] prints T to S
