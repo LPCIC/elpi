@@ -315,20 +315,20 @@ external pred system i:string, o:int.
 % argv[0]).
 % Environment can be left unspecified, defaults to the current process
 % environment.
-external pred unix.open-process i:string, i:list string, i:list string,
-                                o:out_stream, o:in_stream, o:in_stream,
+external pred unix.open-process i:string, i:list string, i:list string, 
+                                o:out_stream, o:in_stream, o:in_stream, 
                                 o:diagnostic.
 
 % [unix.close-process StdIn StdOut StdErr Diagnostic] OCaml's
 % Unix.close_process_full
-external pred unix.close-process i:out_stream, i:in_stream, i:in_stream,
+external pred unix.close-process i:out_stream, i:in_stream, i:in_stream, 
                                  o:diagnostic.
 
 
 kind process type.
 type process out_stream -> in_stream -> in_stream -> process.
 
-pred open-process i:list i:string, i:list string, o:process, o:diagnostic.
+pred open-process i:list string, i:list string, o:process, o:diagnostic.
 open-process Args Env (process In Out Err) Diag :-
   Argv = [Cmd | _],
   unix.open-process Cmd Argv Env In Out Err Diag.

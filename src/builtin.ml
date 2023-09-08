@@ -727,7 +727,7 @@ Environment can be left unspecified, defaults to the current process environment
 kind process type.
 type process out_stream -> in_stream -> in_stream -> process.
 
-pred open-process i:list i:string, i:list string, o:process, o:diagnostic.
+pred open-process i:list string, i:list string, o:process, o:diagnostic.
 open-process Args Env (process In Out Err) Diag :-
   Argv = [Cmd | _],
   unix.open-process Cmd Argv Env In Out Err Diag.
