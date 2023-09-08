@@ -1,21 +1,25 @@
 pred works.
 works :-
-  unix.open-process "ls" ["ls","-l"] _ Out In Err ok,
+  open-process ["cat"] _ P ok,
+  P = (process Out In Err),
+  Test = "foo",
+  output In Test,
   input_line Out L,
-  print "first line of: ls -l:" L,
-  unix.close-process Out In Err ok.
+  L = Test
+  unix.close-process P ok.
 
 pred starts-but-fails.
 starts-but-fails :-
-  unix.open-process "ls" ["ls","non-existent"] _ Out In Err ok,
+  open-process ["ls", "non-existent"] _ P ok,
+  P = (process Out In Err),
   input_line Err L,
   print "error from: ls non-existent:" L,
-  unix.close-process Out In Err (error Msg),
+  unix.close-process P (error Msg),
   print "exit code:" Msg.
 
 pred does-not-start.
 does-not-start :-
-  unix.open-process "non-existent" [] _ Out In Err (error Msg),
+  unix.open-process ["non-existent"] _ (process Out In Err) (error Msg),
   print "Unix API error:" Msg,
   var In, var Out, var Err.
 
