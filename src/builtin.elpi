@@ -330,8 +330,8 @@ type process out_stream -> in_stream -> in_stream -> process.
 
 pred open-process i:list string, i:list string, o:process, o:diagnostic.
 open-process Args Env (process In Out Err) Diag :-
-  Argv = [Cmd | _],
-  unix.open-process Cmd Argv Env In Out Err Diag.
+  Args = [Cmd | _],
+  unix.open-process Cmd Args Env In Out Err Diag.
 
 pred close-process i:process, o:diagnostic.
 close-process (process In Out Err) Diag :-
