@@ -688,8 +688,8 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
     In(string, "Executable",
     In(list string, "Arguments",
     In(unspec (list string), "Environment",
-    Out(in_stream, "StdOut",
     Out(out_stream, "StdIn",
+    Out(in_stream, "StdOut",
     Out(in_stream, "StdErr",
     Out(diagnostic, "Diagnostic",
     Easy {|OCaml's Unix.open_process_args_full.
@@ -704,18 +704,18 @@ Environment can be left unspecified, defaults to the current process environment
         let (out,in_,err) as full = Unix.open_process_args_full cmd (Array.of_list args) env in
         let pid = Unix.process_full_pid full in
         let name_fd s = Printf.sprintf "%s of process %d (%s)" s pid cmd in
-        !: (out,name_fd "stdout") +! (in_,name_fd "stdin") +! (err,name_fd "stderr") +! mkOK
+        !: (in_,name_fd "stdin") +! (out,name_fd "stdout") +! (err,name_fd "stderr") +! mkOK
       with Unix.Unix_error(e,f,a) -> ?: None +? None +? None +! (unix_error_to_diagnostic e f a))),
   DocAbove);
 
   MLCode(Pred("unix.close-process",
+    In(out_stream, "StdIn",
     In(in_stream,  "StdOut",
-    In(out_stream,  "StdIn",
     In(in_stream,  "StdErr",
     Out(diagnostic, "Diagnostic",
     Easy            "OCaml's Unix.close_process_full")))),
     (fun (out,_) (in_,_) (err,_) _ ~depth ->
-      match Unix.close_process_full (out,in_,err) with
+      match Unix.close_process_full (in_,out,err) with
       | Unix.WEXITED 0 -> !: mkOK
       | Unix.WEXITED i -> !: (mkERROR (Printf.sprintf "exited: %d" i))
       | Unix.WSIGNALED i -> !: (mkERROR (Printf.sprintf "signaled: %d" i))
@@ -725,16 +725,16 @@ Environment can be left unspecified, defaults to the current process environment
 
   LPCode {|
 kind process type.
-type process in_stream -> out_stream -> in_stream -> process.
+type process out_stream -> in_stream -> in_stream -> process.
 
 pred open-process i:list i:string, i:list string, o:process, o:diagnostic.
-open-process Args Env (process Out In Err) Diag :-
+open-process Args Env (process In Out Err) Diag :-
   Argv = [Cmd | _],
-  unix.open-process Cmd Argv Env Out In Err Diag.
+  unix.open-process Cmd Argv Env In Out Err Diag.
 
 pred close-process i:process, o:diagnostic.
-close-process (process Out In Err) Diag :-
-  unix.close-process Out In Err Diag.
+close-process (process In Out Err) Diag :-
+  unix.close-process In Out Err Diag.
 |};
 
   LPDoc " -- Debugging --";
