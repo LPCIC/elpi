@@ -1,8 +1,9 @@
 # UNRELEASED
 
 Builtins:
-  - New low-level `unix.open-process` and `unix.close-process`, and
-    `open-process` and `close-process` predicates.
+  - New low level `unix.open-process` and `unix.close-process`
+  - New `process` datatype
+  - New `open-process` and `close-process` high level predicates
 
 # v1.17.0 (July 2023)
 
