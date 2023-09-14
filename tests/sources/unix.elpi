@@ -1,6 +1,6 @@
 pred works0.
 works0 :-
-  std.assert-ok! (open-process ["sh", "-c", "echo foo"] _ P) "works0",
+  std.assert-ok! (open-process ["tests/sources/echo.sh", "foo"] _ P) "works0",
   P = (process _In Out _Err),
   input_line Out Str,
   std.assert! (Str = "foo") "bad output",
