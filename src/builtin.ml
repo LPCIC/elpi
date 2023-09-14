@@ -694,7 +694,8 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
     Out(diagnostic, "Diagnostic",
     Easy {|OCaml's Unix.open_process_args_full.
 Note that the first argument is the executable name (as in argv[0]).
-Environment can be left unspecified, defaults to the current process environment.|}))))))),
+Environment can be left unspecified, defaults to the current process environment.
+This API only works reliably since OCaml 4.12.|}))))))),
     (fun cmd args env _ _ _ _ ~depth ->
       try
         let env =
