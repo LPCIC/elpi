@@ -1,7 +1,7 @@
 pred works0.
 works0 :-
   std.assert-ok! (open-process ["sh", "-c", "echo foo"] _ P) "works0",
-  P = (process _ Out _),
+  P = (process _In Out _Err),
   input_line Out Str,
   std.assert! (Str = "foo") "bad output",
   close-process P ok.
@@ -9,7 +9,7 @@ works0 :-
 pred works1.
 works1 :-
   std.assert-ok! (open-process ["cat"] _ P) "works1",
-  P = (process In Out _),
+  P = (process In Out _Err),
   output In "foo",
   close_out In,
   input_line Out "foo",
