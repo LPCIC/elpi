@@ -1,26 +1,33 @@
-pred works.
-works :-
+pred works0.
+works0 :-
+  open-process ["echo", "foo"] _ P ok,
+  P = (process _ Out _),
+  input_line Out "foo",
+  close-process P ok.
+
+pred works1.
+works1 :-
   open-process ["cat"] _ P ok,
-  P = (process Out In Err),
+  P = (process In Out _),
   Test = "foo",
-  output In Test,
-  input_line Out L,
-  L = Test
-  unix.close-process P ok.
+  output In "foo",
+  close_out In,
+  input_line Out "foo",
+  close-process P ok.
 
 pred starts-but-fails.
 starts-but-fails :-
   open-process ["ls", "non-existent"] _ P ok,
-  P = (process Out In Err),
+  P = (process In Out Err),
   input_line Err L,
   print "error from: ls non-existent:" L,
-  unix.close-process P (error Msg),
+  close-process P (error Msg),
   print "exit code:" Msg.
 
 pred does-not-start.
 does-not-start :-
-  unix.open-process ["non-existent"] _ (process Out In Err) (error Msg),
+  open-process ["non-existent"] _ (process In Out Err) (error Msg),
   print "Unix API error:" Msg,
   var In, var Out, var Err.
 
-main :- works, starts-but-fails, does-not-start.
+main :- works0, works1, starts-but-fails, does-not-start.
