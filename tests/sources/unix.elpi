@@ -10,9 +10,10 @@ pred works1.
 works1 :-
   std.assert-ok! (open-process ["cat"] _ P) "works1",
   P = (process In Out _Err),
-  output In "foo",
+  output In "foo\n",
   close_out In,
-  input_line Out "foo",
+  input_line Out Str,
+  std.assert! (Str = "foo") "bad output",
   close-process P ok.
 
 pred starts-but-fails.
