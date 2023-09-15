@@ -27,8 +27,8 @@ let () = declare "findall"
   ()
 
 let () =
-  let { Sys.major; minor } = Sys.ocaml_release in
-  if major = 4 && minor < 12 then
+  let v = Sys.ocaml_version in
+  if Str.string_match (Str.regexp "4\\.\\(8\\|9\\|10\\|11\\)") v 0 then
     () (* unix opem_process_* APIS are broken *)
   else
     declare "unix"
