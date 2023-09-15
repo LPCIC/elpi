@@ -26,7 +26,12 @@ let () = declare "findall"
   ~description:"stash across backtrack"
   ()
 
-let () = declare "unix"
-  ~source_elpi:"unix.elpi"
-  ~description:"unix APIs"
-  ()
+let () =
+  let { Sys.major; minor } = Sys.ocaml_release in
+  if major = 4 && minor < 12 then
+    () (* unix opem_process_* APIS are broken *)
+  else
+    declare "unix"
+      ~source_elpi:"unix.elpi"
+      ~description:"unix APIs"
+      ()
