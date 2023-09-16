@@ -307,6 +307,38 @@ external pred getenv i:string, o:option string.
 % [system Command RetVal] executes Command and sets RetVal to the exit code
 external pred system i:string, o:int.
 
+%  -- Unix --
+
+% [unix.open-process Executable Arguments Environment StdIn StdOut StdErr
+% Diagnostic] OCaml's Unix.open_process_args_full.
+% Note that the first argument is the executable name (as in
+% argv[0]).
+% Environment can be left unspecified, defaults to the current process
+% environment.
+% This API only works reliably since OCaml 4.12.
+external pred unix.open-process i:string, i:list string, i:list string, 
+                                o:out_stream, o:in_stream, o:in_stream, 
+                                o:diagnostic.
+
+% [unix.close-process StdIn StdOut StdErr Diagnostic] OCaml's
+% Unix.close_process_full
+external pred unix.close-process i:out_stream, i:in_stream, i:in_stream, 
+                                 o:diagnostic.
+
+
+kind process type.
+type process out_stream -> in_stream -> in_stream -> process.
+
+pred open-process i:list string, i:list string, o:process, o:diagnostic.
+open-process Args Env (process In Out Err) Diag :-
+  Args = [Cmd | _],
+  unix.open-process Cmd Args Env In Out Err Diag.
+
+pred close-process i:process, o:diagnostic.
+close-process (process In Out Err) Diag :-
+  unix.close-process In Out Err Diag.
+
+
 %  -- Debugging --
 
 % [term_to_string T S] prints T to S

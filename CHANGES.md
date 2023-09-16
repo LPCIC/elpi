@@ -1,3 +1,10 @@
+# UNRELEASED
+
+Builtins:
+  - New low level `unix.open-process` and `unix.close-process`
+  - New `process` datatype
+  - New `open-process` and `close-process` high level predicates
+
 # v1.17.0 (July 2023)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.
