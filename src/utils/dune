@@ -1,5 +1,5 @@
 (library
   (name elpi_util)
   (public_name elpi.util)
-  (libraries re.str)
+  (libraries unix re.str)
   (modules util))
