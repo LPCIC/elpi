@@ -1,33 +1,33 @@
 pred works0.
 works0 :-
-  std.assert-ok! (open-process ["printf", "foo\n"] _ P) "works0",
-  P = (process _In Out _Err),
+  std.assert-ok! (unix.process.open _ ["printf", "foo\n"] _ P) "works0",
+  P = (unix.process _In Out _Err),
   input_line Out Str,
   std.assert! (Str = "foo") "bad output",
-  close-process P ok.
+  unix.process.close P ok.
 
 pred works1.
 works1 :-
-  std.assert-ok! (open-process ["cat"] _ P) "works1",
-  P = (process In Out _Err),
+  std.assert-ok! (unix.process.open _ ["cat"] _ P) "works1",
+  P = (unix.process In Out _Err),
   output In "foo\n",
   close_out In,
   input_line Out Str,
   std.assert! (Str = "foo") "bad output",
-  close-process P ok.
+  unix.process.close P ok.
 
 pred starts-but-fails.
 starts-but-fails :-
-  std.assert-ok! (open-process ["ls", "non-existent"] _ P) "starts-but-fails",
-  P = (process _In _Out Err),
+  std.assert-ok! (unix.process.open _ ["ls", "non-existent"] _ P) "starts-but-fails",
+  P = (unix.process _In _Out Err),
   input_line Err L,
   print "error from: ls non-existent:" L,
-  close-process P (error Msg),
+  unix.process.close P (error Msg),
   print "exit code:" Msg.
 
 pred does-not-start.
 does-not-start :-
-  open-process ["non-existent"] _ (process In Out Err) D,
+  unix.process.open "non-existent" _ _ (process In Out Err) D,
   std.assert! (D = error Msg) "does-not-exists",
   print "Unix API error:" Msg,
   var In, var Out, var Err.
