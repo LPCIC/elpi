@@ -117,8 +117,10 @@ let print_csv plot results =
           end
       | None -> ());
   close_out oc;
-  ignore(Sys.command (plot ^ " data.csv"));
-  ignore(Sys.command "gnuplot data.csv.plot")
+  if Sys.command "which lua5.1" = 0 && Sys.command "which gnuplot" = 0 then begin
+    ignore(Sys.command (plot ^ " data.csv"));
+    ignore(Sys.command "gnuplot data.csv.plot")
+  end
 ;;
 
 let rec find_map f = function
