@@ -12,7 +12,7 @@ open Notation
 
 module Str = Re.Str
 
-let in_stream = OpaqueData.declare {
+let in_stream_decl = {
   OpaqueData.name = "in_stream";
   pp = (fun fmt (_,d) -> Format.fprintf fmt "<in_stream:%s>" d);
   compare = (fun (_,s1) (_,s2) -> String.compare s1 s2);
@@ -21,8 +21,9 @@ let in_stream = OpaqueData.declare {
   constants = ["std_in",(stdin,"stdin")];
   doc = "";
 }
+let in_stream = OpaqueData.declare in_stream_decl
 
-let out_stream = OpaqueData.declare {
+let out_stream_decl = {
   OpaqueData.name = "out_stream";
   pp = (fun fmt (_,d) -> Format.fprintf fmt "<out_stream:%s>" d);
   compare = (fun (_,s1) (_,s2) -> String.compare s1 s2);
@@ -31,6 +32,28 @@ let out_stream = OpaqueData.declare {
   doc = "";
   constants = ["std_out",(stdout,"stdout");"std_err",(stderr,"stderr")];
 }
+let out_stream = OpaqueData.declare out_stream_decl
+
+type process = {
+  stdin : out_channel * string;
+  stdout : in_channel * string;
+  stderr : in_channel * string;
+}
+let process = AlgebraicData.declare {
+  AlgebraicData.ty = TyName "unix.process";
+  doc = "gathers the standard file descriptors or a process";
+  pp = (fun fmt { stdin; stdout; stderr }  ->
+    Format.fprintf fmt "{ stdin = %a; stdout = %a; stderr = %a }"
+      out_stream_decl.OpaqueData.pp stdin
+      in_stream_decl.OpaqueData.pp stdout
+      in_stream_decl.OpaqueData.pp stderr
+    );
+  constructors = [
+    K("unix.process","",A(out_stream,A(in_stream,A(in_stream,N))),
+      B (fun stdin stdout stderr -> { stdin; stdout; stderr }),
+      M (fun ~ok ~ko:_ { stdin; stdout; stderr } -> ok stdin stdout stderr ))
+  ]
+}|> ContextualConversion.(!<)
 
 let register_eval, register_eval_ty, lookup_eval, eval_declaration =
  let rec str_of_ty n s =
@@ -684,38 +707,44 @@ let io_builtins = let open BuiltIn in let open BuiltInData in [
 
   LPDoc " -- Unix --";
 
-  MLCode(Pred("unix.open-process",
-    In(string, "Executable",
-    In(list string, "Arguments",
+  MLData process;
+
+  MLCode(Pred("unix.process.open",
+    In(unspec string, "Executable",
+    In(unspec @@ list string, "Arguments",
     In(unspec (list string), "Environment",
-    Out(out_stream, "StdIn",
-    Out(in_stream, "StdOut",
-    Out(in_stream, "StdErr",
+    Out(process, "P",
     Out(diagnostic, "Diagnostic",
     Easy {|OCaml's Unix.open_process_args_full.
 Note that the first argument is the executable name (as in argv[0]).
+If Executable is omitted it defaults to the first element of Arguments.
 Environment can be left unspecified, defaults to the current process environment.
-This API only works reliably since OCaml 4.12.|}))))))),
-    (fun cmd args env _ _ _ _ ~depth ->
+This API only works reliably since OCaml 4.12.|}))))),
+    (fun cmd args env _ _ ~depth ->
       try
         let env =
           match env with
           | Given l -> Array.of_list l
           | Unspec -> Unix.environment () in
+        let cmd, args =
+          match cmd, args with
+          | Given x, Unspec -> x, [x]
+          | Given x, Given [] -> x, [x]
+          | Given x, Given args -> x, args
+          | Unspec, Given (x::_ as args) -> x, args
+          | _ -> type_error "unix.process.open: no executable and no argumnts" in
         let (out,in_,err) as full = Unix.open_process_args_full cmd (Array.of_list args) env in
         let pid = Unix.process_full_pid full in
         let name_fd s = Printf.sprintf "%s of process %d (%s)" s pid cmd in
-        !: (in_,name_fd "stdin") +! (out,name_fd "stdout") +! (err,name_fd "stderr") +! mkOK
-      with Unix.Unix_error(e,f,a) -> ?: None +? None +? None +! (unix_error_to_diagnostic e f a))),
+        !: { stdin = (in_,name_fd "stdin"); stdout = (out,name_fd "stdout"); stderr = (err,name_fd "stderr") } +! mkOK
+      with Unix.Unix_error(e,f,a) -> ?: None +! (unix_error_to_diagnostic e f a))),
   DocAbove);
 
-  MLCode(Pred("unix.close-process",
-    In(out_stream, "StdIn",
-    In(in_stream,  "StdOut",
-    In(in_stream,  "StdErr",
+  MLCode(Pred("unix.process.close",
+    In(process, "P",
     Out(diagnostic, "Diagnostic",
-    Easy            "OCaml's Unix.close_process_full")))),
-    (fun (out,_) (in_,_) (err,_) _ ~depth ->
+    Easy            "OCaml's Unix.close_process_full")),
+    (fun { stdin = (out,_); stdout = (in_,_); stderr = (err,_) } _ ~depth ->
       match Unix.close_process_full (in_,out,err) with
       | Unix.WEXITED 0 -> !: mkOK
       | Unix.WEXITED i -> !: (mkERROR (Printf.sprintf "exited: %d" i))
@@ -723,20 +752,6 @@ This API only works reliably since OCaml 4.12.|}))))))),
       | Unix.WSTOPPED i -> !: (mkERROR (Printf.sprintf "stopped: %d" i))
       | exception Unix.Unix_error(e,f,a) -> !: (unix_error_to_diagnostic e f a))),
   DocAbove);
-
-  LPCode {|
-kind process type.
-type process out_stream -> in_stream -> in_stream -> process.
-
-pred open-process i:list string, i:list string, o:process, o:diagnostic.
-open-process Args Env (process In Out Err) Diag :-
-  Args = [Cmd | _],
-  unix.open-process Cmd Args Env In Out Err Diag.
-
-pred close-process i:process, o:diagnostic.
-close-process (process In Out Err) Diag :-
-  unix.close-process In Out Err Diag.
-|};
 
   LPDoc " -- Debugging --";
 
