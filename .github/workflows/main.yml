@@ -17,7 +17,6 @@ jobs:
           - ubuntu-latest
           - windows-latest
         ocaml-compiler:
-          - 5.1.x
           - 4.14.x
           - 4.08.x
         profile:
