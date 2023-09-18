@@ -43,7 +43,7 @@ let process = AlgebraicData.declare {
   AlgebraicData.ty = TyName "unix.process";
   doc = "gathers the standard file descriptors or a process";
   pp = (fun fmt { stdin; stdout; stderr }  ->
-    Format.fprintf fmt "{ stdin = %a; stdout = %a; etderr = %a }"
+    Format.fprintf fmt "{ stdin = %a; stdout = %a; stderr = %a }"
       out_stream_decl.OpaqueData.pp stdin
       in_stream_decl.OpaqueData.pp stdout
       in_stream_decl.OpaqueData.pp stderr
