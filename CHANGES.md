@@ -1,4 +1,7 @@
-# UNRELEASED
+# v1.17.1 (September 2023)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+Camlp5 8.0 or above is optional.
 
 Builtins:
   - New `unix.process` datatype and `unix.process.open/close` APIs
