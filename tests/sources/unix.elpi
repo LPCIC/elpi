@@ -27,7 +27,7 @@ starts-but-fails :-
 
 pred does-not-start.
 does-not-start :-
-  unix.process.open "non-existent" _ _ (process In Out Err) D,
+  unix.process.open "non-existent" _ _ (unix.process In Out Err) D,
   std.assert! (D = error Msg) "does-not-exists",
   print "Unix API error:" Msg,
   var In, var Out, var Err.
