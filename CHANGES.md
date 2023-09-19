@@ -1,3 +1,11 @@
+# v1.17.2 (September 2023)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+Camlp5 8.0 or above is optional.
+
+Builtins:
+  - Change `unix.process` disabled on OCaml 4.12
+
 # v1.17.1 (September 2023)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.
