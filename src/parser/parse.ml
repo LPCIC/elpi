@@ -93,8 +93,7 @@ let to_lexing_loc { Util.Loc.source_name; line; line_starts_at; source_start; _ 
     pos_cnum = source_start; }
   
 let goal_from ~loc lexbuf =
-  let lexbuf =  { lexbuf with Lexing.lex_start_p = to_lexing_loc loc } in
-  let lexbuf =  { lexbuf with Lexing.lex_curr_p = to_lexing_loc loc } in
+  Lexing.set_position lexbuf (to_lexing_loc loc);
   snd @@ parse Grammar.goal "" lexbuf
       
 let goal ~loc ~text =
@@ -103,8 +102,7 @@ let goal ~loc ~text =
 
 let program_from ~loc lexbuf =
   Hashtbl.clear already_parsed;
-  let lexbuf =  { lexbuf with Lexing.lex_start_p = to_lexing_loc loc } in
-  let lexbuf =  { lexbuf with Lexing.lex_curr_p = to_lexing_loc loc } in
+  Lexing.set_position lexbuf (to_lexing_loc loc);
   snd @@ parse Grammar.program "" lexbuf
 
 let program ~file =
