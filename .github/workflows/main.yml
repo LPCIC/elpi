@@ -66,12 +66,15 @@ jobs:
 
       - name: Extra setup on Linux
         if: runner.os == 'Linux'
-        run: opam exec -- echo "workspace=${{ github.workspace }}" >> $GITHUB_ENV
+        run: |
+          opam exec -- echo "workspace=${{ github.workspace }}" >> $GITHUB_ENV
+          sudo apt-get install wdiff
 
       - name: Extra setup on macOS
         if: runner.os == 'macOS'
         run: |
           brew install gnu-time
+          brew install wdiff
           opam exec -- echo "workspace=${{ github.workspace }}" >> $GITHUB_ENV
 
       - name: Extra setup on Windows
@@ -82,9 +85,11 @@ jobs:
           opam exec -- sed -i ' ' tests/sources/*.elpi
           & "$Env:CYGWIN_ROOT/setup-x86_64.exe" -q -P time
           & "$Env:CYGWIN_ROOT/setup-x86_64.exe" -q -P which
+          & "$Env:CYGWIN_ROOT/setup-x86_64.exe" -q -P wdiff
           opam exec -- which which
           opam exec -- time which
           opam exec -- which time
+          opam exec -- which wdiff
 
 # Build ######################################################################
 #
