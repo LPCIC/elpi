@@ -1,3 +1,11 @@
+# v1.17.4 (October 2023)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+Camlp5 8.0 or above is optional.
+
+Parser:
+  - Fix location handling (used to ignore the char count of the initial loc)
+
 # v1.17.3 (September 2023)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.
