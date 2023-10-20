@@ -418,7 +418,7 @@ end = struct (* {{{ *)
  }
 
   let state =
-    Fork.new_local (State.init () |> State.begin_goal_compilation |> State.end_goal_compilation StrMap.empty |> State.end_compilation)
+    Fork.new_local (State.init Data.elpi_state_descriptor |> State.begin_goal_compilation |> State.end_goal_compilation StrMap.empty |> State.end_compilation)
   let read_custom_constraint ct =
     State.get ct !state
   let update_custom_constraint ct f =
@@ -3297,7 +3297,7 @@ let try_fire_rule (gid[@trace]) rule (constraints as orig_constraints) =
         (shift_bound_vars ~depth:0 ~to_:max_depth guard);
     assignments = StrMap.empty;
     initial_depth = max_depth;
-    initial_runtime_state = State.(init () |> State.begin_goal_compilation |> end_goal_compilation StrMap.empty |> end_compilation);
+    initial_runtime_state = State.(init (State.descriptor !CS.state) |> State.begin_goal_compilation |> end_goal_compilation StrMap.empty |> end_compilation);
     query_arguments = Query.N;
     symbol_table = !C.table;
     builtins = !FFI.builtins;
@@ -3694,7 +3694,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
       initial_goal = g;
       assignments = StrMap.empty;
       initial_depth = depth;
-      initial_runtime_state = State.(init () |> State.begin_goal_compilation |> end_goal_compilation StrMap.empty |> end_compilation);
+      initial_runtime_state = State.(init (State.descriptor !CS.state) |> State.begin_goal_compilation |> end_goal_compilation StrMap.empty |> end_compilation);
       query_arguments = Query.N;
       symbol_table = !C.table;
       builtins = !FFI.builtins;

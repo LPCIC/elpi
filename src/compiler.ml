@@ -27,7 +27,9 @@ let default_flags = {
   print_units = false;
 }
 
-let parser : (module Parse.Parser) option D.State.component = D.State.declare ~name:"elpi:parser"
+let parser : (module Parse.Parser) option D.State.component = D.State.declare
+  ~descriptor:D.elpi_state_descriptor
+  ~name:"elpi:parser"
   ~pp:(fun fmt _ -> Format.fprintf fmt "<parser>")
   ~clause_compilation_is_over:(fun x -> x)
   ~goal_compilation_begins:(fun x -> x)
@@ -119,7 +121,9 @@ let prune t alive =
     ast2ct = F.Map.filter (fun _ (k,_) -> D.Constants.Set.mem k alive) t.ast2ct;
   }
 
-let table = D.State.declare ~name:"elpi:compiler:symbol_table"
+let table = D.State.declare
+  ~descriptor:D.elpi_state_descriptor
+  ~name:"elpi:compiler:symbol_table"
   ~pp:pp_table
   ~clause_compilation_is_over:(fun x -> x)
   ~goal_compilation_begins:(fun x -> x)
@@ -290,7 +294,9 @@ end = struct
 let is_empty { names } = StrSet.is_empty names
 let empty =  { names = StrSet.empty; constants = D.Constants.Set.empty; code = [] }
 
-let builtins : t D.State.component = D.State.declare ~name:"elpi:compiler:builtins"
+let builtins : t D.State.component = D.State.declare
+  ~descriptor:D.elpi_state_descriptor
+  ~name:"elpi:compiler:builtins"
   ~pp:(fun fmt x -> StrSet.pp fmt x.names)
   ~init:(fun () -> empty)
   ~clause_compilation_is_over:(fun x -> x)
@@ -851,7 +857,9 @@ let todopp name _fmt _ = error ("pp not implemented for field: "^name)
 
 let get_argmap, set_argmap, _update_argmap, drop_argmap =
   let argmap =
-    State.declare ~name:"elpi:argmap" ~pp:(todopp "elpi:argmap")
+    State.declare
+      ~name:"elpi:argmap" ~pp:(todopp "elpi:argmap")
+      ~descriptor:D.elpi_state_descriptor
       ~clause_compilation_is_over:(fun _ -> empty_amap)
       ~goal_compilation_begins:(fun x -> x)
       ~goal_compilation_is_over:(fun ~args:_ _ -> None)
@@ -865,7 +873,9 @@ type varmap = term F.Map.t
 
 let get_varmap, set_varmap, update_varmap, drop_varmap =
   let varmap : varmap State.component =
-    State.declare ~name:"elpi:varmap" ~pp:(todopp "elpi:varmap")
+    State.declare
+      ~name:"elpi:varmap" ~pp:(todopp "elpi:varmap")
+      ~descriptor:D.elpi_state_descriptor
       ~clause_compilation_is_over:(fun x -> assert(F.Map.is_empty x); x)
       ~goal_compilation_begins:(fun x -> assert(F.Map.is_empty x); x)
       ~goal_compilation_is_over:(fun ~args:_ _ -> None)
@@ -882,7 +892,9 @@ type mtm = {
 
 let get_mtm, set_mtm, drop_mtm =
   let mtm =
-    State.declare ~name:"elpi:mtm" ~pp:(todopp "elpi:mtm")
+    State.declare
+     ~name:"elpi:mtm" ~pp:(todopp "elpi:mtm")
+     ~descriptor:D.elpi_state_descriptor
      ~clause_compilation_is_over:(fun _ -> None)
      ~goal_compilation_begins:(fun x -> x)
      ~goal_compilation_is_over:(fun ~args:_ _ -> None)
@@ -2049,8 +2061,8 @@ let print_unit { print_units } x =
         (String.concat ", " (List.sort compare (Symbols.symbols x.symbol_table)))
 ;;
 
-let header_of_ast ~flags ~parser:p builtins ast : header =
-  let state = D.State.init () in
+let header_of_ast ~flags ~parser:p state_descriptor builtins ast : header =
+  let state = D.State.init state_descriptor in
   let state = D.State.set D.while_compiling state true in
   let state = State.set Symbols.table state (Symbols.global_table ()) in
   let state =

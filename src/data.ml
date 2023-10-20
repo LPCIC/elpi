@@ -230,9 +230,14 @@ include Term
 (* Object oriented State.t: borns at compilation time and survives as run time *)
 module State : sig
 
+  type descriptor
+  val new_descriptor : unit -> descriptor
+  val copy_descriptor : descriptor -> descriptor
+
   (* filled in with components *)
   type 'a component
   val declare :
+    descriptor:descriptor ->
     name:string -> pp:(Format.formatter -> 'a -> unit) ->
     init:(unit -> 'a) ->
     clause_compilation_is_over:('a -> 'a) ->
@@ -253,7 +258,8 @@ module State : sig
      - end_compilation (just once before running)
      - end_execution (just once after running)
   *)
-  val init : unit -> t
+  val init : descriptor -> t
+  val descriptor : t -> descriptor
   val end_clause_compilation : t -> t
   val begin_goal_compilation : t -> t
   val end_goal_compilation : uvar_body StrMap.t -> t -> t
@@ -276,8 +282,6 @@ end = struct
     | Run
     | Halt
 
-  type t = Obj.t StrMap.t * stage
-
   type 'a component = string
   type extension = {
     init : unit -> Obj.t;
@@ -288,24 +292,30 @@ end = struct
     end_exec : Obj.t -> Obj.t option;
     pp   : Format.formatter -> Obj.t -> unit;
   }
-  let extensions : extension StrMap.t ref = ref StrMap.empty
+  type descriptor = extension StrMap.t ref
 
-  let get name (t,_) =
+  type t = { data : Obj.t StrMap.t; stage : stage; extensions : descriptor }
+  let descriptor { extensions = x } = x
+ 
+  let new_descriptor () : descriptor = ref StrMap.empty
+  let copy_descriptor x = ref (!x)
+
+  let get name { data = t } =
     try Obj.obj (StrMap.find name t)
     with Not_found ->
        anomaly ("State.get: component " ^ name ^ " not found")
 
-  let set name (t,s) v = StrMap.add name (Obj.repr v) t, s
-  let drop name (t,s) = StrMap.remove name t, s
-  let update name (t,s) f =
-    StrMap.add name (Obj.repr (f (Obj.obj (StrMap.find name t)))) t, s
+  let set name ({ data } as x) v = { x with data = StrMap.add name (Obj.repr v) data }
+  let drop name ({ data } as x) = { x with data = StrMap.remove name data }
+  let update name ({ data } as x) f =
+    { x with data = StrMap.add name (Obj.repr (f (Obj.obj (StrMap.find name data)))) data }
   let update_return name t f =
     let x = get name t in
     let x, res = f x in
     let t = set name t x in
     t, res
 
-  let declare ~name ~pp ~init ~clause_compilation_is_over ~goal_compilation_begins ~goal_compilation_is_over ~compilation_is_over ~execution_is_over =
+  let declare ~descriptor:extensions ~name ~pp ~init ~clause_compilation_is_over ~goal_compilation_begins ~goal_compilation_is_over ~compilation_is_over ~execution_is_over =
     if StrMap.mem name !extensions then
       anomaly ("Extension "^name^" already declared");
     extensions := StrMap.add name {
@@ -320,47 +330,67 @@ end = struct
       !extensions;
     name
 
-  let init () =
-    StrMap.fold (fun name { init } acc ->
-      let o = init () in
-      StrMap.add name o acc)
-      !extensions StrMap.empty, Compile_prog
+  let init extensions : t =
+    { data =
+       StrMap.fold (fun name { init } acc ->
+        let o = init () in
+        StrMap.add name o acc)
+        !extensions StrMap.empty;
+      stage = Compile_prog;
+      extensions }
 
-  let end_clause_compilation (m,s) = assert(s = Compile_prog);
-    StrMap.fold (fun name obj acc ->
-      let o = (StrMap.find name !extensions).end_clause obj in
-      StrMap.add name o acc) m StrMap.empty, s
+  let end_clause_compilation { data = m; stage = s; extensions } : t =
+    assert(s = Compile_prog);
+    { data = StrMap.fold (fun name obj acc ->
+        let o = (StrMap.find name !extensions).end_clause obj in
+        StrMap.add name o acc) m StrMap.empty;
+      stage = s;
+      extensions }
 
-  let begin_goal_compilation (m,s) = assert(s = Compile_prog);
-    StrMap.fold (fun name obj acc ->
+  let begin_goal_compilation { data = m; stage = s; extensions } : t =
+    assert(s = Compile_prog);
+    { data = StrMap.fold (fun name obj acc ->
       let o = (StrMap.find name !extensions).begin_goal obj in
-      StrMap.add name o acc) m StrMap.empty, Compile_goal
+      StrMap.add name o acc) m StrMap.empty;
+    stage = Compile_goal;
+    extensions }
 
-  let end_goal_compilation args (m,s) = assert(s = Compile_goal);
-    StrMap.fold (fun name obj acc ->
-      match (StrMap.find name !extensions).end_goal ~args obj with
-      | None -> acc
-      | Some o -> StrMap.add name o acc) m StrMap.empty, Link
+  let end_goal_compilation args { data = m; stage = s; extensions } : t =
+    assert(s = Compile_goal);
+    { data = StrMap.fold (fun name obj acc ->
+        match (StrMap.find name !extensions).end_goal ~args obj with
+        | None -> acc
+        | Some o -> StrMap.add name o acc) m StrMap.empty;
+      stage =  Link;
+      extensions }
 
-  let end_compilation (m,s) = assert(s = Link);
-    StrMap.fold (fun name obj acc ->
-      match (StrMap.find name !extensions).end_comp obj with
-      | None -> acc
-      | Some o -> StrMap.add name o acc) m StrMap.empty, Run
+  let end_compilation { data = m; stage = s; extensions } : t =
+    assert(s = Link);
+    { data = StrMap.fold (fun name obj acc ->
+        match (StrMap.find name !extensions).end_comp obj with
+        | None -> acc
+        | Some o -> StrMap.add name o acc) m StrMap.empty;
+      stage = Run;
+      extensions }
 
-  let end_execution (m,s) = assert(s = Run);
-    StrMap.fold (fun name obj acc ->
-      match (StrMap.find name !extensions).end_exec obj with
-      | None -> acc
-      | Some o -> StrMap.add name o acc) m StrMap.empty, Halt
+  let end_execution { data = m; stage = s; extensions } : t =
+    assert(s = Run);
+    { data = StrMap.fold (fun name obj acc ->
+        match (StrMap.find name !extensions).end_exec obj with
+        | None -> acc
+        | Some o -> StrMap.add name o acc) m StrMap.empty;
+      stage = Halt;
+      extensions }
 
-  let pp fmt (t,s) =
+  let pp fmt { data = t; stage = s; extensions } : unit =
     StrMap.iter (fun name { pp } ->
       try pp fmt (StrMap.find name t)
       with Not_found -> ())
     !extensions
 
 end
+
+let elpi_state_descriptor = State.new_descriptor ()
 
 (* This module contains the symbols reserved by Elpi and the ones
    declared by the API client via declare_global_symbol statically
@@ -738,7 +768,9 @@ module ContextualConversion = struct
 
   end
 
-let while_compiling = State.declare ~name:"elpi:compiling"
+let while_compiling : bool State.component = State.declare
+  ~descriptor:elpi_state_descriptor
+  ~name:"elpi:compiling"
   ~pp:(fun fmt _ -> ())
   ~clause_compilation_is_over:(fun b -> b)
   ~goal_compilation_begins:(fun b -> b)

@@ -34,6 +34,9 @@ end
 
 module Setup : sig
 
+  (* State extensions see {!module:State} *)
+  type state_descriptor
+
   (* Built-in predicates, see {!module:BuiltIn} *)
   type builtins
 
@@ -60,6 +63,7 @@ module Setup : sig
         [file_resolver]. *)
   val init :
     ?flags:flags ->
+    ?state:state_descriptor ->
     builtins:builtins list ->
     ?file_resolver:(?cwd:string -> unit:string -> unit -> string) ->
     ?legacy_parser:bool ->
@@ -728,12 +732,16 @@ end
    need to use. *)
 module State : sig
 
+  type descriptor = Setup.state_descriptor
+  val empty_descriptor : unit -> descriptor
+
   (** 'a MUST be purely functional, i.e. backtracking is implemented by using
    * an old binding for 'a.
    * This limitation can be lifted if there is user request. *)
   type 'a component
 
   val declare :
+    descriptor:descriptor ->
     name:string ->
     pp:(Format.formatter -> 'a -> unit) ->
     init:(unit -> 'a) ->
