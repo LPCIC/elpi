@@ -37,7 +37,7 @@ module Setup : sig
   (* State extensions see {!module:State} *)
   type state_descriptor
 
-  (* Other extensions see {!module:Quotations}  {!module:Compiler} *)
+  (* Other extensions see {!module:Quotations}  {!module:RawData} *)
   type hooks_descriptor
 
   (* Built-in predicates, see {!module:BuiltIn} *)
