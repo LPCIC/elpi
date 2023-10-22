@@ -3192,7 +3192,7 @@ let exect_builtin_predicate c ~depth idx (gid[@trace]) args =
     let constraints = !CS.Ugly.delayed in
     let state = !CS.state  in
     let state, gs = FFI.call b ~depth (local_prog idx) constraints state args in
-    let state, gs = !Data.Conversion.extra_goals_postprocessing gs state in
+    let state, gs = State.get Data.Conversion.extra_goals_postprocessing state gs state in
     CS.state := state;
     List.map Data.Conversion.term_of_extra_goal gs
 ;;

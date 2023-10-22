@@ -750,13 +750,26 @@ end (* }}} *)
 
 module Quotation = struct
 
-  type quotation = depth:int -> State.t -> Loc.t -> string -> State.t * term
-  let named_quotations = ref StrMap.empty
-  let default_quotation = ref None
-  
-  let set_default_quotation f = default_quotation := Some f
-  let register_named_quotation ~name:n f =
-    named_quotations := StrMap.add n f !named_quotations
+  let named_quotations : Hooks.quotation StrMap.t State.component = State.declare
+    ~descriptor:elpi_state_descriptor
+    ~name:"elpi:named_quotations"
+    ~pp:(fun _ _ -> ())
+    ~clause_compilation_is_over:(fun b -> b)
+    ~goal_compilation_begins:(fun b -> b)
+    ~goal_compilation_is_over:(fun ~args:_ b -> Some b)
+    ~compilation_is_over:(fun x -> Some x)
+    ~execution_is_over:(fun x -> Some x)
+    ~init:(fun () -> StrMap.empty)
+  let default_quotation : Hooks.quotation option State.component = State.declare
+    ~descriptor:elpi_state_descriptor
+    ~name:"elpi:default_quotation"
+    ~pp:(fun _ _ -> ())
+    ~clause_compilation_is_over:(fun b -> b)
+    ~goal_compilation_begins:(fun b -> b)
+    ~goal_compilation_is_over:(fun ~args:_ b -> Some b)
+    ~compilation_is_over:(fun x -> Some x)
+    ~execution_is_over:(fun x -> Some x)
+    ~init:(fun () -> None)
 
 end
 
@@ -774,30 +787,36 @@ module CustomFunctorCompilation = struct
     let len = String.length s in
     len > 2 && s.[0] == '`' && s.[len-1] == '`'
 
-  let singlequote = ref None
-  let backtick = ref None
+  let singlequote : (State.t -> F.t -> State.t * term) option State.component = State.declare
+  ~descriptor:elpi_state_descriptor
+  ~name:"elpi:singlequote"
+  ~pp:(fun _ _ -> ())
+  ~clause_compilation_is_over:(fun b -> b)
+  ~goal_compilation_begins:(fun b -> b)
+  ~goal_compilation_is_over:(fun ~args:_ b -> Some b)
+  ~compilation_is_over:(fun x -> Some x)
+  ~execution_is_over:(fun x -> Some x)
+  ~init:(fun () -> None)
 
-  let declare_singlequote_compilation name f =
-    match !singlequote with
-    | None -> singlequote := Some(name,f)
-    | Some(oldname,_) ->
-         error("Only one custom compilation of 'ident' is supported. Current: "
-           ^ oldname ^ ", new: " ^ name)
-  let declare_backtick_compilation name f =
-    match !backtick with
-    | None -> backtick := Some(name,f)
-    | Some(oldname,_) ->
-         error("Only one custom compilation of `ident` is supported. Current: "
-           ^ oldname ^ ", new: " ^ name)
+  let backtick  : (State.t -> F.t -> State.t * term) option State.component = State.declare
+  ~descriptor:elpi_state_descriptor
+  ~name:"elpi:backtick"
+  ~pp:(fun _ _ -> ())
+  ~clause_compilation_is_over:(fun b -> b)
+  ~goal_compilation_begins:(fun b -> b)
+  ~goal_compilation_is_over:(fun ~args:_ b -> Some b)
+  ~compilation_is_over:(fun x -> Some x)
+  ~execution_is_over:(fun x -> Some x)
+  ~init:(fun () -> None)
 
   let compile_singlequote state x =
-    match !singlequote with
+    match State.get singlequote state with
     | None -> let state, (_,t) = Symbols.allocate_global_symbol state x in state, t
-    | Some(_,f) -> f state x
+    | Some f -> f state x
   let compile_backtick state x =
-    match !backtick with
+    match State.get backtick state with
     | None -> let state, (_,t) = Symbols.allocate_global_symbol state x in state, t
-    | Some(_,f) -> f state x
+    | Some f -> f state x
 
 end
 
@@ -838,7 +857,7 @@ module ToDBL : sig
       State.t * preterm
 
   (* Exported for quations *)
-  val lp : quotation
+  val lp : Hooks.quotation
   val is_Arg : State.t -> term -> bool
   val mk_Arg : State.t -> name:string -> args:term list -> State.t * term
   val get_Arg : State.t -> name:string -> args:term list -> term
@@ -1070,7 +1089,8 @@ let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
         error ~loc "Applied literal"
     | Ast.Term.Quoted { Ast.Term.data; kind = None; loc } ->
          let unquote =
-           option_get ~err:"No default quotation" !default_quotation in
+           let default_quotation = State.get default_quotation state in
+           option_get ~err:"No default quotation" default_quotation in
          let state = set_mtm state (Some { macros = macro}) in
          begin try
            let state, t = unquote ~depth:lvl state loc data in
@@ -1078,7 +1098,8 @@ let preterm_of_ast ?(on_type=false) loc ~depth:arg_lvl macro state ast =
          with Elpi_parser.Parser_config.ParseError(loc,msg) -> error ~loc msg end
     | Ast.Term.Quoted { Ast.Term.data; kind = Some name; loc } ->
          let unquote =
-           try StrMap.find name !named_quotations
+           let named_quotations = State.get named_quotations state in
+           try StrMap.find name named_quotations
            with Not_found -> anomaly ("No '"^name^"' quotation") in
          let state = set_mtm state (Some { macros = macro}) in
          begin try
@@ -1140,7 +1161,7 @@ let query_preterm_of_function ~depth:_ macros state f =
   assert(is_empty_amap (get_argmap state));
   let state = set_mtm state (Some { macros }) in
   let state, (loc, main), gls = f state in
-  let state, gls = !Data.Conversion.extra_goals_postprocessing gls state in
+  let state, gls = Data.State.get Data.Conversion.extra_goals_postprocessing state gls state in
   let gls = List.map Data.Conversion.term_of_extra_goal gls in
   let term =
     match gls @ [main] with
@@ -2061,8 +2082,26 @@ let print_unit { print_units } x =
         (String.concat ", " (List.sort compare (Symbols.symbols x.symbol_table)))
 ;;
 
-let header_of_ast ~flags ~parser:p state_descriptor builtins ast : header =
+let header_of_ast ~flags ~parser:p state_descriptor hook_descriptor builtins ast : header =
   let state = D.State.init state_descriptor in
+  let state =
+    let { D.Hooks.extra_goals_postprocessing;
+          default_quotation;
+          named_quotations;
+          singlequote_compilation;
+          backtick_compilation } = hook_descriptor in
+    let state =
+      match extra_goals_postprocessing with
+      | Some x ->
+          D.State.set D.Conversion.extra_goals_postprocessing state x
+      | None -> state in
+    let state = D.State.set CustomFunctorCompilation.backtick state (Option.map snd backtick_compilation) in
+    let state = D.State.set CustomFunctorCompilation.singlequote state (Option.map snd singlequote_compilation) in
+    let state = D.State.set Quotation.default_quotation state default_quotation in
+    let state = D.State.set Quotation.named_quotations state named_quotations in
+    state
+  in
+
   let state = D.State.set D.while_compiling state true in
   let state = State.set Symbols.table state (Symbols.global_table ()) in
   let state =

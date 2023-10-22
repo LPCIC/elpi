@@ -76,8 +76,9 @@ let usage =
 ;;
 
 (* For testing purposes we declare an identity quotation *)
+let hooks = API.Quotation.new_hooks_descriptor ()
 let _ =
-  API.Quotation.register_named_quotation ~name:"elpi"
+  API.Quotation.register_named_quotation ~descriptor:hooks ~name:"elpi"
     API.Quotation.lp
 
 let _ =
@@ -138,6 +139,7 @@ let _ =
   let elpi =
     API.Setup.init
       ~legacy_parser:!legacy_parser
+      ~hooks
       ~flags:(API.Compile.to_setup_flags flags)
       ~builtins:[Builtin.std_builtins]
       ~file_resolver:(API.Parse.std_resolver ~paths ())

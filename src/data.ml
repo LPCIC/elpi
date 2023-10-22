@@ -644,8 +644,18 @@ module Conversion = struct
     | RawGoal of term
   type extra_goals = extra_goal list
   type extra_goals_postprocessing = extra_goals -> State.t -> State.t * extra_goals
-  let extra_goals_postprocessing : extra_goals_postprocessing ref = ref (fun x s -> s, x)
   
+  let extra_goals_postprocessing : extra_goals_postprocessing State.component = State.declare
+    ~descriptor:elpi_state_descriptor
+    ~name:"elpi:extra_goals_postprocessing"
+    ~pp:(fun _ _ -> ())
+    ~clause_compilation_is_over:(fun b -> b)
+    ~goal_compilation_begins:(fun b -> b)
+    ~goal_compilation_is_over:(fun ~args:_ b -> Some b)
+    ~compilation_is_over:(fun x -> Some x)
+    ~execution_is_over:(fun x -> Some x)
+    ~init:(fun () -> (); fun x s -> s, x)
+
   type ty_ast = TyName of string | TyApp of string * ty_ast * ty_ast list
   [@@deriving show]
 
@@ -779,6 +789,54 @@ let while_compiling : bool State.component = State.declare
   ~execution_is_over:(fun _ -> Some false) (* we keep it, since API.FlexibleData.Elpi.make needs it *)
   ~init:(fun () -> false)
 
+module Hooks = struct
+  
+type quotation = depth:int -> State.t -> Loc.t -> string -> State.t * term
+
+type descriptor = {
+  named_quotations : quotation StrMap.t;
+  default_quotation : quotation option;
+  singlequote_compilation : (string * (State.t -> F.t -> State.t * term)) option;
+  backtick_compilation : (string * (State.t -> F.t -> State.t * term)) option;
+  extra_goals_postprocessing: Conversion.extra_goals_postprocessing option;
+}
+
+let new_descriptor () = ref {
+  named_quotations = StrMap.empty;
+  default_quotation = None;
+  singlequote_compilation = None;
+  backtick_compilation = None;
+  extra_goals_postprocessing = None;
+}
+
+let set_extra_goals_postprocessing ~descriptor f =
+  match !descriptor with
+  | { extra_goals_postprocessing = None } ->
+     descriptor := { !descriptor with extra_goals_postprocessing = Some f }
+  | { extra_goals_postprocessing = Some _ } ->
+      error "set_extra_goals_postprocessing called twice"
+
+let declare_singlequote_compilation ~descriptor name f =
+  match !descriptor with
+  | { singlequote_compilation = None } ->
+      descriptor := { !descriptor with singlequote_compilation = Some(name,f) }
+  | { singlequote_compilation = Some(oldname,_) } ->
+        error("Only one custom compilation of 'ident' is supported. Current: "
+          ^ oldname ^ ", new: " ^ name)
+let declare_backtick_compilation ~descriptor name f =
+  match !descriptor with
+  | { backtick_compilation = None } ->
+      descriptor := { !descriptor with backtick_compilation = Some(name,f) }
+  | { backtick_compilation = Some(oldname,_) } ->
+        error("Only one custom compilation of `ident` is supported. Current: "
+          ^ oldname ^ ", new: " ^ name)
+
+let set_default_quotation ~descriptor f =
+  descriptor := { !descriptor with default_quotation = Some f }
+let register_named_quotation ~descriptor ~name:n f =
+  descriptor := { !descriptor with named_quotations = StrMap.add n f !descriptor.named_quotations }  
+
+end
 module BuiltInPredicate = struct
 
 type name = string

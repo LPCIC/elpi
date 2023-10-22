@@ -25,6 +25,7 @@ let set_trace argv =
 module Setup = struct
 
 type state_descriptor = Data.State.descriptor
+type hooks_descriptor = Data.Hooks.descriptor ref
 type builtins = Compiler.builtins
 type elpi = {
   parser : (module Parse.Parser);
@@ -33,7 +34,7 @@ type elpi = {
 }
 type flags = Compiler.flags
 
-let init ?(flags=Compiler.default_flags) ?(state=Data.State.copy_descriptor Data.elpi_state_descriptor) ~builtins ?file_resolver ?(legacy_parser=false) () : elpi =
+let init ?(flags=Compiler.default_flags) ?(state=Data.State.copy_descriptor Data.elpi_state_descriptor) ?(hooks=Data.Hooks.new_descriptor ()) ~builtins ?file_resolver ?(legacy_parser=false) () : elpi =
   (* At the moment we can only init the parser once *)
   let file_resolver =
     match file_resolver with
@@ -69,7 +70,7 @@ let init ?(flags=Compiler.default_flags) ?(state=Data.State.copy_descriptor Data
             Util.Loc.(loc.source_stop - loc.line_starts_at));
         Util.anomaly ~loc msg) in
   let header =
-    try Compiler.header_of_ast ~flags ~parser state builtins (List.concat header_src)
+    try Compiler.header_of_ast ~flags ~parser state !hooks builtins (List.concat header_src)
     with Compiler.CompileError(loc,msg) -> Util.anomaly ?loc msg in
   { parser; header; resolver = file_resolver }
 
@@ -655,7 +656,8 @@ module RawData = struct
   type Conversion.extra_goal +=
   | RawGoal = ED.Conversion.RawGoal
 
-  let set_extra_goals_postprocessing f = ED.Conversion.extra_goals_postprocessing := f
+  let set_extra_goals_postprocessing = ED.Hooks.set_extra_goals_postprocessing
+
 end
 
 module FlexibleData = struct
@@ -928,14 +930,19 @@ module RawQuery = struct
 end
 
 module Quotation = struct
+  type quotation = ED.Hooks.quotation
   include Compiler
-  let declare_backtick ~name f =
-    Compiler.CustomFunctorCompilation.declare_backtick_compilation name
+  let declare_backtick ~descriptor ~name f =
+    ED.Hooks.declare_backtick_compilation ~descriptor name
       (fun s x -> f s (EA.Func.show x))
 
-  let declare_singlequote ~name f =
-    Compiler.CustomFunctorCompilation.declare_singlequote_compilation name
+  let declare_singlequote ~descriptor ~name f =
+    ED.Hooks.declare_singlequote_compilation ~descriptor name
       (fun s x -> f s (EA.Func.show x))
+
+  let set_default_quotation = ED.Hooks.set_default_quotation
+
+  let register_named_quotation = ED.Hooks.register_named_quotation
 
   let term_at ~depth s x = Compiler.term_of_ast ~depth s x
 
@@ -945,6 +952,8 @@ module Quotation = struct
   let quote_syntax_compiletime s q =
     let s, l, t = Compiler.quote_syntax `Compiletime s q in
     s, l, t
+
+  let new_hooks_descriptor = ED.Hooks.new_descriptor
 
 end
 
