@@ -736,8 +736,7 @@ end
    need to use. *)
 module State : sig
 
-  type descriptor = Setup.state_descriptor
-  val empty_descriptor : unit -> descriptor
+  val empty_descriptor : unit -> Setup.state_descriptor
 
   (** 'a MUST be purely functional, i.e. backtracking is implemented by using
    * an old binding for 'a.
@@ -745,7 +744,7 @@ module State : sig
   type 'a component
 
   val declare :
-    descriptor:descriptor ->
+    descriptor:Setup.state_descriptor ->
     name:string ->
     pp:(Format.formatter -> 'a -> unit) ->
     init:(unit -> 'a) ->
