@@ -2083,7 +2083,7 @@ let print_unit { print_units } x =
 ;;
 
 let header_of_ast ~flags ~parser:p state_descriptor hook_descriptor builtins ast : header =
-  let state = D.State.init state_descriptor in
+  let state = D.State.(init (merge_descriptors D.elpi_state_descriptor state_descriptor)) in
   let state =
     let { D.Hooks.extra_goals_postprocessing;
           default_quotation;

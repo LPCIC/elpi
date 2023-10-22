@@ -232,7 +232,7 @@ module State : sig
 
   type descriptor
   val new_descriptor : unit -> descriptor
-  val copy_descriptor : descriptor -> descriptor
+  val merge_descriptors : descriptor -> descriptor -> descriptor
 
   (* filled in with components *)
   type 'a component
@@ -298,7 +298,14 @@ end = struct
   let descriptor { extensions = x } = x
  
   let new_descriptor () : descriptor = ref StrMap.empty
-  let copy_descriptor x = ref (!x)
+  let merge_descriptors m1 m2 =
+    ref (StrMap.merge (fun n e1 e2 ->
+      match e1, e2 with
+      | None, None -> None
+      | Some x, None -> Some x
+      | None, Some x -> Some x
+      | Some _, Some _ -> error ("The state cannot contain two components named "^n) )
+      !m1 !m2)
 
   let get name { data = t } =
     try Obj.obj (StrMap.find name t)

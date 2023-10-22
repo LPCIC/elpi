@@ -34,7 +34,7 @@ type elpi = {
 }
 type flags = Compiler.flags
 
-let init ?(flags=Compiler.default_flags) ?(state=Data.State.copy_descriptor Data.elpi_state_descriptor) ?(hooks=Data.Hooks.new_descriptor ()) ~builtins ?file_resolver ?(legacy_parser=false) () : elpi =
+let init ?(flags=Compiler.default_flags) ?(state=Data.State.new_descriptor ()) ?(hooks=Data.Hooks.new_descriptor ()) ~builtins ?file_resolver ?(legacy_parser=false) () : elpi =
   (* At the moment we can only init the parser once *)
   let file_resolver =
     match file_resolver with
@@ -902,8 +902,7 @@ end
 
 module State = struct
   include ED.State
-  let empty_descriptor () =
-    ED.State.copy_descriptor ED.elpi_state_descriptor
+  let empty_descriptor = ED.State.new_descriptor
   
   (* From now on, we pretend there is no difference between terms at
      compilation time and terms at execution time (in the API) *)
