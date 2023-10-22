@@ -1,3 +1,16 @@
+# UNRELEASED
+
+API:
+  - Change `Setup.init` takes a `~state` and `~hooks` descriptors so that
+    each `elpi` handle is completely independent.
+  - Change `State.declare` now takes a `~descriptor`
+  - New `State.empty_descriptor`
+  - Change `Quotations.register_named_quotation` now takes a `~descriptor`
+  - Change `Quotations.set_default_quotation` now takes a `~descriptor`
+  - Change `Quotations.declare_backtick` now takes a `~descriptor`
+  - Change `Quotations.declare_singlequote` now takes a `~descriptor`
+  - New `Quotations.new_hooks_descriptor`
+
 # v1.17.4 (October 2023)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.
