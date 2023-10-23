@@ -750,7 +750,7 @@ end (* }}} *)
 
 module Quotation = struct
 
-  let named_quotations : Hooks.quotation StrMap.t State.component = State.declare
+  let named_quotations : QuotationHooks.quotation StrMap.t State.component = State.declare
     ~descriptor:elpi_state_descriptor
     ~name:"elpi:named_quotations"
     ~pp:(fun _ _ -> ())
@@ -760,7 +760,7 @@ module Quotation = struct
     ~compilation_is_over:(fun x -> Some x)
     ~execution_is_over:(fun x -> Some x)
     ~init:(fun () -> StrMap.empty)
-  let default_quotation : Hooks.quotation option State.component = State.declare
+  let default_quotation : QuotationHooks.quotation option State.component = State.declare
     ~descriptor:elpi_state_descriptor
     ~name:"elpi:default_quotation"
     ~pp:(fun _ _ -> ())
@@ -857,7 +857,7 @@ module ToDBL : sig
       State.t * preterm
 
   (* Exported for quations *)
-  val lp : Hooks.quotation
+  val lp : QuotationHooks.quotation
   val is_Arg : State.t -> term -> bool
   val mk_Arg : State.t -> name:string -> args:term list -> State.t * term
   val get_Arg : State.t -> name:string -> args:term list -> term
@@ -2082,19 +2082,19 @@ let print_unit { print_units } x =
         (String.concat ", " (List.sort compare (Symbols.symbols x.symbol_table)))
 ;;
 
-let header_of_ast ~flags ~parser:p state_descriptor hook_descriptor builtins ast : header =
+let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_descriptor builtins ast : header =
   let state = D.State.(init (merge_descriptors D.elpi_state_descriptor state_descriptor)) in
   let state =
-    let { D.Hooks.extra_goals_postprocessing;
-          default_quotation;
+    match hoas_descriptor.D.HoasHooks.extra_goals_postprocessing with
+    | Some x ->
+        D.State.set D.Conversion.extra_goals_postprocessing state x
+    | None -> state in          
+  let state =
+    let { D.QuotationHooks.default_quotation;
           named_quotations;
           singlequote_compilation;
-          backtick_compilation } = hook_descriptor in
-    let state =
-      match extra_goals_postprocessing with
-      | Some x ->
-          D.State.set D.Conversion.extra_goals_postprocessing state x
-      | None -> state in
+          backtick_compilation } = quotation_descriptor in
+
     let state = D.State.set CustomFunctorCompilation.backtick state (Option.map snd backtick_compilation) in
     let state = D.State.set CustomFunctorCompilation.singlequote state (Option.map snd singlequote_compilation) in
     let state = D.State.set Quotation.default_quotation state default_quotation in

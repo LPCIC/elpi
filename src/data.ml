@@ -796,7 +796,26 @@ let while_compiling : bool State.component = State.declare
   ~execution_is_over:(fun _ -> Some false) (* we keep it, since API.FlexibleData.Elpi.make needs it *)
   ~init:(fun () -> false)
 
-module Hooks = struct
+module HoasHooks = struct
+
+type descriptor = {
+  extra_goals_postprocessing: Conversion.extra_goals_postprocessing option;
+}
+
+let new_descriptor () = ref {
+  extra_goals_postprocessing = None;
+}
+
+let set_extra_goals_postprocessing ~descriptor f =
+  match !descriptor with
+  | { extra_goals_postprocessing = None } ->
+     descriptor := { extra_goals_postprocessing = Some f }
+  | { extra_goals_postprocessing = Some _ } ->
+      error "set_extra_goals_postprocessing called twice"
+
+end
+
+module QuotationHooks = struct
   
 type quotation = depth:int -> State.t -> Loc.t -> string -> State.t * term
 
@@ -805,7 +824,6 @@ type descriptor = {
   default_quotation : quotation option;
   singlequote_compilation : (string * (State.t -> F.t -> State.t * term)) option;
   backtick_compilation : (string * (State.t -> F.t -> State.t * term)) option;
-  extra_goals_postprocessing: Conversion.extra_goals_postprocessing option;
 }
 
 let new_descriptor () = ref {
@@ -813,15 +831,7 @@ let new_descriptor () = ref {
   default_quotation = None;
   singlequote_compilation = None;
   backtick_compilation = None;
-  extra_goals_postprocessing = None;
 }
-
-let set_extra_goals_postprocessing ~descriptor f =
-  match !descriptor with
-  | { extra_goals_postprocessing = None } ->
-     descriptor := { !descriptor with extra_goals_postprocessing = Some f }
-  | { extra_goals_postprocessing = Some _ } ->
-      error "set_extra_goals_postprocessing called twice"
 
 let declare_singlequote_compilation ~descriptor name f =
   match !descriptor with

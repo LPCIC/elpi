@@ -37,8 +37,11 @@ module Setup : sig
   (* State extensions see {!module:State} *)
   type state_descriptor
 
-  (* Other extensions see {!module:Quotations}  {!module:RawData} *)
-  type hooks_descriptor
+  (* Other extensions see {!module:Quotations} *)
+  type quotations_descriptor
+
+  (* Other extensions see {!module:RawData} *)
+  type hoas_descriptor
 
   (* Built-in predicates, see {!module:BuiltIn} *)
   type builtins
@@ -67,7 +70,8 @@ module Setup : sig
   val init :
     ?flags:flags ->
     ?state:state_descriptor ->
-    ?hooks:hooks_descriptor ->
+    ?quotations:quotations_descriptor ->
+    ?hoas:hoas_descriptor ->
     builtins:builtins list ->
     ?file_resolver:(?cwd:string -> unit:string -> unit -> string) ->
     ?legacy_parser:bool ->
@@ -744,14 +748,24 @@ module State : sig
   type 'a component
 
   val declare :
-    descriptor:Setup.state_descriptor ->
     name:string ->
     pp:(Format.formatter -> 'a -> unit) ->
     init:(unit -> 'a) ->
     (* run just before the goal is compiled (but after the program is) *)
     start:('a -> 'a) ->
       'a component
+  [@@deprecated "Use [declare_component] instead"]
 
+  val declare_component :
+    ?descriptor:Setup.state_descriptor ->
+    name:string ->
+    pp:(Format.formatter -> 'a -> unit) ->
+    init:(unit -> 'a) ->
+    (* run just before the goal is compiled (but after the program is) *)
+    start:('a -> 'a) ->
+    unit ->
+      'a component
+  
   type t = Data.state
 
   val get : 'a component -> t -> 'a
@@ -1033,8 +1047,10 @@ module RawData : sig
      Since extension to the data type extra_goal are global to all elpi
      instances, this post-processing function is also global *)
   val set_extra_goals_postprocessing :
-    descriptor:Setup.hooks_descriptor ->
+    ?descriptor:Setup.hoas_descriptor ->
     (Conversion.extra_goals -> State.t -> State.t * Conversion.extra_goals) -> unit
+
+  val new_hoas_descriptor : unit -> Setup.hoas_descriptor
 
 end
 
@@ -1063,10 +1079,10 @@ module Quotation : sig
     depth:int -> State.t -> Ast.Loc.t -> string -> State.t * Data.term
 
   (** The default quotation [{{code}}] *)
-  val set_default_quotation : descriptor:Setup.hooks_descriptor -> quotation -> unit
+  val set_default_quotation : ?descriptor:Setup.quotations_descriptor -> quotation -> unit
 
   (** Named quotation [{{name:code}}] *)
-  val register_named_quotation : descriptor:Setup.hooks_descriptor -> name:string -> quotation -> unit
+  val register_named_quotation : ?descriptor:Setup.quotations_descriptor -> name:string -> quotation -> unit
 
   (** The anti-quotation to lambda Prolog *)
   val lp : quotation
@@ -1084,13 +1100,13 @@ module Quotation : sig
    * needs something that looks like a string but with a custom compilation
    * (e.g. CD.string like but with a case insensitive comparison) *)
 
-  val declare_backtick : descriptor:Setup.hooks_descriptor -> name:string ->
+  val declare_backtick : ?descriptor:Setup.quotations_descriptor -> name:string ->
     (State.t -> string -> State.t * Data.term) -> unit
 
-  val declare_singlequote : descriptor:Setup.hooks_descriptor -> name:string ->
+  val declare_singlequote : ?descriptor:Setup.quotations_descriptor -> name:string ->
     (State.t -> string -> State.t * Data.term) -> unit
 
-  val new_hooks_descriptor : unit -> Setup.hooks_descriptor
+  val new_quotations_descriptor : unit -> Setup.quotations_descriptor
 
 end
 
