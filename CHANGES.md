@@ -1,4 +1,7 @@
-# UNRELEASED
+# v1.18.0 (October 2023)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+Camlp5 8.0 or above is optional.
 
 API:
   - Change `Setup.init` takes a `?state`, `?quotations` and `?hooks` descriptors so that
