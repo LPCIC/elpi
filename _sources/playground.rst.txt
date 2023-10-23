@@ -98,57 +98,12 @@ This ``elpi`` directive should pass validation:
 
 .. code-block:: console
 
-       ocamlopt trace/runtime/.trace_ppx_runtime.objs/native/trace_ppx_runtime.{cmx,o}
-       ocamldep trace/runtime/.trace_ppx_runtime.objs/trace_ppx_runtime__Runtime.impl.d
-       ocamlopt src/.elpi.objs/native/elpi__.{cmx,o}
-       ocamldep src/.elpi.objs/elpi__Legacy_parser_proxy.impl.d
-       ocamldep src/.elpi.objs/elpi__Ptmap.impl.d
-       ocamlopt src/parser/.elpi_parser.objs/native/elpi_parser.{cmx,o}
-       ocamldep src/.elpi.objs/elpi__Builtin.impl.d
-       ocamldep src/parser/.elpi_parser.objs/elpi_parser__Parse.impl.d
-            ppx src/parser/ast.pp.ml
-            ppx src/API.pp.ml
-       ocamlopt src/parser/.elpi_parser.objs/native/elpi_parser__Parser_config.{cmx,o}
-       ocamlopt src/parser/.elpi_parser.objs/native/elpi_parser__Parse.{cmx,o}
-       ocamlopt src/.elpi.objs/native/elpi__Builtin_map.{cmx,o}
-       ocamlopt src/.elpi.objs/native/elpi__Builtin_set.{cmx,o}
-            ppx src/compiler.pp.ml
-       ocamlopt src/parser/.elpi_parser.objs/native/elpi_parser__Error_messages.{cmx,o}
-       ocamlopt src/.elpi.objs/native/elpi__Builtin_stdlib.{cmx,o}
-       ocamlopt trace/runtime/.trace_ppx_runtime.objs/native/trace_ppx_runtime__Runtime.{cmx,o}
-       ocamlopt src/.elpi.objs/native/elpi__Legacy_parser_proxy.{cmx,o}
-       ocamlopt src/parser/.elpi_parser.objs/native/elpi_parser__Lexer.{cmx,o}
-       ocamlopt src/.elpi.objs/native/elpi__Builtin_checker.{cmx,o}
-       ocamlopt src/.elpi.objs/native/elpi.{cmx,o}
-       ocamldep src/parser/.elpi_parser.objs/elpi_parser__Ast.impl.d
-       ocamldep src/.elpi.objs/elpi__API.impl.d
-       ocamlopt src/.elpi.objs/native/elpi__Ptmap.{cmx,o}
-       ocamldep src/.elpi.objs/elpi__Compiler.impl.d
-         ocamlc .elpi_REPL.eobjs/byte/dune__exe__Elpi_REPL.{cmi,cmo,cmt}
-       ocamlopt trace/runtime/trace_ppx_runtime.{a,cmxa}
-            ppx src/runtime.pp.ml
-            ppx src/runtime_trace_off.pp.ml
-       ocamldep src/.elpi.objs/elpi__Runtime.impl.d
-       ocamldep src/.elpi.objs/elpi__Runtime_trace_off.impl.d
-       ocamlopt .elpi_REPL.eobjs/native/dune__exe__Elpi_REPL.{cmx,o}
-       ocamldep src/parser/.elpi_parser.objs/elpi_parser__Grammar.impl.d
-       ocamlopt src/parser/.elpi_parser.objs/native/elpi_parser__Ast.{cmx,o}
-       ocamlopt src/.elpi.objs/native/elpi__API.{cmx,o}
-       ocamlopt src/.elpi.objs/native/elpi__Builtin.{cmx,o}
-       ocamlopt src/.elpi.objs/native/elpi__Data.{cmx,o}
-       ocamlopt src/.elpi.objs/native/elpi__Compiler.{cmx,o}
-       ocamlopt src/.elpi.objs/native/elpi__Runtime_trace_off.{cmx,o}
-       ocamlopt src/.elpi.objs/native/elpi__Runtime.{cmx,o}
-       ocamlopt src/elpi.{a,cmxa}
-       ocamlopt src/parser/.elpi_parser.objs/native/elpi_parser__Grammar.{cmx,o}
-       ocamlopt src/parser/elpi_parser.{a,cmxa}
-       ocamlopt elpi_REPL.exe
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.051
+   Typechecking time: 0.081
    
    Success:
    
@@ -196,7 +151,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.047
+   Typechecking time: 0.086
    
 **../../tests/sources/accumulate_twice2.elpi
 :**
@@ -207,7 +162,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/accumulate_twice2.elpi", line 4, column 0, character 87: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulate_twice2.elpi", line 4, column 0, character 87: 
     Warning: constant other.doomed has no declared type.
    
 
@@ -218,7 +173,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.050
+   Typechecking time: 0.090
    
 **../../tests/sources/accumulated.elpi
 :**
@@ -229,7 +184,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/accumulated.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/accumulated.elpi", line 1, column 0, character 0: 
     Warning: constant doomed has no declared type.
    
 
@@ -240,7 +195,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.053
+   Typechecking time: 0.085
    
 **../../tests/sources/ackermann.elpi
 :**
@@ -251,14 +206,14 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ackermann.elpi", line 13, column 0, character 530: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ackermann.elpi", line 13, column 0, character 530: 
     Warning: constant zero has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ackermann.elpi", line 13, column 0, character 530: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ackermann.elpi", line 13, column 0, character 530: 
     Warning: 
     constant s has no declared type. Did you mean std.spy std.spy! std.split-at std.spy-do! std.set.mem std.set.make std.set.add std.set.remove std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.cardinal std.set.elements std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.set std.set std.loc.set std.int.set std.string.set std.string.map gc.stat gc.set std.loc.set.cardinal std.loc.set.elements std.loc.set.subset std.loc.set.equal std.loc.set.diff std.loc.set.inter std.loc.set.union std.loc.set.remove std.loc.set.add std.loc.set.mem std.loc.set.empty std.int.set.cardinal std.int.set.elements std.int.set.subset std.int.set.equal std.int.set.diff std.int.set.inter std.int.set.union std.int.set.remove std.int.set.add std.int.set.mem std.int.set.empty std.string.set.cardinal std.string.set.elements std.string.set.subset std.string.set.equal std.string.set.diff std.string.set.inter std.string.set.union std.string.set.remove std.string.set.add std.string.set.mem std.string.set.empty std.string.map.bindings std.string.map.find std.string.map.remove std.string.map.add std.string.map.mem std.string.map.empty std.string.concat random.self_init rex.split ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ackermann.elpi", line 13, column 0, character 530: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ackermann.elpi", line 13, column 0, character 530: 
     Warning: constant ack has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ackermann.elpi", line 19, column 0, character 676: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ackermann.elpi", line 19, column 0, character 676: 
     Warning: V is linear: name it _V (discard) or V_ (fresh variable)
    
 
@@ -269,7 +224,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.054
+   Typechecking time: 0.099
    
    Success:
    
@@ -290,11 +245,11 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/asclause.elpi", line 5, column 0, character 36: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/asclause.elpi", line 5, column 0, character 36: 
     Warning: constant simple has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/asclause.elpi", line 2, column 0, character 1: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/asclause.elpi", line 2, column 0, character 1: 
     Warning: constant lam has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/asclause.elpi", line 2, column 0, character 1: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/asclause.elpi", line 2, column 0, character 1: 
     Warning: constant hard has no declared type.
    1
    lam c0 \ c0
@@ -307,7 +262,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.095
    
    Success:
    
@@ -328,13 +283,13 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/beta.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/beta.elpi", line 1, column 0, character 0: 
     Warning: 
     constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.map.find std.int.map.find std.string.map.find loc.fields ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/beta.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/beta.elpi", line 1, column 0, character 0: 
     Warning: 
     constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/beta.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/beta.elpi", line 1, column 0, character 0: 
     Warning: 
     constant a has no declared type. Did you mean std.assert! std.assert-ok! std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
@@ -346,7 +301,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.055
+   Typechecking time: 0.094
    
    Success:
    
@@ -369,7 +324,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/block.elpi", line 1, column 0, character 0:matching } is missing
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/block.elpi", line 1, column 0, character 0:matching } is missing
    
 **../../tests/sources/chr.elpi
 :**
@@ -380,11 +335,11 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/chr.elpi", line 7, column 0, character 133: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr.elpi", line 7, column 0, character 133: 
     Warning: constant term has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/chr.elpi", line 11, column 0, character 319: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr.elpi", line 11, column 0, character 319: 
     Warning: constant len has no declared type. Did you mean std.length ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/chr.elpi", line 28, column 0, character 761: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr.elpi", line 28, column 0, character 761: 
     Warning: constant compatible has no declared type.
    compat [term c1 (uvar frozen--504 []), term c0 (uvar frozen--505 [])] |- 
     frozen--497 [c1, c0] 
@@ -412,13 +367,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.059
+   Typechecking time: 0.098
    
    Success:
    
-   Time: 0.000
+   Time: 0.001
    
    Constraints:
     {c0} : term c0 bool ?- term (X12 c0) nat  /* suspended on X12 */
@@ -436,7 +391,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/chrGCD.elpi", line 6, column 0, character 74: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chrGCD.elpi", line 6, column 0, character 74: 
     Warning: constant gcd has no declared type.
    group 1 solved
    group 2 solved
@@ -447,9 +402,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.050
+   Typechecking time: 0.086
    
    Success:
    
@@ -470,9 +425,9 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/chrLEQ.elpi", line 7, column 0, character 238: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chrLEQ.elpi", line 7, column 0, character 238: 
     Warning: constant ltn has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/chrLEQ.elpi", line 2, column 0, character 16: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chrLEQ.elpi", line 2, column 0, character 16: 
     Warning: constant leq has no declared type.
    
 
@@ -481,9 +436,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.056
+   Typechecking time: 0.092
    
    Success:
    
@@ -511,7 +466,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.049
+   Typechecking time: 0.080
    
    Success:
    
@@ -532,9 +487,9 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/chr_nokey2.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr_nokey2.elpi", line 1, column 0, character 0: 
     Warning: constant foo has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/chr_nokey2.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr_nokey2.elpi", line 1, column 0, character 0: 
     Warning: constant bar has no declared type.
    
 
@@ -545,7 +500,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.054
+   Typechecking time: 0.094
    
    Success:
    
@@ -568,7 +523,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: CHR rule File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/chr_not_clique.elpi", line 3, column 3, character 19:: matches b which is not a constraint on which it is applied. Check the list of predicates after the "constraint" keyword.
+   Fatal error: CHR rule File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr_not_clique.elpi", line 3, column 3, character 19:: matches b which is not a constraint on which it is applied. Check the list of predicates after the "constraint" keyword.
    
 **../../tests/sources/chr_sem.elpi
 :**
@@ -579,13 +534,13 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/chr_sem.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr_sem.elpi", line 1, column 0, character 0: 
     Warning: 
     constant d has no declared type. Did you mean std.debug-print std.drop std.drop-last std.do! std.do-ok! std.loc.set.diff std.int.set.diff std.string.set.diff ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/chr_sem.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr_sem.elpi", line 1, column 0, character 0: 
     Warning: 
     constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/chr_sem.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/chr_sem.elpi", line 1, column 0, character 0: 
     Warning: 
     constant a has no declared type. Did you mean std.assert! std.assert-ok! std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    c
@@ -598,7 +553,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.055
+   Typechecking time: 0.094
    
    Success:
    
@@ -619,9 +574,9 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/conj2.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/conj2.elpi", line 1, column 0, character 0: 
     Warning: constant test2 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/conj2.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/conj2.elpi", line 1, column 0, character 0: 
     Warning: constant test1 has no declared type.
    
 
@@ -632,7 +587,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.056
+   Typechecking time: 0.089
    
    Success:
    
@@ -663,9 +618,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.051
+   Typechecking time: 0.080
    
    Success:
    
@@ -686,23 +641,23 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut.elpi", line 6, column 0, character 100: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut.elpi", line 6, column 0, character 100: 
     Warning: constant two has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut.elpi", line 8, column 0, character 108: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut.elpi", line 8, column 0, character 108: 
     Warning: constant three has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut.elpi", line 2, column 0, character 60: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut.elpi", line 2, column 0, character 60: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut.elpi", line 5, column 0, character 79: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut.elpi", line 5, column 0, character 79: 
     Warning: constant ko has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut.elpi", line 9, column 0, character 117: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut.elpi", line 9, column 0, character 117: 
     Warning: constant four has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut.elpi", line 5, column 0, character 79: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut.elpi", line 5, column 0, character 79: 
     Warning: 
     constant c has no declared type. Did you mean std.map.private.create std.set.private.create std.set.cardinal std.set.private.cardinal gc.compact trace.counter std.loc.set.cardinal std.int.set.cardinal std.string.set.cardinal std.string.concat unix.process.close ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut.elpi", line 5, column 0, character 79: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut.elpi", line 5, column 0, character 79: 
     Warning: 
     constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut.elpi", line 2, column 0, character 60: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut.elpi", line 2, column 0, character 60: 
     Warning: 
     constant a has no declared type. Did you mean std.assert! std.assert-ok! std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
@@ -714,7 +669,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.072
+   Typechecking time: 0.121
    
    Success:
    
@@ -735,22 +690,22 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut2.elpi", line 7, column 0, character 198: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut2.elpi", line 7, column 0, character 198: 
     Warning: constant x has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut2.elpi", line 11, column 0, character 240: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut2.elpi", line 11, column 0, character 240: 
     Warning: constant two has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut2.elpi", line 7, column 0, character 198: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut2.elpi", line 7, column 0, character 198: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut2.elpi", line 10, column 0, character 233: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut2.elpi", line 10, column 0, character 233: 
     Warning: constant one has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut2.elpi", line 15, column 0, character 260: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut2.elpi", line 15, column 0, character 260: 
     Warning: constant ko2 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut2.elpi", line 13, column 0, character 248: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut2.elpi", line 13, column 0, character 248: 
     Warning: constant ko1 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut2.elpi", line 7, column 0, character 198: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut2.elpi", line 7, column 0, character 198: 
     Warning: 
     constant e has no declared type. Did you mean std.exists std.exists2 std.map.private.empty std.set.private.empty std.set.elements std.set.private.elements std.loc.set.elements std.loc.set.equal std.loc.set.empty std.int.set.elements std.int.set.equal std.int.set.empty std.string.set.elements std.string.set.equal std.string.set.empty std.loc.map.empty std.int.map.empty std.string.map.empty ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut2.elpi", line 7, column 0, character 198: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut2.elpi", line 7, column 0, character 198: 
     Warning: 
     constant c has no declared type. Did you mean std.map.private.create std.set.private.create std.set.cardinal std.set.private.cardinal gc.compact trace.counter std.loc.set.cardinal std.int.set.cardinal std.string.set.cardinal std.string.concat unix.process.close ?
    
@@ -762,7 +717,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.072
+   Typechecking time: 0.119
    
    Success:
    
@@ -783,17 +738,17 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut3.elpi", line 3, column 0, character 36: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut3.elpi", line 3, column 0, character 36: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut3.elpi", line 5, column 0, character 57: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut3.elpi", line 5, column 0, character 57: 
     Warning: constant ko has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut3.elpi", line 3, column 0, character 36: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut3.elpi", line 3, column 0, character 36: 
     Warning: 
     constant c has no declared type. Did you mean std.map.private.create std.set.private.create std.set.cardinal std.set.private.cardinal gc.compact trace.counter std.loc.set.cardinal std.int.set.cardinal std.string.set.cardinal std.string.concat unix.process.close ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut3.elpi", line 3, column 0, character 36: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut3.elpi", line 3, column 0, character 36: 
     Warning: 
     constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut3.elpi", line 3, column 0, character 36: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut3.elpi", line 3, column 0, character 36: 
     Warning: 
     constant a has no declared type. Did you mean std.assert! std.assert-ok! std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
@@ -805,7 +760,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.063
+   Typechecking time: 0.102
    
    Success:
    
@@ -831,7 +786,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.046
+   Typechecking time: 0.088
    
    Success:
    
@@ -852,29 +807,29 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut5.elpi", line 6, column 0, character 108: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut5.elpi", line 6, column 0, character 108: 
     Warning: constant two has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut5.elpi", line 8, column 0, character 116: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut5.elpi", line 8, column 0, character 116: 
     Warning: constant three has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut5.elpi", line 2, column 0, character 60: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut5.elpi", line 2, column 0, character 60: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut5.elpi", line 5, column 0, character 79: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut5.elpi", line 5, column 0, character 79: 
     Warning: constant ko has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut5.elpi", line 9, column 0, character 125: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut5.elpi", line 9, column 0, character 125: 
     Warning: constant four has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut5.elpi", line 5, column 0, character 79: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut5.elpi", line 5, column 0, character 79: 
     Warning: 
     constant d has no declared type. Did you mean std.debug-print std.drop std.drop-last std.do! std.do-ok! std.loc.set.diff std.int.set.diff std.string.set.diff ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut5.elpi", line 5, column 0, character 79: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut5.elpi", line 5, column 0, character 79: 
     Warning: 
     constant c has no declared type. Did you mean std.map.private.create std.set.private.create std.set.cardinal std.set.private.cardinal gc.compact trace.counter std.loc.set.cardinal std.int.set.cardinal std.string.set.cardinal std.string.concat unix.process.close ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut5.elpi", line 5, column 0, character 79: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut5.elpi", line 5, column 0, character 79: 
     Warning: 
     constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut5.elpi", line 2, column 0, character 60: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut5.elpi", line 2, column 0, character 60: 
     Warning: 
     constant a has no declared type. Did you mean std.assert! std.assert-ok! std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut5.elpi", line 5, column 0, character 79: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut5.elpi", line 5, column 0, character 79: 
     Warning: Y is linear: name it _Y (discard) or Y_ (fresh variable)
    
 
@@ -885,7 +840,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.073
+   Typechecking time: 0.124
    
    Success:
    
@@ -906,17 +861,17 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut6.elpi", line 3, column 0, character 25: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut6.elpi", line 3, column 0, character 25: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut6.elpi", line 9, column 0, character 75: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut6.elpi", line 9, column 0, character 75: 
     Warning: constant ko has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut6.elpi", line 6, column 0, character 53: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut6.elpi", line 6, column 0, character 53: 
     Warning: 
     constant c has no declared type. Did you mean std.map.private.create std.set.private.create std.set.cardinal std.set.private.cardinal gc.compact trace.counter std.loc.set.cardinal std.int.set.cardinal std.string.set.cardinal std.string.concat unix.process.close ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut6.elpi", line 4, column 0, character 40: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut6.elpi", line 4, column 0, character 40: 
     Warning: 
     constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/cut6.elpi", line 3, column 0, character 25: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/cut6.elpi", line 3, column 0, character 25: 
     Warning: 
     constant a has no declared type. Did you mean std.assert! std.assert-ok! std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
@@ -928,7 +883,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.063
+   Typechecking time: 0.102
    
    Success:
    
@@ -954,7 +909,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.046
+   Typechecking time: 0.078
    
    Success:
    
@@ -975,9 +930,9 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/discard.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/discard.elpi", line 1, column 0, character 0: 
     Warning: constant foo has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/discard.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/discard.elpi", line 1, column 0, character 0: 
     Warning: constant bar has no declared type.
    
 
@@ -988,7 +943,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.059
+   Typechecking time: 0.089
    
    Success:
    
@@ -1009,12 +964,12 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/elpi_only_llam.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/elpi_only_llam.elpi", line 1, column 0, character 0: 
     Warning: constant x has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/elpi_only_llam.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/elpi_only_llam.elpi", line 1, column 0, character 0: 
     Warning: 
     constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.map.private.map unix.process.close unix.process.open unix.process unix.process ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/elpi_only_llam.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/elpi_only_llam.elpi", line 1, column 0, character 0: 
     Warning: 
     constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.map.find std.int.map.find std.string.map.find loc.fields ?
    
@@ -1026,7 +981,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.064
+   Typechecking time: 0.092
    Fatal error: Unification problem outside the pattern fragment. ((Data.Term.App (f, (Data.Term.Const x), [])) == (Data.Term.AppUVar (
       { Data.Term.contents = please extend this printer; uid_private = 41069 },
       0,
@@ -1051,7 +1006,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.045
+   Typechecking time: 0.078
    
    Success:
    
@@ -1072,11 +1027,11 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta.elpi", line 7, column 0, character 129: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta.elpi", line 7, column 0, character 129: 
     Warning: constant k2 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta.elpi", line 6, column 0, character 116: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta.elpi", line 6, column 0, character 116: 
     Warning: constant k1 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta.elpi", line 6, column 0, character 116: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta.elpi", line 6, column 0, character 116: 
     Warning: constant g has no declared type. Did you mean gc.get ?
    c2 \ c2
    c2 \ c2
@@ -1090,7 +1045,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.057
+   Typechecking time: 0.098
    
    Success:
    
@@ -1111,61 +1066,61 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 0, character 1064: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 0, character 1064: 
     Warning: 
     constant u has no declared type. Did you mean std.unsafe-cast std.unzip std.loc.set.union std.int.set.union std.string.set.union ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 0, character 1064: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 0, character 1064: 
     Warning: constant tests-uvar has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 59, column 0, character 1639: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 59, column 0, character 1639: 
     Warning: constant tests-as has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 73, column 0, character 2170: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 73, column 0, character 2170: 
     Warning: constant test-unif has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 89, column 0, character 2567: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 89, column 0, character 2567: 
     Warning: 
     constant c has no declared type. Did you mean std.map.private.create std.set.private.create std.set.cardinal std.set.private.cardinal gc.compact trace.counter std.loc.set.cardinal std.int.set.cardinal std.string.set.cardinal std.string.concat unix.process.close ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 17, column 0, character 237: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 17, column 0, character 237: 
     Warning: constant bar has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 59, column 0, character 1639: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 59, column 0, character 1639: 
     Error: (bar u) has type any but is applied to c3
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 97, column 0, character 2760: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 97, column 0, character 2760: 
     Error: 1 has type int but is used with type (X26 c1 -> X27)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 97, column 0, character 2760: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 97, column 0, character 2760: 
     Error: 1 has type int but is used with type (X28 c1 -> X29)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 23, column 0, character 700: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 23, column 0, character 700: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 33, column 0, character 1023: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 33, column 0, character 1023: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 34, column 0, character 1040: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 34, column 0, character 1040: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 0, character 1064: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 0, character 1064: 
     Warning: X5 is linear: name it _X5 (discard) or X5_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 0, character 1064: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 0, character 1064: 
     Warning: X4 is linear: name it _X4 (discard) or X4_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 0, character 1064: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 0, character 1064: 
     Warning: X3 is linear: name it _X3 (discard) or X3_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 0, character 1064: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 0, character 1064: 
     Warning: X2 is linear: name it _X2 (discard) or X2_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 0, character 1064: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 0, character 1064: 
     Warning: X1 is linear: name it _X1 (discard) or X1_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 0, character 1064: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 0, character 1064: 
     Warning: X01 is linear: name it _X01 (discard) or X01_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 0, character 1064: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 0, character 1064: 
     Warning: X0 is linear: name it _X0 (discard) or X0_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 0, character 1064: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 37, column 0, character 1064: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 59, column 0, character 1639: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 59, column 0, character 1639: 
     Warning: X0 is linear: name it _X0 (discard) or X0_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 73, column 0, character 2170: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 73, column 0, character 2170: 
     Warning: X5 is linear: name it _X5 (discard) or X5_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 73, column 0, character 2170: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 73, column 0, character 2170: 
     Warning: X4 is linear: name it _X4 (discard) or X4_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 73, column 0, character 2170: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 73, column 0, character 2170: 
     Warning: X3 is linear: name it _X3 (discard) or X3_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 73, column 0, character 2170: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 73, column 0, character 2170: 
     Warning: X2 is linear: name it _X2 (discard) or X2_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 73, column 0, character 2170: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 73, column 0, character 2170: 
     Warning: X1 is linear: name it _X1 (discard) or X1_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/eta_as.elpi", line 73, column 0, character 2170: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/eta_as.elpi", line 73, column 0, character 2170: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
    
 
@@ -1174,9 +1129,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.078
+   Typechecking time: 0.119
    Type error. To ignore it, pass -no-tc.
    
 **../../tests/sources/even-odd.elpi
@@ -1188,7 +1143,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/even-odd.elpi", line 19, column 0, character 395: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/even-odd.elpi", line 19, column 0, character 395: 
     Warning: Z is linear: name it _Z (discard) or Z_ (fresh variable)
    
 
@@ -1197,9 +1152,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.047
+   Typechecking time: 0.081
    
    Success:
    
@@ -1220,21 +1175,21 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/findall.elpi", line 26, column 0, character 577: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/findall.elpi", line 26, column 0, character 577: 
     Warning: constant test5 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/findall.elpi", line 16, column 0, character 281: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/findall.elpi", line 16, column 0, character 281: 
     Warning: constant test4 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/findall.elpi", line 8, column 0, character 159: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/findall.elpi", line 8, column 0, character 159: 
     Warning: constant test3 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/findall.elpi", line 7, column 0, character 95: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/findall.elpi", line 7, column 0, character 95: 
     Warning: constant test2 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/findall.elpi", line 6, column 0, character 43: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/findall.elpi", line 6, column 0, character 43: 
     Warning: constant test1 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/findall.elpi", line 6, column 0, character 43: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/findall.elpi", line 6, column 0, character 43: 
     Warning: B is linear: name it _B (discard) or B_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/findall.elpi", line 6, column 0, character 43: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/findall.elpi", line 6, column 0, character 43: 
     Warning: A is linear: name it _A (discard) or A_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/findall.elpi", line 26, column 0, character 577: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/findall.elpi", line 26, column 0, character 577: 
     Warning: Z is linear: name it _Z (discard) or Z_ (fresh variable)
    1
    2
@@ -1250,7 +1205,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.074
+   Typechecking time: 0.105
    
    Success:
    
@@ -1271,12 +1226,12 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/fragment_exit.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit.elpi", line 1, column 0, character 0: 
     Warning: 
     constant r has no declared type. Did you mean std.rev std.map.remove std.map.private.remove std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/fragment_exit.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit.elpi", line 1, column 0, character 0: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/fragment_exit.elpi", line 5, column 0, character 25: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit.elpi", line 5, column 0, character 25: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
    
 
@@ -1287,7 +1242,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.060
+   Typechecking time: 0.090
    
    Success:
    
@@ -1308,13 +1263,13 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/fragment_exit2.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit2.elpi", line 1, column 0, character 0: 
     Warning: 
     constant ignore has no declared type. Did you mean std.ignore-failure! ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/fragment_exit2.elpi", line 2, column 0, character 10: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit2.elpi", line 2, column 0, character 10: 
     Warning: 
     constant d has no declared type. Did you mean std.debug-print std.drop std.drop-last std.do! std.do-ok! std.loc.set.diff std.int.set.diff std.string.set.diff ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/fragment_exit2.elpi", line 2, column 0, character 10: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit2.elpi", line 2, column 0, character 10: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
    
 
@@ -1325,7 +1280,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.068
+   Typechecking time: 0.088
    
    Success:
    
@@ -1346,13 +1301,13 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/fragment_exit3.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit3.elpi", line 1, column 0, character 0: 
     Warning: 
     constant ignore has no declared type. Did you mean std.ignore-failure! ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/fragment_exit3.elpi", line 2, column 0, character 10: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit3.elpi", line 2, column 0, character 10: 
     Warning: 
     constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.map.find std.int.map.find std.string.map.find loc.fields ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/fragment_exit3.elpi", line 2, column 0, character 10: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/fragment_exit3.elpi", line 2, column 0, character 10: 
     Warning: 
     constant d has no declared type. Did you mean std.debug-print std.drop std.drop-last std.do! std.do-ok! std.loc.set.diff std.int.set.diff std.string.set.diff ?
    
@@ -1364,7 +1319,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.058
+   Typechecking time: 0.092
    
    Success:
    
@@ -1385,18 +1340,18 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/general_case.elpi", line 3, column 0, character 20: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/general_case.elpi", line 3, column 0, character 20: 
     Warning: 
     constant ignore has no declared type. Did you mean std.ignore-failure! ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/general_case.elpi", line 4, column 0, character 30: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/general_case.elpi", line 4, column 0, character 30: 
     Warning: constant foo has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/general_case.elpi", line 2, column 0, character 17: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/general_case.elpi", line 2, column 0, character 17: 
     Warning: 
     constant c has no declared type. Did you mean std.map.private.create std.set.private.create std.set.cardinal std.set.private.cardinal gc.compact trace.counter std.loc.set.cardinal std.int.set.cardinal std.string.set.cardinal std.string.concat unix.process.close ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/general_case.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/general_case.elpi", line 1, column 0, character 0: 
     Warning: 
     constant app has no declared type. Did you mean std.append std.appendR ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/general_case.elpi", line 5, column 0, character 55: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/general_case.elpi", line 5, column 0, character 55: 
     Warning: G is linear: name it _G (discard) or G_ (fresh variable)
    
 
@@ -1407,7 +1362,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.056
+   Typechecking time: 0.099
    
    Success:
    
@@ -1428,12 +1383,12 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/general_case2.elpi", line 3, column 0, character 20: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/general_case2.elpi", line 3, column 0, character 20: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/general_case2.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/general_case2.elpi", line 1, column 0, character 0: 
     Warning: 
     constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.map.private.map unix.process.close unix.process.open unix.process unix.process ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/general_case2.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/general_case2.elpi", line 1, column 0, character 0: 
     Warning: 
     constant c has no declared type. Did you mean std.map.private.create std.set.private.create std.set.cardinal std.set.private.cardinal gc.compact trace.counter std.loc.set.cardinal std.int.set.cardinal std.string.set.cardinal std.string.concat unix.process.close ?
    
@@ -1445,7 +1400,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.055
+   Typechecking time: 0.092
    
    Success:
    
@@ -1466,7 +1421,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/general_case3.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/general_case3.elpi", line 1, column 0, character 0: 
     Warning: 
     constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.map.find std.int.map.find std.string.map.find loc.fields ?
    
@@ -1478,7 +1433,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.051
+   Typechecking time: 0.083
    
    Success:
    
@@ -1499,35 +1454,35 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 61, column 0, character 1823: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 61, column 0, character 1823: 
     Warning: constant xnil has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 42, column 0, character 1152: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 42, column 0, character 1152: 
     Warning: constant xcons has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 40, column 0, character 1103: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 40, column 0, character 1103: 
     Warning: constant try_clause has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 20, column 0, character 574: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 20, column 0, character 574: 
     Warning: constant tru has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 65, column 0, character 2013: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 65, column 0, character 2013: 
     Warning: constant test2 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 61, column 0, character 1823: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 61, column 0, character 1823: 
     Warning: constant test1 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 27, column 0, character 633: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 27, column 0, character 633: 
     Warning: constant subst has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 21, column 0, character 588: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 21, column 0, character 588: 
     Warning: constant perp has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 14, column 0, character 396: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 14, column 0, character 396: 
     Warning: constant or has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 40, column 0, character 1103: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 40, column 0, character 1103: 
     Warning: constant memb has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 68, column 0, character 2077: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 68, column 0, character 2077: 
     Warning: [suppressing 12 warnings]
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 34, column 0, character 817: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 34, column 0, character 817: 
     Warning: T is linear: name it _T (discard) or T_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 43, column 0, character 1172: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 43, column 0, character 1172: 
     Warning: Y is linear: name it _Y (discard) or Y_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 50, column 0, character 1381: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 50, column 0, character 1381: 
     Warning: T is linear: name it _T (discard) or T_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 51, column 0, character 1445: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hc_interp.elpi", line 51, column 0, character 1445: 
     Warning: Cs is linear: name it _Cs (discard) or Cs_ (fresh variable)
    
 
@@ -1536,9 +1491,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.084
+   Typechecking time: 0.136
    
    Success:
    
@@ -1564,7 +1519,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.051
+   Typechecking time: 0.080
    
    Success:
    
@@ -1585,7 +1540,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/heap_discard.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/heap_discard.elpi", line 1, column 0, character 0: 
     Warning: Y is linear: name it _Y (discard) or Y_ (fresh variable)
    
 
@@ -1596,7 +1551,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.049
+   Typechecking time: 0.079
    
    Success:
    
@@ -1617,9 +1572,9 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ho.elpi", line 3, column 0, character 67: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ho.elpi", line 3, column 0, character 67: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/ho.elpi", line 5, column 0, character 79: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/ho.elpi", line 5, column 0, character 79: 
     Warning: 
     constant a has no declared type. Did you mean std.assert! std.assert-ok! std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
@@ -1631,7 +1586,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.050
+   Typechecking time: 0.088
    
    Success:
    
@@ -1652,7 +1607,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hollight.elpi", line 231, column 18, character 8433:
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hollight.elpi", line 231, column 18, character 8433:
    Malformed mode declaration. Example:
    mode (foo i i o).
    
@@ -1666,7 +1621,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/hollight_legacy.elpi", line 3, column 0, character 24:
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/hollight_legacy.elpi", line 3, column 0, character 24:
    Mixfix directives are not supported by this parser.
    
    The parser is based on token families.
@@ -1740,7 +1695,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.049
+   Typechecking time: 0.089
    
    Success:
    
@@ -1761,20 +1716,20 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/impl.elpi", line 3, column 0, character 31: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl.elpi", line 3, column 0, character 31: 
     Warning: 
     constant r has no declared type. Did you mean std.rev std.map.remove std.map.private.remove std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/impl.elpi", line 3, column 0, character 31: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl.elpi", line 3, column 0, character 31: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/impl.elpi", line 3, column 0, character 31: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl.elpi", line 3, column 0, character 31: 
     Warning: 
     constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.map.private.map unix.process.close unix.process.open unix.process unix.process ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/impl.elpi", line 5, column 0, character 62: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl.elpi", line 5, column 0, character 62: 
     Warning: constant ko has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/impl.elpi", line 3, column 0, character 31: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl.elpi", line 3, column 0, character 31: 
     Warning: 
     constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.map.find std.int.map.find std.string.map.find loc.fields ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/impl.elpi", line 3, column 0, character 31: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl.elpi", line 3, column 0, character 31: 
     Warning: 
     constant a has no declared type. Did you mean std.assert! std.assert-ok! std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
@@ -1786,7 +1741,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.068
+   Typechecking time: 0.106
    
    Success:
    
@@ -1807,18 +1762,18 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/impl2.elpi", line 3, column 0, character 19: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl2.elpi", line 3, column 0, character 19: 
     Warning: 
     constant r has no declared type. Did you mean std.rev std.map.remove std.map.private.remove std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/impl2.elpi", line 3, column 0, character 19: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl2.elpi", line 3, column 0, character 19: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/impl2.elpi", line 3, column 0, character 19: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl2.elpi", line 3, column 0, character 19: 
     Warning: 
     constant c has no declared type. Did you mean std.map.private.create std.set.private.create std.set.cardinal std.set.private.cardinal gc.compact trace.counter std.loc.set.cardinal std.int.set.cardinal std.string.set.cardinal std.string.concat unix.process.close ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/impl2.elpi", line 3, column 0, character 19: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl2.elpi", line 3, column 0, character 19: 
     Warning: 
     constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/impl2.elpi", line 3, column 0, character 19: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/impl2.elpi", line 3, column 0, character 19: 
     Warning: 
     constant a has no declared type. Did you mean std.assert! std.assert-ok! std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
@@ -1830,7 +1785,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.059
+   Typechecking time: 0.100
    
    Success:
    
@@ -1851,7 +1806,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/index2.elpi", line 111, column 0, character 2318: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/index2.elpi", line 111, column 0, character 2318: 
     Warning: constant iter has no declared type.
    
 
@@ -1860,13 +1815,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.059
+   Typechecking time: 0.102
    
    Success:
    
-   Time: 1.210
+   Time: 1.947
    
    Constraints:
    
@@ -1883,7 +1838,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/io_colon.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/io_colon.elpi", line 1, column 0, character 0: 
     Warning: 
     constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.map.find std.int.map.find std.string.map.find loc.fields ?
    
@@ -1895,7 +1850,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.050
+   Typechecking time: 0.084
    
    Success:
    
@@ -1916,20 +1871,20 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda.elpi", line 10, column 0, character 288: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda.elpi", line 10, column 0, character 288: 
     Warning: constant test has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda.elpi", line 7, column 0, character 186: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda.elpi", line 7, column 0, character 186: 
     Warning: constant of has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda.elpi", line 8, column 0, character 234: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda.elpi", line 8, column 0, character 234: 
     Warning: constant lam has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda.elpi", line 7, column 0, character 186: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda.elpi", line 7, column 0, character 186: 
     Warning: constant impl has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda.elpi", line 12, column 0, character 330: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda.elpi", line 12, column 0, character 330: 
     Warning: 
     constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda.elpi", line 7, column 0, character 186: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda.elpi", line 7, column 0, character 186: 
     Warning: constant appl has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda.elpi", line 12, column 0, character 330: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda.elpi", line 12, column 0, character 330: 
     Warning: 
     constant a has no declared type. Did you mean std.assert! std.assert-ok! std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
@@ -1941,7 +1896,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.069
+   Typechecking time: 0.116
    
    Success:
    
@@ -1962,17 +1917,17 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda2.elpi", line 3, column 0, character 19: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda2.elpi", line 3, column 0, character 19: 
     Warning: 
     constant r has no declared type. Did you mean std.rev std.map.remove std.map.private.remove std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda2.elpi", line 3, column 0, character 19: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda2.elpi", line 3, column 0, character 19: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda2.elpi", line 3, column 0, character 19: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda2.elpi", line 3, column 0, character 19: 
     Warning: 
     constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.map.private.map unix.process.close unix.process.open unix.process unix.process ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda2.elpi", line 5, column 0, character 41: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda2.elpi", line 5, column 0, character 41: 
     Warning: constant ko has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda2.elpi", line 5, column 0, character 41: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda2.elpi", line 5, column 0, character 41: 
     Warning: constant g has no declared type. Did you mean gc.get ?
    
 
@@ -1983,7 +1938,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.065
+   Typechecking time: 0.101
    
    Success:
    
@@ -2004,37 +1959,37 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 36, column 0, character 866: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 36, column 0, character 866: 
     Warning: constant zero has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 7, column 0, character 178: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 7, column 0, character 178: 
     Warning: constant xnil has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 6, column 0, character 122: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 6, column 0, character 122: 
     Warning: constant xcons has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 12, column 0, character 278: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 12, column 0, character 278: 
     Warning: constant x9 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 12, column 0, character 278: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 12, column 0, character 278: 
     Warning: constant x8 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 12, column 0, character 278: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 12, column 0, character 278: 
     Warning: constant x7 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 12, column 0, character 278: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 12, column 0, character 278: 
     Warning: constant x6 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 12, column 0, character 278: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 12, column 0, character 278: 
     Warning: constant x5 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 12, column 0, character 278: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 12, column 0, character 278: 
     Warning: constant x4 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 12, column 0, character 278: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 12, column 0, character 278: 
     Warning: constant x3 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 12, column 0, character 278: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 12, column 0, character 278: 
     Warning: [suppressing 29 warnings]
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 10, column 0, character 221: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 10, column 0, character 221: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 34, column 0, character 847: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 34, column 0, character 847: 
     Warning: Z is linear: name it _Z (discard) or Z_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 36, column 0, character 866: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 36, column 0, character 866: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 42, column 0, character 959: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 42, column 0, character 959: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/lambda3.elpi", line 45, column 0, character 1020: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/lambda3.elpi", line 45, column 0, character 1020: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
    
 
@@ -2043,13 +1998,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.077
+   Typechecking time: 0.131
    
    Success:
    
-   Time: 0.246
+   Time: 0.382
    
    Constraints:
    
@@ -2066,7 +2021,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/list_as_conj.elpi", line 2, column 0, character 15: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/list_as_conj.elpi", line 2, column 0, character 15: 
     Warning: 
     constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.map.find std.int.map.find std.string.map.find loc.fields ?
    a
@@ -2081,7 +2036,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.050
+   Typechecking time: 0.083
    
    Success:
    
@@ -2107,7 +2062,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.047
+   Typechecking time: 0.084
    
    Success:
    
@@ -2128,36 +2083,36 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llam.elpi", line 22, column 0, character 529: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 22, column 0, character 529: 
     Warning: constant whatever has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llam.elpi", line 22, column 0, character 529: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 22, column 0, character 529: 
     Warning: constant v has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llam.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 1, column 0, character 0: 
     Warning: 
     constant spy has no declared type. Did you mean std.spy std.spy! std.spy-do! ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llam.elpi", line 20, column 0, character 500: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 20, column 0, character 500: 
     Warning: constant prune_arg3 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llam.elpi", line 19, column 0, character 476: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 19, column 0, character 476: 
     Warning: constant prune_arg2 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llam.elpi", line 18, column 0, character 459: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 18, column 0, character 459: 
     Warning: constant prune_arg has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llam.elpi", line 22, column 0, character 529: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 22, column 0, character 529: 
     Warning: 
     constant h has no declared type. Did you mean std.map.private.height std.set.private.height ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llam.elpi", line 22, column 0, character 529: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 22, column 0, character 529: 
     Warning: 
     constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.map.find std.int.map.find std.string.map.find loc.fields ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llam.elpi", line 22, column 0, character 529: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 22, column 0, character 529: 
     Warning: constant clause3 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llam.elpi", line 15, column 0, character 400: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 15, column 0, character 400: 
     Warning: constant clause2 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llam.elpi", line 14, column 0, character 383: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 14, column 0, character 383: 
     Warning: [suppressing 2 warnings]
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llam.elpi", line 18, column 0, character 459: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 18, column 0, character 459: 
     Warning: F is linear: name it _F (discard) or F_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llam.elpi", line 19, column 0, character 476: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 19, column 0, character 476: 
     Warning: F is linear: name it _F (discard) or F_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llam.elpi", line 20, column 0, character 500: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llam.elpi", line 20, column 0, character 500: 
     Warning: F is linear: name it _F (discard) or F_ (fresh variable)
    0 test  pi c0 \ pi c1 \ X0 c1 c0 = c0 , X0 = (c0 \ c1 \ c1)
    0 test  pi c0 \ pi c1 \ c0 = X0 c1 c0 , X0 = (c0 \ c1 \ c1)
@@ -2339,13 +2294,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.081
+   Typechecking time: 0.138
    
    Success:
    
-   Time: 0.001
+   Time: 0.002
    
    Constraints:
    
@@ -2362,30 +2317,30 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 8, column 0, character 216: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 8, column 0, character 216: 
     Warning: constant zero has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 33, column 0, character 798: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 33, column 0, character 798: 
     Warning: constant watch has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 3, column 0, character 18: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 3, column 0, character 18: 
     Warning: constant term has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 9, column 0, character 231: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 9, column 0, character 231: 
     Warning: constant succ has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 29, column 0, character 710: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 29, column 0, character 710: 
     Warning: 
     constant spy has no declared type. Did you mean std.spy std.spy! std.spy-do! ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 8, column 0, character 216: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 8, column 0, character 216: 
     Warning: constant nat has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 4, column 0, character 66: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 4, column 0, character 66: 
     Warning: constant lam has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 22, column 0, character 521: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 22, column 0, character 521: 
     Warning: constant compatible has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 19, column 0, character 457: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 19, column 0, character 457: 
     Warning: constant both_or_none has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 36, column 0, character 893: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 36, column 0, character 893: 
     Warning: constant b2n has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 3, column 0, character 18: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 3, column 0, character 18: 
     Warning: [suppressing 2 warnings]
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/llamchr.elpi", line 30, column 0, character 751: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/llamchr.elpi", line 30, column 0, character 751: 
     Warning: P is linear: name it _P (discard) or P_ (fresh variable)
    X0 X1 X1 X0 nat | lam X0 c2 \ lam X1 c3 \ X2 c0 c2 c3 | 
     lam X1 c2 \ lam X0 c3 \ X2 c0 c3 c2
@@ -2403,9 +2358,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.082
+   Typechecking time: 0.135
    
    Success:
    
@@ -2426,7 +2381,7 @@ Test Bed
 
 .. code-block:: console
 
-   0.828371 + 0.039777 + 0.590119
+   1.315660 + 0.061484 + 0.945122
    
 
 .. code-block:: console
@@ -2434,13 +2389,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.048
+   Typechecking time: 0.081
    
    Success:
    
-   Time: 1.615
+   Time: 2.594
    
    Constraints:
    
@@ -2457,7 +2412,7 @@ Test Bed
 
 .. code-block:: console
 
-   4.719643 + 2.017341 + 0.260389
+   7.254493 + 3.123482 + 0.444803
    
 
 .. code-block:: console
@@ -2465,13 +2420,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.051
+   Typechecking time: 0.083
    
    Success:
    
-   Time: 7.002
+   Time: 10.831
    
    Constraints:
    
@@ -2488,7 +2443,7 @@ Test Bed
 
 .. code-block:: console
 
-   3.957750 + 1.805674 + 0.157287
+   6.480848 + 2.897013 + 0.260569
    
 
 .. code-block:: console
@@ -2496,13 +2451,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.047
+   Typechecking time: 0.083
    
    Success:
    
-   Time: 5.924
+   Time: 9.646
    
    Constraints:
    
@@ -2519,7 +2474,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/name_builtin.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/name_builtin.elpi", line 1, column 0, character 0: 
     Error: (c2) has type any but is applied to c3 c4
    
 
@@ -2530,7 +2485,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.048
+   Typechecking time: 0.081
    Type error. To ignore it, pass -no-tc.
    
 **../../tests/sources/named_clauses00.elpi
@@ -2544,7 +2499,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/named_clauses00.elpi", line 4, column 0, character 19:a clause named name1 already exists at File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/named_clauses00.elpi", line 1, column 0, character 0:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/named_clauses00.elpi", line 4, column 0, character 19:a clause named name1 already exists at File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/named_clauses00.elpi", line 1, column 0, character 0:
    
 **../../tests/sources/named_clauses01.elpi
 :**
@@ -2557,7 +2512,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/named_clauses01.elpi", line 2, column 0, character 1:unable to graft this clause: no clause named c
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/named_clauses01.elpi", line 2, column 0, character 1:unable to graft this clause: no clause named c
    
 **../../tests/sources/named_clauses02.elpi
 :**
@@ -2568,7 +2523,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/named_clauses02.elpi", line 5, column 0, character 26: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/named_clauses02.elpi", line 5, column 0, character 26: 
     Warning: 
     constant c has no declared type. Did you mean std.map.private.create std.set.private.create std.set.cardinal std.set.private.cardinal gc.compact trace.counter std.loc.set.cardinal std.int.set.cardinal std.string.set.cardinal std.string.concat unix.process.close ?
    
@@ -2580,7 +2535,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.054
+   Typechecking time: 0.085
    
    Success:
    
@@ -2601,7 +2556,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/namespaces00.elpi", line 9, column 0, character 174: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces00.elpi", line 9, column 0, character 174: 
     Warning: constant aux has no declared type. Did you mean rev.aux ?
    
 
@@ -2612,7 +2567,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.051
+   Typechecking time: 0.085
    
    Success:
    
@@ -2633,11 +2588,11 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/namespaces01.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces01.elpi", line 1, column 0, character 0: 
     Warning: constant toto has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/namespaces01.elpi", line 5, column 3, character 75: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces01.elpi", line 5, column 3, character 75: 
     Warning: constant foo.baz has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/namespaces01.elpi", line 5, column 3, character 75: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces01.elpi", line 5, column 3, character 75: 
     Warning: constant foo.bar has no declared type.
    
 
@@ -2646,9 +2601,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.058
+   Typechecking time: 0.098
    
    Success:
    
@@ -2669,11 +2624,11 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/namespaces02.elpi", line 3, column 3, character 62: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces02.elpi", line 3, column 3, character 62: 
     Warning: constant x.foo has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/namespaces00.elpi", line 9, column 0, character 174: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces00.elpi", line 9, column 0, character 174: 
     Warning: constant x.acc.main has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/namespaces00.elpi", line 9, column 0, character 174: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces00.elpi", line 9, column 0, character 174: 
     Warning: constant aux has no declared type. Did you mean x.acc.rev.aux ?
    
 
@@ -2682,9 +2637,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.056
+   Typechecking time: 0.100
    
    Success:
    
@@ -2705,19 +2660,19 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/namespaces03.elpi", line 21, column 3, character 187: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces03.elpi", line 21, column 3, character 187: 
     Warning: constant a.foo4 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/namespaces03.elpi", line 20, column 3, character 168: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces03.elpi", line 20, column 3, character 168: 
     Warning: constant a.foo3 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/namespaces03.elpi", line 4, column 3, character 37: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces03.elpi", line 4, column 3, character 37: 
     Warning: constant a.foo2 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/namespaces03.elpi", line 3, column 3, character 18: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces03.elpi", line 3, column 3, character 18: 
     Warning: constant a.foo1 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/namespaces03.elpi", line 4, column 3, character 37: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces03.elpi", line 4, column 3, character 37: 
     Warning: constant a.b.foo2 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/namespaces03.elpi", line 4, column 3, character 37: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces03.elpi", line 4, column 3, character 37: 
     Warning: constant a.b.foo1 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/namespaces03.elpi", line 3, column 3, character 18: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/namespaces03.elpi", line 3, column 3, character 18: 
     Warning: constant a.b.c.foo has no declared type.
    
 
@@ -2728,7 +2683,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.068
+   Typechecking time: 0.115
    
    Success:
    
@@ -2754,7 +2709,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.048
+   Typechecking time: 0.080
    
    Success:
    
@@ -2775,32 +2730,32 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/notation.elpi", line 13, column 0, character 122: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation.elpi", line 13, column 0, character 122: 
     Warning: constant ~z has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/notation.elpi", line 15, column 0, character 132: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation.elpi", line 15, column 0, character 132: 
     Warning: constant z has no declared type. Did you mean std.zip ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/notation.elpi", line 15, column 0, character 132: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation.elpi", line 15, column 0, character 132: 
     Warning: constant y has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/notation.elpi", line 11, column 0, character 110: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation.elpi", line 11, column 0, character 110: 
     Warning: constant xx has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/notation.elpi", line 13, column 0, character 122: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation.elpi", line 13, column 0, character 122: 
     Warning: constant x has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/notation.elpi", line 15, column 0, character 132: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation.elpi", line 15, column 0, character 132: 
     Warning: constant w has no declared type. Did you mean std.while-ok-do! ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/notation.elpi", line 11, column 0, character 110: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation.elpi", line 11, column 0, character 110: 
     Warning: constant uu has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/notation.elpi", line 11, column 0, character 110: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation.elpi", line 11, column 0, character 110: 
     Warning: constant foo has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/notation.elpi", line 17, column 0, character 151: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation.elpi", line 17, column 0, character 151: 
     Warning: 
     constant e has no declared type. Did you mean std.exists std.exists2 std.map.private.empty std.set.private.empty std.set.elements std.set.private.elements std.loc.set.elements std.loc.set.equal std.loc.set.empty std.int.set.elements std.int.set.equal std.int.set.empty std.string.set.elements std.string.set.equal std.string.set.empty std.loc.map.empty std.int.map.empty std.string.map.empty ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/notation.elpi", line 25, column 0, character 269: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation.elpi", line 25, column 0, character 269: 
     Warning: constant cd has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/notation.elpi", line 17, column 0, character 151: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation.elpi", line 17, column 0, character 151: 
     Warning: [suppressing 5 warnings]
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/notation.elpi", line 9, column 0, character 101: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation.elpi", line 9, column 0, character 101: 
     Warning: D is linear: name it _D (discard) or D_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/notation.elpi", line 9, column 0, character 101: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation.elpi", line 9, column 0, character 101: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
    a a +x [b] +y d
    
@@ -2810,9 +2765,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.077
+   Typechecking time: 0.124
    
    Success:
    
@@ -2833,7 +2788,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/notation_error.elpi", line 1, column 0, character 0:
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation_error.elpi", line 1, column 0, character 0:
    Mixfix directives are not supported by this parser.
    
    The parser is based on token families.
@@ -2897,7 +2852,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/notation_legacy.elpi", line 3, column 10, character 24:
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/notation_legacy.elpi", line 3, column 10, character 24:
    Mixfix declaration expected (Teyjus compatibility, ignored by Elpi).
    Examples:
    infixl and 30.
@@ -2914,15 +2869,15 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/patternunif.elpi", line 2, column 0, character 30: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif.elpi", line 2, column 0, character 30: 
     Warning: 
     constant s has no declared type. Did you mean std.spy std.spy! std.split-at std.spy-do! std.set.mem std.set.make std.set.add std.set.remove std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.cardinal std.set.elements std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.set std.set std.loc.set std.int.set std.string.set std.string.map gc.stat gc.set std.loc.set.cardinal std.loc.set.elements std.loc.set.subset std.loc.set.equal std.loc.set.diff std.loc.set.inter std.loc.set.union std.loc.set.remove std.loc.set.add std.loc.set.mem std.loc.set.empty std.int.set.cardinal std.int.set.elements std.int.set.subset std.int.set.equal std.int.set.diff std.int.set.inter std.int.set.union std.int.set.remove std.int.set.add std.int.set.mem std.int.set.empty std.string.set.cardinal std.string.set.elements std.string.set.subset std.string.set.equal std.string.set.diff std.string.set.inter std.string.set.union std.string.set.remove std.string.set.add std.string.set.mem std.string.set.empty std.string.map.bindings std.string.map.find std.string.map.remove std.string.map.add std.string.map.mem std.string.map.empty std.string.concat random.self_init rex.split ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/patternunif.elpi", line 2, column 0, character 30: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif.elpi", line 2, column 0, character 30: 
     Warning: 
     constant r has no declared type. Did you mean std.rev std.map.remove std.map.private.remove std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/patternunif.elpi", line 2, column 0, character 30: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif.elpi", line 2, column 0, character 30: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/patternunif.elpi", line 2, column 0, character 30: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif.elpi", line 2, column 0, character 30: 
     Warning: 
     constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.map.find std.int.map.find std.string.map.find loc.fields ?
    
@@ -2934,7 +2889,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.063
+   Typechecking time: 0.104
    
    Success:
    
@@ -2955,10 +2910,10 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/patternunif2.elpi", line 3, column 0, character 32: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif2.elpi", line 3, column 0, character 32: 
     Warning: 
     constant r has no declared type. Did you mean std.rev std.map.remove std.map.private.remove std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/patternunif2.elpi", line 2, column 0, character 18: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/patternunif2.elpi", line 2, column 0, character 18: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
    
 
@@ -2969,7 +2924,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.058
+   Typechecking time: 0.089
    
    Success:
    
@@ -2990,17 +2945,17 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pi.elpi", line 3, column 0, character 19: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi.elpi", line 3, column 0, character 19: 
     Warning: constant z has no declared type. Did you mean std.zip ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pi.elpi", line 3, column 0, character 19: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi.elpi", line 3, column 0, character 19: 
     Warning: 
     constant r has no declared type. Did you mean std.rev std.map.remove std.map.private.remove std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pi.elpi", line 3, column 0, character 19: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi.elpi", line 3, column 0, character 19: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pi.elpi", line 3, column 0, character 19: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi.elpi", line 3, column 0, character 19: 
     Warning: 
     constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.map.private.map unix.process.close unix.process.open unix.process unix.process ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pi.elpi", line 5, column 0, character 62: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi.elpi", line 5, column 0, character 62: 
     Warning: constant ko has no declared type.
    
 
@@ -3011,7 +2966,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.064
+   Typechecking time: 0.104
    
    Success:
    
@@ -3032,9 +2987,9 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pi3.elpi", line 3, column 0, character 31: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi3.elpi", line 3, column 0, character 31: 
     Warning: constant z has no declared type. Did you mean std.zip ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pi3.elpi", line 3, column 0, character 31: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi3.elpi", line 3, column 0, character 31: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
    
 
@@ -3045,7 +3000,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.058
+   Typechecking time: 0.089
    
    Success:
    
@@ -3066,19 +3021,19 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pi5.elpi", line 9, column 0, character 152: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi5.elpi", line 9, column 0, character 152: 
     Warning: 
     constant s has no declared type. Did you mean std.spy std.spy! std.split-at std.spy-do! std.set.mem std.set.make std.set.add std.set.remove std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.cardinal std.set.elements std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.set std.set std.loc.set std.int.set std.string.set std.string.map gc.stat gc.set std.loc.set.cardinal std.loc.set.elements std.loc.set.subset std.loc.set.equal std.loc.set.diff std.loc.set.inter std.loc.set.union std.loc.set.remove std.loc.set.add std.loc.set.mem std.loc.set.empty std.int.set.cardinal std.int.set.elements std.int.set.subset std.int.set.equal std.int.set.diff std.int.set.inter std.int.set.union std.int.set.remove std.int.set.add std.int.set.mem std.int.set.empty std.string.set.cardinal std.string.set.elements std.string.set.subset std.string.set.equal std.string.set.diff std.string.set.inter std.string.set.union std.string.set.remove std.string.set.add std.string.set.mem std.string.set.empty std.string.map.bindings std.string.map.find std.string.map.remove std.string.map.add std.string.map.mem std.string.map.empty std.string.concat random.self_init rex.split ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pi5.elpi", line 8, column 0, character 122: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi5.elpi", line 8, column 0, character 122: 
     Warning: 
     constant r has no declared type. Did you mean std.rev std.map.remove std.map.private.remove std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pi5.elpi", line 7, column 0, character 85: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi5.elpi", line 7, column 0, character 85: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pi5.elpi", line 3, column 0, character 33: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi5.elpi", line 3, column 0, character 33: 
     Warning: constant of has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pi5.elpi", line 5, column 0, character 56: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi5.elpi", line 5, column 0, character 56: 
     Warning: constant lam has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pi5.elpi", line 4, column 0, character 42: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pi5.elpi", line 4, column 0, character 42: 
     Warning: constant bam has no declared type.
    
 
@@ -3089,7 +3044,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.071
+   Typechecking time: 0.113
    
    Success:
    
@@ -3110,26 +3065,26 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pnf.elpi", line 91, column 0, character 3225: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pnf.elpi", line 91, column 0, character 3225: 
     Warning: constant test has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pnf.elpi", line 25, column 0, character 688: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pnf.elpi", line 25, column 0, character 688: 
     Warning: constant termp has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pnf.elpi", line 18, column 0, character 475: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pnf.elpi", line 18, column 0, character 475: 
     Warning: constant quant_free has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pnf.elpi", line 36, column 0, character 855: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pnf.elpi", line 36, column 0, character 855: 
     Warning: constant prenex has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pnf.elpi", line 37, column 0, character 891: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pnf.elpi", line 37, column 0, character 891: 
     Warning: 
     constant merge has no declared type. Did you mean std.map.private.merge std.set.private.merge ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pnf.elpi", line 20, column 0, character 508: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pnf.elpi", line 20, column 0, character 508: 
     Warning: constant atom has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pnf.elpi", line 93, column 0, character 3271: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pnf.elpi", line 93, column 0, character 3271: 
     Warning: F4 is linear: name it _F4 (discard) or F4_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pnf.elpi", line 93, column 0, character 3271: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pnf.elpi", line 93, column 0, character 3271: 
     Warning: F3 is linear: name it _F3 (discard) or F3_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pnf.elpi", line 93, column 0, character 3271: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pnf.elpi", line 93, column 0, character 3271: 
     Warning: F2 is linear: name it _F2 (discard) or F2_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/pnf.elpi", line 93, column 0, character 3271: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/pnf.elpi", line 93, column 0, character 3271: 
     Warning: F1 is linear: name it _F1 (discard) or F1_ (fresh variable)
    
 
@@ -3138,9 +3093,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.078
+   Typechecking time: 0.125
    
    Success:
    
@@ -3161,34 +3116,34 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 84, column 0, character 2748: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 84, column 0, character 2748: 
     Warning: 
     constant union has no declared type. Did you mean std.loc.set.union std.int.set.union std.string.set.union ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 77, column 0, character 2542: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 77, column 0, character 2542: 
     Warning: constant propagate has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 33, column 0, character 1118: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 33, column 0, character 1118: 
     Warning: constant mem_ has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 30, column 0, character 1008: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 30, column 0, character 1008: 
     Warning: 
     constant mem has no declared type. Did you mean std.mem! std.mem std.set.mem std.set.private.mem std.loc.set.mem std.int.set.mem std.string.set.mem std.loc.map.mem std.int.map.mem std.string.map.mem ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 129, column 0, character 3786: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 129, column 0, character 3786: 
     Warning: constant main2 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 102, column 0, character 3251: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 102, column 0, character 3251: 
     Warning: constant main1 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 28, column 0, character 958: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 28, column 0, character 958: 
     Warning: constant is_subset_ has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 23, column 0, character 729: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 23, column 0, character 729: 
     Warning: constant is_subset has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 88, column 0, character 2860: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 88, column 0, character 2860: 
     Warning: constant is_ground has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 80, column 0, character 2645: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 80, column 0, character 2645: 
     Warning: 
     constant inter has no declared type. Did you mean std.intersperse std.loc.set.inter std.int.set.inter std.string.set.inter ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 23, column 0, character 729: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 23, column 0, character 729: 
     Warning: [suppressing 18 warnings]
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 35, column 0, character 1158: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 35, column 0, character 1158: 
     Warning: Y is linear: name it _Y (discard) or Y_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 81, column 0, character 2697: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/polymorphic_variants.elpi", line 81, column 0, character 2697: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
    Type-checking ok
    Type-inference ok
@@ -3220,7 +3175,7 @@ Test Bed
    
    Compilation time: 0.002
    
-   Typechecking time: 0.104
+   Typechecking time: 0.146
    
    Success:
    
@@ -3251,40 +3206,40 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
     Warning: constant || has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
     Warning: constant x has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
     Warning: 
     constant r has no declared type. Did you mean std.rev std.map.remove std.map.private.remove std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
     Warning: 
     constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.map.private.map unix.process.close unix.process.open unix.process unix.process ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
     Warning: constant g has no declared type. Did you mean gc.get ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
     Warning: 
     constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.map.find std.int.map.find std.string.map.find loc.fields ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
     Warning: 
     constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
     Warning: 
     constant a has no declared type. Did you mean std.assert! std.assert-ok! std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
     Warning: constant ==> has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
     Warning: [suppressing 1 warnings]
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
     Error: (r X) has type prop but is used with type int
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
     Error: (, (q X) (r x)) has type prop but is used with type (list prop)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
     Warning: G is linear: name it _G (discard) or G_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/printer.elpi", line 1, column 0, character 0: 
     Warning: B is linear: name it _B (discard) or B_ (fresh variable)
    
 
@@ -3293,9 +3248,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.074
+   Typechecking time: 0.124
    Type error. To ignore it, pass -no-tc.
    
 **../../tests/sources/queens.elpi
@@ -3307,40 +3262,40 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 14, column 0, character 189: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 14, column 0, character 189: 
     Warning: constant zero has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 49, column 0, character 1240: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 49, column 0, character 1240: 
     Warning: constant xxx has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 24, column 0, character 348: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 24, column 0, character 348: 
     Warning: constant xnil has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 27, column 0, character 431: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 27, column 0, character 431: 
     Warning: constant xcons has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 27, column 0, character 431: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 27, column 0, character 431: 
     Warning: constant select has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 15, column 0, character 204: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 15, column 0, character 204: 
     Warning: 
     constant s has no declared type. Did you mean std.spy std.spy! std.split-at std.spy-do! std.set.mem std.set.make std.set.add std.set.remove std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.cardinal std.set.elements std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.set std.set std.loc.set std.int.set std.string.set std.string.map gc.stat gc.set std.loc.set.cardinal std.loc.set.elements std.loc.set.subset std.loc.set.equal std.loc.set.diff std.loc.set.inter std.loc.set.union std.loc.set.remove std.loc.set.add std.loc.set.mem std.loc.set.empty std.int.set.cardinal std.int.set.elements std.int.set.subset std.int.set.equal std.int.set.diff std.int.set.inter std.int.set.union std.int.set.remove std.int.set.add std.int.set.mem std.int.set.empty std.string.set.cardinal std.string.set.elements std.string.set.subset std.string.set.equal std.string.set.diff std.string.set.inter std.string.set.union std.string.set.remove std.string.set.add std.string.set.mem std.string.set.empty std.string.map.bindings std.string.map.find std.string.map.remove std.string.map.add std.string.map.mem std.string.map.empty std.string.concat random.self_init rex.split ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 24, column 0, character 348: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 24, column 0, character 348: 
     Warning: constant range has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 24, column 0, character 348: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 24, column 0, character 348: 
     Warning: constant queens_aux has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 24, column 0, character 348: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 24, column 0, character 348: 
     Warning: constant queens has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 52, column 0, character 1389: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 52, column 0, character 1389: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 14, column 0, character 189: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 14, column 0, character 189: 
     Warning: [suppressing 10 warnings]
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 34, column 0, character 649: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 34, column 0, character 649: 
     Warning: 
     DUMMY2 is linear: name it _DUMMY2 (discard) or DUMMY2_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 34, column 0, character 649: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 34, column 0, character 649: 
     Warning: 
     DUMMY1 is linear: name it _DUMMY1 (discard) or DUMMY1_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 54, column 0, character 1428: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 54, column 0, character 1428: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 57, column 0, character 1471: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 57, column 0, character 1471: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/queens.elpi", line 60, column 0, character 1532: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/queens.elpi", line 60, column 0, character 1532: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
    
 
@@ -3349,13 +3304,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.085
+   Typechecking time: 0.138
    
    Success:
    
-   Time: 1.029
+   Time: 1.953
    
    Constraints:
    
@@ -3372,7 +3327,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/quote_syntax.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/quote_syntax.elpi", line 1, column 0, character 0: 
     Warning: A is linear: name it _A (discard) or A_ (fresh variable)
    clause File "(quote_syntax): query", line 1, column 0, character 0: [] 
     (const main)
@@ -3383,13 +3338,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.046
+   Typechecking time: 0.081
    
    Success:
    
-   Time: 0.009
+   Time: 0.015
    
    Constraints:
    
@@ -3406,7 +3361,7 @@ Test Bed
 
 .. code-block:: console
 
-   5
+   9
    
 
 .. code-block:: console
@@ -3416,7 +3371,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.049
+   Typechecking time: 0.087
    
    Success:
    
@@ -3437,20 +3392,20 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbn.elpi", line 7, column 0, character 285: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbn.elpi", line 7, column 0, character 285: 
     Warning: constant subst has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbn.elpi", line 3, column 0, character 101: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbn.elpi", line 3, column 0, character 101: 
     Warning: constant lam has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbn.elpi", line 2, column 0, character 49: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbn.elpi", line 2, column 0, character 49: 
     Warning: constant copy has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbn.elpi", line 6, column 0, character 211: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbn.elpi", line 6, column 0, character 211: 
     Warning: constant cbn has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbn.elpi", line 2, column 0, character 49: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbn.elpi", line 2, column 0, character 49: 
     Warning: 
     constant app has no declared type. Did you mean std.append std.appendR ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbn.elpi", line 14, column 0, character 563: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbn.elpi", line 14, column 0, character 563: 
     Warning: NINE is linear: name it _NINE (discard) or NINE_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbn.elpi", line 14, column 0, character 563: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbn.elpi", line 14, column 0, character 563: 
     Warning: 
     TWELVE is linear: name it _TWELVE (discard) or TWELVE_ (fresh variable)
    
@@ -3460,13 +3415,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.069
+   Typechecking time: 0.118
    
    Success:
    
-   Time: 0.197
+   Time: 0.319
    
    Constraints:
    
@@ -3483,20 +3438,20 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 2, column 0, character 52: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 2, column 0, character 52: 
     Warning: constant lam has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 1, column 0, character 0: 
     Warning: constant copy has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 4, column 0, character 115: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 4, column 0, character 115: 
     Warning: constant cbv has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 5, column 0, character 186: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 5, column 0, character 186: 
     Warning: constant beta has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 1, column 0, character 0: 
     Warning: 
     constant app has no declared type. Did you mean std.append std.appendR ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 15, column 0, character 351: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 15, column 0, character 351: 
     Warning: NINE is linear: name it _NINE (discard) or NINE_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 15, column 0, character 351: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/reduce_cbv.elpi", line 15, column 0, character 351: 
     Warning: 
     TWELVE is linear: name it _TWELVE (discard) or TWELVE_ (fresh variable)
    
@@ -3506,13 +3461,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.068
+   Typechecking time: 0.113
    
    Success:
    
-   Time: 1.491
+   Time: 2.627
    
    Constraints:
    
@@ -3529,7 +3484,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/restriction.elpi", line 3, column 0, character 21: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/restriction.elpi", line 3, column 0, character 21: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
    
 
@@ -3538,9 +3493,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.049
+   Typechecking time: 0.079
    
 **../../tests/sources/restriction3.elpi
 :**
@@ -3551,7 +3506,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/restriction3.elpi", line 18, column 0, character 442: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/restriction3.elpi", line 18, column 0, character 442: 
     Warning: constant foo has no declared type.
    ----<<---- enter:  X0 c0 = lam c1 \ lam c2 \ X1^1 c1 c2
    ---->>---- exit:  lam c1 \ lam c2 \ X1^1 c1 c2 = lam c1 \ lam c2 \ X1^1 c1 c2
@@ -3570,7 +3525,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.050
+   Typechecking time: 0.086
    
    Success:
    
@@ -3591,10 +3546,10 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/restriction4.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/restriction4.elpi", line 1, column 0, character 0: 
     Warning: 
     constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.map.find std.int.map.find std.string.map.find loc.fields ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/restriction4.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/restriction4.elpi", line 1, column 0, character 0: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
    ----<<---- enter:  X0 c0 = f (X1^1 c1) c2 \ X2^1 c1 c2
    ---->>---- exit:  f (X3 c0) c2 \ X4 c0 c2 = f (X3 c0) c2 \ X4 c0 c2
@@ -3607,7 +3562,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.052
+   Typechecking time: 0.084
    
    Success:
    
@@ -3639,7 +3594,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.050
+   Typechecking time: 0.081
    
    Success:
    
@@ -3660,10 +3615,10 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/restriction6.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/restriction6.elpi", line 1, column 0, character 0: 
     Warning: 
     constant f has no declared type. Did you mean std.forall std.fatal-error std.fatal-error-w-data std.fold std.fold2 std.fold-map std.forall-ok std.forall2 std.filter std.flatten std.flip std.findall std.map.find std.map.private.find gc.full std.loc.map.find std.int.map.find std.string.map.find loc.fields ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/restriction6.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/restriction6.elpi", line 1, column 0, character 0: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
    ----<<---- enter:  X0 c0 = f (X1^1 c1) c2 \ c3 \ X2^2 c3
    ---->>---- exit:  f (X3 c0) c2 \ c3 \ X4^1 c3 = f (X3 c0) c2 \ c3 \ X4^1 c3
@@ -3674,9 +3629,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.049
+   Typechecking time: 0.085
    
    Success:
    
@@ -3697,27 +3652,27 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/rev.elpi", line 40, column 0, character 1827: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev.elpi", line 40, column 0, character 1827: 
     Warning: constant xnil has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/rev.elpi", line 41, column 0, character 1857: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev.elpi", line 41, column 0, character 1857: 
     Warning: constant xcons has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/rev.elpi", line 47, column 0, character 2004: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev.elpi", line 47, column 0, character 2004: 
     Warning: constant x9 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/rev.elpi", line 47, column 0, character 2004: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev.elpi", line 47, column 0, character 2004: 
     Warning: constant x8 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/rev.elpi", line 47, column 0, character 2004: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev.elpi", line 47, column 0, character 2004: 
     Warning: constant x7 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/rev.elpi", line 47, column 0, character 2004: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev.elpi", line 47, column 0, character 2004: 
     Warning: constant x6 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/rev.elpi", line 47, column 0, character 2004: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev.elpi", line 47, column 0, character 2004: 
     Warning: constant x5 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/rev.elpi", line 47, column 0, character 2004: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev.elpi", line 47, column 0, character 2004: 
     Warning: constant x4 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/rev.elpi", line 47, column 0, character 2004: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev.elpi", line 47, column 0, character 2004: 
     Warning: constant x3 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/rev.elpi", line 47, column 0, character 2004: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev.elpi", line 47, column 0, character 2004: 
     Warning: constant x2 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/rev.elpi", line 47, column 0, character 2004: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev.elpi", line 47, column 0, character 2004: 
     Warning: [suppressing 17 warnings]
    
 
@@ -3726,10 +3681,19 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.090
-   Fatal error: exception Stack overflow
+   Typechecking time: 0.130
+   
+   Success:
+   
+   Time: 0.161
+   
+   Constraints:
+   
+   
+   State:
+   
    
 **../../tests/sources/rev14.elpi
 :**
@@ -3740,27 +3704,27 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/rev14.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev14.elpi", line 1, column 0, character 0: 
     Warning: constant xnil has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/rev14.elpi", line 2, column 0, character 29: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev14.elpi", line 2, column 0, character 29: 
     Warning: constant xcons has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/rev14.elpi", line 8, column 0, character 171: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev14.elpi", line 8, column 0, character 171: 
     Warning: constant x9 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/rev14.elpi", line 8, column 0, character 171: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev14.elpi", line 8, column 0, character 171: 
     Warning: constant x8 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/rev14.elpi", line 8, column 0, character 171: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev14.elpi", line 8, column 0, character 171: 
     Warning: constant x7 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/rev14.elpi", line 8, column 0, character 171: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev14.elpi", line 8, column 0, character 171: 
     Warning: constant x6 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/rev14.elpi", line 8, column 0, character 171: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev14.elpi", line 8, column 0, character 171: 
     Warning: constant x5 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/rev14.elpi", line 8, column 0, character 171: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev14.elpi", line 8, column 0, character 171: 
     Warning: constant x4 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/rev14.elpi", line 8, column 0, character 171: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev14.elpi", line 8, column 0, character 171: 
     Warning: constant x3 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/rev14.elpi", line 8, column 0, character 171: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev14.elpi", line 8, column 0, character 171: 
     Warning: constant x2 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/rev14.elpi", line 8, column 0, character 171: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/rev14.elpi", line 8, column 0, character 171: 
     Warning: [suppressing 17 warnings]
    
 
@@ -3769,10 +3733,19 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.078
-   Fatal error: exception Stack overflow
+   Typechecking time: 0.130
+   
+   Success:
+   
+   Time: 0.162
+   
+   Constraints:
+   
+   
+   State:
+   
    
 **../../tests/sources/same_term.elpi
 :**
@@ -3788,7 +3761,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.056
+   Typechecking time: 0.080
    
    Success:
    
@@ -3809,12 +3782,12 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/self_assignment.elpi", line 3, column 0, character 23: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/self_assignment.elpi", line 3, column 0, character 23: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/self_assignment.elpi", line 5, column 0, character 33: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/self_assignment.elpi", line 5, column 0, character 33: 
     Warning: 
     constant d has no declared type. Did you mean std.debug-print std.drop std.drop-last std.do! std.do-ok! std.loc.set.diff std.int.set.diff std.string.set.diff ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/self_assignment.elpi", line 3, column 0, character 23: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/self_assignment.elpi", line 3, column 0, character 23: 
     Warning: A is linear: name it _A (discard) or A_ (fresh variable)
    
 
@@ -3825,7 +3798,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.060
+   Typechecking time: 0.089
    
    Success:
    
@@ -3846,7 +3819,7 @@ Test Bed
 
 .. code-block:: console
 
-   0.834585 + 0.046568 + 0.525300
+   1.097076 + 0.057358 + 0.750335
    
 
 .. code-block:: console
@@ -3854,13 +3827,13 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.052
+   Typechecking time: 0.082
    
    Success:
    
-   Time: 1.515
+   Time: 2.057
    
    Constraints:
    
@@ -3877,15 +3850,15 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten.elpi", line 4, column 0, character 16: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten.elpi", line 4, column 0, character 16: 
     Warning: constant b.foo has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten.elpi", line 5, column 0, character 29: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten.elpi", line 5, column 0, character 29: 
     Warning: constant b.baz has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten.elpi", line 9, column 3, character 67: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten.elpi", line 9, column 3, character 67: 
     Warning: constant b.bar.baz has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten.elpi", line 23, column 3, character 177: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten.elpi", line 23, column 3, character 177: 
     Warning: constant a.main has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten.elpi", line 23, column 3, character 177: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten.elpi", line 23, column 3, character 177: 
     Warning: constant a.bar.baz has no declared type.
    
 
@@ -3896,7 +3869,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.066
+   Typechecking time: 0.104
    
    Success:
    
@@ -3917,11 +3890,11 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten_aux2.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_aux2.elpi", line 1, column 0, character 0: 
     Warning: constant foo has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten_aux2.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_aux2.elpi", line 1, column 0, character 0: 
     Warning: constant bar has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten_aux.elpi", line 2, column 3, character 17: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_aux.elpi", line 2, column 3, character 17: 
     Warning: constant a.foo has no declared type.
    
 
@@ -3932,7 +3905,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.058
+   Typechecking time: 0.100
    
    Success:
    
@@ -3953,7 +3926,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten_aux.elpi", line 2, column 3, character 17: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_aux.elpi", line 2, column 3, character 17: 
     Warning: constant a.foo has no declared type.
    
 
@@ -3964,7 +3937,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.054
+   Typechecking time: 0.085
    
 **../../tests/sources/shorten_aux2.elpi
 :**
@@ -3975,9 +3948,9 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten_aux2.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_aux2.elpi", line 1, column 0, character 0: 
     Warning: constant foo has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten_aux2.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_aux2.elpi", line 1, column 0, character 0: 
     Warning: constant bar has no declared type.
    
 
@@ -3988,7 +3961,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.060
+   Typechecking time: 0.089
    
 **../../tests/sources/shorten_builtin.elpi
 :**
@@ -4009,7 +3982,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.047
+   Typechecking time: 0.079
    
    Success:
    
@@ -4030,17 +4003,17 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 3, column 0, character 44: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 3, column 0, character 44: 
     Warning: constant std.string.escape has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 2, column 0, character 18: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 2, column 0, character 18: 
     Warning: constant std.string.concat1 has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 1, column 0, character 0: 
     Warning: constant std.list.map has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 7, column 0, character 121: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 7, column 0, character 121: 
     Warning: E is linear: name it _E (discard) or E_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 7, column 0, character 121: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 7, column 0, character 121: 
     Warning: AB is linear: name it _AB (discard) or AB_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 7, column 0, character 121: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/shorten_trie.elpi", line 7, column 0, character 121: 
     Warning: F is linear: name it _F (discard) or F_ (fresh variable)
    
 
@@ -4051,7 +4024,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.060
+   Typechecking time: 0.097
    
    Success:
    
@@ -4082,7 +4055,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.048
+   Typechecking time: 0.081
    
    Success:
    
@@ -4111,9 +4084,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.047
+   Typechecking time: 0.081
    
    Success:
    
@@ -4134,7 +4107,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/spill_lam.elpi", line 2, column 0, character 25: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/spill_lam.elpi", line 2, column 0, character 25: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
    
 
@@ -4145,7 +4118,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.049
+   Typechecking time: 0.079
    
    Success:
    
@@ -4166,12 +4139,12 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/trace.elpi", line 2, column 0, character 1: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/trace.elpi", line 2, column 0, character 1: 
     Warning: 
     constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.map.private.map unix.process.close unix.process.open unix.process unix.process ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/trace.elpi", line 6, column 0, character 60: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/trace.elpi", line 6, column 0, character 60: 
     Warning: Y is linear: name it _Y (discard) or Y_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/trace.elpi", line 6, column 0, character 60: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/trace.elpi", line 6, column 0, character 60: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
    
 
@@ -4182,7 +4155,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.050
+   Typechecking time: 0.086
    
    Success:
    
@@ -4213,7 +4186,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.047
+   Typechecking time: 0.079
    
    Success:
    
@@ -4239,7 +4212,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.047
+   Typechecking time: 0.085
    
    Success:
    
@@ -4265,7 +4238,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.048
+   Typechecking time: 0.081
    
    Success:
    
@@ -4286,7 +4259,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/trace_findall.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/trace_findall.elpi", line 1, column 0, character 0: 
     Warning: 
     constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.map.private.map unix.process.close unix.process.open unix.process unix.process ?
    [p 1, p 2, p 3]
@@ -4299,7 +4272,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.051
+   Typechecking time: 0.085
    
    Success:
    
@@ -4320,20 +4293,20 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/trail.elpi", line 4, column 0, character 49: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/trail.elpi", line 4, column 0, character 49: 
     Warning: 
     constant r has no declared type. Did you mean std.rev std.map.remove std.map.private.remove std.map.private.remove-min-binding std.set.remove std.set.private.remove std.set.private.remove-min-binding std.loc.set.remove std.int.set.remove std.string.set.remove std.loc.map.remove std.int.map.remove std.string.map.remove rex.replace ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/trail.elpi", line 5, column 0, character 74: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/trail.elpi", line 5, column 0, character 74: 
     Warning: constant q has no declared type. Did you mean gc.quick-stat ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/trail.elpi", line 4, column 0, character 49: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/trail.elpi", line 4, column 0, character 49: 
     Warning: 
     constant p has no declared type. Did you mean std.map.private.empty std.map.private.find std.map.private.add std.map.private.remove std.map.private.bindings std.map.private.merge std.map.private.min-binding std.map.private.remove-min-binding std.map.private.bal std.map.private.create std.map.private.height std.map.private.node std.set.private.empty std.set.private.add std.set.private.remove std.set.private.merge std.set.private.min-binding std.set.private.remove-min-binding std.set.private.bal std.set.private.create std.set.private.height std.set.private.node std.set.private.mem std.set.private.cardinal std.set.private.elements std.set.private.set std.map.private.map unix.process.close unix.process.open unix.process unix.process ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/trail.elpi", line 4, column 0, character 49: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/trail.elpi", line 4, column 0, character 49: 
     Warning: constant foo has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/trail.elpi", line 7, column 0, character 110: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/trail.elpi", line 7, column 0, character 110: 
     Warning: 
     constant b has no declared type. Did you mean std.map.bindings std.map.private.bindings std.map.private.bal std.set.private.bal std.loc.map.bindings std.int.map.bindings std.string.map.bindings ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/trail.elpi", line 6, column 0, character 105: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/trail.elpi", line 6, column 0, character 105: 
     Warning: 
     constant a has no declared type. Did you mean std.assert! std.assert-ok! std.append std.appendR std.any->string std.map.add std.map.private.add std.set.add std.set.private.add std.loc.set.add std.int.set.add std.string.set.add std.loc.map.add std.int.map.add std.string.map.add ?
    
@@ -4345,7 +4318,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.068
+   Typechecking time: 0.111
    
    Success:
    
@@ -4371,7 +4344,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.047
+   Typechecking time: 0.089
    
    Success:
    
@@ -4395,9 +4368,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.049
+   Typechecking time: 0.079
    
    Success:
    
@@ -4418,15 +4391,15 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv10.elpi", line 7, column 0, character 111: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv10.elpi", line 7, column 0, character 111: 
     Error: 3 has type int but is used with type type
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv10.elpi", line 7, column 0, character 111: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv10.elpi", line 7, column 0, character 111: 
     Error: 3 has type int but is used with type (std.map.private.map X27 X26)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv10.elpi", line 7, column 0, character 111: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv10.elpi", line 7, column 0, character 111: 
     Error: 3 has type int but is used with type (foo X28)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv10.elpi", line 7, column 0, character 111: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv10.elpi", line 7, column 0, character 111: 
     Error: 3 has type int but is used with type (std.map.private.map X30 X29)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv10.elpi", line 7, column 0, character 111: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv10.elpi", line 7, column 0, character 111: 
     Error: 3 has type int but is used with type (foo X31)
    
 
@@ -4437,7 +4410,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.047
+   Typechecking time: 0.081
    Type error. To ignore it, pass -no-tc.
    
 **../../tests/sources/typeabbrv11.elpi
@@ -4449,7 +4422,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv11.elpi", line 4, column 0, character 31: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv11.elpi", line 4, column 0, character 31: 
     Error: x has type string but is used with type int
    
 
@@ -4460,7 +4433,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.047
+   Typechecking time: 0.079
    Type error. To ignore it, pass -no-tc.
    
 **../../tests/sources/typeabbrv12.elpi
@@ -4472,7 +4445,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv12.elpi", line 4, column 0, character 38: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv12.elpi", line 4, column 0, character 38: 
     Error: x has type string but is used with type y
    
 
@@ -4483,7 +4456,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.047
+   Typechecking time: 0.089
    Type error. To ignore it, pass -no-tc.
    
 **../../tests/sources/typeabbrv2.elpi
@@ -4497,7 +4470,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv2.elpi", line 6, column 0, character 39:duplicate type abbreviation for t1. Previous declaration: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv2.elpi", line 1, column 0, character 0:
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv2.elpi", line 6, column 0, character 39:duplicate type abbreviation for t1. Previous declaration: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv2.elpi", line 1, column 0, character 0:
    
 **../../tests/sources/typeabbrv3.elpi
 :**
@@ -4511,9 +4484,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.048
+   Typechecking time: 0.082
    
    Success:
    
@@ -4537,9 +4510,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.049
+   Typechecking time: 0.089
    
    Success:
    
@@ -4577,7 +4550,7 @@ Test Bed
 
    
    Parsing time: 0.000
-   Fatal error: File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/typeabbrv6.elpi", line 1, column 0, character 0:type abbreviation for x has unbound variables
+   Fatal error: File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/typeabbrv6.elpi", line 1, column 0, character 0:type abbreviation for x has unbound variables
    
 **../../tests/sources/typeabbrv7.elpi
 :**
@@ -4591,9 +4564,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.053
+   Typechecking time: 0.089
    
    Success:
    
@@ -4619,7 +4592,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.054
+   Typechecking time: 0.080
    
    Success:
    
@@ -4645,7 +4618,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.051
+   Typechecking time: 0.080
    
    Success:
    
@@ -4671,7 +4644,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.054
+   Typechecking time: 0.080
    
    Success:
    
@@ -4692,9 +4665,9 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/uvar_chr.elpi", line 17, column 0, character 438: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/uvar_chr.elpi", line 17, column 0, character 438: 
     Warning: constant copy-list has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/uvar_chr.elpi", line 28, column 0, character 731: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/uvar_chr.elpi", line 28, column 0, character 731: 
     Warning: F is linear: name it _F (discard) or F_ (fresh variable)
    lam X0
    lam c0 \ X0 c0
@@ -4705,9 +4678,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.056
+   Typechecking time: 0.091
    
    Success:
    
@@ -4728,7 +4701,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/var.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/var.elpi", line 1, column 0, character 0: 
     Warning: X10 is linear: name it _X10 (discard) or X10_ (fresh variable)
    X0 , X1 , X2 , X3 , X4 , X4 c0 c1
    
@@ -4740,7 +4713,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.048
+   Typechecking time: 0.080
    
    Success:
    
@@ -4761,7 +4734,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/variadic_declare_constraints.elpi", line 3, column 0, character 36: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/variadic_declare_constraints.elpi", line 3, column 0, character 36: 
     Warning: Z is linear: name it _Z (discard) or Z_ (fresh variable)
    
 
@@ -4772,7 +4745,7 @@ Test Bed
    
    Compilation time: 0.001
    
-   Typechecking time: 0.048
+   Typechecking time: 0.079
    
    Success:
    
@@ -4793,28 +4766,28 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/w.elpi", line 76, column 0, character 1561: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/w.elpi", line 76, column 0, character 1561: 
     Warning: constant quantify has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/w.elpi", line 5, column 0, character 105: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/w.elpi", line 5, column 0, character 105: 
     Warning: 
     constant mem has no declared type. Did you mean std.mem! std.mem std.set.mem std.set.private.mem std.loc.set.mem std.int.set.mem std.string.set.mem std.loc.map.mem std.int.map.mem std.string.map.mem ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/w.elpi", line 76, column 0, character 1561: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/w.elpi", line 76, column 0, character 1561: 
     Warning: constant generalize has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/w.elpi", line 76, column 0, character 1561: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/w.elpi", line 76, column 0, character 1561: 
     Warning: constant free-ty has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/w.elpi", line 76, column 0, character 1561: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/w.elpi", line 76, column 0, character 1561: 
     Warning: constant free-gamma has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/w.elpi", line 82, column 0, character 1693: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/w.elpi", line 82, column 0, character 1693: 
     Warning: constant free has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/w.elpi", line 1, column 0, character 0: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/w.elpi", line 1, column 0, character 0: 
     Warning: constant filter has no declared type. Did you mean std.filter ?
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/w.elpi", line 93, column 0, character 2038: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/w.elpi", line 93, column 0, character 2038: 
     Warning: constant copy-ty has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/w.elpi", line 93, column 0, character 2038: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/w.elpi", line 93, column 0, character 2038: 
     Warning: constant copy has no declared type.
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/w.elpi", line 91, column 0, character 2025: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/w.elpi", line 91, column 0, character 2025: 
     Warning: X is linear: name it _X (discard) or X_ (fresh variable)
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/w.elpi", line 107, column 0, character 2408: 
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/w.elpi", line 107, column 0, character 2408: 
     Warning: TQ is linear: name it _TQ (discard) or TQ_ (fresh variable)
    Test 1
    Typing 
@@ -4846,9 +4819,9 @@ Test Bed
    
    Parsing time: 0.000
    
-   Compilation time: 0.001
+   Compilation time: 0.002
    
-   Typechecking time: 0.088
+   Typechecking time: 0.140
    
    Success:
    
@@ -4869,7 +4842,7 @@ Test Bed
 
 .. code-block:: console
 
-   File "/home/tassi/LPCIC/elpi/docs/source/../../tests/sources/w_legacy.elpi", line 17, column 0, character 330:
+   File "/home/runner/work/elpi/elpi/docs/source/../../tests/sources/w_legacy.elpi", line 17, column 0, character 330:
    Mixfix directives are not supported by this parser.
    
    The parser is based on token families.
@@ -4931,5 +4904,5 @@ Test Bed
 
 .. code-block:: console
 
-   Fatal error: exception Failure("File /home/tassi/LPCIC/elpi/docs/source/../../tests/sources/zebra.elp not found in: /home/tassi/LPCIC/elpi/_build/default/../lib/, /home/tassi/LPCIC/elpi/_build/default/../lib/ocaml, /home/tassi/LPCIC/elpi/_build/install/default/lib, /home/tassi/LPCIC/elpi/_build/default")
+   Fatal error: exception Failure("File /home/runner/work/elpi/elpi/docs/source/../../tests/sources/zebra.elp not found in: /home/runner/work/elpi/elpi/_build/default/../lib/, /home/runner/work/elpi/elpi/_build/default/../lib/ocaml, /home/runner/work/elpi/elpi/_build/install/default/lib, /home/runner/work/elpi/elpi/_build/default")
    
