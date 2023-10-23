@@ -9,8 +9,10 @@ API:
   - Change `Quotations.register_named_quotation` now takes a `?descriptor`
   - Change `Quotations.set_default_quotation` now takes a `?descriptor`
   - Change `Quotations.declare_backtick` now takes a `?descriptor`
-  - Change `Quotations.declare_singlequote` now takes a `~descriptor`
-  - New `Quotations.new_hooks_descriptor`
+  - Change `Quotations.declare_singlequote` now takes a `?descriptor`
+  - New `Quotations.new_quotations_descriptor`
+  - Change `RawData.set_extra_goals_postprocessing` now takes a `?descriptor`
+  - New `RawData.new_hoas_descriptor`
 
 # v1.17.4 (October 2023)
 
