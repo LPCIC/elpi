@@ -1,3 +1,22 @@
+# v1.18.0 (October 2023)
+
+Requires Menhir 20211230 and OCaml 4.08 or above.
+Camlp5 8.0 or above is optional.
+
+API:
+  - Change `Setup.init` takes a `?state`, `?quotations` and `?hooks` descriptors so that
+    each `elpi` handle is completely independent.
+  - Change `State.declare` is deprecated in favor of `State.declare_component`
+  - New `State.declare_component` like `State.declare` but takes a `~descriptor`
+  - New `State.new_state_descriptor`
+  - Change `Quotations.register_named_quotation` now takes a `?descriptor`
+  - Change `Quotations.set_default_quotation` now takes a `?descriptor`
+  - Change `Quotations.declare_backtick` now takes a `?descriptor`
+  - Change `Quotations.declare_singlequote` now takes a `?descriptor`
+  - New `Quotations.new_quotations_descriptor`
+  - Change `RawData.set_extra_goals_postprocessing` now takes a `?descriptor`
+  - New `RawData.new_hoas_descriptor`
+
 # v1.17.4 (October 2023)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.

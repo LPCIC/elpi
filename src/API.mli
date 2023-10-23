@@ -34,6 +34,15 @@ end
 
 module Setup : sig
 
+  (* State extensions see {!module:State} *)
+  type state_descriptor
+
+  (* Quotation extensions see {!module:Quotations} *)
+  type quotations_descriptor
+
+  (* HOAS encoding extensions see {!module:RawData} *)
+  type hoas_descriptor
+
   (* Built-in predicates, see {!module:BuiltIn} *)
   type builtins
 
@@ -60,6 +69,9 @@ module Setup : sig
         [file_resolver]. *)
   val init :
     ?flags:flags ->
+    ?state:state_descriptor ->
+    ?quotations:quotations_descriptor ->
+    ?hoas:hoas_descriptor ->
     builtins:builtins list ->
     ?file_resolver:(?cwd:string -> unit:string -> unit -> string) ->
     ?legacy_parser:bool ->
@@ -728,6 +740,8 @@ end
    need to use. *)
 module State : sig
 
+  val new_state_descriptor : unit -> Setup.state_descriptor
+
   (** 'a MUST be purely functional, i.e. backtracking is implemented by using
    * an old binding for 'a.
    * This limitation can be lifted if there is user request. *)
@@ -740,7 +754,18 @@ module State : sig
     (* run just before the goal is compiled (but after the program is) *)
     start:('a -> 'a) ->
       'a component
+  [@@deprecated "Use [declare_component] instead"]
 
+  val declare_component :
+    ?descriptor:Setup.state_descriptor ->
+    name:string ->
+    pp:(Format.formatter -> 'a -> unit) ->
+    init:(unit -> 'a) ->
+    (* run just before the goal is compiled (but after the program is) *)
+    start:('a -> 'a) ->
+    unit ->
+      'a component
+  
   type t = Data.state
 
   val get : 'a component -> t -> 'a
@@ -1022,7 +1047,10 @@ module RawData : sig
      Since extension to the data type extra_goal are global to all elpi
      instances, this post-processing function is also global *)
   val set_extra_goals_postprocessing :
+    ?descriptor:Setup.hoas_descriptor ->
     (Conversion.extra_goals -> State.t -> State.t * Conversion.extra_goals) -> unit
+
+  val new_hoas_descriptor : unit -> Setup.hoas_descriptor
 
 end
 
@@ -1051,10 +1079,10 @@ module Quotation : sig
     depth:int -> State.t -> Ast.Loc.t -> string -> State.t * Data.term
 
   (** The default quotation [{{code}}] *)
-  val set_default_quotation : quotation -> unit
+  val set_default_quotation : ?descriptor:Setup.quotations_descriptor -> quotation -> unit
 
   (** Named quotation [{{name:code}}] *)
-  val register_named_quotation : name:string -> quotation -> unit
+  val register_named_quotation : ?descriptor:Setup.quotations_descriptor -> name:string -> quotation -> unit
 
   (** The anti-quotation to lambda Prolog *)
   val lp : quotation
@@ -1072,11 +1100,13 @@ module Quotation : sig
    * needs something that looks like a string but with a custom compilation
    * (e.g. CD.string like but with a case insensitive comparison) *)
 
-  val declare_backtick : name:string ->
+  val declare_backtick : ?descriptor:Setup.quotations_descriptor -> name:string ->
     (State.t -> string -> State.t * Data.term) -> unit
 
-  val declare_singlequote : name:string ->
+  val declare_singlequote : ?descriptor:Setup.quotations_descriptor -> name:string ->
     (State.t -> string -> State.t * Data.term) -> unit
+
+  val new_quotations_descriptor : unit -> Setup.quotations_descriptor
 
 end
 

@@ -24,6 +24,14 @@ let set_trace argv =
 
 module Setup = struct
 
+type state_descriptor = Data.State.descriptor
+type quotations_descriptor = Data.QuotationHooks.descriptor ref
+type hoas_descriptor = Data.HoasHooks.descriptor ref
+
+let default_state_descriptor = Data.State.new_descriptor ()
+let default_quotations_descriptor = Data.QuotationHooks.new_descriptor ()
+let default_hoas_descriptor = Data.HoasHooks.new_descriptor ()
+
 type builtins = Compiler.builtins
 type elpi = {
   parser : (module Parse.Parser);
@@ -32,7 +40,7 @@ type elpi = {
 }
 type flags = Compiler.flags
 
-let init ?(flags=Compiler.default_flags) ~builtins ?file_resolver ?(legacy_parser=false) () : elpi =
+let init ?(flags=Compiler.default_flags) ?(state=default_state_descriptor) ?(quotations=default_quotations_descriptor) ?(hoas=default_hoas_descriptor) ~builtins ?file_resolver ?(legacy_parser=false) () : elpi =
   (* At the moment we can only init the parser once *)
   let file_resolver =
     match file_resolver with
@@ -68,7 +76,7 @@ let init ?(flags=Compiler.default_flags) ~builtins ?file_resolver ?(legacy_parse
             Util.Loc.(loc.source_stop - loc.line_starts_at));
         Util.anomaly ~loc msg) in
   let header =
-    try Compiler.header_of_ast ~flags ~parser builtins (List.concat header_src)
+    try Compiler.header_of_ast ~flags ~parser state !quotations !hoas builtins (List.concat header_src)
     with Compiler.CompileError(loc,msg) -> Util.anomaly ?loc msg in
   { parser; header; resolver = file_resolver }
 
@@ -503,7 +511,7 @@ module Elpi = struct
 
   (* This is to hide to the client the fact that Args change representation
       after compilation *)
-  let uvk = ED.State.declare ~name:"elpi:uvk" ~pp:(Util.StrMap.pp pp)
+  let uvk = ED.State.declare ~descriptor:ED.elpi_state_descriptor ~name:"elpi:uvk" ~pp:(Util.StrMap.pp pp)
     ~clause_compilation_is_over:(fun x -> Util.StrMap.empty)
     ~goal_compilation_begins:(fun x -> Util.StrMap.empty)
     ~goal_compilation_is_over:(fun ~args x ->
@@ -654,7 +662,10 @@ module RawData = struct
   type Conversion.extra_goal +=
   | RawGoal = ED.Conversion.RawGoal
 
-  let set_extra_goals_postprocessing f = ED.Conversion.extra_goals_postprocessing := f
+  let set_extra_goals_postprocessing ?(descriptor=Setup.default_hoas_descriptor) x = ED.HoasHooks.set_extra_goals_postprocessing ~descriptor x
+
+  let new_hoas_descriptor = ED.HoasHooks.new_descriptor
+
 end
 
 module FlexibleData = struct
@@ -746,7 +757,10 @@ module FlexibleData = struct
 
     let show m = Format.asprintf "%a" pp m
 
-    let uvmap = ED.State.declare ~name:(Printf.sprintf "elpi:uvm:%d" uvn) ~pp
+    let uvmap =
+      ED.State.declare
+      ~descriptor:ED.elpi_state_descriptor
+      ~name:(Printf.sprintf "elpi:uvm:%d" uvn) ~pp
       ~clause_compilation_is_over:(fun x -> empty)
       ~goal_compilation_begins:(fun x -> x)
       ~goal_compilation_is_over:(fun ~args { h2e; e2h_compile; e2h_run } ->
@@ -896,16 +910,26 @@ end
 
 module State = struct
   include ED.State
+  let new_state_descriptor = ED.State.new_descriptor
+  
   (* From now on, we pretend there is no difference between terms at
      compilation time and terms at execution time (in the API) *)
   let declare ~name ~pp ~init ~start =
-    declare ~name ~pp ~init
+    ED.State.declare ~descriptor:Setup.default_state_descriptor ~name ~pp ~init
       ~clause_compilation_is_over:(fun x -> x)
       ~goal_compilation_begins:(fun x -> start x)
       ~goal_compilation_is_over:(fun ~args:_ x -> Some x)
       ~compilation_is_over:(fun x -> Some x)
       ~execution_is_over:(fun x -> Some x)
 
+  let declare_component ?(descriptor=Setup.default_state_descriptor) ~name ~pp ~init ~start () =
+    ED.State.declare ~descriptor ~name ~pp ~init
+      ~clause_compilation_is_over:(fun x -> x)
+      ~goal_compilation_begins:(fun x -> start x)
+      ~goal_compilation_is_over:(fun ~args:_ x -> Some x)
+      ~compilation_is_over:(fun x -> Some x)
+      ~execution_is_over:(fun x -> Some x)
+    
 end
 
 
@@ -921,14 +945,19 @@ module RawQuery = struct
 end
 
 module Quotation = struct
+  type quotation = ED.QuotationHooks.quotation
   include Compiler
-  let declare_backtick ~name f =
-    Compiler.CustomFunctorCompilation.declare_backtick_compilation name
+  let declare_backtick ?(descriptor=Setup.default_quotations_descriptor) ~name f =
+    ED.QuotationHooks.declare_backtick_compilation ~descriptor name
       (fun s x -> f s (EA.Func.show x))
 
-  let declare_singlequote ~name f =
-    Compiler.CustomFunctorCompilation.declare_singlequote_compilation name
+  let declare_singlequote ?(descriptor=Setup.default_quotations_descriptor) ~name f =
+    ED.QuotationHooks.declare_singlequote_compilation ~descriptor name
       (fun s x -> f s (EA.Func.show x))
+
+  let set_default_quotation ?(descriptor=Setup.default_quotations_descriptor) x = ED.QuotationHooks.set_default_quotation ~descriptor x
+
+  let register_named_quotation ?(descriptor=Setup.default_quotations_descriptor) ~name x  = ED.QuotationHooks.register_named_quotation ~descriptor ~name x
 
   let term_at ~depth s x = Compiler.term_of_ast ~depth s x
 
@@ -938,6 +967,8 @@ module Quotation = struct
   let quote_syntax_compiletime s q =
     let s, l, t = Compiler.quote_syntax `Compiletime s q in
     s, l, t
+
+  let new_quotations_descriptor = ED.QuotationHooks.new_descriptor
 
 end
 
