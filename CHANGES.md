@@ -1,13 +1,14 @@
 # UNRELEASED
 
 API:
-  - Change `Setup.init` takes a `~state` and `~hooks` descriptors so that
+  - Change `Setup.init` takes a `~state`, `~quotations` and `~hooks` descriptors so that
     each `elpi` handle is completely independent.
-  - Change `State.declare` now takes a `~descriptor`
+  - Change `State.declare` is deprecated in favor of `State.declare_component`
+  - New `State.declare_component` like `State.declare` but takes a `~descriptor`
   - New `State.empty_descriptor`
-  - Change `Quotations.register_named_quotation` now takes a `~descriptor`
-  - Change `Quotations.set_default_quotation` now takes a `~descriptor`
-  - Change `Quotations.declare_backtick` now takes a `~descriptor`
+  - Change `Quotations.register_named_quotation` now takes a `?descriptor`
+  - Change `Quotations.set_default_quotation` now takes a `?descriptor`
+  - Change `Quotations.declare_backtick` now takes a `?descriptor`
   - Change `Quotations.declare_singlequote` now takes a `~descriptor`
   - New `Quotations.new_hooks_descriptor`
 
