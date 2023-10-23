@@ -37,10 +37,10 @@ module Setup : sig
   (* State extensions see {!module:State} *)
   type state_descriptor
 
-  (* Other extensions see {!module:Quotations} *)
+  (* Quotation extensions see {!module:Quotations} *)
   type quotations_descriptor
 
-  (* Other extensions see {!module:RawData} *)
+  (* HOAS encoding extensions see {!module:RawData} *)
   type hoas_descriptor
 
   (* Built-in predicates, see {!module:BuiltIn} *)
