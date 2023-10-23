@@ -910,7 +910,7 @@ end
 
 module State = struct
   include ED.State
-  let empty_descriptor = ED.State.new_descriptor
+  let new_state_descriptor = ED.State.new_descriptor
   
   (* From now on, we pretend there is no difference between terms at
      compilation time and terms at execution time (in the API) *)

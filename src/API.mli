@@ -740,7 +740,7 @@ end
    need to use. *)
 module State : sig
 
-  val empty_descriptor : unit -> Setup.state_descriptor
+  val new_state_descriptor : unit -> Setup.state_descriptor
 
   (** 'a MUST be purely functional, i.e. backtracking is implemented by using
    * an old binding for 'a.
