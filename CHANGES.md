@@ -1,7 +1,7 @@
 # UNRELEASED
 
 API:
-  - Change `Setup.init` takes a `~state`, `~quotations` and `~hooks` descriptors so that
+  - Change `Setup.init` takes a `?state`, `?quotations` and `?hooks` descriptors so that
     each `elpi` handle is completely independent.
   - Change `State.declare` is deprecated in favor of `State.declare_component`
   - New `State.declare_component` like `State.declare` but takes a `~descriptor`
