@@ -5,7 +5,7 @@ API:
     each `elpi` handle is completely independent.
   - Change `State.declare` is deprecated in favor of `State.declare_component`
   - New `State.declare_component` like `State.declare` but takes a `~descriptor`
-  - New `State.empty_descriptor`
+  - New `State.new_state_descriptor`
   - Change `Quotations.register_named_quotation` now takes a `?descriptor`
   - Change `Quotations.set_default_quotation` now takes a `?descriptor`
   - Change `Quotations.declare_backtick` now takes a `?descriptor`
