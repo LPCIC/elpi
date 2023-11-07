@@ -1,3 +1,8 @@
+# UNRELEASED
+
+Library:
+  - New `std.fold-right`
+
 # v1.18.0 (October 2023)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.

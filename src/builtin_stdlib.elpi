@@ -114,6 +114,10 @@ pred fold i:list B, i:A, i:(B -> A -> A -> prop), o:A.
 fold [] A _ A.
 fold [X|XS] A F R :- F X A A1, fold XS A1 F R.
 
+pred fold-right i:list B, i:A, i:(B -> A -> A -> prop), o:A.
+fold-right [] A _ A.
+fold-right [X|XS] A F R :- fold-right XS A F A', F X A' R.
+
 pred fold2 i:list C, i:list B, i:A, i:(C -> B -> A -> A -> prop), o:A.
 fold2 [] [_|_] _ _ _ :- fatal-error "fold2 on lists of different length".
 fold2 [_|_] [] _ _ _ :- fatal-error "fold2 on lists of different length".
