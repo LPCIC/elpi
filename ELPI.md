@@ -66,7 +66,7 @@ trivial-facts :-
 ```
 
 Side note: no solution is computed for goals like `_ = something`.
-On the contrary a problem like `DummyNameUsedOnlyOnce = somthing` demands the
+On the contrary a problem like `DummyNameUsedOnlyOnce = something` demands the
 computation of the solution (even if it is not used), and hence can *fail* if
 some variable occurring in something is out of scope for `DummyNameUsedOnlyOnce`.
 
@@ -618,7 +618,7 @@ syntax `{{:name` .. `}}` where `name` is any non-space or `\n` character.
 Quotations are elaborated before run-time.
 
 The [coq-elpi](https://github.com/LPCIC/coq-elpi) software embeds elpi 
-in Coq and provides a quatation for its terms. For example
+in Coq and provides a quotation for its terms. For example
 ```prolog
 {{ nat -> bool }}
 ```

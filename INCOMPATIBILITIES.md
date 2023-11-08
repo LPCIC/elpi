@@ -1,7 +1,7 @@
 Known incompatibilities with Teyjus
 ===================================
 
-This file tries to summarise known incompatibilities between Elpi and Teyjus.
+This file tries to summarize known incompatibilities between Elpi and Teyjus.
 
 # Semantics
 
@@ -37,7 +37,7 @@ This file tries to summarise known incompatibilities between Elpi and Teyjus.
 - Module signatures are ignored.
 - Elpi accumulates each file once; Teyjus does it multiple times, that is
   always bad (all clauses are duplicated and tried multiple times, that is
-  rarely the expected behaviour).
+  rarely the expected behavior).
 - Elpi understands relative paths as in `accumulate "../foo"`: resolution
   of relative paths is done according to the path of the accumulating file
   first or, if it fails, according to the TJPATH.
