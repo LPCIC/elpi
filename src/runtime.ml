@@ -2286,10 +2286,12 @@ let ppclause f ~hd { depth; args = args; hyps = hyps } =
      (uppterm ~min_prec:(Elpi_parser.Parser_config.appl_precedence+1) depth [] ~argsdepth:0 empty_env) (C.mkAppL hd args)
      (pplist (uppterm ~min_prec:(Elpi_parser.Parser_config.appl_precedence+1) depth [] ~argsdepth:0 empty_env) ", ") hyps
 
+(** [tail_opt L] returns: [match L with [] -> [] | x :: xs -> xs] *)
 let tail_opt = function
   | [] -> []
   | _ :: xs -> xs
 
+(** [hd_opt L] returns false if L = [[]] otherwise L.(0)  *)
 let hd_opt = function
   | b :: _ -> b
   | _ -> false
@@ -2315,6 +2317,14 @@ let rec classify_clause_arg ~depth matching t =
      if hash > mustbevariablec then Rigid (hash,matching)
      else Rigid (hash+1,matching)
 
+(** 
+  [classify_clause_argno ~depth N mode L]
+  where L is the arguments of the clause.
+  Returns the classification of the Nth element of L wrt to the Nth mode. 
+*)
+(* QUESTION: why do not simply List.nth argno modes of L. I think that mode and 
+   and N should (len(L) = len(mode) < N). Is is true ? 
+*)
 let rec classify_clause_argno ~depth argno mode = function
   | [] -> Variable
   | x :: _ when argno == 0 -> classify_clause_arg ~depth (hd_opt mode) x
@@ -2331,7 +2341,11 @@ let dec_to_bin2 num =
 
 let hash_bits = Sys.int_size - 1 (* the sign *)
 
-let hash_arg_list goal hd ~depth args mode spec =
+(**
+  Hashing function for clause and queries depending on the boolean [is_goal].
+  This is done by hashing the parameters wrt to Sys.int_size - 1 (see [hash_bits])
+*)
+let hash_arg_list is_goal hd ~depth args mode spec =
   let nargs = List.(length (filter (fun x -> x > 0) spec)) in
   (* we partition equally, that may not be smart, but is simple ;-) *)
   let arg_size = hash_bits / nargs in
@@ -2368,9 +2382,9 @@ let hash_arg_list goal hd ~depth args mode spec =
           (hash size k) lor
           (shift 1 (self x)) lor
           List.(fold_left (lor) 0 (mapi (fun i x -> shift (i+2) (self x)) xs))
-      | (UVar _ | AppUVar _) when matching && goal -> hash size mustbevariablec
+      | (UVar _ | AppUVar _) when matching && is_goal -> hash size mustbevariablec
       | (UVar _ | AppUVar _) when matching -> all_1 size
-      | (UVar _ | AppUVar _) -> if goal then all_0 size else all_1 size
+      | (UVar _ | AppUVar _) -> if is_goal then all_0 size else all_1 size
       | (Arg _ | AppArg _) -> all_1 size
       | Nil -> hash size Global_symbols.nilc
       | Cons (x,xs) ->
@@ -2390,7 +2404,7 @@ let hash_arg_list goal hd ~depth args mode spec =
     in
     [%spy "dev:index:subhash" ~rid (fun fmt () ->
        Fmt.fprintf fmt "%s: %d: %s: %a"
-         (if goal then "goal" else "clause")
+         (if is_goal then "goal" else "clause")
          size
          (dec_to_bin2 h)
          (uppterm depth [] ~argsdepth:0 empty_env) arg) ()];
@@ -2399,7 +2413,7 @@ let hash_arg_list goal hd ~depth args mode spec =
   let h = aux 0 0 args mode spec in
   [%spy "dev:index:hash" ~rid (fun fmt () ->
      Fmt.fprintf fmt "%s: %s: %a"
-       (if goal then "goal" else "clause")
+       (if is_goal then "goal" else "clause")
        (dec_to_bin2 h)
        (pplist ~boxed:true (uppterm depth [] ~argsdepth:0 empty_env) " ")
       (Const hd :: args)) ()];
@@ -2408,11 +2422,20 @@ let hash_arg_list goal hd ~depth args mode spec =
 let hash_clause_arg_list = hash_arg_list false
 let hash_goal_arg_list = hash_arg_list true
 
+(* bool -> constant -> depth:constant -> term list -> bool list ->constant list -> constant *)
+let build_trie_list (is_goal : bool) (hd: constant) ~(depth: constant) 
+  (args: term list) (mode: bool list) (spec : int) : Path_trie.PathTrie.key =
+  let build_path (term : term) = 
+    match term with 
+    | _ -> [Path_trie.Variable]
+  in 
+  build_path (List.nth args spec)
+
 let add1clause ~depth m (predicate,clause) =
   match Ptmap.find predicate m with
   | TwoLevelIndex { all_clauses; argno; mode; flex_arg_clauses; arg_idx } ->
-      (* X matches both rigid and flexible terms *)
       begin match classify_clause_argno ~depth argno mode clause.args with
+      (* X: matches both rigid and flexible terms *)
       | Variable ->
         Ptmap.add predicate (TwoLevelIndex {
           argno; mode;
@@ -2421,7 +2444,7 @@ let add1clause ~depth m (predicate,clause) =
           arg_idx = Ptmap.map (fun l_rev -> clause :: l_rev) arg_idx;
         }) m
       | MustBeVariable ->
-      (* uvar matches only flexible terms (or itself at the meta level) *)
+      (* uvar: matches only flexible terms (or itself at the meta level) *)
         let l_rev =
           try Ptmap.find mustbevariablec arg_idx
           with Not_found -> flex_arg_clauses in
@@ -2432,7 +2455,7 @@ let add1clause ~depth m (predicate,clause) =
           arg_idx = Ptmap.add mustbevariablec (clause::l_rev) arg_idx;
         }) m
       | Rigid (arg_hd,matching) ->
-      (* a rigid term matches flexible terms only in unification mode *)
+      (* t: a rigid term matches flexible terms only in unification mode *)
         let l_rev =
           try Ptmap.find arg_hd arg_idx
           with Not_found -> flex_arg_clauses in
@@ -2455,6 +2478,16 @@ let add1clause ~depth m (predicate,clause) =
          time = time + 1;
          args_idx = Ptmap.add hash ((clause,time) :: clauses) args_idx
        }) m
+  | IndexWithTrie {mode; argno; args_idx} ->
+      let trie_path = build_trie_list true ~depth predicate clause.args mode argno in 
+      let clauses =
+        try Path_trie.PathTrie.find trie_path args_idx
+        with Not_found -> [] in
+      Ptmap.add predicate (IndexWithTrie {
+          mode; argno;
+          (* TODO: is the order of the clauses respected ? *)
+          args_idx = Path_trie.PathTrie.add trie_path (clause :: clauses) args_idx
+        }) m
   | exception Not_found ->
       match classify_clause_argno ~depth 0 [] clause.args with
       | Variable ->
@@ -2486,22 +2519,27 @@ let add_clauses ~depth clauses p =
 
 let make_index ~depth ~indexing ~clauses_rev:p =
   let m = C.Map.fold (fun predicate (mode, indexing) m ->
-    match indexing with
-    | Hash args ->
-      Ptmap.add predicate (BitHash {
-        args;
-        mode;
-        time = min_int;
-        args_idx = Ptmap.empty;
-      }) m
-    | MapOn argno ->
-      Ptmap.add predicate (TwoLevelIndex {
-        argno;
-        mode;
-        all_clauses = [];
-        flex_arg_clauses = [];
-        arg_idx = Ptmap.empty;
-      }) m) indexing Ptmap.empty in
+    Ptmap.add predicate 
+    begin
+      match indexing with
+      | Hash args -> BitHash {
+          args;
+          mode;
+          time = min_int;
+          args_idx = Ptmap.empty;
+        }
+      | MapOn argno -> TwoLevelIndex {
+          argno;
+          mode;
+          all_clauses = [];
+          flex_arg_clauses = [];
+          arg_idx = Ptmap.empty;
+        }
+      | Trie argno -> IndexWithTrie {
+          argno; mode; 
+          args_idx = Path_trie.PathTrie.empty;
+        }
+    end m) indexing Ptmap.empty in
   { index = add_clauses ~depth p m; src = [] }
 
 let add_clauses ~depth clauses clauses_src { index; src } =
@@ -2545,6 +2583,12 @@ let hash_goal_args ~depth mode args goal =
   | App(k,x,xs) -> hash_goal_arg_list k ~depth (x::xs) mode args
   | _ -> assert false
 
+let trie_goal_args ~depth mode args goal : Path_trie.PathTrie.key =
+  match goal with
+  | Const _ -> [Path_trie.Variable]
+  | App(k,x,xs) -> build_trie_list true k ~depth (x::xs) mode args
+  | _ -> assert false
+
 let get_clauses ~depth predicate goal { index = m } =
  let rc =
    try
@@ -2560,9 +2604,15 @@ let get_clauses ~depth predicate goal { index = m } =
        let hash = hash_goal_args ~depth mode args goal in
        let cl = List.flatten (Ptmap.find_unifiables hash args_idx) in
        List.(map fst (sort (fun (_,cl1) (_,cl2) -> cl2 - cl1) cl))
+     | IndexWithTrie {argno; mode; args_idx} -> 
+        (* TODO: is goal the right argument to pass *)
+        let trie_path = build_trie_list true ~depth predicate [goal] mode argno in 
+        try Path_trie.PathTrie.find trie_path args_idx
+        with Not_found -> []
    with Not_found -> []
  in
  [%log "get_clauses" ~rid (C.show predicate) (List.length rc)];
+ [%spy "dev:get_clauses" ~rid C.pp predicate pp_int (List.length rc)];
  rc
 
 (* flatten_snd = List.flatten o (List.map ~~snd~~) *)
@@ -2777,6 +2827,7 @@ let clausify ~loc { index } ~depth t =
     match Ptmap.find x index with
     | TwoLevelIndex { mode } -> mode
     | BitHash { mode } -> mode
+    | IndexWithTrie { mode } -> mode
     | exception Not_found -> [] in
   let l = split_conj ~depth t in
   let clauses, program, lcs =

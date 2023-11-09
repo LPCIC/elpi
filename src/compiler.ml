@@ -2358,14 +2358,14 @@ let compile_clause modes initial_depth state
   state, cl
 
 let chose_indexing state predicate l =
-  let rec all_zero = function
-    | [] -> true
-    | 0 :: l -> all_zero l
-    | _ -> false in
-  let rec aux n = function
+  let all_zero = List.for_all ((=) 0) in
+  let rec aux argno = function
+    (* TODO: @FissoreD here we should raise an error if n > arity of the predicate? *)
     | [] -> error ("Wrong indexing for " ^ Symbols.show state predicate)
-    | 0 :: l -> aux (n+1) l
-    | 1 :: l when all_zero l -> MapOn n
+    | 0 :: l -> aux (argno+1) l
+    | 1 :: l when all_zero l -> MapOn argno
+    (* TODO: 33 is a random number chosen for indexing with tries *)
+    | 33 :: l when all_zero l -> Trie argno 
     | _ -> Hash l
   in
     aux 0 l
@@ -2406,7 +2406,10 @@ let run
       let mode = try C.Map.find name modes with Not_found -> [] in
       let declare_index, index =
         match tindex with
-        | Some (Ast.Structured.Index l) -> true, chose_indexing state name l
+        | Some (Ast.Structured.Index l) -> 
+          (* TODO: @FissoreD should we assert (length l <= length mode)
+              for example if we have :index (1 0 0 1) pred binary i:int, i:int ? *)
+          true, chose_indexing state name l
         | _ -> false, chose_indexing state name [1] in
       try
         let _, old_tindex = C.Map.find name map in

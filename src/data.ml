@@ -148,6 +148,11 @@ and second_lvl_idx =
     time : int; (* time is used to recover the total order *)
     args_idx : (clause * int) list Ptmap.t; (* clause, insertion time *)
   }
+| IndexWithTrie of {
+    mode : mode;
+    argno : int;
+    args_idx : (clause list) Path_trie.PathTrie.t; 
+}
 and clause = {
     depth : int;
     args : term list;
@@ -167,9 +172,20 @@ type suspended_goal = {
   goal : int * term
 }
 
+(** 
+  Used to index the parameters of a predicate P
+  - [MapOn N] -> Indexing is done by unifying the Nth parameter of P with the
+                 query
+  - [Hash L]  -> L is the list of depths given by the urer for the parameters of
+                 P. Indexing is done by hashing all the parameters with a non
+                 zero depth and comparing it with the hashing of the parameters
+                 of the query
+  - [IndexWithTrie N] -> Indexing is done on the Nth parameter using tries
+*)
 type indexing =
   | MapOn of int
   | Hash of int list
+  | Trie of int 
 [@@deriving show]
 
 let mkLam x = Lam x [@@inline]
