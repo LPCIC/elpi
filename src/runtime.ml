@@ -2500,7 +2500,7 @@ let add1clause ~depth m (predicate,clause) =
       Ptmap.add predicate (IndexWithTrie {
           mode; argno;
           (* TODO: is the order of the clauses respected ? *)
-          args_idx = Data.DT..PathTrie.add trie_path (clause :: clauses) args_idx
+          args_idx = Path_trie.PathTrie.add trie_path (clause :: clauses) args_idx
         }) m
   | exception Not_found ->
       match classify_clause_argno ~depth 0 [] clause.args with
