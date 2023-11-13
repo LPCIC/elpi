@@ -2425,11 +2425,22 @@ let hash_goal_arg_list = hash_arg_list true
 (* bool -> constant -> depth:constant -> term list -> bool list ->constant list -> constant *)
 let build_trie_list (is_goal : bool) (hd: constant) ~(depth: constant) 
   (args: term list) (mode: bool list) (spec : int) : Path_trie.PathTrie.key =
-  let build_path (term : term) = 
+  let open Path_trie in 
+  let rec build_path (term : term) : PathTrie.key = 
     match term with 
-    | _ -> [Path_trie.Variable]
+    | App (c, x, xs) -> Constant (c, List.length xs + 1) :: build_list (x :: xs)
+    | Const c -> [Constant (c, 0)]
+    | UVar _ | _ -> [Variable]
+  and 
+    build_list x = List.map build_path x |> List.flatten 
   in 
-  build_path (List.nth args spec)
+  let res = 
+    try build_path (List.nth args spec)
+    with Failure s as x -> if s = "nth" then failwith "Invalid indexing" else raise x 
+  in
+  List.iter (fun x -> OrderedPath.print x) res;
+  Printf.printf "\n";
+  res
 
 let add1clause ~depth m (predicate,clause) =
   match Ptmap.find predicate m with
@@ -2481,12 +2492,15 @@ let add1clause ~depth m (predicate,clause) =
   | IndexWithTrie {mode; argno; args_idx} ->
       let trie_path = build_trie_list true ~depth predicate clause.args mode argno in 
       let clauses =
-        try Path_trie.PathTrie.find trie_path args_idx
+        try 
+        Path_trie.PathTrie.find1 trie_path args_idx |> List.flatten
         with Not_found -> [] in
+        (* Printf.printf "I have filtered %d\n" (List.length clauses); *)
+      (* List.iter (fun (x: clause) -> ) clauses; clause list *)
       Ptmap.add predicate (IndexWithTrie {
           mode; argno;
           (* TODO: is the order of the clauses respected ? *)
-          args_idx = Path_trie.PathTrie.add trie_path (clause :: clauses) args_idx
+          args_idx = Data.DT..PathTrie.add trie_path (clause :: clauses) args_idx
         }) m
   | exception Not_found ->
       match classify_clause_argno ~depth 0 [] clause.args with
@@ -2583,10 +2597,10 @@ let hash_goal_args ~depth mode args goal =
   | App(k,x,xs) -> hash_goal_arg_list k ~depth (x::xs) mode args
   | _ -> assert false
 
-let trie_goal_args ~depth mode args goal : Path_trie.PathTrie.key =
+let trie_goal_args ~depth mode goal argno : Path_trie.PathTrie.key =
   match goal with
   | Const _ -> [Path_trie.Variable]
-  | App(k,x,xs) -> build_trie_list true k ~depth (x::xs) mode args
+  | App(k,x,xs) -> build_trie_list true k ~depth (x::xs) mode argno
   | _ -> assert false
 
 let get_clauses ~depth predicate goal { index = m } =
@@ -2605,10 +2619,14 @@ let get_clauses ~depth predicate goal { index = m } =
        let cl = List.flatten (Ptmap.find_unifiables hash args_idx) in
        List.(map fst (sort (fun (_,cl1) (_,cl2) -> cl2 - cl1) cl))
      | IndexWithTrie {argno; mode; args_idx} -> 
+        Printf.printf "CIAO DAVIDE, I'm indexing %s\n" (Term.show_term goal);
         (* TODO: is goal the right argument to pass *)
-        let trie_path = build_trie_list true ~depth predicate [goal] mode argno in 
-        try Path_trie.PathTrie.find trie_path args_idx
-        with Not_found -> []
+        let trie_path = trie_goal_args ~depth mode goal argno in 
+        let unifying_clauses =
+        try Path_trie.PathTrie.find1 trie_path args_idx |> List.flatten
+        with Not_found -> [] in 
+        Printf.printf "Filtered clauses number is %d\n" (List.length unifying_clauses); 
+        unifying_clauses
    with Not_found -> []
  in
  [%log "get_clauses" ~rid (C.show predicate) (List.length rc)];

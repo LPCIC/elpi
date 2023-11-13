@@ -54,7 +54,7 @@ module type DiscriminationTree =
       type dataset
       type constant_name
       type t
-
+      
       val iter : t -> (constant_name path -> dataset -> unit) -> unit
       val fold : t -> (constant_name path -> dataset -> 'b -> 'b) -> 'b -> 'b
 
@@ -64,6 +64,8 @@ module type DiscriminationTree =
       val in_index : t -> input -> (data -> bool) -> bool
       val retrieve_generalizations : t -> input -> dataset
       val retrieve_unifiables : t -> input -> dataset
+
+      val pp : Format.formatter -> 'a -> unit
 
       module type Collector = sig
         type t
@@ -95,37 +97,35 @@ and type data = A.elt and type dataset = A.t =
 
       module PSMap = Map.Make(OrderedPathStringElement)
 
-      module DiscriminationTree = Trie.Make(PSMap)
+      module Trie = Trie.Make(PSMap)
 
-      type t = A.t DiscriminationTree.t
+      type t = A.t Trie.t
 
-      let empty = DiscriminationTree.empty
+      let empty = Trie.empty
 
-      let iter dt f = DiscriminationTree.iter (fun p x -> f p x) dt
+      let iter dt f = Trie.iter (fun p x -> f p x) dt
 
-      let fold dt f = DiscriminationTree.fold (fun p x -> f p x) dt
+      let fold dt f = Trie.fold (fun p x -> f p x) dt
 
       let index tree term info =
         let ps = I.path_string_of term in
         let ps_set =
-          try DiscriminationTree.find ps tree with Not_found -> A.empty 
+          try Trie.find ps tree with Not_found -> A.empty 
         in
-        DiscriminationTree.add ps (A.add info ps_set) tree
-      
+        Trie.add ps (A.add info ps_set) tree
 
       let remove_index tree term info =
         let ps = I.path_string_of term in
         try
-          let ps_set = A.remove info (DiscriminationTree.find ps tree) in
-          if A.is_empty ps_set then DiscriminationTree.remove ps tree
-          else DiscriminationTree.add ps ps_set tree
+          let ps_set = A.remove info (Trie.find ps tree) in
+          if A.is_empty ps_set then Trie.remove ps tree
+          else Trie.add ps ps_set tree
         with Not_found -> tree
-      
 
       let in_index tree term test =
         let ps = I.path_string_of term in
         try
-          let ps_set = DiscriminationTree.find ps tree in
+          let ps_set = Trie.find ps tree in
           A.exists test ps_set
         with Not_found -> false
       
@@ -140,6 +140,7 @@ and type data = A.elt and type dataset = A.t =
          The input ariety is the one of f while the path is x.g....t  
          Should be the equivalent of after_t in the literature (handbook A.R.)
        *)
+      (* MAYBE: a pointer to t from f should increase performances  *)
       let rec skip arity path =
         if arity = 0 then path else match path with 
         | [] -> assert false 
@@ -149,31 +150,30 @@ and type data = A.elt and type dataset = A.t =
       (* the equivalent of skip, but on the index, thus the list of trees
          that are rooted just after the term represented by the tree root
          are returned (we are skipping the root) *)
-      let skip_root = function DiscriminationTree.Node (_value, map) ->
-        let rec get n = function DiscriminationTree.Node (_v, m) as tree ->
+      let skip_root = function Trie.Node (_value, map) ->
+        let rec get n = function Trie.Node (_v, m) as tree ->
            if n = 0 then [tree] else 
            PSMap.fold (fun k v res -> (get (n-1 + arity_of k) v) @ res) m []
         in
           PSMap.fold (fun k v res -> (get (arity_of k) v) @ res) map []
-      
 
       let retrieve unif tree term =
         let path = I.path_string_of term in
         let rec retrieve path tree =
           match tree, path with
-          | DiscriminationTree.Node (Some s, _), [] -> s
-          | DiscriminationTree.Node (None, _), [] -> A.empty 
-          | DiscriminationTree.Node (_, _map), Variable::path when unif ->
+          | Trie.Node (Some s, _), [] -> s
+          | Trie.Node (None, _), [] -> A.empty 
+          | Trie.Node (_, _map), Variable::path when unif ->
               List.fold_left A.union A.empty
                 (List.map (retrieve path) (skip_root tree))
-          | DiscriminationTree.Node (_, map), node::path ->
+          | Trie.Node (_, map), node::path ->
               A.union
                  (if not unif && node = Variable then A.empty else
                   try retrieve path (PSMap.find node map)
                   with Not_found -> A.empty)
                  (try
                     match PSMap.find Variable map,skip (arity_of node) path with
-                    | DiscriminationTree.Node (Some s, _), [] -> s
+                    | Trie.Node (Some s, _), [] -> s
                     | n, path -> retrieve path n
                   with Not_found -> A.empty)
        in
@@ -251,19 +251,19 @@ and type data = A.elt and type dataset = A.t =
         let path = I.path_string_of term in
         let rec retrieve n path tree =
           match tree, path with
-          | DiscriminationTree.Node (Some s, _), [] -> S.singleton (s, n)
-          | DiscriminationTree.Node (None, _), [] -> S.empty
-          | DiscriminationTree.Node (_, _map), Variable::path when unif ->
+          | Trie.Node (Some s, _), [] -> S.singleton (s, n)
+          | Trie.Node (None, _), [] -> S.empty
+          | Trie.Node (_, _map), Variable::path when unif ->
               List.fold_left S.union S.empty
                 (List.map (retrieve n path) (skip_root tree))
-          | DiscriminationTree.Node (_, map), node::path ->
+          | Trie.Node (_, map), node::path ->
               S.union
                  (if not unif && node = Variable then S.empty else
                   try retrieve (n+1) path (PSMap.find node map)
                   with Not_found -> S.empty)
                  (try
                     match PSMap.find Variable map,skip (arity_of node) path with
-                    | DiscriminationTree.Node (Some s, _), [] -> 
+                    | Trie.Node (Some s, _), [] -> 
                        S.singleton (s, n)
                     | no, path -> retrieve n path no
                   with Not_found -> S.empty)
@@ -275,6 +275,8 @@ and type data = A.elt and type dataset = A.t =
         retrieve_sorted false tree term
       let retrieve_unifiables_sorted tree term = 
         retrieve_sorted true tree term
+
+    let pp = failwith "TODO"
   end
 
 

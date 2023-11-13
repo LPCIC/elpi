@@ -14,7 +14,7 @@
     ; ----- public API ---------------------------------
     elpi API builtin builtin_checker
     ; ----- internal stuff -----------------------------
-    compiler data ptmap trie path_trie runtime_trace_off runtime
+    compiler data ptmap trie discrimination_tree discrimination_tree_indexing path_trie runtime_trace_off runtime
     builtin_stdlib builtin_map builtin_set
     legacy_parser_proxy)
   (private_modules

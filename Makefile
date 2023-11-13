@@ -135,3 +135,6 @@ menhir-strip-errormsgs:
 	sed -e "/^##/d" -i.bak src/parser/error_messages.txt
 
 .PHONY: tests help install build clean gh-pages
+
+myMake:
+	dune exec elpi -- -test test.elpi

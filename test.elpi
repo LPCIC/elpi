@@ -1,0 +1,20 @@
+kind my_list type.
+type mcons int -> my_list -> my_list.
+type mint int -> my_list.
+type mstring string -> my_list.
+type mlist my_list -> my_list -> my_list.
+type mnil my_list.
+
+:index (33 _)
+pred davide_pred_with_custom_depth o:my_list.
+davide_pred_with_custom_depth mnil.
+davide_pred_with_custom_depth (mlist (mcons 0 mnil) (mcons 1 mnil)).
+davide_pred_with_custom_depth (mlist (mcons 1 mnil) (mcons 2 mnil)).
+davide_pred_with_custom_depth (mcons 0 (mint 0)).
+davide_pred_with_custom_depth (mint X).
+davide_pred_with_custom_depth (mstring "a").
+
+main :- 
+  davide_pred_with_custom_depth (mlist X (mcons 1 mnil)), print "Solution" X Y, fail.
+
+main :- print "End backtracking".
