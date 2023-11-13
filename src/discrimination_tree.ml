@@ -152,7 +152,6 @@ and type data = A.elt and type dataset = A.t =
           let ps_set = Trie.find ps tree in
           A.exists test ps_set
         with Not_found -> false
-      
 
       (* You have h(f(x,g(y,z)),t) whose path_string_of_term_with_jl is 
          (h,2).(f,2).(x,0).(g,2).(y,0).(z,0).(t,0) and you are at f and want to
@@ -169,15 +168,14 @@ and type data = A.elt and type dataset = A.t =
         if arity = 0 then path else match path with 
         | [] -> assert false 
         | m::tl -> skip (arity-1+arity_of m) tl
-      
 
       (* the equivalent of skip, but on the index, thus the list of trees
          that are rooted just after the term represented by the tree root
          are returned (we are skipping the root) *)
       let skip_root = function Trie.Node (_value, map) ->
         let rec get n = function Trie.Node (_v, m) as tree ->
-           if n = 0 then [tree] else 
-           PSMap.fold (fun k v res -> (get (n-1 + arity_of k) v) @ res) m []
+          if n = 0 then [tree] else 
+          PSMap.fold (fun k v res -> (get (n-1 + arity_of k) v) @ res) m []
         in
           PSMap.fold (fun k v res -> (get (arity_of k) v) @ res) map []
 

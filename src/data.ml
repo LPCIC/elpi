@@ -206,14 +206,14 @@ and second_lvl_idx =
 | TwoLevelIndex of {
     mode : mode;
     argno : int;
-    all_clauses : clause list;         (* when the query is flexible *)
-    flex_arg_clauses : clause list;       (* when the query is rigid but arg_id ha nothing *)
-    arg_idx : clause list Ptmap.t;   (* when the query is rigid (includes in each binding flex_arg_clauses) *)
+    all_clauses : clause list;        (* when the query is flexible *)
+    flex_arg_clauses : clause list;   (* when the query is rigid but arg_id ha nothing *)
+    arg_idx : clause list Ptmap.t;    (* when the query is rigid (includes in each binding flex_arg_clauses) *)
   }
 | BitHash of {
     mode : mode;
     args : int list;
-    time : int; (* time is used to recover the total order *)
+    time : int;                             (* time is used to recover the total order *)
     args_idx : (clause * int) list Ptmap.t; (* clause, insertion time *)
   }
 | IndexWithTrie of {
