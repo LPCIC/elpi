@@ -115,6 +115,74 @@ let uvar_isnt_a_blocker { uid_private } = uid_private > 0 [@@inline];;
 let uvar_set_blocker r   = r.uid_private <- -(uvar_id r) [@@inline];;
 let uvar_unset_blocker r = r.uid_private <-  (uvar_id r) [@@inline];;
 
+type clause = {
+    depth : int;
+    args : term list;
+    hyps : term list;
+    vars : int;
+    mode : mode; (* CACHE to avoid allocation in get_clauses *)
+    loc : Loc.t option; (* debug *)
+}
+and mode = bool list (* true=input, false=output *)
+[@@deriving show]
+
+module TreeIndexable : Discrimination_tree.Indexable with 
+  type input = term and type constant_name = constant
+= struct
+  type input = term
+  type constant_name = constant 
+
+  include Discrimination_tree
+
+  let compare = compare
+  
+  let rec path_string_of = function
+    | Const a -> [Constant (a, 0)]
+    | App (hd, x, xs) -> 
+        let tl = List.map path_string_of (x :: xs) |> List.flatten in 
+        Constant (hd, List.length xs + 1) :: tl 
+    | CData d -> [PrimitiveType d]
+    | _ -> [Variable]
+end
+
+module MyListClause : Discrimination_tree.MyList with type elt = clause and type t = clause list = struct
+  type t = clause list
+  type elt = clause
+  let empty = []
+  let is_empty = (=) []
+  let mem = List.mem
+  let add = List.cons
+  let singleton a = [a]
+  let remove a l = List.filter ((<>) a) l
+  (* TODO: be careful to the order of this union since it changes 
+     the order in which clauses are retrieved *)
+  let union a b = match b with [] -> a | _ -> List.append b a
+  let compare = compare
+  let equal = (=)
+  let exists = List.exists
+  let elements = Fun.id
+  let find a l = List.find ((=) a) l
+  let of_list = Fun.id
+  let pp = Util.pplist 
+  (* let show x = failwith "TODO show of MyClauseList" *)
+end
+
+module DT = struct 
+  include Discrimination_tree.Make(TreeIndexable)(MyListClause) 
+  
+  (* let pp f fmt t =
+    let p k v = Format.fprintf fmt "@[<hov 2>%a |->@ %a@]@ " (MyListClause.elt) k f v in
+    Format.fprintf fmt "@[<hov>";
+    iter p t;
+    Format.fprintf fmt "@]" *)
+
+  let pp f fmt =
+    Printf.printf "PP of DT is to be done"
+
+  let show x = "Show of DT is to be done"
+
+end
+
 type stuck_goal = {
   mutable blockers : blockers;
   kind : unification_def stuck_goal_kind;
@@ -151,17 +219,8 @@ and second_lvl_idx =
 | IndexWithTrie of {
     mode : mode;
     argno : int;
-    args_idx : (clause list) Path_trie.PathTrie.t; 
+    args_idx : DT.t; 
 }
-and clause = {
-    depth : int;
-    args : term list;
-    hyps : term list;
-    vars : int;
-    mode : mode; (* CACHE to avoid allocation in get_clauses *)
-    loc : Loc.t option; (* debug *)
-}
-and mode = bool list (* true=input, false=output *)
 [@@deriving show]
 
 type constraints = stuck_goal list

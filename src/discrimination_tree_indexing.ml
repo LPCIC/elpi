@@ -11,8 +11,10 @@ module TreeIndexable : Discrimination_tree.Indexable with
   
   let rec path_string_of = function
     | Data.App (hd, x, xs) -> 
+        Printf.printf "In this first branch";
         let tl = List.map path_string_of (x :: xs) |> List.flatten in 
         Discrimination_tree.Constant (hd, List.length xs + 1) :: tl 
+    | CData d -> Printf.printf "CIaO" ; [PrimitiveType d]
     | _ -> [Variable]
 end
 

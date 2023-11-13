@@ -28,6 +28,7 @@
 type 'a path_string_elem = 
   | Constant of 'a * int
   | Variable
+  | PrimitiveType of Elpi_util.Util.CData.t
   
 
 type 'a path = ('a path_string_elem) list
@@ -43,7 +44,7 @@ end
 
 let arity_of = function
   | Constant (_,a) -> a 
-  | Variable -> 0 
+  | Variable | PrimitiveType _ -> 0
 
 
 module type DiscriminationTree =
@@ -65,8 +66,6 @@ module type DiscriminationTree =
       val retrieve_generalizations : t -> input -> dataset
       val retrieve_unifiables : t -> input -> dataset
 
-      val pp : Format.formatter -> 'a -> unit
-
       module type Collector = sig
         type t
         val empty : t
@@ -79,7 +78,32 @@ module type DiscriminationTree =
       val retrieve_unifiables_sorted : t -> input -> Collector.t
     end
 
-module Make (I:Indexable) (A:Set.S) : DiscriminationTree 
+module type MyList = sig
+    type elt
+    type t
+    val empty: t
+    val is_empty: t -> bool
+    val mem: elt -> t -> bool
+    val add: elt -> t -> t
+    val singleton: elt -> t
+    val remove: elt -> t -> t
+    val union: t -> t -> t
+    val compare: t -> t -> int
+    val equal: t -> t -> bool
+    val exists: (elt -> bool) -> t -> bool
+    val elements: t -> elt list
+    val find: elt -> t -> elt
+    val of_list: elt list -> t
+end
+
+(* Question : Why to use a set ? This would mean that 
+  in the case of a code like: 
+    pred fail_twice. 
+    fail_twice.
+    fail_twice.
+  the second fail_twice is not considered
+*)
+module Make (I:Indexable) (A:MyList) : DiscriminationTree 
 with type constant_name = I.constant_name and type input = I.input
 and type data = A.elt and type dataset = A.t =
 
@@ -275,8 +299,6 @@ and type data = A.elt and type dataset = A.t =
         retrieve_sorted false tree term
       let retrieve_unifiables_sorted tree term = 
         retrieve_sorted true tree term
-
-    let pp = failwith "TODO"
-  end
+end
 
 
