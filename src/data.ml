@@ -192,7 +192,7 @@ module MyListClause : Discrimination_tree.MyList with type elt = clause and type
 end
 
 module DT = struct 
-  include Discrimination_tree.Make(TreeIndexable)(MyListClause) 
+  include Discrimination_tree_jump_to.Make(TreeIndexable)(MyListClause) 
 
   let pp f fmt = Printf.printf "PP of DT is to be done"
 
