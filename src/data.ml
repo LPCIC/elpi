@@ -166,22 +166,31 @@ module TreeIndexable : Discrimination_tree_jump_to.IndexableTerm with
       | [] -> assert false 
       | m::tl -> aux (arity-1+arity_of m) tl in 
     match path with
-    | [] -> failwith "Skipping empty path is not possible"
-    | hd :: tl -> aux (arity_of hd) tl
+      | [] -> failwith "Skipping empty path is not possible"
+      | hd :: tl -> aux (arity_of hd) tl
 end
 
-module MyListClause : Discrimination_tree.MyList with type elt = clause and type t = clause list = struct
-  type t = clause list
-  type elt = clause
+module MyListClause : Discrimination_tree.MyList with type elt = (clause * int)
+and type t = (clause * int) list = struct
+  type elt = clause * int
+  type t = elt list
   let empty = []
   let is_empty = (=) []
   let mem = List.mem
   let add = List.cons
   let singleton a = [a]
+  (* 
+    TODO: the order is obteined via a merge of the two lists. Note that each 
+          are sorted by the timestamp of clauses.
+  *)
+  let rec union (l1: t) (l2 : t) = match l1, l2 with 
+    | [], l | l, [] -> l
+    | (_, tx as x) :: xs, ((_, ty) :: _ as ys) when tx > ty -> 
+        x :: union xs ys
+    | xs, y :: ys -> 
+        y :: union xs ys
+
   let remove a l = List.filter ((<>) a) l
-  (* TODO: be careful to the order of this union since it changes 
-     the order in which clauses are retrieved *)
-  let union a b = match b with [] -> a | _ -> List.append b a
   let compare = compare
   let equal = (=)
   let exists = List.exists
@@ -234,7 +243,8 @@ and second_lvl_idx =
   }
 | IndexWithTrie of {
     mode : mode;
-    argno : int;
+    argno : int;        (* position of argument on which the trie is build *)
+    time : int;         (* time is used to recover the total order *)
     args_idx : DT.t; 
 }
 [@@deriving show]

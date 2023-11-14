@@ -2489,10 +2489,11 @@ let add1clause ~depth m (predicate,clause) =
          time = time + 1;
          args_idx = Ptmap.add hash ((clause,time) :: clauses) args_idx
        }) m
-  | IndexWithTrie {mode; argno; args_idx} ->
-      let path = DT.index args_idx (List.nth clause.args argno) clause in
+  | IndexWithTrie {mode; argno; args_idx; time} ->
+      let path = DT.index args_idx (List.nth clause.args argno) (clause, time) in
       Ptmap.add predicate (IndexWithTrie {
           mode; argno;
+          time = time+1;
           (* TODO: is the order of the clauses respected ? *)
           args_idx = path
         }) m
@@ -2546,6 +2547,7 @@ let make_index ~depth ~indexing ~clauses_rev:p =
       | Trie argno -> IndexWithTrie {
           argno; mode; 
           args_idx = DT.empty;
+          time = min_int;
         }
     end m) indexing Ptmap.empty in
   { index = add_clauses ~depth p m; src = [] }
@@ -2616,7 +2618,7 @@ let get_clauses ~depth predicate goal { index = m } =
         Printf.printf "Current goal to index %s\n" (Term.show_term goal);
         let unifying_clauses = DT.retrieve_unifiables args_idx (trie_goal_args ~depth mode goal argno) in 
         Printf.printf "Filtered clauses number is %d\n" (List.length unifying_clauses); 
-        unifying_clauses
+        List.map fst unifying_clauses
    with Not_found -> []
  in
  [%log "get_clauses" ~rid (C.show predicate) (List.length rc)];
