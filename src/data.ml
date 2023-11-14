@@ -126,23 +126,48 @@ type clause = {
 and mode = bool list (* true=input, false=output *)
 [@@deriving show]
 
-module TreeIndexable : Discrimination_tree.Indexable with 
-  type input = term and type constant_name = constant
-= struct
-  type input = term
-  type constant_name = constant 
+type 'a path_string_elem = 
+  | Constant of 'a * int
+  | Variable
+  | PrimitiveType of Elpi_util.Util.CData.t
+  
 
-  include Discrimination_tree
+type 'a path = ('a path_string_elem) list
+
+let arity_of = function
+  | Constant (_,a) -> a 
+  | Variable | PrimitiveType _ -> 0
+
+module TreeIndexable : Discrimination_tree_jump_to.IndexableTerm with 
+  type input = term and type cell = ((constant path_string_elem))
+= struct
+  type cell = (constant path_string_elem)
+  type path = cell list
+  type input = term 
+  let variable = Variable
 
   let compare = compare
   
   let rec path_string_of = function
-    | Const a -> [Constant (a, 0)]
+    | Const a -> let c = Constant (a, 0) in [c]
     | App (hd, x, xs) -> 
         let tl = List.map path_string_of (x :: xs) |> List.flatten in 
-        Constant (hd, List.length xs + 1) :: tl 
+       ( Constant (hd, List.length xs + 1)) :: tl 
     | CData d -> [PrimitiveType d]
     | _ -> [Variable]
+
+  let arity_of  = function
+    | Constant (_,a) -> a 
+    | Variable | PrimitiveType _ -> 0
+
+  let skip (path: path) : path =
+    let rec aux arity path = 
+    if arity = 0 then path else match path with 
+      | [] -> assert false 
+      | m::tl -> aux (arity-1+arity_of m) tl in 
+    match path with
+    | [] -> failwith "Skipping empty path is not possible"
+    | hd :: tl -> aux (arity_of hd) tl
 end
 
 module MyListClause : Discrimination_tree.MyList with type elt = clause and type t = clause list = struct
@@ -164,23 +189,14 @@ module MyListClause : Discrimination_tree.MyList with type elt = clause and type
   let find a l = List.find ((=) a) l
   let of_list = Fun.id
   let pp = Util.pplist 
-  (* let show x = failwith "TODO show of MyClauseList" *)
 end
 
 module DT = struct 
   include Discrimination_tree.Make(TreeIndexable)(MyListClause) 
-  
-  (* let pp f fmt t =
-    let p k v = Format.fprintf fmt "@[<hov 2>%a |->@ %a@]@ " (MyListClause.elt) k f v in
-    Format.fprintf fmt "@[<hov>";
-    iter p t;
-    Format.fprintf fmt "@]" *)
 
-  let pp f fmt =
-    Printf.printf "PP of DT is to be done"
+  let pp f fmt = Printf.printf "PP of DT is to be done"
 
   let show x = "Show of DT is to be done"
-
 end
 
 type stuck_goal = {
