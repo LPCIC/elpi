@@ -139,7 +139,7 @@ let arity_of = function
   | Variable | PrimitiveType _ -> 0
 
 module TreeIndexable : Discrimination_tree_jump_to.IndexableTerm with 
-  type input = term and type cell = ((constant path_string_elem))
+  type input = term and type cell = constant path_string_elem
 = struct
   type cell = (constant path_string_elem)
   type path = cell list
