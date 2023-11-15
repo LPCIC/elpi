@@ -2,6 +2,8 @@
 
 Library:
   - New `std.fold-right`
+  - New clause retrieval through discrimination tree where the index of all the
+    parameters are set to `0` but one: the argument of which the search is done
 
 # v1.18.0 (October 2023)
 
