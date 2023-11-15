@@ -185,8 +185,8 @@ and type t = (clause * int) list = struct
   let add = List.cons
   let singleton a = [a]
   (* 
-    TODO: the order is obteined via a merge of the two lists. Note that each 
-          are sorted by the timestamp of clauses.
+    NOTE: the lists l1 and l2 are supposed to be sorted by timestamp, 
+          therefore we simply do the merge algorithm to have a sorted list
   *)
   let rec union (l1: t) (l2 : t) = match l1, l2 with 
     | [], l | l, [] -> l
