@@ -1,29 +1,6 @@
-(* Copyright (C) 2005, HELM Team.
- * 
- * This file is part of HELM, an Hypertextual, Electronic
- * Library of Mathematics, developed at the Computer Science
- * Department, University of Bologna, Italy.
- * 
- * HELM is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- * 
- * HELM is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with HELM; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston,
- * MA  02111-1307, USA.
- * 
- * For details, see the HELM World-Wide-Web page,
- * http://cs.unibo.it/helm/.
- *)
-
-(* $Id: discrimination_tree.ml 11171 2011-01-11 15:12:32Z tassi $ *)
+(* elpi: embedded lambda prolog interpreter                                  *)
+(* license: GNU Lesser General Public License Version 2.1 or later           *)
+(* ------------------------------------------------------------------------- *)
 
 module type IndexableTerm = sig
   type input
@@ -104,13 +81,6 @@ module type MyList = sig
     val of_list: elt list -> t
 end
 
-(* Question : Why to use a set ? This would mean that 
-  in the case of a code like: 
-    pred fail_twice. 
-    fail_twice.
-    fail_twice.
-  the second fail_twice is not considered
-*)
 module Make (I:IndexableTerm) (A:MyList)  =
 
     struct
