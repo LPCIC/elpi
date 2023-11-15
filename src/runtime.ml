@@ -2318,12 +2318,9 @@ let rec classify_clause_arg ~depth matching t =
      else Rigid (hash+1,matching)
 
 (** 
-  [classify_clause_argno ~depth N mode L]
-  where L is the arguments of the clause.
-  Returns the classification of the Nth element of L wrt to the Nth mode. 
-*)
-(* QUESTION: why do not simply List.nth argno modes of L. I think that mode and 
-   and N should (len(L) = len(mode) < N). Is is true ? 
+  [classify_clause_argno ~depth N mode L] where L is the arguments of the
+  clause. Returns the classification of the Nth element of L wrt to the Nth mode
+  for the TwoLevelIndex 
 *)
 let rec classify_clause_argno ~depth argno mode = function
   | [] -> Variable
@@ -2422,26 +2419,6 @@ let hash_arg_list is_goal hd ~depth args mode spec =
 let hash_clause_arg_list = hash_arg_list false
 let hash_goal_arg_list = hash_arg_list true
 
-(* bool -> constant -> depth:constant -> term list -> bool list ->constant list -> constant *)
-(* let build_trie_list (is_goal : bool) (hd: constant) ~(depth: constant) 
-  (args: term list) (mode: bool list) (spec : int) : Path_trie.PathTrie.key =
-  let open Path_trie in 
-  let rec build_path (term : term) : PathTrie.key = 
-    match term with 
-    | App (c, x, xs) -> Constant (c, List.length xs + 1) :: build_list (x :: xs)
-    | Const c -> [Constant (c, 0)]
-    | UVar _ | _ -> [Variable]
-  and 
-    build_list x = List.map build_path x |> List.flatten 
-  in 
-  let res = 
-    try build_path (List.nth args spec)
-    with Failure s as x -> if s = "nth" then failwith "Invalid indexing" else raise x 
-  in
-  List.iter (fun x -> OrderedPath.print x) res;
-  Printf.printf "\n";
-  res *)
-
 let add1clause ~depth m (predicate,clause) =
   match Ptmap.find predicate m with
   | TwoLevelIndex { all_clauses; argno; mode; flex_arg_clauses; arg_idx } ->
@@ -2494,7 +2471,6 @@ let add1clause ~depth m (predicate,clause) =
       Ptmap.add predicate (IndexWithTrie {
           mode; argno;
           time = time+1;
-          (* TODO: is the order of the clauses respected ? *)
           args_idx = path
         }) m
   | exception Not_found ->

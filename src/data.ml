@@ -247,7 +247,7 @@ and second_lvl_idx =
   }
 | IndexWithTrie of {
     mode : mode;
-    argno : int;        (* position of argument on which the trie is build *)
+    argno : int;        (* position of argument on which the trie is built *)
     time : int;         (* time is used to recover the total order *)
     args_idx : DT.t; 
 }

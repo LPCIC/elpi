@@ -142,22 +142,4 @@ module Make (M : Elpi_util.Util.Map.S) = struct
     | Node (None, m1) -> M.is_empty m1
     | _ -> false
     
-  let rec pp (f: (Format.formatter -> 'a -> unit)) (fmt: Format.formatter) (m: 'a t) =
-    let print_key k = Printf.printf "k: " in
-    (match m with 
-      | Node (None, sons) -> Printf.printf "None ["; M.iter (fun k v -> print_key k; Printf.printf " v:"; pp f fmt v) sons; Printf.printf "]"
-      | Node (Some k, sons) -> Printf.printf "Some ["; print_key k; M.iter (fun k v -> pp f fmt v) sons); Printf.printf "]"
-
-  (*  (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t  *)
-  let show f m =
-    let b = Buffer.create 20 in
-    let fmt = Format.formatter_of_buffer b in
-    pp f fmt m;
-    Buffer.contents b
-
-    (* let pp f fmt m =
-  let l = to_list m in
-  Elpi_util.Util.(pplist (pp_pair Int.pp f) " " fmt l)
-
- *)
 end

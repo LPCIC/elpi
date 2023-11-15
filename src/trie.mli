@@ -15,6 +15,4 @@ module Make :
       val compare : ('a -> 'a -> int) -> 'a t -> 'a t -> int
       val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
       val is_empty : 'a t -> bool
-      val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
-      val show : (Format.formatter -> 'a -> unit) -> 'a t -> string
     end
