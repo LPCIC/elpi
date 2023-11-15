@@ -149,8 +149,8 @@ module Make (M : Elpi_util.Util.Map.S) = struct
     M.pp (pp ppelem) fmt b;
     Format.fprintf fmt "}]"
 
-    let show (fmt: (Format.formatter -> 'a -> unit)) (n: 'a t) : string = 
-      let b = Buffer.create 22 in
-      Format.fprintf (Format.formatter_of_buffer b) "@[%a@]" (pp fmt) n;
-      Buffer.contents b
+  let show (fmt: (Format.formatter -> 'a -> unit)) (n: 'a t) : string = 
+    let b = Buffer.create 22 in
+    Format.fprintf (Format.formatter_of_buffer b) "@[%a@]" (pp fmt) n;
+    Buffer.contents b
 end
