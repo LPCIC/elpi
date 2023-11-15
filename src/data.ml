@@ -120,11 +120,19 @@ type clause = {
     args : term list;
     hyps : term list;
     vars : int;
-    mode : mode; (* CACHE to avoid allocation in get_clauses *)
+    mode : mode;        (* CACHE to avoid allocation in get_clauses *)
     loc : Loc.t option; (* debug *)
 }
 and mode = bool list (* true=input, false=output *)
 [@@deriving show]
+
+(* Simpler pretty printer for clause *)
+let pp_clause_simple (fmt:Format.formatter) (cl: clause) = 
+  Format.fprintf fmt "[clause_args:";
+  pplist pp_term ", " fmt cl.args;
+  Format.fprintf fmt " ;; clause_hyps:";
+  pplist pp_term ", " fmt cl.hyps;
+  Format.fprintf fmt "]";
 
 type 'a path_string_elem = 
   | Constant of 'a * int
@@ -142,12 +150,8 @@ let arity_of = function
 module TreeIndexable : Discrimination_tree.IndexableTerm with 
   type input = term and type cell = constant path_string_elem
 = struct
-  type cell = (constant path_string_elem)
-  [@@deriving show]
-
-  type path = cell list
-  [@@deriving show]
-
+  type cell = (constant path_string_elem) [@@deriving show]
+  type path = cell list [@@deriving show]
   type input = term 
 
   let variable = Variable
@@ -179,14 +183,8 @@ end
 module MyListClause : Discrimination_tree.MyList with type elt = (clause * int)
 and type t = (clause * int) list = struct
   type elt = clause * int
-  (* [@@deriving show] *)
 
-  let pp_elt (fmt:Format.formatter) ((cl, _): clause * int) = 
-    Format.fprintf fmt "[clause_args:";
-    pplist pp_term ", " fmt cl.args;
-    Format.fprintf fmt " ;; clause_hyps:";
-    pplist pp_term ", " fmt cl.hyps;
-    Format.fprintf fmt "]";
+  let pp_elt a (cl, _) = pp_clause_simple a cl 
   
   type t = elt list
   [@@deriving show]
