@@ -15,4 +15,5 @@ module Make :
       val compare : ('a -> 'a -> int) -> 'a t -> 'a t -> int
       val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
       val is_empty : 'a t -> bool
+      include Elpi_util.Util.Show1 with type 'a t := 'a t
     end

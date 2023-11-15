@@ -21,7 +21,6 @@
     defined as soon as a map over the elements of the list is
     given. *)
 
-
 module Make (M : Elpi_util.Util.Map.S) = struct
   
 (*s Then a trie is just a tree-like structure, where a possible
@@ -30,10 +29,8 @@ module Make (M : Elpi_util.Util.Map.S) = struct
     ['a t M.t]. The empty trie is just the empty map. *)
 
   type key = M.key list
-  [@@deriving show]
 
   type 'a t = Node of 'a option * 'a t M.t
-  [@@deriving show]
 
   let empty = Node (None, M.empty)
 
@@ -141,5 +138,25 @@ module Make (M : Elpi_util.Util.Map.S) = struct
   let is_empty = function
     | Node (None, m1) -> M.is_empty m1
     | _ -> false
+   
     
+  let show (fmt: (Format.formatter -> 'a -> unit)) (Node (a, b): 'a t) : string = 
+    (* Format.fprintf fmt "."  *)
+    (* M.show () b *)
+    (* M.show fmt b *)
+    (* let node_cnt = match a with
+    | None -> "None"
+    | Some a -> "Some ()" ^ Format.fprintf _x "%a ->@ %a;@ " Ord.pp k f v in 
+    Printf.sprintf "Node [%s]" "a" *)
+    Printf.sprintf "TODO: show of trie"
+
+  let rec pp (ppelem : (Format.formatter -> 'a -> unit)) (fmt : Format.formatter) (Node (a, b) : 'a t) : unit = 
+    Format.fprintf fmt "[values:{";
+    begin match a with 
+      | None -> Format.fprintf fmt "."
+      | Some x -> ppelem fmt x
+    end;
+    Format.fprintf fmt "} key:{";
+    M.pp (pp ppelem) fmt b;
+    Format.fprintf fmt "}]"
 end

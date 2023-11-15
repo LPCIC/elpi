@@ -132,8 +132,8 @@ type 'a path_string_elem =
   | PrimitiveType of Elpi_util.Util.CData.t
 [@@deriving show]
   
-
 type 'a path = ('a path_string_elem) list
+[@@deriving show]
 
 let arity_of = function
   | Constant (_,a) -> a 
@@ -144,8 +144,12 @@ module TreeIndexable : Discrimination_tree.IndexableTerm with
 = struct
   type cell = (constant path_string_elem)
   [@@deriving show]
+
   type path = cell list
+  [@@deriving show]
+
   type input = term 
+
   let variable = Variable
 
   let compare = compare
@@ -176,6 +180,7 @@ module MyListClause : Discrimination_tree.MyList with type elt = (clause * int)
 and type t = (clause * int) list = struct
   type elt = clause * int
   [@@deriving show]
+  
   type t = elt list
   [@@deriving show]
 
@@ -204,13 +209,7 @@ and type t = (clause * int) list = struct
   let of_list = Fun.id
 end
 
-module DT = struct 
-  include Discrimination_tree.Make(TreeIndexable)(MyListClause) 
-
-  let pp f fmt = Printf.printf "PP of DT is to be done"
-
-  let show x = "Show of DT is to be done"
-end
+module DT = Discrimination_tree.Make(TreeIndexable)(MyListClause) 
 
 type stuck_goal = {
   mutable blockers : blockers;

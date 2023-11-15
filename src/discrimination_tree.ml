@@ -11,6 +11,7 @@ module type IndexableTerm = sig
   val pp_cell: Format.formatter -> cell -> unit
 
   type path = cell list
+
   val compare: cell -> cell -> int
   val path_string_of : input -> path
 
@@ -38,6 +39,8 @@ module type DiscriminationTree =
       type dataset
       type cell
       type t
+
+      include Elpi_util.Util.Show with type t := t
       
       val iter : t -> (cell list -> dataset -> unit) -> unit
       val fold : t -> (cell list -> dataset -> 'b -> 'b) -> 'b -> 'b
@@ -63,8 +66,7 @@ module type DiscriminationTree =
 
 module type MyList = sig
     type elt
-    include Elpi_util.Util.Show with type t := elt
-    type t
+    type t 
     include Elpi_util.Util.Show with type t := t
     val empty: t
     val is_empty: t -> bool
@@ -81,7 +83,9 @@ module type MyList = sig
     val of_list: elt list -> t
 end
 
-module Make (I:IndexableTerm) (A:MyList)  =
+module Make (I:IndexableTerm) (A:MyList) : DiscriminationTree with 
+type data = A.elt and type dataset = A.t and type input = I.input and 
+type cell = I.cell =
 
     struct
 
@@ -95,6 +99,7 @@ module Make (I:IndexableTerm) (A:MyList)  =
 
       type data = A.elt
       type dataset = A.t
+
       type input = I.input
       type cell = I.cell
 
@@ -102,7 +107,10 @@ module Make (I:IndexableTerm) (A:MyList)  =
 
       module Trie = Trie.Make(PSMap)
 
-      type t = A.t Trie.t
+      type t = dataset Trie.t [@@deriving show]
+
+      let pp = Trie.pp A.pp
+      let show = Trie.show A.pp
 
       let empty = Trie.empty
 
