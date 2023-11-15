@@ -2406,10 +2406,10 @@ let run
       let mode = try C.Map.find name modes with Not_found -> [] in
       let declare_index, index =
         match tindex with
-        | Some (Ast.Structured.Index l) -> 
-          (* TODO: @FissoreD should we assert (length l <= length mode)
-              for example if we have :index (1 0 0 1) pred binary i:int, i:int ? *)
-          true, chose_indexing state name l
+        | Some (Ast.Structured.Index l) ->
+          if (List.length l > List.length mode) 
+            then failwith ("Invalid index arity for predicate" ^ Symbols.show state name) 
+          else true, chose_indexing state name l
         | _ -> false, chose_indexing state name [1] in
       try
         let _, old_tindex = C.Map.find name map in
