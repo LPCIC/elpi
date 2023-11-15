@@ -130,6 +130,7 @@ type 'a path_string_elem =
   | Constant of 'a * int
   | Variable
   | PrimitiveType of Elpi_util.Util.CData.t
+[@@deriving show]
   
 
 type 'a path = ('a path_string_elem) list
@@ -138,10 +139,11 @@ let arity_of = function
   | Constant (_,a) -> a 
   | Variable | PrimitiveType _ -> 0
 
-module TreeIndexable : Discrimination_tree_jump_to.IndexableTerm with 
+module TreeIndexable : Discrimination_tree.IndexableTerm with 
   type input = term and type cell = constant path_string_elem
 = struct
   type cell = (constant path_string_elem)
+  [@@deriving show]
   type path = cell list
   type input = term 
   let variable = Variable
@@ -173,7 +175,10 @@ end
 module MyListClause : Discrimination_tree.MyList with type elt = (clause * int)
 and type t = (clause * int) list = struct
   type elt = clause * int
+  [@@deriving show]
   type t = elt list
+  [@@deriving show]
+
   let empty = []
   let is_empty = (=) []
   let mem = List.mem
@@ -197,11 +202,10 @@ and type t = (clause * int) list = struct
   let elements = Fun.id
   let find a l = List.find ((=) a) l
   let of_list = Fun.id
-  let pp = Util.pplist 
 end
 
 module DT = struct 
-  include Discrimination_tree_jump_to.Make(TreeIndexable)(MyListClause) 
+  include Discrimination_tree.Make(TreeIndexable)(MyListClause) 
 
   let pp f fmt = Printf.printf "PP of DT is to be done"
 

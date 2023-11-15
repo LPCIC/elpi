@@ -2364,8 +2364,8 @@ let chose_indexing state predicate l =
     | [] -> error ("Wrong indexing for " ^ Symbols.show state predicate)
     | 0 :: l -> aux (argno+1) l
     | 1 :: l when all_zero l -> MapOn argno
-    (* TODO: 33 is a random number chosen for indexing with tries *)
-    | 33 :: l when all_zero l -> Trie argno 
+    (* TODO: take hd into account to create "shorter" paths *)
+    | _ :: l when all_zero l -> Trie argno 
     | _ -> Hash l
   in
     aux 0 l

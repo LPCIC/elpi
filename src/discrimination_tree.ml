@@ -25,17 +25,18 @@
 
 (* $Id: discrimination_tree.ml 11171 2011-01-11 15:12:32Z tassi $ *)
 
-type 'a path_string_elem = 
-  | Constant of 'a * int
-  | Variable
-  | PrimitiveType of Elpi_util.Util.CData.t
-  
-
-type 'a path = ('a path_string_elem) list
-
-module type Indexable = sig
+module type IndexableTerm = sig
   type input
-  type constant_name
+  
+  type cell
+  
+  val show_cell: cell -> string
+  val pp_cell: Format.formatter -> cell -> unit
+
+  type path = cell list
+  val compare: cell -> cell -> int
+  val path_string_of : input -> path
+
   (* You have h(f(x,g(y,z)),t) whose path_string_of_term_with_jl is 
     (h,2).(f,2).(x,0).(g,2).(y,0).(z,0).(t,0) and you are at f and want to
     skip all its progeny, thus you want to reach t.
@@ -46,18 +47,11 @@ module type Indexable = sig
     The input ariety is the one of f while the path is x.g....t  
     Should be the equivalent of after_t in the literature (handbook A.R.)
   *)
-  (* MAYBE: a pointer to t from f should increase performances  *)
-  val skip: constant_name path -> constant_name path
-  val compare: 
-    constant_name path_string_elem -> 
-    constant_name path_string_elem -> int
-  val path_string_of : input -> constant_name path
+  (* MAYBE: a pointer to t from f should increase performances (i.e. jump list from McCune 1990) *)
+  val skip : path -> path
+  val arity_of : cell -> int
+  val variable : cell
 end
-
-let arity_of = function
-  | Constant (_,a) -> a 
-  | Variable | PrimitiveType _ -> 0
-
 
 module type DiscriminationTree =
     sig
@@ -65,11 +59,11 @@ module type DiscriminationTree =
       type input 
       type data
       type dataset
-      type constant_name
+      type cell
       type t
       
-      val iter : t -> (constant_name path -> dataset -> unit) -> unit
-      val fold : t -> (constant_name path -> dataset -> 'b -> 'b) -> 'b -> 'b
+      val iter : t -> (cell list -> dataset -> unit) -> unit
+      val fold : t -> (cell list -> dataset -> 'b -> 'b) -> 'b -> 'b
 
       val empty : t
       val index : t -> input -> data -> t
@@ -92,7 +86,9 @@ module type DiscriminationTree =
 
 module type MyList = sig
     type elt
+    include Elpi_util.Util.Show with type t := elt
     type t
+    include Elpi_util.Util.Show with type t := t
     val empty: t
     val is_empty: t -> bool
     val mem: elt -> t -> bool
@@ -115,23 +111,24 @@ end
     fail_twice.
   the second fail_twice is not considered
 *)
-module Make (I:Indexable) (A:MyList) : DiscriminationTree 
-with type constant_name = I.constant_name and type input = I.input
-and type data = A.elt and type dataset = A.t =
+module Make (I:IndexableTerm) (A:MyList)  =
 
     struct
 
       module OrderedPathStringElement = struct
-        type t = I.constant_name path_string_elem
+        type t = I.cell
+
+        let show = I.show_cell
+        let pp = I.pp_cell
         let compare = I.compare
       end
 
-      type constant_name = I.constant_name
       type data = A.elt
       type dataset = A.t
       type input = I.input
+      type cell = I.cell
 
-      module PSMap = Map.Make(OrderedPathStringElement)
+      module PSMap = Elpi_util.Util.Map.Make(OrderedPathStringElement)
 
       module Trie = Trie.Make(PSMap)
 
@@ -171,9 +168,9 @@ and type data = A.elt and type dataset = A.t =
       let skip_root (Trie.Node (_value, map)) =
         let rec get n = function Trie.Node (_v, m) as tree ->
           if n = 0 then [tree] else 
-          PSMap.fold (fun k v res -> (get (n-1 + arity_of k) v) @ res) m []
+          PSMap.fold (fun k v res -> (get (n-1 + I.arity_of k) v) @ res) m []
         in
-          PSMap.fold (fun k v res -> (get (arity_of k) v) @ res) map []
+          PSMap.fold (fun k v res -> (get (I.arity_of k) v) @ res) map []
 
       let retrieve unif tree term =
         let path = I.path_string_of term in
@@ -181,16 +178,16 @@ and type data = A.elt and type dataset = A.t =
           match tree, path with
           | Trie.Node (Some s, _), [] -> s
           | Trie.Node (None, _), [] -> A.empty 
-          | Trie.Node (_, _map), Variable::path when unif ->
+          | Trie.Node (_, _map), v::path when v = I.variable && unif ->
               List.fold_left A.union A.empty
                 (List.map (retrieve path) (skip_root tree))
           | Trie.Node (_, map), node::path ->
               A.union
-                 (if not unif && node = Variable then A.empty else
+                 (if not unif && I.variable = node then A.empty else
                   try retrieve path (PSMap.find node map)
                   with Not_found -> A.empty)
                  (try
-                    match PSMap.find Variable map, I.skip (node :: path) with
+                    match PSMap.find I.variable map, I.skip (node :: path) with
                     | Trie.Node (Some s, _), [] -> s
                     | n, path -> retrieve path n
                   with Not_found -> A.empty)
@@ -271,16 +268,16 @@ and type data = A.elt and type dataset = A.t =
           match tree, path with
           | Trie.Node (Some s, _), [] -> S.singleton (s, n)
           | Trie.Node (None, _), [] -> S.empty
-          | Trie.Node (_, _map), Variable::path when unif ->
+          | Trie.Node (_, _map), v::path when unif && v = I.variable ->
               List.fold_left S.union S.empty
                 (List.map (retrieve n path) (skip_root tree))
           | Trie.Node (_, map), node::path ->
               S.union
-                 (if not unif && node = Variable then S.empty else
+                 (if not unif && node = I.variable then S.empty else
                   try retrieve (n+1) path (PSMap.find node map)
                   with Not_found -> S.empty)
                  (try
-                    match PSMap.find Variable map,I.skip (node::path) with
+                    match PSMap.find I.variable map,I.skip (node::path) with
                     | Trie.Node (Some s, _), [] -> 
                        S.singleton (s, n)
                     | no, path -> retrieve n path no

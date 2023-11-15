@@ -22,7 +22,7 @@
     given. *)
 
 
-module Make (M : Map.S) = struct
+module Make (M : Elpi_util.Util.Map.S) = struct
   
 (*s Then a trie is just a tree-like structure, where a possible
     information is stored at the node (['a option]) and where the sons
@@ -30,8 +30,10 @@ module Make (M : Map.S) = struct
     ['a t M.t]. The empty trie is just the empty map. *)
 
   type key = M.key list
+  [@@deriving show]
 
   type 'a t = Node of 'a option * 'a t M.t
+  [@@deriving show]
 
   let empty = Node (None, M.empty)
 

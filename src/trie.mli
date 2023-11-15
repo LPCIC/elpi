@@ -1,5 +1,5 @@
 module Make :
-  functor (M : Map.S) ->
+  functor (M : Elpi_util.Util.Map.S) ->
     sig
       type key = M.key list
       type 'a t = Node of 'a option * 'a t M.t

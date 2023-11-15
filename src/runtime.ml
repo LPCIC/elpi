@@ -2593,10 +2593,10 @@ let hash_goal_args ~depth mode args goal =
   | App(k,x,xs) -> hash_goal_arg_list k ~depth (x::xs) mode args
   | _ -> assert false
 
-let trie_goal_args ~depth mode goal argno : term =
+let trie_goal_args ~depth mode goal argno : (term * bool) =
   match goal with
-  | Const a -> List.nth [Const a] argno
-  | App(k,x,xs) -> List.nth (x::xs) argno
+  | Const a -> List.nth [Const a] argno, List.nth mode argno
+  | App(k,x,xs) -> List.nth (x::xs) argno, List.nth mode argno
   | _ -> assert false
 
 let get_clauses ~depth predicate goal { index = m } =
@@ -2616,8 +2616,12 @@ let get_clauses ~depth predicate goal { index = m } =
        List.(map fst (sort (fun (_,cl1) (_,cl2) -> cl2 - cl1) cl))
      | IndexWithTrie {argno; mode; args_idx} -> 
         Printf.printf "Current goal to index %s\n" (Term.show_term goal);
-        let unifying_clauses = DT.retrieve_unifiables args_idx (trie_goal_args ~depth mode goal argno) in 
-        Printf.printf "Filtered clauses number is %d\n" (List.length unifying_clauses); 
+        let (arg, mode_arg) = trie_goal_args ~depth mode goal argno in
+        let unifying_clauses = if mode_arg then 
+          DT.retrieve_generalizations args_idx arg else 
+          DT.retrieve_unifiables args_idx arg in 
+          [%spy "dev:disc-tree-filter-number" ~rid Elpi_util.Util.pp_string 
+            (Printf.sprintf "Filtered clauses number is %d\n" (List.length unifying_clauses))];
         List.map fst unifying_clauses
    with Not_found -> []
  in
