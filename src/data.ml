@@ -179,7 +179,14 @@ end
 module MyListClause : Discrimination_tree.MyList with type elt = (clause * int)
 and type t = (clause * int) list = struct
   type elt = clause * int
-  [@@deriving show]
+  (* [@@deriving show] *)
+
+  let pp_elt (fmt:Format.formatter) ((cl, _): clause * int) = 
+    Format.fprintf fmt "[clause_args:";
+    pplist pp_term ", " fmt cl.args;
+    Format.fprintf fmt " ;; clause_hyps:";
+    pplist pp_term ", " fmt cl.hyps;
+    Format.fprintf fmt "]";
   
   type t = elt list
   [@@deriving show]

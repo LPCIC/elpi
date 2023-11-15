@@ -2407,9 +2407,7 @@ let run
       let declare_index, index =
         match tindex with
         | Some (Ast.Structured.Index l) ->
-          if (List.length l > List.length mode) 
-            then failwith ("Invalid index arity for predicate" ^ Symbols.show state name) 
-          else true, chose_indexing state name l
+          true, chose_indexing state name l
         | _ -> false, chose_indexing state name [1] in
       try
         let _, old_tindex = C.Map.find name map in

@@ -138,17 +138,6 @@ module Make (M : Elpi_util.Util.Map.S) = struct
   let is_empty = function
     | Node (None, m1) -> M.is_empty m1
     | _ -> false
-   
-    
-  let show (fmt: (Format.formatter -> 'a -> unit)) (Node (a, b): 'a t) : string = 
-    (* Format.fprintf fmt "."  *)
-    (* M.show () b *)
-    (* M.show fmt b *)
-    (* let node_cnt = match a with
-    | None -> "None"
-    | Some a -> "Some ()" ^ Format.fprintf _x "%a ->@ %a;@ " Ord.pp k f v in 
-    Printf.sprintf "Node [%s]" "a" *)
-    Printf.sprintf "TODO: show of trie"
 
   let rec pp (ppelem : (Format.formatter -> 'a -> unit)) (fmt : Format.formatter) (Node (a, b) : 'a t) : unit = 
     Format.fprintf fmt "[values:{";
@@ -159,4 +148,9 @@ module Make (M : Elpi_util.Util.Map.S) = struct
     Format.fprintf fmt "} key:{";
     M.pp (pp ppelem) fmt b;
     Format.fprintf fmt "}]"
+
+    let show (fmt: (Format.formatter -> 'a -> unit)) (n: 'a t) : string = 
+      let b = Buffer.create 22 in
+      Format.fprintf (Format.formatter_of_buffer b) "@[%a@]" (pp fmt) n;
+      Buffer.contents b
 end
