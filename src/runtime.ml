@@ -2591,14 +2591,12 @@ let get_clauses ~depth predicate goal { index = m } =
        let cl = List.flatten (Ptmap.find_unifiables hash args_idx) in
        List.(map fst (sort (fun (_,cl1) (_,cl2) -> cl2 - cl1) cl))
      | IndexWithTrie {argno; mode; args_idx} -> 
-        [%spy "dev:disc-tree-filter-number1" ~rid Elpi_util.Util.pp_string 
-              (Printf.sprintf "Current goal is %s\n" (Term.show_term goal))];
+        [%spy "dev:disc-tree-filter-number1" ~rid pp_string "Current goal is" pp_term goal];
         let (arg, mode_arg) = trie_goal_args ~depth mode goal argno in
         let unifying_clauses = if mode_arg then 
           DT.retrieve_generalizations args_idx arg else 
           DT.retrieve_unifiables args_idx arg in 
-          [%spy "dev:disc-tree-filter-number2" ~rid Elpi_util.Util.pp_string 
-            (Printf.sprintf "Filtered clauses number is %d\n" (List.length unifying_clauses))];
+          [%spy "dev:disc-tree-filter-number2" ~rid pp_string "Filtered clauses number is" pp_int (List.length unifying_clauses)];
         List.map fst unifying_clauses
    with Not_found -> []
  in
