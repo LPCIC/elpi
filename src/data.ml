@@ -123,7 +123,9 @@ type clause = {
     mode : mode;        (* CACHE to avoid allocation in get_clauses *)
     loc : Loc.t option; (* debug *)
 }
-and mode = bool list (* true=input, false=output *)
+and 
+(** input = true; output = false *)
+mode = bool list (* true=input, false=output *)
 [@@deriving show]
 
 (* Simpler pretty printer for clause *)
@@ -157,14 +159,6 @@ module TreeIndexable : Discrimination_tree.IndexableTerm with
   let variable = Variable
 
   let compare = compare
-  
-  let rec path_string_of = function
-    | Const a -> let c = Constant (a, 0) in [c]
-    | App (hd, x, xs) -> 
-        let tl = List.map path_string_of (x :: xs) |> List.flatten in 
-       ( Constant (hd, List.length xs + 1)) :: tl 
-    | CData d -> [PrimitiveType d]
-    | _ -> [Variable]
 
   let arity_of  = function
     | Constant (_,a) -> a 
@@ -178,13 +172,14 @@ module TreeIndexable : Discrimination_tree.IndexableTerm with
     match path with
       | [] -> failwith "Skipping empty path is not possible"
       | hd :: tl -> aux (arity_of hd) tl
+  
 end
 
 module MyListClause : Discrimination_tree.MyList with type elt = (clause * int)
 and type t = (clause * int) list = struct
   type elt = clause * int
 
-  let pp_elt a (cl, _) = pp_clause_simple a cl 
+  let pp_elt fmt (cl, _) = pp_string fmt "CLAUSE!!" 
   
   type t = elt list
   [@@deriving show]
@@ -194,16 +189,6 @@ and type t = (clause * int) list = struct
   let mem = List.mem
   let add = List.cons
   let singleton a = [a]
-  (* 
-    NOTE: the lists l1 and l2 are supposed to be sorted by timestamp, 
-          therefore we simply do the merge algorithm to have a sorted list
-  *)
-  let rec union (l1: t) (l2 : t) = match l1, l2 with 
-    | [], l | l, [] -> l
-    | (_, tx as x) :: xs, ((_, ty) :: _ as ys) when tx > ty -> 
-        x :: union xs ys
-    | xs, y :: ys -> 
-        y :: union xs ys
 
   let remove a l = List.filter ((<>) a) l
   let compare = compare
@@ -212,6 +197,8 @@ and type t = (clause * int) list = struct
   let elements = Fun.id
   let find a l = List.find ((=) a) l
   let of_list = Fun.id
+  
+  let get_time_stamp = snd
 end
 
 module DT = Discrimination_tree.Make(TreeIndexable)(MyListClause) 

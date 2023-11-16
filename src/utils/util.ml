@@ -83,6 +83,13 @@ module Int = struct
   let compare x y = x - y
 end
 
+module Bool = struct
+  type t = bool
+  let pp fmt x = Format.pp_print_bool fmt x
+  let show x = Format.asprintf "@[%a@]" pp x
+  let compare = Bool.compare
+end
+
 module String = struct
   include String
   let pp fmt s = Format.fprintf fmt "%s" s

@@ -60,6 +60,12 @@ module Int : sig
   include Show with type t := int
 end
 
+module Bool : sig
+  type t = bool
+  val compare : t -> t -> int
+  include Show with type t := t
+end
+
 module String : sig
   include module type of String
   include Show with type t := string

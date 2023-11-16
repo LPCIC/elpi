@@ -10,7 +10,6 @@ module type IndexableTerm = sig
   val show_cell : cell -> string
   val pp_cell : Format.formatter -> cell -> unit
   val compare : cell -> cell -> int
-  val path_string_of : input -> path
 
   (* You have h(f(x,g(y,z)),t) whose path_string_of_term_with_jl is
      (h,2).(f,2).(x,0).(g,2).(y,0).(z,0).(t,0) and you are at f and want to
@@ -34,6 +33,7 @@ module type DiscriminationTree = sig
   type data
   type dataset
   type cell
+  type path = cell list
   type t
 
   include Elpi_util.Util.Show with type t := t
@@ -41,16 +41,17 @@ module type DiscriminationTree = sig
   val iter : t -> (cell list -> dataset -> unit) -> unit
   val fold : t -> (cell list -> dataset -> 'b -> 'b) -> 'b -> 'b
   val empty : t
-  val index : t -> input -> data -> t
-  val remove_index : t -> input -> data -> t
-  val in_index : t -> input -> (data -> bool) -> bool
-  val retrieve_generalizations : t -> input -> dataset
-  val retrieve_unifiables : t -> input -> dataset
+  val index : t -> path -> data -> t
+
+  val remove_index : t -> path -> data -> t
+  val in_index : t -> path -> (data -> bool) -> bool
+  val retrieve_generalizations : t -> path -> dataset
+  val retrieve_unifiables : t -> path -> dataset
 end
 
 module type MyList = sig
   type elt
-  type t
+  type t = elt list
 
   include Elpi_util.Util.Show with type t := t
 
@@ -60,13 +61,14 @@ module type MyList = sig
   val add : elt -> t -> t
   val singleton : elt -> t
   val remove : elt -> t -> t
-  val union : t -> t -> t
   val compare : t -> t -> int
   val equal : t -> t -> bool
   val exists : (elt -> bool) -> t -> bool
   val elements : t -> elt list
   val find : elt -> t -> elt
   val of_list : elt list -> t
+
+  val get_time_stamp: elt -> int
 end
 
 module Make (I : IndexableTerm) (A : MyList) :
@@ -74,7 +76,8 @@ module Make (I : IndexableTerm) (A : MyList) :
     with type data = A.elt
      and type dataset = A.t
      and type input = I.input
-     and type cell = I.cell = struct
+     and type cell = I.cell 
+     and type path = I.path = struct
   module OrderedPathStringElement = struct
     type t = I.cell
 
@@ -91,6 +94,7 @@ module Make (I : IndexableTerm) (A : MyList) :
   type input = I.input
   type t = dataset Trie.t
   type cell = I.cell
+  type path = I.path
 
   let pp = Trie.pp A.pp
   let show = Trie.show A.pp
@@ -98,20 +102,17 @@ module Make (I : IndexableTerm) (A : MyList) :
   let iter dt f = Trie.iter (fun p x -> f p x) dt
   let fold dt f = Trie.fold (fun p x -> f p x) dt
 
-  let index tree term info =
-    let ps = I.path_string_of term in
+  let index tree ps info =
     let ps_set = try Trie.find ps tree with Not_found -> A.empty in
     Trie.add ps (A.add info ps_set) tree
 
-  let remove_index tree term info =
-    let ps = I.path_string_of term in
+  let remove_index tree ps info =
     try
       let ps_set = A.remove info (Trie.find ps tree) in
       if A.is_empty ps_set then Trie.remove ps tree else Trie.add ps ps_set tree
     with Not_found -> tree
 
-  let in_index tree term test =
-    let ps = I.path_string_of term in
+  let in_index tree ps test =
     try
       let ps_set = Trie.find ps tree in
       A.exists test ps_set
@@ -129,17 +130,27 @@ module Make (I : IndexableTerm) (A : MyList) :
     in
     PSMap.fold (fun k v res -> get (I.arity_of k) v @ res) map []
 
-  let retrieve unif tree term =
-    let path = I.path_string_of term in
+  (* 
+    NOTE: the lists l1 and l2 are supposed to be sorted, 
+          therefore we simply do the merge algorithm to have a sorted list
+  *)
+  let rec union (l1: dataset) (l2 : dataset) = match l1, l2 with 
+    | [], l | l, [] -> l
+    | x :: xs, y :: ys when A.get_time_stamp x > A.get_time_stamp y -> 
+        x :: union xs ys
+    | xs, y :: ys -> 
+        y :: union xs ys
+
+  let retrieve unif tree path =
     let rec retrieve path tree =
       match (tree, path) with
       | Trie.Node (Some s, _), [] -> s
       | Trie.Node (None, _), [] -> A.empty
       | Trie.Node (_, _map), v :: path when v = I.variable && unif ->
-          List.fold_left A.union A.empty
+          List.fold_left union A.empty
             (List.map (retrieve path) (skip_root tree))
       | Trie.Node (_, map), node :: path ->
-          A.union
+          union
             (if (not unif) && I.variable = node then A.empty
              else
                try retrieve path (PSMap.find node map)
