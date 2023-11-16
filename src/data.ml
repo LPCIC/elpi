@@ -150,11 +150,10 @@ let arity_of = function
   | Variable | PrimitiveType _ -> 0
 
 module TreeIndexable : Discrimination_tree.IndexableTerm with 
-  type input = term and type cell = constant path_string_elem
+  type cell = constant path_string_elem
 = struct
   type cell = (constant path_string_elem) [@@deriving show]
   type path = cell list [@@deriving show]
-  type input = term 
 
   let variable = Variable
 
@@ -172,31 +171,14 @@ module TreeIndexable : Discrimination_tree.IndexableTerm with
     match path with
       | [] -> failwith "Skipping empty path is not possible"
       | hd :: tl -> aux (arity_of hd) tl
-  
 end
 
-module MyListClause : Discrimination_tree.MyList with type elt = (clause * int)
+module MyListClause : Discrimination_tree.TimeStampList with type elt = (clause * int)
 and type t = (clause * int) list = struct
   type elt = clause * int
-
   let pp_elt fmt (cl, _) = pp_string fmt "CLAUSE!!" 
   
-  type t = elt list
-  [@@deriving show]
-
-  let empty = []
-  let is_empty = (=) []
-  let mem = List.mem
-  let add = List.cons
-  let singleton a = [a]
-
-  let remove a l = List.filter ((<>) a) l
-  let compare = compare
-  let equal = (=)
-  let exists = List.exists
-  let elements = Fun.id
-  let find a l = List.find ((=) a) l
-  let of_list = Fun.id
+  type t = elt list [@@deriving show]
   
   let get_time_stamp = snd
 end

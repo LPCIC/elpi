@@ -3,7 +3,6 @@
 (* ------------------------------------------------------------------------- *)
 
 module type IndexableTerm = sig
-  type input
   type cell
   type path = cell list
 
@@ -29,55 +28,39 @@ module type IndexableTerm = sig
 end
 
 module type DiscriminationTree = sig
-  type input
   type data
-  type dataset
-  type cell
-  type path = cell list
+  type datalist = data list
+  type key
+  type keylist = key list
   type t
 
   include Elpi_util.Util.Show with type t := t
 
-  val iter : t -> (cell list -> dataset -> unit) -> unit
-  val fold : t -> (cell list -> dataset -> 'b -> 'b) -> 'b -> 'b
+  val iter : t -> (keylist -> datalist -> unit) -> unit
+  val fold : t -> (keylist -> datalist -> 'b -> 'b) -> 'b -> 'b
   val empty : t
-  val index : t -> path -> data -> t
-
-  val remove_index : t -> path -> data -> t
-  val in_index : t -> path -> (data -> bool) -> bool
-  val retrieve_generalizations : t -> path -> dataset
-  val retrieve_unifiables : t -> path -> dataset
+  val index : t -> keylist -> data -> t
+  val remove_index : t -> keylist -> data -> t
+  val in_index : t -> keylist -> (data -> bool) -> bool
+  val retrieve_generalizations : t -> keylist -> datalist
+  val retrieve_unifiables : t -> keylist -> datalist
 end
 
-module type MyList = sig
+module type TimeStampList = sig
   type elt
   type t = elt list
 
   include Elpi_util.Util.Show with type t := t
 
-  val empty : t
-  val is_empty : t -> bool
-  val mem : elt -> t -> bool
-  val add : elt -> t -> t
-  val singleton : elt -> t
-  val remove : elt -> t -> t
-  val compare : t -> t -> int
-  val equal : t -> t -> bool
-  val exists : (elt -> bool) -> t -> bool
-  val elements : t -> elt list
-  val find : elt -> t -> elt
-  val of_list : elt list -> t
-
-  val get_time_stamp: elt -> int
+  val get_time_stamp : elt -> int
 end
 
-module Make (I : IndexableTerm) (A : MyList) :
+module Make (I : IndexableTerm) (A : TimeStampList) :
   DiscriminationTree
     with type data = A.elt
-     and type dataset = A.t
-     and type input = I.input
-     and type cell = I.cell 
-     and type path = I.path = struct
+     and type datalist = A.t
+     and type key = I.cell
+     and type keylist = I.path = struct
   module OrderedPathStringElement = struct
     type t = I.cell
 
@@ -90,11 +73,10 @@ module Make (I : IndexableTerm) (A : MyList) :
   module Trie = Trie.Make (PSMap)
 
   type data = A.elt
-  type dataset = A.t
-  type input = I.input
-  type t = dataset Trie.t
-  type cell = I.cell
-  type path = I.path
+  type datalist = A.t
+  type key = I.cell
+  type keylist = I.path
+  type t = datalist Trie.t
 
   let pp = Trie.pp A.pp
   let show = Trie.show A.pp
@@ -103,19 +85,19 @@ module Make (I : IndexableTerm) (A : MyList) :
   let fold dt f = Trie.fold (fun p x -> f p x) dt
 
   let index tree ps info =
-    let ps_set = try Trie.find ps tree with Not_found -> A.empty in
-    Trie.add ps (A.add info ps_set) tree
+    let ps_set = try Trie.find ps tree with Not_found -> [] in
+    Trie.add ps (info :: ps_set) tree
 
   let remove_index tree ps info =
     try
-      let ps_set = A.remove info (Trie.find ps tree) in
-      if A.is_empty ps_set then Trie.remove ps tree else Trie.add ps ps_set tree
+      let ps_set = List.filter (( = ) info) (Trie.find ps tree) in
+      if ps_set = [] then Trie.remove ps tree else Trie.add ps ps_set tree
     with Not_found -> tree
 
   let in_index tree ps test =
     try
       let ps_set = Trie.find ps tree in
-      A.exists test ps_set
+      List.exists test ps_set
     with Not_found -> false
 
   (* the equivalent of skip, but on the index, thus the list of trees
@@ -130,36 +112,30 @@ module Make (I : IndexableTerm) (A : MyList) :
     in
     PSMap.fold (fun k v res -> get (I.arity_of k) v @ res) map []
 
-  (* 
-    NOTE: the lists l1 and l2 are supposed to be sorted, 
-          therefore we simply do the merge algorithm to have a sorted list
-  *)
-  let rec union (l1: dataset) (l2 : dataset) = match l1, l2 with 
+  (* NOTE: l1 and l2 are supposed to be sorted *)
+  let rec merge (l1 : datalist) (l2 : datalist) =
+    match (l1, l2) with
     | [], l | l, [] -> l
-    | x :: xs, y :: ys when A.get_time_stamp x > A.get_time_stamp y -> 
-        x :: union xs ys
-    | xs, y :: ys -> 
-        y :: union xs ys
+    | x :: xs, y :: ys when A.get_time_stamp x > A.get_time_stamp y ->
+        x :: merge xs ys
+    | xs, y :: ys -> y :: merge xs ys
 
   let retrieve unif tree path =
     let rec retrieve path tree =
       match (tree, path) with
       | Trie.Node (Some s, _), [] -> s
-      | Trie.Node (None, _), [] -> A.empty
+      | Trie.Node (None, _), [] -> []
       | Trie.Node (_, _map), v :: path when v = I.variable && unif ->
-          List.fold_left union A.empty
-            (List.map (retrieve path) (skip_root tree))
+          List.fold_left merge [] (List.map (retrieve path) (skip_root tree))
       | Trie.Node (_, map), node :: path ->
-          union
-            (if (not unif) && I.variable = node then A.empty
-             else
-               try retrieve path (PSMap.find node map)
-               with Not_found -> A.empty)
+          merge
+            (if (not unif) && I.variable = node then []
+             else try retrieve path (PSMap.find node map) with Not_found -> [])
             (try
                match (PSMap.find I.variable map, I.skip (node :: path)) with
                | Trie.Node (Some s, _), [] -> s
                | n, path -> retrieve path n
-             with Not_found -> A.empty)
+             with Not_found -> [])
     in
     retrieve path tree
 
