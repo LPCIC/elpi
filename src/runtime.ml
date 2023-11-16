@@ -2419,25 +2419,22 @@ let hash_arg_list is_goal hd ~depth args mode spec =
 let hash_clause_arg_list = hash_arg_list false
 let hash_goal_arg_list = hash_arg_list true
 
-let rec arg_to_trie_path ~depth t : constant path_string_elem list =
-  match deref_head ~depth t with
+let rec arg_to_trie_path ~depth t : TreeIndexable.path =
+  match deref_head ~depth t with 
   | Const k when k == Global_symbols.uvarc -> [Variable]
-  (* | Const k -> [Constant (k, 0)] *)
+  | Const k -> [Constant (k, 0)]
   | CData d -> [PrimitiveType d]
-  | Builtin (k,tl) -> Constant (k, 0) :: []
-  (* | App (k,a,_) when k == Global_symbols.asc -> arg_to_trie_path ~depth a *)
+  | Builtin (k,tl) -> 
+    let args = List.flatten (List.map (arg_to_trie_path ~depth) tl) in
+    Constant (k, List.length tl) :: args
+  | App (k,a,_) when k == Global_symbols.asc -> arg_to_trie_path ~depth a
+  | App (k, x, xs) -> 
+    let args = List.flatten (List.map (arg_to_trie_path ~depth) xs) in
+    let fst_arg = arg_to_trie_path ~depth x in 
+    Constant (k, 1 + List.length xs) :: fst_arg @ args
+  | Nil | Cons _ -> [Variable]
   | Lam _ -> [Variable] (* loose indexing to enable eta *)
   | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> [Variable]
-  | _ -> [Variable]
-  (* | Nil -> [Variable]
-  | Cons _ -> [Variable]
-  | App (k,_,_) when k == Global_symbols.uvarc -> [Variable]
-  | App (k, x, xs) -> Constant (k, 0) :: []
-  (* :: arg_to_trie_path ~depth x @ List.flatten (List.map (arg_to_trie_path ~depth) xs)  *)
-  
-  (* List.flatten (List.map (arg_to_trie_path ~depth) tl)  *)
-   *)
-
 let add1clause ~depth m (predicate,clause) =
   match Ptmap.find predicate m with
   | TwoLevelIndex { all_clauses; argno; mode; flex_arg_clauses; arg_idx } ->
@@ -2487,7 +2484,6 @@ let add1clause ~depth m (predicate,clause) =
        }) m
   | IndexWithTrie {mode; argno; args_idx; time} ->
       let path = arg_to_trie_path ~depth (match clause.args with [] -> Discard | l -> List.nth l argno) in 
-      [%spy "dev:disc-tree-filter-number0" ~rid pp_string "In adding clause path is" (pp_path pp_int) path DT.pp args_idx];
       let dt = DT.index args_idx path (clause, time) in
         Ptmap.add predicate (IndexWithTrie {
           mode; argno;
@@ -2623,11 +2619,15 @@ let get_clauses ~depth predicate goal { index = m } =
      | IndexWithTrie {argno; mode; args_idx} -> 
         let mode_arg = nth_not_bool_default mode argno in 
         let arg = arg_to_trie_path ~depth (trie_goal_args goal argno) in
-        [%spy "dev:disc-tree-filter-number1" ~rid pp_string "Current path is" (pp_path pp_int) arg];
+        [%spy "dev:disc-tree-filter-number1" ~rid 
+          pp_string "Current path is" (pp_path pp_int) arg
+          pp_string " and current DT is " DT.pp args_idx];
         let unifying_clauses = if mode_arg then 
           DT.retrieve_generalizations args_idx arg else 
           DT.retrieve_unifiables args_idx arg in 
-          [%spy "dev:disc-tree-filter-number2" ~rid pp_string "Filtered clauses number is" pp_int (List.length unifying_clauses)];
+          [%spy "dev:disc-tree-filter-number2" ~rid 
+            pp_string "Filtered clauses number is" 
+            pp_int (List.length unifying_clauses)];
         List.map fst unifying_clauses
    with Not_found -> []
  in

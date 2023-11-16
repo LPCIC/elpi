@@ -57,31 +57,31 @@ module type TimeStampList = sig
   val get_time_stamp : elt -> int
 end
 
-module Make (I : IndexableTerm) (A : TimeStampList) :
+module Make (K : IndexableTerm) (D : TimeStampList) :
   DiscriminationTree
-    with type data = A.elt
-     and type datalist = A.t
-     and type key = I.cell
-     and type keylist = I.path = struct
+    with type data = D.elt
+     and type datalist = D.t
+     and type key = K.cell
+     and type keylist = K.path = struct
   module OrderedPathStringElement = struct
-    type t = I.cell
+    type t = K.cell
 
-    let show = I.show_cell
-    let pp = I.pp_cell
-    let compare = I.compare
+    let show = K.show_cell
+    let pp = K.pp_cell
+    let compare = K.compare
   end
 
   module PSMap = Elpi_util.Util.Map.Make (OrderedPathStringElement)
   module Trie = Trie.Make (PSMap)
 
-  type data = A.elt
-  type datalist = A.t
-  type key = I.cell
-  type keylist = I.path
+  type data = D.elt
+  type datalist = D.t
+  type key = K.cell
+  type keylist = K.path
   type t = datalist Trie.t
 
-  let pp = Trie.pp A.pp
-  let show = Trie.show A.pp
+  let pp = Trie.pp D.pp
+  let show = Trie.show D.pp
   let empty = Trie.empty
   let iter dt f = Trie.iter (fun p x -> f p x) dt
   let fold dt f = Trie.fold (fun p x -> f p x) dt
@@ -110,15 +110,15 @@ module Make (I : IndexableTerm) (A : TimeStampList) :
       | Trie.Node (_v, m) as tree ->
           if n = 0 then [ tree ]
           else
-            PSMap.fold (fun k v res -> get (n - 1 + I.arity_of k) v @ res) m []
+            PSMap.fold (fun k v res -> get (n - 1 + K.arity_of k) v @ res) m []
     in
-    PSMap.fold (fun k v res -> get (I.arity_of k) v @ res) map []
+    PSMap.fold (fun k v res -> get (K.arity_of k) v @ res) map []
 
   (* NOTE: l1 and l2 are supposed to be sorted *)
   let rec merge (l1 : datalist) (l2 : datalist) =
     match (l1, l2) with
     | [], l | l, [] -> l
-    | x :: xs, (y :: _ as ys) when A.get_time_stamp x > A.get_time_stamp y ->
+    | x :: xs, (y :: _ as ys) when D.get_time_stamp x > D.get_time_stamp y ->
         x :: merge xs ys
     | xs, y :: ys -> y :: merge xs ys
 
@@ -127,14 +127,14 @@ module Make (I : IndexableTerm) (A : TimeStampList) :
       match (tree, path) with
       | Trie.Node (Some s, _), [] -> s
       | Trie.Node (None, _), [] -> []
-      | Trie.Node (_, _map), v :: path when v = I.variable && unif ->
+      | Trie.Node (_, _map), v :: path when v = K.variable && unif ->
           List.fold_left merge [] (List.map (retrieve path) (skip_root tree))
       | Trie.Node (_, map), node :: path ->
           merge
-            (if (not unif) && I.variable = node then []
+            (if (not unif) && K.variable = node then []
              else try retrieve path (PSMap.find node map) with Not_found -> [])
             (try
-               match (PSMap.find I.variable map, I.skip (node :: path)) with
+               match (PSMap.find K.variable map, K.skip (node :: path)) with
                | Trie.Node (Some s, _), [] -> s
                | n, path -> retrieve path n
              with Not_found -> [])
