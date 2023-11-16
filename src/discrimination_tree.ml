@@ -25,6 +25,8 @@ module type IndexableTerm = sig
   val skip : path -> path
   val arity_of : cell -> int
   val variable : cell
+  val pp : Format.formatter -> path -> unit
+  val show : path -> string
 end
 
 module type DiscriminationTree = sig
@@ -116,7 +118,7 @@ module Make (I : IndexableTerm) (A : TimeStampList) :
   let rec merge (l1 : datalist) (l2 : datalist) =
     match (l1, l2) with
     | [], l | l, [] -> l
-    | x :: xs, y :: ys when A.get_time_stamp x > A.get_time_stamp y ->
+    | x :: xs, (y :: _ as ys) when A.get_time_stamp x > A.get_time_stamp y ->
         x :: merge xs ys
     | xs, y :: ys -> y :: merge xs ys
 

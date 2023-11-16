@@ -150,10 +150,14 @@ let arity_of = function
   | Variable | PrimitiveType _ -> 0
 
 module TreeIndexable : Discrimination_tree.IndexableTerm with 
-  type cell = constant path_string_elem
+  type cell = constant path_string_elem and 
+  type path = constant path_string_elem list
 = struct
   type cell = (constant path_string_elem) [@@deriving show]
   type path = cell list [@@deriving show]
+
+  let pp = pp_path
+  let show = show_path
 
   let variable = Variable
 
