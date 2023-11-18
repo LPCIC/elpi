@@ -240,8 +240,7 @@ type suspended_goal = {
 
 (** 
   Used to index the parameters of a predicate P
-  - [MapOn N] -> Indexing is done by unifying the Nth parameter of P with the
-                 query
+  - [MapOn N] -> N-th argument at depth 1 (head symbol only)
   - [Hash L]  -> L is the list of depths given by the urer for the parameters of
                  P. Indexing is done by hashing all the parameters with a non
                  zero depth and comparing it with the hashing of the parameters
