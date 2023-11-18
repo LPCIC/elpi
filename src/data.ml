@@ -245,7 +245,7 @@ type suspended_goal = {
                  P. Indexing is done by hashing all the parameters with a non
                  zero depth and comparing it with the hashing of the parameters
                  of the query
-  - [IndexWithTrie N] -> Indexing is done on the Nth parameter using tries
+  - [IndexWithTrie N] -> N-th argument at arbitrary depth (TODO bound)
 *)
 type indexing =
   | MapOn of int
