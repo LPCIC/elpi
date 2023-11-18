@@ -2406,8 +2406,7 @@ let run
       let mode = try C.Map.find name modes with Not_found -> [] in
       let declare_index, index =
         match tindex with
-        | Some (Ast.Structured.Index l) ->
-          true, chose_indexing state name l
+        | Some (Ast.Structured.Index l) -> true, chose_indexing state name l
         | _ -> false, chose_indexing state name [1] in
       try
         let _, old_tindex = C.Map.find name map in
