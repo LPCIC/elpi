@@ -1067,10 +1067,16 @@ module RawQuery : sig
   (* Args are parameters of the query (e.g. capital letters). *)
   val is_Arg : State.t -> Data.term -> bool
 
+  (* with the possibility to update the state in which the query will run *)
+  val compile_ast :
+    Compile.program -> Ast.query -> (State.t -> State.t) -> unit Compile.query
+
+  (* generate the query term and initial state by hand *)
   val compile :
     Compile.program -> (depth:int -> State.t -> State.t * (Ast.Loc.t * Data.term) * Conversion.extra_goals) ->
       unit Compile.query
 
+  
 end
 
 module Quotation : sig
