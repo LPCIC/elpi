@@ -1,3 +1,7 @@
+(* elpi: embedded lambda prolog interpreter                                  *)
+(* license: GNU Lesser General Public License Version 2.1 or later           *)
+(* ------------------------------------------------------------------------- *)
+
 module Make : functor (M : Elpi_util.Util.Map.S) -> sig
   type key = M.key list
   type 'a t = Node of 'a option * 'a t M.t

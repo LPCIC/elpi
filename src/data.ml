@@ -169,7 +169,7 @@ module TreeIndexable : Discrimination_tree.IndexableTerm with
       | [] -> assert false 
       | m::tl -> aux (arity-1+arity_of m) tl in 
     match path with
-      | [] -> failwith "Skipping empty path is not possible"
+      | [] -> anomaly "Skipping empty path is not possible"
       | hd :: tl -> aux (arity_of hd) tl
 end
 
