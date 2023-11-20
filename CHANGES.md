@@ -1,5 +1,9 @@
 # UNRELEASED
 
+API:
+  - New `RawQuery.compile_ast`, lets one set up the initial state in which the
+    query is run, even if the query is given as an ast
+
 Library:
   - New `std.fold-right`
 
