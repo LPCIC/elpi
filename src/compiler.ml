@@ -2229,7 +2229,7 @@ let uvbodies_of_assignments assignments =
      | UVar(b,_,_) | AppUVar(b,_,_) -> b
      | _ -> assert false) assignments)
 
-let query_of_ast (compiler_state, assembled_program) t =
+let query_of_ast (compiler_state, assembled_program) t state_update =
   let compiler_state = State.begin_goal_compilation compiler_state in
   let initial_depth = assembled_program.Assembled.local_names in
   let types = assembled_program.Assembled.types in
@@ -2256,7 +2256,7 @@ let query_of_ast (compiler_state, assembled_program) t =
     query_arguments = Query.N;
     initial_goal;
     assignments;
-    compiler_state = state |> (uvbodies_of_assignments assignments);
+    compiler_state = state |> (uvbodies_of_assignments assignments) |> state_update;
   }
 
 let query_of_term (compiler_state, assembled_program) f =

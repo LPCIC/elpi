@@ -165,7 +165,7 @@ module Compile = struct
     Compiler.program_of_ast ~flags ~header (List.flatten l)
 
   let query s_p t =
-    Compiler.query_of_ast s_p t
+    Compiler.query_of_ast s_p t (fun st -> st)
 
   let static_check ~checker q =
     let module R = (val !r) in let open R in
@@ -942,6 +942,8 @@ module RawQuery = struct
   
   let is_Arg = Compiler.is_Arg
   let compile = Compiler.query_of_term
+  let compile_ast = Compiler.query_of_ast
+    
 end
 
 module Quotation = struct
