@@ -138,16 +138,11 @@ let pp_clause_simple (fmt:Format.formatter) (cl: clause) =
 
 type 'a path_string_elem = 
   | Constant of 'a * int
-  | Variable
-  | PrimitiveType of Elpi_util.Util.CData.t
+  | Primitive of Elpi_util.Util.CData.t
+  | Variable | Other
 [@@deriving show]
   
 type 'a path = ('a path_string_elem) list
-[@@deriving show]
-
-let arity_of = function
-  | Constant (_,a) -> a 
-  | Variable | PrimitiveType _ -> 0
 
 module TreeIndexable : Discrimination_tree.IndexableTerm with 
   type cell = constant path_string_elem and 
@@ -160,12 +155,13 @@ module TreeIndexable : Discrimination_tree.IndexableTerm with
   let show = show_path
 
   let variable = Variable
+  let to_unify = Other
 
   let compare = compare
 
   let arity_of  = function
     | Constant (_,a) -> a 
-    | Variable | PrimitiveType _ -> 0
+    | Variable | Other | Primitive _ -> 0
 
   let skip (path: path) : path =
     let rec aux arity path = 

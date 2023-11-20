@@ -25,6 +25,7 @@ module type IndexableTerm = sig
   val skip : path -> path
   val arity_of : cell -> int
   val variable : cell
+  val to_unify : cell
   val pp : Format.formatter -> path -> unit
   val show : path -> string
 end
@@ -123,21 +124,36 @@ module Make (K : IndexableTerm) (D : TimeStampList) :
     | xs, y :: ys -> y :: merge xs ys
 
   let retrieve unif tree path =
+    let open Trie in
+    (*
+      to_unify returns if a key should be unified with all the values of
+      the current sub-tree. This key should be either K.to_unfy or K.variable.
+      In the latter case, the unif boolean to be true (we are in output mode).
+    *)
+    let to_unify v = v = K.to_unify || (v = K.variable && unif) in
     let rec retrieve path tree =
       match (tree, path) with
-      | Trie.Node (Some s, _), [] -> s
-      | Trie.Node (None, _), [] -> []
-      | Trie.Node (_, _map), v :: path when v = K.variable && unif ->
+      | Node (Some s, _), [] -> s
+      | Node (None, _), [] -> []
+      | Node (_, _map), v :: path when to_unify v ->
           List.fold_left merge [] (List.map (retrieve path) (skip_root tree))
-      | Trie.Node (_, map), node :: path ->
+      (* Note: in the following branch the head of the path can't be K.to_unify *)
+      | Node (_, map), (node :: sub_path as path) ->
+          let find_by_key key =
+            try
+              match (PSMap.find key map, K.skip path) with
+              | Node (Some s, _), [] -> s
+              | n, path -> retrieve path n
+            with Not_found -> []
+          in
           merge
-            (if (not unif) && K.variable = node then []
-             else try retrieve path (PSMap.find node map) with Not_found -> [])
-            (try
-               match (PSMap.find K.variable map, K.skip (node :: path)) with
-               | Trie.Node (Some s, _), [] -> s
-               | n, path -> retrieve path n
-             with Not_found -> [])
+            (merge
+               (if (not unif) && K.variable = node then []
+                else
+                  try retrieve sub_path (PSMap.find node map)
+                  with Not_found -> [])
+               (find_by_key K.variable))
+            (find_by_key K.to_unify)
     in
     retrieve path tree
 

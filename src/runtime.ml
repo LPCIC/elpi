@@ -2423,7 +2423,7 @@ let rec arg_to_trie_path ~depth t : TreeIndexable.path =
   match deref_head ~depth t with 
   | Const k when k == Global_symbols.uvarc -> [Variable]
   | Const k -> [Constant (k, 0)]
-  | CData d -> [PrimitiveType d]
+  | CData d -> [Primitive d]
   | Builtin (k,tl) -> 
     let args = List.flatten (List.map (arg_to_trie_path ~depth) tl) in
     Constant (k, List.length tl) :: args
@@ -2433,9 +2433,9 @@ let rec arg_to_trie_path ~depth t : TreeIndexable.path =
     let args = List.flatten (List.map (arg_to_trie_path ~depth) xs) in
     let fst_arg = arg_to_trie_path ~depth x in 
     Constant (k, 1 + List.length xs) :: fst_arg @ args
-  | Nil | Cons _ -> [Variable]
-  | Lam _ -> [Variable] (* loose indexing to enable eta *)
-  | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> [Variable]
+  | Nil | Cons _ -> [Other]
+  | Lam _ -> [Other] (* loose indexing to enable eta *)
+  | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> [Other]
 let add1clause ~depth m (predicate,clause) =
   match Ptmap.find predicate m with
   | TwoLevelIndex { all_clauses; argno; mode; flex_arg_clauses; arg_idx } ->
@@ -2621,10 +2621,9 @@ let get_clauses ~depth predicate goal { index = m } =
         let mode_arg = nth_not_bool_default mode argno in 
         let arg = arg_to_trie_path ~depth (trie_goal_args goal argno) in
         [%spy "dev:disc-tree-filter-number1" ~rid 
-          pp_string "Current path is" (pp_path pp_int) arg
+          pp_string "Current path is" TreeIndexable.pp arg
           pp_string " and current DT is " DT.pp args_idx];
-        (* TODO: check better this bool of the condition... *)
-        let unifying_clauses = if false && mode_arg then 
+        let unifying_clauses = if mode_arg then 
           DT.retrieve_generalizations args_idx arg else 
           DT.retrieve_unifiables args_idx arg in 
           [%spy "dev:disc-tree-filter-number2" ~rid 
