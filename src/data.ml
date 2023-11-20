@@ -181,6 +181,7 @@ and type t = (clause * int) list = struct
   type t = elt list [@@deriving show]
   
   let get_time_stamp = snd
+  let equal a b = a = b
 end
 
 module DT = Discrimination_tree.Make(TreeIndexable)(MyListClause) 

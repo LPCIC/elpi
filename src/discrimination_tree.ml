@@ -56,6 +56,7 @@ module type TimeStampList = sig
   include Elpi_util.Util.Show with type t := t
 
   val get_time_stamp : elt -> int
+  val equal : elt -> elt -> bool
 end
 
 module Make (K : IndexableTerm) (D : TimeStampList) :
@@ -93,7 +94,7 @@ module Make (K : IndexableTerm) (D : TimeStampList) :
 
   let remove_index tree ps info =
     try
-      let ps_set = List.filter (( = ) info) (Trie.find ps tree) in
+      let ps_set = List.filter (D.equal info) (Trie.find ps tree) in
       if ps_set = [] then Trie.remove ps tree else Trie.add ps ps_set tree
     with Not_found -> tree
 
