@@ -129,12 +129,12 @@ mode = bool list (* true=input, false=output *)
 [@@deriving show]
 
 (* Simpler pretty printer for clause *)
-let pp_clause_simple (fmt:Format.formatter) (cl: clause) = 
+let pp_clause_simple (fmt:Format.formatter) (cl: clause) = Format.fprintf fmt "clause" (*
   Format.fprintf fmt "[clause_args:";
   pplist pp_term ", " fmt cl.args;
   Format.fprintf fmt " ;; clause_hyps:";
   pplist pp_term ", " fmt cl.hyps;
-  Format.fprintf fmt "]";
+  Format.fprintf fmt "]";*)
 
 type 'a path_string_elem = 
   | Constant of 'a * int
@@ -211,6 +211,7 @@ and second_lvl_idx =
 | IndexWithTrie of {
     mode : mode;
     argno : int;        (* position of argument on which the trie is built *)
+    path_depth : int;   (* depth bound at which the term is inspected *)
     time : int;         (* time is used to recover the total order *)
     args_idx : clause DT.t; 
 }
@@ -236,7 +237,7 @@ type suspended_goal = {
 type indexing =
   | MapOn of int
   | Hash of int list
-  | Trie of int 
+  | Trie of { argno : int; path_depth : int }
 [@@deriving show]
 
 let mkLam x = Lam x [@@inline]

@@ -2419,7 +2419,7 @@ let hash_arg_list is_goal hd ~depth args mode spec =
 let hash_clause_arg_list = hash_arg_list false
 let hash_goal_arg_list = hash_arg_list true
 
-let rec arg_to_trie_path ~depth t : TreeIndexable.path =
+(*let rec arg_to_trie_path ~depth t : TreeIndexable.path =
   match deref_head ~depth t with 
   | Const k when k == Global_symbols.uvarc -> [Variable]
   | Const k -> [Constant (k, 0)]
@@ -2435,7 +2435,58 @@ let rec arg_to_trie_path ~depth t : TreeIndexable.path =
     Constant (k, 1 + List.length xs) :: fst_arg @ args
   | Nil | Cons _ -> [Other]
   | Lam _ -> [Other] (* loose indexing to enable eta *)
-  | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> [Other]
+  | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> [Other]*)
+(** 
+  [arg_to_trie_path_aux ~depth t_list path_depth]
+  Takes a list of terms and builds the path representing this list with
+  height limited to [depth].
+*)
+let rec arg_to_trie_path_aux ~depth t_list path_depth : TreeIndexable.path = 
+  if path_depth = 0 then []
+  else 
+    match t_list with 
+    | [] -> []
+    | hd :: tl -> 
+        let hd_path = arg_to_trie_path ~depth hd path_depth in 
+        let tl_path = arg_to_trie_path_aux ~depth tl path_depth in 
+        hd_path @ tl_path
+(**
+  [arg_to_trie_path ~depth t path_depth]
+  Takes a [term] and returns it path representation with height bound by [path_depth]
+*)
+and arg_to_trie_path ~depth t path_depth : TreeIndexable.path =
+  if path_depth = 0 then []
+  else 
+    let path_depth = path_depth - 1 in 
+    match deref_head ~depth t with 
+    | Const k when k == Global_symbols.uvarc -> [Variable]
+    | Const k -> [Constant (k, 0)]
+    | CData d -> [Primitive d]
+    | App (k,_,_) when k == Global_symbols.uvarc -> [Variable]
+    | App (k,a,_) when k == Global_symbols.asc -> arg_to_trie_path ~depth a (path_depth+1)
+    | Nil -> [Constant(Global_symbols.nilc,0)]
+    | Lam _ -> [Other] (* loose indexing to enable eta *)
+    | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> [Other]
+    | Builtin (k,tl) ->
+      let path = arg_to_trie_path_aux ~depth tl path_depth in 
+      Constant (k, if path_depth = 0 then 0 else List.length tl) :: path 
+    | App (k, x, xs) -> 
+      let arg_length = if path_depth = 0 then 0 else List.length xs + 1 in
+      let hd_path = arg_to_trie_path ~depth x path_depth in
+      let tl_path = arg_to_trie_path_aux ~depth xs path_depth in
+      Constant (k, arg_length) :: hd_path @ tl_path
+    | Cons (x,xs) ->
+      let hd_path = arg_to_trie_path ~depth x path_depth in
+      let tl_path = arg_to_trie_path ~depth xs path_depth in
+      Constant (Global_symbols.consc, 2) :: hd_path @ tl_path
+
+(** 
+  [arg_to_trie_path ~path_depth ~depth t]
+  Take a term and returns its path representation up to path_depth
+*)
+let arg_to_trie_path ~path_depth ~depth t = 
+  arg_to_trie_path ~depth t path_depth
+
 let add1clause ~depth m (predicate,clause) =
   match Ptmap.find predicate m with
   | TwoLevelIndex { all_clauses; argno; mode; flex_arg_clauses; arg_idx } ->
@@ -2483,11 +2534,11 @@ let add1clause ~depth m (predicate,clause) =
          time = time + 1;
          args_idx = Ptmap.add hash ((clause,time) :: clauses) args_idx
        }) m
-  | IndexWithTrie {mode; argno; args_idx; time} ->
-      let path = arg_to_trie_path ~depth (match clause.args with [] -> Discard | l -> List.nth l argno) in 
+  | IndexWithTrie {mode; argno; args_idx; time; path_depth } ->
+      let path = arg_to_trie_path ~depth ~path_depth (match clause.args with [] -> Discard | l -> List.nth l argno) in 
       let dt = DT.index args_idx path clause ~time in
         Ptmap.add predicate (IndexWithTrie {
-          mode; argno;
+          mode; argno; path_depth;
           time = time+1;
           args_idx = dt
         }) m
@@ -2538,8 +2589,8 @@ let make_index ~depth ~indexing ~clauses_rev:p =
           flex_arg_clauses = [];
           arg_idx = Ptmap.empty;
         }
-      | Trie argno -> IndexWithTrie {
-          argno; mode; 
+      | Trie { argno; path_depth } -> IndexWithTrie {
+          argno; path_depth; mode; 
           args_idx = DT.empty;
           time = min_int;
         }
@@ -2617,12 +2668,13 @@ let get_clauses ~depth predicate goal { index = m } =
        let hash = hash_goal_args ~depth mode args goal in
        let cl = List.flatten (Ptmap.find_unifiables hash args_idx) in
        List.(map fst (sort (fun (_,cl1) (_,cl2) -> cl2 - cl1) cl))
-     | IndexWithTrie {argno; mode; args_idx} -> 
+     | IndexWithTrie {argno; path_depth; mode; args_idx} -> 
         let mode_arg = nth_not_bool_default mode argno in 
-        let arg = arg_to_trie_path ~depth (trie_goal_args goal argno) in
+        let arg = arg_to_trie_path ~depth ~path_depth (trie_goal_args goal argno) in
         [%spy "dev:disc-tree-filter-number1" ~rid 
           pp_string "Current path is" TreeIndexable.pp arg
-          pp_string " and current DT is " (DT.pp pp_clause) args_idx];
+          pp_int path_depth
+          (*pp_string " and current DT is " (DT.pp pp_clause_simple) args_idx*)];
         let candidates = if mode_arg then 
           DT.retrieve_generalizations args_idx arg else 
           DT.retrieve_unifiables args_idx arg in 
