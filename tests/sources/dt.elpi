@@ -1,0 +1,26 @@
+:index (12)
+pred fast o:list int. 
+pred slow o:list int. 
+
+pred mk-index i:int, i:(list int -> prop), o:list prop.
+mk-index 0 _ [].
+mk-index N P [C|CL] :- N > 0, N1 is N - 1, mk-clause P 10 [N] C, mk-index N1 P CL.
+
+pred mk-clause i:(list int -> prop), i:int, i:list int, o:prop.
+mk-clause P 0 X (P X).
+mk-clause P N ACC C :- N > 0, N1 is N - 1,
+  mk-clause P N1 [N|ACC] C.
+
+pred repeat i:int, i:prop.
+repeat 0 _.
+repeat N P :- N > 0, N1 is N - 1, P, !, repeat N1 P.
+
+main :-
+  mk-index 100 fast CL1,
+  mk-index 100 slow CL2,
+  !,
+  CL1 => CL2 => std.do! [
+    std.time (repeat 90000 (fast [_,_,_,_,_,_,_,_,_,_,100])) TFast,
+    % std.time (repeat 90000 (slow [_,_,_,_,_,_,_,_,_,_,100])) TSlow,
+    print TFast TSlow,
+  ].
