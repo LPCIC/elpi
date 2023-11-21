@@ -31,39 +31,24 @@ module type IndexableTerm = sig
 end
 
 module type DiscriminationTree = sig
-  type data
-  type datalist = data list
   type key
   type keylist = key list
-  type t
+  type 'a t
 
-  include Elpi_util.Util.Show with type t := t
+  include Elpi_util.Util.Show1 with type 'a t := 'a t
 
-  val iter : t -> (keylist -> datalist -> unit) -> unit
-  val fold : t -> (keylist -> datalist -> 'b -> 'b) -> 'b -> 'b
-  val empty : t
-  val index : t -> keylist -> data -> t
-  val remove_index : t -> keylist -> data -> t
-  val in_index : t -> keylist -> (data -> bool) -> bool
-  val retrieve_generalizations : t -> keylist -> datalist
-  val retrieve_unifiables : t -> keylist -> datalist
+  val iter : 'a t -> (keylist -> 'a -> unit) -> unit
+  val fold : 'a t -> (keylist -> 'a -> 'b -> 'b) -> 'b -> 'b
+  val empty : 'a t
+  val index : 'a t -> keylist -> 'a -> time:int -> 'a t
+  val in_index : 'a t -> keylist -> ('a -> bool) -> bool
+  val retrieve_generalizations : 'a t -> keylist -> 'a list
+  val retrieve_unifiables : 'a t -> keylist -> 'a list
 end
 
-module type TimeStampList = sig
-  type elt
-  type t = elt list
-
-  include Elpi_util.Util.Show with type t := t
-
-  val get_time_stamp : elt -> int
-  val equal : elt -> elt -> bool
-end
-
-module Make (K : IndexableTerm) (D : TimeStampList) :
+module Make (K : IndexableTerm) :
   DiscriminationTree
-    with type data = D.elt
-     and type datalist = D.t
-     and type key = K.cell
+     with type key = K.cell
      and type keylist = K.path = struct
   module OrderedPathStringElement = struct
     type t = K.cell
@@ -76,32 +61,23 @@ module Make (K : IndexableTerm) (D : TimeStampList) :
   module PSMap = Elpi_util.Util.Map.Make (OrderedPathStringElement)
   module Trie = Trie.Make (PSMap)
 
-  type data = D.elt
-  type datalist = D.t
   type key = K.cell
   type keylist = K.path
-  type t = datalist Trie.t
+  type 'a t = ('a * int) Trie.t
 
-  let pp = Trie.pp D.pp
-  let show = Trie.show D.pp
+  let pp pp_a fmt (t : 'a t) : unit = Trie.pp (fun fmt (a,_) -> pp_a fmt a) fmt t
+  let show pp_a (t : 'a t) : string = Trie.show (fun fmt (a,_) -> pp_a fmt a) t
   let empty = Trie.empty
-  let iter dt f = Trie.iter (fun p x -> f p x) dt
-  let fold dt f = Trie.fold (fun p x -> f p x) dt
+  let iter dt f = Trie.iter (fun p (x,_) -> f p x) dt
+  let fold dt f = Trie.fold (fun p (x,_) -> f p x) dt
 
-  let index tree ps info =
-    let ps_set = try Trie.find ps tree with Not_found -> [] in
-    Trie.add ps (info :: ps_set) tree
-
-  let remove_index tree ps info =
-    try
-      let ps_set = List.filter (D.equal info) (Trie.find ps tree) in
-      if ps_set = [] then Trie.remove ps tree else Trie.add ps ps_set tree
-    with Not_found -> tree
+  let index tree ps info ~time =
+    Trie.add ps (info,time) tree
 
   let in_index tree ps test =
     try
       let ps_set = Trie.find ps tree in
-      List.exists test ps_set
+      List.exists (fun (x,_) -> test x) ps_set
     with Not_found -> false
 
   (* the equivalent of skip, but on the index, thus the list of trees
@@ -117,12 +93,12 @@ module Make (K : IndexableTerm) (D : TimeStampList) :
     PSMap.fold (fun k v res -> get (K.arity_of k) v @ res) map []
 
   (* NOTE: l1 and l2 are supposed to be sorted *)
-  let rec merge (l1 : datalist) (l2 : datalist) =
+  let rec merge l1 l2 =
     match (l1, l2) with
     | [], l | l, [] -> l
-    | x :: xs, (y :: _ as ys) when D.get_time_stamp x > D.get_time_stamp y ->
-        x :: merge xs ys
-    | xs, y :: ys -> y :: merge xs ys
+    | (_,tx as x) :: xs, (_,ty) :: _ when tx > ty ->
+        x :: merge xs l2
+    | _, y :: ys -> y :: merge l1 ys
 
   let retrieve unif tree path =
     let open Trie in
@@ -134,8 +110,7 @@ module Make (K : IndexableTerm) (D : TimeStampList) :
     let to_unify v = v = K.to_unify || (v = K.variable && unif) in
     let rec retrieve path tree =
       match (tree, path) with
-      | Node (Some s, _), [] -> s
-      | Node (None, _), [] -> []
+      | Node (s, _), [] -> s
       | Node (_, _map), v :: path when to_unify v ->
           List.fold_left merge [] (List.map (retrieve path) (skip_root tree))
       (* Note: in the following branch the head of the path can't be K.to_unify *)
@@ -143,7 +118,7 @@ module Make (K : IndexableTerm) (D : TimeStampList) :
           let find_by_key key =
             try
               match (PSMap.find key map, K.skip path) with
-              | Node (Some s, _), [] -> s
+              | Node (s, _), [] -> s
               | n, path -> retrieve path n
             with Not_found -> []
           in
@@ -158,6 +133,6 @@ module Make (K : IndexableTerm) (D : TimeStampList) :
     in
     retrieve path tree
 
-  let retrieve_generalizations tree term = retrieve false tree term
-  let retrieve_unifiables tree term = retrieve true tree term
+  let retrieve_generalizations tree term = retrieve false tree term |> List.map fst
+  let retrieve_unifiables tree term = retrieve true tree term |> List.map fst
 end

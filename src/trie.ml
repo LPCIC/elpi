@@ -28,9 +28,9 @@ module Make (M : Elpi_util.Util.Map.S) = struct
       ['a t M.t]. The empty trie is just the empty map. *)
 
   type key = M.key list
-  type 'a t = Node of 'a option * 'a t M.t
 
-  let empty = Node (None, M.empty)
+  type 'a t = Node of 'a list * 'a t M.t
+  let empty = Node ([], M.empty)
 
   (*s To find a mapping in a trie is easy: when all the elements of the
       key have been read, we just inspect the optional info at the
@@ -39,8 +39,8 @@ module Make (M : Elpi_util.Util.Map.S) = struct
 
   let rec find l t =
     match (l, t) with
-    | [], Node (None, _) -> raise Not_found
-    | [], Node (Some v, _) -> v
+    | [], Node ([], _) -> raise Not_found
+    | [], Node (v, _) -> v
     | x :: r, Node (_, m) -> find r (M.find x m)
 
   let mem l t = try Fun.const true (find l t) with Not_found -> false
@@ -54,7 +54,17 @@ module Make (M : Elpi_util.Util.Map.S) = struct
 
   let add l v t =
     let rec ins = function
-      | [], Node (_, m) -> Node (Some v, m)
+      | [], Node (l, m) -> Node (v::l, m)
+      | x :: r, Node (v, m) ->
+          let t' = try M.find x m with Not_found -> empty in
+          let t'' = ins (r, t') in
+          Node (v, M.add x t'' m)
+    in
+    ins (l, t)
+
+  let replace l v t =
+    let rec ins = function
+      | [], Node (_, m) -> Node (v, m)
       | x :: r, Node (v, m) ->
           let t' = try M.find x m with Not_found -> empty in
           let t'' = ins (r, t') in
@@ -69,7 +79,7 @@ module Make (M : Elpi_util.Util.Map.S) = struct
 
   let rec remove l t =
     match (l, t) with
-    | [], Node (_, m) -> Node (None, m)
+    | [], Node (_, m) -> Node ([], m)
     | x :: r, Node (v, m) -> (
         try
           let t' = remove r (M.find x m) in
@@ -85,23 +95,20 @@ module Make (M : Elpi_util.Util.Map.S) = struct
       has to be passed to function [f]. *)
 
   let rec map f = function
-    | Node (None, m) -> Node (None, M.map (map f) m)
-    | Node (Some v, m) -> Node (Some (f v), M.map (map f) m)
+    | Node (v, m) -> Node (List.map f v, M.map (map f) m)
 
   let mapi f t =
     let rec maprec revp = function
-      | Node (None, m) -> Node (None, M.mapi (fun x -> maprec (x :: revp)) m)
-      | Node (Some v, m) ->
+      | Node (v, m) ->
           Node
-            (Some (f (List.rev revp) v), M.mapi (fun x -> maprec (x :: revp)) m)
+            (List.map (f (List.rev revp)) v, M.mapi (fun x -> maprec (x :: revp)) m)
     in
     maprec [] t
 
   let iter f t =
     let rec traverse revp = function
-      | Node (None, m) -> M.iter (fun x -> traverse (x :: revp)) m
-      | Node (Some v, m) ->
-          f (List.rev revp) v;
+      | Node (v, m) ->
+          List.iter (f (List.rev revp)) v;
           M.iter (fun x t -> traverse (x :: revp) t) m
     in
     traverse [] t
@@ -109,20 +116,16 @@ module Make (M : Elpi_util.Util.Map.S) = struct
   let fold f t acc =
     let rec traverse revp t acc =
       match t with
-      | Node (None, m) -> M.fold (fun x -> traverse (x :: revp)) m acc
-      | Node (Some v, m) ->
-          f (List.rev revp) v (M.fold (fun x -> traverse (x :: revp)) m acc)
+      | Node (v, m) ->
+          List.fold_right (f (List.rev revp)) v (M.fold (fun x -> traverse (x :: revp)) m acc)
     in
     traverse [] t acc
 
   let compare cmp a b =
     let rec comp a b =
       match (a, b) with
-      | Node (Some _, _), Node (None, _) -> 1
-      | Node (None, _), Node (Some _, _) -> -1
-      | Node (None, m1), Node (None, m2) -> M.compare comp m1 m2
-      | Node (Some a, m1), Node (Some b, m2) ->
-          let c = cmp a b in
+      | Node (a, m1), Node (b, m2) ->
+          let c = List.compare cmp a b in
           if c <> 0 then c else M.compare comp m1 m2
     in
     comp a b
@@ -130,19 +133,17 @@ module Make (M : Elpi_util.Util.Map.S) = struct
   let equal eq a b =
     let rec comp a b =
       match (a, b) with
-      | Node (None, m1), Node (None, m2) -> M.equal comp m1 m2
-      | Node (Some a, m1), Node (Some b, m2) -> eq a b && M.equal comp m1 m2
-      | _ -> false
+      | Node (a, m1), Node (b, m2) -> List.equal eq a b && M.equal comp m1 m2
     in
     comp a b
 
   (* The base case is rather stupid, but constructable *)
-  let is_empty = function Node (None, m1) -> M.is_empty m1 | _ -> false
+  let is_empty = function Node ([], m1) -> M.is_empty m1 | _ -> false
 
   let rec pp (ppelem : Format.formatter -> 'a -> unit) (fmt : Format.formatter)
       (Node (a, b) : 'a t) : unit =
     Format.fprintf fmt "[values:{";
-    (match a with None -> Format.fprintf fmt "." | Some x -> ppelem fmt x);
+    Elpi_util.Util.pplist ppelem "; " fmt a;
     Format.fprintf fmt "} key:{";
     M.pp (pp ppelem) fmt b;
     Format.fprintf fmt "}]"

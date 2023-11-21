@@ -4,11 +4,12 @@
 
 module Make : functor (M : Elpi_util.Util.Map.S) -> sig
   type key = M.key list
-  type 'a t = Node of 'a option * 'a t M.t
+  type 'a t = Node of 'a list * 'a t M.t
 
   val empty : 'a t
-  val find : key -> 'a t -> 'a
+  val find : key -> 'a t -> 'a list
   val mem : key -> 'a t -> bool
+  val replace : key -> 'a list -> 'a t -> 'a t
   val add : key -> 'a -> 'a t -> 'a t
   val remove : key -> 'a t -> 'a t
   val map : ('a -> 'b) -> 'a t -> 'b t

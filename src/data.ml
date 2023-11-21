@@ -173,18 +173,7 @@ module TreeIndexable : Discrimination_tree.IndexableTerm with
       | hd :: tl -> aux (arity_of hd) tl
 end
 
-module MyListClause : Discrimination_tree.TimeStampList with type elt = (clause * int)
-and type t = (clause * int) list = struct
-  type elt = clause * int
-  let pp_elt fmt (cl, _) = pp_string fmt "CLAUSE!!" 
-  
-  type t = elt list [@@deriving show]
-  
-  let get_time_stamp = snd
-  let equal a b = snd a = snd b
-end
-
-module DT = Discrimination_tree.Make(TreeIndexable)(MyListClause) 
+module DT = Discrimination_tree.Make(TreeIndexable)
 
 type stuck_goal = {
   mutable blockers : blockers;
@@ -223,7 +212,7 @@ and second_lvl_idx =
     mode : mode;
     argno : int;        (* position of argument on which the trie is built *)
     time : int;         (* time is used to recover the total order *)
-    args_idx : DT.t; 
+    args_idx : clause DT.t; 
 }
 [@@deriving show]
 

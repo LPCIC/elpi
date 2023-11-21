@@ -2485,7 +2485,7 @@ let add1clause ~depth m (predicate,clause) =
        }) m
   | IndexWithTrie {mode; argno; args_idx; time} ->
       let path = arg_to_trie_path ~depth (match clause.args with [] -> Discard | l -> List.nth l argno) in 
-      let dt = DT.index args_idx path (clause, time) in
+      let dt = DT.index args_idx path clause ~time in
         Ptmap.add predicate (IndexWithTrie {
           mode; argno;
           time = time+1;
@@ -2622,14 +2622,14 @@ let get_clauses ~depth predicate goal { index = m } =
         let arg = arg_to_trie_path ~depth (trie_goal_args goal argno) in
         [%spy "dev:disc-tree-filter-number1" ~rid 
           pp_string "Current path is" TreeIndexable.pp arg
-          pp_string " and current DT is " DT.pp args_idx];
-        let unifying_clauses = if mode_arg then 
+          pp_string " and current DT is " (DT.pp pp_clause) args_idx];
+        let candidates = if mode_arg then 
           DT.retrieve_generalizations args_idx arg else 
           DT.retrieve_unifiables args_idx arg in 
           [%spy "dev:disc-tree-filter-number2" ~rid 
             pp_string "Filtered clauses number is" 
-            pp_int (List.length unifying_clauses)];
-        List.map fst unifying_clauses
+            pp_int (List.length candidates)];
+        candidates
    with Not_found -> []
  in
  [%log "get_clauses" ~rid (C.show predicate) (List.length rc)];
