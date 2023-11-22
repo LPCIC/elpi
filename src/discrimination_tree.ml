@@ -47,9 +47,7 @@ module type DiscriminationTree = sig
 end
 
 module Make (K : IndexableTerm) :
-  DiscriminationTree
-     with type key = K.cell
-     and type keylist = K.path = struct
+  DiscriminationTree with type key = K.cell and type keylist = K.path = struct
   module OrderedPathStringElement = struct
     type t = K.cell
 
@@ -65,19 +63,19 @@ module Make (K : IndexableTerm) :
   type keylist = K.path
   type 'a t = ('a * int) Trie.t
 
-  let pp pp_a fmt (t : 'a t) : unit = Trie.pp (fun fmt (a,_) -> pp_a fmt a) fmt t
-  let show pp_a (t : 'a t) : string = Trie.show (fun fmt (a,_) -> pp_a fmt a) t
-  let empty = Trie.empty
-  let iter dt f = Trie.iter (fun p (x,_) -> f p x) dt
-  let fold dt f = Trie.fold (fun p (x,_) -> f p x) dt
+  let pp pp_a fmt (t : 'a t) : unit =
+    Trie.pp (fun fmt (a, _) -> pp_a fmt a) fmt t
 
-  let index tree ps info ~time =
-    Trie.add ps (info,time) tree
+  let show pp_a (t : 'a t) : string = Trie.show (fun fmt (a, _) -> pp_a fmt a) t
+  let empty = Trie.empty
+  let iter dt f = Trie.iter (fun p (x, _) -> f p x) dt
+  let fold dt f = Trie.fold (fun p (x, _) -> f p x) dt
+  let index tree ps info ~time = Trie.add ps (info, time) tree
 
   let in_index tree ps test =
     try
       let ps_set = Trie.find ps tree in
-      List.exists (fun (x,_) -> test x) ps_set
+      List.exists (fun (x, _) -> test x) ps_set
     with Not_found -> false
 
   (* the equivalent of skip, but on the index, thus the list of trees
@@ -96,8 +94,7 @@ module Make (K : IndexableTerm) :
   let rec merge l1 l2 =
     match (l1, l2) with
     | [], l | l, [] -> l
-    | (_,tx as x) :: xs, (_,ty) :: _ when tx > ty ->
-        x :: merge xs l2
+    | ((_, tx) as x) :: xs, (_, ty) :: _ when tx > ty -> x :: merge xs l2
     | _, y :: ys -> y :: merge l1 ys
 
   let retrieve unif tree path =
@@ -108,11 +105,14 @@ module Make (K : IndexableTerm) :
       In the latter case, the unif boolean to be true (we are in output mode).
     *)
     let to_unify v = v = K.to_unify || (v = K.variable && unif) in
-    let rec retrieve path tree =
+    let rec retrieve_aux path = function
+      | [] -> []
+      | hd :: tl -> merge (retrieve path hd) (retrieve_aux path tl)
+    and retrieve path tree =
       match (tree, path) with
       | Node (s, _), [] -> s
       | Node (_, _map), v :: path when to_unify v ->
-          List.fold_left merge [] (List.map (retrieve path) (skip_root tree))
+          retrieve_aux path (skip_root tree)
       (* Note: in the following branch the head of the path can't be K.to_unify *)
       | Node (_, map), (node :: sub_path as path) ->
           let find_by_key key =
@@ -133,6 +133,8 @@ module Make (K : IndexableTerm) :
     in
     retrieve path tree
 
-  let retrieve_generalizations tree term = retrieve false tree term |> List.map fst
+  let retrieve_generalizations tree term =
+    retrieve false tree term |> List.map fst
+
   let retrieve_unifiables tree term = retrieve true tree term |> List.map fst
 end
