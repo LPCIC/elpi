@@ -53,6 +53,7 @@ module Constants : sig
   module Set : Set.S with type elt = constant
   val pp : Format.formatter -> t -> unit
   val show : t -> string
+  val compare : t -> t -> int
 end = struct
 
 module Self = struct
@@ -138,7 +139,7 @@ let pp_clause_simple (fmt:Format.formatter) (cl: clause) = Format.fprintf fmt "c
 
 type 'a path_string_elem = 
   | Constant of 'a * int
-  | Primitive of Elpi_util.Util.CData.t
+  | Primitive of int (*Elpi_util.Util.CData.t*)
   | Variable | Other
 [@@deriving show]
   
@@ -157,7 +158,13 @@ module TreeIndexable : Discrimination_tree.IndexableTerm with
   let variable = Variable
   let to_unify = Other
 
-  let compare = compare
+  let compare x y =
+    match x,y with
+    | Constant(x,_), Constant(y,_) -> Constants.compare x y
+    | Variable, Variable -> 0
+    | Other, Other -> 0
+    | Primitive x, Primitive y -> x - y
+    | _, _ -> compare x y
 
   let arity_of  = function
     | Constant (_,a) -> a 

@@ -2461,7 +2461,7 @@ and arg_to_trie_path ~depth t path_depth : TreeIndexable.path =
     match deref_head ~depth t with 
     | Const k when k == Global_symbols.uvarc -> [Variable]
     | Const k -> [Constant (k, 0)]
-    | CData d -> [Primitive d]
+    | CData d -> [Primitive (CData.hash d)]
     | App (k,_,_) when k == Global_symbols.uvarc -> [Variable]
     | App (k,a,_) when k == Global_symbols.asc -> arg_to_trie_path ~depth a (path_depth+1)
     | Nil -> [Constant(Global_symbols.nilc,0)]

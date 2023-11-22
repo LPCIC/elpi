@@ -1,6 +1,6 @@
 :index (12)
-pred fast o:list int. 
-pred slow o:list int. 
+pred fast i:list int. 
+pred slow i:list int. 
 
 pred mk-index i:int, i:(list int -> prop), o:list prop.
 mk-index 0 _ [].
@@ -20,7 +20,8 @@ main :-
   mk-index 100 slow CL2,
   !,
   CL1 => CL2 => std.do! [
-    std.time (repeat 90000 (fast [_,_,_,_,_,_,_,_,_,_,100])) TFast,
-    % std.time (repeat 90000 (slow [_,_,_,_,_,_,_,_,_,_,100])) TSlow,
-    print TFast TSlow,
+    std.time (repeat 90000 (fast [1,2,3,4,5,6,7,8,9,10,100])) TFast,
+    % std.time (repeat 90000 (slow [1,2,3,4,5,6,7,8,9,10,100])) TSlow,
+    print "DT=" TFast,
+    print "PT=" TSlow,
   ].

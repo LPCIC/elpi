@@ -2,6 +2,7 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
+let (=) (x:int) (y:int) = x = y
 module type IndexableTerm = sig
   type cell
   type path = cell list
@@ -91,7 +92,7 @@ module Make (K : IndexableTerm) :
     PSMap.fold (fun k v res -> get (K.arity_of k) v @ res) map []
 
   (* NOTE: l1 and l2 are supposed to be sorted *)
-  let rec merge l1 l2 =
+  let rec merge (l1 : ('a * int) list) l2 =
     match (l1, l2) with
     | [], l | l, [] -> l
     | ((_, tx) as x) :: xs, (_, ty) :: _ when tx > ty -> x :: merge xs l2
@@ -111,7 +112,8 @@ module Make (K : IndexableTerm) :
     and retrieve path tree =
       match (tree, path) with
       | Node (s, _), [] -> s
-      | Node (_, _map), v :: path when to_unify v ->
+      | Node (_, _map), v :: path when false && to_unify v ->
+        assert false;
           retrieve_aux path (skip_root tree)
       (* Note: in the following branch the head of the path can't be K.to_unify *)
       | Node (_, map), (node :: sub_path as path) ->
@@ -122,14 +124,22 @@ module Make (K : IndexableTerm) :
               | n, path -> retrieve path n
             with Not_found -> []
           in
+          (*
           merge
             (merge
+            *)
                (if (not unif) && K.variable = node then []
                 else
-                  try retrieve sub_path (PSMap.find node map)
-                  with Not_found -> [])
+                  let subtree =
+                    try PSMap.find node map
+                    with Not_found -> Node([],PSMap.empty)
+                  in
+                  retrieve sub_path subtree
+                  )
+                  (*
                (find_by_key K.variable))
             (find_by_key K.to_unify)
+            *)
     in
     retrieve path tree
 

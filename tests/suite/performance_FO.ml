@@ -79,3 +79,8 @@ let () = declare "set"
   ~source_elpi:"set.elpi"
   ~description:"stdlib set"
   ()
+
+let () = declare "dt"
+  ~source_elpi:"dt.elpi"
+  ~description:"discrimination_tree indexing"
+  ()
