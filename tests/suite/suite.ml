@@ -37,7 +37,7 @@ let tests = ref []
 let declare
     name ~description ?source_elpi ?source_teyjus ?(deps_teyjus=[]) ?source_dune ?source_json
     ?after
-    ?(typecheck=false) ?input ?(expectation=Success)
+    ?(typecheck=true) ?input ?(expectation=Success)
     ?(outside_llam=false)
     ?(trace=Off)
     ?(legacy_parser=false)
