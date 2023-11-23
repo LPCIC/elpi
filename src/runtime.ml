@@ -2675,7 +2675,7 @@ let get_clauses ~depth predicate goal { index = m } =
         [%spy "dev:disc-tree:path" ~rid 
           Discrimination_tree.pp_path path
           pp_int path_depth
-          Discrimination_tree.(pp pp_clause) args_idx];
+          (*Discrimination_tree.(pp pp_clause) args_idx*)];
         let candidates = DT.retrieve mode_arg path args_idx in 
           [%spy "dev:disc-tree:candidates" ~rid 
             pp_int (List.length candidates)];

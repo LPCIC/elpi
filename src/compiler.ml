@@ -2365,7 +2365,6 @@ let chose_indexing state predicate l =
     | [] -> error ("Wrong indexing for " ^ Symbols.show state predicate)
     | 0 :: l -> aux (argno+1) l
     | 1 :: l when all_zero l -> MapOn argno
-    (* TODO: take hd into account to create "shorter" paths *)
     | path_depth :: l when all_zero l -> Trie { argno ; path_depth }
     | _ -> Hash l
   in
