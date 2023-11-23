@@ -86,10 +86,11 @@ jobs:
           & "$Env:CYGWIN_ROOT/setup-x86_64.exe" -q -P time
           & "$Env:CYGWIN_ROOT/setup-x86_64.exe" -q -P which
           & "$Env:CYGWIN_ROOT/setup-x86_64.exe" -q -P wdiff
-          opam exec -- which which
-          opam exec -- time which
-          opam exec -- which time
-          opam exec -- which wdiff
+
+#          opam exec -- which which
+#          opam exec -- time which
+#          opam exec -- which time
+#          opam exec -- which wdiff
 
 # Build ######################################################################
 #
