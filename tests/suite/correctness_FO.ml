@@ -109,3 +109,20 @@ let () = declare "conj2_legacy"
   ~description:"parsing and evaluation of & (binary conj)"
   ~legacy_parser:true
   ()
+
+let () = declare "dt_var"
+  ~source_elpi:"dt_var.elpi"
+  ~description:"discrimination_tree indexing flex"
+  ~typecheck:false
+  ~trace:(On["tty";"stdout";"-trace-at";"1";"9999";"-trace-only";"dev:disc-tree:candidates"])
+  ~expectation:(SuccessOutput (Str.regexp "dev:disc-tree:candidates = 2"))
+  ()
+
+let () = declare "dt_var2"
+  ~source_elpi:"dt_var2.elpi"
+  ~description:"discrimination_tree indexing flex"
+  ~typecheck:false
+  ~trace:(On["tty";"stdout";"-trace-at";"1";"9999";"-trace-only";"dev:disc-tree:candidates"])
+  ~expectation:(SuccessOutput (Str.regexp "dev:disc-tree:candidates = 3"))
+  ()
+

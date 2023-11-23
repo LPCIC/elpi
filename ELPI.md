@@ -66,7 +66,7 @@ trivial-facts :-
 ```
 
 Side note: no solution is computed for goals like `_ = something`.
-On the contrary a problem like `DummyNameUsedOnlyOnce = somthing` demands the
+On the contrary a problem like `DummyNameUsedOnlyOnce = something` demands the
 computation of the solution (even if it is not used), and hence can *fail* if
 some variable occurring in something is out of scope for `DummyNameUsedOnlyOnce`.
 
@@ -308,8 +308,20 @@ If only one argument is indexed, and it is indexed at depth one, then Elpi uses
 a standard indexing technique based on a perfect (for depth 1) search tree. This
 means that no false positives are returned by the index.
 
-If more than one argument is indexed, or if some argument is indexed at depth
-greater than 1, then Elpi uses an index based on the idea of
+### Discrimination tree index
+
+If only one argument is indexed at depth greater than one, then Elpi uses
+a [discrimination tree](https://www.cs.cmu.edu/~fp/courses/99-atp/lectures/lecture28.html).
+Both the rule argument and the goal argument are
+indexed up to the given depth. The indexing is not perfect, false positives may
+be returned and ruled out by unification.
+
+Indexed terms are linearized into paths. Paths are inserted into a trie data
+structure sharing common prefixes.
+
+### Hash based index
+
+If more than one argument is indexed then Elpi uses an index based on the idea of
 [unification hashes](http://blog.ndrix.com/2013/03/prolog-unification-hashes.html).
 
 ```prolog
@@ -618,7 +630,7 @@ syntax `{{:name` .. `}}` where `name` is any non-space or `\n` character.
 Quotations are elaborated before run-time.
 
 The [coq-elpi](https://github.com/LPCIC/coq-elpi) software embeds elpi 
-in Coq and provides a quatation for its terms. For example
+in Coq and provides a quotation for its terms. For example
 ```prolog
 {{ nat -> bool }}
 ```

@@ -53,6 +53,7 @@ module Constants : sig
   module Set : Set.S with type elt = constant
   val pp : Format.formatter -> t -> unit
   val show : t -> string
+  val compare : t -> t -> int
 end = struct
 
 module Self = struct
@@ -115,6 +116,25 @@ let uvar_isnt_a_blocker { uid_private } = uid_private > 0 [@@inline];;
 let uvar_set_blocker r   = r.uid_private <- -(uvar_id r) [@@inline];;
 let uvar_unset_blocker r = r.uid_private <-  (uvar_id r) [@@inline];;
 
+type arg_mode = Util.arg_mode = Input | Output [@@deriving show]
+
+type clause = {
+    depth : int;
+    args : term list;
+    hyps : term list;
+    vars : int;
+    mode : mode;        (* CACHE to avoid allocation in get_clauses *)
+    loc : Loc.t option; (* debug *)
+}
+and 
+mode = arg_mode list
+[@@deriving show]
+
+let to_mode = function true -> Input | false -> Output
+
+
+module DT = Discrimination_tree
+
 type stuck_goal = {
   mutable blockers : blockers;
   kind : unification_def stuck_goal_kind;
@@ -138,25 +158,23 @@ and second_lvl_idx =
 | TwoLevelIndex of {
     mode : mode;
     argno : int;
-    all_clauses : clause list;         (* when the query is flexible *)
-    flex_arg_clauses : clause list;       (* when the query is rigid but arg_id ha nothing *)
-    arg_idx : clause list Ptmap.t;   (* when the query is rigid (includes in each binding flex_arg_clauses) *)
+    all_clauses : clause list;        (* when the query is flexible *)
+    flex_arg_clauses : clause list;   (* when the query is rigid but arg_id ha nothing *)
+    arg_idx : clause list Ptmap.t;    (* when the query is rigid (includes in each binding flex_arg_clauses) *)
   }
 | BitHash of {
     mode : mode;
     args : int list;
-    time : int; (* time is used to recover the total order *)
+    time : int;                             (* time is used to recover the total order *)
     args_idx : (clause * int) list Ptmap.t; (* clause, insertion time *)
   }
-and clause = {
-    depth : int;
-    args : term list;
-    hyps : term list;
-    vars : int;
-    mode : mode; (* CACHE to avoid allocation in get_clauses *)
-    loc : Loc.t option; (* debug *)
+| IndexWithTrie of {
+    mode : mode;
+    argno : int;        (* position of argument on which the trie is built *)
+    path_depth : int;   (* depth bound at which the term is inspected *)
+    time : int;         (* time is used to recover the total order *)
+    args_idx : clause DT.t; 
 }
-and mode = bool list (* true=input, false=output *)
 [@@deriving show]
 
 type constraints = stuck_goal list
@@ -167,9 +185,19 @@ type suspended_goal = {
   goal : int * term
 }
 
+(** 
+  Used to index the parameters of a predicate P
+  - [MapOn N] -> N-th argument at depth 1 (head symbol only)
+  - [Hash L]  -> L is the list of depths given by the urer for the parameters of
+                 P. Indexing is done by hashing all the parameters with a non
+                 zero depth and comparing it with the hashing of the parameters
+                 of the query
+  - [IndexWithTrie N D] -> N-th argument at D depth
+*)
 type indexing =
   | MapOn of int
   | Hash of int list
+  | Trie of { argno : int; path_depth : int }
 [@@deriving show]
 
 let mkLam x = Lam x [@@inline]

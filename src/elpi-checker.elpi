@@ -175,27 +175,27 @@ refresh X X.
 safe-dest-app (app [X | A]) X A :- !.
 safe-dest-app X X [].
 
-collect-symbols-term N _ X X :- name N, !.
-collect-symbols-term (cdata _) _ X X :- !.
-collect-symbols-term (app []) _ X X :- !.
-collect-symbols-term (app [HD|L]) Known Acc Res :- !,
-  collect-symbols-term HD Known Acc Acc1,
-  collect-symbols-term (app L) Known Acc1 Res.
-collect-symbols-term (lam F) Known Acc Res :- !,
-  pi x\ collect-symbols-term (F x) Known Acc Res.
-collect-symbols-term (arg F) Known Acc Res :- !,
-  pi x\ collect-symbols-term (F x) Known Acc Res.
-collect-symbols-term (const S) Known Acc Res :- !,
-  if (std.string.set.mem S Known ; std.string.map.mem S Acc) (Res = Acc)
+collect-symbols-term N X X :- name N, !.
+collect-symbols-term (cdata _) X X :- !.
+collect-symbols-term (app []) X X :- !.
+collect-symbols-term (app [HD|L]) Acc Res :- !,
+  collect-symbols-term HD Acc Acc1,
+  collect-symbols-term (app L) Acc1 Res.
+collect-symbols-term (lam F) Acc Res :- !,
+  pi x\ collect-symbols-term (F x) Acc Res.
+collect-symbols-term (arg F) Acc Res :- !,
+  pi x\ collect-symbols-term (F x) Acc Res.
+collect-symbols-term (const S) Acc Res :- !,
+  if (std.string.map.mem S Acc) (Res = Acc)
      (checking Loc, std.string.map.add S Loc Acc Res).
 
-collect-symbols-clause (clause Loc _ C) Known Acc Res :-
-  checking Loc => collect-symbols-term C Known Acc Res.
+collect-symbols-clause (clause Loc _ C) Acc Res :-
+  checking Loc => collect-symbols-term C Acc Res.
 
-collect-symbols-program [ C | P ] Known Acc Res :-
-  collect-symbols-clause C Known Acc Acc1,
-  collect-symbols-program P Known Acc1 Res.
-collect-symbols-program [] _ X X.
+collect-symbols-program [ C | P ] Acc Res :-
+  collect-symbols-clause C Acc Acc1,
+  collect-symbols-program P Acc1 Res.
+collect-symbols-program [] X X.
 
 mode (under-env i i).
 
@@ -241,21 +241,27 @@ under-undecl-env [ pr X _ | XS ] P :-
   %print "Assume" X PT,
   (of (const X) Ty_ :- !) => under-undecl-env XS P.
 
-add-known (const N `: _) S S1 :- std.string.set.add N S S1.
+rm-known (const N `: _) S S1 :- std.string.map.remove N S S1.
 
 :if "TIME:CHECKER"
 timing S P :- !, std.time P Time, print S Time.
 timing _ P :- P.
 
+pred check-all-symbols i:std.string.map loc.
+:name "check-all-symbols:main"
+check-all-symbols _.
+
+:name "typecheck-program:main"
 typecheck-program P Q DeclaredTypes RC :-
   KnownTypes = [
     ((const "pi") `: forall x\ (arrow (arrow x prop) prop)),
     ((const "sigma") `: forall x\ (arrow (arrow x prop) prop)),
     ((const "discard") `: forall x\ x)|DeclaredTypes],
-  timing "known set" (std.fold KnownTypes {std.string.set.empty} add-known Known),
-  timing "collect prog" (collect-symbols-program P Known {std.string.map.empty} TMP),
-  collect-symbols-clause Q Known TMP TMP1,
-  std.string.map.bindings TMP1 Undeclared,
+  timing "collect prog" (collect-symbols-program P {std.string.map.empty} TMP),
+  collect-symbols-clause Q TMP AllSymbols,
+  check-all-symbols AllSymbols,
+  std.fold KnownTypes AllSymbols rm-known Unknown,
+  std.string.map.bindings Unknown Undeclared,
   forall_uto10 {std.rev Undeclared} 0 (warn-undeclared KnownTypes), !,
   timing "typecheck "
          (under-decl-env {std.rev KnownTypes}
@@ -310,6 +316,7 @@ check-non-linear [] (arg C) L :- pi x\
 check-non-linear _ C L :-
   count C L, report-linear L.
 
+:name "warn-linear:main"
 warn-linear [].
 warn-linear [ (clause Loc Names Clause) |CS] :-
   checking Loc =>  check-non-linear Names Clause [],
@@ -337,6 +344,7 @@ compile-type-abbreviations [(S `:= T)|TS] [Clause|Clauses] :-
   type->ppt-clause S [] T Clause,
   compile-type-abbreviations TS Clauses.
 
+:name "check:main"
 check P Q DeclaredTypes TypeAbbreviations :-
   compile-type-abbreviations TypeAbbreviations Abbrevs,
   Abbrevs => typecheck-program P Q DeclaredTypes RC, !,

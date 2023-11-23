@@ -1233,6 +1233,7 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
          Loc.show (snd (C.Map.find name map)) ^ ")")
 
   let compile_mode (state, modes) { Ast.Mode.name; args; loc } =
+    let args = List.map to_mode args in
     let state, mname = funct_of_ast state name in
     check_duplicate_mode state mname (args,loc) modes;
     state, C.Map.add mname (args,loc) modes
@@ -1356,7 +1357,7 @@ let query_preterm_of_ast ~depth macros state (loc, t) =
       (state : State.t), lcs, active_macros,
       { Structured.types; type_abbrevs; modes; body; symbols }
 
-    and compile_body macros types type_abbrevs modes lcs defs state = function
+    and compile_body macros types type_abbrevs (modes : (mode * Loc.t) C.Map.t) lcs defs state = function
       | [] -> lcs, state, types, type_abbrevs, modes, defs, []
       | Locals (nlist, p) :: rest ->
           let orig_varmap = get_varmap state in
@@ -1673,11 +1674,11 @@ module Spill : sig
 
   
   val spill_clause :
-    State.t -> types:Structured.typ list C.Map.t -> modes:(constant -> bool list) ->
+    State.t -> types:Structured.typ list C.Map.t -> modes:(constant -> mode) ->
       (preterm, 'a) Ast.Clause.t -> (preterm, 'a) Ast.Clause.t
 
   val spill_chr :
-    State.t -> types:Structured.typ list C.Map.t -> modes:(constant -> bool list) ->
+    State.t -> types:Structured.typ list C.Map.t -> modes:(constant -> mode) ->
       (constant list * prechr_rule list) -> (constant list * prechr_rule list)
   
   (* Exported to compile the query *)
@@ -1727,7 +1728,7 @@ end = struct (* {{{ *)
       | `Arrow(arity,_),_ ->
           let missing = arity - nargs in
           let output_suffix =
-            let rec aux = function false :: l -> 1 + aux l | _ -> 0 in
+            let rec aux = function Output :: l -> 1 + aux l | _ -> 0 in
             aux (List.rev mode) in
           if missing > output_suffix then
             error ~loc Printf.(sprintf
@@ -2358,14 +2359,13 @@ let compile_clause modes initial_depth state
   state, cl
 
 let chose_indexing state predicate l =
-  let rec all_zero = function
-    | [] -> true
-    | 0 :: l -> all_zero l
-    | _ -> false in
-  let rec aux n = function
+  let all_zero = List.for_all ((=) 0) in
+  let rec aux argno = function
+    (* TODO: @FissoreD here we should raise an error if n > arity of the predicate? *)
     | [] -> error ("Wrong indexing for " ^ Symbols.show state predicate)
-    | 0 :: l -> aux (n+1) l
-    | 1 :: l when all_zero l -> MapOn n
+    | 0 :: l -> aux (argno+1) l
+    | 1 :: l when all_zero l -> MapOn argno
+    | path_depth :: l when all_zero l -> Trie { argno ; path_depth }
     | _ -> Hash l
   in
     aux 0 l

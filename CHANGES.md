@@ -7,6 +7,10 @@ API:
 Library:
   - New `std.fold-right`
 
+Runtime:
+  - New clause retrieval through discrimination tree. This new index is enabled
+    whenever the `:index` directive selects only one argument  with a depth `> 1`.
+
 # v1.18.0 (October 2023)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.

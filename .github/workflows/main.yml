@@ -83,13 +83,12 @@ jobs:
           opam exec -- cygpath -m ${{ github.workspace }} | % {$_ -replace "^","workspace=" }  | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
           opam exec -- cygpath -m "$Env:CYGWIN_ROOT" | % {$_ -replace "^","cygwin_root=" }  | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
           opam exec -- sed -i ' ' tests/sources/*.elpi
-          & "$Env:CYGWIN_ROOT/setup-x86_64.exe" -q -P time
-          & "$Env:CYGWIN_ROOT/setup-x86_64.exe" -q -P which
-          & "$Env:CYGWIN_ROOT/setup-x86_64.exe" -q -P wdiff
-          opam exec -- which which
-          opam exec -- time which
-          opam exec -- which time
-          opam exec -- which wdiff
+          & "$Env:CYGWIN_ROOT/setup-x86_64.exe" -v -q -P time,which,wdiff
+
+#          opam exec -- which which
+#          opam exec -- time which
+#          opam exec -- which time
+#          opam exec -- which wdiff
 
 # Build ######################################################################
 #
