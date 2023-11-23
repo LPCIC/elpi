@@ -2294,12 +2294,12 @@ let tail_opt = function
 (** [hd_opt L] returns false if L = [[]] otherwise L.(0)  *)
 let hd_opt = function
   | b :: _ -> b
-  | _ -> false
+  | _ -> Output
 
 type clause_arg_classification =
   | Variable
   | MustBeVariable
-  | Rigid of constant * bool (* matching *)
+  | Rigid of constant * arg_mode
 
 let rec classify_clause_arg ~depth matching t =
   match deref_head ~depth t with
@@ -2362,10 +2362,10 @@ let hash_arg_list is_goal hd ~depth args mode spec =
     | x::xs, n::spec ->
          let h = aux_arg arg_size (hd_opt mode) n x in
          aux (off + arg_size) (acc lor (h lsl off)) xs (tail_opt mode) spec
-  and aux_arg size matching deep arg =
+  and aux_arg size mode deep arg =
     let h =
       match deref_head ~depth arg with
-      | App (k,a,_) when k == Global_symbols.asc -> aux_arg size matching deep a
+      | App (k,a,_) when k == Global_symbols.asc -> aux_arg size mode deep a
       | Const k when k == Global_symbols.uvarc ->
           hash size mustbevariablec
       | App(k,_,_) when k == Global_symbols.uvarc && deep = 1 ->
@@ -2374,19 +2374,19 @@ let hash_arg_list is_goal hd ~depth args mode spec =
       | App(k,_,_) when deep = 1 -> hash size k
       | App(k,x,xs) ->
           let size = size / (List.length xs + 2) in
-          let self = aux_arg size matching (deep-1) in
+          let self = aux_arg size mode (deep-1) in
           let shift = shift size in
           (hash size k) lor
           (shift 1 (self x)) lor
           List.(fold_left (lor) 0 (mapi (fun i x -> shift (i+2) (self x)) xs))
-      | (UVar _ | AppUVar _) when matching && is_goal -> hash size mustbevariablec
-      | (UVar _ | AppUVar _) when matching -> all_1 size
+      | (UVar _ | AppUVar _) when mode == Input && is_goal -> hash size mustbevariablec
+      | (UVar _ | AppUVar _) when mode == Input -> all_1 size
       | (UVar _ | AppUVar _) -> if is_goal then all_0 size else all_1 size
       | (Arg _ | AppArg _) -> all_1 size
       | Nil -> hash size Global_symbols.nilc
       | Cons (x,xs) ->
           let size = size / 2 in
-          let self = aux_arg size matching (deep-1) in
+          let self = aux_arg size mode (deep-1) in
           let shift = shift size in
           (hash size Global_symbols.consc) lor (shift 1 (self x))
       | CData s -> hash size (CData.hash s)
@@ -2394,7 +2394,7 @@ let hash_arg_list is_goal hd ~depth args mode spec =
       | Discard -> all_1 size
       | Builtin(k,xs) ->
           let size = size / (List.length xs + 1) in
-          let self = aux_arg size matching (deep-1) in
+          let self = aux_arg size mode (deep-1) in
           let shift = shift size in
           (hash size k) lor
           List.(fold_left (lor) 0 (mapi (fun i x -> shift (i+1) (self x)) xs))
@@ -2467,7 +2467,7 @@ and arg_to_trie_path ~depth t path_depth : Discrimination_tree.path =
     | App (k,a,_) when k == Global_symbols.asc -> arg_to_trie_path ~depth a (path_depth+1)
     | Nil -> [mkConstant Global_symbols.nilc 0]
     | Lam _ -> [mkOther] (* loose indexing to enable eta *)
-    | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> [mkOther]
+    | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> [mkVariable]
     | Builtin (k,tl) ->
       let path = arg_to_trie_path_aux ~depth tl path_depth in 
       mkConstant k (if path_depth = 0 then 0 else List.length tl) :: path 
@@ -2511,13 +2511,13 @@ let add1clause ~depth m (predicate,clause) =
           flex_arg_clauses;
           arg_idx = Ptmap.add mustbevariablec (clause::l_rev) arg_idx;
         }) m
-      | Rigid (arg_hd,matching) ->
+      | Rigid (arg_hd,arg_mode) ->
       (* t: a rigid term matches flexible terms only in unification mode *)
         let l_rev =
           try Ptmap.find arg_hd arg_idx
           with Not_found -> flex_arg_clauses in
         let all_clauses =
-          if matching then all_clauses else clause :: all_clauses in
+          if arg_mode = Input then all_clauses else clause :: all_clauses in
         Ptmap.add predicate (TwoLevelIndex {
             argno; mode;
           all_clauses;
@@ -2559,8 +2559,8 @@ let add1clause ~depth m (predicate,clause) =
         flex_arg_clauses = [];
         arg_idx = Ptmap.add mustbevariablec [clause] Ptmap.empty;
       }) m
-      | Rigid (arg_hd,matching) ->
-      let all_clauses = if matching then [] else [clause] in
+      | Rigid (arg_hd,arg_mode) ->
+      let all_clauses = if arg_mode == Input then [] else [clause] in
       Ptmap.add predicate (TwoLevelIndex {
         argno = 0;mode = [];
         all_clauses;
@@ -2644,7 +2644,7 @@ let rec nth_not_found l n = match l with
   | _ :: l -> nth_not_found l (n-1)
 
 let rec nth_not_bool_default l n = match l with 
-  | [] -> false
+  | [] -> Output
   | x :: _ when n = 0 -> x 
   | _ :: l -> nth_not_bool_default l (n - 1)
 
@@ -2671,16 +2671,13 @@ let get_clauses ~depth predicate goal { index = m } =
        List.(map fst (sort (fun (_,cl1) (_,cl2) -> cl2 - cl1) cl))
      | IndexWithTrie {argno; path_depth; mode; args_idx} -> 
         let mode_arg = nth_not_bool_default mode argno in 
-        let arg = arg_to_trie_path ~depth ~path_depth (trie_goal_args goal argno) in
-        [%spy "dev:disc-tree-filter-number1" ~rid 
-          pp_string "Current path is" Discrimination_tree.pp_path arg
+        let path = arg_to_trie_path ~depth ~path_depth (trie_goal_args goal argno) in
+        [%spy "dev:disc-tree:path" ~rid 
+          Discrimination_tree.pp_path path
           pp_int path_depth
-          (*pp_string " and current DT is " (DT.pp pp_clause_simple) args_idx*)];
-        let candidates = if mode_arg then 
-          DT.retrieve_generalizations args_idx arg else 
-          DT.retrieve_unifiables args_idx arg in 
-          [%spy "dev:disc-tree-filter-number2" ~rid 
-            pp_string "Filtered clauses number is" 
+          Discrimination_tree.(pp pp_clause) args_idx];
+        let candidates = DT.retrieve mode_arg path args_idx in 
+          [%spy "dev:disc-tree:candidates" ~rid 
             pp_int (List.length candidates)];
         candidates
    with Not_found -> []
@@ -3758,7 +3755,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
           | x :: xs -> arg != C.dummy &&
              match c_mode with
              | [] -> unif ~argsdepth:depth ~matching:false (gid[@trace]) depth env c_depth arg x && for_all23 ~argsdepth:depth (unif (gid[@trace])) depth env c_depth args_of_g xs
-             | matching :: ms -> unif ~argsdepth:depth ~matching (gid[@trace]) depth env c_depth arg x && for_all3b3 ~argsdepth:depth (unif (gid[@trace])) depth env c_depth args_of_g xs ms false
+             | arg_mode :: ms -> unif ~argsdepth:depth ~matching:(arg_mode == Input) (gid[@trace]) depth env c_depth arg x && for_all3b3 ~argsdepth:depth (unif (gid[@trace])) depth env c_depth args_of_g xs ms false
         with
         | false ->
             T.undo old_trail (); [%tcall backchain depth p (k, arg, args_of_g, gs) (gid[@trace]) next alts cutto_alts cs]

@@ -84,3 +84,9 @@ let () = declare "dt"
   ~source_elpi:"dt.elpi"
   ~description:"discrimination_tree indexing"
   ()
+
+let () = declare "dt_off"
+  ~source_elpi:"dt_off.elpi"
+  ~description:"(without) discrimination_tree indexing"
+  ()
+

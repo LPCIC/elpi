@@ -1,0 +1,8 @@
+:index(20)
+pred f i:int.
+f uvar :- print "uvar".
+f X :- var X, print "X".
+f 1 :- halt "bug".
+
+main :-
+  (f X, fail) ; true.

@@ -1,0 +1,8 @@
+:index(20)
+pred f o:int.
+f uvar :- print "uvar".
+f X :- var X, print "X".
+f 1 :- print "Y".
+
+main :-
+  (f X, fail) ; true.

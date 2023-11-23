@@ -1,4 +1,4 @@
-:index (12) % DT is on
+:index (1) % DT is off
 pred f i:list int. 
 
 pred mk-index i:int, i:(list int -> prop), o:list prop.

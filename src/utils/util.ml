@@ -218,13 +218,16 @@ let rec for_all3b p l1 l2 bl b =
   | (a1::l1, a2::l2, b3::bl) -> p a1 a2 b3 && for_all3b p l1 l2 bl b
   | (_, _, _) -> false
 ;;
+
+type arg_mode = Input | Output
+
 let rec for_all3b3 ~argsdepth (p : argsdepth:int -> matching:bool -> 'a) x1 x2 x3 l1 l2 bl b =
   match (l1, l2, bl) with
   | ([], [], _) -> true
   | ([a1], [a2], []) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:b
-  | ([a1], [a2], b3::_) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:b3
+  | ([a1], [a2], b3::_) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:(b3 == Input)
   | (a1::l1, a2::l2, []) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:b && for_all3b3 ~argsdepth p x1 x2 x3 l1 l2 bl b
-  | (a1::l1, a2::l2, b3::bl) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:b3 && for_all3b3 ~argsdepth p x1 x2 x3 l1 l2 bl b
+  | (a1::l1, a2::l2, b3::bl) -> p ~argsdepth x1 x2 x3 a1 a2 ~matching:(b3 == Input) && for_all3b3 ~argsdepth p x1 x2 x3 l1 l2 bl b
   | (_, _, _) -> false
 ;;
 

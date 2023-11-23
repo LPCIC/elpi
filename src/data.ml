@@ -116,6 +116,8 @@ let uvar_isnt_a_blocker { uid_private } = uid_private > 0 [@@inline];;
 let uvar_set_blocker r   = r.uid_private <- -(uvar_id r) [@@inline];;
 let uvar_unset_blocker r = r.uid_private <-  (uvar_id r) [@@inline];;
 
+type arg_mode = Util.arg_mode = Input | Output [@@deriving show]
+
 type clause = {
     depth : int;
     args : term list;
@@ -125,9 +127,10 @@ type clause = {
     loc : Loc.t option; (* debug *)
 }
 and 
-(** input = true; output = false *)
-mode = bool list (* true=input, false=output *)
+mode = arg_mode list
 [@@deriving show]
+
+let to_mode = function true -> Input | false -> Output
 
 (* Simpler pretty printer for clause *)
 let pp_clause_simple (fmt:Format.formatter) (cl: clause) = Format.fprintf fmt "clause" (*

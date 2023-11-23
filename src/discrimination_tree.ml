@@ -15,7 +15,7 @@ let k_mask = ((1 lsl k_bits) - 1) lsl k_lshift
 let arity_mask = (((1 lsl arity_bits) lsl k_bits) - 1) lsl ka_lshift
 let data_mask = (1 lsl ka_lshift) - 1
 let encode k c a = (k lsl k_lshift) lor (a lsl ka_lshift) lor (c land data_mask)
-let k_of n = n land k_mask
+let k_of n = (n land k_mask) lsr k_lshift
 
 let arity_of n =
   let k = k_of n in
@@ -25,6 +25,28 @@ let mkConstant c a = encode kConstant c a
 let mkVariable = encode kVariable 0 0
 let mkOther = encode kOther 0 0
 let mkPrimitive c = encode kPrimitive (Elpi_util.Util.CData.hash c lsl k_bits) 0
+
+let () = assert(k_of (mkConstant ~-17 0) == kConstant)
+let () = assert(k_of mkVariable == kVariable)
+let () = assert(k_of mkOther == kOther)
+
+let isVariable x = k_of x == kVariable
+let isOther x = k_of x == kOther
+
+type cell = int
+let pp_cell fmt n =
+  let k = k_of n in
+  if k == kConstant then
+    let data = data_mask land n in
+    let arity = (arity_mask land n) lsr ka_lshift in
+    Format.fprintf fmt "Constant(%d,%d)" data arity
+  else if k == kVariable then Format.fprintf fmt "Variable"
+  else if k == kOther then Format.fprintf fmt "Other"
+  else if k == kPrimitive then Format.fprintf fmt "Primitive"
+  else Format.fprintf fmt "%o" k
+
+let show_cell n =
+  Format.asprintf "%a" pp_cell n
 
 module Trie = struct
   (*
@@ -85,7 +107,7 @@ module Trie = struct
   let add l v t =
     let rec ins = function
       | [], Node ({ data } as t) -> Node { t with data = v :: data }
-      | x :: r, Node ({ other } as t) when x == kVariable || x == kOther ->
+      | x :: r, Node ({ other } as t) when isVariable x || isOther x ->
           let t' = match other with None -> empty | Some x -> x in
           let t'' = ins (r, t') in
           Node { t with other = Some t'' }
@@ -103,7 +125,7 @@ module Trie = struct
     Format.fprintf fmt "} other:{";
     (match other with None -> () | Some m -> pp ppelem fmt m);
     Format.fprintf fmt "} key:{";
-    Ptmap.pp (pp ppelem) fmt map;
+    Ptmap.to_list map |> Elpi_util.Util.pplist (fun fmt (k,v) -> pp_cell fmt k; pp ppelem fmt v) "; " fmt;
     Format.fprintf fmt "}]"
 
   let show (fmt : Format.formatter -> 'a -> unit) (n : 'a t) : string =
@@ -112,7 +134,6 @@ module Trie = struct
     Buffer.contents b
 end
 
-type cell = int [@@deriving show]
 type path = cell list [@@deriving show]
 
 let compare x y = x - y
@@ -170,36 +191,31 @@ let rec merge (l1 : ('a * int) list) l2 =
   | ((_, tx) as x) :: xs, (_, ty) :: _ when tx > ty -> x :: merge xs l2
   | _, y :: ys -> y :: merge l1 ys
 
-let to_unify v unif = v == kOther || (v == kVariable && unif)
+let get_all_children v mode = isOther v || (isVariable v && Elpi_util.Util.Output == mode)
 
-(* to_unify returns if a key should be unified with all the values of
+(* get_all_children returns if a key should be unified with all the values of
    the current sub-tree. This key should be either K.to_unfy or K.variable.
-   In the latter case, the unif boolean to be true (we are in output mode). *)
-let rec retrieve_aux unif path = function
+   In the latter case, the mode boolean to be true (we are in output mode). *)
+let rec retrieve_aux mode path = function
   | [] -> []
-  | hd :: tl -> merge (retrieve unif path hd) (retrieve_aux unif path tl)
+  | hd :: tl -> merge (retrieve mode path hd) (retrieve_aux mode path tl)
 
-and retrieve unif path tree =
+and retrieve mode path tree =
   match (tree, path) with
   | Trie.Node { data }, [] -> data
-  | Trie.Node { other; map }, v :: path when to_unify v unif ->
-      retrieve_aux unif path (all_children other map)
+  | Trie.Node { other; map }, v :: path when get_all_children v mode ->
+      retrieve_aux mode path (all_children other map)
   | Trie.Node { other = None; map }, node :: sub_path ->
-      if (not unif) && kVariable == node then []
+      if mode == Elpi_util.Util.Input && isVariable node then []
       else
         let subtree = try Ptmap.find node map with Not_found -> Trie.empty in
-        retrieve unif sub_path subtree
+        retrieve mode sub_path subtree
   | Trie.Node { other = Some other; map }, (node :: sub_path as path) ->
       merge
-        (if (not unif) && kVariable == node then []
+        (if mode == Elpi_util.Util.Input && isVariable node then []
         else
-          let subtree =
-            try Ptmap.find node map with Not_found -> Trie.empty
-          in
-          retrieve unif sub_path subtree)
-        (retrieve unif (skip path) other)
+          let subtree = try Ptmap.find node map with Not_found -> Trie.empty in
+          retrieve mode sub_path subtree)
+        (retrieve mode (skip path) other)
 
-let retrieve_generalizations tree term =
-  retrieve false term tree |> List.map fst
-
-let retrieve_unifiables tree term = retrieve true term tree |> List.map fst
+let retrieve mode path index = retrieve mode path index |> List.map fst
