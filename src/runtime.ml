@@ -2463,7 +2463,7 @@ and arg_to_trie_path ~safe ~depth t path_depth : Discrimination_tree.path =
     | Cons (x,xs) ->
       let hd_path = arg_to_trie_path ~safe ~depth x path_depth in
       let tl_path = arg_to_trie_path ~safe ~depth xs path_depth in
-      mkConstant ~safe Global_symbols.consc 2 :: hd_path @ tl_path
+      mkConstant ~safe Global_symbols.consc (if path_depth = 0 then 0 else 2) :: hd_path @ tl_path
 
 (** 
   [arg_to_trie_path ~path_depth ~depth t]
