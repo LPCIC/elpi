@@ -20,8 +20,8 @@ main :-
   mk-index 100 slow CL2,
   !,
   CL1 => CL2 => std.do! [
-    std.time (repeat 90000 (fast [1,2,3,4,5,6,7,8,9,10,100])) TFast,
-    % std.time (repeat 90000 (slow [1,2,3,4,5,6,7,8,9,10,100])) TSlow,
+    std.time (repeat 900000 (fast [1,2,3,4,5,6,7,8,9,10,100])) TFast,
+    % std.time (repeat 900000 (slow [1,2,3,4,5,6,7,8,9,10,100])) TSlow,
     print "DT=" TFast,
     print "PT=" TSlow,
   ].

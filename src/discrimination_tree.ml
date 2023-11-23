@@ -2,7 +2,7 @@
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
 
-let (=) (x:int) (y:int) = x = y
+(*let (=) (x:int) (y:int) = x = y*)
 module type IndexableTerm = sig
   type cell
   type path = cell list
@@ -96,34 +96,26 @@ module Make (K : IndexableTerm) :
     match (l1, l2) with
     | [], l | l, [] -> l
     | ((_, tx) as x) :: xs, (_, ty) :: _ when tx > ty -> x :: merge xs l2
-    | _, y :: ys -> y :: merge l1 ys
+    | _, y :: ys -> y :: merge l1 ys    
 
-  let retrieve unif tree path =
-    let open Trie in
+  let to_unify v unif = v = K.to_unify || (v = K.variable && unif)
+
     (*
       to_unify returns if a key should be unified with all the values of
       the current sub-tree. This key should be either K.to_unfy or K.variable.
       In the latter case, the unif boolean to be true (we are in output mode).
     *)
-    let to_unify v = v = K.to_unify || (v = K.variable && unif) in
-    let rec retrieve_aux path = function
+    let rec retrieve_aux unif path = function
       | [] -> []
-      | hd :: tl -> merge (retrieve path hd) (retrieve_aux path tl)
-    and retrieve path tree =
+      | hd :: tl -> merge (retrieve unif path hd) (retrieve_aux unif path tl)
+    and retrieve unif path tree =
       match (tree, path) with
-      | Node (s, _), [] -> s
-      | Node (_, _map), v :: path when false && to_unify v ->
+      | Trie.Node (s, _), [] -> s
+      | Trie.Node (_, _map), v :: path when false && to_unify v unif ->
         assert false;
-          retrieve_aux path (skip_root tree)
+          retrieve_aux unif path (skip_root tree)
       (* Note: in the following branch the head of the path can't be K.to_unify *)
-      | Node (_, map), (node :: sub_path as path) ->
-          let find_by_key key =
-            try
-              match (PSMap.find key map, K.skip path) with
-              | Node (s, _), [] -> s
-              | n, path -> retrieve path n
-            with Not_found -> []
-          in
+      | Trie.Node (_, map), (node :: sub_path as path) ->
           (*
           merge
             (merge
@@ -134,17 +126,22 @@ module Make (K : IndexableTerm) :
                     try PSMap.find node map
                     with Not_found -> Node([],PSMap.empty)
                   in
-                  retrieve sub_path subtree
+                  retrieve unif sub_path subtree
                   )
                   (*
-               (find_by_key K.variable))
-            (find_by_key K.to_unify)
+               (find_by_key unif map path K.variable))
+            (find_by_key unif map path K.to_unify)
             *)
-    in
-    retrieve path tree
+    and find_by_key unif key map path =
+        try
+          match (PSMap.find key map, K.skip path) with
+          | Trie.Node (s, _), [] -> s
+          | n, path -> retrieve unif path n
+        with Not_found -> []
+
 
   let retrieve_generalizations tree term =
-    retrieve false tree term |> List.map fst
+    retrieve false term tree |> List.map fst
 
-  let retrieve_unifiables tree term = retrieve true tree term |> List.map fst
+  let retrieve_unifiables tree term = retrieve true term tree |> List.map fst
 end
