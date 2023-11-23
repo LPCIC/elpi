@@ -2460,26 +2460,26 @@ and arg_to_trie_path ~depth t path_depth : Discrimination_tree.path =
   else 
     let path_depth = path_depth - 1 in 
     match deref_head ~depth t with 
-    | Const k when k == Global_symbols.uvarc -> [Variable]
-    | Const k -> [Constant (k, 0)]
-    | CData d -> [Primitive (CData.hash d)]
-    | App (k,_,_) when k == Global_symbols.uvarc -> [Variable]
+    | Const k when k == Global_symbols.uvarc -> [mkVariable]
+    | Const k -> [mkConstant k 0]
+    | CData d -> [mkPrimitive d]
+    | App (k,_,_) when k == Global_symbols.uvarc -> [mkVariable]
     | App (k,a,_) when k == Global_symbols.asc -> arg_to_trie_path ~depth a (path_depth+1)
-    | Nil -> [Constant(Global_symbols.nilc,0)]
-    | Lam _ -> [Other] (* loose indexing to enable eta *)
-    | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> [Other]
+    | Nil -> [mkConstant Global_symbols.nilc 0]
+    | Lam _ -> [mkOther] (* loose indexing to enable eta *)
+    | Arg _ | UVar _ | AppArg _ | AppUVar _ | Discard -> [mkOther]
     | Builtin (k,tl) ->
       let path = arg_to_trie_path_aux ~depth tl path_depth in 
-      Constant (k, if path_depth = 0 then 0 else List.length tl) :: path 
+      mkConstant k (if path_depth = 0 then 0 else List.length tl) :: path 
     | App (k, x, xs) -> 
       let arg_length = if path_depth = 0 then 0 else List.length xs + 1 in
       let hd_path = arg_to_trie_path ~depth x path_depth in
       let tl_path = arg_to_trie_path_aux ~depth xs path_depth in
-      Constant (k, arg_length) :: hd_path @ tl_path
+      mkConstant k arg_length :: hd_path @ tl_path
     | Cons (x,xs) ->
       let hd_path = arg_to_trie_path ~depth x path_depth in
       let tl_path = arg_to_trie_path ~depth xs path_depth in
-      Constant (Global_symbols.consc, 2) :: hd_path @ tl_path
+      mkConstant Global_symbols.consc 2 :: hd_path @ tl_path
 
 (** 
   [arg_to_trie_path ~path_depth ~depth t]

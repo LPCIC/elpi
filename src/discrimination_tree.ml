@@ -47,26 +47,38 @@ module type DiscriminationTree = sig
   val retrieve_unifiables : 'a t -> keylist -> 'a list
 end
 
+let arity_bits = 4
+let arity_mask = (1 lsl arity_bits) - 1
+let encode c a = (c lsl arity_bits) lor a
+let mask_low n = n land arity_mask
+
 type cell =
-  | Constant of int * int (* constant , arity *)
+  | Constant of int (* (constant << arity_bits) lor arity *)
   | Primitive of int (*Elpi_util.Util.CData.t hash *)
   | Variable
   | Other
 [@@deriving show]
 
+let mkConstant c a = Constant (encode c a)
+let mkVariable = Variable
+let mkOther = Other
+let mkPrimitive c = Primitive (Elpi_util.Util.CData.hash c)
+
+let arity_of = function
+  | Constant n -> mask_low n
+  | Variable | Other | Primitive _ -> 0
+
+
 type path = cell list [@@deriving show]
 
 let compare x y =
   match (x, y) with
-  | Constant (x, _), Constant (y, _) -> x - y
+  | Constant x, Constant y -> x - y
   | Variable, Variable -> 0
   | Other, Other -> 0
   | Primitive x, Primitive y -> x - y
   | _, _ -> compare x y
 
-let arity_of = function
-  | Constant (_, a) -> a
-  | Variable | Other | Primitive _ -> 0
 
 let skip (path : path) : path =
   let rec aux arity path =
