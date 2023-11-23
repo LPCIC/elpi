@@ -1,52 +1,6 @@
 (* elpi: embedded lambda prolog interpreter                                  *)
 (* license: GNU Lesser General Public License Version 2.1 or later           *)
 (* ------------------------------------------------------------------------- *)
-
-(*let (=) (x:int) (y:int) = x = y*)
-module type IndexableTerm = sig
-  type cell
-  type path = cell list
-
-  val show_cell : cell -> string
-  val pp_cell : Format.formatter -> cell -> unit
-  val compare : cell -> cell -> int
-
-  (* You have h(f(x,g(y,z)),t) whose path_string_of_term_with_jl is
-     (h,2).(f,2).(x,0).(g,2).(y,0).(z,0).(t,0) and you are at f and want to
-     skip all its progeny, thus you want to reach t.
-
-     You need to skip as many elements as the sum of all arieties contained
-     in the progeny of f.
-
-     The input ariety is the one of f while the path is x.g....t
-     Should be the equivalent of after_t in the literature (handbook A.R.)
-  *)
-  (* MAYBE: a pointer to t from f should increase performances (i.e. jump list
-            from McCune 1990) *)
-  val skip : path -> path
-  val arity_of : cell -> int
-  val variable : cell
-  val to_unify : cell
-  val pp : Format.formatter -> path -> unit
-  val show : path -> string
-end
-
-module type DiscriminationTree = sig
-  type key
-  type keylist = key list
-  type 'a t
-
-  include Elpi_util.Util.Show1 with type 'a t := 'a t
-
-  val iter : 'a t -> (keylist -> 'a -> unit) -> unit
-  val fold : 'a t -> (keylist -> 'a -> 'b -> 'b) -> 'b -> 'b
-  val empty : 'a t
-  val index : 'a t -> keylist -> 'a -> time:int -> 'a t
-  val in_index : 'a t -> keylist -> ('a -> bool) -> bool
-  val retrieve_generalizations : 'a t -> keylist -> 'a list
-  val retrieve_unifiables : 'a t -> keylist -> 'a list
-end
-
 let arity_bits = 4
 let k_bits = 2
 
@@ -55,23 +9,108 @@ let kConstant = 0 (* (constant << arity_bits) lor arity *)
 let kPrimitive = 1 (*Elpi_util.Util.CData.t hash *)
 let kVariable = 2
 let kOther = 3
-
-let k_mask = (1 lsl k_bits) - 1
-let arity_mask = ((1 lsl arity_bits) lsl k_bits) - 1
+let k_lshift = Sys.int_size - k_bits
+let ka_lshift = Sys.int_size - k_bits - arity_bits
+let k_mask = ((1 lsl k_bits) - 1) lsl k_lshift
+let arity_mask = (((1 lsl arity_bits) lsl k_bits) - 1) lsl ka_lshift
+let data_mask = (1 lsl ka_lshift) - 1
+let encode k c a = (k lsl k_lshift) lor (a lsl ka_lshift) lor (c land data_mask)
 let k_of n = n land k_mask
 
 let arity_of n =
   let k = k_of n in
-  if k == kConstant then (n land arity_mask) lsr k_bits
-  else 0
-let encode k c a = ((c lsl arity_bits) lsl k_bits) lor (a lsl k_bits) lor k
-let mask_low n = n land arity_mask
-
+  if k == kConstant then (n land arity_mask) lsr ka_lshift else 0
 
 let mkConstant c a = encode kConstant c a
-let mkVariable = kVariable
-let mkOther = kOther
-let mkPrimitive c = (Elpi_util.Util.CData.hash c lsl k_bits) lor kPrimitive
+let mkVariable = encode kVariable 0 0
+let mkOther = encode kOther 0 0
+let mkPrimitive c = encode kPrimitive (Elpi_util.Util.CData.hash c lsl k_bits) 0
+
+module Trie = struct
+  (*
+   * Trie: maps over lists.
+   * Copyright (C) 2000 Jean-Christophe FILLIATRE
+   * 
+   * This software is free software; you can redistribute it and/or
+   * modify it under the terms of the GNU Library General Public
+   * License version 2, as published by the Free Software Foundation.
+   * 
+   * This software is distributed in the hope that it will be useful,
+   * but WITHOUT ANY WARRANTY; without even the implied warranty of
+   * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+   * 
+   * See the GNU Library General Public License version 2 for more details
+   * (enclosed in the file LGPL).
+   *)
+
+  (*s A trie is a tree-like structure to implement dictionaries over
+      keys which have list-like structures. The idea is that each node
+      branches on an element of the list and stores the value associated
+      to the path from the root, if any. Therefore, a trie can be
+      defined as soon as a map over the elements of the list is
+      given. *)
+
+  (*s Then a trie is just a tree-like structure, where a possible
+      information is stored at the node (['a option]) and where the sons
+      are given by a map from type [key] to sub-tries, so of type
+      ['a t Ptmap.t]. The empty trie is just the empty map. *)
+
+  type key = int list
+
+  type 'a t =
+    | Node of { data : 'a list; other : 'a t option; map : 'a t Ptmap.t }
+
+  let empty = Node { data = []; other = None; map = Ptmap.empty }
+
+  (*s To find a mapping in a trie is easy: when all the elements of the
+      key have been read, we just inspect the optional info at the
+      current node; otherwise, we descend in the appropriate sub-trie
+      using [Ptmap.find]. *)
+
+  let rec find l t =
+    match (l, t) with
+    | [], Node { data = [] } -> raise Not_found
+    | [], Node { data } -> data
+    | x :: r, Node { map } -> find r (Ptmap.find x map)
+
+  let mem l t = try Fun.const true (find l t) with Not_found -> false
+
+  (*s Insertion is more subtle. When the final node is reached, we just
+      put the information ([Some v]). Otherwise, we have to insert the
+      binding in the appropriate sub-trie [t']. But it may not exists,
+      and in that case [t'] is bound to an empty trie. Then we get a new
+      sub-trie [t''] by a recursive insertion and we modify the
+      branching, so that it now points to [t''], with [Ptmap.add]. *)
+
+  let add l v t =
+    let rec ins = function
+      | [], Node ({ data } as t) -> Node { t with data = v :: data }
+      | x :: r, Node ({ other } as t) when x == kVariable || x == kOther ->
+          let t' = match other with None -> empty | Some x -> x in
+          let t'' = ins (r, t') in
+          Node { t with other = Some t'' }
+      | x :: r, Node ({ map } as t) ->
+          let t' = try Ptmap.find x map with Not_found -> empty in
+          let t'' = ins (r, t') in
+          Node { t with map = Ptmap.add x t'' map }
+    in
+    ins (l, t)
+
+  let rec pp (ppelem : Format.formatter -> 'a -> unit) (fmt : Format.formatter)
+      (Node { data; other; map } : 'a t) : unit =
+    Format.fprintf fmt "[values:{";
+    Elpi_util.Util.pplist ppelem "; " fmt data;
+    Format.fprintf fmt "} other:{";
+    (match other with None -> () | Some m -> pp ppelem fmt m);
+    Format.fprintf fmt "} key:{";
+    Ptmap.pp (pp ppelem) fmt map;
+    Format.fprintf fmt "}]"
+
+  let show (fmt : Format.formatter -> 'a -> unit) (n : 'a t) : string =
+    let b = Buffer.create 22 in
+    Format.fprintf (Format.formatter_of_buffer b) "@[%a@]" (pp fmt) n;
+    Buffer.contents b
+end
 
 type cell = int [@@deriving show]
 type path = cell list [@@deriving show]
@@ -90,16 +129,11 @@ let skip (path : path) : path =
   | [] -> Elpi_util.Util.anomaly "Skipping empty path is not possible"
   | hd :: tl -> aux (arity_of hd) tl
 
-module PSMap = Elpi_util.Util.Map.Make (OrderedPathStringElement)
-module Trie = Trie.Make (PSMap)
-
 type 'a t = ('a * int) Trie.t
 
 let pp pp_a fmt (t : 'a t) : unit = Trie.pp (fun fmt (a, _) -> pp_a fmt a) fmt t
 let show pp_a (t : 'a t) : string = Trie.show (fun fmt (a, _) -> pp_a fmt a) t
 let empty = Trie.empty
-let iter dt f = Trie.iter (fun p (x, _) -> f p x) dt
-let fold dt f = Trie.fold (fun p (x, _) -> f p x) dt
 let index tree ps info ~time = Trie.add ps (info, time) tree
 
 let in_index tree ps test =
@@ -111,13 +145,23 @@ let in_index tree ps test =
 (* the equivalent of skip, but on the index, thus the list of trees
     that are rooted just after the term represented by the tree root
     are returned (we are skipping the root) *)
-let skip_root (Trie.Node (_value, map)) =
+let all_children other map =
   let rec get n = function
-    | Trie.Node (_v, m) as tree ->
+    | Trie.Node { other = None; map } as tree ->
         if n = 0 then [ tree ]
-        else PSMap.fold (fun k v res -> get (n - 1 + arity_of k) v @ res) m []
+        else Ptmap.fold (fun k v res -> get (n - 1 + arity_of k) v @ res) map []
+    | Trie.Node { other = Some other; map } as tree ->
+        if n = 0 then [ tree; other ]
+        else
+          Ptmap.fold
+            (fun k v res -> get (n - 1 + arity_of k) v @ res)
+            map [ other ]
   in
-  PSMap.fold (fun k v res -> get (arity_of k) v @ res) map []
+
+  Ptmap.fold
+    (fun k v res -> get (arity_of k) v @ res)
+    map
+    (match other with Some x -> [ x ] | None -> [])
 
 (* NOTE: l1 and l2 are supposed to be sorted *)
 let rec merge (l1 : ('a * int) list) l2 =
@@ -128,44 +172,32 @@ let rec merge (l1 : ('a * int) list) l2 =
 
 let to_unify v unif = v == kOther || (v == kVariable && unif)
 
-(*
-      to_unify returns if a key should be unified with all the values of
-      the current sub-tree. This key should be either K.to_unfy or K.variable.
-      In the latter case, the unif boolean to be true (we are in output mode).
-    *)
+(* to_unify returns if a key should be unified with all the values of
+   the current sub-tree. This key should be either K.to_unfy or K.variable.
+   In the latter case, the unif boolean to be true (we are in output mode). *)
 let rec retrieve_aux unif path = function
   | [] -> []
   | hd :: tl -> merge (retrieve unif path hd) (retrieve_aux unif path tl)
 
 and retrieve unif path tree =
   match (tree, path) with
-  | Trie.Node (s, _), [] -> s
-  | Trie.Node (_, _map), v :: path when false && to_unify v unif ->
-      assert false;
-      retrieve_aux unif path (skip_root tree)
-  (* Note: in the following branch the head of the path can't be K.to_unify *)
-  | Trie.Node (_, map), (node :: sub_path as path) ->
-      (*
-          merge
-            (merge
-            *)
+  | Trie.Node { data }, [] -> data
+  | Trie.Node { other; map }, v :: path when to_unify v unif ->
+      retrieve_aux unif path (all_children other map)
+  | Trie.Node { other = None; map }, node :: sub_path ->
       if (not unif) && kVariable == node then []
       else
-        let subtree =
-          try PSMap.find node map with Not_found -> Node ([], PSMap.empty)
-        in
+        let subtree = try Ptmap.find node map with Not_found -> Trie.empty in
         retrieve unif sub_path subtree
-(*
-               (find_by_key unif map path K.variable))
-            (find_by_key unif map path K.to_unify)
-            *)
-
-and find_by_key unif key map path =
-  try
-    match (PSMap.find key map, skip path) with
-    | Trie.Node (s, _), [] -> s
-    | n, path -> retrieve unif path n
-  with Not_found -> []
+  | Trie.Node { other = Some other; map }, (node :: sub_path as path) ->
+      merge
+        (if (not unif) && kVariable == node then []
+        else
+          let subtree =
+            try Ptmap.find node map with Not_found -> Trie.empty
+          in
+          retrieve unif sub_path subtree)
+        (retrieve unif (skip path) other)
 
 let retrieve_generalizations tree term =
   retrieve false term tree |> List.map fst
