@@ -4,11 +4,12 @@
 let arity_bits = 4
 let k_bits = 2
 
-(* value , arity, k *)
-let kConstant = 0 (* (constant << arity_bits) lor arity *)
-let kPrimitive = 1 (*Elpi_util.Util.CData.t hash *)
+(* 4 constructors encoded as: arg_value , arity, kno *)
+let kConstant = 0
+let kPrimitive = 1
 let kVariable = 2
 let kOther = 3
+
 let k_lshift = Sys.int_size - k_bits
 let ka_lshift = Sys.int_size - k_bits - arity_bits
 let k_mask = ((1 lsl k_bits) - 1) lsl k_lshift
@@ -55,6 +56,7 @@ let show_cell n =
 module Trie = struct
   (*
    * Trie: maps over lists.
+   * Note: This code is a heavily modified version of the original code.
    * Copyright (C) 2000 Jean-Christophe FILLIATRE
    * 
    * This software is free software; you can redistribute it and/or

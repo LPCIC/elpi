@@ -132,13 +132,6 @@ mode = arg_mode list
 
 let to_mode = function true -> Input | false -> Output
 
-(* Simpler pretty printer for clause *)
-let pp_clause_simple (fmt:Format.formatter) (cl: clause) = Format.fprintf fmt "clause" (*
-  Format.fprintf fmt "[clause_args:";
-  pplist pp_term ", " fmt cl.args;
-  Format.fprintf fmt " ;; clause_hyps:";
-  pplist pp_term ", " fmt cl.hyps;
-  Format.fprintf fmt "]";*)
 
 module DT = Discrimination_tree
 
@@ -199,7 +192,7 @@ type suspended_goal = {
                  P. Indexing is done by hashing all the parameters with a non
                  zero depth and comparing it with the hashing of the parameters
                  of the query
-  - [IndexWithTrie N] -> N-th argument at arbitrary depth (TODO bound)
+  - [IndexWithTrie N D] -> N-th argument at D depth
 *)
 type indexing =
   | MapOn of int
