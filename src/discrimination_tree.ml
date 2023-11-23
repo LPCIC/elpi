@@ -48,37 +48,35 @@ module type DiscriminationTree = sig
 end
 
 let arity_bits = 4
-let arity_mask = (1 lsl arity_bits) - 1
-let encode c a = (c lsl arity_bits) lor a
+let k_bits = 2
+
+(* value , arity, k *)
+let kConstant = 0 (* (constant << arity_bits) lor arity *)
+let kPrimitive = 1 (*Elpi_util.Util.CData.t hash *)
+let kVariable = 2
+let kOther = 3
+
+let k_mask = (1 lsl k_bits) - 1
+let arity_mask = ((1 lsl arity_bits) lsl k_bits) - 1
+let k_of n = n land k_mask
+
+let arity_of n =
+  let k = k_of n in
+  if k == kConstant then (n land arity_mask) lsr k_bits
+  else 0
+let encode k c a = ((c lsl arity_bits) lsl k_bits) lor (a lsl k_bits) lor k
 let mask_low n = n land arity_mask
 
-type cell =
-  | Constant of int (* (constant << arity_bits) lor arity *)
-  | Primitive of int (*Elpi_util.Util.CData.t hash *)
-  | Variable
-  | Other
-[@@deriving show]
 
-let mkConstant c a = Constant (encode c a)
-let mkVariable = Variable
-let mkOther = Other
-let mkPrimitive c = Primitive (Elpi_util.Util.CData.hash c)
+let mkConstant c a = encode kConstant c a
+let mkVariable = kVariable
+let mkOther = kOther
+let mkPrimitive c = (Elpi_util.Util.CData.hash c lsl k_bits) lor kPrimitive
 
-let arity_of = function
-  | Constant n -> mask_low n
-  | Variable | Other | Primitive _ -> 0
-
-
+type cell = int [@@deriving show]
 type path = cell list [@@deriving show]
 
-let compare x y =
-  match (x, y) with
-  | Constant x, Constant y -> x - y
-  | Variable, Variable -> 0
-  | Other, Other -> 0
-  | Primitive x, Primitive y -> x - y
-  | _, _ -> compare x y
-
+let compare x y = x - y
 
 let skip (path : path) : path =
   let rec aux arity path =
@@ -91,14 +89,6 @@ let skip (path : path) : path =
   match path with
   | [] -> Elpi_util.Util.anomaly "Skipping empty path is not possible"
   | hd :: tl -> aux (arity_of hd) tl
-
-module OrderedPathStringElement = struct
-  type t = cell
-
-  let show = show_cell
-  let pp = pp_cell
-  let compare = compare
-end
 
 module PSMap = Elpi_util.Util.Map.Make (OrderedPathStringElement)
 module Trie = Trie.Make (PSMap)
@@ -136,7 +126,7 @@ let rec merge (l1 : ('a * int) list) l2 =
   | ((_, tx) as x) :: xs, (_, ty) :: _ when tx > ty -> x :: merge xs l2
   | _, y :: ys -> y :: merge l1 ys
 
-let to_unify v unif = v == Other || (v == Variable && unif)
+let to_unify v unif = v == kOther || (v == kVariable && unif)
 
 (*
       to_unify returns if a key should be unified with all the values of
@@ -159,7 +149,7 @@ and retrieve unif path tree =
           merge
             (merge
             *)
-      if (not unif) && Variable == node then []
+      if (not unif) && kVariable == node then []
       else
         let subtree =
           try PSMap.find node map with Not_found -> Node ([], PSMap.empty)
