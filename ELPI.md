@@ -308,8 +308,20 @@ If only one argument is indexed, and it is indexed at depth one, then Elpi uses
 a standard indexing technique based on a perfect (for depth 1) search tree. This
 means that no false positives are returned by the index.
 
-If more than one argument is indexed, or if some argument is indexed at depth
-greater than 1, then Elpi uses an index based on the idea of
+### Discrimination tree index
+
+If only one argument is indexed at depth greater than one, then Elpi uses
+a [discrimination tree](https://www.cs.cmu.edu/~fp/courses/99-atp/lectures/lecture28.html).
+Both the rule argument and the goal argument are
+indexed up to the given depth. The indexing is not perfect, false positives may
+be returned and ruled out by unification.
+
+Indexed terms are linearized into paths. Paths are inserted into a trie data
+structure sharing common prefixes.
+
+### Hash based index
+
+If more than one argument is indexed then Elpi uses an index based on the idea of
 [unification hashes](http://blog.ndrix.com/2013/03/prolog-unification-hashes.html).
 
 ```prolog

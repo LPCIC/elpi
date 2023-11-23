@@ -2,6 +2,8 @@
 
 Library:
   - New `std.fold-right`
+
+Runtime:
   - New clause retrieval through discrimination tree. This new index is enabled
     whenever the `:index` directive selects only one argument  with a depth `> 1`.
 
