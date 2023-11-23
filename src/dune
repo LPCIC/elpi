@@ -1,7 +1,7 @@
 (library
   (public_name elpi)
   (preprocess (per_module
-    ((pps ppx_deriving.std) API data compiler)
+    ((pps ppx_deriving.std) API data compiler discrimination_tree)
     ((pps ppx_deriving.std elpi.trace.ppx -- --cookie "elpi_trace=\"true\"") runtime)
     ((pps ppx_deriving.std elpi.trace.ppx -- --cookie "elpi_trace=\"false\"") runtime_trace_off)
     ))

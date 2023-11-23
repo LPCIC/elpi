@@ -2419,7 +2419,7 @@ let hash_arg_list is_goal hd ~depth args mode spec =
 let hash_clause_arg_list = hash_arg_list false
 let hash_goal_arg_list = hash_arg_list true
 
-(*let rec arg_to_trie_path ~depth t : TreeIndexable.path =
+(*let rec arg_to_trie_path ~depth t : Discrimination_tree.path =
   match deref_head ~depth t with 
   | Const k when k == Global_symbols.uvarc -> [Variable]
   | Const k -> [Constant (k, 0)]
@@ -2441,7 +2441,7 @@ let hash_goal_arg_list = hash_arg_list true
   Takes a list of terms and builds the path representing this list with
   height limited to [depth].
 *)
-let rec arg_to_trie_path_aux ~depth t_list path_depth : TreeIndexable.path = 
+let rec arg_to_trie_path_aux ~depth t_list path_depth : Discrimination_tree.path = 
   if path_depth = 0 then []
   else 
     match t_list with 
@@ -2454,7 +2454,8 @@ let rec arg_to_trie_path_aux ~depth t_list path_depth : TreeIndexable.path =
   [arg_to_trie_path ~depth t path_depth]
   Takes a [term] and returns it path representation with height bound by [path_depth]
 *)
-and arg_to_trie_path ~depth t path_depth : TreeIndexable.path =
+and arg_to_trie_path ~depth t path_depth : Discrimination_tree.path =
+  let open Discrimination_tree in
   if path_depth = 0 then []
   else 
     let path_depth = path_depth - 1 in 
@@ -2672,7 +2673,7 @@ let get_clauses ~depth predicate goal { index = m } =
         let mode_arg = nth_not_bool_default mode argno in 
         let arg = arg_to_trie_path ~depth ~path_depth (trie_goal_args goal argno) in
         [%spy "dev:disc-tree-filter-number1" ~rid 
-          pp_string "Current path is" TreeIndexable.pp arg
+          pp_string "Current path is" Discrimination_tree.pp_path arg
           pp_int path_depth
           (*pp_string " and current DT is " (DT.pp pp_clause_simple) args_idx*)];
         let candidates = if mode_arg then 

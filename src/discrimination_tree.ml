@@ -47,101 +47,125 @@ module type DiscriminationTree = sig
   val retrieve_unifiables : 'a t -> keylist -> 'a list
 end
 
-module Make (K : IndexableTerm) :
-  DiscriminationTree with type key = K.cell and type keylist = K.path = struct
-  module OrderedPathStringElement = struct
-    type t = K.cell
+type cell =
+  | Constant of int * int (* constant , arity *)
+  | Primitive of int (*Elpi_util.Util.CData.t hash *)
+  | Variable
+  | Other
+[@@deriving show]
 
-    let show = K.show_cell
-    let pp = K.pp_cell
-    let compare = K.compare
-  end
+type path = cell list [@@deriving show]
 
-  module PSMap = Elpi_util.Util.Map.Make (OrderedPathStringElement)
-  module Trie = Trie.Make (PSMap)
+let compare x y =
+  match (x, y) with
+  | Constant (x, _), Constant (y, _) -> x - y
+  | Variable, Variable -> 0
+  | Other, Other -> 0
+  | Primitive x, Primitive y -> x - y
+  | _, _ -> compare x y
 
-  type key = K.cell
-  type keylist = K.path
-  type 'a t = ('a * int) Trie.t
+let arity_of = function
+  | Constant (_, a) -> a
+  | Variable | Other | Primitive _ -> 0
 
-  let pp pp_a fmt (t : 'a t) : unit =
-    Trie.pp (fun fmt (a, _) -> pp_a fmt a) fmt t
+let skip (path : path) : path =
+  let rec aux arity path =
+    if arity = 0 then path
+    else
+      match path with
+      | [] -> assert false
+      | m :: tl -> aux (arity - 1 + arity_of m) tl
+  in
+  match path with
+  | [] -> Elpi_util.Util.anomaly "Skipping empty path is not possible"
+  | hd :: tl -> aux (arity_of hd) tl
 
-  let show pp_a (t : 'a t) : string = Trie.show (fun fmt (a, _) -> pp_a fmt a) t
-  let empty = Trie.empty
-  let iter dt f = Trie.iter (fun p (x, _) -> f p x) dt
-  let fold dt f = Trie.fold (fun p (x, _) -> f p x) dt
-  let index tree ps info ~time = Trie.add ps (info, time) tree
+module OrderedPathStringElement = struct
+  type t = cell
 
-  let in_index tree ps test =
-    try
-      let ps_set = Trie.find ps tree in
-      List.exists (fun (x, _) -> test x) ps_set
-    with Not_found -> false
+  let show = show_cell
+  let pp = pp_cell
+  let compare = compare
+end
 
-  (* the equivalent of skip, but on the index, thus the list of trees
-      that are rooted just after the term represented by the tree root
-      are returned (we are skipping the root) *)
-  let skip_root (Trie.Node (_value, map)) =
-    let rec get n = function
-      | Trie.Node (_v, m) as tree ->
-          if n = 0 then [ tree ]
-          else
-            PSMap.fold (fun k v res -> get (n - 1 + K.arity_of k) v @ res) m []
-    in
-    PSMap.fold (fun k v res -> get (K.arity_of k) v @ res) map []
+module PSMap = Elpi_util.Util.Map.Make (OrderedPathStringElement)
+module Trie = Trie.Make (PSMap)
 
-  (* NOTE: l1 and l2 are supposed to be sorted *)
-  let rec merge (l1 : ('a * int) list) l2 =
-    match (l1, l2) with
-    | [], l | l, [] -> l
-    | ((_, tx) as x) :: xs, (_, ty) :: _ when tx > ty -> x :: merge xs l2
-    | _, y :: ys -> y :: merge l1 ys    
+type 'a t = ('a * int) Trie.t
 
-  let to_unify v unif = v = K.to_unify || (v = K.variable && unif)
+let pp pp_a fmt (t : 'a t) : unit = Trie.pp (fun fmt (a, _) -> pp_a fmt a) fmt t
+let show pp_a (t : 'a t) : string = Trie.show (fun fmt (a, _) -> pp_a fmt a) t
+let empty = Trie.empty
+let iter dt f = Trie.iter (fun p (x, _) -> f p x) dt
+let fold dt f = Trie.fold (fun p (x, _) -> f p x) dt
+let index tree ps info ~time = Trie.add ps (info, time) tree
 
-    (*
+let in_index tree ps test =
+  try
+    let ps_set = Trie.find ps tree in
+    List.exists (fun (x, _) -> test x) ps_set
+  with Not_found -> false
+
+(* the equivalent of skip, but on the index, thus the list of trees
+    that are rooted just after the term represented by the tree root
+    are returned (we are skipping the root) *)
+let skip_root (Trie.Node (_value, map)) =
+  let rec get n = function
+    | Trie.Node (_v, m) as tree ->
+        if n = 0 then [ tree ]
+        else PSMap.fold (fun k v res -> get (n - 1 + arity_of k) v @ res) m []
+  in
+  PSMap.fold (fun k v res -> get (arity_of k) v @ res) map []
+
+(* NOTE: l1 and l2 are supposed to be sorted *)
+let rec merge (l1 : ('a * int) list) l2 =
+  match (l1, l2) with
+  | [], l | l, [] -> l
+  | ((_, tx) as x) :: xs, (_, ty) :: _ when tx > ty -> x :: merge xs l2
+  | _, y :: ys -> y :: merge l1 ys
+
+let to_unify v unif = v == Other || (v == Variable && unif)
+
+(*
       to_unify returns if a key should be unified with all the values of
       the current sub-tree. This key should be either K.to_unfy or K.variable.
       In the latter case, the unif boolean to be true (we are in output mode).
     *)
-    let rec retrieve_aux unif path = function
-      | [] -> []
-      | hd :: tl -> merge (retrieve unif path hd) (retrieve_aux unif path tl)
-    and retrieve unif path tree =
-      match (tree, path) with
-      | Trie.Node (s, _), [] -> s
-      | Trie.Node (_, _map), v :: path when false && to_unify v unif ->
-        assert false;
-          retrieve_aux unif path (skip_root tree)
-      (* Note: in the following branch the head of the path can't be K.to_unify *)
-      | Trie.Node (_, map), (node :: sub_path as path) ->
-          (*
+let rec retrieve_aux unif path = function
+  | [] -> []
+  | hd :: tl -> merge (retrieve unif path hd) (retrieve_aux unif path tl)
+
+and retrieve unif path tree =
+  match (tree, path) with
+  | Trie.Node (s, _), [] -> s
+  | Trie.Node (_, _map), v :: path when false && to_unify v unif ->
+      assert false;
+      retrieve_aux unif path (skip_root tree)
+  (* Note: in the following branch the head of the path can't be K.to_unify *)
+  | Trie.Node (_, map), (node :: sub_path as path) ->
+      (*
           merge
             (merge
             *)
-               (if (not unif) && K.variable = node then []
-                else
-                  let subtree =
-                    try PSMap.find node map
-                    with Not_found -> Node([],PSMap.empty)
-                  in
-                  retrieve unif sub_path subtree
-                  )
-                  (*
+      if (not unif) && Variable == node then []
+      else
+        let subtree =
+          try PSMap.find node map with Not_found -> Node ([], PSMap.empty)
+        in
+        retrieve unif sub_path subtree
+(*
                (find_by_key unif map path K.variable))
             (find_by_key unif map path K.to_unify)
             *)
-    and find_by_key unif key map path =
-        try
-          match (PSMap.find key map, K.skip path) with
-          | Trie.Node (s, _), [] -> s
-          | n, path -> retrieve unif path n
-        with Not_found -> []
 
+and find_by_key unif key map path =
+  try
+    match (PSMap.find key map, skip path) with
+    | Trie.Node (s, _), [] -> s
+    | n, path -> retrieve unif path n
+  with Not_found -> []
 
-  let retrieve_generalizations tree term =
-    retrieve false term tree |> List.map fst
+let retrieve_generalizations tree term =
+  retrieve false term tree |> List.map fst
 
-  let retrieve_unifiables tree term = retrieve true term tree |> List.map fst
-end
+let retrieve_unifiables tree term = retrieve true term tree |> List.map fst

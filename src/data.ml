@@ -137,50 +137,7 @@ let pp_clause_simple (fmt:Format.formatter) (cl: clause) = Format.fprintf fmt "c
   pplist pp_term ", " fmt cl.hyps;
   Format.fprintf fmt "]";*)
 
-type 'a path_string_elem = 
-  | Constant of 'a * int
-  | Primitive of int (*Elpi_util.Util.CData.t*)
-  | Variable | Other
-[@@deriving show]
-  
-type 'a path = ('a path_string_elem) list
-
-module TreeIndexable : Discrimination_tree.IndexableTerm with 
-  type cell = constant path_string_elem and 
-  type path = constant path_string_elem list
-= struct
-  type cell = (constant path_string_elem) [@@deriving show]
-  type path = cell list [@@deriving show]
-
-  let pp = pp_path
-  let show = show_path
-
-  let variable = Variable
-  let to_unify = Other
-
-  let compare x y =
-    match x,y with
-    | Constant(x,_), Constant(y,_) -> Constants.compare x y
-    | Variable, Variable -> 0
-    | Other, Other -> 0
-    | Primitive x, Primitive y -> x - y
-    | _, _ -> compare x y
-
-  let arity_of  = function
-    | Constant (_,a) -> a 
-    | Variable | Other | Primitive _ -> 0
-
-  let skip (path: path) : path =
-    let rec aux arity path = 
-    if arity = 0 then path else match path with 
-      | [] -> assert false 
-      | m::tl -> aux (arity-1+arity_of m) tl in 
-    match path with
-      | [] -> anomaly "Skipping empty path is not possible"
-      | hd :: tl -> aux (arity_of hd) tl
-end
-
-module DT = Discrimination_tree.Make(TreeIndexable)
+module DT = Discrimination_tree
 
 type stuck_goal = {
   mutable blockers : blockers;
