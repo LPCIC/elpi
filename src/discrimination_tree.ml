@@ -21,12 +21,16 @@ let arity_of n =
   let k = k_of n in
   if k == kConstant then (n land arity_mask) lsr ka_lshift else 0
 
-let mkConstant c a = encode kConstant c a
+let mkConstant ~safe c a =
+  let rc = encode kConstant c a in
+  if safe && (abs c > data_mask || a >= 1 lsl arity_bits) then
+    Elpi_util.Util.anomaly (Printf.sprintf "Indexing at depth > 1 is unsupported since constant %d/%d is too large or wide" c a);
+  rc
 let mkVariable = encode kVariable 0 0
 let mkOther = encode kOther 0 0
 let mkPrimitive c = encode kPrimitive (Elpi_util.Util.CData.hash c lsl k_bits) 0
 
-let () = assert(k_of (mkConstant ~-17 0) == kConstant)
+let () = assert(k_of (mkConstant ~safe:false ~-17 0) == kConstant)
 let () = assert(k_of mkVariable == kVariable)
 let () = assert(k_of mkOther == kOther)
 
