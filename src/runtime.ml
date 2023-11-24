@@ -3985,10 +3985,11 @@ open Mainloop
   API
  ******************************************************************************)
 
-let mk_outcome search get_cs assignments =
+let mk_outcome search get_cs assignments depth =
  try
    let alts = search () in
    let syn_csts, state, qargs, pp_ctx = get_cs () in
+   let assignments = StrMap.map (fun x -> full_deref ~adepth:0 empty_env ~depth x) assignments in
    let solution = {
      assignments;
      constraints = syn_csts;
@@ -4004,7 +4005,7 @@ let mk_outcome search get_cs assignments =
 let execute_once ?max_steps ?delay_outside_fragment exec =
  let { search; get } = make_runtime ?max_steps ?delay_outside_fragment exec in
  try
-   let result = fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.state |> State.end_execution, exec.query_arguments, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments) in
+   let result = fst (mk_outcome search (fun () -> get CS.Ugly.delayed, get CS.state |> State.end_execution, exec.query_arguments, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments exec.initial_depth) in
    [%end_trace "execute_once" ~rid];
    result
  with e ->
@@ -4018,7 +4019,7 @@ let execute_loop ?delay_outside_fragment exec ~more ~pp =
  let k = ref noalts in
  let do_with_infos f =
    let time0 = Unix.gettimeofday() in
-   let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, get CS.state |> State.end_execution, exec.query_arguments, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments in
+   let o, alts = mk_outcome f (fun () -> get CS.Ugly.delayed, get CS.state |> State.end_execution, exec.query_arguments, { Data.uv_names = ref (get Pp.uv_names); table = get C.table }) exec.assignments exec.initial_depth in
    let time1 = Unix.gettimeofday() in
    k := alts;
    pp (time1 -. time0) o in
