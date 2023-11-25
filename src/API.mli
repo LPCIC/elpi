@@ -1146,7 +1146,7 @@ module Utils : sig
     depth:int -> Ast.Loc.t -> Data.term -> Ast.program
 
   val relocate_closed_term :
-    State.t * Data.term -> State.t -> Data.term
+    State.t * Data.term -> State.t -> (Data.term,string) Stdlib.Result.t
 
   (** Lifting/restriction/beta (LOW LEVEL, don't use) *)
   val move : from:int -> to_:int -> Data.term -> Data.term
