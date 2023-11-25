@@ -1145,6 +1145,8 @@ module Utils : sig
     ?name:string -> ?graft:([`After | `Before] * string) ->
     depth:int -> Ast.Loc.t -> Data.term -> Ast.program
 
+  (** Hackish API. Move a term from one runtime (after execution) to another
+      one which has all the needed symbols *)
   val relocate_closed_term :
     State.t * Data.term -> State.t -> (Data.term,string) Stdlib.Result.t
 
