@@ -128,8 +128,8 @@ let table = D.State.declare
   ~clause_compilation_is_over:(fun x -> x)
   ~goal_compilation_begins:(fun x -> x)
   ~goal_compilation_is_over:(fun ~args:_ x -> Some x)
-  ~compilation_is_over:(fun x -> Some { x with frozen = true }) (* to implement read_term *)
-  ~execution_is_over:(fun _ -> None)
+  ~compilation_is_over:(fun x -> Some { x with frozen = true }) (* to implement read_term and relocate_closed_term *)
+  ~execution_is_over:(fun x -> Some x) (* to implement relocate_closed_term *)
   ~init:(fun () -> {
     ast2ct = F.Map.empty;
     last_global = D.Global_symbols.table.last_global;
@@ -1437,6 +1437,7 @@ module Flatten : sig
   val run : State.t -> Structured.program -> Flat.program
 
   val relocate : State.t -> D.constant D.Constants.Map.t -> Flat.program  -> Flat.program
+  val relocate_term : State.t -> D.constant D.Constants.Map.t -> term -> term
 
 end = struct (* {{{ *)
 
@@ -1641,6 +1642,9 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
       toplevel_macros;
       symbols = !live_symbols
     }
+    let relocate_term state s t =
+      let ksub = apply_subst_constant ([],s) in
+      smart_map_term state ksub t
 
     let relocate state f {
       Flat.types;
@@ -2034,6 +2038,12 @@ end (* }}} *)
 (****************************************************************************
   API
  ****************************************************************************)
+
+let relocate_closed_term ~from ~to_ t =
+  let table = State.get Symbols.table from in
+  let base, shift = Symbols.build_shift ~flags:default_flags ~base:to_ table in
+  (*assert(base == from);*)
+  Flatten.relocate_term to_ shift t
 
 let w_symbol_table s f x =
   let table = Symbols.compile_table @@ State.get Symbols.table s in
