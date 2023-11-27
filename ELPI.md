@@ -869,6 +869,14 @@ macro @name Args :- Body.
 It is expanded everywhere (even in type declarations)
 at compilation time. 
 
+#### Example: literlas
+
+```prolog
+macro @path :- ["home","gares","elpi"].
+
+main :- print @path.
+```
+
 #### Example: factor hypothetical clauses.
 ```prolog
 macro @of X N T :- (of X T, pp X N).
