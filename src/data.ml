@@ -1343,6 +1343,7 @@ type 'a solution = {
   state : State.t;
   output : 'a;
   pp_ctx : pp_ctx;
+  state_for_relocation : int * State.t;
 }
 type 'a outcome = Success of 'a solution | Failure | NoMoreSteps
 

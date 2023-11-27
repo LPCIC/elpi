@@ -157,6 +157,7 @@ module Data : sig
     state : state;
     output : 'a;
     pp_ctx : pretty_printer_context;
+    relocate_assignment_to_runtime : target:state -> depth:int -> string -> (term, string) Stdlib.Result.t
   }
 
   (* Hypothetical context *)

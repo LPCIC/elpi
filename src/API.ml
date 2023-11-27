@@ -137,12 +137,13 @@ module Data = struct
   type state = Data.State.t
   type pretty_printer_context = ED.pp_ctx
   module StrMap = Util.StrMap
-  type 'a solution = 'a Data.solution = {
+  type 'a solution = {
     assignments : term StrMap.t;
     constraints : constraints;
     state : state;
     output : 'a;
     pp_ctx : pretty_printer_context;
+    relocate_assignment_to_runtime : target:state -> depth:int -> string -> (term, string) Stdlib.Result.t
   }
   type hyp = Data.clause_src = {
     hdepth : int;
@@ -187,14 +188,27 @@ module Compile = struct
 end
 
 module Execute = struct
-  type 'a outcome = 'a ED.outcome =
+  type 'a outcome =
     Success of 'a Data.solution | Failure | NoMoreSteps
+
+  let map_outcome full_deref hmove = function
+    | ED.Failure -> Failure
+    | ED.NoMoreSteps -> NoMoreSteps
+    | ED.Success { ED.assignments; constraints; state; output; pp_ctx; state_for_relocation = (idepth,from); } -> 
+      Success { assignments; constraints; state; output; pp_ctx;
+        relocate_assignment_to_runtime = (fun ~target ~depth s ->
+          Compiler.relocate_closed_term ~from
+            (Util.StrMap.find s assignments |> full_deref ~depth:idepth) ~to_:target
+          |> Stdlib.Result.map (hmove ?avoid:None ~from:depth ~to_:depth)
+        );
+        }
+
   let once ?max_steps ?delay_outside_fragment p =
     let module R = (val !r) in
-    R.execute_once ?max_steps ?delay_outside_fragment p
+    map_outcome R.full_deref R.hmove @@ R.execute_once ?max_steps ?delay_outside_fragment p
   let loop ?delay_outside_fragment p ~more ~pp =
     let module R = (val !r) in
-    R.execute_loop ?delay_outside_fragment p ~more ~pp
+    R.execute_loop ?delay_outside_fragment p ~more ~pp:(fun t o -> pp t (map_outcome R.full_deref R.hmove o))
 
 end
 

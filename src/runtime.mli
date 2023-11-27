@@ -76,3 +76,4 @@ val clausify1 :
   mode Constants.Map.t -> (* for caching it in the clause *)
   nargs:int -> depth:int -> term -> (constant * clause) * clause_src * int
 
+val full_deref : depth:int -> term -> term

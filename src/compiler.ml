@@ -129,7 +129,7 @@ let table = D.State.declare
   ~goal_compilation_begins:(fun x -> x)
   ~goal_compilation_is_over:(fun ~args:_ x -> Some x)
   ~compilation_is_over:(fun x -> Some { x with frozen = true }) (* to implement read_term and relocate_closed_term *)
-  ~execution_is_over:(fun x -> Some x) (* to implement relocate_closed_term *)
+  ~execution_is_over:(fun _ -> None)
   ~init:(fun () -> {
     ast2ct = F.Map.empty;
     last_global = D.Global_symbols.table.last_global;
@@ -2057,13 +2057,14 @@ let rec constants_of acc = function
   | D.AppUVar _ | D.UVar _ -> anomaly "relocate_closed_term: not a closed term"
   | D.Nil | D.Discard | D.CData _ -> acc
 
-let relocate_closed_term ~from ~to_ t =
-  let table = State.get Symbols.table from in
-  let alive = constants_of C.Set.empty t in
-  let table = Symbols.prune table ~alive in
-  let base = State.update Symbols.table to_ Symbols.lock in
-  Stdlib.Result.bind (Symbols.build_shift ~lock_base:true ~flags:default_flags ~base table)
-    (fun (base, shift) -> Stdlib.Result.Ok (Flatten.relocate_term to_ shift t))
+  let relocate_closed_term ~from =
+    let table = State.get Symbols.table from in
+    fun ~to_ t ->
+      let alive = constants_of C.Set.empty t in
+      let table = Symbols.prune table ~alive in
+      let base = State.update Symbols.table to_ Symbols.lock in
+      Stdlib.Result.bind (Symbols.build_shift ~lock_base:true ~flags:default_flags ~base table)
+        (fun (base, shift) -> Stdlib.Result.Ok (Flatten.relocate_term to_ shift t))
 
 let w_symbol_table s f x =
   let table = Symbols.compile_table @@ State.get Symbols.table s in
