@@ -2,7 +2,9 @@
 
 API:
   - New `RawQuery.compile_ast`, lets one set up the initial state in which the
-    query is run, even if the query is given as an ast
+    query is run, even if the query is given as an ast.
+  - New `Utils.relocate_closed_term` to move a term from one runtime to another
+    (experimental)
 
 Library:
   - New `std.fold-right`

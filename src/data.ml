@@ -1214,6 +1214,7 @@ let pp_tab_args fmt l =
   let n = List.length l - 1 in
   let max = List.fold_left (fun m (_,s,_) -> max (String.length s) m) 0 l in
   Fmt.pp_open_tbox fmt ();
+  if l = [] then Fmt.fprintf fmt ".";
   List.iteri (fun i x ->
     let sep = if i = n then "." else "," in
     pp_tab_arg i max sep fmt x) l;

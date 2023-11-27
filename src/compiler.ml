@@ -78,14 +78,14 @@ module Symbols : sig
   val locked : table -> bool
   val equal : table -> table -> bool
   val size : table -> int
-  val prune : table -> D.Constants.Set.t -> table
+  val prune : table -> alive:D.Constants.Set.t -> table
   (* debug *)
   val symbols : table -> string list
 
   val global_table : unit -> table
   val uuid : table -> UUID.t
 
-  val build_shift : flags:flags -> base:D.State.t -> table -> D.State.t * D.constant D.Constants.Map.t
+  val build_shift : ?lock_base:bool -> flags:flags -> base:D.State.t -> table -> (D.State.t * D.constant D.Constants.Map.t, string) Stdlib.Result.t
 
 end = struct
 
@@ -114,7 +114,7 @@ let size t = D.Constants.Map.cardinal t.c2t
 let symbols { c2s } =
   List.map (fun (c,s) -> s ^ ":" ^ string_of_int c) (D.Constants.Map.bindings c2s)
 
-let prune t alive =
+let prune t ~alive =
   { t with 
     c2s = D.Constants.Map.filter (fun k _ -> D.Constants.Set.mem k alive) t.c2s;
     c2t = D.Constants.Map.filter (fun k _ -> D.Constants.Set.mem k alive) t.c2t;
@@ -128,8 +128,8 @@ let table = D.State.declare
   ~clause_compilation_is_over:(fun x -> x)
   ~goal_compilation_begins:(fun x -> x)
   ~goal_compilation_is_over:(fun ~args:_ x -> Some x)
-  ~compilation_is_over:(fun x -> Some { x with frozen = true }) (* to implement read_term *)
-  ~execution_is_over:(fun _ -> None)
+  ~compilation_is_over:(fun x -> Some { x with frozen = true }) (* to implement read_term and relocate_closed_term *)
+  ~execution_is_over:(fun x -> Some x) (* to implement relocate_closed_term *)
   ~init:(fun () -> {
     ast2ct = F.Map.empty;
     last_global = D.Global_symbols.table.last_global;
@@ -233,7 +233,9 @@ let get_global_symbol state s =
 
 let get_global_symbol_str state s = get_global_symbol state (F.from_string s)
 
-let build_shift ~flags:{ print_units } ~base symbols =
+exception Cannot_build_shift of string
+
+let build_shift ?(lock_base=false) ~flags:{ print_units } ~base symbols =
   let open D.Constants in
   D.State.update_return table base (fun base ->
     (* We try hard to respect the same order if possible, since some tests
@@ -249,7 +251,9 @@ let build_shift ~flags:{ print_units } ~base symbols =
             if print_units then Printf.printf "Relocate: %d -> %d (%s)\n%!" v c name;
             base, Map.add v c shift
           end
-        with Not_found ->
+        with
+        | Not_found when lock_base -> raise (Cannot_build_shift (name))
+        | Not_found ->
           let base, (c,_) = allocate_global_symbol_aux (Ast.Func.from_string name) base in
           base, Map.add v c shift
       else
@@ -259,6 +263,10 @@ let build_shift ~flags:{ print_units } ~base symbols =
           base, shift
       )
      (base,Map.empty)  (List.rev (Map.bindings symbols.c2t)))
+
+let build_shift ?lock_base ~flags ~base symbols =
+  try Stdlib.Result.Ok (build_shift ?lock_base ~flags ~base symbols)
+  with Cannot_build_shift s -> Stdlib.Result.Error s
 
 end
 
@@ -1437,6 +1445,7 @@ module Flatten : sig
   val run : State.t -> Structured.program -> Flat.program
 
   val relocate : State.t -> D.constant D.Constants.Map.t -> Flat.program  -> Flat.program
+  val relocate_term : State.t -> D.constant D.Constants.Map.t -> term -> term
 
 end = struct (* {{{ *)
 
@@ -1641,6 +1650,9 @@ let subst_amap state f { nargs; c2i; i2n; n2t; n2i } =
       toplevel_macros;
       symbols = !live_symbols
     }
+    let relocate_term state s t =
+      let ksub = apply_subst_constant ([],s) in
+      smart_map_term state ksub t
 
     let relocate state f {
       Flat.types;
@@ -2007,7 +2019,7 @@ let assemble flags state code  (ul : compilation_unit list) =
   let state, clauses_rev, types, type_abbrevs, modes, chr_rev =
     List.fold_left (fun (state, cl1, t1, ta1, m1, c1) ({ symbol_table; code }  as _u) ->
       let state, { Flat.clauses = cl2; types = t2; type_abbrevs = ta2; modes = m2; chr = c2; toplevel_macros = _ } =
-        let state, shift = Symbols.build_shift ~flags ~base:state symbol_table in
+        let state, shift = Stdlib.Result.get_ok @@ Symbols.build_shift ~flags ~base:state symbol_table in
         let code =
           if C.Map.is_empty shift then code
           else Flatten.relocate state shift code in
@@ -2034,6 +2046,24 @@ end (* }}} *)
 (****************************************************************************
   API
  ****************************************************************************)
+
+let rec constants_of acc = function
+  | D.Const x -> C.Set.add x acc
+  | D.App(c,x,xs) -> List.fold_left constants_of (constants_of (C.Set.add c acc) x) xs
+  | D.Cons(x,xs) -> constants_of (constants_of acc x) xs
+  | D.Lam x -> constants_of acc x
+  | D.Builtin(c,xs) -> List.fold_left constants_of (C.Set.add c acc) xs
+  | D.AppArg _ | D.Arg _
+  | D.AppUVar _ | D.UVar _ -> anomaly "relocate_closed_term: not a closed term"
+  | D.Nil | D.Discard | D.CData _ -> acc
+
+let relocate_closed_term ~from ~to_ t =
+  let table = State.get Symbols.table from in
+  let alive = constants_of C.Set.empty t in
+  let table = Symbols.prune table ~alive in
+  let base = State.update Symbols.table to_ Symbols.lock in
+  Stdlib.Result.bind (Symbols.build_shift ~lock_base:true ~flags:default_flags ~base table)
+    (fun (base, shift) -> Stdlib.Result.Ok (Flatten.relocate_term to_ shift t))
 
 let w_symbol_table s f x =
   let table = Symbols.compile_table @@ State.get Symbols.table s in

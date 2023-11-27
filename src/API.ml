@@ -1049,6 +1049,9 @@ module Utils = struct
       body = aux depth Util.IntMap.empty term;
     }]
 
+  let relocate_closed_term (state,t) new_state =
+    Compiler.relocate_closed_term ~from:state t ~to_:new_state
+
   let map_acc = BuiltInData.map_acc
 
   module type Show = Util.Show
