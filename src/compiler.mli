@@ -20,7 +20,7 @@ exception CompileError of Loc.t option * string
 type builtins = string * Data.BuiltInPredicate.declaration list
 
 type header
-val header_of_ast : flags:flags -> parser:(module Parse.Parser) -> State.descriptor -> QuotationHooks.descriptor -> HoasHooks.descriptor -> builtins list -> Ast.Program.t ->  header
+val header_of_ast : flags:flags -> parser:(module Parse.Parser) -> State.descriptor -> QuotationHooks.descriptor -> HoasHooks.descriptor -> CalcHooks.descriptor -> builtins list -> Ast.Program.t ->  header
 
 type program
 val program_of_ast : flags:flags -> header:header -> Ast.Program.t -> program

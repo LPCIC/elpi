@@ -7,6 +7,7 @@ API:
     (experimental)
   - New `BuiltInPredicate.FullHO` for higher order external predicates
   - New `BuiltInPredicate.HOAdaptors` for `map` and `filter` like HO predicates
+  - New `Calc.register` to register operators for `calc` (aka infix `is`)
 
 Library:
   - New `std.fold-right`

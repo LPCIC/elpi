@@ -861,6 +861,25 @@ let set_extra_goals_postprocessing ~descriptor f =
 
 end
 
+module CalcHooks = struct
+
+type run = term list -> term
+type eval = { code : run; ty_decl : string; }
+type descriptor = (constant * eval) list
+let new_descriptor () : descriptor ref = ref []
+
+let eval : run Constants.Map.t State.component =
+  State.declare ~descriptor:elpi_state_descriptor ~name:"elpi:eval"
+  ~clause_compilation_is_over:(fun x -> x)
+  ~goal_compilation_begins:(fun x -> x)
+  ~goal_compilation_is_over:(fun ~args:_ x -> Some x)
+  ~compilation_is_over:(fun x -> Some x)
+  ~execution_is_over:(fun _ -> None)
+  ~init:(fun () -> Constants.Map.empty)
+  ~pp:(fun fmt t -> Constants.Map.pp (fun _ _ -> ()) fmt t)
+
+end
+
 module QuotationHooks = struct
   
 type quotation = depth:int -> State.t -> Loc.t -> string -> State.t * term
@@ -1292,13 +1311,18 @@ let document_pred fmt docspec name ffi =
     doc [] ffi
 ;;
 
-let document fmt l =
+let document fmt l calc_list =
   let omargin = Fmt.pp_get_margin fmt () in
   Fmt.pp_set_margin fmt 75;
   Fmt.fprintf fmt "@[<v>";
   Fmt.fprintf fmt "@\n@\n";
   List.iter (function
-    | MLCode(Pred(name,ffi,_), docspec) -> document_pred fmt docspec name ffi
+    | MLCode(Pred(name,ffi,_), docspec) ->
+        document_pred fmt docspec name ffi;
+        if name = "calc" then begin
+          Format.fprintf fmt "%s@\n@\n" "%  --- Operators ---";
+          List.iter (fun (_,x) -> Format.fprintf fmt "%s@\n@\n" x.CalcHooks.ty_decl ) calc_list
+        end;
     | MLData { pp_doc } -> Fmt.fprintf fmt "%a@\n" pp_doc ()
     | MLDataC { pp_doc } -> Fmt.fprintf fmt "%a@\n" pp_doc ()
     | LPCode s -> Fmt.fprintf fmt "%s" s; Fmt.fprintf fmt "@\n@\n"
