@@ -1372,6 +1372,34 @@ set,
     Easy "N is the number of elements of M")),
     (fun m _ ~depth -> !: (Set.cardinal m))),
   DocAbove);
+
+  MLCode(Pred(name^".filter",
+    In(set,"M",
+    In(HOAdaptors.pred1 alpha,"F",
+    Out(set,"M1",
+    FullHO(ContextualConversion.unit_ctx, "Filter M w.r.t. the predicate F")))),
+    (fun m f _ ~once ~depth _ _ state ->
+
+      let state, m, gls = HOAdaptors.filter1 ~once ~depth ~filter:Set.filter f m state in
+      
+      state, !: m, gls
+    )),
+  DocAbove);
+
+  MLCode(Pred(name^".map",
+    In(set,"M",
+    In(HOAdaptors.pred2 alpha alpha,"F",
+    Out(set,"M1",
+    FullHO(ContextualConversion.unit_ctx, "Map M w.r.t. the predicate F")))),
+    (fun m f _ ~once ~depth _ _ state ->
+
+      let state, m, gls = HOAdaptors.map1 ~once ~depth ~map:Set.map f m state in
+      
+      state, !: m, gls
+    )),
+  DocAbove);
+
+
 ] 
 ;;
 let ocaml_set ~name c m = snd (ocaml_set_conv ~name c m)
@@ -1380,6 +1408,7 @@ let ocaml_map ~name (type a)
    (alpha : a Conversion.t) (module Map : Util.Map.S with type key = a) =
  
 let closed_A = BuiltInData.closed "A" in
+let closed_B = BuiltInData.closed "B" in
 
 let map = OpaqueData.declare {
   OpaqueData.name;
@@ -1447,6 +1476,33 @@ let open BuiltIn in let open BuiltInData in
     Easy "L is M transformed into an associative list")),
     (fun m _ ~depth -> !: (Map.bindings m))),
   DocAbove);
+
+  MLCode(Pred(name^".filter",
+    In(map "A","M",
+    In(HOAdaptors.pred2 alpha closed_A,"F",
+    Out(map "A","M1",
+    FullHO(ContextualConversion.unit_ctx, "Filter M w.r.t. the predicate F")))),
+    (fun m f _ ~once ~depth _ _ state ->
+
+      let state, m, gls = HOAdaptors.filter2 ~once ~depth ~filter:Map.filter f m state in
+      
+      state, !: m, gls
+    )),
+  DocAbove);
+
+  MLCode(Pred(name^".map",
+    In(map "A","M",
+    In(HOAdaptors.pred3 alpha closed_A closed_B,"F",
+    Out(map "B","M1",
+    FullHO(ContextualConversion.unit_ctx, "Map M w.r.t. the predicate F")))),
+    (fun m f _ ~once ~depth _ _ state ->
+
+      let state, m, gls = HOAdaptors.map2 ~once ~depth ~map:Map.mapi f m state in
+      
+      state, !: m, gls
+    )),
+  DocAbove);
+
 
 ] 
 ;;

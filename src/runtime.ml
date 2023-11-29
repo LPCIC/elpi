@@ -2135,7 +2135,7 @@ let map_acc f s l =
    in
      aux [] [] s l
 
-let call (Data.BuiltInPredicate.Pred(bname,ffi,compute)) ~depth hyps constraints state data =
+let call (Data.BuiltInPredicate.Pred(bname,ffi,compute)) ~once ~depth hyps constraints state data =
   let rec aux : type i o h c.
     (i,o,h,c) Data.BuiltInPredicate.ffi -> h -> c -> compute:i -> reduce:(State.t -> o -> State.t * Conversion.extra_goals) ->
        term list -> int -> State.t -> Conversion.extra_goals list -> State.t * Conversion.extra_goals =
@@ -2151,6 +2151,10 @@ let call (Data.BuiltInPredicate.Pred(bname,ffi,compute)) ~depth hyps constraints
        state, List.(concat (rev extra) @ rev l)
     | Data.BuiltInPredicate.Full _, [] ->
        let state, result, gls = wrap_type_err bname 0 (compute ~depth ctx constraints) state in
+       let state, l = reduce state result in
+       state, List.(concat (rev extra)) @ gls @ List.rev l
+    | Data.BuiltInPredicate.FullHO _, [] ->
+       let state, result, gls = wrap_type_err bname 0 (compute ~once ~depth ctx constraints) state in
        let state, l = reduce state result in
        state, List.(concat (rev extra)) @ gls @ List.rev l
     | Data.BuiltInPredicate.VariadicIn(_,{ ContextualConversion.readback }, _), data ->
@@ -2222,6 +2226,7 @@ let call (Data.BuiltInPredicate.Pred(bname,ffi,compute)) ~depth hyps constraints
 
   in
   let rec aux_ctx : type i o h c. (i,o,h,c) Data.BuiltInPredicate.ffi -> (h,c) ContextualConversion.ctx_readback = function
+    | Data.BuiltInPredicate.FullHO(f,_) -> f
     | Data.BuiltInPredicate.Full(f,_) -> f
     | Data.BuiltInPredicate.Read(f,_) -> f
     | Data.BuiltInPredicate.VariadicIn(f,_,_) -> f
@@ -2995,6 +3000,7 @@ module Constraints : sig
 
   (* out of place *)
   val exect_builtin_predicate :
+    once:(depth:int -> term -> State.t -> State.t) ->
     constant -> depth:int -> prolog_prog -> (UUID.t[@trace]) -> term list -> term list
 
 end = struct (* {{{ *)
@@ -3284,7 +3290,7 @@ let declare_constraint ~depth prog (gid[@trace]) args =
        ~depth prog ~goal:g (gid[@trace]) ~on:keys
   | None -> delay_goal ~depth prog ~goal:g (gid[@trace]) ~on:keys
 
-let exect_builtin_predicate c ~depth idx (gid[@trace]) args =
+let exect_builtin_predicate ~once c ~depth idx (gid[@trace]) args =
        if c == Global_symbols.declare_constraintc then begin
                declare_constraint ~depth idx (gid[@trace]) args; [] end
   else if c == Global_symbols.print_constraintsc then begin
@@ -3297,7 +3303,7 @@ let exect_builtin_predicate c ~depth idx (gid[@trace]) args =
         anomaly ("no built-in predicated named " ^ C.show c) in
     let constraints = !CS.Ugly.delayed in
     let state = !CS.state  in
-    let state, gs = FFI.call b ~depth (local_prog idx) constraints state args in
+    let state, gs = FFI.call b ~once ~depth (local_prog idx) constraints state args in
     let state, gs = State.get Data.Conversion.extra_goals_postprocessing state gs state in
     CS.state := state;
     List.map Data.Conversion.term_of_extra_goal gs
@@ -3706,7 +3712,12 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
        [%spyl "user:rule:backchain:candidates" ~rid ~gid (pp_candidate ~depth ~k) clauses];
        [%tcall backchain depth p (k, x, xs, gs) (gid[@trace]) next alts cutto_alts clauses]
     | Builtin(c, args) -> [%spy "user:rule" ~rid ~gid pp_string "builtin"]; [%spy "user:rule:builtin:name" ~rid ~gid pp_string (C.show c)];
-       begin match Constraints.exect_builtin_predicate c ~depth p (gid[@trace]) args with
+       let once ~depth g state =
+         CS.state := state;
+         let { depth; program; goal; gid = gid [@trace] } = (make_subgoal[@inlined]) (gid[@trace]) ~depth p g in
+           let _alts = run depth program goal (gid[@trace]) [] FNil noalts noalts in
+           !CS.state in
+       begin match Constraints.exect_builtin_predicate ~once c ~depth p (gid[@trace]) args with
        | gs' ->
           [%spy "user:rule:builtin" ~rid ~gid pp_string "success"];
           (match List.map (fun g -> (make_subgoal[@inlined]) (gid[@trace]) ~depth p g) gs' @ gs with
