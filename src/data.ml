@@ -713,11 +713,29 @@ module Conversion = struct
 
   exception TypeErr of ty_ast * int * term (* a type error at data conversion time *)
 
-let rec show_ty_ast ?(outer=true) = function
+type prec_level =
+  | Arrow
+  | AppArg
+
+let need_par x y =
+  match x,y with
+  | Some AppArg, Arrow -> true
+  | Some AppArg, AppArg -> true
+  | Some Arrow, Arrow -> true
+  | Some Arrow, AppArg -> false
+  | None, _ -> false
+
+let with_par p1 p2 s = if need_par p1 p2 then "("^s^")" else s
+
+let rec show_ty_ast ?prec = function
   | TyName s -> s
+  | TyApp ("->",src,[tgt]) ->
+      let src = show_ty_ast ~prec:Arrow src in
+      let tgt = show_ty_ast tgt in
+      with_par prec Arrow (src ^" -> "^ tgt)
   | TyApp (s,x,xs) ->
-      let t = String.concat " " (s :: List.map (show_ty_ast ~outer:false) (x::xs)) in
-      if outer then t else "("^t^")"
+      let t = String.concat " " (s :: List.map (show_ty_ast ~prec:AppArg) (x::xs)) in
+      with_par prec AppArg t
 
 let term_of_extra_goal = function
   | Unify(a,b) -> Builtin(Global_symbols.eqc,[a;b])

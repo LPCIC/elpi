@@ -5,6 +5,8 @@ API:
     query is run, even if the query is given as an ast.
   - New `Utils.relocate_closed_term` to move a term from one runtime to another
     (experimental)
+  - New `BuiltInPredicate.FullHO` for higher order external predicates
+  - New `BuiltInPredicate.HOAdaptors` for `map` and `filter` like HO predicates
 
 Library:
   - New `std.fold-right`
