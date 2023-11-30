@@ -1,0 +1,4 @@
+main :-
+  std.fold {std.iota 9} {std.int.map.empty} (i\std.int.map.add i (x\x)) S,
+  std.int.map.map S (x\f\r\ pi _\ r = f x) S1,
+  print S1.

@@ -74,11 +74,20 @@ let () = declare "map (builtin list)"
   ~source_elpi:"map_list_opt.elpi"
   ~description:"stdlib map reference"
   ()
+let () = declare "map_ho"
+  ~source_elpi:"map_ho.elpi"
+  ~description:"stdlib map HO"
+  ()
 
 let () = declare "set"
   ~source_elpi:"set.elpi"
   ~description:"stdlib set"
   ()
+let () = declare "set_ho"
+  ~source_elpi:"set_ho.elpi"
+  ~description:"stdlib set HO"
+  ()
+
 
 let () = declare "dt"
   ~source_elpi:"dt.elpi"

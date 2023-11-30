@@ -1,0 +1,10 @@
+main :-
+  std.fold {std.iota 99999} {std.int.set.empty} std.int.set.add S,
+  std.time (std.int.set.filter S (x\0 is x mod 123) S1) T1,
+  std.int.set.cardinal S1 N,
+  std.time (std.filter {std.int.set.elements S} (x\0 is x mod 123) L, std.fold L {std.int.set.empty} std.int.set.add S2) T2,
+  std.int.set.cardinal S2 M,
+  std.assert! (N = M) "wrong card filter",
+  print T1 " < " T2,
+  std.int.set.map S1 (_\r\ r = 1) S3,
+  std.assert! (std.int.set.cardinal S3 1) "wrong card map".

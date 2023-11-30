@@ -713,11 +713,29 @@ module Conversion = struct
 
   exception TypeErr of ty_ast * int * term (* a type error at data conversion time *)
 
-let rec show_ty_ast ?(outer=true) = function
+type prec_level =
+  | Arrow
+  | AppArg
+
+let need_par x y =
+  match x,y with
+  | Some AppArg, Arrow -> true
+  | Some AppArg, AppArg -> true
+  | Some Arrow, Arrow -> true
+  | Some Arrow, AppArg -> false
+  | None, _ -> false
+
+let with_par p1 p2 s = if need_par p1 p2 then "("^s^")" else s
+
+let rec show_ty_ast ?prec = function
   | TyName s -> s
+  | TyApp ("->",src,[tgt]) ->
+      let src = show_ty_ast ~prec:Arrow src in
+      let tgt = show_ty_ast tgt in
+      with_par prec Arrow (src ^" -> "^ tgt)
   | TyApp (s,x,xs) ->
-      let t = String.concat " " (s :: List.map (show_ty_ast ~outer:false) (x::xs)) in
-      if outer then t else "("^t^")"
+      let t = String.concat " " (s :: List.map (show_ty_ast ~prec:AppArg) (x::xs)) in
+      with_par prec AppArg t
 
 let term_of_extra_goal = function
   | Unify(a,b) -> Builtin(Global_symbols.eqc,[a;b])
@@ -902,6 +920,7 @@ type ('function_type, 'inernal_outtype_in, 'internal_hyps, 'internal_constraints
   | Easy : doc -> (depth:int -> 'o, 'o,unit,unit) ffi
   | Read : ('h,'c) ContextualConversion.ctx_readback * doc -> (depth:int -> 'h -> 'c -> State.t -> 'o, 'o,'h,'c) ffi
   | Full : ('h,'c) ContextualConversion.ctx_readback * doc -> (depth:int -> 'h -> 'c -> State.t -> State.t * 'o * Conversion.extra_goals, 'o,'h,'c) ffi
+  | FullHO : ('h,'c) ContextualConversion.ctx_readback * doc -> (once:(depth:int -> term -> State.t -> State.t) -> depth:int -> 'h -> 'c -> State.t -> State.t * 'o * Conversion.extra_goals, 'o,'h,'c) ffi
   | VariadicIn    : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t list -> depth:int -> 'h -> 'c -> State.t -> State.t * 'o, 'o,'h,'c) ffi
   | VariadicOut   : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t oarg list -> depth:int -> 'h -> 'c -> State.t -> State.t * ('o * 't option list option), 'o,'h,'c) ffi
   | VariadicInOut : ('h,'c) ContextualConversion.ctx_readback * ('t ioarg,'h,'c) ContextualConversion.t * doc -> ('t ioarg list -> depth:int -> 'h -> 'c -> State.t -> State.t * ('o * 't option list option), 'o,'h,'c) ffi
@@ -1265,6 +1284,7 @@ let document_pred fmt docspec name ffi =
     | Read (_,s) -> pp_pred fmt docspec name s args
     | Easy s -> pp_pred fmt docspec name s args
     | Full (_,s) -> pp_pred fmt docspec name s args
+    | FullHO (_,s) -> pp_pred fmt docspec name s args
     | VariadicIn( _,{ ContextualConversion.ty }, s) -> pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
     | VariadicOut( _,{ ContextualConversion.ty }, s) -> pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
     | VariadicInOut( _,{ ContextualConversion.ty }, s) -> pp_variadictype fmt name s (Conversion.show_ty_ast ty) args
@@ -1343,6 +1363,7 @@ type 'a solution = {
   state : State.t;
   output : 'a;
   pp_ctx : pp_ctx;
+  state_for_relocation : int * State.t;
 }
 type 'a outcome = Success of 'a solution | Failure | NoMoreSteps
 

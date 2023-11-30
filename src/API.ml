@@ -137,12 +137,13 @@ module Data = struct
   type state = Data.State.t
   type pretty_printer_context = ED.pp_ctx
   module StrMap = Util.StrMap
-  type 'a solution = 'a Data.solution = {
+  type 'a solution = {
     assignments : term StrMap.t;
     constraints : constraints;
     state : state;
     output : 'a;
     pp_ctx : pretty_printer_context;
+    relocate_assignment_to_runtime : target:state -> depth:int -> string -> (term, string) Stdlib.Result.t
   }
   type hyp = Data.clause_src = {
     hdepth : int;
@@ -187,14 +188,27 @@ module Compile = struct
 end
 
 module Execute = struct
-  type 'a outcome = 'a ED.outcome =
+  type 'a outcome =
     Success of 'a Data.solution | Failure | NoMoreSteps
+
+  let map_outcome full_deref hmove = function
+    | ED.Failure -> Failure
+    | ED.NoMoreSteps -> NoMoreSteps
+    | ED.Success { ED.assignments; constraints; state; output; pp_ctx; state_for_relocation = (idepth,from); } -> 
+      Success { assignments; constraints; state; output; pp_ctx;
+        relocate_assignment_to_runtime = (fun ~target ~depth s ->
+          Compiler.relocate_closed_term ~from
+            (Util.StrMap.find s assignments |> full_deref ~depth:idepth) ~to_:target
+          |> Stdlib.Result.map (hmove ?avoid:None ~from:depth ~to_:depth)
+        );
+        }
+
   let once ?max_steps ?delay_outside_fragment p =
     let module R = (val !r) in
-    R.execute_once ?max_steps ?delay_outside_fragment p
+    map_outcome R.full_deref R.hmove @@ R.execute_once ?max_steps ?delay_outside_fragment p
   let loop ?delay_outside_fragment p ~more ~pp =
     let module R = (val !r) in
-    R.execute_loop ?delay_outside_fragment p ~more ~pp
+    R.execute_loop ?delay_outside_fragment p ~more ~pp:(fun t o -> pp t (map_outcome R.full_deref R.hmove o))
 
 end
 
@@ -806,6 +820,8 @@ module AlgebraicData = struct
 end
 
 module BuiltInPredicate = struct
+  type once = depth:int -> Data.term -> Data.state -> Data.state
+
   include ED.BuiltInPredicate
   exception No_clause = ED.No_clause
 
@@ -877,6 +893,84 @@ module BuiltInPredicate = struct
     let (+?) a b = a, b
 
   end
+
+  let beta ~depth t args =
+    let module R = (val !r) in let open R in
+    deref_appuv ~from:depth ~to_:depth ?avoid:None args t
+
+  module HOAdaptors = struct
+
+    type 'a pred1 = Data.term * 'a Conversion.t
+    type ('a,'b) pred2 = Data.term * 'a Conversion.t * 'b Conversion.t
+    type ('a,'b,'c) pred3 = Data.term * 'a Conversion.t * 'b Conversion.t * 'c Conversion.t
+
+    let pred1_ty x = Conversion.TyApp("->",x.Conversion.ty,[Conversion.TyName"prop"])
+    let pred1 x = { Conversion.ty = pred1_ty x; readback = (fun ~depth state e -> state,(e,x),[]); embed = (fun ~depth state (x,_) -> state,x,[]); pp = (fun fmt (x,_) -> Format.fprintf fmt "<pred1>"); pp_doc = (fun fmt () -> ()) }
+    let pred2_ty x y = Conversion.(TyApp("->",x.Conversion.ty,[TyApp("->",y.Conversion.ty,[Conversion.TyName"prop"])]))
+    let pred2 x y = { Conversion.ty = pred2_ty x y; readback = (fun ~depth state e -> state,(e,x,y),[]); embed = (fun ~depth state (x,_,_) -> state,x,[]); pp = (fun fmt (x,_,_) -> Format.fprintf fmt "<pred2>"); pp_doc = (fun fmt () -> ()) }
+    let pred3_ty x y z = Conversion.(TyApp("->",x.Conversion.ty,[TyApp("->",y.Conversion.ty,[TyApp("->",z.Conversion.ty,[Conversion.TyName"prop"])])]))
+    let pred3 x y z = { Conversion.ty = pred3_ty x y z; readback = (fun ~depth state e -> state,(e,x,y,z),[]); embed = (fun ~depth state (x,_,_,_) -> state,x,[]); pp = (fun fmt (x,_,_,_) -> Format.fprintf fmt "<pred3>"); pp_doc = (fun fmt () -> ()) }
+
+
+    let filter1 ~once ~depth ~filter (f,c1) m state =
+      let gls = ref [] in
+      let st = ref state in
+      let m = filter (fun x ->
+        try
+          let state, x, gls0 = c1.Conversion.embed ~depth !st x in
+          gls := gls0 :: !gls;
+          let state = once ~depth (beta ~depth f [x]) state in
+          st := state;
+          true
+        with No_clause -> false) m in
+      !st, m, List.concat @@ List.rev !gls
+    let filter2 ~once ~depth ~filter (f,c1,c2) m state =
+      let gls = ref [] in
+      let st = ref state in
+      let m = filter (fun x y ->
+        try
+          let state, x, gls0 = c1.Conversion.embed ~depth !st x in
+          let state, y, gls1 = c2.Conversion.embed ~depth state y in
+          gls := gls1 :: gls0 :: !gls;
+          let state = once ~depth (beta ~depth f [x;y]) state in
+          st := state;
+          true
+        with No_clause -> false) m in
+      !st, m, List.concat @@ List.rev !gls
+
+    let map1 ~once ~depth ~map (f,c1,c2) m state =
+      let gls = ref [] in
+      let st = ref state in
+      let m = map (fun x ->
+          let state, x, gls0 = c1.Conversion.embed ~depth !st x in
+          let state, y = FlexibleData.Elpi.make state in
+          let y = RawData.mkUnifVar y ~args:(List.init depth RawData.mkConst) state in
+          gls := gls0 :: !gls;
+          let state = once ~depth (beta ~depth f [x;y]) state in
+          let state, y, gls1 = c2.Conversion.readback ~depth state y in
+          st := state;
+          y
+        ) m in
+      !st, m, List.concat @@ List.rev !gls
+
+    let map2 ~once ~depth ~map (f,c1,c2,c3) m state =
+      let gls = ref [] in
+      let st = ref state in
+      let m = map (fun x y ->
+          let state, x, gls0 = c1.Conversion.embed ~depth !st x in
+          let state, y, gls1 = c2.Conversion.embed ~depth state y in
+          let state, z = FlexibleData.Elpi.make state in
+          let z = RawData.mkUnifVar z ~args:(List.init depth RawData.mkConst) state in
+          gls := gls1 :: gls0 :: !gls;
+          let state = once ~depth (beta ~depth f [x;y;z]) state in
+          let state, z, gls1 = c3.Conversion.readback ~depth state z in
+          st := state;
+          z
+        ) m in
+      !st, m, List.concat @@ List.rev !gls            
+      
+  end
+
 end
 
 module BuiltIn = struct
@@ -993,9 +1087,8 @@ module Utils = struct
   let move ~from ~to_ t =
     let module R = (val !r) in let open R in
     hmove ~from ~to_ ?avoid:None t
-  let beta ~depth t args =
-    let module R = (val !r) in let open R in
-    deref_appuv ~from:depth ~to_:depth ?avoid:None args t
+
+  let beta = BuiltInPredicate.beta
 
   let error = Util.error
   let type_error = Util.type_error

@@ -157,6 +157,7 @@ module Data : sig
     state : state;
     output : 'a;
     pp_ctx : pretty_printer_context;
+    relocate_assignment_to_runtime : target:state -> depth:int -> string -> (term, string) Stdlib.Result.t
   }
 
   (* Hypothetical context *)
@@ -556,6 +557,8 @@ module BuiltInPredicate : sig
   type 'a oarg = Keep | Discard
   type 'a ioarg = private Data of 'a | NoData
 
+  type once
+
   type ('function_type, 'inernal_outtype_in, 'internal_hyps, 'internal_constraints) ffi =
     (* Arguemnts that are translated independently of the program context *)
     | In    : 't Conversion.t * doc * ('i, 'o,'h,'c) ffi -> ('t -> 'i,'o,'h,'c) ffi
@@ -574,6 +577,7 @@ module BuiltInPredicate : sig
       context readback function *)
     | Read : ('h,'c) ContextualConversion.ctx_readback * doc -> (depth:int -> 'h -> 'c -> Data.state -> 'o, 'o,'h,'c) ffi
     | Full : ('h,'c) ContextualConversion.ctx_readback * doc -> (depth:int -> 'h -> 'c -> Data.state -> Data.state * 'o * Conversion.extra_goals, 'o,'h,'c) ffi
+    | FullHO : ('h,'c) ContextualConversion.ctx_readback * doc -> (once:once -> depth:int -> 'h -> 'c -> Data.state -> Data.state * 'o * Conversion.extra_goals, 'o,'h,'c) ffi
     | VariadicIn    : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * 'o, 'o,'h,'c) ffi
     | VariadicOut   : ('h,'c) ContextualConversion.ctx_readback * ('t,'h,'c) ContextualConversion.t * doc -> ('t oarg list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * ('o * 't option list option), 'o,'h,'c) ffi
     | VariadicInOut : ('h,'c) ContextualConversion.ctx_readback * ('t ioarg,'h,'c) ContextualConversion.t * doc -> ('t ioarg list -> depth:int -> 'h -> 'c -> Data.state -> Data.state * ('o * 't option list option), 'o,'h,'c) ffi
@@ -634,6 +638,51 @@ module BuiltInPredicate : sig
     val (!:) : 'a -> unit * 'a option
     val (+?) : 'a -> 'b -> 'a * 'b
     val (+!) : 'a -> 'b -> 'a * 'b option
+
+  end
+
+  (** Adaptors for standard HO functions *)
+  module HOAdaptors : sig
+
+    type 'a pred1
+    type ('a,'b) pred2
+    type ('a,'b,'c) pred3
+
+    val pred1 : 'a Conversion.t -> 'a pred1 Conversion.t
+    val pred2 : 'a Conversion.t -> 'b Conversion.t -> ('a,'b) pred2 Conversion.t
+    val pred3 : 'a Conversion.t -> 'b Conversion.t -> 'c Conversion.t -> ('a,'b,'c) pred3 Conversion.t
+
+    val filter1 :
+      once:once -> depth:int ->
+      filter:(('a -> bool) -> 's -> 's) ->
+      'a pred1 ->
+      's ->
+      Data.state ->
+      Data.state * 's * Conversion.extra_goals
+
+    val filter2 :
+      once:once -> depth:int ->
+      filter:(('a -> 'b -> bool) -> 's -> 's) ->
+      ('a,'b) pred2 ->
+      's ->
+      Data.state ->
+      Data.state * 's * Conversion.extra_goals
+
+    val map1 :
+      once:once -> depth:int ->
+      map:(('a -> 'c) -> 's -> 's) ->
+      ('a,'c) pred2 ->
+      's ->
+      Data.state ->
+      Data.state * 's * Conversion.extra_goals
+
+    val map2 :
+      once:once -> depth:int ->
+      map:(('a -> 'b -> 'c) -> 's -> 's) ->
+      ('a,'b,'c) pred3 ->
+      's ->
+      Data.state ->
+      Data.state * 's * Conversion.extra_goals
 
   end
 
