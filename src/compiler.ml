@@ -2114,7 +2114,7 @@ let print_unit { print_units } x =
         (String.concat ", " (List.sort compare (Symbols.symbols x.symbol_table)))
 ;;
 
-let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_descriptor builtins ast : header =
+let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_descriptor calc_descriptor builtins ast : header =
   let state = D.State.(init (merge_descriptors D.elpi_state_descriptor state_descriptor)) in
   let state =
     match hoas_descriptor.D.HoasHooks.extra_goals_postprocessing with
@@ -2131,6 +2131,9 @@ let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_de
     let state = D.State.set CustomFunctorCompilation.singlequote state (Option.map snd singlequote_compilation) in
     let state = D.State.set Quotation.default_quotation state default_quotation in
     let state = D.State.set Quotation.named_quotations state named_quotations in
+    let state =
+      let eval_map = List.fold_left (fun m (c,{ CalcHooks.code }) -> Constants.Map.add c code m) Constants.Map.empty (List.rev calc_descriptor) in
+      D.State.set CalcHooks.eval state eval_map in
     state
   in
 

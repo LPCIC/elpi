@@ -68,13 +68,15 @@ stop :- halt.
 
 %  -- Evaluation --
 
+pred (is) o:A, i:A.
+
+X is Y :- calc Y X.
+
 % [calc Expr Out] unifies Out with the value of Expr. It can be used in
 % tandem with spilling, eg [f {calc (N + 1)}]
 external pred calc i:A, o:A.
 
-pred (is) o:A, i:A.
-
-X is Y :- calc Y X.
+%  --- Operators ---
 
 type (-) A -> A -> A.
 
@@ -83,7 +85,6 @@ type (i-) int -> int -> int.
 type (r-) float -> float -> float.
 
 type (+) int -> int -> int.
-
 type (+) float -> float -> float.
 
 type (i+) int -> int -> int.
@@ -91,7 +92,6 @@ type (i+) int -> int -> int.
 type (r+) float -> float -> float.
 
 type (*) int -> int -> int.
-
 type (*) float -> float -> float.
 
 type (/) float -> float -> float.
@@ -103,7 +103,6 @@ type (div) int -> int -> int.
 type (^) string -> string -> string.
 
 type (~) int -> int.
-
 type (~) float -> float.
 
 type (i~) int -> int.
@@ -111,7 +110,6 @@ type (i~) int -> int.
 type (r~) float -> float.
 
 type abs int -> int.
-
 type abs float -> float.
 
 type iabs int -> int.
@@ -119,11 +117,9 @@ type iabs int -> int.
 type rabs float -> float.
 
 type max int -> int -> int.
-
 type max float -> float -> float.
 
 type min int -> int -> int.
-
 type min float -> float -> float.
 
 type sqrt float -> float.
