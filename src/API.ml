@@ -73,9 +73,10 @@ let init ?(flags=Compiler.default_flags) ?(state=default_state_descriptor) ?(quo
         List.iteri (fun i s ->
           Printf.eprintf "%4d: %s\n" (i+1) s)
           (Re.Str.(split_delim (regexp_string "\n") text));
-        Printf.eprintf "Excerpt of %s:\n%s\n" fname
+        begin try Printf.eprintf "Excerpt of %s:\n%s\n" fname
           (String.sub text loc.Util.Loc.line_starts_at
-            Util.Loc.(loc.source_stop - loc.line_starts_at));
+            Util.Loc.(loc.source_stop - loc.line_starts_at))
+        with _ -> (* loc could be bogus *) (); end;
         Util.anomaly ~loc msg) in
   let header =
     try Compiler.header_of_ast ~flags ~parser state !quotations !hoas !calc builtins (List.concat header_src)
