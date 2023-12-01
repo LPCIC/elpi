@@ -193,6 +193,18 @@ module Execute = struct
   type 'a outcome =
     Success of 'a Data.solution | Failure | NoMoreSteps
 
+  let rec uvar2discard ~depth t =
+    let open ED in
+    let module R = (val !r) in
+    match R.deref_head ~depth t with
+    | App(c,x,xs) -> mkApp c (uvar2discard ~depth x) (List.map (uvar2discard ~depth) xs)
+    | Cons(x,xs) -> mkCons (uvar2discard ~depth x) (uvar2discard ~depth xs)
+    | Lam x -> mkLam (uvar2discard ~depth:(depth+1) x)
+    | Builtin(c,xs) -> mkBuiltin c (List.map (uvar2discard ~depth) xs)
+    | UVar _ | AppUVar _ -> mkDiscard
+    | Arg _ | AppArg _ -> assert false
+    | Const _ | Nil | CData _ | Discard -> t
+  
   let map_outcome full_deref hmove = function
     | ED.Failure -> Failure
     | ED.NoMoreSteps -> NoMoreSteps
@@ -200,7 +212,7 @@ module Execute = struct
       Success { assignments; constraints; state; output; pp_ctx;
         relocate_assignment_to_runtime = (fun ~target ~depth s ->
           Compiler.relocate_closed_term ~from
-            (Util.StrMap.find s assignments |> full_deref ~depth:idepth) ~to_:target
+            (Util.StrMap.find s assignments |> full_deref ~depth:idepth |> uvar2discard ~depth:idepth) ~to_:target
           |> Stdlib.Result.map (hmove ?avoid:None ~from:depth ~to_:depth)
         );
         }
@@ -1338,9 +1350,6 @@ module Utils = struct
       attributes;
       body = aux depth Util.IntMap.empty term;
     }]
-
-  let relocate_closed_term (state,t) new_state =
-    Compiler.relocate_closed_term ~from:state t ~to_:new_state
 
   let map_acc = BuiltInData.map_acc
 
