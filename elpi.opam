@@ -9,7 +9,6 @@ bug-reports: "https://github.com/LPCIC/elpi/issues"
 
 build: [
   ["dune" "subst"] {dev}
-  [make "config" "LEGACY_PARSER=1"] {elpi-option-legacy-parser:installed}
   ["dune" "build" "-p" name "-j" jobs]
   [make "tests" "DUNE_OPTS=-p %{name}%" "SKIP=performance_HO" "SKIP+=performance_FO" "SKIP+=elpi_api_performance"] {with-test & os != "macos" & os-distribution != "alpine" & os-distribution != "freebsd"}
 ]
@@ -28,12 +27,6 @@ depends: [
   "atdgen" {>= "2.10.0"}
   "atdts" {>= "2.10.0"}
   "odoc" {with-doc}
-]
-depopts: [
-  "elpi-option-legacy-parser"
-]
-conflicts: [
-  "elpi-option-legacy-parser" {!= "1"}
 ]
 synopsis: "ELPI - Embeddable λProlog Interpreter"
 description: """

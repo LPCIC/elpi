@@ -82,5 +82,3 @@
 (rule
   (targets trace.ts)
   (action (run atdts %{dep:trace.atd})))
-
-(include dune.config)

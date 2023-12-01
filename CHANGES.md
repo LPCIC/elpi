@@ -1,7 +1,9 @@
 # v1.18.1 (December 2023)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.
-Camlp5 8.0 or above is optional.
+
+Parser:
+  - Remove legacy parsing engine based on Camlp5
 
 API:
   - New `RawQuery.compile_ast`, lets one set up the initial state in which the
