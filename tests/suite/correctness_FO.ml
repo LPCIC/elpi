@@ -126,3 +126,7 @@ let () = declare "dt_var2"
   ~expectation:(SuccessOutput (Str.regexp "dev:disc-tree:candidates = 3"))
   ()
 
+let () = declare "is"
+  ~source_elpi:"is.elpi"
+  ~description:"calc"
+  ()

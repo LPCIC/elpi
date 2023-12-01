@@ -378,6 +378,7 @@ module ConstraintStoreAndTrail : sig
   val pp_stuck_goal : ?pp_ctx:pp_ctx -> Fmt.formatter -> stuck_goal -> unit
 
   val state : State.t Fork.local_ref
+  val initial_state : State.t Fork.local_ref
 
   (* ---------------------------------------------------- *)
 
@@ -418,7 +419,10 @@ end = struct (* {{{ *)
  }
 
   let state =
-    Fork.new_local (State.init Data.elpi_state_descriptor |> State.begin_goal_compilation |> State.end_goal_compilation StrMap.empty |> State.end_compilation)
+    Fork.new_local State.dummy
+  let initial_state =
+    Fork.new_local State.dummy
+
   let read_custom_constraint ct =
     State.get ct !state
   let update_custom_constraint ct f =
@@ -3409,7 +3413,7 @@ let try_fire_rule (gid[@trace]) rule (constraints as orig_constraints) =
         (shift_bound_vars ~depth:0 ~to_:max_depth guard);
     assignments = StrMap.empty;
     initial_depth = max_depth;
-    initial_runtime_state = State.(init (State.descriptor !CS.state) |> State.begin_goal_compilation |> end_goal_compilation StrMap.empty |> end_compilation);
+    initial_runtime_state = !CS.initial_state;
     query_arguments = Query.N;
     symbol_table = !C.table;
     builtins = !FFI.builtins;
@@ -3811,7 +3815,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
       initial_goal = g;
       assignments = StrMap.empty;
       initial_depth = depth;
-      initial_runtime_state = State.(init (State.descriptor !CS.state) |> State.begin_goal_compilation |> end_goal_compilation StrMap.empty |> end_compilation);
+      initial_runtime_state = !CS.initial_state;
       query_arguments = Query.N;
       symbol_table = !C.table;
       builtins = !FFI.builtins;
@@ -3972,6 +3976,7 @@ end;*)
   set delay_hard_unif_problems delay_outside_fragment;
   set steps_made 0;
   set CS.state initial_runtime_state;
+  set CS.initial_state initial_runtime_state;
   set C.table symbol_table;
   set FFI.builtins builtins;
   set rid !max_runtime_id;

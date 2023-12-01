@@ -286,8 +286,8 @@ module State : sig
      - end_compilation (just once before running)
      - end_execution (just once after running)
   *)
+  
   val init : descriptor -> t
-  val descriptor : t -> descriptor
   val end_clause_compilation : t -> t
   val begin_goal_compilation : t -> t
   val end_goal_compilation : uvar_body StrMap.t -> t -> t
@@ -301,9 +301,12 @@ module State : sig
   val update_return : 'a component -> t -> ('a -> 'a * 'b) -> t * 'b
   val pp : Format.formatter -> t -> unit
 
+  val dummy : t
+
 end = struct
 
   type stage =
+    | Dummy
     | Compile_prog
     | Compile_goal
     | Link
@@ -323,6 +326,7 @@ end = struct
   type descriptor = extension StrMap.t ref
 
   type t = { data : Obj.t StrMap.t; stage : stage; extensions : descriptor }
+  let dummy : t = { data = StrMap.empty; stage = Dummy; extensions = ref StrMap.empty }
   let descriptor { extensions = x } = x
  
   let new_descriptor () : descriptor = ref StrMap.empty
@@ -366,13 +370,15 @@ end = struct
     name
 
   let init extensions : t =
-    { data =
-       StrMap.fold (fun name { init } acc ->
-        let o = init () in
-        StrMap.add name o acc)
-        !extensions StrMap.empty;
+    let data = StrMap.fold (fun name { init } acc ->
+      let o = init () in
+      StrMap.add name o acc)
+      !extensions StrMap.empty in
+    {
+      data;
       stage = Compile_prog;
-      extensions }
+      extensions;
+    }
 
   let end_clause_compilation { data = m; stage = s; extensions } : t =
     assert(s = Compile_prog);
