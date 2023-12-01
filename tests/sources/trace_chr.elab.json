@@ -1033,7 +1033,7 @@
               {
                 "step_id": 0,
                 "runtime_id": 1,
-                "step": [ "Init", { "goal_text": "odd z", "goal_id": 21 } ],
+                "step": [ "Init", { "goal_text": "odd z", "goal_id": 20 } ],
                 "color": "Grey"
               },
               {
@@ -1042,7 +1042,7 @@
                 "step": [
                   "Inference",
                   {
-                    "current_goal_id": 21,
+                    "current_goal_id": 20,
                     "current_goal_text": "odd z",
                     "current_goal_predicate": "odd",
                     "failed_attempts": [],
@@ -1071,7 +1071,7 @@
                   "step_id": 0,
                   "runtime_id": 2,
                   "step": [
-                    "Init", { "goal_text": "odd (s z)", "goal_id": 23 }
+                    "Init", { "goal_text": "odd (s z)", "goal_id": 21 }
                   ],
                   "color": "Grey"
                 },
@@ -1081,7 +1081,7 @@
                   "step": [
                     "Inference",
                     {
-                      "current_goal_id": 23,
+                      "current_goal_id": 21,
                       "current_goal_text": "odd (s z)",
                       "current_goal_predicate": "odd",
                       "failed_attempts": [],
@@ -1106,7 +1106,7 @@
                             "events": [ [ "Assign", "A0 := z" ] ]
                           },
                           "siblings": [
-                            { "goal_text": "even z", "goal_id": 24 }
+                            { "goal_text": "even z", "goal_id": 22 }
                           ],
                           "siblings_aggregated_outcome": "Success"
                         }
@@ -1143,7 +1143,7 @@
                   "step": [
                     "Inference",
                     {
-                      "current_goal_id": 24,
+                      "current_goal_id": 22,
                       "current_goal_text": "even z",
                       "current_goal_predicate": "even",
                       "failed_attempts": [],
@@ -1219,7 +1219,7 @@
               ]
             },
             "chr_removed_goals": [ 19, 14 ],
-            "chr_new_goals": [ { "goal_text": "_ => fail", "goal_id": 25 } ]
+            "chr_new_goals": [ { "goal_text": "_ => fail", "goal_id": 23 } ]
           }
         ],
         "chr_store_before": [
@@ -1237,7 +1237,7 @@
     "step": [
       "Inference",
       {
-        "current_goal_id": 25,
+        "current_goal_id": 23,
         "current_goal_text": "_ => fail",
         "current_goal_predicate": "=>",
         "failed_attempts": [],
@@ -1247,7 +1247,7 @@
               "rule": [ "BuiltinRule", [ "Logic", "implication" ] ],
               "events": []
             },
-            "siblings": [ { "goal_text": "fail", "goal_id": 26 } ],
+            "siblings": [ { "goal_text": "fail", "goal_id": 24 } ],
             "siblings_aggregated_outcome": "Fail"
           }
         ],
@@ -1269,7 +1269,7 @@
     "step": [
       "Inference",
       {
-        "current_goal_id": 26,
+        "current_goal_id": 24,
         "current_goal_text": "fail",
         "current_goal_predicate": "fail",
         "failed_attempts": [],
