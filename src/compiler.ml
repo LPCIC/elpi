@@ -2100,7 +2100,7 @@ let unit_or_header_of_ast { print_passes } s ?(toplevel_macros=F.Map.empty) p =
   s, {
     version = "%%VERSION_NUM%%";
     code = p;
-    symbol_table = Symbols.prune (State.get Symbols.table s) p.Flat.symbols
+    symbol_table = Symbols.prune (State.get Symbols.table s) ~alive:p.Flat.symbols
   }
 ;;
 

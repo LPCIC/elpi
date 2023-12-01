@@ -460,7 +460,7 @@ module BuiltInData = struct
     { Conversion.embed; readback; ty;
       pp = (fun fmt (t,d) ->
         let module R = (val !r) in let open R in
-        Pp.uppterm d [] d ED.empty_env fmt t);
+        Pp.uppterm d [] ~argsdepth:d ED.empty_env fmt t);
       pp_doc = (fun fmt () -> ()) }
    
   let map_acc f s l =
@@ -518,7 +518,7 @@ module Elpi = struct
         Format.fprintf fmt "%s" str
     | Ref ub ->
         let module R = (val !r) in let open R in
-        Pp.uppterm 0 [] 0 [||] fmt (ED.mkUVar ub 0 0)
+        Pp.uppterm 0 [] ~argsdepth:0 [||] fmt (ED.mkUVar ub 0 0)
 
   let show m = Format.asprintf "%a" pp m
 
@@ -1365,7 +1365,7 @@ end
 module RawPp = struct
   let term depth fmt t =
     let module R = (val !r) in let open R in
-    Pp.uppterm depth [] 0 ED.empty_env fmt t
+    Pp.uppterm depth [] ~argsdepth:0 ED.empty_env fmt t
 
   let constraints f c = 
     let module R = (val !r) in let open R in
@@ -1376,7 +1376,7 @@ module RawPp = struct
   module Debug = struct
     let term depth fmt t =
       let module R = (val !r) in let open R in
-       Pp.ppterm depth [] 0 ED.empty_env fmt t
+       Pp.ppterm depth [] ~argsdepth:0 ED.empty_env fmt t
     let show_term = ED.show_term
   end
 end
