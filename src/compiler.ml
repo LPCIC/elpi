@@ -2100,7 +2100,7 @@ let unit_or_header_of_ast { print_passes } s ?(toplevel_macros=F.Map.empty) p =
   s, {
     version = "%%VERSION_NUM%%";
     code = p;
-    symbol_table = Symbols.prune (State.get Symbols.table s) p.Flat.symbols
+    symbol_table = Symbols.prune (State.get Symbols.table s) ~alive:p.Flat.symbols
   }
 ;;
 
@@ -2121,22 +2121,19 @@ let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_de
     | Some x ->
         D.State.set D.Conversion.extra_goals_postprocessing state x
     | None -> state in          
+  let { D.QuotationHooks.default_quotation;
+        named_quotations;
+        singlequote_compilation;
+        backtick_compilation } = quotation_descriptor in
+
+  let state = D.State.set CustomFunctorCompilation.backtick state (Option.map snd backtick_compilation) in
+  let state = D.State.set CustomFunctorCompilation.singlequote state (Option.map snd singlequote_compilation) in
+  let state = D.State.set Quotation.default_quotation state default_quotation in
+  let state = D.State.set Quotation.named_quotations state named_quotations in
   let state =
-    let { D.QuotationHooks.default_quotation;
-          named_quotations;
-          singlequote_compilation;
-          backtick_compilation } = quotation_descriptor in
-
-    let state = D.State.set CustomFunctorCompilation.backtick state (Option.map snd backtick_compilation) in
-    let state = D.State.set CustomFunctorCompilation.singlequote state (Option.map snd singlequote_compilation) in
-    let state = D.State.set Quotation.default_quotation state default_quotation in
-    let state = D.State.set Quotation.named_quotations state named_quotations in
-    let state =
-      let eval_map = List.fold_left (fun m (c,{ CalcHooks.code }) -> Constants.Map.add c code m) Constants.Map.empty (List.rev calc_descriptor) in
-      D.State.set CalcHooks.eval state eval_map in
-    state
-  in
-
+    let eval_map = List.fold_left (fun m (c,{ CalcHooks.code }) -> Constants.Map.add c code m) Constants.Map.empty (List.rev calc_descriptor) in
+    D.State.set CalcHooks.eval state eval_map in
+  let state = D.State.set parser state (Some p) in
   let state = D.State.set D.while_compiling state true in
   let state = State.set Symbols.table state (Symbols.global_table ()) in
   let state =
@@ -2147,7 +2144,6 @@ let header_of_ast ~flags ~parser:p state_descriptor quotation_descriptor hoas_de
       | Data.BuiltInPredicate.MLDataC _ -> state
       | Data.BuiltInPredicate.LPCode _ -> state
       | Data.BuiltInPredicate.LPDoc _ -> state) state decls) state builtins in
-  let state = D.State.set parser state (Some p) in
   let state, u = unit_or_header_of_ast flags state ast in
   print_unit flags u;
   state, u

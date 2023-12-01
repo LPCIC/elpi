@@ -21,17 +21,10 @@ jobs:
           - 4.08.x
         profile:
           - dev
-        parser:
-          - menhir
         include:
           - os: ubuntu-latest
             ocaml-compiler: 5.1.x
             profile: fatalwarnings
-            parser: menhir
-          - os: ubuntu-latest
-            ocaml-compiler: 4.11.x
-            profile: dev
-            parser: menhir-camlp5
 
     runs-on: ${{ matrix.os }}
 
@@ -98,36 +91,27 @@ jobs:
         run: |
           opam install ./elpi.opam --deps-only --with-doc --with-test
 
-      - name: Install optional dependencies for menhir-camlp5 parser
-        if: matrix.parser == 'menhir-camlp5'
-        run: |
-          opam depext camlp5 || true # no depext on opam 2.1
-          sudo apt-get install libstring-shellquote-perl
-          sudo apt-get install libipc-system-simple-perl
-          opam install ./elpi-option-legacy-parser.opam
-          opam exec -- make config LEGACY_PARSER=1
-
       - name: Build elpi with dune profile ${{ matrix.profile }}
         run: |
           opam exec -- dune subst
           opam exec -- make build DUNE_OPTS='--profile ${{ matrix.profile }}'
-          opam exec -- cp _build/install/default/bin/elpi elpi-${{ matrix.ocaml-compiler }}-${{ matrix.parser }}-${{ runner.os }}.exe
-          opam exec -- cp _build/install/default/bin/elpi-trace-elaborator elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ matrix.parser }}-${{ runner.os }}.exe
+          opam exec -- cp _build/install/default/bin/elpi elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe
+          opam exec -- cp _build/install/default/bin/elpi-trace-elaborator elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe
 
       - name: Strip binary
         run: |
-          opam exec -- chmod u+w ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ matrix.parser }}-${{ runner.os }}.exe
-          opam exec -- chmod u+w ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ matrix.parser }}-${{ runner.os }}.exe
-          opam exec -- strip ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ matrix.parser }}-${{ runner.os }}.exe
-          opam exec -- strip ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ matrix.parser }}-${{ runner.os }}.exe
+          opam exec -- chmod u+w ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe
+          opam exec -- chmod u+w ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe
+          opam exec -- strip ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe
+          opam exec -- strip ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe
 
 # Artifacts 1 ################################################################
 
       - name: Save binary
         uses: actions/upload-artifact@v2
         with:
-          name: elpi-${{ matrix.ocaml-compiler }}-${{ matrix.parser }}-${{ runner.os }}
-          path: elpi*-${{ matrix.ocaml-compiler }}-${{ matrix.parser }}-${{ runner.os }}.exe
+          name: elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}
+          path: elpi*-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe
 
 # Test ######################################################################
 #
@@ -135,13 +119,13 @@ jobs:
 
       - name: Test elpi on Unix
         if: runner.os != 'Windows'
-        run: opam exec -- make tests RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ matrix.parser }}-${{ runner.os }}.exe ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ matrix.parser }}-${{ runner.os }}.exe'
+        run: opam exec -- make tests RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe'
 
       - name: Test elpi on Windows
         if: runner.os == 'Windows'
         run: |
           opam exec -- ls -l tests/sources/*.elpi
-          opam exec -- make tests PWD=${{ env.workspace }} RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ matrix.parser }}-${{ runner.os }}.exe ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ matrix.parser }}-${{ runner.os }}.exe' TIME=--time=${{ env.cygwin_root }}/bin/time.exe
+          opam exec -- make tests PWD=${{ env.workspace }} RUNNERS='dune ${{ env.workspace }}/elpi-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe ${{ env.workspace }}/elpi-trace-elaborator-${{ matrix.ocaml-compiler }}-${{ runner.os }}.exe' TIME=--time=${{ env.cygwin_root }}/bin/time.exe
 
 # Artifacts 2 ################################################################
 
@@ -149,7 +133,7 @@ jobs:
         uses: actions/upload-artifact@v2
         if: always()
         with:
-          name: .logs-${{ matrix.ocaml-compiler }}-${{ matrix.parser }}-${{ runner.os }}
+          name: .logs-${{ matrix.ocaml-compiler }}-${{ runner.os }}
           path: _log
           retention-days: 1
 
@@ -157,7 +141,7 @@ jobs:
         uses: actions/upload-artifact@v2
         if: always()
         with:
-          name: .benchmark-${{ matrix.ocaml-compiler }}-${{ matrix.parser }}-${{ runner.os }}
+          name: .benchmark-${{ matrix.ocaml-compiler }}-${{ runner.os }}
           path: data.csv
           retention-days: 1
 

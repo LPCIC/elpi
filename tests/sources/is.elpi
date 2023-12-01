@@ -1,0 +1,4 @@
+main :-
+  "ab" is "a" ^ "b",
+  3 is 2 + 1,
+  std.findall (X is 1 + 2) L.

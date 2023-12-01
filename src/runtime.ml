@@ -378,6 +378,7 @@ module ConstraintStoreAndTrail : sig
   val pp_stuck_goal : ?pp_ctx:pp_ctx -> Fmt.formatter -> stuck_goal -> unit
 
   val state : State.t Fork.local_ref
+  val initial_state : State.t Fork.local_ref
 
   (* ---------------------------------------------------- *)
 
@@ -418,7 +419,10 @@ end = struct (* {{{ *)
  }
 
   let state =
-    Fork.new_local (State.init Data.elpi_state_descriptor |> State.begin_goal_compilation |> State.end_goal_compilation StrMap.empty |> State.end_compilation)
+    Fork.new_local State.dummy
+  let initial_state =
+    Fork.new_local State.dummy
+
   let read_custom_constraint ct =
     State.get ct !state
   let update_custom_constraint ct f =
@@ -1726,7 +1730,7 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
          true
        with RestrictionFailure ->
         (* avoid fail occur-check on: x\A x = A *)
-        match eta_contract_flex depth adepth bdepth e a with
+        match eta_contract_flex depth adepth ~argsdepth:bdepth e a with
         | None -> false
         | Some a -> unif argsdepth matching depth adepth a bdepth b e end
    | UVar (r,origdepth,0), _ when not matching ->
@@ -1746,7 +1750,7 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
          true
        with RestrictionFailure ->
         (* avoid fail occur-check on: x\A x = A *)
-        match eta_contract_flex depth bdepth bdepth e b with
+        match eta_contract_flex depth bdepth ~argsdepth:bdepth e b with
         | None -> false
         | Some b -> unif argsdepth matching depth adepth a bdepth b e end
 
@@ -1792,7 +1796,7 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
        e.(i) <- UVar(r,adepth,0);
        let kind = Unification {adepth = adepth+depth; env = e; bdepth = bdepth+depth; a; b; matching} in
        let blockers =
-         match is_flex (adepth+depth) other with
+         match is_flex ~depth:(adepth+depth) other with
          | None -> [r]
          | Some r' -> if r==r' then [r] else [r;r'] in
        CS.declare_new { kind; blockers };
@@ -1808,7 +1812,7 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
        Fmt.fprintf Fmt.std_formatter "HO unification delayed: %a = %a\n%!"
          (uppterm depth [] ~argsdepth empty_env) a (uppterm depth [] ~argsdepth empty_env) b ;
        let kind = Unification {adepth = adepth+depth; env = e; bdepth = bdepth+depth; a; b; matching} in
-       let blockers = match is_flex (bdepth+depth) other with | None -> [r] | Some r' -> [r;r'] in
+       let blockers = match is_flex ~depth:(bdepth+depth) other with | None -> [r] | Some r' -> [r;r'] in
        CS.declare_new { kind; blockers };
        true
        end else error (error_msg_hard_unif a b)
@@ -1821,7 +1825,7 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
          (uppterm depth [] ~argsdepth empty_env) a (uppterm depth [] ~argsdepth e) b ;
        let kind = Unification {adepth = adepth+depth; env = e; bdepth = bdepth+depth; a; b; matching} in
        let blockers =
-         match is_flex (adepth+depth) other with
+         match is_flex ~depth:(adepth+depth) other with
          | None -> [r]
          | Some r' -> if r==r' then [r] else [r;r'] in
        CS.declare_new { kind; blockers };
@@ -1864,7 +1868,7 @@ let rec unif argsdepth matching depth adepth a bdepth b e =
    | _ -> false
    end]
 and eta_contract_heap_or_expand_stack argsdepth matching depth adepth a x bdepth b c args e =
-  match eta_contract_flex depth adepth adepth e a with
+  match eta_contract_flex depth adepth ~argsdepth:adepth e a with
   | Some flex -> unif argsdepth matching depth adepth flex bdepth b e
   | None when c == Global_symbols.uvarc-> false
   | None ->
@@ -1874,7 +1878,7 @@ and eta_contract_heap_or_expand_stack argsdepth matching depth adepth a x bdepth
       let eta = C.mkAppL c (args @ [extra]) in
       unif argsdepth matching (depth+1) adepth x bdepth eta e
 and eta_contract_stack_or_expand_heap argsdepth matching depth adepth a c args bdepth b x e =
-  match eta_contract_flex depth bdepth adepth e b with
+  match eta_contract_flex depth bdepth ~argsdepth:adepth e b with
   | Some flex -> unif argsdepth matching depth adepth a bdepth flex e
   | None when c == Global_symbols.uvarc-> false
   | None ->
@@ -3409,7 +3413,7 @@ let try_fire_rule (gid[@trace]) rule (constraints as orig_constraints) =
         (shift_bound_vars ~depth:0 ~to_:max_depth guard);
     assignments = StrMap.empty;
     initial_depth = max_depth;
-    initial_runtime_state = State.(init (State.descriptor !CS.state) |> State.begin_goal_compilation |> end_goal_compilation StrMap.empty |> end_compilation);
+    initial_runtime_state = !CS.initial_state;
     query_arguments = Query.N;
     symbol_table = !C.table;
     builtins = !FFI.builtins;
@@ -3702,12 +3706,12 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
     | AppUVar ({contents = t}, from, args) when t != C.dummy -> [%spy "user:rule" ~rid ~gid pp_string "deref"]; [%spy "user:rule:deref" ~rid ~gid pp_string "success"];
        [%tcall run depth p (deref_appuv ~from ~to_:depth args t) (gid[@trace]) gs next alts cutto_alts]
     | Const k ->
-       let clauses = get_clauses depth k g p in
+       let clauses = get_clauses ~depth k g p in
        [%spy "user:rule" ~rid ~gid pp_string "backchain"];
        [%spyl "user:rule:backchain:candidates" ~rid ~gid (pp_candidate ~depth ~k) clauses];
        [%tcall backchain depth p (k, C.dummy, [], gs) (gid[@trace]) next alts cutto_alts clauses]
     | App (k,x,xs) ->
-       let clauses = get_clauses depth k g p in
+       let clauses = get_clauses ~depth k g p in
        [%spy "user:rule" ~rid ~gid pp_string "backchain"];
        [%spyl "user:rule:backchain:candidates" ~rid ~gid (pp_candidate ~depth ~k) clauses];
        [%tcall backchain depth p (k, x, xs, gs) (gid[@trace]) next alts cutto_alts clauses]
@@ -3753,7 +3757,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
              | arg_mode :: ms -> unif ~argsdepth:depth ~matching:(arg_mode == Input) (gid[@trace]) depth env c_depth arg x && for_all3b3 ~argsdepth:depth (unif (gid[@trace])) depth env c_depth args_of_g xs ms false
         with
         | false ->
-            T.undo old_trail (); [%tcall backchain depth p (k, arg, args_of_g, gs) (gid[@trace]) next alts cutto_alts cs]
+            T.undo ~old_trail (); [%tcall backchain depth p (k, arg, args_of_g, gs) (gid[@trace]) next alts cutto_alts cs]
         | true ->
            let oldalts = alts in
            let alts = if cs = [] then alts else
@@ -3811,7 +3815,7 @@ let make_runtime : ?max_steps: int -> ?delay_outside_fragment: bool -> 'x execut
       initial_goal = g;
       assignments = StrMap.empty;
       initial_depth = depth;
-      initial_runtime_state = State.(init (State.descriptor !CS.state) |> State.begin_goal_compilation |> end_goal_compilation StrMap.empty |> end_compilation);
+      initial_runtime_state = !CS.initial_state;
       query_arguments = Query.N;
       symbol_table = !C.table;
       builtins = !FFI.builtins;
@@ -3972,6 +3976,7 @@ end;*)
   set delay_hard_unif_problems delay_outside_fragment;
   set steps_made 0;
   set CS.state initial_runtime_state;
+  set CS.initial_state initial_runtime_state;
   set C.table symbol_table;
   set FFI.builtins builtins;
   set rid !max_runtime_id;

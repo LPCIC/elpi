@@ -161,7 +161,7 @@ module Data : sig
     state : state;
     output : 'a;
     pp_ctx : pretty_printer_context;
-    relocate_assignment_to_runtime : target:state -> depth:int -> string -> (term, string) Stdlib.Result.t
+    relocate_assignment_to_runtime : target:state -> depth:int -> string -> (term, string) Stdlib.Result.t (* uvars are turned into discard *)
   }
 
   (* Hypothetical context *)
@@ -1223,11 +1223,6 @@ module Utils : sig
   val clause_of_term :
     ?name:string -> ?graft:([`After | `Before] * string) ->
     depth:int -> Ast.Loc.t -> Data.term -> Ast.program
-
-  (** Hackish API. Move a term from one runtime (after execution) to another
-      one which has all the needed symbols *)
-  val relocate_closed_term :
-    State.t * Data.term -> State.t -> (Data.term,string) Stdlib.Result.t
 
   (** Lifting/restriction/beta (LOW LEVEL, don't use) *)
   val move : from:int -> to_:int -> Data.term -> Data.term

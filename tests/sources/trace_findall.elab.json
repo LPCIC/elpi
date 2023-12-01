@@ -163,7 +163,7 @@
           {
             "step_id": 0,
             "runtime_id": 1,
-            "step": [ "Init", { "goal_text": "p X0", "goal_id": 9 } ],
+            "step": [ "Init", { "goal_text": "p X0", "goal_id": 8 } ],
             "color": "Grey"
           },
           {
@@ -172,7 +172,7 @@
             "step": [
               "Inference",
               {
-                "current_goal_id": 9,
+                "current_goal_id": 8,
                 "current_goal_text": "p X0",
                 "current_goal_predicate": "p",
                 "failed_attempts": [],
@@ -232,7 +232,7 @@
             "step": [
               "Inference",
               {
-                "current_goal_id": 9,
+                "current_goal_id": 8,
                 "current_goal_text": "p X0",
                 "current_goal_predicate": "p",
                 "failed_attempts": [],
@@ -292,7 +292,7 @@
             "step": [
               "Inference",
               {
-                "current_goal_id": 9,
+                "current_goal_id": 8,
                 "current_goal_text": "p X0",
                 "current_goal_predicate": "p",
                 "failed_attempts": [],
@@ -316,7 +316,7 @@
                       ],
                       "events": [ [ "Assign", "X0 := 3" ] ]
                     },
-                    "siblings": [ { "goal_text": "p 2", "goal_id": 10 } ],
+                    "siblings": [ { "goal_text": "p 2", "goal_id": 9 } ],
                     "siblings_aggregated_outcome": "Success"
                   }
                 ],
@@ -352,7 +352,7 @@
             "step": [
               "Inference",
               {
-                "current_goal_id": 10,
+                "current_goal_id": 9,
                 "current_goal_text": "p 2",
                 "current_goal_predicate": "p",
                 "failed_attempts": [],
