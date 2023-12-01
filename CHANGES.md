@@ -1,4 +1,4 @@
-# v1.18.1 (November 2023)
+# v1.18.1 (December 2023)
 
 Requires Menhir 20211230 and OCaml 4.08 or above.
 Camlp5 8.0 or above is optional.
@@ -6,8 +6,8 @@ Camlp5 8.0 or above is optional.
 API:
   - New `RawQuery.compile_ast`, lets one set up the initial state in which the
     query is run, even if the query is given as an ast.
-  - New `Utils.relocate_closed_term` to move a term from one runtime to another
-    (experimental)
+  - New `solution.relocate_assignment_to_runtime` to pass a query result
+    to another query
   - New `BuiltInPredicate.FullHO` for higher order external predicates
   - New `BuiltInPredicate.HOAdaptors` for `map` and `filter` like HO predicates
   - New `Calc.register` to register operators for `calc` (aka infix `is`)

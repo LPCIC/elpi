@@ -161,7 +161,7 @@ module Data : sig
     state : state;
     output : 'a;
     pp_ctx : pretty_printer_context;
-    relocate_assignment_to_runtime : target:state -> depth:int -> string -> (term, string) Stdlib.Result.t
+    relocate_assignment_to_runtime : target:state -> depth:int -> string -> (term, string) Stdlib.Result.t (* uvars are turned into discard *)
   }
 
   (* Hypothetical context *)
