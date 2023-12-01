@@ -201,11 +201,58 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">V = s (s (s (s (s (s (s (s (s (s (s (s (s zero))))))))))))</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">    ocamlopt trace/runtime/.trace_ppx_runtime.objs/native/trace_ppx_runtime.{cmx,o}</span>
+<span class="go">    ocamldep trace/runtime/.trace_ppx_runtime.objs/trace_ppx_runtime__Runtime.impl.d</span>
+<span class="go">    ocamlopt src/parser/.elpi_parser.objs/native/elpi_parser.{cmx,o}</span>
+<span class="go">    ocamlopt src/.elpi.objs/native/elpi__.{cmx,o}</span>
+<span class="go">    ocamldep src/.elpi.objs/elpi__Legacy_parser_proxy.impl.d</span>
+<span class="go">    ocamldep src/.elpi.objs/elpi__Ptmap.impl.d</span>
+<span class="go">    ocamldep src/.elpi.objs/elpi__Builtin.impl.d</span>
+<span class="go">    ocamldep src/parser/.elpi_parser.objs/elpi_parser__Parse.impl.d</span>
+<span class="go">         ppx src/parser/ast.pp.ml</span>
+<span class="go">         ppx src/API.pp.ml</span>
+<span class="go">    ocamlopt src/.elpi.objs/native/elpi__Builtin_map.{cmx,o}</span>
+<span class="go">    ocamlopt src/parser/.elpi_parser.objs/native/elpi_parser__Parse.{cmx,o}</span>
+<span class="go">    ocamlopt src/parser/.elpi_parser.objs/native/elpi_parser__Parser_config.{cmx,o}</span>
+<span class="go">    ocamlopt src/parser/.elpi_parser.objs/native/elpi_parser__Error_messages.{cmx,o}</span>
+<span class="go">    ocamlopt src/.elpi.objs/native/elpi__Builtin_set.{cmx,o}</span>
+<span class="go">    ocamlopt trace/runtime/.trace_ppx_runtime.objs/native/trace_ppx_runtime__Runtime.{cmx,o}</span>
+<span class="go">    ocamlopt src/.elpi.objs/native/elpi__Builtin_stdlib.{cmx,o}</span>
+<span class="go">         ppx src/compiler.pp.ml</span>
+<span class="go">    ocamlopt src/.elpi.objs/native/elpi__Legacy_parser_proxy.{cmx,o}</span>
+<span class="go">    ocamlopt src/.elpi.objs/native/elpi__Builtin_checker.{cmx,o}</span>
+<span class="go">    ocamlopt src/parser/.elpi_parser.objs/native/elpi_parser__Lexer.{cmx,o}</span>
+<span class="go">    ocamlopt src/.elpi.objs/native/elpi.{cmx,o}</span>
+<span class="go">    ocamlopt src/.elpi.objs/native/elpi__Ptmap.{cmx,o}</span>
+<span class="go">    ocamldep src/parser/.elpi_parser.objs/elpi_parser__Ast.impl.d</span>
+<span class="go">    ocamldep src/.elpi.objs/elpi__API.impl.d</span>
+<span class="go">      ocamlc .elpi_REPL.eobjs/byte/dune__exe__Elpi_REPL.{cmi,cmo,cmt}</span>
+<span class="go">    ocamlopt src/.elpi.objs/native/elpi__Discrimination_tree.{cmx,o}</span>
+<span class="go">    ocamldep src/.elpi.objs/elpi__Compiler.impl.d</span>
+<span class="go">    ocamlopt trace/runtime/trace_ppx_runtime.{a,cmxa}</span>
+<span class="go">    ocamlopt .elpi_REPL.eobjs/native/dune__exe__Elpi_REPL.{cmx,o}</span>
+<span class="go">         ppx src/runtime.pp.ml</span>
+<span class="go">         ppx src/runtime_trace_off.pp.ml</span>
+<span class="go">    ocamldep src/.elpi.objs/elpi__Runtime.impl.d</span>
+<span class="go">    ocamldep src/.elpi.objs/elpi__Runtime_trace_off.impl.d</span>
+<span class="go">    ocamldep src/parser/.elpi_parser.objs/elpi_parser__Grammar.impl.d</span>
+<span class="go">    ocamlopt src/.elpi.objs/native/elpi__Builtin.{cmx,o}</span>
+<span class="go">    ocamlopt src/parser/.elpi_parser.objs/native/elpi_parser__Ast.{cmx,o}</span>
+<span class="go">    ocamlopt src/.elpi.objs/native/elpi__API.{cmx,o}</span>
+<span class="go">    ocamlopt src/.elpi.objs/native/elpi__Data.{cmx,o}</span>
+<span class="go">    ocamlopt src/.elpi.objs/native/elpi__Compiler.{cmx,o}</span>
+<span class="go">    ocamlopt src/.elpi.objs/native/elpi__Runtime_trace_off.{cmx,o}</span>
+<span class="go">    ocamlopt src/.elpi.objs/native/elpi__Runtime.{cmx,o}</span>
+<span class="go">    ocamlopt src/elpi.{a,cmxa}</span>
+<span class="go">    ocamlopt src/parser/.elpi_parser.objs/native/elpi_parser__Grammar.{cmx,o}</span>
+<span class="go">    ocamlopt src/parser/elpi_parser.{a,cmxa}</span>
+<span class="go">    ocamlopt elpi_REPL.exe</span>
+
+<span class="go">Parsing time: 0.000</span>
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.048</span>
+<span class="go">Typechecking time: 0.047</span>
 
 <span class="go">Success:</span>
 
@@ -249,7 +296,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.050</span>
+<span class="go">Typechecking time: 0.046</span>
 </pre></div>
 </div>
 <p><strong>../../tests/sources/accumulate_twice2.elpi
@@ -270,7 +317,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.054</span>
+<span class="go">Typechecking time: 0.050</span>
 </pre></div>
 </div>
 <p><strong>../../tests/sources/accumulated.elpi
@@ -287,7 +334,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.064</span>
+<span class="go">Typechecking time: 0.053</span>
 </pre></div>
 </div>
 <p><strong>../../tests/sources/ackermann.elpi
@@ -328,7 +375,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.070</span>
+<span class="go">Typechecking time: 0.062</span>
 
 <span class="go">Success:</span>
 
@@ -365,7 +412,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.065</span>
+<span class="go">Typechecking time: 0.066</span>
 
 <span class="go">Success:</span>
 
@@ -397,7 +444,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.058</span>
+<span class="go">Typechecking time: 0.055</span>
 
 <span class="go">Success:</span>
 
@@ -499,7 +546,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.057</span>
+<span class="go">Typechecking time: 0.059</span>
 
 <span class="go">Success:</span>
 
@@ -545,7 +592,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.050</span>
+<span class="go">Typechecking time: 0.052</span>
 
 <span class="go">Success:</span>
 
@@ -643,7 +690,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.045</span>
+<span class="go">Typechecking time: 0.048</span>
 
 <span class="go">Success:</span>
 
@@ -727,7 +774,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.053</span>
+<span class="go">Typechecking time: 0.052</span>
 
 <span class="go">Success:</span>
 
@@ -757,7 +804,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.052</span>
+<span class="go">Typechecking time: 0.053</span>
 
 <span class="go">Success:</span>
 
@@ -859,7 +906,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.067</span>
+<span class="go">Typechecking time: 0.072</span>
 
 <span class="go">Success:</span>
 
@@ -916,7 +963,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.069</span>
+<span class="go">Typechecking time: 0.076</span>
 
 <span class="go">Success:</span>
 
@@ -964,7 +1011,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.058</span>
+<span class="go">Typechecking time: 0.064</span>
 
 <span class="go">Success:</span>
 
@@ -987,7 +1034,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.045</span>
+<span class="go">Typechecking time: 0.051</span>
 
 <span class="go">Success:</span>
 
@@ -1049,7 +1096,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.077</span>
+<span class="go">Typechecking time: 0.075</span>
 
 <span class="go">Success:</span>
 
@@ -1097,7 +1144,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.064</span>
+<span class="go">Typechecking time: 0.060</span>
 
 <span class="go">Success:</span>
 
@@ -1134,7 +1181,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.052</span>
+<span class="go">Typechecking time: 0.048</span>
 
 <span class="go">Success:</span>
 
@@ -1198,7 +1245,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.061</span>
+<span class="go">Typechecking time: 0.054</span>
 <span class="go">Fatal error: Unification problem outside the pattern fragment. ((Data.Term.App (f, (Data.Term.Const x), [])) == (Data.Term.AppUVar (</span>
 <span class="go">   { Data.Term.contents = please extend this printer; uid_private = 41508 },</span>
 <span class="go">   0,</span>
@@ -1220,7 +1267,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.048</span>
+<span class="go">Typechecking time: 0.046</span>
 
 <span class="go">Success:</span>
 
@@ -1281,9 +1328,9 @@
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.062</span>
+<span class="go">Typechecking time: 0.056</span>
 
 <span class="go">Success:</span>
 
@@ -1462,7 +1509,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.075</span>
+<span class="go">Typechecking time: 0.071</span>
 <span class="go">Type error. To ignore it, pass -no-tc.</span>
 </pre></div>
 </div>
@@ -1502,7 +1549,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.053</span>
+<span class="go">Typechecking time: 0.048</span>
 
 <span class="go">Success:</span>
 
@@ -1582,7 +1629,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.076</span>
+<span class="go">Typechecking time: 0.062</span>
 
 <span class="go">Success:</span>
 
@@ -1616,7 +1663,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.069</span>
+<span class="go">Typechecking time: 0.053</span>
 
 <span class="go">Success:</span>
 
@@ -1648,7 +1695,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.065</span>
+<span class="go">Typechecking time: 0.054</span>
 
 <span class="go">Success:</span>
 
@@ -1681,7 +1728,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.060</span>
+<span class="go">Typechecking time: 0.059</span>
 
 <span class="go">Success:</span>
 
@@ -1722,7 +1769,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.059</span>
+<span class="go">Typechecking time: 0.062</span>
 
 <span class="go">Success:</span>
 
@@ -1757,7 +1804,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.057</span>
+<span class="go">Typechecking time: 0.054</span>
 
 <span class="go">Success:</span>
 
@@ -1785,7 +1832,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.048</span>
+<span class="go">Typechecking time: 0.050</span>
 
 <span class="go">Success:</span>
 
@@ -1903,7 +1950,7 @@
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.001</span>
 
 <span class="go">Typechecking time: 0.079</span>
 
@@ -1941,7 +1988,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.047</span>
+<span class="go">Typechecking time: 0.048</span>
 
 <span class="go">Success:</span>
 
@@ -1970,7 +2017,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.049</span>
+<span class="go">Typechecking time: 0.050</span>
 
 <span class="go">Success:</span>
 
@@ -2004,7 +2051,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.050</span>
+<span class="go">Typechecking time: 0.053</span>
 
 <span class="go">Success:</span>
 
@@ -6101,7 +6148,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.051</span>
+<span class="go">Typechecking time: 0.047</span>
 
 <span class="go">Success:</span>
 
@@ -6150,7 +6197,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.071</span>
+<span class="go">Typechecking time: 0.067</span>
 
 <span class="go">Success:</span>
 
@@ -6191,7 +6238,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.068</span>
+<span class="go">Typechecking time: 0.064</span>
 
 <span class="go">Success:</span>
 
@@ -6334,7 +6381,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 1.274</span>
+<span class="go">Time: 1.295</span>
 
 <span class="go">Constraints:</span>
 
@@ -6406,7 +6453,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.065</span>
+<span class="go">Typechecking time: 0.069</span>
 
 <span class="go">Success:</span>
 
@@ -6448,7 +6495,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.062</span>
+<span class="go">Typechecking time: 0.060</span>
 
 <span class="go">Success:</span>
 
@@ -6554,11 +6601,11 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.089</span>
+<span class="go">Typechecking time: 0.077</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.294</span>
+<span class="go">Time: 0.240</span>
 
 <span class="go">Constraints:</span>
 
@@ -6587,7 +6634,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.055</span>
+<span class="go">Typechecking time: 0.050</span>
 
 <span class="go">Success:</span>
 
@@ -6611,7 +6658,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.050</span>
+<span class="go">Typechecking time: 0.047</span>
 
 <span class="go">Success:</span>
 
@@ -6885,7 +6932,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.084</span>
+<span class="go">Typechecking time: 0.083</span>
 
 <span class="go">Success:</span>
 
@@ -6992,7 +7039,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.079</span>
+<span class="go">Typechecking time: 0.082</span>
 
 <span class="go">Success:</span>
 
@@ -7038,18 +7085,18 @@
 <span class="linenos">30</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">0.865442 + 0.040860 + 0.617831</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">0.875697 + 0.040602 + 0.609759</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.048</span>
+<span class="go">Typechecking time: 0.047</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 1.680</span>
+<span class="go">Time: 1.684</span>
 
 <span class="go">Constraints:</span>
 
@@ -7112,7 +7159,7 @@
 <span class="linenos">51</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">4.428753 + 1.953485 + 0.260591</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">4.543532 + 1.964011 + 0.252881</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
@@ -7123,7 +7170,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 6.648</span>
+<span class="go">Time: 6.766</span>
 
 <span class="go">Constraints:</span>
 
@@ -7181,18 +7228,18 @@
 <span class="linenos">46</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">4.083725 + 1.808605 + 0.159717</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">3.978818 + 1.799743 + 0.153632</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.049</span>
+<span class="go">Typechecking time: 0.050</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 6.056</span>
+<span class="go">Time: 5.936</span>
 
 <span class="go">Constraints:</span>
 
@@ -7219,7 +7266,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.049</span>
+<span class="go">Typechecking time: 0.047</span>
 <span class="go">Type error. To ignore it, pass -no-tc.</span>
 </pre></div>
 </div>
@@ -7273,7 +7320,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.049</span>
+<span class="go">Typechecking time: 0.050</span>
 
 <span class="go">Success:</span>
 
@@ -7376,7 +7423,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.058</span>
+<span class="go">Typechecking time: 0.056</span>
 
 <span class="go">Success:</span>
 
@@ -7437,7 +7484,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.072</span>
+<span class="go">Typechecking time: 0.067</span>
 
 <span class="go">Success:</span>
 
@@ -7458,7 +7505,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.059</span>
+<span class="go">Typechecking time: 0.046</span>
 
 <span class="go">Success:</span>
 
@@ -7533,7 +7580,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.102</span>
+<span class="go">Typechecking time: 0.071</span>
 
 <span class="go">Success:</span>
 
@@ -7667,7 +7714,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.057</span>
+<span class="go">Typechecking time: 0.058</span>
 
 <span class="go">Success:</span>
 
@@ -7699,7 +7746,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.054</span>
+<span class="go">Typechecking time: 0.051</span>
 
 <span class="go">Success:</span>
 
@@ -7775,7 +7822,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.053</span>
+<span class="go">Typechecking time: 0.050</span>
 
 <span class="go">Success:</span>
 
@@ -7822,7 +7869,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.063</span>
+<span class="go">Typechecking time: 0.062</span>
 
 <span class="go">Success:</span>
 
@@ -7959,7 +8006,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.079</span>
+<span class="go">Typechecking time: 0.073</span>
 
 <span class="go">Success:</span>
 
@@ -8186,7 +8233,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.085</span>
+<span class="go">Typechecking time: 0.082</span>
 
 <span class="go">Success:</span>
 
@@ -8261,7 +8308,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.074</span>
+<span class="go">Typechecking time: 0.073</span>
 <span class="go">Type error. To ignore it, pass -no-tc.</span>
 </pre></div>
 </div>
@@ -8393,11 +8440,11 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.085</span>
+<span class="go">Typechecking time: 0.077</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.992</span>
+<span class="go">Time: 0.946</span>
 
 <span class="go">Constraints:</span>
 
@@ -8421,7 +8468,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.047</span>
+<span class="go">Typechecking time: 0.045</span>
 
 <span class="go">Success:</span>
 
@@ -8443,14 +8490,14 @@
 <span class="linenos">6</span><span class="w">  </span><span class="nv">R</span><span class="w"> </span><span class="kd">&lt;</span><span class="w"> </span><span class="mi">10</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">4</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">3</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.047</span>
+<span class="go">Typechecking time: 0.046</span>
 
 <span class="go">Success:</span>
 
@@ -8522,11 +8569,11 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.068</span>
+<span class="go">Typechecking time: 0.063</span>
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 0.214</span>
+<span class="go">Time: 0.181</span>
 
 <span class="go">Constraints:</span>
 
@@ -8599,7 +8646,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 1.477</span>
+<span class="go">Time: 1.460</span>
 
 <span class="go">Constraints:</span>
 
@@ -8622,7 +8669,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.046</span>
+<span class="go">Typechecking time: 0.045</span>
 </pre></div>
 </div>
 <p><strong>../../tests/sources/restriction3.elpi
@@ -8669,7 +8716,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.051</span>
+<span class="go">Typechecking time: 0.050</span>
 
 <span class="go">Success:</span>
 
@@ -8701,7 +8748,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.049</span>
+<span class="go">Typechecking time: 0.051</span>
 
 <span class="go">Success:</span>
 
@@ -8728,7 +8775,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.046</span>
+<span class="go">Typechecking time: 0.045</span>
 
 <span class="go">Success:</span>
 
@@ -8871,7 +8918,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.087</span>
+<span class="go">Typechecking time: 0.075</span>
 <span class="go">Fatal error: exception Stack overflow</span>
 </pre></div>
 </div>
@@ -8935,7 +8982,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.082</span>
+<span class="go">Typechecking time: 0.076</span>
 <span class="go">Fatal error: exception Stack overflow</span>
 </pre></div>
 </div>
@@ -8955,7 +9002,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.052</span>
+<span class="go">Typechecking time: 0.047</span>
 
 <span class="go">Success:</span>
 
@@ -8989,7 +9036,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.055</span>
+<span class="go">Typechecking time: 0.052</span>
 
 <span class="go">Success:</span>
 
@@ -9036,7 +9083,7 @@
 <span class="linenos">31</span><span class="w">  </span>print<span class="w"> </span><span class="nv">Time0</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time1</span><span class="w"> </span><span class="s2">&quot;+&quot;</span><span class="w"> </span><span class="nv">Time2</span><span class="o">.</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">0.766698 + 0.040971 + 0.510924</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">0.772697 + 0.037422 + 0.482561</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
@@ -9047,7 +9094,7 @@
 
 <span class="go">Success:</span>
 
-<span class="go">Time: 1.412</span>
+<span class="go">Time: 1.382</span>
 
 <span class="go">Constraints:</span>
 
@@ -9109,7 +9156,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.065</span>
+<span class="go">Typechecking time: 0.061</span>
 
 <span class="go">Success:</span>
 
@@ -9143,7 +9190,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.059</span>
+<span class="go">Typechecking time: 0.055</span>
 
 <span class="go">Success:</span>
 
@@ -9249,7 +9296,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.058</span>
+<span class="go">Typechecking time: 0.066</span>
 
 <span class="go">Success:</span>
 
@@ -9286,7 +9333,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.046</span>
+<span class="go">Typechecking time: 0.055</span>
 
 <span class="go">Success:</span>
 
@@ -9323,7 +9370,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.055</span>
+<span class="go">Typechecking time: 0.053</span>
 
 <span class="go">Success:</span>
 
@@ -9349,7 +9396,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.064</span>
+<span class="go">Typechecking time: 0.056</span>
 
 <span class="go">Success:</span>
 
@@ -9384,7 +9431,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.056</span>
+<span class="go">Typechecking time: 0.058</span>
 
 <span class="go">Success:</span>
 
@@ -9409,7 +9456,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.052</span>
+<span class="go">Typechecking time: 0.053</span>
 
 <span class="go">Success:</span>
 
@@ -9450,9 +9497,9 @@
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">Parsing time: 0.000</span>
 
-<span class="go">Compilation time: 0.002</span>
+<span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.051</span>
+<span class="go">Typechecking time: 0.047</span>
 
 <span class="go">Success:</span>
 
@@ -9516,7 +9563,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.050</span>
+<span class="go">Typechecking time: 0.049</span>
 
 <span class="go">Success:</span>
 
@@ -9595,7 +9642,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.047</span>
+<span class="go">Typechecking time: 0.046</span>
 
 <span class="go">Success:</span>
 
@@ -9621,7 +9668,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.046</span>
+<span class="go">Typechecking time: 0.045</span>
 
 <span class="go">Success:</span>
 
@@ -9660,7 +9707,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.048</span>
+<span class="go">Typechecking time: 0.047</span>
 <span class="go">Type error. To ignore it, pass -no-tc.</span>
 </pre></div>
 </div>
@@ -9682,7 +9729,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.046</span>
+<span class="go">Typechecking time: 0.047</span>
 <span class="go">Type error. To ignore it, pass -no-tc.</span>
 </pre></div>
 </div>
@@ -9704,7 +9751,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.047</span>
+<span class="go">Typechecking time: 0.046</span>
 <span class="go">Type error. To ignore it, pass -no-tc.</span>
 </pre></div>
 </div>
@@ -9738,7 +9785,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.045</span>
+<span class="go">Typechecking time: 0.046</span>
 
 <span class="go">Success:</span>
 
@@ -9766,7 +9813,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.048</span>
+<span class="go">Typechecking time: 0.047</span>
 
 <span class="go">Success:</span>
 
@@ -9826,7 +9873,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.048</span>
+<span class="go">Typechecking time: 0.047</span>
 
 <span class="go">Success:</span>
 
@@ -9857,7 +9904,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.045</span>
+<span class="go">Typechecking time: 0.048</span>
 
 <span class="go">Success:</span>
 
@@ -9887,7 +9934,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.059</span>
+<span class="go">Typechecking time: 0.048</span>
 
 <span class="go">Success:</span>
 
@@ -9910,7 +9957,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.047</span>
+<span class="go">Typechecking time: 0.046</span>
 
 <span class="go">Success:</span>
 
@@ -10000,7 +10047,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.049</span>
+<span class="go">Typechecking time: 0.047</span>
 
 <span class="go">Success:</span>
 
@@ -10028,7 +10075,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.047</span>
+<span class="go">Typechecking time: 0.050</span>
 
 <span class="go">Success:</span>
 
@@ -10224,7 +10271,7 @@
 
 <span class="go">Compilation time: 0.001</span>
 
-<span class="go">Typechecking time: 0.082</span>
+<span class="go">Typechecking time: 0.084</span>
 
 <span class="go">Success:</span>
 
